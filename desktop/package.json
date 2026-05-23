@@ -1,0 +1,25 @@
+{
+  "name": "legend-desktop",
+  "version": "0.1.0",
+  "description": "Legend AI — Desktop App",
+  "main": "dist/main.js",
+  "scripts": {
+    "dev": "electron .",
+    "build": "tsc && electron-builder",
+    "pack": "electron-builder --dir"
+  },
+  "build": {
+    "appId": "ai.legend.app",
+    "productName": "Legend",
+    "directories": { "output": "release" },
+    "mac": { "category": "public.app-category.productivity" },
+    "win": { "target": "nsis" },
+    "linux": { "target": "AppImage" }
+  },
+  "devDependencies": {
+    "@types/electron": "^1.6.10",
+    "electron": "^32.0.0",
+    "electron-builder": "^25.0.0",
+    "typescript": "^5.6.3"
+  }
+}

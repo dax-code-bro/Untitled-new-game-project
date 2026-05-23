@@ -1,0 +1,87 @@
+legend:
+  name: "Legend"
+  version: "0.1.0"
+  description: "The ultimate AI — conversation, storytelling, and creative production"
+
+ai:
+  primary: claude
+  fallback: openai
+  models:
+    claude: "claude-opus-4-7"
+    openai: "gpt-4o"
+  temperature: 0.85
+  max_tokens: 4096
+  memory:
+    enabled: true
+    max_history: 100
+    summary_threshold: 50
+
+story:
+  default_genre: general
+  supported_genres:
+    - fantasy
+    - sci-fi
+    - horror
+    - romance
+    - adventure
+    - mystery
+    - comic
+    - screenplay
+  output_formats:
+    - text
+    - storyboard
+    - script
+    - comic_panels
+
+creative:
+  pipeline:
+    enabled: true
+    stages:
+      - script
+      - storyboard
+      - assets
+      - render
+      - compose
+  image_backend: stable_diffusion
+  model_backend: shap_e
+  texture_resolution: 2048
+  render_engine: blender
+
+integrations:
+  blender:
+    enabled: true
+    addon_path: "./integrations/blender/legend_addon.py"
+    api_port: 8765
+  unity:
+    enabled: true
+    plugin_path: "./integrations/unity/"
+    api_port: 8766
+  unreal:
+    enabled: true
+    plugin_path: "./integrations/unreal/"
+    api_port: 8767
+  github:
+    enabled: true
+    auto_commit: false
+    branch_prefix: "legend/"
+
+api:
+  host: "0.0.0.0"
+  port: 8000
+  cors_origins:
+    - "http://localhost:3000"
+    - "http://localhost:5173"
+  auth:
+    enabled: false
+
+web:
+  port: 3000
+  theme: dark
+
+desktop:
+  window:
+    width: 1400
+    height: 900
+    min_width: 1000
+    min_height: 700
+  always_on_top: false
