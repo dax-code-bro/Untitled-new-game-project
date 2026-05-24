@@ -3,10 +3,10 @@
 
 ---
 
-## STEP 1 — Buy legend.ai
+## STEP 1 — Buy novalegend.ai
 
 1. Go to **namecheap.com**
-2. Search "legend.ai"
+2. Search "novalegend.ai"
 3. If available, add to cart and purchase (~$60–80/year for .ai domains)
 4. Keep the tab open — you'll need it in Step 4
 
@@ -59,17 +59,17 @@ update profiles set plan = 'admin' where email = 'your@email.com';
 
 ---
 
-## STEP 4 — Connect legend.ai to Vercel
+## STEP 4 — Connect novalegend.ai to Vercel
 
 **In Vercel:**
 1. Go to your project → **Settings → Domains**
 2. Click **"Add Domain"**
-3. Type: `legend.ai`
+3. Type: `novalegend.ai`
 4. Vercel will show you DNS records to add — copy them
 
 **In Namecheap:**
 1. Go to your Namecheap dashboard
-2. Click **"Manage"** next to legend.ai
+2. Click **"Manage"** next to novalegend.ai
 3. Go to **"Advanced DNS"**
 4. Delete the default A records
 5. Add the records Vercel gave you:
@@ -88,11 +88,11 @@ update profiles set plan = 'admin' where email = 'your@email.com';
 2. Create a new project → enable Google OAuth
 3. Copy Client ID and Secret
 4. In Supabase → **Authentication → Providers → Google**
-5. Paste the credentials, set redirect URL to: `https://legend.ai/chat`
+5. Paste the credentials, set redirect URL to: `https://novalegend.ai/chat`
 
 **For GitHub sign-in:**
 1. Go to github.com/settings/developers
-2. New OAuth App → Homepage: `https://legend.ai`
+2. New OAuth App → Homepage: `https://novalegend.ai`
 3. Callback: your Supabase Auth callback URL
 4. In Supabase → **Authentication → Providers → GitHub**
 5. Paste credentials
@@ -105,7 +105,7 @@ update profiles set plan = 'admin' where email = 'your@email.com';
 
 ## STEP 6 — You're live
 
-Go to **legend.ai** in your browser.
+Go to **novalegend.ai** in your browser.
 
 The Legend logo appears. Create account works. You're in.
 
