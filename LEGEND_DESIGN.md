@@ -210,20 +210,25 @@ All toggleable anytime in settings. Multiple can be active simultaneously.
 
 ### Game 1 — Flappy Legend
 - Flappy Bird inspired
-- 900 levels, progressively harder
-- Multiple skins to unlock
+- 900 replayable levels, progressively harder
+- 20 unique bird skins — each with a gameplay perk
+  - Faster birds — more speed, harder to control
+  - Double life birds — one free mistake
+  - Heavier birds — don't float into top pipe
+  - Lighter birds — don't sink into bottom pipe
+- Different colored birds and birds of different sizes
+- Size visually reflects the perk — big bird drops fast, tiny bird floats
 - Quests — daily/weekly challenges
-- Coins — earn and spend on skins/powerups
+- Coins — earn per level, spend on skins/powerups
 
 ### Game 2 — Dead Zone
 *(See full Dead Zone design doc below)*
 
 ### Game 3 — Legend's Knight
-- Pixel RPG
-- You play as the gold armored warrior from the Legend logo
-- Setting: Fairytale grasslands — lush, colorful, magical
-- Enemies: Demons and wizards
-- Full RPG: level up, gear, skills, story quest
+*(See full Legend's Knight design doc below)*
+
+### Game 4 — Crossfire Crossing
+*(See full Crossfire Crossing design doc below)*
 
 ---
 
@@ -938,3 +943,313 @@ Real-time strategy: manage essence while the action happens, decide when and wha
 ---
 *Total: 60 units designed*
 *Unlock levels to be assigned during development*
+
+---
+
+## LEGEND'S KNIGHT — FULL DESIGN DOCUMENT
+
+### Concept
+2D open world pixel RPG inspired by Terraria. Full open world — no movement limits, explore left, right, underground, everywhere.
+
+### Main Character — Mark the Crusader
+The gold armored warrior from the Legend logo. That's the end game version of Mark. You're working toward becoming him.
+
+### Story Arc
+1. Mark is a knight serving the kingdom
+2. The king outcasts him — strips him to a peasant, nothing
+3. Mark enters the world — fairytale grasslands, demons, wizards
+4. He grinds, quests, explores, upgrades gear
+5. He becomes the Golden Crusader — the legendary logo version
+6. He leads the Crusader Uprising — rallies his team against the kingdom
+7. He defeats the king and takes the throne — Mark is now king
+
+### The Ending
+Years later as king, a crusader in Mark's kingdom rises up against him.
+Mark demotes them to peasant.
+Screen goes black.
+"You have completed the game."
+The cycle continues. Mark became exactly what he fought.
+Replayable — and on replay you watch it all knowing how it ends.
+
+### Setting
+- Fairytale grasslands — lush, colorful, magical on the surface
+- Underground dungeons and caves beneath the grasslands
+- The kingdom — the enemy stronghold you eventually take
+- Villages scattered across the open world
+
+### Enemies
+- Demons — various types, scattered across the grasslands
+- Wizards — ranged magic enemies, dangerous at distance
+- Kingdom soldiers — guards you fight or bribe
+- Bosses — major story encounters
+
+### Recruitment System (Max 60 members)
+- **Peasants** — found in villages, join if you help them
+- **Royal guards** — bribe them with gold to switch sides
+- **Quest companions** — join after completing their quest
+- **Pet dragon** — one dragon companion, found through a specific quest chain
+- Total: 60 recruitable characters, all unique named characters
+
+### Team Management
+- **Fire members** — remove anyone from your team
+- **Loyalty system** — track who is truly loyal vs. who might betray you
+- **Execute** — eliminate disloyal members
+- **Bribe** — spend gold to flip royal guards
+- Decisions matter — wrong calls cost you in critical moments
+
+### Gear Progression
+- Start: peasant clothes, no weapons
+- Upgrade through: quests, crafting, defeating enemies, exploring
+- Final form: Golden Crusader armor — full gold plate, the logo
+- Weapons: sword, shield, bow, magic, and more
+
+---
+
+## CROSSFIRE CROSSING — FULL DESIGN DOCUMENT
+
+### Concept
+Crossy Road art style (blocky, colorful 3D-ish) meets a shooter.
+You play as a chicken crossing forward while gunning down rival animals.
+Constant threat: the eagle swooping from above trying to grab you.
+16-bit inspired visual style.
+
+### Core Gameplay
+- Cross forward (Crossy Road movement)
+- Shoot sideways and upward simultaneously
+- Fight through 100 unique animal enemies in a Mortal Kombat-style chain
+- Eagle swoops down throughout — must be shot off or it grabs you
+- Earn gold per level — spend on weapons and upgrades
+
+### Weapon System
+All weapons have multiple skins. Boss weapons drop as skins for that weapon type.
+Tap the **"!"** indicator on your equipped weapon to browse all unlocked skins.
+
+#### MELEE
+| Weapon | Notes |
+|---|---|
+| Fists | Default, no unlock needed |
+| Pocket Knife | First unlock |
+| Baseball Bat | Knockback on hit |
+| Machete | Fast swing speed |
+| Sword | Balanced melee |
+| Katana | Fast, high damage |
+| War Hammer | Slow, massive damage |
+| Chainsaw | Continuous damage |
+
+#### PISTOLS
+| Weapon | Notes |
+|---|---|
+| Basic Pistol | Starting gun |
+| Revolver | High damage, slow fire |
+| Dual Pistols | Double fire rate |
+| Hand Cannon | Massive single shot |
+| Golden Pistol | Rare skin, high damage |
+| Silenced Pistol | No sound, faster |
+| Flintlock | Old school, powerful |
+
+#### SMGs
+| Weapon | Notes |
+|---|---|
+| Uzi | Fast fire rate |
+| Tactical SMG | Accurate, moderate speed |
+| Dual SMG | Double barrels |
+| Rapid Fire SMG | Fastest fire rate in game |
+| Rapid Rabbit's SMG | Unlocked by defeating Rapid Rabbit — boss skin |
+
+#### SHOTGUNS
+| Weapon | Notes |
+|---|---|
+| Single Barrel | Basic, slow reload |
+| Double Barrel | Two shots, wide spread |
+| Pump Shotgun | Balanced |
+| Combat Shotgun | Fast pump, tighter spread |
+| Flex Turtle's Charge Shotgun | Unlocked by defeating Flex Turtle — slow charge, devastating damage — boss skin |
+
+#### ASSAULT RIFLES
+| Weapon | Notes |
+|---|---|
+| M-16 | Classic, reliable |
+| Gangster Duck's M-16 | Black, white and yellow skin — unlocked by defeating Gangster Duck |
+| AK-47 | High damage, slight spread |
+| Tactical Rifle | Burst fire, precise |
+| Gold AK | Rare boss skin |
+| Lion Leo's Golden AK | Unlocked by defeating Lion King Leo |
+
+#### SNIPER RIFLES
+| Weapon | Notes |
+|---|---|
+| Hunting Rifle | Basic sniper |
+| Anti-Material Rifle | Pierces through enemies |
+| Thermal Sniper | Sees enemies earlier |
+| King Cobra's Sniper | Long gold barrel — boss skin |
+
+#### HEAVY WEAPONS
+| Weapon | Notes |
+|---|---|
+| Minigun | Massive sustained fire |
+| Gangster Gorilla's Minigun | Golden minigun — boss skin |
+| Grenade Launcher | Bouncing grenades |
+| Rocket Launcher | Massive AOE |
+| Flamethrower | Continuous fire cone |
+| Guided Missile Launcher | Lock-on tracking |
+
+#### SPECIAL / EXOTIC
+| Weapon | Notes |
+|---|---|
+| Laser Gun | Instant hit beam |
+| Electric Rifle | Chains to nearby enemies |
+| Explosive Crossbow | Silent, explosive bolt |
+| Poison Dart Gun | Damage over time |
+| Freeze Ray | Slows enemies |
+| Shadow Wolf's Dual SMGs | Unlocked by defeating Shadow Wolf — black finish |
+| King Cobra's Rocket Launcher | Golden rocket launcher — boss skin |
+
+---
+
+### BOSS WEAPON SKIN SYSTEM
+- Every boss drops a unique skin for their weapon type when defeated
+- Skin appears automatically in your "!" collection for that weapon
+- Equip it to play with that boss's exact weapon look
+- Also unlocks that boss as a **playable character skin**
+
+---
+
+### 100 ANIMAL ENEMY ROSTER
+
+#### TIER 1 — EASY (Animals 1–20)
+| # | Name | Weapon | Notes |
+|---|---|---|---|
+| 1 | Nervous Newt | Fists | Tutorial enemy |
+| 2 | Shaky Sheep | Rusty knife | Flinches a lot |
+| 3 | Clumsy Cat | Baseball bat | Misses often |
+| 4 | Dizzy Dog | Slingshot | Terrible aim |
+| 5 | Wobbly Weasel | Old revolver | Slow and predictable |
+| 6 | Timid Toad | Pocket knife | Runs away sometimes |
+| 7 | Bumbling Bear Cub | Wooden club | Slow swing |
+| 8 | Frantic Finch | Dart gun | Fast but weak |
+| 9 | Panicking Pig | Paintball gun | Messy, harmless |
+| 10 | Scared Squirrel | BB gun | Barely hurts |
+| 11 | Anxious Anteater | Fishing rod | Long range but weak |
+| 12 | Nervous Narwhal | Water pistol | Wet but harmless |
+| 13 | Trembling Turkey | Feather darts | Seasonal enemy |
+| 14 | Jumpy Jay | Sling | Blue jay with attitude |
+| 15 | Wobbly Walrus | Old musket | Very slow reload |
+| 16 | Fidgety Ferret | Cap gun | Mostly noise |
+| 17 | Skittish Skunk | Spray attack | Non-lethal, annoying |
+| 18 | Clumsy Crow | Broken bottle | Melee only |
+| 19 | Rattled Raccoon | Tire iron | First real melee threat |
+| **20** | **BOSS: Gangster Duck** | **Black/white/yellow M-16** | **Daffy inspired. Drops M-16 skin + duck playable skin** |
+
+#### TIER 2 — MEDIUM (Animals 21–40)
+| # | Name | Weapon | Notes |
+|---|---|---|---|
+| 21 | Smooth Snake | Silenced pistol | Quiet and sneaky |
+| 22 | Cool Cat Carlos | Dual knives | Fast melee combos |
+| 23 | Slick Salamander | SMG | First SMG enemy |
+| 24 | Chill Chameleon | Sniper (short range) | Tries to blend in |
+| 25 | Mellow Moose | Shotgun | Wide spread |
+| 26 | Calm Cobra | Poison darts | Damage over time |
+| 27 | Relaxed Rhino | Battering ram | Charges forward |
+| 28 | Laid-back Llama | Dual pistols | Spits too |
+| 29 | Breezy Buffalo | Heavy club | Slow but hits hard |
+| 30 | Groovy Gorilla | Small minigun | First heavy weapon enemy |
+| 31 | Casual Croc | Machete | Snappy attacks |
+| 32 | Mellow Mongoose | Throwing stars | Rapid projectiles |
+| 33 | Suave Seahorse | Trident | Unique weapon type |
+| 34 | Debonair Deer | Bow and arrows | Precise aim |
+| 35 | Classy Crane | Rapier | Elegant and fast |
+| 36 | Fancy Flamingo | Stiletto + pistol | Dual threat |
+| 37 | Dapper Dolphin | Water cannon | Knockback attack |
+| 38 | Sophisticated Sloth | Giant axe | Devastating but extremely slow |
+| 39 | Stylish Stork | Throwing knives | Rapid throws |
+| **40** | **BOSS: Lion King Leo** | **Golden AK-47** | **Drops golden AK skin + lion playable skin** |
+
+#### TIER 3 — HARD (Animals 41–60)
+| # | Name | Weapon | Notes |
+|---|---|---|---|
+| 41 | Gruff Grizzly | Sledgehammer | Shockwave on hit |
+| 42 | Tough Tiger | Dual SMGs | Aggressive pusher |
+| 43 | Hard Hyena | Grenades | Laughs when you die |
+| 44 | Brutal Boar | Chainsaw | Relentless charger |
+| 45 | Fierce Falcon | Talons + shotgun | Dives from above |
+| 46 | Savage Shark | Water missile | Aquatic projectiles |
+| 47 | Rugged Ram | Shield + battering charge | Hard to stop |
+| 48 | Mean Meerkat | Rocket pistol | Tiny but dangerous |
+| 49 | Aggressive Armadillo | Shotgun + heavy armor | Hard to damage |
+| 50 | Dangerous Dingo | Assault rifle | Fast and accurate |
+| 51 | Threatening Tapir | War hammer | Ground slams |
+| 52 | Menacing Manta | Electric ray blast | Stuns on hit |
+| 53 | Intimidating Iguana | Flamethrower | Area denial |
+| 54 | Forceful Fox | Minigun | Fast movement + heavy fire |
+| 55 | Powerful Panda | Dual shotguns | Slow but devastating |
+| 56 | Dominant Dhole | Sniper rifle | Long range precision |
+| 57 | Commanding Capybara | Rocket launcher | Chill but deadly |
+| 58 | Formidable Falcon | Grenade launcher | Second falcon, much harder |
+| 59 | Imposing Impala | Dual assault rifles | Rapid fire from both |
+| **60** | **BOSS: Gangster Gorilla** | **Golden minigun** | **Drops golden minigun skin + gorilla playable skin** |
+
+#### TIER 4 — VERY HARD (Animals 61–80)
+| # | Name | Weapon | Notes |
+|---|---|---|---|
+| 61 | Ruthless Raven | Tactical SMG | Smart, tactical movement |
+| 62 | Merciless Mongoose | Dual revolvers | Fan-fires both |
+| 63 | Heartless Heron | Precision rifle | Long range headshots |
+| 64 | Pitiless Python | Constriction + shotgun | Grabs and shoots |
+| 65 | Cold Cheetah | Dual pistols | Fastest enemy in the game |
+| 66 | Vicious Vulture | Acid bombs | Ground acid pools |
+| 67 | Calculated Cat | Sniper rifle | Waits for perfect shot |
+| 68 | Methodical Mole | Underground pop-up attacks | Unpredictable angles |
+| 69 | Precise Pelican | Explosive arrows | Pouch stores extra ammo |
+| 70 | Tactical Tortoise | Rocket shield | Blocks with rockets attached |
+| 71 | Strategic Stag | Guided missile antlers | Homing projectiles |
+| 72 | Analytical Aardvark | Machine gun snout | Rapid fire cone |
+| 73 | Deliberate Dingo | Explosive mines | Pre-places traps |
+| 74 | Systematic Salamander | Electric SMG | Chains to nearby enemies |
+| 75 | Planned Platypus | Poison dart shotgun | Spread + poison |
+| 76 | Logical Leopard | Thermal sniper | Sees through cover |
+| 77 | Reasoned Rhino | Rocket rampage | Fires rockets while charging |
+| 78 | Calculated Croc | Laser rifle | Instant beam |
+| 79 | Elite Elephant | War cannon trunk | Massive AOE blast |
+| **80** | **BOSS: Shadow Wolf** | **Dual golden SMGs + invisibility** | **Drops dual SMG skin + wolf playable skin** |
+
+#### TIER 5 — EXTREME (Animals 81–98)
+| # | Name | Weapon | Notes |
+|---|---|---|---|
+| 81 | Supreme Snake | Electric whip + pistol | Combo attacker |
+| 82 | Apex Alligator | Minigun + heavy armor | Tank enemy |
+| 83 | Prime Panther | Stealth + dual SMGs | Goes invisible between attacks |
+| 84 | Peak Peacock | Explosive feather fan | 360 degree attack |
+| 85 | Superior Sloth | Single massive strike | One-shots if it lands |
+| 86 | Master Mantis | Precision blade + SMG | Blinding fast |
+| 87 | Champion Chimp | Dual rocket pistols | Swings between shots |
+| 88 | Legendary Lynx | Sniper + combat knife | Switches between ranges |
+| 89 | Ultimate Unicorn | Magical explosive horn | Homing magic blasts |
+| 90 | Pinnacle Piranha | Electric bite + speed | Fastest tier 5 enemy |
+| 91 | Supreme Stallion | Cavalry charge + shotgun | Unstoppable charge |
+| 92 | Apex Armadillo | Indestructible armor + minigun | Requires specific weapons to damage |
+| 93 | Elite Eagle Jr. | Precision rockets | Mini version of the main eagle |
+| 94 | Maximum Mongoose | Dual grenade launchers | Explosive madness |
+| 95 | Paramount Porcupine | Spike missiles | Homes in on player |
+| 96 | Formidable Frog | Tongue grapple + shotgun | Pulls you close |
+| 97 | Unstoppable Urchin | Spike shotgun | Fires in all directions |
+| **98** | **BOSS: King Cobra Commander** | **Golden rocket launcher + poison field** | **Drops rocket launcher skin + cobra playable skin** |
+
+#### FINAL BOSSES
+| # | Name | Weapon | Notes |
+|---|---|---|---|
+| **99** | **Rapid Rabbit** | **SMG — incredibly fast fire** | **Fastest enemy in the entire game. Never stops moving. Drops SMG skin + rabbit playable skin** |
+| **100** | **Flex Turtle** | **Slow charge shotgun** | **Heavily armored. Each charge shot devastating. The final boss. Drops charge shotgun skin + turtle playable skin** |
+
+---
+
+### PLAYABLE SKINS
+Every animal defeated can be played as. 100 animals = 100 playable skins + default chicken = 101 total playable characters.
+Each animal skin is purely cosmetic when played — perks only apply to weapon skins.
+
+### THE EAGLE
+- Constant threat throughout all 100 levels
+- Swoops from above randomly and with increasing frequency in higher tiers
+- Shoot it off before it grabs you
+- In tier 5 and final bosses the eagle coordinates with the enemy
+- Eagle never fully dies — it always comes back
+
