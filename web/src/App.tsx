@@ -1,45 +1,32 @@
-import { useState } from "react";
-import Chat from "./pages/Chat";
-import Story from "./pages/Story";
-import Creative from "./pages/Creative";
-import Studio from "./pages/Studio";
+import { Routes, Route, Navigate } from "react-router-dom";
+import { useAuth } from "./context/AuthContext";
+
+import Landing from "./pages/auth/Landing";
+import CreateAccount from "./pages/auth/CreateAccount";
+import Verify from "./pages/auth/Verify";
+import Login from "./pages/auth/Login";
+import Onboarding from "./pages/auth/Onboarding";
+import MainApp from "./pages/MainApp";
 import "./App.css";
 
-type Tab = "chat" | "story" | "creative" | "studio";
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  if (loading) return <div className="auth-page"><div style={{ color: "var(--gold)" }}>♛</div></div>;
+  if (!user) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>("chat");
-
   return (
-    <div className="app">
-      <header className="header">
-        <div className="logo">
-          <span className="logo-crown">♛</span>
-          <span className="logo-text">LEGEND</span>
-        </div>
-        <nav className="nav">
-          {(["chat", "story", "creative", "studio"] as Tab[]).map((t) => (
-            <button
-              key={t}
-              className={`nav-btn ${tab === t ? "active" : ""}`}
-              onClick={() => setTab(t)}
-            >
-              {t.charAt(0).toUpperCase() + t.slice(1)}
-            </button>
-          ))}
-        </nav>
-        <div className="status">
-          <span className="status-dot" />
-          Online
-        </div>
-      </header>
-
-      <main className="main">
-        {tab === "chat" && <Chat />}
-        {tab === "story" && <Story />}
-        {tab === "creative" && <Creative />}
-        {tab === "studio" && <Studio />}
-      </main>
-    </div>
+    <Routes>
+      <Route path="/" element={<Landing />} />
+      <Route path="/create-account" element={<CreateAccount />} />
+      <Route path="/verify" element={<Verify />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+      <Route path="/chat" element={<ProtectedRoute><MainApp /></ProtectedRoute>} />
+      <Route path="/chat/:chatId" element={<ProtectedRoute><MainApp /></ProtectedRoute>} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
