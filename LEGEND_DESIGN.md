@@ -1253,3 +1253,55 @@ Each animal skin is purely cosmetic when played — perks only apply to weapon s
 - In tier 5 and final bosses the eagle coordinates with the enemy
 - Eagle never fully dies — it always comes back
 
+
+---
+
+## DEAD ZONE LORE — PRISON BREAK
+
+### Project 50-50
+A classified program run by an unknown organization — government, military, or corporate, deliberately never confirmed. The facility was a prison.
+
+They selected ordinary people from the general population. No volunteers. No consent. Injected them with an experimental super soldier serum, sealed them into containment suits, and froze them indefinitely. The intention was to create the ultimate preserved soldiers — frozen until needed, then deployed.
+
+The serum worked. But not cleanly. It mutilated them from the inside. What it did to their faces, their bodies — the containment suits hide most of it. The cracked gas mask is the only window into what's underneath.
+
+Nobody knows the exact number of subjects. Dozens. Maybe hundreds. The program processed people like a production line.
+
+### The Breakout
+At some point the subjects woke up. Whether something went wrong with the freezing, whether someone freed them, or whether the serum itself eventually overcame the containment — unknown.
+
+They went rogue immediately. Turned on the military soldiers guarding the facility and fought their way out. During the breakout they took the soldiers' green military gas masks — not out of necessity, but as a symbol of rebellion.
+
+*We were your weapons. Now we're free.*
+
+The crack in every Prison Break's gas mask happened during the breakout. The mutilated flesh visible through it is what the serum did to them underneath.
+
+They scattered into the world before the zombie outbreak even began.
+
+### Why There Are Many
+Prison Break is not one person. Every unit you spawn is a different 50-50 subject — a different person who went through the same program. Same suit, same baton, same cracked green mask, same heavy breathing — because they all got the same treatment. The supply is tragically large.
+
+Same crack in the mask. Different face behind it every time.
+
+### Why They're Aggressive When Spawned
+In their minds no time passed between the moment they were frozen and the moment they wake up on your battlefield. They go from the middle of the worst moment of their lives straight into combat. No adjustment. No confusion. Just aggression.
+
+### The Death Animation
+When Prison Break reaches critical health:
+
+1. He drops to one knee — the weight of his armor finally pulling him down
+2. Reaches slowly into his suit
+3. Produces a C4 detonator — origin unknown, no explanation given
+4. Presses the red button
+5. A faint laugh — not panic, not pain. Satisfaction.
+6. Explosion — takes everything nearby with him
+
+He decides how he goes out. After everything — taken, experimented on, frozen, used again — this one thing is his.
+
+**Gameplay note:** The explosion damages nearby enemies AND friendly units. Players learn to position Prison Break away from their own squad. The drop to one knee is the warning — get your units clear.
+
+### What the Cowboy Knows
+Unknown. He finds Prison Break units in the prison during the story and deploys them. Whether he knows what they are or what was done to them is left to the player's interpretation.
+
+### The C4
+Where did he get it. Nobody knows. He just has it. Always has.
