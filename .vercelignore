@@ -1,0 +1,14 @@
+backend/
+core/
+creative/
+desktop/
+integrations/
+scripts/
+story/
+config/
+assets/
+supabase/
+requirements.txt
+*.py
+DEPLOY.md
+LEGEND_DESIGN.md
