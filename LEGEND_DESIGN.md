@@ -1305,3 +1305,589 @@ Unknown. He finds Prison Break units in the prison during the story and deploys 
 
 ### The C4
 Where did he get it. Nobody knows. He just has it. Always has.
+
+---
+
+## DEAD ZONE — FACTION SYSTEM
+
+Seven factions. Each has unique passive bonuses and unit roster. Units belong to one faction (or two in rare dual-faction cases).
+
+---
+
+### FACTION PASSIVES
+
+| Faction | Passive Bonuses |
+|---|---|
+| **PSS** | 100% bullet resistance, 100% poison/infection immunity, 30% melee resistance |
+| **Marines** | 80% melee resistance |
+| **Police** | 20% faster cooldowns, 10% discount on all Police units |
+| **Berserkers** | 15% speed boost, rage stacks on kills (each kill = +5% damage, max 10 stacks) |
+| **WWE** | 25% more damage when health is below 50% |
+| **Construction** | 30% more health, tools deal double damage to armored enemies |
+| **Animal** | Cannot be infected, 20% faster movement speed |
+
+---
+
+### PSS — PRESERVED SUPER SOLDIERS
+
+The rarest, most expensive faction. Built for ranged-heavy enemies. Bullets bounce off them. Melee will eventually wear them down.
+
+#### Prison Break *(see existing unit + full lore above)*
+- **Faction:** PSS
+- Most powerful frontline unit in the game
+
+#### AKA
+- **Faction:** PSS
+- **Appearance:** Tactical gear, laser-scoped AK-47
+- **Cost:** 32 essence
+- **Cooldown:** 16 seconds
+- **Health:** Moderate (PSS passives make him tough against bullets)
+- **Weapon:** AK-47 with laser sight and scope
+- **Fire mode:** Semi-auto
+- **Damage:** 180 per shot (first shot of each engagement deals 280 — accuracy bonus)
+- **Special:** First shot of each reload cycle deals bonus damage — rewards controlled fire over panic spraying
+- **Weakness:** Close range — semi-auto struggles when zombies get in his face
+- **Notes:** Patience unit. Players who fire carefully get incredible value. Players who spam waste his potential.
+
+#### Commander
+- **Faction:** PSS
+- **Appearance:** PSS tactical armor, carries a 9mm pistol and a black/red PSS shield (PSS spray painted across the top)
+- **Cost:** 35 essence
+- **Cooldown:** 20 seconds
+- **Health:** High (for PSS)
+- **Weapon 1:** 9mm pistol — low damage, filler
+- **Weapon 2:** PSS Shield Throw — 106 damage, pierces through up to 30 enemies, returns like a boomerang. 20 second cooldown.
+- **Passive aura (while alive on field):** All PSS units gain +20% Health, Speed, Accuracy, Critical damage, Valor, Charisma, and 20% cost reduction
+- **Special dodge:** Randomly side rolls, backflips, or sidesteps to avoid attacks during reload. Can kick enemies in range while reloading.
+- **Weakness:** Low crit — Commander himself rarely crits
+- **Notes:** The reason you build a PSS lineup. Deploy him first and let the buffs do the work.
+
+#### Flamethrower
+- **Faction:** PSS
+- **Appearance:** Heavy PSS containment suit modified with a flamethrower rig — the suit is scorched and blackened from use
+- **Cost:** 33 essence
+- **Cooldown:** 18 seconds
+- **Health:** Low for PSS — the glass cannon of the faction
+- **Weapon:** Military-grade PSS flamethrower
+- **Damage:** Raw continuous fire — 120 per second, hits everything in a wide cone
+- **Special:** None — pure output. What you see is what you get.
+- **Weakness:** Fragile for a PSS unit. Up close melee tears him apart. Needs Commander's health buff to survive.
+- **Notes:** Insane damage floor, no ceiling tricks. Put Commander on the field first — that health buff turns Flamethrower from glass to viable.
+
+#### Captain Faithful *(dual faction — Marines + PSS)*
+- **Faction:** Marines + PSS (gets both faction passives simultaneously)
+- **Appearance:** Full Marine armor, American cape, machete on back, Desert Eagle on hip
+- **Cost:** 50 essence — the most expensive unit in the entire game
+- **Cooldown:** 35 seconds
+- **Health:** Very high (Marine armor + PSS passives stacked)
+- **Weapon 1:** Desert Eagle — high damage pistol
+- **Weapon 2:** Machete
+- **Dodge:** Full dodge kit — sidestep, step back, backflip. Extremely hard to hit.
+- **Special — Machete Massacre:** Charges through a horde in a single animation, slicing, decapitating, and ripping zombies apart. Insta-kills every non-boss zombie in the path. No exceptions.
+- **Weakness:** If caught inside a very large horde he gets briefly trapped. Escapes with a backflip.
+- **Combo note:** Sergeant Jeff (Marine buff) + Commander (PSS buff) + Captain Faithful = both faction buffs stacking on one unit. Broken in the best way.
+- **Notes:** The single most powerful unit in the game for clearing large zombie hordes. The price tag is justified.
+
+#### Reaper
+- **Faction:** PSS
+- **Appearance:** PSS containment suit modified with a long black coat draped over the armor. Carries twin PSS-issue combat scythes.
+- **Cost:** 36 essence
+- **Cooldown:** 22 seconds
+- **Health:** Moderate-high
+- **Weapons:** Twin combat scythes
+- **Damage:** 220 per scythe hit, hits in wide arcs covering both sides simultaneously
+- **Special:** Soul Harvest — every 5th kill triggers a scythe spin dealing 400 damage to everything within melee range. Passive.
+- **Weakness:** Pure melee — no range whatsoever
+- **Notes:** Soul Harvest procs constantly in dense waves. In packed levels Reaper is quietly one of the highest damage per second units on the field.
+
+#### Phantom Rook
+- **Faction:** PSS
+- **Appearance:** PSS suit but matte black — modified for stealth. Moves differently from other PSS units — silent, deliberate.
+- **Cost:** 38 essence
+- **Cooldown:** 24 seconds
+- **Health:** Moderate (PSS passives carry him)
+- **Weapon:** Silenced PSS sniper rifle
+- **Damage:** 600 per shot
+- **Special:** Spawns in stealth — invisible for 8 seconds before first shot. First shot from stealth always crits (1,200 damage).
+- **Weakness:** Bolt-action — slow fire rate. Overwhelmed by fast zombie swarms.
+- **Notes:** The stealth crit opener is one of the highest single-hit numbers in the game. Set him up behind tanks and let him open every engagement with a 1,200 damage shot.
+
+---
+
+### MARINES
+
+Disciplined, melee-resistant, anti-zombie specialists. 80% melee resistance makes them the best faction for close-range zombie combat.
+
+#### Captain Faithful *(see PSS above — dual faction)*
+
+#### Private Santiago
+- **Faction:** Marines
+- **Appearance:** Mexican Marine uniform, standard issue rifle, sniper scope
+- **Cost:** 24 essence
+- **Cooldown:** 12 seconds
+- **Health:** Very fragile — lightest Marine by far
+- **Weapon:** Standard Mexican military rifle + sniper configuration
+- **Sniper damage:** 1,000 per shot — one of the highest single-shot numbers in the game
+- **Rifle damage:** 65 per shot (standard mode)
+- **Special:** Can switch between rifle and sniper mode — sniper has a 4 second charge before firing
+- **Weakness:** Extremely fragile. One wrong placement and he's gone.
+- **Notes:** Glass cannon sniper. 1,000 damage is devastating but he needs protection. Rosa is a sniper too — Santiago hits harder but dies much faster.
+
+#### Sergeant Jeff
+- **Faction:** Marines
+- **Inspired by:** General Shepherd
+- **Appearance:** Veteran Marine sergeant in full combat gear, gruff and commanding
+- **Cost:** 28 essence
+- **Cooldown:** 15 seconds
+- **Health:** Moderate-high
+- **Weapon:** Combat shotgun (personal defense, 110 per shot)
+- **Passive aura:** While alive, all Marine units on field gain a moderate buff to health, damage, and speed (weaker than Commander's PSS buff — roughly +12% across stats)
+- **Special combo:** Sergeant Jeff + Captain Faithful + Prison Break — Captain Faithful gets BOTH Jeff's Marine aura AND Commander's PSS aura simultaneously. Extremely powerful.
+- **Notes:** Less flashy than Commander but the Marine aura is still significant. Essential in a full Marine lineup.
+
+#### SAW
+- **Faction:** Marines
+- **Type:** Utility item (most expensive utility in the game)
+- **Appearance:** Marine specialist in satellite communication gear — carries a targeting beacon
+- **Cost:** 40 essence
+- **Cooldown:** 60 seconds
+- **Health:** Moderate
+- **Weapon:** Personal defense pistol (weak)
+- **Special — Satellite Drop:** Calls in an orbital drop that delivers a full power suit to a targeted location. Any unit from any faction can enter the suit.
+- **Power Suit stats:**
+  - Health x5
+  - Speed ÷5 (very slow, barely moves)
+  - Damage x10
+  - Lifetime: 420 seconds — when the timer expires the suit explodes killing whoever is inside
+- **Notes:** Highest risk / highest reward utility in the game. The right unit in the suit for 420 seconds is devastating. The wrong unit or bad timing is a wasted 40 essence and a dead unit. Captain Faithful in the suit is almost unfair.
+
+#### Casey *(dual faction — Marines + Berserkers)*
+- **Faction:** Marines + Berserkers (gets both faction passives)
+- **Appearance:** Young woman, casual clothes under a Marine jacket — clearly not standard issue
+- **Cost:** 22 essence
+- **Cooldown:** 11 seconds
+- **Health:** Fragile
+- **Weapons:** Dual SMGs
+- **Damage:** 35 per bullet, fires both simultaneously — 70 combined per shot at high fire rate
+- **Weakness:** Low accuracy — bullets go everywhere, especially at range. Fragile health.
+- **Notes:** Spray and pray. Up close she absolutely shreds. At range she wastes ammo. Know her range and she's great value for the cost.
+
+#### Corporal Hendricks
+- **Faction:** Marines
+- **Appearance:** Young Marine corporal, M16 and combat knife on his belt
+- **Cost:** 20 essence
+- **Cooldown:** 10 seconds
+- **Health:** Moderate
+- **Weapon:** M16 (semi-auto, 55 damage per shot), combat knife (95 melee)
+- **Special:** Battle Rhythm — after 10 consecutive shots without taking damage his accuracy increases 30% and damage increases 15%
+- **Weakness:** Getting hit resets Battle Rhythm completely
+- **Notes:** Reliable mid-tier Marine. Battle Rhythm rewards protected positioning. Pair with tanks in front.
+
+#### Lieutenant Cross
+- **Faction:** Marines
+- **Appearance:** Female Marine lieutenant, riot shield on one arm, pistol in the other
+- **Cost:** 26 essence
+- **Cooldown:** 13 seconds
+- **Health:** High
+- **Weapon:** Pistol (75 damage), riot shield (blocks 50% of incoming damage)
+- **Special:** Shield Charge — rushes forward pushing all zombies back 3 positions, dealing 120 damage to everything hit
+- **Notes:** A defensive tank who can also disrupt zombie positioning. Shield Charge is great for buying time when a wave gets too close to the truck.
+
+---
+
+### POLICE
+
+Fast cooldowns and cheaper costs. Not the strongest faction individually but the volume of units you can deploy is unmatched.
+
+#### Officer Ray
+- **Faction:** Police
+- **Appearance:** Standard police uniform, service pistol, nightstick on belt
+- **Cost:** 15 essence
+- **Cooldown:** 8 seconds
+- **Health:** Moderate
+- **Weapon:** Service pistol (55 damage), nightstick (70 melee)
+- **Special:** First Responder — deploys faster than any other unit (no spawn animation delay)
+- **Notes:** The Billy of the Police faction but actually useful. Cheap, fast to deploy, decent damage. Spam him to hold the line while building up for bigger units.
+
+#### Detective Vance
+- **Faction:** Police
+- **Appearance:** Plainclothes detective — trench coat, tie loosened, dual pistols
+- **Cost:** 22 essence
+- **Cooldown:** 11 seconds
+- **Health:** Moderate
+- **Weapons:** Dual pistols (65 damage each, rapid fire)
+- **Special:** Interrogation — once per deployment can briefly stun a zombie group, making them vulnerable for 3 seconds (all damage to stunned zombies increases 40%)
+- **Notes:** Interrogation is deceptively strong. Time it with a unit like Catherine or Brutus for a massive burst window.
+
+#### SWAT Martinez
+- **Faction:** Police
+- **Appearance:** Full SWAT gear — tactical vest, helmet, MP5 submachine gun
+- **Cost:** 28 essence
+- **Cooldown:** 14 seconds
+- **Health:** High
+- **Weapon:** MP5 (40 damage, very high fire rate), flashbang grenades
+- **Special:** Flashbang — blinds and disorients all zombies in a medium radius for 4 seconds (they stop attacking and move erratically)
+- **Notes:** Flashbang is excellent crowd control. Four seconds of chaos gives your team a free damage window. More tactical than most units.
+
+#### Chief Donnelly
+- **Faction:** Police
+- **Appearance:** Police chief in full dress uniform, shotgun
+- **Cost:** 30 essence
+- **Cooldown:** 16 seconds
+- **Health:** High
+- **Weapon:** Pump-action shotgun (200 per shot, wide spread)
+- **Special — Command Presence:** While alive, all Police unit cooldowns decrease by an additional 10% (stacks with the faction passive for 20% total cooldown reduction)
+- **Notes:** Makes the already fast Police cooldowns even faster. In a full Police lineup Chief Donnelly turns the faction into a non-stop unit spam machine.
+
+#### Riot Unit — Briggs
+- **Faction:** Police
+- **Appearance:** Full riot gear — heavy shield, baton, tear gas canisters on belt
+- **Cost:** 26 essence
+- **Cooldown:** 13 seconds
+- **Health:** Very high
+- **Weapons:** Riot baton (90 damage), riot shield (blocks 55% damage), tear gas (area denial)
+- **Special:** Tear Gas — drops a canister that creates a toxic cloud dealing 30 damage per second and slowing zombies by 40% for 6 seconds
+- **Notes:** Best defensive Police unit. Tear gas chokepoints plus the shield makes him a wall that actively punishes anything that tries to push through.
+
+#### K9 Officer Reed
+- **Faction:** Police
+- **Appearance:** Police officer in tactical uniform with a police K9 dog (Belgian Malinois named Duke)
+- **Cost:** 19 essence
+- **Cooldown:** 9 seconds
+- **Health:** Moderate (officer), High (Duke)
+- **Weapons:** Service pistol (officer), bite attacks (Duke — 85 damage per bite, fast)
+- **Special:** Duke fights independently alongside Reed — two units for one deployment cost
+- **Synergy:** Duke counts as an Animal faction unit — gets Animal faction passives
+- **Notes:** Best value Police unit. Two fighters for 19 essence. Duke being Animal faction means he can't be infected and moves faster than Reed.
+
+#### Undercover — Ghost
+- **Faction:** Police
+- **Appearance:** Plain clothes, looks like a civilian — no visible weapons until combat starts
+- **Cost:** 20 essence
+- **Cooldown:** 10 seconds
+- **Health:** Low-moderate
+- **Weapon:** Concealed handgun (80 damage), hidden combat knife (110 melee)
+- **Special:** Blend — spawns without drawing zombie attention for 5 seconds. First attack from Blend always lands as a headshot (instant kill on standard zombies).
+- **Notes:** Cheap headshot opener. The headshot instant kill on first attack is reliable zombie removal for 20 essence.
+
+---
+
+### BERSERKERS (FLORIDA)
+
+Florida Men. They don't feel fear. They don't feel pain the same way. They thrive in the apocalypse because nothing is weirder than Florida was before it.
+
+#### Dave — Florida Man
+- **Faction:** Berserkers
+- **Appearance:** Sunglasses, brown hair, blue shirt with cyan palm trees, white shorts
+- **Cost:** 18 essence (cheap — but this is just the start)
+- **Cooldown:** 9 seconds
+- **Health:** Glass sticky note → Card stock → Mountain diamond (fully upgraded with charms)
+- **Speed:** Very fast
+- **Weapon:** Whatever he found — varies (starts with a lawn chair, upgrades to various improvised weapons)
+- **Dodge:** Best dodge kit in the game alongside Commander — sidestep, roll, cartwheel, full backflip, dive
+- **Synergy:** Florida Gator becomes cheap and massively buffed when Dave is on the field
+- **Upgrade arc:** The most dramatic upgrade path in Dead Zone. Max level Dave with full charms is nearly unkillable despite looking like a tourist.
+- **Notes:** The highest skill ceiling unit in the Berserker faction. Looks useless. Rewards investment harder than almost any unit.
+
+#### Casey *(dual faction — see Marines above)*
+
+#### Florida Gator
+- **Faction:** Animal + Berserkers (dual faction)
+- **Appearance:** 12 foot Florida alligator dressed in a golf sweater
+- **Cost:** 42 essence normally — reduced to 22 essence when Dave is on the field
+- **Cooldown:** 25 seconds
+- **Health:** Very high
+- **Weapon:** His body — death roll and snap attacks
+- **Special 1 — Death Roll:** Grabs a zombie and death rolls continuously dealing 200 damage per second until the zombie is destroyed. Legendary attack animation.
+- **Special 2 — Snap:** Bites standard zombies in half. Insta-kills anything below mid-tier health.
+- **Synergy:** Dave on field = -20 essence cost and +30% damage boost
+- **Notes:** One of the most unique units in the game. The golf sweater is non-negotiable. Expensive alone, incredible value with Dave.
+
+#### Gus — The Lawn Mower Man
+- **Faction:** Berserkers
+- **Appearance:** Old Florida man, sunburned, straw hat, pushing a riding lawn mower
+- **Cost:** 20 essence
+- **Cooldown:** 11 seconds
+- **Health:** Moderate (the mower takes most hits)
+- **Weapon:** Riding lawn mower — runs over zombies
+- **Damage:** 180 per zombie run over, hits multiple in a line
+- **Special:** The mower can be destroyed (it takes damage separately) — when destroyed Gus continues fighting with a garden rake (50 damage, very slow)
+- **Notes:** The mower is the real unit. Protect it. A rageful old man with a rake is not the same.
+
+#### Ricky — Fireworks Guy
+- **Faction:** Berserkers
+- **Appearance:** Florida man in an American flag tank top holding a bundle of fireworks
+- **Cost:** 21 essence
+- **Cooldown:** 10 seconds
+- **Health:** Fragile
+- **Weapon:** Fireworks (thrown explosives)
+- **Damage:** 250 per firework, random bounce on landing — unpredictable blast radius
+- **Special:** Roman Candle — lights a roman candle that fires 8 shots in random directions dealing 100 each. Completely random. Can hit enemies or not. That's the point.
+- **Weakness:** Unpredictable. Sometimes brilliant. Sometimes wastes everything.
+- **Notes:** The chaos unit. In tight zombie clusters Roman Candle can be devastating. In open areas it might hit nothing. Florida Man energy perfectly translated to gameplay.
+
+#### Terry — The Swamp Man
+- **Faction:** Berserkers
+- **Appearance:** Large bearded Florida man, waders, mud-covered, wielding a boat oar
+- **Cost:** 23 essence
+- **Cooldown:** 12 seconds
+- **Health:** High
+- **Weapon:** Boat oar (130 damage, wide swing) + fishing net (thrown, immobilizes)
+- **Special:** Swamp Toss — picks up a zombie and throws it into the horde dealing 200 damage to the thrown zombie and 150 to everything it hits
+- **Notes:** Solid tank with a genuinely useful crowd control tool. Swamp Toss pairs great with Rosa or Santiago — immobilized airborne target is an easy shot.
+
+#### Karen
+- **Faction:** Berserkers
+- **Appearance:** Florida Karen — mom haircut, sunglasses on her head, carrying a Whole Foods bag full of improvised weapons
+- **Cost:** 16 essence
+- **Cooldown:** 8 seconds
+- **Health:** Low
+- **Weapon:** Whatever's in the bag — random each spawn (wine bottle, can of soup, a book, garden shears)
+- **Special:** Speak to the Manager — once per deployment lets out a shriek that stuns all nearby zombies for 2 seconds out of pure aggression
+- **Weakness:** Fragile and her weapon is random — you never know exactly what you're getting
+- **Notes:** Cheap, unpredictable, surprisingly effective. The stun is legitimately useful. Players either love her or can't stand her. Very Florida.
+
+---
+
+### WWE
+
+Early and early-mid game faction. Strong at the start, falls off hard in the late game when zombie health scales past what pure physical combat can handle.
+
+**Faction note:** WWE units deal 25% more damage when below 50% health — this helps them stay useful longer but doesn't fix the late game scaling issue.
+
+#### Fighter Marco
+- **Faction:** WWE
+- **Appearance:** Wrestler in trunks and boots, muscular, classic wrestler look
+- **Cost:** 18 essence
+- **Cooldown:** 9 seconds
+- **Health:** Moderate-high
+- **Weapon:** Fists — punches and wrestling moves
+- **Special — Legendary Headbutt:** 300 damage, stuns the target for 2 seconds. Cooldown 12 seconds.
+- **Weakness:** 300 damage falls off completely in late game (zombies reach 600-800+ health)
+- **Notes:** Carries the early game hard. By mid game he's support at best. Players who don't swap him out will regret it.
+
+#### Wrestler Jack
+- **Faction:** WWE
+- **Appearance:** Classic wrestler with championship belt — still wearing it into the apocalypse
+- **Cost:** 22 essence
+- **Cooldown:** 11 seconds
+- **Health:** Moderate-high
+- **Weapon:** Pistol (450 damage — way more than you'd expect from a wrestler), folding chair (melee, 85 damage)
+- **Special:** Championship Drop — bodyslam that deals 200 damage and knocks back everything in melee range
+- **Notes:** The best WWE unit. The pistol keeps him relevant into mid game unlike his faction mates. Players who invest in upgrades can stretch him into early-late game.
+
+#### Bob
+- **Faction:** WWE
+- **Appearance:** Skinny, clearly not a fighter, somehow ended up here
+- **Cost:** 10 essence
+- **Cooldown:** 6 seconds
+- **Health:** Glass pencil — dies to basically one hit from anything
+- **Weapon:** Slap (15 damage)
+- **Special:** None
+- **Notes:** The cheapest non-Billy unit in the game. Exists purely to waste zombie attention for half a second while you build up essence. Place him, accept his sacrifice, move on.
+
+#### The Champ — Rex Thunder
+- **Faction:** WWE
+- **Appearance:** Massive wrestler, championship title belt, pyrotechnics (yes, he carries them)
+- **Cost:** 28 essence
+- **Cooldown:** 15 seconds
+- **Health:** Very high for WWE
+- **Weapon:** Fists (170 damage), championship belt (110 whip damage, ranged)
+- **Special — Entrance Pyro:** On spawn releases a pyrotechnic blast dealing 300 fire damage to the nearest 5 zombies
+- **Notes:** The premium WWE unit. Entrance Pyro makes him immediately useful on spawn. His health lets him survive longer than the rest of the faction.
+
+#### Lucha Libre — El Diablo
+- **Faction:** WWE
+- **Appearance:** Masked luchador in red and black, incredibly fast
+- **Cost:** 20 essence
+- **Cooldown:** 10 seconds
+- **Health:** Low-moderate
+- **Weapon:** Flying kicks and arm drags (80 damage per hit, very fast attack speed)
+- **Speed:** Fastest WWE unit by far
+- **Special:** Springboard — launches off the nearest obstacle (truck, wall, barrier) and delivers a flying kick dealing 250 damage to a single target
+- **Notes:** Speed makes him more viable than most WWE units. He can hit and avoid retaliation. Best in early-mid game but the speed keeps him around longer than Marco or Bob.
+
+#### Tag Team — The Brothers (Sal & Lou)
+- **Faction:** WWE
+- **Appearance:** Two brothers in matching gear — one big, one lean
+- **Cost:** 30 essence (deploys both)
+- **Cooldown:** 18 seconds
+- **Health:** Moderate each
+- **Weapons:** Sal — power moves (200 damage, slow). Lou — quick strikes (70 damage, very fast).
+- **Special — Tag In:** Every 15 seconds one brother tags the other — the tagged brother gets a 20% damage boost for 8 seconds
+- **Notes:** WWE's version of The Twins. Losing one cuts their combo significantly. Sal tanks, Lou picks off anything Sal pushes back.
+
+---
+
+### CONSTRUCTION
+
+Tanky, hard-hitting, built for armored zombie variants. Their tools deal double damage to armored enemies — in levels with heavy armor zombie variants Construction becomes the go-to faction.
+
+#### Foreman Duke
+- **Faction:** Construction
+- **Appearance:** Stocky foreman in a hard hat and high-vis vest, carrying a clipboard and a nail gun
+- **Cost:** 20 essence
+- **Cooldown:** 10 seconds
+- **Health:** High (Construction passive)
+- **Weapon:** Nail gun (45 damage per nail, rapid fire — 8 nails per second), clipboard (melee joke weapon, 20 damage)
+- **Special — Work Order:** Passive. Construction units within range of Foreman Duke deal 10% more damage.
+- **Notes:** The budget Commander for Construction. The damage aura is weaker but he costs half. First Construction unit you should deploy.
+
+#### Jackhammer Joe
+- **Faction:** Construction
+- **Appearance:** Big guy in dusty work gear, operating a jackhammer
+- **Cost:** 26 essence
+- **Cooldown:** 13 seconds
+- **Health:** Very high
+- **Weapon:** Jackhammer
+- **Damage:** 150 per second continuous ground shaking, knocks back everything in front of him
+- **Special:** Ground Shatter — drives the jackhammer into the ground creating a shockwave that trips and stuns all ground zombies nearby for 3 seconds
+- **Weakness:** Slow, can't move and attack simultaneously
+- **Notes:** Incredible zoning unit. Ground Shatter is one of the best crowd control abilities against large zombie ground waves.
+
+#### Demolitions Dez
+- **Faction:** Construction
+- **Appearance:** Construction worker with a wrecking ball on a chain and a tool belt full of explosives
+- **Cost:** 30 essence
+- **Cooldown:** 17 seconds
+- **Health:** Moderate-high
+- **Weapon:** Wrecking ball chain (200 damage, wide swing), construction explosives
+- **Explosive damage:** 450 per charge, placed not thrown
+- **Special:** Controlled Demolition — plants an explosive on the largest zombie on the field — detonates after 3 seconds dealing 600 damage
+- **Notes:** Best Construction damage dealer. Controlled Demolition targets the priority threat automatically. Wrecking ball handles crowds while waiting for the explosive to cook.
+
+#### The Crane Operator — Big Terry
+- **Faction:** Construction
+- **Type:** Utility/support
+- **Appearance:** Construction worker in an orange vest, controls a remote for off-screen crane
+- **Cost:** 32 essence
+- **Cooldown:** 30 seconds
+- **Health:** Low
+- **Weapon:** Wrench (melee, 60 damage — he's not a fighter)
+- **Special — Crane Drop:** Calls in an off-screen crane that drops a massive steel beam dealing 800 damage to a large area. Single use per deployment (30 second cooldown after first use).
+- **Weakness:** Big Terry himself is fragile — keep him behind tanks
+- **Notes:** The crane drop is one of the most satisfying abilities in the game visually and mechanically. The 800 area damage is massive. Protect Big Terry at all costs.
+
+#### Concrete Carlos
+- **Faction:** Construction
+- **Appearance:** Burly construction worker covered in dried concrete, wears a concrete mixer backpack
+- **Cost:** 24 essence
+- **Cooldown:** 12 seconds
+- **Health:** High
+- **Weapon:** Concrete sprayer (covers zombies in fast-drying concrete)
+- **Damage:** 60 impact, but zombies covered in concrete slow to 20% movement speed for 5 seconds
+- **Special:** Cement Wall — sprays a barrier of concrete across the field that zombies must break through (2,000 health barrier, lasts until destroyed)
+- **Notes:** The best zoning unit in the Construction faction. Cement Wall buys critical time on defense missions. Pairs perfectly with any ranged unit behind it.
+
+#### Sparky
+- **Faction:** Construction
+- **Appearance:** Small electrician in work gear, hard hat with a light on it, electrical tool belt
+- **Cost:** 18 essence
+- **Cooldown:** 9 seconds
+- **Health:** Low-moderate
+- **Weapon:** Electrical drill (melee, 90 electrical damage), wire toss (ranged, 70 damage + briefly shocks)
+- **Special:** Power Surge — overloads his tools sending an electrical pulse that damages all metal-armored zombies for 300 (double damage vs armored = 600 effective)
+- **Notes:** Cheap electrical damage that synergizes with the Construction double-damage-on-armor passive. Essential against armored zombie variants.
+
+#### Wrecking Ball — Big Mike
+- **Faction:** Construction
+- **Appearance:** Enormous construction worker, no shirt, hard hat, literally just carries a wrecking ball in one hand
+- **Cost:** 35 essence
+- **Cooldown:** 22 seconds
+- **Health:** 10,000 — highest in Construction faction
+- **Weapon:** Wrecking ball (hand-held) — 350 per swing, massive knockback
+- **Special:** Full Swing — winds up for 2 seconds then releases a sweeping blow that hits EVERY zombie on the field simultaneously for 200 damage
+- **Weakness:** 2 second wind-up is a vulnerability window — fast zombies can interrupt
+- **Notes:** Full Swing is one of the best wave clear abilities in the game against non-armored zombies. Against armored zombies the Construction passive doubles his already high damage output.
+
+---
+
+### ANIMAL FACTION
+
+Cannot be infected. 20% faster movement. Best for mobile flanking strategies and economy (Sparkle's coin generation).
+
+#### Buddy — Gray Doberman *(legendary)*
+*(Already in main unit list — unit #3)*
+- **Faction:** Animal
+- **Role:** Fast retrieval, flanker, legendary late-game carry when maxed
+- **Notes:** The legendary Animal unit. Feels weak early. Max upgraded Buddy is an absolute beast.
+
+#### Sparkle — Diamond Pitbull
+- **Faction:** Animal
+- **Appearance:** Glittering diamond-coated pitbull — literally shines in light
+- **Cost:** 25 essence
+- **Cooldown:** 12 seconds
+- **Health:** High against blunt damage (diamond hardness), glass against sharp/blade damage (diamond brittleness)
+- **Weapon:** Bite attacks (110 damage per bite)
+- **Special:** Every kill generates coins/money for the player — passive income unit
+- **Damage type note:** Blunt zombies (clubs, fists) barely scratch her. Blade zombies (swords, claws, machetes) destroy her fast.
+- **Notes:** Primary economy unit. In long missions Sparkle's coin generation is significant. The diamond lore reason for the damage type vulnerability is perfect.
+
+#### Florida Gator *(see Berserkers above — dual faction)*
+
+#### Rex — Rottweiler
+- **Faction:** Animal
+- **Cost:** 20 essence
+- **Cooldown:** 10 seconds
+- **Health:** High
+- **Speed:** Moderate
+- **Special:** Charge — knocks back groups of zombies on spawn
+- **Notes:** Solid frontline tank for the Animal faction.
+
+#### Blaze — Red and Black German Shepherd
+- **Faction:** Animal
+- **Cost:** 18 essence
+- **Cooldown:** 9 seconds
+- **Health:** Moderate
+- **Speed:** Fast
+- **Special:** Fire bite — attacks briefly set zombies on fire (30 damage per second for 3 seconds)
+- **Notes:** Great early-mid game. Falls off late when zombie health scales past where a fire DoT matters.
+
+#### Ghost — White Husky
+- **Faction:** Animal
+- **Cost:** 16 essence
+- **Cooldown:** 8 seconds
+- **Health:** Low-moderate
+- **Speed:** Fast
+- **Special:** Silent movement — does not aggro additional zombies when repositioning. Camouflage in snow/fog levels (harder to target)
+- **Notes:** Utility animal. The silence passive is genuinely useful in levels where noise attracts zombie waves.
+
+#### Tank — Oversized Bulldog
+- **Faction:** Animal
+- **Cost:** 22 essence
+- **Cooldown:** 11 seconds
+- **Health:** Very high — highest base health in the animal faction besides Buddy maxed
+- **Speed:** Very slow
+- **Special:** Immovable for first 5 seconds after spawn — cannot be knocked back
+- **Notes:** The meatshield of the Animal faction. Slow but absorbs enormous damage. Buy time by throwing Tank into a horde.
+
+#### Pepper — Chihuahua
+- **Faction:** Animal
+- **Cost:** 8 essence — cheapest Animal unit
+- **Cooldown:** 5 seconds
+- **Health:** Glass
+- **Speed:** Extremely fast
+- **Special:** Bleed stacks — each bite applies a bleed that stacks up to 5 times (5 stacks = 50 damage per second). Annoying, relentless.
+- **Notes:** Useless alone. In groups of 3-4 Peppers the bleed stacks become genuinely threatening. Cheap enough to spam.
+
+#### Shadow — Black Labrador
+- **Faction:** Animal
+- **Cost:** 21 essence
+- **Cooldown:** 10 seconds
+- **Health:** Moderate
+- **Speed:** Fast
+- **Special:** Flanker — spawns behind the zombie line rather than the front. First bite from behind deals double damage.
+- **Notes:** Positioning unit. The rear spawn is unique — Shadow applies pressure from two directions simultaneously.
+
+#### Kong — Great Dane
+- **Faction:** Animal
+- **Cost:** 28 essence
+- **Cooldown:** 14 seconds
+- **Health:** High
+- **Speed:** Moderate
+- **Special — Body Slam:** Leaps and lands on a group of zombies dealing 300 area damage to everything underneath
+- **Notes:** The premium Animal faction bruiser. Body Slam is one of the better area damage abilities in the faction.
+
+---
+
+*All faction units saved. Total factions: 7. Dual faction units: Captain Faithful (Marines + PSS), Casey (Marines + Berserkers), Florida Gator (Animal + Berserkers).*
