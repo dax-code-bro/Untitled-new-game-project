@@ -1891,3 +1891,352 @@ Cannot be infected. 20% faster movement. Best for mobile flanking strategies and
 ---
 
 *All faction units saved. Total factions: 7. Dual faction units: Captain Faithful (Marines + PSS), Casey (Marines + Berserkers), Florida Gator (Animal + Berserkers).*
+
+---
+
+## DEAD ZONE — CAMPAIGN STORY SCRIPT
+
+---
+
+### CHAPTER 1: ASSEMBLY
+*(Recruitment dialogue already written above)*
+
+---
+
+### CHAPTER 2: THE FIRST MISSION
+
+*A collapsed city street. Zombies fill every block as far as the eye can see. The truck idles at the edge.*
+
+**Terry:** *(looking out the window)* That's a lot of them.
+
+**Briggs:** How many you think.
+
+**Terry:** Too many.
+
+**Cross:** Faithful. What's the plan.
+
+*Faithful is already stepping out of the truck.*
+
+**Faithful:** Stay close to the truck. Don't let them reach the generator.
+
+**Reaper:** And you?
+
+*Faithful rolls his neck. Cracks his knuckles.*
+
+**Faithful:** I'll clear the path.
+
+*He walks forward into the horde alone. Then he's airborne — flying straight through the crowd, ripping zombies apart with his bare hands, moving faster than anything that size should move. The team watches in silence.*
+
+**Terry:** *(quietly)* What is he.
+
+**Cross:** PSS file said enhanced strength, speed, flight. Limited compared to what they were trying to build but—
+
+**Terry:** That doesn't look limited.
+
+**Briggs:** He can still die. Remember that. He bleeds.
+
+**Reaper:** *(watching Faithful work)* He's just making sure he doesn't have to.
+
+*Twenty minutes later. The street is clear. Faithful lands in front of the truck, barely breathing hard. A gash on his arm. He's bleeding.*
+
+**Faithful:** *(to Briggs)* You were right. I bleed.
+
+**Briggs:** *(hands him a bandage)* Don't let it happen again.
+
+*They push deeper into the city.*
+
+---
+
+### CHAPTER 3: THE BUNKER
+
+*Underground. A reinforced door, military grade, half buried under rubble. The PSS insignia barely visible under years of grime.*
+
+*Faithful stops cold.*
+
+**Cross:** What is it.
+
+**Faithful:** *(quiet)* I know this door.
+
+**Terry:** From where.
+
+*Faithful doesn't answer. He steps forward and places his hand on the insignia.*
+
+**Faithful:** Everyone stay back.
+
+**Briggs:** Faithful—
+
+**Faithful:** I said stay back.
+
+*He pushes the door open alone.*
+
+*Darkness inside. Then — a shield comes screaming out of the dark and grazes Faithful's temple, drawing blood. He barely dodges.*
+
+*Commander charges out of the shadows — massive, armored, gas mask cracked, baton already swinging.*
+
+**Faithful:** WAIT—
+
+*Commander doesn't wait. He drives his shoulder into Faithful and slams him into the wall.*
+
+**Cross:** *(raising her shield)* MOVE—
+
+**Faithful:** *(shouting)* NOBODY MOVE. STAND DOWN.
+
+*Commander grabs Faithful by the throat and lifts him off the ground.*
+
+**Commander:** PSS facility. Unauthorized entry. Identify yourself.
+
+**Faithful:** *(struggling)* Captain. Faithful. Project PSS. Authorization code Sierra-Zero-Seven.
+
+*Commander freezes.*
+
+*A long silence.*
+
+**Commander:** *(slowly lowers him)* That code was decommissioned four years ago.
+
+**Faithful:** *(catching his breath)* I know. I wrote it.
+
+*Commander steps back. Studies him.*
+
+**Commander:** You're the one who built SAW.
+
+**Faithful:** Among other things.
+
+**Commander:** *(looks at the team behind Faithful)* Who are they.
+
+**Faithful:** My team.
+
+**Commander:** They're not PSS.
+
+**Faithful:** No. But they're alive, which is more than I can say for most people right now. *(beat)* You're not what I expected to find down here.
+
+**Commander:** What did you expect.
+
+**Faithful:** Equipment. Maybe bodies. Not— *(looks at him)* How long have you been down here.
+
+**Commander:** *(pause)* Long enough to stop counting.
+
+**Reaper:** *(from behind Faithful, studying Commander)* He's PSS. Like Prison Break.
+
+**Commander:** *(sharp look)* Don't compare me to those ones.
+
+**Faithful:** How many of you are left.
+
+**Commander:** I'm the last.
+
+*A deep, guttural groan echoes from somewhere deep in the bunker. Everyone tenses.*
+
+**Faithful:** What was that.
+
+**Commander:** *(completely calm)* Judging by the sound — that's either Flamethrower or AKA. Once you've been hearing them long enough you can tell them apart.
+
+**Cross:** I thought you said you were the last.
+
+**Commander:** *(quietly)* The last one worth counting.
+
+---
+
+### CHAPTER 4: WHAT'S LEFT OF THEM
+
+*Deeper in the bunker. A storage room. The door is ajar.*
+
+*Faithful pushes it open.*
+
+*Flamethrower and AKA are on the ground over Rook's body. Feasting. AKA's mask is missing. What's underneath it — nobody on the team speaks.*
+
+**Terry:** *(turns away)* God.
+
+**Cross:** *(hand on her shield)* Faithful—
+
+*Commander walks past all of them and stands in the doorway. He looks at Flamethrower and AKA for a long moment.*
+
+**Commander:** It got worse. After you stopped sending supply drops. *(beat)* The serum does things to the mind when they're not maintained. I held on. They didn't.
+
+**Faithful:** Who was he. *(gestures toward Rook)*
+
+**Commander:** Phantom Rook. He was the best of us. Quiet. Precise. He kept them calm for a long time. *(pause)* Until he couldn't anymore.
+
+*AKA looks up. Sees Faithful. Something flickers in his eyes — not recognition. Hunger.*
+
+*He lunges.*
+
+*Faithful catches him mid-air by the throat with one hand. Holds him there.*
+
+**Commander:** *(doesn't move)* He's gone. Whatever he was — it's not in there anymore.
+
+*Faithful looks at Commander.*
+
+**Commander:** *(flat)* Do what you have to do.
+
+*Faithful does.*
+
+*Flamethrower makes a sound — not a word, just a sound. Commander steps forward and stands between Flamethrower and the team.*
+
+**Faithful:** Commander—
+
+**Commander:** No.
+
+**Faithful:** He's not—
+
+**Commander:** I said no. *(turns to face Faithful)* AKA I can live with. Not him.
+
+*A long silence.*
+
+**Faithful:** *(quietly)* Okay.
+
+*He steps back. Commander kneels in front of Flamethrower.*
+
+**Commander:** *(barely above a whisper)* I've got you. You hear me? I've got you.
+
+*Flamethrower makes that sound again. Commander doesn't flinch.*
+
+---
+
+### CHAPTER 5: WHAT THE COMMANDER CARRIES
+
+*That night. Outside the bunker. Faithful sits on the truck hood. Commander approaches.*
+
+**Commander:** Your team is afraid of me.
+
+**Faithful:** They're cautious. There's a difference.
+
+**Commander:** *(sits)* AKA killed his own parents. Did you know that?
+
+**Faithful:** I heard rumors.
+
+**Commander:** It wasn't a rumor. He told me himself. Said it proved his loyalty to the program. Said family was a weakness. *(long pause)* I never understood that. I never knew mine. My real ones. And he had them and he just— *(stops)*
+
+**Faithful:** I'm sorry.
+
+**Commander:** Don't be sorry. Just— *(looks at him)* Did you ever have anyone? Before all this?
+
+*Faithful goes very still.*
+
+**Faithful:** *(quietly)* I don't... I don't remember. There might have been someone. I can't—*(touches his temple)* It's not there anymore.
+
+**Commander:** What do you mean it's not there.
+
+**Faithful:** I mean exactly that. There are gaps. Things that should be there that aren't. *(beat)* Someone made sure of it.
+
+*Commander studies him.*
+
+**Commander:** The program.
+
+**Faithful:** Probably.
+
+**Commander:** *(quietly)* What did they take from you.
+
+**Faithful:** *(stares at the sky)* I don't know. That's the worst part. I don't know what I'm missing.
+
+*Silence.*
+
+**Commander:** I used to talk to the walls down there. When it was just me. Tell them about the parents I never knew. Make up stories about what they might've been like. *(pause)* Stupid.
+
+**Faithful:** It's not stupid.
+
+**Commander:** It felt stupid.
+
+**Faithful:** It felt human. There's a difference.
+
+*Another silence. Longer this time.*
+
+**Commander:** I'll come with you. Wherever you're going.
+
+**Faithful:** You don't know where that is.
+
+**Commander:** Doesn't matter. *(stands)* Anywhere is better than down there.
+
+---
+
+### CHAPTER 6: THE SKULL
+
+*Midway through the campaign. A brutal battle. Faithful fighting a massive armored zombie variant — something new, something wrong, something that hits harder than anything they've faced.*
+
+*It gets through. A crushing blow to the side of Faithful's head.*
+
+*He goes down.*
+
+**Cross:** FAITHFUL—
+
+**Casey:** *(already moving toward him)* I've got him — EVERYONE HOLD THE LINE—
+
+*The team fights without him. When the battle ends Faithful is unconscious, his skull visibly damaged. Casey is kneeling over him, her hand pressed to the side of his head.*
+
+**Terry:** Is he—
+
+**Casey:** He's breathing. *(her voice is steady but her hands are shaking)* He's breathing.
+
+**Commander:** What do we do.
+
+**Casey:** We wait.
+
+*She doesn't leave his side.*
+
+---
+
+*Hours later. Faithful opens his eyes.*
+
+*Casey is still there.*
+
+*He looks at her. Really looks at her. Something shifts in his face — confusion first. Then something deeper. Something waking up.*
+
+**Faithful:** *(barely a whisper)* ...Casey.
+
+*She goes completely still.*
+
+**Faithful:** *(reaching up slowly)* Casey. You're — how are you—
+
+*His voice breaks.*
+
+**Casey:** *(not moving)* Faithful—
+
+**Faithful:** I watched you — they told me — I saw—*(sits up, takes her face in his hands)* How long. How long have you known.
+
+**Casey:** *(tears)* Since the beginning.
+
+**Faithful:** *(devastated)* Since the— you've been here this whole time and you didn't—
+
+**Casey:** I couldn't. You were finally okay. You were functioning and leading and I couldn't — I didn't want to be the thing that broke you again—
+
+**Faithful:** YOU are not the thing that would've broken me. LOSING you broke me. Having you back—*(pulls her in)* How are you alive. I watched—
+
+**Casey:** I don't fully know. I woke up and you were gone and I had nothing and I just — I kept moving. I kept surviving. And then I found your team and I thought if I could just stay close—
+
+**Faithful:** *(quiet, holding her)* I forgot you. They made me forget you and I am so sorry. I am so sorry.
+
+**Casey:** *(holds on)* You didn't forget me. They hid you from yourself. That's different.
+
+*Long silence.*
+
+**Faithful:** *(pulls back, looks at her)* There's something else. Something else I'm starting to remember. Casey — did we—*(stops)* Did we have a child.
+
+*Casey's breath catches.*
+
+**Casey:** ...Yes.
+
+**Faithful:** What happened to them.
+
+*Casey looks across the camp. Her eyes find Commander — sitting alone, sharpening his baton, unaware.*
+
+*She looks back at Faithful.*
+
+**Casey:** *(barely audible)* I'll tell you everything. I promise. Just — not yet. Let me figure out how to say it.
+
+*Faithful follows her gaze to Commander. Then back to her.*
+
+*Something is already assembling in his mind.*
+
+**Faithful:** *(quiet)* Casey.
+
+**Casey:** Not yet.
+
+*He nods slowly. Holds her hand.*
+
+*Across the camp Commander looks up — catches Faithful looking at him. Nods once. Goes back to sharpening.*
+
+*He has no idea.*
+
+---
+
+*[TO BE CONTINUED — MORE MISSIONS AND THE COMMANDER REVEAL COMING LATER]*
+
+---
