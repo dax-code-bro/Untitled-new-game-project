@@ -4,9 +4,10 @@ legend:
   description: "The ultimate AI — conversation, storytelling, and creative production"
 
 ai:
-  primary: claude
-  fallback: openai
+  primary: atom
+  fallback: claude
   models:
+    atom: "atom-32b"
     claude: "claude-opus-4-7"
     openai: "gpt-4o"
   temperature: 0.85
