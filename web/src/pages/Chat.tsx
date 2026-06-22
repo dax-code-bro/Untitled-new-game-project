@@ -25,34 +25,79 @@ export default function Chat() {
     const text = input.trim();
     if (!text || loading) return;
     setInput("");
-    setMessages((m) => [...m, { role: "user", content: text }]);
+
+    const userMessage: Message = { role: "user", content: text };
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
     setLoading(true);
 
-    const res = await fetch("http://localhost:8000/chat/stream", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: text, mode }),
-    });
+    // history = everything except the last user message (which we pass as `message`)
+    const history = updatedMessages.slice(0, -1).map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
 
+    let res: Response;
+    try {
+      res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text, mode, history }),
+      });
+    } catch {
+      setMessages((m) => [
+        ...m,
+        { role: "assistant", content: "Connection failed. Check your internet and try again." },
+      ]);
+      setLoading(false);
+      return;
+    }
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: "Something went wrong." }));
+      setMessages((m) => [
+        ...m,
+        { role: "assistant", content: `Error: ${err.error ?? "Failed to reach Legend."}` },
+      ]);
+      setLoading(false);
+      return;
+    }
+
+    // Add an empty assistant message that we'll fill in as chunks arrive
     setMessages((m) => [...m, { role: "assistant", content: "" }]);
+
     const reader = res.body!.getReader();
     const decoder = new TextDecoder();
+    let buffer = "";
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      const lines = decoder.decode(value).split("\n");
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      // Keep the last (possibly incomplete) line in the buffer
+      buffer = lines.pop() ?? "";
+
       for (const line of lines) {
-        if (line.startsWith("data: ")) {
-          const data = line.slice(6);
-          if (data === "[DONE]") break;
-          setMessages((m) => {
-            const last = m[m.length - 1];
-            return [...m.slice(0, -1), { ...last, content: last.content + data }];
-          });
+        if (!line.startsWith("data: ")) continue;
+        const data = line.slice(6).trim();
+        if (data === "[DONE]") break;
+        try {
+          const parsed = JSON.parse(data);
+          const chunk: string = parsed.choices?.[0]?.delta?.content ?? "";
+          if (chunk) {
+            setMessages((m) => {
+              const last = m[m.length - 1];
+              return [...m.slice(0, -1), { ...last, content: last.content + chunk }];
+            });
+          }
+        } catch {
+          // skip malformed chunks
         }
       }
     }
+
     setLoading(false);
   }
 
@@ -78,6 +123,12 @@ export default function Chat() {
             <div className="message-content">{m.content}</div>
           </div>
         ))}
+        {loading && (
+          <div className="message assistant">
+            <span className="message-label">Legend</span>
+            <div className="message-content" style={{ opacity: 0.5 }}>thinking...</div>
+          </div>
+        )}
         <div ref={bottomRef} />
       </div>
 
