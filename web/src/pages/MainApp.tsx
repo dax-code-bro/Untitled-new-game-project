@@ -3,53 +3,66 @@ import Chat from "./Chat";
 import Story from "./Story";
 import Creative from "./Creative";
 import Studio from "./Studio";
-import { useAuth } from "../context/AuthContext";
 import "../App.css";
 
-type Tab = "chat" | "story" | "creative" | "studio";
+type View = "chat" | "story" | "creative" | "studio";
+
+const NAV_ITEMS: { id: View; label: string; icon: string }[] = [
+  { id: "chat",     label: "Legend AI",   icon: "♛" },
+  { id: "story",    label: "Story",        icon: "📖" },
+  { id: "creative", label: "3D & Assets",  icon: "🎨" },
+  { id: "studio",   label: "Studio",       icon: "🎬" },
+];
 
 export default function MainApp() {
-  const [tab, setTab] = useState<Tab>("chat");
-  const { signOut } = useAuth();
+  const [view, setView] = useState<View>("chat");
 
   return (
     <div className="app">
-      <header className="header">
-        <div className="logo">
+      {/* ── Sidebar ── */}
+      <aside className="sidebar">
+        <div className="sidebar-logo">
           <span className="logo-crown">♛</span>
           <span className="logo-text">LEGEND</span>
         </div>
-        <nav className="nav">
-          {(["chat", "story", "creative", "studio"] as Tab[]).map((t) => (
+
+        <nav className="sidebar-nav">
+          {NAV_ITEMS.map((item) => (
             <button
-              key={t}
-              className={`nav-btn ${tab === t ? "active" : ""}`}
-              onClick={() => setTab(t)}
+              key={item.id}
+              className={`sidebar-btn ${view === item.id ? "active" : ""}`}
+              onClick={() => setView(item.id)}
             >
-              {t.charAt(0).toUpperCase() + t.slice(1)}
+              <span className="sidebar-icon">{item.icon}</span>
+              <span className="sidebar-label">{item.label}</span>
             </button>
           ))}
+
+          <div className="sidebar-section-label">Coming Soon</div>
+          <button className="sidebar-btn disabled" disabled>
+            <span className="sidebar-icon">💀</span>
+            <span className="sidebar-label">Dead Zone</span>
+          </button>
+          <button className="sidebar-btn disabled" disabled>
+            <span className="sidebar-icon">🗂️</span>
+            <span className="sidebar-label">Files</span>
+          </button>
         </nav>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+
+        <div className="sidebar-footer">
           <div className="status">
             <span className="status-dot" />
-            Online
+            <span>Online</span>
           </div>
-          <button
-            className="nav-btn"
-            onClick={signOut}
-            style={{ fontSize: 12, color: "var(--text-dim)" }}
-          >
-            Sign out
-          </button>
         </div>
-      </header>
+      </aside>
 
+      {/* ── Main Content ── */}
       <main className="main">
-        {tab === "chat" && <Chat />}
-        {tab === "story" && <Story />}
-        {tab === "creative" && <Creative />}
-        {tab === "studio" && <Studio />}
+        {view === "chat"     && <Chat />}
+        {view === "story"    && <Story />}
+        {view === "creative" && <Creative />}
+        {view === "studio"   && <Studio />}
       </main>
     </div>
   );
