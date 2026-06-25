@@ -1,4 +1,4 @@
-export const config = { runtime: "edge" };
+export const config = { maxDuration: 30 };
 
 const SYSTEM_PROMPT = `You are Legend — the ultimate AI.
 
@@ -73,7 +73,7 @@ export default async function handler(req: Request): Promise<Response> {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${atomKey}` },
         body: JSON.stringify({ model: "atom-32b", messages: fullMessages, stream: true, temperature: 0.85, max_tokens: 4096 }),
-        signal: withTimeout(8000),
+        signal: withTimeout(5000),
       });
       if (res.ok) return new Response(res.body, { headers: SSE_HEADERS });
     } catch { /* next */ }
@@ -87,7 +87,7 @@ export default async function handler(req: Request): Promise<Response> {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-api-key": anthropicKey, "anthropic-version": "2023-06-01" },
         body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 4096, system: systemPrompt, messages, stream: true }),
-        signal: withTimeout(8000),
+        signal: withTimeout(5000),
       });
       if (res.ok) {
         const { readable, writable } = new TransformStream();
@@ -131,7 +131,7 @@ export default async function handler(req: Request): Promise<Response> {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${groqKey}` },
         body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages: fullMessages, stream: true, temperature: 0.85, max_tokens: 4096 }),
-        signal: withTimeout(8000),
+        signal: withTimeout(5000),
       });
       if (res.ok) return new Response(res.body, { headers: SSE_HEADERS });
     } catch { /* next */ }
@@ -143,7 +143,7 @@ export default async function handler(req: Request): Promise<Response> {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ model: "openai", messages: fullMessages, stream: false, temperature: 0.85, max_tokens: 2048 }),
-      signal: withTimeout(15000),
+      signal: withTimeout(10000),
     });
     if (res.ok) {
       const data = await res.json();
@@ -156,7 +156,7 @@ export default async function handler(req: Request): Promise<Response> {
   try {
     const prompt = messages.map(m => `${m.role === "user" ? "User" : "Legend"}: ${m.content}`).join("\n") + "\nLegend:";
     const res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(prompt)}`, {
-      signal: withTimeout(15000),
+      signal: withTimeout(10000),
     });
     if (res.ok) {
       const text = await res.text();
