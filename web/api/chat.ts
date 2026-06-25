@@ -42,7 +42,9 @@ function textToSSE(text: string): Response {
 }
 
 function withTimeout(ms: number): AbortSignal {
-  return AbortSignal.timeout(ms);
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), ms);
+  return controller.signal;
 }
 
 export default async function handler(req: Request): Promise<Response> {
