@@ -205,12 +205,36 @@ export default async function handler(req: Request): Promise<Response> {
     }
   }
 
-  // ── No backend configured ───────────────────────────────────────
-  return new Response(
-    JSON.stringify({
-      error:
-        "No AI backend configured. Add GROQ_API_KEY (free at console.groq.com) to your Vercel environment variables.",
+  // ── Pollinations (free, no key required) ────────────────────────
+  const pollinationsMessages = [
+    { role: "system", content: systemPrompt },
+    ...messages,
+  ];
+
+  const upstream = await fetch("https://text.pollinations.ai/openai", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "openai",
+      messages: pollinationsMessages,
+      stream: true,
+      temperature: 0.85,
+      max_tokens: 4096,
     }),
-    { status: 500, headers: { "Content-Type": "application/json" } }
+  });
+
+  if (upstream.ok) {
+    return new Response(upstream.body, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",
+      },
+    });
+  }
+
+  return new Response(
+    JSON.stringify({ error: "All AI backends unavailable. Try again in a moment." }),
+    { status: 503, headers: { "Content-Type": "application/json" } }
   );
 }
