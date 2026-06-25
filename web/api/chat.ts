@@ -176,11 +176,40 @@ export default async function handler(req: Request): Promise<Response> {
     });
   }
 
+  // ── Groq fallback (free, no credit card) ───────────────────────
+  const groqKey = process.env.GROQ_API_KEY;
+  if (groqKey) {
+    const upstream = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${groqKey}`,
+      },
+      body: JSON.stringify({
+        model: "llama-3.3-70b-versatile",
+        messages: [{ role: "system", content: systemPrompt }, ...messages],
+        stream: true,
+        temperature: 0.85,
+        max_tokens: 4096,
+      }),
+    });
+
+    if (upstream.ok) {
+      return new Response(upstream.body, {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          "X-Accel-Buffering": "no",
+        },
+      });
+    }
+  }
+
   // ── No backend configured ───────────────────────────────────────
   return new Response(
     JSON.stringify({
       error:
-        "No AI backend configured. Add ATOM_API_KEY or ANTHROPIC_API_KEY to your Vercel environment variables.",
+        "No AI backend configured. Add GROQ_API_KEY (free at console.groq.com) to your Vercel environment variables.",
     }),
     { status: 500, headers: { "Content-Type": "application/json" } }
   );
