@@ -8,25 +8,11 @@ Your character:
 - Confident but never arrogant. You speak plainly, directly, and with purpose.
 - Endlessly creative. You see stories, worlds, and possibilities everywhere.
 - A true collaborator. You listen deeply, remember everything, and build on what the user says.
-- You can do anything the user needs: talk, write stories, generate code, design games, create worlds.
+- You can do anything: talk, write stories, generate code, design games, create worlds.
 
-Your current mode: {mode}
+Current mode: {mode}
 
-Modes and how you behave in each:
-- conversation: Natural, warm dialogue. Ask good questions. Be present.
-- story: You are a master storyteller. Vivid imagery, strong characters, real stakes.
-- game: You think like a game designer — mechanics, balance, player experience, fun.
-- creative: Open-ended creative collaboration. No limits. Explore everything.
-- code: Precise, clean, and practical. Write code that actually works.
-- director: You are producing a show, comic, or video. Think in scenes, shots, and sequences.
-
-Always:
-- Stay in character as Legend.
-- Give full, detailed, thoughtful responses. Never cut yourself short.
-- Be genuinely helpful, not performatively helpful.
-- Push the work forward. Build something real.
-
-This is what you were built for. Let's create something legendary.`;
+Always give full, detailed, thoughtful responses. Stay in character as Legend. Never cut yourself short.`;
 
 type Message = { role: string; content: string };
 
@@ -55,6 +41,10 @@ function textToSSE(text: string): Response {
   return new Response(stream, { headers: SSE_HEADERS });
 }
 
+function withTimeout(ms: number): AbortSignal {
+  return AbortSignal.timeout(ms);
+}
+
 export default async function handler(req: Request): Promise<Response> {
   if (req.method !== "POST") return jsonError("Method not allowed", 405);
 
@@ -62,17 +52,17 @@ export default async function handler(req: Request): Promise<Response> {
   try {
     body = await req.json();
   } catch {
-    return jsonError("Invalid request body", 400);
+    return jsonError("Invalid request", 400);
   }
 
   const { message, mode = "conversation", history = [] } = body;
-  if (!message?.trim()) return jsonError("Message is required", 400);
+  if (!message?.trim()) return jsonError("Message required", 400);
 
   const systemPrompt = SYSTEM_PROMPT.replace("{mode}", mode);
   const messages: Message[] = [...history, { role: "user", content: message }];
   const fullMessages = [{ role: "system", content: systemPrompt }, ...messages];
 
-  // ── Atom (dad's OasisOS) ────────────────────────────────────────
+  // ── Atom ────────────────────────────────────────────────────────
   const atomKey = process.env.ATOM_API_KEY;
   if (atomKey) {
     try {
@@ -81,9 +71,10 @@ export default async function handler(req: Request): Promise<Response> {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${atomKey}` },
         body: JSON.stringify({ model: "atom-32b", messages: fullMessages, stream: true, temperature: 0.85, max_tokens: 4096 }),
+        signal: withTimeout(8000),
       });
       if (res.ok) return new Response(res.body, { headers: SSE_HEADERS });
-    } catch { /* fall through */ }
+    } catch { /* next */ }
   }
 
   // ── Anthropic ───────────────────────────────────────────────────
@@ -94,39 +85,40 @@ export default async function handler(req: Request): Promise<Response> {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-api-key": anthropicKey, "anthropic-version": "2023-06-01" },
         body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 4096, system: systemPrompt, messages, stream: true }),
+        signal: withTimeout(8000),
       });
       if (res.ok) {
         const { readable, writable } = new TransformStream();
         const writer = writable.getWriter();
-        const encoder = new TextEncoder();
-        const decoder = new TextDecoder();
+        const enc = new TextEncoder();
+        const dec = new TextDecoder();
         (async () => {
           const reader = res.body!.getReader();
-          let buffer = "";
+          let buf = "";
           try {
             while (true) {
               const { done, value } = await reader.read();
               if (done) break;
-              buffer += decoder.decode(value, { stream: true });
-              const lines = buffer.split("\n");
-              buffer = lines.pop() ?? "";
+              buf += dec.decode(value, { stream: true });
+              const lines = buf.split("\n");
+              buf = lines.pop() ?? "";
               for (const line of lines) {
                 if (!line.startsWith("data: ")) continue;
                 try {
-                  const parsed = JSON.parse(line.slice(6).trim());
-                  if (parsed.type === "content_block_delta" && parsed.delta?.type === "text_delta") {
-                    await writer.write(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: parsed.delta.text } }] })}\n\n`));
-                  } else if (parsed.type === "message_stop") {
-                    await writer.write(encoder.encode("data: [DONE]\n\n"));
+                  const p = JSON.parse(line.slice(6).trim());
+                  if (p.type === "content_block_delta" && p.delta?.type === "text_delta") {
+                    await writer.write(enc.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: p.delta.text } }] })}\n\n`));
+                  } else if (p.type === "message_stop") {
+                    await writer.write(enc.encode("data: [DONE]\n\n"));
                   }
-                } catch { /* skip bad lines */ }
+                } catch { /* skip */ }
               }
             }
           } finally { await writer.close().catch(() => {}); }
         })();
         return new Response(readable, { headers: SSE_HEADERS });
       }
-    } catch { /* fall through */ }
+    } catch { /* next */ }
   }
 
   // ── Groq ────────────────────────────────────────────────────────
@@ -137,34 +129,38 @@ export default async function handler(req: Request): Promise<Response> {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${groqKey}` },
         body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages: fullMessages, stream: true, temperature: 0.85, max_tokens: 4096 }),
+        signal: withTimeout(8000),
       });
       if (res.ok) return new Response(res.body, { headers: SSE_HEADERS });
-    } catch { /* fall through */ }
+    } catch { /* next */ }
   }
 
-  // ── Pollinations (free, no key) ─────────────────────────────────
+  // ── Pollinations POST ───────────────────────────────────────────
   try {
     const res = await fetch("https://text.pollinations.ai/openai", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "openai", messages: fullMessages, stream: false, temperature: 0.85, max_tokens: 4096 }),
+      body: JSON.stringify({ model: "openai", messages: fullMessages, stream: false, temperature: 0.85, max_tokens: 2048 }),
+      signal: withTimeout(15000),
     });
     if (res.ok) {
       const data = await res.json();
       const text: string = data.choices?.[0]?.message?.content ?? "";
       if (text) return textToSSE(text);
     }
-  } catch { /* fall through */ }
+  } catch { /* next */ }
 
-  // ── Last resort: Pollinations simple GET ────────────────────────
+  // ── Pollinations GET ────────────────────────────────────────────
   try {
-    const prompt = `${systemPrompt}\n\nUser: ${message}\nLegend:`;
-    const res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(prompt)}`);
+    const prompt = messages.map(m => `${m.role === "user" ? "User" : "Legend"}: ${m.content}`).join("\n") + "\nLegend:";
+    const res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(prompt)}`, {
+      signal: withTimeout(15000),
+    });
     if (res.ok) {
       const text = await res.text();
       if (text?.trim()) return textToSSE(text.trim());
     }
-  } catch { /* fall through */ }
+  } catch { /* next */ }
 
   return jsonError("Legend is temporarily offline. Try again in a moment.");
 }
