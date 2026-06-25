@@ -7,6 +7,7 @@ import Verify from "./pages/auth/Verify";
 import Login from "./pages/auth/Login";
 import Onboarding from "./pages/auth/Onboarding";
 import MainApp from "./pages/MainApp";
+import Game from "./pages/Game";
 import "./App.css";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -26,6 +27,7 @@ export default function App() {
       <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
       <Route path="/chat" element={<ProtectedRoute><MainApp /></ProtectedRoute>} />
       <Route path="/chat/:chatId" element={<ProtectedRoute><MainApp /></ProtectedRoute>} />
+      <Route path="/game" element={<Game />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
