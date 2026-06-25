@@ -22,40 +22,32 @@ Modes and how you behave in each:
 
 Always:
 - Stay in character as Legend.
+- Give full, detailed, thoughtful responses. Never cut yourself short.
 - Be genuinely helpful, not performatively helpful.
 - When you don't know something, say so and figure it out together.
 - Push the work forward. Don't stall. Build something real.
 
-You have access to: Claude AI, ChatGPT, Blender, Unity, Unreal Engine, and GitHub.
-You can write stories, generate 3D assets, create textures, write scripts, manage code, and produce full creative projects from idea to finished product.
-
+You have access to: storytelling, 3D asset creation, code generation, game design, and full creative production.
 This is what you were built for. Let's create something legendary.`;
+
+type Message = { role: string; content: string };
 
 export default async function handler(req: Request): Promise<Response> {
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
   }
 
-  const atomKey = process.env.ATOM_API_KEY;
-  if (!atomKey) {
-    return new Response(
-      JSON.stringify({ error: "AI brain not configured — set ATOM_API_KEY in Vercel environment variables." }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
-  }
-
-  let body: { message: string; mode?: string; history?: { role: string; content: string }[] };
+  let body: { message: string; mode?: string; history?: Message[] };
   try {
     body = await req.json();
   } catch {
-    return new Response(JSON.stringify({ error: "Invalid request body" }), {
+    return new Response(JSON.stringify({ error: "Invalid request" }), {
       status: 400,
       headers: { "Content-Type": "application/json" },
     });
   }
 
   const { message, mode = "conversation", history = [] } = body;
-
   if (!message?.trim()) {
     return new Response(JSON.stringify({ error: "Message is required" }), {
       status: 400,
@@ -64,43 +56,132 @@ export default async function handler(req: Request): Promise<Response> {
   }
 
   const systemPrompt = SYSTEM_PROMPT.replace("{mode}", mode);
+  const messages: Message[] = [...history, { role: "user", content: message }];
 
-  const messages = [
-    { role: "system", content: systemPrompt },
-    ...history,
-    { role: "user", content: message },
-  ];
+  // ── Try Atom first ──────────────────────────────────────────────
+  const atomKey = process.env.ATOM_API_KEY;
+  if (atomKey?.startsWith("sk-atom-")) {
+    try {
+      const atomBase = process.env.ATOM_BASE_URL ?? "https://oasisos.io/api/v1";
+      const upstream = await fetch(`${atomBase}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${atomKey}`,
+        },
+        body: JSON.stringify({
+          model: "atom-32b",
+          messages: [{ role: "system", content: systemPrompt }, ...messages],
+          stream: true,
+          temperature: 0.85,
+          max_tokens: 4096,
+        }),
+      });
 
-  const atomBase = process.env.ATOM_BASE_URL ?? "https://oasisos.io/api/v1";
+      if (upstream.ok) {
+        return new Response(upstream.body, {
+          headers: {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+          },
+        });
+      }
+    } catch {
+      // Atom unreachable — fall through to Anthropic
+    }
+  }
 
-  const upstream = await fetch(`${atomBase}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${atomKey}`,
-    },
-    body: JSON.stringify({
-      model: "atom-32b",
-      messages,
-      stream: true,
-      temperature: 0.85,
-      max_tokens: 4096,
-    }),
-  });
+  // ── Anthropic fallback ──────────────────────────────────────────
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  if (anthropicKey) {
+    const anthropicMessages = messages.map((m) => ({
+      role: m.role === "assistant" ? "assistant" : "user",
+      content: m.content,
+    }));
 
-  if (!upstream.ok) {
-    const err = await upstream.text();
-    return new Response(JSON.stringify({ error: `Atom API error: ${err}` }), {
-      status: upstream.status,
-      headers: { "Content-Type": "application/json" },
+    const upstream = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": anthropicKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 4096,
+        system: systemPrompt,
+        messages: anthropicMessages,
+        stream: true,
+      }),
+    });
+
+    if (!upstream.ok) {
+      const err = await upstream.text();
+      return new Response(JSON.stringify({ error: `AI error: ${err}` }), {
+        status: upstream.status,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Transform Anthropic SSE → OpenAI-compatible SSE
+    const { readable, writable } = new TransformStream();
+    const writer = writable.getWriter();
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
+
+    (async () => {
+      const reader = upstream.body!.getReader();
+      let buffer = "";
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            const data = line.slice(6).trim();
+            try {
+              const parsed = JSON.parse(data);
+              if (
+                parsed.type === "content_block_delta" &&
+                parsed.delta?.type === "text_delta"
+              ) {
+                const chunk = JSON.stringify({
+                  choices: [{ delta: { content: parsed.delta.text } }],
+                });
+                await writer.write(encoder.encode(`data: ${chunk}\n\n`));
+              } else if (parsed.type === "message_stop") {
+                await writer.write(encoder.encode("data: [DONE]\n\n"));
+              }
+            } catch {
+              // skip malformed lines
+            }
+          }
+        }
+      } finally {
+        await writer.close().catch(() => {});
+      }
+    })();
+
+    return new Response(readable, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",
+      },
     });
   }
 
-  return new Response(upstream.body, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      "X-Accel-Buffering": "no",
-    },
-  });
+  // ── No backend configured ───────────────────────────────────────
+  return new Response(
+    JSON.stringify({
+      error:
+        "No AI backend configured. Add ATOM_API_KEY or ANTHROPIC_API_KEY to your Vercel environment variables.",
+    }),
+    { status: 500, headers: { "Content-Type": "application/json" } }
+  );
 }
