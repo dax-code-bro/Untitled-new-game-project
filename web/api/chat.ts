@@ -60,7 +60,7 @@ export default async function handler(req: Request): Promise<Response> {
 
   // ── Try Atom first ──────────────────────────────────────────────
   const atomKey = process.env.ATOM_API_KEY;
-  if (atomKey?.startsWith("sk-atom-")) {
+  if (atomKey) {
     try {
       const atomBase = process.env.ATOM_BASE_URL ?? "https://oasisos.io/api/v1";
       const upstream = await fetch(`${atomBase}/chat/completions`, {
