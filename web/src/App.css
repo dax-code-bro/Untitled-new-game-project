@@ -31,6 +31,24 @@ body {
   height: 100vh;
 }
 
+/* ── Main wrapper ── */
+.main-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Mobile top bar (hidden on desktop) ── */
+.mobile-topbar {
+  display: none;
+}
+
+/* ── Sidebar overlay (hidden on desktop) ── */
+.sidebar-overlay {
+  display: none;
+}
+
 /* ── Sidebar ── */
 .sidebar {
   width: 220px;
@@ -341,4 +359,63 @@ select:focus { border-color: var(--gold-dark); }
   height: 100%;
   background: var(--gold);
   transition: width 0.3s ease;
+}
+
+/* ── Mobile responsive (≤ 768px) ── */
+@media (max-width: 768px) {
+  /* Sidebar slides in from the left as an overlay */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: -260px;
+    width: 260px;
+    height: 100%;
+    z-index: 100;
+    transition: left 0.25s ease;
+  }
+
+  .sidebar.sidebar-open {
+    left: 0;
+  }
+
+  /* Dim background when sidebar is open */
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 99;
+  }
+
+  /* Show the top bar with hamburger */
+  .mobile-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    height: 52px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .mobile-menu-btn {
+    background: none;
+    border: none;
+    color: var(--gold);
+    font-size: 22px;
+    cursor: pointer;
+    padding: 8px;
+    line-height: 1;
+  }
+
+  /* Full width chat on mobile */
+  .page {
+    max-width: 100%;
+    padding: 14px;
+  }
+
+  .message {
+    max-width: 92%;
+  }
 }
