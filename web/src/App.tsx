@@ -1,5 +1,4 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import { useAuth } from "./context/AuthContext";
 
 import Landing from "./pages/auth/Landing";
 import CreateAccount from "./pages/auth/CreateAccount";
@@ -9,13 +8,6 @@ import Onboarding from "./pages/auth/Onboarding";
 import MainApp from "./pages/MainApp";
 import "./App.css";
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-  if (loading) return <div className="auth-page"><div style={{ color: "var(--gold)" }}>♛</div></div>;
-  if (!user) return <Navigate to="/" replace />;
-  return <>{children}</>;
-}
-
 export default function App() {
   return (
     <Routes>
@@ -23,9 +15,9 @@ export default function App() {
       <Route path="/create-account" element={<CreateAccount />} />
       <Route path="/verify" element={<Verify />} />
       <Route path="/login" element={<Login />} />
-      <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
-      <Route path="/chat" element={<ProtectedRoute><MainApp /></ProtectedRoute>} />
-      <Route path="/chat/:chatId" element={<ProtectedRoute><MainApp /></ProtectedRoute>} />
+      <Route path="/onboarding" element={<Onboarding />} />
+      <Route path="/chat" element={<MainApp />} />
+      <Route path="/chat/:chatId" element={<MainApp />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
