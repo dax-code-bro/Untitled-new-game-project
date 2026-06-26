@@ -76,6 +76,13 @@
   .chip .chip-x{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:15px;padding:0 2px}
   .chip .chip-x:hover{color:#e06}
   .att-thumb{max-width:200px;max-height:200px;border-radius:6px;margin-top:8px;display:block}
+  .stop-btn{width:42px;height:42px;flex-shrink:0;border-radius:var(--radius);border:1px solid #6a1f2a;background:#2a0f14;color:#ff6b81;font-size:16px;cursor:pointer;transition:all .15s}
+  .stop-btn:hover{background:#3a151c;border-color:#9a2f3a}
+  .send.thinking{background:var(--surface-3);color:var(--gold);cursor:default}
+  .think-wrap{margin-bottom:8px}
+  .think-toggle{display:inline-flex;align-items:center;gap:6px;background:rgba(201,168,76,.08);border:1px solid var(--gold-dark);color:var(--gold);border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;font-family:inherit}
+  .think-toggle:hover{background:rgba(201,168,76,.16)}
+  .think-content{margin-top:8px;padding:10px 12px;background:#0d0d0d;border-left:2px solid var(--gold-dark);border-radius:4px;font-size:13px;line-height:1.6;color:var(--text-dim);white-space:pre-wrap}
 
   /* Code preview */
   .preview-box{display:none;flex-direction:column;border:1px solid var(--gold-dark);border-radius:var(--radius);margin:0 18px 8px;overflow:hidden}
@@ -160,6 +167,7 @@
           <button class="attach-btn" id="chatAttach" title="Attach photo, video, or file">+</button>
           <textarea id="chatInput" rows="1" placeholder="Talk to Legend..."></textarea>
           <button class="send" id="chatSend">Send</button>
+          <button class="stop-btn" id="chatStop" hidden title="Stop Legend">✕</button>
         </div>
       </div>
     </div>
@@ -182,6 +190,7 @@
           <button class="attach-btn" id="codeAttach" title="Attach photo, video, or file">+</button>
           <textarea id="codeInput" rows="1" placeholder="Describe what to build (e.g. 'a 2D space shooter game')..."></textarea>
           <button class="send" id="codeSend">Build</button>
+          <button class="stop-btn" id="codeStop" hidden title="Stop Legend">✕</button>
         </div>
       </div>
     </div>
@@ -232,6 +241,7 @@
             <button class="attach-btn" id="projAttach" title="Attach photo, video, or file">+</button>
             <textarea id="projInput" rows="1" placeholder="Talk to Legend (shared project memory)..."></textarea>
             <button class="send" id="projSend">Send</button>
+            <button class="stop-btn" id="projStop" hidden title="Stop Legend">✕</button>
           </div>
         </div>
       </div>
@@ -274,6 +284,54 @@
     return '';
   }
 
+  // Separate Legend's <think> reasoning from the final answer as it streams.
+  function splitThink(text){
+    const open=text.indexOf('<think>');
+    if(open===-1) return {think:'', answer:text};
+    const close=text.indexOf('</think>');
+    if(close===-1) return {think:text.slice(open+7), answer:''};
+    return {think:text.slice(open+7,close), answer:text.slice(0,open)+text.slice(close+8)};
+  }
+
+  // Shrink a photo before sending so analysis is fast (smaller upload).
+  function downscaleImage(file, max=768, quality=0.8){
+    return new Promise((resolve,reject)=>{
+      const url=URL.createObjectURL(file); const img=new Image();
+      img.onload=()=>{ const w=img.naturalWidth||img.width, h=img.naturalHeight||img.height;
+        const scale=Math.min(1, max/Math.max(w,h));
+        const cw=Math.max(1,Math.round(w*scale)), ch=Math.max(1,Math.round(h*scale));
+        const c=document.createElement('canvas'); c.width=cw; c.height=ch;
+        c.getContext('2d').drawImage(img,0,0,cw,ch);
+        URL.revokeObjectURL(url);
+        try{ resolve(c.toDataURL('image/jpeg',quality)); }catch(_){ reject(new Error('canvas')); } };
+      img.onerror=()=>{ URL.revokeObjectURL(url); reject(new Error('img')); };
+      img.src=url;
+    });
+  }
+
+  // A bot bubble that streams, with a collapsible "thought process" panel.
+  function createStreamingBubble(container){
+    const wrap=document.createElement('div'); wrap.className='msg bot';
+    const label=document.createElement('span'); label.className='mlabel'; label.textContent='Legend';
+    const bubble=document.createElement('div'); bubble.className='bubble';
+    const thinkWrap=document.createElement('div'); thinkWrap.className='think-wrap'; thinkWrap.style.display='none';
+    const toggle=document.createElement('button'); toggle.className='think-toggle'; toggle.textContent='💭 Legend is thinking…';
+    const thinkContent=document.createElement('div'); thinkContent.className='think-content'; thinkContent.style.display='none';
+    toggle.addEventListener('click', ()=>{ thinkContent.style.display = thinkContent.style.display==='block'?'none':'block'; container.scrollTop=container.scrollHeight; });
+    thinkWrap.appendChild(toggle); thinkWrap.appendChild(thinkContent);
+    const answer=document.createElement('div'); answer.className='answer'; answer.textContent='…';
+    bubble.appendChild(thinkWrap); bubble.appendChild(answer);
+    wrap.appendChild(label); wrap.appendChild(bubble); container.appendChild(wrap); container.scrollTop=container.scrollHeight;
+    function paint(full, done){
+      const {think,answer:ans}=splitThink(full);
+      if(think.trim()){ thinkWrap.style.display='block'; thinkContent.textContent=think.trim();
+        toggle.textContent = ans.trim() ? '💭 Thought process' : '💭 Legend is thinking… (tap to peek)'; }
+      answer.textContent = ans.trim() ? ans.trim() : (think.trim() ? '' : (done?'':'…'));
+      container.scrollTop=container.scrollHeight;
+    }
+    return { update:(f)=>paint(f,false), finalize:(f)=>paint(f,true), bubble, answerEl:answer };
+  }
+
   /* ── Shared message rendering ── */
   function renderMessage(container, role, content){
     const wrap=document.createElement('div'); wrap.className='msg '+(role==='user'?'user':'bot');
@@ -292,33 +350,37 @@
     container.scrollTop=container.scrollHeight; return bubble;
   }
 
-  /* ── Core request (3 fallbacks, streaming) ── */
-  async function streamReply(model, messages, bubble, scrollEl){
+  /* ── Core request (3 fallbacks, streaming, abortable) ── */
+  // onUpdate(fullText) is called as text arrives. signal lets the user stop.
+  async function streamReply(model, messages, onUpdate, signal){
+    const aborted=()=> signal && signal.aborted;
     try{
       const res=await fetch('https://text.pollinations.ai/openai',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({model,messages,stream:true,temperature:0.85,referrer:'legend-app'})});
+        body:JSON.stringify({model,messages,stream:true,temperature:0.85,referrer:'legend-app'}), signal});
       if(res.ok&&res.body){
         const reader=res.body.getReader(); const dec=new TextDecoder(); let buf='',full='';
-        while(true){ const {done,value}=await reader.read(); if(done)break;
+        while(true){ if(aborted())break; const {done,value}=await reader.read(); if(done)break;
           buf+=dec.decode(value,{stream:true}); const lines=buf.split('\n'); buf=lines.pop()||'';
           for(const line of lines){ const t=line.trim(); if(!t.startsWith('data:'))continue;
             const data=t.slice(5).trim(); if(data==='[DONE]')continue;
             try{ const j=JSON.parse(data); const c=j.choices?.[0]?.delta?.content||'';
-              if(c){ full+=c; bubble.textContent=full; scrollEl.scrollTop=scrollEl.scrollHeight; } }catch(_){}
+              if(c){ full+=c; onUpdate(full); } }catch(_){}
           } }
         if(full.trim()) return full.trim();
       }
-    }catch(_){}
+    }catch(_){ if(aborted()) return null; }
+    if(aborted()) return null;
     try{
       const res=await fetch('https://text.pollinations.ai/openai',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({model,messages,temperature:0.85,referrer:'legend-app'})});
+        body:JSON.stringify({model,messages,temperature:0.85,referrer:'legend-app'}), signal});
       if(res.ok){ const d=await res.json(); const txt=d.choices?.[0]?.message?.content||'';
-        if(txt.trim()){ bubble.textContent=txt.trim(); return txt.trim(); } }
-    }catch(_){}
+        if(txt.trim()){ onUpdate(txt.trim()); return txt.trim(); } }
+    }catch(_){ if(aborted()) return null; }
+    if(aborted()) return null;
     try{
       const prompt=messages.filter(m=>m.role!=='system').map(m=>(m.role==='user'?'User: ':'Legend: ')+toText(m.content)).join('\n')+'\nLegend:';
-      const res=await fetch('https://text.pollinations.ai/'+encodeURIComponent(prompt)+'?referrer=legend-app');
-      if(res.ok){ const txt=await res.text(); if(txt.trim()){ bubble.textContent=txt.trim(); return txt.trim(); } }
+      const res=await fetch('https://text.pollinations.ai/'+encodeURIComponent(prompt)+'?referrer=legend-app',{signal});
+      if(res.ok){ const txt=await res.text(); if(txt.trim()){ onUpdate(txt.trim()); return txt.trim(); } }
     }catch(_){}
     return null;
   }
@@ -356,7 +418,8 @@
       const file=input.files&&input.files[0]; input.value=''; if(!file)return;
       try{
         if(file.type.startsWith('image/')){
-          pending={kind:'image', images:[await readDataURL(file)], name:file.name};
+          let url; try{ url=await downscaleImage(file); }catch(_){ url=await readDataURL(file); }
+          pending={kind:'image', images:[url], name:file.name};
         } else if(file.type.startsWith('video/')){
           preview.innerHTML='<div class="chip"><span class="chip-name">🎥 Reading video…</span></div>'; preview.classList.add('show');
           const frames=await grabFrames(file);
@@ -381,13 +444,23 @@
     return { get:()=>pending, clear };
   }
 
+  const THINK_INSTRUCTION = `\n\nBefore your final answer, share a brief honest thought process inside a <think></think> block — 1 to 4 short sentences on how you're approaching it. Keep it short. Then write your final answer AFTER the closing </think> tag. Never put the final answer inside the think block.`;
+
   /* ── Generic chat panel wiring ── */
-  function wirePanel({messagesEl, inputEl, sendBtn, modelSel, getHistory, systemFn, contextFn, onReply, onAfter, attach}){
+  function wirePanel({messagesEl, inputEl, sendBtn, stopBtn, modelSel, getHistory, systemFn, contextFn, onReply, onAfter, attach}){
     const att = attach ? setupAttach(attach) : null;
+    const sendLabel = sendBtn.textContent;
+    let busy=false;
+    function setGenerating(on){
+      busy=on;
+      if(on){ sendBtn.classList.add('thinking'); sendBtn.textContent='Thinking…'; sendBtn.disabled=true; if(stopBtn) stopBtn.hidden=false; }
+      else { sendBtn.classList.remove('thinking'); sendBtn.textContent=sendLabel; sendBtn.disabled=false; if(stopBtn) stopBtn.hidden=true; }
+    }
     async function send(){
+      if(busy) return;
       const text=inputEl.value.trim();
       const a = att ? att.get() : null;
-      if((!text && !a)||sendBtn.disabled)return;
+      if(!text && !a) return;
       inputEl.value=''; inputEl.style.height='auto';
       const history=getHistory();
 
@@ -402,18 +475,33 @@
 
       renderMessage(messagesEl,'user',content); history.push({role:'user',content});
       if(att) att.clear();
-      sendBtn.disabled=true; setBusy(true);
-      const bubble=renderMessage(messagesEl,'bot','…');
+
+      setBusy(true); setGenerating(true);
+      const stream=createStreamingBubble(messagesEl);
+      const controller=new AbortController();
+      if(stopBtn) stopBtn.onclick=()=>controller.abort();
+
       const engine=engineOf(modelSel);
-      const sys=systemFn?systemFn(engine):engine.system;
+      const sys=(systemFn?systemFn(engine):engine.system) + THINK_INSTRUCTION;
       const hasImage = Array.isArray(content);
       const model = hasImage ? 'openai' : engine.model; // openai brain has vision
       const messages=[{role:'system',content:sys}, ...(contextFn?contextFn():[]), ...history];
-      const reply=await streamReply(model, messages, bubble, messagesEl);
-      if(reply){ history.push({role:'assistant',content:reply}); if(onReply)onReply(reply); }
-      else { bubble.textContent="I couldn't reach my brain just now. Check your connection and try again."; }
-      sendBtn.disabled=false; setBusy(false);
-      if(onAfter)onAfter();
+
+      let lastFull='';
+      const reply=await streamReply(model, messages, (f)=>{ lastFull=f; stream.update(f); }, controller.signal);
+
+      const raw = (reply!=null ? reply : lastFull) || '';
+      const parts = splitThink(raw);
+      const clean = (parts.answer.trim() || parts.think.trim() || raw).trim();
+      if(clean){
+        stream.finalize(raw);
+        history.push({role:'assistant',content:clean});
+        if(onReply) onReply(clean);
+      } else {
+        stream.answerEl.textContent = controller.signal.aborted ? '⏹ Stopped.' : "I couldn't reach my brain just now. Check your connection and try again.";
+      }
+      setGenerating(false); setBusy(false);
+      if(onAfter) onAfter();
     }
     sendBtn.addEventListener('click', send);
     inputEl.addEventListener('keydown', e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); send(); } });
@@ -441,7 +529,7 @@
   function updateChatTag(){ $('chatTag').textContent = engineOf($('chatModel')).tag; }
   $('chatModel').addEventListener('change', updateChatTag); updateChatTag();
   wirePanel({
-    messagesEl:$('chatMessages'), inputEl:$('chatInput'), sendBtn:$('chatSend'), modelSel:$('chatModel'),
+    messagesEl:$('chatMessages'), inputEl:$('chatInput'), sendBtn:$('chatSend'), stopBtn:$('chatStop'), modelSel:$('chatModel'),
     getHistory:()=>chatHistory, systemFn:(e)=>e.system+CHAT_CAP,
     attach:{btn:$('chatAttach'), input:$('chatFile'), preview:$('chatPreview')}
   });
@@ -467,7 +555,7 @@
     window.open(URL.createObjectURL(blob),'_blank');
   });
   wirePanel({
-    messagesEl:$('codeMessages'), inputEl:$('codeInput'), sendBtn:$('codeSend'), modelSel:$('codeModel'),
+    messagesEl:$('codeMessages'), inputEl:$('codeInput'), sendBtn:$('codeSend'), stopBtn:$('codeStop'), modelSel:$('codeModel'),
     getHistory:()=>codeHistory, systemFn:()=>CODE_SYS,
     onReply:(reply)=>{ const code=extractRunnable(reply); if(code) showPreview(code); },
     attach:{btn:$('codeAttach'), input:$('codeFile'), preview:$('codePreview2')}
@@ -567,7 +655,7 @@
   $('projChatBack').addEventListener('click', ()=>{ renderProjChats(); showProjPane('projDetail'); });
 
   wirePanel({
-    messagesEl:$('projMessages'), inputEl:$('projInput'), sendBtn:$('projSend'), modelSel:$('projModel'),
+    messagesEl:$('projMessages'), inputEl:$('projInput'), sendBtn:$('projSend'), stopBtn:$('projStop'), modelSel:$('projModel'),
     getHistory:()=> activeChat ? activeChat.history : [],
     systemFn:(e)=> e.system + `\n\nYou are inside the project "${activeProject?activeProject.name:''}". All chats in this project share memory with each other.`,
     contextFn: projectContext,
