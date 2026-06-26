@@ -14,7 +14,6 @@
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
   body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--black);color:var(--text);height:var(--app-h);overflow:hidden}
-
   .app{display:flex;height:var(--app-h)}
 
   /* Sidebar */
@@ -34,25 +33,23 @@
   .dot{width:8px;height:8px;border-radius:50%;background:#4CAF50}
   .dot.busy{background:var(--gold);animation:pulse 1s infinite}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-
   .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99}
 
   /* Main */
   .main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
   .topbar{display:none;align-items:center;gap:10px;padding:0 14px;height:54px;flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border)}
   .menu-btn{background:none;border:none;color:var(--gold);font-size:24px;cursor:pointer;padding:6px;line-height:1}
-
-  .view{flex:1;display:none;flex-direction:column;max-width:900px;width:100%;margin:0 auto;overflow:hidden;min-height:0}
+  .view{flex:1;display:none;flex-direction:column;max-width:920px;width:100%;margin:0 auto;overflow:hidden;min-height:0}
   .view.show{display:flex}
 
-  /* Chat */
+  /* Chat shared */
   .chat-head{display:flex;align-items:center;gap:10px;padding:12px 18px 0;flex-wrap:wrap}
   .chat-head select{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);color:var(--gold);font-size:14px;font-weight:600;padding:9px 12px;outline:none;cursor:pointer}
   .model-tag{font-size:12px;color:var(--text-dim);flex:1;min-width:140px}
   .messages{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:18px;padding:18px}
   .messages::-webkit-scrollbar{width:5px}
   .messages::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
-  .msg{display:flex;flex-direction:column;gap:5px;max-width:85%}
+  .msg{display:flex;flex-direction:column;gap:5px;max-width:88%}
   .msg.user{align-self:flex-end;align-items:flex-end}
   .msg.bot{align-self:flex-start;align-items:flex-start}
   .mlabel{font-size:11px;color:var(--text-dim);letter-spacing:.05em}
@@ -60,18 +57,24 @@
   .bubble{padding:14px 18px;border-radius:var(--radius);font-size:15px;line-height:1.7;white-space:pre-wrap;word-wrap:break-word;overflow-wrap:anywhere}
   .msg.user .bubble{background:rgba(201,168,76,.1);border:1px solid var(--gold-dark)}
   .msg.bot .bubble{background:var(--surface-2);border:1px solid var(--border)}
-
   .inputbar{display:flex;gap:8px;align-items:flex-end;padding:12px 18px;border-top:1px solid var(--border);background:var(--surface);flex-shrink:0}
   textarea{flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:16px;padding:13px 15px;resize:none;font-family:inherit;outline:none;transition:border-color .15s;max-height:120px}
   textarea:focus{border-color:var(--gold-dark)}
   .send{padding:13px 22px;border-radius:var(--radius);border:none;cursor:pointer;font-size:15px;font-weight:600;background:var(--gold);color:var(--black);transition:background .15s;white-space:nowrap}
   .send:hover{background:var(--gold-light)}
   .send:disabled{opacity:.5;cursor:not-allowed}
+  .send.small{padding:10px 14px;font-size:14px}
 
-  /* Image view */
+  /* Code preview */
+  .preview-box{display:none;flex-direction:column;border:1px solid var(--gold-dark);border-radius:var(--radius);margin:0 18px 8px;overflow:hidden}
+  .preview-box.show{display:flex}
+  .preview-head{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--surface-2);font-size:12px;color:var(--gold)}
+  .preview-head button{background:none;border:1px solid var(--gold-dark);color:var(--gold);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer}
+  #codePreview{width:100%;height:40vh;border:none;background:#fff}
+
+  /* Image */
   .img-wrap{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:14px}
   .vtitle{font-size:20px;font-weight:600;color:var(--gold)}
-  .img-controls{display:flex;flex-direction:column;gap:10px}
   .row{display:flex;gap:8px;flex-wrap:wrap}
   .row select{flex:1;min-width:120px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:14px;padding:11px 12px;outline:none;cursor:pointer}
   .img-stage{flex:1;min-height:280px;display:flex;align-items:center;justify-content:center;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;position:relative}
@@ -82,14 +85,28 @@
   .dl-link{display:none;text-align:center;color:var(--gold);font-size:13px;text-decoration:none;padding:6px}
   .dl-link.show{display:block}
 
+  /* Projects */
+  .proj-pane{flex:1;display:none;flex-direction:column;gap:12px;padding:18px;overflow-y:auto;min-height:0}
+  .proj-pane.show{display:flex}
+  .proj-pane.chatpane{padding:0;gap:0}
+  .card{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;transition:border-color .15s}
+  .card:hover{border-color:var(--gold-dark)}
+  .card-main{font-weight:600;color:var(--text)}
+  .card-sub{font-size:12px;color:var(--text-dim);margin-top:3px}
+  .del-x{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:18px;padding:2px 8px;flex-shrink:0}
+  .del-x:hover{color:#e06}
+  .link-btn{background:none;border:none;color:var(--gold);cursor:pointer;font-size:14px;padding:6px 0;text-align:left}
+  .empty-hint{color:var(--text-dim);font-size:14px;line-height:1.6;padding:8px 2px}
+
   @media(max-width:768px){
     .sidebar{position:fixed;top:0;left:-260px;width:260px;height:var(--app-h);z-index:100;transition:left .25s ease}
     .sidebar.open{left:0}
     .overlay.show{display:block}
     .topbar{display:flex}
-    .messages,.img-wrap{padding:14px}
+    .messages,.img-wrap,.proj-pane{padding:14px}
+    .proj-pane.chatpane{padding:0}
     .inputbar{padding:10px 12px}
-    .msg{max-width:92%}
+    .msg{max-width:93%}
   }
 </style>
 </head>
@@ -99,8 +116,9 @@
     <div class="side-logo"><span class="crown">♛</span><span class="brand">LEGEND</span></div>
     <nav class="side-nav">
       <button class="nav-btn active" data-view="chat"><span class="nav-icon">💬</span><span>Chat</span></button>
+      <button class="nav-btn" data-view="code"><span class="nav-icon">💻</span><span>Code</span></button>
       <button class="nav-btn" data-view="image"><span class="nav-icon">🎨</span><span>Create Image</span></button>
-      <button class="nav-btn" id="newChat"><span class="nav-icon">✦</span><span>New Chat</span></button>
+      <button class="nav-btn" data-view="projects"><span class="nav-icon">📁</span><span>Projects</span></button>
       <div class="side-label">Coming Soon</div>
       <button class="nav-btn dim"><span class="nav-icon">📖</span><span>Story</span></button>
       <button class="nav-btn dim"><span class="nav-icon">🎬</span><span>Studio</span></button>
@@ -108,7 +126,6 @@
     </nav>
     <div class="side-foot"><div class="status"><span class="dot" id="dot"></span><span id="statusText">Online</span></div></div>
   </aside>
-
   <div class="overlay" id="overlay"></div>
 
   <div class="main">
@@ -117,139 +134,134 @@
       <span class="crown">♛</span><span class="brand">LEGEND</span>
     </div>
 
-    <!-- CHAT VIEW -->
+    <!-- CHAT -->
     <div class="view show" id="view-chat">
       <div class="chat-head">
-        <select id="modelSel">
-          <option value="midline" selected>◆ Midline</option>
-          <option value="supersonic">⚡ Supersonic</option>
-          <option value="ultra">♛ Ultra Engine</option>
-          <option value="ambit">✦ Ambit</option>
-        </select>
-        <span class="model-tag" id="modelTag"></span>
+        <select id="chatModel"></select>
+        <span class="model-tag" id="chatTag"></span>
       </div>
-      <div class="messages" id="messages"></div>
+      <div class="messages" id="chatMessages"></div>
       <div class="inputbar">
-        <textarea id="input" rows="1" placeholder="Talk to Legend..."></textarea>
-        <button class="send" id="send">Send</button>
+        <textarea id="chatInput" rows="1" placeholder="Talk to Legend..."></textarea>
+        <button class="send" id="chatSend">Send</button>
       </div>
     </div>
 
-    <!-- IMAGE VIEW -->
+    <!-- CODE -->
+    <div class="view" id="view-code">
+      <div class="chat-head">
+        <select id="codeModel"></select>
+        <span class="model-tag">Heavy builder · games, apps, 3D — with live preview</span>
+      </div>
+      <div class="messages" id="codeMessages"></div>
+      <div class="preview-box" id="previewBox">
+        <div class="preview-head"><span>▶ Live Preview</span><button id="openPreview">Open full ↗</button></div>
+        <iframe id="codePreview" sandbox="allow-scripts allow-pointer-lock allow-same-origin"></iframe>
+      </div>
+      <div class="inputbar">
+        <textarea id="codeInput" rows="1" placeholder="Describe what to build (e.g. 'a 2D space shooter game')..."></textarea>
+        <button class="send" id="codeSend">Build</button>
+      </div>
+    </div>
+
+    <!-- IMAGE -->
     <div class="view" id="view-image">
       <div class="img-wrap">
         <span class="vtitle">Create Image</span>
-        <div class="img-controls">
-          <textarea id="imgPrompt" rows="2" placeholder="Describe the image... (e.g. 'a golden dragon over a neon city at night, cinematic')"></textarea>
-          <div class="row">
-            <select id="imgModel">
-              <option value="flux" selected>Flux · Quality</option>
-              <option value="turbo">Turbo · Fast</option>
-            </select>
-            <select id="imgSize">
-              <option value="1024x1024" selected>Square</option>
-              <option value="768x1280">Portrait</option>
-              <option value="1280x768">Landscape</option>
-            </select>
-          </div>
-          <button class="send" id="genImg" style="width:100%">Generate Image</button>
+        <textarea id="imgPrompt" rows="2" placeholder="Describe the image... (e.g. 'a golden dragon over a neon city at night, cinematic')"></textarea>
+        <div class="row">
+          <select id="imgModel"><option value="flux" selected>Flux · Quality</option><option value="turbo">Turbo · Fast</option></select>
+          <select id="imgSize"><option value="1024x1024" selected>Square</option><option value="768x1280">Portrait</option><option value="1280x768">Landscape</option></select>
         </div>
-        <div class="img-stage" id="imgStage">
-          <div class="img-hint">Your image will appear here.<br>Describe anything — Legend draws it.</div>
-        </div>
+        <button class="send" id="genImg" style="width:100%">Generate Image</button>
+        <div class="img-stage" id="imgStage"><div class="img-hint">Your image will appear here.<br>Describe anything — Legend draws it.</div></div>
         <a class="dl-link" id="dlLink" target="_blank" rel="noopener">Open full image / long-press to save ↗</a>
+      </div>
+    </div>
+
+    <!-- PROJECTS -->
+    <div class="view" id="view-projects">
+      <!-- list of projects -->
+      <div class="proj-pane show" id="projList">
+        <span class="vtitle">Projects</span>
+        <button class="send small" id="newProjBtn" style="align-self:flex-start">+ New Project</button>
+        <div class="empty-hint" id="projEmpty">No projects yet. Create one — every chat inside it shares the same memory.</div>
+        <div id="projItems"></div>
+      </div>
+      <!-- inside one project: its chats -->
+      <div class="proj-pane" id="projDetail">
+        <button class="link-btn" id="projBack">← All projects</button>
+        <span class="vtitle" id="projName"></span>
+        <button class="send small" id="newProjChatBtn" style="align-self:flex-start">+ New chat in this project</button>
+        <div class="empty-hint" id="projChatEmpty">No chats yet. Start one — it'll share memory with every other chat here.</div>
+        <div id="projChatItems"></div>
+      </div>
+      <!-- a single project chat -->
+      <div class="proj-pane chatpane" id="projChatView">
+        <div class="chat-head">
+          <button class="link-btn" id="projChatBack">← <span id="projChatProjName"></span></button>
+          <select id="projModel"></select>
+        </div>
+        <div class="messages" id="projMessages"></div>
+        <div class="inputbar">
+          <textarea id="projInput" rows="1" placeholder="Talk to Legend (shared project memory)..."></textarea>
+          <button class="send" id="projSend">Send</button>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
 <script>
-  // Shared Legend character, then each engine adds its own behavior.
-  const BASE = `You are Legend — the ultimate AI: a creative force, a thinking partner, and a builder. Confident, never arrogant. You speak plainly and with purpose.`;
-
-  const MODELS = {
-    ultra: {
-      label: '♛ Ultra Engine',
-      model: 'openai-large',
-      tag: 'Most powerful · deepest answers (takes a little longer)',
-      system: BASE + `\n\nYou are running on the ULTRA ENGINE — the most powerful and most accurate mind in Legend. Treat EVERY question, no matter how small or silly, as worthy of deep thought. Reason carefully, thoroughly, and with genuine insight. Bring nuance and a touch of Socratic depth — turn even a simple question into something genuinely illuminating. Accuracy above all. Never give a lazy or shallow answer.`
-    },
-    supersonic: {
-      label: '⚡ Supersonic',
-      model: 'openai',
-      tag: 'Fastest · short, quick answers (not for coding)',
-      system: BASE + `\n\nYou are running on SUPERSONIC — built purely for SPEED. Answer as fast and concisely as possible: usually one or two sentences, a few at most. No long explanations, no rambling, no filler. Get straight to the point. If the user needs heavy or complex work like real coding, tell them in one line to switch to Ultra Engine or Ambit, then give the short answer anyway.`
-    },
-    midline: {
-      label: '◆ Midline',
-      model: 'openai',
-      tag: 'Balanced everyday model · easy on usage',
-      system: BASE + `\n\nYou are running on MIDLINE — the balanced, everyday engine. Give clear, helpful, solid answers of moderate length — not too short, not overloaded. Practical and reliable for day-to-day questions. Good, steady, no drama.`
-    },
-    ambit: {
-      label: '✦ Ambit',
-      model: 'openai',
-      tag: 'For big, ambitious, multi-step projects',
-      system: BASE + `\n\nYou are running on AMBIT — built for the most ambitious tasks. When given something big or complex, break it down, plan it out, and deliver thorough, well-structured, complete work. Think in clear steps, organize your answer, and be comprehensive. You thrive on large, multi-part projects and never leave them half-done.`
-    },
-  };
-
   const $ = id => document.getElementById(id);
-  const messagesEl=$('messages'), inputEl=$('input'), sendBtn=$('send');
-  const dot=$('dot'), statusText=$('statusText'), sidebar=$('sidebar'), overlay=$('overlay'), modelSel=$('modelSel'), modelTag=$('modelTag');
 
-  // history holds only user/assistant turns; the system prompt is added per-request based on the chosen engine.
-  let history = [];
+  /* ── Engines (the model dropdown) ── */
+  const BASE = `You are Legend — the ultimate AI: a creative force, a thinking partner, and a builder. Confident, never arrogant. You speak plainly and with purpose.`;
+  const ENGINES = {
+    midline:    { label:'◆ Midline',     model:'openai',       tag:'Balanced everyday model · easy on usage',
+      system: BASE + `\n\nYou are running on MIDLINE — the balanced everyday engine. Clear, helpful answers of moderate length. Practical and reliable.` },
+    supersonic: { label:'⚡ Supersonic',  model:'openai',       tag:'Fastest · short, quick answers (not for coding)',
+      system: BASE + `\n\nYou are running on SUPERSONIC — built for SPEED. Answer fast and concisely, usually one or two sentences. No rambling. For heavy coding, suggest switching to Ultra Engine or the Code section.` },
+    ultra:      { label:'♛ Ultra Engine', model:'openai-large', tag:'Most powerful · deepest answers (takes a little longer)',
+      system: BASE + `\n\nYou are running on the ULTRA ENGINE — the most powerful, most accurate mind in Legend. Treat every question as worthy of deep thought. Reason thoroughly with genuine insight and a touch of Socratic depth. Never shallow, never lazy.` },
+    ambit:      { label:'✦ Ambit',       model:'openai',       tag:'For big, ambitious, multi-step projects',
+      system: BASE + `\n\nYou are running on AMBIT — built for ambitious tasks. Break big things into clear steps, organize your answer, and deliver thorough, complete, well-structured work.` },
+  };
+  const ENGINE_ORDER = ['midline','supersonic','ultra','ambit'];
+  function fillModels(sel){
+    sel.innerHTML = ENGINE_ORDER.map(k=>`<option value="${k}"${k==='midline'?' selected':''}>${ENGINES[k].label}</option>`).join('');
+  }
+  function engineOf(sel){ return ENGINES[sel.value] || ENGINES.midline; }
 
-  function updateTag(){ modelTag.textContent = MODELS[modelSel.value].tag; }
-  modelSel.addEventListener('change', updateTag);
-  updateTag();
+  /* ── Section capability notes ── */
+  const CHAT_CAP = `\n\nYou are in the CHAT section: normal conversation, generating high-quality image ideas (the user can use the Create Image tab), and light/short coding plus simple 2D web-browser games. For full 3D or AAA-level games and big builds, point the user to the Code section.`;
+  const CODE_SYS = BASE + `\n\nYou are in the CODE section — Legend's heavy builder. You write complete, working code and build the most ambitious things: 2D AND 3D browser games, AAA-style visuals, apps and tools. RULES: When building anything visual or playable, ALWAYS output ONE complete, self-contained HTML document inside a single \`\`\`html code block that runs on its own — inline CSS and JavaScript, no external files. For 3D, you may load three.js from a CDN. Give a short explanation, then the full code block. Make it polished and actually fun/usable.`;
 
-  /* Sidebar + view switching */
-  function openSidebar(){ sidebar.classList.add('open'); overlay.classList.add('show'); }
-  function closeSidebar(){ sidebar.classList.remove('open'); overlay.classList.remove('show'); }
-  $('menuBtn').addEventListener('click', openSidebar);
-  overlay.addEventListener('click', closeSidebar);
+  /* ── Status ── */
+  function setBusy(b){ $('dot').className=b?'dot busy':'dot'; $('statusText').textContent=b?'Thinking…':'Online'; }
 
-  document.querySelectorAll('.nav-btn[data-view]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.nav-btn[data-view]').forEach(b=>b.classList.remove('active'));
-      btn.classList.add('active');
-      const v = btn.dataset.view;
-      $('view-chat').classList.toggle('show', v==='chat');
-      $('view-image').classList.toggle('show', v==='image');
-      closeSidebar();
-    });
-  });
-
-  /* Chat */
-  function addMessage(role, content){
+  /* ── Shared message rendering ── */
+  function renderMessage(container, role, content){
     const wrap=document.createElement('div'); wrap.className='msg '+(role==='user'?'user':'bot');
     const label=document.createElement('span'); label.className='mlabel'; label.textContent=role==='user'?'You':'Legend';
     const bubble=document.createElement('div'); bubble.className='bubble'; bubble.textContent=content;
-    wrap.appendChild(label); wrap.appendChild(bubble);
-    messagesEl.appendChild(wrap); messagesEl.scrollTop=messagesEl.scrollHeight;
-    return bubble;
+    wrap.appendChild(label); wrap.appendChild(bubble); container.appendChild(wrap);
+    container.scrollTop=container.scrollHeight; return bubble;
   }
-  function setBusy(b){ sendBtn.disabled=b; dot.className=b?'dot busy':'dot'; statusText.textContent=b?'Thinking…':'Online'; }
 
-  inputEl.addEventListener('input', ()=>{ inputEl.style.height='auto'; inputEl.style.height=Math.min(inputEl.scrollHeight,120)+'px'; });
-
-  async function askLegend(bubble){
-    const engine = MODELS[modelSel.value] || MODELS.midline;
-    const model = engine.model;
-    const messages = [{ role:'system', content: engine.system }, ...history];
+  /* ── Core request (3 fallbacks, streaming) ── */
+  async function streamReply(model, messages, bubble, scrollEl){
     try{
       const res=await fetch('https://text.pollinations.ai/openai',{method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({model,messages,stream:true,temperature:0.85,referrer:'legend-app'})});
-      if(res.ok && res.body){
+      if(res.ok&&res.body){
         const reader=res.body.getReader(); const dec=new TextDecoder(); let buf='',full='';
         while(true){ const {done,value}=await reader.read(); if(done)break;
           buf+=dec.decode(value,{stream:true}); const lines=buf.split('\n'); buf=lines.pop()||'';
           for(const line of lines){ const t=line.trim(); if(!t.startsWith('data:'))continue;
             const data=t.slice(5).trim(); if(data==='[DONE]')continue;
             try{ const j=JSON.parse(data); const c=j.choices?.[0]?.delta?.content||'';
-              if(c){ full+=c; bubble.textContent=full; messagesEl.scrollTop=messagesEl.scrollHeight; } }catch(_){}
+              if(c){ full+=c; bubble.textContent=full; scrollEl.scrollTop=scrollEl.scrollHeight; } }catch(_){}
           } }
         if(full.trim()) return full.trim();
       }
@@ -261,54 +273,191 @@
         if(txt.trim()){ bubble.textContent=txt.trim(); return txt.trim(); } }
     }catch(_){}
     try{
-      const prompt=history.map(m=>(m.role==='user'?'User: ':'Legend: ')+m.content).join('\n')+'\nLegend:';
+      const prompt=messages.filter(m=>m.role!=='system').map(m=>(m.role==='user'?'User: ':'Legend: ')+m.content).join('\n')+'\nLegend:';
       const res=await fetch('https://text.pollinations.ai/'+encodeURIComponent(prompt)+'?referrer=legend-app');
       if(res.ok){ const txt=await res.text(); if(txt.trim()){ bubble.textContent=txt.trim(); return txt.trim(); } }
     }catch(_){}
     return null;
   }
 
-  async function send(){
-    const text=inputEl.value.trim(); if(!text||sendBtn.disabled)return;
-    inputEl.value=''; inputEl.style.height='auto';
-    addMessage('user',text); history.push({role:'user',content:text});
-    setBusy(true); const bubble=addMessage('bot','…');
-    const reply=await askLegend(bubble);
-    if(reply){ history.push({role:'assistant',content:reply}); }
-    else{ bubble.textContent="I couldn't reach my brain just now. Check your internet and try again."; }
-    setBusy(false);
+  /* ── Generic chat panel wiring ── */
+  function wirePanel({messagesEl, inputEl, sendBtn, modelSel, getHistory, systemFn, contextFn, onReply, onAfter}){
+    async function send(){
+      const text=inputEl.value.trim(); if(!text||sendBtn.disabled)return;
+      inputEl.value=''; inputEl.style.height='auto';
+      const history=getHistory();
+      renderMessage(messagesEl,'user',text); history.push({role:'user',content:text});
+      sendBtn.disabled=true; setBusy(true);
+      const bubble=renderMessage(messagesEl,'bot','…');
+      const engine=engineOf(modelSel);
+      const sys=systemFn?systemFn(engine):engine.system;
+      const messages=[{role:'system',content:sys}, ...(contextFn?contextFn():[]), ...history];
+      const reply=await streamReply(engine.model, messages, bubble, messagesEl);
+      if(reply){ history.push({role:'assistant',content:reply}); if(onReply)onReply(reply); }
+      else { bubble.textContent="I couldn't reach my brain just now. Check your connection and try again."; }
+      sendBtn.disabled=false; setBusy(false);
+      if(onAfter)onAfter();
+    }
+    sendBtn.addEventListener('click', send);
+    inputEl.addEventListener('keydown', e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); send(); } });
+    inputEl.addEventListener('input', ()=>{ inputEl.style.height='auto'; inputEl.style.height=Math.min(inputEl.scrollHeight,120)+'px'; });
   }
-  sendBtn.addEventListener('click', send);
-  inputEl.addEventListener('keydown', e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); send(); } });
 
-  $('newChat').addEventListener('click', ()=>{
-    history=[]; messagesEl.innerHTML='';
-    addMessage('bot',"Fresh start. What are we building?");
-    document.querySelectorAll('.nav-btn[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view==='chat'));
-    $('view-chat').classList.add('show'); $('view-image').classList.remove('show');
-    closeSidebar();
+  /* ── Sidebar + section switching ── */
+  function openSidebar(){ $('sidebar').classList.add('open'); $('overlay').classList.add('show'); }
+  function closeSidebar(){ $('sidebar').classList.remove('open'); $('overlay').classList.remove('show'); }
+  $('menuBtn').addEventListener('click', openSidebar);
+  $('overlay').addEventListener('click', closeSidebar);
+  document.querySelectorAll('.nav-btn[data-view]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.nav-btn[data-view]').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      const v=btn.dataset.view;
+      ['chat','code','image','projects'].forEach(name=>$('view-'+name).classList.toggle('show', v===name));
+      closeSidebar();
+    });
   });
 
-  /* Image generation */
-  const imgStage=$('imgStage'), dlLink=$('dlLink');
+  /* ── CHAT section ── */
+  fillModels($('chatModel'));
+  let chatHistory=[];
+  function updateChatTag(){ $('chatTag').textContent = engineOf($('chatModel')).tag; }
+  $('chatModel').addEventListener('change', updateChatTag); updateChatTag();
+  wirePanel({
+    messagesEl:$('chatMessages'), inputEl:$('chatInput'), sendBtn:$('chatSend'), modelSel:$('chatModel'),
+    getHistory:()=>chatHistory, systemFn:(e)=>e.system+CHAT_CAP
+  });
+  renderMessage($('chatMessages'),'bot',"I'm Legend. What are we building today?");
+
+  /* ── CODE section ── */
+  fillModels($('codeModel'));
+  let codeHistory=[];
+  function extractRunnable(text){
+    const blocks=[...text.matchAll(/```(?:html|HTML)?\s*([\s\S]*?)```/g)].map(m=>m[1].trim());
+    for(const b of blocks){ if(/<!doctype html|<html|<body|<canvas|<script/i.test(b)) return b; }
+    return null;
+  }
+  function showPreview(code){
+    if(!code){ return; }
+    $('codePreview').srcdoc=code;
+    $('previewBox').classList.add('show');
+    $('previewBox')._code=code;
+  }
+  $('openPreview').addEventListener('click', ()=>{
+    const code=$('previewBox')._code; if(!code)return;
+    const blob=new Blob([code],{type:'text/html'});
+    window.open(URL.createObjectURL(blob),'_blank');
+  });
+  wirePanel({
+    messagesEl:$('codeMessages'), inputEl:$('codeInput'), sendBtn:$('codeSend'), modelSel:$('codeModel'),
+    getHistory:()=>codeHistory, systemFn:()=>CODE_SYS,
+    onReply:(reply)=>{ const code=extractRunnable(reply); if(code) showPreview(code); }
+  });
+  renderMessage($('codeMessages'),'bot',"Code section. Tell me what to build — a game, an app, a tool — and I'll write it and run it right here.");
+
+  /* ── IMAGE section ── */
   let imgSeed=1;
   $('genImg').addEventListener('click', ()=>{
-    const prompt=$('imgPrompt').value.trim(); if(!prompt) return;
-    const model=$('imgModel').value;
-    const [w,h]=$('imgSize').value.split('x');
-    imgSeed=(imgSeed*7919+13)%100000; // vary so re-runs give new images
+    const prompt=$('imgPrompt').value.trim(); if(!prompt)return;
+    const model=$('imgModel').value; const [w,h]=$('imgSize').value.split('x');
+    imgSeed=(imgSeed*7919+13)%100000;
     const url=`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${w}&height=${h}&model=${model}&nologo=true&seed=${imgSeed}`;
-
-    imgStage.innerHTML='<div class="spinner"></div>';
-    dlLink.classList.remove('show');
+    $('imgStage').innerHTML='<div class="spinner"></div>'; $('dlLink').classList.remove('show');
     const img=new Image();
-    img.onload=()=>{ imgStage.innerHTML=''; imgStage.appendChild(img); dlLink.href=url; dlLink.classList.add('show'); };
-    img.onerror=()=>{ imgStage.innerHTML='<div class="img-hint">Couldn’t draw that one. Try again or reword it.</div>'; };
-    img.alt=prompt;
-    img.src=url;
+    img.onload=()=>{ $('imgStage').innerHTML=''; $('imgStage').appendChild(img); $('dlLink').href=url; $('dlLink').classList.add('show'); };
+    img.onerror=()=>{ $('imgStage').innerHTML='<div class="img-hint">Couldn’t draw that one. Try again or reword it.</div>'; };
+    img.alt=prompt; img.src=url;
   });
 
-  addMessage('bot', "I'm Legend. What are we building today?");
+  /* ── PROJECTS section ── */
+  fillModels($('projModel'));
+  let projects = load();
+  let activeProject=null, activeChat=null;
+
+  function load(){ try{ return JSON.parse(localStorage.getItem('legend_projects'))||[]; }catch(_){ return []; } }
+  function save(){ try{ localStorage.setItem('legend_projects', JSON.stringify(projects)); }catch(_){} }
+  function uid(){ return 'id'+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36); }
+
+  function showProjPane(which){
+    ['projList','projDetail','projChatView'].forEach(p=>$(p).classList.toggle('show', p===which));
+  }
+
+  function renderProjects(){
+    const wrap=$('projItems'); wrap.innerHTML='';
+    $('projEmpty').style.display = projects.length?'none':'block';
+    projects.forEach(p=>{
+      const card=document.createElement('div'); card.className='card';
+      const left=document.createElement('div');
+      left.innerHTML=`<div class="card-main">${escapeHtml(p.name)}</div><div class="card-sub">${p.chats.length} chat${p.chats.length===1?'':'s'}</div>`;
+      left.style.flex='1'; left.style.cursor='pointer';
+      left.addEventListener('click', ()=>openProject(p.id));
+      const del=document.createElement('button'); del.className='del-x'; del.textContent='🗑';
+      del.addEventListener('click',(e)=>{ e.stopPropagation(); if(confirm('Delete project "'+p.name+'"?')){ projects=projects.filter(x=>x.id!==p.id); save(); renderProjects(); } });
+      card.appendChild(left); card.appendChild(del); wrap.appendChild(card);
+    });
+  }
+  function openProject(id){
+    activeProject=projects.find(p=>p.id===id); if(!activeProject)return;
+    $('projName').textContent=activeProject.name;
+    renderProjChats(); showProjPane('projDetail');
+  }
+  function renderProjChats(){
+    const wrap=$('projChatItems'); wrap.innerHTML='';
+    $('projChatEmpty').style.display = activeProject.chats.length?'none':'block';
+    activeProject.chats.forEach(c=>{
+      const card=document.createElement('div'); card.className='card';
+      const left=document.createElement('div'); left.style.flex='1'; left.style.cursor='pointer';
+      const preview = c.history.length ? (c.history[c.history.length-1].content.slice(0,60)) : 'Empty chat';
+      left.innerHTML=`<div class="card-main">${escapeHtml(c.name)}</div><div class="card-sub">${escapeHtml(preview)}</div>`;
+      left.addEventListener('click', ()=>openProjChat(c.id));
+      const del=document.createElement('button'); del.className='del-x'; del.textContent='🗑';
+      del.addEventListener('click',(e)=>{ e.stopPropagation(); if(confirm('Delete this chat?')){ activeProject.chats=activeProject.chats.filter(x=>x.id!==c.id); save(); renderProjChats(); } });
+      card.appendChild(left); card.appendChild(del); wrap.appendChild(card);
+    });
+  }
+  function openProjChat(id){
+    activeChat=activeProject.chats.find(c=>c.id===id); if(!activeChat)return;
+    $('projChatProjName').textContent=activeProject.name;
+    const m=$('projMessages'); m.innerHTML='';
+    if(!activeChat.history.length) renderMessage(m,'bot',"New chat in “"+activeProject.name+"”. I remember everything from the other chats here.");
+    activeChat.history.forEach(msg=>renderMessage(m, msg.role==='user'?'user':'bot', msg.content));
+    showProjPane('projChatView');
+  }
+  function projectContext(){
+    if(!activeProject||!activeChat) return [];
+    const others=activeProject.chats.filter(c=>c.id!==activeChat.id && c.history.length);
+    if(!others.length) return [];
+    let mem=`SHARED PROJECT MEMORY — you are working inside the project "${activeProject.name}". The following are the other chats in this same project. Treat their content as shared knowledge you already know:\n`;
+    for(const c of others){
+      const recent=c.history.slice(-6);
+      mem+=`\n— Chat "${c.name}":\n`+recent.map(m=>(m.role==='user'?'User: ':'Legend: ')+m.content).join('\n')+'\n';
+    }
+    return [{role:'system',content:mem}];
+  }
+
+  $('newProjBtn').addEventListener('click', ()=>{
+    const name=prompt('Name your project:'); if(!name||!name.trim())return;
+    const p={id:uid(),name:name.trim(),chats:[]}; projects.unshift(p); save(); renderProjects();
+  });
+  $('projBack').addEventListener('click', ()=>{ renderProjects(); showProjPane('projList'); });
+  $('newProjChatBtn').addEventListener('click', ()=>{
+    const name=prompt('Name this chat:','Chat '+(activeProject.chats.length+1)); if(name===null)return;
+    const c={id:uid(),name:(name.trim()||'Chat '+(activeProject.chats.length+1)),history:[]};
+    activeProject.chats.push(c); save(); renderProjChats(); openProjChat(c.id);
+  });
+  $('projChatBack').addEventListener('click', ()=>{ renderProjChats(); showProjPane('projDetail'); });
+
+  wirePanel({
+    messagesEl:$('projMessages'), inputEl:$('projInput'), sendBtn:$('projSend'), modelSel:$('projModel'),
+    getHistory:()=> activeChat ? activeChat.history : [],
+    systemFn:(e)=> e.system + `\n\nYou are inside the project "${activeProject?activeProject.name:''}". All chats in this project share memory with each other.`,
+    contextFn: projectContext,
+    onAfter: save
+  });
+
+  function escapeHtml(s){ return s.replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+  renderProjects();
 </script>
 </body>
 </html>
