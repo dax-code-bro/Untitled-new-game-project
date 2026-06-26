@@ -121,9 +121,9 @@
     <div class="view show" id="view-chat">
       <div class="chat-head">
         <select id="modelSel">
-          <option value="ultra" selected>♛ Ultra Engine</option>
+          <option value="midline" selected>◆ Midline</option>
           <option value="supersonic">⚡ Supersonic</option>
-          <option value="midline">◆ Midline</option>
+          <option value="ultra">♛ Ultra Engine</option>
           <option value="ambit">✦ Ambit</option>
         </select>
         <span class="model-tag" id="modelTag"></span>
@@ -171,7 +171,7 @@
     ultra: {
       label: '♛ Ultra Engine',
       model: 'openai-large',
-      tag: 'Most powerful · deepest, most accurate answers',
+      tag: 'Most powerful · deepest answers (takes a little longer)',
       system: BASE + `\n\nYou are running on the ULTRA ENGINE — the most powerful and most accurate mind in Legend. Treat EVERY question, no matter how small or silly, as worthy of deep thought. Reason carefully, thoroughly, and with genuine insight. Bring nuance and a touch of Socratic depth — turn even a simple question into something genuinely illuminating. Accuracy above all. Never give a lazy or shallow answer.`
     },
     supersonic: {
@@ -188,7 +188,7 @@
     },
     ambit: {
       label: '✦ Ambit',
-      model: 'openai-large',
+      model: 'openai',
       tag: 'For big, ambitious, multi-step projects',
       system: BASE + `\n\nYou are running on AMBIT — built for the most ambitious tasks. When given something big or complex, break it down, plan it out, and deliver thorough, well-structured, complete work. Think in clear steps, organize your answer, and be comprehensive. You thrive on large, multi-part projects and never leave them half-done.`
     },
@@ -241,7 +241,7 @@
     const messages = [{ role:'system', content: engine.system }, ...history];
     try{
       const res=await fetch('https://text.pollinations.ai/openai',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({model,messages,stream:true,temperature:0.85})});
+        body:JSON.stringify({model,messages,stream:true,temperature:0.85,referrer:'legend-app'})});
       if(res.ok && res.body){
         const reader=res.body.getReader(); const dec=new TextDecoder(); let buf='',full='';
         while(true){ const {done,value}=await reader.read(); if(done)break;
@@ -256,13 +256,13 @@
     }catch(_){}
     try{
       const res=await fetch('https://text.pollinations.ai/openai',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({model,messages,temperature:0.85})});
+        body:JSON.stringify({model,messages,temperature:0.85,referrer:'legend-app'})});
       if(res.ok){ const d=await res.json(); const txt=d.choices?.[0]?.message?.content||'';
         if(txt.trim()){ bubble.textContent=txt.trim(); return txt.trim(); } }
     }catch(_){}
     try{
       const prompt=history.map(m=>(m.role==='user'?'User: ':'Legend: ')+m.content).join('\n')+'\nLegend:';
-      const res=await fetch('https://text.pollinations.ai/'+encodeURIComponent(prompt));
+      const res=await fetch('https://text.pollinations.ai/'+encodeURIComponent(prompt)+'?referrer=legend-app');
       if(res.ok){ const txt=await res.text(); if(txt.trim()){ bubble.textContent=txt.trim(); return txt.trim(); } }
     }catch(_){}
     return null;
