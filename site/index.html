@@ -13,32 +13,17 @@
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
-  body{
-    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-    background:var(--black);color:var(--text);
-    height:var(--app-h);overflow:hidden;
-  }
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--black);color:var(--text);height:var(--app-h);overflow:hidden}
 
   .app{display:flex;height:var(--app-h)}
 
-  /* ── Sidebar ── */
-  .sidebar{
-    width:230px;flex-shrink:0;background:var(--surface);
-    border-right:1px solid var(--border);
-    display:flex;flex-direction:column;padding:16px 0;
-  }
-  .side-logo{
-    display:flex;align-items:center;gap:8px;
-    padding:0 18px 16px;border-bottom:1px solid var(--border);margin-bottom:12px;
-  }
+  /* Sidebar */
+  .sidebar{width:230px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:16px 0}
+  .side-logo{display:flex;align-items:center;gap:8px;padding:0 18px 16px;border-bottom:1px solid var(--border);margin-bottom:12px}
   .crown{color:var(--gold);font-size:20px}
   .brand{font-family:Georgia,serif;font-weight:700;letter-spacing:.22em;color:var(--gold);font-size:16px}
   .side-nav{flex:1;display:flex;flex-direction:column;gap:3px;padding:0 10px;overflow-y:auto}
-  .nav-btn{
-    display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:var(--radius);
-    border:none;background:transparent;color:var(--text-dim);font-size:14px;
-    cursor:pointer;text-align:left;width:100%;transition:all .15s;
-  }
+  .nav-btn{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:var(--radius);border:none;background:transparent;color:var(--text-dim);font-size:14px;cursor:pointer;text-align:left;width:100%;transition:all .15s}
   .nav-btn:hover{color:var(--text);background:var(--surface-3)}
   .nav-btn.active{color:var(--gold);background:rgba(201,168,76,.1)}
   .nav-btn.dim{opacity:.35;cursor:default}
@@ -52,20 +37,20 @@
 
   .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99}
 
-  /* ── Main ── */
+  /* Main */
   .main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
-  .topbar{
-    display:none;align-items:center;gap:10px;
-    padding:0 14px;height:54px;flex-shrink:0;
-    background:var(--surface);border-bottom:1px solid var(--border);
-  }
+  .topbar{display:none;align-items:center;gap:10px;padding:0 14px;height:54px;flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border)}
   .menu-btn{background:none;border:none;color:var(--gold);font-size:24px;cursor:pointer;padding:6px;line-height:1}
 
-  .chat{flex:1;display:flex;flex-direction:column;max-width:900px;width:100%;margin:0 auto;overflow:hidden;min-height:0}
-  .messages{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:18px;padding:24px 18px}
+  .view{flex:1;display:none;flex-direction:column;max-width:900px;width:100%;margin:0 auto;overflow:hidden;min-height:0}
+  .view.show{display:flex}
+
+  /* Chat */
+  .chat-head{display:flex;align-items:center;gap:10px;padding:12px 18px 0}
+  .chat-head select{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:13px;padding:8px 12px;outline:none;cursor:pointer}
+  .messages{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:18px;padding:18px}
   .messages::-webkit-scrollbar{width:5px}
   .messages::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
-
   .msg{display:flex;flex-direction:column;gap:5px;max-width:85%}
   .msg.user{align-self:flex-end;align-items:flex-end}
   .msg.bot{align-self:flex-start;align-items:flex-start}
@@ -76,23 +61,32 @@
   .msg.bot .bubble{background:var(--surface-2);border:1px solid var(--border)}
 
   .inputbar{display:flex;gap:8px;align-items:flex-end;padding:12px 18px;border-top:1px solid var(--border);background:var(--surface);flex-shrink:0}
-  textarea{
-    flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);
-    color:var(--text);font-size:16px;padding:13px 15px;resize:none;font-family:inherit;outline:none;
-    transition:border-color .15s;max-height:120px;
-  }
+  textarea{flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:16px;padding:13px 15px;resize:none;font-family:inherit;outline:none;transition:border-color .15s;max-height:120px}
   textarea:focus{border-color:var(--gold-dark)}
   .send{padding:13px 22px;border-radius:var(--radius);border:none;cursor:pointer;font-size:15px;font-weight:600;background:var(--gold);color:var(--black);transition:background .15s;white-space:nowrap}
   .send:hover{background:var(--gold-light)}
   .send:disabled{opacity:.5;cursor:not-allowed}
 
-  /* ── Mobile ── */
+  /* Image view */
+  .img-wrap{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:14px}
+  .vtitle{font-size:20px;font-weight:600;color:var(--gold)}
+  .img-controls{display:flex;flex-direction:column;gap:10px}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  .row select{flex:1;min-width:120px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:14px;padding:11px 12px;outline:none;cursor:pointer}
+  .img-stage{flex:1;min-height:280px;display:flex;align-items:center;justify-content:center;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;position:relative}
+  .img-stage img{max-width:100%;max-height:100%;display:block}
+  .img-hint{color:var(--text-dim);font-size:14px;text-align:center;padding:20px;line-height:1.6}
+  .spinner{width:34px;height:34px;border:3px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .dl-link{display:none;text-align:center;color:var(--gold);font-size:13px;text-decoration:none;padding:6px}
+  .dl-link.show{display:block}
+
   @media(max-width:768px){
     .sidebar{position:fixed;top:0;left:-260px;width:260px;height:var(--app-h);z-index:100;transition:left .25s ease}
     .sidebar.open{left:0}
     .overlay.show{display:block}
     .topbar{display:flex}
-    .messages{padding:16px 12px}
+    .messages,.img-wrap{padding:14px}
     .inputbar{padding:10px 12px}
     .msg{max-width:92%}
   }
@@ -100,15 +94,15 @@
 </head>
 <body>
 <div class="app">
-  <!-- Sidebar -->
   <aside class="sidebar" id="sidebar">
     <div class="side-logo"><span class="crown">♛</span><span class="brand">LEGEND</span></div>
     <nav class="side-nav">
-      <button class="nav-btn active"><span class="nav-icon">♛</span><span>Legend AI</span></button>
+      <button class="nav-btn active" data-view="chat"><span class="nav-icon">💬</span><span>Chat</span></button>
+      <button class="nav-btn" data-view="image"><span class="nav-icon">🎨</span><span>Create Image</span></button>
       <button class="nav-btn" id="newChat"><span class="nav-icon">✦</span><span>New Chat</span></button>
       <div class="side-label">Coming Soon</div>
       <button class="nav-btn dim"><span class="nav-icon">📖</span><span>Story</span></button>
-      <button class="nav-btn dim"><span class="nav-icon">🎨</span><span>3D &amp; Assets</span></button>
+      <button class="nav-btn dim"><span class="nav-icon">🎬</span><span>Studio</span></button>
       <button class="nav-btn dim"><span class="nav-icon">💀</span><span>Dead Zone</span></button>
     </nav>
     <div class="side-foot"><div class="status"><span class="dot" id="dot"></span><span id="statusText">Online</span></div></div>
@@ -116,17 +110,55 @@
 
   <div class="overlay" id="overlay"></div>
 
-  <!-- Main -->
   <div class="main">
     <div class="topbar">
       <button class="menu-btn" id="menuBtn">☰</button>
       <span class="crown">♛</span><span class="brand">LEGEND</span>
     </div>
-    <div class="chat">
+
+    <!-- CHAT VIEW -->
+    <div class="view show" id="view-chat">
+      <div class="chat-head">
+        <span style="font-size:13px;color:var(--text-dim)">Model</span>
+        <select id="modelSel">
+          <option value="openai-large">Legend · Smart</option>
+          <option value="openai" selected>Legend · Fast</option>
+          <option value="mistral">Mistral</option>
+          <option value="llama">Llama 3</option>
+          <option value="deepseek">DeepSeek</option>
+          <option value="qwen-coder">Qwen Coder</option>
+        </select>
+      </div>
       <div class="messages" id="messages"></div>
       <div class="inputbar">
         <textarea id="input" rows="1" placeholder="Talk to Legend..."></textarea>
         <button class="send" id="send">Send</button>
+      </div>
+    </div>
+
+    <!-- IMAGE VIEW -->
+    <div class="view" id="view-image">
+      <div class="img-wrap">
+        <span class="vtitle">Create Image</span>
+        <div class="img-controls">
+          <textarea id="imgPrompt" rows="2" placeholder="Describe the image... (e.g. 'a golden dragon over a neon city at night, cinematic')"></textarea>
+          <div class="row">
+            <select id="imgModel">
+              <option value="flux" selected>Flux · Quality</option>
+              <option value="turbo">Turbo · Fast</option>
+            </select>
+            <select id="imgSize">
+              <option value="1024x1024" selected>Square</option>
+              <option value="768x1280">Portrait</option>
+              <option value="1280x768">Landscape</option>
+            </select>
+          </div>
+          <button class="send" id="genImg" style="width:100%">Generate Image</button>
+        </div>
+        <div class="img-stage" id="imgStage">
+          <div class="img-hint">Your image will appear here.<br>Describe anything — Legend draws it.</div>
+        </div>
+        <a class="dl-link" id="dlLink" target="_blank" rel="noopener">Open full image / long-press to save ↗</a>
       </div>
     </div>
   </div>
@@ -142,114 +174,111 @@ Your character:
 - You can do anything: talk, write stories, generate code, design games, create worlds.
 Always give full, detailed, thoughtful responses. Stay in character as Legend. Never cut yourself short.`;
 
-  const messagesEl = document.getElementById('messages');
-  const inputEl = document.getElementById('input');
-  const sendBtn = document.getElementById('send');
-  const dot = document.getElementById('dot');
-  const statusText = document.getElementById('statusText');
-  const sidebar = document.getElementById('sidebar');
-  const overlay = document.getElementById('overlay');
+  const $ = id => document.getElementById(id);
+  const messagesEl=$('messages'), inputEl=$('input'), sendBtn=$('send');
+  const dot=$('dot'), statusText=$('statusText'), sidebar=$('sidebar'), overlay=$('overlay'), modelSel=$('modelSel');
 
-  let history = [{ role: 'system', content: SYSTEM_PROMPT }];
+  let history = [{ role:'system', content:SYSTEM_PROMPT }];
 
+  /* Sidebar + view switching */
   function openSidebar(){ sidebar.classList.add('open'); overlay.classList.add('show'); }
   function closeSidebar(){ sidebar.classList.remove('open'); overlay.classList.remove('show'); }
-  document.getElementById('menuBtn').addEventListener('click', openSidebar);
+  $('menuBtn').addEventListener('click', openSidebar);
   overlay.addEventListener('click', closeSidebar);
 
-  function addMessage(role, content){
-    const wrap = document.createElement('div');
-    wrap.className = 'msg ' + (role === 'user' ? 'user' : 'bot');
-    const label = document.createElement('span');
-    label.className = 'mlabel';
-    label.textContent = role === 'user' ? 'You' : 'Legend';
-    const bubble = document.createElement('div');
-    bubble.className = 'bubble';
-    bubble.textContent = content;
-    wrap.appendChild(label); wrap.appendChild(bubble);
-    messagesEl.appendChild(wrap);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
-    return bubble;
-  }
-
-  function setBusy(b){
-    sendBtn.disabled = b;
-    dot.className = b ? 'dot busy' : 'dot';
-    statusText.textContent = b ? 'Thinking…' : 'Online';
-  }
-
-  inputEl.addEventListener('input', () => {
-    inputEl.style.height = 'auto';
-    inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+  document.querySelectorAll('.nav-btn[data-view]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.nav-btn[data-view]').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      const v = btn.dataset.view;
+      $('view-chat').classList.toggle('show', v==='chat');
+      $('view-image').classList.toggle('show', v==='image');
+      closeSidebar();
+    });
   });
 
+  /* Chat */
+  function addMessage(role, content){
+    const wrap=document.createElement('div'); wrap.className='msg '+(role==='user'?'user':'bot');
+    const label=document.createElement('span'); label.className='mlabel'; label.textContent=role==='user'?'You':'Legend';
+    const bubble=document.createElement('div'); bubble.className='bubble'; bubble.textContent=content;
+    wrap.appendChild(label); wrap.appendChild(bubble);
+    messagesEl.appendChild(wrap); messagesEl.scrollTop=messagesEl.scrollHeight;
+    return bubble;
+  }
+  function setBusy(b){ sendBtn.disabled=b; dot.className=b?'dot busy':'dot'; statusText.textContent=b?'Thinking…':'Online'; }
+
+  inputEl.addEventListener('input', ()=>{ inputEl.style.height='auto'; inputEl.style.height=Math.min(inputEl.scrollHeight,120)+'px'; });
+
   async function askLegend(bubble){
-    // Attempt 1: streaming
+    const model = modelSel.value || 'openai';
     try{
-      const res = await fetch('https://text.pollinations.ai/openai',{
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({model:'openai',messages:history,stream:true,temperature:0.85})
-      });
+      const res=await fetch('https://text.pollinations.ai/openai',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({model,messages:history,stream:true,temperature:0.85})});
       if(res.ok && res.body){
-        const reader = res.body.getReader(); const dec = new TextDecoder();
-        let buf=''; let full='';
-        while(true){
-          const {done,value} = await reader.read(); if(done) break;
-          buf += dec.decode(value,{stream:true});
-          const lines = buf.split('\n'); buf = lines.pop()||'';
-          for(const line of lines){
-            const t = line.trim(); if(!t.startsWith('data:')) continue;
-            const data = t.slice(5).trim(); if(data==='[DONE]') continue;
+        const reader=res.body.getReader(); const dec=new TextDecoder(); let buf='',full='';
+        while(true){ const {done,value}=await reader.read(); if(done)break;
+          buf+=dec.decode(value,{stream:true}); const lines=buf.split('\n'); buf=lines.pop()||'';
+          for(const line of lines){ const t=line.trim(); if(!t.startsWith('data:'))continue;
+            const data=t.slice(5).trim(); if(data==='[DONE]')continue;
             try{ const j=JSON.parse(data); const c=j.choices?.[0]?.delta?.content||'';
               if(c){ full+=c; bubble.textContent=full; messagesEl.scrollTop=messagesEl.scrollHeight; } }catch(_){}
-          }
-        }
+          } }
         if(full.trim()) return full.trim();
       }
     }catch(_){}
-    // Attempt 2: non-streaming POST
     try{
-      const res = await fetch('https://text.pollinations.ai/openai',{
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({model:'openai',messages:history,temperature:0.85})
-      });
+      const res=await fetch('https://text.pollinations.ai/openai',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({model,messages:history,temperature:0.85})});
       if(res.ok){ const d=await res.json(); const txt=d.choices?.[0]?.message?.content||'';
         if(txt.trim()){ bubble.textContent=txt.trim(); return txt.trim(); } }
     }catch(_){}
-    // Attempt 3: GET
     try{
-      const prompt = history.filter(m=>m.role!=='system')
-        .map(m=>(m.role==='user'?'User: ':'Legend: ')+m.content).join('\n')+'\nLegend:';
-      const res = await fetch('https://text.pollinations.ai/'+encodeURIComponent(prompt));
+      const prompt=history.filter(m=>m.role!=='system').map(m=>(m.role==='user'?'User: ':'Legend: ')+m.content).join('\n')+'\nLegend:';
+      const res=await fetch('https://text.pollinations.ai/'+encodeURIComponent(prompt));
       if(res.ok){ const txt=await res.text(); if(txt.trim()){ bubble.textContent=txt.trim(); return txt.trim(); } }
     }catch(_){}
     return null;
   }
 
   async function send(){
-    const text = inputEl.value.trim();
-    if(!text || sendBtn.disabled) return;
+    const text=inputEl.value.trim(); if(!text||sendBtn.disabled)return;
     inputEl.value=''; inputEl.style.height='auto';
-    addMessage('user', text);
-    history.push({role:'user',content:text});
-    setBusy(true);
-    const bubble = addMessage('bot','…');
-    const reply = await askLegend(bubble);
+    addMessage('user',text); history.push({role:'user',content:text});
+    setBusy(true); const bubble=addMessage('bot','…');
+    const reply=await askLegend(bubble);
     if(reply){ history.push({role:'assistant',content:reply}); }
-    else { bubble.textContent = "I couldn't reach my brain just now. Check your internet and try again."; }
+    else{ bubble.textContent="I couldn't reach my brain just now. Check your internet and try again."; }
     setBusy(false);
   }
-
   sendBtn.addEventListener('click', send);
-  inputEl.addEventListener('keydown', e => {
-    if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send(); }
+  inputEl.addEventListener('keydown', e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); send(); } });
+
+  $('newChat').addEventListener('click', ()=>{
+    history=[{role:'system',content:SYSTEM_PROMPT}]; messagesEl.innerHTML='';
+    addMessage('bot',"Fresh start. What are we building?");
+    document.querySelectorAll('.nav-btn[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view==='chat'));
+    $('view-chat').classList.add('show'); $('view-image').classList.remove('show');
+    closeSidebar();
   });
 
-  document.getElementById('newChat').addEventListener('click', () => {
-    history = [{ role:'system', content:SYSTEM_PROMPT }];
-    messagesEl.innerHTML='';
-    addMessage('bot', "Fresh start. What are we building?");
-    closeSidebar();
+  /* Image generation */
+  const imgStage=$('imgStage'), dlLink=$('dlLink');
+  let imgSeed=1;
+  $('genImg').addEventListener('click', ()=>{
+    const prompt=$('imgPrompt').value.trim(); if(!prompt) return;
+    const model=$('imgModel').value;
+    const [w,h]=$('imgSize').value.split('x');
+    imgSeed=(imgSeed*7919+13)%100000; // vary so re-runs give new images
+    const url=`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${w}&height=${h}&model=${model}&nologo=true&seed=${imgSeed}`;
+
+    imgStage.innerHTML='<div class="spinner"></div>';
+    dlLink.classList.remove('show');
+    const img=new Image();
+    img.onload=()=>{ imgStage.innerHTML=''; imgStage.appendChild(img); dlLink.href=url; dlLink.classList.add('show'); };
+    img.onerror=()=>{ imgStage.innerHTML='<div class="img-hint">Couldn’t draw that one. Try again or reword it.</div>'; };
+    img.alt=prompt;
+    img.src=url;
   });
 
   addMessage('bot', "I'm Legend. What are we building today?");
