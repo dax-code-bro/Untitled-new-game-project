@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Legend</title>
+<style>
+  :root{
+    --gold:#C9A84C; --gold-light:#F5D78E; --gold-dark:#8B6914;
+    --black:#000; --surface:#0A0A0A; --surface-2:#111; --surface-3:#1A1A1A;
+    --border:#222; --text:#E8E8E8; --text-dim:#888; --radius:8px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    background:var(--black);color:var(--text);
+    height:100vh;overflow:hidden;display:flex;flex-direction:column;
+  }
+
+  /* Top bar */
+  .topbar{
+    display:flex;align-items:center;gap:10px;
+    padding:0 18px;height:56px;flex-shrink:0;
+    background:var(--surface);border-bottom:1px solid var(--border);
+  }
+  .crown{color:var(--gold);font-size:20px}
+  .brand{
+    font-family:Georgia,serif;font-weight:700;letter-spacing:.25em;
+    color:var(--gold);font-size:16px;
+  }
+  .status{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim);margin-left:auto}
+  .dot{width:8px;height:8px;border-radius:50%;background:#4CAF50}
+  .dot.busy{background:var(--gold);animation:pulse 1s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+  /* Chat area */
+  .wrap{flex:1;display:flex;flex-direction:column;max-width:900px;width:100%;margin:0 auto;overflow:hidden}
+  .messages{
+    flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:18px;
+    padding:24px 18px;
+  }
+  .messages::-webkit-scrollbar{width:5px}
+  .messages::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+  .msg{display:flex;flex-direction:column;gap:5px;max-width:85%}
+  .msg.user{align-self:flex-end;align-items:flex-end}
+  .msg.bot{align-self:flex-start;align-items:flex-start}
+  .label{font-size:11px;color:var(--text-dim);letter-spacing:.05em}
+  .msg.user .label{color:var(--gold-dark)}
+  .bubble{
+    padding:14px 18px;border-radius:var(--radius);
+    font-size:15px;line-height:1.7;white-space:pre-wrap;word-wrap:break-word;
+  }
+  .msg.user .bubble{background:rgba(201,168,76,.1);border:1px solid var(--gold-dark)}
+  .msg.bot .bubble{background:var(--surface-2);border:1px solid var(--border)}
+
+  /* Input */
+  .inputbar{
+    display:flex;gap:8px;align-items:flex-end;
+    padding:14px 18px;border-top:1px solid var(--border);background:var(--surface);
+  }
+  textarea{
+    flex:1;background:var(--surface-2);border:1px solid var(--border);
+    border-radius:var(--radius);color:var(--text);font-size:15px;
+    padding:13px 15px;resize:none;font-family:inherit;outline:none;
+    transition:border-color .15s;max-height:140px;
+  }
+  textarea:focus{border-color:var(--gold-dark)}
+  .send{
+    padding:13px 24px;border-radius:var(--radius);border:none;cursor:pointer;
+    font-size:15px;font-weight:600;background:var(--gold);color:var(--black);
+    transition:background .15s;white-space:nowrap;
+  }
+  .send:hover{background:var(--gold-light)}
+  .send:disabled{opacity:.5;cursor:not-allowed}
+
+  @media(max-width:768px){
+    .msg{max-width:92%}
+    .messages{padding:16px 12px}
+    .inputbar{padding:10px 12px}
+  }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <span class="crown">♛</span>
+    <span class="brand">LEGEND</span>
+    <div class="status"><span class="dot" id="dot"></span><span id="statusText">Online</span></div>
+  </div>
+
+  <div class="wrap">
+    <div class="messages" id="messages"></div>
+    <div class="inputbar">
+      <textarea id="input" rows="1" placeholder="Talk to Legend..."></textarea>
+      <button class="send" id="send">Send</button>
+    </div>
+  </div>
+
+<script>
+  const SYSTEM_PROMPT = `You are Legend — the ultimate AI.
+You are not a generic assistant. You are a creative force, a thinking partner, and a builder.
+Your character:
+- Confident but never arrogant. You speak plainly, directly, and with purpose.
+- Endlessly creative. You see stories, worlds, and possibilities everywhere.
+- A true collaborator. You listen deeply, remember everything, and build on what the user says.
+- You can do anything: talk, write stories, generate code, design games, create worlds.
+Always give full, detailed, thoughtful responses. Stay in character as Legend. Never cut yourself short.`;
+
+  const messagesEl = document.getElementById('messages');
+  const inputEl = document.getElementById('input');
+  const sendBtn = document.getElementById('send');
+  const dot = document.getElementById('dot');
+  const statusText = document.getElementById('statusText');
+
+  // Conversation history (system + turns)
+  const history = [{ role: 'system', content: SYSTEM_PROMPT }];
+
+  function addMessage(role, content) {
+    const wrap = document.createElement('div');
+    wrap.className = 'msg ' + (role === 'user' ? 'user' : 'bot');
+    const label = document.createElement('span');
+    label.className = 'label';
+    label.textContent = role === 'user' ? 'You' : 'Legend';
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.textContent = content;
+    wrap.appendChild(label);
+    wrap.appendChild(bubble);
+    messagesEl.appendChild(wrap);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    return bubble;
+  }
+
+  function setBusy(busy) {
+    sendBtn.disabled = busy;
+    dot.className = busy ? 'dot busy' : 'dot';
+    statusText.textContent = busy ? 'Thinking…' : 'Online';
+  }
+
+  // Auto-grow textarea
+  inputEl.addEventListener('input', () => {
+    inputEl.style.height = 'auto';
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 140) + 'px';
+  });
+
+  // Try streaming from Pollinations (no key needed). Falls back to plain GET.
+  async function askLegend(bubble) {
+    // ── Attempt 1: streaming chat completions ──
+    try {
+      const res = await fetch('https://text.pollinations.ai/openai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'openai',
+          messages: history,
+          stream: true,
+          temperature: 0.85,
+        }),
+      });
+      if (res.ok && res.body) {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let full = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+          for (const line of lines) {
+            const t = line.trim();
+            if (!t.startsWith('data:')) continue;
+            const data = t.slice(5).trim();
+            if (data === '[DONE]') continue;
+            try {
+              const json = JSON.parse(data);
+              const chunk = json.choices?.[0]?.delta?.content || '';
+              if (chunk) {
+                full += chunk;
+                bubble.textContent = full;
+                messagesEl.scrollTop = messagesEl.scrollHeight;
+              }
+            } catch (_) {}
+          }
+        }
+        if (full.trim()) return full.trim();
+      }
+    } catch (_) {}
+
+    // ── Attempt 2: non-streaming POST ──
+    try {
+      const res = await fetch('https://text.pollinations.ai/openai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: 'openai', messages: history, temperature: 0.85 }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const text = data.choices?.[0]?.message?.content || '';
+        if (text.trim()) { bubble.textContent = text.trim(); return text.trim(); }
+      }
+    } catch (_) {}
+
+    // ── Attempt 3: simple GET ──
+    try {
+      const prompt = history
+        .filter(m => m.role !== 'system')
+        .map(m => (m.role === 'user' ? 'User: ' : 'Legend: ') + m.content)
+        .join('\n') + '\nLegend:';
+      const res = await fetch('https://text.pollinations.ai/' + encodeURIComponent(prompt));
+      if (res.ok) {
+        const text = await res.text();
+        if (text.trim()) { bubble.textContent = text.trim(); return text.trim(); }
+      }
+    } catch (_) {}
+
+    return null;
+  }
+
+  async function send() {
+    const text = inputEl.value.trim();
+    if (!text || sendBtn.disabled) return;
+
+    inputEl.value = '';
+    inputEl.style.height = 'auto';
+    addMessage('user', text);
+    history.push({ role: 'user', content: text });
+
+    setBusy(true);
+    const bubble = addMessage('bot', '…');
+
+    const reply = await askLegend(bubble);
+    if (reply) {
+      history.push({ role: 'assistant', content: reply });
+    } else {
+      bubble.textContent = "I couldn't reach my brain just now. Check your internet and try again.";
+    }
+    setBusy(false);
+    inputEl.focus();
+  }
+
+  sendBtn.addEventListener('click', send);
+  inputEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+  });
+
+  // Greeting
+  addMessage('bot', "I'm Legend. What are we building today?");
+  inputEl.focus();
+</script>
+</body>
+</html>
