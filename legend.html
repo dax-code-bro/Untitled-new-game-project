@@ -2,100 +2,135 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Legend</title>
 <style>
   :root{
     --gold:#C9A84C; --gold-light:#F5D78E; --gold-dark:#8B6914;
     --black:#000; --surface:#0A0A0A; --surface-2:#111; --surface-3:#1A1A1A;
     --border:#222; --text:#E8E8E8; --text-dim:#888; --radius:8px;
+    --app-h:100vh; --app-h:100dvh;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
   body{
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
     background:var(--black);color:var(--text);
-    height:100vh;overflow:hidden;display:flex;flex-direction:column;
+    height:var(--app-h);overflow:hidden;
   }
 
-  /* Top bar */
-  .topbar{
-    display:flex;align-items:center;gap:10px;
-    padding:0 18px;height:56px;flex-shrink:0;
-    background:var(--surface);border-bottom:1px solid var(--border);
+  .app{display:flex;height:var(--app-h)}
+
+  /* ── Sidebar ── */
+  .sidebar{
+    width:230px;flex-shrink:0;background:var(--surface);
+    border-right:1px solid var(--border);
+    display:flex;flex-direction:column;padding:16px 0;
+  }
+  .side-logo{
+    display:flex;align-items:center;gap:8px;
+    padding:0 18px 16px;border-bottom:1px solid var(--border);margin-bottom:12px;
   }
   .crown{color:var(--gold);font-size:20px}
-  .brand{
-    font-family:Georgia,serif;font-weight:700;letter-spacing:.25em;
-    color:var(--gold);font-size:16px;
+  .brand{font-family:Georgia,serif;font-weight:700;letter-spacing:.22em;color:var(--gold);font-size:16px}
+  .side-nav{flex:1;display:flex;flex-direction:column;gap:3px;padding:0 10px;overflow-y:auto}
+  .nav-btn{
+    display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:var(--radius);
+    border:none;background:transparent;color:var(--text-dim);font-size:14px;
+    cursor:pointer;text-align:left;width:100%;transition:all .15s;
   }
-  .status{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim);margin-left:auto}
+  .nav-btn:hover{color:var(--text);background:var(--surface-3)}
+  .nav-btn.active{color:var(--gold);background:rgba(201,168,76,.1)}
+  .nav-btn.dim{opacity:.35;cursor:default}
+  .nav-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0}
+  .side-label{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);padding:14px 12px 4px;opacity:.6}
+  .side-foot{padding:12px 18px 0;border-top:1px solid var(--border);margin-top:8px}
+  .status{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim)}
   .dot{width:8px;height:8px;border-radius:50%;background:#4CAF50}
   .dot.busy{background:var(--gold);animation:pulse 1s infinite}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
-  /* Chat area */
-  .wrap{flex:1;display:flex;flex-direction:column;max-width:900px;width:100%;margin:0 auto;overflow:hidden}
-  .messages{
-    flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:18px;
-    padding:24px 18px;
+  .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99}
+
+  /* ── Main ── */
+  .main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+  .topbar{
+    display:none;align-items:center;gap:10px;
+    padding:0 14px;height:54px;flex-shrink:0;
+    background:var(--surface);border-bottom:1px solid var(--border);
   }
+  .menu-btn{background:none;border:none;color:var(--gold);font-size:24px;cursor:pointer;padding:6px;line-height:1}
+
+  .chat{flex:1;display:flex;flex-direction:column;max-width:900px;width:100%;margin:0 auto;overflow:hidden;min-height:0}
+  .messages{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:18px;padding:24px 18px}
   .messages::-webkit-scrollbar{width:5px}
   .messages::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
 
   .msg{display:flex;flex-direction:column;gap:5px;max-width:85%}
   .msg.user{align-self:flex-end;align-items:flex-end}
   .msg.bot{align-self:flex-start;align-items:flex-start}
-  .label{font-size:11px;color:var(--text-dim);letter-spacing:.05em}
-  .msg.user .label{color:var(--gold-dark)}
-  .bubble{
-    padding:14px 18px;border-radius:var(--radius);
-    font-size:15px;line-height:1.7;white-space:pre-wrap;word-wrap:break-word;
-  }
+  .mlabel{font-size:11px;color:var(--text-dim);letter-spacing:.05em}
+  .msg.user .mlabel{color:var(--gold-dark)}
+  .bubble{padding:14px 18px;border-radius:var(--radius);font-size:15px;line-height:1.7;white-space:pre-wrap;word-wrap:break-word;overflow-wrap:anywhere}
   .msg.user .bubble{background:rgba(201,168,76,.1);border:1px solid var(--gold-dark)}
   .msg.bot .bubble{background:var(--surface-2);border:1px solid var(--border)}
 
-  /* Input */
-  .inputbar{
-    display:flex;gap:8px;align-items:flex-end;
-    padding:14px 18px;border-top:1px solid var(--border);background:var(--surface);
-  }
+  .inputbar{display:flex;gap:8px;align-items:flex-end;padding:12px 18px;border-top:1px solid var(--border);background:var(--surface);flex-shrink:0}
   textarea{
-    flex:1;background:var(--surface-2);border:1px solid var(--border);
-    border-radius:var(--radius);color:var(--text);font-size:15px;
-    padding:13px 15px;resize:none;font-family:inherit;outline:none;
-    transition:border-color .15s;max-height:140px;
+    flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);
+    color:var(--text);font-size:16px;padding:13px 15px;resize:none;font-family:inherit;outline:none;
+    transition:border-color .15s;max-height:120px;
   }
   textarea:focus{border-color:var(--gold-dark)}
-  .send{
-    padding:13px 24px;border-radius:var(--radius);border:none;cursor:pointer;
-    font-size:15px;font-weight:600;background:var(--gold);color:var(--black);
-    transition:background .15s;white-space:nowrap;
-  }
+  .send{padding:13px 22px;border-radius:var(--radius);border:none;cursor:pointer;font-size:15px;font-weight:600;background:var(--gold);color:var(--black);transition:background .15s;white-space:nowrap}
   .send:hover{background:var(--gold-light)}
   .send:disabled{opacity:.5;cursor:not-allowed}
 
+  /* ── Mobile ── */
   @media(max-width:768px){
-    .msg{max-width:92%}
+    .sidebar{position:fixed;top:0;left:-260px;width:260px;height:var(--app-h);z-index:100;transition:left .25s ease}
+    .sidebar.open{left:0}
+    .overlay.show{display:block}
+    .topbar{display:flex}
     .messages{padding:16px 12px}
     .inputbar{padding:10px 12px}
+    .msg{max-width:92%}
   }
 </style>
 </head>
 <body>
-  <div class="topbar">
-    <span class="crown">♛</span>
-    <span class="brand">LEGEND</span>
-    <div class="status"><span class="dot" id="dot"></span><span id="statusText">Online</span></div>
-  </div>
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="side-logo"><span class="crown">♛</span><span class="brand">LEGEND</span></div>
+    <nav class="side-nav">
+      <button class="nav-btn active"><span class="nav-icon">♛</span><span>Legend AI</span></button>
+      <button class="nav-btn" id="newChat"><span class="nav-icon">✦</span><span>New Chat</span></button>
+      <div class="side-label">Coming Soon</div>
+      <button class="nav-btn dim"><span class="nav-icon">📖</span><span>Story</span></button>
+      <button class="nav-btn dim"><span class="nav-icon">🎨</span><span>3D &amp; Assets</span></button>
+      <button class="nav-btn dim"><span class="nav-icon">💀</span><span>Dead Zone</span></button>
+    </nav>
+    <div class="side-foot"><div class="status"><span class="dot" id="dot"></span><span id="statusText">Online</span></div></div>
+  </aside>
 
-  <div class="wrap">
-    <div class="messages" id="messages"></div>
-    <div class="inputbar">
-      <textarea id="input" rows="1" placeholder="Talk to Legend..."></textarea>
-      <button class="send" id="send">Send</button>
+  <div class="overlay" id="overlay"></div>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <button class="menu-btn" id="menuBtn">☰</button>
+      <span class="crown">♛</span><span class="brand">LEGEND</span>
+    </div>
+    <div class="chat">
+      <div class="messages" id="messages"></div>
+      <div class="inputbar">
+        <textarea id="input" rows="1" placeholder="Talk to Legend..."></textarea>
+        <button class="send" id="send">Send</button>
+      </div>
     </div>
   </div>
+</div>
 
 <script>
   const SYSTEM_PROMPT = `You are Legend — the ultimate AI.
@@ -112,143 +147,112 @@ Always give full, detailed, thoughtful responses. Stay in character as Legend. N
   const sendBtn = document.getElementById('send');
   const dot = document.getElementById('dot');
   const statusText = document.getElementById('statusText');
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('overlay');
 
-  // Conversation history (system + turns)
-  const history = [{ role: 'system', content: SYSTEM_PROMPT }];
+  let history = [{ role: 'system', content: SYSTEM_PROMPT }];
 
-  function addMessage(role, content) {
+  function openSidebar(){ sidebar.classList.add('open'); overlay.classList.add('show'); }
+  function closeSidebar(){ sidebar.classList.remove('open'); overlay.classList.remove('show'); }
+  document.getElementById('menuBtn').addEventListener('click', openSidebar);
+  overlay.addEventListener('click', closeSidebar);
+
+  function addMessage(role, content){
     const wrap = document.createElement('div');
     wrap.className = 'msg ' + (role === 'user' ? 'user' : 'bot');
     const label = document.createElement('span');
-    label.className = 'label';
+    label.className = 'mlabel';
     label.textContent = role === 'user' ? 'You' : 'Legend';
     const bubble = document.createElement('div');
     bubble.className = 'bubble';
     bubble.textContent = content;
-    wrap.appendChild(label);
-    wrap.appendChild(bubble);
+    wrap.appendChild(label); wrap.appendChild(bubble);
     messagesEl.appendChild(wrap);
     messagesEl.scrollTop = messagesEl.scrollHeight;
     return bubble;
   }
 
-  function setBusy(busy) {
-    sendBtn.disabled = busy;
-    dot.className = busy ? 'dot busy' : 'dot';
-    statusText.textContent = busy ? 'Thinking…' : 'Online';
+  function setBusy(b){
+    sendBtn.disabled = b;
+    dot.className = b ? 'dot busy' : 'dot';
+    statusText.textContent = b ? 'Thinking…' : 'Online';
   }
 
-  // Auto-grow textarea
   inputEl.addEventListener('input', () => {
     inputEl.style.height = 'auto';
-    inputEl.style.height = Math.min(inputEl.scrollHeight, 140) + 'px';
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
   });
 
-  // Try streaming from Pollinations (no key needed). Falls back to plain GET.
-  async function askLegend(bubble) {
-    // ── Attempt 1: streaming chat completions ──
-    try {
-      const res = await fetch('https://text.pollinations.ai/openai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'openai',
-          messages: history,
-          stream: true,
-          temperature: 0.85,
-        }),
+  async function askLegend(bubble){
+    // Attempt 1: streaming
+    try{
+      const res = await fetch('https://text.pollinations.ai/openai',{
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({model:'openai',messages:history,stream:true,temperature:0.85})
       });
-      if (res.ok && res.body) {
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        let full = '';
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
-          for (const line of lines) {
-            const t = line.trim();
-            if (!t.startsWith('data:')) continue;
-            const data = t.slice(5).trim();
-            if (data === '[DONE]') continue;
-            try {
-              const json = JSON.parse(data);
-              const chunk = json.choices?.[0]?.delta?.content || '';
-              if (chunk) {
-                full += chunk;
-                bubble.textContent = full;
-                messagesEl.scrollTop = messagesEl.scrollHeight;
-              }
-            } catch (_) {}
+      if(res.ok && res.body){
+        const reader = res.body.getReader(); const dec = new TextDecoder();
+        let buf=''; let full='';
+        while(true){
+          const {done,value} = await reader.read(); if(done) break;
+          buf += dec.decode(value,{stream:true});
+          const lines = buf.split('\n'); buf = lines.pop()||'';
+          for(const line of lines){
+            const t = line.trim(); if(!t.startsWith('data:')) continue;
+            const data = t.slice(5).trim(); if(data==='[DONE]') continue;
+            try{ const j=JSON.parse(data); const c=j.choices?.[0]?.delta?.content||'';
+              if(c){ full+=c; bubble.textContent=full; messagesEl.scrollTop=messagesEl.scrollHeight; } }catch(_){}
           }
         }
-        if (full.trim()) return full.trim();
+        if(full.trim()) return full.trim();
       }
-    } catch (_) {}
-
-    // ── Attempt 2: non-streaming POST ──
-    try {
-      const res = await fetch('https://text.pollinations.ai/openai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: 'openai', messages: history, temperature: 0.85 }),
+    }catch(_){}
+    // Attempt 2: non-streaming POST
+    try{
+      const res = await fetch('https://text.pollinations.ai/openai',{
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({model:'openai',messages:history,temperature:0.85})
       });
-      if (res.ok) {
-        const data = await res.json();
-        const text = data.choices?.[0]?.message?.content || '';
-        if (text.trim()) { bubble.textContent = text.trim(); return text.trim(); }
-      }
-    } catch (_) {}
-
-    // ── Attempt 3: simple GET ──
-    try {
-      const prompt = history
-        .filter(m => m.role !== 'system')
-        .map(m => (m.role === 'user' ? 'User: ' : 'Legend: ') + m.content)
-        .join('\n') + '\nLegend:';
-      const res = await fetch('https://text.pollinations.ai/' + encodeURIComponent(prompt));
-      if (res.ok) {
-        const text = await res.text();
-        if (text.trim()) { bubble.textContent = text.trim(); return text.trim(); }
-      }
-    } catch (_) {}
-
+      if(res.ok){ const d=await res.json(); const txt=d.choices?.[0]?.message?.content||'';
+        if(txt.trim()){ bubble.textContent=txt.trim(); return txt.trim(); } }
+    }catch(_){}
+    // Attempt 3: GET
+    try{
+      const prompt = history.filter(m=>m.role!=='system')
+        .map(m=>(m.role==='user'?'User: ':'Legend: ')+m.content).join('\n')+'\nLegend:';
+      const res = await fetch('https://text.pollinations.ai/'+encodeURIComponent(prompt));
+      if(res.ok){ const txt=await res.text(); if(txt.trim()){ bubble.textContent=txt.trim(); return txt.trim(); } }
+    }catch(_){}
     return null;
   }
 
-  async function send() {
+  async function send(){
     const text = inputEl.value.trim();
-    if (!text || sendBtn.disabled) return;
-
-    inputEl.value = '';
-    inputEl.style.height = 'auto';
+    if(!text || sendBtn.disabled) return;
+    inputEl.value=''; inputEl.style.height='auto';
     addMessage('user', text);
-    history.push({ role: 'user', content: text });
-
+    history.push({role:'user',content:text});
     setBusy(true);
-    const bubble = addMessage('bot', '…');
-
+    const bubble = addMessage('bot','…');
     const reply = await askLegend(bubble);
-    if (reply) {
-      history.push({ role: 'assistant', content: reply });
-    } else {
-      bubble.textContent = "I couldn't reach my brain just now. Check your internet and try again.";
-    }
+    if(reply){ history.push({role:'assistant',content:reply}); }
+    else { bubble.textContent = "I couldn't reach my brain just now. Check your internet and try again."; }
     setBusy(false);
-    inputEl.focus();
   }
 
   sendBtn.addEventListener('click', send);
-  inputEl.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+  inputEl.addEventListener('keydown', e => {
+    if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send(); }
   });
 
-  // Greeting
+  document.getElementById('newChat').addEventListener('click', () => {
+    history = [{ role:'system', content:SYSTEM_PROMPT }];
+    messagesEl.innerHTML='';
+    addMessage('bot', "Fresh start. What are we building?");
+    closeSidebar();
+  });
+
   addMessage('bot', "I'm Legend. What are we building today?");
-  inputEl.focus();
 </script>
 </body>
 </html>
