@@ -46,8 +46,9 @@
   .view.show{display:flex}
 
   /* Chat */
-  .chat-head{display:flex;align-items:center;gap:10px;padding:12px 18px 0}
-  .chat-head select{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:13px;padding:8px 12px;outline:none;cursor:pointer}
+  .chat-head{display:flex;align-items:center;gap:10px;padding:12px 18px 0;flex-wrap:wrap}
+  .chat-head select{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);color:var(--gold);font-size:14px;font-weight:600;padding:9px 12px;outline:none;cursor:pointer}
+  .model-tag{font-size:12px;color:var(--text-dim);flex:1;min-width:140px}
   .messages{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:18px;padding:18px}
   .messages::-webkit-scrollbar{width:5px}
   .messages::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
@@ -119,15 +120,13 @@
     <!-- CHAT VIEW -->
     <div class="view show" id="view-chat">
       <div class="chat-head">
-        <span style="font-size:13px;color:var(--text-dim)">Model</span>
         <select id="modelSel">
-          <option value="openai-large">Legend · Smart</option>
-          <option value="openai" selected>Legend · Fast</option>
-          <option value="mistral">Mistral</option>
-          <option value="llama">Llama 3</option>
-          <option value="deepseek">DeepSeek</option>
-          <option value="qwen-coder">Qwen Coder</option>
+          <option value="ultra" selected>♛ Ultra Engine</option>
+          <option value="supersonic">⚡ Supersonic</option>
+          <option value="midline">◆ Midline</option>
+          <option value="ambit">✦ Ambit</option>
         </select>
+        <span class="model-tag" id="modelTag"></span>
       </div>
       <div class="messages" id="messages"></div>
       <div class="inputbar">
@@ -165,20 +164,46 @@
 </div>
 
 <script>
-  const SYSTEM_PROMPT = `You are Legend — the ultimate AI.
-You are not a generic assistant. You are a creative force, a thinking partner, and a builder.
-Your character:
-- Confident but never arrogant. You speak plainly, directly, and with purpose.
-- Endlessly creative. You see stories, worlds, and possibilities everywhere.
-- A true collaborator. You listen deeply, remember everything, and build on what the user says.
-- You can do anything: talk, write stories, generate code, design games, create worlds.
-Always give full, detailed, thoughtful responses. Stay in character as Legend. Never cut yourself short.`;
+  // Shared Legend character, then each engine adds its own behavior.
+  const BASE = `You are Legend — the ultimate AI: a creative force, a thinking partner, and a builder. Confident, never arrogant. You speak plainly and with purpose.`;
+
+  const MODELS = {
+    ultra: {
+      label: '♛ Ultra Engine',
+      model: 'openai-large',
+      tag: 'Most powerful · deepest, most accurate answers',
+      system: BASE + `\n\nYou are running on the ULTRA ENGINE — the most powerful and most accurate mind in Legend. Treat EVERY question, no matter how small or silly, as worthy of deep thought. Reason carefully, thoroughly, and with genuine insight. Bring nuance and a touch of Socratic depth — turn even a simple question into something genuinely illuminating. Accuracy above all. Never give a lazy or shallow answer.`
+    },
+    supersonic: {
+      label: '⚡ Supersonic',
+      model: 'openai',
+      tag: 'Fastest · short, quick answers (not for coding)',
+      system: BASE + `\n\nYou are running on SUPERSONIC — built purely for SPEED. Answer as fast and concisely as possible: usually one or two sentences, a few at most. No long explanations, no rambling, no filler. Get straight to the point. If the user needs heavy or complex work like real coding, tell them in one line to switch to Ultra Engine or Ambit, then give the short answer anyway.`
+    },
+    midline: {
+      label: '◆ Midline',
+      model: 'openai',
+      tag: 'Balanced everyday model · easy on usage',
+      system: BASE + `\n\nYou are running on MIDLINE — the balanced, everyday engine. Give clear, helpful, solid answers of moderate length — not too short, not overloaded. Practical and reliable for day-to-day questions. Good, steady, no drama.`
+    },
+    ambit: {
+      label: '✦ Ambit',
+      model: 'openai-large',
+      tag: 'For big, ambitious, multi-step projects',
+      system: BASE + `\n\nYou are running on AMBIT — built for the most ambitious tasks. When given something big or complex, break it down, plan it out, and deliver thorough, well-structured, complete work. Think in clear steps, organize your answer, and be comprehensive. You thrive on large, multi-part projects and never leave them half-done.`
+    },
+  };
 
   const $ = id => document.getElementById(id);
   const messagesEl=$('messages'), inputEl=$('input'), sendBtn=$('send');
-  const dot=$('dot'), statusText=$('statusText'), sidebar=$('sidebar'), overlay=$('overlay'), modelSel=$('modelSel');
+  const dot=$('dot'), statusText=$('statusText'), sidebar=$('sidebar'), overlay=$('overlay'), modelSel=$('modelSel'), modelTag=$('modelTag');
 
-  let history = [{ role:'system', content:SYSTEM_PROMPT }];
+  // history holds only user/assistant turns; the system prompt is added per-request based on the chosen engine.
+  let history = [];
+
+  function updateTag(){ modelTag.textContent = MODELS[modelSel.value].tag; }
+  modelSel.addEventListener('change', updateTag);
+  updateTag();
 
   /* Sidebar + view switching */
   function openSidebar(){ sidebar.classList.add('open'); overlay.classList.add('show'); }
@@ -211,10 +236,12 @@ Always give full, detailed, thoughtful responses. Stay in character as Legend. N
   inputEl.addEventListener('input', ()=>{ inputEl.style.height='auto'; inputEl.style.height=Math.min(inputEl.scrollHeight,120)+'px'; });
 
   async function askLegend(bubble){
-    const model = modelSel.value || 'openai';
+    const engine = MODELS[modelSel.value] || MODELS.midline;
+    const model = engine.model;
+    const messages = [{ role:'system', content: engine.system }, ...history];
     try{
       const res=await fetch('https://text.pollinations.ai/openai',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({model,messages:history,stream:true,temperature:0.85})});
+        body:JSON.stringify({model,messages,stream:true,temperature:0.85})});
       if(res.ok && res.body){
         const reader=res.body.getReader(); const dec=new TextDecoder(); let buf='',full='';
         while(true){ const {done,value}=await reader.read(); if(done)break;
@@ -229,12 +256,12 @@ Always give full, detailed, thoughtful responses. Stay in character as Legend. N
     }catch(_){}
     try{
       const res=await fetch('https://text.pollinations.ai/openai',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({model,messages:history,temperature:0.85})});
+        body:JSON.stringify({model,messages,temperature:0.85})});
       if(res.ok){ const d=await res.json(); const txt=d.choices?.[0]?.message?.content||'';
         if(txt.trim()){ bubble.textContent=txt.trim(); return txt.trim(); } }
     }catch(_){}
     try{
-      const prompt=history.filter(m=>m.role!=='system').map(m=>(m.role==='user'?'User: ':'Legend: ')+m.content).join('\n')+'\nLegend:';
+      const prompt=history.map(m=>(m.role==='user'?'User: ':'Legend: ')+m.content).join('\n')+'\nLegend:';
       const res=await fetch('https://text.pollinations.ai/'+encodeURIComponent(prompt));
       if(res.ok){ const txt=await res.text(); if(txt.trim()){ bubble.textContent=txt.trim(); return txt.trim(); } }
     }catch(_){}
@@ -255,7 +282,7 @@ Always give full, detailed, thoughtful responses. Stay in character as Legend. N
   inputEl.addEventListener('keydown', e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); send(); } });
 
   $('newChat').addEventListener('click', ()=>{
-    history=[{role:'system',content:SYSTEM_PROMPT}]; messagesEl.innerHTML='';
+    history=[]; messagesEl.innerHTML='';
     addMessage('bot',"Fresh start. What are we building?");
     document.querySelectorAll('.nav-btn[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view==='chat'));
     $('view-chat').classList.add('show'); $('view-image').classList.remove('show');
