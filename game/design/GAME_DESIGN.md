@@ -88,7 +88,8 @@ The player deploys with a team. Roster (being defined member by member):
   special-forces / SWAT skillset (see service record).
 - **Role / specialty:** **Team leader and founder** — he created the unit and
   commands it. SWAT-caliber veteran skillset.
-- **Signature weapon:** **Benelli M4** combat shotgun (read from "Bonelli M4").
+- **Signature weapon:** **Benelli M3 Super 90** combat shotgun (swapped from
+  "Bonelli M4" to stay closer to the 1985 era; M3 debuted 1989).
 - **Personality:** *TBD.*
 
 ###### Service Record (40 years of combat)
