@@ -66,9 +66,17 @@ This is the cinematic-to-gameplay hand-off: the player takes control as they
 gear up and step off the chopper with the squad.
 
 #### The Squad
-The player deploys with a team. Each member and their role:
+The player deploys with a team. Roster (being defined member by member):
 
-> **TBD** — to be defined (see discussion). Roster, names, and roles pending.
+##### 1. Webber "Molotov" Newman
+- **Callsign:** "Molotov" (sits between first/last name: Webber Newman).
+- **Demeanor:** exceptionally quiet — almost never talks. Dead serious, with
+  the occasional flash of humor.
+- **Look:** full-covering ski mask, spray-painted with **fire and a Molotov
+  cocktail** (origin of the callsign).
+- **Role / specialty:** *TBD* (look strongly implies incendiary / demolitions).
+- **Weapon of choice:** *TBD.*
+- **Rank / backstory:** *TBD.*
 
 ### Multiplayer
 - Competitive PvP.
