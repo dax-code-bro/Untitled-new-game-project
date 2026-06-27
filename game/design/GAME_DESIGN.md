@@ -141,8 +141,17 @@ high-ranking **Sergeant / officer** leading young Irish troops.
   ("you'll see"). Whether he deploys in the field or commands from above is part
   of the narrative.
 
-##### 5. Rodriguez "Spike" Hamilton
+##### 5. Rodriguez "Spike" Hamilton — **THE MAIN CHARACTER (the player)**
 - **Callsign:** "Spike" (between first/last: Rodriguez Hamilton).
+- **Role:** **the player character.** This is who the player controls — the
+  operator in the opening who gears up and steps off the chopper.
+- **Specialty / personality / weapon / backstory:** *TBD — revealed throughout
+  the story* ("we will see").
+
+##### 6. "Payback" — the mystery operator
+- **Pronoun:** she/her.
+- **Codename:** "Payback." **No one knows her real name** — she operates solely
+  under the codename.
 - **Role / specialty / personality / weapon / backstory:** *TBD.*
 
 ### Multiplayer
