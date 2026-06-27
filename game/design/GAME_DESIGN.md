@@ -74,8 +74,11 @@ The player deploys with a team. Roster (being defined member by member):
   the occasional flash of humor.
 - **Look:** full-covering ski mask, spray-painted with **fire and a Molotov
   cocktail** (origin of the callsign).
-- **Role / specialty:** *TBD* (look strongly implies incendiary / demolitions).
-- **Weapon of choice:** *TBD.*
+- **Role / specialty:** the squad's **brute-force all-rounder** — versatile and
+  heavy-hitting, can fill any gap in a fight.
+- **Heritage:** German American.
+- **Signature weapon:** **M16** (read from "in 16"; era-appropriate for 1985)
+  with a **flame charm hanging off the side**, matching his fire motif.
 - **Rank / backstory:** *TBD.*
 
 ### Multiplayer
