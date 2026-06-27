@@ -161,6 +161,35 @@ high-ranking **Sergeant / officer** leading young Irish troops.
     dropped enemy guns, environmental weapons — rather than a fixed loadout.
 - **Role / specialty / personality / backstory:** *TBD.*
 
+#### Mission 1 — Combat Beats (continued from the drop)
+
+After deploying on the rooftop, the mission continues:
+
+1. **Descent.** The squad heads down into a **staircase**, moving slowly deeper
+   into the building.
+2. **Crash + first contact.** As the player finally gets out the door, an
+   **F-16 crashes** right next to the player and the team. *("AF 16" read as an
+   Air Force F-16 — flag if it's something else.)* Molotov and the rest **move
+   out behind cover**.
+3. **First wave (tutorial fight).** ~**16 enemies** attack. They have
+   **deliberately poor accuracy** (niche/low threat — this is the opening fight)
+   and **one burst of the M16 drops each one**. The player also gets
+   **supporting fire from teammates.** *(Design intent: a confidence-building
+   intro encounter that teaches shooting + cover.)*
+4. **Reach the clearing.** Pushing toward the main area, the squad finds a
+   **clearing / safe pocket where enemies can't reach them** — a beat to regroup
+   and give orders.
+5. **Squad split (orders from Fox):**
+   - **Fox → Molotov:** *"Molly, you're with me."* Molotov nods.
+     *(Fox's nickname for Molotov: "Molly.")*
+   - **Fox → Striker:** *"Mr. 24, stay attentive."* *(Fox's nickname for
+     Striker, the 24-year-old rookie: "Mr. 24.")*
+   - **Assignment:** **Striker + Payback clear the way for Spike** (the player).
+   - **Objective set:** **take out a sniper in a watchtower** not far ahead.
+
+This establishes the squad fighting as two elements — **Fox & Molotov** as one
+pair, **Striker & Payback escorting Spike** toward the watchtower sniper.
+
 ### Multiplayer
 - Competitive PvP.
 - Locked to first-person for a level playing field.
