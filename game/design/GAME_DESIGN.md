@@ -1,0 +1,87 @@
+# Untitled 3D Game — Design Base
+
+> Working name: **TBD**. A 3D, first-person-rooted shooter with multiple modes.
+> This document is the single source of truth for the game's design. It is
+> intentionally isolated under `game/` and has **no relationship to any other
+> project in this repository.**
+
+Status: **design phase** — no engine/tech stack committed yet.
+Last updated by design discussion: 2026-06-27.
+
+---
+
+## 1. The Pitch
+
+A 3D shooter built around tight, tactical gunplay and a deep arsenal. Players
+move with a full traversal kit — sprint, slide, crouch, crawl/prone — and fight
+across three distinct modes that share one core combat feel.
+
+---
+
+## 2. Modes
+
+The game ships with three modes. They share movement and combat systems but
+differ in structure, goal, and allowed camera.
+
+| Mode         | Structure                     | Players        | Perspective              |
+| ------------ | ----------------------------- | -------------- | ------------------------ |
+| **Campaign** | Story-driven missions         | Single-player  | **First-person only**    |
+| **Multiplayer** | Competitive matches        | PvP, online    | **First-person only**    |
+| **Zombies**  | Co-op survival vs. waves      | Co-op          | **First OR third person** (player's choice) |
+
+### Campaign
+- Narrative-driven mission structure.
+- Locked to first-person for immersion.
+- Setting/story: **TBD.**
+
+### Multiplayer
+- Competitive PvP.
+- Locked to first-person for a level playing field.
+- Modes/maps within MP: **TBD.**
+
+### Zombies
+- Co-op survival against escalating waves of zombies.
+- **Only mode that allows third-person** — player toggles first ⇄ third.
+- Progression within a match (rounds, upgrades): **TBD.**
+
+---
+
+## 3. Core Mechanics (shared across all modes)
+
+### Movement / Traversal
+- **Sprint** — fast directional movement.
+- **Slide** — momentum slide, typically from sprint into crouch.
+- **Crouch** — lowered stance for cover and accuracy.
+- **Crawl / Prone** — go fully prone; lowest profile.
+- (Stance transitions — slide-to-prone, etc. — to be defined during prototyping.)
+
+### Combat
+- **Guns are the core.** A deep arsenal — **hundreds of guns** to choose from.
+  - Implies a weapon framework: categories, stats, attachments/loadouts (detail TBD).
+- **Melee** — close-quarters backup attack.
+- **Throwables:**
+  - **Frag grenade** — lethal explosive.
+  - **Concussion grenade** — disorient/stun.
+
+---
+
+## 4. Open Decisions (deliberately TBD)
+
+These are intentionally unresolved and tracked so we settle them on purpose:
+
+- [ ] **Game name** — to be decided later.
+- [ ] **Setting & vibe** — modern military / post-apocalyptic / sci-fi / horror / other.
+- [ ] **Tech stack / engine** — not committed. (Browser 3D via three.js/Babylon,
+      or a full engine like Godot/Unity/Unreal — depends on scope & target platform.)
+- [ ] **Target platform** — web, desktop, console-style?
+- [ ] **Weapon system depth** — attachments, loadouts, unlock/progression.
+- [ ] **Multiplayer netcode model** — out of scope until a vertical slice exists.
+
+---
+
+## 5. Build Philosophy
+
+Design first, then a thin vertical slice. The first technical milestone should
+prove the **core feel**: move (sprint/slide/crouch/prone) + shoot one gun in a
+first-person 3D space. Everything else (arsenal breadth, modes, netcode) layers
+on top of a combat core that feels good.
