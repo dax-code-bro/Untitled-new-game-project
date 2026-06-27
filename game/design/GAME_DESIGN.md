@@ -52,6 +52,24 @@ The campaign opens cinematically:
 The player drops in knowing nothing — the "classified" framing is a deliberate
 mystery hook that the campaign pays off over time.
 
+#### Opening Sequence — The Drop (Mission 1 intro)
+Continues from the cold open:
+- Fly over Columbia: below is **a huge pile of smoke and despair** — the city is
+  devastated. The chopper heads straight toward it.
+- The helicopter lands in a **clearing on top of a building** (rooftop LZ).
+- Camera cuts to **inside the helicopter — the main character (the player)**.
+- **Gear up:** the player picks up their **rifle and magazines** (likely the
+  first interactive moment / control hand-off).
+- The player **disembarks alongside their team**.
+
+This is the cinematic-to-gameplay hand-off: the player takes control as they
+gear up and step off the chopper with the squad.
+
+#### The Squad
+The player deploys with a team. Each member and their role:
+
+> **TBD** — to be defined (see discussion). Roster, names, and roles pending.
+
 ### Multiplayer
 - Competitive PvP.
 - Locked to first-person for a level playing field.
