@@ -37,7 +37,20 @@ differ in structure, goal, and allowed camera.
   full campaign runs roughly 48 hours. This is an epic-length campaign
   (most AAA campaigns are 6–15 hrs) — content scope is a first-class concern.
 - **Structure** (linear / open-world / hub-and-spoke): **TBD** ("you'll see").
-- **Setting/story:** **TBD.**
+- **Era/setting:** **1985.** Cold-War-era tone.
+
+#### Cold Open (campaign intro)
+The campaign opens cinematically:
+1. Open on a **helicopter flying in** toward the drop.
+2. Location/date title card stamps in: **COLUMBIA, USA — 1985.**
+   - *(Recorded as "Columbia, USA" per design. Flagged: distinct from
+     "Colombia" the country — to be confirmed if the country was intended.)*
+3. Briefing redacts itself for mystery:
+   - **OBJECTIVE: CLASSIFIED**
+   - **MISSION: CLASSIFIED**
+
+The player drops in knowing nothing — the "classified" framing is a deliberate
+mystery hook that the campaign pays off over time.
 
 ### Multiplayer
 - Competitive PvP.
