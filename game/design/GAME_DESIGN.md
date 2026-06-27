@@ -86,8 +86,10 @@ The player deploys with a team. Roster (being defined member by member):
 - **Age / heritage:** **65 years old** (born 1920; as of the 1985 setting), **Irish**.
 - **Archetype:** grizzled, battle-hardened war veteran — implied elite
   special-forces / SWAT skillset (see service record).
-- **Role / specialty:** *TBD* (SWAT-caliber veteran; exact squad role pending).
-- **Weapon of choice / personality:** *TBD.*
+- **Role / specialty:** **Team leader and founder** — he created the unit and
+  commands it. SWAT-caliber veteran skillset.
+- **Signature weapon:** **Benelli M4** combat shotgun (read from "Bonelli M4").
+- **Personality:** *TBD.*
 
 ###### Service Record (40 years of combat)
 A veteran of three eras of warfare:
