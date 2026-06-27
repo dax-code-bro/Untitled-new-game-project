@@ -103,6 +103,10 @@
   @keyframes spin{to{transform:rotate(360deg)}}
   .dl-link{display:none;text-align:center;color:var(--gold);font-size:13px;text-decoration:none;padding:6px}
   .dl-link.show{display:block}
+  .smart-toggle{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-dim);cursor:pointer}
+  .smart-toggle input{width:auto}
+  #imgUsed{display:none;font-size:12px;color:var(--text-dim);line-height:1.5;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:8px 10px}
+  #imgUsed.show{display:block}
 
   /* Projects */
   .proj-pane{flex:1;display:none;flex-direction:column;gap:12px;padding:18px;overflow-y:auto;min-height:0}
@@ -204,8 +208,10 @@
           <select id="imgModel"><option value="flux" selected>Flux · Quality</option><option value="turbo">Turbo · Fast</option></select>
           <select id="imgSize"><option value="1024x1024" selected>Square</option><option value="768x1280">Portrait</option><option value="1280x768">Landscape</option></select>
         </div>
+        <label class="smart-toggle"><input type="checkbox" id="imgEnhance" checked> ✨ Smart prompt — let Legend add the details</label>
         <button class="send" id="genImg" style="width:100%">Generate Image</button>
         <div class="img-stage" id="imgStage"><div class="img-hint">Your image will appear here.<br>Describe anything — Legend draws it.</div></div>
+        <div id="imgUsed"></div>
         <a class="dl-link" id="dlLink" target="_blank" rel="noopener">Open full image / long-press to save ↗</a>
       </div>
     </div>
@@ -564,17 +570,38 @@
 
   /* ── IMAGE section ── */
   let imgSeed=1;
-  $('genImg').addEventListener('click', ()=>{
-    const prompt=$('imgPrompt').value.trim(); if(!prompt)return;
+  // Legend rewrites a short idea into a rich, drawable prompt — and describes
+  // named characters physically so the image model can actually render them.
+  async function enhancePrompt(idea){
+    const sys = `You are an expert image-prompt engineer. Rewrite the user's idea into ONE single vivid image-generation prompt. CRITICAL: if it names a known character, robot, movie, brand, or person, DESCRIBE its real physical appearance in concrete visual detail (shapes, colors, materials, proportions, distinctive features) so an image model that has never heard the name can still draw it correctly. Add tasteful style, lighting, and quality terms. Output ONLY the final prompt text — no quotes, no preamble, no explanation. Keep it under 70 words.`;
+    const messages=[{role:'system',content:sys},{role:'user',content:idea}];
+    const out=await streamReply('openai', messages, ()=>{}, null);
+    if(!out) return idea;
+    return out.replace(/^["'`]+|["'`]+$/g,'').replace(/\s+/g,' ').trim() || idea;
+  }
+  async function generateImage(){
+    const idea=$('imgPrompt').value.trim(); if(!idea)return;
     const model=$('imgModel').value; const [w,h]=$('imgSize').value.split('x');
+    const smart=$('imgEnhance').checked;
+    const btn=$('genImg'); btn.disabled=true;
+    $('dlLink').classList.remove('show'); $('imgUsed').classList.remove('show');
+
+    let prompt=idea;
+    if(smart){
+      $('imgStage').innerHTML='<div class="img-hint"><div class="spinner" style="margin:0 auto 12px"></div>Legend is imagining the details…</div>';
+      prompt=await enhancePrompt(idea);
+      $('imgUsed').textContent='🎨 Drew: '+prompt; $('imgUsed').classList.add('show');
+    }
+
     imgSeed=(imgSeed*7919+13)%100000;
     const url=`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${w}&height=${h}&model=${model}&nologo=true&seed=${imgSeed}`;
-    $('imgStage').innerHTML='<div class="spinner"></div>'; $('dlLink').classList.remove('show');
+    $('imgStage').innerHTML='<div class="spinner"></div>';
     const img=new Image();
-    img.onload=()=>{ $('imgStage').innerHTML=''; $('imgStage').appendChild(img); $('dlLink').href=url; $('dlLink').classList.add('show'); };
-    img.onerror=()=>{ $('imgStage').innerHTML='<div class="img-hint">Couldn’t draw that one. Try again or reword it.</div>'; };
+    img.onload=()=>{ $('imgStage').innerHTML=''; $('imgStage').appendChild(img); $('dlLink').href=url; $('dlLink').classList.add('show'); btn.disabled=false; };
+    img.onerror=()=>{ $('imgStage').innerHTML='<div class="img-hint">Couldn’t draw that one. Try again or reword it.</div>'; btn.disabled=false; };
     img.alt=prompt; img.src=url;
-  });
+  }
+  $('genImg').addEventListener('click', generateImage);
 
   /* ── PROJECTS section ── */
   fillModels($('projModel'));
