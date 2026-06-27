@@ -123,6 +123,16 @@ high-ranking **Sergeant / officer** leading young Irish troops.
 > **Timeline:** born **1920** — age 19 in 1939 (WWII), 30 in 1950 (Korea), 40
 > in 1960 (Congo), and **65** in the 1985 setting. All battle-ages consistent.
 
+##### 3. John "Striker" Jones
+- **Callsign:** "Striker" (between first/last: John Jones).
+- **Pronoun:** he/him.
+- **Age:** ~24 — the **fresh recruit / new blood** of the squad (the rookie).
+- **Role / specialty:** *TBD* (rookie archetype; finding his footing).
+- **Weapon of choice:** a **compact, single-fire (semi-auto) SMG**
+  (specific model *TBD* — period-fitting compacts: Micro/Mini Uzi, MAC-10/11,
+  MP5K).
+- **Personality / heritage / backstory:** *TBD.*
+
 ### Multiplayer
 - Competitive PvP.
 - Locked to first-person for a level playing field.
