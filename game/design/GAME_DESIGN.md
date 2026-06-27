@@ -154,7 +154,12 @@ high-ranking **Sergeant / officer** leading young Irish troops.
 - **Pronoun:** she/her.
 - **Codename:** "Payback." **No one knows her real name** — she operates solely
   under the codename.
-- **Role / specialty / personality / weapon / backstory:** *TBD.*
+- **Weapon style:** **no signature weapon — and no fixed weapon at all.** She's
+  an **improviser / scavenger**, using whatever is around and available. Travels
+  light and adapts to the battlefield (a fitting trait for a nameless ghost).
+  - *Design implication:* mechanically she leans on **battlefield pickups** —
+    dropped enemy guns, environmental weapons — rather than a fixed loadout.
+- **Role / specialty / personality / backstory:** *TBD.*
 
 ### Multiplayer
 - Competitive PvP.
