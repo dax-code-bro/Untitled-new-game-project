@@ -128,9 +128,10 @@ high-ranking **Sergeant / officer** leading young Irish troops.
 - **Pronoun:** he/him.
 - **Age:** ~24 — the **fresh recruit / new blood** of the squad (the rookie).
 - **Role / specialty:** *TBD* (rookie archetype; finding his footing).
-- **Weapon of choice:** a **compact, single-fire (semi-auto) SMG**
-  (specific model *TBD* — period-fitting compacts: Micro/Mini Uzi, MAC-10/11,
-  MP5K).
+- **Weapon of choice:** the **PP919** — a compact, single-fire (semi-auto) SMG.
+  *(Reads as an original/fictional in-game designation; no real-world "PP919"
+  exists. Fine for the arsenal — flag if you meant a real model like the
+  PP-91 KEDR or PP-19.)*
 - **Personality / heritage / backstory:** *TBD.*
 
 ### Multiplayer
