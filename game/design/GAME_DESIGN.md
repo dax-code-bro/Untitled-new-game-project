@@ -134,6 +134,17 @@ high-ranking **Sergeant / officer** leading young Irish troops.
   PP-91 KEDR or PP-19.)*
 - **Personality / heritage / backstory:** *TBD.*
 
+##### 4. General Abraham
+- **Rank:** four-star general — the top brass attached to the team.
+- **Name:** "Abraham" (first/last unconfirmed).
+- **Role & everything else:** *TBD — deliberately revealed throughout the story*
+  ("you'll see"). Whether he deploys in the field or commands from above is part
+  of the narrative.
+
+##### 5. Rodriguez "Spike" Hamilton
+- **Callsign:** "Spike" (between first/last: Rodriguez Hamilton).
+- **Role / specialty / personality / weapon / backstory:** *TBD.*
+
 ### Multiplayer
 - Competitive PvP.
 - Locked to first-person for a level playing field.
