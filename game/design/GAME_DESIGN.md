@@ -81,6 +81,48 @@ The player deploys with a team. Roster (being defined member by member):
   with a **flame charm hanging off the side**, matching his fire motif.
 - **Rank / backstory:** *TBD.*
 
+##### 2. James "Fox" Carter
+- **Callsign:** "Fox" (between first/last: James Carter).
+- **Age / heritage:** 68 years old (as of the 1985 setting), **Irish**.
+- **Archetype:** grizzled, battle-hardened war veteran — implied elite
+  special-forces / SWAT skillset (see service record).
+- **Role / specialty:** *TBD* (SWAT-caliber veteran; exact squad role pending).
+- **Weapon of choice / personality:** *TBD.*
+
+###### Service Record (40 years of combat)
+A veteran of three eras of warfare:
+
+**1. World War II (1939–1945) — age 19–25**
+A young, fierce fighter in the most brutal combat in human history. Likely
+volunteered for the newly formed elite **British Commandos** or the **SAS**.
+- **Second Battle of El Alamein (1942):** desert warfare in North Africa
+  against Rommel's Panzer armies.
+- **D-Day & the Battle of Normandy (1944):** storming the beaches of France /
+  dropping behind enemy lines as a paratrooper.
+- **The Scheldt / Arnhem (1944):** grim, muddy close-quarters infantry warfare
+  clearing entrenched German positions.
+
+**2. The Korean War (1950–1953) — age 30–33**
+Stayed in service after WWII; deployed to Korea with the British Army (e.g. the
+**Royal Ulster Rifles**, famous for its Irish soldiers).
+- **Battle of Happy Valley (1951):** a freezing winter rearguard action against
+  a massive Chinese Red Army breakthrough outside Seoul.
+- **Battle of the Imjin River (1951):** block-by-block urban defense and
+  hilltop trench warfare under overwhelming artillery fire.
+
+**3. The Congo Crisis / Niemba Ambush (1960) — age 40**
+Ireland's first deadly UN peacekeeping mission. As a 40-year-old veteran, now a
+high-ranking **Sergeant / officer** leading young Irish troops.
+- **The Niemba Ambush:** a real, tragic, legendary event — an Irish patrol cut
+  off and ambushed by overwhelming numbers, ending in brutal hand-to-hand
+  combat; a defining moment of bravery in Irish military history.
+
+> **Timeline note:** the per-war ages above are all consistent with a **1920
+> birth year** (age 19 in 1939, 30 in 1950, 40 in 1960). That would make him
+> **65** in 1985, not 68. To make him exactly 68 in 1985 he'd be born ~1917
+> (slightly older in each war). Minor — flagging so we can pick one and keep
+> the math clean.
+
 ### Multiplayer
 - Competitive PvP.
 - Locked to first-person for a level playing field.
