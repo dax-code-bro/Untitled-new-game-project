@@ -83,7 +83,7 @@ The player deploys with a team. Roster (being defined member by member):
 
 ##### 2. James "Fox" Carter
 - **Callsign:** "Fox" (between first/last: James Carter).
-- **Age / heritage:** 68 years old (as of the 1985 setting), **Irish**.
+- **Age / heritage:** **65 years old** (born 1920; as of the 1985 setting), **Irish**.
 - **Archetype:** grizzled, battle-hardened war veteran — implied elite
   special-forces / SWAT skillset (see service record).
 - **Role / specialty:** *TBD* (SWAT-caliber veteran; exact squad role pending).
@@ -117,11 +117,8 @@ high-ranking **Sergeant / officer** leading young Irish troops.
   off and ambushed by overwhelming numbers, ending in brutal hand-to-hand
   combat; a defining moment of bravery in Irish military history.
 
-> **Timeline note:** the per-war ages above are all consistent with a **1920
-> birth year** (age 19 in 1939, 30 in 1950, 40 in 1960). That would make him
-> **65** in 1985, not 68. To make him exactly 68 in 1985 he'd be born ~1917
-> (slightly older in each war). Minor — flagging so we can pick one and keep
-> the math clean.
+> **Timeline:** born **1920** — age 19 in 1939 (WWII), 30 in 1950 (Korea), 40
+> in 1960 (Congo), and **65** in the 1985 setting. All battle-ages consistent.
 
 ### Multiplayer
 - Competitive PvP.
