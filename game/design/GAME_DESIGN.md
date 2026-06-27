@@ -137,9 +137,8 @@ high-ranking **Sergeant / officer** leading young Irish troops.
 ##### 4. General Abraham
 - **Rank:** four-star general — the top brass attached to the team.
 - **Name:** "Abraham" (first/last unconfirmed).
-- **Signature weapon:** a **pure gold M1 1899** pistol — a flashy, prestige
-  sidearm befitting a four-star general. *(Recorded as given; "M1 1899" likely
-  means a Colt M1911 or a Model 1899 — flag if you want a specific real model.)*
+- **Signature weapon:** a **pure gold Colt M1911** pistol — a flashy, prestige
+  sidearm befitting a four-star general.
 - **Role & everything else:** *TBD — deliberately revealed throughout the story*
   ("you'll see"). Whether he deploys in the field or commands from above is part
   of the narrative.
