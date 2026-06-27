@@ -32,7 +32,12 @@ differ in structure, goal, and allowed camera.
 ### Campaign
 - Narrative-driven mission structure.
 - Locked to first-person for immersion.
-- Setting/story: **TBD.**
+- **Length: ~48 hours of total playtime**, accumulated across a series of
+  missions. Each mission contributes enough runtime that, summed together, the
+  full campaign runs roughly 48 hours. This is an epic-length campaign
+  (most AAA campaigns are 6–15 hrs) — content scope is a first-class concern.
+- **Structure** (linear / open-world / hub-and-spoke): **TBD** ("you'll see").
+- **Setting/story:** **TBD.**
 
 ### Multiplayer
 - Competitive PvP.
