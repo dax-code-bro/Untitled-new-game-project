@@ -28,7 +28,7 @@ complete screenplays.
   *(full opening + breather ending — island warzone, rebels, escape by cruise
   ship; 3-day voyage sets up Mission 5).*
 - `game/design/missions/mission-05.md` — **Mission 5** — "A Lost Cause"
-  *(title + placement locked; beats pending).*
+  *(opening scripted — voyage arrival, rescue chopper, ride to HQ; rest pending).*
 - `game/design/missions/mission-06.md` — **Mission 6** — "Hellfire"
   *(title + placement locked; beats pending).*
 - `game/design/missions/mission-07.md` — **Mission 7** — "Industry"
