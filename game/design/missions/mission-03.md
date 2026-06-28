@@ -26,6 +26,10 @@ dark-humor, transactional/hitman tone is intentional.)*
 - **"Cadena de Muertes en la Costa"** — Spanish, ~*"Chain of Deaths on the
   Coast."* Lady Death's **2-acre shoreline mega-mansion** in Mexico. A sprawling
   beachfront fortress-estate — the mission's main setting.
+  - **Cost: $3 billion.** An obscene flex that establishes Lady Death's
+    near-limitless wealth — and helps explain how she could afford to put a
+    HYDRA drone on retainer. The estate should *feel* like that price tag:
+    opulent, fortified, excessive.
 
 ## Objective (as understood)
 - Reach Lady Death at her coastal mansion and **extract intel** — about Drone 9,
