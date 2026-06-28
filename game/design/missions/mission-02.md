@@ -242,9 +242,37 @@
 > *(Nothing.)*
 > **PRESIDENT:** *Hamilton.*
 >
-> *(Spike blinks. Snaps back into the room.)*
+> *(Spike blinks. Snaps back into the room — but he's somewhere new now. Certain.)*
 >
-> **SPIKE:** *(quiet)* ...Sir.
+> **SPIKE:** *(quiet)* ...Hydra. They were Hydra tanks.
+> **PRESIDENT:** *(beat)* ...Huh. *(leans in)* The same Hydra that released the
+> drones?
+> **SPIKE:** I think so.
+
+### THE BRIEFING — THE DRONE FILE
+
+> *(CAPTAIN ABRAHAM steps to the head of the room and puts an image up on the
+> screen: the **H1.0 Hydra Drone** — the first-generation combat model, the
+> things from 1948. The room goes still.)*
+>
+> **ABRAHAM:** These. First-generation combat drones. Thirteen of them launched
+> in '48 — scattered to the four winds. *(taps the screen)* Here's where they
+> ended up.
+>
+> **ABRAHAM:** Drones **Seven** and **Twelve** — captured. We scrapped them for
+> salvage. Stripped them to the bolts, so they could never, *ever* be
+> reprogrammed and turned against us.
+>
+> **ABRAHAM:** Drone **Nine**... we think Nine went **sentient.** *(a dry,
+> humorless breath)* He's been spotted *making money.* Working as a bodyguard,
+> of all the damn things.
+>
+> **ABRAHAM:** As for the rest — Drone **Five** was found **impaled on a tree
+> branch**, with a *tiger* trying to crack it open like a walnut. We think some
+> of them just... failed to adapt to our ecosystem.
+>
+> **ABRAHAM:** *(grim)* But "failed to adapt" is not "confirmed dead." Any one of
+> the others could still be out there. Still active. Still waiting.
 >
 > *(— END OF MISSION 2. —)*
 

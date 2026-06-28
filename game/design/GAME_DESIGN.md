@@ -22,7 +22,10 @@ complete screenplays.
   every beat).
 - `game/design/missions/mission-02.md` — **Mission 2, full script** — the 1948
   Saudi Arabia flashback (framed by a 1985 boardroom).
-- `game/design/assets/` — reference art (e.g. `hydra-logo.png`).
+- `game/design/hydra-drone-h1.md` — **H1.0 drone codex** (full specs + the
+  13-drone status tracker).
+- `game/design/assets/` — reference art (`hydra-logo.png`,
+  `hydra-drone-h1.0.png`).
 
 **Target content rating: ESRB M (Mature 17+).** Tone is gritty, grounded
 military drama. All writing (dialogue, story beats, characters) should hold
@@ -173,6 +176,12 @@ high-ranking **Sergeant / officer** leading young Irish troops.
 - **Role & everything else:** *TBD — deliberately revealed throughout the story*
   ("you'll see"). Whether he deploys in the field or commands from above is part
   of the narrative.
+- **Knows HYDRA deeply** — he's the one who briefs the team on the drones'
+  fates (Mission 2 boardroom), reinforcing that he's been read in on HYDRA all
+  along (ties to his secrecy at the Mission 1 regroup).
+- **⚠ Rank inconsistency to resolve:** introduced as a **four-star general**, but
+  referred to as **"Captain Abraham"** in the Mission 2 briefing. Pick one
+  (General vs Captain) — or is one a former rank / nickname?
 
 ##### 5. Rodriguez "Spike" Hamilton — **THE MAIN CHARACTER (the player)**
 - **Callsign:** "Spike" (between first/last: Rodriguez Hamilton).
@@ -296,8 +305,15 @@ city → spot **three friendly US Army tanks** rolling in to support → then
   Arabia, a HYDRA scientist launched a **rocket into space** that deployed
   **~13 capsules worldwide**, scattering in different directions — almost
   certainly the **seeding event** for HYDRA's global presence in 1985.
-- **HYDRA drones** — fast, lethal machine-creatures deployed from those capsules;
-  can effortlessly kill trained soldiers (first seen 1948).
+- **HYDRA drones** — fast, lethal transforming machine-creatures (quadruped ⇄
+  biped) deployed from those capsules; can effortlessly kill trained soldiers
+  (first seen 1948). Full specs + the 13-drone status tracker in
+  `game/design/hydra-drone-h1.md`. Key traits: immune to bullets/fire/water,
+  *stronger as they overheat*, **vulnerable to explosives**, blind to normal
+  vision (thermal/night only).
+- **Drone 9 (sentient, rogue):** one drone went **sentient** and works as a
+  **bodyguard-for-hire** — an independent wildcard with major character
+  potential (ally / boss / recruit).
 - **Not all loyal** — HYDRA's own soldiers aren't all believers (the 1948
   scientist's guards turned on him). Loyalty-vs-coercion is a usable theme.
 - **Details (leaders, goals, full tech):** *TBD.*
