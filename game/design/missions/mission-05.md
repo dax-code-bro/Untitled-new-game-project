@@ -10,10 +10,12 @@
   heading to a destination (TBD), having escaped the island.
 - **Sets up Mission 6, "Hellfire."**
 
-## Title Meaning (foreshadow — per naming convention)
-Every title foreshadows the mission's events/ending. "A Lost Cause" implies a
-fight or effort that **can't be won / is already doomed** — something or someone
-is lost here. *(Exact meaning TBD.)*
+## Title Meaning (foreshadow — RESOLVED)
+"A Lost Cause" = **what the team called Spike and Molotov when they thought they
+were dead.** When command heard the exfil failed — no boat, no signal, six days
+of silence — they **wrote the two of them off as a lost cause**, presumed
+"gone below." The title is the team's grief for men who turned out to be alive.
+Abraham delivers the payoff at HQ.
 
 ## Status
 - Title + placement locked. **Opening scripted; rest of mission pending.**
@@ -72,7 +74,19 @@ is lost here. *(Exact meaning TBD.)*
 > home, the math settles in: the mansion, the island, three days at sea — all
 > told, they were gone **almost six days.** Six days written off as dead.)*
 >
-> *(— CONTINUES. The relief won't last — the title is "A Lost Cause." —)*
+### HQ — "A LOST CAUSE" (title payoff)
+
+> *(HQ. Spike and Molotov get situated — cleaned up, Molotov's head finally
+> dressed properly. GENERAL ABRAHAM finds them. For once, the hard man looks
+> shaken.)*
+>
+> **ABRAHAM:** When the exfil went dark... when we heard it failed... *(a long
+> breath)* We thought you were both **a lost cause.** No boat. No signal. Six
+> days of silence. *(quietly)* We thought you'd gone below.
+> **SPIKE:** ...We almost did. *(beat)* We did, for a while.
+> **MOLOTOV:** *(touching the bandage)* ...Some of us more than others.
+>
+> *(— CONTINUES. —)*
 
 ## NOTES / OPEN THREADS
 - **Destination resolved:** the 3-day voyage brought them back to **friendly
