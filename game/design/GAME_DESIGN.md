@@ -289,6 +289,47 @@ they breach the main line and overrun your men.**
 - After all three are destroyed, **head downstairs** and back onto the
   battlefield.
 
+**Anti-tank stand — dialogue script:**
+
+> *(Spike still holds the captured rifle. Below, the black HYDRA tanks grind
+> toward the main line, tracer fire lighting the smoke.)*
+>
+> **PAYBACK:** *(grabs the breech, racks a fat round)* Wait — this isn't a
+> marksman rig. It's **anti-tank**. They came up here to crack armor.
+> **STRIKER:** Then what's it doing pointed at *people?*
+> **PAYBACK:** Doesn't matter what it *was* for. Spike — it matters now.
+> **FOX:** *(radio, gunfire behind him)* Spike! Those tanks reach the line and
+> we're done — the whole element, gone! You've got the high seat — *use it!*
+>
+> **SPIKE:** *(settling the scope)* Loading. Talk me on.
+> **PAYBACK:** Treads first — slow 'em down. Then the turret ring. Breathe
+> between shots.
+>
+> *(— FIRST TANK —)*
+> **SPIKE:** First one's lined up.
+> *(THOOM.)*
+> **PAYBACK:** Tread's gone. He's blind and crawling. Finish him.
+> *(THOOM. THOOM.)*
+> **STRIKER:** *(whoops)* That's a kill — he's brewing up!
+> **FOX:** *(radio)* One down — two to go, and they are *not* slowing!
+>
+> *(— SECOND TANK —)*
+> **SPIKE:** Second's turning on Fox's position.
+> **FOX:** *(radio)* I'm *well* aware! Less talking, more shooting, lad!
+> *(THOOM. THOOM. THOOM.)*
+> **PAYBACK:** Splash. Cooked.
+>
+> *(— THIRD TANK, closest to the line —)*
+> **STRIKER:** Last one's on the barricade — they're gonna breach!
+> **SPIKE:** Not today.
+> *(THOOM. THOOM.)*
+> **PAYBACK:** One more — center mass!
+> *(THOOM. The third tank erupts. A beat — then cheering from the line below.)*
+> **FOX:** *(radio, ragged)* ...Line holds. Bloody beautiful shooting, Spike.
+> Get down here.
+> **PAYBACK:** *(sets the rifle down, quiet)* ...They sent armor. For us.
+> *(beat)* That's not a warning. That's a hunt.
+
 **Regroup — dialogue script:**
 
 > *(Spike descends into the smoke and wreckage. ABRAHAM is on the battlefield;
