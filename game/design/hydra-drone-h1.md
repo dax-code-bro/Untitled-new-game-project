@@ -66,7 +66,23 @@ A transforming machine-creature (reads like a mechanical raptor/Godzilla).
 
 ---
 
+## LATER GENERATIONS — H2.1 Bomber Drone (NEW)
+
+HYDRA has moved well past the 1948 H1.0 line. Introduced as the Mission 5
+cliffhanger:
+- **Model:** **H2.1** — a **bomber drone** (second-generation+ designation; the
+  1948 combat drones were H1.0 "first generation").
+- **Role:** aerial **carpet bombing.**
+- **First strike (Mission 5 → 6):** **3,275 H2.1 bombers** detected inbound at
+  **~75 mph**, heading for **Texas**, projected to **carpet-bomb multiple states
+  en route.**
+- **Implication:** HYDRA is **mass-producing** drones — "they've been building."
+  Directly seeds **Mission 7 "Industry"** (the production/factory source) and
+  **Mission 6 "Hellfire"** (the bombing itself).
+- **Full specs (size, payload, armament, weaknesses):** *TBD.*
+
 ## THE 13 DRONES — Status Tracker (as of 1985)
+*(the original first-generation H1.0 units launched in 1948)*
 
 ~13 launched in 1948. Known fates briefed by **Abraham** (see Mission 2
 boardroom scene):

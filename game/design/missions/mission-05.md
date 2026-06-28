@@ -102,8 +102,27 @@ Abraham delivers the payoff at HQ.
 >
 > **MOLOTOV:** *(quiet, cold)* ...We pay our debts.
 > *(But there's no one left to pay.)*
+
+### THE ALARM — INCOMING
+
+> *(They sit in the silence of it. Then — an ALARM howls through HQ. Red lights
+> strobe across the walls. Abraham is already moving.)*
 >
-> *(— CONTINUES. —)*
+> *(Abraham, Spike, and Molotov rush downstairs to the HQ COMMAND CENTER. A robot
+> voice repeats over the klaxon:)*
+>
+> **AUTOMATED VOICE:** WARNING. WARNING. WARNING. **Three thousand two hundred
+> seventy-five (3,275) H2.1 bomber drones** detected. Speed: approximately
+> **75 mph.** Heading: the **state of Texas.** Projected to **carpet-bomb
+> multiple states en route.**
+>
+> *(The room goes cold.)*
+>
+> **SPIKE:** ...Three *thousand.*
+> **ABRAHAM:** *(staring at the board)* These aren't the ones from '48. New model.
+> *(grim)* They've been *building.*
+>
+> *(— END OF MISSION 5. The incoming swarm sets up Mission 6, "Hellfire." —)*
 
 ## NOTES / OPEN THREADS
 - **Destination resolved:** the 3-day voyage brought them back to **friendly
