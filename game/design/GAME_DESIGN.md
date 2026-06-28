@@ -246,6 +246,27 @@ high-ranking **Sergeant / officer** leading young Irish troops.
     dropped enemy guns, environmental weapons — rather than a fixed loadout.
 - **Role / specialty / personality / backstory:** *TBD.*
 
+##### 7. Brian Wolford
+- One of Team Apex's **quieter, less-spotlighted operators** (background roster).
+- Deployed on the Hellfire mission (every member was). **One of these three
+  quieter operators is introduced to the player during Hellfire** (which — TBD).
+- **⚠ Shares the surname "Wolford" with Jesse** — very likely **related**
+  (brothers? father/son?). Confirm relationship.
+- Callsign / role / weapon / personality: *TBD.*
+
+##### 8. Jesse Wolford
+- Quieter supporting operator (background roster). Deployed on Hellfire.
+- **⚠ Shares the surname "Wolford" with Brian** — likely related (TBD).
+- Callsign / role / weapon / personality: *TBD.*
+
+##### 9. Monroe Sydney
+- Quieter supporting operator (background roster). Deployed on Hellfire.
+- Callsign / role / weapon / personality: *TBD.*
+
+> **Roster note:** Members 1–6 are the spotlighted core; **7–9 (Brian Wolford,
+> Jesse Wolford, Monroe Sydney) are the quieter, less-mentioned operators** of
+> Team Apex. There may still be more members beyond these nine (TBD).
+
 #### Mission 1 — Combat Beats (continued from the drop)
 
 After deploying on the rooftop, the mission continues:

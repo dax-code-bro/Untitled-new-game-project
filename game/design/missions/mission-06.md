@@ -199,6 +199,10 @@ is already aboard helicopters and planes, en route to Texas. Exposition happens
   moral-weight moment — and a wedge between Abraham and command.
 - **President survives** — the team extracts him from City Hall and escapes. His
   **guards are killed** by crashing drones; only Team Apex gets him out.
+- **Full Team Apex deployed.** This mission has **every member deployed**,
+  including the quieter operators **Brian Wolford, Jesse Wolford, Monroe Sydney**
+  (see GAME_DESIGN roster). **The player is introduced to one of them here**
+  (which — TBD). Good spot to give a background operator a memorable moment.
 - **⚠ Era flag (minor, likely intentional):** **UAV-launched Hellfire missiles**
   didn't exist until ~2001 (Hellfire itself: 1984). In *this* alt-history world
   (HYDRA space rockets + drones since 1948), advanced armed UAVs in 1985 fit the
