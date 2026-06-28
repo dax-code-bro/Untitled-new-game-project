@@ -134,8 +134,11 @@ Continues from the cold open:
 This is the cinematic-to-gameplay hand-off: the player takes control as they
 gear up and step off the chopper with the squad.
 
-#### The Squad
-The player deploys with a team. Roster (being defined member by member):
+#### The Squad — **TEAM APEX**
+The player's unit is called **TEAM APEX.** Founded and led by Fox; General
+Abraham is the brass attached to it.
+**⚠ The known roster below is NOT the whole team** — Team Apex has additional
+members not yet introduced (TBD). The six documented so far:
 
 ##### 1. Webber "Molotov" Newman
 - **Callsign:** "Molotov" (sits between first/last name: Webber Newman).
