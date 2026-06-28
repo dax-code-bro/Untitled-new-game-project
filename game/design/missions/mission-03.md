@@ -66,14 +66,151 @@ dark-humor, transactional/hitman tone is intentional.)*
 > **ABRAHAM:** Get in, get the intel, get gone. And try not to start a war with a
 > woman who can afford to *win* one.
 
-## BEAT SHEET
-*(mission proper — to be filled in as described)*
+## BEAT SHEET (mission proper — every detail, in order)
+
+1. **Night insertion** — under the moon, deploy from the water just off the
+   shoreline below the mansion.
+2. **Sniper overwatch** — Spike grabs his sniper; Molotov moves in on foot.
+   **Objective: kill the guards before they spot Molotov** (silent overwatch).
+3. **Entry / bloody hallway** — both move into the mansion. A **blood-soaked
+   hallway**; a man slumped with a **knife stuck in him**, Molotov already
+   crouched beside him. Molotov **pulls the knife** and advances.
+4. **The breach** — Molotov gets ready to make noise. He **throws a sticky bomb
+   up at the ceiling/roof**; both **slide for cover** as it blows a hole.
+5. **Compact ladder** — Molotov deploys a **compact ladder**, both climb up
+   through the hole — into a **bathroom.**
+6. **Inside-out assault** — kick down the bathroom door; take guards from the
+   inside. **~20 guards total in 2 waves of 10.** Clear them all.
+7. **The office standoff** — reach **Lady Death's corporate office**; kick the
+   door down. **Lady Death + her two guards** raise weapons; Spike & Molotov
+   raise theirs. Frozen Mexican standoff.
+8. **The shot** — forced to make a move; **a single gunshot rings out.** The two
+   guards are killed.
+9. **Molotov is hit** — he pulls off his **mask**, thumbs the **bullet hole
+   through it**, touches the **hole in the side of his head** — bleeding, **eye
+   gone bloodshot.** He and Spike share a look. They both know.
+10. **The laptop** — Spike runs to **Lady Death's laptop** for intel (because
+    there's no way Molotov is okay and it's all that's left).
+11. **Fighting retreat** — battle out through the rest of the mansion: **60
+    enemies**, Molotov **leaning on Spike's shoulder, firing his pistol.**
+12. **Exfil** — reaching the **tropical forest behind the mansion**, Spike
+    **requests exfil.**
 
 ## FULL SCRIPT
-*(to be written as beats come in)*
+
+### NIGHT INSERTION
+
+> *(Moonlight on black water. SPIKE and MOLOTOV wade in from just off the
+> shoreline; up the beach, the $3-billion mansion glows.)*
+>
+> **SPIKE:** *(low)* In position. Just off the sand.
+> **MOLOTOV:** *(quiet)* Eyes up. I'll move.
+
+### SNIPER OVERWATCH
+
+> *(Spike posts with the sniper. Molotov slips forward across the grounds. Guards
+> patrol — each must drop **before** they spot Molotov.)*
+>
+> **SPIKE:** *(to himself)* Stay in the dark, Molly. I've got the angles.
+> *(Silent sniper kills, one by one.)*
+> **MOLOTOV:** *(radio, almost a whisper)* ...Clean. Move up.
+
+### THE BLOODY HALLWAY
+
+> *(Inside. A hallway slick with blood. A man slumped against the wall, a knife
+> buried in him. MOLOTOV is already there — crouched beside the body, still as
+> stone. He pulls the knife free, wipes it, stands.)*
+>
+> **MOLOTOV:** *(quiet)* ...Someone got here first. *(beat)* Doesn't matter.
+
+### THE BREACH (sticky bomb → ladder)
+
+> *(Molotov rolls his shoulders. Done being quiet.)*
+>
+> **MOLOTOV:** Cover.
+> *(He lobs a STICKY BOMB up — it clamps to the ceiling. They slide behind cover
+> as it BLOWS a hole through the floor above. Molotov unfolds a compact ladder
+> into the gap. They climb.)*
+> **SPIKE:** *(coming up through the hole)* ...A bathroom. Classy.
+> **MOLOTOV:** *(deadpan)* A flank's a flank.
+
+### INSIDE-OUT ASSAULT (~20 guards, 2× 10)
+
+> *(Spike kicks the bathroom door off its hinges — guards in the room beyond,
+> caught cold from the inside.)*
+>
+> **MOLOTOV:** Now we make ruckus.
+> *(Firefight: ~20 guards, two waves of 10 pushing in.)*
+> **SPIKE:** Second wave — left side!
+> *(They clear every last one.)*
+
+### THE OFFICE — STANDOFF
+
+> *(A heavy door — LADY DEATH'S corporate office. Spike kicks it down. LADY DEATH
+> stands behind her desk, pistol already up. TWO GUARDS flank her, rifles
+> raised. Spike and Molotov level their weapons. Five guns. Nobody breathing.)*
+>
+> **LADY DEATH:** *(calm)* ...You have no idea whose house you just walked into.
+> **SPIKE:** Drone Nine. Three weeks ago. You hired it. You're going to tell us
+> everything.
+> **LADY DEATH:** *(a thin smile)* ...Everyone wants to know everything.
+> *(A finger twitches. The standoff snaps.)*
+> **SPIKE:** *MOVE—!*
+> *(A single GUNSHOT cracks across the room—)*
+
+### THE SHOT
+
+> *(—and then it's over. The two guards drop. Smoke. Ringing silence.)*
+>
+> *(MOLOTOV stands very still. Slowly, he reaches up and pulls off his ski mask —
+> the fire-and-Molotov paint — and turns it over. His thumb finds a hole punched
+> clean through it.)*
+> *(He touches the side of his own head. His fingers come away red. There's a
+> hole there. His eye is blooming bloodshot.)*
+> *(He looks at Spike. Spike looks at him. Neither of them says it. They both
+> already know.)*
+>
+> **MOLOTOV:** *(quiet, almost amused)* ...Huh.
+
+### THE LAPTOP
+
+> *(No time. Spike breaks for the desk — LADY DEATH'S laptop — because there is
+> no way Molotov is okay, and the intel is all that's left to take.)*
+>
+> **SPIKE:** Stay with me, Molly. *Stay with me.*
+> *(PLAYER interacts with the laptop — intel grab. ⚠ success TBD, see notes.)*
+
+### FIGHTING RETREAT (60 enemies)
+
+> *(The whole mansion comes alive — 60 guns closing in. Molotov can't shoulder
+> his rifle anymore; he drapes an arm over Spike and works his PISTOL one-handed
+> as Spike hauls him through, room by bloody room.)*
+>
+> **SPIKE:** Almost there — almost—!
+> **MOLOTOV:** *(firing, weak)* ...Told you. Less to trip over.
+
+### EXFIL
+
+> *(They burst out the back of the mansion into dense TROPICAL FOREST. Spike keys
+> his radio.)*
+>
+> **SPIKE:** Exfil — *now!* I've got a man down — I need a bird and I need it
+> *yesterday!*
+>
+> *(— TO BE CONTINUED. —)*
 
 ## NOTES / OPEN THREADS
-- **Is Drone 9 still guarding her** when the team arrives? If so, the team may
-  have to fight or talk past a sentient H1.0 drone — huge set-piece potential.
-- How did the team **get this intel**, and how fresh is the "3 weeks ago" lead?
-- Lady Death's **real name, look, gang, and how she affords a HYDRA drone** — TBD.
+- **MOLOTOV IS CRITICALLY WOUNDED — headshot survivor (for now).** Bullet went
+  through his mask and the side of his head; bloodshot eye; can't carry his
+  rifle. His **fate is a cliffhanger** into the exfil. *(Does he live? This is a
+  major emotional turn — pending.)*
+- **⚠ Lady Death's fate — UNRESOLVED.** The script only kills her **two guards**;
+  she isn't accounted for. Most likely read: **she fired the shot that hit
+  Molotov and escaped in the chaos**, leaving her laptop behind (sets her up as a
+  recurring antagonist). **Confirm:** did she escape? Did she fire the shot? Or
+  is she killed/captured?
+- **⚠ Was the intel obtained?** Spike reaches the laptop, but success isn't
+  stated. Confirm whether the team **gets the intel** (and what it reveals).
+- **Drone 9 is ABSENT from the raid** — she hired it 3 weeks ago, but it's not at
+  the mansion. (Already left her employ? Off on a job?) Thread to develop.
+- Lady Death's **real name, look, gang** — still TBD.
