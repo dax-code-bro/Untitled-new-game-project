@@ -179,9 +179,9 @@ high-ranking **Sergeant / officer** leading young Irish troops.
 - **Knows HYDRA deeply** — he's the one who briefs the team on the drones'
   fates (Mission 2 boardroom), reinforcing that he's been read in on HYDRA all
   along (ties to his secrecy at the Mission 1 regroup).
-- **⚠ Rank inconsistency to resolve:** introduced as a **four-star general**, but
-  referred to as **"Captain Abraham"** in the Mission 2 briefing. Pick one
-  (General vs Captain) — or is one a former rank / nickname?
+- **Rank — RESOLVED:** canonically a **four-star general.** "Captain" is only
+  informal/colloquial shorthand (e.g. the writer/players calling him that) — NOT
+  his actual rank. Always **General Abraham** in canon.
 
 ##### 5. Rodriguez "Spike" Hamilton — **THE MAIN CHARACTER (the player)**
 - **Callsign:** "Spike" (between first/last: Rodriguez Hamilton).

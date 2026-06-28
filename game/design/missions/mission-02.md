@@ -251,7 +251,7 @@
 
 ### THE BRIEFING — THE DRONE FILE
 
-> *(CAPTAIN ABRAHAM steps to the head of the room and puts an image up on the
+> *(GENERAL ABRAHAM steps to the head of the room and puts an image up on the
 > screen: the **H1.0 Hydra Drone** — the first-generation combat model, the
 > things from 1948. The room goes still.)*
 >
