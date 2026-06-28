@@ -33,15 +33,114 @@ made. *(Exact meaning to be revealed.)*
 - **The hunter:** unidentified attacker who rocketed the exfil boat and darted
   Spike. Identity unknown.
 
-## BEAT SHEET
-*(to be filled in as the mission is described)*
+## BEAT SHEET (opening — every detail, in order)
+
+1. **They survived.** Molotov sits slumped against a tree, a **field bandage
+   around his head**; his **backpack lies unzipped** in the dirt, **medical
+   supplies spilled and smeared with blood.** Spike checks if he's okay.
+2. **The plan.** Spike tells Molotov he needs to reach the **cruise ship** — and
+   they have to **move fast.**
+3. **The dogfight.** Pushing through the forest, they're interrupted by **F-16s
+   roaring overhead, firing** at something. Behind them: **more planes shooting
+   back** — a full air battle.
+4. **The cliff.** Enemy shots start landing near them. They break onto a
+   **hill/cliff edge**; Spike **nearly falls off** — below is a **whole warzone
+   at the dock**, where a **huge cruise ship** sits. A lot happened while they
+   were out.
+5. **The descent.** Molotov produces a **grappling hook**, sets it over the
+   cliff; they **clip handles onto the line and climb down.**
+6. **The dock warzone.** At the bottom: a battle with **many HYDRA soldiers.**
+   They take cover and spot **local civilians / rebels fighting for their lives.**
+7. **Help the rebels.** Spike joins in — **throws grenades**, cuts down HYDRA
+   soldiers. **Clear the remaining ~16 soldiers.**
+8. **The rebel leader.** He confronts them: *"I don't know who you are, but thank
+   you. You're welcome to stay with us whenever you'd like."*
+9. **The alliance offer (Molotov).** Molotov proposes a deal: **help us get
+   aboard that cruise ship**, and in return **we can send some of our own to stay
+   and help you hold off "those things"** (HYDRA).
 
 ## FULL SCRIPT
-*(to be written as beats come in)*
+
+### OPENING — MOLLY AGAINST THE TREE
+
+> *(Grey light in the jungle. MOLOTOV sits slumped against a tree, a field
+> bandage wrapped around his head, crusted dark. His backpack lies unzipped in
+> the dirt, medical supplies spilled out and smeared with blood. SPIKE crouches
+> over him, checking him.)*
+>
+> **SPIKE:** Hey. Hey — you with me? You good?
+> **MOLOTOV:** *(rasping, dry)* ...Define good.
+> **SPIKE:** *(checking the bandage)* ...Yeah. Me neither.
+> **SPIKE:** Listen — I need to get to that cruise ship. The dock, that's our way
+> off this rock. We move fast, we move *now.* Can you walk?
+> **MOLOTOV:** *(dragging himself upright)* ...Try and stop me.
+
+### THE DOGFIGHT
+
+> *(They push through the forest. Then — a ROAR overhead. A flight of F-16s
+> screams across the sky, guns blazing at something ahead. Spike glances back:
+> more planes, climbing and firing back. A full air battle, right over them.)*
+>
+> **SPIKE:** ...When did the whole island go to war?
+> **MOLOTOV:** While we were sleeping.
+
+### THE CLIFF
+
+> *(They keep moving. Enemy fire starts walking toward them — rounds chewing the
+> dirt. They break out of the trees onto a HILL — a CLIFF edge. Spike's boot
+> skids over nothing—)*
+>
+> **SPIKE:** *WHOA—!*
+>
+> *(—and he catches himself at the lip. Below: a full WARZONE at the docks, a
+> massive CRUISE SHIP looming at the pier. Smoke, tracers, bodies.)*
+>
+> **SPIKE:** ...A lot happened while we were out.
+>
+> *(Molotov pulls a grappling hook and sets it over the cliff edge.)*
+>
+> **MOLOTOV:** Handles. Clip on.
+>
+> *(They attach handles to the line and climb down the cliff, slow and careful.)*
+
+### THE DOCK WARZONE
+
+> *(At the bottom — chaos. HYDRA soldiers everywhere. Spike and Molotov take
+> cover. Nearby, a ragged band of LOCAL CIVILIANS / REBELS is pinned down,
+> fighting for their lives.)*
+>
+> **SPIKE:** Civilians. They're getting slaughtered down there.
+> **MOLOTOV:** ...So we even the odds.
+>
+> *(Spike hurls grenades into the HYDRA ranks and fights alongside the rebels.
+> They clear the remaining ~16 soldiers.)*
+
+### THE REBELS — THE OFFER
+
+> *(The gunfire dies down. The REBEL LEADER approaches, lowering his weapon,
+> chest heaving.)*
+>
+> **REBEL LEADER:** I don't know who you are. *(beat)* But thank you. You're
+> welcome to stay with us — whenever you'd like.
+> **MOLOTOV:** *(stepping in)* Then here's an offer. You help us get aboard that
+> ship — *(nods toward the cruise ship)* — and we'll send some of our own back
+> here. To stay. To help you stand off those things.
+> **REBEL LEADER:** ...You'd do that for us?
+> **MOLOTOV:** *(quiet)* We pay our debts.
+>
+> *(— CONTINUES. —)*
 
 ## NOTES / OPEN THREADS
-- **Whose "sins"?** Spike's (Lady Death, the panic-kill)? Diego's (1948)?
-  HYDRA's? The title implies a past reckoning — develop.
-- **Who is the hunter** that trapped them? Likely revealed here. (HYDRA? Drone 9?
-  Lady Death contingency? Someone tied to Diego's past?)
-- **Do Spike and/or Molotov survive?** Carried over from Mission 3.
+- **RESOLVED — both survive (for now):** Molotov lived the night (head
+  field-bandaged, used his own/Spike's medical supplies); Spike came out of the
+  dart. Both are wounded but mobile.
+- **New faction — the Island Rebels / Locals:** civilians-turned-fighters
+  resisting HYDRA on the island. Led by the **Rebel Leader (name TBD).** Offer
+  Spike & Molotov sanctuary; potential **alliance** (they help the duo board the
+  cruise ship; in return the team sends fighters to help them hold the island).
+- **"Those things"** = HYDRA forces/drones threatening the island.
+- **The cruise ship** at the dock is the objective — their way off the island.
+- **STILL OPEN:** Who **darted Spike / rocketed the exfil** in Mission 3? Not yet
+  revealed. The island air battle (F-16s vs. unknown planes) hints at larger
+  forces in play.
+- **Whose "sins"?** Title still implies a past reckoning — to be revealed.
