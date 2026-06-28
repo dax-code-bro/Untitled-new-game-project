@@ -68,7 +68,8 @@ is already aboard helicopters and planes, en route to Texas. Exposition happens
   bomb payload before self-destructing** — which is *why* they carpet-bomb
   everything en route rather than flying straight to the target. Horrifying by
   design.
-- **⚠ "EMP sharks" — clarify.** Recorded as given. What is an EMP shark? A
-  guided EMP missile/drone? A vehicle? A deployable charge? Need the form factor
-  + how the player uses them.
+- **EMP Sharks — DEFINED:** unmanned 11ft×5ft remote-controlled mini-helicopters
+  that open a rear latch and release several thousand EMP bomblets in a
+  shotgun-blast spread, **~45-mile radius**, disabling everything electrically
+  powered. Full spec: `game/design/emp-shark.md`. (Several are deployed here.)
 - Sets up **Mission 7 "Industry"** (where the drones are built).

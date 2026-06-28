@@ -39,7 +39,8 @@ complete screenplays.
 flashback + boardroom) → 3 "Would You Like a Receipt With That Order?" → 4 "Sins
 of the Past" → 5 "A Lost Cause" → 6 "Hellfire" → 7 "Industry".
 - `game/design/hydra-drone-h1.md` — **H1.0 drone codex** (full specs + the
-  13-drone status tracker).
+  13-drone status tracker; plus the new **H2.1 bomber** generation).
+- `game/design/emp-shark.md` — **EMP Shark** allied anti-drone weapon spec.
 - `game/design/assets/` — reference art (`hydra-logo.png`,
   `hydra-drone-h1.0.png`).
 
