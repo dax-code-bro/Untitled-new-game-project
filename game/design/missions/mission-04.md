@@ -127,8 +127,35 @@ made. *(Exact meaning to be revealed.)*
 > here. To stay. To help you stand off those things.
 > **REBEL LEADER:** ...You'd do that for us?
 > **MOLOTOV:** *(quiet)* We pay our debts.
+
+### THE CRUISE SHIP — DEPARTURE (the breather)
+
+> *(The Rebel Leader leads Spike and Molotov up the gangway onto the massive
+> CRUISE SHIP. On the bridge, he works the controls — and with a deep, building
+> hum, the ship powers ON, lights rippling to life across the decks.)*
 >
-> *(— CONTINUES. —)*
+> **REBEL LEADER:** She still runs. Old girl's got life in her yet.
+>
+> *(He gives Spike a quick lesson on the helm — throttle, heading, the basics.)*
+>
+> **REBEL LEADER:** Simpler than it looks. Throttle, here. Hold your heading,
+> here. Keep her pointed straight — and in about **three days**, you'll be there.
+> No trouble at all.
+> **SPIKE:** Three days.
+> **REBEL LEADER:** Three days. *(beat)* Rest. God knows you've earned it.
+>
+> *(He steps back down onto the dock. The gangway rises. The great ship pulls away
+> from the war-torn island, out into open water — and, for the first time since
+> the mansion, it goes quiet.)*
+>
+> *(— END OF MISSION 4. The 3-day voyage sets up Mission 5, "A Lost Cause." —)*
+
+## Pacing Note
+**This mission is a deliberate BREATHER.** After the relentless intensity of
+Mission 3 ("Would You Like a Receipt With That Order?"), Mission 4 deflates the
+tension and ends on calm: a quiet escape by sea, a 3-day voyage, a chance for
+Spike and Molotov (and the player) to finally breathe. Use the contrast
+intentionally — the calm makes whatever comes next hit harder.
 
 ## NOTES / OPEN THREADS
 - **RESOLVED — both survive (for now):** Molotov lived the night (head

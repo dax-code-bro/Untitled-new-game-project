@@ -25,8 +25,18 @@ complete screenplays.
 - `game/design/missions/mission-03.md` — **Mission 3** — "Would You Like a
   Receipt With That Order?" *(full script — Lady Death mansion raid).*
 - `game/design/missions/mission-04.md` — **Mission 4** — "Sins of the Past"
-  *(title + placement locked; beats pending — Spike & Molotov trapped on the
-  island).*
+  *(full opening + breather ending — island warzone, rebels, escape by cruise
+  ship; 3-day voyage sets up Mission 5).*
+- `game/design/missions/mission-05.md` — **Mission 5** — "A Lost Cause"
+  *(title + placement locked; beats pending).*
+- `game/design/missions/mission-06.md` — **Mission 6** — "Hellfire"
+  *(title + placement locked; beats pending).*
+- `game/design/missions/mission-07.md` — **Mission 7** — "Industry"
+  *(title + placement locked; beats pending).*
+
+**Known mission order so far:** 1 (Colombia/Columbia, classified) → 2 (1948
+flashback + boardroom) → 3 "Would You Like a Receipt With That Order?" → 4 "Sins
+of the Past" → 5 "A Lost Cause" → 6 "Hellfire" → 7 "Industry".
 - `game/design/hydra-drone-h1.md` — **H1.0 drone codex** (full specs + the
   13-drone status tracker).
 - `game/design/assets/` — reference art (`hydra-logo.png`,
