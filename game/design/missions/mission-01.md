@@ -118,9 +118,10 @@ HYDRA and clocks Abraham's secret. Molotov breaks silence just to name them.
 > staircase**, if the player looks to their **LEFT**, two operators are perched
 > **side-by-side sniping enemies down below.** These are **Brian Wolford and
 > Jesse Wolford** — Team Apex's quiet operators, present from the very first
-> mission. Putting the crosshair on them shows their **blue (friendly) code
-> names** via the nameplate system. A long-game continuity Easter egg that pays
-> off when they're formally introduced later.
+> mission. Putting the crosshair on them shows **blue (friendly) nameplates** —
+> their **first names** ("Brian," "Jesse") since they have no code names yet. A
+> long-game continuity Easter egg that pays off when they're formally introduced
+> later.
 
 ### 6. THE DESCENT
 

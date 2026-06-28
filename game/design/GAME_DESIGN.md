@@ -494,15 +494,18 @@ When the player's **crosshair passes over a NAMED individual** (a character with
 name in the campaign), their name appears **next to the crosshair**, color-coded
 by allegiance:
 - **Enemy (named):** **RED** — shows their **FULL NAME**.
-- **Friendly / ally:** **BLUE** — shows their **CODE NAME**.
+- **Friendly / ally:** **BLUE** — shows their **CODE NAME** (or, if they have no
+  code name, their **first name** instead — still in blue).
 - **Neutral:** **WHITE** — shows their name.
 
 **Only triggers for named campaign individuals** — generic/unnamed enemies and
 background NPCs show **nothing**. This is the player's tool for spotting story
 characters in a crowd (e.g. identifying the Brian & Jesse cameo in Mission 1, or
 clocking a named enemy among mooks).
-- *(Implication: friendlies need **code names** for the blue nameplate — so the
-  quieter operators Brian/Jesse Wolford & Monroe Sydney will need callsigns.)*
+- *(Friendlies without a code name simply show their **first name** in blue — so
+  Brian/Jesse Wolford & Monroe Sydney would display as "Brian," "Jesse,"
+  "Monroe" unless/until they're given callsigns. Code names are optional flavor,
+  not required.)*
 
 ### Story-Protection Rules (named characters)
 Two hard rules guard the narrative around named characters:
