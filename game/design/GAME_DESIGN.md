@@ -201,6 +201,66 @@ pair, **Striker & Payback escorting Spike** toward the watchtower sniper.
 > the opening title card to "CARTAGENA, COLOMBIA — 1985" — or a deliberate
 > fictional "Columbia, USA" that happens to share the landmark name?
 
+#### Mission 1 — Scene: The Clock Tower (Torre del Reloj)
+
+**Gameplay flow:** push into the Clock Tower → climb the tower (ladder or
+staircase, whichever the tower has) → **stealth-kill two guards** sniping the
+team from the top → **pick up / reload their sniper rifle** → scope across the
+city → spot **three friendly US Army tanks** rolling in to support → then
+**several black HYDRA tanks** appear bearing the three-headed serpent crest.
+
+**Dialogue script:**
+
+> *(The trio — Spike, Striker, Payback — stack at the base of the tower; the
+> stairs wind up into the dark.)*
+>
+> **PAYBACK:** *(low)* Two up top. Snipers — they've got eyes on Fox's element.
+> **STRIKER:** *(whisper)* How do you wanna—
+> **PAYBACK:** Quiet. Blades. Spike, take the left. I've got the right.
+>
+> *(Player climbs and stealth-kills the first guard; Payback takes the second.)*
+>
+> **STRIKER:** *(radio, hushed)* Mr. 24's got the stairs. Go.
+> **PAYBACK:** Clear. Grab the rifle — you'll want the glass.
+>
+> *(Player reloads the dropped sniper, aims down sights, zooms over the city.)*
+>
+> **FOX:** *(radio)* Spike, talk to me. What do you see?
+> **SPIKE:** ...Armor. Three tanks, rolling in from the north.
+> **STRIKER:** Those ours?
+> **SPIKE:** US Army markings. Cavalry's here.
+> **FOX:** *(radio)* About bloody time.
+>
+> *(Beat. More tanks roll in at the far end — black, unmarked. The scope tightens
+> on the hull: a three-headed serpent.)*
+>
+> **SPIKE:** ...Wait.
+> **STRIKER:** What? What is it?
+> **SPIKE:** More armor. But they're black. No US markings.
+> **PAYBACK:** *(cold)* Zoom in. The hull.
+> **SPIKE:** There's a symbol. Some kind of snake. Three heads.
+> **FOX:** *(radio, long pause)* ...Say that again.
+> **PAYBACK:** *(quiet)* Hydra.
+> **STRIKER:** Who the hell are Hydra?
+> **FOX:** *(radio, grim)* Trouble we were told didn't exist. Everyone — off the
+> X. Now.
+
+---
+
+### Antagonist Faction — HYDRA
+
+- **First appearance:** Mission 1, the Clock Tower reveal — black tanks bearing
+  the crest roll in after the friendly US Army armor.
+- **Emblem:** a **three-headed serpent** above the wordmark **HYDRA**.
+  - Asset: `game/design/assets/hydra-logo.png` (provided reference).
+- **Role:** the campaign's shadow enemy — a force "we were told didn't exist."
+- **Details (leaders, goals, tech):** *TBD.*
+
+> **Naming note:** "HYDRA" is also the name of a famous Marvel Comics villain
+> organization (though Marvel's emblem is a skull with tentacles, not a
+> three-headed serpent). Flagging only in case you want a fully original name to
+> avoid the association — totally fine to keep if the overlap is intentional.
+
 ### Multiplayer
 - Competitive PvP.
 - Locked to first-person for a level playing field.
