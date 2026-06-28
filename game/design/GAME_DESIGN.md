@@ -190,6 +190,17 @@ After deploying on the rooftop, the mission continues:
 This establishes the squad fighting as two elements — **Fox & Molotov** as one
 pair, **Striker & Payback escorting Spike** toward the watchtower sniper.
 
+6. **Fighting through the city.** The squad pushes slowly through, **everyone
+   under heavy fire, clearing wave after wave** of enemies.
+7. **Landmark reached:** **Torre del Reloj (the Clock Tower).**
+
+> **⚠ Setting flag (important):** **Torre del Reloj** is the iconic Clock Tower
+> gate of **Cartagena, Colombia** (the country). This is strong evidence the
+> campaign is set in **Colombia**, not "Columbia, USA" as recorded at the title
+> card. **Decision needed:** is it Colombia (the country) — which would update
+> the opening title card to "CARTAGENA, COLOMBIA — 1985" — or a deliberate
+> fictional "Columbia, USA" that happens to share the landmark name?
+
 ### Multiplayer
 - Competitive PvP.
 - Locked to first-person for a level playing field.
