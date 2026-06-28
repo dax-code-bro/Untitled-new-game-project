@@ -40,7 +40,9 @@ is already aboard helicopters and planes, en route to Texas. Exposition happens
 
 > *(NO briefing. NO HQ. Hard cut from the alarm to the SKY: a fleet of
 > HELICOPTERS and PLANES already screaming toward Texas, the team aboard, gearing
-> up mid-flight.)*
+> up mid-flight. These are special **gas- and biofuel-powered** craft — no
+> electrical engines — chosen so the team can fly through their own EMP blast
+> unharmed.)*
 >
 > **SPIKE:** Somebody tell me why Hydra's turning seven states into a graveyard!
 > **ABRAHAM:** *(over comms)* Because they're not after the states. Texas is

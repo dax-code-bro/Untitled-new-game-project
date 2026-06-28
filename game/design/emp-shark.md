@@ -28,14 +28,14 @@ A **special unmanned weapon platform** — the team's answer to mass drone swarm
   risk.**
 
 ## Design Considerations / Flags
-- **⚠ Indiscriminate blast (huge collateral footprint).** A 45-mile EMP radius
-  that kills *anything* electrically powered would also fry **friendly aircraft,
-  the team's own helicopters/planes, vehicles, power grids, and civilian
-  infrastructure** caught inside it. This is a meaningful tradeoff — using it is
-  not "free." Could be a deliberate dramatic cost (black out a city / risk
-  dropping your own birds to stop the swarm), fitting the "Hellfire" theme of
-  terrible choices. **Confirm intent:** does the blast discriminate at all, or is
-  the collateral part of the tension?
+- **Team safety — RESOLVED:** the team rides in **gas- and biofuel-powered
+  vehicles** (no electrical engine), so the EMP blast **can't harm them.** They
+  specifically **acquired these special non-electrical vehicles just to safely
+  deploy the EMP Shark** — flying straight through their own 45-mile blast
+  unharmed. (Smart "they planned for this" detail.)
+- **⚠ Remaining collateral (open, minor):** the blast would still knock out
+  **civilian power grids / infrastructure** within 45 miles. Not addressed yet —
+  could be ignored, or a small cost beat. Low priority.
 - **⚠ Lore consistency w/ drone power.** The 1948 **H1.0** drones run on a
   **thermal reactor core** ("no battery required") — which would be EMP-resistant.
   The **H2.1 bombers** are evidently **electrically powered** (since EMP is the
