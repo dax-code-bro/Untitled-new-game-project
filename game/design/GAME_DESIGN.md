@@ -75,6 +75,13 @@ differ in structure, goal, and allowed camera.
 - **Structure** (linear / open-world / hub-and-spoke): **TBD** ("you'll see").
 - **Era/setting:** **1985.** Cold-War-era tone.
 
+#### Mission Naming Convention (important)
+**Every mission's title is a deliberate FORESHADOW** — it hints at either the
+**ending** of the mission or **what's going to happen** during it. Titles are
+thematic and symbolic, never just literal objective names. When naming a mission,
+the title should encode a meaning the player only fully understands after playing
+it. (See each mission file's "Title Meaning" note.)
+
 #### Recurring Format — Mission Briefings
 Between missions, there's a **briefing sequence**: the team sits around **General
 Abraham**, who lays out the next mission's details before they head out. This is

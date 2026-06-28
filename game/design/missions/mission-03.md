@@ -7,6 +7,19 @@
 
 **Title:** "Do You Need a Receipt With That Order?" *(working/locked title — the
 dark-humor, transactional/hitman tone is intentional.)*
+*(⚠ Wording variant heard later: "Would You Like a Receipt With That Order?" —
+confirm preferred phrasing. Meaning is identical either way.)*
+
+### Title Meaning (foreshadow)
+Per the campaign's naming convention (every title foreshadows the mission's
+ending/events), this title is the **return-the-purchase metaphor**:
+- After everything this mission costs — **Molotov shot through the head**, the
+  **exfil destroyed**, **Spike darted and collapsing** — Spike would give
+  anything to **"return" the mission**: to go back in time and choose *not* to
+  take it.
+- But **there is no receipt.** You can't return what you've already paid for in
+  blood. No take-backs, no refunds, no undo. The flippant retail line is the
+  cruelest possible framing of an irreversible, devastating job.
 
 ## Status
 - Title locked. **Setup established; detailed beats & dialogue pending.**
