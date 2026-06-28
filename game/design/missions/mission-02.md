@@ -14,7 +14,10 @@
 - **Spike** — Rodriguez "Spike" Hamilton, present-day (1985), daydreaming.
 - **The President** — head of the 1985 boardroom; questions Spike. *(Name TBD.)*
 - **Corporate executives** — other figures at the table. *(TBD.)*
-- **Diego** — the **player character of the 1948 flashback**. *(Surname TBD.)*
+- **Diego** — the **player character of the 1948 flashback**. **Diego is
+  SPIKE'S FATHER.** *(Surname presumably Hamilton — confirm; Spike = Rodriguez
+  "Spike" Hamilton.)* Survives the 1948 mission (escapes the blast) and later
+  has Spike.
 - **"The Thirty"** — a ~30-year-old man, Diego's comrade and the squad's heart;
   sacrifices himself at the end. **⚠ NAME TBD — user to provide.**
 - **Park** — flashback operator (name revealed at the main building). Killed.
@@ -263,9 +266,17 @@
 
 ## OPEN THREADS / NOTES
 
-- **Spike ↔ Diego connection (KEY MYSTERY):** Why does Spike experience this 1948
-  flashback? Is Diego an ancestor, the same bloodline, a recording/file Spike
-  studied, or something stranger? **TBD — major hook.**
+- **Spike ↔ Diego connection — RESOLVED:** **Diego is Spike's father.** The 1948
+  flashback is Spike dwelling on his father's history — the man who survived
+  HYDRA's first strike. Implications:
+  - Diego **survived** the 1948 mission (escaped the Claymore blast) and later
+    had Spike. Timeline works (Spike is an adult in 1985).
+  - Spike's fight against HYDRA in 1985 is now **generational / personal** — the
+    same enemy that nearly killed his father.
+  - **How does Spike know this story in such detail?** (Told by Diego? Diego's
+    journals/recordings? Is Diego still alive in 1985, or already gone?) — open.
+  - **Where is Diego in 1985?** Alive? Dead? Is he connected to Abraham knowing
+    about HYDRA? — strong thread to develop.
 - **"The Thirty" needs a name** — the ~30-year-old comrade who sacrifices himself.
   User said they forgot it; awaiting the real name.
 - **Surnames/names TBD:** Diego's surname, the President, the scientist.

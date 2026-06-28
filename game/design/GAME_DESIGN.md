@@ -178,6 +178,9 @@ high-ranking **Sergeant / officer** leading young Irish troops.
 - **Callsign:** "Spike" (between first/last: Rodriguez Hamilton).
 - **Role:** **the player character.** This is who the player controls — the
   operator in the opening who gears up and steps off the chopper.
+- **Father:** **Diego** (the playable lead of the 1948 flashback, Mission 2) —
+  a soldier who survived HYDRA's first strike in Saudi Arabia. This makes Spike's
+  1985 war with HYDRA **generational and personal.**
 - **Specialty / personality / weapon / backstory:** *TBD — revealed throughout
   the story* ("we will see").
 
