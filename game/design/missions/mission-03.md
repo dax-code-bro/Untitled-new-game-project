@@ -36,8 +36,38 @@ dark-humor, transactional/hitman tone is intentional.)*
   and through him, HYDRA. *(Approach — infiltration / assault / negotiation —
   TBD.)*
 
+## Deployed Operators (this mission)
+- **Spike** and **Molotov ONLY** — a two-man job. The full squad is briefed, but
+  **only two deploy.** In-fiction reason: the target is too rich/fortified to
+  assault with a full team — it's a quiet scalpel job, not a war.
+
+## PRE-MISSION BRIEFING (recurring format — around General Abraham)
+
+> *(The team is gathered around the briefing table. GENERAL ABRAHAM stands at the
+> head, a file spread out — surveillance photos of a woman, and one of the H1.0
+> drone.)*
+>
+> **ABRAHAM:** Mexico. *(slides a photo forward)* Meet **Lady Death.** Cartel
+> royalty — she's worth more than most of the governments in this hemisphere.
+> Three weeks ago, she picked up a new bodyguard. *(taps the drone photo)* Drone
+> Nine.
+> **STRIKER:** ...The sentient one.
+> **ABRAHAM:** The sentient one. Which makes her the only living lead we've got
+> on it. She knows where it came from. Maybe where the *others* are.
+> **FOX:** So we knock on her door.
+> **ABRAHAM:** You don't knock. Her place — *Cadena de Muertes en la Costa* —
+> Chain of Deaths on the Coast. Two acres of beachfront. Three *billion* dollars
+> of walls, cameras, and men. You don't roll a squad up that beach. Too many
+> bodies. Too loud.
+> **ABRAHAM:** This is a scalpel. *Two* men. *(beat)* Spike. Molotov. In quiet,
+> out quiet, with what she knows.
+> **STRIKER:** *Two?* Against a private army?
+> **MOLOTOV:** *(quiet)* ...Less to trip over.
+> **ABRAHAM:** Get in, get the intel, get gone. And try not to start a war with a
+> woman who can afford to *win* one.
+
 ## BEAT SHEET
-*(to be filled in as the mission is described)*
+*(mission proper — to be filled in as described)*
 
 ## FULL SCRIPT
 *(to be written as beats come in)*

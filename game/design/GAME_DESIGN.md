@@ -75,6 +75,17 @@ differ in structure, goal, and allowed camera.
 - **Structure** (linear / open-world / hub-and-spoke): **TBD** ("you'll see").
 - **Era/setting:** **1985.** Cold-War-era tone.
 
+#### Recurring Format — Mission Briefings
+Between missions, there's a **briefing sequence**: the team sits around **General
+Abraham**, who lays out the next mission's details before they head out. This is
+a recurring connective beat across the campaign (a hub for exposition, banter,
+and squad selection).
+- *(Note: Abraham may be informally called "Captain" or "Colonel" in dialogue —
+  canon rank is still **four-star general.**)*
+- **Squad selection happens here** — not every operator deploys on every
+  mission. The briefing establishes who's going (see Mission 3: only Spike &
+  Molotov deploy).
+
 #### Cold Open (campaign intro)
 The campaign opens cinematically:
 1. Open on a **helicopter flying in** toward the drop.
