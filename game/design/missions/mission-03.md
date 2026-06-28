@@ -84,8 +84,10 @@ dark-humor, transactional/hitman tone is intentional.)*
 7. **The office standoff** — reach **Lady Death's corporate office**; kick the
    door down. **Lady Death + her two guards** raise weapons; Spike & Molotov
    raise theirs. Frozen Mexican standoff.
-8. **The shot** — forced to make a move; **a single gunshot rings out.** The two
-   guards are killed.
+8. **The shot** — forced to make a move; **Lady Death fires first** (the shot
+   that hits Molotov). Spike, not even looking, **panics and mows down all three**
+   — both guards **and Lady Death**, killing her almost by accident. Their only
+   living lead is dead.
 9. **Molotov is hit** — he pulls off his **mask**, thumbs the **bullet hole
    through it**, touches the **hole in the side of his head** — bleeding, **eye
    gone bloodshot.** He and Spike share a look. They both know.
@@ -93,8 +95,17 @@ dark-humor, transactional/hitman tone is intentional.)*
     there's no way Molotov is okay and it's all that's left).
 11. **Fighting retreat** — battle out through the rest of the mansion: **60
     enemies**, Molotov **leaning on Spike's shoulder, firing his pistol.**
-12. **Exfil** — reaching the **tropical forest behind the mansion**, Spike
-    **requests exfil.**
+12. **Exfil request** — reaching the **tropical forest behind the mansion**
+    (down to the water's edge), Spike **requests exfil.**
+13. **Exfil destroyed** — a **speedboat** appears, then is **blown up by a rocket
+    launcher** from an unseen attacker.
+14. **Spike darted** — dragging Molotov deeper into the jungle, Spike is hit by a
+    **dart** (drug/toxin) — agonizing pain. He **can't find/identify the shooter.**
+15. **Delirium crawl** — Spike, drugged and panicking, checks the laptop for a
+    nearby **luxury cruise resort** up the coast and tries to drag Molotov toward
+    it. He's confused, everything's too fast, **babbling non-words.**
+16. **Collapse** — before reaching the resort, **Spike collapses.** Both men
+    down. Cliffhanger.
 
 ## FULL SCRIPT
 
@@ -156,13 +167,18 @@ dark-humor, transactional/hitman tone is intentional.)*
 > **LADY DEATH:** *(a thin smile)* ...Everyone wants to know everything.
 > *(A finger twitches. The standoff snaps.)*
 > **SPIKE:** *MOVE—!*
-> *(A single GUNSHOT cracks across the room—)*
+> *(LADY DEATH fires first — a single GUNSHOT cracks across the room—)*
 
 ### THE SHOT
 
-> *(—and then it's over. The two guards drop. Smoke. Ringing silence.)*
+> *(—and Spike doesn't even think. He isn't looking at her, isn't aiming at
+> anyone — he just **panics** and **unloads**, mowing down everything in the room
+> before his brain catches up to his trigger finger. When the smoke clears, all
+> three are down: the two guards — and **Lady Death** herself, killed almost by
+> accident in the spray. Their only living lead, gone. Spike barely registers it.)*
 >
-> *(MOLOTOV stands very still. Slowly, he reaches up and pulls off his ski mask —
+> *(Because MOLOTOV stands very still. Slowly, he reaches up and pulls off his
+> ski mask —
 > the fire-and-Molotov paint — and turns it over. His thumb finds a hole punched
 > clean through it.)*
 > *(He touches the side of his own head. His fingers come away red. There's a
@@ -191,11 +207,55 @@ dark-humor, transactional/hitman tone is intentional.)*
 
 ### EXFIL
 
-> *(They burst out the back of the mansion into dense TROPICAL FOREST. Spike keys
-> his radio.)*
+> *(They burst out the back of the mansion into dense TROPICAL FOREST and push
+> through to the water's edge. Spike keys his radio.)*
 >
-> **SPIKE:** Exfil — *now!* I've got a man down — I need a bird and I need it
-> *yesterday!*
+> **SPIKE:** Exfil — *now!* I've got a man down — I need it *yesterday!*
+
+### THE EXFIL DIES
+
+> *(A beat. Then — a SPEEDBOAT carves around the point, racing in toward the
+> shore. Relief, for half a second—)*
+>
+> *(—and a streak of fire lances out of the dark. A **ROCKET.** The speedboat
+> ERUPTS — a fireball rolling across the water. The exfil is gone.)*
+>
+> **SPIKE:** *NO—!*
+
+### HUNTED
+
+> *(Something is out there. Spike can't see it. He grabs Molotov under the arms
+> and drags him back, deeper into the jungle.)*
+>
+> **SPIKE:** Come on — come *on*, we are not done—
+>
+> *(A soft PHUT from the trees. A **DART** buries itself in Spike. Fire blooms
+> through his body — agonizing, wrong, spreading.)*
+>
+> **SPIKE:** *(gasping)* —agh—! What — what *is* —
+>
+> *(He keeps pulling Molotov. He scans the treeline for the shooter — nothing. No
+> one. He can't find them. He can't find who did this.)*
+
+### DELIRIUM — THE CRAWL
+
+> *(The world tilts. The dart is doing something to him. With shaking hands he
+> fumbles the stolen laptop open — there was a place, he saw it, a **luxury
+> cruise resort**, not far, just up the coast—)*
+>
+> **SPIKE:** *(slurring)* ...resort. There's a — it's right — Molly. Molly, stay.
+> Stay with—
+>
+> *(His words start to come apart. He's saying things that aren't words anymore.
+> Everything's too fast. His heart's a hammer. He can't find the shooter, can't
+> think, can't breathe right — he just drags Molotov by the vest, one-handed,
+> through the mud, toward a far light through the trees.)*
+>
+> **SPIKE:** *(barely)* ...not gonna — I'm not — don't you — Mol...
+>
+> *(His legs give out. The light is still so far away.)*
+>
+> *(SPIKE COLLAPSES. Black.)*
 >
 > *(— TO BE CONTINUED. —)*
 
@@ -204,13 +264,23 @@ dark-humor, transactional/hitman tone is intentional.)*
   through his mask and the side of his head; bloodshot eye; can't carry his
   rifle. His **fate is a cliffhanger** into the exfil. *(Does he live? This is a
   major emotional turn — pending.)*
-- **⚠ Lady Death's fate — UNRESOLVED.** The script only kills her **two guards**;
-  she isn't accounted for. Most likely read: **she fired the shot that hit
-  Molotov and escaped in the chaos**, leaving her laptop behind (sets her up as a
-  recurring antagonist). **Confirm:** did she escape? Did she fire the shot? Or
-  is she killed/captured?
-- **⚠ Was the intel obtained?** Spike reaches the laptop, but success isn't
-  stated. Confirm whether the team **gets the intel** (and what it reveals).
-- **Drone 9 is ABSENT from the raid** — she hired it 3 weeks ago, but it's not at
-  the mansion. (Already left her employ? Off on a job?) Thread to develop.
-- Lady Death's **real name, look, gang** — still TBD.
+- **Lady Death's fate — RESOLVED: DEAD.** She fired first (hitting Molotov);
+  Spike **panic-fired and killed all three** in the room, including her — almost
+  by accident, without even looking. She is **not** a recurring villain. The
+  squad's only living lead on Drone 9 is gone — making her **laptop** the sole
+  remaining source.
+- **⚠ NEW MYSTERY — who attacked the exfil?** An unseen enemy **blew up the
+  speedboat with a rocket** and **darted Spike**. Spike never sees them.
+  Candidates: HYDRA? Drone 9? A third party / Lady Death's contingency? **Major
+  open hook — to develop.**
+- **⚠ Was the intel obtained?** Spike grabs the laptop and later uses it to find
+  the resort, so the laptop is **in hand** — but whether its HYDRA/Drone-9 intel
+  is recovered/usable is unconfirmed. Confirm what it reveals.
+- **Both Spike and Molotov are DOWN** in the jungle after Spike collapses. Their
+  survival + rescue is the cliffhanger into the next beat/mission.
+- **New location seeded:** a **luxury cruise resort** up the coast (from the
+  laptop) — likely the next setting.
+- **Molotov's fate** — still a headshot survivor, critical, now also stranded.
+- **Drone 9 is ABSENT from the raid** — hired 3 weeks ago but not present.
+  (Left her employ? Off on a job? Connected to the exfil attacker?) — develop.
+- Lady Death's **real name, look, gang** — TBD (now posthumous flavor).
