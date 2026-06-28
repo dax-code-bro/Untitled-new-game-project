@@ -504,6 +504,18 @@ clocking a named enemy among mooks).
 - *(Implication: friendlies need **code names** for the blue nameplate — so the
   quieter operators Brian/Jesse Wolford & Monroe Sydney will need callsigns.)*
 
+### Story-Protection Rules (named characters)
+Two hard rules guard the narrative around named characters:
+- **Friendly fire (teammates) — forbidden.** If the player tries to kill a
+  teammate, the screen **immediately goes BLACK** and displays:
+  > **"Friendly fire will not be tolerated."**
+  …then the **mission restarts from the last checkpoint.**
+- **Named enemies — protected until scripted.** A **named enemy individual
+  cannot be shot/killed until the game explicitly allows it** (as part of an
+  objective). If the player tries to harm them early, the game responds:
+  > **"Nice try, but be patient."**
+  …and the enemy takes no damage until their scripted moment arrives.
+
 ### Combat
 - **Guns are the core.** A deep arsenal — **hundreds of guns** to choose from.
   - Implies a weapon framework: categories, stats, attachments/loadouts (detail TBD).
