@@ -273,6 +273,21 @@
 >
 > **ABRAHAM:** *(grim)* But "failed to adapt" is not "confirmed dead." Any one of
 > the others could still be out there. Still active. Still waiting.
+
+### THE WALKOUT
+
+> *(A long silence. Then SPIKE pushes back his chair and stands.)*
+>
+> **SPIKE:** *(flat)* ...Yeah. I'm not gonna waste my time on this.
+>
+> *(He turns and walks for the door. The PRESIDENT and the executives watch,
+> caught off guard.)*
+>
+> **PRESIDENT:** Hamilton—
+>
+> *(The door's already swinging shut behind him. A beat. Then — one by one — the
+> rest of the team rise and follow him out, leaving the brass alone at the
+> table.)*
 >
 > *(— END OF MISSION 2. —)*
 
@@ -313,6 +328,18 @@
 - **"The Thirty" needs a name** — the ~30-year-old comrade who sacrifices himself.
   User said they forgot it; awaiting the real name.
 - **Surnames/names TBD:** Diego's surname, the President, the scientist.
+
+## CHARACTER BEAT — The Walkout (what it establishes)
+
+- **Spike outranks the room in the only way that matters.** He walks out on a
+  *Presidential* briefing — jaded, blunt, done with bureaucracy ("I'm not gonna
+  waste my time on this").
+- **The team's loyalty is to Spike, not the brass.** They rise and follow *him*
+  out, leaving the President and executives behind. This is a defining squad
+  dynamic.
+- **Open question (intentional):** *why* does Spike dismiss it? Grief (his father
+  / HYDRA being personal)? Distrust of the President/corporate? A belief the brass
+  will only get people killed? Or does he have his own plan? — thread to develop.
 
 ## ⚠ ERA / TECH FLAGS (1948 setting — for a deliberate decision)
 
