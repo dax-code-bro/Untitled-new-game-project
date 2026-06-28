@@ -22,8 +22,11 @@ complete screenplays.
   every beat).
 - `game/design/missions/mission-02.md` — **Mission 2, full script** — the 1948
   Saudi Arabia flashback (framed by a 1985 boardroom).
-- `game/design/missions/mission-03.md` — **Mission 3** — "Do You Need a Receipt
-  With That Order?" *(title locked; beats pending).*
+- `game/design/missions/mission-03.md` — **Mission 3** — "Would You Like a
+  Receipt With That Order?" *(full script — Lady Death mansion raid).*
+- `game/design/missions/mission-04.md` — **Mission 4** — "Sins of the Past"
+  *(title + placement locked; beats pending — Spike & Molotov trapped on the
+  island).*
 - `game/design/hydra-drone-h1.md` — **H1.0 drone codex** (full specs + the
   13-drone status tracker).
 - `game/design/assets/` — reference art (`hydra-logo.png`,

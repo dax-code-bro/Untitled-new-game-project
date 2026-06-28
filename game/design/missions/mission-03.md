@@ -1,13 +1,12 @@
-# Mission 03 — "Do You Need a Receipt With That Order?"
+# Mission 03 — "Would You Like a Receipt With That Order?"
 
 > **Canonical full script (in progress).** Preserves EVERY line of dialogue and
 > EVERY story detail. Nothing here is to be lost or summarized away.
 >
 > Target rating: **ESRB M.**
 
-**Title:** ⚠ **UNDER CLARIFICATION** — the name of this (the Lady Death mansion)
-mission is being confirmed with the user. The "receipt/return" theme and its
-meaning still stand; the exact title is pending.
+**Title:** "Would You Like a Receipt With That Order?" *(LOCKED — confirmed
+phrasing. The dark-humor, transactional/hitman tone is intentional.)*
 
 ### Title Meaning (foreshadow)
 Per the campaign's naming convention (every title foreshadows the mission's
