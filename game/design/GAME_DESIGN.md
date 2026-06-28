@@ -30,7 +30,8 @@ complete screenplays.
 - `game/design/missions/mission-05.md` — **Mission 5** — "A Lost Cause"
   *(opening scripted — voyage arrival, rescue chopper, ride to HQ; rest pending).*
 - `game/design/missions/mission-06.md` — **Mission 6** — "Hellfire"
-  *(title + placement locked; beats pending).*
+  *(cold-open scripted — immediate air scramble vs. the bomber swarm; rest
+  pending).*
 - `game/design/missions/mission-07.md` — **Mission 7** — "Industry"
   *(title + placement locked; beats pending).*
 
