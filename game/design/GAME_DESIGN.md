@@ -506,10 +506,12 @@ clocking a named enemy among mooks).
 
 ### Story-Protection Rules (named characters)
 Two hard rules guard the narrative around named characters:
-- **Friendly fire (teammates) — forbidden.** If the player tries to kill a
-  teammate, the screen **immediately goes BLACK** and displays:
+- **Friendly fire (teammates AND neutrals) — forbidden.** If the player tries to
+  kill a **teammate** *or* a **neutral** (blue or white nameplate), the screen
+  **immediately goes BLACK** and displays:
   > **"Friendly fire will not be tolerated."**
-  …then the **mission restarts from the last checkpoint.**
+  …then the **mission restarts from the last checkpoint.** (Applies to any
+  non-hostile named character — you simply cannot kill allies or neutrals.)
 - **Named enemies — protected until scripted.** A **named enemy individual
   cannot be shot/killed until the game explicitly allows it** (as part of an
   objective). If the player tries to harm them early, the game responds:
