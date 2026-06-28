@@ -8,6 +8,20 @@
 Status: **design phase** — no engine/tech stack committed yet.
 Last updated by design discussion: 2026-06-27.
 
+### Canon & Preservation Policy
+**Nothing about this story is ever to be lost or summarized away.** Every line
+of dialogue and every small detail is preserved verbatim in version-controlled
+files and committed/pushed as it's created. Full per-mission scripts live in
+`game/design/missions/`. This design doc is the bible; the mission files are the
+complete screenplays.
+
+**Canon index:**
+- `game/design/GAME_DESIGN.md` — this design bible (modes, mechanics, characters,
+  rating, open decisions).
+- `game/design/missions/mission-01.md` — **Mission 1, full script** (every line,
+  every beat).
+- `game/design/assets/` — reference art (e.g. `hydra-logo.png`).
+
 **Target content rating: ESRB M (Mature 17+).** Tone is gritty, grounded
 military drama. All writing (dialogue, story beats, characters) should hold
 this bar.
