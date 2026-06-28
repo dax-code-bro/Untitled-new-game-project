@@ -9,9 +9,28 @@
 dark-humor, transactional/hitman tone is intentional.)*
 
 ## Status
-- Title locked. **Story beats & dialogue: pending — to be provided.**
-- Likely follows directly from the Mission 2 walkout (team has left the
-  President; on their own now). *(Connection TBD.)*
+- Title locked. **Setup established; detailed beats & dialogue pending.**
+- Follows the team going independent after the Mission 2 walkout.
+- **Drone 9 tie-in CONFIRMED** — the mission exists because of Drone 9.
+
+## Cast / Key Figures
+- **The team** (Spike + squad), now acting on their own intel.
+- **Lady Death** — a **gang/mob boss in Mexico.** New antagonist/source.
+  - **~3 weeks ago she employed Drone 9 as her personal bodyguard** — making her
+    the team's lead on the sentient drone (and a thread back to HYDRA).
+  - Runs a criminal operation; dangerous, well-protected. *(Details TBD.)*
+- **Drone 9** — the sentient bodyguard-for-hire (see `hydra-drone-h1.md`).
+  Was/is in Lady Death's employ. *(Is he still with her during the mission? TBD.)*
+
+## Location
+- **"Cadena de Muertes en la Costa"** — Spanish, ~*"Chain of Deaths on the
+  Coast."* Lady Death's **2-acre shoreline mega-mansion** in Mexico. A sprawling
+  beachfront fortress-estate — the mission's main setting.
+
+## Objective (as understood)
+- Reach Lady Death at her coastal mansion and **extract intel** — about Drone 9,
+  and through him, HYDRA. *(Approach — infiltration / assault / negotiation —
+  TBD.)*
 
 ## BEAT SHEET
 *(to be filled in as the mission is described)*
@@ -20,6 +39,7 @@ dark-humor, transactional/hitman tone is intentional.)*
 *(to be written as beats come in)*
 
 ## NOTES / OPEN THREADS
-- Does this mission tie to **Drone 9** (the sentient bodyguard-for-hire)? The
-  "order/receipt" framing *feels* transactional — flagging as a possible link.
-  *(TBD.)*
+- **Is Drone 9 still guarding her** when the team arrives? If so, the team may
+  have to fight or talk past a sentient H1.0 drone — huge set-piece potential.
+- How did the team **get this intel**, and how fresh is the "3 weeks ago" lead?
+- Lady Death's **real name, look, gang, and how she affords a HYDRA drone** — TBD.
