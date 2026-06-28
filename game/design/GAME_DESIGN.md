@@ -9,9 +9,19 @@ Status: **design phase** — no engine/tech stack committed yet.
 Last updated by design discussion: 2026-06-27.
 
 **Target content rating: ESRB M (Mature 17+).** Tone is gritty, grounded
-military drama — intense combat violence, wartime stakes, and mature language
-are in-bounds and consistent with the established voice. All writing (dialogue,
-story beats, characters) should hold this bar.
+military drama. All writing (dialogue, story beats, characters) should hold
+this bar.
+
+**Content descriptors (intended):**
+- **Intense Violence** — graphic, realistic combat.
+- **Strong Language** — mature/profane dialogue.
+- **Dark Humor** — gallows/black comedy amid the grim tone.
+- **Use of Tobacco** — characters may smoke (period-appropriate for 1985).
+- **Drug Reference and Use** — references to and depiction of drug use.
+- **Use of Alcohol** — alcoholic substances depicted/consumed.
+
+*(These are deliberate, world-appropriate elements of a mature war story — not
+gratuitous. Depicted in service of character and setting.)*
 
 ---
 
