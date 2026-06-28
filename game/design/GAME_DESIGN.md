@@ -250,14 +250,17 @@ high-ranking **Sergeant / officer** leading young Irish troops.
 - One of Team Apex's **quieter, less-spotlighted operators** (background roster).
 - Deployed on the Hellfire mission (every member was). **One of these three
   quieter operators is introduced to the player during Hellfire** (which — TBD).
+- **CAMEO — Mission 1:** appears alongside Jesse on the rooftop (look left before
+  descending), sniping enemies below. Present since the very first mission.
 - **⚠ Shares the surname "Wolford" with Jesse** — very likely **related**
   (brothers? father/son?). Confirm relationship.
-- Callsign / role / weapon / personality: *TBD.*
+- Callsign (needed for blue nameplate) / role / weapon / personality: *TBD.*
 
 ##### 8. Jesse Wolford
 - Quieter supporting operator (background roster). Deployed on Hellfire.
+- **CAMEO — Mission 1:** appears alongside Brian on the rooftop, sniping below.
 - **⚠ Shares the surname "Wolford" with Brian** — likely related (TBD).
-- Callsign / role / weapon / personality: *TBD.*
+- Callsign (needed for blue nameplate) / role / weapon / personality: *TBD.*
 
 ##### 9. Monroe Sydney
 - Quieter supporting operator (background roster). Deployed on Hellfire.
@@ -485,6 +488,21 @@ they breach the main line and overrun your men.**
 - **Crouch** — lowered stance for cover and accuracy.
 - **Crawl / Prone** — go fully prone; lowest profile.
 - (Stance transitions — slide-to-prone, etc. — to be defined during prototyping.)
+
+### HUD — Named-Character Nameplate System
+When the player's **crosshair passes over a NAMED individual** (a character with a
+name in the campaign), their name appears **next to the crosshair**, color-coded
+by allegiance:
+- **Enemy (named):** **RED** — shows their **FULL NAME**.
+- **Friendly / ally:** **BLUE** — shows their **CODE NAME**.
+- **Neutral:** **WHITE** — shows their name.
+
+**Only triggers for named campaign individuals** — generic/unnamed enemies and
+background NPCs show **nothing**. This is the player's tool for spotting story
+characters in a crowd (e.g. identifying the Brian & Jesse cameo in Mission 1, or
+clocking a named enemy among mooks).
+- *(Implication: friendlies need **code names** for the blue nameplate — so the
+  quieter operators Brian/Jesse Wolford & Monroe Sydney will need callsigns.)*
 
 ### Combat
 - **Guns are the core.** A deep arsenal — **hundreds of guns** to choose from.

@@ -113,6 +113,14 @@ HYDRA and clocks Abraham's secret. Molotov breaks silence just to name them.
 
 > **FOX:** Off the bird! On me!
 > *(The squad disembarks onto the rooftop together.)*
+>
+> **🔎 HIDDEN DETAIL / CAMEO:** On the rooftop, **before descending the
+> staircase**, if the player looks to their **LEFT**, two operators are perched
+> **side-by-side sniping enemies down below.** These are **Brian Wolford and
+> Jesse Wolford** — Team Apex's quiet operators, present from the very first
+> mission. Putting the crosshair on them shows their **blue (friendly) code
+> names** via the nameplate system. A long-game continuity Easter egg that pays
+> off when they're formally introduced later.
 
 ### 6. THE DESCENT
 
@@ -287,3 +295,6 @@ HYDRA and clocks Abraham's secret. Molotov breaks silence just to name them.
 - Fail state of the anti-tank stand: tanks breach the main line → your men are
   overrun.
 - **Open setting flag:** Columbia (USA) vs Colombia (country) — unresolved.
+- **Brian & Jesse Wolford cameo** on the rooftop (look left before descending) —
+  earliest appearance of Team Apex's quiet operators; ID'able via the blue
+  friendly nameplate. Needs their code names defined.
