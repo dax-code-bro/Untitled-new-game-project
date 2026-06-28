@@ -162,9 +162,14 @@ intentionally — the calm makes whatever comes next hit harder.
   field-bandaged, used his own/Spike's medical supplies); Spike came out of the
   dart. Both are wounded but mobile.
 - **New faction — the Island Rebels / Locals:** civilians-turned-fighters
-  resisting HYDRA on the island. Led by the **Rebel Leader (name TBD).** Offer
-  Spike & Molotov sanctuary; potential **alliance** (they help the duo board the
+  resisting HYDRA on the island. Led by the **Rebel Leader (name TBD).** Offered
+  Spike & Molotov sanctuary; struck an **alliance** (they help the duo board the
   cruise ship; in return the team sends fighters to help them hold the island).
+  - **⚠ THEIR FATE (revealed in Mission 5):** the rebels were **bombed by HYDRA
+    shortly after the cruise ship left the dock — all of them killed.** The
+    alliance/promise is rendered tragically moot ("we pay our debts" — but
+    there's no one left to pay). A consequence beat fitting the campaign's
+    "Sins of the Past" weight.
 - **"Those things"** = HYDRA forces/drones threatening the island.
 - **The cruise ship** at the dock is the objective — their way off the island.
 - **STILL OPEN:** Who **darted Spike / rocketed the exfil** in Mission 3? Not yet

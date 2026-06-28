@@ -85,6 +85,23 @@ Abraham delivers the payoff at HQ.
 > days of silence. *(quietly)* We thought you'd gone below.
 > **SPIKE:** ...We almost did. *(beat)* We did, for a while.
 > **MOLOTOV:** *(touching the bandage)* ...Some of us more than others.
+
+### THE REBELS' FATE
+
+> *(Spike tells Abraham about the island — the rebels, the locals who fought
+> beside them, the promise they made.)*
+>
+> **SPIKE:** There were people on that island. Rebels — locals. They bled with
+> us. We made them a promise.
+> **ABRAHAM:** *(a slow nod)* ...We know about that. *(a long, heavy pause)* And
+> I'm sorry to say it, son. The rebels were bombed. Not long after you left the
+> dock. *(beat)* Hydra got them. All of them.
+>
+> *(Silence. MOLOTOV — the one who shook on the deal, who said "we pay our debts"
+> — goes very still.)*
+>
+> **MOLOTOV:** *(quiet, cold)* ...We pay our debts.
+> *(But there's no one left to pay.)*
 >
 > *(— CONTINUES. —)*
 
@@ -98,5 +115,9 @@ Abraham delivers the payoff at HQ.
   feed the "lost cause" turn. Develop.
 - **Whose "lost cause"?** The title promises the relief curdles into something
   doomed. The turn is still TBD.
+- **The rebels are dead.** HYDRA **bombed the island rebels** shortly after the
+  cruise ship departed (Mission 4) — all killed. The alliance Molotov brokered is
+  moot; the "we pay our debts" promise can never be paid. A heavy survivor's-guilt
+  beat for Spike & Molotov (especially Molotov, who made the deal).
 - **Still unresolved (carryover):** who darted Spike / rocketed the exfil in
   Mission 3.
