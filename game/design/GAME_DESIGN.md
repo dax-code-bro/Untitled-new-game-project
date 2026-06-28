@@ -20,6 +20,8 @@ complete screenplays.
   rating, open decisions).
 - `game/design/missions/mission-01.md` — **Mission 1, full script** (every line,
   every beat).
+- `game/design/missions/mission-02.md` — **Mission 2, full script** — the 1948
+  Saudi Arabia flashback (framed by a 1985 boardroom).
 - `game/design/assets/` — reference art (e.g. `hydra-logo.png`).
 
 **Target content rating: ESRB M (Mature 17+).** Tone is gritty, grounded
@@ -283,7 +285,15 @@ city → spot **three friendly US Army tanks** rolling in to support → then
 - **Emblem:** a **three-headed serpent** above the wordmark **HYDRA**.
   - Asset: `game/design/assets/hydra-logo.png` (provided reference).
 - **Role:** the campaign's shadow enemy — a force "we were told didn't exist."
-- **Details (leaders, goals, tech):** *TBD.*
+- **History — exists since at least 1948** (see Mission 2). In 1948, in Saudi
+  Arabia, a HYDRA scientist launched a **rocket into space** that deployed
+  **~13 capsules worldwide**, scattering in different directions — almost
+  certainly the **seeding event** for HYDRA's global presence in 1985.
+- **HYDRA drones** — fast, lethal machine-creatures deployed from those capsules;
+  can effortlessly kill trained soldiers (first seen 1948).
+- **Not all loyal** — HYDRA's own soldiers aren't all believers (the 1948
+  scientist's guards turned on him). Loyalty-vs-coercion is a usable theme.
+- **Details (leaders, goals, full tech):** *TBD.*
 
 > **Naming note:** "HYDRA" is also the name of a famous Marvel Comics villain
 > organization (though Marvel's emblem is a skull with tentacles, not a
