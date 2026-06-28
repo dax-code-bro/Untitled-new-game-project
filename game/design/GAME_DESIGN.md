@@ -276,6 +276,48 @@ city → spot **three friendly US Army tanks** rolling in to support → then
 > three-headed serpent). Flagging only in case you want a fully original name to
 > avoid the association — totally fine to keep if the overlap is intentional.
 
+#### Mission 1 — Scene: Anti-Tank Stand & Regroup
+
+**Setup:** The player learns the captured sniper is loaded with **anti-tank
+rounds** (an anti-materiel rifle). **Objective: destroy the HYDRA tanks before
+they breach the main line and overrun your men.**
+
+**Gameplay (timed sniper sequence):**
+- **3 tanks**, each takes **3 anti-tank shots** to kill (9 shots total).
+- **Time pressure:** the tanks are rolling toward the main line — destroy them
+  **before they breach** or your men get wiped. Fail state = the line falls.
+- After all three are destroyed, **head downstairs** and back onto the
+  battlefield.
+
+**Regroup — dialogue script:**
+
+> *(Spike descends into the smoke and wreckage. ABRAHAM is on the battlefield;
+> he strides over and extends a hand.)*
+>
+> **ABRAHAM:** Good shooting, son. *(firm handshake)* You just bought us the line.
+>
+> *(The squad gathers — battered, rattled. Several look furious.)*
+>
+> **STRIKER:** Sir — with respect — what the hell was that? Those tanks. That
+> symbol.
+> **MOLOTOV:** *(rare, low — he almost never speaks)* Hydra.
+> **STRIKER:** Who *are* Hydra? Why do they have armor? Why does nobody—
+> **FOX:** *(stepping in)* Easy, Mr. 24.
+> **PAYBACK:** *(quiet, eyes locked on Abraham)* ...He knows.
+>
+> *(All eyes turn to Abraham.)*
+>
+> **ABRAHAM:** *(flat)* That's none of your concern. For the current moment.
+> **STRIKER:** None of our—? They almost wiped us out!
+> **ABRAHAM:** And you're still breathing. Keep it that way. Move out.
+
+**Story threads planted:**
+- **Abraham knows what HYDRA is and is withholding it** — sets up a
+  trust/secrecy arc with the squad.
+- **Payback also recognizes HYDRA** (she named them at the tower, and clocks
+  Abraham's secret here) — two characters in the know, the rest in the dark.
+- **Molotov breaking silence** to say the name underscores how serious it is.
+
 ### Multiplayer
 - Competitive PvP.
 - Locked to first-person for a level playing field.
