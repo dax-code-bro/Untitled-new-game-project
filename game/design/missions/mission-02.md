@@ -273,10 +273,15 @@
     had Spike. Timeline works (Spike is an adult in 1985).
   - Spike's fight against HYDRA in 1985 is now **generational / personal** — the
     same enemy that nearly killed his father.
-  - **How does Spike know this story in such detail?** (Told by Diego? Diego's
-    journals/recordings? Is Diego still alive in 1985, or already gone?) — open.
-  - **Where is Diego in 1985?** Alive? Dead? Is he connected to Abraham knowing
-    about HYDRA? — strong thread to develop.
+  - **How Spike knows the story — RESOLVED:** **Diego told him the story when
+    Spike was a boy.** It's a father's account, passed down — which is why the
+    flashback plays as Spike's memory of it.
+  - **Where Diego is in 1985 — RESOLVED:** **Diego is dead.** He **died of old
+    age, shortly after the death of Spike's mother.** Both of Spike's parents are
+    gone; Spike is an orphan carrying his father's story.
+  - **Still open:** Is Diego's history connected to **how Abraham knows about
+    HYDRA**? (Did they cross paths? Did Diego's report reach Abraham?) — thread
+    to develop.
 - **"The Thirty" needs a name** — the ~30-year-old comrade who sacrifices himself.
   User said they forgot it; awaiting the real name.
 - **Surnames/names TBD:** Diego's surname, the President, the scientist.
