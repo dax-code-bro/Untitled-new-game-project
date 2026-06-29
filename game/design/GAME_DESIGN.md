@@ -287,11 +287,13 @@ high-ranking **Sergeant / officer** leading young Irish troops.
 - **Weapons:** Brian favors a **shotgun** (at least here). Jesse — TBD.
 - Callsigns: *TBD* (nameplates fall back to "Brian"/"Jesse").
 
-##### 9. Monroe Sydney
+##### 9. Monroe Sydney — **DECEASED (KIA Mission 7, traitor)**
 - Quieter supporting operator (background roster). Deployed on Hellfire.
 - **Role — the inside man:** in Mission 7 "Industry," he had **secretly taken a
   job at the HYDRA casino** weeks ahead, embedding himself; he opens the latch to
   the manufacturing lab.
+- **FATE:** after betraying the team and aiming at Jesse, **killed by Brian** —
+  a thrown knife to the head. The team only learned he was a traitor afterward.
 - **Goes by "Sydney."**
 - **⚠ BETRAYAL — confirmed in his own words:** at the climax he stands with a
   soldier and a security guard, **revolvers on the twins**, and openly sides

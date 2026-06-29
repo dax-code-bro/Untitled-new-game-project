@@ -134,7 +134,51 @@ the playable lead. *(Exact roster split and who leads on the ground — TBD.)*
 > **broken product**... until Abraham *fixed* you. *(beat, cold)* Me? I never
 > needed fixing.
 >
-> *(— CONTINUES. —)*
+> *(Sydney swings his aim onto JESSE.)*
+
+### THE COUNTER — QTE
+
+> **[QUICK-TIME EVENT — button prompts]**
+>
+> *(Brian EXPLODES into motion — snatches **two knives** from the security
+> guard's holster. One buries to the hilt in **SYDNEY'S skull.** The other into
+> the **guard's head.** Both drop where they stand.)*
+>
+> *(But Sydney's gun went off — the round **GRAZES Jesse's shoulder.**)*
+>
+> **JESSE:** *(wincing)* ...I'm fine.
+>
+> *(He scoops up a fallen gun and keeps walking. Behind them, Brian thumbs the
+> detonator — the **C4 blows the manufacturing lab sky-high** as the twins stride
+> away without looking back. Pure action-movie cool.)*
+
+### EXFIL — PLAY AS BRIAN
+
+> *(The signal goes out; everyone moves to leave.)*
+>
+> **PAYBACK:** *(earpiece)* We've got a situation — that boom brought security
+> down on us. Lot of them.
+>
+> **[PLAYABLE — BRIAN]** *(Fight out through the hallway: **3 waves of 6 guards**
+> — 18 total. Make it out.)*
+>
+> *(Outside: civilians flee in terror through the casino. The team piles into the
+> van; Brian drives off, back toward the facility.)*
+>
+> *(FADE TO BLACK.)*
+
+### BACK AT THE FACILITY (HQ)
+
+> *(The van pulls up to the facility. ABRAHAM meets them.)*
+>
+> **ABRAHAM:** So — how'd you get along? *(beat)* And where's Sydney?
+> **BRIAN:** *(flat)* Knife in his head. Dead.
+>
+> *(The other members go still — shocked. All except JESSE.)*
+>
+> **JESSE:** *(evenly)* He tried to double-cross us.
+>
+> *(— END OF MISSION 7. —)*
 
 > **REVEAL — "broken product" (it's a METAPHOR):** Sydney's "broken product"
 > line is **figurative**, NOT literal. Brian was a **broken/damaged person**
@@ -149,8 +193,20 @@ the playable lead. *(Exact roster split and who leads on the ground — TBD.)*
 > **Confirm:** is this a true betrayal, or is Monroe **coerced / a hostage /
 > playing a deeper game**? It changes everything about his character.
 
+## Climax & Ending (beats)
+- **Sydney aims at Jesse → QTE:** Brian grabs two of the guard's knives —
+  **kills Sydney (knife to the head) and the guard.**
+- **Jesse grazed** by Sydney's shot but **fine**; picks up a gun, walks on.
+- **C4 detonated** — the manufacturing lab (and the H3.2 line / Patient 14) is
+  blown. Cool walk-away.
+- **Playable Brian** fights out: **3 waves of 6 guards (18).**
+- **Escape** in the van past terrified civilians → drive to HQ → fade to black.
+- **HQ:** Abraham asks where Sydney is. Brian: *"Knife in his head. Dead."* Team
+  shocked except Jesse: *"He tried to double-cross us."*
+
 ## Status
-- Title + placement + premise + opening setup locked. **Dialogue & rest: pending.**
+- **Mission 7 fully scripted, start to finish.** (Open: define Patient 14 specs,
+  Brian/Jesse weapons & callsigns, Sydney's full motive.)
 
 ## NOTES / OPEN THREADS
 - **Wolford twins CONFIRMED:** Brian & Jesse Wolford are **twins** (resolves the
@@ -182,9 +238,15 @@ the playable lead. *(Exact roster split and who leads on the ground — TBD.)*
   Brian/Jesse/Monroe real personality, roles, and stakes.
 - **H3.2 drone specs** (what makes it the "new ultimate") — TBD.
 - **"Patient 14"** — the first H3.2 unit, **~50% built** at this casino plant.
-  The "Patient" designation hints at something experimental/sentient. He's a
-  prime candidate for the **mission's centerpiece/climax** (interrupt his build
-  or awakening). See `hydra-drone-h1.md`.
+  **⚠ Presumably destroyed in the C4 blast** that leveled the lab. **Confirm:**
+  is Patient 14 gone for good, or salvaged/rebuilt later (he's a high-potential
+  character — HYDRA has hundreds of other plants to rebuild him)? See
+  `hydra-drone-h1.md`.
+- **Sydney/Monroe is DEAD** — killed by Brian after his betrayal. The team learns
+  he was a traitor only at the HQ debrief (they were shocked).
+- **Jesse aftermath note:** the nervous one earlier is **steady and cold** here
+  ("He tried to double-cross us") — adversity hardened him in the moment; worth
+  tracking his range.
 - **Scope — RESOLVED (sobering):** this casino is **just ONE of HYDRA's hundreds
   of major bases** worldwide (US, Germany, Russia, China, a few in Mexico).
   Shutting it down is a meaningful hit but **barely scratches** HYDRA — the war is
