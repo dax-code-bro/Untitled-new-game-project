@@ -170,15 +170,25 @@ members not yet introduced (TBD). The six documented so far:
 - **Heritage:** German American.
 - **Signature weapon:** **M16** (read from "in 16"; era-appropriate for 1985)
   with a **flame charm hanging off the side**, matching his fire motif.
-- **Backstory (Mission 8 flashback):** real name **Webber**; abusive **German
-  father** who used **fire as punishment** and set a toy room ablaze with
-  Webber's **little brother** inside. Mother **died in the war** (father blamed
-  her "weakness"). Young Webber **smashed the door with a hammer, saved his
-  brother, and killed his father** with a revolver — his first kill was his
-  abuser. **The fire motif is reclaimed trauma** — he wears the very thing that
-  destroyed his family (fire + Molotov on the mask). Explains his silence,
-  gravity, and protectiveness. *(Little brother's fate in 1985 = open thread.)*
-- **Rank:** *TBD.*
+- **Backstory (Mission 8 flashback):**
+  - **Childhood:** real name **Webber**; abusive **German father** who used fire
+    as punishment and set a toy room ablaze with Webber's **little brother**
+    inside. Mother **died in the war.** Young Webber smashed the door with a
+    hammer, **saved his brother, and killed his father** with a revolver.
+  - **"The Mollys" (~age 18, brother 16):** the brothers joined a **fire-masked
+    liberation group, "the Mollys,"** that freed territory from German control
+    and helped **take down Hitler.** *This is the origin of his fire mask and his
+    name* — "Molotov" / "Molly" both come from the Mollys.
+  - **The loss:** his **brother was betrayed and shot dead in front of him.**
+    Webber was hit by a **flamethrower** off a 3-story building, **impaled on a
+    spike**, tore free, and doused himself in water. **Two years later he killed
+    the entire team** responsible (revenge). **Seven months later, joined Team
+    Apex.**
+- **Why the mask:** the flamethrower left **severe burns mainly on his face** —
+  the full-covering ski mask hides the scarring. (His **hair is fine/untouched**;
+  not bald.)
+- **Rank:** *TBD.* **Present age:** see flashback timeline flag (Hitler-era Mollys
+  implies he could be ~58 in 1985 — to reconcile).
 
 ##### 2. James "Fox" Carter
 - **Callsign:** "Fox" (between first/last: James Carter).

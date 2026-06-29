@@ -60,6 +60,28 @@
 >
 > *(— END OF FLASHBACK. —)*
 
+## THE FLASHBACK (continued) — "The Mollys"
+
+- **~10 years later:** Webber is **18**, his little brother **16**. The two of
+  them join a **top-secret liberation / rebellion group known as "the Mollys."**
+- **The Mollys wore fire masks** and **liberated territory from German control.**
+  They were **part of the group that took down "that one mustache guy"** (Hitler).
+  - *This is the ORIGIN of Molotov's fire mask AND his name* — "Molotov" / the
+    nickname **"Molly"** both come from **the Mollys.** (Fox calling him "Molly"
+    is literally calling him by his old unit's name.)
+- **Tragedy:** Webber's **brother is betrayed and shot dead right in front of
+  him.** (He saved the boy from fire as a child — only to lose him here.)
+- **Webber is hit by a FLAMETHROWER blast off a three-story building**, falls,
+  and is **impaled on a metal spike.** He **rips the spike out of himself** and
+  **jumps into water** to put out the flames.
+- **Revenge:** **two years later, he kills the entire team** responsible (the
+  betrayers).
+- **The burns:** the flamethrower left **severe burns — mainly on his FACE** (the
+  main impact point). His **hair is untouched** (the top of his head was mostly
+  spared — he's **not bald, hair grows in fine**). The facial scarring is **why he
+  wears the full-covering ski mask.**
+- **Seven months later, he joined Team Apex.**
+
 ## WHAT THE FLASHBACK ESTABLISHES (Molotov's origin)
 - **Real name confirmed: Webber** (Webber Newman). German father → his
   German-American heritage.
@@ -89,9 +111,15 @@
 - **Molotov's origin is "complicated"** and he won't discuss it — the flashback
   is the payoff. Big chance to develop the most enigmatic core member.
 - Continues the **multi-POV / flashback structure** (cf. Diego, Mission 2).
-- **⚠ THE LITTLE BROTHER — thread.** Webber saved him as a child. **Where is he
-  in 1985?** Alive? Estranged? Is "we pay our debts" about him? Strong
-  open hook.
-- **⚠ Timeline.** Mother "fell in the war" (likely WWII). Pin Webber's age/birth
-  year so the childhood flashback and his 1985 present line up. *(TBD.)*
+- **THE LITTLE BROTHER — RESOLVED (dead).** Webber saved him from the fire as a
+  child, the two joined the Mollys together, and the brother was **betrayed and
+  shot dead in front of Webber** during the Mollys era. The defining loss of his
+  life. *(Name TBD.)*
+- **⚠ TIMELINE — needs reconciling.** The Mollys helped **take down Hitler**
+  (~1945) when Webber was **18** → born ~**1927** → ~**58 in 1985.** That's old
+  for a frontline operator (near Fox's 65) and is in tension with how Molotov
+  reads. Also: mother "fell in the war" in the *childhood* flashback (~10 yrs
+  earlier) — hard to fit before/within WWII. **Pin Webber's birth year & which
+  "war"** so childhood → Mollys → 1985 line up. (User noted some details are
+  "besides the point" — flagging only because his present age depends on it.)
 - **Is the flashback playable** (like Diego's) or purely cinematic? *(TBD.)*
