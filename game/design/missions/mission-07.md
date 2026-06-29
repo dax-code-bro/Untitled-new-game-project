@@ -81,5 +81,7 @@ the playable lead. *(Exact roster split and who leads on the ground — TBD.)*
 - This is the **payoff for Team Apex's quiet operators** — use it to give
   Brian/Jesse/Monroe real personality, roles, and stakes.
 - **H3.2 drone specs** (what makes it different/worse than H2.1) — TBD.
-- Does shutting the plant **stop** H3.2 production, or only one facility (more
-  plants elsewhere)? Scope TBD.
+- **Scope — RESOLVED (sobering):** this casino is **just ONE of HYDRA's hundreds
+  of major bases** worldwide (US, Germany, Russia, China, a few in Mexico).
+  Shutting it down is a meaningful hit but **barely scratches** HYDRA — the war is
+  enormous. Frames the campaign's true scale.

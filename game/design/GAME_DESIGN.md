@@ -388,6 +388,16 @@ city → spot **three friendly US Army tanks** rolling in to support → then
   potential (ally / boss / recruit).
 - **Not all loyal** — HYDRA's own soldiers aren't all believers (the 1948
   scientist's guards turned on him). Loyalty-vs-coercion is a usable theme.
+- **GLOBAL SCALE — hundreds of major bases.** HYDRA operates **hundreds of major
+  bases** worldwide, concentrated in:
+  - **The United States**
+  - **Germany**
+  - **Russia**
+  - **China**
+  - **a few in Mexico**
+  The Mission 7 casino is **just one** of these hundreds. Implication: this is a
+  vast, near-state-level global organization — no single raid meaningfully dents
+  it, which raises the stakes of the whole war (and explains their resources).
 - **Funding — front businesses:** HYDRA runs **high-class casino fronts** that
   pull in millions/billions, bankrolling the drone program — and hide production
   in plain sight (Mission 7's casino has the H3.2 factory in its back half).
