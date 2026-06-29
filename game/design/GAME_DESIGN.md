@@ -277,6 +277,13 @@ high-ranking **Sergeant / officer** leading young Irish troops.
 - **Rank — RESOLVED:** canonically a **four-star general.** "Captain" is only
   informal/colloquial shorthand (e.g. the writer/players calling him that) — NOT
   his actual rank. Always **General Abraham** in canon.
+- **⚠⚠ THE "RAY ABRAHAM" BOMBSHELL (Mission 9):** an interrogated HYDRA soldier
+  says leader **Victor Prestige has been talking to a "Ray Abraham."** Same
+  surname as the General. Combined with his secrecy (knows HYDRA, withholds
+  intel, briefed the drones, "fixes broken people"), this seeds a possible
+  **Abraham = HYDRA insider / double agent** twist (or relative / red herring).
+  Spike clocks the name. A potential campaign-defining reveal — handle
+  deliberately.
 
 ##### 5. Rodriguez "Spike" Hamilton — **THE MAIN CHARACTER (the player)**
 - **Callsign:** "Spike" (between first/last: Rodriguez Hamilton).
@@ -469,7 +476,17 @@ city → spot **three friendly US Army tanks** rolling in to support → then
 - **Funding — front businesses:** HYDRA runs **high-class casino fronts** that
   pull in millions/billions, bankrolling the drone program — and hide production
   in plain sight (Mission 7's casino has the H3.2 factory in its back half).
-- **Details (leaders, goals, full tech):** *TBD.*
+- **Leadership — Victor Prestige (Mission 9 reveal):** named as **HYDRA's leader
+  / "owner."** First real name at the top of the century-old org. Details TBD.
+- **⚠⚠ The "Ray Abraham" connection (Mission 9):** an interrogated soldier says
+  Victor Prestige **has been talking to a "Ray Abraham."** The surname matches the
+  team's own **General Abraham** — a potential bombshell (Abraham as HYDRA
+  insider/double agent? a relative? red herring?). Major open twist; see
+  `mission-09.md` and Abraham's profile.
+- **Drone program is compartmentalized** — even HYDRA bases (e.g. the Mission 9
+  Africa base) keep **no drone intel** and have "never seen a single one." The
+  drones are walled off inside the org.
+- **Details (goals, full tech):** *TBD.*
 
 > **Naming note:** "HYDRA" is also the name of a famous Marvel Comics villain
 > organization (though Marvel's emblem is a skull with tentacles, not a
