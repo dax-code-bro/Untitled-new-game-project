@@ -81,8 +81,12 @@ As the trust question comes to a head, Team Apex splits along loyalty lines:
 > **SPIKE:** I already gave you an option. You never took it.
 > **SPIKE:** *(one last time)* ...Swear to me.
 > **MOLOTOV:** *(quiet)* The system is wrong, Spike.
+> *(— and he means it as agreement: you're right, now come with me. He came to
+> get Spike OUT, not to fight. But he doesn't know about the dart.)*
 >
-> *(A knife flashes. Molotov dodges, drives the blade into **Spike's back.**
+> *(The brainwashing **surge breaks through.** Spike's eyes change. A knife
+> flashes — Spike lunges. Molotov dodges, and in the scramble drives the blade
+> into **Spike's back.**
 > Spike roars, spins, and cracks him across the face — drives him to the ground,
 > gets on top, and beats him down, savage and desperate, until **half of
 > Molotov's mask breaks away** — the bloodshot eyes, the burn-scarred face laid
@@ -136,11 +140,17 @@ himself**, and Spike's "betrayal" of Molotov was never his choice.
 ## ⚠ FLAGS / AMBIGUITIES (confirm)
 - **"Confirmed specimen"** — read as Abraham being confirmed a HYDRA
   agent/suspect. Confirm the word "specimen" (vs. "suspect").
-- **Molotov's side still partly open:** the Spike-attack is now explained
-  (brainwashing), but **why Molotov left the team, said "the system is wrong,"
-  and came to confront Spike** is his own thread. Did he **know** Spike was
-  compromised (his sorrow suggests he understood it wasn't really Spike)? Confirm
-  Molotov's agenda.
+- **MOLOTOV'S SIDE — RESOLVED (and it's the gut-punch):** Molotov **fully agreed
+  with Spike** — everything Spike was saying about the corrupt system/Abraham was
+  *right*. "The system is wrong, Spike" was **agreement**, not opposition. Molotov
+  **came to take Spike OUT of it** — to save him — because Spike had become a
+  **brother** to him and **he couldn't bear to watch another brother die** (cf.
+  his flashback: he couldn't save his real brother). **He did NOT know the
+  brainwashing surge had broken through.** So the man who came to *rescue* his
+  brother got attacked by him, and crippled him in the scramble — never knowing
+  it wasn't really Spike. **Both men were right, both loved each other, and the
+  dart turned it into a tragedy.** His sorrow as he left = he just maimed the
+  brother he came to save.
 - **Is Spike's paralysis permanent** or temporary? Defines the back half of the
   campaign (a crippled protagonist is a huge swing).
 - **Whose "operation"/building** was this — HYDRA's? Abraham's? Where did the

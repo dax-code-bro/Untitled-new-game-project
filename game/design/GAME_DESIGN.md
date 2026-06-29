@@ -169,9 +169,14 @@ members not yet introduced (TBD). The six documented so far:
 > CRIPPLED Spike in Mission 10** — stabbed him in the back, shot him, and left him
 > paralyzed ("I can't feel my legs"). His stance: **"the system is wrong."** Half
 > his mask broke in the fight, **revealing his burn-scarred face.**
-> **⚠ Agenda unclear:** he agrees the system is corrupt yet stops Spike from
-> exposing it — villain, tragic antihero, or misguided protector? (See Mission 10
-> flags.) He showed **sorrow**, not malice, as he left Spike.
+> **Agenda — RESOLVED (tragic):** Molotov **fully agreed with Spike** (the system/
+> Abraham IS corrupt). "The system is wrong, Spike" was agreement. He left and
+> came to **pull Spike OUT and save him** — because Spike had become a **brother**
+> and **he couldn't watch another brother die** (he couldn't save his real one).
+> He **didn't know the brainwashing surge broke through** — so the brother he came
+> to rescue attacked him, and he crippled Spike in the scramble. **No villain
+> here — just two men who were right, and a dart that ruined it.** His sorrow = he
+> maimed the brother he came to save.
 
 - **Callsign:** "Molotov" (sits between first/last name: Webber Newman).
 - **Demeanor:** exceptionally quiet — almost never talks. Dead serious, with
