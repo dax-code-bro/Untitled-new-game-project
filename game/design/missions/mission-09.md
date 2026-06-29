@@ -1,11 +1,17 @@
-# Mission 09 (tentative) — Spike & Striker, the Africa Base
+# Mission 09 — "The Reboot"
 
 > **Canonical script (in progress).** Preserves EVERY line of dialogue and EVERY
 > detail. Nothing to be lost. Target rating: **ESRB M.**
 >
-> **⚠ Number/title TENTATIVE** — placed as "Mission 9" (follows the Molotov
-> flashback). **Title TBD** — per the naming convention it should foreshadow the
-> mission's events/ending.
+> **Title:** "The Reboot" *(LOCKED.)* (Number tentative — follows the Molotov
+> flashback.)
+
+## Title Meaning (foreshadow — per naming convention, TBD)
+"The Reboot" foreshadows this mission's events/ending — a **reset / restart /
+something brought back online.** Candidate reads (to be revealed): Drone 9 being
+rebooted/reset, HYDRA rebooting its drone program (Patient 14 / H3.2 rebuilt
+after Industry), or a character/operation getting a hard restart. *(Confirm as
+the mission plays out.)*
 
 ## Placement
 - Comes **right after Molotov's flashback (Mission 8).** The flashback ends, the

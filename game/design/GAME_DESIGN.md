@@ -37,14 +37,14 @@ complete screenplays.
 
 - `game/design/missions/mission-08-molotov-flashback.md` — **Mission 8
   (tentative)** — Molotov's backstory flashback *(complete)*.
-- `game/design/missions/mission-09.md` — **Mission 9 (tentative, title TBD)** —
+- `game/design/missions/mission-09.md` — **Mission 9 — "The Reboot"** —
   Spike & Striker raid a HYDRA base near Africa for intel on Drone 9's latest
-  user and a potential **owner of HYDRA** *(premise set; beats pending)*.
+  user and a potential **owner of HYDRA** *(title locked; beats pending)*.
 
 **Known mission order so far:** 1 (Colombia/Columbia, classified) → 2 (1948
 flashback + boardroom) → 3 "Would You Like a Receipt With That Order?" → 4 "Sins
 of the Past" → 5 "A Lost Cause" → 6 "Hellfire" → 7 "Industry" → 8 (tentative,
-Molotov flashback).
+Molotov flashback) → 9 "The Reboot".
 - `game/design/hydra-drone-h1.md` — **H1.0 drone codex** (full specs + the
   13-drone status tracker; plus the new **H2.1 bomber** generation).
 - `game/design/emp-shark.md` — **EMP Shark** allied anti-drone weapon spec.
