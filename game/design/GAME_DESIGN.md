@@ -231,6 +231,11 @@ high-ranking **Sergeant / officer** leading young Irish troops.
 - **Knows HYDRA deeply** — he's the one who briefs the team on the drones'
   fates (Mission 2 boardroom), reinforcing that he's been read in on HYDRA all
   along (ties to his secrecy at the Mission 1 regroup).
+- **⚠ "Fixes broken products" (Mission 7 reveal):** Sydney says Brian was a
+  "broken product until **Abraham fixed** him." Implies Abraham has a pattern of
+  **taking broken people (or manufactured beings) and repairing/recruiting them**
+  onto Team Apex. If literal, it ties Abraham's HYDRA knowledge to actually
+  **repairing HYDRA tech/creations** — a potentially huge piece of his secret.
 - **Rank — RESOLVED:** canonically a **four-star general.** "Captain" is only
   informal/colloquial shorthand (e.g. the writer/players calling him that) — NOT
   his actual rank. Always **General Abraham** in canon.
@@ -274,6 +279,10 @@ high-ranking **Sergeant / officer** leading young Irish troops.
   - **Jesse Wolford** — the **talker**, but **nervous/anxious**: handles the
     bluffing, but fumbles under pressure (cracked giving a fake ID).
   - A classic twin contrast — the steady gun and the jittery mouth.
+- **⚠ Brian — "broken product" reveal:** Sydney claims Brian "was just a **broken
+  product** until **Abraham fixed** him." Open whether this is **figurative**
+  (a broken man Abraham rehabilitated) or **literal** (a manufactured/synthetic
+  being Abraham repaired — see Mission 7 flag). May extend to Jesse / others.
 - **Weapons:** Brian favors a **shotgun** (at least here). Jesse — TBD.
 - Callsigns: *TBD* (nameplates fall back to "Brian"/"Jesse").
 
@@ -282,11 +291,15 @@ high-ranking **Sergeant / officer** leading young Irish troops.
 - **Role — the inside man:** in Mission 7 "Industry," he had **secretly taken a
   job at the HYDRA casino** weeks ahead, embedding himself; he opens the latch to
   the manufacturing lab.
-- **⚠ APPARENT BETRAYAL:** at the climax he stands with a soldier and a security
-  guard, **revolvers on the twins** — reading as a **double-cross** (the inside
-  man was inside for HYDRA). **Allegiance to confirm** (true traitor / double
-  agent / coerced). Potentially the most pivotal of the quiet operators.
-- Callsign / weapon / personality: *TBD.*
+- **Goes by "Sydney."**
+- **⚠ BETRAYAL — confirmed in his own words:** at the climax he stands with a
+  soldier and a security guard, **revolvers on the twins**, and openly sides
+  against Apex. He's cold and ideological about it — taunts Brian as a "broken
+  product" Abraham fixed, and claims **he "never needed fixing."** Positions
+  himself as the genuine article vs. Abraham's "repaired" operators.
+- **The hook:** *why* did he turn? What does "never needed fixing" mean about his
+  past and how he sees Team Apex? Now the most pivotal quiet operator.
+- Callsign / weapon / full backstory: *TBD.*
 
 > **Roster note:** Members 1–6 are the spotlighted core; **7–9 (Brian Wolford,
 > Jesse Wolford, Monroe Sydney) are the quieter, less-mentioned operators** of

@@ -128,9 +128,26 @@ the playable lead. *(Exact roster split and who leads on the ground — TBD.)*
 > **BRIAN:** You double-crossed us. *(a beat — real hurt under the steel)* Apex
 > gave you a good thing. How could you trade us — for *these* people?
 >
-> *(Monroe says nothing. Yet.)*
+> *(Monroe — who goes by **Sydney** — doesn't flinch.)*
+>
+> **SYDNEY (MONROE):** They gave *you* a good thing, Brian. You were just a
+> **broken product**... until Abraham *fixed* you. *(beat, cold)* Me? I never
+> needed fixing.
 >
 > *(— CONTINUES. —)*
+
+> **⚠ MAJOR REVEAL / FLAG — "broken product":** Sydney calls Brian a "broken
+> **product**" that **Abraham "fixed."** Two readings, and they change the whole
+> story:
+> - **Figurative:** Brian was a broken/damaged *person* (criminal past, trauma)
+>   whom Abraham rehabilitated and recruited.
+> - **Literal:** Brian is a *manufactured being* — a drone/synthetic/experiment
+>   (HYDRA-made?) that **Abraham repaired/repurposed** onto Team Apex. Given the
+>   sentient-machine themes (Drone 9, Patient 14, engineered sentience), this is a
+>   live possibility — and would mean **Abraham "fixes broken products,"** tying
+>   his deep HYDRA knowledge to *building/repairing* HYDRA tech.
+> - Also implied: this may extend to **Jesse / other Apex members**, and Sydney
+>   positions himself as the one who "never needed fixing." **Confirm intent.**
 
 > **⚠ INTERPRETATION FLAG:** Read as **Monroe double-crossing Team Apex** — he
 > embedded himself to walk them into a trap (HYDRA loyalist / double agent).
