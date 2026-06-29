@@ -186,8 +186,10 @@ members not yet introduced (TBD). The six documented so far:
     Apex.**
 - **Identity capstone:** *"That day, Webber died in a grave. But Molotov lived."*
   The boy who saved his brother died with him; "Molotov" is the self that
-  remained. He answers only to the mask's name — which makes Fox's "Molly" the
-  one name that still reaches the grave.
+  remained.
+- **Naming:** he **likes "Molly," "Molotov," or anything else** — those are the
+  self he chose. The **only name he rejects is "Webber"** (his dead self). So
+  Fox's "Molly" is warm/welcome; calling him **"Webber"** is the thing that cuts.
 - **Why the mask:** the flamethrower left **severe burns mainly on his face** —
   the full-covering ski mask hides the scarring. (His **hair is fine/untouched**;
   not bald.)

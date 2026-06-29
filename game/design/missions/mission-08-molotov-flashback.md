@@ -89,9 +89,12 @@
 
 The boy who saved his brother is gone — buried with him. What climbed out of the
 water and hunted the betrayers was someone new. **"Webber" is the dead self;
-"Molotov" is who remained.** This is why he answers only to the mask's name, why
-he's silent, why there's nothing of the boy left to reach. (Makes Fox calling him
-"Molly" quietly devastating — it's the one name that still touches the grave.)
+"Molotov" is who remained.**
+
+**Naming (important):** he **likes being called "Molly," "Molotov," or anything
+else** — those are the self he chose. The **ONE name he rejects is "Webber"** —
+his dead self, the boy in the grave. So Fox's "Molly" is warm and welcome (not a
+wound); calling him **"Webber"** would be the thing that cuts.
 
 ## WHAT THE FLASHBACK ESTABLISHES (Molotov's origin)
 - **Real name confirmed: Webber** (Webber Newman). German father → his
