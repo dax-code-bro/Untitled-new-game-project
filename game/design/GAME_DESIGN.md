@@ -170,7 +170,15 @@ members not yet introduced (TBD). The six documented so far:
 - **Heritage:** German American.
 - **Signature weapon:** **M16** (read from "in 16"; era-appropriate for 1985)
   with a **flame charm hanging off the side**, matching his fire motif.
-- **Rank / backstory:** *TBD.*
+- **Backstory (Mission 8 flashback):** real name **Webber**; abusive **German
+  father** who used **fire as punishment** and set a toy room ablaze with
+  Webber's **little brother** inside. Mother **died in the war** (father blamed
+  her "weakness"). Young Webber **smashed the door with a hammer, saved his
+  brother, and killed his father** with a revolver — his first kill was his
+  abuser. **The fire motif is reclaimed trauma** — he wears the very thing that
+  destroyed his family (fire + Molotov on the mask). Explains his silence,
+  gravity, and protectiveness. *(Little brother's fate in 1985 = open thread.)*
+- **Rank:** *TBD.*
 
 ##### 2. James "Fox" Carter
 - **Callsign:** "Fox" (between first/last: James Carter).

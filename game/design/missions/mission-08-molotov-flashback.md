@@ -31,8 +31,51 @@
 >
 > *(And we fall into a flashback. Molotov's.)*
 
-## THE FLASHBACK
-*(— PENDING: user is about to narrate Molotov's backstory flashback. —)*
+## THE FLASHBACK — "The House in the Field"
+
+> *(Content: child abuse, parricide. Handle with gravity — dark, not gratuitous.
+> Fits the ESRB M tone.)*
+>
+> *(Yelling. The camera pushes in on a lone HOUSE in the middle of a wide FIELD.
+> Inside: a GERMAN MAN — Webber's father — towering over TWO YOUNG CHILDREN:
+> young **WEBBER** and his **LITTLE BROTHER.**)*
+>
+> *(The father seizes the youngest by the arm, hauls him into a TOY ROOM, and
+> tosses a LIGHTER in after him. The room catches — flames climbing fast.)*
+>
+> **FATHER:** *(cold)* That is the price for acting up, Webber.
+> *(He turns to leave, already done with them.)*
+> **FATHER:** Your brother was weak. Like your mother. *(beat)* That's why she
+> fell in the war.
+>
+> *(Something in young Webber breaks. As his father walks off, Webber grabs a
+> **HAMMER** — smashes the hinges off the burning toy-room door — and drags his
+> little brother out of the blaze.)*
+>
+> *(Hauling his brother toward the front door, Webber's eyes catch a **REVOLVER**
+> sitting on the counter.)*
+>
+> *(CUT. The two children walk out the front door into the open field. Behind
+> them, through the doorway: the father, slumped dead in a chair.)*
+>
+> *(— END OF FLASHBACK. —)*
+
+## WHAT THE FLASHBACK ESTABLISHES (Molotov's origin)
+- **Real name confirmed: Webber** (Webber Newman). German father → his
+  German-American heritage.
+- **Abusive German father.** Used **fire as a weapon/punishment** (set the toy
+  room — and the little brother — ablaze).
+- **Mother died ("fell in the war")** — the father blames her "weakness." Likely
+  WWII (timeline approximate — see flag).
+- **A little brother**, whom young Webber **saved from the fire** (hammer to the
+  hinges).
+- **Webber killed his father** (the revolver → the father slumped dead) to
+  protect his brother. His **first kill was his abuser**, as a child.
+- **THE FIRE MOTIF — origin:** fire was his father's weapon and his family's
+  ruin. Webber **reclaimed it** — the ski mask painted with fire and a Molotov,
+  the callsign. He owns the thing that broke him.
+- Explains his **silence, dead-seriousness, and fierce protectiveness** (and
+  "we pay our debts").
 
 ## NOTES / OPEN THREADS
 - **⚠ "MARCUS" — name to confirm.** In the telling, the person Molotov walks in
@@ -46,3 +89,9 @@
 - **Molotov's origin is "complicated"** and he won't discuss it — the flashback
   is the payoff. Big chance to develop the most enigmatic core member.
 - Continues the **multi-POV / flashback structure** (cf. Diego, Mission 2).
+- **⚠ THE LITTLE BROTHER — thread.** Webber saved him as a child. **Where is he
+  in 1985?** Alive? Estranged? Is "we pay our debts" about him? Strong
+  open hook.
+- **⚠ Timeline.** Mother "fell in the war" (likely WWII). Pin Webber's age/birth
+  year so the childhood flashback and his 1985 present line up. *(TBD.)*
+- **Is the flashback playable** (like Diego's) or purely cinematic? *(TBD.)*
