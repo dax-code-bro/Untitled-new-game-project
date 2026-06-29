@@ -184,6 +184,10 @@ members not yet introduced (TBD). The six documented so far:
     spike**, tore free, and doused himself in water. **Two years later he killed
     the entire team** responsible (revenge). **Seven months later, joined Team
     Apex.**
+- **Identity capstone:** *"That day, Webber died in a grave. But Molotov lived."*
+  The boy who saved his brother died with him; "Molotov" is the self that
+  remained. He answers only to the mask's name — which makes Fox's "Molly" the
+  one name that still reaches the grave.
 - **Why the mask:** the flamethrower left **severe burns mainly on his face** —
   the full-covering ski mask hides the scarring. (His **hair is fine/untouched**;
   not bald.)

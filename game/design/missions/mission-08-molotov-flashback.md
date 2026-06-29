@@ -82,6 +82,17 @@
   wears the full-covering ski mask.**
 - **Seven months later, he joined Team Apex.**
 
+### Closing line (thematic capstone)
+
+> *That day, **Webber** died in a grave.*
+> *But **Molotov** lived.*
+
+The boy who saved his brother is gone — buried with him. What climbed out of the
+water and hunted the betrayers was someone new. **"Webber" is the dead self;
+"Molotov" is who remained.** This is why he answers only to the mask's name, why
+he's silent, why there's nothing of the boy left to reach. (Makes Fox calling him
+"Molly" quietly devastating — it's the one name that still touches the grave.)
+
 ## WHAT THE FLASHBACK ESTABLISHES (Molotov's origin)
 - **Real name confirmed: Webber** (Webber Newman). German father → his
   German-American heritage.
