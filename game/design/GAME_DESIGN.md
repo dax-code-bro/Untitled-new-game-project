@@ -105,9 +105,9 @@ boots:
 - **Mission 2** — played as **Diego** (Spike's father) in the 1948 flashback.
   (More flashback than mission, but the player still acts — it counts as a
   playable mission.)
-- **Mission 7 "Industry"** — played as the **less-heard-of operators** (the quiet
-  Team Apex members: Brian/Jesse Wolford, Monroe Sydney) on their own op. This is
-  how those background operators get their **development/spotlight**.
+- **Mission 7 "Industry"** — played as **Payback** alongside the **less-heard-of
+  operators** (Brian/Jesse Wolford, Monroe Sydney) on their own op. This is how
+  those background operators get their **development/spotlight**.
 - Other POV-swap missions may follow this pattern. Spike remains the through-line
   and most-developed lead.
 

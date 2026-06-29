@@ -12,12 +12,12 @@
 "Industry" = a **HYDRA production plant / factory.** The mission is a raid to
 **shut it down.** Confirms HYDRA's mass-manufacturing ("they've been building").
 
-## Playable POV — the quiet operators
-**You do NOT play as Spike in this mission.** Instead you play as the
-**less-heard-of Team Apex operators** (Brian Wolford, Jesse Wolford, Monroe
-Sydney). This is their **spotlight / development mission** — putting the player in
-the boots of the background operators to flesh them out. *(Exact roster split and
-who leads — TBD.)*
+## Playable POV — Payback + the quiet operators
+**You do NOT play as Spike in this mission.** You play as **Payback**, alongside
+the **less-heard-of Team Apex operators** (Brian Wolford, Jesse Wolford, Monroe
+Sydney). This is the **spotlight / development mission** for the background
+members — putting the player in their boots to flesh them out, with Payback as
+the playable lead. *(Exact roster split and who leads on the ground — TBD.)*
 
 ## Objective
 - **Infiltrate and shut down a HYDRA plant** that is producing the **H3.2** —
