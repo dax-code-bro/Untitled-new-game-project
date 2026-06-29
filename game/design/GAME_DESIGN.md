@@ -164,10 +164,14 @@ Abraham is the brass attached to it.
 **⚠ The known roster below is NOT the whole team** — Team Apex has additional
 members not yet introduced (TBD). The six documented so far:
 
-##### 1. Webber "Molotov" Newman  — **(LEFT THE TEAM — in hiding, as of Mission 9)**
-> **Status:** quietly **left Team Apex and went into hiding** during the Mission 9
-> aftermath argument (slipped out unnoticed). **Why is an open thread** — timing
-> ties to his backstory surfacing + the Victor Prestige / "Ray Abraham" reveal.
+##### 1. Webber "Molotov" Newman  — **(TURNED ON SPIKE — Mission 10)**
+> **Status:** left Apex and went into hiding (Mission 9), then **confronted and
+> CRIPPLED Spike in Mission 10** — stabbed him in the back, shot him, and left him
+> paralyzed ("I can't feel my legs"). His stance: **"the system is wrong."** Half
+> his mask broke in the fight, **revealing his burn-scarred face.**
+> **⚠ Agenda unclear:** he agrees the system is corrupt yet stops Spike from
+> exposing it — villain, tragic antihero, or misguided protector? (See Mission 10
+> flags.) He showed **sorrow**, not malice, as he left Spike.
 
 - **Callsign:** "Molotov" (sits between first/last name: Webber Newman).
 - **Demeanor:** exceptionally quiet — almost never talks. Dead serious, with
@@ -294,11 +298,18 @@ high-ranking **Sergeant / officer** leading young Irish troops.
   **Abraham = HYDRA insider / double agent** twist (or relative / red herring).
   Spike clocks the name. A potential campaign-defining reveal — handle
   deliberately.
+  - **⚠ "CONFIRMED" (Mission 10):** Spike finds **documents confirming Abraham's
+    HYDRA connection** — to him, the suspicion is now fact. *But Spike is crippled
+    and alone right after, so the proof may not reach the team.* (Exact nature of
+    Abraham's involvement still TBD — mole? Victor's contact? deeper game?)
 
 ##### 5. Rodriguez "Spike" Hamilton — **THE MAIN CHARACTER (the player)**
 - **Callsign:** "Spike" (between first/last: Rodriguez Hamilton).
 - **Role:** **the player character.** This is who the player controls — the
   operator in the opening who gears up and steps off the chopper.
+- **⚠ STATUS (Mission 10):** **gravely wounded / paralyzed** — Molotov stabbed and
+  shot him; **"I can't feel my legs."** The protagonist is crippled by a teammate
+  and left alone. (Permanent or temporary — TBD; a huge swing for the back half.)
 - **Family:** Spike is an **orphan** by 1985.
   - **Father — Diego** (playable lead of the 1948 flashback, Mission 2): survived
     HYDRA's first strike in Saudi Arabia and **told young Spike the story
