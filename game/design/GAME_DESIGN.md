@@ -97,6 +97,20 @@ thematic and symbolic, never just literal objective names. When naming a mission
 the title should encode a meaning the player only fully understands after playing
 it. (See each mission file's "Title Meaning" note.)
 
+#### Playable Characters (multiple POVs)
+**Spike is the official main character** — the protagonist with the most
+development and the most missions. **But the campaign hands the controller to
+other characters for certain missions**, putting the player in someone else's
+boots:
+- **Mission 2** — played as **Diego** (Spike's father) in the 1948 flashback.
+  (More flashback than mission, but the player still acts — it counts as a
+  playable mission.)
+- **Mission 7 "Industry"** — played as the **less-heard-of operators** (the quiet
+  Team Apex members: Brian/Jesse Wolford, Monroe Sydney) on their own op. This is
+  how those background operators get their **development/spotlight**.
+- Other POV-swap missions may follow this pattern. Spike remains the through-line
+  and most-developed lead.
+
 #### Recurring Format — Mission Briefings
 Between missions, there's a **briefing sequence**: the team sits around **General
 Abraham**, who lays out the next mission's details before they head out. This is

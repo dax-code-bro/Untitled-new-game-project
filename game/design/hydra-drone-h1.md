@@ -81,6 +81,24 @@ cliffhanger:
   **Mission 6 "Hellfire"** (the bombing itself).
 - **Full specs (size, payload, armament, weaknesses):** *TBD.*
 
+## LATER GENERATIONS — H3.2 (NEWEST)
+
+The newest known drone model, introduced via Mission 7 ("Industry").
+- **Model:** **H3.2** — third-generation designation (after H1.0 combat and H2.1
+  bomber).
+- **Production:** built at a **HYDRA plant** that Team Apex's quiet operators
+  raid to shut down in Mission 7.
+- **Role / specs / what makes it more dangerous than H2.1:** *TBD.*
+- **Implication:** HYDRA's drone line keeps **advancing generations** — the arms
+  race is escalating faster than Team Apex can keep up.
+
+### Drone generation timeline (so far)
+| Gen | Model | Debut | Role |
+| --- | --- | --- | --- |
+| 1st | **H1.0** | 1948 | Combat/assault (the 13 launched drones) |
+| 2nd | **H2.1** | 1985 | Bomber (the 3,275-drone Texas swarm) |
+| 3rd | **H3.2** | 1985 | NEWEST — built at the "Industry" plant (specs TBD) |
+
 ## THE 13 DRONES — Status Tracker (as of 1985)
 *(the original first-generation H1.0 units launched in 1948)*
 
