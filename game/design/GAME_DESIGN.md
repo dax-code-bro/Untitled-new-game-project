@@ -318,6 +318,7 @@ high-ranking **Sergeant / officer** leading young Irish troops.
   light and adapts to the battlefield (a fitting trait for a nameless ghost).
   - *Design implication:* mechanically she leans on **battlefield pickups** —
     dropped enemy guns, environmental weapons — rather than a fixed loadout.
+- **Loyalty (Mission 10):** **remains loyal to the system** as the team fractures.
 - **Role / specialty / personality / backstory:** *TBD.*
 
 ##### 7 & 8. The Wolford Twins — Brian & Jesse Wolford
@@ -334,6 +335,9 @@ high-ranking **Sergeant / officer** leading young Irish troops.
   - **Jesse Wolford** — the **talker**, but **nervous/anxious**: handles the
     bluffing, but fumbles under pressure (cracked giving a fake ID).
   - A classic twin contrast — the steady gun and the jittery mouth.
+- **Loyalty (Mission 10):** the twins **remain loyal to the system — most
+  steadfastly of anyone** as the team fractures. Fits "Abraham fixed Brian":
+  they owe the establishment everything.
 - **Brian — "broken product" (metaphor):** Sydney calls Brian a "broken product
   until Abraham fixed him" — **figurative.** Brian was a **broken/damaged man**
   whom **Abraham rehabilitated** and recruited. Fully human; gives Brian a

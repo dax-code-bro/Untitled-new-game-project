@@ -22,8 +22,34 @@ threads:
 Likely pays off as a **trust/betrayal turning point** — exposing an ally, forcing
 a side to be chosen, or confirming/clearing a suspicion. *(Exact meaning TBD.)*
 
+## Loyalty / Faction Alignment (the team divides)
+
+As the trust question comes to a head, Team Apex splits along loyalty lines:
+
+- **LOYAL TO THE SYSTEM:**
+  - **Payback** — stays loyal to the system / established order.
+  - **Brian & Jesse Wolford (the twins)** — loyal to the system, **most
+    steadfastly of all.** *(Tracks with "Abraham fixed Brian" — the twins owe the
+    establishment everything, so their loyalty runs deepest.)*
+- **DIVERGING / QUESTIONING:**
+  - **Spike** — wants to dig deeper into Victor Prestige and the Abraham lead;
+    increasingly at odds with the team's "let it go."
+  - **Striker** — has been **dismissive** (tried to undo/bury the Abraham angle);
+    leans toward the status quo, but his exact stance is fluid. *(Confirm.)*
+- **GONE / WILDCARD:**
+  - **Molotov** — left, in hiding (allegiance/agenda unknown).
+  - **Sydney** — the proven traitor (dead) who started all this distrust.
+- **THE SUSPECTED / THE LEADERS:**
+  - **General Abraham** — under the "Ray Abraham" shadow.
+  - **Fox** — leader carrying his own dark "what if they all turn" thoughts.
+
+> *"The system"* = the established order / chain of command / Team Apex's mission
+> as-is (as opposed to Spike questioning it or Molotov abandoning it).
+> *(Confirm if "the system" means something more specific — e.g. the government,
+> Abraham personally, or HYDRA-adjacent structures.)*
+
 ## Status
-- Title + placement locked. **Beats & dialogue: pending.**
+- Title + placement + loyalty alignment locked. **Beats & dialogue: pending.**
 
 ## NOTES / OPEN THREADS
 - This title basically **announces the third-act theme**: who in Team Apex is
