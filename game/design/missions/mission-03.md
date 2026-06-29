@@ -280,10 +280,15 @@ ending/events), this title is the **return-the-purchase metaphor**:
   by accident, without even looking. She is **not** a recurring villain. The
   squad's only living lead on Drone 9 is gone — making her **laptop** the sole
   remaining source.
-- **⚠ NEW MYSTERY — who attacked the exfil?** An unseen enemy **blew up the
-  speedboat with a rocket** and **darted Spike**. Spike never sees them.
-  Candidates: HYDRA? Drone 9? A third party / Lady Death's contingency? **Major
-  open hook — to develop.**
+- **THE DART — RESOLVED (Mission 10 reveal):** the unseen jungle shooter was a
+  **HYDRA operator, himself bleeding out.** Seeing how dangerous Spike was, he
+  fired a **BRAINWASHING dart** — a program designed to make Spike **kill all his
+  allies**, stripping his **humanity, sanity, and emotions.** Dying, he **missed
+  Spike's head and hit his NECK** — so it works **slowly**, crawling toward the
+  brain over many missions. (See Spike's profile + Mission 10 for the payoff: it
+  briefly breaks through, makes him attack Molotov, then flushes out and fails.)
+  *(The rocket that blew the exfil boat — same operator or a related HYDRA
+  element; the dart is the key.)*
 - **⚠ Was the intel obtained?** Spike grabs the laptop and later uses it to find
   the resort, so the laptop is **in hand** — but whether its HYDRA/Drone-9 intel
   is recovered/usable is unconfirmed. Confirm what it reveals.

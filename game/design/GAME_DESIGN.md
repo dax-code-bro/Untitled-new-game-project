@@ -307,9 +307,18 @@ high-ranking **Sergeant / officer** leading young Irish troops.
 - **Callsign:** "Spike" (between first/last: Rodriguez Hamilton).
 - **Role:** **the player character.** This is who the player controls — the
   operator in the opening who gears up and steps off the chopper.
+- **⚠ THE BRAINWASHING ARC (Mission 3 → 10):** the Mission 3 jungle **dart** was a
+  **HYDRA brainwashing program** meant to make Spike **kill all his allies**
+  (stripping humanity, sanity, emotions). The dying operator **missed his head and
+  hit his neck**, so it worked **slowly** — Spike spent Missions 3–10
+  **unknowingly fighting it** (his obsessive, divided, paranoid behavior was that
+  internal war). At Mission 10's climax an **adrenaline surge** let it break
+  through for **one short burst** → he **attacked Molotov** → the same surge
+  **flushed it out; it FAILED.** **Spike is now free of it.** (His "betrayal" of
+  Molotov was never his choice.)
 - **⚠ STATUS (Mission 10):** **gravely wounded / paralyzed** — Molotov stabbed and
-  shot him; **"I can't feel my legs."** The protagonist is crippled by a teammate
-  and left alone. (Permanent or temporary — TBD; a huge swing for the back half.)
+  shot him; **"I can't feel my legs."** Crippled by a teammate and left alone.
+  (Permanent or temporary — TBD; a huge swing for the back half.)
 - **Family:** Spike is an **orphan** by 1985.
   - **Father — Diego** (playable lead of the 1948 flashback, Mission 2): survived
     HYDRA's first strike in Saudi Arabia and **told young Spike the story
@@ -511,6 +520,10 @@ city → spot **three friendly US Army tanks** rolling in to support → then
 - **Drone program is compartmentalized** — even HYDRA bases (e.g. the Mission 9
   Africa base) keep **no drone intel** and have "never seen a single one." The
   drones are walled off inside the org.
+- **Brainwashing tech (darts):** HYDRA has **brainwashing dart** programs designed
+  to turn a target into an ally-killing weapon (strip humanity/sanity/emotions).
+  Used on Spike in Mission 3 (see his arc) — it failed, but the tech is real and a
+  standing threat.
 - **Details (goals, full tech):** *TBD.*
 
 > **Naming note:** "HYDRA" is also the name of a famous Marvel Comics villain

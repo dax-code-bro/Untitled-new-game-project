@@ -114,16 +114,33 @@ As the trust question comes to a head, Team Apex splits along loyalty lines:
   stance: **"the system is wrong."** His face is now partly revealed (mask
   half-gone, burns shown).
 
+## WHY SPIKE ATTACKED — THE BRAINWASHING (revealed)
+**Spike didn't truly choose to fight Molotov — the Mission 3 dart did.** Full
+mechanism (see also Mission 3 + Spike's profile):
+- In Mission 3's jungle, a **HYDRA operator** (himself **bleeding out**), seeing
+  how dangerous Spike was, fired a **brainwashing dart** at him — designed to
+  make Spike **kill all his allies**, stripping his **humanity, sanity, and
+  emotions.**
+- Dying, the operator **missed Spike's head and hit his neck** — so the program
+  worked **slowly**, crawling toward his brain across Missions 3–10.
+- Spike **unknowingly fought it the whole time** — his obsessive, divided,
+  paranoid behavior was the **internal war** against it.
+- At this climax, an **extreme adrenaline surge** let it **break through for a
+  short burst** → he **attacked Molotov.**
+- That **same surge flushed it out completely — the brainwashing FAILED.** The
+  window was only long enough for the one attack. **Spike is now free of it.**
+
+So the tragedy is doubled: Molotov crippled a man who **wasn't in control of
+himself**, and Spike's "betrayal" of Molotov was never his choice.
+
 ## ⚠ FLAGS / AMBIGUITIES (confirm)
 - **"Confirmed specimen"** — read as Abraham being confirmed a HYDRA
-  agent/suspect. Confirm the word "specimen" (vs. "suspect") — it may tie to the
-  experimental/"product" language, or just be phrasing.
-- **Molotov's motive is unclear/contradictory:** he says "the system is wrong"
-  (agreeing with Spike, who's exposing the corrupt system) — yet he **fights and
-  cripples Spike** to stop him. Likely read: *both see the rot, but Molotov is
-  trying to stop Spike from going down this path* (it'll get people killed / can't
-  be won / he has his own plan). **Confirm Molotov's agenda & allegiance** — it
-  defines whether he's villain, tragic antihero, or misguided protector.
+  agent/suspect. Confirm the word "specimen" (vs. "suspect").
+- **Molotov's side still partly open:** the Spike-attack is now explained
+  (brainwashing), but **why Molotov left the team, said "the system is wrong,"
+  and came to confront Spike** is his own thread. Did he **know** Spike was
+  compromised (his sorrow suggests he understood it wasn't really Spike)? Confirm
+  Molotov's agenda.
 - **Is Spike's paralysis permanent** or temporary? Defines the back half of the
   campaign (a crippled protagonist is a huge swing).
 - **Whose "operation"/building** was this — HYDRA's? Abraham's? Where did the
