@@ -231,11 +231,12 @@ high-ranking **Sergeant / officer** leading young Irish troops.
 - **Knows HYDRA deeply** — he's the one who briefs the team on the drones'
   fates (Mission 2 boardroom), reinforcing that he's been read in on HYDRA all
   along (ties to his secrecy at the Mission 1 regroup).
-- **⚠ "Fixes broken products" (Mission 7 reveal):** Sydney says Brian was a
-  "broken product until **Abraham fixed** him." Implies Abraham has a pattern of
-  **taking broken people (or manufactured beings) and repairing/recruiting them**
-  onto Team Apex. If literal, it ties Abraham's HYDRA knowledge to actually
-  **repairing HYDRA tech/creations** — a potentially huge piece of his secret.
+- **"Fixes broken people" (Mission 7 reveal):** Sydney says Brian was a "broken
+  product until **Abraham fixed** him" — a **metaphor.** Abraham has a pattern of
+  **taking in broken/damaged people, rehabilitating them, and recruiting them**
+  onto Team Apex. Team Apex is, in part, **Abraham's collection of people he
+  saved** — which is why their loyalty to him runs deep (and why Sydney, who
+  "never needed fixing," doesn't share it).
 - **Rank — RESOLVED:** canonically a **four-star general.** "Captain" is only
   informal/colloquial shorthand (e.g. the writer/players calling him that) — NOT
   his actual rank. Always **General Abraham** in canon.
@@ -279,10 +280,10 @@ high-ranking **Sergeant / officer** leading young Irish troops.
   - **Jesse Wolford** — the **talker**, but **nervous/anxious**: handles the
     bluffing, but fumbles under pressure (cracked giving a fake ID).
   - A classic twin contrast — the steady gun and the jittery mouth.
-- **⚠ Brian — "broken product" reveal:** Sydney claims Brian "was just a **broken
-  product** until **Abraham fixed** him." Open whether this is **figurative**
-  (a broken man Abraham rehabilitated) or **literal** (a manufactured/synthetic
-  being Abraham repaired — see Mission 7 flag). May extend to Jesse / others.
+- **Brian — "broken product" (metaphor):** Sydney calls Brian a "broken product
+  until Abraham fixed him" — **figurative.** Brian was a **broken/damaged man**
+  whom **Abraham rehabilitated** and recruited. Fully human; gives Brian a
+  troubled past + a debt of loyalty to Abraham/Apex. (May apply to Jesse too.)
 - **Weapons:** Brian favors a **shotgun** (at least here). Jesse — TBD.
 - Callsigns: *TBD* (nameplates fall back to "Brian"/"Jesse").
 

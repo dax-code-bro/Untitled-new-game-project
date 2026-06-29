@@ -136,18 +136,13 @@ the playable lead. *(Exact roster split and who leads on the ground — TBD.)*
 >
 > *(— CONTINUES. —)*
 
-> **⚠ MAJOR REVEAL / FLAG — "broken product":** Sydney calls Brian a "broken
-> **product**" that **Abraham "fixed."** Two readings, and they change the whole
-> story:
-> - **Figurative:** Brian was a broken/damaged *person* (criminal past, trauma)
->   whom Abraham rehabilitated and recruited.
-> - **Literal:** Brian is a *manufactured being* — a drone/synthetic/experiment
->   (HYDRA-made?) that **Abraham repaired/repurposed** onto Team Apex. Given the
->   sentient-machine themes (Drone 9, Patient 14, engineered sentience), this is a
->   live possibility — and would mean **Abraham "fixes broken products,"** tying
->   his deep HYDRA knowledge to *building/repairing* HYDRA tech.
-> - Also implied: this may extend to **Jesse / other Apex members**, and Sydney
->   positions himself as the one who "never needed fixing." **Confirm intent.**
+> **REVEAL — "broken product" (it's a METAPHOR):** Sydney's "broken product"
+> line is **figurative**, NOT literal. Brian was a **broken/damaged person**
+> (rough past, trauma) whom **Abraham rehabilitated** and gave a purpose — i.e.
+> Abraham takes in broken people and "fixes" them onto Team Apex. Brian is fully
+> human; no synthetic/manufactured angle. Sydney, by contrast, claims he **"never
+> needed fixing"** — he wasn't a broken man Abraham saved, which colors why he
+> feels no loyalty.
 
 > **⚠ INTERPRETATION FLAG:** Read as **Monroe double-crossing Team Apex** — he
 > embedded himself to walk them into a trap (HYDRA loyalist / double agent).
