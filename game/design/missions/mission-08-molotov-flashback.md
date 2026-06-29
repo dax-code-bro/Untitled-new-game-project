@@ -137,3 +137,5 @@ wound); calling him **"Webber"** would be the thing that cuts.
   "war"** so childhood → Mollys → 1985 line up. (User noted some details are
   "besides the point" — flagging only because his present age depends on it.)
 - **Is the flashback playable** (like Diego's) or purely cinematic? *(TBD.)*
+- **After the flashback:** we return to the present and the camera cuts to
+  **Spike & Striker** on a new op (see Mission 9).

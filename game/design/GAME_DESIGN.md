@@ -36,8 +36,10 @@ complete screenplays.
   *(title + placement locked; beats pending).*
 
 - `game/design/missions/mission-08-molotov-flashback.md` — **Mission 8
-  (tentative)** — Molotov's backstory flashback *(framing scene done; flashback
-  pending)*.
+  (tentative)** — Molotov's backstory flashback *(complete)*.
+- `game/design/missions/mission-09.md` — **Mission 9 (tentative, title TBD)** —
+  Spike & Striker raid a HYDRA base near Africa for intel on Drone 9's latest
+  user and a potential **owner of HYDRA** *(premise set; beats pending)*.
 
 **Known mission order so far:** 1 (Colombia/Columbia, classified) → 2 (1948
 flashback + boardroom) → 3 "Would You Like a Receipt With That Order?" → 4 "Sins
