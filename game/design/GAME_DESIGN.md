@@ -267,10 +267,15 @@ high-ranking **Sergeant / officer** leading young Irish troops.
 - **CAMEO — Mission 1:** the two of them appear on the rooftop (look left before
   descending), sniping enemies below — side by side, fittingly. Present since the
   very first mission.
-- **Spotlight — Mission 7 "Industry":** playable-adjacent spotlight mission; in
-  the opening they wear **police/security uniforms** as their disguise.
-- Callsigns / roles / weapons / personalities: *TBD* (Industry is where they get
-  developed).
+- **Spotlight — Mission 7 "Industry":** they infiltrate the HYDRA casino in
+  **police/security uniforms.** **Personalities established here:**
+  - **Brian Wolford** — the **trigger**: cold, calm, lethally fast. Dropped five
+    guards with a shotgun before any could react, then walked off without a word.
+  - **Jesse Wolford** — the **talker**, but **nervous/anxious**: handles the
+    bluffing, but fumbles under pressure (cracked giving a fake ID).
+  - A classic twin contrast — the steady gun and the jittery mouth.
+- **Weapons:** Brian favors a **shotgun** (at least here). Jesse — TBD.
+- Callsigns: *TBD* (nameplates fall back to "Brian"/"Jesse").
 
 ##### 9. Monroe Sydney
 - Quieter supporting operator (background roster). Deployed on Hellfire.

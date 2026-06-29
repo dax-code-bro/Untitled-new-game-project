@@ -61,8 +61,45 @@ the playable lead. *(Exact roster split and who leads on the ground — TBD.)*
 > - **Monroe Sydney** — dressed in-between: not fancy, not casual.
 > - **The twins (Brian & Jesse)** — matching police / security uniforms.
 >
-> *(— Dialogue & the rest of the infiltration: pending. This is the quiet
-> operators' spotlight — a chance to give them voice for the first time. —)*
+### THE INFILTRATION BEGINS — THE FLOOR
+
+> *(The operators head out onto the casino floor and split up. PAYBACK buys a
+> drink at the bar and drifts toward a staircase — all casual, just another
+> high-roller. Then she clocks them: **FIVE GUARDS** moving in.)*
+>
+> *(She touches her earpiece, voice low and easy.)*
+> **PAYBACK:** John — you've got five coming up the **north stairwell.** *(beat)*
+> Twins, can you make it there?
+
+### CUTSCENE — THE TWINS vs. THE GUARDS
+
+> *(A hallway. The WOLFORD TWINS — **Brian & Jesse** — in security uniforms,
+> shotguns held low but locked and loaded, walk up to meet the five real
+> guards.)*
+>
+> **JESSE:** Hey — I think I saw some suspicious activity downstairs. You boys
+> might wanna check that out.
+> **GUARD:** ...I don't remember you two. What's your ID number?
+> **JESSE:** *(nervous)* ...Uh — five-five-two-one-eight-seven. *(552187)*
+> **GUARD:** *(beat)* ...Take 'em down, boys.
+>
+> *(But Brian's already moving. Five shells in the tube — he pumps and drops all
+> five guards before a single one gets a shot off. By the time the second body
+> hits the floor, the rest are already down. They never even reacted.)*
+>
+> *(Brian tosses the empty shotgun aside and keeps walking down the stairwell,
+> calm as anything. He thumbs his earpiece.)*
+> **BRIAN:** John — made a scene at the south hallway. You might catch some
+> action. We're moving to your door — gonna get to you before anything else goes
+> south.
+
+### CUT TO — JOHN, THE HACKER
+
+> *(Elsewhere: JOHN "STRIKER" JONES hunched over a computer terminal, fingers
+> flying, data scrolling past. In the corner, a **knocked-out scientist**
+> slouches against the wall.)*
+>
+> *(— CONTINUES. —)*
 
 ## Status
 - Title + placement + premise + opening setup locked. **Dialogue & rest: pending.**
@@ -70,10 +107,20 @@ the playable lead. *(Exact roster split and who leads on the ground — TBD.)*
 ## NOTES / OPEN THREADS
 - **Wolford twins CONFIRMED:** Brian & Jesse Wolford are **twins** (resolves the
   earlier relationship flag).
-- **⚠ Is STRIKER on this mission?** You mentioned "the twins, Sydney, and
-  Striker" in the van, but only gave disguises for **Payback, Sydney, and the
-  twins.** Recorded the van team as **Payback + Brian + Jesse + Monroe Sydney.**
-  Confirm whether **Striker (John Jones)** is also aboard (and his disguise).
+- **STRIKER CONFIRMED on the mission** — "John" (Striker / John Jones) is the
+  team's **hacker**, working a computer terminal (knocked out a scientist to get
+  there). Payback coordinates with him by earpiece. Full Industry team:
+  **Payback, John/Striker, Brian & Jesse Wolford, Monroe Sydney** (Monroe's role
+  this sequence — TBD).
+- **Operator roles (heist comp):**
+  - **Payback** — face / lookout / coordinator (works the floor, calls threats).
+  - **John "Striker" Jones** — hacker (terminal, data, neutralized a scientist).
+  - **Brian Wolford** — the trigger: calm, lethal, lightning-fast (dropped 5
+    guards with a shotgun before they reacted).
+  - **Jesse Wolford** — the talker, but **nervous** (fumbled the ID bluff).
+  - **Monroe Sydney** — role TBD this sequence.
+- **⚠ Minor continuity:** Payback says "north stairwell," Brian later says "south
+  hallway." Could be two spots or a slip — reconcile if it matters.
 - **Venue CONFIRMED:** a **high-class HYDRA casino** (front) with the **H3.2
   manufacturing warehouse in the back half.** Doubles as a major HYDRA funding
   source (millions–trillions). Possible thread: ties to HYDRA's wealth / how a
