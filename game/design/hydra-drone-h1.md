@@ -108,10 +108,10 @@ The newest known drone model, introduced via Mission 7 ("Industry").
   sentience: it wasn't (purely) a fluke — **HYDRA has, or is chasing, a method to
   engineer sentience**, and Drone 9 is the **precedent** they want to repeat in
   their ultimate drone.
-- **Story potential:** a half-built "ultimate" drone that HYDRA wants to wake up
-  into a thinking being — interrupting his construction (or his awakening) is a
-  prime Mission 7 centerpiece. A sentient ultimate weapon vs. a rogue sentient
-  Drone 9 is a rich collision. *(TBD — high-potential thread.)*
+- **FATE — DESTROYED.** Patient 14 was **blown up in the warehouse** by the
+  twins' C4 at the end of Mission 7. This half-built unit is **gone.** *(HYDRA's
+  H3.2 program may continue at other plants — hundreds of bases — but this first
+  unit is destroyed.)*
 
 ### HYDRA Drone Development Timeline (lore)
 | Model | Development time | Result |

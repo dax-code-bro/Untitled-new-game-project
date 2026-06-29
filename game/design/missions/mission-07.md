@@ -259,10 +259,7 @@ the playable lead. *(Exact roster split and who leads on the ground — TBD.)*
   Brian/Jesse/Monroe real personality, roles, and stakes.
 - **H3.2 drone specs** (what makes it the "new ultimate") — TBD.
 - **"Patient 14"** — the first H3.2 unit, **~50% built** at this casino plant.
-  **⚠ Presumably destroyed in the C4 blast** that leveled the lab. **Confirm:**
-  is Patient 14 gone for good, or salvaged/rebuilt later (he's a high-potential
-  character — HYDRA has hundreds of other plants to rebuild him)? See
-  `hydra-drone-h1.md`.
+  **DESTROYED** — blown up in the warehouse by the twins' C4. This unit is gone.
 - **Sydney/Monroe is DEAD** — killed by Brian after his betrayal. The team learns
   he was a traitor only at the HQ debrief (they were shocked).
 - **Jesse aftermath note:** the nervous one earlier is **steady and cold** here
