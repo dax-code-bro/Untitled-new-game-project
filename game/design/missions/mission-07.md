@@ -177,8 +177,29 @@ the playable lead. *(Exact roster split and who leads on the ground — TBD.)*
 > *(The other members go still — shocked. All except JESSE.)*
 >
 > **JESSE:** *(evenly)* He tried to double-cross us.
+
+### CODA — FOX, ALONE (stinger)
+
+> *(The screen fades to a CONTROL ROOM — a private corporate office. FOX leans
+> back in a chair, alone, staring at nothing. He's turning something over, hard.)*
+>
+> **FOX:** *(quiet, to himself)* One quiet soldier turned... and nearly killed
+> two of my men. *(beat)* One.
+>
+> *(His eyes narrow.)*
+>
+> **FOX:** ...If *one* man can do that — what's stopping the whole team? *(beat)*
+> The day they all turn... they could wipe out a city.
+>
+> *(Hold on Fox's face. We can't tell if it's fear — or an idea.)*
 >
 > *(— END OF MISSION 7. —)*
+
+> **⚠ THREAD — Fox's dark thought:** This stinger plants a major seed. **Is Fox
+> *afraid* the team could turn (paranoia/burden of command), or *tempted* by the
+> realization of what his team could do if unleashed (weaponizing them)?**
+> Deliberately ambiguous. Strong setup for: a future betrayal, Fox's arc, or the
+> team's destructive potential becoming a plot point. Confirm/develop later.
 
 > **REVEAL — "broken product" (it's a METAPHOR):** Sydney's "broken product"
 > line is **figurative**, NOT literal. Brian was a **broken/damaged person**

@@ -209,6 +209,12 @@ high-ranking **Sergeant / officer** leading young Irish troops.
 > **Timeline:** born **1920** — age 19 in 1939 (WWII), 30 in 1950 (Korea), 40
 > in 1960 (Congo), and **65** in the 1985 setting. All battle-ages consistent.
 
+- **⚠ THREAD — Fox's dark thought (Mission 7 coda):** alone after Sydney's
+  betrayal, Fox contemplates: if *one* quiet soldier turning nearly killed two of
+  his men, **what would the whole team turning do** — they could "wipe out a
+  city." Deliberately ambiguous: **fear** (paranoia / burden of command) or
+  **temptation** (his team as a weapon to unleash). A major seed for Fox's arc.
+
 ##### 3. John "Striker" Jones
 - **Callsign:** "Striker" (between first/last: John Jones).
 - **Pronoun:** he/him.
