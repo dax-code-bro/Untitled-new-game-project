@@ -70,6 +70,15 @@ the mission plays out.)*
 > **SOLDIER:** That's all I know — I swear. We don't keep intel on the drones
 > here. We don't *handle* them. I've never laid eyes on a single one.
 
+### ON THE WAY BACK
+
+> *(Exfil. Spike is quiet, chewing on the name. Striker notices.)*
+>
+> **STRIKER:** ...I know what you're thinking. *(beat)* But there's a *lot* of
+> people with the last name Abraham, Spike. Could be nothing.
+>
+> *(Spike doesn't answer. He's not sure he believes that.)*
+
 ## REVEALS (canon)
 - **Victor Prestige** — named as **HYDRA's leader** (the "owner of HYDRA" the op
   was hunting). First real name at the top of the org.
@@ -100,5 +109,8 @@ the mission plays out.)*
   strongly implies a connection. **Is "Ray Abraham" = General Abraham? A relative?
   A coincidence/red herring?** Potentially the campaign's biggest twist setup —
   Abraham as a HYDRA insider/double agent. Confirm/develop carefully.
+  - **Doubt planted in-fiction:** on the way back, **Striker dismisses it** —
+    "there's a lot of people with the last name Abraham... could be nothing." Keeps
+    it as **ambiguous suspicion**, not confirmation. Spike isn't convinced.
 - **Victor Prestige** — flesh out (who he is, how he "owns" a century-old global
   org). New top-level antagonist.
