@@ -388,6 +388,9 @@ city → spot **three friendly US Army tanks** rolling in to support → then
   potential (ally / boss / recruit).
 - **Not all loyal** — HYDRA's own soldiers aren't all believers (the 1948
   scientist's guards turned on him). Loyalty-vs-coercion is a usable theme.
+- **Funding — front businesses:** HYDRA runs **high-class casino fronts** that
+  pull in millions/billions, bankrolling the drone program — and hide production
+  in plain sight (Mission 7's casino has the H3.2 factory in its back half).
 - **Details (leaders, goals, full tech):** *TBD.*
 
 > **Naming note:** "HYDRA" is also the name of a famous Marvel Comics villain
