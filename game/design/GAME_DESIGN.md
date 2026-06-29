@@ -279,7 +279,14 @@ high-ranking **Sergeant / officer** leading young Irish troops.
 
 ##### 9. Monroe Sydney
 - Quieter supporting operator (background roster). Deployed on Hellfire.
-- Callsign / role / weapon / personality: *TBD.*
+- **Role — the inside man:** in Mission 7 "Industry," he had **secretly taken a
+  job at the HYDRA casino** weeks ahead, embedding himself; he opens the latch to
+  the manufacturing lab.
+- **⚠ APPARENT BETRAYAL:** at the climax he stands with a soldier and a security
+  guard, **revolvers on the twins** — reading as a **double-cross** (the inside
+  man was inside for HYDRA). **Allegiance to confirm** (true traitor / double
+  agent / coerced). Potentially the most pivotal of the quiet operators.
+- Callsign / weapon / personality: *TBD.*
 
 > **Roster note:** Members 1–6 are the spotlighted core; **7–9 (Brian Wolford,
 > Jesse Wolford, Monroe Sydney) are the quieter, less-mentioned operators** of

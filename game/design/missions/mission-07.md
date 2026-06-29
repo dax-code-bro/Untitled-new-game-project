@@ -98,8 +98,37 @@ the playable lead. *(Exact roster split and who leads on the ground — TBD.)*
 > *(Elsewhere: JOHN "STRIKER" JONES hunched over a computer terminal, fingers
 > flying, data scrolling past. In the corner, a **knocked-out scientist**
 > slouches against the wall.)*
+
+### MONROE — THE INSIDE MAN — THE LAB REVEALED
+
+> *(MONROE SYDNEY was already inside — weeks ago he quietly landed a **job** at
+> the casino in secret, embedding himself ahead of the op. Now he works a
+> control panel, and a huge **LATCH** grinds open — revealing the back-half
+> **MANUFACTURING LAB** in full: the H3.2 assembly line. And in the very center:
+> a **HALF-BUILT DRONE.** Patient 14.)*
+
+### THE C4
+
+> *(The team takes one look and they all want the same thing — shut it down. The
+> WOLFORD TWINS move fast, pulling bricks of **C4** and planting them, wiring the
+> whole operation to blow.)*
+>
+> **BRIAN:** Charges are set.
+> *(A finger hovers over the detonator—)*
+
+### THE TURN — GUNPOINT  ⚠ (betrayal? confirm)
+
+> *(—and two revolvers press against the twins' heads. Held by a **SOLDIER** and
+> a **SECURITY GUARD.** And standing with them, calm: **MONROE SYDNEY.**)*
+>
+> *(The inside man was inside for the wrong side.)*
 >
 > *(— CONTINUES. —)*
+
+> **⚠ INTERPRETATION FLAG:** Read as **Monroe double-crossing Team Apex** — he
+> embedded himself to walk them into a trap (HYDRA loyalist / double agent).
+> **Confirm:** is this a true betrayal, or is Monroe **coerced / a hostage /
+> playing a deeper game**? It changes everything about his character.
 
 ## Status
 - Title + placement + premise + opening setup locked. **Dialogue & rest: pending.**
@@ -118,9 +147,14 @@ the playable lead. *(Exact roster split and who leads on the ground — TBD.)*
   - **Brian Wolford** — the trigger: calm, lethal, lightning-fast (dropped 5
     guards with a shotgun before they reacted).
   - **Jesse Wolford** — the talker, but **nervous** (fumbled the ID bluff).
-  - **Monroe Sydney** — role TBD this sequence.
+  - **Monroe Sydney** — the **inside man**: secretly got a job at the casino
+    weeks earlier; opens the latch to the manufacturing lab. **Then turns on the
+    team at gunpoint (apparent betrayal — see flag).**
 - **⚠ Minor continuity:** Payback says "north stairwell," Brian later says "south
   hallway." Could be two spots or a slip — reconcile if it matters.
+- **⚠ MONROE TWIST — confirm allegiance.** Apparent double-cross: he embedded
+  himself only to trap the team. Confirm betrayal vs. coercion/deeper-game. Huge
+  character beat either way.
 - **Venue CONFIRMED:** a **high-class HYDRA casino** (front) with the **H3.2
   manufacturing warehouse in the back half.** Doubles as a major HYDRA funding
   source (millions–trillions). Possible thread: ties to HYDRA's wealth / how a
