@@ -24,10 +24,47 @@ the playable lead. *(Exact roster split and who leads on the ground — TBD.)*
   a **new (third-generation) drone model.** *(H1.0 = 1948 combat; H2.1 = bomber;
   **H3.2 = newest**, built here.)*
 
+## Timing
+- Takes place **three weeks after the events of Hellfire (Mission 6).**
+
+## BEAT SHEET (opening — every detail, in order)
+1. **The van.** Opens with **Payback** and the quiet operators in the **back of a
+   van**, rolling toward the target — all in **disguise (dressed up).**
+2. **The disguises:**
+   - **Payback** — an **elegant evening dress / high-class gambler outfit.**
+   - **Monroe Sydney** — dressed **in-between** (not fancy, not casual).
+   - **The Wolford twins (Brian & Jesse)** — **police / security uniforms.**
+3. *(Implied target: an upscale venue — Payback's "high-class gambler" cover
+   strongly suggests a **casino / gambling establishment** fronting or guarding
+   the HYDRA plant. — TBD/confirm.)*
+
+## FULL SCRIPT
+
+### THE VAN — INFILTRATION PREP (3 weeks after Hellfire)
+
+> *(Three weeks after Hellfire. The back of a VAN, rumbling toward the target.
+> Inside: **PAYBACK** and Team Apex's quiet operators — the **WOLFORD TWINS**
+> (Brian & Jesse) and **MONROE SYDNEY.** Everyone is dressed up, in disguise.)*
+>
+> - **Payback** — an elegant evening dress; a high-class gambler's look.
+> - **Monroe Sydney** — dressed in-between: not fancy, not casual.
+> - **The twins (Brian & Jesse)** — matching police / security uniforms.
+>
+> *(— Dialogue & the rest of the infiltration: pending. This is the quiet
+> operators' spotlight — a chance to give them voice for the first time. —)*
+
 ## Status
-- Title + placement + premise locked. **Detailed beats & dialogue: pending.**
+- Title + placement + premise + opening setup locked. **Dialogue & rest: pending.**
 
 ## NOTES / OPEN THREADS
+- **Wolford twins CONFIRMED:** Brian & Jesse Wolford are **twins** (resolves the
+  earlier relationship flag).
+- **⚠ Is STRIKER on this mission?** You mentioned "the twins, Sydney, and
+  Striker" in the van, but only gave disguises for **Payback, Sydney, and the
+  twins.** Recorded the van team as **Payback + Brian + Jesse + Monroe Sydney.**
+  Confirm whether **Striker (John Jones)** is also aboard (and his disguise).
+- **⚠ Venue:** Payback's "high-class gambler" cover implies a **casino/upscale
+  venue** as the front. Confirm the setting.
 - This is the **payoff for Team Apex's quiet operators** — use it to give
   Brian/Jesse/Monroe real personality, roles, and stakes.
 - **H3.2 drone specs** (what makes it different/worse than H2.1) — TBD.

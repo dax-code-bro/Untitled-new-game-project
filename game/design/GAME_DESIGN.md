@@ -260,21 +260,17 @@ high-ranking **Sergeant / officer** leading young Irish troops.
     dropped enemy guns, environmental weapons — rather than a fixed loadout.
 - **Role / specialty / personality / backstory:** *TBD.*
 
-##### 7. Brian Wolford
-- One of Team Apex's **quieter, less-spotlighted operators** (background roster).
-- Deployed on the Hellfire mission (every member was). **One of these three
-  quieter operators is introduced to the player during Hellfire** (which — TBD).
-- **CAMEO — Mission 1:** appears alongside Jesse on the rooftop (look left before
-  descending), sniping enemies below. Present since the very first mission.
-- **⚠ Shares the surname "Wolford" with Jesse** — very likely **related**
-  (brothers? father/son?). Confirm relationship.
-- Callsign (needed for blue nameplate) / role / weapon / personality: *TBD.*
-
-##### 8. Jesse Wolford
-- Quieter supporting operator (background roster). Deployed on Hellfire.
-- **CAMEO — Mission 1:** appears alongside Brian on the rooftop, sniping below.
-- **⚠ Shares the surname "Wolford" with Brian** — likely related (TBD).
-- Callsign (needed for blue nameplate) / role / weapon / personality: *TBD.*
+##### 7 & 8. The Wolford Twins — Brian & Jesse Wolford
+- **Brian Wolford and Jesse Wolford are TWINS** — Team Apex's quieter operators,
+  a matched pair (relationship CONFIRMED).
+- Background roster; deployed on Hellfire (every member was).
+- **CAMEO — Mission 1:** the two of them appear on the rooftop (look left before
+  descending), sniping enemies below — side by side, fittingly. Present since the
+  very first mission.
+- **Spotlight — Mission 7 "Industry":** playable-adjacent spotlight mission; in
+  the opening they wear **police/security uniforms** as their disguise.
+- Callsigns / roles / weapons / personalities: *TBD* (Industry is where they get
+  developed).
 
 ##### 9. Monroe Sydney
 - Quieter supporting operator (background roster). Deployed on Hellfire.
