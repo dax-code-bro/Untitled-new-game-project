@@ -123,6 +123,13 @@ the playable lead. *(Exact roster split and who leads on the ground — TBD.)*
 >
 > *(The inside man was inside for the wrong side.)*
 >
+> *(Slowly — gun be damned — BRIAN turns to face him.)*
+>
+> **BRIAN:** You double-crossed us. *(a beat — real hurt under the steel)* Apex
+> gave you a good thing. How could you trade us — for *these* people?
+>
+> *(Monroe says nothing. Yet.)*
+>
 > *(— CONTINUES. —)*
 
 > **⚠ INTERPRETATION FLAG:** Read as **Monroe double-crossing Team Apex** — he
