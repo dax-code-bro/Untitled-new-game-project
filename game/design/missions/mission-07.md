@@ -80,7 +80,11 @@ the playable lead. *(Exact roster split and who leads on the ground — TBD.)*
   crime boss like Lady Death could afford a drone.
 - This is the **payoff for Team Apex's quiet operators** — use it to give
   Brian/Jesse/Monroe real personality, roles, and stakes.
-- **H3.2 drone specs** (what makes it different/worse than H2.1) — TBD.
+- **H3.2 drone specs** (what makes it the "new ultimate") — TBD.
+- **"Patient 14"** — the first H3.2 unit, **~50% built** at this casino plant.
+  The "Patient" designation hints at something experimental/sentient. He's a
+  prime candidate for the **mission's centerpiece/climax** (interrupt his build
+  or awakening). See `hydra-drone-h1.md`.
 - **Scope — RESOLVED (sobering):** this casino is **just ONE of HYDRA's hundreds
   of major bases** worldwide (US, Germany, Russia, China, a few in Mexico).
   Shutting it down is a meaningful hit but **barely scratches** HYDRA — the war is

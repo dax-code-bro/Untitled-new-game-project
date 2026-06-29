@@ -95,6 +95,19 @@ The newest known drone model, introduced via Mission 7 ("Industry").
   operators raid to shut down in Mission 7.
 - **Role / full specs / what makes it the "ultimate":** *TBD.*
 
+#### The First H3.2 — "PATIENT 14"
+- The **first H3.2 unit** is currently being built and is **~halfway complete**
+  (50%) at the casino plant.
+- HYDRA calls him **"Patient 14."**
+- **⚠ Notable terminology:** they call him a **"Patient,"** not a "Drone" or
+  "Unit" — strongly implying something **experimental / organic / possibly
+  sentient** (you don't call a machine a patient). Echoes **Drone 9's** sentience.
+- **The number 14** lands right after the **original 13** drones (1948) — framing
+  Patient 14 as the **next in the lineage / the 14th.** Likely intentional.
+- **Story potential:** a half-built "ultimate" being — interrupting his
+  construction (or his awakening) could be the climax of Mission 7. Is he a
+  weapon, a person, or both? *(TBD — high-potential thread.)*
+
 ### HYDRA Drone Development Timeline (lore)
 | Model | Development time | Result |
 | --- | --- | --- |
