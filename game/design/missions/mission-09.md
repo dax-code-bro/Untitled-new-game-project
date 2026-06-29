@@ -89,9 +89,40 @@ the mission plays out.)*
   within HYDRA. (So the **Drone 9 lead is a dead end here** — only the leadership
   names came out.)
 
+## AFTERMATH — HQ (the team fractures)
+
+### The Argument
+> *(Back at the facility. Spike lays out what they found — **Victor Prestige**,
+> and the name **Ray Abraham** — to the rest of the team. It detonates into an
+> argument. STRIKER keeps trying to walk it back — bury it, talk everyone down,
+> undo it.)*
+>
+> *(In the shadows at the edge of the room, MOLOTOV watches. And quietly —
+> slowly — he steps back, turns, and walks out. He removes himself from the team.
+> In the heat of the argument, **no one notices him go.**)*
+
+### Three Days Later
+> *(The shouting's died down. But Spike hasn't let go — he's **still divided,
+> still set on digging deeper** into Prestige and the Abraham lead. And by now
+> everyone's realized the cost of that night: **Molotov is gone. He left the
+> team. He's gone into hiding.**)*
+
 ## Status
-- Mission largely scripted (travel → SWAT clear → interrogation). **Open:** title
-  meaning, exact Africa location, the Ray-Abraham reveal's payoff.
+- Mission + aftermath scripted. **Open:** title meaning, exact Africa location,
+  the Ray-Abraham payoff, **WHY Molotov left.**
+
+## AFTERMATH THREADS
+- **⚠ MOLOTOV LEFT TEAM APEX → in hiding.** Major development, and the timing is
+  loaded: right after his backstory flashback, and during the Victor
+  Prestige / "Ray Abraham" argument. **Why did he leave?** (The Abraham reveal?
+  Something he knows about HYDRA from the Mollys era? His own demons? Protecting
+  someone?) — **big open thread.** *(He slipped out unnoticed — fitting for the
+  silent man.)*
+- **Spike is obsessed / diverging** — wants to dig deeper despite the team
+  dismissing it. Sets up Spike possibly going solo / straining the unit.
+- **TEAM APEX IS FRACTURING** — Sydney (traitor, dead), Molotov (gone), Spike
+  (diverging). **This is Fox's coda fear coming true** ("if one can turn, why not
+  the whole team?"). The unit is coming apart from the inside.
 
 ## NOTES / OPEN THREADS
 - **Advances two big threads at once:** Drone 9's whereabouts, and HYDRA's

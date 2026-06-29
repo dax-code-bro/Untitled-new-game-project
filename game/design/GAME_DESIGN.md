@@ -161,7 +161,11 @@ Abraham is the brass attached to it.
 **⚠ The known roster below is NOT the whole team** — Team Apex has additional
 members not yet introduced (TBD). The six documented so far:
 
-##### 1. Webber "Molotov" Newman
+##### 1. Webber "Molotov" Newman  — **(LEFT THE TEAM — in hiding, as of Mission 9)**
+> **Status:** quietly **left Team Apex and went into hiding** during the Mission 9
+> aftermath argument (slipped out unnoticed). **Why is an open thread** — timing
+> ties to his backstory surfacing + the Victor Prestige / "Ray Abraham" reveal.
+
 - **Callsign:** "Molotov" (sits between first/last name: Webber Newman).
 - **Demeanor:** exceptionally quiet — almost never talks. Dead serious, with
   the occasional flash of humor.
@@ -245,6 +249,9 @@ high-ranking **Sergeant / officer** leading young Irish troops.
   his men, **what would the whole team turning do** — they could "wipe out a
   city." Deliberately ambiguous: **fear** (paranoia / burden of command) or
   **temptation** (his team as a weapon to unleash). A major seed for Fox's arc.
+  - **Materializing (Mission 9 aftermath):** the team is fracturing — Sydney
+    (traitor, dead), **Molotov gone into hiding**, Spike diverging. Fox's fear of
+    the unit coming apart is starting to come true.
 
 ##### 3. John "Striker" Jones
 - **Callsign:** "Striker" (between first/last: John Jones).
