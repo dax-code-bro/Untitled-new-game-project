@@ -81,16 +81,32 @@ cliffhanger:
   **Mission 6 "Hellfire"** (the bombing itself).
 - **Full specs (size, payload, armament, weaknesses):** *TBD.*
 
-## LATER GENERATIONS — H3.2 (NEWEST)
+## LATER GENERATIONS — H3.2 (NEWEST — "the new ultimate")
 
 The newest known drone model, introduced via Mission 7 ("Industry").
 - **Model:** **H3.2** — third-generation designation (after H1.0 combat and H2.1
   bomber).
-- **Production:** built at a **HYDRA plant** that Team Apex's quiet operators
-  raid to shut down in Mission 7.
-- **Role / specs / what makes it more dangerous than H2.1:** *TBD.*
-- **Implication:** HYDRA's drone line keeps **advancing generations** — the arms
-  race is escalating faster than Team Apex can keep up.
+- **Intended to be HYDRA's "NEW ULTIMATE"** — a far **better design and build
+  than the H1.0**, their magnum-opus drone.
+- **Development: ~30 years and still ongoing** (in design as of 1985, so since
+  ~1955). Unlike the disposable bombers, this is a **patiently perfected
+  masterwork** — quality over quantity.
+- **Production/design site:** the **HYDRA casino plant** Team Apex's quiet
+  operators raid to shut down in Mission 7.
+- **Role / full specs / what makes it the "ultimate":** *TBD.*
+
+### HYDRA Drone Development Timeline (lore)
+| Model | Development time | Result |
+| --- | --- | --- |
+| **H1.0** | **~75 years** (≈1873–1948) | The 13 first-gen combat drones launched 1948 |
+| **H2.1** | **a few months** (1985) | Bomber swarm — cheap, fast, mass-produced, disposable |
+| **H3.2** | **~30 years, ongoing** (≈1955–present) | The "new ultimate" — slow, perfected, superior |
+
+> **⚠ MAJOR LORE:** If the H1.0 took **75 years** and released in 1948, HYDRA's
+> drone program — and likely HYDRA itself — dates back to **~1873.** HYDRA is
+> **over a century old** by 1985 (~110+ years). A patient, generational
+> organization, not a recent threat. *(Reconciles with the 1948 setting; note the
+> user said "1940" but 1948 is the established date.)*
 
 ### Drone generation timeline (so far)
 | Gen | Model | Debut | Role |

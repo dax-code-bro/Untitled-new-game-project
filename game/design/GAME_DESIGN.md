@@ -373,10 +373,13 @@ city → spot **three friendly US Army tanks** rolling in to support → then
 - **Emblem:** a **three-headed serpent** above the wordmark **HYDRA**.
   - Asset: `game/design/assets/hydra-logo.png` (provided reference).
 - **Role:** the campaign's shadow enemy — a force "we were told didn't exist."
-- **History — exists since at least 1948** (see Mission 2). In 1948, in Saudi
-  Arabia, a HYDRA scientist launched a **rocket into space** that deployed
-  **~13 capsules worldwide**, scattering in different directions — almost
-  certainly the **seeding event** for HYDRA's global presence in 1985.
+- **History — over a CENTURY old (~since 1873).** The 1948 H1.0 drones took
+  **~75 years** to develop, so HYDRA's program dates to **~1873** — a patient,
+  generational organization, ~110+ years old by 1985.
+- **1948 seeding event** (see Mission 2): in Saudi Arabia, a HYDRA scientist
+  launched a **rocket into space** that deployed **~13 capsules worldwide**,
+  scattering in different directions — the **seeding event** for HYDRA's global
+  presence in 1985.
 - **HYDRA drones** — fast, lethal transforming machine-creatures (quadruped ⇄
   biped) deployed from those capsules; can effortlessly kill trained soldiers
   (first seen 1948). Full specs + the 13-drone status tracker in
