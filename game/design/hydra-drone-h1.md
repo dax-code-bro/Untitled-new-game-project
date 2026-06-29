@@ -99,14 +99,19 @@ The newest known drone model, introduced via Mission 7 ("Industry").
 - The **first H3.2 unit** is currently being built and is **~halfway complete**
   (50%) at the casino plant.
 - HYDRA calls him **"Patient 14."**
-- **⚠ Notable terminology:** they call him a **"Patient,"** not a "Drone" or
-  "Unit" — strongly implying something **experimental / organic / possibly
-  sentient** (you don't call a machine a patient). Echoes **Drone 9's** sentience.
+- **Terminology — it's a GAG:** "Patient 14" is a **fun nickname by HYDRA's own
+  creators/engineers**, not a literal medical/organic label. In-house humor.
 - **The number 14** lands right after the **original 13** drones (1948) — framing
   Patient 14 as the **next in the lineage / the 14th.** Likely intentional.
-- **Story potential:** a half-built "ultimate" being — interrupting his
-  construction (or his awakening) could be the climax of Mission 7. Is he a
-  weapon, a person, or both? *(TBD — high-potential thread.)*
+- **⚠ THE PLAN — engineered sentience:** HYDRA intends to **somehow make Patient
+  14 SENTIENT — "like what they did with Nine."** This reframes **Drone 9's**
+  sentience: it wasn't (purely) a fluke — **HYDRA has, or is chasing, a method to
+  engineer sentience**, and Drone 9 is the **precedent** they want to repeat in
+  their ultimate drone.
+- **Story potential:** a half-built "ultimate" drone that HYDRA wants to wake up
+  into a thinking being — interrupting his construction (or his awakening) is a
+  prime Mission 7 centerpiece. A sentient ultimate weapon vs. a rogue sentient
+  Drone 9 is a rich collision. *(TBD — high-potential thread.)*
 
 ### HYDRA Drone Development Timeline (lore)
 | Model | Development time | Result |
@@ -138,7 +143,7 @@ boardroom scene):
 | --- | --- | --- |
 | **5** | **Destroyed (KIA)** | Found **impaled on a tree branch**, a **tiger trying to break it open**. Likely **failed to adapt to the ecosystem.** |
 | **7** | **Captured → Scrapped** | Taken and **scrapped for salvage** so it could **never be reprogrammed / turned against us.** |
-| **9** | **ACTIVE — believed SENTIENT** | Went sentient. **Seen making money as a bodyguard.** Independent/rogue actor — major character potential. |
+| **9** | **ACTIVE — SENTIENT** | Sentient (possibly **HYDRA-engineered**, not a fluke — they cite "what they did with Nine" as the precedent for Patient 14). **Seen making money as a bodyguard.** Independent/rogue actor — major character potential. |
 | **12** | **Captured → Scrapped** | Same as 7 — stripped for salvage to prevent reprogramming. |
 | Others (1–4, 6, 8, 10, 11, 13) | **UNKNOWN** | May have **failed to adapt to Earth's ecosystem** — but **"failed to adapt" ≠ confirmed dead.** Any could **still be active** somewhere in the world. |
 
