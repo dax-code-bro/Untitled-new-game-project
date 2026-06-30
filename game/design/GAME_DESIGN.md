@@ -50,6 +50,8 @@ complete screenplays.
 flashback + boardroom) → 3 "Would You Like a Receipt With That Order?" → 4 "Sins
 of the Past" → 5 "A Lost Cause" → 6 "Hellfire" → 7 "Industry" → 8 (tentative,
 Molotov flashback) → 9 "The Reboot" → 10 "Whom Can We Trust Among Us?".
+- `game/design/modes/new-mode-post-epilogue.md` — **New 4th mode** (operator-
+  select, ~1 yr after the epilogue) *(premise + early roster)*.
 - `game/design/hydra-drone-h1.md` — **H1.0 drone codex** (full specs + the
   13-drone status tracker; plus the new **H2.1 bomber** generation).
 - `game/design/emp-shark.md` — **EMP Shark** allied anti-drone weapon spec.
@@ -91,6 +93,7 @@ differ in structure, goal, and allowed camera.
 | **Campaign** | Story-driven missions         | Single-player  | **First-person only**    |
 | **Multiplayer** | Competitive matches        | PvP, online    | **First-person only**    |
 | **Zombies**  | Co-op survival vs. waves      | Co-op          | **First OR third person** (player's choice) |
+| **New mode** *(TBD)* | Operator-select, **~1 yr after the campaign epilogue** | TBD | TBD |
 
 ### Campaign
 - Narrative-driven mission structure.
