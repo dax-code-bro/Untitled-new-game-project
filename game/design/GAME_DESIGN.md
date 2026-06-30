@@ -271,9 +271,10 @@ high-ranking **Sergeant / officer** leading young Irish troops.
     (traitor, dead), **Molotov gone into hiding**, Spike diverging. Fox's fear of
     the unit coming apart is starting to come true.
 
-##### 3. John "Striker" Jones — **⚠ presumed KIA (Mission 11 ambush)**
-> **Status:** gunned down with the trio in the LMG ambush (presumed killed —
-> confirm whether he dies outright or survives).
+##### 3. John "Striker" Jones — **DECEASED (KIA Mission 11)**
+> **Status:** killed in the LMG ambush — **500+ rounds of 5.56×45mm NATO.**
+> Definitively dead. The rookie who hardened across the campaign, cut down with
+> the trio.
 
 - **Callsign:** "Striker" (between first/last: John Jones).
 - **Pronoun:** he/him.
@@ -351,9 +352,10 @@ high-ranking **Sergeant / officer** leading young Irish troops.
 - **Specialty / personality / weapon / backstory:** *TBD — revealed throughout
   the story* ("we will see").
 
-##### 6. "Payback" — the mystery operator — **⚠ presumed KIA (Mission 11 ambush)**
-> **Status:** gunned down with the trio in the LMG ambush (presumed killed —
-> confirm; her unknown identity could leave room for a survival twist).
+##### 6. "Payback" — the mystery operator — **DECEASED (KIA Mission 11)**
+> **Status:** killed in the LMG ambush — **500+ rounds of 5.56×45mm NATO.**
+> Definitively dead (no survival twist). Her real name died with her — never
+> revealed.
 
 - **Pronoun:** she/her.
 - **Codename:** "Payback." **No one knows her real name** — she operates solely

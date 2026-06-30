@@ -52,7 +52,8 @@ here in blood.
 > *(He backs away. The trio exchange a confused look.)*
 >
 > *(The soldiers behind the sandbags rise — their weapons revealed as **LMGs** —
-> and open fire, **mowing the trio down.**)*
+> and open fire. **500+ rounds of 5.56×45mm NATO** tear into the trio from every
+> angle. There is no surviving it.)*
 
 ## FOX'S DEATH
 
@@ -82,9 +83,10 @@ here in blood.
 - **Fox — KIA.** Executed by Abraham (golden Colt M1911, to the head).
 - **Brian Wolford — KIA.** Shot by Abraham's planted operators.
 - **Jesse Wolford — KIA.** Shot by Abraham's planted operators.
-- **Payback — gunned down in the LMG ambush** (presumed KIA — ⚠ confirm if she
-  dies outright or survives).
-- **Striker — gunned down in the LMG ambush** (presumed KIA — ⚠ confirm).
+- **Payback — KIA.** Cut down in the LMG ambush — **500+ rounds of 5.56×45mm
+  NATO** across her whole body. Definitively dead; no survival.
+- **Striker — KIA.** Same — shredded by the LMG ambush (500+ rounds of 5.56).
+  Definitively dead.
 - **The four overwatch operators:** at least two were Abraham's plants (the
   killers); the others' fate TBD.
 
