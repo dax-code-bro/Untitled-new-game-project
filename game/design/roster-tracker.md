@@ -10,7 +10,7 @@
 | Operator | Appears in | Dies in |
 | --- | --- | --- |
 | **Spike** (Rodriguez Hamilton) | M1, M2, M3, M4, M5, M6, M9, M10 | **Alive** — paralyzed (M10) |
-| **Molotov** (Webber Newman) | M1, M3, M4, M5, M6, M8 (his flashback), M9, M10 | **Alive** — in hiding (left M9) |
+| **Molotov** (Webber Newman) | M1, M3, M4, M5, M6, M8 (his flashback), M9, M10 | **Alive** — survives the campaign; reappears as the secret contractor in the new mode (then leaves the island) |
 | **General Abraham** | M1, M2, M5, M6, M11 | **Alive** — the traitor |
 | **Fox** (James Carter) | M1, M5, M6, M7 (coda), M8 (framing), M11 | **M11** — executed by Abraham |
 | **Striker** (John Jones) | M1, M2, M5, M6, M7, M9, M11 | **M11** — LMG ambush |

@@ -182,6 +182,13 @@ members not yet introduced (TBD). The six documented so far:
 > to rescue attacked him, and he crippled Spike in the scramble. **No villain
 > here — just two men who were right, and a dart that ruined it.** His sorrow = he
 > maimed the brother he came to save.
+> **POST-CAMPAIGN — CONFIRMED ALIVE:** Molotov **survives the campaign.** A year
+> later he's the **secret hidden contractor** in the new mode (lives in a cave,
+> teaches the player to hunt/skydive/parachute, gives jobs to liberate the
+> island). After his contracts, he **buys a helicopter and leaves**; a radio
+> transmission reveals he **reached the coast but his chopper died on the beach**,
+> surviving on a few months' supplies — fate uncertain/bittersweet. The lone true
+> survivor of Team Apex finally walking away from the war.
 
 - **Callsign:** "Molotov" (sits between first/last name: Webber Newman).
 - **Demeanor:** exceptionally quiet — almost never talks. Dead serious, with

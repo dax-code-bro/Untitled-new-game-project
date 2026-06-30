@@ -33,6 +33,34 @@
 > operators** (each has a distinct profile). Earlier "an operator called Nemesis
 > Spine Ridge" was just two names run together.
 
+## Activities / Things To Do (open-world sandbox)
+The operators are just trying to make money. The island is a freeform merc
+sandbox:
+- **Explore the island** — **discover secret ambush spots** and **points of
+  interest.**
+- **Skydiving** — leap off cliffs and **parachute.**
+- **Hunting** — hunt animals and **sell them** for money.
+- **Vehicles** — buy and use:
+  - **Humvees** and other utility/military-style vehicles.
+  - **Horses.**
+  - ⚠ **NO sports cars** (deliberate restriction — utilitarian/grounded, not
+    flashy).
+- **Gun store** (in the main city) — buy new guns.
+- **Contracts** — accept jobs from **multiple contractors around the map** for
+  money. **Infinite contracts** (endless/procedural), varied objectives.
+- **Liberate San Juan de la Selva** — the small HYDRA-occupied town; clearing it
+  **unlocks a SECOND hub** (see Shops).
+
+> **Tone:** an open, *fun* sandbox — explore, hunt, parachute, take jobs, get
+> paid. Lighter, freeform counterpoint to the campaign's heavy story.
+
+## Shops & Economy
+Two shop hubs once the town is liberated:
+- **Isla del Neón Fuego (main city):** gun store, clothing store, general store.
+- **San Juan de la Selva (after liberating it from HYDRA):** a second hub selling
+  **guns, vehicles, clothing, items, equipment, and health items.**
+- Money comes from **contracts, hunting/selling animals**, etc.
+
 ## World / Map
 - **A huge map** — stated as **"200 mi² long, 60 mi² thick."**
   - *(⚠ Units: "mi²" with "long/thick" is mixed — likely means **~200 miles long
@@ -117,6 +145,32 @@ The island hosts several outposts beyond the HYDRA village — implying an
   **outposts** (American gov't / coastal, Hawaiian / by the ritual site, European
   / mountainside), plus beach, tropical forest, ocean. A clear **"civilization
   vs. wilderness/enemy"** spread across the huge ~200×60 mi world.
+
+## Contracts & Contractors
+- Most **contractors are just a few random people** scattered around the map
+  (job-givers; pay money).
+- **⚠ THE SECRET CONTRACTOR — MOLOTOV (he's ALIVE!).** One contractor does **NOT
+  show up as a map icon** — you have to find him. It's **Molotov**, from the
+  campaign — **he survived the campaign's epilogue** and is hiding out on this
+  island (in a **cave**).
+  - He **teaches the player to hunt, skydive, and parachute.**
+  - He **gives jobs around the island to help liberate it** (from HYDRA).
+  - **His arc / send-off:** after you complete **all of Molotov's contracts**,
+    you return to his cave to find him **gone** — he raised enough money to **buy
+    a helicopter and leave the island.**
+  - **The radio transmission (his ending):** later, the player can find a **radio
+    transmission** revealing Molotov **made it to the coast — but his
+    helicopter's fuel/engine died right on the beach.** He has **enough supplies
+    to last a few months** — *(stated as **less than** the time he'd need to find
+    a place to settle down → a **bittersweet, uncertain** fate; confirm phrasing)*.
+  - **Why it lands:** Molotov, the sole true survivor of Team Apex, finally gets
+    to **walk away from the war** — helping one last stranger liberate one last
+    place ("we pay our debts"), then leaving — but his freedom is **precarious**,
+    not a clean happy ending. Fitting for him.
+
+> **CONTINUITY (important):** This **confirms Molotov SURVIVES the campaign**
+> (he was in hiding at its end, not at the Mission 11 massacre). A fixed point for
+> the campaign epilogue. See his profile + roster tracker.
 
 ## Operator Profiles
 
