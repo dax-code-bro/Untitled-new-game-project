@@ -41,8 +41,10 @@ complete screenplays.
   Spike & Striker raid a HYDRA base near Africa for intel on Drone 9's latest
   user and a potential **owner of HYDRA** *(scripted + fracturing aftermath)*.
 - `game/design/missions/mission-10.md` — **Mission 10 — "Whom Can We Trust Among
-  Us?"** — trust/paranoia turning point *(title + placement locked; beats
-  pending)*.
+  Us?"** — Spike confirms Abraham, Molotov cripples him (brainwashing) *(scripted)*.
+- `game/design/missions/mission-11.md` — **Mission 11 (title TBD)** — **the
+  Abraham betrayal/massacre**: Apex annihilated, Fox executed, twins killed
+  *(scripted)*.
 
 **Known mission order so far:** 1 (Colombia/Columbia, classified) → 2 (1948
 flashback + boardroom) → 3 "Would You Like a Receipt With That Order?" → 4 "Sins
@@ -214,7 +216,11 @@ members not yet introduced (TBD). The six documented so far:
 - **Rank:** *TBD.* **Present age:** see flashback timeline flag (Hitler-era Mollys
   implies he could be ~58 in 1985 — to reconcile).
 
-##### 2. James "Fox" Carter
+##### 2. James "Fox" Carter — **DECEASED (KIA Mission 11)**
+> **Status:** **executed by Abraham** (golden Colt M1911, headshot) after the
+> ambush, while crawling away wounded. The founder and heart of Team Apex, killed
+> by the general he trusted.
+
 - **Callsign:** "Fox" (between first/last: James Carter).
 - **Age / heritage:** **65 years old** (born 1920; as of the 1985 setting), **Irish**.
 - **Archetype:** grizzled, battle-hardened war veteran — implied elite
@@ -265,7 +271,10 @@ high-ranking **Sergeant / officer** leading young Irish troops.
     (traitor, dead), **Molotov gone into hiding**, Spike diverging. Fox's fear of
     the unit coming apart is starting to come true.
 
-##### 3. John "Striker" Jones
+##### 3. John "Striker" Jones — **⚠ presumed KIA (Mission 11 ambush)**
+> **Status:** gunned down with the trio in the LMG ambush (presumed killed —
+> confirm whether he dies outright or survives).
+
 - **Callsign:** "Striker" (between first/last: John Jones).
 - **Pronoun:** he/him.
 - **Age:** ~24 — the **fresh recruit / new blood** of the squad (the rookie).
@@ -276,7 +285,15 @@ high-ranking **Sergeant / officer** leading young Irish troops.
   PP-91 KEDR or PP-19.)*
 - **Personality / heritage / backstory:** *TBD.*
 
-##### 4. General Abraham
+##### 4. General Abraham — **THE TRAITOR (revealed Mission 11)**
+> **THE BIG REVEAL:** Abraham is the traitor — HYDRA's / Victor Prestige's man
+> ("Ray Abraham"). He **used Team Apex to retrieve the final intel** on the HYDRA
+> leader, then **led them into an ambush and annihilated them**, personally
+> **executing Fox** with his golden Colt M1911. His exit line: *"Next time, just
+> don't try to double-check. That's all you had to do."* Recontextualizes his
+> whole arc — the secrecy, the deep HYDRA knowledge, "fixes broken people," even
+> his Hellfire objection. The team's own general was the snake all along.
+
 - **Rank:** four-star general — the top brass attached to the team.
 - **Name:** "Abraham" (first/last unconfirmed).
 - **Signature weapon:** a **pure gold Colt M1911** pistol — a flashy, prestige
@@ -334,7 +351,10 @@ high-ranking **Sergeant / officer** leading young Irish troops.
 - **Specialty / personality / weapon / backstory:** *TBD — revealed throughout
   the story* ("we will see").
 
-##### 6. "Payback" — the mystery operator
+##### 6. "Payback" — the mystery operator — **⚠ presumed KIA (Mission 11 ambush)**
+> **Status:** gunned down with the trio in the LMG ambush (presumed killed —
+> confirm; her unknown identity could leave room for a survival twist).
+
 - **Pronoun:** she/her.
 - **Codename:** "Payback." **No one knows her real name** — she operates solely
   under the codename.
@@ -346,7 +366,12 @@ high-ranking **Sergeant / officer** leading young Irish troops.
 - **Loyalty (Mission 10):** **remains loyal to the system** as the team fractures.
 - **Role / specialty / personality / backstory:** *TBD.*
 
-##### 7 & 8. The Wolford Twins — Brian & Jesse Wolford
+##### 7 & 8. The Wolford Twins — Brian & Jesse Wolford — **DECEASED (KIA Mission 11)**
+> **Status:** **both killed on the overwatch hill** in Mission 11 — shot from
+> behind by two of Abraham's planted operators the instant Brian lined up a shot
+> on Abraham. They died realizing the betrayal, one trigger-pull short of
+> stopping it.
+
 - **Brian Wolford and Jesse Wolford are TWINS** — Team Apex's quieter operators,
   a matched pair (relationship CONFIRMED).
 - Background roster; deployed on Hellfire (every member was).
