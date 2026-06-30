@@ -68,6 +68,16 @@
 - *(Note: French name here vs. Spanish "Isla del Neón Fuego" — mixed-language
   worldbuilding; flag if you want consistency.)*
 
+### Landmark — The Dark Ritual Site (tropical mountaintop)
+- A **small dark ritual site** atop a **tropical mountain.**
+- Centerpiece: a **body missing its legs and hands, impaled on a spike.**
+- The head wears a **skull mask** with a **symbol in the middle** of it.
+- **Several torches** ring the site (lit — someone tends this).
+- **Tone:** grim, horror-tinged; signals a **cult / ritualistic faction**
+  presence on the map. The lit torches imply it's **active**, not abandoned.
+- **⚠ Hook — the symbol:** what is it? **HYDRA's three-headed serpent**, or a
+  **new cult/faction's** mark? Big worldbuilding thread for this mode. *(Confirm.)*
+
 ## Operator Profiles
 
 ### Flint — Mateo Grandy
