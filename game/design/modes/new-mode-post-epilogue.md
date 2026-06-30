@@ -88,13 +88,24 @@
   objective hub** for this mode. (Possibly tied to the mountaintop ritual site —
   is that symbol HYDRA's? — see ritual-site hook.)
 
+### Outposts (multiple factions present)
+The island hosts several outposts beyond the HYDRA village — implying an
+**international/multi-faction hotspot:**
+- **American government outpost** — on a **coastal area.**
+- **Hawaiian outpost** — **next to the dark ritual site** (mountaintop).
+- **European outpost** — on the **side of the mountain.**
+- *(Roles TBD: allies? rivals? neutral quest hubs? vendors? Confirm how the
+  player interacts with each faction. The American gov't presence may tie back to
+  the campaign's US/government threads.)*
+
 ### Map layout (forming)
 - **One end:** **Isla del Neón Fuego** — the dense neon city (beach/forest border).
 - **Opposite end:** **San Juan de la Selva** — small HYDRA-held jungle village.
 - **Between/around:** the **Rivière de la Mort** (death river + 70 ft waterfall →
-  clearing lake → ocean canal), the **mountaintop dark ritual site**, beach,
-  tropical forest, ocean. A clear **"civilization vs. wilderness/enemy"** spread
-  across the huge ~200×60 mi world.
+  clearing lake → ocean canal), the **mountaintop dark ritual site**, and faction
+  **outposts** (American gov't / coastal, Hawaiian / by the ritual site, European
+  / mountainside), plus beach, tropical forest, ocean. A clear **"civilization
+  vs. wilderness/enemy"** spread across the huge ~200×60 mi world.
 
 ## Operator Profiles
 
