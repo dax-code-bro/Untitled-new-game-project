@@ -11,7 +11,7 @@
   as from a roster.
 
 ## Playable Roster (so far)
-- **Private Star** — "Rich," female, 5'9"/170 lbs.
+- **Private Star** — "Rich," female, 5'11"/210 lbs.
 - **Nemesis / Genesis** ⚠ (name to confirm) — German, no full name, 6'4"/230 lbs.
 - **Spine Ridge** — playable operator (separate from Nemesis). Captain, ex-sniper,
   6'2"/200 lbs.
@@ -54,7 +54,7 @@
 - **Callsign:** "Private Star." **Name: Rich** *(⚠ first name / surname / full
   name? — confirm).*
 - **Gender:** female.
-- **Build:** **5'9", 170 lbs.**
+- **Build:** **5'11", 210 lbs.** *(Revised from an earlier 5'9"/170.)*
 - **Role / playstyle / weapons / personality / heritage / backstory:** *TBD.*
 
 ## Open / TBD
