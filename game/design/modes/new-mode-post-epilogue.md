@@ -12,7 +12,7 @@
 
 ## Playable Roster (so far)
 - **Private Star** — playable operator. *(Details TBD.)*
-- **Nemesis** — playable operator. *(Details TBD.)*
+- **Nemesis / Genesis** ⚠ (name to confirm) — German, no full name, 6'4"/230 lbs.
 - **Spine Ridge** ("Spineridge"?) — playable operator. *(Details TBD.)*
 - **Flint** — playable operator/character. *(Details TBD. Note: "Flint" =
   fire-starter — possible thematic echo of Molotov's fire motif? TBD.)*
@@ -32,6 +32,14 @@
 - **Role / playstyle / weapons / personality:** *TBD.*
 - **Callsign origin ("Flint") / connection to campaign cast:** *TBD* (the
   fire-starter name may or may not tie to Molotov's fire motif).
+
+### Nemesis / Genesis  ⚠ (name to confirm)
+- **⚠ Name discrepancy:** introduced as **"Nemesis,"** then called **"Genesis."**
+  Confirm which (very different names). Recorded as **"Nemesis/Genesis"** for now.
+- **Heritage:** **German.**
+- **Name:** **no full name** (a mononym — like Payback in the campaign).
+- **Build:** **6'4", 230 lbs** — big, imposing.
+- **Role / playstyle / weapons / personality / backstory:** *TBD.*
 
 ## Open / TBD
 - **Mode name** (it'll want a title in the same spirit as the rest of the game).
