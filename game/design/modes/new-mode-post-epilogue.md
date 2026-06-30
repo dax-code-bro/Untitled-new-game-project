@@ -22,6 +22,15 @@
 > operators** (each has a distinct profile). Earlier "an operator called Nemesis
 > Spine Ridge" was just two names run together.
 
+## World / Map
+- **A huge map** — stated as **"200 mi² long, 60 mi² thick."**
+  - *(⚠ Units: "mi²" with "long/thick" is mixed — likely means **~200 miles long
+    × ~60 miles wide**, i.e. a gigantic open-world landmass. Confirm exact
+    dimensions. Either reading = enormous, **open-world scale.**)*
+- **Implication:** this mode is **large-scale / open-world** (exploration,
+  traversal, vehicles likely) — not a tight arena. Big enough to hold many
+  distinct regions.
+
 ## Operator Profiles
 
 ### Flint — Mateo Grandy
