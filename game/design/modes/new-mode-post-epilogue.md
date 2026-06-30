@@ -31,6 +31,19 @@
   traversal, vehicles likely) — not a tight arena. Big enough to hold many
   distinct regions.
 
+### Drop-in city — **Isla del Neón Fuego** ("Island of Neon Fire")
+- **You drop in by helicopter** into this city.
+- **Aesthetic — a blend of four real places:**
+  - **Hawaii** — tropical, beachfront, lush.
+  - **San Francisco** — hills, bridges, dense urban character.
+  - **New York** — skyscrapers, big-city density.
+  - **Las Vegas** — neon, lights, glitz (the "Neón Fuego" / neon-fire vibe).
+- **Location:** right on the **border where the beach meets the tropical
+  forest** — paradise on one side, jungle on the other.
+- **Size:** **~6 mi wide × ~8 mi thick** (the city footprint, set within the
+  much larger ~200×60 mi open-world map).
+- *(Name is Spanish for "Island of Neon Fire" — recorded as given.)*
+
 ## Operator Profiles
 
 ### Flint — Mateo Grandy
