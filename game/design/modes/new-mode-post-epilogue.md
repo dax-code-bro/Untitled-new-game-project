@@ -78,6 +78,24 @@
 - **⚠ Hook — the symbol:** what is it? **HYDRA's three-headed serpent**, or a
   **new cult/faction's** mark? Big worldbuilding thread for this mode. *(Confirm.)*
 
+### Location — San Juan de la Selva (HYDRA-controlled village)
+- A **small traditional village, deep in the forest**, on the **direct opposite
+  side of the map** from the neon city (Isla del Neón Fuego).
+- **Controlled by HYDRA.**
+- Name is **Spanish for "St. John of the Jungle/Forest."**
+- **Significance:** confirms **HYDRA survives into this mode** (~1 year after the
+  campaign epilogue) and holds territory here. Likely the **enemy stronghold /
+  objective hub** for this mode. (Possibly tied to the mountaintop ritual site —
+  is that symbol HYDRA's? — see ritual-site hook.)
+
+### Map layout (forming)
+- **One end:** **Isla del Neón Fuego** — the dense neon city (beach/forest border).
+- **Opposite end:** **San Juan de la Selva** — small HYDRA-held jungle village.
+- **Between/around:** the **Rivière de la Mort** (death river + 70 ft waterfall →
+  clearing lake → ocean canal), the **mountaintop dark ritual site**, beach,
+  tropical forest, ocean. A clear **"civilization vs. wilderness/enemy"** spread
+  across the huge ~200×60 mi world.
+
 ## Operator Profiles
 
 ### Flint — Mateo Grandy
