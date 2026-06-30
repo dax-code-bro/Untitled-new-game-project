@@ -22,6 +22,17 @@
 > separate operators, **"Nemesis"** and **"Spine Ridge"**? Recorded as separate
 > for now.
 
+## Operator Profiles
+
+### Flint — Mateo Grandy
+- **Callsign:** "Flint." Real name **Mateo Grandy.**
+- **Build:** **5'10", 190 lbs.**
+- **Heritage:** **Mexican** — descends from a **lineage renowned for fighting in
+  many Mexican wars**, notably the **Mexican Revolution.** A bloodline of soldiers.
+- **Role / playstyle / weapons / personality:** *TBD.*
+- **Callsign origin ("Flint") / connection to campaign cast:** *TBD* (the
+  fire-starter name may or may not tie to Molotov's fire motif).
+
 ## Open / TBD
 - **Mode name** (it'll want a title in the same spirit as the rest of the game).
 - **What kind of mode is it?** Story missions with selectable operators? Roguelike?
