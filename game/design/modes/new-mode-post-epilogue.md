@@ -13,14 +13,14 @@
 ## Playable Roster (so far)
 - **Private Star** — playable operator. *(Details TBD.)*
 - **Nemesis / Genesis** ⚠ (name to confirm) — German, no full name, 6'4"/230 lbs.
-- **Spine Ridge** ("Spineridge"?) — playable operator. *(Details TBD.)*
+- **Spine Ridge** — playable operator (separate from Nemesis). Captain, ex-sniper,
+  6'2"/200 lbs.
 - **Flint** — playable operator/character. *(Details TBD. Note: "Flint" =
   fire-starter — possible thematic echo of Molotov's fire motif? TBD.)*
 
-> **⚠ ROSTER PARSING — confirm:** "an operator called Nemesis Spine Ridge" is
-> ambiguous. Is it **ONE** operator named **"Nemesis Spineridge,"** or **TWO**
-> separate operators, **"Nemesis"** and **"Spine Ridge"**? Recorded as separate
-> for now.
+> **ROSTER PARSING — RESOLVED:** **Nemesis and Spine Ridge are TWO separate
+> operators** (each has a distinct profile). Earlier "an operator called Nemesis
+> Spine Ridge" was just two names run together.
 
 ## Operator Profiles
 
@@ -40,6 +40,15 @@
 - **Name:** **no full name** (a mononym — like Payback in the campaign).
 - **Build:** **6'4", 230 lbs** — big, imposing.
 - **Role / playstyle / weapons / personality / backstory:** *TBD.*
+
+### Spine Ridge  *(read from "fine"/"Spine" — confirm spelling)*
+- **Build:** **6'2", 200 lbs.**
+- **Rank:** **Captain.**
+- **Background:** **mainly a sniper** — **before going off the radar** (went
+  dark / disappeared). The "off the radar" past is a built-in mystery hook.
+- **Role / playstyle / weapons / personality / full backstory:** *TBD.*
+- *(His having a standalone profile confirms **Spine Ridge is a separate
+  operator**, NOT part of "Nemesis's" name — see resolved parsing below.)*
 
 ## Open / TBD
 - **Mode name** (it'll want a title in the same spirit as the rest of the game).
