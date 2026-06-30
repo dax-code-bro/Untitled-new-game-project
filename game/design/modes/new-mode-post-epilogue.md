@@ -44,6 +44,19 @@
   much larger ~200×60 mi open-world map).
 - *(Name is Spanish for "Island of Neon Fire" — recorded as given.)*
 
+#### City detail — a living world
+- **Fully lit** — the city glows (neon, detailed lighting).
+- **Every building is detailed** — high fidelity; buildings feel real/enterable.
+- **Tons of civilians** populate the city — a living, busy place, not an empty
+  map. (Implies NPC crowds, ambient city life.)
+- **Shops you can visit:**
+  - **Clothing store** — *(likely cosmetics / operator customization).*
+  - **General store** — *(likely supplies / items / gear).*
+- **Design read:** this is an **immersive, GTA-density living open-world city**
+  — explore, shop, blend with crowds — rather than a pure shooter arena. *(Note:
+  civilians + the campaign's friendly-fire rule may interact — see GAME_DESIGN
+  story-protection rules; confirm whether civilians here are protected too.)*
+
 ## Operator Profiles
 
 ### Flint — Mateo Grandy
