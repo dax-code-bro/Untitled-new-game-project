@@ -9,6 +9,17 @@
   the campaign ends (epilogue still TBD — see flag).
 - **Operator-select / multiple playable operators** — you can choose who you play
   as from a roster.
+- **CORE CONCEPT — Mercenary for hire.** The operator you play is a **rogue
+  ex-military mercenary** on the island who **takes jobs from anyone who pays** —
+  no fixed allegiance, money talks. The whole stable of operators are guns for
+  hire.
+  - Fits the **multi-faction island** (American, Hawaiian, European, HYDRA — all
+    potential clients *and* targets) — you work for whoever's paying.
+  - Explains **Spine Ridge "going off the radar"** (a captain who went merc).
+  - Thematic echo of the campaign's **Drone 9** (sentient bodyguard-for-hire) —
+    this world runs on mercenaries.
+  - *(Core loop = contracts/jobs for money. Exact loop — open-world contract
+    sandbox? — TBD.)*
 
 ## Playable Roster (so far)
 - **Private Star** — "Rich," female, 5'11"/210 lbs.
