@@ -57,6 +57,17 @@
   civilians + the campaign's friendly-fire rule may interact — see GAME_DESIGN
   story-protection rules; confirm whether civilians here are protected too.)*
 
+### Landmark — Rivière de la Mort ("River of Death")
+- **The largest river in the game.** Name is **French for "River of Death."**
+- **Very strong current** — a real hazard; can sweep players/objects downstream.
+- **Flows to a waterfall — a 70-foot drop.**
+- The waterfall pours into a **lake inside a little clearing.**
+- That lake has a **canal that leads out to the ocean.**
+- **Water route:** river → 70 ft waterfall → hidden clearing lake → canal →
+  **ocean.** A natural traversal/escape path (and a deadly one if you fall in).
+- *(Note: French name here vs. Spanish "Isla del Neón Fuego" — mixed-language
+  worldbuilding; flag if you want consistency.)*
+
 ## Operator Profiles
 
 ### Flint — Mateo Grandy
