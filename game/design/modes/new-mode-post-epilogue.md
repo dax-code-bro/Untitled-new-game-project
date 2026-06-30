@@ -49,7 +49,8 @@ sandbox:
 - **Contracts** — accept jobs from **multiple contractors around the map** for
   money. **Infinite contracts** (endless/procedural), varied objectives.
 - **Liberate San Juan de la Selva** — the small HYDRA-occupied town; clearing it
-  **unlocks a SECOND hub** (see Shops).
+  **unlocks a SECOND hub** (see Shops). *(This happens via Molotov's final secret
+  contract, "We Pay Our Debt" — see the Molotov Easter Egg.)*
 
 > **Tone:** an open, *fun* sandbox — explore, hunt, parachute, take jobs, get
 > paid. Lighter, freeform counterpoint to the campaign's heavy story.
@@ -167,6 +168,28 @@ The island hosts several outposts beyond the HYDRA village — implying an
     to **walk away from the war** — helping one last stranger liberate one last
     place ("we pay our debts"), then leaving — but his freedom is **precarious**,
     not a clean happy ending. Fitting for him.
+
+### Easter Egg Walkthrough — Finding & Completing Molotov
+1. **Find the cave (off-route).** Head off the beaten path to **Molotov's cave.**
+2. **The intro scene:**
+   - Molotov is **loading a homemade musket**, then **points it at you.**
+   - **Player:** "Does it still work?" *(asks if the musket still works)*
+   - Molotov **shoots a chicken in a cage** — the bullet punches **clean through
+     the chicken's head.** He **cocks it again**, still aimed at you.
+   - **Player:** "I'm just here for work."
+   - Molotov then offers a **few contract options.**
+3. **The contract chain.** Work up through Molotov's contracts.
+4. **Final contract — "We Pay Our Debt"** *(callback to his catchphrase "we pay
+   our debts").* A **hefty firefight** to **take down the HYDRA base and liberate
+   the village (San Juan de la Selva).**
+   - **NOTE:** this is the **same event** that liberates the town and unlocks the
+     second shop hub — Molotov's questline IS the village-liberation content.
+5. **The payout (split):** **Molotov is paid $2.5 BILLION; the player gets
+   $325 MILLION** — because "Molotov did most of the work." *(The $2.5B is what
+   funds his helicopter and his escape from the island.)*
+6. **The send-off:** return to the cave afterward → **he's gone** (bought a
+   helicopter, left the island) → later find the **radio transmission** (made the
+   coast, chopper died on the beach, limited supplies — see above).
 
 > **CONTINUITY (important):** This **confirms Molotov SURVIVES the campaign**
 > (he was in hiding at its end, not at the Mission 11 massacre). A fixed point for
