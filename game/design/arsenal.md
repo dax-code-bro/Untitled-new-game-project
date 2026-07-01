@@ -4,6 +4,12 @@
 
 ## 1. Assault Rifles (42 / 44 — 2 reassigned to Marksman Rifles)
 
+### Shared Attachments — All Assault Rifles
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Supported Barrel | Barrel | Massively increases damage; adds bullet penetration, bullet velocity, and bullet range | Decently decreases mobility and accuracy | Front-heavy design shifts the weapon's balance forward; the weight and length gain is what drives both the damage boost and the handling penalty. |
+
 | # | Name | Damage | Accuracy | Mobility | Fire Rate | Recoil | Fire Modes | Notes |
 |---|------|--------|----------|----------|-----------|--------|------------|-------|
 | 1 | M4A1 | Medium | Medium | High | High (~800 RPM) | Low | Semi / Auto | Lightweight carbine; fast transitions; tight hip-fire; mild vertical climb in sustained auto. |
