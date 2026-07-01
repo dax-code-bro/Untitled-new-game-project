@@ -24,15 +24,54 @@
 | Diego (1948) | period weapons (StG44/M1/etc.) |
 | Molotov (island Easter egg) | **homemade musket** |
 
-## The 200+ Named Guns (catalog — to be filled in)
-> Format per entry: **Name — class — unique attachment — notes.**
+## Weapon Class Breakdown (exactly 200 total)
+| Class | Count |
+| --- | --- |
+| Assault Rifles | 44 |
+| Marksman Rifles | 30 |
+| Unique / Exotic Weapons | 26 |
+| Projectile Melee | 25 |
+| Submachine Guns (SMGs) | 20 |
+| Explosive Weapons | 20 |
+| Shotguns | 14 |
+| Sniper Rifles | 11 |
+| Bows & Crossbows | 10 |
+| **TOTAL** | **200** ✓ |
 
-*(TBD — user to provide names/attachments. Will be filled in over time; this is
-the master list.)*
+*(Sum verified: 44+30+26+25+20+20+14+11+10 = 200.)*
 
-1. *(TBD)*
-2. *(TBD)*
-...
+## The 200 Named Guns (catalog — to be filled in)
+> Format per entry: **Name — unique attachment — notes.** Each weapon gets its own
+> name and its own unique attachment.
+
+### Assault Rifles (0/44 named)
+1. *(TBD)* … 44. *(TBD)*
+
+### Marksman Rifles (0/30 named)
+1. *(TBD)* … 30. *(TBD)*
+
+### Unique / Exotic Weapons (0/26 named)
+1. *(TBD)* … 26. *(TBD)*
+
+### Projectile Melee (0/25 named)
+1. *(TBD)* … 25. *(TBD)*
+
+### Submachine Guns / SMGs (0/20 named)
+1. *(TBD)* … 20. *(TBD)*
+- *(Striker's **PP919** belongs here.)*
+
+### Explosive Weapons (0/20 named)
+1. *(TBD)* … 20. *(TBD)*
+
+### Shotguns (0/14 named)
+1. *(TBD)* … 14. *(TBD)*
+- *(Fox's **Benelli M3 Super 90** belongs here.)*
+
+### Sniper Rifles (0/11 named)
+1. *(TBD)* … 11. *(TBD)*
+
+### Bows & Crossbows (0/10 named)
+1. *(TBD)* … 10. *(TBD)*
 
 ## Open / TBD
 - The full 200+ named list + each gun's unique attachment.
