@@ -193,6 +193,11 @@ members not yet introduced (TBD). The six documented so far:
 > transmission reveals he **reached the coast but his chopper died on the beach**,
 > surviving on a few months' supplies — fate uncertain/bittersweet. The lone true
 > survivor of Team Apex finally walking away from the war.
+> **Fox was his one breaking point:** Molotov held his flat, serious tone through
+> the entire Spike tragedy (agreeing with him, then crippling him) — **no tears,
+> no waver.** The ONLY thing that shatters his composure is finding **Fox's body**
+> (M12): one tear, "I'm sorry." Fox — who took him in and called him "Molly" —
+> meant more to him than anyone. His single point of vulnerability.
 
 - **Callsign:** "Molotov" (sits between first/last name: Webber Newman).
 - **Demeanor:** exceptionally quiet — almost never talks. Dead serious, with

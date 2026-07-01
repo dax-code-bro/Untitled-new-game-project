@@ -56,10 +56,14 @@
 > *(— END OF MISSION 12. —)*
 
 ## WHY IT LANDS / THREADS
-- **The stoic breaks.** Molotov — who "died in a grave" and never shows emotion,
-  the near-silent man — sheds **one tear** and says **two words.** For him, that's
-  a total collapse. Fox was the leader who took him in and called him "Molly"
-  (warmth); now Fox is dead in his arms.
+- **The stoic breaks — and ONLY for Fox.** This is the key. Molotov held his
+  **exact same serious, flat tone** the entire Spike sequence (M10) — he didn't
+  soften when he *agreed* with Spike, and he **didn't cry or waver after he shot
+  and crippled him.** Iron composure through all of it. So the fact that **Fox's
+  body is what finally shatters him** — one tear, collapse to both knees,
+  "I'm sorry" — tells us, with zero exposition, that **Fox meant more to him than
+  anyone.** The unbreakable man had exactly one breaking point, and it was Fox.
+  (Fox took him in, founded the team that became his family, called him "Molly.")
 - **His arc of failure:** couldn't save his little brother (flashback), couldn't
   save Spike (M10), now couldn't save the team. **"I'm sorry"** is the weight of
   all of it. This guilt drives his post-campaign path (the island, "we pay our
