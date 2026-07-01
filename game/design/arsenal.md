@@ -66,9 +66,22 @@ revolver. Sum: 44+30+26+25+20+14+11+11+10+9 = 200.)*
 ### Explosive Weapons (0/11 named)
 1. *(TBD)* … 11. *(TBD)*
 
-### Pistols (0/9 named)
-1. *(TBD)* … 9. *(TBD)*
-- *(Abraham's **gold Colt M1911** and Diego's **revolver** belong here.)*
+### Pistols (9/9 named — ⚠ DRAFT, pending approval)
+> Format: **Name** — base type — *Unique Attachment* — notes.
+1. **The Statesman** — gold Colt M1911 — *Gilded Slide* (pure-gold slide; faster
+   ADS, intimidation flair) — **Abraham's signature sidearm.**
+2. **Vaquero** — single-action .45 revolver — *Fanning Hammer* (rapid fan-fire) —
+   **Diego's 1948 revolver.**
+3. **Sidewinder** — fast 9mm semi-auto — *Snakebite Compensator* (recoil control).
+4. **The Deacon** — heavy .44 Magnum revolver — *Sermon Ported Barrel* (muzzle
+   climb tamed on a hand-cannon).
+5. **Ghostwriter** — integrally suppressed pistol — *Redacted Rounds* (subsonic;
+   near-silent) — nods to the campaign's "classified" motif.
+6. **Little Havana** — compact machine pistol — *Cigar-Box Drum* (extended mag).
+7. **Nightcap** — .380 pocket pistol — *Last Call Laser* (fast close-range sight).
+8. **The Notary** — burst-fire pistol — *Triple-Seal Burst* (tighter 3-round burst).
+9. **Neon Fang** — flashy pistol (Isla del Neón Fuego vibe) — *Fuego Tracers*
+   (incendiary tracer rounds).
 
 ### Shotguns (0/14 named)
 1. *(TBD)* … 14. *(TBD)*
