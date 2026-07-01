@@ -32,13 +32,16 @@
 | Unique / Exotic Weapons | 26 |
 | Projectile Melee | 25 |
 | Submachine Guns (SMGs) | 20 |
-| Explosive Weapons | 20 |
 | Shotguns | 14 |
+| Explosive Weapons | 11 |
 | Sniper Rifles | 11 |
 | Bows & Crossbows | 10 |
+| **Pistols** | **9** |
 | **TOTAL** | **200** ✓ |
 
-*(Sum verified: 44+30+26+25+20+20+14+11+10 = 200.)*
+*(Rebalance: **Explosives 20 → 11**; the 9 freed slots became a new **Pistols**
+class — fills a gap (no sidearms before) and homes Abraham's gold M1911 / Diego's
+revolver. Sum: 44+30+26+25+20+14+11+11+10+9 = 200.)*
 
 ## The 200 Named Guns (catalog — to be filled in)
 > Format per entry: **Name — unique attachment — notes.** Each weapon gets its own
@@ -60,8 +63,12 @@
 1. *(TBD)* … 20. *(TBD)*
 - *(Striker's **PP919** belongs here.)*
 
-### Explosive Weapons (0/20 named)
-1. *(TBD)* … 20. *(TBD)*
+### Explosive Weapons (0/11 named)
+1. *(TBD)* … 11. *(TBD)*
+
+### Pistols (0/9 named)
+1. *(TBD)* … 9. *(TBD)*
+- *(Abraham's **gold Colt M1911** and Diego's **revolver** belong here.)*
 
 ### Shotguns (0/14 named)
 1. *(TBD)* … 14. *(TBD)*
