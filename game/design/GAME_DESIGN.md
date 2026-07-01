@@ -49,8 +49,11 @@ complete screenplays.
   POV: races to warn the team, finds them all dead; breaks down over Fox's body
   *(scripted)*.
 - `game/design/missions/mission-13.md` — **Mission 13 (title TBD)** — time skip
-  ("12 years later — Dec 31, 2000"); a prison, rows of **H1.0-pattern robots**
-  *(scene + ⚠ timeline reconciliation flag)*.
+  ("15 years later — Dec 31, 2000"); a prison, rows of **H1.0-pattern robots**
+  *(scene; timeline resolved)*.
+
+**Timeline chain:** 1985 (campaign) → Dec 31, 2000 (M13 time-skip) → late 2001 /
+post-9/11 (open-world mercenary mode).
 
 **Known mission order so far:** 1 (Colombia/Columbia, classified) → 2 (1948
 flashback + boardroom) → 3 "Would You Like a Receipt With That Order?" → 4 "Sins
