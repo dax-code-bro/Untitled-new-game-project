@@ -12,6 +12,7 @@
 | Steady Aim Barrel | Barrel | Massively increases ADS accuracy | Major hip-fire accuracy falloff | **Unlock: Weapon Level 15.** Lightweight design — no mobility penalty. Built purely for precision while aiming down sights; completely unreliable from the hip. |
 | SWAT Barrel | Barrel | Massive headshot damage multiplier | Heavily increases both horizontal and vertical recoil | **Unlock: Weapon Level 27.** High-risk, high-reward; rewards precise aim at the head but makes sustained fire and recoil control significantly harder. |
 | Spiral Barrel | Barrel | Massively increases bullet penetration, utility strike damage, and bullet velocity — no downsides | None | **Unlock: Weapon Max Level (41).** Rifling imparts a tight drill-like spin on the bullet; the spin dramatically increases penetration through materials and enemies, and supercharges utility/equipment strikes. Pure endgame reward — no trade-off. |
+| Striker Barrel | Barrel | Massively increases bullet spread; major close-range damage boost — effectively turns the rifle into a shotgun at close quarters | Heavily decreases damage range, bullet velocity, headshot multiplier, and nearly all standard rifle stats | **Unlock: TBD.** Completely transforms the rifle's role — all long-range capability is sacrificed in exchange for devastating close-range spread damage. A fully committed CQB conversion; useless at distance. |
 
 | # | Name | Damage | Accuracy | Mobility | Fire Rate | Recoil | Fire Modes | Notes |
 |---|------|--------|----------|----------|-----------|--------|------------|-------|
