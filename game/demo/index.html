@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>UNTITLED — First Demo</title>
+<style>
+  :root { color-scheme: dark; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #05060a; font-family: ui-monospace, Menlo, Consolas, monospace; color: #cdd6f4; }
+  #app { position: fixed; inset: 0; }
+  canvas { display: block; }
+
+  /* ---------- Overlays ---------- */
+  .overlay { position: fixed; inset: 0; display: grid; place-items: center; text-align: center;
+    background: radial-gradient(circle at 50% 40%, #0b1020 0%, #05060a 80%); z-index: 20; }
+  .hidden { display: none !important; }
+  .card { max-width: 720px; padding: 40px; }
+  h1.title { font-size: 44px; letter-spacing: 6px; color: #89b4fa; text-shadow: 0 0 24px #1e3a8a; }
+  .sub { color: #6c7086; margin-top: 8px; letter-spacing: 3px; font-size: 13px; }
+  .modes { margin-top: 34px; display: grid; gap: 12px; }
+  .mode { padding: 14px 20px; border: 1px solid rgba(137,180,250,.35); border-radius: 10px; cursor: pointer;
+    background: rgba(20,26,44,.5); transition: .15s; font-size: 15px; letter-spacing: 2px; }
+  .mode:hover { border-color: #89b4fa; background: rgba(30,58,138,.35); transform: translateY(-1px); }
+  .mode small { display:block; color:#6c7086; letter-spacing:1px; font-size:11px; margin-top:4px; }
+  .mode.soon { opacity:.55; }
+  .mode .tag { color:#a6e3a1; }
+  .mode .tagsoon { color:#f9e2af; }
+
+  /* Story card */
+  #story .card { max-width: 640px; }
+  .stamp { font-size: 30px; letter-spacing: 8px; color:#e6e6e6; }
+  .classified { margin-top:22px; font-size:15px; letter-spacing:4px; color:#f38ba8; border:1px solid #f38ba8; display:inline-block; padding:8px 16px; border-radius:6px; }
+  .prompt { margin-top:40px; color:#89b4fa; animation: blink 1.2s steps(2) infinite; }
+  @keyframes blink { 50% { opacity:.25; } }
+
+  /* ---------- HUD ---------- */
+  #hud { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
+  #crosshair { position:absolute; left:50%; top:50%; width:16px; height:16px; transform:translate(-50%,-50%); }
+  #crosshair::before, #crosshair::after { content:''; position:absolute; background:#e6e6e6; box-shadow:0 0 3px #000; }
+  #crosshair::before { left:50%; top:0; width:2px; height:16px; transform:translateX(-50%); }
+  #crosshair::after { top:50%; left:0; height:2px; width:16px; transform:translateY(-50%); }
+  #nameplate { position:absolute; left:50%; top:calc(50% + 22px); transform:translateX(-50%); font-size:13px; letter-spacing:1px; font-weight:bold; text-shadow:0 0 4px #000; white-space:nowrap; }
+  #bottomleft { position:absolute; left:22px; bottom:20px; }
+  #hp { width:220px; height:10px; background:rgba(255,255,255,.12); border-radius:5px; overflow:hidden; margin-top:6px; }
+  #hpfill { height:100%; width:100%; background:linear-gradient(90deg,#f38ba8,#a6e3a1); transition:width .15s; }
+  #bottomright { position:absolute; right:24px; bottom:18px; text-align:right; }
+  #ammo { font-size:34px; font-weight:bold; color:#e6e6e6; }
+  #ammo small { font-size:16px; color:#6c7086; }
+  #wname { color:#89b4fa; letter-spacing:2px; margin-top:2px; }
+  #watt { color:#6c7086; font-size:11px; }
+  #topleft { position:absolute; left:22px; top:18px; font-size:12px; color:#6c7086; }
+  #topleft .fps { color:#a6e3a1; }
+  #topright { position:absolute; right:22px; top:18px; font-size:12px; color:#6c7086; text-align:right; line-height:1.7; }
+  #topright b { color:#cdd6f4; }
+  #killfeed { position:absolute; right:22px; top:90px; text-align:right; font-size:12px; color:#f38ba8; }
+  #toast { position:absolute; left:50%; top:32%; transform:translateX(-50%); color:#f9e2af; font-size:15px; letter-spacing:2px; text-shadow:0 0 6px #000; opacity:0; transition:opacity .2s; }
+
+  /* Fail flash */
+  #fail { position:fixed; inset:0; background:#000; z-index:30; display:grid; place-items:center; opacity:0; pointer-events:none; transition:opacity .12s; }
+  #fail.show { opacity:1; }
+  #fail div { color:#f38ba8; font-size:22px; letter-spacing:4px; }
+
+  #pad { position:absolute; right:22px; bottom:96px; font-size:11px; color:#585b70; text-align:right; }
+  #pad.on { color:#a6e3a1; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "./vendor/three.module.js",
+  "three/addons/controls/PointerLockControls.js": "./vendor/PointerLockControls.js"
+}}
+</script>
+</head>
+<body>
+<div id="app"></div>
+
+<!-- HUD -->
+<div id="hud" class="hidden">
+  <div id="crosshair"></div>
+  <div id="nameplate"></div>
+  <div id="topleft">FPS <span class="fps" id="fps">--</span></div>
+  <div id="topright"></div>
+  <div id="killfeed"></div>
+  <div id="toast"></div>
+  <div id="bottomleft"><div style="letter-spacing:2px;font-size:12px;color:#6c7086">HEALTH</div><div id="hp"><div id="hpfill"></div></div></div>
+  <div id="bottomright">
+    <div id="ammo">--<small>/--</small></div>
+    <div id="wname">—</div>
+    <div id="watt">—</div>
+  </div>
+  <div id="pad">🎮 controller: not detected</div>
+</div>
+
+<!-- Menu -->
+<div id="menu" class="overlay">
+  <div class="card">
+    <h1 class="title">UNTITLED</h1>
+    <div class="sub">3D · ESRB M · FIRST DEMO — VERTICAL SLICE</div>
+    <div class="modes">
+      <div class="mode" data-mode="campaign"><span class="tag">▶ CAMPAIGN</span> — Playable slice<small>Colombia, 1985 · the HYDRA reveal</small></div>
+      <div class="mode soon" data-mode="mp"><span class="tagsoon">MULTIPLAYER</span> — prototype<small>200-gun arsenal · first-person PvP</small></div>
+      <div class="mode soon" data-mode="zombies"><span class="tagsoon">ZOMBIES</span> — prototype<small>co-op survival · 1st/3rd person</small></div>
+      <div class="mode soon" data-mode="merc"><span class="tagsoon">ISLA DEL NEÓN FUEGO</span> — prototype<small>post-9/11 open-world mercenary</small></div>
+    </div>
+    <div class="sub" style="margin-top:26px">KB+Mouse or Controller · click Campaign to deploy</div>
+  </div>
+</div>
+
+<!-- Story card -->
+<div id="story" class="overlay hidden">
+  <div class="card">
+    <div class="stamp" id="stamp"></div>
+    <div><span class="classified">OBJECTIVE: CLASSIFIED</span></div>
+    <div style="margin-top:10px"><span class="classified">MISSION: CLASSIFIED</span></div>
+    <div class="prompt">▶ click to deploy (locks mouse)</div>
+  </div>
+</div>
+
+<!-- Fail flash -->
+<div id="fail"><div id="failtext">FRIENDLY FIRE WILL NOT BE TOLERATED</div></div>
+
+<script type="module" src="./main.js"></script>
+</body>
+</html>
