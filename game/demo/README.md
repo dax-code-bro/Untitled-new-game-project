@@ -5,8 +5,15 @@ no internet needed — Three.js is vendored locally in `vendor/`.
 
 ## How to run
 
-ES modules need to be served over http (opening `index.html` as a `file://`
-won't work). From this folder:
+### 🟢 Easiest — `play-offline.html` (just double-click it)
+`play-offline.html` is the **entire game bundled into one self-contained file**
+(Three.js included). **Download it and double-click** — it opens in your browser
+and plays. No server, no install, no internet. Regenerate it with
+`node build-offline.mjs` after changing the game.
+
+### Or serve the folder (dev)
+The split `index.html` uses ES modules, which need to be served over http
+(opening it as `file://` won't work). From this folder:
 
 ```bash
 # any one of these:
