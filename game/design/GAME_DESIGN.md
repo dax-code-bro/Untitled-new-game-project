@@ -198,6 +198,11 @@ members not yet introduced (TBD). The six documented so far:
 > no waver.** The ONLY thing that shatters his composure is finding **Fox's body**
 > (M12): one tear, "I'm sorry." Fox — who took him in and called him "Molly" —
 > meant more to him than anyone. His single point of vulnerability.
+> **⭐ HARD CANON RULE:** the tear over Fox (M12) is the **ONLY time in the ENTIRE
+> GAME** that Molotov **changes his tone or sheds a tear.** Every other moment —
+> the whole campaign, the Spike tragedy, even the post-epilogue mode as the secret
+> contractor — he stays flat and serious. Writers must keep this true: **exactly
+> one emotional beat, ever.** Break it anywhere and it loses all its weight.
 
 - **Callsign:** "Molotov" (sits between first/last name: Webber Newman).
 - **Demeanor:** exceptionally quiet — almost never talks. Dead serious, with
