@@ -57,9 +57,21 @@
 
 ---
 
-## 2. Shotguns (1 / 14)
+## 2. Shotguns (14 / 14)
 
 | # | Name | Damage | Accuracy | Mobility | Fire Rate | Recoil | Fire Modes | Notes |
 |---|------|--------|----------|----------|-----------|--------|------------|-------|
 | 1 | Benelli M4 | Very High | Medium (pellet spread) | Medium | Medium-High (semi-auto follow-up) | High (reduced by ARGO gas system vs other 12ga) | Semi-Auto | US Marine Corps standard combat shotgun; ARGO gas-operated system cycles reliably with any ammo and cuts felt recoil vs inertia-driven designs; fastest reliable follow-up shot in the shotgun class. |
 | 2 | AA-12 (Auto Assault-12) | Very High | Medium (pellet spread) | Medium-Low | High (~300 RPM full-auto) | Medium (recoil buffer system absorbs most kick despite 12ga) | Semi / Auto (hold trigger) | The only full-auto shotgun in the class; tap for single shots, hold for continuous fire; 8-round box or 20/32-round drum mag; heavier than most shotguns but the recoil buffer makes it surprisingly manageable on full-auto. |
+| 3 | Mossberg 500 | Very High | Medium | High | Low (pump) | High | Pump | Extremely reliable pump-action; lightweight; ambidextrous tang safety; military and police staple worldwide. |
+| 4 | Remington 870 | Very High | Medium | Medium | Low (pump) | High | Pump | Most-produced shotgun in history; heavier and more solid than the Mossberg 500; legendary durability; slightly slower handling trade-off. |
+| 5 | SPAS-12 | Very High | Medium | Medium-Low | Medium (semi) / Low (pump) | High | Pump / Semi-Auto (switchable) | Iconic Italian combat shotgun; switchable between pump for low-pressure specialty rounds and semi-auto for standard shells; folding hook stock; heavy but distinctive. |
+| 6 | SPAS-15 | Very High | Medium | Medium | Medium (semi) / Low (pump) | High | Pump / Semi-Auto (switchable) | Evolved SPAS-12 with a detachable 6-round box magazine; more tactical reload profile than its predecessor; same pump/semi switch mechanic. |
+| 7 | Ithaca 37 | Very High | Medium | High | Low (pump) / Medium (slam-fire) | High | Pump / Slam-Fire | Bottom-ejecting pump — fully ambidextrous by design; no disconnector means holding the trigger and pumping rapidly fires on every stroke (slam-fire); used by LAPD and US military in Vietnam. |
+| 8 | Winchester Model 1897 | Very High | Medium-Low | Low | Low (pump) / Medium (slam-fire) | High | Pump / Slam-Fire | WWI trench gun; exposed external hammer; no disconnector allows slam-firing like the Ithaca 37; vintage and heavy but iconic close-range violence. |
+| 9 | Browning Auto-5 | Very High | Medium | Medium | Medium-High (semi-auto) | High (long-recoil system bucks rearward distinctively) | Semi-Auto | First successful semi-auto shotgun; distinctive humpback receiver; long-recoil operation gives it a unique physical kick not felt in gas-operated designs. |
+| 10 | Remington 1100 | Very High | Medium | Medium-High | Medium-High (semi-auto) | Medium (gas system bleeds off recoil) | Semi-Auto | Softest-shooting shotgun in the class; gas-operated system reduces felt recoil significantly; reliable follow-up shots; popular with law enforcement for this reason. |
+| 11 | KS-23 | Extreme (23mm) | Low | Low | Very Low (pump) | Extreme | Pump | Soviet 23mm (4-gauge equivalent) — essentially a portable cannon; fires specialized rounds including slug, buckshot, tear gas, and rubber; devastating at any range it can hit; rarely seen outside Soviet special units. |
+| 12 | Striker-12 "Jury" **[F]** | Very High | Medium | Medium | Medium (revolving cylinder) | High | Semi-Auto | Fictional 12-round revolving-cylinder shotgun; high capacity for a shotgun; cylinder rotation adds a slight mechanical delay between shots but keeps pressure in sustained close-range fights. |
+| 13 | Brimstone BS-7 **[F]** | Very High | Very Low (extreme wide spread) | Low | Medium-High (semi-auto) | Very High | Semi-Auto | Fictional area-denial shotgun; widest pellet spread in the class — near-useless at range but fills an entire doorway at close quarters; heavy drum magazine drags mobility down. |
+| 14 | Sledge SG-1 **[F]** | Extreme (rifled slug) | High (for a shotgun — single projectile, not pellets) | High (lightweight break-action) | Very Low (single shot, break-action reload) | Extreme | Single-Shot | Fictional slug-only break-action; fires one massive rifled slug per reload; highest single-shot damage in the shotgun class; accurate enough to engage targets at medium range that other shotguns can't touch. |
