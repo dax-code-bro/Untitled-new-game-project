@@ -6,12 +6,12 @@
 
 ## The Five Main Factions
 1. **AGO — American Government Operation** *(below)*
-2. *(TBD)*
+2. **HYDRA** — the century-old antagonist org, **still up and running** *(below)*
 3. *(TBD)*
 4. *(TBD)*
 5. *(TBD)*
 
-*(Plus HYDRA — the century-old antagonist org — and ~a dozen minor factions.)*
+*(Plus ~a dozen minor factions.)*
 
 ---
 
@@ -34,3 +34,25 @@
     HYDRA** in the Abraham massacre — so AGO's relationship to HYDRA is
     compromised/ambiguous (clean government front, or in bed with HYDRA?).
 - **Goal / leadership / allies & enemies / how the player interacts:** *TBD.*
+
+---
+
+## 2. HYDRA — (still up and running)
+- **Emblem:** the **three-headed serpent** over the wordmark **HYDRA.** Asset:
+  `game/design/assets/hydra-logo.png`.
+- **Status:** **still active** across the entire timeline — the campaign's core
+  antagonist persists into the Dec-31-2000 era and the post-9/11 open-world mode
+  (they hold **San Juan de la Selva** on the island).
+- **Full canon lives in `GAME_DESIGN.md`** (HYDRA section) + related files:
+  - Over a **century old (~since 1873)**; the **1948** rocket that seeded ~13
+    drones worldwide.
+  - **Drone line:** H1.0 (1948 combat) → H2.1 (bomber swarm) → H3.2 ("new
+    ultimate," Patient 14) → **H1.0-pattern robots resurface in 2000** (M13).
+    See `hydra-drone-h1.md`.
+  - **Funding:** casino fronts (millions–trillions); **hundreds of bases**
+    worldwide (US, Germany, Russia, China, Mexico).
+  - **Leader:** **Victor Prestige** (M9). **Insider:** **General Abraham**
+    (the traitor). **Rogue sentient drone:** Drone 9.
+  - **Brainwashing dart tech** (used on Spike).
+- **As a playable-world faction:** enemy presence, territory to liberate, and a
+  potential employer in the mercenary mode (money talks). Details TBD.
