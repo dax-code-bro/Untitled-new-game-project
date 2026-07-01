@@ -404,6 +404,38 @@
 | 8 | AT4 | Disposable Rocket Launcher | Extreme (anti-armor) | Medium-Large | 1 | Single-use — discard after firing | Swedish 84mm single-shot unguided anti-armor rocket; the heaviest-hitting disposable launcher in the class; designed to defeat T-72 class armor; rocket stabilizes via spin after launch; significant backblast; slower to shoulder than the LAW but dramatically more destructive on impact. |
 | 9 | HYDRA Plasma Launcher **[F][HYDRA]** | Experimental Energy Launcher | Extreme (plasma) | Large | 3 charges | Medium (charge cycling) | HYDRA experimental plasma-based launcher; fires superheated plasma bolts that travel slower than conventional rockets but track slightly toward heat signatures; each impact creates a lingering plasma fire zone that burns through armor over time; decades ahead of any 1985 weapons technology; only deployed by senior HYDRA field commanders. |
 
+### Explosive Weapon Shared Attachments
+
+> Explosive weapons use three attachment slots: **Warhead**, **Optic**, and **Tactical Module**. Not all warhead types are available on all launchers — disposable single-shot weapons are locked to their warhead. The Warhead slot changes the round's effect entirely.
+
+#### Warhead
+
+| Attachment | Slot | Effect | Ammo Limit | Notes |
+|------------|------|--------|------------|-------|
+| HE (High Explosive) | Warhead | Standard blast; balanced damage and radius; destroys cover, equipment, and vehicles | Standard per-life supply | **Unlock: Level 1 (default).** The baseline warhead; effective against infantry groups and hard structures. |
+| HEAT (High Explosive Anti-Tank) | Warhead | Shaped charge; massively increases armor and vehicle penetration; concentrates blast energy inward rather than outward | Standard supply — slightly fewer rounds due to size | **Unlock: Level 8.** Purpose-built for vehicles and armored targets; less effective vs unarmored infantry spread across open ground. |
+| Thermobaric | Warhead | Two-stage detonation: first charge aerates a fuel cloud, second ignites it — devastating in enclosed spaces; pressure wave penetrates cover that stops standard HE | Reduced supply — only 1–2 rounds per life | **Unlock: Level 18.** The most devastating warhead in the slot; at close range in buildings it is near-unsurvivable; in open air much of the pressure wave dissipates. |
+| Incendiary | Warhead | On impact, spreads burning thermite/napalm across a wide area; fire lingers and denies the zone; slow but persistent damage | Standard supply | **Unlock: Level 12.** Area denial; enemies are forced to move or burn; does not destroy armor but effective against infantry and equipment in the open. |
+| Smoke | Warhead | Deploys a large smoke cloud on impact; provides instant tactical cover without using an equipment slot | Standard supply | **Unlock: Level 6.** A tactical utility warhead; frees up the equipment slot; instant smoke on demand at any range. |
+| Airburst | Warhead | Detonates at a programmable distance above the target, raining fragmentation downward — bypasses cover that would stop ground-level blasts | Reduced supply — complex fusing | **Unlock: Level 25.** Counter to enemies behind walls, in trenches, or crouched behind hard cover; the blast comes from above. |
+
+#### Explosive Optic
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Open Sights | Optic | Fastest target acquisition; no obstruction | Least precise; no range compensation | **Unlock: Level 1 (default).** Basic iron/open sights; fast to shoulder; works at most launcher ranges. |
+| Rangefinder Scope | Optic | Built-in rangefinder provides distance readout to target; improves accuracy on moving targets; 2× magnification | Slower to shoulder; slight weight increase | **Unlock: Level 10.** Dramatically improves first-shot accuracy at distance; the difference between a hit and a miss on a moving vehicle at range. |
+| Thermal Scope | Optic | 4× magnification with thermal imaging; highlights vehicle heat signatures through smoke and light obstruction; exceptional for anti-armor targeting | Slowest to shoulder; heavy; ineffective in point-blank situations | **Unlock: Level 22.** The anti-armor specialist optic; finds vehicles through smoke and cover that would hide them from every other optic. |
+
+#### Tactical Module
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Carrying Sling | Tactical Module | Reduces the weight penalty of carrying the launcher; improves mobility while the weapon is equipped | Minimal other impact | **Unlock: Level 3.** A quality-of-life upgrade; large launchers like the Carl Gustaf significantly hamper movement — the sling mitigates this. |
+| Bipod | Tactical Module | When prone or crouched, deploys a bipod — massively improves aim stability and reduces any sway; dramatically improves first-round accuracy at long range | Heavy; mobility reduction; only useful while stationary | **Unlock: Level 14.** Converts the launcher into a precision long-range platform when set up; essential for consistent hits at maximum range. |
+| Backblast Suppressor | Tactical Module | Dramatically reduces the backblast danger zone; allows firing in closer proximity to walls and cover without self-damage | Heavy; slight reduction in rocket velocity | **Unlock: Level 20.** Safety-critical in urban environments; without it, a wall two meters behind you is lethal when you fire. With it, the safe firing space is dramatically reduced. |
+| Tandem Charger **[F]** | Tactical Module | Fictional pre-cursor charge system; fires a small shaped charge milliseconds before the main warhead — defeats reactive armor that would otherwise detonate and neutralize the primary warhead | Adds significant weight and complexity; rare | **Unlock: Level 35.** The counter to reactive armor; standard HEAT rounds are neutralized by ERA (explosive reactive armor) on advanced vehicles. The tandem system defeats that protection layer. |
+
 ---
 
 ## 6. Sniper Rifles (7 / 7)
