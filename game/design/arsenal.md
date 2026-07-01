@@ -54,3 +54,11 @@
 > **Reassigned to Marksman Rifles:**
 > - **PR-85 "Phantom"** — semi-only, Very High damage, Very High accuracy. Textbook marksman rifle.
 > - **Lynx LR-3** — Elite accuracy, noted as rivaling DMR platforms. Belongs in marksman rifles.
+
+---
+
+## 2. Shotguns (1 / 14)
+
+| # | Name | Damage | Accuracy | Mobility | Fire Rate | Recoil | Fire Modes | Notes |
+|---|------|--------|----------|----------|-----------|--------|------------|-------|
+| 1 | Benelli M4 | Very High | Medium (pellet spread) | Medium | Medium-High (semi-auto follow-up) | High (reduced by ARGO gas system vs other 12ga) | Semi-Auto | US Marine Corps standard combat shotgun; ARGO gas-operated system cycles reliably with any ammo and cuts felt recoil vs inertia-driven designs; fastest reliable follow-up shot in the shotgun class. |
