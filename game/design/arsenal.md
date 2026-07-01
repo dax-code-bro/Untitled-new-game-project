@@ -329,6 +329,63 @@
 | 13 | Stechkin APS | Medium | Medium | High | High (~700 RPM full-auto) | High (full-auto) / Low (semi) | Semi / Full-Auto | Soviet machine pistol; 20-round magazine; the only fully automatic pistol in the class — in full-auto mode it burns through ammo at a frightening rate but provides extraordinary close-range burst output; wooden holster clips on as a shoulder stock for added stability. **Dual-wield unlocked at Max Level (41).** |
 | 14 | Rhino Mk. IV **[F]** | Very High | Medium-High | Medium | Low (double-action) / Medium (single-action) | Very High | Revolver (DA/SA) | Fictional heavy-caliber combat revolver; fires a purpose-built high-pressure round; the barrel is mounted at the bottom of the cylinder rather than the top — dramatically lowers bore axis and reduces muzzle flip despite the heavy cartridge; 6-round cylinder; high damage with better recoil management than the Python or Model 29. **[No Dual-Wield]** — the caliber and weight make it impractical. |
 
+### Pistol Shared Attachments
+
+#### Pistol Barrels
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Standard Barrel | Barrel | Baseline factory barrel; balanced velocity and accuracy | None — default | **Unlock: Level 1 (default).** No modification; the weapon as designed. |
+| Compensator | Barrel | Significantly reduces muzzle flip and vertical recoil; faster follow-up shot accuracy | Slight increase in muzzle noise | **Unlock: Level 5.** The most impactful barrel on high-recoil pistols like the Desert Eagle and S&W Model 29 — tames the kick meaningfully. |
+| Suppressor | Barrel | Drastically reduces sound and muzzle flash; conceals firing position | Reduced bullet velocity; slight damage falloff at range; adds length — may affect draw speed | **Unlock: Level 10.** The stealth barrel; transforms the pistol into a silent secondary for covert approaches. |
+| Extended Barrel | Barrel | Improves bullet velocity and effective range; tightens shot groupings | Adds length and weight; slower to draw and holster | **Unlock: Level 16.** Pushes the pistol into mid-range viability; best on accurate platforms like the SIG P226 or CZ 75. |
+| Ported Barrel | Barrel | Aggressive gas porting massively reduces muzzle flip on powerful pistols; near-flat recovery between shots | Noticeably louder; more visible muzzle flash | **Unlock: Level 26.** The premium recoil solution; most impactful on the heaviest-kicking pistols in the class. |
+
+#### Pistol Lasers
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Standard Laser | Laser | Improves hip-fire accuracy; useful when quick-drawing without fully aiming | Always-on laser visible to enemies | **Unlock: Level 1 (default).** Hip-fire with a pistol is already fast — the laser makes it meaningfully accurate at close range. |
+| Tactical Laser | Laser | Improves both ADS speed and hip-fire accuracy; well-rounded | Laser visible to enemies | **Unlock: Level 7.** The balanced option; benefits both pistol ADS and quick-draw hip-fire equally. |
+| Mini Laser | Laser | Smallest, lightest laser available; zero ADS speed penalty; barely visible profile | Less accurate laser beam than full-size options | **Unlock: Level 15.** For players who want a reference point without any weight or size impact. |
+| IR Laser | Laser | Completely invisible to enemies not using Night Vision; best stealth laser option | Invisible to the user without NVGs in complete darkness | **Unlock: Level 27.** Pairs with the Suppressor for a fully concealed close-range secondary. |
+
+#### Pistol Optics
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Iron Sights | Optic | Fastest draw; lightest; zero trade-off | Limited precision | **Unlock: Level 1 (default).** The weapon's factory sights; always available; chosen when speed is everything. |
+| Mini Red Dot | Optic | Small reflex dot; improves close accuracy; minimal weight | No magnification | **Unlock: Level 6.** The most common pistol optic upgrade; noticeably improves shot accuracy without slowing the draw. |
+| Pistol Reflex | Optic | Wide window sight; fast acquisition; excellent situational awareness while aiming | No magnification; less precise than the red dot at distance | **Unlock: Level 12.** For aggressive close-range pistol play where seeing around the weapon matters. |
+| Micro Scope 2× | Optic | 2× magnification; best precision optic in the pistol class; enables accurate medium-range shooting | Slowest draw of any pistol optic; reduces close-range snap-shooting capability | **Unlock: Level 22.** Niche but powerful; turns a pistol into a precise mid-range tool rather than a panic secondary. |
+
+#### Pistol Underbarrel
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Tactical Flashlight | Underbarrel | Illuminates dark environments; brief blindness effect on nearby enemies | Reveals position in dark | **Unlock: Level 4.** One of the most practical pistol attachments; a lit pistol is a CQB room-clearing tool. |
+| Compact Foregrip | Underbarrel | Stabilizes the pistol; reduces muzzle flip on follow-up shots | Slight weight increase | **Unlock: Level 9.** Aids rapid follow-up shots on powerful pistols; especially impactful on the Desert Eagle and Stechkin APS. |
+| Laser Foregrip | Underbarrel | Combines a compact foregrip and standard laser into one attachment — saves a slot | Laser is always visible; slight weight | **Unlock: Level 18.** Efficient combo attachment; frees up the laser slot for a different build choice. |
+| Holster Stock | Underbarrel | Clips the weapon's holster to the grip as a shoulder brace; significantly reduces recoil and improves accuracy on long sustained bursts; only applicable to certain pistols (Stechkin APS) | Bulky; reduces the pistol's primary advantage of concealability and draw speed | **Unlock: Level 30.** A true special mechanic — the Stechkin APS's wooden holster converts it to a braced PDW. On all other pistols this provides a minimalist shoulder brace that reduces recoil. |
+
+#### Pistol Ammunition
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Standard Load | Ammunition | Balanced damage and capacity | None — default | **Unlock: Level 1 (default).** The weapon's designed chambering; no trade-offs. |
+| Hollow Point | Ammunition | Massively increases damage against unarmored targets | Zero penetration through armor or cover | **Unlock: Level 8.** The lethal round for soft targets; devastating when it lands, useless vs armor. |
+| Armor Piercing | Ammunition | Punches through soft body armor; retains damage through light barriers | Reduced damage vs unarmored; harder tip sacrifices expansion | **Unlock: Level 14.** For armored opponents; switches the damage profile entirely. |
+| Extended Magazine | Ammunition | Increases magazine capacity by 50%; additional rounds before reload | Slightly slower reload due to added length and weight | **Unlock: Level 20.** High-capacity option; best on pistols with low base magazines like the M1911 (7 rounds) or Makarov (8 rounds). |
+| High Velocity | Ammunition | Significantly increases bullet velocity and effective range; improved damage retention at distance | Snappier recoil per shot from higher chamber pressure | **Unlock: Level 32.** Extends the pistol's effective range meaningfully; best paired with the Extended Barrel and Micro Scope 2× for a long-range pistol build. |
+
+#### Pistol Firing Mods
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Match Trigger | Firing Mod | Lighter, crisper trigger pull; faster reset; improved shot-to-shot accuracy | Minimal trade-off | **Unlock: Level 5.** Sharpens every shot; especially impactful on single-action pistols like the M1911 where trigger quality directly affects precision. |
+| Hair Trigger | Firing Mod | Extremely light trigger pull — near-instant activation; massively improves rapid-fire speed on semi-auto pistols | Very easy to accidentally discharge; demands careful trigger discipline | **Unlock: Level 18.** The highest fire-rate option for semi-auto pistols; in fast hands it approaches the Stechkin's auto output; in careless hands it empties the mag prematurely. |
+| Full Auto Conversion | Firing Mod | Adds full-auto fire to the Stechkin APS only; all other pistols gain a 3-round burst mode | Increased recoil on full-auto; ammo consumption is severe in auto mode | **Unlock: Level 28.** The Stechkin already ships with full-auto — this mod adds a selector for the burst intermediate. On all other pistols it unlocks a disciplined 3-round burst in place of pure semi-auto. |
+
 ---
 
 ## 5. Explosive Weapons (9 / 9)
