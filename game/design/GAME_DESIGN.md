@@ -48,6 +48,9 @@ complete screenplays.
 - `game/design/missions/mission-12.md` — **Mission 12 (title TBD)** — Molotov's
   POV: races to warn the team, finds them all dead; breaks down over Fox's body
   *(scripted)*.
+- `game/design/missions/mission-13.md` — **Mission 13 (title TBD)** — time skip
+  ("12 years later — Dec 31, 2000"); a prison, rows of **H1.0-pattern robots**
+  *(scene + ⚠ timeline reconciliation flag)*.
 
 **Known mission order so far:** 1 (Colombia/Columbia, classified) → 2 (1948
 flashback + boardroom) → 3 "Would You Like a Receipt With That Order?" → 4 "Sins

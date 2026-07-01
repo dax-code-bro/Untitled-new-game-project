@@ -5,8 +5,12 @@
 > Zombies) — an **original mode invented for this game.**
 
 ## Premise
-- **Set ~1 YEAR AFTER the campaign's epilogue.** Story-connected; depends on how
-  the campaign ends (epilogue still TBD — see flag).
+- **Set RIGHT AFTER the events of 9/11 (≈ late 2001).** *(Timeline revision.)*
+  This is **~1 year after the campaign's epilogue** — consistent if the campaign's
+  ending lands around **2000** (see the Mission 13 time-skip to Dec 31, 2000).
+  Story-connected; depends on how the campaign ends (epilogue TBD).
+  - *(⚠ Post-9/11 setting = a real, heavy historical backdrop. The mercenary-
+    island fiction sits in that era; keep tone deliberate.)*
 - **Operator-select / multiple playable operators** — you can choose who you play
   as from a roster.
 - **CORE CONCEPT — Mercenary for hire.** The operator you play is a **rogue
