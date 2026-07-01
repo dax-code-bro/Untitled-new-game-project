@@ -134,3 +134,64 @@
 | Rapid Fire | Firing Mod | Significantly increases pump speed on pump-action shotguns; faster cycling on semi-auto variants; more shots downrange per second | Increased recoil per shot; harder to manage during rapid successive fire | **Unlock: Level 16.** Pushes the cycling mechanism beyond factory speed; reward for players who can absorb the extra kick. |
 | CO2 Pump | Firing Mod | CO2-assisted pump mechanism dramatically accelerates pump speed — near-semi-auto cycling on pump-action shotguns; improves overall handling feel | CO2 canisters are finite; effectiveness slightly decreases over extended use as pressure drops; slight reduction in per-shot power | **Unlock: Level 20.** Mechanically the most interesting pump mod; transforms pump-actions into aggressive fast-cycling weapons at the cost of a limited resource. |
 | Dragon's Breath | Firing Mod | Each shot sprays a burst of burning incendiary material; applies fire damage over time to anything it touches; lingers in the air after firing; area-denial in enclosed spaces | Extremely short effective range even by shotgun standards; fire does not penetrate armor; limited ammo supply | **Unlock: Level 28.** More psychological weapon than lethal one at range — the fire cloud lingers in corridors and doorways, forcing enemies to move or burn. Devastating indoors. |
+
+### Shotgun Barrels
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Standard Choke | Barrel | Baseline pellet pattern; balanced spread and range | None — default configuration | **Unlock: Level 1 (default).** The factory choke; no trade-offs, no specialisation. |
+| Extended Barrel | Barrel | Tightens pellet pattern; significantly increases effective range and damage falloff distance; improved accuracy | Reduced mobility; slower ADS; heavier front end | **Unlock: Level 5.** Pushes the shotgun toward mid-range effectiveness; the closest a shotgun gets to a precision tool. |
+| Suppressor | Barrel | Drastically reduces sound and muzzle flash; slight recoil reduction | Reduced damage and pellet velocity; slightly shorter effective range | **Unlock: Level 10.** Quietest shotgun option; trades stopping power for stealth; works best on semi-auto builds. |
+| Sawed-Off | Barrel | Massively increases spread; major mobility and ADS speed improvement; extremely fast to handle | Severely reduced range and damage falloff; nearly useless beyond point-blank | **Unlock: Level 14.** The most extreme CQB conversion; inside a room it's devastating; outside it's useless. |
+| Heat Shield | Barrel | Allows sustained firing without heat distortion affecting the sight picture; slight suppression resistance | Minimal stat impact — cosmetic and comfort-focused | **Unlock: Level 18.** Adds a vented heat shield over the barrel; prevents rising heat shimmer from obscuring the sight during rapid back-to-back shots. |
+| Full Choke | Barrel | Maximum pellet constriction — tightest possible grouping; significantly improves long-range pellet density | Extreme reduction in close-range spread; close-up shots hit fewer pellets simultaneously | **Unlock: Level 25.** Converts the shotgun into a long-range precision tool at the cost of its close-range breadth. |
+
+### Shotgun Lasers
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Tactical Laser | Laser | Improves hip-fire accuracy and ADS speed; visible laser gives quick target reference | Laser is visible to enemies — reveals position | **Unlock: Level 4.** A solid general-purpose laser for aggressive hip-fire shotgun play. |
+| Standard Laser | Laser | Significantly improves hip-fire accuracy; tightens hip-fire pellet spread | Slight ADS speed reduction; always-on laser reveals position | **Unlock: Level 7.** Best hip-fire laser in the class; the go-to for players who rarely ADS with a shotgun. |
+| Wide Beam Laser | Laser | Widens and stabilises the hip-fire spread into a consistent, predictable pattern at close range; pairs well with Sawed-Off | Reduces ADS accuracy; the wide beam is only effective at close range | **Unlock: Level 15.** Designed specifically for maximum-spread builds; makes the spread pattern consistent and reliable rather than random. |
+
+### Shotgun Optics
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Bead Sight | Optic | Fastest ADS of any optic; lightest; zero obstruction of the sight picture | Least precise; no help at range | **Unlock: Level 1 (default).** The classic shotgun front bead; fastest to shoulder, least accurate. |
+| Ghost Ring | Optic | Improved close-range target acquisition over bead; quick sight picture in low light | No magnification; limited at range | **Unlock: Level 3.** Aperture rear + bead front; faster than a full sight picture and more precise than a bead alone. |
+| Red Dot | Optic | Clean precise aiming point; improves mid-range accuracy; good for slug builds | Slight ADS speed reduction | **Unlock: Level 6.** Best general-purpose optic for players who mix buckshot and slugs. |
+| Reflex Sight | Optic | Wide sight window; fast target acquisition; good in CQB | No magnification | **Unlock: Level 9.** Open reflex window gives excellent situational awareness while still providing an aiming point. |
+| Holographic | Optic | Accurate reticle; excellent clarity; works well in low light | Heavier; slightly slower ADS than red dot | **Unlock: Level 12.** Cleaner reticle than the red dot with slightly better low-light performance. |
+| Slug Scope | Optic | Low-magnification (2×) scope purpose-built for slug rounds; significantly improves slug accuracy at medium range | Completely impractical with buckshot at close range; slow ADS | **Unlock: Level 22.** Commits the shotgun to a slug-only role; in that role it extends effective range dramatically. |
+
+### Shotgun Underbarrel
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Vertical Foregrip | Underbarrel | Reduces vertical recoil; steadier follow-up shots | Slight mobility reduction | **Unlock: Level 3.** The fundamental grip; especially useful on high-recoil pump builds. |
+| Tactical Flashlight | Underbarrel | Illuminates dark areas; blinds enemies briefly when shone directly at them in low light | Reveals the player's position in dark environments | **Unlock: Level 7.** Essential for indoor and night operations; doubles as a close-range disorientation tool. |
+| Angled Foregrip | Underbarrel | Improves ADS speed; better handling during movement | Minimal recoil reduction compared to vertical grip | **Unlock: Level 11.** For players who ADS regularly; faster transition than any other grip. |
+| Breacher Device | Underbarrel | Attaches a door-breaching muzzle device; allows instant mechanical door breaching without wasting a shell | Slight weight increase; minimal other stat impact | **Unlock: Level 19.** A tactical utility tool; breach doors silently and instantly without firing — keeps the element of surprise. |
+| Bipod | Underbarrel | When prone or crouched, deploys a bipod that massively stabilises the shotgun — near-zero recoil and maximum pellet consistency while set up | Heavy; major mobility reduction; only effective while stationary | **Unlock: Level 24.** Niche but powerful for defensive slug builds; turns the shotgun into a fixed precision platform. |
+
+### Shotgun Stock
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| No Stock (Pistol Grip) | Stock | Massively improves mobility and ADS speed; fastest handling of any stock option | Greatly increases recoil — nothing to brace against the shoulder | **Unlock: Level 2.** Strip the stock for a compact, aggressive build; brutal recoil demands short engagements. |
+| Folding Stock | Stock | Improves mobility and ADS speed; folds for tighter movement; decent recoil management | Slight recoil increase over fixed stock | **Unlock: Level 6.** The balanced option; good mobility without fully sacrificing shoulder contact and control. |
+| Rubber Recoil Pad | Stock | Significantly reduces felt recoil; absorbs kick on every shot; improves sustained fire comfort | Minimal mobility impact — adds slight weight | **Unlock: Level 9.** The simplest recoil solution; no trade-offs beyond marginal weight; best on high-recoil heavy builds. |
+| Tactical Stock | Stock | Improves ADS stability; reduces weapon sway; better control during movement | Slight ADS speed reduction | **Unlock: Level 16.** A solid all-round stability upgrade; best for players who move and shoot simultaneously. |
+| Adjustable Stock | Stock | Fully configurable length-of-pull; improves both ADS speed and recoil management simultaneously | Moderate weight increase from the adjustment mechanism | **Unlock: Level 21.** The most versatile stock; gives back both speed and stability — at the cost of added bulk. |
+
+### Shotgun Ammunition
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Buckshot | Ammunition | Standard 12-pellet spread; balanced damage and range | None — default configuration | **Unlock: Level 1 (default).** The baseline; reliable all-round performance. |
+| Birdshot | Ammunition | Maximum pellet count; devastating at point-blank; excellent for hitting moving targets at close range | Very low damage per pellet; minimal effectiveness beyond close range | **Unlock: Level 4.** Trades power for volume; hits more pellets closer but each one does far less. |
+| Slugs | Ammunition | Single large projectile; dramatically improves range and accuracy; high single-hit damage | Eliminates spread entirely — requires precise aim; less forgiving than pellet loads | **Unlock: Level 11.** Converts the shotgun into a short-range rifle; pairs naturally with the Slug Scope and Extended Barrel. |
+| Flechette | Ammunition | Fires a pattern of hardened steel darts; significantly improves penetration through light armor and cover; darts tumble on impact causing additional wound damage | Reduced damage against unarmored targets; narrower spread than buckshot | **Unlock: Level 17.** Anti-armor shotgun load; punishes armored enemies that buckshot struggles to stop. |
+| Incendiary | Ammunition | Pellets ignite on impact; applies fire damage over time; can ignite environmental objects | Reduced base damage per pellet; limited ammo supply | **Unlock: Level 23.** A burning damage-over-time load; best for softening multiple enemies or denying an area through environmental fire. |
+| Breaching Round | Ammunition | Specialized low-penetration round designed to destroy door hinges and locks instantly without over-penetrating into rooms | Extremely low damage against personnel; effective only at point-blank range | **Unlock: Level 26.** The tactical entry round; takes out a door in one shot without sending lethal material through the other side. |
