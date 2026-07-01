@@ -311,8 +311,9 @@ function updateHUD() {
   document.getElementById('wname').textContent = w.name;
   document.getElementById('watt').textContent = w.cls + ' · ' + w.att + '  [1-4 swap · R reload]';
   document.getElementById('hpfill').style.width = Math.max(0, hp) + '%';
-  document.getElementById('topright').innerHTML =
-    '<b>CAMPAIGN</b> — Colombia, 1985<br>Move <b>WASD</b> · Sprint <b>Shift</b> · Crouch <b>C</b> · Jump <b>Space</b><br>Shoot <b>LMB/RT</b> · Look <b>Mouse/R-Stick</b>';
+  document.getElementById('topright').innerHTML = isTouch
+    ? '<b>CAMPAIGN</b> — Colombia, 1985<br>Left stick = move · drag right = look<br><b>FIRE</b> to shoot'
+    : '<b>CAMPAIGN</b> — Colombia, 1985<br>Move <b>WASD</b> · Sprint <b>Shift</b> · Crouch <b>C</b> · Jump <b>Space</b><br>Shoot <b>LMB/RT</b> · Look <b>Mouse/R-Stick</b>';
 }
 
 // nameplate raycast from screen center
@@ -346,10 +347,79 @@ function flashMenu() { const m = document.getElementById('menu'); m.animate([{ f
 document.getElementById('story').addEventListener('click', () => {
   document.getElementById('story').classList.add('hidden');
   hud.classList.remove('hidden');
-  controls.lock();
+  if (isTouch) { playing = true; }   // no pointer lock on mobile — touch controls take over
+  else controls.lock();
 });
 controls.addEventListener('lock', () => { playing = true; });
 controls.addEventListener('unlock', () => { playing = false; if (!failEl.classList.contains('show')) { /* paused */ } });
+
+// ---------------------------------------------------------------- touch controls (mobile)
+const isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+const touch = { moveX: 0, moveZ: 0, sprint: false, crouchToggle: false, firing: false,
+  moveId: null, lookId: null, fireId: null, moveOrigin: null, lookLast: null };
+const knobEl = document.getElementById('knob');
+if (isTouch) { document.getElementById('touch').classList.remove('hidden'); document.body.classList.add('touchmode'); }
+
+function zoneAt(x, y) {
+  for (const id of ['btn-fire', 'btn-jump', 'btn-reload', 'btn-crouch', 'btn-swap', 'stick']) {
+    const r = document.getElementById(id).getBoundingClientRect();
+    if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return id;
+  }
+  return null;
+}
+function tStart(e) {
+  if (!playing) return;
+  for (const t of e.changedTouches) {
+    const z = zoneAt(t.clientX, t.clientY);
+    if (z === 'btn-fire') { touch.firing = true; touch.fireId = t.identifier; }
+    else if (z === 'btn-jump') { if (onGround) { vy = 6; onGround = false; } }
+    else if (z === 'btn-reload') { reload(); }
+    else if (z === 'btn-crouch') { touch.crouchToggle = !touch.crouchToggle; }
+    else if (z === 'btn-swap') { switchTo((wIndex + 1) % WEAPONS.length); }
+    else if (z === 'stick' || t.clientX < innerWidth * 0.45) {
+      touch.moveId = t.identifier;
+      const r = document.getElementById('stick').getBoundingClientRect();
+      touch.moveOrigin = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    } else { touch.lookId = t.identifier; touch.lookLast = { x: t.clientX, y: t.clientY }; }
+  }
+  e.preventDefault();
+}
+function tMove(e) {
+  if (!playing) return;
+  for (const t of e.changedTouches) {
+    if (t.identifier === touch.moveId && touch.moveOrigin) {
+      const dx = t.clientX - touch.moveOrigin.x, dy = t.clientY - touch.moveOrigin.y;
+      const max = 55, mag = Math.hypot(dx, dy), cl = Math.min(mag, max);
+      const nx = mag ? dx / mag : 0, ny = mag ? dy / mag : 0;
+      touch.moveX = nx * (cl / max); touch.moveZ = ny * (cl / max);
+      touch.sprint = (cl / max) > 0.92;
+      knobEl.style.left = (40 + nx * cl * 0.7) + 'px';
+      knobEl.style.top = (40 + ny * cl * 0.7) + 'px';
+    } else if (t.identifier === touch.lookId && touch.lookLast) {
+      const dx = t.clientX - touch.lookLast.x, dy = t.clientY - touch.lookLast.y;
+      const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+      euler.setFromQuaternion(camera.quaternion);
+      euler.y -= dx * 0.004; euler.x -= dy * 0.004;
+      euler.x = Math.max(-1.5, Math.min(1.5, euler.x));
+      camera.quaternion.setFromEuler(euler);
+      touch.lookLast = { x: t.clientX, y: t.clientY };
+    }
+  }
+  e.preventDefault();
+}
+function tEnd(e) {
+  for (const t of e.changedTouches) {
+    if (t.identifier === touch.moveId) { touch.moveId = null; touch.moveX = 0; touch.moveZ = 0; touch.sprint = false; knobEl.style.left = '40px'; knobEl.style.top = '40px'; }
+    if (t.identifier === touch.lookId) { touch.lookId = null; touch.lookLast = null; }
+    if (t.identifier === touch.fireId) { touch.firing = false; touch.fireId = null; }
+  }
+}
+if (isTouch) {
+  addEventListener('touchstart', tStart, { passive: false });
+  addEventListener('touchmove', tMove, { passive: false });
+  addEventListener('touchend', tEnd);
+  addEventListener('touchcancel', tEnd);
+}
 
 // ---------------------------------------------------------------- main loop
 const clock = new THREE.Clock();
@@ -383,8 +453,8 @@ function animate() {
       }
     }
     // ---- move ----
-    const sprint = keys['ShiftLeft'] || keys['ShiftRight'] || (gp && padBtn(gp, 10));
-    crouching = keys['KeyC'] || (gp && padBtn(gp, 1));
+    const sprint = keys['ShiftLeft'] || keys['ShiftRight'] || (gp && padBtn(gp, 10)) || touch.sprint;
+    crouching = keys['KeyC'] || (gp && padBtn(gp, 1)) || touch.crouchToggle;
     let speed = crouching ? 2.2 : sprint ? 8.5 : 5;
     let ix = 0, iz = 0;
     if (keys['KeyW'] || keys['ArrowUp']) iz -= 1;
@@ -392,6 +462,7 @@ function animate() {
     if (keys['KeyA'] || keys['ArrowLeft']) ix -= 1;
     if (keys['KeyD'] || keys['ArrowRight']) ix += 1;
     if (gp) { ix += dz(gp.axes[0] || 0); iz += dz(gp.axes[1] || 0); }
+    if (isTouch) { ix += touch.moveX; iz += touch.moveZ; }
     const len = Math.hypot(ix, iz) || 1; ix /= len; iz /= len;
 
     const fwd = new THREE.Vector3(); camera.getWorldDirection(fwd); fwd.y = 0; fwd.normalize();
@@ -424,7 +495,7 @@ function animate() {
 
     // ---- fire ----
     const rt = gp && (gp.buttons[7] && gp.buttons[7].value > 0.4);
-    const wantFire = firing || rt;
+    const wantFire = firing || rt || touch.firing;
     const w = curW();
     const now = performance.now();
     if (wantFire && now - lastShot > 60000 / w.rpm) { lastShot = now; shoot(); if (!w.auto) { firing = false; } }

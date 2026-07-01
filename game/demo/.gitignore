@@ -1,4 +1,6 @@
 node_modules/
 package-lock.json
 demo-screenshot.png
+mobile-screenshot.png
 offline-test.mjs
+mobile-test.mjs
