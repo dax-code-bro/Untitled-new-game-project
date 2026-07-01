@@ -8,7 +8,7 @@
 
 | Attachment | Slot | Buffs | Nerfs | Notes |
 |------------|------|-------|-------|-------|
-| Supported Barrel | Barrel | Massively increases damage; adds bullet penetration, bullet velocity, and bullet range | Decently decreases mobility and accuracy | Front-heavy design shifts the weapon's balance forward; the weight and length gain is what drives both the damage boost and the handling penalty. |
+| Supported Barrel | Barrel | Massively increases damage; adds bullet penetration, bullet velocity, and bullet range | Decently decreases mobility and accuracy | **Unlock: Weapon Level 30.** Front-heavy design shifts the weapon's balance forward; the weight and length gain is what drives both the damage boost and the handling penalty. |
 
 | # | Name | Damage | Accuracy | Mobility | Fire Rate | Recoil | Fire Modes | Notes |
 |---|------|--------|----------|----------|-----------|--------|------------|-------|
