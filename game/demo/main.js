@@ -120,7 +120,7 @@ function makeEntity(name, kind, x, z) {
   grp.position.set(x, 0, z);
   scene.add(grp);
   const e = { name, kind, grp, body, head, color: colors[kind], hp: 100, alive: true,
-    baseX: x, baseZ: z, phase: Math.random() * 9 };
+    baseX: x, baseZ: z, phase: Math.random() * 9, shootTimer: 1 + Math.random() * 2.5 };
   entities.push(e);
   return e;
 }
@@ -174,7 +174,7 @@ addEventListener('mouseup', e => { if (e.button === 0) firing = false; });
 const vel = new THREE.Vector3();
 let vy = 0, onGround = true, crouching = false;
 let firing = false, lastShot = 0;
-let hp = 100, dead = false;
+let hp = 100, dead = false, killCount = 0, respawning = false;
 
 // ---------------------------------------------------------------- gamepad
 let padPrev = {};
@@ -243,6 +243,7 @@ function shoot() {
 }
 function killEntity(e, head) {
   e.alive = false; e.grp.visible = false;
+  killCount++;
   addKill(e.name + (head ? '  ✖ HEADSHOT' : '  ✖'));
   setTimeout(() => { // respawn so the demo stays lively
     e.hp = 100; e.alive = true; e.grp.visible = true;
@@ -266,6 +267,31 @@ function failFriendlyFire() {
     controls.getObject && (camera.rotation.set(0, 0, 0));
     dead = false; failEl.classList.remove('show');
   }, 1400);
+}
+
+// ---------------------------------------------------------------- enemy fire, player damage, death
+const dmgEl = document.getElementById('dmg');
+function damagePlayer(amount) {
+  if (dead || respawning) return;
+  hp -= amount;
+  dmgEl.style.opacity = Math.min(0.9, 0.3 + amount / 20);
+  setTimeout(() => dmgEl.style.opacity = 0, 130);
+  if (hp <= 0) { hp = 0; playerDie(); }
+}
+function playerDie() {
+  respawning = true; dead = true;
+  document.getElementById('failtext').textContent = 'YOU ARE DOWN — RESPAWNING';
+  failEl.classList.add('show');
+  setTimeout(() => {
+    hp = 100; camera.position.set(0, PLAYER_H, 8);
+    failEl.classList.remove('show'); dead = false; respawning = false;
+  }, 1500);
+}
+const tracerMat = new THREE.LineBasicMaterial({ color: 0xff5566 });
+function enemyTracer(from, to) {
+  const g = new THREE.BufferGeometry().setFromPoints([from.clone().setY(1.4), to.clone()]);
+  const line = new THREE.Line(g, tracerMat); scene.add(line);
+  setTimeout(() => scene.remove(line), 60);
 }
 
 // ---------------------------------------------------------------- HUD
@@ -327,7 +353,7 @@ controls.addEventListener('unlock', () => { playing = false; if (!failEl.classLi
 
 // ---------------------------------------------------------------- main loop
 const clock = new THREE.Clock();
-let fpsAcc = 0, fpsFrames = 0;
+let fpsAcc = 0, fpsFrames = 0, lastFps = 0;
 function animate() {
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.05);
@@ -335,7 +361,9 @@ function animate() {
 
   // fps
   fpsAcc += dt; fpsFrames++;
-  if (fpsAcc >= 0.4) { fpsEl.textContent = Math.round(fpsFrames / fpsAcc); fpsAcc = 0; fpsFrames = 0; }
+  if (fpsAcc >= 0.4) { lastFps = Math.round(fpsFrames / fpsAcc); fpsAcc = 0; fpsFrames = 0; }
+  document.getElementById('topleft').innerHTML =
+    'FPS <span class="fps">' + lastFps + '</span>&nbsp;&nbsp;·&nbsp;&nbsp;KILLS <b style="color:#a6e3a1">' + killCount + '</b>';
 
   // toast fade
   if (toastT > 0) { toastT -= dt; if (toastT <= 0) toastEl.style.opacity = 0; }
@@ -407,6 +435,20 @@ function animate() {
       if (padPressed(gp, 3)) switchTo((wIndex + 1) % WEAPONS.length);
       if (padPressed(gp, 5)) switchTo((wIndex + 1) % WEAPONS.length);
       if (padPressed(gp, 4)) switchTo((wIndex - 1 + WEAPONS.length) % WEAPONS.length);
+    }
+
+    // ---- enemy AI: shoot back ----
+    for (const e of entities) {
+      if (!e.alive || e.kind !== 'enemy') continue;
+      const d = e.grp.position.distanceTo(camera.position);
+      if (d > 55) continue;
+      e.shootTimer -= dt;
+      if (e.shootTimer <= 0) {
+        e.shootTimer = 1.1 + Math.random() * 1.9;
+        enemyTracer(e.grp.position, camera.position);
+        const chance = THREE.MathUtils.clamp(1 - d / 75, 0.12, 0.6);
+        if (Math.random() < chance) damagePlayer(6 + Math.random() * 9);
+      }
     }
 
     updateNameplate();
