@@ -20,9 +20,11 @@
   (stars over stripes) on its chest, holding a **gold star** in one talon and a
   **bundle of arrows** in the other, with **"AGO"** in bold blue below. Asset:
   `game/design/assets/faction-ago.png`.
-  - **Design read:** it's the US Great Seal's eagle, but the **olive branch of
-    peace is replaced by a star** — only the star and the arrows (war) remain. A
-    deliberately **militaristic, no-peace** version of American iconography.
+  - **Symbolism (per design):**
+    - **Arrows = military & war** — their *means.*
+    - **Star = hope for a bright future for America** — their *purpose/goal.*
+    - Together: **war as the instrument, a brighter American future as the aim.**
+      An idealistic self-image — which cuts deep *if* they're entangled with HYDRA.
 - **What they are:** the **American government's operational arm** — the US
   state/military presence in the game's world.
 - **Ties to the story:**
