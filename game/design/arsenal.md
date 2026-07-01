@@ -2,7 +2,7 @@
 
 ---
 
-## 1. Assault Rifles (38 / 44)
+## 1. Assault Rifles (44 / 44)
 
 | # | Name | Damage | Accuracy | Mobility | Fire Rate | Recoil | Fire Modes | Notes |
 |---|------|--------|----------|----------|-----------|--------|------------|-------|
@@ -44,3 +44,9 @@
 | 36 | FX-05 Xiuhcoatl | Medium | High | Medium-High | Medium-High | Low | Semi / Auto | Resilient polymer frame; low vertical rise; minimal horizontal sway; highly reliable cadence. |
 | 37 | RK 62 | High | High | Medium | Medium | Low | Semi / Auto | High-quality milled receiver; exceptional build quality; heavy damage paired with consistent, predictable recoil. |
 | 38 | SAR 21 | Medium | High | High | Medium | Very Low | Semi / Auto | Compact bullpup; integrated optical sight; exceptionally flat vertical recoil profile. |
+| 39 | PR-85 "Phantom" **[F]** | Very High | Very High | Low | Low (semi-precision optimized) | Very Low | Semi Only | Black-ops NATO prototype; heavyweight precision frame; no automatic mode — built to land fewer, perfect shots. Rare drop from elite enemies. |
+| 40 | Krait KR-9 **[F]** | Medium | Medium-Low | Medium | Very High (~950 RPM) | High | Semi / Auto | Fictional Eastern European design built entirely around volume of fire; aggressive cyclic rate shreds at close range but sprays wildly beyond mid-distance. |
+| 41 | Lynx LR-3 **[F]** | Medium-High | Elite | Medium | Medium | Very Low | Semi / Auto | Fictional Nordic precision assault rifle; cold-weather spec; mechanical accuracy rivals DMR platforms; every shot lands exactly where aimed. |
+| 42 | Viper V-14 **[F]** | Very High | High | Low | Low-Medium | High | Semi / Auto | Fictional heavy-caliber assault rifle; shreds cover and light armor; devastating per shot; poor mobility is the price for that stopping power. |
+| 43 | Talon TX-4 **[F]** | Medium | Medium | Very High | High | Mid | Semi / Auto | Fictional ultra-compact design built for vehicle crews and CQB; near-SMG size with full AR damage; sacrifices accuracy at range for unmatched maneuverability. |
+| 44 | HYDRA MK-I **[F][HYDRA]** | High | Very High | Medium | High | Very Low | Semi / Auto | HYDRA's standard infantry rifle; decades ahead of 1985 in materials and tolerances; near-zero recoil at assault rifle damage; only found on HYDRA soldiers. |
