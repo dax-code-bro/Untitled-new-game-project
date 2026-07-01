@@ -45,11 +45,15 @@ complete screenplays.
 - `game/design/missions/mission-11.md` — **Mission 11 (title TBD)** — **the
   Abraham betrayal/massacre**: Apex annihilated, Fox executed, twins killed
   *(scripted)*.
+- `game/design/missions/mission-12.md` — **Mission 12 (title TBD)** — Molotov's
+  POV: races to warn the team, finds them all dead; breaks down over Fox's body
+  *(scripted)*.
 
 **Known mission order so far:** 1 (Colombia/Columbia, classified) → 2 (1948
 flashback + boardroom) → 3 "Would You Like a Receipt With That Order?" → 4 "Sins
 of the Past" → 5 "A Lost Cause" → 6 "Hellfire" → 7 "Industry" → 8 (tentative,
-Molotov flashback) → 9 "The Reboot" → 10 "Whom Can We Trust Among Us?".
+Molotov flashback) → 9 "The Reboot" → 10 "Whom Can We Trust Among Us?"
+→ 11 (title TBD, the massacre) → 12 (title TBD, Molotov finds them).
 - `game/design/modes/new-mode-post-epilogue.md` — **New 4th mode** (operator-
   select, ~1 yr after the epilogue) *(premise + early roster)*.
 - `game/design/hydra-drone-h1.md` — **H1.0 drone codex** (full specs + the
@@ -304,6 +308,10 @@ high-ranking **Sergeant / officer** leading young Irish troops.
 > don't try to double-check. That's all you had to do."* Recontextualizes his
 > whole arc — the secrecy, the deep HYDRA knowledge, "fixes broken people," even
 > his Hellfire objection. The team's own general was the snake all along.
+> **⚠ Reaches into the US military (M12):** the ambush used **American military
+> vehicles alongside HYDRA** — so **US forces/government are complicit** with
+> HYDRA, not just Abraham. The corruption goes far higher than one general. Major
+> conspiracy thread.
 
 - **Rank:** four-star general — the top brass attached to the team.
 - **Name:** "Abraham" (first/last unconfirmed).
