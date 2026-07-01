@@ -65,8 +65,11 @@ Molotov flashback) → 9 "The Reboot" → 10 "Whom Can We Trust Among Us?"
 - `game/design/hydra-drone-h1.md` — **H1.0 drone codex** (full specs + the
   13-drone status tracker; plus the new **H2.1 bomber** generation).
 - `game/design/emp-shark.md` — **EMP Shark** allied anti-drone weapon spec.
-- `game/design/factions.md` — **Factions** (the 5 main + notes) — starting with
-  **AGO (American Government Operation)**.
+- `game/design/factions.md` — **Factions** (the 5 main + notes).
+- `game/design/arsenal.md` — **Arsenal** — the 200+ named guns (each with a unique
+  attachment); master weapon catalog.
+- `game/design/dlc-sins-of-the-past.md` — **DLC "Sins of the Past"** — story-gap
+  filler + a new Zombies mode + new guns *(⚠ name collides with Mission 4)*.
 - `game/design/assets/` — reference art (`hydra-logo.png`,
   `hydra-drone-h1.0.png`).
 
