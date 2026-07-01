@@ -452,6 +452,65 @@
 | 6 | McMillan TAC-50 | Extreme | Elite | Very Low | Very Low (bolt) | Extreme | Bolt-Action | .50 BMG; bolt-action precision at extreme range; the most accurate .50 caliber rifle in the class; McMillan fiberglass stock absorbs some recoil but it remains the hardest-kicking weapon in the game; 5-round magazine; holds real-world long-range engagement records; suited for static hides only — mobility is essentially zero. |
 | 7 | VSS Vintorez | Medium-High | High | Medium | Medium (semi-auto) | Low | Semi-Auto | Soviet 9×39mm integrally suppressed sniper rifle; the quietest sniper in the class by a massive margin — completely silent without any attachment; the heavy subsonic 9mm cartridge sacrifices extreme range for near-total acoustic concealment; 10-round magazine; designed for deep-penetration reconnaissance and silent elimination; effective range is shorter than other snipers but no other sniper can be used without revealing position. |
 
+### Sniper Rifle Shared Attachments
+
+#### Sniper Barrels
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Match Grade Barrel | Barrel | Tight factory tolerances; improves accuracy and consistency; reduces shot-to-shot variance | None — this is the baseline at its best | **Unlock: Level 1 (default).** The precision-fitted factory barrel; every round groups tighter; the foundation every sniper build starts from. |
+| Suppressor | Barrel | Eliminates muzzle report signature; conceals firing position; hides the muzzle flash entirely | Reduces bullet velocity; causes slight holdover adjustment at extreme range | **Unlock: Level 7.** The stealth barrel; enemy cannot hear where the shot came from; does not make it completely quiet — the supersonic crack of the bullet is still audible near the target. |
+| Muzzle Brake | Barrel | Massively reduces felt recoil and muzzle rise; fastest follow-up shot recovery of any barrel | Significantly louder — the redirected gas amplifies muzzle blast | **Unlock: Level 12.** Critical on the Barrett M82 and McMillan TAC-50 where recoil is extreme; dramatically reduces the time between shots for semi-auto builds. |
+| Heavy Barrel | Barrel | Significantly improves bullet velocity, damage at extreme range, and barrel harmonics — tighter groupings at max distance | Adds considerable weight; notable mobility reduction | **Unlock: Level 19.** The long-range barrel; extends effective engagement distance and reduces damage falloff at the very edges of the sniper's range. |
+| Fluted Barrel | Barrel | Reduces barrel weight while maintaining rigidity; improves mobility without sacrificing accuracy | Slight reduction in sustained-fire heat management | **Unlock: Level 30.** Material removed through fluting keeps the barrel as accurate as a heavy barrel at a fraction of the weight; best of both worlds for precision and mobility. |
+
+#### Sniper Lasers
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| IR Laser | Laser | Completely invisible without NVGs; zero position giveaway; marks targets for team coordination in dark environments | Invisible to the user in full daylight without NVG — requires equipment to see | **Unlock: Level 5.** The only laser that makes sense for sniper builds where concealment is everything; visible laser on a sniper is a position giveaway at range. |
+| Range Laser | Laser | Integrated laser rangefinder; displays accurate distance to where the laser touches; removes guesswork from holdover calculations | Laser pulse briefly visible to sharp-eyed observers | **Unlock: Level 16.** A precision tool rather than a tactical laser; pairs directly with the Rangefinder Scope for confirmed first-round hits at maximum distance. |
+| Low Visibility Laser | Laser | Extremely dim laser visible only in low-light conditions; functions as a subtle close-range reference without the brightness of a standard beam | No benefit in daylight; very limited hip-fire improvement | **Unlock: Level 24.** A low-signature option; provides some hip-fire reference in buildings and at night without exposing position the way a standard laser would. |
+
+#### Sniper Optics
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Iron Sights | Optic | Zero added weight; fastest possible target acquisition; no ADS speed penalty | Effectively limits engagement to mid-range; impossible to take precision shots at sniper distances | **Unlock: Level 1 (default).** Unusual for a sniper build but usable on the VSS Vintorez for close-range stealth roles. |
+| 4× Fixed Scope | Optic | Clean 4× magnification; good clarity; excellent mid-to-long range precision | Fixed magnification; less versatile than variable optics | **Unlock: Level 3.** The SVD's PSO-1 style scope; the bread-and-butter sniper optic; reliable and fast to use. |
+| 10× Fixed Scope | Optic | High magnification precision scope; excellent for extreme long range; sharp reticle with windage/elevation markings | Very slow to shoulder; extreme close-range tunnel vision | **Unlock: Level 9.** The dedicated long-range optic; best on bolt-actions and the Barrett M82 for maximum effective distance. |
+| Variable 4–14× Scope | Optic | Adjustable magnification from 4× to 14×; versatile across all engagement ranges; first focal plane reticle scales with zoom | Complex; slightly slower to shoulder than fixed optics | **Unlock: Level 17.** The most flexible optic; dial to 4× for medium range and 14× for extreme precision — one optic covers every sniper scenario. |
+| Night Vision Scope | Optic | Amplifies available light for night operations; allows precision shooting in near-total darkness; 6× magnification | Daylight use washes out the image — night use only; slight weight increase | **Unlock: Level 28.** Transforms the sniper into a night operations specialist; the only optic that enables precision nighttime engagements. |
+
+#### Sniper Underbarrel
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Bipod | Underbarrel | When prone or crouched, deploys and massively reduces all recoil; near-zero sway while set up; dramatically improves precision at maximum range | Heavy; mobility reduction; only beneficial while stationary | **Unlock: Level 1 (default).** The essential sniper underbarrel; every serious sniper build uses a bipod; the difference in accuracy while prone is enormous. |
+| Tactical Grip | Underbarrel | Improves stability while standing or moving; reduces weapon sway during unsupported shots | Slight weight increase; not as effective as a bipod while stationary | **Unlock: Level 11.** For snipers who engage while standing or moving rather than setting up in a hide; maintains accuracy in less-than-ideal positions. |
+| Monopod | Underbarrel | Rear monopod under the stock; when used with a bipod simultaneously, creates a fully supported three-point rest — best possible stability while stationary | Only useful in conjunction with a bipod; heavy; useless while moving | **Unlock: Level 20.** Stacks with the bipod for the most stable possible shooting platform — full three-point support removes virtually all sway for maximum precision. |
+| Rangefinder Module | Underbarrel | Built-in laser rangefinder displays target distance on the scope; eliminates guesswork on holdover; confirms distance before engaging | Slight weight and bulk; requires a moment to range before shooting | **Unlock: Level 31.** For precision long-range shots where an inch of holdover difference means a hit or miss; particularly valuable when using non-standard ammunition with different drop curves. |
+
+#### Sniper Stock
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Standard Stock | Stock | Factory stock; balanced comfort and stability | None — default | **Unlock: Level 1 (default).** The weapon as designed; suitable baseline for most builds. |
+| Adjustable Cheek Riser | Stock | Raises the cheek weld to align perfectly with high-mounted optics; improves eye relief and reduces scope shadow; slightly better first-shot accuracy | Minimal mobility impact | **Unlock: Level 6.** Pairs with high-mounted scopes; proper cheek weld alignment significantly improves sight picture consistency. |
+| Folding Stock | Stock | Folds for transit; dramatically improves mobility while moving between positions; useful for snipers who reposition frequently | Slight accuracy reduction from stock-to-rifle contact vs fixed stock | **Unlock: Level 13.** For aggressive-repositioning snipers; fold the stock to move, unfold to engage; trade-off in stability is minor at close range. |
+| McMillan A5 Stock | Stock | Precision chassis stock with full adjustability for length-of-pull, cheek height, and cant; massively improves stability and accuracy; zero flex in the action | Very heavy; significant mobility reduction | **Unlock: Level 22.** The premium precision stock; used on real-world long-range competition and military sniper rifles; every dimension of the build becomes more consistent. |
+| Suppressor Stock | Stock | Internal hydraulic buffer absorbs recoil from suppressed fire; improves stability when running a suppressor barrel | Only beneficial when used with a suppressor; moderate weight | **Unlock: Level 34.** Designed to pair with the Suppressor barrel; the hydraulic system compensates for the slightly different recoil impulse a suppressor creates on the action. |
+
+#### Sniper Ammunition
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Match Grade | Ammunition | Hand-loaded match-quality rounds; dramatically tightens shot groupings; reduces shot-to-shot variance; best consistency of any ammo | No other trade-off — pure accuracy improvement | **Unlock: Level 1 (default).** The sniper's standard load; match-grade ammunition is what snipers actually use — each round is individually weighed and checked. |
+| Armor Piercing | Ammunition | Punches through body armor and light vehicle glass; retains lethal velocity through barriers | Slightly less damage against unarmored targets | **Unlock: Level 9.** Counters armored targets; especially effective on the Barrett M82 and TAC-50 for defeating light vehicle armor. |
+| Subsonic | Ammunition | Near-silent when used with a suppressor; eliminates the supersonic crack — the shooter's position is completely concealed | Significantly reduced range and velocity; substantially more bullet drop — requires heavy holdover adjustment | **Unlock: Level 15.** The ghost load; paired with the Suppressor, the VSS Vintorez was already subsonic — other snipers now match that silence at extreme cost to range. |
+| Incendiary | Ammunition | Round ignites on impact; applies fire damage over time; incendiary component penetrates light armor to burn inside | Slight accuracy reduction from modified tip; limited supply | **Unlock: Level 23.** Specialized round; most useful against vehicles and equipment rather than personnel; the fire component continues damaging after impact. |
+| .50 BMG Extended Range **[TAC-50 / M82 only]** | Ammunition | Purpose-built extreme long-range .50 BMG load; maximum bullet velocity; minimal drop at distances other snipers cannot reach | Only compatible with .50 caliber platforms; very limited supply | **Unlock: Level 36.** The extreme range round; extends the effective reach of the Barrett M82 and McMillan TAC-50 beyond what standard .50 BMG achieves; for confirmed kills at distances that break every other sniper's effective range. |
+
 ---
 
 ## 7. Marksman Rifles (14 / 14)
