@@ -11,6 +11,7 @@
 | Supported Barrel | Barrel | Massively increases damage; adds bullet penetration, bullet velocity, and bullet range | Decently decreases mobility and accuracy | **Unlock: Weapon Level 30.** Front-heavy design shifts the weapon's balance forward; the weight and length gain is what drives both the damage boost and the handling penalty. |
 | Steady Aim Barrel | Barrel | Massively increases ADS accuracy | Major hip-fire accuracy falloff | **Unlock: Weapon Level 15.** Lightweight design — no mobility penalty. Built purely for precision while aiming down sights; completely unreliable from the hip. |
 | SWAT Barrel | Barrel | Massive headshot damage multiplier | Heavily increases both horizontal and vertical recoil | **Unlock: Weapon Level 27.** High-risk, high-reward; rewards precise aim at the head but makes sustained fire and recoil control significantly harder. |
+| Spiral Barrel | Barrel | Massively increases bullet penetration, utility strike damage, and bullet velocity — no downsides | None | **Unlock: Weapon Max Level (41).** Rifling imparts a tight drill-like spin on the bullet; the spin dramatically increases penetration through materials and enemies, and supercharges utility/equipment strikes. Pure endgame reward — no trade-off. |
 
 | # | Name | Damage | Accuracy | Mobility | Fire Rate | Recoil | Fire Modes | Notes |
 |---|------|--------|----------|----------|-----------|--------|------------|-------|
