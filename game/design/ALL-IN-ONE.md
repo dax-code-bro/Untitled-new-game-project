@@ -3656,106 +3656,638 @@ The island hosts several outposts beyond the HYDRA village — implying an
 # ▓▓▓ FILE: arsenal.md ▓▓▓
 ═══════════════════════════════════════════════════════════════════════
 
-# Arsenal — The Guns
+# Arsenal
 
-> Canon reference for the game's weapons. The campaign established **"hundreds of
-> guns."** **Multiplayer has 200+ guns.** Target rating: **ESRB M.**
+> **MERGED** from the arsenal-specialist branch (`game-design-review-0lwev0`) into
+> the main story branch. This detailed version (attachments + stat-lined weapons)
+> is now canon. Target rating: **ESRB M.**
 
-## The Plan (200+ guns)
-- **Multiplayer arsenal: 200+ guns.**
-- **Each gun will be:**
-  1. **Named individually** (a unique name per gun).
-  2. **Given a UNIQUE attachment** (each gun has its own signature attachment — no
-     two share the same one).
-- This is a **big, ongoing catalog** — filled in gun by gun. The DLC(s) add more
-  (e.g. "Sins of the Past" adds several new guns).
+## ⚠ RECONCILIATION NEEDED — class breakdown vs. the final 200-plan
+This detailed arsenal was built on an **earlier class breakdown** than the final
+**exactly-200** plan the design later locked. They differ — to reconcile:
 
-## Signature Weapons (from the campaign — already established)
-| Character | Weapon |
-| --- | --- |
-| Webber "Molotov" Newman | **M16** (+ flame charm) |
-| James "Fox" Carter | **Benelli M3 Super 90** (shotgun) |
-| John "Striker" Jones | **PP919** (compact semi-auto SMG; original/fictional) |
-| General Abraham | **gold Colt M1911** |
-| Brian Wolford | **shotgun** (Industry) |
-| Payback | *no fixed weapon — uses battlefield pickups* |
-| Diego (1948) | period weapons (StG44/M1/etc.) |
-| Molotov (island Easter egg) | **homemade musket** |
+| Class | This doc | Final 200-plan | Action |
+| --- | --- | --- | --- |
+| Assault Rifles | 42 (+2→marksman) | **44** | re-fit counts |
+| Marksman Rifles | 14 | **30** | **+16 to add** |
+| Unique / Exotic | — | **26** | **entire class missing — add 26** |
+| Projectile Melee | — | **25** | **entire class missing — add 25** |
+| SMGs | 30 | **20** | trim/re-fit |
+| Shotguns | 14 | **14** | ✅ matches |
+| Explosive | 9 | **11** | +2 |
+| Sniper Rifles | 7 | **11** | +4 |
+| Bows & Crossbows | — | **10** | **entire class missing — add 10** |
+| Pistols | 14 | **9** | trim/re-fit |
 
-## Weapon Class Breakdown (exactly 200 total)
-| Class | Count |
-| --- | --- |
-| Assault Rifles | 44 |
-| Marksman Rifles | 30 |
-| Unique / Exotic Weapons | 26 |
-| Projectile Melee | 25 |
-| Submachine Guns (SMGs) | 20 |
-| Shotguns | 14 |
-| Explosive Weapons | 11 |
-| Sniper Rifles | 11 |
-| Bows & Crossbows | 10 |
-| **Pistols** | **9** |
-| **TOTAL** | **200** ✓ |
+**Missing entirely: Exotic (26), Projectile Melee (25), Bows/Crossbows (10) = 61
+weapons.** Keep this doc's excellent format (attachment system + stat tables) and
+build the missing classes / adjust counts to hit exactly 200. *(Decide later
+whether to keep the older counts or move to the 200-plan.)*
 
-*(Rebalance: **Explosives 20 → 11**; the 9 freed slots became a new **Pistols**
-class — fills a gap (no sidearms before) and homes Abraham's gold M1911 / Diego's
-revolver. Sum: 44+30+26+25+20+14+11+11+10+9 = 200.)*
+---
 
-## The 200 Named Guns (catalog — to be filled in)
-> Format per entry: **Name — unique attachment — notes.** Each weapon gets its own
-> name and its own unique attachment.
+## 1. Assault Rifles (42 / 44 — 2 reassigned to Marksman Rifles)
 
-### Assault Rifles (0/44 named)
-1. *(TBD)* … 44. *(TBD)*
+### Shared Attachments — All Assault Rifles
 
-### Marksman Rifles (0/30 named)
-1. *(TBD)* … 30. *(TBD)*
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Supported Barrel | Barrel | Massively increases damage; adds bullet penetration, bullet velocity, and bullet range | Decently decreases mobility and accuracy | **Unlock: Weapon Level 30.** Front-heavy design shifts the weapon's balance forward; the weight and length gain is what drives both the damage boost and the handling penalty. |
+| Steady Aim Barrel | Barrel | Massively increases ADS accuracy | Major hip-fire accuracy falloff | **Unlock: Weapon Level 15.** Lightweight design — no mobility penalty. Built purely for precision while aiming down sights; completely unreliable from the hip. |
+| SWAT Barrel | Barrel | Massive headshot damage multiplier | Heavily increases both horizontal and vertical recoil | **Unlock: Weapon Level 27.** High-risk, high-reward; rewards precise aim at the head but makes sustained fire and recoil control significantly harder. |
+| Spiral Barrel | Barrel | Massively increases bullet penetration, utility strike damage, and bullet velocity — no downsides | None | **Unlock: Weapon Max Level (41).** Rifling imparts a tight drill-like spin on the bullet; the spin dramatically increases penetration through materials and enemies, and supercharges utility/equipment strikes. Pure endgame reward — no trade-off. |
+| Striker Barrel | Barrel | Massively increases bullet spread; major close-range damage boost — effectively turns the rifle into a shotgun at close quarters | Heavily decreases damage range, bullet velocity, headshot multiplier, and nearly all standard rifle stats | **Unlock: Level 23.** Completely transforms the rifle's role — all long-range capability is sacrificed in exchange for devastating close-range spread damage. A fully committed CQB conversion; useless at distance. |
+| Steady Aim Laser | Laser | Significantly reduces ADS sway; tightens bullet groupings while aiming; improves ADS accuracy | Slightly reduces hip-fire accuracy | **Unlock: Level 6.** Promotes a committed ADS playstyle; pairs naturally with the Steady Aim Barrel for a full precision build. |
+| Canting Laser | Laser | Significantly improves hip-fire accuracy; faster snap-to-fire time without requiring full ADS | Slightly reduces ADS accuracy — the angled mount compromises the primary sight line | **Unlock: Level 11.** Mounted at a 45° angle; designed for aggressive players who stay in motion rather than planting and aiming; rewards confident hip-fire. |
+| Shotgun Laser | Laser | Massively improves close-range hip-fire effectiveness; widens and tightens the hip-fire spread into a controlled close-range pattern | Significantly reduces accuracy at medium and long range; nearly useless beyond close quarters | **Unlock: Level 19.** Built for pure CQB; the wide-beam laser guides spread at close range for maximum saturation; pairs directly with the Striker Barrel for a full shotgun-conversion build. |
+| Fast Motion Laser | Laser | Increases movement speed while aiming; significantly improves ADS speed and sprint-to-fire time | Slight accuracy reduction while moving — speed comes at a cost to stability | **Unlock: Level 8.** For aggressive, mobile players; keeps you fast and lethal without forcing you to stop and plant before firing. |
+| Iron Sights | Optic | Lightest optic — fastest ADS speed of any optic option | Least precise at medium and long range | **Unlock: Level 1 (default).** The weapon's built-in sights; always available; no added weight; no magnification. |
+| Cobra Red Dot | Optic | Clean unobstructed sight picture; improves ADS accuracy at close-mid range; slight ADS speed improvement over iron sights | No magnification; no long-range advantage | **Unlock: Level 4.** The reliable everyday workhorse; no frills, broad situational use. |
+| Viper Red Dot | Optic | Fastest ADS speed of any optic; wider sight window than the Cobra for fast aggressive play | Slightly less precise than the Cobra at medium range; no magnification | **Unlock: Level 9.** Built for speed over precision; for players who stay in motion and need instant target acquisition. |
+| Mecca 3X Sight | Optic | 3x magnification; significantly improves medium-range accuracy and target identification | Slower ADS than red dots; reduced close-range situational awareness | **Unlock: Level 14.** The sweet spot between speed and range; excellent mid-range optic without fully committing to a long-range role. |
+| Zoom Sight -3 | Optic | Wide-angle lens dramatically widens the field of view; fastest ADS of any magnified optic; exceptional close-mid range awareness | Reduced effective magnification makes it weak at long range | **Unlock: Level 18.** Counter-intuitive design — the negative zoom gives a panoramic view instead of magnifying; for players who want situational awareness over precision. |
+| Sniper Scope | Optic | 10x magnification; massively improves long-range accuracy; clean precision reticle | Very slow ADS; severely limits close-range capability; heavy | **Unlock: Level 22.** Fully converts the rifle into a long-range platform at the cost of all CQB effectiveness. |
+| Thermal X8 Optic | Optic | 8x magnification + thermal imaging; highlights enemy heat signatures through smoke and light foliage; best optic in low-visibility conditions | Slowest ADS of all optics; completely unusable at close range; heaviest optic in the class | **Unlock: Level 28.** In the right conditions — smoke, night, dense cover — it's unmatched; in CQB it is a death sentence. |
+| Hydra Sight | Optic | 4x magnification + predictive targeting overlay that tracks enemy movement and highlights likely next positions; built-in light amplification for dark environments; major accuracy boost | Slight ADS speed reduction; tracking overlay can be visually overwhelming | **Unlock: Level 36.** HYDRA-engineered optic; decades ahead of 1985 tech; the targeting system predicts enemy movement patterns giving a distinct advantage on moving targets. Rare — only found on HYDRA soldiers or as a high-level unlock. |
+| Vertical Foregrip | Underbarrel | Significantly reduces vertical recoil; improves sustained fire accuracy | Slight ADS speed and mobility reduction | **Unlock: Level 3.** The most fundamental grip; the go-to for taming muzzle climb on high-recoil weapons. |
+| Horizontal Foregrip | Underbarrel | Significantly reduces horizontal recoil and side-to-side sway during sustained fire | Slight ADS speed reduction; minimal effect on vertical recoil | **Unlock: Level 6.** Best paired with weapons that drift sideways rather than climb; complements the Vertical Foregrip playstyle. |
+| Fast Motion Foregrip | Underbarrel | Increases movement speed while aiming; improves ADS speed and sprint-to-fire time | Slight recoil increase; minimal stability benefit | **Unlock: Level 7.** For aggressive mobile players who prioritize speed of movement and weapon handling over recoil control. |
+| Smoke Launcher | Underbarrel | Fires a smoke grenade on demand without consuming the equipment slot; provides instant tactical cover | Slight weight and bulk increase to handling | **Unlock: Level 11.** Frees up the equipment slot entirely; on-demand smoke for repositioning, covering pushes, or breaking line of sight. |
+| Steady Foregrip | Underbarrel | Massively reduces all recoil — both vertical and horizontal; significantly reduces weapon sway while ADS; best raw stability of any grip | Notable mobility decrease; slower ADS speed | **Unlock: Level 13.** The ultimate stability grip; plants the weapon like a rock; best on the highest-recoil weapons in the class. |
+| CS Gas Launcher | Underbarrel | Fires a CS tear gas grenade; blinds and disorients enemies in the cloud; imposes a movement and aim penalty on anyone caught inside | Moderate weight increase; the cloud affects allies too — requires caution | **Unlock: Level 16.** Area denial and zone control; forces enemies out of cover and punishes tight groupings. |
+| Standard Launcher | Underbarrel | Fires a 40mm high-explosive grenade; high burst damage; can destroy vehicles, equipment, and fortified positions | Heavy weight increase; significantly reduces mobility and ADS speed; limited ammo per life | **Unlock: Level 19.** M203-style underbarrel; transforms the rifle into a grenadier's platform; slow to reload between shots. |
+| Concussion Launcher | Underbarrel | Fires a concussion grenade; stuns and disorients enemies — temporarily impairs their aim, movement, and audio | Moderate weight increase; non-lethal — won't finish enemies on its own | **Unlock: Level 21.** Perfect for breaching and stunning grouped enemies before pushing; clears a room without killing — letting you clean up. |
+| No Stock | Stock | Massively improves mobility and ADS speed; near-SMG handling; fastest sprint-to-fire of any stock option | Significantly increases recoil and weapon sway — no shoulder contact means nothing to brace against | **Unlock: Level 2.** Strip the stock entirely; transforms the rifle into a highly aggressive CQB tool; punishing at range. |
+| Light Stock | Stock | Improves mobility and ADS speed; reduces weapon weight; better handling than standard without fully sacrificing stability | Slight recoil increase over standard stock; reduced sustained-fire stability | **Unlock: Level 5.** The balanced middle ground between No Stock and Heavy Stock; good all-rounder. |
+| Heavy Stock | Stock | Massively reduces recoil; greatly improves stability and accuracy during sustained fire; significantly reduces weapon sway | Major mobility decrease; notably slower ADS speed; heavy | **Unlock: Level 8.** Plants the weapon firmly against the shoulder; the stability gain is enormous but the handling loss is equally significant. |
+| Laser Stock | Stock | Built-in integrated laser improves hip-fire accuracy without consuming the laser attachment slot; lightweight; improves ADS speed | Slight recoil increase — lighter stock means less shoulder contact | **Unlock: Level 17.** Combines stock and laser into a single slot; frees up the laser slot for a second attachment elsewhere. The built-in laser is always active. |
+| Tripod Stock | Stock | Unfolds into a bipod when prone or crouched — massively reduces recoil and improves accuracy to near-stationary precision while deployed; excellent for holding sightlines | Heavy; major mobility reduction; slower ADS; bipod benefit only activates while stationary | **Unlock: Level 23.** Converts the rifle into a fixed platform when set up; unmatched accuracy while deployed; a serious liability while moving. |
+| Electric Stock | Stock | Active electric dampening system counters recoil impulse in real time; improves sustained-fire stability; melee strikes with the weapon deliver an electric shock that briefly stuns enemies | Heavier than standard; slight mobility reduction | **Unlock: Level 24.** Dual-purpose tech stock — recoil dampening during firefights and a close-quarters stun tool if an enemy gets too close. |
+| Hydro Stock | Stock | Hydraulic recoil absorption system massively reduces felt recoil and smooths out sustained fire; the most recoil-reduction of any stock option | Considerable weight from hydraulic system; major mobility decrease; slowest ADS of all stock options | **Unlock: Level 32.** The hydraulic system actively absorbs recoil impulse shot-by-shot; paired with the Steady Foregrip it creates near-zero recoil; the weight trade-off is severe. |
+| Hollow Point | Ammunition | Massively increases damage against unarmored targets; rounds expand on impact for greater wound channels | Significantly reduced penetration — stops at body armor and light cover; useless against armored enemies | **Unlock: Level 8.** Devastating against unprotected enemies; completely neutered by armor — know your target before equipping. |
+| Armor Piercing | Ammunition | Significantly improves penetration through armor and cover; bullets pass through light walls and body armor with reduced damage drop | Reduced damage against unarmored targets; the hardened tip sacrifices stopping power for penetration | **Unlock: Level 12.** For fighting armored enemies or shooting through cover; the reverse trade-off of Hollow Point. |
+| Tracer Rounds | Ammunition | Rounds leave a visible trail to the target; improves hit confirmation and target tracking in low visibility; slight morale/suppression effect on enemies | Enemy can see exactly where fire is coming from — reveals position clearly | **Unlock: Level 16.** A visibility and tracking tool; excellent for coordinating fire with teammates but removes all element of concealment. |
+| Subsonic | Ammunition | Near-silent when used with a suppressor; significantly reduces sound signature; reduces muzzle flash | Reduced bullet velocity and effective range; lower damage at distance | **Unlock: Level 18.** The stealth ammunition; pairs with a suppressor for the quietest possible build — best for close-to-mid range where the velocity loss is manageable. |
+| 6.8mm Remington SPC | Ammunition | Moderate damage increase over standard 5.56mm; better terminal performance and wound ballistics; good damage retention at range | Slight magazine capacity reduction; slightly increased recoil | **Unlock: Level 10.** A meaningful step up from standard caliber without the full weight and recoil penalty of 7.62mm — the middle ground. |
+| .300 AAC Blackout | Ammunition | Excellent suppressor compatibility; high close-range damage with subsonic loads; dual-use — supersonic loads for range, subsonic for suppressed silent builds | Reduced effective range on subsonic loads; moderate magazine capacity reduction | **Unlock: Level 15.** Designed around suppressor use; pairs naturally with any suppressor attachment for a quiet, hard-hitting close-range setup. |
+| 7.62×51mm NATO | Ammunition | Significantly increases damage, penetration, bullet velocity, and effective range; the heaviest-hitting caliber conversion available | Increased recoil; reduced magazine capacity; slight mobility reduction from heavier ammunition | **Unlock: Level 20.** A full caliber step up; converts the rifle into a harder-punching platform — closer to a battle rifle in power at the cost of control and capacity. |
+| Explosive Rounds | Ammunition | Each bullet carries a small explosive payload that detonates on impact; area damage can hit multiple enemies; devastating against grouped targets and light equipment | **Hard cap of 24 rounds per life** — no resupply mid-match; reduced penetration; slight accuracy reduction from tip weight | **Unlock: Level 29.** The most destructive ammunition in the class; limited supply forces careful shot selection — every bullet counts. |
+| Match Trigger | Firing Mod | Crisp, light trigger pull with a shorter reset; improves ADS accuracy on first shot; faster trigger response between shots | Minimal — the lightest mod in the slot | **Unlock: Level 5.** A precision trigger job; sharpens the feel of every shot without fundamentally changing the weapon's behaviour. Best on semi-auto builds. |
+| Extended Cycle | Firing Mod | Significantly slows fire rate; each round hits with increased force and tighter accuracy; recoil per shot is drastically reduced | Fire rate drops noticeably — poor in close-range spray situations | **Unlock: Level 13.** Trades volume of fire for quality of fire; every round lands harder and more precisely; rewards patient, deliberate shooters. |
+| Double Tap | Firing Mod | Every trigger pull fires two rounds in near-instant succession; effectively doubles damage output per pull | Uses ammo twice as fast; increased recoil per pull from the double shot | **Unlock: Level 20.** High burst output at the cost of ammo economy; devastating in short controlled bursts but burns through magazines quickly. |
+| Rapid Fire | Firing Mod | Significantly increases fire rate — more rounds per minute output | Increases recoil and horizontal sway at the higher cyclic rate; slight accuracy reduction during sustained fire | **Unlock: Level 26.** Internal mechanism mod that pushes the weapon's cyclic rate beyond its factory setting; the faster output is offset by harder-to-manage recoil — rewards players who can control it. |
+| Binary Trigger | Firing Mod | Fires one round on trigger pull and one round on trigger release — effectively doubles fire rate in sustained use without increasing cyclic speed | Extremely difficult to control; the release shot often lands off-target; fires on release whether intended or not | **Unlock: Level 33.** The highest skill ceiling firing mod; in trained hands it nearly doubles output; in untrained hands it wastes rounds and kills accuracy. |
 
-### Unique / Exotic Weapons (0/26 named)
-1. *(TBD)* … 26. *(TBD)*
+| # | Name | Damage | Accuracy | Mobility | Fire Rate | Recoil | Fire Modes | Notes |
+|---|------|--------|----------|----------|-----------|--------|------------|-------|
+| 1 | M4A1 | Medium | Medium | High | High (~800 RPM) | Low | Semi / Auto | Lightweight carbine; fast transitions; tight hip-fire; mild vertical climb in sustained auto. |
+| 2 | XM4 | Medium-High | Good | Mid | Varies | Mid | Semi / Auto | Upgraded M4; better damage and accuracy, trades some mobility and recoil control. |
+| 3 | AK-47 | High | Medium-Low | Medium | Medium (~600 RPM) | Very High | Semi / Auto | Heavy 7.62×39mm; devastating per hit; severe violent muzzle rise with random side-to-side sway; heavier wood and steel slows reloads. |
+| 4 | M16A4 | Medium-High | Very High | Low | Medium (burst) | Low | Semi / 3-Round Burst | Long barrel maximizes velocity; exceptional damage retention at range; highly predictable vertical kick, near-zero horizontal drift; slow due to full-size fixed-stock frame. |
+| 5 | G36 | Medium | Very High | High | High (~750 RPM) | Low | Semi / Auto | German polymer build; integral dual optic (red dot + 3×); exceptional factory accuracy. |
+| 6 | Steyr AUG A3 | Medium | High | High | Medium (~680–750 RPM) | Low-Mid | Semi / Auto | Bullpup; full barrel in compact frame; Picatinny rail; slight diagonal pull during sustained fire. |
+| 7 | HK416 | Medium | High | Medium-High | High | Low | Semi / Auto | Gas piston keeps it flat and stable; slightly heavier than M4 but highly agile. |
+| 8 | LMT MARS-L | Medium | High | High | High | Mid | Semi / Auto | Fully ambidextrous; fast reload and weapon-swap; tight initial bullet groupings. |
+| 9 | SIG Sauer MCX Spear-LT | Medium | High | High | High | Low | Semi / Auto | Modern skeletal design; minimal point-of-aim shift during continuous automatic strings. |
+| 10 | Colt Canada C7A2 | Medium-High | Very High | Medium | Medium-High | Low | Semi / Auto | Full rifle length; lightweight modern polymer; straight-back recoil; strong at distance. |
+| 11 | FN SCAR-L (Mk 16) | Medium | High | Medium | Medium | Low | Semi / Auto | Folding stock; blocky receiver; recoil moves straight upward with zero horizontal sway. |
+| 12 | HK33 | Medium | Medium | Medium-Low | Medium-High | Mid | Semi / Auto | Older heavy stamped steel construction; noticeable camera shake but reliable, predictable pattern. |
+| 13 | FN FNC | Medium | High | Medium | Medium | Low | Semi / Auto | Heavy all-metal frame absorbs continuous kick; muzzle stays steady through sustained fire. |
+| 14 | AKM | High | Medium-Low | Medium | Medium (~600 RPM) | High | Semi / Auto | Lighter stamped receiver than AK-47; marginally easier to control; same heavy-hitting punch. |
+| 15 | AK-103 | High | Medium | Medium | Medium (~600 RPM) | Medium-High | Semi / Auto | Polymer furniture AK; muzzle brake eliminates side-to-side drift while keeping heavy damage per round. |
+| 16 | AK-12 | Medium | High | Medium-High | High | Low-Mid | Semi / Auto | Modern AK with rail systems; drastically reduces the traditional horizontal sway of older platforms. |
+| 17 | AN-94 | Medium | Elite (first 2 shots) / Medium (auto) | Medium-Low | 1800 RPM (first 2 shots) → Medium (sustained) | Very Low (first 2) / Mid (auto) | Semi / 2-Round Hyperburst / Auto | First two rounds fire at 1800 RPM and land on the same point before recoil kicks in; complex internals add slight weight penalty. |
+| 18 | Galil AR | Medium | High | Medium-Low | Medium-High | Low | Semi / Auto | Heavy rugged steel receiver; physical weight acts as natural stabilizer; full-auto spray stays tight. |
+| 19 | Zastava M70 | High | Medium | Medium | Medium | Medium-High | Semi / Auto | Punishing bullet-per-bullet stopping power; heavy vertical lift builds under sustained fire. |
+| 20 | FAMAS F1 | Medium | Medium | High | Extreme (~950–1000 RPM) | High | Semi / Auto | Fastest cyclic rate in the AR class; compact frame; severe rapid vertical climb from sheer volume of fire. |
+| 21 | IWI Tavor TAR-21 | Medium | High | High | Medium-High | Low | Semi / Auto | Polymer bullpup built for tight spaces; centered center of gravity makes tracking targets fluid. |
+| 22 | IWI Tavor X95 | Medium | Medium-High | High | Medium-High | Mid | Semi / Auto | Compact bullpup; snappy vertical pop requires active correction; full AR damage in a short frame. |
+| 23 | SA80 / L85A2 | Medium | Very High | Medium-Low | Medium | Very Low | Semi / Auto | Back-heavy and notably slow; weight completely tames vertical recoil; exceptional accuracy over long lines of sight. |
+| 24 | FN F2000 | Medium | High | High | High (~850 RPM) | Low | Semi / Auto | Rounded ergonomic frame; fluid predictable vertical; minimal horizontal drift. |
+| 25 | QBZ-95 | Medium-High | High | High | Medium | Low | Semi / Auto | Unique intermediate round with armor-defeating traits; compact bullpup; smooth linear recoil. |
+| 26 | QBZ-191 | Medium-High | High | Medium-High | Medium-High | Low | Semi / Auto | Modern conventional layout; fast reload; consistent vertical recovery; strong at distance. |
+| 27 | VHS-2 | Medium | High | High | High | Very Low | Semi / Auto | Incredibly flat, consistent continuous fire; sleek chassis; rapid target acquisition. |
+| 28 | SIG 550 | Medium | Very High | Medium-Low | Medium | Very Low | Semi / Burst / Auto | Long heavy frame; near-flawless mechanical accuracy; minimal recoil disruption at all ranges. |
+| 29 | Beretta ARX-160 | Medium | Medium-High | High | Medium-High | Mid | Semi / Auto | Advanced technopolymer; very lightweight; slight snappy jump on initial shots. |
+| 30 | Daewoo K2 | Medium | High | Medium | Medium | Low | Semi / Burst / Auto | Balanced across all stats; predictable upward climb with zero sudden diagonal jumps. |
+| 31 | CZ BREN 2 | Medium | High | High | High | Low | Semi / Auto | Modular aluminum and polymer; crisp rapid handling; linear, manageable vertical recoil. |
+| 32 | FARA 83 | Medium | High | Medium-Low | Medium | Low | Semi / Auto | Slightly heavier frame limits reactive targeting; smooth rhythmic recoil pattern; easy to master. |
+| 33 | INSAS | Medium | High | Medium | Medium | Low | Semi / Burst / Auto | Balanced operational weight; predictable baseline vertical rise; reliable cyclic pace. |
+| 34 | Howa Type 89 | Medium | Very High | Medium | Medium-High | Low | Semi / Burst / Auto | Mechanically designed for tight groupings; stable, dependable, and highly precise. |
+| 35 | Valmet M76 | High | High | Medium | Medium | Low | Semi / Auto | Cleans up camera wobble for a clear sight picture; heavy-hitting round paired with controlled recoil. |
+| 36 | FX-05 Xiuhcoatl | Medium | High | Medium-High | Medium-High | Low | Semi / Auto | Resilient polymer frame; low vertical rise; minimal horizontal sway; reliable cadence. |
+| 37 | RK 62 | High | High | Medium | Medium | Low | Semi / Auto | High-quality milled receiver; exceptional build quality; heavy damage with consistent, predictable recoil. |
+| 38 | SAR 21 | Medium | High | High | Medium | Very Low | Semi / Auto | Compact bullpup; integrated optical sight; exceptionally flat vertical recoil profile. |
+| 39 | Krait KR-9 **[F]** | Medium | Medium-Low | Medium | High (~820 RPM) | High | Semi / Auto | Fictional Eastern European design built for volume of fire; fast but not SMG-speed; sprays wildly beyond mid-distance. |
+| 40 | Viper V-14 **[F]** | High | High | Low | Low-Medium | High | Semi / Auto | Fictional heavy-caliber AR; shreds cover and light armor; hardest-hitting gun in the AR class; poor mobility is the trade-off. |
+| 41 | Talon TX-4 **[F]** | Medium | Medium | High | High | Mid | Semi / Auto | Fictional compact AR for vehicle crews and CQB; short frame with full AR damage output; trades range accuracy for handling. |
+| 42 | HYDRA MK-I **[F][HYDRA]** | High | High | Medium | High | Very Low | Semi / Auto | HYDRA's standard infantry rifle; decades ahead of 1985 in materials; near-zero recoil at high damage; only found on HYDRA soldiers. |
 
-### Projectile Melee (0/25 named)
-1. *(TBD)* … 25. *(TBD)*
+---
 
-### Submachine Guns / SMGs (0/20 named)
-1. *(TBD)* … 20. *(TBD)*
-- *(Striker's **PP919** belongs here.)*
+> **Reassigned to Marksman Rifles:**
+> - **PR-85 "Phantom"** — semi-only, Very High damage, Very High accuracy. Textbook marksman rifle.
+> - **Lynx LR-3** — Elite accuracy, noted as rivaling DMR platforms. Belongs in marksman rifles.
 
-### Explosive Weapons (0/11 named)
-1. *(TBD)* … 11. *(TBD)*
+---
 
-### Pistols (9/9 named — ⚠ DRAFT, pending approval)
-> Format: **Name** — base type — *Unique Attachment* — notes.
-1. **The Statesman** — gold Colt M1911 — *Gilded Slide* (pure-gold slide; faster
-   ADS, intimidation flair) — **Abraham's signature sidearm.**
-2. **Vaquero** — single-action .45 revolver — *Fanning Hammer* (rapid fan-fire) —
-   **Diego's 1948 revolver.**
-3. **Sidewinder** — fast 9mm semi-auto — *Snakebite Compensator* (recoil control).
-4. **The Deacon** — heavy .44 Magnum revolver — *Sermon Ported Barrel* (muzzle
-   climb tamed on a hand-cannon).
-5. **Ghostwriter** — integrally suppressed pistol — *Redacted Rounds* (subsonic;
-   near-silent) — nods to the campaign's "classified" motif.
-6. **Little Havana** — compact machine pistol — *Cigar-Box Drum* (extended mag).
-7. **Nightcap** — .380 pocket pistol — *Last Call Laser* (fast close-range sight).
-8. **The Notary** — burst-fire pistol — *Triple-Seal Burst* (tighter 3-round burst).
-9. **Neon Fang** — flashy pistol (Isla del Neón Fuego vibe) — *Fuego Tracers*
-   (incendiary tracer rounds).
+## 2. Shotguns (14 / 14)
 
-### Shotguns (0/14 named)
-1. *(TBD)* … 14. *(TBD)*
-- *(Fox's **Benelli M3 Super 90** belongs here.)*
+| # | Name | Damage | Accuracy | Mobility | Fire Rate | Recoil | Fire Modes | Notes |
+|---|------|--------|----------|----------|-----------|--------|------------|-------|
+| 1 | Benelli M4 | Very High | Medium (pellet spread) | Medium | Medium-High (semi-auto follow-up) | High (reduced by ARGO gas system vs other 12ga) | Semi-Auto | US Marine Corps standard combat shotgun; ARGO gas-operated system cycles reliably with any ammo and cuts felt recoil vs inertia-driven designs; fastest reliable follow-up shot in the shotgun class. |
+| 2 | AA-12 (Auto Assault-12) | Very High | Medium (pellet spread) | Medium-Low | High (~300 RPM full-auto) | Medium (recoil buffer system absorbs most kick despite 12ga) | Semi / Auto (hold trigger) | The only full-auto shotgun in the class; tap for single shots, hold for continuous fire; 8-round box or 20/32-round drum mag; heavier than most shotguns but the recoil buffer makes it surprisingly manageable on full-auto. |
+| 3 | Mossberg 500 | Very High | Medium | High | Low (pump) | High | Pump | Extremely reliable pump-action; lightweight; ambidextrous tang safety; military and police staple worldwide. |
+| 4 | Remington 870 | Very High | Medium | Medium | Low (pump) | High | Pump | Most-produced shotgun in history; heavier and more solid than the Mossberg 500; legendary durability; slightly slower handling trade-off. |
+| 5 | SPAS-12 | Very High | Medium | Medium-Low | Medium (semi) / Low (pump) | High | Pump / Semi-Auto (switchable) | Iconic Italian combat shotgun; switchable between pump for low-pressure specialty rounds and semi-auto for standard shells; folding hook stock; heavy but distinctive. |
+| 6 | SPAS-15 | Very High | Medium | Medium | Medium (semi) / Low (pump) | High | Pump / Semi-Auto (switchable) | Evolved SPAS-12 with a detachable 6-round box magazine; more tactical reload profile than its predecessor; same pump/semi switch mechanic. |
+| 7 | Ithaca 37 | Very High | Medium | High | Low (pump) / Medium (slam-fire) | High | Pump / Slam-Fire | Bottom-ejecting pump — fully ambidextrous by design; no disconnector means holding the trigger and pumping rapidly fires on every stroke (slam-fire); used by LAPD and US military in Vietnam. |
+| 8 | Winchester Model 1897 | Very High | Medium-Low | Low | Low (pump) / Medium (slam-fire) | High | Pump / Slam-Fire | WWI trench gun; exposed external hammer; no disconnector allows slam-firing like the Ithaca 37; vintage and heavy but iconic close-range violence. |
+| 9 | Browning Auto-5 | Very High | Medium | Medium | Medium-High (semi-auto) | High (long-recoil system bucks rearward distinctively) | Semi-Auto | First successful semi-auto shotgun; distinctive humpback receiver; long-recoil operation gives it a unique physical kick not felt in gas-operated designs. |
+| 10 | Remington 1100 | Very High | Medium | Medium-High | Medium-High (semi-auto) | Medium (gas system bleeds off recoil) | Semi-Auto | Softest-shooting shotgun in the class; gas-operated system reduces felt recoil significantly; reliable follow-up shots; popular with law enforcement for this reason. |
+| 11 | KS-23 | Extreme (23mm) | Low | Low | Very Low (pump) | Extreme | Pump | Soviet 23mm (4-gauge equivalent) — essentially a portable cannon; fires specialized rounds including slug, buckshot, tear gas, and rubber; devastating at any range it can hit; rarely seen outside Soviet special units. |
+| 12 | Striker-12 "Jury" **[F]** | Very High | Medium | Medium | Medium (revolving cylinder) | High | Semi-Auto | Fictional 12-round revolving-cylinder shotgun; high capacity for a shotgun; cylinder rotation adds a slight mechanical delay between shots but keeps pressure in sustained close-range fights. |
+| 13 | Brimstone BS-7 **[F]** | Very High | Very Low (extreme wide spread) | Low | Medium-High (semi-auto) | Very High | Semi-Auto | Fictional area-denial shotgun; widest pellet spread in the class — near-useless at range but fills an entire doorway at close quarters; heavy drum magazine drags mobility down. |
+| 14 | Sledge SG-1 **[F]** | Extreme (rifled slug) | High (for a shotgun — single projectile, not pellets) | High (lightweight break-action) | Very Low (single shot, break-action reload) | Extreme | Single-Shot | Fictional slug-only break-action; fires one massive rifled slug per reload; highest single-shot damage in the shotgun class; accurate enough to engage targets at medium range that other shotguns can't touch. |
 
-### Sniper Rifles (0/11 named)
-1. *(TBD)* … 11. *(TBD)*
+### Shotgun Firing Mods
 
-### Bows & Crossbows (0/10 named)
-1. *(TBD)* … 10. *(TBD)*
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| 20 Gauge | Firing Mod | Reduces recoil significantly; improves handling and mobility; tighter, more predictable pellet pattern | Reduced damage and fewer pellets per shot than 12 gauge — noticeably less stopping power | **Unlock: Level 8.** A full caliber step down; trades raw power for control; best for players who struggle managing 12ga recoil. |
+| Rapid Fire | Firing Mod | Significantly increases pump speed on pump-action shotguns; faster cycling on semi-auto variants; more shots downrange per second | Increased recoil per shot; harder to manage during rapid successive fire | **Unlock: Level 16.** Pushes the cycling mechanism beyond factory speed; reward for players who can absorb the extra kick. |
+| CO2 Pump | Firing Mod | CO2-assisted pump mechanism dramatically accelerates pump speed — near-semi-auto cycling on pump-action shotguns; improves overall handling feel | CO2 canisters are finite; effectiveness slightly decreases over extended use as pressure drops; slight reduction in per-shot power | **Unlock: Level 20.** Mechanically the most interesting pump mod; transforms pump-actions into aggressive fast-cycling weapons at the cost of a limited resource. |
+| Dragon's Breath | Firing Mod | Each shot sprays a burst of burning incendiary material; applies fire damage over time to anything it touches; lingers in the air after firing; area-denial in enclosed spaces | Extremely short effective range even by shotgun standards; fire does not penetrate armor; limited ammo supply | **Unlock: Level 28.** More psychological weapon than lethal one at range — the fire cloud lingers in corridors and doorways, forcing enemies to move or burn. Devastating indoors. |
 
-## Open / TBD
-- The full 200+ named list + each gun's unique attachment.
-- Weapon classes/categories (AR, SMG, LMG, shotgun, sniper, pistol, etc.).
-- How attachments work system-wide (loadouts, unlocks, customization).
-- Which guns are MP-only vs. shared across modes (campaign, zombies, open-world).
+### Shotgun Barrels
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Standard Choke | Barrel | Baseline pellet pattern; balanced spread and range | None — default configuration | **Unlock: Level 1 (default).** The factory choke; no trade-offs, no specialisation. |
+| Extended Barrel | Barrel | Tightens pellet pattern; significantly increases effective range and damage falloff distance; improved accuracy | Reduced mobility; slower ADS; heavier front end | **Unlock: Level 5.** Pushes the shotgun toward mid-range effectiveness; the closest a shotgun gets to a precision tool. |
+| Suppressor | Barrel | Drastically reduces sound and muzzle flash; slight recoil reduction | Reduced damage and pellet velocity; slightly shorter effective range | **Unlock: Level 10.** Quietest shotgun option; trades stopping power for stealth; works best on semi-auto builds. |
+| Sawed-Off | Barrel | Massively increases spread; major mobility and ADS speed improvement; extremely fast to handle | Severely reduced range and damage falloff; nearly useless beyond point-blank | **Unlock: Level 14.** The most extreme CQB conversion; inside a room it's devastating; outside it's useless. |
+| Heat Shield | Barrel | Allows sustained firing without heat distortion affecting the sight picture; slight suppression resistance | Minimal stat impact — cosmetic and comfort-focused | **Unlock: Level 18.** Adds a vented heat shield over the barrel; prevents rising heat shimmer from obscuring the sight during rapid back-to-back shots. |
+| Full Choke | Barrel | Maximum pellet constriction — tightest possible grouping; significantly improves long-range pellet density | Extreme reduction in close-range spread; close-up shots hit fewer pellets simultaneously | **Unlock: Level 25.** Converts the shotgun into a long-range precision tool at the cost of its close-range breadth. |
+
+### Shotgun Lasers
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Tactical Laser | Laser | Improves hip-fire accuracy and ADS speed; visible laser gives quick target reference | Laser is visible to enemies — reveals position | **Unlock: Level 4.** A solid general-purpose laser for aggressive hip-fire shotgun play. |
+| Standard Laser | Laser | Significantly improves hip-fire accuracy; tightens hip-fire pellet spread | Slight ADS speed reduction; always-on laser reveals position | **Unlock: Level 7.** Best hip-fire laser in the class; the go-to for players who rarely ADS with a shotgun. |
+| Wide Beam Laser | Laser | Widens and stabilises the hip-fire spread into a consistent, predictable pattern at close range; pairs well with Sawed-Off | Reduces ADS accuracy; the wide beam is only effective at close range | **Unlock: Level 15.** Designed specifically for maximum-spread builds; makes the spread pattern consistent and reliable rather than random. |
+
+### Shotgun Optics
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Bead Sight | Optic | Fastest ADS of any optic; lightest; zero obstruction of the sight picture | Least precise; no help at range | **Unlock: Level 1 (default).** The classic shotgun front bead; fastest to shoulder, least accurate. |
+| Ghost Ring | Optic | Improved close-range target acquisition over bead; quick sight picture in low light | No magnification; limited at range | **Unlock: Level 3.** Aperture rear + bead front; faster than a full sight picture and more precise than a bead alone. |
+| Red Dot | Optic | Clean precise aiming point; improves mid-range accuracy; good for slug builds | Slight ADS speed reduction | **Unlock: Level 6.** Best general-purpose optic for players who mix buckshot and slugs. |
+| Reflex Sight | Optic | Wide sight window; fast target acquisition; good in CQB | No magnification | **Unlock: Level 9.** Open reflex window gives excellent situational awareness while still providing an aiming point. |
+| Holographic | Optic | Accurate reticle; excellent clarity; works well in low light | Heavier; slightly slower ADS than red dot | **Unlock: Level 12.** Cleaner reticle than the red dot with slightly better low-light performance. |
+| Slug Scope | Optic | Low-magnification (2×) scope purpose-built for slug rounds; significantly improves slug accuracy at medium range | Completely impractical with buckshot at close range; slow ADS | **Unlock: Level 22.** Commits the shotgun to a slug-only role; in that role it extends effective range dramatically. |
+
+### Shotgun Underbarrel
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Vertical Foregrip | Underbarrel | Reduces vertical recoil; steadier follow-up shots | Slight mobility reduction | **Unlock: Level 3.** The fundamental grip; especially useful on high-recoil pump builds. |
+| Tactical Flashlight | Underbarrel | Illuminates dark areas; blinds enemies briefly when shone directly at them in low light | Reveals the player's position in dark environments | **Unlock: Level 7.** Essential for indoor and night operations; doubles as a close-range disorientation tool. |
+| Angled Foregrip | Underbarrel | Improves ADS speed; better handling during movement | Minimal recoil reduction compared to vertical grip | **Unlock: Level 11.** For players who ADS regularly; faster transition than any other grip. |
+| Breacher Device | Underbarrel | Attaches a door-breaching muzzle device; allows instant mechanical door breaching without wasting a shell | Slight weight increase; minimal other stat impact | **Unlock: Level 19.** A tactical utility tool; breach doors silently and instantly without firing — keeps the element of surprise. |
+| Bipod | Underbarrel | When prone or crouched, deploys a bipod that massively stabilises the shotgun — near-zero recoil and maximum pellet consistency while set up | Heavy; major mobility reduction; only effective while stationary | **Unlock: Level 24.** Niche but powerful for defensive slug builds; turns the shotgun into a fixed precision platform. |
+
+### Shotgun Stock
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| No Stock (Pistol Grip) | Stock | Massively improves mobility and ADS speed; fastest handling of any stock option | Greatly increases recoil — nothing to brace against the shoulder | **Unlock: Level 2.** Strip the stock for a compact, aggressive build; brutal recoil demands short engagements. |
+| Folding Stock | Stock | Improves mobility and ADS speed; folds for tighter movement; decent recoil management | Slight recoil increase over fixed stock | **Unlock: Level 6.** The balanced option; good mobility without fully sacrificing shoulder contact and control. |
+| Rubber Recoil Pad | Stock | Significantly reduces felt recoil; absorbs kick on every shot; improves sustained fire comfort | Minimal mobility impact — adds slight weight | **Unlock: Level 9.** The simplest recoil solution; no trade-offs beyond marginal weight; best on high-recoil heavy builds. |
+| Tactical Stock | Stock | Improves ADS stability; reduces weapon sway; better control during movement | Slight ADS speed reduction | **Unlock: Level 16.** A solid all-round stability upgrade; best for players who move and shoot simultaneously. |
+| Adjustable Stock | Stock | Fully configurable length-of-pull; improves both ADS speed and recoil management simultaneously | Moderate weight increase from the adjustment mechanism | **Unlock: Level 21.** The most versatile stock; gives back both speed and stability — at the cost of added bulk. |
+
+### Shotgun Ammunition
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Buckshot | Ammunition | Standard 12-pellet spread; balanced damage and range | None — default configuration | **Unlock: Level 1 (default).** The baseline; reliable all-round performance. |
+| Birdshot | Ammunition | Maximum pellet count; devastating at point-blank; excellent for hitting moving targets at close range | Very low damage per pellet; minimal effectiveness beyond close range | **Unlock: Level 4.** Trades power for volume; hits more pellets closer but each one does far less. |
+| Slugs | Ammunition | Single large projectile; dramatically improves range and accuracy; high single-hit damage | Eliminates spread entirely — requires precise aim; less forgiving than pellet loads | **Unlock: Level 11.** Converts the shotgun into a short-range rifle; pairs naturally with the Slug Scope and Extended Barrel. |
+| Flechette | Ammunition | Fires a pattern of hardened steel darts; significantly improves penetration through light armor and cover; darts tumble on impact causing additional wound damage | Reduced damage against unarmored targets; narrower spread than buckshot | **Unlock: Level 17.** Anti-armor shotgun load; punishes armored enemies that buckshot struggles to stop. |
+| Incendiary | Ammunition | Pellets ignite on impact; applies fire damage over time; can ignite environmental objects | Reduced base damage per pellet; limited ammo supply | **Unlock: Level 23.** A burning damage-over-time load; best for softening multiple enemies or denying an area through environmental fire. |
+| Breaching Round | Ammunition | Specialized low-penetration round designed to destroy door hinges and locks instantly without over-penetrating into rooms | Extremely low damage against personnel; effective only at point-blank range | **Unlock: Level 26.** The tactical entry round; takes out a door in one shot without sending lethal material through the other side. |
+
+---
+
+## 3. SMGs (30 / 30)
+
+> **Dual-Wield Note:** Marked weapons can be dual-wielded when the weapon reaches **Max Level (41)**. Dual-wield doubles magazine capacity and output but eliminates ADS, reduces accuracy significantly, and prevents reloading both weapons simultaneously.
+
+| # | Name | Damage | Accuracy | Mobility | Fire Rate | Recoil | Fire Modes | Notes |
+|---|------|--------|----------|----------|-----------|--------|------------|-------|
+| 1 | HK MP5 | Medium | High | High | High (~800 RPM) | Low | Semi / Auto | The gold standard of SMGs; roller-delayed blowback makes it one of the smoothest and most controllable submachine guns ever built; tight groupings at SMG range. |
+| 2 | HK MP5K | Medium | Medium | Very High | High (~900 RPM) | Low-Mid | Semi / Auto | Compact pistol-grip version of the MP5; no stock and shortened barrel; near-instantaneous target acquisition; loses some accuracy over the standard model. **Dual-wield unlocked at Max Level (41).** |
+| 3 | HK MP5SD | Medium-Low | High | High | High (~800 RPM) | Very Low | Semi / Auto | Integrated suppressor version; ported barrel bleeds gas to reduce bullet to subsonic speed — near-silent without any additional attachment; slightly reduced damage is the only trade-off. |
+| 4 | Uzi | Medium | Medium | High | Medium (~600 RPM) | Medium | Semi / Auto | Israeli blowback-operated SMG; open-bolt design is simple and reliable; telescoping bolt over the barrel keeps it compact; relatively slow fire rate for the class. **Dual-wield unlocked at Max Level (41).** |
+| 5 | Mini Uzi | Medium-Low | Medium-Low | Very High | High (~950 RPM) | High | Semi / Auto | Compact Uzi variant; the shorter barrel and higher cyclic rate produce a harder-to-control spray; what it loses in accuracy it gains in aggression and speed. **Dual-wield unlocked at Max Level (41).** |
+| 6 | Micro Uzi | Low | Low | Extreme | Extreme (~1250 RPM) | Very High | Semi / Auto | Smallest Uzi variant — barely larger than a pistol; cyclic rate is nearly uncontrollable; empties a magazine in under two seconds; point-and-spray CQB only. **Dual-wield unlocked at Max Level (41).** |
+| 7 | MAC-10 | Medium | Low | High | Extreme (~1090 RPM) | Very High | Semi / Auto | .45 ACP machine pistol; extremely high cyclic rate for its caliber; brutal at contact range, completely unpredictable beyond that; stamped steel construction keeps it feather-light. **Dual-wield unlocked at Max Level (41).** |
+| 8 | MAC-11 | Low-Medium | Low | Very High | Extreme (~1200 RPM) | Very High | Semi / Auto | 9mm/.380 ACP; even faster than the MAC-10 and smaller; empties in a flash; the lightest and most concealable SMG in the class; purely a close-range room-clearing panic weapon. **Dual-wield unlocked at Max Level (41).** |
+| 9 | Skorpion vz. 61 | Low | Medium | Very High | High (~840 RPM) | Medium | Semi / Auto | Czechoslovak .32 ACP miniature SMG; small enough to holster like a pistol; low caliber means low damage per hit but the compact size and high mobility make it exceptionally easy to use on the move. **Dual-wield unlocked at Max Level (41).** |
+| 10 | PP-19 Bizon | Medium | Medium | Medium | Medium (~680 RPM) | Low-Mid | Semi / Auto | Russian helical-magazine SMG; the distinctive helical drum holds 64 rounds — the highest magazine capacity in the SMG class; slower fire rate offsets the volume; no need to reload often. |
+| 11 | SR-2 Veresk | Medium-High | High | High | High (~900 RPM) | Medium | Semi / Auto | Russian 9×21mm Gyurza compact; the 9×21mm cartridge has exceptional armor-defeating capability for an SMG round; punches above the class in damage against armored targets. |
+| 12 | OTs-02 Kiparis | Medium | Medium | High | High (~900 RPM) | Medium | Semi / Auto | Russian compact blowback SMG; folds flat for concealment; straightforward blowback operation is reliable in harsh conditions; standard-issue for Russian internal forces. |
+| 13 | P90 | Medium | High | High | High (~900 RPM) | Low | Semi / Auto | Belgian bullpup PDW; 50-round horizontally-mounted transparent magazine; 5.7×28mm offers excellent penetration against soft body armor; flat horizontal recoil profile is one of the easiest to control in class. |
+| 14 | MP7 | Medium | High | Very High | High (~950 RPM) | Low | Semi / Auto | Ultra-compact HK PDW; 4.6×30mm purpose-designed to defeat body armor; one of the smallest SMGs but punches hard against protected targets; a refined evolution of the MP5 concept. |
+| 15 | Steyr TMP | Medium | High | Very High | High (~900 RPM) | Low-Mid | Semi / Auto | Austrian polymer compact; rotating barrel mechanism tames recoil at high fire rate; exceptionally accurate for its size and speed. **Dual-wield unlocked at Max Level (41).** |
+| 16 | Spectre M4 | Medium | High | High | High (~850 RPM) | Low | Semi / Auto | Italian SMG with a unique 50-round quad-stack box magazine; lower profile than the Bizon but same high-capacity philosophy; double-action trigger works without cocking. |
+| 17 | HK UMP45 | High | Medium | Medium | Medium (~600 RPM) | Medium | Semi / Auto | .45 ACP heavy-hitter; what it sacrifices in fire rate it more than makes up for in stopping power per round; the hardest-hitting SMG in the class damage-wise; polymer construction keeps weight manageable. |
+| 18 | Beretta M12 | Medium | Medium | Medium | Medium (~550 RPM) | Low | Semi / Auto | Italian tubular-receiver SMG; balanced all-rounder; grip wraps around the barrel for a compact, well-centered design; standard Italian military and police issue; nothing extreme, nothing bad. |
+| 19 | CZ Scorpion Evo 3 | Medium | Medium | High | Very High (~1150 RPM) | High | Semi / Auto | Modern Czech polymer SMG; the highest fire rate of any accurate SMG in the class; recoil is manageable but the speed makes sustained accuracy a skill-check; fast and aggressive. |
+| 20 | Walther MPL | Medium | High | Medium | Medium (~550 RPM) | Low | Semi / Auto | German Cold War-era SMG; fixed wire stock; clean, deliberate fire rate; one of the more accurate SMGs in the class at medium range; favored by German police in the period. |
+| 21 | Sterling L2A3 | Medium | High | Medium-Low | Medium (~550 RPM) | Low | Semi / Auto | British Cold War workhorse; distinctive side-mounted curved magazine; reliable in mud, sand, and arctic conditions; relatively slow cyclic rate produces very controllable single and burst fire. |
+| 22 | K7 | Medium | High | High | High (~900 RPM) | Low | Semi / Auto | South Korean integrated-suppressor SMG; the suppressor is built into the design rather than added — whisper quiet without any attachment penalty; purpose-built for silent operations. |
+| 23 | Kedr PP-91 | Medium | Medium | High | High (~900 RPM) | Medium | Semi / Auto | Russian compact blowback SMG derived from the PP-71; 9×18mm Makarov; lightweight and concealable; common among Russian special units and law enforcement. |
+| 24 | AEK-919 Kashtan | Medium-High | Medium | High | High (~900 RPM) | Medium | Semi / Auto | Russian naval SMG chambered for 9×19mm; designed for naval and ship-boarding operations; compact enough to use in tight corridor fighting; above-average damage for the class. |
+| 25 | PP-90 | Medium | Medium | High | Medium (~650 RPM) | Low-Mid | Semi / Auto | Russian folding SMG; collapses into a flat rectangular block for concealment; the mechanism adds slight mechanical delay to the first shot but subsequent shots are reliable; unusual profile. |
+| 26 | LUSA A2 | Medium | Medium | High | High (~900 RPM) | Low-Mid | Semi / Auto | Portuguese compact SMG; conventional blowback operation; standard issue for Portuguese security forces; reliable, uncomplicated, and easy to handle in tight spaces. |
+| 27 | Cobray M11 | Low-Medium | Very Low | Very High | Extreme (~1200 RPM) | Very High | Semi / Auto | American .380 ACP machine pistol; wildly inaccurate beyond arm's length; dumps its magazine almost instantly; the chaos it creates at point-blank range is its only selling point. **Dual-wield unlocked at Max Level (41).** |
+| 28 | AGRAM 2000 | Medium | Medium | High | High (~900 RPM) | Medium | Semi / Auto | Croatian compact SMG developed during the Balkan conflicts; front-grip integrated into the frame; straightforward blowback operation; designed for reliability under field conditions over precision. |
+| 29 | Krait KVS-9 **[F]** | Medium | Medium-Low | High | High (~1000 RPM) | High | Semi / Auto | Fictional Eastern bloc SMG; fires in unpredictable erratic bursts making it hard to control; effective only in pure spray at close range; a high risk/high reward weapon for aggressive players. |
+| 30 | HYDRA VP-9 **[F][HYDRA]** | Medium-High | High | High | Very High (~1100 RPM) | Low | Semi / Auto | HYDRA's compact close-quarters weapon; advanced polymer and ported barrel system eliminates most felt recoil at the elevated cyclic rate; decades ahead of 1985 SMG technology. Only found on HYDRA operators. |
+
+### SMG Shared Attachments
+
+#### SMG Barrels
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Flash Hider | Barrel | Eliminates visible muzzle flash during full-auto fire; slight improvement to sustained accuracy | Minimal — negligible trade-off | **Unlock: Level 1 (default).** Keeps your position hidden during rapid fire; the first upgrade most players equip. |
+| Compensator | Barrel | Significantly reduces vertical recoil; muzzle stays on target through long auto bursts | Slight increase in muzzle noise | **Unlock: Level 5.** The core recoil tool for SMGs; controls the upward climb that high-cyclic-rate weapons generate. |
+| Suppressor | Barrel | Drastically reduces sound and muzzle flash; slight recoil reduction; conceals firing position | Reduced bullet velocity and damage at extended range | **Unlock: Level 9.** The stealth barrel; pairs naturally with IR Laser and Subsonic ammo for a fully silent build. |
+| Extended Barrel | Barrel | Improves bullet velocity, damage range, and accuracy at distance; makes the SMG competitive mid-range | Reduces mobility and ADS speed; heavier front end | **Unlock: Level 14.** Pushes the SMG toward a more AR-like engagement range; best on slower-firing models like the UMP45. |
+| Ported Compensator | Barrel | Massively reduces both horizontal and vertical recoil through aggressive gas venting ports | Noticeably louder; increased muzzle flash reveals position | **Unlock: Level 20.** Best raw recoil control in the barrel slot; the noise trade-off matters in stealth but on direct engagements nothing keeps the muzzle flatter. |
+| Sprint Barrel | Barrel | Lightweight shortened design; massively improves ADS speed and sprint-to-fire transition | Reduced bullet velocity and faster damage falloff at range | **Unlock: Level 28.** For the most aggressive mobile builds; the barrel is almost an extension of your movement — draw and fire before the enemy reacts. |
+
+#### SMG Lasers
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Standard Laser | Laser | Tightens hip-fire spread; provides a visible reference point for hip-fire at close range | Laser is visible to enemies — reveals position | **Unlock: Level 1 (default).** The fundamental hip-fire tool; most SMG players live in hip-fire at close range. |
+| Tactical Laser | Laser | Simultaneously improves ADS speed and hip-fire accuracy; versatile across engagement styles | Laser is visible to enemies | **Unlock: Level 6.** The best all-round laser; benefits both ADS and hip-fire players equally. |
+| Fast Motion Laser | Laser | Increases movement speed while ADS; improves sprint-to-fire time; keeps you mobile while aiming | Slight accuracy reduction while moving — speed costs stability | **Unlock: Level 12.** For aggressive SMG players who push constantly; lets you ADS without slowing down. |
+| IR Laser | Laser | Invisible to the naked eye — gives zero position information to enemies; only visible through Night Vision Goggles | The beam is invisible to the user without NVGs in full daylight — requires NVG equipment to see the dot in darkness | **Unlock: Level 24.** The stealth laser; pairs with the Suppressor build for silent operations where light discipline matters. |
+
+#### SMG Optics
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Iron Sights | Optic | Fastest ADS of any optic; zero added weight | Limited precision; hard to use at medium range | **Unlock: Level 1 (default).** The weapon's factory sights; fast, light, zero trade-off — chosen by players who ADS rarely. |
+| Red Dot | Optic | Clean unobstructed sight picture; good close-to-mid accuracy | No magnification | **Unlock: Level 4.** The workhorse optic for SMGs; improves precision without slowing the weapon down meaningfully. |
+| Ghost Ring | Optic | Large aperture rear sight; excellent target acquisition in low light; faster than a traditional scope | No magnification; open aperture less precise than a dot at range | **Unlock: Level 8.** Best optic for dark interiors and night operations; the aperture catches the eye naturally without forcing precise alignment. |
+| Reflex Sight | Optic | Wide open sight window; best situational awareness of any optic; fast target acquisition | No magnification; less precise at distance than the red dot | **Unlock: Level 13.** For players who want to see everything around the reticle while aiming; aggressive and aware. |
+| Mini ACOG 2× | Optic | 2× magnification; meaningfully extends SMG effective range; improves accuracy on burst fire | Slower ADS than unmagnified optics; reduces close-range situational awareness | **Unlock: Level 22.** The only magnified optic in the SMG class; turns a close-range weapon into a mid-range threat. |
+
+#### SMG Underbarrel
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Vertical Foregrip | Underbarrel | Significantly reduces vertical recoil; steadier sustained fire | Slight mobility and ADS speed reduction | **Unlock: Level 3.** The fundamental grip; essential on high-cyclic-rate SMGs where vertical climb is the primary recoil concern. |
+| Wrist Brace | Underbarrel | Stabilizes the weapon during sustained fire; reduces weapon sway while ADS | Minimal other impact | **Unlock: Level 7.** A subtle stability improvement; most effective on compact SMGs that naturally flex during fire. |
+| Tactical Flashlight | Underbarrel | Illuminates dark environments; brief flash blinds enemies when aimed directly at them in low light | Reveals your position in dark environments | **Unlock: Level 11.** Indoor and night operations staple; the close-range aggression of SMGs pairs well with a disorientation tool. |
+| Angled Foregrip | Underbarrel | Significantly improves ADS speed; better weapon transitions while moving | Minimal recoil reduction compared to vertical grip | **Unlock: Level 16.** For mobile players who ADS frequently; the fastest transition grip in the slot. |
+| Compact Foregrip | Underbarrel | Reduces both horizontal and vertical recoil simultaneously without significant bulk | Slight ADS speed reduction | **Unlock: Level 27.** The premium grip; tames recoil in both axes with less mobility impact than larger grips. |
+
+#### SMG Stock
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| No Stock | Stock | Massively improves mobility and ADS speed; near-pistol handling speed | Major recoil increase — no shoulder contact | **Unlock: Level 2.** Strip the stock entirely; pairs best with high-fire-rate compact SMGs for maximum aggression at point-blank range. |
+| Wire Stock | Stock | Lightweight foldable wire frame; balanced improvement in both speed and stability | Slight recoil increase vs fixed stock | **Unlock: Level 6.** The practical compromise; gives back most of the No Stock speed while providing some shoulder contact for stability. |
+| Compact Stock | Stock | Reduces weapon sway and recoil while keeping mobility reasonable; solid all-rounder | Slight ADS speed reduction | **Unlock: Level 10.** The reliable middle ground; improves control without committing to full stability sacrifice. |
+| Folding Stock | Stock | Improves mobility when deployed; folds out of the way for close-quarters transitions | Moderate recoil vs fixed stock | **Unlock: Level 17.** Best for mixed engagements where you switch between moving and holding positions. |
+| Reinforced Stock | Stock | Massively reduces recoil and weapon sway; most stable SMG stock option | Major mobility reduction; significantly slower ADS | **Unlock: Level 29.** Locks the weapon against the shoulder for maximum stability; best on the UMP45 or PP-19 Bizon for a deliberate, controlled firing style. |
+
+#### SMG Ammunition
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Standard 9mm | Ammunition | Balanced damage, range, and magazine capacity | None — default configuration | **Unlock: Level 1 (default).** The baseline; reliable across all engagement ranges. |
+| Hollow Point | Ammunition | Massively increases damage against unarmored targets; excellent stopping power per hit | Zero penetration through body armor or cover; useless vs armored enemies | **Unlock: Level 7.** The ultimate soft-target round; devastating in modes where enemies run light, useless where armor is common. |
+| Armor Piercing | Ammunition | Punches through soft body armor and light cover; bullets retain damage through barriers | Reduced damage against unarmored targets; harder tip sacrifices stopping power for penetration | **Unlock: Level 13.** The counter to armored opponents; switches the damage profile for armored engagements. |
+| Extended Magazine | Ammunition | Increases magazine capacity by 50%; fewer reloads in sustained engagements | Slightly slower reload time due to added length | **Unlock: Level 18.** The volume-of-fire option; especially valuable on SMGs with small stock magazines. |
+| Drum Magazine | Ammunition | Doubles magazine capacity; sustain fire through entire engagements without reloading | Major weight increase; significantly slower reload when it does run dry | **Unlock: Level 28.** Maximum capacity option; the PP-19 Bizon already runs a 64-round helical drum — other SMGs equipped with this approach that level. |
+
+#### SMG Firing Mods
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Match Trigger | Firing Mod | Crisp light trigger pull with faster reset; improved first-shot accuracy; better burst control | Minimal trade-off | **Unlock: Level 5.** Sharpens the feel of every shot without changing the weapon's fundamental behaviour; best on semi-auto or burst builds. |
+| Rapid Fire | Firing Mod | Significantly increases cyclic rate; more rounds per second downrange | Harder recoil management at higher speed; slight accuracy reduction in sustained fire | **Unlock: Level 14.** Pushes the SMG past its factory fire rate; best on weapons with manageable base recoil like the MP5 or TMP. |
+| Full Auto Conversion | Firing Mod | Adds a full-auto fire mode to SMGs that lack it; fire selector gains the auto position | Increased recoil on converted weapons; slightly reduced control | **Unlock: Level 21.** Unlocks automatic fire on the few SMGs in the class that shipped semi-auto only; opens up aggressive playstyles on those platforms. |
+| Binary Trigger | Firing Mod | Fires one round on trigger pull and one on trigger release — near-doubles effective fire rate without increasing cyclic speed | Fires on release regardless of intent — demands deliberate trigger discipline; poor control in CQB panic fire | **Unlock: Level 33.** The highest skill ceiling firing mod in the class; in disciplined hands it nearly doubles output; in untrained hands it empties magazines into ceilings. |
+
+---
+
+## 4. Pistols (14 / 14)
+
+> **Dual-Wield Note:** Most pistols support dual-wield at **Max Level (41)**. Weapons marked **[No Dual-Wield]** are too large or mechanically impractical. Dual-wielding doubles output but removes ADS entirely and significantly reduces accuracy.
+
+| # | Name | Damage | Accuracy | Mobility | Fire Rate | Recoil | Fire Modes | Notes |
+|---|------|--------|----------|----------|-----------|--------|------------|-------|
+| 1 | M1911A1 | High | High | High | Medium (semi) | Medium | Semi-Auto | .45 ACP American classic; heavy per-shot stopping power; 7+1 capacity; reliable single-action trigger with a crisp break; standard US military sidearm for decades. **Dual-wield unlocked at Max Level (41).** |
+| 2 | Beretta M9 (92F) | Medium-High | High | High | Medium-High (semi) | Low-Mid | Semi-Auto | 9mm NATO; double/single-action; 15-round magazine — highest capacity of the conventional pistols; open-slide design vents heat and reduces stoppages; successor to the M1911 in US service. **Dual-wield unlocked at Max Level (41).** |
+| 3 | SIG Sauer P226 | Medium-High | Very High | High | Medium-High (semi) | Low | Semi-Auto | 9mm; double/single-action; one of the most mechanically accurate pistols ever produced; precision machined Swiss/German construction; no external safety — decocker only; preferred by special operations worldwide. **Dual-wield unlocked at Max Level (41).** |
+| 4 | Glock 17 | Medium | High | Very High | Medium-High (semi) | Low | Semi-Auto | 9mm; polymer-framed striker-fired; lightest service pistol in the class; 17-round standard magazine; simple three-safety system; nothing fancy, nothing failing — relentlessly reliable. **Dual-wield unlocked at Max Level (41).** |
+| 5 | Desert Eagle (.50 AE) | Extreme | Medium | Low | Low (semi) | Extreme | Semi-Auto | .50 Action Express; the highest single-shot damage in the pistol class; gas-operated action is unique for a pistol; the barrel length and mass help absorb the titanic recoil but it remains the hardest-kicking weapon in the sidearm category; 7-round magazine. **[No Dual-Wield]** — too large and heavy. |
+| 6 | Colt Python | Very High | High | Medium | Low (double-action) / Medium (single-action) | High | Revolver (DA/SA) | .357 Magnum; the finest production revolver ever made; silky smooth double-action trigger; 6-round cylinder; no magazine to lose — slow to reload but never jams; each shot hits hard with exceptional accuracy. **[No Dual-Wield]** — revolver cylinder makes dual-wield mechanically impractical. |
+| 7 | S&W Model 29 | Extreme | Medium-High | Low | Low (double-action) / Medium (single-action) | Extreme | Revolver (DA/SA) | .44 Magnum; the most powerful production revolver in existence; 6-round cylinder; each shot is a commitment — the recoil is violent and recovery is slow; second only to the Desert Eagle in raw damage but significantly more accurate shot-for-shot. **[No Dual-Wield]** — physically impossible to manage two simultaneously. |
+| 8 | CZ 75 | Medium-High | Very High | High | Medium-High (semi) | Low | Semi-Auto | 9mm; double/single-action; the slide rides inside the frame rails rather than outside — an unusual design that dramatically lowers the bore axis and reduces muzzle flip; one of the most naturally accurate pistols in the class. **Dual-wield unlocked at Max Level (41).** |
+| 9 | Browning Hi-Power | Medium-High | High | High | Medium-High (semi) | Low-Mid | Semi-Auto | 9mm; single-action; 13-round magazine; one of the first high-capacity pistols ever made; used by both NATO and Warsaw Pact nations simultaneously; balanced, reliable, and naturally pointing. **Dual-wield unlocked at Max Level (41).** |
+| 10 | Makarov PM | Medium | High | Very High | Medium (semi) | Low | Semi-Auto | 9×18mm Soviet sidearm; blowback-operated; simple, rugged, and reliable; 8-round magazine keeps it light and compact; standard Soviet/Eastern Bloc military and police sidearm; the Eastern counterpart to the Walther PPK. **Dual-wield unlocked at Max Level (41).** |
+| 11 | Tokarev TT-33 | Medium-High | High | High | Medium (semi) | Medium | Semi-Auto | 7.62×25mm Soviet; the small high-velocity bottlenecked cartridge has exceptional penetration for a pistol — punches through soft armor that stops 9mm; 8-round magazine; single-action only; no external safety — demands careful handling. **Dual-wield unlocked at Max Level (41).** |
+| 12 | Walther PPK | Low-Medium | High | Extreme | Medium (semi) | Low | Semi-Auto | .380 ACP; the most concealable pistol in the class; 7-round magazine; double/single-action; light recoil makes it easy to recover between shots; its size and weight make it the fastest weapon to draw and aim; compensates for low damage with unmatched speed. **Dual-wield unlocked at Max Level (41).** |
+| 13 | Stechkin APS | Medium | Medium | High | High (~700 RPM full-auto) | High (full-auto) / Low (semi) | Semi / Full-Auto | Soviet machine pistol; 20-round magazine; the only fully automatic pistol in the class — in full-auto mode it burns through ammo at a frightening rate but provides extraordinary close-range burst output; wooden holster clips on as a shoulder stock for added stability. **Dual-wield unlocked at Max Level (41).** |
+| 14 | Rhino Mk. IV **[F]** | Very High | Medium-High | Medium | Low (double-action) / Medium (single-action) | Very High | Revolver (DA/SA) | Fictional heavy-caliber combat revolver; fires a purpose-built high-pressure round; the barrel is mounted at the bottom of the cylinder rather than the top — dramatically lowers bore axis and reduces muzzle flip despite the heavy cartridge; 6-round cylinder; high damage with better recoil management than the Python or Model 29. **[No Dual-Wield]** — the caliber and weight make it impractical. |
+
+### Pistol Shared Attachments
+
+#### Pistol Barrels
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Standard Barrel | Barrel | Baseline factory barrel; balanced velocity and accuracy | None — default | **Unlock: Level 1 (default).** No modification; the weapon as designed. |
+| Compensator | Barrel | Significantly reduces muzzle flip and vertical recoil; faster follow-up shot accuracy | Slight increase in muzzle noise | **Unlock: Level 5.** The most impactful barrel on high-recoil pistols like the Desert Eagle and S&W Model 29 — tames the kick meaningfully. |
+| Suppressor | Barrel | Drastically reduces sound and muzzle flash; conceals firing position | Reduced bullet velocity; slight damage falloff at range; adds length — may affect draw speed | **Unlock: Level 10.** The stealth barrel; transforms the pistol into a silent secondary for covert approaches. |
+| Extended Barrel | Barrel | Improves bullet velocity and effective range; tightens shot groupings | Adds length and weight; slower to draw and holster | **Unlock: Level 16.** Pushes the pistol into mid-range viability; best on accurate platforms like the SIG P226 or CZ 75. |
+| Ported Barrel | Barrel | Aggressive gas porting massively reduces muzzle flip on powerful pistols; near-flat recovery between shots | Noticeably louder; more visible muzzle flash | **Unlock: Level 26.** The premium recoil solution; most impactful on the heaviest-kicking pistols in the class. |
+
+#### Pistol Lasers
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Standard Laser | Laser | Improves hip-fire accuracy; useful when quick-drawing without fully aiming | Always-on laser visible to enemies | **Unlock: Level 1 (default).** Hip-fire with a pistol is already fast — the laser makes it meaningfully accurate at close range. |
+| Tactical Laser | Laser | Improves both ADS speed and hip-fire accuracy; well-rounded | Laser visible to enemies | **Unlock: Level 7.** The balanced option; benefits both pistol ADS and quick-draw hip-fire equally. |
+| Mini Laser | Laser | Smallest, lightest laser available; zero ADS speed penalty; barely visible profile | Less accurate laser beam than full-size options | **Unlock: Level 15.** For players who want a reference point without any weight or size impact. |
+| IR Laser | Laser | Completely invisible to enemies not using Night Vision; best stealth laser option | Invisible to the user without NVGs in complete darkness | **Unlock: Level 27.** Pairs with the Suppressor for a fully concealed close-range secondary. |
+
+#### Pistol Optics
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Iron Sights | Optic | Fastest draw; lightest; zero trade-off | Limited precision | **Unlock: Level 1 (default).** The weapon's factory sights; always available; chosen when speed is everything. |
+| Mini Red Dot | Optic | Small reflex dot; improves close accuracy; minimal weight | No magnification | **Unlock: Level 6.** The most common pistol optic upgrade; noticeably improves shot accuracy without slowing the draw. |
+| Pistol Reflex | Optic | Wide window sight; fast acquisition; excellent situational awareness while aiming | No magnification; less precise than the red dot at distance | **Unlock: Level 12.** For aggressive close-range pistol play where seeing around the weapon matters. |
+| Micro Scope 2× | Optic | 2× magnification; best precision optic in the pistol class; enables accurate medium-range shooting | Slowest draw of any pistol optic; reduces close-range snap-shooting capability | **Unlock: Level 22.** Niche but powerful; turns a pistol into a precise mid-range tool rather than a panic secondary. |
+
+#### Pistol Underbarrel
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Tactical Flashlight | Underbarrel | Illuminates dark environments; brief blindness effect on nearby enemies | Reveals position in dark | **Unlock: Level 4.** One of the most practical pistol attachments; a lit pistol is a CQB room-clearing tool. |
+| Compact Foregrip | Underbarrel | Stabilizes the pistol; reduces muzzle flip on follow-up shots | Slight weight increase | **Unlock: Level 9.** Aids rapid follow-up shots on powerful pistols; especially impactful on the Desert Eagle and Stechkin APS. |
+| Laser Foregrip | Underbarrel | Combines a compact foregrip and standard laser into one attachment — saves a slot | Laser is always visible; slight weight | **Unlock: Level 18.** Efficient combo attachment; frees up the laser slot for a different build choice. |
+| Holster Stock | Underbarrel | Clips the weapon's holster to the grip as a shoulder brace; significantly reduces recoil and improves accuracy on long sustained bursts; only applicable to certain pistols (Stechkin APS) | Bulky; reduces the pistol's primary advantage of concealability and draw speed | **Unlock: Level 30.** A true special mechanic — the Stechkin APS's wooden holster converts it to a braced PDW. On all other pistols this provides a minimalist shoulder brace that reduces recoil. |
+
+#### Pistol Ammunition
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Standard Load | Ammunition | Balanced damage and capacity | None — default | **Unlock: Level 1 (default).** The weapon's designed chambering; no trade-offs. |
+| Hollow Point | Ammunition | Massively increases damage against unarmored targets | Zero penetration through armor or cover | **Unlock: Level 8.** The lethal round for soft targets; devastating when it lands, useless vs armor. |
+| Armor Piercing | Ammunition | Punches through soft body armor; retains damage through light barriers | Reduced damage vs unarmored; harder tip sacrifices expansion | **Unlock: Level 14.** For armored opponents; switches the damage profile entirely. |
+| Extended Magazine | Ammunition | Increases magazine capacity by 50%; additional rounds before reload | Slightly slower reload due to added length and weight | **Unlock: Level 20.** High-capacity option; best on pistols with low base magazines like the M1911 (7 rounds) or Makarov (8 rounds). |
+| High Velocity | Ammunition | Significantly increases bullet velocity and effective range; improved damage retention at distance | Snappier recoil per shot from higher chamber pressure | **Unlock: Level 32.** Extends the pistol's effective range meaningfully; best paired with the Extended Barrel and Micro Scope 2× for a long-range pistol build. |
+
+#### Pistol Firing Mods
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Match Trigger | Firing Mod | Lighter, crisper trigger pull; faster reset; improved shot-to-shot accuracy | Minimal trade-off | **Unlock: Level 5.** Sharpens every shot; especially impactful on single-action pistols like the M1911 where trigger quality directly affects precision. |
+| Hair Trigger | Firing Mod | Extremely light trigger pull — near-instant activation; massively improves rapid-fire speed on semi-auto pistols | Very easy to accidentally discharge; demands careful trigger discipline | **Unlock: Level 18.** The highest fire-rate option for semi-auto pistols; in fast hands it approaches the Stechkin's auto output; in careless hands it empties the mag prematurely. |
+| Full Auto Conversion | Firing Mod | Adds full-auto fire to the Stechkin APS only; all other pistols gain a 3-round burst mode | Increased recoil on full-auto; ammo consumption is severe in auto mode | **Unlock: Level 28.** The Stechkin already ships with full-auto — this mod adds a selector for the burst intermediate. On all other pistols it unlocks a disciplined 3-round burst in place of pure semi-auto. |
+
+---
+
+## 5. Explosive Weapons (9 / 9)
+
+> Explosive weapons occupy their own dedicated slot separate from primary and secondary. Ammo is limited per life. Direct hits deal full damage; blast radius deals falloff damage. All explosive weapons destroy vehicles, fortified positions, and equipment. Friendly fire is active — watch your angles.
+
+| # | Name | Type | Damage | Blast Radius | Ammo Per Life | Reload / Cycle | Notes |
+|---|------|------|--------|--------------|---------------|----------------|-------|
+| 1 | M72 LAW | Disposable Rocket Launcher | Extreme (anti-armor) | Medium | 1 | Single-use — discard after firing | 66mm unguided rocket; lightest launcher in the class; fires once then is discarded; devastating against light armor, vehicles, and fortified positions; the rocket travels in a straight line — lead moving targets; collapses flat for carrying. |
+| 2 | RPG-7 | Reusable Rocket Launcher | Extreme (anti-armor) | Medium-Large | 3 rockets | Slow (manual reload per rocket) | Soviet 40mm rocket-propelled grenade; reusable tube; fires anti-tank, thermobaric, and anti-personnel warheads interchangeably; the PG-7V warhead can defeat most 1985-era armor; signature backblast — never fire in an enclosed space; iconic and universally recognizable. |
+| 3 | M79 | Break-Action Grenade Launcher | High (blast) | Large | 6 rounds | Slow (break-action single round) | 40mm break-action grenade launcher; nicknamed "Blooper" or "Thumper" in Vietnam; single-shot with manual break-action reload; the large blast radius compensates for slow cycling; carries secondary buckshot rounds as a close-range emergency backup; effective against infantry groups and cover. |
+| 4 | M203 (Standalone) | Underbarrel GL (Standalone Config) | High (blast) | Large | 8 rounds | Medium (pump slide) | 40mm pump-action grenade launcher configured for standalone use with a pistol grip; the same launcher mounted on the M16/M4 family but used independently; faster follow-up than the M79 due to the pump-slide action; the most versatile grenade launcher in the class. |
+| 5 | Carl Gustaf M2 | Recoilless Rifle | Extreme (anti-armor/anti-personnel) | Large | 4 rounds | Slow (manual breech loading) | Swedish 84mm recoilless rifle; the most powerful launcher in the class; fires anti-tank, HE, smoke, illumination, and HEAT rounds; devastating backblast danger zone extends several meters behind the firer; requires a loader in real life — in-game handled solo with a slow reload penalty; nothing in the 1985 battlefield can ignore a direct hit. |
+| 6 | Panzerfaust 3 | Disposable Rocket Launcher | Very High (anti-armor) | Medium | 2 | Single-use per tube | German 60mm disposable anti-tank rocket; more powerful than the M72 LAW; the precursor charge detonates before the main warhead to defeat reactive armor; slightly bulkier than the LAW but significantly more effective against heavily armored targets. |
+| 7 | M202 FLASH | Multi-Shot Incendiary Rocket Launcher | High (incendiary) | Very Large | 4 rockets (one launcher) | No reload — fire all 4 then resupply | US Army 4-barrel 66mm incendiary rocket launcher; each rocket sprays burning triethylaluminum (TEA) on impact; the fire cloud covers a massive area and lingers; primarily anti-personnel and area denial; four rockets can be fired in rapid succession before the launcher is discarded; devastating against infantry groups in the open. |
+| 8 | AT4 | Disposable Rocket Launcher | Extreme (anti-armor) | Medium-Large | 1 | Single-use — discard after firing | Swedish 84mm single-shot unguided anti-armor rocket; the heaviest-hitting disposable launcher in the class; designed to defeat T-72 class armor; rocket stabilizes via spin after launch; significant backblast; slower to shoulder than the LAW but dramatically more destructive on impact. |
+| 9 | HYDRA Plasma Launcher **[F][HYDRA]** | Experimental Energy Launcher | Extreme (plasma) | Large | 3 charges | Medium (charge cycling) | HYDRA experimental plasma-based launcher; fires superheated plasma bolts that travel slower than conventional rockets but track slightly toward heat signatures; each impact creates a lingering plasma fire zone that burns through armor over time; decades ahead of any 1985 weapons technology; only deployed by senior HYDRA field commanders. |
+
+### Explosive Weapon Shared Attachments
+
+> Explosive weapons use three attachment slots: **Warhead**, **Optic**, and **Tactical Module**. Not all warhead types are available on all launchers — disposable single-shot weapons are locked to their warhead. The Warhead slot changes the round's effect entirely.
+
+#### Warhead
+
+| Attachment | Slot | Effect | Ammo Limit | Notes |
+|------------|------|--------|------------|-------|
+| HE (High Explosive) | Warhead | Standard blast; balanced damage and radius; destroys cover, equipment, and vehicles | Standard per-life supply | **Unlock: Level 1 (default).** The baseline warhead; effective against infantry groups and hard structures. |
+| HEAT (High Explosive Anti-Tank) | Warhead | Shaped charge; massively increases armor and vehicle penetration; concentrates blast energy inward rather than outward | Standard supply — slightly fewer rounds due to size | **Unlock: Level 8.** Purpose-built for vehicles and armored targets; less effective vs unarmored infantry spread across open ground. |
+| Thermobaric | Warhead | Two-stage detonation: first charge aerates a fuel cloud, second ignites it — devastating in enclosed spaces; pressure wave penetrates cover that stops standard HE | Reduced supply — only 1–2 rounds per life | **Unlock: Level 18.** The most devastating warhead in the slot; at close range in buildings it is near-unsurvivable; in open air much of the pressure wave dissipates. |
+| Incendiary | Warhead | On impact, spreads burning thermite/napalm across a wide area; fire lingers and denies the zone; slow but persistent damage | Standard supply | **Unlock: Level 12.** Area denial; enemies are forced to move or burn; does not destroy armor but effective against infantry and equipment in the open. |
+| Smoke | Warhead | Deploys a large smoke cloud on impact; provides instant tactical cover without using an equipment slot | Standard supply | **Unlock: Level 6.** A tactical utility warhead; frees up the equipment slot; instant smoke on demand at any range. |
+| Airburst | Warhead | Detonates at a programmable distance above the target, raining fragmentation downward — bypasses cover that would stop ground-level blasts | Reduced supply — complex fusing | **Unlock: Level 25.** Counter to enemies behind walls, in trenches, or crouched behind hard cover; the blast comes from above. |
+
+#### Explosive Optic
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Open Sights | Optic | Fastest target acquisition; no obstruction | Least precise; no range compensation | **Unlock: Level 1 (default).** Basic iron/open sights; fast to shoulder; works at most launcher ranges. |
+| Rangefinder Scope | Optic | Built-in rangefinder provides distance readout to target; improves accuracy on moving targets; 2× magnification | Slower to shoulder; slight weight increase | **Unlock: Level 10.** Dramatically improves first-shot accuracy at distance; the difference between a hit and a miss on a moving vehicle at range. |
+| Thermal Scope | Optic | 4× magnification with thermal imaging; highlights vehicle heat signatures through smoke and light obstruction; exceptional for anti-armor targeting | Slowest to shoulder; heavy; ineffective in point-blank situations | **Unlock: Level 22.** The anti-armor specialist optic; finds vehicles through smoke and cover that would hide them from every other optic. |
+
+#### Tactical Module
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Carrying Sling | Tactical Module | Reduces the weight penalty of carrying the launcher; improves mobility while the weapon is equipped | Minimal other impact | **Unlock: Level 3.** A quality-of-life upgrade; large launchers like the Carl Gustaf significantly hamper movement — the sling mitigates this. |
+| Bipod | Tactical Module | When prone or crouched, deploys a bipod — massively improves aim stability and reduces any sway; dramatically improves first-round accuracy at long range | Heavy; mobility reduction; only useful while stationary | **Unlock: Level 14.** Converts the launcher into a precision long-range platform when set up; essential for consistent hits at maximum range. |
+| Backblast Suppressor | Tactical Module | Dramatically reduces the backblast danger zone; allows firing in closer proximity to walls and cover without self-damage | Heavy; slight reduction in rocket velocity | **Unlock: Level 20.** Safety-critical in urban environments; without it, a wall two meters behind you is lethal when you fire. With it, the safe firing space is dramatically reduced. |
+| Tandem Charger **[F]** | Tactical Module | Fictional pre-cursor charge system; fires a small shaped charge milliseconds before the main warhead — defeats reactive armor that would otherwise detonate and neutralize the primary warhead | Adds significant weight and complexity; rare | **Unlock: Level 35.** The counter to reactive armor; standard HEAT rounds are neutralized by ERA (explosive reactive armor) on advanced vehicles. The tandem system defeats that protection layer. |
+
+---
+
+## 6. Sniper Rifles (7 / 7)
+
+> All sniper rifles are bolt-action or semi-auto. One-shot kill to the head at any range. High-powered scopes standard. Heavy and slow — commit to the role.
+
+| # | Name | Damage | Accuracy | Mobility | Fire Rate | Recoil | Fire Modes | Notes |
+|---|------|--------|----------|----------|-----------|--------|------------|-------|
+| 1 | M24 SWS | Very High | Elite | Very Low | Very Low (bolt) | High | Bolt-Action | 7.62×51mm NATO; the US Army's primary sniper system; Remington 700 action in a Kevlar-reinforced stock; outstanding mechanical accuracy out of the box; 5-round internal magazine; the benchmark bolt-action sniper in the class. |
+| 2 | M40A1 | Very High | Elite | Very Low | Very Low (bolt) | High | Bolt-Action | 7.62×51mm; USMC counterpart to the M24; built on the Remington 700 action with a McMillan fiberglass stock; slightly superior free-floating barrel for enhanced accuracy over the M24; 5-round magazine; glass-bedded action produces near-zero shot-to-shot variance. |
+| 3 | Barrett M82 | Extreme | Very High | Low | Low (semi-auto) | Very High | Semi-Auto | .50 BMG; the only .50 caliber rifle in the sniper class; semi-auto operation allows faster follow-up shots than any bolt-action; one-shot destruction of light vehicles, radar dishes, and crew-served weapons; the muzzle brake reduces felt recoil to manageable levels; 10-round magazine; effective at ranges other snipers cannot reach. |
+| 4 | Accuracy International L96 | Very High | Elite | Very Low | Very Low (bolt) | High | Bolt-Action | 7.62×51mm; British; the action that redefined precision bolt rifles; one of the most accurate production sniper rifles ever manufactured; chassis design keeps accuracy consistent across temperature extremes; 10-round magazine; preferred by British SAS and over 40 other nations' special forces. |
+| 5 | Dragunov SVD | High | Very High | Low-Medium | Low (semi-auto) | Medium-High | Semi-Auto | 7.62×54mmR Soviet; the designated marksman rifle of the Soviet military; semi-auto enables faster target engagement than bolt-actions; PSO-1 4× scope with built-in rangefinder and infrared filter is standard; 10-round magazine; designed to keep pace with advancing infantry rather than set up in a static hide — the most mobile sniper in the class. |
+| 6 | McMillan TAC-50 | Extreme | Elite | Very Low | Very Low (bolt) | Extreme | Bolt-Action | .50 BMG; bolt-action precision at extreme range; the most accurate .50 caliber rifle in the class; McMillan fiberglass stock absorbs some recoil but it remains the hardest-kicking weapon in the game; 5-round magazine; holds real-world long-range engagement records; suited for static hides only — mobility is essentially zero. |
+| 7 | VSS Vintorez | Medium-High | High | Medium | Medium (semi-auto) | Low | Semi-Auto | Soviet 9×39mm integrally suppressed sniper rifle; the quietest sniper in the class by a massive margin — completely silent without any attachment; the heavy subsonic 9mm cartridge sacrifices extreme range for near-total acoustic concealment; 10-round magazine; designed for deep-penetration reconnaissance and silent elimination; effective range is shorter than other snipers but no other sniper can be used without revealing position. |
+
+### Sniper Rifle Shared Attachments
+
+#### Sniper Barrels
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Match Grade Barrel | Barrel | Tight factory tolerances; improves accuracy and consistency; reduces shot-to-shot variance | None — this is the baseline at its best | **Unlock: Level 1 (default).** The precision-fitted factory barrel; every round groups tighter; the foundation every sniper build starts from. |
+| Suppressor | Barrel | Eliminates muzzle report signature; conceals firing position; hides the muzzle flash entirely | Reduces bullet velocity; causes slight holdover adjustment at extreme range | **Unlock: Level 7.** The stealth barrel; enemy cannot hear where the shot came from; does not make it completely quiet — the supersonic crack of the bullet is still audible near the target. |
+| Muzzle Brake | Barrel | Massively reduces felt recoil and muzzle rise; fastest follow-up shot recovery of any barrel | Significantly louder — the redirected gas amplifies muzzle blast | **Unlock: Level 12.** Critical on the Barrett M82 and McMillan TAC-50 where recoil is extreme; dramatically reduces the time between shots for semi-auto builds. |
+| Heavy Barrel | Barrel | Significantly improves bullet velocity, damage at extreme range, and barrel harmonics — tighter groupings at max distance | Adds considerable weight; notable mobility reduction | **Unlock: Level 19.** The long-range barrel; extends effective engagement distance and reduces damage falloff at the very edges of the sniper's range. |
+| Fluted Barrel | Barrel | Reduces barrel weight while maintaining rigidity; improves mobility without sacrificing accuracy | Slight reduction in sustained-fire heat management | **Unlock: Level 30.** Material removed through fluting keeps the barrel as accurate as a heavy barrel at a fraction of the weight; best of both worlds for precision and mobility. |
+
+#### Sniper Lasers
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| IR Laser | Laser | Completely invisible without NVGs; zero position giveaway; marks targets for team coordination in dark environments | Invisible to the user in full daylight without NVG — requires equipment to see | **Unlock: Level 5.** The only laser that makes sense for sniper builds where concealment is everything; visible laser on a sniper is a position giveaway at range. |
+| Range Laser | Laser | Integrated laser rangefinder; displays accurate distance to where the laser touches; removes guesswork from holdover calculations | Laser pulse briefly visible to sharp-eyed observers | **Unlock: Level 16.** A precision tool rather than a tactical laser; pairs directly with the Rangefinder Scope for confirmed first-round hits at maximum distance. |
+| Low Visibility Laser | Laser | Extremely dim laser visible only in low-light conditions; functions as a subtle close-range reference without the brightness of a standard beam | No benefit in daylight; very limited hip-fire improvement | **Unlock: Level 24.** A low-signature option; provides some hip-fire reference in buildings and at night without exposing position the way a standard laser would. |
+
+#### Sniper Optics
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Iron Sights | Optic | Zero added weight; fastest possible target acquisition; no ADS speed penalty | Effectively limits engagement to mid-range; impossible to take precision shots at sniper distances | **Unlock: Level 1 (default).** Unusual for a sniper build but usable on the VSS Vintorez for close-range stealth roles. |
+| 4× Fixed Scope | Optic | Clean 4× magnification; good clarity; excellent mid-to-long range precision | Fixed magnification; less versatile than variable optics | **Unlock: Level 3.** The SVD's PSO-1 style scope; the bread-and-butter sniper optic; reliable and fast to use. |
+| 10× Fixed Scope | Optic | High magnification precision scope; excellent for extreme long range; sharp reticle with windage/elevation markings | Very slow to shoulder; extreme close-range tunnel vision | **Unlock: Level 9.** The dedicated long-range optic; best on bolt-actions and the Barrett M82 for maximum effective distance. |
+| Variable 4–14× Scope | Optic | Adjustable magnification from 4× to 14×; versatile across all engagement ranges; first focal plane reticle scales with zoom | Complex; slightly slower to shoulder than fixed optics | **Unlock: Level 17.** The most flexible optic; dial to 4× for medium range and 14× for extreme precision — one optic covers every sniper scenario. |
+| Night Vision Scope | Optic | Amplifies available light for night operations; allows precision shooting in near-total darkness; 6× magnification | Daylight use washes out the image — night use only; slight weight increase | **Unlock: Level 28.** Transforms the sniper into a night operations specialist; the only optic that enables precision nighttime engagements. |
+
+#### Sniper Underbarrel
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Bipod | Underbarrel | When prone or crouched, deploys and massively reduces all recoil; near-zero sway while set up; dramatically improves precision at maximum range | Heavy; mobility reduction; only beneficial while stationary | **Unlock: Level 1 (default).** The essential sniper underbarrel; every serious sniper build uses a bipod; the difference in accuracy while prone is enormous. |
+| Tactical Grip | Underbarrel | Improves stability while standing or moving; reduces weapon sway during unsupported shots | Slight weight increase; not as effective as a bipod while stationary | **Unlock: Level 11.** For snipers who engage while standing or moving rather than setting up in a hide; maintains accuracy in less-than-ideal positions. |
+| Monopod | Underbarrel | Rear monopod under the stock; when used with a bipod simultaneously, creates a fully supported three-point rest — best possible stability while stationary | Only useful in conjunction with a bipod; heavy; useless while moving | **Unlock: Level 20.** Stacks with the bipod for the most stable possible shooting platform — full three-point support removes virtually all sway for maximum precision. |
+| Rangefinder Module | Underbarrel | Built-in laser rangefinder displays target distance on the scope; eliminates guesswork on holdover; confirms distance before engaging | Slight weight and bulk; requires a moment to range before shooting | **Unlock: Level 31.** For precision long-range shots where an inch of holdover difference means a hit or miss; particularly valuable when using non-standard ammunition with different drop curves. |
+
+#### Sniper Stock
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Standard Stock | Stock | Factory stock; balanced comfort and stability | None — default | **Unlock: Level 1 (default).** The weapon as designed; suitable baseline for most builds. |
+| Adjustable Cheek Riser | Stock | Raises the cheek weld to align perfectly with high-mounted optics; improves eye relief and reduces scope shadow; slightly better first-shot accuracy | Minimal mobility impact | **Unlock: Level 6.** Pairs with high-mounted scopes; proper cheek weld alignment significantly improves sight picture consistency. |
+| Folding Stock | Stock | Folds for transit; dramatically improves mobility while moving between positions; useful for snipers who reposition frequently | Slight accuracy reduction from stock-to-rifle contact vs fixed stock | **Unlock: Level 13.** For aggressive-repositioning snipers; fold the stock to move, unfold to engage; trade-off in stability is minor at close range. |
+| McMillan A5 Stock | Stock | Precision chassis stock with full adjustability for length-of-pull, cheek height, and cant; massively improves stability and accuracy; zero flex in the action | Very heavy; significant mobility reduction | **Unlock: Level 22.** The premium precision stock; used on real-world long-range competition and military sniper rifles; every dimension of the build becomes more consistent. |
+| Suppressor Stock | Stock | Internal hydraulic buffer absorbs recoil from suppressed fire; improves stability when running a suppressor barrel | Only beneficial when used with a suppressor; moderate weight | **Unlock: Level 34.** Designed to pair with the Suppressor barrel; the hydraulic system compensates for the slightly different recoil impulse a suppressor creates on the action. |
+
+#### Sniper Ammunition
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Match Grade | Ammunition | Hand-loaded match-quality rounds; dramatically tightens shot groupings; reduces shot-to-shot variance; best consistency of any ammo | No other trade-off — pure accuracy improvement | **Unlock: Level 1 (default).** The sniper's standard load; match-grade ammunition is what snipers actually use — each round is individually weighed and checked. |
+| Armor Piercing | Ammunition | Punches through body armor and light vehicle glass; retains lethal velocity through barriers | Slightly less damage against unarmored targets | **Unlock: Level 9.** Counters armored targets; especially effective on the Barrett M82 and TAC-50 for defeating light vehicle armor. |
+| Subsonic | Ammunition | Near-silent when used with a suppressor; eliminates the supersonic crack — the shooter's position is completely concealed | Significantly reduced range and velocity; substantially more bullet drop — requires heavy holdover adjustment | **Unlock: Level 15.** The ghost load; paired with the Suppressor, the VSS Vintorez was already subsonic — other snipers now match that silence at extreme cost to range. |
+| Incendiary | Ammunition | Round ignites on impact; applies fire damage over time; incendiary component penetrates light armor to burn inside | Slight accuracy reduction from modified tip; limited supply | **Unlock: Level 23.** Specialized round; most useful against vehicles and equipment rather than personnel; the fire component continues damaging after impact. |
+| .50 BMG Extended Range **[TAC-50 / M82 only]** | Ammunition | Purpose-built extreme long-range .50 BMG load; maximum bullet velocity; minimal drop at distances other snipers cannot reach | Only compatible with .50 caliber platforms; very limited supply | **Unlock: Level 36.** The extreme range round; extends the effective reach of the Barrett M82 and McMillan TAC-50 beyond what standard .50 BMG achieves; for confirmed kills at distances that break every other sniper's effective range. |
+
+---
+
+## 7. Marksman Rifles (14 / 14)
+
+> Marksman Rifles fire **semi-auto or burst only** — no full-auto. Best damage and top-tier accuracy of any automatic weapon class. Designed to bridge the gap between assault rifles and sniper rifles. Higher mobility than snipers; more precision than ARs.
+
+| # | Name | Damage | Accuracy | Mobility | Fire Rate | Recoil | Fire Modes | Notes |
+|---|------|--------|----------|----------|-----------|--------|------------|-------|
+| 1 | PR-85 "Phantom" **[F]** | Very High | Very High | Medium | Low (semi-auto) | Medium | Semi-Auto | Fictional precision marksman rifle; semi-auto only; extremely clean trigger break; excellent damage retention at range; purpose-built as a designated marksman platform — not fast, not light, but relentlessly precise. Reassigned from AR class. |
+| 2 | Lynx LR-3 **[F]** | Very High | Elite | Medium-Low | Low (semi-auto) | Low | Semi-Auto | Fictional long-range DMR; accuracy rivals dedicated sniper platforms; semi-auto action allows faster target engagement than bolt-actions; heavy — low mobility; the most accurate semi-auto weapon in the marksman class. Reassigned from AR class. |
+| 3 | M14 / M21 | Very High | Very High | Medium-Low | Low-Medium (semi-auto) | Medium | Semi-Auto | 7.62×51mm NATO American battle rifle turned DMR; 20-round magazine; the wooden-stocked M14 evolved into the accurized M21 sniper variant; heavy all-steel construction limits mobility; exceptional damage and range in return; the original American DMR. |
+| 4 | HK417 | Very High | Very High | Medium | Low-Medium (semi-auto) | Low-Mid | Semi-Auto | 7.62×51mm German; the larger-caliber sibling of the HK416; gas-piston system keeps it clean and reliable; 20-round magazine; one of the most modern and refined DMRs in the class; used by GSG-9 and special operations across Europe. |
+| 5 | FN FAL | Very High | High | Medium-Low | Low-Medium (semi-auto) | Medium-High | Semi-Auto | 7.62×51mm Belgian; nicknamed "The Right Arm of the Free World" — used by over 90 nations; heavy tilting-bolt action; gas-adjustable for reliability in any environment; the vertical recoil is significant but predictable; 20-round magazine; the most widespread battle rifle in NATO history. |
+| 6 | M1 Garand | High | Very High | Low | Low (semi-auto) | High | Semi-Auto | .30-06 Springfield American; the first standard-issue semi-automatic military rifle in the world; 8-round en bloc clip — the distinctive metallic "ping" as the clip ejects signals an empty weapon; heavy all-steel and walnut construction; slower reload than magazine-fed rifles; exceptional per-shot damage. |
+| 7 | SKS | High | High | Medium | Medium (semi-auto) | Medium | Semi-Auto | 7.62×39mm Soviet; fixed 10-round internal magazine loaded via stripper clip; shorter and lighter than the SVD; the AK-47's semi-auto predecessor; exceptionally reliable and easy to maintain; the most mobile marksman rifle in the class after the PR-85. |
+| 8 | MK 14 EBR | Very High | Very High | Medium | Low-Medium (semi-auto) | Medium | Semi-Auto | 7.62×51mm; Enhanced Battle Rifle — the M14 chassis rebuilt with a modern folding stock and full rail system; same heavy-hitting round as the M14 with dramatically improved ergonomics; 20-round magazine; SOCOM's precision engagement rifle. |
+| 9 | SR-25 / M110 SASS | Very High | Elite | Medium | Low-Medium (semi-auto) | Low | Semi-Auto | 7.62×51mm; Stoner-designed semi-auto precision rifle; 20-round magazine; near-bolt-action accuracy in a semi-auto platform; the most accurate magazine-fed semi-auto in the class; the M110 SASS (Semi-Automatic Sniper System) designation tells you exactly what it is. |
+| 10 | Walther WA 2000 | Very High | Elite | Low | Low (semi-auto) | Low | Semi-Auto | .300 Win Mag West German; one of the rarest and most expensive precision rifles ever made; bullpup configuration puts the action behind the trigger for a full-length barrel in a compact overall package; extremely accurate; produced in tiny numbers — almost never seen in the field; a collector's sniper in marksman clothing. |
+| 11 | QBU-88 | High | Very High | Medium-High | Medium (semi-auto) | Low-Mid | Semi-Auto | 5.8×42mm Chinese DMR; the Chinese military's primary designated marksman rifle; 10-round magazine; bullpup design gives it the best mobility of the 7+ lb marksman rifles; the unique Chinese 5.8mm round offers good accuracy and controlled recoil. |
+| 12 | HK PSG-1 | Very High | Elite | Very Low | Low (semi-auto) | Very Low | Semi-Auto | 7.62×51mm German; one of the most accurate semi-automatic precision rifles ever built; match-grade barrel, adjustable stock, and a match trigger make it a factory-ready competition rifle; extremely heavy at 16+ lbs — the least mobile weapon in the marksman class; every shot is a precision instrument. |
+| 13 | Dragunov SVDS | High | Very High | Medium | Low-Medium (semi-auto) | Medium | Semi-Auto | 7.62×54mmR Soviet; the folding-stock paratrooper variant of the SVD; hinged tubular stock folds to the side for vehicle use and airdrop operations; slightly reduced accuracy over the full SVD due to the stock flex; 10-round magazine; the most mobile of the large-caliber marksman rifles. |
+| 14 | Talon MR-7 **[F]** | Very High | Very High | Medium | Low-Medium (semi-auto) | Low | Semi-Auto | Fictional modern DMR; ambidextrous chassis with adjustable length-of-pull and cheek weld; 20-round magazine; advanced muzzle brake reduces recoil to near-zero for a 7.62mm platform; purpose-designed for rapid target transitions at distance; the best all-round marksman rifle in the class for players who want precision without extreme mobility sacrifice. |
+
+### Marksman Rifle Shared Attachments
+
+#### Marksman Barrels
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Match Barrel | Barrel | Tight-tolerance precision barrel; reduces shot-to-shot variance; best baseline accuracy in the slot | None — default configuration | **Unlock: Level 1 (default).** The accuracy foundation of every marksman build; already fitted to factory DMR configurations. |
+| Suppressor | Barrel | Drastically reduces sound and muzzle flash; conceals firing position; allows repositioning without detection | Reduced bullet velocity; slight damage falloff at the outer edge of range | **Unlock: Level 8.** The stealth barrel; transforms the DMR into a ghost platform; fire, reposition, fire again — the enemy never locates you. |
+| Muzzle Brake | Barrel | Massively reduces muzzle rise and felt recoil; fastest follow-up shot recovery of any barrel option | Significantly louder — vented gas amplifies the report | **Unlock: Level 13.** Essential for rapid semi-auto fire; allows the marksman to put multiple rounds on target before the enemy has processed the first shot. |
+| Heavy Barrel | Barrel | Improves bullet velocity, damage at range, and long-distance accuracy; tighter groupings at maximum engagement distance | Significant weight and mobility penalty | **Unlock: Level 20.** Extends the DMR's effective range toward sniper territory; best on the SR-25, HK417, and Lynx LR-3 for maximum distance engagements. |
+| Skeleton Barrel | Barrel | Material removed from the barrel body; dramatically reduces weight while maintaining rigidity; best mobility of any barrel option | Slight reduction in sustained-fire heat management; marginally less accurate than heavy barrel at extreme range | **Unlock: Level 27.** For mobile marksmen who reposition frequently; keeps the DMR fast and light without fully sacrificing accuracy. |
+| Suppressor with Muzzle Brake **[F]** | Barrel | Combines suppressor sound reduction with muzzle brake recoil control — both effects simultaneously; fictional advanced design | Slightly less effective at each function than dedicated attachments; rare | **Unlock: Level 38.** The premium endgame barrel; fictional combination attachment that approaches the sound suppression of a dedicated suppressor and the recoil control of a dedicated brake. A significant unlock for players who want stealth and speed simultaneously. |
+
+#### Marksman Lasers
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Standard Laser | Laser | Improves hip-fire accuracy; useful during snap engagements before fully ADS | Laser visible to enemies — gives away position | **Unlock: Level 4.** Rare for a DMR build but effective for players who quick-draw at close range before an enemy closes to their preferred distance. |
+| Tactical Laser | Laser | Improves ADS speed and hip-fire accuracy simultaneously | Laser visible to enemies | **Unlock: Level 9.** The most practical laser for DMR play; faster ADS is directly valuable on a semi-auto weapon where every second of transition is a potential shot. |
+| IR Laser | Laser | Completely invisible to enemies; zero position giveaway; allows laser use without concealment risk | Invisible to user without NVGs in full darkness | **Unlock: Level 18.** For stealth-oriented DMR builds; use the laser freely without betraying position — pairs naturally with the Suppressor barrel. |
+| Steady Aim Laser | Laser | Significantly reduces ADS sway and weapon movement while aimed; improves mid-to-long range accuracy while ADS | Slight hip-fire accuracy reduction | **Unlock: Level 26.** For precision semi-auto builds; locks the weapon steadier during the critical moment before firing. |
+
+#### Marksman Optics
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Iron Sights | Optic | Fastest ADS; lightest; no penalty | Very limited precision at DMR distances | **Unlock: Level 1 (default).** Almost never the best choice for a DMR — but viable on the SKS or PR-85 for close-range aggressive builds. |
+| Red Dot | Optic | Clean sight picture; good close-to-mid accuracy | No magnification | **Unlock: Level 3.** For players who use the DMR at close-to-mid range rather than its intended distance; the fastest magnified option available in the slot. |
+| 4× ACOG | Optic | 4× magnification; excellent mid-to-long range clarity; fast to shoulder for a magnified optic | No zoom adjustment | **Unlock: Level 7.** The bread-and-butter DMR optic; matches the marksman's natural engagement range perfectly without over-magnifying. |
+| 6× Precision Scope | Optic | 6× magnification; sharp reticle with range compensation markings; excellent long-range precision | Slower to shoulder than 4×; close-range awareness suffers | **Unlock: Level 14.** Pushes the DMR into near-sniper range precision; best on the SR-25, HK417, and Lynx LR-3 where accuracy is the priority. |
+| Variable 3–9× Scope | Optic | Adjustable magnification from 3× to 9×; covers every engagement range the DMR operates in; versatile | Complex; slightly slower than fixed optics | **Unlock: Level 23.** The most flexible optic in the class; dial to 3× for close engagements, 9× for maximum precision — one optic solves all scenarios. |
+
+#### Marksman Underbarrel
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Vertical Foregrip | Underbarrel | Significantly reduces vertical recoil on rapid semi-auto fire; steadier on follow-up shots | Slight mobility and ADS speed reduction | **Unlock: Level 3.** The fundamental grip; the DMR's semi-auto capability means recoil recovery between shots is critical — this directly improves it. |
+| Bipod | Underbarrel | When prone or crouched, massively stabilizes the weapon — near-zero recoil and sway while deployed | Heavy; only beneficial while stationary | **Unlock: Level 10.** For defensive or static DMR play; set up in a window or treeline and the bipod turns the weapon into a near-sniper-grade platform. |
+| Angled Foregrip | Underbarrel | Improves ADS speed and transitions; better weapon handling while moving | Minimal recoil reduction | **Unlock: Level 15.** For aggressive DMR builds; the ADS speed improvement means faster transitions between targets in semi-auto fire. |
+| Steady Foregrip | Underbarrel | Reduces all recoil — both vertical and horizontal — while ADS; best stability of any grip | Notable mobility reduction; slower ADS speed | **Unlock: Level 21.** The precision grip; locks the weapon during sustained semi-auto fire for the most consistent shot groupings in the class. |
+| Tactical Flashlight | Underbarrel | Illuminates dark interiors; brief blinds enemies at close range | Reveals position in dark environments | **Unlock: Level 29.** Unusual for a DMR but useful in close-range building clearance where a DMR user must defend themselves in tight spaces. |
+
+#### Marksman Stock
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Standard Stock | Stock | Factory stock; balanced between stability and mobility | None — default | **Unlock: Level 1 (default).** The baseline; suitable for general play. |
+| Folding Stock | Stock | Folds for repositioning; improves mobility between engagements | Slight reduction in stability vs fixed stock | **Unlock: Level 6.** For mobile marksmen; fold the stock to move, deploy to engage. |
+| Precision Stock | Stock | Fully adjustable length-of-pull and cheek height; improved consistency on every shot; reduces weapon sway | Weight increase; slight mobility reduction | **Unlock: Level 12.** The accuracy stock; every adjustment tightens the shooter's position against the rifle, reducing variance across multiple shots. |
+| Heavy Stock | Stock | Massively reduces recoil and weapon sway; the most stable stock in the class | Major mobility decrease; notably slower ADS | **Unlock: Level 19.** For stationary defensive DMR builds; plants the weapon like a rock for sustained semi-auto precision. |
+| Skeleton Stock | Stock | Lightest stock in the class; significantly improves mobility and ADS speed | Increases recoil — less shoulder contact | **Unlock: Level 32.** For high-mobility DMR builds; maximizes movement and speed at the cost of stability — best on low-recoil weapons like the Talon MR-7 and Lynx LR-3. |
+
+#### Marksman Ammunition
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Match Grade | Ammunition | Hand-loaded precision rounds; tightest shot groupings; best consistency | None — pure accuracy benefit | **Unlock: Level 1 (default).** The baseline for precision semi-auto fire; what real-world DMRs are fed for accuracy. |
+| Armor Piercing | Ammunition | Punches through body armor and light cover; retains damage through barriers | Reduced damage vs unarmored targets | **Unlock: Level 10.** Counter for armored opponents; switches the entire damage profile toward penetration. |
+| Hollow Point | Ammunition | Massively increased damage on unarmored targets; exceptional stopping power per hit | Zero penetration through armor | **Unlock: Level 15.** Maximum per-shot lethality on soft targets; devastating on a high-damage-per-shot platform like a DMR. |
+| Extended Magazine | Ammunition | Increases magazine capacity; more shots before reload | Slightly slower reload | **Unlock: Level 20.** Extends the DMR's sustained engagement window; especially valuable on weapons with small default magazines like the M1 Garand (8-round en bloc). |
+| .308 Subsonic **[suppressor builds]** | Ammunition | Near-silent when paired with a suppressor; eliminates the supersonic crack — no audible giveaway near the target | Significantly reduced velocity and range; substantial bullet drop requiring holdover adjustment | **Unlock: Level 29.** The ghost load for DMR suppressor builds; loses range dramatically but the position is completely concealed — fire, relocate, and the enemy still doesn't know where you are. |
+
+#### Marksman Firing Mods
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Match Trigger | Firing Mod | Crisp, light trigger pull; faster reset; improved first-shot accuracy; better burst discipline | Minimal trade-off | **Unlock: Level 5.** The precision trigger; sharpens the feel of every shot; essential for players who time each semi-auto pull deliberately. |
+| Extended Cycle | Firing Mod | Slightly slows fire rate; each shot hits with increased force and tighter accuracy; per-shot recoil is reduced | Fire rate drops noticeably — poor for quick target transitions | **Unlock: Level 13.** Turns the DMR into a precision striker; every round lands harder and more accurately at the cost of speed between shots. |
+| Double Tap | Firing Mod | Every trigger pull fires two rounds in near-instant succession; doubles damage output per pull | Uses ammo twice as fast; increased recoil per pull | **Unlock: Level 21.** Devastating burst output; on a high-damage DMR, two rounds in near-instant succession at range is a near-guaranteed kill. |
+| Rapid Semi | Firing Mod | Tightens the trigger's mechanical reset — allows faster semi-auto pulling without the Binary Trigger's release-fire risk | Slight accuracy reduction during max-speed semi-auto fire | **Unlock: Level 31.** The speed mod for disciplined semi-auto fire; increases how fast the trigger can be pulled intentionally without the unpredictability of the Binary Trigger. |
 
 
 ═══════════════════════════════════════════════════════════════════════
