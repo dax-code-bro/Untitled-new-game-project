@@ -533,3 +533,74 @@
 | 12 | HK PSG-1 | Very High | Elite | Very Low | Low (semi-auto) | Very Low | Semi-Auto | 7.62×51mm German; one of the most accurate semi-automatic precision rifles ever built; match-grade barrel, adjustable stock, and a match trigger make it a factory-ready competition rifle; extremely heavy at 16+ lbs — the least mobile weapon in the marksman class; every shot is a precision instrument. |
 | 13 | Dragunov SVDS | High | Very High | Medium | Low-Medium (semi-auto) | Medium | Semi-Auto | 7.62×54mmR Soviet; the folding-stock paratrooper variant of the SVD; hinged tubular stock folds to the side for vehicle use and airdrop operations; slightly reduced accuracy over the full SVD due to the stock flex; 10-round magazine; the most mobile of the large-caliber marksman rifles. |
 | 14 | Talon MR-7 **[F]** | Very High | Very High | Medium | Low-Medium (semi-auto) | Low | Semi-Auto | Fictional modern DMR; ambidextrous chassis with adjustable length-of-pull and cheek weld; 20-round magazine; advanced muzzle brake reduces recoil to near-zero for a 7.62mm platform; purpose-designed for rapid target transitions at distance; the best all-round marksman rifle in the class for players who want precision without extreme mobility sacrifice. |
+
+### Marksman Rifle Shared Attachments
+
+#### Marksman Barrels
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Match Barrel | Barrel | Tight-tolerance precision barrel; reduces shot-to-shot variance; best baseline accuracy in the slot | None — default configuration | **Unlock: Level 1 (default).** The accuracy foundation of every marksman build; already fitted to factory DMR configurations. |
+| Suppressor | Barrel | Drastically reduces sound and muzzle flash; conceals firing position; allows repositioning without detection | Reduced bullet velocity; slight damage falloff at the outer edge of range | **Unlock: Level 8.** The stealth barrel; transforms the DMR into a ghost platform; fire, reposition, fire again — the enemy never locates you. |
+| Muzzle Brake | Barrel | Massively reduces muzzle rise and felt recoil; fastest follow-up shot recovery of any barrel option | Significantly louder — vented gas amplifies the report | **Unlock: Level 13.** Essential for rapid semi-auto fire; allows the marksman to put multiple rounds on target before the enemy has processed the first shot. |
+| Heavy Barrel | Barrel | Improves bullet velocity, damage at range, and long-distance accuracy; tighter groupings at maximum engagement distance | Significant weight and mobility penalty | **Unlock: Level 20.** Extends the DMR's effective range toward sniper territory; best on the SR-25, HK417, and Lynx LR-3 for maximum distance engagements. |
+| Skeleton Barrel | Barrel | Material removed from the barrel body; dramatically reduces weight while maintaining rigidity; best mobility of any barrel option | Slight reduction in sustained-fire heat management; marginally less accurate than heavy barrel at extreme range | **Unlock: Level 27.** For mobile marksmen who reposition frequently; keeps the DMR fast and light without fully sacrificing accuracy. |
+| Suppressor with Muzzle Brake **[F]** | Barrel | Combines suppressor sound reduction with muzzle brake recoil control — both effects simultaneously; fictional advanced design | Slightly less effective at each function than dedicated attachments; rare | **Unlock: Level 38.** The premium endgame barrel; fictional combination attachment that approaches the sound suppression of a dedicated suppressor and the recoil control of a dedicated brake. A significant unlock for players who want stealth and speed simultaneously. |
+
+#### Marksman Lasers
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Standard Laser | Laser | Improves hip-fire accuracy; useful during snap engagements before fully ADS | Laser visible to enemies — gives away position | **Unlock: Level 4.** Rare for a DMR build but effective for players who quick-draw at close range before an enemy closes to their preferred distance. |
+| Tactical Laser | Laser | Improves ADS speed and hip-fire accuracy simultaneously | Laser visible to enemies | **Unlock: Level 9.** The most practical laser for DMR play; faster ADS is directly valuable on a semi-auto weapon where every second of transition is a potential shot. |
+| IR Laser | Laser | Completely invisible to enemies; zero position giveaway; allows laser use without concealment risk | Invisible to user without NVGs in full darkness | **Unlock: Level 18.** For stealth-oriented DMR builds; use the laser freely without betraying position — pairs naturally with the Suppressor barrel. |
+| Steady Aim Laser | Laser | Significantly reduces ADS sway and weapon movement while aimed; improves mid-to-long range accuracy while ADS | Slight hip-fire accuracy reduction | **Unlock: Level 26.** For precision semi-auto builds; locks the weapon steadier during the critical moment before firing. |
+
+#### Marksman Optics
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Iron Sights | Optic | Fastest ADS; lightest; no penalty | Very limited precision at DMR distances | **Unlock: Level 1 (default).** Almost never the best choice for a DMR — but viable on the SKS or PR-85 for close-range aggressive builds. |
+| Red Dot | Optic | Clean sight picture; good close-to-mid accuracy | No magnification | **Unlock: Level 3.** For players who use the DMR at close-to-mid range rather than its intended distance; the fastest magnified option available in the slot. |
+| 4× ACOG | Optic | 4× magnification; excellent mid-to-long range clarity; fast to shoulder for a magnified optic | No zoom adjustment | **Unlock: Level 7.** The bread-and-butter DMR optic; matches the marksman's natural engagement range perfectly without over-magnifying. |
+| 6× Precision Scope | Optic | 6× magnification; sharp reticle with range compensation markings; excellent long-range precision | Slower to shoulder than 4×; close-range awareness suffers | **Unlock: Level 14.** Pushes the DMR into near-sniper range precision; best on the SR-25, HK417, and Lynx LR-3 where accuracy is the priority. |
+| Variable 3–9× Scope | Optic | Adjustable magnification from 3× to 9×; covers every engagement range the DMR operates in; versatile | Complex; slightly slower than fixed optics | **Unlock: Level 23.** The most flexible optic in the class; dial to 3× for close engagements, 9× for maximum precision — one optic solves all scenarios. |
+
+#### Marksman Underbarrel
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Vertical Foregrip | Underbarrel | Significantly reduces vertical recoil on rapid semi-auto fire; steadier on follow-up shots | Slight mobility and ADS speed reduction | **Unlock: Level 3.** The fundamental grip; the DMR's semi-auto capability means recoil recovery between shots is critical — this directly improves it. |
+| Bipod | Underbarrel | When prone or crouched, massively stabilizes the weapon — near-zero recoil and sway while deployed | Heavy; only beneficial while stationary | **Unlock: Level 10.** For defensive or static DMR play; set up in a window or treeline and the bipod turns the weapon into a near-sniper-grade platform. |
+| Angled Foregrip | Underbarrel | Improves ADS speed and transitions; better weapon handling while moving | Minimal recoil reduction | **Unlock: Level 15.** For aggressive DMR builds; the ADS speed improvement means faster transitions between targets in semi-auto fire. |
+| Steady Foregrip | Underbarrel | Reduces all recoil — both vertical and horizontal — while ADS; best stability of any grip | Notable mobility reduction; slower ADS speed | **Unlock: Level 21.** The precision grip; locks the weapon during sustained semi-auto fire for the most consistent shot groupings in the class. |
+| Tactical Flashlight | Underbarrel | Illuminates dark interiors; brief blinds enemies at close range | Reveals position in dark environments | **Unlock: Level 29.** Unusual for a DMR but useful in close-range building clearance where a DMR user must defend themselves in tight spaces. |
+
+#### Marksman Stock
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Standard Stock | Stock | Factory stock; balanced between stability and mobility | None — default | **Unlock: Level 1 (default).** The baseline; suitable for general play. |
+| Folding Stock | Stock | Folds for repositioning; improves mobility between engagements | Slight reduction in stability vs fixed stock | **Unlock: Level 6.** For mobile marksmen; fold the stock to move, deploy to engage. |
+| Precision Stock | Stock | Fully adjustable length-of-pull and cheek height; improved consistency on every shot; reduces weapon sway | Weight increase; slight mobility reduction | **Unlock: Level 12.** The accuracy stock; every adjustment tightens the shooter's position against the rifle, reducing variance across multiple shots. |
+| Heavy Stock | Stock | Massively reduces recoil and weapon sway; the most stable stock in the class | Major mobility decrease; notably slower ADS | **Unlock: Level 19.** For stationary defensive DMR builds; plants the weapon like a rock for sustained semi-auto precision. |
+| Skeleton Stock | Stock | Lightest stock in the class; significantly improves mobility and ADS speed | Increases recoil — less shoulder contact | **Unlock: Level 32.** For high-mobility DMR builds; maximizes movement and speed at the cost of stability — best on low-recoil weapons like the Talon MR-7 and Lynx LR-3. |
+
+#### Marksman Ammunition
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Match Grade | Ammunition | Hand-loaded precision rounds; tightest shot groupings; best consistency | None — pure accuracy benefit | **Unlock: Level 1 (default).** The baseline for precision semi-auto fire; what real-world DMRs are fed for accuracy. |
+| Armor Piercing | Ammunition | Punches through body armor and light cover; retains damage through barriers | Reduced damage vs unarmored targets | **Unlock: Level 10.** Counter for armored opponents; switches the entire damage profile toward penetration. |
+| Hollow Point | Ammunition | Massively increased damage on unarmored targets; exceptional stopping power per hit | Zero penetration through armor | **Unlock: Level 15.** Maximum per-shot lethality on soft targets; devastating on a high-damage-per-shot platform like a DMR. |
+| Extended Magazine | Ammunition | Increases magazine capacity; more shots before reload | Slightly slower reload | **Unlock: Level 20.** Extends the DMR's sustained engagement window; especially valuable on weapons with small default magazines like the M1 Garand (8-round en bloc). |
+| .308 Subsonic **[suppressor builds]** | Ammunition | Near-silent when paired with a suppressor; eliminates the supersonic crack — no audible giveaway near the target | Significantly reduced velocity and range; substantial bullet drop requiring holdover adjustment | **Unlock: Level 29.** The ghost load for DMR suppressor builds; loses range dramatically but the position is completely concealed — fire, relocate, and the enemy still doesn't know where you are. |
+
+#### Marksman Firing Mods
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Match Trigger | Firing Mod | Crisp, light trigger pull; faster reset; improved first-shot accuracy; better burst discipline | Minimal trade-off | **Unlock: Level 5.** The precision trigger; sharpens the feel of every shot; essential for players who time each semi-auto pull deliberately. |
+| Extended Cycle | Firing Mod | Slightly slows fire rate; each shot hits with increased force and tighter accuracy; per-shot recoil is reduced | Fire rate drops noticeably — poor for quick target transitions | **Unlock: Level 13.** Turns the DMR into a precision striker; every round lands harder and more accurately at the cost of speed between shots. |
+| Double Tap | Firing Mod | Every trigger pull fires two rounds in near-instant succession; doubles damage output per pull | Uses ammo twice as fast; increased recoil per pull | **Unlock: Level 21.** Devastating burst output; on a high-damage DMR, two rounds in near-instant succession at range is a near-guaranteed kill. |
+| Rapid Semi | Firing Mod | Tightens the trigger's mechanical reset — allows faster semi-auto pulling without the Binary Trigger's release-fire risk | Slight accuracy reduction during max-speed semi-auto fire | **Unlock: Level 31.** The speed mod for disciplined semi-auto fire; increases how fast the trigger can be pulled intentionally without the unpredictability of the Binary Trigger. |
