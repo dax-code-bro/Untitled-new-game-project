@@ -235,6 +235,77 @@
 | 29 | Krait KVS-9 **[F]** | Medium | Medium-Low | High | High (~1000 RPM) | High | Semi / Auto | Fictional Eastern bloc SMG; fires in unpredictable erratic bursts making it hard to control; effective only in pure spray at close range; a high risk/high reward weapon for aggressive players. |
 | 30 | HYDRA VP-9 **[F][HYDRA]** | Medium-High | High | High | Very High (~1100 RPM) | Low | Semi / Auto | HYDRA's compact close-quarters weapon; advanced polymer and ported barrel system eliminates most felt recoil at the elevated cyclic rate; decades ahead of 1985 SMG technology. Only found on HYDRA operators. |
 
+### SMG Shared Attachments
+
+#### SMG Barrels
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Flash Hider | Barrel | Eliminates visible muzzle flash during full-auto fire; slight improvement to sustained accuracy | Minimal — negligible trade-off | **Unlock: Level 1 (default).** Keeps your position hidden during rapid fire; the first upgrade most players equip. |
+| Compensator | Barrel | Significantly reduces vertical recoil; muzzle stays on target through long auto bursts | Slight increase in muzzle noise | **Unlock: Level 5.** The core recoil tool for SMGs; controls the upward climb that high-cyclic-rate weapons generate. |
+| Suppressor | Barrel | Drastically reduces sound and muzzle flash; slight recoil reduction; conceals firing position | Reduced bullet velocity and damage at extended range | **Unlock: Level 9.** The stealth barrel; pairs naturally with IR Laser and Subsonic ammo for a fully silent build. |
+| Extended Barrel | Barrel | Improves bullet velocity, damage range, and accuracy at distance; makes the SMG competitive mid-range | Reduces mobility and ADS speed; heavier front end | **Unlock: Level 14.** Pushes the SMG toward a more AR-like engagement range; best on slower-firing models like the UMP45. |
+| Ported Compensator | Barrel | Massively reduces both horizontal and vertical recoil through aggressive gas venting ports | Noticeably louder; increased muzzle flash reveals position | **Unlock: Level 20.** Best raw recoil control in the barrel slot; the noise trade-off matters in stealth but on direct engagements nothing keeps the muzzle flatter. |
+| Sprint Barrel | Barrel | Lightweight shortened design; massively improves ADS speed and sprint-to-fire transition | Reduced bullet velocity and faster damage falloff at range | **Unlock: Level 28.** For the most aggressive mobile builds; the barrel is almost an extension of your movement — draw and fire before the enemy reacts. |
+
+#### SMG Lasers
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Standard Laser | Laser | Tightens hip-fire spread; provides a visible reference point for hip-fire at close range | Laser is visible to enemies — reveals position | **Unlock: Level 1 (default).** The fundamental hip-fire tool; most SMG players live in hip-fire at close range. |
+| Tactical Laser | Laser | Simultaneously improves ADS speed and hip-fire accuracy; versatile across engagement styles | Laser is visible to enemies | **Unlock: Level 6.** The best all-round laser; benefits both ADS and hip-fire players equally. |
+| Fast Motion Laser | Laser | Increases movement speed while ADS; improves sprint-to-fire time; keeps you mobile while aiming | Slight accuracy reduction while moving — speed costs stability | **Unlock: Level 12.** For aggressive SMG players who push constantly; lets you ADS without slowing down. |
+| IR Laser | Laser | Invisible to the naked eye — gives zero position information to enemies; only visible through Night Vision Goggles | The beam is invisible to the user without NVGs in full daylight — requires NVG equipment to see the dot in darkness | **Unlock: Level 24.** The stealth laser; pairs with the Suppressor build for silent operations where light discipline matters. |
+
+#### SMG Optics
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Iron Sights | Optic | Fastest ADS of any optic; zero added weight | Limited precision; hard to use at medium range | **Unlock: Level 1 (default).** The weapon's factory sights; fast, light, zero trade-off — chosen by players who ADS rarely. |
+| Red Dot | Optic | Clean unobstructed sight picture; good close-to-mid accuracy | No magnification | **Unlock: Level 4.** The workhorse optic for SMGs; improves precision without slowing the weapon down meaningfully. |
+| Ghost Ring | Optic | Large aperture rear sight; excellent target acquisition in low light; faster than a traditional scope | No magnification; open aperture less precise than a dot at range | **Unlock: Level 8.** Best optic for dark interiors and night operations; the aperture catches the eye naturally without forcing precise alignment. |
+| Reflex Sight | Optic | Wide open sight window; best situational awareness of any optic; fast target acquisition | No magnification; less precise at distance than the red dot | **Unlock: Level 13.** For players who want to see everything around the reticle while aiming; aggressive and aware. |
+| Mini ACOG 2× | Optic | 2× magnification; meaningfully extends SMG effective range; improves accuracy on burst fire | Slower ADS than unmagnified optics; reduces close-range situational awareness | **Unlock: Level 22.** The only magnified optic in the SMG class; turns a close-range weapon into a mid-range threat. |
+
+#### SMG Underbarrel
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Vertical Foregrip | Underbarrel | Significantly reduces vertical recoil; steadier sustained fire | Slight mobility and ADS speed reduction | **Unlock: Level 3.** The fundamental grip; essential on high-cyclic-rate SMGs where vertical climb is the primary recoil concern. |
+| Wrist Brace | Underbarrel | Stabilizes the weapon during sustained fire; reduces weapon sway while ADS | Minimal other impact | **Unlock: Level 7.** A subtle stability improvement; most effective on compact SMGs that naturally flex during fire. |
+| Tactical Flashlight | Underbarrel | Illuminates dark environments; brief flash blinds enemies when aimed directly at them in low light | Reveals your position in dark environments | **Unlock: Level 11.** Indoor and night operations staple; the close-range aggression of SMGs pairs well with a disorientation tool. |
+| Angled Foregrip | Underbarrel | Significantly improves ADS speed; better weapon transitions while moving | Minimal recoil reduction compared to vertical grip | **Unlock: Level 16.** For mobile players who ADS frequently; the fastest transition grip in the slot. |
+| Compact Foregrip | Underbarrel | Reduces both horizontal and vertical recoil simultaneously without significant bulk | Slight ADS speed reduction | **Unlock: Level 27.** The premium grip; tames recoil in both axes with less mobility impact than larger grips. |
+
+#### SMG Stock
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| No Stock | Stock | Massively improves mobility and ADS speed; near-pistol handling speed | Major recoil increase — no shoulder contact | **Unlock: Level 2.** Strip the stock entirely; pairs best with high-fire-rate compact SMGs for maximum aggression at point-blank range. |
+| Wire Stock | Stock | Lightweight foldable wire frame; balanced improvement in both speed and stability | Slight recoil increase vs fixed stock | **Unlock: Level 6.** The practical compromise; gives back most of the No Stock speed while providing some shoulder contact for stability. |
+| Compact Stock | Stock | Reduces weapon sway and recoil while keeping mobility reasonable; solid all-rounder | Slight ADS speed reduction | **Unlock: Level 10.** The reliable middle ground; improves control without committing to full stability sacrifice. |
+| Folding Stock | Stock | Improves mobility when deployed; folds out of the way for close-quarters transitions | Moderate recoil vs fixed stock | **Unlock: Level 17.** Best for mixed engagements where you switch between moving and holding positions. |
+| Reinforced Stock | Stock | Massively reduces recoil and weapon sway; most stable SMG stock option | Major mobility reduction; significantly slower ADS | **Unlock: Level 29.** Locks the weapon against the shoulder for maximum stability; best on the UMP45 or PP-19 Bizon for a deliberate, controlled firing style. |
+
+#### SMG Ammunition
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Standard 9mm | Ammunition | Balanced damage, range, and magazine capacity | None — default configuration | **Unlock: Level 1 (default).** The baseline; reliable across all engagement ranges. |
+| Hollow Point | Ammunition | Massively increases damage against unarmored targets; excellent stopping power per hit | Zero penetration through body armor or cover; useless vs armored enemies | **Unlock: Level 7.** The ultimate soft-target round; devastating in modes where enemies run light, useless where armor is common. |
+| Armor Piercing | Ammunition | Punches through soft body armor and light cover; bullets retain damage through barriers | Reduced damage against unarmored targets; harder tip sacrifices stopping power for penetration | **Unlock: Level 13.** The counter to armored opponents; switches the damage profile for armored engagements. |
+| Extended Magazine | Ammunition | Increases magazine capacity by 50%; fewer reloads in sustained engagements | Slightly slower reload time due to added length | **Unlock: Level 18.** The volume-of-fire option; especially valuable on SMGs with small stock magazines. |
+| Drum Magazine | Ammunition | Doubles magazine capacity; sustain fire through entire engagements without reloading | Major weight increase; significantly slower reload when it does run dry | **Unlock: Level 28.** Maximum capacity option; the PP-19 Bizon already runs a 64-round helical drum — other SMGs equipped with this approach that level. |
+
+#### SMG Firing Mods
+
+| Attachment | Slot | Buffs | Nerfs | Notes |
+|------------|------|-------|-------|-------|
+| Match Trigger | Firing Mod | Crisp light trigger pull with faster reset; improved first-shot accuracy; better burst control | Minimal trade-off | **Unlock: Level 5.** Sharpens the feel of every shot without changing the weapon's fundamental behaviour; best on semi-auto or burst builds. |
+| Rapid Fire | Firing Mod | Significantly increases cyclic rate; more rounds per second downrange | Harder recoil management at higher speed; slight accuracy reduction in sustained fire | **Unlock: Level 14.** Pushes the SMG past its factory fire rate; best on weapons with manageable base recoil like the MP5 or TMP. |
+| Full Auto Conversion | Firing Mod | Adds a full-auto fire mode to SMGs that lack it; fire selector gains the auto position | Increased recoil on converted weapons; slightly reduced control | **Unlock: Level 21.** Unlocks automatic fire on the few SMGs in the class that shipped semi-auto only; opens up aggressive playstyles on those platforms. |
+| Binary Trigger | Firing Mod | Fires one round on trigger pull and one on trigger release — near-doubles effective fire rate without increasing cyclic speed | Fires on release regardless of intent — demands deliberate trigger discipline; poor control in CQB panic fire | **Unlock: Level 33.** The highest skill ceiling firing mod in the class; in disciplined hands it nearly doubles output; in untrained hands it empties magazines into ceilings. |
+
 ---
 
 ## 4. Pistols (14 / 14)
