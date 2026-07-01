@@ -62,3 +62,4 @@
 | # | Name | Damage | Accuracy | Mobility | Fire Rate | Recoil | Fire Modes | Notes |
 |---|------|--------|----------|----------|-----------|--------|------------|-------|
 | 1 | Benelli M4 | Very High | Medium (pellet spread) | Medium | Medium-High (semi-auto follow-up) | High (reduced by ARGO gas system vs other 12ga) | Semi-Auto | US Marine Corps standard combat shotgun; ARGO gas-operated system cycles reliably with any ammo and cuts felt recoil vs inertia-driven designs; fastest reliable follow-up shot in the shotgun class. |
+| 2 | AA-12 (Auto Assault-12) | Very High | Medium (pellet spread) | Medium-Low | High (~300 RPM full-auto) | Medium (recoil buffer system absorbs most kick despite 12ga) | Semi / Auto (hold trigger) | The only full-auto shotgun in the class; tap for single shots, hold for continuous fire; 8-round box or 20/32-round drum mag; heavier than most shotguns but the recoil buffer makes it surprisingly manageable on full-auto. |
