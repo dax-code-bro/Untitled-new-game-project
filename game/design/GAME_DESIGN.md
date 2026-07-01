@@ -16,6 +16,10 @@ files and committed/pushed as it's created. Full per-mission scripts live in
 complete screenplays.
 
 **Canon index:**
+- `game/design/ALL-IN-ONE.md` — **auto-generated combined snapshot** of every doc
+  below, for easy reading/export. Regenerate after edits with
+  `bash game/design/build-combined.sh`. *(The individual files are the source of
+  truth; don't edit ALL-IN-ONE directly.)*
 - `game/design/GAME_DESIGN.md` — this design bible (modes, mechanics, characters,
   rating, open decisions).
 - `game/design/missions/mission-01.md` — **Mission 1, full script** (every line,
