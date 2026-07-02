@@ -4,6 +4,30 @@
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 
+// ---------------------------------------------------------------- crash visibility (mobile debugging)
+// Any JS error gets printed ON SCREEN so a phone user can see what broke.
+function showFatal(msg) {
+  let b = document.getElementById('fatal');
+  if (!b) {
+    b = document.createElement('div');
+    b.id = 'fatal';
+    b.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:99;background:#7a1226;color:#fff;font:12px monospace;padding:10px 14px;white-space:pre-wrap;';
+    document.body.appendChild(b);
+  }
+  b.textContent = '⚠ GAME ERROR (send this to Claude):\n' + msg;
+}
+window.addEventListener('error', (e) => showFatal((e.message || 'unknown') + '\n' + (e.filename || '') + ':' + (e.lineno || '')));
+window.addEventListener('unhandledrejection', (e) => showFatal('Promise: ' + (e.reason && e.reason.message || e.reason)));
+
+// "script alive" badge — proves JS is running at all
+(() => {
+  const ok = document.createElement('div');
+  ok.id = 'jsok';
+  ok.style.cssText = 'position:fixed;left:8px;bottom:6px;z-index:98;color:#a6e3a1;font:10px monospace;opacity:.7;';
+  ok.textContent = 'js: loading…';
+  document.body.appendChild(ok);
+})();
+
 // ---------------------------------------------------------------- setup
 const app = document.getElementById('app');
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -347,7 +371,7 @@ function flashMenu() { const m = document.getElementById('menu'); m.animate([{ f
 document.getElementById('story').addEventListener('click', () => {
   document.getElementById('story').classList.add('hidden');
   hud.classList.remove('hidden');
-  if (isTouch) { playing = true; }   // no pointer lock on mobile — touch controls take over
+  if (isTouch) { playing = true; document.getElementById('touch').classList.remove('hidden'); }
   else controls.lock();
 });
 controls.addEventListener('lock', () => { playing = true; });
@@ -358,7 +382,7 @@ const isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 const touch = { moveX: 0, moveZ: 0, sprint: false, crouchToggle: false, firing: false,
   moveId: null, lookId: null, fireId: null, moveOrigin: null, lookLast: null };
 const knobEl = document.getElementById('knob');
-if (isTouch) { document.getElementById('touch').classList.remove('hidden'); document.body.classList.add('touchmode'); }
+if (isTouch) document.body.classList.add('touchmode'); // touch buttons revealed at game start, not over the menu
 
 function zoneAt(x, y) {
   for (const id of ['btn-fire', 'btn-jump', 'btn-reload', 'btn-crouch', 'btn-swap', 'stick']) {
@@ -533,3 +557,4 @@ animate();
 // expose a tiny hook for headless smoke-testing
 window.__demo = { THREE, scene, camera, entities, WEAPONS };
 console.log('[demo] ready — Three r' + THREE.REVISION);
+document.getElementById('jsok').textContent = 'js: ✓ running (r' + THREE.REVISION + ')';
