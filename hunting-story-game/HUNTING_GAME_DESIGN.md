@@ -45,15 +45,33 @@ of the story.
 | **The baby** | 3 months old | Name + boy/girl up to you |
 | **Uncle Dale** *(placeholder name — rename him)* | The uncle with ATTR-CM | Sold the lodge for the cure; too sick to make the climb this season, but he's on the phone |
 
-### Chapters (each is a "hunt")
-1. **Coming Home** — John arrives with his family. The gate key still sticks.
-   Dale calls: "Freezer's yours to fill, Johnny. One more season."
-2. **Six Generations** — John finds six sets of initials carved in the tree
-   stand, the oldest nearly grown over. There's room for one more.
-3. **Thirty Days** — the buyer's agent calls the lodge landline. Thirty days
-   until the papers turn in. The weather turns mean, like the woods heard it.
+### Chapter I (current focus — this chapter stays for a while)
+Chapter I is not a quick level; it's the whole game right now, and it will
+keep growing scene by scene.
+
+**Scene 1 — Arrival (done, full dialogue):** John, Emma, and the baby drive
+up. The key sticks. Dale calls the landline — "Freezer's yours to fill,
+Johnny. One more season." Emma sends John out with his grandfather's rifle.
+
+**The hidden wall (done):** when the arrival scene ends, the player is given
+**no objective, no prompt, nothing**. They're simply in the woods. Behind the
+scenes, the game requires them to **find, track, and hunt 3 animals of any
+species** before the day ends and the story continues. The sky slowly slides
+toward dusk as the bag fills, so progress is *felt*, never announced.
+
+**Scene 2 — First dusk (done, dialogue):** porch lamp comes on, John hauls
+his take down the ridge, Emma's line about Dale's freezer. "The first day of
+the last season is over. There will be more of them — but not many."
+
+**Later Chapter I scenes:** TBD — Dax is writing. (Tree-stand initials,
+Emma/baby scenes at the lodge, more Dale calls, etc.)
+
+### Later chapters (parked, story reserved)
+2. **Six Generations** — the initials in the tree stand; room for one more.
+3. **Thirty Days** — the buyer's agent calls; the weather turns mean.
 4. **The Old Man of the North Woods** — the legendary buck Dale and John's
-   grandfather chased for thirty years and never took. One final choice.
+   grandfather chased for thirty years and never took. One final choice
+   (The Hunter / The Keeper — see below).
 
 ### Tone
 Quiet, patient, bittersweet — but warm, not bleak. The lodge is full of a
@@ -74,11 +92,20 @@ brought him home. On Friday, none of it is theirs.
 ## 4. Gameplay (the part I can build)
 
 - **Perspective:** simple first-person-ish scene view (browser canvas).
-- **Core loop:** watch the treeline → an animal appears → line up your shot →
-  control your breathing (aim steadies then drifts) → fire in the window.
-- **Tracking:** between animals, follow tracks/sounds that hint what's coming.
-- **Patience meter:** rushing scares animals off; waiting is rewarded.
-- **Story beats:** short narrative text between hunts (pulled from Section 3).
+- **Dialogue scenes:** full click-through dialogue (speaker name + line, stage
+  directions in italics) over drawn backdrops (the lodge at morning/dusk).
+- **Core loop:** find sign → wait → the animal appears → steady your breath
+  (reticle tightens when you hold still) → fire in the window.
+- **Tracking:** before an animal shows, its **sign** fades in on the ground —
+  hoofprints (deer), paired paw prints (rabbit), scratch marks (pheasant).
+  Hover the reticle over the sign to *read* it and learn what's coming.
+- **Species (3 so far):** whitetail deer (big, pauses to feed), cottontail
+  rabbit (small, fast, hops, stops without warning), pheasant (slow on the
+  ground, but flushes into the air if you miss or take too long).
+- **Hidden progression:** no visible quotas or objectives during free hunt.
+  Story gates sit "behind a hidden wall" (e.g., 3 animals of any species ends
+  day one). The world signals progress instead — the light slowly dies.
+- **More mechanics later:** Dax has a list coming; this section will grow.
 
 ---
 
@@ -88,8 +115,10 @@ brought him home. On Friday, none of it is theirs.
 |-------|--------|
 | Isolated project folder | ✅ done (`hunting-story-game/`) |
 | Design/story doc (this file) | ✅ done |
-| Playable prototype (`hunting-game.html`) | ✅ v0.2 — runnable in a browser |
+| Playable prototype (`hunting-game.html`) | ✅ v0.3 — Chapter I: dialogue scenes + free hunt + hidden wall |
 | Your real story text | ✅ John Matthews premise wired in (names still placeholder) |
+| Dialogue (arrival + first dusk) | ✅ v1 draft — Dax can rewrite any line |
+| 3 species + tracking sign | ✅ deer / rabbit / pheasant |
 | Art / sound | ⬜ later |
 
 ---
