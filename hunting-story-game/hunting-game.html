@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Last Hunt — Prototype</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; background: #0d0f0c; color: #e8e6dc;
+    font-family: Georgia, 'Times New Roman', serif; overflow: hidden; }
+  #wrap { position: relative; width: 100vw; height: 100vh;
+    display: flex; align-items: center; justify-content: center; }
+  canvas { display: block; background: #1a2015; max-width: 100%; max-height: 100%; }
+  .overlay { position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center;
+    padding: 6vw; background: rgba(8,10,7,0.82); }
+  .hidden { display: none !important; }
+  h1 { font-size: clamp(28px, 6vw, 64px); letter-spacing: 4px; margin-bottom: 18px;
+    color: #d9c9a3; text-shadow: 0 2px 20px #000; }
+  p.story { font-size: clamp(15px, 2.4vw, 22px); line-height: 1.7; max-width: 720px;
+    color: #cfcbbe; margin-bottom: 26px; font-style: italic; }
+  .sub { font-size: 13px; letter-spacing: 3px; color: #7d8a6a; margin-bottom: 30px;
+    text-transform: uppercase; }
+  button { background: #2a3320; color: #e8e6dc; border: 1px solid #55643c;
+    padding: 14px 34px; font-size: 17px; font-family: inherit; letter-spacing: 2px;
+    cursor: pointer; border-radius: 3px; transition: all .2s; }
+  button:hover { background: #3a4a28; border-color: #8aa15c; }
+  .choice-row { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+  #hud { position: absolute; top: 0; left: 0; right: 0; padding: 16px 22px;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    pointer-events: none; font-size: 15px; text-shadow: 0 1px 4px #000; }
+  #hud .right { text-align: right; }
+  .meter { width: 190px; height: 9px; background: #20261a; border: 1px solid #3d4a2c;
+    border-radius: 5px; margin-top: 5px; overflow: hidden; }
+  .meter > div { height: 100%; width: 100%; transition: width .08s linear; }
+  #steadyFill { background: linear-gradient(90deg,#8aa15c,#d9c9a3); }
+  #hint { position: absolute; bottom: 26px; left: 0; right: 0; text-align: center;
+    font-size: 15px; color: #b9c39a; letter-spacing: 1px; pointer-events: none;
+    text-shadow: 0 1px 6px #000; }
+  .flash { position:absolute; inset:0; background:#fff; opacity:0; pointer-events:none; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c" width="960" height="600"></canvas>
+  <div class="flash" id="flash"></div>
+
+  <div id="hud" class="hidden">
+    <div>
+      <div id="chapterLabel">Chapter I</div>
+      <div style="font-size:13px;color:#9aa680" id="scoreLabel">Taken: 0</div>
+    </div>
+    <div class="right">
+      <div>Steadiness</div>
+      <div class="meter"><div id="steadyFill"></div></div>
+      <div style="font-size:13px;color:#9aa680;margin-top:6px" id="ammoLabel">Rounds: 4</div>
+    </div>
+  </div>
+  <div id="hint" class="hidden"></div>
+
+  <!-- Title -->
+  <div class="overlay" id="titleScreen">
+    <h1>THE LAST HUNT</h1>
+    <div class="sub">a hunting story — prototype v0.1</div>
+    <p class="story">You told him you'd come back one last season.<br>The forest remembers you, even if no one else does.</p>
+    <button id="startBtn">Enter the woods</button>
+  </div>
+
+  <!-- Story beat between chapters -->
+  <div class="overlay hidden" id="storyScreen">
+    <h1 id="storyTitle"></h1>
+    <p class="story" id="storyText"></p>
+    <button id="storyBtn">Continue</button>
+  </div>
+
+  <!-- Final choice -->
+  <div class="overlay hidden" id="choiceScreen">
+    <h1 id="choiceTitle">The Last Hunt</h1>
+    <p class="story">It stands in the clearing. Old. Unbothered. The way he used to describe them.<br>The rifle is steady. The choice is yours.</p>
+    <div class="choice-row">
+      <button id="shootBtn">Take the shot</button>
+      <button id="spareBtn">Lower the rifle</button>
+    </div>
+  </div>
+
+  <!-- Ending -->
+  <div class="overlay hidden" id="endScreen">
+    <h1 id="endTitle"></h1>
+    <p class="story" id="endText"></p>
+    <button id="restartBtn">Hunt again</button>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   THE LAST HUNT — self-contained prototype.
+   Everything in this file. No dependencies. No external assets.
+   Story text is placeholder — meant to be rewritten by you.
+   ============================================================ */
+const cv = document.getElementById('c');
+const ctx = cv.getContext('2d');
+const W = cv.width, H = cv.height;
+
+const el = id => document.getElementById(id);
+const screens = {
+  title: el('titleScreen'), story: el('storyScreen'),
+  choice: el('choiceScreen'), end: el('endScreen')
+};
+function show(name){ Object.values(screens).forEach(s=>s.classList.add('hidden'));
+  if(name) screens[name].classList.remove('hidden');
+  el('hud').classList.toggle('hidden', !!name);
+  el('hint').classList.toggle('hidden', !!name); }
+
+// ---- Chapters (placeholder story — rewrite freely) ----
+const chapters = [
+  { title:'Chapter I — The First Light',
+    text:'Morning. The kind of quiet you forget exists in town. Take a few. Line up your breath before your shot — steadiness comes and goes. Bring home three.',
+    quota:3, roman:'I' },
+  { title:'Chapter II — The Cold Trail',
+    text:'They’re warier now, quicker to bolt. You found his old knife near the creek this morning. Still sharp. Bring home three.',
+    quota:3, roman:'II' },
+  { title:'Chapter III — The Storm',
+    text:'The wind’s turned mean and the light is going. Harder to hold steady out here. Bring home three, then head for the clearing.',
+    quota:3, roman:'III' },
+];
+
+let state = {}, animal = null, chapterIdx = 0;
+function resetRun(){ chapterIdx = 0; state.taken = 0; }
+
+// ---- Aim / steadiness model ----
+let aim = { x: W/2, y: H/2 };
+let steady = 1;          // 0..1, higher = tighter aim
+let breathT = 0;
+let ammo = 4;
+let playing = false;
+let stormy = false;
+let mouse = { x: W/2, y: H/2 };
+
+cv.addEventListener('mousemove', e=>{
+  const r = cv.getBoundingClientRect();
+  mouse.x = (e.clientX - r.left) * (W / r.width);
+  mouse.y = (e.clientY - r.top) * (H / r.height);
+});
+cv.addEventListener('mousedown', ()=>{ if(playing) fire(); });
+
+// ---- Animal spawning ----
+function spawnAnimal(){
+  const fromLeft = Math.floor(breathT*7) % 2 === 0 ? true : Math.random()<.5;
+  const y = H*0.58 + Math.random()*H*0.14;
+  const size = 34 + Math.random()*14;
+  const speed = (0.5 + Math.random()*0.7) * (stormy?1.5:1) * (0.9 + chapterIdx*0.35);
+  animal = {
+    x: fromLeft ? -60 : W+60, y, size,
+    vx: (fromLeft?1:-1)*speed, alive:true, spooked:false, t:0,
+    // it pauses sometimes — your window to shoot
+    pauseAt: 0.25 + Math.random()*0.4, paused:false, pauseTimer:0
+  };
+}
+
+function fire(){
+  if(ammo<=0){ flashHint('Out of rounds — the herd has moved on.'); return; }
+  ammo--; el('ammoLabel').textContent = 'Rounds: '+ammo;
+  doFlash();
+  if(animal && animal.alive){
+    // hit if reticle is within a radius scaled by steadiness
+    const dx = mouse.x - animal.x, dy = mouse.y - animal.y;
+    const dist = Math.hypot(dx, dy);
+    const hitR = animal.size * (0.7 + steady*0.9);
+    if(dist < hitR){
+      animal.alive = false;
+      state.taken++;
+      el('scoreLabel').textContent = 'Taken: '+state.taken;
+      flashHint('A clean shot. He’d have nodded.');
+      setTimeout(()=>{ animal=null; checkQuota(); }, 700);
+    } else {
+      animal.spooked = true;
+      animal.vx *= 2.4;
+      flashHint('Missed — it bolts for the trees.');
+    }
+  }
+  if(ammo<=0 && !(chapterQuotaMet())){
+    setTimeout(()=>reloadPrompt(), 900);
+  }
+}
+
+function reloadPrompt(){ ammo = 4; el('ammoLabel').textContent='Rounds: '+ammo;
+  flashHint('You reload. Patience.'); }
+
+function chapterQuotaMet(){ return state.chapterTaken >= chapters[chapterIdx].quota; }
+
+function checkQuota(){
+  state.chapterTaken = (state.chapterTaken||0);
+  // recompute chapterTaken from difference tracking
+}
+
+// track per-chapter kills
+function startChapter(i){
+  chapterIdx = i; stormy = (i===2);
+  state.chapterTaken = 0; ammo = 4;
+  el('chapterLabel').textContent = 'Chapter '+chapters[i].roman;
+  el('ammoLabel').textContent = 'Rounds: '+ammo;
+  el('scoreLabel').textContent = 'Taken: '+state.taken;
+  cv.style.background = stormy ? '#12160f' : '#1a2015';
+  playing = true; animal = null; spawnTimer = 60;
+  flashHint('Watch the treeline. Wait for your moment.');
+}
+
+let hintTimer = 0;
+function flashHint(t){ el('hint').textContent = t; hintTimer = 160; }
+function doFlash(){ const f = el('flash'); f.style.transition='none'; f.style.opacity=.55;
+  requestAnimationFrame(()=>{ f.style.transition='opacity .35s'; f.style.opacity=0; }); }
+
+// override kill accounting to be per-chapter
+const _origFire = fire;
+
+let spawnTimer = 60;
+
+// ---- Main loop ----
+function update(){
+  breathT += 0.016;
+  // breathing: steadiness oscillates; the longer you hold still, the tighter
+  const stillness = 1 - Math.min(1, Math.hypot(mouse.x-aim.x, mouse.y-aim.y)/40);
+  aim.x += (mouse.x - aim.x)*0.12; aim.y += (mouse.y - aim.y)*0.12;
+  const breathe = (Math.sin(breathT*2.2)*0.5+0.5);
+  const base = stormy ? 0.45 : 0.7;
+  steady = Math.max(0.15, Math.min(1, base + stillness*0.35 - breathe*(stormy?0.4:0.25)));
+  el('steadyFill').style.width = (steady*100)+'%';
+
+  if(playing){
+    if(!animal){
+      spawnTimer--;
+      if(spawnTimer<=0){ spawnAnimal(); }
+    } else {
+      animal.t += 0.016;
+      if(animal.alive){
+        // pause behavior — a window to line up the shot
+        if(!animal.paused && animal.t > animal.pauseAt*4 && !animal.spooked){
+          animal.paused = true; animal.pauseTimer = 90;
+        }
+        if(animal.paused && animal.pauseTimer>0){ animal.pauseTimer--; }
+        else { animal.paused=false; animal.x += animal.vx; }
+      } else {
+        animal.y += 2; // fall
+      }
+      // off screen
+      if(animal.x < -120 || animal.x > W+120){
+        if(animal.alive) flashHint('It slips into the trees. Wait for the next.');
+        animal = null; spawnTimer = 40 + Math.random()*70;
+      }
+    }
+    if(hintTimer>0) hintTimer--;
+  }
+  draw();
+  requestAnimationFrame(update);
+}
+
+// ---- Rendering ----
+function draw(){
+  // sky / ground
+  const g = ctx.createLinearGradient(0,0,0,H);
+  if(stormy){ g.addColorStop(0,'#20261c'); g.addColorStop(.55,'#161c12'); g.addColorStop(1,'#0d1108'); }
+  else { g.addColorStop(0,'#3a4a2c'); g.addColorStop(.5,'#2a3a1e'); g.addColorStop(1,'#16200f'); }
+  ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+
+  // distant treeline
+  ctx.fillStyle = stormy ? '#0f150b' : '#16210e';
+  for(let i=0;i<26;i++){
+    const x = i*(W/24), tw = 26, th = 90 + (i*53%60);
+    ctx.beginPath(); ctx.moveTo(x-tw, H*0.55); ctx.lineTo(x, H*0.55-th);
+    ctx.lineTo(x+tw, H*0.55); ctx.closePath(); ctx.fill();
+  }
+  // ground line
+  ctx.fillStyle = stormy ? '#0c1207' : '#1c2a11';
+  ctx.fillRect(0,H*0.55,W,H*0.45);
+
+  // rain
+  if(stormy){ ctx.strokeStyle='rgba(180,190,200,0.25)'; ctx.lineWidth=1;
+    for(let i=0;i<70;i++){ const rx=(i*137+ (breathT*600))%W; const ry=((i*89)+(breathT*900))%H;
+      ctx.beginPath(); ctx.moveTo(rx,ry); ctx.lineTo(rx-4,ry+14); ctx.stroke(); } }
+
+  // animal (a deer silhouette)
+  if(animal){ drawDeer(animal); }
+
+  // vignette
+  const v = ctx.createRadialGradient(W/2,H/2,H*0.2, W/2,H/2,H*0.75);
+  v.addColorStop(0,'rgba(0,0,0,0)'); v.addColorStop(1,'rgba(0,0,0,0.6)');
+  ctx.fillStyle=v; ctx.fillRect(0,0,W,H);
+
+  if(playing) drawReticle();
+}
+
+function drawDeer(a){
+  ctx.save();
+  ctx.translate(a.x, a.y);
+  if(a.vx<0) ctx.scale(-1,1);
+  ctx.fillStyle = a.alive ? '#5c4a32' : '#3e3222';
+  const s = a.size/34;
+  // body
+  ctx.beginPath(); ctx.ellipse(0,0,26*s,14*s,0,0,7); ctx.fill();
+  // neck + head
+  ctx.beginPath(); ctx.moveTo(18*s,-4*s); ctx.lineTo(30*s,-26*s);
+  ctx.lineTo(38*s,-24*s); ctx.lineTo(24*s,2*s); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(34*s,-26*s,7*s,5*s,0.4,0,7); ctx.fill();
+  // antlers
+  if(a.alive){ ctx.strokeStyle='#6b5738'; ctx.lineWidth=2*s;
+    ctx.beginPath(); ctx.moveTo(33*s,-30*s); ctx.lineTo(30*s,-44*s);
+    ctx.moveTo(33*s,-30*s); ctx.lineTo(42*s,-42*s);
+    ctx.moveTo(36*s,-30*s); ctx.lineTo(44*s,-38*s); ctx.stroke(); }
+  // legs
+  ctx.strokeStyle = a.alive ? '#4a3c28' : '#332a1c'; ctx.lineWidth=3.5*s;
+  const lg = a.alive?0:1;
+  ctx.beginPath();
+  ctx.moveTo(-14*s,10*s); ctx.lineTo(-16*s,(a.alive?30:14)*s);
+  ctx.moveTo(-6*s,10*s); ctx.lineTo(-6*s,(a.alive?30:14)*s);
+  ctx.moveTo(10*s,10*s); ctx.lineTo(12*s,(a.alive?30:14)*s);
+  ctx.moveTo(18*s,10*s); ctx.lineTo(20*s,(a.alive?30:14)*s);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawReticle(){
+  const r = 10 + (1-steady)*46;   // tighter when steady
+  ctx.strokeStyle = 'rgba(220,200,150,0.9)'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(mouse.x, mouse.y, r, 0, 7); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(mouse.x-r-8,mouse.y); ctx.lineTo(mouse.x-r+4,mouse.y);
+  ctx.moveTo(mouse.x+r-4,mouse.y); ctx.lineTo(mouse.x+r+8,mouse.y);
+  ctx.moveTo(mouse.x,mouse.y-r-8); ctx.lineTo(mouse.x,mouse.y-r+4);
+  ctx.moveTo(mouse.x,mouse.y+r-4); ctx.lineTo(mouse.x,mouse.y+r+8);
+  ctx.stroke();
+  ctx.fillStyle='rgba(220,200,150,0.9)';
+  ctx.fillRect(mouse.x-1,mouse.y-1,2,2);
+}
+
+// ---- Kill accounting (per-chapter, fixed) ----
+// Re-wire fire's success path to advance chapters correctly.
+function tryAdvance(){
+  if(state.chapterTaken >= chapters[chapterIdx].quota){
+    playing = false;
+    if(chapterIdx < chapters.length-1){
+      const next = chapterIdx+1;
+      showStory(chapters[next].title, chapters[next].text, ()=> startChapter(next));
+    } else {
+      // to the final choice
+      showChoice();
+    }
+  }
+}
+
+// Patch: intercept a successful kill by polling
+let lastTaken = 0;
+setInterval(()=>{
+  if(!playing) return;
+  if(state.chapterTaken !== lastTaken){ lastTaken = state.chapterTaken; }
+}, 100);
+
+// Simplify: redefine fire's hit to also bump chapterTaken + advance
+function fire(){
+  if(!playing) return;
+  if(ammo<=0){ reloadPrompt(); return; }
+  ammo--; el('ammoLabel').textContent = 'Rounds: '+ammo;
+  doFlash();
+  if(animal && animal.alive){
+    const dx = mouse.x - animal.x, dy = mouse.y - animal.y;
+    const dist = Math.hypot(dx,dy);
+    const hitR = animal.size * (0.7 + steady*0.9);
+    if(dist < hitR){
+      animal.alive = false;
+      state.taken++; state.chapterTaken++;
+      el('scoreLabel').textContent = 'Taken: '+state.taken;
+      const lines = ['A clean shot. He’d have nodded.','That one was for him.','Steady hands. Good.','The woods go quiet.'];
+      flashHint(lines[Math.floor(breathT)%lines.length]);
+      setTimeout(()=>{ animal=null; spawnTimer=50+Math.random()*60; tryAdvance(); }, 700);
+    } else {
+      animal.spooked = true; animal.paused=false; animal.vx *= 2.4;
+      flashHint('Missed — it bolts for the trees.');
+    }
+  }
+  if(ammo<=0){ setTimeout(reloadPrompt, 800); }
+}
+
+// ---- Story beat screen ----
+let storyCb = null;
+function showStory(title, text, cb){
+  el('storyTitle').textContent = title;
+  el('storyText').textContent = text;
+  storyCb = cb; show('story');
+}
+el('storyBtn').onclick = ()=>{ show(null); if(storyCb) storyCb(); };
+
+// ---- Final choice ----
+function showChoice(){ show('choice'); }
+el('shootBtn').onclick = ()=> showEnding(true);
+el('spareBtn').onclick = ()=> showEnding(false);
+
+function showEnding(shot){
+  if(shot){
+    el('endTitle').textContent = 'The Hunter';
+    el('endText').textContent = 'The shot echoes and then the woods are silent for a long time. You did what you came to do. Season’s over. You don’t know yet if you’ll be back.';
+  } else {
+    el('endTitle').textContent = 'The Keeper';
+    el('endText').textContent = 'You lower the rifle. It watches you a moment, then walks off into the trees, unhurried. Some things you keep by letting them go. He’d have understood that too.';
+  }
+  show('end');
+}
+
+// ---- Buttons / flow ----
+el('startBtn').onclick = ()=>{
+  resetRun();
+  showStory(chapters[0].title, chapters[0].text, ()=> startChapter(0));
+};
+el('restartBtn').onclick = ()=>{
+  resetRun();
+  show('title');
+};
+
+// hint auto-hide
+setInterval(()=>{ if(hintTimer<=0 && playing) el('hint').textContent = ''; }, 300);
+
+show('title');
+update();
+</script>
+</body>
+</html>
