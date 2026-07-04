@@ -91,21 +91,42 @@ brought him home. On Friday, none of it is theirs.
 
 ## 4. Gameplay (the part I can build)
 
-- **Perspective:** simple first-person-ish scene view (browser canvas).
-- **Dialogue scenes:** full click-through dialogue (speaker name + line, stage
-  directions in italics) over drawn backdrops (the lodge at morning/dusk).
-- **Core loop:** find sign → wait → the animal appears → steady your breath
-  (reticle tightens when you hold still) → fire in the window.
-- **Tracking:** before an animal shows, its **sign** fades in on the ground —
-  hoofprints (deer), paired paw prints (rabbit), scratch marks (pheasant).
-  Hover the reticle over the sign to *read* it and learn what's coming.
-- **Species (3 so far):** whitetail deer (big, pauses to feed), cottontail
-  rabbit (small, fast, hops, stops without warning), pheasant (slow on the
-  ground, but flushes into the air if you miss or take too long).
+**The game is 3D.** Full first-person 3D world (three.js, vendored in
+`lib/` — no internet needed, double-click still works). The current build is
+**placeholder geometry only: flat colors, no textures, no custom shaders** —
+by design. The team adds its own shaders, graphics, and textures later; this
+build is the skeleton they skin.
+
+- **Player:** true first-person controller — WASD to move, mouse look
+  (pointer lock), click to fire. Collision with trees/rocks/lodge, world
+  boundary at the treeline.
+- **The world:** open pine woods (~170 trees), rocks, a clearing, and the
+  lodge at the south edge with lit windows, chimney, porch — and a porch lamp
+  that only comes on at dusk.
+- **Dialogue scenes:** full click-through dialogue (speaker name + line,
+  stage directions in italics) played over the live 3D world with a slow
+  cinematic camera drift.
+- **Core loop:** walk the woods → find sign → wait → the animal appears →
+  stand still to steady your breath (crosshair tightens) → fire. Shots use a
+  real raycast with spread scaled by unsteadiness.
+- **Tracking:** track marks appear on the ground somewhere in the woods.
+  Walk up to them to *read* the sign — it tells you what's feeding nearby.
+  The animal spawns a little further along the trail.
+- **Species (3 so far):** whitetail deer (walks/grazes), cottontail rabbit
+  (small target, hops), pheasant (flushes into the sky when spooked). All
+  flee if you miss near them or walk too close.
 - **Hidden progression:** no visible quotas or objectives during free hunt.
-  Story gates sit "behind a hidden wall" (e.g., 3 animals of any species ends
-  day one). The world signals progress instead — the light slowly dies.
+  Story gates sit "behind a hidden wall" (3 animals of any species ends day
+  one). The world signals progress instead — the sky slides to dusk, the sun
+  drops orange, the porch lamp comes on.
 - **More mechanics later:** Dax has a list coming; this section will grow.
+
+### Files
+| File | What it is |
+|------|-----------|
+| `hunting-game.html` | **The game** (3D). Open in any browser. |
+| `lib/three.min.js` | three.js r149, vendored so the game runs offline |
+| `prototype-2d.html` | the earlier 2D prototype, kept for reference |
 
 ---
 
@@ -115,7 +136,8 @@ brought him home. On Friday, none of it is theirs.
 |-------|--------|
 | Isolated project folder | ✅ done (`hunting-story-game/`) |
 | Design/story doc (this file) | ✅ done |
-| Playable prototype (`hunting-game.html`) | ✅ v0.3 — Chapter I: dialogue scenes + free hunt + hidden wall |
+| Playable game (`hunting-game.html`) | ✅ v0.4 — **3D**: first-person player, Chapter I dialogue, free hunt, hidden wall |
+| Placeholder art (flat colors, no textures/shaders) | ✅ by design — team art pass comes later |
 | Your real story text | ✅ John Matthews premise wired in (names still placeholder) |
 | Dialogue (arrival + first dusk) | ✅ v1 draft — Dax can rewrite any line |
 | 3 species + tracking sign | ✅ deer / rabbit / pheasant |

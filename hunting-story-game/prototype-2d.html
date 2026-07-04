@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Last Hunt — Chapter I</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; background: #0d0f0c; color: #e8e6dc;
+    font-family: Georgia, 'Times New Roman', serif; overflow: hidden; }
+  #wrap { position: relative; width: 100vw; height: 100vh;
+    display: flex; align-items: center; justify-content: center; }
+  canvas { display: block; background: #1a2015; max-width: 100%; max-height: 100%; }
+  .overlay { position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center;
+    padding: 6vw; background: rgba(8,10,7,0.82); }
+  .hidden { display: none !important; }
+  h1 { font-size: clamp(28px, 6vw, 64px); letter-spacing: 4px; margin-bottom: 18px;
+    color: #d9c9a3; text-shadow: 0 2px 20px #000; }
+  p.story { font-size: clamp(15px, 2.4vw, 22px); line-height: 1.7; max-width: 720px;
+    color: #cfcbbe; margin-bottom: 26px; font-style: italic; }
+  .sub { font-size: 13px; letter-spacing: 3px; color: #7d8a6a; margin-bottom: 30px;
+    text-transform: uppercase; }
+  button { background: #2a3320; color: #e8e6dc; border: 1px solid #55643c;
+    padding: 14px 34px; font-size: 17px; font-family: inherit; letter-spacing: 2px;
+    cursor: pointer; border-radius: 3px; transition: all .2s; }
+  button:hover { background: #3a4a28; border-color: #8aa15c; }
+
+  /* HUD */
+  #hud { position: absolute; top: 0; left: 0; right: 0; padding: 16px 22px;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    pointer-events: none; font-size: 15px; text-shadow: 0 1px 4px #000; }
+  #hud .right { text-align: right; }
+  .meter { width: 190px; height: 9px; background: #20261a; border: 1px solid #3d4a2c;
+    border-radius: 5px; margin-top: 5px; overflow: hidden; }
+  .meter > div { height: 100%; width: 100%; transition: width .08s linear; }
+  #steadyFill { background: linear-gradient(90deg,#8aa15c,#d9c9a3); }
+  #hint { position: absolute; bottom: 26px; left: 0; right: 0; text-align: center;
+    font-size: 15px; color: #b9c39a; letter-spacing: 1px; pointer-events: none;
+    text-shadow: 0 1px 6px #000; font-style: italic; }
+  .flash { position:absolute; inset:0; background:#fff; opacity:0; pointer-events:none; }
+
+  /* Dialogue box */
+  #dlg { position: absolute; left: 0; right: 0; bottom: 0; padding: 0 6vw 5vh;
+    display: flex; justify-content: center; pointer-events: none; }
+  #dlgBox { pointer-events: auto; cursor: pointer; width: min(860px, 92vw);
+    background: rgba(10,13,8,0.88); border: 1px solid #3d4a2c; border-radius: 4px;
+    padding: 20px 28px 16px; box-shadow: 0 8px 40px rgba(0,0,0,0.6); }
+  #dlgWho { font-size: 13px; letter-spacing: 3px; color: #d9c9a3;
+    text-transform: uppercase; margin-bottom: 8px; min-height: 15px; }
+  #dlgText { font-size: clamp(15px, 2.2vw, 20px); line-height: 1.65; color: #e8e6dc; }
+  #dlgText.direction { font-style: italic; color: #b4b09e; }
+  #dlgMore { text-align: right; font-size: 12px; color: #7d8a6a; margin-top: 10px;
+    letter-spacing: 2px; animation: pulse 1.6s infinite; }
+  @keyframes pulse { 0%,100% { opacity:.35; } 50% { opacity:1; } }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c" width="960" height="600"></canvas>
+  <div class="flash" id="flash"></div>
+
+  <div id="hud" class="hidden">
+    <div>
+      <div>Chapter I</div>
+      <div style="font-size:13px;color:#9aa680" id="bagLabel">Game bag: empty</div>
+    </div>
+    <div class="right">
+      <div>Steadiness</div>
+      <div class="meter"><div id="steadyFill"></div></div>
+      <div style="font-size:13px;color:#9aa680;margin-top:6px" id="ammoLabel">Rounds: 5</div>
+    </div>
+  </div>
+  <div id="hint" class="hidden"></div>
+
+  <!-- Dialogue -->
+  <div id="dlg" class="hidden">
+    <div id="dlgBox">
+      <div id="dlgWho"></div>
+      <div id="dlgText"></div>
+      <div id="dlgMore">click&nbsp;/&nbsp;space</div>
+    </div>
+  </div>
+
+  <!-- Title -->
+  <div class="overlay" id="titleScreen">
+    <h1>THE LAST HUNT</h1>
+    <div class="sub">the story of john matthews — chapter i</div>
+    <p class="story">Six generations of Matthews hunted this land.<br>
+      Uncle Dale sold it to buy the medicine keeping his heart alive.<br>
+      The papers aren't signed yet. For one more season, the lodge is still ours.</p>
+    <button id="startBtn">Drive up to the lodge</button>
+  </div>
+
+  <!-- End of day -->
+  <div class="overlay hidden" id="endScreen">
+    <h1 id="endTitle">First Light</h1>
+    <p class="story" id="endText"></p>
+    <button id="restartBtn">Back to the title</button>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   THE LAST HUNT — Chapter I build (v0.3)
+   - Opening scene with full dialogue
+   - Then: free hunt. NO objective is shown. Hidden gate:
+     take 3 animals (any species) to end the first day.
+   - Species: whitetail deer, cottontail rabbit, pheasant
+   - Tracking: fresh sign appears before an animal does;
+     hover it to read what's coming.
+   Self-contained. No dependencies. Story by Dax.
+   ============================================================ */
+const cv = document.getElementById('c');
+const ctx = cv.getContext('2d');
+const W = cv.width, H = cv.height;
+const el = id => document.getElementById(id);
+const rand = (a,b) => a + Math.random()*(b-a);
+const lerp = (a,b,t) => a + (b-a)*t;
+const lerpC = (c1,c2,t) => '#' + [0,1,2].map(i => {
+  const v = Math.round(lerp(c1[i], c2[i], t));
+  return v.toString(16).padStart(2,'0');
+}).join('');
+
+/* ---------- Game mode ---------- */
+let mode = 'title';           // title | dialogue | hunt | end
+let bag = 0;                  // animals taken today (hidden gate = 3)
+const DAY_QUOTA = 3;          // never shown to the player
+
+/* ---------- Dialogue system ---------- */
+let script = [], scriptIdx = 0, dlgBackdrop = 'lodge', dlgDone = null;
+
+const OPENING = [
+  {s:null,   t:'The gravel road hums under the truck. The baby sleeps straight through it.'},
+  {s:'EMMA', t:'Out cold the second we hit the gravel. Like she knows she’s home.'},
+  {s:'JOHN', t:'Sixth generation of Matthews to nap on that road.'},
+  {s:null,   t:'The lodge. The key sticks in the lock, the way it has since before you were born.'},
+  {s:'JOHN', t:'Key still sticks.'},
+  {s:'EMMA', t:'You say that like it’s a feature.'},
+  {s:'JOHN', t:'It is.'},
+  {s:null,   t:'Inside: cedar, woodsmoke, and forty years of Dale’s coffee soaked into the walls. The landline rings before you’ve set the bags down.'},
+  {s:'DALE', t:'You up there yet, Johnny?'},
+  {s:'JOHN', t:'Just walked in. Place smells like you never left.'},
+  {s:'DALE', t:'That’s the cedar. Or my cooking. How’s the little one taking to it?'},
+  {s:'JOHN', t:'Slept the whole way up. Emma’s already claimed your chair.'},
+  {s:'DALE', t:'’Course she has. Listen — freezer’s yours to fill. One more season, same as always.'},
+  {s:'JOHN', t:'How are you feeling? Really.'},
+  {s:null,   t:'A pause. Long enough to hear the line crackle.'},
+  {s:'DALE', t:'Like a man who traded a cabin for a heartbeat. Best trade I ever made, Johnny. Don’t you dare hunt sad on my land.'},
+  {s:'JOHN', t:'It’s your land till Friday.'},
+  {s:'DALE', t:'Then quit wasting my daylight.'},
+  {s:null,   t:'The line clicks. Emma nods at the rifle over the mantel — your grandfather’s.'},
+  {s:'EMMA', t:'Go on. We’ll be here when you get back.'},
+  {s:null,   t:'You take the ridge trail up into the pines. No list. No orders. Just the woods, the way it’s always been.'},
+];
+
+const CLOSING = [
+  {s:null,   t:'The light goes long and gold, then starts to fail. Down the ridge, the porch lamp comes on like a struck match.'},
+  {s:'JOHN', t:'That’s a start, old man.'},
+  {s:null,   t:'You drag your load down the trail in the blue dark. A window of warm light. Supper on the stove. The baby crying, then not.'},
+  {s:'EMMA', t:'Well. Dale’s freezer won’t know what hit it.'},
+  {s:null,   t:'The first day of the last season is over. There will be more of them — but not many.'},
+];
+
+function startDialogue(lines, backdrop, done){
+  script = lines; scriptIdx = 0; dlgBackdrop = backdrop; dlgDone = done;
+  mode = 'dialogue';
+  el('dlg').classList.remove('hidden');
+  el('hud').classList.add('hidden'); el('hint').classList.add('hidden');
+  showLine();
+}
+function showLine(){
+  const L = script[scriptIdx];
+  el('dlgWho').textContent = L.s || '';
+  el('dlgText').textContent = L.s ? '“'+L.t+'”' : L.t;
+  el('dlgText').classList.toggle('direction', !L.s);
+}
+function advanceDialogue(){
+  scriptIdx++;
+  if(scriptIdx >= script.length){
+    el('dlg').classList.add('hidden');
+    const cb = dlgDone; dlgDone = null;
+    if(cb) cb();
+  } else showLine();
+}
+el('dlgBox').addEventListener('click', advanceDialogue);
+window.addEventListener('keydown', e => {
+  if(mode==='dialogue' && (e.code==='Space' || e.code==='Enter')){ e.preventDefault(); advanceDialogue(); }
+});
+
+/* ---------- Species ---------- */
+const SPECIES = {
+  deer: {
+    label:'deer', sign:'Fresh tracks — split hearts pressed deep. A whitetail came through, and not long ago.',
+    weight: 3, size: 34, yMin: 0.56, yMax: 0.70, speed: [0.55, 1.0],
+  },
+  rabbit: {
+    label:'rabbit', sign:'Small prints in pairs, zig-zagging between the brush. Cottontail. Quick one.',
+    weight: 2, size: 15, yMin: 0.68, yMax: 0.80, speed: [1.3, 1.9],
+  },
+  pheasant: {
+    label:'pheasant', sign:'Three-toed scratches and a dust bowl by the grass. A pheasant’s been feeding here.',
+    weight: 2, size: 16, yMin: 0.66, yMax: 0.78, speed: [0.4, 0.7],
+  },
+};
+function pickSpecies(){
+  const pool = [];
+  for(const k in SPECIES) for(let i=0;i<SPECIES[k].weight;i++) pool.push(k);
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+
+/* ---------- Hunt state ---------- */
+let animal = null, sign = null, spawnTimer = 90;
+let aim = { x: W/2, y: H/2 }, mouse = { x: W/2, y: H/2 };
+let steady = 1, breathT = 0, ammo = 5, reloading = false;
+let hintTimer = 0;
+
+cv.addEventListener('mousemove', e=>{
+  const r = cv.getBoundingClientRect();
+  mouse.x = (e.clientX - r.left) * (W / r.width);
+  mouse.y = (e.clientY - r.top) * (H / r.height);
+});
+cv.addEventListener('mousedown', ()=>{ if(mode==='hunt') fire(); });
+
+function flashHint(t){ el('hint').textContent = t; hintTimer = 170; }
+function doFlash(){ const f = el('flash'); f.style.transition='none'; f.style.opacity=.55;
+  requestAnimationFrame(()=>{ f.style.transition='opacity .35s'; f.style.opacity=0; }); }
+
+function startHunt(){
+  mode = 'hunt';
+  el('hud').classList.remove('hidden');
+  el('hint').classList.remove('hidden');
+  el('hint').textContent = '';
+  bag = 0; ammo = 5; reloading = false;
+  el('bagLabel').textContent = 'Game bag: empty';
+  el('ammoLabel').textContent = 'Rounds: '+ammo;
+  animal = null; sign = null; spawnTimer = 120;
+}
+
+/* ---------- Sign (tracking) ---------- */
+function makeSign(){
+  const species = pickSpecies();
+  const spec = SPECIES[species];
+  const fromLeft = Math.random() < 0.5;
+  const y = H * rand(spec.yMin, spec.yMax) + 24;
+  const edgeX = fromLeft ? 30 : W - 30;
+  const dir = fromLeft ? 1 : -1;
+  const prints = [];
+  for(let i=0;i<6;i++){
+    prints.push({ x: edgeX + dir*(i*26 + rand(-4,4)), y: y + rand(-7,7), a: 0 });
+  }
+  sign = { species, fromLeft, y: y-24, prints, timer: rand(300, 480), read:false };
+}
+
+/* ---------- Animal ---------- */
+function spawnFromSign(){
+  const spec = SPECIES[sign.species];
+  const speed = rand(spec.speed[0], spec.speed[1]);
+  animal = {
+    species: sign.species, size: spec.size,
+    x: sign.fromLeft ? -60 : W + 60, y: sign.y,
+    vx: (sign.fromLeft ? 1 : -1) * speed, vy: 0,
+    alive: true, spooked: false, flushing: false, t: 0,
+    paused: false, pauseTimer: 0,
+    nextPause: rand(1.2, 2.6), hopPhase: rand(0, 6),
+    lifetime: rand(9, 14),
+  };
+  sign = null;
+}
+
+function updateAnimal(dt){
+  const a = animal;
+  a.t += dt;
+  if(!a.alive){ a.y += 2; if(a.y > H+80) clearAnimal(false); return; }
+
+  if(a.species === 'deer'){
+    if(!a.paused && a.t > a.nextPause && !a.spooked){
+      a.paused = true; a.pauseTimer = rand(70, 120);
+    }
+    if(a.paused && a.pauseTimer > 0){ a.pauseTimer--; if(a.pauseTimer<=0){ a.paused=false; a.nextPause = a.t + rand(1.5,3); } }
+    else a.x += a.vx;
+  }
+  else if(a.species === 'rabbit'){
+    if(!a.paused && Math.random() < 0.006 && !a.spooked){ a.paused = true; a.pauseTimer = rand(50, 90); }
+    if(a.paused && a.pauseTimer > 0){ a.pauseTimer--; if(a.pauseTimer<=0) a.paused=false; }
+    else { a.x += a.vx; a.hopPhase += 0.22; }
+  }
+  else if(a.species === 'pheasant'){
+    if(a.flushing){ a.x += a.vx; a.y += a.vy; a.vy -= 0.06; }
+    else {
+      a.x += a.vx;
+      if(a.t > a.lifetime * 0.6 && Math.random() < 0.004) flushPheasant();
+    }
+  }
+  if(a.spooked && a.species !== 'pheasant') a.x += a.vx * 0.8;
+
+  if(a.x < -140 || a.x > W+140 || a.y < -140){
+    if(a.alive) flashHint('It slips away into the trees.');
+    clearAnimal(false);
+  }
+}
+function flushPheasant(){ animal.flushing = true; animal.vy = -2.6; animal.vx *= 3.2; }
+
+function clearAnimal(killed){
+  animal = null;
+  spawnTimer = killed ? rand(140, 220) : rand(90, 160);
+}
+
+/* ---------- Firing ---------- */
+function fire(){
+  if(reloading) return;
+  if(ammo <= 0){ startReload(); return; }
+  ammo--; el('ammoLabel').textContent = 'Rounds: '+ammo;
+  doFlash();
+  if(animal && animal.alive){
+    const dist = Math.hypot(mouse.x - animal.x, mouse.y - animal.y);
+    const hitR = animal.size * (0.7 + steady * 0.9);
+    if(dist < hitR){
+      animal.alive = false;
+      bag++;
+      el('bagLabel').textContent = 'Game bag: ' + bag + (bag===1?' animal':' animals');
+      const lines = ['A clean shot. Dale would’ve nodded.','That one fills the freezer.','Steady, like he taught you.','The woods go quiet, then breathe again.'];
+      flashHint(lines[Math.floor(rand(0, lines.length))]);
+      setTimeout(()=> {
+        clearAnimal(true);
+        if(bag >= DAY_QUOTA) endDay();
+      }, 800);
+    } else {
+      animal.spooked = true;
+      if(animal.species === 'pheasant') flushPheasant();
+      else { animal.paused = false; animal.vx *= 2.2; }
+      flashHint('Missed — it bolts.');
+    }
+  }
+  if(ammo <= 0) startReload();
+}
+function startReload(){
+  if(reloading) return;
+  reloading = true;
+  flashHint('You thumb fresh rounds in. No hurry. Hurry is how you miss.');
+  setTimeout(()=>{ ammo = 5; reloading = false; el('ammoLabel').textContent = 'Rounds: '+ammo; }, 2200);
+}
+
+/* ---------- Hidden gate: the day ends ---------- */
+function endDay(){
+  setTimeout(()=>{
+    startDialogue(CLOSING, 'dusk', ()=>{
+      el('endText').textContent = 'End of the first day. Chapter I isn’t over — the season, and the story, continue.';
+      el('endScreen').classList.remove('hidden');
+      el('hud').classList.add('hidden'); el('hint').classList.add('hidden');
+      mode = 'end';
+    });
+  }, 1400);
+}
+
+/* ---------- Main loop ---------- */
+function update(){
+  breathT += 0.016;
+
+  if(mode === 'hunt'){
+    const stillness = 1 - Math.min(1, Math.hypot(mouse.x-aim.x, mouse.y-aim.y)/40);
+    aim.x += (mouse.x - aim.x)*0.12; aim.y += (mouse.y - aim.y)*0.12;
+    const breathe = Math.sin(breathT*2.2)*0.5+0.5;
+    steady = Math.max(0.15, Math.min(1, 0.7 + stillness*0.35 - breathe*0.25));
+    el('steadyFill').style.width = (steady*100)+'%';
+
+    if(!animal && !sign){
+      spawnTimer--;
+      if(spawnTimer <= 0) makeSign();
+    }
+    if(sign){
+      sign.prints.forEach(p => { if(p.a < 1) p.a += 0.01; });
+      sign.timer--;
+      if(sign.timer <= 0) spawnFromSign();
+    }
+    if(animal) updateAnimal(0.016);
+    if(hintTimer > 0) { hintTimer--; if(hintTimer<=0) el('hint').textContent=''; }
+  }
+
+  draw();
+  requestAnimationFrame(update);
+}
+
+/* ---------- Rendering ---------- */
+function draw(){
+  if(mode === 'dialogue'){ drawLodge(dlgBackdrop === 'dusk'); return; }
+  if(mode === 'title' || mode === 'end'){ drawWoods(); return; }
+  drawWoods();
+  if(sign) drawSign();
+  if(animal) drawAnimal(animal);
+  vignette();
+  drawReticle();
+}
+
+/* Day slides toward dusk as the bag fills — no words needed. */
+function dayT(){ return Math.min(1, bag / DAY_QUOTA); }
+
+function drawWoods(){
+  const t = mode==='hunt' ? dayT()*0.75 : 0;
+  const g = ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0, lerpC([58,74,44],[64,48,42], t));
+  g.addColorStop(.5, lerpC([42,58,30],[38,32,30], t));
+  g.addColorStop(1, lerpC([22,32,15],[16,14,14], t));
+  ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+
+  ctx.fillStyle = lerpC([22,33,14],[14,13,12], t);
+  for(let i=0;i<26;i++){
+    const x = i*(W/24), tw = 26, th = 90 + (i*53%60);
+    ctx.beginPath(); ctx.moveTo(x-tw, H*0.55); ctx.lineTo(x, H*0.55-th);
+    ctx.lineTo(x+tw, H*0.55); ctx.closePath(); ctx.fill();
+  }
+  ctx.fillStyle = lerpC([28,42,17],[20,17,14], t);
+  ctx.fillRect(0, H*0.55, W, H*0.45);
+}
+
+function drawLodge(dusk){
+  const g = ctx.createLinearGradient(0,0,0,H);
+  if(dusk){ g.addColorStop(0,'#2a2233'); g.addColorStop(.6,'#3a2a28'); g.addColorStop(1,'#141010'); }
+  else { g.addColorStop(0,'#8a7a6a'); g.addColorStop(.55,'#5a5a4a'); g.addColorStop(1,'#26301a'); }
+  ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+  // pines behind
+  ctx.fillStyle = dusk ? '#0e120b' : '#1b2812';
+  for(let i=0;i<20;i++){
+    const x = i*(W/18), th = 130 + (i*67%80);
+    ctx.beginPath(); ctx.moveTo(x-34, H*0.62); ctx.lineTo(x, H*0.62-th);
+    ctx.lineTo(x+34, H*0.62); ctx.closePath(); ctx.fill();
+  }
+  // ground
+  ctx.fillStyle = dusk ? '#171310' : '#243015';
+  ctx.fillRect(0, H*0.62, W, H*0.38);
+  // lodge
+  const lx = W*0.5, ly = H*0.62;
+  ctx.fillStyle = '#241a10';
+  ctx.fillRect(lx-150, ly-120, 300, 120);
+  ctx.beginPath(); ctx.moveTo(lx-170, ly-120); ctx.lineTo(lx, ly-185); ctx.lineTo(lx+170, ly-120);
+  ctx.closePath(); ctx.fillStyle = '#1a1208'; ctx.fill();
+  // chimney + smoke
+  ctx.fillStyle = '#2e241a'; ctx.fillRect(lx+80, ly-175, 22, 60);
+  ctx.fillStyle = 'rgba(200,200,200,0.10)';
+  for(let i=0;i<4;i++){
+    const s = (breathT*20 + i*35) % 140;
+    ctx.beginPath(); ctx.arc(lx+91 + Math.sin((s+i*20)/25)*8, ly-180 - s, 8 + s/14, 0, 7); ctx.fill();
+  }
+  // windows — warm
+  ctx.fillStyle = '#e8b45a';
+  ctx.fillRect(lx-110, ly-85, 44, 40);
+  ctx.fillRect(lx+40, ly-85, 44, 40);
+  ctx.fillStyle = '#241a10';
+  ctx.fillRect(lx-90, ly-85, 4, 40); ctx.fillRect(lx-110, ly-67, 44, 4);
+  ctx.fillRect(lx+60, ly-85, 4, 40); ctx.fillRect(lx+40, ly-67, 44, 4);
+  // door + porch
+  ctx.fillStyle = '#160f08'; ctx.fillRect(lx-24, ly-70, 48, 70);
+  ctx.fillStyle = '#1e150c'; ctx.fillRect(lx-160, ly, 320, 10);
+  if(dusk){ // porch lamp
+    const lg = ctx.createRadialGradient(lx-140, ly-60, 4, lx-140, ly-60, 90);
+    lg.addColorStop(0,'rgba(255,200,110,0.75)'); lg.addColorStop(1,'rgba(255,200,110,0)');
+    ctx.fillStyle = lg; ctx.beginPath(); ctx.arc(lx-140, ly-60, 90, 0, 7); ctx.fill();
+  }
+  vignette();
+}
+
+function drawSign(){
+  const spec = SPECIES[sign.species];
+  ctx.save();
+  sign.prints.forEach((p,i) => {
+    ctx.globalAlpha = p.a * 0.8;
+    ctx.fillStyle = '#12180c';
+    if(sign.species === 'deer'){
+      ctx.beginPath(); ctx.ellipse(p.x-3, p.y, 3, 5, -0.2, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(p.x+3, p.y, 3, 5, 0.2, 0, 7); ctx.fill();
+    } else if(sign.species === 'rabbit'){
+      ctx.beginPath(); ctx.arc(p.x-3, p.y, 2.4, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.arc(p.x+3, p.y-1, 2.4, 0, 7); ctx.fill();
+    } else {
+      ctx.strokeStyle = '#12180c'; ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y); ctx.lineTo(p.x-4, p.y-5);
+      ctx.moveTo(p.x, p.y); ctx.lineTo(p.x, p.y-6);
+      ctx.moveTo(p.x, p.y); ctx.lineTo(p.x+4, p.y-5);
+      ctx.stroke();
+    }
+  });
+  ctx.restore();
+
+  // hover to read the sign
+  const cx = sign.prints.reduce((s,p)=>s+p.x,0)/sign.prints.length;
+  const cy = sign.prints.reduce((s,p)=>s+p.y,0)/sign.prints.length;
+  if(Math.hypot(mouse.x-cx, mouse.y-cy) < 70){
+    sign.read = true;
+    ctx.font = 'italic 15px Georgia';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(217,201,163,0.95)';
+    const tw = ctx.measureText(spec.sign).width;
+    const tx = Math.max(tw/2 + 12, Math.min(W - tw/2 - 12, cx));
+    ctx.fillText(spec.sign, tx, cy - 34);
+  }
+}
+
+function drawAnimal(a){
+  if(a.species === 'deer') drawDeer(a);
+  else if(a.species === 'rabbit') drawRabbit(a);
+  else drawPheasant(a);
+}
+
+function drawDeer(a){
+  ctx.save(); ctx.translate(a.x, a.y);
+  if(a.vx < 0) ctx.scale(-1,1);
+  const s = a.size/34;
+  ctx.fillStyle = a.alive ? '#5c4a32' : '#3e3222';
+  ctx.beginPath(); ctx.ellipse(0,0,26*s,14*s,0,0,7); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(18*s,-4*s); ctx.lineTo(30*s,-26*s);
+  ctx.lineTo(38*s,-24*s); ctx.lineTo(24*s,2*s); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(34*s,-26*s,7*s,5*s,0.4,0,7); ctx.fill();
+  if(a.alive){ ctx.strokeStyle='#6b5738'; ctx.lineWidth=2*s;
+    ctx.beginPath(); ctx.moveTo(33*s,-30*s); ctx.lineTo(30*s,-44*s);
+    ctx.moveTo(33*s,-30*s); ctx.lineTo(42*s,-42*s);
+    ctx.moveTo(36*s,-30*s); ctx.lineTo(44*s,-38*s); ctx.stroke(); }
+  ctx.strokeStyle = a.alive ? '#4a3c28' : '#332a1c'; ctx.lineWidth=3.5*s;
+  ctx.beginPath();
+  ctx.moveTo(-14*s,10*s); ctx.lineTo(-16*s,(a.alive?30:14)*s);
+  ctx.moveTo(-6*s,10*s); ctx.lineTo(-6*s,(a.alive?30:14)*s);
+  ctx.moveTo(10*s,10*s); ctx.lineTo(12*s,(a.alive?30:14)*s);
+  ctx.moveTo(18*s,10*s); ctx.lineTo(20*s,(a.alive?30:14)*s);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawRabbit(a){
+  ctx.save();
+  const hop = (a.paused || !a.alive) ? 0 : Math.abs(Math.sin(a.hopPhase)) * 12;
+  ctx.translate(a.x, a.y - hop);
+  if(a.vx < 0) ctx.scale(-1,1);
+  const s = a.size/15;
+  ctx.fillStyle = a.alive ? '#8a7a62' : '#5e5344';
+  ctx.beginPath(); ctx.ellipse(0,0,11*s,8*s,0,0,7); ctx.fill();          // body
+  ctx.beginPath(); ctx.arc(10*s,-5*s,5*s,0,7); ctx.fill();               // head
+  ctx.beginPath(); ctx.ellipse(9*s,-12*s,1.8*s,5*s,-0.15,0,7); ctx.fill(); // ears
+  ctx.beginPath(); ctx.ellipse(12*s,-12*s,1.8*s,5*s,0.15,0,7); ctx.fill();
+  ctx.fillStyle = '#cfc4ae';
+  ctx.beginPath(); ctx.arc(-10*s,-2*s,2.6*s,0,7); ctx.fill();            // tail
+  ctx.restore();
+}
+
+function drawPheasant(a){
+  ctx.save(); ctx.translate(a.x, a.y);
+  if(a.vx < 0) ctx.scale(-1,1);
+  const s = a.size/16;
+  ctx.fillStyle = a.alive ? '#6e4a2e' : '#4a3420';
+  ctx.beginPath(); ctx.ellipse(0,0,13*s,7*s,0,0,7); ctx.fill();          // body
+  ctx.strokeStyle = a.alive ? '#5a3c24' : '#3e2c1c'; ctx.lineWidth = 2.5*s;
+  ctx.beginPath(); ctx.moveTo(-11*s,2*s); ctx.lineTo(-26*s,-2*s); ctx.stroke(); // tail
+  ctx.fillStyle = a.alive ? '#2e4a3a' : '#24352c';                        // head
+  ctx.beginPath(); ctx.arc(11*s,-6*s,4*s,0,7); ctx.fill();
+  if(a.alive){ ctx.fillStyle = '#b83a2a';                                 // wattle
+    ctx.beginPath(); ctx.arc(12.5*s,-6*s,1.6*s,0,7); ctx.fill(); }
+  if(a.flushing){                                                          // wings out
+    ctx.strokeStyle = '#5a3c24'; ctx.lineWidth = 2*s;
+    const w = Math.sin(breathT*30)*8;
+    ctx.beginPath(); ctx.moveTo(0,-3*s); ctx.lineTo(-6*s, -14*s + w); ctx.stroke();
+  } else if(a.alive){
+    ctx.strokeStyle = '#3e2c1c'; ctx.lineWidth = 2*s;                     // legs
+    ctx.beginPath(); ctx.moveTo(-2*s,6*s); ctx.lineTo(-2*s,12*s);
+    ctx.moveTo(4*s,6*s); ctx.lineTo(4*s,12*s); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function vignette(){
+  const v = ctx.createRadialGradient(W/2,H/2,H*0.2, W/2,H/2,H*0.75);
+  v.addColorStop(0,'rgba(0,0,0,0)'); v.addColorStop(1,'rgba(0,0,0,0.6)');
+  ctx.fillStyle=v; ctx.fillRect(0,0,W,H);
+}
+
+function drawReticle(){
+  const r = 10 + (1-steady)*46;
+  ctx.strokeStyle = 'rgba(220,200,150,0.9)'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(mouse.x, mouse.y, r, 0, 7); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(mouse.x-r-8,mouse.y); ctx.lineTo(mouse.x-r+4,mouse.y);
+  ctx.moveTo(mouse.x+r-4,mouse.y); ctx.lineTo(mouse.x+r+8,mouse.y);
+  ctx.moveTo(mouse.x,mouse.y-r-8); ctx.lineTo(mouse.x,mouse.y-r+4);
+  ctx.moveTo(mouse.x,mouse.y+r-4); ctx.lineTo(mouse.x,mouse.y+r+8);
+  ctx.stroke();
+  ctx.fillStyle='rgba(220,200,150,0.9)';
+  ctx.fillRect(mouse.x-1,mouse.y-1,2,2);
+}
+
+/* ---------- Flow ---------- */
+el('startBtn').onclick = ()=>{
+  el('titleScreen').classList.add('hidden');
+  startDialogue(OPENING, 'lodge', startHunt);
+};
+el('restartBtn').onclick = ()=>{
+  el('endScreen').classList.add('hidden');
+  el('titleScreen').classList.remove('hidden');
+  mode = 'title';
+};
+
+update();
+</script>
+</body>
+</html>
