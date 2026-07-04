@@ -61,9 +61,9 @@
   <!-- Title -->
   <div class="overlay" id="titleScreen">
     <h1>THE LAST HUNT</h1>
-    <div class="sub">a hunting story — prototype v0.1</div>
-    <p class="story">You told him you'd come back one last season.<br>The forest remembers you, even if no one else does.</p>
-    <button id="startBtn">Enter the woods</button>
+    <div class="sub">the story of john matthews — prototype v0.2</div>
+    <p class="story">Six generations of Matthews hunted this land.<br>Uncle Dale sold it to buy the medicine keeping his heart alive.<br>The papers aren't signed yet. For one more season, the lodge is still ours.</p>
+    <button id="startBtn">Drive up to the lodge</button>
   </div>
 
   <!-- Story beat between chapters -->
@@ -75,8 +75,8 @@
 
   <!-- Final choice -->
   <div class="overlay hidden" id="choiceScreen">
-    <h1 id="choiceTitle">The Last Hunt</h1>
-    <p class="story">It stands in the clearing. Old. Unbothered. The way he used to describe them.<br>The rifle is steady. The choice is yours.</p>
+    <h1 id="choiceTitle">The Old Man of the North Woods</h1>
+    <p class="story">He steps out of the pines like he owns them — the buck Dale and your grandfather chased for thirty years and never took. Six generations hunted this land, and no one ever brought him home.<br>On Friday, none of it is yours.<br>The rifle is steady. The choice is John's.</p>
     <div class="choice-row">
       <button id="shootBtn">Take the shot</button>
       <button id="spareBtn">Lower the rifle</button>
@@ -113,14 +113,14 @@ function show(name){ Object.values(screens).forEach(s=>s.classList.add('hidden')
 
 // ---- Chapters (placeholder story — rewrite freely) ----
 const chapters = [
-  { title:'Chapter I — The First Light',
-    text:'Morning. The kind of quiet you forget exists in town. Take a few. Line up your breath before your shot — steadiness comes and goes. Bring home three.',
+  { title:'Chapter I — Coming Home',
+    text:'The gate key still sticks, same as when you were twelve. Emma is settling the baby in by the woodstove. Dale can’t make the climb this year, but he called ahead: “Freezer’s yours to fill, Johnny. One more season.” Take three, the way he taught you — steady your breath before the shot.',
     quota:3, roman:'I' },
-  { title:'Chapter II — The Cold Trail',
-    text:'They’re warier now, quicker to bolt. You found his old knife near the creek this morning. Still sharp. Bring home three.',
+  { title:'Chapter II — Six Generations',
+    text:'You found the initials carved in the tree stand this morning — six sets of them, the oldest almost grown over. There’s room for one more, and a pocketknife in your coat. The deer run warier this deep in. Take three.',
     quota:3, roman:'II' },
-  { title:'Chapter III — The Storm',
-    text:'The wind’s turned mean and the light is going. Harder to hold steady out here. Bring home three, then head for the clearing.',
+  { title:'Chapter III — Thirty Days',
+    text:'The buyer’s agent called the lodge landline at dawn. Thirty days until the papers turn in. The weather heard it too — the wind has gone mean. Take three, then head for the north clearing. The one Dale never let anyone hunt.',
     quota:3, roman:'III' },
 ];
 
@@ -368,7 +368,7 @@ function fire(){
       animal.alive = false;
       state.taken++; state.chapterTaken++;
       el('scoreLabel').textContent = 'Taken: '+state.taken;
-      const lines = ['A clean shot. He’d have nodded.','That one was for him.','Steady hands. Good.','The woods go quiet.'];
+      const lines = ['A clean shot. Dale would’ve nodded.','That one fills the freezer.','Steady, like he taught you.','The woods go quiet.'];
       flashHint(lines[Math.floor(breathT)%lines.length]);
       setTimeout(()=>{ animal=null; spawnTimer=50+Math.random()*60; tryAdvance(); }, 700);
     } else {
@@ -396,10 +396,10 @@ el('spareBtn').onclick = ()=> showEnding(false);
 function showEnding(shot){
   if(shot){
     el('endTitle').textContent = 'The Hunter';
-    el('endText').textContent = 'The shot echoes and then the woods are silent for a long time. You did what you came to do. Season’s over. You don’t know yet if you’ll be back.';
+    el('endText').textContent = 'The shot rolls across the valley and back. When you call Dale, he goes quiet for a long time — then laughs until he coughs, and swears it’s the good kind. The lodge will belong to strangers, but the Old Man comes home with the Matthews family. Someday you’ll tell the baby it happened on the last hunt.';
   } else {
     el('endTitle').textContent = 'The Keeper';
-    el('endText').textContent = 'You lower the rifle. It watches you a moment, then walks off into the trees, unhurried. Some things you keep by letting them go. He’d have understood that too.';
+    el('endText').textContent = 'You lower the rifle. He watches you a long moment, then walks back into the pines, unhurried — like he knows the papers mean nothing to him. Whoever buys this land will never know what walks it. You carry the baby up the porch steps one last time. The lodge was never the building.';
   }
   show('end');
 }

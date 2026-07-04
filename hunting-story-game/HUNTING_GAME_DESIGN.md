@@ -19,33 +19,55 @@ the woods — and deeper into why you came out here in the first place.
 
 ---
 
-## 3. Story (this is your part — placeholders you can rewrite)
-
-The story is **yours to write**. What's below is scaffolding so the game has
-something to run on. Replace any of it.
+## 3. Story — by Dax
 
 ### Premise
-You play as a hunter returning to the woods where your grandfather taught you to
-hunt. He's gone now. You told him you'd come back one last season. The forest
-remembers you even if no one else does.
+**John Matthews, 24.** Recently married, with a three-month-old at home. The
+family hunting lodge has been in the Matthews family for **six generations** —
+until this season. John's uncle was diagnosed with **transthyretin amyloid
+cardiomyopathy (ATTR-CM)**, and the only way he could afford the treatment
+that can stop it was to sell the lodge.
+
+The sale is agreed, but the papers haven't fully turned in yet. So for one
+last stretch of the season, the lodge is still theirs. John brings his wife
+and the baby up, and spends his last memories with the place — hunting it the
+way his family always has.
+
+The uncle didn't lose the lodge. He *traded* it — six generations of the
+family's past for the chance to stay in its future. That trade is the heart
+of the story.
+
+### Characters
+| Character | Who they are | Notes |
+|-----------|--------------|-------|
+| **John Matthews** | 24, the player | New husband, new dad, last Matthews to hunt the land |
+| **Emma** *(placeholder name — rename her)* | John's wife | Up at the lodge with him, baby in tow |
+| **The baby** | 3 months old | Name + boy/girl up to you |
+| **Uncle Dale** *(placeholder name — rename him)* | The uncle with ATTR-CM | Sold the lodge for the cure; too sick to make the climb this season, but he's on the phone |
 
 ### Chapters (each is a "hunt")
-1. **The First Light** — an easy morning hunt. Learn to track, aim, breathe.
-2. **The Cold Trail** — the animals get warier. You find something of your
-   grandfather's out here.
-3. **The Storm** — weather turns. Survival matters as much as the hunt.
-4. **The Last Hunt** — one final animal, one final choice: take the shot, or don't.
+1. **Coming Home** — John arrives with his family. The gate key still sticks.
+   Dale calls: "Freezer's yours to fill, Johnny. One more season."
+2. **Six Generations** — John finds six sets of initials carved in the tree
+   stand, the oldest nearly grown over. There's room for one more.
+3. **Thirty Days** — the buyer's agent calls the lodge landline. Thirty days
+   until the papers turn in. The weather turns mean, like the woods heard it.
+4. **The Old Man of the North Woods** — the legendary buck Dale and John's
+   grandfather chased for thirty years and never took. One final choice.
 
 ### Tone
-Quiet, patient, a little lonely. Not a gore-fest. The kills should *mean*
-something. Think "reflective," not "arcade."
+Quiet, patient, bittersweet — but warm, not bleak. The lodge is full of a
+young family, not ghosts. The kills should *mean* something (filling Dale's
+freezer one last time). Think "reflective," not "arcade."
 
-### The Choice (ending hook)
-The final chapter should let the player **choose not to shoot**. Two endings:
-- Take the shot → "The Hunter"
-- Lower the rifle → "The Keeper"
-
-*(You can rewrite all of this — it's placeholder story to give the build shape.)*
+### The Choice (ending)
+In the north clearing — the spot Dale never let anyone hunt — the Old Man
+steps out of the pines. Six generations hunted this land and no one ever
+brought him home. On Friday, none of it is theirs.
+- **Take the shot → "The Hunter"** — the lodge goes to strangers, but the Old
+  Man comes home with the family. Dale laughs until he coughs. The good kind.
+- **Lower the rifle → "The Keeper"** — whoever buys the land will never know
+  what walks it. The lodge was never the building.
 
 ---
 
@@ -66,8 +88,8 @@ The final chapter should let the player **choose not to shoot**. Two endings:
 |-------|--------|
 | Isolated project folder | ✅ done (`hunting-story-game/`) |
 | Design/story doc (this file) | ✅ done |
-| Playable prototype (`hunting-game.html`) | ✅ v0.1 — runnable in a browser |
-| Your real story text | ⬜ your turn |
+| Playable prototype (`hunting-game.html`) | ✅ v0.2 — runnable in a browser |
+| Your real story text | ✅ John Matthews premise wired in (names still placeholder) |
 | Art / sound | ⬜ later |
 
 ---
