@@ -876,9 +876,12 @@ HARD RULES:
     setTimeout(()=>{ sp.classList.add('hide'); setTimeout(()=>sp.remove(), 800); }, 2400);
   })();
 
-  /* ── Install as an app (PWA) ── */
-  if('serviceWorker' in navigator && location.protocol==='https:'){
-    window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+  /* ── Always load the freshest version: drop any old service worker + caches. ── */
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{});
+  }
+  if(window.caches && caches.keys){
+    caches.keys().then(ks=>ks.forEach(k=>caches.delete(k))).catch(()=>{});
   }
 </script>
 </body>
