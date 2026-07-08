@@ -133,6 +133,13 @@
   .code-block{margin-top:8px;background:#0d0d0d;border-left:2px solid var(--gold-dark);border-radius:4px;padding:10px;overflow-x:auto;max-height:320px;overflow-y:auto}
   .code-block pre{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.5;color:#d8d8d8;white-space:pre}
 
+  /* Chat/Code history panes */
+  .conv-list{flex:1;display:none;flex-direction:column;gap:12px;padding:18px;overflow-y:auto;min-height:0}
+  .conv-list.show{display:flex}
+  .conv-pane{flex:1;display:none;flex-direction:column;min-height:0}
+  .conv-pane.show{display:flex}
+  .conv-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+
   /* Projects */
   .proj-pane{flex:1;display:none;flex-direction:column;gap:12px;padding:18px;overflow-y:auto;min-height:0}
   .proj-pane.show{display:flex}
@@ -187,42 +194,58 @@
 
     <!-- CHAT -->
     <div class="view show" id="view-chat">
-      <div class="chat-head">
-        <select id="chatModel"></select>
-        <span class="model-tag" id="chatTag"></span>
+      <div class="conv-list show" id="chatListPane">
+        <div class="conv-head"><span class="vtitle">Chats</span><button class="send small" id="chatNew">+ New Chat</button></div>
+        <div class="empty-hint" id="chatEmpty">No chats yet. Tap “New Chat” to start — every chat is saved here so you can come back to it.</div>
+        <div id="chatItems"></div>
       </div>
-      <div class="messages" id="chatMessages"></div>
-      <div class="composer">
-        <div class="attach-preview" id="chatPreview"></div>
-        <div class="inputbar">
-          <input type="file" id="chatFile" accept="image/*,video/*,.txt,.md,.json,.js,.ts,.html,.css,.csv,.py" hidden>
-          <button class="attach-btn" id="chatAttach" title="Attach photo, video, or file">+</button>
-          <textarea id="chatInput" rows="1" placeholder="Talk to Legend..."></textarea>
-          <button class="send" id="chatSend">Send</button>
-          <button class="stop-btn" id="chatStop" hidden title="Stop Legend">✕</button>
+      <div class="conv-pane" id="chatConvo">
+        <div class="chat-head">
+          <button class="link-btn" id="chatBack">← Chats</button>
+          <select id="chatModel"></select>
+          <span class="model-tag" id="chatTag"></span>
+        </div>
+        <div class="messages" id="chatMessages"></div>
+        <div class="composer">
+          <div class="attach-preview" id="chatPreview"></div>
+          <div class="inputbar">
+            <input type="file" id="chatFile" accept="image/*,video/*,.txt,.md,.json,.js,.ts,.html,.css,.csv,.py" hidden>
+            <button class="attach-btn" id="chatAttach" title="Attach photo, video, or file">+</button>
+            <textarea id="chatInput" rows="1" placeholder="Talk to Legend..."></textarea>
+            <button class="send" id="chatSend">Send</button>
+            <button class="stop-btn" id="chatStop" hidden title="Stop Legend">✕</button>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- CODE -->
     <div class="view" id="view-code">
-      <div class="chat-head">
-        <select id="codeModel"></select>
-        <span class="model-tag">Heavy builder · games, apps, 3D — with live preview</span>
+      <div class="conv-list show" id="codeListPane">
+        <div class="conv-head"><span class="vtitle">Code projects</span><button class="send small" id="codeNew">+ New Build</button></div>
+        <div class="empty-hint" id="codeEmpty">No builds yet. Tap “New Build” to start — every build is saved here.</div>
+        <div id="codeItems"></div>
       </div>
-      <div class="messages" id="codeMessages"></div>
-      <div class="preview-box" id="previewBox">
-        <div class="preview-head"><span>▶ Live Preview</span><button id="openPreview">Open full ↗</button></div>
-        <iframe id="codePreview" sandbox="allow-scripts allow-pointer-lock allow-same-origin"></iframe>
-      </div>
-      <div class="composer">
-        <div class="attach-preview" id="codePreview2"></div>
-        <div class="inputbar">
-          <input type="file" id="codeFile" accept="image/*,video/*,.txt,.md,.json,.js,.ts,.html,.css,.csv,.py" hidden>
-          <button class="attach-btn" id="codeAttach" title="Attach photo, video, or file">+</button>
-          <textarea id="codeInput" rows="1" placeholder="Describe what to build (e.g. 'a 2D space shooter game')..."></textarea>
-          <button class="send" id="codeSend">Build</button>
-          <button class="stop-btn" id="codeStop" hidden title="Stop Legend">✕</button>
+      <div class="conv-pane" id="codeConvo">
+        <div class="chat-head">
+          <button class="link-btn" id="codeBack">← Builds</button>
+          <select id="codeModel"></select>
+          <span class="model-tag">Heavy builder · with live preview</span>
+        </div>
+        <div class="messages" id="codeMessages"></div>
+        <div class="preview-box" id="previewBox">
+          <div class="preview-head"><span>▶ Live Preview</span><button id="openPreview">Open full ↗</button></div>
+          <iframe id="codePreview" sandbox="allow-scripts allow-pointer-lock allow-same-origin"></iframe>
+        </div>
+        <div class="composer">
+          <div class="attach-preview" id="codePreview2"></div>
+          <div class="inputbar">
+            <input type="file" id="codeFile" accept="image/*,video/*,.txt,.md,.json,.js,.ts,.html,.css,.csv,.py" hidden>
+            <button class="attach-btn" id="codeAttach" title="Attach photo, video, or file">+</button>
+            <textarea id="codeInput" rows="1" placeholder="Describe what to build (e.g. 'a 2D space shooter game')..."></textarea>
+            <button class="send" id="codeSend">Build</button>
+            <button class="stop-btn" id="codeStop" hidden title="Stop Legend">✕</button>
+          </div>
         </div>
       </div>
     </div>
@@ -692,57 +715,136 @@ HARD RULES:
   function closeSidebar(){ $('sidebar').classList.remove('open'); $('overlay').classList.remove('show'); }
   $('menuBtn').addEventListener('click', openSidebar);
   $('overlay').addEventListener('click', closeSidebar);
+  const sectionViews={};   // populated after Chat/Code sections are set up
   document.querySelectorAll('.nav-btn[data-view]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       document.querySelectorAll('.nav-btn[data-view]').forEach(b=>b.classList.remove('active'));
       btn.classList.add('active');
       const v=btn.dataset.view;
       ['chat','code','image','projects'].forEach(name=>$('view-'+name).classList.toggle('show', v===name));
+      if(sectionViews[v] && sectionViews[v].showList) sectionViews[v].showList();  // land on the saved-chat list
       closeSidebar();
     });
   });
 
-  /* ── CHAT section ── */
+  /* ── Saved-conversation sections (Chat & Code) ── */
+  // Render a stored assistant message; for code, tuck the code into "View full code".
+  function renderAssistantInto(container, content, codeMode){
+    const bubble = renderMessage(container, 'bot', content);
+    if(codeMode){
+      const cb = extractCodeBlocks(toText(content));
+      if(cb.blocks.length){
+        bubble.textContent = cb.stripped || 'Build ready — see the Live Preview or tap “View full code”.';
+        cb.blocks.forEach(b=>appendCodePanel(bubble, b));
+        return cb.blocks[cb.blocks.length-1];
+      }
+    }
+    return null;
+  }
+
+  // A section whose conversations are saved to localStorage and listed like a history.
+  function setupHistorySection(cfg){
+    let list=[]; try{ list=JSON.parse(localStorage.getItem(cfg.key))||[]; }catch(_){ list=[]; }
+    let activeId=null;
+    const save=()=>{ try{ localStorage.setItem(cfg.key, JSON.stringify(list)); }catch(_){} };
+    const active=()=> list.find(c=>c.id===activeId);
+
+    function showList(){ $(cfg.listPane).classList.add('show'); $(cfg.convo).classList.remove('show'); renderList(); }
+    function showConvo(){ $(cfg.listPane).classList.remove('show'); $(cfg.convo).classList.add('show'); }
+
+    function renderList(){
+      const wrap=$(cfg.items); wrap.innerHTML='';
+      $(cfg.empty).style.display = list.length?'none':'block';
+      list.forEach(c=>{
+        const card=document.createElement('div'); card.className='card';
+        const left=document.createElement('div'); left.style.flex='1'; left.style.cursor='pointer';
+        const preview = c.history.length ? (toText(c.history[c.history.length-1].content).slice(0,60)||'…') : 'Empty';
+        left.innerHTML=`<div class="card-main">${escapeHtml(c.name)}</div><div class="card-sub">${escapeHtml(preview)}</div>`;
+        left.addEventListener('click', ()=>open(c.id));
+        const rn=document.createElement('button'); rn.className='del-x'; rn.textContent='✏️'; rn.title='Rename';
+        rn.addEventListener('click',(e)=>{ e.stopPropagation(); const n=prompt('Rename:', c.name); if(n&&n.trim()){ c.name=n.trim(); save(); renderList(); } });
+        const del=document.createElement('button'); del.className='del-x'; del.textContent='🗑'; del.title='Delete';
+        del.addEventListener('click',(e)=>{ e.stopPropagation(); if(confirm('Delete "'+c.name+'"?')){ list=list.filter(x=>x.id!==c.id); if(activeId===c.id) activeId=null; save(); renderList(); } });
+        card.appendChild(left); card.appendChild(rn); card.appendChild(del); wrap.appendChild(card);
+      });
+    }
+
+    function open(id){
+      activeId=id; const c=active(); if(!c) return;
+      const m=$(cfg.messages); m.innerHTML='';
+      if(cfg.resetPreview) cfg.resetPreview();
+      if(!c.history.length && cfg.greeting) renderMessage(m,'bot',cfg.greeting);
+      let lastCode=null;
+      c.history.forEach(msg=>{
+        if(msg.role==='user') renderMessage(m,'user',msg.content);
+        else { const lc=renderAssistantInto(m, msg.content, cfg.codeMode); if(lc) lastCode=lc; }
+      });
+      if(cfg.codeMode && lastCode && cfg.showPreview) cfg.showPreview(lastCode);
+      showConvo();
+    }
+
+    function newConv(){
+      const c={id:uid(), name:cfg.defaultName+' '+(list.length+1), history:[]};
+      list.unshift(c); save(); open(c.id);
+    }
+
+    $(cfg.newBtn).addEventListener('click', newConv);
+    $(cfg.back).addEventListener('click', showList);
+
+    wirePanel({
+      messagesEl:$(cfg.messages), inputEl:$(cfg.input), sendBtn:$(cfg.send), stopBtn:$(cfg.stop), modelSel:$(cfg.model),
+      getHistory:()=>{ let c=active(); if(!c){ newConv(); c=active(); } return c.history; },
+      systemFn: cfg.systemFn, allowImages: cfg.allowImages, codeMode: cfg.codeMode, onReply: cfg.onReply,
+      attach: cfg.attach,
+      onAfter: ()=>{ const c=active(); if(c){
+        if(c.name.indexOf(cfg.defaultName+' ')===0){ const f=c.history.find(m=>m.role==='user'); if(f){ const t=toText(f.content).trim(); if(t) c.name=t.slice(0,42); } }
+        save(); renderList();
+      } }
+    });
+
+    showList();
+    return { showList };
+  }
+
+  /* ── CHAT ── */
   fillModels($('chatModel'));
-  let chatHistory=[];
   function updateChatTag(){ $('chatTag').textContent = engineOf($('chatModel')).tag; }
   $('chatModel').addEventListener('change', updateChatTag); updateChatTag();
-  wirePanel({
-    messagesEl:$('chatMessages'), inputEl:$('chatInput'), sendBtn:$('chatSend'), stopBtn:$('chatStop'), modelSel:$('chatModel'),
-    getHistory:()=>chatHistory, systemFn:(e)=>e.system+CHAT_CAP, allowImages:true,
-    attach:{btn:$('chatAttach'), input:$('chatFile'), preview:$('chatPreview')}
+  sectionViews.chat = setupHistorySection({
+    key:'legend_chats', defaultName:'Chat',
+    listPane:'chatListPane', items:'chatItems', empty:'chatEmpty', newBtn:'chatNew', back:'chatBack', convo:'chatConvo',
+    messages:'chatMessages', input:'chatInput', send:'chatSend', stop:'chatStop', model:'chatModel',
+    systemFn:(e)=>e.system+CHAT_CAP, allowImages:true,
+    attach:{btn:$('chatAttach'), input:$('chatFile'), preview:$('chatPreview')},
+    greeting:"I'm Legend. What are we building today?"
   });
-  renderMessage($('chatMessages'),'bot',"I'm Legend. What are we building today?");
 
-  /* ── CODE section ── */
+  /* ── CODE ── */
   fillModels($('codeModel'));
-  let codeHistory=[];
   function extractRunnable(text){
     const blocks=[...text.matchAll(/```(?:html|HTML)?\s*([\s\S]*?)```/g)].map(m=>m[1].trim());
     for(const b of blocks){ if(/<!doctype html|<html|<body|<canvas|<script/i.test(b)) return b; }
-    // Fallback: grab a raw HTML document even if the closing fence was cut off.
     const doc=text.match(/<!doctype html[\s\S]*<\/html>/i) || text.match(/<html[\s\S]*<\/html>/i);
     if(doc) return doc[0];
     return null;
   }
-  function showPreview(code){
-    if(!code){ return; }
-    $('codePreview').srcdoc=code;
-    $('previewBox').classList.add('show');
-    $('previewBox')._code=code;
-  }
+  function showPreview(code){ if(!code) return; $('codePreview').srcdoc=code; $('previewBox').classList.add('show'); $('previewBox')._code=code; }
+  function resetPreview(){ $('previewBox').classList.remove('show'); $('previewBox')._code=null; $('codePreview').srcdoc=''; }
   $('openPreview').addEventListener('click', ()=>{
     const code=$('previewBox')._code; if(!code)return;
     const blob=new Blob([code],{type:'text/html'});
     window.open(URL.createObjectURL(blob),'_blank');
   });
-  wirePanel({
-    messagesEl:$('codeMessages'), inputEl:$('codeInput'), sendBtn:$('codeSend'), stopBtn:$('codeStop'), modelSel:$('codeModel'),
-    getHistory:()=>codeHistory, systemFn:()=>CODE_SYS, codeMode:true,
+  sectionViews.code = setupHistorySection({
+    key:'legend_code', defaultName:'Build',
+    listPane:'codeListPane', items:'codeItems', empty:'codeEmpty', newBtn:'codeNew', back:'codeBack', convo:'codeConvo',
+    messages:'codeMessages', input:'codeInput', send:'codeSend', stop:'codeStop', model:'codeModel',
+    systemFn:()=>CODE_SYS, codeMode:true,
     onReply:(reply)=>{ const code=extractRunnable(reply); if(code) showPreview(code); },
-    attach:{btn:$('codeAttach'), input:$('codeFile'), preview:$('codePreview2')}
+    attach:{btn:$('codeAttach'), input:$('codeFile'), preview:$('codePreview2')},
+    greeting:"New build. Tell me what to make — a game, an app, a tool — and I'll write it and run it right here.",
+    showPreview:showPreview, resetPreview:resetPreview
   });
-  renderMessage($('codeMessages'),'bot',"Code section. Tell me what to build — a game, an app, a tool — and I'll write it and run it right here.");
 
   /* ── IMAGE section ── */
   let imgSeed=1;
