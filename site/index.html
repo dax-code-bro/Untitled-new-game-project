@@ -130,6 +130,8 @@
   .inline-img{margin-top:10px}
   .inline-img img{max-width:100%;border-radius:8px;display:block}
   .inline-img a{margin-top:4px}
+  .code-block{margin-top:8px;background:#0d0d0d;border-left:2px solid var(--gold-dark);border-radius:4px;padding:10px;overflow-x:auto;max-height:320px;overflow-y:auto}
+  .code-block pre{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.5;color:#d8d8d8;white-space:pre}
 
   /* Projects */
   .proj-pane{flex:1;display:none;flex-direction:column;gap:12px;padding:18px;overflow-y:auto;min-height:0}
@@ -310,7 +312,7 @@ IMAGE ABILITY: When the user asks you to draw, create, generate, design, show, o
 Rules for the description inside the tag: be specific and visual; if a named character/brand/movie is mentioned, describe its real physical appearance (shapes, colors, materials, features) so it renders correctly; add style and lighting words. You may output multiple [IMAGE: ...] tags for multiple pictures. The app turns each tag into a real image shown to the user, so never say you "can't" make images.
 
 For full 3D or AAA-level games and big builds, point the user to the Code section.`;
-  const CODE_SYS = BASE + `\n\nYou are in the CODE section — Legend's heavy builder. You write complete, working code and build the most ambitious things: 2D AND 3D browser games, AAA-style visuals, apps and tools. RULES: When building anything visual or playable, ALWAYS output ONE complete, self-contained HTML document inside a single \`\`\`html code block that runs on its own — inline CSS and JavaScript, no external files. For 3D, you may load three.js from a CDN. Give a short explanation, then the full code block. Make it polished and actually fun/usable.`;
+  const CODE_SYS = BASE + `\n\nYou are in the CODE section — Legend's heavy builder. You write complete, working code and build the most ambitious things: 2D AND 3D browser games, AAA-style visuals, apps and tools. RULES: When building anything visual or playable, ALWAYS output ONE complete, self-contained HTML document inside a single \`\`\`html code block that runs on its own — inline CSS and JavaScript, no external files. For 3D, you may load three.js from a CDN. KEEP YOUR SPOKEN REPLY VERY SHORT — one or two friendly sentences telling the user what you built and how to use it. Then the single code block. Do NOT narrate the code, do NOT explain it line by line, do NOT repeat it — the code is shown separately, so your words stay brief.`;
 
   /* ── Status ── */
   function setBusy(b){ $('dot').className=b?'dot busy':'dot'; $('statusText').textContent=b?'Thinking…':'Online'; }
@@ -390,6 +392,22 @@ For full 3D or AAA-level games and big builds, point the user to the Code sectio
       if(scrollEl) scrollEl.scrollTop=scrollEl.scrollHeight; };
     im.onerror=()=>{ box.innerHTML='<div class="img-hint">Couldn’t draw that one.</div>'; };
     im.alt=prompt; im.src=url;
+  }
+
+  // Pull fenced code blocks out of a reply so the chat stays short.
+  function extractCodeBlocks(text){
+    const rx=/```[^\n]*\n?([\s\S]*?)```/g; const blocks=[]; let m;
+    while((m=rx.exec(text))) blocks.push(m[1].trim());
+    const stripped=text.replace(rx,'').replace(/\n{3,}/g,'\n\n').trim();
+    return {blocks, stripped};
+  }
+  function appendCodePanel(bubble, code){
+    const wrap=document.createElement('div'); wrap.className='think-wrap'; wrap.style.display='block'; wrap.style.marginTop='8px';
+    const toggle=document.createElement('button'); toggle.className='think-toggle'; toggle.textContent='💻 View full code';
+    const content=document.createElement('div'); content.className='code-block'; content.style.display='none';
+    const pre=document.createElement('pre'); pre.textContent=code; content.appendChild(pre);
+    toggle.addEventListener('click', ()=>{ content.style.display = content.style.display==='block'?'none':'block'; });
+    wrap.appendChild(toggle); wrap.appendChild(content); bubble.appendChild(wrap);
   }
 
   /* ── Shared message rendering ── */
@@ -507,7 +525,7 @@ For full 3D or AAA-level games and big builds, point the user to the Code sectio
   const THINK_INSTRUCTION = `\n\nBefore your final answer, share a brief honest thought process inside a <think></think> block — 1 to 4 short sentences on how you're approaching it. Keep it short. Then write your final answer AFTER the closing </think> tag. Never put the final answer inside the think block.`;
 
   /* ── Generic chat panel wiring ── */
-  function wirePanel({messagesEl, inputEl, sendBtn, stopBtn, modelSel, getHistory, systemFn, contextFn, onReply, onAfter, attach, allowImages}){
+  function wirePanel({messagesEl, inputEl, sendBtn, stopBtn, modelSel, getHistory, systemFn, contextFn, onReply, onAfter, attach, allowImages, codeMode}){
     const att = attach ? setupAttach(attach) : null;
     const sendLabel = sendBtn.textContent;
     let busy=false;
@@ -542,7 +560,7 @@ For full 3D or AAA-level games and big builds, point the user to the Code sectio
       if(stopBtn) stopBtn.onclick=()=>controller.abort();
 
       const engine=engineOf(modelSel);
-      const sys=(systemFn?systemFn(engine):engine.system) + THINK_INSTRUCTION;
+      const sys=(systemFn?systemFn(engine):engine.system) + (codeMode ? '' : THINK_INSTRUCTION);
       const hasImage = Array.isArray(content);
       const model = hasImage ? 'openai' : engine.model; // openai brain has vision
       const messages=[{role:'system',content:sys}, ...(contextFn?contextFn():[]), ...history];
@@ -562,6 +580,13 @@ For full 3D or AAA-level games and big builds, point the user to the Code sectio
             stream.setAnswer(pr.display);
             pr.prompts.forEach(p=>appendInlineImage(stream.bubble, p, messagesEl));
             histText=pr.forHistory;
+          }
+        }
+        if(codeMode){
+          const cb=extractCodeBlocks(clean);
+          if(cb.blocks.length){
+            stream.setAnswer(cb.stripped || 'Done — try it in the Live Preview below, or tap “View full code”.');
+            cb.blocks.forEach(b=>appendCodePanel(stream.bubble, b));
           }
         }
         history.push({role:'assistant',content:histText});
@@ -625,7 +650,7 @@ For full 3D or AAA-level games and big builds, point the user to the Code sectio
   });
   wirePanel({
     messagesEl:$('codeMessages'), inputEl:$('codeInput'), sendBtn:$('codeSend'), stopBtn:$('codeStop'), modelSel:$('codeModel'),
-    getHistory:()=>codeHistory, systemFn:()=>CODE_SYS,
+    getHistory:()=>codeHistory, systemFn:()=>CODE_SYS, codeMode:true,
     onReply:(reply)=>{ const code=extractRunnable(reply); if(code) showPreview(code); },
     attach:{btn:$('codeAttach'), input:$('codeFile'), preview:$('codePreview2')}
   });
