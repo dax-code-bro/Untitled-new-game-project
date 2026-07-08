@@ -1,5 +1,5 @@
 // Legend service worker — makes the app installable and work offline.
-const CACHE = 'legend-v1';
+const CACHE = 'legend-v3';
 const SHELL = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
@@ -19,6 +19,8 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
 
+  // Never touch the AI endpoint or any API route — always live network.
+  if (url.pathname.startsWith('/api/')) return;
   // Only handle our own app files. Let AI/image API calls go straight to the network.
   if (url.origin !== self.location.origin) return;
 
