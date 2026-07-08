@@ -1,0 +1,9 @@
+{
+  "private": true,
+  "name": "legend",
+  "version": "1.0.0",
+  "description": "Legend — the ultimate AI (static PWA + AI proxy function)",
+  "engines": {
+    "node": "20.x"
+  }
+}
