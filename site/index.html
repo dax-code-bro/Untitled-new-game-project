@@ -737,6 +737,11 @@ For full 3D or AAA-level games and big builds, point the user to the Code sectio
   function escapeHtml(s){ return s.replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
   renderProjects();
+
+  /* ── Install as an app (PWA) ── */
+  if('serviceWorker' in navigator && location.protocol==='https:'){
+    window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+  }
 </script>
 </body>
 </html>
