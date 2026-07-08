@@ -24,6 +24,18 @@
   body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--black);color:var(--text);height:var(--app-h);overflow:hidden}
   .app{display:flex;height:var(--app-h)}
 
+  /* ── Splash / loading intro ── */
+  .splash{position:fixed;inset:0;z-index:1000;background:radial-gradient(circle at 50% 42%, #1c1608 0%, #000 72%);display:flex;align-items:center;justify-content:center;transition:opacity .7s ease}
+  .splash.hide{opacity:0;pointer-events:none}
+  .splash-inner{display:flex;flex-direction:column;align-items:center;gap:10px}
+  .splash-crown{font-size:78px;line-height:1;color:var(--gold);opacity:0;transform:scale(.35);text-shadow:0 10px 44px rgba(201,168,76,.55);animation:spCrown 1s .15s cubic-bezier(.2,.8,.2,1) forwards}
+  .splash-brand{font-family:Georgia,serif;font-weight:700;color:var(--gold);font-size:clamp(28px,9vw,40px);letter-spacing:-.15em;opacity:0;animation:spBrand 1.1s .75s cubic-bezier(.2,.8,.2,1) forwards}
+  .splash-sub{font-size:13px;letter-spacing:.55em;color:var(--gold-dark);opacity:0;padding-left:.55em;animation:spSub .8s 1.5s ease forwards}
+  @keyframes spCrown{to{opacity:1;transform:scale(1)}}
+  @keyframes spBrand{0%{opacity:0;letter-spacing:-.15em;transform:translateY(-2px)}60%{opacity:1}100%{opacity:1;letter-spacing:.3em;transform:none}}
+  @keyframes spSub{to{opacity:.85}}
+  @media(prefers-reduced-motion:reduce){.splash-crown,.splash-brand,.splash-sub{animation-duration:.01s}}
+
   /* Sidebar */
   .sidebar{width:230px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:16px 0}
   .side-logo{display:flex;align-items:center;gap:8px;padding:0 18px 16px;border-bottom:1px solid var(--border);margin-bottom:12px}
@@ -145,6 +157,13 @@
 </style>
 </head>
 <body>
+<div class="splash" id="splash">
+  <div class="splash-inner">
+    <div class="splash-crown">♛</div>
+    <div class="splash-brand">LEGEND</div>
+    <div class="splash-sub">A I</div>
+  </div>
+</div>
 <div class="app">
   <aside class="sidebar" id="sidebar">
     <div class="side-logo"><span class="crown">♛</span><span class="brand">LEGEND</span></div>
@@ -737,6 +756,12 @@ For full 3D or AAA-level games and big builds, point the user to the Code sectio
   function escapeHtml(s){ return s.replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
   renderProjects();
+
+  /* ── Splash intro: fade to the app after the reveal ── */
+  (function(){
+    const sp=$('splash'); if(!sp) return;
+    setTimeout(()=>{ sp.classList.add('hide'); setTimeout(()=>sp.remove(), 800); }, 2400);
+  })();
 
   /* ── Install as an app (PWA) ── */
   if('serviceWorker' in navigator && location.protocol==='https:'){
