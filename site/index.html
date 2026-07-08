@@ -312,7 +312,15 @@ IMAGE ABILITY: When the user asks you to draw, create, generate, design, show, o
 Rules for the description inside the tag: be specific and visual; if a named character/brand/movie is mentioned, describe its real physical appearance (shapes, colors, materials, features) so it renders correctly; add style and lighting words. You may output multiple [IMAGE: ...] tags for multiple pictures. The app turns each tag into a real image shown to the user, so never say you "can't" make images.
 
 For full 3D or AAA-level games and big builds, point the user to the Code section.`;
-  const CODE_SYS = BASE + `\n\nYou are in the CODE section — Legend's heavy builder. You write complete, working code and build the most ambitious things: 2D AND 3D browser games, AAA-style visuals, apps and tools. RULES: When building anything visual or playable, ALWAYS output ONE complete, self-contained HTML document inside a single \`\`\`html code block that runs on its own — inline CSS and JavaScript, no external files. For 3D, you may load three.js from a CDN. KEEP YOUR SPOKEN REPLY VERY SHORT — one or two friendly sentences telling the user what you built and how to use it. Then the single code block. Do NOT narrate the code, do NOT explain it line by line, do NOT repeat it — the code is shown separately, so your words stay brief.`;
+  const CODE_SYS = BASE + `\n\nYou are in the CODE section — Legend's heavy builder. You build ambitious, COMPLETE, WORKING things: 2D and 3D browser games, AAA-style visuals, apps and tools.
+
+HARD RULES:
+- Output ONE complete, self-contained HTML document inside a single \`\`\`html code block: inline CSS and JavaScript, no external files. For 3D you may load three.js from a CDN.
+- Write REAL, FULLY-IMPLEMENTED code — usually several hundred lines. NEVER use placeholders, stubs, "// TODO", "// rest of code here", "// add more", or "...". Every function must be complete and actually work.
+- The program MUST run with zero errors and show something on screen IMMEDIATELY — never a blank white screen. Give the page a background color, draw the first frame right away, and start the game loop on load.
+- For a game include ALL of: a canvas that fills the screen, a real game loop with requestAnimationFrame, keyboard/touch input, moving entities, collision, score or win/lose state, and on-screen instructions.
+- FINISH THE ENTIRE DOCUMENT. It must end with </html>. Do not stop partway. If it's long, keep going until it is fully complete.
+- KEEP YOUR SPOKEN REPLY VERY SHORT (1-2 sentences on what it is and how to play). Do NOT narrate or repeat the code — it is shown separately.`;
 
   /* ── Status ── */
   function setBusy(b){ $('dot').className=b?'dot busy':'dot'; $('statusText').textContent=b?'Thinking…':'Online'; }
@@ -398,8 +406,21 @@ For full 3D or AAA-level games and big builds, point the user to the Code sectio
   function extractCodeBlocks(text){
     const rx=/```[^\n]*\n?([\s\S]*?)```/g; const blocks=[]; let m;
     while((m=rx.exec(text))) blocks.push(m[1].trim());
-    const stripped=text.replace(rx,'').replace(/\n{3,}/g,'\n\n').trim();
+    let stripped=text.replace(rx,'');
+    // Handle an unclosed fence (code got cut off): drop everything from the last ```
+    if(!blocks.length){
+      const open=text.search(/```/);
+      if(open!==-1){ blocks.push(text.slice(open).replace(/```[^\n]*\n?/, '').trim()); stripped=text.slice(0,open); }
+    }
+    stripped=stripped.replace(/\n{3,}/g,'\n\n').trim();
     return {blocks, stripped};
+  }
+  // Detect a reply whose code got cut off mid-stream.
+  function looksTruncated(text){
+    const fences=(text.match(/```/g)||[]).length;
+    if(fences%2===1) return true;
+    if(/<!doctype html|<html/i.test(text) && !/<\/html>/i.test(text)) return true;
+    return false;
   }
   function appendCodePanel(bubble, code){
     const wrap=document.createElement('div'); wrap.className='think-wrap'; wrap.style.display='block'; wrap.style.marginTop='8px';
@@ -434,7 +455,7 @@ For full 3D or AAA-level games and big builds, point the user to the Code sectio
     const aborted=()=> signal && signal.aborted;
     try{
       const res=await fetch('https://text.pollinations.ai/openai',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({model,messages,stream:true,temperature:0.85,referrer:'legend-app'}), signal});
+        body:JSON.stringify({model,messages,stream:true,temperature:0.85,max_tokens:8000,referrer:'legend-app'}), signal});
       if(res.ok&&res.body){
         const reader=res.body.getReader(); const dec=new TextDecoder(); let buf='',full='';
         while(true){ if(aborted())break; const {done,value}=await reader.read(); if(done)break;
@@ -450,7 +471,7 @@ For full 3D or AAA-level games and big builds, point the user to the Code sectio
     if(aborted()) return null;
     try{
       const res=await fetch('https://text.pollinations.ai/openai',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({model,messages,temperature:0.85,referrer:'legend-app'}), signal});
+        body:JSON.stringify({model,messages,temperature:0.85,max_tokens:8000,referrer:'legend-app'}), signal});
       if(res.ok){ const d=await res.json(); const txt=d.choices?.[0]?.message?.content||'';
         if(txt.trim()){ onUpdate(txt.trim()); return txt.trim(); } }
     }catch(_){ if(aborted()) return null; }
@@ -568,7 +589,23 @@ For full 3D or AAA-level games and big builds, point the user to the Code sectio
       let lastFull='';
       const reply=await streamReply(model, messages, (f)=>{ lastFull=f; stream.update(f); }, controller.signal);
 
-      const raw = (reply!=null ? reply : lastFull) || '';
+      let raw = (reply!=null ? reply : lastFull) || '';
+
+      // Auto-continue: if code got cut off, ask Legend to keep going and stitch it.
+      if(codeMode && raw){
+        let tries=0;
+        while(tries<5 && !controller.signal.aborted && looksTruncated(raw)){
+          tries++;
+          sendBtn.textContent='Building…';
+          const contMsgs=[{role:'system',content:sys}, ...history,
+            {role:'assistant',content:raw},
+            {role:'user',content:'Continue the code EXACTLY where you left off. Do not repeat any earlier lines, do not add explanations or code fences — output only the remaining code, and finish the complete document ending with </html>.'}];
+          const base=raw;
+          const more=await streamReply(model, contMsgs, (f)=>{ stream.update(base + f); }, controller.signal);
+          if(!more){ break; }
+          raw = base + '\n' + more.replace(/```+/g,'');
+        }
+      }
       const parts = splitThink(raw);
       const clean = (parts.answer.trim() || parts.think.trim() || raw).trim();
       if(clean){
@@ -635,6 +672,9 @@ For full 3D or AAA-level games and big builds, point the user to the Code sectio
   function extractRunnable(text){
     const blocks=[...text.matchAll(/```(?:html|HTML)?\s*([\s\S]*?)```/g)].map(m=>m[1].trim());
     for(const b of blocks){ if(/<!doctype html|<html|<body|<canvas|<script/i.test(b)) return b; }
+    // Fallback: grab a raw HTML document even if the closing fence was cut off.
+    const doc=text.match(/<!doctype html[\s\S]*<\/html>/i) || text.match(/<html[\s\S]*<\/html>/i);
+    if(doc) return doc[0];
     return null;
   }
   function showPreview(code){
