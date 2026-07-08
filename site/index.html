@@ -463,14 +463,16 @@ HARD RULES:
 
   async function streamReply(model, messages, onUpdate, signal){
     const userAborted=()=> signal && signal.aborted;
-    const bodyFor=(stream)=>JSON.stringify({model,messages,stream,temperature:0.85,max_tokens:8000,referrer:'legend-app'});
+    const bodyFor=(stream)=>JSON.stringify({model,messages,stream,temperature:0.85,max_tokens:4096,referrer:'legend-app'});
 
-    // Streaming attempts (retry on failure). A 25s gap with no new data = stall.
+    // Streaming attempts (retry on failure). Wait up to 55s for the FIRST word
+    // (heavy builds are slow to start); after that, a 22s gap = stall.
     for(let attempt=0; attempt<2 && !userAborted(); attempt++){
       const ac=new AbortController();
       const fwd=()=>ac.abort();
       if(signal) signal.addEventListener('abort',fwd);
-      let timer; const bump=()=>{ clearTimeout(timer); timer=setTimeout(()=>ac.abort(), 25000); };
+      let timer, gotData=false;
+      const bump=()=>{ clearTimeout(timer); timer=setTimeout(()=>ac.abort(), gotData?22000:55000); };
       let full='';
       try{
         bump();
@@ -481,7 +483,7 @@ HARD RULES:
             buf+=dec.decode(value,{stream:true}); const lines=buf.split('\n'); buf=lines.pop()||'';
             for(const line of lines){ const t=line.trim(); if(!t.startsWith('data:'))continue;
               const data=t.slice(5).trim(); if(data==='[DONE]')continue;
-              try{ const j=JSON.parse(data); const c=j.choices?.[0]?.delta?.content||''; if(c){ full+=c; onUpdate(full); } }catch(_){}
+              try{ const j=JSON.parse(data); const c=j.choices?.[0]?.delta?.content||''; if(c){ full+=c; gotData=true; onUpdate(full); } }catch(_){}
             } }
           clearTimeout(timer); if(signal) signal.removeEventListener('abort',fwd);
           if(full.trim()) return full.trim();
@@ -496,9 +498,9 @@ HARD RULES:
     }
     if(userAborted()) return null;
 
-    // Fallback: non-streaming (30s cap, one retry).
+    // Fallback: non-streaming (60s cap, one retry).
     for(let attempt=0; attempt<2 && !userAborted(); attempt++){
-      const lc=linkedController(signal, 30000);
+      const lc=linkedController(signal, 60000);
       try{
         const res=await fetch('https://text.pollinations.ai/openai',{method:'POST',headers:{'Content-Type':'application/json'},body:bodyFor(false),signal:lc.signal});
         lc.clear();
@@ -508,9 +510,9 @@ HARD RULES:
     }
     if(userAborted()) return null;
 
-    // Last resort: simple GET (30s cap).
+    // Last resort: simple GET (45s cap).
     try{
-      const lc=linkedController(signal, 30000);
+      const lc=linkedController(signal, 45000);
       const prompt=messages.filter(m=>m.role!=='system').map(m=>(m.role==='user'?'User: ':'Legend: ')+toText(m.content)).join('\n')+'\nLegend:';
       const res=await fetch('https://text.pollinations.ai/'+encodeURIComponent(prompt)+'?referrer=legend-app',{signal:lc.signal});
       lc.clear();
