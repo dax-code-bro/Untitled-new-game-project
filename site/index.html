@@ -690,7 +690,9 @@ HARD RULES — every build MUST follow all of these:
     const userAborted=()=> signal && signal.aborted;
     lastFail='no response';
     const proxyBody=JSON.stringify({model,messages});
-    const directBody=JSON.stringify({model,messages,stream:true,temperature:0.85,max_tokens:4096,referrer:'legend-app'});
+
+    // If the chosen brain is down upstream, retry with the reliable default.
+    const models = model === 'openai' ? ['openai'] : [model, 'openai'];
 
     // 1) Our own server proxy (same-origin — bypasses browser blocks & phone rate limits).
     for(let i=0;i<2 && !userAborted();i++){
@@ -699,21 +701,25 @@ HARD RULES — every build MUST follow all of these:
       if(userAborted()) return null;
       await sleep(600);
     }
-    // 2) Direct to Pollinations (in case the server function isn't available).
-    if(!userAborted()){
-      const r=await streamOnce('https://text.pollinations.ai/openai', directBody, onUpdate, signal);
+    // 2) Direct to Pollinations (in case the server function isn't available), each model in turn.
+    for(const m of models){
+      if(userAborted()) return null;
+      const r=await streamOnce('https://text.pollinations.ai/openai', JSON.stringify({model:m,messages,stream:true,temperature:0.85,max_tokens:4096,referrer:'legend-app'}), onUpdate, signal);
       if(r) return r;
     }
     if(userAborted()) return null;
 
-    // 3) Non-streaming direct (60s cap).
-    try{
-      const lc=linkedController(signal, 60000);
-      const res=await fetch('https://text.pollinations.ai/openai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model,messages,temperature:0.85,max_tokens:4096,referrer:'legend-app'}),signal:lc.signal});
-      lc.clear();
-      if(res.ok){ const d=await res.json(); const txt=d.choices?.[0]?.message?.content||''; if(txt.trim()){ onUpdate(txt.trim()); return txt.trim(); } lastFail='empty reply'; }
-      else { lastFail='server error '+res.status; }
-    }catch(e){ if(userAborted()) return null; lastFail='network/blocked: '+(e&&e.message?e.message:'failed to fetch'); }
+    // 3) Non-streaming direct (60s cap), each model in turn.
+    for(const m of models){
+      if(userAborted()) return null;
+      try{
+        const lc=linkedController(signal, 60000);
+        const res=await fetch('https://text.pollinations.ai/openai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:m,messages,temperature:0.85,max_tokens:4096,referrer:'legend-app'}),signal:lc.signal});
+        lc.clear();
+        if(res.ok){ const d=await res.json(); const txt=d.choices?.[0]?.message?.content||''; if(txt.trim()){ onUpdate(txt.trim()); return txt.trim(); } lastFail='empty reply'; }
+        else { lastFail='AI service error '+res.status+' ('+m+')'; }
+      }catch(e){ if(userAborted()) return null; lastFail='network/blocked: '+(e&&e.message?e.message:'failed to fetch'); }
+    }
     if(userAborted()) return null;
 
     // 4) Last resort: simple GET (45s cap).

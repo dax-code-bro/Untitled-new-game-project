@@ -21,34 +21,41 @@ module.exports = async (req, res) => {
     res.end();
   };
 
-  // 1) Streaming passthrough from Pollinations
-  try {
-    const r = await fetch('https://text.pollinations.ai/openai', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, messages, stream: true, temperature: 0.85, max_tokens: 4096, referrer: 'legend-app' })
-    });
-    if (r.ok && r.body) {
-      sseHead();
-      const reader = r.body.getReader();
-      const dec = new TextDecoder();
-      while (true) { const { done, value } = await reader.read(); if (done) break; res.write(dec.decode(value)); }
-      res.end();
-      return;
-    }
-  } catch (e) { /* next */ }
+  // If the requested model is down/renamed upstream, retry with the reliable default.
+  const models = model === 'openai' ? ['openai'] : [model, 'openai'];
 
-  // 2) Non-streaming POST
-  try {
-    const r = await fetch('https://text.pollinations.ai/openai', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, messages, temperature: 0.85, max_tokens: 4096, referrer: 'legend-app' })
-    });
-    if (r.ok) {
-      const d = await r.json();
-      const text = (d && d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content) || '';
-      if (text.trim()) { sseText(text.trim()); return; }
-    }
-  } catch (e) { /* next */ }
+  // 1) Streaming passthrough from Pollinations (each model in turn)
+  for (const m of models) {
+    try {
+      const r = await fetch('https://text.pollinations.ai/openai', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: m, messages, stream: true, temperature: 0.85, max_tokens: 4096, referrer: 'legend-app' })
+      });
+      if (r.ok && r.body) {
+        sseHead();
+        const reader = r.body.getReader();
+        const dec = new TextDecoder();
+        while (true) { const { done, value } = await reader.read(); if (done) break; res.write(dec.decode(value)); }
+        res.end();
+        return;
+      }
+    } catch (e) { /* next */ }
+  }
+
+  // 2) Non-streaming POST (each model in turn)
+  for (const m of models) {
+    try {
+      const r = await fetch('https://text.pollinations.ai/openai', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: m, messages, temperature: 0.85, max_tokens: 4096, referrer: 'legend-app' })
+      });
+      if (r.ok) {
+        const d = await r.json();
+        const text = (d && d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content) || '';
+        if (text.trim()) { sseText(text.trim()); return; }
+      }
+    } catch (e) { /* next */ }
+  }
 
   // 3) Simple GET
   try {
