@@ -483,7 +483,7 @@ HARD RULES — every build MUST follow all of these:
 - RENDER REAL GRAPHICS. Draw everything on a full-screen <canvas> using the 2D context or WebGL — NEVER a page that just displays text, and NEVER print the source code on screen. The player must see a real game world, not words.
 - MAKE IT LOOK GOOD. Use gradients, glowing effects, particle effects, smooth color palettes, shadows, sprites drawn with canvas shapes, parallax or animated backgrounds. For 3D, use real geometry, lighting, materials, and shaders where they help. Aim for vibrant, polished, "wow" visuals.
 - MOVEMENT & ANIMATION. Everything animates via requestAnimationFrame at ~60fps: things move, rotate, bounce, spawn, and react. No static screens.
-- MOBILE FIRST — THIS IS CRITICAL. The player is usually on a PHONE. You MUST include large on-screen TOUCH controls (buttons, a drag joystick, or tap/swipe) so the game is fully playable with fingers alone. Also support keyboard for desktop. If a game needs movement and you only add arrow keys, it is BROKEN on mobile — always add touch.
+- CONTROLS ARE BUILT IN. Every published game automatically receives Legend Controls: an on-screen joystick + A/B buttons on touchscreens and full gamepad support, all delivered to your game as standard keyboard events. Therefore implement ALL input with KEYBOARD events only: Arrow keys and/or WASD to move, Space = primary action (jump/shoot/select), X = secondary action. Do NOT build your own touch joystick or on-screen buttons — they are provided. In your on-screen instructions say "Move + A/B buttons (or arrows/WASD + Space/X)".
 - STARTING THE GAME: any start/restart screen MUST begin on a tap OR click ANYWHERE on the screen. Attach the start handler to window using BOTH 'pointerdown' and 'touchstart' (plus any key). A start screen that listens only for a key or a small button is BROKEN. Test mentally: "if I tap the middle of the screen, does the game start?" — the answer must be yes.
 - GAMEPLAY. Include a real loop with a goal: moving entities, collision, score and/or win/lose states, increasing challenge, a start prompt, and clear on-screen instructions. Make it genuinely fun.
 - The game must run with zero errors and show a moving, drawn scene IMMEDIATELY on load — never a blank or white screen.
@@ -1053,9 +1053,59 @@ HARD RULES — every build MUST follow all of these:
   }
   function miniBtn(label, fn){ const b=document.createElement('button'); b.className='mini-btn'; b.textContent=label; b.addEventListener('click',fn); return b; }
 
+  // Legend Controls — injected into every AIGB: touch joystick + A/B buttons and
+  // gamepad support, all translated into standard keyboard events (arrows/WASD,
+  // Space=A, X=B) so any keyboard-driven game instantly works on phone/PC/controller.
+  const LEGEND_CONTROLS_SRC = `
+(function(){
+if(window.__LEGEND_CONTROLS__)return;window.__LEGEND_CONTROLS__=1;
+var pad={x:0,y:0,a:false,b:false};window.LegendPad=pad;
+function fire(t,k,c,n){var e;try{e=new KeyboardEvent(t,{key:k,code:c,bubbles:true,cancelable:true});
+Object.defineProperty(e,'keyCode',{get:function(){return n}});Object.defineProperty(e,'which',{get:function(){return n}});}catch(x){return}
+window.dispatchEvent(e);document.dispatchEvent(e);if(document.body)document.body.dispatchEvent(e);}
+var down={};
+var MAPS={left:[['ArrowLeft','ArrowLeft',37],['a','KeyA',65]],right:[['ArrowRight','ArrowRight',39],['d','KeyD',68]],up:[['ArrowUp','ArrowUp',38],['w','KeyW',87]],down:[['ArrowDown','ArrowDown',40],['s','KeyS',83]],a:[[' ','Space',32]],b:[['x','KeyX',88]]};
+function setKey(n,on){if(!!down[n]===on)return;down[n]=on;var ms=MAPS[n];for(var i=0;i<ms.length;i++)fire(on?'keydown':'keyup',ms[i][0],ms[i][1],ms[i][2]);}
+var hasTouch='ontouchstart' in window||navigator.maxTouchPoints>0;
+if(hasTouch){
+var Z='position:fixed;z-index:2147483000;user-select:none;-webkit-user-select:none;touch-action:none;';
+var stick=document.createElement('div');stick.style.cssText=Z+'left:16px;bottom:22px;width:124px;height:124px;border-radius:50%;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.28);';
+var knob=document.createElement('div');knob.style.cssText='position:absolute;left:36px;top:36px;width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.3);pointer-events:none;';
+stick.appendChild(knob);
+function mkBtn(txt,right,bottom){var b=document.createElement('div');b.style.cssText=Z+'right:'+right+'px;bottom:'+bottom+'px;width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.09);border:1.5px solid rgba(255,255,255,.3);color:rgba(255,255,255,.75);font:700 20px sans-serif;display:flex;align-items:center;justify-content:center;';b.textContent=txt;return b;}
+var btnA=mkBtn('A',24,86),btnB=mkBtn('B',96,26);
+function press(el,name){el.addEventListener('pointerdown',function(e){e.preventDefault();el.setPointerCapture&&el.setPointerCapture(e.pointerId);el.style.background='rgba(255,255,255,.25)';pad[name]=true;setKey(name,true);});
+var end=function(e){el.style.background='rgba(255,255,255,.09)';pad[name]=false;setKey(name,false);};
+el.addEventListener('pointerup',end);el.addEventListener('pointercancel',end);}
+press(btnA,'a');press(btnB,'b');
+var sid=null;
+function jmove(e){var r=stick.getBoundingClientRect();var dx=e.clientX-(r.left+62),dy=e.clientY-(r.top+62);var d=Math.sqrt(dx*dx+dy*dy)||1;var cl=Math.min(d,44);dx=dx/d*cl;dy=dy/d*cl;
+knob.style.left=(36+dx)+'px';knob.style.top=(36+dy)+'px';pad.x=dx/44;pad.y=dy/44;
+setKey('left',dx<-14);setKey('right',dx>14);setKey('up',dy<-14);setKey('down',dy>14);}
+stick.addEventListener('pointerdown',function(e){e.preventDefault();sid=e.pointerId;stick.setPointerCapture&&stick.setPointerCapture(e.pointerId);jmove(e);});
+stick.addEventListener('pointermove',function(e){if(sid===e.pointerId)jmove(e);});
+function jend(e){if(sid!==e.pointerId)return;sid=null;knob.style.left='36px';knob.style.top='36px';pad.x=0;pad.y=0;setKey('left',false);setKey('right',false);setKey('up',false);setKey('down',false);}
+stick.addEventListener('pointerup',jend);stick.addEventListener('pointercancel',jend);
+var tog=document.createElement('div');tog.style.cssText=Z+'right:12px;top:12px;width:34px;height:34px;border-radius:50%;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.25);color:rgba(255,255,255,.7);font:16px sans-serif;display:flex;align-items:center;justify-content:center;';tog.textContent='🕹';
+var vis=true;tog.addEventListener('pointerdown',function(e){e.preventDefault();e.stopPropagation();vis=!vis;var d=vis?'flex':'none';stick.style.display=vis?'block':'none';btnA.style.display=d;btnB.style.display=d;});
+function add(){document.body.appendChild(stick);document.body.appendChild(btnA);document.body.appendChild(btnB);document.body.appendChild(tog);}
+if(document.body)add();else window.addEventListener('DOMContentLoaded',add);
+}
+setInterval(function(){var gs=navigator.getGamepads?navigator.getGamepads():[];var g=null;for(var i=0;i<gs.length;i++){if(gs[i]){g=gs[i];break}}if(!g)return;
+var ax=g.axes[0]||0,ay=g.axes[1]||0,b=g.buttons;function pb(i){return !!(b[i]&&b[i].pressed)}
+setKey('left',ax<-0.4||pb(14));setKey('right',ax>0.4||pb(15));setKey('up',ay<-0.4||pb(12));setKey('down',ay>0.4||pb(13));setKey('a',pb(0));setKey('b',pb(1));
+pad.x=ax;pad.y=ay;pad.a=pb(0);pad.b=pb(1);},50);
+})();`;
+  function withControls(html){
+    if(html.indexOf('__LEGEND_CONTROLS__')!==-1) return html;
+    const tag='<script>'+LEGEND_CONTROLS_SRC+'<\/script>';
+    return /<\/body>/i.test(html) ? html.replace(/<\/body>/i, tag+'</body>') : html+tag;
+  }
+
   // Builds publish themselves: same build = same permanent link, version bumps.
   function autoPublishAIGB(html){
     if(!html) return;
+    html = withControls(html);   // every AIGB ships with universal touch/gamepad controls
     const buildId = (sectionViews.code && sectionViews.code.activeId) ? sectionViews.code.activeId() : null;
     let a = buildId ? aigb.find(x=>x.buildKey===buildId) : null;
     const isUpdate = !!a;
