@@ -276,10 +276,6 @@
           <span class="model-tag">Heavy builder · with live preview</span>
         </div>
         <div class="messages" id="codeMessages"></div>
-        <div class="preview-box" id="previewBox">
-          <div class="preview-head"><span>▶ Live Preview</span><div style="display:flex;gap:8px"><button id="publishAIGB">🎮 Publish</button><button id="openPreview">Open full ↗</button></div></div>
-          <iframe id="codePreview" sandbox="allow-scripts allow-pointer-lock allow-same-origin"></iframe>
-        </div>
         <div class="composer">
           <div class="attach-preview" id="codePreview2"></div>
           <div class="inputbar">
@@ -488,6 +484,7 @@ HARD RULES — every build MUST follow all of these:
 - MAKE IT LOOK GOOD. Use gradients, glowing effects, particle effects, smooth color palettes, shadows, sprites drawn with canvas shapes, parallax or animated backgrounds. For 3D, use real geometry, lighting, materials, and shaders where they help. Aim for vibrant, polished, "wow" visuals.
 - MOVEMENT & ANIMATION. Everything animates via requestAnimationFrame at ~60fps: things move, rotate, bounce, spawn, and react. No static screens.
 - MOBILE FIRST — THIS IS CRITICAL. The player is usually on a PHONE. You MUST include large on-screen TOUCH controls (buttons, a drag joystick, or tap/swipe) so the game is fully playable with fingers alone. Also support keyboard for desktop. If a game needs movement and you only add arrow keys, it is BROKEN on mobile — always add touch.
+- STARTING THE GAME: any start/restart screen MUST begin on a tap OR click ANYWHERE on the screen. Attach the start handler to window using BOTH 'pointerdown' and 'touchstart' (plus any key). A start screen that listens only for a key or a small button is BROKEN. Test mentally: "if I tap the middle of the screen, does the game start?" — the answer must be yes.
 - GAMEPLAY. Include a real loop with a goal: moving entities, collision, score and/or win/lose states, increasing challenge, a start prompt, and clear on-screen instructions. Make it genuinely fun.
 - The game must run with zero errors and show a moving, drawn scene IMMEDIATELY on load — never a blank or white screen.
 - FINISH THE ENTIRE DOCUMENT ending with </html>. Never stop partway; if it's long, keep going until complete. NEVER use placeholders, stubs, "// TODO", "// rest of code", "// add more", or "...". Every function fully implemented.
@@ -1004,7 +1001,7 @@ HARD RULES — every build MUST follow all of these:
     });
 
     showList();
-    return { showList, activeId:()=>activeId };
+    return { showList, activeId:()=>activeId, activeName:()=>{ const c=active(); return c?c.name:null; } };
   }
 
   /* ── CHAT ── */
@@ -1030,22 +1027,14 @@ HARD RULES — every build MUST follow all of these:
     if(doc) return doc[0];
     return null;
   }
-  function showPreview(code){ if(!code) return; $('codePreview').srcdoc=code; $('previewBox').classList.add('show'); $('previewBox')._code=code; }
-  function resetPreview(){ $('previewBox').classList.remove('show'); $('previewBox')._code=null; $('codePreview').srcdoc=''; }
-  $('openPreview').addEventListener('click', ()=>{
-    const code=$('previewBox')._code; if(!code)return;
-    const blob=new Blob([code],{type:'text/html'});
-    window.open(URL.createObjectURL(blob),'_blank');
-  });
   sectionViews.code = setupHistorySection({
     key:'legend_code', defaultName:'Build',
     listPane:'codeListPane', items:'codeItems', empty:'codeEmpty', newBtn:'codeNew', back:'codeBack', convo:'codeConvo',
     messages:'codeMessages', input:'codeInput', send:'codeSend', stop:'codeStop', model:'codeModel',
     systemFn:()=>CODE_SYS, codeMode:true,
-    onReply:(reply)=>{ const code=extractRunnable(reply); if(code) showPreview(code); },
+    onReply:(reply)=>{ const code=extractRunnable(reply); if(code) autoPublishAIGB(code); },
     attach:{btn:$('codeAttach'), input:$('codeFile'), preview:$('codePreview2')},
-    greeting:"New build. Tell me what to make — a game, an app, a tool — and I'll write it and run it right here.",
-    showPreview:showPreview, resetPreview:resetPreview
+    greeting:"New build. Tell me what to make — a game, an app, a tool — and I'll build it and publish it straight to your AIGB menu (top right)."
   });
 
   /* ── AIGB — permanent, shareable game links ── */
@@ -1064,25 +1053,23 @@ HARD RULES — every build MUST follow all of these:
   }
   function miniBtn(label, fn){ const b=document.createElement('button'); b.className='mini-btn'; b.textContent=label; b.addEventListener('click',fn); return b; }
 
-  function publishAIGB(){
-    const html=$('previewBox')._code;
-    if(!html){ alert('Build a game first, then publish it as an AIGB.'); return; }
+  // Builds publish themselves: same build = same permanent link, version bumps.
+  function autoPublishAIGB(html){
+    if(!html) return;
     const buildId = (sectionViews.code && sectionViews.code.activeId) ? sectionViews.code.activeId() : null;
     let a = buildId ? aigb.find(x=>x.buildKey===buildId) : null;
-    if(a){ a.html=html; a.version=(a.version||1)+1; }   // update keeps the same permanent link
+    const isUpdate = !!a;
+    if(a){ a.html=html; a.version=(a.version||1)+1; }
     else {
-      const name=prompt('Name your game / app:', 'My Game'); if(name===null) return;
-      a={ id:uid(), buildKey:buildId, name:(name.trim()||'My Game'), html, version:1 };
+      const name=(sectionViews.code && sectionViews.code.activeName && sectionViews.code.activeName()) || 'My Game';
+      a={ id:uid(), buildKey:buildId, name, html, version:1 };
       aigb.unshift(a);
     }
-    saveAigb();
-    // jump to the Games view showing this AIGB
-    document.querySelectorAll('.nav-btn[data-view]').forEach(b=>b.classList.toggle('active', b.dataset.view==='games'));
-    ['chat','code','image','projects','games'].forEach(name=>$('view-'+name).classList.toggle('show', name==='games'));
-    renderGames(a.id);
-    updateFab();
+    saveAigb(); refreshAigbUI();
+    renderMessage($('codeMessages'),'bot', isUpdate
+      ? `🎮 Updated “${a.name}” (v${a.version}) — open the AIGB menu (top right) and press ▶ Play.`
+      : `🎮 “${a.name}” is live! Tap the gold AIGB button (top right) and press ▶ Play.`);
   }
-  $('publishAIGB').addEventListener('click', publishAIGB);
 
   function renderGames(highlightId){
     const wrap=$('gamesItems'); wrap.innerHTML='';
