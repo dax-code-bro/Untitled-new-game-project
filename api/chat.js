@@ -21,6 +21,51 @@ module.exports = async (req, res) => {
     res.end();
   };
 
+  const hasVision = messages.some(m => Array.isArray(m.content));
+  const textMessages = () => messages.map(m => ({ role: m.role, content: typeof m.content === 'string' ? m.content : (Array.isArray(m.content) ? m.content.filter(p => p.type === 'text').map(p => p.text).join('\n') : '') }));
+
+  // ── Keyed providers (used automatically if a key is set in Vercel env vars) ──
+  // Any ONE of these makes Legend permanently reliable: ATOM_API_KEY (+ optional
+  // ATOM_BASE_URL), GROQ_API_KEY, or ANTHROPIC_API_KEY.
+  const streamOpenAICompat = async (url, key, m, msgs) => {
+    const r = await fetch(url, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+      body: JSON.stringify({ model: m, messages: msgs, stream: true, temperature: 0.85, max_tokens: 4096 })
+    });
+    if (!r.ok || !r.body) return false;
+    sseHead();
+    const reader = r.body.getReader(); const dec = new TextDecoder();
+    while (true) { const { done, value } = await reader.read(); if (done) break; res.write(dec.decode(value)); }
+    res.end(); return true;
+  };
+  if (process.env.ATOM_API_KEY) {
+    try {
+      const base = process.env.ATOM_BASE_URL || 'https://oasisos.io/api/v1';
+      if (await streamOpenAICompat(base + '/chat/completions', process.env.ATOM_API_KEY, 'atom-32b', textMessages())) return;
+    } catch (e) { /* next */ }
+  }
+  if (process.env.GROQ_API_KEY && !hasVision) {
+    try {
+      if (await streamOpenAICompat('https://api.groq.com/openai/v1/chat/completions', process.env.GROQ_API_KEY, 'llama-3.3-70b-versatile', textMessages())) return;
+    } catch (e) { /* next */ }
+  }
+  if (process.env.ANTHROPIC_API_KEY && !hasVision) {
+    try {
+      const tm = textMessages();
+      const system = tm.filter(m2 => m2.role === 'system').map(m2 => m2.content).join('\n\n');
+      const convo = tm.filter(m2 => m2.role !== 'system');
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 4096, system, messages: convo })
+      });
+      if (r.ok) {
+        const d = await r.json();
+        const text = (d && d.content && d.content[0] && d.content[0].text) || '';
+        if (text.trim()) { sseText(text.trim()); return; }
+      }
+    } catch (e) { /* next */ }
+  }
+
   // If the requested model is down/renamed upstream, retry with the reliable default.
   const models = model === 'openai' ? ['openai'] : [model, 'openai'];
 

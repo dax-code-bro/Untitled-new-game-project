@@ -859,8 +859,19 @@ HARD RULES — every build MUST follow all of these:
           : (s<8 ? '…' : s<25 ? 'Thinking…' : 'Still thinking — one moment…'));
       }, 1000);
       let lastFull='';
-      const reply=await streamReply(model, messages, (f)=>{ started=true; lastFull=f; stream.update(f); }, controller.signal);
+      const doAsk=()=>streamReply(model, messages, (f)=>{ started=true; lastFull=f; stream.update(f); }, controller.signal);
+      let reply=await doAsk();
       started=true; clearInterval(waitTick);
+      // Self-healing: if the AI service is briefly down, wait and retry automatically.
+      for(let attempt=1; attempt<=3 && !reply && !lastFull && !controller.signal.aborted; attempt++){
+        for(let s=attempt*8; s>0 && !controller.signal.aborted; s--){
+          stream.setAnswer('⏳ AI service busy — retrying in '+s+'s (attempt '+attempt+' of 3)… tap ✕ to cancel');
+          await sleep(1000);
+        }
+        if(controller.signal.aborted) break;
+        stream.setAnswer('…');
+        reply=await doAsk();
+      }
 
       let raw = (reply!=null ? reply : lastFull) || '';
 
