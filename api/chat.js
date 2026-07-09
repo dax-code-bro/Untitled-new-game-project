@@ -1,6 +1,7 @@
 // Legend AI proxy — runs on Vercel's server, not the user's phone.
 // Calling the AI from the server sidesteps browser CORS and per-device rate limits.
 module.exports = async (req, res) => {
+  // (config exported below — long builds need more than the default 10s)
   if (req.method !== 'POST') { res.status(405).json({ error: 'POST only' }); return; }
 
   let body = req.body;
@@ -63,3 +64,6 @@ module.exports = async (req, res) => {
 
   res.status(502).json({ error: 'All AI backends failed upstream' });
 };
+
+// Allow up to 60s so long game builds aren't cut off mid-stream.
+module.exports.config = { maxDuration: 60 };

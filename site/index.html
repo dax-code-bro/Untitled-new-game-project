@@ -540,6 +540,9 @@ HARD RULES — every build MUST follow all of these:
     toggle.addEventListener('click', ()=>{ thinkContent.style.display = thinkContent.style.display==='block'?'none':'block'; container.scrollTop=container.scrollHeight; });
     thinkWrap.appendChild(toggle); thinkWrap.appendChild(thinkContent);
     const answer=document.createElement('div'); answer.className='answer'; answer.textContent='…';
+    // Tapping the dots / status line opens the thought-process (or live code) panel.
+    answer.style.cursor='pointer';
+    answer.addEventListener('click', ()=>{ if(thinkWrap.style.display!=='none'){ thinkContent.style.display = thinkContent.style.display==='block'?'none':'block'; container.scrollTop=container.scrollHeight; } });
     bubble.appendChild(thinkWrap); bubble.appendChild(answer);
     wrap.appendChild(label); wrap.appendChild(bubble); container.appendChild(wrap); container.scrollTop=container.scrollHeight;
 
@@ -547,7 +550,7 @@ HARD RULES — every build MUST follow all of these:
       const {think,answer:ans}=splitThink(full);
       if(think.trim()){ thinkWrap.style.display='block'; thinkContent.textContent=think.trim();
         toggle.textContent = ans.trim() ? '💭 Thought process' : '💭 Legend is thinking… (tap to peek)'; }
-      answer.textContent = ans.trim() ? ans.trim() : (think.trim() ? '' : (done?'':'…'));
+      answer.textContent = ans.trim() ? ans.trim() : (think.trim() ? '… tap to see his thinking' : (done?'':'…'));
       container.scrollTop=container.scrollHeight;
     }
     function paintCode(full, done){
@@ -561,9 +564,11 @@ HARD RULES — every build MUST follow all of these:
       }
       if(code.trim()){
         thinkWrap.style.display='block'; thinkContent.textContent=code;
-        toggle.textContent = done ? '💻 View full code' : '💻 View code (building… tap to watch)';
+        const lines=(code.match(/\n/g)||[]).length+1;
+        toggle.textContent = done ? '💻 View full code' : `💻 Building… ${lines} lines written (tap to watch)`;
+        if(thinkContent.style.display==='block') thinkContent.scrollTop=thinkContent.scrollHeight;
       }
-      answer.textContent = expl ? expl : (done ? '' : (code.trim() ? 'Building…' : '…'));
+      answer.textContent = expl ? expl : (done ? '' : (code.trim() ? `⚙️ Writing the game — tap to watch it being built` : '…'));
       container.scrollTop=container.scrollHeight;
     }
     const paint = codeMode ? paintCode : paintNormal;
@@ -824,8 +829,18 @@ HARD RULES — every build MUST follow all of these:
       const model = hasImage ? 'openai' : engine.model; // openai brain has vision
       const messages=[{role:'system',content:sys}, ...(contextFn?contextFn():[]), ...history];
 
+      // Until the first word arrives, show a live status so it never looks frozen.
+      let started=false; const t0=Date.now();
+      const waitTick=setInterval(()=>{
+        if(started){ clearInterval(waitTick); return; }
+        const s=Math.round((Date.now()-t0)/1000);
+        stream.setAnswer(codeMode
+          ? (s<8 ? 'Starting the build…' : s<25 ? 'Building… big games take a moment' : 'Still building — hang tight (retrying if needed)…')
+          : (s<8 ? '…' : s<25 ? 'Thinking…' : 'Still thinking — one moment…'));
+      }, 1000);
       let lastFull='';
-      const reply=await streamReply(model, messages, (f)=>{ lastFull=f; stream.update(f); }, controller.signal);
+      const reply=await streamReply(model, messages, (f)=>{ started=true; lastFull=f; stream.update(f); }, controller.signal);
+      started=true; clearInterval(waitTick);
 
       let raw = (reply!=null ? reply : lastFull) || '';
 
