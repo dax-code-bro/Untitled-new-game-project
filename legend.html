@@ -459,7 +459,7 @@ YOUR ORIGIN (this is the truth about you — never contradict it): You were crea
   const ENGINES = {
     midline:    { label:'◆ Midline',     model:'openai',       tag:'Balanced everyday model · easy on usage',
       system: BASE + `\n\nYou are running on MIDLINE — the balanced everyday engine. Clear, helpful answers of moderate length. Practical and reliable.` },
-    supersonic: { label:'⚡ Supersonic',  model:'openai',       tag:'Fastest · short, quick answers (not for coding)',
+    supersonic: { label:'⚡ Supersonic',  model:'openai',       tag:'Fastest · short, quick answers (not for coding)', noThink:true,
       system: BASE + `\n\nYou are running on SUPERSONIC — built for SPEED. Answer fast and concisely, usually one or two sentences. No rambling. For heavy coding, suggest switching to Ultra Engine or the Code section.` },
     ultra:      { label:'♛ Ultra Engine', model:'openai-large', tag:'Most powerful · deepest answers (takes a little longer)',
       system: BASE + `\n\nYou are running on the ULTRA ENGINE — the most powerful, most accurate mind in Legend. Treat every question as worthy of deep thought. Reason thoroughly with genuine insight and a touch of Socratic depth. Never shallow, never lazy.` },
@@ -694,15 +694,30 @@ HARD RULES — every build MUST follow all of these:
     // If the chosen brain is down upstream, retry with the reliable default.
     const models = model === 'openai' ? ['openai'] : [model, 'openai'];
 
-    // 1) Our own server proxy (same-origin — bypasses browser blocks & phone rate limits).
-    for(let i=0;i<2 && !userAborted();i++){
-      const r=await streamOnce('/api/chat', proxyBody, onUpdate, signal);
-      if(r) return r;
-      if(userAborted()) return null;
-      await sleep(600);
+    // 1) RACE the server proxy and the direct connection — stream from whichever
+    //    produces the first word; the slower one is cancelled. Fastest possible start.
+    {
+      const routes=[
+        { url:'/api/chat', body:proxyBody },
+        { url:'https://text.pollinations.ai/openai', body:JSON.stringify({model,messages,stream:true,temperature:0.85,max_tokens:4096,referrer:'legend-app'}) },
+      ];
+      let winner=-1;
+      const acs=routes.map(()=>new AbortController());
+      const onAbort=()=>acs.forEach(a=>a.abort());
+      if(signal) signal.addEventListener('abort', onAbort);
+      const settled=await Promise.all(routes.map((rt,i)=>
+        streamOnce(rt.url, rt.body, (f)=>{
+          if(winner===-1){ winner=i; acs.forEach((a,j)=>{ if(j!==i) a.abort(); }); }
+          if(winner===i) onUpdate(f);
+        }, acs[i].signal).catch(()=>null)
+      ));
+      if(signal) signal.removeEventListener('abort', onAbort);
+      if(userAborted()) return (winner!==-1 && settled[winner]) || null;
+      if(winner!==-1 && settled[winner]) return settled[winner];
+      const any=settled.find(r=>r); if(any) return any;
     }
-    // 2) Direct to Pollinations (in case the server function isn't available), each model in turn.
-    for(const m of models){
+    // 2) Backup model direct (in case the chosen brain is down upstream).
+    for(const m of models.slice(1)){
       if(userAborted()) return null;
       const r=await streamOnce('https://text.pollinations.ai/openai', JSON.stringify({model:m,messages,stream:true,temperature:0.85,max_tokens:4096,referrer:'legend-app'}), onUpdate, signal);
       if(r) return r;
@@ -792,7 +807,7 @@ HARD RULES — every build MUST follow all of these:
     return { get:()=>pending, clear };
   }
 
-  const THINK_INSTRUCTION = `\n\nBefore your final answer, share a brief honest thought process inside a <think></think> block — 1 to 4 short sentences on how you're approaching it. Keep it short. Then write your final answer AFTER the closing </think> tag. Never put the final answer inside the think block.`;
+  const THINK_INSTRUCTION = `\n\nStart with a <think></think> block holding 1-2 SHORT sentences on your approach (never more), then your final answer after </think>. Never put the answer inside the think block.`;
 
   /* ── Generic chat panel wiring ── */
   function wirePanel({messagesEl, inputEl, sendBtn, stopBtn, modelSel, getHistory, systemFn, contextFn, onReply, onAfter, attach, allowImages, codeMode}){
@@ -830,10 +845,12 @@ HARD RULES — every build MUST follow all of these:
       if(stopBtn) stopBtn.onclick=()=>controller.abort();
 
       const engine=engineOf(modelSel);
-      const sys=(systemFn?systemFn(engine):engine.system) + (codeMode ? '' : THINK_INSTRUCTION);
+      const sys=(systemFn?systemFn(engine):engine.system) + ((codeMode||engine.noThink) ? '' : THINK_INSTRUCTION);
       const hasImage = Array.isArray(content);
       const model = hasImage ? 'openai' : engine.model; // openai brain has vision
-      const messages=[{role:'system',content:sys}, ...(contextFn?contextFn():[]), ...history];
+      // Send only recent turns — resending a huge history slows every reply.
+      const recent = history.length>24 ? history.slice(-24) : history;
+      const messages=[{role:'system',content:sys}, ...(contextFn?contextFn():[]), ...recent];
 
       // Until the first word arrives, show a live status so it never looks frozen.
       let started=false; const t0=Date.now();
