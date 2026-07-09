@@ -151,6 +151,7 @@
   .inline-img a{margin-top:4px}
   .code-block{margin-top:8px;background:#0d0d0d;border-left:2px solid var(--gold-dark);border-radius:4px;padding:10px;overflow-x:auto;max-height:320px;overflow-y:auto}
   .code-block pre{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.5;color:#d8d8d8;white-space:pre}
+  .code-block-live{margin:8px 0 0;background:#0d0d0d;border-left:2px solid var(--gold-dark);border-radius:4px;padding:10px;overflow:auto;max-height:300px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.5;color:#d8d8d8;white-space:pre}
 
   /* Chat/Code history panes */
   .conv-list{flex:1;display:none;flex-direction:column;gap:12px;padding:18px;overflow-y:auto;min-height:0}
@@ -487,26 +488,45 @@ HARD RULES:
     });
   }
 
-  // A bot bubble that streams, with a collapsible "thought process" panel.
-  function createStreamingBubble(container){
+  // A bot bubble that streams. In codeMode, the code is routed into the
+  // collapsible panel LIVE (hidden by default) so the chat never shows raw code.
+  function createStreamingBubble(container, codeMode){
     const wrap=document.createElement('div'); wrap.className='msg bot';
     const label=document.createElement('span'); label.className='mlabel'; label.textContent='Legend';
     const bubble=document.createElement('div'); bubble.className='bubble';
     const thinkWrap=document.createElement('div'); thinkWrap.className='think-wrap'; thinkWrap.style.display='none';
-    const toggle=document.createElement('button'); toggle.className='think-toggle'; toggle.textContent='💭 Legend is thinking…';
-    const thinkContent=document.createElement('div'); thinkContent.className='think-content'; thinkContent.style.display='none';
+    const toggle=document.createElement('button'); toggle.className='think-toggle'; toggle.textContent = codeMode ? '💻 View code' : '💭 Legend is thinking…';
+    const thinkContent=document.createElement(codeMode?'pre':'div'); thinkContent.className = codeMode ? 'code-block-live' : 'think-content'; thinkContent.style.display='none';
     toggle.addEventListener('click', ()=>{ thinkContent.style.display = thinkContent.style.display==='block'?'none':'block'; container.scrollTop=container.scrollHeight; });
     thinkWrap.appendChild(toggle); thinkWrap.appendChild(thinkContent);
     const answer=document.createElement('div'); answer.className='answer'; answer.textContent='…';
     bubble.appendChild(thinkWrap); bubble.appendChild(answer);
     wrap.appendChild(label); wrap.appendChild(bubble); container.appendChild(wrap); container.scrollTop=container.scrollHeight;
-    function paint(full, done){
+
+    function paintNormal(full, done){
       const {think,answer:ans}=splitThink(full);
       if(think.trim()){ thinkWrap.style.display='block'; thinkContent.textContent=think.trim();
         toggle.textContent = ans.trim() ? '💭 Thought process' : '💭 Legend is thinking… (tap to peek)'; }
       answer.textContent = ans.trim() ? ans.trim() : (think.trim() ? '' : (done?'':'…'));
       container.scrollTop=container.scrollHeight;
     }
+    function paintCode(full, done){
+      const idx=full.indexOf('```');
+      let expl, code;
+      if(idx===-1){ expl=full.trim(); code=''; }
+      else{
+        expl=full.slice(0,idx).trim();
+        code=full.slice(idx+3).replace(/^[^\n]*\n?/, '');  // strip the opening fence + language
+        code=code.replace(/```\s*$/,'');                   // strip closing fence if present
+      }
+      if(code.trim()){
+        thinkWrap.style.display='block'; thinkContent.textContent=code;
+        toggle.textContent = done ? '💻 View full code' : '💻 View code (building… tap to watch)';
+      }
+      answer.textContent = expl ? expl : (done ? '' : (code.trim() ? 'Building…' : '…'));
+      container.scrollTop=container.scrollHeight;
+    }
+    const paint = codeMode ? paintCode : paintNormal;
     return { update:(f)=>paint(f,false), finalize:(f)=>paint(f,true), setAnswer:(t)=>{ answer.textContent=t; }, bubble, answerEl:answer };
   }
 
@@ -754,7 +774,7 @@ HARD RULES:
       if(att) att.clear();
 
       setBusy(true); setGenerating(true);
-      const stream=createStreamingBubble(messagesEl);
+      const stream=createStreamingBubble(messagesEl, codeMode);
       const controller=new AbortController();
       if(stopBtn) stopBtn.onclick=()=>controller.abort();
 
@@ -797,13 +817,8 @@ HARD RULES:
             histText=pr.forHistory;
           }
         }
-        if(codeMode){
-          const cb=extractCodeBlocks(clean);
-          if(cb.blocks.length){
-            stream.setAnswer(cb.stripped || 'Done — try it in the Live Preview below, or tap “View full code”.');
-            cb.blocks.forEach(b=>appendCodePanel(stream.bubble, b));
-          }
-        }
+        // codeMode: the streaming bubble already routed the code into its
+        // collapsible "View full code" panel — nothing extra to render here.
         history.push({role:'assistant',content:histText});
         if(onReply) onReply(clean);
       } else {
