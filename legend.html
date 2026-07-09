@@ -172,6 +172,9 @@
   .del-x:hover{color:#e06}
   .link-btn{background:none;border:none;color:var(--gold);cursor:pointer;font-size:14px;padding:6px 0;text-align:left}
   .empty-hint{color:var(--text-dim);font-size:14px;line-height:1.6;padding:8px 2px}
+  .mini-btn{background:var(--surface-3);border:1px solid var(--gold-dark);color:var(--gold);border-radius:6px;padding:8px 12px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+  .mini-btn:hover{background:rgba(201,168,76,.15)}
+  .preview-head #publishAIGB{background:var(--gold);color:var(--black);border:none;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer}
 
   @media(max-width:768px){
     .sidebar{position:fixed;top:0;left:-260px;width:260px;height:var(--app-h);z-index:100;transition:left .25s ease;padding-top:calc(16px + env(safe-area-inset-top,0px))}
@@ -201,6 +204,7 @@
       <button class="nav-btn" data-view="code"><span class="nav-icon">💻</span><span>Code</span></button>
       <button class="nav-btn" data-view="image"><span class="nav-icon">🎨</span><span>Create Image</span></button>
       <button class="nav-btn" data-view="projects"><span class="nav-icon">📁</span><span>Projects</span></button>
+      <button class="nav-btn" data-view="games"><span class="nav-icon">🎮</span><span>Games · AIGB</span></button>
     </nav>
     <div class="side-foot">
       <div class="status"><span class="dot" id="dot"></span><span id="statusText">Online</span></div>
@@ -257,7 +261,7 @@
         </div>
         <div class="messages" id="codeMessages"></div>
         <div class="preview-box" id="previewBox">
-          <div class="preview-head"><span>▶ Live Preview</span><button id="openPreview">Open full ↗</button></div>
+          <div class="preview-head"><span>▶ Live Preview</span><div style="display:flex;gap:8px"><button id="publishAIGB">🎮 Publish</button><button id="openPreview">Open full ↗</button></div></div>
           <iframe id="codePreview" sandbox="allow-scripts allow-pointer-lock allow-same-origin"></iframe>
         </div>
         <div class="composer">
@@ -324,6 +328,15 @@
             <button class="stop-btn" id="projStop" hidden title="Stop Legend">✕</button>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- GAMES · AIGB -->
+    <div class="view" id="view-games">
+      <div class="conv-list show" id="gamesPane">
+        <span class="vtitle">Games · AIGB</span>
+        <div class="empty-hint" id="gamesInfo">AIGB (AI Game Building) turns a game you build in <b>Code</b> into a permanent link that opens straight into the game — no accounts, no downloads, no setup. Build a game in Code, then tap “🎮 Publish AIGB”.</div>
+        <div id="gamesItems"></div>
       </div>
     </div>
   </div>
@@ -843,8 +856,9 @@ HARD RULES:
       document.querySelectorAll('.nav-btn[data-view]').forEach(b=>b.classList.remove('active'));
       btn.classList.add('active');
       const v=btn.dataset.view;
-      ['chat','code','image','projects'].forEach(name=>$('view-'+name).classList.toggle('show', v===name));
+      ['chat','code','image','projects','games'].forEach(name=>$('view-'+name).classList.toggle('show', v===name));
       if(sectionViews[v] && sectionViews[v].showList) sectionViews[v].showList();  // land on the saved-chat list
+      if(v==='games') renderGames();
       closeSidebar();
     });
   });
@@ -925,7 +939,7 @@ HARD RULES:
     });
 
     showList();
-    return { showList };
+    return { showList, activeId:()=>activeId };
   }
 
   /* ── CHAT ── */
@@ -967,6 +981,61 @@ HARD RULES:
     greeting:"New build. Tell me what to make — a game, an app, a tool — and I'll write it and run it right here.",
     showPreview:showPreview, resetPreview:resetPreview
   });
+
+  /* ── AIGB — permanent, shareable game links ── */
+  let aigb=[]; try{ aigb=JSON.parse(localStorage.getItem('legend_aigb'))||[]; }catch(_){ aigb=[]; }
+  function saveAigb(){ try{ localStorage.setItem('legend_aigb', JSON.stringify(aigb)); }catch(_){} }
+
+  // Compress a game into a self-contained share link (no server needed).
+  async function encodeGame(html){
+    const data=new TextEncoder().encode(html);
+    const cs=new CompressionStream('gzip');
+    const stream=new Blob([data]).stream().pipeThrough(cs);
+    const buf=await new Response(stream).arrayBuffer();
+    let bin=''; const bytes=new Uint8Array(buf);
+    for(let i=0;i<bytes.length;i++) bin+=String.fromCharCode(bytes[i]);
+    return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  }
+  function miniBtn(label, fn){ const b=document.createElement('button'); b.className='mini-btn'; b.textContent=label; b.addEventListener('click',fn); return b; }
+
+  function publishAIGB(){
+    const html=$('previewBox')._code;
+    if(!html){ alert('Build a game first, then publish it as an AIGB.'); return; }
+    const buildId = (sectionViews.code && sectionViews.code.activeId) ? sectionViews.code.activeId() : null;
+    let a = buildId ? aigb.find(x=>x.buildKey===buildId) : null;
+    if(a){ a.html=html; a.version=(a.version||1)+1; }   // update keeps the same permanent link
+    else {
+      const name=prompt('Name your game / app:', 'My Game'); if(name===null) return;
+      a={ id:uid(), buildKey:buildId, name:(name.trim()||'My Game'), html, version:1 };
+      aigb.unshift(a);
+    }
+    saveAigb();
+    // jump to the Games view showing this AIGB
+    document.querySelectorAll('.nav-btn[data-view]').forEach(b=>b.classList.toggle('active', b.dataset.view==='games'));
+    ['chat','code','image','projects','games'].forEach(name=>$('view-'+name).classList.toggle('show', name==='games'));
+    renderGames(a.id);
+  }
+  $('publishAIGB').addEventListener('click', publishAIGB);
+
+  function renderGames(highlightId){
+    const wrap=$('gamesItems'); wrap.innerHTML='';
+    $('gamesInfo').style.display = aigb.length ? 'none' : 'block';
+    aigb.forEach(a=>{
+      const link = location.origin + '/play.html?play=' + a.id;
+      const card=document.createElement('div'); card.className='card'; card.style.flexWrap='wrap'; card.style.cursor='default';
+      const main=document.createElement('div'); main.style.flex='1'; main.style.minWidth='150px';
+      main.innerHTML=`<div class="card-main">${escapeHtml(a.name)}</div><div class="card-sub">v${a.version} · permanent AIGB link</div>`;
+      const actions=document.createElement('div'); actions.style.cssText='display:flex;gap:8px;flex-wrap:wrap;width:100%;margin-top:10px';
+      const play=miniBtn('▶ Play', ()=> window.open(link,'_blank'));
+      const copy=miniBtn('🔗 Copy link', async()=>{ try{ await navigator.clipboard.writeText(link); copy.textContent='✓ Copied'; }catch(_){ prompt('Copy this link:', link); } setTimeout(()=>copy.textContent='🔗 Copy link',1500); });
+      const share=miniBtn('📤 Share game', async()=>{ share.textContent='…'; try{ const enc=await encodeGame(a.html); const sl=location.origin+'/play.html?g='+enc; try{ await navigator.clipboard.writeText(sl); share.textContent='✓ Share link copied'; }catch(_){ prompt('Copy this share link:', sl); share.textContent='📤 Share game'; } }catch(_){ share.textContent='Share failed'; } setTimeout(()=>share.textContent='📤 Share game',2000); });
+      const del=miniBtn('🗑', ()=>{ if(confirm('Delete “'+a.name+'”?')){ aigb=aigb.filter(x=>x.id!==a.id); saveAigb(); renderGames(); } });
+      actions.append(play,copy,share,del);
+      card.append(main,actions);
+      if(highlightId===a.id) card.style.borderColor='var(--gold)';
+      wrap.appendChild(card);
+    });
+  }
 
   /* ── IMAGE section ── */
   let imgSeed=1;
