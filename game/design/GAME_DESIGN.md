@@ -66,6 +66,9 @@ Molotov flashback) → 9 "The Reboot" → 10 "Whom Can We Trust Among Us?"
 → 11 (title TBD, the massacre) → 12 (title TBD, Molotov finds them).
 - `game/design/modes/new-mode-post-epilogue.md` — **New 4th mode** (operator-
   select, ~1 yr after the epilogue) *(premise + early roster)*.
+- `game/design/modes/multiplayer.md` — **Multiplayer** — loadout slots
+  (primary/secondary/lethal/tactical) + tactical equipment (Hydro Gas, inverted
+  concussion, RTGMK stim, etc.).
 - `game/design/hydra-drone-h1.md` — **H1.0 drone codex** (full specs + the
   13-drone status tracker; plus the new **H2.1 bomber** generation).
 - `game/design/emp-shark.md` — **EMP Shark** allied anti-drone weapon spec.

@@ -23,6 +23,7 @@ FILES=(
   missions/mission-12.md
   missions/mission-13.md
   modes/new-mode-post-epilogue.md
+  modes/multiplayer.md
   factions.md
   arsenal.md
   hydra-drone-h1.md
