@@ -19,6 +19,17 @@ Mostly TBD — rounds, maps, perks, progression to come. First canon entry below
   Do NOT invent or assume the payoff; it will be revealed when the creator
   chooses. *(Described as "a very cute Easter egg.")*
 
+## Companion — the Broken Spirit Hound (Zombies special)
+The **Broken Spirit** Hydro Hound skin grants a **special ability in Zombies**
+(full entry in `hydro-hound.md`):
+- Activate him → a **loyal companion for the whole match** — protects you,
+  fights beside you, as long as he lives.
+- **Heal him**; **revive him up to 3 times** when he falls.
+- **Self-regen** after 10s without damage.
+- **You can pet him.** 🐕
+- Designed with boss fights in mind ("imagine bringing this guy into a boss
+  fight").
+
 ## Open / TBD
 - Round/wave structure, maps, perks/upgrades, zombie types (H-series drone ties?)
 - The base Zombies premise + how it connects to the campaign lore

@@ -49,8 +49,40 @@ permanently deployed, lethal at every range.
 | **Fire** | **30 kills** with the Hydro Hound | Molten/lava aesthetic; **fire-resistant coating protects against extreme heat and flame weapons** (features list swaps "flexible leather plating" for "fire resistant coating"). Sheet: `assets/hydro-hound-fire.png`. |
 | **Gold** | **15 HEADSHOT kills** with the Hydro Hound | The prestige skin — unlocked by **precision** (headshots), not raw kills. Earning it unlocks the **Reactive Gold** line (see Reactive Skins). *(Read from "gold horn / 15 hedgehogs" — confirmed reading: Gold hound / 15 headshots.)* |
 | **Tech** | **80 kills** with the Hydro Hound | Blue-circuit cyber aesthetic; **Reinforced Armor** — "composite alloy armor, nano-coated surface: maximum protection, minimal weight." Also an **Advanced Head Unit** (integrated targeting AI, precise lock-on + environmental analysis), "highly potent" neurotoxin, and guns tuned for "high rate of fire with accurate suppression." Sheet: `assets/hydro-hound-tech.png`. |
-| **Broken Spirit** | (teased at **100 kills**, Zombies) | 🔒 **Sealed Easter egg** — equipping it + 100 Hound kills in Zombies triggers something the creator refuses to spoil. A Broken Spirit variant will exist for **every Hound version**. |
+| **Broken Spirit** | Sheet: **80 kills** *(⚠ earlier tease said 100, and Tech is also 80 — reconcile the ladder)* | **The undead hound.** Full entry below. Sheet: `assets/hydro-hound-broken-spirit.png`. |
 | *(more TBD)* | — | "Every version of the Hydro Hound" implies multiple variants/versions. |
+
+## BROKEN SPIRIT — full entry (the special one)
+
+**The look (sheet):** an **undead Doberman** — decayed flesh over exposed,
+corrupted wiring; pale blind-looking eyes; no visible gun pods (art), though the
+weapons box still lists the dual MGs + bite.
+- **Weight drops to 110 kg** (vs 120) — the decay is even in the stats.
+- **Features swap:** Enhanced *Senses* (not sensors), Silent *Movement* (not
+  servos), plus **Corrupted Wiring** and **Undead Endurance.**
+- **Sheet text:**
+  - *Undead Doberman Form:* "A once loyal hound, now reanimated and corrupted.
+    Its flesh decays, but **its hatred and loyalty remain unbroken.**"
+  - *Corrupted Wiring:* "Exposed wiring and nodes feed directly into the core,
+    **enhancing reflexes and aggression.**"
+  - *Exposed Systems:* "Damaged but functional. Wires feed vital systems and
+    weapons. **Pain is irrelevant. Mission is everything.**"
+
+**Why it's so hard to earn — the SPECIAL ABILITY (multiplayer AND zombies):**
+- **In Zombies, activating him makes him a true COMPANION:** a loyal, faithful
+  hound that **protects you and fights for you for the entire match** while he's
+  alive.
+- **You can HEAL him**, and **REVIVE him when he goes down — up to 3 revives.**
+- **Self-regen:** after **10 seconds without taking damage**, he slowly
+  regenerates health automatically.
+- **Unique interaction: you can PET him.** 🐕
+- Creator's note: *"I can just imagine people bringing this guy into a boss
+  fight."*
+
+> 🔒 **Easter egg status:** the "very cute" sealed Easter egg (100 Hound kills
+> with Broken Spirit equipped in Zombies) was teased earlier. Whether the **pet
+> interaction** is that payoff or the seal still hides something more — **not
+> assumed.** The seal holds until the creator says otherwise.
 
 > **Skins are FUNCTIONAL, not just cosmetic:** Leather = quiet movement +
 > durability; Fire = heat/flame resistance. Each skin trades the plating for a
