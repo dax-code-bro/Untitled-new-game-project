@@ -22,6 +22,7 @@ Contents (in order):
 - `missions/mission-13.md`
 - `modes/new-mode-post-epilogue.md`
 - `modes/multiplayer.md`
+- `modes/zombies.md`
 - `factions.md`
 - `arsenal.md`
 - `hydra-drone-h1.md`
@@ -103,8 +104,10 @@ Molotov flashback) → 9 "The Reboot" → 10 "Whom Can We Trust Among Us?"
 - `game/design/modes/new-mode-post-epilogue.md` — **New 4th mode** (operator-
   select, ~1 yr after the epilogue) *(premise + early roster)*.
 - `game/design/modes/multiplayer.md` — **Multiplayer** — loadout slots
-  (primary/secondary/lethal/tactical) + tactical equipment (Hydro Gas, inverted
-  concussion, RTGMK stim, etc.).
+  (primary/secondary/lethal/tactical/POWER) + equipment (Hydro Gas, The Spider,
+  HYDRA Hound, Da Vinci Tank, etc.).
+- `game/design/modes/zombies.md` — **Zombies** — starts with the 🔒 sealed
+  Broken-Spirit/Hound Easter egg (payoff deliberately unrevealed).
 - `game/design/hydra-drone-h1.md` — **H1.0 drone codex** (full specs + the
   13-drone status tracker; plus the new **H2.1 bomber** generation).
 - `game/design/emp-shark.md` — **EMP Shark** allied anti-drone weapon spec.
@@ -3735,6 +3738,37 @@ The big-ticket deployables — each one is a match-changing piece of hardware:
 - Match modes (TDM, Domination, etc.) + maps
 - Progression (weapon levels already exist per `arsenal.md` attachments — see
   unlock levels there)
+
+
+═══════════════════════════════════════════════════════════════════════
+# ▓▓▓ FILE: modes/zombies.md ▓▓▓
+═══════════════════════════════════════════════════════════════════════
+
+# Zombies — Design
+
+> **Canonical design (in progress).** Preserves EVERY detail. Target rating:
+> **ESRB M.** Co-op survival vs. waves; the only mode allowing **first OR third
+> person** (player's choice) — per GAME_DESIGN.md.
+
+## Status
+Mostly TBD — rounds, maps, perks, progression to come. First canon entry below.
+
+## 🔒 SEALED EASTER EGG — the Hound & the "Broken Spirit" skin
+- The **HYDRA Hound** (see multiplayer Power slot) is also deployable in
+  **Zombies.**
+- The Hound has **skins** — one is named **"Broken Spirit."** The creator is
+  making a Broken Spirit variant for **every version of the HYDRA Hound.**
+- **The Easter egg:** get **100 kills with the HYDRA Hound while the "Broken
+  Spirit" skin is equipped** → *something happens.*
+- **⚠ DELIBERATELY UNSPOILED.** The creator has chosen not to reveal the payoff
+  — not even to this design doc. "I'm not gonna spoil it… just wait and see."
+  Do NOT invent or assume the payoff; it will be revealed when the creator
+  chooses. *(Described as "a very cute Easter egg.")*
+
+## Open / TBD
+- Round/wave structure, maps, perks/upgrades, zombie types (H-series drone ties?)
+- The base Zombies premise + how it connects to the campaign lore
+- The DLC "Sins of the Past" adds a **new Zombies mode** (see its file)
 
 
 ═══════════════════════════════════════════════════════════════════════

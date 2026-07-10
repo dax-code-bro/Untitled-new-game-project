@@ -67,8 +67,10 @@ Molotov flashback) → 9 "The Reboot" → 10 "Whom Can We Trust Among Us?"
 - `game/design/modes/new-mode-post-epilogue.md` — **New 4th mode** (operator-
   select, ~1 yr after the epilogue) *(premise + early roster)*.
 - `game/design/modes/multiplayer.md` — **Multiplayer** — loadout slots
-  (primary/secondary/lethal/tactical) + tactical equipment (Hydro Gas, inverted
-  concussion, RTGMK stim, etc.).
+  (primary/secondary/lethal/tactical/POWER) + equipment (Hydro Gas, The Spider,
+  HYDRA Hound, Da Vinci Tank, etc.).
+- `game/design/modes/zombies.md` — **Zombies** — starts with the 🔒 sealed
+  Broken-Spirit/Hound Easter egg (payoff deliberately unrevealed).
 - `game/design/hydra-drone-h1.md` — **H1.0 drone codex** (full specs + the
   13-drone status tracker; plus the new **H2.1 bomber** generation).
 - `game/design/emp-shark.md` — **EMP Shark** allied anti-drone weapon spec.
