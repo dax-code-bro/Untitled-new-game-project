@@ -3324,14 +3324,86 @@ general.
   *(15 years, so it correctly lands on 2000 from the 1985 campaign.)*
 - The screen **fades in on a PRISON.**
 
-## FULL SCRIPT — THE PRISON
+## FULL SCRIPT — THE PRISON *(⚠ sequence flag — see notes)*
 
 > *(Fade up on a **PRISON.** Footsteps echo, right under the frame. Heading down
 > the hallway — **neatly side-by-side, in rows** — is a group of **small,
 > malicious ROBOTS** that, for some reason, **greatly match the H1.0** (the 1948
 > HYDRA combat drone).)*
+
+## FULL SCRIPT — THE OVERWATCH OP (Molotov & the Recruit)
+
+> *(After the title card: we're in the **perspective of MOLOTOV** — older,
+> geared in plain **tactical/protective gear**, wearing a **new, FIXED,
+> futuristic version of his mask** (the broken plate finally repaired — and
+> upgraded). He carries an **XM4.**)*
+>
+> *(Beside him: a **much younger RECRUIT**, draped in **camouflage**, wearing
+> **a version of Molotov's mask** — the fire mask has been passed down. The
+> recruit holds a **black sniper rifle.**)*
+>
+> **MOLOTOV:** *(stern, quiet — almost a whisper)* Keep your eyes on him.
+>
+> *(We drop into the **sniper scope**: a **HIGH-VALUE MAN in a tuxedo**,
+> surrounded by a few guards, meeting up with someone. The crosshair settles
+> right on his head.)*
+>
+> **MOLOTOV:** Now.
+>
+> *(The shot. The bullet flies — and **STOPS mid-air**, frozen in place inside a
+> crackling **electrical field.** A beat. Then **six blue lasers** snap up —
+> pointed at Molotov and the recruit.)*
+>
+> *(The tuxedo man looks up, unhurried.)*
+>
+> **TUXEDO MAN:** *(smiling)* Hydra gear. You should try it sometime.
+>
+> *(MUSIC KICKS IN. And out of nowhere — **SPIKE**, alive, upright, **a lot of
+> gear rigged on his waist**, opens up with a **MINIGUN.** The guards drop one
+> after another; the tuxedo man scrambles for cover.)*
+>
+> **MOLOTOV:** *(touching his earpiece)* Mission failed. Get out — **now.**
+>
+> *(Molotov runs — the camera holds its ground as he sprints straight at it,
+> until the frame **fades into the black of his gear** —)*
+
+### MATCH CUT — THE MEETING TABLE
+
+> *(— and out of the black: a **meeting table.** Around it: **MOLOTOV, SPIKE,
+> the young RECRUIT, and a few others.** A new team. The survivors built
+> something again.)*
 >
 > *(— CONTINUES. —)*
+
+## REVEALS (canon)
+- **MOLOTOV IS ACTIVE IN 2000** — new **fixed/futuristic mask** (the M10 break
+  finally repaired), tactical gear, XM4.
+- **SPIKE IS BACK ON HIS FEET AND FIGHTING** — the man paralyzed in 1985 is
+  standing, mobile, and firing a minigun in 2000, with **substantial gear rigged
+  at his waist** *(the implied source of his mobility? — see flags)*.
+- **The two survivors are TOGETHER again** — and lead a **new team** (the
+  meeting table: Molotov, Spike, the recruit, and others).
+- **The mask is a LEGACY now** — the young recruit wears a version of Molotov's
+  fire mask. What the Mollys were to Webber, this team is to the recruit.
+- **HYDRA GEAR (defensive tech):** the tuxedo man is protected by a **bullet-
+  stopping electrical field** + **six blue laser** counter-targeting. HYDRA tech
+  in 2000 casually no-sells a sniper round. ("Hydra gear. You should try it
+  sometime.")
+
+## ⚠ FLAGS / OPEN QUESTIONS
+- **⚠ SEQUENCE:** the previously-established **prison scene** (H1.0-pattern
+  robots) was described as what follows the title card; this overwatch scene is
+  *also* described as following the card. **Confirm order:** prison first as a
+  cold-open establishing shot → then the op? Or does the op replace the prison
+  scene (prison moved later)? *(Both are preserved; nothing deleted.)*
+- **Who is the tuxedo man?** High-value target with HYDRA gear and swagger —
+  **Victor Prestige himself, 15 years on?** Someone new? TBD.
+- **How does Spike walk again?** The **waist gear** implies mobility tech
+  (HYDRA-derived? homemade exo-rig?). Deliberate mystery for now — confirm when
+  ready.
+- **The recruit** — name/callsign/backstory TBD. (Wears the legacy mask; sniper.)
+- **Who was the tuxedo man meeting?** Unseen "someone" — TBD.
+- Title for Mission 13 still TBD (naming convention: foreshadow).
 
 ## REVEALS / THREADS
 - **H1.0-pattern robots are back — in 2000.** Robots that closely **match the
