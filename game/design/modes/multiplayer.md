@@ -55,7 +55,7 @@ The defined tactical equipment:
 ### 5. POWER slot
 The big-ticket deployables — each one is a match-changing piece of hardware:
 
-#### 🐕 HYDRA Hound
+#### 🐕 Hydro Hound  *(official name per concept sheet — see `hydro-hound.md` for full specs + skins)*
 - A **robot dog** — literally a **Doberman made of metal and wires.**
 - **Two turrets**, one mounted on each side, plus a **deadly neurotoxin bite.**
 - **PERMANENT deployment** — no timer, no auto-expire, no self-destruct. It stays

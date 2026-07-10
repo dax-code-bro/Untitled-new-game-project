@@ -28,6 +28,7 @@ FILES=(
   factions.md
   arsenal.md
   hydra-drone-h1.md
+  hydro-hound.md
   emp-shark.md
   roster-tracker.md
   dlc-sins-of-the-past.md

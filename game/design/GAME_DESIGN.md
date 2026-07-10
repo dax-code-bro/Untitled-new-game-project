@@ -73,6 +73,8 @@ Molotov flashback) → 9 "The Reboot" → 10 "Whom Can We Trust Among Us?"
   Broken-Spirit/Hound Easter egg (payoff deliberately unrevealed).
 - `game/design/hydra-drone-h1.md` — **H1.0 drone codex** (full specs + the
   13-drone status tracker; plus the new **H2.1 bomber** generation).
+- `game/design/hydro-hound.md` — **Hydro Hound** codex (HYDRA robot war-dog:
+  full sheet specs + kill-unlocked skin system).
 - `game/design/emp-shark.md` — **EMP Shark** allied anti-drone weapon spec.
 - `game/design/factions.md` — **Factions** (the 5 main + notes).
 - `game/design/arsenal.md` — **Arsenal** — the 200+ named guns (each with a unique
