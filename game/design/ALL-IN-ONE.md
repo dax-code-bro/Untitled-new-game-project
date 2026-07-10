@@ -253,6 +253,11 @@ members not yet introduced (TBD). The six documented so far:
 > transmission reveals he **reached the coast but his chopper died on the beach**,
 > surviving on a few months' supplies — fate uncertain/bittersweet. The lone true
 > survivor of Team Apex finally walking away from the war.
+> **HAS A SON (revealed M13, year 2000):** in the 15 years after the massacre,
+> Molotov built a **family** — his **son** fights beside him as the new team's
+> young **sniper**, wearing **a version of the fire mask** passed down as legacy
+> and protection (the inversion of what Webber's own father did with fire — the
+> cycle broken). Son's name/mother: TBD.
 > **Fox was his one breaking point:** Molotov held his flat, serious tone through
 > the entire Spike tragedy (agreeing with him, then crippling him) — **no tears,
 > no waver.** The ONLY thing that shatters his composure is finding **Fox's body**
@@ -3401,7 +3406,14 @@ general.
 - **How does Spike walk again?** The **waist gear** implies mobility tech
   (HYDRA-derived? homemade exo-rig?). Deliberate mystery for now — confirm when
   ready.
-- **The recruit** — name/callsign/backstory TBD. (Wears the legacy mask; sniper.)
+- **THE RECRUIT — REVEALED: MOLOTOV'S SON.** The young sniper in the legacy
+  mask is **Webber "Molotov" Newman's own son.** Between 1985 and 2000, the lone
+  survivor built a **family** — and passed the fire mask down as protection and
+  legacy, inverting what his own father did with fire. The abuse cycle ends with
+  Webber, reversed. *(Name / mother / how much he knows about "Webber" — TBD.)*
+  - **Consistency note:** even with his son, Molotov keeps the flat, stern,
+    near-whisper tone in the field — the ⭐ one-emotion-in-the-whole-game rule
+    (the tear for Fox) still holds.
 - **Who was the tuxedo man meeting?** Unseen "someone" — TBD.
 - Title for Mission 13 still TBD (naming convention: foreshadow).
 

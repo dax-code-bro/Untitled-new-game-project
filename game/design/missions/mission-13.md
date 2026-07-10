@@ -90,7 +90,14 @@
 - **How does Spike walk again?** The **waist gear** implies mobility tech
   (HYDRA-derived? homemade exo-rig?). Deliberate mystery for now — confirm when
   ready.
-- **The recruit** — name/callsign/backstory TBD. (Wears the legacy mask; sniper.)
+- **THE RECRUIT — REVEALED: MOLOTOV'S SON.** The young sniper in the legacy
+  mask is **Webber "Molotov" Newman's own son.** Between 1985 and 2000, the lone
+  survivor built a **family** — and passed the fire mask down as protection and
+  legacy, inverting what his own father did with fire. The abuse cycle ends with
+  Webber, reversed. *(Name / mother / how much he knows about "Webber" — TBD.)*
+  - **Consistency note:** even with his son, Molotov keeps the flat, stern,
+    near-whisper tone in the field — the ⭐ one-emotion-in-the-whole-game rule
+    (the tear for Fox) still holds.
 - **Who was the tuxedo man meeting?** Unseen "someone" — TBD.
 - Title for Mission 13 still TBD (naming convention: foreshadow).
 

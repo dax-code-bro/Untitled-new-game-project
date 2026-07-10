@@ -215,6 +215,11 @@ members not yet introduced (TBD). The six documented so far:
 > transmission reveals he **reached the coast but his chopper died on the beach**,
 > surviving on a few months' supplies — fate uncertain/bittersweet. The lone true
 > survivor of Team Apex finally walking away from the war.
+> **HAS A SON (revealed M13, year 2000):** in the 15 years after the massacre,
+> Molotov built a **family** — his **son** fights beside him as the new team's
+> young **sniper**, wearing **a version of the fire mask** passed down as legacy
+> and protection (the inversion of what Webber's own father did with fire — the
+> cycle broken). Son's name/mother: TBD.
 > **Fox was his one breaking point:** Molotov held his flat, serious tone through
 > the entire Spike tragedy (agreeing with him, then crippling him) — **no tears,
 > no waver.** The ONLY thing that shatters his composure is finding **Fox's body**
