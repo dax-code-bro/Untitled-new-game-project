@@ -45,6 +45,12 @@ permanently deployed, lethal at every range.
 ## SKINS (unlocked by kills WITH the Hound)
 | Skin | Unlock | Notes |
 | --- | --- | --- |
-| **Leather** | **10 kills** with the Hydro Hound | Soft leather over flexible armor — **quiet movement + durability** (sheet art). |
+| **Leather** | **10 kills** with the Hydro Hound | Soft leather over flexible armor — **quiet movement + durability**. Sheet: `assets/hydro-hound-leather.png`. |
+| **Fire** | **30 kills** with the Hydro Hound | Molten/lava aesthetic; **fire-resistant coating protects against extreme heat and flame weapons** (features list swaps "flexible leather plating" for "fire resistant coating"). Sheet: `assets/hydro-hound-fire.png`. |
 | **Broken Spirit** | (teased at **100 kills**, Zombies) | 🔒 **Sealed Easter egg** — equipping it + 100 Hound kills in Zombies triggers something the creator refuses to spoil. A Broken Spirit variant will exist for **every Hound version**. |
 | *(more TBD)* | — | "Every version of the Hydro Hound" implies multiple variants/versions. |
+
+> **Skins are FUNCTIONAL, not just cosmetic:** Leather = quiet movement +
+> durability; Fire = heat/flame resistance. Each skin trades the plating for a
+> different property — pick your Hound build. (Core specs/weapons stay identical
+> across skins.)
