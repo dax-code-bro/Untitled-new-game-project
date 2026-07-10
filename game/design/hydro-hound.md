@@ -54,3 +54,26 @@ permanently deployed, lethal at every range.
 > durability; Fire = heat/flame resistance. Each skin trades the plating for a
 > different property — pick your Hound build. (Core specs/weapons stay identical
 > across skins.)
+
+## REACTIVE SKINS (evolve mid-match)
+From the **Reactive Skin: GOLD** sheet (`assets/hydro-hound-reactive-gold.png`):
+- **Unlock:** earn the **base (Gold) skin** first → unlocks its **Reactive**
+  version. Equipped at match start; **evolves as you earn kill streaks WITH the
+  Hydro Hound.** *"Each stage reflects your dominance on the battlefield."*
+
+| Stage | Look | Trigger | Sheet text |
+| --- | --- | --- | --- |
+| 1 — **DEFAULT** | Standard black armor | Match start | "Standard Hydra Hound armor. Built for speed. Built to kill." |
+| 2 — **GOLD** | Gold-plated armor | **3 kill streak** | "A sign of domination and superiority." |
+| 3 — **COSMIC** | Infused with cosmic particles (glowing purple, toxin-drooling fangs) | **5 kill streak** | "Its bite becomes **even more lethal**." *(functional boost!)* |
+| 4 — **AURORA BOREALIS** | Aurora-powered iridescence | **8 kill streak** | "A rare and beautiful force of destruction." |
+
+- Implication: there's a **base Gold skin** in the catalog (between Fire@30 and
+  Broken Spirit@100? unlock TBD), and reactive variants may exist for other
+  skins too.
+- **Stage 3 is a functional evolution** (more lethal bite) — reactive stages
+  aren't purely visual.
+
+## HYDRA TECHNOLOGIES
+Sheet footer brands the maker: **"HYDRA TECHNOLOGIES — Only the strong
+survive."** — HYDRA's tech division has a name and a slogan (canon worldbuilding).

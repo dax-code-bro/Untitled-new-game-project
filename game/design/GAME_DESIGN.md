@@ -589,6 +589,8 @@ city → spot **three friendly US Army tanks** rolling in to support → then
   The Mission 7 casino is **just one** of these hundreds. Implication: this is a
   vast, near-state-level global organization — no single raid meaningfully dents
   it, which raises the stakes of the whole war (and explains their resources).
+- **HYDRA TECHNOLOGIES** — the org's tech/manufacturing division brand (stamped
+  on Hydro Hound sheets). Slogan: **"Only the strong survive."**
 - **Funding — front businesses:** HYDRA runs **high-class casino fronts** that
   pull in millions/billions, bankrolling the drone program — and hide production
   in plain sight (Mission 7's casino has the H3.2 factory in its back half).
