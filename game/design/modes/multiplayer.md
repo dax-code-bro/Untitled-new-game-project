@@ -52,6 +52,68 @@ The defined tactical equipment:
 | **EMP** | (Electronics/equipment disable — details TBD) | — |
 | **RTGMK** — "Ready To Go Med Kit" | This game's version of a **stim shot** — instant self-heal | — |
 
+### 5. POWER slot
+The big-ticket deployables — each one is a match-changing piece of hardware:
+
+#### 🐕 HYDRA Hound
+- A **robot dog** — literally a **Doberman made of metal and wires.**
+- **Two turrets**, one mounted on each side, plus a **deadly neurotoxin bite.**
+- **PERMANENT deployment** — no timer, no auto-expire, no self-destruct. It stays
+  on the map **until someone destroys it.** (Explicit design intent: unlike
+  typical timed deployables.)
+- **Speed:** runs slightly faster than a sprinting player.
+- **Leap attack:** within ~**3 feet** of an enemy it can **leap on them and maul
+  them to death.**
+- **Follow behavior:** heels within **10 feet of its owner** — but the moment it
+  **spots an enemy it breaks that rule** and **hunts them until they're dead.**
+- **Health & armor:**
+  - Base health ≈ **4 players' worth** (an SMG could shred it alone)…
+  - …so it wears **ARMOR** that **significantly reduces damage from grenades,
+    fire, EMP, and bullets** — armor durability ≈ **~15 players' worth of
+    semi-auto AK-47 fire.** Strip the armor and it shreds fast.
+- **Traversal animations (signature charm):** normal drops it just **leaps
+  down**; but off a big fall it **jumps and pops a MINI PARACHUTE**, gliding
+  down "very cutely" to land right beside you.
+
+#### ☁ Hydra Gas Trap
+- Placed trap; lasts **10 minutes** unless destroyed.
+- When an enemy comes near, releases a **massive cloud of Hydra Gas** (the
+  hallucination gas from the tactical slot).
+
+#### 🛡 Da Vinci Tank
+- You receive a little **XL radio** and **choose where to call it in** — a
+  **transport helicopter** flies overhead and **drops a package.**
+- Run up, press **UNBOX** → quick animation: your character **swipes a knife at
+  the box** and the whole crate falls away — revealing a **modernized version of
+  Leonardo da Vinci's tank** (the round Renaissance war machine, rebuilt).
+- **Armament: 16 fast-spinning rocket launchers** ringing the hull.
+- **Weaknesses (by design):**
+  - **Incredibly vulnerable to EMP — just 2 EMPs kill it.** Otherwise it's
+    effectively **unkillable.**
+  - **Glacially slow turn rate** — "turning slower than a snail."
+
+#### 🥾 Anti-Gravity Boots
+- Let you **float around in the air.**
+- *(User's own note, preserved: "who knows why I added this — maybe in 30 years
+  we'll find out." 👀 Possible long-game foreshadowing; left as a mystery.)*
+
+#### 🤖 Hellfire GEAR *(⚠ name as heard: "hellfire missile and GEAR" — confirm)*
+- Called in by **transport helicopter** drop.
+- A **massive suit of armor — a MECH suit** loaded with "too many guns"
+  (plausibly incl. hellfire missiles, per the name).
+- **Insane damage output** — "delete everyone in front of you" — with **insane
+  health and armor** to match.
+
+#### 👻 Camo
+- **Complete invisibility** — you *and your weapon* — for **30 seconds.**
+- Counterplay: a **faint blue tint** remains, so sharp-eyed enemies can
+  occasionally spot you.
+
+> **⚠ Open design question — what GATES the power slot?** These are enormous
+> (permanent war-dog, near-unkillable tank, a mech). Are they earned in-match
+> (kill/score-streak style), once-per-life, once-per-match, on a long cooldown,
+> or limited some other way? This is the key balance decision for the slot.
+
 ## Notes / Flags
 - **Hydro Gas is the standout** — a hallucination grenade is rare in shooters
   (phantom enemies + phantom damage = paranoia in a can). Fits the HYDRA-tech
