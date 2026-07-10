@@ -3624,7 +3624,21 @@ The backup — anything that "sounds like a secondary":
 - **Pistols**
 
 ### 3. LETHAL slot
-- *(Contents TBD — frags, semtex, throwing knives, etc. — user to define.)*
+The defined lethal equipment:
+
+| Lethal | Effect |
+| --- | --- |
+| **Frag Grenade** | The classic explosive. |
+| **Semtex** | Sticky grenade. |
+| **Molotov** | Fire bomb / area burn. *(Shares its name with the operator — fitting, since he's literally named after it.)* |
+| **C4** | Plantable, remote-detonated charge. |
+| **The Spider** | **EMP-like deployable: an electronic spider** that **crawls into the suit of another player, rips out the suit's electronics, and causes them to EXPLODE.** Part hunter-killer drone, part nightmare. |
+| **Claymore** | Directional proximity mine. |
+| **Mine** | Classic landmine. |
+
+> **Lore implication (The Spider):** for the Spider to work, **players wear
+> suits with onboard electronics** — a canon detail about this world's soldiers
+> (and consistent with HYDRA-era tech). Worth defining what else the suit does.
 
 ### 4. TACTICAL slot
 The defined tactical equipment:
