@@ -4693,6 +4693,7 @@ permanently deployed, lethal at every range.
 | --- | --- | --- |
 | **Leather** | **10 kills** with the Hydro Hound | Soft leather over flexible armor — **quiet movement + durability**. Sheet: `assets/hydro-hound-leather.png`. |
 | **Fire** | **30 kills** with the Hydro Hound | Molten/lava aesthetic; **fire-resistant coating protects against extreme heat and flame weapons** (features list swaps "flexible leather plating" for "fire resistant coating"). Sheet: `assets/hydro-hound-fire.png`. |
+| **Gold** | **15 HEADSHOT kills** with the Hydro Hound | The prestige skin — unlocked by **precision** (headshots), not raw kills. Earning it unlocks the **Reactive Gold** line (see Reactive Skins). *(Read from "gold horn / 15 hedgehogs" — confirmed reading: Gold hound / 15 headshots.)* |
 | **Tech** | **80 kills** with the Hydro Hound | Blue-circuit cyber aesthetic; **Reinforced Armor** — "composite alloy armor, nano-coated surface: maximum protection, minimal weight." Also an **Advanced Head Unit** (integrated targeting AI, precise lock-on + environmental analysis), "highly potent" neurotoxin, and guns tuned for "high rate of fire with accurate suppression." Sheet: `assets/hydro-hound-tech.png`. |
 | **Broken Spirit** | (teased at **100 kills**, Zombies) | 🔒 **Sealed Easter egg** — equipping it + 100 Hound kills in Zombies triggers something the creator refuses to spoil. A Broken Spirit variant will exist for **every Hound version**. |
 | *(more TBD)* | — | "Every version of the Hydro Hound" implies multiple variants/versions. |
