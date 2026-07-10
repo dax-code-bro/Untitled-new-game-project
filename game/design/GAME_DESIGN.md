@@ -758,8 +758,9 @@ These are intentionally unresolved and tracked so we settle them on purpose:
 
 - [ ] **Game name** — to be decided later.
 - [ ] **Setting & vibe** — modern military / post-apocalyptic / sci-fi / horror / other.
-- [ ] **Tech stack / engine** — not committed. (Browser 3D via three.js/Babylon,
-      or a full engine like Godot/Unity/Unreal — depends on scope & target platform.)
+- [x] **Tech stack / engine — DECIDED: UNREAL ENGINE** for the real game build.
+      (The Three.js browser demo in `game/demo/` stays as the playable prototype /
+      proof-of-feel; production development targets Unreal.)
 - [ ] **Target platform** — web, desktop, console-style?
 - [ ] **Weapon system depth** — attachments, loadouts, unlock/progression.
 - [ ] **Multiplayer netcode model** — out of scope until a vertical slice exists.
