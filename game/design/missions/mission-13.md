@@ -90,8 +90,11 @@
 - **How does Spike walk again?** The **waist gear** implies mobility tech
   (HYDRA-derived? homemade exo-rig?). Deliberate mystery for now — confirm when
   ready.
-- **THE RECRUIT — REVEALED: MOLOTOV'S SON.** The young sniper in the legacy
-  mask is **Webber "Molotov" Newman's own son.** Between 1985 and 2000, the lone
+- **THE RECRUIT — REVEALED: MOLOTOV'S SON — Jonah "Cocktail" Newman.** The
+  young sniper in the legacy mask is **Webber "Molotov" Newman's own son.**
+  - **Name:** **Jonah Newman**; **callsign "Cocktail"** — chosen because it's
+    the other half of the weapon's name: **Molotov + Cocktail = Molotov
+    Cocktail.** Father and son together complete the name. Between 1985 and 2000, the lone
   survivor built a **family** — and passed the fire mask down as protection and
   legacy, inverting what his own father did with fire. The abuse cycle ends with
   Webber, reversed. *(Name / mother / how much he knows about "Webber" — TBD.)*
