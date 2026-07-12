@@ -227,8 +227,8 @@ members not yet introduced (TBD). The six documented so far:
 > forbidden name lives on through her. Confirm.)*
 > - Had **Jonah shortly after the deaths of Fox, Payback, and John** (the M11
 >   massacre, 1985) — so the relationship predates/spans the campaign's end.
->   *(⚠ Age math: Jonah born ~1986 → he's **~14–15** in the Dec-2000 mission —
->   a teenage sniper. Confirm intended, or shift dates.)*
+>   **Jonah is ~15 years old in Mission 13 (Dec 2000) — CONFIRMED.** A teenage
+>   sniper fighting beside his father.
 > - **Alive in 2000.** Supports Molotov's work; **sometimes even shows up.**
 > - Her love is **"a different kind — very strong and quiet"** (a mirror of him).
 > - She lets her husband AND son go on missions because, in her mind, **Molotov
