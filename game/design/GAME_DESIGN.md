@@ -499,10 +499,16 @@ Post-massacre, the survivors built a new unit *(team name TBD)*:
 1. **Molotov** — leader-figure; fixed futuristic mask; XM4.
 2. **Spike** — walks via a **gravity stabilizer** waist rig; heavy weapons.
 3. **Jonah "Cocktail" Newman** — Molotov's son, 15, sniper, legacy mask.
-4. **Nova** — *(TBD)*
-5. **Atomic** — *(TBD)*
-6. **Jeff** — *(TBD)*
-7. **Charles** — *(TBD)*
+4. **Nova** — **Payback's replacement** (fills her role on the team), and a
+   former **cartel inner-circle** member. *(Echoes the campaign's cartel world —
+   Lady Death's orbit? Connection TBD. Gender/pronouns not yet stated.)*
+5. **Atomic** — a **huge Hawaiian bodybuilder**; the team's **heavyweight.**
+6. **Jeff** — **more mysterious than the others.** (The most ordinary name on
+   the roster, the least-known man behind it. Deliberate.)
+7. **Charles** — the **tech specialist**: **builds most of the guns, ammo, and
+   gear the team uses.** Extremely valuable member. *(Strong inference — did
+   Charles build **Spike's gravity stabilizer** and **Molotov's fixed futuristic
+   mask**? Confirm.)*
 - **Elizabeth** (see Molotov's entry) supports the team; sometimes shows up.
 - Era goal: take down **the Three Pillars of Ruin** (Abraham, Prestige, Hunter).
 
