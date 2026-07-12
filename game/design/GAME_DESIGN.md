@@ -52,7 +52,9 @@ complete screenplays.
 - `game/design/missions/mission-12.md` — **Mission 12 (title TBD)** — Molotov's
   POV: races to warn the team, finds them all dead; breaks down over Fox's body
   *(scripted)*.
-- `game/design/missions/mission-13.md` — **Mission 13 (title TBD)** — time skip
+- `game/design/missions/mission-13.md` — **Mission 13 — "The Three Pillars of
+  Ruin"** — 2000 era opens: hunt the three villains (Abraham, Prestige, Hunter
+  "the Terrorist in Black"); time skip
   ("15 years later — Dec 31, 2000"); a prison, rows of **H1.0-pattern robots**
   *(scene; timeline resolved)*.
 
@@ -620,6 +622,10 @@ city → spot **three friendly US Army tanks** rolling in to support → then
   in plain sight (Mission 7's casino has the H3.2 factory in its back half).
 - **Leadership — Victor Prestige (Mission 9 reveal):** named as **HYDRA's leader
   / "owner."** First real name at the top of the century-old org. Details TBD.
+- **THE THREE PILLARS OF RUIN (2000 era):** the era's three central villains —
+  **General Abraham** (the traitor), **Victor Prestige** (HYDRA's owner), and
+  **HUNTER, "the Terrorist in Black"** (new; feared by locals; details TBD). The
+  new team's goal: find and take down all three.
 - **⚠⚠ The "Ray Abraham" connection (Mission 9):** an interrogated soldier says
   Victor Prestige **has been talking to a "Ray Abraham."** The surname matches the
   team's own **General Abraham** — a potential bombshell (Abraham as HYDRA

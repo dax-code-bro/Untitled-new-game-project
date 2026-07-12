@@ -1,7 +1,21 @@
-# Mission 13 (title TBD) — Time Skip: "15 Years Later" (Prison / H1.0-match robots)
+# Mission 13 — "The Three Pillars of Ruin"
 
 > **Canonical script (in progress).** Preserves EVERY detail. Target rating:
 > **ESRB M.** **⚠ Title TBD.** Number tentative (follows Mission 12).
+
+**Title:** "The Three Pillars of Ruin" *(LOCKED)* — the first mission of the
+2000 era.
+
+## Title Meaning (foreshadow — per naming convention)
+The **three pillars** are the era's **three central villains**, and the mission
+(and era) is about **finding and taking down all three**:
+1. **General Abraham** — the traitor who massacred Team Apex.
+2. **Victor Prestige** — HYDRA's leader/owner.
+3. **HUNTER** — a **new villain**, known to the locals as **"the Terrorist in
+   Black."** *(Details TBD — first mention.)*
+
+"Of Ruin" cuts both ways: the ruin these three have caused — and the ruin
+coming for them.
 
 ## The time skip
 - Continues from **Mission 12** (Molotov over Fox's body → screen fades to black).
@@ -86,7 +100,8 @@
   cold-open establishing shot → then the op? Or does the op replace the prison
   scene (prison moved later)? *(Both are preserved; nothing deleted.)*
 - **Who is the tuxedo man?** High-value target with HYDRA gear and swagger —
-  **Victor Prestige himself, 15 years on?** Someone new? TBD.
+  now with three named candidates: **Victor Prestige? Hunter ("the Terrorist in
+  Black")? Abraham?** Or a fourth party. TBD.
 - **How does Spike walk again?** The **waist gear** implies mobility tech
   (HYDRA-derived? homemade exo-rig?). Deliberate mystery for now — confirm when
   ready.
@@ -102,7 +117,9 @@
     near-whisper tone in the field — the ⭐ one-emotion-in-the-whole-game rule
     (the tear for Fox) still holds.
 - **Who was the tuxedo man meeting?** Unseen "someone" — TBD.
-- Title for Mission 13 still TBD (naming convention: foreshadow).
+- **HUNTER — new villain, first mention.** Locals call him **"the Terrorist in
+  Black."** Who he is, his relationship to HYDRA/Abraham/Prestige, and why the
+  locals fear him — all TBD.
 
 ## REVEALS / THREADS
 - **H1.0-pattern robots are back — in 2000.** Robots that closely **match the
