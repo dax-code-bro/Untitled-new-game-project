@@ -494,6 +494,18 @@ high-ranking **Sergeant / officer** leading young Irish troops.
 > Jesse Wolford, Monroe Sydney) are the quieter, less-mentioned operators** of
 > Team Apex. There may still be more members beyond these nine (TBD).
 
+#### THE NEW TEAM (2000 era — Mission 13 onward)
+Post-massacre, the survivors built a new unit *(team name TBD)*:
+1. **Molotov** — leader-figure; fixed futuristic mask; XM4.
+2. **Spike** — walks via a **gravity stabilizer** waist rig; heavy weapons.
+3. **Jonah "Cocktail" Newman** — Molotov's son, 15, sniper, legacy mask.
+4. **Nova** — *(TBD)*
+5. **Atomic** — *(TBD)*
+6. **Jeff** — *(TBD)*
+7. **Charles** — *(TBD)*
+- **Elizabeth** (see Molotov's entry) supports the team; sometimes shows up.
+- Era goal: take down **the Three Pillars of Ruin** (Abraham, Prestige, Hunter).
+
 #### Mission 1 — Combat Beats (continued from the drop)
 
 After deploying on the rooftop, the mission continues:

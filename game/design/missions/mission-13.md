@@ -70,6 +70,20 @@ coming for them.
 > *(Molotov runs — the camera holds its ground as he sprints straight at it,
 > until the frame **fades into the black of his gear** —)*
 
+## THE NEW TEAM — deploying on this mission
+"Almost all of the team" goes on this mission. The deploying roster:
+1. **Molotov** (Webber Newman) — fixed futuristic mask, XM4.
+2. **Spike** (Rodriguez Hamilton) — wearing a **gravity stabilizer** (waist rig
+   that lets him walk despite the M10 paralysis); minigun entrance.
+3. **Jonah "Cocktail" Newman** — 15, sniper, legacy fire mask.
+4. **Nova** — new member *(details TBD)*.
+5. **Atomic** — new member *(details TBD)*.
+6. **Jeff** — new member *(details TBD)*.
+7. **Charles** — new member *(details TBD)*.
+
+*(Team name TBD. "Almost all" implies at least one more member staying behind —
+roster may extend beyond these seven.)*
+
 ### MATCH CUT — THE MEETING TABLE
 
 > *(— and out of the black: a **meeting table.** Around it: **MOLOTOV, SPIKE,
@@ -102,9 +116,9 @@ coming for them.
 - **Who is the tuxedo man?** High-value target with HYDRA gear and swagger —
   now with three named candidates: **Victor Prestige? Hunter ("the Terrorist in
   Black")? Abraham?** Or a fourth party. TBD.
-- **How does Spike walk again?** The **waist gear** implies mobility tech
-  (HYDRA-derived? homemade exo-rig?). Deliberate mystery for now — confirm when
-  ready.
+- **How does Spike walk — RESOLVED:** the waist gear is a **GRAVITY
+  STABILIZER** — a device that helps him walk (compensating the paralysis from
+  Mission 10). *(Origin of the tech — built by whom? — still open.)*
 - **THE RECRUIT — REVEALED: MOLOTOV'S SON — Jonah "Cocktail" Newman.** The
   young sniper in the legacy mask is **Webber "Molotov" Newman's own son.**
   - **Name:** **Jonah Newman**; **callsign "Cocktail"** — chosen because it's
