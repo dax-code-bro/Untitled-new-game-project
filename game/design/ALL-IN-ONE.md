@@ -269,6 +269,9 @@ members not yet introduced (TBD). The six documented so far:
 >   sniper fighting beside his father.
 > - **Alive in 2000.** Supports Molotov's work; **sometimes even shows up.**
 > - Her love is **"a different kind — very strong and quiet"** (a mirror of him).
+> - **What she is to HIM:** not just a person — **something hard to put into
+>   words.** (Deliberately left undefined: the man of few words has one thing
+>   language can't hold. Write around it, never through it.)
 > - She lets her husband AND son go on missions because, in her mind, **Molotov
 >   is the strongest person she's ever met — and their son is his blood.**
 > **Fox was his one breaking point:** Molotov held his flat, serious tone through
@@ -312,6 +315,9 @@ members not yet introduced (TBD). The six documented so far:
 - **Naming:** he **likes "Molly," "Molotov," or anything else** — those are the
   self he chose. The **only name he rejects is "Webber"** (his dead self). So
   Fox's "Molly" is warm/welcome; calling him **"Webber"** is the thing that cuts.
+- **His past is off-limits:** he **does not like others bringing up his past** —
+  anyone raising it (the father, the fire, the Mollys, the grave) gets stonewalled
+  or worse. (Distinct from, and layered on top of, the "Webber" name rule.)
 - **Why the mask:** the flamethrower left **severe burns mainly on his face** —
   the full-covering ski mask hides the scarring. (His **hair is fine/untouched**;
   not bald.)
