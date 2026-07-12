@@ -680,8 +680,15 @@ city → spot **three friendly US Army tanks** rolling in to support → then
   / "owner."** First real name at the top of the century-old org. Details TBD.
 - **THE THREE PILLARS OF RUIN (2000 era):** the era's three central villains —
   **General Abraham** (the traitor), **Victor Prestige** (HYDRA's owner), and
-  **HUNTER, "the Terrorist in Black"** (new; feared by locals; details TBD). The
-  new team's goal: find and take down all three.
+  **HUNTER, "the Terrorist in Black."** The new team's goal: find and take down
+  all three.
+- **HUNTER — what's known (M13):** signature weapon is a **black-and-gold
+  revolver.** MO: **walks into maximum-security sites in plain sight**, executes
+  high-ranking targets **in front of hundreds of guards who somehow do
+  nothing**, and **escapes seamlessly, every time.** Locals won't say his name
+  loudly. *(How he does it — bought guards? tech? something that "turns people
+  off"? — TBD. Note: the gold-on-the-gun echoes **Abraham's gold Colt** —
+  connection or coincidence, TBD.)*
 - **⚠⚠ The "Ray Abraham" connection (Mission 9):** an interrogated soldier says
   Victor Prestige **has been talking to a "Ray Abraham."** The surname matches the
   team's own **General Abraham** — a potential bombshell (Abraham as HYDRA
@@ -3448,6 +3455,74 @@ roster may extend beyond these seven.)*
 > *(— and out of the black: a **meeting table.** Around it: **MOLOTOV, SPIKE,
 > the young RECRUIT, and a few others.** A new team. The survivors built
 > something again.)*
+
+## THE DRIVE — HUNTING HUNTER (full dialogue)
+
+> *(A HUMVEE rolls through what used to be a city. Now it's **flattened** — block
+> after block of rubble, punctuated by **homeless shelters** in old tents and
+> **money-raising centers** with hand-painted signs. People queue in the cold.
+> An **unnamed operator** drives. The player rides in the **backseat** — SPIKE,
+> the gravity stabilizer humming faintly at his waist. ATOMIC takes up a seat
+> and a half beside him. NOVA rides shotgun. JONAH and JEFF in the far back,
+> CHARLES wedged between gear crates, tinkering.)*
+>
+> **ATOMIC:** *(looking out the window)* ...I used to vacation in this city,
+> brah. Best malasadas outside of Oahu, two blocks that way. *(beat)* Now the
+> whole block's a tent.
+> **NOVA:** *(not looking up)* Be glad it's a tent. Where I'm from, they don't
+> set up shelters after. They just move the fence.
+> **JONAH:** Where are you from?
+> **NOVA:** *(beat)* Somewhere with nice fences.
+>
+> **CHARLES:** *(from the back, still tinkering)* Hey — whoever's got my number
+> three driver, I need it back. And Atomic, stop testing the plates by flexing
+> on them, they're rated for rounds, not for *you.*
+> **ATOMIC:** *(grinning)* Everything's rated for me if I believe in myself.
+> **CHARLES:** That is *not* how load tolerances work—
+> **SPIKE:** *(dry)* Let him believe, Charles. It's cheaper than more plates.
+>
+> **JONAH:** *(to Jeff, who's been silent, watching the rubble)* You ever talk?
+> **JEFF:** *(long pause; still watching the window)* When it matters.
+> **JONAH:** ...Right.
+> **ATOMIC:** *(stage whisper)* Nobody knows what Jeff did before this. I asked
+> him once. He just looked at me until I apologized.
+>
+> *(The Humvee slows past a money-raising center — a banner: REBUILD FUND. A kid
+> chases the vehicle a few steps, then gives up. Silence for a moment.)*
+>
+> **SPIKE:** *(quiet)* Somebody did all this and the world just... put up tents.
+> **NOVA:** The world's good at tents.
+>
+> **MOLOTOV:** *(radio, flat as ever)* Eyes up. Briefing.
+>
+> *(ATOMIC pulls out a TABLET, props it on his knee so the backseat can see, and
+> hits play.)*
+>
+> **ATOMIC:** This is why we're out here. Watch the man in black.
+>
+> *(FOOTAGE: a **maximum-security compound** — checkpoints, biometric doors,
+> **hundreds of security guards.** A man in black **walks straight in through
+> the front.** Nobody stops him. Nobody *moves.* He crosses the atrium like he
+> owns the air in it, draws a **BLACK-AND-GOLD REVOLVER**, and — one shot —
+> **assassinates a high-ranking political figure** mid-handshake. Then he walks
+> out the way he came. Guards everywhere. Not one lays a hand on him. The
+> footage ends with him simply... gone.)*
+>
+> **JONAH:** *(quiet)* ...Why didn't anyone shoot him?
+> **ATOMIC:** Hundreds of guards, kid. Cameras on every inch. And he walks in,
+> does it, and walks out. **Seamless.** Every time.
+> **CHARLES:** *(leaning in, frowning at the tablet)* Freeze it. There — frame
+> before the shot. No jamming rig I know fits under a suit. Either every guard
+> in that building was bought... or something about him *turns people off.*
+> **NOVA:** *(low)* The locals have a name for him. **The Terrorist in Black.**
+> They don't say it loud.
+> **SPIKE:** *(watching the frozen frame — the black-and-gold revolver)* ...Gold
+> on the gun. *(beat, colder)* I knew another man who loved gold on a gun.
+>
+> *(Nobody answers that. The Humvee rolls on through the ruins.)*
+>
+> **MOLOTOV:** *(radio)* Name's **Hunter.** He's pillar three. *(beat)* Today we
+> find out if he bleeds.
 >
 > *(— CONTINUES. —)*
 

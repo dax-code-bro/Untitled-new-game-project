@@ -642,8 +642,15 @@ city → spot **three friendly US Army tanks** rolling in to support → then
   / "owner."** First real name at the top of the century-old org. Details TBD.
 - **THE THREE PILLARS OF RUIN (2000 era):** the era's three central villains —
   **General Abraham** (the traitor), **Victor Prestige** (HYDRA's owner), and
-  **HUNTER, "the Terrorist in Black"** (new; feared by locals; details TBD). The
-  new team's goal: find and take down all three.
+  **HUNTER, "the Terrorist in Black."** The new team's goal: find and take down
+  all three.
+- **HUNTER — what's known (M13):** signature weapon is a **black-and-gold
+  revolver.** MO: **walks into maximum-security sites in plain sight**, executes
+  high-ranking targets **in front of hundreds of guards who somehow do
+  nothing**, and **escapes seamlessly, every time.** Locals won't say his name
+  loudly. *(How he does it — bought guards? tech? something that "turns people
+  off"? — TBD. Note: the gold-on-the-gun echoes **Abraham's gold Colt** —
+  connection or coincidence, TBD.)*
 - **⚠⚠ The "Ray Abraham" connection (Mission 9):** an interrogated soldier says
   Victor Prestige **has been talking to a "Ray Abraham."** The surname matches the
   team's own **General Abraham** — a potential bombshell (Abraham as HYDRA
