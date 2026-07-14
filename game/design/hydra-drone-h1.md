@@ -141,11 +141,12 @@ boardroom scene):
 
 | # | Status (1985) | Notes |
 | --- | --- | --- |
+| **6** | **FOUND DESTROYED (M15, ~2000)** | Discovered **wrecked beneath the medical place** hiding Victor Prestige: both legs gone, one arm, half its face, most of its back — **still attacked** before short-circuiting dead. **What dismembered it is unknown.** |
 | **5** | **Destroyed (KIA)** | Found **impaled on a tree branch**, a **tiger trying to break it open**. Likely **failed to adapt to the ecosystem.** |
 | **7** | **Captured → Scrapped** | Taken and **scrapped for salvage** so it could **never be reprogrammed / turned against us.** |
 | **9** | **ACTIVE — SENTIENT** | Sentient (possibly **HYDRA-engineered**, not a fluke — they cite "what they did with Nine" as the precedent for Patient 14). **Seen making money as a bodyguard.** Independent/rogue actor — major character potential. |
 | **12** | **Captured → Scrapped** | Same as 7 — stripped for salvage to prevent reprogramming. |
-| Others (1–4, 6, 8, 10, 11, 13) | **UNKNOWN** | May have **failed to adapt to Earth's ecosystem** — but **"failed to adapt" ≠ confirmed dead.** Any could **still be active** somewhere in the world. |
+| Others (1–4, 8, 10, 11, 13) | **UNKNOWN** | May have **failed to adapt to Earth's ecosystem** — but **"failed to adapt" ≠ confirmed dead.** Any could **still be active** somewhere in the world. |
 
 **Story hooks from the tracker:**
 - **Drone 9 (sentient, bodyguard-for-hire)** — a thinking machine that chose

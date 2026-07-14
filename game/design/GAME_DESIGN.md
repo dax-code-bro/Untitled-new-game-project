@@ -55,6 +55,12 @@ complete screenplays.
 - `game/design/missions/mission-13.md` — **Mission 13 — "The Three Pillars of
   Ruin"** — 2000 era opens: hunt the three villains (Abraham, Prestige, Hunter
   "the Terrorist in Black"); time skip
+- `game/design/missions/mission-14.md` — **Mission 14 — "The Pillar Made of
+  Titanium"** — HQ renovation (gear degradation reversed), Assault-on-Hunter
+  postponed; Hunter hunts Prestige.
+- `game/design/missions/mission-15.md` — **Mission 15 — "The Pillar of
+  Prestige"** — the medical place, the tile, the blood tunnel, **Drone 06**
+  *(scripted w/ full dialogue)*.
   ("15 years later — Dec 31, 2000"); a prison, rows of **H1.0-pattern robots**
   *(scene; timeline resolved)*.
 

@@ -28,8 +28,37 @@ rain (M6). His terror-war has always pointed at HYDRA's head.
   may be open to terms — or may collect "one of you" on the way (his forest
   threat).
 
+## CONTENT — THE RENOVATION (and the postponement)
+*(⚠ Structure read: the renovation + the decision to postpone the Hunter assault
+= this mission, "The Pillar Made of Titanium" — the team admitting Hunter can't
+be cracked yet. The medical-place op that follows = Mission 15 "The Pillar of
+Prestige." Confirm.)*
+
+### The renovation
+- **Supplies dealer run:** buy **massive sheets of metal, screws, tools, pipes**,
+  other necessities — and **gun-cleaning supplies** at last.
+- **MONTAGE:** the team strips the ruined warehouse — **entire walls, the roof,
+  the two big warehouse doors all come off** — replaced with **pristine,
+  unrusted metal that will hold.** Proper **barracks bedrooms**, **toilets with
+  pipes that actually work**, **electricity.**
+- **⚙ MECHANIC PAYOFF — degradation reversed:** at the training course, the
+  **DM10 (or any selected gun) hits like it does in other modes again** — full
+  damage, **sights no longer blurry** — and **laser attachments finally work**
+  (before, the team couldn't afford batteries to power them). The poverty arc
+  closes *in the hands*, same place it started.
+- After a long day — sleep. **Next morning, Mission 15 begins.**
+
+### The postponed plan — "THE ASSAULT ON HUNTER"
+The team has a named plan on the board for later: now that they have **explosive
+gear**, the plan is to **blow open wherever Hunter is hiding and kill him
+instantly** — no questions asked: explosives through his militia, **blow his
+front door open, walk into his palace, put a gun to him, execute him.**
+- **Postponed** — because first they need to know **Prestige** (they've never
+  even seen his face). The titanium pillar waits; the assault stays loaded.
+
 ## Status
-- Title + placement + core twist locked. **Beats & dialogue: pending.**
+- Renovation + postponement + Assault-on-Hunter plan locked. *(Further beats
+  TBD if this mission holds more.)*
 
 ## NOTES / OPEN THREADS
 - Hunter's forest whisper (M13) hangs over this mission: *"I'll just have to

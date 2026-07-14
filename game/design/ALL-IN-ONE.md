@@ -21,6 +21,7 @@ Contents (in order):
 - `missions/mission-12.md`
 - `missions/mission-13.md`
 - `missions/mission-14.md`
+- `missions/mission-15.md`
 - `modes/new-mode-post-epilogue.md`
 - `modes/multiplayer.md`
 - `modes/zombies.md`
@@ -94,6 +95,12 @@ complete screenplays.
 - `game/design/missions/mission-13.md` — **Mission 13 — "The Three Pillars of
   Ruin"** — 2000 era opens: hunt the three villains (Abraham, Prestige, Hunter
   "the Terrorist in Black"); time skip
+- `game/design/missions/mission-14.md` — **Mission 14 — "The Pillar Made of
+  Titanium"** — HQ renovation (gear degradation reversed), Assault-on-Hunter
+  postponed; Hunter hunts Prestige.
+- `game/design/missions/mission-15.md` — **Mission 15 — "The Pillar of
+  Prestige"** — the medical place, the tile, the blood tunnel, **Drone 06**
+  *(scripted w/ full dialogue)*.
   ("15 years later — Dec 31, 2000"); a prison, rows of **H1.0-pattern robots**
   *(scene; timeline resolved)*.
 
@@ -3808,8 +3815,37 @@ rain (M6). His terror-war has always pointed at HYDRA's head.
   may be open to terms — or may collect "one of you" on the way (his forest
   threat).
 
+## CONTENT — THE RENOVATION (and the postponement)
+*(⚠ Structure read: the renovation + the decision to postpone the Hunter assault
+= this mission, "The Pillar Made of Titanium" — the team admitting Hunter can't
+be cracked yet. The medical-place op that follows = Mission 15 "The Pillar of
+Prestige." Confirm.)*
+
+### The renovation
+- **Supplies dealer run:** buy **massive sheets of metal, screws, tools, pipes**,
+  other necessities — and **gun-cleaning supplies** at last.
+- **MONTAGE:** the team strips the ruined warehouse — **entire walls, the roof,
+  the two big warehouse doors all come off** — replaced with **pristine,
+  unrusted metal that will hold.** Proper **barracks bedrooms**, **toilets with
+  pipes that actually work**, **electricity.**
+- **⚙ MECHANIC PAYOFF — degradation reversed:** at the training course, the
+  **DM10 (or any selected gun) hits like it does in other modes again** — full
+  damage, **sights no longer blurry** — and **laser attachments finally work**
+  (before, the team couldn't afford batteries to power them). The poverty arc
+  closes *in the hands*, same place it started.
+- After a long day — sleep. **Next morning, Mission 15 begins.**
+
+### The postponed plan — "THE ASSAULT ON HUNTER"
+The team has a named plan on the board for later: now that they have **explosive
+gear**, the plan is to **blow open wherever Hunter is hiding and kill him
+instantly** — no questions asked: explosives through his militia, **blow his
+front door open, walk into his palace, put a gun to him, execute him.**
+- **Postponed** — because first they need to know **Prestige** (they've never
+  even seen his face). The titanium pillar waits; the assault stays loaded.
+
 ## Status
-- Title + placement + core twist locked. **Beats & dialogue: pending.**
+- Renovation + postponement + Assault-on-Hunter plan locked. *(Further beats
+  TBD if this mission holds more.)*
 
 ## NOTES / OPEN THREADS
 - Hunter's forest whisper (M13) hangs over this mission: *"I'll just have to
@@ -3818,6 +3854,165 @@ rain (M6). His terror-war has always pointed at HYDRA's head.
 - The team's resource crisis (no gun oil, degraded weapons) is active.
 - **Victor Prestige = the maker of the drones** (now canon — the H-series is
   his work).
+
+
+═══════════════════════════════════════════════════════════════════════
+# ▓▓▓ FILE: missions/mission-15.md ▓▓▓
+═══════════════════════════════════════════════════════════════════════
+
+# Mission 15 — "The Pillar of Prestige"
+
+> **Canonical script.** Preserves EVERY detail. Target rating: **ESRB M.**
+> Epilogue era. POV: **Spike** *(inference: Molotov benched at HQ — 5 broken
+> ribs from M13; confirm)*.
+
+**Title:** "The Pillar of Prestige" *(LOCKED.)*
+
+## Purpose
+The **Assault on Hunter** is postponed (see M14). First: learn **Victor
+Prestige** — the team has **never even seen his face.** Intel points to a
+**medical place** where Prestige supposedly is.
+
+## Squad
+**Spike (POV), Atomic, Jeff, Jonah "Cocktail," + a few newer members.**
+*(⚠ The "few others you haven't heard of" need names — below I've drafted
+**"Patch"** (team medic) and **"Dice"** (driver/scrounger) as placeholders.
+Rename at will; their lines survive any rename.)*
+
+**Mission's character goal (per design):** the player gets to know these
+people — personalities, backstory — and starts to **care.** Especially
+**Atomic**, whose defining trait lands here: **he cares about Cocktail and
+Molotov's family** — believes they never should've been dragged into a war —
+and **he'll do anything to keep them safe.**
+
+## FULL SCRIPT
+
+### THE RIDE OUT
+
+> *(Morning. The renovated warehouse gleams behind them — actual walls, actual
+> doors. The squad rolls out; PATCH drives, DICE rides shotgun, SPIKE, ATOMIC,
+> JEFF, and JONAH in back. Gear smells like fresh oil for the first time in
+> years.)*
+>
+> **DICE:** *(flipping a coin, catching it without looking)* New walls, working
+> toilets, lasers that turn on. Fellas, we're rich.
+> **PATCH:** We are the opposite of rich. I sold my *bike* for those pipes.
+> **DICE:** And it was a noble bike. It died so the toilet could live.
+>
+> **JONAH:** *(checking his rifle — the sight is crystal clear)* ...I forgot
+> scopes could look like this.
+> **ATOMIC:** *(watching him, quieter)* You shouldn't know what a bad scope
+> looks like, kid. Not at fifteen.
+> **JONAH:** Dad knew worse at my age.
+> **ATOMIC:** *(beat)* Yeah. And if I ever get a time machine, I'm gonna have
+> words with whoever let *him* start, too.
+>
+> *(Jonah grins under the mask. Atomic doesn't.)*
+>
+> **SPIKE:** *(low, to Atomic)* He's good, you know. Best glass on the team.
+> **ATOMIC:** Never said he wasn't good, brah. I said he's *fifteen.* Molly and
+> Liz and that kid — they're the only family this team's got left that isn't
+> carved on a wall somewhere. *(beat)* War already ate one Newman family. It
+> doesn't get this one. Not while I'm breathing.
+> **SPIKE:** *(long pause)* ...That's the most words I've ever heard you say.
+> **ATOMIC:** *(shrug)* Worth saying.
+>
+> **JEFF:** *(from the corner, not looking up)* He counts our exits, you know.
+> The kid. Every room we enter. Counts the exits, marks the cover.
+> **JONAH:** ...You *noticed* that?
+> **JEFF:** I notice everything.
+> **DICE:** *(muttering)* That's the creepiest thing anyone's ever said in this
+> truck, and Patch described surgery at lunch.
+
+### THE MEDICAL PLACE
+
+> *(A squat medical clinic/store — shelves, fluorescent hum, too clean for this
+> city. The squad spreads out, casual-armed. Spike checks the intel feed.)*
+>
+> **SPIKE:** *(reading)* Charles' intel says we're right on top of Prestige.
+> Right. On top.
+> **DICE:** *(looking around at cough syrup and gauze)* Then he's disguised as
+> a blood-pressure cuff, 'cause there's nothing here.
+> **PATCH:** Place is wrong, though. Look — no dust. No *anywhere.* Clinics in
+> a ruined city don't stay this clean unless someone's paying them to be.
+> **ATOMIC:** Cameras in the corners. Six. That's four more than a pharmacy
+> needs.
+> **JONAH:** *(quiet)* ...Floor's wrong too. Tiles don't echo the same over
+> there. *(taps his boot twice — flat knock; steps left, taps again — hollow)*
+> **JEFF:** *(already moving)* Told you. He counts everything.
+>
+> **SPIKE:** *(beat — the idea lands)* We're right ON TOP of him. *(to the
+> squad)* Watch the door. Nobody sees this.
+>
+> *(Behind a shelf, out of camera sight — Spike **breaks the hollow tile.** A
+> ladder. A throat of darkness going down.)*
+
+### THE TUNNEL
+
+> *(Down. A **narrow hallway** — eerie, **fog** hanging low, dark past the
+> flashlight's reach. And the floor... the entire floor is coated in about
+> **three inches of something blood-red.** Every step lands with a **wet
+> sound** that the walls hand back to you.)*
+>
+> **PATCH:** *(whisper, gagging)* Please be dye. Please be dye.
+> **DICE:** *(whisper)* You're the medic, taste it.
+> **PATCH:** I will *end* you.
+> **ATOMIC:** *(whisper, flat)* Quiet. Cocktail — behind me. *(he shifts his
+> bulk in front of Jonah without asking)*
+> **JONAH:** I can hold my own—
+> **ATOMIC:** You can hold it from behind me.
+>
+> *(Ahead: a **DOOR.** Spike reaches it. Beat. Opens it—)*
+
+### JUMPSCARE — THE THING BEHIND THE DOOR
+
+> *(—and something **LUNGES** out of the dark onto him. **A broken-down HYDRA
+> DRONE H1.0** — **both legs gone, one whole arm missing, half its face torn
+> away, most of its back stripped to sparking spine** — shrieking static,
+> dragging itself up Spike's chest by its one arm, jaws snapping.)*
+>
+> **SPIKE:** GET IT — *GET IT OFF—*
+>
+> *(Atomic rips it off him one-handed and hurls it down the hall. It lands in
+> the red with a splash, flips itself over — **still trying to fight** — claws
+> its way forward on one arm, sparks vomiting from its back... and then its
+> whole frame seizes, rattles — **short-circuits** — and dies. The light in its
+> half-face gutters out in the fog.)*
+>
+> *(Silence. Just the red dripping off Atomic's arm.)*
+>
+> **PATCH:** *(tiny voice)* ...I have to sit down.
+> **DICE:** It's a *puddle* down here, Patch.
+> **PATCH:** I'm aware.
+>
+> *(JONAH crouches by the dead machine. Rubs the dust and red off its
+> shoulder-plate with a thumb. Stamped in old HYDRA type:)*
+>
+> **JONAH:** *(reading, quiet)* ...Zero-six.
+>
+> *(— CONTINUES. —)*
+
+## REVEALS / THREADS
+- **DRONE 06 — FOUND.** One of the unaccounted original 13 (1948) — discovered
+  **wrecked** beneath the medical place: legs gone, an arm gone, half its face,
+  most of its back — yet **still functional enough to attack** until it
+  short-circuited. Update the tracker.
+  - **⚠ The horror question: what did THAT to a first-gen drone?** Something
+    down here dismembered a machine that armies couldn't stop — and left it as
+    a guard dog... or a warning.
+- **The red liquid** — 3 inches deep, coating the whole tunnel floor. What is
+  it, and why? *(TBD — deliberately unexplained for now.)*
+- **Prestige is literally beneath the medical place** — "right on top of him"
+  was geometry, not metaphor.
+- **Atomic's heart is now on the record** — the family's guardian. *("War
+  already ate one Newman family. It doesn't get this one.")*
+- **Jeff notices everything** — and Jonah counts exits (tradecraft the kid
+  taught himself). Small character seeds planted.
+- **⚠ Placeholder names:** "Patch" (medic) and "Dice" (driver/scrounger) are
+  MY drafts for the unnamed newer members — rename freely.
+
+## Status
+- Scripted through the Drone 06 reveal. **What's deeper in the tunnel: pending.**
 
 
 ═══════════════════════════════════════════════════════════════════════
@@ -5102,11 +5297,12 @@ boardroom scene):
 
 | # | Status (1985) | Notes |
 | --- | --- | --- |
+| **6** | **FOUND DESTROYED (M15, ~2000)** | Discovered **wrecked beneath the medical place** hiding Victor Prestige: both legs gone, one arm, half its face, most of its back — **still attacked** before short-circuiting dead. **What dismembered it is unknown.** |
 | **5** | **Destroyed (KIA)** | Found **impaled on a tree branch**, a **tiger trying to break it open**. Likely **failed to adapt to the ecosystem.** |
 | **7** | **Captured → Scrapped** | Taken and **scrapped for salvage** so it could **never be reprogrammed / turned against us.** |
 | **9** | **ACTIVE — SENTIENT** | Sentient (possibly **HYDRA-engineered**, not a fluke — they cite "what they did with Nine" as the precedent for Patient 14). **Seen making money as a bodyguard.** Independent/rogue actor — major character potential. |
 | **12** | **Captured → Scrapped** | Same as 7 — stripped for salvage to prevent reprogramming. |
-| Others (1–4, 6, 8, 10, 11, 13) | **UNKNOWN** | May have **failed to adapt to Earth's ecosystem** — but **"failed to adapt" ≠ confirmed dead.** Any could **still be active** somewhere in the world. |
+| Others (1–4, 8, 10, 11, 13) | **UNKNOWN** | May have **failed to adapt to Earth's ecosystem** — but **"failed to adapt" ≠ confirmed dead.** Any could **still be active** somewhere in the world. |
 
 **Story hooks from the tracker:**
 - **Drone 9 (sentient, bodyguard-for-hire)** — a thinking machine that chose
