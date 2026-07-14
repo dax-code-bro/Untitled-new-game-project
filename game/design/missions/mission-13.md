@@ -231,8 +231,71 @@ roster may extend beyond these seven.)*
 >
 > **ATOMIC:** *(radio, tight)* Heads up — I've got what looks like **four men
 > moving in on your location.** You gotta move fast.
+
+## THE CLIMAX — THE DUEL OF BULLETS
+
+> *(No time. No clean angle coming. **The player is forced to take the
+> execution shot on Hunter.** The trigger pulls — and the world drops into
+> **SLOW MOTION.**)*
 >
-> *(— CONTINUES. —)*
+> *(Side POV, level with Hunter's head. Without hurry, he raises the
+> black-and-gold revolver and fires. The revolver **twists in his wrist** from
+> recoil — and he **flexes it back level in one motion.**)*
+>
+> *(Mid-air, dead center between them: **the two bullets CRASH INTO EACH
+> OTHER.** The player's **.45 ACP is shredded** — torn apart by Hunter's
+> **specialized .38 Special armor-piercing round** — which keeps coming—)*
+>
+> *(—and **hits MOLOTOV in the chest.** He's thrown off his feet. The AP round
+> **nearly punches through his armored vest** — stopped, barely. **Five broken
+> ribs.**)*
+>
+> *(Hunter's men flood in. **Playable: gun them down and drag out** — Molotov
+> half-carried, the team collapsing back from the perimeter, a running fight out
+> of the warehouse and a **flat sprint into the forest.**)*
+
+### THE FOREST — FALSE RELIEF
+
+> *(Deep enough. Safe enough. The team collapses into cover — and the relief
+> bursts out of them: laughing, breathless, **rejoicing.** It's over. They made
+> it.)*
+>
+> *(CUT: **HUNTER, in the shadows**, close on his lips as he **whispers to his
+> revolver:**)*
+>
+> **HUNTER:** *(a murmur, almost loving)* It is not over yet, my pretty little
+> friends. You cannot outrun your fate. Today you killed my men... maybe, in a
+> little while — **I'll just have to take one of you.**
+>
+> *(He stands while the team is still unloading their relief, and simply...
+> leaves. The camera **zooms in on his chest** — and holds there. Black.)*
+>
+> *(⚠ The chest zoom is preserved as directed — what it reveals [armor mark
+> from the exchange? a pendant? something else] is the creator's to define.)*
+
+### BACK AT HQ — THE BREATHER (the hideout)
+
+> *(Black screen → **HEADQUARTERS.** The whole team takes a massive breather.)*
+>
+> **The hideout is an old, destroyed warehouse** — and if the player takes time
+> to walk around, the poverty is everywhere:
+> - Team members **constantly fixing water leaks.**
+> - The **toilet is falling apart.**
+> - And the discovery that stings: **there's no gun oil.** The guns, the
+>   magazines, the bullets — even the **gun sights are going blurry.**
+
+## ⚙ MECHANIC — GEAR DEGRADATION (poverty made playable)
+The team's brokeness is expressed **through the guns themselves**:
+- The **DM10 (specialized DMR, marksman rifle)** used in the previous mission is
+  a **top-tier weapon in Multiplayer and the 1985 campaign missions** — but in
+  the **epilogue missions**, with no gun oil and failing maintenance:
+  - its **sights are blurry**, and
+  - its **damage drops to roughly AK-47 equivalent** — **~5 single shots** to
+    drop an enemy vs **~3** in other modes.
+- Same gun, same player — poorer world. The team's struggle is *felt in the
+  hands*, not just seen in cutscenes.
+
+*(— END OF MISSION 13. Hunter lives. The first pillar didn't fall. —)*
 
 ## SCENE NOTES / FLAGS
 - **Hunter's look:** black bandanna, thin black clothes; **gold-and-black

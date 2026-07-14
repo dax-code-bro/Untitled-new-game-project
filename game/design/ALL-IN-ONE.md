@@ -20,6 +20,7 @@ Contents (in order):
 - `missions/mission-11.md`
 - `missions/mission-12.md`
 - `missions/mission-13.md`
+- `missions/mission-14.md`
 - `modes/new-mode-post-epilogue.md`
 - `modes/multiplayer.md`
 - `modes/zombies.md`
@@ -3630,8 +3631,71 @@ roster may extend beyond these seven.)*
 >
 > **ATOMIC:** *(radio, tight)* Heads up — I've got what looks like **four men
 > moving in on your location.** You gotta move fast.
+
+## THE CLIMAX — THE DUEL OF BULLETS
+
+> *(No time. No clean angle coming. **The player is forced to take the
+> execution shot on Hunter.** The trigger pulls — and the world drops into
+> **SLOW MOTION.**)*
 >
-> *(— CONTINUES. —)*
+> *(Side POV, level with Hunter's head. Without hurry, he raises the
+> black-and-gold revolver and fires. The revolver **twists in his wrist** from
+> recoil — and he **flexes it back level in one motion.**)*
+>
+> *(Mid-air, dead center between them: **the two bullets CRASH INTO EACH
+> OTHER.** The player's **.45 ACP is shredded** — torn apart by Hunter's
+> **specialized .38 Special armor-piercing round** — which keeps coming—)*
+>
+> *(—and **hits MOLOTOV in the chest.** He's thrown off his feet. The AP round
+> **nearly punches through his armored vest** — stopped, barely. **Five broken
+> ribs.**)*
+>
+> *(Hunter's men flood in. **Playable: gun them down and drag out** — Molotov
+> half-carried, the team collapsing back from the perimeter, a running fight out
+> of the warehouse and a **flat sprint into the forest.**)*
+
+### THE FOREST — FALSE RELIEF
+
+> *(Deep enough. Safe enough. The team collapses into cover — and the relief
+> bursts out of them: laughing, breathless, **rejoicing.** It's over. They made
+> it.)*
+>
+> *(CUT: **HUNTER, in the shadows**, close on his lips as he **whispers to his
+> revolver:**)*
+>
+> **HUNTER:** *(a murmur, almost loving)* It is not over yet, my pretty little
+> friends. You cannot outrun your fate. Today you killed my men... maybe, in a
+> little while — **I'll just have to take one of you.**
+>
+> *(He stands while the team is still unloading their relief, and simply...
+> leaves. The camera **zooms in on his chest** — and holds there. Black.)*
+>
+> *(⚠ The chest zoom is preserved as directed — what it reveals [armor mark
+> from the exchange? a pendant? something else] is the creator's to define.)*
+
+### BACK AT HQ — THE BREATHER (the hideout)
+
+> *(Black screen → **HEADQUARTERS.** The whole team takes a massive breather.)*
+>
+> **The hideout is an old, destroyed warehouse** — and if the player takes time
+> to walk around, the poverty is everywhere:
+> - Team members **constantly fixing water leaks.**
+> - The **toilet is falling apart.**
+> - And the discovery that stings: **there's no gun oil.** The guns, the
+>   magazines, the bullets — even the **gun sights are going blurry.**
+
+## ⚙ MECHANIC — GEAR DEGRADATION (poverty made playable)
+The team's brokeness is expressed **through the guns themselves**:
+- The **DM10 (specialized DMR, marksman rifle)** used in the previous mission is
+  a **top-tier weapon in Multiplayer and the 1985 campaign missions** — but in
+  the **epilogue missions**, with no gun oil and failing maintenance:
+  - its **sights are blurry**, and
+  - its **damage drops to roughly AK-47 equivalent** — **~5 single shots** to
+    drop an enemy vs **~3** in other modes.
+- Same gun, same player — poorer world. The team's struggle is *felt in the
+  hands*, not just seen in cutscenes.
+
+*(— END OF MISSION 13. Hunter lives. The first pillar didn't fall. —)*
 
 ## SCENE NOTES / FLAGS
 - **Hunter's look:** black bandanna, thin black clothes; **gold-and-black
@@ -3708,6 +3772,52 @@ roster may extend beyond these seven.)*
   campaign's ~2000 epilogue. Consistent.
 - Full chain: **1985** (campaign) → **Dec 31, 2000** (this time-skip) → **late
   2001 / post-9/11** (open-world mode).
+
+
+═══════════════════════════════════════════════════════════════════════
+# ▓▓▓ FILE: missions/mission-14.md ▓▓▓
+═══════════════════════════════════════════════════════════════════════
+
+# Mission 14 — "The Pillar Made of Titanium"
+
+> **Canonical script (in progress).** Preserves EVERY detail. Target rating:
+> **ESRB M.** Epilogue era (2000+); POV swaps between **Molotov and Spike**.
+>
+> **⚠ Title as heard:** "the struggles and all in the pillar made out of
+> titanium" — recorded as **"The Pillar Made of Titanium"** (confirm exact
+> phrasing; "The Struggle(s)..." variant possible).
+
+## Title Meaning (foreshadow — per naming convention)
+The team believes they may **never take Hunter down** — he's likely **the
+hardest pillar of the three**, because he literally **leads a criminal
+empire.** He's the pillar made of titanium: you don't chip him, you don't
+crack him. After M13, they've seen him **shoot a bullet out of the air.**
+
+## Placement
+- Follows Mission 13 ("The Three Pillars of Ruin") — Hunter escaped; Molotov has
+  **5 broken ribs**; the team is broke, low on everything (see M13's gear
+  degradation).
+
+## THE TWIST — the pillars hunt each other
+**Hunter is ALSO hunting Victor Prestige** — because **Prestige is the maker of
+the drones**, and the drones are what mutilated Hunter's parents in the Hellfire
+rain (M6). His terror-war has always pointed at HYDRA's head.
+- Geometry: **Pillar 3 hunts Pillar 2.** The team and Hunter share a target.
+- Implications (TBD): a race to Prestige? A temporary monstrous alliance? Does
+  the team *use* Hunter as a weapon against HYDRA? The "cruel but fair" villain
+  may be open to terms — or may collect "one of you" on the way (his forest
+  threat).
+
+## Status
+- Title + placement + core twist locked. **Beats & dialogue: pending.**
+
+## NOTES / OPEN THREADS
+- Hunter's forest whisper (M13) hangs over this mission: *"I'll just have to
+  take one of you."* — a standing death-flag on the team.
+- Molotov fights (if at all) with **5 broken ribs.**
+- The team's resource crisis (no gun oil, degraded weapons) is active.
+- **Victor Prestige = the maker of the drones** (now canon — the H-series is
+  his work).
 
 
 ═══════════════════════════════════════════════════════════════════════
