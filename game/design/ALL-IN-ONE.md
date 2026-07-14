@@ -3990,7 +3990,54 @@ and **he'll do anything to keep them safe.**
 >
 > **JONAH:** *(reading, quiet)* ...Zero-six.
 >
+> *(Nobody answers him. Because the fog behind the squad has a **shape** in it.)*
+
+### DRONE 9
+
+> *(A **silhouette** stands behind them in the red murk — tall, wrong, still.
+> **Two glowing red eyes.** A few **sparks** drip off it in the dark. As it
+> steps into the flashlight's edge: **an H1.0. Damaged. Old.** Plating scarred
+> and patched — and strapped around its stomach, worn the way a hunter wears a
+> belt of pelts, hang **four assault rifles. Trophies.**)*
+>
+> *(**DRONE 9.**)*
+>
+> *(The squad's guns come up in a ragged clatter. Nine does not care. He walks
+> **past them** — through the red, each step a wet echo — straight to **Drone
+> 06's corpse.**)*
+>
+> *(He tries to bend down — and one of his **knees buckles**, venting a spark.
+> Old machine. He steadies. Plants one hand flat on **06's chest**, wraps the
+> other around **06's head—)*
+>
+> *(—and **TWISTS.** The head comes off **clean.** He straightens — the knee
+> complaining again — and clips the head to his waist.)*
+>
+> *(Where **three other drone heads** already hang.)*
+>
+> **PATCH:** *(barely air)* ...those are *heads.* He collects — those are
+> **heads.**
+> **ATOMIC:** *(not moving, arm already across Jonah)* Nobody. Shoots.
+>
+> *(Four rifles. Four heads. Two red eyes, unreadable in the fog, turning — at
+> last — toward the squad.)*
+>
 > *(— CONTINUES. —)*
+
+## REVEAL — DRONE 9, THE SIBLING-HUNTER
+- **The thing that dismembered Drone 06 was DRONE 9.** The sentient drone has
+  been **hunting the original 13 — his own kind — and taking their HEADS.**
+- **His trophies:** **4 assault rifles** worn around his stomach; **4 drone
+  heads** now at his waist (3 + 06's). The missing/unaccounted drones (1–4, 8,
+  10, 11, 13) are very plausibly **his victims** — that's why the world lost
+  track of them.
+- **His condition (year 2000):** visibly **damaged and aging** — sparking,
+  a knee that buckles. ~52 years since launch. Even sentient machines get old.
+- **Open (deliberately):** WHY he hunts his siblings (autonomy? contract?
+  hatred of what he is?), whether he's hostile to the squad, whether he serves
+  or hunts **Prestige** (he's under Prestige's hideout...), and **his voice**
+  — Drone 9 has not yet spoken. *(No dialogue written for him — his first words
+  are the creator's to give.)*
 
 ## REVEALS / THREADS
 - **DRONE 06 — FOUND.** One of the unaccounted original 13 (1948) — discovered
@@ -5300,7 +5347,7 @@ boardroom scene):
 | **6** | **FOUND DESTROYED (M15, ~2000)** | Discovered **wrecked beneath the medical place** hiding Victor Prestige: both legs gone, one arm, half its face, most of its back — **still attacked** before short-circuiting dead. **What dismembered it is unknown.** |
 | **5** | **Destroyed (KIA)** | Found **impaled on a tree branch**, a **tiger trying to break it open**. Likely **failed to adapt to the ecosystem.** |
 | **7** | **Captured → Scrapped** | Taken and **scrapped for salvage** so it could **never be reprogrammed / turned against us.** |
-| **9** | **ACTIVE — SENTIENT** | Sentient (possibly **HYDRA-engineered**, not a fluke — they cite "what they did with Nine" as the precedent for Patient 14). **Seen making money as a bodyguard.** Independent/rogue actor — major character potential. |
+| **9** | **ACTIVE — SENTIENT — THE SIBLING-HUNTER (M15, ~2000)** | Sentient (possibly **HYDRA-engineered** — the Patient 14 precedent). 1985: bodyguard-for-hire (Lady Death). **2000: revealed as the hunter of the original 13** — kills his own kind and **collects their heads** (4 at his waist incl. 06) + 4 assault rifles as trophies. Aging: sparks, buckling knee. Motive unknown. The "unknown" drones are plausibly his kills. |
 | **12** | **Captured → Scrapped** | Same as 7 — stripped for salvage to prevent reprogramming. |
 | Others (1–4, 8, 10, 11, 13) | **UNKNOWN** | May have **failed to adapt to Earth's ecosystem** — but **"failed to adapt" ≠ confirmed dead.** Any could **still be active** somewhere in the world. |
 
