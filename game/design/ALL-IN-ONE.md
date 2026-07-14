@@ -3523,8 +3523,96 @@ roster may extend beyond these seven.)*
 >
 > **MOLOTOV:** *(radio)* Name's **Hunter.** He's pillar three. *(beat)* Today we
 > find out if he bleeds.
+
+## STRUCTURE NOTE — "THE EPILOGUE" (the 2000 era)
+- The post-timeskip era is **the campaign's EPILOGUE arc.**
+- **Hunter is the FIRST pillar** the team moves to take down.
+- **Playable POV: the player SWAPS between MOLOTOV and SPIKE** across the
+  epilogue's missions (both are player characters in this era).
+
+## THE WAREHOUSE — HUNTER'S GAME (full dialogue)
+
+> *(A WAREHOUSE on the ruined city's edge. The team takes the perimeter — NOVA,
+> ATOMIC, JONAH, JEFF, CHARLES locking down every exit. **Molotov and Spike head
+> in** alone.)*
+>
+> **ATOMIC:** *(radio)* Perimeter's ours. Nothing gets out, brah.
+> **MOLOTOV:** *(flat)* Nothing needs to.
+>
+> *(Inside: catwalks, dust, one pool of work-light. On the floor below — a
+> **TRIANGLE** taped out, a **bound captive at each point**, hands and legs
+> tied. Roughly **ten soldiers** ring the shape. And pacing the center — a man
+> in **thin black clothes and a black bandanna**, a **gold-and-black revolver
+> with a pristine wood grip** riding his hip. **HUNTER.**)*
+>
+> *(Molotov and Spike slip onto a catwalk above. Hold. Watch.)*
+>
+> **HUNTER:** *(to the captives, bright as a game-show host)* Gentlemen. How
+> about we play a little game of faith?
+>
+> *(He holsters the revolver with a flourish and unties the **first two**
+> captives. The FIRST one lunges the instant his hands are free — going for
+> Hunter's throat—)*
+>
+> *(—Hunter cracks him across the temple with the revolver's hammer, cocks it in
+> the same motion, and shoots him through the head. Swift. Bored, almost.)*
+>
+> **HUNTER:** *(to the body, mildly)* That's not faith. That's initiative.
+> *(beat)* I hate initiative.
+>
+> *(He unties the **last two.** They look at the body. They look at each other.
+> They **agree to his terms** — and fight. Bare hands. It's brutal, ugly,
+> desperate — two starving men swinging for their lives.)*
+>
+> **HUNTER:** *(watching, delighted)* Pause. **Pause!**
+>
+> *(They freeze, heaving. Hunter draws a KNIFE, drops it dead-center of the
+> triangle — and fires his revolver into the air. The fight explodes back to
+> life. A scramble for the blade — and one man opens the other's throat with
+> it.)*
+>
+> *(Silence. The survivor stands there shaking, knife dripping, waiting.)*
+>
+> **HUNTER:** *(cocking the revolver, warm)* Well done. *(beat)* I'll give you a
+> gift.
+>
+> *(He shoots the survivor in the head.)*
+>
+> *(Hunter lays the revolver over his shoulder, charismatic as a man at his own
+> birthday party, and turns to his soldiers.)*
+>
+> **HUNTER:** Only a matter of time, my friends.
+>
+> *(Three of his men douse the bodies and **set them on fire.** The light of it
+> climbs the walls.)*
+>
+> *(On the catwalk — the flames dance across MOLOTOV's mask. He **mutters
+> something** under his breath, too low to make out. Fire and bodies. Of all
+> things — fire and bodies.)*
+>
+> **SPIKE:** *(barely a whisper)* Shut up.
+>
+> *(They move — deeper into the building, working for a clean line on Hunter.
+> Then the radio crackles:)*
+>
+> **ATOMIC:** *(radio, tight)* Heads up — I've got what looks like **four men
+> moving in on your location.** You gotta move fast.
 >
 > *(— CONTINUES. —)*
+
+## SCENE NOTES / FLAGS
+- **Hunter's look:** black bandanna, thin black clothes; **gold-and-black
+  revolver, pristine wood grip.**
+- **Hunter's character:** a game-master sadist. The "game of faith" is rigged —
+  play or refuse, everyone dies; the winner's prize is a bullet. He kills
+  boredly and celebrates warmly. "Only a matter of time, my friends."
+- **⚠ "game of faith"** — as heard ("game of face"); faith/fates both fit. Confirm.
+- **⚠ "tin soldiers"** — read as **~ten soldiers** ringing the triangle. Confirm.
+- **Molotov's mutter:** written as inaudible-by-design. *(Note the resonance: he
+  watches bodies burn — fire is HIS wound. The mutter stays under his breath,
+  per the ⭐ one-emotion rule — this is as close to the line as he gets without
+  crossing it.)*
+- **Cliffhanger:** four unknown men closing on Molotov & Spike's position.
 
 ## REVEALS (canon)
 - **MOLOTOV IS ACTIVE IN 2000** — new **fixed/futuristic mask** (the M10 break
