@@ -651,6 +651,31 @@ city → spot **three friendly US Army tanks** rolling in to support → then
   loudly. *(How he does it — bought guards? tech? something that "turns people
   off"? — TBD. Note: the gold-on-the-gun echoes **Abraham's gold Colt** —
   connection or coincidence, TBD.)*
+
+- **HUNTER — ORIGIN (the Hellfire orphan):**
+  - **Mission 6 ("Hellfire," 1985) created him.** When the Hellfire missiles
+    shredded the H2.1 swarm, the burning ~4-ft drones rained on the city — and
+    **14-year-old Hunter watched his parents get brutally mutilated by the
+    propellers of falling drones.** He is the human cost of the President's
+    no-win choice — one of the "thousands" sacrificed for the billions.
+  - **His vendetta:** revenge on **the President and EVERYONE involved in the
+    Hellfire mission.** *(⚠ Dramatic irony — that list plausibly includes
+    SPIKE and MOLOTOV, who flew that mission. The team hunting Hunter may be ON
+    Hunter's list. Confirm.)*
+  - **The musket:** he took his **father's old musket** (a modern reproduction —
+    still painfully slow) as his first weapon. Sentimental, impractical, his.
+  - **First kill:** a **coastal farmer** who shot at Hunter as he tried to steal
+    tropical pigs. Hunter killed him, took his weapons and ammo.
+  - **The farm's secret:** the farmer kept **slaves/workers.** Hunter **freed
+    them all** — gave the **women and children $300 and shipped them to America**
+    for a better life; the **unmarried / childless men chose to go WITH him.**
+    Those freed men became the seed of his **criminal empire.**
+  - **His army = people he liberated.** That's why his men adore him and why he
+    moves untouchable through crowds — he is, to the bottom of the world, a
+    liberator. To the top of it, a terrorist.
+  - **Thesis: "Hunter is CRUEL — but FAIR."** The warehouse game is the cruelty;
+    the $300 and the freedom papers are the fairness. Both are true at once.
+  - **Age:** 14 in 1985 → **~29–30 in 2000.**
 - **⚠⚠ The "Ray Abraham" connection (Mission 9):** an interrogated soldier says
   Victor Prestige **has been talking to a "Ray Abraham."** The surname matches the
   team's own **General Abraham** — a potential bombshell (Abraham as HYDRA

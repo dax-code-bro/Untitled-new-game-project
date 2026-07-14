@@ -212,3 +212,11 @@ is already aboard helicopters and planes, en route to Texas. Exposition happens
   be downed by even a full Shark blast — escalates the threat and forces the
   Hellfire choice.
 - Sets up **Mission 7 "Industry"** (where the drones are built).
+
+## LEGACY — this mission creates a villain
+**The falling fireballs of Hellfire birthed HUNTER** ("the Terrorist in Black,"
+the epilogue's third pillar — see M13 + GAME_DESIGN). A 14-year-old boy watched
+his parents mutilated by the propellers of falling drones in this mission's
+final act. The President's no-win choice didn't just cost thousands of lives —
+it planted the era's most feared man. Fifteen years later, everyone involved in
+Hellfire is on his list.
