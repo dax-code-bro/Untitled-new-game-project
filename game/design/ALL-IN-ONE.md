@@ -4397,8 +4397,54 @@ on Hunter" [M14] comes off the shelf.)*
 >
 > *(Slowly — one by one, Atomic dead last — the guns come down. Nobody
 > holsters.)*
+
+### THE TREATY GIFT
+
+> *(Hunter signals his men. They carry in a **huge, heavy metal container** and
+> set it down with a clang that echoes off the new walls. Hunter unlatches it
+> and swings it open:)*
 >
-> *(— Uneasy stand-down. The war council is next. —)*
+> *(**Bottles of beer. Salt. Cash — stacks of it. Cigarettes. And three gold
+> bars.**)*
+>
+> **HUNTER:** Let this be my treaty gift.
+>
+> *(Silence. Dice drifts toward the cash like it's magnetic.)*
+>
+> **DICE:** *(reverent)* ...I take back forty percent of what I said about you.
+> **PATCH:** *(lifting a beer bottle, squinting)* Is it poisoned?
+> **HUNTER:** *(mildly)* If I wanted you dead, you'd be dead and I'd have kept
+> the beer.
+> **PATCH:** ...Weirdly comforting.
+>
+> **JONAH:** *(off the odd item)* ...Why salt?
+> **JEFF:** *(quiet, from the wall)* Salt covenant. Old custom — older than
+> flags. You take a man's salt, the peace is sacred. Break it and you're cursed.
+> *(beat)* He's not paying us. He's *binding* us.
+>
+> *(Everyone looks at Hunter. Hunter smiles like a man who enjoys being
+> translated.)*
+>
+> **HUNTER:** Your quiet one reads. *(to Molotov)* I like your family, Molotov.
+> All of it.
+> **ATOMIC:** *(flat)* Stop liking things.
+>
+> *(Molotov looks at the salt a long moment. Then he reaches in, takes a pinch,
+> and eats it. Hunter's smile goes — for half a second — entirely real.)*
+>
+> *(— The covenant is taken. The war council is next. —)*
+
+## THE TREATY GIFT (canon)
+- Contents: **beer, salt, cash, cigarettes, three gold bars.**
+- **The salt = a salt covenant** — an ancient custom: take a man's salt and the
+  peace is sacred. Hunter isn't buying the team; he's **binding** them. (Jeff
+  translates; **Molotov eats the salt** — my staging — sealing it.)
+- **Three gold bars** — three is Hunter's number (three children, three right
+  hands, three pillars). Everything he gives comes in his signature count.
+- **The cash lands hard** — this team sold bikes for plumbing. Hunter just
+  solved their poverty in one crate (and the gear-degradation arc gets a patron).
+- ESRB descriptors cash their checks: **alcohol + tobacco**, on-screen, in a
+  treaty crate.
 
 ## SCENE NOTES
 - **First scene under the escalated-language policy** (Dice's F-bomb debut;
