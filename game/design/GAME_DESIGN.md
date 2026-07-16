@@ -63,6 +63,15 @@ complete screenplays.
   *(scripted w/ full dialogue)*.
   ("15 years later — Dec 31, 2000"); a prison, rows of **H1.0-pattern robots**
   *(scene; timeline resolved)*.
+- `game/design/missions/mission-16.md` — **Mission 16 (title TBD)** — family
+  council, the gunsmith parley (Hunter allied), homecoming, the salt-covenant
+  treaty gift *(scripted)*.
+- `game/design/missions/mission-17.md` — **Mission 17 (title TBD)** — the
+  storming of Prestige's base; **playable Hunter**; the split bullet; **PRESTIGE
+  DIES**; coda: the night of peace *(scripted — COMPLETE)*.
+- `game/design/missions/mission-18.md` — **Mission 18 (title TBD)** — HYDRA is
+  GONE; the hunt for Abraham begins; **Spike's dire hour** (practically a full
+  cyborg; everything he loved is gone) *(in progress)*.
 
 **Timeline chain:** 1985 (campaign) → Dec 31, 2000 (M13 time-skip) → late 2001 /
 post-9/11 (open-world mercenary mode).
@@ -471,6 +480,15 @@ high-ranking **Sergeant / officer** leading young Irish troops.
     his late father's enemy, alone.
 - **Specialty / personality / weapon / backstory:** *TBD — revealed throughout
   the story* ("we will see").
+- **⚠ THE CYBORG (2000 era — revealed post-M17):** Spike is **practically a
+  FULL cyborg.** The M10 crippling was only the start — the gravity-stabilizer
+  waist rig grew, over 15 years, into near-total replacement of his body.
+  *(Which parts, how it happened, whether Charles built him — OPEN; see M18.)*
+- **⚠ SOMETHING DIRE (M18):** with HYDRA finally gone, Spike is in crisis —
+  **he lost the people he looked up to** (all of Team Apex), **he's practically
+  a full cyborg**, and **everything he's ever loved is gone.** The war's end
+  gave Molotov everything back and gave Spike nothing. The main character's
+  darkest hour — shape of the arc TBD (creator's).
 
 ##### 6. "Payback" — the mystery operator — **DECEASED (KIA Mission 11)**
 > **Status:** killed in the LMG ambush — **500+ rounds of 5.56×45mm NATO.**
@@ -684,6 +702,11 @@ city → spot **three friendly US Army tanks** rolling in to support → then
   in plain sight (Mission 7's casino has the H3.2 factory in its back half).
 - **Leadership — Victor Prestige (Mission 9 reveal):** named as **HYDRA's leader
   / "owner."** First real name at the top of the century-old org. Details TBD.
+- **☠ HYDRA — GONE (post-M17):** with **Prestige dead**, **ALL of HYDRA is
+  gone.** The century-old organization is finished — no owner, no factories,
+  no program. What remains: **Abraham** (the last hostile Pillar, Antarctica)
+  and whatever leaderless machines are still loose in the world (the two new
+  drone models, Drone 9, the unaccounted originals).
 - **THE THREE PILLARS OF RUIN (2000 era):** the era's three central villains —
   **General Abraham** (the traitor), **Victor Prestige** (HYDRA's owner), and
   **HUNTER, "the Terrorist in Black."** The new team's goal: find and take down

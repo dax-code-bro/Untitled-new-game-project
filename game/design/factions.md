@@ -37,12 +37,17 @@
 
 ---
 
-## 2. HYDRA — (still up and running)
+## 2. HYDRA — (GONE as of M17)
 - **Emblem:** the **three-headed serpent** over the wordmark **HYDRA.** Asset:
   `game/design/assets/hydra-logo.png`.
-- **Status:** **still active** across the entire timeline — the campaign's core
-  antagonist persists into the Dec-31-2000 era and the post-9/11 open-world mode
-  (they hold **San Juan de la Selva** on the island).
+- **Status — ☠ GONE (post-M17):** with **Victor Prestige dead**, **ALL of HYDRA
+  is gone** — the century-old org is finished. Loose ends: **Abraham**
+  (Antarctica) + leaderless drones still in the wild.
+- **⚠ RECONCILE — the post-9/11 open-world mode:** earlier canon has HYDRA
+  holding **San Juan de la Selva** in the post-epilogue mode (set *after* the
+  campaign). If HYDRA is gone at M17, the island force is presumably a
+  **remnant/successor cell** (a hydra grows new heads?) — **creator to
+  confirm; do not invent.**
 - **Full canon lives in `GAME_DESIGN.md`** (HYDRA section) + related files:
   - Over a **century old (~since 1873)**; the **1948** rocket that seeded ~13
     drones worldwide.
