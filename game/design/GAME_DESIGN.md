@@ -701,6 +701,12 @@ city → spot **three friendly US Army tanks** rolling in to support → then
     the $300 and the freedom papers are the fairness. Both are true at once.
   - **Age — LOCKED:** **16 at Hellfire (1985) → ~31 in 2000.** Still very young
     for what he's built.
+  - **THE BULLET:** forged from **pieces of the drones that killed his
+    parents** — collected the day they died, welded, shaved to bullet size,
+    carried ~15 years. Reserved for **Prestige**: the maker dies by the made.
+    "Simple trade."
+  - **ALLIED (M16):** parleyed with Molotov at a gunsmith; joins the Prestige
+    hit; may help against Abraham **if he survives.**
 - **HUNTER — THE FAMILY & THE SUCCESSION (M16 reveal):**
   - **At age 20 he had three children**, whom he **values dearly** — they are
     the heirs he'll **pass his criminal empire to.** He wants to hand down his

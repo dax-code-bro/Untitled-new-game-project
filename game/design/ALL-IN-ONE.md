@@ -742,6 +742,12 @@ city → spot **three friendly US Army tanks** rolling in to support → then
     the $300 and the freedom papers are the fairness. Both are true at once.
   - **Age — LOCKED:** **16 at Hellfire (1985) → ~31 in 2000.** Still very young
     for what he's built.
+  - **THE BULLET:** forged from **pieces of the drones that killed his
+    parents** — collected the day they died, welded, shaved to bullet size,
+    carried ~15 years. Reserved for **Prestige**: the maker dies by the made.
+    "Simple trade."
+  - **ALLIED (M16):** parleyed with Molotov at a gunsmith; joins the Prestige
+    hit; may help against Abraham **if he survives.**
 - **HUNTER — THE FAMILY & THE SUCCESSION (M16 reveal):**
   - **At age 20 he had three children**, whom he **values dearly** — they are
     the heirs he'll **pass his criminal empire to.** He wants to hand down his
@@ -4264,10 +4270,65 @@ on Hunter" [M14] comes off the shelf.)*
   team — and the man walking in alone is the one whose wife and son live at
   HQ.)*
 
+## THE PARLEY — THE GUNSMITH (full dialogue)
+
+> *(A GUNSMITH's shop — racks of steel, the smell of oil and brass. HUNTER is
+> there like he owns it — maybe he does. No panic at Molotov's arrival; if
+> anything, he seems pleased. MOLOTOV stands just inside the door, hands
+> visible, mask on.)*
+>
+> **HUNTER:** *(not looking up)* The quiet one. Alone. *(a smile)* That's
+> either respect or a very small funeral.
+> **MOLOTOV:** *(flat)* Prestige.
+> **HUNTER:** Straight to it. Good. *(turning, wiping his hands)* I'll take an
+> ally when I get the option to. Doesn't happen often — people keep trying to
+> shoot me first. *(beat)* And I'm always in for a little liberation. So here's
+> my end: we do Prestige together. And if I come out of that ordeal alive...
+> maybe I help you with your **Abraham** as well.
+>
+> *(Molotov says nothing. Which, from him, is agreement.)*
+>
+> *(Hunter turns back to the counter — and Molotov sees it: Hunter is **loading
+> a single special bullet** into the black-and-gold revolver. It doesn't look
+> like the others. It looks... assembled.)*
+>
+> **MOLOTOV:** What is that.
+> **HUNTER:** *(holds it up to the light, almost tender)* The day my parents
+> died, I took a piece of the drones that killed them. Both of them. I
+> connected the pieces together. Shaved them down... *(seats it in the
+> cylinder)* ...into the size of a bullet.
+>
+> *(He snaps the cylinder shut.)*
+>
+> **HUNTER:** Now I'm going to kill Prestige with the same weapon that killed
+> my parents. *(looks up, bright)* Simple trade. Don't you think?
+>
+> *(Molotov looks at the revolver. At the man. Says nothing — but he doesn't
+> disagree.)*
+>
+> **HUNTER:** *(holstering, clapping once)* So! Where are we going now?
+>
+> *(— The alliance is live. —)*
+
+## CANON — THE ALLIANCE & THE BULLET
+- **The alliance is SEALED:** Hunter joins for the **Prestige** hit. Terms:
+  - He takes allies "when he gets the option" — and he's "always in for a
+    little liberation" (his brand since the farm).
+  - **If he survives the Prestige ordeal**, he *may* help take down
+    **Abraham** too.
+  - He mobilizes **immediately** ("So, where are we going now?").
+- **THE BULLET (signature object):** forged from **pieces of the very drones
+  that killed his parents** at Hellfire — collected the day they died,
+  connected, shaved down to bullet-size. Carried ~15 years. **Purpose: kill
+  Victor Prestige — the drone-maker — with his own drones.**
+  - It's his "cruel but fair" ethos in an object: a **simple trade.** The maker
+    dies by the made.
+- Hunter's setting — a **gunsmith** — and his ease there noted (possibly his).
+
 ## OPEN
-- The parley itself — where, how Molotov approaches, what's said. (Hunter's
-  first spoken dialogue TO the team's side.)
-- Does the team know he's going, or does he slip out?
+- The team's reaction when Molotov returns with the Terrorist in Black at his
+  shoulder. (Atomic. Oh, Atomic.)
+- The joint Prestige assault — the drones, Nine in the basement, the plan.
 - Mission title TBD.
 
 
