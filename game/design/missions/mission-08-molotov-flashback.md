@@ -129,13 +129,13 @@ wound); calling him **"Webber"** would be the thing that cuts.
   child, the two joined the Mollys together, and the brother was **betrayed and
   shot dead in front of Webber** during the Mollys era. The defining loss of his
   life. *(Name TBD.)*
-- **⚠ TIMELINE — needs reconciling.** The Mollys helped **take down Hitler**
-  (~1945) when Webber was **18** → born ~**1927** → ~**58 in 1985.** That's old
-  for a frontline operator (near Fox's 65) and is in tension with how Molotov
-  reads. Also: mother "fell in the war" in the *childhood* flashback (~10 yrs
-  earlier) — hard to fit before/within WWII. **Pin Webber's birth year & which
-  "war"** so childhood → Mollys → 1985 line up. (User noted some details are
-  "besides the point" — flagging only because his present age depends on it.)
+- **TIMELINE — RESOLVED (alt-history):** in this universe **the "mustache guy"
+  survived far longer than in ours** — German control persisted deep into the
+  20th century. Webber is **born ~1963**: childhood fire ~1973; mother fell in
+  the *extended German conflict*; **Mollys at 18 (~1981)** with his brother
+  (16), helping finally take the mustache guy down; betrayal + burns; **two
+  years of revenge (~1983)**; **joins Team Apex ~7 months later (~1984)**; is
+  **22 at Mission 1 (1985)** and **~37 in the 2000 epilogue.** Every beat locks.
 - **Is the flashback playable** (like Diego's) or purely cinematic? *(TBD.)*
 - **After the flashback:** we return to the present and the camera cuts to
   **Spike & Striker** on a new op (see Mission 9).

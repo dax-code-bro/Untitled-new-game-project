@@ -335,13 +335,18 @@ members not yet introduced (TBD). The six documented so far:
 - **Rank:** *TBD.*
 - **AGE — CANON (M16):** **22 in 1985 → ~37 in 2000** (born ~1963). Consistent
   with Jonah's birth (~1986, Molotov ~23).
-  - **⚠⚠ TIMELINE CONFLICT with the M8 flashback:** the Mollys were said to have
-    helped take down **"that one mustache guy"** (read as Hitler, ~1945) when
-    Webber was 18 — impossible if he's born ~1963. Options: (a) the "mustache
-    guy" is a **different, later dictator** (fictional/regional, ~1981); (b) the
-    Mollys' war was a later German-control conflict (alt-history); (c) revise the
-    flashback dates. **Creator to resolve — the 22-in-1985 age is the fixed
-    point.**
+  - **TIMELINE — RESOLVED (alt-history):** in this universe, **the "mustache
+    guy" survived a LOT longer** — German control persisted deep into the 20th
+    century, and the **Mollys helped take him down ~1981**, when Webber was 18.
+    The full reconciled line (all consistent, born ~1963):
+    - ~1973 (age ~10): the father, the fire, the revolver (childhood flashback).
+    - Mother "fell in the war" — the **extended German conflict** of this
+      alt-history.
+    - ~1981 (age 18): joins the **Mollys** with his brother (16); they help
+      take down the mustache guy; the betrayal, the flamethrower, the burns.
+    - ~1981–83: two years hunting the betrayers.
+    - ~1984: **seven months later, joins Team Apex.**
+    - 1985 (age 22): Mission 1. **The math locks end to end.**
 
 ##### 2. James "Fox" Carter — **DECEASED (KIA Mission 11)**
 > **Status:** **executed by Abraham** (golden Colt M1911, headshot) after the
@@ -735,8 +740,7 @@ city → spot **three friendly US Army tanks** rolling in to support → then
     liberator. To the top of it, a terrorist.
   - **Thesis: "Hunter is CRUEL — but FAIR."** The warehouse game is the cruelty;
     the $300 and the freedom papers are the fairness. Both are true at once.
-  - **Age:** *(⚠ revised)* **16 in 1985 → ~31 in 2000.** *(Originally given as
-    14 at Hellfire; latest statement says 16 — confirm which.)* Still very young
+  - **Age — LOCKED:** **16 at Hellfire (1985) → ~31 in 2000.** Still very young
     for what he's built.
 - **HUNTER — THE FAMILY & THE SUCCESSION (M16 reveal):**
   - **At age 20 he had three children**, whom he **values dearly** — they are
@@ -2890,13 +2894,13 @@ wound); calling him **"Webber"** would be the thing that cuts.
   child, the two joined the Mollys together, and the brother was **betrayed and
   shot dead in front of Webber** during the Mollys era. The defining loss of his
   life. *(Name TBD.)*
-- **⚠ TIMELINE — needs reconciling.** The Mollys helped **take down Hitler**
-  (~1945) when Webber was **18** → born ~**1927** → ~**58 in 1985.** That's old
-  for a frontline operator (near Fox's 65) and is in tension with how Molotov
-  reads. Also: mother "fell in the war" in the *childhood* flashback (~10 yrs
-  earlier) — hard to fit before/within WWII. **Pin Webber's birth year & which
-  "war"** so childhood → Mollys → 1985 line up. (User noted some details are
-  "besides the point" — flagging only because his present age depends on it.)
+- **TIMELINE — RESOLVED (alt-history):** in this universe **the "mustache guy"
+  survived far longer than in ours** — German control persisted deep into the
+  20th century. Webber is **born ~1963**: childhood fire ~1973; mother fell in
+  the *extended German conflict*; **Mollys at 18 (~1981)** with his brother
+  (16), helping finally take the mustache guy down; betrayal + burns; **two
+  years of revenge (~1983)**; **joins Team Apex ~7 months later (~1984)**; is
+  **22 at Mission 1 (1985)** and **~37 in the 2000 epilogue.** Every beat locks.
 - **Is the flashback playable** (like Diego's) or purely cinematic? *(TBD.)*
 - **After the flashback:** we return to the present and the camera cuts to
   **Spike & Striker** on a new op (see Mission 9).
