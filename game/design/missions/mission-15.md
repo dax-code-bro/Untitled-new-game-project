@@ -250,6 +250,22 @@ and **he'll do anything to keep them safe.**
 - **Molotov fought this mission on 5 broken ribs** (pistol-slamming locks, no
   complaints — of course he did).
 
+## AFTERMATH — THE ABRAHAM FILE (back at HQ)
+Back at the warehouse, **Jeff and others hit the computers** and dig up
+Abraham's trail:
+- **Last known appearance: ANTARCTICA.**
+- Seen **harvesting a MOUNTAIN OF URANIUM.**
+- **The magnetic field around Antarctica has drastically increased** — caused by
+  a **satellite he has stationed above the entire region.**
+  - *(⚠ Garbled fragment "a new detonated" — possibly **"a nuke detonated"**
+    down there. Confirm what happened.)*
+- Whatever he's building at the bottom of the world — uranium + a
+  field-warping satellite — it reads **apocalyptic.**
+
+**The decision:** despite all that... **HUNTER remains the main target.** The
+titanium pillar first; the Antarctic nightmare after. *(The postponed "Assault
+on Hunter" [M14] comes off the shelf.)*
+
 ## REVEALS / THREADS
 - **DRONE 06 — FOUND.** One of the unaccounted original 13 (1948) — discovered
   **wrecked** beneath the medical place: legs gone, an arm gone, half its face,

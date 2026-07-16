@@ -372,6 +372,11 @@ high-ranking **Sergeant / officer** leading young Irish troops.
 > don't try to double-check. That's all you had to do."* Recontextualizes his
 > whole arc — the secrecy, the deep HYDRA knowledge, "fixes broken people," even
 > his Hellfire objection. The team's own general was the snake all along.
+> **YEAR 2000 (M15 intel):** last seen in **ANTARCTICA**, **harvesting a mountain
+> of uranium**; the **magnetic field around Antarctica has drastically
+> increased** due to a **satellite he stationed above the region** *(⚠ possible
+> nuke detonation — garbled, confirm)*. Whatever he's building down there is the
+> era's looming endgame — the team chose to hunt Hunter first.
 > **⚠ Reaches into the US military (M12):** the ambush used **American military
 > vehicles alongside HYDRA** — so **US forces/government are complicit** with
 > HYDRA, not just Abraham. The corruption goes far higher than one general. Major

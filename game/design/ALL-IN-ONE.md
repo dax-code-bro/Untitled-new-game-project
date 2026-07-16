@@ -412,6 +412,11 @@ high-ranking **Sergeant / officer** leading young Irish troops.
 > don't try to double-check. That's all you had to do."* Recontextualizes his
 > whole arc — the secrecy, the deep HYDRA knowledge, "fixes broken people," even
 > his Hellfire objection. The team's own general was the snake all along.
+> **YEAR 2000 (M15 intel):** last seen in **ANTARCTICA**, **harvesting a mountain
+> of uranium**; the **magnetic field around Antarctica has drastically
+> increased** due to a **satellite he stationed above the region** *(⚠ possible
+> nuke detonation — garbled, confirm)*. Whatever he's building down there is the
+> era's looming endgame — the team chose to hunt Hunter first.
 > **⚠ Reaches into the US military (M12):** the ambush used **American military
 > vehicles alongside HYDRA** — so **US forces/government are complicit** with
 > HYDRA, not just Abraham. The corruption goes far higher than one general. Major
@@ -4111,6 +4116,22 @@ and **he'll do anything to keep them safe.**
   target.** (And given this story, "I hope" is doing a lot of load-bearing.)
 - **Molotov fought this mission on 5 broken ribs** (pistol-slamming locks, no
   complaints — of course he did).
+
+## AFTERMATH — THE ABRAHAM FILE (back at HQ)
+Back at the warehouse, **Jeff and others hit the computers** and dig up
+Abraham's trail:
+- **Last known appearance: ANTARCTICA.**
+- Seen **harvesting a MOUNTAIN OF URANIUM.**
+- **The magnetic field around Antarctica has drastically increased** — caused by
+  a **satellite he has stationed above the entire region.**
+  - *(⚠ Garbled fragment "a new detonated" — possibly **"a nuke detonated"**
+    down there. Confirm what happened.)*
+- Whatever he's building at the bottom of the world — uranium + a
+  field-warping satellite — it reads **apocalyptic.**
+
+**The decision:** despite all that... **HUNTER remains the main target.** The
+titanium pillar first; the Antarctic nightmare after. *(The postponed "Assault
+on Hunter" [M14] comes off the shelf.)*
 
 ## REVEALS / THREADS
 - **DRONE 06 — FOUND.** One of the unaccounted original 13 (1948) — discovered
