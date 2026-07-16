@@ -4602,8 +4602,43 @@ on Hunter" [M14] comes off the shelf.)*
 > **jumps from the catwalk** — down through the smoke to meet the others below.)*
 >
 > *(They've done it. They've **taken down a Pillar.**)*
+
+## CODA — THE NIGHT AFTER (full scene)
+
+> *(And then... **everyone leaves.** No twist. No ambush on the road home. The
+> base burns itself out behind them and they just... go home.)*
 >
-> *(— END OF MISSION 17. —)*
+> *(For the first time in the whole story, **everything is better. Everything
+> is good — and happy.** Hunter's militia peels off into the dark. The team
+> rolls back to the renovated HQ. Somebody laughs at something dumb. It's
+> allowed now.)*
+>
+> *(**MOLOTOV** comes home. **ELIZABETH** is there. And that night — *finally* —
+> he **goes to sleep beside her.** Really sleeps. Because for the first time in
+> fifteen years, he knows exactly where the last person who could harm them
+> is — **a continent away.** Frozen at the bottom of the world.)*
+>
+> *(⚠ proposed connective lines — approve/adjust:)*
+>
+> **ELIZABETH:** *(quiet, in the dark)* ...You're actually here tonight.
+> **MOLOTOV:** *(eyes already closing)* ...Mm.
+> **ELIZABETH:** All of you. Not just the body.
+> **MOLOTOV:** ...All of me.
+>
+> *(She doesn't ask about the mission. He doesn't tell. The house is quiet.
+> The man of fire sleeps.)*
+>
+> *(HOLD on the peace. One full, warm, quiet beat — long enough that the player
+> almost believes it's over.)*
+>
+> *(**MORNING.**)*
+>
+> *(Because there's still one left. And a continent away isn't the same as
+> gone.)*
+>
+> *(In the morning — **they've got to find him.**)*
+>
+> *(— END OF MISSION 17. → M18: THE HUNT FOR ABRAHAM. —)*
 
 ## SCENE NOTES / FLAGS
 - **Hunter's siege doctrine:** **rope-bundled grenades + fuel tanks, ignited and
@@ -4657,6 +4692,22 @@ on Hunter" [M14] comes off the shelf.)*
   (he's the only one on the ground being stood over; the shot misses Hunter).
   **"Haven" read as a garble** for "He then / Prestige." Confirm there is no
   separate character named "Haven."
+- **"Malta goes to sleep with Elizabeth"** — recorded as **MOLOTOV** ("Malta" =
+  dictation garble; Elizabeth is his wife). ✔ near-certain.
+- **"How was everyone leaves"** — read as **"Now everyone leaves."** Confirm.
+
+## CODA NOTES
+- **The one warm beat of the whole game (so far).** After 17 missions of loss,
+  the coda is deliberately *un*-eventful: no twist, no ambush — just peace.
+  Design intent: hold it long enough that the player almost believes it's over.
+- **Molotov finally SLEEPS.** Fifteen years of vigilance end the night Prestige
+  dies — because the last person who could harm his family (**Abraham**) is
+  **a continent away** (Antarctica). Note the quiet logic: he can only rest
+  when the threat is *located*, not when it's *gone.* That's who he is.
+- **⚠ The Elizabeth/Molotov pillow lines are PROPOSED connective tissue** (the
+  creator gave the beat, not the words). Approve, adjust, or cut.
+- **Morning = the M18 hook:** *they've got to find him.* The hunt for Abraham —
+  the last hostile Pillar — begins.
 
 ## OPEN
 - **Mission 17 title** (still TBD — must foreshadow the ending). Candidates that
@@ -4667,8 +4718,8 @@ on Hunter" [M14] comes off the shelf.)*
 - **The two new Prestige drone models + Drone 9** — they did **not** appear in
   the garage fight as scripted. Are they still out there (loose, now that their
   maker is dead)? Follow-up thread.
-- **What the fall of Prestige changes** — Abraham (Antarctica) is now the pillar
-  still standing that isn't an ally. Next target?
+- ~~What the fall of Prestige changes — next target?~~ **RESOLVED (coda):**
+  morning after the night of peace — **the hunt for Abraham begins (M18).** ✔
 
 ═══════════════════════════════════════════════════════════════════════
 # ▓▓▓ FILE: modes/new-mode-post-epilogue.md ▓▓▓
