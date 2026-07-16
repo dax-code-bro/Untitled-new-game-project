@@ -148,6 +148,26 @@ this bar.
 *(These are deliberate, world-appropriate elements of a mature war story — not
 gratuitous. Depicted in service of character and setting.)*
 
+### Language Policy — profanity ESCALATES with the story (canon)
+Profanity is a **damage meter for the team's soul.** It scales with how
+battle-hardened and destroyed the characters are:
+- **1985, early campaign (M1–M6):** disciplined soldiers — moderate military
+  swearing (hell/damn/ass, occasional s-word); f-bombs reserved for true shock.
+- **The dark turn (M7–M12):** heavier — s-words common; f-bombs land at impact
+  moments (betrayals, deaths).
+- **THE EPILOGUE (M13+):** **full strength, unfiltered.** These people are
+  battle-hardened and completely destroyed — **they don't care anymore.**
+  F-bombs are casual in combat chatter. The restraint is gone because the
+  people it belonged to are gone.
+- **Character calibration:**
+  - **Dice / Atomic:** swear easily and often.
+  - **Fox (1985):** swears Irish ("bloody," "feckin'").
+  - **Hunter:** **never swears** — too composed; it makes him scarier.
+  - **Molotov:** may swear **once in the entire game** (same law as the tear —
+    save it, spend it where it detonates).
+  - **Jonah (15):** swears like a teenager trying it out; **Atomic polices his
+    mouth** (running bit + characterization).
+
 ---
 
 ## 1. The Pitch
