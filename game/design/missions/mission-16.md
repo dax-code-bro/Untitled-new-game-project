@@ -132,8 +132,76 @@
     dies by the made.
 - Hunter's setting — a **gunsmith** — and his ease there noted (possibly his).
 
+## THE HOMECOMING — HUNTER AT THE WAREHOUSE (full dialogue)
+
+> *(Hunter **calls off his men** — the shadow-war between his militia and the
+> team goes quiet on his word alone. He brings **a few of his soldiers** and
+> rides back with Molotov. The warehouse doors roll open—)*
+>
+> *(—and every gun in the building comes up at once. Chairs scrape. DICE drops
+> his coffee.)*
+>
+> **DICE:** Oh, you have got to be *fucking* kidding me.
+> **PATCH:** That's— that's *him.* That's actually him. In our house.
+> **ATOMIC:** *(already between Hunter and the interior — between Hunter and
+> where JONAH is standing — rifle level, voice low)* Molly. Brah. Tell me this
+> is a hostage situation. Tell me you're about to say the word and we drop him.
+> **MOLOTOV:** *(flat)* He's with us.
+> **ATOMIC:** He said he'd *take one of us.* I was THERE. The kid was there!
+> **MOLOTOV:** I know what he said.
+>
+> *(HUNTER, hands loose, unbothered — takes in the renovated warehouse like a
+> man touring a property.)*
+>
+> **HUNTER:** *(pleasant)* New walls. Good welds. You did this in — what, a
+> week? *(to Atomic, warmly)* And you must be the one who stands in front of
+> people. I respect that. I have three of you at home.
+> **ATOMIC:** *(not lowering the rifle)* I'm not your friend, man.
+> **HUNTER:** No. You're his. *(nods at Molotov)* That's worth more.
+>
+> *(JONAH, up on the catwalk, has his rifle on Hunter — has had it since the
+> doors opened. Hunter finds the boy's scope without searching for it.)*
+>
+> **HUNTER:** *(to the catwalk, genuinely pleased)* Good eye-line, little
+> sniper. Cover *and* exit. *(beat)* Your father shot at me once. Ask him how
+> that went.
+> **JONAH:** *(steady, seventeen kinds of tense)* ...He's standing. Ask *him*
+> how it went.
+> **HUNTER:** *(a real laugh — points at Jonah, looks at Molotov)* Oh, I *like*
+> him.
+> **ATOMIC:** *(quiet, to Hunter)* You looking at him is my least favorite
+> thing that's ever happened.
+>
+> **SPIKE:** *(entering — sees Hunter — long, long pause; the gravity
+> stabilizer hums in the silence)* ...Somebody had better start talking.
+> **MOLOTOV:** He wants Prestige dead. We want Prestige dead. After Prestige —
+> *(beat)* — maybe Abraham.
+> **SPIKE:** *(staring at Hunter)* And the shit he said in the forest?
+> **HUNTER:** *(mildly)* I say a great many things in forests.
+> **SPIKE:** *(to Molotov)* If this goes sideways, I'm shooting him first and
+> you second.
+> **MOLOTOV:** *(flat)* Fair.
+>
+> *(Slowly — one by one, Atomic dead last — the guns come down. Nobody
+> holsters.)*
+>
+> *(— Uneasy stand-down. The war council is next. —)*
+
+## SCENE NOTES
+- **First scene under the escalated-language policy** (Dice's F-bomb debut;
+  epilogue register active).
+- **Hunter never swears** — policy holding; his composure against everyone
+  else's alarm *is* the menace.
+- **Atomic's body does the talking:** he physically placed himself between
+  Hunter and Jonah before saying a word — the vow, again, in blocking.
+- **Hunter reads everyone in one pass** (Atomic = the shield, Jonah = the
+  legacy) and compliments what he sees. Charm as reconnaissance.
+- **Spike's terms:** "If this goes sideways, I'm shooting him first and you
+  second." / Molotov: **"Fair."** — the alliance's real contract.
+- **Guns down, nothing holstered** — the mood of the whole arrangement.
+
 ## OPEN
-- The team's reaction when Molotov returns with the Terrorist in Black at his
-  shoulder. (Atomic. Oh, Atomic.)
-- The joint Prestige assault — the drones, Nine in the basement, the plan.
+- The war council: the joint plan against Prestige (two new drone models, Nine
+  in the basement, Hunter's bullet).
+- Do Hunter's soldiers stay in the warehouse? (Elizabeth's under this roof...)
 - Mission title TBD.
