@@ -4432,6 +4432,22 @@ on Hunter" [M14] comes off the shelf.)*
 > *(Molotov looks at the salt a long moment. Then he reaches in, takes a pinch,
 > and eats it. Hunter's smile goes — for half a second — entirely real.)*
 >
+> *(The crate opens for business. Dice counts cash out loud. Patch clinks two
+> beers free. Atomic takes cigarettes without taking his eyes off Hunter. And
+> JONAH — casual as anything, a professional sniper's stealth — slides a hand
+> toward a beer bottle—)*
+>
+> *(**MOLOTOV** doesn't even turn around.)*
+>
+> **MOLOTOV:** *(flat)* No.
+> **JONAH:** I wasn't—
+> **MOLOTOV:** *(still not turning)* Cigarettes neither.
+> **JONAH:** *(retreating hand)* ...This crate has nothing for me.
+> **DICE:** *(counting bills)* Grow taller, kid.
+>
+> *(The rest of the group takes their share. Jonah gets salt. He does not want
+> salt.)*
+>
 > *(— The covenant is taken. The war council is next. —)*
 
 ## THE TREATY GIFT (canon)
