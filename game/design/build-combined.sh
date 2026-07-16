@@ -24,6 +24,7 @@ FILES=(
   missions/mission-13.md
   missions/mission-14.md
   missions/mission-15.md
+  missions/mission-16.md
   modes/new-mode-post-epilogue.md
   modes/multiplayer.md
   modes/zombies.md
