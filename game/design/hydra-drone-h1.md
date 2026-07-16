@@ -148,6 +148,14 @@ boardroom scene):
 | **12** | **Captured → Scrapped** | Same as 7 — stripped for salvage to prevent reprogramming. |
 | Others (1–4, 8, 10, 11, 13) | **UNKNOWN** | May have **failed to adapt to Earth's ecosystem** — but **"failed to adapt" ≠ confirmed dead.** Any could **still be active** somewhere in the world. |
 
+**⚠ POST-M17 — THE MAKER IS DEAD:**
+- **Victor Prestige is DEAD** (M17). The **two new drone models** he'd built
+  (glimpsed frayed/rebuilding in M15) and **Drone 9** did **NOT** appear at the
+  garage assault. They're now **loose with no maker** — open threats seeded for
+  a follow-up. Whether Drone 9's "make sure no one else can be harmed" quest
+  changes now that his origin-source (Prestige/HYDRA's engineering) is gone is
+  an open, high-value thread. **Do not invent — awaiting the creator.**
+
 **Story hooks from the tracker:**
 - **Drone 9 (sentient, bodyguard-for-hire)** — a thinking machine that chose
   *commerce* over conquest. Potential ally, wildcard, boss, or recruitable

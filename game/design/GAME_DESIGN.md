@@ -688,6 +688,15 @@ city → spot **three friendly US Army tanks** rolling in to support → then
   **General Abraham** (the traitor), **Victor Prestige** (HYDRA's owner), and
   **HUNTER, "the Terrorist in Black."** The new team's goal: find and take down
   all three.
+  - **STATUS (post-M17):** **Victor Prestige — DEAD** (M17, killed by Hunter on
+    the catwalk with the drone-shrapnel round). **Hunter — ALLY** (M16 parley).
+    **General Abraham — STILL STANDING** (Antarctica) — the last hostile Pillar.
+  - **PRESTIGE'S DEATH (M17):** stormed his base with Hunter's militia; Prestige
+    made his last stand on a **catwalk** over the burning garage, **missing
+    every shot** (pistol, then a point-blank Glock). Hunter grappled up, we
+    **played as Hunter** for the first time, ran him down, and killed him with
+    the forged round — *"This is for my parents… for my friend."* **The maker
+    died by the made.** ⚠ **"my friend" = unidentified second victim (open).**
 - **HUNTER — what's known (M13):** signature weapon is a **black-and-gold
   revolver.** MO: **walks into maximum-security sites in plain sight**, executes
   high-ranking targets **in front of hundreds of guards who somehow do
@@ -725,6 +734,11 @@ city → spot **three friendly US Army tanks** rolling in to support → then
     parents** — collected the day they died, welded, shaved to bullet size,
     carried ~15 years. Reserved for **Prestige**: the maker dies by the made.
     "Simple trade."
+    - **PAYOFF (M17):** he fired it into Prestige on the catwalk. Because it was
+      **improvised — "didn't seat the bullets together too good" — it SPLIT IN
+      TWO in flight.** Both halves hit; Prestige died in ~2 seconds. Even
+      Hunter's *sloppy* round finishes the job. **The parents' drones killed
+      their own maker.** ✔ **USED / SPENT.**
   - **ALLIED (M16):** parleyed with Molotov at a gunsmith; joins the Prestige
     hit; may help against Abraham **if he survives.**
 - **HUNTER — THE FAMILY & THE SUCCESSION (M16 reveal):**
