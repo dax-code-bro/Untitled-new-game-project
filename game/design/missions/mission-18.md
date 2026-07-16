@@ -80,11 +80,78 @@
   member of his team. If the creator wants a Spike↔Nine scene, the rhyme is
   sitting right there. **Not assumed.**
 
+## ⚠⚠⚠ THE REVEAL — SPIKE IS ABRAHAM'S (MASSIVE SPOILER — new canon)
+
+> **It's revealed (to the audience): SPIKE HAS SECRETLY BEEN WORKING WITH
+> ABRAHAM.**
+
+- **How Abraham twisted him — the mysterious way:** Abraham **"brought back"
+  Payback and the others.** Except he didn't. **They were AI — planted inside
+  Spike's head.** Digital recreations of the dead Team Apex, living in the
+  machine parts of a man who's practically a full cyborg.
+- **Spike believed it.** *(⚠ garble: "thinking he was thought" — read as
+  **"thinking they were real"** / thinking he was saved. Confirm exact sense.)*
+  And **over time, this twisted form became his SANCTUARY.** The fake dead
+  became the only place Spike felt at home. That's the trap's genius: Abraham
+  didn't threaten him — he gave him back **everything he'd ever loved.**
+- **This re-frames the DIRE scene above:** "everything he's ever loved is
+  gone" — *except the versions living in his head.* The maintenance-bench
+  silence isn't just grief; it's a man alone with his ghosts — ghosts with an
+  owner. The dire thing isn't only what Spike lost. **It's what he let in.**
+- **ABRAHAM'S SIGNATURE — "he fixes broken people" (long-seeded payoff):**
+  established canon since 1985 — Abraham **rehabilitated Brian** ("a broken
+  product until Abraham fixed him") and recruited through repair. Now he's
+  done it again, to the main character: **found the most broken man alive and
+  "fixed" him.** The traitor's method never changed — only the technology.
+- **THE STRUCTURAL GUT-PUNCH:** the 1985 team died because **the man they
+  trusted most** (Abraham) was the traitor. Now the 2000 team walks to
+  Antarctica with **the man the PLAYER trusts most** — the main character,
+  the protagonist we've played since Mission 1 — compromised. **The player
+  has been playing the traitor.**
+- **⚠ OPEN — do NOT invent:**
+  - **Since when?** How long has Spike been Abraham's (before M13? during the
+    Pillar hunt? was he feeding Abraham intel through M13–17?).
+  - **Which "others"** live in his head — Payback + who? (Fox? Striker? the
+    twins? Diego?)
+  - **The plant vector** — how did the AI get into his head? (His cybernetics
+    are the obvious door. Who built/serviced those parts — Charles? Someone
+    Abraham owned? **The answer decides who else is dirty.**)
+  - **What Spike has actually DONE for Abraham** so far — orders, sabotage,
+    intel? Unknown.
+  - **Does Spike know he's twisted?** "Thinking he was [saved/them real]"
+    suggests he may not fully understand what was done to him — a victim and
+    a traitor at once, like his own M3–M10 brainwashing arc, but slower and
+    kinder and therefore worse.
+  - **Audience-only reveal?** Presumed **dramatic irony** (we know; the team
+    doesn't). Confirm.
+- **The rhyme (now canon-adjacent, was flagged before):** HYDRA's dart
+  brainwashing (M3–10) tried to take Spike by **force** and failed. Abraham
+  took him with **love** and succeeded. First time: an enemy weapon. This
+  time: a gift.
+
+## NEXT MISSION HOOK — THE PARTING OF WAYS (M19)
+- The group **parts ways.** A **large expedition heads to ANTARCTICA:**
+  **Atomic, Spike, Molotov, Charles, Jeff.**
+- Staying behind: **Jonah, Nova** (+ Elizabeth; Hunter/militia TBD).
+- Dramatic irony armed: the Antarctica party is walking to Abraham **with
+  Abraham's man inside the wire** — and inside the walls of a full-cyborg
+  body. See `mission-19.md`.
+
 ## OPEN
-- Mission 18 title (foreshadow rule).
-- How the team finds Abraham (the hunt's first thread).
-- Spike's dire arc — where it goes. **⚠ Handle with care:** "dire" is the
-  creator's word; the shape of it (despair? self-destruction? withdrawal from
-  the team? something else?) is **not yet given.**
+- Mission 18 title (foreshadow rule). Now that the mission contains the Spike
+  reveal, candidates can foreshadow *the sanctuary trap*: **"Sanctuary,"**
+  **"The Fixed Man,"** **"What the War Gave Back."** — creator's pick.
+- ~~How the team finds Abraham~~ → they're going to him: **Antarctica (M19).** ✔
+- ~~Spike's dire arc — shape?~~ → **RESOLVED: the reveal.** His "dire" state is
+  the sanctuary trap. ✔ (Where it *ends* is open.)
 - Whether the intercut structure (Molotov's peace / Spike's dire hour) is
   approved.
+
+## ⚠ DICTATION / GARBLES LOGGED (this beat)
+- "But anyway, **it's reviewed**" → read as **"it's revealed."**
+- "**The spike** has secretly been working" → "that **Spike** has…"
+- "twist him **and I'm mysterious way**" → "in **a** mysterious way."
+- "**thinking he was thought overtime** this twisted form became his
+  sanctuary" → read as *"thinking they were real; over time this twisted form
+  became his sanctuary."* **Confirm.**
+- "head**,** Antarctica" → "head **to** Antarctica."

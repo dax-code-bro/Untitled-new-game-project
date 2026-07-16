@@ -70,8 +70,12 @@ complete screenplays.
   storming of Prestige's base; **playable Hunter**; the split bullet; **PRESTIGE
   DIES**; coda: the night of peace *(scripted — COMPLETE)*.
 - `game/design/missions/mission-18.md` — **Mission 18 (title TBD)** — HYDRA is
-  GONE; the hunt for Abraham begins; **Spike's dire hour** (practically a full
-  cyborg; everything he loved is gone) *(in progress)*.
+  GONE; **Spike's dire hour** (practically a full cyborg) → **⚠⚠⚠ THE REVEAL:
+  Spike is secretly Abraham's** (AI ghosts of Payback & the others planted in
+  his head; the sanctuary trap) *(scripted)*.
+- `game/design/missions/mission-19.md` — **Mission 19 (title TBD)** — the
+  parting of ways; the **Antarctica expedition** (Molotov, Spike, Atomic,
+  Charles, Jeff) — carrying Abraham's agent with them *(in progress)*.
 
 **Timeline chain:** 1985 (campaign) → Dec 31, 2000 (M13 time-skip) → late 2001 /
 post-9/11 (open-world mercenary mode).
@@ -423,6 +427,11 @@ high-ranking **Sergeant / officer** leading young Irish troops.
 > vehicles alongside HYDRA** — so **US forces/government are complicit** with
 > HYDRA, not just Abraham. The corruption goes far higher than one general. Major
 > conspiracy thread.
+> **⚠⚠⚠ HIS MASTERSTROKE (M18 reveal):** Abraham **owns SPIKE.** He "brought
+> back" Payback and the others as **AI planted in Spike's cyborg head** — and
+> the lie became Spike's sanctuary. "Fixes broken people," perfected: he took
+> the most broken man alive and fixed him into a weapon. The team hunting him
+> is carrying his agent to Antarctica (M19).
 
 - **Rank:** four-star general — the top brass attached to the team.
 - **Name:** "Abraham" (first/last unconfirmed).
@@ -487,13 +496,26 @@ high-ranking **Sergeant / officer** leading young Irish troops.
 - **⚠ SOMETHING DIRE (M18):** with HYDRA finally gone, Spike is in crisis —
   **he lost the people he looked up to** (all of Team Apex), **he's practically
   a full cyborg**, and **everything he's ever loved is gone.** The war's end
-  gave Molotov everything back and gave Spike nothing. The main character's
-  darkest hour — shape of the arc TBD (creator's).
+  gave Molotov everything back and gave Spike nothing.
+- **⚠⚠⚠ THE SECOND TWISTING (M18 reveal — MASSIVE SPOILER):** **Spike has
+  secretly been working with ABRAHAM.** Abraham twisted him in a mysterious
+  way — by **"bringing back" Payback and the others** as **AI planted inside
+  Spike's head** (his cybernetics = the door). Spike believed it, and **over
+  time the twisted form became his SANCTUARY** — the fake dead are the only
+  home he has left. Abraham's lifelong method ("he fixes broken people" — how
+  he got Brian) executed on the main character: HYDRA's dart took him by
+  force and failed (M3–10); **Abraham took him with love and succeeded.**
+  **The player has been playing the traitor.** *(Audience-only reveal —
+  presumed dramatic irony. Since-when / which ghosts / what he's done for
+  Abraham / does-he-know — ALL OPEN, see mission-18.md.)*
 
 ##### 6. "Payback" — the mystery operator — **DECEASED (KIA Mission 11)**
 > **Status:** killed in the LMG ambush — **500+ rounds of 5.56×45mm NATO.**
 > Definitively dead (no survival twist). Her real name died with her — never
 > revealed.
+> **⚠ BUT (M18):** an **AI recreation of Payback** (and "the others") exists —
+> **planted inside Spike's head by Abraham** to twist him. She is still dead;
+> the ghost is a puppet. (Which "others" got recreated — OPEN.)
 
 - **Pronoun:** she/her.
 - **Codename:** "Payback." **No one knows her real name** — she operates solely
