@@ -332,8 +332,16 @@ members not yet introduced (TBD). The six documented so far:
 - **Why the mask:** the flamethrower left **severe burns mainly on his face** —
   the full-covering ski mask hides the scarring. (His **hair is fine/untouched**;
   not bald.)
-- **Rank:** *TBD.* **Present age:** see flashback timeline flag (Hitler-era Mollys
-  implies he could be ~58 in 1985 — to reconcile).
+- **Rank:** *TBD.*
+- **AGE — CANON (M16):** **22 in 1985 → ~37 in 2000** (born ~1963). Consistent
+  with Jonah's birth (~1986, Molotov ~23).
+  - **⚠⚠ TIMELINE CONFLICT with the M8 flashback:** the Mollys were said to have
+    helped take down **"that one mustache guy"** (read as Hitler, ~1945) when
+    Webber was 18 — impossible if he's born ~1963. Options: (a) the "mustache
+    guy" is a **different, later dictator** (fictional/regional, ~1981); (b) the
+    Mollys' war was a later German-control conflict (alt-history); (c) revise the
+    flashback dates. **Creator to resolve — the 22-in-1985 age is the fixed
+    point.**
 
 ##### 2. James "Fox" Carter — **DECEASED (KIA Mission 11)**
 > **Status:** **executed by Abraham** (golden Colt M1911, headshot) after the
@@ -727,7 +735,19 @@ city → spot **three friendly US Army tanks** rolling in to support → then
     liberator. To the top of it, a terrorist.
   - **Thesis: "Hunter is CRUEL — but FAIR."** The warehouse game is the cruelty;
     the $300 and the freedom papers are the fairness. Both are true at once.
-  - **Age:** 14 in 1985 → **~29–30 in 2000.**
+  - **Age:** *(⚠ revised)* **16 in 1985 → ~31 in 2000.** *(Originally given as
+    14 at Hellfire; latest statement says 16 — confirm which.)* Still very young
+    for what he's built.
+- **HUNTER — THE FAMILY & THE SUCCESSION (M16 reveal):**
+  - **At age 20 he had three children**, whom he **values dearly** — they are
+    the heirs he'll **pass his criminal empire to.** He wants to hand down his
+    legacy **as soon as possible.**
+  - **Three trusted soldiers:** when his time comes, each becomes the **right
+    hand** of one of his children. Succession fully planned.
+  - **The Molotov parallel:** both men have **families they love** (for
+    different reasons) and **both want Prestige dead.** Two fathers building
+    legacies — one passes down a fire mask, the other an empire. This parallel
+    is the basis for the parley.
 - **⚠⚠ The "Ray Abraham" connection (Mission 9):** an interrogated soldier says
   Victor Prestige **has been talking to a "Ray Abraham."** The surname matches the
   team's own **General Abraham** — a potential bombshell (Abraham as HYDRA
@@ -4224,11 +4244,26 @@ on Hunter" [M14] comes off the shelf.)*
 - *(Elizabeth's lines here are my draft of her first-ever dialogue — calibrate
   her voice as desired.)*
 
+## THE DECISION — MOLOTOV GOES ALONE
+- **Resolved: Molotov agreed to go talk to Hunter ALONE.** The Assault becomes,
+  first, a **parley of one.**
+- **The basis — the parallel between the two men:**
+  - **Both have families they love** (for different reasons).
+  - **Both want Prestige dead.**
+  - Two fathers, two legacies: Molotov passes down a **fire mask**; Hunter, a
+    **criminal empire.** Each man will recognize himself in the other — that's
+    the gamble.
+- **Hunter's family (canon, see GAME_DESIGN):** three children (had them by age
+  20) — his heirs; three trusted soldiers sworn to become their right hands when
+  his time comes. A man obsessed with succession, "as soon as possible."
+- *(Note the charge on this meeting: Hunter threatened to "take one of" the
+  team — and the man walking in alone is the one whose wife and son live at
+  HQ.)*
+
 ## OPEN
-- Does Molotov bring the alliance to the team? Who objects? (Atomic — with
-  Hunter's "take one of you" threat aimed at the family he guards — seems the
-  natural objector; Spike's vote may be the decider.)
-- Does the Assault on Hunter proceed as a kill mission, or become a parley?
+- The parley itself — where, how Molotov approaches, what's said. (Hunter's
+  first spoken dialogue TO the team's side.)
+- Does the team know he's going, or does he slip out?
 - Mission title TBD.
 
 

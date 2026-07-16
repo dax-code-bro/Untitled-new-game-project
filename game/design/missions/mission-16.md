@@ -61,9 +61,24 @@
 - *(Elizabeth's lines here are my draft of her first-ever dialogue — calibrate
   her voice as desired.)*
 
+## THE DECISION — MOLOTOV GOES ALONE
+- **Resolved: Molotov agreed to go talk to Hunter ALONE.** The Assault becomes,
+  first, a **parley of one.**
+- **The basis — the parallel between the two men:**
+  - **Both have families they love** (for different reasons).
+  - **Both want Prestige dead.**
+  - Two fathers, two legacies: Molotov passes down a **fire mask**; Hunter, a
+    **criminal empire.** Each man will recognize himself in the other — that's
+    the gamble.
+- **Hunter's family (canon, see GAME_DESIGN):** three children (had them by age
+  20) — his heirs; three trusted soldiers sworn to become their right hands when
+  his time comes. A man obsessed with succession, "as soon as possible."
+- *(Note the charge on this meeting: Hunter threatened to "take one of" the
+  team — and the man walking in alone is the one whose wife and son live at
+  HQ.)*
+
 ## OPEN
-- Does Molotov bring the alliance to the team? Who objects? (Atomic — with
-  Hunter's "take one of you" threat aimed at the family he guards — seems the
-  natural objector; Spike's vote may be the decider.)
-- Does the Assault on Hunter proceed as a kill mission, or become a parley?
+- The parley itself — where, how Molotov approaches, what's said. (Hunter's
+  first spoken dialogue TO the team's side.)
+- Does the team know he's going, or does he slip out?
 - Mission title TBD.
