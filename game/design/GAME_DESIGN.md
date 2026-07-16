@@ -74,8 +74,11 @@ complete screenplays.
   Spike is secretly Abraham's** (AI ghosts of Payback & the others planted in
   his head; the sanctuary trap) *(scripted)*.
 - `game/design/missions/mission-19.md` — **Mission 19 (title TBD)** — the
-  parting of ways; the **Antarctica expedition** (Molotov, Spike, Atomic,
-  Charles, Jeff) — carrying Abraham's agent with them *(in progress)*.
+  Antarctica expedition: the safe house, **the 87° surge, the GREEN
+  CONTINENT** (climate shift), the mountain mine (⚠ "Everest"), **playable
+  Spike stealth** (rocks/bribes/prisoner command), **the uprising** (Martin &
+  Lewis), the family's arrival, the eve of the true rebellion *(scripted;
+  in progress)*.
 
 **Timeline chain:** 1985 (campaign) → Dec 31, 2000 (M13 time-skip) → late 2001 /
 post-9/11 (open-world mercenary mode).
@@ -423,6 +426,13 @@ high-ranking **Sergeant / officer** leading young Irish troops.
 > increased** due to a **satellite he stationed above the region** *(⚠ possible
 > nuke detonation — garbled, confirm)*. Whatever he's building down there is the
 > era's looming endgame — the team chose to hunt Hunter first.
+> **THE GREEN CONTINENT (M19 — seen firsthand):** the uranium + the
+> magnetic-field change have put Antarctica through a **major climate shift** —
+> a large portion is now **87°F, warm and lush with green grass**, the mountain's
+> ice melted. His mine runs on **slave labor: hundreds of prisoners in
+> protective suits.** Abraham didn't just build a base — **he changed the
+> weather of a continent.** *(⚠ the mountain is "actually Mount Everest" as
+> narrated — possible garble for Mount EREBUS; unruled.)*
 > **⚠ Reaches into the US military (M12):** the ambush used **American military
 > vehicles alongside HYDRA** — so **US forces/government are complicit** with
 > HYDRA, not just Abraham. The corruption goes far higher than one general. Major
@@ -594,7 +604,12 @@ Post-massacre, the survivors built a new unit *(team name TBD)*:
    Charles build **Spike's gravity stabilizer** and **Molotov's fixed futuristic
    mask**? Confirm.)*
 - **Elizabeth** (see Molotov's entry) supports the team; sometimes shows up.
+- **MARTIN & LEWIS (M19):** Spike's **two trusted lieutenants** from the
+  Antarctic prisoner uprising — freed uranium-mine slaves, first to be geared
+  up, core of the prisoner militia. *(Everything else about them — TBD; do
+  not invent.)*
 - Era goal: take down **the Three Pillars of Ruin** (Abraham, Prestige, Hunter).
+  *(Status: Prestige dead M17; Hunter allied; Abraham = the endgame.)*
 
 #### Mission 1 — Combat Beats (continued from the drop)
 
