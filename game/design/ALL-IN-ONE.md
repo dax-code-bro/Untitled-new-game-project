@@ -3874,7 +3874,8 @@ Prestige** — the team has **never even seen his face.** Intel points to a
 **medical place** where Prestige supposedly is.
 
 ## Squad
-**Spike (POV), Atomic, Jeff, Jonah "Cocktail," + a few newer members.**
+**Spike (POV), Molotov (fighting through 5 broken ribs), Atomic, Jeff, Jonah
+"Cocktail," + a few newer members.**
 *(⚠ The "few others you haven't heard of" need names — below I've drafted
 **"Patch"** (team medic) and **"Dice"** (driver/scrounger) as placeholders.
 Rename at will; their lines survive any rename.)*
@@ -4052,7 +4053,64 @@ and **he'll do anything to keep them safe.**
   awful poetry available here: **the answer to "why was I created" is hiding in
   this very building.** Prestige *made* him. *(Speculation only — the creator
   decides if Nine came to guard, to kill, or to ASK.)*
-- **His voice** — still unwritten; his first words remain the creator's to give.
+- **His voice** — still unwritten in-scene. **🔒 SEALED: the creator has "an
+  amazing line" reserved for Drone 9 at THE END OF THE GAME.** Not revealed, not
+  to be guessed or invented. The vault holds it.
+
+### PAST NINE — DEEPER IN
+
+> *(Somehow — Nine lets them. The squad edges past the red eyes and moves on
+> down the hallway, hearts still hammering, whispering about it as they go.)*
+>
+> **DICE:** *(whisper)* Four heads on his belt and he just — *watched* us.
+> **PATCH:** Maybe we're not on the list.
+> **JEFF:** *(quiet)* Everything's on a list. We're just not at the top of his.
+> **JONAH:** ...I kind of liked him.
+> **ATOMIC:** *(flat)* Don't.
+>
+> *(A DOOR at the end of the hall. Locked. MOLOTOV steps up — ribs strapped,
+> breath short — jams his **pistol against the lock and slams it, breaking it
+> clean off.** A wince nobody's allowed to see. They **storm in.**)*
+
+### THE LAB — VICTOR PRESTIGE, IN THE FLESH
+
+> *(A LAB — humming, cluttered, lived-in. And there he is. **VICTOR PRESTIGE.**
+> For the first time in fifteen years of shadows: a man with **wild, crazed
+> hair**, eyes **exhausted** — a god of machines who clearly hasn't slept like
+> one. He looks *off.* Frayed.)*
+>
+> *(He looks up. And **TWO NEW DRONES** unfold from the lab's corners — models
+> nobody's seen before — putting themselves between Prestige and the guns.)*
+>
+> *(It's not a fight the squad can win. **They run.**)*
+
+### THE RETREAT — LAMPSHADE & VOW
+
+> *(Fighting withdrawal back down the red hallway, drones shrieking behind
+> them.)*
+>
+> **DICE:** *(running)* Don't you think this is getting a bit REPETITIVE?!
+> Every time we try to get someone, they're either protected by super soldiers
+> or we can't even *reach* them!
+> **PATCH:** *(running)* He's got a point!
+> **DICE:** Maybe Abraham will be different!
+> **SPIKE:** *(grim, not slowing)* ...I hope.
+>
+> *(— END OF MISSION 15. Objective met — they've SEEN Prestige's face. But the
+> second pillar stands. 0 for 2. Abraham is next. —)*
+
+## ADDITIONAL REVEALS
+- **PRESTIGE, SEEN AT LAST:** wild crazy hair, deeply tired, visibly *off* —
+  the drone-maker is **fraying.** (And no wonder: Hunter hunts him, Nine haunts
+  his basement, and now a hit squad kicked in his door. The most powerful man
+  in the world looks like he hasn't slept in years.)
+- **TWO NEW DRONE MODELS** guard him personally *(designation TBD — H3.2s at
+  last? something newer? — confirm)*.
+- **The pattern lampshade:** the team openly jokes the pillars are all
+  unreachable — "maybe Abraham will be different." **Abraham is the next
+  target.** (And given this story, "I hope" is doing a lot of load-bearing.)
+- **Molotov fought this mission on 5 broken ribs** (pistol-slamming locks, no
+  complaints — of course he did).
 
 ## REVEALS / THREADS
 - **DRONE 06 — FOUND.** One of the unaccounted original 13 (1948) — discovered
