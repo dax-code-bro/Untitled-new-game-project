@@ -171,11 +171,26 @@ and **he'll do anything to keep them safe.**
   track of them.
 - **His condition (year 2000):** visibly **damaged and aging** — sparking,
   a knee that buckles. ~52 years since launch. Even sentient machines get old.
-- **Open (deliberately):** WHY he hunts his siblings (autonomy? contract?
-  hatred of what he is?), whether he's hostile to the squad, whether he serves
-  or hunts **Prestige** (he's under Prestige's hideout...), and **his voice**
-  — Drone 9 has not yet spoken. *(No dialogue written for him — his first words
-  are the creator's to give.)*
+- **WHY — REVEALED (the tragedy of Nine):**
+  - Nine is on a **rogue quest to find the meaning of life.** He understands
+    he's *just a machine* — but **he doesn't know why he was created**, and it
+    haunts him.
+  - His answer, for now: spend **"the rest of his rusting and corroding days
+    making sure no one else can be harmed"** — starting with his own siblings.
+    The heads aren't trophies of malice; they're **proof of decommission.** He
+    kills the 13 so the 13 can never kill again.
+  - **He once saved a rebellion off the coast** — that's where he **learned to
+    use weapons.** *(⚠ WHICH rebellion? Candidates: the M4/M5 island rebels
+    (HYDRA-bombed — survivors?), or another coastal uprising. Confirm.)*
+  - **Weapons:** he **mostly dual-wields M4s** — carbines, comically small in a
+    5-ton drone's manipulators, absolutely not comical in effect. (The four
+    rifles at his stomach are his working arsenal.)
+- **Still open:** whether he's hostile to the squad (his creed says no — unless
+  they're a danger to others), what he wants with **Prestige**... and note the
+  awful poetry available here: **the answer to "why was I created" is hiding in
+  this very building.** Prestige *made* him. *(Speculation only — the creator
+  decides if Nine came to guard, to kill, or to ASK.)*
+- **His voice** — still unwritten; his first words remain the creator's to give.
 
 ## REVEALS / THREADS
 - **DRONE 06 — FOUND.** One of the unaccounted original 13 (1948) — discovered
