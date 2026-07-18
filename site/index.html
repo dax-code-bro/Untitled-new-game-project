@@ -486,7 +486,13 @@ HARD RULES — every build MUST follow all of these:
 - CONTROLS ARE BUILT IN. Every published game automatically receives Legend Controls: an on-screen joystick + A/B buttons on touchscreens and full gamepad support, all delivered to your game as standard keyboard events. Therefore implement ALL input with KEYBOARD events only: Arrow keys and/or WASD to move, Space = primary action (jump/shoot/select), X = secondary action. Do NOT build your own touch joystick or on-screen buttons — they are provided. In your on-screen instructions say "Move + A/B buttons (or arrows/WASD + Space/X)".
 - STARTING THE GAME: any start/restart screen MUST begin on a tap OR click ANYWHERE on the screen. Attach the start handler to window using BOTH 'pointerdown' and 'touchstart' (plus any key). A start screen that listens only for a key or a small button is BROKEN. Test mentally: "if I tap the middle of the screen, does the game start?" — the answer must be yes.
 - GAMEPLAY. Include a real loop with a goal: moving entities, collision, score and/or win/lose states, increasing challenge, a start prompt, and clear on-screen instructions. Make it genuinely fun.
+- REQUIRED STRUCTURE — follow this exact recipe every time:
+  1) a state variable: 'start' → 'playing' → 'gameover';
+  2) a keys object updated by window keydown/keyup listeners (this is how ALL input arrives, including touch/controller);
+  3) update(dt) that moves everything using dt, and draw() that renders the current state (including the start screen);
+  4) one requestAnimationFrame loop that ALWAYS runs from page load — it draws the start screen, the gameplay, and the game-over screen. The loop never waits for input to start running.
 - The game must run with zero errors and show a moving, drawn scene IMMEDIATELY on load — never a blank or white screen.
+- YOUR GAME IS AUTO-TESTED after you build it: it runs in a hidden test and must produce zero errors and real animation frames. If you receive a message starting with "AUTO-TEST FAILED", it means your previous game was broken exactly as described — fix that exact problem and output the FULL corrected HTML document.
 - FINISH THE ENTIRE DOCUMENT ending with </html>. Never stop partway; if it's long, keep going until complete. NEVER use placeholders, stubs, "// TODO", "// rest of code", "// add more", or "...". Every function fully implemented.
 - KEEP YOUR SPOKEN REPLY VERY SHORT (1-2 sentences on what it is and how to play, including the touch controls). Do NOT narrate or repeat the code — it is shown separately.`;
 
@@ -1043,7 +1049,7 @@ HARD RULES — every build MUST follow all of these:
     listPane:'codeListPane', items:'codeItems', empty:'codeEmpty', newBtn:'codeNew', back:'codeBack', convo:'codeConvo',
     messages:'codeMessages', input:'codeInput', send:'codeSend', stop:'codeStop', model:'codeModel',
     systemFn:()=>CODE_SYS, codeMode:true,
-    onReply:(reply)=>{ const code=extractRunnable(reply); if(code) autoPublishAIGB(code); },
+    onReply:(reply)=>{ const code=extractRunnable(reply); if(code) testThenPublish(code); },
     attach:{btn:$('codeAttach'), input:$('codeFile'), preview:$('codePreview2')},
     greeting:"New build. Tell me what to make — a game, an app, a tool — and I'll build it and publish it straight to your AIGB menu (top right)."
   });
@@ -1111,6 +1117,49 @@ pad.x=ax;pad.y=ay;pad.a=pb(0);pad.b=pb(1);},50);
     if(html.indexOf('__LEGEND_CONTROLS__')!==-1) return html;
     const tag='<script>'+LEGEND_CONTROLS_SRC+'<\/script>';
     return /<\/body>/i.test(html) ? html.replace(/<\/body>/i, tag+'</body>') : html+tag;
+  }
+
+  // ── Auto-test every build: run it hidden, catch crashes and frozen screens ──
+  const TEST_PROBE = '<script>'+
+    'window.onerror=function(m,s,l){try{parent.postMessage({__legendErr:String(m)+(l?" (line "+l+")":"")},"*")}catch(e){}};'+
+    'window.addEventListener("unhandledrejection",function(e){try{parent.postMessage({__legendErr:String(e.reason)},"*")}catch(x){}});'+
+    'var __lfn=0,__lraf=window.requestAnimationFrame.bind(window);'+
+    'window.requestAnimationFrame=function(f){__lfn++;if(__lfn===5){try{parent.postMessage({__legendOK:1},"*")}catch(e){}}return __lraf(f)};'+
+    'setTimeout(function(){try{var ev;try{ev=new PointerEvent("pointerdown",{bubbles:true})}catch(e){ev=new MouseEvent("mousedown",{bubbles:true})}'+
+    'window.dispatchEvent(ev);document.dispatchEvent(ev);var c=document.querySelector("canvas");if(c)c.dispatchEvent(ev);'+
+    'var ck=new MouseEvent("click",{bubbles:true});window.dispatchEvent(ck);document.dispatchEvent(ck);if(c)c.dispatchEvent(ck)}catch(e){}},900);'+
+    '<\/script>';
+  function testGame(code){
+    return new Promise((resolve)=>{
+      let html = /<head[^>]*>/i.test(code) ? code.replace(/<head[^>]*>/i, m=>m+TEST_PROBE) : TEST_PROBE+code;
+      const fr=document.createElement('iframe');
+      fr.style.cssText='position:fixed;left:-9999px;top:-9999px;width:390px;height:600px;visibility:hidden';
+      fr.setAttribute('sandbox','allow-scripts');
+      const errs=[]; let ok=false;
+      function onMsg(e){ const d=e.data||{}; if(d.__legendErr) errs.push(String(d.__legendErr).slice(0,300)); if(d.__legendOK) ok=true; }
+      window.addEventListener('message', onMsg);
+      fr.srcdoc=html; document.body.appendChild(fr);
+      setTimeout(()=>{ window.removeEventListener('message',onMsg); fr.remove(); resolve({ok, err:errs[0]||null}); }, 3500);
+    });
+  }
+  const autoFix={key:null,count:0};
+  async function testThenPublish(code){
+    const key=(sectionViews.code&&sectionViews.code.activeId)?sectionViews.code.activeId():null;
+    if(autoFix.key!==key){ autoFix.key=key; autoFix.count=0; }
+    const t=await testGame(code);
+    const problem = t.err ? ('it crashes with this error: '+t.err)
+                  : (!t.ok ? 'the screen never animates — the requestAnimationFrame game loop never runs, so the game is a frozen image' : null);
+    if(!problem){ autoFix.count=0; autoPublishAIGB(code); return; }
+    if(autoFix.count>=2){
+      renderMessage($('codeMessages'),'bot','⚠️ I tested it and it still has issues ('+problem+'), but I\'m publishing this version anyway — tell me what\'s wrong in-game and I\'ll fix it.');
+      autoPublishAIGB(code); return;
+    }
+    autoFix.count++;
+    renderMessage($('codeMessages'),'bot','🔧 I tested the game and found a problem — fixing it automatically (attempt '+autoFix.count+' of 2)…');
+    setTimeout(()=>{
+      $('codeInput').value='AUTO-TEST FAILED: '+problem+'. Fix this and output the FULL corrected HTML document (complete, ending with </html>).';
+      $('codeSend').click();
+    }, 400);
   }
 
   // Builds publish themselves: same build = same permanent link, version bumps.
