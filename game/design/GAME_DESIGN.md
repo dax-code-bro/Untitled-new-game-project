@@ -82,8 +82,10 @@ complete screenplays.
 - `game/design/missions/mission-20.md` — **Mission 20 (title TBD)** — **the
   true rebellion** (pickaxes, the machine-gun fifty); **played as ATOMIC**;
   the hill: **Abraham shoots Atomic (POV death)**, **MOLOTOV EXECUTES SPIKE**,
-  the circle standoff cliffhanger. **☠ Spike & Atomic both KIA** *(scripted;
-  cliffhanger open)*.
+  the third-person circle; Molotov shields Jonah (leg); the friendly-fire
+  **AIRSTRIKE**; Cocktail POV → **the crack: JONAH KILLS ABRAHAM** (choice /
+  fail state); **the exile** — father & son flee their own team. **☠ Spike,
+  Atomic & Abraham KIA; all Pillars resolved** *(scripted — COMPLETE)*.
 
 **Timeline chain:** 1985 (campaign) → Dec 31, 2000 (M13 time-skip) → late 2001 /
 post-9/11 (open-world mercenary mode).
@@ -447,6 +449,14 @@ high-ranking **Sergeant / officer** leading young Irish troops.
 > the lie became Spike's sanctuary. "Fixes broken people," perfected: he took
 > the most broken man alive and fixed him into a weapon. The team hunting him
 > is carrying his agent to Antarctica (M19).
+> **☠☠ FATE — DEAD (M20):** after the hill (Atomic shot, Spike executed by
+> Molotov, Molotov leg-shot shielding Jonah) and the friendly-fire airstrike,
+> Abraham stabbed Molotov in the stomach and beat him down in a knife/fist
+> fight — and was then **shot in the back through a crack in the rubble by
+> JONAH "COCKTAIL" NEWMAN, age 15**, with an ash-covered 9mm (player choice;
+> refusing = Abraham executes Molotov & shoots Jonah = mission failed). No
+> last words scripted. The traitor of 1985, killed by the son of the man he
+> couldn't kill — in the back, like everything he ever did.
 
 - **Rank:** four-star general — the top brass attached to the team.
 - **Name:** "Abraham" (first/last unconfirmed).
@@ -612,6 +622,10 @@ Post-massacre, the survivors built a new unit *(team name TBD)*:
 1. **Molotov** — leader-figure; fixed futuristic mask; XM4.
 2. **Spike** — walks via a **gravity stabilizer** waist rig; heavy weapons.
 3. **Jonah "Cocktail" Newman** — Molotov's son, 15, sniper, legacy mask.
+   **M20:** held the standoff circle without breaking; **KILLED GENERAL
+   ABRAHAM** — shot in the back through a crack in the rubble, ash-covered
+   9mm, wounded arm, age fifteen. The last Pillar fell to the kid. Now a
+   **fugitive alongside his father** (the M20 exile).
 4. **Nova** — **Payback's replacement** (fills her role on the team), and a
    former **cartel inner-circle** member. *(Echoes the campaign's cartel world —
    Lady Death's orbit? Connection TBD. Gender/pronouns not yet stated.)*
@@ -771,9 +785,13 @@ city → spot **three friendly US Army tanks** rolling in to support → then
   **General Abraham** (the traitor), **Victor Prestige** (HYDRA's owner), and
   **HUNTER, "the Terrorist in Black."** The new team's goal: find and take down
   all three.
-  - **STATUS (post-M17):** **Victor Prestige — DEAD** (M17, killed by Hunter on
-    the catwalk with the drone-shrapnel round). **Hunter — ALLY** (M16 parley).
-    **General Abraham — STILL STANDING** (Antarctica) — the last hostile Pillar.
+  - **STATUS (post-M20): ALL THREE PILLARS RESOLVED.** **Victor Prestige —
+    DEAD** (M17, Hunter's forged round on the catwalk). **General Abraham —
+    DEAD** (M20, shot in the back through the rubble by Jonah "Cocktail"
+    Newman, 15). **Hunter — ALLY** (M16 parley; alive).
+  - **The bitter math:** neither Pillar fell to the team proper — one Pillar
+    killed another, and a child killed the last. And the "victory" ended with
+    **Molotov and Jonah fleeing their own team** (M20 exile).
   - **PRESTIGE'S DEATH (M17):** stormed his base with Hunter's militia; Prestige
     made his last stand on a **catwalk** over the burning garage, **missing
     every shot** (pistol, then a point-blank Glock). Hunter grappled up, we

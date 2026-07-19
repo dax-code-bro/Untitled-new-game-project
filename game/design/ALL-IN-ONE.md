@@ -127,8 +127,10 @@ complete screenplays.
 - `game/design/missions/mission-20.md` — **Mission 20 (title TBD)** — **the
   true rebellion** (pickaxes, the machine-gun fifty); **played as ATOMIC**;
   the hill: **Abraham shoots Atomic (POV death)**, **MOLOTOV EXECUTES SPIKE**,
-  the circle standoff cliffhanger. **☠ Spike & Atomic both KIA** *(scripted;
-  cliffhanger open)*.
+  the third-person circle; Molotov shields Jonah (leg); the friendly-fire
+  **AIRSTRIKE**; Cocktail POV → **the crack: JONAH KILLS ABRAHAM** (choice /
+  fail state); **the exile** — father & son flee their own team. **☠ Spike,
+  Atomic & Abraham KIA; all Pillars resolved** *(scripted — COMPLETE)*.
 
 **Timeline chain:** 1985 (campaign) → Dec 31, 2000 (M13 time-skip) → late 2001 /
 post-9/11 (open-world mercenary mode).
@@ -492,6 +494,14 @@ high-ranking **Sergeant / officer** leading young Irish troops.
 > the lie became Spike's sanctuary. "Fixes broken people," perfected: he took
 > the most broken man alive and fixed him into a weapon. The team hunting him
 > is carrying his agent to Antarctica (M19).
+> **☠☠ FATE — DEAD (M20):** after the hill (Atomic shot, Spike executed by
+> Molotov, Molotov leg-shot shielding Jonah) and the friendly-fire airstrike,
+> Abraham stabbed Molotov in the stomach and beat him down in a knife/fist
+> fight — and was then **shot in the back through a crack in the rubble by
+> JONAH "COCKTAIL" NEWMAN, age 15**, with an ash-covered 9mm (player choice;
+> refusing = Abraham executes Molotov & shoots Jonah = mission failed). No
+> last words scripted. The traitor of 1985, killed by the son of the man he
+> couldn't kill — in the back, like everything he ever did.
 
 - **Rank:** four-star general — the top brass attached to the team.
 - **Name:** "Abraham" (first/last unconfirmed).
@@ -657,6 +667,10 @@ Post-massacre, the survivors built a new unit *(team name TBD)*:
 1. **Molotov** — leader-figure; fixed futuristic mask; XM4.
 2. **Spike** — walks via a **gravity stabilizer** waist rig; heavy weapons.
 3. **Jonah "Cocktail" Newman** — Molotov's son, 15, sniper, legacy mask.
+   **M20:** held the standoff circle without breaking; **KILLED GENERAL
+   ABRAHAM** — shot in the back through a crack in the rubble, ash-covered
+   9mm, wounded arm, age fifteen. The last Pillar fell to the kid. Now a
+   **fugitive alongside his father** (the M20 exile).
 4. **Nova** — **Payback's replacement** (fills her role on the team), and a
    former **cartel inner-circle** member. *(Echoes the campaign's cartel world —
    Lady Death's orbit? Connection TBD. Gender/pronouns not yet stated.)*
@@ -816,9 +830,13 @@ city → spot **three friendly US Army tanks** rolling in to support → then
   **General Abraham** (the traitor), **Victor Prestige** (HYDRA's owner), and
   **HUNTER, "the Terrorist in Black."** The new team's goal: find and take down
   all three.
-  - **STATUS (post-M17):** **Victor Prestige — DEAD** (M17, killed by Hunter on
-    the catwalk with the drone-shrapnel round). **Hunter — ALLY** (M16 parley).
-    **General Abraham — STILL STANDING** (Antarctica) — the last hostile Pillar.
+  - **STATUS (post-M20): ALL THREE PILLARS RESOLVED.** **Victor Prestige —
+    DEAD** (M17, Hunter's forged round on the catwalk). **General Abraham —
+    DEAD** (M20, shot in the back through the rubble by Jonah "Cocktail"
+    Newman, 15). **Hunter — ALLY** (M16 parley; alive).
+  - **The bitter math:** neither Pillar fell to the team proper — one Pillar
+    killed another, and a child killed the last. And the "victory" ended with
+    **Molotov and Jonah fleeing their own team** (M20 exile).
   - **PRESTIGE'S DEATH (M17):** stormed his base with Hunter's militia; Prestige
     made his last stand on a **catwalk** over the burning garage, **missing
     every shot** (pistol, then a point-blank Glock). Hunter grappled up, we
@@ -5331,16 +5349,92 @@ on Hunter" [M14] comes off the shelf.)*
 > down / can't break his stance in the standoff. Confirm.)* The kid holds.
 > Gun up. Shaking. Holding.)*
 >
-> *(— CONTINUES. —)*
+> *(**Molotov can't get up.**)*
+
+## SCENE 7 — THE AIRSTRIKE (friendly fire)
+
+> *(Then — the **entire team sees it.**)*
+>
+> *(**One worker** — one of the freed prisoners — **had called in a PRECISION
+> AIRSTRIKE**, thinking **the rest of the crew was still back down there.**
+> *(⚠ read: he believed his own people weren't on the hill — that only the
+> enemy was up here.)* **He didn't know.**)*
+>
+> *(**He just released a precision airstrike on his own men.**)*
+>
+> *(**Heavy fire — bullets and EXPLOSIVE rounds — rain down on the
+> battlefield.** The circle, the standoff, the hilltop: everything
+> disappears into it.)*
+
+## SCENE 8 — COCKTAIL POV: THE HOLE (playable)
+
+> *(**POV SWITCH → COCKTAIL.** The player is now the kid.)*
+>
+> *(He is **thrown around, brutally bashed** by the barrage. When it stops
+> moving him, the world has changed: **everyone is separated** — rubble,
+> smoke, craters where the circle used to be.)*
+>
+> *(Through a **SMALL HOLE** in the debris, Cocktail sees:)*
+>
+> *(**MOLOTOV** — **heavily bruised, destroyed** — **with a knife, trying to
+> fight ABRAHAM.** But Molotov is **STABBED IN THE STOMACH** *(⚠ "his stand
+> in the stomach" — read "he's stabbed in the stomach")* — and keeps going
+> anyway, **continuing with a fist fight.** Gut-stabbed, shot leg, broken —
+> swinging.)*
+>
+> *(**Eventually, Molotov is beaten down.**)*
+
+## SCENE 9 — THE CRACK (the player choice)
+
+> *(**COCKTAIL** — **heavily wounded in his arm** — with **all his strength**
+> brings out a **9mm, covered in ash.**)*
+>
+> *(He **pulls up the gun**, aiming it **at Abraham's back through a small
+> crack** in the rubble.)*
+>
+> *(**THE PLAYER IS ABLE TO SILENCE ABRAHAM FOREVER.**)*
+
+### IF THE PLAYER TAKES THE SHOT (canonical path)
+> *(**ABRAHAM GOES DOWN.** The last Pillar — the traitor of 1985, the man who
+> murdered Team Apex, the man who changed a continent's weather — is killed
+> by a **fifteen-year-old** with an **ash-covered 9mm**, through a **crack in
+> the rubble**, **in the back.** No duel. No speech. A hole barely big enough
+> for the barrel.)*
+>
+> *(And then — **MOLOTOV and COCKTAIL ESCAPE. From the REST OF THE TEAM.**)*
+>
+> *(Because they know: **the rest of the team is likely going to hunt them
+> down for what they did.** *(⚠ see flag — "what they did.")*)*
+>
+> *(— END OF MISSION 20. Father and son, fugitives. —)*
+
+### IF THE PLAYER DOES NOT SHOOT (fail state)
+> *(**ABRAHAM takes the knife and EXECUTES MOLOTOV.** Then he **snatches the
+> gun through the crack** — and **shoots Cocktail.**)*
+>
+> *(**MISSION FAILED.** → Retry.)*
+>
+> *(Design: there is no branch. There is only the shot, or watching your
+> father die and then dying. The game will wait as long as the player's
+> nerve holds.)*
 
 ## THE DEAD (this mission — canon)
-- **☠ ATOMIC — KIA.** Shot in the chest by Abraham (golden 1911, slow
+- **☠ ATOMIC — KIA.** Shot in the chest by Abraham (golden revolver, slow
   motion); **bled out during the standoff.** Died as the PLAYER — the player
   spins, closes his eyes, and dies in first person.
 - **☠ SPIKE — KIA. THE MAIN CHARACTER IS DEAD.** Shot **in the head by
   MOLOTOV**, in a rage, on the hill, in front of everyone — after walking
   away from the rebellion to Abraham. Head jerked back, knees, face-plant.
   No ambiguity written; as narrated, he is dead.
+- **☠ GENERAL ABRAHAM — KIA (canonical path). THE LAST PILLAR FALLS.** Shot
+  **in the back**, **through a crack in the rubble**, by **JONAH "COCKTAIL"
+  NEWMAN, age 15**, with an **ash-covered 9mm**, wounded arm, all his
+  strength. The traitor of 1985 — executed by the son of the man he couldn't
+  kill. **ALL THREE PILLARS OF RUIN ARE RESOLVED:** Prestige dead (Hunter,
+  M17), Abraham dead (Cocktail, M20), Hunter allied (M16).
+- **Airstrike casualties:** unspecified — the barrage separated everyone;
+  who else lived or died on that hill (Charles, Jeff, Nova, the militia,
+  Abraham's two men, Elizabeth's whereabouts) — **⚠ OPEN.**
 
 ## SCENE NOTES / FLAGS
 - **THE M10 MIRROR — Molotov and Spike, closed with a bullet:** in 1985
@@ -5404,7 +5498,43 @@ on Hunter" [M14] comes off the shelf.)*
   here. *(No dialogue written for him — silence may be stronger; creator's
   call.)*
 - **⚠ Molotov's 2000-era injury tally** now: 5 broken ribs (M13, Hunter) +
-  **gunshot, leg (M20, Abraham).** He is down but alive as scripted.
+  **gunshot leg + stabbed in the stomach + beaten down, heavily bruised
+  (M20, Abraham).** He is carried out of this mission barely alive — and
+  escapes anyway. The man does not stop.
+- **THE AIRSTRIKE — friendly-fire tragedy:** a freed WORKER called in a
+  precision strike believing his own people were still back down at the
+  mine — that only the enemy held the hill. **He didn't know.** Bullets and
+  explosive rounds on his own men. ⚠ OPEN: **how** a worker had strike
+  authority (captured base comms/equipment presumed — whose aircraft?), who
+  he is, and whether he ever learns what he did. *(A one-line character with
+  a lifetime of weight — strong material if ever revisited.)*
+- **POV CASCADE (design):** M20's POV chain is **Atomic → (death) →
+  third-person ghost → COCKTAIL.** The player dies as the shield and wakes
+  up as the kid the shield died for. The mission's POV structure IS its
+  theme: the people in front of Jonah keep falling until Jonah is the one
+  holding the gun.
+- **THE CHOICE THAT ISN'T (design):** shoot Abraham in the back through a
+  crack — or mission failed. No branch, no morality meter: the "choice" is
+  the player's nerve. Players who hesitate watch Abraham knife-execute
+  Molotov and shoot them through the crack. There is no path where mercy
+  works. The 15-year-old doesn't get a clean duel; he gets a hole big enough
+  for a barrel, and the game makes YOU close your hand around it.
+- **NO SPEECH FOR ABRAHAM'S DEATH (as narrated):** the arch-villain of the
+  whole story dies mid-fistfight, shot in the back by a child, no last
+  words scripted. ⚠ If the creator wants final Abraham words (before or
+  during the fight through the hole), supply them — **not invented.**
+- **⚠ "FOR WHAT THEY DID" — the exile (open to precise):** Molotov and
+  Cocktail flee because the rest of the team will **likely hunt them down
+  for what they did.** Presumed meaning: **Molotov executed Spike** (the
+  team never learned Spike was Abraham's — to them, Molotov murdered their
+  teammate in cold blood) — possibly plus Cocktail's unsanctioned kill of
+  Abraham amid a circle whose allegiances were unresolved. **Confirm exact
+  charge.** Note the resonance: this is Molotov's SECOND exile (he left in
+  1985 under a cloud after M10; now he runs again — with his son).
+- **CANON LINK — the post-epilogue mode:** existing canon has **Molotov
+  living in hiding**, resurfacing as the **secret contractor** in the
+  post-9/11 open-world mode. The M20 exile is the missing origin of that
+  hiding. It connects.
 
 ## PREDICTED PLAYER REACTIONS (beat-by-beat design analysis)
 
@@ -5469,7 +5599,31 @@ on Hunter" [M14] comes off the shelf.)*
     anymore.* The cliffhanger cut here will produce actual screaming.
     Players' first theory-craft priority: WHO are the two men, and which
     teammates are about to break which way.
-11. **Aggregate / risk note (design honesty):** this mission spends more
+11. **The airstrike — "NO NO NO" whiplash.** Just as players brace for the
+    circle to resolve by allegiance, the sky resolves it by accident. The
+    friendly-fire reveal ("he didn't know") lands as horror, not spectacle —
+    the uprising you built killed your own hill. Players will feel complicit:
+    THEY armed and mobilized these men.
+12. **Waking up as Cocktail — the worst seat in the game.** Being the
+    15-year-old, wounded, watching your gut-stabbed father brawl the devil
+    through a hole in the rubble: maximum protective instinct. Players who've
+    watched Jonah be babied all game (denied the beer, shielded twice) now
+    ARE him, and the game hands them the family trigger.
+13. **The shot through the crack — the retry that teaches.** A huge share of
+    players will hesitate or test the no-shot path — and the game punishes
+    them with the worst thing it can show (father knifed, then your own gun
+    turned through the crack on you) and a FAILED screen. Reaction on the
+    retry: no hesitation. The design forces every player to *become* someone
+    who shoots a man in the back without hesitating — which is the story's
+    whole point about what this war makes of children. Expect this
+    choice-that-isn't to be argued about in every review.
+14. **The exile ending — stunned silence.** Kill the final villain and the
+    reward is... running from your own team. No victory sting, no medal. The
+    campaign's arch-plot resolves and the story instantly converts it into a
+    manhunt where the heroes are the prey. Players end the mission asking
+    the exact question the story wants: *wait — who's left to fight?* Answer:
+    everyone they love.
+15. **Aggregate / risk note (design honesty):** this mission spends more
     audience trust in 20 minutes than most games spend in a campaign — the
     main character, a beloved POV, and the player's agency, all in one hill.
     That's its power, and its risk: the NEXT mission must catch the player
@@ -5508,6 +5662,15 @@ on Hunter" [M14] comes off the shelf.)*
 - "cocktail **trying to hold his ground from what just happened is in shock
   but he knows he can't break it**" → read as: in shock, holding his ground,
   **he knows he can't break** (down / the stance). **Confirm sense of "it."**
+- "then **that's only the entire team sees it**" → "that's **when** the
+  entire team sees it."
+- "**his stand in the stomach**" → "**he's stabbed** in the stomach"
+  (Molotov).
+- "brings out a **covered in ash 9 mm heavily wounded from his arm**" →
+  "an **ash-covered 9mm**; [Cocktail is] **heavily wounded in his arm**."
+- "**silence Abraham forever**" → kept verbatim (it's a great phrase).
+- "escape **from the rest of the team**" → as written — they flee their OWN
+  team. Confirmed reading via the hunt line that follows.
 
 
 ═══════════════════════════════════════════════════════════════════════
@@ -7009,7 +7172,7 @@ A **special unmanned weapon platform** — the team's answer to mass drone swarm
 | --- | --- | --- |
 | **Spike** (Rodriguez Hamilton) | M1, M2, M3, M4, M5, M6, M9, M10; 2000 era M13–M20 | **☠ M20** — shot in the head by **Molotov** on the Antarctic hill (after the M18 twisting; walked to Abraham). The main character. |
 | **Molotov** (Webber Newman) | M1, M3, M4, M5, M6, M8 (his flashback), M9, M10; 2000 era M13–M20 | **Alive** — survives the campaign; reappears as the secret contractor in the new mode (then leaves the island) |
-| **General Abraham** | M1, M2, M5, M6, M11; 2000 era M20 | **Alive** — the traitor; last hostile Pillar (Antarctica) |
+| **General Abraham** | M1, M2, M5, M6, M11; 2000 era M20 | **☠ M20** — shot in the back through the rubble by Jonah "Cocktail" Newman (15), ash-covered 9mm. The traitor, dead in Antarctica. |
 | **Fox** (James Carter) | M1, M5, M6, M7 (coda), M8 (framing), M11 | **M11** — executed by Abraham |
 | **Striker** (John Jones) | M1, M2, M5, M6, M7, M9, M11 | **M11** — LMG ambush |
 | **Payback** | M1, M6, M7, M11 | **M11** — LMG ambush |
@@ -7028,8 +7191,16 @@ A **special unmanned weapon platform** — the team's answer to mass drone swarm
 ## 2000-era team losses (the new unit)
 - **☠ Atomic — M20:** shot in the chest by Abraham on the hill; bled out in
   first person (M20 POV).
-- *(Others: Molotov, Jonah "Cocktail," Nova, Jeff, Charles — alive as of the
-  M20 circle-standoff cliffhanger; allegiances in question.)*
+- **☠ General Abraham — M20:** killed by Jonah "Cocktail" Newman (see above).
+  All Three Pillars resolved.
+- **Molotov + Jonah — FUGITIVES (M20 exile):** escaped the hill; the rest of
+  the team is expected to hunt them for what they did (⚠ presumed: Spike's
+  execution — the team never learned Spike was Abraham's). Links to Molotov
+  "in hiding" in the post-epilogue mode.
+- *(Status after the airstrike — Nova, Jeff, Charles, Hunter, Elizabeth, the
+  prisoner militia, Martin & Lewis, Abraham's two men: **ALL OPEN.** The
+  barrage separated everyone; nobody's fate on that hill is confirmed except
+  the dead above.)*
 
 ## Non-Apex / flashback characters (for completeness)
 - **Diego** (Spike's father; playable in the M2 1948 flashback) — **died of old
