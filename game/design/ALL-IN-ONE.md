@@ -5318,6 +5318,19 @@ on Hunter" [M14] comes off the shelf.)*
 > *(And **the REST OF THE TEAM... doesn't know.** Doesn't know **if they're
 > betraying — or making the right choice.** The circle keeps turning.)*
 >
+> *(Then **ABRAHAM SHOOTS — at COCKTAIL.**)*
+>
+> *(**But MOLOTOV gets in the way.** *(⚠ "gets in the leg" — read: steps into
+> the shot, takes it **in the LEG**.)* He **drops to the floor.**)*
+>
+> *(The father is down. And **COCKTAIL** — fifteen years old, his father
+> bleeding at his feet, Spike dead in the dirt, Atomic gone — **tries to hold
+> his ground.** He is **in SHOCK** from everything that just happened.)*
+>
+> *(**But he knows he can't break.** *(⚠ "can't break it" — read: can't break
+> down / can't break his stance in the standoff. Confirm.)* The kid holds.
+> Gun up. Shaking. Holding.)*
+>
 > *(— CONTINUES. —)*
 
 ## THE DEAD (this mission — canon)
@@ -5378,6 +5391,20 @@ on Hunter" [M14] comes off the shelf.)*
 - **Molotov's language note:** per the language policy, Molotov curses
   **once-ever** in the whole story. If that once is anywhere, it may be this
   hill. **Not written — creator's call.**
+- **MOLOTOV TAKES THE BULLET (the shield chain):** Abraham fires at the KID —
+  and the father steps into it, taking it **in the leg**, dropping. Note the
+  chain: **Atomic shielded Jonah** at the warehouse (M16); Atomic is dead on
+  this hill; **now Molotov is the shield.** The men who stand in front of
+  Jonah keep falling. *(Presumed fired from the **silver 1911** — the gun
+  already leveled at them; confirm.)*
+- **COCKTAIL HOLDS (the kid's defining beat):** fifteen, in shock — father
+  down at his feet, Spike executed, Atomic dead — and he **doesn't break.**
+  Gun up, shaking, holding his ground in a ring of adults deciding whether
+  to betray him. Whatever the mask legacy means, it's being earned right
+  here. *(No dialogue written for him — silence may be stronger; creator's
+  call.)*
+- **⚠ Molotov's 2000-era injury tally** now: 5 broken ribs (M13, Hunter) +
+  **gunshot, leg (M20, Abraham).** He is down but alive as scripted.
 
 ## PREDICTED PLAYER REACTIONS (beat-by-beat design analysis)
 
@@ -5475,6 +5502,12 @@ on Hunter" [M14] comes off the shelf.)*
 - "everyone is **sort of going in a circle trying to find out who is who**" →
   recorded as the circling standoff with unknown allegiances (kept verbatim
   spirit).
+- "Abraham then shoots cocktail, **but Molotov gets in the leg drops to the
+  floor**" → read as "**Molotov gets in [the way — hit] in the leg, drops to
+  the floor.**" (The shot was FOR Cocktail; Molotov intercepted.) **Confirm.**
+- "cocktail **trying to hold his ground from what just happened is in shock
+  but he knows he can't break it**" → read as: in shock, holding his ground,
+  **he knows he can't break** (down / the stance). **Confirm sense of "it."**
 
 
 ═══════════════════════════════════════════════════════════════════════
