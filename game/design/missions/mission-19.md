@@ -176,7 +176,7 @@
 >
 > *(**Tomorrow, they start the TRUE REBELLION.**)*
 >
-> *(— CONTINUES (M19 or M20: the true rebellion). —)*
+> *(— CONTINUES → **Mission 20: the true rebellion.** —)*
 
 ## SCENE NOTES / FLAGS
 - **⚠ THE SPIKE PROBLEM (biggest open thread):** Spike — secretly Abraham's —

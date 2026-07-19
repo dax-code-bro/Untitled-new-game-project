@@ -79,6 +79,11 @@ complete screenplays.
   Spike stealth** (rocks/bribes/prisoner command), **the uprising** (Martin &
   Lewis), the family's arrival, the eve of the true rebellion *(scripted;
   in progress)*.
+- `game/design/missions/mission-20.md` — **Mission 20 (title TBD)** — **the
+  true rebellion** (pickaxes, the machine-gun fifty); **played as ATOMIC**;
+  the hill: **Abraham shoots Atomic (POV death)**, **MOLOTOV EXECUTES SPIKE**,
+  the circle standoff cliffhanger. **☠ Spike & Atomic both KIA** *(scripted;
+  cliffhanger open)*.
 
 **Timeline chain:** 1985 (campaign) → Dec 31, 2000 (M13 time-skip) → late 2001 /
 post-9/11 (open-world mercenary mode).
@@ -474,7 +479,16 @@ high-ranking **Sergeant / officer** leading young Irish troops.
     and alone right after, so the proof may not reach the team.* (Exact nature of
     Abraham's involvement still TBD — mole? Victor's contact? deeper game?)
 
-##### 5. Rodriguez "Spike" Hamilton — **THE MAIN CHARACTER (the player)**
+##### 5. Rodriguez "Spike" Hamilton — **THE MAIN CHARACTER (the player)** — **☠ DECEASED (KIA Mission 20)**
+> **FATE:** during the Antarctic rebellion, Spike **walked away along the
+> cliffs to Abraham.** On the hill, after Abraham gunned down Atomic,
+> **MOLOTOV — in a rage, too broken for anything else — shot Spike in the
+> head.** Head jerked back, knees, face-plant. **The main character is dead**,
+> killed by the man who once crippled him by accident (M10) and loved him as a
+> brother. Whether Molotov killed a traitor or a puppet (the M18 sanctuary
+> ghosts) was never answered before the bullet — the story's cruelest open
+> question.
+
 - **Callsign:** "Spike" (between first/last: Rodriguez Hamilton).
 - **Role:** **the player character.** This is who the player controls — the
   operator in the opening who gears up and steps off the chopper.
@@ -597,6 +611,10 @@ Post-massacre, the survivors built a new unit *(team name TBD)*:
    former **cartel inner-circle** member. *(Echoes the campaign's cartel world —
    Lady Death's orbit? Connection TBD. Gender/pronouns not yet stated.)*
 5. **Atomic** — a **huge Hawaiian bodybuilder**; the team's **heavyweight.**
+   **☠ DECEASED (KIA M20):** shot in the chest by Abraham (golden 1911, slow
+   motion) on the hill; **bled out during the standoff — in first person**
+   (M20 was played as Atomic; the player's vision spun, closed, and died).
+   He shielded Jonah once (M16); he died steps from him.
 6. **Jeff** — **more mysterious than the others.** (The most ordinary name on
    the roster, the least-known man behind it. Deliberate.)
 7. **Charles** — the **tech specialist**: **builds most of the guns, ammo, and

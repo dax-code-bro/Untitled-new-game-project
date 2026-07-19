@@ -9,9 +9,9 @@
 
 | Operator | Appears in | Dies in |
 | --- | --- | --- |
-| **Spike** (Rodriguez Hamilton) | M1, M2, M3, M4, M5, M6, M9, M10 | **Alive** — paralyzed (M10) |
-| **Molotov** (Webber Newman) | M1, M3, M4, M5, M6, M8 (his flashback), M9, M10 | **Alive** — survives the campaign; reappears as the secret contractor in the new mode (then leaves the island) |
-| **General Abraham** | M1, M2, M5, M6, M11 | **Alive** — the traitor |
+| **Spike** (Rodriguez Hamilton) | M1, M2, M3, M4, M5, M6, M9, M10; 2000 era M13–M20 | **☠ M20** — shot in the head by **Molotov** on the Antarctic hill (after the M18 twisting; walked to Abraham). The main character. |
+| **Molotov** (Webber Newman) | M1, M3, M4, M5, M6, M8 (his flashback), M9, M10; 2000 era M13–M20 | **Alive** — survives the campaign; reappears as the secret contractor in the new mode (then leaves the island) |
+| **General Abraham** | M1, M2, M5, M6, M11; 2000 era M20 | **Alive** — the traitor; last hostile Pillar (Antarctica) |
 | **Fox** (James Carter) | M1, M5, M6, M7 (coda), M8 (framing), M11 | **M11** — executed by Abraham |
 | **Striker** (John Jones) | M1, M2, M5, M6, M7, M9, M11 | **M11** — LMG ambush |
 | **Payback** | M1, M6, M7, M11 | **M11** — LMG ambush |
@@ -23,8 +23,15 @@
 - **M7 "Industry"** killed **1** operator: Sydney (traitor).
 - **M11 (the massacre)** killed **5** operators in one mission: **Fox, Striker,
   Payback, Brian, Jesse.**
-- **Survivors:** **Spike** (paralyzed) and **Molotov** (in hiding) — the only
-  Team Apex members left alive. **Abraham** lives as the revealed traitor.
+- **M20 (the hill)** killed **Spike** — the last Apex member besides Molotov.
+- **Sole Apex survivor: MOLOTOV** — and he's the one who pulled the trigger
+  on Spike. **Abraham** lives as the revealed traitor.
+
+## 2000-era team losses (the new unit)
+- **☠ Atomic — M20:** shot in the chest by Abraham on the hill; bled out in
+  first person (M20 POV).
+- *(Others: Molotov, Jonah "Cocktail," Nova, Jeff, Charles — alive as of the
+  M20 circle-standoff cliffhanger; allegiances in question.)*
 
 ## Non-Apex / flashback characters (for completeness)
 - **Diego** (Spike's father; playable in the M2 1948 flashback) — **died of old
