@@ -452,6 +452,11 @@ high-ranking **Sergeant / officer** leading young Irish troops.
 - **Name:** "Abraham" (first/last unconfirmed).
 - **Signature weapon:** a **pure gold Colt M1911** pistol — a flashy, prestige
   sidearm befitting a four-star general.
+  - **2000 era (M20 — ruled):** he carries **TWO guns** — a **GOLDEN REVOLVER**
+    (the statement piece; shot Atomic) and a **standard SILVER 1911** (the
+    workhorse; drawn on Cocktail & Molotov). *(⚠ minor: whether the golden
+    revolver replaced the '85 gold M1911 or the gold gun was always a
+    revolver — creator may rule whenever; non-blocking.)*
 - **Role & everything else:** *TBD — deliberately revealed throughout the story*
   ("you'll see"). Whether he deploys in the field or commands from above is part
   of the narrative.

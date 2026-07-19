@@ -497,6 +497,11 @@ high-ranking **Sergeant / officer** leading young Irish troops.
 - **Name:** "Abraham" (first/last unconfirmed).
 - **Signature weapon:** a **pure gold Colt M1911** pistol — a flashy, prestige
   sidearm befitting a four-star general.
+  - **2000 era (M20 — ruled):** he carries **TWO guns** — a **GOLDEN REVOLVER**
+    (the statement piece; shot Atomic) and a **standard SILVER 1911** (the
+    workhorse; drawn on Cocktail & Molotov). *(⚠ minor: whether the golden
+    revolver replaced the '85 gold M1911 or the gold gun was always a
+    revolver — creator may rule whenever; non-blocking.)*
 - **Role & everything else:** *TBD — deliberately revealed throughout the story*
   ("you'll see"). Whether he deploys in the field or commands from above is part
   of the narrative.
@@ -5271,7 +5276,8 @@ on Hunter" [M14] comes off the shelf.)*
 > canon: pure-gold Colt M1911; see flags)* — and in **SLOW MOTION**, before
 > you can react —)*
 >
-> *(**He shoots you in the chest.**)*
+> *(**He shoots you in the chest.** — the **golden revolver**; his **standard
+> silver 1911** still holstered, waiting.)*
 >
 > *(**ATOMIC POV:** the screen's **edges go red** — you are **bleeding out.**
 > You're on the ground. You **look up.** You see the rest of them — the whole
@@ -5285,8 +5291,8 @@ on Hunter" [M14] comes off the shelf.)*
 > *(Spike's **head violently jerks back.** He **falls to his knees.** Then he
 > **face-plants.** Dead.)*
 >
-> *(**ABRAHAM** pulls out **a 1911** *(⚠ see gun flag)* and levels it at
-> **COCKTAIL and MOLOTOV.**)*
+> *(**ABRAHAM** pulls out his **standard silver 1911** — a gun in each hand
+> now — and levels it at **COCKTAIL and MOLOTOV.**)*
 >
 > *(**ATOMIC POV:** your vision starts to **spin, briefly, in a circle** —
 > the world going around you — then your character **closes his eyes** —)*
@@ -5295,9 +5301,10 @@ on Hunter" [M14] comes off the shelf.)*
 >
 > *(TRANSITION into CUTSCENE.)*
 
-## SCENE 6 — CUTSCENE: THE CIRCLE (cliffhanger)
+## SCENE 6 — THIRD-PERSON CUTSCENE: THE CIRCLE (cliffhanger)
 
-> *(No POV now. Just the hilltop.)*
+> *(**THIRD PERSON.** No POV now — the player has no body left on this hill.
+> The camera shows **the entire standoff** at once.)*
 >
 > *(**Everyone is moving slowly in a circle** — guns up, eyes darting —
 > **trying to find out who is who.** Who's loyal. Who's bought. Who's about
@@ -5341,12 +5348,21 @@ on Hunter" [M14] comes off the shelf.)*
   be executed. Structural gut-punch: the story shoots both "the player."
 - **⚠ WHO DO WE PLAY NOW?** Spike (main character) is dead; Atomic (this
   mission's POV) is dead. The POV for the remainder — **OPEN.**
-- **⚠ THE GUN (reconcile):** narration says Abraham "grabs his **golden
-  revolver**" to shoot Atomic, then later "pulls out **a 1911**" at Cocktail
-  & Molotov. Prior canon: Abraham's signature is a **pure-gold Colt M1911**
-  (pistol, not revolver). Best read: **same golden M1911 throughout**
-  ("revolver" = dictation slip; the second "pulls out" = re-leveling it).
-  Alternative: two guns (golden M1911 + a second plain 1911). **Confirm.**
+- **THE GUNS — RULED (creator):** during this mission Abraham carries **TWO
+  guns**: his **GOLDEN REVOLVER** (shot Atomic, slow motion) **and a standard
+  SILVER 1911** (drawn on Cocktail & Molotov). Both canon. *(⚠ minor
+  reconcile, non-blocking: 1985 canon gave him a "pure gold Colt M1911" —
+  Fox's execution weapon, M11. Read: the golden sidearm of 2000 is a
+  **revolver** — either an upgrade/replacement over 15 years or the gold gun
+  was always a revolver; creator may rule whenever. The silver 1911 is the
+  *standard* workhorse; the gold gun is the statement piece.)*
+- **THE STANDOFF IS A THIRD-PERSON CUTSCENE — RULED (creator):** after
+  Atomic's eyes close, the camera leaves first person entirely. **The circle
+  plays out in third person — we see the ENTIRE standoff**: every gun, every
+  face, every hesitation, all at once. (Design: the player has just lost both
+  bodies they inhabited — now they're a ghost above the hill, able to see
+  everyone and control no one. The camera itself says: *you're not in this
+  anymore.*)
 - **⚠ ABRAHAM'S TWO MEN — who are they?** Abraham stands with **two of his
   men** in the circle. Are they his own soldiers — or **turncoats from the
   team**? (The line "the rest of the team doesn't know if they're betraying
@@ -5362,6 +5378,78 @@ on Hunter" [M14] comes off the shelf.)*
 - **Molotov's language note:** per the language policy, Molotov curses
   **once-ever** in the whole story. If that once is anywhere, it may be this
   hill. **Not written — creator's call.**
+
+## PREDICTED PLAYER REACTIONS (beat-by-beat design analysis)
+
+> How players would likely experience this mission, part by part — useful for
+> pacing, marketing beats, and knowing which moments to protect from leaks.
+
+1. **The morning walk / chatter — DREAD, not calm.** Normally a walk-and-talk
+   reads as downtime. Not here: the audience has known since M18 that Spike is
+   Abraham's. Every line of banter plays under dramatic irony — players will
+   be watching *Spike* in every shot, waiting. The game doesn't need to do
+   anything; the players' own knowledge poisons the peace. (Streamers will
+   literally be saying "don't trust him, DON'T trust him" over the chatter.)
+2. **Tablet analysis → prisoners sent immediately — competence high.** Brief
+   power fantasy: the plan, the map, the army you built in M19. Players feel
+   like generals. This is the last time in the mission they feel in control —
+   which is the point.
+3. **The pickaxe assault — CATHARSIS.** Slaves killing slavers with the tools
+   of their slavery is a massive crowd-pleaser beat; players will cheer. The
+   few prisoner deaths keep it from being clean fun — a first tax on the
+   uprising.
+4. **The machine gun / the fifty — the GUT-DROP.** Players expect uprisings
+   to have plot armor. Fifty men falling to one gun deletes that expectation
+   in two seconds. Reaction: shock → rage → a personal vendetta against that
+   one soldier (everyone will rush him). This beat teaches the mission's real
+   lesson early: *numbers are bodies, and bodies spend.* It also retroactively
+   justifies the family's "more numbers are better" — and darkens it.
+5. **"Spike is gone" — the STOMACH PIT.** The M18 shoe finally drops. Players
+   have carried this secret for two missions; seeing the empty spot where
+   Spike should be converts dread into panic. The long shot of him *walking*
+   the cliffs — not running, not fighting, just walking — will be one of the
+   game's most screenshotted images. Players will chase that hill faster than
+   any objective marker could push them.
+6. **The POV reveal (you're Atomic) — affection, then horror in hindsight.**
+   Atomic is beloved (the wall in front of Jonah, the gentle giant). Players
+   enjoy finally being the big man... and the mission weaponizes that.
+7. **Abraham + the slow-motion chest shot — VIOLATION.** The game deliberately
+   breaks its own rules: slow motion usually means *player advantage*; here
+   it's slow motion you can't act in. "I never had a chance" isn't bad
+   design — it IS the design; the trap closes on the player the way it closed
+   on the team. Expect genuine controller-drop shock, then replays ("could I
+   have dodged that?" — no; some will try five times to be sure).
+8. **Bleeding out while Molotov executes Spike — THE moment of the game.**
+   The main character since Mission 1, executed by the most beloved character,
+   watched from the dirt through a dying man's reddening eyes. This is the
+   clip that goes viral; this is the "Ghost, Loose Ends" / boat-scene tier
+   memory players carry for years. And it will SPLIT the community in half
+   on the spot: half screaming "HE WAS TWISTED, THE GHOSTS, HE DIDN'T
+   CHOOSE" (they know M18), half defending Molotov ("he couldn't know; his
+   family was at gunpoint"). That argument — did Molotov kill a traitor or a
+   victim? — is the healthiest kind of discourse fuel: both sides are right,
+   because the story never told anyone the answer. Forums burn for weeks.
+9. **Atomic's death (the spin, the closing eyes) — the double kill.** Players
+   die twice in one scene, in two bodies: the character they've BEEN since M1
+   (executed while they watch) and the body they're IN right now (bleeding
+   out). Very few games ever dare the double. Reaction: numb silence — the
+   exact emotional state the cutscene needs them in.
+10. **The third-person circle — HELPLESS OMNISCIENCE.** The camera pulling
+    out of first person lands as its own gut-punch: the player has no body
+    left on that hill. They can finally see EVERYONE — every gun, every
+    wavering teammate, Abraham's two men, Molotov and the kid — and control
+    NO ONE. After 20 missions of "you are in this," the game says *not
+    anymore.* The cliffhanger cut here will produce actual screaming.
+    Players' first theory-craft priority: WHO are the two men, and which
+    teammates are about to break which way.
+11. **Aggregate / risk note (design honesty):** this mission spends more
+    audience trust in 20 minutes than most games spend in a campaign — the
+    main character, a beloved POV, and the player's agency, all in one hill.
+    That's its power, and its risk: the NEXT mission must catch the player
+    (aftermath, grief, clarity about the circle) rather than pile on, or
+    exhaustion sets in. Also: this is the single most spoilable mission in
+    the game — "MOLOTOV KILLS SPIKE" is a five-word leak that can gut the
+    whole campaign's marketing. Protect it like the M11 massacre.
 
 ## OPEN
 - Mission 20 title (foreshadow rule). Candidates: **"The Circle,"** **"Who Is
