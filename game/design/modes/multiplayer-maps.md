@@ -26,6 +26,18 @@
 - Everything else (lanes, spawns, modes it hosts, story tie-in): **⚠ not
   yet given — awaiting creator (or delegable).**
 
+## Map 02 — WAREHOUSE
+- **Setting:** a **direct copy of HUNTER'S WAREHOUSE** — the exact location
+  where the story meets him for the first time (the warehouse of the
+  "game of faith," M13). Campaign geography reused as a competitive space.
+- **EASTER EGG + HIDDEN ACHIEVEMENT:** somewhere on the map you can **hide
+  in a box.** Doing so unlocks the hidden achievement **"METAL GEAR."**
+  *(The reference is the point: a cardboard box, a warehouse, tactical
+  espionage. First recorded achievement in the game's design docs —
+  an achievements system now canonically exists.)*
+- Everything else (lanes, spawns, modes, size class): **⚠ not yet given —
+  awaiting creator (or delegable).**
+
 ## ⚠ DICTATION / GARBLES LOGGED
 - "our first **math** is called **river**" → our first **map**, **"River."**
 - "big enough to **wear** you will run into a fight" → "big enough
