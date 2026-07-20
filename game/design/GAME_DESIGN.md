@@ -85,10 +85,16 @@ complete screenplays.
   the third-person circle; Molotov shields Jonah (leg); the friendly-fire
   **AIRSTRIKE**; Cocktail POV → **the crack: JONAH KILLS ABRAHAM** (choice /
   fail state); **the exile** — father & son flee their own team. **☠ Spike,
-  Atomic & Abraham KIA; all Pillars resolved** *(scripted — COMPLETE)*.
+  Atomic & Abraham KIA; all Pillars resolved.** Then: **THE END — credits
+  montage** (pick up Elizabeth at the mansion; Molotov builds a house,
+  settles with his family) + **end-credit scene: Molotov's apology at
+  Spike's grave in a beautiful park.** **THE CAMPAIGN ENDS HERE** *(scripted
+  — COMPLETE; M20 is the finale)*.
 
-**Timeline chain:** 1985 (campaign) → Dec 31, 2000 (M13 time-skip) → late 2001 /
-post-9/11 (open-world mercenary mode).
+**Timeline chain:** 1985 (campaign M1–M12) → Dec 31, 2000 (M13 time-skip; epilogue
+era M13–M20) → **campaign ENDS at M20** (credits; Molotov settles with his
+family; Spike's grave) → late 2001 / post-9/11 (open-world mercenary mode —
+Molotov in hiding as the secret contractor; the M20 exile is why).
 
 **Known mission order so far:** 1 (Colombia/Columbia, classified) → 2 (1948
 flashback + boardroom) → 3 "Would You Like a Receipt With That Order?" → 4 "Sins
@@ -503,6 +509,11 @@ high-ranking **Sergeant / officer** leading young Irish troops.
 > brother. Whether Molotov killed a traitor or a puppet (the M18 sanctuary
 > ghosts) was never answered before the bullet — the story's cruelest open
 > question.
+> **THE GRAVE (campaign ending):** Spike is buried in a **beautiful park.**
+> The campaign's final scene is Molotov's hand on his headstone: *"I'm sorry —
+> what I did to you. I put you through so much pain. But I didn't know what I
+> was doing. I just hope one day you can forgive me."* The story that began
+> as Spike's ends at his grave.
 
 - **Callsign:** "Spike" (between first/last: Rodriguez Hamilton).
 - **Role:** **the player character.** This is who the player controls — the

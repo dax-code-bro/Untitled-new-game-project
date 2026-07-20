@@ -190,6 +190,42 @@
 > father die and then dying. The game will wait as long as the player's
 > nerve holds.)*
 
+## THE END — CREDITS (the campaign's ending)
+
+> *(After the escape — a **BLACK SCREEN.**)*
+>
+> *(**THE END.**)*
+>
+> *(**The credits start rolling.** And under them, a **MONTAGE:**)*
+>
+> - *(**Molotov and Cocktail go to the MANSION to pick up ELIZABETH.**
+>   *(⚠ see flag — Elizabeth/the mansion.)*)*
+> - *(**Molotov building a NEW HOUSE.**)*
+> - *(**Moving in furniture.**)*
+> - *(**Molotov settling down with his family.**)*
+>
+> *(No dialogue. Just a man who spent his whole life burning — building.)*
+
+## THE END-CREDIT SCENE (the last scene of the campaign)
+
+> *(After the credits. One final scene.)*
+>
+> *(**MOLOTOV**, alone, speaking quietly to someone:)*
+>
+> **MOLOTOV:** I'm sorry — what I did to you. I put you through so much
+> pain. But I didn't know what I was doing. *(beat)* I just hope one day...
+> you can forgive me.
+>
+> *(He **puts his hand on something.** The camera **zooms out** — revealing
+> it to be **SPIKE'S GRAVE.**)*
+>
+> *(The camera keeps backing away — revealing the grave sits in a
+> **beautiful PARK.** Green, warm, quiet. A good place.)*
+>
+> *(The screen **fades to black.**)*
+>
+> *(— **END OF THE CAMPAIGN.** —)*
+
 ## THE DEAD (this mission — canon)
 - **☠ ATOMIC — KIA.** Shot in the chest by Abraham (golden revolver, slow
   motion); **bled out during the standoff.** Died as the PLAYER — the player
@@ -307,6 +343,39 @@
   living in hiding**, resurfacing as the **secret contractor** in the
   post-9/11 open-world mode. The M20 exile is the missing origin of that
   hiding. It connects.
+
+## ENDING NOTES / FLAGS (credits + end-credit scene)
+- **⚠ ELIZABETH & THE MANSION — reconcile needed:** M19 canon says
+  **Elizabeth flew to Antarctica** with "basically the entire team." The
+  credits montage has Molotov & Cocktail **picking her up at the MANSION.**
+  Readings: (a) she survived the hill events off-screen and traveled home
+  ahead of them; (b) M19's "basically the entire team" over-included her and
+  she never actually came; (c) "the mansion" is somewhere she went after.
+  Also: **whose mansion?** First mention of it. **Creator to rule.**
+- **THE APOLOGY — deliberately double-edged (recorded, not resolved):**
+  *"I didn't know what I was doing"* covers **both wounds** — the M10
+  crippling (accident) and the M20 execution (rage, without knowing Spike
+  was twisted). **⚠ OPEN: does Molotov ever LEARN about the AI ghosts /
+  that Spike was Abraham's puppet?** The apology plays either way — a man
+  apologizing for his rage, or a man who found out the truth too late. The
+  creator holds this knife.
+- **THE MANHUNT — left unresolved on purpose (as narrated):** the team was
+  going to hunt them... and the montage shows building, furniture, family.
+  Whether the hunt happened, fizzled, or is still out there is **not
+  shown** — which feeds perfectly into the post-epilogue mode (Molotov in
+  hiding, new identity as the contractor). The new house may BE the hiding.
+- **⚠ Spike's grave — logistics unstated:** who recovered Spike's body from
+  Antarctica, who buried him, whether the park is near the new house — all
+  open. (The image is what matters; the logistics can stay off-screen
+  forever if the creator wants.)
+- **THE LAST IMAGE:** the campaign ends on a **green, warm, beautiful
+  park** — the same image as Abraham's impossible green Antarctica, but
+  *honest* this time. Warmth that wasn't stolen. (Design observation, not
+  canon.)
+- **FULL-CIRCLE:** the campaign opened with Spike stepping off a helicopter
+  into Colombia, 1985. It closes with Molotov's hand on Spike's headstone in
+  a park. The story began as Spike's and ended as Molotov's — the last Apex
+  survivor carrying all of it.
 
 ## PREDICTED PLAYER REACTIONS (beat-by-beat design analysis)
 
@@ -443,3 +512,9 @@
 - "**silence Abraham forever**" → kept verbatim (it's a great phrase).
 - "escape **from the rest of the team**" → as written — they flee their OWN
   team. Confirmed reading via the hunt line that follows.
+- "**BC** Molotov and cocktail go to the mansion" → "**because** / [during
+  which] Molotov and Cocktail go to the mansion."
+- "**Malta** building a new house / **Malta** settling down" → **Molotov.**
+- "I'm sorry **what I did** to you" → kept nearly verbatim ("I'm sorry —
+  what I did to you").
+- "revealing it to be **pikes grave**" → **Spike's grave.**
