@@ -6222,6 +6222,24 @@ The big-ticket deployables — each one is a match-changing piece of hardware:
 - Everything else (lanes, spawns, modes, size class): **⚠ not yet given —
   awaiting creator (or delegable).**
 
+## Map 03 — GUNSMITH
+- **Setting:** a **small city** block centered on a **gunsmith shop.**
+- **Spawn structure (asymmetric):** one team **spawns INSIDE the gunsmith
+  and defends it**; the other team spawns **on the other side of the
+  block** and attacks.
+- **Mode profile:** primarily a **capture map** (attack/defend), but also
+  in rotation for **Team Deathmatch** and **Kill Confirmed.**
+- **EASTER EGG — the wall guns:** you can **pick up the guns off the
+  gunsmith's wall.** They come with **no attachments** and do **a lot less
+  damage** than whatever you brought (showroom pieces, not fighting guns).
+  On the wall: an **AK-47**, a few **MGs** *(⚠ "MMG's" — read as machine
+  guns; confirm)*, and **shotguns** — **nothing too overpowered.**
+- **⚠ Story tie (inference, not stated):** the campaign has one canonical
+  gunsmith — the **M16 parley shop** where Molotov and Hunter sealed the
+  alliance. If this map is a copy of THAT gunsmith (like Warehouse copies
+  Hunter's warehouse), it completes a pattern. **Confirm.**
+- Everything else: **⚠ awaiting creator (or delegable).**
+
 ## ⚠ DICTATION / GARBLES LOGGED
 - "our first **math** is called **river**" → our first **map**, **"River."**
 - "big enough to **wear** you will run into a fight" → "big enough
