@@ -55,6 +55,132 @@
 *(These are three of "a few different sets" Molotov owns — any others not
 yet described. Awaiting the creator. Do not invent.)*
 
+---
+
+# GEAR SETS — ALL OTHER PLAYABLE OPERATORS
+
+> **[D] DELEGATED DESIGNS.** The creator asked for **four unique outfits for
+> every other playable operator** and delegated the designs. All sets below
+> are designer-authored from each character's canon — every one is
+> adjustable/replaceable on request. Unlock missions: TBD (delegable).
+> Playable operator roster used: **Spike, Diego, Hunter, Atomic, Cocktail**
+> (the campaign's POV characters besides Molotov).
+
+## SPIKE — 4 sets [D]
+
+### "Standard Issue"
+The 1985 soldier, perfected: crisp US fatigues, the M1 helmet he stepped off
+the helicopter in, his father's dog tags worn outside the shirt. The kid who
+still believes in the system — worn best in the early missions, bitter by
+the late ones.
+
+### "Static"
+The brainwashing arc, worn on the outside. Matte-black kit shot through with
+**glitch-pattern decals** — broken scan lines, misregistered color. **Mini
+reactive skin:** the glitching **spreads slowly across the outfit as
+missions progress** (M3→M10 mirror). One eye of the balaclava has a faint
+flicker. *(The dart is in the neck. The suit knows.)*
+
+### "Full Metal"
+2000-era only. The cyborg, unhidden: plating exposed and polished instead of
+covered — chrome limbs, visible actuators, the gravity rig worn like armor
+rather than shame. For players who want Spike to stop pretending.
+
+### "Apex"
+The memorial set. Team Apex's colors with **every fallen member's patch**
+sewn down the left arm — Fox at the shoulder, then Striker, Payback, the
+twins, Sydney's patch half-unstitched. Black armband. He carries the whole
+team into every fight.
+
+## DIEGO — 4 sets [D] (1948 flashback missions)
+
+### "Sandstorm"
+Weathered 1948 desert expedition kit — sun-bleached khaki, brass goggles,
+neck scarf pulled high, sand worked into every seam.
+
+### "The Survivor"
+Post-attack Diego: torn fatigues, field bandages, ash and dried blood,
+one sleeve burned away. The man who walked out of HYDRA's first strike.
+
+### "Hamilton '48"
+Dress uniform of the era — pressed olive drab, brass buttons, garrison cap.
+For playing the flashback like a war memorial.
+
+### "The Storyteller"
+The old man who told young Spike everything: civilian cardigan over a
+service shirt, reading glasses on a cord, his old medals pinned crooked.
+*(Playing a 1948 firefight dressed as the grandfather who survived it —
+the flashback as Spike imagines the telling.)*
+
+## HUNTER — 4 sets [D]
+
+### "Plain Sight"
+The MO, wearable: unremarkable workman's clothes, canvas jacket, hat brim
+low — the outfit he walks into maximum-security sites in. The scariest
+thing he owns is how normal it looks. (Black-and-gold revolver stays; it's
+the only tell.)
+
+### "Black & Gold"
+Formal menace: tailored all-black suit with gold trim tracing the seams,
+gold watch chain, gloves. Matches the revolver like the gun ordered the
+suit.
+
+### "The Liberator"
+Militia fatigues hung with **tokens from the people he freed** — woven
+charms, a child's bracelet, tags with names — sewn on by the freed men
+themselves. What the bottom of the world sees when he walks by.
+
+### "The Farmhand"
+The origin: rough field clothes, rope belt, machete across the back,
+sea-salt stains. The teenage pig-thief who killed his first man and freed
+a farm. Where the empire started.
+
+## ATOMIC — 4 sets [D]
+
+### "Big Island"
+Hawaiian print — actual aloha-pattern fabric — stretched over a plate
+carrier that has to be custom because nothing stock fits him. Shorts.
+Combat boots. Zero apologies.
+
+### "Powerlifter"
+Gym tank, lifting belt cinched over tactical bottoms, chalk on the hands
+and forearms. The plates on his rig look suspiciously like weight plates.
+
+### "Tsunami"
+Heavyweight armor in blue-white wave motifs rolling across the chest —
+the big man as a force of nature that arrives slow and stops for nothing.
+
+### "Mauna"
+Volcanic heavy plating — matte black rock texture with **lava-glow cracks**
+that brighten when he sprints or melees. The mountain, awake.
+
+## COCKTAIL (JONAH) — 4 sets [D]
+
+### "Hand-Me-Down"
+Adult gear strapped and re-punched to fit a 15-year-old — rolled cuffs,
+extra belt holes, a plate carrier cinched tight. Somebody's old kit,
+somebody's old war, worn by the kid inheriting both.
+
+### "New Blood"
+What a teenager thinks tactical should look like: streetwear layers under
+a modern vest, bright accent laces, the legacy mask pushed up on his head
+half the time. Loud where his father is quiet.
+
+### "Ghillie Jr."
+A sniper's ghillie suit sized down, grass and burlap strands, scope-cover
+mitt. The smallest silhouette on the team and the furthest from the fight —
+exactly how his parents prefer it.
+
+### "Cocktail Party"
+A sharp little black suit — skinny tie, dress shoes he can still run in —
+worn under the legacy mask. The name is the joke and the joke is the point.
+*(Still not old enough for the beer.)*
+
+> **[D] Notes:** one mini-reactive included (Spike's "Static"); Atomic's
+> "Mauna" has a minor glow effect but no stages. If any operator should get
+> a full reactive like Molotov's "Monsters Display," or any set misses the
+> character, say so and it changes.
+
 ## NOTES / FLAGS
 - **⚠ Molotov's other sets** — "a few different sets" exist; only Flame On
   described so far.
