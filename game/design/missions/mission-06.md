@@ -199,6 +199,9 @@ is already aboard helicopters and planes, en route to Texas. Exposition happens
   moral-weight moment — and a wedge between Abraham and command.
 - **President survives** — the team extracts him from City Hall and escapes. His
   **guards are killed** by crashing drones; only Team Apex gets him out.
+- **NAMED (later ruling, via hideouts.md): PRESIDENT JAMES.** The President in
+  this mission is canonically **President James** — distinct from the "president
+  of the campus" at the Military Base hideout.
 - **Full Team Apex deployed.** This mission has **every member deployed**,
   including the quieter operators **Brian Wolford, Jesse Wolford, Monroe Sydney**
   (see GAME_DESIGN roster). **The player is introduced to one of them here**
