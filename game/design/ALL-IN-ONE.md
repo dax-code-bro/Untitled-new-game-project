@@ -559,6 +559,10 @@ high-ranking **Sergeant / officer** leading young Irish troops.
 > what I did to you. I put you through so much pain. But I didn't know what I
 > was doing. I just hope one day you can forgive me."* The story that began
 > as Spike's ends at his grave.
+> **🔒 SEALED (creator ruling):** whether Molotov ever learned the truth about
+> the twisting is one of the campaign's **three permanently unanswered
+> questions** (see mission-20.md ending notes) — never to be resolved in any
+> future material.
 
 - **Callsign:** "Spike" (between first/last: Rodriguez Hamilton).
 - **Role:** **the player character.** This is who the player controls — the
@@ -5583,26 +5587,27 @@ on Hunter" [M14] comes off the shelf.)*
   post-9/11 open-world mode. The M20 exile is the missing origin of that
   hiding. It connects.
 
-## ENDING NOTES / FLAGS (credits + end-credit scene)
-- **⚠ ELIZABETH & THE MANSION — reconcile needed:** M19 canon says
-  **Elizabeth flew to Antarctica** with "basically the entire team." The
-  credits montage has Molotov & Cocktail **picking her up at the MANSION.**
-  Readings: (a) she survived the hill events off-screen and traveled home
-  ahead of them; (b) M19's "basically the entire team" over-included her and
-  she never actually came; (c) "the mansion" is somewhere she went after.
-  Also: **whose mansion?** First mention of it. **Creator to rule.**
-- **THE APOLOGY — deliberately double-edged (recorded, not resolved):**
-  *"I didn't know what I was doing"* covers **both wounds** — the M10
-  crippling (accident) and the M20 execution (rage, without knowing Spike
-  was twisted). **⚠ OPEN: does Molotov ever LEARN about the AI ghosts /
-  that Spike was Abraham's puppet?** The apology plays either way — a man
-  apologizing for his rage, or a man who found out the truth too late. The
-  creator holds this knife.
-- **THE MANHUNT — left unresolved on purpose (as narrated):** the team was
-  going to hunt them... and the montage shows building, furniture, family.
-  Whether the hunt happened, fizzled, or is still out there is **not
-  shown** — which feeds perfectly into the post-epilogue mode (Molotov in
-  hiding, new identity as the contractor). The new house may BE the hiding.
+## ENDING NOTES — 🔒 THE THREE UNANSWERED QUESTIONS (SEALED BY CREATOR RULING)
+
+> **CREATOR RULING (final):** the three questions below are **NEVER
+> ANSWERED.** Not in the campaign, not later. They are deliberate, permanent
+> mysteries — part of the ending's design. Do NOT resolve, imply, or answer
+> them in any future material.
+
+- **🔒 1. ELIZABETH & THE MANSION — never explained.** M19 said Elizabeth flew
+  to Antarctica; the credits pick her up at a mansion. How she got there,
+  whose mansion it is, whether she ever set foot on the ice — **never
+  answered.** The audience is allowed to wonder forever.
+- **🔒 2. THE APOLOGY — never resolved.** Whether Molotov ever learned that
+  Spike was Abraham's puppet (the AI ghosts) — whether *"I didn't know what
+  I was doing"* is a man apologizing for his rage, or a man who found out
+  the truth too late — **never answered.** The line plays both ways to the
+  end of time. That's the point.
+- **🔒 3. THE MANHUNT — never shown.** Whether the team hunted them, gave up,
+  or is still out there while Molotov hangs curtains — **never answered.**
+  The montage's peace is uncertified. (It still *feeds* the post-epilogue
+  mode's "Molotov in hiding" — the mode may live in the question's shadow,
+  but the question itself stays open.)
 - **⚠ Spike's grave — logistics unstated:** who recovered Spike's body from
   Antarctica, who buried him, whether the park is near the new house — all
   open. (The image is what matters; the logistics can stay off-screen

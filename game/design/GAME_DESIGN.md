@@ -514,6 +514,10 @@ high-ranking **Sergeant / officer** leading young Irish troops.
 > what I did to you. I put you through so much pain. But I didn't know what I
 > was doing. I just hope one day you can forgive me."* The story that began
 > as Spike's ends at his grave.
+> **🔒 SEALED (creator ruling):** whether Molotov ever learned the truth about
+> the twisting is one of the campaign's **three permanently unanswered
+> questions** (see mission-20.md ending notes) — never to be resolved in any
+> future material.
 
 - **Callsign:** "Spike" (between first/last: Rodriguez Hamilton).
 - **Role:** **the player character.** This is who the player controls — the
