@@ -31,6 +31,7 @@ FILES=(
   missions/mission-20.md
   modes/new-mode-post-epilogue.md
   modes/multiplayer.md
+  modes/multiplayer-maps.md
   modes/zombies.md
   factions.md
   arsenal.md

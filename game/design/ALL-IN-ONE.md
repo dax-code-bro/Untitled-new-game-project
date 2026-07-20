@@ -29,6 +29,7 @@ Contents (in order):
 - `missions/mission-20.md`
 - `modes/new-mode-post-epilogue.md`
 - `modes/multiplayer.md`
+- `modes/multiplayer-maps.md`
 - `modes/zombies.md`
 - `factions.md`
 - `arsenal.md`
@@ -173,9 +174,12 @@ Molotov flashback) → 9 "The Reboot" → 10 "Whom Can We Trust Among Us?"
   set recorded: Molotov's "Flame On" — gangster tailoring, fire decals,
   glass amber mask).
 - `game/design/hideouts.md` — **Hideouts** — the campaign's three explorable
-  hub spaces. #1: the Military Base (biggest in the game — 5 barracks,
-  cafeteria, garage, flight line, ~61 NPCs incl. 10 generals and ONE
-  PRESIDENT, 20 random interactions). #2 and #3 TBD.
+  hub spaces: the Military Base (1985; biggest in the game; campus
+  president; 20 random interactions), the Little Mansion (2000 HQ,
+  pre/post renovation), the Little Cabin in Antarctica (endgame).
+- `game/design/modes/multiplayer-maps.md` — **Multiplayer Maps** — global
+  pacing directives (a fight every ~10s) + the map list (01 "River" — small
+  Chinese village, lethal river current with special death animation).
 - `game/design/dlc-sins-of-the-past.md` — **DLC "Sins of the Past"** — story-gap
   filler + a new Zombies mode + new guns *(⚠ name collides with Mission 4)*.
 - `game/design/assets/` — reference art (`hydra-logo.png`,
@@ -6172,6 +6176,47 @@ The big-ticket deployables — each one is a match-changing piece of hardware:
 - Match modes (TDM, Domination, etc.) + maps
 - Progression (weapon levels already exist per `arsenal.md` attachments — see
   unlock levels there)
+
+
+═══════════════════════════════════════════════════════════════════════
+# ▓▓▓ FILE: modes/multiplayer-maps.md ▓▓▓
+═══════════════════════════════════════════════════════════════════════
+
+# Multiplayer Maps
+
+> **Canon (creator-specified).** Companion to `modes/multiplayer.md`.
+
+## GLOBAL MAP DESIGN DIRECTIVES (apply to ALL maps)
+- **Engagement pacing:** maps are sized/laid out so you **run into a fight
+  roughly every 10 seconds.** Big enough to breathe, tight enough that
+  combat finds you.
+- **Playstyle friendliness:** *(⚠ garble — "but it's camper and why why
+  sweat friendly")* — read as: maps are friendly to **both campers AND
+  sweats** — holding a position is viable, and fast aggressive movement is
+  viable; the layouts serve both. *(Alternative reading: "camper-UNfriendly,
+  sweat-friendly." The two readings are opposites — **confirm.** Recorded as
+  both-friendly for now since the 10-second pacing already limits hard
+  camping.)*
+
+---
+
+## Map 01 — RIVER
+- **Setting:** a **small Chinese village** next to a **flowing river.**
+- **Size class:** small.
+- **THE RIVER — environmental hazard:** if you go into the river, you get a
+  **special death animation** — **the current sweeps you away and you
+  die.** *(The river is not cover, not a flank route, not swimmable. It is
+  a border made of water, and it takes you.)*
+- Everything else (lanes, spawns, modes it hosts, story tie-in): **⚠ not
+  yet given — awaiting creator (or delegable).**
+
+## ⚠ DICTATION / GARBLES LOGGED
+- "our first **math** is called **river**" → our first **map**, **"River."**
+- "big enough to **wear** you will run into a fight" → "big enough
+  **where**…"
+- "**it's camper and why why sweat friendly**" → see Global Directives —
+  both-friendly vs. camper-unfriendly readings; **confirm.**
+- "or the current **sweep** you away" → "the current **sweeps** you away."
 
 
 ═══════════════════════════════════════════════════════════════════════

@@ -125,9 +125,12 @@ Molotov flashback) → 9 "The Reboot" → 10 "Whom Can We Trust Among Us?"
   set recorded: Molotov's "Flame On" — gangster tailoring, fire decals,
   glass amber mask).
 - `game/design/hideouts.md` — **Hideouts** — the campaign's three explorable
-  hub spaces. #1: the Military Base (biggest in the game — 5 barracks,
-  cafeteria, garage, flight line, ~61 NPCs incl. 10 generals and ONE
-  PRESIDENT, 20 random interactions). #2 and #3 TBD.
+  hub spaces: the Military Base (1985; biggest in the game; campus
+  president; 20 random interactions), the Little Mansion (2000 HQ,
+  pre/post renovation), the Little Cabin in Antarctica (endgame).
+- `game/design/modes/multiplayer-maps.md` — **Multiplayer Maps** — global
+  pacing directives (a fight every ~10s) + the map list (01 "River" — small
+  Chinese village, lethal river current with special death animation).
 - `game/design/dlc-sins-of-the-past.md` — **DLC "Sins of the Past"** — story-gap
   filler + a new Zombies mode + new guns *(⚠ name collides with Mission 4)*.
 - `game/design/assets/` — reference art (`hydra-logo.png`,
