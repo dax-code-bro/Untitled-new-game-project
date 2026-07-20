@@ -35,6 +35,7 @@ FILES=(
   factions.md
   arsenal.md
   campaign-loadout.md
+  operator-gear.md
   hydra-drone-h1.md
   hydro-hound.md
   emp-shark.md

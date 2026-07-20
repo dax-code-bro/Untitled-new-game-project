@@ -120,6 +120,10 @@ Molotov flashback) → 9 "The Reboot" → 10 "Whom Can We Trust Among Us?"
   pre-mission Primary/Secondary/Lethal/Melee selection; the restricted
   campaign weapon + attachment lists; mission-by-mission unlock schedule
   (M1 fixed M4 → M19–20 everything).
+- `game/design/operator-gear.md` — **Operator Gear** — switchable outfit
+  sets for all playable operators, unlocked by mission progression (first
+  set recorded: Molotov's "Flame On" — gangster tailoring, fire decals,
+  glass amber mask).
 - `game/design/dlc-sins-of-the-past.md` — **DLC "Sins of the Past"** — story-gap
   filler + a new Zombies mode + new guns *(⚠ name collides with Mission 4)*.
 - `game/design/assets/` — reference art (`hydra-logo.png`,
