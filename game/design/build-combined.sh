@@ -36,6 +36,7 @@ FILES=(
   arsenal.md
   campaign-loadout.md
   operator-gear.md
+  hideouts.md
   hydra-drone-h1.md
   hydro-hound.md
   emp-shark.md

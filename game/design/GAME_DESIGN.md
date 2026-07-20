@@ -124,6 +124,10 @@ Molotov flashback) → 9 "The Reboot" → 10 "Whom Can We Trust Among Us?"
   sets for all playable operators, unlocked by mission progression (first
   set recorded: Molotov's "Flame On" — gangster tailoring, fire decals,
   glass amber mask).
+- `game/design/hideouts.md` — **Hideouts** — the campaign's three explorable
+  hub spaces. #1: the Military Base (biggest in the game — 5 barracks,
+  cafeteria, garage, flight line, ~61 NPCs incl. 10 generals and ONE
+  PRESIDENT, 20 random interactions). #2 and #3 TBD.
 - `game/design/dlc-sins-of-the-past.md` — **DLC "Sins of the Past"** — story-gap
   filler + a new Zombies mode + new guns *(⚠ name collides with Mission 4)*.
 - `game/design/assets/` — reference art (`hydra-logo.png`,
