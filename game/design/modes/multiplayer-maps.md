@@ -56,6 +56,37 @@
   Hunter's warehouse), it completes a pattern. **Confirm.**
 - Everything else: **⚠ awaiting creator (or delegable).**
 
+## Map 04 — TRUTH OR DARE
+- **Setting (as specified — see the risk note):** based on the **falling
+  Twin Towers.** Two tower-sides, mid-collapse.
+- **Core mechanic — THE LAUNCHPAD:** you **cannot jump across** the gap
+  between the sides. Teams must use the **LAUNCHPAD** to cross — flinging
+  players through open air **while the enemy team tries to gun them down
+  mid-air from the other side.** (The name is the mechanic: crossing is
+  the dare.)
+- Everything else: **⚠ awaiting creator (or delegable).**
+
+### ⚠⚠⚠ DESIGN-RISK NOTE (recorded honestly — the creator said "maybe a
+### bit controversial"; this note quantifies that)
+- A competitive map staged on the **real** falling Twin Towers — an attack
+  that killed ~3,000 real people — is **beyond "M-rated edgy."** Precedent
+  says the reaction would not be controversy but **crisis**: platform
+  holders (Sony/Microsoft/Valve) have pulled or forced changes on far less
+  (MW2's "No Russian" was *fictional* violence and still shipped with a
+  skip warning + regional censorship; a playable real-victim tragedy is a
+  tier past that — storefront delisting territory, review-bombing, victims'
+  families in the press).
+- **The alt-history door (the game's own canon offers the fix):** this
+  universe already diverges from ours (HYDRA, 1948 drones, a green
+  Antarctica, a surviving "mustache guy"). An **in-universe pair of falling
+  towers** — same silhouette, same vertigo, same launchpad dare, but *this
+  world's* towers brought down by *this world's* villains (HYDRA drones /
+  the era's fallout) — keeps **100% of the gameplay** and sheds the
+  real-victim weight. The post-9/11 open-world mode already establishes a
+  9/11-analog era exists here.
+- **Decision is the creator's** — recorded as specified; the note is
+  counsel, not a change.
+
 ## ⚠ DICTATION / GARBLES LOGGED
 - "our first **math** is called **river**" → our first **map**, **"River."**
 - "big enough to **wear** you will run into a fight" → "big enough
