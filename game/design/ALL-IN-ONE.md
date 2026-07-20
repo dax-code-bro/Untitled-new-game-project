@@ -7103,8 +7103,25 @@ read "different rounds for pistols and rifles"; confirm)*
   bottle. The quietest version of the motif: all black, one white mark.)*
 - **Unlock:** after mission — **⚠ specific mission not stated; TBD.**
 
-*(These are two of "a few different sets" Molotov owns — any others not yet
-described. Awaiting the creator. Do not invent.)*
+### "Monsters Display" *(⚠ name as dictated — possibly "Monster's Display"; confirm)*
+- **Style:** a **fully jet-black outfit** with **golden bits sprinkled
+  throughout.**
+- **Mask:** **replaces the ski mask entirely** with a **24-KARAT GOLD MASK.**
+- **REACTIVE SKIN** — the outfit **evolves across the missions** through
+  three stages:
+  1. **Stage 1:** black, with a bit of **fake fabric gold.**
+  2. **Stage 2 (middle):** a bit of **REAL gold** on it.
+  3. **Stage 3 (final):** a **FULL 24-karat gold outfit.**
+  *(The gold becomes real, then becomes everything. ⚠ Progression trigger —
+  mission count? kills? story milestones? — not stated; "throughout the
+  missions" recorded. Confirm.)*
+- **Unlock:** after mission — **⚠ specific mission not stated; TBD.**
+- *(Reactive-skin precedent: the Hydro Hound reactive skins — same
+  technology of cosmetics that evolve with play. This is the first OPERATOR
+  reactive skin.)*
+
+*(These are three of "a few different sets" Molotov owns — any others not
+yet described. Awaiting the creator. Do not invent.)*
 
 ## NOTES / FLAGS
 - **⚠ Molotov's other sets** — "a few different sets" exist; only Flame On
@@ -7132,6 +7149,11 @@ described. Awaiting the creator. Do not invent.)*
 - "the next one is **also for me it is tacked out**" → "also for **him**
   [Molotov]; it is **'Tac'd Out'**" (set name — confirm spelling: Tac'd
   Out / Tacked Out / Tact Out).
+- "**monsters display**" → recorded as dictated; possibly **"Monster's
+  Display."** Confirm.
+- "it will convert from black with a bit of **fake fabric gold two in the
+  middle** with a bit of real gold" → parsed as three stages: fake fabric
+  gold → **then in the middle** a bit of real gold → full 24k. Confirm.
 
 
 ═══════════════════════════════════════════════════════════════════════
