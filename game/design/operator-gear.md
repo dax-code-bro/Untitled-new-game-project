@@ -27,8 +27,16 @@
   mask with translucent amber glass. *(The fire motif made elegant: the man
   of fire in amber — fire, frozen still.)*
 - **Unlock:** after mission — **⚠ specific mission not stated; TBD.**
-- *(One of "a few different sets" Molotov owns — the others not yet
-  described. Awaiting the creator. Do not invent.)*
+
+### "Tac'd Out" *(⚠ "tacked out" as dictated — recorded as "Tac'd Out"; confirm spelling)*
+- **Style:** his **standard black tactical outfit** — the workhorse look.
+- **Mask:** a **fully black ski mask** with the **silhouette of a white
+  Molotov bottle on the side.** *(No fire paint, no flames — just the
+  bottle. The quietest version of the motif: all black, one white mark.)*
+- **Unlock:** after mission — **⚠ specific mission not stated; TBD.**
+
+*(These are two of "a few different sets" Molotov owns — any others not yet
+described. Awaiting the creator. Do not invent.)*
 
 ## NOTES / FLAGS
 - **⚠ Molotov's other sets** — "a few different sets" exist; only Flame On
@@ -53,3 +61,6 @@
   both readings noted.
 - "a unique **glass amber mask**" → translucent amber glass mask, unique to
   this set.
+- "the next one is **also for me it is tacked out**" → "also for **him**
+  [Molotov]; it is **'Tac'd Out'**" (set name — confirm spelling: Tac'd
+  Out / Tacked Out / Tact Out).
