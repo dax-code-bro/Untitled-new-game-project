@@ -34,6 +34,7 @@ FILES=(
   modes/zombies.md
   factions.md
   arsenal.md
+  campaign-loadout.md
   hydra-drone-h1.md
   hydro-hound.md
   emp-shark.md

@@ -116,6 +116,10 @@ Molotov flashback) → 9 "The Reboot" → 10 "Whom Can We Trust Among Us?"
 - `game/design/factions.md` — **Factions** (the 5 main + notes).
 - `game/design/arsenal.md` — **Arsenal** — the 200+ named guns (each with a unique
   attachment); master weapon catalog.
+- `game/design/campaign-loadout.md` — **Campaign Loadout / Mission Board** —
+  pre-mission Primary/Secondary/Lethal/Melee selection; the restricted
+  campaign weapon + attachment lists; mission-by-mission unlock schedule
+  (M1 fixed M4 → M19–20 everything).
 - `game/design/dlc-sins-of-the-past.md` — **DLC "Sins of the Past"** — story-gap
   filler + a new Zombies mode + new guns *(⚠ name collides with Mission 4)*.
 - `game/design/assets/` — reference art (`hydra-logo.png`,
