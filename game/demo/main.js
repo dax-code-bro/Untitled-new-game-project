@@ -555,12 +555,12 @@ function soldierModel(kind, name) {
   }
   const armRJ = makeArm(1), armLJ = makeArm(-1);
   const combatant = isEnemy || kind === 'friendly';
-  if (combatant) {                                           // firing pose: both hands ON the weapon
-    armRJ.shoulder.rotation.x = -1.15; armRJ.elbow.rotation.x = 0.55;
-    armLJ.shoulder.rotation.x = -1.3;  armLJ.shoulder.rotation.z = -0.62; armLJ.elbow.rotation.x = 0.5;
+  if (combatant) {                                           // LOW-READY: gun forward-down, both hands on it
+    armRJ.shoulder.rotation.x = 0.5;  armRJ.elbow.rotation.x = 0.6;
+    armLJ.shoulder.rotation.x = 0.7;  armLJ.shoulder.rotation.z = 0.45; armLJ.elbow.rotation.x = 0.35;
   } else {                                                   // civilians: arms down, slight bend
-    armRJ.shoulder.rotation.x = -0.1; armRJ.elbow.rotation.x = 0.2;
-    armLJ.shoulder.rotation.x = -0.1; armLJ.elbow.rotation.x = 0.2;
+    armRJ.shoulder.rotation.x = 0.1; armRJ.elbow.rotation.x = 0.15;
+    armLJ.shoulder.rotation.x = 0.1; armLJ.elbow.rotation.x = 0.15;
   }
   armRJ.shoulder.userData.bx = armRJ.shoulder.rotation.x;
   armLJ.shoulder.userData.bx = armLJ.shoulder.rotation.x;
@@ -605,9 +605,11 @@ function soldierModel(kind, name) {
     body.castShadow = true;
     gun.add(body, brl, gmag, gstock);
     // anchor to the right hand: elbow-local, counter-rotated so the barrel points body-forward
-    gun.position.set(-0.03, -0.24, -0.05);
-    gun.rotation.x = 0.52;
-    gun.userData.baseRotX = 0.52;
+    // (arm chain at low-ready = 0.5 + 0.6 = 1.1 rad; gun -0.75 leaves the muzzle ~20° down)
+    gun.position.set(-0.02, -0.2, -0.03);
+    gun.rotation.x = -0.75;
+    gun.userData.baseRotX = -0.75;
+    gun.userData.basePos = gun.position.clone();
     gun.userData.mag = gmag;
     armRJ.elbow.add(gun);
   }
@@ -1447,29 +1449,33 @@ function updateEntities(dt) {
       if (ai.reloadT > 0) {
         const p = 1 - ai.reloadT / 1.7;
         const wave = Math.sin(Math.min(1, p) * Math.PI);
-        J[0].rotation.x = B(0).x + wave * 1.15;      // left hand off the handguard, down to the belt
-        J[0].rotation.z = B(0).z + wave * 0.35;
-        J[1].rotation.x = B(1).x - wave * 0.55;
+        J[0].rotation.x = B(0).x - wave * 0.55;      // left hand off the handguard, down to the belt
+        J[0].rotation.z = B(0).z - wave * 0.3;
+        J[1].rotation.x = B(1).x + wave * 0.35;
         if (e.model.gun) {
           e.model.gun.rotation.x = e.model.gun.userData.baseRotX + wave * 0.4;   // muzzle tips up
           const mg = e.model.gun.userData.mag;
           if (mg) mg.visible = !(p > 0.3 && p < 0.62); // the magazine is OUT mid-reload
         }
       } else {
-        // two-handed SHOULDERED AIM blend: both arms rise, gun levels at the shoulder,
-        // and each shot kicks the muzzle up and the elbows back
-        J[0].rotation.x = B(0).x + Math.sin(e.phase * 1.7) * 0.035 - 0.24 * aimA;
-        J[0].rotation.z = B(0).z + 0.16 * aimA;
-        J[1].rotation.x = B(1).x - 0.18 * aimA - 0.22 * kick;
+        // OPERATOR AIM blend (photo-matched): stock to the shoulder pocket, right elbow
+        // low on the grip, LEFT ARM EXTENDED along the handguard, gun level at cheek height.
+        const L = (a, b) => a * (1 - aimA) + b * aimA;
+        const br = Math.sin(e.phase * 1.7) * 0.035;
+        J[0].rotation.x = L(B(0).x + br, 1.25);            // left arm reaches far forward
+        J[0].rotation.z = L(B(0).z, 0.52);                 //   ...and across to the handguard
+        J[1].rotation.x = L(B(1).x, 0.12) - 0.2 * kick;    // nearly straight support arm
         if (e.model.gun) {
-          e.model.gun.rotation.x = e.model.gun.userData.baseRotX + 0.62 * aimA
-            + 0.3 * kick;                                 // muzzle flip on every shot
-          const mg = e.model.gun.userData.mag;
+          const g = e.model.gun;
+          g.rotation.x = L(g.userData.baseRotX, -1.62) + 0.3 * kick;  // level at the shoulder; kick flips the muzzle
+          g.position.y = L(g.userData.basePos.y, -0.14);              // rides up into the pocket
+          g.position.z = L(g.userData.basePos.z, 0.0) + 0.05 * kick;  // and shoves BACK into the shoulder each shot
+          const mg = g.userData.mag;
           if (mg) mg.visible = true;
         }
       }
-      J[2].rotation.x = B(2).x - Math.sin(e.phase * 1.7) * 0.035 - 0.3 * aimA + 0.14 * kick;
-      J[3].rotation.x = B(3).x - 0.24 * aimA - 0.28 * kick; // right elbow absorbs the kick
+      J[2].rotation.x = B(2).x * (1 - aimA) + 0.15 * aimA - Math.sin(e.phase * 1.7) * 0.035 * (1 - aimA) + 0.1 * kick;
+      J[3].rotation.x = B(3).x * (1 - aimA) + 1.45 * aimA - 0.25 * kick; // elbow LOW, grip hand near the chest — stock in the pocket
       // cheek weld + bladed torso while aiming; the body rocks back on each shot
       J[8].rotation.z = 0.07 * aimA;
       e.model.torso.rotation.y = 0.12 * aimA;
@@ -1737,7 +1743,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 9;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 10;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
