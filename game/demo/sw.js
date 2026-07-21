@@ -1,6 +1,6 @@
 // UNTITLED demo — service worker: cache-first so the game runs fully offline
 // after the first visit. Bump VERSION to force clients onto a new build.
-const VERSION = 'untitled-demo-v1';
+const VERSION = 'untitled-demo-v2';   // bump on every demo update so installed PWAs pull the new build
 const ASSETS = [
   './play-offline.html',
   './manifest.webmanifest',
