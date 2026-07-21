@@ -326,23 +326,69 @@ const groundNormal = normalFromHeight((x, s) => {
   }
 }, 256, 2.0, 26, 26);
 
-// dirt ground with grass patches + stones (Colombia village floor)
-const dirtTex = canvasTex(512, (ctx, s) => {
-  ctx.fillStyle = '#6d5a41'; ctx.fillRect(0, 0, s, s);
-  for (let i = 0; i < 16000; i++) {          // soil noise
-    ctx.fillStyle = `rgba(${rnd(70, 125) | 0},${rnd(55, 100) | 0},${rnd(35, 70) | 0},${rnd(0.15, 0.5)})`;
-    ctx.fillRect(rnd(0, s), rnd(0, s), rnd(1, 3), rnd(1, 3));
+// ---- fractal value-noise: the difference between "TV static" and real material ----
+function noiseCanvas(cell) {
+  const c = document.createElement('canvas'); c.width = c.height = cell;
+  const x = c.getContext('2d');
+  const img = x.createImageData(cell, cell);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const v = rnd(0, 255) | 0;
+    img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+    img.data[i + 3] = 255;
   }
-  for (let i = 0; i < 110; i++) {            // grass patches
-    const x = rnd(0, s), y = rnd(0, s), r = rnd(8, 34);
+  x.putImageData(img, 0, 0);
+  return c;
+}
+function mottle(ctx, s, cells, op, alpha) {
+  ctx.save();
+  ctx.globalCompositeOperation = op;
+  ctx.imageSmoothingEnabled = true;
+  cells.forEach((cell, k) => {
+    ctx.globalAlpha = alpha * Math.pow(0.62, k);
+    ctx.drawImage(noiseCanvas(cell), 0, 0, s, s);   // smoothed upscale = soft octave
+  });
+  ctx.restore();
+  ctx.globalAlpha = 1;
+}
+
+// dirt ground — layered earth tones, fractal mottling, shadowed pebbles, grass tufts
+const dirtTex = canvasTex(512, (ctx, s) => {
+  ctx.fillStyle = '#6f5b40'; ctx.fillRect(0, 0, s, s);
+  for (let i = 0; i < 14; i++) {             // broad earth-tone patches (ochre/umber/olive)
+    const x = rnd(0, s), y = rnd(0, s), r = rnd(50, 160);
+    const cols = ['122,101,71', '95,79,56', '107,106,74', '130,110,80'];
     const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-    g.addColorStop(0, `rgba(${rnd(60, 90) | 0},${rnd(95, 130) | 0},50,0.55)`);
-    g.addColorStop(1, 'rgba(80,110,50,0)');
+    g.addColorStop(0, `rgba(${cols[i % 4]},0.35)`);
+    g.addColorStop(1, `rgba(${cols[i % 4]},0)`);
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
   }
-  for (let i = 0; i < 280; i++) {            // stones
-    ctx.fillStyle = `rgba(${rnd(120, 160) | 0},${rnd(115, 150) | 0},${rnd(105, 140) | 0},${rnd(0.4, 0.9)})`;
-    ctx.beginPath(); ctx.ellipse(rnd(0, s), rnd(0, s), rnd(1, 4), rnd(1, 3), rnd(0, 3), 0, 7); ctx.fill();
+  mottle(ctx, s, [7, 13, 27, 53], 'overlay', 0.5);   // natural large-to-fine mottling
+  mottle(ctx, s, [17, 67], 'multiply', 0.28);
+  for (let i = 0; i < 260; i++) {            // pebbles WITH drop shadows
+    const x = rnd(0, s), y = rnd(0, s), rx2 = rnd(1, 4), ry2 = rnd(1, 3), a = rnd(0, 3);
+    ctx.fillStyle = 'rgba(20,14,8,0.4)';
+    ctx.beginPath(); ctx.ellipse(x + 1.2, y + 1.4, rx2, ry2, a, 0, 7); ctx.fill();
+    ctx.fillStyle = `hsl(${rnd(28, 45) | 0},${rnd(8, 20) | 0}%,${rnd(42, 68) | 0}%)`;
+    ctx.beginPath(); ctx.ellipse(x, y, rx2, ry2, a, 0, 7); ctx.fill();
+  }
+  for (let i = 0; i < 220; i++) {            // grass TUFTS — blade strokes, not blobs
+    const x = rnd(0, s), y = rnd(0, s);
+    ctx.strokeStyle = `hsl(${rnd(72, 105) | 0},${rnd(28, 46) | 0}%,${rnd(24, 38) | 0}%)`;
+    ctx.lineWidth = rnd(0.7, 1.4);
+    for (let b2 = 0; b2 < 4; b2++) {
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.quadraticCurveTo(x + rnd(-3, 3), y - rnd(2, 5), x + rnd(-5, 5), y - rnd(4, 9));
+      ctx.stroke();
+    }
+  }
+  ctx.strokeStyle = 'rgba(35,25,15,0.3)'; ctx.lineWidth = 1;   // dry earth cracks
+  for (let i = 0; i < 8; i++) {
+    ctx.beginPath();
+    let x = rnd(0, s), y = rnd(0, s);
+    ctx.moveTo(x, y);
+    for (let k = 0; k < 6; k++) { x += rnd(-22, 22); y += rnd(-22, 22); ctx.lineTo(x, y); }
+    ctx.stroke();
   }
 }, 26, 26);
 
@@ -350,15 +396,27 @@ const dirtTex = canvasTex(512, (ctx, s) => {
 function wallTexture(base, trim) {
   return canvasTex(512, (ctx, s) => {
     ctx.fillStyle = base; ctx.fillRect(0, 0, s, s);
-    for (let i = 0; i < 9000; i++) {         // stucco noise
-      ctx.fillStyle = `rgba(0,0,0,${rnd(0.02, 0.09)})`;
-      ctx.fillRect(rnd(0, s), rnd(0, s), rnd(1, 3), rnd(1, 2));
-    }
+    mottle(ctx, s, [9, 21, 47], 'overlay', 0.38);      // plaster mottling — aged, uneven
+    mottle(ctx, s, [15, 61], 'multiply', 0.2);
     for (let i = 0; i < 12; i++) {           // grime streaks from top
       const x = rnd(0, s);
       const g = ctx.createLinearGradient(0, 0, 0, rnd(60, 200));
       g.addColorStop(0, 'rgba(40,35,30,0.25)'); g.addColorStop(1, 'rgba(40,35,30,0)');
       ctx.fillStyle = g; ctx.fillRect(x, 0, rnd(6, 22), 200);
+    }
+    { // weathering: rain-splash grime at the base, sun-fade at the top, corner AO
+      const gb = ctx.createLinearGradient(0, s, 0, s - 90);
+      gb.addColorStop(0, 'rgba(48,40,28,0.42)'); gb.addColorStop(1, 'rgba(48,40,28,0)');
+      ctx.fillStyle = gb; ctx.fillRect(0, s - 90, s, 90);
+      const gt = ctx.createLinearGradient(0, 0, 0, 60);
+      gt.addColorStop(0, 'rgba(255,250,235,0.10)'); gt.addColorStop(1, 'rgba(255,250,235,0)');
+      ctx.fillStyle = gt; ctx.fillRect(0, 0, s, 60);
+      [[0, 0, 26, s], [s - 26, 0, 26, s]].forEach(([ex, ey, ew, eh]) => {
+        const ga = ctx.createLinearGradient(ex, 0, ex === 0 ? ew : s - ew, 0);
+        ga.addColorStop(ex === 0 ? 0 : 1, 'rgba(20,16,10,0.22)');
+        ga.addColorStop(ex === 0 ? 1 : 0, 'rgba(20,16,10,0)');
+        ctx.fillStyle = ga; ctx.fillRect(ex, ey, ew, eh);
+      });
     }
     // windows (2 rows)
     for (let row = 0; row < 2; row++) for (let col = 0; col < 3; col++) {
@@ -371,6 +429,16 @@ function wallTexture(base, trim) {
       ctx.strokeRect(wx, wy, ww, wh);
       ctx.beginPath(); ctx.moveTo(wx + ww / 2, wy); ctx.lineTo(wx + ww / 2, wy + wh);
       ctx.moveTo(wx, wy + wh / 2); ctx.lineTo(wx + ww, wy + wh / 2); ctx.stroke();
+      // sun glint on the glass + water-stain drips bleeding from the sill
+      ctx.fillStyle = 'rgba(255,255,255,0.16)';
+      ctx.beginPath(); ctx.moveTo(wx + 6, wy + wh - 8); ctx.lineTo(wx + ww - 20, wy + 8);
+      ctx.lineTo(wx + ww - 6, wy + 8); ctx.lineTo(wx + 18, wy + wh - 8); ctx.closePath(); ctx.fill();
+      for (let dr = 0; dr < 3; dr++) {
+        const dx2 = wx + rnd(4, ww - 8);
+        const g2 = ctx.createLinearGradient(0, wy + wh + 8, 0, wy + wh + rnd(26, 60));
+        g2.addColorStop(0, 'rgba(52,44,32,0.32)'); g2.addColorStop(1, 'rgba(52,44,32,0)');
+        ctx.fillStyle = g2; ctx.fillRect(dx2, wy + wh + 8, rnd(2.5, 6), 60);
+      }
     }
     // crack lines
     ctx.strokeStyle = 'rgba(30,25,20,0.35)'; ctx.lineWidth = 1.5;
@@ -387,38 +455,70 @@ const wallTexA = wallTexture('#b8a284', '#4a3b2c');
 const wallTexB = wallTexture('#a49478', '#3c3128');
 const wallTexC = wallTexture('#8f8a7a', '#2f2a24');
 
-// brick
+// brick — per-brick hue variation, top-light shading, mortar shadows, aged grime
 const brickTex = canvasTex(512, (ctx, s) => {
   ctx.fillStyle = '#5f5148'; ctx.fillRect(0, 0, s, s);   // mortar
   const bh = 32, bw = 84;
   for (let row = 0; row < s / bh; row++) {
     const off = (row % 2) * (bw / 2);
     for (let col = -1; col < s / bw + 1; col++) {
-      ctx.fillStyle = `rgb(${rnd(115, 150) | 0},${rnd(58, 76) | 0},${rnd(44, 58) | 0})`;
-      ctx.fillRect(col * bw + off + 3, row * bh + 3, bw - 6, bh - 6);
-      for (let i = 0; i < 40; i++) {
-        ctx.fillStyle = `rgba(0,0,0,${rnd(0.03, 0.12)})`;
-        ctx.fillRect(col * bw + off + rnd(3, bw - 6), row * bh + rnd(3, bh - 6), 2, 2);
+      const bx = col * bw + off + 3, by = row * bh + 3, bwi = bw - 6, bhi = bh - 6;
+      const hue = rnd(8, 22), sat = rnd(28, 48), lit = rnd(30, 44);
+      const g = ctx.createLinearGradient(0, by, 0, by + bhi);          // top-lit face
+      g.addColorStop(0, `hsl(${hue | 0},${sat | 0}%,${(lit + 7) | 0}%)`);
+      g.addColorStop(1, `hsl(${hue | 0},${sat | 0}%,${(lit - 4) | 0}%)`);
+      ctx.fillStyle = g; ctx.fillRect(bx, by, bwi, bhi);
+      ctx.fillStyle = 'rgba(25,18,12,0.4)';                            // shadow under the brick
+      ctx.fillRect(bx, by + bhi, bwi, 2.5);
+      for (let i = 0; i < 26; i++) {                                    // pitting
+        ctx.fillStyle = `rgba(0,0,0,${rnd(0.04, 0.14)})`;
+        ctx.fillRect(bx + rnd(0, bwi), by + rnd(0, bhi), rnd(1, 2.5), rnd(1, 2));
+      }
+      if (Math.random() < 0.12) {                                       // the odd broken corner
+        ctx.fillStyle = '#5f5148';
+        ctx.beginPath(); ctx.moveTo(bx + bwi, by);
+        ctx.lineTo(bx + bwi - rnd(6, 16), by); ctx.lineTo(bx + bwi, by + rnd(5, 12));
+        ctx.closePath(); ctx.fill();
       }
     }
   }
+  mottle(ctx, s, [11, 31], 'multiply', 0.22);                           // aged grime wash
+  mottle(ctx, s, [23], 'overlay', 0.25);
 }, 3, 2);
 
-// wood planks
+// wood planks — hue-varied boards, wavy grain, KNOTS, weathered wash
 const woodTex = canvasTex(256, (ctx, s) => {
   ctx.fillStyle = '#8a6a42'; ctx.fillRect(0, 0, s, s);
   for (let p = 0; p < 4; p++) {
-    ctx.fillStyle = `rgb(${rnd(125, 155) | 0},${rnd(92, 112) | 0},${rnd(55, 70) | 0})`;
-    ctx.fillRect(0, p * 64 + 2, s, 60);
-    ctx.strokeStyle = 'rgba(70,50,28,0.6)';
-    for (let i = 0; i < 7; i++) {            // grain
+    const py = p * 64;
+    const g = ctx.createLinearGradient(0, py, 0, py + 62);
+    const l = rnd(38, 50);
+    g.addColorStop(0, `hsl(${rnd(26, 34) | 0},${rnd(30, 42) | 0}%,${(l + 4) | 0}%)`);
+    g.addColorStop(1, `hsl(${rnd(26, 34) | 0},${rnd(30, 42) | 0}%,${(l - 3) | 0}%)`);
+    ctx.fillStyle = g; ctx.fillRect(0, py + 2, s, 60);
+    ctx.strokeStyle = 'rgba(70,50,28,0.55)';
+    for (let i = 0; i < 9; i++) {            // wavy long grain
+      ctx.lineWidth = rnd(0.6, 1.6);
       ctx.beginPath();
-      const y = p * 64 + rnd(6, 58);
+      const y = py + rnd(6, 58);
       ctx.moveTo(0, y);
-      for (let x = 0; x < s; x += 22) ctx.lineTo(x, y + rnd(-2.5, 2.5));
+      for (let x = 0; x < s; x += 16) ctx.lineTo(x, y + Math.sin(x * 0.06 + i) * 1.8 + rnd(-1, 1));
       ctx.stroke();
     }
+    if (Math.random() < 0.8) {               // a knot with rings bending the grain
+      const kx = rnd(30, s - 30), ky = py + rnd(18, 46);
+      for (let r = 6; r > 0; r -= 1.6) {
+        ctx.strokeStyle = `rgba(60,40,22,${0.25 + (6 - r) * 0.08})`;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.ellipse(kx, ky, r * 1.6, r, 0, 0, 7); ctx.stroke();
+      }
+      ctx.fillStyle = 'rgba(48,30,16,0.85)';
+      ctx.beginPath(); ctx.ellipse(kx, ky, 2.6, 1.8, 0, 0, 7); ctx.fill();
+    }
+    ctx.fillStyle = 'rgba(30,20,10,0.5)';     // plank gap shadow
+    ctx.fillRect(0, py, s, 2.5);
   }
+  mottle(ctx, s, [13, 41], 'multiply', 0.2);  // weathering wash
   ctx.fillStyle = 'rgba(45,30,15,0.9)';       // nails
   [20, 236].forEach(x => { for (let p = 0; p < 4; p++) { ctx.beginPath(); ctx.arc(x, p * 64 + 32, 3, 0, 7); ctx.fill(); } });
 });
@@ -449,6 +549,9 @@ function camoTex(c1, c2, c3) {
         ctx.closePath(); ctx.fill();
       }
     });
+    mottle(ctx, s, [19, 53], 'overlay', 0.3);         // fabric depth
+    ctx.strokeStyle = 'rgba(0,0,0,0.05)';             // weave threads
+    for (let y = 0; y < s; y += 2.5) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(s, y); ctx.stroke(); }
   });
 }
 const camoGreen = camoTex('#4a5a3a', '#2f3d27', '#6b6f4d');
@@ -2188,7 +2291,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 17;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 18;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
