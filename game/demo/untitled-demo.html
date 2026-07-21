@@ -674,7 +674,7 @@ function updateFire(dt, t) {
     em.smokeT += dt;
     if (em.smokeT > em.rate) {
       em.smokeT = 0;
-      if (fireSys.smokes.length > 90) scene.remove(fireSys.smokes.shift());
+      if (fireSys.smokes.length > 120) scene.remove(fireSys.smokes.shift());
       const m = new THREE.SpriteMaterial({ map: smokeTex, transparent: true, depthWrite: false,
         opacity: 0.45, color: 0x4a453e });
       const s = new THREE.Sprite(m);
@@ -707,7 +707,7 @@ function makeBuilding(x, z, w, h, d, i, forceIntact = false) {
     normalScale: new THREE.Vector2(isBrick ? 0.9 : 0.5, isBrick ? 0.9 : 0.5) });
   const roof = new THREE.MeshStandardMaterial({ color: 0x5a4636, roughness: 1 });
   const ry = (i % 4) * 0.12 - 0.18;
-  const damaged = !forceIntact && (i % 5) !== 4;   // the war came through: ~80% of the village is hit
+  const damaged = !forceIntact;   // M1 canon: "Whole blocks burning… is the WHOLE CITY on fire?" — every building is hit
 
   if (!damaged) {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), [wall, wall, roof, roof, wall, wall]);
@@ -773,14 +773,14 @@ function makeBuilding(x, z, w, h, d, i, forceIntact = false) {
   g.add(lip);
   scene.add(g);
   buildings.push(new THREE.Box3().setFromObject(g));
-  // fire + smoke rising from the break (about two-thirds of the damaged buildings)
-  if (i % 3 !== 2) {
+  // EVERY damaged building smokes; half of them carry open flames at the break
+  {
     const wx = x + xd * Math.cos(ry), wz = z - xd * Math.sin(ry);
     const flames = (i % 2 === 0)
       ? [[wx + rnd(-0.5, 0.5), hs + 0.4, wz + rnd(-0.4, 0.4), rnd(0.7, 1.1)],
          [wx + rnd(-0.5, 0.5), hs + 0.3, wz + rnd(-0.4, 0.4), rnd(0.5, 0.8)]]
       : [];
-    addFireEmitter(wx, hs + 0.2, wz, { rate: rnd(0.55, 0.9), flames });
+    addFireEmitter(wx, hs + 0.2, wz, { rate: rnd(0.8, 1.3), flames });
   }
 }
 for (let i = 0; i < 20; i++) {
@@ -2524,7 +2524,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 21;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 22;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
