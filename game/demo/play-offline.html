@@ -726,7 +726,7 @@ function soldierModel(kind, name) {
     const elbow = new THREE.Group();
     elbow.position.y = -0.26;
     elbow.add(limbSeg(0.09, 0.22, suit));                    // forearm
-    const hand = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.08), skinM);
+    const hand = new THREE.Mesh(new THREE.BoxGeometry(0.105, 0.105, 0.105), skinM);
     hand.position.y = -0.24; elbow.add(hand);
     shoulder.add(elbow);
     grp.add(shoulder);
@@ -785,6 +785,7 @@ function soldierModel(kind, name) {
     gun.add(body, brl, gmag, gstock);
     // the gun is FIXED to the body, perfectly LEVEL — never tilted. The hands
     // are posed onto it: right hand at the grip (rear), left hand on the barrel.
+    gun.scale.setScalar(1.4);                     // full-size rifle — fills the hands
     gun.position.set(0.08, 1.14, -0.2);
     gun.rotation.x = 0;
     gun.userData.basePos = gun.position.clone();
@@ -1950,7 +1951,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 11;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 12;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
