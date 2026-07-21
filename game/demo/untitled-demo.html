@@ -556,6 +556,7 @@ function camoTex(c1, c2, c3) {
 }
 const camoGreen = camoTex('#4a5a3a', '#2f3d27', '#6b6f4d');
 const camoBlack = camoTex('#23262b', '#15171b', '#33373e');
+const blackTacTex = camoTex('#16171a', '#0e0f11', '#1f2124');   // Molotov's black-on-black
 
 // sky dome — overcast-blue with painted clouds
 const skyTex = canvasTex(1024, (ctx, s) => {
@@ -1105,26 +1106,39 @@ function faceTex(f = {}) {
   x.scale(2, 2);
   const skin = f.skin || '#c9a184';
   if (f.mask === 'molotov') {
-    // Molotov: BLACK KNIT SKI MASK with eye holes and the fire/bottle decal — a masked MAN, not a robot
-    x.fillStyle = '#141414'; x.fillRect(0, 0, 128, 128);
-    for (let i = 0; i < 900; i++) { x.fillStyle = `rgba(255,255,255,${rnd(0.015, 0.05)})`; x.fillRect(rnd(0, 128), rnd(0, 128), 1.5, 1); } // knit weave
-    // eye holes with real eyes inside
-    [[40, 52], [88, 52]].forEach(([ex, ey]) => {
-      x.fillStyle = skin; x.beginPath(); x.ellipse(ex, ey, 13, 9, 0, 0, 7); x.fill();
-      x.fillStyle = '#fff'; x.beginPath(); x.ellipse(ex, ey, 8, 5, 0, 0, 7); x.fill();
-      x.fillStyle = '#5a3c22'; x.beginPath(); x.arc(ex, ey, 3.4, 0, 7); x.fill();
-      x.fillStyle = '#000'; x.beginPath(); x.arc(ex, ey, 1.6, 0, 7); x.fill();
+    // SCULPTED FLAME MASK (ChatGPT design): living fire over the whole face,
+    // dark eye sockets with ember glints, vent slits, the white bottle at the chin
+    const base = x.createLinearGradient(0, 128, 0, 0);
+    base.addColorStop(0, '#5a1404'); base.addColorStop(0.45, '#a33208');
+    base.addColorStop(0.8, '#e06010'); base.addColorStop(1, '#f0a027');
+    x.fillStyle = base; x.fillRect(0, 0, 128, 128);
+    for (let i = 0; i < 14; i++) {                    // flame tongues licking upward
+      const fx = rnd(4, 124), w = rnd(5, 14), h = rnd(30, 85);
+      const g = x.createLinearGradient(0, 128, 0, 128 - h);
+      g.addColorStop(0, 'rgba(255,210,90,0.85)');
+      g.addColorStop(0.6, 'rgba(255,120,25,0.5)');
+      g.addColorStop(1, 'rgba(255,120,25,0)');
+      x.fillStyle = g;
+      x.beginPath(); x.moveTo(fx - w / 2, 128);
+      x.quadraticCurveTo(fx - w * 0.8, 128 - h * 0.55, fx + rnd(-6, 6), 128 - h);
+      x.quadraticCurveTo(fx + w * 0.8, 128 - h * 0.5, fx + w / 2, 128);
+      x.closePath(); x.fill();
+    }
+    x.strokeStyle = 'rgba(120,25,5,0.6)'; x.lineWidth = 3;   // brow ridge contour
+    x.beginPath(); x.moveTo(20, 44); x.quadraticCurveTo(64, 30, 108, 44); x.stroke();
+    [[42, 54], [86, 54]].forEach(([ex, ey]) => {             // DARK sockets, ember glint
+      x.fillStyle = '#120503';
+      x.beginPath(); x.ellipse(ex, ey, 13, 8, 0, 0, 7); x.fill();
+      x.fillStyle = 'rgba(255,140,40,0.8)';
+      x.beginPath(); x.arc(ex + 2, ey - 1, 1.6, 0, 7); x.fill();
     });
-    // painted flame decal rising from the chin + tiny molotov bottle on the forehead
-    const fl = x.createLinearGradient(0, 128, 0, 78);
-    fl.addColorStop(0, '#ff5522'); fl.addColorStop(0.6, '#ff9a2d'); fl.addColorStop(1, 'rgba(255,154,45,0)');
-    x.fillStyle = fl;
-    x.beginPath(); x.moveTo(8, 128);
-    for (let i = 0; i <= 8; i++) x.lineTo(8 + i * 14, 128 - (i % 2 ? rnd(30, 44) : rnd(12, 20)));
-    x.lineTo(120, 128); x.closePath(); x.fill();
-    x.strokeStyle = '#ff7a2d'; x.lineWidth = 3;
-    x.strokeRect(58, 14, 12, 18); x.fillStyle = '#ff7a2d'; x.fillRect(61, 8, 6, 6);   // the bottle
-  } else if (f.mask === 'balaclava') {
+    x.fillStyle = 'rgba(60,12,4,0.7)';                       // vent slits
+    x.fillRect(59, 74, 10, 3); x.fillRect(56, 82, 16, 3); x.fillRect(59, 90, 10, 3);
+    x.strokeStyle = 'rgba(255,255,255,0.18)'; x.lineWidth = 2; // gloss (it is a hard shell)
+    x.beginPath(); x.moveTo(30, 20); x.quadraticCurveTo(64, 10, 98, 22); x.stroke();
+    x.fillStyle = '#f2f2f2';                                  // the white bottle emblem
+    x.fillRect(60, 106, 8, 13); x.fillRect(62, 101, 4, 5);
+    } else if (f.mask === 'balaclava') {
     // HYDRA trooper: dark balaclava + goggles band
     x.fillStyle = '#1c1e22'; x.fillRect(0, 0, 128, 128);
     for (let i = 0; i < 700; i++) { x.fillStyle = `rgba(255,255,255,${rnd(0.01, 0.04)})`; x.fillRect(rnd(0, 128), rnd(0, 128), 1.5, 1); }
@@ -1180,7 +1194,7 @@ function faceTex(f = {}) {
 
 // distinctive face + headgear per named character
 const PRESETS = {
-  'Molotov':         { face: { mask: 'molotov' },                                              hat: null,      hairSide: '#141414' },
+  'Molotov':         { face: { mask: 'molotov' }, hat: null, hairSide: '#8a2f10', blackTac: true, tape: 'MOLOTOV' },
   'Fox':             { face: { skin: '#c98d63', hair: '#4a3320', mustache: true, stern: true }, hat: 'cap',     hairSide: '#4a3320' },
   'Striker':         { face: { skin: '#7a5236', hair: '#171412', stern: true, stubble: true },  hat: 'helmetG', hairSide: '#171412' },
   'Payback':         { face: { skin: '#d9ab88', scarf: true, eye: '#2e4a2e' },                  hat: 'hood',    hairSide: '#7a6a4e' },
@@ -1202,30 +1216,32 @@ function soldierModel(kind, name) {
   const grp = new THREE.Group();
   const isEnemy = kind === 'enemy';
   const preset = PRESETS[name] || PRESETS['Civilian'];
+  const blackOps = !!preset.blackTac;                        // Molotov: all-black kit
   const suit = kind === 'protected'
     ? new THREE.MeshStandardMaterial({ color: 0x23262e, roughness: 0.55 })                     // Prestige: dark suit
-    : new THREE.MeshStandardMaterial({ map: isEnemy ? camoBlack : camoGreen, roughness: 0.95 });
-  const pants = new THREE.MeshStandardMaterial({ color: kind === 'neutral' ? 0x5a5347 : 0x2e3129, roughness: 1 });
+    : new THREE.MeshStandardMaterial({ map: isEnemy ? camoBlack : (blackOps ? blackTacTex : camoGreen), roughness: 0.95 });
+  const pants = new THREE.MeshStandardMaterial({ color: kind === 'neutral' ? 0x5a5347 : (blackOps ? 0x121316 : 0x2e3129), roughness: 1 });
   const skinM = new THREE.MeshStandardMaterial({ color: preset.face.skin || 0xc9a184, roughness: 0.8 });
+  const handM = blackOps ? new THREE.MeshStandardMaterial({ color: 0x0d0e10, roughness: 0.9 }) : skinM; // gloves
 
   // torso + hips + chest rig
   const torso = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.6, 0.26), suit); torso.position.y = 1.18; torso.castShadow = true;
   const hips = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.2, 0.24), pants); hips.position.y = 0.82; hips.castShadow = true;
-  const rigM = new THREE.MeshStandardMaterial({ color: isEnemy ? 0x15171a : 0x2c3526, roughness: 0.85 });
+  const rigM = new THREE.MeshStandardMaterial({ color: isEnemy ? 0x15171a : (blackOps ? 0x0f1013 : 0x2c3526), roughness: 0.85 });
   for (let p = 0; p < 3; p++) {                              // ammo pouches on the chest
     const pouch = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.12, 0.05), rigM);
     pouch.position.set(-0.15 + p * 0.15, 1.22, -0.155);
     grp.add(pouch);
   }
   // rounded shoulder pads (spheres!)
-  const padM = new THREE.MeshStandardMaterial({ color: isEnemy ? 0x1a1c20 : 0x39452f, roughness: 0.9 });
+  const padM = new THREE.MeshStandardMaterial({ color: isEnemy ? 0x1a1c20 : (blackOps ? 0x101215 : 0x39452f), roughness: 0.9 });
   [-0.29, 0.29].forEach(px => {
     const pad = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), padM);
     pad.position.set(px, 1.44, 0); pad.castShadow = true;
     grp.add(pad);
   });
   // neck + head with the PAINTED FACE (front) and hair/mask color on the other sides
-  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.08, 8), skinM); neck.position.y = 1.51;
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.08, 8), blackOps ? suit : skinM); neck.position.y = 1.51;
   const sideM = new THREE.MeshStandardMaterial({ color: preset.hairSide || '#2e2a26', roughness: 0.9 });
   const faceM = new THREE.MeshStandardMaterial({ map: faceTex(preset.face), roughness: 0.75 });
   const head = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.28, 0.24), [sideM, sideM, sideM, skinM, sideM, faceM]);
@@ -1264,7 +1280,7 @@ function soldierModel(kind, name) {
     const elbow = new THREE.Group();
     elbow.position.y = -0.34;
     elbow.add(limbSeg(0.09, 0.3, suit));                     // forearm
-    const hand = new THREE.Mesh(new THREE.BoxGeometry(0.105, 0.105, 0.105), skinM);
+    const hand = new THREE.Mesh(new THREE.BoxGeometry(0.105, 0.105, 0.105), handM);
     hand.position.y = -0.32; elbow.add(hand);
     shoulder.add(elbow);
     grp.add(shoulder);
@@ -1298,6 +1314,23 @@ function soldierModel(kind, name) {
     return { hip, knee };
   }
   const legRJ = makeLeg(1), legLJ = makeLeg(-1);
+  if (blackOps) {                                            // hard-shell knee pads (ride the knee joints)
+    [legRJ, legLJ].forEach(l => {
+      const pad = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.11, 0.05),
+        new THREE.MeshStandardMaterial({ color: 0x0c0d0f, roughness: 0.6 }));
+      pad.position.set(0, -0.05, -0.075);
+      l.knee.add(pad);
+    });
+  }
+  if (preset.tape) {                                         // "MOLOTOV" name tape on the carrier
+    const backing = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.038, 0.004),
+      new THREE.MeshStandardMaterial({ color: 0x3a3d40, roughness: 0.9 }));
+    backing.position.set(0, 1.335, -0.135);
+    const tape = markPlate([preset.tape], 0.15, 0.03, 'rgba(238,238,240,0.95)');
+    tape.position.set(0, 1.335, -0.139);
+    tape.rotation.y = Math.PI;
+    grp.add(backing, tape);
+  }
   legRJ.hip.rotation.x = -0.06; legRJ.knee.rotation.x = 0.1;  // relaxed combat stance
   legLJ.hip.rotation.x = 0.08;  legLJ.knee.rotation.x = 0.06;
   grp.add(torso, hips, neck, head);
@@ -1539,20 +1572,20 @@ function ribbedGuard(mat, r, len, x, y, z, ribs = 4) {
 }
 
 // etched text markings (caliber stamps, serials) painted onto receiver sides
-function markingsTex(lines) {
+function markingsTex(lines, color) {
   const c = document.createElement('canvas'); c.width = 256; c.height = 64;
   const x = c.getContext('2d');
   x.font = 'bold 18px monospace';
-  x.fillStyle = 'rgba(15,15,18,0.9)';
+  x.fillStyle = color || 'rgba(15,15,18,0.9)';
   x.textBaseline = 'middle';
   lines.forEach((ln, i) => x.fillText(ln, 8, 20 + i * 24));
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
 }
-function markPlate(text, wdt, hgt) {
+function markPlate(text, wdt, hgt, color) {
   const m = new THREE.Mesh(new THREE.PlaneGeometry(wdt, hgt),
-    new THREE.MeshBasicMaterial({ map: markingsTex(text), transparent: true, depthWrite: false }));
+    new THREE.MeshBasicMaterial({ map: markingsTex(text, color), transparent: true, depthWrite: false }));
   return m;
 }
 // scroll engraving for the gilded slide
@@ -2844,7 +2877,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 25;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 26;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
