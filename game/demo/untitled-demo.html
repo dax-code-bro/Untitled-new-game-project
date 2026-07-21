@@ -796,7 +796,7 @@ function makeEntity(name, kind, x, z, baseY = 0) {
   m.grp.position.set(x, baseY, z);
   scene.add(m.grp);
   const e = { name, kind, grp: m.grp, body: m.torso, head: m.head, model: m, color: colors[kind],
-    hp: 100, alive: true, dying: 0, baseX: x, baseZ: z, baseY, phase: Math.random() * 9,
+    hp: 100, alive: true, dying: 0, hitT: 0, baseX: x, baseZ: z, baseY, phase: Math.random() * 9,
     shootTimer: 1 + Math.random() * 2.5, muzzleT: 0 };
   entities.push(e);
   return e;
@@ -857,7 +857,7 @@ function stepNPC(e, tx, tz, speed, dt) {
   if (d < 0.3) return 'arrived';
   const vx = dx / d * speed * dt, vz = dz / d * speed * dt;
   const clear = (nx, nz) => {
-    const pt = new THREE.Vector3(nx, 1, nz);
+    const pt = new THREE.Vector3(nx, 0.5, nz);         // probe at knee height — sandbags & low crates block too
     for (const b of buildings) if (b.containsPoint(pt)) return false;
     return Math.hypot(nx, nz) < 68;                    // stay in the arena
   };
@@ -1148,6 +1148,7 @@ function switchTo(n) {
 }
 
 const ray = new THREE.Raycaster();
+const ffHits = [];   // recent friendly-fire timestamps (accident tolerance window)
 function shoot() {
   const w = curW(), s = curS();
   if (s.reloading || dead) return;
@@ -1180,7 +1181,17 @@ function shoot() {
     const hits = ray.intersectObjects(meshes, false);
     if (hits.length) {
       const e = hits[0].object.userData.e;
-      if (e.kind === 'friendly' || e.kind === 'neutral') { failFriendlyFire(); return; }
+      if (e.kind === 'friendly') {
+        // squaddies now sprint across your firing line — one accident is a warning,
+        // three hits inside 4s is a choice. Civilians are never an accident.
+        const now2 = performance.now();
+        while (ffHits.length && now2 - ffHits[0] > 4000) ffHits.shift();
+        ffHits.push(now2);
+        if (ffHits.length >= 3) { failFriendlyFire(); }
+        else toast('WATCH YOUR FIRE — ' + e.name.toUpperCase());
+        return;
+      }
+      if (e.kind === 'neutral') { failFriendlyFire(); return; }
       if (e.kind === 'protected') { toast('NICE TRY, BUT BE PATIENT'); playerTracer(hits[0].point); continue; }
       const head = hits[0].object === e.head;
       e.hp -= w.dmg * (head ? 2.2 : 1);
@@ -1593,6 +1604,8 @@ function updateEntities(dt) {
     J[8].rotation.x = B(8).x - 0.35 * e.hitT;
 
     if (ai) {
+      // walk-cycle blend decays HERE (runs even while paused/dead, so nobody jogs in place)
+      ai.movingAmt = Math.max(0, ai.movingAmt - dt * 4);
       // ---- crouch blend (cover) ----
       ai.crouch += ((ai.crouchTarget || 0) - ai.crouch) * Math.min(1, dt * 7);
 
@@ -1669,7 +1682,6 @@ function updateCombatAI(dt) {
     const ai = e.ai;
     if (ai.reloadT > 0) ai.reloadT = Math.max(0, ai.reloadT - dt);
     if (ai.reloadT === 0 && ai.mag <= 0) ai.mag = ai.magMax;   // mag seated
-    ai.movingAmt = Math.max(0, ai.movingAmt - dt * 4);         // decays unless stepping
 
     // ============ TEAM APEX (ground squad): run, take cover, peek, fire ============
     if (e.kind === 'friendly' && !e.posted) {
@@ -1871,7 +1883,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 6;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 7;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
