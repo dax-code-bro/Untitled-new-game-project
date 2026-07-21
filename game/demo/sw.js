@@ -1,6 +1,7 @@
-// UNTITLED demo — service worker: cache-first so the game runs fully offline
-// after the first visit. Bump VERSION to force clients onto a new build.
-const VERSION = 'untitled-demo-v2';   // bump on every demo update so installed PWAs pull the new build
+// UNTITLED demo — service worker.
+// Strategy: NETWORK-FIRST for the game itself (you always get the newest build
+// when online; cache is the offline fallback). Cache-first for icons/manifest.
+const VERSION = 'untitled-demo-v3';
 const ASSETS = [
   './play-offline.html',
   './manifest.webmanifest',
@@ -22,10 +23,11 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
-  e.respondWith(
-    caches.match(e.request, { ignoreSearch: true }).then((cached) => {
-      // serve from cache instantly; refresh the cache in the background
-      const fetched = fetch(e.request)
+  const isGame = e.request.mode === 'navigate' || e.request.url.includes('play-offline.html');
+  if (isGame) {
+    // network-first: fresh build every online launch; cached copy when offline
+    e.respondWith(
+      fetch(e.request)
         .then((res) => {
           if (res && res.ok) {
             const copy = res.clone();
@@ -33,8 +35,23 @@ self.addEventListener('fetch', (e) => {
           }
           return res;
         })
-        .catch(() => cached);
-      return cached || fetched;
-    })
-  );
+        .catch(() => caches.match(e.request, { ignoreSearch: true }))
+    );
+  } else {
+    // cache-first with background refresh for small assets
+    e.respondWith(
+      caches.match(e.request, { ignoreSearch: true }).then((cached) => {
+        const fetched = fetch(e.request)
+          .then((res) => {
+            if (res && res.ok) {
+              const copy = res.clone();
+              caches.open(VERSION).then((c) => c.put(e.request, copy));
+            }
+            return res;
+          })
+          .catch(() => cached);
+        return cached || fetched;
+      })
+    );
+  }
 });

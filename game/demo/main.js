@@ -1105,6 +1105,7 @@ function animate() {
 }
 animate();
 
-window.__demo = { THREE, scene, camera, entities, WEAPONS };
-console.log('[demo] ready — Three r' + THREE.REVISION);
-document.getElementById('jsok').textContent = 'js: ✓ running (r' + THREE.REVISION + ')';
+const BUILD = 3;   // bump with each demo update — shown on the badge so staleness is visible
+window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
+console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
+document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
