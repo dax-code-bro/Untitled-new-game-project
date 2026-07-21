@@ -385,20 +385,20 @@ const gunGold  = new THREE.MeshStandardMaterial({ color: 0xd9a92f, roughness: 0.
 
 function buildM16() {
   const g = new THREE.Group();
-  const upper = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.07, 0.52), gunBlack); upper.position.z = -0.28;
-  const handguard = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.042, 0.3, 8), gunPoly);
+  const upper = new THREE.Mesh(new THREE.BoxGeometry(0.026, 0.055, 0.52), gunBlack); upper.position.z = -0.28;
+  const handguard = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.028, 0.3, 8), gunPoly);
   handguard.rotation.x = Math.PI / 2; handguard.position.z = -0.55;
-  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.3, 8), gunSteel);
+  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.3, 8), gunSteel);
   barrel.rotation.x = Math.PI / 2; barrel.position.z = -0.82;
-  const carry = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.045, 0.24), gunBlack); carry.position.set(0, 0.06, -0.22);
-  const frontSight = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.06, 0.02), gunBlack); frontSight.position.set(0, 0.045, -0.68);
+  const carry = new THREE.Mesh(new THREE.BoxGeometry(0.014, 0.038, 0.24), gunBlack); carry.position.set(0, 0.055, -0.22);
+  const frontSight = new THREE.Mesh(new THREE.BoxGeometry(0.007, 0.055, 0.012), gunBlack); frontSight.position.set(0, 0.045, -0.68);
   const mag = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.2, 0.09), gunSteel);
   mag.position.set(0, -0.12, -0.24); mag.rotation.x = 0.28;
   const grip = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.14, 0.06), gunPoly);
   grip.position.set(0, -0.1, -0.06); grip.rotation.x = -0.35;
-  const stock = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.09, 0.24), gunPoly); stock.position.set(0, -0.01, 0.09);
-  // iron sights: rear aperture ring on the carry handle, aligned with the front post
-  const rearSight = new THREE.Mesh(new THREE.TorusGeometry(0.014, 0.004, 6, 12), gunBlack);
+  const stock = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.08, 0.24), gunPoly); stock.position.set(0, -0.01, 0.09);
+  // iron sights: THIN rear aperture ring on the carry handle, aligned with the front post
+  const rearSight = new THREE.Mesh(new THREE.TorusGeometry(0.013, 0.002, 6, 14), gunBlack);
   rearSight.position.set(0, 0.065, -0.02);
   g.add(upper, handguard, barrel, carry, frontSight, mag, grip, stock, rearSight);
   return { g, mag, muzzle: new THREE.Vector3(0, 0, -0.97), pump: null, ads: new THREE.Vector3(0, -0.065, -0.36) };
@@ -414,9 +414,9 @@ function buildPP919() {
   grip.position.set(0, -0.1, -0.02); grip.rotation.x = -0.3;
   const stock = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.05, 0.2), gunSteel); stock.position.set(0, 0.005, 0.1);
   // iron sights: front post on the shroud + rear notch on the receiver
-  const frontPost = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.03, 0.008), gunBlack);
+  const frontPost = new THREE.Mesh(new THREE.BoxGeometry(0.004, 0.03, 0.004), gunBlack);
   frontPost.position.set(0, 0.055, -0.5);
-  const rearL = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.022, 0.008), gunBlack); rearL.position.set(-0.014, 0.055, 0.0);
+  const rearL = new THREE.Mesh(new THREE.BoxGeometry(0.004, 0.022, 0.004), gunBlack); rearL.position.set(-0.012, 0.055, 0.0);
   const rearR = rearL.clone(); rearR.position.x = 0.014;
   g.add(body, shroud, helical, grip, stock, frontPost, rearL, rearR);
   return { g, mag: helical, muzzle: new THREE.Vector3(0, 0.01, -0.56), pump: null, ads: new THREE.Vector3(0, -0.058, -0.32) };
@@ -437,7 +437,7 @@ function buildBenelli() {
   const bead = new THREE.Mesh(new THREE.SphereGeometry(0.007, 8, 8),
     new THREE.MeshStandardMaterial({ color: 0xd9b25f, metalness: 0.9, roughness: 0.25 }));
   bead.position.set(0, 0.048, -0.76);
-  const rearL = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.018, 0.01), gunBlack); rearL.position.set(-0.015, 0.048, 0.02);
+  const rearL = new THREE.Mesh(new THREE.BoxGeometry(0.004, 0.016, 0.006), gunBlack); rearL.position.set(-0.013, 0.048, 0.02);
   const rearR = rearL.clone(); rearR.position.x = 0.015;
   g.add(receiver, barrel, tube, pump, grip, stock, bead, rearL, rearR);
   return { g, mag: null, muzzle: new THREE.Vector3(0, 0.02, -0.78), pump, ads: new THREE.Vector3(0, -0.05, -0.3) };
@@ -451,7 +451,7 @@ function buildStatesman() {
   const trigger = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.045, 0.05), gunBlack); trigger.position.set(0, -0.06, -0.1);
   const sight = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.02, 0.015), gunBlack); sight.position.set(0, 0.037, -0.2);
   // iron sights: rear notch posts on the gilded slide
-  const rearL = new THREE.Mesh(new THREE.BoxGeometry(0.009, 0.018, 0.012), gunBlack); rearL.position.set(-0.013, 0.037, 0.0);
+  const rearL = new THREE.Mesh(new THREE.BoxGeometry(0.005, 0.016, 0.01), gunBlack); rearL.position.set(-0.011, 0.037, 0.0);
   const rearR = rearL.clone(); rearR.position.x = 0.013;
   g.add(slide, frame, grip, trigger, sight, rearL, rearR);
   return { g, mag: grip, muzzle: new THREE.Vector3(0, 0, -0.24), pump: slide, ads: new THREE.Vector3(0, -0.042, -0.3) };
