@@ -831,9 +831,11 @@ function failFriendlyFire() {
   }, 1400);
 }
 const dmgEl = document.getElementById('dmg');
+let lastDamageAt = -Infinity;
 function damagePlayer(amount) {
   if (dead || respawning) return;
   hp -= amount;
+  lastDamageAt = performance.now();
   dmgEl.style.opacity = Math.min(0.9, 0.3 + amount / 20);
   setTimeout(() => dmgEl.style.opacity = 0, 130);
   if (hp <= 0) { hp = 0; playerDie(); }
@@ -1248,6 +1250,11 @@ function animate() {
           }, 4500);
         }
       }
+    }
+
+    // health regen: 3 seconds without taking damage -> regenerate to 100
+    if (hp < 100 && performance.now() - lastDamageAt > 3000) {
+      hp = Math.min(100, hp + 45 * dt);
     }
 
     updateNameplate();
