@@ -847,6 +847,8 @@ function makeAI(e) {
     crouch: 0, crouchTarget: 0,    // 0..1 animated crouch
     walkPhase: rnd(0, 6),
     movingAmt: 0,                  // 0..1 for the walk-cycle blend
+    aimAmt: 0, aimHold: 0,         // two-handed shouldered-aim blend + hold timer
+    kick: 0,                       // per-shot recoil impulse on the body
   };
 }
 entities.forEach(e => {
@@ -904,6 +906,8 @@ function npcTryFire(e, targetPos, opts) {
   if ((e.faceErr || 0) > 0.6) return false;            // still turning — hold fire until on target
   if (ai.mag <= 0) { ai.reloadT = 1.7; return false; } // dry — reload (animation plays)
   ai.mag--;
+  ai.aimHold = Math.max(ai.aimHold, 0.9);              // rifle stays shouldered after the shot
+  ai.kick = 1;                                         // the shot ROCKS them — recoil on the body
   return npcFire(e, targetPos, opts);
 }
 
@@ -1618,6 +1622,12 @@ function updateEntities(dt) {
     if (ai) {
       // walk-cycle blend decays HERE (runs even while paused/dead, so nobody jogs in place)
       ai.movingAmt = Math.max(0, ai.movingAmt - dt * 4);
+      // ---- aim + recoil timers ----
+      ai.aimHold = Math.max(0, ai.aimHold - dt);
+      const wantAim = ai.aimHold > 0 && ai.reloadT === 0 ? 1 : 0;
+      ai.aimAmt += (wantAim - ai.aimAmt) * Math.min(1, dt * 6);
+      ai.kick = Math.max(0, ai.kick - dt * 7);
+      const aimA = ai.aimAmt, kick = ai.kick * ai.kick;   // sharp kick, fast recovery
       // ---- crouch blend (cover) ----
       ai.crouch += ((ai.crouchTarget || 0) - ai.crouch) * Math.min(1, dt * 7);
 
@@ -1648,16 +1658,24 @@ function updateEntities(dt) {
           if (mg) mg.visible = !(p > 0.3 && p < 0.62); // the magazine is OUT mid-reload
         }
       } else {
-        J[0].rotation.x = B(0).x + Math.sin(e.phase * 1.7) * 0.035;
-        J[0].rotation.z = B(0).z;
-        J[1].rotation.x = B(1).x;
+        // two-handed SHOULDERED AIM blend: both arms rise, gun levels at the shoulder,
+        // and each shot kicks the muzzle up and the elbows back
+        J[0].rotation.x = B(0).x + Math.sin(e.phase * 1.7) * 0.035 - 0.24 * aimA;
+        J[0].rotation.z = B(0).z + 0.16 * aimA;
+        J[1].rotation.x = B(1).x - 0.18 * aimA - 0.22 * kick;
         if (e.model.gun) {
-          e.model.gun.rotation.x = e.model.gun.userData.baseRotX;
+          e.model.gun.rotation.x = e.model.gun.userData.baseRotX + 0.62 * aimA
+            + 0.3 * kick;                                 // muzzle flip on every shot
           const mg = e.model.gun.userData.mag;
           if (mg) mg.visible = true;
         }
       }
-      J[2].rotation.x = B(2).x - Math.sin(e.phase * 1.7) * 0.035;
+      J[2].rotation.x = B(2).x - Math.sin(e.phase * 1.7) * 0.035 - 0.3 * aimA + 0.14 * kick;
+      J[3].rotation.x = B(3).x - 0.24 * aimA - 0.28 * kick; // right elbow absorbs the kick
+      // cheek weld + bladed torso while aiming; the body rocks back on each shot
+      J[8].rotation.z = 0.07 * aimA;
+      e.model.torso.rotation.y = 0.12 * aimA;
+      e.model.torso.rotation.x += -0.09 * kick;
 
       // ---- body height: crouch + footstep bob ----
       e.grp.position.y = e.baseY - 0.34 * ai.crouch
@@ -1745,6 +1763,7 @@ function updateCombatAI(dt) {
         if (ai.coverT <= 0 && ai.reloadT === 0) { ai.state = 'peek'; ai.peekT = rnd(1.1, 1.9); ai.fireT = 0.25; }
       } else if (ai.state === 'peek') {                 // up on the sights — fire a burst
         ai.crouchTarget = 0;
+        ai.aimHold = Math.max(ai.aimHold, 0.3);         // rifle shouldered the whole peek
         ai.peekT -= dt; ai.fireT -= dt;
         if (ai.fireT <= 0) {
           ai.fireT = rnd(0.32, 0.5);
@@ -1762,6 +1781,7 @@ function updateCombatAI(dt) {
     else if (e.kind === 'friendly' && e.posted) {
       const target = nearestEnemyOf(e);
       if (!target) continue;
+      ai.aimHold = Math.max(ai.aimHold, 0.3);           // snipers live on the glass
       e.shootTimer -= dt;
       if (e.shootTimer <= 0) {
         e.shootTimer = 1.2 + Math.random() * 1.8;
@@ -1789,6 +1809,7 @@ function updateCombatAI(dt) {
         }
         if (dPlayer < 60) {
           e.shootTimer -= dt;
+          if (e.shootTimer < 0.5) ai.aimHold = Math.max(ai.aimHold, 0.4);  // raises the rifle BEFORE firing — a readable tell
           if (e.shootTimer <= 0) {
             e.shootTimer = 1.1 + Math.random() * 1.9;
             if (friendlies.length && Math.random() < 0.4) {   // crossfire at your team
@@ -1918,7 +1939,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 8;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 9;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
