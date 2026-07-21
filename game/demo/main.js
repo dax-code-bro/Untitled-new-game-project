@@ -555,9 +555,9 @@ function soldierModel(kind, name) {
   }
   const armRJ = makeArm(1), armLJ = makeArm(-1);
   const combatant = isEnemy || kind === 'friendly';
-  if (combatant) {                                           // firing pose: both hands to the weapon
+  if (combatant) {                                           // firing pose: both hands ON the weapon
     armRJ.shoulder.rotation.x = -1.15; armRJ.elbow.rotation.x = 0.55;
-    armLJ.shoulder.rotation.x = -1.0;  armLJ.shoulder.rotation.z = -0.5; armLJ.elbow.rotation.x = 0.85;
+    armLJ.shoulder.rotation.x = -1.3;  armLJ.shoulder.rotation.z = -0.62; armLJ.elbow.rotation.x = 0.5;
   } else {                                                   // civilians: arms down, slight bend
     armRJ.shoulder.rotation.x = -0.1; armRJ.elbow.rotation.x = 0.2;
     armLJ.shoulder.rotation.x = -0.1; armLJ.elbow.rotation.x = 0.2;
@@ -586,7 +586,8 @@ function soldierModel(kind, name) {
   grp.add(torso, hips, neck, head);
   const armL = armLJ.shoulder, armR = armRJ.shoulder;         // (kept names for the animator)
   const legL = legLJ.hip, legR = legRJ.hip;
-  // rifle for combatants (with a real muzzle point — NPC shots come FROM the gun)
+  // rifle for combatants — HELD IN THE RIGHT HAND (child of the elbow joint),
+  // so wherever the arms go, the gun goes. Left hand rides the handguard.
   let gun = null;
   if (isEnemy || kind === 'friendly') {
     gun = new THREE.Group();
@@ -598,10 +599,17 @@ function soldierModel(kind, name) {
     const gmag = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.15, 0.07),
       new THREE.MeshStandardMaterial({ color: 0x2b2e33, roughness: 0.7 }));
     gmag.position.set(0, -0.1, -0.08); gmag.rotation.x = 0.25;
+    const gstock = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.08, 0.16),
+      new THREE.MeshStandardMaterial({ color: 0x2b2e33, roughness: 0.8 }));
+    gstock.position.set(0, -0.01, 0.31);
     body.castShadow = true;
-    gun.add(body, brl, gmag);
-    gun.position.set(0.12, 1.12, -0.3); gun.rotation.x = -0.08;
-    grp.add(gun);
+    gun.add(body, brl, gmag, gstock);
+    // anchor to the right hand: elbow-local, counter-rotated so the barrel points body-forward
+    gun.position.set(-0.03, -0.24, -0.05);
+    gun.rotation.x = 0.52;
+    gun.userData.baseRotX = 0.52;
+    gun.userData.mag = gmag;
+    armRJ.elbow.add(gun);
   }
   // record every joint's posed rotation so ragdolls can flop and respawns can restore
   const joints = [
@@ -714,6 +722,7 @@ function pickCover(e, threatPos) {
 function npcTryFire(e, targetPos, opts) {
   const ai = e.ai;
   if (ai.reloadT > 0 || e.hitT > 0.55) return false;   // reloading or staggered
+  if ((e.faceErr || 0) > 0.6) return false;            // still turning — hold fire until on target
   if (ai.mag <= 0) { ai.reloadT = 1.7; return false; } // dry — reload (animation plays)
   ai.mag--;
   return npcFire(e, targetPos, opts);
@@ -1084,7 +1093,10 @@ function killEntity(e, head, impulse, by) {
     e.grp.position.set(e.baseX, e.baseY, e.baseZ);
     e.model.joints.forEach(j => { const b = j.userData.basePose; j.rotation.set(b.x, b.y, b.z); });
     e.model.torso.rotation.set(0, 0, 0);
-    if (e.model.gun) e.model.gun.rotation.x = -0.08;
+    if (e.model.gun) {
+      e.model.gun.rotation.x = e.model.gun.userData.baseRotX;
+      if (e.model.gun.userData.mag) e.model.gun.userData.mag.visible = true;
+    }
     if (e.ai) e.ai = makeAI(e);                      // fresh brain, full mag, standing
   }, 5000);
 }
@@ -1421,17 +1433,27 @@ function updateEntities(dt) {
       // slight forward lean while running
       e.model.torso.rotation.x += -0.14 * ai.movingAmt;
 
-      // ---- reload animation: support arm drops to the mag, gun tips ----
+      // ---- reload animation: mag OUT, hand dives to the belt, mag back IN ----
       if (ai.reloadT > 0) {
         const p = 1 - ai.reloadT / 1.7;
         const wave = Math.sin(Math.min(1, p) * Math.PI);
-        J[0].rotation.x = B(0).x + wave * 0.95;      // left shoulder down
-        J[1].rotation.x = B(1).x - wave * 0.4;
-        if (e.model.gun) e.model.gun.rotation.x = -0.08 + wave * 0.55;
+        J[0].rotation.x = B(0).x + wave * 1.15;      // left hand off the handguard, down to the belt
+        J[0].rotation.z = B(0).z + wave * 0.35;
+        J[1].rotation.x = B(1).x - wave * 0.55;
+        if (e.model.gun) {
+          e.model.gun.rotation.x = e.model.gun.userData.baseRotX + wave * 0.4;   // muzzle tips up
+          const mg = e.model.gun.userData.mag;
+          if (mg) mg.visible = !(p > 0.3 && p < 0.62); // the magazine is OUT mid-reload
+        }
       } else {
         J[0].rotation.x = B(0).x + Math.sin(e.phase * 1.7) * 0.035;
+        J[0].rotation.z = B(0).z;
         J[1].rotation.x = B(1).x;
-        if (e.model.gun) e.model.gun.rotation.x = -0.08;
+        if (e.model.gun) {
+          e.model.gun.rotation.x = e.model.gun.userData.baseRotX;
+          const mg = e.model.gun.userData.mag;
+          if (mg) mg.visible = true;
+        }
       }
       J[2].rotation.x = B(2).x - Math.sin(e.phase * 1.7) * 0.035;
 
@@ -1440,26 +1462,39 @@ function updateEntities(dt) {
         + Math.abs(Math.sin(ai.walkPhase)) * 0.05 * ai.movingAmt
         + Math.sin(e.phase * 2) * 0.02 * (1 - ai.movingAmt);
 
-      // ---- facing ----
+      // ---- facing: TURN, don't snap — bodies rotate at a real turn rate ----
+      let fx, fz;
       if (ai.state === 'move') {
-        const tx = e.kind === 'friendly' ? (ai.cover ? ai.cover.sx : e.grp.position.x) : ai.moveX;
-        const tz = e.kind === 'friendly' ? (ai.cover ? ai.cover.sz : e.grp.position.z) : ai.moveZ;
-        e.grp.lookAt(tx, e.grp.position.y, tz);
+        fx = e.kind === 'friendly' ? (ai.cover ? ai.cover.sx : e.grp.position.x) : ai.moveX;
+        fz = e.kind === 'friendly' ? (ai.cover ? ai.cover.sz : e.grp.position.z) : ai.moveZ;
       } else if (e.kind === 'friendly') {
         const t = nearestEnemyOf(e);
-        const face = t ? t.grp.position : camera.position;
-        e.grp.lookAt(face.x, e.grp.position.y, face.z);
+        fx = (t ? t.grp.position : camera.position).x;
+        fz = (t ? t.grp.position : camera.position).z;
       } else {
-        e.grp.lookAt(camera.position.x, e.grp.position.y, camera.position.z);
+        fx = camera.position.x; fz = camera.position.z;
       }
+      turnToward(e, fx, fz, ai.state === 'move' ? 5.5 : 3.2, dt);
     } else {
-      // civilians / Prestige: breathe and watch you
+      // civilians / Prestige: breathe and watch you (turning, not snapping)
       e.grp.position.y = e.baseY + Math.sin(e.phase * 2) * 0.03;
       e.model.armL.rotation.x = (e.model.armL.userData.bx || 0) + Math.sin(e.phase * 1.7) * 0.035;
       e.model.armR.rotation.x = (e.model.armR.userData.bx || 0) - Math.sin(e.phase * 1.7) * 0.035;
-      e.grp.lookAt(camera.position.x, e.grp.position.y, camera.position.z);
+      turnToward(e, camera.position.x, camera.position.z, 2.4, dt);
     }
   }
+}
+
+// rotate an NPC's body toward a point at a limited turn rate (rad/s).
+// Leaves e.faceErr = remaining yaw error, so the AI can hold fire mid-turn.
+function turnToward(e, fx, fz, rate, dt) {
+  const desired = Math.atan2(-(fx - e.grp.position.x), -(fz - e.grp.position.z));
+  let diff = desired - e.grp.rotation.y;
+  while (diff > Math.PI) diff -= Math.PI * 2;
+  while (diff < -Math.PI) diff += Math.PI * 2;
+  const step = Math.sign(diff) * Math.min(Math.abs(diff), rate * dt);
+  e.grp.rotation.y += step;
+  e.faceErr = Math.abs(diff) - Math.abs(step);
 }
 
 // ---------------------------------------------------------------- combat AI (think + move + shoot)
@@ -1681,7 +1716,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 7;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 8;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
