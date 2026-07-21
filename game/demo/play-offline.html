@@ -1282,6 +1282,136 @@ function faceTex(f = {}) {
   return t;
 }
 
+// ---------------------------------------------------------------- SCULPTED 3D FACES
+// Real modeled features — protruding nose, eyeballs with iris/pupil, skin
+// eyelids that blink, browridges, lips, ears, hair volume. The face looks
+// out along -Z (the entity facing convention).
+function sculptFace(head, f, hasHat) {
+  const skinC = new THREE.Color(f.skin || '#c9a184');
+  const skin = new THREE.MeshStandardMaterial({ color: skinC, roughness: 0.62 });
+  const hairM = new THREE.MeshStandardMaterial({ color: f.hair || '#2e2a26', roughness: 0.97 });
+  // cranium FIRST — it stays the headshot raycast target (head.children[0])
+  const cranium = new THREE.Mesh(new THREE.SphereGeometry(0.135, 18, 14), skin);
+  cranium.scale.set(0.92, 1.08, 0.98);
+  cranium.castShadow = true;
+  head.add(cranium);
+  // jaw + chin square the lower face
+  const jaw = new THREE.Mesh(new THREE.SphereGeometry(0.1, 14, 10), skin);
+  jaw.scale.set(0.86, 0.72, 0.8); jaw.position.set(0, -0.082, -0.018);
+  jaw.castShadow = true;
+  const chin = new THREE.Mesh(new THREE.SphereGeometry(0.031, 10, 8), skin);
+  chin.scale.set(1.15, 0.85, 0.8); chin.position.set(0, -0.122, -0.072);
+  head.add(jaw, chin);
+  [-0.064, 0.064].forEach(px => {                       // cheekbones
+    const cb = new THREE.Mesh(new THREE.SphereGeometry(0.034, 10, 8), skin);
+    cb.scale.set(1, 0.78, 0.72); cb.position.set(px, -0.006, -0.088);
+    head.add(cb);
+  });
+  // EYES — real eyeballs (sclera sphere, iris, pupil) set under skin lids
+  const lids = [];
+  const scleraM = new THREE.MeshStandardMaterial({ color: 0xf0ece2, roughness: 0.22 });
+  const irisM = new THREE.MeshStandardMaterial({ color: new THREE.Color(f.eye || '#4a3c28'), roughness: 0.3 });
+  const pupilM = new THREE.MeshStandardMaterial({ color: 0x080605, roughness: 0.15 });
+  [-0.047, 0.047].forEach(px => {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.023, 12, 9), scleraM);
+    eye.position.set(px, 0.018, -0.112);
+    const iris = new THREE.Mesh(new THREE.SphereGeometry(0.0118, 10, 8), irisM);
+    iris.scale.z = 0.38; iris.position.z = -0.0215;   // proud of the sclera so it reads
+    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.0054, 8, 6), pupilM);
+    pupil.scale.z = 0.32; pupil.position.z = -0.0248;
+    eye.add(iris, pupil);
+    // eyelid — a skin cap that sweeps down over the eyeball on each blink;
+    // at rest it hoods the top of the eye for an almond shape
+    const lid = new THREE.Mesh(
+      new THREE.SphereGeometry(0.0258, 12, 6, 0, Math.PI * 2, 0, Math.PI * 0.34), skin);
+    lid.position.copy(eye.position);
+    lid.userData.open = -0.5; lid.userData.closed = -1.28;
+    lid.rotation.x = lid.userData.open;
+    lids.push(lid);
+    head.add(eye, lid);
+  });
+  // BROWS — expression-tilted ridges of hair
+  [-0.047, 0.047].forEach(px => {
+    const s = px < 0 ? -1 : 1;
+    const brow = new THREE.Mesh(new THREE.BoxGeometry(0.054, 0.016, 0.022), hairM);
+    brow.position.set(px, 0.052, -0.126);
+    brow.rotation.y = s * 0.3;                          // follow the skull curve
+    brow.rotation.z = f.stern ? s * 0.2 : f.worried ? -s * 0.16 : s * 0.05;
+    head.add(brow);
+  });
+  const lowerFace = !f.scarf;                           // scarf hides everything below the eyes
+  if (lowerFace) {
+    // NOSE — bridge leaning out to a tip, nostril wings, dark nostrils
+    const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.09, 0.036), skin);
+    bridge.position.set(0, 0.003, -0.134); bridge.rotation.x = 0.26;
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.022, 10, 8), skin);
+    tip.position.set(0, -0.036, -0.151);
+    head.add(bridge, tip);
+    [-0.0205, 0.0205].forEach(px => {
+      const wing = new THREE.Mesh(new THREE.SphereGeometry(0.0142, 8, 7), skin);
+      wing.position.set(px, -0.042, -0.135);
+      const hole = new THREE.Mesh(new THREE.SphereGeometry(0.006, 6, 5),
+        new THREE.MeshStandardMaterial({ color: 0x241812, roughness: 1 }));
+      hole.position.set(px * 0.6, -0.053, -0.143);
+      head.add(wing, hole);
+    });
+    // LIPS — two volumes with a dark seam; grim mouths press thinner
+    const lipT = new THREE.MeshStandardMaterial({ color: skinC.clone().lerp(new THREE.Color('#8e4a3c'), 0.55), roughness: 0.55 });
+    const lipB = new THREE.MeshStandardMaterial({ color: skinC.clone().lerp(new THREE.Color('#b06a55'), 0.45), roughness: 0.5 });
+    const thin = f.grim ? 0.7 : 1;
+    const upper = new THREE.Mesh(new THREE.SphereGeometry(0.03, 10, 7), lipT);
+    upper.scale.set(1.6, 0.38 * thin, 0.5); upper.position.set(0, -0.067, -0.113);
+    const lower = new THREE.Mesh(new THREE.SphereGeometry(0.03, 10, 7), lipB);
+    lower.scale.set(1.3, 0.5 * thin, 0.6); lower.position.set(0, -0.081, -0.111);
+    const seam = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.0035, 0.012),
+      new THREE.MeshStandardMaterial({ color: 0x3a1c14, roughness: 0.9 }));
+    seam.position.set(0, -0.074, -0.122);
+    head.add(upper, lower, seam);
+    if (f.mustache) [-0.018, 0.018].forEach(px => {
+      const mo = new THREE.Mesh(new THREE.BoxGeometry(0.042, 0.0155, 0.02), hairM);
+      mo.position.set(px, -0.055, -0.124);
+      mo.rotation.z = px < 0 ? 0.26 : -0.26;
+      mo.rotation.y = px < 0 ? -0.18 : 0.18;
+      head.add(mo);
+    });
+    if (f.stubble) {                                    // five-o'clock shadow shell over the jaw
+      const st = new THREE.Mesh(new THREE.SphereGeometry(0.104, 14, 10),
+        new THREE.MeshStandardMaterial({ color: 0x171310, roughness: 1, transparent: true, opacity: 0.38, depthWrite: false }));
+      st.scale.set(0.85, 0.68, 0.8); st.position.set(0, -0.079, -0.02);
+      head.add(st);
+    }
+  } else {                                              // wrapped scarf across the lower face
+    const wrap = new THREE.Mesh(new THREE.SphereGeometry(0.115, 14, 10),
+      new THREE.MeshStandardMaterial({ color: 0x7a6a4e, roughness: 1 }));
+    wrap.scale.set(0.98, 0.72, 0.98); wrap.position.set(0, -0.058, -0.008);
+    head.add(wrap);
+  }
+  if (f.scar) {
+    const scar = new THREE.Mesh(new THREE.BoxGeometry(0.006, 0.052, 0.004),
+      new THREE.MeshStandardMaterial({ color: 0x8e4438, roughness: 0.8 }));
+    scar.position.set(0.062, 0.028, -0.116);
+    scar.rotation.z = 0.22; scar.rotation.y = -0.42;
+    head.add(scar);
+  }
+  // EARS
+  [-0.121, 0.121].forEach(px => {
+    const ear = new THREE.Mesh(new THREE.SphereGeometry(0.028, 8, 7), skin);
+    ear.scale.set(0.4, 1, 0.72); ear.position.set(px, -0.008, 0.004);
+    head.add(ear);
+  });
+  // HAIR — crown cap (skipped under hats) + back-of-head shell
+  if (!hasHat) {
+    const crown = new THREE.Mesh(new THREE.SphereGeometry(0.1405, 16, 8, 0, Math.PI * 2, 0, 0.95), hairM);
+    crown.scale.set(0.94, 1.1, 1.0); crown.castShadow = true;
+    head.add(crown);
+  }
+  // back + temple hair wraps everything but the face opening
+  const backHair = new THREE.Mesh(new THREE.SphereGeometry(0.1405, 18, 10, -0.55, Math.PI + 1.1, 0.6, 1.15), hairM);
+  backHair.scale.set(0.94, 1.1, 1.0);
+  head.add(backHair);
+  return lids;
+}
+
 // distinctive face + headgear per named character
 const PRESETS = {
   'Molotov':         { face: { mask: 'molotov' }, hat: null, hairSide: '#8a2f10', blackTac: true, tape: 'MOLOTOV' },
@@ -1359,16 +1489,22 @@ function soldierModel(kind, name) {
   // neck + head with the PAINTED FACE (front) and hair/mask color on the other sides
   const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.08, 8), blackOps ? suit : skinM); neck.position.y = 1.51;
   const sideM = new THREE.MeshStandardMaterial({ color: preset.hairSide || '#2e2a26', roughness: 0.9 });
-  const faceM = new THREE.MeshStandardMaterial({ map: faceTex(preset.face), roughness: 0.75 });
-  const head = new THREE.Group();                            // skull + curved face panel
-  const skull = new THREE.Mesh(new THREE.SphereGeometry(0.135, 14, 11), sideM);
-  skull.scale.set(0.95, 1.12, 1.0);
-  skull.castShadow = true;
-  // the face wraps a curved panel on the front of the skull — no more flat box
-  const facePanel = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.13, 0.125, 0.26, 14, 1, true, Math.PI - 1.15, 2.3), faceM);
-  facePanel.position.z = -0.012;
-  head.add(skull, facePanel);
+  const head = new THREE.Group();
+  let lids = null;
+  if (preset.face.mask) {
+    // masked (Molotov flame shell, HYDRA balaclava): painted shell over the skull
+    const faceM = new THREE.MeshStandardMaterial({ map: faceTex(preset.face), roughness: 0.75 });
+    const skull = new THREE.Mesh(new THREE.SphereGeometry(0.135, 14, 11), sideM);
+    skull.scale.set(0.95, 1.12, 1.0);
+    skull.castShadow = true;
+    const facePanel = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.13, 0.125, 0.26, 14, 1, true, Math.PI - 1.15, 2.3), faceM);
+    facePanel.position.z = -0.012;
+    head.add(skull, facePanel);
+  } else {
+    // bare faces: fully SCULPTED 3D head — modeled nose/eyes/lips/brows + blinking lids
+    lids = sculptFace(head, preset.face, !!preset.hat);
+  }
   head.position.y = 1.68;
   // headgear
   if (preset.hat === 'helmetB' || preset.hat === 'helmetG') {
@@ -1507,7 +1643,7 @@ function soldierModel(kind, name) {
     legLJ.hip, legLJ.knee, legRJ.hip, legRJ.knee, head,   // head is the whole head group
   ];
   joints.forEach(j => j.userData.basePose = { x: j.rotation.x, y: j.rotation.y, z: j.rotation.z });
-  return { grp, torso, head: head.children[0], headG: head, armL, armR, legL, legR, gun, joints };
+  return { grp, torso, head: head.children[0], headG: head, armL, armR, legL, legR, gun, joints, lids };
 }
 function makeEntity(name, kind, x, z, baseY = 0) {
   const colors = { enemy: 0xf38ba8, protected: 0xf38ba8, friendly: 0x89b4fa, neutral: 0xe6e6e6 };
@@ -1516,7 +1652,8 @@ function makeEntity(name, kind, x, z, baseY = 0) {
   scene.add(m.grp);
   const e = { name, kind, grp: m.grp, body: m.torso, head: m.head, model: m, color: colors[kind],
     hp: 100, alive: true, dying: 0, hitT: 0, baseX: x, baseZ: z, baseY, phase: Math.random() * 9,
-    shootTimer: 1 + Math.random() * 2.5, muzzleT: 0 };
+    shootTimer: 1 + Math.random() * 2.5, muzzleT: 0,
+    lids: m.lids, blinkN: 0.5 + Math.random() * 3, blinkP: 0 };
   entities.push(e);
   return e;
 }
@@ -2638,6 +2775,16 @@ function updateEntities(dt) {
     if (e.rag) { updateRagdoll(e, dt); continue; }   // ragdolling — let it flop
     if (!e.alive) continue;
     e.phase += dt;
+    // ---- blink (sculpted heads): lids sweep shut and reopen over ~0.22s ----
+    if (e.lids) {
+      e.blinkN -= dt;
+      if (e.blinkN <= 0) { e.blinkP = 0.22; e.blinkN = 2.2 + Math.random() * 3.8; }
+      if (e.blinkP > 0) {
+        e.blinkP = Math.max(0, e.blinkP - dt);
+        const c = Math.sin(Math.PI * (1 - e.blinkP / 0.22));
+        for (const l of e.lids) l.rotation.x = l.userData.open + (l.userData.closed - l.userData.open) * c;
+      }
+    }
     const J = e.model.joints;                        // [aLs, aLe, aRs, aRe, lLh, lLk, lRh, lRk, head]
     const B = (i) => J[i].userData.basePose;
     const ai = e.ai;
@@ -3004,7 +3151,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 28;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 29;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
