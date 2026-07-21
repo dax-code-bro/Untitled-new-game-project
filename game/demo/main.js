@@ -1229,6 +1229,61 @@ function sculptFace(head, f, hasHat) {
   return lids;
 }
 
+// a character's COMPLETE head — sculpted face (or painted mask shell) + headgear,
+// built around the head center (origin). Works parented to a body group or a bone.
+function buildCharacterHead(preset, withNeck = false) {
+  const assembly = new THREE.Group();
+  let lids = null;
+  if (preset.face.mask) {
+    // masked (Molotov flame shell, HYDRA balaclava): painted shell over the skull
+    const sideM = new THREE.MeshStandardMaterial({ color: preset.hairSide || '#2e2a26', roughness: 0.9 });
+    const faceM = new THREE.MeshStandardMaterial({ map: faceTex(preset.face), roughness: 0.75 });
+    const skull = new THREE.Mesh(new THREE.SphereGeometry(0.135, 14, 11), sideM);
+    skull.scale.set(0.95, 1.12, 1.0);
+    skull.castShadow = true;
+    const facePanel = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.13, 0.125, 0.26, 14, 1, true, Math.PI - 1.15, 2.3), faceM);
+    facePanel.position.z = -0.012;
+    assembly.add(skull, facePanel);
+  } else {
+    // bare faces: fully SCULPTED 3D head — modeled nose/eyes/lips/brows + blinking lids
+    lids = sculptFace(assembly, preset.face, !!preset.hat);
+  }
+  // headgear (offsets relative to head center — the old absolute y minus 1.68)
+  if (preset.hat === 'helmetB' || preset.hat === 'helmetG') {
+    const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.17, 12, 7, 0, Math.PI * 2, 0, 1.45),
+      new THREE.MeshStandardMaterial({ color: preset.hat === 'helmetB' ? 0x1a1c20 : 0x3d4a33, roughness: 0.85 }));
+    helmet.position.y = 0.12; helmet.castShadow = true; assembly.add(helmet);
+  } else if (preset.hat === 'boonie') {
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(0.145, 10, 6, 0, Math.PI * 2, 0, 1.4),
+      new THREE.MeshStandardMaterial({ color: 0x4c523a, roughness: 1 }));
+    dome.position.y = 0.135;
+    const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.22, 0.025, 12),
+      new THREE.MeshStandardMaterial({ color: 0x444a34, roughness: 1 }));
+    brim.position.y = 0.11;
+    assembly.add(dome, brim);
+  } else if (preset.hat === 'cap') {
+    const capTop = new THREE.Mesh(new THREE.CylinderGeometry(0.135, 0.145, 0.09, 10),
+      new THREE.MeshStandardMaterial({ color: 0x3a4530, roughness: 1 }));
+    capTop.position.y = 0.15;
+    const bill = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.02, 0.12),
+      new THREE.MeshStandardMaterial({ color: 0x323b29, roughness: 1 }));
+    bill.position.set(0, 0.12, -0.17);
+    assembly.add(capTop, bill);
+  } else if (preset.hat === 'hood') {
+    const hood = new THREE.Mesh(new THREE.SphereGeometry(0.165, 10, 7, 0, Math.PI * 2, 0, 1.7),
+      new THREE.MeshStandardMaterial({ color: 0x7a6a4e, roughness: 1 }));
+    hood.position.y = 0.06; assembly.add(hood);
+  }
+  if (withNeck) {   // close the gap down to the body's neck stump
+    const neckC = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.068, 0.16, 8),
+      new THREE.MeshStandardMaterial({ color: preset.face.mask ? 0x1c1e22 : (preset.face.skin || 0xc9a184), roughness: 0.85 }));
+    neckC.position.y = -0.17;
+    assembly.add(neckC);
+  }
+  return { assembly, lids };
+}
+
 // distinctive face + headgear per named character
 const PRESETS = {
   'Molotov':         { face: { mask: 'molotov' }, hat: null, hairSide: '#8a2f10', blackTac: true, tape: 'MOLOTOV' },
@@ -1339,50 +1394,11 @@ function soldierModel(kind, name) {
   });
   // neck + head with the PAINTED FACE (front) and hair/mask color on the other sides
   const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.08, 8), blackOps ? suit : skinM); neck.position.y = 1.51;
-  const sideM = new THREE.MeshStandardMaterial({ color: preset.hairSide || '#2e2a26', roughness: 0.9 });
   const head = new THREE.Group();
-  let lids = null;
-  if (preset.face.mask) {
-    // masked (Molotov flame shell, HYDRA balaclava): painted shell over the skull
-    const faceM = new THREE.MeshStandardMaterial({ map: faceTex(preset.face), roughness: 0.75 });
-    const skull = new THREE.Mesh(new THREE.SphereGeometry(0.135, 14, 11), sideM);
-    skull.scale.set(0.95, 1.12, 1.0);
-    skull.castShadow = true;
-    const facePanel = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.13, 0.125, 0.26, 14, 1, true, Math.PI - 1.15, 2.3), faceM);
-    facePanel.position.z = -0.012;
-    head.add(skull, facePanel);
-  } else {
-    // bare faces: fully SCULPTED 3D head — modeled nose/eyes/lips/brows + blinking lids
-    lids = sculptFace(head, preset.face, !!preset.hat);
-  }
+  const builtHead = buildCharacterHead(preset);
+  head.add(builtHead.assembly);
+  const lids = builtHead.lids;
   head.position.y = 1.68;
-  // headgear
-  if (preset.hat === 'helmetB' || preset.hat === 'helmetG') {
-    const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.17, 12, 7, 0, Math.PI * 2, 0, 1.45),
-      new THREE.MeshStandardMaterial({ color: preset.hat === 'helmetB' ? 0x1a1c20 : 0x3d4a33, roughness: 0.85 }));
-    helmet.position.y = 1.8; helmet.castShadow = true; grp.add(helmet);
-  } else if (preset.hat === 'boonie') {
-    const dome = new THREE.Mesh(new THREE.SphereGeometry(0.145, 10, 6, 0, Math.PI * 2, 0, 1.4),
-      new THREE.MeshStandardMaterial({ color: 0x4c523a, roughness: 1 }));
-    dome.position.y = 1.815;
-    const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.22, 0.025, 12),
-      new THREE.MeshStandardMaterial({ color: 0x444a34, roughness: 1 }));
-    brim.position.y = 1.79;
-    grp.add(dome, brim);
-  } else if (preset.hat === 'cap') {
-    const capTop = new THREE.Mesh(new THREE.CylinderGeometry(0.135, 0.145, 0.09, 10),
-      new THREE.MeshStandardMaterial({ color: 0x3a4530, roughness: 1 }));
-    capTop.position.y = 1.83;
-    const bill = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.02, 0.12),
-      new THREE.MeshStandardMaterial({ color: 0x323b29, roughness: 1 }));
-    bill.position.set(0, 1.8, -0.17);
-    grp.add(capTop, bill);
-  } else if (preset.hat === 'hood') {
-    const hood = new THREE.Mesh(new THREE.SphereGeometry(0.165, 10, 7, 0, Math.PI * 2, 0, 1.7),
-      new THREE.MeshStandardMaterial({ color: 0x7a6a4e, roughness: 1 }));
-    hood.position.y = 1.74; grp.add(hood);
-  }
   // ARMS — shoulder + elbow joints, posed holding the rifle
   function makeArm(side) {                                   // side: -1 left, +1 right
     const shoulder = new THREE.Group();
@@ -1466,7 +1482,7 @@ function soldierModel(kind, name) {
     legLJ.hip, legLJ.knee, legRJ.hip, legRJ.knee, head,   // head is the whole head group
   ];
   joints.forEach(j => j.userData.basePose = { x: j.rotation.x, y: j.rotation.y, z: j.rotation.z });
-  return { grp, torso, head: head.children[0], headG: head, armL, armR, legL, legR, gun, joints, lids };
+  return { grp, torso, head: builtHead.assembly.children[0], headG: head, armL, armR, legL, legR, gun, joints, lids };
 }
 // ---------------------------------------------------------------- RIGGED soldiers (real sculpted human mesh)
 // Every NPC clones the professionally-modeled, skeleton-rigged human. Locomotion
@@ -1478,41 +1494,90 @@ function riggedModel(kind, name) {
   const preset = PRESETS[name] || PRESETS['Civilian'];
   const grp = new THREE.Group();
   const inner = cloneSkeleton(RIG.scene);
-  // (the model natively faces -Z — already our forward convention)
+  inner.rotation.y = Math.PI;                       // mannequin faces +Z; our forward is -Z
   grp.add(inner);
   const bones = {};
   inner.traverse(o => { if (o.isBone) bones[o.name.replace('mixamorig', '')] = o; });
+  // uniform tints on the mannequin's two materials (surface panels + joint gaps)
+  const TINT = isEnemy ? [0x33363d, 0x16181c]                       // HYDRA: near-black
+    : kind === 'neutral' ? [0x8a7a5c, 0x4a4234]                     // civvy earth tones
+    : kind === 'protected' ? [0x35383f, 0x1c1e24]                   // Prestige: dark suit
+    : preset.blackTac ? [0x27282c, 0x111214]                        // Molotov: black kit
+    : [0x4a5238, 0x252a1e];                                         // squad: olive drab
   inner.traverse(o => {
     if (o.isMesh || o.isSkinnedMesh) {
       o.castShadow = true;
       o.frustumCulled = false;                      // skinned bounds lag the pose
       o.material = o.material.clone();
-      if (isEnemy) o.material.color.setHex(0x585c66);              // HYDRA: gunmetal
-      else if (kind === 'neutral') o.material.color.setHex(0xd8c8a6);  // civvy earth tones
-      else if (kind === 'protected') o.material.color.setHex(0x9a9da6);// Prestige: gray suit
-      else if (preset.blackTac) o.material.color.setHex(0x4a4c52);     // Molotov: black kit
+      o.material.color.setHex(/joint/i.test(o.material.name) ? TINT[1] : TINT[0]);
     }
   });
   // ragdoll joints — real bones; flop targets around the bind pose
   const joints = [bones.LeftArm, bones.LeftForeArm, bones.RightArm, bones.RightForeArm,
     bones.LeftUpLeg, bones.LeftLeg, bones.RightUpLeg, bones.RightLeg, bones.Head];
   joints.forEach(j => j.userData.basePose = { x: j.rotation.x, y: j.rotation.y, z: j.rotation.z });
-  // motion-captured locomotion
+  // motion-captured locomotion (clip names vary per model — match loosely)
   const mixer = new THREE.AnimationMixer(inner);
-  const act = {};
-  for (const c of RIG.clips) { act[c.name] = mixer.clipAction(c); }
+  const findClip = (n) => RIG.clips.find(cl => cl.name.toLowerCase().includes(n));
+  const act = {
+    Idle: mixer.clipAction(findClip('idle')),
+    Walk: mixer.clipAction(findClip('walk')),
+    Run: mixer.clipAction(findClip('run')),
+  };
+  const sneak = findClip('sneak');
+  if (sneak) { act.Sneak = mixer.clipAction(sneak); act.Sneak.play(); act.Sneak.weight = 0; }
   act.Idle.play(); act.Walk.play(); act.Run.play();
   act.Walk.weight = 0; act.Run.weight = 0;
   mixer.update(Math.random() * 1.7);                // desync the crowd
   const hipsRestY = bones.Hips.position.y;
-  // invisible hit volumes riding the skeleton (raycast targets, cm bone-space)
+  // THE CANON HEAD: collapse the mannequin's blank head and mount this
+  // character's sculpted head (face, hair, hat, mask) on the head bone.
+  // All bone-space attachments compensate the rig's world scale DYNAMICALLY
+  // (different models export in meters or centimeters).
+  bones.Head.scale.setScalar(0.01);
+  grp.updateMatrixWorld(true);
+  const _ws = new THREE.Vector3();
+  const invScaleOf = (bone) => { bone.getWorldScale(_ws); return 1 / _ws.x; };
+  const builtHead = buildCharacterHead(preset, true);
+  const headAsm = builtHead.assembly;
+  const headInv = invScaleOf(bones.Head);
+  headAsm.scale.setScalar(headInv);
+  headAsm.position.y = 0.1 * headInv;               // ~10cm above the head-bone origin
+  headAsm.rotation.y = Math.PI;                     // face the mannequin's +Z front
+  bones.Head.add(headAsm);
+  // invisible hit volumes (raycast targets, meter dims scaled into bone space)
   const ghostM = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
-  const torso = new THREE.Mesh(new THREE.BoxGeometry(42, 78, 34), ghostM);
-  torso.name = 'hitTorso'; torso.position.set(0, 8, 0);
+  const spineInv = invScaleOf(bones.Spine1);
+  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.78, 0.34), ghostM);
+  torso.name = 'hitTorso';
+  torso.scale.setScalar(spineInv);
+  torso.position.y = 0.08 * spineInv;
   bones.Spine1.add(torso);
-  const headHit = new THREE.Mesh(new THREE.SphereGeometry(15, 8, 8), ghostM);
-  headHit.name = 'hitHead'; headHit.position.set(0, 9, 0);
-  bones.Head.add(headHit);
+  const headHit = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 8), ghostM);
+  headHit.name = 'hitHead';
+  headAsm.add(headHit);                             // rides the custom head 1:1
+  // chest gear on the spine: ammo pouches for combatants, Molotov's name tape
+  if (isEnemy || kind === 'friendly') {
+    const gear = new THREE.Group();
+    gear.scale.setScalar(invScaleOf(bones.Spine2)); // meter units inside
+    const rigM2 = new THREE.MeshStandardMaterial({ color: isEnemy ? 0x15171a : (preset.blackTac ? 0x0f1013 : 0x2c3526), roughness: 0.85 });
+    for (let p = 0; p < 3; p++) {
+      const pouch = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.11, 0.05), rigM2);
+      pouch.position.set(-0.13 + p * 0.13, 0.02, 0.13);   // +Z = mannequin front
+      gear.add(pouch);
+    }
+    if (preset.tape) {
+      const backing = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.038, 0.004),
+        new THREE.MeshStandardMaterial({ color: 0x3a3d40, roughness: 0.9 }));
+      backing.position.set(0, 0.13, 0.155);
+      const tape = markPlate([preset.tape], 0.15, 0.03, 'rgba(238,238,240,0.95)');
+      tape.position.set(0, 0.13, 0.159);
+      gear.add(backing, tape);
+    }
+    bones.Spine2.add(gear);
+  }
+  // hips sink amounts are expressed in meters — convert to the hips' parent space
+  const hipsUnit = (() => { bones.Hips.parent.getWorldScale(_ws); return 1 / _ws.x; })();
   // the detailed service rifle — same body-relative carry as the built-ins
   let gun = null;
   if (isEnemy || kind === 'friendly') {
@@ -1523,9 +1588,9 @@ function riggedModel(kind, name) {
     grp.add(gun);
   }
   const decoy = () => { const o = new THREE.Object3D(); o.userData.basePose = { x: 0, y: 0, z: 0 }; return o; };
-  return { grp, torso, head: headHit, headG: bones.Head, gun, joints, lids: null,
+  return { grp, torso, head: headHit, headG: bones.Head, gun, joints, lids: builtHead.lids,
     armL: decoy(), armR: decoy(), legL: decoy(), legR: decoy(),
-    rigged: true, bones, mixer, act, hipsRestY };
+    rigged: true, bones, mixer, act, hipsRestY, hipsUnit };
 }
 
 // two-bone IK: swing `bone` so the world position of `tip` lands on targetW
@@ -1598,6 +1663,8 @@ let RIG = null;
 (function loadRig() {
   const loader = new GLTFLoader();
   const done = (g) => {
+    // drop scale tracks — they fight the collapsed-head-bone trick and carry no motion
+    g.animations.forEach(cl => { cl.tracks = cl.tracks.filter(t => !t.name.endsWith('.scale')); });
     RIG = { scene: g.scene, clips: g.animations };
     if (window.__demo) window.__demo.rig = RIG;
     spawnAll();
@@ -1608,7 +1675,7 @@ let RIG = null;
       const bin = Uint8Array.from(atob(window.__SOLDIER_GLB_B64), c => c.charCodeAt(0)).buffer;
       loader.parse(bin, '', done, fail);
     } else {
-      loader.load('./assets/soldier.glb', done, undefined, fail);
+      loader.load('./assets/body.glb', done, undefined, fail);
     }
   } catch (err) { fail(err); }
 })();
@@ -2821,21 +2888,32 @@ function updateRigged(e, dt) {
     ai.crouch += ((ai.crouchTarget || 0) - ai.crouch) * Math.min(1, dt * 7);
     const aimA = ai.aimAmt, kick = ai.kick * ai.kick, c = ai.crouch;
     const sp = ai.state === 'move' ? (ai.runSpeed || 2.3) : 0;
-    // ---- locomotion: blend the motion-captured clips ----
+    // ---- locomotion: blend the motion-captured clips (sneak pose = crouch) ----
     const run = sp > 3.2 ? 1 : 0;
-    M.act.Idle.weight = 1 - ai.movingAmt;
-    M.act.Walk.weight = ai.movingAmt * (1 - run);
-    M.act.Run.weight = ai.movingAmt * run;
-    M.mixer.update(dt);
-    // ---- crouch: sink the hips, fold the legs on top of the clip pose ----
-    if (c > 0.003) {
-      b.Hips.position.y = M.hipsRestY - 34 * c;
-      b.LeftUpLeg.rotation.x += -1.15 * c;
-      b.LeftLeg.rotation.x += 1.8 * c;
-      b.RightUpLeg.rotation.x += -0.5 * c;
-      b.RightLeg.rotation.x += 1.55 * c;
-      b.Spine.rotation.x += 0.14 * c;
-    } else b.Hips.position.y = M.hipsRestY;
+    const mv = ai.movingAmt;
+    if (M.act.Sneak) {
+      M.act.Sneak.weight = c;
+      M.act.Idle.weight = (1 - mv) * (1 - c);
+      M.act.Walk.weight = mv * (1 - run) * (1 - c);
+      M.act.Run.weight = mv * run * (1 - c);
+      M.mixer.update(dt);
+      b.Spine.rotation.x += 0.12 * c;              // settle lower over the knees
+      b.Hips.position.y = M.hipsRestY - 0.12 * M.hipsUnit * c;  // extra sink under the mocap pose
+    } else {
+      M.act.Idle.weight = 1 - mv;
+      M.act.Walk.weight = mv * (1 - run);
+      M.act.Run.weight = mv * run;
+      M.mixer.update(dt);
+      // no sneak clip: procedural crouch — sink hips, fold legs
+      if (c > 0.003) {
+        b.Hips.position.y = M.hipsRestY - 0.34 * M.hipsUnit * c;
+        b.LeftUpLeg.rotation.x += -1.15 * c;
+        b.LeftLeg.rotation.x += 1.8 * c;
+        b.RightUpLeg.rotation.x += -0.5 * c;
+        b.RightLeg.rotation.x += 1.55 * c;
+        b.Spine.rotation.x += 0.14 * c;
+      } else b.Hips.position.y = M.hipsRestY;
+    }
     // ---- facing FIRST so the gun/hand solve sees the final yaw ----
     let fx, fz;
     if (ai.state === 'move') {
@@ -3151,7 +3229,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 30;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 31;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;

@@ -32,7 +32,7 @@ let addons = '';
   addons = bgu + '\n' + gltf + '\n' + skel;
 }
 // the rigged soldier model rides along as base64 so the single file stays self-contained
-const glbB64 = fs.readFileSync('assets/soldier.glb').toString('base64');
+const glbB64 = fs.readFileSync('assets/body.glb').toString('base64');
 
 // --- transform game code: drop ES imports, use global THREE, replace controls ---
 game = game
