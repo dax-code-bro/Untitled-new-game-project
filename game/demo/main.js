@@ -444,8 +444,8 @@ function buildBenelli() {
 }
 function buildStatesman() {
   const g = new THREE.Group();
-  const slide = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.055, 0.24), gunGold); slide.position.z = -0.1; // gilded slide
-  const frame = new THREE.Mesh(new THREE.BoxGeometry(0.042, 0.04, 0.2), gunBlack); frame.position.set(0, -0.045, -0.08);
+  const slide = new THREE.Mesh(new THREE.BoxGeometry(0.026, 0.05, 0.24), gunGold); slide.position.z = -0.1; // gilded slide (thin)
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(0.024, 0.038, 0.2), gunBlack); frame.position.set(0, -0.045, -0.08);
   const grip = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.13, 0.07), gunWood);
   grip.position.set(0, -0.11, -0.005); grip.rotation.x = -0.28;
   const trigger = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.045, 0.05), gunBlack); trigger.position.set(0, -0.06, -0.1);
@@ -789,7 +789,7 @@ const knobEl = document.getElementById('knob');
 if (isTouch) document.body.classList.add('touchmode');
 
 function zoneAt(x, y) {
-  for (const id of ['btn-fire', 'btn-jump', 'btn-reload', 'btn-crouch', 'btn-swap', 'stick']) {
+  for (const id of ['btn-fire', 'btn-jump', 'btn-reload', 'btn-crouch', 'btn-swap', 'btn-aim', 'stick']) {
     const r = document.getElementById(id).getBoundingClientRect();
     if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return id;
   }
@@ -804,6 +804,7 @@ function tStart(e) {
     else if (z === 'btn-reload') { reload(); }
     else if (z === 'btn-crouch') { touch.crouchToggle = !touch.crouchToggle; }
     else if (z === 'btn-swap') { switchTo((wIndex + 1) % WEAPONS.length); }
+    else if (z === 'btn-aim') { aiming = !aiming; document.getElementById('btn-aim').classList.toggle('on', aiming); }
     else if (z === 'stick' || t.clientX < innerWidth * 0.45) {
       touch.moveId = t.identifier;
       const r = document.getElementById('stick').getBoundingClientRect();
