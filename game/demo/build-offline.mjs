@@ -7,10 +7,39 @@ const threeSrc = fs.readFileSync('node_modules/three/build/three.min.js', 'utf8'
 let game = fs.readFileSync('main.js', 'utf8');
 let html = fs.readFileSync('index.html', 'utf8');
 
+// --- transform ES-module addons (GLTFLoader etc.) to plain scripts on global THREE ---
+function addonToPlain(path) {
+  let src = fs.readFileSync(path, 'utf8');
+  // gather names imported from 'three' and destructure them off the global
+  const m = src.match(/import\s*\{([\s\S]*?)\}\s*from\s*'three';/);
+  const names = m ? m[1].split(',').map(s => s.trim()).filter(Boolean) : [];
+  src = src.replace(/import\s*\{[\s\S]*?\}\s*from\s*'three';/g, '');
+  src = src.replace(/import\s*\{[\s\S]*?\}\s*from\s*'\.\/BufferGeometryUtils\.js';/g, '');
+  src = src.replace(/export\s*\{[\s\S]*?\};?/g, '');
+  src = src.replace(/^export\s+(function|class|const|let|var)/gm, '$1');
+  return `(function(){\nconst { ${names.join(', ')} } = THREE;\n${src}\n` +
+    `window.__ADDONS = window.__ADDONS || {};\nObject.assign(window.__ADDONS, __EXPORTS__);\n})();`;
+}
+let addons = '';
+{
+  let bgu = addonToPlain('vendor/BufferGeometryUtils.js')
+    .replace('__EXPORTS__', '{ toTrianglesDrawMode }');
+  let gltf = addonToPlain('vendor/GLTFLoader.js')
+    .replace('__EXPORTS__', '{ GLTFLoader }')
+    .replace('const { ', 'const { toTrianglesDrawMode } = window.__ADDONS; const { ');
+  let skel = addonToPlain('vendor/SkeletonUtils.js')
+    .replace('__EXPORTS__', '{ cloneSkeleton: clone }');
+  addons = bgu + '\n' + gltf + '\n' + skel;
+}
+// the rigged soldier model rides along as base64 so the single file stays self-contained
+const glbB64 = fs.readFileSync('assets/soldier.glb').toString('base64');
+
 // --- transform game code: drop ES imports, use global THREE, replace controls ---
 game = game
   .replace(/import \* as THREE from 'three';\n/, '')
   .replace(/import \{ PointerLockControls \} from 'three\/addons\/controls\/PointerLockControls\.js';\n/, '')
+  .replace(/import \{ GLTFLoader \} from 'three\/addons\/loaders\/GLTFLoader\.js';\n/, 'const { GLTFLoader } = window.__ADDONS;\n')
+  .replace(/import \{ clone as cloneSkeleton \} from 'three\/addons\/utils\/SkeletonUtils\.js';\n/, 'const { cloneSkeleton } = window.__ADDONS;\n')
   .replace(
     "const controls = new PointerLockControls(camera, renderer.domElement);",
     `// inline pointer-lock shim (same API the game uses: lock/addEventListener/getObject)
@@ -42,7 +71,8 @@ const controls = (function () {
 // --- rebuild the html: strip importmap + module script, inline three + game ---
 // NB: use FUNCTION replacements so `$` chars inside three.min.js / game code are NOT
 // interpreted as special replacement patterns ($&, $', $1, ...).
-const inlined = `<script>\n${threeSrc}\n</script>\n<script>\n${game}\n</script>`;
+const inlined = `<script>\n${threeSrc}\n</script>\n<script>\n${addons}\n</script>\n` +
+  `<script>window.__SOLDIER_GLB_B64 = "${glbB64}";</script>\n<script>\n${game}\n</script>`;
 html = html
   .replace(/<script type="importmap">[\s\S]*?<\/script>\n?/, () => '')
   .replace(/<script type="module" src="\.\/main\.js"><\/script>/, () => inlined);

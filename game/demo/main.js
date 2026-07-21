@@ -5,6 +5,8 @@
 // nameplate system, friendly-fire lockout, story intro.
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
 
 // ---------------------------------------------------------------- crash visibility (mobile debugging)
 function showFatal(msg) {
@@ -1240,6 +1242,40 @@ const PRESETS = {
   'HYDRA Trooper':   { face: { mask: 'balaclava' },                                             hat: 'helmetB', hairSide: '#1c1e22' },
 };
 
+// the fully-detailed NPC service rifle — shared by built-in and rigged soldiers.
+// Meter units, barrel down -Z, origin at the receiver.
+function buildNpcRifle() {
+  const gun = new THREE.Group();
+  const mSteel = new THREE.MeshStandardMaterial({ map: metalTex, roughness: 0.5, metalness: 0.5 });
+  const mDark = new THREE.MeshStandardMaterial({ color: 0x14151a, roughness: 0.55, metalness: 0.4 });
+  const mPoly = new THREE.MeshStandardMaterial({ color: 0x24272c, roughness: 0.8 });
+  gun.add(part(mSteel, 0.05, 0.07, 0.34, 0, 0, -0.1));            // upper receiver
+  gun.add(part(mDark, 0.05, 0.05, 0.16, 0, -0.05, -0.04));        // lower receiver
+  gun.add(part(mDark, 0.004, 0.026, 0.06, 0.027, 0.005, -0.1));   // ejection port
+  gun.add(cyl(mPoly, 0.03, 0.034, 0.18, 0, 0, -0.36));            // handguard
+  gun.add(cyl(mDark, 0.013, 0.013, 0.16, 0, 0, -0.5));            // barrel
+  gun.add(cyl(mDark, 0.018, 0.018, 0.05, 0, 0, -0.59));           // muzzle device
+  gun.add(part(mDark, 0.008, 0.06, 0.014, 0, 0.042, -0.44));      // front sight post
+  gun.add(part(mDark, 0.03, 0.03, 0.05, 0, 0.05, 0.02));          // rear sight block
+  gun.add(part(mPoly, 0.03, 0.1, 0.05, 0, -0.115, 0.03, -0.45));  // pistol grip
+  gun.add(part(mDark, 0.02, 0.008, 0.09, 0, -0.09, -0.08));       // trigger guard
+  const gmag = curvedMag(mDark, 1.15);
+  gmag.position.set(0, -0.07, -0.16);
+  gun.add(gmag);
+  gun.add(part(mPoly, 0.045, 0.075, 0.2, 0, -0.008, 0.165));      // stock
+  gun.add(part(mDark, 0.05, 0.085, 0.02, 0, -0.008, 0.272));      // buttpad
+  gun.add(part(mDark, 0.008, 0.012, 0.03, -0.028, -0.01, -0.02)); // selector
+  gun.add(part(mDark, 0.01, 0.016, 0.016, 0.028, -0.02, -0.14));  // mag release
+  gun.add(cyl(mDark, 0.036, 0.036, 0.016, 0, 0, -0.28));          // barrel band / delta ring
+  gun.add(part(mSteel, 0.008, 0.01, 0.008, 0, -0.05, -0.42));     // front sling stud
+  gun.add(part(mSteel, 0.008, 0.01, 0.008, 0, -0.055, 0.32));     // rear sling stud
+  gun.add(part(mSteel, 0.052, 0.008, 0.008, 0, -0.024, -0.02));   // takedown pin line
+  gun.rotation.x = 0;
+  gun.userData.baseRotX = 0;
+  gun.userData.mag = gmag;
+  return gun;
+}
+
 // ---------------------------------------------------------------- soldier models — JOINTED (shoulders/elbows/hips/knees)
 function limbSeg(w, len, mat) {
   const m = new THREE.Mesh(new THREE.CylinderGeometry(w * 0.56, w * 0.38, len, 10), mat);
@@ -1418,38 +1454,10 @@ function soldierModel(kind, name) {
   // curved magazine, trigger guard, shaped grip, stock with buttpad
   let gun = null;
   if (isEnemy || kind === 'friendly') {
-    gun = new THREE.Group();
-    const mSteel = new THREE.MeshStandardMaterial({ map: metalTex, roughness: 0.5, metalness: 0.5 });
-    const mDark = new THREE.MeshStandardMaterial({ color: 0x14151a, roughness: 0.55, metalness: 0.4 });
-    const mPoly = new THREE.MeshStandardMaterial({ color: 0x24272c, roughness: 0.8 });
-    gun.add(part(mSteel, 0.05, 0.07, 0.34, 0, 0, -0.1));            // upper receiver
-    gun.add(part(mDark, 0.05, 0.05, 0.16, 0, -0.05, -0.04));        // lower receiver
-    gun.add(part(mDark, 0.004, 0.026, 0.06, 0.027, 0.005, -0.1));   // ejection port
-    gun.add(cyl(mPoly, 0.03, 0.034, 0.18, 0, 0, -0.36));            // handguard
-    gun.add(cyl(mDark, 0.013, 0.013, 0.16, 0, 0, -0.5));            // barrel
-    gun.add(cyl(mDark, 0.018, 0.018, 0.05, 0, 0, -0.59));           // muzzle device
-    gun.add(part(mDark, 0.008, 0.06, 0.014, 0, 0.042, -0.44));      // front sight post
-    gun.add(part(mDark, 0.03, 0.03, 0.05, 0, 0.05, 0.02));          // rear sight block
-    const gGrip = part(mPoly, 0.03, 0.1, 0.05, 0, -0.115, 0.03, -0.45);
-    gun.add(gGrip);
-    gun.add(part(mDark, 0.02, 0.008, 0.09, 0, -0.09, -0.08));       // trigger guard
-    const gmag = curvedMag(mDark, 1.15);
-    gmag.position.set(0, -0.07, -0.16);
-    gun.add(gmag);
-    gun.add(part(mPoly, 0.045, 0.075, 0.2, 0, -0.008, 0.165));      // stock
-    gun.add(part(mDark, 0.05, 0.085, 0.02, 0, -0.008, 0.272));      // buttpad
+    gun = buildNpcRifle();
     gun.scale.setScalar(1.3);
     gun.position.set(0.16, 1.22, -0.5);
-    gun.rotation.x = 0;
-    gun.userData.baseRotX = 0;
     gun.userData.basePos = gun.position.clone();
-    gun.add(part(mDark, 0.008, 0.012, 0.03, -0.028, -0.01, -0.02));  // selector
-    gun.add(part(mDark, 0.01, 0.016, 0.016, 0.028, -0.02, -0.14));    // mag release
-    gun.add(cyl(mDark, 0.036, 0.036, 0.016, 0, 0, -0.28));            // barrel band / delta ring
-    gun.add(part(mSteel, 0.008, 0.01, 0.008, 0, -0.05, -0.42));       // front sling stud
-    gun.add(part(mSteel, 0.008, 0.01, 0.008, 0, -0.055, 0.32));       // rear sling stud
-    gun.add(part(mSteel, 0.052, 0.008, 0.008, 0, -0.024, -0.02));     // takedown pin line
-    gun.userData.mag = gmag;
     grp.add(gun);
   }
   // record every joint's posed rotation so ragdolls can flop and respawns can restore
@@ -1460,9 +1468,93 @@ function soldierModel(kind, name) {
   joints.forEach(j => j.userData.basePose = { x: j.rotation.x, y: j.rotation.y, z: j.rotation.z });
   return { grp, torso, head: head.children[0], headG: head, armL, armR, legL, legR, gun, joints, lids };
 }
+// ---------------------------------------------------------------- RIGGED soldiers (real sculpted human mesh)
+// Every NPC clones the professionally-modeled, skeleton-rigged human. Locomotion
+// comes from its motion-captured clips (Idle/Walk/Run); the rifle stays a
+// body-relative child exactly like before, and per-frame two-bone IK plants the
+// hands ON the gun's grip and handguard, whatever the pose.
+function riggedModel(kind, name) {
+  const isEnemy = kind === 'enemy';
+  const preset = PRESETS[name] || PRESETS['Civilian'];
+  const grp = new THREE.Group();
+  const inner = cloneSkeleton(RIG.scene);
+  // (the model natively faces -Z — already our forward convention)
+  grp.add(inner);
+  const bones = {};
+  inner.traverse(o => { if (o.isBone) bones[o.name.replace('mixamorig', '')] = o; });
+  inner.traverse(o => {
+    if (o.isMesh || o.isSkinnedMesh) {
+      o.castShadow = true;
+      o.frustumCulled = false;                      // skinned bounds lag the pose
+      o.material = o.material.clone();
+      if (isEnemy) o.material.color.setHex(0x585c66);              // HYDRA: gunmetal
+      else if (kind === 'neutral') o.material.color.setHex(0xd8c8a6);  // civvy earth tones
+      else if (kind === 'protected') o.material.color.setHex(0x9a9da6);// Prestige: gray suit
+      else if (preset.blackTac) o.material.color.setHex(0x4a4c52);     // Molotov: black kit
+    }
+  });
+  // ragdoll joints — real bones; flop targets around the bind pose
+  const joints = [bones.LeftArm, bones.LeftForeArm, bones.RightArm, bones.RightForeArm,
+    bones.LeftUpLeg, bones.LeftLeg, bones.RightUpLeg, bones.RightLeg, bones.Head];
+  joints.forEach(j => j.userData.basePose = { x: j.rotation.x, y: j.rotation.y, z: j.rotation.z });
+  // motion-captured locomotion
+  const mixer = new THREE.AnimationMixer(inner);
+  const act = {};
+  for (const c of RIG.clips) { act[c.name] = mixer.clipAction(c); }
+  act.Idle.play(); act.Walk.play(); act.Run.play();
+  act.Walk.weight = 0; act.Run.weight = 0;
+  mixer.update(Math.random() * 1.7);                // desync the crowd
+  const hipsRestY = bones.Hips.position.y;
+  // invisible hit volumes riding the skeleton (raycast targets, cm bone-space)
+  const ghostM = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
+  const torso = new THREE.Mesh(new THREE.BoxGeometry(42, 78, 34), ghostM);
+  torso.name = 'hitTorso'; torso.position.set(0, 8, 0);
+  bones.Spine1.add(torso);
+  const headHit = new THREE.Mesh(new THREE.SphereGeometry(15, 8, 8), ghostM);
+  headHit.name = 'hitHead'; headHit.position.set(0, 9, 0);
+  bones.Head.add(headHit);
+  // the detailed service rifle — same body-relative carry as the built-ins
+  let gun = null;
+  if (isEnemy || kind === 'friendly') {
+    gun = buildNpcRifle();
+    gun.scale.setScalar(1.3);
+    gun.position.set(0.16, 1.22, -0.5);
+    gun.userData.basePos = gun.position.clone();
+    grp.add(gun);
+  }
+  const decoy = () => { const o = new THREE.Object3D(); o.userData.basePose = { x: 0, y: 0, z: 0 }; return o; };
+  return { grp, torso, head: headHit, headG: bones.Head, gun, joints, lids: null,
+    armL: decoy(), armR: decoy(), legL: decoy(), legR: decoy(),
+    rigged: true, bones, mixer, act, hipsRestY };
+}
+
+// two-bone IK: swing `bone` so the world position of `tip` lands on targetW
+const _ikV = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+const _ikQ = [new THREE.Quaternion(), new THREE.Quaternion(), new THREE.Quaternion()];
+function boneAim(bone, tip, targetW) {
+  bone.updateWorldMatrix(true, false);
+  tip.updateWorldMatrix(true, false);
+  const bp = _ikV[0].setFromMatrixPosition(bone.matrixWorld);
+  const cur = _ikV[1].setFromMatrixPosition(tip.matrixWorld).sub(bp);
+  const des = _ikV[2].copy(targetW).sub(bp);
+  if (cur.lengthSq() < 1e-8 || des.lengthSq() < 1e-8) return;
+  _ikQ[0].setFromUnitVectors(cur.normalize(), des.normalize());
+  const pw = bone.parent.getWorldQuaternion(_ikQ[1]);
+  const bw = _ikQ[2].copy(pw).multiply(bone.quaternion);       // bone's world rotation
+  bw.premultiply(_ikQ[0]);                                     // rotated by the world delta
+  bone.quaternion.copy(pw.invert().multiply(bw));
+}
+function armIK(upper, fore, hand, targetW, elbowBiasW) {
+  const hint = targetW.clone().add(elbowBiasW);
+  boneAim(upper, hand, hint);
+  boneAim(fore, hand, targetW);
+  boneAim(upper, hand, hint);      // second pass tightens the solve
+  boneAim(fore, hand, targetW);
+}
+
 function makeEntity(name, kind, x, z, baseY = 0) {
   const colors = { enemy: 0xf38ba8, protected: 0xf38ba8, friendly: 0x89b4fa, neutral: 0xe6e6e6 };
-  const m = soldierModel(kind, name);
+  const m = RIG ? riggedModel(kind, name) : soldierModel(kind, name);
   m.grp.position.set(x, baseY, z);
   scene.add(m.grp);
   const e = { name, kind, grp: m.grp, body: m.torso, head: m.head, model: m, color: colors[kind],
@@ -1472,24 +1564,54 @@ function makeEntity(name, kind, x, z, baseY = 0) {
   entities.push(e);
   return e;
 }
-// --- THE OPPOSITION ---
-makeEntity('HYDRA Trooper', 'enemy', -6, -12);
-makeEntity('HYDRA Trooper', 'enemy', 3, -16);
-makeEntity('HYDRA Trooper', 'enemy', -2, -22);
-makeEntity('HYDRA Trooper', 'enemy', 9, -14);
-makeEntity('HYDRA Trooper', 'enemy', -10, -27);
-makeEntity('HYDRA Trooper', 'enemy', 12, -29);
-makeEntity('Victor Prestige', 'protected', 0, -34);
-// --- TEAM APEX (Mission 1 deployment — your team fights WITH you) ---
-makeEntity('Molotov', 'friendly', -4, 2);
-makeEntity('Fox', 'friendly', -2, 4);
-makeEntity('Striker', 'friendly', 2.5, 4);
-makeEntity('Payback', 'friendly', 6, 2.5);
-makeEntity('Civilian', 'neutral', 5, 1);
-// The Wolford twins — on a rooftop, side by side, sniping below (their canonical M1 cameo)
-makeBuilding(-15, -3, 6, 6, 6, 1, true);   // their overwatch post still stands
-makeEntity('Brian Wolford', 'friendly', -16, -3, 6);
-makeEntity('Jesse Wolford', 'friendly', -14, -3, 6);
+// --- SPAWNS run after the rigged model resolves (or immediately on fallback) ---
+makeBuilding(-15, -3, 6, 6, 6, 1, true);   // the twins' overwatch post still stands
+function spawnAll() {
+  // --- THE OPPOSITION ---
+  makeEntity('HYDRA Trooper', 'enemy', -6, -12);
+  makeEntity('HYDRA Trooper', 'enemy', 3, -16);
+  makeEntity('HYDRA Trooper', 'enemy', -2, -22);
+  makeEntity('HYDRA Trooper', 'enemy', 9, -14);
+  makeEntity('HYDRA Trooper', 'enemy', -10, -27);
+  makeEntity('HYDRA Trooper', 'enemy', 12, -29);
+  makeEntity('Victor Prestige', 'protected', 0, -34);
+  // --- TEAM APEX (Mission 1 deployment — your team fights WITH you) ---
+  makeEntity('Molotov', 'friendly', -4, 2);
+  makeEntity('Fox', 'friendly', -2, 4);
+  makeEntity('Striker', 'friendly', 2.5, 4);
+  makeEntity('Payback', 'friendly', 6, 2.5);
+  makeEntity('Civilian', 'neutral', 5, 1);
+  // The Wolford twins — rooftop, side by side, sniping below (their canonical M1 cameo)
+  makeEntity('Brian Wolford', 'friendly', -16, -3, 6);
+  makeEntity('Jesse Wolford', 'friendly', -14, -3, 6);
+  entities.forEach(e => {
+    if (e.kind === 'enemy' || e.kind === 'friendly') {
+      e.ai = makeAI(e);
+      e.posted = e.baseY > 0.5;    // rooftop twins hold their post
+      e.hitT = 0;
+    }
+  });
+}
+// RIG: the professionally-sculpted, skeleton-rigged human mesh all soldiers clone.
+// Loaded from base64 in the single-file build, from ./assets in the served build.
+let RIG = null;
+(function loadRig() {
+  const loader = new GLTFLoader();
+  const done = (g) => {
+    RIG = { scene: g.scene, clips: g.animations };
+    if (window.__demo) window.__demo.rig = RIG;
+    spawnAll();
+  };
+  const fail = (err) => { console.warn('[demo] rigged model unavailable — built-in soldiers', err); spawnAll(); };
+  try {
+    if (window.__SOLDIER_GLB_B64) {
+      const bin = Uint8Array.from(atob(window.__SOLDIER_GLB_B64), c => c.charCodeAt(0)).buffer;
+      loader.parse(bin, '', done, fail);
+    } else {
+      loader.load('./assets/soldier.glb', done, undefined, fail);
+    }
+  } catch (err) { fail(err); }
+})();
 
 // ---------------------------------------------------------------- NPC brains (combat AI state)
 function makeAI(e) {
@@ -1515,14 +1637,6 @@ function makeAI(e) {
     kick: 0,                       // per-shot recoil impulse on the body
   };
 }
-entities.forEach(e => {
-  if (e.kind === 'enemy' || e.kind === 'friendly') {
-    e.ai = makeAI(e);
-    e.posted = e.baseY > 0.5;      // rooftop twins hold their post
-    e.hitT = 0;
-  }
-});
-
 // step an NPC toward a point with building/prop collision (slide, else report blocked)
 function stepNPC(e, tx, tz, speed, dt) {
   const p = e.grp.position;
@@ -2583,6 +2697,7 @@ function updateEntities(dt) {
 
     // ---- hit reaction (both sides): jerk back, stagger, recover ----
     if (e.hitT > 0) e.hitT = Math.max(0, e.hitT - dt * 2.6);
+    if (e.model.rigged) { updateRigged(e, dt); continue; }
     e.model.torso.rotation.x = -0.35 * e.hitT;
     J[8].rotation.x = B(8).x - 0.35 * e.hitT;
 
@@ -2689,6 +2804,99 @@ function updateEntities(dt) {
       e.model.armR.rotation.x = (e.model.armR.userData.bx || 0) - Math.sin(e.phase * 1.7) * 0.035;
       turnToward(e, camera.position.x, camera.position.z, 2.4, dt);
     }
+  }
+}
+
+// pose application for RIGGED soldiers: mocap locomotion + procedural combat layer.
+// Runs INSTEAD of the joint animator; shares all the same ai fields and facing logic.
+function updateRigged(e, dt) {
+  const M = e.model, ai = e.ai, b = M.bones;
+  if (ai) {
+    // ---- timers (identical to the built-in path) ----
+    ai.movingAmt = Math.max(0, ai.movingAmt - dt * 4);
+    ai.aimHold = Math.max(0, ai.aimHold - dt);
+    const wantAim = ai.aimHold > 0 && ai.reloadT === 0 ? 1 : 0;
+    ai.aimAmt += (wantAim - ai.aimAmt) * Math.min(1, dt * 6);
+    ai.kick = Math.max(0, ai.kick - dt * 7);
+    ai.crouch += ((ai.crouchTarget || 0) - ai.crouch) * Math.min(1, dt * 7);
+    const aimA = ai.aimAmt, kick = ai.kick * ai.kick, c = ai.crouch;
+    const sp = ai.state === 'move' ? (ai.runSpeed || 2.3) : 0;
+    // ---- locomotion: blend the motion-captured clips ----
+    const run = sp > 3.2 ? 1 : 0;
+    M.act.Idle.weight = 1 - ai.movingAmt;
+    M.act.Walk.weight = ai.movingAmt * (1 - run);
+    M.act.Run.weight = ai.movingAmt * run;
+    M.mixer.update(dt);
+    // ---- crouch: sink the hips, fold the legs on top of the clip pose ----
+    if (c > 0.003) {
+      b.Hips.position.y = M.hipsRestY - 34 * c;
+      b.LeftUpLeg.rotation.x += -1.15 * c;
+      b.LeftLeg.rotation.x += 1.8 * c;
+      b.RightUpLeg.rotation.x += -0.5 * c;
+      b.RightLeg.rotation.x += 1.55 * c;
+      b.Spine.rotation.x += 0.14 * c;
+    } else b.Hips.position.y = M.hipsRestY;
+    // ---- facing FIRST so the gun/hand solve sees the final yaw ----
+    let fx, fz;
+    if (ai.state === 'move') {
+      fx = e.kind === 'friendly' ? (ai.cover ? ai.cover.sx : e.grp.position.x) : ai.moveX;
+      fz = e.kind === 'friendly' ? (ai.cover ? ai.cover.sz : e.grp.position.z) : ai.moveZ;
+    } else if (e.kind === 'friendly') {
+      const t = nearestEnemyOf(e);
+      fx = (t ? t.grp.position : camera.position).x;
+      fz = (t ? t.grp.position : camera.position).z;
+    } else {
+      fx = camera.position.x; fz = camera.position.z;
+    }
+    turnToward(e, fx, fz, ai.state === 'move' ? 3.4 : 2.2, dt);
+    // ---- the gun: level carry -> shouldered aim -> recoil shove (as before) ----
+    let gripW = null, guardW = null;
+    if (M.gun) {
+      const g = M.gun;
+      const L = (a2, b2) => a2 * (1 - aimA) + b2 * aimA;
+      g.rotation.x = 0.12 * kick;
+      g.position.x = L(g.userData.basePos.x, 0.12);
+      g.position.y = L(g.userData.basePos.y, 1.38) - 0.34 * c;
+      g.position.z = L(g.userData.basePos.z, -0.52) + 0.06 * kick;
+      g.updateWorldMatrix(true, false);
+      gripW = new THREE.Vector3(0, -0.1, 0.03).applyMatrix4(g.matrixWorld);   // pistol grip
+      guardW = new THREE.Vector3(0, -0.01, -0.36).applyMatrix4(g.matrixWorld); // handguard
+      const mg = g.userData.mag;
+      if (ai.reloadT > 0) {
+        // reload: left hand dives to the belt, the empty mag drops out
+        const p = 1 - ai.reloadT / 1.7;
+        if (mg) {
+          const out = p > 0.3 && p < 0.62;
+          if (out && !ai.magDropped) { ai.magDropped = true; dropMag(mg); }
+          mg.visible = !out;
+        }
+        guardW = new THREE.Vector3(-0.16, 0.92 - 0.34 * c, -0.12).applyMatrix4(e.grp.matrixWorld);
+      } else if (mg) mg.visible = true;
+    }
+    // ---- spine/head: turn lead, flinch, recoil rock (additive on the clip) ----
+    const lead = THREE.MathUtils.clamp(e.turnDiff || 0, -0.55, 0.55);
+    b.Spine1.rotation.y += lead * 0.4 + 0.1 * aimA;
+    b.Spine1.rotation.x += -0.1 * kick - 0.45 * e.hitT;
+    b.Head.rotation.y += lead * 0.55;
+    b.Head.rotation.x += -0.3 * e.hitT + 0.06 * aimA;
+    // ---- arms: IK the hands onto the rifle stations (overrides the clip swing) ----
+    if (M.gun) {
+      const q = e.grp.quaternion;
+      armIK(b.RightArm, b.RightForeArm, b.RightHand, gripW,
+        new THREE.Vector3(0.3, -0.45, 0.15).applyQuaternion(q));
+      armIK(b.LeftArm, b.LeftForeArm, b.LeftHand, guardW,
+        new THREE.Vector3(-0.3, -0.5, 0.1).applyQuaternion(q));
+    }
+    // ---- height: footstep bob only (the hips bone owns the crouch drop) ----
+    e.grp.position.y = e.baseY + Math.abs(Math.sin(ai.walkPhase)) * 0.04 * ai.movingAmt;
+    if (ai.movingAmt > 0.05) ai.walkPhase += dt * (4 + sp * 1.7);
+  } else {
+    // civilians / Prestige: idle clip, watch the player, head tracks first
+    M.act.Idle.weight = 1; M.act.Walk.weight = 0; M.act.Run.weight = 0;
+    M.mixer.update(dt);
+    turnToward(e, camera.position.x, camera.position.z, 2.4, dt);
+    b.Head.rotation.y += THREE.MathUtils.clamp(e.turnDiff || 0, -0.6, 0.6) * 0.5;
+    b.Spine1.rotation.x += -0.45 * e.hitT;
   }
 }
 
@@ -2943,7 +3151,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 29;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 30;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
