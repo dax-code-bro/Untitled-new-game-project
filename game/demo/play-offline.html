@@ -446,7 +446,7 @@ sandbags(9, -18, 6, -0.7);
 // ---------------------------------------------------------------- soldier models (entities w/ nameplates)
 const entities = [];
 const skinMat = new THREE.MeshStandardMaterial({ color: 0xc9a184, roughness: 0.8 });
-function soldierModel(kind) {
+function soldierModel(kind, opts = {}) {
   const grp = new THREE.Group();
   const isEnemy = kind === 'enemy';
   const suit = kind === 'protected'
@@ -457,14 +457,15 @@ function soldierModel(kind) {
   const torso = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.62, 0.28), suit); torso.position.y = 1.18;
   const hips = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.22, 0.26), pants); hips.position.y = 0.82;
   const head = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.26, 0.24),
-    kind === 'friendly' ? new THREE.MeshStandardMaterial({ color: 0x181818, roughness: 0.9 }) : skinMat); // Molotov: ski mask
+    opts.mask ? new THREE.MeshStandardMaterial({ color: 0x181818, roughness: 0.9 }) : skinMat); // Molotov only: ski mask
   head.position.y = 1.66;
-  // helmet for combatants
-  if (isEnemy) {
-    const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 6, 0, Math.PI * 2, 0, 1.5), suit);
+  // headgear: enemies get black helmets, Team Apex gets green helmets, Molotov gets his fire stripe
+  if (isEnemy || (kind === 'friendly' && !opts.mask)) {
+    const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 6, 0, Math.PI * 2, 0, 1.5),
+      isEnemy ? suit : new THREE.MeshStandardMaterial({ color: 0x3d4a33, roughness: 0.9 }));
     helmet.position.y = 1.78; grp.add(helmet);
   }
-  if (kind === 'friendly') { // fire decal stripe on Molotov's mask
+  if (opts.mask) { // fire decal stripe — Molotov's signature mask
     const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.06, 0.25),
       new THREE.MeshStandardMaterial({ color: 0xff5522, emissive: 0xaa2200, emissiveIntensity: 0.5 }));
     stripe.position.y = 1.7; grp.add(stripe);
@@ -474,33 +475,53 @@ function soldierModel(kind) {
   const legL = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.7, 0.16), pants); legL.position.set(-0.13, 0.36, 0);
   const legR = legL.clone(); legR.position.x = 0.13;
   grp.add(torso, hips, head, armL, armR, legL, legR);
-  // rifle prop for combatants
+  // rifle for combatants (with a real muzzle point — NPC shots come FROM the gun)
+  let gun = null;
   if (isEnemy || kind === 'friendly') {
-    const gun = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.1, 0.62),
+    gun = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.09, 0.5),
       new THREE.MeshStandardMaterial({ map: metalTex, roughness: 0.5, metalness: 0.5 }));
-    gun.position.set(0.12, 1.12, -0.28); gun.rotation.x = -0.12;
+    const brl = new THREE.Mesh(new THREE.CylinderGeometry(0.013, 0.013, 0.24, 6),
+      new THREE.MeshStandardMaterial({ color: 0x22252a, metalness: 0.6, roughness: 0.4 }));
+    brl.rotation.x = Math.PI / 2; brl.position.z = -0.34;
+    const gmag = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.15, 0.07),
+      new THREE.MeshStandardMaterial({ color: 0x2b2e33, roughness: 0.7 }));
+    gmag.position.set(0, -0.1, -0.08); gmag.rotation.x = 0.25;
+    gun.add(body, brl, gmag);
+    gun.position.set(0.12, 1.12, -0.3); gun.rotation.x = -0.08;
     grp.add(gun);
   }
-  return { grp, torso, head, armL, armR, legL, legR };
+  return { grp, torso, head, armL, armR, legL, legR, gun };
 }
-function makeEntity(name, kind, x, z) {
+function makeEntity(name, kind, x, z, baseY = 0) {
   const colors = { enemy: 0xf38ba8, protected: 0xf38ba8, friendly: 0x89b4fa, neutral: 0xe6e6e6 };
-  const m = soldierModel(kind);
-  m.grp.position.set(x, 0, z);
+  const m = soldierModel(kind, { mask: name === 'Molotov' });
+  m.grp.position.set(x, baseY, z);
   scene.add(m.grp);
   const e = { name, kind, grp: m.grp, body: m.torso, head: m.head, model: m, color: colors[kind],
-    hp: 100, alive: true, dying: 0, baseX: x, baseZ: z, phase: Math.random() * 9, shootTimer: 1 + Math.random() * 2.5,
-    muzzleT: 0 };
+    hp: 100, alive: true, dying: 0, baseX: x, baseZ: z, baseY, phase: Math.random() * 9,
+    shootTimer: 1 + Math.random() * 2.5, muzzleT: 0 };
   entities.push(e);
   return e;
 }
+// --- THE OPPOSITION ---
 makeEntity('HYDRA Trooper', 'enemy', -6, -12);
 makeEntity('HYDRA Trooper', 'enemy', 3, -16);
 makeEntity('HYDRA Trooper', 'enemy', -2, -22);
 makeEntity('HYDRA Trooper', 'enemy', 9, -14);
+makeEntity('HYDRA Trooper', 'enemy', -10, -27);
+makeEntity('HYDRA Trooper', 'enemy', 12, -29);
 makeEntity('Victor Prestige', 'protected', 0, -34);
+// --- TEAM APEX (Mission 1 deployment — your team fights WITH you) ---
 makeEntity('Molotov', 'friendly', -4, 2);
+makeEntity('Fox', 'friendly', -2, 4);
+makeEntity('Striker', 'friendly', 2.5, 4);
+makeEntity('Payback', 'friendly', 6, 2.5);
 makeEntity('Civilian', 'neutral', 5, 1);
+// The Wolford twins — on a rooftop, side by side, sniping below (their canonical M1 cameo)
+makeBuilding(-15, -3, 6, 6, 6, 1);
+makeEntity('Brian Wolford', 'friendly', -16, -3, 6);
+makeEntity('Jesse Wolford', 'friendly', -14, -3, 6);
 
 // ---------------------------------------------------------------- arsenal
 const WEAPONS = [
@@ -788,7 +809,7 @@ function killEntity(e, head) {
     e.hp = 100; e.alive = true; e.dying = 0;
     e.grp.visible = true;
     e.grp.rotation.set(0, 0, 0);
-    e.grp.position.set(e.baseX, 0, e.baseZ);
+    e.grp.position.set(e.baseX, e.baseY, e.baseZ);
   }, 4500);
 }
 function hitSpark(pos) {
@@ -826,11 +847,47 @@ function playerDie() {
     failEl.classList.remove('show'); dead = false; respawning = false;
   }, 1500);
 }
-const tracerMat = new THREE.LineBasicMaterial({ color: 0xff5566 });
-function enemyTracer(from, to) {
-  const g = new THREE.BufferGeometry().setFromPoints([from.clone().setY(1.4), to.clone()]);
-  const line = new THREE.Line(g, tracerMat); scene.add(line);
-  setTimeout(() => scene.remove(line), 60);
+// ---------------------------------------------------------------- NPC gunfire (flashes, tracers, misses)
+const tracerMatE = new THREE.LineBasicMaterial({ color: 0xff5566, transparent: true, opacity: 0.85 });
+const tracerMatF = new THREE.LineBasicMaterial({ color: 0xffe9a8, transparent: true, opacity: 0.8 });
+function npcTracer(from, to, friendly) {
+  const g = new THREE.BufferGeometry().setFromPoints([from, to]);
+  const line = new THREE.Line(g, friendly ? tracerMatF : tracerMatE); scene.add(line);
+  setTimeout(() => scene.remove(line), 55);
+}
+const flashSpriteMat = new THREE.SpriteMaterial({ map: flashTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+function npcFlash(pos) {
+  const s = new THREE.Sprite(flashSpriteMat);
+  s.position.copy(pos);
+  s.scale.setScalar(rnd(0.28, 0.42));
+  scene.add(s);
+  setTimeout(() => scene.remove(s), 45);
+}
+function npcMuzzle(e) {
+  // world position of this soldier's gun muzzle (falls back to chest height)
+  if (e.model.gun) {
+    e.model.gun.updateWorldMatrix(true, false);
+    return new THREE.Vector3(0, 0, -0.46).applyMatrix4(e.model.gun.matrixWorld);
+  }
+  return e.grp.position.clone().add(new THREE.Vector3(0, 1.3, 0));
+}
+// One NPC shot with real aim error — can visibly MISS (tracer streaks past the target)
+function npcFire(e, targetPos, opts = {}) {
+  const from = npcMuzzle(e);
+  npcFlash(from);
+  const dir = targetPos.clone().sub(from).normalize();
+  const err = opts.err ?? 0.06;
+  dir.x += rnd(-err, err); dir.y += rnd(-err, err) * 0.6; dir.z += rnd(-err, err);
+  dir.normalize();
+  // closest approach of the shot line to the target — decides hit vs whiff
+  const toT = targetPos.clone().sub(from);
+  const along = toT.dot(dir);
+  const closest = from.clone().addScaledVector(dir, Math.max(0, along));
+  const missBy = closest.distanceTo(targetPos);
+  const hit = missBy < (opts.hitRadius ?? 0.35);
+  const end = hit ? targetPos.clone() : from.clone().addScaledVector(dir, Math.min(60, along + rnd(6, 18)));
+  npcTracer(from, end, opts.friendly);
+  return hit;
 }
 
 // ---------------------------------------------------------------- HUD
@@ -1028,17 +1085,27 @@ function updateEntities(dt) {
       e.dying = Math.max(0, e.dying - dt * 2.2);
       const t = 1 - e.dying;                  // 0->1
       e.grp.rotation.x = -t * Math.PI / 2;
-      e.grp.position.y = t * 0.12;
+      e.grp.position.y = e.baseY + t * 0.12;
       if (e.dying === 0) e.grp.visible = false;
       continue;
     }
     if (!e.alive) continue;
     e.phase += dt;
     // breathe + tiny idle shuffle
-    e.grp.position.y = Math.sin(e.phase * 2) * 0.03;
+    e.grp.position.y = e.baseY + Math.sin(e.phase * 2) * 0.03;
     e.model.armL.rotation.x = Math.sin(e.phase * 1.7) * 0.06;
     e.model.armR.rotation.x = -Math.sin(e.phase * 1.7) * 0.06;
-    e.grp.lookAt(camera.position.x, e.grp.position.y, camera.position.z);
+    // friendlies face the nearest living enemy (they're IN the fight); everyone else faces you
+    let face = camera.position;
+    if (e.kind === 'friendly') {
+      let bd = 70;
+      for (const t of entities) {
+        if (!t.alive || t.kind !== 'enemy') continue;
+        const d = e.grp.position.distanceTo(t.grp.position);
+        if (d < bd) { bd = d; face = t.grp.position; }
+      }
+    }
+    e.grp.lookAt(face.x, e.grp.position.y, face.z);
   }
 }
 
@@ -1123,16 +1190,63 @@ function animate() {
       if (padPressed(gp, 4)) switchTo((wIndex - 1 + WEAPONS.length) % WEAPONS.length);
     }
 
+    // ---- ENEMY AI: pick a target (you or your team), fire with real aim error ----
+    const friendlies = entities.filter(f => f.alive && f.kind === 'friendly');
     for (const e of entities) {
       if (!e.alive || e.kind !== 'enemy') continue;
       const d = e.grp.position.distanceTo(camera.position);
-      if (d > 55) continue;
+      if (d > 60) continue;
       e.shootTimer -= dt;
       if (e.shootTimer <= 0) {
         e.shootTimer = 1.1 + Math.random() * 1.9;
-        enemyTracer(e.grp.position, camera.position);
-        const chance = THREE.MathUtils.clamp(1 - d / 75, 0.12, 0.6);
-        if (Math.random() < chance) damagePlayer(6 + Math.random() * 9);
+        // 60% shoot at the player, 40% at a teammate (a real crossfire)
+        if (friendlies.length && Math.random() < 0.4) {
+          const f = friendlies[(Math.random() * friendlies.length) | 0];
+          const aim = f.grp.position.clone().add(new THREE.Vector3(0, 1.2, 0));
+          if (npcFire(e, aim, { err: 0.08, hitRadius: 0.3 })) {
+            hitSpark(aim);                                    // teammates take the hit and stay up
+            f.model.torso.rotation.z = 0.15;                  // flinch
+            setTimeout(() => { if (f.model) f.model.torso.rotation.z = 0; }, 150);
+          }
+        } else {
+          // aim error grows with distance and shrinks if you stand still & tall
+          const err = 0.035 + d * 0.0011 + moveAmount * 0.03 + (crouching ? -0.008 : 0);
+          if (npcFire(e, camera.position.clone(), { err, hitRadius: 0.4 })) {
+            damagePlayer(6 + Math.random() * 9);
+          }
+          // whiff = you SEE the tracer streak past — that's the miss, no dice roll
+        }
+      }
+    }
+
+    // ---- TEAM APEX AI: your team fights with you ----
+    for (const f of entities) {
+      if (!f.alive || f.kind !== 'friendly') continue;
+      f.shootTimer -= dt;
+      if (f.shootTimer > 0) continue;
+      f.shootTimer = 0.9 + Math.random() * 1.6;
+      // nearest living enemy in range
+      let best = null, bestD = 65;
+      for (const e of entities) {
+        if (!e.alive || e.kind !== 'enemy') continue;
+        const d = f.grp.position.distanceTo(e.grp.position);
+        if (d < bestD) { bestD = d; best = e; }
+      }
+      if (!best) continue;
+      const isTwin = f.name.includes('Wolford');               // rooftop snipers shoot straighter
+      const aim = best.grp.position.clone().add(new THREE.Vector3(0, 1.2, 0));
+      if (npcFire(f, aim, { err: isTwin ? 0.03 : 0.055, hitRadius: 0.32, friendly: true })) {
+        best.hp -= isTwin ? 45 : 22;
+        hitSpark(aim);
+        if (best.hp <= 0 && best.alive) {
+          best.alive = false; best.dying = 1;
+          addKill(f.name + ' ✖ ' + best.name);
+          setTimeout(() => {
+            best.hp = 100; best.alive = true; best.dying = 0;
+            best.grp.visible = true; best.grp.rotation.set(0, 0, 0);
+            best.grp.position.set(best.baseX, best.baseY, best.baseZ);
+          }, 4500);
+        }
       }
     }
 
