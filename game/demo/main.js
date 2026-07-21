@@ -287,6 +287,8 @@ for (let i = 0; i < 20; i++) {
   if (Math.hypot(x, z - 8) < 11) continue;   // keep the player spawn area clear
   makeBuilding(x, z, 5 + (i % 3) * 2, 4.5 + (i % 5) * 2, 5 + (i % 4) * 2, i);
 }
+// cover spots the squad AI can duck behind (filled in by the props below)
+const coverPoints = [];
 // crates
 const crateMat = new THREE.MeshStandardMaterial({ map: woodTex, roughness: 0.9 });
 [[-4, -8, 1.1], [-3, -8.8, 0.9], [-3.5, -7.5, 0.8, 0.9], [6, -10, 1.2], [7.1, -10.3, 0.85],
@@ -294,16 +296,20 @@ const crateMat = new THREE.MeshStandardMaterial({ map: woodTex, roughness: 0.9 }
   const c = new THREE.Mesh(new THREE.BoxGeometry(s, s, s), crateMat);
   c.position.set(x, (y || 0) + s / 2, z);
   c.rotation.y = rnd(0, 1.2);
+  c.castShadow = true; c.receiveShadow = true;
   scene.add(c);
   buildings.push(new THREE.Box3().setFromObject(c));
+  if (!y) coverPoints.push({ x, z, r: s * 0.85 });
 });
 // barrels
 const barrelMat = new THREE.MeshStandardMaterial({ color: 0x39503a, map: metalTex, roughness: 0.7, metalness: 0.35 });
 [[-6.5, -13], [5, -15.5], [5.7, -15.2], [-1, -27], [8.5, -25]].forEach(([x, z]) => {
   const b = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 1.1, 14), barrelMat);
   b.position.set(x, 0.55, z);
+  b.castShadow = true;
   scene.add(b);
   buildings.push(new THREE.Box3().setFromObject(b));
+  coverPoints.push({ x, z, r: 0.75 });
 });
 // sandbag lines
 const bagMat = new THREE.MeshStandardMaterial({ color: 0x8a7c5c, roughness: 1 });
@@ -319,9 +325,9 @@ function sandbags(x, z, len, ry) {
   scene.add(g);
   buildings.push(new THREE.Box3().setFromObject(g));
 }
-sandbags(0, -10.5, 7, 0);
-sandbags(-9, -24, 6, 0.9);
-sandbags(9, -18, 6, -0.7);
+sandbags(0, -10.5, 7, 0);   coverPoints.push({ x: 0, z: -10.5, r: 1.9 });
+sandbags(-9, -24, 6, 0.9);  coverPoints.push({ x: -9, z: -24, r: 1.7 });
+sandbags(9, -18, 6, -0.7);  coverPoints.push({ x: 9, z: -18, r: 1.7 });
 
 // ---------------------------------------------------------------- variety props (spheres, cones, reflections)
 // jungle trees — cone canopies (triangles) on cylinder trunks; Colombia needs green
@@ -635,6 +641,84 @@ makeBuilding(-15, -3, 6, 6, 6, 1);
 makeEntity('Brian Wolford', 'friendly', -16, -3, 6);
 makeEntity('Jesse Wolford', 'friendly', -14, -3, 6);
 
+// ---------------------------------------------------------------- NPC brains (combat AI state)
+function makeAI(e) {
+  const enemy = e.kind === 'enemy';
+  return {
+    state: 'hold',                 // hold | move | cover | peek
+    mag: enemy ? 7 : 10, magMax: enemy ? 7 : 10,
+    reloadT: 0,                    // >0 while reloading (seconds left)
+    thinkT: rnd(0.6, 2.2),
+    fireT: rnd(0.8, 2),
+    burst: 0,
+    moveX: 0, moveZ: 0,            // current destination
+    runSpeed: 0,                   // speed while in 'move'
+    cover: null,                   // chosen cover point
+    coverT: 0,                     // time to stay tucked
+    peekT: 0,
+    peekCycles: 0,
+    crouch: 0, crouchTarget: 0,    // 0..1 animated crouch
+    walkPhase: rnd(0, 6),
+    movingAmt: 0,                  // 0..1 for the walk-cycle blend
+  };
+}
+entities.forEach(e => {
+  if (e.kind === 'enemy' || e.kind === 'friendly') {
+    e.ai = makeAI(e);
+    e.posted = e.baseY > 0.5;      // rooftop twins hold their post
+    e.hitT = 0;
+  }
+});
+
+// step an NPC toward a point with building/prop collision (slide, else report blocked)
+function stepNPC(e, tx, tz, speed, dt) {
+  const p = e.grp.position;
+  const dx = tx - p.x, dz = tz - p.z;
+  const d = Math.hypot(dx, dz);
+  if (d < 0.3) return 'arrived';
+  const vx = dx / d * speed * dt, vz = dz / d * speed * dt;
+  const clear = (nx, nz) => {
+    const pt = new THREE.Vector3(nx, 1, nz);
+    for (const b of buildings) if (b.containsPoint(pt)) return false;
+    return Math.hypot(nx, nz) < 68;                    // stay in the arena
+  };
+  if (clear(p.x + vx, p.z + vz)) { p.x += vx; p.z += vz; return 'moving'; }
+  if (clear(p.x + vx, p.z)) { p.x += vx; return 'moving'; }
+  if (clear(p.x, p.z + vz)) { p.z += vz; return 'moving'; }
+  return 'blocked';
+}
+
+// pick a cover point that puts the object between the soldier and the threat
+function pickCover(e, threatPos) {
+  let best = null, bestScore = Infinity;
+  for (const c of coverPoints) {
+    const dxt = c.x - threatPos.x, dzt = c.z - threatPos.z;
+    const dl = Math.hypot(dxt, dzt) || 1;
+    const sx = c.x + (dxt / dl) * (c.r + 0.5), sz = c.z + (dzt / dl) * (c.r + 0.5);
+    const dTar = Math.hypot(sx - threatPos.x, sz - threatPos.z);
+    if (dTar < 6 || dTar > 48) continue;
+    // don't stack two soldiers on the same slot
+    let taken = false;
+    for (const o of entities) {
+      if (o !== e && o.ai && o.ai.cover && Math.hypot(o.ai.cover.sx - sx, o.ai.cover.sz - sz) < 1.3) { taken = true; break; }
+    }
+    if (taken) continue;
+    const dSelf = Math.hypot(sx - e.grp.position.x, sz - e.grp.position.z);
+    const score = dSelf + Math.abs(dTar - 16) * 0.5 + rnd(0, 5);
+    if (score < bestScore) { bestScore = score; best = { sx, sz, c }; }
+  }
+  return best;
+}
+
+// one NPC trigger pull, honoring magazine + reload
+function npcTryFire(e, targetPos, opts) {
+  const ai = e.ai;
+  if (ai.reloadT > 0 || e.hitT > 0.55) return false;   // reloading or staggered
+  if (ai.mag <= 0) { ai.reloadT = 1.7; return false; } // dry — reload (animation plays)
+  ai.mag--;
+  return npcFire(e, targetPos, opts);
+}
+
 // ---------------------------------------------------------------- arsenal
 const WEAPONS = [
   { name: 'M16',                 cls: 'Assault Rifle', att: 'Flame Charm',     dmg: 34, rpm: 700, mag: 30, reserve: 180, auto: true,  spread: 0.012 },
@@ -898,6 +982,7 @@ function shoot() {
       if (e.kind === 'protected') { toast('NICE TRY, BUT BE PATIENT'); playerTracer(hits[0].point); continue; }
       const head = hits[0].object === e.head;
       e.hp -= w.dmg * (head ? 2.2 : 1);
+      e.hitT = 1;                                    // stagger animation
       bloodBurst(hits[0].point, dir, head);
       playerTracer(hits[0].point);
       if (e.hp <= 0) killEntity(e, head, dir);
@@ -982,11 +1067,14 @@ function killEntity(e, head, impulse, by) {
   if (by) addKill(by + ' ✖ ' + e.name);
   else { killCount++; addKill(e.name + (head ? '  ✖ HEADSHOT' : '  ✖')); }
   setTimeout(() => {
-    e.hp = 100; e.alive = true; e.rag = null; e.dying = 0;
+    e.hp = 100; e.alive = true; e.rag = null; e.dying = 0; e.hitT = 0;
     e.grp.visible = true;
     e.grp.rotation.set(0, 0, 0);
     e.grp.position.set(e.baseX, e.baseY, e.baseZ);
     e.model.joints.forEach(j => { const b = j.userData.basePose; j.rotation.set(b.x, b.y, b.z); });
+    e.model.torso.rotation.set(0, 0, 0);
+    if (e.model.gun) e.model.gun.rotation.x = -0.08;
+    if (e.ai) e.ai = makeAI(e);                      // fresh brain, full mag, standing
   }, 5000);
 }
 function updateRagdoll(e, dt) {
@@ -1293,23 +1381,193 @@ function updateEntities(dt) {
     if (e.rag) { updateRagdoll(e, dt); continue; }   // ragdolling — let it flop
     if (!e.alive) continue;
     e.phase += dt;
-    // breathe + tiny idle shuffle
-    e.grp.position.y = e.baseY + Math.sin(e.phase * 2) * 0.03;
-    // breathe around the posed joints (not overwrite them)
-    e.model.armL.rotation.x = (e.model.armL.userData.bx || 0) + Math.sin(e.phase * 1.7) * 0.035;
-    e.model.armR.rotation.x = (e.model.armR.userData.bx || 0) - Math.sin(e.phase * 1.7) * 0.035;
-    // friendlies face the nearest living enemy (they're IN the fight); everyone else faces you
-    let face = camera.position;
-    if (e.kind === 'friendly') {
-      let bd = 70;
-      for (const t of entities) {
-        if (!t.alive || t.kind !== 'enemy') continue;
-        const d = e.grp.position.distanceTo(t.grp.position);
-        if (d < bd) { bd = d; face = t.grp.position; }
+    const J = e.model.joints;                        // [aLs, aLe, aRs, aRe, lLh, lLk, lRh, lRk, head]
+    const B = (i) => J[i].userData.basePose;
+    const ai = e.ai;
+
+    // ---- hit reaction (both sides): jerk back, stagger, recover ----
+    if (e.hitT > 0) e.hitT = Math.max(0, e.hitT - dt * 2.6);
+    e.model.torso.rotation.x = -0.35 * e.hitT;
+    J[8].rotation.x = B(8).x - 0.35 * e.hitT;
+
+    if (ai) {
+      // ---- crouch blend (cover) ----
+      ai.crouch += ((ai.crouchTarget || 0) - ai.crouch) * Math.min(1, dt * 7);
+
+      // ---- walk / run cycle on the leg joints ----
+      const sp = ai.state === 'move' ? (ai.runSpeed || 2.3) : 0;
+      if (ai.movingAmt > 0.05) ai.walkPhase += dt * (4 + sp * 1.7);
+      const swing = Math.sin(ai.walkPhase) * (0.32 + sp * 0.08) * ai.movingAmt;
+      const lift = Math.max(0, -Math.sin(ai.walkPhase)) * 0.5 * ai.movingAmt;
+      const liftB = Math.max(0, Math.sin(ai.walkPhase)) * 0.5 * ai.movingAmt;
+      const crouchHip = -1.05 * ai.crouch, crouchKnee = 1.45 * ai.crouch;
+      J[4].rotation.x = B(4).x + swing + crouchHip;
+      J[6].rotation.x = B(6).x - swing + crouchHip;
+      J[5].rotation.x = B(5).x + lift + crouchKnee;
+      J[7].rotation.x = B(7).x + liftB + crouchKnee;
+      // slight forward lean while running
+      e.model.torso.rotation.x += -0.14 * ai.movingAmt;
+
+      // ---- reload animation: support arm drops to the mag, gun tips ----
+      if (ai.reloadT > 0) {
+        const p = 1 - ai.reloadT / 1.7;
+        const wave = Math.sin(Math.min(1, p) * Math.PI);
+        J[0].rotation.x = B(0).x + wave * 0.95;      // left shoulder down
+        J[1].rotation.x = B(1).x - wave * 0.4;
+        if (e.model.gun) e.model.gun.rotation.x = -0.08 + wave * 0.55;
+      } else {
+        J[0].rotation.x = B(0).x + Math.sin(e.phase * 1.7) * 0.035;
+        J[1].rotation.x = B(1).x;
+        if (e.model.gun) e.model.gun.rotation.x = -0.08;
+      }
+      J[2].rotation.x = B(2).x - Math.sin(e.phase * 1.7) * 0.035;
+
+      // ---- body height: crouch + footstep bob ----
+      e.grp.position.y = e.baseY - 0.34 * ai.crouch
+        + Math.abs(Math.sin(ai.walkPhase)) * 0.05 * ai.movingAmt
+        + Math.sin(e.phase * 2) * 0.02 * (1 - ai.movingAmt);
+
+      // ---- facing ----
+      if (ai.state === 'move') {
+        const tx = e.kind === 'friendly' ? (ai.cover ? ai.cover.sx : e.grp.position.x) : ai.moveX;
+        const tz = e.kind === 'friendly' ? (ai.cover ? ai.cover.sz : e.grp.position.z) : ai.moveZ;
+        e.grp.lookAt(tx, e.grp.position.y, tz);
+      } else if (e.kind === 'friendly') {
+        const t = nearestEnemyOf(e);
+        const face = t ? t.grp.position : camera.position;
+        e.grp.lookAt(face.x, e.grp.position.y, face.z);
+      } else {
+        e.grp.lookAt(camera.position.x, e.grp.position.y, camera.position.z);
+      }
+    } else {
+      // civilians / Prestige: breathe and watch you
+      e.grp.position.y = e.baseY + Math.sin(e.phase * 2) * 0.03;
+      e.model.armL.rotation.x = (e.model.armL.userData.bx || 0) + Math.sin(e.phase * 1.7) * 0.035;
+      e.model.armR.rotation.x = (e.model.armR.userData.bx || 0) - Math.sin(e.phase * 1.7) * 0.035;
+      e.grp.lookAt(camera.position.x, e.grp.position.y, camera.position.z);
+    }
+  }
+}
+
+// ---------------------------------------------------------------- combat AI (think + move + shoot)
+function nearestEnemyOf(f) {
+  let best = null, bestD = 70;
+  for (const e of entities) {
+    if (!e.alive || e.kind !== 'enemy') continue;
+    const d = f.grp.position.distanceTo(e.grp.position);
+    if (d < bestD) { bestD = d; best = e; }
+  }
+  return best;
+}
+function updateCombatAI(dt) {
+  const friendlies = entities.filter(f => f.alive && f.kind === 'friendly');
+
+  for (const e of entities) {
+    if (!e.alive || !e.ai) continue;
+    const ai = e.ai;
+    if (ai.reloadT > 0) ai.reloadT = Math.max(0, ai.reloadT - dt);
+    if (ai.reloadT === 0 && ai.mag <= 0) ai.mag = ai.magMax;   // mag seated
+    ai.movingAmt = Math.max(0, ai.movingAmt - dt * 4);         // decays unless stepping
+
+    // ============ TEAM APEX (ground squad): run, take cover, peek, fire ============
+    if (e.kind === 'friendly' && !e.posted) {
+      const target = nearestEnemyOf(e);
+      if (!target) { ai.state = 'hold'; ai.crouchTarget = 0; continue; }
+      const aim = target.grp.position.clone().add(new THREE.Vector3(0, 1.15, 0));
+
+      if (ai.state === 'hold') {                       // decide where to fight from
+        const cov = pickCover(e, target.grp.position);
+        if (cov) { ai.cover = cov; ai.state = 'move'; ai.runSpeed = rnd(3.6, 4.6); ai.fireT = rnd(0.5, 1.1); }
+        else { ai.state = 'peek'; ai.peekT = rnd(1, 2); }
+      } else if (ai.state === 'move') {                 // RUN to cover — shooting on the move
+        const r = stepNPC(e, ai.cover.sx, ai.cover.sz, ai.runSpeed, dt);
+        ai.movingAmt = 1; ai.crouchTarget = 0;
+        ai.fireT -= dt;
+        if (ai.fireT <= 0) {                            // snap a shot mid-run (wild)
+          ai.fireT = rnd(0.8, 1.5);
+          npcTryFire(e, aim, { err: 0.11, hitRadius: 0.3, friendly: true }) && hitEnemy(e, target, 16);
+        }
+        if (r === 'arrived') { ai.state = 'cover'; ai.coverT = rnd(0.9, 2.0); ai.peekCycles = 2 + (Math.random() * 3 | 0); }
+        else if (r === 'blocked') { ai.cover = null; ai.state = 'hold'; }
+      } else if (ai.state === 'cover') {                // tucked behind the object
+        ai.crouchTarget = 1;
+        ai.coverT -= dt;
+        if (ai.reloadT === 0 && ai.mag < ai.magMax * 0.4) { ai.mag = 0; ai.reloadT = 1.7; } // top up while safe
+        if (ai.coverT <= 0 && ai.reloadT === 0) { ai.state = 'peek'; ai.peekT = rnd(1.1, 1.9); ai.fireT = 0.25; }
+      } else if (ai.state === 'peek') {                 // up on the sights — fire a burst
+        ai.crouchTarget = 0;
+        ai.peekT -= dt; ai.fireT -= dt;
+        if (ai.fireT <= 0) {
+          ai.fireT = rnd(0.32, 0.5);
+          npcTryFire(e, aim, { err: 0.055, hitRadius: 0.32, friendly: true }) && hitEnemy(e, target, 22);
+        }
+        if (ai.peekT <= 0) {
+          ai.peekCycles--;
+          if (ai.peekCycles <= 0 || !ai.cover) { ai.cover = null; ai.state = 'hold'; } // REPOSITION — run somewhere new
+          else { ai.state = 'cover'; ai.coverT = rnd(0.8, 1.6); }
+        }
       }
     }
-    e.grp.lookAt(face.x, e.grp.position.y, face.z);
+
+    // ============ Rooftop twins: posted snipers (reload + stagger only) ============
+    else if (e.kind === 'friendly' && e.posted) {
+      const target = nearestEnemyOf(e);
+      if (!target) continue;
+      e.shootTimer -= dt;
+      if (e.shootTimer <= 0) {
+        e.shootTimer = 1.2 + Math.random() * 1.8;
+        const aim = target.grp.position.clone().add(new THREE.Vector3(0, 1.15, 0));
+        npcTryFire(e, aim, { err: 0.03, hitRadius: 0.32, friendly: true }) && hitEnemy(e, target, 45);
+      }
+    }
+
+    // ============ HYDRA: defenders that patrol, stagger, and reload ============
+    else if (e.kind === 'enemy') {
+      const dPlayer = e.grp.position.distanceTo(camera.position);
+      if (ai.state === 'move') {
+        const r = stepNPC(e, ai.moveX, ai.moveZ, 2.3, dt);
+        ai.movingAmt = 1;
+        if (r !== 'moving') ai.state = 'hold';
+      } else {
+        ai.thinkT -= dt;
+        if (ai.thinkT <= 0) {                           // sometimes walk to a new spot nearby
+          ai.thinkT = rnd(2.5, 6);
+          if (Math.random() < 0.45) {
+            ai.moveX = e.baseX + rnd(-3.5, 3.5);
+            ai.moveZ = e.baseZ + rnd(-3.5, 3.5);
+            ai.state = 'move';
+          }
+        }
+        if (dPlayer < 60) {
+          e.shootTimer -= dt;
+          if (e.shootTimer <= 0) {
+            e.shootTimer = 1.1 + Math.random() * 1.9;
+            if (friendlies.length && Math.random() < 0.4) {   // crossfire at your team
+              const f = friendlies[(Math.random() * friendlies.length) | 0];
+              const fAim = f.grp.position.clone().add(new THREE.Vector3(0, f.ai && f.ai.crouch > 0.5 ? 0.8 : 1.2, 0));
+              if (npcTryFire(e, fAim, { err: 0.08, hitRadius: 0.3 })) {
+                bloodBurst(fAim, null);
+                f.hitT = 1;                                   // hit reaction (animated)
+              }
+            } else {
+              const err = 0.035 + dPlayer * 0.0011 + moveAmount * 0.03 + (crouching ? -0.008 : 0);
+              if (npcTryFire(e, camera.position.clone(), { err, hitRadius: 0.4 })) {
+                damagePlayer(6 + Math.random() * 9);
+              }
+            }
+          }
+        }
+      }
+    }
   }
+}
+// a friendly landing a hit on an enemy (blood, stagger, maybe the kill)
+function hitEnemy(f, target, dmg) {
+  target.hp -= dmg;
+  target.hitT = 1;
+  const shotDir = target.grp.position.clone().sub(f.grp.position).setY(0).normalize();
+  bloodBurst(target.grp.position.clone().add(new THREE.Vector3(0, 1.15, 0)), shotDir);
+  if (target.hp <= 0 && target.alive) killEntity(target, false, shotDir, f.name);
 }
 
 // ---------------------------------------------------------------- main loop
@@ -1394,58 +1652,8 @@ function animate() {
       if (padPressed(gp, 4)) switchTo((wIndex - 1 + WEAPONS.length) % WEAPONS.length);
     }
 
-    // ---- ENEMY AI: pick a target (you or your team), fire with real aim error ----
-    const friendlies = entities.filter(f => f.alive && f.kind === 'friendly');
-    for (const e of entities) {
-      if (!e.alive || e.kind !== 'enemy') continue;
-      const d = e.grp.position.distanceTo(camera.position);
-      if (d > 60) continue;
-      e.shootTimer -= dt;
-      if (e.shootTimer <= 0) {
-        e.shootTimer = 1.1 + Math.random() * 1.9;
-        // 60% shoot at the player, 40% at a teammate (a real crossfire)
-        if (friendlies.length && Math.random() < 0.4) {
-          const f = friendlies[(Math.random() * friendlies.length) | 0];
-          const aim = f.grp.position.clone().add(new THREE.Vector3(0, 1.2, 0));
-          if (npcFire(e, aim, { err: 0.08, hitRadius: 0.3 })) {
-            bloodBurst(aim, null);                            // teammates bleed but stay up
-            f.model.torso.rotation.z = 0.15;                  // flinch
-            setTimeout(() => { if (f.model) f.model.torso.rotation.z = 0; }, 150);
-          }
-        } else {
-          // aim error grows with distance and shrinks if you stand still & tall
-          const err = 0.035 + d * 0.0011 + moveAmount * 0.03 + (crouching ? -0.008 : 0);
-          if (npcFire(e, camera.position.clone(), { err, hitRadius: 0.4 })) {
-            damagePlayer(6 + Math.random() * 9);
-          }
-          // whiff = you SEE the tracer streak past — that's the miss, no dice roll
-        }
-      }
-    }
-
-    // ---- TEAM APEX AI: your team fights with you ----
-    for (const f of entities) {
-      if (!f.alive || f.kind !== 'friendly') continue;
-      f.shootTimer -= dt;
-      if (f.shootTimer > 0) continue;
-      f.shootTimer = 0.9 + Math.random() * 1.6;
-      // nearest living enemy in range
-      let best = null, bestD = 65;
-      for (const e of entities) {
-        if (!e.alive || e.kind !== 'enemy') continue;
-        const d = f.grp.position.distanceTo(e.grp.position);
-        if (d < bestD) { bestD = d; best = e; }
-      }
-      if (!best) continue;
-      const isTwin = f.name.includes('Wolford');               // rooftop snipers shoot straighter
-      const aim = best.grp.position.clone().add(new THREE.Vector3(0, 1.2, 0));
-      if (npcFire(f, aim, { err: isTwin ? 0.03 : 0.055, hitRadius: 0.32, friendly: true })) {
-        best.hp -= isTwin ? 45 : 22;
-        const shotDir = aim.clone().sub(f.grp.position).setY(0).normalize();
-        bloodBurst(aim, shotDir);
-        if (best.hp <= 0 && best.alive) killEntity(best, false, shotDir, f.name);
-      }
-    }
+    // ---- COMBAT AI: state machines for both sides (move/cover/peek/reload) ----
+    updateCombatAI(dt);
 
     // health regen: 3 seconds without taking damage -> regenerate to 100
     if (hp < 100 && performance.now() - lastDamageAt > 3000) {
@@ -1461,7 +1669,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 5;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 6;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
