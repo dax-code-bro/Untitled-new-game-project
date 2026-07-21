@@ -1317,7 +1317,7 @@ function soldierModel(kind, name) {
     gun.add(cyl(mPoly, 0.03, 0.034, 0.18, 0, 0, -0.36));            // handguard
     gun.add(cyl(mDark, 0.013, 0.013, 0.16, 0, 0, -0.5));            // barrel
     gun.add(cyl(mDark, 0.018, 0.018, 0.05, 0, 0, -0.59));           // muzzle device
-    gun.add(part(mDark, 0.008, 0.06, 0.014, 0, 0.05, -0.44));       // front sight post
+    gun.add(part(mDark, 0.008, 0.06, 0.014, 0, 0.042, -0.44));      // front sight post
     gun.add(part(mDark, 0.03, 0.03, 0.05, 0, 0.05, 0.02));          // rear sight block
     const gGrip = part(mPoly, 0.03, 0.1, 0.05, 0, -0.115, 0.03, -0.45);
     gun.add(gGrip);
@@ -1325,8 +1325,8 @@ function soldierModel(kind, name) {
     const gmag = curvedMag(mDark, 1.15);
     gmag.position.set(0, -0.07, -0.16);
     gun.add(gmag);
-    gun.add(part(mPoly, 0.045, 0.075, 0.2, 0, -0.008, 0.27));       // stock
-    gun.add(part(mDark, 0.05, 0.085, 0.02, 0, -0.008, 0.38));       // buttpad
+    gun.add(part(mPoly, 0.045, 0.075, 0.2, 0, -0.008, 0.165));      // stock
+    gun.add(part(mDark, 0.05, 0.085, 0.02, 0, -0.008, 0.272));      // buttpad
     gun.scale.setScalar(1.3);
     gun.position.set(0.16, 1.22, -0.5);
     gun.rotation.x = 0;
@@ -1538,14 +1538,14 @@ function buildM16() {
   const upper = part(gunBlack, 0.026, 0.05, 0.3, 0, 0.006, -0.17);
   const lower = part(gunBlack, 0.026, 0.042, 0.17, 0, -0.033, -0.11);
   const ejPort = part(gunDark, 0.002, 0.02, 0.05, 0.0145, 0.004, -0.16);        // ejection port
-  const chHandle = part(gunDark, 0.02, 0.012, 0.035, 0, 0.032, -0.015);         // charging handle — CYCLES
+  const chHandle = part(gunDark, 0.02, 0.012, 0.035, 0, 0.028, -0.032);         // charging handle — CYCLES
   chHandle.userData.home = chHandle.position.clone();
   // carry handle with the rear aperture
-  const chL = part(gunBlack, 0.006, 0.03, 0.2, -0.01, 0.052, -0.14);
-  const chR = part(gunBlack, 0.006, 0.03, 0.2, 0.01, 0.052, -0.14);
-  const chTop = part(gunBlack, 0.026, 0.012, 0.2, 0, 0.068, -0.14);
+  const chL = part(gunBlack, 0.006, 0.034, 0.2, -0.01, 0.046, -0.14);
+  const chR = part(gunBlack, 0.006, 0.034, 0.2, 0.01, 0.046, -0.14);
+  const chTop = part(gunBlack, 0.026, 0.012, 0.2, 0, 0.065, -0.14);
   const rearSight = new THREE.Mesh(new THREE.TorusGeometry(0.011, 0.0022, 6, 14), gunBlack);
-  rearSight.position.set(0, 0.065, -0.03);
+  rearSight.position.set(0, 0.065, -0.055);
   // furniture
   const grip = pistolGrip(gunPoly); grip.position.set(0, -0.054, -0.045);
   const trig = triggerAssembly(gunBlack); trig.position.set(0, -0.054, -0.1);
@@ -1559,9 +1559,9 @@ function buildM16() {
   const fsR = part(gunBlack, 0.005, 0.05, 0.012, 0.012, 0.022, -0.6, 0, 0, -0.35);
   const fsPost = part(gunBlack, 0.005, 0.05, 0.008, 0, 0.045, -0.6);
   // stock with buttpad + cheek line
-  const stock = part(gunPoly, 0.024, 0.05, 0.2, 0, -0.004, 0.12);
-  const cheek = part(gunPoly, 0.024, 0.016, 0.14, 0, 0.026, 0.14);
-  const buttpad = part(gunDark, 0.028, 0.06, 0.018, 0, -0.004, 0.228);
+  const stock = part(gunPoly, 0.024, 0.05, 0.2, 0, -0.004, 0.075);
+  const cheek = part(gunPoly, 0.024, 0.016, 0.14, 0, 0.026, 0.095);
+  const buttpad = part(gunDark, 0.028, 0.06, 0.018, 0, -0.004, 0.183);
   g.add(upper, lower, ejPort, chHandle, chL, chR, chTop, rearSight, grip, trig, mag,
     guard, barrel, muzzle, fsL, fsR, fsPost, stock, cheek, buttpad);
   return { g, mag, bolt: chHandle, muzzle: new THREE.Vector3(0, 0, -0.78), pump: null,
@@ -1584,10 +1584,11 @@ function buildPP919() {
   const rodB = part(gunSteel, 0.012, 0.008, 0.16, 0, -0.03, 0.11, -0.18);
   const plate = part(gunSteel, 0.016, 0.07, 0.014, 0, -0.005, 0.19);
   // sights
+  const fpBase = part(gunBlack, 0.01, 0.024, 0.012, 0, 0.032, -0.42);
   const frontPost = part(gunBlack, 0.004, 0.03, 0.004, 0, 0.055, -0.42);
   const rearL = part(gunBlack, 0.004, 0.022, 0.004, -0.012, 0.055, 0.0);
   const rearR = part(gunBlack, 0.004, 0.022, 0.004, 0.012, 0.055, 0.0);
-  g.add(body, dust, bolt, helical, shroud, muzzle, grip, trig, rodT, rodB, plate, frontPost, rearL, rearR);
+  g.add(body, dust, bolt, helical, shroud, muzzle, grip, trig, rodT, rodB, plate, fpBase, frontPost, rearL, rearR);
   return { g, mag: helical, bolt, muzzle: new THREE.Vector3(0, 0.012, -0.5), pump: null,
     ads: new THREE.Vector3(0, -0.058, -0.32) };
 }
@@ -1604,10 +1605,10 @@ function buildBenelli() {
   bead.position.set(0, 0.042, -0.69);
   const rearL = part(gunBlack, 0.004, 0.014, 0.006, -0.013, 0.042, 0.02);
   const rearR = part(gunBlack, 0.004, 0.014, 0.006, 0.013, 0.042, 0.02);
-  const grip = pistolGrip(gunPoly); grip.position.set(0, -0.052, 0.03);
+  const grip = pistolGrip(gunPoly); grip.position.set(0, -0.04, 0.03);
   const trig = triggerAssembly(gunBlack); trig.position.set(0, -0.052, -0.02);
-  const stock = part(gunPoly, 0.026, 0.055, 0.2, 0, -0.006, 0.15);
-  const buttpad = part(gunDark, 0.03, 0.065, 0.018, 0, -0.006, 0.258);
+  const stock = part(gunPoly, 0.026, 0.055, 0.2, 0, -0.006, 0.13);
+  const buttpad = part(gunDark, 0.03, 0.065, 0.018, 0, -0.006, 0.238);
   g.add(receiver, port, barrel, tube, pump, bead, rearL, rearR, grip, trig, stock, buttpad);
   return { g, mag: null, bolt: null, muzzle: new THREE.Vector3(0, 0.022, -0.71), pump,
     ads: new THREE.Vector3(0, -0.046, -0.3) };
@@ -1616,9 +1617,9 @@ function buildStatesman() {
   const g = new THREE.Group();
   const slide = part(gunGold, 0.024, 0.045, 0.22, 0, 0.012, -0.09);               // gilded slide — CYCLES
   slide.userData.base = slide.position.clone();
-  for (let i = 0; i < 5; i++) g.add(part(gunDark, 0.026, 0.028, 0.004, 0, 0.012, 0.006 + i * 0.011)); // serrations
+  for (let i = 0; i < 5; i++) g.add(part(gunDark, 0.026, 0.028, 0.004, 0, 0.012, 0.016 - i * 0.009)); // serrations
   const frame = part(gunBlack, 0.022, 0.026, 0.19, 0, -0.022, -0.075);
-  const hammer = part(gunDark, 0.01, 0.024, 0.008, 0, 0.032, 0.024);              // hammer — COCKS
+  const hammer = part(gunDark, 0.01, 0.024, 0.008, 0, 0.03, 0.021);               // hammer — COCKS
   hammer.userData.home = hammer.rotation.x;
   const gripL = part(gunWood, 0.005, 0.085, 0.055, -0.015, -0.075, 0.005, -0.28);
   const gripR = part(gunWood, 0.005, 0.085, 0.055, 0.015, -0.075, 0.005, -0.28);
@@ -2732,7 +2733,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 23;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 24;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
