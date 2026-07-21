@@ -844,6 +844,108 @@ function terrainH(x, z) {
   scene.add(grass);
 }
 
+// THE BURNED HOUSE — a destroyed home, still smoking, still on fire
+const fireFX = { flames: [], light: null, smokeT: 0, smokes: [], x: 15, z: 8 };
+{
+  const burnt = new THREE.MeshStandardMaterial({ color: 0x211d18, roughness: 1 });
+  const charred = new THREE.MeshStandardMaterial({ color: 0x2e2620, roughness: 0.95,
+    normalMap: stuccoNormal, normalScale: new THREE.Vector2(0.6, 0.6) });
+  const HX = fireFX.x, HZ = fireFX.z;
+  function ruinWall(w, h, d, x, z, ry = 0) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), charred);
+    m.position.set(x, h / 2, z); m.rotation.y = ry;
+    m.castShadow = true; m.receiveShadow = true;
+    scene.add(m);
+    buildings.push(new THREE.Box3().setFromObject(m));
+    return m;
+  }
+  ruinWall(4.8, 2.3, 0.35, HX, HZ - 1.9);            // front wall stub
+  ruinWall(0.35, 3.2, 4.0, HX - 2.3, HZ);            // left wall — tallest survivor
+  ruinWall(4.8, 1.2, 0.35, HX, HZ + 1.9);            // back wall, mostly gone
+  // jagged broken tops
+  [[HX - 1.6, 2.5, HZ - 1.9, 0.7, 0.8], [HX + 0.9, 2.6, HZ - 1.9, 0.5, 0.6],
+   [HX - 2.3, 3.5, HZ - 1.2, 0.6, 0.7], [HX - 2.3, 3.4, HZ + 0.9, 0.5, 0.9]].forEach(([x, y, z, w, h]) => {
+    const j = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.34), charred);
+    j.position.set(x, y, z); j.rotation.z = rnd(-0.2, 0.2);
+    scene.add(j);
+  });
+  // collapsed roof beams, leaning burnt
+  for (let i = 0; i < 4; i++) {
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, rnd(3, 4.4)), burnt);
+    beam.position.set(HX + rnd(-1.5, 1.5), rnd(0.8, 1.6), HZ + rnd(-1, 1));
+    beam.rotation.set(rnd(-0.5, -0.2), rnd(0, 3), rnd(-0.2, 0.2));
+    beam.castShadow = true;
+    scene.add(beam);
+  }
+  // rubble pile where the right wall used to be
+  for (let i = 0; i < 10; i++) {
+    const r = new THREE.Mesh(new THREE.BoxGeometry(rnd(0.3, 0.9), rnd(0.2, 0.5), rnd(0.3, 0.8)), i % 3 ? charred : burnt);
+    r.position.set(HX + rnd(1.2, 2.6), rnd(0.1, 0.55), HZ + rnd(-1.6, 1.6));
+    r.rotation.set(rnd(0, 0.6), rnd(0, 3), rnd(0, 0.5));
+    r.castShadow = true; r.receiveShadow = true;
+    scene.add(r);
+  }
+  buildings.push(new THREE.Box3(
+    new THREE.Vector3(HX + 1.0, 0, HZ - 1.7), new THREE.Vector3(HX + 2.8, 1, HZ + 1.7)));
+  // scorched ground
+  const scorch = new THREE.Mesh(new THREE.CircleGeometry(4.2, 22),
+    new THREE.MeshBasicMaterial({ color: 0x14100c, transparent: true, opacity: 0.55, depthWrite: false }));
+  scorch.rotation.x = -Math.PI / 2; scorch.position.set(HX, 0.015, HZ);
+  scene.add(scorch);
+  // FLAMES — flickering additive sprites + a firelight
+  const flameTex = canvasTex(64, (ctx, s) => {
+    const g = ctx.createRadialGradient(s / 2, s * 0.62, 0, s / 2, s * 0.62, s * 0.55);
+    g.addColorStop(0, 'rgba(255,240,180,1)');
+    g.addColorStop(0.35, 'rgba(255,160,40,0.9)');
+    g.addColorStop(0.75, 'rgba(220,70,15,0.5)');
+    g.addColorStop(1, 'rgba(180,40,10,0)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, s, s);
+  });
+  [[HX - 0.6, 0.9, HZ + 0.4, 1.5], [HX + 0.7, 0.7, HZ - 0.9, 1.1], [HX - 1.8, 1.9, HZ - 0.3, 0.9],
+   [HX + 1.8, 0.5, HZ + 0.8, 0.8]].forEach(([x, y, z, sc]) => {
+    const f = new THREE.Sprite(new THREE.SpriteMaterial({ map: flameTex, transparent: true,
+      depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.95 }));
+    f.position.set(x, y, z);
+    f.userData = { base: sc, phase: rnd(0, 9), y0: y };
+    f.scale.setScalar(sc);
+    scene.add(f);
+    fireFX.flames.push(f);
+  });
+  fireFX.light = new THREE.PointLight(0xff7726, 3, 14);
+  fireFX.light.position.set(HX, 1.6, HZ);
+  scene.add(fireFX.light);
+}
+function updateFire(dt, t) {
+  for (const f of fireFX.flames) {                    // flicker: scale, stretch, breathe
+    const w = Math.sin(t * 13 + f.userData.phase) * 0.5 + Math.sin(t * 29 + f.userData.phase * 2) * 0.5;
+    f.scale.set(f.userData.base * (1 + w * 0.18), f.userData.base * (1 + w * 0.3), 1);
+    f.position.y = f.userData.y0 + w * 0.06;
+    f.material.opacity = 0.8 + w * 0.15;
+  }
+  fireFX.light.intensity = 2.7 + Math.sin(t * 17) * 0.7 + Math.sin(t * 7.3) * 0.5;
+  fireFX.smokeT += dt;                                 // the black column
+  while (fireFX.smokeT > 0.16) {
+    fireFX.smokeT -= 0.16;
+    const m = new THREE.SpriteMaterial({ map: smokeTex, transparent: true, depthWrite: false,
+      opacity: 0.5, color: 0x4a453e });
+    const s = new THREE.Sprite(m);
+    s.position.set(fireFX.x + rnd(-0.8, 0.8), rnd(1.6, 2.4), fireFX.z + rnd(-0.8, 0.8));
+    s.scale.setScalar(rnd(0.6, 1.1));
+    s.userData = { t: 0, drift: new THREE.Vector3(rnd(0.15, 0.45), rnd(0.9, 1.4), rnd(-0.1, 0.1)) };
+    scene.add(s);
+    fireFX.smokes.push(s);
+    if (fireFX.smokes.length > 42) scene.remove(fireFX.smokes.shift());
+  }
+  for (let i = fireFX.smokes.length - 1; i >= 0; i--) {
+    const s = fireFX.smokes[i];
+    s.userData.t += dt;
+    s.position.addScaledVector(s.userData.drift, dt);
+    s.scale.multiplyScalar(1 + dt * 0.55);
+    s.material.opacity = Math.max(0, 0.5 - s.userData.t * 0.085);
+    if (s.userData.t > 6) { scene.remove(s); fireFX.smokes.splice(i, 1); }
+  }
+}
+
 // puddles — mirror-flat reflective discs after the rain
 const puddleMat = new THREE.MeshStandardMaterial({ color: 0x93aabb, metalness: 1, roughness: 0.06 });
 [[3, -6, 1.4], [-7, -16, 1.9], [7.5, -20, 1.2], [-2, -28, 1.6], [11, -9, 1.0]].forEach(([x, z, r]) => {
@@ -2245,7 +2347,7 @@ function hitEnemy(f, target, dmg) {
 
 // ---------------------------------------------------------------- main loop
 const clock = new THREE.Clock();
-let fpsAcc = 0, fpsFrames = 0, lastFps = 0;
+let fpsAcc = 0, fpsFrames = 0, lastFps = 0, elapsed = 0;
 function animate() {
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.05);
@@ -2262,6 +2364,8 @@ function animate() {
   updateBlood(dt);
   updateSmoke(dt);
   updateDust(dt);
+  elapsed += dt;
+  updateFire(dt, elapsed);
   skyDome.position.copy(camera.position);      // sky follows player
 
   const gp = pollGamepad();
@@ -2344,7 +2448,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 19;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 20;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
