@@ -606,6 +606,59 @@ function tree(x, z, s = 1) {
   }
 }
 
+// REAL GRASS — thousands of instanced blade tufts following the terrain (one draw call)
+function terrainH(x, z) {
+  const d = Math.hypot(x, z);
+  const amp = d < 12 ? 0 : Math.min(1, (d - 12) / 30);
+  return (Math.sin(x * 0.16) * Math.cos(z * 0.13) + Math.sin(x * 0.31 - z * 0.21) * 0.5) * 0.22 * amp;
+}
+{
+  const grassBladeTex = canvasTex(64, (ctx, s) => {
+    for (let b2 = 0; b2 < 8; b2++) {                 // a few blades per tuft card
+      const x0 = rnd(8, s - 8);
+      const g = ctx.createLinearGradient(0, s, 0, 0);
+      const hue = rnd(70, 108) | 0;
+      g.addColorStop(0, `hsl(${hue},40%,22%)`);
+      g.addColorStop(1, `hsl(${hue},45%,38%)`);
+      ctx.strokeStyle = g;
+      ctx.lineWidth = rnd(2.5, 4.5);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x0, s);
+      ctx.quadraticCurveTo(x0 + rnd(-6, 6), s * 0.5, x0 + rnd(-14, 14), rnd(4, s * 0.45));
+      ctx.stroke();
+    }
+  });
+  const grassMat = new THREE.MeshStandardMaterial({ map: grassBladeTex, alphaTest: 0.4,
+    side: THREE.DoubleSide, roughness: 1, metalness: 0 });
+  const COUNT = 3200;
+  const grass = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.55, 0.42), grassMat, COUNT);
+  const dummy = new THREE.Object3D();
+  const col = new THREE.Color();
+  let placed = 0, guard = 0;
+  const probe = new THREE.Vector3();
+  while (placed < COUNT && guard++ < 30000) {
+    const x = rnd(-66, 66), z = rnd(-70, 62);
+    if (Math.hypot(x, z) > 67) continue;
+    probe.set(x, 0.5, z);
+    let blocked = false;
+    for (const b2 of buildings) if (b2.containsPoint(probe)) { blocked = true; break; }
+    if (blocked) continue;
+    dummy.position.set(x, terrainH(x, z) + 0.17, z);
+    dummy.rotation.y = rnd(0, Math.PI);
+    const sc = rnd(0.6, 1.6);
+    dummy.scale.set(sc, rnd(0.55, 1.25), sc);
+    dummy.updateMatrix();
+    grass.setMatrixAt(placed, dummy.matrix);
+    grass.setColorAt(placed, col.setHSL(rnd(0.2, 0.3), rnd(0.32, 0.5), rnd(0.3, 0.5)));
+    placed++;
+  }
+  grass.count = placed;
+  grass.instanceMatrix.needsUpdate = true;
+  if (grass.instanceColor) grass.instanceColor.needsUpdate = true;
+  scene.add(grass);
+}
+
 // puddles — mirror-flat reflective discs after the rain
 const puddleMat = new THREE.MeshStandardMaterial({ color: 0x93aabb, metalness: 1, roughness: 0.06 });
 [[3, -6, 1.4], [-7, -16, 1.9], [7.5, -20, 1.2], [-2, -28, 1.6], [11, -9, 1.0]].forEach(([x, z, r]) => {
@@ -2083,7 +2136,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 18;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 19;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
