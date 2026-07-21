@@ -1431,19 +1431,20 @@ function updateEntities(dt) {
       // ---- crouch blend (cover) ----
       ai.crouch += ((ai.crouchTarget || 0) - ai.crouch) * Math.min(1, dt * 7);
 
-      // ---- walk / run cycle on the leg joints ----
+      // ---- walk / run cycle + crouch formations on the leg joints ----
       const sp = ai.state === 'move' ? (ai.runSpeed || 2.3) : 0;
       if (ai.movingAmt > 0.05) ai.walkPhase += dt * (4 + sp * 1.7);
-      const swing = Math.sin(ai.walkPhase) * (0.32 + sp * 0.08) * ai.movingAmt;
-      const lift = Math.max(0, -Math.sin(ai.walkPhase)) * 0.5 * ai.movingAmt;
-      const liftB = Math.max(0, Math.sin(ai.walkPhase)) * 0.5 * ai.movingAmt;
-      const crouchHip = -1.05 * ai.crouch, crouchKnee = 1.45 * ai.crouch;
-      J[4].rotation.x = B(4).x + swing + crouchHip;
-      J[6].rotation.x = B(6).x - swing + crouchHip;
-      J[5].rotation.x = B(5).x + lift + crouchKnee;
-      J[7].rotation.x = B(7).x + liftB + crouchKnee;
-      // slight forward lean while running
-      e.model.torso.rotation.x += -0.14 * ai.movingAmt;
+      const c = ai.crouch;
+      const CR = CROUCH_STYLES[ai.crouchStyle || 0];
+      const swing = Math.sin(ai.walkPhase) * (0.32 + sp * 0.08) * ai.movingAmt * (1 - c);
+      const bendA = Math.max(0, -Math.sin(ai.walkPhase)) * 0.45 * ai.movingAmt * (1 - c);
+      const bendB = Math.max(0, Math.sin(ai.walkPhase)) * 0.45 * ai.movingAmt * (1 - c);
+      J[4].rotation.x = B(4).x + swing - bendA * 0 + (CR.lh - B(4).x) * c;  // left hip
+      J[5].rotation.x = B(5).x - bendA + (CR.lk - B(5).x) * c;              // left knee (shin folds BACK)
+      J[6].rotation.x = B(6).x - swing + (CR.rh - B(6).x) * c;              // right hip
+      J[7].rotation.x = B(7).x - bendB + (CR.rk - B(7).x) * c;              // right knee
+      // lean forward while running; settle lower into the kneel
+      e.model.torso.rotation.x += -0.14 * ai.movingAmt - 0.12 * c;
 
       // ---- arms & gun: the gun stays LEVEL on the body; hands ride their stations ----
       // READY  (creation pose): gun at chest height; right hand grip, left hand barrel.
@@ -1482,17 +1483,17 @@ function updateEntities(dt) {
         g.position.y = L(g.userData.basePos.y, 1.38);
         g.position.z = L(g.userData.basePos.z, -0.18) + 0.06 * kick;
       }
-      // cheek weld + bladed torso while aiming; the body rocks back on each shot
+      // cheek weld while aiming; the body rocks back on each shot
+      // (torso yaw is set in the facing section below — turn-lead + blade)
       J[8].rotation.z = 0.07 * aimA;
-      e.model.torso.rotation.y = 0.12 * aimA;
       e.model.torso.rotation.x += -0.09 * kick;
 
-      // ---- body height: crouch + footstep bob ----
-      e.grp.position.y = e.baseY - 0.34 * ai.crouch
+      // ---- body height: crouch formation depth + footstep bob ----
+      e.grp.position.y = e.baseY - CR.drop * ai.crouch
         + Math.abs(Math.sin(ai.walkPhase)) * 0.05 * ai.movingAmt
         + Math.sin(e.phase * 2) * 0.02 * (1 - ai.movingAmt);
 
-      // ---- facing: TURN, don't snap — bodies rotate at a real turn rate ----
+      // ---- facing: TURN, don't snap — slow believable rotation, torso leads ----
       let fx, fz;
       if (ai.state === 'move') {
         fx = e.kind === 'friendly' ? (ai.cover ? ai.cover.sx : e.grp.position.x) : ai.moveX;
@@ -1504,7 +1505,12 @@ function updateEntities(dt) {
       } else {
         fx = camera.position.x; fz = camera.position.z;
       }
-      turnToward(e, fx, fz, ai.state === 'move' ? 5.5 : 3.2, dt);
+      turnToward(e, fx, fz, ai.state === 'move' ? 3.4 : 2.2, dt);
+      // the upper body LEADS the turn — head and torso swing toward the target
+      // first, the feet catch up. This is what makes rotation read as rotation.
+      const lead = THREE.MathUtils.clamp(e.turnDiff || 0, -0.55, 0.55);
+      e.model.torso.rotation.y = 0.12 * aimA + lead * 0.45;
+      J[8].rotation.y = lead * 0.65;
     } else {
       // civilians / Prestige: breathe and watch you (turning, not snapping)
       e.grp.position.y = e.baseY + Math.sin(e.phase * 2) * 0.03;
@@ -1516,16 +1522,25 @@ function updateEntities(dt) {
 }
 
 // rotate an NPC's body toward a point at a limited turn rate (rad/s).
-// Leaves e.faceErr = remaining yaw error, so the AI can hold fire mid-turn.
+// Leaves e.faceErr (remaining yaw error — AI holds fire mid-turn) and
+// e.turnDiff (signed error — the torso/head visibly LEAD into the turn).
 function turnToward(e, fx, fz, rate, dt) {
   const desired = Math.atan2(-(fx - e.grp.position.x), -(fz - e.grp.position.z));
   let diff = desired - e.grp.rotation.y;
   while (diff > Math.PI) diff -= Math.PI * 2;
   while (diff < -Math.PI) diff += Math.PI * 2;
+  e.turnDiff = diff;
   const step = Math.sign(diff) * Math.min(Math.abs(diff), rate * dt);
   e.grp.rotation.y += step;
   e.faceErr = Math.abs(diff) - Math.abs(step);
 }
+
+// crouch formations — picked at random each time a soldier settles into cover
+const CROUCH_STYLES = [
+  { lh: 1.15, lk: -1.25, rh: -0.2, rk: -1.5,  drop: 0.42 }, // KNEEL: right knee down, left foot planted
+  { lh: -0.2, lk: -1.5,  rh: 1.15, rk: -1.25, drop: 0.42 }, // KNEEL mirrored: left knee down
+  { lh: 1.2,  lk: -1.4,  rh: 1.2,  rk: -1.4,  drop: 0.5 },  // LOW SQUAT: both legs coiled
+];
 
 // ---------------------------------------------------------------- combat AI (think + move + shoot)
 function nearestEnemyOf(f) {
@@ -1564,7 +1579,10 @@ function updateCombatAI(dt) {
           ai.fireT = rnd(0.8, 1.5);
           npcTryFire(e, aim, { err: 0.11, hitRadius: 0.3, friendly: true }) && hitEnemy(e, target, 16);
         }
-        if (r === 'arrived') { ai.state = 'cover'; ai.coverT = rnd(0.9, 2.0); ai.peekCycles = 2 + (Math.random() * 3 | 0); }
+        if (r === 'arrived') {
+          ai.state = 'cover'; ai.coverT = rnd(0.9, 2.0); ai.peekCycles = 2 + (Math.random() * 3 | 0);
+          ai.crouchStyle = (Math.random() * CROUCH_STYLES.length) | 0;   // pick a crouch formation
+        }
         else if (r === 'blocked') { ai.cover = null; ai.state = 'hold'; }
       } else if (ai.state === 'cover') {                // tucked behind the object
         ai.crouchTarget = 1;
@@ -1749,7 +1767,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 12;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 13;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
