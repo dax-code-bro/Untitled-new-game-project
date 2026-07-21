@@ -566,11 +566,35 @@ function makeBuilding(x, z, w, h, d, i, forceIntact = false) {
   const soot = new THREE.Mesh(new THREE.BoxGeometry(0.12, h * 0.45, d * 0.8), charMat);
   soot.position.set((2 * wi - w) / 2 + 0.02, h * 0.72, 0);
   g.add(intact, stub, cap, soot);
-  for (let j = 0; j < 3; j++) {
-    const jag = new THREE.Mesh(new THREE.BoxGeometry(rnd(0.3, 0.7), rnd(0.4, 0.9), 0.3), charMat);
-    jag.position.set(xd + rnd(-wd / 2 + 0.3, wd / 2 - 0.3), hs + rnd(0.2, 0.5), rnd(-d / 2 + 0.3, d / 2 - 0.3));
-    jag.rotation.z = rnd(-0.25, 0.25);
+  for (let j = 0; j < 5; j++) {
+    const jag = new THREE.Mesh(new THREE.BoxGeometry(rnd(0.3, 0.7), rnd(0.4, 1.1), 0.3), charMat);
+    jag.position.set(xd + rnd(-wd / 2 + 0.3, wd / 2 - 0.3), hs + rnd(0.2, 0.6), rnd(-d / 2 + 0.3, d / 2 - 0.3));
+    jag.rotation.z = rnd(-0.3, 0.3);
     g.add(jag);
+  }
+  // the collapsed roof slab, fallen and leaning from the intact half down onto the stub
+  const slab = new THREE.Mesh(new THREE.BoxGeometry(wd * 1.15, 0.14, d * 0.85),
+    new THREE.MeshStandardMaterial({ color: 0x4a3c2f, roughness: 1 }));
+  slab.position.set(xd - 0.15, hs + (h - hs) * 0.35, rnd(-0.3, 0.3));
+  slab.rotation.z = -Math.atan2((h - hs) * 0.6, wd) + rnd(-0.1, 0.1);
+  slab.rotation.y = rnd(-0.12, 0.12);
+  slab.castShadow = true;
+  g.add(slab);
+  // shell holes punched through the surviving wall — dark breaches with rubble below
+  for (let j = 0; j < 2; j++) {
+    const holeZ = (j % 2 ? 1 : -1) * (d / 2 + 0.012);
+    const hole = new THREE.Mesh(new THREE.CircleGeometry(rnd(0.35, 0.6), 7),
+      new THREE.MeshBasicMaterial({ color: 0x0c0a08 }));
+    hole.position.set(xi + rnd(-wi / 3, wi / 3), rnd(h * 0.35, h * 0.75), holeZ);
+    hole.rotation.y = holeZ > 0 ? 0 : Math.PI;
+    hole.rotation.z = rnd(0, 3);
+    g.add(hole);
+    for (let k = 0; k < 3; k++) {
+      const bit = new THREE.Mesh(new THREE.BoxGeometry(rnd(0.12, 0.3), rnd(0.08, 0.2), rnd(0.12, 0.3)), k % 2 ? charMat : wall);
+      bit.position.set(hole.position.x + rnd(-0.4, 0.4), rnd(0.05, 0.2), holeZ + (holeZ > 0 ? rnd(0.1, 0.6) : -rnd(0.1, 0.6)));
+      bit.rotation.y = rnd(0, 3);
+      g.add(bit);
+    }
   }
   // rubble spilling off the fallen half
   for (let j = 0; j < 4; j++) {
@@ -837,6 +861,48 @@ function terrainH(x, z) {
   scene.add(fireSys.light);
 }
 
+// STREET DEBRIS — the war's litter: rubble piles, scattered bricks, beams, craters
+{
+  const brickBit = new THREE.MeshStandardMaterial({ color: 0x8a5a48, roughness: 1 });
+  const stoneBit = new THREE.MeshStandardMaterial({ color: 0x7d766c, roughness: 1 });
+  function debrisPile(x, z, n, spread) {
+    for (let i = 0; i < n; i++) {
+      const mats = [charMat, brickBit, stoneBit];
+      const b2 = new THREE.Mesh(new THREE.BoxGeometry(rnd(0.12, 0.5), rnd(0.08, 0.3), rnd(0.12, 0.45)), mats[i % 3]);
+      b2.position.set(x + rnd(-spread, spread), rnd(0.04, 0.22), z + rnd(-spread, spread));
+      b2.rotation.set(rnd(0, 0.5), rnd(0, 3), rnd(0, 0.5));
+      b2.castShadow = true; b2.receiveShadow = true;
+      scene.add(b2);
+    }
+    // the odd fallen beam
+    if (Math.random() < 0.7) {
+      const beam = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.14, rnd(1.6, 3)), charMat);
+      beam.position.set(x + rnd(-spread, spread), 0.09, z + rnd(-spread, spread));
+      beam.rotation.y = rnd(0, 3);
+      beam.castShadow = true;
+      scene.add(beam);
+    }
+  }
+  [[-8, -6], [7, -4], [-3, -14], [11, -17], [-12, -20], [3, -25], [-7, -30], [14, -26],
+   [-16, -10], [18, -14], [0, -34], [-19, 2], [9, 3], [-2, 6]].forEach(([x, z]) => debrisPile(x, z, 8, 1.6));
+  // shell craters — scorched dish + a rim of thrown earth
+  const craterMat = new THREE.MeshBasicMaterial({ color: 0x191410, transparent: true, opacity: 0.7, depthWrite: false });
+  [[-5, -19], [8, -8], [-11, -13], [4, -30], [16, -20], [-15, 5]].forEach(([x, z]) => {
+    const c = new THREE.Mesh(new THREE.CircleGeometry(rnd(0.9, 1.5), 16), craterMat);
+    c.rotation.x = -Math.PI / 2; c.position.set(x, 0.018, z);
+    scene.add(c);
+    for (let i = 0; i < 6; i++) {
+      const a = rnd(0, 6.3), rr = rnd(1.0, 1.6);
+      const clod = new THREE.Mesh(new THREE.BoxGeometry(rnd(0.1, 0.28), rnd(0.08, 0.18), rnd(0.1, 0.24)),
+        new THREE.MeshStandardMaterial({ color: 0x4c3e2c, roughness: 1 }));
+      clod.position.set(x + Math.cos(a) * rr, 0.07, z + Math.sin(a) * rr);
+      clod.rotation.y = rnd(0, 3);
+      clod.castShadow = true;
+      scene.add(clod);
+    }
+  });
+}
+
 // puddles — mirror-flat reflective discs after the rain
 const puddleMat = new THREE.MeshStandardMaterial({ color: 0x93aabb, metalness: 1, roughness: 0.06 });
 [[3, -6, 1.4], [-7, -16, 1.9], [7.5, -20, 1.2], [-2, -28, 1.6], [11, -9, 1.0]].forEach(([x, z, r]) => {
@@ -1052,29 +1118,34 @@ function soldierModel(kind, name) {
   grp.add(torso, hips, neck, head);
   const armL = armLJ.shoulder, armR = armRJ.shoulder;         // (kept names for the animator)
   const legL = legLJ.hip, legR = legRJ.hip;
-  // rifle for combatants — HELD IN THE RIGHT HAND (child of the elbow joint),
-  // so wherever the arms go, the gun goes. Left hand rides the handguard.
+  // rifle for combatants — a REAL rifle now: receiver, handguard, muzzle device,
+  // curved magazine, trigger guard, shaped grip, stock with buttpad
   let gun = null;
   if (isEnemy || kind === 'friendly') {
     gun = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.09, 0.5),
-      new THREE.MeshStandardMaterial({ map: metalTex, roughness: 0.5, metalness: 0.5 }));
-    const brl = new THREE.Mesh(new THREE.CylinderGeometry(0.013, 0.013, 0.24, 6),
-      new THREE.MeshStandardMaterial({ color: 0x22252a, metalness: 0.6, roughness: 0.4 }));
-    brl.rotation.x = Math.PI / 2; brl.position.z = -0.34;
-    const gmag = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.15, 0.07),
-      new THREE.MeshStandardMaterial({ color: 0x2b2e33, roughness: 0.7 }));
-    gmag.position.set(0, -0.1, -0.08); gmag.rotation.x = 0.25;
-    const gstock = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.08, 0.1),
-      new THREE.MeshStandardMaterial({ color: 0x2b2e33, roughness: 0.8 }));
-    gstock.position.set(0, -0.01, 0.27);
-    body.castShadow = true;
-    gun.add(body, brl, gmag, gstock);
-    // the gun is FIXED to the body, perfectly LEVEL — never tilted. The hands
-    // are posed onto it: right hand at the grip (rear), left hand on the barrel.
-    gun.scale.setScalar(1.3);                     // full-size rifle — fills the hands
-    gun.position.set(0.16, 1.22, -0.5);           // WHOLE gun forward of the body — butt at the shoulder, not through it
+    const mSteel = new THREE.MeshStandardMaterial({ map: metalTex, roughness: 0.5, metalness: 0.5 });
+    const mDark = new THREE.MeshStandardMaterial({ color: 0x14151a, roughness: 0.55, metalness: 0.4 });
+    const mPoly = new THREE.MeshStandardMaterial({ color: 0x24272c, roughness: 0.8 });
+    gun.add(part(mSteel, 0.05, 0.07, 0.34, 0, 0, -0.1));            // upper receiver
+    gun.add(part(mDark, 0.05, 0.05, 0.16, 0, -0.05, -0.04));        // lower receiver
+    gun.add(part(mDark, 0.004, 0.026, 0.06, 0.027, 0.005, -0.1));   // ejection port
+    gun.add(cyl(mPoly, 0.03, 0.034, 0.18, 0, 0, -0.36));            // handguard
+    gun.add(cyl(mDark, 0.013, 0.013, 0.16, 0, 0, -0.5));            // barrel
+    gun.add(cyl(mDark, 0.018, 0.018, 0.05, 0, 0, -0.59));           // muzzle device
+    gun.add(part(mDark, 0.008, 0.06, 0.014, 0, 0.05, -0.44));       // front sight post
+    gun.add(part(mDark, 0.03, 0.03, 0.05, 0, 0.05, 0.02));          // rear sight block
+    const gGrip = part(mPoly, 0.03, 0.1, 0.05, 0, -0.115, 0.03, -0.45);
+    gun.add(gGrip);
+    gun.add(part(mDark, 0.02, 0.008, 0.09, 0, -0.09, -0.08));       // trigger guard
+    const gmag = curvedMag(mDark, 1.15);
+    gmag.position.set(0, -0.07, -0.16);
+    gun.add(gmag);
+    gun.add(part(mPoly, 0.045, 0.075, 0.2, 0, -0.008, 0.27));       // stock
+    gun.add(part(mDark, 0.05, 0.085, 0.02, 0, -0.008, 0.38));       // buttpad
+    gun.scale.setScalar(1.3);
+    gun.position.set(0.16, 1.22, -0.5);
     gun.rotation.x = 0;
+    gun.userData.baseRotX = 0;
     gun.userData.basePos = gun.position.clone();
     gun.userData.mag = gmag;
     grp.add(gun);
@@ -1137,6 +1208,7 @@ function makeAI(e) {
     walkPhase: rnd(0, 6),
     movingAmt: 0,                  // 0..1 for the walk-cycle blend
     aimAmt: 0, aimHold: 0,         // two-handed shouldered-aim blend + hold timer
+    magDropped: false,             // one falling mag per reload
     kick: 0,                       // per-shot recoil impulse on the body
   };
 }
@@ -1193,7 +1265,7 @@ function npcTryFire(e, targetPos, opts) {
   const ai = e.ai;
   if (ai.reloadT > 0 || e.hitT > 0.55) return false;   // reloading or staggered
   if ((e.faceErr || 0) > 0.6) return false;            // still turning — hold fire until on target
-  if (ai.mag <= 0) { ai.reloadT = 1.7; return false; } // dry — reload (animation plays)
+  if (ai.mag <= 0) { ai.reloadT = 1.7; ai.magDropped = false; return false; } // dry — reload (animation plays)
   ai.mag--;
   ai.aimHold = Math.max(ai.aimHold, 0.9);              // rifle stays shouldered after the shot
   ai.kick = 1;                                         // the shot ROCKS them — recoil on the body
@@ -1219,78 +1291,161 @@ const gunPoly  = new THREE.MeshStandardMaterial({ color: 0x2c2f35, roughness: 0.
 const gunWood  = new THREE.MeshStandardMaterial({ map: woodTex, roughness: 0.8 });
 const gunGold  = new THREE.MeshStandardMaterial({ color: 0xd9a92f, roughness: 0.25, metalness: 0.95 });
 
+// ---- gun parts kit: shaped pieces every weapon is assembled from ----
+const gunDark = new THREE.MeshStandardMaterial({ color: 0x121317, roughness: 0.5, metalness: 0.5 });
+function part(mat, w, h, dp, x, y, z, rx = 0, ry = 0, rz = 0) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, dp), mat);
+  m.position.set(x, y, z); m.rotation.set(rx, ry, rz);
+  return m;
+}
+function cyl(mat, r1, r2, len, x, y, z, alongZ = true, seg = 10) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(r1, r2, len, seg), mat);
+  if (alongZ) m.rotation.x = Math.PI / 2;
+  m.position.set(x, y, z);
+  return m;
+}
+function curvedMag(mat, sx = 1) {
+  // a real banana magazine: three segments sweeping forward as they descend
+  const g = new THREE.Group();
+  for (let i = 0; i < 3; i++) {
+    const seg = part(mat, 0.024 * sx, 0.055 * sx, 0.05 * sx, 0, -i * 0.048 * sx, -i * 0.014 * sx, 0.18 + i * 0.17);
+    g.add(seg);
+  }
+  const plate = part(mat, 0.028 * sx, 0.012 * sx, 0.055 * sx, 0, -2.55 * 0.048 * sx, -2.4 * 0.014 * sx, 0.5);
+  g.add(plate);
+  return g;
+}
+function pistolGrip(mat, sx = 1) {
+  const g = new THREE.Group();
+  g.add(part(mat, 0.024 * sx, 0.095 * sx, 0.048 * sx, 0, -0.04 * sx, 0.012 * sx, -0.42));
+  g.add(part(mat, 0.026 * sx, 0.02 * sx, 0.052 * sx, 0, -0.088 * sx, 0.03 * sx, -0.42)); // flared base
+  return g;
+}
+function triggerAssembly(mat, sx = 1) {
+  const g = new THREE.Group();
+  g.add(part(mat, 0.016 * sx, 0.006 * sx, 0.075 * sx, 0, -0.042 * sx, 0, 0));           // guard bottom
+  g.add(part(mat, 0.016 * sx, 0.03 * sx, 0.006 * sx, 0, -0.028 * sx, -0.036 * sx, 0));  // guard front
+  g.add(part(mat, 0.016 * sx, 0.03 * sx, 0.006 * sx, 0, -0.028 * sx, 0.036 * sx, 0));   // guard rear
+  g.add(part(gunDark, 0.007 * sx, 0.026 * sx, 0.007 * sx, 0, -0.026 * sx, -0.008 * sx, 0.25)); // the trigger
+  return g;
+}
+function birdcage(x, y, z, sx = 1) {
+  const g = new THREE.Group();
+  g.add(cyl(gunDark, 0.014 * sx, 0.014 * sx, 0.055 * sx, 0, 0, 0));
+  g.add(cyl(gunSteel, 0.0145 * sx, 0.0145 * sx, 0.006 * sx, 0, 0, -0.02 * sx));  // slot ring
+  g.add(cyl(gunSteel, 0.0145 * sx, 0.0145 * sx, 0.006 * sx, 0, 0, 0.002 * sx));
+  g.position.set(x, y, z);
+  return g;
+}
+function ribbedGuard(mat, r, len, x, y, z, ribs = 4) {
+  const g = new THREE.Group();
+  g.add(cyl(mat, r, r * 1.12, len, 0, 0, 0));
+  for (let i = 0; i < ribs; i++) {
+    g.add(cyl(gunDark, r * 1.06, r * 1.06, 0.008, 0, 0, -len / 2 + (i + 0.5) * (len / ribs)));
+  }
+  g.position.set(x, y, z);
+  return g;
+}
+
 function buildM16() {
   const g = new THREE.Group();
-  const upper = new THREE.Mesh(new THREE.BoxGeometry(0.026, 0.055, 0.52), gunBlack); upper.position.z = -0.28;
-  const handguard = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.028, 0.3, 8), gunPoly);
-  handguard.rotation.x = Math.PI / 2; handguard.position.z = -0.55;
-  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.3, 8), gunSteel);
-  barrel.rotation.x = Math.PI / 2; barrel.position.z = -0.82;
-  const carry = new THREE.Mesh(new THREE.BoxGeometry(0.014, 0.038, 0.24), gunBlack); carry.position.set(0, 0.055, -0.22);
-  const frontSight = new THREE.Mesh(new THREE.BoxGeometry(0.007, 0.055, 0.012), gunBlack); frontSight.position.set(0, 0.045, -0.68);
-  const mag = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.2, 0.09), gunSteel);
-  mag.position.set(0, -0.12, -0.24); mag.rotation.x = 0.28;
-  const grip = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.14, 0.06), gunPoly);
-  grip.position.set(0, -0.1, -0.06); grip.rotation.x = -0.35;
-  const stock = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.08, 0.24), gunPoly); stock.position.set(0, -0.01, 0.09);
-  // iron sights: THIN rear aperture ring on the carry handle, aligned with the front post
-  const rearSight = new THREE.Mesh(new THREE.TorusGeometry(0.013, 0.002, 6, 14), gunBlack);
-  rearSight.position.set(0, 0.065, -0.02);
-  g.add(upper, handguard, barrel, carry, frontSight, mag, grip, stock, rearSight);
-  return { g, mag, muzzle: new THREE.Vector3(0, 0, -0.97), pump: null, ads: new THREE.Vector3(0, -0.065, -0.36) };
+  // receiver: shaped upper + lower with a real mag well between them
+  const upper = part(gunBlack, 0.026, 0.05, 0.3, 0, 0.006, -0.17);
+  const lower = part(gunBlack, 0.026, 0.042, 0.17, 0, -0.033, -0.11);
+  const ejPort = part(gunDark, 0.002, 0.02, 0.05, 0.0145, 0.004, -0.16);        // ejection port
+  const chHandle = part(gunDark, 0.02, 0.012, 0.035, 0, 0.032, -0.015);         // charging handle — CYCLES
+  chHandle.userData.home = chHandle.position.clone();
+  // carry handle with the rear aperture
+  const chL = part(gunBlack, 0.006, 0.03, 0.2, -0.01, 0.052, -0.14);
+  const chR = part(gunBlack, 0.006, 0.03, 0.2, 0.01, 0.052, -0.14);
+  const chTop = part(gunBlack, 0.026, 0.012, 0.2, 0, 0.068, -0.14);
+  const rearSight = new THREE.Mesh(new THREE.TorusGeometry(0.011, 0.0022, 6, 14), gunBlack);
+  rearSight.position.set(0, 0.065, -0.03);
+  // furniture
+  const grip = pistolGrip(gunPoly); grip.position.set(0, -0.054, -0.045);
+  const trig = triggerAssembly(gunBlack); trig.position.set(0, -0.054, -0.1);
+  const mag = curvedMag(gunSteel); mag.position.set(0, -0.075, -0.17);
+  mag.userData.home = { y: -0.075, z: -0.17 };
+  const guard = ribbedGuard(gunPoly, 0.02, 0.26, 0, 0, -0.45, 5);
+  const barrel = cyl(gunSteel, 0.009, 0.009, 0.14, 0, 0, -0.65);
+  const muzzle = birdcage(0, 0, -0.745);
+  // A-frame front sight
+  const fsL = part(gunBlack, 0.005, 0.05, 0.012, -0.012, 0.022, -0.6, 0, 0, 0.35);
+  const fsR = part(gunBlack, 0.005, 0.05, 0.012, 0.012, 0.022, -0.6, 0, 0, -0.35);
+  const fsPost = part(gunBlack, 0.005, 0.05, 0.008, 0, 0.045, -0.6);
+  // stock with buttpad + cheek line
+  const stock = part(gunPoly, 0.024, 0.05, 0.2, 0, -0.004, 0.12);
+  const cheek = part(gunPoly, 0.024, 0.016, 0.14, 0, 0.026, 0.14);
+  const buttpad = part(gunDark, 0.028, 0.06, 0.018, 0, -0.004, 0.228);
+  g.add(upper, lower, ejPort, chHandle, chL, chR, chTop, rearSight, grip, trig, mag,
+    guard, barrel, muzzle, fsL, fsR, fsPost, stock, cheek, buttpad);
+  return { g, mag, bolt: chHandle, muzzle: new THREE.Vector3(0, 0, -0.78), pump: null,
+    ads: new THREE.Vector3(0, -0.065, -0.36) };
 }
 function buildPP919() {
   const g = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.085, 0.36), gunBlack); body.position.z = -0.18;
-  const shroud = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, 0.22, 10), gunSteel);
-  shroud.rotation.x = Math.PI / 2; shroud.position.set(0, 0.01, -0.44);
-  const helical = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.34, 10), gunPoly); // Bizon-style helical mag
-  helical.rotation.x = Math.PI / 2; helical.position.set(0, -0.07, -0.26);
-  const grip = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.13, 0.055), gunPoly);
-  grip.position.set(0, -0.1, -0.02); grip.rotation.x = -0.3;
-  const stock = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.05, 0.2), gunSteel); stock.position.set(0, 0.005, 0.1);
-  // iron sights: front post on the shroud + rear notch on the receiver
-  const frontPost = new THREE.Mesh(new THREE.BoxGeometry(0.004, 0.03, 0.004), gunBlack);
-  frontPost.position.set(0, 0.055, -0.5);
-  const rearL = new THREE.Mesh(new THREE.BoxGeometry(0.004, 0.022, 0.004), gunBlack); rearL.position.set(-0.012, 0.055, 0.0);
-  const rearR = rearL.clone(); rearR.position.x = 0.014;
-  g.add(body, shroud, helical, grip, stock, frontPost, rearL, rearR);
-  return { g, mag: helical, muzzle: new THREE.Vector3(0, 0.01, -0.56), pump: null, ads: new THREE.Vector3(0, -0.058, -0.32) };
+  const body = part(gunBlack, 0.026, 0.055, 0.34, 0, 0, -0.16);
+  const dust = cyl(gunBlack, 0.016, 0.016, 0.3, 0, 0.03, -0.16);                 // round dust cover
+  const bolt = part(gunDark, 0.016, 0.014, 0.04, 0.02, 0.012, -0.08);            // side bolt knob — CYCLES
+  bolt.userData.home = bolt.position.clone();
+  const helical = cyl(gunPoly, 0.032, 0.032, 0.3, 0, -0.045, -0.22);             // Bizon helical mag
+  helical.userData.home = { y: -0.045, z: -0.22 };
+  const shroud = cyl(gunSteel, 0.014, 0.014, 0.14, 0, 0.012, -0.4);
+  const muzzle = cyl(gunDark, 0.011, 0.013, 0.03, 0, 0.012, -0.475);
+  const grip = pistolGrip(gunPoly); grip.position.set(0, -0.05, 0.015);
+  const trig = triggerAssembly(gunBlack); trig.position.set(0, -0.05, -0.04);
+  // skeleton folding stock
+  const rodT = part(gunSteel, 0.012, 0.008, 0.18, 0, 0.02, 0.1);
+  const rodB = part(gunSteel, 0.012, 0.008, 0.16, 0, -0.03, 0.11, -0.18);
+  const plate = part(gunSteel, 0.016, 0.07, 0.014, 0, -0.005, 0.19);
+  // sights
+  const frontPost = part(gunBlack, 0.004, 0.03, 0.004, 0, 0.055, -0.42);
+  const rearL = part(gunBlack, 0.004, 0.022, 0.004, -0.012, 0.055, 0.0);
+  const rearR = part(gunBlack, 0.004, 0.022, 0.004, 0.012, 0.055, 0.0);
+  g.add(body, dust, bolt, helical, shroud, muzzle, grip, trig, rodT, rodB, plate, frontPost, rearL, rearR);
+  return { g, mag: helical, bolt, muzzle: new THREE.Vector3(0, 0.012, -0.5), pump: null,
+    ads: new THREE.Vector3(0, -0.058, -0.32) };
 }
 function buildBenelli() {
   const g = new THREE.Group();
-  const receiver = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.08, 0.3), gunBlack); receiver.position.z = -0.12;
-  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.55, 8), gunSteel);
-  barrel.rotation.x = Math.PI / 2; barrel.position.set(0, 0.02, -0.5);
-  const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.45, 8), gunBlack);
-  tube.rotation.x = Math.PI / 2; tube.position.set(0, -0.02, -0.45);
-  const pump = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.16, 10), gunPoly);
-  pump.rotation.x = Math.PI / 2; pump.position.set(0, -0.02, -0.42);
-  const grip = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.13, 0.06), gunPoly);
-  grip.position.set(0, -0.1, 0.0); grip.rotation.x = -0.4;
-  const stock = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.1, 0.26), gunPoly); stock.position.set(0, -0.02, 0.16);
-  // iron sights: brass bead at the muzzle + shallow rear posts on the receiver
-  const bead = new THREE.Mesh(new THREE.SphereGeometry(0.007, 8, 8),
+  const receiver = part(gunBlack, 0.028, 0.06, 0.24, 0, 0, -0.08);
+  const port = part(gunDark, 0.002, 0.024, 0.05, 0.015, 0, -0.1);                 // loading/ejection port
+  const barrel = cyl(gunSteel, 0.013, 0.013, 0.5, 0, 0.022, -0.45);
+  const tube = cyl(gunBlack, 0.011, 0.011, 0.42, 0, -0.012, -0.42);               // mag tube
+  const pump = ribbedGuard(gunPoly, 0.02, 0.13, 0, -0.012, -0.38, 3);             // ribbed pump — CYCLES
+  pump.userData.base = pump.position.clone();
+  const bead = new THREE.Mesh(new THREE.SphereGeometry(0.006, 8, 8),
     new THREE.MeshStandardMaterial({ color: 0xd9b25f, metalness: 0.9, roughness: 0.25 }));
-  bead.position.set(0, 0.048, -0.76);
-  const rearL = new THREE.Mesh(new THREE.BoxGeometry(0.004, 0.016, 0.006), gunBlack); rearL.position.set(-0.013, 0.048, 0.02);
-  const rearR = rearL.clone(); rearR.position.x = 0.015;
-  g.add(receiver, barrel, tube, pump, grip, stock, bead, rearL, rearR);
-  return { g, mag: null, muzzle: new THREE.Vector3(0, 0.02, -0.78), pump, ads: new THREE.Vector3(0, -0.05, -0.3) };
+  bead.position.set(0, 0.042, -0.69);
+  const rearL = part(gunBlack, 0.004, 0.014, 0.006, -0.013, 0.042, 0.02);
+  const rearR = part(gunBlack, 0.004, 0.014, 0.006, 0.013, 0.042, 0.02);
+  const grip = pistolGrip(gunPoly); grip.position.set(0, -0.052, 0.03);
+  const trig = triggerAssembly(gunBlack); trig.position.set(0, -0.052, -0.02);
+  const stock = part(gunPoly, 0.026, 0.055, 0.2, 0, -0.006, 0.15);
+  const buttpad = part(gunDark, 0.03, 0.065, 0.018, 0, -0.006, 0.258);
+  g.add(receiver, port, barrel, tube, pump, bead, rearL, rearR, grip, trig, stock, buttpad);
+  return { g, mag: null, bolt: null, muzzle: new THREE.Vector3(0, 0.022, -0.71), pump,
+    ads: new THREE.Vector3(0, -0.046, -0.3) };
 }
 function buildStatesman() {
   const g = new THREE.Group();
-  const slide = new THREE.Mesh(new THREE.BoxGeometry(0.026, 0.05, 0.24), gunGold); slide.position.z = -0.1; // gilded slide (thin)
-  const frame = new THREE.Mesh(new THREE.BoxGeometry(0.024, 0.038, 0.2), gunBlack); frame.position.set(0, -0.045, -0.08);
-  const grip = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.13, 0.07), gunWood);
-  grip.position.set(0, -0.11, -0.005); grip.rotation.x = -0.28;
-  const trigger = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.045, 0.05), gunBlack); trigger.position.set(0, -0.06, -0.1);
-  const sight = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.02, 0.015), gunBlack); sight.position.set(0, 0.037, -0.2);
-  // iron sights: rear notch posts on the gilded slide
-  const rearL = new THREE.Mesh(new THREE.BoxGeometry(0.005, 0.016, 0.01), gunBlack); rearL.position.set(-0.011, 0.037, 0.0);
-  const rearR = rearL.clone(); rearR.position.x = 0.013;
-  g.add(slide, frame, grip, trigger, sight, rearL, rearR);
-  return { g, mag: grip, muzzle: new THREE.Vector3(0, 0, -0.24), pump: slide, ads: new THREE.Vector3(0, -0.042, -0.3) };
+  const slide = part(gunGold, 0.024, 0.045, 0.22, 0, 0.012, -0.09);               // gilded slide — CYCLES
+  slide.userData.base = slide.position.clone();
+  for (let i = 0; i < 5; i++) g.add(part(gunDark, 0.026, 0.028, 0.004, 0, 0.012, 0.006 + i * 0.011)); // serrations
+  const frame = part(gunBlack, 0.022, 0.026, 0.19, 0, -0.022, -0.075);
+  const hammer = part(gunDark, 0.01, 0.024, 0.008, 0, 0.032, 0.024);              // hammer — COCKS
+  hammer.userData.home = hammer.rotation.x;
+  const gripL = part(gunWood, 0.005, 0.085, 0.055, -0.015, -0.075, 0.005, -0.28);
+  const gripR = part(gunWood, 0.005, 0.085, 0.055, 0.015, -0.075, 0.005, -0.28);
+  const gripCore = part(gunBlack, 0.024, 0.09, 0.05, 0, -0.075, 0.005, -0.28);
+  const magBase = part(gunDark, 0.026, 0.012, 0.055, 0, -0.122, 0.018, -0.28);
+  const trig = triggerAssembly(gunBlack, 0.85); trig.position.set(0, -0.032, -0.09);
+  const sight = part(gunBlack, 0.01, 0.016, 0.012, 0, 0.042, -0.19);
+  const rearL2 = part(gunBlack, 0.005, 0.014, 0.01, -0.01, 0.042, 0.0);
+  const rearR2 = part(gunBlack, 0.005, 0.014, 0.01, 0.01, 0.042, 0.0);
+  g.add(slide, frame, hammer, gripL, gripR, gripCore, magBase, trig, sight, rearL2, rearR2);
+  return { g, mag: magBase, bolt: hammer, muzzle: new THREE.Vector3(0, 0.012, -0.21), pump: slide,
+    ads: new THREE.Vector3(0, -0.047, -0.3) };
 }
 const gunModels = [buildM16(), buildPP919(), buildBenelli(), buildStatesman()];
 
@@ -1401,6 +1556,29 @@ const muzzleLight = new THREE.PointLight(0xffc36b, 0, 7);
 rig.add(muzzleLight);
 
 // shell casings
+// spent magazines physically fall out of guns during reloads
+const fallingMags = [];
+function dropMag(src) {
+  src.updateWorldMatrix(true, false);
+  const m = src.clone(true);
+  m.visible = true;
+  src.matrixWorld.decompose(m.position, m.quaternion, m.scale);
+  m.userData = { v: new THREE.Vector3(rnd(-0.4, 0.4), -0.3, rnd(-0.4, 0.4)), av: rnd(-7, 7), t: 0 };
+  scene.add(m);
+  fallingMags.push(m);
+  if (fallingMags.length > 8) scene.remove(fallingMags.shift());
+}
+function updateFallingMags(dt) {
+  for (let i = fallingMags.length - 1; i >= 0; i--) {
+    const m = fallingMags[i];
+    m.userData.t += dt;
+    m.userData.v.y -= 9.8 * dt;
+    m.position.addScaledVector(m.userData.v, dt);
+    m.rotation.x += m.userData.av * dt;
+    if (m.position.y < 0.05) { m.position.y = 0.05; m.userData.v.set(0, 0, 0); m.userData.av = 0; }
+    if (m.userData.t > 3) { scene.remove(m); fallingMags.splice(i, 1); }
+  }
+}
 const shellGeo = new THREE.CylinderGeometry(0.008, 0.008, 0.03, 6);
 const shellMat = new THREE.MeshStandardMaterial({ color: 0xc8a13c, metalness: 0.9, roughness: 0.3 });
 const shells = [];
@@ -1922,16 +2100,41 @@ function updateWeapon(dt) {
     rig.position.y += -dip * 0.13;
     rig.rotation.z = -dip * 0.5;
     rig.rotation.x += -dip * 0.25;
-    const mag = gunModels[wIndex].mag;
-    if (mag) {
-      mag.userData.base = mag.userData.base || mag.position.clone();
-      const mt = t < 0.45 ? t / 0.45 : t > 0.6 ? 1 - (t - 0.6) / 0.4 : 1;
-      mag.position.y = mag.userData.base.y - mt * 0.16;
+    const gm = gunModels[wIndex];
+    if (gm.mag && gm.mag.userData.home) {
+      const home = gm.mag.userData.home;
+      if (t < 0.35) {                                  // mag releases: slides down and tilts out
+        gm.mag.visible = true;
+        gm.mag.position.y = home.y - (t / 0.35) * 0.2;
+        gm.mag.rotation.x = (t / 0.35) * 0.45;
+      } else if (t < 0.6) {                            // the empty DROPS — a real mag falls to the ground
+        if (!s.magDropped) { s.magDropped = true; dropMag(gm.mag); }
+        gm.mag.visible = false;
+      } else {                                         // fresh mag comes up from below and seats
+        gm.mag.visible = true;
+        const k = (t - 0.6) / 0.4;
+        gm.mag.position.y = home.y - (1 - k) * 0.18;
+        gm.mag.rotation.x = 0;
+      }
     }
   } else {
     rig.rotation.z = THREE.MathUtils.lerp(rig.rotation.z, 0, dt * 10);
-    const mag = gunModels[wIndex].mag;
-    if (mag && mag.userData.base) mag.position.copy(mag.userData.base);
+    const gm = gunModels[wIndex];
+    if (gm.mag && gm.mag.userData.home) {
+      gm.mag.visible = true;
+      gm.mag.position.y = gm.mag.userData.home.y;
+      gm.mag.rotation.x = 0;
+      s.magDropped = false;
+    }
+  }
+  // bolt / charging handle / hammer cycles with every shot
+  {
+    const gm = gunModels[wIndex];
+    if (gm.bolt && gm.bolt.userData.home !== undefined) {
+      const k = recoil * recoil;
+      if (wIndex === 3) gm.bolt.rotation.x = -k * 0.9;                       // hammer snaps back
+      else if (gm.bolt.userData.home.z !== undefined) gm.bolt.position.z = gm.bolt.userData.home.z + k * 0.055;
+    }
   }
 
   // shotgun pump / pistol slide cycle on recoil
@@ -2005,7 +2208,11 @@ function updateEntities(dt) {
         J[1].rotation.x = B(1).x + wave * 0.3;
         if (e.model.gun) {
           const mg = e.model.gun.userData.mag;
-          if (mg) mg.visible = !(p > 0.3 && p < 0.62);  // the magazine is OUT mid-reload
+          if (mg) {
+            const out = p > 0.3 && p < 0.62;
+            if (out && !ai.magDropped) { ai.magDropped = true; dropMag(mg); }  // the empty hits the dirt
+            mg.visible = !out;
+          }
         }
       } else {
         J[0].rotation.x = L(B(0).x + br, 1.44);          // left hand rides the BARREL
@@ -2132,7 +2339,7 @@ function updateCombatAI(dt) {
       } else if (ai.state === 'cover') {                // tucked behind the object
         ai.crouchTarget = 1;
         ai.coverT -= dt;
-        if (ai.reloadT === 0 && ai.mag < ai.magMax * 0.4) { ai.mag = 0; ai.reloadT = 1.7; } // top up while safe
+        if (ai.reloadT === 0 && ai.mag < ai.magMax * 0.4) { ai.mag = 0; ai.reloadT = 1.7; ai.magDropped = false; } // top up while safe
         if (ai.coverT <= 0 && ai.reloadT === 0) { ai.state = 'peek'; ai.peekT = rnd(1.1, 1.9); ai.fireT = 0.25; }
       } else if (ai.state === 'peek') {                 // up on the sights — fire a burst
         ai.crouchTarget = 0;
@@ -2232,6 +2439,7 @@ function animate() {
   updateBlood(dt);
   updateSmoke(dt);
   updateDust(dt);
+  updateFallingMags(dt);
   elapsed += dt;
   updateFire(dt, elapsed);
   skyDome.position.copy(camera.position);      // sky follows player
@@ -2316,7 +2524,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 22;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 23;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
