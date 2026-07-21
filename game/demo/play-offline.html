@@ -53,6 +53,11 @@
 
   /* ---------- HUD ---------- */
   #hud { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
+  /* cinematic vignette + warm grade over the whole frame (pure compositing, zero GPU cost) */
+  #vignette { position:fixed; inset:0; pointer-events:none; z-index:5;
+    background:
+      radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 55%, rgba(10,8,5,0.42) 100%),
+      linear-gradient(rgba(255,225,170,0.05), rgba(60,45,25,0.07)); }
   #crosshair { position:absolute; left:50%; top:50%; width:16px; height:16px; transform:translate(-50%,-50%); }
   #crosshair::before, #crosshair::after { content:''; position:absolute; background:#e6e6e6; box-shadow:0 0 3px #000; }
   #crosshair::before { left:50%; top:0; width:2px; height:16px; transform:translateX(-50%); }
@@ -112,6 +117,7 @@
 <!-- HUD -->
 <div id="hud" class="hidden">
   <div id="crosshair"></div>
+  <div id="vignette"></div>
   <div id="nameplate"></div>
   <div id="topleft">FPS <span class="fps" id="fps">--</span></div>
   <div id="topright"></div>
@@ -245,6 +251,75 @@ function canvasTex(size, painter, rx = 1, ry = 1) {
   return t;
 }
 const rnd = (a, b) => a + Math.random() * (b - a);
+
+// generate a NORMAL MAP from a painted height field (Sobel filter) — bump detail in code
+function normalFromHeight(heightPainter, size = 256, strength = 2.2, rx = 1, ry = 1) {
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const x = c.getContext('2d');
+  heightPainter(x, size);
+  const d = x.getImageData(0, 0, size, size).data;
+  const h = (i, j) => d[(((j + size) % size) * size + ((i + size) % size)) * 4] / 255;
+  const n = document.createElement('canvas'); n.width = n.height = size;
+  const nx = n.getContext('2d');
+  const out = nx.createImageData(size, size);
+  for (let j = 0; j < size; j++) for (let i = 0; i < size; i++) {
+    const dx = (h(i + 1, j) - h(i - 1, j)) * strength;
+    const dy = (h(i, j + 1) - h(i, j - 1)) * strength;
+    const inv = 1 / Math.sqrt(dx * dx + dy * dy + 1);
+    const o = (j * size + i) * 4;
+    out.data[o] = (-dx * inv * 0.5 + 0.5) * 255;
+    out.data[o + 1] = (-dy * inv * 0.5 + 0.5) * 255;
+    out.data[o + 2] = inv * 255;
+    out.data[o + 3] = 255;
+  }
+  nx.putImageData(out, 0, 0);
+  const t = new THREE.CanvasTexture(n);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(rx, ry);
+  return t;
+}
+// height painters for the world's materials
+const brickNormal = normalFromHeight((x, s) => {
+  x.fillStyle = '#404040'; x.fillRect(0, 0, s, s);          // mortar low
+  const bh = 16, bw = 42;
+  for (let row = 0; row < s / bh; row++) {
+    const off = (row % 2) * (bw / 2);
+    for (let col = -1; col < s / bw + 1; col++) {
+      x.fillStyle = `hsl(0,0%,${rnd(72, 82) | 0}%)`;         // brick faces high
+      x.fillRect(col * bw + off + 2, row * bh + 2, bw - 4, bh - 4);
+    }
+  }
+}, 256, 2.6, 3, 2);
+const stuccoNormal = normalFromHeight((x, s) => {
+  x.fillStyle = '#808080'; x.fillRect(0, 0, s, s);
+  for (let i = 0; i < 5200; i++) {
+    x.fillStyle = `hsl(0,0%,${rnd(35, 68) | 0}%)`;
+    x.fillRect(rnd(0, s), rnd(0, s), rnd(1, 4), rnd(1, 3));
+  }
+}, 256, 1.5);
+const plankNormal = normalFromHeight((x, s) => {
+  x.fillStyle = '#9a9a9a'; x.fillRect(0, 0, s, s);
+  for (let p = 0; p < 4; p++) {
+    x.fillStyle = '#2a2a2a'; x.fillRect(0, p * 64, s, 4);   // deep gaps
+    for (let i = 0; i < 8; i++) {
+      x.fillStyle = `hsl(0,0%,${rnd(48, 66) | 0}%)`;
+      x.fillRect(0, p * 64 + rnd(8, 58), s, rnd(1, 3));      // grain grooves
+    }
+  }
+}, 256, 2.4);
+const groundNormal = normalFromHeight((x, s) => {
+  x.fillStyle = '#787878'; x.fillRect(0, 0, s, s);
+  for (let i = 0; i < 2600; i++) {
+    x.fillStyle = `hsl(0,0%,${rnd(38, 62) | 0}%)`;
+    x.fillRect(rnd(0, s), rnd(0, s), rnd(1, 4), rnd(1, 3));
+  }
+  for (let i = 0; i < 120; i++) {                            // stone bumps
+    const cx = rnd(0, s), cy = rnd(0, s), r = rnd(2, 6);
+    const g = x.createRadialGradient(cx, cy, 0, cx, cy, r);
+    g.addColorStop(0, '#d8d8d8'); g.addColorStop(1, '#787878');
+    x.fillStyle = g; x.beginPath(); x.arc(cx, cy, r, 0, 7); x.fill();
+  }
+}, 256, 2.0, 26, 26);
 
 // dirt ground with grass patches + stones (Colombia village floor)
 const dirtTex = canvasTex(512, (ctx, s) => {
@@ -390,14 +465,14 @@ const skyTex = canvasTex(1024, (ctx, s) => {
 
 // ---------------------------------------------------------------- sky, fog, lights (daylight — CoD1 palette)
 scene.background = new THREE.Color(0xa7c2d8);
-scene.fog = new THREE.Fog(0xb6c4c9, 45, 190);
+scene.fog = new THREE.Fog(0xc4bda8, 40, 230);   // warm dust haze — the RDR distance
 const skyDome = new THREE.Mesh(new THREE.SphereGeometry(280, 24, 14),
   new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide, fog: false }));
 scene.add(skyDome);
 
-scene.add(new THREE.HemisphereLight(0xbfd0e0, 0x6b5f48, 0.9));
-const sun = new THREE.DirectionalLight(0xfff1d6, 1.25);
-sun.position.set(18, 30, 10);
+scene.add(new THREE.HemisphereLight(0xc4d2e0, 0x77653f, 0.85));
+const sun = new THREE.DirectionalLight(0xffe9c2, 1.45);   // warm late-day sun
+sun.position.set(24, 26, 12);
 sun.castShadow = true;
 sun.shadow.mapSize.set(1024, 1024);
 sun.shadow.camera.left = -60; sun.shadow.camera.right = 60;
@@ -425,18 +500,44 @@ envTex.colorSpace = THREE.SRGBColorSpace;
 scene.environment = envTex;
 
 // ---------------------------------------------------------------- ground
-const ground = new THREE.Mesh(new THREE.PlaneGeometry(240, 240),
-  new THREE.MeshStandardMaterial({ map: dirtTex, roughness: 1, metalness: 0 }));
+const groundGeo = new THREE.PlaneGeometry(240, 240, 72, 72);
+{ // gentle terrain relief — the ground is no longer a billiard table
+  const pos = groundGeo.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const gx = pos.getX(i), gy = pos.getY(i);
+    const d = Math.hypot(gx, gy);
+    const amp = d < 12 ? 0 : Math.min(1, (d - 12) / 30);      // dead flat at spawn, rolls further out
+    pos.setZ(i, (Math.sin(gx * 0.16) * Math.cos(gy * 0.13) + Math.sin(gx * 0.31 + gy * 0.21) * 0.5) * 0.22 * amp);
+  }
+  groundGeo.computeVertexNormals();
+}
+const ground = new THREE.Mesh(groundGeo,
+  new THREE.MeshStandardMaterial({ map: dirtTex, normalMap: groundNormal,
+    normalScale: new THREE.Vector2(0.7, 0.7), roughness: 1, metalness: 0 }));
 ground.rotation.x = -Math.PI / 2;
 ground.receiveShadow = true;
 scene.add(ground);
+
+// distant mountain ring + haze — the world no longer ends at a fog wall
+const mtnMat = new THREE.MeshBasicMaterial({ color: 0x8d9aa8, fog: true });
+for (let i = 0; i < 14; i++) {
+  const a = (i / 14) * Math.PI * 2 + 0.2;
+  const r = 195 + (i % 3) * 18;
+  const m = new THREE.Mesh(new THREE.ConeGeometry(rnd(28, 55), rnd(26, 48), 5), mtnMat);
+  m.position.set(Math.cos(a) * r, 4, Math.sin(a) * r);
+  m.rotation.y = rnd(0, 3);
+  scene.add(m);
+}
 
 // ---------------------------------------------------------------- village buildings + props (collidable)
 const buildings = [];
 const wallMats = [wallTexA, wallTexB, wallTexC, brickTex];
 function makeBuilding(x, z, w, h, d, i) {
   const tex = wallMats[i % wallMats.length];
-  const wall = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95 });
+  const isBrick = tex === brickTex;
+  const wall = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95,
+    normalMap: isBrick ? brickNormal : stuccoNormal,
+    normalScale: new THREE.Vector2(isBrick ? 0.9 : 0.5, isBrick ? 0.9 : 0.5) });
   const roof = new THREE.MeshStandardMaterial({ color: 0x5a4636, roughness: 1 });
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), [wall, wall, roof, roof, wall, wall]);
   mesh.position.set(x, h / 2, z);
@@ -469,7 +570,8 @@ for (let i = 0; i < 20; i++) {
 // cover spots the squad AI can duck behind (filled in by the props below)
 const coverPoints = [];
 // crates
-const crateMat = new THREE.MeshStandardMaterial({ map: woodTex, roughness: 0.9 });
+const crateMat = new THREE.MeshStandardMaterial({ map: woodTex, roughness: 0.9,
+  normalMap: plankNormal, normalScale: new THREE.Vector2(0.8, 0.8) });
 [[-4, -8, 1.1], [-3, -8.8, 0.9], [-3.5, -7.5, 0.8, 0.9], [6, -10, 1.2], [7.1, -10.3, 0.85],
  [2, -20, 1.0], [-8, -18, 1.1], [10, -22, 0.95]].forEach(([x, z, s, y]) => {
   const c = new THREE.Mesh(new THREE.BoxGeometry(s, s, s), crateMat);
@@ -549,6 +651,36 @@ function tree(x, z, s = 1) {
   wt.position.set(-22, 0, -28);
   scene.add(wt);
   buildings.push(new THREE.Box3().setFromObject(wt));
+}
+
+// telephone poles with sagging wires down the main street (the RDR skyline)
+{
+  const poleMat = new THREE.MeshStandardMaterial({ map: woodTex, roughness: 1 });
+  const wireMat = new THREE.LineBasicMaterial({ color: 0x1c1a17 });
+  const tops = [];
+  [[-4.5, 2], [4.5, -8], [-4.5, -18], [4.5, -28], [-4.5, -38]].forEach(([px, pz]) => {
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 7.4, 8), poleMat);
+    pole.position.set(px, 3.7, pz);
+    pole.castShadow = true;
+    const cross = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.09, 0.09), poleMat);
+    cross.position.set(px, 6.9, pz);
+    scene.add(pole, cross);
+    buildings.push(new THREE.Box3().setFromObject(pole));
+    tops.push(new THREE.Vector3(px, 7.05, pz));
+  });
+  for (let i = 0; i < tops.length - 1; i++) {           // catenary sag between poles
+    for (const off of [-0.5, 0.5]) {
+      const a = tops[i].clone(), b2 = tops[i + 1].clone();
+      a.x += off; b2.x += off;
+      const pts = [];
+      for (let t = 0; t <= 10; t++) {
+        const p = a.clone().lerp(b2, t / 10);
+        p.y -= Math.sin((t / 10) * Math.PI) * 0.55;     // the sag
+        pts.push(p);
+      }
+      scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), wireMat));
+    }
+  }
 }
 
 // puddles — mirror-flat reflective discs after the rain
@@ -1007,12 +1139,88 @@ function buildStatesman() {
 }
 const gunModels = [buildM16(), buildPP919(), buildBenelli(), buildStatesman()];
 
+// PLAYER ARMS — visible camo sleeves + hands holding the weapon (the CoD frame)
+const sleeveMat = new THREE.MeshStandardMaterial({ map: camoGreen, roughness: 0.95 });
+const handMat = new THREE.MeshStandardMaterial({ color: 0xc9a184, roughness: 0.8 });
+function buildPlayerArms() {
+  const g = new THREE.Group();
+  // right forearm: from bottom-right of the frame up to the grip
+  const rFore = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 0.34), sleeveMat);
+  rFore.position.set(0.045, -0.1, 0.09); rFore.rotation.x = 0.55; rFore.rotation.z = -0.12;
+  const rHand = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.085, 0.08), handMat);
+  rHand.position.set(0.005, -0.085, -0.055);
+  // left forearm: from bottom-left reaching to the handguard
+  const lFore = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 0.42), sleeveMat);
+  lFore.position.set(-0.12, -0.15, -0.25); lFore.rotation.x = 0.35; lFore.rotation.y = -0.35;
+  const lHand = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.075, 0.085), handMat);
+  lHand.position.set(-0.02, -0.045, -0.46);
+  g.add(rFore, rHand, lFore, lHand);
+  return g;
+}
+const playerArms = buildPlayerArms();
+
+// muzzle smoke — soft grey puffs that drift up after each shot
+const smokeTex = canvasTex(64, (ctx, s) => {
+  const g = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+  g.addColorStop(0, 'rgba(190,185,175,0.55)');
+  g.addColorStop(0.6, 'rgba(170,165,155,0.28)');
+  g.addColorStop(1, 'rgba(160,155,145,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, s, s);
+});
+const smokes = [];
+function muzzleSmoke(worldPos) {
+  const m = new THREE.SpriteMaterial({ map: smokeTex, transparent: true, depthWrite: false, opacity: 0.55 });
+  const s = new THREE.Sprite(m);
+  s.position.copy(worldPos);
+  s.scale.setScalar(rnd(0.12, 0.2));
+  s.userData = { t: 0, drift: new THREE.Vector3(rnd(-0.1, 0.1), rnd(0.25, 0.45), rnd(-0.1, 0.1)) };
+  scene.add(s); smokes.push(s);
+  if (smokes.length > 24) scene.remove(smokes.shift());
+}
+function updateSmoke(dt) {
+  for (let i = smokes.length - 1; i >= 0; i--) {
+    const s = smokes[i];
+    s.userData.t += dt;
+    s.position.addScaledVector(s.userData.drift, dt);
+    s.scale.multiplyScalar(1 + dt * 1.6);
+    s.material.opacity = Math.max(0, 0.55 - s.userData.t * 0.8);
+    if (s.userData.t > 0.8) { scene.remove(s); smokes.splice(i, 1); }
+  }
+}
+
+// ambient dust motes drifting through the air (the RDR atmosphere)
+const dustTex = canvasTex(32, (ctx, s) => {
+  const g = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+  g.addColorStop(0, 'rgba(220,205,175,0.7)'); g.addColorStop(1, 'rgba(220,205,175,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, s, s);
+});
+const dustMotes = [];
+for (let i = 0; i < 36; i++) {
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: dustTex, transparent: true, depthWrite: false, opacity: rnd(0.12, 0.3) }));
+  s.position.set(rnd(-30, 30), rnd(0.3, 4), rnd(-35, 10));
+  s.scale.setScalar(rnd(0.04, 0.12));
+  s.userData.v = new THREE.Vector3(rnd(0.1, 0.4), rnd(-0.05, 0.05), rnd(-0.08, 0.08));
+  scene.add(s); dustMotes.push(s);
+}
+function updateDust(dt) {
+  for (const s of dustMotes) {
+    s.position.addScaledVector(s.userData.v, dt);
+    // wrap the mote volume around the player
+    const dx = s.position.x - camera.position.x, dz = s.position.z - camera.position.z;
+    if (dx > 32) s.position.x -= 64; if (dx < -32) s.position.x += 64;
+    if (dz > 32) s.position.z -= 64; if (dz < -32) s.position.z += 64;
+    if (s.position.y < 0.2) s.position.y = rnd(2, 4);
+    if (s.position.y > 4.5) s.position.y = 0.3;
+  }
+}
+
 // weapon rig (holds the current gun; animated every frame)
 const rig = new THREE.Group();
 const HIP = new THREE.Vector3(0.26, -0.24, -0.55);
 const ADS = new THREE.Vector3(0, -0.155, -0.42);
 rig.position.copy(HIP);
 gunModels.forEach((m, i) => { m.g.visible = i === 0; rig.add(m.g); });
+rig.add(playerArms);                     // your own arms in the frame, riding every bob/kick
 camera.add(rig);
 scene.add(camera);
 
@@ -1180,6 +1388,8 @@ function shoot() {
   muzzleLight.position.copy(m.muzzle);
   muzzleLight.intensity = 9;
   setTimeout(() => { flash.visible = false; muzzleLight.intensity = 0; }, 42);
+  rig.updateMatrixWorld();
+  muzzleSmoke(m.muzzle.clone().applyMatrix4(m.g.matrixWorld));
 
   const pellets = w.pellets || 1;
   const sprMul = aiming ? 0.45 : 1;
@@ -1399,6 +1609,7 @@ function npcMuzzle(e) {
 function npcFire(e, targetPos, opts = {}) {
   const from = npcMuzzle(e);
   npcFlash(from);
+  muzzleSmoke(from);
   const dir = targetPos.clone().sub(from).normalize();
   const err = opts.err ?? 0.06;
   dir.x += rnd(-err, err); dir.y += rnd(-err, err) * 0.6; dir.z += rnd(-err, err);
@@ -1887,6 +2098,8 @@ function animate() {
   updateEntities(dt);
   updateShells(dt);
   updateBlood(dt);
+  updateSmoke(dt);
+  updateDust(dt);
   skyDome.position.copy(camera.position);      // sky follows player
 
   const gp = pollGamepad();
@@ -1969,7 +2182,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 15;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 16;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
