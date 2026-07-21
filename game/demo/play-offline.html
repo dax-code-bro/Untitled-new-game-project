@@ -2,8 +2,25 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
 <title>UNTITLED — First Demo</title>
+<!-- PWA: installable + offline (Add to Home Screen on iPhone/Android) -->
+<link rel="manifest" href="./manifest.webmanifest" />
+<meta name="theme-color" content="#05060a" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="UNTITLED" />
+<link rel="apple-touch-icon" href="./icon-192.png" />
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
+<script>
+  // Register the service worker only when served over http(s) — skipped for file:// double-click play.
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch(() => {/* offline install unavailable; game still runs */});
+    });
+  }
+</script>
 <style>
   :root { color-scheme: dark; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
