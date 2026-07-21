@@ -452,37 +452,151 @@ for (let i = 0; i < 14; i++) {
   scene.add(m);
 }
 
+// ---------------------------------------------------------------- war-damage fire system (shared by every burning building)
+const charMat = new THREE.MeshStandardMaterial({ color: 0x241f19, roughness: 1 });
+const flameTex = canvasTex(64, (ctx, s) => {
+  const g = ctx.createRadialGradient(s / 2, s * 0.62, 0, s / 2, s * 0.62, s * 0.55);
+  g.addColorStop(0, 'rgba(255,240,180,1)');
+  g.addColorStop(0.35, 'rgba(255,160,40,0.9)');
+  g.addColorStop(0.75, 'rgba(220,70,15,0.5)');
+  g.addColorStop(1, 'rgba(180,40,10,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, s, s);
+});
+const fireSys = { emitters: [], smokes: [], light: null };
+function addFlame(x, y, z, sc) {
+  const f = new THREE.Sprite(new THREE.SpriteMaterial({ map: flameTex, transparent: true,
+    depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.95 }));
+  f.position.set(x, y, z);
+  f.userData = { base: sc, phase: rnd(0, 9), y0: y };
+  f.scale.setScalar(sc);
+  scene.add(f);
+  return f;
+}
+function addFireEmitter(x, y, z, opts = {}) {
+  const em = { x, y, z, flames: [], smokeT: rnd(0, 0.4), rate: opts.rate || 0.5, big: !!opts.big };
+  (opts.flames || []).forEach(([fx, fy, fz, sc]) => em.flames.push(addFlame(fx, fy, fz, sc)));
+  fireSys.emitters.push(em);
+  return em;
+}
+function updateFire(dt, t) {
+  for (const em of fireSys.emitters) {
+    for (const f of em.flames) {
+      const w = Math.sin(t * 13 + f.userData.phase) * 0.5 + Math.sin(t * 29 + f.userData.phase * 2) * 0.5;
+      f.scale.set(f.userData.base * (1 + w * 0.18), f.userData.base * (1 + w * 0.3), 1);
+      f.position.y = f.userData.y0 + w * 0.06;
+      f.material.opacity = 0.8 + w * 0.15;
+    }
+    em.smokeT += dt;
+    if (em.smokeT > em.rate) {
+      em.smokeT = 0;
+      if (fireSys.smokes.length > 90) scene.remove(fireSys.smokes.shift());
+      const m = new THREE.SpriteMaterial({ map: smokeTex, transparent: true, depthWrite: false,
+        opacity: 0.45, color: 0x4a453e });
+      const s = new THREE.Sprite(m);
+      s.position.set(em.x + rnd(-0.7, 0.7), em.y + rnd(0, 0.5), em.z + rnd(-0.7, 0.7));
+      s.scale.setScalar(rnd(0.6, 1.1) * (em.big ? 1.4 : 1));
+      s.userData = { t: 0, drift: new THREE.Vector3(rnd(0.15, 0.45), rnd(0.9, 1.4), rnd(-0.1, 0.1)) };
+      scene.add(s);
+      fireSys.smokes.push(s);
+    }
+  }
+  for (let i = fireSys.smokes.length - 1; i >= 0; i--) {
+    const s = fireSys.smokes[i];
+    s.userData.t += dt;
+    s.position.addScaledVector(s.userData.drift, dt);
+    s.scale.multiplyScalar(1 + dt * 0.55);
+    s.material.opacity = Math.max(0, 0.45 - s.userData.t * 0.075);
+    if (s.userData.t > 6) { scene.remove(s); fireSys.smokes.splice(i, 1); }
+  }
+  if (fireSys.light) fireSys.light.intensity = 2.7 + Math.sin(t * 17) * 0.7 + Math.sin(t * 7.3) * 0.5;
+}
+
 // ---------------------------------------------------------------- village buildings + props (collidable)
 const buildings = [];
 const wallMats = [wallTexA, wallTexB, wallTexC, brickTex];
-function makeBuilding(x, z, w, h, d, i) {
+function makeBuilding(x, z, w, h, d, i, forceIntact = false) {
   const tex = wallMats[i % wallMats.length];
   const isBrick = tex === brickTex;
   const wall = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95,
     normalMap: isBrick ? brickNormal : stuccoNormal,
     normalScale: new THREE.Vector2(isBrick ? 0.9 : 0.5, isBrick ? 0.9 : 0.5) });
   const roof = new THREE.MeshStandardMaterial({ color: 0x5a4636, roughness: 1 });
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), [wall, wall, roof, roof, wall, wall]);
-  mesh.position.set(x, h / 2, z);
-  mesh.rotation.y = (i % 4) * 0.12 - 0.18;
-  mesh.castShadow = true; mesh.receiveShadow = true;
-  scene.add(mesh);
-  if (i % 3 === 0) {
-    // pyramid roof (triangles!) on every third building
-    const pyr = new THREE.Mesh(new THREE.ConeGeometry(Math.max(w, d) * 0.72, 1.6 + (i % 2), 4),
-      new THREE.MeshStandardMaterial({ color: 0x7a3b2e, roughness: 0.9 }));
-    pyr.position.set(x, h + 0.8, z); pyr.rotation.y = mesh.rotation.y + Math.PI / 4;
-    pyr.castShadow = true;
-    scene.add(pyr);
-  } else {
-    // flat roof lip
-    const lip = new THREE.Mesh(new THREE.BoxGeometry(w + 0.5, 0.28, d + 0.5),
-      new THREE.MeshStandardMaterial({ color: 0x3f342a, roughness: 1 }));
-    lip.position.set(x, h + 0.1, z); lip.rotation.y = mesh.rotation.y;
-    lip.castShadow = true;
-    scene.add(lip);
+  const ry = (i % 4) * 0.12 - 0.18;
+  const damaged = !forceIntact && (i % 5) !== 4;   // the war came through: ~80% of the village is hit
+
+  if (!damaged) {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), [wall, wall, roof, roof, wall, wall]);
+    mesh.position.set(x, h / 2, z);
+    mesh.rotation.y = ry;
+    mesh.castShadow = true; mesh.receiveShadow = true;
+    scene.add(mesh);
+    if (i % 3 === 0) {
+      const pyr = new THREE.Mesh(new THREE.ConeGeometry(Math.max(w, d) * 0.72, 1.6 + (i % 2), 4),
+        new THREE.MeshStandardMaterial({ color: 0x7a3b2e, roughness: 0.9 }));
+      pyr.position.set(x, h + 0.8, z); pyr.rotation.y = ry + Math.PI / 4;
+      pyr.castShadow = true;
+      scene.add(pyr);
+    } else {
+      const lip = new THREE.Mesh(new THREE.BoxGeometry(w + 0.5, 0.28, d + 0.5),
+        new THREE.MeshStandardMaterial({ color: 0x3f342a, roughness: 1 }));
+      lip.position.set(x, h + 0.1, z); lip.rotation.y = ry;
+      lip.castShadow = true;
+      scene.add(lip);
+    }
+    buildings.push(new THREE.Box3().setFromObject(mesh));
+    return;
   }
-  buildings.push(new THREE.Box3().setFromObject(mesh));
+
+  // WAR-TORN: one half still standing and normal, the other half collapsed — and burning
+  const g = new THREE.Group();
+  g.position.set(x, 0, z);
+  g.rotation.y = ry;
+  const wi = w * 0.55, wd = w * 0.45;
+  const xi = -(w - wi) / 2, xd = (w - wd) / 2;      // centers of the intact / destroyed halves
+  const intact = new THREE.Mesh(new THREE.BoxGeometry(wi, h, d), [wall, wall, roof, roof, wall, wall]);
+  intact.position.set(xi, h / 2, 0);
+  intact.castShadow = true; intact.receiveShadow = true;
+  const hs = h * rnd(0.3, 0.55);                    // the fallen half is a low broken stub
+  const stub = new THREE.Mesh(new THREE.BoxGeometry(wd, hs, d), [wall, wall, charMat, charMat, wall, wall]);
+  stub.position.set(xd, hs / 2, 0);
+  stub.castShadow = true; stub.receiveShadow = true;
+  // charred break line: burnt cap on the stub + jagged chunks + soot climbing the intact wall
+  const cap = new THREE.Mesh(new THREE.BoxGeometry(wd + 0.1, 0.16, d + 0.1), charMat);
+  cap.position.set(xd, hs + 0.08, 0);
+  const soot = new THREE.Mesh(new THREE.BoxGeometry(0.12, h * 0.45, d * 0.8), charMat);
+  soot.position.set((2 * wi - w) / 2 + 0.02, h * 0.72, 0);
+  g.add(intact, stub, cap, soot);
+  for (let j = 0; j < 3; j++) {
+    const jag = new THREE.Mesh(new THREE.BoxGeometry(rnd(0.3, 0.7), rnd(0.4, 0.9), 0.3), charMat);
+    jag.position.set(xd + rnd(-wd / 2 + 0.3, wd / 2 - 0.3), hs + rnd(0.2, 0.5), rnd(-d / 2 + 0.3, d / 2 - 0.3));
+    jag.rotation.z = rnd(-0.25, 0.25);
+    g.add(jag);
+  }
+  // rubble spilling off the fallen half
+  for (let j = 0; j < 4; j++) {
+    const r = new THREE.Mesh(new THREE.BoxGeometry(rnd(0.3, 0.7), rnd(0.15, 0.4), rnd(0.3, 0.6)), j % 2 ? charMat : wall);
+    r.position.set(xd + rnd(-0.5, 0.8) + wd / 2, rnd(0.08, 0.35), rnd(-d / 2, d / 2));
+    r.rotation.set(rnd(0, 0.5), rnd(0, 3), rnd(0, 0.4));
+    r.castShadow = true;
+    g.add(r);
+  }
+  // roof lip survives over the intact half only
+  const lip = new THREE.Mesh(new THREE.BoxGeometry(wi + 0.4, 0.26, d + 0.4),
+    new THREE.MeshStandardMaterial({ color: 0x3f342a, roughness: 1 }));
+  lip.position.set(xi, h + 0.08, 0);
+  lip.castShadow = true;
+  g.add(lip);
+  scene.add(g);
+  buildings.push(new THREE.Box3().setFromObject(g));
+  // fire + smoke rising from the break (about two-thirds of the damaged buildings)
+  if (i % 3 !== 2) {
+    const wx = x + xd * Math.cos(ry), wz = z - xd * Math.sin(ry);
+    const flames = (i % 2 === 0)
+      ? [[wx + rnd(-0.5, 0.5), hs + 0.4, wz + rnd(-0.4, 0.4), rnd(0.7, 1.1)],
+         [wx + rnd(-0.5, 0.5), hs + 0.3, wz + rnd(-0.4, 0.4), rnd(0.5, 0.8)]]
+      : [];
+    addFireEmitter(wx, hs + 0.2, wz, { rate: rnd(0.55, 0.9), flames });
+  }
 }
 for (let i = 0; i < 20; i++) {
   const a = (i / 20) * Math.PI * 2, r = 22 + (i % 5) * 6;
@@ -659,106 +773,68 @@ function terrainH(x, z) {
   scene.add(grass);
 }
 
-// THE BURNED HOUSE — a destroyed home, still smoking, still on fire
-const fireFX = { flames: [], light: null, smokeT: 0, smokes: [], x: 15, z: 8 };
+// THE HALF-BURNED HOUSE — one side still a home, the other side rubble and fire
 {
-  const burnt = new THREE.MeshStandardMaterial({ color: 0x211d18, roughness: 1 });
-  const charred = new THREE.MeshStandardMaterial({ color: 0x2e2620, roughness: 0.95,
-    normalMap: stuccoNormal, normalScale: new THREE.Vector2(0.6, 0.6) });
-  const HX = fireFX.x, HZ = fireFX.z;
-  function ruinWall(w, h, d, x, z, ry = 0) {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), charred);
-    m.position.set(x, h / 2, z); m.rotation.y = ry;
-    m.castShadow = true; m.receiveShadow = true;
-    scene.add(m);
-    buildings.push(new THREE.Box3().setFromObject(m));
-    return m;
-  }
-  ruinWall(4.8, 2.3, 0.35, HX, HZ - 1.9);            // front wall stub
-  ruinWall(0.35, 3.2, 4.0, HX - 2.3, HZ);            // left wall — tallest survivor
-  ruinWall(4.8, 1.2, 0.35, HX, HZ + 1.9);            // back wall, mostly gone
-  // jagged broken tops
-  [[HX - 1.6, 2.5, HZ - 1.9, 0.7, 0.8], [HX + 0.9, 2.6, HZ - 1.9, 0.5, 0.6],
-   [HX - 2.3, 3.5, HZ - 1.2, 0.6, 0.7], [HX - 2.3, 3.4, HZ + 0.9, 0.5, 0.9]].forEach(([x, y, z, w, h]) => {
-    const j = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.34), charred);
-    j.position.set(x, y, z); j.rotation.z = rnd(-0.2, 0.2);
-    scene.add(j);
+  const HX = 15, HZ = 8;
+  const wallM = new THREE.MeshStandardMaterial({ map: wallTexA, roughness: 0.95,
+    normalMap: stuccoNormal, normalScale: new THREE.Vector2(0.5, 0.5) });
+  const roofM = new THREE.MeshStandardMaterial({ color: 0x5a4636, roughness: 1 });
+  // the intact half: a real house with windows, roof lip and all
+  const intact = new THREE.Mesh(new THREE.BoxGeometry(2.6, 3.2, 4.2), [wallM, wallM, roofM, roofM, wallM, wallM]);
+  intact.position.set(HX - 1.2, 1.6, HZ);
+  intact.castShadow = true; intact.receiveShadow = true;
+  const lip = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.26, 4.6),
+    new THREE.MeshStandardMaterial({ color: 0x3f342a, roughness: 1 }));
+  lip.position.set(HX - 1.2, 3.3, HZ);
+  lip.castShadow = true;
+  scene.add(intact, lip);
+  buildings.push(new THREE.Box3().setFromObject(intact));
+  // soot climbing the intact wall where the fire licks it
+  const soot = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.6, 3.4), charMat);
+  soot.position.set(HX + 0.12, 2.2, HZ);
+  scene.add(soot);
+  // the destroyed half: low broken stubs, still wearing the house's own wall texture
+  [[HX + 1.3, 1.0, HZ - 1.95, 2.4, 0.34, 0], [HX + 1.3, 0.7, HZ + 1.95, 2.4, 0.34, 0],
+   [HX + 2.45, 1.15, HZ, 0.34, 3.9, 0]].forEach(([bx, bh, bz, bw, bd]) => {
+    const stub = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), [wallM, wallM, charMat, charMat, wallM, wallM]);
+    stub.position.set(bx, bh / 2, bz);
+    stub.castShadow = true; stub.receiveShadow = true;
+    scene.add(stub);
+    buildings.push(new THREE.Box3().setFromObject(stub));
+    const cap = new THREE.Mesh(new THREE.BoxGeometry(bw + 0.08, 0.12, bd + 0.08), charMat);
+    cap.position.set(bx, bh + 0.06, bz);
+    scene.add(cap);
   });
-  // collapsed roof beams, leaning burnt
+  // collapsed burnt roof beams across the open half
   for (let i = 0; i < 4; i++) {
-    const beam = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, rnd(3, 4.4)), burnt);
-    beam.position.set(HX + rnd(-1.5, 1.5), rnd(0.8, 1.6), HZ + rnd(-1, 1));
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, rnd(2.6, 3.8)),
+      new THREE.MeshStandardMaterial({ color: 0x211d18, roughness: 1 }));
+    beam.position.set(HX + rnd(0.6, 2.2), rnd(0.6, 1.3), HZ + rnd(-1, 1));
     beam.rotation.set(rnd(-0.5, -0.2), rnd(0, 3), rnd(-0.2, 0.2));
     beam.castShadow = true;
     scene.add(beam);
   }
-  // rubble pile where the right wall used to be
-  for (let i = 0; i < 10; i++) {
-    const r = new THREE.Mesh(new THREE.BoxGeometry(rnd(0.3, 0.9), rnd(0.2, 0.5), rnd(0.3, 0.8)), i % 3 ? charred : burnt);
-    r.position.set(HX + rnd(1.2, 2.6), rnd(0.1, 0.55), HZ + rnd(-1.6, 1.6));
+  // rubble where the wall came down
+  for (let i = 0; i < 8; i++) {
+    const r = new THREE.Mesh(new THREE.BoxGeometry(rnd(0.3, 0.8), rnd(0.2, 0.45), rnd(0.3, 0.7)),
+      i % 2 ? charMat : wallM);
+    r.position.set(HX + rnd(0.6, 2.4), rnd(0.1, 0.5), HZ + rnd(-1.5, 1.5));
     r.rotation.set(rnd(0, 0.6), rnd(0, 3), rnd(0, 0.5));
     r.castShadow = true; r.receiveShadow = true;
     scene.add(r);
   }
-  buildings.push(new THREE.Box3(
-    new THREE.Vector3(HX + 1.0, 0, HZ - 1.7), new THREE.Vector3(HX + 2.8, 1, HZ + 1.7)));
-  // scorched ground
-  const scorch = new THREE.Mesh(new THREE.CircleGeometry(4.2, 22),
-    new THREE.MeshBasicMaterial({ color: 0x14100c, transparent: true, opacity: 0.55, depthWrite: false }));
-  scorch.rotation.x = -Math.PI / 2; scorch.position.set(HX, 0.015, HZ);
+  // scorched ground under the burning half only
+  const scorch = new THREE.Mesh(new THREE.CircleGeometry(3.2, 20),
+    new THREE.MeshBasicMaterial({ color: 0x14100c, transparent: true, opacity: 0.5, depthWrite: false }));
+  scorch.rotation.x = -Math.PI / 2; scorch.position.set(HX + 1.4, 0.015, HZ);
   scene.add(scorch);
-  // FLAMES — flickering additive sprites + a firelight
-  const flameTex = canvasTex(64, (ctx, s) => {
-    const g = ctx.createRadialGradient(s / 2, s * 0.62, 0, s / 2, s * 0.62, s * 0.55);
-    g.addColorStop(0, 'rgba(255,240,180,1)');
-    g.addColorStop(0.35, 'rgba(255,160,40,0.9)');
-    g.addColorStop(0.75, 'rgba(220,70,15,0.5)');
-    g.addColorStop(1, 'rgba(180,40,10,0)');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, s, s);
-  });
-  [[HX - 0.6, 0.9, HZ + 0.4, 1.5], [HX + 0.7, 0.7, HZ - 0.9, 1.1], [HX - 1.8, 1.9, HZ - 0.3, 0.9],
-   [HX + 1.8, 0.5, HZ + 0.8, 0.8]].forEach(([x, y, z, sc]) => {
-    const f = new THREE.Sprite(new THREE.SpriteMaterial({ map: flameTex, transparent: true,
-      depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.95 }));
-    f.position.set(x, y, z);
-    f.userData = { base: sc, phase: rnd(0, 9), y0: y };
-    f.scale.setScalar(sc);
-    scene.add(f);
-    fireFX.flames.push(f);
-  });
-  fireFX.light = new THREE.PointLight(0xff7726, 3, 14);
-  fireFX.light.position.set(HX, 1.6, HZ);
-  scene.add(fireFX.light);
-}
-function updateFire(dt, t) {
-  for (const f of fireFX.flames) {                    // flicker: scale, stretch, breathe
-    const w = Math.sin(t * 13 + f.userData.phase) * 0.5 + Math.sin(t * 29 + f.userData.phase * 2) * 0.5;
-    f.scale.set(f.userData.base * (1 + w * 0.18), f.userData.base * (1 + w * 0.3), 1);
-    f.position.y = f.userData.y0 + w * 0.06;
-    f.material.opacity = 0.8 + w * 0.15;
-  }
-  fireFX.light.intensity = 2.7 + Math.sin(t * 17) * 0.7 + Math.sin(t * 7.3) * 0.5;
-  fireFX.smokeT += dt;                                 // the black column
-  while (fireFX.smokeT > 0.16) {
-    fireFX.smokeT -= 0.16;
-    const m = new THREE.SpriteMaterial({ map: smokeTex, transparent: true, depthWrite: false,
-      opacity: 0.5, color: 0x4a453e });
-    const s = new THREE.Sprite(m);
-    s.position.set(fireFX.x + rnd(-0.8, 0.8), rnd(1.6, 2.4), fireFX.z + rnd(-0.8, 0.8));
-    s.scale.setScalar(rnd(0.6, 1.1));
-    s.userData = { t: 0, drift: new THREE.Vector3(rnd(0.15, 0.45), rnd(0.9, 1.4), rnd(-0.1, 0.1)) };
-    scene.add(s);
-    fireFX.smokes.push(s);
-    if (fireFX.smokes.length > 42) scene.remove(fireFX.smokes.shift());
-  }
-  for (let i = fireFX.smokes.length - 1; i >= 0; i--) {
-    const s = fireFX.smokes[i];
-    s.userData.t += dt;
-    s.position.addScaledVector(s.userData.drift, dt);
-    s.scale.multiplyScalar(1 + dt * 0.55);
-    s.material.opacity = Math.max(0, 0.5 - s.userData.t * 0.085);
-    if (s.userData.t > 6) { scene.remove(s); fireFX.smokes.splice(i, 1); }
-  }
+  // the fire itself — biggest blaze in the village, with the one real firelight
+  addFireEmitter(HX + 1.3, 1.4, HZ, { rate: 0.16, big: true, flames: [
+    [HX + 0.8, 0.9, HZ + 0.4, 1.5], [HX + 1.8, 0.7, HZ - 0.9, 1.1],
+    [HX + 0.4, 1.9, HZ - 0.2, 0.9], [HX + 2.2, 0.5, HZ + 0.8, 0.8]] });
+  fireSys.light = new THREE.PointLight(0xff7726, 3, 14);
+  fireSys.light.position.set(HX + 1.2, 1.8, HZ);
+  scene.add(fireSys.light);
 }
 
 // puddles — mirror-flat reflective discs after the rain
@@ -1037,7 +1113,7 @@ makeEntity('Striker', 'friendly', 2.5, 4);
 makeEntity('Payback', 'friendly', 6, 2.5);
 makeEntity('Civilian', 'neutral', 5, 1);
 // The Wolford twins — on a rooftop, side by side, sniping below (their canonical M1 cameo)
-makeBuilding(-15, -3, 6, 6, 6, 1);
+makeBuilding(-15, -3, 6, 6, 6, 1, true);   // their overwatch post still stands
 makeEntity('Brian Wolford', 'friendly', -16, -3, 6);
 makeEntity('Jesse Wolford', 'friendly', -14, -3, 6);
 
@@ -2240,7 +2316,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 20;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 21;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
