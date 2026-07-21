@@ -1112,7 +1112,7 @@ const PRESETS = {
 
 // ---------------------------------------------------------------- soldier models — JOINTED (shoulders/elbows/hips/knees)
 function limbSeg(w, len, mat) {
-  const m = new THREE.Mesh(new THREE.CylinderGeometry(w * 0.54, w * 0.46, len, 9), mat);
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(w * 0.56, w * 0.38, len, 10), mat);
   m.position.y = -len / 2;
   m.castShadow = true;
   return m;
@@ -1135,21 +1135,40 @@ function soldierModel(kind, name) {
   const handM = blackOps ? new THREE.MeshStandardMaterial({ color: 0x0d0e10, roughness: 0.9 }) : skinM; // gloves
 
   // torso + hips + chest rig
-  const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.2, 0.62, 12), suit);
-  torso.scale.z = 0.58; torso.position.y = 1.17; torso.castShadow = true;   // tapered chest, elliptical section
-  const hips = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.19, 0.22, 12), pants);
-  hips.scale.z = 0.58; hips.position.y = 0.81; hips.castShadow = true;
+  // ONE continuous trunk — a lathed anatomical profile (like a real body mesh):
+  // neck base, sloped shoulders, chest, ribs, waist, hips, pelvis — no seams
+  const trunkPts = [
+    [0.001, -0.38], [0.15, -0.38],  // pelvis floor
+    [0.215, -0.26],                 // hips
+    [0.19, -0.1],                   // waist
+    [0.235, 0.06],                  // ribs
+    [0.26, 0.2],                    // chest
+    [0.245, 0.32],                  // upper chest
+    [0.155, 0.4],                   // shoulder slope (trapezius)
+    [0.065, 0.44], [0.001, 0.44],   // neck base
+  ].map(([r2, y2]) => new THREE.Vector2(r2, y2));
+  const torso = new THREE.Mesh(new THREE.LatheGeometry(trunkPts, 16), suit);
+  torso.scale.z = 0.62;             // elliptical section
+  torso.position.y = 1.1;           // pivot mid-trunk so leans bend at the waist
+  torso.castShadow = true;
+  // pants wrap the lower trunk as a short lathed pelvis piece
+  const hipPts = [[0.001, -0.02], [0.152, -0.02], [0.218, 0.1], [0.205, 0.24], [0.001, 0.24]]
+    .map(([r2, y2]) => new THREE.Vector2(r2, y2));
+  const hips = new THREE.Mesh(new THREE.LatheGeometry(hipPts, 14), pants);
+  hips.scale.z = 0.63;
+  hips.position.y = 0.72;
+  hips.castShadow = true;
   const rigM = new THREE.MeshStandardMaterial({ color: isEnemy ? 0x15171a : (blackOps ? 0x0f1013 : 0x2c3526), roughness: 0.85 });
   for (let p = 0; p < 3; p++) {                              // ammo pouches on the chest
     const pouch = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.12, 0.05), rigM);
     pouch.position.set(-0.15 + p * 0.15, 1.22, -0.17);
     grp.add(pouch);
   }
-  // rounded shoulder pads (spheres!)
-  const padM = new THREE.MeshStandardMaterial({ color: isEnemy ? 0x1a1c20 : (blackOps ? 0x101215 : 0x39452f), roughness: 0.9 });
-  [-0.29, 0.29].forEach(px => {
-    const pad = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), padM);
-    pad.position.set(px, 1.44, 0); pad.castShadow = true;
+  // deltoids — flattened caps blending the trunk into the upper arms (same suit fabric)
+  [-0.275, 0.275].forEach(px => {
+    const pad = new THREE.Mesh(new THREE.SphereGeometry(0.095, 10, 8), suit);
+    pad.scale.set(1.08, 0.82, 0.95);
+    pad.position.set(px, 1.425, 0); pad.castShadow = true;
     grp.add(pad);
   });
   // neck + head with the PAINTED FACE (front) and hair/mask color on the other sides
@@ -2777,7 +2796,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 27;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 28;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
