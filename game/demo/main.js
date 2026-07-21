@@ -1147,6 +1147,12 @@ function soldierModel(kind, name) {
     gun.rotation.x = 0;
     gun.userData.baseRotX = 0;
     gun.userData.basePos = gun.position.clone();
+    gun.add(part(mDark, 0.008, 0.012, 0.03, -0.028, -0.01, -0.02));  // selector
+    gun.add(part(mDark, 0.01, 0.016, 0.016, 0.028, -0.02, -0.14));    // mag release
+    gun.add(cyl(mDark, 0.036, 0.036, 0.016, 0, 0, -0.28));            // barrel band / delta ring
+    gun.add(part(mSteel, 0.008, 0.01, 0.008, 0, -0.05, -0.42));       // front sling stud
+    gun.add(part(mSteel, 0.008, 0.01, 0.008, 0, -0.055, 0.32));       // rear sling stud
+    gun.add(part(mSteel, 0.052, 0.008, 0.008, 0, -0.024, -0.02));     // takedown pin line
     gun.userData.mag = gmag;
     grp.add(gun);
   }
@@ -1347,6 +1353,40 @@ function ribbedGuard(mat, r, len, x, y, z, ribs = 4) {
   return g;
 }
 
+// etched text markings (caliber stamps, serials) painted onto receiver sides
+function markingsTex(lines) {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 64;
+  const x = c.getContext('2d');
+  x.font = 'bold 18px monospace';
+  x.fillStyle = 'rgba(15,15,18,0.9)';
+  x.textBaseline = 'middle';
+  lines.forEach((ln, i) => x.fillText(ln, 8, 20 + i * 24));
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+function markPlate(text, wdt, hgt) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(wdt, hgt),
+    new THREE.MeshBasicMaterial({ map: markingsTex(text), transparent: true, depthWrite: false }));
+  return m;
+}
+// scroll engraving for the gilded slide
+const engravingTex = (() => {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 48;
+  const x = c.getContext('2d');
+  x.strokeStyle = 'rgba(110,78,18,0.85)';
+  x.lineWidth = 2;
+  for (let i = 0; i < 9; i++) {
+    const cx = 14 + i * 27, cy = 24;
+    x.beginPath();
+    for (let a = 0; a < 12; a += 0.3) x.lineTo(cx + Math.cos(a) * a * 0.9, cy + Math.sin(a) * a * 0.75);
+    x.stroke();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+})();
+
 function buildM16() {
   const g = new THREE.Group();
   // receiver: shaped upper + lower with a real mag well between them
@@ -1379,6 +1419,28 @@ function buildM16() {
   const buttpad = part(gunDark, 0.028, 0.06, 0.018, 0, -0.004, 0.183);
   g.add(upper, lower, ejPort, chHandle, chL, chR, chTop, rearSight, grip, trig, mag,
     guard, barrel, muzzle, fsL, fsR, fsPost, stock, cheek, buttpad);
+  // --- the small stuff a real M16 carries ---
+  g.add(part(gunDark, 0.01, 0.012, 0.012, 0.018, 0.01, -0.05));        // forward assist
+  g.add(part(gunBlack, 0.008, 0.016, 0.014, 0.017, 0.008, -0.1, 0, 0, 0.6)); // brass deflector
+  const portDoor = part(gunSteel, 0.002, 0.022, 0.05, 0.021, -0.014, -0.16, 0.95); // ejection port door hanging open
+  g.add(portDoor);
+  g.add(part(gunDark, 0.004, 0.008, 0.024, -0.016, 0.0, -0.06));       // fire selector lever
+  g.add(cyl(gunSteel, 0.005, 0.005, 0.004, -0.0155, 0.0, -0.052, false)); // selector pivot
+  g.add(part(gunDark, 0.006, 0.01, 0.01, 0.016, -0.008, -0.195));      // mag release button
+  g.add(part(gunDark, 0.004, 0.018, 0.028, -0.016, 0.002, -0.15));     // bolt catch
+  g.add(part(gunSteel, 0.029, 0.005, 0.005, 0, -0.03, -0.035));        // rear takedown pin
+  g.add(part(gunSteel, 0.029, 0.005, 0.005, 0, -0.03, -0.185));        // front pivot pin
+  g.add(cyl(gunBlack, 0.023, 0.026, 0.02, 0, 0, -0.325));              // delta ring
+  const swF = new THREE.Mesh(new THREE.TorusGeometry(0.009, 0.002, 6, 12), gunSteel);
+  swF.position.set(0, -0.016, -0.6); g.add(swF);                       // front sling swivel
+  const swR = new THREE.Mesh(new THREE.TorusGeometry(0.009, 0.002, 6, 12), gunSteel);
+  swR.position.set(0, -0.036, 0.17); g.add(swR);                       // rear sling swivel
+  g.add(part(gunDark, 0.004, 0.004, 0.04, 0, 0.013, -0.745));          // birdcage top slot
+  g.add(part(gunSteel, 0.028, 0.008, 0.008, 0, 0.052, -0.06));         // rear sight windage drum
+  g.add(part(gunDark, 0.0245, 0.002, 0.05, 0, -0.078, -0.042));        // grip finger groove line
+  const mk = markPlate(['M16A1 · CAL 5.56MM', 'AUTO — SEMI — SAFE'], 0.1, 0.024);
+  mk.position.set(-0.0135, -0.028, -0.11); mk.rotation.y = -Math.PI / 2;
+  g.add(mk);                                                           // receiver stampings
   return { g, mag, bolt: chHandle, muzzle: new THREE.Vector3(0, 0, -0.78), pump: null,
     ads: new THREE.Vector3(0, -0.065, -0.36) };
 }
@@ -1404,6 +1466,22 @@ function buildPP919() {
   const rearL = part(gunBlack, 0.004, 0.022, 0.004, -0.012, 0.055, 0.0);
   const rearR = part(gunBlack, 0.004, 0.022, 0.004, 0.012, 0.055, 0.0);
   g.add(body, dust, bolt, helical, shroud, muzzle, grip, trig, rodT, rodB, plate, fpBase, frontPost, rearL, rearR);
+  // --- small parts ---
+  g.add(part(gunBlack, 0.006, 0.026, 0.006, -0.018, 0.05, 0.0));       // rear sight ear L
+  g.add(part(gunBlack, 0.006, 0.026, 0.006, 0.018, 0.05, 0.0));        // rear sight ear R
+  g.add(part(gunDark, 0.004, 0.007, 0.02, 0.0145, -0.005, -0.02));     // selector lever
+  g.add(part(gunDark, 0.008, 0.014, 0.01, 0, -0.032, -0.055));         // mag release lever
+  g.add(part(gunDark, 0.002, 0.016, 0.04, 0.0135, 0.01, -0.12));       // ejection port
+  g.add(cyl(gunSteel, 0.005, 0.005, 0.004, -0.014, 0.01, -0.08, false));// receiver pin
+  g.add(cyl(gunSteel, 0.005, 0.005, 0.004, -0.014, -0.01, 0.02, false));// receiver pin
+  for (let i = 0; i < 3; i++) g.add(cyl(gunDark, 0.0335, 0.0335, 0.004, 0, -0.045, -0.32 + i * 0.09)); // helical mag grooves
+  const ppSw = new THREE.Mesh(new THREE.TorusGeometry(0.008, 0.002, 6, 12), gunSteel);
+  ppSw.position.set(0, -0.02, -0.44); g.add(ppSw);                     // front sling loop
+  const ppSw2 = new THREE.Mesh(new THREE.TorusGeometry(0.008, 0.002, 6, 12), gunSteel);
+  ppSw2.position.set(0, 0.032, 0.16); g.add(ppSw2);                    // rear sling loop
+  const mk2 = markPlate(['PP-919 · 9×18', ''], 0.08, 0.02);
+  mk2.position.set(-0.0135, -0.015, -0.14); mk2.rotation.y = -Math.PI / 2;
+  g.add(mk2);
   return { g, mag: helical, bolt, muzzle: new THREE.Vector3(0, 0.012, -0.5), pump: null,
     ads: new THREE.Vector3(0, -0.058, -0.32) };
 }
@@ -1424,7 +1502,19 @@ function buildBenelli() {
   const trig = triggerAssembly(gunBlack); trig.position.set(0, -0.052, -0.02);
   const stock = part(gunPoly, 0.026, 0.055, 0.2, 0, -0.006, 0.13);
   const buttpad = part(gunDark, 0.03, 0.065, 0.018, 0, -0.006, 0.238);
+  // action bars connect the pump to the receiver — and CYCLE with it
+  pump.add(part(gunSteel, 0.004, 0.006, 0.26, -0.016, 0, 0.17));
+  pump.add(part(gunSteel, 0.004, 0.006, 0.26, 0.016, 0, 0.17));
   g.add(receiver, port, barrel, tube, pump, bead, rearL, rearR, grip, trig, stock, buttpad);
+  g.add(part(gunSteel, 0.012, 0.008, 0.008, 0.019, 0.012, -0.05));     // bolt handle knob
+  g.add(part(gunDark, 0.022, 0.006, 0.006, 0, -0.04, 0.012));          // cross-bolt safety
+  g.add(cyl(gunBlack, 0.02, 0.02, 0.012, 0, 0.005, -0.66));            // barrel/tube clamp band
+  g.add(part(gunSteel, 0.02, 0.004, 0.032, 0, -0.031, -0.09));         // shell lifter
+  g.add(part(gunSteel, 0.005, 0.008, 0.005, 0, -0.024, -0.62));        // front sling stud
+  g.add(part(gunSteel, 0.005, 0.008, 0.005, 0, -0.036, 0.2));          // rear sling stud
+  const mk3 = markPlate(['BENELLI M3 · 12GA', ''], 0.09, 0.02);
+  mk3.position.set(-0.0145, -0.012, -0.1); mk3.rotation.y = -Math.PI / 2;
+  g.add(mk3);
   return { g, mag: null, bolt: null, muzzle: new THREE.Vector3(0, 0.022, -0.71), pump,
     ads: new THREE.Vector3(0, -0.046, -0.3) };
 }
@@ -1445,6 +1535,27 @@ function buildStatesman() {
   const rearL2 = part(gunBlack, 0.005, 0.014, 0.01, -0.01, 0.042, 0.0);
   const rearR2 = part(gunBlack, 0.005, 0.014, 0.01, 0.01, 0.042, 0.0);
   g.add(slide, frame, hammer, gripL, gripR, gripCore, magBase, trig, sight, rearL2, rearR2);
+  // --- the gilded details ---
+  g.add(part(gunDark, 0.002, 0.016, 0.034, 0.0125, 0.02, -0.115));     // ejection port cut
+  g.add(cyl(gunGold, 0.0135, 0.0135, 0.012, 0, 0.012, -0.202));        // barrel bushing
+  g.add(cyl(gunDark, 0.008, 0.008, 0.006, 0, 0.012, -0.207));          // recessed crown
+  g.add(part(gunDark, 0.006, 0.008, 0.02, -0.0145, 0.014, 0.005));     // thumb safety
+  g.add(part(gunDark, 0.004, 0.006, 0.032, -0.0145, -0.002, -0.1));    // slide stop lever
+  g.add(cyl(gunSteel, 0.004, 0.004, 0.004, 0.0135, -0.002, -0.085, false)); // slide stop pin
+  [[-0.0175, -0.045, -0.017], [-0.0175, -0.105, 0.026], [0.0175, -0.045, -0.017], [0.0175, -0.105, 0.026]]
+    .forEach(([sx2, sy2, sz2]) => g.add(cyl(gunGold, 0.003, 0.003, 0.003, sx2, sy2, sz2, false))); // grip screws
+  g.add(part(gunGold, 0.018, 0.005, 0.022, 0, 0.024, 0.03, 0.45));     // beavertail grip safety
+  const lan = new THREE.Mesh(new THREE.TorusGeometry(0.006, 0.0018, 6, 10), gunDark);
+  lan.position.set(0, -0.132, 0.03); g.add(lan);                       // lanyard loop
+  const bead2 = part(gunGold, 0.004, 0.004, 0.004, 0, 0.052, -0.19);   // gold bead front sight
+  g.add(bead2);
+  [-1, 1].forEach(sd => {                                              // scroll engraving on the slide
+    const eng = new THREE.Mesh(new THREE.PlaneGeometry(0.17, 0.032),
+      new THREE.MeshBasicMaterial({ map: engravingTex, transparent: true, depthWrite: false }));
+    eng.position.set(sd * 0.0125, 0.012, -0.09);
+    eng.rotation.y = sd * -Math.PI / 2;
+    g.add(eng);
+  });
   return { g, mag: magBase, bolt: hammer, muzzle: new THREE.Vector3(0, 0.012, -0.21), pump: slide,
     ads: new THREE.Vector3(0, -0.047, -0.3) };
 }
@@ -2525,7 +2636,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 24;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 25;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
