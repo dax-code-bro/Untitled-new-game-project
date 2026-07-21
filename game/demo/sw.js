@@ -1,8 +1,9 @@
 // UNTITLED demo — service worker.
 // Strategy: NETWORK-FIRST for the game itself (you always get the newest build
 // when online; cache is the offline fallback). Cache-first for icons/manifest.
-const VERSION = 'untitled-demo-v3';
+const VERSION = 'untitled-demo-v4';
 const ASSETS = [
+  './untitled-demo.html',
   './play-offline.html',
   './manifest.webmanifest',
   './icon-192.png',
@@ -23,7 +24,7 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
-  const isGame = e.request.mode === 'navigate' || e.request.url.includes('play-offline.html');
+  const isGame = e.request.mode === 'navigate' || e.request.url.includes('play-offline.html') || e.request.url.includes('untitled-demo.html');
   if (isGame) {
     // network-first: fresh build every online launch; cached copy when offline
     e.respondWith(

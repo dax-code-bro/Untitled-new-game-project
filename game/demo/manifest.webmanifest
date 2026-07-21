@@ -2,7 +2,7 @@
   "name": "UNTITLED — First Demo",
   "short_name": "UNTITLED",
   "description": "Playable FPS vertical slice — Colombia, 1985. Team Apex deploys.",
-  "start_url": "./play-offline.html",
+  "start_url": "./untitled-demo.html",
   "scope": "./",
   "display": "fullscreen",
   "orientation": "landscape",

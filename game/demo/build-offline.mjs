@@ -48,4 +48,5 @@ html = html
   .replace(/<script type="module" src="\.\/main\.js"><\/script>/, () => inlined);
 
 fs.writeFileSync('play-offline.html', html);
-console.log('Wrote play-offline.html (' + (fs.statSync('play-offline.html').size / 1024 | 0) + ' KB) — double-click to play.');
+fs.writeFileSync('untitled-demo.html', html);   // cache-busting twin: fresh URL, same game
+console.log('Wrote play-offline.html + untitled-demo.html (' + (fs.statSync('play-offline.html').size / 1024 | 0) + ' KB) — double-click to play.');
