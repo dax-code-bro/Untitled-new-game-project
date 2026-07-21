@@ -34,6 +34,10 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true;                     // real shadows
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;    // filmic tone curve
+renderer.toneMappingExposure = 1.05;
 app.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
@@ -215,13 +219,37 @@ scene.add(skyDome);
 scene.add(new THREE.HemisphereLight(0xbfd0e0, 0x6b5f48, 0.9));
 const sun = new THREE.DirectionalLight(0xfff1d6, 1.25);
 sun.position.set(18, 30, 10);
+sun.castShadow = true;
+sun.shadow.mapSize.set(1024, 1024);
+sun.shadow.camera.left = -60; sun.shadow.camera.right = 60;
+sun.shadow.camera.top = 60; sun.shadow.camera.bottom = -60;
+sun.shadow.camera.near = 1; sun.shadow.camera.far = 120;
+sun.shadow.bias = -0.0005;
 scene.add(sun);
 scene.add(new THREE.AmbientLight(0x8797a5, 0.35));
+
+// environment cube (painted sky gradient) — gives metals REAL reflections
+const envFaces = [];
+for (let i = 0; i < 6; i++) {
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const x = c.getContext('2d');
+  const g = x.createLinearGradient(0, 0, 0, 64);
+  if (i === 2) { g.addColorStop(0, '#8fb2d4'); g.addColorStop(1, '#a7c2d8'); }        // up
+  else if (i === 3) { g.addColorStop(0, '#6d5a41'); g.addColorStop(1, '#54452f'); }   // down
+  else { g.addColorStop(0, '#7fa6c9'); g.addColorStop(0.7, '#cfd8d6'); g.addColorStop(1, '#8a7a5c'); }
+  x.fillStyle = g; x.fillRect(0, 0, 64, 64);
+  envFaces.push(c);
+}
+const envTex = new THREE.CubeTexture(envFaces);
+envTex.needsUpdate = true;
+envTex.colorSpace = THREE.SRGBColorSpace;
+scene.environment = envTex;
 
 // ---------------------------------------------------------------- ground
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(240, 240),
   new THREE.MeshStandardMaterial({ map: dirtTex, roughness: 1, metalness: 0 }));
 ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
 scene.add(ground);
 
 // ---------------------------------------------------------------- village buildings + props (collidable)
@@ -234,12 +262,23 @@ function makeBuilding(x, z, w, h, d, i) {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), [wall, wall, roof, roof, wall, wall]);
   mesh.position.set(x, h / 2, z);
   mesh.rotation.y = (i % 4) * 0.12 - 0.18;
+  mesh.castShadow = true; mesh.receiveShadow = true;
   scene.add(mesh);
-  // roof lip
-  const lip = new THREE.Mesh(new THREE.BoxGeometry(w + 0.5, 0.28, d + 0.5),
-    new THREE.MeshStandardMaterial({ color: 0x3f342a, roughness: 1 }));
-  lip.position.set(x, h + 0.1, z); lip.rotation.y = mesh.rotation.y;
-  scene.add(lip);
+  if (i % 3 === 0) {
+    // pyramid roof (triangles!) on every third building
+    const pyr = new THREE.Mesh(new THREE.ConeGeometry(Math.max(w, d) * 0.72, 1.6 + (i % 2), 4),
+      new THREE.MeshStandardMaterial({ color: 0x7a3b2e, roughness: 0.9 }));
+    pyr.position.set(x, h + 0.8, z); pyr.rotation.y = mesh.rotation.y + Math.PI / 4;
+    pyr.castShadow = true;
+    scene.add(pyr);
+  } else {
+    // flat roof lip
+    const lip = new THREE.Mesh(new THREE.BoxGeometry(w + 0.5, 0.28, d + 0.5),
+      new THREE.MeshStandardMaterial({ color: 0x3f342a, roughness: 1 }));
+    lip.position.set(x, h + 0.1, z); lip.rotation.y = mesh.rotation.y;
+    lip.castShadow = true;
+    scene.add(lip);
+  }
   buildings.push(new THREE.Box3().setFromObject(mesh));
 }
 for (let i = 0; i < 20; i++) {
@@ -284,38 +323,263 @@ sandbags(0, -10.5, 7, 0);
 sandbags(-9, -24, 6, 0.9);
 sandbags(9, -18, 6, -0.7);
 
-// ---------------------------------------------------------------- soldier models (entities w/ nameplates)
+// ---------------------------------------------------------------- variety props (spheres, cones, reflections)
+// jungle trees — cone canopies (triangles) on cylinder trunks; Colombia needs green
+const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5a4228, roughness: 1 });
+const leafMatA = new THREE.MeshStandardMaterial({ color: 0x2f6b33, roughness: 0.9 });
+const leafMatB = new THREE.MeshStandardMaterial({ color: 0x3f7d2e, roughness: 0.9 });
+function tree(x, z, s = 1) {
+  const t = new THREE.Group();
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.16 * s, 0.22 * s, 1.6 * s, 7), trunkMat);
+  trunk.position.y = 0.8 * s; trunk.castShadow = true;
+  const c1 = new THREE.Mesh(new THREE.ConeGeometry(1.15 * s, 1.9 * s, 8), leafMatA);
+  c1.position.y = 2.2 * s; c1.castShadow = true;
+  const c2 = new THREE.Mesh(new THREE.ConeGeometry(0.85 * s, 1.5 * s, 8), leafMatB);
+  c2.position.y = 3.1 * s; c2.castShadow = true;
+  t.add(trunk, c1, c2);
+  t.position.set(x, 0, z);
+  scene.add(t);
+  buildings.push(new THREE.Box3().setFromObject(trunk).expandByScalar(0.1));
+}
+[[-12, 6, 1.1], [14, 4, 0.9], [-20, -12, 1.3], [18, -8, 1.0], [-6, -31, 0.9], [13, -33, 1.2],
+ [24, -20, 1.0], [-24, -20, 1.1], [8, 8, 0.8], [-16, -36, 1.0], [20, 10, 1.2], [-26, 2, 0.9]]
+  .forEach(([x, z, s]) => tree(x, z, s));
+
+// water tower — reflective steel sphere on legs (spheres + reflections in one)
+{
+  const wt = new THREE.Group();
+  const tankMat = new THREE.MeshStandardMaterial({ color: 0xb8c2c8, metalness: 1, roughness: 0.18 });
+  const tank = new THREE.Mesh(new THREE.SphereGeometry(2.2, 20, 14), tankMat);
+  tank.position.y = 9; tank.castShadow = true;
+  const legMat = new THREE.MeshStandardMaterial({ color: 0x4a4f55, metalness: 0.8, roughness: 0.45 });
+  for (let i = 0; i < 4; i++) {
+    const a = i * Math.PI / 2 + Math.PI / 4;
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 8.4, 8), legMat);
+    leg.position.set(Math.cos(a) * 1.4, 4.2, Math.sin(a) * 1.4);
+    leg.rotation.z = Math.cos(a) * 0.1; leg.rotation.x = -Math.sin(a) * 0.1;
+    leg.castShadow = true;
+    wt.add(leg);
+  }
+  wt.add(tank);
+  wt.position.set(-22, 0, -28);
+  scene.add(wt);
+  buildings.push(new THREE.Box3().setFromObject(wt));
+}
+
+// puddles — mirror-flat reflective discs after the rain
+const puddleMat = new THREE.MeshStandardMaterial({ color: 0x93aabb, metalness: 1, roughness: 0.06 });
+[[3, -6, 1.4], [-7, -16, 1.9], [7.5, -20, 1.2], [-2, -28, 1.6], [11, -9, 1.0]].forEach(([x, z, r]) => {
+  const p = new THREE.Mesh(new THREE.CircleGeometry(r, 20), puddleMat);
+  p.rotation.x = -Math.PI / 2; p.position.set(x, 0.012, z);
+  p.receiveShadow = true;
+  scene.add(p);
+});
+
+// ---------------------------------------------------------------- character faces (painted per person)
 const entities = [];
-const skinMat = new THREE.MeshStandardMaterial({ color: 0xc9a184, roughness: 0.8 });
-function soldierModel(kind, opts = {}) {
+function faceTex(f = {}) {
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const x = c.getContext('2d');
+  const skin = f.skin || '#c9a184';
+  if (f.mask === 'molotov') {
+    // Molotov: BLACK KNIT SKI MASK with eye holes and the fire/bottle decal — a masked MAN, not a robot
+    x.fillStyle = '#141414'; x.fillRect(0, 0, 128, 128);
+    for (let i = 0; i < 900; i++) { x.fillStyle = `rgba(255,255,255,${rnd(0.015, 0.05)})`; x.fillRect(rnd(0, 128), rnd(0, 128), 1.5, 1); } // knit weave
+    // eye holes with real eyes inside
+    [[40, 52], [88, 52]].forEach(([ex, ey]) => {
+      x.fillStyle = skin; x.beginPath(); x.ellipse(ex, ey, 13, 9, 0, 0, 7); x.fill();
+      x.fillStyle = '#fff'; x.beginPath(); x.ellipse(ex, ey, 8, 5, 0, 0, 7); x.fill();
+      x.fillStyle = '#5a3c22'; x.beginPath(); x.arc(ex, ey, 3.4, 0, 7); x.fill();
+      x.fillStyle = '#000'; x.beginPath(); x.arc(ex, ey, 1.6, 0, 7); x.fill();
+    });
+    // painted flame decal rising from the chin + tiny molotov bottle on the forehead
+    const fl = x.createLinearGradient(0, 128, 0, 78);
+    fl.addColorStop(0, '#ff5522'); fl.addColorStop(0.6, '#ff9a2d'); fl.addColorStop(1, 'rgba(255,154,45,0)');
+    x.fillStyle = fl;
+    x.beginPath(); x.moveTo(8, 128);
+    for (let i = 0; i <= 8; i++) x.lineTo(8 + i * 14, 128 - (i % 2 ? rnd(30, 44) : rnd(12, 20)));
+    x.lineTo(120, 128); x.closePath(); x.fill();
+    x.strokeStyle = '#ff7a2d'; x.lineWidth = 3;
+    x.strokeRect(58, 14, 12, 18); x.fillStyle = '#ff7a2d'; x.fillRect(61, 8, 6, 6);   // the bottle
+  } else if (f.mask === 'balaclava') {
+    // HYDRA trooper: dark balaclava + goggles band
+    x.fillStyle = '#1c1e22'; x.fillRect(0, 0, 128, 128);
+    for (let i = 0; i < 700; i++) { x.fillStyle = `rgba(255,255,255,${rnd(0.01, 0.04)})`; x.fillRect(rnd(0, 128), rnd(0, 128), 1.5, 1); }
+    x.fillStyle = '#0c0d10'; x.fillRect(16, 38, 96, 26);                               // goggle band
+    [[44, 51], [84, 51]].forEach(([ex, ey]) => {                                       // red lenses
+      x.fillStyle = '#3b0f14'; x.beginPath(); x.ellipse(ex, ey, 13, 9, 0, 0, 7); x.fill();
+      x.fillStyle = '#a33'; x.beginPath(); x.ellipse(ex - 3, ey - 2, 4, 2.5, 0, 0, 7); x.fill();
+    });
+  } else {
+    // a human face: skin, eyes, brows, nose, mouth — per-character features
+    x.fillStyle = skin; x.fillRect(0, 0, 128, 128);
+    const shade = x.createLinearGradient(0, 0, 0, 128);
+    shade.addColorStop(0, 'rgba(0,0,0,0.08)'); shade.addColorStop(0.5, 'rgba(0,0,0,0)'); shade.addColorStop(1, 'rgba(0,0,0,0.14)');
+    x.fillStyle = shade; x.fillRect(0, 0, 128, 128);
+    if (f.old) { x.strokeStyle = 'rgba(60,40,30,0.35)'; x.lineWidth = 1.5;             // age lines
+      [[30, 80, 55, 84], [98, 80, 73, 84], [40, 100, 88, 100]].forEach(([a, b, cx2, d]) => { x.beginPath(); x.moveTo(a, b); x.quadraticCurveTo(64, b + 6, cx2, d); x.stroke(); }); }
+    if (f.hair) { x.fillStyle = f.hair; x.fillRect(0, 0, 128, 22);                     // fringe
+      x.fillRect(0, 0, 10, 60); x.fillRect(118, 0, 10, 60); }
+    // eyes
+    [[42, 54], [86, 54]].forEach(([ex, ey]) => {
+      x.fillStyle = '#fff'; x.beginPath(); x.ellipse(ex, ey, 9.5, 6, 0, 0, 7); x.fill();
+      x.fillStyle = f.eye || '#4a3c28'; x.beginPath(); x.arc(ex, ey, 3.6, 0, 7); x.fill();
+      x.fillStyle = '#000'; x.beginPath(); x.arc(ex, ey, 1.8, 0, 7); x.fill();
+      x.fillStyle = 'rgba(255,255,255,0.85)'; x.beginPath(); x.arc(ex + 1.4, ey - 1.6, 1, 0, 7); x.fill();
+    });
+    // brows
+    x.fillStyle = f.hair || '#2c2019';
+    const tilt = f.worried ? -4 : f.stern ? 4 : 0;
+    x.save(); x.translate(42, 43); x.rotate(tilt * 0.04); x.fillRect(-11, -2.5, 22, 5); x.restore();
+    x.save(); x.translate(86, 43); x.rotate(-tilt * 0.04); x.fillRect(-11, -2.5, 22, 5); x.restore();
+    // nose + mouth
+    x.strokeStyle = 'rgba(60,40,30,0.5)'; x.lineWidth = 2.5;
+    x.beginPath(); x.moveTo(64, 58); x.lineTo(61, 76); x.lineTo(67, 78); x.stroke();
+    x.strokeStyle = '#6d4438'; x.lineWidth = 3.5;
+    x.beginPath();
+    if (f.worried) x.arc(64, 102, 12, Math.PI * 1.15, Math.PI * 1.85);
+    else if (f.grim) { x.moveTo(50, 98); x.lineTo(78, 98); }
+    else x.arc(64, 92, 12, Math.PI * 0.15, Math.PI * 0.85);
+    x.stroke();
+    if (f.mustache) { x.fillStyle = f.hair || '#3a2a1a';
+      x.beginPath(); x.ellipse(64, 84, 20, 7, 0, 0, 7); x.fill(); }
+    if (f.stubble) { for (let i = 0; i < 350; i++) { x.fillStyle = 'rgba(30,22,16,0.25)';
+      x.fillRect(rnd(28, 100), rnd(86, 122), 1.2, 1.2); } }
+    if (f.scar) { x.strokeStyle = 'rgba(140,60,50,0.8)'; x.lineWidth = 2.5;
+      x.beginPath(); x.moveTo(96, 34); x.lineTo(88, 66); x.stroke(); }
+    if (f.scarf) { x.fillStyle = '#7a6a4e'; x.fillRect(0, 68, 128, 60);                // shemagh over nose/mouth
+      x.strokeStyle = 'rgba(0,0,0,0.2)'; for (let yy = 74; yy < 126; yy += 8) { x.beginPath(); x.moveTo(0, yy); x.lineTo(128, yy + 4); x.stroke(); } }
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+// distinctive face + headgear per named character
+const PRESETS = {
+  'Molotov':         { face: { mask: 'molotov' },                                              hat: null,      hairSide: '#141414' },
+  'Fox':             { face: { skin: '#c98d63', hair: '#4a3320', mustache: true, stern: true }, hat: 'cap',     hairSide: '#4a3320' },
+  'Striker':         { face: { skin: '#7a5236', hair: '#171412', stern: true, stubble: true },  hat: 'helmetG', hairSide: '#171412' },
+  'Payback':         { face: { skin: '#d9ab88', scarf: true, eye: '#2e4a2e' },                  hat: 'hood',    hairSide: '#7a6a4e' },
+  'Brian Wolford':   { face: { skin: '#dcb08e', hair: '#7a4a22', grim: true, scar: true },      hat: 'boonie',  hairSide: '#7a4a22' },
+  'Jesse Wolford':   { face: { skin: '#dcb08e', hair: '#7a4a22', worried: true },               hat: 'boonie',  hairSide: '#7a4a22' },
+  'Victor Prestige': { face: { skin: '#d8c2ad', hair: '#8e8e94', old: true, grim: true },       hat: null,      hairSide: '#8e8e94' },
+  'Civilian':        { face: { skin: '#c9a184', hair: '#2e2a26' },                              hat: null,      hairSide: '#2e2a26' },
+  'HYDRA Trooper':   { face: { mask: 'balaclava' },                                             hat: 'helmetB', hairSide: '#1c1e22' },
+};
+
+// ---------------------------------------------------------------- soldier models — JOINTED (shoulders/elbows/hips/knees)
+function limbSeg(w, len, mat) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, len, w), mat);
+  m.position.y = -len / 2;
+  m.castShadow = true;
+  return m;
+}
+function soldierModel(kind, name) {
   const grp = new THREE.Group();
   const isEnemy = kind === 'enemy';
+  const preset = PRESETS[name] || PRESETS['Civilian'];
   const suit = kind === 'protected'
-    ? new THREE.MeshStandardMaterial({ color: 0x23262e, roughness: 0.6 })                     // Prestige: dark suit
+    ? new THREE.MeshStandardMaterial({ color: 0x23262e, roughness: 0.55 })                     // Prestige: dark suit
     : new THREE.MeshStandardMaterial({ map: isEnemy ? camoBlack : camoGreen, roughness: 0.95 });
   const pants = new THREE.MeshStandardMaterial({ color: kind === 'neutral' ? 0x5a5347 : 0x2e3129, roughness: 1 });
+  const skinM = new THREE.MeshStandardMaterial({ color: preset.face.skin || 0xc9a184, roughness: 0.8 });
 
-  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.62, 0.28), suit); torso.position.y = 1.18;
-  const hips = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.22, 0.26), pants); hips.position.y = 0.82;
-  const head = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.26, 0.24),
-    opts.mask ? new THREE.MeshStandardMaterial({ color: 0x181818, roughness: 0.9 }) : skinMat); // Molotov only: ski mask
-  head.position.y = 1.66;
-  // headgear: enemies get black helmets, Team Apex gets green helmets, Molotov gets his fire stripe
-  if (isEnemy || (kind === 'friendly' && !opts.mask)) {
-    const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 6, 0, Math.PI * 2, 0, 1.5),
-      isEnemy ? suit : new THREE.MeshStandardMaterial({ color: 0x3d4a33, roughness: 0.9 }));
-    helmet.position.y = 1.78; grp.add(helmet);
+  // torso + hips + chest rig
+  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.6, 0.26), suit); torso.position.y = 1.18; torso.castShadow = true;
+  const hips = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.2, 0.24), pants); hips.position.y = 0.82; hips.castShadow = true;
+  const rigM = new THREE.MeshStandardMaterial({ color: isEnemy ? 0x15171a : 0x2c3526, roughness: 0.85 });
+  for (let p = 0; p < 3; p++) {                              // ammo pouches on the chest
+    const pouch = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.12, 0.05), rigM);
+    pouch.position.set(-0.15 + p * 0.15, 1.22, -0.155);
+    grp.add(pouch);
   }
-  if (opts.mask) { // fire decal stripe — Molotov's signature mask
-    const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.06, 0.25),
-      new THREE.MeshStandardMaterial({ color: 0xff5522, emissive: 0xaa2200, emissiveIntensity: 0.5 }));
-    stripe.position.y = 1.7; grp.add(stripe);
+  // rounded shoulder pads (spheres!)
+  const padM = new THREE.MeshStandardMaterial({ color: isEnemy ? 0x1a1c20 : 0x39452f, roughness: 0.9 });
+  [-0.29, 0.29].forEach(px => {
+    const pad = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), padM);
+    pad.position.set(px, 1.44, 0); pad.castShadow = true;
+    grp.add(pad);
+  });
+  // neck + head with the PAINTED FACE (front) and hair/mask color on the other sides
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.08, 8), skinM); neck.position.y = 1.51;
+  const sideM = new THREE.MeshStandardMaterial({ color: preset.hairSide || '#2e2a26', roughness: 0.9 });
+  const faceM = new THREE.MeshStandardMaterial({ map: faceTex(preset.face), roughness: 0.75 });
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.28, 0.24), [sideM, sideM, sideM, skinM, sideM, faceM]);
+  head.position.y = 1.68; head.castShadow = true;
+  // headgear
+  if (preset.hat === 'helmetB' || preset.hat === 'helmetG') {
+    const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.17, 12, 7, 0, Math.PI * 2, 0, 1.45),
+      new THREE.MeshStandardMaterial({ color: preset.hat === 'helmetB' ? 0x1a1c20 : 0x3d4a33, roughness: 0.85 }));
+    helmet.position.y = 1.8; helmet.castShadow = true; grp.add(helmet);
+  } else if (preset.hat === 'boonie') {
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(0.145, 10, 6, 0, Math.PI * 2, 0, 1.4),
+      new THREE.MeshStandardMaterial({ color: 0x4c523a, roughness: 1 }));
+    dome.position.y = 1.815;
+    const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.22, 0.025, 12),
+      new THREE.MeshStandardMaterial({ color: 0x444a34, roughness: 1 }));
+    brim.position.y = 1.79;
+    grp.add(dome, brim);
+  } else if (preset.hat === 'cap') {
+    const capTop = new THREE.Mesh(new THREE.CylinderGeometry(0.135, 0.145, 0.09, 10),
+      new THREE.MeshStandardMaterial({ color: 0x3a4530, roughness: 1 }));
+    capTop.position.y = 1.83;
+    const bill = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.02, 0.12),
+      new THREE.MeshStandardMaterial({ color: 0x323b29, roughness: 1 }));
+    bill.position.set(0, 1.8, -0.17);
+    grp.add(capTop, bill);
+  } else if (preset.hat === 'hood') {
+    const hood = new THREE.Mesh(new THREE.SphereGeometry(0.165, 10, 7, 0, Math.PI * 2, 0, 1.7),
+      new THREE.MeshStandardMaterial({ color: 0x7a6a4e, roughness: 1 }));
+    hood.position.y = 1.74; grp.add(hood);
   }
-  const armL = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.55, 0.13), suit); armL.position.set(-0.34, 1.2, 0);
-  const armR = armL.clone(); armR.position.x = 0.34;
-  const legL = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.7, 0.16), pants); legL.position.set(-0.13, 0.36, 0);
-  const legR = legL.clone(); legR.position.x = 0.13;
-  grp.add(torso, hips, head, armL, armR, legL, legR);
+  // ARMS — shoulder + elbow joints, posed holding the rifle
+  function makeArm(side) {                                   // side: -1 left, +1 right
+    const shoulder = new THREE.Group();
+    shoulder.position.set(0.3 * side, 1.44, 0);
+    shoulder.add(limbSeg(0.11, 0.26, suit));                 // upper arm
+    const elbow = new THREE.Group();
+    elbow.position.y = -0.26;
+    elbow.add(limbSeg(0.09, 0.22, suit));                    // forearm
+    const hand = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.08), skinM);
+    hand.position.y = -0.24; elbow.add(hand);
+    shoulder.add(elbow);
+    grp.add(shoulder);
+    return { shoulder, elbow };
+  }
+  const armRJ = makeArm(1), armLJ = makeArm(-1);
+  const combatant = isEnemy || kind === 'friendly';
+  if (combatant) {                                           // firing pose: both hands to the weapon
+    armRJ.shoulder.rotation.x = -1.15; armRJ.elbow.rotation.x = 0.55;
+    armLJ.shoulder.rotation.x = -1.0;  armLJ.shoulder.rotation.z = -0.5; armLJ.elbow.rotation.x = 0.85;
+  } else {                                                   // civilians: arms down, slight bend
+    armRJ.shoulder.rotation.x = -0.1; armRJ.elbow.rotation.x = 0.2;
+    armLJ.shoulder.rotation.x = -0.1; armLJ.elbow.rotation.x = 0.2;
+  }
+  armRJ.shoulder.userData.bx = armRJ.shoulder.rotation.x;
+  armLJ.shoulder.userData.bx = armLJ.shoulder.rotation.x;
+  // LEGS — hip + knee joints, natural stance
+  function makeLeg(side) {
+    const hip = new THREE.Group();
+    hip.position.set(0.13 * side, 0.74, 0);
+    hip.add(limbSeg(0.15, 0.36, pants));                     // thigh
+    const knee = new THREE.Group();
+    knee.position.y = -0.36;
+    knee.add(limbSeg(0.13, 0.32, pants));                    // shin
+    const boot = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.09, 0.24),
+      new THREE.MeshStandardMaterial({ color: 0x1e1a14, roughness: 0.9 }));
+    boot.position.set(0, -0.35, -0.04); boot.castShadow = true;
+    knee.add(boot);
+    hip.add(knee);
+    grp.add(hip);
+    return { hip, knee };
+  }
+  const legRJ = makeLeg(1), legLJ = makeLeg(-1);
+  legRJ.hip.rotation.x = -0.06; legRJ.knee.rotation.x = 0.1;  // relaxed combat stance
+  legLJ.hip.rotation.x = 0.08;  legLJ.knee.rotation.x = 0.06;
+  grp.add(torso, hips, neck, head);
+  const armL = armLJ.shoulder, armR = armRJ.shoulder;         // (kept names for the animator)
+  const legL = legLJ.hip, legR = legRJ.hip;
   // rifle for combatants (with a real muzzle point — NPC shots come FROM the gun)
   let gun = null;
   if (isEnemy || kind === 'friendly') {
@@ -328,6 +592,7 @@ function soldierModel(kind, opts = {}) {
     const gmag = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.15, 0.07),
       new THREE.MeshStandardMaterial({ color: 0x2b2e33, roughness: 0.7 }));
     gmag.position.set(0, -0.1, -0.08); gmag.rotation.x = 0.25;
+    body.castShadow = true;
     gun.add(body, brl, gmag);
     gun.position.set(0.12, 1.12, -0.3); gun.rotation.x = -0.08;
     grp.add(gun);
@@ -336,7 +601,7 @@ function soldierModel(kind, opts = {}) {
 }
 function makeEntity(name, kind, x, z, baseY = 0) {
   const colors = { enemy: 0xf38ba8, protected: 0xf38ba8, friendly: 0x89b4fa, neutral: 0xe6e6e6 };
-  const m = soldierModel(kind, { mask: name === 'Molotov' });
+  const m = soldierModel(kind, name);
   m.grp.position.set(x, baseY, z);
   scene.add(m.grp);
   const e = { name, kind, grp: m.grp, body: m.torso, head: m.head, model: m, color: colors[kind],
@@ -934,8 +1199,9 @@ function updateEntities(dt) {
     e.phase += dt;
     // breathe + tiny idle shuffle
     e.grp.position.y = e.baseY + Math.sin(e.phase * 2) * 0.03;
-    e.model.armL.rotation.x = Math.sin(e.phase * 1.7) * 0.06;
-    e.model.armR.rotation.x = -Math.sin(e.phase * 1.7) * 0.06;
+    // breathe around the posed joints (not overwrite them)
+    e.model.armL.rotation.x = (e.model.armL.userData.bx || 0) + Math.sin(e.phase * 1.7) * 0.035;
+    e.model.armR.rotation.x = (e.model.armR.userData.bx || 0) - Math.sin(e.phase * 1.7) * 0.035;
     // friendlies face the nearest living enemy (they're IN the fight); everyone else faces you
     let face = camera.position;
     if (e.kind === 'friendly') {
@@ -1105,7 +1371,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 3;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 4;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
