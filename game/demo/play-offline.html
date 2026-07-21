@@ -734,9 +734,9 @@ function soldierModel(kind, name) {
   }
   const armRJ = makeArm(1), armLJ = makeArm(-1);
   const combatant = isEnemy || kind === 'friendly';
-  if (combatant) {                                           // LOW-READY: gun forward-down, both hands on it
-    armRJ.shoulder.rotation.x = 0.5;  armRJ.elbow.rotation.x = 0.6;
-    armLJ.shoulder.rotation.x = 0.7;  armLJ.shoulder.rotation.z = 0.45; armLJ.elbow.rotation.x = 0.35;
+  if (combatant) {                                           // READY: level gun, right hand grip / left hand barrel
+    armRJ.shoulder.rotation.x = 0.25; armRJ.shoulder.rotation.z = -0.45; armRJ.elbow.rotation.x = 0.35;
+    armLJ.shoulder.rotation.x = 0.95; armLJ.shoulder.rotation.z = 0.74;  armLJ.elbow.rotation.x = 0.15;
   } else {                                                   // civilians: arms down, slight bend
     armRJ.shoulder.rotation.x = 0.1; armRJ.elbow.rotation.x = 0.15;
     armLJ.shoulder.rotation.x = 0.1; armLJ.elbow.rotation.x = 0.15;
@@ -783,14 +783,13 @@ function soldierModel(kind, name) {
     gstock.position.set(0, -0.01, 0.31);
     body.castShadow = true;
     gun.add(body, brl, gmag, gstock);
-    // anchor to the right hand: elbow-local, counter-rotated so the barrel points body-forward
-    // (arm chain at low-ready = 0.5 + 0.6 = 1.1 rad; gun -0.75 leaves the muzzle ~20° down)
-    gun.position.set(-0.02, -0.2, -0.03);
-    gun.rotation.x = -0.75;
-    gun.userData.baseRotX = -0.75;
+    // the gun is FIXED to the body, perfectly LEVEL — never tilted. The hands
+    // are posed onto it: right hand at the grip (rear), left hand on the barrel.
+    gun.position.set(0.08, 1.14, -0.2);
+    gun.rotation.x = 0;
     gun.userData.basePos = gun.position.clone();
     gun.userData.mag = gmag;
-    armRJ.elbow.add(gun);
+    grp.add(gun);
   }
   // record every joint's posed rotation so ragdolls can flop and respawns can restore
   const joints = [
@@ -1647,37 +1646,43 @@ function updateEntities(dt) {
       // slight forward lean while running
       e.model.torso.rotation.x += -0.14 * ai.movingAmt;
 
-      // ---- reload animation: mag OUT, hand dives to the belt, mag back IN ----
+      // ---- arms & gun: the gun stays LEVEL on the body; hands ride their stations ----
+      // READY  (creation pose): gun at chest height; right hand grip, left hand barrel.
+      // AIM: the level gun rises to the shoulder; both hands rise with it.
+      const L = (a, b) => a * (1 - aimA) + b * aimA;
+      const br = Math.sin(e.phase * 1.7) * 0.035 * (1 - aimA);
       if (ai.reloadT > 0) {
+        // reload: right hand keeps the grip; LEFT hand drops to the belt for the mag
         const p = 1 - ai.reloadT / 1.7;
         const wave = Math.sin(Math.min(1, p) * Math.PI);
-        J[0].rotation.x = B(0).x - wave * 0.55;      // left hand off the handguard, down to the belt
-        J[0].rotation.z = B(0).z - wave * 0.3;
-        J[1].rotation.x = B(1).x + wave * 0.35;
+        J[0].rotation.x = B(0).x - wave * 0.75;
+        J[0].rotation.z = B(0).z - wave * 0.55;
+        J[1].rotation.x = B(1).x + wave * 0.3;
         if (e.model.gun) {
-          e.model.gun.rotation.x = e.model.gun.userData.baseRotX + wave * 0.4;   // muzzle tips up
           const mg = e.model.gun.userData.mag;
-          if (mg) mg.visible = !(p > 0.3 && p < 0.62); // the magazine is OUT mid-reload
+          if (mg) mg.visible = !(p > 0.3 && p < 0.62);  // the magazine is OUT mid-reload
         }
       } else {
-        // OPERATOR AIM blend (photo-matched): stock to the shoulder pocket, right elbow
-        // low on the grip, LEFT ARM EXTENDED along the handguard, gun level at cheek height.
-        const L = (a, b) => a * (1 - aimA) + b * aimA;
-        const br = Math.sin(e.phase * 1.7) * 0.035;
-        J[0].rotation.x = L(B(0).x + br, 1.25);            // left arm reaches far forward
-        J[0].rotation.z = L(B(0).z, 0.52);                 //   ...and across to the handguard
-        J[1].rotation.x = L(B(1).x, 0.12) - 0.2 * kick;    // nearly straight support arm
+        J[0].rotation.x = L(B(0).x + br, 1.28);          // left arm extends along the barrel
+        J[0].rotation.z = L(B(0).z, 0.68);
+        J[1].rotation.x = L(B(1).x, 0.05) - 0.2 * kick;
         if (e.model.gun) {
-          const g = e.model.gun;
-          g.rotation.x = L(g.userData.baseRotX, -1.62) + 0.3 * kick;  // level at the shoulder; kick flips the muzzle
-          g.position.y = L(g.userData.basePos.y, -0.14);              // rides up into the pocket
-          g.position.z = L(g.userData.basePos.z, 0.0) + 0.05 * kick;  // and shoves BACK into the shoulder each shot
-          const mg = g.userData.mag;
+          const mg = e.model.gun.userData.mag;
           if (mg) mg.visible = true;
         }
       }
-      J[2].rotation.x = B(2).x * (1 - aimA) + 0.15 * aimA - Math.sin(e.phase * 1.7) * 0.035 * (1 - aimA) + 0.1 * kick;
-      J[3].rotation.x = B(3).x * (1 - aimA) + 1.45 * aimA - 0.25 * kick; // elbow LOW, grip hand near the chest — stock in the pocket
+      // right arm: grip hand rear, elbow bends deeper as the gun rises
+      J[2].rotation.x = L(B(2).x + br, 0.75) + 0.1 * kick;
+      J[2].rotation.z = L(-0.45, -0.55);
+      J[3].rotation.x = L(B(3).x, 1.8) - 0.25 * kick;
+      // the LEVEL gun itself: rises from chest carry to shoulder aim; recoil shoves it straight back
+      if (e.model.gun) {
+        const g = e.model.gun;
+        g.rotation.x = 0.12 * kick;                      // level — only the shot itself flips it
+        g.position.x = L(g.userData.basePos.x, 0.05);
+        g.position.y = L(g.userData.basePos.y, 1.38);
+        g.position.z = L(g.userData.basePos.z, -0.18) + 0.06 * kick;
+      }
       // cheek weld + bladed torso while aiming; the body rocks back on each shot
       J[8].rotation.z = 0.07 * aimA;
       e.model.torso.rotation.y = 0.12 * aimA;
@@ -1945,7 +1950,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 10;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 11;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
