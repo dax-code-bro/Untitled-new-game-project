@@ -9233,7 +9233,7 @@ let MOLLY = null;      // Molotov's Meshy-generated full body (creator's own des
   };
   const headFail = (err) => { console.warn('[demo] head scan unavailable — sculpted heads', err); settle(); };
   // --- Molotov's generated body (streamed; ring body is the fallback) ---
-  loader.load('./assets/molotov.glb', (g) => {
+  loader.load('./assets/molotov2.glb', (g) => {
     try {
     let mesh = null;
     g.scene.traverse(o => { if (o.isMesh && !mesh) mesh = o; });
@@ -10986,7 +10986,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 56;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 57;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
