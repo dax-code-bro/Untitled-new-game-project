@@ -9947,7 +9947,12 @@ function shoot() {
     const meshes = [];
     entities.forEach(e => { if (e.alive) { e.body.userData.e = e; e.head.userData.e = e; meshes.push(e.body, e.head); } });
     const hits = ray.intersectObjects(meshes, false);
-    if (hits.length) {
+    const wOrigin = camera.getWorldPosition(new THREE.Vector3());
+    const wD = wallDist(wOrigin, dir, 999);
+    if (hits.length && hits[0].distance > wD + 0.05) {   // a wall is in the way
+      playerTracer(wOrigin.addScaledVector(dir, wD));
+      hitSpark(camera.getWorldPosition(new THREE.Vector3()).addScaledVector(dir, wD));
+    } else if (hits.length) {
       const e = hits[0].object.userData.e;
       if (e.kind === 'friendly') {
         // squaddies now sprint across your firing line — one accident is a warning,
@@ -10058,6 +10063,7 @@ function killEntity(e, head, impulse, by) {
       e.model.gun.rotation.x = e.model.gun.userData.baseRotX;
       if (e.model.gun.userData.mag) e.model.gun.userData.mag.visible = true;
     }
+    e.shootTimer = 1.5 + Math.random() * 1.5;        // no spawn-frame cheap shots
     if (e.ai) e.ai = makeAI(e);                      // fresh brain, full mag, standing
   }, 5000);
 }
@@ -10149,6 +10155,19 @@ function npcMuzzle(e) {
   return e.grp.position.clone().add(new THREE.Vector3(0, 1.3, 0));
 }
 // One NPC shot with real aim error — can visibly MISS (tracer streaks past the target)
+const _wallRay = new THREE.Ray();
+function wallDist(origin, dir, maxD) {
+  _wallRay.set(origin, dir);
+  let best = maxD;
+  const hitP = new THREE.Vector3();
+  for (const b of buildings) {
+    if (_wallRay.intersectBox(b, hitP)) {
+      const d = origin.distanceTo(hitP);
+      if (d < best) best = d;
+    }
+  }
+  return best;
+}
 function npcFire(e, targetPos, opts = {}) {
   const from = npcMuzzle(e);
   npcFlash(from);
@@ -10176,8 +10195,10 @@ function npcFire(e, targetPos, opts = {}) {
   const along = toT.dot(dir);
   const closest = from.clone().addScaledVector(dir, Math.max(0, along));
   const missBy = closest.distanceTo(targetPos);
-  const hit = missBy < (opts.hitRadius ?? 0.35);
-  const end = hit ? targetPos.clone() : from.clone().addScaledVector(dir, Math.min(60, along + rnd(6, 18)));
+  const wd = wallDist(from, dir, 999);
+  const blocked = wd < Math.max(0, along) - 0.3;      // a wall stands before the target
+  const hit = !blocked && missBy < (opts.hitRadius ?? 0.35);
+  const end = hit ? targetPos.clone() : from.clone().addScaledVector(dir, Math.min(60, Math.min(wd, along + rnd(6, 18))));
   npcTracer(from, end, opts.friendly);
   return hit;
 }
@@ -10223,7 +10244,7 @@ document.querySelectorAll('.mode').forEach(el => el.addEventListener('click', ()
   const mode = el.dataset.mode;
   if (mode !== 'campaign') { toast('PROTOTYPE — not in this demo'); flashMenu(); return; }
   document.getElementById('menu').classList.add('hidden');
-  document.getElementById('stamp').textContent = 'COLUMBIA, USA — 1985';
+  document.getElementById('stamp').textContent = 'COLOMBIA — 1985';
   document.getElementById('story').classList.remove('hidden');
 }));
 function flashMenu() { const m = document.getElementById('menu'); m.animate([{ filter: 'brightness(1)' }, { filter: 'brightness(1.6)' }, { filter: 'brightness(1)' }], { duration: 300 }); }
@@ -10887,7 +10908,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 43;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 44;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
