@@ -1738,13 +1738,13 @@ function operatorModel(kind, name) {
     headHit0.position.y = 0.12; headB.add(headHit0);
     let gun0 = null;
     shR.rotation.x = -0.05; shR.rotation.z = -0.25; elR.rotation.x = 1.35;
-    shL.rotation.x = 1.19;  shL.rotation.z = 0.58;  elL.rotation.x = 0.05;
+    shL.rotation.x = 1.42;  shL.rotation.z = 0.42;  elL.rotation.x = 0.04;
     shL.userData.bx = shL.rotation.x; shR.userData.bx = shR.rotation.x;
     hipR.rotation.x = -0.06; knR.rotation.x = 0.1;
     hipL.rotation.x = 0.08;  knL.rotation.x = 0.06;
     gun0 = buildWeapon(preset.weapon || {});
     gun0.scale.setScalar(1.3);
-    gun0.position.set(0.16, 1.22, -0.5);
+    gun0.position.set(0.15, 1.22, -0.44);
     gun0.userData.basePos = gun0.position.clone();
     grp.add(gun0);
     const joints0 = [shL, elL, shR, elR, hipL, knL, hipR, knR, headB];
@@ -1778,10 +1778,10 @@ function operatorModel(kind, name) {
   let gun = null;
   if (combatant) {
     shR.rotation.x = -0.05; shR.rotation.z = -0.25; elR.rotation.x = 1.35;
-    shL.rotation.x = 1.19;  shL.rotation.z = 0.58;  elL.rotation.x = 0.05;
+    shL.rotation.x = 1.42;  shL.rotation.z = 0.42;  elL.rotation.x = 0.04;
     gun = buildWeapon(preset.weapon || {});
     gun.scale.setScalar(1.3);
-    gun.position.set(0.16, 1.22, -0.5);
+    gun.position.set(0.15, 1.22, -0.44);
     gun.userData.basePos = gun.position.clone();
     grp.add(gun);
   } else {
@@ -2005,7 +2005,7 @@ function soldierModel(kind, name) {
   if (isEnemy || kind === 'friendly') {
     gun = buildNpcRifle();
     gun.scale.setScalar(1.3);
-    gun.position.set(0.16, 1.22, -0.5);
+    gun.position.set(0.15, 1.22, -0.44);
     gun.userData.basePos = gun.position.clone();
     grp.add(gun);
   }
@@ -2119,7 +2119,7 @@ function riggedModel(kind, name) {
   if (isEnemy || kind === 'friendly') {
     gun = buildNpcRifle();
     gun.scale.setScalar(1.3);
-    gun.position.set(0.16, 1.22, -0.5);
+    gun.position.set(0.15, 1.22, -0.44);
     gun.userData.basePos = gun.position.clone();
     grp.add(gun);
   }
@@ -3500,8 +3500,8 @@ function updateEntities(dt) {
           }
         }
       } else {
-        J[0].rotation.x = L(B(0).x + br, 1.44 + (H.lx || 0));  // left hand rides its station
-        J[0].rotation.z = L(B(0).z, 0.57 + (H.lz || 0));
+        J[0].rotation.x = L(B(0).x + br, 1.62 + (H.lx || 0));  // left hand OUT on the handguard
+        J[0].rotation.z = L(B(0).z, 0.42 + (H.lz || 0));
         J[1].rotation.x = L(B(1).x, 0.03) - 0.2 * kick;
         if (e.model.gun) {
           const mg = e.model.gun.userData.mag;
@@ -3518,7 +3518,7 @@ function updateEntities(dt) {
         g.rotation.x = 0.12 * kick + 0.4 * runB;        // level; dips into the sprint
         g.position.x = L(g.userData.basePos.x, 0.12);
         g.position.y = L(g.userData.basePos.y, 1.38 + (H.gy || 0)) - 0.07 * runB;
-        g.position.z = L(g.userData.basePos.z, -0.52) + 0.06 * kick;  // butt seats AT the shoulder pocket
+        g.position.z = L(g.userData.basePos.z, -0.46) + 0.06 * kick;  // butt seats AT the shoulder pocket
       }
       // cheek weld while aiming; the body rocks back on each shot
       // (torso yaw is set in the facing section below — turn-lead + blade)
@@ -3914,7 +3914,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 48;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 49;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
