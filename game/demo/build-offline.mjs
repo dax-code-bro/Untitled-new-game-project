@@ -29,10 +29,15 @@ let addons = '';
     .replace('const { ', 'const { toTrianglesDrawMode } = window.__ADDONS; const { ');
   let skel = addonToPlain('vendor/SkeletonUtils.js')
     .replace('__EXPORTS__', '{ cloneSkeleton: clone }');
-  addons = bgu + '\n' + gltf + '\n' + skel;
+  let rgbe = addonToPlain('vendor/RGBELoader.js')
+    .replace('__EXPORTS__', '{ RGBELoader }');
+  addons = bgu + '\n' + gltf + '\n' + skel + '\n' + rgbe;
 }
-// the rigged soldier model rides along as base64 so the single file stays self-contained
+// the rigged body + scanned head ride along as base64 so the single file stays self-contained
 const glbB64 = fs.readFileSync('assets/body.glb').toString('base64');
+const headB64 = fs.readFileSync('assets/head.glb').toString('base64');
+const headColB64 = fs.readFileSync('assets/head-col.jpg').toString('base64');
+const headNrmB64 = fs.readFileSync('assets/head-nrm.jpg').toString('base64');
 
 // --- transform game code: drop ES imports, use global THREE, replace controls ---
 game = game
@@ -40,6 +45,7 @@ game = game
   .replace(/import \{ PointerLockControls \} from 'three\/addons\/controls\/PointerLockControls\.js';\n/, '')
   .replace(/import \{ GLTFLoader \} from 'three\/addons\/loaders\/GLTFLoader\.js';\n/, 'const { GLTFLoader } = window.__ADDONS;\n')
   .replace(/import \{ clone as cloneSkeleton \} from 'three\/addons\/utils\/SkeletonUtils\.js';\n/, 'const { cloneSkeleton } = window.__ADDONS;\n')
+  .replace(/import \{ RGBELoader \} from 'three\/addons\/loaders\/RGBELoader\.js';\n/, 'const { RGBELoader } = window.__ADDONS;\n')
   .replace(
     "const controls = new PointerLockControls(camera, renderer.domElement);",
     `// inline pointer-lock shim (same API the game uses: lock/addEventListener/getObject)
@@ -72,7 +78,7 @@ const controls = (function () {
 // NB: use FUNCTION replacements so `$` chars inside three.min.js / game code are NOT
 // interpreted as special replacement patterns ($&, $', $1, ...).
 const inlined = `<script>\n${threeSrc}\n</script>\n<script>\n${addons}\n</script>\n` +
-  `<script>window.__SOLDIER_GLB_B64 = "${glbB64}";</script>\n<script>\n${game}\n</script>`;
+  `<script>window.__SOLDIER_GLB_B64 = "${glbB64}"; window.__HEAD_GLB_B64 = "${headB64}"; window.__HEAD_COL_B64 = "${headColB64}"; window.__HEAD_NRM_B64 = "${headNrmB64}";</script>\n<script>\n${game}\n</script>`;
 html = html
   .replace(/<script type="importmap">[\s\S]*?<\/script>\n?/, () => '')
   .replace(/<script type="module" src="\.\/main\.js"><\/script>/, () => inlined);

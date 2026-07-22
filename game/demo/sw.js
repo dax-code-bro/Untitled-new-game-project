@@ -1,7 +1,7 @@
 // UNTITLED demo — service worker.
 // Strategy: NETWORK-FIRST for the game itself (you always get the newest build
 // when online; cache is the offline fallback). Cache-first for icons/manifest.
-const VERSION = 'untitled-demo-v32';
+const VERSION = 'untitled-demo-v33';
 const ASSETS = [
   './untitled-demo.html',
   './play-offline.html',
@@ -9,6 +9,13 @@ const ASSETS = [
   './icon-192.png',
   './icon-512.png',
   './assets/body.glb',
+  './assets/head.glb',
+  './assets/head-col.jpg',
+  './assets/head-nrm.jpg',
+  './assets/pbr-brick-diff.jpg',
+  './assets/pbr-brick-rough.jpg',
+  './assets/pbr-brick-bump.jpg',
+  './assets/sky.hdr',
 ];
 
 self.addEventListener('install', (e) => {

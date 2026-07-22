@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 
 // ---------------------------------------------------------------- crash visibility (mobile debugging)
 function showFatal(msg) {
@@ -516,6 +517,7 @@ function updateFire(dt, t) {
 
 // ---------------------------------------------------------------- village buildings + props (collidable)
 const buildings = [];
+const pbrBrickMats = [];   // brick walls waiting for the photo-scanned PBR upgrade
 const wallMats = [wallTexA, wallTexB, wallTexC, brickTex];
 function makeBuilding(x, z, w, h, d, i, forceIntact = false) {
   const tex = wallMats[i % wallMats.length];
@@ -523,6 +525,7 @@ function makeBuilding(x, z, w, h, d, i, forceIntact = false) {
   const wall = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95,
     normalMap: isBrick ? brickNormal : stuccoNormal,
     normalScale: new THREE.Vector2(isBrick ? 0.9 : 0.5, isBrick ? 0.9 : 0.5) });
+  if (isBrick) pbrBrickMats.push(wall);
   const roof = new THREE.MeshStandardMaterial({ color: 0x5a4636, roughness: 1 });
   const ry = (i % 4) * 0.12 - 0.18;
   const damaged = !forceIntact;   // M1 canon: "Whole blocks burning… is the WHOLE CITY on fire?" — every building is hit
@@ -1234,7 +1237,39 @@ function sculptFace(head, f, hasHat) {
 function buildCharacterHead(preset, withNeck = false) {
   const assembly = new THREE.Group();
   let lids = null;
-  if (preset.face.mask) {
+  if (!preset.face.mask && HEADSCAN) {
+    // PHOTOREAL branch: the scanned human head, tinted + dressed per character
+    if (!HEADSCAN.headGeo) HEADSCAN.headGeo = clipBelowY(HEADSCAN.geo, -1.9);  // cut the bust at the neck
+    const skin = new THREE.MeshStandardMaterial({
+      map: HEADSCAN.colT, normalMap: HEADSCAN.nrmT, roughness: 0.58,
+      color: new THREE.Color(preset.tint || '#ffffff'),
+      side: THREE.DoubleSide,
+    });
+    const scan = new THREE.Mesh(HEADSCAN.headGeo, skin);
+    scan.castShadow = true;
+    scan.rotation.y = Math.PI;                 // scan faces +Z; assembly convention is -Z
+    scan.scale.setScalar(0.066);
+    scan.position.y = -0.043;                  // eyes land ~2cm above head center
+    assembly.add(scan);
+    // character overlays on the real face
+    if (preset.glasses) assembly.add(buildEyewear(preset.glasses));
+    if (preset.face.mustache) {
+      const hairM2 = new THREE.MeshStandardMaterial({ color: preset.face.hair || '#3a2a1a', roughness: 0.95 });
+      [-0.016, 0.016].forEach(px => {
+        const mo = new THREE.Mesh(new THREE.BoxGeometry(0.034, 0.013, 0.016), hairM2);
+        mo.position.set(px, -0.041, -0.122);
+        mo.rotation.z = px < 0 ? 0.24 : -0.24;
+        mo.rotation.y = px < 0 ? -0.16 : 0.16;
+        assembly.add(mo);
+      });
+    }
+    if (preset.face.scarf) {                   // Payback: lower face stays hidden
+      const wrap = new THREE.Mesh(new THREE.SphereGeometry(0.112, 14, 10),
+        new THREE.MeshStandardMaterial({ color: 0x7a6a4e, roughness: 1 }));
+      wrap.scale.set(0.96, 0.7, 0.96); wrap.position.set(0, -0.052, -0.006);
+      assembly.add(wrap);
+    }
+  } else if (preset.face.mask) {
     // masked (Molotov flame shell, HYDRA balaclava): painted shell over the skull
     const sideM = new THREE.MeshStandardMaterial({ color: preset.hairSide || '#2e2a26', roughness: 0.9 });
     const faceM = new THREE.MeshStandardMaterial({ map: faceTex(preset.face), roughness: 0.75 });
@@ -1249,33 +1284,42 @@ function buildCharacterHead(preset, withNeck = false) {
     // bare faces: fully SCULPTED 3D head — modeled nose/eyes/lips/brows + blinking lids
     lids = sculptFace(assembly, preset.face, !!preset.hat);
   }
-  // headgear (offsets relative to head center — the old absolute y minus 1.68)
+  // headgear (offsets relative to head center — the old absolute y minus 1.68);
+  // the scan skull is taller than the sculpted sphere, so gear rides higher
+  const hatLift = (!preset.face.mask && HEADSCAN) ? 0.045 : 0;
   if (preset.hat === 'helmetB' || preset.hat === 'helmetG') {
     const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.17, 12, 7, 0, Math.PI * 2, 0, 1.45),
       new THREE.MeshStandardMaterial({ color: preset.hat === 'helmetB' ? 0x1a1c20 : 0x3d4a33, roughness: 0.85 }));
-    helmet.position.y = 0.12; helmet.castShadow = true; assembly.add(helmet);
+    helmet.position.y = 0.12 + hatLift; helmet.castShadow = true; assembly.add(helmet);
   } else if (preset.hat === 'boonie') {
     const dome = new THREE.Mesh(new THREE.SphereGeometry(0.145, 10, 6, 0, Math.PI * 2, 0, 1.4),
       new THREE.MeshStandardMaterial({ color: 0x4c523a, roughness: 1 }));
-    dome.position.y = 0.135;
+    dome.position.y = 0.135 + hatLift;
     const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.22, 0.025, 12),
       new THREE.MeshStandardMaterial({ color: 0x444a34, roughness: 1 }));
-    brim.position.y = 0.11;
+    brim.position.y = 0.11 + hatLift;
     assembly.add(dome, brim);
   } else if (preset.hat === 'cap') {
     const capTop = new THREE.Mesh(new THREE.CylinderGeometry(0.135, 0.145, 0.09, 10),
       new THREE.MeshStandardMaterial({ color: 0x3a4530, roughness: 1 }));
-    capTop.position.y = 0.15;
+    capTop.position.y = 0.15 + hatLift;
     const bill = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.02, 0.12),
       new THREE.MeshStandardMaterial({ color: 0x323b29, roughness: 1 }));
-    bill.position.set(0, 0.12, -0.17);
+    bill.position.set(0, 0.12 + hatLift, -0.16);
     assembly.add(capTop, bill);
   } else if (preset.hat === 'hood') {
     const hood = new THREE.Mesh(new THREE.SphereGeometry(0.165, 10, 7, 0, Math.PI * 2, 0, 1.7),
       new THREE.MeshStandardMaterial({ color: 0x7a6a4e, roughness: 1 }));
-    hood.position.y = 0.06; assembly.add(hood);
+    hood.position.y = 0.06 + hatLift; assembly.add(hood);
   }
-  if (withNeck) {   // close the gap down to the body's neck stump
+  if (withNeck && !preset.face.mask && HEADSCAN) {
+    // chunky uniform collar — covers the neck junction with the body
+    const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.078, 0.092, 0.07, 12),
+      new THREE.MeshStandardMaterial({ color: preset.collar || 0x39412c, roughness: 0.95 }));
+    collar.position.y = -0.16;
+    assembly.add(collar);
+  }
+  if (withNeck && !(HEADSCAN && !preset.face.mask)) {   // close the gap down to the body's neck stump (scan heads bring their own neck)
     const neckC = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.068, 0.16, 8),
       new THREE.MeshStandardMaterial({ color: preset.face.mask ? 0x1c1e22 : (preset.face.skin || 0xc9a184), roughness: 0.85 }));
     neckC.position.y = -0.17;
@@ -1287,13 +1331,13 @@ function buildCharacterHead(preset, withNeck = false) {
 // distinctive face + headgear per named character
 const PRESETS = {
   'Molotov':         { face: { mask: 'molotov' }, hat: null, hairSide: '#8a2f10', blackTac: true, tape: 'MOLOTOV' },
-  'Fox':             { face: { skin: '#c98d63', hair: '#4a3320', mustache: true, stern: true }, hat: 'cap',     hairSide: '#4a3320' },
-  'Striker':         { face: { skin: '#7a5236', hair: '#171412', stern: true, stubble: true },  hat: 'helmetG', hairSide: '#171412' },
-  'Payback':         { face: { skin: '#d9ab88', scarf: true, eye: '#2e4a2e' },                  hat: 'hood',    hairSide: '#7a6a4e' },
-  'Brian Wolford':   { face: { skin: '#dcb08e', hair: '#7a4a22', grim: true, scar: true },      hat: 'boonie',  hairSide: '#7a4a22' },
-  'Jesse Wolford':   { face: { skin: '#dcb08e', hair: '#7a4a22', worried: true },               hat: 'boonie',  hairSide: '#7a4a22' },
-  'Victor Prestige': { face: { skin: '#d8c2ad', hair: '#8e8e94', old: true, grim: true },       hat: null,      hairSide: '#8e8e94' },
-  'Civilian':        { face: { skin: '#c9a184', hair: '#2e2a26' },                              hat: null,      hairSide: '#2e2a26' },
+  'Fox':             { face: { skin: '#c98d63', hair: '#4a3320', mustache: true, stern: true }, hat: 'cap',     hairSide: '#4a3320', glasses: 'aviator', tint: '#e6c9a4' },
+  'Striker':         { face: { skin: '#7a5236', hair: '#171412', stern: true, stubble: true },  hat: 'helmetG', hairSide: '#171412', glasses: 'aviator', tint: '#9a7050' },
+  'Payback':         { face: { skin: '#d9ab88', scarf: true, eye: '#2e4a2e' },                  hat: 'hood',    hairSide: '#7a6a4e', glasses: 'aviator' },
+  'Brian Wolford':   { face: { skin: '#dcb08e', hair: '#7a4a22', grim: true, scar: true },      hat: 'boonie',  hairSide: '#7a4a22', glasses: 'aviator' },
+  'Jesse Wolford':   { face: { skin: '#dcb08e', hair: '#7a4a22', worried: true },               hat: 'boonie',  hairSide: '#7a4a22', glasses: 'aviator' },
+  'Victor Prestige': { face: { skin: '#d8c2ad', hair: '#8e8e94', old: true, grim: true },       hat: null,      hairSide: '#8e8e94', glasses: 'round', tint: '#e8e2dc', collar: 0x23252b },
+  'Civilian':        { face: { skin: '#c9a184', hair: '#2e2a26' },                              hat: null,      hairSide: '#2e2a26', tint: '#d8b894', collar: 0x6e5f45 },
   'HYDRA Trooper':   { face: { mask: 'balaclava' },                                             hat: 'helmetB', hairSide: '#1c1e22' },
 };
 
@@ -1534,7 +1578,7 @@ function riggedModel(kind, name) {
   // character's sculpted head (face, hair, hat, mask) on the head bone.
   // All bone-space attachments compensate the rig's world scale DYNAMICALLY
   // (different models export in meters or centimeters).
-  bones.Head.scale.setScalar(0.01);
+  bones.Head.scale.setScalar(0.01);  // collapse the blank head (junction hidden by the collar)
   grp.updateMatrixWorld(true);
   const _ws = new THREE.Vector3();
   const invScaleOf = (bone) => { bone.getWorldScale(_ws); return 1 / _ws.x; };
@@ -1660,24 +1704,124 @@ function spawnAll() {
 // RIG: the professionally-sculpted, skeleton-rigged human mesh all soldiers clone.
 // Loaded from base64 in the single-file build, from ./assets in the served build.
 let RIG = null;
-(function loadRig() {
+let HEADSCAN = null;   // photoreal scanned human head (geometry + photo skin maps)
+(function loadAssets() {
   const loader = new GLTFLoader();
-  const done = (g) => {
+  let pending = 2;
+  const settle = () => { if (--pending === 0) spawnAll(); };
+  // --- the rigged body ---
+  const bodyDone = (g) => {
     // drop scale tracks — they fight the collapsed-head-bone trick and carry no motion
     g.animations.forEach(cl => { cl.tracks = cl.tracks.filter(t => !t.name.endsWith('.scale')); });
     RIG = { scene: g.scene, clips: g.animations };
     if (window.__demo) window.__demo.rig = RIG;
-    spawnAll();
+    settle();
   };
-  const fail = (err) => { console.warn('[demo] rigged model unavailable — built-in soldiers', err); spawnAll(); };
+  const bodyFail = (err) => { console.warn('[demo] rigged body unavailable — built-in soldiers', err); settle(); };
   try {
     if (window.__SOLDIER_GLB_B64) {
       const bin = Uint8Array.from(atob(window.__SOLDIER_GLB_B64), c => c.charCodeAt(0)).buffer;
-      loader.parse(bin, '', done, fail);
+      loader.parse(bin, '', bodyDone, bodyFail);
     } else {
-      loader.load('./assets/body.glb', done, undefined, fail);
+      loader.load('./assets/body.glb', bodyDone, undefined, bodyFail);
     }
-  } catch (err) { fail(err); }
+  } catch (err) { bodyFail(err); }
+  // --- the scanned head + skin maps ---
+  const texL = new THREE.TextureLoader();
+  const colT = texL.load(window.__HEAD_COL_B64 ? 'data:image/jpeg;base64,' + window.__HEAD_COL_B64 : './assets/head-col.jpg');
+  colT.colorSpace = THREE.SRGBColorSpace;
+  const nrmT = texL.load(window.__HEAD_NRM_B64 ? 'data:image/jpeg;base64,' + window.__HEAD_NRM_B64 : './assets/head-nrm.jpg');
+  const headDone = (g) => {
+    let mesh = null;
+    g.scene.traverse(o => { if (o.isMesh && !mesh) mesh = o; });
+    if (mesh) HEADSCAN = { geo: mesh.geometry, colT, nrmT, headGeo: null };
+    settle();
+  };
+  const headFail = (err) => { console.warn('[demo] head scan unavailable — sculpted heads', err); settle(); };
+  try {
+    if (window.__HEAD_GLB_B64) {
+      const bin = Uint8Array.from(atob(window.__HEAD_GLB_B64), c => c.charCodeAt(0)).buffer;
+      loader.parse(bin, '', headDone, headFail);
+    } else {
+      loader.load('./assets/head.glb', headDone, undefined, headFail);
+    }
+  } catch (err) { headFail(err); }
+})();
+
+// drop every triangle of a geometry fully below yMin (cuts the scan bust at the neck)
+function clipBelowY(geo, yMin) {
+  const g = geo.index ? geo.toNonIndexed() : geo.clone();
+  const pos = g.attributes.position, uv = g.attributes.uv, norm = g.attributes.normal;
+  const P = [], U = [], N = [];
+  for (let i = 0; i < pos.count; i += 3) {
+    if (pos.getY(i) < yMin && pos.getY(i + 1) < yMin && pos.getY(i + 2) < yMin) continue;
+    for (let k = 0; k < 3; k++) {
+      P.push(pos.getX(i + k), pos.getY(i + k), pos.getZ(i + k));
+      N.push(norm.getX(i + k), norm.getY(i + k), norm.getZ(i + k));
+      U.push(uv.getX(i + k), uv.getY(i + k));
+    }
+  }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+  out.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3));
+  out.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2));
+  return out;
+}
+
+// 1985-issue eyewear — hides the scan's closed eyes with era style
+function buildEyewear(style) {
+  const g = new THREE.Group();
+  const lensM = new THREE.MeshStandardMaterial({ color: 0x0d1114, roughness: 0.12, metalness: 0.55 });
+  const frameM = new THREE.MeshStandardMaterial({ color: 0x9a8a5a, roughness: 0.35, metalness: 0.9 });
+  const r = style === 'round' ? 0.03 : 0.039;
+  [-0.036, 0.036].forEach(px => {
+    const lens = new THREE.Mesh(new THREE.SphereGeometry(r, 12, 9), lensM);
+    lens.scale.set(1.05, style === 'round' ? 1 : 0.85, 0.28);
+    lens.position.set(px, 0.046, -0.126);
+    g.add(lens);
+  });
+  const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.026, 0.006, 0.008), frameM);
+  bridge.position.set(0, 0.058, -0.124);
+  g.add(bridge);
+  [-1, 1].forEach(s => {
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.006, 0.006, 0.15), frameM);
+    arm.position.set(s * 0.08, 0.052, -0.05);
+    arm.rotation.y = s * 0.1;
+    g.add(arm);
+  });
+  return g;
+}
+
+// ---------------------------------------------------------------- photoreal PBR upgrade
+// Fetched alongside the game (network path); painted textures remain the
+// offline / file:// fallback. Materials upgrade IN PLACE when the photos land.
+(function upgradePBR() {
+  const TL = new THREE.TextureLoader();
+  const setup = (t, srgb) => {
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(2.2, 1.5);
+    t.anisotropy = 8;
+    if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  };
+  TL.load('./assets/pbr-brick-diff.jpg', (d) => {
+    setup(d, true);
+    const rough = setup(TL.load('./assets/pbr-brick-rough.jpg', undefined, undefined, () => {}), false);
+    const bump = setup(TL.load('./assets/pbr-brick-bump.jpg', undefined, undefined, () => {}), false);
+    for (const m of pbrBrickMats) {
+      m.map = d; m.roughnessMap = rough; m.bumpMap = bump; m.bumpScale = 0.5;
+      m.normalMap = null; m.needsUpdate = true;
+    }
+    console.log('[demo] PBR brick applied to', pbrBrickMats.length, 'buildings');
+  }, undefined, () => {});
+  new RGBELoader().load('./assets/sky.hdr', (hdr) => {
+    hdr.mapping = THREE.EquirectangularReflectionMapping;
+    const pm = new THREE.PMREMGenerator(renderer);
+    const env = pm.fromEquirectangular(hdr).texture;
+    scene.environment = env;      // real photographed sky light on every surface
+    hdr.dispose(); pm.dispose();
+    console.log('[demo] HDRI environment lighting applied');
+  }, undefined, () => {});
 })();
 
 // ---------------------------------------------------------------- NPC brains (combat AI state)
@@ -3229,7 +3373,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 31;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 32;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
