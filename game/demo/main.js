@@ -1522,11 +1522,23 @@ function buildSkinnedBody(kind, preset) {
       ring(sx, 0.96, 0, 0.052, 0.052, [[el, 1]]),                    // forearm
       ring(sx, 0.82, 0, 0.046, 0.046, [[el, 0.6], [wr, 0.4]]),       // wrist blend
       ring(sx, 0.76, 0, 0.048, 0.05, [[wr, 1]]),                     // palm
-      ring(sx, 0.70, 0, 0.043, 0.046, [[wr, 0.4], [fi, 0.6]]),       // knuckles
-      ring(sx, 0.64, 0, 0.03, 0.038, [[fi, 1]]),                     // fingers
+      ring(sx, 0.705, 0, 0.045, 0.047, [[wr, 0.5], [fi, 0.5]]),      // knuckle line
     ];
     chain(rings);
-    cap(rings[rings.length - 1], sx, 0.62, 0, [[fi, 1]]);
+    cap(rings[rings.length - 1], sx, 0.70, 0, [[fi, 1]]);
+    // INDIVIDUAL FINGERS — index extended to the trigger (rides the wrist bone),
+    // middle/ring/pinky curl with the grip bone, thumb along the gun's side
+    const finger = (dz, r, w, y0 = 0.70, y1 = 0.632, dx = 0) => {
+      const a = ring(sx + dx, y0, dz, r, r, w);
+      const b2 = ring(sx + dx, y1, dz, r * 0.85, r * 0.85, w);
+      bridge(a, b2);
+      cap(b2, sx + dx, y1 - 0.012, dz, w);
+    };
+    finger(-0.03, 0.0115, [[wr, 1]]);               // INDEX — on the trigger
+    finger(-0.01, 0.0125, [[fi, 1]]);               // middle
+    finger(0.009, 0.0115, [[fi, 1]]);               // ring
+    finger(0.027, 0.0105, [[fi, 1]], 0.70, 0.648);  // pinky (shorter)
+    finger(0.012, 0.0115, [[wr, 1]], 0.755, 0.705, -Math.sign(sx) * 0.045); // thumb, inner side
   };
   arm(-0.285, shL, elL, wrL, fiL);
   arm(0.285, shR, elR, wrR, fiR);
@@ -1633,7 +1645,7 @@ function buildSkinnedBody(kind, preset) {
   mesh.updateMatrixWorld(true);
   mesh.bind(new THREE.Skeleton(B));
   // grip curl on the finger bones — hands read as gripping, not paddles
-  fiL.rotation.x = 0.55; fiR.rotation.x = 0.55;
+  fiL.rotation.x = 0.85; fiR.rotation.x = 0.85;
   return { mesh, bones: { hipsB, spineB, chestB, neckB, headB, shL, elL, wrL, fiL, shR, elR, wrR, fiR, hipL, knL, anL, toL, hipR, knR, anR, toR } };
 }
 
@@ -3902,7 +3914,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 47;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 48;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
