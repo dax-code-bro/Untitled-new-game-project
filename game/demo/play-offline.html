@@ -8462,13 +8462,13 @@ function buildSkinnedBody(kind, preset) {
 
   // TORSO — anatomical profile from pelvis to neck (elliptical rings)
   const torsoRings = [
-    ring(0, 0.68, 0, 0.185, 0.13, [[hipsB, 1]]),                 // pelvis floor
-    ring(0, 0.80, 0, 0.235, 0.155, [[hipsB, 1]]),                // hips
-    ring(0, 0.98, 0, 0.215, 0.14, [[hipsB, 0.7], [spineB, 0.3]]),// waist
-    ring(0, 1.14, 0, 0.25, 0.16, [[spineB, 0.8], [hipsB, 0.2]]), // ribs
-    ring(0, 1.30, 0, 0.285, 0.175, [[spineB, 0.5], [chestB, 0.5]]),// chest
-    ring(0, 1.42, 0, 0.27, 0.165, [[chestB, 1]]),                // upper chest
-    ring(0, 1.50, 0, 0.175, 0.12, [[chestB, 0.8], [neckB, 0.2]]),// trapezius slope
+    ring(0, 0.68, 0, 0.195, 0.165, [[hipsB, 1]]),                // pelvis floor
+    ring(0, 0.80, 0, 0.25, 0.20, [[hipsB, 1]]),                  // hips
+    ring(0, 0.98, 0, 0.23, 0.185, [[hipsB, 0.7], [spineB, 0.3]]),// waist
+    ring(0, 1.14, 0, 0.265, 0.21, [[spineB, 0.8], [hipsB, 0.2]]),// ribs
+    ring(0, 1.30, 0, 0.30, 0.225, [[spineB, 0.5], [chestB, 0.5]]),// chest
+    ring(0, 1.42, 0, 0.285, 0.215, [[chestB, 1]]),               // upper chest
+    ring(0, 1.50, 0, 0.185, 0.15, [[chestB, 0.8], [neckB, 0.2]]),// trapezius slope
     ring(0, 1.56, 0, 0.07, 0.065, [[neckB, 1]]),                 // neck base
     ring(0, 1.63, 0, 0.062, 0.06, [[neckB, 0.4], [headB, 0.6]]), // neck top
   ];
@@ -8562,16 +8562,16 @@ function operatorModel(kind, name) {
     const trim = new THREE.MeshStandardMaterial({ color: isEnemy ? 0x23261c : 0x0b0c0e, roughness: 0.9 });
     const buckleM = new THREE.MeshStandardMaterial({ color: 0x2a2c30, roughness: 0.5, metalness: 0.6 });
     // plate carrier: a curved shell hugging the chest ellipse (front + back)
-    const shellGeo = new THREE.CylinderGeometry(0.315, 0.30, 0.30, 18, 1, true, -0.85, 1.7);
+    const shellGeo = new THREE.CylinderGeometry(0.33, 0.315, 0.30, 18, 1, true, -0.85, 1.7);
     const front = new THREE.Mesh(shellGeo, fab);
-    front.scale.z = 0.62; front.rotation.y = Math.PI;                    // front face (-Z)
+    front.scale.z = 0.78; front.rotation.y = Math.PI;                    // front face (-Z)
     front.position.set(0, -0.02, 0.015); chestB.add(front);
     const backShell = new THREE.Mesh(shellGeo, fab);
-    backShell.scale.z = 0.66; backShell.position.set(0, -0.02, -0.015); chestB.add(backShell);
+    backShell.scale.z = 0.82; backShell.position.set(0, -0.02, -0.015); chestB.add(backShell);
     // MOLLE webbing rows across the front shell
     for (let r2 = 0; r2 < 3; r2++) {
-      const web = new THREE.Mesh(new THREE.CylinderGeometry(0.318, 0.318, 0.022, 18, 1, true, Math.PI - 0.72, 1.44), trim);
-      web.scale.z = 0.62;
+      const web = new THREE.Mesh(new THREE.CylinderGeometry(0.333, 0.333, 0.022, 18, 1, true, Math.PI - 0.72, 1.44), trim);
+      web.scale.z = 0.78;
       web.position.set(0, 0.055 - r2 * 0.055, 0.015);
       chestB.add(web);
     }
@@ -8586,17 +8586,17 @@ function operatorModel(kind, name) {
     for (let p = 0; p < 3; p++) {
       const px = -0.1 + p * 0.1;
       const pouch = new THREE.Mesh(new THREE.CapsuleGeometry(0.036, 0.055, 3, 8), fab);
-      pouch.position.set(px, -0.135, -0.185); chestB.add(pouch);
+      pouch.position.set(px, -0.135, -0.225); chestB.add(pouch);
       const flap = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.038, 0.03, 8, 1, false), trim);
-      flap.position.set(px, -0.095, -0.185); chestB.add(flap);
+      flap.position.set(px, -0.095, -0.225); chestB.add(flap);
       const buckle = new THREE.Mesh(new THREE.SphereGeometry(0.008, 6, 5), buckleM);
-      buckle.position.set(px, -0.11, -0.222); chestB.add(buckle);
+      buckle.position.set(px, -0.11, -0.262); chestB.add(buckle);
     }
     // duty belt: elliptical band with a rounded buckle plate
-    const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.255, 0.055, 18, 1, true), trim);
-    belt.scale.z = 0.66; belt.position.set(0, -0.045, 0); hipsB.add(belt);
+    const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.265, 0.27, 0.055, 18, 1, true), trim);
+    belt.scale.z = 0.82; belt.position.set(0, -0.045, 0); hipsB.add(belt);
     const bplate = new THREE.Mesh(new THREE.CapsuleGeometry(0.02, 0.03, 3, 8), buckleM);
-    bplate.rotation.z = Math.PI / 2; bplate.position.set(0, -0.045, -0.165); hipsB.add(bplate);
+    bplate.rotation.z = Math.PI / 2; bplate.position.set(0, -0.045, -0.205); hipsB.add(bplate);
     // knee pads: curved shells that cup the knee
     [knL, knR].forEach(k => {
       const pad = new THREE.Mesh(new THREE.SphereGeometry(0.085, 12, 8, 0, Math.PI * 2, 0, 1.25), trim);
@@ -8619,7 +8619,7 @@ function operatorModel(kind, name) {
     hstrap.position.set(0, -0.1, 0); hipR.add(hstrap);
     if (preset.tape) {
       const tape = markPlate([preset.tape], 0.15, 0.03, 'rgba(238,238,240,0.95)');
-      tape.position.set(0, 0.09, -0.20); tape.rotation.y = Math.PI; chestB.add(tape);
+      tape.position.set(0, 0.09, -0.245); tape.rotation.y = Math.PI; chestB.add(tape);
     }
   }
 
@@ -8640,7 +8640,7 @@ function operatorModel(kind, name) {
 
   // hit volumes for the raycast systems
   const ghostM = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
-  const bodyHit = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.82, 0.36), ghostM);
+  const bodyHit = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.82, 0.44), ghostM);
   bodyHit.position.set(0, 0.02, 0); spineB.add(bodyHit);
   const headHit = new THREE.Mesh(new THREE.SphereGeometry(0.155, 8, 8), ghostM);
   headHit.position.y = 0.03;
@@ -10677,7 +10677,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 37;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 38;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
