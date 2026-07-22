@@ -1557,6 +1557,7 @@ function buildSkinnedBody(kind, preset) {
 
   // creator-designed body (Meshy): bind HIS mesh to our bones instead of the rings
   if (preset.meshyBody && MOLLY) {
+    try {
     if (!MOLLY.bound) {
       const sg = (b, ax, ay, az, bx, by, bz) => ({ b, ax, ay, az, bx, by, bz });
       const segs = [
@@ -1607,6 +1608,7 @@ function buildSkinnedBody(kind, preset) {
     mMesh.bind(new THREE.Skeleton(B));
     fiL.rotation.x = 0.55; fiR.rotation.x = 0.55;
     return { mesh: mMesh, bones: { hipsB, spineB, chestB, neckB, headB, shL, elL, wrL, fiL, shR, elR, wrR, fiR, hipL, knL, anL, toL, hipR, knR, anR, toR }, meshy: true };
+    } catch (err) { console.warn('[demo] Molotov bind failed — ring body', err); MOLLY = null; }
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
@@ -2186,8 +2188,10 @@ let HEADSCAN = null;   // photoreal scanned human head (geometry + photo skin ma
 let MOLLY = null;      // Molotov's Meshy-generated full body (creator's own design!)
 (function loadAssets() {
   const loader = new GLTFLoader();
-  let pending = 2;
-  const settle = () => { if (--pending === 0) spawnAll(); };
+  let pending = 2, spawned = false;
+  const go = () => { if (!spawned) { spawned = true; try { spawnAll(); } catch (err) { showFatal('spawn: ' + err.message); } } };
+  const settle = () => { if (--pending <= 0) go(); };
+  setTimeout(() => { if (!spawned) { console.warn('[demo] asset timeout — spawning with what we have'); go(); } }, 12000);
   // --- the scanned head + skin maps ---
   const texL = new THREE.TextureLoader();
   const colT = texL.load(window.__HEAD_COL_B64 ? 'data:image/jpeg;base64,' + window.__HEAD_COL_B64 : './assets/head-col.jpg');
@@ -2202,6 +2206,7 @@ let MOLLY = null;      // Molotov's Meshy-generated full body (creator's own des
   const headFail = (err) => { console.warn('[demo] head scan unavailable — sculpted heads', err); settle(); };
   // --- Molotov's generated body (streamed; ring body is the fallback) ---
   loader.load('./assets/molotov.glb', (g) => {
+    try {
     let mesh = null;
     g.scene.traverse(o => { if (o.isMesh && !mesh) mesh = o; });
     if (mesh) {
@@ -2212,6 +2217,7 @@ let MOLLY = null;      // Molotov's Meshy-generated full body (creator's own des
       MOLLY = { geo, mat: mesh.material || null, bound: false };
       console.log('[demo] Molotov body model loaded');
     }
+    } catch (err) { console.warn('[demo] Molotov model rejected', err); MOLLY = null; }
     settle();
   }, undefined, (err) => { console.warn('[demo] Molotov model unavailable — built-in body', err); settle(); });
   try {
@@ -3885,7 +3891,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 45;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 46;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
