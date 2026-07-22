@@ -1239,7 +1239,7 @@ function buildCharacterHead(preset, withNeck = false) {
   let lids = null;
   if (!preset.face.mask && HEADSCAN) {
     // PHOTOREAL branch: the scanned human head, tinted + dressed per character
-    if (!HEADSCAN.headGeo) HEADSCAN.headGeo = clipBelowY(HEADSCAN.geo, -1.9);  // cut the bust at the neck
+    if (!HEADSCAN.headGeo) HEADSCAN.headGeo = clipBelowY(HEADSCAN.geo, -1.45);  // head + neck only (lower keeps shoulder slabs)
     const skin = new THREE.MeshStandardMaterial({
       map: HEADSCAN.colT, normalMap: HEADSCAN.nrmT, roughness: 0.58,
       color: new THREE.Color(preset.tint || '#ffffff'),
@@ -1251,6 +1251,32 @@ function buildCharacterHead(preset, withNeck = false) {
     scan.scale.setScalar(0.066);
     scan.position.y = -0.043;                  // eyes land ~2cm above head center
     assembly.add(scan);
+    // EYES — open eyeballs set into the scan's sockets (iris + pupil catch light)
+    const scleraM2 = new THREE.MeshStandardMaterial({ color: 0xf1ede4, roughness: 0.22 });
+    const irisM2 = new THREE.MeshStandardMaterial({ color: new THREE.Color(preset.face.eye || '#4a3c28'), roughness: 0.28 });
+    const pupilM2 = new THREE.MeshStandardMaterial({ color: 0x0a0806, roughness: 0.14 });
+    [-0.034, 0.034].forEach(px => {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.0148, 10, 8), scleraM2);
+      eye.position.set(px, 0.045, -0.108);
+      const iris = new THREE.Mesh(new THREE.SphereGeometry(0.0078, 9, 7), irisM2);
+      iris.scale.z = 0.4; iris.position.z = -0.0122;
+      const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.0036, 7, 6), pupilM2);
+      pupil.scale.z = 0.35; pupil.position.z = -0.0148;
+      eye.add(iris, pupil);
+      assembly.add(eye);
+    });
+    // HAIR — short military crop fitted to the scan skull (skipped under hats)
+    const hairM3 = new THREE.MeshStandardMaterial({ color: preset.face.hair || preset.hairSide || '#2e2a26', roughness: 0.97 });
+    if (!preset.hat) {
+      const crown = new THREE.Mesh(new THREE.SphereGeometry(0.126, 16, 8, 0, Math.PI * 2, 0, 1.0), hairM3);
+      crown.scale.set(1.02, 1.14, 1.14);
+      crown.position.set(0, 0.092, 0.008);
+      assembly.add(crown);
+    }
+    const backHair2 = new THREE.Mesh(new THREE.SphereGeometry(0.126, 16, 9, -0.5, Math.PI + 1.0, 0.7, 0.95), hairM3);
+    backHair2.scale.set(1.02, 1.15, 1.12);
+    backHair2.position.set(0, 0.082, 0.01);
+    assembly.add(backHair2);
     // character overlays on the real face
     if (preset.glasses) assembly.add(buildEyewear(preset.glasses));
     if (preset.face.mustache) {
@@ -1373,6 +1399,224 @@ function buildNpcRifle() {
   gun.userData.baseRotX = 0;
   gun.userData.mag = gmag;
   return gun;
+}
+
+// ---------------------------------------------------------------- OUR OWN SKELETON + CONTINUOUS SKINNED BODY
+// A hand-built bone hierarchy (head/neck/spine/hips, shoulders->arms->fingers,
+// hips->legs->feet->toes) at the EXACT stations and axis conventions of the
+// battle-tested primitive rig — so the tuned walk/crouch/aim/reload/recoil
+// animator drives it unchanged. Over it: ONE continuous skinned mesh (ring
+// tubes with blended weights at every joint — bodies bend smoothly, no seams).
+function buildSkinnedBody(kind, preset) {
+  const isEnemy = kind === 'enemy';
+  const B = [];
+  const mk = (x, y, z, parent) => {
+    const b = new THREE.Bone(); b.position.set(x, y, z);
+    if (parent) parent.add(b);
+    B.push(b); return b;
+  };
+  const hipsB = mk(0, 1.0, 0, null);
+  const spineB = mk(0, 0.14, 0, hipsB);                    // waist -> chest lean pivot
+  const chestB = mk(0, 0.24, 0, spineB);                   // world 1.38
+  const neckB = mk(0, 0.16, 0, chestB);                    // world 1.54
+  const headB = mk(0, 0.14, 0, neckB);                     // world 1.68
+  const shL = mk(-0.285, 0.06, 0, chestB), elL = mk(0, -0.34, 0, shL), wrL = mk(0, -0.30, 0, elL), fiL = mk(0, -0.10, 0, wrL);
+  const shR = mk(0.285, 0.06, 0, chestB),  elR = mk(0, -0.34, 0, shR), wrR = mk(0, -0.30, 0, elR), fiR = mk(0, -0.10, 0, wrR);
+  const hipL = mk(-0.135, -0.26, 0, hipsB), knL = mk(0, -0.36, 0, hipL), anL = mk(0, -0.35, 0, knL), toL = mk(0, -0.02, -0.14, anL);
+  const hipR = mk(0.135, -0.26, 0, hipsB),  knR = mk(0, -0.36, 0, hipR), anR = mk(0, -0.35, 0, knR), toR = mk(0, -0.02, -0.14, anR);
+  const bi = (b) => B.indexOf(b);
+
+  // ---- continuous mesh: rings of vertices, skin-weighted to the bones ----
+  const P = [], UV = [], SI = [], SW = [], IDX = [];
+  const SEG = 12;
+  let ringStart = -SEG;
+  const ring = (cx, cy, cz, rx, rz, w) => {                 // w: [[bone, weight], ...] (max 2)
+    const base = P.length / 3;
+    for (let s = 0; s < SEG; s++) {
+      const a = (s / SEG) * Math.PI * 2;
+      P.push(cx + Math.cos(a) * rx, cy, cz + Math.sin(a) * rz);
+      UV.push(s / SEG * 2, cy * 1.4);
+      SI.push(bi(w[0][0]), w[1] ? bi(w[1][0]) : 0, 0, 0);
+      SW.push(w[0][1], w[1] ? w[1][1] : 0, 0, 0);
+    }
+    ringStart = base;
+    return base;
+  };
+  const bridge = (a, b) => {
+    for (let s = 0; s < SEG; s++) {
+      const s2 = (s + 1) % SEG;
+      IDX.push(a + s, b + s, b + s2, a + s, b + s2, a + s2);
+    }
+  };
+  const chain = (rings) => { for (let i = 1; i < rings.length; i++) bridge(rings[i - 1], rings[i]); };
+  const cap = (r0, cx, cy, cz, w) => {                      // close a tube end
+    const c = P.length / 3;
+    P.push(cx, cy, cz); UV.push(0.5, cy * 1.4);
+    SI.push(bi(w[0][0]), 0, 0, 0); SW.push(1, 0, 0, 0);
+    for (let s = 0; s < SEG; s++) IDX.push(r0 + s, c, r0 + (s + 1) % SEG);
+    return c;
+  };
+
+  // TORSO — anatomical profile from pelvis to neck (elliptical rings)
+  const torsoRings = [
+    ring(0, 0.68, 0, 0.185, 0.13, [[hipsB, 1]]),                 // pelvis floor
+    ring(0, 0.80, 0, 0.235, 0.155, [[hipsB, 1]]),                // hips
+    ring(0, 0.98, 0, 0.215, 0.14, [[hipsB, 0.7], [spineB, 0.3]]),// waist
+    ring(0, 1.14, 0, 0.25, 0.16, [[spineB, 0.8], [hipsB, 0.2]]), // ribs
+    ring(0, 1.30, 0, 0.285, 0.175, [[spineB, 0.5], [chestB, 0.5]]),// chest
+    ring(0, 1.42, 0, 0.27, 0.165, [[chestB, 1]]),                // upper chest
+    ring(0, 1.50, 0, 0.175, 0.12, [[chestB, 0.8], [neckB, 0.2]]),// trapezius slope
+    ring(0, 1.56, 0, 0.07, 0.065, [[neckB, 1]]),                 // neck base
+    ring(0, 1.63, 0, 0.062, 0.06, [[neckB, 0.4], [headB, 0.6]]), // neck top
+  ];
+  chain(torsoRings);
+  cap(torsoRings[0], 0, 0.66, 0, [[hipsB, 1]]);
+  cap(torsoRings[torsoRings.length - 1], 0, 1.65, 0, [[headB, 1]]);
+
+  // ARM tube builder (world-space rest: hanging straight down from the shoulder)
+  const arm = (sx, sh, el, wr, fi) => {
+    const rings = [
+      ring(sx, 1.50, 0, 0.085, 0.085, [[chestB, 0.6], [sh, 0.4]]),   // deltoid top
+      ring(sx, 1.40, 0, 0.079, 0.079, [[sh, 1]]),                    // upper arm
+      ring(sx, 1.22, 0, 0.066, 0.066, [[sh, 1]]),
+      ring(sx, 1.10, 0, 0.058, 0.058, [[sh, 0.5], [el, 0.5]]),       // elbow blend
+      ring(sx, 0.96, 0, 0.052, 0.052, [[el, 1]]),                    // forearm
+      ring(sx, 0.82, 0, 0.046, 0.046, [[el, 0.6], [wr, 0.4]]),       // wrist blend
+      ring(sx, 0.76, 0, 0.048, 0.05, [[wr, 1]]),                     // palm
+      ring(sx, 0.70, 0, 0.043, 0.046, [[wr, 0.4], [fi, 0.6]]),       // knuckles
+      ring(sx, 0.64, 0, 0.03, 0.038, [[fi, 1]]),                     // fingers
+    ];
+    chain(rings);
+    cap(rings[rings.length - 1], sx, 0.62, 0, [[fi, 1]]);
+  };
+  arm(-0.285, shL, elL, wrL, fiL);
+  arm(0.285, shR, elR, wrR, fiR);
+
+  // LEG tube builder + boot + toe
+  const leg = (lx, hip, kn, an, to) => {
+    const rings = [
+      ring(lx, 0.78, 0, 0.115, 0.115, [[hipsB, 0.5], [hip, 0.5]]),   // upper thigh
+      ring(lx, 0.60, 0, 0.10, 0.10, [[hip, 1]]),
+      ring(lx, 0.42, 0, 0.085, 0.085, [[hip, 0.5], [kn, 0.5]]),      // knee blend
+      ring(lx, 0.24, 0, 0.072, 0.072, [[kn, 1]]),                    // shin
+      ring(lx, 0.10, 0, 0.06, 0.06, [[kn, 0.7], [an, 0.3]]),         // ankle blend
+      ring(lx, 0.055, 0, 0.062, 0.07, [[an, 1]]),                    // boot cuff
+    ];
+    chain(rings);
+    // boot: heel ring then toe rings extending forward (-Z)
+    const heel = ring(lx, 0.02, 0.015, 0.062, 0.075, [[an, 1]]);
+    bridge(rings[rings.length - 1], heel);
+    const mid = ring(lx, 0.02, -0.075, 0.06, 0.062, [[an, 0.6], [to, 0.4]]);
+    bridge(heel, mid);
+    const toe = ring(lx, 0.022, -0.155, 0.05, 0.035, [[to, 1]]);
+    bridge(mid, toe);
+    cap(toe, lx, 0.02, -0.175, [[to, 1]]);
+    cap(rings[0], lx, 0.80, 0, [[hip, 1]]);
+  };
+  leg(-0.135, hipL, knL, anL, toL);
+  leg(0.135, hipR, knR, anR, toR);
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(UV, 2));
+  geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(SI, 4));
+  geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(SW, 4));
+  geo.setIndex(IDX);
+  geo.computeVertexNormals();
+
+  // fabric per faction: squad black-tac, HYDRA jungle merc, civvy cloth, suit
+  const mat = isEnemy
+    ? new THREE.MeshStandardMaterial({ map: camoGreen, color: 0x8a8f78, roughness: 0.95 })
+    : kind === 'neutral'
+      ? new THREE.MeshStandardMaterial({ color: 0x8a7a5c, roughness: 1 })
+      : kind === 'protected'
+        ? new THREE.MeshStandardMaterial({ color: 0x2c2f36, roughness: 0.7 })
+        : new THREE.MeshStandardMaterial({ map: blackTacTex, roughness: 0.92 });
+  const mesh = new THREE.SkinnedMesh(geo, mat);
+  mesh.castShadow = true;
+  mesh.frustumCulled = false;
+  mesh.add(hipsB);
+  mesh.updateMatrixWorld(true);
+  mesh.bind(new THREE.Skeleton(B));
+  // grip curl on the finger bones — hands read as gripping, not paddles
+  fiL.rotation.x = 0.55; fiR.rotation.x = 0.55;
+  return { mesh, bones: { hipsB, spineB, chestB, neckB, headB, shL, elL, wrL, fiL, shR, elR, wrR, fiR, hipL, knL, anL, toL, hipR, knR, anR, toR } };
+}
+
+// full character on the custom skeleton: skinned body + black tac gear + canon head + rifle
+function operatorModel(kind, name) {
+  const isEnemy = kind === 'enemy';
+  const preset = PRESETS[name] || PRESETS['Civilian'];
+  const grp = new THREE.Group();
+  const { mesh, bones } = buildSkinnedBody(kind, preset);
+  const { spineB, chestB, hipsB, headB, shL, elL, wrL, shR, elR, hipL, knL, hipR, knR } = bones;
+  grp.add(mesh);
+  const combatant = isEnemy || kind === 'friendly';
+
+  // BLACK TACTICAL GEAR riding the bones (rigid plates move with the body)
+  if (combatant) {
+    const gearM = new THREE.MeshStandardMaterial({ color: isEnemy ? 0x2e3327 : 0x101114, roughness: 0.85 });
+    const plate = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.26, 0.06), gearM);   // chest plate carrier
+    plate.position.set(0, -0.03, -0.15); chestB.add(plate);
+    const back = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.34, 0.09), gearM);    // pack
+    back.position.set(0, 0.04, 0.17); chestB.add(back);
+    for (let p = 0; p < 3; p++) {                                                   // mag pouches
+      const pouch = new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.11, 0.05), gearM);
+      pouch.position.set(-0.11 + p * 0.11, -0.13, -0.175); chestB.add(pouch);
+    }
+    const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.245, 0.245, 0.06, 14), gearM);
+    belt.position.set(0, -0.04, 0); belt.scale.z = 0.68; hipsB.add(belt);
+    [knL, knR].forEach(k => {                                                       // knee pads
+      const pad = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.11, 0.05), gearM);
+      pad.position.set(0, -0.06, -0.075); k.add(pad);
+    });
+    [shL, shR].forEach(s2 => {                                                      // shoulder plates
+      const sp = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.09, 0.13), gearM);
+      sp.position.set(0, -0.04, 0); s2.add(sp);
+    });
+    const holster = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.16, 0.09), gearM); // thigh holster
+    holster.position.set(0.075, -0.12, -0.02); hipR.add(holster);
+    if (preset.tape) {
+      const tape = markPlate([preset.tape], 0.15, 0.03, 'rgba(238,238,240,0.95)');
+      tape.position.set(0, 0.055, -0.185); tape.rotation.y = Math.PI; chestB.add(tape);
+    }
+  }
+
+  // the canon head (scan face + hair + eyes + hats + mask) on the head bone
+  const builtHead = buildCharacterHead(preset, true);
+  builtHead.assembly.position.y = 0.02;
+  headB.add(builtHead.assembly);
+
+  // hit volumes for the raycast systems
+  const ghostM = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
+  const bodyHit = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.82, 0.36), ghostM);
+  bodyHit.position.set(0, 0.02, 0); spineB.add(bodyHit);
+  const headHit = new THREE.Mesh(new THREE.SphereGeometry(0.155, 8, 8), ghostM);
+  headHit.position.y = 0.03;
+  builtHead.assembly.add(headHit);
+
+  // combat pose (the tuned two-hand carry the animator lerps from) + rifle
+  let gun = null;
+  if (combatant) {
+    shR.rotation.x = -0.05; shR.rotation.z = -0.25; elR.rotation.x = 1.35;
+    shL.rotation.x = 1.19;  shL.rotation.z = 0.58;  elL.rotation.x = 0.05;
+    gun = buildNpcRifle();
+    gun.scale.setScalar(1.3);
+    gun.position.set(0.16, 1.22, -0.5);
+    gun.userData.basePos = gun.position.clone();
+    grp.add(gun);
+  } else {
+    shR.rotation.x = 0.1; elR.rotation.x = 0.15;
+    shL.rotation.x = 0.1; elL.rotation.x = 0.15;
+  }
+  shL.userData.bx = shL.rotation.x; shR.userData.bx = shR.rotation.x;
+  hipR.rotation.x = -0.06; knR.rotation.x = 0.1;    // relaxed stance
+  hipL.rotation.x = 0.08;  knL.rotation.x = 0.06;
+
+  const joints = [shL, elL, shR, elR, hipL, knL, hipR, knR, headB];
+  joints.forEach(j => j.userData.basePose = { x: j.rotation.x, y: j.rotation.y, z: j.rotation.z });
+  return { grp, torso: spineB, bodyHit, head: headHit, headG: headB,
+    armL: shL, armR: shR, legL: hipL, legR: hipR, gun, joints, lids: builtHead.lids };
 }
 
 // ---------------------------------------------------------------- soldier models — JOINTED (shoulders/elbows/hips/knees)
@@ -1666,10 +1910,10 @@ function armIK(upper, fore, hand, targetW, elbowBiasW) {
 
 function makeEntity(name, kind, x, z, baseY = 0) {
   const colors = { enemy: 0xf38ba8, protected: 0xf38ba8, friendly: 0x89b4fa, neutral: 0xe6e6e6 };
-  const m = RIG ? riggedModel(kind, name) : soldierModel(kind, name);
+  const m = operatorModel(kind, name);   // our own skeleton + skinned body
   m.grp.position.set(x, baseY, z);
   scene.add(m.grp);
-  const e = { name, kind, grp: m.grp, body: m.torso, head: m.head, model: m, color: colors[kind],
+  const e = { name, kind, grp: m.grp, body: m.bodyHit || m.torso, head: m.head, model: m, color: colors[kind],
     hp: 100, alive: true, dying: 0, hitT: 0, baseX: x, baseZ: z, baseY, phase: Math.random() * 9,
     shootTimer: 1 + Math.random() * 2.5, muzzleT: 0,
     lids: m.lids, blinkN: 0.5 + Math.random() * 3, blinkP: 0 };
@@ -1706,29 +1950,12 @@ function spawnAll() {
 }
 // RIG: the professionally-sculpted, skeleton-rigged human mesh all soldiers clone.
 // Loaded from base64 in the single-file build, from ./assets in the served build.
-let RIG = null;
+let RIG = null;            // (retired: bodies are our own skeleton now)
 let HEADSCAN = null;   // photoreal scanned human head (geometry + photo skin maps)
 (function loadAssets() {
   const loader = new GLTFLoader();
-  let pending = 2;
+  let pending = 1;
   const settle = () => { if (--pending === 0) spawnAll(); };
-  // --- the rigged body ---
-  const bodyDone = (g) => {
-    // drop scale tracks — they fight the collapsed-head-bone trick and carry no motion
-    g.animations.forEach(cl => { cl.tracks = cl.tracks.filter(t => !t.name.endsWith('.scale')); });
-    RIG = { scene: g.scene, clips: g.animations };
-    if (window.__demo) window.__demo.rig = RIG;
-    settle();
-  };
-  const bodyFail = (err) => { console.warn('[demo] rigged body unavailable — built-in soldiers', err); settle(); };
-  try {
-    if (window.__SOLDIER_GLB_B64) {
-      const bin = Uint8Array.from(atob(window.__SOLDIER_GLB_B64), c => c.charCodeAt(0)).buffer;
-      loader.parse(bin, '', bodyDone, bodyFail);
-    } else {
-      loader.load('./assets/body.glb', bodyDone, undefined, bodyFail);
-    }
-  } catch (err) { bodyFail(err); }
   // --- the scanned head + skin maps ---
   const texL = new THREE.TextureLoader();
   const colT = texL.load(window.__HEAD_COL_B64 ? 'data:image/jpeg;base64,' + window.__HEAD_COL_B64 : './assets/head-col.jpg');
@@ -3376,7 +3603,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 33;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 34;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;

@@ -34,7 +34,6 @@ let addons = '';
   addons = bgu + '\n' + gltf + '\n' + skel + '\n' + rgbe;
 }
 // the rigged body + scanned head ride along as base64 so the single file stays self-contained
-const glbB64 = fs.readFileSync('assets/body.glb').toString('base64');
 const headB64 = fs.readFileSync('assets/head.glb').toString('base64');
 const headColB64 = fs.readFileSync('assets/head-col.jpg').toString('base64');
 const headNrmB64 = fs.readFileSync('assets/head-nrm.jpg').toString('base64');
@@ -78,7 +77,7 @@ const controls = (function () {
 // NB: use FUNCTION replacements so `$` chars inside three.min.js / game code are NOT
 // interpreted as special replacement patterns ($&, $', $1, ...).
 const inlined = `<script>\n${threeSrc}\n</script>\n<script>\n${addons}\n</script>\n` +
-  `<script>window.__SOLDIER_GLB_B64 = "${glbB64}"; window.__HEAD_GLB_B64 = "${headB64}"; window.__HEAD_COL_B64 = "${headColB64}"; window.__HEAD_NRM_B64 = "${headNrmB64}";</script>\n<script>\n${game}\n</script>`;
+  `<script>window.__HEAD_GLB_B64 = "${headB64}"; window.__HEAD_COL_B64 = "${headColB64}"; window.__HEAD_NRM_B64 = "${headNrmB64}";</script>\n<script>\n${game}\n</script>`;
 html = html
   .replace(/<script type="importmap">[\s\S]*?<\/script>\n?/, () => '')
   .replace(/<script type="module" src="\.\/main\.js"><\/script>/, () => inlined);
