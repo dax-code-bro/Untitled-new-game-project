@@ -3735,7 +3735,7 @@ function updateCombatAI(dt) {
       if (!target) { ai.state = 'hold'; ai.crouchTarget = 0; continue; }
       const aim = target.grp.position.clone().add(new THREE.Vector3(0, 1.15, 0));
       const distT = e.grp.position.distanceTo(target.grp.position);
-      ai.threatNear = distT < 30;   // inside 30m the weapon stays ready
+      ai.threatNear = distT < 14;   // weapons up only in close engagement
 
       if (ai.state === 'hold') {                       // decide where to fight from
         const cov = pickCover(e, target.grp.position);
@@ -3745,7 +3745,7 @@ function updateCombatAI(dt) {
         const r = stepNPC(e, ai.cover.sx, ai.cover.sz, ai.runSpeed, dt);
         ai.movingAmt = 1; ai.crouchTarget = 0;
         ai.fireT -= dt;
-        if (ai.fireT <= 0 && distT < 34) {              // snap a shot mid-run (only when close)
+        if (ai.fireT <= 0 && distT < 18) {              // snap a shot mid-run (only when close)
           ai.fireT = rnd(0.8, 1.5);
           npcTryFire(e, aim, { err: 0.11, hitRadius: 0.3, friendly: true }) && hitEnemy(e, target, 16);
         }
@@ -3786,7 +3786,7 @@ function updateCombatAI(dt) {
         e.shootTimer = 1.2 + Math.random() * 1.8;
         const aim = target.grp.position.clone().add(new THREE.Vector3(0, 1.15, 0));
       const distT = e.grp.position.distanceTo(target.grp.position);
-      ai.threatNear = distT < 30;   // inside 30m the weapon stays ready
+      ai.threatNear = distT < 14;   // weapons up only in close engagement
         npcTryFire(e, aim, { err: 0.03, hitRadius: 0.32, friendly: true }) && hitEnemy(e, target, 45);
       }
     }
@@ -3794,7 +3794,7 @@ function updateCombatAI(dt) {
     // ============ HYDRA: defenders that patrol, stagger, and reload ============
     else if (e.kind === 'enemy') {
       const dPlayer = e.grp.position.distanceTo(camera.position);
-      ai.threatNear = dPlayer < 30;
+      ai.threatNear = dPlayer < 14;
       if (ai.state === 'move') {
         const r = stepNPC(e, ai.moveX, ai.moveZ, 2.3, dt);
         ai.movingAmt = 1;
@@ -3947,7 +3947,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 51;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 52;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
