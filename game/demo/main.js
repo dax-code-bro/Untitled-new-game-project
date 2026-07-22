@@ -1801,16 +1801,21 @@ function operatorModel(kind, name) {
     bodyHit0.position.set(0, 0.02, 0); spineB.add(bodyHit0);
     const headHit0 = new THREE.Mesh(new THREE.SphereGeometry(0.155, 8, 8), ghostM0);
     headHit0.position.y = 0.12; headB.add(headHit0);
-    // his weapon is SCULPTED into the model (generated holding it) — arms stay
-    // locked in the designed pose so the rigid gun can never shear between them
-    const gun0 = null;
+    // v2 was generated with EMPTY HANDS — full arm animation + the live rifle
+    shR.rotation.x = -0.05; shR.rotation.z = -0.25; elR.rotation.x = 1.35;
+    shL.rotation.x = 1.42;  shL.rotation.z = 0.42;  elL.rotation.x = 0.04;
     shL.userData.bx = shL.rotation.x; shR.userData.bx = shR.rotation.x;
     hipR.rotation.x = -0.06; knR.rotation.x = 0.1;
     hipL.rotation.x = 0.08;  knL.rotation.x = 0.06;
+    const gun0 = buildWeapon(preset.weapon || {});
+    gun0.scale.setScalar(1.3);
+    gun0.position.set(0.15, 1.22, -0.44);
+    gun0.userData.basePos = gun0.position.clone();
+    grp.add(gun0);
     const joints0 = [shL, elL, shR, elR, hipL, knL, hipR, knR, headB];
     joints0.forEach(j => j.userData.basePose = { x: j.rotation.x, y: j.rotation.y, z: j.rotation.z });
     return { grp, torso: spineB, bodyHit: bodyHit0, head: headHit0, headG: headB,
-      armL: shL, armR: shR, legL: hipL, legR: hipR, gun: gun0, joints: joints0, lids: null, hold: null, lockArms: true };
+      armL: shL, armR: shR, legL: hipL, legR: hipR, gun: gun0, joints: joints0, lids: null, hold: HOLDS[preset.hold] || null };
   }
   const builtHead = buildCharacterHead(preset, false);
   builtHead.assembly.position.y = 0.02;
@@ -4011,7 +4016,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 60;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 61;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
