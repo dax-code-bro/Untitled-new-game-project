@@ -8556,32 +8556,70 @@ function operatorModel(kind, name) {
   grp.add(mesh);
   const combatant = isEnemy || kind === 'friendly';
 
-  // BLACK TACTICAL GEAR riding the bones (rigid plates move with the body)
+  // TACTICAL KIT — rounded, strapped, fabric-textured; no boxes against a scanned face
   if (combatant) {
-    const gearM = new THREE.MeshStandardMaterial({ color: isEnemy ? 0x2e3327 : 0x101114, roughness: 0.85 });
-    const plate = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.26, 0.06), gearM);   // chest plate carrier
-    plate.position.set(0, -0.03, -0.15); chestB.add(plate);
-    const back = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.34, 0.09), gearM);    // pack
-    back.position.set(0, 0.04, 0.17); chestB.add(back);
-    for (let p = 0; p < 3; p++) {                                                   // mag pouches
-      const pouch = new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.11, 0.05), gearM);
-      pouch.position.set(-0.11 + p * 0.11, -0.13, -0.175); chestB.add(pouch);
+    const fab = new THREE.MeshStandardMaterial({ map: blackTacTex, color: isEnemy ? 0x8a8f78 : 0xffffff, roughness: 0.96 });
+    const trim = new THREE.MeshStandardMaterial({ color: isEnemy ? 0x23261c : 0x0b0c0e, roughness: 0.9 });
+    const buckleM = new THREE.MeshStandardMaterial({ color: 0x2a2c30, roughness: 0.5, metalness: 0.6 });
+    // plate carrier: a curved shell hugging the chest ellipse (front + back)
+    const shellGeo = new THREE.CylinderGeometry(0.315, 0.30, 0.30, 18, 1, true, -0.85, 1.7);
+    const front = new THREE.Mesh(shellGeo, fab);
+    front.scale.z = 0.62; front.rotation.y = Math.PI;                    // front face (-Z)
+    front.position.set(0, -0.02, 0.015); chestB.add(front);
+    const backShell = new THREE.Mesh(shellGeo, fab);
+    backShell.scale.z = 0.66; backShell.position.set(0, -0.02, -0.015); chestB.add(backShell);
+    // MOLLE webbing rows across the front shell
+    for (let r2 = 0; r2 < 3; r2++) {
+      const web = new THREE.Mesh(new THREE.CylinderGeometry(0.318, 0.318, 0.022, 18, 1, true, Math.PI - 0.72, 1.44), trim);
+      web.scale.z = 0.62;
+      web.position.set(0, 0.055 - r2 * 0.055, 0.015);
+      chestB.add(web);
     }
-    const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.245, 0.245, 0.06, 14), gearM);
-    belt.position.set(0, -0.04, 0); belt.scale.z = 0.68; hipsB.add(belt);
-    [knL, knR].forEach(k => {                                                       // knee pads
-      const pad = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.11, 0.05), gearM);
-      pad.position.set(0, -0.06, -0.075); k.add(pad);
+    // shoulder straps over the traps connecting front/back
+    [-0.11, 0.11].forEach(px => {
+      const strap = new THREE.Mesh(new THREE.TorusGeometry(0.085, 0.017, 6, 10, Math.PI), trim);
+      strap.rotation.x = Math.PI / 2 + 0.12; strap.rotation.z = 0;
+      strap.position.set(px, 0.135, 0.01);
+      chestB.add(strap);
     });
-    [shL, shR].forEach(s2 => {                                                      // shoulder plates
-      const sp = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.09, 0.13), gearM);
-      sp.position.set(0, -0.04, 0); s2.add(sp);
+    // mag pouches: rounded (capsule-ish) with flap + buckle
+    for (let p = 0; p < 3; p++) {
+      const px = -0.1 + p * 0.1;
+      const pouch = new THREE.Mesh(new THREE.CapsuleGeometry(0.036, 0.055, 3, 8), fab);
+      pouch.position.set(px, -0.135, -0.185); chestB.add(pouch);
+      const flap = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.038, 0.03, 8, 1, false), trim);
+      flap.position.set(px, -0.095, -0.185); chestB.add(flap);
+      const buckle = new THREE.Mesh(new THREE.SphereGeometry(0.008, 6, 5), buckleM);
+      buckle.position.set(px, -0.11, -0.222); chestB.add(buckle);
+    }
+    // duty belt: elliptical band with a rounded buckle plate
+    const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.255, 0.055, 18, 1, true), trim);
+    belt.scale.z = 0.66; belt.position.set(0, -0.045, 0); hipsB.add(belt);
+    const bplate = new THREE.Mesh(new THREE.CapsuleGeometry(0.02, 0.03, 3, 8), buckleM);
+    bplate.rotation.z = Math.PI / 2; bplate.position.set(0, -0.045, -0.165); hipsB.add(bplate);
+    // knee pads: curved shells that cup the knee
+    [knL, knR].forEach(k => {
+      const pad = new THREE.Mesh(new THREE.SphereGeometry(0.085, 12, 8, 0, Math.PI * 2, 0, 1.25), trim);
+      pad.rotation.x = -Math.PI / 2 + 0.25;
+      pad.scale.set(0.85, 1, 0.9);
+      pad.position.set(0, -0.055, -0.045); k.add(pad);
     });
-    const holster = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.16, 0.09), gearM); // thigh holster
-    holster.position.set(0.075, -0.12, -0.02); hipR.add(holster);
+    // deltoid shells: curved caps, not crates
+    [shL, shR].forEach(s2 => {
+      const sp = new THREE.Mesh(new THREE.SphereGeometry(0.088, 12, 8, 0, Math.PI * 2, 0, 1.35), fab);
+      sp.scale.set(1, 0.85, 1);
+      sp.position.set(0, 0.01, 0); s2.add(sp);
+    });
+    // drop-leg holster: rounded shell + retention strap
+    const holster = new THREE.Mesh(new THREE.CapsuleGeometry(0.04, 0.09, 3, 8), trim);
+    holster.rotation.x = 0.15;
+    holster.position.set(0.08, -0.13, -0.03); hipR.add(holster);
+    const hstrap = new THREE.Mesh(new THREE.TorusGeometry(0.115, 0.012, 5, 12), trim);
+    hstrap.rotation.x = Math.PI / 2;
+    hstrap.position.set(0, -0.1, 0); hipR.add(hstrap);
     if (preset.tape) {
       const tape = markPlate([preset.tape], 0.15, 0.03, 'rgba(238,238,240,0.95)');
-      tape.position.set(0, 0.055, -0.185); tape.rotation.y = Math.PI; chestB.add(tape);
+      tape.position.set(0, 0.09, -0.20); tape.rotation.y = Math.PI; chestB.add(tape);
     }
   }
 
@@ -10629,7 +10667,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 34;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 35;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
