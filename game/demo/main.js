@@ -1539,6 +1539,9 @@ function riggedModel(kind, name) {
   const grp = new THREE.Group();
   const inner = cloneSkeleton(RIG.scene);
   inner.rotation.y = Math.PI;                       // mannequin faces +Z; our forward is -Z
+  // bulk the slim mannequin to real-adult proportions so the scanned head fits:
+  // wider shoulders/chest, a touch taller — head/gear/hitboxes compensate dynamically
+  inner.scale.set(1.16, 1.03, 1.12);
   grp.add(inner);
   const bones = {};
   inner.traverse(o => { if (o.isBone) bones[o.name.replace('mixamorig', '')] = o; });
@@ -3373,7 +3376,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 32;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 33;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;

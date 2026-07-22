@@ -1,7 +1,7 @@
 // UNTITLED demo — service worker.
 // Strategy: NETWORK-FIRST for the game itself (you always get the newest build
 // when online; cache is the offline fallback). Cache-first for icons/manifest.
-const VERSION = 'untitled-demo-v33';
+const VERSION = 'untitled-demo-v34';
 const ASSETS = [
   './untitled-demo.html',
   './play-offline.html',
