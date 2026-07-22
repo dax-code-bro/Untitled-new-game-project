@@ -8412,7 +8412,7 @@ function buildNpcRifle() {
 // tubes with blended weights at every joint — bodies bend smoothly, no seams).
 // AUTO-SKIN an arbitrary human mesh onto bones: each vertex weights to its
 // two nearest bone segments (sharp falloff), like a rigger's first weight pass.
-function bindGeoToBones(geo, B, segs) {
+function bindGeoToBones(geo, B, segs, rigid = []) {
   const pos = geo.attributes.position;
   const SI = [], SW = [];
   const dSeg = (px, py, pz, s) => {
@@ -8422,14 +8422,20 @@ function bindGeoToBones(geo, B, segs) {
     u = Math.max(0, Math.min(1, u));
     return Math.hypot(px - (s.ax + tx * u), py - (s.ay + ty * u), pz - (s.az + tz * u));
   };
+  const hipsSeg = segs[0];
   for (let i = 0; i < pos.count; i++) {
     const px = pos.getX(i), py = pos.getY(i), pz = pos.getZ(i);
+    // rigid zones: slung gear etc. rides ONE bone — no cross-limb stretching
+    const rz2 = rigid.find(r => px >= r.minX && px <= r.maxX && py >= r.minY && py <= r.maxY && pz >= r.minZ && pz <= r.maxZ);
+    if (rz2) { SI.push(B.indexOf(rz2.b), 0, 0, 0); SW.push(1, 0, 0, 0); continue; }
     let s1 = null, d1 = 1e9, s2 = null, d2 = 1e9;
     for (const s of segs) {
       const d = dSeg(px, py, pz, s);
       if (d < d1) { d2 = d1; s2 = s1; d1 = d; s1 = s; }
       else if (d < d2) { d2 = d; s2 = s; }
     }
+    // anything far from every bone (hanging gear) rides the hips rigidly
+    if (d1 > 0.2) { SI.push(B.indexOf(hipsSeg.b), 0, 0, 0); SW.push(1, 0, 0, 0); continue; }
     let w1 = 1, w2 = 0;
     if (s2 && s2.b !== s1.b) {
       const k1 = 1 / Math.pow(d1 + 0.001, 4), k2 = 1 / Math.pow(d2 + 0.001, 4);
@@ -8569,7 +8575,9 @@ function buildSkinnedBody(kind, preset) {
         sg(hipR, 0.135, 0.74, 0, 0.135, 0.38, 0), sg(knR, 0.135, 0.38, 0, 0.135, 0.03, 0),
         sg(anR, 0.135, 0.05, 0, 0.135, 0.02, -0.10), sg(toR, 0.135, 0.02, -0.10, 0.135, 0.02, -0.17),
       ];
-      bindGeoToBones(MOLLY.geo, B, segs);
+      bindGeoToBones(MOLLY.geo, B, segs, [
+        { minX: -0.52, maxX: -0.22, minY: 0.2, maxY: 0.99, minZ: -0.32, maxZ: -0.035, b: hipsB },  // slung rifle
+      ]);
       MOLLY.geo.computeVertexNormals();
       // paint him like the design: flame mask, black kit, jet gloves/boots
       const vp = MOLLY.geo.attributes.position, C = [];
@@ -10879,7 +10887,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 40;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 41;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
