@@ -1801,21 +1801,16 @@ function operatorModel(kind, name) {
     bodyHit0.position.set(0, 0.02, 0); spineB.add(bodyHit0);
     const headHit0 = new THREE.Mesh(new THREE.SphereGeometry(0.155, 8, 8), ghostM0);
     headHit0.position.y = 0.12; headB.add(headHit0);
-    let gun0 = null;
-    shR.rotation.x = -0.05; shR.rotation.z = -0.25; elR.rotation.x = 1.35;
-    shL.rotation.x = 1.42;  shL.rotation.z = 0.42;  elL.rotation.x = 0.04;
+    // his weapon is SCULPTED into the model (generated holding it) — arms stay
+    // locked in the designed pose so the rigid gun can never shear between them
+    const gun0 = null;
     shL.userData.bx = shL.rotation.x; shR.userData.bx = shR.rotation.x;
     hipR.rotation.x = -0.06; knR.rotation.x = 0.1;
     hipL.rotation.x = 0.08;  knL.rotation.x = 0.06;
-    gun0 = buildWeapon(preset.weapon || {});
-    gun0.scale.setScalar(1.3);
-    gun0.position.set(0.15, 1.22, -0.44);
-    gun0.userData.basePos = gun0.position.clone();
-    grp.add(gun0);
     const joints0 = [shL, elL, shR, elR, hipL, knL, hipR, knR, headB];
     joints0.forEach(j => j.userData.basePose = { x: j.rotation.x, y: j.rotation.y, z: j.rotation.z });
     return { grp, torso: spineB, bodyHit: bodyHit0, head: headHit0, headG: headB,
-      armL: shL, armR: shR, legL: hipL, legR: hipR, gun: gun0, joints: joints0, lids: null, hold: HOLDS[preset.hold] || null };
+      armL: shL, armR: shR, legL: hipL, legR: hipR, gun: gun0, joints: joints0, lids: null, hold: null, lockArms: true };
   }
   const builtHead = buildCharacterHead(preset, false);
   builtHead.assembly.position.y = 0.02;
@@ -3556,6 +3551,7 @@ function updateEntities(dt) {
       const H = e.model.hold || {};
       const runB = ai.movingAmt * (sp > 3.2 ? 1 : 0) * (1 - aimA);   // sprint pose blend
       const br = Math.sin(e.phase * 1.7) * 0.035 * (1 - aimA);
+      if (!e.model.lockArms) {
       if (ai.reloadT > 0) {
         // reload: right hand keeps the grip; LEFT hand drops to the belt for the mag
         const p = 1 - ai.reloadT / 1.7;
@@ -3584,6 +3580,7 @@ function updateEntities(dt) {
       J[2].rotation.x = L(B(2).x + br, 0.35) + 0.1 * kick;
       J[2].rotation.z = L(B(2).z, -0.35 + (H.rz || 0));
       J[3].rotation.x = L(B(3).x, 1.6) - 0.25 * kick;
+      }
       // the LEVEL gun itself: rises from chest carry to shoulder aim; recoil shoves it straight back
       if (e.model.gun) {
         const g = e.model.gun;
@@ -3609,12 +3606,14 @@ function updateEntities(dt) {
           g2.position.y = g2.position.y * R + 1.04 * P;
           g2.position.z = g2.position.z * R + (-0.29) * P;
         }
+        if (!e.model.lockArms) {
         J[0].rotation.x = J[0].rotation.x * R + (0.12 + swingL) * P;  // free hand swings
         J[0].rotation.z = J[0].rotation.z * R + 0.06 * P;
         J[1].rotation.x = J[1].rotation.x * R + 0.22 * P;
         J[2].rotation.x = J[2].rotation.x * R + 0.5 * P;              // grip hand rides the sling
         J[2].rotation.z = J[2].rotation.z * R + (-0.12) * P;
         J[3].rotation.x = J[3].rotation.x * R + 0.62 * P;
+        }
       }
 
       // ---- body height: crouch formation depth + footstep bob ----
@@ -4012,7 +4011,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 58;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 59;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
