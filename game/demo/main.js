@@ -1596,7 +1596,9 @@ function buildSkinnedBody(kind, preset) {
       MOLLY.geo.setAttribute('color', new THREE.Float32BufferAttribute(C, 3));
       MOLLY.bound = true;
     }
-    const mMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 });
+    const mMat = MOLLY.mat
+      ? MOLLY.mat                                     // the creator's PAINTED texture
+      : new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 });
     const mMesh = new THREE.SkinnedMesh(MOLLY.geo, mMat);
     mMesh.castShadow = true;
     mMesh.frustumCulled = false;
@@ -2205,8 +2207,9 @@ let MOLLY = null;      // Molotov's Meshy-generated full body (creator's own des
     if (mesh) {
       const geo = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry;
       geo.rotateY(Math.PI);          // sculpt faces +Z; our forward is -Z
-      geo.translate(0, 0.95, 0);     // feet to the ground
-      MOLLY = { geo, bound: false };
+      geo.computeBoundingBox();
+      geo.translate(0, -geo.boundingBox.min.y, 0);   // feet to the ground, whatever the export frame
+      MOLLY = { geo, mat: mesh.material || null, bound: false };
       console.log('[demo] Molotov body model loaded');
     }
     settle();
@@ -3882,7 +3885,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 44;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 45;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
