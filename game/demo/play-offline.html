@@ -8359,7 +8359,7 @@ function buildCharacterHead(preset, withNeck = false) {
 
 // distinctive face + headgear per named character
 const PRESETS = {
-  'Molotov':         { face: { mask: 'molotov' }, hat: null, hairSide: '#8a2f10', blackTac: true, tape: 'MOLOTOV' },
+  'Molotov':         { face: { mask: 'molotov' }, hat: null, hairSide: '#8a2f10', blackTac: true, tape: 'MOLOTOV', meshyBody: true },
   'Fox':             { face: { skin: '#c98d63', hair: '#4a3320', mustache: true, stern: true }, hat: 'cap',     hairSide: '#4a3320', glasses: 'aviator', tint: '#e6c9a4' },
   'Striker':         { face: { skin: '#7a5236', hair: '#171412', stern: true, stubble: true },  hat: 'helmetG', hairSide: '#171412', glasses: 'aviator', tint: '#9a7050' },
   'Payback':         { face: { skin: '#d9ab88', scarf: true, eye: '#2e4a2e' },                  hat: 'hood',    hairSide: '#7a6a4e', glasses: 'aviator' },
@@ -8410,6 +8410,39 @@ function buildNpcRifle() {
 // battle-tested primitive rig — so the tuned walk/crouch/aim/reload/recoil
 // animator drives it unchanged. Over it: ONE continuous skinned mesh (ring
 // tubes with blended weights at every joint — bodies bend smoothly, no seams).
+// AUTO-SKIN an arbitrary human mesh onto bones: each vertex weights to its
+// two nearest bone segments (sharp falloff), like a rigger's first weight pass.
+function bindGeoToBones(geo, B, segs) {
+  const pos = geo.attributes.position;
+  const SI = [], SW = [];
+  const dSeg = (px, py, pz, s) => {
+    const tx = s.bx - s.ax, ty = s.by - s.ay, tz = s.bz - s.az;
+    const L2 = tx * tx + ty * ty + tz * tz;
+    let u = L2 ? ((px - s.ax) * tx + (py - s.ay) * ty + (pz - s.az) * tz) / L2 : 0;
+    u = Math.max(0, Math.min(1, u));
+    return Math.hypot(px - (s.ax + tx * u), py - (s.ay + ty * u), pz - (s.az + tz * u));
+  };
+  for (let i = 0; i < pos.count; i++) {
+    const px = pos.getX(i), py = pos.getY(i), pz = pos.getZ(i);
+    let s1 = null, d1 = 1e9, s2 = null, d2 = 1e9;
+    for (const s of segs) {
+      const d = dSeg(px, py, pz, s);
+      if (d < d1) { d2 = d1; s2 = s1; d1 = d; s1 = s; }
+      else if (d < d2) { d2 = d; s2 = s; }
+    }
+    let w1 = 1, w2 = 0;
+    if (s2 && s2.b !== s1.b) {
+      const k1 = 1 / Math.pow(d1 + 0.001, 4), k2 = 1 / Math.pow(d2 + 0.001, 4);
+      w1 = k1 / (k1 + k2); w2 = 1 - w1;
+      if (w2 < 0.18) { w1 = 1; w2 = 0; }
+    }
+    SI.push(B.indexOf(s1.b), s2 ? B.indexOf(s2.b) : 0, 0, 0);
+    SW.push(w1, w2, 0, 0);
+  }
+  geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(SI, 4));
+  geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(SW, 4));
+}
+
 function buildSkinnedBody(kind, preset) {
   const isEnemy = kind === 'enemy';
   const B = [];
@@ -8519,6 +8552,37 @@ function buildSkinnedBody(kind, preset) {
   leg(-0.135, hipL, knL, anL, toL);
   leg(0.135, hipR, knR, anR, toR);
 
+  // creator-designed body (Meshy): bind HIS mesh to our bones instead of the rings
+  if (preset.meshyBody && MOLLY) {
+    if (!MOLLY.bound) {
+      const sg = (b, ax, ay, az, bx, by, bz) => ({ b, ax, ay, az, bx, by, bz });
+      const segs = [
+        sg(hipsB, 0, 0.86, 0, 0, 1.14, 0), sg(spineB, 0, 1.14, 0, 0, 1.38, 0),
+        sg(chestB, 0, 1.38, 0, 0, 1.54, 0), sg(neckB, 0, 1.54, 0, 0, 1.66, 0),
+        sg(headB, 0, 1.66, 0, 0, 1.92, 0),
+        sg(shL, -0.285, 1.44, 0, -0.285, 1.10, 0), sg(elL, -0.285, 1.10, 0, -0.285, 0.80, 0),
+        sg(wrL, -0.285, 0.80, 0, -0.285, 0.70, 0), sg(fiL, -0.285, 0.70, 0, -0.285, 0.60, 0),
+        sg(shR, 0.285, 1.44, 0, 0.285, 1.10, 0), sg(elR, 0.285, 1.10, 0, 0.285, 0.80, 0),
+        sg(wrR, 0.285, 0.80, 0, 0.285, 0.70, 0), sg(fiR, 0.285, 0.70, 0, 0.285, 0.60, 0),
+        sg(hipL, -0.135, 0.74, 0, -0.135, 0.38, 0), sg(knL, -0.135, 0.38, 0, -0.135, 0.03, 0),
+        sg(anL, -0.135, 0.05, 0, -0.135, 0.02, -0.10), sg(toL, -0.135, 0.02, -0.10, -0.135, 0.02, -0.17),
+        sg(hipR, 0.135, 0.74, 0, 0.135, 0.38, 0), sg(knR, 0.135, 0.38, 0, 0.135, 0.03, 0),
+        sg(anR, 0.135, 0.05, 0, 0.135, 0.02, -0.10), sg(toR, 0.135, 0.02, -0.10, 0.135, 0.02, -0.17),
+      ];
+      bindGeoToBones(MOLLY.geo, B, segs);
+      MOLLY.geo.computeVertexNormals();
+      MOLLY.bound = true;
+    }
+    const mMat = new THREE.MeshStandardMaterial({ map: blackTacTex, roughness: 0.94 });
+    const mMesh = new THREE.SkinnedMesh(MOLLY.geo, mMat);
+    mMesh.castShadow = true;
+    mMesh.frustumCulled = false;
+    mMesh.add(hipsB);
+    mMesh.updateMatrixWorld(true);
+    mMesh.bind(new THREE.Skeleton(B));
+    fiL.rotation.x = 0.55; fiR.rotation.x = 0.55;
+    return { mesh: mMesh, bones: { hipsB, spineB, chestB, neckB, headB, shL, elL, wrL, fiL, shR, elR, wrR, fiR, hipL, knL, anL, toL, hipR, knR, anR, toR }, meshy: true };
+  }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
   geo.setAttribute('uv', new THREE.Float32BufferAttribute(UV, 2));
@@ -8551,13 +8615,15 @@ function operatorModel(kind, name) {
   const isEnemy = kind === 'enemy';
   const preset = PRESETS[name] || PRESETS['Civilian'];
   const grp = new THREE.Group();
-  const { mesh, bones } = buildSkinnedBody(kind, preset);
+  const built2 = buildSkinnedBody(kind, preset);
+  const { mesh, bones } = built2;
+  const meshy = !!built2.meshy;
   const { spineB, chestB, hipsB, neckB, headB, shL, elL, wrL, shR, elR, hipL, knL, hipR, knR } = bones;
   grp.add(mesh);
   const combatant = isEnemy || kind === 'friendly';
 
   // TACTICAL KIT — rounded, strapped, fabric-textured; no boxes against a scanned face
-  if (combatant) {
+  if (combatant && !meshy) {
     const fab = new THREE.MeshStandardMaterial({ map: blackTacTex, color: isEnemy ? 0x8a8f78 : 0xffffff, roughness: 0.96 });
     const trim = new THREE.MeshStandardMaterial({ color: isEnemy ? 0x23261c : 0x0b0c0e, roughness: 0.9 });
     const buckleM = new THREE.MeshStandardMaterial({ color: 0x2a2c30, roughness: 0.5, metalness: 0.6 });
@@ -8624,6 +8690,29 @@ function operatorModel(kind, name) {
   }
 
   // the canon head (scan face + hair + eyes + hats + mask) on the head bone
+  // (the sculpted Meshy body brings its own head, mask, and gear)
+  if (meshy) {
+    const ghostM0 = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
+    const bodyHit0 = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.82, 0.44), ghostM0);
+    bodyHit0.position.set(0, 0.02, 0); spineB.add(bodyHit0);
+    const headHit0 = new THREE.Mesh(new THREE.SphereGeometry(0.155, 8, 8), ghostM0);
+    headHit0.position.y = 0.12; headB.add(headHit0);
+    let gun0 = null;
+    shR.rotation.x = -0.05; shR.rotation.z = -0.25; elR.rotation.x = 1.35;
+    shL.rotation.x = 1.19;  shL.rotation.z = 0.58;  elL.rotation.x = 0.05;
+    shL.userData.bx = shL.rotation.x; shR.userData.bx = shR.rotation.x;
+    hipR.rotation.x = -0.06; knR.rotation.x = 0.1;
+    hipL.rotation.x = 0.08;  knL.rotation.x = 0.06;
+    gun0 = buildNpcRifle();
+    gun0.scale.setScalar(1.3);
+    gun0.position.set(0.16, 1.22, -0.5);
+    gun0.userData.basePos = gun0.position.clone();
+    grp.add(gun0);
+    const joints0 = [shL, elL, shR, elR, hipL, knL, hipR, knR, headB];
+    joints0.forEach(j => j.userData.basePose = { x: j.rotation.x, y: j.rotation.y, z: j.rotation.z });
+    return { grp, torso: spineB, bodyHit: bodyHit0, head: headHit0, headG: headB,
+      armL: shL, armR: shR, legL: hipL, legR: hipR, gun: gun0, joints: joints0, lids: null };
+  }
   const builtHead = buildCharacterHead(preset, false);
   builtHead.assembly.position.y = 0.02;
   headB.add(builtHead.assembly);
@@ -9003,9 +9092,10 @@ function spawnAll() {
 // Loaded from base64 in the single-file build, from ./assets in the served build.
 let RIG = null;            // (retired: bodies are our own skeleton now)
 let HEADSCAN = null;   // photoreal scanned human head (geometry + photo skin maps)
+let MOLLY = null;      // Molotov's Meshy-generated full body (creator's own design!)
 (function loadAssets() {
   const loader = new GLTFLoader();
-  let pending = 1;
+  let pending = 2;
   const settle = () => { if (--pending === 0) spawnAll(); };
   // --- the scanned head + skin maps ---
   const texL = new THREE.TextureLoader();
@@ -9019,6 +9109,19 @@ let HEADSCAN = null;   // photoreal scanned human head (geometry + photo skin ma
     settle();
   };
   const headFail = (err) => { console.warn('[demo] head scan unavailable — sculpted heads', err); settle(); };
+  // --- Molotov's generated body (streamed; ring body is the fallback) ---
+  loader.load('./assets/molotov.glb', (g) => {
+    let mesh = null;
+    g.scene.traverse(o => { if (o.isMesh && !mesh) mesh = o; });
+    if (mesh) {
+      const geo = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry;
+      geo.rotateY(Math.PI);          // sculpt faces +Z; our forward is -Z
+      geo.translate(0, 0.95, 0);     // feet to the ground
+      MOLLY = { geo, bound: false };
+      console.log('[demo] Molotov body model loaded');
+    }
+    settle();
+  }, undefined, (err) => { console.warn('[demo] Molotov model unavailable — built-in body', err); settle(); });
   try {
     if (window.__HEAD_GLB_B64) {
       const bin = Uint8Array.from(atob(window.__HEAD_GLB_B64), c => c.charCodeAt(0)).buffer;
@@ -10677,7 +10780,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 38;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 39;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
