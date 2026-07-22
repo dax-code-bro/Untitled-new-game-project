@@ -1426,7 +1426,12 @@ function bindGeoToBones(geo, B, segs, rigid = []) {
     const rz2 = rigid.find(r => px >= r.minX && px <= r.maxX && py >= r.minY && py <= r.maxY && pz >= r.minZ && pz <= r.maxZ);
     if (rz2) { SI.push(B.indexOf(rz2.b), 0, 0, 0); SW.push(1, 0, 0, 0); continue; }
     let s1 = null, d1 = 1e9, s2 = null, d2 = 1e9;
+    const ax2 = Math.abs(px);
     for (const s of segs) {
+      // territory: below the chest, inner-body flesh can't join an arm,
+      // and outboard hand-space flesh can't join a leg
+      if (s.ch === 'a' && ax2 < 0.20 && py < 0.95) continue;
+      if (s.ch === 'l' && ax2 > 0.24 && py > 0.5) continue;
       const d = dSeg(px, py, pz, s);
       if (d < d1) { d2 = d1; s2 = s1; d1 = d; s1 = s; }
       else if (d < d2) { d2 = d; s2 = s; }
@@ -1434,6 +1439,7 @@ function bindGeoToBones(geo, B, segs, rigid = []) {
     // anything far from every bone (hanging gear) rides the hips rigidly
     if (d1 > 0.2) { SI.push(B.indexOf(hipsSeg.b), 0, 0, 0); SW.push(1, 0, 0, 0); continue; }
     let w1 = 1, w2 = 0;
+    if (s2 && ((s1.ch === 'a' && s2.ch === 'l') || (s1.ch === 'l' && s2.ch === 'a'))) s2 = null;
     if (s2 && s2.b !== s1.b) {
       const k1 = 1 / Math.pow(d1 + 0.001, 4), k2 = 1 / Math.pow(d2 + 0.001, 4);
       w1 = k1 / (k1 + k2); w2 = 1 - w1;
@@ -1571,19 +1577,19 @@ function buildSkinnedBody(kind, preset) {
   if (preset.meshyBody && MOLLY) {
     try {
     if (!MOLLY.bound) {
-      const sg = (b, ax, ay, az, bx, by, bz) => ({ b, ax, ay, az, bx, by, bz });
+      const sg = (b, ax, ay, az, bx, by, bz, ch = 't') => ({ b, ax, ay, az, bx, by, bz, ch });
       const segs = [
         sg(hipsB, 0, 0.86, 0, 0, 1.14, 0), sg(spineB, 0, 1.14, 0, 0, 1.38, 0),
         sg(chestB, 0, 1.38, 0, 0, 1.54, 0), sg(neckB, 0, 1.54, 0, 0, 1.66, 0),
         sg(headB, 0, 1.66, 0, 0, 1.92, 0),
-        sg(shL, -0.285, 1.44, 0, -0.285, 1.10, 0), sg(elL, -0.285, 1.10, 0, -0.285, 0.80, 0),
-        sg(wrL, -0.285, 0.80, 0, -0.285, 0.70, 0), sg(fiL, -0.285, 0.70, 0, -0.285, 0.60, 0),
-        sg(shR, 0.285, 1.44, 0, 0.285, 1.10, 0), sg(elR, 0.285, 1.10, 0, 0.285, 0.80, 0),
-        sg(wrR, 0.285, 0.80, 0, 0.285, 0.70, 0), sg(fiR, 0.285, 0.70, 0, 0.285, 0.60, 0),
-        sg(hipL, -0.135, 0.74, 0, -0.135, 0.38, 0), sg(knL, -0.135, 0.38, 0, -0.135, 0.03, 0),
-        sg(anL, -0.135, 0.05, 0, -0.135, 0.02, -0.10), sg(toL, -0.135, 0.02, -0.10, -0.135, 0.02, -0.17),
-        sg(hipR, 0.135, 0.74, 0, 0.135, 0.38, 0), sg(knR, 0.135, 0.38, 0, 0.135, 0.03, 0),
-        sg(anR, 0.135, 0.05, 0, 0.135, 0.02, -0.10), sg(toR, 0.135, 0.02, -0.10, 0.135, 0.02, -0.17),
+        sg(shL, -0.285, 1.44, 0, -0.285, 1.10, 0, 'a'), sg(elL, -0.285, 1.10, 0, -0.285, 0.80, 0, 'a'),
+        sg(wrL, -0.285, 0.80, 0, -0.285, 0.70, 0, 'a'), sg(fiL, -0.285, 0.70, 0, -0.285, 0.60, 0, 'a'),
+        sg(shR, 0.285, 1.44, 0, 0.285, 1.10, 0, 'a'), sg(elR, 0.285, 1.10, 0, 0.285, 0.80, 0, 'a'),
+        sg(wrR, 0.285, 0.80, 0, 0.285, 0.70, 0, 'a'), sg(fiR, 0.285, 0.70, 0, 0.285, 0.60, 0, 'a'),
+        sg(hipL, -0.135, 0.74, 0, -0.135, 0.38, 0, 'l'), sg(knL, -0.135, 0.38, 0, -0.135, 0.03, 0, 'l'),
+        sg(anL, -0.135, 0.05, 0, -0.135, 0.02, -0.10, 'l'), sg(toL, -0.135, 0.02, -0.10, -0.135, 0.02, -0.17, 'l'),
+        sg(hipR, 0.135, 0.74, 0, 0.135, 0.38, 0, 'l'), sg(knR, 0.135, 0.38, 0, 0.135, 0.03, 0, 'l'),
+        sg(anR, 0.135, 0.05, 0, 0.135, 0.02, -0.10, 'l'), sg(toR, 0.135, 0.02, -0.10, 0.135, 0.02, -0.17, 'l'),
       ];
       bindGeoToBones(MOLLY.geo, B, segs, [
         { minX: -0.52, maxX: -0.22, minY: 0.2, maxY: 0.99, minZ: -0.32, maxZ: -0.035, b: hipsB },  // slung rifle
@@ -3947,7 +3953,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 52;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 53;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
