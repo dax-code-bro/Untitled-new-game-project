@@ -8359,15 +8359,15 @@ function buildCharacterHead(preset, withNeck = false) {
 
 // distinctive face + headgear per named character
 const PRESETS = {
-  'Molotov':         { face: { mask: 'molotov' }, hat: null, hairSide: '#8a2f10', blackTac: true, tape: 'MOLOTOV', meshyBody: true },
-  'Fox':             { face: { skin: '#c98d63', hair: '#4a3320', mustache: true, stern: true }, hat: 'cap',     hairSide: '#4a3320', glasses: 'aviator', tint: '#e6c9a4' },
-  'Striker':         { face: { skin: '#7a5236', hair: '#171412', stern: true, stubble: true },  hat: 'helmetG', hairSide: '#171412', glasses: 'aviator', tint: '#9a7050' },
-  'Payback':         { face: { skin: '#d9ab88', scarf: true, eye: '#2e4a2e' },                  hat: 'hood',    hairSide: '#7a6a4e', glasses: 'aviator' },
-  'Brian Wolford':   { face: { skin: '#dcb08e', hair: '#7a4a22', grim: true, scar: true },      hat: 'boonie',  hairSide: '#7a4a22', glasses: 'aviator' },
-  'Jesse Wolford':   { face: { skin: '#dcb08e', hair: '#7a4a22', worried: true },               hat: 'boonie',  hairSide: '#7a4a22', glasses: 'aviator' },
+  'Molotov':         { face: { mask: 'molotov' }, hat: null, hairSide: '#8a2f10', blackTac: true, tape: 'MOLOTOV', meshyBody: true, weapon: { type: 'akm', sight: 'reddot', fire: 'auto' }, hold: 'magwell' },
+  'Fox':             { face: { skin: '#c98d63', hair: '#4a3320', mustache: true, stern: true }, hat: 'cap',     hairSide: '#4a3320', glasses: 'aviator', tint: '#e6c9a4', weapon: { type: 'm4', sight: 'iron', fire: 'semi', laser: true } },
+  'Striker':         { face: { skin: '#7a5236', hair: '#171412', stern: true, stubble: true },  hat: 'helmetG', hairSide: '#171412', glasses: 'aviator', tint: '#9a7050', weapon: { type: 'm4', sight: 'reddot', fire: 'auto' }, hold: 'underBarrel' },
+  'Payback':         { face: { skin: '#d9ab88', scarf: true, eye: '#2e4a2e' },                  hat: 'hood',    hairSide: '#7a6a4e', glasses: 'aviator', weapon: { type: 'm14', sight: 'scope', fire: 'semi' }, hold: 'relaxed' },
+  'Brian Wolford':   { face: { skin: '#dcb08e', hair: '#7a4a22', grim: true, scar: true },      hat: 'boonie',  hairSide: '#7a4a22', glasses: 'aviator', weapon: { type: 'm24', sight: 'scope', fire: 'safe' } },
+  'Jesse Wolford':   { face: { skin: '#dcb08e', hair: '#7a4a22', worried: true },               hat: 'boonie',  hairSide: '#7a4a22', glasses: 'aviator', weapon: { type: 'm24', sight: 'scope', fire: 'safe' } },
   'Victor Prestige': { face: { skin: '#d8c2ad', hair: '#8e8e94', old: true, grim: true },       hat: null,      hairSide: '#8e8e94', glasses: 'round', tint: '#e8e2dc', collar: 0x23252b },
   'Civilian':        { face: { skin: '#c9a184', hair: '#2e2a26' },                              hat: null,      hairSide: '#2e2a26', tint: '#d8b894', collar: 0x6e5f45 },
-  'HYDRA Trooper':   { face: { mask: 'balaclava' },                                             hat: 'helmetB', hairSide: '#1c1e22' },
+  'HYDRA Trooper':   { face: { mask: 'balaclava' },                                             hat: 'helmetB', hairSide: '#1c1e22', weapon: { type: 'akm', sight: 'iron', fire: 'auto' }, hold: 'sloppy' },
 };
 
 // the fully-detailed NPC service rifle — shared by built-in and rigged soldiers.
@@ -8571,9 +8571,27 @@ function buildSkinnedBody(kind, preset) {
       ];
       bindGeoToBones(MOLLY.geo, B, segs);
       MOLLY.geo.computeVertexNormals();
+      // paint him like the design: flame mask, black kit, jet gloves/boots
+      const vp = MOLLY.geo.attributes.position, C = [];
+      for (let i = 0; i < vp.count; i++) {
+        const y = vp.getY(i), z = vp.getZ(i), x = vp.getX(i);
+        const n = Math.sin(x * 41 + y * 57) * 0.5 + Math.sin(y * 91 + z * 63) * 0.5;
+        if (y > 1.6 && z < -0.015) {                   // the FLAME MASK face
+          const t = Math.max(0, Math.min(1, (1.92 - y) / 0.3));
+          C.push(0.55 + 0.35 * t + n * 0.06, 0.12 + 0.28 * t, 0.02 + 0.04 * t);
+        } else if (y > 1.56) {                         // hood/back of head
+          C.push(0.05, 0.045, 0.05);
+        } else if (y < 0.16 || (y > 0.6 && y < 0.85 && Math.abs(x) > 0.2)) {
+          C.push(0.03, 0.03, 0.035);                   // boots + gloves: jet black
+        } else {                                       // black tactical kit
+          const v2 = 0.075 + n * 0.02;
+          C.push(v2, v2, v2 + 0.008);
+        }
+      }
+      MOLLY.geo.setAttribute('color', new THREE.Float32BufferAttribute(C, 3));
       MOLLY.bound = true;
     }
-    const mMat = new THREE.MeshStandardMaterial({ map: blackTacTex, roughness: 0.94 });
+    const mMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 });
     const mMesh = new THREE.SkinnedMesh(MOLLY.geo, mMat);
     mMesh.castShadow = true;
     mMesh.frustumCulled = false;
@@ -8703,7 +8721,7 @@ function operatorModel(kind, name) {
     shL.userData.bx = shL.rotation.x; shR.userData.bx = shR.rotation.x;
     hipR.rotation.x = -0.06; knR.rotation.x = 0.1;
     hipL.rotation.x = 0.08;  knL.rotation.x = 0.06;
-    gun0 = buildNpcRifle();
+    gun0 = buildWeapon(preset.weapon || {});
     gun0.scale.setScalar(1.3);
     gun0.position.set(0.16, 1.22, -0.5);
     gun0.userData.basePos = gun0.position.clone();
@@ -8711,7 +8729,7 @@ function operatorModel(kind, name) {
     const joints0 = [shL, elL, shR, elR, hipL, knL, hipR, knR, headB];
     joints0.forEach(j => j.userData.basePose = { x: j.rotation.x, y: j.rotation.y, z: j.rotation.z });
     return { grp, torso: spineB, bodyHit: bodyHit0, head: headHit0, headG: headB,
-      armL: shL, armR: shR, legL: hipL, legR: hipR, gun: gun0, joints: joints0, lids: null };
+      armL: shL, armR: shR, legL: hipL, legR: hipR, gun: gun0, joints: joints0, lids: null, hold: HOLDS[preset.hold] || null };
   }
   const builtHead = buildCharacterHead(preset, false);
   builtHead.assembly.position.y = 0.02;
@@ -8740,7 +8758,7 @@ function operatorModel(kind, name) {
   if (combatant) {
     shR.rotation.x = -0.05; shR.rotation.z = -0.25; elR.rotation.x = 1.35;
     shL.rotation.x = 1.19;  shL.rotation.z = 0.58;  elL.rotation.x = 0.05;
-    gun = buildNpcRifle();
+    gun = buildWeapon(preset.weapon || {});
     gun.scale.setScalar(1.3);
     gun.position.set(0.16, 1.22, -0.5);
     gun.userData.basePos = gun.position.clone();
@@ -8756,8 +8774,74 @@ function operatorModel(kind, name) {
   const joints = [shL, elL, shR, elR, hipL, knL, hipR, knR, headB];
   joints.forEach(j => j.userData.basePose = { x: j.rotation.x, y: j.rotation.y, z: j.rotation.z });
   return { grp, torso: spineB, bodyHit, head: headHit, headG: headB,
-    armL: shL, armR: shR, legL: hipL, legR: hipR, gun, joints, lids: builtHead.lids };
+    armL: shL, armR: shR, legL: hipL, legR: hipR, gun, joints, lids: builtHead.lids, hold: HOLDS[preset.hold] || null };
 }
+
+// WEAPON FACTORY — historically-flavored builds on the base receiver.
+// spec: { type: m4|akm|m14|m24, sight: iron|reddot|scope, fire: safe|semi|auto, laser }
+function buildWeapon(spec = {}) {
+  const gun = buildNpcRifle();
+  const mDark = new THREE.MeshStandardMaterial({ color: 0x14151a, roughness: 0.55, metalness: 0.4 });
+  const mSteel = new THREE.MeshStandardMaterial({ map: metalTex, roughness: 0.5, metalness: 0.5 });
+  const mWood = new THREE.MeshStandardMaterial({ map: woodTex, roughness: 0.85 });
+  const mRed = new THREE.MeshStandardMaterial({ color: 0xff2211, emissive: 0xff2211, emissiveIntensity: 2, roughness: 0.3 });
+  // fire selector: lever angle = SAFE straight / SEMI 60deg / AUTO 120deg
+  const sel = part(mSteel, 0.007, 0.032, 0.009, -0.031, -0.004, -0.015);
+  sel.rotation.x = spec.fire === 'auto' ? 1.15 : spec.fire === 'semi' ? 0.6 : 0;
+  gun.add(sel);
+  gun.add(part(mSteel, 0.012, 0.009, 0.055, 0.031, 0.024, 0.015));   // charging handle
+  if (spec.type === 'akm') {
+    const brake = cyl(mDark, 0.017, 0.021, 0.05, 0, 0.004, -0.615, true, 8);
+    brake.rotation.x = Math.PI / 2 + 0.28;                            // the slant brake
+    gun.add(brake);
+    gun.add(cyl(mDark, 0.009, 0.009, 0.2, 0, 0.028, -0.36));          // gas tube
+    gun.add(part(mWood, 0.062, 0.05, 0.16, 0, -0.006, -0.34));        // wood lower handguard
+    gun.add(part(mWood, 0.05, 0.07, 0.1, 0, -0.01, 0.12));            // wood stock wrist
+    gun.add(part(mSteel, 0.02, 0.012, 0.05, 0, 0.052, -0.02));        // tangent rear sight
+  } else if (spec.type === 'm4') {
+    gun.add(part(mDark, 0.034, 0.045, 0.14, 0, 0.062, 0.0));          // carry handle
+    gun.add(part(mDark, 0.004, 0.02, 0.05, 0, 0.09, 0.0));            // handle aperture wall
+    if (spec.laser) {
+      gun.add(part(mDark, 0.02, 0.02, 0.06, 0.032, -0.012, -0.36));   // AN/PEQ-style laser box
+      const lens = cyl(mRed, 0.004, 0.004, 0.006, 0.032, -0.012, -0.392, true, 6);
+      gun.add(lens);
+    }
+  } else if (spec.type === 'm14') {
+    gun.add(part(mWood, 0.058, 0.06, 0.5, 0, -0.02, -0.2));           // full-length walnut stock
+    gun.add(cyl(mDark, 0.011, 0.011, 0.1, 0, 0, -0.62));              // long barrel + lug
+    gun.add(part(mSteel, 0.02, 0.008, 0.03, 0, -0.045, -0.6));        // bayonet lug
+  } else if (spec.type === 'm24') {
+    const bolt = cyl(mSteel, 0.007, 0.007, 0.05, 0.035, 0.012, 0.03, false, 6);
+    bolt.rotation.z = 0.9;                                            // bolt handle swept back
+    gun.add(bolt);
+    gun.add(part(mDark, 0.05, 0.05, 0.42, 0, -0.012, -0.18));         // stock forend
+    if (gun.userData.mag) gun.userData.mag.scale.setScalar(0.55);     // internal magazine
+  }
+  // optics
+  if (spec.sight === 'reddot') {
+    const tube = cyl(mDark, 0.021, 0.023, 0.055, 0, 0.075, -0.03, true, 10);
+    gun.add(tube);
+    gun.add(cyl(mDark, 0.024, 0.024, 0.006, 0, 0.075, -0.06, true, 10));   // front rim
+    const dot = new THREE.Mesh(new THREE.SphereGeometry(0.004, 6, 5), mRed);
+    dot.position.set(0, 0.075, -0.045); gun.add(dot);                  // THE red dot
+    gun.add(part(mDark, 0.016, 0.03, 0.03, 0, 0.052, -0.03));          // mount riser
+  } else if (spec.sight === 'scope') {
+    gun.add(cyl(mDark, 0.019, 0.019, 0.15, 0, 0.078, 0.0, true, 10));  // main tube
+    gun.add(cyl(mDark, 0.026, 0.02, 0.05, 0, 0.078, -0.095, true, 10));// objective bell
+    gun.add(cyl(mDark, 0.023, 0.019, 0.035, 0, 0.078, 0.09, true, 10));// ocular
+    gun.add(part(mDark, 0.012, 0.02, 0.012, 0, 0.104, 0.0));           // elevation turret
+    gun.add(part(mDark, 0.02, 0.012, 0.012, 0.016, 0.078, 0.0));       // windage turret
+    gun.add(part(mDark, 0.014, 0.026, 0.024, 0, 0.052, 0.03));         // rings
+  }
+  return gun;
+}
+// distinct HOLDS: per-operator deltas layered on the tuned carry/aim pose
+const HOLDS = {
+  magwell:    { lx: -0.28, lz: -0.32 },            // support hand pulled back to the mag
+  underBarrel:{ lx: 0.14, lz: 0.14 },              // hand far out on the guard
+  relaxed:    { gy: -0.09, lx: -0.12 },            // DMR low-ready
+  sloppy:     { lz: -0.12, rz: 0.1, gy: -0.03 },   // conscript grip
+};
 
 // ---------------------------------------------------------------- soldier models — JOINTED (shoulders/elbows/hips/knees)
 function limbSeg(w, len, mat) {
@@ -10061,6 +10145,20 @@ function npcFire(e, targetPos, opts = {}) {
   const from = npcMuzzle(e);
   npcFlash(from);
   muzzleSmoke(from);
+  if (e.model.gun) {                                  // brass out of the ejection port
+    const g = e.model.gun;
+    g.updateWorldMatrix(true, false);
+    const port = new THREE.Vector3(0.035, 0.01, -0.1).applyMatrix4(g.matrixWorld);
+    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(e.grp.quaternion);
+    const sh = new THREE.Mesh(shellGeo, shellMat);
+    sh.position.copy(port);
+    sh.userData.v = right.multiplyScalar(rnd(1, 1.8)).add(new THREE.Vector3(0, rnd(1.4, 2.2), 0));
+    sh.userData.av = new THREE.Vector3(rnd(-9, 9), rnd(-9, 9), rnd(-9, 9));
+    sh.userData.t = 0;
+    scene.add(sh);
+    shells.push(sh);
+    if (shells.length > 40) scene.remove(shells.shift());
+  }
   const dir = targetPos.clone().sub(from).normalize();
   const err = opts.err ?? 0.06;
   dir.x += rnd(-err, err); dir.y += rnd(-err, err) * 0.6; dir.z += rnd(-err, err);
@@ -10350,6 +10448,7 @@ function updateEntities(dt) {
       // READY  (creation pose): gun at chest height; right hand grip, left hand barrel.
       // AIM: the level gun rises to the shoulder; both hands rise with it.
       const L = (a, b) => a * (1 - aimA) + b * aimA;
+      const H = e.model.hold || {};
       const br = Math.sin(e.phase * 1.7) * 0.035 * (1 - aimA);
       if (ai.reloadT > 0) {
         // reload: right hand keeps the grip; LEFT hand drops to the belt for the mag
@@ -10367,8 +10466,8 @@ function updateEntities(dt) {
           }
         }
       } else {
-        J[0].rotation.x = L(B(0).x + br, 1.44);          // left hand rides the BARREL
-        J[0].rotation.z = L(B(0).z, 0.57);
+        J[0].rotation.x = L(B(0).x + br, 1.44 + (H.lx || 0));  // left hand rides its station
+        J[0].rotation.z = L(B(0).z, 0.57 + (H.lz || 0));
         J[1].rotation.x = L(B(1).x, 0.03) - 0.2 * kick;
         if (e.model.gun) {
           const mg = e.model.gun.userData.mag;
@@ -10377,14 +10476,14 @@ function updateEntities(dt) {
       }
       // right arm: hand stays ON the grip; elbow bends deeper as the gun rises
       J[2].rotation.x = L(B(2).x + br, 0.35) + 0.1 * kick;
-      J[2].rotation.z = L(B(2).z, -0.35);
+      J[2].rotation.z = L(B(2).z, -0.35 + (H.rz || 0));
       J[3].rotation.x = L(B(3).x, 1.6) - 0.25 * kick;
       // the LEVEL gun itself: rises from chest carry to shoulder aim; recoil shoves it straight back
       if (e.model.gun) {
         const g = e.model.gun;
         g.rotation.x = 0.12 * kick;                      // level — only the shot itself flips it
         g.position.x = L(g.userData.basePos.x, 0.12);
-        g.position.y = L(g.userData.basePos.y, 1.38);
+        g.position.y = L(g.userData.basePos.y, 1.38 + (H.gy || 0));
         g.position.z = L(g.userData.basePos.z, -0.52) + 0.06 * kick;  // butt seats AT the shoulder pocket
       }
       // cheek weld while aiming; the body rocks back on each shot
@@ -10780,7 +10879,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 39;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 40;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
