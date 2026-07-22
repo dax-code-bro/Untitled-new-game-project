@@ -1549,7 +1549,7 @@ function operatorModel(kind, name) {
   const preset = PRESETS[name] || PRESETS['Civilian'];
   const grp = new THREE.Group();
   const { mesh, bones } = buildSkinnedBody(kind, preset);
-  const { spineB, chestB, hipsB, headB, shL, elL, wrL, shR, elR, hipL, knL, hipR, knR } = bones;
+  const { spineB, chestB, hipsB, neckB, headB, shL, elL, wrL, shR, elR, hipL, knL, hipR, knR } = bones;
   grp.add(mesh);
   const combatant = isEnemy || kind === 'friendly';
 
@@ -1621,9 +1621,19 @@ function operatorModel(kind, name) {
   }
 
   // the canon head (scan face + hair + eyes + hats + mask) on the head bone
-  const builtHead = buildCharacterHead(preset, true);
+  const builtHead = buildCharacterHead(preset, false);
   builtHead.assembly.position.y = 0.02;
   headB.add(builtHead.assembly);
+  // NECK JUNCTION on the BODY side (does not turn with the head):
+  // a skin/mask-toned filler column inside, the jacket collar around it
+  const masked = !!preset.face.mask;
+  const filler = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.06, 0.14, 12),
+    new THREE.MeshStandardMaterial({ color: masked ? 0x1c1e22 : new THREE.Color(preset.tint || '#e2c4a2').multiplyScalar(0.92), roughness: 0.8 }));
+  filler.position.y = 0.075; neckB.add(filler);
+  const collarColor = preset.collar || (kind === 'neutral' ? 0x6e5f45 : kind === 'protected' ? 0x23252b : isEnemy ? 0x39412c : 0x131418);
+  const collar2 = new THREE.Mesh(new THREE.CylinderGeometry(0.082, 0.096, 0.08, 14),
+    new THREE.MeshStandardMaterial({ color: collarColor, roughness: 0.95 }));
+  collar2.position.y = 0.015; neckB.add(collar2);
 
   // hit volumes for the raycast systems
   const ghostM = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
@@ -3641,7 +3651,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 35;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 36;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
