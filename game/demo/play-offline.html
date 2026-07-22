@@ -9342,6 +9342,7 @@ function makeAI(e) {
     movingAmt: 0,                  // 0..1 for the walk-cycle blend
     aimAmt: 0, aimHold: 0,         // two-handed shouldered-aim blend + hold timer
     magDropped: false,             // one falling mag per reload
+    ready: 1,                      // 0 = patrol sling, 1 = both hands on the weapon
     kick: 0,                       // per-shot recoil impulse on the body
   };
 }
@@ -10484,7 +10485,13 @@ function updateEntities(dt) {
       const wantAim = ai.aimHold > 0 && ai.reloadT === 0 ? 1 : 0;
       ai.aimAmt += (wantAim - ai.aimAmt) * Math.min(1, dt * 6);
       ai.kick = Math.max(0, ai.kick - dt * 7);
-      const aimA = ai.aimAmt, kick = ai.kick * ai.kick;   // sharp kick, fast recovery
+      const wantCombat = (ai.aimHold > 0 || ai.reloadT > 0) ? 1 : 0;
+      if (ai.ready === undefined) ai.ready = 1;
+      ai.ready += (wantCombat - ai.ready) * Math.min(1, dt * (wantCombat ? 9 : 1.1));
+      const R = ai.ready;
+      // the rifle can only rise once the support hand is back on it
+      const aimA = ai.aimAmt * Math.max(0, Math.min(1, (R - 0.55) / 0.45));
+      const kick = ai.kick * ai.kick;   // sharp kick, fast recovery
       // ---- crouch blend (cover) ----
       ai.crouch += ((ai.crouchTarget || 0) - ai.crouch) * Math.min(1, dt * 7);
 
@@ -10550,6 +10557,26 @@ function updateEntities(dt) {
       // (torso yaw is set in the facing section below — turn-lead + blade)
       J[8].rotation.z = 0.07 * aimA;
       e.model.torso.rotation.x += -0.09 * kick;
+      // ---- PATROL CARRY: gun slung diagonal across the chest by the grip,
+      // support hand free (swings with the stride); blends out on contact ----
+      const P = 1 - R;
+      if (P > 0.01) {
+        const swingL = Math.sin(ai.walkPhase) * 0.4 * ai.movingAmt;
+        const g2 = e.model.gun;
+        if (g2) {
+          g2.rotation.x = g2.rotation.x * R + 0.5 * P;
+          g2.rotation.z = 0.65 * P;                       // the diagonal cant
+          g2.position.x = g2.position.x * R + 0.03 * P;
+          g2.position.y = g2.position.y * R + 1.04 * P;
+          g2.position.z = g2.position.z * R + (-0.29) * P;
+        }
+        J[0].rotation.x = J[0].rotation.x * R + (0.12 + swingL) * P;  // free hand swings
+        J[0].rotation.z = J[0].rotation.z * R + 0.06 * P;
+        J[1].rotation.x = J[1].rotation.x * R + 0.22 * P;
+        J[2].rotation.x = J[2].rotation.x * R + 0.5 * P;              // grip hand rides the sling
+        J[2].rotation.z = J[2].rotation.z * R + (-0.12) * P;
+        J[3].rotation.x = J[3].rotation.x * R + 0.62 * P;
+      }
 
       // ---- body height: crouch formation depth + footstep bob ----
       e.grp.position.y = e.baseY - CR.drop * ai.crouch
@@ -10940,7 +10967,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 49;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 50;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
