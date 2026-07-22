@@ -1598,9 +1598,9 @@ function buildSkinnedBody(kind, preset) {
         sg(hipR, 0.135, 0.74, 0, 0.135, 0.38, 0, 'l'), sg(knR, 0.135, 0.38, 0, 0.135, 0.03, 0, 'l'),
         sg(anR, 0.135, 0.05, 0, 0.135, 0.02, -0.10, 'l'), sg(toR, 0.135, 0.02, -0.10, 0.135, 0.02, -0.17, 'l'),
       ];
-      bindGeoToBones(MOLLY.geo, B, segs, [
-        { minX: -0.52, maxX: -0.22, minY: 0.2, maxY: 0.99, minZ: -0.32, maxZ: -0.035, b: hipsB },  // slung rifle
-      ]);
+      // (no rigid zones for this model — v2 has no slung gun; the stale v1 box
+      // was slicing through the new mesh's coat and pinning it to the hip)
+      bindGeoToBones(MOLLY.geo, B, segs, []);
       MOLLY.geo.computeVertexNormals();
       // paint him like the design: flame mask, black kit, jet gloves/boots
       const vp = MOLLY.geo.attributes.position, C = [];
@@ -3960,7 +3960,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 54;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 55;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
