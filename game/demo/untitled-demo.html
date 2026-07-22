@@ -10568,7 +10568,7 @@ function updateEntities(dt) {
       J[6].rotation.x = B(6).x - swing + (CR.rh - B(6).x) * c;              // right hip
       J[7].rotation.x = B(7).x - bendB + (CR.rk - B(7).x) * c;              // right knee
       // lean forward while running; settle lower into the kneel
-      e.model.torso.rotation.x += -0.14 * ai.movingAmt - 0.12 * c;
+      e.model.torso.rotation.x += -0.14 * ai.movingAmt - 0.2 * c;
 
       // ---- arms & gun: the gun stays LEVEL on the body; hands ride their stations ----
       // READY  (creation pose): gun at chest height; right hand grip, left hand barrel.
@@ -10795,9 +10795,9 @@ function turnToward(e, fx, fz, rate, dt) {
 
 // crouch formations — picked at random each time a soldier settles into cover
 const CROUCH_STYLES = [
-  { lh: 1.15, lk: -1.25, rh: -0.2, rk: -1.5,  drop: 0.42 }, // KNEEL: right knee down, left foot planted
-  { lh: -0.2, lk: -1.5,  rh: 1.15, rk: -1.25, drop: 0.42 }, // KNEEL mirrored: left knee down
-  { lh: 1.2,  lk: -1.4,  rh: 1.2,  rk: -1.4,  drop: 0.5 },  // LOW SQUAT: both legs coiled
+  { lh: 1.38, lk: -1.5,  rh: -0.38, rk: -1.72, drop: 0.5 },  // KNEEL: right knee down, left foot planted, thigh shelf for the elbow
+  { lh: -0.38, lk: -1.72, rh: 1.38, rk: -1.5,  drop: 0.5 },  // KNEEL mirrored: left knee down
+  { lh: 1.5,  lk: -1.8,  rh: 1.5,  rk: -1.8,  drop: 0.62 }, // LOW SQUAT: coiled tight behind cover
 ];
 
 // ---------------------------------------------------------------- combat AI (think + move + shoot)
@@ -11037,7 +11037,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 59;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 60;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
