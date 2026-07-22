@@ -3242,6 +3242,7 @@ controls.addEventListener('unlock', () => { playing = false; });
 
 // ---------------------------------------------------------------- touch controls
 const isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+let sprintNow = false, sprintAmt = 0;   // tactical-sprint viewmodel blend
 const touch = { moveX: 0, moveZ: 0, sprint: false, crouchToggle: false, firing: false,
   moveId: null, lookId: null, fireId: null, moveOrigin: null, lookLast: null };
 const knobEl = document.getElementById('knob');
@@ -3323,8 +3324,9 @@ function updateWeapon(dt) {
   rig.position.lerp(target, Math.min(1, dt * 14));
 
   // walk bob
-  bobPhase += dt * (4 + moveAmount * 6.5);
-  const bobAmt = moveAmount * (aiming ? 0.004 : 0.014);
+  sprintAmt += ((sprintNow && !onSights ? 1 : 0) - sprintAmt) * Math.min(1, dt * 8);
+  bobPhase += dt * (4 + moveAmount * 6.5 + sprintAmt * 4);
+  const bobAmt = moveAmount * (aiming ? 0.004 : 0.014) * (1 + sprintAmt * 0.9);
   rig.position.y += Math.abs(Math.sin(bobPhase)) * -bobAmt + bobAmt * 0.5;
   rig.position.x += Math.cos(bobPhase * 0.5) * bobAmt * 0.6;
 
@@ -3333,6 +3335,13 @@ function updateWeapon(dt) {
   const e = new THREE.Euler().setFromQuaternion(dq, 'YXZ');
   rig.rotation.y = THREE.MathUtils.lerp(rig.rotation.y, THREE.MathUtils.clamp(e.y * 6, -0.06, 0.06), dt * 10);
   rig.rotation.x = THREE.MathUtils.lerp(rig.rotation.x, THREE.MathUtils.clamp(e.x * 6, -0.05, 0.05), dt * 10);
+  if (sprintAmt > 0.003) {              // the classic run: muzzle dips, gun cants across the chest
+    rig.rotation.y += 0.45 * sprintAmt;
+    rig.rotation.x += -0.3 * sprintAmt;
+    rig.position.x += 0.05 * sprintAmt;
+    rig.position.y += -0.05 * sprintAmt;
+    rig.position.z += 0.055 * sprintAmt;
+  }
   prevCamQ.copy(camera.quaternion);
 
   // recoil spring
@@ -3461,6 +3470,7 @@ function updateEntities(dt) {
       // AIM: the level gun rises to the shoulder; both hands rise with it.
       const L = (a, b) => a * (1 - aimA) + b * aimA;
       const H = e.model.hold || {};
+      const runB = ai.movingAmt * (sp > 3.2 ? 1 : 0) * (1 - aimA);   // sprint pose blend
       const br = Math.sin(e.phase * 1.7) * 0.035 * (1 - aimA);
       if (ai.reloadT > 0) {
         // reload: right hand keeps the grip; LEFT hand drops to the belt for the mag
@@ -3493,9 +3503,9 @@ function updateEntities(dt) {
       // the LEVEL gun itself: rises from chest carry to shoulder aim; recoil shoves it straight back
       if (e.model.gun) {
         const g = e.model.gun;
-        g.rotation.x = 0.12 * kick;                      // level — only the shot itself flips it
+        g.rotation.x = 0.12 * kick + 0.4 * runB;        // level; dips into the sprint
         g.position.x = L(g.userData.basePos.x, 0.12);
-        g.position.y = L(g.userData.basePos.y, 1.38 + (H.gy || 0));
+        g.position.y = L(g.userData.basePos.y, 1.38 + (H.gy || 0)) - 0.07 * runB;
         g.position.z = L(g.userData.basePos.z, -0.52) + 0.06 * kick;  // butt seats AT the shoulder pocket
       }
       // cheek weld while aiming; the body rocks back on each shot
@@ -3837,6 +3847,7 @@ function animate() {
     if (isTouch) { ix += touch.moveX; iz += touch.moveZ; }
     const len = Math.hypot(ix, iz) || 1; ix /= len; iz /= len;
     moveAmount = Math.min(1, Math.hypot(ix, iz)) * (sprint ? 1 : 0.7);
+    sprintNow = !!sprint && moveAmount > 0.15;
 
     const fwd = new THREE.Vector3(); camera.getWorldDirection(fwd); fwd.y = 0; fwd.normalize();
     const right = new THREE.Vector3().crossVectors(fwd, new THREE.Vector3(0, 1, 0)).normalize();
@@ -3891,7 +3902,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 46;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 47;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
