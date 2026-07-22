@@ -8242,7 +8242,7 @@ function buildCharacterHead(preset, withNeck = false) {
   let lids = null;
   if (!preset.face.mask && HEADSCAN) {
     // PHOTOREAL branch: the scanned human head, tinted + dressed per character
-    if (!HEADSCAN.headGeo) HEADSCAN.headGeo = clipBelowY(HEADSCAN.geo, -1.45);  // head + neck only (lower keeps shoulder slabs)
+    if (!HEADSCAN.headGeo) HEADSCAN.headGeo = clipBelowY(HEADSCAN.geo, -1.26);  // high neck cut — the scan neck flares wide below this
     const skin = new THREE.MeshStandardMaterial({
       map: HEADSCAN.colT, normalMap: HEADSCAN.nrmT, roughness: 0.58,
       color: new THREE.Color(preset.tint || '#ffffff'),
@@ -8630,13 +8630,13 @@ function operatorModel(kind, name) {
   // NECK JUNCTION on the BODY side (does not turn with the head):
   // a skin/mask-toned filler column inside, the jacket collar around it
   const masked = !!preset.face.mask;
-  const filler = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.06, 0.14, 12),
+  const filler = new THREE.Mesh(new THREE.CylinderGeometry(0.054, 0.062, 0.17, 12),
     new THREE.MeshStandardMaterial({ color: masked ? 0x1c1e22 : new THREE.Color(preset.tint || '#e2c4a2').multiplyScalar(0.92), roughness: 0.8 }));
   filler.position.y = 0.075; neckB.add(filler);
   const collarColor = preset.collar || (kind === 'neutral' ? 0x6e5f45 : kind === 'protected' ? 0x23252b : isEnemy ? 0x39412c : 0x131418);
-  const collar2 = new THREE.Mesh(new THREE.CylinderGeometry(0.082, 0.096, 0.08, 14),
+  const collar2 = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.098, 0.1, 14),
     new THREE.MeshStandardMaterial({ color: collarColor, roughness: 0.95 }));
-  collar2.position.y = 0.015; neckB.add(collar2);
+  collar2.position.y = 0.025; neckB.add(collar2);
 
   // hit volumes for the raycast systems
   const ghostM = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
@@ -10677,7 +10677,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 36;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 37;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
