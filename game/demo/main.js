@@ -1459,6 +1459,57 @@ function bindGeoToBones(geo, B, segs, rigid = []) {
   geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(SW, 4));
 }
 
+// WEIGHT SMOOTHING — the real fix for boundary tearing: diffuse skin weights
+// across the mesh's actual surface (topology-aware), so no hard border between
+// bones can exist anywhere. Runs after auto-binding, before use.
+function smoothSkinWeights(geo, iters = 4) {
+  const pos = geo.attributes.position, si = geo.attributes.skinIndex, sw = geo.attributes.skinWeight;
+  const n = pos.count;
+  const rep = new Array(n);                       // weld coincident verts
+  const groups = new Map();
+  for (let i = 0; i < n; i++) {
+    const k = ((pos.getX(i) * 2000) | 0) + '_' + ((pos.getY(i) * 2000) | 0) + '_' + ((pos.getZ(i) * 2000) | 0);
+    let g = groups.get(k);
+    if (!g) groups.set(k, g = i);
+    rep[i] = g;
+  }
+  const adj = new Map();
+  const link = (a, b) => { let s2 = adj.get(a); if (!s2) adj.set(a, s2 = new Set()); s2.add(b); };
+  for (let t = 0; t < n; t += 3) {
+    const a = rep[t], b = rep[t + 1], c = rep[t + 2];
+    link(a, b); link(b, a); link(b, c); link(c, b); link(a, c); link(c, a);
+  }
+  let W = new Map();
+  adj.forEach((_, r) => {
+    const m = new Map();
+    m.set(si.getX(r), sw.getX(r));
+    if (sw.getY(r) > 0) m.set(si.getY(r), (m.get(si.getY(r)) || 0) + sw.getY(r));
+    W.set(r, m);
+  });
+  for (let it = 0; it < iters; it++) {
+    const out = new Map();
+    adj.forEach((nbrs, r) => {
+      const acc = new Map();
+      const add = (m, f) => { if (m) m.forEach((w, b) => acc.set(b, (acc.get(b) || 0) + w * f)); };
+      add(W.get(r), 0.5);
+      const f = 0.5 / nbrs.size;
+      nbrs.forEach(nb => add(W.get(nb), f));
+      out.set(r, acc);
+    });
+    W = out;
+  }
+  for (let i = 0; i < n; i++) {
+    const m = W.get(rep[i]);
+    if (!m) continue;
+    let b1 = 0, w1 = 0, b2 = 0, w2 = 0;
+    m.forEach((w, b) => { if (w > w1) { b2 = b1; w2 = w1; b1 = b; w1 = w; } else if (w > w2) { b2 = b; w2 = w; } });
+    const tot = w1 + w2 || 1;
+    si.setXYZW(i, b1, b2, 0, 0);
+    sw.setXYZW(i, w1 / tot, w2 / tot, 0, 0);
+  }
+  si.needsUpdate = true; sw.needsUpdate = true;
+}
+
 function buildSkinnedBody(kind, preset) {
   const isEnemy = kind === 'enemy';
   const B = [];
@@ -1601,6 +1652,7 @@ function buildSkinnedBody(kind, preset) {
       // (no rigid zones for this model — v2 has no slung gun; the stale v1 box
       // was slicing through the new mesh's coat and pinning it to the hip)
       bindGeoToBones(MOLLY.geo, B, segs, []);
+      smoothSkinWeights(MOLLY.geo, 4);   // diffuse weights over the surface — no hard borders
       MOLLY.geo.computeVertexNormals();
       // paint him like the design: flame mask, black kit, jet gloves/boots
       const vp = MOLLY.geo.attributes.position, C = [];
@@ -3960,7 +4012,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 57;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 58;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
