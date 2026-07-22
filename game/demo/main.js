@@ -1425,6 +1425,8 @@ function bindGeoToBones(geo, B, segs, rigid = []) {
     // rigid zones: slung gear etc. rides ONE bone — no cross-limb stretching
     const rz2 = rigid.find(r => px >= r.minX && px <= r.maxX && py >= r.minY && py <= r.maxY && pz >= r.minZ && pz <= r.maxZ);
     if (rz2) { SI.push(B.indexOf(rz2.b), 0, 0, 0); SW.push(1, 0, 0, 0); continue; }
+    const M2 = 0.07;   // soft margin: fade into the rigid zone instead of tearing at its edge
+    const rz3 = rigid.find(r => px >= r.minX - M2 && px <= r.maxX + M2 && py >= r.minY - M2 && py <= r.maxY + M2 && pz >= r.minZ - M2 && pz <= r.maxZ + M2);
     let s1 = null, d1 = 1e9, s2 = null, d2 = 1e9;
     const ax2 = Math.abs(px);
     for (const s of segs) {
@@ -1444,6 +1446,11 @@ function bindGeoToBones(geo, B, segs, rigid = []) {
       const k1 = 1 / Math.pow(d1 + 0.001, 4), k2 = 1 / Math.pow(d2 + 0.001, 4);
       w1 = k1 / (k1 + k2); w2 = 1 - w1;
       if (w2 < 0.18) { w1 = 1; w2 = 0; }
+    }
+    if (rz3) {                                   // boundary band: half local bone, half the rigid anchor
+      SI.push(B.indexOf(s1.b), B.indexOf(rz3.b), 0, 0);
+      SW.push(0.5, 0.5, 0, 0);
+      continue;
     }
     SI.push(B.indexOf(s1.b), s2 ? B.indexOf(s2.b) : 0, 0, 0);
     SW.push(w1, w2, 0, 0);
@@ -3953,7 +3960,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 53;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 54;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
