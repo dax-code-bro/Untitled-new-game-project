@@ -1893,6 +1893,10 @@ function buildSkinnedBody(kind, preset) {
     const mMat = MOLLY.mat
       ? MOLLY.mat                                     // the creator's PAINTED texture
       : new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 });
+    // AI-generated meshes routinely ship inconsistent face winding; a strict GPU
+    // (iOS) culls the back-facing half and the character looks half-gone. Render
+    // BOTH sides so no triangle can ever vanish, whatever the device.
+    mMat.side = THREE.DoubleSide;
     const mMesh = new THREE.SkinnedMesh(MOLLY.geo, mMat);
     mMesh.castShadow = true;
     mMesh.frustumCulled = false;
@@ -4252,7 +4256,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 68;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 69;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
