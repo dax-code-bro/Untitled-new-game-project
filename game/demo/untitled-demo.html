@@ -8713,8 +8713,11 @@ function buildSkinnedBody(kind, preset) {
         for (let t = 0; t < p2.count; t += 3) {
           const c1 = chainOf(si2.getX(t)), c2 = chainOf(si2.getX(t + 1)), c3 = chainOf(si2.getX(t + 2));
           const hasA = c1 === 1 || c2 === 1 || c3 === 1;
-          const hasL = c1 === 2 || c2 === 2 || c3 === 2;
-          if (hasA && hasL) { cut2++; continue; }
+          const hasOther = c1 !== 1 || c2 !== 1 || c3 !== 1;
+          // arms legitimately join the body ONLY at the shoulder — any arm-to-anything
+          // span below shoulder height is fused geometry (fingertips to thigh OR coat)
+          const topY = Math.max(p2.getY(t), p2.getY(t + 1), p2.getY(t + 2));
+          if (hasA && hasOther && topY < 1.28) { cut2++; continue; }
           for (let k = 0; k < 3; k++) {
             P3.push(p2.getX(t + k), p2.getY(t + k), p2.getZ(t + k));
             N3.push(no3.getX(t + k), no3.getY(t + k), no3.getZ(t + k));
@@ -11118,7 +11121,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 64;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 65;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
