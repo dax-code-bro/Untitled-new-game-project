@@ -8875,43 +8875,20 @@ function buildSkinnedBody(kind, preset) {
         sg(hipR, 0.135, 0.74, 0, 0.135, 0.38, 0, 'l'), sg(knR, 0.135, 0.38, 0, 0.135, 0.03, 0, 'l'),
         sg(anR, 0.135, 0.05, 0, 0.135, 0.02, -0.10, 'l'), sg(toR, 0.135, 0.02, -0.10, 0.135, 0.02, -0.17, 'l'),
       ];
-      // (no rigid zones for this model — v2 has no slung gun; the stale v1 box
-      // was slicing through the new mesh's coat and pinning it to the hip)
-      MOLLY.geo = cutArmLegBridges(MOLLY.geo);
+      // NON-DESTRUCTIVE bind — WEIGHTS ONLY, geometry left exactly as the GLB
+      // ships it. During the "stretching" era the FULL mesh loaded on every
+      // device; the cure for the stretch is the weight CLAMP below (soft joints,
+      // no cross-limb bleed), NOT cutting triangles. Every geometry-rebuild pass
+      // (bridge-cut, stretch-delete, island-remove, winding-flip) is GONE —
+      // rebuilding the mesh is exactly what the creator's iPhone failed to load.
       bindGeoToBones(MOLLY.geo, B, segs, []);          // records each vertex's limb group
       smoothSkinWeights(MOLLY.geo, 4);                 // diffuse weights — soft joints, no hard borders
-      // build a bone-index -> group map (0 torso / 1 arm / 2 leg) and CLAMP: smoothing
-      // may not move any vertex's influence into a different limb than it started in.
-      // This kills the chest-centre tear (arm weight bleeding onto the sternum) that
-      // per-triangle stretch detection structurally cannot catch — the patch moves
-      // rigidly with the arm, so it only tears at the SEAM with its neighbours.
       {
         const boneGroup = B.map(() => 0);
         [shL, elL, wrL, fiL, shR, elR, wrR, fiR].forEach(b => boneGroup[B.indexOf(b)] = 1);
         [hipL, knL, anL, toL, hipR, knR, anR, toR].forEach(b => boneGroup[B.indexOf(b)] = 2);
-        clampWeightsToGroups(MOLLY.geo, boneGroup);
+        clampWeightsToGroups(MOLLY.geo, boneGroup);    // stop arm weight bleeding onto the chest (the tear)
       }
-      // DEFINITIVE, CAUSE-AGNOSTIC cleanup: pose the skeleton through the real
-      // animation extremes (shouldered aim, both kneels, reload cross-draw) and
-      // delete any triangle that physically TEARS. Whatever the fusion — fingertip
-      // to thigh, fingertip to coat, sleeve web — it can only surface as a triangle
-      // that stretches when the limbs move, so this removes all of them at once
-      // while sparing real joint creases (which stay small even when they spike).
-      MOLLY.geo = deleteStretchTriangles(MOLLY.geo, B, [
-        () => { shL.rotation.set(1.5, 0.42, 0.5); elL.rotation.x = 1.35;
-                shR.rotation.set(1.5, -0.42, -0.5); elR.rotation.x = 1.35; },                                    // shouldered aim
-        () => { shL.rotation.set(1.5, 0.42, 0.5); elL.rotation.x = 1.35;
-                shR.rotation.set(1.5, -0.42, -0.5); elR.rotation.x = 1.35;
-                hipL.rotation.x = 1.4; knL.rotation.x = -1.72; hipR.rotation.x = -0.4; knR.rotation.x = -1.72; }, // aim + right-knee kneel
-        () => { shL.rotation.set(1.5, 0.42, 0.5); elL.rotation.x = 1.35;
-                shR.rotation.set(1.5, -0.42, -0.5); elR.rotation.x = 1.35;
-                hipR.rotation.x = 1.4; knR.rotation.x = -1.72; hipL.rotation.x = -0.4; knL.rotation.x = -1.72; }, // aim + left-knee kneel
-        () => { shL.rotation.set(0.9, 0.2, 0.6); elL.rotation.x = 1.7;
-                shR.rotation.set(0.4, -0.2, -0.3); elR.rotation.x = 0.6; },                                      // reload / patrol cross-draw
-      ], 2.2, 0.09);
-      MOLLY.geo = removeSmallIslands(MOLLY.geo, 250);
-      fixWinding(MOLLY.geo);            // orient every face OUTWARD (AI meshes ship mixed winding)
-      MOLLY.geo.computeVertexNormals();
       // paint him like the design: flame mask, black kit, jet gloves/boots
       const vp = MOLLY.geo.attributes.position, C = [];
       for (let i = 0; i < vp.count; i++) {
@@ -8935,11 +8912,10 @@ function buildSkinnedBody(kind, preset) {
     const mMat = MOLLY.mat
       ? MOLLY.mat                                     // the creator's PAINTED texture
       : new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 });
-    // The GLB ships doubleSided + full-white emissive — the combo renders SOLID in
-    // desktop GL but ghostly/see-through on strict mobile (iOS) GPUs. With winding
-    // now consistent we can render single-sided (rock-solid everywhere), and the
-    // stray white self-illumination is killed so he can't glow into transparency.
-    mMat.side = THREE.FrontSide;
+    // Render config that LOADED FULLY on the creator's phone during the stretching
+    // era: double-sided (the GLB's own setting) + opaque. Only the stray full-white
+    // emissive is disabled (it can ghost on some GPUs and isn't part of his design).
+    mMat.side = THREE.DoubleSide;
     mMat.transparent = false; mMat.opacity = 1; mMat.depthWrite = true; mMat.depthTest = true;
     mMat.emissiveIntensity = 0;
     if (mMat.emissive) mMat.emissive.setRGB(0, 0, 0);
@@ -9567,7 +9543,7 @@ let MOLLY = null;      // Molotov's Meshy-generated full body (creator's own des
   };
   const headFail = (err) => { console.warn('[demo] head scan unavailable — sculpted heads', err); settle(); };
   // --- Molotov's generated body (streamed; ring body is the fallback) ---
-  loader.load('./assets/molotov3.glb', (g) => {
+  loader.load('./assets/molotov4.glb', (g) => {
     const wasSpawned = spawned;                     // did the failsafe already fire?
     try {
     let mesh = null;
@@ -11326,7 +11302,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 70;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 71;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
