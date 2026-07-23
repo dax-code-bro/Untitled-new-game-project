@@ -2474,6 +2474,24 @@ function spawnAll() {
     }
   });
 }
+// If the generated body streams in AFTER the squad already spawned on the
+// fallback (slow connection), swap Molotov's model in place — you never get
+// stuck on the built-in body waiting for the download.
+let MOLLY_UPGRADED = false;
+function upgradeMolotov() {
+  if (MOLLY_UPGRADED || !MOLLY) return;
+  const e = entities.find(x => x.name === 'Molotov');
+  if (!e) return;
+  MOLLY_UPGRADED = true;
+  const px = e.grp.position.x, py = e.grp.position.y, pz = e.grp.position.z, ry = e.grp.rotation.y;
+  scene.remove(e.grp);
+  const m = operatorModel('friendly', 'Molotov');   // MOLLY is set now → builds the real body
+  m.grp.position.set(px, py, pz); m.grp.rotation.y = ry;
+  scene.add(m.grp);
+  e.grp = m.grp; e.model = m; e.body = m.bodyHit || m.torso; e.head = m.head; e.lids = m.lids;
+  if (e.ai) e.ai = makeAI(e);
+  console.log('[demo] Molotov upgraded to the generated body (late load)');
+}
 // RIG: the professionally-sculpted, skeleton-rigged human mesh all soldiers clone.
 // Loaded from base64 in the single-file build, from ./assets in the served build.
 let RIG = null;            // (retired: bodies are our own skeleton now)
@@ -2484,7 +2502,7 @@ let MOLLY = null;      // Molotov's Meshy-generated full body (creator's own des
   let pending = 2, spawned = false;
   const go = () => { if (!spawned) { spawned = true; try { spawnAll(); } catch (err) { showFatal('spawn: ' + err.message); } } };
   const settle = () => { if (--pending <= 0) go(); };
-  setTimeout(() => { if (!spawned) { console.warn('[demo] asset timeout — spawning with what we have'); go(); } }, 12000);
+  setTimeout(() => { if (!spawned) { console.warn('[demo] asset timeout — spawning with what we have'); go(); } }, 20000);
   // --- the scanned head + skin maps ---
   const texL = new THREE.TextureLoader();
   const colT = texL.load(window.__HEAD_COL_B64 ? 'data:image/jpeg;base64,' + window.__HEAD_COL_B64 : './assets/head-col.jpg');
@@ -2498,7 +2516,8 @@ let MOLLY = null;      // Molotov's Meshy-generated full body (creator's own des
   };
   const headFail = (err) => { console.warn('[demo] head scan unavailable — sculpted heads', err); settle(); };
   // --- Molotov's generated body (streamed; ring body is the fallback) ---
-  loader.load('./assets/molotov2.glb', (g) => {
+  loader.load('./assets/molotov3.glb', (g) => {
+    const wasSpawned = spawned;                     // did the failsafe already fire?
     try {
     let mesh = null;
     g.scene.traverse(o => { if (o.isMesh && !mesh) mesh = o; });
@@ -2512,6 +2531,7 @@ let MOLLY = null;      // Molotov's Meshy-generated full body (creator's own des
     }
     } catch (err) { console.warn('[demo] Molotov model rejected', err); MOLLY = null; }
     settle();
+    if (wasSpawned) upgradeMolotov();               // spawned on the fallback → swap the real body in now
   }, undefined, (err) => { console.warn('[demo] Molotov model unavailable — built-in body', err); settle(); });
   try {
     if (window.__HEAD_GLB_B64) {
@@ -4232,7 +4252,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 67;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 68;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
