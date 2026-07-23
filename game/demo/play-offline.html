@@ -8415,6 +8415,8 @@ function buildNpcRifle() {
 function bindGeoToBones(geo, B, segs, rigid = []) {
   const pos = geo.attributes.position;
   const SI = [], SW = [];
+  const grp = [], dom = [];                 // per-vertex limb group (0 torso / 1 arm / 2 leg) + dominant bone
+  const G = (c) => (c === 'a' ? 1 : c === 'l' ? 2 : 0);
   const dSeg = (px, py, pz, s) => {
     const tx = s.bx - s.ax, ty = s.by - s.ay, tz = s.bz - s.az;
     const L2 = tx * tx + ty * ty + tz * tz;
@@ -8427,7 +8429,7 @@ function bindGeoToBones(geo, B, segs, rigid = []) {
     const px = pos.getX(i), py = pos.getY(i), pz = pos.getZ(i);
     // rigid zones: slung gear etc. rides ONE bone — no cross-limb stretching
     const rz2 = rigid.find(r => px >= r.minX && px <= r.maxX && py >= r.minY && py <= r.maxY && pz >= r.minZ && pz <= r.maxZ);
-    if (rz2) { SI.push(B.indexOf(rz2.b), 0, 0, 0); SW.push(1, 0, 0, 0); continue; }
+    if (rz2) { SI.push(B.indexOf(rz2.b), 0, 0, 0); SW.push(1, 0, 0, 0); grp.push(0); dom.push(B.indexOf(rz2.b)); continue; }
     const M2 = 0.07;   // soft margin: fade into the rigid zone instead of tearing at its edge
     const rz3 = rigid.find(r => px >= r.minX - M2 && px <= r.maxX + M2 && py >= r.minY - M2 && py <= r.maxY + M2 && pz >= r.minZ - M2 && pz <= r.maxZ + M2);
     let s1 = null, d1 = 1e9, s2 = null, d2 = 1e9;
@@ -8442,7 +8444,7 @@ function bindGeoToBones(geo, B, segs, rigid = []) {
       else if (d < d2) { d2 = d; s2 = s; }
     }
     // anything far from every bone (hanging gear) rides the hips rigidly
-    if (d1 > 0.2) { SI.push(B.indexOf(hipsSeg.b), 0, 0, 0); SW.push(1, 0, 0, 0); continue; }
+    if (d1 > 0.2) { SI.push(B.indexOf(hipsSeg.b), 0, 0, 0); SW.push(1, 0, 0, 0); grp.push(0); dom.push(B.indexOf(hipsSeg.b)); continue; }
     let w1 = 1, w2 = 0;
     if (s2 && ((s1.ch === 'a' && s2.ch === 'l') || (s1.ch === 'l' && s2.ch === 'a'))) s2 = null;
     if (s2 && s2.b !== s1.b) {
@@ -8453,13 +8455,46 @@ function bindGeoToBones(geo, B, segs, rigid = []) {
     if (rz3) {                                   // boundary band: half local bone, half the rigid anchor
       SI.push(B.indexOf(s1.b), B.indexOf(rz3.b), 0, 0);
       SW.push(0.5, 0.5, 0, 0);
+      grp.push(G(s1.ch)); dom.push(B.indexOf(s1.b));
       continue;
     }
     SI.push(B.indexOf(s1.b), s2 ? B.indexOf(s2.b) : 0, 0, 0);
     SW.push(w1, w2, 0, 0);
+    grp.push(G(s1.ch)); dom.push(B.indexOf(s1.b));
   }
   geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(SI, 4));
   geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(SW, 4));
+  // remember each vertex's PRE-smoothing limb group + dominant bone, so smoothing
+  // can be prevented from bleeding one limb's influence onto another afterward
+  geo.userData.limbGroup = grp;
+  geo.userData.domBone = dom;
+}
+
+// GROUP CLAMP — after smoothing, forbid any vertex from being weighted to a bone
+// in a DIFFERENT limb group than its proximity binding assigned. Smoothing stays
+// soft WITHIN a group (elbow, knee, deltoid-to-chest inside the torso) but can no
+// longer bleed arm weight onto the chest centre or finger weight onto a thigh —
+// which is what tears a rigid patch loose from the body. boneGroup[i] maps a bone
+// index to 0/1/2; the pre-smoothing dominant bone is the safe fallback.
+function clampWeightsToGroups(geo, boneGroup) {
+  const grp = geo.userData.limbGroup, dom = geo.userData.domBone;
+  if (!grp) return;
+  const si = geo.attributes.skinIndex, sw = geo.attributes.skinWeight;
+  let fixed = 0;
+  for (let i = 0; i < si.count; i++) {
+    const g = grp[i];
+    let b0 = si.getX(i), w0 = sw.getX(i), b1 = si.getY(i), w1 = sw.getY(i);
+    let changed = false;
+    if (w0 > 0 && boneGroup[b0] !== g) { w0 = 0; changed = true; }
+    if (w1 > 0 && boneGroup[b1] !== g) { w1 = 0; changed = true; }
+    if (!changed) continue;
+    const tot = w0 + w1;
+    if (tot > 1e-5) { sw.setX(i, w0 / tot); sw.setY(i, w1 / tot); }
+    else { si.setX(i, dom[i]); si.setY(i, 0); sw.setX(i, 1); sw.setY(i, 0); }  // fully drifted → snap home
+    fixed++;
+  }
+  si.needsUpdate = true; sw.needsUpdate = true;
+  console.log('[demo] group clamp corrected', fixed, 'cross-limb-weighted vertices');
 }
 
 // WEIGHT SMOOTHING — the real fix for boundary tearing: diffuse skin weights
@@ -8492,6 +8527,126 @@ function cutArmLegBridges(geo) {
   out.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
   out.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3));
   out.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2));
+  return out;
+}
+
+// remove orphaned scraps left behind by the scissors: connected components
+// with too few triangles to be a real body part
+function removeSmallIslands(geo, minTris = 300) {
+  const pos = geo.attributes.position;
+  const n = pos.count;
+  const rep = new Array(n);
+  const seen = new Map();
+  for (let i = 0; i < n; i++) {
+    const k = ((pos.getX(i) * 2000) | 0) + '_' + ((pos.getY(i) * 2000) | 0) + '_' + ((pos.getZ(i) * 2000) | 0);
+    let g = seen.get(k);
+    if (g === undefined) { seen.set(k, i); g = i; }
+    rep[i] = g;
+  }
+  const parent = new Array(n).fill(0).map((_, i) => i);
+  const find = (a) => { while (parent[a] !== a) { parent[a] = parent[parent[a]]; a = parent[a]; } return a; };
+  const uni = (a, b) => { parent[find(a)] = find(b); };
+  for (let t = 0; t < n; t += 3) { uni(rep[t], rep[t + 1]); uni(rep[t + 1], rep[t + 2]); }
+  const triCount = new Map();
+  for (let t = 0; t < n; t += 3) {
+    const r = find(rep[t]);
+    triCount.set(r, (triCount.get(r) || 0) + 1);
+  }
+  const uv = geo.attributes.uv, nor = geo.attributes.normal, si = geo.attributes.skinIndex, sw = geo.attributes.skinWeight;
+  const P = [], U = [], N = [], S = [], W = [];
+  let cut = 0;
+  for (let t = 0; t < n; t += 3) {
+    if (triCount.get(find(rep[t])) < minTris) { cut++; continue; }
+    for (let k = 0; k < 3; k++) {
+      P.push(pos.getX(t + k), pos.getY(t + k), pos.getZ(t + k));
+      N.push(nor.getX(t + k), nor.getY(t + k), nor.getZ(t + k));
+      U.push(uv.getX(t + k), uv.getY(t + k));
+      if (si) { S.push(si.getX(t + k), si.getY(t + k), 0, 0); W.push(sw.getX(t + k), sw.getY(t + k), 0, 0); }
+    }
+  }
+  console.log('[demo] island cleanup removed', cut, 'orphan triangles');
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+  out.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3));
+  out.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2));
+  if (si) {
+    out.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(S, 4));
+    out.setAttribute('skinWeight', new THREE.Float32BufferAttribute(W, 4));
+  }
+  return out;
+}
+
+// DEFINITIVE skinning cleanup — pose the bound skeleton through the real
+// animation extremes and delete every triangle that BOTH stretches past
+// `ratioThr`x its rest size AND ends up physically long (> `absThr` metres).
+// Cause-agnostic: any fused-across-body geometry (the #1 artifact in AI-
+// generated character meshes — fingertips welded to a thigh, a coat, a sleeve)
+// can only reveal itself as a triangle that tears when the limbs move, so this
+// catches every one wherever it hides, while sparing legit joint creases (which
+// stay physically small even when their ratio spikes). poseFns each mutate bone
+// rotations; the rest pose is saved and restored around the analysis.
+function deleteStretchTriangles(geo, bones, poseFns, ratioThr = 2.2, absThr = 0.09) {
+  const root = bones[0];
+  const saved = bones.map(b => b.rotation.clone());
+  root.updateMatrixWorld(true);
+  const restInv = bones.map(b => b.matrixWorld.clone().invert());
+  const pos = geo.attributes.position, si = geo.attributes.skinIndex, sw = geo.attributes.skinWeight;
+  const n = pos.count;
+  const rest = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) { rest[i * 3] = pos.getX(i); rest[i * 3 + 1] = pos.getY(i); rest[i * 3 + 2] = pos.getZ(i); }
+  const def = new Float32Array(n * 3);
+  const bad = new Uint8Array(n / 3);
+  const skinMat = bones.map(() => new THREE.Matrix4());
+  const base = new THREE.Vector3(), tmp = new THREE.Vector3(), acc = new THREE.Vector3();
+  for (const poseFn of poseFns) {
+    bones.forEach((b, i) => b.rotation.copy(saved[i]));   // reset to rest
+    poseFn();                                             // strike the test pose
+    root.updateMatrixWorld(true);
+    for (let i = 0; i < bones.length; i++) skinMat[i].multiplyMatrices(bones[i].matrixWorld, restInv[i]);
+    for (let v = 0; v < n; v++) {                         // linear-blend-skin every vertex
+      base.set(rest[v * 3], rest[v * 3 + 1], rest[v * 3 + 2]);
+      acc.set(0, 0, 0);
+      const b0 = si.getX(v), w0 = sw.getX(v), b1 = si.getY(v), w1 = sw.getY(v);
+      if (w0 > 0) { tmp.copy(base).applyMatrix4(skinMat[b0]); acc.addScaledVector(tmp, w0); }
+      if (w1 > 0) { tmp.copy(base).applyMatrix4(skinMat[b1]); acc.addScaledVector(tmp, w1); }
+      const tw = w0 + w1;
+      if (tw > 0 && Math.abs(tw - 1) > 1e-4) acc.multiplyScalar(1 / tw);
+      def[v * 3] = acc.x; def[v * 3 + 1] = acc.y; def[v * 3 + 2] = acc.z;
+    }
+    for (let t = 0; t < n; t += 3) {                      // flag torn triangles
+      if (bad[t / 3]) continue;
+      for (let e = 0; e < 3; e++) {
+        const a = t + e, b = t + ((e + 1) % 3);
+        const rl = Math.hypot(rest[a * 3] - rest[b * 3], rest[a * 3 + 1] - rest[b * 3 + 1], rest[a * 3 + 2] - rest[b * 3 + 2]);
+        const dl = Math.hypot(def[a * 3] - def[b * 3], def[a * 3 + 1] - def[b * 3 + 1], def[a * 3 + 2] - def[b * 3 + 2]);
+        const ratio = rl > 1e-4 ? dl / rl : (dl > 0.05 ? 999 : 1);
+        if (ratio > ratioThr && dl > absThr) { bad[t / 3] = 1; break; }
+      }
+    }
+  }
+  bones.forEach((b, i) => b.rotation.copy(saved[i]));     // restore rest pose for the real bind
+  root.updateMatrixWorld(true);
+  const uv = geo.attributes.uv, nor = geo.attributes.normal;
+  const P = [], U = [], N = [], S = [], W = [];
+  let cut = 0;
+  for (let t = 0; t < n; t += 3) {
+    if (bad[t / 3]) { cut++; continue; }
+    for (let k = 0; k < 3; k++) {
+      const i = t + k;
+      P.push(pos.getX(i), pos.getY(i), pos.getZ(i));
+      N.push(nor ? nor.getX(i) : 0, nor ? nor.getY(i) : 0, nor ? nor.getZ(i) : 0);
+      U.push(uv.getX(i), uv.getY(i));
+      S.push(si.getX(i), si.getY(i), 0, 0);
+      W.push(sw.getX(i), sw.getY(i), 0, 0);
+    }
+  }
+  console.log('[demo] stretch cleanup removed', cut, 'triangles across', poseFns.length, 'poses');
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+  out.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3));
+  out.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2));
+  out.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(S, 4));
+  out.setAttribute('skinWeight', new THREE.Float32BufferAttribute(W, 4));
   return out;
 }
 
@@ -8685,56 +8840,38 @@ function buildSkinnedBody(kind, preset) {
       // (no rigid zones for this model — v2 has no slung gun; the stale v1 box
       // was slicing through the new mesh's coat and pinning it to the hip)
       MOLLY.geo = cutArmLegBridges(MOLLY.geo);
-      bindGeoToBones(MOLLY.geo, B, segs, []);
-      smoothSkinWeights(MOLLY.geo, 4);   // diffuse weights over the surface — no hard borders
-      // re-assert territories after smoothing (diffusion must not cross arm/leg)
+      bindGeoToBones(MOLLY.geo, B, segs, []);          // records each vertex's limb group
+      smoothSkinWeights(MOLLY.geo, 4);                 // diffuse weights — soft joints, no hard borders
+      // build a bone-index -> group map (0 torso / 1 arm / 2 leg) and CLAMP: smoothing
+      // may not move any vertex's influence into a different limb than it started in.
+      // This kills the chest-centre tear (arm weight bleeding onto the sternum) that
+      // per-triangle stretch detection structurally cannot catch — the patch moves
+      // rigidly with the arm, so it only tears at the SEAM with its neighbours.
       {
-        const armIdx = new Set([shL, elL, wrL, fiL, shR, elR, wrR, fiR].map(b => B.indexOf(b)));
-        const legIdx = new Set([hipL, knL, anL, toL, hipR, knR, anR, toR].map(b => B.indexOf(b)));
-        const p2 = MOLLY.geo.attributes.position, si2 = MOLLY.geo.attributes.skinIndex, sw2 = MOLLY.geo.attributes.skinWeight;
-        for (let i = 0; i < p2.count; i++) {
-          const ax3 = Math.abs(p2.getX(i)), y3 = p2.getY(i);
-          if (y3 > 1.0) continue;
-          const ban = ax3 > 0.235 ? legIdx : ax3 < 0.205 ? armIdx : null;
-          if (!ban) continue;
-          let w0 = sw2.getX(i), w1b = sw2.getY(i);
-          if (ban.has(si2.getX(i))) w0 = 0;
-          if (ban.has(si2.getY(i))) w1b = 0;
-          const tot = w0 + w1b;
-          if (tot > 0) { sw2.setX(i, w0 / tot); sw2.setY(i, w1b / tot); }
-        }
-        sw2.needsUpdate = true;
-        // FINAL SCISSORS: drop any triangle whose corners follow different limbs —
-        // these are precisely (and only) the polygons that can stretch across the body
-        const chainOf = (bi2) => armIdx.has(bi2) ? 1 : legIdx.has(bi2) ? 2 : 0;
-        const P3 = [], U3 = [], N3 = [], S3 = [], W3 = [];
-        const uv3 = MOLLY.geo.attributes.uv, no3 = MOLLY.geo.attributes.normal;
-        let cut2 = 0;
-        for (let t = 0; t < p2.count; t += 3) {
-          const c1 = chainOf(si2.getX(t)), c2 = chainOf(si2.getX(t + 1)), c3 = chainOf(si2.getX(t + 2));
-          const hasA = c1 === 1 || c2 === 1 || c3 === 1;
-          const hasOther = c1 !== 1 || c2 !== 1 || c3 !== 1;
-          // arms legitimately join the body ONLY at the shoulder — any arm-to-anything
-          // span below shoulder height is fused geometry (fingertips to thigh OR coat)
-          const topY = Math.max(p2.getY(t), p2.getY(t + 1), p2.getY(t + 2));
-          if (hasA && hasOther && topY < 1.28) { cut2++; continue; }
-          for (let k = 0; k < 3; k++) {
-            P3.push(p2.getX(t + k), p2.getY(t + k), p2.getZ(t + k));
-            N3.push(no3.getX(t + k), no3.getY(t + k), no3.getZ(t + k));
-            U3.push(uv3.getX(t + k), uv3.getY(t + k));
-            S3.push(si2.getX(t + k), si2.getY(t + k), 0, 0);
-            W3.push(sw2.getX(t + k), sw2.getY(t + k), 0, 0);
-          }
-        }
-        console.log('[demo] cross-limb scissors removed', cut2, 'triangles');
-        const g3 = new THREE.BufferGeometry();
-        g3.setAttribute('position', new THREE.Float32BufferAttribute(P3, 3));
-        g3.setAttribute('normal', new THREE.Float32BufferAttribute(N3, 3));
-        g3.setAttribute('uv', new THREE.Float32BufferAttribute(U3, 2));
-        g3.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(S3, 4));
-        g3.setAttribute('skinWeight', new THREE.Float32BufferAttribute(W3, 4));
-        MOLLY.geo = g3;
+        const boneGroup = B.map(() => 0);
+        [shL, elL, wrL, fiL, shR, elR, wrR, fiR].forEach(b => boneGroup[B.indexOf(b)] = 1);
+        [hipL, knL, anL, toL, hipR, knR, anR, toR].forEach(b => boneGroup[B.indexOf(b)] = 2);
+        clampWeightsToGroups(MOLLY.geo, boneGroup);
       }
+      // DEFINITIVE, CAUSE-AGNOSTIC cleanup: pose the skeleton through the real
+      // animation extremes (shouldered aim, both kneels, reload cross-draw) and
+      // delete any triangle that physically TEARS. Whatever the fusion — fingertip
+      // to thigh, fingertip to coat, sleeve web — it can only surface as a triangle
+      // that stretches when the limbs move, so this removes all of them at once
+      // while sparing real joint creases (which stay small even when they spike).
+      MOLLY.geo = deleteStretchTriangles(MOLLY.geo, B, [
+        () => { shL.rotation.set(1.5, 0.42, 0.5); elL.rotation.x = 1.35;
+                shR.rotation.set(1.5, -0.42, -0.5); elR.rotation.x = 1.35; },                                    // shouldered aim
+        () => { shL.rotation.set(1.5, 0.42, 0.5); elL.rotation.x = 1.35;
+                shR.rotation.set(1.5, -0.42, -0.5); elR.rotation.x = 1.35;
+                hipL.rotation.x = 1.4; knL.rotation.x = -1.72; hipR.rotation.x = -0.4; knR.rotation.x = -1.72; }, // aim + right-knee kneel
+        () => { shL.rotation.set(1.5, 0.42, 0.5); elL.rotation.x = 1.35;
+                shR.rotation.set(1.5, -0.42, -0.5); elR.rotation.x = 1.35;
+                hipR.rotation.x = 1.4; knR.rotation.x = -1.72; hipL.rotation.x = -0.4; knL.rotation.x = -1.72; }, // aim + left-knee kneel
+        () => { shL.rotation.set(0.9, 0.2, 0.6); elL.rotation.x = 1.7;
+                shR.rotation.set(0.4, -0.2, -0.3); elR.rotation.x = 0.6; },                                      // reload / patrol cross-draw
+      ], 2.2, 0.09);
+      MOLLY.geo = removeSmallIslands(MOLLY.geo, 250);
       MOLLY.geo.computeVertexNormals();
       // paint him like the design: flame mask, black kit, jet gloves/boots
       const vp = MOLLY.geo.attributes.position, C = [];
@@ -8897,7 +9034,7 @@ function operatorModel(kind, name) {
     const joints0 = [shL, elL, shR, elR, hipL, knL, hipR, knR, headB];
     joints0.forEach(j => j.userData.basePose = { x: j.rotation.x, y: j.rotation.y, z: j.rotation.z });
     return { grp, torso: spineB, bodyHit: bodyHit0, head: headHit0, headG: headB,
-      armL: shL, armR: shR, legL: hipL, legR: hipR, gun: gun0, joints: joints0, lids: null, hold: HOLDS[preset.hold] || null };
+      armL: shL, armR: shR, legL: hipL, legR: hipR, gun: gun0, joints: joints0, lids: null, hold: HOLDS[preset.hold] || null, bones };
   }
   const builtHead = buildCharacterHead(preset, false);
   builtHead.assembly.position.y = 0.02;
@@ -8942,7 +9079,7 @@ function operatorModel(kind, name) {
   const joints = [shL, elL, shR, elR, hipL, knL, hipR, knR, headB];
   joints.forEach(j => j.userData.basePose = { x: j.rotation.x, y: j.rotation.y, z: j.rotation.z });
   return { grp, torso: spineB, bodyHit, head: headHit, headG: headB,
-    armL: shL, armR: shR, legL: hipL, legR: hipR, gun, joints, lids: builtHead.lids, hold: HOLDS[preset.hold] || null };
+    armL: shL, armR: shR, legL: hipL, legR: hipR, gun, joints, lids: builtHead.lids, hold: HOLDS[preset.hold] || null, bones };
 }
 
 // WEAPON FACTORY — historically-flavored builds on the base receiver.
@@ -11121,7 +11258,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 65;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 67;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
