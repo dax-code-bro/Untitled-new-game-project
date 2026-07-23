@@ -8650,6 +8650,44 @@ function deleteStretchTriangles(geo, bones, poseFns, ratioThr = 2.2, absThr = 0.
   return out;
 }
 
+// CONSISTENT WINDING — AI-generated meshes ship triangles wound both ways, so a
+// single-sided render culls the wrongly-wound half (looks gone) and a double-
+// sided render can ghost on strict mobile GPUs. At this point the geometry still
+// carries the GLB's ORIGINAL vertex normals (the intended outward direction), so
+// any triangle whose winding-derived normal disagrees with them is flipped. After
+// this, single-sided rendering is rock-solid on every device.
+function fixWinding(geo) {
+  const pos = geo.attributes.position, nor = geo.attributes.normal;
+  const uv = geo.attributes.uv, si = geo.attributes.skinIndex, sw = geo.attributes.skinWeight;
+  if (!nor) return;
+  const A = new THREE.Vector3(), B = new THREE.Vector3(), C = new THREE.Vector3();
+  const ab = new THREE.Vector3(), ac = new THREE.Vector3(), gn = new THREE.Vector3(), sn = new THREE.Vector3();
+  const swap = (attr, i, j, comps) => {
+    for (let c = 0; c < comps; c++) {
+      const tmp = attr.array[i * comps + c];
+      attr.array[i * comps + c] = attr.array[j * comps + c];
+      attr.array[j * comps + c] = tmp;
+    }
+  };
+  let flipped = 0;
+  for (let t = 0; t < pos.count; t += 3) {
+    A.fromBufferAttribute(pos, t); B.fromBufferAttribute(pos, t + 1); C.fromBufferAttribute(pos, t + 2);
+    ab.subVectors(B, A); ac.subVectors(C, A); gn.crossVectors(ab, ac);
+    sn.set(0, 0, 0);
+    for (let k = 0; k < 3; k++) { sn.x += nor.getX(t + k); sn.y += nor.getY(t + k); sn.z += nor.getZ(t + k); }
+    if (gn.dot(sn) < 0) {                          // winding disagrees with intended normals → flip
+      swap(pos, t + 1, t + 2, 3); swap(nor, t + 1, t + 2, 3);
+      if (uv) swap(uv, t + 1, t + 2, 2);
+      if (si) swap(si, t + 1, t + 2, 4);
+      if (sw) swap(sw, t + 1, t + 2, 4);
+      flipped++;
+    }
+  }
+  pos.needsUpdate = true; nor.needsUpdate = true;
+  if (uv) uv.needsUpdate = true; if (si) si.needsUpdate = true; if (sw) sw.needsUpdate = true;
+  console.log('[demo] winding fix flipped', flipped, 'of', pos.count / 3, 'triangles');
+}
+
 function smoothSkinWeights(geo, iters = 4) {
   const pos = geo.attributes.position, si = geo.attributes.skinIndex, sw = geo.attributes.skinWeight;
   const n = pos.count;
@@ -8872,6 +8910,7 @@ function buildSkinnedBody(kind, preset) {
                 shR.rotation.set(0.4, -0.2, -0.3); elR.rotation.x = 0.6; },                                      // reload / patrol cross-draw
       ], 2.2, 0.09);
       MOLLY.geo = removeSmallIslands(MOLLY.geo, 250);
+      fixWinding(MOLLY.geo);            // orient every face OUTWARD (AI meshes ship mixed winding)
       MOLLY.geo.computeVertexNormals();
       // paint him like the design: flame mask, black kit, jet gloves/boots
       const vp = MOLLY.geo.attributes.position, C = [];
@@ -8896,10 +8935,15 @@ function buildSkinnedBody(kind, preset) {
     const mMat = MOLLY.mat
       ? MOLLY.mat                                     // the creator's PAINTED texture
       : new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 });
-    // AI-generated meshes routinely ship inconsistent face winding; a strict GPU
-    // (iOS) culls the back-facing half and the character looks half-gone. Render
-    // BOTH sides so no triangle can ever vanish, whatever the device.
-    mMat.side = THREE.DoubleSide;
+    // The GLB ships doubleSided + full-white emissive — the combo renders SOLID in
+    // desktop GL but ghostly/see-through on strict mobile (iOS) GPUs. With winding
+    // now consistent we can render single-sided (rock-solid everywhere), and the
+    // stray white self-illumination is killed so he can't glow into transparency.
+    mMat.side = THREE.FrontSide;
+    mMat.transparent = false; mMat.opacity = 1; mMat.depthWrite = true; mMat.depthTest = true;
+    mMat.emissiveIntensity = 0;
+    if (mMat.emissive) mMat.emissive.setRGB(0, 0, 0);
+    mMat.needsUpdate = true;
     const mMesh = new THREE.SkinnedMesh(MOLLY.geo, mMat);
     mMesh.castShadow = true;
     mMesh.frustumCulled = false;
@@ -11282,7 +11326,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 69;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 70;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
