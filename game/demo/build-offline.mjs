@@ -37,7 +37,7 @@ let addons = '';
 const headB64 = fs.readFileSync('assets/head.glb').toString('base64');
 const headColB64 = fs.readFileSync('assets/head-col.jpg').toString('base64');
 const headNrmB64 = fs.readFileSync('assets/head-nrm.jpg').toString('base64');
-const mollyB64 = fs.readFileSync('assets/molotov5.glb').toString('base64');
+const mollyB64 = fs.readFileSync('assets/molotov6.glb').toString('base64');
 
 // --- transform game code: drop ES imports, use global THREE, replace controls ---
 game = game

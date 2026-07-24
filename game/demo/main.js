@@ -1497,6 +1497,47 @@ function clampWeightsToGroups(geo, boneGroup) {
 // WEIGHT SMOOTHING — the real fix for boundary tearing: diffuse skin weights
 // across the mesh's actual surface (topology-aware), so no hard border between
 // bones can exist anywhere. Runs after auto-binding, before use.
+// FOLD A T-POSE MESH'S ARMS DOWN into the rig's arms-hanging rest pose.
+// The rig (and all the tuned aim/reload/recoil animation) expects the mesh to
+// arrive with arms at the sides. A Meshy T-pose model (arms straight out) must
+// be pre-posed to match, ONCE, before binding — a rest-pose edit, not skinning,
+// so it introduces no runtime stretch. Each arm vertex rotates about its shoulder
+// in the XY plane, with a smooth blend from 0 at the shoulder to full down the
+// arm, so the deltoid bends instead of tearing. Normals rotate with the verts.
+// Returns true if it detected a T-pose and folded; false if the mesh was already
+// arms-down (nothing to do).
+function foldArmsDown(geo) {
+  const pos = geo.attributes.position, nor = geo.attributes.normal;
+  // detect T-pose: real reach out past |x| 0.5 (arms-down models stay under ~0.35)
+  let maxAbsX = 0;
+  for (let i = 0; i < pos.count; i++) maxAbsX = Math.max(maxAbsX, Math.abs(pos.getX(i)));
+  if (maxAbsX < 0.5) return false;
+  const X0 = 0.26, X1 = 0.42;              // blend band: shoulder(no turn) -> upper arm(full turn)
+  const PIVY = 1.50;                       // shoulder height
+  const ANG = Math.PI / 2 * 0.96;          // ~86.4deg: hang down, a hair outboard like the old rest
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    const ax = Math.abs(x);
+    if (ax <= X0 || y < 0.9) continue;     // torso / legs untouched
+    const side = x < 0 ? -1 : 1;           // right arm folds -ANG about +Z, left +ANG
+    const pivx = side * X0;
+    const blend = Math.min(1, (ax - X0) / (X1 - X0));
+    const a = -side * ANG * blend;
+    const ca = Math.cos(a), sa = Math.sin(a);
+    const dx = x - pivx, dy = y - PIVY;
+    pos.setX(i, pivx + dx * ca - dy * sa);
+    pos.setY(i, PIVY + dx * sa + dy * ca);
+    // rotate the normal too (XY only)
+    const nx = nor.getX(i), ny = nor.getY(i);
+    nor.setX(i, nx * ca - ny * sa);
+    nor.setY(i, nx * sa + ny * ca);
+  }
+  pos.needsUpdate = true; nor.needsUpdate = true;
+  geo.computeBoundingBox();
+  console.log('[demo] folded T-pose arms down (reach was', maxAbsX.toFixed(2) + ')');
+  return true;
+}
+
 // cut triangles that span hand-space and body/leg-space (AI models fuse
 // resting fingertips to thighs; those bridges stretch when arms raise)
 function cutArmLegBridges(geo) {
@@ -1879,6 +1920,7 @@ function buildSkinnedBody(kind, preset) {
       // rebuild, nothing else). The heavy passes that broke iOS stay gone; this one
       // is minimal and he plays on PC now anyway. Stretch's other cause (arm weight
       // bleeding onto the chest) is handled by the weight CLAMP below — no cutting.
+      foldArmsDown(MOLLY.geo);                         // T-pose model -> arms-hanging rest (no-op if already down)
       MOLLY.geo = cutArmLegBridges(MOLLY.geo);
       bindGeoToBones(MOLLY.geo, B, segs, []);          // records each vertex's limb group
       smoothSkinWeights(MOLLY.geo, 4);                 // diffuse weights — soft joints, no hard borders
@@ -2565,7 +2607,7 @@ let MOLLY = null;      // Molotov's Meshy-generated full body (creator's own des
       const bin = Uint8Array.from(atob(window.__MOLLY_GLB_B64), c => c.charCodeAt(0)).buffer;
       loader.parse(bin, '', mollyDone, mollyFail);
     } else {
-      loader.load('./assets/molotov5.glb', mollyDone, undefined, mollyFail);
+      loader.load('./assets/molotov6.glb', mollyDone, undefined, mollyFail);
     }
   } catch (err) { mollyFail(err); }
   try {
@@ -4314,7 +4356,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 74;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 75;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
