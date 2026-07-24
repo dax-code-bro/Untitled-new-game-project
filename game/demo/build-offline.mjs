@@ -33,10 +33,11 @@ let addons = '';
     .replace('__EXPORTS__', '{ RGBELoader }');
   addons = bgu + '\n' + gltf + '\n' + skel + '\n' + rgbe;
 }
-// the rigged body + scanned head ride along as base64 so the single file stays self-contained
+// the rigged body + scanned head + Molotov ride along as base64 so the single file is self-contained
 const headB64 = fs.readFileSync('assets/head.glb').toString('base64');
 const headColB64 = fs.readFileSync('assets/head-col.jpg').toString('base64');
 const headNrmB64 = fs.readFileSync('assets/head-nrm.jpg').toString('base64');
+const mollyB64 = fs.readFileSync('assets/molotov5.glb').toString('base64');
 
 // --- transform game code: drop ES imports, use global THREE, replace controls ---
 game = game
@@ -77,7 +78,7 @@ const controls = (function () {
 // NB: use FUNCTION replacements so `$` chars inside three.min.js / game code are NOT
 // interpreted as special replacement patterns ($&, $', $1, ...).
 const inlined = `<script>\n${threeSrc}\n</script>\n<script>\n${addons}\n</script>\n` +
-  `<script>window.__HEAD_GLB_B64 = "${headB64}"; window.__HEAD_COL_B64 = "${headColB64}"; window.__HEAD_NRM_B64 = "${headNrmB64}";</script>\n<script>\n${game}\n</script>`;
+  `<script>window.__HEAD_GLB_B64 = "${headB64}"; window.__HEAD_COL_B64 = "${headColB64}"; window.__HEAD_NRM_B64 = "${headNrmB64}"; window.__MOLLY_GLB_B64 = "${mollyB64}";</script>\n<script>\n${game}\n</script>`;
 html = html
   .replace(/<script type="importmap">[\s\S]*?<\/script>\n?/, () => '')
   .replace(/<script type="module" src="\.\/main\.js"><\/script>/, () => inlined);

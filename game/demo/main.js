@@ -2539,8 +2539,8 @@ let MOLLY = null;      // Molotov's Meshy-generated full body (creator's own des
     settle();
   };
   const headFail = (err) => { console.warn('[demo] head scan unavailable — sculpted heads', err); settle(); };
-  // --- Molotov's generated body (streamed; ring body is the fallback) ---
-  loader.load('./assets/molotov5.glb', (g) => {
+  // --- Molotov's generated body (embedded base64 in the single-file build, else streamed) ---
+  const mollyDone = (g) => {
     const wasSpawned = spawned;                     // did the failsafe already fire?
     try {
     let mesh = null;
@@ -2556,7 +2556,16 @@ let MOLLY = null;      // Molotov's Meshy-generated full body (creator's own des
     } catch (err) { console.warn('[demo] Molotov model rejected', err); MOLLY = null; }
     settle();
     if (wasSpawned) upgradeMolotov();               // spawned on the fallback → swap the real body in now
-  }, undefined, (err) => { console.warn('[demo] Molotov model unavailable — built-in body', err); settle(); });
+  };
+  const mollyFail = (err) => { console.warn('[demo] Molotov model unavailable — built-in body', err); settle(); };
+  try {
+    if (window.__MOLLY_GLB_B64) {
+      const bin = Uint8Array.from(atob(window.__MOLLY_GLB_B64), c => c.charCodeAt(0)).buffer;
+      loader.parse(bin, '', mollyDone, mollyFail);
+    } else {
+      loader.load('./assets/molotov5.glb', mollyDone, undefined, mollyFail);
+    }
+  } catch (err) { mollyFail(err); }
   try {
     if (window.__HEAD_GLB_B64) {
       const bin = Uint8Array.from(atob(window.__HEAD_GLB_B64), c => c.charCodeAt(0)).buffer;
@@ -4276,7 +4285,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 72;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 73;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
