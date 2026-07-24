@@ -8875,12 +8875,14 @@ function buildSkinnedBody(kind, preset) {
         sg(hipR, 0.135, 0.74, 0, 0.135, 0.38, 0, 'l'), sg(knR, 0.135, 0.38, 0, 0.135, 0.03, 0, 'l'),
         sg(anR, 0.135, 0.05, 0, 0.135, 0.02, -0.10, 'l'), sg(toR, 0.135, 0.02, -0.10, 0.135, 0.02, -0.17, 'l'),
       ];
-      // NON-DESTRUCTIVE bind — WEIGHTS ONLY, geometry left exactly as the GLB
-      // ships it. During the "stretching" era the FULL mesh loaded on every
-      // device; the cure for the stretch is the weight CLAMP below (soft joints,
-      // no cross-limb bleed), NOT cutting triangles. Every geometry-rebuild pass
-      // (bridge-cut, stretch-delete, island-remove, winding-flip) is GONE —
-      // rebuilding the mesh is exactly what the creator's iPhone failed to load.
+      // The creator nailed the diagnosis: his fingers were touching his thighs
+      // when Meshy generated him, so the mesh FUSED finger-to-thigh — those welded
+      // bridge triangles are what stretch when the arm raises. cutArmLegBridges
+      // snips ONLY those ~80 bridge triangles (the lightest possible cut — one
+      // rebuild, nothing else). The heavy passes that broke iOS stay gone; this one
+      // is minimal and he plays on PC now anyway. Stretch's other cause (arm weight
+      // bleeding onto the chest) is handled by the weight CLAMP below — no cutting.
+      MOLLY.geo = cutArmLegBridges(MOLLY.geo);
       bindGeoToBones(MOLLY.geo, B, segs, []);          // records each vertex's limb group
       smoothSkinWeights(MOLLY.geo, 4);                 // diffuse weights — soft joints, no hard borders
       {
@@ -9841,6 +9843,21 @@ const engravingTex = (() => {
   return t;
 })();
 
+// a clean RED-DOT optic for the player viewmodel — a see-through tube with a
+// glowing dot floating inside; you aim by putting the dot on the target.
+function playerRedDot(x, y, z) {
+  const g = new THREE.Group();
+  const dotMat = new THREE.MeshStandardMaterial({ color: 0xff2a15, emissive: 0xff1a08, emissiveIntensity: 4, roughness: 0.35 });
+  const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.052, 16, 1, true), gunDark);
+  tube.rotation.x = Math.PI / 2;                                   // axis along the barrel (z)
+  const rimF = new THREE.Mesh(new THREE.TorusGeometry(0.0165, 0.0026, 8, 18), gunDark); rimF.position.z = -0.027;
+  const rimB = new THREE.Mesh(new THREE.TorusGeometry(0.0165, 0.0026, 8, 18), gunDark); rimB.position.z = 0.027;
+  const dot = new THREE.Mesh(new THREE.SphereGeometry(0.0026, 8, 6), dotMat); dot.position.z = 0.008;
+  const mount = part(gunDark, 0.02, 0.03, 0.03, 0, -0.024, 0);    // riser down to the rail
+  g.add(tube, rimF, rimB, dot, mount);
+  g.position.set(x, y, z);
+  return g;
+}
 function buildM16() {
   const g = new THREE.Group();
   // receiver: shaped upper + lower with a real mag well between them
@@ -9895,8 +9912,9 @@ function buildM16() {
   const mk = markPlate(['M16A1 · CAL 5.56MM', 'AUTO — SEMI — SAFE'], 0.1, 0.024);
   mk.position.set(-0.0135, -0.028, -0.11); mk.rotation.y = -Math.PI / 2;
   g.add(mk);                                                           // receiver stampings
+  g.add(playerRedDot(0, 0.098, -0.12));                                // RED DOT on the carry handle — clears the irons
   return { g, mag, bolt: chHandle, muzzle: new THREE.Vector3(0, 0, -0.78), pump: null,
-    ads: new THREE.Vector3(0, -0.065, -0.36) };
+    ads: new THREE.Vector3(0, -0.098, -0.34) };
 }
 function buildPP919() {
   const g = new THREE.Group();
@@ -9936,8 +9954,9 @@ function buildPP919() {
   const mk2 = markPlate(['PP-919 · 9×18', ''], 0.08, 0.02);
   mk2.position.set(-0.0135, -0.015, -0.14); mk2.rotation.y = -Math.PI / 2;
   g.add(mk2);
+  g.add(playerRedDot(0, 0.078, -0.2));                                 // RED DOT on the receiver
   return { g, mag: helical, bolt, muzzle: new THREE.Vector3(0, 0.012, -0.5), pump: null,
-    ads: new THREE.Vector3(0, -0.058, -0.32) };
+    ads: new THREE.Vector3(0, -0.078, -0.3) };
 }
 function buildBenelli() {
   const g = new THREE.Group();
@@ -10685,6 +10704,7 @@ if (isTouch) {
 
 // ---------------------------------------------------------------- weapon animation (bob/sway/recoil/reload/ADS)
 let bobPhase = 0;
+let recoilRotX = 0, recoilPosZ = 0;   // last frame's recoil offset — removed before the sway lerp so it never accumulates
 const prevCamQ = new THREE.Quaternion();
 function updateWeapon(dt) {
   const s = curS();
@@ -10692,6 +10712,12 @@ function updateWeapon(dt) {
   const onSights = aiming && !s.reloading;
   const target = onSights ? (gunModels[wIndex].ads || ADS) : HIP;
   document.getElementById('crosshair').style.opacity = onSights ? 0 : 1;
+
+  // undo last frame's recoil kick FIRST so the lerps operate on a clean base
+  // (previously it fed back through the lerp and multiplied with framerate —
+  // on a 240Hz screen that ran 4x, climbing the muzzle to the sky)
+  rig.rotation.x -= recoilRotX; rig.position.z -= recoilPosZ;
+  recoilRotX = 0; recoilPosZ = 0;
 
   // base approach (ADS <-> hip)
   rig.position.lerp(target, Math.min(1, dt * 14));
@@ -10717,12 +10743,15 @@ function updateWeapon(dt) {
   }
   prevCamQ.copy(camera.quaternion);
 
-  // recoil spring
+  // recoil spring — a CLEAN offset (no feedback, framerate-independent). Peak ~16deg
+  // muzzle climb, recovering as the spring decays: visible to manage, never runaway.
   if (recoil > 0) {
     recoil = Math.max(0, recoil - dt * 7);
     const k = recoil * recoil;
-    rig.position.z += k * 0.055;
-    rig.rotation.x += k * 0.06;
+    recoilPosZ = k * 0.04;
+    recoilRotX = k * 0.28;
+    rig.position.z += recoilPosZ;
+    rig.rotation.x += recoilRotX;
   }
 
   // reload animation (gun dips + rolls, mag drops and returns)
@@ -11311,7 +11340,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 73;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 74;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
