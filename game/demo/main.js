@@ -1414,6 +1414,11 @@ function bindGeoToBones(geo, B, segs, rigid = []) {
   const SI = [], SW = [];
   const grp = [], dom = [];                 // per-vertex limb group (0 torso / 1 arm / 2 leg) + dominant bone
   const G = (c) => (c === 'a' ? 1 : c === 'l' ? 2 : 0);
+  // arm tag from a T-pose fold: forces those verts onto arm bones of their side,
+  // overriding proximity territory (a folded hand sits in leg-space but is arm)
+  const armSide = geo.attributes.armSide ? geo.attributes.armSide.array : null;
+  const armSegsL = segs.filter(s => s.ch === 'a' && s.ax < 0);
+  const armSegsR = segs.filter(s => s.ch === 'a' && s.ax > 0);
   const dSeg = (px, py, pz, s) => {
     const tx = s.bx - s.ax, ty = s.by - s.ay, tz = s.bz - s.az;
     const L2 = tx * tx + ty * ty + tz * tz;
@@ -1431,14 +1436,33 @@ function bindGeoToBones(geo, B, segs, rigid = []) {
     const rz3 = rigid.find(r => px >= r.minX - M2 && px <= r.maxX + M2 && py >= r.minY - M2 && py <= r.maxY + M2 && pz >= r.minZ - M2 && pz <= r.maxZ + M2);
     let s1 = null, d1 = 1e9, s2 = null, d2 = 1e9;
     const ax2 = Math.abs(px);
-    for (const s of segs) {
-      // territory: below the chest, inner-body flesh can't join an arm,
-      // and outboard hand-space flesh can't join a leg
-      if (s.ch === 'a' && ax2 < 0.20 && py < 0.95) continue;
-      if (s.ch === 'l' && ax2 > 0.24 && py > 0.5) continue;
+    const tag = armSide ? armSide[i] : 0;
+    // TAGGED ARM VERTEX: bind ONLY to its own arm's bones (shoulder->finger),
+    // ignoring the leg-territory rule — a folded hand lives in leg-space but is arm
+    const cand = tag > 0 ? armSegsR : tag < 0 ? armSegsL : segs;
+    for (const s of cand) {
+      if (!tag) {
+        // territory: below the chest, inner-body flesh can't join an arm,
+        // and outboard hand-space flesh can't join a leg
+        if (s.ch === 'a' && ax2 < 0.20 && py < 0.95) continue;
+        if (s.ch === 'l' && ax2 > 0.24 && py > 0.5) continue;
+      }
       const d = dSeg(px, py, pz, s);
       if (d < d1) { d2 = d1; s2 = s1; d1 = d; s1 = s; }
       else if (d < d2) { d2 = d; s2 = s; }
+    }
+    // tagged arm verts always land on an arm bone — never fall through to the hips
+    if (tag && s1) {
+      let w1 = 1, w2 = 0;
+      if (s2 && s2.b !== s1.b) {
+        const k1 = 1 / Math.pow(d1 + 0.001, 4), k2 = 1 / Math.pow(d2 + 0.001, 4);
+        w1 = k1 / (k1 + k2); w2 = 1 - w1;
+        if (w2 < 0.18) { w1 = 1; w2 = 0; }
+      }
+      SI.push(B.indexOf(s1.b), s2 ? B.indexOf(s2.b) : 0, 0, 0);
+      SW.push(w1, w2, 0, 0);
+      grp.push(1); dom.push(B.indexOf(s1.b));
+      continue;
     }
     // anything far from every bone (hanging gear) rides the hips rigidly
     if (d1 > 0.2) { SI.push(B.indexOf(hipsSeg.b), 0, 0, 0); SW.push(1, 0, 0, 0); grp.push(0); dom.push(B.indexOf(hipsSeg.b)); continue; }
@@ -1515,11 +1539,17 @@ function foldArmsDown(geo) {
   const X0 = 0.26, X1 = 0.42;              // blend band: shoulder(no turn) -> upper arm(full turn)
   const PIVY = 1.50;                       // shoulder height
   const ANG = Math.PI / 2 * 0.96;          // ~86.4deg: hang down, a hair outboard like the old rest
+  // TAG every folded vertex as arm (+1 right / -1 left). After folding, a hand
+  // sits right next to the thigh — position alone can no longer tell arm from
+  // leg, so the binder MUST trust this tag instead of proximity territory, or
+  // the hand binds to the leg and stretches when the arm raises.
+  const armSide = new Float32Array(pos.count);
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
     const ax = Math.abs(x);
     if (ax <= X0 || y < 0.9) continue;     // torso / legs untouched
     const side = x < 0 ? -1 : 1;           // right arm folds -ANG about +Z, left +ANG
+    armSide[i] = side;                     // this vertex belongs to the arm, forever
     const pivx = side * X0;
     const blend = Math.min(1, (ax - X0) / (X1 - X0));
     const a = -side * ANG * blend;
@@ -1533,6 +1563,7 @@ function foldArmsDown(geo) {
     nor.setY(i, nx * sa + ny * ca);
   }
   pos.needsUpdate = true; nor.needsUpdate = true;
+  geo.setAttribute('armSide', new THREE.BufferAttribute(armSide, 1));
   geo.computeBoundingBox();
   console.log('[demo] folded T-pose arms down (reach was', maxAbsX.toFixed(2) + ')');
   return true;
@@ -1920,9 +1951,12 @@ function buildSkinnedBody(kind, preset) {
       // rebuild, nothing else). The heavy passes that broke iOS stay gone; this one
       // is minimal and he plays on PC now anyway. Stretch's other cause (arm weight
       // bleeding onto the chest) is handled by the weight CLAMP below — no cutting.
-      foldArmsDown(MOLLY.geo);                         // T-pose model -> arms-hanging rest (no-op if already down)
-      MOLLY.geo = cutArmLegBridges(MOLLY.geo);
-      bindGeoToBones(MOLLY.geo, B, segs, []);          // records each vertex's limb group
+      const folded = foldArmsDown(MOLLY.geo);          // T-pose model -> arms-hanging rest, TAGS arm verts
+      // A clean T-pose has no fused finger-thigh bridges to cut, and cutting
+      // rebuilds the geometry (dropping the arm tag). Only old arms-down models
+      // need the bridge scissors.
+      if (!folded) MOLLY.geo = cutArmLegBridges(MOLLY.geo);
+      bindGeoToBones(MOLLY.geo, B, segs, []);          // arm-tagged verts bind to arm bones only
       smoothSkinWeights(MOLLY.geo, 4);                 // diffuse weights — soft joints, no hard borders
       {
         const boneGroup = B.map(() => 0);
@@ -4356,7 +4390,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 75;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 76;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
