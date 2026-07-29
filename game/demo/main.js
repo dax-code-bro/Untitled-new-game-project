@@ -2641,7 +2641,7 @@ let MOLLY = null;      // Molotov's Meshy-generated full body (creator's own des
       const bin = Uint8Array.from(atob(window.__MOLLY_GLB_B64), c => c.charCodeAt(0)).buffer;
       loader.parse(bin, '', mollyDone, mollyFail);
     } else {
-      loader.load('./assets/molotov6.glb', mollyDone, undefined, mollyFail);
+      loader.load('./assets/molotov7.glb', mollyDone, undefined, mollyFail);
     }
   } catch (err) { mollyFail(err); }
   try {
@@ -4390,7 +4390,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 76;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 77;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
