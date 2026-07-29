@@ -8997,6 +8997,13 @@ function buildSkinnedBody(kind, preset) {
     mMat.transparent = false; mMat.opacity = 1; mMat.depthWrite = true; mMat.depthTest = true;
     mMat.emissiveIntensity = 0;
     if (mMat.emissive) mMat.emissive.setRGB(0, 0, 0);
+    // ===== BUILD 78 STALE-FILE TEST: force Molotov BRIGHT GREEN. If the creator
+    // sees green, new builds reach their screen; if he's still orange, they're
+    // opening an old cached file. Revert once confirmed. =====
+    if (mMat.color) mMat.color.setRGB(0.1, 1.0, 0.1);
+    if (mMat.emissive) mMat.emissive.setRGB(0.0, 0.8, 0.0);
+    mMat.emissiveIntensity = 1.0;
+    mMat.map = null;                                    // drop the flame texture so green is unmistakable
     mMat.needsUpdate = true;
     const mMesh = new THREE.SkinnedMesh(MOLLY.geo, mMat);
     mMesh.castShadow = true;
@@ -11416,7 +11423,7 @@ function animate() {
 }
 animate();
 
-const BUILD = 77;   // bump with each demo update — shown on the badge so staleness is visible
+const BUILD = 78;   // bump with each demo update — shown on the badge so staleness is visible
 window.__demo = { THREE, scene, camera, entities, WEAPONS, BUILD };
 console.log('[demo] ready — Three r' + THREE.REVISION + ' · build ' + BUILD);
 document.getElementById('jsok').textContent = 'js: ✓ running · build ' + BUILD;
