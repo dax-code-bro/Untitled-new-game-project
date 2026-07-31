@@ -53,9 +53,20 @@ and plays sixty seconds of basketball highlights before it shorts out.
 - **Assembly** — barricaded; you get through it on your belly. Workers on the
   floor with plating driven into them, and a holding cage whose bars are bent
   outward.
-- **Extermination chamber** — dead scientists, a splinter of pale birchwood, and
-  a blueprint: eleven feet, tungsten frame, non-oxidising steel joints,
-  birchwood body. Three attempts at naming it, all struck out.
+- **Extermination chamber** — dead scientists, broken glass, a clipboard, a
+  splinter of pale birchwood, and a blueprint: eleven feet, tungsten frame,
+  non-oxidising steel joints, birchwood body. Three attempts at naming it, all
+  struck out.
+
+Dressing throughout: an EXIT sign still lit over the sealed entrance, a wall
+clock stopped where the power died, magazines on the waiting-room tables,
+directional signage and conduit down the corridors, a tipped wet-floor cone,
+papers spilled outside the office, a desk lamp and a phone off the hook inside
+it, framed certificates, stall doors and toilets in the restrooms (one door
+ajar, one torn off flat), pallets and a roof-leak puddle in the warehouse,
+drag marks running the south corridor into Assembly — and on the storage unit
+wall, twenty-three days of tally marks scratched into the paint. The count
+stops.
 
 ### Doors
 
@@ -73,6 +84,25 @@ Every doorway carries a leaf built to its own spec, and all of them open:
 | Airlock (both ends) | Hazard-striped hatches with wheel handles and dogging bolts |
 | Supply storage | Utility steel, signage plate |
 | Entrance | Tempered glass — sealed |
+
+### Sound
+
+**Every room has its own audio track** — fourteen beds, one per room, each a
+distinct recipe of filtered noise and drones that crossfade as you cross a
+doorway. On top of the beds, each area rolls its own random one-shots: dripping
+taps in both restrooms, distant knocks in the corridors, racking groans in the
+warehouse, long scrapes and deep booms in Assembly, gas hiss in the chamber, a
+wood creak in the office.
+
+**Footsteps follow the surface.** Carpet pads softly with a hint of fibre; tile
+gives a hard heel-click, a faint ring, and the room slapping it back; corridor
+concrete is a flat thud and scuff; the industrial floors crunch loose debris;
+the lab's vinyl clicks tight and dry.
+
+**Doors sound like what they're made of.** Wood doors are a latch, stick-slip
+hinge squeaks and a shut thud; steel doors groan on resonance with a push-bar
+clack and a ring off the leaf; the airlock hatches ratchet their wheel before a
+heavy clunk; the storage shutter rattles up its guides slat by slat.
 
 ### Mirrors
 

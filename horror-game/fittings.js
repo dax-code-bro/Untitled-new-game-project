@@ -228,7 +228,7 @@
         lock.rotation.z = Math.PI / 2;
         lock.position.set(gap.at - 0.07, 0.95, (gap.min + gap.max) / 2);
         group.add(lock);
-        interact(slats.children[6], { kind: 'door', id: id, doorId: id, label: spec.label, verb: 'Open', locked: true });
+        interact(slats.children[6], { kind: 'door', id: id, doorId: id, label: spec.label, verb: 'Open', locked: true, sound: 'roller' });
         solid(gap.at - 0.12, gap.min, gap.at + 0.12, gap.max, id);
         runtime[id] = { open: false, angle: 0, target: 0, kind: 'roll', node: slats, travel: 2.3 };
         return;
@@ -321,7 +321,9 @@
         pivot.add(g);
         group.add(pivot);
         leaves.push({ pivot: pivot, base: pivot.rotation.y, swing: swing });
-        interact(built.slab, { kind: 'door', id: id, doorId: id, label: spec.label, verb: 'Open' });
+        var soundKind = (spec.style === 'wood' || spec.style === 'restroom') ? 'wood'
+          : (spec.style === 'hatch' ? 'hatch' : 'steel');
+        interact(built.slab, { kind: 'door', id: id, doorId: id, label: spec.label, verb: 'Open', sound: soundKind });
       }
 
       // frame lining

@@ -950,6 +950,150 @@
       box(0.44, 0.16, 0.5, new THREE.MeshStandardMaterial({ color: 0xd6d8d4, roughness: 0.3 }), 73.6, 0.86, 59.2);
     })();
 
+    // ===================================================================
+    // SET DRESSING — the small stuff that makes the building read as a
+    // place people worked in, and then stopped.
+    // ===================================================================
+    (function setDressing() {
+      function signMat(text, o) {
+        return new THREE.MeshStandardMaterial({ map: T.sign(THREE, text, o || {}), roughness: 0.6, metalness: 0.15 });
+      }
+      function wallSign(text, x, y, z, ry, w, h, o) {
+        return box(w || 0.7, h || 0.35, 0.02, signMat(text, o), x, y, z, ry || 0);
+      }
+
+      // ---------------- Waiting ----------------
+      // The EXIT sign over the sealed entrance — still lit, going nowhere.
+      var exitTex = T.sign(THREE, 'EXIT', { bg: '#0c2414', fg: '#84e396', border: 'rgba(132,227,150,0.5)', fontSize: 44 });
+      box(0.62, 0.24, 0.05, new THREE.MeshStandardMaterial({
+        map: exitTex, emissive: 0x4ce07a, emissiveMap: exitTex, emissiveIntensity: 0.9, roughness: 0.5
+      }), 0, 2.62, 6.85);
+
+      // A wall clock, stopped where the power died.
+      box(0.5, 0.5, 0.035, new THREE.MeshStandardMaterial({ map: T.clock(THREE), roughness: 0.6 }),
+        -7.92, 2.25, 2.4, Math.PI / 2);
+
+      // Low tables with old magazines, tucked against the chair row.
+      [-4.6, 4.6].forEach(function (tx) {
+        box(0.8, 0.34, 0.5, MAT.darkWood, tx, 0.17, 3.3);
+        solid(tx - 0.45, 3.02, tx + 0.45, 3.58);
+        for (var m = 0; m < 3; m++) {
+          box(0.24, 0.008, 0.32, MAT.paper, tx - 0.2 + m * 0.18, 0.35 + m * 0.004, 3.3 + (m % 2) * 0.08, m * 0.4);
+        }
+      });
+      wallSign('ALL VISITORS\nMUST SIGN IN', 7.92, 1.9, 3.4, -Math.PI / 2, 0.8, 0.4, { fontSize: 22 });
+
+      // ---------------- Corridors ----------------
+      wallSign('← RECEPTION', -12, 2.35, -1.43, 0, 0.9, 0.3, { fontSize: 24 });
+      wallSign('WAREHOUSE →', -40, 2.35, 1.43, 0, 0.9, 0.3, { fontSize: 24 });
+      wallSign('RESTROOMS', -18.5, 2.62, -1.43, 0, 0.8, 0.28, { fontSize: 24 });
+      wallSign('← RECEPTION', 12, 2.35, 1.43, 0, 0.9, 0.3, { fontSize: 24 });
+      wallSign('STORAGE →', 44, 2.35, -1.43, 0, 0.9, 0.3, { fontSize: 24 });
+      wallSign('ASSEMBLY', 48.07, 2.35, 42, Math.PI / 2, 0.9, 0.3, { fontSize: 24 });
+
+      // Conduit runs along the corridor ceilings.
+      box(38, 0.06, 0.05, MAT.darkMetal, -28, 2.96, 1.42);
+      box(38, 0.06, 0.05, MAT.darkMetal, 28, 2.96, -1.42);
+      box(0.05, 0.06, 42, MAT.darkMetal, 50.93, 2.96, 24);
+
+      // A wet-floor cone on its side. Nobody is coming to right it.
+      var cone = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.2, 0.52, 10),
+        new THREE.MeshStandardMaterial({ color: 0xb8a02c, roughness: 0.7 }));
+      cone.position.set(-26, 0.14, 0.55);
+      cone.rotation.z = Math.PI / 2 - 0.08;
+      cone.rotation.y = 0.7;
+      group.add(cone);
+
+      // Papers spilled outside the office doorway.
+      for (var pp = 0; pp < 6; pp++) {
+        box(0.2, 0.004, 0.28, MAT.paper,
+          26.2 + Math.random() * 2.6, 0.006 + pp * 0.002, -0.9 - Math.random() * 0.5, Math.random() * 3);
+      }
+
+      // Something was dragged down the south corridor, toward Assembly.
+      for (var bd = 0; bd < 5; bd++) {
+        var streak = new THREE.Mesh(new THREE.PlaneGeometry(0.24 + Math.random() * 0.14, 3.1), MAT.blood);
+        streak.rotation.x = -Math.PI / 2;
+        streak.rotation.z = (Math.random() - 0.5) * 0.16;
+        streak.position.set(49.4 + Math.random() * 0.5, 0.014 + bd * 0.0008, 31 + bd * 3.1);
+        group.add(streak);
+      }
+      // ...and inside Assembly the drags converge on the cage.
+      for (var bd2 = 0; bd2 < 3; bd2++) {
+        var st2 = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 2.6), MAT.blood);
+        st2.rotation.x = -Math.PI / 2;
+        st2.rotation.z = 0.5 - bd2 * 0.3;
+        st2.position.set(50.5 + bd2 * 1.1, 0.0145, 49.5 + bd2 * 1.8);
+        group.add(st2);
+      }
+
+      // ---------------- Restrooms ----------------
+      var porcelain = new THREE.MeshStandardMaterial({ color: 0xd6d8d4, roughness: 0.35 });
+      for (var s = 0; s < 3; s++) {
+        var sx = -21.2 + s * 1.7;
+        box(0.4, 0.5, 0.14, porcelain, sx + 0.2, 0.66, -8.52);                     // cistern
+        cyl(0.19, 0.19, 0.05, porcelain, sx + 0.2, 0.45, -8.05, 14);              // seat
+        if (s === 0) {
+          box(0.72, 1.6, 0.03, MAT.metal, sx + 0.62, 1.05, -6.75, 0.55);          // ajar
+        } else if (s === 1) {
+          box(0.72, 1.6, 0.03, MAT.metal, sx + 0.4, 1.05, -7.03);                 // shut
+          solid(sx + 0.02, -7.08, sx + 0.78, -6.98);
+        } else {
+          box(0.72, 0.03, 1.6, MAT.metal, sx + 0.4, 0.03, -7.7, 0.2);             // torn off, flat
+        }
+      }
+      box(0.3, 0.44, 0.11, MAT.metal, -15.08, 1.35, -3.2, Math.PI / 2);           // towel dispenser
+
+      // ---------------- Warehouse ----------------
+      [0, 1, 2].forEach(function (pl) {
+        box(1.2, 0.13, 1.0, MAT.wood, -61.5, 0.08 + pl * 0.15, 3.2 + (pl % 2) * 0.06, (pl % 2) * 0.05);
+      });
+      solid(-62.2, 2.6, -60.8, 3.8);
+      var lean = box(1.2, 0.13, 1.0, MAT.wood, -63.3, 0.75, 1.2);
+      lean.rotation.z = 1.25;
+      var puddle = new THREE.Mesh(new THREE.CircleGeometry(0.6, 20),
+        new THREE.MeshStandardMaterial({ color: 0x161a1e, roughness: 0.16, metalness: 0.25 }));
+      puddle.rotation.x = -Math.PI / 2;
+      puddle.position.set(-52.5, 0.013, -1.8);
+      group.add(puddle);
+
+      // ---------------- Storage unit ----------------
+      // Nick counted his days on the wall. The count stops.
+      box(0.6, 0.4, 0.02, new THREE.MeshStandardMaterial({ map: T.tally(THREE, 23), roughness: 0.9 }),
+        63.9, 1.3, 3.3, Math.PI / 2);
+      box(0.9, 0.045, 0.7, new THREE.MeshStandardMaterial({ color: 0x39404a, roughness: 1 }),
+        62.3, 0.028, 4.35, 0.5);                                                   // his blanket
+
+      // ---------------- Corporate office ----------------
+      cyl(0.09, 0.11, 0.03, MAT.darkMetal, 27.1, 0.83, -8.75, 12);                // lamp base
+      var arm = box(0.025, 0.4, 0.025, MAT.darkMetal, 27.18, 1.02, -8.68);
+      arm.rotation.z = -0.4;
+      var lampHead = cyl(0.05, 0.085, 0.16, new THREE.MeshStandardMaterial({
+        color: 0x2e3234, roughness: 0.5, metalness: 0.4, emissive: 0xffd9a0, emissiveIntensity: 0.35
+      }), 27.3, 1.2, -8.62, 12);
+      lampHead.rotation.z = 1.2;
+      var lampLight = new THREE.PointLight(0xffd9a0, 1.6, 3.4, 2);
+      lampLight.position.set(27.4, 1.12, -8.6);
+      group.add(lampLight);
+      lights.push({ light: lampLight, panel: null, base: 1.6, style: 'dying', seed: 11 });
+      // The desk phone, off the hook.
+      box(0.15, 0.05, 0.11, MAT.plastic, 28.7, 0.84, -8.2, 0.3);
+      box(0.17, 0.04, 0.05, MAT.plastic, 28.4, 0.83, -7.9, 1.1);
+      wallSign('CERTIFICATE\nOF EXCELLENCE', 30.2, 1.9, -13.92, 0, 0.5, 0.38, { fontSize: 16, bg: '#3a3226', fg: '#cbbf9e' });
+      wallSign('EMPLOYEE\nOF THE MONTH', 31.1, 1.9, -13.92, 0, 0.5, 0.38, { fontSize: 16, bg: '#33302a', fg: '#c4c0b2' });
+
+      // ---------------- Extermination chamber ----------------
+      for (var sh = 0; sh < 9; sh++) {
+        box(0.05 + Math.random() * 0.06, 0.006, 0.04 + Math.random() * 0.05,
+          new THREE.MeshStandardMaterial({ color: 0xb9c6c9, roughness: 0.15, metalness: 0.1 }),
+          64.5 + Math.random() * 3.4, 0.008, 50.2 + Math.random() * 1.6, Math.random() * 3);
+      }
+      box(0.22, 0.014, 0.3, MAT.plastic, 67.4, 0.98, 49.4, 0.3);                  // clipboard
+      box(0.19, 0.004, 0.26, MAT.paper, 67.4, 0.99, 49.4, 0.3);
+      wallSign('AUTHORIZED\nPERSONNEL ONLY', 57.92, 2.75, 52.5, Math.PI / 2, 0.8, 0.4,
+        { fontSize: 20, bg: '#3d2f14', fg: '#d8c37a' });
+    })();
+
     // ---------------- Doors ----------------
     // Every doorway gets a leaf built to its own spec; see fittings.js.
     var fittingsCtx = {

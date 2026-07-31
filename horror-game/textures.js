@@ -304,5 +304,69 @@
     return finish(THREE, c);
   };
 
+  // ---------------- Wall clock, stopped ----------------
+  TEX.clock = function (THREE) {
+    var c = document.createElement('canvas');
+    c.width = c.height = 256;
+    var x = c.getContext('2d');
+    x.fillStyle = '#26292b'; x.fillRect(0, 0, 256, 256);
+    x.fillStyle = '#d8d6cc';
+    x.beginPath(); x.arc(128, 128, 112, 0, Math.PI * 2); x.fill();
+    x.strokeStyle = '#2a2d2f'; x.lineWidth = 8;
+    x.beginPath(); x.arc(128, 128, 112, 0, Math.PI * 2); x.stroke();
+    for (var i = 0; i < 12; i++) {
+      var a = i * Math.PI / 6;
+      x.strokeStyle = '#3a3d3f';
+      x.lineWidth = i % 3 === 0 ? 6 : 3;
+      x.beginPath();
+      x.moveTo(128 + Math.cos(a) * 96, 128 + Math.sin(a) * 96);
+      x.lineTo(128 + Math.cos(a) * 106, 128 + Math.sin(a) * 106);
+      x.stroke();
+    }
+    // hands frozen where the power died
+    x.strokeStyle = '#1d1f21'; x.lineCap = 'round';
+    x.lineWidth = 7;
+    x.beginPath(); x.moveTo(128, 128); x.lineTo(180, 114); x.stroke();
+    x.lineWidth = 5;
+    x.beginPath(); x.moveTo(128, 128); x.lineTo(148, 210); x.stroke();
+    x.strokeStyle = '#7e3529'; x.lineWidth = 2;
+    x.beginPath(); x.moveTo(128, 128); x.lineTo(58, 88); x.stroke();
+    for (var g = 0; g < 30; g++) {
+      x.fillStyle = 'rgba(30,26,20,' + Math.random() * 0.08 + ')';
+      x.fillRect(Math.random() * 256, Math.random() * 256, 20, 2);
+    }
+    var t = new THREE.CanvasTexture(c);
+    t.anisotropy = 8;
+    return t;
+  };
+
+  // ---------------- Tally marks scratched into paint ----------------
+  TEX.tally = function (THREE, count) {
+    var c = document.createElement('canvas');
+    c.width = 256; c.height = 160;
+    var x = c.getContext('2d');
+    x.fillStyle = '#4a4e50'; x.fillRect(0, 0, 256, 160);
+    grime(x, 256, 6, 0.12);
+    x.strokeStyle = 'rgba(224,218,200,0.8)';
+    x.lineWidth = 3; x.lineCap = 'round';
+    var n = count || 23;
+    for (var i = 0; i < n; i++) {
+      var group = Math.floor(i / 5), inGroup = i % 5;
+      var bx = 24 + (group % 4) * 56, by = 34 + Math.floor(group / 4) * 58;
+      x.beginPath();
+      if (inGroup < 4) {
+        var lx = bx + inGroup * 10 + (Math.random() - 0.5) * 2;
+        x.moveTo(lx, by + (Math.random() - 0.5) * 3);
+        x.lineTo(lx + 2, by + 34 + (Math.random() - 0.5) * 3);
+      } else {
+        x.moveTo(bx - 4, by + 28); x.lineTo(bx + 36, by + 6);
+      }
+      x.stroke();
+    }
+    var t = new THREE.CanvasTexture(c);
+    t.anisotropy = 8;
+    return t;
+  };
+
   window.TEX = TEX;
 })();
