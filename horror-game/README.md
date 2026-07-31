@@ -126,6 +126,18 @@ its own aged silvering — dirt toward the edges and speckled desilvering.
 | `Esc` | Pause, or close a document |
 | Touch | On-screen stick to move, drag to look, tap to use |
 
+## Playing it online
+
+**https://dax-code-bro.github.io/Untitled-new-game-project/**
+
+Every push to the game's branch redeploys the site automatically via the
+`gh-pages` workflow — installed copies pick the update up on their next
+launch. If the URL 404s on first visit, enable Pages once: repository
+Settings → Pages → Source: *Deploy from a branch* → `gh-pages` → Save.
+
+**On iPhone/iPad:** open the URL in Safari → Share → **Add to Home Screen**.
+It installs like an app: fullscreen, its own icon, playable offline.
+
 ## Installing it
 
 The game is a PWA. Served over HTTPS (or localhost), it registers a service
