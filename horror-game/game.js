@@ -711,6 +711,9 @@
       tvWatched: false,
       readJournal: false,
       readBlueprint: false,
+      readConfession: false,
+      readRoster: false,
+      readValuation: false,
       supplies: false,
       room: null,
       seenAssembly: false,
@@ -1035,6 +1038,24 @@
           state.readBlueprint = true;
           if (ui.showBlueprint) ui.showBlueprint();
           break;
+        case 'confession':
+          state.readConfession = true;
+          if (ui.showManifesto) ui.showManifesto();
+          break;
+        case 'roster':
+          state.readRoster = true;
+          if (ui.showRoster) ui.showRoster();
+          break;
+        case 'valuation':
+          state.readValuation = true;
+          if (ui.showValuation) ui.showValuation();
+          break;
+        case 'trapnell':
+          say('A laminated badge, cracked down the middle. TRAPNELL — CONTAINMENT. The photo has been scraped off.');
+          break;
+        case 'nickID':
+          say('An employee badge. NICK AHOY — INTAKE — AGE 19. The lanyard is still knotted the way he tied it.');
+          break;
         case 'fragment':
           say('A splinter of pale birchwood, dense as bone. One end is scorched. The other is sharpened.');
           break;
@@ -1045,7 +1066,7 @@
           say('The office door is buried halfway into the wall. It was not opened. It was thrown.');
           break;
         case 'cage':
-          say('HOLDING — SUBJECT SECURE. The bars are bent outward. It was not let out.');
+          say('HOLDING — SUBJECT SECURE. Carbon-reinforced steel, rated past anything else on this floor. The bars are bent outward from the inside. It was not let out.');
           break;
         case 'cameraCrate':
           if (state.camsTaken) { say('Empty. The foam cutouts are shaped like cameras.'); break; }

@@ -586,10 +586,74 @@
       <div class="spec-row"><span class="spec-key">Frame</span><span class="spec-val">Tungsten</span></div>
       <div class="spec-row"><span class="spec-key">Joints</span><span class="spec-val">Steel, non-oxidising</span></div>
       <div class="spec-row"><span class="spec-key">Body</span><span class="spec-val">Birchwood</span></div>
+      <div class="spec-row"><span class="spec-key">Design team</span><span class="spec-val">Seven engineers, credited nowhere else in the file</span></div>
+      <div class="spec-row"><span class="spec-key">Status</span><span class="spec-val">Prototype — never approved for a second unit</span></div>
       <div class="spec-row"><span class="spec-key">Unit name</span><span class="spec-val none">Left blank — three attempts, all struck out</span></div>
     </div>
     <p>The outline is human. The proportions are not — the arms reach past the knees. Whoever was
       filling in the name got as far as three letters, twice, and gave up both times.</p>
+    <p>A margin note, different pen, cramped into the corner: the tungsten order alone emptied the
+      account, then the line of credit behind it. What's left of the body came out of the scrap
+      bin afterward — thin, mismatched birch offcuts, glued and screwed because there was nothing
+      better left to spend. It was never supposed to be more than a shape on a showroom floor.</p>
+    <p>Stapled to the back, out of sequence, one line in handwriting that matches nothing else in
+      the folder: <em>"The cognition board wasn't rated to ship in this housing. Someone swapped
+      the crate labels before qualification testing. Nobody flagged it until it started answering
+      back."</em></p>
+    <button class="close" type="button" data-close>Close</button>
+  </div>
+</div>
+
+<!-- ---------- Confession ---------- -->
+<div class="overlay" id="manifesto" hidden>
+  <div class="sheet">
+    <h2>Typed page, clipped to a board</h2>
+    <p>I have been here since before there was a company to work for. Six of us, a rented unit,
+      and a loan none of us could cover alone.</p>
+    <p>Nobody remembers that anymore. They brought in new faces who couldn't tell tungsten from
+      steel, put it on the floor like it was one of us, and called it help. It ran better than
+      any of us ever did. I trained half the people it killed.</p>
+    <p>It took four months to write. Nights, after the store closed. Not hard, once you understood
+      what had been left inside it by accident — a door held open that nobody meant to leave
+      open. I only had to knock.</p>
+    <p>I did not want it out. I wanted the doors shut, and everyone behind them, the way I had
+      been shut behind them for eleven years while it got the ribbon-cuttings and the raises and
+      my name stopped coming up in meetings. I did not think about which side of the doors I
+      would end up on.</p>
+    <p>He was my best friend for eleven years, and I watched them wheel him past that window. I am
+      not going to write his name here.</p>
+    <p>If you are reading this, the string is still in it somewhere. Do not go looking for it.
+      Whatever answers now isn't listening for that anymore.</p>
+    <button class="close" type="button" data-close>Close</button>
+  </div>
+</div>
+
+<!-- ---------- HR memo ---------- -->
+<div class="overlay" id="roster" hidden>
+  <div class="sheet">
+    <h2>Internal memo — Staffing</h2>
+    <p class="hand">Headcount review, second quarter.</p>
+    <p class="hand">Hired to date: 42. Resigned or terminated: 27. Current staff: 15.</p>
+    <p class="hand">Exit interviews cite the smell from the assembly floor, the noise after hours,
+      and "a management style best described as changing." One entry, unsigned, reads in full:
+      "It's not tired. It doesn't need a shift change. Ask yourselves why that doesn't bother
+      you."</p>
+    <p class="hand">Retention bonus approved for remaining staff: 4%.</p>
+    <button class="close" type="button" data-close>Close</button>
+  </div>
+</div>
+
+<!-- ---------- Framed clipping ---------- -->
+<div class="overlay" id="valuation" hidden>
+  <div class="sheet">
+    <h2>Framed clipping, torn along one edge</h2>
+    <p>The business page, laminated and hung like a diploma. The masthead is torn away — no paper
+      name, no date survives the crease — but the pull-quote is intact:</p>
+    <p><em>"What began as a two-person display-fixture shop has grown into a three-million-dollar
+      operation in under two years, owners say, crediting a new automated floor prototype for the
+      jump. 'It doesn't call in sick,' one manager is quoted. 'It doesn't take breaks. We built it
+      to hold the store together, and it has.'"</em></p>
+    <p>Someone has underlined "it" three times in ballpoint, hard enough to tear the page.</p>
     <button class="close" type="button" data-close>Close</button>
   </div>
 </div>
@@ -852,6 +916,9 @@ window.bootUI = function bootUI(THREE) {
       showNote: function () { openOverlay('noteOverlay'); },
       showJournal: function () { openOverlay('journal'); },
       showBlueprint: function () { openOverlay('blueprint'); },
+      showManifesto: function () { openOverlay('manifesto'); },
+      showRoster: function () { openOverlay('roster'); },
+      showValuation: function () { openOverlay('valuation'); },
       showComputer: function (connected) { openTerminal(connected); },
       onEnding: function () {
         blackout.classList.add('on');

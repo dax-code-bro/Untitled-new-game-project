@@ -929,6 +929,13 @@
       scientist(68.2, 56.6, -1.1);
       scientist(72.3, 50.2, 2.2);
 
+      // Thrown the length of the room when the bars gave. His badge skidded
+      // further than he did.
+      scientist(70.6, 51.4, 1.6);
+      var badgeMat = new THREE.MeshStandardMaterial({ color: 0xe4ddc8, roughness: 0.55 });
+      var trapnellTag = box(0.07, 0.1, 0.006, badgeMat, 71.6, 0.021, 49.9, 0.5);
+      interact(trapnellTag, { id: 'trapnell', label: 'Laminated ID badge', verb: 'Inspect' });
+
       var frag = box(0.34, 0.07, 0.13, new THREE.MeshStandardMaterial({ color: 0xb99a63, roughness: 0.85 }), 65.4, 0.99, 49.3, 0.4);
       interact(frag, { id: 'fragment', label: 'Splinter of pale wood', verb: 'Inspect' });
 
@@ -955,6 +962,8 @@
         x.fillText('FRAME   TUNGSTEN', 20, 46);
         x.fillText('JOINTS  STEEL, NON-OXIDISING', 20, 62);
         x.fillText('BODY    BIRCHWOOD', 20, 78);
+        x.fillText('LEAD ENG.  7', 20, 94);
+        x.fillText('STATUS  PROTOTYPE', 20, 110);
         x.fillText('UNIT NAME:', 20, 268);
         x.strokeStyle = 'rgba(207,228,242,0.75)'; x.lineWidth = 1.5;
         x.font = '13px monospace';
@@ -1106,6 +1115,9 @@
         63.9, 1.3, 3.3, Math.PI / 2);
       box(0.9, 0.045, 0.7, new THREE.MeshStandardMaterial({ color: 0x39404a, roughness: 1 }),
         62.3, 0.028, 4.35, 0.5);                                                   // his blanket
+      var nickBadgeMat = new THREE.MeshStandardMaterial({ color: 0xe4ddc8, roughness: 0.55 });
+      var nickBadge = box(0.07, 0.09, 0.006, nickBadgeMat, 61.65, 0.021, 2.7, 0.35);
+      interact(nickBadge, { id: 'nickID', label: 'Employee badge', verb: 'Inspect' });
 
       // ---------------- Corporate office ----------------
       cyl(0.09, 0.11, 0.03, MAT.darkMetal, 27.1, 0.83, -8.75, 12);                // lamp base
@@ -1124,6 +1136,11 @@
       box(0.17, 0.04, 0.05, MAT.plastic, 28.4, 0.83, -7.9, 1.1);
       wallSign('CERTIFICATE\nOF EXCELLENCE', 30.2, 1.9, -13.92, 0, 0.5, 0.38, { fontSize: 16, bg: '#3a3226', fg: '#cbbf9e' });
       wallSign('EMPLOYEE\nOF THE MONTH', 31.1, 1.9, -13.92, 0, 0.5, 0.38, { fontSize: 16, bg: '#33302a', fg: '#c4c0b2' });
+      var valuationFrame = wallSign('"A DISPLAY THAT\nSELLS ITSELF"', 28.9, 1.9, -13.92, 0, 0.5, 0.38,
+        { fontSize: 13, bg: '#233020', fg: '#bcd6a0' });
+      interact(valuationFrame, { id: 'valuation', label: 'Framed clipping', verb: 'Read' });
+      var memoPaper = box(0.24, 0.01, 0.32, MAT.paper, 27.5, 0.815, -8.55, 0.15);
+      interact(memoPaper, { id: 'roster', label: 'Stapled memo', verb: 'Read' });
 
       // ---------------- Extermination chamber ----------------
       for (var sh = 0; sh < 9; sh++) {
@@ -1132,7 +1149,8 @@
           64.5 + Math.random() * 3.4, 0.008, 50.2 + Math.random() * 1.6, Math.random() * 3);
       }
       box(0.22, 0.014, 0.3, MAT.plastic, 67.4, 0.98, 49.4, 0.3);                  // clipboard
-      box(0.19, 0.004, 0.26, MAT.paper, 67.4, 0.99, 49.4, 0.3);
+      var confessionPaper = box(0.19, 0.004, 0.26, MAT.paper, 67.4, 0.99, 49.4, 0.3);
+      interact(confessionPaper, { id: 'confession', label: 'Typed page, clipped to a board', verb: 'Read' });
       wallSign('AUTHORIZED\nPERSONNEL ONLY', 57.92, 2.75, 52.5, Math.PI / 2, 0.8, 0.4,
         { fontSize: 20, bg: '#3d2f14', fg: '#d8c37a' });
     })();
