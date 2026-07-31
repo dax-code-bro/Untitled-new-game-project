@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Untitled Horror Game</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    #app { position: fixed; inset: 0; }
+    canvas { display: block; }
+
+    /* Click-to-play overlay */
+    #overlay {
+      position: fixed; inset: 0; z-index: 10;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: radial-gradient(circle at center, rgba(20,20,22,0.85) 0%, rgba(0,0,0,0.96) 100%);
+      color: #d8d8d8; text-align: center; cursor: pointer;
+      transition: opacity 0.4s ease;
+    }
+    #overlay.hidden { opacity: 0; pointer-events: none; }
+    #overlay h1 {
+      font-size: clamp(28px, 6vw, 56px); font-weight: 700; letter-spacing: 0.08em;
+      color: #b8b8b8; text-transform: uppercase; margin-bottom: 18px;
+      text-shadow: 0 0 18px rgba(0,0,0,0.9);
+    }
+    #overlay p { font-size: clamp(14px, 2.4vw, 18px); color: #8a8a8a; line-height: 1.7; max-width: 460px; }
+    #overlay .play { margin-top: 28px; font-size: 15px; color: #6f6f6f; letter-spacing: 0.15em; text-transform: uppercase; }
+    #overlay .keys { margin-top: 22px; font-size: 13px; color: #555; letter-spacing: 0.05em; }
+    kbd {
+      display: inline-block; padding: 2px 8px; margin: 0 2px;
+      background: #1c1c1e; border: 1px solid #333; border-radius: 4px;
+      font-family: monospace; color: #aaa; font-size: 12px;
+    }
+
+    /* Crosshair */
+    #crosshair {
+      position: fixed; top: 50%; left: 50%; z-index: 5;
+      width: 6px; height: 6px; margin: -3px 0 0 -3px;
+      border-radius: 50%; background: rgba(220,220,220,0.5);
+      pointer-events: none; opacity: 0; transition: opacity 0.3s ease;
+    }
+    #crosshair.visible { opacity: 1; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <div id="crosshair"></div>
+  <div id="overlay">
+    <h1>Untitled Horror Game</h1>
+    <p>You wake in a cold grey room. There is no way out&hellip; yet.</p>
+    <div class="play">Click to enter</div>
+    <div class="keys">
+      <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move &nbsp;·&nbsp;
+      <kbd>Mouse</kbd> look &nbsp;·&nbsp; <kbd>Esc</kbd> release
+    </div>
+  </div>
+
+  <!-- Three.js is vendored locally in ./vendor so the game has no runtime CDN dependency. -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./vendor/three/three.module.js",
+      "three/addons/": "./vendor/three/addons/"
+    }
+  }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+
+    // ---------------------------------------------------------------------
+    // Room configuration
+    // ---------------------------------------------------------------------
+    const ROOM_SIZE = 10;          // 10 x 10 floor
+    const WALL_HEIGHT = 4;         // metres
+    const EYE_HEIGHT = 1.7;        // player camera height
+    const HALF = ROOM_SIZE / 2;
+    const PLAYER_RADIUS = 0.4;     // keep the player off the walls
+
+    // ---------------------------------------------------------------------
+    // Renderer
+    // ---------------------------------------------------------------------
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.getElementById('app').appendChild(renderer.domElement);
+
+    // ---------------------------------------------------------------------
+    // Scene + camera
+    // ---------------------------------------------------------------------
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0a0a0b);
+    scene.fog = new THREE.Fog(0x0a0a0b, 4, 16); // dim, closes in the distance
+
+    const camera = new THREE.PerspectiveCamera(
+      70, window.innerWidth / window.innerHeight, 0.1, 100
+    );
+    camera.position.set(0, EYE_HEIGHT, 0);
+
+    // ---------------------------------------------------------------------
+    // Materials (grey)
+    // ---------------------------------------------------------------------
+    const floorMat = new THREE.MeshStandardMaterial({ color: 0x4a4a4d, roughness: 0.95, metalness: 0.0 });
+    const wallMat  = new THREE.MeshStandardMaterial({ color: 0x565659, roughness: 0.9,  metalness: 0.0 });
+    const ceilMat  = new THREE.MeshStandardMaterial({ color: 0x3a3a3d, roughness: 1.0,  metalness: 0.0 });
+
+    // ---------------------------------------------------------------------
+    // Room geometry
+    // ---------------------------------------------------------------------
+    const room = new THREE.Group();
+
+    // Floor
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(ROOM_SIZE, ROOM_SIZE), floorMat);
+    floor.rotation.x = -Math.PI / 2;
+    floor.receiveShadow = true;
+    room.add(floor);
+
+    // Ceiling
+    const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(ROOM_SIZE, ROOM_SIZE), ceilMat);
+    ceiling.rotation.x = Math.PI / 2;
+    ceiling.position.y = WALL_HEIGHT;
+    ceiling.receiveShadow = true;
+    room.add(ceiling);
+
+    // Walls — a plane per side, facing inward
+    function makeWall(w, h, x, y, z, rotY) {
+      const wall = new THREE.Mesh(new THREE.PlaneGeometry(w, h), wallMat);
+      wall.position.set(x, y, z);
+      wall.rotation.y = rotY;
+      wall.receiveShadow = true;
+      room.add(wall);
+    }
+    const midH = WALL_HEIGHT / 2;
+    makeWall(ROOM_SIZE, WALL_HEIGHT, 0,  midH, -HALF, 0);           // north (-Z)
+    makeWall(ROOM_SIZE, WALL_HEIGHT, 0,  midH,  HALF, Math.PI);     // south (+Z)
+    makeWall(ROOM_SIZE, WALL_HEIGHT, -HALF, midH, 0,  Math.PI / 2); // west (-X)
+    makeWall(ROOM_SIZE, WALL_HEIGHT,  HALF, midH, 0, -Math.PI / 2); // east (+X)
+
+    scene.add(room);
+
+    // ---------------------------------------------------------------------
+    // Lighting
+    // ---------------------------------------------------------------------
+    // Low ambient so the room is never fully black
+    const ambient = new THREE.AmbientLight(0x50505a, 0.9);
+    scene.add(ambient);
+
+    // Main ceiling light — a single hanging bulb, casts shadows
+    const bulb = new THREE.PointLight(0xfff2d8, 42, 26, 2);
+    bulb.position.set(0, WALL_HEIGHT - 0.5, 0);
+    bulb.castShadow = true;
+    bulb.shadow.mapSize.set(1024, 1024);
+    bulb.shadow.bias = -0.0005;
+    scene.add(bulb);
+
+    // Visible little fixture for the bulb
+    const bulbMesh = new THREE.Mesh(
+      new THREE.SphereGeometry(0.08, 16, 16),
+      new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff2d8, emissiveIntensity: 2 })
+    );
+    bulbMesh.position.copy(bulb.position);
+    scene.add(bulbMesh);
+
+    // A cord from the ceiling to the bulb
+    const cord = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.008, 0.008, 0.5, 6),
+      new THREE.MeshStandardMaterial({ color: 0x111111 })
+    );
+    cord.position.set(0, WALL_HEIGHT - 0.25, 0);
+    scene.add(cord);
+
+    const baseBulbIntensity = bulb.intensity;
+
+    // ---------------------------------------------------------------------
+    // Controls (first person)
+    // ---------------------------------------------------------------------
+    const controls = new PointerLockControls(camera, renderer.domElement);
+    scene.add(controls.getObject());
+
+    const overlay = document.getElementById('overlay');
+    const crosshair = document.getElementById('crosshair');
+
+    overlay.addEventListener('click', () => controls.lock());
+    controls.addEventListener('lock', () => {
+      overlay.classList.add('hidden');
+      crosshair.classList.add('visible');
+    });
+    controls.addEventListener('unlock', () => {
+      overlay.classList.remove('hidden');
+      crosshair.classList.remove('visible');
+    });
+
+    // Movement state
+    const keys = { forward: false, back: false, left: false, right: false };
+    const MOVE_SPEED = 3.2; // metres / second
+
+    window.addEventListener('keydown', (e) => {
+      switch (e.code) {
+        case 'KeyW': case 'ArrowUp':    keys.forward = true; break;
+        case 'KeyS': case 'ArrowDown':  keys.back = true; break;
+        case 'KeyA': case 'ArrowLeft':  keys.left = true; break;
+        case 'KeyD': case 'ArrowRight': keys.right = true; break;
+      }
+    });
+    window.addEventListener('keyup', (e) => {
+      switch (e.code) {
+        case 'KeyW': case 'ArrowUp':    keys.forward = false; break;
+        case 'KeyS': case 'ArrowDown':  keys.back = false; break;
+        case 'KeyA': case 'ArrowLeft':  keys.left = false; break;
+        case 'KeyD': case 'ArrowRight': keys.right = false; break;
+      }
+    });
+
+    // ---------------------------------------------------------------------
+    // Main loop
+    // ---------------------------------------------------------------------
+    const clock = new THREE.Clock();
+    const velocity = new THREE.Vector3();
+    const direction = new THREE.Vector3();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+
+      if (controls.isLocked) {
+        // Smooth damped movement
+        velocity.x -= velocity.x * 10 * delta;
+        velocity.z -= velocity.z * 10 * delta;
+
+        direction.z = Number(keys.forward) - Number(keys.back);
+        direction.x = Number(keys.right) - Number(keys.left);
+        direction.normalize();
+
+        if (keys.forward || keys.back)  velocity.z -= direction.z * MOVE_SPEED * 10 * delta;
+        if (keys.left || keys.right)    velocity.x -= direction.x * MOVE_SPEED * 10 * delta;
+
+        controls.moveRight(-velocity.x * delta);
+        controls.moveForward(-velocity.z * delta);
+
+        // Keep the player inside the room
+        const obj = controls.getObject();
+        const limit = HALF - PLAYER_RADIUS;
+        obj.position.x = Math.max(-limit, Math.min(limit, obj.position.x));
+        obj.position.z = Math.max(-limit, Math.min(limit, obj.position.z));
+        obj.position.y = EYE_HEIGHT;
+      }
+
+      // Subtle horror flicker on the ceiling light
+      const t = clock.elapsedTime;
+      const flicker = 1 + 0.05 * Math.sin(t * 11) + (Math.random() < 0.015 ? -0.5 : 0);
+      bulb.intensity = baseBulbIntensity * flicker;
+
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // ---------------------------------------------------------------------
+    // Resize
+    // ---------------------------------------------------------------------
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
