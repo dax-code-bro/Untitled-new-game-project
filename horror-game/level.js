@@ -565,7 +565,8 @@
       box(0.12, 2.3, 0.14, MAT.darkMetal, 0, 1.15, 7);
       var gl = box(1.5, 2.2, 0.06, MAT.glass, -0.8, 1.1, 7);
       var gr = box(1.5, 2.2, 0.06, MAT.glass, 0.8, 1.1, 7);
-      solid(-1.6, 6.9, 1.6, 7.1);
+      solid(-1.6, 6.9, 1.6, 7.1, 'entrance');
+      window.__entranceGlass = [gl, gr];
       interact(gl, { id: 'entranceDoor', label: 'Entrance', verb: 'Try' });
       interact(gr, { id: 'entranceDoor', label: 'Entrance', verb: 'Try' });
 
@@ -621,6 +622,20 @@
       box(0.06, 0.2, 0.07, MAT.plastic, -7.75, 1.5, -3.2, Math.PI / 2);
       interact(phoneBody, { id: 'phone', label: 'Telephone', verb: 'Use' });
     })();
+
+    // ===================================================================
+    // HARD SEAL — tungsten shutters over Waiting's two corridor doorways.
+    // Earthquake doors, meant to keep the building out of the room.
+    // ===================================================================
+    var sealMeshes = {};
+    [['sealWest', -7.7], ['sealEast', 7.7]].forEach(function (sd) {
+      var m = box(0.22, 2.4, 3.1, new THREE.MeshStandardMaterial({
+        color: 0x565c60, map: texMetal, bumpMap: texMetal, bumpScale: 0.1,
+        roughness: 0.45, metalness: 0.7
+      }), sd[1], 3.6 + 1.2, 0);   // parked up inside the ceiling void
+      sealMeshes[sd[0]] = m;
+      solid(sd[1] - 0.13, -1.55, sd[1] + 0.13, 1.55, sd[0]);
+    });
 
     // ===================================================================
     // CORRIDORS — long, and badly lit
@@ -694,6 +709,23 @@
         gm.rotation.z = 0.3 + g * 0.04;
         gm.position.set(-53 + g * 0.18, 0.012, 2.6 + g * 0.1);
         group.add(gm);
+      }
+
+      // The security-camera crate — the reason to come in here first.
+      var camCrate = box(0.9, 0.6, 0.7, MAT.wood, -59.5, 0.31, 5.2, 0.2);
+      box(0.7, 0.24, 0.02, new THREE.MeshStandardMaterial({
+        map: T.sign(THREE, 'SECURITY', { fontSize: 30 }), roughness: 0.7
+      }), -59.48, 0.42, 5.56, 0.2);
+      interact(camCrate, { id: 'cameraCrate', label: 'Crate marked SECURITY', verb: 'Open' });
+      solid(-60.0, 4.8, -59.0, 5.6);
+
+      // Loose stock: crates you can actually open.
+      for (var lc = 0; lc < 14; lc++) {
+        var lx = -62.5 + (lc % 7) * 2.1 + Math.random() * 0.5;
+        var lz = -8.8 + Math.floor(lc / 7) * 2.4 + Math.random() * 0.6;
+        var crate = box(0.72, 0.6, 0.72, MAT.wood, lx, 0.31, lz, Math.random() * 0.5);
+        interact(crate, { id: 'lootCrate', idx: lc, label: 'Supply crate', verb: 'Open' });
+        solid(lx - 0.4, lz - 0.4, lx + 0.4, lz + 0.4);
       }
 
       var keyMesh = box(0.11, 0.02, 0.04, new THREE.MeshStandardMaterial({ color: 0xc7b26a, roughness: 0.35, metalness: 0.85 }), -51.6, 0.63, 4.7);
@@ -949,7 +981,8 @@
 
       box(0.06, 1.9, 1.4, MAT.metal, 71.2, 1.15, 61.4);
       solid(71.17, 60.7, 71.23, 62.1);
-      box(0.44, 0.42, 0.34, new THREE.MeshStandardMaterial({ color: 0xd6d8d4, roughness: 0.35 }), 70.6, 0.21, 61.6);
+      interact(box(0.44, 0.42, 0.34, new THREE.MeshStandardMaterial({ color: 0xd6d8d4, roughness: 0.35 }), 70.6, 0.21, 61.6),
+        { id: 'toilet', label: 'Toilet', verb: 'Use' });
       box(0.44, 0.16, 0.5, new THREE.MeshStandardMaterial({ color: 0xd6d8d4, roughness: 0.3 }), 73.6, 0.86, 59.2);
     })();
 
@@ -1035,7 +1068,8 @@
       for (var s = 0; s < 3; s++) {
         var sx = -21.2 + s * 1.7;
         box(0.4, 0.5, 0.14, porcelain, sx + 0.2, 0.66, -8.52);                     // cistern
-        cyl(0.19, 0.19, 0.05, porcelain, sx + 0.2, 0.45, -8.05, 14);              // seat
+        interact(cyl(0.19, 0.19, 0.05, porcelain, sx + 0.2, 0.45, -8.05, 14),
+          { id: 'toilet', label: 'Toilet', verb: 'Use' });
         if (s === 0) {
           box(0.72, 1.6, 0.03, MAT.metal, sx + 0.62, 1.05, -6.75, 0.55);          // ajar
         } else if (s === 1) {
@@ -1181,6 +1215,8 @@
     return {
       colliders: colliders,
       wallBoxes: wallBoxes,
+      lightFixtures: lights,
+      sealMeshes: sealMeshes,
       interactables: interactables,
       updates: updates,
       roomAt: roomAt,

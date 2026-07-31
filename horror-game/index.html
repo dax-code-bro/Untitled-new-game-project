@@ -327,6 +327,68 @@
   .term-btn:focus-visible { outline: 2px solid #4e8f6d; outline-offset: 2px; }
   .term-err { color: #c2603f; font-size: 11px; letter-spacing: 0.14em; min-height: 15px; }
 
+  /* survival meters */
+  #meters {
+    position: fixed; right: max(20px, env(safe-area-inset-right));
+    bottom: max(86px, calc(env(safe-area-inset-bottom) + 70px)); z-index: 6;
+    display: flex; flex-direction: column; gap: 7px; align-items: flex-end;
+    pointer-events: none; opacity: 0; transition: opacity 400ms ease;
+  }
+  #meters.on { opacity: 1; }
+  .meter { display: flex; align-items: center; gap: 8px; }
+  .meter .lbl { font-size: 9px; letter-spacing: 0.22em; color: var(--concrete-l); text-transform: uppercase; }
+  .meter .cells { display: flex; gap: 2px; }
+  .meter .cell { width: 7px; height: 10px; background: rgba(107,113,115,0.25); }
+  .meter .cell.f { background: var(--bone); }
+  .meter.thirst .cell.f { background: #7fa8b8; }
+  .meter.energy .cell { width: 5px; }
+  .meter.energy .cell.f { background: #c9b96a; }
+  .meter.energy.green .cell.f { background: #6fce7e; box-shadow: 0 0 6px rgba(111,206,126,0.6); }
+  .meter .warn { color: var(--oxide); font-size: 9px; letter-spacing: 0.2em; }
+
+  /* terminal tabs */
+  .term-tabs { display: flex; gap: 8px; }
+  .term-tab {
+    appearance: none; flex: 1; padding: 9px; background: transparent;
+    border: 1px solid #1f4634; color: #4e8f6d; font-family: var(--mono);
+    font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; cursor: pointer;
+  }
+  .term-tab.on { background: #0d241a; color: #a8e6c2; border-color: #2f7a55; }
+  #feedCanvas { width: 100%; image-rendering: pixelated; border: 1px solid #1f4634; background: #030604; }
+  .feed-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  .feed-btn {
+    appearance: none; padding: 7px 12px; background: #0a1a13; border: 1px solid #1f4634;
+    color: #78c79a; font-family: var(--mono); font-size: 11px; cursor: pointer;
+  }
+  .feed-btn.on { border-color: #2f7a55; background: #0d241a; color: #a8e6c2; }
+  .feed-btn.dead { color: #7e3529; border-color: #47231c; }
+  .seal-row { display: flex; gap: 10px; }
+  .seal-btn {
+    appearance: none; flex: 1; padding: 16px; background: transparent;
+    border: 1px solid #2f7a55; color: #78c79a; font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.24em; text-transform: uppercase; cursor: pointer;
+  }
+  .seal-btn.on { background: #143325; color: #d8f4e2; border-color: #4ecf8a; }
+  #shockBtn {
+    appearance: none; width: 100%; padding: 13px; background: transparent;
+    border: 1px solid #6b4a1c; color: #d8c37a; font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.26em; text-transform: uppercase; cursor: pointer;
+  }
+  #shockBtn:disabled { opacity: 0.3; cursor: default; }
+
+  /* the good ending */
+  #ending {
+    position: fixed; inset: 0; z-index: 60; display: grid; place-items: center;
+    background: #000; text-align: center;
+  }
+  #ending[hidden] { display: none; }
+  #ending .pay { color: var(--bone); font-size: 15px; letter-spacing: 0.2em; margin-bottom: 26px; }
+  #ending .passed {
+    color: #e8891d; font-size: clamp(34px, 8vw, 64px); font-weight: 700;
+    letter-spacing: 0.06em; text-shadow: 0 0 40px rgba(232,137,29,0.4);
+  }
+  #ending .respect { color: #e8891d; font-size: 19px; letter-spacing: 0.3em; margin-top: 12px; }
+
   @media (prefers-reduced-motion: reduce) {
     #grain, .failing { animation: none; }
     #curtain, #blackout, #crosshair, #status, #sound, #prompt, #subtitle { transition-duration: 1ms; }
@@ -347,6 +409,11 @@
 <button id="sound" type="button" aria-label="Toggle sound">Sound On</button>
 <div id="carry"></div>
 <div id="ammo"><div class="big">—</div><div class="sub">Rounds</div></div>
+<div id="meters">
+  <div class="meter hungerM"><span class="lbl">Hunger</span><span class="cells"></span></div>
+  <div class="meter thirst"><span class="lbl">Thirst</span><span class="cells"></span></div>
+  <div class="meter energy"><span class="lbl">Energy</span><span class="cells"></span></div>
+</div>
 <div id="status">
   <div id="stance">Standing</div>
   <div id="legend"></div>
@@ -378,6 +445,14 @@
       <button id="enter" type="button">Enter the room</button>
       <p class="hint" id="hint"></p>
     </div>
+  </div>
+</div>
+
+<div id="ending" hidden>
+  <div>
+    <div class="pay">You walk out with your $2,000 paycheck.</div>
+    <div class="passed">MISSION PASSED</div>
+    <div class="respect">RESPECT ++++</div>
   </div>
 </div>
 
@@ -454,6 +529,17 @@ window.bootUI = function bootUI(THREE) {
   var stick = $('stick'), stickNub = $('stick-nub'), touchbar = $('touchbar');
   var fileNo = $('file-no'), grain = $('grain');
 
+  var metersEl = $('meters');
+  var lastHud = null;
+  function drawMeter(sel, val, max) {
+    var cells = metersEl.querySelector(sel + ' .cells');
+    if (cells.children.length !== max) {
+      cells.innerHTML = '';
+      for (var i = 0; i < max; i++) cells.appendChild(document.createElement('span')).className = 'cell';
+    }
+    for (var j = 0; j < max; j++) cells.children[j].classList.toggle('f', j < val);
+  }
+
   var coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
   if (coarse) { stick.classList.add('mounted'); touchbar.classList.add('mounted'); }
 
@@ -472,14 +558,34 @@ window.bootUI = function bootUI(THREE) {
     grain.style.backgroundImage = 'url(' + n.toDataURL() + ')';
   })();
 
-  var LOOK_MOUSE = '<b>WASD</b> Move · <b>Mouse</b> Look · <b>E</b> Use · <b>C</b> Crouch · <b>Z</b> Crawl · <b>Shift</b> Run';
+  setInterval(function () {
+    if (window.__horror && window.__horror.isActive) {
+      hallucinating = window.__horror.getState().hallucinating;
+    }
+  }, 1000);
+
+  var LOOK_MOUSE = '<b>WASD</b> Move · <b>Mouse</b> Look · <b>E</b> Use · <b>F</b> Camera · <b>C</b> Crouch · <b>Z</b> Crawl · <b>4/5/6</b> Eat/Drink';
   var LOOK_DRAG  = '<b>WASD</b> Move · <b>Drag</b> Look · <b>E</b> Use · <b>C</b> Crouch · <b>Z</b> Crawl · <b>←→</b> Turn';
   var LOOK_TOUCH = '<b>Stick</b> Move · <b>Drag</b> Look · <b>Tap</b> Use';
   var mode = coarse ? LOOK_TOUCH : LOOK_MOUSE;
   hint.innerHTML = mode;
 
   var subTimer = null;
+  var hallucinating = false;
+  function scramble(text) {
+    if (!hallucinating) return text;
+    var out = '';
+    for (var i = 0; i < text.length; i++) {
+      var ch = text[i];
+      if (/[a-zA-Z]/.test(ch) && Math.random() < 0.22) {
+        out += Math.random() < 0.5 ? String(Math.floor(Math.random() * 10))
+          : String.fromCharCode(65 + Math.floor(Math.random() * 26));
+      } else out += ch;
+    }
+    return out;
+  }
   function say(text) {
+    text = scramble(text);
     subtitle.textContent = text;
     subtitle.classList.add('on');
     clearTimeout(subTimer);
@@ -520,15 +626,34 @@ window.bootUI = function bootUI(THREE) {
       onHud: function (s) {
         if (s.hasGlock) {
           ammoEl.classList.add('on');
-          ammoEl.querySelector('.big').textContent = s.inMag + ' / ' + Math.max(0, s.ammo - s.inMag);
-          ammoEl.classList.toggle('dry', s.inMag === 0);
+          var big;
+          if (s.weapon === 'shotgun') big = 'SG ' + s.shells;
+          else if (s.weapon === 'ar') big = 'AR ' + s.arRounds;
+          else big = s.inMag + ' / ' + Math.max(0, s.ammo - s.inMag);
+          ammoEl.querySelector('.big').textContent = big;
+          ammoEl.classList.toggle('dry', s.weapon === 'glock' ? s.inMag === 0 : (s.weapon === 'shotgun' ? s.shells === 0 : s.arRounds === 0));
         } else {
           ammoEl.classList.remove('on');
         }
         var items = [];
         if (s.hasKey) items.push('Storage key');
-        if (s.supplies) items.push('Water · Beans');
+        if (s.keycard) items.push('KEYCARD');
+        if (s.riotGear) items.push('Riot gear');
+        if (s.cams > 0) items.push('Cameras ×' + s.cams);
+        if (s.waterN > 0) items.push('Water ×' + s.waterN + ' <b>[4]</b>');
+        if (s.beansN > 0) items.push('Beans ×' + s.beansN + ' <b>[5]</b>');
+        if (s.fuelN > 0) items.push('GAMER ×' + s.fuelN + ' <b>[6]</b>');
+        if (s.hasShotgun) items.push('Shotgun <b>[2]</b>');
+        if (s.hasAR) items.push('Rifle <b>[3]</b>');
+        if (s.needToilet) items.push('<span style="color:var(--oxide)">TOILET</span>');
         carry.innerHTML = items.map(function (t) { return '<span>' + t + '</span>'; }).join('');
+
+        metersEl.classList.add('on');
+        drawMeter('.hungerM', s.hunger, 10);
+        drawMeter('.thirst', s.thirst, 10);
+        drawMeter('.energy', s.energy, 25);
+        metersEl.querySelector('.energy').classList.toggle('green', s.fueled);
+        lastHud = s;
       },
       onMuzzleFlash: function () {
         muzzle.classList.add('on');
@@ -538,11 +663,22 @@ window.bootUI = function bootUI(THREE) {
       showJournal: function () { openOverlay('journal'); },
       showBlueprint: function () { openOverlay('blueprint'); },
       showComputer: function (connected) { openTerminal(connected); },
-      onDeath: function () {
-        dead = true;
+      onEnding: function () {
         blackout.classList.add('on');
         setTimeout(function () {
-          fileNo.textContent = 'File 001 — Terminated';
+          blackout.classList.remove('on');
+          document.getElementById('ending').hidden = false;
+        }, 1200);
+      },
+      onDeath: function (reason) {
+        dead = true;
+        blackout.classList.add('on');
+        var label = reason === 'seizure' ? 'File 001 — Cardiac event'
+          : reason === 'starved' ? 'File 001 — Starved'
+          : reason === 'headbutt' ? 'File 001 — Blunt trauma'
+          : 'File 001 — Terminated';
+        setTimeout(function () {
+          fileNo.textContent = label;
           enterBtn.textContent = 'Continue';
           curtain.hidden = false;
           void curtain.offsetWidth;
@@ -588,37 +724,154 @@ window.bootUI = function bootUI(THREE) {
     { name: 'FBI SURVEILLANCE VAN 4', bars: '•○○' },
     { name: 'PRINTER_04B', bars: '••○' }
   ];
+  var termTab = 'net';
+  var feedIndex = 0;
+  var feedTimer = null;
+
   function openTerminal(connected) {
-    var body = $('termBody');
-    $('termStatus').textContent = connected ? 'Connected' : 'Not connected';
-    body.innerHTML = '';
-    if (connected) {
-      var p = document.createElement('div');
-      p.className = 'term-note';
-      p.textContent = 'Connected to WAITING ROOM WIFI. Display output routed to overhead screen 2.';
-      body.appendChild(p);
-    } else {
-      var note = document.createElement('div');
-      note.className = 'term-note';
-      note.textContent = 'Select a network.';
-      body.appendChild(note);
-      NETWORKS.forEach(function (n) {
-        var b = document.createElement('button');
-        b.className = 'net' + (n.target ? ' target' : '');
-        b.type = 'button';
-        b.innerHTML = '<span>' + n.name + '</span><span class="bars">' + n.bars + '</span>';
-        b.addEventListener('click', function () {
-          if (!n.target) {
-            note.textContent = 'Out of range.';
-            return;
-          }
-          showPassword(body);
-        });
-        body.appendChild(b);
-      });
-    }
+    renderTerminal(connected);
     openOverlay('terminal');
   }
+
+  function renderTerminal(connected) {
+    var body = $('termBody');
+    var st = window.__horror ? window.__horror.getState() : null;
+    $('termStatus').textContent = connected ? 'Connected' : 'Not connected';
+    clearInterval(feedTimer);
+    body.innerHTML = '';
+
+    // tabs
+    var tabs = document.createElement('div');
+    tabs.className = 'term-tabs';
+    [['net', 'Network'], ['cams', 'Cameras'], ['seal', 'Hard Seal']].forEach(function (t) {
+      var b = document.createElement('button');
+      b.className = 'term-tab' + (termTab === t[0] ? ' on' : '');
+      b.type = 'button';
+      b.textContent = t[1];
+      b.addEventListener('click', function () { termTab = t[0]; renderTerminal(connected); });
+      tabs.appendChild(b);
+    });
+    body.appendChild(tabs);
+
+    if (termTab === 'net') {
+      if (connected) {
+        var pnote = document.createElement('div');
+        pnote.className = 'term-note';
+        pnote.textContent = 'Connected to WAITING ROOM WIFI. Camera relay and hard-seal control online.';
+        body.appendChild(pnote);
+      } else {
+        var note = document.createElement('div');
+        note.className = 'term-note';
+        note.textContent = 'Select a network.';
+        body.appendChild(note);
+        NETWORKS.forEach(function (n) {
+          var b = document.createElement('button');
+          b.className = 'net' + (n.target ? ' target' : '');
+          b.type = 'button';
+          b.innerHTML = '<span>' + n.name + '</span><span class="bars">' + n.bars + '</span>';
+          b.addEventListener('click', function () {
+            if (!n.target) { note.textContent = 'Out of range.'; return; }
+            showPassword(body);
+          });
+          body.appendChild(b);
+        });
+      }
+      return;
+    }
+
+    if (!connected) {
+      var no = document.createElement('div');
+      no.className = 'term-note';
+      no.textContent = 'Requires a network connection.';
+      body.appendChild(no);
+      return;
+    }
+
+    if (termTab === 'cams') {
+      var cams = window.__horror.plantedCams();
+      if (cams.length === 0) {
+        var e0 = document.createElement('div');
+        e0.className = 'term-note';
+        e0.textContent = 'No cameras placed. Find them in the warehouse, place them with F.';
+        body.appendChild(e0);
+        return;
+      }
+      var list = document.createElement('div');
+      list.className = 'feed-list';
+      cams.forEach(function (c, i) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'feed-btn' + (i === feedIndex ? ' on' : '') + (c.alive ? '' : ' dead');
+        b.textContent = 'CAM ' + (i + 1) + (c.alive ? '' : ' ✕');
+        b.addEventListener('click', function () { feedIndex = i; renderTerminal(connected); });
+        list.appendChild(b);
+      });
+      body.appendChild(list);
+      var fc = document.createElement('canvas');
+      fc.id = 'feedCanvas';
+      fc.width = 256; fc.height = 160;
+      body.appendChild(fc);
+      var stamp = document.createElement('div');
+      stamp.className = 'term-note';
+      body.appendChild(stamp);
+
+      function draw() {
+        var alive = window.__horror.renderFeed(feedIndex, fc);
+        var x2 = fc.getContext('2d');
+        // scanlines + noise on top of the raw feed
+        x2.globalAlpha = 0.14;
+        for (var y = 0; y < 160; y += 3) { x2.fillStyle = '#000'; x2.fillRect(0, y, 256, 1); }
+        x2.globalAlpha = 1;
+        for (var n2 = 0; n2 < 120; n2++) {
+          x2.fillStyle = 'rgba(190,255,200,' + Math.random() * 0.06 + ')';
+          x2.fillRect(Math.random() * 256, Math.random() * 160, 2, 1);
+        }
+        x2.fillStyle = alive ? '#a8e6c2' : '#7e3529';
+        x2.font = '10px monospace';
+        x2.fillText(alive ? 'CAM ' + (feedIndex + 1) + ' · REC' : 'NO SIGNAL', 8, 14);
+        stamp.textContent = alive ? 'Live.' : 'This feed is gone.';
+      }
+      draw();
+      feedTimer = setInterval(draw, 700);
+
+      var shock = document.createElement('button');
+      shock.id = 'shockBtn';
+      shock.type = 'button';
+      shock.textContent = 'Shock holding cage';
+      shock.disabled = window.__horror.entityLurk() !== 'cage';
+      shock.addEventListener('click', function () {
+        if (window.__horror.shockEntity()) {
+          shock.disabled = true;
+          shock.textContent = 'Discharging — 100s';
+        }
+      });
+      body.appendChild(shock);
+      return;
+    }
+
+    // hard seal
+    var sn = document.createElement('div');
+    sn.className = 'term-note';
+    sn.textContent = 'Earthquake shutters, one at a time. Tungsten. Sealing one raises the other.';
+    body.appendChild(sn);
+    var row = document.createElement('div');
+    row.className = 'seal-row';
+    var hud = lastHud || { seals: { west: false, east: false } };
+    [['sealWest', 'West door', hud.seals.west], ['sealEast', 'East door', hud.seals.east]].forEach(function (sd) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'seal-btn' + (sd[2] ? ' on' : '');
+      b.textContent = sd[1] + (sd[2] ? ' — SEALED' : '');
+      b.addEventListener('click', function () {
+        var seals = window.__horror.setSeal(sd[2] ? null : sd[0]);
+        void seals;
+        renderTerminal(connected);
+      });
+      row.appendChild(b);
+    });
+    body.appendChild(row);
+  }
+
   function showPassword(body) {
     body.innerHTML = '';
     var lbl = document.createElement('div');
@@ -657,8 +910,12 @@ window.bootUI = function bootUI(THREE) {
       if (e.key === 'Enter') { e.preventDefault(); attempt(); }
       e.stopPropagation();
     });
-    back.addEventListener('click', function () { openTerminal(false); });
+    back.addEventListener('click', function () { termTab = 'net'; renderTerminal(false); });
   }
+
+  // close must stop the feed loop
+  var _closeOverlay = closeOverlay;
+  closeOverlay = function () { clearInterval(feedTimer); _closeOverlay(); };
 
   // ---------------- Entry / pause ----------------
   var legendTimer = null, enterTimer = null, hideTimer = null;

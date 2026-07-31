@@ -327,6 +327,68 @@
   .term-btn:focus-visible { outline: 2px solid #4e8f6d; outline-offset: 2px; }
   .term-err { color: #c2603f; font-size: 11px; letter-spacing: 0.14em; min-height: 15px; }
 
+  /* survival meters */
+  #meters {
+    position: fixed; right: max(20px, env(safe-area-inset-right));
+    bottom: max(86px, calc(env(safe-area-inset-bottom) + 70px)); z-index: 6;
+    display: flex; flex-direction: column; gap: 7px; align-items: flex-end;
+    pointer-events: none; opacity: 0; transition: opacity 400ms ease;
+  }
+  #meters.on { opacity: 1; }
+  .meter { display: flex; align-items: center; gap: 8px; }
+  .meter .lbl { font-size: 9px; letter-spacing: 0.22em; color: var(--concrete-l); text-transform: uppercase; }
+  .meter .cells { display: flex; gap: 2px; }
+  .meter .cell { width: 7px; height: 10px; background: rgba(107,113,115,0.25); }
+  .meter .cell.f { background: var(--bone); }
+  .meter.thirst .cell.f { background: #7fa8b8; }
+  .meter.energy .cell { width: 5px; }
+  .meter.energy .cell.f { background: #c9b96a; }
+  .meter.energy.green .cell.f { background: #6fce7e; box-shadow: 0 0 6px rgba(111,206,126,0.6); }
+  .meter .warn { color: var(--oxide); font-size: 9px; letter-spacing: 0.2em; }
+
+  /* terminal tabs */
+  .term-tabs { display: flex; gap: 8px; }
+  .term-tab {
+    appearance: none; flex: 1; padding: 9px; background: transparent;
+    border: 1px solid #1f4634; color: #4e8f6d; font-family: var(--mono);
+    font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; cursor: pointer;
+  }
+  .term-tab.on { background: #0d241a; color: #a8e6c2; border-color: #2f7a55; }
+  #feedCanvas { width: 100%; image-rendering: pixelated; border: 1px solid #1f4634; background: #030604; }
+  .feed-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  .feed-btn {
+    appearance: none; padding: 7px 12px; background: #0a1a13; border: 1px solid #1f4634;
+    color: #78c79a; font-family: var(--mono); font-size: 11px; cursor: pointer;
+  }
+  .feed-btn.on { border-color: #2f7a55; background: #0d241a; color: #a8e6c2; }
+  .feed-btn.dead { color: #7e3529; border-color: #47231c; }
+  .seal-row { display: flex; gap: 10px; }
+  .seal-btn {
+    appearance: none; flex: 1; padding: 16px; background: transparent;
+    border: 1px solid #2f7a55; color: #78c79a; font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.24em; text-transform: uppercase; cursor: pointer;
+  }
+  .seal-btn.on { background: #143325; color: #d8f4e2; border-color: #4ecf8a; }
+  #shockBtn {
+    appearance: none; width: 100%; padding: 13px; background: transparent;
+    border: 1px solid #6b4a1c; color: #d8c37a; font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.26em; text-transform: uppercase; cursor: pointer;
+  }
+  #shockBtn:disabled { opacity: 0.3; cursor: default; }
+
+  /* the good ending */
+  #ending {
+    position: fixed; inset: 0; z-index: 60; display: grid; place-items: center;
+    background: #000; text-align: center;
+  }
+  #ending[hidden] { display: none; }
+  #ending .pay { color: var(--bone); font-size: 15px; letter-spacing: 0.2em; margin-bottom: 26px; }
+  #ending .passed {
+    color: #e8891d; font-size: clamp(34px, 8vw, 64px); font-weight: 700;
+    letter-spacing: 0.06em; text-shadow: 0 0 40px rgba(232,137,29,0.4);
+  }
+  #ending .respect { color: #e8891d; font-size: 19px; letter-spacing: 0.3em; margin-top: 12px; }
+
   @media (prefers-reduced-motion: reduce) {
     #grain, .failing { animation: none; }
     #curtain, #blackout, #crosshair, #status, #sound, #prompt, #subtitle { transition-duration: 1ms; }
@@ -347,6 +409,11 @@
 <button id="sound" type="button" aria-label="Toggle sound">Sound On</button>
 <div id="carry"></div>
 <div id="ammo"><div class="big">—</div><div class="sub">Rounds</div></div>
+<div id="meters">
+  <div class="meter hungerM"><span class="lbl">Hunger</span><span class="cells"></span></div>
+  <div class="meter thirst"><span class="lbl">Thirst</span><span class="cells"></span></div>
+  <div class="meter energy"><span class="lbl">Energy</span><span class="cells"></span></div>
+</div>
 <div id="status">
   <div id="stance">Standing</div>
   <div id="legend"></div>
@@ -378,6 +445,14 @@
       <button id="enter" type="button">Enter the room</button>
       <p class="hint" id="hint"></p>
     </div>
+  </div>
+</div>
+
+<div id="ending" hidden>
+  <div>
+    <div class="pay">You walk out with your $2,000 paycheck.</div>
+    <div class="passed">MISSION PASSED</div>
+    <div class="respect">RESPECT ++++</div>
   </div>
 </div>
 
@@ -1354,34 +1429,42 @@
 </script>
 <script>
 /*
- * Untitled Horror Game — the thing from the blueprint.
+ * Untitled Horror Game — the Birch.
  *
- * Eleven feet. Tungsten frame, non-oxidising steel joints, the rest
- * birchwood. The extermination chamber is full of the people who tried
- * to switch it off, so gunfire staggers it; nothing kills it.
+ * A store mannequin, eleven feet tall, hand-carved from pale birch with
+ * the joints left visible and tungsten bolts holding some of it together.
+ * Its hands were made flat so it could never hurt anyone.
  *
- * Dormant until the player takes Nick's gun. Then it walks the building:
- * a fixed patrol along the corridor spines, slamming doors open as it
- * comes to them, breaking into a chase when it has line of sight.
+ * It hides in the vents until the player takes the security cameras from
+ * the warehouse. Then it haunts three spots — the storage unit (smearing
+ * Nick's blood over itself), the holding cage (a frozen pirouette), the
+ * warehouse (a raised-hand hello) — for 5 to 25 minutes at a time before
+ * moving. While it is being LOOKED AT in a lurk or roam it cannot move.
+ * Chases and rage don't care whether you're watching.
  *
  *   window.buildEntity(THREE, { scene, level }) → api
  */
 (function () {
   'use strict';
 
-  var HEIGHT = 3.35;          // 11 ft
-  var RADIUS = 0.55;
-  var EYE_Y = 3.0;
-  var PATROL_SPEED = 1.9;
-  var CHASE_SPEED = 3.3;
-  var SIGHT_RANGE = 16;
-  var SENSE_RANGE = 3;        // it feels you this close, eyes or none
-  var FOV = Math.PI * 0.42;   // ~75° either side
-  var LOSE_AFTER = 5;         // seconds without sight before it gives up
-  var CATCH_DIST = 1.15;
+  var RADIUS = 0.5;
+  var ROAM_SPEED = 2.2;
+  var CHASE_SPEED = 3.4;
+  var RAGE_SPEED = 4.6;
+  var SIGHT_RANGE = 17;
+  var SENSE_RANGE = 3;
+  var FOV = Math.PI * 0.42;
+  var LOSE_AFTER = 5;
+  var CATCH_DIST = 1.2;
+  var WATCH_DOT = 0.45;       // how centred you must have it to pin it
+  var WATCH_RANGE = 48;
 
-  // The route it walks: warehouse → west corridor → Waiting → east
-  // corridor → junction → the length of the south corridor, and back.
+  var LURKS = [
+    { id: 'storage',   x: 62.4, z: 2.6,  pose: 'smear' },
+    { id: 'cage',      x: 54.3, z: 56,   pose: 'spin' },
+    { id: 'warehouse', x: -56,  z: -2,   pose: 'hi' }
+  ];
+
   var PATROL = [
     [-56, 2.2], [-50, 0], [-30, 0], [-10, 0], [0, 0.9],
     [10, 0], [30, 0], [44, 0], [49.5, 0], [49.5, 10],
@@ -1392,121 +1475,238 @@
     var scene = ctx.scene, level = ctx.level;
     var T = window.TEX;
 
-    // ---------------- The body ----------------
-    var birchTex = T.wood(THREE, 512, [190, 172, 130], { knots: 4, grime: 7 });
+    // ================= The mannequin =================
+    var birchTex = T.wood(THREE, 512, [196, 180, 142], { knots: 3, grime: 3 });
     var birch = new THREE.MeshStandardMaterial({
-      map: birchTex, bumpMap: birchTex, bumpScale: 0.18, roughness: 0.82
+      map: birchTex, bumpMap: birchTex, bumpScale: 0.1, roughness: 0.72
     });
-    var joint = new THREE.MeshStandardMaterial({ color: 0x3c4144, roughness: 0.38, metalness: 0.85 });
-    var frame = new THREE.MeshStandardMaterial({ color: 0x23282b, roughness: 0.5, metalness: 0.75 });
+    var birchBloody = new THREE.MeshStandardMaterial({
+      map: birchTex, bumpMap: birchTex, bumpScale: 0.1, roughness: 0.8,
+      color: 0x9c5a4a
+    });
+    var bolt = new THREE.MeshStandardMaterial({ color: 0x3c4144, roughness: 0.35, metalness: 0.85 });
 
     var g = new THREE.Group();
+    var meshes = { arms: {}, blood: [] };
 
-    function limb(w, h, d, mat, x, y, z) {
-      var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    function cylPart(parent, rt, rb, h, x, y, z, mat) {
+      var m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, 12), mat || birch);
       m.position.set(x, y, z);
-      g.add(m);
+      parent.add(m);
       return m;
     }
-    function ball(r, x, y, z) {
-      var m = new THREE.Mesh(new THREE.SphereGeometry(r, 10, 8), joint);
+    function spherePart(parent, r, x, y, z, sx, sy, sz) {
+      var m = new THREE.Mesh(new THREE.SphereGeometry(r, 12, 10), birch);
       m.position.set(x, y, z);
-      g.add(m);
+      if (sx) m.scale.set(sx, sy, sz);
+      parent.add(m);
+      return m;
+    }
+    function boltAt(parent, x, y, z, rz) {
+      var m = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.05, 8), bolt);
+      m.position.set(x, y, z);
+      m.rotation.z = rz === undefined ? Math.PI / 2 : rz;
+      parent.add(m);
       return m;
     }
 
-    // legs — too long, like the drawing
-    limb(0.2, 1.5, 0.24, birch, -0.22, 0.78, 0);
-    limb(0.2, 1.5, 0.24, birch, 0.22, 0.78, 0);
-    ball(0.13, -0.22, 1.56, 0); ball(0.13, 0.22, 1.56, 0);   // hip joints
-    ball(0.11, -0.22, 0.82, 0.02); ball(0.11, 0.22, 0.82, 0.02); // knees
-    limb(0.24, 0.1, 0.42, birch, -0.22, 0.05, 0.06);         // feet
-    limb(0.24, 0.1, 0.42, birch, 0.22, 0.05, 0.06);
+    // legs: stilt-thin, joints visible as turned balls with bolts through
+    function leg(side) {
+      var hip = new THREE.Group();
+      hip.position.set(side * 0.17, 1.62, 0);
+      spherePart(hip, 0.085, 0, 0, 0);
+      boltAt(hip, 0, 0, 0);
+      cylPart(hip, 0.06, 0.052, 0.78, 0, -0.42, 0);
+      var kneeY = -0.82;
+      spherePart(hip, 0.072, 0, kneeY, 0);
+      boltAt(hip, 0, kneeY, 0);
+      cylPart(hip, 0.05, 0.046, 0.74, 0, kneeY - 0.4, 0);
+      var foot = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.05, 0.3), birch);
+      foot.position.set(0, kneeY - 0.79, 0.07);
+      hip.add(foot);
+      g.add(hip);
+      return hip;
+    }
+    var legL = leg(-1), legR = leg(1);
 
-    // pelvis and torso, with the chest left unfinished — the frame shows
-    limb(0.62, 0.3, 0.34, birch, 0, 1.72, 0);
-    var torso = limb(0.7, 1.0, 0.4, birch, 0, 2.32, 0);
-    limb(0.34, 0.5, 0.06, frame, 0, 2.36, 0.2);              // open chest panel
-    limb(0.05, 0.44, 0.05, joint, -0.09, 2.36, 0.21);        // exposed ribs of tungsten
-    limb(0.05, 0.44, 0.05, joint, 0.09, 2.36, 0.21);
+    // pelvis and a waist gap you can see through
+    spherePart(g, 0.16, 0, 1.68, 0, 1.25, 0.62, 0.8);
+    cylPart(g, 0.035, 0.035, 0.14, 0, 1.84, 0, bolt);   // exposed spine rod
 
-    // shoulders and arms — they reach past the knees
-    ball(0.15, -0.42, 2.72, 0); ball(0.15, 0.42, 2.72, 0);
-    var armL = new THREE.Group(); var armR = new THREE.Group();
-    [armL, armR].forEach(function (arm, i) {
-      var side = i === 0 ? -1 : 1;
-      arm.position.set(side * 0.46, 2.72, 0);
-      var upper = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.9, 0.18), birch);
-      upper.position.y = -0.45;
-      arm.add(upper);
-      var elbow = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 8), joint);
-      elbow.position.y = -0.92;
-      arm.add(elbow);
-      var fore = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.85, 0.15), birch);
-      fore.position.y = -1.36;
-      arm.add(fore);
-      // the hand: four long fingers, no thumb worth the name
-      for (var f = 0; f < 4; f++) {
-        var finger = new THREE.Mesh(new THREE.BoxGeometry(0.028, 0.3, 0.03), birch);
-        finger.position.set(-0.05 + f * 0.033, -1.92, 0);
-        arm.add(finger);
-      }
-      g.add(arm);
+    // torso: a mannequin's tapered chest, far too thin
+    var torso = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.105, 0.98, 14), birch);
+    torso.position.set(0, 2.42, 0);
+    g.add(torso);
+    spherePart(g, 0.155, 0, 2.9, 0, 1.15, 0.5, 0.85);   // chest cap
+    boltAt(g, -0.1, 2.62, 0.12, 0.5);
+    boltAt(g, 0.12, 2.2, -0.1, 1.1);
+
+    // blood smears (hidden until it visits Nick)
+    [[0, 2.55, 0.15, 0.22, 0.5], [-0.07, 2.2, 0.12, 0.16, 0.4], [0.09, 2.75, 0.13, 0.18, 0.3]].forEach(function (b) {
+      var s = new THREE.Mesh(new THREE.PlaneGeometry(b[3], b[4]),
+        new THREE.MeshStandardMaterial({ color: 0x571812, roughness: 0.55, transparent: true, opacity: 0.85 }));
+      s.position.set(b[0], b[1], b[2]);
+      s.rotation.z = Math.random();
+      s.visible = false;
+      g.add(s);
+      meshes.blood.push(s);
     });
 
-    // the head: undersized, featureless, a lathe-turned suggestion of one
-    var head = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.16, 0.34, 10), birch);
-    head.position.set(0, 3.05, 0);
-    g.add(head);
-    ball(0.09, 0, 2.85, 0);                                   // neck joint
+    // arms: hung from bolted shoulder balls, ending in FLAT hands
+    function arm(side) {
+      var sh = new THREE.Group();
+      sh.position.set(side * 0.26, 2.86, 0);
+      spherePart(sh, 0.08, 0, 0, 0);
+      boltAt(sh, 0, 0, 0, 0);
+      cylPart(sh, 0.047, 0.042, 0.74, 0, -0.4, 0);
+      spherePart(sh, 0.06, 0, -0.8, 0);
+      boltAt(sh, 0, -0.8, 0);
+      cylPart(sh, 0.04, 0.036, 0.72, 0, -1.18, 0);
+      // the flat hand — a paddle of wood, edge-on it disappears
+      var hand = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.34, 0.016), birch);
+      hand.position.set(0, -1.72, 0);
+      sh.add(hand);
+      g.add(sh);
+      return sh;
+    }
+    var armL = arm(-1), armR = arm(1);
+    meshes.arms.left = armL;
+    meshes.arms.right = armR;
+
+    // neck and the head: a featureless egg — until something is drawn on it
+    var neck = cylPart(g, 0.035, 0.045, 0.16, 0, 3.02, 0);
+    void neck;
+    var headGroup = new THREE.Group();
+    headGroup.position.set(0, 3.24, 0);
+    var head = new THREE.Mesh(new THREE.SphereGeometry(0.155, 16, 14), birch);
+    head.scale.set(0.92, 1.22, 0.98);
+    headGroup.add(head);
+
+    // the face: a transparent canvas hovering just off the wood
+    var faceCanvas = document.createElement('canvas');
+    faceCanvas.width = faceCanvas.height = 128;
+    var faceCtx = faceCanvas.getContext('2d');
+    var faceTex = new THREE.CanvasTexture(faceCanvas);
+    var facePlane = new THREE.Mesh(new THREE.CircleGeometry(0.115, 20),
+      new THREE.MeshBasicMaterial({ map: faceTex, transparent: true }));
+    facePlane.position.set(0, 0.01, 0.15);
+    headGroup.add(facePlane);
+    g.add(headGroup);
+
+    function drawFace(kind) {
+      var x = faceCtx;
+      x.clearRect(0, 0, 128, 128);
+      if (kind === 'none') { faceTex.needsUpdate = true; return; }
+      x.strokeStyle = kind === 'blood' ? 'rgba(120,26,18,0.92)' : 'rgba(28,26,24,0.9)';
+      x.lineWidth = kind === 'blood' ? 7 : 5;
+      x.lineCap = 'round';
+      // two line eyes, drawn the way a child draws them
+      x.beginPath(); x.moveTo(42, 38); x.lineTo(44, 60); x.stroke();
+      x.beginPath(); x.moveTo(84, 36); x.lineTo(85, 59); x.stroke();
+      // that signature smile
+      x.beginPath();
+      x.moveTo(32, 76);
+      x.quadraticCurveTo(64, 112, 96, 74);
+      x.stroke();
+      faceTex.needsUpdate = true;
+    }
+    drawFace('none');
 
     g.visible = false;
     scene.add(g);
 
-    // ---------------- Occlusion ----------------
-    // Line of sight tests walls and closed doors only. Furniture does not
-    // hide you from something eleven feet tall.
+    // fallen pieces appear in the world when parts break off
+    function dropPiece(size, x, z) {
+      var m = new THREE.Mesh(new THREE.BoxGeometry(size[0], size[1], size[2]), birch);
+      m.position.set(x + (Math.random() - 0.5) * 0.8, size[1] / 2 + 0.01, z + (Math.random() - 0.5) * 0.8);
+      m.rotation.y = Math.random() * 3;
+      scene.add(m);
+      return m;
+    }
+
+    // ================= Poses =================
+    function setPose(name) {
+      // reset
+      armL.rotation.set(0, 0, 0); armR.rotation.set(0, 0, 0);
+      legL.rotation.set(0, 0, 0); legR.rotation.set(0, 0, 0);
+      headGroup.rotation.set(0, 0, 0);
+      g.rotation.z = 0;
+      if (name === 'hi') {
+        armR.rotation.z = Math.PI - 0.25;         // one flat hand raised: hello
+        headGroup.rotation.z = 0.12;
+      } else if (name === 'spin') {
+        armL.rotation.z = -Math.PI / 2 + 0.2;     // a wooden ballerina, stopped
+        armR.rotation.z = Math.PI / 2 - 0.2;
+        legR.rotation.x = -0.9;
+        g.rotation.z = 0.06;
+        headGroup.rotation.y = 0.7;
+      } else if (name === 'smear') {
+        g.rotation.z = 0.0;
+        armL.rotation.x = -1.1;                   // both hands at the face
+        armR.rotation.x = -1.15;
+        armL.rotation.z = -0.25; armR.rotation.z = 0.25;
+        headGroup.rotation.x = 0.35;
+      } else if (name === 'menace') {
+        armR.rotation.x = -Math.PI + 0.4;         // hand high, about to spear
+        headGroup.rotation.x = -0.15;
+      }
+    }
+
+    // ================= Brain =================
+    // dormant | lurk | roam | chase | rage | frozen | banging | menace | destroyed
+    var mode = 'dormant';
+    var pos = { x: LURKS[2].x, z: LURKS[2].z };
+    var facing = 0;
+    var lurkIndex = 2;
+    var lurkT = 0;
+    var lurkScale = 1;          // tests shrink the 5–25 minute waits
+    var roamTarget = null;      // {x,z, hunt:bool}
+    var wpIndex = 0, wpDir = 1;
+    var lastSeen = 0;
+    var staggerT = 0, freezeT = 0, bangT = 0, menaceT = 0, rageT = 0;
+    var hits = 0;
+    var walkT = 0;
+    var bloodied = false;
+    var armsLeft = 2;
+    var headOn = true;
+    var spottedOnce = false;
+    var menaceCam = -1;
+    var watched = false;
+
+    function lurkDuration() { return (300 + Math.random() * 1200) * lurkScale; }
+
     function segmentHitsBox(x1, z1, x2, z2, b) {
       var dx = x2 - x1, dz = z2 - z1;
       var tmin = 0, tmax = 1;
-      if (Math.abs(dx) < 1e-9) {
-        if (x1 < b.x1 || x1 > b.x2) return false;
-      } else {
+      if (Math.abs(dx) < 1e-9) { if (x1 < b.x1 || x1 > b.x2) return false; }
+      else {
         var tx1 = (b.x1 - x1) / dx, tx2 = (b.x2 - x1) / dx;
         tmin = Math.max(tmin, Math.min(tx1, tx2));
         tmax = Math.min(tmax, Math.max(tx1, tx2));
       }
-      if (Math.abs(dz) < 1e-9) {
-        if (z1 < b.z1 || z1 > b.z2) return false;
-      } else {
+      if (Math.abs(dz) < 1e-9) { if (z1 < b.z1 || z1 > b.z2) return false; }
+      else {
         var tz1 = (b.z1 - z1) / dz, tz2 = (b.z2 - z1) / dz;
         tmin = Math.max(tmin, Math.min(tz1, tz2));
         tmax = Math.min(tmax, Math.max(tz1, tz2));
       }
       return tmax >= tmin;
     }
-
     function losClear(x1, z1, x2, z2) {
       var walls = level.wallBoxes;
-      for (var i = 0; i < walls.length; i++) {
-        if (segmentHitsBox(x1, z1, x2, z2, walls[i])) return false;
-      }
+      for (var i = 0; i < walls.length; i++) if (segmentHitsBox(x1, z1, x2, z2, walls[i])) return false;
       var cols = level.colliders;
       for (var j = 0; j < cols.length; j++) {
         var c = cols[j];
-        if (!c.id) continue;
-        if (level.isDoorOpen(c.id)) continue;
-        if (c.id === 'cage') continue;                 // bars, not a wall
+        if (!c.id || c.id === 'cage') continue;
+        if (c.id.indexOf('seal') === 0) { if (!api.isSealActive(c.id)) continue; }
+        else if (level.isDoorOpen(c.id)) continue;
         if (segmentHitsBox(x1, z1, x2, z2, c)) return false;
       }
       return true;
     }
 
-    // Movement collides with walls and closed doors; doors it simply
-    // slams open. It does not path around furniture — it is the reason
-    // the furniture is broken.
     function move(nx, nz) {
-      var boxes = level.wallBoxes;
       var r = RADIUS;
       function push(b) {
         if (nx + r < b.x1 || nx - r > b.x2 || nz + r < b.z1 || nz - r > b.z2) return;
@@ -1516,49 +1716,32 @@
         if (mx < mz) nx += (pxl < pxr) ? -mx : mx;
         else nz += (pzt < pzb) ? -mz : mz;
       }
+      var boxes = level.wallBoxes;
       for (var i = 0; i < boxes.length; i++) push(boxes[i]);
       for (var j = 0; j < level.colliders.length; j++) {
         var c = level.colliders[j];
-        if (!c.id || level.isDoorOpen(c.id)) continue;
+        if (!c.id) continue;
+        if (c.id.indexOf('seal') === 0) {
+          if (api.isSealActive(c.id)) push(c);   // tungsten does not negotiate
+          continue;
+        }
+        if (level.isDoorOpen(c.id)) continue;
         if (c.id === 'barricade' || c.id === 'cage') { push(c); continue; }
-        // a closed door in its way gets opened, hard
         var cx = Math.max(c.x1, Math.min(nx, c.x2));
         var cz = Math.max(c.z1, Math.min(nz, c.z2));
         if ((nx - cx) * (nx - cx) + (nz - cz) * (nz - cz) < 1.1) {
           level.toggleDoor(c.id);
           if (api.onDoorSlam) api.onDoorSlam(c.id);
-        } else {
-          push(c);
-        }
+        } else push(c);
       }
       return { x: nx, z: nz };
-    }
-
-    // ---------------- Brain ----------------
-    var mode = 'dormant';       // dormant | patrol | chase
-    var pos = { x: PATROL[0][0], z: PATROL[0][1] };
-    var facing = 0;
-    var wpIndex = 1, wpDir = 1;
-    var lastSeen = 0;
-    var staggerT = 0;
-    var stepAccum = 0;
-    var hits = 0;
-    var walkT = 0;
-    var spottedOnce = false;
-
-    function nearestWaypoint() {
-      var best = 0, bd = Infinity;
-      for (var i = 0; i < PATROL.length; i++) {
-        var d = (PATROL[i][0] - pos.x) * (PATROL[i][0] - pos.x) + (PATROL[i][1] - pos.z) * (PATROL[i][1] - pos.z);
-        if (d < bd) { bd = d; best = i; }
-      }
-      return best;
     }
 
     function canSee(px, pz) {
       var dx = px - pos.x, dz = pz - pos.z;
       var dist = Math.hypot(dx, dz);
-      if (dist < SENSE_RANGE) return true;
+      // it can smell you this close — but not through tungsten
+      if (dist < SENSE_RANGE) return losClear(pos.x, pos.z, px, pz);
       if (dist > SIGHT_RANGE) return false;
       var ang = Math.atan2(-dx, -dz);
       var diff = Math.atan2(Math.sin(ang - facing), Math.cos(ang - facing));
@@ -1566,116 +1749,330 @@
       return losClear(pos.x, pos.z, px, pz);
     }
 
+    function nearestWaypoint(x, z) {
+      var best = 0, bd = Infinity;
+      for (var i = 0; i < PATROL.length; i++) {
+        var d = (PATROL[i][0] - x) * (PATROL[i][0] - x) + (PATROL[i][1] - z) * (PATROL[i][1] - z);
+        if (d < bd) { bd = d; best = i; }
+      }
+      return best;
+    }
+
+    function beginLurk(index) {
+      lurkIndex = index === undefined ? Math.floor(Math.random() * LURKS.length) : index;
+      var spot = LURKS[lurkIndex];
+      pos.x = spot.x; pos.z = spot.z;
+      mode = 'lurk';
+      lurkT = lurkDuration();
+      setPose(spot.pose);
+      if (spot.id === 'storage' && !bloodied) {
+        bloodied = true;
+        meshes.blood.forEach(function (b) { b.visible = true; });
+        torso.material = birchBloody;
+        head.material = birchBloody;
+      }
+      if (api.onLurk) api.onLurk(spot.id);
+    }
+
+    function beginRoam() {
+      setPose('walk');
+      var hunt = Math.random() < 0.5;
+      if (hunt) roamTarget = { x: 0, z: 0.9, hunt: true };       // it comes to Waiting
+      else {
+        var next = (lurkIndex + 1 + Math.floor(Math.random() * (LURKS.length - 1))) % LURKS.length;
+        roamTarget = { x: LURKS[next].x, z: LURKS[next].z, hunt: false, lurk: next };
+      }
+      wpIndex = nearestWaypoint(pos.x, pos.z);
+      mode = 'roam';
+      if (api.onWindup) api.onWindup();
+      // does it pass one of the player's cameras on the way?
+      if (api.findCameraNear) {
+        var cam = api.findCameraNear(pos.x, pos.z, roamTarget.x, roamTarget.z);
+        if (cam >= 0 && Math.random() < 0.4) {
+          menaceCam = cam;
+          menaceT = 8;
+          mode = 'menace';
+          drawFace('blood');
+          setPose('menace');
+          var cp = api.cameraPos(cam);
+          if (cp) { pos.x = cp.x; pos.z = cp.z; }
+          return;
+        }
+      }
+    }
+
+    function beginRage() {
+      mode = 'rage';
+      rageT = 75;
+      drawFace('sharpie');
+      setPose('walk');
+      if (api.onRage) api.onRage();
+    }
+
     var api = {
       group: g,
-      onCaught: null,
-      onDoorSlam: null,
-      onStep: null,
-      onSpotted: null,
+      onCaught: null, onDoorSlam: null, onStep: null, onSpotted: null,
+      onLurk: null, onRage: null, onBang: null, onWindup: null,
+      onCameraDestroyed: null, onArmBroken: null, onHeadBroken: null,
+      // supplied by the engine:
+      isSealActive: function () { return false; },
+      findCameraNear: null, cameraPos: null,
 
       activate: function () {
         if (mode !== 'dormant') return;
-        mode = 'patrol';
-        pos.x = PATROL[0][0]; pos.z = PATROL[0][1];
-        wpIndex = 1; wpDir = 1;
         g.visible = true;
+        beginLurk();
       },
       reset: function () {
-        if (mode === 'dormant') return;
-        mode = 'patrol';
-        pos.x = PATROL[0][0]; pos.z = PATROL[0][1];
-        wpIndex = 1; wpDir = 1;
-        staggerT = 0;
-        g.position.set(pos.x, 0, pos.z);
+        if (mode === 'dormant' || mode === 'destroyed') return;
+        staggerT = freezeT = bangT = menaceT = rageT = 0;
+        drawFace(bloodied ? 'none' : 'none');
+        beginLurk();
       },
-      hitShot: function () {
-        if (mode === 'dormant') return false;
-        hits++;
-        staggerT = 1.1;
-        if (mode === 'patrol') { mode = 'chase'; lastSeen = 0; }
+      freeze: function (seconds) {
+        if (mode === 'destroyed' || mode === 'dormant') return false;
+        freezeT = seconds;
+        mode = 'frozen';
         return true;
       },
+      shockAtCage: function () {
+        if (mode === 'lurk' && LURKS[lurkIndex].id === 'cage') return api.freeze(100);
+        return false;
+      },
+      hitShot: function (stagger) {
+        if (mode === 'dormant' || mode === 'destroyed') return false;
+        hits++;
+        staggerT = Math.max(staggerT, stagger || 1.1);
+        if (mode === 'lurk' || mode === 'roam' || mode === 'menace') { mode = 'chase'; lastSeen = 0; setPose('walk'); }
+        if (hits === 6 && rageT <= 0) beginRage();
+        return true;
+      },
+      // the riot shield turns its own attacks against it
+      breakArm: function () {
+        if (armsLeft <= 0) return false;
+        armsLeft--;
+        var which = armsLeft === 1 ? armR : armL;
+        which.visible = false;
+        dropPiece([0.06, 1.5, 0.08], pos.x, pos.z);
+        if (api.onArmBroken) api.onArmBroken(armsLeft);
+        staggerT = 1.6;
+        return true;
+      },
+      breakHead: function () {
+        if (!headOn) return false;
+        headOn = false;
+        headGroup.visible = false;
+        dropPiece([0.24, 0.32, 0.24], pos.x, pos.z);
+        mode = 'destroyed';
+        // the body folds where it stands
+        g.rotation.x = Math.PI / 2 - 0.15;
+        g.position.y = 0.35;
+        if (api.onHeadBroken) api.onHeadBroken(pos.x, pos.z);
+        return true;
+      },
+      setWatched: function (w) { watched = w; },
+      los: function (x1, z1, x2, z2) { return losClear(x1, z1, x2, z2); },
+      setLurkScale: function (s) { lurkScale = s; },
 
       update: function (dt, px, pz) {
-        if (mode === 'dormant') return;
+        if (mode === 'dormant' || mode === 'destroyed') return;
 
         var dx = px - pos.x, dz = pz - pos.z;
         var dist = Math.hypot(dx, dz);
 
+        // being caught does not care what state it is in — but a flat
+        // hand cannot pass through a wall or a sealed shutter
+        if (dist < CATCH_DIST && mode !== 'frozen' && api.onCaught &&
+            losClear(pos.x, pos.z, px, pz)) api.onCaught(armsLeft, headOn);
+
+        if (mode === 'frozen') {
+          freezeT -= dt;
+          if (freezeT <= 0) beginLurk(lurkIndex);
+          return;
+        }
+
         if (staggerT > 0) {
           staggerT -= dt;
           g.rotation.x = -0.12 * Math.max(0, staggerT);
-        } else {
-          g.rotation.x = 0;
+          g.position.set(pos.x, 0, pos.z);
+          return;
+        }
+        if (mode !== 'destroyed') g.rotation.x = 0;
 
-          var speed, tx, tz;
-          if (mode === 'chase') {
+        if (mode === 'menace') {
+          menaceT -= dt;
+          if (menaceT <= 0) {
+            if (api.onCameraDestroyed) api.onCameraDestroyed(menaceCam);
+            drawFace(rageT > 0 ? 'sharpie' : 'none');
+            menaceCam = -1;
+            beginRoam();
+          }
+          g.position.set(pos.x, 0, pos.z);
+          return;
+        }
+
+        if (mode === 'banging') {
+          bangT -= dt;
+          if (api.onBang && Math.random() < dt * 1.4) api.onBang(dist);
+          if (bangT <= 0) {
+            if (Math.random() < 0.35) beginRage();
+            else beginLurk();
+          }
+          return;
+        }
+
+        if (mode === 'lurk') {
+          // it moves only when nobody is looking at it
+          lurkT -= dt;
+          if (!watched && lurkT <= 0) beginRoam();
+          if (canSee(px, pz) && dist < 7 && !watched) { mode = 'chase'; lastSeen = 0; setPose('walk'); }
+          g.position.set(pos.x, 0, pos.z);
+          return;
+        }
+
+        var moving = false;
+        var speed = 0, tx = pos.x, tz = pos.z;
+
+        if (mode === 'chase' || mode === 'rage') {
+          if (mode === 'rage') {
+            rageT -= dt;
+            if (rageT <= 0) { drawFace(bloodied ? 'none' : 'none'); beginLurk(); return; }
+            speed = RAGE_SPEED; tx = px; tz = pz;      // rage always knows
+            moving = true;
+          } else {
             if (canSee(px, pz)) lastSeen = 0; else lastSeen += dt;
-            if (lastSeen > LOSE_AFTER) {
-              mode = 'patrol';
-              wpIndex = nearestWaypoint(); wpDir = 1;
-            }
-          } else if (canSee(px, pz)) {
-            mode = 'chase';
-            lastSeen = 0;
+            if (lastSeen > LOSE_AFTER) { beginLurk(); return; }
+            speed = CHASE_SPEED; tx = px; tz = pz;
+            moving = true;
+          }
+        } else if (mode === 'roam') {
+          // pinned by a look, exactly like the lurk
+          if (watched) { g.position.set(pos.x, 0, pos.z); return; }
+          if (canSee(px, pz)) {
+            mode = 'chase'; lastSeen = 0;
             if (!spottedOnce) { spottedOnce = true; if (api.onSpotted) api.onSpotted(true); }
             else if (api.onSpotted) api.onSpotted(false);
+            return;
           }
-
-          if (mode === 'chase') {
-            speed = CHASE_SPEED; tx = px; tz = pz;
-          } else {
-            speed = PATROL_SPEED;
-            var wp = PATROL[wpIndex];
+          speed = ROAM_SPEED;
+          var wp = PATROL[wpIndex];
+          var targetNear = Math.hypot(roamTarget.x - pos.x, roamTarget.z - pos.z);
+          if (targetNear < 12 || wpIndex < 0) { tx = roamTarget.x; tz = roamTarget.z; }
+          else {
             tx = wp[0]; tz = wp[1];
-            if (Math.hypot(tx - pos.x, tz - pos.z) < 0.6) {
-              wpIndex += wpDir;
-              if (wpIndex >= PATROL.length) { wpIndex = PATROL.length - 2; wpDir = -1; }
-              if (wpIndex < 0) { wpIndex = 1; wpDir = 1; }
+            if (Math.hypot(tx - pos.x, tz - pos.z) < 0.7) {
+              var targetWp = nearestWaypoint(roamTarget.x, roamTarget.z);
+              wpIndex += (targetWp > wpIndex) ? 1 : (targetWp < wpIndex ? -1 : 0);
             }
           }
+          moving = true;
+          if (targetNear < 0.9) {
+            if (roamTarget.hunt) { beginLurk(); return; }
+            beginLurk(roamTarget.lurk);
+            return;
+          }
+          // a sealed shutter in its path stops it dead
+          if (roamTarget.hunt) {
+            var sealHit = api.isSealActive('sealWest') && Math.abs(pos.x + 8) < 2.2 && Math.abs(pos.z) < 2.5 ? 'sealWest'
+              : api.isSealActive('sealEast') && Math.abs(pos.x - 8) < 2.2 && Math.abs(pos.z) < 2.5 ? 'sealEast' : null;
+            if (sealHit) {
+              mode = 'banging';
+              bangT = 9;
+              if (api.onBang) api.onBang(dist);
+              return;
+            }
+          }
+        }
 
+        if (moving) {
           var mdx = tx - pos.x, mdz = tz - pos.z;
           var mlen = Math.hypot(mdx, mdz) || 1;
           var want = Math.atan2(-mdx, -mdz);
           var turn = Math.atan2(Math.sin(want - facing), Math.cos(want - facing));
-          facing += Math.max(-2.6 * dt, Math.min(2.6 * dt, turn));
-
+          facing += Math.max(-3 * dt, Math.min(3 * dt, turn));
           var resolved = move(pos.x + (mdx / mlen) * speed * dt, pos.z + (mdz / mlen) * speed * dt);
           pos.x = resolved.x; pos.z = resolved.z;
 
-          // footsteps: the whole building hears wood on concrete
-          stepAccum += speed * dt;
-          var stride = mode === 'chase' ? 1.35 : 1.75;
-          if (stepAccum > stride) {
-            stepAccum = 0;
-            if (api.onStep) api.onStep(dist, mode === 'chase');
-          }
-
-          if (dist < CATCH_DIST && api.onCaught) api.onCaught();
+          stepAccumulate(dt, speed, dist);
         }
 
-        walkT += dt * (mode === 'chase' ? 8 : 4.4);
-        g.position.set(pos.x, Math.sin(walkT) * 0.045, pos.z);
+        // ---------------- presentation ----------------
+        walkT += dt * (mode === 'rage' ? 9 : mode === 'chase' ? 7 : 4.2);
+        var wallCrawl = mode === 'rage' && isInCorridor(pos.x, pos.z);
+        if (wallCrawl) {
+          // in its rage it takes to the walls
+          g.position.set(pos.x, 1.1 + Math.sin(walkT * 0.7) * 0.2, pos.z);
+          g.rotation.z = 0.9;
+        } else {
+          g.rotation.z = 0;
+          g.position.set(pos.x, Math.abs(Math.sin(walkT)) * 0.05, pos.z);
+        }
         g.rotation.y = facing;
-        armL.rotation.x = Math.sin(walkT * 0.5) * 0.28;
-        armR.rotation.x = -Math.sin(walkT * 0.5) * 0.28;
-        var breathe = 1 + Math.sin(walkT * 0.23) * 0.01;
-        torso.scale.set(breathe, 1, breathe);
-        head.rotation.y = Math.sin(walkT * 0.31) * 0.4;
+        if (moving) {
+          legL.rotation.x = Math.sin(walkT) * 0.5;
+          legR.rotation.x = -Math.sin(walkT) * 0.5;
+          if (armsLeft > 0) armL.rotation.x = -Math.sin(walkT) * 0.3;
+          if (armsLeft > 1) armR.rotation.x = Math.sin(walkT) * 0.3;
+          if (mode === 'chase' && armsLeft > 1) armR.rotation.x = -2.4;  // hand already up
+        }
+        if (mode === 'rage') {
+          headGroup.rotation.y += dt * 5;          // the head goes all the way around
+        } else if (mode === 'chase') {
+          headGroup.rotation.y = 0;
+        } else {
+          headGroup.rotation.y = Math.sin(walkT * 0.2) * 0.6;
+        }
+        if (armsLeft === 0 && headOn) {
+          // nothing left but the desperate lean
+          g.rotation.x = 0.28;
+        }
       },
 
       getState: function () {
-        return { mode: mode, x: pos.x, z: pos.z, hits: hits, facing: facing };
+        return {
+          mode: mode, x: pos.x, z: pos.z, hits: hits, facing: facing,
+          lurk: mode === 'lurk' ? LURKS[lurkIndex].id : null,
+          bloodied: bloodied, armsLeft: armsLeft, headOn: headOn,
+          raging: rageT > 0, watched: watched
+        };
       },
-      // test hook — place it and set its mind directly
-      force: function (x, z, m) {
+      force: function (x, z, m, lurkId) {
         pos.x = x; pos.z = z;
-        if (m) mode = m;
+        staggerT = freezeT = bangT = menaceT = 0;
+        if (m) {
+          mode = m;
+          if (m === 'lurk') {
+            beginLurk(lurkId !== undefined ? lurkId : lurkIndex);
+          }
+          if (m === 'roam') {
+            // forcing a roam always means a fresh hunt toward Waiting —
+            // a stale target from an earlier roam must never leak in
+            roamTarget = { x: 0, z: 0.9, hunt: true };
+            wpIndex = nearestWaypoint(x, z);
+            setPose('walk');
+          }
+          if (m !== 'rage') rageT = 0;
+          if (m === 'rage') beginRage();
+        }
         if (mode !== 'dormant') g.visible = true;
         g.position.set(pos.x, 0, pos.z);
       }
     };
+
+    var stepClock = 0;
+    function stepAccumulate(dt, speed, dist) {
+      stepClock += speed * dt;
+      var stride = mode === 'rage' ? 1.2 : mode === 'chase' ? 1.35 : 1.75;
+      if (stepClock > stride) {
+        stepClock = 0;
+        if (api.onStep) api.onStep(dist, mode === 'chase' || mode === 'rage');
+      }
+    }
+
+    function isInCorridor(x, z) {
+      var r = level.roomAt(x, z);
+      return r && (r.id === 'hallL' || r.id === 'hallR' || r.id === 'hallS' || r.id === 'hallE');
+    }
 
     return api;
   };
@@ -2250,7 +2647,8 @@
       box(0.12, 2.3, 0.14, MAT.darkMetal, 0, 1.15, 7);
       var gl = box(1.5, 2.2, 0.06, MAT.glass, -0.8, 1.1, 7);
       var gr = box(1.5, 2.2, 0.06, MAT.glass, 0.8, 1.1, 7);
-      solid(-1.6, 6.9, 1.6, 7.1);
+      solid(-1.6, 6.9, 1.6, 7.1, 'entrance');
+      window.__entranceGlass = [gl, gr];
       interact(gl, { id: 'entranceDoor', label: 'Entrance', verb: 'Try' });
       interact(gr, { id: 'entranceDoor', label: 'Entrance', verb: 'Try' });
 
@@ -2306,6 +2704,20 @@
       box(0.06, 0.2, 0.07, MAT.plastic, -7.75, 1.5, -3.2, Math.PI / 2);
       interact(phoneBody, { id: 'phone', label: 'Telephone', verb: 'Use' });
     })();
+
+    // ===================================================================
+    // HARD SEAL — tungsten shutters over Waiting's two corridor doorways.
+    // Earthquake doors, meant to keep the building out of the room.
+    // ===================================================================
+    var sealMeshes = {};
+    [['sealWest', -7.7], ['sealEast', 7.7]].forEach(function (sd) {
+      var m = box(0.22, 2.4, 3.1, new THREE.MeshStandardMaterial({
+        color: 0x565c60, map: texMetal, bumpMap: texMetal, bumpScale: 0.1,
+        roughness: 0.45, metalness: 0.7
+      }), sd[1], 3.6 + 1.2, 0);   // parked up inside the ceiling void
+      sealMeshes[sd[0]] = m;
+      solid(sd[1] - 0.13, -1.55, sd[1] + 0.13, 1.55, sd[0]);
+    });
 
     // ===================================================================
     // CORRIDORS — long, and badly lit
@@ -2379,6 +2791,23 @@
         gm.rotation.z = 0.3 + g * 0.04;
         gm.position.set(-53 + g * 0.18, 0.012, 2.6 + g * 0.1);
         group.add(gm);
+      }
+
+      // The security-camera crate — the reason to come in here first.
+      var camCrate = box(0.9, 0.6, 0.7, MAT.wood, -59.5, 0.31, 5.2, 0.2);
+      box(0.7, 0.24, 0.02, new THREE.MeshStandardMaterial({
+        map: T.sign(THREE, 'SECURITY', { fontSize: 30 }), roughness: 0.7
+      }), -59.48, 0.42, 5.56, 0.2);
+      interact(camCrate, { id: 'cameraCrate', label: 'Crate marked SECURITY', verb: 'Open' });
+      solid(-60.0, 4.8, -59.0, 5.6);
+
+      // Loose stock: crates you can actually open.
+      for (var lc = 0; lc < 14; lc++) {
+        var lx = -62.5 + (lc % 7) * 2.1 + Math.random() * 0.5;
+        var lz = -8.8 + Math.floor(lc / 7) * 2.4 + Math.random() * 0.6;
+        var crate = box(0.72, 0.6, 0.72, MAT.wood, lx, 0.31, lz, Math.random() * 0.5);
+        interact(crate, { id: 'lootCrate', idx: lc, label: 'Supply crate', verb: 'Open' });
+        solid(lx - 0.4, lz - 0.4, lx + 0.4, lz + 0.4);
       }
 
       var keyMesh = box(0.11, 0.02, 0.04, new THREE.MeshStandardMaterial({ color: 0xc7b26a, roughness: 0.35, metalness: 0.85 }), -51.6, 0.63, 4.7);
@@ -2634,7 +3063,8 @@
 
       box(0.06, 1.9, 1.4, MAT.metal, 71.2, 1.15, 61.4);
       solid(71.17, 60.7, 71.23, 62.1);
-      box(0.44, 0.42, 0.34, new THREE.MeshStandardMaterial({ color: 0xd6d8d4, roughness: 0.35 }), 70.6, 0.21, 61.6);
+      interact(box(0.44, 0.42, 0.34, new THREE.MeshStandardMaterial({ color: 0xd6d8d4, roughness: 0.35 }), 70.6, 0.21, 61.6),
+        { id: 'toilet', label: 'Toilet', verb: 'Use' });
       box(0.44, 0.16, 0.5, new THREE.MeshStandardMaterial({ color: 0xd6d8d4, roughness: 0.3 }), 73.6, 0.86, 59.2);
     })();
 
@@ -2720,7 +3150,8 @@
       for (var s = 0; s < 3; s++) {
         var sx = -21.2 + s * 1.7;
         box(0.4, 0.5, 0.14, porcelain, sx + 0.2, 0.66, -8.52);                     // cistern
-        cyl(0.19, 0.19, 0.05, porcelain, sx + 0.2, 0.45, -8.05, 14);              // seat
+        interact(cyl(0.19, 0.19, 0.05, porcelain, sx + 0.2, 0.45, -8.05, 14),
+          { id: 'toilet', label: 'Toilet', verb: 'Use' });
         if (s === 0) {
           box(0.72, 1.6, 0.03, MAT.metal, sx + 0.62, 1.05, -6.75, 0.55);          // ajar
         } else if (s === 1) {
@@ -2866,6 +3297,8 @@
     return {
       colliders: colliders,
       wallBoxes: wallBoxes,
+      lightFixtures: lights,
+      sealMeshes: sealMeshes,
       interactables: interactables,
       updates: updates,
       roomAt: roomAt,
@@ -3235,6 +3668,41 @@
         if (!started) return;
         master.gain.setTargetAtTime(m ? 0 : 0.9, now(), 0.15);
       },
+      windup: function (dist) {
+        // gears taking up slack before it moves
+        var a = Math.max(0.1, 1 - (dist || 10) / 45);
+        for (var i = 0; i < 9; i++) {
+          noiseHit({ at: i * 0.07, dur: 0.02, type: 'highpass', freq: 2800 + i * 140, gain: 0.02 * a });
+        }
+        tone({ dur: 0.7, freq: 160, to: 340, type: 'triangle', gain: 0.02 * a, attack: 0.2 });
+      },
+      bang: function (dist) {
+        var a = Math.max(0.15, 1 - (dist || 10) / 50);
+        for (var i = 0; i < 3; i++) {
+          noiseHit({ at: i * 0.4, dur: 0.3, freq: 600, sweepTo: 80, gain: 0.3 * a });
+          tone({ at: i * 0.4, freq: 55, to: 34, dur: 0.4, gain: 0.22 * a });
+        }
+      },
+      zap: function () {
+        noiseHit({ dur: 1.2, type: 'highpass', freq: 2400, gain: 0.16 });
+        tone({ dur: 1.1, freq: 120, type: 'square', gain: 0.07, wobble: { rate: 30, depth: 60 } });
+      },
+      shotgun: function () {
+        noiseHit({ dur: 0.5, freq: 5200, sweepTo: 140, gain: 0.7 });
+        tone({ freq: 110, to: 30, dur: 0.4, type: 'square', gain: 0.3 });
+      },
+      consume: function (kind) {
+        if (kind === 'water') { for (var i = 0; i < 3; i++) tone({ at: i * 0.24, freq: 320 - i * 40, dur: 0.1, gain: 0.05 }); }
+        else if (kind === 'beans') { noiseHit({ dur: 0.3, freq: 900, sweepTo: 300, gain: 0.05 }); }
+        else { noiseHit({ dur: 0.5, type: 'highpass', freq: 3000, gain: 0.045 }); tone({ freq: 660, to: 880, dur: 0.3, gain: 0.03 }); }
+      },
+      vomit: function () { noiseHit({ dur: 0.7, freq: 700, sweepTo: 200, gain: 0.1 }); },
+      flush: function () { noiseHit({ dur: 1.6, freq: 1400, sweepTo: 300, gain: 0.09, attack: 0.15 }); },
+      sealSlam: function () {
+        noiseHit({ dur: 0.5, freq: 900, sweepTo: 70, gain: 0.4 });
+        tone({ freq: 50, to: 30, dur: 0.7, gain: 0.3 });
+        tone({ at: 0.05, freq: 1870, dur: 0.2, gain: 0.03 });
+      },
       entityStep: function (dist, chasing) {
         // wood on concrete, carrying down the corridors
         var atten = Math.max(0, 1 - dist / 42);
@@ -3242,6 +3710,9 @@
         var v = atten * atten * (chasing ? 1.25 : 1);
         tone({ freq: 82 + Math.random() * 14, to: 46, dur: 0.16, gain: 0.14 * v });
         noiseHit({ dur: 0.09, freq: 340, sweepTo: 110, gain: 0.09 * v });
+        // the gears, always — a small ratchet under every step
+        noiseHit({ at: 0.03, dur: 0.014, type: 'highpass', freq: 3400, gain: 0.02 * v });
+        noiseHit({ at: 0.055, dur: 0.012, type: 'highpass', freq: 3900, gain: 0.014 * v });
         if (dist < 9) {
           // near enough to hear the joints
           tone({ at: 0.05, freq: 620 + Math.random() * 300, to: 480, dur: 0.09, type: 'triangle', gain: 0.012 * v, wobble: { rate: 11, depth: 50 } });
@@ -3351,11 +3822,33 @@
       room: null,
       seenAssembly: false,
       dead: false,
-      deaths: 0
+      deaths: 0,
+      deathReason: null,
+      // survival
+      hunger: 10, thirst: 10, energy: 20,
+      waterN: 0, beansN: 0, fuelN: 0,
+      fuelStreak: 0, fueled: false,
+      gut: 0, bladder: 0, needToilet: false,
+      collapseT: 0, starveT: 0, hallucinating: false,
+      // security
+      cams: 0, seals: { sealWest: false, sealEast: false },
+      // arsenal
+      weapon: 'glock', shells: 0, arRounds: 0,
+      hasShotgun: false, hasAR: false, riotGear: false,
+      keycard: false, entranceOpen: false, ended: false,
+      attackCd: 0
     };
+    var planted = [];          // {x,z,facing,alive,mesh}
+    var openedCrates = {};
+    var debugChance = {};      // test hook: force named rolls
+    function chance(name, p) {
+      if (debugChance[name] !== undefined) return debugChance[name];
+      return Math.random() < p;
+    }
     var MAG_SIZE = 17;
 
     var audio = createAudio();
+    function say(text) { if (ui.onMessage) ui.onMessage(text); }
 
     // ---------------- Input ----------------
     var keys = { f: false, b: false, l: false, r: false, tl: false, tr: false };
@@ -3387,6 +3880,13 @@
         case 'ControlLeft': case 'ControlRight': case 'KeyC': setStance('crouch'); break;
         case 'KeyZ': setStance('crawl'); break;
         case 'KeyR': reload(); break;
+        case 'KeyF': plantCamera(); break;
+        case 'Digit1': switchWeapon('glock'); break;
+        case 'Digit2': switchWeapon('shotgun'); break;
+        case 'Digit3': switchWeapon('ar'); break;
+        case 'Digit4': consume('water'); break;
+        case 'Digit5': consume('beans'); break;
+        case 'Digit6': consume('fuel'); break;
         default: return;
       }
       if (active) e.preventDefault();
@@ -3493,7 +3993,11 @@
       var r = PLAYER_RADIUS;
       for (var i = 0; i < colliders.length; i++) {
         var c = colliders[i];
-        if (c.id && level.isDoorOpen(c.id)) continue;
+        if (c.id === 'sealWest' || c.id === 'sealEast') {
+          if (!state.seals[c.id]) continue;      // shutter parked in the ceiling
+        } else if (c.id === 'entrance') {
+          if (state.entranceOpen) continue;
+        } else if (c.id && level.isDoorOpen(c.id)) continue;
         // The barricade has a gap you can only take on your belly.
         if (c.id === 'barricade' && state.stance === 'crawl') continue;
         if (nx + r < c.x1 || nx - r > c.x2 || nz + r < c.z1 || nz - r > c.z2) continue;
@@ -3585,6 +4089,13 @@
           if (ui.showComputer) ui.showComputer(state.wifiConnected);
           break;
         case 'entranceDoor':
+          if (state.keycard && !state.entranceOpen) {
+            state.entranceOpen = true;
+            if (window.__entranceGlass) window.__entranceGlass.forEach(function (m) { m.visible = false; });
+            if (audio) audio.unlock();
+            say('The reader blinks green. The glass swings loose. Outside is outside.');
+            break;
+          }
           if (audio) audio.locked();
           say('The glass does not move. Whatever is on the other side, you cannot see it.');
           break;
@@ -3615,13 +4126,6 @@
           if (audio) audio.pickup();
           say('Glock 19, and two magazines. Thirty-four rounds. There will not be more.');
           refreshHud();
-          if (entity) {
-            entity.activate();
-            if (audio) audio.doorSlam(40);
-            setTimeout(function () {
-              if (ui.onMessage) ui.onMessage('Somewhere far away, a door slams open.');
-            }, 1400);
-          }
           break;
         case 'blueprint':
           state.readBlueprint = true;
@@ -3639,6 +4143,62 @@
         case 'cage':
           say('HOLDING — SUBJECT SECURE. The bars are bent outward. It was not let out.');
           break;
+        case 'cameraCrate':
+          if (state.cams > 0 || focused.userData.opened) { say('Empty. The foam cutouts are shaped like cameras.'); break; }
+          focused.userData.opened = true;
+          state.cams += 5;
+          if (audio) audio.pickup();
+          say('Five security cameras. Place them with F.');
+          refreshHud();
+          if (entity) {
+            entity.activate();
+            setTimeout(function () {
+              if (ui.onMessage) ui.onMessage('Above you, something long slides out of a vent. It knows your blood.');
+            }, 1500);
+            if (audio) setTimeout(function () { audio.doorSlam(30); }, 700);
+          }
+          break;
+        case 'lootCrate': {
+          var idx = d.idx;
+          if (openedCrates[idx]) { say('Already open. Packing straw.'); break; }
+          openedCrates[idx] = true;
+          var got = [];
+          if (chance('cameras', 0.30)) { state.cams += 5; got.push('a bundle of five cameras'); }
+          if (chance('ammo', 0.10)) { state.ammo += 17; got.push('a box of 9mm'); }
+          if (chance('gun', 0.02)) {
+            if (Math.random() < 0.5) { state.hasShotgun = true; state.shells += 6; got.push('a shotgun'); }
+            else { state.hasAR = true; state.arRounds += 30; got.push('an assault rifle'); }
+          }
+          if (chance('water', 0.50)) { state.waterN++; got.push('water'); }
+          if (chance('beans', 0.60)) { state.beansN++; got.push('beans'); }
+          if (chance('fuel', 0.25)) { state.fuelN++; got.push('GAMER ENERGY'); }
+          if (chance('riot', 0.09)) {
+            if (!state.riotGear) { state.riotGear = true; got.push('RIOT GEAR'); }
+            else got.push('spare riot padding');
+          }
+          if (audio) audio.pickup();
+          say(got.length ? 'Inside: ' + got.join(', ') + '.' : 'Packing straw and dust.');
+          refreshHud();
+          break;
+        }
+        case 'toilet':
+          if (state.needToilet) {
+            state.gut = 0; state.bladder = 0; state.needToilet = false;
+            if (audio) audio.flush();
+            say('Better. The flush echoes much too far.');
+          } else {
+            if (audio) audio.flush();
+            say('No need. The flush echoes anyway.');
+          }
+          refreshHud();
+          break;
+        case 'keycard':
+          state.keycard = true;
+          focused.visible = false;
+          if (audio) audio.pickup();
+          say('A keycard, warm from the machinery. Stamped: FRONT ENTRANCE.');
+          refreshHud();
+          break;
         case 'supplies':
           state.supplies = true;
           if (audio) audio.pickup();
@@ -3651,24 +4211,133 @@
       updateFocus();
     }
 
+    // ---------------- Cameras, consumables, seals ----------------
+    function plantCamera() {
+      if (!active || uiOpen || state.dead) return;
+      if (state.cams <= 0) { say('No cameras to place.'); return; }
+      state.cams--;
+      var mesh = new THREE.Group();
+      var body = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.08, 0.16),
+        new THREE.MeshStandardMaterial({ color: 0x22262a, roughness: 0.5 }));
+      var lens = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.03, 0.05, 8),
+        new THREE.MeshStandardMaterial({ color: 0x0a0c0e, roughness: 0.2 }));
+      lens.rotation.x = Math.PI / 2;
+      lens.position.z = 0.1;
+      mesh.add(body); mesh.add(lens);
+      mesh.position.set(camera.position.x, 2.35, camera.position.z);
+      mesh.rotation.y = yaw;
+      scene.add(mesh);
+      planted.push({ x: camera.position.x, z: camera.position.z, facing: yaw, alive: true, mesh: mesh });
+      if (audio) audio.ui();
+      say('Camera ' + planted.length + ' placed, watching the way you face.');
+      refreshHud();
+    }
+
+    function switchWeapon(w) {
+      if (!active || uiOpen) return;
+      if (w === 'shotgun' && !state.hasShotgun) return;
+      if (w === 'ar' && !state.hasAR) return;
+      if (w !== 'glock' && !state.hasGlock && w === 'glock') return;
+      state.weapon = w;
+      if (audio) audio.ui();
+      refreshHud();
+    }
+
+    var UNHINGED = [
+      'I could take him.',
+      'He is made of wood. I am made of ENERGY.',
+      'Blink. I dare you, plank.',
+      'My blood is nine percent taurine.',
+      'Try me, furniture.'
+    ];
+    function consume(kind) {
+      if (!active || uiOpen || state.dead) return;
+      if (kind === 'water') {
+        if (state.waterN <= 0) { say('No water.'); return; }
+        state.waterN--;
+        state.fuelStreak = 0;
+        if (state.thirst >= 9) { state.bladder++; }
+        state.thirst = Math.min(10, state.thirst + 5);
+        if (state.bladder >= 2) {
+          state.needToilet = true;
+          if (audio) audio.vomit();
+          say('Too much. It comes back up, and now you need the toilet as well.');
+          state.thirst = Math.max(0, state.thirst - 1);
+          state.hunger = Math.max(0, state.hunger - 1);
+        } else {
+          if (audio) audio.consume('water');
+          say('The water is warm and perfect.');
+        }
+      } else if (kind === 'beans') {
+        if (state.beansN <= 0) { say('No beans.'); return; }
+        state.beansN--;
+        state.fuelStreak = 0;
+        if (state.hunger >= 9) state.gut++;
+        state.hunger = Math.min(10, state.hunger + 3);
+        if (state.gut >= 2) {
+          state.needToilet = true;
+          say('Cold beans. Nick was right about the smell. You will need the toilet.');
+        } else {
+          say('Cold beans, straight from the can.');
+        }
+        if (audio) audio.consume('beans');
+      } else {
+        if (state.fuelN <= 0) { say('No GAMER ENERGY.'); return; }
+        state.fuelN--;
+        state.fuelStreak++;
+        state.energy = 25;
+        state.fueled = true;
+        if (audio) audio.consume('fuel');
+        if (state.fuelStreak >= 10 && chance('seizure', 0.25)) {
+          say('Your heart plays a drum solo. Then it stops.');
+          setTimeout(function () { die('seizure'); }, 1200);
+          return;
+        }
+        say(UNHINGED[Math.floor(Math.random() * UNHINGED.length)]);
+      }
+      refreshHud();
+    }
+
+    function setSeal(which) {
+      // one shutter at a time — sealing one raises the other
+      Object.keys(state.seals).forEach(function (k) { state.seals[k] = false; });
+      if (which) state.seals[which] = true;
+      if (audio) audio.sealSlam();
+      refreshHud();
+      return state.seals;
+    }
+
     // ---------------- Weapon ----------------
     function shoot() {
-      if (!state.hasGlock || uiOpen) return;
-      if (state.inMag <= 0) {
-        if (audio) audio.dryFire();
-        if (ui.onMessage) ui.onMessage(state.ammo > 0 ? 'Empty. Reload with R.' : 'Empty. There is no more ammunition.');
-        return;
+      if (!state.hasGlock || uiOpen || state.dead) return;
+      var stagger = 1.1;
+      if (state.weapon === 'shotgun') {
+        if (state.shells <= 0) { if (audio) audio.dryFire(); say('No shells.'); return; }
+        state.shells--;
+        stagger = 2.5;
+        if (audio) audio.shotgun();
+      } else if (state.weapon === 'ar') {
+        if (state.arRounds <= 0) { if (audio) audio.dryFire(); say('The rifle is dry.'); return; }
+        state.arRounds--;
+        stagger = 0.8;
+        if (audio) audio.gunshot();
+      } else {
+        if (state.inMag <= 0) {
+          if (audio) audio.dryFire();
+          if (ui.onMessage) ui.onMessage(state.ammo > 0 ? 'Empty. Reload with R.' : 'Empty. There is no more ammunition.');
+          return;
+        }
+        state.inMag--;
+        state.ammo--;
+        if (audio) audio.gunshot();
       }
-      state.inMag--;
-      state.ammo--;
-      if (audio) audio.gunshot();
       if (ui.onMuzzleFlash) ui.onMuzzleFlash();
       if (entity) {
         camera.updateMatrixWorld();
         gunRay.setFromCamera(centre, camera);
         var hitList = gunRay.intersectObject(entity.group, true);
         if (hitList.length > 0 && hitList[0].distance < 45) {
-          if (entity.hitShot()) {
+          if (entity.hitShot(stagger)) {
             if (audio) setTimeout(function () { audio.woodHit(); }, 40);
             if (ui.onMessage) ui.onMessage('The round buries itself in the wood. It does not fall.');
           }
@@ -3691,38 +4360,121 @@
 
     function refreshHud() {
       if (ui.onHud) ui.onHud({
-        hasGlock: state.hasGlock,
-        inMag: state.inMag,
-        ammo: state.ammo,
-        hasKey: state.hasKey,
-        supplies: state.supplies
+        hasGlock: state.hasGlock, inMag: state.inMag, ammo: state.ammo,
+        weapon: state.weapon, shells: state.shells, arRounds: state.arRounds,
+        hasShotgun: state.hasShotgun, hasAR: state.hasAR, riotGear: state.riotGear,
+        hasKey: state.hasKey, supplies: state.supplies, keycard: state.keycard,
+        cams: state.cams, planted: planted.map(function (c) { return { alive: c.alive }; }),
+        hunger: state.hunger, thirst: state.thirst, energy: state.energy,
+        fueled: state.fueled, needToilet: state.needToilet,
+        waterN: state.waterN, beansN: state.beansN, fuelN: state.fuelN,
+        seals: { west: state.seals.sealWest, east: state.seals.sealEast }
       });
     }
 
     // ---------------- Entity hooks ----------------
-    function die() {
-      if (state.dead) return;
+    function die(reason) {
+      if (state.dead || state.ended) return;
       state.dead = true;
       state.deaths++;
+      state.deathReason = reason || 'impaled';
       active = false;
       keys.f = keys.b = keys.l = keys.r = keys.tl = keys.tr = false;
       if (audio) audio.death();
       if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock();
-      if (ui.onDeath) ui.onDeath(state.deaths);
+      if (ui.onDeath) ui.onDeath(state.deathReason);
     }
 
     if (entity) {
-      entity.onCaught = function () { die(); };
+      entity.onCaught = function (armsLeft, headOn) {
+        if (state.dead || state.ended || !active) return;
+        if (state.attackCd > 0) return;
+        state.attackCd = 1.3;
+        var es = entity.getState();
+        if (armsLeft === 0 && headOn) {
+          // all it has left is the desperate lean of its head
+          if (state.riotGear) {
+            entity.breakHead();
+            if (audio) { audio.woodHit(); audio.doorSlam(1); }
+            say('Its head comes off against the shield. The body folds like a closed hand.');
+            return;
+          }
+          die('headbutt');
+          return;
+        }
+        if (state.riotGear && chance('armBreak', 0.35)) {
+          entity.breakArm();
+          if (audio) audio.woodHit();
+          say(entity.getState().armsLeft === 1
+            ? 'The flat hand shatters on the shield. It looks at the stump.'
+            : 'The other arm breaks off. It has nothing left to spear you with.');
+          // shoved back hard
+          var kdx = camera.position.x - es.x, kdz = camera.position.z - es.z;
+          var kl = Math.hypot(kdx, kdz) || 1;
+          var pushed = collide(camera.position.x + (kdx / kl) * 3, camera.position.z + (kdz / kl) * 3);
+          camera.position.x = pushed.x; camera.position.z = pushed.z;
+          return;
+        }
+        die('impaled');
+      };
       entity.onStep = function (dist, chasing) { if (audio) audio.entityStep(dist, chasing); };
+      entity.onWindup = function () {
+        if (!audio) return;
+        var es = entity.getState();
+        audio.windup(Math.hypot(es.x - camera.position.x, es.z - camera.position.z));
+      };
       entity.onDoorSlam = function () {
         if (!audio) return;
         var es = entity.getState();
-        var d = Math.hypot(es.x - camera.position.x, es.z - camera.position.z);
-        audio.doorSlam(d);
+        audio.doorSlam(Math.hypot(es.x - camera.position.x, es.z - camera.position.z));
+      };
+      entity.onBang = function () {
+        if (!audio) return;
+        var es = entity.getState();
+        audio.bang(Math.hypot(es.x - camera.position.x, es.z - camera.position.z));
       };
       entity.onSpotted = function (first) {
         if (audio) audio.spotted();
         if (first && ui.onMessage) ui.onMessage('It has seen you.');
+      };
+      entity.onRage = function () {
+        if (audio) { audio.spotted(); audio.stinger(); }
+        say('Something on its face now. Drawn like a child would draw it.');
+      };
+      entity.onLurk = function () {};
+      entity.onCameraDestroyed = function (i) {
+        if (planted[i]) {
+          planted[i].alive = false;
+          if (planted[i].mesh) planted[i].mesh.visible = false;
+          say('A camera feed just died.');
+          if (audio) audio.shortCircuit();
+          refreshHud();
+        }
+      };
+      entity.onArmBroken = function () {};
+      entity.onHeadBroken = function (x, z) {
+        // the keycard was inside it the whole time
+        var card = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.012, 0.06),
+          new THREE.MeshStandardMaterial({ color: 0xc7742c, roughness: 0.4 }));
+        card.position.set(x, 0.35, z);
+        scene.add(card);
+        card.userData.interact = { id: 'keycard', label: 'Something buried in the body', verb: 'Tear out' };
+        level.interactables.push(card);
+      };
+      entity.isSealActive = function (id) { return !!state.seals[id]; };
+      entity.findCameraNear = function (x1, z1, x2, z2) {
+        for (var i = 0; i < planted.length; i++) {
+          var c = planted[i];
+          if (!c.alive) continue;
+          var mx = (x1 + x2) / 2, mz = (z1 + z2) / 2;
+          if (Math.hypot(c.x - x1, c.z - z1) < 9 || Math.hypot(c.x - mx, c.z - mz) < 9) return i;
+        }
+        return -1;
+      };
+      entity.cameraPos = function (i) {
+        var c = planted[i];
+        if (!c) return null;
+        return { x: c.x + Math.sin(c.facing) * 1.6, z: c.z + Math.cos(c.facing) * 1.6 };
       };
     }
 
@@ -3739,11 +4491,52 @@
       if (ui.onMessage) ui.onMessage('The screen shorts out. The room is quieter than it was.');
     };
 
+    // ---------------- Security feeds ----------------
+    var feedTarget = new THREE.WebGLRenderTarget(256, 160);
+    if (THREE.SRGBColorSpace) feedTarget.texture.colorSpace = THREE.SRGBColorSpace;
+    var feedCam = new THREE.PerspectiveCamera(72, 1.6, 0.05, 60);
+    var feedPixels = new Uint8Array(256 * 160 * 4);
+
+    function renderFeed(i, canvas2d) {
+      var c = planted[i];
+      if (!c) return false;
+      var x2 = canvas2d.getContext('2d');
+      if (!c.alive) {
+        x2.fillStyle = '#05070a';
+        x2.fillRect(0, 0, canvas2d.width, canvas2d.height);
+        return false;
+      }
+      feedCam.position.set(c.x, 2.35, c.z);
+      feedCam.rotation.set(-0.12, c.facing, 0, 'YXZ');
+      var prev = renderer.getRenderTarget();
+      renderer.setRenderTarget(feedTarget);
+      renderer.render(scene, feedCam);
+      renderer.readRenderTargetPixels(feedTarget, 0, 0, 256, 160, feedPixels);
+      renderer.setRenderTarget(prev);
+      var img = x2.createImageData(256, 160);
+      // flip vertically, lift the blacks, push it green — a cheap camera
+      for (var y = 0; y < 160; y++) {
+        for (var x = 0; x < 256; x++) {
+          var si = ((159 - y) * 256 + x) * 4, di = (y * 256 + x) * 4;
+          var lum = (feedPixels[si] + feedPixels[si + 1] + feedPixels[si + 2]) / 3;
+          var v = Math.min(255, 14 + lum * 2.1);
+          img.data[di] = v * 0.55;
+          img.data[di + 1] = v;
+          img.data[di + 2] = v * 0.6;
+          img.data[di + 3] = 255;
+        }
+      }
+      x2.putImageData(img, 0, 0);
+      return true;
+    }
+
     // ---------------- Loop ----------------
     var clock = new THREE.Clock();
     var velocity = new THREE.Vector3();
     var bobTime = 0, stepAccum = 0, eyeCurrent = STANCE.stand.eye;
     var focusTimer = 0, cullTimer = 0;
+    var survivalT = 0, thirstAcc = 0, hungerAcc = 0, energyAcc = 0, stillAcc = 0;
+    var collapseAcc = 0, fuelLineT = 20, rageRelight = 0;
     var ACTIVE_LIGHTS = 6;
     level.cullLights(camera.position, ACTIVE_LIGHTS);
 
@@ -3752,7 +4545,22 @@
       var dt = Math.min(clock.getDelta(), 0.05);
       var elapsed = clock.elapsedTime;
 
-      if (active && !uiOpen) {
+      // seal shutters slide whether or not the player is moving
+      if (level.sealMeshes) {
+        Object.keys(level.sealMeshes).forEach(function (k) {
+          var m = level.sealMeshes[k];
+          var target = state.seals[k] ? 1.2 : 4.8;
+          m.position.y += (target - m.position.y) * (1 - Math.exp(-6 * dt));
+        });
+      }
+
+      if (active && !uiOpen && state.collapseT > 0) {
+        // face down on the floor, counting seconds
+        state.collapseT -= dt;
+        eyeCurrent += (0.32 - eyeCurrent) * (1 - Math.exp(-6 * dt));
+        camera.position.y = eyeCurrent;
+        if (state.collapseT <= 0) say('You get up. Nothing about that was sleep.');
+      } else if (active && !uiOpen) {
         var inputX = (keys.r ? 1 : 0) - (keys.l ? 1 : 0) + stick.x;
         var inputZ = (keys.f ? 1 : 0) - (keys.b ? 1 : 0) - stick.y;
         var len = Math.hypot(inputX, inputZ);
@@ -3763,7 +4571,13 @@
         if (keys.tl || keys.tr) applyLook();
 
         var st = STANCE[state.stance];
-        var speed = st.speed * (running && state.stance === 'stand' ? 1.7 : 1);
+        var canSprint = state.energy > 0 && state.hunger > 0;
+        var sprintMult = running && state.stance === 'stand' ? (canSprint ? 1.7 : 1.25) : 1;
+        var speed = st.speed * sprintMult * (state.fueled ? 1.2 : 1);
+        if (state.hallucinating) {
+          // the corridor will not hold still
+          inputX += Math.sin(elapsed * 0.9) * 0.35;
+        }
         var fx = -Math.sin(yaw), fz = -Math.cos(yaw);
         var rx = Math.cos(yaw), rz = -Math.sin(yaw);
         var tx = (fx * inputZ + rx * inputX) * speed;
@@ -3816,7 +4630,98 @@
 
         if (audio) audio.tick(dt, state.room ? state.room.id : null);
 
-        if (entity) entity.update(dt, camera.position.x, camera.position.z);
+        if (entity) {
+          // pinned while observed: centred enough in view, close enough, unobstructed
+          var es0 = entity.getState();
+          var vex = es0.x - camera.position.x, vez = es0.z - camera.position.z;
+          var vd = Math.hypot(vex, vez) || 1;
+          var fx2 = -Math.sin(yaw), fz2 = -Math.cos(yaw);
+          var dot = (vex / vd) * fx2 + (vez / vd) * fz2;
+          entity.setWatched(dot > 0.45 && vd < 48 && entity.los(camera.position.x, camera.position.z, es0.x, es0.z));
+          entity.update(dt, camera.position.x, camera.position.z);
+        }
+
+        // in its rage, the lights die wherever it walks
+        if (entity) {
+          var esR = entity.getState();
+          if (esR.raging) {
+            for (var lf = 0; lf < level.lightFixtures.length; lf++) {
+              var F = level.lightFixtures[lf];
+              var fdx = F.light.position.x - esR.x, fdz = F.light.position.z - esR.z;
+              if (!F.killed && fdx * fdx + fdz * fdz < 36) {
+                F.killed = true;
+                F.light.visible = false;
+                if (F.panel) F.panel.material.emissiveIntensity = 0.02;
+              }
+            }
+            rageRelight = 4;
+          } else if (rageRelight > 0) {
+            rageRelight -= dt;
+            if (rageRelight <= 0) {
+              for (var lf2 = 0; lf2 < level.lightFixtures.length; lf2++) {
+                var F2 = level.lightFixtures[lf2];
+                if (F2.killed) {
+                  F2.killed = false;
+                  F2.light.visible = true;
+                  if (F2.panel) F2.panel.material.emissiveIntensity = 1.6;
+                }
+              }
+            }
+          }
+        }
+
+        // ---------------- survival ----------------
+        if (state.attackCd > 0) state.attackCd -= dt;
+        survivalT += dt;
+        if (survivalT > 1) {
+          survivalT = 0;
+          thirstAcc += 1; hungerAcc += 1;
+          if (thirstAcc >= 50) { thirstAcc = 0; state.thirst = Math.max(0, state.thirst - 1); refreshHud(); }
+          if (hungerAcc >= 70) { hungerAcc = 0; state.hunger = Math.max(0, state.hunger - 1); refreshHud(); }
+          if (state.needToilet && Math.random() < 0.12) say('You need the toilet. Genuinely.');
+        }
+        var movedNow = Math.hypot(velocity.x, velocity.z);
+        if (running && movedNow > 0.6 && state.energy > 0) {
+          energyAcc += dt;
+          if (energyAcc > 3.5) { energyAcc = 0; state.energy = Math.max(0, state.energy - 1); refreshHud(); }
+        } else if (movedNow < 0.15) {
+          stillAcc += dt;
+          if (stillAcc > 3 && state.energy < 20) { stillAcc = 0; state.energy++; refreshHud(); }
+        } else { stillAcc = 0; }
+        if (state.fueled && state.energy <= 20) state.fueled = false;
+        if (state.fueled) {
+          fuelLineT -= dt;
+          if (fuelLineT <= 0) { fuelLineT = 22 + Math.random() * 10; say(UNHINGED[Math.floor(Math.random() * UNHINGED.length)]); }
+        }
+        var fovTarget = state.fueled ? 84 : 74;
+        if (Math.abs(camera.fov - fovTarget) > 0.2) {
+          camera.fov += (fovTarget - camera.fov) * (1 - Math.exp(-4 * dt));
+          camera.updateProjectionMatrix();
+        }
+        state.hallucinating = state.thirst <= 0;
+        if (state.hallucinating) {
+          camera.rotation.z = Math.sin(elapsed * 0.7) * 0.05;
+          collapseAcc += dt;
+          if (collapseAcc > 15) {
+            collapseAcc = 0;
+            if (chance('collapse', 0.35)) {
+              state.collapseT = 50;
+              say('The floor comes up to meet you. Fifty seconds.');
+            }
+          }
+        } else if (!prefersReducedMotion) camera.rotation.z = 0;
+        if (state.hunger <= 0) {
+          state.starveT += dt;
+          if (state.starveT > 180) die('starved');
+        } else state.starveT = 0;
+
+        // walking out — the only good ending
+        if (state.entranceOpen && camera.position.z > 7.4 && !state.ended) {
+          state.ended = true;
+          active = false;
+          if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock();
+          if (ui.onEnding) ui.onEnding();
+        }
       }
 
       handLight.position.copy(camera.position);
@@ -3870,6 +4775,9 @@
       },
       respawn: function () {
         state.dead = false;
+        state.collapseT = 0;
+        state.attackCd = 0;
+        state.deathReason = null;
         camera.position.set(level.spawn.x, STANCE.stand.eye, level.spawn.z);
         yaw = level.spawn.yaw; pitch = 0;
         applyLook();
@@ -3899,13 +4807,44 @@
           hasKey: state.hasKey, storageOpen: state.storageOpen,
           hasGlock: state.hasGlock, ammo: state.ammo, inMag: state.inMag,
           wifiConnected: state.wifiConnected, tvWatched: state.tvWatched,
-          dead: state.dead, deaths: state.deaths,
+          dead: state.dead, deaths: state.deaths, deathReason: state.deathReason,
           entity: entity ? entity.getState() : null,
+          hunger: state.hunger, thirst: state.thirst, energy: state.energy,
+          fueled: state.fueled, collapsed: state.collapseT > 0,
+          hallucinating: state.hallucinating, needToilet: state.needToilet,
+          cams: state.cams, plantedCount: planted.length,
+          waterN: state.waterN, beansN: state.beansN, fuelN: state.fuelN,
+          weapon: state.weapon, shells: state.shells, arRounds: state.arRounds,
+          riotGear: state.riotGear, keycard: state.keycard,
+          seals: { west: state.seals.sealWest, east: state.seals.sealEast },
+          entranceOpen: state.entranceOpen, ended: state.ended,
           focus: focused ? focused.userData.interact.id : null
         };
       },
       // test/debug helpers
-      forceEntity: function (x, z, m) { if (entity) entity.force(x, z, m); },
+      forceEntity: function (x, z, m, lurkId) { if (entity) entity.force(x, z, m, lurkId); },
+      setSeal: function (w) { return setSeal(w); },
+      shockEntity: function () {
+        if (!entity) return false;
+        var ok = entity.shockAtCage();
+        if (ok) { if (audio) audio.zap(); say('The cage floor lights. It stands perfectly still, cooking.'); }
+        return ok;
+      },
+      renderFeed: renderFeed,
+      plantedCams: function () { return planted.map(function (c) { return { x: c.x, z: c.z, alive: c.alive }; }); },
+      entityLurk: function () { return entity ? entity.getState().lurk : null; },
+      setLurkScale: function (v) { if (entity) entity.setLurkScale(v); },
+      setChance: function (name, v) { debugChance[name] = v; },
+      giveDebug: function (what) {
+        if (what === 'cams') state.cams += 5;
+        if (what === 'riot') state.riotGear = true;
+        if (what === 'water') state.waterN += 5;
+        if (what === 'beans') state.beansN += 5;
+        if (what === 'fuel') state.fuelN += 12;
+        if (what === 'keycard') state.keycard = true;
+        refreshHud();
+      },
+      consumeDebug: function (kind) { consume(kind); },
       entityInfo: function () {
         if (!entity) return null;
         var b = new THREE.Box3().setFromObject(entity.group);
@@ -4006,6 +4945,17 @@ window.bootUI = function bootUI(THREE) {
   var stick = $('stick'), stickNub = $('stick-nub'), touchbar = $('touchbar');
   var fileNo = $('file-no'), grain = $('grain');
 
+  var metersEl = $('meters');
+  var lastHud = null;
+  function drawMeter(sel, val, max) {
+    var cells = metersEl.querySelector(sel + ' .cells');
+    if (cells.children.length !== max) {
+      cells.innerHTML = '';
+      for (var i = 0; i < max; i++) cells.appendChild(document.createElement('span')).className = 'cell';
+    }
+    for (var j = 0; j < max; j++) cells.children[j].classList.toggle('f', j < val);
+  }
+
   var coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
   if (coarse) { stick.classList.add('mounted'); touchbar.classList.add('mounted'); }
 
@@ -4024,14 +4974,34 @@ window.bootUI = function bootUI(THREE) {
     grain.style.backgroundImage = 'url(' + n.toDataURL() + ')';
   })();
 
-  var LOOK_MOUSE = '<b>WASD</b> Move · <b>Mouse</b> Look · <b>E</b> Use · <b>C</b> Crouch · <b>Z</b> Crawl · <b>Shift</b> Run';
+  setInterval(function () {
+    if (window.__horror && window.__horror.isActive) {
+      hallucinating = window.__horror.getState().hallucinating;
+    }
+  }, 1000);
+
+  var LOOK_MOUSE = '<b>WASD</b> Move · <b>Mouse</b> Look · <b>E</b> Use · <b>F</b> Camera · <b>C</b> Crouch · <b>Z</b> Crawl · <b>4/5/6</b> Eat/Drink';
   var LOOK_DRAG  = '<b>WASD</b> Move · <b>Drag</b> Look · <b>E</b> Use · <b>C</b> Crouch · <b>Z</b> Crawl · <b>←→</b> Turn';
   var LOOK_TOUCH = '<b>Stick</b> Move · <b>Drag</b> Look · <b>Tap</b> Use';
   var mode = coarse ? LOOK_TOUCH : LOOK_MOUSE;
   hint.innerHTML = mode;
 
   var subTimer = null;
+  var hallucinating = false;
+  function scramble(text) {
+    if (!hallucinating) return text;
+    var out = '';
+    for (var i = 0; i < text.length; i++) {
+      var ch = text[i];
+      if (/[a-zA-Z]/.test(ch) && Math.random() < 0.22) {
+        out += Math.random() < 0.5 ? String(Math.floor(Math.random() * 10))
+          : String.fromCharCode(65 + Math.floor(Math.random() * 26));
+      } else out += ch;
+    }
+    return out;
+  }
   function say(text) {
+    text = scramble(text);
     subtitle.textContent = text;
     subtitle.classList.add('on');
     clearTimeout(subTimer);
@@ -4072,15 +5042,34 @@ window.bootUI = function bootUI(THREE) {
       onHud: function (s) {
         if (s.hasGlock) {
           ammoEl.classList.add('on');
-          ammoEl.querySelector('.big').textContent = s.inMag + ' / ' + Math.max(0, s.ammo - s.inMag);
-          ammoEl.classList.toggle('dry', s.inMag === 0);
+          var big;
+          if (s.weapon === 'shotgun') big = 'SG ' + s.shells;
+          else if (s.weapon === 'ar') big = 'AR ' + s.arRounds;
+          else big = s.inMag + ' / ' + Math.max(0, s.ammo - s.inMag);
+          ammoEl.querySelector('.big').textContent = big;
+          ammoEl.classList.toggle('dry', s.weapon === 'glock' ? s.inMag === 0 : (s.weapon === 'shotgun' ? s.shells === 0 : s.arRounds === 0));
         } else {
           ammoEl.classList.remove('on');
         }
         var items = [];
         if (s.hasKey) items.push('Storage key');
-        if (s.supplies) items.push('Water · Beans');
+        if (s.keycard) items.push('KEYCARD');
+        if (s.riotGear) items.push('Riot gear');
+        if (s.cams > 0) items.push('Cameras ×' + s.cams);
+        if (s.waterN > 0) items.push('Water ×' + s.waterN + ' <b>[4]</b>');
+        if (s.beansN > 0) items.push('Beans ×' + s.beansN + ' <b>[5]</b>');
+        if (s.fuelN > 0) items.push('GAMER ×' + s.fuelN + ' <b>[6]</b>');
+        if (s.hasShotgun) items.push('Shotgun <b>[2]</b>');
+        if (s.hasAR) items.push('Rifle <b>[3]</b>');
+        if (s.needToilet) items.push('<span style="color:var(--oxide)">TOILET</span>');
         carry.innerHTML = items.map(function (t) { return '<span>' + t + '</span>'; }).join('');
+
+        metersEl.classList.add('on');
+        drawMeter('.hungerM', s.hunger, 10);
+        drawMeter('.thirst', s.thirst, 10);
+        drawMeter('.energy', s.energy, 25);
+        metersEl.querySelector('.energy').classList.toggle('green', s.fueled);
+        lastHud = s;
       },
       onMuzzleFlash: function () {
         muzzle.classList.add('on');
@@ -4090,11 +5079,22 @@ window.bootUI = function bootUI(THREE) {
       showJournal: function () { openOverlay('journal'); },
       showBlueprint: function () { openOverlay('blueprint'); },
       showComputer: function (connected) { openTerminal(connected); },
-      onDeath: function () {
-        dead = true;
+      onEnding: function () {
         blackout.classList.add('on');
         setTimeout(function () {
-          fileNo.textContent = 'File 001 — Terminated';
+          blackout.classList.remove('on');
+          document.getElementById('ending').hidden = false;
+        }, 1200);
+      },
+      onDeath: function (reason) {
+        dead = true;
+        blackout.classList.add('on');
+        var label = reason === 'seizure' ? 'File 001 — Cardiac event'
+          : reason === 'starved' ? 'File 001 — Starved'
+          : reason === 'headbutt' ? 'File 001 — Blunt trauma'
+          : 'File 001 — Terminated';
+        setTimeout(function () {
+          fileNo.textContent = label;
           enterBtn.textContent = 'Continue';
           curtain.hidden = false;
           void curtain.offsetWidth;
@@ -4140,37 +5140,154 @@ window.bootUI = function bootUI(THREE) {
     { name: 'FBI SURVEILLANCE VAN 4', bars: '•○○' },
     { name: 'PRINTER_04B', bars: '••○' }
   ];
+  var termTab = 'net';
+  var feedIndex = 0;
+  var feedTimer = null;
+
   function openTerminal(connected) {
-    var body = $('termBody');
-    $('termStatus').textContent = connected ? 'Connected' : 'Not connected';
-    body.innerHTML = '';
-    if (connected) {
-      var p = document.createElement('div');
-      p.className = 'term-note';
-      p.textContent = 'Connected to WAITING ROOM WIFI. Display output routed to overhead screen 2.';
-      body.appendChild(p);
-    } else {
-      var note = document.createElement('div');
-      note.className = 'term-note';
-      note.textContent = 'Select a network.';
-      body.appendChild(note);
-      NETWORKS.forEach(function (n) {
-        var b = document.createElement('button');
-        b.className = 'net' + (n.target ? ' target' : '');
-        b.type = 'button';
-        b.innerHTML = '<span>' + n.name + '</span><span class="bars">' + n.bars + '</span>';
-        b.addEventListener('click', function () {
-          if (!n.target) {
-            note.textContent = 'Out of range.';
-            return;
-          }
-          showPassword(body);
-        });
-        body.appendChild(b);
-      });
-    }
+    renderTerminal(connected);
     openOverlay('terminal');
   }
+
+  function renderTerminal(connected) {
+    var body = $('termBody');
+    var st = window.__horror ? window.__horror.getState() : null;
+    $('termStatus').textContent = connected ? 'Connected' : 'Not connected';
+    clearInterval(feedTimer);
+    body.innerHTML = '';
+
+    // tabs
+    var tabs = document.createElement('div');
+    tabs.className = 'term-tabs';
+    [['net', 'Network'], ['cams', 'Cameras'], ['seal', 'Hard Seal']].forEach(function (t) {
+      var b = document.createElement('button');
+      b.className = 'term-tab' + (termTab === t[0] ? ' on' : '');
+      b.type = 'button';
+      b.textContent = t[1];
+      b.addEventListener('click', function () { termTab = t[0]; renderTerminal(connected); });
+      tabs.appendChild(b);
+    });
+    body.appendChild(tabs);
+
+    if (termTab === 'net') {
+      if (connected) {
+        var pnote = document.createElement('div');
+        pnote.className = 'term-note';
+        pnote.textContent = 'Connected to WAITING ROOM WIFI. Camera relay and hard-seal control online.';
+        body.appendChild(pnote);
+      } else {
+        var note = document.createElement('div');
+        note.className = 'term-note';
+        note.textContent = 'Select a network.';
+        body.appendChild(note);
+        NETWORKS.forEach(function (n) {
+          var b = document.createElement('button');
+          b.className = 'net' + (n.target ? ' target' : '');
+          b.type = 'button';
+          b.innerHTML = '<span>' + n.name + '</span><span class="bars">' + n.bars + '</span>';
+          b.addEventListener('click', function () {
+            if (!n.target) { note.textContent = 'Out of range.'; return; }
+            showPassword(body);
+          });
+          body.appendChild(b);
+        });
+      }
+      return;
+    }
+
+    if (!connected) {
+      var no = document.createElement('div');
+      no.className = 'term-note';
+      no.textContent = 'Requires a network connection.';
+      body.appendChild(no);
+      return;
+    }
+
+    if (termTab === 'cams') {
+      var cams = window.__horror.plantedCams();
+      if (cams.length === 0) {
+        var e0 = document.createElement('div');
+        e0.className = 'term-note';
+        e0.textContent = 'No cameras placed. Find them in the warehouse, place them with F.';
+        body.appendChild(e0);
+        return;
+      }
+      var list = document.createElement('div');
+      list.className = 'feed-list';
+      cams.forEach(function (c, i) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'feed-btn' + (i === feedIndex ? ' on' : '') + (c.alive ? '' : ' dead');
+        b.textContent = 'CAM ' + (i + 1) + (c.alive ? '' : ' ✕');
+        b.addEventListener('click', function () { feedIndex = i; renderTerminal(connected); });
+        list.appendChild(b);
+      });
+      body.appendChild(list);
+      var fc = document.createElement('canvas');
+      fc.id = 'feedCanvas';
+      fc.width = 256; fc.height = 160;
+      body.appendChild(fc);
+      var stamp = document.createElement('div');
+      stamp.className = 'term-note';
+      body.appendChild(stamp);
+
+      function draw() {
+        var alive = window.__horror.renderFeed(feedIndex, fc);
+        var x2 = fc.getContext('2d');
+        // scanlines + noise on top of the raw feed
+        x2.globalAlpha = 0.14;
+        for (var y = 0; y < 160; y += 3) { x2.fillStyle = '#000'; x2.fillRect(0, y, 256, 1); }
+        x2.globalAlpha = 1;
+        for (var n2 = 0; n2 < 120; n2++) {
+          x2.fillStyle = 'rgba(190,255,200,' + Math.random() * 0.06 + ')';
+          x2.fillRect(Math.random() * 256, Math.random() * 160, 2, 1);
+        }
+        x2.fillStyle = alive ? '#a8e6c2' : '#7e3529';
+        x2.font = '10px monospace';
+        x2.fillText(alive ? 'CAM ' + (feedIndex + 1) + ' · REC' : 'NO SIGNAL', 8, 14);
+        stamp.textContent = alive ? 'Live.' : 'This feed is gone.';
+      }
+      draw();
+      feedTimer = setInterval(draw, 700);
+
+      var shock = document.createElement('button');
+      shock.id = 'shockBtn';
+      shock.type = 'button';
+      shock.textContent = 'Shock holding cage';
+      shock.disabled = window.__horror.entityLurk() !== 'cage';
+      shock.addEventListener('click', function () {
+        if (window.__horror.shockEntity()) {
+          shock.disabled = true;
+          shock.textContent = 'Discharging — 100s';
+        }
+      });
+      body.appendChild(shock);
+      return;
+    }
+
+    // hard seal
+    var sn = document.createElement('div');
+    sn.className = 'term-note';
+    sn.textContent = 'Earthquake shutters, one at a time. Tungsten. Sealing one raises the other.';
+    body.appendChild(sn);
+    var row = document.createElement('div');
+    row.className = 'seal-row';
+    var hud = lastHud || { seals: { west: false, east: false } };
+    [['sealWest', 'West door', hud.seals.west], ['sealEast', 'East door', hud.seals.east]].forEach(function (sd) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'seal-btn' + (sd[2] ? ' on' : '');
+      b.textContent = sd[1] + (sd[2] ? ' — SEALED' : '');
+      b.addEventListener('click', function () {
+        var seals = window.__horror.setSeal(sd[2] ? null : sd[0]);
+        void seals;
+        renderTerminal(connected);
+      });
+      row.appendChild(b);
+    });
+    body.appendChild(row);
+  }
+
   function showPassword(body) {
     body.innerHTML = '';
     var lbl = document.createElement('div');
@@ -4209,8 +5326,12 @@ window.bootUI = function bootUI(THREE) {
       if (e.key === 'Enter') { e.preventDefault(); attempt(); }
       e.stopPropagation();
     });
-    back.addEventListener('click', function () { openTerminal(false); });
+    back.addEventListener('click', function () { termTab = 'net'; renderTerminal(false); });
   }
+
+  // close must stop the feed loop
+  var _closeOverlay = closeOverlay;
+  closeOverlay = function () { clearInterval(feedTimer); _closeOverlay(); };
 
   // ---------------- Entry / pause ----------------
   var legendTimer = null, enterTimer = null, hideTimer = null;

@@ -187,30 +187,67 @@ node build-standalone.mjs
 - `window.__horror.getState()` and friends expose real state for testing — the
   scene animates every frame, so pixel diffing proves nothing.
 
-### The thing from the blueprint
+### The Birch
 
-It exists now, built to the drawing: eleven feet of pale birchwood on a
-tungsten frame, steel joints, arms that reach past its knees, an unfinished
-chest with the frame showing through, and a lathe-turned suggestion of a head.
+Designed by the author. A store mannequin, eleven feet tall and far too thin,
+hand-carved from pale birch — every ball joint visible, tungsten bolts through
+the ones that mattered. Its hands are flat paddles, made flat **so it could
+never hurt anyone.** It turned them into spears. Gears wind up when it starts
+to move, and tick under every wooden footfall.
 
-It sleeps until you take Nick's gun. The moment you do, somewhere far away a
-door slams open — and from then on it walks the building: warehouse, west
-corridor, Waiting, east corridor, and the length of the south corridor, over
-and over, exactly the round Nick's journal describes. Its footsteps are wood
-on concrete and they carry; you will hear it two corridors away, and you will
-hear the joints when it is close. Doors in its way get slammed open, and you
-hear those too, attenuated by distance.
+It hides in the vents until you take the security cameras from the warehouse
+crate — then it smells your blood, and the game begins.
 
-It chases on line of sight — walls and closed doors hide you, furniture does
-not — and it loses you a few seconds after you break sight. If it reaches you,
-the file card returns reading **Terminated**. Continue puts you back in
-Waiting with everything you carried; the thing goes back to its round.
+**The loop.** It haunts three spots, 5 to 25 minutes at a time: the storage
+unit, where it smears Nick's blood over its face and body (the stains are
+permanent); the broken holding cage, where it stands in a frozen pirouette;
+and the warehouse, one flat hand raised in a hello. **While you are looking
+at it, it cannot move.** The moment you look away, it does. When it leaves a
+spot it either relocates or comes for Waiting — and your only warning is the
+cameras.
 
-**Shooting it works exactly as well as the extermination chamber did.** A hit
-staggers it for a second and buries a round in the wood. It does not fall.
-Thirty-four rounds buy you thirty-four seconds, spread across the whole game.
+**Cameras.** Five in the SECURITY crate, more in loot. Place them with `F`,
+watch them from the reception terminal. Worst case: you flip to a feed and it
+is already there, hand raised, a smiley drawn on its face in blood — it found
+your camera, and that feed is about to die.
 
-## Not built yet
+**Hard seal.** The terminal drops earthquake-rated tungsten shutters over
+Waiting's corridor doorways — **one at a time**, so you must seal the side it
+is coming from. Sealed out, it bangs on the metal. Do not open it. Sometimes
+the banging stops and something worse starts.
 
-A way out. The entrance stays sealed, and the rest of the layout is still to
-be described.
+**Rage.** A smiley face appears, drawn like a child with a sharpie. It stops
+caring whether you watch. It takes to the corridor walls, its head goes all
+the way around, it is faster than you — and every light dies where it walks.
+
+**The shock.** If it lurks in the cage it once escaped, the terminal can
+electrify the floor: 100 frozen seconds to plant cameras, seal a door, or run.
+
+**The kill.** Flat hand through you; the second hand; two pieces. With riot
+gear the impale can shatter its arm instead — break both and all it has left
+is a desperate headbutt. Headbutt into a riot shield and its own head comes
+off. In the body: a keycard. Tear it out, open the entrance, and walk into
+the orange letters: **MISSION PASSED — RESPECT ++++**, with your $2,000.
+
+### Survival
+
+Ten bars of hunger, ten of thirst, twenty of energy. Water restores five
+thirst, beans three hunger. At zero thirst you hallucinate — text scrambles
+into numbers, the corridor won't hold still, and you can collapse for fifty
+helpless seconds. At zero hunger you lose the sprint and eventually die. Energy
+refills one bar per three seconds of standing still — or slam a GAMER ENERGY
+to overcharge to 25: green bars, wider eyes, faster legs, and your character
+starts saying unhinged things to the furniture. Ten in a row risks a fatal
+cardiac event. Overeat or overdrink and you will need the toilet; both
+restrooms finally justify their existence.
+
+### Warehouse loot
+
+Fourteen openable crates, every roll independent: cameras ×5 (30%), 9mm
+(10%), a shotgun or assault rifle (2%), water (50%), beans (60%), GAMER
+ENERGY (25%), riot gear (9%).
+
+## Not built yet## Not built yet
+
+The rest of the layout, when the author describes it. The riot-shield keycard
+is currently the only way out.

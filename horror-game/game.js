@@ -352,6 +352,41 @@
         if (!started) return;
         master.gain.setTargetAtTime(m ? 0 : 0.9, now(), 0.15);
       },
+      windup: function (dist) {
+        // gears taking up slack before it moves
+        var a = Math.max(0.1, 1 - (dist || 10) / 45);
+        for (var i = 0; i < 9; i++) {
+          noiseHit({ at: i * 0.07, dur: 0.02, type: 'highpass', freq: 2800 + i * 140, gain: 0.02 * a });
+        }
+        tone({ dur: 0.7, freq: 160, to: 340, type: 'triangle', gain: 0.02 * a, attack: 0.2 });
+      },
+      bang: function (dist) {
+        var a = Math.max(0.15, 1 - (dist || 10) / 50);
+        for (var i = 0; i < 3; i++) {
+          noiseHit({ at: i * 0.4, dur: 0.3, freq: 600, sweepTo: 80, gain: 0.3 * a });
+          tone({ at: i * 0.4, freq: 55, to: 34, dur: 0.4, gain: 0.22 * a });
+        }
+      },
+      zap: function () {
+        noiseHit({ dur: 1.2, type: 'highpass', freq: 2400, gain: 0.16 });
+        tone({ dur: 1.1, freq: 120, type: 'square', gain: 0.07, wobble: { rate: 30, depth: 60 } });
+      },
+      shotgun: function () {
+        noiseHit({ dur: 0.5, freq: 5200, sweepTo: 140, gain: 0.7 });
+        tone({ freq: 110, to: 30, dur: 0.4, type: 'square', gain: 0.3 });
+      },
+      consume: function (kind) {
+        if (kind === 'water') { for (var i = 0; i < 3; i++) tone({ at: i * 0.24, freq: 320 - i * 40, dur: 0.1, gain: 0.05 }); }
+        else if (kind === 'beans') { noiseHit({ dur: 0.3, freq: 900, sweepTo: 300, gain: 0.05 }); }
+        else { noiseHit({ dur: 0.5, type: 'highpass', freq: 3000, gain: 0.045 }); tone({ freq: 660, to: 880, dur: 0.3, gain: 0.03 }); }
+      },
+      vomit: function () { noiseHit({ dur: 0.7, freq: 700, sweepTo: 200, gain: 0.1 }); },
+      flush: function () { noiseHit({ dur: 1.6, freq: 1400, sweepTo: 300, gain: 0.09, attack: 0.15 }); },
+      sealSlam: function () {
+        noiseHit({ dur: 0.5, freq: 900, sweepTo: 70, gain: 0.4 });
+        tone({ freq: 50, to: 30, dur: 0.7, gain: 0.3 });
+        tone({ at: 0.05, freq: 1870, dur: 0.2, gain: 0.03 });
+      },
       entityStep: function (dist, chasing) {
         // wood on concrete, carrying down the corridors
         var atten = Math.max(0, 1 - dist / 42);
@@ -359,6 +394,9 @@
         var v = atten * atten * (chasing ? 1.25 : 1);
         tone({ freq: 82 + Math.random() * 14, to: 46, dur: 0.16, gain: 0.14 * v });
         noiseHit({ dur: 0.09, freq: 340, sweepTo: 110, gain: 0.09 * v });
+        // the gears, always — a small ratchet under every step
+        noiseHit({ at: 0.03, dur: 0.014, type: 'highpass', freq: 3400, gain: 0.02 * v });
+        noiseHit({ at: 0.055, dur: 0.012, type: 'highpass', freq: 3900, gain: 0.014 * v });
         if (dist < 9) {
           // near enough to hear the joints
           tone({ at: 0.05, freq: 620 + Math.random() * 300, to: 480, dur: 0.09, type: 'triangle', gain: 0.012 * v, wobble: { rate: 11, depth: 50 } });
@@ -468,11 +506,33 @@
       room: null,
       seenAssembly: false,
       dead: false,
-      deaths: 0
+      deaths: 0,
+      deathReason: null,
+      // survival
+      hunger: 10, thirst: 10, energy: 20,
+      waterN: 0, beansN: 0, fuelN: 0,
+      fuelStreak: 0, fueled: false,
+      gut: 0, bladder: 0, needToilet: false,
+      collapseT: 0, starveT: 0, hallucinating: false,
+      // security
+      cams: 0, seals: { sealWest: false, sealEast: false },
+      // arsenal
+      weapon: 'glock', shells: 0, arRounds: 0,
+      hasShotgun: false, hasAR: false, riotGear: false,
+      keycard: false, entranceOpen: false, ended: false,
+      attackCd: 0
     };
+    var planted = [];          // {x,z,facing,alive,mesh}
+    var openedCrates = {};
+    var debugChance = {};      // test hook: force named rolls
+    function chance(name, p) {
+      if (debugChance[name] !== undefined) return debugChance[name];
+      return Math.random() < p;
+    }
     var MAG_SIZE = 17;
 
     var audio = createAudio();
+    function say(text) { if (ui.onMessage) ui.onMessage(text); }
 
     // ---------------- Input ----------------
     var keys = { f: false, b: false, l: false, r: false, tl: false, tr: false };
@@ -504,6 +564,13 @@
         case 'ControlLeft': case 'ControlRight': case 'KeyC': setStance('crouch'); break;
         case 'KeyZ': setStance('crawl'); break;
         case 'KeyR': reload(); break;
+        case 'KeyF': plantCamera(); break;
+        case 'Digit1': switchWeapon('glock'); break;
+        case 'Digit2': switchWeapon('shotgun'); break;
+        case 'Digit3': switchWeapon('ar'); break;
+        case 'Digit4': consume('water'); break;
+        case 'Digit5': consume('beans'); break;
+        case 'Digit6': consume('fuel'); break;
         default: return;
       }
       if (active) e.preventDefault();
@@ -610,7 +677,11 @@
       var r = PLAYER_RADIUS;
       for (var i = 0; i < colliders.length; i++) {
         var c = colliders[i];
-        if (c.id && level.isDoorOpen(c.id)) continue;
+        if (c.id === 'sealWest' || c.id === 'sealEast') {
+          if (!state.seals[c.id]) continue;      // shutter parked in the ceiling
+        } else if (c.id === 'entrance') {
+          if (state.entranceOpen) continue;
+        } else if (c.id && level.isDoorOpen(c.id)) continue;
         // The barricade has a gap you can only take on your belly.
         if (c.id === 'barricade' && state.stance === 'crawl') continue;
         if (nx + r < c.x1 || nx - r > c.x2 || nz + r < c.z1 || nz - r > c.z2) continue;
@@ -702,6 +773,13 @@
           if (ui.showComputer) ui.showComputer(state.wifiConnected);
           break;
         case 'entranceDoor':
+          if (state.keycard && !state.entranceOpen) {
+            state.entranceOpen = true;
+            if (window.__entranceGlass) window.__entranceGlass.forEach(function (m) { m.visible = false; });
+            if (audio) audio.unlock();
+            say('The reader blinks green. The glass swings loose. Outside is outside.');
+            break;
+          }
           if (audio) audio.locked();
           say('The glass does not move. Whatever is on the other side, you cannot see it.');
           break;
@@ -732,13 +810,6 @@
           if (audio) audio.pickup();
           say('Glock 19, and two magazines. Thirty-four rounds. There will not be more.');
           refreshHud();
-          if (entity) {
-            entity.activate();
-            if (audio) audio.doorSlam(40);
-            setTimeout(function () {
-              if (ui.onMessage) ui.onMessage('Somewhere far away, a door slams open.');
-            }, 1400);
-          }
           break;
         case 'blueprint':
           state.readBlueprint = true;
@@ -756,6 +827,62 @@
         case 'cage':
           say('HOLDING — SUBJECT SECURE. The bars are bent outward. It was not let out.');
           break;
+        case 'cameraCrate':
+          if (state.cams > 0 || focused.userData.opened) { say('Empty. The foam cutouts are shaped like cameras.'); break; }
+          focused.userData.opened = true;
+          state.cams += 5;
+          if (audio) audio.pickup();
+          say('Five security cameras. Place them with F.');
+          refreshHud();
+          if (entity) {
+            entity.activate();
+            setTimeout(function () {
+              if (ui.onMessage) ui.onMessage('Above you, something long slides out of a vent. It knows your blood.');
+            }, 1500);
+            if (audio) setTimeout(function () { audio.doorSlam(30); }, 700);
+          }
+          break;
+        case 'lootCrate': {
+          var idx = d.idx;
+          if (openedCrates[idx]) { say('Already open. Packing straw.'); break; }
+          openedCrates[idx] = true;
+          var got = [];
+          if (chance('cameras', 0.30)) { state.cams += 5; got.push('a bundle of five cameras'); }
+          if (chance('ammo', 0.10)) { state.ammo += 17; got.push('a box of 9mm'); }
+          if (chance('gun', 0.02)) {
+            if (Math.random() < 0.5) { state.hasShotgun = true; state.shells += 6; got.push('a shotgun'); }
+            else { state.hasAR = true; state.arRounds += 30; got.push('an assault rifle'); }
+          }
+          if (chance('water', 0.50)) { state.waterN++; got.push('water'); }
+          if (chance('beans', 0.60)) { state.beansN++; got.push('beans'); }
+          if (chance('fuel', 0.25)) { state.fuelN++; got.push('GAMER ENERGY'); }
+          if (chance('riot', 0.09)) {
+            if (!state.riotGear) { state.riotGear = true; got.push('RIOT GEAR'); }
+            else got.push('spare riot padding');
+          }
+          if (audio) audio.pickup();
+          say(got.length ? 'Inside: ' + got.join(', ') + '.' : 'Packing straw and dust.');
+          refreshHud();
+          break;
+        }
+        case 'toilet':
+          if (state.needToilet) {
+            state.gut = 0; state.bladder = 0; state.needToilet = false;
+            if (audio) audio.flush();
+            say('Better. The flush echoes much too far.');
+          } else {
+            if (audio) audio.flush();
+            say('No need. The flush echoes anyway.');
+          }
+          refreshHud();
+          break;
+        case 'keycard':
+          state.keycard = true;
+          focused.visible = false;
+          if (audio) audio.pickup();
+          say('A keycard, warm from the machinery. Stamped: FRONT ENTRANCE.');
+          refreshHud();
+          break;
         case 'supplies':
           state.supplies = true;
           if (audio) audio.pickup();
@@ -768,24 +895,133 @@
       updateFocus();
     }
 
+    // ---------------- Cameras, consumables, seals ----------------
+    function plantCamera() {
+      if (!active || uiOpen || state.dead) return;
+      if (state.cams <= 0) { say('No cameras to place.'); return; }
+      state.cams--;
+      var mesh = new THREE.Group();
+      var body = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.08, 0.16),
+        new THREE.MeshStandardMaterial({ color: 0x22262a, roughness: 0.5 }));
+      var lens = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.03, 0.05, 8),
+        new THREE.MeshStandardMaterial({ color: 0x0a0c0e, roughness: 0.2 }));
+      lens.rotation.x = Math.PI / 2;
+      lens.position.z = 0.1;
+      mesh.add(body); mesh.add(lens);
+      mesh.position.set(camera.position.x, 2.35, camera.position.z);
+      mesh.rotation.y = yaw;
+      scene.add(mesh);
+      planted.push({ x: camera.position.x, z: camera.position.z, facing: yaw, alive: true, mesh: mesh });
+      if (audio) audio.ui();
+      say('Camera ' + planted.length + ' placed, watching the way you face.');
+      refreshHud();
+    }
+
+    function switchWeapon(w) {
+      if (!active || uiOpen) return;
+      if (w === 'shotgun' && !state.hasShotgun) return;
+      if (w === 'ar' && !state.hasAR) return;
+      if (w !== 'glock' && !state.hasGlock && w === 'glock') return;
+      state.weapon = w;
+      if (audio) audio.ui();
+      refreshHud();
+    }
+
+    var UNHINGED = [
+      'I could take him.',
+      'He is made of wood. I am made of ENERGY.',
+      'Blink. I dare you, plank.',
+      'My blood is nine percent taurine.',
+      'Try me, furniture.'
+    ];
+    function consume(kind) {
+      if (!active || uiOpen || state.dead) return;
+      if (kind === 'water') {
+        if (state.waterN <= 0) { say('No water.'); return; }
+        state.waterN--;
+        state.fuelStreak = 0;
+        if (state.thirst >= 9) { state.bladder++; }
+        state.thirst = Math.min(10, state.thirst + 5);
+        if (state.bladder >= 2) {
+          state.needToilet = true;
+          if (audio) audio.vomit();
+          say('Too much. It comes back up, and now you need the toilet as well.');
+          state.thirst = Math.max(0, state.thirst - 1);
+          state.hunger = Math.max(0, state.hunger - 1);
+        } else {
+          if (audio) audio.consume('water');
+          say('The water is warm and perfect.');
+        }
+      } else if (kind === 'beans') {
+        if (state.beansN <= 0) { say('No beans.'); return; }
+        state.beansN--;
+        state.fuelStreak = 0;
+        if (state.hunger >= 9) state.gut++;
+        state.hunger = Math.min(10, state.hunger + 3);
+        if (state.gut >= 2) {
+          state.needToilet = true;
+          say('Cold beans. Nick was right about the smell. You will need the toilet.');
+        } else {
+          say('Cold beans, straight from the can.');
+        }
+        if (audio) audio.consume('beans');
+      } else {
+        if (state.fuelN <= 0) { say('No GAMER ENERGY.'); return; }
+        state.fuelN--;
+        state.fuelStreak++;
+        state.energy = 25;
+        state.fueled = true;
+        if (audio) audio.consume('fuel');
+        if (state.fuelStreak >= 10 && chance('seizure', 0.25)) {
+          say('Your heart plays a drum solo. Then it stops.');
+          setTimeout(function () { die('seizure'); }, 1200);
+          return;
+        }
+        say(UNHINGED[Math.floor(Math.random() * UNHINGED.length)]);
+      }
+      refreshHud();
+    }
+
+    function setSeal(which) {
+      // one shutter at a time — sealing one raises the other
+      Object.keys(state.seals).forEach(function (k) { state.seals[k] = false; });
+      if (which) state.seals[which] = true;
+      if (audio) audio.sealSlam();
+      refreshHud();
+      return state.seals;
+    }
+
     // ---------------- Weapon ----------------
     function shoot() {
-      if (!state.hasGlock || uiOpen) return;
-      if (state.inMag <= 0) {
-        if (audio) audio.dryFire();
-        if (ui.onMessage) ui.onMessage(state.ammo > 0 ? 'Empty. Reload with R.' : 'Empty. There is no more ammunition.');
-        return;
+      if (!state.hasGlock || uiOpen || state.dead) return;
+      var stagger = 1.1;
+      if (state.weapon === 'shotgun') {
+        if (state.shells <= 0) { if (audio) audio.dryFire(); say('No shells.'); return; }
+        state.shells--;
+        stagger = 2.5;
+        if (audio) audio.shotgun();
+      } else if (state.weapon === 'ar') {
+        if (state.arRounds <= 0) { if (audio) audio.dryFire(); say('The rifle is dry.'); return; }
+        state.arRounds--;
+        stagger = 0.8;
+        if (audio) audio.gunshot();
+      } else {
+        if (state.inMag <= 0) {
+          if (audio) audio.dryFire();
+          if (ui.onMessage) ui.onMessage(state.ammo > 0 ? 'Empty. Reload with R.' : 'Empty. There is no more ammunition.');
+          return;
+        }
+        state.inMag--;
+        state.ammo--;
+        if (audio) audio.gunshot();
       }
-      state.inMag--;
-      state.ammo--;
-      if (audio) audio.gunshot();
       if (ui.onMuzzleFlash) ui.onMuzzleFlash();
       if (entity) {
         camera.updateMatrixWorld();
         gunRay.setFromCamera(centre, camera);
         var hitList = gunRay.intersectObject(entity.group, true);
         if (hitList.length > 0 && hitList[0].distance < 45) {
-          if (entity.hitShot()) {
+          if (entity.hitShot(stagger)) {
             if (audio) setTimeout(function () { audio.woodHit(); }, 40);
             if (ui.onMessage) ui.onMessage('The round buries itself in the wood. It does not fall.');
           }
@@ -808,38 +1044,121 @@
 
     function refreshHud() {
       if (ui.onHud) ui.onHud({
-        hasGlock: state.hasGlock,
-        inMag: state.inMag,
-        ammo: state.ammo,
-        hasKey: state.hasKey,
-        supplies: state.supplies
+        hasGlock: state.hasGlock, inMag: state.inMag, ammo: state.ammo,
+        weapon: state.weapon, shells: state.shells, arRounds: state.arRounds,
+        hasShotgun: state.hasShotgun, hasAR: state.hasAR, riotGear: state.riotGear,
+        hasKey: state.hasKey, supplies: state.supplies, keycard: state.keycard,
+        cams: state.cams, planted: planted.map(function (c) { return { alive: c.alive }; }),
+        hunger: state.hunger, thirst: state.thirst, energy: state.energy,
+        fueled: state.fueled, needToilet: state.needToilet,
+        waterN: state.waterN, beansN: state.beansN, fuelN: state.fuelN,
+        seals: { west: state.seals.sealWest, east: state.seals.sealEast }
       });
     }
 
     // ---------------- Entity hooks ----------------
-    function die() {
-      if (state.dead) return;
+    function die(reason) {
+      if (state.dead || state.ended) return;
       state.dead = true;
       state.deaths++;
+      state.deathReason = reason || 'impaled';
       active = false;
       keys.f = keys.b = keys.l = keys.r = keys.tl = keys.tr = false;
       if (audio) audio.death();
       if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock();
-      if (ui.onDeath) ui.onDeath(state.deaths);
+      if (ui.onDeath) ui.onDeath(state.deathReason);
     }
 
     if (entity) {
-      entity.onCaught = function () { die(); };
+      entity.onCaught = function (armsLeft, headOn) {
+        if (state.dead || state.ended || !active) return;
+        if (state.attackCd > 0) return;
+        state.attackCd = 1.3;
+        var es = entity.getState();
+        if (armsLeft === 0 && headOn) {
+          // all it has left is the desperate lean of its head
+          if (state.riotGear) {
+            entity.breakHead();
+            if (audio) { audio.woodHit(); audio.doorSlam(1); }
+            say('Its head comes off against the shield. The body folds like a closed hand.');
+            return;
+          }
+          die('headbutt');
+          return;
+        }
+        if (state.riotGear && chance('armBreak', 0.35)) {
+          entity.breakArm();
+          if (audio) audio.woodHit();
+          say(entity.getState().armsLeft === 1
+            ? 'The flat hand shatters on the shield. It looks at the stump.'
+            : 'The other arm breaks off. It has nothing left to spear you with.');
+          // shoved back hard
+          var kdx = camera.position.x - es.x, kdz = camera.position.z - es.z;
+          var kl = Math.hypot(kdx, kdz) || 1;
+          var pushed = collide(camera.position.x + (kdx / kl) * 3, camera.position.z + (kdz / kl) * 3);
+          camera.position.x = pushed.x; camera.position.z = pushed.z;
+          return;
+        }
+        die('impaled');
+      };
       entity.onStep = function (dist, chasing) { if (audio) audio.entityStep(dist, chasing); };
+      entity.onWindup = function () {
+        if (!audio) return;
+        var es = entity.getState();
+        audio.windup(Math.hypot(es.x - camera.position.x, es.z - camera.position.z));
+      };
       entity.onDoorSlam = function () {
         if (!audio) return;
         var es = entity.getState();
-        var d = Math.hypot(es.x - camera.position.x, es.z - camera.position.z);
-        audio.doorSlam(d);
+        audio.doorSlam(Math.hypot(es.x - camera.position.x, es.z - camera.position.z));
+      };
+      entity.onBang = function () {
+        if (!audio) return;
+        var es = entity.getState();
+        audio.bang(Math.hypot(es.x - camera.position.x, es.z - camera.position.z));
       };
       entity.onSpotted = function (first) {
         if (audio) audio.spotted();
         if (first && ui.onMessage) ui.onMessage('It has seen you.');
+      };
+      entity.onRage = function () {
+        if (audio) { audio.spotted(); audio.stinger(); }
+        say('Something on its face now. Drawn like a child would draw it.');
+      };
+      entity.onLurk = function () {};
+      entity.onCameraDestroyed = function (i) {
+        if (planted[i]) {
+          planted[i].alive = false;
+          if (planted[i].mesh) planted[i].mesh.visible = false;
+          say('A camera feed just died.');
+          if (audio) audio.shortCircuit();
+          refreshHud();
+        }
+      };
+      entity.onArmBroken = function () {};
+      entity.onHeadBroken = function (x, z) {
+        // the keycard was inside it the whole time
+        var card = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.012, 0.06),
+          new THREE.MeshStandardMaterial({ color: 0xc7742c, roughness: 0.4 }));
+        card.position.set(x, 0.35, z);
+        scene.add(card);
+        card.userData.interact = { id: 'keycard', label: 'Something buried in the body', verb: 'Tear out' };
+        level.interactables.push(card);
+      };
+      entity.isSealActive = function (id) { return !!state.seals[id]; };
+      entity.findCameraNear = function (x1, z1, x2, z2) {
+        for (var i = 0; i < planted.length; i++) {
+          var c = planted[i];
+          if (!c.alive) continue;
+          var mx = (x1 + x2) / 2, mz = (z1 + z2) / 2;
+          if (Math.hypot(c.x - x1, c.z - z1) < 9 || Math.hypot(c.x - mx, c.z - mz) < 9) return i;
+        }
+        return -1;
+      };
+      entity.cameraPos = function (i) {
+        var c = planted[i];
+        if (!c) return null;
+        return { x: c.x + Math.sin(c.facing) * 1.6, z: c.z + Math.cos(c.facing) * 1.6 };
       };
     }
 
@@ -856,11 +1175,52 @@
       if (ui.onMessage) ui.onMessage('The screen shorts out. The room is quieter than it was.');
     };
 
+    // ---------------- Security feeds ----------------
+    var feedTarget = new THREE.WebGLRenderTarget(256, 160);
+    if (THREE.SRGBColorSpace) feedTarget.texture.colorSpace = THREE.SRGBColorSpace;
+    var feedCam = new THREE.PerspectiveCamera(72, 1.6, 0.05, 60);
+    var feedPixels = new Uint8Array(256 * 160 * 4);
+
+    function renderFeed(i, canvas2d) {
+      var c = planted[i];
+      if (!c) return false;
+      var x2 = canvas2d.getContext('2d');
+      if (!c.alive) {
+        x2.fillStyle = '#05070a';
+        x2.fillRect(0, 0, canvas2d.width, canvas2d.height);
+        return false;
+      }
+      feedCam.position.set(c.x, 2.35, c.z);
+      feedCam.rotation.set(-0.12, c.facing, 0, 'YXZ');
+      var prev = renderer.getRenderTarget();
+      renderer.setRenderTarget(feedTarget);
+      renderer.render(scene, feedCam);
+      renderer.readRenderTargetPixels(feedTarget, 0, 0, 256, 160, feedPixels);
+      renderer.setRenderTarget(prev);
+      var img = x2.createImageData(256, 160);
+      // flip vertically, lift the blacks, push it green — a cheap camera
+      for (var y = 0; y < 160; y++) {
+        for (var x = 0; x < 256; x++) {
+          var si = ((159 - y) * 256 + x) * 4, di = (y * 256 + x) * 4;
+          var lum = (feedPixels[si] + feedPixels[si + 1] + feedPixels[si + 2]) / 3;
+          var v = Math.min(255, 14 + lum * 2.1);
+          img.data[di] = v * 0.55;
+          img.data[di + 1] = v;
+          img.data[di + 2] = v * 0.6;
+          img.data[di + 3] = 255;
+        }
+      }
+      x2.putImageData(img, 0, 0);
+      return true;
+    }
+
     // ---------------- Loop ----------------
     var clock = new THREE.Clock();
     var velocity = new THREE.Vector3();
     var bobTime = 0, stepAccum = 0, eyeCurrent = STANCE.stand.eye;
     var focusTimer = 0, cullTimer = 0;
+    var survivalT = 0, thirstAcc = 0, hungerAcc = 0, energyAcc = 0, stillAcc = 0;
+    var collapseAcc = 0, fuelLineT = 20, rageRelight = 0;
     var ACTIVE_LIGHTS = 6;
     level.cullLights(camera.position, ACTIVE_LIGHTS);
 
@@ -869,7 +1229,22 @@
       var dt = Math.min(clock.getDelta(), 0.05);
       var elapsed = clock.elapsedTime;
 
-      if (active && !uiOpen) {
+      // seal shutters slide whether or not the player is moving
+      if (level.sealMeshes) {
+        Object.keys(level.sealMeshes).forEach(function (k) {
+          var m = level.sealMeshes[k];
+          var target = state.seals[k] ? 1.2 : 4.8;
+          m.position.y += (target - m.position.y) * (1 - Math.exp(-6 * dt));
+        });
+      }
+
+      if (active && !uiOpen && state.collapseT > 0) {
+        // face down on the floor, counting seconds
+        state.collapseT -= dt;
+        eyeCurrent += (0.32 - eyeCurrent) * (1 - Math.exp(-6 * dt));
+        camera.position.y = eyeCurrent;
+        if (state.collapseT <= 0) say('You get up. Nothing about that was sleep.');
+      } else if (active && !uiOpen) {
         var inputX = (keys.r ? 1 : 0) - (keys.l ? 1 : 0) + stick.x;
         var inputZ = (keys.f ? 1 : 0) - (keys.b ? 1 : 0) - stick.y;
         var len = Math.hypot(inputX, inputZ);
@@ -880,7 +1255,13 @@
         if (keys.tl || keys.tr) applyLook();
 
         var st = STANCE[state.stance];
-        var speed = st.speed * (running && state.stance === 'stand' ? 1.7 : 1);
+        var canSprint = state.energy > 0 && state.hunger > 0;
+        var sprintMult = running && state.stance === 'stand' ? (canSprint ? 1.7 : 1.25) : 1;
+        var speed = st.speed * sprintMult * (state.fueled ? 1.2 : 1);
+        if (state.hallucinating) {
+          // the corridor will not hold still
+          inputX += Math.sin(elapsed * 0.9) * 0.35;
+        }
         var fx = -Math.sin(yaw), fz = -Math.cos(yaw);
         var rx = Math.cos(yaw), rz = -Math.sin(yaw);
         var tx = (fx * inputZ + rx * inputX) * speed;
@@ -933,7 +1314,98 @@
 
         if (audio) audio.tick(dt, state.room ? state.room.id : null);
 
-        if (entity) entity.update(dt, camera.position.x, camera.position.z);
+        if (entity) {
+          // pinned while observed: centred enough in view, close enough, unobstructed
+          var es0 = entity.getState();
+          var vex = es0.x - camera.position.x, vez = es0.z - camera.position.z;
+          var vd = Math.hypot(vex, vez) || 1;
+          var fx2 = -Math.sin(yaw), fz2 = -Math.cos(yaw);
+          var dot = (vex / vd) * fx2 + (vez / vd) * fz2;
+          entity.setWatched(dot > 0.45 && vd < 48 && entity.los(camera.position.x, camera.position.z, es0.x, es0.z));
+          entity.update(dt, camera.position.x, camera.position.z);
+        }
+
+        // in its rage, the lights die wherever it walks
+        if (entity) {
+          var esR = entity.getState();
+          if (esR.raging) {
+            for (var lf = 0; lf < level.lightFixtures.length; lf++) {
+              var F = level.lightFixtures[lf];
+              var fdx = F.light.position.x - esR.x, fdz = F.light.position.z - esR.z;
+              if (!F.killed && fdx * fdx + fdz * fdz < 36) {
+                F.killed = true;
+                F.light.visible = false;
+                if (F.panel) F.panel.material.emissiveIntensity = 0.02;
+              }
+            }
+            rageRelight = 4;
+          } else if (rageRelight > 0) {
+            rageRelight -= dt;
+            if (rageRelight <= 0) {
+              for (var lf2 = 0; lf2 < level.lightFixtures.length; lf2++) {
+                var F2 = level.lightFixtures[lf2];
+                if (F2.killed) {
+                  F2.killed = false;
+                  F2.light.visible = true;
+                  if (F2.panel) F2.panel.material.emissiveIntensity = 1.6;
+                }
+              }
+            }
+          }
+        }
+
+        // ---------------- survival ----------------
+        if (state.attackCd > 0) state.attackCd -= dt;
+        survivalT += dt;
+        if (survivalT > 1) {
+          survivalT = 0;
+          thirstAcc += 1; hungerAcc += 1;
+          if (thirstAcc >= 50) { thirstAcc = 0; state.thirst = Math.max(0, state.thirst - 1); refreshHud(); }
+          if (hungerAcc >= 70) { hungerAcc = 0; state.hunger = Math.max(0, state.hunger - 1); refreshHud(); }
+          if (state.needToilet && Math.random() < 0.12) say('You need the toilet. Genuinely.');
+        }
+        var movedNow = Math.hypot(velocity.x, velocity.z);
+        if (running && movedNow > 0.6 && state.energy > 0) {
+          energyAcc += dt;
+          if (energyAcc > 3.5) { energyAcc = 0; state.energy = Math.max(0, state.energy - 1); refreshHud(); }
+        } else if (movedNow < 0.15) {
+          stillAcc += dt;
+          if (stillAcc > 3 && state.energy < 20) { stillAcc = 0; state.energy++; refreshHud(); }
+        } else { stillAcc = 0; }
+        if (state.fueled && state.energy <= 20) state.fueled = false;
+        if (state.fueled) {
+          fuelLineT -= dt;
+          if (fuelLineT <= 0) { fuelLineT = 22 + Math.random() * 10; say(UNHINGED[Math.floor(Math.random() * UNHINGED.length)]); }
+        }
+        var fovTarget = state.fueled ? 84 : 74;
+        if (Math.abs(camera.fov - fovTarget) > 0.2) {
+          camera.fov += (fovTarget - camera.fov) * (1 - Math.exp(-4 * dt));
+          camera.updateProjectionMatrix();
+        }
+        state.hallucinating = state.thirst <= 0;
+        if (state.hallucinating) {
+          camera.rotation.z = Math.sin(elapsed * 0.7) * 0.05;
+          collapseAcc += dt;
+          if (collapseAcc > 15) {
+            collapseAcc = 0;
+            if (chance('collapse', 0.35)) {
+              state.collapseT = 50;
+              say('The floor comes up to meet you. Fifty seconds.');
+            }
+          }
+        } else if (!prefersReducedMotion) camera.rotation.z = 0;
+        if (state.hunger <= 0) {
+          state.starveT += dt;
+          if (state.starveT > 180) die('starved');
+        } else state.starveT = 0;
+
+        // walking out — the only good ending
+        if (state.entranceOpen && camera.position.z > 7.4 && !state.ended) {
+          state.ended = true;
+          active = false;
+          if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock();
+          if (ui.onEnding) ui.onEnding();
+        }
       }
 
       handLight.position.copy(camera.position);
@@ -987,6 +1459,9 @@
       },
       respawn: function () {
         state.dead = false;
+        state.collapseT = 0;
+        state.attackCd = 0;
+        state.deathReason = null;
         camera.position.set(level.spawn.x, STANCE.stand.eye, level.spawn.z);
         yaw = level.spawn.yaw; pitch = 0;
         applyLook();
@@ -1016,13 +1491,44 @@
           hasKey: state.hasKey, storageOpen: state.storageOpen,
           hasGlock: state.hasGlock, ammo: state.ammo, inMag: state.inMag,
           wifiConnected: state.wifiConnected, tvWatched: state.tvWatched,
-          dead: state.dead, deaths: state.deaths,
+          dead: state.dead, deaths: state.deaths, deathReason: state.deathReason,
           entity: entity ? entity.getState() : null,
+          hunger: state.hunger, thirst: state.thirst, energy: state.energy,
+          fueled: state.fueled, collapsed: state.collapseT > 0,
+          hallucinating: state.hallucinating, needToilet: state.needToilet,
+          cams: state.cams, plantedCount: planted.length,
+          waterN: state.waterN, beansN: state.beansN, fuelN: state.fuelN,
+          weapon: state.weapon, shells: state.shells, arRounds: state.arRounds,
+          riotGear: state.riotGear, keycard: state.keycard,
+          seals: { west: state.seals.sealWest, east: state.seals.sealEast },
+          entranceOpen: state.entranceOpen, ended: state.ended,
           focus: focused ? focused.userData.interact.id : null
         };
       },
       // test/debug helpers
-      forceEntity: function (x, z, m) { if (entity) entity.force(x, z, m); },
+      forceEntity: function (x, z, m, lurkId) { if (entity) entity.force(x, z, m, lurkId); },
+      setSeal: function (w) { return setSeal(w); },
+      shockEntity: function () {
+        if (!entity) return false;
+        var ok = entity.shockAtCage();
+        if (ok) { if (audio) audio.zap(); say('The cage floor lights. It stands perfectly still, cooking.'); }
+        return ok;
+      },
+      renderFeed: renderFeed,
+      plantedCams: function () { return planted.map(function (c) { return { x: c.x, z: c.z, alive: c.alive }; }); },
+      entityLurk: function () { return entity ? entity.getState().lurk : null; },
+      setLurkScale: function (v) { if (entity) entity.setLurkScale(v); },
+      setChance: function (name, v) { debugChance[name] = v; },
+      giveDebug: function (what) {
+        if (what === 'cams') state.cams += 5;
+        if (what === 'riot') state.riotGear = true;
+        if (what === 'water') state.waterN += 5;
+        if (what === 'beans') state.beansN += 5;
+        if (what === 'fuel') state.fuelN += 12;
+        if (what === 'keycard') state.keycard = true;
+        refreshHud();
+      },
+      consumeDebug: function (kind) { consume(kind); },
       entityInfo: function () {
         if (!entity) return null;
         var b = new THREE.Box3().setFromObject(entity.group);
