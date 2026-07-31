@@ -79,10 +79,10 @@ Every doorway carries a leaf built to its own spec, and all of them open:
 | Warehouse | Steel double doors, push bars, wired-glass vision panels |
 | Corporate office | **No leaf** — torn off its hinges; only bent hinges and splinters remain |
 | East junction | Fire door, push bar, `FIRE DOOR / KEEP SHUT` plate |
-| Storage unit | Roller shutter, locked — it lifts rather than swings |
+| Storage unit | Plain panelled wood, locked — a brass deadbolt, nothing more |
 | Assembly | Steel door standing open, planks nailed across the frame |
 | Airlock (both ends) | Hazard-striped hatches with wheel handles and dogging bolts |
-| Supply storage | Utility steel, signage plate |
+| Utility room | Utility steel, signage plate |
 | Entrance | Tempered glass — sealed |
 
 ### Sound
@@ -102,7 +102,7 @@ the lab's vinyl clicks tight and dry.
 **Doors sound like what they're made of.** Wood doors are a latch, stick-slip
 hinge squeaks and a shut thud; steel doors groan on resonance with a push-bar
 clack and a ring off the leaf; the airlock hatches ratchet their wheel before a
-heavy clunk; the storage shutter rattles up its guides slat by slat.
+heavy clunk.
 
 ### Mirrors
 
@@ -351,6 +351,14 @@ to overcharge to 25: green bars, wider eyes, faster legs, and your character
 starts saying unhinged things to the furniture. Ten in a row risks a fatal
 cardiac event. Overeat or overdrink and you will need the toilet; both
 restrooms finally justify their existence.
+
+**The food is finite.** A braced shelf against the warehouse's west wall holds
+six bottles of water and six cans of beans, each one modelled — a ribbed steel
+can with a paper label and rolled rims, a moulded bottle with a neck, cap and
+label band — and each taken individually, once. The shelf empties as you strip
+it. A few already-drained cans lie on their sides beside it. Everything else
+has to come out of the loot crates, which is the whole pressure: Nick had this
+same shelf, and it ran out.
 
 ### Warehouse loot
 

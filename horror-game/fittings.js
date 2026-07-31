@@ -138,8 +138,10 @@
         sign: 'FIRE DOOR\nKEEP SHUT'
       },
       storage: {
+        // An ordinary door on an ordinary room. It is locked, not armoured.
         gap: { axis: 'x', at: 56, min: -1.5, max: 1.5 },
-        style: 'roller', label: 'Storage unit', locked: true, id: 'storageDoor'
+        style: 'wood', label: 'Storage unit door', locked: true, id: 'storageDoor',
+        hinge: 'min', swing: -1.85
       },
       assembly: {
         gap: { axis: 'z', at: 46, min: 48, max: 51 },
@@ -156,8 +158,8 @@
       },
       supply: {
         gap: { axis: 'z', at: 58, min: 63.5, max: 65.5 },
-        style: 'utility', label: 'Supply storage door', hinge: 'min', swing: 1.75,
-        sign: 'SUPPLY'
+        style: 'utility', label: 'Utility room door', hinge: 'min', swing: 1.75,
+        sign: 'UTILITY'
       },
       bath2: {
         gap: { axis: 'z', at: 58, min: 70, max: 72 },
@@ -323,7 +325,18 @@
         leaves.push({ pivot: pivot, base: pivot.rotation.y, swing: swing });
         var soundKind = (spec.style === 'wood' || spec.style === 'restroom') ? 'wood'
           : (spec.style === 'hatch' ? 'hatch' : 'steel');
-        interact(built.slab, { kind: 'door', id: id, doorId: id, label: spec.label, verb: 'Open', sound: soundKind });
+        // A locked leaf gets a deadbolt escutcheon, and carries the flag the
+        // game reads to decide whether the key is needed.
+        if (spec.locked) {
+          var esc = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.11, 0.02),
+            new THREE.MeshStandardMaterial({ color: 0xb0a578, roughness: 0.35, metalness: 0.8 }));
+          esc.position.set(leafW * (spec.hinge === 'min' ? 0.86 : 0.14), LEAF_H * 0.47, 0.045);
+          g.add(esc);
+        }
+        interact(built.slab, {
+          kind: 'door', id: id, doorId: id, label: spec.label, verb: 'Open',
+          sound: soundKind, locked: !!spec.locked
+        });
       }
 
       // frame lining

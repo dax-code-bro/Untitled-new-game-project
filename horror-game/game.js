@@ -989,8 +989,8 @@
           }
           state.storageOpen = true;
           if (audio) audio.unlock();
-          if (audio) audio.door('roller', true);
-          say('The lock turns. The shutter rolls up on a smell you will not forget.');
+          if (audio) audio.door(d.sound || 'wood', true);
+          say('The lock turns. The door swings back on a smell you will not forget.');
           level.toggleDoor(d.doorId);
           updateFocus();
           return;
@@ -1185,14 +1185,19 @@
           say('A keycard, warm from the machinery. Stamped: FRONT ENTRANCE.');
           refreshHud();
           break;
-        case 'supplies':
+        case 'supplyItem': {
+          // One item, once. The shelf empties as you strip it.
+          if (d.node && d.node.parent) d.node.parent.remove(d.node);
+          var si = level.interactables.indexOf(focused);
+          if (si >= 0) level.interactables.splice(si, 1);
           state.supplies = true;
           if (audio) audio.pickup();
-          state.waterN += 2; state.beansN += 2;
-          giveItem('water'); giveItem('beans');
-          say('Water, and a few cans of beans. Exactly what Nick ran out of.');
+          if (d.kind2 === 'water') { state.waterN++; giveItem('water'); say('A bottle of water. There are not many left.'); }
+          else { state.beansN++; giveItem('beans'); say('A can of beans. Exactly what Nick ran out of.'); }
+          focused = null;
           refreshHud();
           break;
+        }
         default:
           say(d.label);
       }
@@ -2409,10 +2414,53 @@
           out.push({
             outfit: o.userData.humanoid,
             minX: b.min.x, maxX: b.max.x, minZ: b.min.z, maxZ: b.max.z,
+            minY: b.min.y, maxY: b.max.y,
             cx: (b.min.x + b.max.x) / 2, cz: (b.min.z + b.max.z) / 2
           });
         });
         return out;
+      },
+      // Which bodies are lying through the scenery. Bodies sprawl over a
+      // metre, so a corpse placed clear of a prop can still reach into it.
+      bodiesInsideProps: function () {
+        var out = [], b = new THREE.Box3();
+        scene.traverse(function (o) {
+          if (!o.userData || !o.userData.humanoid || (playerRig && o === playerRig.group)) return;
+          b.setFromObject(o);
+          for (var i = 0; i < level.colliders.length; i++) {
+            var c = level.colliders[i];
+            // doorways and the barricade are meant to be walked through
+            if (c.id) continue;
+            var overlapX = Math.min(b.max.x, c.x2) - Math.max(b.min.x, c.x1);
+            var overlapZ = Math.min(b.max.z, c.z2) - Math.max(b.min.z, c.z1);
+            if (overlapX > 0.06 && overlapZ > 0.06) {
+              out.push({
+                outfit: o.userData.humanoid,
+                cx: +((b.min.x + b.max.x) / 2).toFixed(2), cz: +((b.min.z + b.max.z) / 2).toFixed(2),
+                into: [c.x1, c.z1, c.x2, c.z2], overlap: +Math.min(overlapX, overlapZ).toFixed(2)
+              });
+              break;
+            }
+          }
+        });
+        return out;
+      },
+      supplyItemRooms: function () {
+        var out = [], v = new THREE.Vector3();
+        for (var i = 0; i < level.interactables.length; i++) {
+          var o = level.interactables[i];
+          if (o.userData.interact.id !== 'supplyItem') continue;
+          var d = o.userData.interact;
+          o.getWorldPosition(v);
+          var r = level.roomAt(v.x, v.z);
+          var meshes = 0;
+          if (d.node) d.node.traverse(function (m) { if (m.isMesh) meshes++; });
+          out.push({ kind: d.kind2, room: r ? r.id : null, x: v.x, y: v.y, z: v.z, meshes: meshes });
+        }
+        return out;
+      },
+      roomNames: function () {
+        return window.LEVEL.rooms.map(function (r) { return { id: r.id, name: r.name }; });
       },
       roomOf: function (x, z) {
         var r = level.roomAt(x, z);

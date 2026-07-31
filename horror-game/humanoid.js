@@ -176,12 +176,14 @@
       hipL: [0, 0, 0.26], hipR: [-0.2, 0, -0.34], kneeL: [-0.35, 0, 0], kneeR: [-0.15, 0, 0],
       shoulderL: [0.2, 0, 1.15], shoulderR: [0.15, 0, -1.4], elbowL: [0.4, 0, 0], elbowR: [0.3, 0, 0],
       head: [0, -0.8, 0] },
-    // slumped sitting against a wall — how Nick went. The measured drop
-    // lands the feet on the floor and the pelvis where a sitting one goes.
-    slumped: { tilt: -0.15,
-      hipL: [-1.5, 0, 0.16], hipR: [-1.4, 0, -0.2], kneeL: [1.2, 0, 0], kneeR: [1.5, 0, 0],
-      shoulderL: [0.35, 0, 0.5], shoulderR: [0.3, 0, -0.42], elbowL: [-0.5, 0, 0], elbowR: [-0.7, 0, 0],
-      torso: [0.3, 0, 0.1], head: [0.6, 0.25, 0] },
+    // Slumped on the floor with his back to a wall — how Nick went. The
+    // legs go out flat in front of him rather than folding down at the
+    // knee: a seated pose with vertical shins leaves the pelvis at chair
+    // height with nothing under it, which reads as floating.
+    slumped: { tilt: 0.26,
+      hipL: [-1.78, 0, 0.15], hipR: [-1.7, 0, -0.19], kneeL: [0.22, 0, 0], kneeR: [0.4, 0, 0],
+      shoulderL: [-0.2, 0, 0.5], shoulderR: [-0.26, 0, -0.4], elbowL: [0.6, 0, 0], elbowR: [0.75, 0, 0],
+      torso: [-0.14, 0, 0.08], head: [0.75, 0.3, 0.12] },
     // thrown, crumpled where they landed, half rolled onto one side
     crumpled: { tilt: -Math.PI / 2, spin: 0.5,
       hipL: [0.25, 0, 0.75], hipR: [0.1, 0, -0.12], kneeL: [1.1, 0, 0], kneeR: [0.85, 0, 0],
@@ -368,6 +370,14 @@
         group.position.z += z - (_b.min.z + _b.max.z) / 2;
         group.updateMatrixWorld(true);
         return api;
+      },
+      // The body's floor footprint, for giving a corpse a collider that
+      // matches the shape actually lying there.
+      footprint: function (inset) {
+        group.updateMatrixWorld(true);
+        _b.setFromObject(group);
+        var i = inset === undefined ? 0.12 : inset;
+        return { x1: _b.min.x + i, z1: _b.min.z + i, x2: _b.max.x - i, z2: _b.max.z - i };
       },
       // Where the blood should pool: under the chest, not under the feet.
       torsoWorld: function () {

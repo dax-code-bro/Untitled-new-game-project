@@ -39,7 +39,9 @@
     { id: 'link',      name: 'Airlock',               x1: 58,  z1: 51,   x2: 62,  z2: 54,  tone: 'lab' },
     { id: 'exterm',    name: 'Extermination Chamber', x1: 62,  z1: 48,   x2: 74,  z2: 58,  tone: 'lab' },
 
-    { id: 'supply',    name: 'Supply Storage',        x1: 62,  z1: 58,   x2: 68,  z2: 64,  tone: 'industrial' },
+    // Named 'Utility Room', not 'Supply Storage': two rooms both reading as
+    // "storage" had players hunting the storage unit's contents in here.
+    { id: 'supply',    name: 'Utility Room',          x1: 62,  z1: 58,   x2: 68,  z2: 64,  tone: 'industrial' },
     { id: 'bath2',     name: 'Restroom',              x1: 68,  z1: 58,   x2: 74,  z2: 64,  tone: 'tile' }
   ];
 
@@ -182,6 +184,84 @@
       interactables.push(mesh);
       return mesh;
     }
+    // ---------------- Consumables ----------------
+    // Beans and water are what you live on, so they get built rather than
+    // implied: a ribbed steel can with a paper label, and a moulded bottle
+    // with a neck, a cap and a label band.
+    var CAN_MATS = {
+      steel: new THREE.MeshStandardMaterial({ color: 0xb9bcbb, roughness: 0.38, metalness: 0.72 }),
+      label: new THREE.MeshStandardMaterial({ color: 0x8d5f2a, roughness: 0.9 }),
+      lid: new THREE.MeshStandardMaterial({ color: 0xa8abaa, roughness: 0.45, metalness: 0.7 })
+    };
+    var BOTTLE_MATS = {
+      body: new THREE.MeshStandardMaterial({
+        color: 0xbcd8de, roughness: 0.16, metalness: 0.05, transparent: true, opacity: 0.62
+      }),
+      cap: new THREE.MeshStandardMaterial({ color: 0x2f6ea8, roughness: 0.55 }),
+      label: new THREE.MeshStandardMaterial({ color: 0xdfe4e2, roughness: 0.85 })
+    };
+
+    function beanCan(x, y, z, ry) {
+      var g = new THREE.Group();
+      g.position.set(x, y, z);
+      if (ry) g.rotation.y = ry;
+      var body = new THREE.Mesh(new THREE.CylinderGeometry(0.037, 0.037, 0.105, 12), CAN_MATS.steel);
+      body.position.y = 0.0525;
+      g.add(body);
+      var wrap = new THREE.Mesh(new THREE.CylinderGeometry(0.0385, 0.0385, 0.07, 12), CAN_MATS.label);
+      wrap.position.y = 0.052;
+      g.add(wrap);
+      // rolled rims, top and bottom
+      [0.004, 0.101].forEach(function (ly) {
+        var rim = new THREE.Mesh(new THREE.CylinderGeometry(0.039, 0.039, 0.008, 12), CAN_MATS.lid);
+        rim.position.y = ly;
+        g.add(rim);
+      });
+      group.add(g);
+      return g;
+    }
+
+    function waterBottle(x, y, z, ry) {
+      var g = new THREE.Group();
+      g.position.set(x, y, z);
+      if (ry) g.rotation.y = ry;
+      var body = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.04, 0.17, 12), BOTTLE_MATS.body);
+      body.position.y = 0.085;
+      g.add(body);
+      var shoulder = new THREE.Mesh(new THREE.CylinderGeometry(0.017, 0.036, 0.05, 12), BOTTLE_MATS.body);
+      shoulder.position.y = 0.195;
+      g.add(shoulder);
+      var neck = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.03, 10), BOTTLE_MATS.body);
+      neck.position.y = 0.232;
+      g.add(neck);
+      var cap = new THREE.Mesh(new THREE.CylinderGeometry(0.019, 0.019, 0.026, 10), BOTTLE_MATS.cap);
+      cap.position.y = 0.259;
+      g.add(cap);
+      var label = new THREE.Mesh(new THREE.CylinderGeometry(0.0415, 0.0415, 0.06, 12), BOTTLE_MATS.label);
+      label.position.y = 0.075;
+      g.add(label);
+      group.add(g);
+      return g;
+    }
+
+    // A shelf run that is actually held up by something. `runsAlongX` picks
+    // whether the boards span X or Z; uprights go at both ends and stand on
+    // the floor, because a plank floating off a wall reads as a bug.
+    function shelfRun(x, z, y0, levels, spacing, width, depth, runsAlongX, mat) {
+      var m = mat || MAT.metal;
+      for (var s = 0; s < levels; s++) {
+        var y = y0 + s * spacing;
+        if (runsAlongX) box(width, 0.06, depth, m, x, y, z);
+        else box(depth, 0.06, width, m, x, y, z);
+      }
+      var top = y0 + (levels - 1) * spacing + 0.06;
+      [-1, 1].forEach(function (e) {
+        var ex = runsAlongX ? x + e * (width / 2 - 0.06) : x;
+        var ez = runsAlongX ? z : z + e * (width / 2 - 0.06);
+        box(0.06, top, depth, m, ex, top / 2, ez);
+      });
+    }
+
     // Position on a ring, with the mesh's +Z face pointing outward.
     function ringAt(cx, cz, r, theta) {
       return { x: cx + Math.sin(theta) * r, z: cz + Math.cos(theta) * r, ry: theta };
@@ -740,6 +820,34 @@
       glow.position.set(-51.6, 0.75, 4.7);
       group.add(glow);
 
+      // The food. Finite, and each item taken individually — this is what
+      // Nick was rationing, and what you will be too.
+      // against the west wall, clear of the racks and of the response-team
+      // case further along the floor
+      shelfRun(-63.4, -2, 0.62, 2, 0.68, 3.0, 0.5, false);
+      solid(-63.7, -3.6, -63.1, -0.4);
+      var supplyIdx = 0;
+      for (var wb = 0; wb < 6; wb++) {
+        var bot = waterBottle(-63.4, 0.68 + Math.floor(wb / 3) * 0.68, -3.2 + (wb % 3) * 0.34, Math.random());
+        interact(bot.children[0], {
+          id: 'supplyItem', kind2: 'water', node: bot, idx: supplyIdx++,
+          label: 'Bottle of water', verb: 'Take'
+        });
+      }
+      for (var bc = 0; bc < 6; bc++) {
+        var can = beanCan(-63.4, 0.68 + Math.floor(bc / 3) * 0.68, -1.6 + (bc % 3) * 0.32, Math.random());
+        interact(can.children[0], {
+          id: 'supplyItem', kind2: 'beans', node: can, idx: supplyIdx++,
+          label: 'Can of beans', verb: 'Take'
+        });
+      }
+      // a few already emptied, dropped where whoever drank them stood
+      for (var ec = 0; ec < 4; ec++) {
+        var dead = beanCan(-63.4 + Math.random() * 0.7, 0.02, -1.4 + Math.random() * 2.2, Math.random() * 3);
+        dead.rotation.z = Math.PI / 2;
+        dead.position.y = 0.037;
+      }
+
       // Someone else came looking, once. They didn't get any further than
       // this — a response-team case, forced, and left where it fell.
       var caseMat = new THREE.MeshStandardMaterial({ color: 0x2b3324, roughness: 0.75 });
@@ -775,7 +883,7 @@
       clawedChair(25.6, -10.4, 0.6);
       clawedChair(31.2, -11.2, -0.5);
 
-      [1.0, 1.6, 2.2].forEach(function (y) { box(3.2, 0.07, 0.4, MAT.darkWood, 25.4, y, -13.7); });
+      shelfRun(25.4, -13.7, 1.0, 3, 0.6, 3.2, 0.4, true, MAT.darkWood);
       solid(23.8, -13.95, 27.0, -13.45);
       var boneMat = new THREE.MeshStandardMaterial({ color: 0xd6cdb4, roughness: 0.8 });
       box(0.5, 0.26, 0.24, boneMat, 24.4, 1.78, -13.7);
@@ -817,7 +925,7 @@
     (function storageUnit() {
       batten(60, 0, WALL_H, 0xd8e2e4, 5, 11, 'dying');
 
-      for (var s = 0; s < 3; s++) box(0.4, 0.06, 3.4, MAT.metal, 63.6, 0.6 + s * 0.7, -2);
+      shelfRun(63.6, -2, 0.6, 3, 0.7, 3.4, 0.4, false);
       solid(63.35, -3.75, 63.85, -0.25);
       for (var c = 0; c < 5; c++) box(0.5, 0.4, 0.4, MAT.wood, 63.6, 0.85 + Math.floor(c / 2) * 0.7, -3.2 + (c % 2) * 0.9);
       for (var t = 0; t < 11; t++) {
@@ -828,14 +936,21 @@
       // Nick, where he sat down and did not get up. Same blue intern tee
       // you were handed on your way in.
       var nick = window.buildHumanoid(THREE, 'nick', { pose: 'slumped', hair: 0x4a3524, blood: true });
-      nick.group.position.set(62.6, 0, 3.5);
-      nick.group.rotation.y = Math.PI;
+      // back to the east wall, directly under the tally marks he scratched.
+      // Placed by his centre like the other bodies: set by the feet he ends
+      // up half inside the wall he is leaning on.
+      nick.group.rotation.y = Math.PI / 2;
       group.add(nick.group);
+      nick.centerOn(63.15, 3.0);
+      // his collider is his own shape, not a guessed box left over from the
+      // slab he used to be; the id keeps the body-vs-prop check off it
+      var nf = nick.footprint();
+      solid(nf.x1, nf.z1, nf.x2, nf.z2, 'corpseNick');
+      var nt = nick.torsoWorld();
       var pool = new THREE.Mesh(new THREE.CircleGeometry(0.75, 22), MAT.blood);
       pool.rotation.x = -Math.PI / 2;
-      pool.position.set(62.6, 0.011, 3.1);
+      pool.position.set(nt.x, 0.011, nt.z - 0.15);
       group.add(pool);
-      solid(62.2, 2.6, 63.0, 3.7);
 
       var journal = box(0.22, 0.05, 0.3, new THREE.MeshStandardMaterial({ color: 0x6d5433, roughness: 0.9 }), 61.9, 0.025, 3.0, 0.4);
       interact(journal, { id: 'journal', label: "Nick's journal", verb: 'Read' });
@@ -896,7 +1011,7 @@
         pl.position.set(t.x + 0.1, 0.01, t.z + 0.15);
         group.add(pl);
       }
-      corpse(45.5, 48.5, 0.4, true, 'sprawl');
+      corpse(45.5, 47.8, 0.4, true, 'sprawl');
       corpse(47.8, 53.6, 1.9, false, 'faceup');
       corpse(52.2, 48.2, -0.8, true, 'crumpled');
       corpse(55.4, 52.8, 2.6, false, 'sprawl');
@@ -997,14 +1112,21 @@
       batten(65, 61, WALL_H, 0xd8e2e4, 5, 10, 'dying');
       batten(71, 61, WALL_H, 0xdfe8ea, 5, 10, 'buzz');
 
-      for (var s = 0; s < 3; s++) box(4.6, 0.06, 0.5, MAT.metal, 65, 0.7 + s * 0.62, 63.4);
+      // Janitorial, not a pantry — the food lives in the warehouse.
+      shelfRun(65, 63.4, 0.7, 3, 0.62, 4.6, 0.5, true);
       solid(62.7, 63.1, 67.3, 63.7);
-      for (var b = 0; b < 22; b++) {
-        cyl(0.045, 0.045, 0.12, new THREE.MeshStandardMaterial({ color: 0x9a8f6a, roughness: 0.55, metalness: 0.35 }),
-          63.1 + (b % 8) * 0.55, 0.79 + (b % 3) * 0.62, 63.4, 10);
+      var jugMat = new THREE.MeshStandardMaterial({ color: 0x6f7c58, roughness: 0.6 });
+      for (var b = 0; b < 9; b++) {
+        cyl(0.06, 0.07, 0.22, jugMat, 63.2 + (b % 5) * 0.62, 0.84 + Math.floor(b / 5) * 0.62, 63.4, 8);
       }
-      var water = cyl(0.07, 0.07, 0.26, new THREE.MeshStandardMaterial({ color: 0x9fc4cc, roughness: 0.25, transparent: true, opacity: 0.75 }), 66.6, 0.86, 63.4, 10);
-      interact(water, { id: 'supplies', label: 'Water and beans', verb: 'Take' });
+      var boxMat = new THREE.MeshStandardMaterial({ color: 0x7d6a4e, roughness: 0.95 });
+      for (var cb = 0; cb < 5; cb++) {
+        box(0.4, 0.3, 0.34, boxMat, 65.6 + (cb % 3) * 0.5, 2.09, 63.4, (Math.random() - 0.5) * 0.4);
+      }
+      // a mop and bucket parked in the corner
+      box(0.28, 0.24, 0.28, new THREE.MeshStandardMaterial({ color: 0x3f4a52, roughness: 0.7 }), 62.6, 0.12, 62.3);
+      var mop = cyl(0.018, 0.018, 1.3, MAT.wood, 62.75, 0.65, 62.5, 8);
+      mop.rotation.z = 0.22;
 
       box(0.06, 1.9, 1.4, MAT.metal, 71.2, 1.15, 61.4);
       solid(71.17, 60.7, 71.23, 62.1);
