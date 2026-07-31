@@ -5,29 +5,36 @@ step, no bundler, no runtime network access.
 
 ## The facility
 
-Thirteen connected rooms on one floor. You start in **Waiting**, behind sealed
-tempered-glass doors.
+Fourteen connected rooms on one floor. You start in **Waiting**, behind sealed
+tempered-glass doors. The corridors are long on purpose — 40m each way, and 45m
+south — so you lose sight of both ends of them.
 
 ```
-                       WAREHOUSE ── key
-                           │
-    RESTROOMS ── WEST CORRIDOR ── WAITING ── EAST CORRIDOR ── CORPORATE OFFICE
-                                                   │
-                                              JUNCTION ────── STORAGE UNIT (locked)
-                                                   │
-                                           SOUTH CORRIDOR
-                                                   │
-                                              ASSEMBLY ── EXTERMINATION ── SUPPLY
-                                             (barricaded)         └──────── RESTROOM
+   WAREHOUSE ══ 40m WEST CORRIDOR ══ WAITING ══ 40m EAST CORRIDOR ══ JUNCTION ── STORAGE (locked)
+    (key)            │                                   │                │
+                 RESTROOMS                        CORPORATE OFFICE   45m SOUTH CORRIDOR
+                                                                          │
+                                                                     ASSEMBLY (barricaded)
+                                                                          │
+                                                                      AIRLOCK
+                                                                          │
+                                                              EXTERMINATION ── SUPPLY
+                                                                           └── RESTROOM
 ```
 
 ### Waiting
 
-Rows of chairs, shelves of books, and a curved reception desk you can walk
-behind through a gap in the counter. On it: a tipped coffee cup drying into the
-newspapers, scattered paper, pens laid out separately, a half-cracked monitor.
-An old telephone on the wall — the line is dead. A bank of five TVs overhead,
-most of them smashed.
+A round reception **island** with a dropped **bulkhead** soffit hanging over it,
+lit from recessed downlights in its underside. **Four screens are mounted to the
+bulkhead's outer face, one per side — only one of them still works.** The counter
+rings the island with a single gap at the back; you have to walk around and
+through it to get inside. On the counter: a tipped coffee cup drying into the
+newspapers, scattered paper, pens laid out separately, a half-cracked monitor
+facing inward. Shelves of books against the back wall, and an old telephone —
+the line is dead.
+
+Seating is kept clear of both corridor mouths, so the walk to either hallway is
+never blocked.
 
 **The Wi-Fi puzzle.** Crawl under the rolling chair and look up: the password is
 taped to the underside of the seat. Use the terminal, pick `WAITING ROOM WIFI`
@@ -91,7 +98,9 @@ horror-game/
 ```
 
 Walls are generated from room rectangles with doorway gaps punched out, so the
-floorplan is edited as data in `level.js` rather than as placed meshes.
+floorplan is edited as data in `level.js` rather than as placed meshes. Wall
+planes are merged across rooms before they are built — building per-room would
+put two coincident faces wherever rooms share a plane, which z-fights.
 
 ```bash
 node build-standalone.mjs
@@ -102,9 +111,10 @@ node build-standalone.mjs
 - **All audio is synthesised at runtime** — per-room tone beds, footsteps that
   change with the surface, and stingers. No audio files.
 - **Lighting is culled to the nearest six fixtures.** Forward rendering
-  evaluates every light in every fragment shader, and the facility has ~28. The
-  count of *visible* lights is held constant, because a changing count makes
-  Three.js recompile every shader mid-play.
+  evaluates every light in every fragment shader, and the corridors alone carry
+  dozens. The count of *visible* lights is held constant, because a changing
+  count makes Three.js recompile every shader mid-play. Fixtures flicker in four
+  styles — `steady`, `buzz`, `dying`, `strobe` — assigned down the corridor runs.
 - **The highlight reel is a stylised silhouette animation**, drawn to a canvas
   each frame. It is not real broadcast footage.
 - **Deliberately single-theme.** A horror game that repaints itself for light
