@@ -196,9 +196,10 @@ never hurt anyone.** It turned them into spears. Gears wind up when it starts
 to move, and tick under every wooden footfall.
 
 It hides in the vents. The SECURITY crate sits in the corner of the waiting
-room; taking the five cameras changes nothing — until you carry them back to
-the reception desk. Then the ceiling speakers die mid-chorus, and the game
-begins.
+room; taking the five cameras changes nothing. Placing all five changes
+nothing. The game begins the moment you open the camera view on the terminal —
+the speakers die mid-chorus, and one of your own feeds already has it in
+frame, looking at the lens.
 
 **The loop.** It haunts three spots, 5 to 25 minutes at a time: the storage
 unit, where it smears Nick's blood over its face and body (the stains are
@@ -252,9 +253,26 @@ weapons fire, consumables consume, cameras place. **Riot gear only protects
 you once it is equipped in the armor slot.** First pickups bind themselves to
 free slots.
 
-**Viewmodels.** Every weapon renders in first person — Glock, shotgun, rifle,
-or the camera in your hand — with a real 3D muzzle flash and burst light at
-the barrel, recoil kick, and idle sway. Rounds no longer pass through walls.
+**The guns are guns now.** Visible arms with hands actually on the weapons.
+The Glock 19 has a reciprocating slide and an animated magazine reload. The
+semi-automatic 12-gauge feeds from a six-shell tube, reloads shell by shell,
+and throws an eight-pellet spread. The rifle is a Remington 700 — walnut
+stock, iron sights, and a bolt the right hand visibly cycles between shots,
+which IS the rate of fire. Every shot ejects real brass that bounces on the
+floor, sends a tracer you can watch fly, and puffs dust where it lands.
+Rounds stop at walls.
+
+**Doors are not shelter.** Anything that isn't hard-sealed tungsten, the
+Birch bashes straight through — the leaf is destroyed permanently, with a
+splintering crash you'll hear from rooms away.
+
+**The cameras are vintage.** Black-and-white feeds with lifted blacks, a
+blinking red dot beside REC, two bars of battery, full signal — and when a
+camera dies, static and CONNECTION LOST. Each head pans and tilts from the
+terminal (buttons or arrow keys). If the movement register reads POSITIVE on
+the feed you're watching, you get the SHOCK button — and here is the trade:
+it takes the current, it screams, and it comes for the hallway at a dead run.
+Hit HARD SEAL immediately.
 
 ### Survival
 

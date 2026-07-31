@@ -449,6 +449,40 @@
         noiseHit({ dur: 1.2, type: 'highpass', freq: 2400, gain: 0.16 });
         tone({ dur: 1.1, freq: 120, type: 'square', gain: 0.07, wobble: { rate: 30, depth: 60 } });
       },
+      rifle: function () {
+        // a hunting rifle indoors: an enormous crack and a long tail
+        noiseHit({ dur: 0.6, freq: 6000, sweepTo: 120, gain: 0.75 });
+        tone({ freq: 130, to: 26, dur: 0.55, type: 'square', gain: 0.32 });
+        noiseHit({ at: 0.12, dur: 1.1, freq: 800, sweepTo: 90, gain: 0.12, attack: 0.1 });
+      },
+      boltCycle: function () {
+        noiseHit({ dur: 0.03, type: 'highpass', freq: 3200, gain: 0.05 });
+        tone({ at: 0.02, freq: 1870, dur: 0.05, gain: 0.014 });
+      },
+      magOut: function () { noiseHit({ dur: 0.05, type: 'highpass', freq: 2200, gain: 0.05 }); },
+      magIn: function () {
+        noiseHit({ dur: 0.04, type: 'highpass', freq: 2600, gain: 0.06 });
+        tone({ at: 0.03, freq: 240, dur: 0.06, gain: 0.05 });
+      },
+      shellIn: function () {
+        noiseHit({ dur: 0.03, type: 'bandpass', freq: 1400, q: 2, gain: 0.05 });
+        tone({ freq: 420, dur: 0.05, gain: 0.02 });
+      },
+      scream: function (dist) {
+        // wood should not be able to make this noise
+        var a = Math.max(0.2, 1 - (dist || 10) / 60);
+        tone({ freq: 1150, to: 420, dur: 1.5, type: 'sawtooth', gain: 0.16 * a, wobble: { rate: 22, depth: 160 } });
+        tone({ at: 0.1, freq: 1560, to: 700, dur: 1.2, type: 'square', gain: 0.05 * a, wobble: { rate: 31, depth: 220 } });
+        noiseHit({ dur: 1.4, type: 'bandpass', freq: 1900, q: 2.5, gain: 0.09 * a, attack: 0.05 });
+      },
+      doorBash: function (dist) {
+        var a = Math.max(0.15, 1 - (dist || 10) / 55);
+        noiseHit({ dur: 0.5, freq: 1200, sweepTo: 90, gain: 0.4 * a });
+        tone({ freq: 60, to: 30, dur: 0.6, gain: 0.28 * a });
+        for (var i = 0; i < 6; i++) {
+          noiseHit({ at: 0.04 + i * 0.03, dur: 0.05, type: 'bandpass', freq: 900 + Math.random() * 1400, q: 3, gain: 0.08 * a });
+        }
+      },
       shotgun: function () {
         noiseHit({ dur: 0.5, freq: 5200, sweepTo: 140, gain: 0.7 });
         tone({ freq: 110, to: 30, dur: 0.4, type: 'square', gain: 0.3 });
@@ -572,102 +606,47 @@
     var yaw = level.spawn.yaw;
     var pitch = 0;
 
-    // ---------------- First-person viewmodel ----------------
+    // ---------------- First-person weapons ----------------
     scene.add(camera);   // children of the camera need it in the graph
     var viewRoot = new THREE.Group();
     viewRoot.position.set(0.24, -0.22, -0.45);
     camera.add(viewRoot);
-    var vmMat = new THREE.MeshStandardMaterial({ color: 0x2c3033, roughness: 0.45, metalness: 0.55 });
-    var vmDark = new THREE.MeshStandardMaterial({ color: 0x191c1e, roughness: 0.6, metalness: 0.4 });
-    var viewmodels = {};
-    (function buildViewmodels() {
-      function vm() { var g2 = new THREE.Group(); g2.visible = false; viewRoot.add(g2); return g2; }
-      // Glock: slide, frame, grip
-      var gk = vm();
-      gk.add(new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.055, 0.2), vmMat));
-      var gkGrip = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.11, 0.06), vmDark);
-      gkGrip.position.set(0, -0.07, 0.06);
-      gkGrip.rotation.x = 0.25;
-      gk.add(gkGrip);
-      viewmodels.glock = { g: gk, tip: new THREE.Vector3(0, 0.01, -0.12) };
-      // Shotgun: long barrel, pump, stock
-      var sg = vm();
-      var sgB = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.42, 10), vmMat);
-      sgB.rotation.x = Math.PI / 2;
-      sgB.position.z = -0.1;
-      sg.add(sgB);
-      var pump = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.14, 10), vmDark);
-      pump.rotation.x = Math.PI / 2;
-      pump.position.set(0, -0.015, -0.12);
-      sg.add(pump);
-      var sgStock = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.09, 0.16), new THREE.MeshStandardMaterial({ color: 0x5a4630, roughness: 0.7 }));
-      sgStock.position.set(0, -0.04, 0.14);
-      sg.add(sgStock);
-      viewmodels.shotgun = { g: sg, tip: new THREE.Vector3(0, 0, -0.32) };
-      // Rifle: receiver, mag, barrel
-      var ar = vm();
-      ar.add(new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.07, 0.3), vmMat));
-      var mag = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.11, 0.05), vmDark);
-      mag.position.set(0, -0.08, 0.02);
-      mag.rotation.x = 0.3;
-      ar.add(mag);
-      var arB = new THREE.Mesh(new THREE.CylinderGeometry(0.013, 0.013, 0.2, 8), vmDark);
-      arB.rotation.x = Math.PI / 2;
-      arB.position.z = -0.24;
-      ar.add(arB);
-      viewmodels.ar = { g: ar, tip: new THREE.Vector3(0, 0, -0.36) };
-      // Camera in hand
-      var cm = vm();
-      cm.add(new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.07, 0.13), vmDark));
-      viewmodels.camera = { g: cm, tip: null };
-    })();
-    // the flash itself: a card of hot light at the muzzle plus a burst light
-    var flashTex = (function () {
-      var c = document.createElement('canvas');
-      c.width = c.height = 64;
-      var x = c.getContext('2d');
-      var grd = x.createRadialGradient(32, 32, 2, 32, 32, 30);
-      grd.addColorStop(0, 'rgba(255,240,190,1)');
-      grd.addColorStop(0.4, 'rgba(255,190,90,0.8)');
-      grd.addColorStop(1, 'rgba(255,140,40,0)');
-      x.fillStyle = grd;
-      x.fillRect(0, 0, 64, 64);
-      for (var sp = 0; sp < 6; sp++) {
-        x.save();
-        x.translate(32, 32);
-        x.rotate(sp * Math.PI / 3);
-        x.fillStyle = 'rgba(255,220,140,0.7)';
-        x.fillRect(-1.6, 0, 3.2, 30);
-        x.restore();
-      }
-      return new THREE.CanvasTexture(c);
-    })();
-    var flashSprite = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.16),
-      new THREE.MeshBasicMaterial({ map: flashTex, transparent: true, depthWrite: false }));
-    flashSprite.visible = false;
-    viewRoot.add(flashSprite);
-    var flashLight = new THREE.PointLight(0xffc37a, 0, 7, 2);
-    camera.add(flashLight);
-    var flashT = 0;
-    var vmKick = 0;
-
+    var weapons = window.buildWeapons(THREE, { camera: camera, viewRoot: viewRoot, scene: scene });
     function updateViewmodel() {
       var id = state.hotbar[state.hotbarSel];
-      Object.keys(viewmodels).forEach(function (k) { viewmodels[k].g.visible = false; });
-      if (id && viewmodels[id] && (ITEM_DEFS[id].kind === 'weapon' || id === 'camera')) {
-        viewmodels[id].g.visible = true;
-      }
+      if (id && (ITEM_DEFS[id].kind === 'weapon' || id === 'camera')) weapons.select(id);
+      else weapons.select(null);
     }
-    function muzzleFlash() {
-      var id = state.weapon;
-      var v = viewmodels[id];
-      if (!v || !v.tip) return;
-      flashSprite.position.copy(v.tip);
-      flashSprite.rotation.z = Math.random() * Math.PI;
-      flashSprite.visible = true;
-      flashLight.intensity = 6;
-      flashT = 0.06;
-      vmKick = 1;
+
+    // Where does this shot actually stop? Walls, closed doors and seals,
+    // in 2D, then projected along the true aim.
+    function wallHitDistance(ox, oz, dx, dz) {
+      var best = 60;
+      function slab(b) {
+        var tmin = -Infinity, tmax = Infinity;
+        if (Math.abs(dx) < 1e-9) { if (ox < b.x1 || ox > b.x2) return; }
+        else {
+          var t1 = (b.x1 - ox) / dx, t2 = (b.x2 - ox) / dx;
+          tmin = Math.max(tmin, Math.min(t1, t2));
+          tmax = Math.min(tmax, Math.max(t1, t2));
+        }
+        if (Math.abs(dz) < 1e-9) { if (oz < b.z1 || oz > b.z2) return; }
+        else {
+          var t3 = (b.z1 - oz) / dz, t4 = (b.z2 - oz) / dz;
+          tmin = Math.max(tmin, Math.min(t3, t4));
+          tmax = Math.min(tmax, Math.max(t3, t4));
+        }
+        if (tmax >= tmin && tmin > 0.05 && tmin < best) best = tmin;
+      }
+      for (var i = 0; i < level.wallBoxes.length; i++) slab(level.wallBoxes[i]);
+      for (var j = 0; j < level.colliders.length; j++) {
+        var c = level.colliders[j];
+        if (!c.id) continue;
+        if (c.id.indexOf('seal') === 0) { if (state.seals[c.id]) slab(c); continue; }
+        if (c.id === 'entrance' && !state.entranceOpen) { slab(c); continue; }
+        if (!level.isDoorOpen(c.id)) slab(c);
+      }
+      return best;
     }
 
     // The player's own light: not a torch, just enough to read by.
@@ -711,7 +690,7 @@
       // security
       cams: 0, seals: { sealWest: false, sealEast: false },
       // arsenal
-      weapon: 'glock', shells: 0, arRounds: 0,
+      weapon: 'glock', shells: 0, arRounds: 0, tube: 0,
       hasShotgun: false, hasAR: false, riotGear: false,
       keycard: false, entranceOpen: false, ended: false,
       attackCd: 0,
@@ -1086,7 +1065,7 @@
           if (chance('cameras', 0.30)) { state.cams += 5; giveItem('camera'); got.push('a bundle of five cameras'); }
           if (chance('ammo', 0.10)) { state.ammo += 17; got.push('a box of 9mm'); }
           if (chance('gun', 0.02)) {
-            if (Math.random() < 0.5) { state.hasShotgun = true; state.shells += 6; giveItem('shotgun'); got.push('a shotgun'); }
+            if (Math.random() < 0.5) { var hadSg = state.hasShotgun; state.hasShotgun = true; state.shells += 6; if (!hadSg) state.tube = 6; giveItem('shotgun'); got.push('a semi-auto shotgun'); }
             else { state.hasAR = true; state.arRounds += 30; giveItem('ar'); got.push('an assault rifle'); }
           }
           if (chance('water', 0.50)) { state.waterN++; giveItem('water'); got.push('water'); }
@@ -1138,8 +1117,8 @@
     // whatever is selected: weapons fire, consumables consume, cameras place.
     var ITEM_DEFS = {
       glock: { label: 'GLOCK', kind: 'weapon' },
-      shotgun: { label: 'SHTGN', kind: 'weapon' },
-      ar: { label: 'RIFLE', kind: 'weapon' },
+      shotgun: { label: 'SEMI12', kind: 'weapon' },
+      ar: { label: 'R700', kind: 'weapon' },
       camera: { label: 'CAM', kind: 'place' },
       water: { label: 'WATER', kind: 'consume' },
       beans: { label: 'BEANS', kind: 'consume' },
@@ -1297,23 +1276,24 @@
     // ---------------- Weapon ----------------
     function shoot() {
       if (!state.hasGlock || uiOpen || state.dead) return;
-      var stagger = 1.1;
-      if (state.weapon === 'shotgun') {
-        if (state.shells <= 0) { if (audio) audio.dryFire(); say('No shells.'); return; }
-        state.shells--;
-        stagger = 2.5;
+      if (!weapons.canFire()) return;
+      var w = state.weapon;
+      var pellets = 1, stagger = 1.1, spread = 0;
+
+      if (w === 'shotgun') {
+        if (state.tube <= 0) { if (audio) audio.dryFire(); say(state.shells > 0 ? 'Tube empty. Reload with R.' : 'No shells at all.'); return; }
+        state.tube--;
+        pellets = 8; spread = 0.045; stagger = 1.2;
         if (audio) audio.shotgun();
-        muzzleFlash();
-      } else if (state.weapon === 'ar') {
+      } else if (w === 'ar') {
         if (state.arRounds <= 0) { if (audio) audio.dryFire(); say('The rifle is dry.'); return; }
         state.arRounds--;
-        stagger = 0.8;
-        if (audio) audio.gunshot();
-        muzzleFlash();
+        stagger = 2.2;
+        if (audio) audio.rifle();
       } else {
         if (state.inMag <= 0) {
           if (audio) audio.dryFire();
-          if (ui.onMessage) ui.onMessage(state.ammo > 0 ? 'Empty. Reload with R.' : 'Empty. There is no more ammunition.');
+          say(state.ammo > 0 ? 'Empty. Reload with R.' : 'Empty. There is no more ammunition.');
           return;
         }
         state.inMag--;
@@ -1321,38 +1301,85 @@
         if (audio) audio.gunshot();
       }
       if (ui.onMuzzleFlash) ui.onMuzzleFlash();
-      if (entity) {
-        camera.updateMatrixWorld();
-        gunRay.setFromCamera(centre, camera);
-        var hitList = gunRay.intersectObject(entity.group, true);
-        var es3 = entity.getState();
-        if (hitList.length > 0 && hitList[0].distance < 45 &&
-            entity.los(camera.position.x, camera.position.z, es3.x, es3.z)) {
-          if (entity.hitShot(stagger)) {
-            if (audio) setTimeout(function () { audio.woodHit(); }, 40);
-            if (ui.onMessage) ui.onMessage('The round buries itself in the wood. It does not fall.');
+
+      camera.updateMatrixWorld();
+      var hitsOnEntity = 0;
+      var firstHit = null;
+      var muzzle = weapons.muzzleWorld() || camera.position.clone();
+      var es3 = entity ? entity.getState() : null;
+
+      for (var pi = 0; pi < pellets; pi++) {
+        var sx = (Math.random() - 0.5) * spread * 2;
+        var sy = (Math.random() - 0.5) * spread * 2;
+        gunRay.setFromCamera({ x: sx, y: sy }, camera);
+        var dir = gunRay.ray.direction;
+        var wallD = wallHitDistance(camera.position.x, camera.position.z, dir.x, dir.z);
+        var endPoint = camera.position.clone().addScaledVector(dir, Math.min(wallD, 55));
+        if (entity && es3) {
+          var hitList = gunRay.intersectObject(entity.group, true);
+          if (hitList.length > 0 && hitList[0].distance < wallD && hitList[0].distance < 45) {
+            hitsOnEntity++;
+            endPoint = hitList[0].point.clone();
+            if (!firstHit) firstHit = endPoint;
           }
+        }
+        weapons.spawnPellets(muzzle, [endPoint]);
+      }
+      weapons.onFired(w, null);
+
+      if (w === 'ar') {
+        weapons.cycleBolt(function () { if (audio) audio.boltCycle(); });
+        if (audio) setTimeout(function () { audio.boltCycle(); }, 120);
+      }
+
+      if (hitsOnEntity > 0 && entity) {
+        var totalStagger = stagger + (pellets > 1 ? hitsOnEntity * 0.18 : 0);
+        if (entity.hitShot(totalStagger)) {
+          if (audio) setTimeout(function () { audio.woodHit(); }, 40);
+          say(pellets > 1
+            ? hitsOnEntity + ' of ' + pellets + ' pellets bury themselves in the wood. It does not fall.'
+            : 'The round buries itself in the wood. It does not fall.');
         }
       }
       refreshHud();
     }
+
     function reload() {
-      if (!state.hasGlock) return;
-      if (state.inMag >= MAG_SIZE) return;
-      var pool = state.ammo - state.inMag;
-      if (pool <= 0) { if (ui.onMessage) ui.onMessage('No magazines left.'); return; }
-      var need = MAG_SIZE - state.inMag;
-      var take = Math.min(need, pool);
-      state.inMag += take;
-      if (audio) audio.ui();
-      if (ui.onMessage) ui.onMessage('Reloaded.');
-      refreshHud();
+      if (!state.hasGlock || uiOpen || state.dead || weapons.isReloading()) return;
+      var w = state.weapon;
+      if (w === 'glock') {
+        if (state.inMag >= MAG_SIZE) return;
+        var pool = state.ammo - state.inMag;
+        if (pool <= 0) { say('No magazines left.'); return; }
+        if (audio) audio.magOut();
+        weapons.startReload('glock', 1.0, function () {
+          var take = Math.min(MAG_SIZE - state.inMag, pool);
+          state.inMag += take;
+          if (audio) audio.magIn();
+          say('Reloaded.');
+          refreshHud();
+        });
+      } else if (w === 'shotgun') {
+        if (state.tube >= 6 || state.shells - state.tube <= 0) return;
+        var want = Math.min(6 - state.tube, state.shells - state.tube);
+        if (audio) audio.ui();
+        weapons.startReload('shotgun', 0.5 * want, function () {
+          state.tube += want;
+          say(want === 1 ? 'One shell into the tube.' : want + ' shells into the tube.');
+          refreshHud();
+        });
+        // a click per shell as they go in
+        for (var sh2 = 0; sh2 < want; sh2++) {
+          if (audio) setTimeout(function () { audio.shellIn(); }, 250 + sh2 * 500);
+        }
+      }
+      // the rifle feeds from the pool; its reload is the bolt
     }
 
     function refreshHud() {
       if (ui.onHud) ui.onHud({
         hasGlock: state.hasGlock, inMag: state.inMag, ammo: state.ammo,
-        weapon: state.weapon, shells: state.shells, arRounds: state.arRounds,
+        weapon: state.weapon, shells: state.shells, arRounds: state.arRounds, tube: state.tube,
         hasShotgun: state.hasShotgun, hasAR: state.hasAR, riotGear: state.riotGear,
         hasKey: state.hasKey, supplies: state.supplies, keycard: state.keycard,
         cams: state.cams, planted: planted.map(function (c) { return { alive: c.alive }; }),
@@ -1418,10 +1445,14 @@
         var es = entity.getState();
         audio.windup(Math.hypot(es.x - camera.position.x, es.z - camera.position.z));
       };
-      entity.onDoorSlam = function () {
-        if (!audio) return;
+      entity.onDoorSlam = function (id) {
+        // it does not open doors. It goes through them — unless they are
+        // hard-sealed tungsten.
         var es = entity.getState();
-        audio.doorSlam(Math.hypot(es.x - camera.position.x, es.z - camera.position.z));
+        var d2 = Math.hypot(es.x - camera.position.x, es.z - camera.position.z);
+        if (id !== 'storageDoor' && level.destroyDoor && level.destroyDoor(id)) {
+          if (audio) audio.doorBash(d2);
+        } else if (audio) audio.doorSlam(d2);
       };
       entity.onBang = function () {
         if (!audio) return;
@@ -1505,7 +1536,7 @@
         return false;
       }
       feedCam.position.set(c.x, 2.35, c.z);
-      feedCam.rotation.set(-0.12, c.facing, 0, 'YXZ');
+      feedCam.rotation.set(c.pitch === undefined ? -0.12 : c.pitch, c.facing, 0, 'YXZ');
       var prev = renderer.getRenderTarget();
       renderer.setRenderTarget(feedTarget);
       renderer.render(scene, feedCam);
@@ -1517,10 +1548,11 @@
         for (var x = 0; x < 256; x++) {
           var si = ((159 - y) * 256 + x) * 4, di = (y * 256 + x) * 4;
           var lum = (feedPixels[si] + feedPixels[si + 1] + feedPixels[si + 2]) / 3;
-          var v = Math.min(255, 14 + lum * 2.1);
-          img.data[di] = v * 0.55;
+          // black and white, blacks lifted — a camera from another decade
+          var v = Math.min(255, 16 + lum * 2.2);
+          img.data[di] = v;
           img.data[di + 1] = v;
-          img.data[di + 2] = v * 0.6;
+          img.data[di + 2] = v;
           img.data[di + 3] = 255;
         }
       }
@@ -1713,15 +1745,6 @@
           if (state.starveT > 180) die('starved');
         } else state.starveT = 0;
 
-        // the Birch wakes when you bring the cameras back to reception
-        if (state.camsTaken && !state.birchAwake &&
-            Math.hypot(camera.position.x, camera.position.z + 3) < 5.2) {
-          state.birchAwake = true;
-          if (entity) entity.activate();
-          if (audio) { audio.setPhase('eerie'); audio.doorSlam(35); }
-          say('The speakers die mid-chorus. Somewhere far off, a vent cover hits a floor.');
-        }
-
         // walking out — the only good ending
         if (state.entranceOpen && camera.position.z > 7.4 && !state.ended) {
           state.ended = true;
@@ -1731,13 +1754,7 @@
         }
       }
 
-      if (flashT > 0) {
-        flashT -= dt;
-        if (flashT <= 0) { flashSprite.visible = false; flashLight.intensity = 0; }
-      }
-      if (vmKick > 0) vmKick = Math.max(0, vmKick - dt * 7);
-      viewRoot.position.z = -0.45 + vmKick * 0.05;
-      viewRoot.rotation.x = vmKick * 0.12 + Math.sin(bobTime) * 0.008;
+      weapons.update(dt, bobTime);
 
       handLight.position.copy(camera.position);
 
@@ -1829,7 +1846,7 @@
           hallucinating: state.hallucinating, needToilet: state.needToilet,
           cams: state.cams, plantedCount: planted.length,
           waterN: state.waterN, beansN: state.beansN, fuelN: state.fuelN,
-          weapon: state.weapon, shells: state.shells, arRounds: state.arRounds,
+          weapon: state.weapon, shells: state.shells, arRounds: state.arRounds, tube: state.tube,
           riotGear: state.riotGear, keycard: state.keycard,
           seals: { west: state.seals.sealWest, east: state.seals.sealEast },
           entranceOpen: state.entranceOpen, ended: state.ended,
@@ -1850,6 +1867,51 @@
         return ok;
       },
       renderFeed: renderFeed,
+      rotateCam: function (i, dyaw, dpitch) {
+        var c = planted[i];
+        if (!c) return;
+        c.facing += dyaw;
+        c.pitch = Math.max(-0.6, Math.min(0.4, (c.pitch === undefined ? -0.12 : c.pitch) + dpitch));
+        if (c.mesh) c.mesh.rotation.y = c.facing;
+      },
+      entityNearCam: function (i) {
+        if (!entity || !planted[i]) return false;
+        var es = entity.getState();
+        if (es.mode === 'dormant' || es.mode === 'destroyed') return false;
+        return Math.hypot(es.x - planted[i].x, es.z - planted[i].z) < 11;
+      },
+      notifyCamerasViewed: function () {
+        if (!state.camsTaken || state.birchAwake || planted.length < 5) return false;
+        state.birchAwake = true;
+        var i = Math.floor(Math.random() * planted.length);
+        var c = planted[i];
+        var fx3 = -Math.sin(c.facing), fz3 = -Math.cos(c.facing);
+        if (entity) entity.spawnAt(c.x + fx3 * 3, c.z + fz3 * 3, Math.atan2(-(-fx3), -(-fz3)));
+        if (audio) { audio.setPhase('eerie'); audio.doorSlam(30); }
+        say('The speakers die mid-chorus. CAM ' + (i + 1) + ' — it is already looking at the lens.');
+        refreshHud();
+        return true;
+      },
+      shockAt: function (i) {
+        if (!entity || !planted[i]) return false;
+        var es = entity.getState();
+        if (Math.hypot(es.x - planted[i].x, es.z - planted[i].z) >= 11) return false;
+        if (es.lurk === 'cage') {
+          var ok = entity.shockAtCage();
+          if (ok) { if (audio) audio.zap(); say('The cage floor lights. It stands perfectly still, cooking.'); }
+          return ok;
+        }
+        entity.shocked();
+        if (audio) {
+          audio.zap();
+          setTimeout(function () {
+            var es2 = entity.getState();
+            audio.scream(Math.hypot(es2.x - camera.position.x, es2.z - camera.position.z));
+          }, 350);
+        }
+        say('It takes the current — and SCREAMS — and starts running. Seal the door. Now.');
+        return true;
+      },
       plantedCams: function () { return planted.map(function (c) { return { x: c.x, z: c.z, alive: c.alive }; }); },
       entityLurk: function () { return entity ? entity.getState().lurk : null; },
       setLurkScale: function (v) { if (entity) entity.setLurkScale(v); },

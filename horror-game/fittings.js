@@ -346,6 +346,18 @@
 
     Object.keys(SPECS).forEach(function (key) { buildLeaf(key, SPECS[key]); });
 
+    // A door the Birch has gone through is not a door any more.
+    function destroy(id) {
+      var d = runtime[id];
+      if (!d || d.kind === 'none') return false;
+      if (d.kind === 'swing') d.leaves.forEach(function (L) { L.pivot.visible = false; });
+      if (d.kind === 'roll' && d.node) d.node.visible = false;
+      d.kind = 'none';
+      d.open = true;
+      d.angle = 1; d.target = 1;
+      return true;
+    }
+
     function toggle(id) {
       var d = runtime[id];
       if (!d || d.kind === 'none') return null;
@@ -379,7 +391,7 @@
       });
     }
 
-    return { toggle: toggle, isOpen: isOpen, update: update, runtime: runtime };
+    return { toggle: toggle, isOpen: isOpen, destroy: destroy, update: update, runtime: runtime };
   };
 
   // ===================================================================

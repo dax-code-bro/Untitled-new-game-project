@@ -243,6 +243,7 @@
     var menaceCam = -1;
     var watched = false;
     var ventsOpen = false;
+    var standT = 0;
 
     function lurkDuration() { return (300 + Math.random() * 1200) * lurkScale; }
 
@@ -449,6 +450,27 @@
       },
       setWatched: function (w) { watched = w; },
       setVentsOpen: function (v) { ventsOpen = !!v; },
+      // materialise in front of a camera, already looking at the lens
+      spawnAt: function (x, z, face) {
+        pos.x = x; pos.z = z;
+        if (face !== undefined) facing = face;
+        mode = 'stand';
+        standT = lurkDuration() * 0.4;
+        setPose('menace');
+        g.visible = true;
+        g.position.set(pos.x, 0, pos.z);
+        g.rotation.y = facing;
+      },
+      // shocked anywhere but the cage: it screams and charges the hallway
+      shocked: function () {
+        if (mode === 'dormant' || mode === 'destroyed') return false;
+        staggerT = 0; freezeT = 0;
+        mode = 'charge';
+        roamTarget = { x: 0, z: 0.9, hunt: true };
+        wpIndex = nearestWaypoint(pos.x, pos.z);
+        setPose('walk');
+        return true;
+      },
       onVentMove: null,
       los: function (x1, z1, x2, z2) { return losClear(x1, z1, x2, z2); },
       setLurkScale: function (s) { lurkScale = s; },
@@ -500,10 +522,10 @@
           return;
         }
 
-        if (mode === 'lurk') {
+        if (mode === 'lurk' || mode === 'stand') {
           // it moves only when nobody is looking at it
-          lurkT -= dt;
-          if (!watched && lurkT <= 0) beginRoam();
+          var tRef = mode === 'stand' ? (standT -= dt, standT) : (lurkT -= dt, lurkT);
+          if (!watched && tRef <= 0) beginRoam();
           if (canSee(px, pz) && dist < 7 && !watched) { mode = 'chase'; lastSeen = 0; setPose('walk'); }
           g.position.set(pos.x, 0, pos.z);
           return;
@@ -524,16 +546,16 @@
             speed = CHASE_SPEED; tx = px; tz = pz;
             moving = true;
           }
-        } else if (mode === 'roam') {
-          // pinned by a look, exactly like the lurk
-          if (watched) { g.position.set(pos.x, 0, pos.z); return; }
+        } else if (mode === 'roam' || mode === 'charge') {
+          // a roam is pinned by a look; a shocked charge is not
+          if (mode === 'roam' && watched) { g.position.set(pos.x, 0, pos.z); return; }
           if (canSee(px, pz)) {
             mode = 'chase'; lastSeen = 0;
             if (!spottedOnce) { spottedOnce = true; if (api.onSpotted) api.onSpotted(true); }
             else if (api.onSpotted) api.onSpotted(false);
             return;
           }
-          speed = ROAM_SPEED;
+          speed = mode === 'charge' ? RAGE_SPEED : ROAM_SPEED;
           var wp = PATROL[wpIndex];
           var targetNear = Math.hypot(roamTarget.x - pos.x, roamTarget.z - pos.z);
           if (targetNear < 12 || wpIndex < 0) { tx = roamTarget.x; tz = roamTarget.z; }

@@ -1268,6 +1268,7 @@
       cullLights: cullLights,
       toggleDoor: doors.toggle,
       isDoorOpen: doors.isOpen,
+      destroyDoor: doors.destroy,
       doorIds: function () { return Object.keys(doors.runtime); },
       lightCount: pointLights.length,
       spawn: { x: 0, z: 5.6, yaw: 0 }
