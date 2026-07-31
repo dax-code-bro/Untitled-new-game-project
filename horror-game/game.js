@@ -714,6 +714,7 @@
       readConfession: false,
       readRoster: false,
       readValuation: false,
+      readEvidenceLog: false,
       supplies: false,
       room: null,
       seenAssembly: false,
@@ -1055,6 +1056,13 @@
           break;
         case 'nickID':
           say('An employee badge. NICK AHOY — INTAKE — AGE 19. The lanyard is still knotted the way he tied it.');
+          break;
+        case 'evidenceLog':
+          state.readEvidenceLog = true;
+          if (ui.showEvidenceLog) ui.showEvidenceLog();
+          break;
+        case 'deadRadio':
+          say('A handheld radio, battery long dead. The channel dial is still set to a frequency nobody uses anymore.');
           break;
         case 'fragment':
           say('A splinter of pale birchwood, dense as bone. One end is scorched. The other is sharpened.');
@@ -1997,28 +2005,53 @@
 
     // ---------------- The opening, interior half ----------------
     var openingLock = false;
+    // Thrown in, not walked in — you come to on your back, on the floor,
+    // with the lock already turning behind you. Eye height rides the normal
+    // stance system (crawl/crouch/stand) rather than fighting it: the main
+    // loop re-derives camera.position.y from state.stance every frame, so a
+    // hand-rolled tween on position.y directly gets overwritten within a
+    // frame or two. Pitch isn't touched by that loop, so it tweens freely.
     function playOpening(onDone) {
       openingLock = true;
       camera.position.set(0, STANCE.stand.eye, 5.4);
-      yaw = Math.PI; pitch = 0;      // facing the room, just inside
+      yaw = Math.PI + 0.35; pitch = 1.1;    // flat on the floor, looking at the ceiling
       applyLook();
+      state.stance = 'crawl';
+
+      function tweenPitch(dur, from, to) {
+        var t0 = performance.now();
+        (function step() {
+          var u = Math.min(1, (performance.now() - t0) / dur);
+          pitch = from + (to - from) * (u * u * (3 - 2 * u));
+          applyLook();
+          if (u < 1) requestAnimationFrame(step);
+        })();
+      }
+
       var steps = [
-        [600, function () { if (audio) audio.doorSlam(1); }],
-        [900, function () {
-          // whip around to face the doors
+        // still dark — you hear them seal it before you can see anything
+        [0, function () { if (audio) audio.sealSlam(); }],
+        // vision swims back
+        [1600, function () { tweenPitch(1900, 1.1, 0.55); }],
+        // getting your feet under you
+        [3500, function () { state.stance = 'crouch'; }],
+        [3700, function () { tweenPitch(1500, 0.55, 0); }],
+        [5000, function () { state.stance = 'stand'; }],
+        [5400, function () { say('Get up. Get up—get up.'); }],
+        [6300, function () {
+          // one look back at the doors, out of habit more than hope
           var startYaw = yaw, t0 = performance.now();
           (function turn() {
-            var u = Math.min(1, (performance.now() - t0) / 420);
-            yaw = startYaw + (Math.PI - 0) * (u * u * (3 - 2 * u)) * -1;
+            var u = Math.min(1, (performance.now() - t0) / 480);
+            yaw = startYaw + (Math.PI - startYaw) * (u * u * (3 - 2 * u));
             applyLook();
             if (u < 1) requestAnimationFrame(turn);
           })();
+          camera.position.z = 5.7;
         }],
-        [1700, function () { if (audio) audio.glassBang(); camera.position.z = 5.9; }],
-        [2100, function () { if (audio) audio.glassBang(); say('HEY! HEY—'); }],
-        [2600, function () { if (audio) audio.glassBang(); }],
-        [3600, function () { say('Locked. From the outside.'); }],
-        [5100, function () {
+        [6900, function () { if (audio) audio.glassBang(); }],
+        [7500, function () { say('Locked. From the outside.'); }],
+        [9000, function () {
           openingLock = false;
           if (onDone) onDone();
         }]
@@ -2060,6 +2093,7 @@
       audioEngine: function (on) { if (audio) audio.engine(on); },
       audioBrakes: function () { if (audio) audio.brakes(); },
       audioCreak: function () { if (audio) audio.door('wood', true); },
+      audioBash: function () { if (audio) audio.doorBash(2); },
       audioStart: function () { if (audio) audio.start(); },
       respawn: function () {
         state.dead = false;

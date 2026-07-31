@@ -85,6 +85,8 @@
     opacity: 0; pointer-events: none; transition: opacity 130ms linear;
   }
   #blackout.on { opacity: 1; }
+  /* coming to on the floor, not a scene cut — a slower fade for the opening */
+  #blackout.slow { transition: opacity 2000ms ease; }
 
   .card { width: min(460px,100%); display: flex; flex-direction: column; gap: 22px; margin: auto; }
   .eyebrow {
@@ -515,7 +517,7 @@
     <div class="eyebrow"><span class="mark"></span><span id="file-no">File 001 — Interior</span></div>
     <div class="titleblock">
       <img class="card-logo" src="./logo.svg" alt="THE BIRCH" />
-      <div class="title-sm">A facility, a truck, and a door that locks behind you</div>
+      <div class="title-sm">They knew no one comes back. That was the point.</div>
     </div>
     <div class="spec">
       <div class="spec-row"><span class="spec-key">Floor</span><span class="spec-val">Ground — 13 rooms mapped</span></div>
@@ -654,6 +656,26 @@
       jump. 'It doesn't call in sick,' one manager is quoted. 'It doesn't take breaks. We built it
       to hold the store together, and it has.'"</em></p>
     <p>Someone has underlined "it" three times in ballpoint, hard enough to tear the page.</p>
+    <button class="close" type="button" data-close>Close</button>
+  </div>
+</div>
+
+<!-- ---------- Incident log ---------- -->
+<div class="overlay" id="evidenceLog" hidden>
+  <div class="sheet">
+    <h2>Incident log — unit dispatch record (partial, water-stained)</h2>
+    <p>Response teams deployed: six, over the following weeks. Recovered: zero.</p>
+    <p>Transmission, third team: <em>"—requesting backup, radio's cutting out, we have movement,
+      repeat, we have—"</em> [cuts]</p>
+    <p>Transmission, fifth team, final entry: <em>"—it's not chasing us. It's herding us. It's
+      laughing, I swear to God it's laughing, it's making sure we know it's there before
+      it—"</em> [end of transmission]</p>
+    <p>Recommendation: cease all further deployment. Establish a fixed exclusion zone at one mile
+      from the structure in every direction. Post warning signage. Relocate remaining residents to
+      sites on the far coast; do not disclose the destination to press.</p>
+    <p>Addendum, different hand, dated much later: fence sensors confirm the subject has not
+      crossed the marked line once in four years. Whatever is keeping it in there is doing its
+      job. That is the only reason this file is closed, and not still open.</p>
     <button class="close" type="button" data-close>Close</button>
   </div>
 </div>
@@ -919,6 +941,7 @@ window.bootUI = function bootUI(THREE) {
       showManifesto: function () { openOverlay('manifesto'); },
       showRoster: function () { openOverlay('roster'); },
       showValuation: function () { openOverlay('valuation'); },
+      showEvidenceLog: function () { openOverlay('evidenceLog'); },
       showComputer: function (connected) { openTerminal(connected); },
       onEnding: function () {
         blackout.classList.add('on');
@@ -1269,7 +1292,7 @@ window.bootUI = function bootUI(THREE) {
       intro = window.buildIntro(THREE, game.renderer, {
         engine: function (on) { game.audioEngine(on); },
         brakes: function () { game.audioBrakes(); },
-        creak: function () { game.audioCreak(); }
+        bash: function () { game.audioBash(); }
       });
       window.__introActive = intro;
       document.getElementById('skipHint').classList.add('on');
@@ -1318,7 +1341,17 @@ window.bootUI = function bootUI(THREE) {
       clearTimeout(legendTimer);
       legendTimer = setTimeout(function () { legend.innerHTML = ''; }, 9000);
 
-      blackout.classList.remove('on');
+      if (withOpening) {
+        // still out cold for a beat — the lock turns in the dark before
+        // sight starts to come back, matching playOpening's wake-up tween
+        setTimeout(function () {
+          blackout.classList.add('slow');
+          blackout.classList.remove('on');
+          setTimeout(function () { blackout.classList.remove('slow'); }, 2100);
+        }, 1500);
+      } else {
+        blackout.classList.remove('on');
+      }
     }, 150);
   }
 

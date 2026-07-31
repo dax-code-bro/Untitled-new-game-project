@@ -739,6 +739,16 @@
       var glow = new THREE.PointLight(0xffe9b0, 1.2, 2.6, 2);
       glow.position.set(-51.6, 0.75, 4.7);
       group.add(glow);
+
+      // Someone else came looking, once. They didn't get any further than
+      // this — a response-team case, forced, and left where it fell.
+      var caseMat = new THREE.MeshStandardMaterial({ color: 0x2b3324, roughness: 0.75 });
+      box(0.62, 0.26, 0.4, caseMat, -60, 0.13, 5.4, 0.3);
+      var evidenceLog = box(0.2, 0.006, 0.27, MAT.paper, -59.9, 0.265, 5.32, 0.4);
+      interact(evidenceLog, { id: 'evidenceLog', label: 'Incident log, water-stained', verb: 'Read' });
+      var radioMat = new THREE.MeshStandardMaterial({ color: 0x1a1c1d, roughness: 0.6, metalness: 0.3 });
+      var deadRadio = box(0.09, 0.16, 0.05, radioMat, -60.28, 0.08, 5.58, -0.4);
+      interact(deadRadio, { id: 'deadRadio', label: 'Handheld radio', verb: 'Inspect' });
     })();
 
     // ===================================================================
