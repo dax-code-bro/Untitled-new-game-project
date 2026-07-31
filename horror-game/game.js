@@ -982,12 +982,21 @@
     // A pickup is gone once taken: hidden, and out of the interactable list
     // so nothing can find it again. Hiding alone let players re-take the
     // Glock for a fresh thirty-four rounds, indefinitely.
+    // Drop the crosshair target and tell the HUD. Nulling `focused` alone is
+    // not enough: updateFocus() only notifies the UI when the target changes,
+    // and null -> null is not a change, so the "E Take" prompt for a thing
+    // you just pocketed stayed on screen until you looked at something else.
+    function clearFocus() {
+      focused = null;
+      if (ui.onFocus) ui.onFocus(null, promptFor(null));
+    }
+
     function takePickup(mesh, hideParent) {
       var node = (hideParent && mesh.parent) ? mesh.parent : mesh;
       node.visible = false;
       var i = level.interactables.indexOf(mesh);
       if (i >= 0) level.interactables.splice(i, 1);
-      focused = null;
+      clearFocus();
     }
 
     function updateFocus() {
@@ -1251,7 +1260,7 @@
           if (audio) audio.pickup();
           if (d.kind2 === 'water') { state.waterN++; giveItem('water'); say('A bottle of water. There are not many left.'); }
           else { state.beansN++; giveItem('beans'); say('A can of beans. Exactly what Nick ran out of.'); }
-          focused = null;
+          clearFocus();
           refreshHud();
           break;
         }
@@ -1479,6 +1488,7 @@
             say('The housing is crushed. Beyond repair.');
           }
           if (audio) audio.pickup();
+          clearFocus();
           refreshHud();
           return true;
         }
