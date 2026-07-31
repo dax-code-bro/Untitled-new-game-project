@@ -971,6 +971,25 @@
     var centre = new THREE.Vector2(0, 0);
     var focused = null;
 
+    // Raycaster does not care whether a mesh is visible, so a hidden pickup
+    // stays targetable unless we say otherwise. Walk the parents too: some
+    // items hide the group rather than the clickable mesh.
+    function meshShown(o) {
+      for (var n = o; n; n = n.parent) { if (!n.visible) return false; }
+      return true;
+    }
+
+    // A pickup is gone once taken: hidden, and out of the interactable list
+    // so nothing can find it again. Hiding alone let players re-take the
+    // Glock for a fresh thirty-four rounds, indefinitely.
+    function takePickup(mesh, hideParent) {
+      var node = (hideParent && mesh.parent) ? mesh.parent : mesh;
+      node.visible = false;
+      var i = level.interactables.indexOf(mesh);
+      if (i >= 0) level.interactables.splice(i, 1);
+      focused = null;
+    }
+
     function updateFocus() {
       // setFromCamera reads camera.matrixWorld, which is only refreshed by
       // render(). Without this the interaction prompt trails the camera by
@@ -982,6 +1001,7 @@
       for (var i = 0; i < hits.length; i++) {
         var d = hits[i].object.userData.interact;
         if (!d) continue;
+        if (!meshShown(hits[i].object)) continue;
         if (d.requiresProne && state.stance !== 'crawl') continue;
         found = hits[i].object;
         break;
@@ -1057,14 +1077,14 @@
           break;
         case 'storageKey':
           state.hasKey = true;
-          focused.visible = false;
+          takePickup(focused);
           if (audio) audio.pickup();
           say('You take the key. The tag reads STORAGE, in biro, twice.');
           refreshHud();
           break;
         case 'flashlight':
           state.hasFlashlight = true;
-          if (focused.parent) focused.parent.visible = false;
+          takePickup(focused, true);
           if (audio) audio.pickup();
           giveItem('flashlight');
           setTorch(true);
@@ -1080,7 +1100,7 @@
           state.mags = 2;
           state.inMag = MAG_SIZE;
           state.ammo = MAG_SIZE * 2;
-          focused.visible = false;
+          takePickup(focused, true);      // the whole pistol group, not just the slide
           if (audio) audio.pickup();
           giveItem('glock');
           say('Glock 19, and two magazines. Thirty-four rounds. There will not be more.');
@@ -1217,7 +1237,7 @@
           break;
         case 'keycard':
           state.keycard = true;
-          focused.visible = false;
+          takePickup(focused);
           if (audio) audio.pickup();
           say('A keycard, warm from the machinery. Stamped: FRONT ENTRANCE.');
           refreshHud();
@@ -2483,6 +2503,132 @@
               });
               break;
             }
+          }
+        });
+        return out;
+      },
+      // Every interactable item, checked for interpenetrating anything else.
+      // Resting on a surface or sitting beside something is fine; being sunk
+      // into it is not, so this measures overlap volume against the smaller
+      // of the two boxes rather than just asking whether they touch.
+      // Flat signage should stand in front of the wall it hangs on. Walls are
+      // 0.18 thick, so a plate placed 0.07 off the wall's centreline ends up
+      // behind its own surface and is simply not there when you look.
+      signsInWalls: function () {
+        var out = [], b = new THREE.Box3(), wb = new THREE.Box3();
+        var walls = [];
+        (level.group || scene).traverse(function (o) {
+          if (!o.isMesh || !o.geometry || !o.geometry.parameters) return;
+          var pr = o.geometry.parameters;
+          // wall planes are the big thin slabs
+          if (pr.depth === undefined) return;
+          var big = Math.max(pr.width || 0, pr.depth || 0);
+          var thin = Math.min(pr.width || 0, pr.depth || 0);
+          if (big > 6 && thin < 0.25 && (pr.height || 0) > 2.5) walls.push(o);
+        });
+        (level.group || scene).traverse(function (o) {
+          if (!o.isMesh || !o.geometry || !o.geometry.parameters) return;
+          var pr = o.geometry.parameters;
+          if (pr.depth === undefined) return;
+          var t = Math.min(pr.width, pr.height, pr.depth);
+          // thin plates only, small enough to be signage, and mounted at
+          // reading height — vent grates are thin plates too, and those are
+          // supposed to be set into the wall
+          if (t > 0.06 || Math.max(pr.width, pr.height, pr.depth) > 1.4) return;
+          if (o.position.y < 1.2) return;
+          b.setFromObject(o);
+          for (var i = 0; i < walls.length; i++) {
+            wb.setFromObject(walls[i]);
+            var dx = Math.min(b.max.x, wb.max.x) - Math.max(b.min.x, wb.min.x);
+            var dy = Math.min(b.max.y, wb.max.y) - Math.max(b.min.y, wb.min.y);
+            var dz = Math.min(b.max.z, wb.max.z) - Math.max(b.min.z, wb.min.z);
+            if (dx > 0.01 && dy > 0.01 && dz > 0.01) {
+              var bx = (b.max.x - b.min.x) * (b.max.y - b.min.y) * (b.max.z - b.min.z);
+              if ((dx * dy * dz) / Math.max(bx, 1e-9) > 0.5) {
+                out.push({
+                  text: 'plate', axis: 'xyz',
+                  pos: [b.min.x, b.min.y, b.min.z].map(function (v) { return +v.toFixed(2); })
+                });
+              }
+              break;
+            }
+          }
+        });
+        return out;
+      },
+      propOverlaps: function (frac) {
+        var limit = frac === undefined ? 0.28 : frac;
+        // Two things are meant to be inside the scenery: a vent grate is set
+        // into the wall it vents through, and the office door was thrown so
+        // hard it is buried in the plaster.
+        var EMBEDDED = { vent: 1, embeddedDoor: 1 };
+        var root = level.group || scene;
+        // the item's own model: anything under the same top-level node is a
+        // sibling part (a lens inside a bezel), not a collision
+        function topOf(o) {
+          var n = o;
+          while (n.parent && n.parent !== root && n.parent !== scene) n = n.parent;
+          return n;
+        }
+        var items = [];
+        level.interactables.forEach(function (m) {
+          if (!m.visible) return;
+          if (EMBEDDED[m.userData.interact.id]) return;
+          var b = new THREE.Box3().setFromObject(m);
+          if (!isFinite(b.min.x)) return;
+          items.push({ mesh: m, id: m.userData.interact.id, box: b, top: topOf(m) });
+        });
+        var others = [];
+        root.traverse(function (o) {
+          if (!o.isMesh || !o.visible) return;
+          others.push(o);
+        });
+        function vol(b) {
+          return Math.max(0, b.max.x - b.min.x) * Math.max(0, b.max.y - b.min.y) * Math.max(0, b.max.z - b.min.z);
+        }
+        // Volume alone cannot tell "resting on" from "sunk through": a sheet
+        // of paper is so thin that a cup standing on it reads as a big share
+        // of the paper's volume. Depth can — a couple of millimetres is
+        // contact, a couple of centimetres on every axis is penetration.
+        var MIN_DEPTH = 0.015;
+        function overlapOf(a, b) {
+          var dx = Math.min(a.max.x, b.max.x) - Math.max(a.min.x, b.min.x);
+          var dy = Math.min(a.max.y, b.max.y) - Math.max(a.min.y, b.min.y);
+          var dz = Math.min(a.max.z, b.max.z) - Math.max(a.min.z, b.min.z);
+          if (dx <= 0 || dy <= 0 || dz <= 0) return { v: 0, d: 0 };
+          return { v: dx * dy * dz, d: Math.min(dx, dy, dz) };
+        }
+        var out = [], ob = new THREE.Box3();
+        items.forEach(function (it) {
+          var iv = vol(it.box);
+          if (iv <= 0) return;
+          var worst = null;
+          for (var k = 0; k < others.length; k++) {
+            var o = others[k];
+            if (o === it.mesh) continue;
+            if (topOf(o) === it.top) continue;          // part of the same object
+            ob.setFromObject(o);
+            if (!isFinite(ob.min.x)) continue;
+            var o2 = overlapOf(it.box, ob);
+            if (o2.v <= 0 || o2.d < MIN_DEPTH) continue;
+            var share = o2.v / Math.min(iv, Math.max(vol(ob), 1e-9));
+            if (share > limit && (!worst || share > worst.share)) {
+              worst = {
+                share: share, depth: o2.d,
+                oc: [(ob.min.x + ob.max.x) / 2, (ob.min.y + ob.max.y) / 2, (ob.min.z + ob.max.z) / 2],
+                os: [ob.max.x - ob.min.x, ob.max.y - ob.min.y, ob.max.z - ob.min.z]
+              };
+            }
+          }
+          if (worst) {
+            out.push({
+              id: it.id, share: +worst.share.toFixed(2), depth: +worst.depth.toFixed(3),
+              at: [it.box.min.x, it.box.min.y, it.box.min.z].map(function (v) { return +v.toFixed(2); }),
+              size: [it.box.max.x - it.box.min.x, it.box.max.y - it.box.min.y, it.box.max.z - it.box.min.z]
+                .map(function (v) { return +v.toFixed(3); }),
+              intoAt: worst.oc.map(function (v) { return +v.toFixed(2); }),
+              intoSize: worst.os.map(function (v) { return +v.toFixed(2); })
+            });
           }
         });
         return out;

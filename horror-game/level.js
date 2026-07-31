@@ -609,32 +609,32 @@
       })();
 
       var np = counterPoint(0.42, 0.04);
-      var news = box(0.6, 0.012, 0.42, new THREE.MeshStandardMaterial({ map: paperTex, roughness: 0.96 }), np.x, 1.095, np.z, np.ry);
+      var news = box(0.6, 0.012, 0.42, new THREE.MeshStandardMaterial({ map: paperTex, roughness: 0.96 }), np.x, 1.126, np.z, np.ry);
       interact(news, { id: 'newspaper', label: 'Newspaper', verb: 'Read' });
       var cp = counterPoint(0.30, 0.02);
-      var cup = cyl(0.045, 0.037, 0.11, new THREE.MeshStandardMaterial({ color: 0xd9d5cc, roughness: 0.7 }), cp.x, 1.12, cp.z, 12);
+      var cup = cyl(0.045, 0.037, 0.11, new THREE.MeshStandardMaterial({ color: 0xd9d5cc, roughness: 0.7 }), cp.x, 1.178, cp.z, 12);
       cup.rotation.z = Math.PI / 2 - 0.15;
       var stain = new THREE.Mesh(new THREE.CircleGeometry(0.12, 20), new THREE.MeshStandardMaterial({ color: 0x4a2f14, roughness: 0.85 }));
       stain.rotation.x = -Math.PI / 2;
-      stain.position.set(cp.x + 0.12, 1.088, cp.z + 0.04);
+      stain.position.set(cp.x + 0.12, 1.134, cp.z + 0.04);
       group.add(stain);
 
       for (var pp = 0; pp < 10; pp++) {
         var ap = -0.9 + Math.random() * 1.9;
         var sp = counterPoint(ap, Math.random() * 0.12);
-        box(0.2, 0.004, 0.27, MAT.paper, sp.x, 1.09 + pp * 0.002, sp.z, Math.random() * Math.PI);
+        box(0.2, 0.004, 0.27, MAT.paper, sp.x, 1.122 + pp * 0.002, sp.z, Math.random() * Math.PI);
       }
       for (var pen = 0; pen < 5; pen++) {
         var pa = -0.62 + pen * 0.1;
         var pt = counterPoint(pa, 0.06);
-        var pc = cyl(0.006, 0.006, 0.14, MAT.plastic, pt.x, 1.095, pt.z, 6);
+        var pc = cyl(0.006, 0.006, 0.14, MAT.plastic, pt.x, 1.126, pt.z, 6);
         pc.rotation.z = Math.PI / 2;
         pc.rotation.y = pa;
       }
 
       // the computer, facing into the island
       var mp = counterPoint(-0.42, 0.07);
-      box(0.06, 0.16, 0.2, MAT.plastic, mp.x, 1.17, mp.z, mp.ry);
+      box(0.06, 0.16, 0.2, MAT.plastic, mp.x, 1.20, mp.z, mp.ry);
       var crackTex = (function () {
         var c = document.createElement('canvas'); c.width = 512; c.height = 320;
         var x = c.getContext('2d');
@@ -651,23 +651,23 @@
       })();
       var monitor = box(0.6, 0.4, 0.045, new THREE.MeshStandardMaterial({
         map: crackTex, emissive: 0x101416, emissiveIntensity: 0.5, roughness: 0.35
-      }), mp.x, 1.42, mp.z, mp.ry + Math.PI);
+      }), mp.x, 1.45, mp.z, mp.ry + Math.PI);
       interact(monitor, { id: 'computer', label: 'Reception terminal', verb: 'Use' });
       var kp = counterPoint(-0.42, 0.30);
-      box(0.4, 0.02, 0.15, MAT.plastic, kp.x, 1.095, kp.z, kp.ry);
+      box(0.4, 0.02, 0.15, MAT.plastic, kp.x, 1.13, kp.z, kp.ry);
 
       // The torch someone left out on the night it went wrong, and the key
       // to the storage unit on its tag beside it.
       var fp = counterPoint(0.95, 0.07);
-      var torch = flashlightModel(fp.x, 1.088, fp.z, fp.ry + 0.35);
+      var torch = flashlightModel(fp.x, 1.12, fp.z, fp.ry + 0.35);
       interact(torch.children[0], { id: 'flashlight', label: 'Flashlight', verb: 'Take' });
 
       var skp = counterPoint(0.70, 0.13);
       var keyMesh = box(0.11, 0.02, 0.04, new THREE.MeshStandardMaterial({
         color: 0xc7b26a, roughness: 0.35, metalness: 0.85
-      }), skp.x, 1.098, skp.z, skp.ry + 0.6);
+      }), skp.x, 1.131, skp.z, skp.ry + 0.6);
       // a paper tag on a ring, so it reads as a labelled key and not litter
-      box(0.06, 0.004, 0.045, MAT.paper, skp.x + 0.075, 1.09, skp.z + 0.03, skp.ry + 0.6);
+      box(0.06, 0.004, 0.045, MAT.paper, skp.x + 0.075, 1.123, skp.z + 0.03, skp.ry + 0.6);
       interact(keyMesh, { id: 'storageKey', label: 'Key, tagged STORAGE', verb: 'Take' });
 
       // ---- the rolling chair, inside the island ----
@@ -758,7 +758,7 @@
       batten(0, 5.2, WALL_H, 0xdfe8ea, 7, 12, 'buzz');
 
       // The SECURITY crate, shoved into the corner by the entrance.
-      var camCrate = box(0.8, 0.55, 0.65, MAT.wood, -7.2, 0.28, 6.2, 0.3);
+      var camCrate = box(0.8, 0.55, 0.65, MAT.wood, -7.4, 0.275, 6.5, 0.12);
       box(0.6, 0.22, 0.02, new THREE.MeshStandardMaterial({
         map: T.sign(THREE, 'SECURITY', { fontSize: 30 }), roughness: 0.7
       }), -6.9, 0.38, 5.93, 0.3);
@@ -834,27 +834,39 @@
       batten(-53, 4, 5.0, 0xcfe0e4, 8, 15, 'strobe');
 
       var lootIdx = 0;
-      function shelfCrate(cx, cy, cz) {
-        var w = 0.55 + Math.random() * 0.4;
-        var crate = box(w, 0.5 + Math.random() * 0.3, w, MAT.wood, cx, cy, cz, (Math.random() - 0.5) * 0.7);
+      var SHELF_Y = [0.5, 1.85, 3.2];
+      // A crate rests on the board it is standing on: its height decides its
+      // centre, rather than every crate sharing one hard-coded height and the
+      // tall ones sinking a fifth of a metre through the steel.
+      function shelfCrate(cx, boardY, cz, w, h, ry) {
+        var crate = box(w, h, w, MAT.wood, cx, boardY + 0.045 + h / 2, cz, ry);
         if (Math.random() < 0.3) {
           interact(crate, { id: 'lootCrate', idx: lootIdx++, label: 'Crate on the shelf', verb: 'Open' });
         }
         return crate;
       }
       function rack(x, z, len) {
-        for (var lvl = 0; lvl < 3; lvl++) box(len, 0.09, 1.1, MAT.metal, x, 0.5 + lvl * 1.35, z);
+        for (var lvl = 0; lvl < 3; lvl++) box(len, 0.09, 1.1, MAT.metal, x, SHELF_Y[lvl], z);
         var half = len / 2;
-        for (var u = -half + 0.2; u <= half - 0.2; u += 1.6) cyl(0.05, 0.05, 4.1, MAT.metal, x + u, 2.05, z, 6);
-        // stock the shelves the way a dying company stocks shelves:
-        // gaps, crooked stacks, nothing lined up with anything
-        for (var c = 0; c < Math.floor(len / 1.1); c++) {
-          if (Math.random() < 0.48) continue;
-          shelfCrate(
-            x - half + 0.6 + c * 1.05 + (Math.random() - 0.5) * 0.35,
-            0.9 + Math.floor(Math.random() * 2) * 1.35,
-            z + (Math.random() - 0.5) * 0.25
-          );
+        var posts = [];
+        for (var u = -half + 0.2; u <= half - 0.2; u += 1.6) {
+          cyl(0.05, 0.05, 4.1, MAT.metal, x + u, 2.05, z, 6);
+          posts.push(x + u);
+        }
+        // stock the shelves the way a dying company stocks shelves: gaps,
+        // crooked stacks, nothing lined up with anything — but one crate per
+        // slot, so they lean against each other instead of growing through
+        var slots = Math.floor(len / 1.35);
+        for (var c = 0; c < slots; c++) {
+          if (Math.random() < 0.42) continue;
+          var cx = x - half + 0.9 + c * 1.35;
+          var clear = true;
+          for (var pI = 0; pI < posts.length; pI++) {
+            if (Math.abs(posts[pI] - cx) < 0.62) { clear = false; break; }
+          }
+          if (!clear) continue;
+          shelfCrate(cx, SHELF_Y[Math.floor(Math.random() * 2)], z + (Math.random() - 0.5) * 0.14,
+            0.5 + Math.random() * 0.26, 0.42 + Math.random() * 0.24, (Math.random() - 0.5) * 0.45);
         }
         solid(x - half, z - 0.6, x + half, z + 0.6);
       }
@@ -883,14 +895,14 @@
       solid(-63.7, -3.6, -63.1, -0.4);
       var supplyIdx = 0;
       for (var wb = 0; wb < 6; wb++) {
-        var bot = waterBottle(-63.4, 0.68 + Math.floor(wb / 3) * 0.68, -3.2 + (wb % 3) * 0.34, Math.random());
+        var bot = waterBottle(-63.4, 0.65 + Math.floor(wb / 3) * 0.68, -3.02 + (wb % 3) * 0.34, Math.random());
         interact(bot.children[0], {
           id: 'supplyItem', kind2: 'water', node: bot, idx: supplyIdx++,
           label: 'Bottle of water', verb: 'Take'
         });
       }
       for (var bc = 0; bc < 6; bc++) {
-        var can = beanCan(-63.4, 0.68 + Math.floor(bc / 3) * 0.68, -1.6 + (bc % 3) * 0.32, Math.random());
+        var can = beanCan(-63.4, 0.65 + Math.floor(bc / 3) * 0.68, -1.62 + (bc % 3) * 0.32, Math.random());
         interact(can.children[0], {
           id: 'supplyItem', kind2: 'beans', node: can, idx: supplyIdx++,
           label: 'Can of beans', verb: 'Take'
@@ -910,7 +922,8 @@
       var evidenceLog = box(0.2, 0.006, 0.27, MAT.paper, -59.9, 0.265, 5.32, 0.4);
       interact(evidenceLog, { id: 'evidenceLog', label: 'Incident log, water-stained', verb: 'Read' });
       var radioMat = new THREE.MeshStandardMaterial({ color: 0x1a1c1d, roughness: 0.6, metalness: 0.3 });
-      var deadRadio = box(0.09, 0.16, 0.05, radioMat, -60.28, 0.08, 5.58, -0.4);
+      var deadRadio = box(0.09, 0.16, 0.05, radioMat, -60.78, 0.045, 5.12, -0.4);
+      deadRadio.rotation.z = Math.PI / 2;         // dropped on its side beside the case
       interact(deadRadio, { id: 'deadRadio', label: 'Handheld radio', verb: 'Inspect' });
     })();
 
@@ -1010,9 +1023,29 @@
       var journal = box(0.22, 0.05, 0.3, new THREE.MeshStandardMaterial({ color: 0x6d5433, roughness: 0.9 }), 61.9, 0.025, 3.0, 0.4);
       interact(journal, { id: 'journal', label: "Nick's journal", verb: 'Read' });
 
-      var gun = box(0.19, 0.055, 0.05, MAT.darkMetal, 61.2, 0.03, 1.6, 0.3);
-      box(0.06, 0.12, 0.045, MAT.darkMetal, 61.15, 0.0, 1.63, 0.3);
-      interact(gun, { id: 'glock', label: 'Glock 19', verb: 'Take' });
+      // The Glock, lying on its side where he dropped it. Built as one
+      // grouped model: it used to be two loose boxes that intersected each
+      // other, with the grip half through the floor.
+      var gunG = new THREE.Group();
+      gunG.position.set(61.2, 0, 1.6);
+      gunG.rotation.y = 0.3;
+      var slideMat = new THREE.MeshStandardMaterial({ color: 0x24282b, roughness: 0.42, metalness: 0.55 });
+      var frameMat2 = new THREE.MeshStandardMaterial({ color: 0x1b1e20, roughness: 0.78, metalness: 0.1 });
+      var gunSlide = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.026, 0.032), slideMat);
+      gunSlide.position.set(-0.01, 0.013, -0.014);
+      gunG.add(gunSlide);
+      var gunFrame = new THREE.Mesh(new THREE.BoxGeometry(0.145, 0.024, 0.022), frameMat2);
+      gunFrame.position.set(0.005, 0.013, 0.008);
+      gunG.add(gunFrame);
+      var gunGrip = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.026, 0.082), frameMat2);
+      gunGrip.position.set(0.056, 0.013, 0.052);
+      gunGrip.rotation.y = -0.18;
+      gunG.add(gunGrip);
+      var guard = new THREE.Mesh(new THREE.BoxGeometry(0.034, 0.02, 0.006), frameMat2);
+      guard.position.set(0.022, 0.013, 0.03);
+      gunG.add(guard);
+      group.add(gunG);
+      interact(gunSlide, { id: 'glock', label: 'Glock 19', verb: 'Take' });
       box(0.035, 0.1, 0.05, MAT.darkMetal, 61.5, 0.05, 1.35);
       box(0.035, 0.1, 0.05, MAT.darkMetal, 61.62, 0.05, 1.42);
     })();
@@ -1211,7 +1244,7 @@
 
       // A wall clock, stopped where the power died.
       box(0.5, 0.5, 0.035, new THREE.MeshStandardMaterial({ map: T.clock(THREE), roughness: 0.6 }),
-        -7.92, 2.25, 2.4, Math.PI / 2);
+        -7.89, 2.25, 2.4, Math.PI / 2);
 
       // Low tables with old magazines, tucked against the chair row.
       [-4.6, 4.6].forEach(function (tx) {
@@ -1221,15 +1254,15 @@
           box(0.24, 0.008, 0.32, MAT.paper, tx - 0.2 + m * 0.18, 0.35 + m * 0.004, 3.3 + (m % 2) * 0.08, m * 0.4);
         }
       });
-      wallSign('ALL VISITORS\nMUST SIGN IN', 7.92, 1.9, 3.4, -Math.PI / 2, 0.8, 0.4, { fontSize: 22 });
+      wallSign('ALL VISITORS\nMUST SIGN IN', 7.89, 1.9, 3.4, -Math.PI / 2, 0.8, 0.4, { fontSize: 22 });
 
       // ---------------- Corridors ----------------
-      wallSign('← RECEPTION', -12, 2.35, -1.43, 0, 0.9, 0.3, { fontSize: 24 });
-      wallSign('WAREHOUSE →', -40, 2.35, 1.43, 0, 0.9, 0.3, { fontSize: 24 });
-      wallSign('RESTROOMS', -18.5, 2.62, -1.43, 0, 0.8, 0.28, { fontSize: 24 });
-      wallSign('← RECEPTION', 12, 2.35, 1.43, 0, 0.9, 0.3, { fontSize: 24 });
-      wallSign('STORAGE →', 44, 2.35, -1.43, 0, 0.9, 0.3, { fontSize: 24 });
-      wallSign('ASSEMBLY', 48.07, 2.35, 42, Math.PI / 2, 0.9, 0.3, { fontSize: 24 });
+      wallSign('← RECEPTION', -12, 2.35, -1.39, 0, 0.9, 0.3, { fontSize: 24 });
+      wallSign('WAREHOUSE →', -40, 2.35, 1.39, 0, 0.9, 0.3, { fontSize: 24 });
+      wallSign('RESTROOMS', -18.5, 2.62, -1.39, 0, 0.8, 0.28, { fontSize: 24 });
+      wallSign('← RECEPTION', 12, 2.35, 1.39, 0, 0.9, 0.3, { fontSize: 24 });
+      wallSign('STORAGE →', 44, 2.35, -1.39, 0, 0.9, 0.3, { fontSize: 24 });
+      wallSign('ASSEMBLY', 48.11, 2.35, 42, Math.PI / 2, 0.9, 0.3, { fontSize: 24 });
 
       // Conduit runs along the corridor ceilings.
       box(38, 0.06, 0.05, MAT.darkMetal, -28, 2.96, 1.42);
@@ -1301,7 +1334,7 @@
       // ---------------- Storage unit ----------------
       // Nick counted his days on the wall. The count stops.
       box(0.6, 0.4, 0.02, new THREE.MeshStandardMaterial({ map: T.tally(THREE, 23), roughness: 0.9 }),
-        63.9, 1.3, 3.3, Math.PI / 2);
+        63.88, 1.3, 3.3, Math.PI / 2);
       box(0.9, 0.045, 0.7, new THREE.MeshStandardMaterial({ color: 0x39404a, roughness: 1 }),
         62.3, 0.028, 4.35, 0.5);                                                   // his blanket
       var nickBadgeMat = new THREE.MeshStandardMaterial({ color: 0xe4ddc8, roughness: 0.55 });
@@ -1323,9 +1356,9 @@
       // The desk phone, off the hook.
       box(0.15, 0.05, 0.11, MAT.plastic, 28.7, 0.84, -8.2, 0.3);
       box(0.17, 0.04, 0.05, MAT.plastic, 28.4, 0.83, -7.9, 1.1);
-      wallSign('CERTIFICATE\nOF EXCELLENCE', 30.2, 1.9, -13.92, 0, 0.5, 0.38, { fontSize: 16, bg: '#3a3226', fg: '#cbbf9e' });
-      wallSign('EMPLOYEE\nOF THE MONTH', 31.1, 1.9, -13.92, 0, 0.5, 0.38, { fontSize: 16, bg: '#33302a', fg: '#c4c0b2' });
-      var valuationFrame = wallSign('"A DISPLAY THAT\nSELLS ITSELF"', 28.9, 1.9, -13.92, 0, 0.5, 0.38,
+      wallSign('CERTIFICATE\nOF EXCELLENCE', 30.2, 1.9, -13.89, 0, 0.5, 0.38, { fontSize: 16, bg: '#3a3226', fg: '#cbbf9e' });
+      wallSign('EMPLOYEE\nOF THE MONTH', 31.1, 1.9, -13.89, 0, 0.5, 0.38, { fontSize: 16, bg: '#33302a', fg: '#c4c0b2' });
+      var valuationFrame = wallSign('"A DISPLAY THAT\nSELLS ITSELF"', 28.9, 1.9, -13.89, 0, 0.5, 0.38,
         { fontSize: 13, bg: '#233020', fg: '#bcd6a0' });
       interact(valuationFrame, { id: 'valuation', label: 'Framed clipping', verb: 'Read' });
       var memoPaper = box(0.24, 0.01, 0.32, MAT.paper, 27.5, 0.815, -8.55, 0.15);
@@ -1340,7 +1373,7 @@
       box(0.22, 0.014, 0.3, MAT.plastic, 67.4, 0.98, 49.4, 0.3);                  // clipboard
       var confessionPaper = box(0.19, 0.004, 0.26, MAT.paper, 67.4, 0.99, 49.4, 0.3);
       interact(confessionPaper, { id: 'confession', label: 'Typed page, clipped to a board', verb: 'Read' });
-      wallSign('AUTHORIZED\nPERSONNEL ONLY', 57.92, 2.75, 52.5, Math.PI / 2, 0.8, 0.4,
+      wallSign('AUTHORIZED\nPERSONNEL ONLY', 57.89, 2.75, 52.5, Math.PI / 2, 0.8, 0.4,
         { fontSize: 20, bg: '#3d2f14', fg: '#d8c37a' });
     })();
 
@@ -1464,6 +1497,7 @@
     }
 
     return {
+      group: group,
       colliders: colliders,
       wallBoxes: wallBoxes,
       lightFixtures: lights,

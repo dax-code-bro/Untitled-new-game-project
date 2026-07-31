@@ -360,6 +360,22 @@ have to holster to shoot is a torch nobody uses. Toggle it with `G`, or from
 its hotbar slot (which is how touch players reach it). No battery meter: it was
 asked for as a light, not as another bar to manage.
 
+**Pickups are taken once.** A one-shot pickup is hidden *and* pulled out of
+the interactable list, because Three.js's raycaster does not care whether a
+mesh is visible — hiding alone left the Glock targetable, and every re-press
+handed out another full thirty-four rounds. Containers like the camera crate
+stay in the world on purpose and tell you they are empty.
+
+**Nothing is sunk inside anything.** `propOverlaps()` walks every interactable
+against every mesh in the level and reports any pair that both overlaps by
+volume and bites at least 15mm deep on all three axes — the depth test is what
+separates a cup standing on a newspaper from a key buried in a countertop. It
+found the counter clutter sitting *inside* the counter slab (the surface is at
+1.12, everything had been placed at 1.09), every wall sign mounted behind its
+own wall face, the Glock modelled as two boxes intersecting each other with the
+grip through the floor, a radio inside its case, and crates sunk a fifth of a
+metre into shelf boards.
+
 **The storage key** is on the same counter, on a paper tag. It used to be face
 down on a crate in the unlit warehouse, which is a fine place to hide a key and
 a bad place to find one.
