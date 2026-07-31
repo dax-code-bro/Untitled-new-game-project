@@ -512,6 +512,42 @@
         }
       },
       setPhase: setPhase,
+      engineNode: null,
+      engine: function (on) {
+        if (!started) return;
+        if (on && !this.engineNode) {
+          var g = ctx.createGain();
+          g.gain.value = 0;
+          g.connect(master);
+          var o = ctx.createOscillator();
+          o.type = 'sawtooth'; o.frequency.value = 42;
+          var og = ctx.createGain(); og.gain.value = 0.12;
+          o.connect(og); og.connect(g); o.start();
+          var l = ctx.createOscillator(); l.frequency.value = 9;
+          var lg = ctx.createGain(); lg.gain.value = 5;
+          l.connect(lg); lg.connect(o.frequency); l.start();
+          var nb = ctx.createBufferSource();
+          nb.buffer = noiseBuffer(3); nb.loop = true;
+          var f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 210;
+          var ng = ctx.createGain(); ng.gain.value = 0.16;
+          nb.connect(f); f.connect(ng); ng.connect(g); nb.start();
+          g.gain.setTargetAtTime(0.7, now(), 0.6);
+          this.engineNode = g;
+        } else if (!on && this.engineNode) {
+          this.engineNode.gain.setTargetAtTime(0, now(), 0.5);
+          this.engineNode = null;
+        }
+      },
+      brakes: function () {
+        noiseHit({ dur: 0.9, type: 'highpass', freq: 2800, gain: 0.14, attack: 0.02 });
+        noiseHit({ at: 0.1, dur: 0.5, freq: 300, sweepTo: 90, gain: 0.1 });
+      },
+      glassBang: function () {
+        tone({ freq: 90, to: 55, dur: 0.2, gain: 0.24 });
+        noiseHit({ dur: 0.12, type: 'bandpass', freq: 900, q: 3, gain: 0.2 });
+        tone({ at: 0.01, freq: 1870, dur: 0.25, gain: 0.03 });
+        tone({ at: 0.01, freq: 2740, dur: 0.2, gain: 0.02 });
+      },
       sealSlam: function () {
         noiseHit({ dur: 0.5, freq: 900, sweepTo: 70, gain: 0.4 });
         tone({ freq: 50, to: 30, dur: 0.7, gain: 0.3 });
@@ -1703,6 +1739,11 @@
       var dt = Math.min(clock.getDelta(), 0.05);
       var elapsed = clock.elapsedTime;
 
+      if (window.__introActive && window.__introActive.active) {
+        window.__introActive.render(dt);
+        return;
+      }
+
       // seal shutters slide whether or not the player is moving
       if (level.sealMeshes) {
         Object.keys(level.sealMeshes).forEach(function (k) {
@@ -1712,6 +1753,10 @@
         });
       }
 
+      if (openingLock) {
+        // subtle shake while the fists land on the glass
+        camera.rotation.z = Math.sin(elapsed * 60) * 0.004;
+      }
       if (active && !uiOpen && state.collapseT > 0) {
         // face down on the floor, counting seconds
         state.collapseT -= dt;
@@ -1919,6 +1964,37 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
+    // ---------------- The opening, interior half ----------------
+    var openingLock = false;
+    function playOpening(onDone) {
+      openingLock = true;
+      camera.position.set(0, STANCE.stand.eye, 5.4);
+      yaw = Math.PI; pitch = 0;      // facing the room, just inside
+      applyLook();
+      var steps = [
+        [600, function () { if (audio) audio.doorSlam(1); }],
+        [900, function () {
+          // whip around to face the doors
+          var startYaw = yaw, t0 = performance.now();
+          (function turn() {
+            var u = Math.min(1, (performance.now() - t0) / 420);
+            yaw = startYaw + (Math.PI - 0) * (u * u * (3 - 2 * u)) * -1;
+            applyLook();
+            if (u < 1) requestAnimationFrame(turn);
+          })();
+        }],
+        [1700, function () { if (audio) audio.glassBang(); camera.position.z = 5.9; }],
+        [2100, function () { if (audio) audio.glassBang(); say('HEY! HEY—'); }],
+        [2600, function () { if (audio) audio.glassBang(); }],
+        [3600, function () { say('Locked. From the outside.'); }],
+        [5100, function () {
+          openingLock = false;
+          if (onDone) onDone();
+        }]
+      ];
+      steps.forEach(function (st2) { setTimeout(st2[1], st2[0]); });
+    }
+
     // ---------------- Public surface ----------------
     return {
       enter: function () {
@@ -1948,6 +2024,12 @@
           requestLock();
         }
       },
+      playOpening: playOpening,
+      renderer: renderer,
+      audioEngine: function (on) { if (audio) audio.engine(on); },
+      audioBrakes: function () { if (audio) audio.brakes(); },
+      audioCreak: function () { if (audio) audio.door('wood', true); },
+      audioStart: function () { if (audio) audio.start(); },
       respawn: function () {
         state.dead = false;
         state.collapseT = 0;

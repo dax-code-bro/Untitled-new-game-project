@@ -55,7 +55,7 @@ const indexHtml = read('index.html');
 const threeSrc = read('vendor/three/three.module.min.js');
 
 // Every local script index.html pulls in, in document order.
-const LOCAL_SCRIPTS = ['textures.js', 'fittings.js', 'weapons.js', 'entity.js', 'level.js', 'game.js'];
+const LOCAL_SCRIPTS = ['textures.js', 'fittings.js', 'intro.js', 'weapons.js', 'entity.js', 'level.js', 'game.js'];
 const sources = new Map(LOCAL_SCRIPTS.map((name) => [name, read(name)]));
 
 // Nothing inlined into a <script> may contain a closing script tag.
@@ -85,6 +85,11 @@ for (const [name, src] of sources) {
   if (!out.includes(tag)) throw new Error(`${tag} not found in index.html.`);
   out = out.replace(tag, `<script>\n${src}\n</script>`);
 }
+
+// the logo rides inside the single file as a data URI
+const logoSvg = readFileSync(join(here, 'logo.svg'), 'utf8');
+const logoUri = 'data:image/svg+xml;base64,' + Buffer.from(logoSvg).toString('base64');
+out = out.split('"./logo.svg"').join('"' + logoUri + '"');
 
 writeFileSync(join(here, 'standalone.html'), out);
 mkdirSync(join(here, 'dist'), { recursive: true });

@@ -1,4 +1,4 @@
-# Untitled Horror Game
+# THE BIRCH
 
 A first-person horror game built with [Three.js](https://threejs.org/). No build
 step, no bundler, no runtime network access.

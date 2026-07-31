@@ -1,8 +1,8 @@
 {
-  "name": "Untitled Horror Game",
+  "name": "The Birch",
   "short_name": "The Birch",
   "description": "A first-person horror game. It moves when you look away.",
-  "start_url": "./standalone.html",
+  "start_url": "./",
   "scope": "./",
   "display": "fullscreen",
   "orientation": "landscape",

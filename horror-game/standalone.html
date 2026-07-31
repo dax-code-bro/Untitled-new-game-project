@@ -6,7 +6,7 @@
 <meta name="color-scheme" content="dark" />
 <meta name="theme-color" content="#08090a" />
 <link rel="manifest" href="./manifest.webmanifest" />
-<title>Untitled Horror Game — Waiting</title>
+<title>The Birch</title>
 <style>
   /* ------------------------------------------------------------------
      Deliberately single-theme. A horror game that repaints itself for
@@ -74,6 +74,7 @@
     -webkit-backdrop-filter: blur(7px) saturate(0.7);
     transition: opacity 340ms ease, backdrop-filter 340ms ease;
   }
+  #curtain { overflow-y: auto; }
   #curtain[hidden] { display: none; }
   #curtain.dismissing { opacity: 0; backdrop-filter: blur(0px); }
 
@@ -83,7 +84,7 @@
   }
   #blackout.on { opacity: 1; }
 
-  .card { width: min(460px,100%); display: flex; flex-direction: column; gap: 26px; }
+  .card { width: min(460px,100%); display: flex; flex-direction: column; gap: 22px; margin: auto; }
   .eyebrow {
     display: flex; align-items: center; gap: 10px;
     font-size: 11px; letter-spacing: 0.34em; text-transform: uppercase;
@@ -414,6 +415,22 @@
   .inv-cell.armorSlot.equipped { border-color: #6fce7e; color: #a9e6b4; }
   .inv-note { font-size: 10.5px; color: var(--concrete-l); letter-spacing: 0.1em; line-height: 1.8; }
 
+  /* logo splash between the banging and the game */
+  #splash {
+    position: fixed; inset: 0; z-index: 55; display: grid; place-items: center;
+    background: #000; opacity: 0; pointer-events: none; transition: opacity 900ms ease;
+  }
+  #splash.on { opacity: 1; }
+  #splash img { width: min(480px, 80vw); }
+  #skipHint {
+    position: fixed; right: 20px; bottom: 16px; z-index: 56;
+    font-size: 10px; letter-spacing: 0.24em; color: var(--concrete-l);
+    text-transform: uppercase; opacity: 0; transition: opacity 400ms ease;
+    pointer-events: none;
+  }
+  #skipHint.on { opacity: 1; }
+  .card-logo { width: min(340px, 78vw); max-height: 24vh; object-fit: contain; object-position: left; display: block; }
+
   /* the good ending */
   #ending {
     position: fixed; inset: 0; z-index: 60; display: grid; place-items: center;
@@ -476,6 +493,9 @@
   </div>
 </div>
 
+<div id="splash"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NDAgMjIwIiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IlRoZSBCaXJjaCI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9InBhbGUiIHgxPSIwIiB5MT0iMCIgeDI9IjAiIHkyPSIxIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjZWZlNmNjIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI2M5YmQ5ZSIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjY0MCIgaGVpZ2h0PSIyMjAiIGZpbGw9Im5vbmUiLz4KICA8IS0tIHRoZSBtYW5uZXF1aW4gc3RhbmRzIGluIGZvciB0aGUgSSBvZiBCSVJDSCAtLT4KICA8ZyBzdHJva2U9InVybCgjcGFsZSkiIHN0cm9rZS13aWR0aD0iNyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBmaWxsPSJub25lIj4KICAgIDxlbGxpcHNlIGN4PSIzNTIiIGN5PSI3MiIgcng9IjEzIiByeT0iMTciIGZpbGw9InVybCgjcGFsZSkiIHN0cm9rZT0ibm9uZSIvPgogICAgPGxpbmUgeDE9IjM1MiIgeTE9IjkwIiB4Mj0iMzUyIiB5Mj0iMTQwIi8+CiAgICA8bGluZSB4MT0iMzUyIiB5MT0iMTAwIiB4Mj0iMzIyIiB5Mj0iMTM4Ii8+CiAgICA8bGluZSB4MT0iMzUyIiB5MT0iMTAwIiB4Mj0iMzgyIiB5Mj0iMTM4Ii8+CiAgICA8bGluZSB4MT0iMzIyIiB5MT0iMTM4IiB4Mj0iMzE4IiB5Mj0iMTY4Ii8+CiAgICA8bGluZSB4MT0iMzgyIiB5MT0iMTM4IiB4Mj0iMzg2IiB5Mj0iMTY4Ii8+CiAgICA8bGluZSB4MT0iMzUyIiB5MT0iMTQwIiB4Mj0iMzM2IiB5Mj0iMTk2Ii8+CiAgICA8bGluZSB4MT0iMzUyIiB5MT0iMTQwIiB4Mj0iMzY4IiB5Mj0iMTk2Ii8+CiAgPC9nPgogIDwhLS0gdGhlIHNtaWxlIG5vYm9keSBkcmV3IHlldCAtLT4KICA8ZyBzdHJva2U9IiMyYTIxMTgiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBmaWxsPSJub25lIiBvcGFjaXR5PSIwLjg1Ij4KICAgIDxsaW5lIHgxPSIzNDYiIHkxPSI2NSIgeDI9IjM0Ni41IiB5Mj0iNzUiLz4KICAgIDxsaW5lIHgxPSIzNTgiIHkxPSI2NSIgeDI9IjM1OC41IiB5Mj0iNzUiLz4KICAgIDxwYXRoIGQ9Ik0zNDQgODAgUTM1MiA4OCAzNjAgODAiLz4KICA8L2c+CiAgPCEtLSB3b3JkbWFyazogdGFsbCwgdGhpbiwgY2FydmVkIC0tPgogIDxnIGZpbGw9IiNlOWRmYzYiIGZvbnQtZmFtaWx5PSJBcmlhbCBOYXJyb3csIEhhZXR0ZW5zY2h3ZWlsZXIsIEltcGFjdCwgc2Fucy1zZXJpZiIgbGV0dGVyLXNwYWNpbmc9IjYiPgogICAgPHRleHQgeD0iNjYiIHk9IjExOCIgZm9udC1zaXplPSI0NCIgb3BhY2l0eT0iMC44NSI+VEhFPC90ZXh0PgogICAgPHRleHQgeD0iNjYiIHk9IjE4NiIgZm9udC1zaXplPSI5MiIgZm9udC13ZWlnaHQ9ImJvbGQiPkI8L3RleHQ+CiAgICA8dGV4dCB4PSIxNDYiIHk9IjE4NiIgZm9udC1zaXplPSI5MiIgZm9udC13ZWlnaHQ9ImJvbGQiPkk8L3RleHQ+CiAgICA8dGV4dCB4PSIxODgiIHk9IjE4NiIgZm9udC1zaXplPSI5MiIgZm9udC13ZWlnaHQ9ImJvbGQiPlI8L3RleHQ+CiAgICA8dGV4dCB4PSI0MDQiIHk9IjE4NiIgZm9udC1zaXplPSI5MiIgZm9udC13ZWlnaHQ9ImJvbGQiPkM8L3RleHQ+CiAgICA8dGV4dCB4PSI0ODYiIHk9IjE4NiIgZm9udC1zaXplPSI5MiIgZm9udC13ZWlnaHQ9ImJvbGQiPkg8L3RleHQ+CiAgPC9nPgogIDwhLS0gZ3JhaW4gc2NyYXRjaGVzIHRocm91Z2ggdGhlIGxldHRlcnMgLS0+CiAgPGcgc3Ryb2tlPSIjMDgwOTBhIiBzdHJva2Utd2lkdGg9IjEuNCIgb3BhY2l0eT0iMC41Ij4KICAgIDxsaW5lIHgxPSI3MCIgeTE9IjE1MCIgeDI9IjU4MCIgeTI9IjE0NiIvPgogICAgPGxpbmUgeDE9IjgwIiB5MT0iMTY4IiB4Mj0iNTYwIiB5Mj0iMTcxIi8+CiAgPC9nPgo8L3N2Zz4K" alt="THE BIRCH" /></div>
+<div id="skipHint">Click to skip</div>
+
 <div id="blackout"></div>
 
 <!-- ---------- Entry / pause ---------- -->
@@ -483,8 +503,8 @@
   <div class="card">
     <div class="eyebrow"><span class="mark"></span><span id="file-no">File 001 — Interior</span></div>
     <div class="titleblock">
-      <div class="title-sm">Untitled</div>
-      <h1 class="title-lg">Waiting</h1>
+      <img class="card-logo" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NDAgMjIwIiByb2xlPSJpbWciIGFyaWEtbGFiZWw9IlRoZSBCaXJjaCI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9InBhbGUiIHgxPSIwIiB5MT0iMCIgeDI9IjAiIHkyPSIxIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjZWZlNmNjIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI2M5YmQ5ZSIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjY0MCIgaGVpZ2h0PSIyMjAiIGZpbGw9Im5vbmUiLz4KICA8IS0tIHRoZSBtYW5uZXF1aW4gc3RhbmRzIGluIGZvciB0aGUgSSBvZiBCSVJDSCAtLT4KICA8ZyBzdHJva2U9InVybCgjcGFsZSkiIHN0cm9rZS13aWR0aD0iNyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBmaWxsPSJub25lIj4KICAgIDxlbGxpcHNlIGN4PSIzNTIiIGN5PSI3MiIgcng9IjEzIiByeT0iMTciIGZpbGw9InVybCgjcGFsZSkiIHN0cm9rZT0ibm9uZSIvPgogICAgPGxpbmUgeDE9IjM1MiIgeTE9IjkwIiB4Mj0iMzUyIiB5Mj0iMTQwIi8+CiAgICA8bGluZSB4MT0iMzUyIiB5MT0iMTAwIiB4Mj0iMzIyIiB5Mj0iMTM4Ii8+CiAgICA8bGluZSB4MT0iMzUyIiB5MT0iMTAwIiB4Mj0iMzgyIiB5Mj0iMTM4Ii8+CiAgICA8bGluZSB4MT0iMzIyIiB5MT0iMTM4IiB4Mj0iMzE4IiB5Mj0iMTY4Ii8+CiAgICA8bGluZSB4MT0iMzgyIiB5MT0iMTM4IiB4Mj0iMzg2IiB5Mj0iMTY4Ii8+CiAgICA8bGluZSB4MT0iMzUyIiB5MT0iMTQwIiB4Mj0iMzM2IiB5Mj0iMTk2Ii8+CiAgICA8bGluZSB4MT0iMzUyIiB5MT0iMTQwIiB4Mj0iMzY4IiB5Mj0iMTk2Ii8+CiAgPC9nPgogIDwhLS0gdGhlIHNtaWxlIG5vYm9keSBkcmV3IHlldCAtLT4KICA8ZyBzdHJva2U9IiMyYTIxMTgiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBmaWxsPSJub25lIiBvcGFjaXR5PSIwLjg1Ij4KICAgIDxsaW5lIHgxPSIzNDYiIHkxPSI2NSIgeDI9IjM0Ni41IiB5Mj0iNzUiLz4KICAgIDxsaW5lIHgxPSIzNTgiIHkxPSI2NSIgeDI9IjM1OC41IiB5Mj0iNzUiLz4KICAgIDxwYXRoIGQ9Ik0zNDQgODAgUTM1MiA4OCAzNjAgODAiLz4KICA8L2c+CiAgPCEtLSB3b3JkbWFyazogdGFsbCwgdGhpbiwgY2FydmVkIC0tPgogIDxnIGZpbGw9IiNlOWRmYzYiIGZvbnQtZmFtaWx5PSJBcmlhbCBOYXJyb3csIEhhZXR0ZW5zY2h3ZWlsZXIsIEltcGFjdCwgc2Fucy1zZXJpZiIgbGV0dGVyLXNwYWNpbmc9IjYiPgogICAgPHRleHQgeD0iNjYiIHk9IjExOCIgZm9udC1zaXplPSI0NCIgb3BhY2l0eT0iMC44NSI+VEhFPC90ZXh0PgogICAgPHRleHQgeD0iNjYiIHk9IjE4NiIgZm9udC1zaXplPSI5MiIgZm9udC13ZWlnaHQ9ImJvbGQiPkI8L3RleHQ+CiAgICA8dGV4dCB4PSIxNDYiIHk9IjE4NiIgZm9udC1zaXplPSI5MiIgZm9udC13ZWlnaHQ9ImJvbGQiPkk8L3RleHQ+CiAgICA8dGV4dCB4PSIxODgiIHk9IjE4NiIgZm9udC1zaXplPSI5MiIgZm9udC13ZWlnaHQ9ImJvbGQiPlI8L3RleHQ+CiAgICA8dGV4dCB4PSI0MDQiIHk9IjE4NiIgZm9udC1zaXplPSI5MiIgZm9udC13ZWlnaHQ9ImJvbGQiPkM8L3RleHQ+CiAgICA8dGV4dCB4PSI0ODYiIHk9IjE4NiIgZm9udC1zaXplPSI5MiIgZm9udC13ZWlnaHQ9ImJvbGQiPkg8L3RleHQ+CiAgPC9nPgogIDwhLS0gZ3JhaW4gc2NyYXRjaGVzIHRocm91Z2ggdGhlIGxldHRlcnMgLS0+CiAgPGcgc3Ryb2tlPSIjMDgwOTBhIiBzdHJva2Utd2lkdGg9IjEuNCIgb3BhY2l0eT0iMC41Ij4KICAgIDxsaW5lIHgxPSI3MCIgeTE9IjE1MCIgeDI9IjU4MCIgeTI9IjE0NiIvPgogICAgPGxpbmUgeDE9IjgwIiB5MT0iMTY4IiB4Mj0iNTYwIiB5Mj0iMTcxIi8+CiAgPC9nPgo8L3N2Zz4K" alt="THE BIRCH" />
+      <div class="title-sm">A facility, a truck, and a door that locks behind you</div>
     </div>
     <div class="spec">
       <div class="spec-row"><span class="spec-key">Floor</span><span class="spec-val">Ground — 13 rooms mapped</span></div>
@@ -1496,6 +1516,172 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
   };
 
   window.FITTINGS = FITTINGS;
+})();
+
+</script>
+<script>
+/*
+ * THE BIRCH — the arrival.
+ *
+ * A box truck pulls up to the facility at night, the glass doors open,
+ * and the player goes in. The interior half of the opening (the slam,
+ * the banging, the realisation) is scripted in game.js; this file is
+ * only the exterior shot.
+ *
+ *   window.buildIntro(THREE, renderer, audio) → { start(onDone), skip(), render(dt), active }
+ */
+(function () {
+  'use strict';
+
+  window.buildIntro = function buildIntro(THREE, renderer, audioHooks) {
+    var T = window.TEX;
+    var scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x040507);
+    scene.fog = new THREE.FogExp2(0x040507, 0.03);
+
+    var camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 0.1, 120);
+    camera.position.set(6.8, 1.7, 13.5);
+    camera.lookAt(-2, 1.3, 4);
+
+    // ---------------- the lot ----------------
+    var asphalt = new THREE.Mesh(new THREE.PlaneGeometry(120, 80),
+      new THREE.MeshStandardMaterial({ map: T.concrete(THREE, 512, 52, { speckle: 3200, grime: 12, repeat: [10, 7] }), color: 0x5c6063, roughness: 0.95 }));
+    asphalt.rotation.x = -Math.PI / 2;
+    scene.add(asphalt);
+
+    // ---------------- the facade ----------------
+    var wallMat = new THREE.MeshStandardMaterial({ map: T.concrete(THREE, 512, 118, { formwork: true, repeat: [6, 2] }), color: 0x8b9194, roughness: 0.95 });
+    var wall = new THREE.Mesh(new THREE.BoxGeometry(46, 7, 0.6), wallMat);
+    wall.position.set(0, 3.5, 0);
+    scene.add(wall);
+    // door frame + two glass leaves
+    var frameMat = new THREE.MeshStandardMaterial({ color: 0x2c3134, roughness: 0.6, metalness: 0.4 });
+    [-1.7, 0, 1.7].forEach(function (x) {
+      var p = new THREE.Mesh(new THREE.BoxGeometry(0.14, 2.5, 0.2), frameMat);
+      p.position.set(x, 1.25, 0.35);
+      scene.add(p);
+    });
+    var glassMat = new THREE.MeshStandardMaterial({ color: 0xa8c0c4, roughness: 0.4, metalness: 0.1, transparent: true, opacity: 0.5 });
+    var doorL = new THREE.Group(); doorL.position.set(-1.7, 0, 0.35);
+    var leafL = new THREE.Mesh(new THREE.BoxGeometry(1.6, 2.4, 0.06), glassMat);
+    leafL.position.set(0.8, 1.2, 0);
+    doorL.add(leafL); scene.add(doorL);
+    var doorR = new THREE.Group(); doorR.position.set(1.7, 0, 0.35);
+    var leafR = new THREE.Mesh(new THREE.BoxGeometry(1.6, 2.4, 0.06), glassMat);
+    leafR.position.set(-0.8, 1.2, 0);
+    doorR.add(leafR); scene.add(doorR);
+    // warm light spilling from inside
+    var spill = new THREE.PointLight(0xffe3c0, 7, 14, 2);
+    spill.position.set(0, 2, 1.4);
+    scene.add(spill);
+    // a tired exterior lamp over the doors
+    var lamp = new THREE.PointLight(0xdfe8ea, 11, 20, 2);
+    lamp.position.set(0, 4.6, 1.2);
+    scene.add(lamp);
+    var lampFix = new THREE.Mesh(new THREE.BoxGeometry(1, 0.1, 0.3),
+      new THREE.MeshStandardMaterial({ color: 0xf0f2ee, emissive: 0xdfe8ea, emissiveIntensity: 1.4 }));
+    lampFix.position.set(0, 4.7, 0.5);
+    scene.add(lampFix);
+    scene.add(new THREE.HemisphereLight(0x2a3a4c, 0x07090c, 1.4));
+    var moon = new THREE.DirectionalLight(0x8fa3c0, 0.5);
+    moon.position.set(-20, 30, 25);
+    scene.add(moon);
+
+    // ---------------- the truck ----------------
+    var truck = new THREE.Group();
+    var boxMat = new THREE.MeshStandardMaterial({ map: T.metal(THREE, 512, 150, { rust: 5 }), color: 0xb8bcbd, roughness: 0.6, metalness: 0.25 });
+    var cabMat = new THREE.MeshStandardMaterial({ color: 0x3f5a70, roughness: 0.5, metalness: 0.3 });
+    var body = new THREE.Mesh(new THREE.BoxGeometry(7.2, 3.1, 2.5), boxMat);
+    body.position.set(-1.4, 2.05, 0);
+    truck.add(body);
+    var cab = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.9, 2.4), cabMat);
+    cab.position.set(3.5, 1.45, 0);
+    truck.add(cab);
+    var shield = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.8, 2.0),
+      new THREE.MeshStandardMaterial({ color: 0x101820, roughness: 0.2, metalness: 0.6 }));
+    shield.position.set(4.72, 1.8, 0);
+    truck.add(shield);
+    var wheelMat = new THREE.MeshStandardMaterial({ color: 0x121416, roughness: 0.9 });
+    [[3.6, 1], [3.6, -1], [-0.2, 1], [-0.2, -1], [-2.8, 1], [-2.8, -1]].forEach(function (w) {
+      var wh = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.35, 14), wheelMat);
+      wh.rotation.x = Math.PI / 2;
+      wh.position.set(w[0], 0.55, w[1] * 1.15);
+      truck.add(wh);
+    });
+    var head1 = new THREE.SpotLight(0xfff2cc, 60, 40, 0.4, 0.5, 1.6);
+    head1.position.set(4.8, 1.1, 0.75);
+    var head1T = new THREE.Object3D(); head1T.position.set(20, 0.6, 0.75);
+    truck.add(head1T); head1.target = head1T; truck.add(head1);
+    var head2 = head1.clone();
+    head2.position.z = -0.75;
+    var head2T = new THREE.Object3D(); head2T.position.set(20, 0.6, -0.75);
+    truck.add(head2T); head2.target = head2T; truck.add(head2);
+    [1, -1].forEach(function (sz) {
+      var tail = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.2, 0.3),
+        new THREE.MeshStandardMaterial({ color: 0x400a08, emissive: 0xc23020, emissiveIntensity: 1.4 }));
+      tail.position.set(-5.02, 1.1, sz * 0.9);
+      truck.add(tail);
+    });
+    // it arrives from the dark, heading for the doors
+    truck.rotation.y = Math.PI / 2 + 0.1;
+    truck.position.set(-2.2, 0, 36);
+    scene.add(truck);
+
+    // ---------------- timeline ----------------
+    var active = false, t = 0, onDoneCb = null;
+    var A = audioHooks || {};
+
+    function start(onDone) {
+      active = true; t = 0; onDoneCb = onDone;
+      if (A.engine) A.engine(true);
+    }
+    function finish() {
+      if (!active) return;
+      active = false;
+      if (A.engine) A.engine(false);
+      if (onDoneCb) { var cb = onDoneCb; onDoneCb = null; cb(); }
+    }
+
+    return {
+      get active() { return active; },
+      start: start,
+      skip: finish,
+      onResize: function () {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+      },
+      render: function (dt) {
+        if (!active) return;
+        t += dt;
+        // 0–5.2s: the truck rolls in and stops at the doors
+        var drive = Math.min(1, t / 5.2);
+        var eased = 1 - Math.pow(1 - drive, 2.4);
+        truck.position.z = 36 - eased * 29.5;
+        truck.position.x = -2.2 - eased * 0.8;
+        if (drive >= 1 && A.brakes && !this._hissed) { this._hissed = true; A.brakes(); }
+        // idle shake
+        truck.position.y = Math.sin(t * 30) * 0.012 * (drive < 1 ? 1 : 0.5);
+        // 5.9–7.2s: the glass doors swing open for you
+        if (t > 5.9) {
+          var open = Math.min(1, (t - 5.9) / 1.3);
+          var oe = 1 - Math.pow(1 - open, 3);
+          doorL.rotation.y = -oe * 1.5;
+          doorR.rotation.y = oe * 1.5;
+          if (!this._creaked && A.creak) { this._creaked = true; A.creak(); }
+        }
+        // 6.4s→: the camera walks to the doorway
+        if (t > 6.4) {
+          var walk = Math.min(1, (t - 6.4) / 2.6);
+          var we = walk * walk * (3 - 2 * walk);
+          camera.position.set(6.8 - we * 6.6, 1.7 + Math.sin(t * 7) * 0.02 * we, 13.5 - we * 11.7);
+          camera.lookAt(0, 1.5, 0.5);
+        }
+        // and it's over
+        if (t > 9.3) { finish(); return; }
+        renderer.render(scene, camera);
+      }
+    };
+  };
 })();
 
 </script>
@@ -4403,6 +4589,42 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
         }
       },
       setPhase: setPhase,
+      engineNode: null,
+      engine: function (on) {
+        if (!started) return;
+        if (on && !this.engineNode) {
+          var g = ctx.createGain();
+          g.gain.value = 0;
+          g.connect(master);
+          var o = ctx.createOscillator();
+          o.type = 'sawtooth'; o.frequency.value = 42;
+          var og = ctx.createGain(); og.gain.value = 0.12;
+          o.connect(og); og.connect(g); o.start();
+          var l = ctx.createOscillator(); l.frequency.value = 9;
+          var lg = ctx.createGain(); lg.gain.value = 5;
+          l.connect(lg); lg.connect(o.frequency); l.start();
+          var nb = ctx.createBufferSource();
+          nb.buffer = noiseBuffer(3); nb.loop = true;
+          var f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 210;
+          var ng = ctx.createGain(); ng.gain.value = 0.16;
+          nb.connect(f); f.connect(ng); ng.connect(g); nb.start();
+          g.gain.setTargetAtTime(0.7, now(), 0.6);
+          this.engineNode = g;
+        } else if (!on && this.engineNode) {
+          this.engineNode.gain.setTargetAtTime(0, now(), 0.5);
+          this.engineNode = null;
+        }
+      },
+      brakes: function () {
+        noiseHit({ dur: 0.9, type: 'highpass', freq: 2800, gain: 0.14, attack: 0.02 });
+        noiseHit({ at: 0.1, dur: 0.5, freq: 300, sweepTo: 90, gain: 0.1 });
+      },
+      glassBang: function () {
+        tone({ freq: 90, to: 55, dur: 0.2, gain: 0.24 });
+        noiseHit({ dur: 0.12, type: 'bandpass', freq: 900, q: 3, gain: 0.2 });
+        tone({ at: 0.01, freq: 1870, dur: 0.25, gain: 0.03 });
+        tone({ at: 0.01, freq: 2740, dur: 0.2, gain: 0.02 });
+      },
       sealSlam: function () {
         noiseHit({ dur: 0.5, freq: 900, sweepTo: 70, gain: 0.4 });
         tone({ freq: 50, to: 30, dur: 0.7, gain: 0.3 });
@@ -5594,6 +5816,11 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       var dt = Math.min(clock.getDelta(), 0.05);
       var elapsed = clock.elapsedTime;
 
+      if (window.__introActive && window.__introActive.active) {
+        window.__introActive.render(dt);
+        return;
+      }
+
       // seal shutters slide whether or not the player is moving
       if (level.sealMeshes) {
         Object.keys(level.sealMeshes).forEach(function (k) {
@@ -5603,6 +5830,10 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
         });
       }
 
+      if (openingLock) {
+        // subtle shake while the fists land on the glass
+        camera.rotation.z = Math.sin(elapsed * 60) * 0.004;
+      }
       if (active && !uiOpen && state.collapseT > 0) {
         // face down on the floor, counting seconds
         state.collapseT -= dt;
@@ -5810,6 +6041,37 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
+    // ---------------- The opening, interior half ----------------
+    var openingLock = false;
+    function playOpening(onDone) {
+      openingLock = true;
+      camera.position.set(0, STANCE.stand.eye, 5.4);
+      yaw = Math.PI; pitch = 0;      // facing the room, just inside
+      applyLook();
+      var steps = [
+        [600, function () { if (audio) audio.doorSlam(1); }],
+        [900, function () {
+          // whip around to face the doors
+          var startYaw = yaw, t0 = performance.now();
+          (function turn() {
+            var u = Math.min(1, (performance.now() - t0) / 420);
+            yaw = startYaw + (Math.PI - 0) * (u * u * (3 - 2 * u)) * -1;
+            applyLook();
+            if (u < 1) requestAnimationFrame(turn);
+          })();
+        }],
+        [1700, function () { if (audio) audio.glassBang(); camera.position.z = 5.9; }],
+        [2100, function () { if (audio) audio.glassBang(); say('HEY! HEY—'); }],
+        [2600, function () { if (audio) audio.glassBang(); }],
+        [3600, function () { say('Locked. From the outside.'); }],
+        [5100, function () {
+          openingLock = false;
+          if (onDone) onDone();
+        }]
+      ];
+      steps.forEach(function (st2) { setTimeout(st2[1], st2[0]); });
+    }
+
     // ---------------- Public surface ----------------
     return {
       enter: function () {
@@ -5839,6 +6101,12 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
           requestLock();
         }
       },
+      playOpening: playOpening,
+      renderer: renderer,
+      audioEngine: function (on) { if (audio) audio.engine(on); },
+      audioBrakes: function () { if (audio) audio.brakes(); },
+      audioCreak: function () { if (audio) audio.door('wood', true); },
+      audioStart: function () { if (audio) audio.start(); },
       respawn: function () {
         state.dead = false;
         state.collapseT = 0;
@@ -6605,6 +6873,8 @@ window.bootUI = function bootUI(THREE) {
   // ---------------- Entry / pause ----------------
   var legendTimer = null, enterTimer = null, hideTimer = null;
   var dead = false;
+  var introPlayed = false;
+  var intro = null;
 
   function enter() {
     if (dead) {
@@ -6612,10 +6882,36 @@ window.bootUI = function bootUI(THREE) {
       game.respawn();
       fileNo.textContent = 'File 001 — Interior';
     }
+    // the arrival plays once, for people — automation goes straight in
+    if (!introPlayed && !navigator.webdriver) {
+      introPlayed = true;
+      game.audioStart();
+      curtain.classList.add('dismissing');
+      setTimeout(function () { curtain.hidden = true; }, 340);
+      intro = window.buildIntro(THREE, game.renderer, {
+        engine: function (on) { game.audioEngine(on); },
+        brakes: function () { game.audioBrakes(); },
+        creak: function () { game.audioCreak(); }
+      });
+      window.__introActive = intro;
+      document.getElementById('skipHint').classList.add('on');
+      var skip = function () { intro.skip(); };
+      window.addEventListener('pointerdown', skip, { once: true });
+      intro.start(function () {
+        window.__introActive = null;
+        document.getElementById('skipHint').classList.remove('on');
+        enterWorld(true);
+      });
+      return;
+    }
+    enterWorld(false);
+  }
+
+  function enterWorld(withOpening) {
     blackout.classList.add('on');
     clearTimeout(enterTimer);
     enterTimer = setTimeout(function () {
-      curtain.classList.add('dismissing');
+      if (!withOpening) curtain.classList.add('dismissing');
       clearTimeout(hideTimer);
       // the timer can starve on a saturated main thread; transitionend is
       // the belt to its braces
@@ -6627,6 +6923,13 @@ window.bootUI = function bootUI(THREE) {
       hideTimer = setTimeout(hideOnce, 340);
 
       game.enter();
+      if (withOpening) {
+        game.playOpening(function () {
+          var splash = document.getElementById('splash');
+          splash.classList.add('on');
+          setTimeout(function () { splash.classList.remove('on'); }, 2400);
+        });
+      }
 
       crosshair.classList.add('on');
       soundBtn.classList.add('on');

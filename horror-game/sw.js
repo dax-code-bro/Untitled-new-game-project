@@ -1,9 +1,11 @@
-/* Untitled Horror Game — offline cache. The game is one file; so is this. */
-var CACHE = 'birch-v1';
-var ASSETS = ['./standalone.html', './manifest.webmanifest', './icon.svg'];
+/* THE BIRCH — offline cache, updates first.
+   Network-first: an installed copy always tries for the newest build, and
+   only falls back to cache when there is no signal. */
+var CACHE = 'birch-v2';
+var ASSETS = ['./', './index.html', './manifest.webmanifest', './icon.svg', './logo.svg'];
 
 self.addEventListener('install', function (e) {
-  e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(ASSETS); }));
+  e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(ASSETS).catch(function () {}); }));
   self.skipWaiting();
 });
 self.addEventListener('activate', function (e) {
@@ -14,11 +16,13 @@ self.addEventListener('activate', function (e) {
 });
 self.addEventListener('fetch', function (e) {
   e.respondWith(
-    caches.match(e.request).then(function (hit) {
-      return hit || fetch(e.request).then(function (res) {
-        var copy = res.clone();
-        caches.open(CACHE).then(function (c) { c.put(e.request, copy); });
-        return res;
+    fetch(e.request).then(function (res) {
+      var copy = res.clone();
+      caches.open(CACHE).then(function (c) { c.put(e.request, copy); });
+      return res;
+    }).catch(function () {
+      return caches.match(e.request).then(function (hit) {
+        return hit || caches.match('./index.html');
       });
     })
   );
