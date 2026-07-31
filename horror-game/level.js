@@ -618,6 +618,14 @@
       batten(5.5, -5.4, WALL_H, 0xdfe8ea, 6, 10, 'dying');
       batten(0, 5.2, WALL_H, 0xdfe8ea, 7, 12, 'buzz');
 
+      // The SECURITY crate, shoved into the corner by the entrance.
+      var camCrate = box(0.8, 0.55, 0.65, MAT.wood, -7.2, 0.28, 6.2, 0.3);
+      box(0.6, 0.22, 0.02, new THREE.MeshStandardMaterial({
+        map: T.sign(THREE, 'SECURITY', { fontSize: 30 }), roughness: 0.7
+      }), -6.9, 0.38, 5.93, 0.3);
+      interact(camCrate, { id: 'cameraCrate', label: 'Crate marked SECURITY', verb: 'Open' });
+      solid(-7.65, 5.85, -6.75, 6.55);
+
       var phoneBody = box(0.16, 0.26, 0.1, MAT.plastic, -7.85, 1.45, -3.2, Math.PI / 2);
       box(0.06, 0.2, 0.07, MAT.plastic, -7.75, 1.5, -3.2, Math.PI / 2);
       interact(phoneBody, { id: 'phone', label: 'Telephone', verb: 'Use' });
@@ -686,13 +694,28 @@
       batten(-59, 0, 5.0, 0xcfe0e4, 10, 17, 'buzz');
       batten(-53, 4, 5.0, 0xcfe0e4, 8, 15, 'strobe');
 
+      var lootIdx = 0;
+      function shelfCrate(cx, cy, cz) {
+        var w = 0.55 + Math.random() * 0.4;
+        var crate = box(w, 0.5 + Math.random() * 0.3, w, MAT.wood, cx, cy, cz, (Math.random() - 0.5) * 0.7);
+        if (Math.random() < 0.3) {
+          interact(crate, { id: 'lootCrate', idx: lootIdx++, label: 'Crate on the shelf', verb: 'Open' });
+        }
+        return crate;
+      }
       function rack(x, z, len) {
         for (var lvl = 0; lvl < 3; lvl++) box(len, 0.09, 1.1, MAT.metal, x, 0.5 + lvl * 1.35, z);
         var half = len / 2;
         for (var u = -half + 0.2; u <= half - 0.2; u += 1.6) cyl(0.05, 0.05, 4.1, MAT.metal, x + u, 2.05, z, 6);
+        // stock the shelves the way a dying company stocks shelves:
+        // gaps, crooked stacks, nothing lined up with anything
         for (var c = 0; c < Math.floor(len / 1.1); c++) {
-          if (Math.random() < 0.32) continue;
-          box(0.8, 0.7, 0.8, MAT.wood, x - half + 0.6 + c * 1.05, 0.9 + Math.floor(Math.random() * 2) * 1.35, z);
+          if (Math.random() < 0.48) continue;
+          shelfCrate(
+            x - half + 0.6 + c * 1.05 + (Math.random() - 0.5) * 0.35,
+            0.9 + Math.floor(Math.random() * 2) * 1.35,
+            z + (Math.random() - 0.5) * 0.25
+          );
         }
         solid(x - half, z - 0.6, x + half, z + 0.6);
       }
@@ -709,23 +732,6 @@
         gm.rotation.z = 0.3 + g * 0.04;
         gm.position.set(-53 + g * 0.18, 0.012, 2.6 + g * 0.1);
         group.add(gm);
-      }
-
-      // The security-camera crate — the reason to come in here first.
-      var camCrate = box(0.9, 0.6, 0.7, MAT.wood, -59.5, 0.31, 5.2, 0.2);
-      box(0.7, 0.24, 0.02, new THREE.MeshStandardMaterial({
-        map: T.sign(THREE, 'SECURITY', { fontSize: 30 }), roughness: 0.7
-      }), -59.48, 0.42, 5.56, 0.2);
-      interact(camCrate, { id: 'cameraCrate', label: 'Crate marked SECURITY', verb: 'Open' });
-      solid(-60.0, 4.8, -59.0, 5.6);
-
-      // Loose stock: crates you can actually open.
-      for (var lc = 0; lc < 14; lc++) {
-        var lx = -62.5 + (lc % 7) * 2.1 + Math.random() * 0.5;
-        var lz = -8.8 + Math.floor(lc / 7) * 2.4 + Math.random() * 0.6;
-        var crate = box(0.72, 0.6, 0.72, MAT.wood, lx, 0.31, lz, Math.random() * 0.5);
-        interact(crate, { id: 'lootCrate', idx: lc, label: 'Supply crate', verb: 'Open' });
-        solid(lx - 0.4, lz - 0.4, lx + 0.4, lz + 0.4);
       }
 
       var keyMesh = box(0.11, 0.02, 0.04, new THREE.MeshStandardMaterial({ color: 0xc7b26a, roughness: 0.35, metalness: 0.85 }), -51.6, 0.63, 4.7);
@@ -1131,6 +1137,44 @@
         { fontSize: 20, bg: '#3d2f14', fg: '#d8c37a' });
     })();
 
+    // ---------------- Vents ----------------
+    // Four crawl runs through the walls. A grate has to be wrenched off
+    // first, and once it is off it is off for good — for everyone.
+    var vents = [];
+    (function buildVents() {
+      var louvreMat = new THREE.MeshStandardMaterial({ color: 0x4c5254, roughness: 0.55, metalness: 0.5 });
+      function grate(x, z, ry) {
+        var gg = new THREE.Group();
+        var frame = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.4, 0.05), louvreMat);
+        gg.add(frame);
+        for (var l = 0; l < 5; l++) {
+          var slat = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.03, 0.06), new THREE.MeshStandardMaterial({ color: 0x33383a, roughness: 0.6, metalness: 0.4 }));
+          slat.position.y = -0.14 + l * 0.07;
+          slat.rotation.x = -0.5;
+          gg.add(slat);
+        }
+        gg.position.set(x, 0.42, z);
+        gg.rotation.y = ry;
+        group.add(gg);
+        return gg;
+      }
+      // ry points back INTO the room you emerge in — the landing spot is
+      // 0.9m along -sin/-cos of it, and must never be inside the wall.
+      var DEFS = [
+        { a: { x: -7.85, z: 3.6, ry: -Math.PI / 2 }, b: { x: -15.15, z: -3.4, ry: Math.PI / 2 },  name: 'Waiting ↔ Restrooms' },
+        { a: { x: 7.85, z: 3.6, ry: Math.PI / 2 },   b: { x: 22.15, z: -4.2, ry: -Math.PI / 2 }, name: 'Waiting ↔ Office' },
+        { a: { x: 30, z: -1.42, ry: Math.PI },       b: { x: 48.08, z: 20, ry: -Math.PI / 2 },   name: 'East corridor ↔ South corridor' },
+        { a: { x: -48.1, z: -6, ry: Math.PI / 2 },   b: { x: -30, z: 1.42, ry: 0 },              name: 'Warehouse ↔ West corridor' }
+      ];
+      DEFS.forEach(function (def, vi) {
+        var ga = grate(def.a.x, def.a.z, def.a.ry);
+        var gb = grate(def.b.x, def.b.z, def.b.ry);
+        interact(ga.children[0], { id: 'vent', vent: vi, end: 0, label: 'Air vent', verb: 'Break open' });
+        interact(gb.children[0], { id: 'vent', vent: vi, end: 1, label: 'Air vent', verb: 'Break open' });
+        vents.push({ a: def.a, b: def.b, meshA: ga, meshB: gb, name: def.name });
+      });
+    })();
+
     // ---------------- Doors ----------------
     // Every doorway gets a leaf built to its own spec; see fittings.js.
     var fittingsCtx = {
@@ -1217,6 +1261,7 @@
       wallBoxes: wallBoxes,
       lightFixtures: lights,
       sealMeshes: sealMeshes,
+      vents: vents,
       interactables: interactables,
       updates: updates,
       roomAt: roomAt,

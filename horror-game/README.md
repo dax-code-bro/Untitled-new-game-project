@@ -195,8 +195,10 @@ the ones that mattered. Its hands are flat paddles, made flat **so it could
 never hurt anyone.** It turned them into spears. Gears wind up when it starts
 to move, and tick under every wooden footfall.
 
-It hides in the vents until you take the security cameras from the warehouse
-crate — then it smells your blood, and the game begins.
+It hides in the vents. The SECURITY crate sits in the corner of the waiting
+room; taking the five cameras changes nothing — until you carry them back to
+the reception desk. Then the ceiling speakers die mid-chorus, and the game
+begins.
 
 **The loop.** It haunts three spots, 5 to 25 minutes at a time: the storage
 unit, where it smears Nick's blood over its face and body (the stains are
@@ -206,7 +208,8 @@ at it, it cannot move.** The moment you look away, it does. When it leaves a
 spot it either relocates or comes for Waiting — and your only warning is the
 cameras.
 
-**Cameras.** Five in the SECURITY crate, more in loot. Place them with `F`,
+**Cameras.** Five in the corner crate, more in loot. Place them with `F` or
+from the hotbar,
 watch them from the reception terminal. Worst case: you flip to a feed and it
 is already there, hand raised, a smiley drawn on its face in blood — it found
 your camera, and that feed is about to die.
@@ -229,6 +232,30 @@ is a desperate headbutt. Headbutt into a riot shield and its own head comes
 off. In the body: a keycard. Tear it out, open the entrance, and walk into
 the orange letters: **MISSION PASSED — RESPECT ++++**, with your $2,000.
 
+### The building
+
+**Music.** Until the Birch wakes, the whole facility plays classic mediocre
+pop — a four-chord loop rendered offline and piped through store speakers.
+When you bring the cameras back to the desk, the tape sags to a stop, and
+every room's eerie bed and disturbing one-shots take over.
+
+**Vents.** Four crawl runs through the walls: Waiting↔Restrooms,
+Waiting↔Office, the two long corridors, Warehouse↔West corridor. Wrench a
+grate off (once — it stays off) and crawl through. But every vent you open is
+a route the Birch can use too: with grates off, it moves between its haunts
+through the ducts, instantly, with nothing but a scramble in the walls as
+warning.
+
+**Hotbar and inventory.** Minecraft-style: five hotbar slots (keys `1–5`), an
+armor slot, twenty inventory spaces (`Tab`). Click uses whatever is selected —
+weapons fire, consumables consume, cameras place. **Riot gear only protects
+you once it is equipped in the armor slot.** First pickups bind themselves to
+free slots.
+
+**Viewmodels.** Every weapon renders in first person — Glock, shotgun, rifle,
+or the camera in your hand — with a real 3D muzzle flash and burst light at
+the barrel, recoil kick, and idle sway. Rounds no longer pass through walls.
+
 ### Survival
 
 Ten bars of hunger, ten of thirst, twenty of energy. Water restores five
@@ -243,9 +270,13 @@ restrooms finally justify their existence.
 
 ### Warehouse loot
 
-Fourteen openable crates, every roll independent: cameras ×5 (30%), 9mm
+The warehouse is stocked the way a dying company stocks shelves: crooked
+stacks with gaps, crates scattered and tipped in the aisles, some on the
+racking, three already half-open with the water and beans visible inside.
+About twenty are openable, every roll independent: cameras ×5 (30%), 9mm
 (10%), a shotgun or assault rifle (2%), water (50%), beans (60%), GAMER
-ENERGY (25%), riot gear (9%).
+ENERGY (25%), riot gear (9%) — and the suite statistically verifies those
+numbers against 20,000 simulated rolls.
 
 ## Not built yet## Not built yet
 

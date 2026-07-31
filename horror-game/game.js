@@ -149,6 +149,49 @@
       return g;
     }
 
+    var muzak = null, muzakSrc = null;
+    function buildMuzak() {
+      // four bars of classic mediocre pop, straight off a demo keyboard
+      var off = new OfflineAudioContext(1, 44100 * 7.5, 44100);
+      var CHORDS = [[261.6, 329.6, 392], [220, 261.6, 329.6], [174.6, 220, 261.6], [196, 246.9, 293.7]];
+      for (var bar = 0; bar < 4; bar++) {
+        var t0 = bar * 1.85;
+        CHORDS[bar].forEach(function (f) {
+          var o = off.createOscillator();
+          o.type = 'triangle';
+          o.frequency.value = f;
+          var g = off.createGain();
+          g.gain.setValueAtTime(0.045, t0);
+          g.gain.linearRampToValueAtTime(0.03, t0 + 1.7);
+          o.connect(g); g.connect(off.destination);
+          o.start(t0); o.stop(t0 + 1.82);
+        });
+        var b2 = off.createOscillator();
+        b2.type = 'sine';
+        b2.frequency.value = CHORDS[bar][0] / 2;
+        var bg = off.createGain();
+        for (var beat = 0; beat < 4; beat++) {
+          bg.gain.setValueAtTime(0.09, t0 + beat * 0.46);
+          bg.gain.exponentialRampToValueAtTime(0.02, t0 + beat * 0.46 + 0.4);
+        }
+        b2.connect(bg); bg.connect(off.destination);
+        b2.start(t0); b2.stop(t0 + 1.85);
+        // the world's least ambitious drum machine
+        for (var h = 0; h < 8; h++) {
+          var nb = off.createBufferSource();
+          var buf = off.createBuffer(1, 1200, 44100);
+          var dd = buf.getChannelData(0);
+          for (var n2 = 0; n2 < 1200; n2++) dd[n2] = (Math.random() * 2 - 1) * (1 - n2 / 1200);
+          nb.buffer = buf;
+          var hg = off.createGain();
+          hg.gain.value = h % 2 === 0 ? 0.05 : 0.028;
+          nb.connect(hg); hg.connect(off.destination);
+          nb.start(t0 + h * 0.23);
+        }
+      }
+      return off.startRendering();
+    }
+
     function start() {
       if (started) return;
       started = true;
@@ -156,6 +199,21 @@
       master = ctx.createGain();
       master.gain.value = 0.9;
       master.connect(ctx.destination);
+
+      muzak = ctx.createGain();
+      muzak.gain.value = 0;
+      var mf = ctx.createBiquadFilter();
+      mf.type = 'lowpass';
+      mf.frequency.value = 2600;
+      muzak.connect(mf); mf.connect(master);
+      buildMuzak().then(function (buf) {
+        muzakSrc = ctx.createBufferSource();
+        muzakSrc.buffer = buf;
+        muzakSrc.loop = true;
+        muzakSrc.connect(muzak);
+        muzakSrc.start();
+        if (phase === 'pop') muzak.gain.setTargetAtTime(0.85, now(), 0.5);
+      });
 
       // One bed per room — every part of the building has its own track.
       function bed(id, opts) { beds[id] = makeBed(opts); }
@@ -177,13 +235,29 @@
       if (currentRoom) setRoom(currentRoom);
     }
 
+    var phase = 'pop';
     function setRoom(id) {
       currentRoom = id;
       if (!started) return;
       Object.keys(beds).forEach(function (k) {
-        beds[k].gain.setTargetAtTime(k === id ? 1 : 0, now(), 1.1);
+        beds[k].gain.setTargetAtTime(phase === 'eerie' && k === id ? 1 : 0, now(), 1.1);
       });
       nextAmbient = ambientDelay(id) * 0.5;
+    }
+    function setPhase(p) {
+      if (phase === p) return;
+      phase = p;
+      if (!started) return;
+      if (p === 'eerie') {
+        // the tape dies: pitch sags, then nothing but the building
+        if (muzakSrc) {
+          muzakSrc.playbackRate.setTargetAtTime(0.4, now(), 0.8);
+        }
+        if (muzak) muzak.gain.setTargetAtTime(0, now(), 1.2);
+        setRoom(currentRoom);
+      } else if (muzak) {
+        muzak.gain.setTargetAtTime(0.85, now(), 0.5);
+      }
     }
 
     // ---------------- Random ambient one-shots, per room ----------------
@@ -250,6 +324,7 @@
     }
     function tick(dt, roomId) {
       if (!started || muted || !roomId) return;
+      if (phase !== 'eerie') return;   // the building holds its breath until the pop dies
       if (roomId !== currentRoom) return;
       nextAmbient -= dt;
       if (nextAmbient > 0) return;
@@ -264,12 +339,14 @@
       var v = stance === 'crawl' ? 0.32 : stance === 'crouch' ? 0.55 : 1;
       var j = 0.85 + Math.random() * 0.3;   // no two steps identical
       if (surface === 'lobby' || surface === 'wood') {
-        // carpet: a soft pad and a hint of fibre
+        // carpet: heel pad, then the toe settling
         noiseHit({ dur: 0.07, freq: 300 * j, sweepTo: 140, gain: 0.05 * v });
+        noiseHit({ at: 0.07, dur: 0.05, freq: 240 * j, sweepTo: 120, gain: 0.024 * v });
         noiseHit({ at: 0.012, dur: 0.05, type: 'highpass', freq: 3400, gain: 0.006 * v });
       } else if (surface === 'tile') {
         // hard heel click, a faint ring, and the room slapping it back
         noiseHit({ dur: 0.035, type: 'bandpass', freq: 3200 * j, q: 1.4, gain: 0.075 * v });
+        noiseHit({ at: 0.075, dur: 0.03, type: 'bandpass', freq: 2500 * j, q: 1.4, gain: 0.035 * v });
         tone({ freq: 1150 * j, dur: 0.07, gain: 0.012 * v });
         noiseHit({ at: 0.085, dur: 0.05, freq: 1200, gain: 0.02 * v });
       } else if (surface === 'lab') {
@@ -283,8 +360,9 @@
           noiseHit({ at: 0.01 + Math.random() * 0.05, dur: 0.012, type: 'highpass', freq: 4000, gain: 0.008 * v });
         }
       } else {
-        // bare corridor concrete: flat mid thud and a scuff
+        // bare corridor concrete: heel, toe, and a scuff
         noiseHit({ dur: 0.055, freq: 520 * j, sweepTo: 200, gain: 0.065 * v });
+        noiseHit({ at: 0.065, dur: 0.045, freq: 420 * j, sweepTo: 170, gain: 0.03 * v });
         noiseHit({ at: 0.02, dur: 0.07, type: 'bandpass', freq: 850, q: 0.9, gain: 0.018 * v });
       }
     }
@@ -382,6 +460,24 @@
       },
       vomit: function () { noiseHit({ dur: 0.7, freq: 700, sweepTo: 200, gain: 0.1 }); },
       flush: function () { noiseHit({ dur: 1.6, freq: 1400, sweepTo: 300, gain: 0.09, attack: 0.15 }); },
+      ventBreak: function () {
+        noiseHit({ dur: 0.3, freq: 2000, sweepTo: 300, gain: 0.2 });
+        for (var i = 0; i < 5; i++) tone({ at: 0.05 + i * 0.05, freq: 1400 + i * 300, dur: 0.06, gain: 0.02 });
+        tone({ at: 0.3, freq: 140, to: 60, dur: 0.3, gain: 0.1 });
+      },
+      ventCrawl: function () {
+        for (var i = 0; i < 8; i++) {
+          noiseHit({ at: i * 0.22, dur: 0.1, freq: 500 + Math.random() * 400, sweepTo: 200, gain: 0.05 });
+          tone({ at: i * 0.22, freq: 90 + Math.random() * 40, dur: 0.12, gain: 0.03 });
+        }
+      },
+      ventScramble: function (dist) {
+        var a = Math.max(0.1, 1 - (dist || 20) / 50);
+        for (var i = 0; i < 10; i++) {
+          noiseHit({ at: i * 0.09, dur: 0.05, type: 'bandpass', freq: 700 + Math.random() * 900, q: 3, gain: 0.04 * a });
+        }
+      },
+      setPhase: setPhase,
       sealSlam: function () {
         noiseHit({ dur: 0.5, freq: 900, sweepTo: 70, gain: 0.4 });
         tone({ freq: 50, to: 30, dur: 0.7, gain: 0.3 });
@@ -476,6 +572,104 @@
     var yaw = level.spawn.yaw;
     var pitch = 0;
 
+    // ---------------- First-person viewmodel ----------------
+    scene.add(camera);   // children of the camera need it in the graph
+    var viewRoot = new THREE.Group();
+    viewRoot.position.set(0.24, -0.22, -0.45);
+    camera.add(viewRoot);
+    var vmMat = new THREE.MeshStandardMaterial({ color: 0x2c3033, roughness: 0.45, metalness: 0.55 });
+    var vmDark = new THREE.MeshStandardMaterial({ color: 0x191c1e, roughness: 0.6, metalness: 0.4 });
+    var viewmodels = {};
+    (function buildViewmodels() {
+      function vm() { var g2 = new THREE.Group(); g2.visible = false; viewRoot.add(g2); return g2; }
+      // Glock: slide, frame, grip
+      var gk = vm();
+      gk.add(new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.055, 0.2), vmMat));
+      var gkGrip = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.11, 0.06), vmDark);
+      gkGrip.position.set(0, -0.07, 0.06);
+      gkGrip.rotation.x = 0.25;
+      gk.add(gkGrip);
+      viewmodels.glock = { g: gk, tip: new THREE.Vector3(0, 0.01, -0.12) };
+      // Shotgun: long barrel, pump, stock
+      var sg = vm();
+      var sgB = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.42, 10), vmMat);
+      sgB.rotation.x = Math.PI / 2;
+      sgB.position.z = -0.1;
+      sg.add(sgB);
+      var pump = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.14, 10), vmDark);
+      pump.rotation.x = Math.PI / 2;
+      pump.position.set(0, -0.015, -0.12);
+      sg.add(pump);
+      var sgStock = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.09, 0.16), new THREE.MeshStandardMaterial({ color: 0x5a4630, roughness: 0.7 }));
+      sgStock.position.set(0, -0.04, 0.14);
+      sg.add(sgStock);
+      viewmodels.shotgun = { g: sg, tip: new THREE.Vector3(0, 0, -0.32) };
+      // Rifle: receiver, mag, barrel
+      var ar = vm();
+      ar.add(new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.07, 0.3), vmMat));
+      var mag = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.11, 0.05), vmDark);
+      mag.position.set(0, -0.08, 0.02);
+      mag.rotation.x = 0.3;
+      ar.add(mag);
+      var arB = new THREE.Mesh(new THREE.CylinderGeometry(0.013, 0.013, 0.2, 8), vmDark);
+      arB.rotation.x = Math.PI / 2;
+      arB.position.z = -0.24;
+      ar.add(arB);
+      viewmodels.ar = { g: ar, tip: new THREE.Vector3(0, 0, -0.36) };
+      // Camera in hand
+      var cm = vm();
+      cm.add(new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.07, 0.13), vmDark));
+      viewmodels.camera = { g: cm, tip: null };
+    })();
+    // the flash itself: a card of hot light at the muzzle plus a burst light
+    var flashTex = (function () {
+      var c = document.createElement('canvas');
+      c.width = c.height = 64;
+      var x = c.getContext('2d');
+      var grd = x.createRadialGradient(32, 32, 2, 32, 32, 30);
+      grd.addColorStop(0, 'rgba(255,240,190,1)');
+      grd.addColorStop(0.4, 'rgba(255,190,90,0.8)');
+      grd.addColorStop(1, 'rgba(255,140,40,0)');
+      x.fillStyle = grd;
+      x.fillRect(0, 0, 64, 64);
+      for (var sp = 0; sp < 6; sp++) {
+        x.save();
+        x.translate(32, 32);
+        x.rotate(sp * Math.PI / 3);
+        x.fillStyle = 'rgba(255,220,140,0.7)';
+        x.fillRect(-1.6, 0, 3.2, 30);
+        x.restore();
+      }
+      return new THREE.CanvasTexture(c);
+    })();
+    var flashSprite = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.16),
+      new THREE.MeshBasicMaterial({ map: flashTex, transparent: true, depthWrite: false }));
+    flashSprite.visible = false;
+    viewRoot.add(flashSprite);
+    var flashLight = new THREE.PointLight(0xffc37a, 0, 7, 2);
+    camera.add(flashLight);
+    var flashT = 0;
+    var vmKick = 0;
+
+    function updateViewmodel() {
+      var id = state.hotbar[state.hotbarSel];
+      Object.keys(viewmodels).forEach(function (k) { viewmodels[k].g.visible = false; });
+      if (id && viewmodels[id] && (ITEM_DEFS[id].kind === 'weapon' || id === 'camera')) {
+        viewmodels[id].g.visible = true;
+      }
+    }
+    function muzzleFlash() {
+      var id = state.weapon;
+      var v = viewmodels[id];
+      if (!v || !v.tip) return;
+      flashSprite.position.copy(v.tip);
+      flashSprite.rotation.z = Math.random() * Math.PI;
+      flashSprite.visible = true;
+      flashLight.intensity = 6;
+      flashT = 0.06;
+      vmKick = 1;
+    }
+
     // The player's own light: not a torch, just enough to read by.
     var handLight = new THREE.PointLight(0xbfd0dd, 2.0, 7.5, 2);
     scene.add(handLight);
@@ -520,7 +714,12 @@
       weapon: 'glock', shells: 0, arRounds: 0,
       hasShotgun: false, hasAR: false, riotGear: false,
       keycard: false, entranceOpen: false, ended: false,
-      attackCd: 0
+      attackCd: 0,
+      camsTaken: false, birchAwake: false,
+      riotEquipped: false,
+      hotbar: [null, null, null, null, null],
+      hotbarSel: 0,
+      ventOpen: [false, false, false, false]
     };
     var planted = [];          // {x,z,facing,alive,mesh}
     var openedCrates = {};
@@ -565,12 +764,12 @@
         case 'KeyZ': setStance('crawl'); break;
         case 'KeyR': reload(); break;
         case 'KeyF': plantCamera(); break;
-        case 'Digit1': switchWeapon('glock'); break;
-        case 'Digit2': switchWeapon('shotgun'); break;
-        case 'Digit3': switchWeapon('ar'); break;
-        case 'Digit4': consume('water'); break;
-        case 'Digit5': consume('beans'); break;
-        case 'Digit6': consume('fuel'); break;
+        case 'Digit1': selectSlot(0); break;
+        case 'Digit2': selectSlot(1); break;
+        case 'Digit3': selectSlot(2); break;
+        case 'Digit4': selectSlot(3); break;
+        case 'Digit5': selectSlot(4); break;
+        case 'Tab': if (ui.onInventory) ui.onInventory(); break;
         default: return;
       }
       if (active) e.preventDefault();
@@ -617,7 +816,7 @@
     var dragging = false, lastX = 0, lastY = 0, dragMoved = 0;
     canvas.addEventListener('pointerdown', function (e) {
       if (!active || uiOpen) return;
-      if (pointerLocked) { shoot(); return; }
+      if (pointerLocked) { useSelected(); return; }
       // Pointer lock is released whenever an overlay opens; clicking the
       // world takes it back rather than dropping into drag-look for good.
       if (!pointerLockBlocked && canvas.requestPointerLock) { requestLock(); return; }
@@ -808,6 +1007,7 @@
           state.ammo = MAG_SIZE * 2;
           focused.visible = false;
           if (audio) audio.pickup();
+          giveItem('glock');
           say('Glock 19, and two magazines. Thirty-four rounds. There will not be more.');
           refreshHud();
           break;
@@ -828,36 +1028,72 @@
           say('HOLDING — SUBJECT SECURE. The bars are bent outward. It was not let out.');
           break;
         case 'cameraCrate':
-          if (state.cams > 0 || focused.userData.opened) { say('Empty. The foam cutouts are shaped like cameras.'); break; }
-          focused.userData.opened = true;
+          if (state.camsTaken) { say('Empty. The foam cutouts are shaped like cameras.'); break; }
+          state.camsTaken = true;
           state.cams += 5;
+          giveItem('camera');
           if (audio) audio.pickup();
-          say('Five security cameras. Place them with F.');
+          say('Five security cameras. Select them on the hotbar and click to place.');
           refreshHud();
-          if (entity) {
-            entity.activate();
-            setTimeout(function () {
-              if (ui.onMessage) ui.onMessage('Above you, something long slides out of a vent. It knows your blood.');
-            }, 1500);
-            if (audio) setTimeout(function () { audio.doorSlam(30); }, 700);
+          break;
+        case 'vent': {
+          var vi = d.vent;
+          if (!state.ventOpen[vi]) {
+            state.ventOpen[vi] = true;
+            // the grate hangs off its last screw, forever
+            var vm = d.end === 0 ? level.vents[vi].meshA : level.vents[vi].meshB;
+            vm.rotation.z = 0.9;
+            vm.position.y = 0.18;
+            var other = d.end === 0 ? level.vents[vi].meshB : level.vents[vi].meshA;
+            other.rotation.z = -0.8;
+            other.position.y = 0.18;
+            if (audio) audio.ventBreak();
+            say('The grate wrenches off. That is permanent — and it is not only your shortcut now.');
+            if (entity) entity.setVentsOpen(true);
+            refreshHud();
+            break;
           }
+          if (state.stance !== 'crawl') { say('The duct is knee-high. You would have to crawl.'); break; }
+          // through the wall
+          var dest = d.end === 0 ? level.vents[vi].b : level.vents[vi].a;
+          if (audio) audio.ventCrawl();
+          if (ui.onVentTravel) ui.onVentTravel();
+          var self = this;
+          void self;
+          setTimeout(function () {
+            camera.position.x = dest.x - Math.sin(dest.ry) * 0.9;
+            camera.position.z = dest.z - Math.cos(dest.ry) * 0.9;
+            var r2 = level.roomAt(camera.position.x, camera.position.z);
+            state.room = r2;
+            if (audio && r2) audio.setRoom(r2.id);
+          }, 900);
+          break;
+        }
+        case 'openCrate':
+          if (focused.userData.taken) { say('Nothing left but the straw.'); break; }
+          focused.userData.taken = true;
+          if (d.kind === 'water') { state.waterN += 2; giveItem('water'); say('Two bottles of water, right on top.'); }
+          else if (d.kind === 'beans') { state.beansN += 2; giveItem('beans'); say('Two cans of beans. Nick would have wept.'); }
+          else say('Paperwork. Order forms for birch, tungsten, and steel.');
+          if (audio) audio.pickup();
+          refreshHud();
           break;
         case 'lootCrate': {
           var idx = d.idx;
           if (openedCrates[idx]) { say('Already open. Packing straw.'); break; }
           openedCrates[idx] = true;
           var got = [];
-          if (chance('cameras', 0.30)) { state.cams += 5; got.push('a bundle of five cameras'); }
+          if (chance('cameras', 0.30)) { state.cams += 5; giveItem('camera'); got.push('a bundle of five cameras'); }
           if (chance('ammo', 0.10)) { state.ammo += 17; got.push('a box of 9mm'); }
           if (chance('gun', 0.02)) {
-            if (Math.random() < 0.5) { state.hasShotgun = true; state.shells += 6; got.push('a shotgun'); }
-            else { state.hasAR = true; state.arRounds += 30; got.push('an assault rifle'); }
+            if (Math.random() < 0.5) { state.hasShotgun = true; state.shells += 6; giveItem('shotgun'); got.push('a shotgun'); }
+            else { state.hasAR = true; state.arRounds += 30; giveItem('ar'); got.push('an assault rifle'); }
           }
-          if (chance('water', 0.50)) { state.waterN++; got.push('water'); }
-          if (chance('beans', 0.60)) { state.beansN++; got.push('beans'); }
-          if (chance('fuel', 0.25)) { state.fuelN++; got.push('GAMER ENERGY'); }
+          if (chance('water', 0.50)) { state.waterN++; giveItem('water'); got.push('water'); }
+          if (chance('beans', 0.60)) { state.beansN++; giveItem('beans'); got.push('beans'); }
+          if (chance('fuel', 0.25)) { state.fuelN++; giveItem('fuel'); got.push('GAMER ENERGY'); }
           if (chance('riot', 0.09)) {
-            if (!state.riotGear) { state.riotGear = true; got.push('RIOT GEAR'); }
+            if (!state.riotGear) { state.riotGear = true; giveItem('riot'); got.push('RIOT GEAR — equip it in your inventory'); }
             else got.push('spare riot padding');
           }
           if (audio) audio.pickup();
@@ -886,6 +1122,8 @@
         case 'supplies':
           state.supplies = true;
           if (audio) audio.pickup();
+          state.waterN += 2; state.beansN += 2;
+          giveItem('water'); giveItem('beans');
           say('Water, and a few cans of beans. Exactly what Nick ran out of.');
           refreshHud();
           break;
@@ -893,6 +1131,81 @@
           say(d.label);
       }
       updateFocus();
+    }
+
+    // ---------------- Hotbar and inventory ----------------
+    // Item counts live in state; the hotbar holds item ids. Clicking uses
+    // whatever is selected: weapons fire, consumables consume, cameras place.
+    var ITEM_DEFS = {
+      glock: { label: 'GLOCK', kind: 'weapon' },
+      shotgun: { label: 'SHTGN', kind: 'weapon' },
+      ar: { label: 'RIFLE', kind: 'weapon' },
+      camera: { label: 'CAM', kind: 'place' },
+      water: { label: 'WATER', kind: 'consume' },
+      beans: { label: 'BEANS', kind: 'consume' },
+      fuel: { label: 'NRG', kind: 'consume' },
+      riot: { label: 'RIOT', kind: 'armor' }
+    };
+    function itemCount(id) {
+      if (id === 'camera') return state.cams;
+      if (id === 'water') return state.waterN;
+      if (id === 'beans') return state.beansN;
+      if (id === 'fuel') return state.fuelN;
+      if (id === 'glock') return state.hasGlock ? 1 : 0;
+      if (id === 'shotgun') return state.hasShotgun ? 1 : 0;
+      if (id === 'ar') return state.hasAR ? 1 : 0;
+      if (id === 'riot') return state.riotGear && !state.riotEquipped ? 1 : 0;
+      return 0;
+    }
+    function ownedItems() {
+      return Object.keys(ITEM_DEFS).filter(function (id) {
+        if (id === 'riot') return state.riotGear;
+        return itemCount(id) > 0;
+      }).map(function (id) {
+        return { id: id, label: ITEM_DEFS[id].label, kind: ITEM_DEFS[id].kind, count: itemCount(id), equipped: id === 'riot' && state.riotEquipped };
+      });
+    }
+    // first pickup of a thing lands it in the first free hotbar slot
+    function giveItem(id) {
+      if (ITEM_DEFS[id].kind === 'armor') { refreshHud(); return; }
+      if (state.hotbar.indexOf(id) >= 0) { refreshHud(); return; }
+      for (var i = 0; i < 5; i++) {
+        if (!state.hotbar[i]) {
+          state.hotbar[i] = id;
+          if (ITEM_DEFS[id].kind === 'weapon') { state.hotbarSel = i; state.weapon = id; updateViewmodel(); }
+          break;
+        }
+      }
+      refreshHud();
+    }
+    function selectSlot(i) {
+      if (!active || uiOpen) return;
+      state.hotbarSel = i;
+      var id = state.hotbar[i];
+      if (id && ITEM_DEFS[id].kind === 'weapon') state.weapon = id;
+      updateViewmodel();
+      if (audio) audio.ui();
+      refreshHud();
+    }
+    function useSelected() {
+      var id = state.hotbar[state.hotbarSel];
+      if (!id) return false;
+      var kind = ITEM_DEFS[id].kind;
+      if (kind === 'weapon') { state.weapon = id; shoot(); return true; }
+      if (kind === 'consume') { consume(id === 'fuel' ? 'fuel' : id); return true; }
+      if (kind === 'place') { plantCamera(); return true; }
+      return false;
+    }
+    function assignHotbar(slot, id) {
+      if (id && ITEM_DEFS[id] && ITEM_DEFS[id].kind === 'armor') return;
+      state.hotbar[slot] = id;
+      refreshHud();
+    }
+    function equipRiot(on) {
+      if (!state.riotGear) return;
+      state.riotEquipped = !!on;
+      if (audio) audio.ui();
+      refreshHud();
     }
 
     // ---------------- Cameras, consumables, seals ----------------
@@ -914,16 +1227,6 @@
       planted.push({ x: camera.position.x, z: camera.position.z, facing: yaw, alive: true, mesh: mesh });
       if (audio) audio.ui();
       say('Camera ' + planted.length + ' placed, watching the way you face.');
-      refreshHud();
-    }
-
-    function switchWeapon(w) {
-      if (!active || uiOpen) return;
-      if (w === 'shotgun' && !state.hasShotgun) return;
-      if (w === 'ar' && !state.hasAR) return;
-      if (w !== 'glock' && !state.hasGlock && w === 'glock') return;
-      state.weapon = w;
-      if (audio) audio.ui();
       refreshHud();
     }
 
@@ -1000,11 +1303,13 @@
         state.shells--;
         stagger = 2.5;
         if (audio) audio.shotgun();
+        muzzleFlash();
       } else if (state.weapon === 'ar') {
         if (state.arRounds <= 0) { if (audio) audio.dryFire(); say('The rifle is dry.'); return; }
         state.arRounds--;
         stagger = 0.8;
         if (audio) audio.gunshot();
+        muzzleFlash();
       } else {
         if (state.inMag <= 0) {
           if (audio) audio.dryFire();
@@ -1020,7 +1325,9 @@
         camera.updateMatrixWorld();
         gunRay.setFromCamera(centre, camera);
         var hitList = gunRay.intersectObject(entity.group, true);
-        if (hitList.length > 0 && hitList[0].distance < 45) {
+        var es3 = entity.getState();
+        if (hitList.length > 0 && hitList[0].distance < 45 &&
+            entity.los(camera.position.x, camera.position.z, es3.x, es3.z)) {
           if (entity.hitShot(stagger)) {
             if (audio) setTimeout(function () { audio.woodHit(); }, 40);
             if (ui.onMessage) ui.onMessage('The round buries itself in the wood. It does not fall.');
@@ -1052,7 +1359,11 @@
         hunger: state.hunger, thirst: state.thirst, energy: state.energy,
         fueled: state.fueled, needToilet: state.needToilet,
         waterN: state.waterN, beansN: state.beansN, fuelN: state.fuelN,
-        seals: { west: state.seals.sealWest, east: state.seals.sealEast }
+        seals: { west: state.seals.sealWest, east: state.seals.sealEast },
+        hotbar: state.hotbar.map(function (id, i) {
+          return { id: id, label: id ? ITEM_DEFS[id].label : '', count: id ? itemCount(id) : 0, sel: i === state.hotbarSel };
+        }),
+        riotEquipped: state.riotEquipped
       });
     }
 
@@ -1077,7 +1388,7 @@
         var es = entity.getState();
         if (armsLeft === 0 && headOn) {
           // all it has left is the desperate lean of its head
-          if (state.riotGear) {
+          if (state.riotEquipped) {
             entity.breakHead();
             if (audio) { audio.woodHit(); audio.doorSlam(1); }
             say('Its head comes off against the shield. The body folds like a closed hand.');
@@ -1086,7 +1397,7 @@
           die('headbutt');
           return;
         }
-        if (state.riotGear && chance('armBreak', 0.35)) {
+        if (state.riotEquipped && chance('armBreak', 0.35)) {
           entity.breakArm();
           if (audio) audio.woodHit();
           say(entity.getState().armsLeft === 1
@@ -1146,6 +1457,9 @@
         level.interactables.push(card);
       };
       entity.isSealActive = function (id) { return !!state.seals[id]; };
+      entity.onVentMove = function (x, z) {
+        if (audio) audio.ventScramble(Math.hypot(x - camera.position.x, z - camera.position.z));
+      };
       entity.findCameraNear = function (x1, z1, x2, z2) {
         for (var i = 0; i < planted.length; i++) {
           var c = planted[i];
@@ -1399,6 +1713,15 @@
           if (state.starveT > 180) die('starved');
         } else state.starveT = 0;
 
+        // the Birch wakes when you bring the cameras back to reception
+        if (state.camsTaken && !state.birchAwake &&
+            Math.hypot(camera.position.x, camera.position.z + 3) < 5.2) {
+          state.birchAwake = true;
+          if (entity) entity.activate();
+          if (audio) { audio.setPhase('eerie'); audio.doorSlam(35); }
+          say('The speakers die mid-chorus. Somewhere far off, a vent cover hits a floor.');
+        }
+
         // walking out — the only good ending
         if (state.entranceOpen && camera.position.z > 7.4 && !state.ended) {
           state.ended = true;
@@ -1407,6 +1730,14 @@
           if (ui.onEnding) ui.onEnding();
         }
       }
+
+      if (flashT > 0) {
+        flashT -= dt;
+        if (flashT <= 0) { flashSprite.visible = false; flashLight.intensity = 0; }
+      }
+      if (vmKick > 0) vmKick = Math.max(0, vmKick - dt * 7);
+      viewRoot.position.z = -0.45 + vmKick * 0.05;
+      viewRoot.rotation.x = vmKick * 0.12 + Math.sin(bobTime) * 0.008;
 
       handLight.position.copy(camera.position);
 
@@ -1502,6 +1833,10 @@
           riotGear: state.riotGear, keycard: state.keycard,
           seals: { west: state.seals.sealWest, east: state.seals.sealEast },
           entranceOpen: state.entranceOpen, ended: state.ended,
+          camsTaken: state.camsTaken, birchAwake: state.birchAwake,
+          riotEquipped: state.riotEquipped,
+          hotbar: state.hotbar.slice(), hotbarSel: state.hotbarSel,
+          ventOpen: state.ventOpen.slice(),
           focus: focused ? focused.userData.interact.id : null
         };
       },
@@ -1529,6 +1864,21 @@
         refreshHud();
       },
       consumeDebug: function (kind) { consume(kind); },
+      selectSlot: selectSlot,
+      useSelected: useSelected,
+      assignHotbar: assignHotbar,
+      equipRiot: equipRiot,
+      ownedItems: ownedItems,
+      lootSample: function (n) {
+        var P = { cameras: 0.30, ammo: 0.10, gun: 0.02, water: 0.50, beans: 0.60, fuel: 0.25, riot: 0.09 };
+        var out = {};
+        Object.keys(P).forEach(function (k) { out[k] = 0; });
+        for (var i = 0; i < n; i++) {
+          Object.keys(P).forEach(function (k) { if (Math.random() < P[k]) out[k]++; });
+        }
+        Object.keys(out).forEach(function (k) { out[k] = out[k] / n; });
+        return out;
+      },
       entityInfo: function () {
         if (!entity) return null;
         var b = new THREE.Box3().setFromObject(entity.group);

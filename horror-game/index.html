@@ -376,6 +376,42 @@
   }
   #shockBtn:disabled { opacity: 0.3; cursor: default; }
 
+  /* hotbar */
+  #hotbar {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: max(14px, env(safe-area-inset-bottom)); z-index: 7;
+    display: flex; gap: 5px; align-items: flex-end;
+    opacity: 0; transition: opacity 400ms ease; pointer-events: none;
+  }
+  #hotbar.on { opacity: 1; }
+  .hb-slot {
+    width: 52px; height: 52px; position: relative;
+    border: 2px solid rgba(107,113,115,0.4); background: rgba(8,9,10,0.55);
+    display: grid; place-items: center;
+    font-size: 9px; letter-spacing: 0.08em; color: var(--concrete-l);
+  }
+  .hb-slot.sel { border-color: var(--tungsten); color: var(--bone); box-shadow: 0 0 14px rgba(240,190,123,0.25); }
+  .hb-slot .num { position: absolute; top: 2px; left: 4px; font-size: 8px; color: var(--concrete); }
+  .hb-slot .cnt { position: absolute; bottom: 2px; right: 4px; font-size: 10px; color: var(--bone); font-variant-numeric: tabular-nums; }
+  .hb-slot.armor { border-style: dashed; margin-left: 10px; }
+  .hb-slot.armor.equipped { border-color: #6fce7e; color: #a9e6b4; border-style: solid; }
+
+  /* inventory overlay */
+  #invOverlay .sheet { width: min(520px, 100%); }
+  .inv-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .inv-cell {
+    aspect-ratio: 1; border: 1px solid var(--concrete); background: #101314;
+    display: grid; place-items: center; position: relative;
+    font-size: 10px; letter-spacing: 0.06em; color: var(--bone);
+    cursor: pointer; appearance: none; font-family: var(--mono);
+  }
+  .inv-cell:hover { border-color: var(--tungsten); }
+  .inv-cell.empty { cursor: default; opacity: 0.35; }
+  .inv-cell .cnt { position: absolute; bottom: 3px; right: 5px; font-size: 10px; }
+  .inv-cell.armorSlot { border-style: dashed; }
+  .inv-cell.armorSlot.equipped { border-color: #6fce7e; color: #a9e6b4; }
+  .inv-note { font-size: 10.5px; color: var(--concrete-l); letter-spacing: 0.1em; line-height: 1.8; }
+
   /* the good ending */
   #ending {
     position: fixed; inset: 0; z-index: 60; display: grid; place-items: center;
@@ -423,6 +459,19 @@
   <button id="btnUse" type="button">Use</button>
   <button id="btnCrouch" type="button">Crouch</button>
   <button id="btnCrawl" type="button">Crawl</button>
+</div>
+
+<div id="hotbar"></div>
+
+<div class="overlay" id="invOverlay" hidden>
+  <div class="sheet">
+    <h2>Inventory — 20 spaces</h2>
+    <p class="inv-note">Click an item, then a hotbar slot below to bind it. Riot gear goes to the armor slot.</p>
+    <div class="inv-grid" id="invGrid"></div>
+    <h2 style="margin-top:8px">Hotbar · Armor</h2>
+    <div class="inv-grid" id="invHotbar"></div>
+    <button class="close" type="button" data-close>Close</button>
+  </div>
 </div>
 
 <div id="blackout"></div>
@@ -540,6 +589,79 @@ window.bootUI = function bootUI(THREE) {
     for (var j = 0; j < max; j++) cells.children[j].classList.toggle('f', j < val);
   }
 
+  var hotbarEl = $('hotbar');
+  var invSelected = null;
+  function renderHotbar(s) {
+    if (!s.hotbar) return;
+    hotbarEl.classList.add('on');
+    var html = '';
+    s.hotbar.forEach(function (h, i) {
+      html += '<div class="hb-slot' + (h.sel ? ' sel' : '') + '">' +
+        '<span class="num">' + (i + 1) + '</span>' +
+        (h.id ? '<span>' + h.label + '</span><span class="cnt">' + (h.count > 1 ? h.count : '') + '</span>' : '') +
+        '</div>';
+    });
+    html += '<div class="hb-slot armor' + (s.riotEquipped ? ' equipped' : '') + '">' +
+      (s.riotEquipped ? '<span>RIOT</span>' : '<span style="opacity:0.4">ARMR</span>') + '</div>';
+    hotbarEl.innerHTML = html;
+  }
+
+  function openInventory() {
+    renderInventory();
+    openOverlay('invOverlay');
+  }
+  function renderInventory() {
+    var items = window.__horror.ownedItems();
+    var st = window.__horror.getState();
+    var grid = $('invGrid');
+    grid.innerHTML = '';
+    for (var i = 0; i < 20; i++) {
+      var cell = document.createElement('button');
+      cell.type = 'button';
+      var it = items[i];
+      if (it) {
+        cell.className = 'inv-cell' + (invSelected === it.id ? ' sel' : '');
+        cell.innerHTML = '<span>' + it.label + '</span>' + (it.count > 1 ? '<span class="cnt">' + it.count + '</span>' : '');
+        if (it.equipped) cell.innerHTML += '<span class="cnt">ON</span>';
+        (function (id, kind) {
+          cell.addEventListener('click', function () {
+            if (kind === 'armor') { window.__horror.equipRiot(!st.riotEquipped); renderInventory(); return; }
+            invSelected = id;
+            renderInventory();
+          });
+        })(it.id, it.kind);
+      } else {
+        cell.className = 'inv-cell empty';
+      }
+      grid.appendChild(cell);
+    }
+    var hb = $('invHotbar');
+    hb.innerHTML = '';
+    st.hotbar.forEach(function (id, i) {
+      var cell = document.createElement('button');
+      cell.type = 'button';
+      cell.className = 'inv-cell';
+      cell.innerHTML = id ? '<span>' + id.toUpperCase().slice(0, 5) + '</span>' : '<span style="opacity:0.4">' + (i + 1) + '</span>';
+      (function (slot) {
+        cell.addEventListener('click', function () {
+          if (invSelected) { window.__horror.assignHotbar(slot, invSelected); invSelected = null; }
+          else window.__horror.assignHotbar(slot, null);
+          renderInventory();
+        });
+      })(i);
+      hb.appendChild(cell);
+    });
+    var armor = document.createElement('button');
+    armor.type = 'button';
+    armor.className = 'inv-cell armorSlot' + (st.riotEquipped ? ' equipped' : '');
+    armor.innerHTML = st.riotEquipped ? '<span>RIOT</span>' : '<span style="opacity:0.5">ARMOR</span>';
+    armor.addEventListener('click', function () {
+      window.__horror.equipRiot(!st.riotEquipped);
+      renderInventory();
+    });
+    hb.appendChild(armor);
+  }
+
   var coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
   if (coarse) { stick.classList.add('mounted'); touchbar.classList.add('mounted'); }
 
@@ -564,7 +686,7 @@ window.bootUI = function bootUI(THREE) {
     }
   }, 1000);
 
-  var LOOK_MOUSE = '<b>WASD</b> Move · <b>Mouse</b> Look · <b>E</b> Use · <b>F</b> Camera · <b>C</b> Crouch · <b>Z</b> Crawl · <b>4/5/6</b> Eat/Drink';
+  var LOOK_MOUSE = '<b>WASD</b> Move · <b>Mouse</b> Look · <b>E</b> Use · <b>1-5</b> Hotbar · <b>Click</b> Use item · <b>Tab</b> Inventory · <b>Z</b> Crawl';
   var LOOK_DRAG  = '<b>WASD</b> Move · <b>Drag</b> Look · <b>E</b> Use · <b>C</b> Crouch · <b>Z</b> Crawl · <b>←→</b> Turn';
   var LOOK_TOUCH = '<b>Stick</b> Move · <b>Drag</b> Look · <b>Tap</b> Use';
   var mode = coarse ? LOOK_TOUCH : LOOK_MOUSE;
@@ -623,7 +745,13 @@ window.bootUI = function bootUI(THREE) {
         roomTimer = setTimeout(function () { roomname.classList.remove('on'); }, 3600);
       },
       onStance: function (label) { stanceEl.textContent = label; },
+      onVentTravel: function () {
+        blackout.classList.add('on');
+        setTimeout(function () { blackout.classList.remove('on'); }, 950);
+      },
+      onInventory: function () { openInventory(); },
       onHud: function (s) {
+        renderHotbar(s);
         if (s.hasGlock) {
           ammoEl.classList.add('on');
           var big;
@@ -932,7 +1060,14 @@ window.bootUI = function bootUI(THREE) {
     enterTimer = setTimeout(function () {
       curtain.classList.add('dismissing');
       clearTimeout(hideTimer);
-      hideTimer = setTimeout(function () { curtain.hidden = true; }, 340);
+      // the timer can starve on a saturated main thread; transitionend is
+      // the belt to its braces
+      var hideOnce = function () {
+        if (curtain.classList.contains('dismissing')) curtain.hidden = true;
+        curtain.removeEventListener('transitionend', hideOnce);
+      };
+      curtain.addEventListener('transitionend', hideOnce);
+      hideTimer = setTimeout(hideOnce, 340);
 
       game.enter();
 
@@ -969,6 +1104,7 @@ window.bootUI = function bootUI(THREE) {
   enterBtn.addEventListener('click', enter);
 
   window.addEventListener('keydown', function (e) {
+    if (e.code === 'Tab' && game.isActive) { e.preventDefault(); return; }
     if (e.code !== 'Escape') return;
     if (overlayOpen()) { closeOverlay(); return; }
     if (game.isActive && !document.pointerLockElement) pause();

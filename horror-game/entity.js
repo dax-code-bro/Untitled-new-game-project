@@ -242,6 +242,7 @@
     var spottedOnce = false;
     var menaceCam = -1;
     var watched = false;
+    var ventsOpen = false;
 
     function lurkDuration() { return (300 + Math.random() * 1200) * lurkScale; }
 
@@ -350,6 +351,12 @@
       if (hunt) roamTarget = { x: 0, z: 0.9, hunt: true };       // it comes to Waiting
       else {
         var next = (lurkIndex + 1 + Math.floor(Math.random() * (LURKS.length - 1))) % LURKS.length;
+        // with the grates off, it takes the ducts — no corridor, no warning
+        if (ventsOpen && Math.random() < 0.6) {
+          beginLurk(next);
+          if (api.onVentMove) api.onVentMove(pos.x, pos.z);
+          return;
+        }
         roamTarget = { x: LURKS[next].x, z: LURKS[next].z, hunt: false, lurk: next };
       }
       wpIndex = nearestWaypoint(pos.x, pos.z);
@@ -441,6 +448,8 @@
         return true;
       },
       setWatched: function (w) { watched = w; },
+      setVentsOpen: function (v) { ventsOpen = !!v; },
+      onVentMove: null,
       los: function (x1, z1, x2, z2) { return losClear(x1, z1, x2, z2); },
       setLurkScale: function (s) { lurkScale = s; },
 
