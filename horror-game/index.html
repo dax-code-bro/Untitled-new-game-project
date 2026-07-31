@@ -439,6 +439,7 @@
 
 <script src="./textures.js"></script>
 <script src="./fittings.js"></script>
+<script src="./entity.js"></script>
 <script src="./level.js"></script>
 <script src="./game.js"></script>
 <script>
@@ -536,7 +537,24 @@ window.bootUI = function bootUI(THREE) {
       showNote: function () { openOverlay('noteOverlay'); },
       showJournal: function () { openOverlay('journal'); },
       showBlueprint: function () { openOverlay('blueprint'); },
-      showComputer: function (connected) { openTerminal(connected); }
+      showComputer: function (connected) { openTerminal(connected); },
+      onDeath: function () {
+        dead = true;
+        blackout.classList.add('on');
+        setTimeout(function () {
+          fileNo.textContent = 'File 001 — Terminated';
+          enterBtn.textContent = 'Continue';
+          curtain.hidden = false;
+          void curtain.offsetWidth;
+          curtain.classList.remove('dismissing');
+          crosshair.classList.remove('on');
+          statusEl.classList.remove('on');
+          prompt.classList.remove('on');
+          if (coarse) { stick.classList.remove('on'); touchbar.classList.remove('on'); }
+          blackout.classList.remove('on');
+          enterBtn.focus();
+        }, 900);
+      }
     }
   });
   window.__horror = game;
@@ -644,8 +662,14 @@ window.bootUI = function bootUI(THREE) {
 
   // ---------------- Entry / pause ----------------
   var legendTimer = null, enterTimer = null, hideTimer = null;
+  var dead = false;
 
   function enter() {
+    if (dead) {
+      dead = false;
+      game.respawn();
+      fileNo.textContent = 'File 001 — Interior';
+    }
     blackout.classList.add('on');
     clearTimeout(enterTimer);
     enterTimer = setTimeout(function () {

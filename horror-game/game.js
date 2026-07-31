@@ -352,6 +352,41 @@
         if (!started) return;
         master.gain.setTargetAtTime(m ? 0 : 0.9, now(), 0.15);
       },
+      entityStep: function (dist, chasing) {
+        // wood on concrete, carrying down the corridors
+        var atten = Math.max(0, 1 - dist / 42);
+        if (atten <= 0.01) return;
+        var v = atten * atten * (chasing ? 1.25 : 1);
+        tone({ freq: 82 + Math.random() * 14, to: 46, dur: 0.16, gain: 0.14 * v });
+        noiseHit({ dur: 0.09, freq: 340, sweepTo: 110, gain: 0.09 * v });
+        if (dist < 9) {
+          // near enough to hear the joints
+          tone({ at: 0.05, freq: 620 + Math.random() * 300, to: 480, dur: 0.09, type: 'triangle', gain: 0.012 * v, wobble: { rate: 11, depth: 50 } });
+        }
+      },
+      doorSlam: function (dist) {
+        var atten = dist === undefined ? 1 : Math.max(0.12, 1 - dist / 55);
+        noiseHit({ dur: 0.4, freq: 700, sweepTo: 90, gain: 0.28 * atten });
+        tone({ freq: 68, to: 38, dur: 0.5, gain: 0.2 * atten });
+        tone({ at: 0.03, freq: 1870, dur: 0.12, gain: 0.02 * atten });
+      },
+      spotted: function () {
+        // it stops, and the note under everything rises
+        tone({ freq: 46, to: 130, dur: 1.4, type: 'sawtooth', gain: 0.07, attack: 0.25 });
+        noiseHit({ dur: 1.1, type: 'bandpass', freq: 500, sweepTo: 1600, q: 4, gain: 0.05, attack: 0.2 });
+      },
+      woodHit: function () {
+        // a round burying itself in birch
+        noiseHit({ dur: 0.07, freq: 1500, sweepTo: 300, gain: 0.14 });
+        tone({ freq: 210, to: 140, dur: 0.12, type: 'triangle', gain: 0.06 });
+        for (var i = 0; i < 3; i++) {
+          noiseHit({ at: 0.02 + Math.random() * 0.05, dur: 0.02, type: 'highpass', freq: 3600, gain: 0.02 });
+        }
+      },
+      death: function () {
+        tone({ freq: 60, to: 24, dur: 2.2, type: 'sawtooth', gain: 0.22, attack: 0.01 });
+        noiseHit({ dur: 1.6, freq: 900, sweepTo: 60, gain: 0.22 });
+      },
       gunshot: function () {
         burst(0.32, 4200, 0.55, 180);
         blip(140, 0.22, 'square', 0.22, 42);
@@ -396,6 +431,9 @@
     var level = window.buildLevel(THREE, scene, renderer, camera);
     var colliders = level.colliders;
 
+    // ---------------- The thing from the blueprint ----------------
+    var entity = window.buildEntity ? window.buildEntity(THREE, { scene: scene, level: level }) : null;
+
     camera.position.set(level.spawn.x, STANCE.stand.eye, level.spawn.z);
     var yaw = level.spawn.yaw;
     var pitch = 0;
@@ -428,7 +466,9 @@
       readBlueprint: false,
       supplies: false,
       room: null,
-      seenAssembly: false
+      seenAssembly: false,
+      dead: false,
+      deaths: 0
     };
     var MAG_SIZE = 17;
 
@@ -590,6 +630,8 @@
     // ---------------- Interaction ----------------
     var raycaster = new THREE.Raycaster();
     raycaster.far = REACH;
+    var gunRay = new THREE.Raycaster();
+    gunRay.far = 60;
     var centre = new THREE.Vector2(0, 0);
     var focused = null;
 
@@ -690,6 +732,13 @@
           if (audio) audio.pickup();
           say('Glock 19, and two magazines. Thirty-four rounds. There will not be more.');
           refreshHud();
+          if (entity) {
+            entity.activate();
+            if (audio) audio.doorSlam(40);
+            setTimeout(function () {
+              if (ui.onMessage) ui.onMessage('Somewhere far away, a door slams open.');
+            }, 1400);
+          }
           break;
         case 'blueprint':
           state.readBlueprint = true;
@@ -731,6 +780,17 @@
       state.ammo--;
       if (audio) audio.gunshot();
       if (ui.onMuzzleFlash) ui.onMuzzleFlash();
+      if (entity) {
+        camera.updateMatrixWorld();
+        gunRay.setFromCamera(centre, camera);
+        var hitList = gunRay.intersectObject(entity.group, true);
+        if (hitList.length > 0 && hitList[0].distance < 45) {
+          if (entity.hitShot()) {
+            if (audio) setTimeout(function () { audio.woodHit(); }, 40);
+            if (ui.onMessage) ui.onMessage('The round buries itself in the wood. It does not fall.');
+          }
+        }
+      }
       refreshHud();
     }
     function reload() {
@@ -754,6 +814,33 @@
         hasKey: state.hasKey,
         supplies: state.supplies
       });
+    }
+
+    // ---------------- Entity hooks ----------------
+    function die() {
+      if (state.dead) return;
+      state.dead = true;
+      state.deaths++;
+      active = false;
+      keys.f = keys.b = keys.l = keys.r = keys.tl = keys.tr = false;
+      if (audio) audio.death();
+      if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock();
+      if (ui.onDeath) ui.onDeath(state.deaths);
+    }
+
+    if (entity) {
+      entity.onCaught = function () { die(); };
+      entity.onStep = function (dist, chasing) { if (audio) audio.entityStep(dist, chasing); };
+      entity.onDoorSlam = function () {
+        if (!audio) return;
+        var es = entity.getState();
+        var d = Math.hypot(es.x - camera.position.x, es.z - camera.position.z);
+        audio.doorSlam(d);
+      };
+      entity.onSpotted = function (first) {
+        if (audio) audio.spotted();
+        if (first && ui.onMessage) ui.onMessage('It has seen you.');
+      };
     }
 
     // ---------------- Wi-Fi / TV hooks used by the shell ----------------
@@ -845,6 +932,8 @@
         if (focusTimer > 0.08) { focusTimer = 0; updateFocus(); }
 
         if (audio) audio.tick(dt, state.room ? state.room.id : null);
+
+        if (entity) entity.update(dt, camera.position.x, camera.position.z);
       }
 
       handLight.position.copy(camera.position);
@@ -896,6 +985,17 @@
           requestLock();
         }
       },
+      respawn: function () {
+        state.dead = false;
+        camera.position.set(level.spawn.x, STANCE.stand.eye, level.spawn.z);
+        yaw = level.spawn.yaw; pitch = 0;
+        applyLook();
+        velocity.set(0, 0, 0);
+        state.stance = 'stand';
+        if (entity) entity.reset();
+        state.room = level.roomAt(camera.position.x, camera.position.z);
+        if (audio && state.room) audio.setRoom(state.room.id);
+      },
       toggleMute: function () {
         var m = !window.__muted;
         window.__muted = m;
@@ -916,10 +1016,21 @@
           hasKey: state.hasKey, storageOpen: state.storageOpen,
           hasGlock: state.hasGlock, ammo: state.ammo, inMag: state.inMag,
           wifiConnected: state.wifiConnected, tvWatched: state.tvWatched,
+          dead: state.dead, deaths: state.deaths,
+          entity: entity ? entity.getState() : null,
           focus: focused ? focused.userData.interact.id : null
         };
       },
       // test/debug helpers
+      forceEntity: function (x, z, m) { if (entity) entity.force(x, z, m); },
+      entityInfo: function () {
+        if (!entity) return null;
+        var b = new THREE.Box3().setFromObject(entity.group);
+        var v = new THREE.Vector3();
+        b.getSize(v);
+        return { h: v.y, w: v.x };
+      },
+      fire: function () { shoot(); },
       renderInfo: function () {
         return {
           calls: renderer.info.render.calls,

@@ -187,8 +187,30 @@ node build-standalone.mjs
 - `window.__horror.getState()` and friends expose real state for testing — the
   scene animates every frame, so pixel diffing proves nothing.
 
+### The thing from the blueprint
+
+It exists now, built to the drawing: eleven feet of pale birchwood on a
+tungsten frame, steel joints, arms that reach past its knees, an unfinished
+chest with the frame showing through, and a lathe-turned suggestion of a head.
+
+It sleeps until you take Nick's gun. The moment you do, somewhere far away a
+door slams open — and from then on it walks the building: warehouse, west
+corridor, Waiting, east corridor, and the length of the south corridor, over
+and over, exactly the round Nick's journal describes. Its footsteps are wood
+on concrete and they carry; you will hear it two corridors away, and you will
+hear the joints when it is close. Doors in its way get slammed open, and you
+hear those too, attenuated by distance.
+
+It chases on line of sight — walls and closed doors hide you, furniture does
+not — and it loses you a few seconds after you break sight. If it reaches you,
+the file card returns reading **Terminated**. Continue puts you back in
+Waiting with everything you carried; the thing goes back to its round.
+
+**Shooting it works exactly as well as the extermination chamber did.** A hit
+staggers it for a second and buries a round in the wood. It does not fall.
+Thirty-four rounds buy you thirty-four seconds, spread across the whole game.
+
 ## Not built yet
 
-The thing from the blueprint does not exist in the level. Nothing hunts you, so
-the 34 rounds currently have nothing to hit and there is no way out — the
-entrance stays sealed by design. Those are the next decisions to make.
+A way out. The entrance stays sealed, and the rest of the layout is still to
+be described.

@@ -212,6 +212,7 @@
     // per-room would place two coincident faces wherever rooms share a
     // plane, which z-fights, and the long corridors share a lot of planes.
     var planes = {};
+    var wallBoxes = [];
     function addEdge(axis, at, mn, mx, h, mat) {
       var key = axis + '|' + at.toFixed(3);
       if (!planes[key]) planes[key] = { axis: axis, at: at, iv: [], h: h, mat: mat };
@@ -237,9 +238,11 @@
           if (pl.axis === 'x') {
             box(WALL_T, pl.h, len, pl.mat, pl.at, pl.h / 2, mid);
             solid(pl.at - WALL_T / 2, s.min, pl.at + WALL_T / 2, s.max);
+            wallBoxes.push({ x1: pl.at - WALL_T / 2, z1: s.min, x2: pl.at + WALL_T / 2, z2: s.max });
           } else {
             box(len, pl.h, WALL_T, pl.mat, mid, pl.h / 2, pl.at);
             solid(s.min, pl.at - WALL_T / 2, s.max, pl.at + WALL_T / 2);
+            wallBoxes.push({ x1: s.min, z1: pl.at - WALL_T / 2, x2: s.max, z2: pl.at + WALL_T / 2 });
           }
         });
       });
@@ -1177,6 +1180,7 @@
 
     return {
       colliders: colliders,
+      wallBoxes: wallBoxes,
       interactables: interactables,
       updates: updates,
       roomAt: roomAt,
