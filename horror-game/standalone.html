@@ -4,6 +4,8 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="color-scheme" content="dark" />
+<meta name="theme-color" content="#08090a" />
+<link rel="manifest" href="./manifest.webmanifest" />
 <title>Untitled Horror Game — Waiting</title>
 <style>
   /* ------------------------------------------------------------------
@@ -561,6 +563,15 @@
   </div>
 </div>
 
+<script>
+// Installable app: the service worker makes the one-file build fully
+// offline. Secure contexts only — file:// and artifact hosts skip it.
+if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.indexOf('http') === 0) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('./sw.js').catch(function () { /* not fatal */ });
+  });
+}
+</script>
 <script>
 /*
  * Untitled Horror Game — procedural surfaces.
@@ -4971,6 +4982,9 @@
           }
           refreshHud();
           break;
+        case 'placedCam':
+          collectCamera(focused);
+          break;
         case 'keycard':
           state.keycard = true;
           focused.visible = false;
@@ -5068,25 +5082,150 @@
     }
 
     // ---------------- Cameras, consumables, seals ----------------
+    // ---------------- Placeable cameras ----------------
+    var camAnims = [];
+    var camMats = {
+      body: new THREE.MeshStandardMaterial({ color: 0x22262a, roughness: 0.5 }),
+      lens: new THREE.MeshStandardMaterial({ color: 0x0a0c0e, roughness: 0.15, metalness: 0.3 }),
+      leg: new THREE.MeshStandardMaterial({ color: 0x3a3f43, roughness: 0.45, metalness: 0.6 }),
+      led: new THREE.MeshStandardMaterial({ color: 0x300a08, emissive: 0xc33322, emissiveIntensity: 1.6 })
+    };
+
+    function cameraHead(parent) {
+      var head = new THREE.Group();
+      head.add(new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.09, 0.17), camMats.body));
+      var hood = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.02, 0.17), camMats.body);
+      hood.position.set(0, 0.055, 0);
+      head.add(hood);
+      var lens = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.034, 0.05, 10), camMats.lens);
+      lens.rotation.x = Math.PI / 2;
+      lens.position.set(0, 0.005, -0.1);
+      head.add(lens);
+      var led = new THREE.Mesh(new THREE.SphereGeometry(0.008, 6, 6), camMats.led);
+      led.position.set(0.04, 0.03, -0.085);
+      head.add(led);
+      parent.add(head);
+      return head;
+    }
+
+    // three legs meeting the pan-head hub — every part actually joined
+    function buildTripod() {
+      var g = new THREE.Group();
+      var APEX = 0.8;
+      var hub = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 0.06, 10), camMats.leg);
+      hub.position.y = APEX;
+      g.add(hub);
+      for (var l = 0; l < 3; l++) {
+        var a = (l / 3) * Math.PI * 2 + 0.5;
+        var footX = Math.cos(a) * 0.26, footZ = Math.sin(a) * 0.26;
+        var leg = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.016, 0.86, 8), camMats.leg);
+        // from the hub down to the splayed foot
+        leg.position.set(footX / 2, APEX / 2, footZ / 2);
+        leg.lookAt ? null : null;
+        var dir = new THREE.Vector3(footX, -APEX, footZ);
+        leg.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), dir.clone().normalize());
+        g.add(leg);
+        var foot = new THREE.Mesh(new THREE.SphereGeometry(0.02, 6, 6), camMats.leg);
+        foot.position.set(footX, 0.015, footZ);
+        g.add(foot);
+      }
+      var column = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.14, 8), camMats.leg);
+      column.position.y = APEX + 0.09;
+      g.add(column);
+      var head = cameraHead(g);
+      head.position.y = APEX + 0.19;
+      return { g: g, head: head, headY: APEX + 0.19 };
+    }
+
+    // plate → arm → hinge → head: a standard wall unit
+    function buildWallCam() {
+      var g = new THREE.Group();
+      var plate = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.14, 0.02), camMats.leg);
+      plate.position.z = 0.01;
+      g.add(plate);
+      var arm = new THREE.Group();
+      var armBar = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.16, 8), camMats.leg);
+      armBar.rotation.x = Math.PI / 2;
+      armBar.position.z = -0.08;
+      arm.add(armBar);
+      var hinge = new THREE.Mesh(new THREE.SphereGeometry(0.026, 8, 8), camMats.leg);
+      hinge.position.z = -0.16;
+      arm.add(hinge);
+      var head = cameraHead(arm);
+      head.position.set(0, -0.05, -0.2);
+      head.rotation.x = -0.35;
+      g.add(arm);
+      return { g: g, arm: arm, headY: 0 };
+    }
+
     function plantCamera() {
       if (!active || uiOpen || state.dead) return;
       if (state.cams <= 0) { say('No cameras to place.'); return; }
+
+      camera.updateMatrixWorld();
+      gunRay.setFromCamera(centre, camera);
+      var dir = gunRay.ray.direction;
+      var flat = Math.hypot(dir.x, dir.z) || 1;
+      var wallD = wallHitDistance(camera.position.x, camera.position.z, dir.x / flat, dir.z / flat);
+
+      var entry;
+      if (wallD < 2.4) {
+        // close to a wall: it becomes a standard wall unit, looking back
+        // into the room from just shy of the surface
+        var wx = camera.position.x + (dir.x / flat) * (wallD - 0.09);
+        var wz = camera.position.z + (dir.z / flat) * (wallD - 0.09);
+        var built = buildWallCam();
+        built.g.position.set(wx, 2.3, wz);
+        built.g.rotation.y = yaw;                    // plate against the wall
+        scene.add(built.g);
+        // the arm swings down out of your hands
+        built.arm.rotation.x = 1.3;
+        camAnims.push({ t: 0, dur: 0.55, kind: 'wall', arm: built.arm });
+        entry = { x: wx, z: wz, facing: yaw + Math.PI, pitch: -0.3, headY: 2.2, alive: true, mesh: built.g, type: 'wall' };
+        say('Camera ' + (planted.length + 1) + ' bolted to the wall.');
+      } else {
+        // open floor: a tripod, three feet tall, planted a step ahead
+        var px = camera.position.x + (dir.x / flat) * 1.1;
+        var pz = camera.position.z + (dir.z / flat) * 1.1;
+        var built2 = buildTripod();
+        built2.g.position.set(px, 0, pz);
+        built2.g.rotation.y = yaw;
+        built2.g.scale.set(0.4, 0.25, 0.4);          // legs folded in your hands
+        scene.add(built2.g);
+        camAnims.push({ t: 0, dur: 0.7, kind: 'tripod', mesh: built2.g });
+        entry = { x: px, z: pz, facing: yaw, pitch: -0.05, headY: built2.headY, alive: true, mesh: built2.g, type: 'tripod' };
+        say('Camera ' + (planted.length + 1) + ' planted. Knee height sees more than you think.');
+      }
+
       state.cams--;
-      var mesh = new THREE.Group();
-      var body = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.08, 0.16),
-        new THREE.MeshStandardMaterial({ color: 0x22262a, roughness: 0.5 }));
-      var lens = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.03, 0.05, 8),
-        new THREE.MeshStandardMaterial({ color: 0x0a0c0e, roughness: 0.2 }));
-      lens.rotation.x = Math.PI / 2;
-      lens.position.z = 0.1;
-      mesh.add(body); mesh.add(lens);
-      mesh.position.set(camera.position.x, 2.35, camera.position.z);
-      mesh.rotation.y = yaw;
-      scene.add(mesh);
-      planted.push({ x: camera.position.x, z: camera.position.z, facing: yaw, alive: true, mesh: mesh });
+      entry.mesh.traverse(function (o) { o.userData.plantedCam = true; });
+      entry.mesh.children[0].userData.interact = { id: 'placedCam', label: 'Security camera', verb: 'Collect' };
+      level.interactables.push(entry.mesh.children[0]);
+      planted.push(entry);
       if (audio) audio.ui();
-      say('Camera ' + planted.length + ' placed, watching the way you face.');
       refreshHud();
+    }
+
+    function collectCamera(mesh) {
+      for (var i = 0; i < planted.length; i++) {
+        if (planted[i].mesh.children.indexOf(mesh) >= 0 || planted[i].mesh === mesh) {
+          var c = planted[i];
+          scene.remove(c.mesh);
+          var ii = level.interactables.indexOf(mesh);
+          if (ii >= 0) level.interactables.splice(ii, 1);
+          planted.splice(i, 1);
+          if (c.alive) {
+            state.cams++;
+            say('Camera packed up. Place it somewhere better.');
+          } else {
+            say('The housing is crushed. Beyond repair.');
+          }
+          if (audio) audio.pickup();
+          refreshHud();
+          return true;
+        }
+      }
+      return false;
     }
 
     var UNHINGED = [
@@ -5415,7 +5554,7 @@
         x2.fillRect(0, 0, canvas2d.width, canvas2d.height);
         return false;
       }
-      feedCam.position.set(c.x, 2.35, c.z);
+      feedCam.position.set(c.x, c.headY === undefined ? 2.35 : c.headY, c.z);
       feedCam.rotation.set(c.pitch === undefined ? -0.12 : c.pitch, c.facing, 0, 'YXZ');
       var prev = renderer.getRenderTarget();
       renderer.setRenderTarget(feedTarget);
@@ -5636,6 +5775,21 @@
 
       weapons.update(dt, bobTime);
 
+      for (var ca = camAnims.length - 1; ca >= 0; ca--) {
+        var A = camAnims[ca];
+        A.t += dt;
+        var u = Math.min(1, A.t / A.dur);
+        var ease = 1 - Math.pow(1 - u, 3);
+        if (A.kind === 'tripod') {
+          // legs unfold, then the whole thing settles with a bounce
+          var sy = 0.25 + ease * 0.75 + (u > 0.85 ? Math.sin((u - 0.85) * 22) * 0.03 * (1 - u) : 0);
+          A.mesh.scale.set(0.4 + ease * 0.6, sy, 0.4 + ease * 0.6);
+        } else {
+          A.arm.rotation.x = 1.3 * (1 - ease);
+        }
+        if (u >= 1) camAnims.splice(ca, 1);
+      }
+
       handLight.position.copy(camera.position);
 
       cullTimer += dt;
@@ -5792,7 +5946,7 @@
         say('It takes the current — and SCREAMS — and starts running. Seal the door. Now.');
         return true;
       },
-      plantedCams: function () { return planted.map(function (c) { return { x: c.x, z: c.z, alive: c.alive }; }); },
+      plantedCams: function () { return planted.map(function (c) { return { x: c.x, z: c.z, alive: c.alive, type: c.type, headY: c.headY }; }); },
       entityLurk: function () { return entity ? entity.getState().lurk : null; },
       setLurkScale: function (v) { if (entity) entity.setLurkScale(v); },
       setChance: function (name, v) { debugChance[name] = v; },

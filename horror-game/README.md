@@ -126,6 +126,13 @@ its own aged silvering — dirt toward the edges and speckled desilvering.
 | `Esc` | Pause, or close a document |
 | Touch | On-screen stick to move, drag to look, tap to use |
 
+## Installing it
+
+The game is a PWA. Served over HTTPS (or localhost), it registers a service
+worker that caches the whole single-file build — installable to a home screen
+or desktop, fullscreen, landscape, and fully playable offline. `file://` and
+embedded hosts skip the worker gracefully.
+
 ## Running it
 
 **Simplest:** open `standalone.html` — a single self-contained file that runs
@@ -209,8 +216,14 @@ at it, it cannot move.** The moment you look away, it does. When it leaves a
 spot it either relocates or comes for Waiting — and your only warning is the
 cameras.
 
-**Cameras.** Five in the corner crate, more in loot. Place them with `F` or
-from the hotbar,
+**Cameras.** Five in the corner crate, more in loot. Place with `F` or from
+the hotbar — **on open floor you plant a three-foot tripod** (three legs
+meeting a pan-head hub, unfolding out of your hands with a settle-bounce as
+you set it down; its feed watches from knee height), **aimed at a wall within
+arm's reach you bolt on a standard wall unit** (plate, arm, hinge, head — the
+arm swings down into position). Walk up to any placed camera and collect it
+back into the bag to re-site it — destroyed housings are beyond repair. Watch
+them all
 watch them from the reception terminal. Worst case: you flip to a feed and it
 is already there, hand raised, a smiley drawn on its face in blood — it found
 your camera, and that feed is about to die.

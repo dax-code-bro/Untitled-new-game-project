@@ -1,0 +1,15 @@
+{
+  "name": "Untitled Horror Game",
+  "short_name": "The Birch",
+  "description": "A first-person horror game. It moves when you look away.",
+  "start_url": "./standalone.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#08090a",
+  "theme_color": "#08090a",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

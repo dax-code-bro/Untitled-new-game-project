@@ -4,6 +4,8 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="color-scheme" content="dark" />
+<meta name="theme-color" content="#08090a" />
+<link rel="manifest" href="./manifest.webmanifest" />
 <title>Untitled Horror Game — Waiting</title>
 <style>
   /* ------------------------------------------------------------------
@@ -561,6 +563,15 @@
   </div>
 </div>
 
+<script>
+// Installable app: the service worker makes the one-file build fully
+// offline. Secure contexts only — file:// and artifact hosts skip it.
+if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.indexOf('http') === 0) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('./sw.js').catch(function () { /* not fatal */ });
+  });
+}
+</script>
 <script src="./textures.js"></script>
 <script src="./fittings.js"></script>
 <script src="./weapons.js"></script>
