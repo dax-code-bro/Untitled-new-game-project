@@ -689,6 +689,20 @@
     var handLight = new THREE.PointLight(0xbfd0dd, 2.0, 7.5, 2);
     scene.add(handLight);
 
+    // ---------------- The body you're wearing ----------------
+    // Blue intern tee, white pants that have already had a day. It lives on
+    // layer 1, which the player's own camera does not render — otherwise
+    // you would be looking at the inside of your own head — while mirrors
+    // and the security feeds do. Walking it is driven from the move loop.
+    var playerRig = window.buildHumanoid
+      ? window.buildHumanoid(THREE, 'intern', { hair: 0x352519 })
+      : null;
+    if (playerRig) {
+      playerRig.each(function (m) { m.layers.set(1); });
+      scene.add(playerRig.group);
+    }
+    var walkPhase = 0, lastStance = 'stand';
+
     function applyLook() { camera.rotation.set(pitch, yaw, 0, 'YXZ'); }
     applyLook();
     function addLook(dx, dy) {
@@ -1722,6 +1736,7 @@
     var feedTarget = new THREE.WebGLRenderTarget(256, 160);
     if (THREE.SRGBColorSpace) feedTarget.texture.colorSpace = THREE.SRGBColorSpace;
     var feedCam = new THREE.PerspectiveCamera(72, 1.6, 0.05, 60);
+    feedCam.layers.enable(1);          // your cameras can see you too
     var feedPixels = new Uint8Array(256 * 160 * 4);
 
     function renderFeed(i, canvas2d) {
@@ -1850,6 +1865,18 @@
         } else {
           eyeCurrent += (st.eye - eyeCurrent) * (1 - Math.exp(-9 * dt));
           camera.position.y = eyeCurrent;
+        }
+
+        // the body follows you around, one stance behind nothing
+        if (playerRig) {
+          if (state.stance !== lastStance) { playerRig.pose(state.stance); lastStance = state.stance; }
+          playerRig.group.position.x = camera.position.x;
+          playerRig.group.position.z = camera.position.z;
+          playerRig.group.rotation.y = yaw;
+          if (state.stance === 'stand') {
+            walkPhase += dt * moved * 3.4;
+            playerRig.setWalk(walkPhase, Math.min(1, moved / 2.2));
+          }
         }
 
         // room tracking → audio bed + HUD label
@@ -2304,6 +2331,108 @@
         return { x: size.x, y: size.y, z: size.z };
       },
       doorIds: function () { return level.doorIds(); },
+      // A bright lamp anywhere, so visual QA can actually see the geometry
+      // it is checking. Nothing calls this during play.
+      debugLight: function (x, y, z, intensity) {
+        if (window.__qaLight) scene.remove(window.__qaLight);
+        var l = new THREE.PointLight(0xffffff, intensity || 20, 34, 2);
+        l.position.set(x, y === undefined ? 2.4 : y, z);
+        scene.add(l);
+        window.__qaLight = l;
+      },
+      // Stand a row of figures in front of the camera, for visual QA.
+      debugStage: function (rows, z, lightAt) {
+        if (window.__stage) { scene.remove(window.__stage); }
+        var stage = new THREE.Group();
+        rows.forEach(function (r) {
+          var h = window.buildHumanoid(THREE, r[0], { pose: r[1] });
+          h.group.position.set(r[2], 0, z || 0);
+          h.group.rotation.y = Math.PI;
+          stage.add(h.group);
+        });
+        var l = new THREE.PointLight(0xffffff, 14, 26, 2);
+        l.position.set(0.7, 2.4, (z || 0) + (lightAt || 2));
+        stage.add(l);
+        scene.add(stage);
+        window.__stage = stage;
+      },
+      // ---- humanoid rig introspection, for the body test suite ----
+      probeHumanoid: function (outfit, poseName, ry) {
+        var h = window.buildHumanoid(THREE, outfit, { pose: poseName || 'stand' });
+        if (ry) h.group.rotation.y = ry;
+        h.group.updateMatrixWorld(true);
+        var b = new THREE.Box3().setFromObject(h.group);
+        return {
+          joints: Object.keys(h.joints),
+          nested: h.group.children.length === 1 && h.group.children[0].isGroup,
+          minY: b.min.y, height: b.max.y - b.min.y
+        };
+      },
+      probeOutfits: function (names) {
+        var torsoColors = [], built = 0, mats = {};
+        var count = 0;
+        names.forEach(function (n) {
+          // build each outfit twice: identical figures must share materials
+          var a = window.buildHumanoid(THREE, n);
+          var b2 = window.buildHumanoid(THREE, n);
+          built++;
+          [a, b2].forEach(function (fig) {
+            fig.each(function (m) { if (!mats[m.material.uuid]) { mats[m.material.uuid] = 1; count++; } });
+          });
+          torsoColors.push(a.joints.torso.children[0].material.uuid);
+        });
+        return {
+          built: built,
+          torsoColors: torsoColors,
+          matCount: count,
+          sharedMaterials: count < names.length * 8
+        };
+      },
+      countHumanoids: function () {
+        var byRoom = { assembly: 0, exterm: 0, storage: 0, other: 0 }, total = 0;
+        var v = new THREE.Vector3();
+        scene.traverse(function (o) {
+          if (!o.userData || !o.userData.humanoid) return;
+          total++;
+          o.getWorldPosition(v);
+          var r = level.roomAt(v.x, v.z);
+          var id = r ? r.id : 'other';
+          if (byRoom[id] === undefined) byRoom.other++; else byRoom[id]++;
+        });
+        return { total: total, byRoom: byRoom };
+      },
+      eachHumanoidBounds: function () {
+        var out = [], b = new THREE.Box3();
+        scene.traverse(function (o) {
+          if (!o.userData || !o.userData.humanoid || o === playerRig.group) return;
+          b.setFromObject(o);
+          out.push({
+            outfit: o.userData.humanoid,
+            minX: b.min.x, maxX: b.max.x, minZ: b.min.z, maxZ: b.max.z,
+            cx: (b.min.x + b.max.x) / 2, cz: (b.min.z + b.max.z) / 2
+          });
+        });
+        return out;
+      },
+      roomOf: function (x, z) {
+        var r = level.roomAt(x, z);
+        return r ? { id: r.id, x1: r.x1, z1: r.z1, x2: r.x2, z2: r.z2 } : null;
+      },
+      playerBodyInfo: function () {
+        if (!playerRig) return { exists: false };
+        playerRig.group.updateMatrixWorld(true);
+        var b = new THREE.Box3().setFromObject(playerRig.group);
+        var meshes = 0, offLayer = 0;
+        playerRig.each(function (m) { meshes++; if (!m.layers.isEnabled(1) || m.layers.isEnabled(0)) offLayer++; });
+        return {
+          exists: true, meshes: meshes, offLayer: offLayer, allLayer1: offLayer === 0,
+          mainCameraSeesIt: camera.layers.isEnabled(1),
+          feedCamSeesIt: feedCam.layers.isEnabled(1),
+          x: playerRig.group.position.x, z: playerRig.group.position.z,
+          minY: b.min.y, height: b.max.y - b.min.y,
+          hipAngles: [playerRig.joints.hipL.rotation.x, playerRig.joints.hipR.rotation.x]
+        };
+      },
       interactablePos: function (id) {
         for (var i = 0; i < level.interactables.length; i++) {
           var o = level.interactables[i];

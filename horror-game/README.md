@@ -111,6 +111,40 @@ camera mirrored through the glass. They only render while you are close and on
 the reflective side, since each one costs a whole extra pass. The glass carries
 its own aged silvering — dirt toward the edges and speckled desilvering.
 
+### The people
+
+Everyone in the building is the same blocky rig (`humanoid.js`): square head,
+slab torso, thin limbs, and a real pivot at every hip, knee, shoulder and elbow,
+so one figure poses a walking escort, a corpse, and your own reflection. Only
+the clothing changes:
+
+| Outfit | Worn by |
+| --- | --- |
+| Blue intern tee, scuffed white pants | you |
+| The same, filthier | Nick, in storage — he had your job |
+| White lab coat and trousers | the scientists in extermination |
+| Slate canvas coveralls | the assembly floor |
+| Dark utility uniform | Trapnell, containment |
+| Black suit and tie | the two who threw you in |
+
+Clothing is a procedural scuffed-weave texture, generated once per colour and
+shared by every figure wearing it. The dead get a second variant with blood
+soaked in, heaviest where the cloth met the floor.
+
+Poses (`stand`, `crouch`, `crawl`, `sprawl`, `faceup`, `slumped`, `crumpled`)
+set joint angles and a body tilt, then the rig **measures** its own lowest
+point and settles onto the floor — a tilt pivots a figure around its feet and
+every limb angle changes the footprint, so written-in drop values go wrong the
+moment a pose is edited. Bodies are placed by `centerOn(x, z)` for the same
+reason: a standing figure occupies its own coordinates, a sprawled one reaches
+more than a metre past them.
+
+**Your own body** exists and is rigged to your stance and stride. It lives on
+render layer 1, which your eyes do not draw — otherwise you would be looking at
+the inside of your own head — while mirrors and the security feeds do. Point a
+planted camera back down a corridor you are standing in and you will watch
+yourself on it.
+
 ## Controls
 
 | Input | Action |

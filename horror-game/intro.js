@@ -158,28 +158,9 @@
     // ---------------- the escort ----------------
     // Two suits, no names given, no names asked for. They know exactly what
     // this place is, and they leave the second the doors are shut.
-    var suitMat = new THREE.MeshStandardMaterial({ color: 0x0c0d0e, roughness: 0.6 });
-    var suitSkin = new THREE.MeshStandardMaterial({ color: 0x2a2622, roughness: 0.85 });
-    function buildSuit() {
-      var g = new THREE.Group();
-      var torso = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.62, 0.24), suitMat);
-      torso.position.y = 1.32;
-      g.add(torso);
-      var head = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.22, 0.2), suitSkin);
-      head.position.y = 1.74;
-      g.add(head);
-      [-1, 1].forEach(function (side) {
-        var arm = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.58, 0.15), suitMat);
-        arm.position.set(side * 0.29, 1.32, 0);
-        g.add(arm);
-        var leg = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.86, 0.19), suitMat);
-        leg.position.set(side * 0.12, 0.43, 0);
-        g.add(leg);
-      });
-      return g;
-    }
-    var suitL = buildSuit();
-    var suitR = buildSuit();
+    var suitA = window.buildHumanoid(THREE, 'suit', { hair: 0x1a1512 });
+    var suitB = window.buildHumanoid(THREE, 'suit', { hair: 0x241a14 });
+    var suitL = suitA.group, suitR = suitB.group;
     scene.add(suitL, suitR);
 
     // ---------------- timeline ----------------
@@ -230,6 +211,8 @@
           suitL.position.set(-3.4 - oe * 1.6, 0, 6.9 - oe * 2.6);
           suitR.position.set(-1.0 + oe * 1.6, 0, 6.9 - oe * 2.6);
           suitL.rotation.y = suitR.rotation.y = Math.PI * 0.15;
+          suitA.setWalk(t * 7, oe);
+          suitB.setWalk(t * 7 + Math.PI, oe);
         }
 
         // 4.4–5.8s: dragged across the lot, on your feet but not steady
@@ -241,6 +224,11 @@
           camera.position.set(pos.x, pos.y - Math.abs(Math.sin(t * 6)) * 0.05 * we, pos.z);
           suitL.position.lerpVectors(new THREE.Vector3(-3.4, 0, 4.3), new THREE.Vector3(-0.9, 0, 2.3), we);
           suitR.position.lerpVectors(new THREE.Vector3(-1.0, 0, 4.3), new THREE.Vector3(1.1, 0, 2.3), we);
+          // they walk you in, one on each arm — inner arms held out to you
+          suitA.setWalk(t * 7, 1 - we * 0.4);
+          suitB.setWalk(t * 7 + Math.PI, 1 - we * 0.4);
+          suitA.joints.shoulderR.rotation.x = -0.5 * we;
+          suitB.joints.shoulderL.rotation.x = -0.5 * we;
           camera.lookAt(pos.x + wob, 1.2, pos.z - 3);
         }
 

@@ -24,7 +24,9 @@
     var walnut = new THREE.MeshStandardMaterial({ color: 0x5a3d24, roughness: 0.62 });
     var brass = new THREE.MeshStandardMaterial({ color: 0xb08d3f, roughness: 0.3, metalness: 0.8 });
     var skin = new THREE.MeshStandardMaterial({ color: 0x9c7b62, roughness: 0.85 });
-    var sleeve = new THREE.MeshStandardMaterial({ color: 0x2e3338, roughness: 0.95 });
+    // The intern tee is short-sleeved, so what's on the gun is bare forearm
+    // with the hem of the sleeve just visible at the top of frame.
+    var sleeve = new THREE.MeshStandardMaterial({ color: 0x2f5d96, roughness: 0.94 });
 
     function box(parent, w, h, d, mat, x, y, z) {
       var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
@@ -45,8 +47,9 @@
     // screen; what sells it is the hand actually being on the gun.
     function makeArm() {
       var a = new THREE.Group();
-      var fore = box(a, 0.055, 0.055, 0.24, sleeve, 0, 0, 0.1);
+      var fore = box(a, 0.055, 0.055, 0.24, skin, 0, 0, 0.1);
       void fore;
+      box(a, 0.062, 0.062, 0.05, sleeve, 0, 0, 0.2);      // sleeve hem
       var hand = box(a, 0.05, 0.075, 0.075, skin, 0, 0.005, -0.045);
       void hand;
       // four block fingers wrapped forward

@@ -456,6 +456,9 @@
     group.add(mesh);
 
     var virtualCamera = new THREE.PerspectiveCamera();
+    // Layer 1 is the player's own body: hidden from their eyes, but a
+    // mirror has to show it or the reflection is an empty room.
+    virtualCamera.layers.enable(1);
     var reflectorPos = new THREE.Vector3();
     var cameraPos = new THREE.Vector3();
     var normal = new THREE.Vector3();

@@ -825,12 +825,12 @@
           58.5 + Math.random() * 4, 0.055, -3.5 + Math.random() * 7, 10);
       }
 
-      var torso = box(0.52, 0.66, 0.3, MAT.body, 62.6, 0.34, 3.4);
-      torso.rotation.x = 0.42;
-      box(0.2, 0.2, 0.2, MAT.body, 62.6, 0.72, 3.15);
-      box(0.18, 0.72, 0.2, MAT.body, 62.42, 0.11, 2.75).rotation.x = Math.PI / 2 - 0.2;
-      box(0.18, 0.72, 0.2, MAT.body, 62.78, 0.11, 2.7).rotation.x = Math.PI / 2 - 0.32;
-      box(0.14, 0.6, 0.15, MAT.body, 62.25, 0.24, 3.15).rotation.x = 1.1;
+      // Nick, where he sat down and did not get up. Same blue intern tee
+      // you were handed on your way in.
+      var nick = window.buildHumanoid(THREE, 'nick', { pose: 'slumped', hair: 0x4a3524, blood: true });
+      nick.group.position.set(62.6, 0, 3.5);
+      nick.group.rotation.y = Math.PI;
+      group.add(nick.group);
       var pool = new THREE.Mesh(new THREE.CircleGeometry(0.75, 22), MAT.blood);
       pool.rotation.x = -Math.PI / 2;
       pool.position.set(62.6, 0.011, 3.1);
@@ -882,27 +882,26 @@
       var cageSign = box(0.5, 0.3, 0.03, new THREE.MeshStandardMaterial({ color: 0x8a2b1e, roughness: 0.8 }), 52.5, 2.4, 55.6, Math.PI / 2);
       interact(cageSign, { id: 'cage', label: 'Holding cage', verb: 'Inspect' });
 
-      function corpse(x, z, ry, metal) {
-        box(0.5, 0.24, 0.9, MAT.body, x, 0.12, z, ry);
-        box(0.2, 0.19, 0.2, MAT.body, x + Math.sin(ry) * 0.6, 0.1, z + Math.cos(ry) * 0.6);
-        box(0.15, 0.14, 0.62, MAT.body, x - 0.35, 0.08, z + 0.2, ry + 0.5);
-        box(0.15, 0.14, 0.58, MAT.body, x + 0.36, 0.08, z - 0.15, ry - 0.4);
-        if (metal) {
-          box(0.42, 0.1, 0.5, MAT.metal, x, 0.24, z - 0.1, ry);
-          cyl(0.03, 0.03, 0.5, MAT.metal, x + 0.14, 0.3, z + 0.2, 6).rotation.z = 1.2;
-          cyl(0.03, 0.03, 0.42, MAT.metal, x - 0.16, 0.28, z + 0.05, 6).rotation.x = 1.0;
-        }
+      // The assembly floor, as it was left. Coveralls, and on some of them
+      // the reconstruction work that was done to what came back.
+      function corpse(x, z, ry, metal, poseName) {
+        var h = window.buildHumanoid(THREE, 'worker', { pose: poseName || 'sprawl', blood: true });
+        h.group.rotation.y = ry;
+        if (metal) h.addMetal(MAT.metal);
+        group.add(h.group);
+        h.centerOn(x, z);
+        var t = h.torsoWorld();
         var pl = new THREE.Mesh(new THREE.CircleGeometry(0.55 + Math.random() * 0.4, 18), MAT.blood);
         pl.rotation.x = -Math.PI / 2;
-        pl.position.set(x + 0.1, 0.01, z + 0.15);
+        pl.position.set(t.x + 0.1, 0.01, t.z + 0.15);
         group.add(pl);
       }
-      corpse(45.5, 48.5, 0.4, true);
-      corpse(47.8, 53.6, 1.9, false);
-      corpse(52.2, 48.2, -0.8, true);
-      corpse(55.4, 52.8, 2.6, false);
-      corpse(49.0, 58.2, 0.2, true);
-      corpse(43.6, 56.4, -1.3, false);
+      corpse(45.5, 48.5, 0.4, true, 'sprawl');
+      corpse(47.8, 53.6, 1.9, false, 'faceup');
+      corpse(52.2, 48.2, -0.8, true, 'crumpled');
+      corpse(55.4, 52.8, 2.6, false, 'sprawl');
+      corpse(49.0, 58.2, 0.2, true, 'faceup');
+      corpse(43.6, 56.4, -1.3, false, 'crumpled');
 
       for (var sc = 0; sc < 12; sc++) {
         box(0.3 + Math.random() * 0.3, 0.03, 0.24, MAT.metal, 43 + Math.random() * 14, 0.015, 47 + Math.random() * 12, Math.random() * 3);
@@ -926,22 +925,25 @@
         cyl(0.05, 0.08, 0.22, MAT.metal, 63.5 + (n % 3) * 4.5, WALL_H - 0.12, 50 + Math.floor(n / 3) * 5, 8);
       }
 
-      function scientist(x, z, ry) {
-        box(0.48, 0.22, 0.88, new THREE.MeshStandardMaterial({ color: 0x8d9088, roughness: 0.9 }), x, 0.11, z, ry);
-        box(0.19, 0.18, 0.19, MAT.body, x + Math.sin(ry) * 0.58, 0.09, z + Math.cos(ry) * 0.58);
-        box(0.14, 0.12, 0.6, new THREE.MeshStandardMaterial({ color: 0x8d9088, roughness: 0.9 }), x - 0.32, 0.07, z + 0.18, ry + 0.6);
+      // Lab coats. They were the ones who tried to strap it down.
+      function scientist(x, z, ry, poseName, outfit) {
+        var h = window.buildHumanoid(THREE, outfit || 'scientist', { pose: poseName || 'faceup', blood: true });
+        h.group.rotation.y = ry;
+        group.add(h.group);
+        h.centerOn(x, z);
+        var t = h.torsoWorld();
         var pl = new THREE.Mesh(new THREE.CircleGeometry(0.6, 18), MAT.blood);
         pl.rotation.x = -Math.PI / 2;
-        pl.position.set(x, 0.01, z + 0.1);
+        pl.position.set(t.x, 0.01, t.z + 0.1);
         group.add(pl);
       }
-      scientist(64.4, 55.6, 0.7);
-      scientist(68.2, 56.6, -1.1);
-      scientist(72.3, 50.2, 2.2);
+      scientist(64.4, 55.6, 0.7, 'sprawl');
+      scientist(68.2, 56.6, -1.1, 'faceup');
+      scientist(72.3, 50.2, 2.2, 'crumpled');
 
-      // Thrown the length of the room when the bars gave. His badge skidded
-      // further than he did.
-      scientist(70.6, 51.4, 1.6);
+      // Thrown the length of the room when the bars gave — containment, not
+      // lab staff. His badge skidded further than he did.
+      scientist(70.6, 51.4, 1.6, 'crumpled', 'security');
       var badgeMat = new THREE.MeshStandardMaterial({ color: 0xe4ddc8, roughness: 0.55 });
       var trapnellTag = box(0.07, 0.1, 0.006, badgeMat, 71.6, 0.021, 49.9, 0.5);
       interact(trapnellTag, { id: 'trapnell', label: 'Laminated ID badge', verb: 'Inspect' });
