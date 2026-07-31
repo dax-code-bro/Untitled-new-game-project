@@ -650,7 +650,7 @@
     var weapons = window.buildWeapons(THREE, { camera: camera, viewRoot: viewRoot, scene: scene });
     function updateViewmodel() {
       var id = state.hotbar[state.hotbarSel];
-      if (id && (ITEM_DEFS[id].kind === 'weapon' || id === 'camera')) weapons.select(id);
+      if (id && (ITEM_DEFS[id].kind === 'weapon' || id === 'camera' || id === 'flashlight')) weapons.select(id);
       else weapons.select(null);
     }
 
@@ -689,6 +689,31 @@
     var handLight = new THREE.PointLight(0xbfd0dd, 2.0, 7.5, 2);
     scene.add(handLight);
 
+    // The torch off the reception desk. Parented to the camera so it always
+    // points where you are looking, and it stays lit while you hold a gun —
+    // a light you have to put away to shoot is a light nobody uses.
+    var torchBeam = new THREE.SpotLight(0xf2f6ff, 0, 26, 0.42, 0.45, 1.4);
+    torchBeam.position.set(0.12, -0.1, 0);
+    var torchTarget = new THREE.Object3D();
+    torchTarget.position.set(0.12, -0.1, -12);
+    camera.add(torchTarget);
+    torchBeam.target = torchTarget;
+    camera.add(torchBeam);
+    // a soft near-field wash, so your own feet are not pitch black
+    var torchSpill = new THREE.PointLight(0xdfe8f4, 0, 5.5, 2);
+    torchSpill.position.set(0.1, -0.1, -0.4);
+    camera.add(torchSpill);
+
+    function setTorch(on) {
+      if (!state.hasFlashlight) return false;
+      state.torchOn = !!on;
+      torchBeam.intensity = state.torchOn ? 34 : 0;
+      torchSpill.intensity = state.torchOn ? 1.5 : 0;
+      if (audio) audio.ui();
+      refreshHud();
+      return state.torchOn;
+    }
+
     // ---------------- The body you're wearing ----------------
     // Blue intern tee, white pants that have already had a day. It lives on
     // layer 1, which the player's own camera does not render — otherwise
@@ -716,6 +741,8 @@
     var state = {
       stance: 'stand',
       hasKey: false,
+      hasFlashlight: false,
+      torchOn: false,
       hasGlock: false,
       ammo: 0,
       mags: 0,
@@ -797,6 +824,7 @@
         case 'KeyZ': setStance('crawl'); break;
         case 'KeyR': reload(); break;
         case 'KeyF': plantCamera(); break;
+        case 'KeyG': setTorch(!state.torchOn); break;
         case 'Digit1': selectSlot(0); break;
         case 'Digit2': selectSlot(1); break;
         case 'Digit3': selectSlot(2); break;
@@ -1031,7 +1059,16 @@
           state.hasKey = true;
           focused.visible = false;
           if (audio) audio.pickup();
-          say('You take the key. Stamped: STORAGE.');
+          say('You take the key. The tag reads STORAGE, in biro, twice.');
+          refreshHud();
+          break;
+        case 'flashlight':
+          state.hasFlashlight = true;
+          if (focused.parent) focused.parent.visible = false;
+          if (audio) audio.pickup();
+          giveItem('flashlight');
+          setTorch(true);
+          say('A torch, and the batteries are still in it. It stays on while your hands are full.');
           refreshHud();
           break;
         case 'journal':
@@ -1212,12 +1249,14 @@
       shotgun: { label: 'SEMI12', kind: 'weapon' },
       ar: { label: 'R700', kind: 'weapon' },
       camera: { label: 'CAM', kind: 'place' },
+      flashlight: { label: 'LIGHT', kind: 'toggle' },
       water: { label: 'WATER', kind: 'consume' },
       beans: { label: 'BEANS', kind: 'consume' },
       fuel: { label: 'NRG', kind: 'consume' },
       riot: { label: 'RIOT', kind: 'armor' }
     };
     function itemCount(id) {
+      if (id === 'flashlight') return state.hasFlashlight ? 1 : 0;
       if (id === 'camera') return state.cams;
       if (id === 'water') return state.waterN;
       if (id === 'beans') return state.beansN;
@@ -1265,6 +1304,7 @@
       if (kind === 'weapon') { state.weapon = id; shoot(); return true; }
       if (kind === 'consume') { consume(id === 'fuel' ? 'fuel' : id); return true; }
       if (kind === 'place') { plantCamera(); return true; }
+      if (kind === 'toggle') { setTorch(!state.torchOn); return true; }
       return false;
     }
     function assignHotbar(slot, id) {
@@ -1599,6 +1639,7 @@
         weapon: state.weapon, shells: state.shells, arRounds: state.arRounds, tube: state.tube,
         hasShotgun: state.hasShotgun, hasAR: state.hasAR, riotGear: state.riotGear,
         hasKey: state.hasKey, supplies: state.supplies, keycard: state.keycard,
+        hasFlashlight: state.hasFlashlight, torchOn: state.torchOn,
         cams: state.cams, planted: planted.map(function (c) { return { alive: c.alive }; }),
         hunger: state.hunger, thirst: state.thirst, energy: state.energy,
         fueled: state.fueled, needToilet: state.needToilet,
@@ -2159,6 +2200,7 @@
           active: active, locked: pointerLocked, uiOpen: uiOpen,
           pointerLockBlocked: pointerLockBlocked,
           hasKey: state.hasKey, storageOpen: state.storageOpen,
+          hasFlashlight: state.hasFlashlight, torchOn: state.torchOn,
           hasGlock: state.hasGlock, ammo: state.ammo, inMag: state.inMag,
           wifiConnected: state.wifiConnected, tvWatched: state.tvWatched,
           dead: state.dead, deaths: state.deaths, deathReason: state.deathReason,
@@ -2444,6 +2486,20 @@
           }
         });
         return out;
+      },
+      torchInfo: function () {
+        var wp = new THREE.Vector3(), wt = new THREE.Vector3();
+        torchBeam.getWorldPosition(wp);
+        torchTarget.getWorldPosition(wt);
+        // does the beam point the way the camera is facing?
+        var fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+        var beamDir = wt.clone().sub(wp).normalize();
+        return {
+          intensity: torchBeam.intensity,
+          onCamera: torchBeam.parent === camera,
+          aimsForward: beamDir.dot(fwd) > 0.97,
+          on: state.torchOn
+        };
       },
       supplyItemRooms: function () {
         var out = [], v = new THREE.Vector3();

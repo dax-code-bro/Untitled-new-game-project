@@ -723,7 +723,7 @@ window.bootUI = function bootUI(THREE) {
   var hotbarEl = $('hotbar');
   var invSelected = null;
   // What the big touch button does for each holdable — mirrors ITEM_DEFS kinds.
-  var ACT_VERB = { glock: 'Fire', shotgun: 'Fire', ar: 'Fire', camera: 'Place', water: 'Drink', beans: 'Eat', fuel: 'Chug' };
+  var ACT_VERB = { glock: 'Fire', shotgun: 'Fire', ar: 'Fire', camera: 'Place', water: 'Drink', beans: 'Eat', fuel: 'Chug', flashlight: 'Light' };
   function renderHotbar(s) {
     if (!s.hotbar) return;
     hotbarEl.classList.add('on');
@@ -835,7 +835,7 @@ window.bootUI = function bootUI(THREE) {
     }
   }, 1000);
 
-  var LOOK_MOUSE = '<b>WASD</b> Move · <b>Mouse</b> Look · <b>E</b> Use · <b>1-5</b> Hotbar · <b>Click</b> Use item · <b>Tab</b> Inventory · <b>Z</b> Crawl';
+  var LOOK_MOUSE = '<b>WASD</b> Move · <b>Mouse</b> Look · <b>E</b> Use · <b>1-5</b> Hotbar · <b>Click</b> Use item · <b>G</b> Light · <b>Tab</b> Inventory · <b>Z</b> Crawl';
   var LOOK_DRAG  = '<b>WASD</b> Move · <b>Drag</b> Look · <b>E</b> Use · <b>C</b> Crouch · <b>Z</b> Crawl · <b>←→</b> Turn';
   var LOOK_TOUCH = '<b>Stick</b> Move · <b>Drag</b> Look · <b>Tap</b> Use';
   var mode = coarse ? LOOK_TOUCH : LOOK_MOUSE;

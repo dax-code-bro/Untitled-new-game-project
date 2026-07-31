@@ -163,10 +163,29 @@
       return { g: g, tip: null };
     }
 
+    // The torch, held low and forward the way you carry one you are
+    // actually using. The beam itself lives on the camera, not here.
+    function rigFlashlight() {
+      var g = new THREE.Group();
+      var barrel = cyl(g, 0.021, 0.019, 0.16, polymer, 0, 0, -0.02, Math.PI / 2);
+      void barrel;
+      for (var k = 0; k < 3; k++) cyl(g, 0.0225, 0.0225, 0.008, steel, 0, 0, 0.01 - k * 0.022, Math.PI / 2);
+      cyl(g, 0.029, 0.022, 0.05, steel, 0, 0, -0.12, Math.PI / 2);
+      var lens = cyl(g, 0.024, 0.024, 0.006, new THREE.MeshStandardMaterial({
+        color: 0xdcecff, emissive: 0xcfe2f5, emissiveIntensity: 1.4, roughness: 0.1
+      }), 0, 0, -0.147, Math.PI / 2);
+      var armR = makeArm();
+      armR.position.set(0.018, -0.085, 0.1);
+      armR.rotation.x = 0.28;
+      g.add(armR);
+      return { g: g, tip: null, lens: lens };
+    }
+
     rigs.glock = rigGlock();
     rigs.shotgun = rigShotgun();
     rigs.ar = rigRifle();
     rigs.camera = rigCamera();
+    rigs.flashlight = rigFlashlight();
     Object.keys(rigs).forEach(function (k) {
       rigs[k].g.visible = false;
       viewRoot.add(rigs[k].g);

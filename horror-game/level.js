@@ -244,6 +244,51 @@
       return g;
     }
 
+    // A small anodised torch, the kind that lives in a reception drawer
+    // until the night somebody actually needs it.
+    var TORCH_MATS = {
+      body: new THREE.MeshStandardMaterial({ color: 0x2a2e31, roughness: 0.42, metalness: 0.6 }),
+      bezel: new THREE.MeshStandardMaterial({ color: 0x6d7477, roughness: 0.3, metalness: 0.8 }),
+      lens: new THREE.MeshStandardMaterial({
+        color: 0xdcecff, roughness: 0.1, metalness: 0.1,
+        emissive: 0x9fb4c8, emissiveIntensity: 0.35
+      }),
+      switch: new THREE.MeshStandardMaterial({ color: 0x9c3f2c, roughness: 0.7 })
+    };
+    function flashlightModel(x, y, z, ry) {
+      var g = new THREE.Group();
+      g.position.set(x, y, z);
+      if (ry) g.rotation.y = ry;
+      // laid on its side, so the barrel runs along Z before the group turns
+      var barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.021, 0.019, 0.16, 12), TORCH_MATS.body);
+      barrel.rotation.x = Math.PI / 2;
+      barrel.position.y = 0.021;
+      g.add(barrel);
+      for (var k = 0; k < 3; k++) {          // knurled grip rings
+        var ring = new THREE.Mesh(new THREE.CylinderGeometry(0.0225, 0.0225, 0.008, 12), TORCH_MATS.bezel);
+        ring.rotation.x = Math.PI / 2;
+        ring.position.set(0, 0.021, -0.01 + k * 0.022);
+        g.add(ring);
+      }
+      var head = new THREE.Mesh(new THREE.CylinderGeometry(0.029, 0.022, 0.05, 12), TORCH_MATS.bezel);
+      head.rotation.x = Math.PI / 2;
+      head.position.set(0, 0.021, -0.1);
+      g.add(head);
+      var lens = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.024, 0.006, 12), TORCH_MATS.lens);
+      lens.rotation.x = Math.PI / 2;
+      lens.position.set(0, 0.021, -0.126);
+      g.add(lens);
+      var sw = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.01, 0.026), TORCH_MATS.switch);
+      sw.position.set(0, 0.041, 0.03);
+      g.add(sw);
+      var tail = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.012, 12), TORCH_MATS.bezel);
+      tail.rotation.x = Math.PI / 2;
+      tail.position.set(0, 0.021, 0.083);
+      g.add(tail);
+      group.add(g);
+      return g;
+    }
+
     // A shelf run that is actually held up by something. `runsAlongX` picks
     // whether the boards span X or Z; uprights go at both ends and stand on
     // the floor, because a plank floating off a wall reads as a bug.
@@ -611,6 +656,20 @@
       var kp = counterPoint(-0.42, 0.30);
       box(0.4, 0.02, 0.15, MAT.plastic, kp.x, 1.095, kp.z, kp.ry);
 
+      // The torch someone left out on the night it went wrong, and the key
+      // to the storage unit on its tag beside it.
+      var fp = counterPoint(0.95, 0.07);
+      var torch = flashlightModel(fp.x, 1.088, fp.z, fp.ry + 0.35);
+      interact(torch.children[0], { id: 'flashlight', label: 'Flashlight', verb: 'Take' });
+
+      var skp = counterPoint(0.70, 0.13);
+      var keyMesh = box(0.11, 0.02, 0.04, new THREE.MeshStandardMaterial({
+        color: 0xc7b26a, roughness: 0.35, metalness: 0.85
+      }), skp.x, 1.098, skp.z, skp.ry + 0.6);
+      // a paper tag on a ring, so it reads as a labelled key and not litter
+      box(0.06, 0.004, 0.045, MAT.paper, skp.x + 0.075, 1.09, skp.z + 0.03, skp.ry + 0.6);
+      interact(keyMesh, { id: 'storageKey', label: 'Key, tagged STORAGE', verb: 'Take' });
+
       // ---- the rolling chair, inside the island ----
       var chX = ISLAND.x - 0.5, chZ = ISLAND.z + 0.15;
       cyl(0.03, 0.03, 0.36, MAT.metal, chX, 0.36, chZ, 8);
@@ -814,11 +873,7 @@
         group.add(gm);
       }
 
-      var keyMesh = box(0.11, 0.02, 0.04, new THREE.MeshStandardMaterial({ color: 0xc7b26a, roughness: 0.35, metalness: 0.85 }), -51.6, 0.63, 4.7);
-      interact(keyMesh, { id: 'storageKey', label: 'Storage unit key', verb: 'Take' });
-      var glow = new THREE.PointLight(0xffe9b0, 1.2, 2.6, 2);
-      glow.position.set(-51.6, 0.75, 4.7);
-      group.add(glow);
+      // (the storage key used to sit here; it lives on the reception desk now)
 
       // The food. Finite, and each item taken individually — this is what
       // Nick was rationing, and what you will be too.

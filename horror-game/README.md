@@ -157,6 +157,7 @@ yourself on it.
 | `Shift` | Run |
 | `R` | Reload |
 | `←` `→` / `Q` | Turn, when pointer lock is unavailable |
+| `G` | Flashlight on/off |
 | `Esc` | Pause, or close a document |
 
 On touch (phones, tablets) the full loop is playable by finger: stick to
@@ -351,6 +352,17 @@ to overcharge to 25: green bars, wider eyes, faster legs, and your character
 starts saying unhinged things to the furniture. Ten in a row risks a fatal
 cardiac event. Overeat or overdrink and you will need the toilet; both
 restrooms finally justify their existence.
+
+**The flashlight** sits on the reception counter, next to the key. Taking it
+switches it on. The beam is a spotlight parented to the camera, so it always
+points where you look, and it **stays lit while you hold a gun** — a torch you
+have to holster to shoot is a torch nobody uses. Toggle it with `G`, or from
+its hotbar slot (which is how touch players reach it). No battery meter: it was
+asked for as a light, not as another bar to manage.
+
+**The storage key** is on the same counter, on a paper tag. It used to be face
+down on a crate in the unlit warehouse, which is a fine place to hide a key and
+a bad place to find one.
 
 **The food is finite.** A braced shelf against the warehouse's west wall holds
 six bottles of water and six cans of beans, each one modelled — a ribbed steel

@@ -2457,10 +2457,29 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       return { g: g, tip: null };
     }
 
+    // The torch, held low and forward the way you carry one you are
+    // actually using. The beam itself lives on the camera, not here.
+    function rigFlashlight() {
+      var g = new THREE.Group();
+      var barrel = cyl(g, 0.021, 0.019, 0.16, polymer, 0, 0, -0.02, Math.PI / 2);
+      void barrel;
+      for (var k = 0; k < 3; k++) cyl(g, 0.0225, 0.0225, 0.008, steel, 0, 0, 0.01 - k * 0.022, Math.PI / 2);
+      cyl(g, 0.029, 0.022, 0.05, steel, 0, 0, -0.12, Math.PI / 2);
+      var lens = cyl(g, 0.024, 0.024, 0.006, new THREE.MeshStandardMaterial({
+        color: 0xdcecff, emissive: 0xcfe2f5, emissiveIntensity: 1.4, roughness: 0.1
+      }), 0, 0, -0.147, Math.PI / 2);
+      var armR = makeArm();
+      armR.position.set(0.018, -0.085, 0.1);
+      armR.rotation.x = 0.28;
+      g.add(armR);
+      return { g: g, tip: null, lens: lens };
+    }
+
     rigs.glock = rigGlock();
     rigs.shotgun = rigShotgun();
     rigs.ar = rigRifle();
     rigs.camera = rigCamera();
+    rigs.flashlight = rigFlashlight();
     Object.keys(rigs).forEach(function (k) {
       rigs[k].g.visible = false;
       viewRoot.add(rigs[k].g);
@@ -3650,6 +3669,51 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       return g;
     }
 
+    // A small anodised torch, the kind that lives in a reception drawer
+    // until the night somebody actually needs it.
+    var TORCH_MATS = {
+      body: new THREE.MeshStandardMaterial({ color: 0x2a2e31, roughness: 0.42, metalness: 0.6 }),
+      bezel: new THREE.MeshStandardMaterial({ color: 0x6d7477, roughness: 0.3, metalness: 0.8 }),
+      lens: new THREE.MeshStandardMaterial({
+        color: 0xdcecff, roughness: 0.1, metalness: 0.1,
+        emissive: 0x9fb4c8, emissiveIntensity: 0.35
+      }),
+      switch: new THREE.MeshStandardMaterial({ color: 0x9c3f2c, roughness: 0.7 })
+    };
+    function flashlightModel(x, y, z, ry) {
+      var g = new THREE.Group();
+      g.position.set(x, y, z);
+      if (ry) g.rotation.y = ry;
+      // laid on its side, so the barrel runs along Z before the group turns
+      var barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.021, 0.019, 0.16, 12), TORCH_MATS.body);
+      barrel.rotation.x = Math.PI / 2;
+      barrel.position.y = 0.021;
+      g.add(barrel);
+      for (var k = 0; k < 3; k++) {          // knurled grip rings
+        var ring = new THREE.Mesh(new THREE.CylinderGeometry(0.0225, 0.0225, 0.008, 12), TORCH_MATS.bezel);
+        ring.rotation.x = Math.PI / 2;
+        ring.position.set(0, 0.021, -0.01 + k * 0.022);
+        g.add(ring);
+      }
+      var head = new THREE.Mesh(new THREE.CylinderGeometry(0.029, 0.022, 0.05, 12), TORCH_MATS.bezel);
+      head.rotation.x = Math.PI / 2;
+      head.position.set(0, 0.021, -0.1);
+      g.add(head);
+      var lens = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.024, 0.006, 12), TORCH_MATS.lens);
+      lens.rotation.x = Math.PI / 2;
+      lens.position.set(0, 0.021, -0.126);
+      g.add(lens);
+      var sw = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.01, 0.026), TORCH_MATS.switch);
+      sw.position.set(0, 0.041, 0.03);
+      g.add(sw);
+      var tail = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.012, 12), TORCH_MATS.bezel);
+      tail.rotation.x = Math.PI / 2;
+      tail.position.set(0, 0.021, 0.083);
+      g.add(tail);
+      group.add(g);
+      return g;
+    }
+
     // A shelf run that is actually held up by something. `runsAlongX` picks
     // whether the boards span X or Z; uprights go at both ends and stand on
     // the floor, because a plank floating off a wall reads as a bug.
@@ -4017,6 +4081,20 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       var kp = counterPoint(-0.42, 0.30);
       box(0.4, 0.02, 0.15, MAT.plastic, kp.x, 1.095, kp.z, kp.ry);
 
+      // The torch someone left out on the night it went wrong, and the key
+      // to the storage unit on its tag beside it.
+      var fp = counterPoint(0.95, 0.07);
+      var torch = flashlightModel(fp.x, 1.088, fp.z, fp.ry + 0.35);
+      interact(torch.children[0], { id: 'flashlight', label: 'Flashlight', verb: 'Take' });
+
+      var skp = counterPoint(0.70, 0.13);
+      var keyMesh = box(0.11, 0.02, 0.04, new THREE.MeshStandardMaterial({
+        color: 0xc7b26a, roughness: 0.35, metalness: 0.85
+      }), skp.x, 1.098, skp.z, skp.ry + 0.6);
+      // a paper tag on a ring, so it reads as a labelled key and not litter
+      box(0.06, 0.004, 0.045, MAT.paper, skp.x + 0.075, 1.09, skp.z + 0.03, skp.ry + 0.6);
+      interact(keyMesh, { id: 'storageKey', label: 'Key, tagged STORAGE', verb: 'Take' });
+
       // ---- the rolling chair, inside the island ----
       var chX = ISLAND.x - 0.5, chZ = ISLAND.z + 0.15;
       cyl(0.03, 0.03, 0.36, MAT.metal, chX, 0.36, chZ, 8);
@@ -4220,11 +4298,7 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
         group.add(gm);
       }
 
-      var keyMesh = box(0.11, 0.02, 0.04, new THREE.MeshStandardMaterial({ color: 0xc7b26a, roughness: 0.35, metalness: 0.85 }), -51.6, 0.63, 4.7);
-      interact(keyMesh, { id: 'storageKey', label: 'Storage unit key', verb: 'Take' });
-      var glow = new THREE.PointLight(0xffe9b0, 1.2, 2.6, 2);
-      glow.position.set(-51.6, 0.75, 4.7);
-      group.add(glow);
+      // (the storage key used to sit here; it lives on the reception desk now)
 
       // The food. Finite, and each item taken individually — this is what
       // Nick was rationing, and what you will be too.
@@ -5488,7 +5562,7 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
     var weapons = window.buildWeapons(THREE, { camera: camera, viewRoot: viewRoot, scene: scene });
     function updateViewmodel() {
       var id = state.hotbar[state.hotbarSel];
-      if (id && (ITEM_DEFS[id].kind === 'weapon' || id === 'camera')) weapons.select(id);
+      if (id && (ITEM_DEFS[id].kind === 'weapon' || id === 'camera' || id === 'flashlight')) weapons.select(id);
       else weapons.select(null);
     }
 
@@ -5527,6 +5601,31 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
     var handLight = new THREE.PointLight(0xbfd0dd, 2.0, 7.5, 2);
     scene.add(handLight);
 
+    // The torch off the reception desk. Parented to the camera so it always
+    // points where you are looking, and it stays lit while you hold a gun —
+    // a light you have to put away to shoot is a light nobody uses.
+    var torchBeam = new THREE.SpotLight(0xf2f6ff, 0, 26, 0.42, 0.45, 1.4);
+    torchBeam.position.set(0.12, -0.1, 0);
+    var torchTarget = new THREE.Object3D();
+    torchTarget.position.set(0.12, -0.1, -12);
+    camera.add(torchTarget);
+    torchBeam.target = torchTarget;
+    camera.add(torchBeam);
+    // a soft near-field wash, so your own feet are not pitch black
+    var torchSpill = new THREE.PointLight(0xdfe8f4, 0, 5.5, 2);
+    torchSpill.position.set(0.1, -0.1, -0.4);
+    camera.add(torchSpill);
+
+    function setTorch(on) {
+      if (!state.hasFlashlight) return false;
+      state.torchOn = !!on;
+      torchBeam.intensity = state.torchOn ? 34 : 0;
+      torchSpill.intensity = state.torchOn ? 1.5 : 0;
+      if (audio) audio.ui();
+      refreshHud();
+      return state.torchOn;
+    }
+
     // ---------------- The body you're wearing ----------------
     // Blue intern tee, white pants that have already had a day. It lives on
     // layer 1, which the player's own camera does not render — otherwise
@@ -5554,6 +5653,8 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
     var state = {
       stance: 'stand',
       hasKey: false,
+      hasFlashlight: false,
+      torchOn: false,
       hasGlock: false,
       ammo: 0,
       mags: 0,
@@ -5635,6 +5736,7 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
         case 'KeyZ': setStance('crawl'); break;
         case 'KeyR': reload(); break;
         case 'KeyF': plantCamera(); break;
+        case 'KeyG': setTorch(!state.torchOn); break;
         case 'Digit1': selectSlot(0); break;
         case 'Digit2': selectSlot(1); break;
         case 'Digit3': selectSlot(2); break;
@@ -5869,7 +5971,16 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
           state.hasKey = true;
           focused.visible = false;
           if (audio) audio.pickup();
-          say('You take the key. Stamped: STORAGE.');
+          say('You take the key. The tag reads STORAGE, in biro, twice.');
+          refreshHud();
+          break;
+        case 'flashlight':
+          state.hasFlashlight = true;
+          if (focused.parent) focused.parent.visible = false;
+          if (audio) audio.pickup();
+          giveItem('flashlight');
+          setTorch(true);
+          say('A torch, and the batteries are still in it. It stays on while your hands are full.');
           refreshHud();
           break;
         case 'journal':
@@ -6050,12 +6161,14 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       shotgun: { label: 'SEMI12', kind: 'weapon' },
       ar: { label: 'R700', kind: 'weapon' },
       camera: { label: 'CAM', kind: 'place' },
+      flashlight: { label: 'LIGHT', kind: 'toggle' },
       water: { label: 'WATER', kind: 'consume' },
       beans: { label: 'BEANS', kind: 'consume' },
       fuel: { label: 'NRG', kind: 'consume' },
       riot: { label: 'RIOT', kind: 'armor' }
     };
     function itemCount(id) {
+      if (id === 'flashlight') return state.hasFlashlight ? 1 : 0;
       if (id === 'camera') return state.cams;
       if (id === 'water') return state.waterN;
       if (id === 'beans') return state.beansN;
@@ -6103,6 +6216,7 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       if (kind === 'weapon') { state.weapon = id; shoot(); return true; }
       if (kind === 'consume') { consume(id === 'fuel' ? 'fuel' : id); return true; }
       if (kind === 'place') { plantCamera(); return true; }
+      if (kind === 'toggle') { setTorch(!state.torchOn); return true; }
       return false;
     }
     function assignHotbar(slot, id) {
@@ -6437,6 +6551,7 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
         weapon: state.weapon, shells: state.shells, arRounds: state.arRounds, tube: state.tube,
         hasShotgun: state.hasShotgun, hasAR: state.hasAR, riotGear: state.riotGear,
         hasKey: state.hasKey, supplies: state.supplies, keycard: state.keycard,
+        hasFlashlight: state.hasFlashlight, torchOn: state.torchOn,
         cams: state.cams, planted: planted.map(function (c) { return { alive: c.alive }; }),
         hunger: state.hunger, thirst: state.thirst, energy: state.energy,
         fueled: state.fueled, needToilet: state.needToilet,
@@ -6997,6 +7112,7 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
           active: active, locked: pointerLocked, uiOpen: uiOpen,
           pointerLockBlocked: pointerLockBlocked,
           hasKey: state.hasKey, storageOpen: state.storageOpen,
+          hasFlashlight: state.hasFlashlight, torchOn: state.torchOn,
           hasGlock: state.hasGlock, ammo: state.ammo, inMag: state.inMag,
           wifiConnected: state.wifiConnected, tvWatched: state.tvWatched,
           dead: state.dead, deaths: state.deaths, deathReason: state.deathReason,
@@ -7283,6 +7399,20 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
         });
         return out;
       },
+      torchInfo: function () {
+        var wp = new THREE.Vector3(), wt = new THREE.Vector3();
+        torchBeam.getWorldPosition(wp);
+        torchTarget.getWorldPosition(wt);
+        // does the beam point the way the camera is facing?
+        var fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+        var beamDir = wt.clone().sub(wp).normalize();
+        return {
+          intensity: torchBeam.intensity,
+          onCamera: torchBeam.parent === camera,
+          aimsForward: beamDir.dot(fwd) > 0.97,
+          on: state.torchOn
+        };
+      },
       supplyItemRooms: function () {
         var out = [], v = new THREE.Vector3();
         for (var i = 0; i < level.interactables.length; i++) {
@@ -7362,7 +7492,7 @@ window.bootUI = function bootUI(THREE) {
   var hotbarEl = $('hotbar');
   var invSelected = null;
   // What the big touch button does for each holdable — mirrors ITEM_DEFS kinds.
-  var ACT_VERB = { glock: 'Fire', shotgun: 'Fire', ar: 'Fire', camera: 'Place', water: 'Drink', beans: 'Eat', fuel: 'Chug' };
+  var ACT_VERB = { glock: 'Fire', shotgun: 'Fire', ar: 'Fire', camera: 'Place', water: 'Drink', beans: 'Eat', fuel: 'Chug', flashlight: 'Light' };
   function renderHotbar(s) {
     if (!s.hotbar) return;
     hotbarEl.classList.add('on');
@@ -7474,7 +7604,7 @@ window.bootUI = function bootUI(THREE) {
     }
   }, 1000);
 
-  var LOOK_MOUSE = '<b>WASD</b> Move · <b>Mouse</b> Look · <b>E</b> Use · <b>1-5</b> Hotbar · <b>Click</b> Use item · <b>Tab</b> Inventory · <b>Z</b> Crawl';
+  var LOOK_MOUSE = '<b>WASD</b> Move · <b>Mouse</b> Look · <b>E</b> Use · <b>1-5</b> Hotbar · <b>Click</b> Use item · <b>G</b> Light · <b>Tab</b> Inventory · <b>Z</b> Crawl';
   var LOOK_DRAG  = '<b>WASD</b> Move · <b>Drag</b> Look · <b>E</b> Use · <b>C</b> Crouch · <b>Z</b> Crawl · <b>←→</b> Turn';
   var LOOK_TOUCH = '<b>Stick</b> Move · <b>Drag</b> Look · <b>Tap</b> Use';
   var mode = coarse ? LOOK_TOUCH : LOOK_MOUSE;
