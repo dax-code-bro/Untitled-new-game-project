@@ -124,7 +124,14 @@ its own aged silvering — dirt toward the edges and speckled desilvering.
 | `R` | Reload |
 | `←` `→` / `Q` | Turn, when pointer lock is unavailable |
 | `Esc` | Pause, or close a document |
-| Touch | On-screen stick to move, drag to look, tap to use |
+
+On touch (phones, tablets) the full loop is playable by finger: stick to
+move, drag to look, tap the world (or the **Use** button) to interact, tap a
+hotbar slot to select it, and the big action button does whatever is in
+hand — **Fire**, **Place**, **Drink**, **Eat**, **Chug**. **Reload** appears
+when a gun is selected; **Items** opens the inventory; the armor slot on the
+hotbar opens it too. Pointer lock is never requested on coarse-pointer
+devices — it would swallow every tap.
 
 ## Playing it online
 

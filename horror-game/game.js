@@ -808,7 +808,12 @@
       pointerLockBlocked = true;
       if (ui.onPointerLockBlocked) ui.onPointerLockBlocked();
     }
+    // Touch players steer by dragging — a captured, hidden cursor would eat
+    // every tap on the stick and buttons (Android exposes requestPointerLock
+    // even on phones, so feature-detection alone is not enough).
+    var coarseInput = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
     function requestLock() {
+      if (coarseInput) return;
       if (!active || pointerLockBlocked || !canvas.requestPointerLock) return;
       if (document.pointerLockElement === canvas) return;
       var req;
@@ -834,7 +839,7 @@
       if (pointerLocked) { useSelected(); return; }
       // Pointer lock is released whenever an overlay opens; clicking the
       // world takes it back rather than dropping into drag-look for good.
-      if (!pointerLockBlocked && canvas.requestPointerLock) { requestLock(); return; }
+      if (!coarseInput && !pointerLockBlocked && canvas.requestPointerLock) { requestLock(); return; }
       dragging = true; dragMoved = 0;
       lastX = e.clientX; lastY = e.clientY;
       try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* not fatal */ }

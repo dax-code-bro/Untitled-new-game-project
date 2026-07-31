@@ -245,16 +245,22 @@
   #touchbar {
     position: fixed; z-index: 8;
     right: max(20px, env(safe-area-inset-right)); bottom: max(96px, env(safe-area-inset-bottom));
-    display: none; flex-direction: column; gap: 10px;
+    display: none; grid-template-columns: repeat(2, 74px); gap: 8px;
   }
   #touchbar.mounted { display: none; }
-  #touchbar.on { display: flex; }
+  #touchbar.on { display: grid; }
   #touchbar button {
     appearance: none; width: 74px; padding: 12px 0; background: rgba(8,9,10,0.42);
     border: 1px solid rgba(107,113,115,0.32); color: var(--bone);
     font-family: var(--mono); font-size: 10px; letter-spacing: 0.16em;
     text-transform: uppercase; cursor: pointer;
   }
+  /* the do-the-thing button: fire, place, drink — whatever is in hand */
+  #btnAct {
+    grid-column: 1 / -1; width: auto; padding: 14px 0; font-size: 11px;
+    border-color: rgba(240,190,123,0.55); color: var(--tungsten);
+  }
+  #btnAct:disabled { opacity: 0.35; }
 
   /* ---------------- Overlays (terminal, documents) ---------------- */
   .overlay {
@@ -386,11 +392,11 @@
     display: flex; gap: 5px; align-items: flex-end;
     opacity: 0; transition: opacity 400ms ease; pointer-events: none;
   }
-  #hotbar.on { opacity: 1; }
+  #hotbar.on { opacity: 1; pointer-events: auto; }
   .hb-slot {
     width: 52px; height: 52px; position: relative;
     border: 2px solid rgba(107,113,115,0.4); background: rgba(8,9,10,0.55);
-    display: grid; place-items: center;
+    display: grid; place-items: center; cursor: pointer;
     font-size: 9px; letter-spacing: 0.08em; color: var(--concrete-l);
   }
   .hb-slot.sel { border-color: var(--tungsten); color: var(--bone); box-shadow: 0 0 14px rgba(240,190,123,0.25); }
@@ -475,9 +481,12 @@
 </div>
 <div id="stick"><div id="stick-nub"></div></div>
 <div id="touchbar">
+  <button id="btnAct" type="button" disabled>Fire</button>
   <button id="btnUse" type="button">Use</button>
+  <button id="btnReload" type="button" style="display:none">Reload</button>
   <button id="btnCrouch" type="button">Crouch</button>
   <button id="btnCrawl" type="button">Crawl</button>
+  <button id="btnInv" type="button">Items</button>
 </div>
 
 <div id="hotbar"></div>
@@ -4885,7 +4894,12 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       pointerLockBlocked = true;
       if (ui.onPointerLockBlocked) ui.onPointerLockBlocked();
     }
+    // Touch players steer by dragging — a captured, hidden cursor would eat
+    // every tap on the stick and buttons (Android exposes requestPointerLock
+    // even on phones, so feature-detection alone is not enough).
+    var coarseInput = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
     function requestLock() {
+      if (coarseInput) return;
       if (!active || pointerLockBlocked || !canvas.requestPointerLock) return;
       if (document.pointerLockElement === canvas) return;
       var req;
@@ -4911,7 +4925,7 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       if (pointerLocked) { useSelected(); return; }
       // Pointer lock is released whenever an overlay opens; clicking the
       // world takes it back rather than dropping into drag-look for good.
-      if (!pointerLockBlocked && canvas.requestPointerLock) { requestLock(); return; }
+      if (!coarseInput && !pointerLockBlocked && canvas.requestPointerLock) { requestLock(); return; }
       dragging = true; dragMoved = 0;
       lastX = e.clientX; lastY = e.clientY;
       try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* not fatal */ }
@@ -6356,11 +6370,15 @@ window.bootUI = function bootUI(THREE) {
 
   var hotbarEl = $('hotbar');
   var invSelected = null;
+  // What the big touch button does for each holdable — mirrors ITEM_DEFS kinds.
+  var ACT_VERB = { glock: 'Fire', shotgun: 'Fire', ar: 'Fire', camera: 'Place', water: 'Drink', beans: 'Eat', fuel: 'Chug' };
   function renderHotbar(s) {
     if (!s.hotbar) return;
     hotbarEl.classList.add('on');
     var html = '';
+    var selH = null;
     s.hotbar.forEach(function (h, i) {
+      if (h.sel) selH = h;
       html += '<div class="hb-slot' + (h.sel ? ' sel' : '') + '">' +
         '<span class="num">' + (i + 1) + '</span>' +
         (h.id ? '<span>' + h.label + '</span><span class="cnt">' + (h.count > 1 ? h.count : '') + '</span>' : '') +
@@ -6369,7 +6387,21 @@ window.bootUI = function bootUI(THREE) {
     html += '<div class="hb-slot armor' + (s.riotEquipped ? ' equipped' : '') + '">' +
       (s.riotEquipped ? '<span>RIOT</span>' : '<span style="opacity:0.4">ARMR</span>') + '</div>';
     hotbarEl.innerHTML = html;
+    var act = $('btnAct'), rel = $('btnReload');
+    act.textContent = (selH && selH.id) ? (ACT_VERB[selH.id] || 'Use') : 'Fire';
+    act.disabled = !(selH && selH.id && selH.count > 0);
+    rel.style.display = (selH && (selH.id === 'glock' || selH.id === 'shotgun')) ? '' : 'none';
   }
+  // Tap a slot to select it; tap the armor slot to open the inventory.
+  hotbarEl.addEventListener('click', function (e) {
+    if (!game) return;
+    var el = e.target;
+    while (el && el !== hotbarEl && !(el.classList && el.classList.contains('hb-slot'))) el = el.parentElement;
+    if (!el || el === hotbarEl) return;
+    if (el.classList.contains('armor')) { openInventory(); return; }
+    var i = Array.prototype.indexOf.call(hotbarEl.children, el);
+    if (i >= 0 && i < 5) game.selectSlot(i);
+  });
 
   function openInventory() {
     renderInventory();
@@ -6977,13 +7009,18 @@ window.bootUI = function bootUI(THREE) {
   });
 
   // Touch buttons
+  $('btnAct').addEventListener('click', function () { game.useSelected(); });
   $('btnUse').addEventListener('click', function () { game.interact(); });
+  $('btnReload').addEventListener('click', function () {
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyR' }));
+  });
   $('btnCrouch').addEventListener('click', function () {
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyC' }));
   });
   $('btnCrawl').addEventListener('click', function () {
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyZ' }));
   });
+  $('btnInv').addEventListener('click', function () { openInventory(); });
 };
 </script>
 
