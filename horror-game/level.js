@@ -91,7 +91,7 @@
     return out;
   }
 
-  window.buildLevel = function buildLevel(THREE, scene) {
+  window.buildLevel = function buildLevel(THREE, scene, renderer, camera) {
     var colliders = [];
     var interactables = [];
     var updates = [];
@@ -100,80 +100,35 @@
     var group = new THREE.Group();
     scene.add(group);
 
-    // ---------------- Textures ----------------
-    function noiseTexture(size, base, speckle) {
-      var c = document.createElement('canvas');
-      c.width = c.height = size;
-      var x = c.getContext('2d');
-      x.fillStyle = 'rgb(' + base + ',' + base + ',' + base + ')';
-      x.fillRect(0, 0, size, size);
-      var octs = [[6, 16, 0.5], [16, 12, 0.4], [48, 8, 0.35], [128, 5, 0.3]];
-      for (var o = 0; o < octs.length; o++) {
-        var cells = octs[o][0], amp = octs[o][1], al = octs[o][2];
-        var step = size / cells;
-        for (var yy = 0; yy < cells; yy++) {
-          for (var xx = 0; xx < cells; xx++) {
-            var v = Math.max(0, Math.min(255, base + (Math.random() * 2 - 1) * amp));
-            x.fillStyle = 'rgba(' + v + ',' + v + ',' + v + ',' + al + ')';
-            x.fillRect(xx * step, yy * step, step + 1, step + 1);
-          }
-        }
-      }
-      for (var s = 0; s < speckle; s++) {
-        var v2 = Math.max(0, Math.min(255, base + (Math.random() < 0.6 ? -34 : 26)));
-        x.fillStyle = 'rgba(' + v2 + ',' + v2 + ',' + v2 + ',' + (Math.random() * 0.5 + 0.2) + ')';
-        x.beginPath();
-        x.arc(Math.random() * size, Math.random() * size, Math.random() * 1.6 + 0.2, 0, Math.PI * 2);
-        x.fill();
-      }
-      var t = new THREE.CanvasTexture(c);
-      t.wrapS = t.wrapT = THREE.RepeatWrapping;
-      t.anisotropy = 4;
-      return t;
-    }
-
-    function tileTexture(size) {
-      var c = document.createElement('canvas');
-      c.width = c.height = size;
-      var x = c.getContext('2d');
-      x.fillStyle = '#b9bcbb'; x.fillRect(0, 0, size, size);
-      var n = 8, step = size / n;
-      x.strokeStyle = '#6c706f'; x.lineWidth = 3;
-      for (var i = 0; i <= n; i++) {
-        x.beginPath(); x.moveTo(i * step, 0); x.lineTo(i * step, size); x.stroke();
-        x.beginPath(); x.moveTo(0, i * step); x.lineTo(size, i * step); x.stroke();
-      }
-      for (var s = 0; s < 900; s++) {
-        x.fillStyle = 'rgba(0,0,0,' + (Math.random() * 0.09) + ')';
-        x.fillRect(Math.random() * size, Math.random() * size, 2, 2);
-      }
-      var t = new THREE.CanvasTexture(c);
-      t.wrapS = t.wrapT = THREE.RepeatWrapping;
-      return t;
-    }
-
-    var texConcrete = noiseTexture(512, 128, 2400);
-    var texFloor = noiseTexture(512, 104, 3000);
-    var texTile = tileTexture(512);
-    var texMetal = noiseTexture(256, 96, 900);
-    var texCarpet = noiseTexture(256, 74, 4200);
+    // ---------------- Surfaces ----------------
+    var T = window.TEX;
+    var texConcrete   = T.concrete(THREE, 512, 128, { formwork: true, cracks: 4, repeat: [3, 1.4] });
+    var texConcreteFl = T.concrete(THREE, 512, 104, { speckle: 3200, cracks: 5, grime: 9, repeat: [8, 8] });
+    var texCeiling    = T.concrete(THREE, 512, 96,  { speckle: 1500, cracks: 2, grime: 7, repeat: [6, 6] });
+    var texTile       = T.tile(THREE, 512, { repeat: [4, 3] });
+    var texTileFloor  = T.tile(THREE, 512, { cells: 10, grime: 14, repeat: [6, 6] });
+    var texMetal      = T.metal(THREE, 512, 108, { rust: 7, repeat: [2, 2] });
+    var texCarpet     = T.carpet(THREE, 512, [78, 84, 92], { repeat: [10, 10] });
+    var texWoodWall   = T.wood(THREE, 512, [96, 72, 46], { knots: 3, repeat: [3, 1.2] });
+    var texCounter    = T.wood(THREE, 512, [140, 108, 68], { knots: 1, repeat: [1, 1] });
+    var texDeskWood   = T.wood(THREE, 512, [72, 52, 32], { knots: 2, repeat: [2, 1] });
 
     var MAT = {
-      wall: new THREE.MeshStandardMaterial({ color: 0x9aa1a4, map: texConcrete, bumpMap: texConcrete, bumpScale: 0.3, roughness: 0.95 }),
-      wallHall: new THREE.MeshStandardMaterial({ color: 0x8e9598, map: texConcrete, bumpMap: texConcrete, bumpScale: 0.3, roughness: 0.95 }),
-      wallTile: new THREE.MeshStandardMaterial({ color: 0xa9adad, map: texTile, roughness: 0.35 }),
-      wallLab: new THREE.MeshStandardMaterial({ color: 0xa2adb0, map: texConcrete, bumpScale: 0.2, roughness: 0.6 }),
-      wallWood: new THREE.MeshStandardMaterial({ color: 0x6b5741, map: texConcrete, bumpMap: texConcrete, bumpScale: 0.25, roughness: 0.8 }),
-      floor: new THREE.MeshStandardMaterial({ color: 0x8b9295, map: texFloor, bumpMap: texFloor, bumpScale: 0.35, roughness: 0.94 }),
-      carpet: new THREE.MeshStandardMaterial({ color: 0x565c63, map: texCarpet, bumpMap: texCarpet, bumpScale: 0.5, roughness: 1 }),
-      tileFloor: new THREE.MeshStandardMaterial({ color: 0x9fa3a3, map: texTile, roughness: 0.4 }),
-      ceiling: new THREE.MeshStandardMaterial({ color: 0x7f868a, map: texConcrete, roughness: 1 }),
-      metal: new THREE.MeshStandardMaterial({ color: 0x6f7679, map: texMetal, roughness: 0.55, metalness: 0.55 }),
+      wall: new THREE.MeshStandardMaterial({ color: 0x9aa1a4, map: texConcrete, bumpMap: texConcrete, bumpScale: 0.45, roughness: 0.95 }),
+      wallHall: new THREE.MeshStandardMaterial({ color: 0x8e9598, map: texConcrete, bumpMap: texConcrete, bumpScale: 0.45, roughness: 0.95 }),
+      wallTile: new THREE.MeshStandardMaterial({ color: 0xa9adad, map: texTile, bumpMap: texTile, bumpScale: 0.18, roughness: 0.32, metalness: 0.03 }),
+      wallLab: new THREE.MeshStandardMaterial({ color: 0xa2adb0, map: texConcrete, bumpMap: texConcrete, bumpScale: 0.22, roughness: 0.55 }),
+      wallWood: new THREE.MeshStandardMaterial({ color: 0x8f7a5e, map: texWoodWall, bumpMap: texWoodWall, bumpScale: 0.2, roughness: 0.78 }),
+      floor: new THREE.MeshStandardMaterial({ color: 0x8b9295, map: texConcreteFl, bumpMap: texConcreteFl, bumpScale: 0.5, roughness: 0.94 }),
+      carpet: new THREE.MeshStandardMaterial({ color: 0x6a7079, map: texCarpet, bumpMap: texCarpet, bumpScale: 0.65, roughness: 1 }),
+      tileFloor: new THREE.MeshStandardMaterial({ color: 0x9fa3a3, map: texTileFloor, bumpMap: texTileFloor, bumpScale: 0.22, roughness: 0.38, metalness: 0.03 }),
+      ceiling: new THREE.MeshStandardMaterial({ color: 0x7f868a, map: texCeiling, bumpMap: texCeiling, bumpScale: 0.3, roughness: 1 }),
+      metal: new THREE.MeshStandardMaterial({ color: 0x6f7679, map: texMetal, bumpMap: texMetal, bumpScale: 0.14, roughness: 0.52, metalness: 0.55 }),
       darkMetal: new THREE.MeshStandardMaterial({ color: 0x33383b, roughness: 0.6, metalness: 0.5 }),
       bulkhead: new THREE.MeshStandardMaterial({ color: 0x878d90, roughness: 0.85 }),
       wood: new THREE.MeshStandardMaterial({ color: 0x7a5c3c, roughness: 0.75 }),
-      darkWood: new THREE.MeshStandardMaterial({ color: 0x4a3a28, roughness: 0.8 }),
-      counter: new THREE.MeshStandardMaterial({ color: 0x8d7a5c, roughness: 0.55 }),
+      darkWood: new THREE.MeshStandardMaterial({ color: 0x6a5238, map: texDeskWood, bumpMap: texDeskWood, bumpScale: 0.14, roughness: 0.78 }),
+      counter: new THREE.MeshStandardMaterial({ color: 0xa08a66, map: texCounter, bumpMap: texCounter, bumpScale: 0.1, roughness: 0.45 }),
       plastic: new THREE.MeshStandardMaterial({ color: 0x2c2f31, roughness: 0.7 }),
       fabric: new THREE.MeshStandardMaterial({ color: 0x3d4550, roughness: 0.95 }),
       paper: new THREE.MeshStandardMaterial({ color: 0xd8d4c6, roughness: 0.95 }),
@@ -251,7 +206,6 @@
       c.receiveShadow = true;
       group.add(c);
     });
-    [MAT.floor, MAT.carpet, MAT.tileFloor].forEach(function (m) { if (m.map) m.map.repeat.set(8, 8); });
 
     // ---------------- Walls ----------------
     // Wall planes are merged across rooms before they are built. Building
@@ -622,18 +576,21 @@
         });
         solid(x - 0.28, z - 0.28, x + 0.28, z + 0.28);
       }
-      // Both doorways sit in the band z = -1.5 .. 1.5, so nothing is placed
-      // there: the walk to either corridor has to stay clear.
-      for (var i = 0; i < 3; i++) {
-        waitingChair(-6.6, 3.0 + i * 1.35, Math.PI / 2);
-        waitingChair(-4.9, 3.0 + i * 1.35, -Math.PI / 2);
-        waitingChair(6.6, 3.0 + i * 1.35, -Math.PI / 2);
-        waitingChair(4.9, 3.0 + i * 1.35, Math.PI / 2);
-      }
-      waitingChair(-6.6, -3.4, Math.PI / 2);
-      waitingChair(-6.6, -4.8, Math.PI / 2);
-      waitingChair(6.6, -3.4, -Math.PI / 2);
-      waitingChair(6.6, -4.8, -Math.PI / 2);
+      // One line, all facing the reception island — no facing pairs.
+      // Both corridor doorways sit in the band z = -1.5 .. 1.5 and the
+      // entrance is at x = -1.6 .. 1.6, so the row leaves a walkway down
+      // the middle and stops well short of either hallway mouth.
+      var ROW_Z = 4.5;
+      [-6.5, -5.2, -3.9, -2.6].forEach(function (x) { waitingChair(x, ROW_Z, Math.PI); });
+      [2.6, 3.9, 5.2, 6.5].forEach(function (x) { waitingChair(x, ROW_Z, Math.PI); });
+
+      // A single tipped-over chair, out of the way against the west wall.
+      (function () {
+        var t = box(0.5, 0.07, 0.5, MAT.fabric, -7.0, 0.26, 5.9, 0.5);
+        t.rotation.z = Math.PI / 2.1;
+        box(0.5, 0.5, 0.07, MAT.fabric, -6.72, 0.5, 5.9, 0.5);
+        solid(-7.3, 5.6, -6.5, 6.2);
+      })();
 
       // ---- shelves and the wall telephone ----
       function bookshelf(x, z, ry) {
@@ -688,7 +645,8 @@
     // RESTROOMS
     // ===================================================================
     (function restrooms() {
-      batten(-18.5, -5.5, WALL_H, 0xdfe8ea, 6, 10, 'strobe');
+      batten(-18.5, -5.5, WALL_H, 0xdfe8ea, 7, 11, 'buzz');
+      batten(-18.5, -8.2, WALL_H, 0xdfe8ea, 5, 9, 'strobe');
       for (var s = 0; s < 3; s++) {
         var sx = -21.2 + s * 1.7;
         box(0.06, 1.9, 1.5, MAT.metal, sx + 0.85, 1.15, -7.8);
@@ -807,11 +765,6 @@
     // ===================================================================
     (function storageUnit() {
       batten(60, 0, WALL_H, 0xd8e2e4, 5, 11, 'dying');
-
-      var door = box(0.14, 2.25, 3.0, MAT.metal, 56, 1.125, 0);
-      interact(door, { id: 'storageDoor', label: 'Storage unit', verb: 'Open' });
-      solid(55.9, -1.5, 56.1, 1.5, 'storageDoor');
-      window.__storageDoorMesh = door;
 
       for (var s = 0; s < 3; s++) box(0.4, 0.06, 3.4, MAT.metal, 63.6, 0.6 + s * 0.7, -2);
       solid(63.35, -3.75, 63.85, -0.25);
@@ -994,8 +947,34 @@
       box(0.06, 1.9, 1.4, MAT.metal, 71.2, 1.15, 61.4);
       solid(71.17, 60.7, 71.23, 62.1);
       box(0.44, 0.42, 0.34, new THREE.MeshStandardMaterial({ color: 0xd6d8d4, roughness: 0.35 }), 70.6, 0.21, 61.6);
-      box(0.5, 0.16, 0.4, new THREE.MeshStandardMaterial({ color: 0xd6d8d4, roughness: 0.3 }), 72.6, 0.86, 59.2);
+      box(0.44, 0.16, 0.5, new THREE.MeshStandardMaterial({ color: 0xd6d8d4, roughness: 0.3 }), 73.6, 0.86, 59.2);
     })();
+
+    // ---------------- Doors ----------------
+    // Every doorway gets a leaf built to its own spec; see fittings.js.
+    var fittingsCtx = {
+      group: group, materials: MAT, scene: scene, renderer: renderer, camera: camera,
+      box: box, cyl: cyl, solid: solid, interact: interact
+    };
+    var doors = window.FITTINGS.createDoors(THREE, fittingsCtx);
+    updates.push(function (dt) { doors.update(dt); });
+    window.__storageDoorMesh = null;
+
+    // ---------------- Mirrors ----------------
+    var mirrors = [];
+    // Above the restroom basins: one continuous sheet, not three panes.
+    mirrors.push(window.FITTINGS.createMirror(THREE, fittingsCtx, {
+      x: -15.14, y: 1.45, z: -5.2, ry: -Math.PI / 2,
+      width: 4.4, height: 1.15, res: 512, range: 9, grime: 0.18
+    }));
+    // The second restroom, off the extermination chamber.
+    mirrors.push(window.FITTINGS.createMirror(THREE, fittingsCtx, {
+      x: 73.86, y: 1.45, z: 59.2, ry: -Math.PI / 2,
+      width: 1.5, height: 1.0, res: 384, range: 8, grime: 0.3
+    }));
+    updates.push(function () {
+      for (var i = 0; i < mirrors.length; i++) mirrors[i].update();
+    });
 
     // ---------------- Flicker ----------------
     function flickerLevel(style, t, seed) {
@@ -1058,6 +1037,9 @@
       updates: updates,
       roomAt: roomAt,
       cullLights: cullLights,
+      toggleDoor: doors.toggle,
+      isDoorOpen: doors.isOpen,
+      doorIds: function () { return Object.keys(doors.runtime); },
       lightCount: pointLights.length,
       spawn: { x: 0, z: 5.6, yaw: 0 }
     };

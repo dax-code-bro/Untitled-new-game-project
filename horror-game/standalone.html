@@ -439,6 +439,855 @@
 
 <script>
 /*
+ * Untitled Horror Game — procedural surfaces.
+ *
+ * Every texture in the game is drawn to a canvas at load. Nothing is
+ * fetched, so the single-file build stays self-contained.
+ *
+ *   window.TEX.concrete(...)  → THREE.CanvasTexture
+ */
+(function () {
+  'use strict';
+
+  function canvas(size) {
+    var c = document.createElement('canvas');
+    c.width = c.height = size;
+    return c;
+  }
+
+  function finish(THREE, c, repeat) {
+    var t = new THREE.CanvasTexture(c);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.anisotropy = 8;
+    if (repeat) t.repeat.set(repeat[0], repeat[1]);
+    return t;
+  }
+
+  // Value-noise blotching used as the base of most rough surfaces.
+  function blotch(x, size, base, octaves) {
+    for (var o = 0; o < octaves.length; o++) {
+      var cells = octaves[o][0], amp = octaves[o][1], al = octaves[o][2];
+      var step = size / cells;
+      for (var yy = 0; yy < cells; yy++) {
+        for (var xx = 0; xx < cells; xx++) {
+          var v = Math.max(0, Math.min(255, base + (Math.random() * 2 - 1) * amp));
+          x.fillStyle = 'rgba(' + v + ',' + v + ',' + v + ',' + al + ')';
+          x.fillRect(xx * step, yy * step, step + 1, step + 1);
+        }
+      }
+    }
+  }
+
+  function grime(x, size, amount, alpha) {
+    for (var i = 0; i < amount; i++) {
+      var gx = Math.random() * size, gy = Math.random() * size;
+      var r = 8 + Math.random() * 46;
+      var g = x.createRadialGradient(gx, gy, 0, gx, gy, r);
+      g.addColorStop(0, 'rgba(28,24,18,' + (alpha || 0.09) + ')');
+      g.addColorStop(1, 'rgba(28,24,18,0)');
+      x.fillStyle = g;
+      x.beginPath(); x.arc(gx, gy, r, 0, Math.PI * 2); x.fill();
+    }
+  }
+
+  var TEX = {};
+
+  // ---------------- Concrete ----------------
+  TEX.concrete = function (THREE, size, base, opts) {
+    opts = opts || {};
+    var c = canvas(size), x = c.getContext('2d');
+    x.fillStyle = 'rgb(' + base + ',' + base + ',' + base + ')';
+    x.fillRect(0, 0, size, size);
+    blotch(x, size, base, [[6, 15, 0.5], [16, 11, 0.4], [48, 8, 0.35], [128, 5, 0.3]]);
+
+    // aggregate and pitting
+    for (var s = 0; s < (opts.speckle || 2400); s++) {
+      var v = Math.max(0, Math.min(255, base + (Math.random() < 0.6 ? -36 : 28)));
+      x.fillStyle = 'rgba(' + v + ',' + v + ',' + v + ',' + (Math.random() * 0.5 + 0.2) + ')';
+      x.beginPath();
+      x.arc(Math.random() * size, Math.random() * size, Math.random() * 1.7 + 0.2, 0, Math.PI * 2);
+      x.fill();
+    }
+    // form-tie holes and pour lines
+    if (opts.formwork) {
+      x.strokeStyle = 'rgba(0,0,0,0.10)'; x.lineWidth = 2;
+      for (var f = 1; f < 3; f++) {
+        x.beginPath(); x.moveTo(0, (size / 3) * f); x.lineTo(size, (size / 3) * f + (Math.random() - 0.5) * 6); x.stroke();
+      }
+      for (var t = 0; t < 4; t++) {
+        var tx = size * (0.2 + Math.random() * 0.6), ty = size * (0.2 + Math.random() * 0.6);
+        x.fillStyle = 'rgba(0,0,0,0.16)';
+        x.beginPath(); x.arc(tx, ty, 3.5, 0, Math.PI * 2); x.fill();
+      }
+    }
+    // hairline cracks
+    for (var k = 0; k < (opts.cracks || 3); k++) {
+      x.strokeStyle = 'rgba(0,0,0,0.22)';
+      x.lineWidth = 0.8 + Math.random();
+      x.beginPath();
+      var cx = Math.random() * size, cy = Math.random() * size;
+      x.moveTo(cx, cy);
+      for (var seg = 0; seg < 7; seg++) {
+        cx += (Math.random() - 0.5) * 44; cy += (Math.random() - 0.5) * 44;
+        x.lineTo(cx, cy);
+      }
+      x.stroke();
+    }
+    grime(x, size, opts.grime === undefined ? 5 : opts.grime, 0.07);
+    return finish(THREE, c, opts.repeat);
+  };
+
+  // ---------------- Wood ----------------
+  // Used for the corridor doors, the counter and the office.
+  TEX.wood = function (THREE, size, tone, opts) {
+    opts = opts || {};
+    var c = canvas(size), x = c.getContext('2d');
+    var base = tone || [122, 92, 58];
+    x.fillStyle = 'rgb(' + base[0] + ',' + base[1] + ',' + base[2] + ')';
+    x.fillRect(0, 0, size, size);
+
+    // grain: long bands with fine fibre inside them
+    var y = 0;
+    while (y < size) {
+      var bandH = 4 + Math.random() * 16;
+      var d = (Math.random() - 0.45) * 34;
+      x.fillStyle = 'rgba(' + Math.max(0, base[0] + d) + ',' + Math.max(0, base[1] + d * 0.85) + ',' + Math.max(0, base[2] + d * 0.7) + ',0.55)';
+      x.fillRect(0, y, size, bandH);
+      for (var f = 0; f < bandH * 1.6; f++) {
+        var fy = y + Math.random() * bandH;
+        x.strokeStyle = 'rgba(' + Math.max(0, base[0] - 30) + ',' + Math.max(0, base[1] - 26) + ',' + Math.max(0, base[2] - 20) + ',' + (Math.random() * 0.16) + ')';
+        x.lineWidth = 0.7;
+        x.beginPath();
+        x.moveTo(0, fy);
+        for (var sx = 0; sx <= size; sx += 32) x.lineTo(sx, fy + Math.sin(sx * 0.02 + y) * 1.6);
+        x.stroke();
+      }
+      y += bandH;
+    }
+    // knots
+    for (var k = 0; k < (opts.knots === undefined ? 2 : opts.knots); k++) {
+      var kx = Math.random() * size, ky = Math.random() * size;
+      for (var r = 16; r > 0; r -= 2.2) {
+        x.strokeStyle = 'rgba(' + Math.max(0, base[0] - 46) + ',' + Math.max(0, base[1] - 40) + ',' + Math.max(0, base[2] - 30) + ',' + (0.14 + (16 - r) * 0.02) + ')';
+        x.lineWidth = 1.4;
+        x.beginPath();
+        x.ellipse(kx, ky, r, r * 0.62, 0.4, 0, Math.PI * 2);
+        x.stroke();
+      }
+    }
+    grime(x, size, opts.grime === undefined ? 4 : opts.grime, 0.08);
+    return finish(THREE, c, opts.repeat);
+  };
+
+  // ---------------- Metal ----------------
+  TEX.metal = function (THREE, size, base, opts) {
+    opts = opts || {};
+    var c = canvas(size), x = c.getContext('2d');
+    x.fillStyle = 'rgb(' + base + ',' + base + ',' + base + ')';
+    x.fillRect(0, 0, size, size);
+    blotch(x, size, base, [[8, 9, 0.35], [32, 6, 0.3]]);
+
+    // brushed scratches
+    for (var s = 0; s < 420; s++) {
+      var sy = Math.random() * size;
+      var len = 20 + Math.random() * 180;
+      var sx = Math.random() * size;
+      x.strokeStyle = 'rgba(' + (Math.random() < 0.5 ? 255 : 0) + ',' + (Math.random() < 0.5 ? 255 : 0) + ',255,' + (Math.random() * 0.05) + ')';
+      x.lineWidth = 0.6 + Math.random() * 0.8;
+      x.beginPath(); x.moveTo(sx, sy); x.lineTo(sx + len, sy + (Math.random() - 0.5) * 3); x.stroke();
+    }
+    // rust blooms
+    for (var r = 0; r < (opts.rust || 6); r++) {
+      var rx = Math.random() * size, ry = Math.random() * size, rr = 6 + Math.random() * 30;
+      var g = x.createRadialGradient(rx, ry, 0, rx, ry, rr);
+      g.addColorStop(0, 'rgba(112,58,26,0.42)');
+      g.addColorStop(0.6, 'rgba(96,52,26,0.22)');
+      g.addColorStop(1, 'rgba(96,52,26,0)');
+      x.fillStyle = g;
+      x.beginPath(); x.arc(rx, ry, rr, 0, Math.PI * 2); x.fill();
+    }
+    if (opts.plate) {
+      x.strokeStyle = 'rgba(0,0,0,0.3)'; x.lineWidth = 3;
+      x.strokeRect(2, 2, size - 4, size - 4);
+      for (var b = 0; b < 8; b++) {
+        var bx = 14 + (b % 4) * (size / 4), by = 14 + Math.floor(b / 4) * (size - 28);
+        x.fillStyle = 'rgba(255,255,255,0.10)';
+        x.beginPath(); x.arc(bx, by, 3.4, 0, Math.PI * 2); x.fill();
+        x.fillStyle = 'rgba(0,0,0,0.35)';
+        x.beginPath(); x.arc(bx, by + 1.2, 2.2, 0, Math.PI * 2); x.fill();
+      }
+    }
+    return finish(THREE, c, opts.repeat);
+  };
+
+  // ---------------- Tile ----------------
+  TEX.tile = function (THREE, size, opts) {
+    opts = opts || {};
+    var c = canvas(size), x = c.getContext('2d');
+    var n = opts.cells || 8, step = size / n;
+    x.fillStyle = opts.grout || '#5e6362';
+    x.fillRect(0, 0, size, size);
+    for (var i = 0; i < n; i++) {
+      for (var j = 0; j < n; j++) {
+        var v = 178 + (Math.random() - 0.5) * 16;
+        x.fillStyle = 'rgb(' + v + ',' + (v + 2) + ',' + (v + 1) + ')';
+        x.fillRect(i * step + 2, j * step + 2, step - 4, step - 4);
+        // a few cracked or missing tiles
+        if (Math.random() < 0.05) {
+          x.strokeStyle = 'rgba(40,44,44,0.6)'; x.lineWidth = 1.2;
+          x.beginPath();
+          x.moveTo(i * step + 2, j * step + Math.random() * step);
+          x.lineTo(i * step + step - 2, j * step + Math.random() * step);
+          x.stroke();
+        }
+      }
+    }
+    // grime settles into the grout lines
+    for (var g = 0; g <= n; g++) {
+      x.strokeStyle = 'rgba(28,26,20,0.22)';
+      x.lineWidth = 3;
+      x.beginPath(); x.moveTo(g * step, 0); x.lineTo(g * step, size); x.stroke();
+      x.beginPath(); x.moveTo(0, g * step); x.lineTo(size, g * step); x.stroke();
+    }
+    grime(x, size, opts.grime === undefined ? 10 : opts.grime, 0.10);
+    return finish(THREE, c, opts.repeat);
+  };
+
+  // ---------------- Carpet ----------------
+  TEX.carpet = function (THREE, size, tone, opts) {
+    opts = opts || {};
+    var c = canvas(size), x = c.getContext('2d');
+    var base = tone || [78, 84, 92];
+    x.fillStyle = 'rgb(' + base[0] + ',' + base[1] + ',' + base[2] + ')';
+    x.fillRect(0, 0, size, size);
+    // loop pile: dense short strokes
+    for (var i = 0; i < size * 34; i++) {
+      var d = (Math.random() - 0.5) * 40;
+      x.strokeStyle = 'rgba(' + Math.max(0, base[0] + d) + ',' + Math.max(0, base[1] + d) + ',' + Math.max(0, base[2] + d) + ',0.5)';
+      x.lineWidth = 0.8;
+      var px = Math.random() * size, py = Math.random() * size;
+      x.beginPath(); x.moveTo(px, py); x.lineTo(px + (Math.random() - 0.5) * 3, py + (Math.random() - 0.5) * 3); x.stroke();
+    }
+    // contract-carpet fleck
+    for (var f = 0; f < 500; f++) {
+      x.fillStyle = Math.random() < 0.5 ? 'rgba(160,150,120,0.16)' : 'rgba(20,22,26,0.28)';
+      x.fillRect(Math.random() * size, Math.random() * size, 1.6, 1.6);
+    }
+    grime(x, size, opts.grime === undefined ? 8 : opts.grime, 0.11);
+    return finish(THREE, c, opts.repeat);
+  };
+
+  // ---------------- Wired safety glass ----------------
+  TEX.wiredGlass = function (THREE, size) {
+    var c = canvas(size), x = c.getContext('2d');
+    x.fillStyle = 'rgba(150,175,180,0.30)';
+    x.fillRect(0, 0, size, size);
+    x.strokeStyle = 'rgba(60,66,66,0.55)';
+    x.lineWidth = 1.4;
+    var step = size / 12;
+    for (var i = 0; i <= 12; i++) {
+      x.beginPath(); x.moveTo(i * step, 0); x.lineTo(i * step, size); x.stroke();
+      x.beginPath(); x.moveTo(0, i * step); x.lineTo(size, i * step); x.stroke();
+    }
+    grime(x, size, 6, 0.14);
+    return finish(THREE, c);
+  };
+
+  // ---------------- Signage ----------------
+  TEX.sign = function (THREE, text, opts) {
+    opts = opts || {};
+    var c = document.createElement('canvas');
+    c.width = 256; c.height = 128;
+    var x = c.getContext('2d');
+    x.fillStyle = opts.bg || '#2b2f31';
+    x.fillRect(0, 0, 256, 128);
+    x.strokeStyle = opts.border || 'rgba(200,205,205,0.35)';
+    x.lineWidth = 3;
+    x.strokeRect(7, 7, 242, 114);
+    x.fillStyle = opts.fg || '#cfd4d2';
+    x.font = 'bold ' + (opts.fontSize || 34) + 'px monospace';
+    x.textAlign = 'center';
+    x.textBaseline = 'middle';
+    var lines = text.split('\n');
+    lines.forEach(function (line, i) {
+      x.fillText(line, 128, 64 + (i - (lines.length - 1) / 2) * (opts.fontSize || 34) * 1.15);
+    });
+    // scuffing
+    for (var s = 0; s < 40; s++) {
+      x.fillStyle = 'rgba(0,0,0,' + (Math.random() * 0.14) + ')';
+      x.fillRect(Math.random() * 256, Math.random() * 128, Math.random() * 20, 1.5);
+    }
+    var t = new THREE.CanvasTexture(c);
+    t.anisotropy = 8;
+    return t;
+  };
+
+  // Hazard stripes, for the airlock hatches.
+  TEX.hazard = function (THREE, size) {
+    var c = canvas(size), x = c.getContext('2d');
+    x.fillStyle = '#c9a227'; x.fillRect(0, 0, size, size);
+    x.fillStyle = '#1b1b1c';
+    var w = size / 6;
+    for (var i = -6; i < 12; i++) {
+      x.save();
+      x.beginPath();
+      x.moveTo(i * w, 0); x.lineTo(i * w + w / 2, 0);
+      x.lineTo(i * w + w / 2 + size, size); x.lineTo(i * w + size, size);
+      x.closePath(); x.fill();
+      x.restore();
+    }
+    for (var s = 0; s < 260; s++) {
+      x.fillStyle = 'rgba(0,0,0,' + (Math.random() * 0.2) + ')';
+      x.fillRect(Math.random() * size, Math.random() * size, Math.random() * 14, 2);
+    }
+    grime(x, size, 8, 0.16);
+    return finish(THREE, c);
+  };
+
+  window.TEX = TEX;
+})();
+
+</script>
+<script>
+/*
+ * Untitled Horror Game — doors and mirrors.
+ *
+ * Doors: every doorway in the facility gets a slab built to its own spec.
+ * They swing (or roll) on interaction and their collider drops out once
+ * they are far enough open to walk through.
+ *
+ * Mirrors: a planar reflector. The scene is re-rendered from a camera
+ * mirrored through the glass, and only while the player is close enough
+ * and facing it — a mirror is a whole extra scene render, so it is not
+ * something to leave running down a corridor.
+ *
+ *   window.FITTINGS.createDoors(THREE, ctx)
+ *   window.FITTINGS.createMirror(THREE, ctx, spec)
+ */
+(function () {
+  'use strict';
+
+  var FITTINGS = {};
+
+  // ===================================================================
+  // Doors
+  // ===================================================================
+  FITTINGS.createDoors = function (THREE, ctx) {
+    var group = ctx.group, MAT = ctx.materials, TEX = window.TEX;
+    var box = ctx.box, cyl = ctx.cyl, solid = ctx.solid, interact = ctx.interact;
+
+    var runtime = {};   // id → { open, angle, target, kind, pivot }
+    var LEAF_H = 2.24;
+
+    function panelledLeaf(w, h, mat, edgeMat) {
+      // A door leaf is a slab plus raised panel mouldings, built around a
+      // local origin at the hinge edge so the pivot maths stays simple.
+      var g = new THREE.Group();
+      var slab = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.045), mat);
+      slab.position.set(w / 2, h / 2, 0);
+      g.add(slab);
+      var pw = w * 0.66, ph = h * 0.32;
+      [h * 0.72, h * 0.32].forEach(function (cy) {
+        var p = new THREE.Mesh(new THREE.BoxGeometry(pw, ph, 0.016), edgeMat || mat);
+        p.position.set(w / 2, cy, 0.03);
+        g.add(p);
+        var p2 = new THREE.Mesh(new THREE.BoxGeometry(pw, ph, 0.016), edgeMat || mat);
+        p2.position.set(w / 2, cy, -0.03);
+        g.add(p2);
+      });
+      return { group: g, slab: slab };
+    }
+
+    function handle(g, w, h, side) {
+      var m = new THREE.MeshStandardMaterial({ color: 0x8c8578, roughness: 0.35, metalness: 0.8 });
+      var hx = side === 'far' ? w - 0.12 : 0.12;
+      [0.045, -0.045].forEach(function (z) {
+        var lever = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.026, 0.026), m);
+        lever.position.set(hx, h * 0.46, z);
+        g.add(lever);
+        var rose = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, 0.014, 10), m);
+        rose.rotation.x = Math.PI / 2;
+        rose.position.set(hx, h * 0.46, z);
+        g.add(rose);
+      });
+    }
+
+    function pushBar(g, w, h) {
+      var m = new THREE.MeshStandardMaterial({ color: 0x9aa0a2, roughness: 0.4, metalness: 0.75 });
+      var bar = new THREE.Mesh(new THREE.BoxGeometry(w * 0.78, 0.07, 0.05), m);
+      bar.position.set(w / 2, h * 0.45, 0.06);
+      g.add(bar);
+      [0.22, 0.78].forEach(function (f) {
+        var br = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.09), m);
+        br.position.set(w * f, h * 0.45, 0.035);
+        g.add(br);
+      });
+    }
+
+    function visionPanel(g, w, h, wired) {
+      var pane = new THREE.Mesh(
+        new THREE.BoxGeometry(w * 0.4, h * 0.26, 0.012),
+        new THREE.MeshStandardMaterial({
+          map: wired, color: 0xb9ccd0, roughness: 0.35,
+          transparent: true, opacity: 0.62
+        })
+      );
+      pane.position.set(w / 2, h * 0.7, 0);
+      g.add(pane);
+      var frame = new THREE.Mesh(
+        new THREE.BoxGeometry(w * 0.46, h * 0.31, 0.052),
+        new THREE.MeshStandardMaterial({ color: 0x4a4f51, roughness: 0.6, metalness: 0.4 })
+      );
+      frame.position.set(w / 2, h * 0.7, -0.004);
+      g.add(frame);
+    }
+
+    var woodLight = TEX.wood(THREE, 512, [128, 96, 60], { knots: 2 });
+    var woodDark = TEX.wood(THREE, 512, [86, 62, 38], { knots: 3 });
+    var steelTex = TEX.metal(THREE, 512, 112, { rust: 8, plate: true });
+    var wiredTex = TEX.wiredGlass(THREE, 256);
+    var hazardTex = TEX.hazard(THREE, 256);
+
+    var MATS = {
+      woodLight: new THREE.MeshStandardMaterial({ map: woodLight, bumpMap: woodLight, bumpScale: 0.12, roughness: 0.72 }),
+      woodDark: new THREE.MeshStandardMaterial({ map: woodDark, bumpMap: woodDark, bumpScale: 0.14, roughness: 0.76 }),
+      steel: new THREE.MeshStandardMaterial({ map: steelTex, bumpMap: steelTex, bumpScale: 0.1, roughness: 0.5, metalness: 0.55 }),
+      hazard: new THREE.MeshStandardMaterial({ map: hazardTex, roughness: 0.65, metalness: 0.2 }),
+      frame: new THREE.MeshStandardMaterial({ color: 0x5a5f60, roughness: 0.7, metalness: 0.25 })
+    };
+
+    // ---- the specification for every doorway in the building ----
+    // hinge: which end of the gap the leaf is hung from. swing: which way
+    // it opens, in radians.
+    var SPECS = {
+      waitingWest: {
+        gap: { axis: 'x', at: -8, min: -1.5, max: 1.5 },
+        style: 'wood', label: 'Door to the west corridor', hinge: 'min', swing: -1.85,
+        sign: null
+      },
+      waitingEast: {
+        gap: { axis: 'x', at: 8, min: -1.5, max: 1.5 },
+        style: 'wood', label: 'Door to the east corridor', hinge: 'max', swing: 1.85
+      },
+      restrooms: {
+        gap: { axis: 'z', at: -1.5, min: -20, max: -17 },
+        style: 'restroom', label: 'Restroom door', hinge: 'min', swing: 1.8,
+        sign: 'REST\nROOMS'
+      },
+      warehouse: {
+        gap: { axis: 'x', at: -48, min: -1.5, max: 1.5 },
+        style: 'industrial', label: 'Warehouse doors', hinge: 'min', swing: -1.9,
+        sign: 'WAREHOUSE'
+      },
+      office: {
+        gap: { axis: 'z', at: -1.5, min: 26, max: 29 },
+        style: 'ripped', label: 'The office doorway'
+      },
+      junction: {
+        gap: { axis: 'x', at: 48, min: -1.5, max: 1.5 },
+        style: 'fire', label: 'Fire door', hinge: 'min', swing: -1.85,
+        sign: 'FIRE DOOR\nKEEP SHUT'
+      },
+      storage: {
+        gap: { axis: 'x', at: 56, min: -1.5, max: 1.5 },
+        style: 'roller', label: 'Storage unit', locked: true, id: 'storageDoor'
+      },
+      assembly: {
+        gap: { axis: 'z', at: 46, min: 48, max: 51 },
+        style: 'barricaded', label: 'Assembly'
+      },
+      airlockIn: {
+        gap: { axis: 'x', at: 58, min: 51, max: 54 },
+        style: 'hatch', label: 'Airlock hatch', hinge: 'min', swing: -1.7
+      },
+      airlockOut: {
+        gap: { axis: 'x', at: 62, min: 51, max: 54 },
+        style: 'hatch', label: 'Chamber hatch', hinge: 'max', swing: 1.7,
+        sign: null
+      },
+      supply: {
+        gap: { axis: 'z', at: 58, min: 63.5, max: 65.5 },
+        style: 'utility', label: 'Supply storage door', hinge: 'min', swing: 1.75,
+        sign: 'SUPPLY'
+      },
+      bath2: {
+        gap: { axis: 'z', at: 58, min: 70, max: 72 },
+        style: 'restroom', label: 'Restroom door', hinge: 'min', swing: 1.75,
+        sign: 'REST\nROOM'
+      }
+    };
+
+    // A leaf is modelled along its local +X with its faces on local Z, so
+    // the pivot has to turn it to lie *in* the doorway. For a wall plane at
+    // constant x the leaf must run along Z; for one at constant z, along X.
+    function hingeBase(axis, atMin) {
+      if (axis === 'x') return atMin ? -Math.PI / 2 : Math.PI / 2;
+      return atMin ? 0 : Math.PI;
+    }
+
+    function buildLeaf(key, spec) {
+      var gap = spec.gap;
+      var w = gap.max - gap.min;
+      var id = spec.id || ('door_' + key);
+
+      // ---- doorways with no leaf ----
+      if (spec.style === 'ripped') {
+        // The office door was torn off; only the frame and hinges remain.
+        var hy = [0.5, 1.2, 1.95];
+        hy.forEach(function (y) {
+          var hinge = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.14, 0.05), MATS.frame);
+          hinge.position.set(gap.min + 0.08, y, gap.at);
+          hinge.rotation.z = (Math.random() - 0.5) * 0.5;
+          group.add(hinge);
+        });
+        // splinters where the frame gave way
+        for (var s = 0; s < 9; s++) {
+          var sp = new THREE.Mesh(new THREE.BoxGeometry(0.05 + Math.random() * 0.13, 0.04, 0.05), MATS.woodDark);
+          sp.position.set(gap.min + 0.06 + Math.random() * 0.2, 0.3 + Math.random() * 1.9, gap.at + (Math.random() - 0.5) * 0.14);
+          sp.rotation.set(Math.random(), Math.random(), Math.random());
+          group.add(sp);
+        }
+        runtime[id] = { open: true, angle: 0, target: 0, kind: 'none' };
+        return;
+      }
+
+      if (spec.style === 'barricaded') {
+        // A steel door standing open, with the planks nailed across it.
+        var leaf = new THREE.Mesh(new THREE.BoxGeometry(w * 0.95, LEAF_H, 0.06), MATS.steel);
+        leaf.position.set(gap.min + w * 0.1, LEAF_H / 2, gap.at - 0.55);
+        leaf.rotation.y = 1.25;
+        group.add(leaf);
+        runtime[id] = { open: true, angle: 0, target: 0, kind: 'none' };
+        return;
+      }
+
+      if (spec.style === 'roller') {
+        // A roller shutter: it lifts rather than swings.
+        var slats = new THREE.Group();
+        for (var r = 0; r < 12; r++) {
+          var slat = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.17, w + 0.1), MATS.steel);
+          slat.position.set(0, 0.1 + r * 0.185, 0);
+          slats.add(slat);
+        }
+        var housing = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.26, w + 0.3), MATS.frame);
+        housing.position.set(gap.at, LEAF_H + 0.16, (gap.min + gap.max) / 2);
+        group.add(housing);
+        slats.position.set(gap.at, 0, (gap.min + gap.max) / 2);
+        group.add(slats);
+        var lock = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.05, 10),
+          new THREE.MeshStandardMaterial({ color: 0xb0a578, roughness: 0.3, metalness: 0.85 }));
+        lock.rotation.z = Math.PI / 2;
+        lock.position.set(gap.at - 0.07, 0.95, (gap.min + gap.max) / 2);
+        group.add(lock);
+        interact(slats.children[6], { kind: 'door', id: id, doorId: id, label: spec.label, verb: 'Open', locked: true });
+        solid(gap.at - 0.12, gap.min, gap.at + 0.12, gap.max, id);
+        runtime[id] = { open: false, angle: 0, target: 0, kind: 'roll', node: slats, travel: 2.3 };
+        return;
+      }
+
+      // ---- hinged leaves ----
+      var mat, edge, leafW = w - 0.06;
+      var isDouble = spec.style === 'industrial';
+      if (isDouble) leafW = (w - 0.08) / 2;
+
+      if (spec.style === 'wood') { mat = MATS.woodLight; edge = MATS.woodDark; }
+      else if (spec.style === 'restroom') { mat = MATS.woodDark; edge = MATS.woodDark; }
+      else if (spec.style === 'utility') { mat = MATS.steel; edge = MATS.steel; }
+      else if (spec.style === 'fire') { mat = MATS.steel; edge = MATS.steel; }
+      else if (spec.style === 'hatch') { mat = MATS.hazard; edge = MATS.hazard; }
+      else { mat = MATS.steel; edge = MATS.steel; }
+
+      var leaves = [];
+      var count = isDouble ? 2 : 1;
+      for (var li = 0; li < count; li++) {
+        var built = panelledLeaf(leafW, LEAF_H, mat, edge);
+        var g = built.group;
+
+        // per-style fittings
+        if (spec.style === 'wood') handle(g, leafW, LEAF_H, 'far');
+        if (spec.style === 'restroom') {
+          handle(g, leafW, LEAF_H, 'far');
+          // louvre vent along the bottom rail
+          for (var v = 0; v < 5; v++) {
+            var louvre = new THREE.Mesh(new THREE.BoxGeometry(leafW * 0.42, 0.022, 0.06), MATS.frame);
+            louvre.position.set(leafW / 2, 0.2 + v * 0.045, 0.012);
+            louvre.rotation.x = -0.5;
+            g.add(louvre);
+          }
+        }
+        if (spec.style === 'industrial') { pushBar(g, leafW, LEAF_H); visionPanel(g, leafW, LEAF_H, wiredTex); }
+        if (spec.style === 'fire') { pushBar(g, leafW, LEAF_H); visionPanel(g, leafW, LEAF_H, wiredTex); }
+        if (spec.style === 'utility') handle(g, leafW, LEAF_H, 'far');
+        if (spec.style === 'hatch') {
+          // a wheel handle and a ring of dogging bolts
+          var wheel = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.022, 8, 20),
+            new THREE.MeshStandardMaterial({ color: 0x7d8486, roughness: 0.45, metalness: 0.75 }));
+          wheel.position.set(leafW * 0.62, LEAF_H * 0.5, 0.05);
+          g.add(wheel);
+          for (var sp2 = 0; sp2 < 4; sp2++) {
+            var spoke = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.02, 0.02),
+              new THREE.MeshStandardMaterial({ color: 0x7d8486, roughness: 0.45, metalness: 0.75 }));
+            spoke.position.set(leafW * 0.62, LEAF_H * 0.5, 0.05);
+            spoke.rotation.z = sp2 * Math.PI / 4;
+            g.add(spoke);
+          }
+          for (var d = 0; d < 8; d++) {
+            var bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.03, 8),
+              new THREE.MeshStandardMaterial({ color: 0x5c6163, roughness: 0.5, metalness: 0.7 }));
+            bolt.rotation.x = Math.PI / 2;
+            bolt.position.set(0.07 + (d % 4) * (leafW - 0.14) / 3, d < 4 ? 0.1 : LEAF_H - 0.1, 0.03);
+            g.add(bolt);
+          }
+        }
+        if (spec.sign) {
+          var signMat = new THREE.MeshStandardMaterial({
+            map: TEX.sign(THREE, spec.sign, { fontSize: spec.sign.indexOf('\n') > -1 ? 34 : 26 }),
+            roughness: 0.6, metalness: 0.2
+          });
+          var plate = new THREE.Mesh(new THREE.BoxGeometry(leafW * 0.5, leafW * 0.25, 0.008), signMat);
+          plate.position.set(leafW / 2, LEAF_H * 0.86, 0.026);
+          g.add(plate);
+        }
+
+        // place the pivot at the hinge edge
+        var hingeAtMin = (spec.hinge === 'min');
+        var pivot = new THREE.Group();
+        var swing = spec.swing;
+        var offset, ry0;
+
+        if (isDouble) {
+          // two leaves meeting in the middle, hinged at opposite jambs
+          var atMin = (li === 0);
+          offset = atMin ? gap.min + 0.02 : gap.max - 0.02;
+          ry0 = hingeBase(gap.axis, atMin);
+          swing = atMin ? spec.swing : -spec.swing;
+        } else {
+          offset = hingeAtMin ? gap.min + 0.03 : gap.max - 0.03;
+          ry0 = hingeBase(gap.axis, hingeAtMin);
+        }
+
+        if (gap.axis === 'x') pivot.position.set(gap.at, 0, offset);
+        else pivot.position.set(offset, 0, gap.at);
+        pivot.rotation.y = ry0;
+        pivot.add(g);
+        group.add(pivot);
+        leaves.push({ pivot: pivot, base: pivot.rotation.y, swing: swing });
+        interact(built.slab, { kind: 'door', id: id, doorId: id, label: spec.label, verb: 'Open' });
+      }
+
+      // frame lining
+      var lining = 0.06;
+      if (gap.axis === 'x') {
+        box(0.26, LEAF_H + 0.06, lining, MATS.frame, gap.at, (LEAF_H + 0.06) / 2, gap.min + lining / 2);
+        box(0.26, LEAF_H + 0.06, lining, MATS.frame, gap.at, (LEAF_H + 0.06) / 2, gap.max - lining / 2);
+        box(0.26, lining, gap.max - gap.min, MATS.frame, gap.at, LEAF_H + 0.03, (gap.min + gap.max) / 2);
+      } else {
+        box(lining, LEAF_H + 0.06, 0.26, MATS.frame, gap.min + lining / 2, (LEAF_H + 0.06) / 2, gap.at);
+        box(lining, LEAF_H + 0.06, 0.26, MATS.frame, gap.max - lining / 2, (LEAF_H + 0.06) / 2, gap.at);
+        box(gap.max - gap.min, lining, 0.26, MATS.frame, (gap.min + gap.max) / 2, LEAF_H + 0.03, gap.at);
+      }
+
+      if (gap.axis === 'x') solid(gap.at - 0.1, gap.min, gap.at + 0.1, gap.max, id);
+      else solid(gap.min, gap.at - 0.1, gap.max, gap.at + 0.1, id);
+
+      runtime[id] = { open: false, angle: 0, target: 0, kind: 'swing', leaves: leaves };
+    }
+
+    Object.keys(SPECS).forEach(function (key) { buildLeaf(key, SPECS[key]); });
+
+    function toggle(id) {
+      var d = runtime[id];
+      if (!d || d.kind === 'none') return null;
+      d.target = d.target > 0.5 ? 0 : 1;
+      d.open = d.target > 0.5;
+      return d.open;
+    }
+    function isOpen(id) {
+      var d = runtime[id];
+      // Not a door. Colliders like the assembly barricade and the holding
+      // cage carry ids too, and must never be waved through here.
+      if (!d) return false;
+      if (d.kind === 'none') return true;
+      return d.angle > 0.45;
+    }
+
+    function update(dt) {
+      Object.keys(runtime).forEach(function (id) {
+        var d = runtime[id];
+        if (d.kind === 'none') return;
+        if (Math.abs(d.angle - d.target) < 0.001) return;
+        d.angle += (d.target - d.angle) * (1 - Math.exp(-4.5 * dt));
+        if (d.kind === 'swing') {
+          for (var i = 0; i < d.leaves.length; i++) {
+            var L = d.leaves[i];
+            L.pivot.rotation.y = L.base + L.swing * d.angle;
+          }
+        } else if (d.kind === 'roll') {
+          d.node.position.y = d.angle * d.travel;
+        }
+      });
+    }
+
+    return { toggle: toggle, isOpen: isOpen, update: update, runtime: runtime };
+  };
+
+  // ===================================================================
+  // Mirrors
+  // ===================================================================
+  FITTINGS.createMirror = function (THREE, ctx, spec) {
+    var renderer = ctx.renderer, scene = ctx.scene, camera = ctx.camera, group = ctx.group;
+
+    var target = new THREE.WebGLRenderTarget(spec.res || 512, spec.res || 512, {
+      minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter
+    });
+    // The renderer converts to the target texture's colour space on write.
+    // Left at the default the reflection is written linear and then shown
+    // as though it were sRGB, which reads as a near-black mirror.
+    if (THREE.SRGBColorSpace) target.texture.colorSpace = THREE.SRGBColorSpace;
+
+    var textureMatrix = new THREE.Matrix4();
+    var material = new THREE.ShaderMaterial({
+      uniforms: {
+        tDiffuse: { value: target.texture },
+        textureMatrix: { value: textureMatrix },
+        tint: { value: new THREE.Color(spec.tint || 0xbcc6c8) },
+        grime: { value: spec.grime === undefined ? 0.16 : spec.grime }
+      },
+      vertexShader: [
+        'uniform mat4 textureMatrix;',
+        'varying vec4 vUvR;',
+        'varying vec2 vUv;',
+        'void main() {',
+        '  vUv = uv;',
+        '  vUvR = textureMatrix * vec4( position, 1.0 );',
+        '  gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );',
+        '}'
+      ].join('\n'),
+      fragmentShader: [
+        'uniform sampler2D tDiffuse;',
+        'uniform vec3 tint;',
+        'uniform float grime;',
+        'varying vec4 vUvR;',
+        'varying vec2 vUv;',
+        'float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }',
+        'void main() {',
+        '  vec4 base = texture2DProj( tDiffuse, vUvR );',
+        // old silvering: dirt toward the edges, speckled desilvering
+        '  vec2 c = abs(vUv - 0.5) * 2.0;',
+        '  float edge = smoothstep(0.55, 1.0, max(c.x, c.y));',
+        '  float spots = smoothstep(0.82, 1.0, hash(floor(vUv * 90.0)));',
+        // Silvered glass returns most of the light, so lift it back up —
+        // the raw reflection reads far darker than the room itself.
+        '  vec3 col = base.rgb * tint;',
+        '  col = mix(col, col * 0.45, edge * grime * 1.8);',
+        '  col = mix(col, vec3(0.05, 0.055, 0.06), spots * 0.30);',
+        '  gl_FragColor = vec4(col, 1.0);',
+        '}'
+      ].join('\n')
+    });
+
+    var geo = new THREE.PlaneGeometry(spec.width, spec.height);
+    var mesh = new THREE.Mesh(geo, material);
+    mesh.position.set(spec.x, spec.y, spec.z);
+    mesh.rotation.y = spec.ry || 0;
+    group.add(mesh);
+
+    var virtualCamera = new THREE.PerspectiveCamera();
+    var reflectorPos = new THREE.Vector3();
+    var cameraPos = new THREE.Vector3();
+    var normal = new THREE.Vector3();
+    var view = new THREE.Vector3();
+    var lookAtPosition = new THREE.Vector3(0, 0, -1);
+    var targetPos = new THREE.Vector3();
+    var rotationMatrix = new THREE.Matrix4();
+    var toCamera = new THREE.Vector3();
+    var reflectorPlane = new THREE.Plane();
+    var clipPlane = new THREE.Vector4();
+    var q = new THREE.Vector4();
+    var CLIP_BIAS = 0.003;
+
+    var RANGE = spec.range || 9;
+
+    function update() {
+      mesh.updateMatrixWorld();
+      reflectorPos.setFromMatrixPosition(mesh.matrixWorld);
+      cameraPos.setFromMatrixPosition(camera.matrixWorld);
+
+      // A mirror costs a whole extra render of the scene, so only pay for
+      // it when the player is near it and on the reflective side.
+      toCamera.subVectors(cameraPos, reflectorPos);
+      if (toCamera.lengthSq() > RANGE * RANGE) return;
+
+      rotationMatrix.extractRotation(mesh.matrixWorld);
+      normal.set(0, 0, 1).applyMatrix4(rotationMatrix);
+      if (toCamera.dot(normal) < 0) return;
+
+      view.subVectors(reflectorPos, cameraPos);
+      view.reflect(normal).negate().add(reflectorPos);
+
+      rotationMatrix.extractRotation(camera.matrixWorld);
+      lookAtPosition.set(0, 0, -1).applyMatrix4(rotationMatrix).add(cameraPos);
+      targetPos.subVectors(reflectorPos, lookAtPosition);
+      targetPos.reflect(normal).negate().add(reflectorPos);
+
+      virtualCamera.position.copy(view);
+      virtualCamera.up.set(0, 1, 0).applyMatrix4(rotationMatrix).reflect(normal);
+      virtualCamera.lookAt(targetPos);
+      virtualCamera.far = camera.far;
+      virtualCamera.near = camera.near;
+      virtualCamera.fov = camera.fov;
+      virtualCamera.aspect = 1;
+      virtualCamera.updateProjectionMatrix();
+      virtualCamera.updateMatrixWorld();
+
+      textureMatrix.set(
+        0.5, 0.0, 0.0, 0.5,
+        0.0, 0.5, 0.0, 0.5,
+        0.0, 0.0, 0.5, 0.5,
+        0.0, 0.0, 0.0, 1.0
+      );
+      textureMatrix.multiply(virtualCamera.projectionMatrix);
+      textureMatrix.multiply(virtualCamera.matrixWorldInverse);
+      textureMatrix.multiply(mesh.matrixWorld);
+
+      // Oblique near-plane clipping. The mirrored camera sits behind the
+      // wall the mirror hangs on, so without skewing the near plane onto
+      // the mirror surface it renders the back of that wall and the
+      // reflection is nothing but a dark slab.
+      reflectorPlane.setFromNormalAndCoplanarPoint(normal, reflectorPos);
+      reflectorPlane.applyMatrix4(virtualCamera.matrixWorldInverse);
+      clipPlane.set(reflectorPlane.normal.x, reflectorPlane.normal.y,
+        reflectorPlane.normal.z, reflectorPlane.constant);
+
+      var pm = virtualCamera.projectionMatrix;
+      q.x = (Math.sign(clipPlane.x) + pm.elements[8]) / pm.elements[0];
+      q.y = (Math.sign(clipPlane.y) + pm.elements[9]) / pm.elements[5];
+      q.z = -1.0;
+      q.w = (1.0 + pm.elements[10]) / pm.elements[14];
+      clipPlane.multiplyScalar(2.0 / clipPlane.dot(q));
+      pm.elements[2] = clipPlane.x;
+      pm.elements[6] = clipPlane.y;
+      pm.elements[10] = clipPlane.z + 1.0 - CLIP_BIAS;
+      pm.elements[14] = clipPlane.w;
+
+      mesh.visible = false;
+      var prevTarget = renderer.getRenderTarget();
+      renderer.setRenderTarget(target);
+      renderer.clear();
+      renderer.render(scene, virtualCamera);
+      renderer.setRenderTarget(prevTarget);
+      mesh.visible = true;
+    }
+
+    return { mesh: mesh, update: update };
+  };
+
+  window.FITTINGS = FITTINGS;
+})();
+
+</script>
+<script>
+/*
  * Untitled Horror Game — the facility.
  *
  * Floorplan, geometry and props. Walls are generated from room rectangles
@@ -531,7 +1380,7 @@
     return out;
   }
 
-  window.buildLevel = function buildLevel(THREE, scene) {
+  window.buildLevel = function buildLevel(THREE, scene, renderer, camera) {
     var colliders = [];
     var interactables = [];
     var updates = [];
@@ -540,80 +1389,35 @@
     var group = new THREE.Group();
     scene.add(group);
 
-    // ---------------- Textures ----------------
-    function noiseTexture(size, base, speckle) {
-      var c = document.createElement('canvas');
-      c.width = c.height = size;
-      var x = c.getContext('2d');
-      x.fillStyle = 'rgb(' + base + ',' + base + ',' + base + ')';
-      x.fillRect(0, 0, size, size);
-      var octs = [[6, 16, 0.5], [16, 12, 0.4], [48, 8, 0.35], [128, 5, 0.3]];
-      for (var o = 0; o < octs.length; o++) {
-        var cells = octs[o][0], amp = octs[o][1], al = octs[o][2];
-        var step = size / cells;
-        for (var yy = 0; yy < cells; yy++) {
-          for (var xx = 0; xx < cells; xx++) {
-            var v = Math.max(0, Math.min(255, base + (Math.random() * 2 - 1) * amp));
-            x.fillStyle = 'rgba(' + v + ',' + v + ',' + v + ',' + al + ')';
-            x.fillRect(xx * step, yy * step, step + 1, step + 1);
-          }
-        }
-      }
-      for (var s = 0; s < speckle; s++) {
-        var v2 = Math.max(0, Math.min(255, base + (Math.random() < 0.6 ? -34 : 26)));
-        x.fillStyle = 'rgba(' + v2 + ',' + v2 + ',' + v2 + ',' + (Math.random() * 0.5 + 0.2) + ')';
-        x.beginPath();
-        x.arc(Math.random() * size, Math.random() * size, Math.random() * 1.6 + 0.2, 0, Math.PI * 2);
-        x.fill();
-      }
-      var t = new THREE.CanvasTexture(c);
-      t.wrapS = t.wrapT = THREE.RepeatWrapping;
-      t.anisotropy = 4;
-      return t;
-    }
-
-    function tileTexture(size) {
-      var c = document.createElement('canvas');
-      c.width = c.height = size;
-      var x = c.getContext('2d');
-      x.fillStyle = '#b9bcbb'; x.fillRect(0, 0, size, size);
-      var n = 8, step = size / n;
-      x.strokeStyle = '#6c706f'; x.lineWidth = 3;
-      for (var i = 0; i <= n; i++) {
-        x.beginPath(); x.moveTo(i * step, 0); x.lineTo(i * step, size); x.stroke();
-        x.beginPath(); x.moveTo(0, i * step); x.lineTo(size, i * step); x.stroke();
-      }
-      for (var s = 0; s < 900; s++) {
-        x.fillStyle = 'rgba(0,0,0,' + (Math.random() * 0.09) + ')';
-        x.fillRect(Math.random() * size, Math.random() * size, 2, 2);
-      }
-      var t = new THREE.CanvasTexture(c);
-      t.wrapS = t.wrapT = THREE.RepeatWrapping;
-      return t;
-    }
-
-    var texConcrete = noiseTexture(512, 128, 2400);
-    var texFloor = noiseTexture(512, 104, 3000);
-    var texTile = tileTexture(512);
-    var texMetal = noiseTexture(256, 96, 900);
-    var texCarpet = noiseTexture(256, 74, 4200);
+    // ---------------- Surfaces ----------------
+    var T = window.TEX;
+    var texConcrete   = T.concrete(THREE, 512, 128, { formwork: true, cracks: 4, repeat: [3, 1.4] });
+    var texConcreteFl = T.concrete(THREE, 512, 104, { speckle: 3200, cracks: 5, grime: 9, repeat: [8, 8] });
+    var texCeiling    = T.concrete(THREE, 512, 96,  { speckle: 1500, cracks: 2, grime: 7, repeat: [6, 6] });
+    var texTile       = T.tile(THREE, 512, { repeat: [4, 3] });
+    var texTileFloor  = T.tile(THREE, 512, { cells: 10, grime: 14, repeat: [6, 6] });
+    var texMetal      = T.metal(THREE, 512, 108, { rust: 7, repeat: [2, 2] });
+    var texCarpet     = T.carpet(THREE, 512, [78, 84, 92], { repeat: [10, 10] });
+    var texWoodWall   = T.wood(THREE, 512, [96, 72, 46], { knots: 3, repeat: [3, 1.2] });
+    var texCounter    = T.wood(THREE, 512, [140, 108, 68], { knots: 1, repeat: [1, 1] });
+    var texDeskWood   = T.wood(THREE, 512, [72, 52, 32], { knots: 2, repeat: [2, 1] });
 
     var MAT = {
-      wall: new THREE.MeshStandardMaterial({ color: 0x9aa1a4, map: texConcrete, bumpMap: texConcrete, bumpScale: 0.3, roughness: 0.95 }),
-      wallHall: new THREE.MeshStandardMaterial({ color: 0x8e9598, map: texConcrete, bumpMap: texConcrete, bumpScale: 0.3, roughness: 0.95 }),
-      wallTile: new THREE.MeshStandardMaterial({ color: 0xa9adad, map: texTile, roughness: 0.35 }),
-      wallLab: new THREE.MeshStandardMaterial({ color: 0xa2adb0, map: texConcrete, bumpScale: 0.2, roughness: 0.6 }),
-      wallWood: new THREE.MeshStandardMaterial({ color: 0x6b5741, map: texConcrete, bumpMap: texConcrete, bumpScale: 0.25, roughness: 0.8 }),
-      floor: new THREE.MeshStandardMaterial({ color: 0x8b9295, map: texFloor, bumpMap: texFloor, bumpScale: 0.35, roughness: 0.94 }),
-      carpet: new THREE.MeshStandardMaterial({ color: 0x565c63, map: texCarpet, bumpMap: texCarpet, bumpScale: 0.5, roughness: 1 }),
-      tileFloor: new THREE.MeshStandardMaterial({ color: 0x9fa3a3, map: texTile, roughness: 0.4 }),
-      ceiling: new THREE.MeshStandardMaterial({ color: 0x7f868a, map: texConcrete, roughness: 1 }),
-      metal: new THREE.MeshStandardMaterial({ color: 0x6f7679, map: texMetal, roughness: 0.55, metalness: 0.55 }),
+      wall: new THREE.MeshStandardMaterial({ color: 0x9aa1a4, map: texConcrete, bumpMap: texConcrete, bumpScale: 0.45, roughness: 0.95 }),
+      wallHall: new THREE.MeshStandardMaterial({ color: 0x8e9598, map: texConcrete, bumpMap: texConcrete, bumpScale: 0.45, roughness: 0.95 }),
+      wallTile: new THREE.MeshStandardMaterial({ color: 0xa9adad, map: texTile, bumpMap: texTile, bumpScale: 0.18, roughness: 0.32, metalness: 0.03 }),
+      wallLab: new THREE.MeshStandardMaterial({ color: 0xa2adb0, map: texConcrete, bumpMap: texConcrete, bumpScale: 0.22, roughness: 0.55 }),
+      wallWood: new THREE.MeshStandardMaterial({ color: 0x8f7a5e, map: texWoodWall, bumpMap: texWoodWall, bumpScale: 0.2, roughness: 0.78 }),
+      floor: new THREE.MeshStandardMaterial({ color: 0x8b9295, map: texConcreteFl, bumpMap: texConcreteFl, bumpScale: 0.5, roughness: 0.94 }),
+      carpet: new THREE.MeshStandardMaterial({ color: 0x6a7079, map: texCarpet, bumpMap: texCarpet, bumpScale: 0.65, roughness: 1 }),
+      tileFloor: new THREE.MeshStandardMaterial({ color: 0x9fa3a3, map: texTileFloor, bumpMap: texTileFloor, bumpScale: 0.22, roughness: 0.38, metalness: 0.03 }),
+      ceiling: new THREE.MeshStandardMaterial({ color: 0x7f868a, map: texCeiling, bumpMap: texCeiling, bumpScale: 0.3, roughness: 1 }),
+      metal: new THREE.MeshStandardMaterial({ color: 0x6f7679, map: texMetal, bumpMap: texMetal, bumpScale: 0.14, roughness: 0.52, metalness: 0.55 }),
       darkMetal: new THREE.MeshStandardMaterial({ color: 0x33383b, roughness: 0.6, metalness: 0.5 }),
       bulkhead: new THREE.MeshStandardMaterial({ color: 0x878d90, roughness: 0.85 }),
       wood: new THREE.MeshStandardMaterial({ color: 0x7a5c3c, roughness: 0.75 }),
-      darkWood: new THREE.MeshStandardMaterial({ color: 0x4a3a28, roughness: 0.8 }),
-      counter: new THREE.MeshStandardMaterial({ color: 0x8d7a5c, roughness: 0.55 }),
+      darkWood: new THREE.MeshStandardMaterial({ color: 0x6a5238, map: texDeskWood, bumpMap: texDeskWood, bumpScale: 0.14, roughness: 0.78 }),
+      counter: new THREE.MeshStandardMaterial({ color: 0xa08a66, map: texCounter, bumpMap: texCounter, bumpScale: 0.1, roughness: 0.45 }),
       plastic: new THREE.MeshStandardMaterial({ color: 0x2c2f31, roughness: 0.7 }),
       fabric: new THREE.MeshStandardMaterial({ color: 0x3d4550, roughness: 0.95 }),
       paper: new THREE.MeshStandardMaterial({ color: 0xd8d4c6, roughness: 0.95 }),
@@ -691,7 +1495,6 @@
       c.receiveShadow = true;
       group.add(c);
     });
-    [MAT.floor, MAT.carpet, MAT.tileFloor].forEach(function (m) { if (m.map) m.map.repeat.set(8, 8); });
 
     // ---------------- Walls ----------------
     // Wall planes are merged across rooms before they are built. Building
@@ -1062,18 +1865,21 @@
         });
         solid(x - 0.28, z - 0.28, x + 0.28, z + 0.28);
       }
-      // Both doorways sit in the band z = -1.5 .. 1.5, so nothing is placed
-      // there: the walk to either corridor has to stay clear.
-      for (var i = 0; i < 3; i++) {
-        waitingChair(-6.6, 3.0 + i * 1.35, Math.PI / 2);
-        waitingChair(-4.9, 3.0 + i * 1.35, -Math.PI / 2);
-        waitingChair(6.6, 3.0 + i * 1.35, -Math.PI / 2);
-        waitingChair(4.9, 3.0 + i * 1.35, Math.PI / 2);
-      }
-      waitingChair(-6.6, -3.4, Math.PI / 2);
-      waitingChair(-6.6, -4.8, Math.PI / 2);
-      waitingChair(6.6, -3.4, -Math.PI / 2);
-      waitingChair(6.6, -4.8, -Math.PI / 2);
+      // One line, all facing the reception island — no facing pairs.
+      // Both corridor doorways sit in the band z = -1.5 .. 1.5 and the
+      // entrance is at x = -1.6 .. 1.6, so the row leaves a walkway down
+      // the middle and stops well short of either hallway mouth.
+      var ROW_Z = 4.5;
+      [-6.5, -5.2, -3.9, -2.6].forEach(function (x) { waitingChair(x, ROW_Z, Math.PI); });
+      [2.6, 3.9, 5.2, 6.5].forEach(function (x) { waitingChair(x, ROW_Z, Math.PI); });
+
+      // A single tipped-over chair, out of the way against the west wall.
+      (function () {
+        var t = box(0.5, 0.07, 0.5, MAT.fabric, -7.0, 0.26, 5.9, 0.5);
+        t.rotation.z = Math.PI / 2.1;
+        box(0.5, 0.5, 0.07, MAT.fabric, -6.72, 0.5, 5.9, 0.5);
+        solid(-7.3, 5.6, -6.5, 6.2);
+      })();
 
       // ---- shelves and the wall telephone ----
       function bookshelf(x, z, ry) {
@@ -1128,7 +1934,8 @@
     // RESTROOMS
     // ===================================================================
     (function restrooms() {
-      batten(-18.5, -5.5, WALL_H, 0xdfe8ea, 6, 10, 'strobe');
+      batten(-18.5, -5.5, WALL_H, 0xdfe8ea, 7, 11, 'buzz');
+      batten(-18.5, -8.2, WALL_H, 0xdfe8ea, 5, 9, 'strobe');
       for (var s = 0; s < 3; s++) {
         var sx = -21.2 + s * 1.7;
         box(0.06, 1.9, 1.5, MAT.metal, sx + 0.85, 1.15, -7.8);
@@ -1247,11 +2054,6 @@
     // ===================================================================
     (function storageUnit() {
       batten(60, 0, WALL_H, 0xd8e2e4, 5, 11, 'dying');
-
-      var door = box(0.14, 2.25, 3.0, MAT.metal, 56, 1.125, 0);
-      interact(door, { id: 'storageDoor', label: 'Storage unit', verb: 'Open' });
-      solid(55.9, -1.5, 56.1, 1.5, 'storageDoor');
-      window.__storageDoorMesh = door;
 
       for (var s = 0; s < 3; s++) box(0.4, 0.06, 3.4, MAT.metal, 63.6, 0.6 + s * 0.7, -2);
       solid(63.35, -3.75, 63.85, -0.25);
@@ -1434,8 +2236,34 @@
       box(0.06, 1.9, 1.4, MAT.metal, 71.2, 1.15, 61.4);
       solid(71.17, 60.7, 71.23, 62.1);
       box(0.44, 0.42, 0.34, new THREE.MeshStandardMaterial({ color: 0xd6d8d4, roughness: 0.35 }), 70.6, 0.21, 61.6);
-      box(0.5, 0.16, 0.4, new THREE.MeshStandardMaterial({ color: 0xd6d8d4, roughness: 0.3 }), 72.6, 0.86, 59.2);
+      box(0.44, 0.16, 0.5, new THREE.MeshStandardMaterial({ color: 0xd6d8d4, roughness: 0.3 }), 73.6, 0.86, 59.2);
     })();
+
+    // ---------------- Doors ----------------
+    // Every doorway gets a leaf built to its own spec; see fittings.js.
+    var fittingsCtx = {
+      group: group, materials: MAT, scene: scene, renderer: renderer, camera: camera,
+      box: box, cyl: cyl, solid: solid, interact: interact
+    };
+    var doors = window.FITTINGS.createDoors(THREE, fittingsCtx);
+    updates.push(function (dt) { doors.update(dt); });
+    window.__storageDoorMesh = null;
+
+    // ---------------- Mirrors ----------------
+    var mirrors = [];
+    // Above the restroom basins: one continuous sheet, not three panes.
+    mirrors.push(window.FITTINGS.createMirror(THREE, fittingsCtx, {
+      x: -15.14, y: 1.45, z: -5.2, ry: -Math.PI / 2,
+      width: 4.4, height: 1.15, res: 512, range: 9, grime: 0.18
+    }));
+    // The second restroom, off the extermination chamber.
+    mirrors.push(window.FITTINGS.createMirror(THREE, fittingsCtx, {
+      x: 73.86, y: 1.45, z: 59.2, ry: -Math.PI / 2,
+      width: 1.5, height: 1.0, res: 384, range: 8, grime: 0.3
+    }));
+    updates.push(function () {
+      for (var i = 0; i < mirrors.length; i++) mirrors[i].update();
+    });
 
     // ---------------- Flicker ----------------
     function flickerLevel(style, t, seed) {
@@ -1498,6 +2326,9 @@
       updates: updates,
       roomAt: roomAt,
       cullLights: cullLights,
+      toggleDoor: doors.toggle,
+      isDoorOpen: doors.isOpen,
+      doorIds: function () { return Object.keys(doors.runtime); },
       lightCount: pointLights.length,
       spawn: { x: 0, z: 5.6, yaw: 0 }
     };
@@ -1667,6 +2498,12 @@
       dryFire: function () { blip(1800, 0.05, 'square', 0.05); },
       pickup: function () { blip(660, 0.1, 'sine', 0.09, 990); },
       locked: function () { blip(180, 0.13, 'square', 0.09, 120); },
+      doorMove: function (opening) {
+        // a dry hinge, then the latch
+        burst(0.55, 900, 0.075, 320);
+        blip(opening ? 210 : 170, 0.5, 'sawtooth', 0.035, opening ? 320 : 120);
+        setTimeout(function () { burst(0.07, 2400, 0.09, 700); }, opening ? 520 : 470);
+      },
       unlock: function () { blip(420, 0.16, 'sine', 0.1, 720); },
       ui: function () { blip(880, 0.045, 'square', 0.04); },
       shortCircuit: function () { burst(0.7, 6000, 0.5, 120); blip(90, 0.5, 'sawtooth', 0.2, 30); },
@@ -1702,7 +2539,7 @@
     var camera = new THREE.PerspectiveCamera(74, window.innerWidth / window.innerHeight, 0.05, 90);
 
     // ---------------- Level ----------------
-    var level = window.buildLevel(THREE, scene);
+    var level = window.buildLevel(THREE, scene, renderer, camera);
     var colliders = level.colliders;
 
     camera.position.set(level.spawn.x, STANCE.stand.eye, level.spawn.z);
@@ -1879,7 +2716,7 @@
       var r = PLAYER_RADIUS;
       for (var i = 0; i < colliders.length; i++) {
         var c = colliders[i];
-        if (c.id === 'storageDoor' && state.storageOpen) continue;
+        if (c.id && level.isDoorOpen(c.id)) continue;
         // The barricade has a gap you can only take on your belly.
         if (c.id === 'barricade' && state.stance === 'crawl') continue;
         if (nx + r < c.x1 || nx - r > c.x2 || nz + r < c.z1 || nz - r > c.z2) continue;
@@ -1928,9 +2765,9 @@
     function promptFor(obj) {
       if (!obj) return null;
       var d = obj.userData.interact;
-      if (d.id === 'storageDoor') {
-        if (state.storageOpen) return null;
-        return state.hasKey ? 'Unlock storage unit' : 'Locked — needs a key';
+      if (d.kind === 'door') {
+        if (d.locked && !state.storageOpen) return state.hasKey ? 'Unlock storage unit' : 'Locked — needs a key';
+        return (level.isDoorOpen(d.doorId) ? 'Close ' : 'Open ') + d.label.toLowerCase();
       }
       return d.verb + ' ' + d.label.toLowerCase();
     }
@@ -1939,6 +2776,25 @@
       if (!focused || !active) return;
       var d = focused.userData.interact;
       var say = ui.onMessage || function () {};
+      if (d.kind === 'door') {
+        if (d.locked && !state.storageOpen) {
+          if (!state.hasKey) {
+            if (audio) audio.locked();
+            say('Locked. There is a keyhole, and no key in it.');
+            return;
+          }
+          state.storageOpen = true;
+          if (audio) audio.unlock();
+          say('The lock turns. The shutter rolls up on a smell you will not forget.');
+          level.toggleDoor(d.doorId);
+          updateFocus();
+          return;
+        }
+        var nowOpen = level.toggleDoor(d.doorId);
+        if (audio) audio.doorMove(nowOpen);
+        updateFocus();
+        return;
+      }
       switch (d.id) {
         case 'wifiNote':
           if (audio) audio.ui();
@@ -1965,14 +2821,6 @@
           if (audio) audio.pickup();
           say('You take the key. Stamped: STORAGE.');
           refreshHud();
-          break;
-        case 'storageDoor':
-          if (state.storageOpen) break;
-          if (!state.hasKey) { if (audio) audio.locked(); say('Locked. There is a keyhole, and no key in it.'); break; }
-          state.storageOpen = true;
-          if (window.__storageDoorMesh) window.__storageDoorMesh.visible = false;
-          if (audio) audio.unlock();
-          say('The lock turns. The door rolls up on a smell you will not forget.');
           break;
         case 'journal':
           state.readJournal = true;
@@ -2250,6 +3098,26 @@
         });
         return n;
       },
+      isDoorOpen: function (id) { return level.isDoorOpen(id); },
+      // World-space extent of a door leaf. A leaf hung the wrong way round
+      // still blocks correctly (the collider is separate) but sticks out
+      // through the room, so its orientation needs asserting numerically.
+      doorBounds: function (id) {
+        var b = new THREE.Box3(), found = false;
+        for (var i = 0; i < level.interactables.length; i++) {
+          var o = level.interactables[i];
+          var d = o.userData.interact;
+          if (d.kind !== 'door' || d.doorId !== id) continue;
+          o.updateWorldMatrix(true, false);
+          b.expandByObject(o);
+          found = true;
+        }
+        if (!found) return null;
+        var size = new THREE.Vector3();
+        b.getSize(size);
+        return { x: size.x, y: size.y, z: size.z };
+      },
+      doorIds: function () { return level.doorIds(); },
       interactablePos: function (id) {
         for (var i = 0; i < level.interactables.length; i++) {
           var o = level.interactables[i];

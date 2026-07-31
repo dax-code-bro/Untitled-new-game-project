@@ -159,6 +159,12 @@
       dryFire: function () { blip(1800, 0.05, 'square', 0.05); },
       pickup: function () { blip(660, 0.1, 'sine', 0.09, 990); },
       locked: function () { blip(180, 0.13, 'square', 0.09, 120); },
+      doorMove: function (opening) {
+        // a dry hinge, then the latch
+        burst(0.55, 900, 0.075, 320);
+        blip(opening ? 210 : 170, 0.5, 'sawtooth', 0.035, opening ? 320 : 120);
+        setTimeout(function () { burst(0.07, 2400, 0.09, 700); }, opening ? 520 : 470);
+      },
       unlock: function () { blip(420, 0.16, 'sine', 0.1, 720); },
       ui: function () { blip(880, 0.045, 'square', 0.04); },
       shortCircuit: function () { burst(0.7, 6000, 0.5, 120); blip(90, 0.5, 'sawtooth', 0.2, 30); },
@@ -194,7 +200,7 @@
     var camera = new THREE.PerspectiveCamera(74, window.innerWidth / window.innerHeight, 0.05, 90);
 
     // ---------------- Level ----------------
-    var level = window.buildLevel(THREE, scene);
+    var level = window.buildLevel(THREE, scene, renderer, camera);
     var colliders = level.colliders;
 
     camera.position.set(level.spawn.x, STANCE.stand.eye, level.spawn.z);
@@ -371,7 +377,7 @@
       var r = PLAYER_RADIUS;
       for (var i = 0; i < colliders.length; i++) {
         var c = colliders[i];
-        if (c.id === 'storageDoor' && state.storageOpen) continue;
+        if (c.id && level.isDoorOpen(c.id)) continue;
         // The barricade has a gap you can only take on your belly.
         if (c.id === 'barricade' && state.stance === 'crawl') continue;
         if (nx + r < c.x1 || nx - r > c.x2 || nz + r < c.z1 || nz - r > c.z2) continue;
@@ -420,9 +426,9 @@
     function promptFor(obj) {
       if (!obj) return null;
       var d = obj.userData.interact;
-      if (d.id === 'storageDoor') {
-        if (state.storageOpen) return null;
-        return state.hasKey ? 'Unlock storage unit' : 'Locked — needs a key';
+      if (d.kind === 'door') {
+        if (d.locked && !state.storageOpen) return state.hasKey ? 'Unlock storage unit' : 'Locked — needs a key';
+        return (level.isDoorOpen(d.doorId) ? 'Close ' : 'Open ') + d.label.toLowerCase();
       }
       return d.verb + ' ' + d.label.toLowerCase();
     }
@@ -431,6 +437,25 @@
       if (!focused || !active) return;
       var d = focused.userData.interact;
       var say = ui.onMessage || function () {};
+      if (d.kind === 'door') {
+        if (d.locked && !state.storageOpen) {
+          if (!state.hasKey) {
+            if (audio) audio.locked();
+            say('Locked. There is a keyhole, and no key in it.');
+            return;
+          }
+          state.storageOpen = true;
+          if (audio) audio.unlock();
+          say('The lock turns. The shutter rolls up on a smell you will not forget.');
+          level.toggleDoor(d.doorId);
+          updateFocus();
+          return;
+        }
+        var nowOpen = level.toggleDoor(d.doorId);
+        if (audio) audio.doorMove(nowOpen);
+        updateFocus();
+        return;
+      }
       switch (d.id) {
         case 'wifiNote':
           if (audio) audio.ui();
@@ -457,14 +482,6 @@
           if (audio) audio.pickup();
           say('You take the key. Stamped: STORAGE.');
           refreshHud();
-          break;
-        case 'storageDoor':
-          if (state.storageOpen) break;
-          if (!state.hasKey) { if (audio) audio.locked(); say('Locked. There is a keyhole, and no key in it.'); break; }
-          state.storageOpen = true;
-          if (window.__storageDoorMesh) window.__storageDoorMesh.visible = false;
-          if (audio) audio.unlock();
-          say('The lock turns. The door rolls up on a smell you will not forget.');
           break;
         case 'journal':
           state.readJournal = true;
@@ -742,6 +759,26 @@
         });
         return n;
       },
+      isDoorOpen: function (id) { return level.isDoorOpen(id); },
+      // World-space extent of a door leaf. A leaf hung the wrong way round
+      // still blocks correctly (the collider is separate) but sticks out
+      // through the room, so its orientation needs asserting numerically.
+      doorBounds: function (id) {
+        var b = new THREE.Box3(), found = false;
+        for (var i = 0; i < level.interactables.length; i++) {
+          var o = level.interactables[i];
+          var d = o.userData.interact;
+          if (d.kind !== 'door' || d.doorId !== id) continue;
+          o.updateWorldMatrix(true, false);
+          b.expandByObject(o);
+          found = true;
+        }
+        if (!found) return null;
+        var size = new THREE.Vector3();
+        b.getSize(size);
+        return { x: size.x, y: size.y, z: size.z };
+      },
+      doorIds: function () { return level.doorIds(); },
       interactablePos: function (id) {
         for (var i = 0; i < level.interactables.length; i++) {
           var o = level.interactables[i];

@@ -33,8 +33,9 @@ newspapers, scattered paper, pens laid out separately, a half-cracked monitor
 facing inward. Shelves of books against the back wall, and an old telephone —
 the line is dead.
 
-Seating is kept clear of both corridor mouths, so the walk to either hallway is
-never blocked.
+Seating is a **single row**, every chair facing the reception island — no
+facing pairs. It stops well short of both corridor mouths and leaves a walkway
+down the middle from the entrance, so nothing blocks the way to either hallway.
 
 **The Wi-Fi puzzle.** Crawl under the rolling chair and look up: the password is
 taped to the underside of the seat. Use the terminal, pick `WAITING ROOM WIFI`
@@ -55,6 +56,30 @@ and plays sixty seconds of basketball highlights before it shorts out.
 - **Extermination chamber** — dead scientists, a splinter of pale birchwood, and
   a blueprint: eleven feet, tungsten frame, non-oxidising steel joints,
   birchwood body. Three attempts at naming it, all struck out.
+
+### Doors
+
+Every doorway carries a leaf built to its own spec, and all of them open:
+
+| Doorway | Door |
+| --- | --- |
+| Waiting → both corridors | Simple panelled wood, lever handles |
+| Restrooms | Dark wood, signage plate, louvre vent along the bottom rail |
+| Warehouse | Steel double doors, push bars, wired-glass vision panels |
+| Corporate office | **No leaf** — torn off its hinges; only bent hinges and splinters remain |
+| East junction | Fire door, push bar, `FIRE DOOR / KEEP SHUT` plate |
+| Storage unit | Roller shutter, locked — it lifts rather than swings |
+| Assembly | Steel door standing open, planks nailed across the frame |
+| Airlock (both ends) | Hazard-striped hatches with wheel handles and dogging bolts |
+| Supply storage | Utility steel, signage plate |
+| Entrance | Tempered glass — sealed |
+
+### Mirrors
+
+The restrooms have real mirrors: a planar reflector re-renders the scene from a
+camera mirrored through the glass. They only render while you are close and on
+the reflective side, since each one costs a whole extra pass. The glass carries
+its own aged silvering — dirt toward the edges and speckled desilvering.
 
 ## Controls
 
@@ -89,6 +114,8 @@ python3 -m http.server 8000
 ```
 horror-game/
 ├── index.html            # markup, styles, UI wiring — the source of truth
+├── textures.js           # every surface, drawn to a canvas at load
+├── fittings.js           # doors and the planar-reflector mirrors
 ├── level.js              # floorplan, geometry, props, per-room lighting
 ├── game.js               # renderer, player, collision, interaction, audio
 ├── build-standalone.mjs  # inlines Three.js + the scripts into the builds
@@ -108,6 +135,14 @@ node build-standalone.mjs
 
 ## Notes
 
+- **Every texture is procedural** — concrete with formwork lines and hairline
+  cracks, wood with grain bands and knots, brushed and rusted metal, tile with
+  grimed grout, carpet with contract-flooring fleck. Nothing is fetched.
+- **Mirror reflections need oblique near-plane clipping.** The mirrored camera
+  sits behind the wall the glass hangs on, so without skewing the near plane
+  onto the mirror surface it renders the back of that wall and the reflection
+  is a dark slab. The render target also needs an explicit sRGB colour space,
+  or the reflection is written linear and shown as though it were sRGB.
 - **All audio is synthesised at runtime** — per-room tone beds, footsteps that
   change with the surface, and stingers. No audio files.
 - **Lighting is culled to the nearest six fixtures.** Forward rendering
