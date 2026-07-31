@@ -1706,11 +1706,16 @@
       }
       feedCam.position.set(c.x, c.headY === undefined ? 2.35 : c.headY, c.z);
       feedCam.rotation.set(c.pitch === undefined ? -0.12 : c.pitch, c.facing, 0, 'YXZ');
+      // the eye sits inside the camera's own head — hide the model or the
+      // lens renders as a black blob in the middle of its own feed
+      var ownMesh = c.mesh, wasVisible = ownMesh ? ownMesh.visible : true;
+      if (ownMesh) ownMesh.visible = false;
       var prev = renderer.getRenderTarget();
       renderer.setRenderTarget(feedTarget);
       renderer.render(scene, feedCam);
       renderer.readRenderTargetPixels(feedTarget, 0, 0, 256, 160, feedPixels);
       renderer.setRenderTarget(prev);
+      if (ownMesh) ownMesh.visible = wasVisible;
       var img = x2.createImageData(256, 160);
       // flip vertically, lift the blacks, push it green — a cheap camera
       for (var y = 0; y < 160; y++) {
@@ -2102,7 +2107,9 @@
         if (!c) return;
         c.facing += dyaw;
         c.pitch = Math.max(-0.6, Math.min(0.4, (c.pitch === undefined ? -0.12 : c.pitch) + dpitch));
-        if (c.mesh) c.mesh.rotation.y = c.facing;
+        // a wall unit's mesh is placed plate-to-wall, half a turn from where
+        // it looks — panning must keep that offset or the plate leaves the wall
+        if (c.mesh) c.mesh.rotation.y = (c.type === 'wall') ? c.facing - Math.PI : c.facing;
       },
       entityNearCam: function (i) {
         if (!entity || !planted[i]) return false;
@@ -2142,7 +2149,7 @@
         say('It takes the current — and SCREAMS — and starts running. Seal the door. Now.');
         return true;
       },
-      plantedCams: function () { return planted.map(function (c) { return { x: c.x, z: c.z, alive: c.alive, type: c.type, headY: c.headY }; }); },
+      plantedCams: function () { return planted.map(function (c) { return { x: c.x, z: c.z, alive: c.alive, type: c.type, headY: c.headY, facing: c.facing, pitch: c.pitch }; }); },
       entityLurk: function () { return entity ? entity.getState().lurk : null; },
       setLurkScale: function (v) { if (entity) entity.setLurkScale(v); },
       setChance: function (name, v) { debugChance[name] = v; },

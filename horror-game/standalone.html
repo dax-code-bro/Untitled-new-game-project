@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <meta name="color-scheme" content="dark" />
 <meta name="theme-color" content="#08090a" />
 <link rel="manifest" href="./manifest.webmanifest" />
@@ -40,6 +40,8 @@
 
   #stage { position: fixed; inset: 0; }
   #stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+  /* no double-tap zoom on anything tappable — it eats the second tap on phones */
+  button, .hb-slot { touch-action: manipulation; }
   #stage canvas:focus-visible { outline: none; }
 
   /* ---------------- Atmosphere ---------------- */
@@ -5792,11 +5794,16 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       }
       feedCam.position.set(c.x, c.headY === undefined ? 2.35 : c.headY, c.z);
       feedCam.rotation.set(c.pitch === undefined ? -0.12 : c.pitch, c.facing, 0, 'YXZ');
+      // the eye sits inside the camera's own head — hide the model or the
+      // lens renders as a black blob in the middle of its own feed
+      var ownMesh = c.mesh, wasVisible = ownMesh ? ownMesh.visible : true;
+      if (ownMesh) ownMesh.visible = false;
       var prev = renderer.getRenderTarget();
       renderer.setRenderTarget(feedTarget);
       renderer.render(scene, feedCam);
       renderer.readRenderTargetPixels(feedTarget, 0, 0, 256, 160, feedPixels);
       renderer.setRenderTarget(prev);
+      if (ownMesh) ownMesh.visible = wasVisible;
       var img = x2.createImageData(256, 160);
       // flip vertically, lift the blacks, push it green — a cheap camera
       for (var y = 0; y < 160; y++) {
@@ -6188,7 +6195,9 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
         if (!c) return;
         c.facing += dyaw;
         c.pitch = Math.max(-0.6, Math.min(0.4, (c.pitch === undefined ? -0.12 : c.pitch) + dpitch));
-        if (c.mesh) c.mesh.rotation.y = c.facing;
+        // a wall unit's mesh is placed plate-to-wall, half a turn from where
+        // it looks — panning must keep that offset or the plate leaves the wall
+        if (c.mesh) c.mesh.rotation.y = (c.type === 'wall') ? c.facing - Math.PI : c.facing;
       },
       entityNearCam: function (i) {
         if (!entity || !planted[i]) return false;
@@ -6228,7 +6237,7 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
         say('It takes the current — and SCREAMS — and starts running. Seal the door. Now.');
         return true;
       },
-      plantedCams: function () { return planted.map(function (c) { return { x: c.x, z: c.z, alive: c.alive, type: c.type, headY: c.headY }; }); },
+      plantedCams: function () { return planted.map(function (c) { return { x: c.x, z: c.z, alive: c.alive, type: c.type, headY: c.headY, facing: c.facing, pitch: c.pitch }; }); },
       entityLurk: function () { return entity ? entity.getState().lurk : null; },
       setLurkScale: function (v) { if (entity) entity.setLurkScale(v); },
       setChance: function (name, v) { debugChance[name] = v; },
@@ -6652,6 +6661,7 @@ window.bootUI = function bootUI(THREE) {
   var termTab = 'net';
   var feedIndex = 0;
   var feedTimer = null;
+  var ptTimer = null;
   var overlayKeys = null;
   document.addEventListener('keydown', function (e) {
     if (overlayKeys && !document.getElementById('terminal').hidden) overlayKeys(e);
@@ -6667,6 +6677,7 @@ window.bootUI = function bootUI(THREE) {
     var st = window.__horror ? window.__horror.getState() : null;
     $('termStatus').textContent = connected ? 'Connected' : 'Not connected';
     clearInterval(feedTimer);
+    clearInterval(ptTimer);
     body.innerHTML = '';
 
     // tabs
@@ -6742,15 +6753,25 @@ window.bootUI = function bootUI(THREE) {
       fc.width = 256; fc.height = 160;
       body.appendChild(fc);
 
-      // pan / tilt, like a real PTZ head
+      // pan / tilt, like a real PTZ head: press to nudge, hold to sweep,
+      // and the feed redraws immediately instead of on the next tick
       var pt = document.createElement('div');
       pt.className = 'term-actions';
-      [['◀', -0.16, 0], ['▲', 0, 0.08], ['▼', 0, -0.08], ['▶', 0.16, 0]].forEach(function (bt) {
+      function nudge(dy, dp) { window.__horror.rotateCam(feedIndex, dy, dp); draw(); }
+      [['◀', 0.16, 0], ['▲', 0, 0.08], ['▼', 0, -0.08], ['▶', -0.16, 0]].forEach(function (bt) {
         var b2 = document.createElement('button');
         b2.className = 'term-btn';
         b2.type = 'button';
         b2.textContent = bt[0];
-        b2.addEventListener('click', function () { window.__horror.rotateCam(feedIndex, bt[1], bt[2]); });
+        b2.addEventListener('pointerdown', function (ev) {
+          ev.preventDefault();
+          nudge(bt[1], bt[2]);
+          clearInterval(ptTimer);
+          ptTimer = setInterval(function () { nudge(bt[1], bt[2]); }, 140);
+        });
+        ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (evn) {
+          b2.addEventListener(evn, function () { clearInterval(ptTimer); });
+        });
         pt.appendChild(b2);
       });
       body.appendChild(pt);
@@ -6806,9 +6827,8 @@ window.bootUI = function bootUI(THREE) {
           shock.disabled = !shockable;
         }
       }
-      draw();
-      feedTimer = setInterval(draw, 650);
-
+      // the SHOCK button must exist before the first draw() — draw() sets
+      // its disabled state, and a throw here would kill the refresh timer
       var shock = document.createElement('button');
       shock.id = 'shockBtn';
       shock.type = 'button';
@@ -6822,12 +6842,15 @@ window.bootUI = function bootUI(THREE) {
       });
       body.appendChild(shock);
 
+      draw();
+      feedTimer = setInterval(draw, 650);
+
       // arrow keys drive the PTZ while this tab is open
       overlayKeys = function (e) {
-        if (e.code === 'ArrowLeft') window.__horror.rotateCam(feedIndex, -0.16, 0);
-        else if (e.code === 'ArrowRight') window.__horror.rotateCam(feedIndex, 0.16, 0);
-        else if (e.code === 'ArrowUp') window.__horror.rotateCam(feedIndex, 0, 0.08);
-        else if (e.code === 'ArrowDown') window.__horror.rotateCam(feedIndex, 0, -0.08);
+        if (e.code === 'ArrowLeft') nudge(0.16, 0);
+        else if (e.code === 'ArrowRight') nudge(-0.16, 0);
+        else if (e.code === 'ArrowUp') nudge(0, 0.08);
+        else if (e.code === 'ArrowDown') nudge(0, -0.08);
         else return;
         e.preventDefault();
       };
@@ -6900,7 +6923,7 @@ window.bootUI = function bootUI(THREE) {
 
   // close must stop the feed loop
   var _closeOverlay = closeOverlay;
-  closeOverlay = function () { clearInterval(feedTimer); overlayKeys = null; _closeOverlay(); };
+  closeOverlay = function () { clearInterval(feedTimer); clearInterval(ptTimer); overlayKeys = null; _closeOverlay(); };
 
   // ---------------- Entry / pause ----------------
   var legendTimer = null, enterTimer = null, hideTimer = null;
