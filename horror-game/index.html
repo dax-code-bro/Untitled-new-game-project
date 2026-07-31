@@ -1,271 +1,430 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Untitled Horror Game</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    #app { position: fixed; inset: 0; }
-    canvas { display: block; }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="color-scheme" content="dark" />
+<title>Untitled Horror Game — Room 001</title>
+<style>
+  /* ------------------------------------------------------------------
+     Deliberately single-theme. A horror game that repaints itself for
+     light mode defeats its own subject, so the dark ground is held in
+     both directions rather than left to chance.
+     ------------------------------------------------------------------ */
+  :root,
+  :root[data-theme="light"],
+  :root[data-theme="dark"] {
+    --void:        #08090a;
+    --concrete-d:  #16191b;
+    --concrete:    #43484a;
+    --concrete-l:  #6b7173;
+    --bone:        #c7c3b8;
+    --tungsten:    #f0be7b;
+    --oxide:       #7e3529;
 
-    /* Click-to-play overlay */
-    #overlay {
-      position: fixed; inset: 0; z-index: 10;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      background: radial-gradient(circle at center, rgba(20,20,22,0.85) 0%, rgba(0,0,0,0.96) 100%);
-      color: #d8d8d8; text-align: center; cursor: pointer;
-      transition: opacity 0.4s ease;
-    }
-    #overlay.hidden { opacity: 0; pointer-events: none; }
-    #overlay h1 {
-      font-size: clamp(28px, 6vw, 56px); font-weight: 700; letter-spacing: 0.08em;
-      color: #b8b8b8; text-transform: uppercase; margin-bottom: 18px;
-      text-shadow: 0 0 18px rgba(0,0,0,0.9);
-    }
-    #overlay p { font-size: clamp(14px, 2.4vw, 18px); color: #8a8a8a; line-height: 1.7; max-width: 460px; }
-    #overlay .play { margin-top: 28px; font-size: 15px; color: #6f6f6f; letter-spacing: 0.15em; text-transform: uppercase; }
-    #overlay .keys { margin-top: 22px; font-size: 13px; color: #555; letter-spacing: 0.05em; }
-    kbd {
-      display: inline-block; padding: 2px 8px; margin: 0 2px;
-      background: #1c1c1e; border: 1px solid #333; border-radius: 4px;
-      font-family: monospace; color: #aaa; font-size: 12px;
-    }
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, "Cascadia Mono",
+            "Roboto Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace;
 
-    /* Crosshair */
-    #crosshair {
-      position: fixed; top: 50%; left: 50%; z-index: 5;
-      width: 6px; height: 6px; margin: -3px 0 0 -3px;
-      border-radius: 50%; background: rgba(220,220,220,0.5);
-      pointer-events: none; opacity: 0; transition: opacity 0.3s ease;
-    }
-    #crosshair.visible { opacity: 1; }
-  </style>
+    --t-eyebrow: 11px;
+    --t-label:   11px;
+    --t-data:    12.5px;
+    --t-title:   clamp(38px, 9vw, 74px);
+
+    color-scheme: dark;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: var(--void);
+    color: var(--bone);
+    font-family: var(--mono);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #stage { position: fixed; inset: 0; }
+  #stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+  #stage canvas:focus-visible { outline: none; }
+
+  /* ---------------- Atmosphere layers ---------------- */
+  #vignette {
+    position: fixed; inset: 0; z-index: 2; pointer-events: none;
+    background:
+      radial-gradient(ellipse at center,
+        rgba(0,0,0,0) 38%,
+        rgba(0,0,0,0.42) 74%,
+        rgba(0,0,0,0.82) 100%);
+  }
+  #grain {
+    position: fixed; inset: -50%; z-index: 3; pointer-events: none;
+    opacity: 0.05; mix-blend-mode: overlay;
+    background-repeat: repeat;
+    animation: grainShift 0.6s steps(1) infinite;
+  }
+  @keyframes grainShift {
+    0%   { transform: translate(0, 0); }
+    25%  { transform: translate(-3%, 2%); }
+    50%  { transform: translate(2%, -3%); }
+    75%  { transform: translate(-2%, -2%); }
+    100% { transform: translate(3%, 1%); }
+  }
+
+  /* ---------------- Entry / pause card ---------------- */
+  #curtain {
+    position: fixed; inset: 0; z-index: 20;
+    display: grid; place-items: center;
+    padding: 24px;
+    background: rgba(6, 7, 8, 0.58);
+    backdrop-filter: blur(7px) saturate(0.7);
+    -webkit-backdrop-filter: blur(7px) saturate(0.7);
+    transition: opacity 340ms ease, backdrop-filter 340ms ease;
+  }
+  #curtain[hidden] { display: none; }
+  #curtain.dismissing { opacity: 0; backdrop-filter: blur(0px); }
+
+  /* The light cutting out as you step in. */
+  #blackout {
+    position: fixed; inset: 0; z-index: 30;
+    background: #000; opacity: 0; pointer-events: none;
+    transition: opacity 130ms linear;
+  }
+  #blackout.on { opacity: 1; }
+
+  .card {
+    width: min(460px, 100%);
+    display: flex; flex-direction: column; gap: 26px;
+  }
+
+  .eyebrow {
+    display: flex; align-items: center; gap: 10px;
+    font-size: var(--t-eyebrow); letter-spacing: 0.34em; text-transform: uppercase;
+    color: var(--concrete-l);
+  }
+  .eyebrow::after {
+    content: ""; flex: 1; height: 1px;
+    background: linear-gradient(90deg, var(--concrete) 0%, transparent 100%);
+  }
+  .mark {
+    width: 7px; height: 7px; flex: none;
+    background: var(--oxide);
+    box-shadow: 0 0 10px rgba(126, 53, 41, 0.9);
+  }
+
+  .titleblock { display: flex; flex-direction: column; gap: 2px; }
+  .title-sm {
+    font-size: clamp(13px, 3vw, 16px); letter-spacing: 0.48em;
+    text-transform: uppercase; color: var(--concrete-l);
+  }
+  .title-lg {
+    font-size: var(--t-title); line-height: 0.94; font-weight: 700;
+    letter-spacing: -0.025em; text-transform: uppercase;
+    color: var(--bone); text-wrap: balance;
+    text-shadow: 0 0 42px rgba(240, 190, 123, 0.14);
+  }
+
+  /* The room's actual specification — the structure is the content. */
+  .spec { display: flex; flex-direction: column; }
+  .spec-row {
+    display: flex; align-items: baseline; gap: 16px;
+    padding: 9px 0;
+    border-top: 1px solid rgba(107, 113, 115, 0.22);
+    font-size: var(--t-data);
+  }
+  .spec-row:last-child { border-bottom: 1px solid rgba(107, 113, 115, 0.22); }
+  .spec-key {
+    flex: none; width: 104px;
+    font-size: var(--t-label); letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--concrete-l);
+  }
+  .spec-val {
+    color: var(--bone); font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+  }
+  .failing { color: var(--oxide); animation: failFlicker 4.2s steps(1) infinite; }
+  @keyframes failFlicker {
+    0%, 86%, 89%, 93%, 100% { opacity: 1; }
+    87%, 91% { opacity: 0.28; }
+  }
+  .none { color: var(--concrete-l); }
+
+  .actions { display: flex; flex-direction: column; gap: 14px; }
+
+  #enter {
+    appearance: none; width: 100%;
+    padding: 15px 20px;
+    background: transparent;
+    border: 1px solid var(--concrete);
+    color: var(--tungsten);
+    font-family: var(--mono); font-size: 12px;
+    letter-spacing: 0.3em; text-transform: uppercase;
+    cursor: pointer;
+    transition: border-color 200ms ease, color 200ms ease,
+                background-color 200ms ease, box-shadow 260ms ease;
+  }
+  #enter:hover {
+    border-color: var(--tungsten);
+    background: rgba(240, 190, 123, 0.06);
+    box-shadow: 0 0 34px rgba(240, 190, 123, 0.12);
+  }
+  #enter:focus-visible {
+    outline: 2px solid var(--tungsten);
+    outline-offset: 3px;
+  }
+
+  .hint {
+    font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--concrete); line-height: 1.9;
+  }
+  .hint b { color: var(--concrete-l); font-weight: 400; }
+
+  /* ---------------- In-game HUD ---------------- */
+  #crosshair {
+    position: fixed; top: 50%; left: 50%; z-index: 4;
+    width: 3px; height: 3px; margin: -1.5px 0 0 -1.5px;
+    border-radius: 50%; background: rgba(199, 195, 184, 0.5);
+    pointer-events: none; opacity: 0;
+    transition: opacity 400ms ease;
+  }
+  #crosshair.on { opacity: 1; }
+
+  #legend {
+    position: fixed; z-index: 5;
+    left: max(20px, env(safe-area-inset-left)); bottom: max(18px, env(safe-area-inset-bottom));
+    font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--concrete); line-height: 1.9;
+    pointer-events: none; opacity: 0;
+    transition: opacity 700ms ease;
+  }
+  #legend.on { opacity: 1; }
+
+  #sound {
+    position: fixed; z-index: 6;
+    right: max(18px, env(safe-area-inset-right)); top: max(18px, env(safe-area-inset-top));
+    appearance: none; background: transparent;
+    border: 1px solid rgba(107, 113, 115, 0.3);
+    color: var(--concrete-l);
+    font-family: var(--mono); font-size: 10px;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    padding: 8px 12px; cursor: pointer; opacity: 0;
+    transition: opacity 500ms ease, color 200ms ease, border-color 200ms ease;
+  }
+  #sound.on { opacity: 1; }
+  #sound:hover { color: var(--bone); border-color: var(--concrete-l); }
+  #sound:focus-visible { outline: 2px solid var(--tungsten); outline-offset: 2px; }
+
+  /* Touch stick — only mounted on coarse pointers. */
+  #stick {
+    position: fixed; z-index: 7;
+    left: max(24px, env(safe-area-inset-left)); bottom: max(84px, env(safe-area-inset-bottom));
+    width: 116px; height: 116px; border-radius: 50%;
+    border: 1px solid rgba(107, 113, 115, 0.28);
+    background: rgba(8, 9, 10, 0.3);
+    display: none; place-items: center;
+    touch-action: none; opacity: 0;
+    transition: opacity 400ms ease;
+  }
+  #stick.mounted { display: grid; }
+  #stick.on { opacity: 1; }
+  #stick-nub {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: rgba(199, 195, 184, 0.16);
+    border: 1px solid rgba(199, 195, 184, 0.3);
+    transition: transform 90ms ease-out;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #grain { animation: none; }
+    .failing { animation: none; }
+    #curtain, #blackout, #enter, #crosshair, #legend, #sound { transition-duration: 1ms; }
+  }
+</style>
 </head>
 <body>
-  <div id="app"></div>
-  <div id="crosshair"></div>
-  <div id="overlay">
-    <h1>Untitled Horror Game</h1>
-    <p>You wake in a cold grey room. There is no way out&hellip; yet.</p>
-    <div class="play">Click to enter</div>
-    <div class="keys">
-      <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move &nbsp;·&nbsp;
-      <kbd>Mouse</kbd> look &nbsp;·&nbsp; <kbd>Esc</kbd> release
+
+<div id="stage"></div>
+<div id="vignette"></div>
+<div id="grain"></div>
+
+<div id="crosshair"></div>
+<button id="sound" type="button" aria-label="Toggle ambient sound">Sound On</button>
+<div id="legend"></div>
+<div id="stick"><div id="stick-nub"></div></div>
+
+<div id="blackout"></div>
+
+<div id="curtain">
+  <div class="card">
+    <div class="eyebrow"><span class="mark"></span><span id="file-no">File 001 — Interior</span></div>
+
+    <div class="titleblock">
+      <div class="title-sm">Untitled</div>
+      <h1 class="title-lg">Horror<br />Game</h1>
+    </div>
+
+    <div class="spec">
+      <div class="spec-row">
+        <span class="spec-key">Dimensions</span>
+        <span class="spec-val">10 &times; 10 &times; 4 m</span>
+      </div>
+      <div class="spec-row">
+        <span class="spec-key">Surface</span>
+        <span class="spec-val">Poured concrete</span>
+      </div>
+      <div class="spec-row">
+        <span class="spec-key">Light</span>
+        <span class="spec-val">1 &times; incandescent — <span class="failing">failing</span></span>
+      </div>
+      <div class="spec-row">
+        <span class="spec-key">Exits</span>
+        <span class="spec-val none">None recorded</span>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="enter" type="button">Enter the room</button>
+      <p class="hint" id="hint"></p>
     </div>
   </div>
+</div>
 
-  <!-- Three.js is vendored locally in ./vendor so the game has no runtime CDN dependency. -->
-  <script type="importmap">
-  {
-    "imports": {
-      "three": "./vendor/three/three.module.js",
-      "three/addons/": "./vendor/three/addons/"
+<script src="./game.js"></script>
+<script>
+/* UI wiring — shared by the dev build and the single-file build. */
+window.bootUI = function bootUI(THREE) {
+  var curtain   = document.getElementById('curtain');
+  var blackout  = document.getElementById('blackout');
+  var enterBtn  = document.getElementById('enter');
+  var crosshair = document.getElementById('crosshair');
+  var legend    = document.getElementById('legend');
+  var soundBtn  = document.getElementById('sound');
+  var hint      = document.getElementById('hint');
+  var stick     = document.getElementById('stick');
+  var stickNub  = document.getElementById('stick-nub');
+  var fileNo    = document.getElementById('file-no');
+  var grain     = document.getElementById('grain');
+
+  var coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+  if (coarse) stick.classList.add('mounted');
+
+  // Film grain: a small noise tile generated once, then jittered in CSS.
+  (function () {
+    var n = document.createElement('canvas');
+    n.width = n.height = 128;
+    var nx = n.getContext('2d');
+    var img = nx.createImageData(128, 128);
+    for (var i = 0; i < img.data.length; i += 4) {
+      var v = (Math.random() * 255) | 0;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+      img.data[i + 3] = 255;
     }
+    nx.putImageData(img, 0, 0);
+    grain.style.backgroundImage = 'url(' + n.toDataURL() + ')';
+  })();
+
+  var LOOK_MOUSE = '<b>W A S D</b> Move &nbsp;·&nbsp; <b>Mouse</b> Look &nbsp;·&nbsp; <b>Shift</b> Run &nbsp;·&nbsp; <b>Esc</b> Release';
+  var LOOK_DRAG  = '<b>W A S D</b> Move &nbsp;·&nbsp; <b>Drag</b> Look &nbsp;·&nbsp; <b>← →</b> Turn &nbsp;·&nbsp; <b>Esc</b> Pause';
+  var LOOK_TOUCH = '<b>Stick</b> Move &nbsp;·&nbsp; <b>Drag</b> Look';
+  var mode = coarse ? LOOK_TOUCH : LOOK_MOUSE;
+  hint.innerHTML = mode;
+
+  var game = window.startGame(THREE, {
+    mount: document.getElementById('stage'),
+    ui: {
+      stick: coarse ? stick : null,
+      stickNub: coarse ? stickNub : null,
+      onPointerLockBlocked: function () {
+        // Pointer lock is unavailable (common inside an iframe) — say so
+        // plainly and switch the legend to the drag controls that do work.
+        if (!coarse) { mode = LOOK_DRAG; hint.innerHTML = mode; legend.innerHTML = mode; }
+      },
+      onLockChange: function (locked) {
+        if (!locked && game && game.isActive) pause();
+      }
+    }
+  });
+
+  // Debug handle: lets the test suite inspect real camera state.
+  window.__horror = game;
+
+  var legendTimer = null;
+  var enterTimer = null;
+  var hideTimer = null;
+
+  function enter() {
+    // Kill the light, then bring the room up — a cut, not a fade.
+    blackout.classList.add('on');
+    clearTimeout(enterTimer);
+    enterTimer = setTimeout(function () {
+      curtain.classList.add('dismissing');
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(function () { curtain.hidden = true; }, 340);
+
+      game.enter();
+
+      crosshair.classList.add('on');
+      soundBtn.classList.add('on');
+      if (coarse) stick.classList.add('on');
+
+      legend.innerHTML = mode;
+      legend.classList.add('on');
+      clearTimeout(legendTimer);
+      legendTimer = setTimeout(function () { legend.classList.remove('on'); }, 6000);
+
+      blackout.classList.remove('on');
+    }, 150);
   }
-  </script>
 
-  <script type="module">
-    import * as THREE from 'three';
-    import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+  function pause() {
+    // Cancel any in-flight entry animation. Pausing within the entry
+    // transition would otherwise let a stale timer hide the pause card and
+    // strand the player with no UI and no pointer lock.
+    clearTimeout(enterTimer);
+    clearTimeout(hideTimer);
+    blackout.classList.remove('on');
 
-    // ---------------------------------------------------------------------
-    // Room configuration
-    // ---------------------------------------------------------------------
-    const ROOM_SIZE = 10;          // 10 x 10 floor
-    const WALL_HEIGHT = 4;         // metres
-    const EYE_HEIGHT = 1.7;        // player camera height
-    const HALF = ROOM_SIZE / 2;
-    const PLAYER_RADIUS = 0.4;     // keep the player off the walls
+    game.exit();
+    fileNo.textContent = 'File 001 — Paused';
+    enterBtn.textContent = 'Resume';
+    curtain.hidden = false;
+    // Force a reflow so the transition replays from the hidden state.
+    void curtain.offsetWidth;
+    curtain.classList.remove('dismissing');
+    crosshair.classList.remove('on');
+    legend.classList.remove('on');
+    if (coarse) stick.classList.remove('on');
+    enterBtn.focus();
+  }
 
-    // ---------------------------------------------------------------------
-    // Renderer
-    // ---------------------------------------------------------------------
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    document.getElementById('app').appendChild(renderer.domElement);
+  enterBtn.addEventListener('click', enter);
 
-    // ---------------------------------------------------------------------
-    // Scene + camera
-    // ---------------------------------------------------------------------
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0a0a0b);
-    scene.fog = new THREE.Fog(0x0a0a0b, 4, 16); // dim, closes in the distance
+  // Esc pauses in drag-look mode, where there is no pointer lock to release.
+  window.addEventListener('keydown', function (e) {
+    if (e.code === 'Escape' && game.isActive && !document.pointerLockElement) pause();
+  });
 
-    const camera = new THREE.PerspectiveCamera(
-      70, window.innerWidth / window.innerHeight, 0.1, 100
-    );
-    camera.position.set(0, EYE_HEIGHT, 0);
+  soundBtn.addEventListener('click', function () {
+    var muted = game.toggleMute();
+    soundBtn.textContent = muted ? 'Sound Off' : 'Sound On';
+    soundBtn.setAttribute('aria-pressed', String(muted));
+  });
+};
+</script>
 
-    // ---------------------------------------------------------------------
-    // Materials (grey)
-    // ---------------------------------------------------------------------
-    const floorMat = new THREE.MeshStandardMaterial({ color: 0x4a4a4d, roughness: 0.95, metalness: 0.0 });
-    const wallMat  = new THREE.MeshStandardMaterial({ color: 0x565659, roughness: 0.9,  metalness: 0.0 });
-    const ceilMat  = new THREE.MeshStandardMaterial({ color: 0x3a3a3d, roughness: 1.0,  metalness: 0.0 });
+<!-- LOADER:START — replaced with an inlined copy of Three.js by build-standalone.mjs -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three/three.module.js"
+  }
+}
+</script>
+<script type="module">
+  import * as THREE from 'three';
+  window.bootUI(THREE);
+</script>
+<!-- LOADER:END -->
 
-    // ---------------------------------------------------------------------
-    // Room geometry
-    // ---------------------------------------------------------------------
-    const room = new THREE.Group();
-
-    // Floor
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(ROOM_SIZE, ROOM_SIZE), floorMat);
-    floor.rotation.x = -Math.PI / 2;
-    floor.receiveShadow = true;
-    room.add(floor);
-
-    // Ceiling
-    const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(ROOM_SIZE, ROOM_SIZE), ceilMat);
-    ceiling.rotation.x = Math.PI / 2;
-    ceiling.position.y = WALL_HEIGHT;
-    ceiling.receiveShadow = true;
-    room.add(ceiling);
-
-    // Walls — a plane per side, facing inward
-    function makeWall(w, h, x, y, z, rotY) {
-      const wall = new THREE.Mesh(new THREE.PlaneGeometry(w, h), wallMat);
-      wall.position.set(x, y, z);
-      wall.rotation.y = rotY;
-      wall.receiveShadow = true;
-      room.add(wall);
-    }
-    const midH = WALL_HEIGHT / 2;
-    makeWall(ROOM_SIZE, WALL_HEIGHT, 0,  midH, -HALF, 0);           // north (-Z)
-    makeWall(ROOM_SIZE, WALL_HEIGHT, 0,  midH,  HALF, Math.PI);     // south (+Z)
-    makeWall(ROOM_SIZE, WALL_HEIGHT, -HALF, midH, 0,  Math.PI / 2); // west (-X)
-    makeWall(ROOM_SIZE, WALL_HEIGHT,  HALF, midH, 0, -Math.PI / 2); // east (+X)
-
-    scene.add(room);
-
-    // ---------------------------------------------------------------------
-    // Lighting
-    // ---------------------------------------------------------------------
-    // Low ambient so the room is never fully black
-    const ambient = new THREE.AmbientLight(0x50505a, 0.9);
-    scene.add(ambient);
-
-    // Main ceiling light — a single hanging bulb, casts shadows
-    const bulb = new THREE.PointLight(0xfff2d8, 42, 26, 2);
-    bulb.position.set(0, WALL_HEIGHT - 0.5, 0);
-    bulb.castShadow = true;
-    bulb.shadow.mapSize.set(1024, 1024);
-    bulb.shadow.bias = -0.0005;
-    scene.add(bulb);
-
-    // Visible little fixture for the bulb
-    const bulbMesh = new THREE.Mesh(
-      new THREE.SphereGeometry(0.08, 16, 16),
-      new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff2d8, emissiveIntensity: 2 })
-    );
-    bulbMesh.position.copy(bulb.position);
-    scene.add(bulbMesh);
-
-    // A cord from the ceiling to the bulb
-    const cord = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.008, 0.008, 0.5, 6),
-      new THREE.MeshStandardMaterial({ color: 0x111111 })
-    );
-    cord.position.set(0, WALL_HEIGHT - 0.25, 0);
-    scene.add(cord);
-
-    const baseBulbIntensity = bulb.intensity;
-
-    // ---------------------------------------------------------------------
-    // Controls (first person)
-    // ---------------------------------------------------------------------
-    const controls = new PointerLockControls(camera, renderer.domElement);
-    scene.add(controls.getObject());
-
-    const overlay = document.getElementById('overlay');
-    const crosshair = document.getElementById('crosshair');
-
-    overlay.addEventListener('click', () => controls.lock());
-    controls.addEventListener('lock', () => {
-      overlay.classList.add('hidden');
-      crosshair.classList.add('visible');
-    });
-    controls.addEventListener('unlock', () => {
-      overlay.classList.remove('hidden');
-      crosshair.classList.remove('visible');
-    });
-
-    // Movement state
-    const keys = { forward: false, back: false, left: false, right: false };
-    const MOVE_SPEED = 3.2; // metres / second
-
-    window.addEventListener('keydown', (e) => {
-      switch (e.code) {
-        case 'KeyW': case 'ArrowUp':    keys.forward = true; break;
-        case 'KeyS': case 'ArrowDown':  keys.back = true; break;
-        case 'KeyA': case 'ArrowLeft':  keys.left = true; break;
-        case 'KeyD': case 'ArrowRight': keys.right = true; break;
-      }
-    });
-    window.addEventListener('keyup', (e) => {
-      switch (e.code) {
-        case 'KeyW': case 'ArrowUp':    keys.forward = false; break;
-        case 'KeyS': case 'ArrowDown':  keys.back = false; break;
-        case 'KeyA': case 'ArrowLeft':  keys.left = false; break;
-        case 'KeyD': case 'ArrowRight': keys.right = false; break;
-      }
-    });
-
-    // ---------------------------------------------------------------------
-    // Main loop
-    // ---------------------------------------------------------------------
-    const clock = new THREE.Clock();
-    const velocity = new THREE.Vector3();
-    const direction = new THREE.Vector3();
-
-    function animate() {
-      requestAnimationFrame(animate);
-      const delta = clock.getDelta();
-
-      if (controls.isLocked) {
-        // Smooth damped movement
-        velocity.x -= velocity.x * 10 * delta;
-        velocity.z -= velocity.z * 10 * delta;
-
-        direction.z = Number(keys.forward) - Number(keys.back);
-        direction.x = Number(keys.right) - Number(keys.left);
-        direction.normalize();
-
-        if (keys.forward || keys.back)  velocity.z -= direction.z * MOVE_SPEED * 10 * delta;
-        if (keys.left || keys.right)    velocity.x -= direction.x * MOVE_SPEED * 10 * delta;
-
-        controls.moveRight(-velocity.x * delta);
-        controls.moveForward(-velocity.z * delta);
-
-        // Keep the player inside the room
-        const obj = controls.getObject();
-        const limit = HALF - PLAYER_RADIUS;
-        obj.position.x = Math.max(-limit, Math.min(limit, obj.position.x));
-        obj.position.z = Math.max(-limit, Math.min(limit, obj.position.z));
-        obj.position.y = EYE_HEIGHT;
-      }
-
-      // Subtle horror flicker on the ceiling light
-      const t = clock.elapsedTime;
-      const flicker = 1 + 0.05 * Math.sin(t * 11) + (Math.random() < 0.015 ? -0.5 : 0);
-      bulb.intensity = baseBulbIntensity * flicker;
-
-      renderer.render(scene, camera);
-    }
-    animate();
-
-    // ---------------------------------------------------------------------
-    // Resize
-    // ---------------------------------------------------------------------
-    window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    });
-  </script>
 </body>
 </html>
