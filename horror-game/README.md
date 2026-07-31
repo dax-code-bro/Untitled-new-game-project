@@ -1,23 +1,53 @@
 # Untitled Horror Game
 
-A first-person horror game built with [Three.js](https://threejs.org/). This is
-the first milestone: **Room 001**, a 10 × 10 grey concrete room lit by a single
-failing bulb.
+A first-person horror game built with [Three.js](https://threejs.org/). No build
+step, no bundler, no runtime network access.
 
-## What's here
+## The facility
 
-- **The room** — 10 × 10 × 4 m, floor / ceiling / four walls, with procedurally
-  generated concrete texture (multi-octave canvas noise, no external assets) and
-  a skirting rail.
-- **Lighting** — a cool hemisphere fill keeps the concrete reading *grey*, while
-  one warm tungsten bulb owns the pool of light beneath it. The bulb swings on
-  its cord so shadows crawl, and its filament stutters at irregular intervals.
-- **Controls** — first person, with pointer lock where it's available and a
-  drag-to-look fallback where it isn't (pointer lock is routinely blocked inside
-  an iframe). Touch devices get an on-screen stick.
-- **Ambience** — the bulb's 50 Hz mains hum, synthesised with WebAudio and ducked
-  in sync with the flicker. Toggleable; starts from the entry click so autoplay
-  policy is satisfied.
+Thirteen connected rooms on one floor. You start in **Waiting**, behind sealed
+tempered-glass doors.
+
+```
+                       WAREHOUSE ── key
+                           │
+    RESTROOMS ── WEST CORRIDOR ── WAITING ── EAST CORRIDOR ── CORPORATE OFFICE
+                                                   │
+                                              JUNCTION ────── STORAGE UNIT (locked)
+                                                   │
+                                           SOUTH CORRIDOR
+                                                   │
+                                              ASSEMBLY ── EXTERMINATION ── SUPPLY
+                                             (barricaded)         └──────── RESTROOM
+```
+
+### Waiting
+
+Rows of chairs, shelves of books, and a curved reception desk you can walk
+behind through a gap in the counter. On it: a tipped coffee cup drying into the
+newspapers, scattered paper, pens laid out separately, a half-cracked monitor.
+An old telephone on the wall — the line is dead. A bank of five TVs overhead,
+most of them smashed.
+
+**The Wi-Fi puzzle.** Crawl under the rolling chair and look up: the password is
+taped to the underside of the seat. Use the terminal, pick `WAITING ROOM WIFI`
+out of the junk networks, enter the code, and the one surviving screen wakes up
+and plays sixty seconds of basketball highlights before it shorts out.
+
+### The rest
+
+- **Corporate office** — vintage shelf of fossil casts and books, an old
+  chandelier, chairs clawed to pieces. The door was thrown hard enough to bury
+  itself halfway into a wall.
+- **Warehouse** — racking, torn open. The storage key is here.
+- **Storage unit** — locked until you find the key. Nick Ahoy's body, his
+  journal, and a Glock 19 with two magazines: **34 rounds for the whole game.**
+- **Assembly** — barricaded; you get through it on your belly. Workers on the
+  floor with plating driven into them, and a holding cage whose bars are bent
+  outward.
+- **Extermination chamber** — dead scientists, a splinter of pale birchwood, and
+  a blueprint: eleven feet, tungsten frame, non-oxidising steel joints,
+  birchwood body. Three attempts at naming it, all struck out.
 
 ## Controls
 
@@ -25,16 +55,19 @@ failing bulb.
 | --- | --- |
 | `W` `A` `S` `D` | Move |
 | Mouse | Look (pointer lock), or drag to look |
-| `←` `→` / `Q` `E` | Turn — for when pointer lock is unavailable |
+| `E` | Use / read / take |
+| `C` or `Ctrl` | Crouch |
+| `Z` | Crawl — needed for the Wi-Fi note and the barricade |
 | `Shift` | Run |
-| `Esc` | Release the mouse / pause |
-| Touch | On-screen stick to move, drag to look |
+| `R` | Reload |
+| `←` `→` / `Q` | Turn, when pointer lock is unavailable |
+| `Esc` | Pause, or close a document |
+| Touch | On-screen stick to move, drag to look, tap to use |
 
 ## Running it
 
-**Simplest:** open `standalone.html` directly — it's a single self-contained
-file with Three.js inlined, so it runs from `file://` with no server and no
-network access at all.
+**Simplest:** open `standalone.html` — a single self-contained file that runs
+from `file://` with no server.
 
 **For development,** `index.html` loads the vendored module build, which needs a
 server because of ES module semantics:
@@ -42,43 +75,45 @@ server because of ES module semantics:
 ```bash
 cd horror-game
 python3 -m http.server 8000
-# then visit http://localhost:8000
 ```
 
 ## Layout
 
 ```
 horror-game/
-├── index.html            # markup, styles and UI wiring — the source of truth
-├── game.js               # scene, lighting, controls, ambience
-├── build-standalone.mjs  # inlines Three.js + game.js into the builds below
-├── standalone.html       # single-file playable build (no server needed)
+├── index.html            # markup, styles, UI wiring — the source of truth
+├── level.js              # floorplan, geometry, props, per-room lighting
+├── game.js               # renderer, player, collision, interaction, audio
+├── build-standalone.mjs  # inlines Three.js + the scripts into the builds
+├── standalone.html       # single-file playable build
 ├── vendor/three/         # Three.js r160, vendored (no CDN at runtime)
-└── dist/artifact.html    # same page as a body fragment (build output)
+└── dist/artifact.html    # body-fragment build output
 ```
 
-`index.html` is the single source of truth for markup and styles. The build
-script only swaps the module loader for an inlined copy of Three.js and inlines
-`game.js`:
+Walls are generated from room rectangles with doorway gaps punched out, so the
+floorplan is edited as data in `level.js` rather than as placed meshes.
 
 ```bash
 node build-standalone.mjs
 ```
 
-Three.js ships as an ES module whose public names survive minification only in
-its trailing `export {}` statement, so the build rewrites that statement into a
-namespace object. That avoids both a bundler and the deprecated UMD build.
-
 ## Notes
 
+- **All audio is synthesised at runtime** — per-room tone beds, footsteps that
+  change with the surface, and stingers. No audio files.
+- **Lighting is culled to the nearest six fixtures.** Forward rendering
+  evaluates every light in every fragment shader, and the facility has ~28. The
+  count of *visible* lights is held constant, because a changing count makes
+  Three.js recompile every shader mid-play.
+- **The highlight reel is a stylised silhouette animation**, drawn to a canvas
+  each frame. It is not real broadcast footage.
 - **Deliberately single-theme.** A horror game that repaints itself for light
-  mode defeats its own subject, so the dark ground is held in both directions.
-- `window.__horror.getState()` exposes camera state for testing — the scene
-  animates every frame, so pixel diffing proves nothing.
+  mode defeats its own subject.
+- `window.__horror.getState()` and friends expose real state for testing — the
+  scene animates every frame, so pixel diffing proves nothing.
 
-## Next
+## Not built yet
 
-- A door, and whatever is needed to open it
-- Interactable objects — a key, a note, a flashlight
-- Footsteps and stingers
-- Something else in the room
+The thing from the blueprint does not exist in the level. Nothing hunts you, so
+the 34 rounds currently have nothing to hit and there is no way out — the
+entrance stays sealed by design. Those are the next decisions to make.

@@ -52,11 +52,14 @@ function moduleToNamespace(source, namespace = 'THREE') {
 }
 
 const indexHtml = read('index.html');
-const gameJs = read('game.js');
 const threeSrc = read('vendor/three/three.module.min.js');
 
+// Every local script index.html pulls in, in document order.
+const LOCAL_SCRIPTS = ['level.js', 'game.js'];
+const sources = new Map(LOCAL_SCRIPTS.map((name) => [name, read(name)]));
+
 // Nothing inlined into a <script> may contain a closing script tag.
-for (const [name, src] of [['game.js', gameJs], ['three.module.min.js', threeSrc]]) {
+for (const [name, src] of [...sources, ['three.module.min.js', threeSrc]]) {
   if (/<\/script/i.test(src)) {
     throw new Error(`${name} contains a literal </script> and cannot be inlined.`);
   }
@@ -77,12 +80,11 @@ let out = indexHtml.replace(
 );
 if (out === indexHtml) throw new Error('Loader block not found in index.html.');
 
-const beforeGame = out;
-out = out.replace(
-  /<script src="\.\/game\.js"><\/script>/,
-  `<script>\n${gameJs}\n</script>`
-);
-if (out === beforeGame) throw new Error('game.js script tag not found in index.html.');
+for (const [name, src] of sources) {
+  const tag = `<script src="./${name}"></script>`;
+  if (!out.includes(tag)) throw new Error(`${tag} not found in index.html.`);
+  out = out.replace(tag, `<script>\n${src}\n</script>`);
+}
 
 writeFileSync(join(here, 'standalone.html'), out);
 mkdirSync(join(here, 'dist'), { recursive: true });

@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="color-scheme" content="dark" />
-<title>Untitled Horror Game — Room 001</title>
+<title>Untitled Horror Game — Waiting</title>
 <style>
   /* ------------------------------------------------------------------
      Deliberately single-theme. A horror game that repaints itself for
@@ -25,58 +25,49 @@
     --mono: ui-monospace, "SF Mono", SFMono-Regular, "Cascadia Mono",
             "Roboto Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace;
 
-    --t-eyebrow: 11px;
-    --t-label:   11px;
-    --t-data:    12.5px;
-    --t-title:   clamp(38px, 9vw, 74px);
-
     color-scheme: dark;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   html, body {
-    width: 100%; height: 100%;
-    overflow: hidden;
-    background: var(--void);
-    color: var(--bone);
-    font-family: var(--mono);
-    -webkit-font-smoothing: antialiased;
+    width: 100%; height: 100%; overflow: hidden;
+    background: var(--void); color: var(--bone);
+    font-family: var(--mono); -webkit-font-smoothing: antialiased;
   }
 
   #stage { position: fixed; inset: 0; }
   #stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
   #stage canvas:focus-visible { outline: none; }
 
-  /* ---------------- Atmosphere layers ---------------- */
+  /* ---------------- Atmosphere ---------------- */
   #vignette {
     position: fixed; inset: 0; z-index: 2; pointer-events: none;
-    background:
-      radial-gradient(ellipse at center,
-        rgba(0,0,0,0) 38%,
-        rgba(0,0,0,0.42) 74%,
-        rgba(0,0,0,0.82) 100%);
+    background: radial-gradient(ellipse at center,
+      rgba(0,0,0,0) 36%, rgba(0,0,0,0.44) 74%, rgba(0,0,0,0.84) 100%);
   }
   #grain {
     position: fixed; inset: -50%; z-index: 3; pointer-events: none;
-    opacity: 0.05; mix-blend-mode: overlay;
-    background-repeat: repeat;
+    opacity: 0.05; mix-blend-mode: overlay; background-repeat: repeat;
     animation: grainShift 0.6s steps(1) infinite;
   }
   @keyframes grainShift {
-    0%   { transform: translate(0, 0); }
-    25%  { transform: translate(-3%, 2%); }
-    50%  { transform: translate(2%, -3%); }
-    75%  { transform: translate(-2%, -2%); }
-    100% { transform: translate(3%, 1%); }
+    0% { transform: translate(0,0); } 25% { transform: translate(-3%,2%); }
+    50% { transform: translate(2%,-3%); } 75% { transform: translate(-2%,-2%); }
+    100% { transform: translate(3%,1%); }
   }
+  #muzzle {
+    position: fixed; inset: 0; z-index: 4; pointer-events: none;
+    background: radial-gradient(circle at 50% 62%, rgba(255,226,170,0.5), rgba(255,190,110,0) 45%);
+    opacity: 0; transition: opacity 90ms ease-out;
+  }
+  #muzzle.on { opacity: 1; transition-duration: 10ms; }
 
   /* ---------------- Entry / pause card ---------------- */
   #curtain {
     position: fixed; inset: 0; z-index: 20;
-    display: grid; place-items: center;
-    padding: 24px;
-    background: rgba(6, 7, 8, 0.58);
+    display: grid; place-items: center; padding: 24px;
+    background: rgba(6,7,8,0.58);
     backdrop-filter: blur(7px) saturate(0.7);
     -webkit-backdrop-filter: blur(7px) saturate(0.7);
     transition: opacity 340ms ease, backdrop-filter 340ms ease;
@@ -84,22 +75,16 @@
   #curtain[hidden] { display: none; }
   #curtain.dismissing { opacity: 0; backdrop-filter: blur(0px); }
 
-  /* The light cutting out as you step in. */
   #blackout {
-    position: fixed; inset: 0; z-index: 30;
-    background: #000; opacity: 0; pointer-events: none;
-    transition: opacity 130ms linear;
+    position: fixed; inset: 0; z-index: 30; background: #000;
+    opacity: 0; pointer-events: none; transition: opacity 130ms linear;
   }
   #blackout.on { opacity: 1; }
 
-  .card {
-    width: min(460px, 100%);
-    display: flex; flex-direction: column; gap: 26px;
-  }
-
+  .card { width: min(460px,100%); display: flex; flex-direction: column; gap: 26px; }
   .eyebrow {
     display: flex; align-items: center; gap: 10px;
-    font-size: var(--t-eyebrow); letter-spacing: 0.34em; text-transform: uppercase;
+    font-size: 11px; letter-spacing: 0.34em; text-transform: uppercase;
     color: var(--concrete-l);
   }
   .eyebrow::after {
@@ -107,137 +92,244 @@
     background: linear-gradient(90deg, var(--concrete) 0%, transparent 100%);
   }
   .mark {
-    width: 7px; height: 7px; flex: none;
-    background: var(--oxide);
-    box-shadow: 0 0 10px rgba(126, 53, 41, 0.9);
+    width: 7px; height: 7px; flex: none; background: var(--oxide);
+    box-shadow: 0 0 10px rgba(126,53,41,0.9);
   }
-
   .titleblock { display: flex; flex-direction: column; gap: 2px; }
   .title-sm {
-    font-size: clamp(13px, 3vw, 16px); letter-spacing: 0.48em;
+    font-size: clamp(13px,3vw,16px); letter-spacing: 0.48em;
     text-transform: uppercase; color: var(--concrete-l);
   }
   .title-lg {
-    font-size: var(--t-title); line-height: 0.94; font-weight: 700;
-    letter-spacing: -0.025em; text-transform: uppercase;
-    color: var(--bone); text-wrap: balance;
-    text-shadow: 0 0 42px rgba(240, 190, 123, 0.14);
+    font-size: clamp(38px,9vw,74px); line-height: 0.94; font-weight: 700;
+    letter-spacing: -0.025em; text-transform: uppercase; color: var(--bone);
+    text-wrap: balance; text-shadow: 0 0 42px rgba(240,190,123,0.14);
   }
-
-  /* The room's actual specification — the structure is the content. */
   .spec { display: flex; flex-direction: column; }
   .spec-row {
-    display: flex; align-items: baseline; gap: 16px;
-    padding: 9px 0;
-    border-top: 1px solid rgba(107, 113, 115, 0.22);
-    font-size: var(--t-data);
+    display: flex; align-items: baseline; gap: 16px; padding: 9px 0;
+    border-top: 1px solid rgba(107,113,115,0.22); font-size: 12.5px;
   }
-  .spec-row:last-child { border-bottom: 1px solid rgba(107, 113, 115, 0.22); }
+  .spec-row:last-child { border-bottom: 1px solid rgba(107,113,115,0.22); }
   .spec-key {
-    flex: none; width: 104px;
-    font-size: var(--t-label); letter-spacing: 0.2em; text-transform: uppercase;
-    color: var(--concrete-l);
+    flex: none; width: 104px; font-size: 11px; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--concrete-l);
   }
-  .spec-val {
-    color: var(--bone); font-variant-numeric: tabular-nums;
-    letter-spacing: 0.04em;
-  }
+  .spec-val { color: var(--bone); font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
   .failing { color: var(--oxide); animation: failFlicker 4.2s steps(1) infinite; }
   @keyframes failFlicker {
-    0%, 86%, 89%, 93%, 100% { opacity: 1; }
-    87%, 91% { opacity: 0.28; }
+    0%,86%,89%,93%,100% { opacity: 1; } 87%,91% { opacity: 0.28; }
   }
   .none { color: var(--concrete-l); }
-
   .actions { display: flex; flex-direction: column; gap: 14px; }
-
   #enter {
-    appearance: none; width: 100%;
-    padding: 15px 20px;
-    background: transparent;
-    border: 1px solid var(--concrete);
-    color: var(--tungsten);
-    font-family: var(--mono); font-size: 12px;
-    letter-spacing: 0.3em; text-transform: uppercase;
-    cursor: pointer;
-    transition: border-color 200ms ease, color 200ms ease,
-                background-color 200ms ease, box-shadow 260ms ease;
+    appearance: none; width: 100%; padding: 15px 20px; background: transparent;
+    border: 1px solid var(--concrete); color: var(--tungsten);
+    font-family: var(--mono); font-size: 12px; letter-spacing: 0.3em;
+    text-transform: uppercase; cursor: pointer;
+    transition: border-color 200ms ease, color 200ms ease, background-color 200ms ease, box-shadow 260ms ease;
   }
-  #enter:hover {
-    border-color: var(--tungsten);
-    background: rgba(240, 190, 123, 0.06);
-    box-shadow: 0 0 34px rgba(240, 190, 123, 0.12);
-  }
-  #enter:focus-visible {
-    outline: 2px solid var(--tungsten);
-    outline-offset: 3px;
-  }
-
-  .hint {
-    font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase;
-    color: var(--concrete); line-height: 1.9;
-  }
+  #enter:hover { border-color: var(--tungsten); background: rgba(240,190,123,0.06); box-shadow: 0 0 34px rgba(240,190,123,0.12); }
+  #enter:focus-visible { outline: 2px solid var(--tungsten); outline-offset: 3px; }
+  .hint { font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--concrete); line-height: 1.9; }
   .hint b { color: var(--concrete-l); font-weight: 400; }
 
-  /* ---------------- In-game HUD ---------------- */
+  /* ---------------- HUD ---------------- */
   #crosshair {
-    position: fixed; top: 50%; left: 50%; z-index: 4;
-    width: 3px; height: 3px; margin: -1.5px 0 0 -1.5px;
-    border-radius: 50%; background: rgba(199, 195, 184, 0.5);
-    pointer-events: none; opacity: 0;
-    transition: opacity 400ms ease;
+    position: fixed; top: 50%; left: 50%; z-index: 5;
+    width: 3px; height: 3px; margin: -1.5px 0 0 -1.5px; border-radius: 50%;
+    background: rgba(199,195,184,0.5); pointer-events: none; opacity: 0;
+    transition: opacity 400ms ease, background-color 200ms ease, transform 160ms ease;
   }
   #crosshair.on { opacity: 1; }
+  #crosshair.hot { background: var(--tungsten); transform: scale(1.9); }
 
-  #legend {
-    position: fixed; z-index: 5;
-    left: max(20px, env(safe-area-inset-left)); bottom: max(18px, env(safe-area-inset-bottom));
-    font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
-    color: var(--concrete); line-height: 1.9;
-    pointer-events: none; opacity: 0;
-    transition: opacity 700ms ease;
+  #prompt {
+    position: fixed; left: 50%; top: calc(50% + 26px); z-index: 6;
+    transform: translateX(-50%);
+    font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--bone); text-shadow: 0 2px 12px #000;
+    pointer-events: none; opacity: 0; transition: opacity 160ms ease;
+    white-space: nowrap;
   }
-  #legend.on { opacity: 1; }
+  #prompt.on { opacity: 1; }
+  #prompt .key {
+    display: inline-block; padding: 1px 6px; margin-right: 8px;
+    border: 1px solid var(--concrete-l); color: var(--tungsten);
+  }
+
+  #roomname {
+    position: fixed; left: max(20px, env(safe-area-inset-left));
+    top: max(18px, env(safe-area-inset-top)); z-index: 6;
+    font-size: 11px; letter-spacing: 0.34em; text-transform: uppercase;
+    color: var(--concrete-l); pointer-events: none;
+    opacity: 0; transition: opacity 600ms ease;
+  }
+  #roomname.on { opacity: 1; }
+
+  #status {
+    position: fixed; left: max(20px, env(safe-area-inset-left));
+    bottom: max(18px, env(safe-area-inset-bottom)); z-index: 6;
+    display: flex; flex-direction: column; gap: 6px;
+    font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--concrete); pointer-events: none; opacity: 0;
+    transition: opacity 500ms ease;
+  }
+  #status.on { opacity: 1; }
+  #stance { color: var(--concrete-l); }
+  #legend { line-height: 1.9; }
+  #legend b { color: var(--concrete-l); font-weight: 400; }
+
+  #ammo {
+    position: fixed; right: max(20px, env(safe-area-inset-right));
+    bottom: max(18px, env(safe-area-inset-bottom)); z-index: 6;
+    text-align: right; font-variant-numeric: tabular-nums;
+    color: var(--bone); pointer-events: none; opacity: 0;
+    transition: opacity 400ms ease;
+  }
+  #ammo.on { opacity: 1; }
+  #ammo .big { font-size: 30px; letter-spacing: 0.04em; line-height: 1; }
+  #ammo .sub { font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--concrete-l); margin-top: 5px; }
+  #ammo.dry .big { color: var(--oxide); }
+
+  #carry {
+    position: fixed; right: max(20px, env(safe-area-inset-right));
+    top: max(56px, calc(env(safe-area-inset-top) + 48px)); z-index: 6;
+    display: flex; flex-direction: column; gap: 5px; align-items: flex-end;
+    font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--concrete-l); pointer-events: none;
+  }
+  #carry span { border: 1px solid rgba(107,113,115,0.3); padding: 4px 9px; }
+
+  #subtitle {
+    position: fixed; left: 50%; bottom: max(86px, calc(env(safe-area-inset-bottom) + 76px));
+    transform: translateX(-50%); z-index: 6;
+    width: min(560px, calc(100vw - 48px)); text-align: center;
+    font-size: 13px; line-height: 1.7; color: var(--bone);
+    text-shadow: 0 2px 14px #000; pointer-events: none;
+    opacity: 0; transition: opacity 400ms ease;
+  }
+  #subtitle.on { opacity: 1; }
 
   #sound {
-    position: fixed; z-index: 6;
-    right: max(18px, env(safe-area-inset-right)); top: max(18px, env(safe-area-inset-top));
+    position: fixed; right: max(18px, env(safe-area-inset-right));
+    top: max(18px, env(safe-area-inset-top)); z-index: 7;
     appearance: none; background: transparent;
-    border: 1px solid rgba(107, 113, 115, 0.3);
-    color: var(--concrete-l);
-    font-family: var(--mono); font-size: 10px;
-    letter-spacing: 0.2em; text-transform: uppercase;
-    padding: 8px 12px; cursor: pointer; opacity: 0;
+    border: 1px solid rgba(107,113,115,0.3); color: var(--concrete-l);
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em;
+    text-transform: uppercase; padding: 8px 12px; cursor: pointer; opacity: 0;
     transition: opacity 500ms ease, color 200ms ease, border-color 200ms ease;
   }
   #sound.on { opacity: 1; }
   #sound:hover { color: var(--bone); border-color: var(--concrete-l); }
   #sound:focus-visible { outline: 2px solid var(--tungsten); outline-offset: 2px; }
 
-  /* Touch stick — only mounted on coarse pointers. */
   #stick {
-    position: fixed; z-index: 7;
-    left: max(24px, env(safe-area-inset-left)); bottom: max(84px, env(safe-area-inset-bottom));
+    position: fixed; z-index: 8;
+    left: max(24px, env(safe-area-inset-left)); bottom: max(96px, env(safe-area-inset-bottom));
     width: 116px; height: 116px; border-radius: 50%;
-    border: 1px solid rgba(107, 113, 115, 0.28);
-    background: rgba(8, 9, 10, 0.3);
-    display: none; place-items: center;
-    touch-action: none; opacity: 0;
+    border: 1px solid rgba(107,113,115,0.28); background: rgba(8,9,10,0.3);
+    display: none; place-items: center; touch-action: none; opacity: 0;
     transition: opacity 400ms ease;
   }
   #stick.mounted { display: grid; }
   #stick.on { opacity: 1; }
   #stick-nub {
     width: 44px; height: 44px; border-radius: 50%;
-    background: rgba(199, 195, 184, 0.16);
-    border: 1px solid rgba(199, 195, 184, 0.3);
+    background: rgba(199,195,184,0.16); border: 1px solid rgba(199,195,184,0.3);
     transition: transform 90ms ease-out;
   }
+  #touchbar {
+    position: fixed; z-index: 8;
+    right: max(20px, env(safe-area-inset-right)); bottom: max(96px, env(safe-area-inset-bottom));
+    display: none; flex-direction: column; gap: 10px;
+  }
+  #touchbar.mounted { display: none; }
+  #touchbar.on { display: flex; }
+  #touchbar button {
+    appearance: none; width: 74px; padding: 12px 0; background: rgba(8,9,10,0.42);
+    border: 1px solid rgba(107,113,115,0.32); color: var(--bone);
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.16em;
+    text-transform: uppercase; cursor: pointer;
+  }
+
+  /* ---------------- Overlays (terminal, documents) ---------------- */
+  .overlay {
+    position: fixed; inset: 0; z-index: 40;
+    display: grid; place-items: center; padding: 24px;
+    background: rgba(4,5,6,0.86);
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  }
+  .overlay[hidden] { display: none; }
+  .sheet {
+    width: min(620px, 100%); max-height: min(78vh, 720px); overflow-y: auto;
+    border: 1px solid var(--concrete); background: #0d0f10; padding: 30px 32px;
+    display: flex; flex-direction: column; gap: 18px;
+  }
+  .sheet h2 {
+    font-size: 12px; letter-spacing: 0.34em; text-transform: uppercase;
+    color: var(--concrete-l); font-weight: 400;
+  }
+  .sheet p { font-size: 13.5px; line-height: 1.85; color: var(--bone); }
+  .sheet p.hand { color: #b9b3a2; }
+  .sheet .sig { color: var(--tungsten); letter-spacing: 0.1em; }
+  .close {
+    align-self: flex-start; appearance: none; background: transparent;
+    border: 1px solid var(--concrete); color: var(--concrete-l);
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.24em;
+    text-transform: uppercase; padding: 9px 16px; cursor: pointer;
+  }
+  .close:hover { color: var(--bone); border-color: var(--concrete-l); }
+  .close:focus-visible { outline: 2px solid var(--tungsten); outline-offset: 2px; }
+
+  /* the note under the chair */
+  .note {
+    background: #e8e2c8; color: #2a2620; padding: 30px 34px;
+    width: min(340px,100%); transform: rotate(-1.4deg);
+    box-shadow: 0 24px 60px rgba(0,0,0,0.7);
+  }
+  .note .lbl { font-size: 12px; letter-spacing: 0.3em; text-transform: uppercase; color: #6a6252; }
+  .note .code { font-size: 44px; font-weight: 700; letter-spacing: 0.1em; margin: 10px 0 6px; font-variant-numeric: tabular-nums; }
+  .note .sub { font-size: 11px; color: #6a6252; letter-spacing: 0.05em; }
+
+  /* the reception terminal */
+  #terminal .sheet { background: #07110d; border-color: #1f4634; width: min(560px,100%); }
+  .term-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid #1f4634; padding-bottom: 10px;
+    font-size: 10px; letter-spacing: 0.26em; text-transform: uppercase; color: #4e8f6d;
+  }
+  .term-body { display: flex; flex-direction: column; gap: 4px; }
+  .net {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 11px 12px; border: 1px solid transparent; background: #0a1a13;
+    color: #78c79a; font-size: 12.5px; letter-spacing: 0.06em;
+    cursor: pointer; text-align: left; font-family: var(--mono);
+    appearance: none; width: 100%;
+  }
+  .net:hover, .net:focus-visible { border-color: #2f7a55; background: #0d241a; outline: none; }
+  .net .bars { color: #3f7d5c; font-size: 11px; letter-spacing: 0.1em; }
+  .net.target { color: #a8e6c2; }
+  .term-note { font-size: 11px; color: #3f7d5c; letter-spacing: 0.1em; line-height: 1.8; }
+  #pwField {
+    width: 100%; padding: 12px; background: #0a1a13; border: 1px solid #2f7a55;
+    color: #a8e6c2; font-family: var(--mono); font-size: 18px; letter-spacing: 0.42em;
+    text-align: center;
+  }
+  #pwField:focus-visible { outline: 2px solid #4e8f6d; outline-offset: 2px; }
+  .term-actions { display: flex; gap: 10px; }
+  .term-btn {
+    appearance: none; flex: 1; padding: 11px; background: transparent;
+    border: 1px solid #2f7a55; color: #78c79a; font-family: var(--mono);
+    font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase; cursor: pointer;
+  }
+  .term-btn:hover { background: #0d241a; color: #a8e6c2; }
+  .term-btn:focus-visible { outline: 2px solid #4e8f6d; outline-offset: 2px; }
+  .term-err { color: #c2603f; font-size: 11px; letter-spacing: 0.14em; min-height: 15px; }
 
   @media (prefers-reduced-motion: reduce) {
-    #grain { animation: none; }
-    .failing { animation: none; }
-    #curtain, #blackout, #enter, #crosshair, #legend, #sound { transition-duration: 1ms; }
+    #grain, .failing { animation: none; }
+    #curtain, #blackout, #crosshair, #status, #sound, #prompt, #subtitle { transition-duration: 1ms; }
   }
 </style>
 </head>
@@ -246,42 +338,42 @@
 <div id="stage"></div>
 <div id="vignette"></div>
 <div id="grain"></div>
+<div id="muzzle"></div>
 
 <div id="crosshair"></div>
-<button id="sound" type="button" aria-label="Toggle ambient sound">Sound On</button>
-<div id="legend"></div>
+<div id="prompt"></div>
+<div id="roomname"></div>
+<div id="subtitle"></div>
+<button id="sound" type="button" aria-label="Toggle sound">Sound On</button>
+<div id="carry"></div>
+<div id="ammo"><div class="big">—</div><div class="sub">Rounds</div></div>
+<div id="status">
+  <div id="stance">Standing</div>
+  <div id="legend"></div>
+</div>
 <div id="stick"><div id="stick-nub"></div></div>
+<div id="touchbar">
+  <button id="btnUse" type="button">Use</button>
+  <button id="btnCrouch" type="button">Crouch</button>
+  <button id="btnCrawl" type="button">Crawl</button>
+</div>
 
 <div id="blackout"></div>
 
+<!-- ---------- Entry / pause ---------- -->
 <div id="curtain">
   <div class="card">
     <div class="eyebrow"><span class="mark"></span><span id="file-no">File 001 — Interior</span></div>
-
     <div class="titleblock">
       <div class="title-sm">Untitled</div>
-      <h1 class="title-lg">Horror<br />Game</h1>
+      <h1 class="title-lg">Waiting</h1>
     </div>
-
     <div class="spec">
-      <div class="spec-row">
-        <span class="spec-key">Dimensions</span>
-        <span class="spec-val">10 &times; 10 &times; 4 m</span>
-      </div>
-      <div class="spec-row">
-        <span class="spec-key">Surface</span>
-        <span class="spec-val">Poured concrete</span>
-      </div>
-      <div class="spec-row">
-        <span class="spec-key">Light</span>
-        <span class="spec-val">1 &times; incandescent — <span class="failing">failing</span></span>
-      </div>
-      <div class="spec-row">
-        <span class="spec-key">Exits</span>
-        <span class="spec-val none">None recorded</span>
-      </div>
+      <div class="spec-row"><span class="spec-key">Floor</span><span class="spec-val">Ground — 13 rooms mapped</span></div>
+      <div class="spec-row"><span class="spec-key">Entrance</span><span class="spec-val">Tempered glass — <span class="failing">sealed</span></span></div>
+      <div class="spec-row"><span class="spec-key">Occupancy</span><span class="spec-val none">No survivors recorded</span></div>
+      <div class="spec-row"><span class="spec-key">Exits</span><span class="spec-val none">None recorded</span></div>
     </div>
-
     <div class="actions">
       <button id="enter" type="button">Enter the room</button>
       <p class="hint" id="hint"></p>
@@ -289,26 +381,80 @@
   </div>
 </div>
 
+<!-- ---------- The note under the chair ---------- -->
+<div class="overlay" id="noteOverlay" hidden>
+  <div class="note">
+    <div class="lbl">Wifi</div>
+    <div class="code">016390</div>
+    <div class="sub">do NOT give to guests</div>
+    <button class="close" type="button" data-close style="margin-top:22px">Close</button>
+  </div>
+</div>
+
+<!-- ---------- Reception terminal ---------- -->
+<div class="overlay" id="terminal" hidden>
+  <div class="sheet">
+    <div class="term-bar"><span>Reception Terminal</span><span id="termStatus">Not connected</span></div>
+    <div class="term-body" id="termBody"></div>
+    <button class="close" type="button" data-close>Close</button>
+  </div>
+</div>
+
+<!-- ---------- Nick's journal ---------- -->
+<div class="overlay" id="journal" hidden>
+  <div class="sheet">
+    <h2>Journal — found beside the body</h2>
+    <p class="hand">Something in the warehouse came alive.</p>
+    <p class="hand">I've been hiding here. If anyone finds this, they probably won't. I hear it
+      every day. It keeps walking by. I heard it kill the last of us.</p>
+    <p class="hand">I'm starting to feel dehydrated and starving. There were only a few cans of
+      beans and water when I came here. The beans made this unit smell like garbage, but the
+      water was good to wash it down with.</p>
+    <p class="hand">I've had the last of the water and the beans. I can't go outside to search
+      for more. I tried opening the hallway — that thing came after me. It put its hand straight
+      through me. I managed to run away. I'm bleeding heavily. I don't think I can last much longer.</p>
+    <p class="hand">If anyone comes here — please, I'm begging you. If you escape, call my parents,
+      if you ever do find them.</p>
+    <p class="hand sig">My name is Nick Ahoy.</p>
+    <button class="close" type="button" data-close>Close</button>
+  </div>
+</div>
+
+<!-- ---------- Blueprint ---------- -->
+<div class="overlay" id="blueprint" hidden>
+  <div class="sheet">
+    <h2>Recovered blueprint — Extermination Chamber</h2>
+    <div class="spec">
+      <div class="spec-row"><span class="spec-key">Height</span><span class="spec-val">11 ft 0 in</span></div>
+      <div class="spec-row"><span class="spec-key">Frame</span><span class="spec-val">Tungsten</span></div>
+      <div class="spec-row"><span class="spec-key">Joints</span><span class="spec-val">Steel, non-oxidising</span></div>
+      <div class="spec-row"><span class="spec-key">Body</span><span class="spec-val">Birchwood</span></div>
+      <div class="spec-row"><span class="spec-key">Unit name</span><span class="spec-val none">Left blank — three attempts, all struck out</span></div>
+    </div>
+    <p>The outline is human. The proportions are not — the arms reach past the knees. Whoever was
+      filling in the name got as far as three letters, twice, and gave up both times.</p>
+    <button class="close" type="button" data-close>Close</button>
+  </div>
+</div>
+
+<script src="./level.js"></script>
 <script src="./game.js"></script>
 <script>
 /* UI wiring — shared by the dev build and the single-file build. */
 window.bootUI = function bootUI(THREE) {
-  var curtain   = document.getElementById('curtain');
-  var blackout  = document.getElementById('blackout');
-  var enterBtn  = document.getElementById('enter');
-  var crosshair = document.getElementById('crosshair');
-  var legend    = document.getElementById('legend');
-  var soundBtn  = document.getElementById('sound');
-  var hint      = document.getElementById('hint');
-  var stick     = document.getElementById('stick');
-  var stickNub  = document.getElementById('stick-nub');
-  var fileNo    = document.getElementById('file-no');
-  var grain     = document.getElementById('grain');
+  var $ = function (id) { return document.getElementById(id); };
+  var curtain = $('curtain'), blackout = $('blackout'), enterBtn = $('enter');
+  var crosshair = $('crosshair'), prompt = $('prompt'), roomname = $('roomname');
+  var statusEl = $('status'), stanceEl = $('stance'), legend = $('legend');
+  var soundBtn = $('sound'), hint = $('hint'), subtitle = $('subtitle');
+  var ammoEl = $('ammo'), carry = $('carry'), muzzle = $('muzzle');
+  var stick = $('stick'), stickNub = $('stick-nub'), touchbar = $('touchbar');
+  var fileNo = $('file-no'), grain = $('grain');
 
   var coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-  if (coarse) stick.classList.add('mounted');
+  if (coarse) { stick.classList.add('mounted'); touchbar.classList.add('mounted'); }
 
-  // Film grain: a small noise tile generated once, then jittered in CSS.
+  // Film grain: one noise tile, jittered in CSS.
   (function () {
     var n = document.createElement('canvas');
     n.width = n.height = 128;
@@ -316,44 +462,188 @@ window.bootUI = function bootUI(THREE) {
     var img = nx.createImageData(128, 128);
     for (var i = 0; i < img.data.length; i += 4) {
       var v = (Math.random() * 255) | 0;
-      img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
-      img.data[i + 3] = 255;
+      img.data[i] = img.data[i+1] = img.data[i+2] = v;
+      img.data[i+3] = 255;
     }
     nx.putImageData(img, 0, 0);
     grain.style.backgroundImage = 'url(' + n.toDataURL() + ')';
   })();
 
-  var LOOK_MOUSE = '<b>W A S D</b> Move &nbsp;·&nbsp; <b>Mouse</b> Look &nbsp;·&nbsp; <b>Shift</b> Run &nbsp;·&nbsp; <b>Esc</b> Release';
-  var LOOK_DRAG  = '<b>W A S D</b> Move &nbsp;·&nbsp; <b>Drag</b> Look &nbsp;·&nbsp; <b>← →</b> Turn &nbsp;·&nbsp; <b>Esc</b> Pause';
-  var LOOK_TOUCH = '<b>Stick</b> Move &nbsp;·&nbsp; <b>Drag</b> Look';
+  var LOOK_MOUSE = '<b>WASD</b> Move · <b>Mouse</b> Look · <b>E</b> Use · <b>C</b> Crouch · <b>Z</b> Crawl · <b>Shift</b> Run';
+  var LOOK_DRAG  = '<b>WASD</b> Move · <b>Drag</b> Look · <b>E</b> Use · <b>C</b> Crouch · <b>Z</b> Crawl · <b>←→</b> Turn';
+  var LOOK_TOUCH = '<b>Stick</b> Move · <b>Drag</b> Look · <b>Tap</b> Use';
   var mode = coarse ? LOOK_TOUCH : LOOK_MOUSE;
   hint.innerHTML = mode;
 
+  var subTimer = null;
+  function say(text) {
+    subtitle.textContent = text;
+    subtitle.classList.add('on');
+    clearTimeout(subTimer);
+    subTimer = setTimeout(function () { subtitle.classList.remove('on'); }, 5200);
+  }
+
+  var roomTimer = null;
   var game = window.startGame(THREE, {
-    mount: document.getElementById('stage'),
+    mount: $('stage'),
     ui: {
       stick: coarse ? stick : null,
       stickNub: coarse ? stickNub : null,
       onPointerLockBlocked: function () {
-        // Pointer lock is unavailable (common inside an iframe) — say so
-        // plainly and switch the legend to the drag controls that do work.
         if (!coarse) { mode = LOOK_DRAG; hint.innerHTML = mode; legend.innerHTML = mode; }
       },
       onLockChange: function (locked) {
-        if (!locked && game && game.isActive) pause();
-      }
+        if (!locked && game && game.isActive && !overlayOpen()) pause();
+      },
+      onFocus: function (data, text) {
+        if (text) {
+          prompt.innerHTML = '<span class="key">' + (coarse ? 'TAP' : 'E') + '</span>' + text;
+          prompt.classList.add('on');
+          crosshair.classList.add('hot');
+        } else {
+          prompt.classList.remove('on');
+          crosshair.classList.remove('hot');
+        }
+        void data;
+      },
+      onMessage: say,
+      onRoom: function (name) {
+        roomname.textContent = name;
+        roomname.classList.add('on');
+        clearTimeout(roomTimer);
+        roomTimer = setTimeout(function () { roomname.classList.remove('on'); }, 3600);
+      },
+      onStance: function (label) { stanceEl.textContent = label; },
+      onHud: function (s) {
+        if (s.hasGlock) {
+          ammoEl.classList.add('on');
+          ammoEl.querySelector('.big').textContent = s.inMag + ' / ' + Math.max(0, s.ammo - s.inMag);
+          ammoEl.classList.toggle('dry', s.inMag === 0);
+        } else {
+          ammoEl.classList.remove('on');
+        }
+        var items = [];
+        if (s.hasKey) items.push('Storage key');
+        if (s.supplies) items.push('Water · Beans');
+        carry.innerHTML = items.map(function (t) { return '<span>' + t + '</span>'; }).join('');
+      },
+      onMuzzleFlash: function () {
+        muzzle.classList.add('on');
+        setTimeout(function () { muzzle.classList.remove('on'); }, 45);
+      },
+      showNote: function () { openOverlay('noteOverlay'); },
+      showJournal: function () { openOverlay('journal'); },
+      showBlueprint: function () { openOverlay('blueprint'); },
+      showComputer: function (connected) { openTerminal(connected); }
     }
   });
-
-  // Debug handle: lets the test suite inspect real camera state.
   window.__horror = game;
 
-  var legendTimer = null;
-  var enterTimer = null;
-  var hideTimer = null;
+  // ---------------- Overlays ----------------
+  var openId = null;
+  function overlayOpen() { return openId !== null; }
+  function openOverlay(id) {
+    openId = id;
+    $(id).hidden = false;
+    game.setUiOpen(true);
+    var btn = $(id).querySelector('[data-close], .term-btn, input');
+    if (btn) btn.focus();
+  }
+  function closeOverlay() {
+    if (!openId) return;
+    $(openId).hidden = true;
+    openId = null;
+    game.setUiOpen(false);
+  }
+  document.addEventListener('click', function (e) {
+    if (e.target.matches('[data-close]')) closeOverlay();
+  });
+
+  // ---------------- Reception terminal ----------------
+  var NETWORKS = [
+    { name: 'HUSKY WOLF', bars: '••○' },
+    { name: "BARBARA'S NO WIFI", bars: '•○○' },
+    { name: 'WAITING ROOM WIFI', bars: '•••', target: true },
+    { name: 'BLANKET SENSATION', bars: '••○' },
+    { name: 'FBI SURVEILLANCE VAN 4', bars: '•○○' },
+    { name: 'PRINTER_04B', bars: '••○' }
+  ];
+  function openTerminal(connected) {
+    var body = $('termBody');
+    $('termStatus').textContent = connected ? 'Connected' : 'Not connected';
+    body.innerHTML = '';
+    if (connected) {
+      var p = document.createElement('div');
+      p.className = 'term-note';
+      p.textContent = 'Connected to WAITING ROOM WIFI. Display output routed to overhead screen 2.';
+      body.appendChild(p);
+    } else {
+      var note = document.createElement('div');
+      note.className = 'term-note';
+      note.textContent = 'Select a network.';
+      body.appendChild(note);
+      NETWORKS.forEach(function (n) {
+        var b = document.createElement('button');
+        b.className = 'net' + (n.target ? ' target' : '');
+        b.type = 'button';
+        b.innerHTML = '<span>' + n.name + '</span><span class="bars">' + n.bars + '</span>';
+        b.addEventListener('click', function () {
+          if (!n.target) {
+            note.textContent = 'Out of range.';
+            return;
+          }
+          showPassword(body);
+        });
+        body.appendChild(b);
+      });
+    }
+    openOverlay('terminal');
+  }
+  function showPassword(body) {
+    body.innerHTML = '';
+    var lbl = document.createElement('div');
+    lbl.className = 'term-note';
+    lbl.textContent = 'WAITING ROOM WIFI — password required.';
+    var input = document.createElement('input');
+    input.id = 'pwField';
+    input.type = 'text';
+    input.inputMode = 'numeric';
+    input.maxLength = 6;
+    input.setAttribute('aria-label', 'Wi-Fi password');
+    var err = document.createElement('div');
+    err.className = 'term-err';
+    var actions = document.createElement('div');
+    actions.className = 'term-actions';
+    var connect = document.createElement('button');
+    connect.className = 'term-btn'; connect.type = 'button'; connect.textContent = 'Connect';
+    var back = document.createElement('button');
+    back.className = 'term-btn'; back.type = 'button'; back.textContent = 'Back';
+    actions.appendChild(connect); actions.appendChild(back);
+    body.appendChild(lbl); body.appendChild(input); body.appendChild(err); body.appendChild(actions);
+    input.focus();
+
+    function attempt() {
+      if (input.value.trim() === '016390') {
+        closeOverlay();
+        if (window.__onWifiConnected) window.__onWifiConnected();
+      } else {
+        err.textContent = 'Incorrect password.';
+        input.value = '';
+        input.focus();
+      }
+    }
+    connect.addEventListener('click', attempt);
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); attempt(); }
+      e.stopPropagation();
+    });
+    back.addEventListener('click', function () { openTerminal(false); });
+  }
+
+  // ---------------- Entry / pause ----------------
+  var legendTimer = null, enterTimer = null, hideTimer = null;
 
   function enter() {
-    // Kill the light, then bring the room up — a cut, not a fade.
     blackout.classList.add('on');
     clearTimeout(enterTimer);
     enterTimer = setTimeout(function () {
@@ -365,49 +655,55 @@ window.bootUI = function bootUI(THREE) {
 
       crosshair.classList.add('on');
       soundBtn.classList.add('on');
-      if (coarse) stick.classList.add('on');
+      statusEl.classList.add('on');
+      if (coarse) { stick.classList.add('on'); touchbar.classList.add('on'); }
 
       legend.innerHTML = mode;
-      legend.classList.add('on');
       clearTimeout(legendTimer);
-      legendTimer = setTimeout(function () { legend.classList.remove('on'); }, 6000);
+      legendTimer = setTimeout(function () { legend.innerHTML = ''; }, 9000);
 
       blackout.classList.remove('on');
     }, 150);
   }
 
   function pause() {
-    // Cancel any in-flight entry animation. Pausing within the entry
-    // transition would otherwise let a stale timer hide the pause card and
-    // strand the player with no UI and no pointer lock.
     clearTimeout(enterTimer);
     clearTimeout(hideTimer);
     blackout.classList.remove('on');
-
     game.exit();
     fileNo.textContent = 'File 001 — Paused';
     enterBtn.textContent = 'Resume';
     curtain.hidden = false;
-    // Force a reflow so the transition replays from the hidden state.
     void curtain.offsetWidth;
     curtain.classList.remove('dismissing');
     crosshair.classList.remove('on');
-    legend.classList.remove('on');
-    if (coarse) stick.classList.remove('on');
+    statusEl.classList.remove('on');
+    prompt.classList.remove('on');
+    if (coarse) { stick.classList.remove('on'); touchbar.classList.remove('on'); }
     enterBtn.focus();
   }
 
   enterBtn.addEventListener('click', enter);
 
-  // Esc pauses in drag-look mode, where there is no pointer lock to release.
   window.addEventListener('keydown', function (e) {
-    if (e.code === 'Escape' && game.isActive && !document.pointerLockElement) pause();
+    if (e.code !== 'Escape') return;
+    if (overlayOpen()) { closeOverlay(); return; }
+    if (game.isActive && !document.pointerLockElement) pause();
   });
 
   soundBtn.addEventListener('click', function () {
     var muted = game.toggleMute();
     soundBtn.textContent = muted ? 'Sound Off' : 'Sound On';
     soundBtn.setAttribute('aria-pressed', String(muted));
+  });
+
+  // Touch buttons
+  $('btnUse').addEventListener('click', function () { game.interact(); });
+  $('btnCrouch').addEventListener('click', function () {
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyC' }));
+  });
+  $('btnCrawl').addEventListener('click', function () {
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyZ' }));
   });
 };
 </script>

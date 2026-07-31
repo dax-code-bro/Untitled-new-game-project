@@ -1,160 +1,175 @@
 /*
- * Untitled Horror Game — Room 001
+ * Untitled Horror Game — engine.
  *
- * Classic (non-module) script so the same source can power both the
- * multi-file dev build (index.html + vendored Three.js) and the inlined
- * single-file build (standalone.html). Exposes one entry point:
+ * Classic (non-module) script so the same source powers both the multi-file
+ * dev build and the inlined single-file build. Level content lives in
+ * level.js; this file is renderer, player, collision, interaction, audio.
  *
  *   window.startGame(THREE, { mount, ui })
- *
- * THREE is injected rather than imported so neither build needs a bundler.
  */
 (function () {
   'use strict';
 
-  // -------------------------------------------------------------------
-  // Room specification — the numbers the entry card advertises.
-  // -------------------------------------------------------------------
-  var ROOM_SIZE = 10;      // 10 x 10 metres
-  var WALL_HEIGHT = 4;     // metres
-  var EYE_HEIGHT = 1.7;    // camera height
-  var PLAYER_RADIUS = 0.4; // keeps the player off the walls
-  var HALF = ROOM_SIZE / 2;
-  var MOVE_SPEED = 2.9;    // metres / second
+  var STANCE = {
+    stand: { eye: 1.68, speed: 2.9, label: 'Standing' },
+    crouch: { eye: 1.05, speed: 1.5, label: 'Crouching' },
+    crawl: { eye: 0.34, speed: 0.85, label: 'Crawling' }
+  };
+  var PLAYER_RADIUS = 0.32;
   var LOOK_SENSITIVITY = 0.0022;
   var PITCH_LIMIT = Math.PI / 2 - 0.06;
+  var REACH = 2.6;
 
   var prefersReducedMotion =
     window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // -------------------------------------------------------------------
-  // Procedural concrete: multi-octave canvas noise, so the grey surfaces
-  // read as poured concrete instead of flat colour. No external assets.
+  // Audio: room tone, footsteps and stingers, all synthesised.
   // -------------------------------------------------------------------
-  function makeConcreteTexture(THREE, size, baseValue, speckle) {
-    var canvas = document.createElement('canvas');
-    canvas.width = canvas.height = size;
-    var ctx = canvas.getContext('2d');
-
-    ctx.fillStyle = 'rgb(' + baseValue + ',' + baseValue + ',' + baseValue + ')';
-    ctx.fillRect(0, 0, size, size);
-
-    // Coarse blotches through to fine mottling.
-    var octaves = [
-      { cells: 6, amp: 16, alpha: 0.5 },
-      { cells: 16, amp: 12, alpha: 0.4 },
-      { cells: 48, amp: 8, alpha: 0.35 },
-      { cells: 128, amp: 5, alpha: 0.3 }
-    ];
-    for (var o = 0; o < octaves.length; o++) {
-      var oct = octaves[o];
-      var step = size / oct.cells;
-      for (var y = 0; y < oct.cells; y++) {
-        for (var x = 0; x < oct.cells; x++) {
-          var d = (Math.random() * 2 - 1) * oct.amp;
-          var v = Math.max(0, Math.min(255, baseValue + d));
-          ctx.fillStyle = 'rgba(' + v + ',' + v + ',' + v + ',' + oct.alpha + ')';
-          ctx.fillRect(x * step, y * step, step + 1, step + 1);
-        }
-      }
-    }
-
-    // Pitting and aggregate flecks.
-    for (var s = 0; s < speckle; s++) {
-      var sx = Math.random() * size;
-      var sy = Math.random() * size;
-      var r = Math.random() * 1.6 + 0.2;
-      var dark = Math.random() < 0.6;
-      var sv = dark ? baseValue - 34 : baseValue + 26;
-      sv = Math.max(0, Math.min(255, sv));
-      ctx.fillStyle = 'rgba(' + sv + ',' + sv + ',' + sv + ',' + (Math.random() * 0.5 + 0.2) + ')';
-      ctx.beginPath();
-      ctx.arc(sx, sy, r, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    var tex = new THREE.CanvasTexture(canvas);
-    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-    tex.anisotropy = 4;
-    return tex;
-  }
-
-  // -------------------------------------------------------------------
-  // The electrical hum of a failing bulb, synthesised on the fly.
-  // Started from the user's click, so autoplay policy is satisfied.
-  // -------------------------------------------------------------------
-  function createAmbience() {
+  function createAudio() {
     var Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return null;
+    var ctx = null, master = null, started = false;
+    var beds = {};
+    var current = null;
+    var muted = false;
 
-    var ctx, master, humGain;
-    var started = false;
+    function noiseBuffer(seconds) {
+      var len = Math.floor(ctx.sampleRate * seconds);
+      var buf = ctx.createBuffer(1, len, ctx.sampleRate);
+      var d = buf.getChannelData(0);
+      for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      return buf;
+    }
+
+    // A bed is a filtered noise loop plus optional tonal drone.
+    function makeBed(opts) {
+      var g = ctx.createGain();
+      g.gain.value = 0;
+      g.connect(master);
+
+      var src = ctx.createBufferSource();
+      src.buffer = noiseBuffer(4);
+      src.loop = true;
+      var f = ctx.createBiquadFilter();
+      f.type = opts.filter || 'lowpass';
+      f.frequency.value = opts.cutoff;
+      f.Q.value = opts.q || 0.7;
+      var ng = ctx.createGain();
+      ng.gain.value = opts.noise;
+      src.connect(f); f.connect(ng); ng.connect(g);
+      src.start();
+
+      (opts.tones || []).forEach(function (t) {
+        var o = ctx.createOscillator();
+        o.type = t.type || 'sine';
+        o.frequency.value = t.freq;
+        var og = ctx.createGain();
+        og.gain.value = t.gain;
+        o.connect(og); og.connect(g);
+        o.start();
+        if (t.lfo) {
+          var l = ctx.createOscillator();
+          l.frequency.value = t.lfo;
+          var lg = ctx.createGain();
+          lg.gain.value = t.freq * 0.012;
+          l.connect(lg); lg.connect(o.frequency); l.start();
+        }
+      });
+      return g;
+    }
 
     function start() {
       if (started) return;
       started = true;
       ctx = new Ctx();
       master = ctx.createGain();
-      master.gain.value = 0.0;
+      master.gain.value = 0.9;
       master.connect(ctx.destination);
 
-      // 50Hz mains buzz plus its harmonic — the bulb's filament.
-      humGain = ctx.createGain();
-      humGain.gain.value = 0.5;
-      humGain.connect(master);
+      beds.lobby = makeBed({ cutoff: 320, noise: 0.05, tones: [{ freq: 50, gain: 0.05 }, { freq: 100, gain: 0.016, type: 'triangle' }] });
+      beds.hall = makeBed({ cutoff: 240, noise: 0.045, tones: [{ freq: 47, gain: 0.035 }] });
+      beds.tile = makeBed({ cutoff: 520, noise: 0.035, tones: [{ freq: 62, gain: 0.02 }] });
+      beds.industrial = makeBed({ cutoff: 180, noise: 0.075, tones: [{ freq: 33, gain: 0.07, lfo: 0.12 }, { freq: 66, gain: 0.02 }] });
+      beds.lab = makeBed({ cutoff: 400, noise: 0.04, tones: [{ freq: 41, gain: 0.05, lfo: 0.2 }, { freq: 123, gain: 0.012, type: 'triangle' }] });
+      beds.wood = makeBed({ cutoff: 280, noise: 0.04, tones: [{ freq: 44, gain: 0.04 }] });
+      // A separate, nastier layer for Assembly onward.
+      beds.dread = makeBed({ cutoff: 900, q: 6, noise: 0.05, filter: 'bandpass', tones: [{ freq: 29, gain: 0.09, lfo: 0.07 }, { freq: 38.5, gain: 0.05, lfo: 0.05 }] });
+    }
 
-      [50, 100, 150].forEach(function (freq, i) {
-        var osc = ctx.createOscillator();
-        osc.type = i === 0 ? 'sine' : 'triangle';
-        osc.frequency.value = freq;
-        var g = ctx.createGain();
-        g.gain.value = [0.5, 0.16, 0.06][i];
-        osc.connect(g);
-        g.connect(humGain);
-        osc.start();
+    function setBed(name, dread) {
+      if (!started) return;
+      Object.keys(beds).forEach(function (k) {
+        var want = 0;
+        if (k === name) want = 1;
+        if (k === 'dread') want = dread ? 1 : 0;
+        beds[k].gain.setTargetAtTime(muted ? 0 : want, ctx.currentTime, 1.1);
       });
+      current = name;
+    }
 
-      // A breath of filtered noise underneath: room tone.
-      var len = ctx.sampleRate * 2;
-      var buffer = ctx.createBuffer(1, len, ctx.sampleRate);
-      var data = buffer.getChannelData(0);
-      for (var i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * 0.35;
-      var noise = ctx.createBufferSource();
-      noise.buffer = buffer;
-      noise.loop = true;
-      var lp = ctx.createBiquadFilter();
-      lp.type = 'lowpass';
-      lp.frequency.value = 340;
-      var ng = ctx.createGain();
-      ng.gain.value = 0.5;
-      noise.connect(lp);
-      lp.connect(ng);
-      ng.connect(master);
-      noise.start();
+    function blip(freq, dur, type, gain, slideTo) {
+      if (!started || muted) return;
+      var o = ctx.createOscillator();
+      o.type = type || 'sine';
+      o.frequency.value = freq;
+      if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, ctx.currentTime + dur);
+      var g = ctx.createGain();
+      g.gain.value = 0;
+      g.gain.linearRampToValueAtTime(gain || 0.08, ctx.currentTime + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur);
+      o.connect(g); g.connect(master);
+      o.start(); o.stop(ctx.currentTime + dur + 0.02);
+    }
 
-      // Fade in — never a hard cut.
-      master.gain.setTargetAtTime(0.05, ctx.currentTime, 1.2);
+    function burst(dur, cutoff, gain, sweepTo) {
+      if (!started || muted) return;
+      var s = ctx.createBufferSource();
+      s.buffer = noiseBuffer(Math.max(0.12, dur));
+      var f = ctx.createBiquadFilter();
+      f.type = 'lowpass';
+      f.frequency.value = cutoff;
+      if (sweepTo) f.frequency.exponentialRampToValueAtTime(sweepTo, ctx.currentTime + dur);
+      var g = ctx.createGain();
+      g.gain.value = gain;
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur);
+      s.connect(f); f.connect(g); g.connect(master);
+      s.start(); s.stop(ctx.currentTime + dur + 0.02);
     }
 
     return {
       start: start,
-      // Duck the hum in sync with the light dropping out.
-      setFlicker: function (amount) {
-        if (!started || !humGain) return;
-        humGain.gain.setTargetAtTime(0.2 + amount * 0.8, ctx.currentTime, 0.02);
+      setBed: setBed,
+      get started() { return started; },
+      setMuted: function (m) {
+        muted = m;
+        if (!started) return;
+        master.gain.setTargetAtTime(m ? 0 : 0.9, ctx.currentTime, 0.15);
       },
-      setMuted: function (muted) {
-        if (!started || !master) return;
-        master.gain.setTargetAtTime(muted ? 0.0 : 0.05, ctx.currentTime, 0.15);
+      footstep: function (surface, stance) {
+        var vol = stance === 'crawl' ? 0.035 : stance === 'crouch' ? 0.05 : 0.09;
+        if (surface === 'tile') burst(0.07, 2600, vol, 700);
+        else if (surface === 'lobby') burst(0.09, 700, vol * 0.7, 260);
+        else burst(0.08, 1500, vol, 420);
       },
-      get available() {
-        return started;
+      gunshot: function () {
+        burst(0.32, 4200, 0.55, 180);
+        blip(140, 0.22, 'square', 0.22, 42);
+      },
+      dryFire: function () { blip(1800, 0.05, 'square', 0.05); },
+      pickup: function () { blip(660, 0.1, 'sine', 0.09, 990); },
+      locked: function () { blip(180, 0.13, 'square', 0.09, 120); },
+      unlock: function () { blip(420, 0.16, 'sine', 0.1, 720); },
+      ui: function () { blip(880, 0.045, 'square', 0.04); },
+      shortCircuit: function () { burst(0.7, 6000, 0.5, 120); blip(90, 0.5, 'sawtooth', 0.2, 30); },
+      stinger: function () { blip(58, 2.4, 'sawtooth', 0.16, 26); burst(1.6, 700, 0.12, 90); },
+      phoneDead: function () {
+        blip(440, 0.4, 'sine', 0.05);
+        setTimeout(function () { blip(440, 0.4, 'sine', 0.05); }, 520);
       }
     };
   }
 
-  // -------------------------------------------------------------------
-  // Entry point
   // -------------------------------------------------------------------
   window.startGame = function startGame(THREE, options) {
     options = options || {};
@@ -165,239 +180,167 @@
     var renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.15;
+    renderer.toneMappingExposure = 1.12;
     mount.appendChild(renderer.domElement);
     var canvas = renderer.domElement;
     canvas.setAttribute('tabindex', '0');
-    canvas.setAttribute('aria-label', 'Room 001 — first person view');
+    canvas.setAttribute('aria-label', 'First person view');
 
-    // ---------------- Scene ----------------
     var scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x08090a);
-    scene.fog = new THREE.FogExp2(0x08090a, 0.055);
+    scene.background = new THREE.Color(0x060708);
+    scene.fog = new THREE.FogExp2(0x060708, 0.035);
 
-    var camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.05, 60);
-    // Start off-centre looking across the room's diagonal — the longest
-    // sightline, so the space reads as a room immediately.
-    camera.position.set(2.8, EYE_HEIGHT, 3.1);
+    var camera = new THREE.PerspectiveCamera(74, window.innerWidth / window.innerHeight, 0.05, 90);
 
-    // ---------------- Materials ----------------
-    var wallTex = makeConcreteTexture(THREE, 512, 132, 2600);
-    wallTex.repeat.set(3, 1.4);
-    var floorTex = makeConcreteTexture(THREE, 512, 108, 3400);
-    floorTex.repeat.set(4, 4);
-    var ceilTex = makeConcreteTexture(THREE, 512, 96, 1800);
-    ceilTex.repeat.set(3, 3);
+    // ---------------- Level ----------------
+    var level = window.buildLevel(THREE, scene);
+    var colliders = level.colliders;
 
-    var wallMat = new THREE.MeshStandardMaterial({
-      color: 0x9aa1a4, map: wallTex, bumpMap: wallTex, bumpScale: 0.35,
-      roughness: 0.96, metalness: 0.0
-    });
-    var floorMat = new THREE.MeshStandardMaterial({
-      color: 0x8b9295, map: floorTex, bumpMap: floorTex, bumpScale: 0.4,
-      roughness: 0.94, metalness: 0.0
-    });
-    var ceilMat = new THREE.MeshStandardMaterial({
-      color: 0x7f868a, map: ceilTex, bumpMap: ceilTex, bumpScale: 0.3,
-      roughness: 1.0, metalness: 0.0
-    });
-
-    // ---------------- Room ----------------
-    var room = new THREE.Group();
-
-    var floor = new THREE.Mesh(new THREE.PlaneGeometry(ROOM_SIZE, ROOM_SIZE), floorMat);
-    floor.rotation.x = -Math.PI / 2;
-    floor.receiveShadow = true;
-    room.add(floor);
-
-    var ceiling = new THREE.Mesh(new THREE.PlaneGeometry(ROOM_SIZE, ROOM_SIZE), ceilMat);
-    ceiling.rotation.x = Math.PI / 2;
-    ceiling.position.y = WALL_HEIGHT;
-    ceiling.receiveShadow = true;
-    room.add(ceiling);
-
-    function addWall(x, y, z, rotY) {
-      var wall = new THREE.Mesh(new THREE.PlaneGeometry(ROOM_SIZE, WALL_HEIGHT), wallMat);
-      wall.position.set(x, y, z);
-      wall.rotation.y = rotY;
-      wall.receiveShadow = true;
-      wall.castShadow = true;
-      room.add(wall);
-    }
-    var midH = WALL_HEIGHT / 2;
-    addWall(0, midH, -HALF, 0);            // north
-    addWall(0, midH, HALF, Math.PI);       // south
-    addWall(-HALF, midH, 0, Math.PI / 2);  // west
-    addWall(HALF, midH, 0, -Math.PI / 2);  // east
-
-    // A skirting rail grounds the walls against the floor.
-    var trimMat = new THREE.MeshStandardMaterial({ color: 0x6a6f71, roughness: 0.85 });
-    for (var t = 0; t < 4; t++) {
-      var horizontal = t < 2;
-      var trim = new THREE.Mesh(
-        new THREE.BoxGeometry(horizontal ? ROOM_SIZE : 0.06, 0.14, horizontal ? 0.06 : ROOM_SIZE),
-        trimMat
-      );
-      trim.position.set(
-        horizontal ? 0 : (t === 2 ? -HALF + 0.03 : HALF - 0.03),
-        0.07,
-        horizontal ? (t === 0 ? -HALF + 0.03 : HALF - 0.03) : 0
-      );
-      trim.receiveShadow = true;
-      room.add(trim);
-    }
-
-    scene.add(room);
-
-    // ---------------- Lighting ----------------
-    // Cold fill so the concrete reads grey. Without enough cool light the
-    // tungsten bulb stains the whole room sepia — the room must stay grey
-    // and let the bulb own only the warm pool beneath it.
-    var sky = new THREE.HemisphereLight(0x8fa3b4, 0x24282a, 1.15);
-    scene.add(sky);
-    var ambient = new THREE.AmbientLight(0x5b6b78, 0.5);
-    scene.add(ambient);
-
-    // ...against one warm, failing tungsten bulb. The whole palette is
-    // this single relationship: cold room, fragile warm source.
-    var bulbPivot = new THREE.Group();
-    bulbPivot.position.set(0, WALL_HEIGHT, 0);
-    scene.add(bulbPivot);
-
-    var CORD_LENGTH = 0.62;
-
-    var cord = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.006, 0.006, CORD_LENGTH, 6),
-      new THREE.MeshStandardMaterial({ color: 0x0e0f10, roughness: 1 })
-    );
-    cord.position.y = -CORD_LENGTH / 2;
-    bulbPivot.add(cord);
-
-    var socket = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.035, 0.045, 0.09, 12),
-      new THREE.MeshStandardMaterial({ color: 0x1b1c1d, roughness: 0.7, metalness: 0.3 })
-    );
-    socket.position.y = -CORD_LENGTH - 0.04;
-    bulbPivot.add(socket);
-
-    var bulbMat = new THREE.MeshStandardMaterial({
-      color: 0xfff4e2, emissive: 0xffd9a0, emissiveIntensity: 3.0, roughness: 0.25
-    });
-    var bulbMesh = new THREE.Mesh(new THREE.SphereGeometry(0.075, 20, 16), bulbMat);
-    bulbMesh.position.y = -CORD_LENGTH - 0.13;
-    bulbPivot.add(bulbMesh);
-
-    var bulb = new THREE.PointLight(0xffe3c2, 22, 26, 1.75);
-    bulb.position.y = -CORD_LENGTH - 0.13;
-    bulb.castShadow = true;
-    bulb.shadow.mapSize.set(1024, 1024);
-    bulb.shadow.bias = -0.0016;
-    bulb.shadow.camera.near = 0.05;
-    bulb.shadow.camera.far = 20;
-    bulbPivot.add(bulb);
-
-    var BASE_INTENSITY = bulb.intensity;
-    var BASE_EMISSIVE = bulbMat.emissiveIntensity;
-
-    // ---------------- Look state ----------------
-    var yaw = Math.PI / 4;  // face the opposite corner
+    camera.position.set(level.spawn.x, STANCE.stand.eye, level.spawn.z);
+    var yaw = level.spawn.yaw;
     var pitch = 0;
 
-    function applyLook() {
-      camera.rotation.set(pitch, yaw, 0, 'YXZ');
-    }
-    applyLook();
+    // The player's own light: not a torch, just enough to read by.
+    var handLight = new THREE.PointLight(0xbfd0dd, 2.0, 7.5, 2);
+    scene.add(handLight);
 
+    function applyLook() { camera.rotation.set(pitch, yaw, 0, 'YXZ'); }
+    applyLook();
     function addLook(dx, dy) {
       yaw -= dx * LOOK_SENSITIVITY;
       pitch -= dy * LOOK_SENSITIVITY;
-      if (pitch > PITCH_LIMIT) pitch = PITCH_LIMIT;
-      if (pitch < -PITCH_LIMIT) pitch = -PITCH_LIMIT;
+      pitch = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, pitch));
       applyLook();
     }
 
+    // ---------------- Game state ----------------
+    var state = {
+      stance: 'stand',
+      hasKey: false,
+      hasGlock: false,
+      ammo: 0,
+      mags: 0,
+      inMag: 0,
+      storageOpen: false,
+      wifiConnected: false,
+      tvWatched: false,
+      readJournal: false,
+      readBlueprint: false,
+      supplies: false,
+      room: null,
+      seenAssembly: false
+    };
+    var MAG_SIZE = 17;
+
+    var audio = createAudio();
+
     // ---------------- Input ----------------
-    var keys = { forward: false, back: false, left: false, right: false, turnL: false, turnR: false };
+    var keys = { f: false, b: false, l: false, r: false, tl: false, tr: false };
     var running = false;
-    var active = false;      // is the player in the room (past the entry card)?
+    var active = false;
     var pointerLocked = false;
-    var pointerLockBlocked = false; // e.g. sandboxed iframe without allow="pointer-lock"
+    var pointerLockBlocked = false;
+    var uiOpen = false;   // an overlay (computer, journal…) has the input
 
-    function keyHandler(down) {
-      return function (e) {
-        switch (e.code) {
-          case 'KeyW': case 'ArrowUp': keys.forward = down; break;
-          case 'KeyS': case 'ArrowDown': keys.back = down; break;
-          case 'KeyA': keys.left = down; break;
-          case 'KeyD': keys.right = down; break;
-          case 'ArrowLeft': keys.turnL = down; break;   // arrows turn, WASD strafes
-          case 'ArrowRight': keys.turnR = down; break;
-          case 'KeyQ': keys.turnL = down; break;
-          case 'KeyE': keys.turnR = down; break;
-          case 'ShiftLeft': case 'ShiftRight': running = down; break;
-          default: return;
-        }
-        if (active) e.preventDefault();
-      };
+    function setStance(next) {
+      if (state.stance === next) next = 'stand';
+      state.stance = next;
+      if (ui.onStance) ui.onStance(STANCE[state.stance].label, state.stance);
     }
-    window.addEventListener('keydown', keyHandler(true));
-    window.addEventListener('keyup', keyHandler(false));
 
-    // Pointer lock is the ideal path, but it is routinely unavailable inside
-    // an iframe. Drag-to-look is a first-class fallback, not a degradation.
-    document.addEventListener('pointerlockchange', function () {
-      pointerLocked = document.pointerLockElement === canvas;
-      if (ui.onLockChange) ui.onLockChange(pointerLocked);
+    window.addEventListener('keydown', function (e) {
+      if (e.code === 'Escape') return;              // handled by the shell
+      if (uiOpen) return;
+      switch (e.code) {
+        case 'KeyW': case 'ArrowUp': keys.f = true; break;
+        case 'KeyS': case 'ArrowDown': keys.b = true; break;
+        case 'KeyA': keys.l = true; break;
+        case 'KeyD': keys.r = true; break;
+        case 'ArrowLeft': keys.tl = true; break;
+        case 'ArrowRight': keys.tr = true; break;
+        case 'KeyQ': keys.tl = true; break;
+        case 'KeyE': tryInteract(); break;
+        case 'ShiftLeft': case 'ShiftRight': running = true; break;
+        case 'ControlLeft': case 'ControlRight': case 'KeyC': setStance('crouch'); break;
+        case 'KeyZ': setStance('crawl'); break;
+        case 'KeyR': reload(); break;
+        default: return;
+      }
+      if (active) e.preventDefault();
     });
+    window.addEventListener('keyup', function (e) {
+      switch (e.code) {
+        case 'KeyW': case 'ArrowUp': keys.f = false; break;
+        case 'KeyS': case 'ArrowDown': keys.b = false; break;
+        case 'KeyA': keys.l = false; break;
+        case 'KeyD': keys.r = false; break;
+        case 'ArrowLeft': keys.tl = false; break;
+        case 'ArrowRight': keys.tr = false; break;
+        case 'KeyQ': keys.tl = false; break;
+        case 'ShiftLeft': case 'ShiftRight': running = false; break;
+        default: return;
+      }
+    });
+
     function markPointerLockBlocked() {
       if (pointerLockBlocked) return;
       pointerLockBlocked = true;
       if (ui.onPointerLockBlocked) ui.onPointerLockBlocked();
     }
+    function requestLock() {
+      if (!active || pointerLockBlocked || !canvas.requestPointerLock) return;
+      if (document.pointerLockElement === canvas) return;
+      var req;
+      try { req = canvas.requestPointerLock(); } catch (err) { markPointerLockBlocked(); }
+      if (req && typeof req.catch === 'function') req.catch(markPointerLockBlocked);
+    }
+    function releaseLock() {
+      if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock();
+    }
+    document.addEventListener('pointerlockchange', function () {
+      pointerLocked = document.pointerLockElement === canvas;
+      if (ui.onLockChange) ui.onLockChange(pointerLocked);
+    });
     document.addEventListener('pointerlockerror', markPointerLockBlocked);
-
     document.addEventListener('mousemove', function (e) {
-      if (!pointerLocked) return;
+      if (!pointerLocked || uiOpen) return;
       addLook(e.movementX || 0, e.movementY || 0);
     });
 
-    // Drag-to-look (mouse or touch) whenever the pointer is not locked.
-    var dragging = false;
-    var lastX = 0, lastY = 0;
-
+    var dragging = false, lastX = 0, lastY = 0, dragMoved = 0;
     canvas.addEventListener('pointerdown', function (e) {
-      if (!active || pointerLocked) return;
-      dragging = true;
-      lastX = e.clientX;
-      lastY = e.clientY;
+      if (!active || uiOpen) return;
+      if (pointerLocked) { shoot(); return; }
+      // Pointer lock is released whenever an overlay opens; clicking the
+      // world takes it back rather than dropping into drag-look for good.
+      if (!pointerLockBlocked && canvas.requestPointerLock) { requestLock(); return; }
+      dragging = true; dragMoved = 0;
+      lastX = e.clientX; lastY = e.clientY;
       try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* not fatal */ }
     });
     canvas.addEventListener('pointermove', function (e) {
-      if (!dragging || pointerLocked) return;
-      addLook((e.clientX - lastX) * 2.1, (e.clientY - lastY) * 2.1);
-      lastX = e.clientX;
-      lastY = e.clientY;
+      if (!dragging || pointerLocked || uiOpen) return;
+      var dx = e.clientX - lastX, dy = e.clientY - lastY;
+      dragMoved += Math.abs(dx) + Math.abs(dy);
+      addLook(dx * 2.1, dy * 2.1);
+      lastX = e.clientX; lastY = e.clientY;
     });
     function endDrag(e) {
       if (!dragging) return;
       dragging = false;
+      // A tap (rather than a drag) interacts — the only way to play on touch.
+      if (dragMoved < 6 && active && !uiOpen) tryInteract();
       try { canvas.releasePointerCapture(e.pointerId); } catch (err) { /* not fatal */ }
     }
     canvas.addEventListener('pointerup', endDrag);
     canvas.addEventListener('pointercancel', endDrag);
 
-    // On-screen stick for touch devices.
     var stick = { active: false, x: 0, y: 0, id: null };
     if (ui.stick && ui.stickNub) {
-      var stickEl = ui.stick;
-      var nub = ui.stickNub;
-      var RADIUS = 46;
+      var stickEl = ui.stick, nub = ui.stickNub, RAD = 46;
       stickEl.addEventListener('pointerdown', function (e) {
-        stick.active = true;
-        stick.id = e.pointerId;
+        stick.active = true; stick.id = e.pointerId;
         try { stickEl.setPointerCapture(e.pointerId); } catch (err) { /* not fatal */ }
         e.preventDefault();
       });
@@ -407,18 +350,15 @@
         var dx = e.clientX - (rect.left + rect.width / 2);
         var dy = e.clientY - (rect.top + rect.height / 2);
         var dist = Math.hypot(dx, dy) || 1;
-        var clamped = Math.min(dist, RADIUS);
-        dx = (dx / dist) * clamped;
-        dy = (dy / dist) * clamped;
-        stick.x = dx / RADIUS;
-        stick.y = dy / RADIUS;
+        var cl = Math.min(dist, RAD);
+        dx = (dx / dist) * cl; dy = (dy / dist) * cl;
+        stick.x = dx / RAD; stick.y = dy / RAD;
         nub.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
         e.preventDefault();
       });
       function resetStick(e) {
         if (!stick.active) return;
-        stick.active = false;
-        stick.x = stick.y = 0;
+        stick.active = false; stick.x = stick.y = 0;
         nub.style.transform = 'translate(0px,0px)';
         try { stickEl.releasePointerCapture(e.pointerId); } catch (err) { /* not fatal */ }
       }
@@ -426,90 +366,289 @@
       stickEl.addEventListener('pointercancel', resetStick);
     }
 
-    // ---------------- Ambience ----------------
-    var ambience = createAmbience();
-    var muted = false;
+    // ---------------- Collision ----------------
+    function collide(nx, nz) {
+      var r = PLAYER_RADIUS;
+      for (var i = 0; i < colliders.length; i++) {
+        var c = colliders[i];
+        if (c.id === 'storageDoor' && state.storageOpen) continue;
+        // The barricade has a gap you can only take on your belly.
+        if (c.id === 'barricade' && state.stance === 'crawl') continue;
+        if (nx + r < c.x1 || nx - r > c.x2 || nz + r < c.z1 || nz - r > c.z2) continue;
+        // Push out along the shallower axis.
+        var pxLeft = (nx + r) - c.x1;
+        var pxRight = c.x2 - (nx - r);
+        var pzTop = (nz + r) - c.z1;
+        var pzBot = c.z2 - (nz - r);
+        var mx = Math.min(pxLeft, pxRight);
+        var mz = Math.min(pzTop, pzBot);
+        if (mx < mz) nx += (pxLeft < pxRight) ? -mx : mx;
+        else nz += (pzTop < pzBot) ? -mz : mz;
+      }
+      return { x: nx, z: nz };
+    }
+
+    // ---------------- Interaction ----------------
+    var raycaster = new THREE.Raycaster();
+    raycaster.far = REACH;
+    var centre = new THREE.Vector2(0, 0);
+    var focused = null;
+
+    function updateFocus() {
+      // setFromCamera reads camera.matrixWorld, which is only refreshed by
+      // render(). Without this the interaction prompt trails the camera by
+      // a frame, which is visible when you flick the mouse across an object.
+      camera.updateMatrixWorld();
+      raycaster.setFromCamera(centre, camera);
+      var hits = raycaster.intersectObjects(level.interactables, false);
+      var found = null;
+      for (var i = 0; i < hits.length; i++) {
+        var d = hits[i].object.userData.interact;
+        if (!d) continue;
+        if (d.requiresProne && state.stance !== 'crawl') continue;
+        found = hits[i].object;
+        break;
+      }
+      if (found !== focused) {
+        focused = found;
+        if (ui.onFocus) {
+          ui.onFocus(focused ? focused.userData.interact : null, promptFor(focused));
+        }
+      }
+    }
+
+    function promptFor(obj) {
+      if (!obj) return null;
+      var d = obj.userData.interact;
+      if (d.id === 'storageDoor') {
+        if (state.storageOpen) return null;
+        return state.hasKey ? 'Unlock storage unit' : 'Locked — needs a key';
+      }
+      return d.verb + ' ' + d.label.toLowerCase();
+    }
+
+    function tryInteract() {
+      if (!focused || !active) return;
+      var d = focused.userData.interact;
+      var say = ui.onMessage || function () {};
+      switch (d.id) {
+        case 'wifiNote':
+          if (audio) audio.ui();
+          if (ui.showNote) ui.showNote();
+          break;
+        case 'computer':
+          if (audio) audio.ui();
+          if (ui.showComputer) ui.showComputer(state.wifiConnected);
+          break;
+        case 'entranceDoor':
+          if (audio) audio.locked();
+          say('The glass does not move. Whatever is on the other side, you cannot see it.');
+          break;
+        case 'phone':
+          if (audio) audio.phoneDead();
+          say('You lift the receiver. Two tones, then nothing. The line is dead.');
+          break;
+        case 'newspaper':
+          say('Local section, three weeks old. A coffee ring has eaten most of the front page.');
+          break;
+        case 'storageKey':
+          state.hasKey = true;
+          focused.visible = false;
+          if (audio) audio.pickup();
+          say('You take the key. Stamped: STORAGE.');
+          refreshHud();
+          break;
+        case 'storageDoor':
+          if (state.storageOpen) break;
+          if (!state.hasKey) { if (audio) audio.locked(); say('Locked. There is a keyhole, and no key in it.'); break; }
+          state.storageOpen = true;
+          if (window.__storageDoorMesh) window.__storageDoorMesh.visible = false;
+          if (audio) audio.unlock();
+          say('The lock turns. The door rolls up on a smell you will not forget.');
+          break;
+        case 'journal':
+          state.readJournal = true;
+          if (ui.showJournal) ui.showJournal();
+          break;
+        case 'glock':
+          state.hasGlock = true;
+          state.mags = 2;
+          state.inMag = MAG_SIZE;
+          state.ammo = MAG_SIZE * 2;
+          focused.visible = false;
+          if (audio) audio.pickup();
+          say('Glock 19, and two magazines. Thirty-four rounds. There will not be more.');
+          refreshHud();
+          break;
+        case 'blueprint':
+          state.readBlueprint = true;
+          if (ui.showBlueprint) ui.showBlueprint();
+          break;
+        case 'fragment':
+          say('A splinter of pale birchwood, dense as bone. One end is scorched. The other is sharpened.');
+          break;
+        case 'bones':
+          say('Fossil casts, mounted and labelled. Somebody paid a great deal for these.');
+          break;
+        case 'embeddedDoor':
+          say('The office door is buried halfway into the wall. It was not opened. It was thrown.');
+          break;
+        case 'cage':
+          say('HOLDING — SUBJECT SECURE. The bars are bent outward. It was not let out.');
+          break;
+        case 'supplies':
+          state.supplies = true;
+          if (audio) audio.pickup();
+          say('Water, and a few cans of beans. Exactly what Nick ran out of.');
+          refreshHud();
+          break;
+        default:
+          say(d.label);
+      }
+      updateFocus();
+    }
+
+    // ---------------- Weapon ----------------
+    function shoot() {
+      if (!state.hasGlock || uiOpen) return;
+      if (state.inMag <= 0) {
+        if (audio) audio.dryFire();
+        if (ui.onMessage) ui.onMessage(state.ammo > 0 ? 'Empty. Reload with R.' : 'Empty. There is no more ammunition.');
+        return;
+      }
+      state.inMag--;
+      state.ammo--;
+      if (audio) audio.gunshot();
+      if (ui.onMuzzleFlash) ui.onMuzzleFlash();
+      refreshHud();
+    }
+    function reload() {
+      if (!state.hasGlock) return;
+      if (state.inMag >= MAG_SIZE) return;
+      var pool = state.ammo - state.inMag;
+      if (pool <= 0) { if (ui.onMessage) ui.onMessage('No magazines left.'); return; }
+      var need = MAG_SIZE - state.inMag;
+      var take = Math.min(need, pool);
+      state.inMag += take;
+      if (audio) audio.ui();
+      if (ui.onMessage) ui.onMessage('Reloaded.');
+      refreshHud();
+    }
+
+    function refreshHud() {
+      if (ui.onHud) ui.onHud({
+        hasGlock: state.hasGlock,
+        inMag: state.inMag,
+        ammo: state.ammo,
+        hasKey: state.hasKey,
+        supplies: state.supplies
+      });
+    }
+
+    // ---------------- Wi-Fi / TV hooks used by the shell ----------------
+    window.__onWifiConnected = function () {
+      state.wifiConnected = true;
+      if (window.__startTv) window.__startTv();
+      if (audio) audio.ui();
+      if (ui.onMessage) ui.onMessage('Connected. Behind you, one of the screens wakes up.');
+    };
+    window.__onTvShort = function () {
+      state.tvWatched = true;
+      if (audio) audio.shortCircuit();
+      if (ui.onMessage) ui.onMessage('The screen shorts out. The room is quieter than it was.');
+    };
 
     // ---------------- Loop ----------------
     var clock = new THREE.Clock();
     var velocity = new THREE.Vector3();
-    var forwardVec = new THREE.Vector3();
-    var rightVec = new THREE.Vector3();
-    var bobTime = 0;
-    var flickerDrop = 0;   // 0 = bulb at full, 1 = fully dropped out
-    var nextFlickerAt = 2.5;
+    var bobTime = 0, stepAccum = 0, eyeCurrent = STANCE.stand.eye;
+    var focusTimer = 0, cullTimer = 0;
+    var ACTIVE_LIGHTS = 6;
+    level.cullLights(camera.position, ACTIVE_LIGHTS);
 
     function tick() {
       requestAnimationFrame(tick);
-      var delta = Math.min(clock.getDelta(), 0.05);
+      var dt = Math.min(clock.getDelta(), 0.05);
       var elapsed = clock.elapsedTime;
 
-      if (active) {
-        // --- movement ---
-        var inputX = (keys.right ? 1 : 0) - (keys.left ? 1 : 0) + stick.x;
-        var inputZ = (keys.forward ? 1 : 0) - (keys.back ? 1 : 0) - stick.y;
+      if (active && !uiOpen) {
+        var inputX = (keys.r ? 1 : 0) - (keys.l ? 1 : 0) + stick.x;
+        var inputZ = (keys.f ? 1 : 0) - (keys.b ? 1 : 0) - stick.y;
         var len = Math.hypot(inputX, inputZ);
         if (len > 1) { inputX /= len; inputZ /= len; }
 
-        if (keys.turnL) yaw += 1.7 * delta;
-        if (keys.turnR) yaw -= 1.7 * delta;
-        if (keys.turnL || keys.turnR) applyLook();
+        if (keys.tl) yaw += 1.7 * dt;
+        if (keys.tr) yaw -= 1.7 * dt;
+        if (keys.tl || keys.tr) applyLook();
 
-        var speed = MOVE_SPEED * (running ? 1.75 : 1);
-        forwardVec.set(-Math.sin(yaw), 0, -Math.cos(yaw));
-        rightVec.set(Math.cos(yaw), 0, -Math.sin(yaw));
+        var st = STANCE[state.stance];
+        var speed = st.speed * (running && state.stance === 'stand' ? 1.7 : 1);
+        var fx = -Math.sin(yaw), fz = -Math.cos(yaw);
+        var rx = Math.cos(yaw), rz = -Math.sin(yaw);
+        var tx = (fx * inputZ + rx * inputX) * speed;
+        var tz = (fz * inputZ + rz * inputX) * speed;
 
-        var targetX = (forwardVec.x * inputZ + rightVec.x * inputX) * speed;
-        var targetZ = (forwardVec.z * inputZ + rightVec.z * inputX) * speed;
+        var damp = 1 - Math.exp(-11 * dt);
+        velocity.x += (tx - velocity.x) * damp;
+        velocity.z += (tz - velocity.z) * damp;
 
-        // Critically-damped-ish approach; walking here should feel heavy.
-        var damp = 1 - Math.exp(-11 * delta);
-        velocity.x += (targetX - velocity.x) * damp;
-        velocity.z += (targetZ - velocity.z) * damp;
+        var resolved = collide(camera.position.x + velocity.x * dt, camera.position.z + velocity.z * dt);
+        camera.position.x = resolved.x;
+        camera.position.z = resolved.z;
 
-        camera.position.x += velocity.x * delta;
-        camera.position.z += velocity.z * delta;
+        var moved = Math.hypot(velocity.x, velocity.z);
 
-        var limit = HALF - PLAYER_RADIUS;
-        camera.position.x = Math.max(-limit, Math.min(limit, camera.position.x));
-        camera.position.z = Math.max(-limit, Math.min(limit, camera.position.z));
-
-        // --- head bob ---
-        var speedNow = Math.hypot(velocity.x, velocity.z);
-        if (!prefersReducedMotion) {
-          bobTime += delta * speedNow * 2.4;
-          camera.position.y = EYE_HEIGHT + Math.sin(bobTime * 2) * 0.022 + Math.sin(bobTime) * 0.012;
-        } else {
-          camera.position.y = EYE_HEIGHT;
+        // footsteps
+        stepAccum += moved * dt;
+        var stride = state.stance === 'crawl' ? 0.75 : state.stance === 'crouch' ? 0.62 : 0.78;
+        if (stepAccum > stride) {
+          stepAccum = 0;
+          if (audio && state.room) audio.footstep(state.room.tone, state.stance);
         }
+
+        if (!prefersReducedMotion) {
+          bobTime += dt * moved * 2.2;
+          eyeCurrent += (st.eye - eyeCurrent) * (1 - Math.exp(-9 * dt));
+          camera.position.y = eyeCurrent + Math.sin(bobTime * 2) * 0.02 + Math.sin(bobTime) * 0.011;
+        } else {
+          eyeCurrent += (st.eye - eyeCurrent) * (1 - Math.exp(-9 * dt));
+          camera.position.y = eyeCurrent;
+        }
+
+        // room tracking → audio bed + HUD label
+        var r = level.roomAt(camera.position.x, camera.position.z);
+        if (r !== state.room) {
+          state.room = r;
+          if (r) {
+            var dread = (r.id === 'assembly' || r.id === 'exterm');
+            if (audio) audio.setBed(r.tone, dread);
+            if (ui.onRoom) ui.onRoom(r.name);
+            if (r.id === 'assembly' && !state.seenAssembly) {
+              state.seenAssembly = true;
+              if (audio) audio.stinger();
+              if (ui.onMessage) ui.onMessage('Something in here is still warm.');
+            }
+          }
+        }
+
+        focusTimer += dt;
+        if (focusTimer > 0.08) { focusTimer = 0; updateFocus(); }
       }
 
-      // --- the bulb ---
-      // A slow pendulum swing makes every shadow in the room crawl.
-      if (!prefersReducedMotion) {
-        bulbPivot.rotation.z = Math.sin(elapsed * 0.62) * 0.035;
-        bulbPivot.rotation.x = Math.cos(elapsed * 0.47) * 0.026;
+      handLight.position.copy(camera.position);
+
+      cullTimer += dt;
+      if (cullTimer > 0.2) {
+        cullTimer = 0;
+        level.cullLights(camera.position, ACTIVE_LIGHTS);
       }
 
-      // Failing filament: mostly steady, with occasional stutters.
-      if (elapsed > nextFlickerAt) {
-        flickerDrop = 0.55 + Math.random() * 0.45;
-        nextFlickerAt = elapsed + 1.6 + Math.random() * 6.5;
-      }
-      flickerDrop *= Math.exp(-9 * delta);
-      var buzz = Math.sin(elapsed * 47) * 0.018 + Math.sin(elapsed * 13) * 0.012;
-      var level = Math.max(0.05, 1 - flickerDrop + buzz);
-
-      bulb.intensity = BASE_INTENSITY * level;
-      bulbMat.emissiveIntensity = BASE_EMISSIVE * Math.max(0.08, level);
-      if (ambience) ambience.setFlicker(level);
-      if (ui.onLightLevel) ui.onLightLevel(level);
+      for (var i = 0; i < level.updates.length; i++) level.updates[i](dt, elapsed);
 
       renderer.render(scene, camera);
     }
     tick();
 
-    // ---------------- Resize ----------------
     window.addEventListener('resize', function () {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
@@ -521,52 +660,100 @@
       enter: function () {
         active = true;
         canvas.focus();
-        if (ambience) ambience.start();
-        if (!pointerLockBlocked && canvas.requestPointerLock) {
-          // Chromium returns a promise here and rejects it when the frame
-          // lacks the pointer-lock permission. Swallow it deliberately:
-          // an unhandled rejection would spam the console in exactly the
-          // embedded case the drag fallback exists to cover.
-          var request;
-          try {
-            request = canvas.requestPointerLock();
-          } catch (err) {
-            markPointerLockBlocked();
-          }
-          if (request && typeof request.catch === 'function') {
-            request.catch(markPointerLockBlocked);
-          }
+        if (audio) {
+          audio.start();
+          var r = level.roomAt(camera.position.x, camera.position.z);
+          if (r) audio.setBed(r.tone, false);
         }
+        requestLock();
+        refreshHud();
       },
       exit: function () {
         active = false;
-        keys.forward = keys.back = keys.left = keys.right = false;
-        keys.turnL = keys.turnR = false;
-        if (document.pointerLockElement === canvas && document.exitPointerLock) {
-          document.exitPointerLock();
+        keys.f = keys.b = keys.l = keys.r = keys.tl = keys.tr = false;
+        if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock();
+      },
+      setUiOpen: function (open) {
+        uiOpen = open;
+        if (open) {
+          keys.f = keys.b = keys.l = keys.r = keys.tl = keys.tr = false;
+          // While the mouse is locked to the canvas the browser routes every
+          // click there, so an open overlay would be unclickable.
+          releaseLock();
+        } else {
+          requestLock();
         }
       },
       toggleMute: function () {
-        muted = !muted;
-        if (ambience) ambience.setMuted(muted);
-        return muted;
+        var m = !window.__muted;
+        window.__muted = m;
+        if (audio) audio.setMuted(m);
+        return m;
       },
+      interact: tryInteract,
       get isActive() { return active; },
       get pointerLockBlocked() { return pointerLockBlocked; },
-
-      // Inspectable state — used by the test suite to assert on the real
-      // camera rather than on pixels, since the scene animates every frame.
       getState: function () {
         return {
-          yaw: yaw,
-          pitch: pitch,
-          x: camera.position.x,
-          z: camera.position.z,
-          active: active,
-          locked: pointerLocked,
-          pointerLockBlocked: pointerLockBlocked
+          yaw: yaw, pitch: pitch,
+          x: camera.position.x, z: camera.position.z, y: camera.position.y,
+          stance: state.stance,
+          room: state.room ? state.room.id : null,
+          active: active, locked: pointerLocked, uiOpen: uiOpen,
+          pointerLockBlocked: pointerLockBlocked,
+          hasKey: state.hasKey, storageOpen: state.storageOpen,
+          hasGlock: state.hasGlock, ammo: state.ammo, inMag: state.inMag,
+          wifiConnected: state.wifiConnected, tvWatched: state.tvWatched,
+          focus: focused ? focused.userData.interact.id : null
         };
-      }
+      },
+      // test/debug helpers
+      renderInfo: function () {
+        return {
+          calls: renderer.info.render.calls,
+          triangles: renderer.info.render.triangles,
+          programs: renderer.info.programs ? renderer.info.programs.length : -1,
+          geometries: renderer.info.memory.geometries,
+          textures: renderer.info.memory.textures,
+          lights: level.lightCount
+        };
+      },
+      teleport: function (x, z) {
+        camera.position.x = x; camera.position.z = z;
+        state.room = level.roomAt(x, z);
+      },
+      // Point the camera at a world position, using the same yaw/pitch the
+      // player controls drive, so tests exercise the real raycast path.
+      aimAt: function (x, y, z) {
+        var dx = x - camera.position.x, dy = y - camera.position.y, dz = z - camera.position.z;
+        yaw = Math.atan2(-dx, -dz);
+        pitch = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, Math.atan2(dy, Math.hypot(dx, dz))));
+        applyLook();
+        updateFocus();
+      },
+      // How many props actually landed in a given patch of floor. Guards
+      // against geometry that is built but never parented into the scene.
+      meshesNear: function (x, z, radius) {
+        var n = 0, v = new THREE.Vector3();
+        scene.traverse(function (o) {
+          if (!o.isMesh) return;
+          o.getWorldPosition(v);
+          if (Math.hypot(v.x - x, v.z - z) <= radius) n++;
+        });
+        return n;
+      },
+      interactablePos: function (id) {
+        for (var i = 0; i < level.interactables.length; i++) {
+          var o = level.interactables[i];
+          if (o.userData.interact.id === id) {
+            var v = new THREE.Vector3();
+            o.getWorldPosition(v);
+            return { x: v.x, y: v.y, z: v.z };
+          }
+        }
+        return null;
+      },
+      forceStance: function (s) { state.stance = s; if (ui.onStance) ui.onStance(STANCE[s].label, s); }
     };
   };
 })();
