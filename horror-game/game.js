@@ -774,6 +774,8 @@
       },
       wires: null,             // the power puzzle's current wiring
       beansNamed: false,       // Chef Rat -> Diarrhea, after the first can
+      powerOn: false, hasPhone: false, hasSledge: false, underground: false,
+      phonePct: 0, emailCode: null,
       supplies: false,
       room: null,
       seenAssembly: false,
@@ -1082,6 +1084,13 @@
           break;
         case 'computer':
           if (audio) audio.ui();
+          // with the phone in hand the lead is the point of the desk
+          if (state.hasPhone && !state.story.emailOpen) {
+            state.phoneCharging = true;
+            if (!state.story.phoneCharged && state.phonePct >= 1) flag('phoneCharged');
+            if (ui.showPhone) ui.showPhone();
+            break;
+          }
           if (ui.showComputer) ui.showComputer(state.wifiConnected);
           break;
         case 'entranceDoor':
@@ -1156,6 +1165,62 @@
           break;
         case 'nickID':
           say('An employee badge. NICK AHOY — INTAKE — AGE 19. The lanyard is still knotted the way he tied it.');
+          break;
+        case 'powerPanel':
+          if (state.powerOn) { say('Green across the board. It stays on.'); break; }
+          if (!state.wires) state.wires = makeWires();
+          if (audio) audio.ui();
+          if (ui.showWires) ui.showWires();
+          break;
+        case 'sledge':
+          state.hasSledge = true;
+          takePickup(focused, true);
+          if (audio) audio.pickup();
+          say('Sledgehammer. Heavier than it looks, and the only tool in this building worth anything.');
+          checkBeat();
+          break;
+        case 'shaftWall':
+          if (state.underground || state.story.shaftOpen) { say('The hole goes down further than the torch reaches.'); break; }
+          if (!state.story.sawMap) { say('Brick over concrete, and newer than the wall around it. Somebody closed something off here.'); break; }
+          if (!state.hasSledge) { say('The map says a service lift used to run down from this corner. You would need to break it open.'); break; }
+          breakShaft();
+          break;
+        case 'shaftDown':
+          descend();
+          break;
+        case 'ownerPhone':
+          state.hasPhone = true;
+          takePickup(focused, true);
+          if (audio) audio.pickup();
+          cinematic('gotPhone');
+          checkBeat();
+          break;
+        case 'bunk':
+          trySleep();
+          break;
+        case 'cellDoor':
+          if (!state.story.openedCell) {
+            flag('openedCell');
+            if (window.__cellDoor) window.__cellDoor.rotation.y = 1.5;
+            if (audio) audio.door('steel', true);
+            cinematic('openedCell', { lock: false });
+          } else say('You have seen what is in there. Once was enough.');
+          break;
+        case 'undergroundRadio':
+          if (state.story.heardRadio) { say('The same loop. He is still saying it.'); break; }
+          flag('heardRadio');
+          if (audio) audio.ui();
+          cinematic('radioOn');
+          break;
+        case 'barracksDoor':
+          if (state.story.metJames) { say('He is still in there. Still holding the rifle.'); break; }
+          flag('metJames');
+          if (audio) audio.door('steel', true);
+          cinematic('knock', { lock: true }, function () {
+            cinematic('jamesTalk', { lock: true }, function () {
+              if (ui.onActEnd) ui.onActEnd();
+            });
+          });
           break;
         case 'evidenceLog':
           state.readEvidenceLog = true;
@@ -1745,6 +1810,7 @@
     // up on the HUD. Beats that carry a timer fail you if it runs out.
     var S = window.STORY;
     var cineLock = false, cineTimers = [];
+    var beatPoll = 0;          // objectives are re-checked on a timer, not on trust
 
     function beat() { return S.BEATS[state.beat] || null; }
 
@@ -1784,18 +1850,41 @@
       checkBeat();
     }
 
+    // Derive every flag that can be derived from live game state, rather
+    // than trusting each site to remember to raise it. The camera objective
+    // sat there forever because nothing called flag('camsPlanted'); doing
+    // this every tick means an objective cannot get stuck even if a future
+    // beat's trigger is wired up wrong.
+    function syncStoryFlags() {
+      var f = state.story;
+      f.camsPlanted = plantedByPlayer();
+      f.wifiConnected = state.wifiConnected;
+      f.hasGlock = state.hasGlock;
+      f.sealedEast = f.sealedEast || !!state.seals.sealEast;
+      f.sealedWest = f.sealedWest || !!state.seals.sealWest;
+      f.powerOn = f.powerOn || !!state.powerOn;
+      f.hasPhone = f.hasPhone || !!state.hasPhone;
+      f.hasSledge = f.hasSledge || !!state.hasSledge;
+      f.underground = f.underground || !!state.underground;
+    }
+
     function checkBeat() {
-      var guard = 0;
+      syncStoryFlags();
+      var guard = 0, moved = false;
       while (guard++ < 40) {
         var b = beat();
         if (!b || !b.done(state.story)) break;
         state.beat++;
         state.beatTimer = 0;
+        moved = true;
         var nb = beat();
         if (nb && nb.timer) state.beatTimer = nb.timer;
         if (ui.onObjective) ui.onObjective(nb, 0);
       }
-      refreshHud();
+      // Only touch the HUD when something actually changed. This runs four
+      // times a second; redrawing the hotbar on every call replaced its DOM
+      // constantly, and a slot you are trying to tap kept vanishing.
+      if (moved) refreshHud();
     }
 
     function startPhase(which) {
@@ -1820,6 +1909,99 @@
         if (d.id === 'openCrate') d.taken = m.userData.taken = false;
       });
     }
+
+    // ---------------- The power panel ----------------
+    // Four wires a side. The left column is fixed; the right column starts
+    // shuffled and cross-linked, and you drag each one onto its own colour.
+    var WIRE_COLOURS = ['yellow', 'purple', 'green', 'blue'];
+    function makeWires() {
+      var right = WIRE_COLOURS.slice();
+      // shuffle until at least three are in the wrong place
+      var tries = 0;
+      do {
+        for (var i = right.length - 1; i > 0; i--) {
+          var j = Math.floor(Math.random() * (i + 1));
+          var t = right[i]; right[i] = right[j]; right[j] = t;
+        }
+        tries++;
+      } while (tries < 20 && right.filter(function (c, k) { return c === WIRE_COLOURS[k]; }).length > 1);
+      // links[i] = which right-hand terminal the left wire i is joined to
+      return { left: WIRE_COLOURS.slice(), right: right, links: [3, 2, 0, 1] };
+    }
+    function wiresCorrect(w) {
+      if (!w) return false;
+      for (var i = 0; i < 4; i++) if (w.right[w.links[i]] !== w.left[i]) return false;
+      return true;
+    }
+    function powerRestored() {
+      if (state.powerOn) return;
+      state.powerOn = true;
+      flag('powerOn');
+      if (audio) { audio.unlock(); audio.bang(4); }
+      // the alarm tells it exactly which room you are standing in
+      if (entity && !entity.isHidden()) entity.force(camera.position.x, camera.position.z - 8, 'chase');
+      cinematic('powerOn');
+      checkBeat();
+    }
+
+    // ---------------- Sleep ----------------
+    function trySleep() {
+      if (state.phase !== 'night') { say('It is daylight. Sleeping through the only safe hours would be a choice.'); return; }
+      var es = entity ? entity.getState() : null;
+      if (es && es.mode === 'banging') { say('Not with that on the other side of the door.'); return; }
+      if (state.hunger < 10 || state.thirst < 10) { say('Too hungry and too thirsty to sleep. Eat something first.'); return; }
+      if (state.energy < 20) { say('Wired. You need to sit still for a while before this works.'); return; }
+      flag('slept');
+      state.clock = 1;                    // the night runs out while you are under
+      if (ui.onSleep) ui.onSleep();
+      cinematic('slept');
+      checkBeat();
+    }
+
+    // ---------------- The shaft ----------------
+    function breakShaft() {
+      flag('shaftOpen');
+      if (window.__shaftWall) window.__shaftWall.visible = false;
+      // the collider goes with it, and a way down takes its place
+      for (var i = 0; i < level.colliders.length; i++) {
+        if (level.colliders[i].id === 'shaftWall') { level.colliders.splice(i, 1); break; }
+      }
+      if (audio) { audio.doorBash(2); setTimeout(function () { audio.doorBash(2); }, 420); setTimeout(function () { audio.ventBreak(); }, 900); }
+      if (window.__shaftHole) {
+        window.__shaftHole.visible = true;
+        level.interactables.push(window.__shaftHole);
+      }
+      cinematic('shaftOpen');
+      checkBeat();
+    }
+    function descend() {
+      if (state.underground) return;
+      state.underground = true;
+      flag('underground');
+      if (ui.onBars) ui.onBars(true);
+      cineLock = true;
+      if (audio) audio.ventCrawl();
+      // a slow ride down the guide rails, then the lights come up on the floor below
+      var t0 = performance.now();
+      (function drop() {
+        var u = Math.min(1, (performance.now() - t0) / 4200);
+        camera.position.set(57.6, 1.68 - u * 0.9, 4.2);
+        pitch = -0.5 + u * 0.5;
+        applyLook();
+        if (u < 1) requestAnimationFrame(drop);
+        else {
+          camera.position.set(UNDER.entry.x, STANCE.stand.eye, UNDER.entry.z);
+          yaw = UNDER.entry.yaw; pitch = 0;
+          applyLook();
+          state.room = level.roomAt(camera.position.x, camera.position.z);
+          cineLock = false;
+          if (ui.onBars) ui.onBars(false);
+          cinematic('landed', {}, function () { cinematic('cellsSeen'); });
+          checkBeat();
+        }
+      })();
+    }
+    var UNDER = { entry: { x: 6, z: -78, yaw: Math.PI } };
 
     // ---------------- Entity hooks ----------------
     function die(reason) {
@@ -2029,6 +2211,13 @@
       }
       // ---- campaign clock ----
       if (active && !state.dead && !state.ended) {
+        beatPoll -= dt;
+        if (beatPoll <= 0) { beatPoll = 0.25; checkBeat(); }
+        // the phone trickles up off the reception lead
+        if (state.phoneCharging && state.phonePct < 100) {
+          state.phonePct = Math.min(100, state.phonePct + dt * 0.9);
+          if (state.phonePct >= 1 && !state.story.phoneCharged) flag('phoneCharged');
+        }
         var b0 = beat();
         if (b0 && b0.timer) {
           // a beat with a countdown: run out and it reaches you
@@ -2426,6 +2615,9 @@
           dayPhase: state.phase, clock: state.clock,
           story: JSON.parse(JSON.stringify(state.story)),
           beansNamed: state.beansNamed,
+          powerOn: state.powerOn, hasPhone: state.hasPhone, hasSledge: state.hasSledge,
+          underground: state.underground, phonePct: state.phonePct,
+          mapUnlocked: !!state.mapUnlocked, sawPhotos: !!state.sawPhotos,
           ventOpen: state.ventOpen.slice(),
           focus: focused ? focused.userData.interact.id : null
         };
@@ -2848,6 +3040,62 @@
           }
         });
         return out;
+      },
+      // ---- the power panel ----
+      wireState: function () {
+        if (!state.wires) state.wires = makeWires();
+        return { left: state.wires.left.slice(), right: state.wires.right.slice(), links: state.wires.links.slice() };
+      },
+      linkWire: function (leftRow, rightRow) {
+        if (!state.wires || state.powerOn) return false;
+        // a terminal takes one wire: whoever had it loses it
+        var prev = state.wires.links.indexOf(rightRow);
+        if (prev >= 0 && prev !== leftRow) {
+          state.wires.links[prev] = state.wires.links[leftRow];
+        }
+        state.wires.links[leftRow] = rightRow;
+        if (audio) audio.ui();
+        if (wiresCorrect(state.wires)) powerRestored();
+        return true;
+      },
+      // ---- the owner's phone ----
+      emailCode: function () {
+        if (!state.emailCode) state.emailCode = String(1000 + Math.floor(Math.random() * 9000));
+        return state.emailCode;
+      },
+      sawPhotos: function () {
+        if (state.sawPhotos) return;
+        state.sawPhotos = true;
+        cinematic('photos');
+      },
+      // ---- campaign test hooks ----
+      debugConnectWifi: function () { state.wifiConnected = true; flag('wifiConnected'); },
+      debugFill: function () { state.hunger = 10; state.thirst = 10; state.energy = 20; refreshHud(); },
+      debugChargePhone: function () { state.phonePct = 100; flag('phoneCharged'); checkBeat(); },
+      interactId: function (id) {
+        for (var i = 0; i < level.interactables.length; i++) {
+          var o = level.interactables[i];
+          if (o.userData.interact.id !== id) continue;
+          focused = o;
+          tryInteract();
+          return true;
+        }
+        // the shaft mouth is not listed until the wall comes down
+        if (id === 'shaftDown' && window.__shaftHole) { focused = window.__shaftHole; tryInteract(); return true; }
+        return false;
+      },
+      sawMapNow: function () {
+        if (state.story.sawMap) return;
+        flag('sawMap');
+        cinematic('sawMap');
+        checkBeat();
+      },
+      acceptEmail: function () {
+        if (state.story.emailOpen) return;
+        flag('emailOpen');
+        state.mapUnlocked = true;
+        say('Accepted. The layout is on the terminal now.');
+        checkBeat();
       },
       torchInfo: function () {
         var wp = new THREE.Vector3(), wt = new THREE.Vector3();

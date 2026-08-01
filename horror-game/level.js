@@ -42,7 +42,15 @@
     // Named 'Utility Room', not 'Supply Storage': two rooms both reading as
     // "storage" had players hunting the storage unit's contents in here.
     { id: 'supply',    name: 'Utility Room',          x1: 62,  z1: 58,   x2: 68,  z2: 64,  tone: 'industrial' },
-    { id: 'bath2',     name: 'Restroom',              x1: 68,  z1: 58,   x2: 74,  z2: 64,  tone: 'tile' }
+    { id: 'bath2',     name: 'Restroom',              x1: 68,  z1: 58,   x2: 74,  z2: 64,  tone: 'tile' },
+
+    // ---- the floor they sealed off. Reached by the lift shaft in storage. ----
+    { id: 'shaftFoot', name: 'Lift Shaft — Bottom',   x1: 2,   z1: -82,  x2: 10,  z2: -74, tone: 'industrial' },
+    { id: 'deepHall',  name: 'Sublevel Corridor',     x1: 2,   z1: -74,  x2: 6,   z2: -44, tone: 'lab' },
+    // wide enough that the cells are real rooms behind their doors, not
+    // a stencil on a wall with the subject standing outside the building
+    { id: 'cellblock', name: 'Containment',           x1: -12, z1: -44,  x2: 16,  z2: -28, tone: 'lab', h: 4.4 },
+    { id: 'barracks',  name: 'Camper Barracks',       x1: -8,  z1: -28,  x2: 4,   z2: -18, tone: 'industrial' }
   ];
 
   // axis 'x' → a gap in a wall plane at constant x (running along Z)
@@ -59,7 +67,11 @@
     { axis: 'x', at: 58,  min: 51,   max: 54 },      // assembly → airlock
     { axis: 'x', at: 62,  min: 51,   max: 54 },      // airlock → extermination
     { axis: 'z', at: 58,  min: 63.5, max: 65.5 },    // extermination → supply
-    { axis: 'z', at: 58,  min: 70,   max: 72 }       // extermination → restroom
+    { axis: 'z', at: 58,  min: 70,   max: 72 },      // extermination → restroom
+    // ---- sublevel ----
+    { axis: 'z', at: -74, min: 3,    max: 5.5 },     // shaft foot → corridor
+    { axis: 'z', at: -44, min: 3,    max: 5.5 },     // corridor → containment
+    { axis: 'z', at: -28, min: -3,   max: 0 }        // containment → barracks
   ];
 
   // The two tempered-glass entrance doors. Sealed — the way in, not out.
@@ -1160,6 +1172,20 @@
       var trapnellTag = box(0.07, 0.1, 0.006, badgeMat, 71.6, 0.021, 49.9, 0.5);
       interact(trapnellTag, { id: 'trapnell', label: 'Laminated ID badge', verb: 'Inspect' });
 
+      // The owner went down with his staff, and his phone went with him.
+      var phoneG = new THREE.Group();
+      phoneG.position.set(64.9, 0.012, 55.0);
+      phoneG.rotation.y = 0.9;
+      var phBody = box(0.072, 0.01, 0.148, new THREE.MeshStandardMaterial({
+        color: 0x16181a, roughness: 0.35, metalness: 0.4
+      }), 0, 0, 0);
+      phoneG.add(phBody);
+      phoneG.add(box(0.062, 0.002, 0.132, new THREE.MeshStandardMaterial({
+        color: 0x05070a, roughness: 0.12, metalness: 0.2
+      }), 0, 0.006, 0));
+      group.add(phoneG);
+      interact(phBody, { id: 'ownerPhone', label: "The owner's phone", verb: 'Take' });
+
       var frag = box(0.34, 0.07, 0.13, new THREE.MeshStandardMaterial({ color: 0xb99a63, roughness: 0.85 }), 65.4, 0.99, 49.3, 0.4);
       interact(frag, { id: 'fragment', label: 'Splinter of pale wood', verb: 'Inspect' });
 
@@ -1230,6 +1256,116 @@
       interact(box(0.44, 0.42, 0.34, new THREE.MeshStandardMaterial({ color: 0xd6d8d4, roughness: 0.35 }), 70.6, 0.21, 61.6),
         { id: 'toilet', label: 'Toilet', verb: 'Use' });
       box(0.44, 0.16, 0.5, new THREE.MeshStandardMaterial({ color: 0xd6d8d4, roughness: 0.3 }), 73.6, 0.86, 59.2);
+    })();
+
+    // ===================================================================
+    // THE SUBLEVEL — the floor on the classified half of the map.
+    // ===================================================================
+    (function sublevel() {
+      // the shaft foot: one dead bulb, and the hole you came down
+      batten(6, -78, WALL_H, 0x9fb6c4, 3, 8, 'dying');
+      for (var r = 0; r < 6; r++) {
+        box(0.06, 0.06, 1.4, MAT.metal, 3.4 + (r % 2) * 5.2, 1.0 + r * 0.55, -79.6);
+      }
+
+      // The corridor has no lighting at all — one wash at the far end is the
+      // only thing telling you which way is forward.
+      batten(4, -47, WALL_H, 0xbcd0d6, 5, 12, 'strobe');
+
+      // ---- containment ----
+      batten(4, -36, 4.2, 0xc8d8de, 6, 15, 'dying');
+      batten(-4, -32, 4.2, 0xc8d8de, 4, 11, 'buzz');
+      var cellMat = new THREE.MeshStandardMaterial({ color: 0x767f83, roughness: 0.6, metalness: 0.4 });
+      var stencil = new THREE.MeshStandardMaterial({
+        map: T.sign(THREE, 'FAILED\nPROJECT', { fontSize: 22, bg: '#2a2d2c', fg: '#b8483a' }), roughness: 0.8
+      });
+      // two banks of cells facing each other down the long walls
+      // the west bank leaves one bay empty — that is the cell that opens
+      var OPEN_BAY = 5;
+      for (var c = 0; c < 6; c++) {
+        var cz = -42 + c * 2.4;
+        [-7.5, 15.5].forEach(function (cx, side) {
+          if (side === 0 && c === OPEN_BAY) return;
+          var ry = side ? -Math.PI / 2 : Math.PI / 2;
+          box(0.08, 2.4, 1.9, cellMat, cx + (side ? -0.06 : 0.06), 1.2, cz, 0);
+          box(0.5, 0.34, 0.03, stencil, cx + (side ? -0.12 : 0.12), 1.75, cz, ry);
+        });
+      }
+      // the one you can open, in the bay the bank left free
+      var openCell = box(0.09, 2.4, 1.9, cellMat, -7.44, 1.2, -42 + OPEN_BAY * 2.4, 0);
+      window.__cellDoor = openCell;
+      interact(openCell, { id: 'cellDoor', label: 'Containment cell', verb: 'Unlock' });
+
+      // the operating floor in the middle, and the keycard on it
+      box(2.6, 0.09, 1.2, MAT.metal, 4, 0.92, -36);
+      solid(2.7, -36.6, 5.3, -35.4);
+      for (var lg = 0; lg < 4; lg++) {
+        cyl(0.04, 0.04, 0.9, MAT.metal, 3 + (lg % 2) * 2, 0.45, -36.4 + Math.floor(lg / 2) * 0.8, 6);
+      }
+      var kc = box(0.085, 0.006, 0.055, new THREE.MeshStandardMaterial({
+        color: 0xd8dcc8, roughness: 0.5
+      }), 4.3, 0.97, -35.9, 0.4);
+      interact(kc, { id: 'deepKeycard', label: 'Keycard on the operating table', verb: 'Take' });
+
+      // what is inside the cell that opens
+      var chair = box(0.5, 0.1, 0.5, MAT.darkMetal, -8.9, 0.5, -30.0);
+      void chair;
+      box(0.5, 0.9, 0.08, MAT.darkMetal, -8.9, 0.95, -30.3);
+      cyl(0.03, 0.03, 0.5, MAT.darkMetal, -8.9, 0.25, -30.0, 6);
+      var subject = window.buildHumanoid(THREE, 'worker', { pose: 'slumped', blood: true, hair: 0x1e1712 });
+      subject.group.rotation.y = Math.PI / 2;
+      group.add(subject.group);
+      subject.centerOn(-8.85, -30.0);
+      var tray = box(0.7, 0.06, 0.4, MAT.metal, -8.9, 0.86, -31.2);
+      void tray;
+      for (var inst = 0; inst < 6; inst++) {
+        box(0.02, 0.012, 0.16, MAT.metal, -9.1 + inst * 0.08, 0.9, -31.2, Math.random() * 0.6);
+      }
+      var pool2 = new THREE.Mesh(new THREE.CircleGeometry(0.8, 20), MAT.blood);
+      pool2.rotation.x = -Math.PI / 2;
+      pool2.position.set(-8.8, 0.012, -30.0);
+      group.add(pool2);
+
+      // the radio, on a crate by the cell
+      var radioG = new THREE.Group();
+      radioG.position.set(-6.4, 0, -29.4);
+      var rcrate = box(0.5, 0.44, 0.5, MAT.wood, 0, 0.22, 0);
+      radioG.add(rcrate);
+      var rbody = box(0.24, 0.16, 0.12, new THREE.MeshStandardMaterial({
+        color: 0x2b2e30, roughness: 0.6, metalness: 0.3
+      }), 0, 0.52, 0);
+      radioG.add(rbody);
+      radioG.add(cyl(0.008, 0.008, 0.34, MAT.darkMetal, 0.09, 0.72, -0.03, 6));
+      group.add(radioG);
+      interact(rbody, { id: 'undergroundRadio', label: 'Field radio', verb: 'Switch on' });
+
+      // ---- the Camper Barracks ----
+      batten(-2, -23, WALL_H, 0xdfd2b4, 5, 11, 'steady');
+      var bunkMat = new THREE.MeshStandardMaterial({ color: 0x5a5f52, roughness: 0.9 });
+      for (var bk = 0; bk < 3; bk++) {
+        var bx = -6.4 + bk * 2.2;
+        box(0.9, 0.1, 1.9, bunkMat, bx, 0.5, -24.5);
+        box(0.9, 0.1, 1.9, bunkMat, bx, 1.34, -24.5);
+        for (var pl = 0; pl < 4; pl++) {
+          cyl(0.03, 0.03, 1.5, MAT.metal, bx + (pl % 2 ? 0.4 : -0.4), 0.75, -25.3 + Math.floor(pl / 2) * 1.6, 6);
+        }
+      }
+      var bunkTag = box(0.36, 0.2, 0.03, new THREE.MeshStandardMaterial({
+        map: T.sign(THREE, 'BUNK', { fontSize: 34 }), roughness: 0.8
+      }), -6.4, 0.62, -23.5);
+      interact(bunkTag, { id: 'bunk', label: 'A bunk', verb: 'Sleep' });
+
+      // James's door, at the far end
+      var jamesDoor = box(0.1, 2.3, 1.6, MAT.metal, 3.82, 1.15, -20.5);
+      interact(jamesDoor, { id: 'barracksDoor', label: 'A door, barricaded from the inside', verb: 'Knock' });
+      solid(3.72, -21.3, 3.92, -19.7);
+      wallSignLocal('CAMPER\nBARRACKS', -2, 2.4, -27.88, 0, 0.9, 0.42);
+
+      function wallSignLocal(text, x, y, z, ry, w, h) {
+        box(w, h, 0.02, new THREE.MeshStandardMaterial({
+          map: T.sign(THREE, text, { fontSize: 22, bg: '#33302a', fg: '#c4c0b2' }), roughness: 0.7
+        }), x, y, z, ry);
+      }
     })();
 
     // ===================================================================
@@ -1346,6 +1482,43 @@
         63.88, 1.3, 3.3, Math.PI / 2);
       box(0.9, 0.045, 0.7, new THREE.MeshStandardMaterial({ color: 0x39404a, roughness: 1 }),
         62.3, 0.028, 4.35, 0.5);                                                   // his blanket
+      // ---- the power panel, the sledgehammer, the bricked-up shaft ----
+      var panelMat = new THREE.MeshStandardMaterial({ color: 0x59616a, roughness: 0.5, metalness: 0.6 });
+      box(0.5, 0.62, 0.09, panelMat, 57.95, 1.35, -3.2, Math.PI / 2);
+      var panelDoor = box(0.46, 0.56, 0.03, new THREE.MeshStandardMaterial({
+        color: 0x6d757c, roughness: 0.45, metalness: 0.55
+      }), 57.88, 1.35, -3.2, Math.PI / 2);
+      interact(panelDoor, { id: 'powerPanel', label: 'Electrical panel', verb: 'Open' });
+      box(0.16, 0.05, 0.02, new THREE.MeshStandardMaterial({
+        map: T.sign(THREE, 'MAINS', { fontSize: 40, bg: '#3d2f14', fg: '#d8c37a' }), roughness: 0.7
+      }), 57.86, 1.72, -3.2, Math.PI / 2);
+
+      var sledgeG = new THREE.Group();
+      sledgeG.position.set(62.2, 0, -3.9);
+      sledgeG.rotation.y = 0.4;
+      var haft = cyl(0.026, 0.03, 0.9, MAT.wood, 0, 0, 0, 8);
+      haft.rotation.z = Math.PI / 2 - 0.28;
+      haft.position.set(0, 0.42, 0);
+      sledgeG.add(haft);
+      var sHead = box(0.1, 0.1, 0.22, MAT.darkMetal, 0.3, 0.79, 0);
+      sledgeG.add(sHead);
+      group.add(sledgeG);
+      interact(sHead, { id: 'sledge', label: 'Sledgehammer', verb: 'Take' });
+
+      // the corner they bricked over when they sealed the service lift
+      var shaftWall = box(1.5, 2.6, 0.16, new THREE.MeshStandardMaterial({
+        color: 0x8d8578, roughness: 0.98
+      }), 57.9, 1.3, 4.2, Math.PI / 2);
+      interact(shaftWall, { id: 'shaftWall', label: 'Bricked-over corner', verb: 'Inspect' });
+      window.__shaftWall = shaftWall;
+      solid(57.7, 3.45, 58.1, 4.95, 'shaftWall');
+      // what is behind it — hidden until the wall comes down
+      var hole = box(1.5, 2.2, 0.1, new THREE.MeshStandardMaterial({ color: 0x030405, roughness: 1 }),
+        57.94, 1.1, 4.2, Math.PI / 2);
+      hole.visible = false;
+      hole.userData.interact = { id: 'shaftDown', label: 'The shaft', verb: 'Climb down' };
+      window.__shaftHole = hole;
+
       var nickBadgeMat = new THREE.MeshStandardMaterial({ color: 0xe4ddc8, roughness: 0.55 });
       var nickBadge = box(0.07, 0.09, 0.006, nickBadgeMat, 61.65, 0.021, 2.7, 0.35);
       interact(nickBadge, { id: 'nickID', label: 'Employee badge', verb: 'Inspect' });

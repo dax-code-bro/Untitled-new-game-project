@@ -470,6 +470,42 @@
   .hb-slot.armor { border-style: dashed; margin-left: 10px; }
   .hb-slot.armor.equipped { border-color: #6fce7e; color: #a9e6b4; border-style: solid; }
 
+  /* power panel */
+  #wireBoard { display: grid; grid-template-columns: 1fr 90px 1fr; gap: 10px 0; align-items: center; }
+  .wireBtn {
+    appearance: none; border: 1px solid var(--concrete); background: #121516;
+    color: var(--bone); font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em;
+    text-transform: uppercase; padding: 10px 12px; cursor: pointer; text-align: left;
+  }
+  .wireBtn.r { text-align: right; }
+  .wireBtn.sel { border-color: var(--tungsten); box-shadow: 0 0 12px rgba(240,190,123,0.25); }
+  .wireBtn .dot {
+    display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+    margin-right: 8px; vertical-align: -1px; border: 1px solid rgba(0,0,0,0.5);
+  }
+  .wireBtn.r .dot { margin: 0 0 0 8px; }
+  .wireLink { text-align: center; font-size: 10px; letter-spacing: 0.1em; color: var(--concrete); }
+  .wireLink.ok { color: #6fce7e; }
+  .wireLink.bad { color: #d0684f; }
+
+  /* the phone */
+  #phoneBody .app {
+    display: block; width: 100%; text-align: left; margin-bottom: 6px;
+    appearance: none; border: 1px solid var(--concrete); background: #101314;
+    color: var(--bone); font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.14em; text-transform: uppercase; padding: 11px 14px; cursor: pointer;
+  }
+  #phoneBody .app:hover { border-color: var(--tungsten); }
+  #phoneBody .batt { font-size: 10px; letter-spacing: 0.2em; color: var(--concrete-l); margin-bottom: 12px; }
+  #phoneBody .shot {
+    border: 1px solid var(--concrete); background: #0b0e0f; padding: 14px 16px;
+    margin-bottom: 8px; font-size: 12.5px; line-height: 1.7; color: #b9b3a2;
+  }
+  #phoneBody input {
+    width: 140px; background: #0b0e0f; border: 1px solid var(--concrete); color: var(--bone);
+    font-family: var(--mono); font-size: 18px; letter-spacing: 0.5em; padding: 10px 12px; text-align: center;
+  }
+
   /* inventory overlay */
   #invOverlay .sheet { width: min(520px, 100%); }
   .inv-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
@@ -730,6 +766,27 @@
   </div>
 </div>
 
+<!-- ---------- Power panel ---------- -->
+<div class="overlay" id="wires" hidden>
+  <div class="sheet">
+    <h2>Mains distribution — terminal block</h2>
+    <p class="term-note">Somebody pulled these apart in a hurry and put them back wrong.
+      Click a wire on the left, then the terminal it belongs on.</p>
+    <div id="wireBoard"></div>
+    <div class="term-note" id="wireState"></div>
+    <button class="close" type="button" data-close>Back away</button>
+  </div>
+</div>
+
+<!-- ---------- The owner's phone ---------- -->
+<div class="overlay" id="phone" hidden>
+  <div class="sheet">
+    <h2 id="phoneHead">Charging…</h2>
+    <div id="phoneBody"></div>
+    <button class="close" type="button" data-close>Put it down</button>
+  </div>
+</div>
+
 <!-- ---------- Incident log ---------- -->
 <div class="overlay" id="evidenceLog" hidden>
   <div class="sheet">
@@ -793,7 +850,7 @@ window.bootUI = function bootUI(THREE) {
   }
 
   var hotbarEl = $('hotbar');
-  var invSelected = null;
+  var invSelected = null, lastHotbarHtml = '';
   // What the big touch button does for each holdable — mirrors ITEM_DEFS kinds.
   var ACT_VERB = { glock: 'Fire', shotgun: 'Fire', ar: 'Fire', camera: 'Place', water: 'Drink', beans: 'Eat', fuel: 'Chug', flashlight: 'Light' };
   function renderHotbar(s) {
@@ -810,7 +867,9 @@ window.bootUI = function bootUI(THREE) {
     });
     html += '<div class="hb-slot armor' + (s.riotEquipped ? ' equipped' : '') + '">' +
       (s.riotEquipped ? '<span>RIOT</span>' : '<span style="opacity:0.4">ARMR</span>') + '</div>';
-    hotbarEl.innerHTML = html;
+    // rebuilding identical markup throws away the nodes the player is
+    // reaching for, so only touch the DOM when the bar has actually changed
+    if (html !== lastHotbarHtml) { lastHotbarHtml = html; hotbarEl.innerHTML = html; }
     var act = $('btnAct'), rel = $('btnReload');
     act.textContent = (selH && selH.id) ? (ACT_VERB[selH.id] || 'Use') : 'Fire';
     act.disabled = !(selH && selH.id && selH.count > 0);
@@ -826,6 +885,117 @@ window.bootUI = function bootUI(THREE) {
     var i = Array.prototype.indexOf.call(hotbarEl.children, el);
     if (i >= 0 && i < 5) game.selectSlot(i);
   });
+
+  // ---------------- The power panel ----------------
+  var WIRE_HEX = { yellow: '#d8c34a', purple: '#8b62b8', green: '#5aa85e', blue: '#4f7fc4' };
+  var wirePick = null;
+  function renderWires() {
+    var w = window.__horror.wireState();
+    var board = $('wireBoard');
+    board.innerHTML = '';
+    if (!w) return;
+    for (var i = 0; i < 4; i++) {
+      (function (row) {
+        var l = document.createElement('button');
+        l.type = 'button';
+        l.className = 'wireBtn' + (wirePick === row ? ' sel' : '');
+        l.innerHTML = '<span class="dot" style="background:' + WIRE_HEX[w.left[row]] + '"></span>' + w.left[row];
+        l.addEventListener('click', function () { wirePick = row; renderWires(); });
+        board.appendChild(l);
+
+        var mid = document.createElement('div');
+        var joinedTo = w.links[row];
+        var good = w.right[joinedTo] === w.left[row];
+        mid.className = 'wireLink ' + (good ? 'ok' : 'bad');
+        mid.textContent = good ? '───────' : '──╳──';
+        board.appendChild(mid);
+
+        var r = document.createElement('button');
+        r.type = 'button';
+        r.className = 'wireBtn r';
+        r.innerHTML = w.right[row] + '<span class="dot" style="background:' + WIRE_HEX[w.right[row]] + '"></span>';
+        r.addEventListener('click', function () {
+          if (wirePick === null) return;
+          window.__horror.linkWire(wirePick, row);
+          wirePick = null;
+          renderWires();
+          if (window.__horror.getState().story.powerOn) closeOverlay();
+        });
+        board.appendChild(r);
+      })(i);
+    }
+    var ok = w.links.every(function (t, i2) { return w.right[t] === w.left[i2]; });
+    $('wireState').textContent = ok ? 'All four matched.' : 'Mismatched pairs remain.';
+  }
+
+  // ---------------- The owner's phone ----------------
+  var phoneView = 'apps';
+  function renderPhone() {
+    var st = window.__horror.getState();
+    var pct = st.phonePct || 0;
+    $('phoneHead').textContent = pct < 1 ? 'Charging…' : "The owner's phone";
+    var b = $('phoneBody');
+    b.innerHTML = '';
+    var batt = document.createElement('div');
+    batt.className = 'batt';
+    batt.textContent = 'BATTERY ' + pct.toFixed(0) + '%  ·  SIGNAL ▁';
+    b.appendChild(batt);
+    if (pct < 1) {
+      var wait = document.createElement('div');
+      wait.className = 'term-note';
+      wait.textContent = 'Nothing yet. Leave it on the lead and give it a minute.';
+      b.appendChild(wait);
+      return;
+    }
+    if (phoneView === 'apps') {
+      ['Photos', 'Mail'].forEach(function (app) {
+        var btn = document.createElement('button');
+        btn.type = 'button'; btn.className = 'app'; btn.textContent = app;
+        btn.addEventListener('click', function () {
+          phoneView = app.toLowerCase();
+          if (app === 'Photos') window.__horror.sawPhotos();
+          renderPhone();
+        });
+        b.appendChild(btn);
+      });
+      return;
+    }
+    if (phoneView === 'photos') {
+      [
+        'A girl on his shoulders at some fair. She is holding a paper windmill and he is squinting into the sun.',
+        'A woman laughing at whoever is holding the camera. Kitchen. Somebody\'s birthday.',
+        'The three of them on a sofa, all asleep, taken by someone who thought it was funny.'
+      ].forEach(function (t) {
+        var s = document.createElement('div'); s.className = 'shot'; s.textContent = t; b.appendChild(s);
+      });
+      var back = document.createElement('button');
+      back.type = 'button'; back.className = 'app'; back.textContent = '← Close photos';
+      back.addEventListener('click', function () { phoneView = 'apps'; renderPhone(); });
+      b.appendChild(back);
+      return;
+    }
+    // mail
+    var note = document.createElement('div');
+    note.className = 'term-note';
+    note.textContent = 'FACILITY LAYOUT — verification required. Enter the four-digit code sent to this device.';
+    b.appendChild(note);
+    var code = document.createElement('div');
+    code.className = 'shot';
+    code.textContent = 'From: SITE SYSTEMS. Your verification code is ' + window.__horror.emailCode() + '.';
+    b.appendChild(code);
+    var input = document.createElement('input');
+    input.maxLength = 4; input.inputMode = 'numeric';
+    b.appendChild(input);
+    var go = document.createElement('button');
+    go.type = 'button'; go.className = 'app'; go.style.marginTop = '10px'; go.textContent = 'Accept';
+    go.addEventListener('click', function () {
+      if (input.value.trim() === String(window.__horror.emailCode())) {
+        window.__horror.acceptEmail();
+        closeOverlay();
+      } else { note.textContent = 'Wrong code.'; }
+    });
+    b.appendChild(go);
+  }
 
   function openInventory() {
     renderInventory();
@@ -1039,6 +1209,24 @@ window.bootUI = function bootUI(THREE) {
       showRoster: function () { openOverlay('roster'); },
       showValuation: function () { openOverlay('valuation'); },
       showEvidenceLog: function () { openOverlay('evidenceLog'); },
+      showWires: function () { renderWires(); openOverlay('wires'); },
+      showPhone: function () { renderPhone(); openOverlay('phone'); },
+      onSleep: function () {
+        blackout.classList.add('slow');
+        blackout.classList.add('on');
+        setTimeout(function () {
+          blackout.classList.remove('on');
+          setTimeout(function () { blackout.classList.remove('slow'); }, 2100);
+        }, 2600);
+      },
+      onActEnd: function () {
+        fileNo.textContent = 'File 001 — Part one';
+        enterBtn.textContent = 'Continue';
+        hint.textContent = 'There is more. Part two is still being written.';
+        curtain.hidden = false;
+        void curtain.offsetWidth;
+        curtain.classList.remove('dismissing');
+      },
       showComputer: function (connected) { openTerminal(connected); },
       onEnding: function () {
         blackout.classList.add('on');
@@ -1126,7 +1314,9 @@ window.bootUI = function bootUI(THREE) {
     // tabs
     var tabs = document.createElement('div');
     tabs.className = 'term-tabs';
-    [['net', 'Network'], ['cams', 'Cameras'], ['seal', 'Hard Seal']].forEach(function (t) {
+    var TABS = [['net', 'Network'], ['cams', 'Cameras'], ['seal', 'Hard Seal']];
+    if (st && st.mapUnlocked) TABS.push(['map', 'Layout']);
+    TABS.forEach(function (t) {
       var b = document.createElement('button');
       b.className = 'term-tab' + (termTab === t[0] ? ' on' : '');
       b.type = 'button';
@@ -1167,6 +1357,21 @@ window.bootUI = function bootUI(THREE) {
       no.className = 'term-note';
       no.textContent = 'Requires a network connection.';
       body.appendChild(no);
+      return;
+    }
+
+    if (termTab === 'map') {
+      var mn = document.createElement('div');
+      mn.className = 'term-note';
+      mn.textContent = 'GROUND FLOOR — 15 spaces mapped. Waiting, corridors, warehouse, assembly, extermination, storage.';
+      body.appendChild(mn);
+      var m2 = document.createElement('div');
+      m2.className = 'term-note';
+      m2.style.color = '#d0684f';
+      m2.textContent = 'SUBLEVEL — CLASSIFIED. Containment wing, operating floor, Camper Barracks. '
+        + 'Service lift: DECOMMISSIONED, shaft bricked at the storage unit corner.';
+      body.appendChild(m2);
+      window.__horror.sawMapNow();
       return;
     }
 
