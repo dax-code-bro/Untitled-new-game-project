@@ -389,6 +389,67 @@
   }
   #shockBtn:disabled { opacity: 0.3; cursor: default; }
 
+  /* ---------------- Campaign: clock, objective, dialogue ---------------- */
+  #clock {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    top: max(16px, env(safe-area-inset-top)); z-index: 7;
+    font-size: 11px; letter-spacing: 0.26em; text-transform: uppercase;
+    color: var(--concrete-l); opacity: 0; transition: opacity 500ms ease;
+    text-align: center; pointer-events: none; text-shadow: 0 2px 10px #000;
+  }
+  #clock.on { opacity: 1; }
+  #clock .phase { color: var(--bone); }
+  #clock.night .phase { color: #d08a72; }
+  #clock .time { font-variant-numeric: tabular-nums; letter-spacing: 0.12em; }
+
+  #objective {
+    position: fixed; left: max(20px, env(safe-area-inset-left));
+    top: max(58px, calc(env(safe-area-inset-top) + 44px)); z-index: 7;
+    max-width: 300px; opacity: 0; transition: opacity 450ms ease;
+    pointer-events: none; text-shadow: 0 2px 10px #000;
+  }
+  #objective.on { opacity: 1; }
+  #objective .lbl {
+    font-size: 9px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--concrete);
+  }
+  #objective .txt {
+    font-size: 12px; letter-spacing: 0.06em; color: var(--tungsten); margin-top: 4px; line-height: 1.5;
+  }
+  #objective .hint { font-size: 10.5px; color: var(--concrete-l); margin-top: 3px; line-height: 1.5; }
+  #objective.urgent .txt { color: #ef7a5c; }
+  #objective .count {
+    font-size: 20px; color: #ef7a5c; font-variant-numeric: tabular-nums; margin-top: 2px;
+  }
+
+  /* scripted dialogue, larger and slower than the incidental subtitle */
+  #dialogue {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: max(120px, calc(env(safe-area-inset-bottom) + 104px)); z-index: 9;
+    width: min(720px, calc(100vw - 48px)); text-align: center;
+    opacity: 0; transition: opacity 320ms ease; pointer-events: none;
+  }
+  #dialogue.on { opacity: 1; }
+  #dialogue .who {
+    font-size: 10px; letter-spacing: 0.3em; text-transform: uppercase;
+    color: var(--tungsten); margin-bottom: 6px;
+  }
+  #dialogue .what {
+    font-size: 15px; line-height: 1.7; color: var(--bone);
+    text-shadow: 0 2px 14px #000, 0 0 30px #000;
+  }
+  #dialogue.radio .who { color: #7fb2c4; }
+  #dialogue.radio .what { font-family: var(--mono); letter-spacing: 0.04em; color: #cfe0e6; }
+
+  /* letterbox for cutscenes */
+  #bars { position: fixed; inset: 0; z-index: 8; pointer-events: none; }
+  #bars::before, #bars::after {
+    content: ''; position: absolute; left: 0; right: 0; height: 0; background: #000;
+    transition: height 420ms ease;
+  }
+  #bars::before { top: 0; }
+  #bars::after { bottom: 0; }
+  #bars.on::before, #bars.on::after { height: 11vh; }
+
   /* hotbar */
   #hotbar {
     position: fixed; left: 50%; transform: translateX(-50%);
@@ -469,6 +530,15 @@
 
 <div id="crosshair"></div>
 <div id="prompt"></div>
+<div id="clock"><span class="phase">Day 1</span> · <span class="time">25:00</span></div>
+<div id="objective">
+  <div class="lbl">Objective</div>
+  <div class="txt"></div>
+  <div class="hint"></div>
+  <div class="count"></div>
+</div>
+<div id="dialogue"><div class="who"></div><div class="what"></div></div>
+<div id="bars"></div>
 <div id="roomname"></div>
 <div id="subtitle"></div>
 <button id="sound" type="button" aria-label="Toggle sound">Sound On</button>
@@ -2030,6 +2100,246 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
 </script>
 <script>
 /*
+ * THE BIRCH — the campaign.
+ *
+ * The facility is a sandbox; this file is the thread through it. It holds
+ * the day/night clock, the ordered list of beats the player works through,
+ * and every line of dialogue, so the story can be edited without touching
+ * the engine.
+ *
+ *   window.STORY.BEATS     — ordered steps, each with an objective line
+ *   window.STORY.LINES     — scripted dialogue, keyed by beat
+ *   window.STORY.DAY_LEN   — seconds of daylight
+ *   window.STORY.NIGHT_LEN — seconds of dark
+ */
+(function () {
+  'use strict';
+
+  var DAY_LEN = 25 * 60;      // 25 minutes to prepare
+  var NIGHT_LEN = 10 * 60;    // 10 minutes with it awake
+
+  // Each beat: an id, the objective the HUD shows, and where it happens.
+  // `done` is evaluated against the game's story flags every tick.
+  var BEATS = [
+    { id: 'wifi', obj: 'Get the reception terminal online',
+      hint: 'There is a password somewhere behind that desk.',
+      done: function (f) { return f.wifiConnected; } },
+
+    { id: 'cameras', obj: 'Plant all five security cameras',
+      hint: 'The crate in the corner of the waiting room.',
+      done: function (f) { return f.camsPlanted >= 5; } },
+
+    { id: 'findHim', obj: 'Check the feeds — find what is in here with you',
+      hint: 'One camera was already here. It still works.',
+      done: function (f) { return f.sawBirch; } },
+
+    { id: 'shock', obj: 'CAM 0 has a taser. Use it',
+      hint: 'Your cameras are older stock. That one is not.',
+      done: function (f) { return f.shockedInCage; } },
+
+    { id: 'sealEast', obj: 'SEAL THE EAST DOOR', timer: 30,
+      hint: 'Hard Seal, on the terminal. Now.',
+      fail: 'caught',
+      done: function (f) { return f.sealedEast; } },
+
+    { id: 'gun', obj: 'Daylight. Unlock the storage unit and take the Glock',
+      hint: 'The key was on the reception desk.',
+      done: function (f) { return f.hasGlock; } },
+
+    { id: 'food', obj: 'Take water and beans from the warehouse',
+      hint: 'The shelf on the west wall.',
+      done: function (f) { return f.ate && f.drank; } },
+
+    { id: 'power', obj: 'Restore the facility power',
+      hint: 'A panel in the storage unit. The wires are crossed.',
+      done: function (f) { return f.powerOn; } },
+
+    { id: 'sealWest', obj: 'THE ALARM TOLD IT WHERE YOU ARE — SEAL THE WEST DOOR', timer: 25,
+      hint: 'Get to the desk.',
+      fail: 'caught',
+      done: function (f) { return f.sealedWest; } },
+
+    { id: 'survive', obj: 'Survive the night',
+      hint: 'Sleep when you are fed, watered, rested — and it is not at the door.',
+      done: function (f) { return f.slept; } },
+
+    { id: 'phone', obj: "Take the lead scientist's phone",
+      hint: 'Extermination chamber. He is the one in the containment uniform.',
+      done: function (f) { return f.hasPhone; } },
+
+    { id: 'charge', obj: 'Charge the phone at the terminal',
+      hint: 'The USB lead runs into the reception computer.',
+      done: function (f) { return f.phoneCharged; } },
+
+    { id: 'email', obj: 'Open his email and accept the code',
+      hint: 'One percent is enough.',
+      done: function (f) { return f.emailOpen; } },
+
+    { id: 'map', obj: 'Pull the facility layout',
+      hint: 'The terminal has a fourth app now.',
+      done: function (f) { return f.sawMap; } },
+
+    { id: 'sledge', obj: 'Get the sledgehammer from the storage unit',
+      hint: 'Against the racking.',
+      done: function (f) { return f.hasSledge; } },
+
+    { id: 'breakWall', obj: 'Break open the sealed elevator shaft',
+      hint: 'The corner of the storage unit reads hollow.',
+      done: function (f) { return f.shaftOpen; } },
+
+    { id: 'descend', obj: 'Climb down',
+      hint: 'Tape the torch to your shoulder.',
+      done: function (f) { return f.underground; } },
+
+    { id: 'cells', obj: 'Find out what they were doing down here',
+      hint: 'The keycard is on the desk in the middle of the floor.',
+      done: function (f) { return f.openedCell; } },
+
+    { id: 'radio', obj: 'That radio is receiving something',
+      hint: 'Turn it on.',
+      done: function (f) { return f.heardRadio; } },
+
+    { id: 'barracks', obj: 'North section — find the Camper Barracks',
+      hint: 'Someone down here is still alive.',
+      done: function (f) { return f.metJames; } }
+  ];
+
+  // Scripted dialogue. Each entry is a list of [delayMs, speaker, text].
+  // speaker '' is Brian's own head; 'RADIO' and 'JAMES' are voices.
+  var LINES = {
+    intro: [
+      [0, '', 'Brian Truffle. Intake, day one. Nobody said anything about a night shift.'],
+      [4200, '', 'That desk had a terminal. Start there.']
+    ],
+    sawBirch: [
+      [0, '', 'That is the cage from Assembly. The one that was torn open from the inside.'],
+      [4600, '', 'And it climbed back in. Like it is charging.'],
+      [9200, '', 'CAM 0 was already here when I got here. Older, uglier — and it has a taser in it.']
+    ],
+    shocked: [
+      [0, '', 'It takes the current.'],
+      [1500, '', 'It is looking at the lens.'],
+      [3600, '', 'It is looking at ME through the lens—']
+    ],
+    camDead: [
+      [0, '', 'CONNECTION LOST. It came out of that cage like the bars were paper.'],
+      [3800, '', 'East corridor. It is coming through the east door. SEAL IT.']
+    ],
+    sealedEast: [
+      [0, '', 'Tungsten. Earthquake-rated. It is hitting it anyway.'],
+      [4500, '', 'Hold. Just hold.'],
+      [9000, '', 'It stopped. It got light out. It stopped when it got light out.']
+    ],
+    dawn: [
+      [0, '', 'Daylight through the front glass. Twenty-five minutes of it, if the clock on the wall is honest.'],
+      [5000, '', 'It hides in the day. So I move in the day.']
+    ],
+    gotGun: [
+      [0, '', "Nick's Glock. Thirty-four rounds and a note asking me to call his parents."],
+      [5200, '', 'I will. If I ever get to a phone that works.']
+    ],
+    ateBeans: [
+      [0, '', 'Chef Rat Beans. Whoever signed off on that name knew.'],
+      [4000, '', 'I am renaming these.']
+    ],
+    realise: [
+      [0, '', 'Nothing in this building opens that front door. Not the gun. I tried the gun.'],
+      [5400, '', 'The only way to call for help is to BE somewhere I can call for help.'],
+      [10200, '', 'And nothing electrical works. Start with that.']
+    ],
+    powerOn: [
+      [0, '', 'Lights.'],
+      [1400, '', 'And an alarm across the whole floor, telling it exactly which room I am standing in.'],
+      [5000, '', 'Desk. West door. GO—']
+    ],
+    sealedWest: [
+      [0, '', 'Sealed. Sealed. It is on the other side of that.'],
+      [5000, '', 'I am going to sit down for a second. Just a second.']
+    ],
+    slept: [
+      [0, '', 'I slept. I actually slept, with that thing walking around out there.'],
+      [4800, '', 'The terminal has a map app. It wants the owner\'s email code.'],
+      [9600, '', 'The owner is in the extermination chamber with his staff. He is not going to mind.']
+    ],
+    gotPhone: [
+      [0, '', 'Dead. Of course it is dead.'],
+      [3200, '', 'There is a USB lead running into the reception computer. Small mercies.']
+    ],
+    photos: [
+      [0, '', 'Wrong app. That is his photos.'],
+      [3400, '', 'A girl on his shoulders at some fair. A woman laughing at whoever is holding the camera.'],
+      [8400, '', 'He built the thing that is hunting me, and he had a family, and both of those are true.'],
+      [13600, '', 'Email. Get the code. Do not look at that again.']
+    ],
+    sawMap: [
+      [0, '', 'Waiting. Corridors. Warehouse. Assembly. Extermination. All of it where it should be.'],
+      [5600, '', 'And a second floorplan underneath the first one, greyed out, stamped CLASSIFIED.'],
+      [11000, '', 'There is a whole facility under my feet.'],
+      [15200, '', 'Storage had a service elevator. They bricked the shaft.']
+    ],
+    shaftOpen: [
+      [0, '', 'The wall goes through on the third swing.'],
+      [3000, '', 'No car. No cable. Just a hole that keeps going down past where the torch reaches.'],
+      [8000, '', 'Tape the torch to my shoulder. Use the guide rails. Do not look down at nothing.']
+    ],
+    landed: [
+      [0, '', 'Bottom.'],
+      [2200, '', 'No lights down here at all. There is something lit at the far end.']
+    ],
+    cellsSeen: [
+      [0, '', 'Containment cells. Dozens of them.'],
+      [3600, '', 'Every door has the same stencil. FAILED PROJECT. FAILED PROJECT. FAILED PROJECT.'],
+      [9000, '', 'There is a keycard on the desk in the middle of the floor.']
+    ],
+    openedCell: [
+      [0, '', 'A man. Taped to the chair by the wrists.'],
+      [3600, '', 'They took things out of him. And they were putting other things in.'],
+      [8200, '', 'Not prosthetics. Animal. That is animal.'],
+      [13000, '', 'Every scientist down here is gone. Not dead. Gone.']
+    ],
+    radioOn: [
+      [0, '', 'A radio. Please be music. Please just be music.'],
+      [4000, 'RADIO', '—this is trial number seven. My name is James Inc.'],
+      [8200, 'RADIO', 'My entire squad is dead. Ten of our coworkers went out there and never came back.'],
+      [14000, 'RADIO', 'If anyone reaches this radio — we are in the north section. The Camper Barracks.'],
+      [20000, 'RADIO', 'Please come here. Anyone. Please.'],
+      [25000, '', 'North section. North section, north section—']
+    ],
+    knock: [
+      [0, '', 'Hello? HELLO? My name is Brian Truffle, I work upstairs, I am not one of them—'],
+      [6000, 'JAMES', 'On your knees. Hands where I can see them.'],
+      [9600, 'JAMES', '...you are a person. You are an actual person.'],
+      [13400, 'JAMES', 'James. James Inc. I was a scientist here. I was about to quit anyway.']
+    ],
+    jamesTalk: [
+      [0, 'JAMES', 'You want to know what this place was. Fine.'],
+      [3800, 'JAMES', 'They were taking people apart and putting animals back into them. For fun. That is not a figure of speech.'],
+      [10400, 'JAMES', 'If the subject failed, they shot it. If the subject worked, they shot it too. That is the whole protocol.'],
+      [17600, 'JAMES', 'I have seen a man walk out of that theatre with a crocodile\'s jaw and I have seen what they did to him for it.'],
+      [24800, '', 'There is something upstairs. Eleven feet, made out of wood. It has been hunting me for two days.'],
+      [30400, 'JAMES', 'The mannequin. You have seen the mannequin.'],
+      [34000, 'JAMES', 'Have you found out a way to stop it?'],
+      [38200, '', 'No.'],
+      [40400, 'JAMES', '...'],
+      [43000, 'JAMES', 'Then you need to sit down. Because there is more.']
+    ]
+  };
+
+  window.STORY = {
+    DAY_LEN: DAY_LEN,
+    NIGHT_LEN: NIGHT_LEN,
+    BEATS: BEATS,
+    LINES: LINES,
+    beatIndex: function (id) {
+      for (var i = 0; i < BEATS.length; i++) if (BEATS[i].id === id) return i;
+      return -1;
+    }
+  };
+})();
+
+</script>
+<script>
+/*
  * THE BIRCH — the arrival.
  *
  * Not a delivery. An armored jeep pulls up outside the facility at night,
@@ -2985,6 +3295,7 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
     var menaceCam = -1;
     var watched = false;
     var ventsOpen = false;
+    var daylightHold = null;   // the mode it was in when the sun came up
     var standT = 0;
 
     function lurkDuration() { return (300 + Math.random() * 1200) * lurkScale; }
@@ -3192,6 +3503,36 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       },
       setWatched: function (w) { watched = w; },
       setVentsOpen: function (v) { ventsOpen = !!v; },
+      // Daylight sends it back to whatever it does when it is not hunting.
+      // It is not destroyed and it is not asleep — it is somewhere else, and
+      // it comes back the moment the light goes.
+      setDaylight: function (day) {
+        if (mode === 'destroyed') return;
+        if (day) {
+          if (mode !== 'dormant') { daylightHold = mode; }
+          mode = 'dormant';
+          g.visible = false;
+        } else if (daylightHold) {
+          mode = 'lurk';
+          lurkT = 0;
+          beginLurk(Math.floor(Math.random() * LURKS.length));
+          daylightHold = null;
+          g.visible = true;
+        }
+      },
+      isHidden: function () { return mode === 'dormant'; },
+      // It climbs back into the cage it tore open and folds up in there,
+      // perfectly still, like something on charge.
+      settleInCage: function (x, z) {
+        pos.x = x; pos.z = z;
+        mode = 'lurk';
+        lurkIndex = 1;             // the cage
+        lurkT = 1e9;               // it stays until something moves it
+        facing = Math.PI;
+        setPose('spin');
+        drawFace('none');
+        g.visible = true;
+      },
       // materialise in front of a camera, already looking at the lens
       spawnAt: function (x, z, face) {
         pos.x = x; pos.z = z;
@@ -4260,11 +4601,13 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
 
       var lootIdx = 0;
       var SHELF_Y = [0.5, 1.85, 3.2];
+      var allCrates = [];
       // A crate rests on the board it is standing on: its height decides its
       // centre, rather than every crate sharing one hard-coded height and the
       // tall ones sinking a fifth of a metre through the steel.
       function shelfCrate(cx, boardY, cz, w, h, ry) {
         var crate = box(w, h, w, MAT.wood, cx, boardY + 0.045 + h / 2, cz, ry);
+        allCrates.push(crate);
         if (Math.random() < 0.3) {
           interact(crate, { id: 'lootCrate', idx: lootIdx++, label: 'Crate on the shelf', verb: 'Open' });
         }
@@ -4298,6 +4641,13 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       rack(-56, -8, 12);
       rack(-56, -4, 12);
       rack(-56, 0.5, 12);
+      // The racks stock themselves at random, which twice produced a
+      // warehouse with nothing openable in it at all. Promote plain crates
+      // until there is a floor's worth of loot to actually find.
+      for (var pc = 0; pc < allCrates.length && lootIdx < 12; pc++) {
+        if (allCrates[pc].userData.interact) continue;
+        interact(allCrates[pc], { id: 'lootCrate', idx: lootIdx++, label: 'Crate on the shelf', verb: 'Open' });
+      }
 
       for (var d = 0; d < 7; d++) {
         box(0.7, 0.6, 0.7, MAT.wood, -51.5 - Math.random() * 3, 0.3, 4.2 + Math.random() * 2, Math.random() * 2);
@@ -5702,6 +6052,24 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       readRoster: false,
       readValuation: false,
       readEvidenceLog: false,
+      // ---- campaign ----
+      // `story` is the flag set the beat list reads; `beat` is how far
+      // through that list the player has got.
+      beat: 0,
+      dayNo: 1,
+      phase: 'night',          // the first stretch is the shock and the seal
+      clock: 0,
+      beatTimer: 0,            // counts down on beats that carry one
+      story: {
+        wifiConnected: false, camsPlanted: 0, sawBirch: false, shockedInCage: false,
+        sealedEast: false, hasGlock: false, ate: false, drank: false,
+        powerOn: false, sealedWest: false, slept: false,
+        hasPhone: false, phoneCharged: false, emailOpen: false, sawMap: false,
+        hasSledge: false, shaftOpen: false, underground: false,
+        openedCell: false, heardRadio: false, metJames: false
+      },
+      wires: null,             // the power puzzle's current wiring
+      beansNamed: false,       // Chef Rat -> Diarrhea, after the first can
       supplies: false,
       room: null,
       seenAssembly: false,
@@ -6055,7 +6423,9 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
           state.mags = 2;
           state.inMag = MAG_SIZE;
           state.ammo = MAG_SIZE * 2;
-          takePickup(focused, true);      // the whole pistol group, not just the slide
+          takePickup(focused, true);
+          flag('hasGlock');
+          cinematic('gotGun');      // the whole pistol group, not just the slide
           if (audio) audio.pickup();
           giveItem('glock');
           say('Glock 19, and two magazines. Thirty-four rounds. There will not be more.');
@@ -6371,6 +6741,32 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       return { g: g, arm: arm, headY: 0 };
     }
 
+    // planted[0] is the fixture that came with the building; the five the
+    // player carries in are everything after it.
+    function plantedByPlayer() {
+      var n = 0;
+      planted.forEach(function (c) { if (!c.fixed) n++; });
+      return n;
+    }
+
+    // CAM 0 — the one that was already here. Bolted to the Assembly wall
+    // looking straight at the holding cage, half dead, and the only unit in
+    // the building with a taser in it. Yours are older stock without one.
+    (function installFixedCam() {
+      var CAGE = { x: 54.3, z: 56 };
+      var x = 49.4, z = 51.6;
+      var built = buildWallCam();
+      built.g.position.set(x, 2.35, z);
+      var face = Math.atan2(-(CAGE.x - x), -(CAGE.z - z));
+      built.g.rotation.y = face + Math.PI;      // plate to the wall
+      built.arm.rotation.x = 0;
+      scene.add(built.g);
+      planted.push({
+        x: x, z: z, facing: face, pitch: -0.16, headY: 2.2,
+        alive: true, mesh: built.g, type: 'wall', taser: true, fixed: true
+      });
+    })();
+
     function plantCamera() {
       if (!active || uiOpen || state.dead) return;
       if (state.cams <= 0) { say('No cameras to place.'); return; }
@@ -6465,7 +6861,8 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
           state.hunger = Math.max(0, state.hunger - 1);
         } else {
           if (audio) audio.consume('water');
-          say('The water is warm and perfect.');
+          say('The water is warm and perfect. Generic. Absolutely generic.');
+          flag('drank');
         }
       } else if (kind === 'beans') {
         if (state.beansN <= 0) { say('No beans.'); return; }
@@ -6476,10 +6873,19 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
         if (state.gut >= 2) {
           state.needToilet = true;
           say('Cold beans. Nick was right about the smell. You will need the toilet.');
+        } else if (!state.beansNamed) {
+          say('Cold Chef Rat Beans, straight from the can. That was a mistake.');
         } else {
-          say('Cold beans, straight from the can.');
+          say('More Diarrhea Beans. You have made your peace with it.');
         }
         if (audio) audio.consume('beans');
+        flag('ate');
+        // the label does not survive contact with the product
+        if (!state.beansNamed) {
+          state.beansNamed = true;
+          ITEM_DEFS.beans.label = 'DIARRHEA';
+          cinematic('ateBeans');
+        }
       } else {
         if (state.fuelN <= 0) { say('No GAMER ENERGY.'); return; }
         state.fuelN--;
@@ -6501,6 +6907,8 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       // one shutter at a time — sealing one raises the other
       Object.keys(state.seals).forEach(function (k) { state.seals[k] = false; });
       if (which) state.seals[which] = true;
+      if (which === 'sealEast') flag('sealedEast');
+      if (which === 'sealWest') flag('sealedWest');
       if (audio) audio.sealSlam();
       refreshHud();
       return state.seals;
@@ -6628,6 +7036,87 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       });
     }
 
+    // ---------------- The campaign ----------------
+    // A beat is done when its flag turns true; the next objective then goes
+    // up on the HUD. Beats that carry a timer fail you if it runs out.
+    var S = window.STORY;
+    var cineLock = false, cineTimers = [];
+
+    function beat() { return S.BEATS[state.beat] || null; }
+
+    // Play a scripted run of lines. Locks nothing by default — the player
+    // usually needs to keep running while their own head talks at them.
+    function cinematic(key, opts, onDone) {
+      var lines = S.LINES[key];
+      if (!lines) { if (onDone) onDone(); return; }
+      opts = opts || {};
+      if (opts.lock) { cineLock = true; if (ui.onBars) ui.onBars(true); }
+      var last = 0;
+      lines.forEach(function (l) {
+        last = Math.max(last, l[0]);
+        cineTimers.push(setTimeout(function () {
+          if (ui.onDialogue) ui.onDialogue(l[1], l[2]);
+        }, l[0]));
+      });
+      cineTimers.push(setTimeout(function () {
+        if (ui.onDialogue) ui.onDialogue(null, null);
+        if (opts.lock) { cineLock = false; if (ui.onBars) ui.onBars(false); }
+        if (onDone) onDone();
+      }, last + (opts.hold === undefined ? 4200 : opts.hold)));
+    }
+    function stopCinematics() {
+      cineTimers.forEach(clearTimeout);
+      cineTimers = [];
+      if (ui.onDialogue) ui.onDialogue(null, null);
+      cineLock = false;
+      if (ui.onBars) ui.onBars(false);
+    }
+
+    // Fired by the world when something story-relevant happens.
+    function flag(name, value) {
+      var v = value === undefined ? true : value;
+      if (state.story[name] === v) return;
+      state.story[name] = v;
+      checkBeat();
+    }
+
+    function checkBeat() {
+      var guard = 0;
+      while (guard++ < 40) {
+        var b = beat();
+        if (!b || !b.done(state.story)) break;
+        state.beat++;
+        state.beatTimer = 0;
+        var nb = beat();
+        if (nb && nb.timer) state.beatTimer = nb.timer;
+        if (ui.onObjective) ui.onObjective(nb, 0);
+      }
+      refreshHud();
+    }
+
+    function startPhase(which) {
+      state.phase = which;
+      state.clock = which === 'day' ? S.DAY_LEN : S.NIGHT_LEN;
+      if (entity) entity.setDaylight(which === 'day');
+      if (audio) audio.setPhase(which === 'day' ? 'pop' : 'eerie');
+      if (ui.onClock) ui.onClock(state.dayNo, which, state.clock);
+      if (which === 'day') {
+        restockWorld();
+        cinematic('dawn');
+      }
+    }
+
+    // Every morning the facility restocks: crates you emptied are full
+    // again. One-off things — a read newspaper, the torch, the Glock — are
+    // gone for good, so anything taken out of the interactable list stays out.
+    function restockWorld() {
+      openedCrates = {};
+      level.interactables.forEach(function (m) {
+        var d = m.userData.interact;
+        if (d.id === 'openCrate') d.taken = m.userData.taken = false;
+      });
+    }
+
     // ---------------- Entity hooks ----------------
     function die(reason) {
       if (state.dead || state.ended) return;
@@ -6744,6 +7233,7 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
     // ---------------- Wi-Fi / TV hooks used by the shell ----------------
     window.__onWifiConnected = function () {
       state.wifiConnected = true;
+        flag('wifiConnected');
       if (window.__startTv) window.__startTv();
       if (audio) audio.ui();
       if (ui.onMessage) ui.onMessage('Connected. Behind you, one of the screens wakes up.');
@@ -6833,6 +7323,28 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
         // subtle shake while the fists land on the glass
         camera.rotation.z = Math.sin(elapsed * 60) * 0.004;
       }
+      // ---- campaign clock ----
+      if (active && !state.dead && !state.ended) {
+        var b0 = beat();
+        if (b0 && b0.timer) {
+          // a beat with a countdown: run out and it reaches you
+          state.beatTimer -= dt;
+          if (ui.onObjective) ui.onObjective(b0, Math.max(0, state.beatTimer));
+          if (state.beatTimer <= 0) {
+            state.beatTimer = 0;
+            if (b0.fail === 'caught' && entity) entity.force(camera.position.x + 1.2, camera.position.z, 'chase');
+          }
+        }
+        if (state.clock > 0) {
+          state.clock -= dt;
+          if (ui.onClock) ui.onClock(state.dayNo, state.phase, Math.max(0, state.clock));
+          if (state.clock <= 0) {
+            if (state.phase === 'day') startPhase('night');
+            else { state.dayNo++; startPhase('day'); }
+          }
+        }
+      }
+
       if (active && !uiOpen && state.collapseT > 0) {
         // face down on the floor, counting seconds
         state.collapseT -= dt;
@@ -7110,6 +7622,18 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
 
     // ---------------- Public surface ----------------
     return {
+      // Kick the campaign off: first objective on screen, first stretch of
+      // dark on the clock. Called once, when the player first takes control.
+      beginCampaign: function () {
+        if (state.beat > 0 || state.clock > 0) return;
+        state.beat = 0;
+        state.phase = 'night';
+        state.clock = S.NIGHT_LEN;
+        if (entity) entity.setDaylight(false);
+        if (ui.onClock) ui.onClock(state.dayNo, 'night', state.clock);
+        if (ui.onObjective) ui.onObjective(beat(), 0);
+        cinematic('intro');
+      },
       enter: function () {
         active = true;
         canvas.focus();
@@ -7193,6 +7717,11 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
           camsTaken: state.camsTaken, birchAwake: state.birchAwake,
           riotEquipped: state.riotEquipped,
           hotbar: state.hotbar.slice(), hotbarSel: state.hotbarSel,
+          beat: state.beat, beatId: beat() ? beat().id : null,
+          beatTimer: state.beatTimer, dayNo: state.dayNo,
+          dayPhase: state.phase, clock: state.clock,
+          story: JSON.parse(JSON.stringify(state.story)),
+          beansNamed: state.beansNamed,
           ventOpen: state.ventOpen.slice(),
           focus: focused ? focused.userData.interact.id : null
         };
@@ -7222,27 +7751,45 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
         if (es.mode === 'dormant' || es.mode === 'destroyed') return false;
         return Math.hypot(es.x - planted[i].x, es.z - planted[i].z) < 11;
       },
+      // Opening the feeds with all five of your own cameras down is what
+      // starts it. It does not appear on one of yours — it is already in the
+      // cage it tore open, on the camera that was here before you were.
       notifyCamerasViewed: function () {
-        if (!state.camsTaken || state.birchAwake || planted.length < 5) return false;
+        if (!state.camsTaken || state.birchAwake) return false;
+        if (plantedByPlayer() < 5) return false;
         state.birchAwake = true;
-        var i = Math.floor(Math.random() * planted.length);
-        var c = planted[i];
-        var fx3 = -Math.sin(c.facing), fz3 = -Math.cos(c.facing);
-        if (entity) entity.spawnAt(c.x + fx3 * 3, c.z + fz3 * 3, Math.atan2(-(-fx3), -(-fz3)));
+        if (entity) entity.settleInCage(54.3, 56);
         if (audio) { audio.setPhase('eerie'); audio.doorSlam(30); }
-        say('The speakers die mid-chorus. CAM ' + (i + 1) + ' — it is already looking at the lens.');
+        say('The speakers die mid-chorus.');
         refreshHud();
         return true;
       },
-      shockAt: function (i) {
-        if (!entity || !planted[i]) return false;
+      // Viewing CAM 0 while it is folded up in the cage is the reveal.
+      notifyFeedViewed: function (i) {
+        if (i !== 0 || !state.birchAwake || state.story.sawBirch) return false;
+        if (!entity) return false;
         var es = entity.getState();
-        if (Math.hypot(es.x - planted[i].x, es.z - planted[i].z) >= 11) return false;
-        if (es.lurk === 'cage') {
-          var ok = entity.shockAtCage();
-          if (ok) { if (audio) audio.zap(); say('The cage floor lights. It stands perfectly still, cooking.'); }
-          return ok;
-        }
+        if (Math.hypot(es.x - 54.3, es.z - 56) > 6) return false;
+        flag('sawBirch');
+        cinematic('sawBirch');
+        return true;
+      },
+      // Only CAM 0 can do this. The five you carried in are leftovers with
+      // no taser in them, which is the whole reason the first one matters.
+      canShock: function (i) {
+        var c = planted[i];
+        if (!c || !c.taser || !c.alive || !entity) return false;
+        var es = entity.getState();
+        if (es.mode === 'dormant' || es.mode === 'destroyed') return false;
+        return Math.hypot(es.x - c.x, es.z - c.z) < 11;
+      },
+      shockAt: function (i) {
+        var c = planted[i];
+        if (!entity || !c) return false;
+        if (!c.taser) { say('No taser in this one. It is older stock — they all are, except the one that was already here.'); return false; }
+        var es = entity.getState();
+        if (Math.hypot(es.x - c.x, es.z - c.z) >= 11) return false;
+
         entity.shocked();
         if (audio) {
           audio.zap();
@@ -7251,7 +7798,16 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
             audio.scream(Math.hypot(es2.x - camera.position.x, es2.z - camera.position.z));
           }, 350);
         }
-        say('It takes the current — and SCREAMS — and starts running. Seal the door. Now.');
+        flag('shockedInCage');
+        cinematic('shocked');
+        // it comes out of the cage through the camera that shocked it
+        setTimeout(function () {
+          c.alive = false;
+          if (c.mesh) c.mesh.visible = false;
+          if (audio) audio.doorBash(24);
+          cinematic('camDead');
+          refreshHud();
+        }, 4200);
         return true;
       },
       plantedCams: function () { return planted.map(function (c) { return { x: c.x, z: c.z, alive: c.alive, type: c.type, headY: c.headY, facing: c.facing, pitch: c.pitch }; }); },
@@ -7667,6 +8223,7 @@ window.bootUI = function bootUI(THREE) {
   var ammoEl = $('ammo'), carry = $('carry'), muzzle = $('muzzle');
   var stick = $('stick'), stickNub = $('stick-nub'), touchbar = $('touchbar');
   var fileNo = $('file-no'), grain = $('grain');
+  var clockEl = $('clock'), objEl = $('objective'), dlgEl = $('dialogue'), barsEl = $('bars');
 
   var metersEl = $('meters');
   var lastHud = null;
@@ -7845,6 +8402,30 @@ window.bootUI = function bootUI(THREE) {
         }
         void data;
       },
+      onClock: function (dayNo, phase, secs) {
+        clockEl.classList.add('on');
+        clockEl.classList.toggle('night', phase === 'night');
+        var m = Math.floor(secs / 60), s = Math.floor(secs % 60);
+        clockEl.querySelector('.phase').textContent = phase === 'day' ? ('Day ' + dayNo) : ('Night ' + dayNo);
+        clockEl.querySelector('.time').textContent = m + ':' + (s < 10 ? '0' : '') + s;
+      },
+      onObjective: function (b, countdown) {
+        if (!b) { objEl.classList.remove('on'); return; }
+        objEl.classList.add('on');
+        objEl.classList.toggle('urgent', !!b.timer);
+        objEl.querySelector('.txt').textContent = b.obj;
+        objEl.querySelector('.hint').textContent = b.hint || '';
+        objEl.querySelector('.count').textContent =
+          b.timer ? Math.ceil(countdown || 0) + 's' : '';
+      },
+      onDialogue: function (who, what) {
+        if (!what) { dlgEl.classList.remove('on'); return; }
+        dlgEl.classList.add('on');
+        dlgEl.classList.toggle('radio', who === 'RADIO');
+        dlgEl.querySelector('.who').textContent = who || 'Brian';
+        dlgEl.querySelector('.what').textContent = what;
+      },
+      onBars: function (on) { barsEl.classList.toggle('on', !!on); },
       onMessage: say,
       onRoom: function (name) {
         roomname.textContent = name;
@@ -8049,7 +8630,7 @@ window.bootUI = function bootUI(THREE) {
         var b = document.createElement('button');
         b.type = 'button';
         b.className = 'feed-btn' + (i === feedIndex ? ' on' : '') + (c.alive ? '' : ' dead');
-        b.textContent = 'CAM ' + (i + 1) + (c.alive ? '' : ' ✕');
+        b.textContent = 'CAM ' + i + (c.alive ? '' : ' ✕');
         b.addEventListener('click', function () { feedIndex = i; renderTerminal(connected); });
         list.appendChild(b);
       });
@@ -8119,7 +8700,7 @@ window.bootUI = function bootUI(THREE) {
           x2.fillStyle = '#e8e4d8';
           x2.font = 'bold 10px monospace';
           x2.fillText('REC', 20, 16);
-          x2.fillText('CAM ' + (feedIndex + 1), W - 48, 16);
+          x2.fillText('CAM ' + feedIndex, W - 48, 16);
           // battery: two of four bars
           x2.strokeStyle = '#e8e4d8';
           x2.strokeRect(W - 34, H - 16, 24, 10);
@@ -8128,7 +8709,8 @@ window.bootUI = function bootUI(THREE) {
           for (var bb = 0; bb < 2; bb++) x2.fillRect(W - 32 + bb * 6, H - 14, 4, 6);
           // connection: all four bars
           for (var sg = 0; sg < 4; sg++) x2.fillRect(8 + sg * 5, H - 8 - sg * 2, 3, 4 + sg * 2);
-          var shockable = window.__horror.entityNearCam(feedIndex);
+          window.__horror.notifyFeedViewed(feedIndex);
+          var shockable = window.__horror.canShock(feedIndex);
           stamp.textContent = shockable ? 'Movement register: POSITIVE.' : 'Live.';
           shock.disabled = !shockable;
         }
@@ -8289,7 +8871,10 @@ window.bootUI = function bootUI(THREE) {
           var splash = document.getElementById('splash');
           splash.classList.add('on');
           setTimeout(function () { splash.classList.remove('on'); }, 2400);
+          game.beginCampaign();
         });
+      } else {
+        game.beginCampaign();
       }
 
       crosshair.classList.add('on');

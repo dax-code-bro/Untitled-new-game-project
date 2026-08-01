@@ -243,6 +243,7 @@
     var menaceCam = -1;
     var watched = false;
     var ventsOpen = false;
+    var daylightHold = null;   // the mode it was in when the sun came up
     var standT = 0;
 
     function lurkDuration() { return (300 + Math.random() * 1200) * lurkScale; }
@@ -450,6 +451,36 @@
       },
       setWatched: function (w) { watched = w; },
       setVentsOpen: function (v) { ventsOpen = !!v; },
+      // Daylight sends it back to whatever it does when it is not hunting.
+      // It is not destroyed and it is not asleep — it is somewhere else, and
+      // it comes back the moment the light goes.
+      setDaylight: function (day) {
+        if (mode === 'destroyed') return;
+        if (day) {
+          if (mode !== 'dormant') { daylightHold = mode; }
+          mode = 'dormant';
+          g.visible = false;
+        } else if (daylightHold) {
+          mode = 'lurk';
+          lurkT = 0;
+          beginLurk(Math.floor(Math.random() * LURKS.length));
+          daylightHold = null;
+          g.visible = true;
+        }
+      },
+      isHidden: function () { return mode === 'dormant'; },
+      // It climbs back into the cage it tore open and folds up in there,
+      // perfectly still, like something on charge.
+      settleInCage: function (x, z) {
+        pos.x = x; pos.z = z;
+        mode = 'lurk';
+        lurkIndex = 1;             // the cage
+        lurkT = 1e9;               // it stays until something moves it
+        facing = Math.PI;
+        setPose('spin');
+        drawFace('none');
+        g.visible = true;
+      },
       // materialise in front of a camera, already looking at the lens
       spawnAt: function (x, z, face) {
         pos.x = x; pos.z = z;

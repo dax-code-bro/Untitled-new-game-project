@@ -389,6 +389,67 @@
   }
   #shockBtn:disabled { opacity: 0.3; cursor: default; }
 
+  /* ---------------- Campaign: clock, objective, dialogue ---------------- */
+  #clock {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    top: max(16px, env(safe-area-inset-top)); z-index: 7;
+    font-size: 11px; letter-spacing: 0.26em; text-transform: uppercase;
+    color: var(--concrete-l); opacity: 0; transition: opacity 500ms ease;
+    text-align: center; pointer-events: none; text-shadow: 0 2px 10px #000;
+  }
+  #clock.on { opacity: 1; }
+  #clock .phase { color: var(--bone); }
+  #clock.night .phase { color: #d08a72; }
+  #clock .time { font-variant-numeric: tabular-nums; letter-spacing: 0.12em; }
+
+  #objective {
+    position: fixed; left: max(20px, env(safe-area-inset-left));
+    top: max(58px, calc(env(safe-area-inset-top) + 44px)); z-index: 7;
+    max-width: 300px; opacity: 0; transition: opacity 450ms ease;
+    pointer-events: none; text-shadow: 0 2px 10px #000;
+  }
+  #objective.on { opacity: 1; }
+  #objective .lbl {
+    font-size: 9px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--concrete);
+  }
+  #objective .txt {
+    font-size: 12px; letter-spacing: 0.06em; color: var(--tungsten); margin-top: 4px; line-height: 1.5;
+  }
+  #objective .hint { font-size: 10.5px; color: var(--concrete-l); margin-top: 3px; line-height: 1.5; }
+  #objective.urgent .txt { color: #ef7a5c; }
+  #objective .count {
+    font-size: 20px; color: #ef7a5c; font-variant-numeric: tabular-nums; margin-top: 2px;
+  }
+
+  /* scripted dialogue, larger and slower than the incidental subtitle */
+  #dialogue {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: max(120px, calc(env(safe-area-inset-bottom) + 104px)); z-index: 9;
+    width: min(720px, calc(100vw - 48px)); text-align: center;
+    opacity: 0; transition: opacity 320ms ease; pointer-events: none;
+  }
+  #dialogue.on { opacity: 1; }
+  #dialogue .who {
+    font-size: 10px; letter-spacing: 0.3em; text-transform: uppercase;
+    color: var(--tungsten); margin-bottom: 6px;
+  }
+  #dialogue .what {
+    font-size: 15px; line-height: 1.7; color: var(--bone);
+    text-shadow: 0 2px 14px #000, 0 0 30px #000;
+  }
+  #dialogue.radio .who { color: #7fb2c4; }
+  #dialogue.radio .what { font-family: var(--mono); letter-spacing: 0.04em; color: #cfe0e6; }
+
+  /* letterbox for cutscenes */
+  #bars { position: fixed; inset: 0; z-index: 8; pointer-events: none; }
+  #bars::before, #bars::after {
+    content: ''; position: absolute; left: 0; right: 0; height: 0; background: #000;
+    transition: height 420ms ease;
+  }
+  #bars::before { top: 0; }
+  #bars::after { bottom: 0; }
+  #bars.on::before, #bars.on::after { height: 11vh; }
+
   /* hotbar */
   #hotbar {
     position: fixed; left: 50%; transform: translateX(-50%);
@@ -469,6 +530,15 @@
 
 <div id="crosshair"></div>
 <div id="prompt"></div>
+<div id="clock"><span class="phase">Day 1</span> · <span class="time">25:00</span></div>
+<div id="objective">
+  <div class="lbl">Objective</div>
+  <div class="txt"></div>
+  <div class="hint"></div>
+  <div class="count"></div>
+</div>
+<div id="dialogue"><div class="who"></div><div class="what"></div></div>
+<div id="bars"></div>
 <div id="roomname"></div>
 <div id="subtitle"></div>
 <button id="sound" type="button" aria-label="Toggle sound">Sound On</button>
@@ -692,6 +762,7 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
 <script src="./textures.js"></script>
 <script src="./fittings.js"></script>
 <script src="./humanoid.js"></script>
+<script src="./story.js"></script>
 <script src="./intro.js"></script>
 <script src="./weapons.js"></script>
 <script src="./entity.js"></script>
@@ -708,6 +779,7 @@ window.bootUI = function bootUI(THREE) {
   var ammoEl = $('ammo'), carry = $('carry'), muzzle = $('muzzle');
   var stick = $('stick'), stickNub = $('stick-nub'), touchbar = $('touchbar');
   var fileNo = $('file-no'), grain = $('grain');
+  var clockEl = $('clock'), objEl = $('objective'), dlgEl = $('dialogue'), barsEl = $('bars');
 
   var metersEl = $('meters');
   var lastHud = null;
@@ -886,6 +958,30 @@ window.bootUI = function bootUI(THREE) {
         }
         void data;
       },
+      onClock: function (dayNo, phase, secs) {
+        clockEl.classList.add('on');
+        clockEl.classList.toggle('night', phase === 'night');
+        var m = Math.floor(secs / 60), s = Math.floor(secs % 60);
+        clockEl.querySelector('.phase').textContent = phase === 'day' ? ('Day ' + dayNo) : ('Night ' + dayNo);
+        clockEl.querySelector('.time').textContent = m + ':' + (s < 10 ? '0' : '') + s;
+      },
+      onObjective: function (b, countdown) {
+        if (!b) { objEl.classList.remove('on'); return; }
+        objEl.classList.add('on');
+        objEl.classList.toggle('urgent', !!b.timer);
+        objEl.querySelector('.txt').textContent = b.obj;
+        objEl.querySelector('.hint').textContent = b.hint || '';
+        objEl.querySelector('.count').textContent =
+          b.timer ? Math.ceil(countdown || 0) + 's' : '';
+      },
+      onDialogue: function (who, what) {
+        if (!what) { dlgEl.classList.remove('on'); return; }
+        dlgEl.classList.add('on');
+        dlgEl.classList.toggle('radio', who === 'RADIO');
+        dlgEl.querySelector('.who').textContent = who || 'Brian';
+        dlgEl.querySelector('.what').textContent = what;
+      },
+      onBars: function (on) { barsEl.classList.toggle('on', !!on); },
       onMessage: say,
       onRoom: function (name) {
         roomname.textContent = name;
@@ -1090,7 +1186,7 @@ window.bootUI = function bootUI(THREE) {
         var b = document.createElement('button');
         b.type = 'button';
         b.className = 'feed-btn' + (i === feedIndex ? ' on' : '') + (c.alive ? '' : ' dead');
-        b.textContent = 'CAM ' + (i + 1) + (c.alive ? '' : ' ✕');
+        b.textContent = 'CAM ' + i + (c.alive ? '' : ' ✕');
         b.addEventListener('click', function () { feedIndex = i; renderTerminal(connected); });
         list.appendChild(b);
       });
@@ -1160,7 +1256,7 @@ window.bootUI = function bootUI(THREE) {
           x2.fillStyle = '#e8e4d8';
           x2.font = 'bold 10px monospace';
           x2.fillText('REC', 20, 16);
-          x2.fillText('CAM ' + (feedIndex + 1), W - 48, 16);
+          x2.fillText('CAM ' + feedIndex, W - 48, 16);
           // battery: two of four bars
           x2.strokeStyle = '#e8e4d8';
           x2.strokeRect(W - 34, H - 16, 24, 10);
@@ -1169,7 +1265,8 @@ window.bootUI = function bootUI(THREE) {
           for (var bb = 0; bb < 2; bb++) x2.fillRect(W - 32 + bb * 6, H - 14, 4, 6);
           // connection: all four bars
           for (var sg = 0; sg < 4; sg++) x2.fillRect(8 + sg * 5, H - 8 - sg * 2, 3, 4 + sg * 2);
-          var shockable = window.__horror.entityNearCam(feedIndex);
+          window.__horror.notifyFeedViewed(feedIndex);
+          var shockable = window.__horror.canShock(feedIndex);
           stamp.textContent = shockable ? 'Movement register: POSITIVE.' : 'Live.';
           shock.disabled = !shockable;
         }
@@ -1330,7 +1427,10 @@ window.bootUI = function bootUI(THREE) {
           var splash = document.getElementById('splash');
           splash.classList.add('on');
           setTimeout(function () { splash.classList.remove('on'); }, 2400);
+          game.beginCampaign();
         });
+      } else {
+        game.beginCampaign();
       }
 
       crosshair.classList.add('on');

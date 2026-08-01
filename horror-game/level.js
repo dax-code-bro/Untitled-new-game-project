@@ -835,11 +835,13 @@
 
       var lootIdx = 0;
       var SHELF_Y = [0.5, 1.85, 3.2];
+      var allCrates = [];
       // A crate rests on the board it is standing on: its height decides its
       // centre, rather than every crate sharing one hard-coded height and the
       // tall ones sinking a fifth of a metre through the steel.
       function shelfCrate(cx, boardY, cz, w, h, ry) {
         var crate = box(w, h, w, MAT.wood, cx, boardY + 0.045 + h / 2, cz, ry);
+        allCrates.push(crate);
         if (Math.random() < 0.3) {
           interact(crate, { id: 'lootCrate', idx: lootIdx++, label: 'Crate on the shelf', verb: 'Open' });
         }
@@ -873,6 +875,13 @@
       rack(-56, -8, 12);
       rack(-56, -4, 12);
       rack(-56, 0.5, 12);
+      // The racks stock themselves at random, which twice produced a
+      // warehouse with nothing openable in it at all. Promote plain crates
+      // until there is a floor's worth of loot to actually find.
+      for (var pc = 0; pc < allCrates.length && lootIdx < 12; pc++) {
+        if (allCrates[pc].userData.interact) continue;
+        interact(allCrates[pc], { id: 'lootCrate', idx: lootIdx++, label: 'Crate on the shelf', verb: 'Open' });
+      }
 
       for (var d = 0; d < 7; d++) {
         box(0.7, 0.6, 0.7, MAT.wood, -51.5 - Math.random() * 3, 0.3, 4.2 + Math.random() * 2, Math.random() * 2);

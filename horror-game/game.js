@@ -756,6 +756,24 @@
       readRoster: false,
       readValuation: false,
       readEvidenceLog: false,
+      // ---- campaign ----
+      // `story` is the flag set the beat list reads; `beat` is how far
+      // through that list the player has got.
+      beat: 0,
+      dayNo: 1,
+      phase: 'night',          // the first stretch is the shock and the seal
+      clock: 0,
+      beatTimer: 0,            // counts down on beats that carry one
+      story: {
+        wifiConnected: false, camsPlanted: 0, sawBirch: false, shockedInCage: false,
+        sealedEast: false, hasGlock: false, ate: false, drank: false,
+        powerOn: false, sealedWest: false, slept: false,
+        hasPhone: false, phoneCharged: false, emailOpen: false, sawMap: false,
+        hasSledge: false, shaftOpen: false, underground: false,
+        openedCell: false, heardRadio: false, metJames: false
+      },
+      wires: null,             // the power puzzle's current wiring
+      beansNamed: false,       // Chef Rat -> Diarrhea, after the first can
       supplies: false,
       room: null,
       seenAssembly: false,
@@ -1109,7 +1127,9 @@
           state.mags = 2;
           state.inMag = MAG_SIZE;
           state.ammo = MAG_SIZE * 2;
-          takePickup(focused, true);      // the whole pistol group, not just the slide
+          takePickup(focused, true);
+          flag('hasGlock');
+          cinematic('gotGun');      // the whole pistol group, not just the slide
           if (audio) audio.pickup();
           giveItem('glock');
           say('Glock 19, and two magazines. Thirty-four rounds. There will not be more.');
@@ -1425,6 +1445,32 @@
       return { g: g, arm: arm, headY: 0 };
     }
 
+    // planted[0] is the fixture that came with the building; the five the
+    // player carries in are everything after it.
+    function plantedByPlayer() {
+      var n = 0;
+      planted.forEach(function (c) { if (!c.fixed) n++; });
+      return n;
+    }
+
+    // CAM 0 — the one that was already here. Bolted to the Assembly wall
+    // looking straight at the holding cage, half dead, and the only unit in
+    // the building with a taser in it. Yours are older stock without one.
+    (function installFixedCam() {
+      var CAGE = { x: 54.3, z: 56 };
+      var x = 49.4, z = 51.6;
+      var built = buildWallCam();
+      built.g.position.set(x, 2.35, z);
+      var face = Math.atan2(-(CAGE.x - x), -(CAGE.z - z));
+      built.g.rotation.y = face + Math.PI;      // plate to the wall
+      built.arm.rotation.x = 0;
+      scene.add(built.g);
+      planted.push({
+        x: x, z: z, facing: face, pitch: -0.16, headY: 2.2,
+        alive: true, mesh: built.g, type: 'wall', taser: true, fixed: true
+      });
+    })();
+
     function plantCamera() {
       if (!active || uiOpen || state.dead) return;
       if (state.cams <= 0) { say('No cameras to place.'); return; }
@@ -1519,7 +1565,8 @@
           state.hunger = Math.max(0, state.hunger - 1);
         } else {
           if (audio) audio.consume('water');
-          say('The water is warm and perfect.');
+          say('The water is warm and perfect. Generic. Absolutely generic.');
+          flag('drank');
         }
       } else if (kind === 'beans') {
         if (state.beansN <= 0) { say('No beans.'); return; }
@@ -1530,10 +1577,19 @@
         if (state.gut >= 2) {
           state.needToilet = true;
           say('Cold beans. Nick was right about the smell. You will need the toilet.');
+        } else if (!state.beansNamed) {
+          say('Cold Chef Rat Beans, straight from the can. That was a mistake.');
         } else {
-          say('Cold beans, straight from the can.');
+          say('More Diarrhea Beans. You have made your peace with it.');
         }
         if (audio) audio.consume('beans');
+        flag('ate');
+        // the label does not survive contact with the product
+        if (!state.beansNamed) {
+          state.beansNamed = true;
+          ITEM_DEFS.beans.label = 'DIARRHEA';
+          cinematic('ateBeans');
+        }
       } else {
         if (state.fuelN <= 0) { say('No GAMER ENERGY.'); return; }
         state.fuelN--;
@@ -1555,6 +1611,8 @@
       // one shutter at a time — sealing one raises the other
       Object.keys(state.seals).forEach(function (k) { state.seals[k] = false; });
       if (which) state.seals[which] = true;
+      if (which === 'sealEast') flag('sealedEast');
+      if (which === 'sealWest') flag('sealedWest');
       if (audio) audio.sealSlam();
       refreshHud();
       return state.seals;
@@ -1682,6 +1740,87 @@
       });
     }
 
+    // ---------------- The campaign ----------------
+    // A beat is done when its flag turns true; the next objective then goes
+    // up on the HUD. Beats that carry a timer fail you if it runs out.
+    var S = window.STORY;
+    var cineLock = false, cineTimers = [];
+
+    function beat() { return S.BEATS[state.beat] || null; }
+
+    // Play a scripted run of lines. Locks nothing by default — the player
+    // usually needs to keep running while their own head talks at them.
+    function cinematic(key, opts, onDone) {
+      var lines = S.LINES[key];
+      if (!lines) { if (onDone) onDone(); return; }
+      opts = opts || {};
+      if (opts.lock) { cineLock = true; if (ui.onBars) ui.onBars(true); }
+      var last = 0;
+      lines.forEach(function (l) {
+        last = Math.max(last, l[0]);
+        cineTimers.push(setTimeout(function () {
+          if (ui.onDialogue) ui.onDialogue(l[1], l[2]);
+        }, l[0]));
+      });
+      cineTimers.push(setTimeout(function () {
+        if (ui.onDialogue) ui.onDialogue(null, null);
+        if (opts.lock) { cineLock = false; if (ui.onBars) ui.onBars(false); }
+        if (onDone) onDone();
+      }, last + (opts.hold === undefined ? 4200 : opts.hold)));
+    }
+    function stopCinematics() {
+      cineTimers.forEach(clearTimeout);
+      cineTimers = [];
+      if (ui.onDialogue) ui.onDialogue(null, null);
+      cineLock = false;
+      if (ui.onBars) ui.onBars(false);
+    }
+
+    // Fired by the world when something story-relevant happens.
+    function flag(name, value) {
+      var v = value === undefined ? true : value;
+      if (state.story[name] === v) return;
+      state.story[name] = v;
+      checkBeat();
+    }
+
+    function checkBeat() {
+      var guard = 0;
+      while (guard++ < 40) {
+        var b = beat();
+        if (!b || !b.done(state.story)) break;
+        state.beat++;
+        state.beatTimer = 0;
+        var nb = beat();
+        if (nb && nb.timer) state.beatTimer = nb.timer;
+        if (ui.onObjective) ui.onObjective(nb, 0);
+      }
+      refreshHud();
+    }
+
+    function startPhase(which) {
+      state.phase = which;
+      state.clock = which === 'day' ? S.DAY_LEN : S.NIGHT_LEN;
+      if (entity) entity.setDaylight(which === 'day');
+      if (audio) audio.setPhase(which === 'day' ? 'pop' : 'eerie');
+      if (ui.onClock) ui.onClock(state.dayNo, which, state.clock);
+      if (which === 'day') {
+        restockWorld();
+        cinematic('dawn');
+      }
+    }
+
+    // Every morning the facility restocks: crates you emptied are full
+    // again. One-off things — a read newspaper, the torch, the Glock — are
+    // gone for good, so anything taken out of the interactable list stays out.
+    function restockWorld() {
+      openedCrates = {};
+      level.interactables.forEach(function (m) {
+        var d = m.userData.interact;
+        if (d.id === 'openCrate') d.taken = m.userData.taken = false;
+      });
+    }
+
     // ---------------- Entity hooks ----------------
     function die(reason) {
       if (state.dead || state.ended) return;
@@ -1798,6 +1937,7 @@
     // ---------------- Wi-Fi / TV hooks used by the shell ----------------
     window.__onWifiConnected = function () {
       state.wifiConnected = true;
+        flag('wifiConnected');
       if (window.__startTv) window.__startTv();
       if (audio) audio.ui();
       if (ui.onMessage) ui.onMessage('Connected. Behind you, one of the screens wakes up.');
@@ -1887,6 +2027,28 @@
         // subtle shake while the fists land on the glass
         camera.rotation.z = Math.sin(elapsed * 60) * 0.004;
       }
+      // ---- campaign clock ----
+      if (active && !state.dead && !state.ended) {
+        var b0 = beat();
+        if (b0 && b0.timer) {
+          // a beat with a countdown: run out and it reaches you
+          state.beatTimer -= dt;
+          if (ui.onObjective) ui.onObjective(b0, Math.max(0, state.beatTimer));
+          if (state.beatTimer <= 0) {
+            state.beatTimer = 0;
+            if (b0.fail === 'caught' && entity) entity.force(camera.position.x + 1.2, camera.position.z, 'chase');
+          }
+        }
+        if (state.clock > 0) {
+          state.clock -= dt;
+          if (ui.onClock) ui.onClock(state.dayNo, state.phase, Math.max(0, state.clock));
+          if (state.clock <= 0) {
+            if (state.phase === 'day') startPhase('night');
+            else { state.dayNo++; startPhase('day'); }
+          }
+        }
+      }
+
       if (active && !uiOpen && state.collapseT > 0) {
         // face down on the floor, counting seconds
         state.collapseT -= dt;
@@ -2164,6 +2326,18 @@
 
     // ---------------- Public surface ----------------
     return {
+      // Kick the campaign off: first objective on screen, first stretch of
+      // dark on the clock. Called once, when the player first takes control.
+      beginCampaign: function () {
+        if (state.beat > 0 || state.clock > 0) return;
+        state.beat = 0;
+        state.phase = 'night';
+        state.clock = S.NIGHT_LEN;
+        if (entity) entity.setDaylight(false);
+        if (ui.onClock) ui.onClock(state.dayNo, 'night', state.clock);
+        if (ui.onObjective) ui.onObjective(beat(), 0);
+        cinematic('intro');
+      },
       enter: function () {
         active = true;
         canvas.focus();
@@ -2247,6 +2421,11 @@
           camsTaken: state.camsTaken, birchAwake: state.birchAwake,
           riotEquipped: state.riotEquipped,
           hotbar: state.hotbar.slice(), hotbarSel: state.hotbarSel,
+          beat: state.beat, beatId: beat() ? beat().id : null,
+          beatTimer: state.beatTimer, dayNo: state.dayNo,
+          dayPhase: state.phase, clock: state.clock,
+          story: JSON.parse(JSON.stringify(state.story)),
+          beansNamed: state.beansNamed,
           ventOpen: state.ventOpen.slice(),
           focus: focused ? focused.userData.interact.id : null
         };
@@ -2276,27 +2455,45 @@
         if (es.mode === 'dormant' || es.mode === 'destroyed') return false;
         return Math.hypot(es.x - planted[i].x, es.z - planted[i].z) < 11;
       },
+      // Opening the feeds with all five of your own cameras down is what
+      // starts it. It does not appear on one of yours — it is already in the
+      // cage it tore open, on the camera that was here before you were.
       notifyCamerasViewed: function () {
-        if (!state.camsTaken || state.birchAwake || planted.length < 5) return false;
+        if (!state.camsTaken || state.birchAwake) return false;
+        if (plantedByPlayer() < 5) return false;
         state.birchAwake = true;
-        var i = Math.floor(Math.random() * planted.length);
-        var c = planted[i];
-        var fx3 = -Math.sin(c.facing), fz3 = -Math.cos(c.facing);
-        if (entity) entity.spawnAt(c.x + fx3 * 3, c.z + fz3 * 3, Math.atan2(-(-fx3), -(-fz3)));
+        if (entity) entity.settleInCage(54.3, 56);
         if (audio) { audio.setPhase('eerie'); audio.doorSlam(30); }
-        say('The speakers die mid-chorus. CAM ' + (i + 1) + ' — it is already looking at the lens.');
+        say('The speakers die mid-chorus.');
         refreshHud();
         return true;
       },
-      shockAt: function (i) {
-        if (!entity || !planted[i]) return false;
+      // Viewing CAM 0 while it is folded up in the cage is the reveal.
+      notifyFeedViewed: function (i) {
+        if (i !== 0 || !state.birchAwake || state.story.sawBirch) return false;
+        if (!entity) return false;
         var es = entity.getState();
-        if (Math.hypot(es.x - planted[i].x, es.z - planted[i].z) >= 11) return false;
-        if (es.lurk === 'cage') {
-          var ok = entity.shockAtCage();
-          if (ok) { if (audio) audio.zap(); say('The cage floor lights. It stands perfectly still, cooking.'); }
-          return ok;
-        }
+        if (Math.hypot(es.x - 54.3, es.z - 56) > 6) return false;
+        flag('sawBirch');
+        cinematic('sawBirch');
+        return true;
+      },
+      // Only CAM 0 can do this. The five you carried in are leftovers with
+      // no taser in them, which is the whole reason the first one matters.
+      canShock: function (i) {
+        var c = planted[i];
+        if (!c || !c.taser || !c.alive || !entity) return false;
+        var es = entity.getState();
+        if (es.mode === 'dormant' || es.mode === 'destroyed') return false;
+        return Math.hypot(es.x - c.x, es.z - c.z) < 11;
+      },
+      shockAt: function (i) {
+        var c = planted[i];
+        if (!entity || !c) return false;
+        if (!c.taser) { say('No taser in this one. It is older stock — they all are, except the one that was already here.'); return false; }
+        var es = entity.getState();
+        if (Math.hypot(es.x - c.x, es.z - c.z) >= 11) return false;
+
         entity.shocked();
         if (audio) {
           audio.zap();
@@ -2305,7 +2502,16 @@
             audio.scream(Math.hypot(es2.x - camera.position.x, es2.z - camera.position.z));
           }, 350);
         }
-        say('It takes the current — and SCREAMS — and starts running. Seal the door. Now.');
+        flag('shockedInCage');
+        cinematic('shocked');
+        // it comes out of the cage through the camera that shocked it
+        setTimeout(function () {
+          c.alive = false;
+          if (c.mesh) c.mesh.visible = false;
+          if (audio) audio.doorBash(24);
+          cinematic('camDead');
+          refreshHud();
+        }, 4200);
         return true;
       },
       plantedCams: function () { return planted.map(function (c) { return { x: c.x, z: c.z, alive: c.alive, type: c.type, headY: c.headY, facing: c.facing, pitch: c.pitch }; }); },
