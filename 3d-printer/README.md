@@ -1,9 +1,27 @@
-# 3-D Printer
+# Creality K2 Combo
 
-A home for everything about the new 3-D printer — models to print, slicer
-settings that work, and notes so nothing gets forgotten between prints.
+A home for everything about the printer — models to print, slicer settings
+that work, and notes so nothing gets forgotten between prints.
 
-Nothing here is locked in. Start with whatever you need first and let it grow.
+## The printer
+
+| | |
+| --- | --- |
+| **Model** | Creality K2 Combo (with CFS) |
+| **Build volume** | 260 × 260 × 260 mm |
+| **Max speed** | 600 mm/s |
+| **Max acceleration** | 20,000 mm/s² |
+| **Nozzle** | 0.4 mm standard · max **300 °C** |
+| **Bed** | max **100 °C** |
+| **Enclosure** | Fully enclosed CoreXY |
+| **Multicolor** | CFS — 4 spools per unit, up to 4 units = 16 colors |
+| **Extruder** | Direct drive |
+| **Leveling** | Fully automatic |
+| **Slicer** | Creality Print (OrcaSlicer also works) |
+
+> The 300 °C nozzle cap is the main thing to keep in mind — it covers PLA,
+> PETG, TPU, ABS and ASA comfortably, but rules out high-temp engineering
+> filaments like PPS or PEEK.
 
 ## What's in here
 
@@ -12,27 +30,17 @@ Nothing here is locked in. Start with whatever you need first and let it grow.
 | [`models/`](models/) | Your 3D model and print files — `.stl`, `.3mf`, `.gcode` |
 | [`profiles/`](profiles/) | Slicer profiles and known-good settings per material |
 | [`logs/`](logs/) | A running log of prints and printer maintenance |
-| [`notes/`](notes/) | Calibration steps, tips, and anything you want to remember |
+| [`notes/`](notes/) | Calibration, CFS multicolor, and first-print guides |
 
-## Getting started
+## Start here
 
-1. **Fill in your printer.** Edit the table below with your printer's details.
-2. **Drop in a model.** Put an `.stl` or `.3mf` file in `models/`.
-3. **Save what worked.** When a print comes out well, jot the settings in
-   `profiles/` and add a line to `logs/print-log.md`.
+1. **[First prints](notes/first-prints.md)** — what to print first, in order
+2. **[Calibration](notes/calibration.md)** — dialing it in (the K2 auto-levels,
+   so there's less to do than on older printers)
+3. **[CFS multicolor](notes/cfs-multicolor.md)** — getting the most out of the
+   filament system, and what not to feed it
+4. **[Settings](profiles/README.md)** — starting temps for each material
 
-## The printer
-
-| | |
-| --- | --- |
-| **Make / model** | _(fill in)_ |
-| **Build volume** | _(fill in, e.g. 220 × 220 × 250 mm)_ |
-| **Nozzle** | _(fill in, e.g. 0.4 mm)_ |
-| **Slicer** | _(fill in, e.g. Cura / PrusaSlicer / OrcaSlicer)_ |
-| **Bought / set up** | _(fill in)_ |
-
----
-
-_Tip: tell your assistant the printer's make and model and it can tailor this
-whole folder — build volume, recommended starting profiles, and a
-calibration checklist made for your machine._
+When a print comes out well, add a line to
+[`logs/print-log.md`](logs/print-log.md) and save the settings — future you
+will be grateful.
