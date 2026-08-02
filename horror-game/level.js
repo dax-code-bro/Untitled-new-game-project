@@ -1369,6 +1369,53 @@
     })();
 
     // ===================================================================
+    // SCATTERED SUPPLIES — what people left lying around before it went
+    // wrong. Randomised per run, but only ever somewhere a person would
+    // plausibly have put down a drink or a lunch: on a desk, a bench, a
+    // bunk, a shelf. Never the extermination chamber, never the airlock,
+    // never the containment floor — nobody was eating in those rooms.
+    // ===================================================================
+    (function scatterSupplies() {
+      // [x, y, z, what] — y is the surface it rests on.
+      // 'both' means the spot can hold either; 'water' means a bottle only.
+      // The storage unit and the utility room are deliberately absent: the
+      // food was moved out of both of those on purpose.
+      var SPOTS = [
+        // waiting room: the low tables by the chair row
+        [-4.6, 0.34, 3.3, 'both'], [4.6, 0.34, 3.3, 'both'],
+        // corporate office: the desk somebody was working at
+        [27.2, 0.805, -8.65, 'both'], [28.9, 0.805, -8.15, 'water'],
+        // warehouse: the pallet stack and the floor by the scattered crates
+        [-61.5, 0.45, 3.2, 'both'], [-57.2, 0, 5.4, 'both'],
+        // assembly: the line workers ate at the belt
+        [46.4, 0.96, 50, 'both'], [53.6, 0.96, 50, 'both'], [44.4, 0, 58.6, 'water'],
+        // restrooms: a bottle left on a sink
+        [-15.6, 0.94, -6.4, 'water'], [-15.6, 0.94, -5.2, 'water'],
+        // the corridors: dropped and never picked up
+        [-26.4, 0, 0.55, 'water'], [20.3, 0, -0.55, 'water'],
+        // Camper Barracks: people actually lived down here
+        [-4.2, 0.55, -24.6, 'both'], [-2.0, 0.55, -24.4, 'both'], [0.6, 0, -22.2, 'both']
+      ];
+      // take a random handful, different every run
+      var pool = SPOTS.slice();
+      for (var i = pool.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var t = pool[i]; pool[i] = pool[j]; pool[j] = t;
+      }
+      var take = 5 + Math.floor(Math.random() * 3);       // 5–7 of them
+      for (var k = 0; k < take && k < pool.length; k++) {
+        var s = pool[k];
+        var kind = s[3] === 'water' ? 'water' : (Math.random() < 0.5 ? 'water' : 'beans');
+        var ry = Math.random() * Math.PI * 2;
+        var node = kind === 'water' ? waterBottle(s[0], s[1], s[2], ry) : beanCan(s[0], s[1], s[2], ry);
+        interact(node.children[0], {
+          id: 'supplyItem', kind2: kind, node: node,
+          label: kind === 'water' ? 'Bottle of water' : 'Can of beans', verb: 'Take'
+        });
+      }
+    })();
+
+    // ===================================================================
     // SET DRESSING — the small stuff that makes the building read as a
     // place people worked in, and then stopped.
     // ===================================================================

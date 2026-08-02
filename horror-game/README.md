@@ -380,6 +380,16 @@ metre into shelf boards.
 down on a crate in the unlit warehouse, which is a fine place to hide a key and
 a bad place to find one.
 
+**Some of it is scattered, and it moves.** Beyond the fixed warehouse shelf,
+five to seven bottles and cans are strewn around the facility, in different
+places every run — on the waiting-room tables, the office desk, the assembly
+line's belt, a restroom sink, a corridor floor, the pallets, the bunks down in
+the Camper Barracks. The pool of spots is hand-placed rather than generated,
+because the point is that they only ever turn up where a person would
+plausibly have set down a drink. Nothing is ever left in the extermination
+chamber, the airlock, the containment wing or the shaft — nobody was eating in
+those rooms — and nothing in the storage unit or the utility room either.
+
 **The food is finite.** A braced shelf against the warehouse's west wall holds
 six bottles of water and six cans of beans, each one modelled — a ribbed steel
 can with a paper label and rolled rims, a moulded bottle with a neck, cap and
