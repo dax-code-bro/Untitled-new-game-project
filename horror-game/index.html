@@ -1986,10 +1986,8 @@ window.bootUI = function bootUI(THREE) {
         game.beginCampaign();
       }
 
-      crosshair.classList.add('on');
-      soundBtn.classList.add('on');
-      statusEl.classList.add('on');
-      if (coarse) { stick.classList.add('on'); touchbar.classList.add('on'); }
+      setHud(true);
+      game.audioUnlock();
 
       legend.innerHTML = mode;
       clearTimeout(legendTimer);
@@ -2009,6 +2007,56 @@ window.bootUI = function bootUI(THREE) {
     }, 150);
   }
 
+  // ===================================================================
+  // Two things that must not be able to break.
+  //
+  // Sound: a phone suspends the audio context whenever the app goes to the
+  // background, and it does not come back on its own. Any touch, any key,
+  // and coming back to the foreground all nudge it awake.
+  //
+  // The HUD: the crosshair, the pickup prompt and the rest used to be
+  // switched on exactly once, inside a timeout that pause() cancels — so a
+  // blur at the wrong moment during entry lost them for the whole session.
+  // Now the game's own state decides, four times a second, and a missed
+  // moment simply corrects itself on the next tick.
+  // ===================================================================
+  ['pointerdown', 'touchstart', 'keydown'].forEach(function (evt) {
+    window.addEventListener(evt, function () { game.audioUnlock(); }, { passive: true });
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') game.audioUnlock();
+  });
+  window.addEventListener('focus', function () { game.audioUnlock(); });
+
+  var hudWanted = false;
+  function setHud(on) {
+    hudWanted = on;
+    crosshair.classList.toggle('on', on);
+    soundBtn.classList.toggle('on', on);
+    statusEl.classList.toggle('on', on);
+    // the hotbar and the meters are switched on by refreshHud, which only
+    // runs when something changes — so without these two they would stay
+    // dark until the player happened to pick something up
+    hotbarEl.classList.toggle('on', on);
+    metersEl.classList.toggle('on', on);
+    if (coarse) {
+      stick.classList.toggle('on', on);
+      touchbar.classList.toggle('on', on);
+    }
+    if (!on) prompt.classList.remove('on');
+  }
+  setInterval(function () {
+    if (!game || !game.getState) return;
+    var s = game.getState();
+    // in the world and not being killed: the HUD belongs on screen
+    var want = s.active && !s.dead && !s.killing && curtain.hidden;
+    // unconditionally, not only when it changes — the whole point is to
+    // correct the HUD if something else knocked it off, and toggling a
+    // class to the value it already has costs nothing
+    setHud(want);
+    if (want) game.audioUnlock();
+  }, 250);
+
   function pause() {
     clearTimeout(enterTimer);
     clearTimeout(hideTimer);
@@ -2019,10 +2067,7 @@ window.bootUI = function bootUI(THREE) {
     curtain.hidden = false;
     void curtain.offsetWidth;
     curtain.classList.remove('dismissing');
-    crosshair.classList.remove('on');
-    statusEl.classList.remove('on');
-    prompt.classList.remove('on');
-    if (coarse) { stick.classList.remove('on'); touchbar.classList.remove('on'); }
+    setHud(false);
     enterBtn.focus();
   }
 

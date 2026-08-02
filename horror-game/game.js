@@ -277,10 +277,28 @@
       return off.startRendering();
     }
 
+    // Browsers hand you a SUSPENDED AudioContext and keep it that way until
+    // something the user did resumes it — and iOS suspends it again every
+    // time the app goes to the background. Nothing was ever calling resume,
+    // so on a phone the game could come back from the app switcher silent
+    // and stay silent. Safe to call as often as you like.
+    var lastUnlockError = null;
+    function unlock() {
+      if (!ctx) return false;
+      if (ctx.state === 'suspended' && ctx.resume) {
+        try {
+          var pr = ctx.resume();
+          if (pr && pr.catch) pr.catch(function (e) { lastUnlockError = String(e && e.message || e); });
+        } catch (e) { lastUnlockError = String(e && e.message || e); }
+      }
+      return ctx.state === 'running';
+    }
+
     function start() {
-      if (started) return;
+      if (started) { unlock(); return; }
       started = true;
       ctx = new Ctx();
+      unlock();
       master = ctx.createGain();
       master.gain.value = 0.9;
       master.connect(ctx.destination);
@@ -529,6 +547,13 @@
       footstep: footstep,
       get started() { return started; },
       debugBeds: function () { return Object.keys(beds); },
+      wake: unlock,        // NOT `unlock` — that name is taken further down
+                           // this same object by the lock-turning sound, and
+                           // the later key silently won
+      state: function () { return ctx ? ctx.state : 'none'; },
+      // for tests: put the context to sleep the way a phone does
+      suspendForTest: function () { if (ctx && ctx.suspend) ctx.suspend(); },
+      lastError: function () { return lastUnlockError; },
       // the three sliders in Settings
       setVolumes: function (v) {
         if (v.music !== undefined) vol.music = v.music;
@@ -3023,6 +3048,11 @@
       audioCreak: function () { if (audio) audio.door('wood', true); },
       audioBash: function () { if (audio) audio.doorBash(2); },
       audioStart: function () { if (audio) audio.start(); },
+      audioUnlock: function () { return audio ? audio.wake() : false; },
+      audioState: function () { return audio ? audio.state() : 'none'; },
+      audioStarted: function () { return !!(audio && audio.started); },
+      audioSuspendForTest: function () { if (audio) audio.suspendForTest(); },
+      audioLastError: function () { return audio ? audio.lastError() : null; },
       respawn: function () {
         if (kills) kills.cancel();
         state.killing = false;

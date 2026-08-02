@@ -6901,10 +6901,28 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       return off.startRendering();
     }
 
+    // Browsers hand you a SUSPENDED AudioContext and keep it that way until
+    // something the user did resumes it — and iOS suspends it again every
+    // time the app goes to the background. Nothing was ever calling resume,
+    // so on a phone the game could come back from the app switcher silent
+    // and stay silent. Safe to call as often as you like.
+    var lastUnlockError = null;
+    function unlock() {
+      if (!ctx) return false;
+      if (ctx.state === 'suspended' && ctx.resume) {
+        try {
+          var pr = ctx.resume();
+          if (pr && pr.catch) pr.catch(function (e) { lastUnlockError = String(e && e.message || e); });
+        } catch (e) { lastUnlockError = String(e && e.message || e); }
+      }
+      return ctx.state === 'running';
+    }
+
     function start() {
-      if (started) return;
+      if (started) { unlock(); return; }
       started = true;
       ctx = new Ctx();
+      unlock();
       master = ctx.createGain();
       master.gain.value = 0.9;
       master.connect(ctx.destination);
@@ -7153,6 +7171,13 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       footstep: footstep,
       get started() { return started; },
       debugBeds: function () { return Object.keys(beds); },
+      wake: unlock,        // NOT `unlock` — that name is taken further down
+                           // this same object by the lock-turning sound, and
+                           // the later key silently won
+      state: function () { return ctx ? ctx.state : 'none'; },
+      // for tests: put the context to sleep the way a phone does
+      suspendForTest: function () { if (ctx && ctx.suspend) ctx.suspend(); },
+      lastError: function () { return lastUnlockError; },
       // the three sliders in Settings
       setVolumes: function (v) {
         if (v.music !== undefined) vol.music = v.music;
@@ -9647,6 +9672,11 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       audioCreak: function () { if (audio) audio.door('wood', true); },
       audioBash: function () { if (audio) audio.doorBash(2); },
       audioStart: function () { if (audio) audio.start(); },
+      audioUnlock: function () { return audio ? audio.wake() : false; },
+      audioState: function () { return audio ? audio.state() : 'none'; },
+      audioStarted: function () { return !!(audio && audio.started); },
+      audioSuspendForTest: function () { if (audio) audio.suspendForTest(); },
+      audioLastError: function () { return audio ? audio.lastError() : null; },
       respawn: function () {
         if (kills) kills.cancel();
         state.killing = false;
@@ -11804,10 +11834,8 @@ window.bootUI = function bootUI(THREE) {
         game.beginCampaign();
       }
 
-      crosshair.classList.add('on');
-      soundBtn.classList.add('on');
-      statusEl.classList.add('on');
-      if (coarse) { stick.classList.add('on'); touchbar.classList.add('on'); }
+      setHud(true);
+      game.audioUnlock();
 
       legend.innerHTML = mode;
       clearTimeout(legendTimer);
@@ -11827,6 +11855,56 @@ window.bootUI = function bootUI(THREE) {
     }, 150);
   }
 
+  // ===================================================================
+  // Two things that must not be able to break.
+  //
+  // Sound: a phone suspends the audio context whenever the app goes to the
+  // background, and it does not come back on its own. Any touch, any key,
+  // and coming back to the foreground all nudge it awake.
+  //
+  // The HUD: the crosshair, the pickup prompt and the rest used to be
+  // switched on exactly once, inside a timeout that pause() cancels — so a
+  // blur at the wrong moment during entry lost them for the whole session.
+  // Now the game's own state decides, four times a second, and a missed
+  // moment simply corrects itself on the next tick.
+  // ===================================================================
+  ['pointerdown', 'touchstart', 'keydown'].forEach(function (evt) {
+    window.addEventListener(evt, function () { game.audioUnlock(); }, { passive: true });
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') game.audioUnlock();
+  });
+  window.addEventListener('focus', function () { game.audioUnlock(); });
+
+  var hudWanted = false;
+  function setHud(on) {
+    hudWanted = on;
+    crosshair.classList.toggle('on', on);
+    soundBtn.classList.toggle('on', on);
+    statusEl.classList.toggle('on', on);
+    // the hotbar and the meters are switched on by refreshHud, which only
+    // runs when something changes — so without these two they would stay
+    // dark until the player happened to pick something up
+    hotbarEl.classList.toggle('on', on);
+    metersEl.classList.toggle('on', on);
+    if (coarse) {
+      stick.classList.toggle('on', on);
+      touchbar.classList.toggle('on', on);
+    }
+    if (!on) prompt.classList.remove('on');
+  }
+  setInterval(function () {
+    if (!game || !game.getState) return;
+    var s = game.getState();
+    // in the world and not being killed: the HUD belongs on screen
+    var want = s.active && !s.dead && !s.killing && curtain.hidden;
+    // unconditionally, not only when it changes — the whole point is to
+    // correct the HUD if something else knocked it off, and toggling a
+    // class to the value it already has costs nothing
+    setHud(want);
+    if (want) game.audioUnlock();
+  }, 250);
+
   function pause() {
     clearTimeout(enterTimer);
     clearTimeout(hideTimer);
@@ -11837,10 +11915,7 @@ window.bootUI = function bootUI(THREE) {
     curtain.hidden = false;
     void curtain.offsetWidth;
     curtain.classList.remove('dismissing');
-    crosshair.classList.remove('on');
-    statusEl.classList.remove('on');
-    prompt.classList.remove('on');
-    if (coarse) { stick.classList.remove('on'); touchbar.classList.remove('on'); }
+    setHud(false);
     enterBtn.focus();
   }
 
