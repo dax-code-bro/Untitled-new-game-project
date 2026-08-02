@@ -3275,6 +3275,55 @@
         });
         return { total: total, byRoom: byRoom };
       },
+      // Are the dead actually lying on anything? Same five-point ray as the
+      // props, because a body draped over a conveyor is supported by the
+      // conveyor and a body 40mm off the tiles is a bug.
+      bodiesFloating: function (tol) {
+        var GAP = tol === undefined ? 0.05 : tol;
+        var root = level.group || scene;
+        var world = [];
+        root.traverse(function (o) { if (o.isMesh && o.visible) world.push(o); });
+        var ray = new THREE.Raycaster();
+        ray.far = 6;
+        var down = new THREE.Vector3(0, -1, 0);
+        var b = new THREE.Box3();
+        var out = [];
+        scene.traverse(function (o) {
+          if (!o.userData || !o.userData.humanoid) return;
+          if (playerRig && o === playerRig.group) return;
+          b.setFromObject(o);
+          if (!isFinite(b.min.x)) return;
+          var w = b.max.x - b.min.x, d = b.max.z - b.min.z;
+          var ix = Math.min(w * 0.3, 0.06), iz = Math.min(d * 0.3, 0.06);
+          var pts = [
+            [(b.min.x + b.max.x) / 2, (b.min.z + b.max.z) / 2],
+            [b.min.x + ix, b.min.z + iz], [b.max.x - ix, b.min.z + iz],
+            [b.min.x + ix, b.max.z - iz], [b.max.x - ix, b.max.z - iz]
+          ];
+          var best = Infinity;
+          pts.forEach(function (p) {
+            ray.set(new THREE.Vector3(p[0], b.min.y + 0.02, p[1]), down);
+            var hits = ray.intersectObjects(world, false);
+            for (var i = 0; i < hits.length; i++) {
+              var n = hits[i].object, own = false;
+              while (n) { if (n === o) { own = true; break; } n = n.parent; }
+              if (own) continue;
+              best = Math.min(best, hits[i].distance - 0.02);
+              break;
+            }
+          });
+          if (!isFinite(best)) best = b.min.y;      // nothing under it at all
+          if (best > GAP) {
+            out.push({
+              outfit: o.userData.humanoid, gap: +best.toFixed(3),
+              x: +((b.min.x + b.max.x) / 2).toFixed(2),
+              y: +b.min.y.toFixed(3),
+              z: +((b.min.z + b.max.z) / 2).toFixed(2)
+            });
+          }
+        });
+        return out;
+      },
       eachHumanoidBounds: function () {
         var out = [], b = new THREE.Box3();
         scene.traverse(function (o) {
@@ -3362,6 +3411,176 @@
           }
         });
         return out;
+      },
+      // Every prop in the building, checked for two things the eye notices
+      // immediately: is it actually resting on something, and is it resting
+      // ON it rather than half off the edge. Rays down from five points of
+      // the footprint; a thing wall-mounted or hung from the ceiling is
+      // allowed to have nothing underneath it.
+      propSupport: function (opts) {
+        opts = opts || {};
+        // things that are meant to be in a wall, a door or the ceiling
+        var EMBEDDED_SUPPORT = {
+          vent: 1, embeddedDoor: 1, wifiNote: 1, blueprint: 1, roster: 1,
+          valuation: 1, confession: 1, evidenceLog: 1, trapnell: 1, nickID: 1,
+          entranceDoor: 1, powerPanel: 1, shaftWall: 1, shaftDown: 1,
+          cellDoor: 1, barracksDoor: 1, camera: 1, plantedCam: 1,
+          // parts of a built structure rather than things set down on a
+          // surface: the cage's own bars, the bunk's mattress in its frame
+          cage: 1, bunk: 1
+        };
+        var GAP = opts.gap === undefined ? 0.045 : opts.gap;      // float tolerance
+        var NEED = opts.need === undefined ? 0.2 : opts.need;      // share of base over support
+        var root = level.group || scene;
+        var ray = new THREE.Raycaster();
+        ray.far = 6;
+        var down = new THREE.Vector3(0, -1, 0);
+        var box = new THREE.Box3();
+        var _lb = new THREE.Box3(), _wv = new THREE.Vector3();
+
+        // everything solid, for the rays to land on
+        var world = [];
+        root.traverse(function (o) { if (o.isMesh && o.visible) world.push(o); });
+
+        function isDescendant(o, top) {
+          var n = o;
+          while (n) { if (n === top) return true; n = n.parent; }
+          return false;
+        }
+
+        // The building is authored as thousands of individual boxes added
+        // straight to one group, so a chair is not a node — its seat, legs
+        // and back are three separate top-level meshes. Asking whether the
+        // seat rests on anything is therefore meaningless. What IS
+        // meaningful, and what the player actually looks at, is every item:
+        // the torch on the desk, the cans on the shelf, the gun in storage.
+        var seen = [];
+        var nodes = [];
+        level.interactables.forEach(function (m) {
+          if (!m.visible) return;
+          if (EMBEDDED_SUPPORT[m.userData.interact.id]) return;
+          var n = m;
+          while (n.parent && n.parent !== root && n.parent !== scene) n = n.parent;
+          if (seen.indexOf(n) >= 0) return;
+          seen.push(n);
+          n.userData.propName = m.userData.interact.id;
+          nodes.push(n);
+        });
+
+        var out = [];
+        nodes.forEach(function (node) {
+          if (!node.visible) return;
+          box.setFromObject(node);
+          if (!isFinite(box.min.x)) return;
+          var w = box.max.x - box.min.x, h = box.max.y - box.min.y, d = box.max.z - box.min.z;
+
+          // Sample the object's OWN bottom-face vertices, not the corners of
+          // its bounding box. A curved counter or a rotated crate has box
+          // corners hanging out over nothing, and testing those reports
+          // every one of them as falling off a shelf it is sitting on.
+          var pts = bottomPoints(node, box.min.y);
+          if (!pts.length) return;
+          // where its weight actually is
+          var cx = 0, cy = 0, cz = 0;
+          pts.forEach(function (p) { cx += p[0]; cy += p[1]; cz += p[2]; });
+          pts.push([cx / pts.length, cy / pts.length, cz / pts.length]);
+          var centreIdx = pts.length - 1;
+
+          // Start each ray well above the underside. A ray that begins
+          // INSIDE the thing holding the object up reports no hit at all —
+          // a monitor sitting on its own stand read as floating in mid-air
+          // purely because the ray started a millimetre inside the stand.
+          var LIFT = 0.25;
+          var held = 0, best = Infinity, centreHeld = false;
+          pts.forEach(function (p, pi) {
+            ray.set(new THREE.Vector3(p[0], p[1] + LIFT, p[2]), down);
+            var hits = ray.intersectObjects(world, false);
+            for (var i = 0; i < hits.length; i++) {
+              if (isDescendant(hits[i].object, node)) continue;   // its own parts
+              var gap = hits[i].distance - LIFT;
+              if (gap < best) best = gap;
+              if (gap <= GAP) {
+                if (pi === centreIdx) centreHeld = true; else held++;
+              }
+              break;
+            }
+          });
+          var sampleN = pts.length - 1;
+          var name = node.userData && node.userData.propName;
+          var mesh0 = null;
+          node.traverse(function (o) { if (!mesh0 && o.isMesh) mesh0 = o; });
+          if (!name && mesh0 && mesh0.userData.interact) name = mesh0.userData.interact.id;
+          var info = {
+            name: name || node.name || 'prop',
+            x: +((box.min.x + box.max.x) / 2).toFixed(2),
+            y: +box.min.y.toFixed(3),
+            z: +((box.min.z + box.max.z) / 2).toFixed(2),
+            w: +w.toFixed(2), h: +h.toFixed(2), d: +d.toFixed(2),
+            supported: +(held / sampleN).toFixed(2), centre: centreHeld,
+            gap: isFinite(best) ? +best.toFixed(3) : null
+          };
+          if (held === 0 && !centreHeld) {
+            // nothing under it — is it stuck to a wall or a ceiling instead?
+            if (touchesWall(box) || touchesCeiling(box)) return;
+            info.kind = 'floating';
+            out.push(info);
+          } else if (!centreHeld && held / sampleN < NEED) {
+            // Touching something, but only just, and not under its weight —
+            // a can balanced on the lip of a shelf. A worktop overhanging
+            // its cabinet is fine, because its weight is still over the
+            // cabinet; this is the case where it would tip off.
+            if (touchesWall(box)) return;
+            info.kind = 'perched';
+            out.push(info);
+          }
+        });
+        return out;
+
+        // A grid across the underside of whichever parts of the object are
+        // actually at the bottom, built in each part's OWN frame so a
+        // rotated crate is sampled across its real base and not across the
+        // corners of an axis-aligned box that contains it. Vertices alone
+        // will not do: a box only has corner vertices, so a worktop that
+        // properly overhangs its cabinet would read as touching nothing.
+        function bottomPoints(node, minY) {
+          var pts = [], N = 3;
+          node.updateMatrixWorld(true);
+          node.traverse(function (o) {
+            if (!o.isMesh || !o.visible || !o.geometry) return;
+            if (!o.geometry.boundingBox && o.geometry.computeBoundingBox) o.geometry.computeBoundingBox();
+            if (!o.geometry.boundingBox) return;
+            _lb.copy(o.geometry.boundingBox);
+            // is this part one of the ones resting on something?
+            _wv.set((_lb.min.x + _lb.max.x) / 2, _lb.min.y, (_lb.min.z + _lb.max.z) / 2)
+              .applyMatrix4(o.matrixWorld);
+            if (_wv.y > minY + 0.05) return;
+            for (var i = 0; i <= N; i++) {
+              for (var j = 0; j <= N; j++) {
+                var lx = _lb.min.x + (_lb.max.x - _lb.min.x) * (i / N);
+                var lz = _lb.min.z + (_lb.max.z - _lb.min.z) * (j / N);
+                _wv.set(lx, _lb.min.y, lz).applyMatrix4(o.matrixWorld);
+                pts.push([_wv.x, _wv.y, _wv.z]);
+              }
+            }
+          });
+          return pts;
+        }
+
+        function touchesWall(b) {
+          var pad = 0.14;
+          for (var i = 0; i < level.wallBoxes.length; i++) {
+            var wb = level.wallBoxes[i];
+            if (b.max.x + pad < wb.x1 || b.min.x - pad > wb.x2) continue;
+            if (b.max.z + pad < wb.z1 || b.min.z - pad > wb.z2) continue;
+            return true;
+          }
+          return false;
+        }
+        function touchesCeiling(b) {
+          var r = level.roomAt((b.min.x + b.max.x) / 2, (b.min.z + b.max.z) / 2);
+          var ch = (r && r.h) ? r.h : 3.4;
+          return b.max.y > ch - 0.35;
+        }
       },
       propOverlaps: function (frac) {
         var limit = frac === undefined ? 0.28 : frac;
@@ -3595,6 +3814,41 @@
           minY: b.min.y, height: b.max.y - b.min.y,
           hipAngles: [playerRig.joints.hipL.rotation.x, playerRig.joints.hipR.rotation.x]
         };
+      },
+      // the top-level node an item belongs to, so a test can move it
+      interactableNode: function (id) {
+        var root = level.group || scene;
+        for (var i = 0; i < level.interactables.length; i++) {
+          var m = level.interactables[i];
+          if (m.userData.interact.id !== id) continue;
+          var n = m;
+          while (n.parent && n.parent !== root && n.parent !== scene) n = n.parent;
+          return n;
+        }
+        return null;
+      },
+      // what is physically at a point — for chasing down a clash
+      meshesNear: function (x, y, z, r) {
+        var root = level.group || scene;
+        var out = [], b = new THREE.Box3();
+        root.traverse(function (o) {
+          if (!o.isMesh || !o.visible) return;
+          b.setFromObject(o);
+          if (!isFinite(b.min.x)) return;
+          var cx = (b.min.x + b.max.x) / 2, cy = (b.min.y + b.max.y) / 2, cz = (b.min.z + b.max.z) / 2;
+          if (Math.abs(cx - x) > r || Math.abs(cz - z) > r || Math.abs(cy - y) > r + 0.5) return;
+          var top = o;
+          while (top.parent && top.parent !== root && top.parent !== scene) top = top.parent;
+          out.push({
+            c: [+cx.toFixed(2), +cy.toFixed(2), +cz.toFixed(2)],
+            size: [+(b.max.x - b.min.x).toFixed(3), +(b.max.y - b.min.y).toFixed(3), +(b.max.z - b.min.z).toFixed(3)],
+            interact: o.userData.interact ? o.userData.interact.id : null,
+            topInteract: (top.userData && top.userData.propName) || null,
+            humanoid: (top.userData && top.userData.humanoid) || null,
+            geo: o.geometry ? o.geometry.type : null
+          });
+        });
+        return out;
       },
       interactablePos: function (id) {
         for (var i = 0; i < level.interactables.length; i++) {

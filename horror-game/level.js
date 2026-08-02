@@ -1041,7 +1041,8 @@
       pool.position.set(nt.x, 0.011, nt.z - 0.15);
       group.add(pool);
 
-      var journal = box(0.22, 0.05, 0.3, new THREE.MeshStandardMaterial({ color: 0x6d5433, roughness: 0.9 }), 61.9, 0.025, 3.0, 0.4);
+      // dropped clear of his hand — it used to intersect his fingers
+      var journal = box(0.22, 0.05, 0.3, new THREE.MeshStandardMaterial({ color: 0x6d5433, roughness: 0.9 }), 61.62, 0.025, 2.52, 0.4);
       interact(journal, { id: 'journal', label: "Nick's journal", verb: 'Read' });
 
       // The Glock, lying on its side where he dropped it. Built as one
@@ -1543,11 +1544,13 @@
       var sledgeG = new THREE.Group();
       sledgeG.position.set(62.2, 0, -3.9);
       sledgeG.rotation.y = 0.4;
+      // leaning on the racking: the butt of the haft ON the floor, not
+      // hovering a foot above it, which is where it used to sit
       var haft = cyl(0.026, 0.03, 0.9, MAT.wood, 0, 0, 0, 8);
       haft.rotation.z = Math.PI / 2 - 0.28;
-      haft.position.set(0, 0.42, 0);
+      haft.position.set(0, 0.155, 0);
       sledgeG.add(haft);
-      var sHead = box(0.1, 0.1, 0.22, MAT.darkMetal, 0.3, 0.79, 0);
+      var sHead = box(0.1, 0.1, 0.22, MAT.darkMetal, 0.3, 0.525, 0);
       sledgeG.add(sHead);
       group.add(sledgeG);
       interact(sHead, { id: 'sledge', label: 'Sledgehammer', verb: 'Take' });
@@ -1567,7 +1570,9 @@
       window.__shaftHole = hole;
 
       var nickBadgeMat = new THREE.MeshStandardMaterial({ color: 0xe4ddc8, roughness: 0.55 });
-      var nickBadge = box(0.07, 0.09, 0.006, nickBadgeMat, 61.65, 0.021, 2.7, 0.35);
+      // clear of the journal's corner — the two used to just touch, which
+      // showed up as a clash on some runs and not others
+      var nickBadge = box(0.07, 0.09, 0.006, nickBadgeMat, 61.72, 0.021, 2.94, 0.35);
       interact(nickBadge, { id: 'nickID', label: 'Employee badge', verb: 'Inspect' });
 
       // ---------------- Corporate office ----------------
