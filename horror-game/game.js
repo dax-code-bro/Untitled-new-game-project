@@ -851,10 +851,12 @@
     viewRoot.position.set(0.24, -0.22, -0.45);
     camera.add(viewRoot);
     var weapons = window.buildWeapons(THREE, { camera: camera, viewRoot: viewRoot, scene: scene });
+    // Whatever is selected on the hotbar is what is in your hand. Every
+    // holdable has a model — this used to be guns, the camera and the torch
+    // only, so selecting a can of beans showed you an empty hand.
     function updateViewmodel() {
       var id = state.hotbar[state.hotbarSel];
-      if (id && (ITEM_DEFS[id].kind === 'weapon' || id === 'camera' || id === 'flashlight')) weapons.select(id);
-      else weapons.select(null);
+      weapons.select(id && weapons.hasRig(id) ? id : null);
     }
 
     // Where does this shot actually stop? Walls, closed doors and seals,
@@ -1660,6 +1662,9 @@
     function equipRiot(on) {
       if (!state.riotGear) return;
       state.riotEquipped = !!on;
+      // the helmet goes on, and you spend the rest of the night looking
+      // through a scratched polycarbonate visor
+      weapons.setVisor(state.riotEquipped);
       if (audio) audio.ui();
       refreshHud();
     }
@@ -2330,7 +2335,10 @@
       var es = entity ? entity.getState() : null;
       if (es && es.mode === 'banging') { say('Not with that on the other side of the door.'); return; }
       if (state.hunger < 10 || state.thirst < 10) { say('Too hungry and too thirsty to sleep. Eat something first.'); return; }
-      if (state.energy < 20) { say('Wired. You need to sit still for a while before this works.'); return; }
+      // "Rested" with a little tolerance. Requiring stamina at exactly the
+      // cap meant the drain between standing up and reaching the bunk could
+      // refuse a sleep you had genuinely earned.
+      if (state.energy < 18) { say('Wired. You need to sit still for a while before this works.'); return; }
       flag('slept');
       state.clock = 1;                    // the night runs out while you are under
       if (ui.onSleep) ui.onSleep();
@@ -2606,8 +2614,10 @@
     var ACTIVE_LIGHTS = opt.lights;   // live-updatable from Settings
     level.cullLights(camera.position, ACTIVE_LIGHTS);
 
+    var frameNo = 0;
     function tick() {
       requestAnimationFrame(tick);
+      frameNo++;
       var dt = Math.min(clock.getDelta(), 0.05);
       var elapsed = clock.elapsedTime;
 
@@ -2942,6 +2952,7 @@
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
+      weapons.fitVisor();      // the helmet has to keep covering the screen
     });
 
     // ---------------- The opening, interior half ----------------
@@ -3208,14 +3219,43 @@
       setLurkScale: function (v) { if (entity) entity.setLurkScale(v); },
       setChance: function (name, v) { debugChance[name] = v; },
       giveDebug: function (what) {
-        if (what === 'cams') state.cams += 5;
+        if (what === 'cams') { state.cams += 5; giveItem('camera'); }
+        if (what === 'camera') { state.cams += 5; giveItem('camera'); }
         if (what === 'riot') state.riotGear = true;
-        if (what === 'water') state.waterN += 5;
-        if (what === 'beans') state.beansN += 5;
-        if (what === 'fuel') state.fuelN += 12;
+        if (what === 'water') { state.waterN += 5; giveItem('water'); }
+        if (what === 'beans') { state.beansN += 5; giveItem('beans'); }
+        if (what === 'fuel') { state.fuelN += 12; giveItem('fuel'); }
+        if (what === 'glock') { state.hasGlock = true; state.mags = 2; state.inMag = MAG_SIZE; state.ammo = MAG_SIZE * 2; giveItem('glock'); }
+        if (what === 'flashlight') { state.hasFlashlight = true; giveItem('flashlight'); }
         if (what === 'keycard') state.keycard = true;
         refreshHud();
       },
+      heldItem: function () { return state.hotbar[state.hotbarSel] || null; },
+      // how much model each interactable actually has, for spotting props
+      // that are still a single box with a label on them
+      eachInteractable: function () {
+        var root = level.group || scene;
+        var box = new THREE.Box3();
+        return level.interactables.map(function (m) {
+          var n = m;
+          while (n.parent && n.parent !== root && n.parent !== scene) n = n.parent;
+          var meshes = 0;
+          n.traverse(function (o) { if (o.isMesh) meshes++; });
+          box.setFromObject(n);
+          return {
+            id: m.userData.interact.id, meshes: meshes,
+            size: [ +(box.max.x-box.min.x).toFixed(2), +(box.max.y-box.min.y).toFixed(2), +(box.max.z-box.min.z).toFixed(2) ].join('x')
+          };
+        });
+      },
+      visorOn: function () { return weapons.visorOn(); },
+      visorScreenPos: function () { return weapons.visorScreenPos(); },
+      rigInfo: function (id) { return weapons.rigInfo(id); },
+      shownRig: function () { return weapons.shownRig(); },
+      sceneRoot: function () { return scene; },
+      frameCount: function () { return frameNo; },
+      renderInfo: function () { return { calls: renderer.info.render.calls, tris: renderer.info.render.triangles }; },
+      equipRiotDebug: function (on) { state.riotGear = true; equipRiot(on); },
       consumeDebug: function (kind) { consume(kind); },
       selectSlot: selectSlot,
       useSelected: useSelected,
@@ -4009,6 +4049,8 @@
         if (snap.cams) restoreCameras(snap.cams);
         if (entity && snap.entity) entity.deserialize(snap.entity);
         if (state.hasFlashlight) setTorch(!!state.torchOn);
+        weapons.setVisor(!!state.riotEquipped);
+        updateViewmodel();
         clearFocus();
         refreshHud();
         if (ui.onClock) ui.onClock(state.dayNo, state.phase, Math.max(0, state.clock));

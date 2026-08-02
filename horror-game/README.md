@@ -145,6 +145,20 @@ the inside of your own head — while mirrors and the security feeds do. Point a
 planted camera back down a corridor you are standing in and you will watch
 yourself on it.
 
+## In your hands
+
+Everything holdable has a model, not just the guns: the Glock, the SEMI12
+and the R700, a security camera with its sunshade and IR ring, the torch,
+a bottle of water, a tin of beans with the lid peeled back, a can of GAMER
+ENERGY, and the riot helmet carried under one arm before you put it on.
+
+**Put the helmet on and you spend the night looking through it.** Scratched
+polycarbonate, a haze where a sleeve has wiped it, a reflection sliding
+down the glass, and the shell crowding in at the edges of vision. It is
+bolted to your head rather than to the gun, so it does not sway when you
+swing anything about — the world moves behind it and it does not move at
+all.
+
 ## Saves and settings
 
 The front screen offers **Continue** if you have played before, or **Create

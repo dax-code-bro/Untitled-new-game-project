@@ -2862,13 +2862,147 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       };
     }
 
+    // A camera you can see is a camera: bevelled housing, a sunshade over
+    // the lens, a glass front, the IR ring, a status LED and the pigtail
+    // lead hanging off the back. It used to be a box with a stub on it.
     function rigCamera() {
       var g = new THREE.Group();
-      box(g, 0.09, 0.07, 0.13, polymer, 0, 0, 0);
-      cyl(g, 0.02, 0.024, 0.04, steel, 0, 0.005, -0.08);
+      var body = box(g, 0.095, 0.075, 0.15, polymer, 0, 0, 0);
+      void body;
+      box(g, 0.099, 0.02, 0.152, steel, 0, 0.03, 0);           // top rib
+      box(g, 0.101, 0.055, 0.03, steel, 0, -0.005, 0.062);      // back plate
+      // sunshade hood over the lens
+      box(g, 0.098, 0.012, 0.06, polymer, 0, 0.036, -0.055);
+      box(g, 0.012, 0.05, 0.06, polymer, 0.045, 0.012, -0.055);
+      box(g, 0.012, 0.05, 0.06, polymer, -0.045, 0.012, -0.055);
+      // the lens barrel, its glass, and the ring of IR emitters
+      cyl(g, 0.028, 0.031, 0.045, steel, 0, 0, -0.09);
+      var glass = cyl(g, 0.024, 0.024, 0.004, new THREE.MeshStandardMaterial({
+        color: 0x0a1116, roughness: 0.08, metalness: 0.6,
+        emissive: 0x0d2430, emissiveIntensity: 0.5
+      }), 0, 0, -0.113);
+      void glass;
+      for (var i = 0; i < 8; i++) {
+        var a = (i / 8) * Math.PI * 2;
+        cyl(g, 0.0035, 0.0035, 0.004, new THREE.MeshStandardMaterial({
+          color: 0x3a1010, emissive: 0x5c1414, emissiveIntensity: 0.8, roughness: 0.4
+        }), Math.cos(a) * 0.036, Math.sin(a) * 0.036, -0.108);
+      }
+      // status LED and the lead out of the back
+      cyl(g, 0.004, 0.004, 0.004, new THREE.MeshStandardMaterial({
+        color: 0x123, emissive: 0x2ad07a, emissiveIntensity: 2.2, roughness: 0.3
+      }), 0.031, 0.021, -0.072);
+      cyl(g, 0.008, 0.008, 0.05, polymer, 0, -0.012, 0.09);
+      cyl(g, 0.006, 0.006, 0.07, new THREE.MeshStandardMaterial({ color: 0x14161a, roughness: 0.9 }),
+        0, -0.03, 0.125, Math.PI / 2.4);
+      // the mount foot it bolts down on
+      box(g, 0.05, 0.014, 0.05, steel, 0, -0.043, 0.01);
       var armR = makeArm();
-      armR.position.set(0.02, -0.09, 0.08);
+      armR.position.set(0.03, -0.1, 0.09);
       armR.rotation.x = 0.3;
+      g.add(armR);
+      return { g: g, tip: null };
+    }
+
+    // ---------------- The things you carry ----------------
+    // Everything holdable gets a model in hand, not just the guns.
+    var tinMat = new THREE.MeshStandardMaterial({ color: 0xb9bcc0, roughness: 0.34, metalness: 0.75 });
+    var labelBeans = new THREE.MeshStandardMaterial({ color: 0x9d3123, roughness: 0.85 });
+    var plasticClear = new THREE.MeshStandardMaterial({
+      color: 0xcfe3ec, roughness: 0.12, metalness: 0.05,
+      transparent: true, opacity: 0.42
+    });
+    var waterMat = new THREE.MeshStandardMaterial({
+      color: 0x5f9fb8, roughness: 0.1, transparent: true, opacity: 0.72
+    });
+    var capMat = new THREE.MeshStandardMaterial({ color: 0x2b6fa8, roughness: 0.5 });
+
+    // A dented tin, held up near the mouth the way you hold a can you are
+    // about to eat cold, with the lid peeled half back.
+    function rigBeans() {
+      var g = new THREE.Group();
+      var tin = cyl(g, 0.038, 0.038, 0.105, tinMat, 0, 0, 0, 0);
+      void tin;
+      cyl(g, 0.0395, 0.0395, 0.062, labelBeans, 0, 0, 0, 0);
+      cyl(g, 0.0405, 0.0405, 0.006, tinMat, 0, 0.049, 0, 0);     // rolled rim
+      cyl(g, 0.0405, 0.0405, 0.006, tinMat, 0, -0.049, 0, 0);
+      // the lid, peeled back and still attached
+      var lid = new THREE.Mesh(new THREE.CylinderGeometry(0.037, 0.037, 0.003, 14, 1, false, 0, Math.PI * 1.2), tinMat);
+      lid.position.set(0.01, 0.056, 0.012);
+      lid.rotation.set(-0.9, 0.4, 0);
+      g.add(lid);
+      // what is in it
+      cyl(g, 0.034, 0.034, 0.012, new THREE.MeshStandardMaterial({ color: 0x6d4326, roughness: 0.95 }), 0, 0.046, 0, 0);
+      g.position.set(0, 0, 0);
+      var armR = makeArm();
+      armR.position.set(0.035, -0.11, 0.1);
+      armR.rotation.x = 0.42;
+      armR.rotation.z = -0.2;
+      g.add(armR);
+      return { g: g, tip: null };
+    }
+
+    // A scuffed half-litre bottle, label long gone.
+    function rigWater() {
+      var g = new THREE.Group();
+      cyl(g, 0.032, 0.034, 0.15, plasticClear, 0, 0, 0, 0);
+      cyl(g, 0.029, 0.031, 0.115, waterMat, 0, -0.012, 0, 0);   // what is left in it
+      cyl(g, 0.017, 0.03, 0.035, plasticClear, 0, 0.09, 0, 0);  // shoulder
+      cyl(g, 0.014, 0.014, 0.022, plasticClear, 0, 0.116, 0, 0); // neck
+      cyl(g, 0.017, 0.017, 0.016, capMat, 0, 0.133, 0, 0);      // cap
+      for (var r = 0; r < 3; r++) {
+        cyl(g, 0.0345, 0.0345, 0.004, plasticClear, 0, -0.04 + r * 0.035, 0, 0);
+      }
+      var armR = makeArm();
+      armR.position.set(0.034, -0.13, 0.1);
+      armR.rotation.x = 0.4;
+      armR.rotation.z = -0.18;
+      g.add(armR);
+      return { g: g, tip: null };
+    }
+
+    // GAMER ENERGY: a tall slab-sided can, far too pleased with itself.
+    function rigFuel() {
+      var g = new THREE.Group();
+      var can = new THREE.MeshStandardMaterial({ color: 0x14161a, roughness: 0.3, metalness: 0.7 });
+      var flash = new THREE.MeshStandardMaterial({
+        color: 0x8ce03a, roughness: 0.4, emissive: 0x397a12, emissiveIntensity: 0.45
+      });
+      cyl(g, 0.031, 0.031, 0.17, can, 0, 0, 0, 0);
+      cyl(g, 0.0315, 0.0315, 0.05, flash, 0, 0.005, 0, 0);
+      cyl(g, 0.0325, 0.0325, 0.005, tinMat, 0, 0.083, 0, 0);
+      cyl(g, 0.0325, 0.0325, 0.005, tinMat, 0, -0.083, 0, 0);
+      cyl(g, 0.026, 0.03, 0.012, tinMat, 0, 0.09, 0, 0);
+      box(g, 0.016, 0.003, 0.01, tinMat, 0.006, 0.098, 0);       // the tab
+      var armR = makeArm();
+      armR.position.set(0.033, -0.14, 0.1);
+      armR.rotation.x = 0.4;
+      armR.rotation.z = -0.18;
+      g.add(armR);
+      return { g: g, tip: null };
+    }
+
+    // The riot helmet, carried under one arm before you put it on.
+    function rigRiot() {
+      var g = new THREE.Group();
+      var shellMat = new THREE.MeshStandardMaterial({ color: 0x1a1d21, roughness: 0.42, metalness: 0.2 });
+      var shell = new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.62), shellMat);
+      shell.position.set(0, 0.01, 0);
+      g.add(shell);
+      box(g, 0.2, 0.028, 0.02, shellMat, 0, -0.055, -0.086);       // brow
+      var visor = new THREE.Mesh(
+        new THREE.SphereGeometry(0.112, 16, 10, Math.PI * 0.62, Math.PI * 0.76, Math.PI * 0.32, Math.PI * 0.36),
+        new THREE.MeshStandardMaterial({
+          color: 0x9fb4bd, roughness: 0.06, metalness: 0.25,
+          transparent: true, opacity: 0.4, side: THREE.DoubleSide
+        }));
+      visor.position.set(0, 0.01, 0);
+      g.add(visor);
+      box(g, 0.075, 0.05, 0.045, shellMat, 0, -0.07, 0.075);        // nape
+      var armR = makeArm();
+      armR.position.set(0.06, -0.13, 0.11);
+      armR.rotation.x = 0.5;
+      armR.rotation.z = -0.3;
       g.add(armR);
       return { g: g, tip: null };
     }
@@ -2896,10 +3030,118 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
     rigs.ar = rigRifle();
     rigs.camera = rigCamera();
     rigs.flashlight = rigFlashlight();
+    rigs.beans = rigBeans();
+    rigs.water = rigWater();
+    rigs.fuel = rigFuel();
+    rigs.riot = rigRiot();
+    // The view root is placed for a rifle held at the hip. Something small
+    // held up in one hand wants to be higher and nearer the middle, or the
+    // bottom half of it is off the edge of the screen.
+    rigs.beans.g.position.set(-0.05, 0.1, 0.08);
+    rigs.water.g.position.set(-0.05, 0.11, 0.08);
+    rigs.fuel.g.position.set(-0.05, 0.12, 0.08);
+    rigs.riot.g.position.set(-0.04, 0.05, 0.06);
+    rigs.camera.g.position.set(-0.03, 0.07, 0.04);
     Object.keys(rigs).forEach(function (k) {
       rigs[k].g.visible = false;
       viewRoot.add(rigs[k].g);
     });
+
+    // ---------------- The riot helmet, from the inside ----------------
+    // Not a filter over the screen — an actual visor bolted to your head.
+    // It sits rigid to the camera rather than in the weapon root, because a
+    // helmet does not sway when you swing a gun about: the world moves
+    // behind it and it does not move at all. Which is the whole point.
+    var visor = (function buildVisor() {
+      // One panel, right in front of the eyes, carrying the whole helmet:
+      // a soft aperture that darkens towards the edges, the tint and haze
+      // of scratched polycarbonate across the middle, and a reflection.
+      // Built as a texture rather than as geometry because a visor edge is
+      // a soft curve, and plates in 3D give you hard black rectangles.
+      var S = 512;
+      var c = document.createElement('canvas');
+      c.width = c.height = S;
+      var x = c.getContext('2d');
+
+      // --- the shell, crowding in from every edge ---
+      x.fillStyle = 'rgba(6,7,8,0.985)';
+      x.fillRect(0, 0, S, S);
+      // punch the opening out of it, softly
+      x.globalCompositeOperation = 'destination-out';
+      x.filter = 'blur(26px)';
+      x.beginPath();
+      var m = S * 0.085, r = S * 0.3;
+      x.moveTo(m + r, m * 1.35);
+      x.lineTo(S - m - r, m * 1.35);
+      x.quadraticCurveTo(S - m * 0.55, m * 1.35, S - m * 0.55, m * 1.35 + r);
+      x.lineTo(S - m * 0.55, S - m * 1.5 - r);
+      x.quadraticCurveTo(S - m * 0.55, S - m * 1.5, S - m - r, S - m * 1.5);
+      x.lineTo(m + r, S - m * 1.5);
+      x.quadraticCurveTo(m * 0.55, S - m * 1.5, m * 0.55, S - m * 1.5 - r);
+      x.lineTo(m * 0.55, m * 1.35 + r);
+      x.quadraticCurveTo(m * 0.55, m * 1.35, m + r, m * 1.35);
+      x.closePath();
+      x.fill();
+      x.filter = 'none';
+      x.globalCompositeOperation = 'source-over';
+
+      // --- the glass itself, over everything ---
+      var tint = x.createLinearGradient(0, 0, 0, S);
+      tint.addColorStop(0, 'rgba(150,186,200,0.12)');
+      tint.addColorStop(0.45, 'rgba(150,186,200,0.045)');
+      tint.addColorStop(1, 'rgba(120,160,178,0.1)');
+      x.fillStyle = tint;
+      x.fillRect(0, 0, S, S);
+
+      // scratches, mostly where a sleeve has wiped it
+      x.strokeStyle = 'rgba(226,242,248,0.13)';
+      for (var i = 0; i < 46; i++) {
+        x.lineWidth = Math.random() < 0.82 ? 0.8 : 1.7;
+        x.beginPath();
+        var sx = Math.random() * S, sy = S * 0.12 + Math.random() * S * 0.7;
+        var len = 14 + Math.random() * 110, ang = (Math.random() - 0.5) * 0.9;
+        x.moveTo(sx, sy);
+        x.lineTo(sx + Math.cos(ang) * len, sy + Math.sin(ang) * len * 0.3);
+        x.stroke();
+      }
+      x.strokeStyle = 'rgba(240,250,255,0.26)';
+      x.lineWidth = 1.9;
+      for (var j = 0; j < 4; j++) {
+        x.beginPath();
+        var gx = S * 0.2 + Math.random() * S * 0.6, gy = S * 0.25 + Math.random() * S * 0.5;
+        x.moveTo(gx, gy);
+        x.lineTo(gx + 50 + Math.random() * 110, gy + (Math.random() - 0.5) * 40);
+        x.stroke();
+      }
+
+      // the reflection sliding down the glass
+      var gl = x.createLinearGradient(S * 0.1, 0, S * 0.62, S * 0.8);
+      gl.addColorStop(0, 'rgba(226,242,250,0)');
+      gl.addColorStop(0.45, 'rgba(226,242,250,0.09)');
+      gl.addColorStop(0.62, 'rgba(226,242,250,0.02)');
+      gl.addColorStop(1, 'rgba(226,242,250,0)');
+      x.fillStyle = gl;
+      x.fillRect(0, 0, S, S);
+
+      var tex = new THREE.CanvasTexture(c);
+      var plane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1),
+        new THREE.MeshBasicMaterial({
+          map: tex, transparent: true, depthTest: false, depthWrite: false
+        }));
+      var DIST = 0.12;
+      plane.position.set(0, 0, -DIST);
+      plane.renderOrder = 999;
+      plane.visible = false;
+      camera.add(plane);
+
+      // cover exactly the frustum at that distance, whatever the screen is
+      function fit() {
+        var h = 2 * DIST * Math.tan((camera.fov * Math.PI / 180) / 2);
+        plane.scale.set(h * camera.aspect * 1.02, h * 1.02, 1);
+      }
+      fit();
+      return { g: plane, fit: fit };
+    })();
 
     // ---------------- Muzzle flash ----------------
     var flashTex = (function () {
@@ -2998,6 +3240,25 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
     var boltNeeded = false;
 
     var api = {
+      hasRig: function (id) { return !!rigs[id]; },
+      rigInfo: function (id) {
+        if (!rigs[id]) return null;
+        var n = 0;
+        rigs[id].g.traverse(function (o) { if (o.isMesh) n++; });
+        return { meshes: n, visible: rigs[id].g.visible };
+      },
+      shownRig: function () { return current; },
+      visorScreenPos: function () {
+        visor.g.updateMatrixWorld(true);
+        var v = new THREE.Vector3();
+        visor.g.getWorldPosition(v);
+        v.project(camera);
+        return { x: +v.x.toFixed(4), y: +v.y.toFixed(4) };
+      },
+      // looking out through the visor
+      setVisor: function (on) { visor.fit(); visor.g.visible = !!on; },
+      fitVisor: function () { visor.fit(); },
+      visorOn: function () { return visor.g.visible; },
       select: function (id) {
         Object.keys(rigs).forEach(function (k) { rigs[k].g.visible = false; });
         current = rigs[id] ? id : null;
@@ -5486,7 +5747,6 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
 
       // the computer, facing into the island
       var mp = counterPoint(-0.42, 0.07);
-      box(0.06, 0.16, 0.2, MAT.plastic, mp.x, 1.20, mp.z, mp.ry);
       var crackTex = (function () {
         var c = document.createElement('canvas'); c.width = 512; c.height = 320;
         var x = c.getContext('2d');
@@ -5501,10 +5761,55 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
         }
         return new THREE.CanvasTexture(c);
       })();
-      var monitor = box(0.6, 0.4, 0.045, new THREE.MeshStandardMaterial({
-        map: crackTex, emissive: 0x101416, emissiveIntensity: 0.5, roughness: 0.35
-      }), mp.x, 1.45, mp.z, mp.ry + Math.PI);
-      interact(monitor, { id: 'computer', label: 'Reception terminal', verb: 'Use' });
+      // The terminal is where the whole story is driven from, and it was a
+      // single flat panel floating over a stub. Give it a bezel, a screen
+      // set into it, a proper stand and foot, a keyboard and a lead.
+      (function terminal() {
+        var tg = new THREE.Group();
+        tg.position.set(mp.x, 0, mp.z);
+        tg.rotation.y = mp.ry + Math.PI;
+        group.add(tg);
+        function tp(w, h, d, mat, x, y, z, rx) {
+          var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+          m.position.set(x, y, z);
+          if (rx) m.rotation.x = rx;
+          tg.add(m);
+          return m;
+        }
+        var shell = new THREE.MeshStandardMaterial({ color: 0x3a3d3f, roughness: 0.62 });
+        // foot, neck and the hinge the panel sits on
+        tp(0.26, 0.018, 0.17, shell, 0, 1.128, 0.02);
+        tp(0.05, 0.16, 0.05, shell, 0, 1.21, 0.03);
+        tp(0.1, 0.04, 0.06, shell, 0, 1.28, 0.025);
+        // the bezel, tilted back a touch the way a monitor sits
+        var bezel = tp(0.64, 0.44, 0.035, shell, 0, 1.47, 0.02, -0.13);
+        void bezel;
+        var screen = new THREE.Mesh(new THREE.PlaneGeometry(0.58, 0.38),
+          new THREE.MeshStandardMaterial({
+            map: crackTex, emissive: 0x101416, emissiveIntensity: 0.5, roughness: 0.35
+          }));
+        screen.position.set(0, 1.4725, 0.0405);
+        screen.rotation.x = -0.13;
+        tg.add(screen);
+        // a keyboard in front of it, and the lead running off the back
+        var kb = tp(0.42, 0.018, 0.15, new THREE.MeshStandardMaterial({ color: 0x2a2d2f, roughness: 0.8 }), 0, 1.129, -0.16);
+        void kb;
+        for (var kr = 0; kr < 4; kr++) {
+          tp(0.38, 0.004, 0.022, new THREE.MeshStandardMaterial({ color: 0x1a1c1e, roughness: 0.9 }),
+            0, 1.14, -0.205 + kr * 0.029);
+        }
+        var lead = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.007, 0.22, 8),
+          new THREE.MeshStandardMaterial({ color: 0x151719, roughness: 0.9 }));
+        lead.position.set(0.06, 1.14, 0.1);
+        lead.rotation.set(1.1, 0, 0.3);
+        tg.add(lead);
+
+        var hit = new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.44, 0.06),
+          new THREE.MeshBasicMaterial({ visible: false }));
+        hit.position.set(0, 1.47, 0.02);
+        tg.add(hit);
+        interact(hit, { id: 'computer', label: 'Reception terminal', verb: 'Use' });
+      })();
       var kp = counterPoint(-0.42, 0.30);
       box(0.4, 0.02, 0.15, MAT.plastic, kp.x, 1.13, kp.z, kp.ry);
 
@@ -5609,13 +5914,88 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       batten(5.5, -5.4, WALL_H, 0xdfe8ea, 6, 10, 'dying');
       batten(0, 5.2, WALL_H, 0xdfe8ea, 7, 12, 'buzz');
 
-      // The SECURITY crate, shoved into the corner by the entrance.
-      var camCrate = box(0.8, 0.55, 0.65, MAT.wood, -7.4, 0.275, 6.5, 0.12);
-      box(0.6, 0.22, 0.02, new THREE.MeshStandardMaterial({
-        map: T.sign(THREE, 'SECURITY', { fontSize: 30 }), roughness: 0.7
-      }), -6.9, 0.38, 5.93, 0.3);
-      interact(camCrate, { id: 'cameraCrate', label: 'Crate marked SECURITY', verb: 'Open' });
-      solid(-7.65, 5.85, -6.75, 6.55);
+      // The SECURITY crate, shoved into the corner by the entrance. A real
+      // shipping crate: boarded sides with the gaps showing, batten frame,
+      // a lid prised off and leaning against it, and the stencil on the
+      // crate's own face — it used to be one plain box with the label
+      // floating in mid-air a foot away, next to the tipped chair.
+      (function securityCrate() {
+        var CX = -7.35, CZ = 6.42, RY = 0.12;
+        var W = 0.78, D = 0.62, H = 0.5;
+        var cg = new THREE.Group();
+        cg.position.set(CX, 0, CZ);
+        cg.rotation.y = RY;
+        group.add(cg);
+
+        var slatMat = MAT.wood;
+        var battenMat = MAT.darkWood;
+        function part(w, h, d, mat, x, y, z, ry) {
+          var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+          m.position.set(x, y, z);
+          if (ry) m.rotation.y = ry;
+          cg.add(m);
+          return m;
+        }
+        // four boards a side, with a hairline gap between them
+        var boardH = 0.108, gap = 0.016;
+        for (var b = 0; b < 4; b++) {
+          var by = 0.055 + b * (boardH + gap);
+          part(W, boardH, 0.022, slatMat, 0, by, D / 2);      // front
+          part(W, boardH, 0.022, slatMat, 0, by, -D / 2);     // back
+          part(0.022, boardH, D, slatMat, W / 2, by, 0);      // right
+          part(0.022, boardH, D, slatMat, -W / 2, by, 0);     // left
+        }
+        // corner battens holding it together
+        [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (c) {
+          part(0.05, H, 0.05, battenMat, c[0] * (W / 2 - 0.012), H / 2, c[1] * (D / 2 - 0.012));
+        });
+        // a base you cannot see under, and packing straw showing at the top
+        part(W, 0.03, D, battenMat, 0, 0.02, 0);
+        var straw = new THREE.Mesh(new THREE.BoxGeometry(W - 0.09, 0.05, D - 0.09),
+          new THREE.MeshStandardMaterial({ color: 0x9c8d64, roughness: 1 }));
+        straw.position.set(0, H - 0.06, 0);
+        cg.add(straw);
+        // two camera housings still nested in it, one on its side
+        [[-0.16, 0.06], [0.17, -0.09]].forEach(function (p, i) {
+          var h = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.1, 0.19), MAT.plastic);
+          h.position.set(p[0], H - 0.02, p[1]);
+          h.rotation.y = i ? 0.5 : -0.2;
+          h.rotation.z = i ? 0.35 : 0;
+          cg.add(h);
+          var lens = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.03, 0.03, 12), MAT.darkMetal);
+          lens.rotation.x = Math.PI / 2;
+          lens.position.set(p[0] + (i ? 0.06 : 0), H + 0.01, p[1] + (i ? 0.05 : -0.1));
+          cg.add(lens);
+        });
+        // The lid, prised off and leaning against the crate — on the side
+        // you walk in from, not the side jammed against the wall.
+        var lid = new THREE.Mesh(new THREE.BoxGeometry(W, 0.032, D), slatMat);
+        lid.position.set(0.06, 0.29, -(D / 2 + 0.2));
+        lid.rotation.x = -1.28;
+        cg.add(lid);
+        // The stencil goes where it can be read: the two faces open to the
+        // room. Putting it on the wall side is how you end up with a crate
+        // nobody can tell is a crate.
+        function stencilOn(px, pz, ry) {
+          var st = new THREE.Mesh(new THREE.PlaneGeometry(0.46, 0.155),
+            new THREE.MeshStandardMaterial({
+              map: T.sign(THREE, 'SECURITY', { fontSize: 30, bg: '#7d6c4d', fg: '#211f19' }),
+              roughness: 0.9, transparent: true
+            }));
+          st.position.set(px, 0.3, pz);
+          st.rotation.y = ry;
+          cg.add(st);
+        }
+        stencilOn(0, -(D / 2 + 0.013), Math.PI);      // toward the room
+        stencilOn(W / 2 + 0.013, 0, Math.PI / 2);     // and the long side
+
+        var hit = new THREE.Mesh(new THREE.BoxGeometry(W, H, D),
+          new THREE.MeshBasicMaterial({ visible: false }));
+        hit.position.set(0, H / 2, 0);
+        cg.add(hit);
+        interact(hit, { id: 'cameraCrate', label: 'Crate marked SECURITY', verb: 'Open' });
+        solid(CX - 0.46, CZ - 0.38, CX + 0.46, CZ + 0.5);
+      })();
 
       var phoneBody = box(0.16, 0.26, 0.1, MAT.plastic, -7.85, 1.45, -3.2, Math.PI / 2);
       box(0.06, 0.2, 0.07, MAT.plastic, -7.75, 1.5, -3.2, Math.PI / 2);
@@ -5691,8 +6071,43 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       // A crate rests on the board it is standing on: its height decides its
       // centre, rather than every crate sharing one hard-coded height and the
       // tall ones sinking a fifth of a metre through the steel.
+      // A crate with boards and a batten frame rather than a plain cube —
+      // there are dozens of these on the racking and every one of them was
+      // a single box, which is exactly what reads as unfinished up close.
+      function crateShell(parent, w, h, ry) {
+        var slat = 0.02;
+        var boards = Math.max(2, Math.round(h / 0.12));
+        var bh = (h - (boards - 1) * 0.012) / boards;
+        for (var i = 0; i < boards; i++) {
+          var by = -h / 2 + bh / 2 + i * (bh + 0.012);
+          [[0, w / 2 - slat / 2, 0], [0, -(w / 2 - slat / 2), 0]].forEach(function (p) {
+            var m = new THREE.Mesh(new THREE.BoxGeometry(w, bh, slat), MAT.wood);
+            m.position.set(0, by, p[1]); parent.add(m);
+          });
+          var l = new THREE.Mesh(new THREE.BoxGeometry(slat, bh, w), MAT.wood);
+          l.position.set(w / 2 - slat / 2, by, 0); parent.add(l);
+          var r = new THREE.Mesh(new THREE.BoxGeometry(slat, bh, w), MAT.wood);
+          r.position.set(-(w / 2 - slat / 2), by, 0); parent.add(r);
+        }
+        [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (c) {
+          var b2 = new THREE.Mesh(new THREE.BoxGeometry(0.035, h, 0.035), MAT.darkWood);
+          b2.position.set(c[0] * (w / 2 - 0.014), 0, c[1] * (w / 2 - 0.014));
+          parent.add(b2);
+        });
+        var lid = new THREE.Mesh(new THREE.BoxGeometry(w, 0.022, w), MAT.darkWood);
+        lid.position.y = h / 2 - 0.011;
+        parent.add(lid);
+        void ry;
+      }
       function shelfCrate(cx, boardY, cz, w, h, ry) {
-        var crate = box(w, h, w, MAT.wood, cx, boardY + 0.045 + h / 2, cz, ry);
+        var cgrp = new THREE.Group();
+        cgrp.position.set(cx, boardY + 0.045 + h / 2, cz);
+        cgrp.rotation.y = ry || 0;
+        group.add(cgrp);
+        crateShell(cgrp, w, h, ry);
+        var crate = new THREE.Mesh(new THREE.BoxGeometry(w, h, w),
+          new THREE.MeshBasicMaterial({ visible: false }));
+        cgrp.add(crate);
         allCrates.push(crate);
         if (Math.random() < 0.3) {
           interact(crate, { id: 'lootCrate', idx: lootIdx++, label: 'Crate on the shelf', verb: 'Open' });
@@ -5881,8 +6296,10 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       pool.position.set(nt.x, 0.011, nt.z - 0.15);
       group.add(pool);
 
-      // dropped clear of his hand — it used to intersect his fingers
-      var journal = box(0.22, 0.05, 0.3, new THREE.MeshStandardMaterial({ color: 0x6d5433, roughness: 0.9 }), 61.62, 0.025, 2.52, 0.4);
+      // Dropped on open floor a stride from him. Two earlier spots put it
+      // through his hand and then through the shelf leg beside it, so this
+      // one was picked by sampling the storage floor for a clear patch.
+      var journal = box(0.22, 0.05, 0.3, new THREE.MeshStandardMaterial({ color: 0x6d5433, roughness: 0.9 }), 61.15, 0.025, 3.25, 0.4);
       interact(journal, { id: 'journal', label: "Nick's journal", verb: 'Read' });
 
       // The Glock, lying on its side where he dropped it. Built as one
@@ -7475,10 +7892,12 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
     viewRoot.position.set(0.24, -0.22, -0.45);
     camera.add(viewRoot);
     var weapons = window.buildWeapons(THREE, { camera: camera, viewRoot: viewRoot, scene: scene });
+    // Whatever is selected on the hotbar is what is in your hand. Every
+    // holdable has a model — this used to be guns, the camera and the torch
+    // only, so selecting a can of beans showed you an empty hand.
     function updateViewmodel() {
       var id = state.hotbar[state.hotbarSel];
-      if (id && (ITEM_DEFS[id].kind === 'weapon' || id === 'camera' || id === 'flashlight')) weapons.select(id);
-      else weapons.select(null);
+      weapons.select(id && weapons.hasRig(id) ? id : null);
     }
 
     // Where does this shot actually stop? Walls, closed doors and seals,
@@ -8284,6 +8703,9 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
     function equipRiot(on) {
       if (!state.riotGear) return;
       state.riotEquipped = !!on;
+      // the helmet goes on, and you spend the rest of the night looking
+      // through a scratched polycarbonate visor
+      weapons.setVisor(state.riotEquipped);
       if (audio) audio.ui();
       refreshHud();
     }
@@ -8954,7 +9376,10 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       var es = entity ? entity.getState() : null;
       if (es && es.mode === 'banging') { say('Not with that on the other side of the door.'); return; }
       if (state.hunger < 10 || state.thirst < 10) { say('Too hungry and too thirsty to sleep. Eat something first.'); return; }
-      if (state.energy < 20) { say('Wired. You need to sit still for a while before this works.'); return; }
+      // "Rested" with a little tolerance. Requiring stamina at exactly the
+      // cap meant the drain between standing up and reaching the bunk could
+      // refuse a sleep you had genuinely earned.
+      if (state.energy < 18) { say('Wired. You need to sit still for a while before this works.'); return; }
       flag('slept');
       state.clock = 1;                    // the night runs out while you are under
       if (ui.onSleep) ui.onSleep();
@@ -9230,8 +9655,10 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
     var ACTIVE_LIGHTS = opt.lights;   // live-updatable from Settings
     level.cullLights(camera.position, ACTIVE_LIGHTS);
 
+    var frameNo = 0;
     function tick() {
       requestAnimationFrame(tick);
+      frameNo++;
       var dt = Math.min(clock.getDelta(), 0.05);
       var elapsed = clock.elapsedTime;
 
@@ -9566,6 +9993,7 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
+      weapons.fitVisor();      // the helmet has to keep covering the screen
     });
 
     // ---------------- The opening, interior half ----------------
@@ -9832,14 +10260,43 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       setLurkScale: function (v) { if (entity) entity.setLurkScale(v); },
       setChance: function (name, v) { debugChance[name] = v; },
       giveDebug: function (what) {
-        if (what === 'cams') state.cams += 5;
+        if (what === 'cams') { state.cams += 5; giveItem('camera'); }
+        if (what === 'camera') { state.cams += 5; giveItem('camera'); }
         if (what === 'riot') state.riotGear = true;
-        if (what === 'water') state.waterN += 5;
-        if (what === 'beans') state.beansN += 5;
-        if (what === 'fuel') state.fuelN += 12;
+        if (what === 'water') { state.waterN += 5; giveItem('water'); }
+        if (what === 'beans') { state.beansN += 5; giveItem('beans'); }
+        if (what === 'fuel') { state.fuelN += 12; giveItem('fuel'); }
+        if (what === 'glock') { state.hasGlock = true; state.mags = 2; state.inMag = MAG_SIZE; state.ammo = MAG_SIZE * 2; giveItem('glock'); }
+        if (what === 'flashlight') { state.hasFlashlight = true; giveItem('flashlight'); }
         if (what === 'keycard') state.keycard = true;
         refreshHud();
       },
+      heldItem: function () { return state.hotbar[state.hotbarSel] || null; },
+      // how much model each interactable actually has, for spotting props
+      // that are still a single box with a label on them
+      eachInteractable: function () {
+        var root = level.group || scene;
+        var box = new THREE.Box3();
+        return level.interactables.map(function (m) {
+          var n = m;
+          while (n.parent && n.parent !== root && n.parent !== scene) n = n.parent;
+          var meshes = 0;
+          n.traverse(function (o) { if (o.isMesh) meshes++; });
+          box.setFromObject(n);
+          return {
+            id: m.userData.interact.id, meshes: meshes,
+            size: [ +(box.max.x-box.min.x).toFixed(2), +(box.max.y-box.min.y).toFixed(2), +(box.max.z-box.min.z).toFixed(2) ].join('x')
+          };
+        });
+      },
+      visorOn: function () { return weapons.visorOn(); },
+      visorScreenPos: function () { return weapons.visorScreenPos(); },
+      rigInfo: function (id) { return weapons.rigInfo(id); },
+      shownRig: function () { return weapons.shownRig(); },
+      sceneRoot: function () { return scene; },
+      frameCount: function () { return frameNo; },
+      renderInfo: function () { return { calls: renderer.info.render.calls, tris: renderer.info.render.triangles }; },
+      equipRiotDebug: function (on) { state.riotGear = true; equipRiot(on); },
       consumeDebug: function (kind) { consume(kind); },
       selectSlot: selectSlot,
       useSelected: useSelected,
@@ -10633,6 +11090,8 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
         if (snap.cams) restoreCameras(snap.cams);
         if (entity && snap.entity) entity.deserialize(snap.entity);
         if (state.hasFlashlight) setTorch(!!state.torchOn);
+        weapons.setVisor(!!state.riotEquipped);
+        updateViewmodel();
         clearFocus();
         refreshHud();
         if (ui.onClock) ui.onClock(state.dayNo, state.phase, Math.max(0, state.clock));

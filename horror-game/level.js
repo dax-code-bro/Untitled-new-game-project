@@ -646,7 +646,6 @@
 
       // the computer, facing into the island
       var mp = counterPoint(-0.42, 0.07);
-      box(0.06, 0.16, 0.2, MAT.plastic, mp.x, 1.20, mp.z, mp.ry);
       var crackTex = (function () {
         var c = document.createElement('canvas'); c.width = 512; c.height = 320;
         var x = c.getContext('2d');
@@ -661,10 +660,55 @@
         }
         return new THREE.CanvasTexture(c);
       })();
-      var monitor = box(0.6, 0.4, 0.045, new THREE.MeshStandardMaterial({
-        map: crackTex, emissive: 0x101416, emissiveIntensity: 0.5, roughness: 0.35
-      }), mp.x, 1.45, mp.z, mp.ry + Math.PI);
-      interact(monitor, { id: 'computer', label: 'Reception terminal', verb: 'Use' });
+      // The terminal is where the whole story is driven from, and it was a
+      // single flat panel floating over a stub. Give it a bezel, a screen
+      // set into it, a proper stand and foot, a keyboard and a lead.
+      (function terminal() {
+        var tg = new THREE.Group();
+        tg.position.set(mp.x, 0, mp.z);
+        tg.rotation.y = mp.ry + Math.PI;
+        group.add(tg);
+        function tp(w, h, d, mat, x, y, z, rx) {
+          var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+          m.position.set(x, y, z);
+          if (rx) m.rotation.x = rx;
+          tg.add(m);
+          return m;
+        }
+        var shell = new THREE.MeshStandardMaterial({ color: 0x3a3d3f, roughness: 0.62 });
+        // foot, neck and the hinge the panel sits on
+        tp(0.26, 0.018, 0.17, shell, 0, 1.128, 0.02);
+        tp(0.05, 0.16, 0.05, shell, 0, 1.21, 0.03);
+        tp(0.1, 0.04, 0.06, shell, 0, 1.28, 0.025);
+        // the bezel, tilted back a touch the way a monitor sits
+        var bezel = tp(0.64, 0.44, 0.035, shell, 0, 1.47, 0.02, -0.13);
+        void bezel;
+        var screen = new THREE.Mesh(new THREE.PlaneGeometry(0.58, 0.38),
+          new THREE.MeshStandardMaterial({
+            map: crackTex, emissive: 0x101416, emissiveIntensity: 0.5, roughness: 0.35
+          }));
+        screen.position.set(0, 1.4725, 0.0405);
+        screen.rotation.x = -0.13;
+        tg.add(screen);
+        // a keyboard in front of it, and the lead running off the back
+        var kb = tp(0.42, 0.018, 0.15, new THREE.MeshStandardMaterial({ color: 0x2a2d2f, roughness: 0.8 }), 0, 1.129, -0.16);
+        void kb;
+        for (var kr = 0; kr < 4; kr++) {
+          tp(0.38, 0.004, 0.022, new THREE.MeshStandardMaterial({ color: 0x1a1c1e, roughness: 0.9 }),
+            0, 1.14, -0.205 + kr * 0.029);
+        }
+        var lead = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.007, 0.22, 8),
+          new THREE.MeshStandardMaterial({ color: 0x151719, roughness: 0.9 }));
+        lead.position.set(0.06, 1.14, 0.1);
+        lead.rotation.set(1.1, 0, 0.3);
+        tg.add(lead);
+
+        var hit = new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.44, 0.06),
+          new THREE.MeshBasicMaterial({ visible: false }));
+        hit.position.set(0, 1.47, 0.02);
+        tg.add(hit);
+        interact(hit, { id: 'computer', label: 'Reception terminal', verb: 'Use' });
+      })();
       var kp = counterPoint(-0.42, 0.30);
       box(0.4, 0.02, 0.15, MAT.plastic, kp.x, 1.13, kp.z, kp.ry);
 
@@ -769,13 +813,88 @@
       batten(5.5, -5.4, WALL_H, 0xdfe8ea, 6, 10, 'dying');
       batten(0, 5.2, WALL_H, 0xdfe8ea, 7, 12, 'buzz');
 
-      // The SECURITY crate, shoved into the corner by the entrance.
-      var camCrate = box(0.8, 0.55, 0.65, MAT.wood, -7.4, 0.275, 6.5, 0.12);
-      box(0.6, 0.22, 0.02, new THREE.MeshStandardMaterial({
-        map: T.sign(THREE, 'SECURITY', { fontSize: 30 }), roughness: 0.7
-      }), -6.9, 0.38, 5.93, 0.3);
-      interact(camCrate, { id: 'cameraCrate', label: 'Crate marked SECURITY', verb: 'Open' });
-      solid(-7.65, 5.85, -6.75, 6.55);
+      // The SECURITY crate, shoved into the corner by the entrance. A real
+      // shipping crate: boarded sides with the gaps showing, batten frame,
+      // a lid prised off and leaning against it, and the stencil on the
+      // crate's own face — it used to be one plain box with the label
+      // floating in mid-air a foot away, next to the tipped chair.
+      (function securityCrate() {
+        var CX = -7.35, CZ = 6.42, RY = 0.12;
+        var W = 0.78, D = 0.62, H = 0.5;
+        var cg = new THREE.Group();
+        cg.position.set(CX, 0, CZ);
+        cg.rotation.y = RY;
+        group.add(cg);
+
+        var slatMat = MAT.wood;
+        var battenMat = MAT.darkWood;
+        function part(w, h, d, mat, x, y, z, ry) {
+          var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+          m.position.set(x, y, z);
+          if (ry) m.rotation.y = ry;
+          cg.add(m);
+          return m;
+        }
+        // four boards a side, with a hairline gap between them
+        var boardH = 0.108, gap = 0.016;
+        for (var b = 0; b < 4; b++) {
+          var by = 0.055 + b * (boardH + gap);
+          part(W, boardH, 0.022, slatMat, 0, by, D / 2);      // front
+          part(W, boardH, 0.022, slatMat, 0, by, -D / 2);     // back
+          part(0.022, boardH, D, slatMat, W / 2, by, 0);      // right
+          part(0.022, boardH, D, slatMat, -W / 2, by, 0);     // left
+        }
+        // corner battens holding it together
+        [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (c) {
+          part(0.05, H, 0.05, battenMat, c[0] * (W / 2 - 0.012), H / 2, c[1] * (D / 2 - 0.012));
+        });
+        // a base you cannot see under, and packing straw showing at the top
+        part(W, 0.03, D, battenMat, 0, 0.02, 0);
+        var straw = new THREE.Mesh(new THREE.BoxGeometry(W - 0.09, 0.05, D - 0.09),
+          new THREE.MeshStandardMaterial({ color: 0x9c8d64, roughness: 1 }));
+        straw.position.set(0, H - 0.06, 0);
+        cg.add(straw);
+        // two camera housings still nested in it, one on its side
+        [[-0.16, 0.06], [0.17, -0.09]].forEach(function (p, i) {
+          var h = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.1, 0.19), MAT.plastic);
+          h.position.set(p[0], H - 0.02, p[1]);
+          h.rotation.y = i ? 0.5 : -0.2;
+          h.rotation.z = i ? 0.35 : 0;
+          cg.add(h);
+          var lens = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.03, 0.03, 12), MAT.darkMetal);
+          lens.rotation.x = Math.PI / 2;
+          lens.position.set(p[0] + (i ? 0.06 : 0), H + 0.01, p[1] + (i ? 0.05 : -0.1));
+          cg.add(lens);
+        });
+        // The lid, prised off and leaning against the crate — on the side
+        // you walk in from, not the side jammed against the wall.
+        var lid = new THREE.Mesh(new THREE.BoxGeometry(W, 0.032, D), slatMat);
+        lid.position.set(0.06, 0.29, -(D / 2 + 0.2));
+        lid.rotation.x = -1.28;
+        cg.add(lid);
+        // The stencil goes where it can be read: the two faces open to the
+        // room. Putting it on the wall side is how you end up with a crate
+        // nobody can tell is a crate.
+        function stencilOn(px, pz, ry) {
+          var st = new THREE.Mesh(new THREE.PlaneGeometry(0.46, 0.155),
+            new THREE.MeshStandardMaterial({
+              map: T.sign(THREE, 'SECURITY', { fontSize: 30, bg: '#7d6c4d', fg: '#211f19' }),
+              roughness: 0.9, transparent: true
+            }));
+          st.position.set(px, 0.3, pz);
+          st.rotation.y = ry;
+          cg.add(st);
+        }
+        stencilOn(0, -(D / 2 + 0.013), Math.PI);      // toward the room
+        stencilOn(W / 2 + 0.013, 0, Math.PI / 2);     // and the long side
+
+        var hit = new THREE.Mesh(new THREE.BoxGeometry(W, H, D),
+          new THREE.MeshBasicMaterial({ visible: false }));
+        hit.position.set(0, H / 2, 0);
+        cg.add(hit);
+        interact(hit, { id: 'cameraCrate', label: 'Crate marked SECURITY', verb: 'Open' });
+        solid(CX - 0.46, CZ - 0.38, CX + 0.46, CZ + 0.5);
+      })();
 
       var phoneBody = box(0.16, 0.26, 0.1, MAT.plastic, -7.85, 1.45, -3.2, Math.PI / 2);
       box(0.06, 0.2, 0.07, MAT.plastic, -7.75, 1.5, -3.2, Math.PI / 2);
@@ -851,8 +970,43 @@
       // A crate rests on the board it is standing on: its height decides its
       // centre, rather than every crate sharing one hard-coded height and the
       // tall ones sinking a fifth of a metre through the steel.
+      // A crate with boards and a batten frame rather than a plain cube —
+      // there are dozens of these on the racking and every one of them was
+      // a single box, which is exactly what reads as unfinished up close.
+      function crateShell(parent, w, h, ry) {
+        var slat = 0.02;
+        var boards = Math.max(2, Math.round(h / 0.12));
+        var bh = (h - (boards - 1) * 0.012) / boards;
+        for (var i = 0; i < boards; i++) {
+          var by = -h / 2 + bh / 2 + i * (bh + 0.012);
+          [[0, w / 2 - slat / 2, 0], [0, -(w / 2 - slat / 2), 0]].forEach(function (p) {
+            var m = new THREE.Mesh(new THREE.BoxGeometry(w, bh, slat), MAT.wood);
+            m.position.set(0, by, p[1]); parent.add(m);
+          });
+          var l = new THREE.Mesh(new THREE.BoxGeometry(slat, bh, w), MAT.wood);
+          l.position.set(w / 2 - slat / 2, by, 0); parent.add(l);
+          var r = new THREE.Mesh(new THREE.BoxGeometry(slat, bh, w), MAT.wood);
+          r.position.set(-(w / 2 - slat / 2), by, 0); parent.add(r);
+        }
+        [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (c) {
+          var b2 = new THREE.Mesh(new THREE.BoxGeometry(0.035, h, 0.035), MAT.darkWood);
+          b2.position.set(c[0] * (w / 2 - 0.014), 0, c[1] * (w / 2 - 0.014));
+          parent.add(b2);
+        });
+        var lid = new THREE.Mesh(new THREE.BoxGeometry(w, 0.022, w), MAT.darkWood);
+        lid.position.y = h / 2 - 0.011;
+        parent.add(lid);
+        void ry;
+      }
       function shelfCrate(cx, boardY, cz, w, h, ry) {
-        var crate = box(w, h, w, MAT.wood, cx, boardY + 0.045 + h / 2, cz, ry);
+        var cgrp = new THREE.Group();
+        cgrp.position.set(cx, boardY + 0.045 + h / 2, cz);
+        cgrp.rotation.y = ry || 0;
+        group.add(cgrp);
+        crateShell(cgrp, w, h, ry);
+        var crate = new THREE.Mesh(new THREE.BoxGeometry(w, h, w),
+          new THREE.MeshBasicMaterial({ visible: false }));
+        cgrp.add(crate);
         allCrates.push(crate);
         if (Math.random() < 0.3) {
           interact(crate, { id: 'lootCrate', idx: lootIdx++, label: 'Crate on the shelf', verb: 'Open' });
@@ -1041,8 +1195,10 @@
       pool.position.set(nt.x, 0.011, nt.z - 0.15);
       group.add(pool);
 
-      // dropped clear of his hand — it used to intersect his fingers
-      var journal = box(0.22, 0.05, 0.3, new THREE.MeshStandardMaterial({ color: 0x6d5433, roughness: 0.9 }), 61.62, 0.025, 2.52, 0.4);
+      // Dropped on open floor a stride from him. Two earlier spots put it
+      // through his hand and then through the shelf leg beside it, so this
+      // one was picked by sampling the storage floor for a clear patch.
+      var journal = box(0.22, 0.05, 0.3, new THREE.MeshStandardMaterial({ color: 0x6d5433, roughness: 0.9 }), 61.15, 0.025, 3.25, 0.4);
       interact(journal, { id: 'journal', label: "Nick's journal", verb: 'Read' });
 
       // The Glock, lying on its side where he dropped it. Built as one
