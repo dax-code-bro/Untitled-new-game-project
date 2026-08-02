@@ -799,6 +799,53 @@
           y: g.position.y, headSpin: headGroup.rotation.y, pose: pose
         };
       },
+      // ---- for a save file ----
+      serialize: function () {
+        return {
+          mode: mode, x: pos.x, z: pos.z, facing: facing,
+          lurkIndex: lurkIndex, lurkT: lurkT, rageT: isFinite(rageT) ? rageT : -1,
+          hits: hits, bloodied: bloodied, armsLeft: armsLeft, headOn: headOn,
+          angered: angered, spottedOnce: spottedOnce, ventsOpen: ventsOpen,
+          daylightHold: daylightHold, visible: g.visible, fleeT: fleeT,
+          woundSide: woundSide, woundHeld: woundHeld
+        };
+      },
+      deserialize: function (s) {
+        if (!s) return false;
+        pos.x = s.x; pos.z = s.z; facing = s.facing || 0;
+        lurkIndex = s.lurkIndex || 0;
+        lurkT = s.lurkT || 0;
+        rageT = s.rageT === -1 ? Infinity : (s.rageT || 0);
+        hits = s.hits || 0;
+        armsLeft = s.armsLeft === undefined ? 2 : s.armsLeft;
+        headOn = s.headOn !== false;
+        angered = !!s.angered;
+        spottedOnce = !!s.spottedOnce;
+        ventsOpen = !!s.ventsOpen;
+        daylightHold = s.daylightHold || null;
+        fleeT = s.fleeT || 0;
+        woundSide = s.woundSide || 0;
+        woundHeld = s.woundHeld || 0;
+        staggerT = freezeT = bangT = menaceT = 0;
+        frozenForKill = false;
+        if (s.bloodied && !bloodied) {
+          bloodied = true;
+          meshes.blood.forEach(function (b) { b.visible = true; });
+          torso.material = birchBloody;
+          head.material = birchBloody;
+        }
+        if (armsLeft < 2) armR.shoulder.visible = false;
+        if (armsLeft < 1) armL.shoulder.visible = false;
+        if (!headOn) headGroup.visible = false;
+        mode = s.mode || 'dormant';
+        drawFace(rageT > 0 ? 'sharpie' : 'none');
+        setPose(mode === 'lurk' ? LURKS[lurkIndex].pose : 'walk');
+        g.visible = s.visible !== false && mode !== 'dormant';
+        g.position.set(pos.x, 0, pos.z);
+        g.rotation.set(0, facing, 0);
+        if (mode === 'destroyed') { g.rotation.x = Math.PI / 2 - 0.15; g.position.y = 0.35; }
+        return true;
+      },
       force: function (x, z, m, lurkId) {
         pos.x = x; pos.z = z;
         staggerT = freezeT = bangT = menaceT = 0;

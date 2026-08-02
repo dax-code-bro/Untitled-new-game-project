@@ -145,6 +145,25 @@ the inside of your own head — while mirrors and the security feeds do. Point a
 planted camera back down a corridor you are standing in and you will watch
 yourself on it.
 
+## Saves and settings
+
+The front screen offers **Continue** if you have played before, or **Create
+game** if you have not. Every save has a name you choose, and no two saves
+can share one — you can rename any of them later, and keep as many as you
+like. Each row shows how far in you are, when you last played it, and when
+you made it.
+
+**It saves itself.** Every sixty seconds, and again the moment you quit,
+close the tab, or switch away from it on a phone. Every write also keeps
+the previous copy as a backup, so a phone dying mid-write costs you at most
+a minute rather than the whole run — the game notices the damaged copy on
+load and quietly falls back.
+
+**Settings** covers volume — background music, sound effects, and creatures
+and jump scares are three separate faders — plus graphics (a quality preset,
+render scale, active lights, shadows, film grain, vignette), look
+sensitivity, invert vertical, and the control list.
+
 ## Controls
 
 | Input | Action |

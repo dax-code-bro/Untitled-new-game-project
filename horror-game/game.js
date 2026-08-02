@@ -34,6 +34,10 @@
     var currentRoom = null;
     var nextAmbient = 6;
     var motionBed = null, whisperBed = null;
+    // Three buses under the master, so the player can turn the music down
+    // without turning the thing in the corridor down with it.
+    var busMusic = null, busSfx = null, busCreature = null;
+    var vol = { music: 0.7, sfx: 0.9, creature: 1.0 };
     var creakClock = 0;
 
     function now() { return ctx.currentTime; }
@@ -44,6 +48,14 @@
       var d = buf.getChannelData(0);
       for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
       return buf;
+    }
+
+    // Which bus a sound belongs on. Default is effects; anything the
+    // creature makes is tagged so it can be turned down on its own.
+    function busFor(name) {
+      if (name === 'creature') return busCreature || master;
+      if (name === 'music') return busMusic || master;
+      return busSfx || master;
     }
 
     // A filtered noise hit, schedulable slightly in the future.
@@ -62,7 +74,7 @@
       g.gain.setValueAtTime(0, t);
       g.gain.linearRampToValueAtTime(o.gain, t + (o.attack || 0.004));
       g.gain.exponentialRampToValueAtTime(0.0001, t + o.dur);
-      s.connect(f); f.connect(g); g.connect(master);
+      s.connect(f); f.connect(g); g.connect(busFor(o.bus));
       s.start(t); s.stop(t + o.dur + 0.03);
     }
 
@@ -88,7 +100,7 @@
         lfo.connect(lg); lg.connect(osc.frequency);
         lfo.start(t); lfo.stop(t + o.dur + 0.05);
       }
-      osc.connect(g); g.connect(master);
+      osc.connect(g); g.connect(busFor(o.bus));
       osc.start(t); osc.stop(t + o.dur + 0.05);
     }
 
@@ -107,7 +119,7 @@
     function makeMotion() {
       var g = ctx.createGain();
       g.gain.value = 0;
-      g.connect(master);
+      g.connect(busFor('creature'));
 
       var whine = ctx.createOscillator();
       whine.type = 'sawtooth';
@@ -140,7 +152,7 @@
     function makeWhisper() {
       var g = ctx.createGain();
       g.gain.value = 0;
-      g.connect(master);
+      g.connect(busFor('creature'));
 
       var src = ctx.createBufferSource();
       src.buffer = noiseBuffer(5);
@@ -273,12 +285,16 @@
       master.gain.value = 0.9;
       master.connect(ctx.destination);
 
+      busMusic = ctx.createGain(); busMusic.gain.value = vol.music; busMusic.connect(master);
+      busSfx = ctx.createGain(); busSfx.gain.value = vol.sfx; busSfx.connect(master);
+      busCreature = ctx.createGain(); busCreature.gain.value = vol.creature; busCreature.connect(master);
+
       muzak = ctx.createGain();
       muzak.gain.value = 0;
       var mf = ctx.createBiquadFilter();
       mf.type = 'lowpass';
       mf.frequency.value = 2600;
-      muzak.connect(mf); mf.connect(master);
+      muzak.connect(mf); mf.connect(busMusic);
       buildMuzak().then(function (buf) {
         muzakSrc = ctx.createBufferSource();
         muzakSrc.buffer = buf;
@@ -513,6 +529,18 @@
       footstep: footstep,
       get started() { return started; },
       debugBeds: function () { return Object.keys(beds); },
+      // the three sliders in Settings
+      setVolumes: function (v) {
+        if (v.music !== undefined) vol.music = v.music;
+        if (v.sfx !== undefined) vol.sfx = v.sfx;
+        if (v.creature !== undefined) vol.creature = v.creature;
+        if (!started) return vol;
+        busMusic.gain.setTargetAtTime(vol.music, now(), 0.05);
+        busSfx.gain.setTargetAtTime(vol.sfx, now(), 0.05);
+        busCreature.gain.setTargetAtTime(vol.creature, now(), 0.05);
+        return vol;
+      },
+      volumes: function () { return { music: vol.music, sfx: vol.sfx, creature: vol.creature }; },
       setMuted: function (m) {
         muted = m;
         if (!started) return;
@@ -544,19 +572,19 @@
       // shot, and it does not like it
       scream: function (dist) {
         var a = Math.max(0.25, 1 - (dist || 8) / 40);
-        tone({ freq: 900, to: 210, dur: 1.5, type: 'sawtooth', gain: 0.16 * a, wobble: { rate: 17, depth: 190 } });
-        tone({ at: 0.04, freq: 1340, to: 320, dur: 1.3, type: 'square', gain: 0.055 * a, wobble: { rate: 23, depth: 260 } });
-        noiseHit({ dur: 1.4, type: 'bandpass', freq: 1500, sweepTo: 420, q: 2.2, gain: 0.13 * a, attack: 0.05 });
-        tone({ at: 0.2, freq: 62, to: 40, dur: 1.1, gain: 0.1 * a });
+        tone({ bus: 'creature', freq: 900, to: 210, dur: 1.5, type: 'sawtooth', gain: 0.16 * a, wobble: { rate: 17, depth: 190 } });
+        tone({ bus: 'creature', at: 0.04, freq: 1340, to: 320, dur: 1.3, type: 'square', gain: 0.055 * a, wobble: { rate: 23, depth: 260 } });
+        noiseHit({ bus: 'creature', dur: 1.4, type: 'bandpass', freq: 1500, sweepTo: 420, q: 2.2, gain: 0.13 * a, attack: 0.05 });
+        tone({ bus: 'creature', at: 0.2, freq: 62, to: 40, dur: 1.1, gain: 0.1 * a });
       },
       // eleven feet of mannequin folding itself into a 560mm duct
       ventSqueeze: function (dist) {
         var a = Math.max(0.2, 1 - (dist || 8) / 36);
         for (var i = 0; i < 7; i++) {
-          noiseHit({ at: i * 0.16, dur: 0.19, type: 'bandpass', freq: 900 + Math.random() * 1800, q: 6, gain: 0.09 * a });
+          noiseHit({ bus: 'creature', at: i * 0.16, dur: 0.19, type: 'bandpass', freq: 900 + Math.random() * 1800, q: 6, gain: 0.09 * a });
         }
-        tone({ freq: 148, to: 96, dur: 1.25, type: 'sawtooth', gain: 0.05 * a, wobble: { rate: 6, depth: 30 } });
-        noiseHit({ at: 0.9, dur: 0.35, freq: 420, sweepTo: 120, gain: 0.12 * a });
+        tone({ bus: 'creature', freq: 148, to: 96, dur: 1.25, type: 'sawtooth', gain: 0.05 * a, wobble: { rate: 6, depth: 30 } });
+        noiseHit({ bus: 'creature', at: 0.9, dur: 0.35, freq: 420, sweepTo: 120, gain: 0.12 * a });
       },
       // your own lungs, and the noise you make without deciding to
       panic: function (hard) {
@@ -567,15 +595,15 @@
         // gears taking up slack before it moves
         var a = Math.max(0.1, 1 - (dist || 10) / 45);
         for (var i = 0; i < 9; i++) {
-          noiseHit({ at: i * 0.07, dur: 0.02, type: 'highpass', freq: 2800 + i * 140, gain: 0.02 * a });
+          noiseHit({ bus: 'creature', at: i * 0.07, dur: 0.02, type: 'highpass', freq: 2800 + i * 140, gain: 0.02 * a });
         }
-        tone({ dur: 0.7, freq: 160, to: 340, type: 'triangle', gain: 0.02 * a, attack: 0.2 });
+        tone({ bus: 'creature', dur: 0.7, freq: 160, to: 340, type: 'triangle', gain: 0.02 * a, attack: 0.2 });
       },
       bang: function (dist) {
         var a = Math.max(0.15, 1 - (dist || 10) / 50);
         for (var i = 0; i < 3; i++) {
-          noiseHit({ at: i * 0.4, dur: 0.3, freq: 600, sweepTo: 80, gain: 0.3 * a });
-          tone({ at: i * 0.4, freq: 55, to: 34, dur: 0.4, gain: 0.22 * a });
+          noiseHit({ bus: 'creature', at: i * 0.4, dur: 0.3, freq: 600, sweepTo: 80, gain: 0.3 * a });
+          tone({ bus: 'creature', at: i * 0.4, freq: 55, to: 34, dur: 0.4, gain: 0.22 * a });
         }
       },
       zap: function () {
@@ -610,10 +638,10 @@
       },
       doorBash: function (dist) {
         var a = Math.max(0.15, 1 - (dist || 10) / 55);
-        noiseHit({ dur: 0.5, freq: 1200, sweepTo: 90, gain: 0.4 * a });
-        tone({ freq: 60, to: 30, dur: 0.6, gain: 0.28 * a });
+        noiseHit({ bus: 'creature', dur: 0.5, freq: 1200, sweepTo: 90, gain: 0.4 * a });
+        tone({ bus: 'creature', freq: 60, to: 30, dur: 0.6, gain: 0.28 * a });
         for (var i = 0; i < 6; i++) {
-          noiseHit({ at: 0.04 + i * 0.03, dur: 0.05, type: 'bandpass', freq: 900 + Math.random() * 1400, q: 3, gain: 0.08 * a });
+          noiseHit({ bus: 'creature', at: 0.04 + i * 0.03, dur: 0.05, type: 'bandpass', freq: 900 + Math.random() * 1400, q: 3, gain: 0.08 * a });
         }
       },
       shotgun: function () {
@@ -628,20 +656,20 @@
       vomit: function () { noiseHit({ dur: 0.7, freq: 700, sweepTo: 200, gain: 0.1 }); },
       flush: function () { noiseHit({ dur: 1.6, freq: 1400, sweepTo: 300, gain: 0.09, attack: 0.15 }); },
       ventBreak: function () {
-        noiseHit({ dur: 0.3, freq: 2000, sweepTo: 300, gain: 0.2 });
-        for (var i = 0; i < 5; i++) tone({ at: 0.05 + i * 0.05, freq: 1400 + i * 300, dur: 0.06, gain: 0.02 });
-        tone({ at: 0.3, freq: 140, to: 60, dur: 0.3, gain: 0.1 });
+        noiseHit({ bus: 'creature', dur: 0.3, freq: 2000, sweepTo: 300, gain: 0.2 });
+        for (var i = 0; i < 5; i++) tone({ bus: 'creature', at: 0.05 + i * 0.05, freq: 1400 + i * 300, dur: 0.06, gain: 0.02 });
+        tone({ bus: 'creature', at: 0.3, freq: 140, to: 60, dur: 0.3, gain: 0.1 });
       },
       ventCrawl: function () {
         for (var i = 0; i < 8; i++) {
-          noiseHit({ at: i * 0.22, dur: 0.1, freq: 500 + Math.random() * 400, sweepTo: 200, gain: 0.05 });
-          tone({ at: i * 0.22, freq: 90 + Math.random() * 40, dur: 0.12, gain: 0.03 });
+          noiseHit({ bus: 'creature', at: i * 0.22, dur: 0.1, freq: 500 + Math.random() * 400, sweepTo: 200, gain: 0.05 });
+          tone({ bus: 'creature', at: i * 0.22, freq: 90 + Math.random() * 40, dur: 0.12, gain: 0.03 });
         }
       },
       ventScramble: function (dist) {
         var a = Math.max(0.1, 1 - (dist || 20) / 50);
         for (var i = 0; i < 10; i++) {
-          noiseHit({ at: i * 0.09, dur: 0.05, type: 'bandpass', freq: 700 + Math.random() * 900, q: 3, gain: 0.04 * a });
+          noiseHit({ bus: 'creature', at: i * 0.09, dur: 0.05, type: 'bandpass', freq: 700 + Math.random() * 900, q: 3, gain: 0.04 * a });
         }
       },
       setPhase: setPhase,
@@ -691,14 +719,14 @@
         var atten = Math.max(0, 1 - dist / 42);
         if (atten <= 0.01) return;
         var v = atten * atten * (chasing ? 1.25 : 1);
-        tone({ freq: 82 + Math.random() * 14, to: 46, dur: 0.16, gain: 0.14 * v });
-        noiseHit({ dur: 0.09, freq: 340, sweepTo: 110, gain: 0.09 * v });
+        tone({ bus: 'creature', freq: 82 + Math.random() * 14, to: 46, dur: 0.16, gain: 0.14 * v });
+        noiseHit({ bus: 'creature', dur: 0.09, freq: 340, sweepTo: 110, gain: 0.09 * v });
         // the gears, always — a small ratchet under every step
-        noiseHit({ at: 0.03, dur: 0.014, type: 'highpass', freq: 3400, gain: 0.02 * v });
-        noiseHit({ at: 0.055, dur: 0.012, type: 'highpass', freq: 3900, gain: 0.014 * v });
+        noiseHit({ bus: 'creature', at: 0.03, dur: 0.014, type: 'highpass', freq: 3400, gain: 0.02 * v });
+        noiseHit({ bus: 'creature', at: 0.055, dur: 0.012, type: 'highpass', freq: 3900, gain: 0.014 * v });
         if (dist < 9) {
           // near enough to hear the joints
-          tone({ at: 0.05, freq: 620 + Math.random() * 300, to: 480, dur: 0.09, type: 'triangle', gain: 0.012 * v, wobble: { rate: 11, depth: 50 } });
+          tone({ bus: 'creature', at: 0.05, freq: 620 + Math.random() * 300, to: 480, dur: 0.09, type: 'triangle', gain: 0.012 * v, wobble: { rate: 11, depth: 50 } });
         }
       },
       doorSlam: function (dist) {
@@ -709,8 +737,8 @@
       },
       spotted: function () {
         // it stops, and the note under everything rises
-        tone({ freq: 46, to: 130, dur: 1.4, type: 'sawtooth', gain: 0.07, attack: 0.25 });
-        noiseHit({ dur: 1.1, type: 'bandpass', freq: 500, sweepTo: 1600, q: 4, gain: 0.05, attack: 0.2 });
+        tone({ bus: 'creature', freq: 46, to: 130, dur: 1.4, type: 'sawtooth', gain: 0.07, attack: 0.25 });
+        noiseHit({ bus: 'creature', dur: 1.1, type: 'bandpass', freq: 500, sweepTo: 1600, q: 4, gain: 0.05, attack: 0.2 });
       },
       woodHit: function () {
         // a round burying itself in birch
@@ -747,9 +775,26 @@
     var mount = options.mount || document.body;
     var ui = options.ui || {};
 
+    // ---------------- Settings ----------------
+    // Read once at build time and then live-updatable, because a phone
+    // that cannot hold a framerate needs the render scale down NOW, not
+    // after a restart.
+    var S0 = (window.SAVES && window.SAVES.settings) ? window.SAVES.settings() : {};
+    var opt = {
+      sensitivity: S0.sensitivity === undefined ? 1 : S0.sensitivity,
+      invertY: !!S0.invertY,
+      lights: S0.lights === undefined ? 6 : S0.lights,
+      renderScale: S0.renderScale === undefined ? 1 : S0.renderScale,
+      shadows: S0.shadows === undefined ? true : !!S0.shadows,
+      quality: S0.quality || 'high'
+    };
+
     // ---------------- Renderer ----------------
-    var renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    var renderer = new THREE.WebGLRenderer({
+      antialias: opt.quality !== 'low',
+      powerPreference: 'high-performance'
+    });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2) * opt.renderScale);
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.12;
@@ -883,8 +928,8 @@
     function applyLook() { camera.rotation.set(pitch, yaw, 0, 'YXZ'); }
     applyLook();
     function addLook(dx, dy) {
-      yaw -= dx * LOOK_SENSITIVITY;
-      pitch -= dy * LOOK_SENSITIVITY;
+      yaw -= dx * LOOK_SENSITIVITY * opt.sensitivity;
+      pitch -= dy * LOOK_SENSITIVITY * opt.sensitivity * (opt.invertY ? -1 : 1);
       pitch = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, pitch));
       applyLook();
     }
@@ -1696,6 +1741,29 @@
         alive: true, mesh: built.g, type: 'wall', taser: true, fixed: true
       });
     })();
+
+    // Put the camera rig back exactly as it was left. Anything already in
+    // the world is torn down first, so loading twice does not stack two
+    // sets of tripods on top of each other.
+    function restoreCameras(list) {
+      planted.forEach(function (c) { if (c.mesh) scene.remove(c.mesh); });
+      planted.length = 0;
+      camAnims.length = 0;
+      (list || []).forEach(function (c) {
+        var built = c.type === 'wall' ? buildWallCam() : buildTripod();
+        built.g.position.set(c.x, c.type === 'wall' ? 2.3 : 0, c.z);
+        built.g.rotation.y = c.type === 'wall' ? (c.facing - Math.PI) : c.facing;
+        if (built.arm) built.arm.rotation.x = 1.3;
+        scene.add(built.g);
+        built.g.visible = c.alive !== false;
+        planted.push({
+          x: c.x, z: c.z, facing: c.facing, pitch: c.pitch, headY: c.headY,
+          alive: c.alive !== false, mesh: built.g, type: c.type,
+          fixed: !!c.fixed, taser: !!c.taser
+        });
+      });
+      state.cams = state.cams;
+    }
 
     function plantCamera() {
       if (!active || uiOpen || state.dead) return;
@@ -2510,7 +2578,7 @@
     var focusTimer = 0, cullTimer = 0;
     var survivalT = 0, thirstAcc = 0, hungerAcc = 0, energyAcc = 0, stillAcc = 0;
     var collapseAcc = 0, fuelLineT = 20, rageRelight = 0;
-    var ACTIVE_LIGHTS = 6;
+    var ACTIVE_LIGHTS = opt.lights;   // live-updatable from Settings
     level.cullLights(camera.position, ACTIVE_LIGHTS);
 
     function tick() {
@@ -3815,6 +3883,110 @@
           hipAngles: [playerRig.joints.hipL.rotation.x, playerRig.joints.hipR.rotation.x]
         };
       },
+      // ---------------- settings, applied live ----------------
+      applySettings: function (s) {
+        if (!s) return opt;
+        if (s.sensitivity !== undefined) opt.sensitivity = s.sensitivity;
+        if (s.invertY !== undefined) opt.invertY = !!s.invertY;
+        if (s.lights !== undefined && s.lights !== opt.lights) {
+          opt.lights = s.lights;
+          ACTIVE_LIGHTS = s.lights;
+          level.cullLights(camera.position, ACTIVE_LIGHTS);
+        }
+        if (s.renderScale !== undefined && s.renderScale !== opt.renderScale) {
+          opt.renderScale = s.renderScale;
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2) * opt.renderScale);
+          renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        if (s.shadows !== undefined) {
+          opt.shadows = !!s.shadows;
+          renderer.shadowMap.enabled = opt.shadows;
+        }
+        if (audio && (s.volMusic !== undefined || s.volSfx !== undefined || s.volCreature !== undefined)) {
+          audio.setVolumes({ music: s.volMusic, sfx: s.volSfx, creature: s.volCreature });
+        }
+        return opt;
+      },
+      settingsNow: function () { return JSON.parse(JSON.stringify(opt)); },
+      audioVolumes: function () { return audio ? audio.volumes() : null; },
+      lookBy: function (dx, dy) { addLook(dx, dy); },
+
+      // ---------------- save and load ----------------
+      // Everything that would be missed if it were not here: where you are,
+      // what you are carrying, how far through the story you got, which
+      // doors are open, which items you have already taken, and what the
+      // thing in the building is currently doing.
+      snapshot: function () {
+        var snap = { v: 1, at: Date.now(), state: {} };
+        var SKIP = { room: 1 };
+        Object.keys(state).forEach(function (k) {
+          if (SKIP[k]) return;
+          var v = state[k];
+          if (v === null || typeof v !== 'object') { snap.state[k] = v; return; }
+          snap.state[k] = JSON.parse(JSON.stringify(v));
+        });
+        snap.player = {
+          x: camera.position.x, y: camera.position.y, z: camera.position.z,
+          yaw: yaw, pitch: pitch
+        };
+        // items already taken, so they do not come back on load
+        var root = level.group || scene;
+        snap.hidden = [];
+        root.traverse(function (o) {
+          if (o.isMesh && o.userData.interact && !meshShown(o)) snap.hidden.push(o.userData.interact.id);
+        });
+        snap.listed = level.interactables.map(function (m) { return m.userData.interact.id; });
+        snap.doors = level.doorStates ? level.doorStates() : null;
+        snap.cams = planted.map(function (c) {
+          return { x: c.x, z: c.z, facing: c.facing, pitch: c.pitch, headY: c.headY,
+            alive: c.alive, type: c.type, fixed: !!c.fixed, taser: !!c.taser };
+        });
+        snap.entity = entity ? entity.serialize() : null;
+        snap.crates = openedCrates;
+        return snap;
+      },
+
+      restore: function (snap) {
+        if (!snap || !snap.state) return false;
+        Object.keys(snap.state).forEach(function (k) {
+          if (k === 'room') return;
+          state[k] = snap.state[k];
+        });
+        state.room = level.roomAt(snap.player ? snap.player.x : 0, snap.player ? snap.player.z : 0);
+        if (snap.player) {
+          camera.position.set(snap.player.x, snap.player.y, snap.player.z);
+          yaw = snap.player.yaw; pitch = snap.player.pitch;
+          applyLook();
+        }
+        velocity.set(0, 0, 0);
+        openedCrates = snap.crates || {};
+
+        // items that were picked up stay picked up
+        if (snap.hidden && snap.hidden.length) {
+          var want = {};
+          snap.hidden.forEach(function (id) { want[id] = true; });
+          var root2 = level.group || scene;
+          root2.traverse(function (o) {
+            if (!o.isMesh || !o.userData.interact) return;
+            if (!want[o.userData.interact.id]) return;
+            var node = o.parent && o.parent !== root2 ? o.parent : o;
+            node.visible = false;
+            var i = level.interactables.indexOf(o);
+            if (i >= 0) level.interactables.splice(i, 1);
+          });
+        }
+        if (snap.doors && level.setDoorStates) level.setDoorStates(snap.doors);
+        if (snap.cams) restoreCameras(snap.cams);
+        if (entity && snap.entity) entity.deserialize(snap.entity);
+        if (state.hasFlashlight) setTorch(!!state.torchOn);
+        clearFocus();
+        refreshHud();
+        if (ui.onClock) ui.onClock(state.dayNo, state.phase, Math.max(0, state.clock));
+        if (ui.onObjective) ui.onObjective(beat(), state.beatTimer);
+        checkBeat();
+        return true;
+      },
+
       // the top-level node an item belongs to, so a test can move it
       interactableNode: function (id) {
         var root = level.group || scene;

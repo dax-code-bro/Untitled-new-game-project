@@ -55,7 +55,7 @@ const indexHtml = read('index.html');
 const threeSrc = read('vendor/three/three.module.min.js');
 
 // Every local script index.html pulls in, in document order.
-const LOCAL_SCRIPTS = ['textures.js', 'fittings.js', 'humanoid.js', 'story.js', 'intro.js', 'weapons.js', 'entity.js', 'kills.js', 'level.js', 'game.js'];
+const LOCAL_SCRIPTS = ['textures.js', 'fittings.js', 'humanoid.js', 'story.js', 'intro.js', 'weapons.js', 'saves.js', 'entity.js', 'kills.js', 'level.js', 'game.js'];
 const sources = new Map(LOCAL_SCRIPTS.map((name) => [name, read(name)]));
 
 // Nothing inlined into a <script> may contain a closing script tag.

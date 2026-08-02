@@ -80,175 +80,74 @@
   #curtain[hidden] { display: none; }
   #curtain.dismissing { opacity: 0; backdrop-filter: blur(0px); }
 
-  /* What is on the lens while it kills you. Held on a separate layer from
-     the vignette so a death can run over any lighting state. */
-  #gore {
-    position: fixed; inset: 0; z-index: 26; pointer-events: none; opacity: 0;
-    background:
-      radial-gradient(120% 90% at 50% 55%, rgba(120,10,6,0) 34%, rgba(96,6,4,0.62) 72%, rgba(38,2,2,0.95) 100%),
-      radial-gradient(38% 30% at 34% 42%, rgba(150,14,8,0.5), rgba(150,14,8,0) 70%),
-      radial-gradient(30% 26% at 68% 60%, rgba(132,10,6,0.45), rgba(132,10,6,0) 70%);
+  /* ---------- menu panels: saves and settings ---------- */
+  /* .card sets display:flex and is declared later, so hiding a panel needs
+     to out-rank it rather than politely lose to it */
+  .panel { width: min(560px, 100%); margin: auto; flex-direction: column; gap: 14px; }
+  .panel:not(.on) { display: none !important; }
+  .panel.on { display: flex; }
+  [hidden] { display: none !important; }
+  .panel h2 {
+    font-size: 11px; letter-spacing: 0.32em; text-transform: uppercase;
+    color: var(--tungsten); margin: 0; font-weight: 500;
   }
-  /* the running-down-the-lens part */
-  #gore::after {
-    content: ''; position: absolute; inset: 0;
-    background:
-      linear-gradient(to bottom, rgba(88,4,3,0.75) 0%, rgba(88,4,3,0) 26%),
-      radial-gradient(9% 34% at 22% 12%, rgba(104,6,4,0.8), rgba(104,6,4,0) 72%),
-      radial-gradient(6% 26% at 61% 6%, rgba(104,6,4,0.7), rgba(104,6,4,0) 72%),
-      radial-gradient(7% 30% at 84% 16%, rgba(104,6,4,0.7), rgba(104,6,4,0) 72%);
-  }
-  /* everything the player normally reads goes away for the duration */
-  body.killing #crosshair, body.killing #prompt, body.killing #clock,
-  body.killing #objective, body.killing #dialogue, body.killing #subtitle,
-  body.killing #carry, body.killing #ammo, body.killing #meters,
-  body.killing #status, body.killing #stick, body.killing #touchbar,
-  body.killing #hotbar, body.killing #roomname, body.killing #sound {
-    opacity: 0 !important; pointer-events: none !important;
-    transition: opacity 220ms ease;
-  }
-  #blackout {
-    position: fixed; inset: 0; z-index: 30; background: #000;
-    opacity: 0; pointer-events: none; transition: opacity 130ms linear;
-  }
-  #blackout.on { opacity: 1; }
-  /* coming to on the floor, not a scene cut — a slower fade for the opening */
-  #blackout.slow { transition: opacity 2000ms ease; }
+  .panel .sub { font-size: 12px; color: var(--concrete-l); margin: -6px 0 2px; line-height: 1.65; }
 
-  .card { width: min(460px,100%); display: flex; flex-direction: column; gap: 22px; margin: auto; }
-  .eyebrow {
-    display: flex; align-items: center; gap: 10px;
-    font-size: 11px; letter-spacing: 0.34em; text-transform: uppercase;
-    color: var(--concrete-l);
-  }
-  .eyebrow::after {
-    content: ""; flex: 1; height: 1px;
-    background: linear-gradient(90deg, var(--concrete) 0%, transparent 100%);
-  }
-  .mark {
-    width: 7px; height: 7px; flex: none; background: var(--oxide);
-    box-shadow: 0 0 10px rgba(126,53,41,0.9);
-  }
-  .titleblock { display: flex; flex-direction: column; gap: 2px; }
-  .title-sm {
-    font-size: clamp(13px,3vw,16px); letter-spacing: 0.48em;
-    text-transform: uppercase; color: var(--concrete-l);
-  }
-  .title-lg {
-    font-size: clamp(38px,9vw,74px); line-height: 0.94; font-weight: 700;
-    letter-spacing: -0.025em; text-transform: uppercase; color: var(--bone);
-    text-wrap: balance; text-shadow: 0 0 42px rgba(240,190,123,0.14);
-  }
-  .spec { display: flex; flex-direction: column; }
-  .spec-row {
-    display: flex; align-items: baseline; gap: 16px; padding: 9px 0;
-    border-top: 1px solid rgba(107,113,115,0.22); font-size: 12.5px;
-  }
-  .spec-row:last-child { border-bottom: 1px solid rgba(107,113,115,0.22); }
-  .spec-key {
-    flex: none; width: 104px; font-size: 11px; letter-spacing: 0.2em;
-    text-transform: uppercase; color: var(--concrete-l);
-  }
-  .spec-val { color: var(--bone); font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
-  .failing { color: var(--oxide); animation: failFlicker 4.2s steps(1) infinite; }
-  @keyframes failFlicker {
-    0%,86%,89%,93%,100% { opacity: 1; } 87%,91% { opacity: 0.28; }
-  }
-  .none { color: var(--concrete-l); }
-  .actions { display: flex; flex-direction: column; gap: 14px; }
-  #enter {
-    appearance: none; width: 100%; padding: 15px 20px; background: transparent;
+  /* every button in the menu wears the same coat as ENTER THE ROOM */
+  .panel button, .menu-btns button {
+    appearance: none; width: 100%; padding: 12px 16px; background: transparent;
     border: 1px solid var(--concrete); color: var(--tungsten);
-    font-family: var(--mono); font-size: 12px; letter-spacing: 0.3em;
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.22em;
     text-transform: uppercase; cursor: pointer;
-    transition: border-color 200ms ease, color 200ms ease, background-color 200ms ease, box-shadow 260ms ease;
+    transition: border-color 200ms ease, color 200ms ease, background-color 200ms ease;
   }
-  #enter:hover { border-color: var(--tungsten); background: rgba(240,190,123,0.06); box-shadow: 0 0 34px rgba(240,190,123,0.12); }
-  #enter:focus-visible { outline: 2px solid var(--tungsten); outline-offset: 3px; }
-  .hint { font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--concrete); line-height: 1.9; }
-  .hint b { color: var(--concrete-l); font-weight: 400; }
+  .panel button:hover:not(:disabled), .menu-btns button:hover {
+    border-color: var(--tungsten); background: rgba(240,190,123,0.06);
+  }
+  .panel button:disabled { opacity: 0.35; cursor: default; }
+  .panel button:focus-visible, .menu-btns button:focus-visible {
+    outline: 2px solid var(--tungsten); outline-offset: 3px;
+  }
+  .menu-btns { display: flex; flex-direction: column; gap: 9px; margin-top: 9px; }
+  .row2 { display: flex; gap: 9px; }
+  .row2 button { flex: 1; }
 
-  /* ---------------- HUD ---------------- */
-  #crosshair {
-    position: fixed; top: 50%; left: 50%; z-index: 5;
-    width: 3px; height: 3px; margin: -1.5px 0 0 -1.5px; border-radius: 50%;
-    background: rgba(199,195,184,0.5); pointer-events: none; opacity: 0;
-    transition: opacity 400ms ease, background-color 200ms ease, transform 160ms ease;
+  .saveList { display: flex; flex-direction: column; gap: 8px; max-height: 44vh; overflow-y: auto; }
+  .saveRow {
+    display: flex; align-items: center; gap: 12px; text-align: left;
+    padding: 12px 14px; border: 1px solid var(--concrete-d);
+    background: rgba(16,18,20,0.7); cursor: pointer;
+    color: var(--bone); font-family: var(--mono); width: 100%;
+    transition: border-color 180ms ease, background-color 180ms ease;
   }
-  #crosshair.on { opacity: 1; }
-  #crosshair.hot { background: var(--tungsten); transform: scale(1.9); }
+  .saveRow:hover { border-color: var(--concrete-l); background: rgba(26,28,30,0.85); }
+  .saveRow.sel { border-color: var(--tungsten); background: rgba(240,190,123,0.05); }
+  .saveRow .nm { font-size: 13.5px; letter-spacing: 0.04em; color: var(--bone); }
+  .saveRow .meta { font-size: 10.5px; color: var(--concrete-l); margin-top: 5px; line-height: 1.7; letter-spacing: 0.06em; }
+  .saveRow .grow { flex: 1; min-width: 0; }
+  .saveRow .badge {
+    font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--tungsten); white-space: nowrap;
+  }
+  .empty { font-size: 11.5px; color: var(--concrete-l); padding: 14px 2px; line-height: 1.8; letter-spacing: 0.06em; }
 
-  #prompt {
-    position: fixed; left: 50%; top: calc(50% + 26px); z-index: 6;
-    transform: translateX(-50%);
-    font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase;
-    color: var(--bone); text-shadow: 0 2px 12px #000;
-    pointer-events: none; opacity: 0; transition: opacity 160ms ease;
-    white-space: nowrap;
+  .setRow { display: flex; align-items: center; gap: 12px; padding: 6px 0; }
+  .setRow label { flex: 1.1; font-size: 11.5px; color: var(--bone); letter-spacing: 0.08em; }
+  .setRow input[type=range] { flex: 1; accent-color: var(--tungsten); min-width: 0; }
+  .setRow .val { width: 46px; text-align: right; font-size: 10.5px; color: var(--tungsten); letter-spacing: 0.08em; }
+  .setRow select, .nameField input {
+    background: rgba(10,12,13,0.92); color: var(--bone);
+    border: 1px solid var(--concrete); font-family: var(--mono);
+    padding: 9px 10px; font-size: 11.5px; letter-spacing: 0.08em;
   }
-  #prompt.on { opacity: 1; }
-  #prompt .key {
-    display: inline-block; padding: 1px 6px; margin-right: 8px;
-    border: 1px solid var(--concrete-l); color: var(--tungsten);
-  }
-
-  #roomname {
-    position: fixed; left: max(20px, env(safe-area-inset-left));
-    top: max(18px, env(safe-area-inset-top)); z-index: 6;
-    font-size: 11px; letter-spacing: 0.34em; text-transform: uppercase;
-    color: var(--concrete-l); pointer-events: none;
-    opacity: 0; transition: opacity 600ms ease;
-  }
-  #roomname.on { opacity: 1; }
-
-  #status {
-    position: fixed; left: max(20px, env(safe-area-inset-left));
-    bottom: max(18px, env(safe-area-inset-bottom)); z-index: 6;
-    display: flex; flex-direction: column; gap: 6px;
-    font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
-    color: var(--concrete); pointer-events: none; opacity: 0;
-    transition: opacity 500ms ease;
-  }
-  #status.on { opacity: 1; }
-  #stance { color: var(--concrete-l); }
-  #legend { line-height: 1.9; }
-  #legend b { color: var(--concrete-l); font-weight: 400; }
-
-  #ammo {
-    position: fixed; right: max(20px, env(safe-area-inset-right));
-    bottom: max(18px, env(safe-area-inset-bottom)); z-index: 6;
-    text-align: right; font-variant-numeric: tabular-nums;
-    color: var(--bone); pointer-events: none; opacity: 0;
-    transition: opacity 400ms ease;
-  }
-  #ammo.on { opacity: 1; }
-  #ammo .big { font-size: 30px; letter-spacing: 0.04em; line-height: 1; }
-  #ammo .sub { font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--concrete-l); margin-top: 5px; }
-  #ammo.dry .big { color: var(--oxide); }
-
-  #carry {
-    position: fixed; right: max(20px, env(safe-area-inset-right));
-    top: max(56px, calc(env(safe-area-inset-top) + 48px)); z-index: 6;
-    display: flex; flex-direction: column; gap: 5px; align-items: flex-end;
-    font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
-    color: var(--concrete-l); pointer-events: none;
-  }
-  #carry span { border: 1px solid rgba(107,113,115,0.3); padding: 4px 9px; }
-
-  #subtitle {
-    position: fixed; left: 50%; bottom: max(86px, calc(env(safe-area-inset-bottom) + 76px));
-    transform: translateX(-50%); z-index: 6;
-    width: min(560px, calc(100vw - 48px)); text-align: center;
-    font-size: 13px; line-height: 1.7; color: var(--bone);
-    text-shadow: 0 2px 14px #000; pointer-events: none;
-    opacity: 0; transition: opacity 400ms ease, bottom 220ms ease;
-  }
-  #subtitle.on { opacity: 1; }
-  /* both caption lines can be up at once — a scene playing while the world
-     says something. Lift the ambient line clear of the spoken one. */
-  #dialogue.on ~ #subtitle {
-    bottom: max(190px, calc(env(safe-area-inset-bottom) + 174px));
-  }
+  .setRow select { flex: 1; min-width: 0; }
+  .setGroup { border-top: 1px solid var(--concrete-d); padding-top: 12px; margin-top: 6px; }
+  .keyList { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; font-size: 10.5px; color: var(--concrete-l); letter-spacing: 0.06em; }
+  .keyList b { color: var(--bone); font-weight: 400; }
+  .warn { font-size: 10.5px; color: var(--oxide); line-height: 1.7; letter-spacing: 0.08em; }
+  .nameField { display: flex; gap: 8px; }
+  .nameField input { flex: 1; min-width: 0; }
+  .nameField button { width: auto !important; flex: 0 0 auto; }
 
   #sound {
     position: fixed; right: max(18px, env(safe-area-inset-right));
@@ -664,9 +563,95 @@
       <div class="spec-row"><span class="spec-key">Occupancy</span><span class="spec-val none">No survivors recorded</span></div>
       <div class="spec-row"><span class="spec-key">Exits</span><span class="spec-val none">None recorded</span></div>
     </div>
-    <div class="actions">
+    <div class="actions" id="mainActions">
       <button id="enter" type="button">Enter the room</button>
+      <div class="menu-btns" id="menuBtns">
+        <button id="btnSaves" type="button">Select save</button>
+        <button id="btnSettings" type="button">Settings</button>
+      </div>
       <p class="hint" id="hint"></p>
+    </div>
+  </div>
+
+  <!-- ---------- save picker ---------- -->
+  <div class="panel" id="savePanel">
+    <h2>Save files</h2>
+    <p class="sub" id="saveSub"></p>
+    <div class="saveList" id="saveList"></div>
+    <div class="nameField" id="renameField" hidden>
+      <input id="renameInput" type="text" maxlength="28" placeholder="Name this save" />
+      <button id="renameOk" type="button">Rename</button>
+    </div>
+    <p class="warn" id="saveWarn" hidden></p>
+    <div class="row2">
+      <button id="saveLoad" type="button" disabled>Continue</button>
+      <button id="saveRename" type="button" disabled>Rename</button>
+      <button id="saveDelete" type="button" disabled>Delete</button>
+    </div>
+    <div class="row2">
+      <button id="saveNew" type="button">New game</button>
+      <button id="saveBack" type="button">Back</button>
+    </div>
+  </div>
+
+  <!-- ---------- naming a new save ---------- -->
+  <div class="panel" id="namePanel">
+    <h2>Name this one</h2>
+    <p class="sub">Every save has a name, and no two can share one. You can change it later.</p>
+    <div class="nameField">
+      <input id="newName" type="text" maxlength="28" placeholder="Night 1" />
+    </div>
+    <p class="warn" id="nameWarn" hidden></p>
+    <div class="row2">
+      <button id="nameOk" type="button">Begin</button>
+      <button id="nameBack" type="button">Back</button>
+    </div>
+  </div>
+
+  <!-- ---------- settings ---------- -->
+  <div class="panel" id="setPanel">
+    <h2>Settings</h2>
+    <div class="setGroup">
+      <h2>Volume</h2>
+      <div class="setRow"><label for="vMusic">Background music</label><input id="vMusic" type="range" min="0" max="100" /><span class="val" id="vMusicV"></span></div>
+      <div class="setRow"><label for="vSfx">Sound effects</label><input id="vSfx" type="range" min="0" max="100" /><span class="val" id="vSfxV"></span></div>
+      <div class="setRow"><label for="vCreature">Creatures &amp; jump scares</label><input id="vCreature" type="range" min="0" max="100" /><span class="val" id="vCreatureV"></span></div>
+    </div>
+    <div class="setGroup">
+      <h2>Graphics</h2>
+      <div class="setRow"><label for="gQuality">Quality preset</label>
+        <select id="gQuality">
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low — for older phones</option>
+          <option value="custom">Custom</option>
+        </select></div>
+      <div class="setRow"><label for="gScale">Render scale</label><input id="gScale" type="range" min="50" max="100" step="5" /><span class="val" id="gScaleV"></span></div>
+      <div class="setRow"><label for="gLights">Active lights</label><input id="gLights" type="range" min="2" max="12" /><span class="val" id="gLightsV"></span></div>
+      <div class="setRow"><label for="gShadows">Shadows</label><select id="gShadows"><option value="1">On</option><option value="0">Off</option></select></div>
+      <div class="setRow"><label for="gGrain">Film grain</label><select id="gGrain"><option value="1">On</option><option value="0">Off</option></select></div>
+      <div class="setRow"><label for="gVig">Vignette</label><select id="gVig"><option value="1">On</option><option value="0">Off</option></select></div>
+    </div>
+    <div class="setGroup">
+      <h2>Sensitivity</h2>
+      <div class="setRow"><label for="gSens">Look sensitivity</label><input id="gSens" type="range" min="20" max="250" /><span class="val" id="gSensV"></span></div>
+      <div class="setRow"><label for="gInv">Invert vertical</label><select id="gInv"><option value="0">No</option><option value="1">Yes</option></select></div>
+    </div>
+    <div class="setGroup">
+      <h2>Controls</h2>
+      <div class="keyList">
+        <span><b>WASD</b> move</span><span><b>Mouse</b> look</span>
+        <span><b>E</b> use</span><span><b>F</b> place camera</span>
+        <span><b>G</b> torch</span><span><b>R</b> reload</span>
+        <span><b>C</b> crouch</span><span><b>Z</b> crawl</span>
+        <span><b>1–5</b> hotbar</span><span><b>Tab</b> inventory</span>
+        <span><b>Esc</b> pause</span><span><b>Hold forward</b> to run</span>
+      </div>
+      <p class="sub" style="margin-top:10px">On a phone: left thumb to move, drag anywhere to look, and the buttons across the bottom do the rest.</p>
+    </div>
+    <div class="row2">
+      <button id="setReset" type="button">Reset to defaults</button>
+      <button id="setBack" type="button">Back</button>
     </div>
   </div>
 </div>
@@ -3172,6 +3157,207 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
 </script>
 <script>
 /*
+ * THE BIRCH — save files and settings.
+ *
+ * Everything lives in localStorage, which survives the browser being
+ * killed, the phone being restarted, and the PWA being closed from the app
+ * switcher. There is no server and there is nothing to lose to a network.
+ *
+ * Every save is written twice: the live copy and a backup of whatever the
+ * live copy held before. A write interrupted halfway — the phone dying
+ * mid-autosave — can corrupt at most the live copy, and the backup is
+ * still the state from a minute ago. Loading falls back to it silently.
+ *
+ *   window.SAVES.list()                → [{id,name,created,played,meta}] newest first
+ *   window.SAVES.create(name, snap)    → record, or null if the name is taken
+ *   window.SAVES.write(id, snap)       → record
+ *   window.SAVES.read(id)              → {snap, usedBackup} | null
+ *   window.SAVES.rename(id, name)      → true | false if taken
+ *   window.SAVES.remove(id)
+ *   window.SAVES.nameTaken(name, exceptId)
+ *   window.SAVES.settings() / saveSettings(obj)
+ */
+(function () {
+  'use strict';
+
+  var INDEX = 'birch.saves.v1';
+  var SLOT = 'birch.save.v1.';
+  var BAK = 'birch.bak.v1.';
+  var SETTINGS = 'birch.settings.v1';
+
+  function store() {
+    try {
+      var s = window.localStorage;
+      s.setItem('birch.probe', '1');
+      s.removeItem('birch.probe');
+      return s;
+    } catch (e) {
+      return null;      // private mode, or storage disabled
+    }
+  }
+  var LS = store();
+
+  // If localStorage is unavailable the game still has to run, so fall back
+  // to memory. Saves will not survive the tab, and the menu says so.
+  var mem = {};
+  function get(k) { return LS ? LS.getItem(k) : (mem[k] === undefined ? null : mem[k]); }
+  function set(k, v) { if (LS) LS.setItem(k, v); else mem[k] = v; }
+  function del(k) { if (LS) LS.removeItem(k); else delete mem[k]; }
+
+  function parse(raw, fallback) {
+    if (raw === null || raw === undefined) return fallback;
+    try { return JSON.parse(raw); } catch (e) { return fallback; }
+  }
+
+  function readIndex() {
+    var idx = parse(get(INDEX), null);
+    if (!idx || !idx.saves || !idx.saves.length) return [];
+    return idx.saves;
+  }
+  function writeIndex(saves) {
+    set(INDEX, JSON.stringify({ v: 1, saves: saves }));
+  }
+
+  function norm(name) { return String(name || '').trim().replace(/\s+/g, ' '); }
+  function key(name) { return norm(name).toLowerCase(); }
+
+  function newId() {
+    // no Date.now collisions: the counter carries across calls in a tick
+    newId.n = (newId.n || 0) + 1;
+    return 's' + Date.now().toString(36) + newId.n.toString(36);
+  }
+
+  var api = {
+    available: function () { return !!LS; },
+
+    list: function () {
+      return readIndex().slice().sort(function (a, b) { return (b.played || 0) - (a.played || 0); });
+    },
+    count: function () { return readIndex().length; },
+
+    nameTaken: function (name, exceptId) {
+      var k = key(name);
+      return readIndex().some(function (s) { return key(s.name) === k && s.id !== exceptId; });
+    },
+
+    // A name that is not in use yet, for prefilling the box.
+    suggestName: function () {
+      var n = readIndex().length + 1;
+      while (api.nameTaken('Night ' + n)) n++;
+      return 'Night ' + n;
+    },
+
+    create: function (name, snap, meta) {
+      name = norm(name);
+      if (!name) return null;
+      if (api.nameTaken(name)) return null;
+      var now = Date.now();
+      var rec = { id: newId(), name: name, created: now, played: now, meta: meta || {} };
+      var saves = readIndex();
+      saves.push(rec);
+      writeIndex(saves);
+      set(SLOT + rec.id, JSON.stringify(snap || {}));
+      return rec;
+    },
+
+    // Write, keeping the previous contents as the backup. This is the
+    // order that matters: back up what is already there BEFORE overwriting
+    // it, so a write that dies halfway leaves one good copy behind.
+    write: function (id, snap, meta) {
+      var saves = readIndex();
+      var rec = null;
+      for (var i = 0; i < saves.length; i++) if (saves[i].id === id) rec = saves[i];
+      if (!rec) return null;
+      var prev = get(SLOT + id);
+      if (prev !== null) {
+        try { set(BAK + id, prev); } catch (e) { /* quota: the live copy matters more */ }
+      }
+      set(SLOT + id, JSON.stringify(snap || {}));
+      rec.played = Date.now();
+      if (meta) rec.meta = meta;
+      writeIndex(saves);
+      return rec;
+    },
+
+    read: function (id) {
+      var raw = get(SLOT + id);
+      var snap = parse(raw, null);
+      if (snap && typeof snap === 'object') return { snap: snap, usedBackup: false };
+      // the live copy is missing or was written through — fall back
+      var b = parse(get(BAK + id), null);
+      if (b && typeof b === 'object') return { snap: b, usedBackup: true };
+      return null;
+    },
+
+    record: function (id) {
+      var saves = readIndex();
+      for (var i = 0; i < saves.length; i++) if (saves[i].id === id) return saves[i];
+      return null;
+    },
+
+    rename: function (id, name) {
+      name = norm(name);
+      if (!name) return false;
+      if (api.nameTaken(name, id)) return false;
+      var saves = readIndex();
+      for (var i = 0; i < saves.length; i++) {
+        if (saves[i].id === id) { saves[i].name = name; writeIndex(saves); return true; }
+      }
+      return false;
+    },
+
+    remove: function (id) {
+      writeIndex(readIndex().filter(function (s) { return s.id !== id; }));
+      del(SLOT + id);
+      del(BAK + id);
+    },
+
+    // most recently played, for the Continue button
+    latest: function () {
+      var l = api.list();
+      return l.length ? l[0] : null;
+    },
+
+    // ---------------- settings ----------------
+    DEFAULTS: {
+      volMusic: 0.7, volSfx: 0.9, volCreature: 1.0, muted: false,
+      sensitivity: 1.0, invertY: false,
+      quality: 'high',        // high | medium | low
+      shadows: true, grain: true, vignette: true, lights: 6, renderScale: 1,
+      keys: null              // null = the defaults in the engine
+    },
+    settings: function () {
+      var s = parse(get(SETTINGS), {}) || {};
+      var out = {};
+      Object.keys(api.DEFAULTS).forEach(function (k) {
+        out[k] = (s[k] === undefined || s[k] === null) && k !== 'keys' ? api.DEFAULTS[k] : s[k];
+      });
+      if (out.keys === undefined) out.keys = null;
+      return out;
+    },
+    saveSettings: function (obj) {
+      set(SETTINGS, JSON.stringify(obj || {}));
+      return obj;
+    },
+
+    // how much room is left, roughly, so the menu can warn before it bites
+    usage: function () {
+      if (!LS) return null;
+      var n = 0;
+      for (var i = 0; i < LS.length; i++) {
+        var k = LS.key(i);
+        if (k && k.indexOf('birch.') === 0) n += (LS.getItem(k) || '').length + k.length;
+      }
+      return n;
+    }
+  };
+
+  window.SAVES = api;
+})();
+
+</script>
+<script>
+/*
  * Untitled Horror Game — the Birch.
  *
  * A store mannequin, eleven feet tall, hand-carved from pale birch with
@@ -3971,6 +4157,53 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
           hunch: hunch, splay: splay, onCeiling: ceilingT > 0.5,
           y: g.position.y, headSpin: headGroup.rotation.y, pose: pose
         };
+      },
+      // ---- for a save file ----
+      serialize: function () {
+        return {
+          mode: mode, x: pos.x, z: pos.z, facing: facing,
+          lurkIndex: lurkIndex, lurkT: lurkT, rageT: isFinite(rageT) ? rageT : -1,
+          hits: hits, bloodied: bloodied, armsLeft: armsLeft, headOn: headOn,
+          angered: angered, spottedOnce: spottedOnce, ventsOpen: ventsOpen,
+          daylightHold: daylightHold, visible: g.visible, fleeT: fleeT,
+          woundSide: woundSide, woundHeld: woundHeld
+        };
+      },
+      deserialize: function (s) {
+        if (!s) return false;
+        pos.x = s.x; pos.z = s.z; facing = s.facing || 0;
+        lurkIndex = s.lurkIndex || 0;
+        lurkT = s.lurkT || 0;
+        rageT = s.rageT === -1 ? Infinity : (s.rageT || 0);
+        hits = s.hits || 0;
+        armsLeft = s.armsLeft === undefined ? 2 : s.armsLeft;
+        headOn = s.headOn !== false;
+        angered = !!s.angered;
+        spottedOnce = !!s.spottedOnce;
+        ventsOpen = !!s.ventsOpen;
+        daylightHold = s.daylightHold || null;
+        fleeT = s.fleeT || 0;
+        woundSide = s.woundSide || 0;
+        woundHeld = s.woundHeld || 0;
+        staggerT = freezeT = bangT = menaceT = 0;
+        frozenForKill = false;
+        if (s.bloodied && !bloodied) {
+          bloodied = true;
+          meshes.blood.forEach(function (b) { b.visible = true; });
+          torso.material = birchBloody;
+          head.material = birchBloody;
+        }
+        if (armsLeft < 2) armR.shoulder.visible = false;
+        if (armsLeft < 1) armL.shoulder.visible = false;
+        if (!headOn) headGroup.visible = false;
+        mode = s.mode || 'dormant';
+        drawFace(rageT > 0 ? 'sharpie' : 'none');
+        setPose(mode === 'lurk' ? LURKS[lurkIndex].pose : 'walk');
+        g.visible = s.visible !== false && mode !== 'dormant';
+        g.position.set(pos.x, 0, pos.z);
+        g.rotation.set(0, facing, 0);
+        if (mode === 'destroyed') { g.rotation.x = Math.PI / 2 - 0.15; g.position.y = 0.35; }
+        return true;
       },
       force: function (x, z, m, lurkId) {
         pos.x = x; pos.z = z;
@@ -6359,6 +6592,26 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       setDim: setDim,
       toggleDoor: doors.toggle,
       isDoorOpen: doors.isOpen,
+      // which doors are standing open, for a save file
+      doorStates: function () {
+        var out = {};
+        Object.keys(doors.runtime).forEach(function (id) {
+          var d = doors.runtime[id];
+          if (d.kind !== 'none') out[id] = d.open ? 1 : 0;
+        });
+        return out;
+      },
+      setDoorStates: function (map) {
+        if (!map) return;
+        Object.keys(map).forEach(function (id) {
+          var d = doors.runtime[id];
+          if (!d || d.kind === 'none') return;
+          var want = !!map[id];
+          if (d.open === want) return;
+          doors.toggle(id);
+          d.angle = d.target;          // already there, not swinging into place
+        });
+      },
       destroyDoor: doors.destroy,
       doorIds: function () { return Object.keys(doors.runtime); },
       lightCount: pointLights.length,
@@ -6405,6 +6658,10 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
     var currentRoom = null;
     var nextAmbient = 6;
     var motionBed = null, whisperBed = null;
+    // Three buses under the master, so the player can turn the music down
+    // without turning the thing in the corridor down with it.
+    var busMusic = null, busSfx = null, busCreature = null;
+    var vol = { music: 0.7, sfx: 0.9, creature: 1.0 };
     var creakClock = 0;
 
     function now() { return ctx.currentTime; }
@@ -6415,6 +6672,14 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       var d = buf.getChannelData(0);
       for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
       return buf;
+    }
+
+    // Which bus a sound belongs on. Default is effects; anything the
+    // creature makes is tagged so it can be turned down on its own.
+    function busFor(name) {
+      if (name === 'creature') return busCreature || master;
+      if (name === 'music') return busMusic || master;
+      return busSfx || master;
     }
 
     // A filtered noise hit, schedulable slightly in the future.
@@ -6433,7 +6698,7 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       g.gain.setValueAtTime(0, t);
       g.gain.linearRampToValueAtTime(o.gain, t + (o.attack || 0.004));
       g.gain.exponentialRampToValueAtTime(0.0001, t + o.dur);
-      s.connect(f); f.connect(g); g.connect(master);
+      s.connect(f); f.connect(g); g.connect(busFor(o.bus));
       s.start(t); s.stop(t + o.dur + 0.03);
     }
 
@@ -6459,7 +6724,7 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
         lfo.connect(lg); lg.connect(osc.frequency);
         lfo.start(t); lfo.stop(t + o.dur + 0.05);
       }
-      osc.connect(g); g.connect(master);
+      osc.connect(g); g.connect(busFor(o.bus));
       osc.start(t); osc.stop(t + o.dur + 0.05);
     }
 
@@ -6478,7 +6743,7 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
     function makeMotion() {
       var g = ctx.createGain();
       g.gain.value = 0;
-      g.connect(master);
+      g.connect(busFor('creature'));
 
       var whine = ctx.createOscillator();
       whine.type = 'sawtooth';
@@ -6511,7 +6776,7 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
     function makeWhisper() {
       var g = ctx.createGain();
       g.gain.value = 0;
-      g.connect(master);
+      g.connect(busFor('creature'));
 
       var src = ctx.createBufferSource();
       src.buffer = noiseBuffer(5);
@@ -6644,12 +6909,16 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       master.gain.value = 0.9;
       master.connect(ctx.destination);
 
+      busMusic = ctx.createGain(); busMusic.gain.value = vol.music; busMusic.connect(master);
+      busSfx = ctx.createGain(); busSfx.gain.value = vol.sfx; busSfx.connect(master);
+      busCreature = ctx.createGain(); busCreature.gain.value = vol.creature; busCreature.connect(master);
+
       muzak = ctx.createGain();
       muzak.gain.value = 0;
       var mf = ctx.createBiquadFilter();
       mf.type = 'lowpass';
       mf.frequency.value = 2600;
-      muzak.connect(mf); mf.connect(master);
+      muzak.connect(mf); mf.connect(busMusic);
       buildMuzak().then(function (buf) {
         muzakSrc = ctx.createBufferSource();
         muzakSrc.buffer = buf;
@@ -6884,6 +7153,18 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       footstep: footstep,
       get started() { return started; },
       debugBeds: function () { return Object.keys(beds); },
+      // the three sliders in Settings
+      setVolumes: function (v) {
+        if (v.music !== undefined) vol.music = v.music;
+        if (v.sfx !== undefined) vol.sfx = v.sfx;
+        if (v.creature !== undefined) vol.creature = v.creature;
+        if (!started) return vol;
+        busMusic.gain.setTargetAtTime(vol.music, now(), 0.05);
+        busSfx.gain.setTargetAtTime(vol.sfx, now(), 0.05);
+        busCreature.gain.setTargetAtTime(vol.creature, now(), 0.05);
+        return vol;
+      },
+      volumes: function () { return { music: vol.music, sfx: vol.sfx, creature: vol.creature }; },
       setMuted: function (m) {
         muted = m;
         if (!started) return;
@@ -6915,19 +7196,19 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       // shot, and it does not like it
       scream: function (dist) {
         var a = Math.max(0.25, 1 - (dist || 8) / 40);
-        tone({ freq: 900, to: 210, dur: 1.5, type: 'sawtooth', gain: 0.16 * a, wobble: { rate: 17, depth: 190 } });
-        tone({ at: 0.04, freq: 1340, to: 320, dur: 1.3, type: 'square', gain: 0.055 * a, wobble: { rate: 23, depth: 260 } });
-        noiseHit({ dur: 1.4, type: 'bandpass', freq: 1500, sweepTo: 420, q: 2.2, gain: 0.13 * a, attack: 0.05 });
-        tone({ at: 0.2, freq: 62, to: 40, dur: 1.1, gain: 0.1 * a });
+        tone({ bus: 'creature', freq: 900, to: 210, dur: 1.5, type: 'sawtooth', gain: 0.16 * a, wobble: { rate: 17, depth: 190 } });
+        tone({ bus: 'creature', at: 0.04, freq: 1340, to: 320, dur: 1.3, type: 'square', gain: 0.055 * a, wobble: { rate: 23, depth: 260 } });
+        noiseHit({ bus: 'creature', dur: 1.4, type: 'bandpass', freq: 1500, sweepTo: 420, q: 2.2, gain: 0.13 * a, attack: 0.05 });
+        tone({ bus: 'creature', at: 0.2, freq: 62, to: 40, dur: 1.1, gain: 0.1 * a });
       },
       // eleven feet of mannequin folding itself into a 560mm duct
       ventSqueeze: function (dist) {
         var a = Math.max(0.2, 1 - (dist || 8) / 36);
         for (var i = 0; i < 7; i++) {
-          noiseHit({ at: i * 0.16, dur: 0.19, type: 'bandpass', freq: 900 + Math.random() * 1800, q: 6, gain: 0.09 * a });
+          noiseHit({ bus: 'creature', at: i * 0.16, dur: 0.19, type: 'bandpass', freq: 900 + Math.random() * 1800, q: 6, gain: 0.09 * a });
         }
-        tone({ freq: 148, to: 96, dur: 1.25, type: 'sawtooth', gain: 0.05 * a, wobble: { rate: 6, depth: 30 } });
-        noiseHit({ at: 0.9, dur: 0.35, freq: 420, sweepTo: 120, gain: 0.12 * a });
+        tone({ bus: 'creature', freq: 148, to: 96, dur: 1.25, type: 'sawtooth', gain: 0.05 * a, wobble: { rate: 6, depth: 30 } });
+        noiseHit({ bus: 'creature', at: 0.9, dur: 0.35, freq: 420, sweepTo: 120, gain: 0.12 * a });
       },
       // your own lungs, and the noise you make without deciding to
       panic: function (hard) {
@@ -6938,15 +7219,15 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
         // gears taking up slack before it moves
         var a = Math.max(0.1, 1 - (dist || 10) / 45);
         for (var i = 0; i < 9; i++) {
-          noiseHit({ at: i * 0.07, dur: 0.02, type: 'highpass', freq: 2800 + i * 140, gain: 0.02 * a });
+          noiseHit({ bus: 'creature', at: i * 0.07, dur: 0.02, type: 'highpass', freq: 2800 + i * 140, gain: 0.02 * a });
         }
-        tone({ dur: 0.7, freq: 160, to: 340, type: 'triangle', gain: 0.02 * a, attack: 0.2 });
+        tone({ bus: 'creature', dur: 0.7, freq: 160, to: 340, type: 'triangle', gain: 0.02 * a, attack: 0.2 });
       },
       bang: function (dist) {
         var a = Math.max(0.15, 1 - (dist || 10) / 50);
         for (var i = 0; i < 3; i++) {
-          noiseHit({ at: i * 0.4, dur: 0.3, freq: 600, sweepTo: 80, gain: 0.3 * a });
-          tone({ at: i * 0.4, freq: 55, to: 34, dur: 0.4, gain: 0.22 * a });
+          noiseHit({ bus: 'creature', at: i * 0.4, dur: 0.3, freq: 600, sweepTo: 80, gain: 0.3 * a });
+          tone({ bus: 'creature', at: i * 0.4, freq: 55, to: 34, dur: 0.4, gain: 0.22 * a });
         }
       },
       zap: function () {
@@ -6981,10 +7262,10 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       },
       doorBash: function (dist) {
         var a = Math.max(0.15, 1 - (dist || 10) / 55);
-        noiseHit({ dur: 0.5, freq: 1200, sweepTo: 90, gain: 0.4 * a });
-        tone({ freq: 60, to: 30, dur: 0.6, gain: 0.28 * a });
+        noiseHit({ bus: 'creature', dur: 0.5, freq: 1200, sweepTo: 90, gain: 0.4 * a });
+        tone({ bus: 'creature', freq: 60, to: 30, dur: 0.6, gain: 0.28 * a });
         for (var i = 0; i < 6; i++) {
-          noiseHit({ at: 0.04 + i * 0.03, dur: 0.05, type: 'bandpass', freq: 900 + Math.random() * 1400, q: 3, gain: 0.08 * a });
+          noiseHit({ bus: 'creature', at: 0.04 + i * 0.03, dur: 0.05, type: 'bandpass', freq: 900 + Math.random() * 1400, q: 3, gain: 0.08 * a });
         }
       },
       shotgun: function () {
@@ -6999,20 +7280,20 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       vomit: function () { noiseHit({ dur: 0.7, freq: 700, sweepTo: 200, gain: 0.1 }); },
       flush: function () { noiseHit({ dur: 1.6, freq: 1400, sweepTo: 300, gain: 0.09, attack: 0.15 }); },
       ventBreak: function () {
-        noiseHit({ dur: 0.3, freq: 2000, sweepTo: 300, gain: 0.2 });
-        for (var i = 0; i < 5; i++) tone({ at: 0.05 + i * 0.05, freq: 1400 + i * 300, dur: 0.06, gain: 0.02 });
-        tone({ at: 0.3, freq: 140, to: 60, dur: 0.3, gain: 0.1 });
+        noiseHit({ bus: 'creature', dur: 0.3, freq: 2000, sweepTo: 300, gain: 0.2 });
+        for (var i = 0; i < 5; i++) tone({ bus: 'creature', at: 0.05 + i * 0.05, freq: 1400 + i * 300, dur: 0.06, gain: 0.02 });
+        tone({ bus: 'creature', at: 0.3, freq: 140, to: 60, dur: 0.3, gain: 0.1 });
       },
       ventCrawl: function () {
         for (var i = 0; i < 8; i++) {
-          noiseHit({ at: i * 0.22, dur: 0.1, freq: 500 + Math.random() * 400, sweepTo: 200, gain: 0.05 });
-          tone({ at: i * 0.22, freq: 90 + Math.random() * 40, dur: 0.12, gain: 0.03 });
+          noiseHit({ bus: 'creature', at: i * 0.22, dur: 0.1, freq: 500 + Math.random() * 400, sweepTo: 200, gain: 0.05 });
+          tone({ bus: 'creature', at: i * 0.22, freq: 90 + Math.random() * 40, dur: 0.12, gain: 0.03 });
         }
       },
       ventScramble: function (dist) {
         var a = Math.max(0.1, 1 - (dist || 20) / 50);
         for (var i = 0; i < 10; i++) {
-          noiseHit({ at: i * 0.09, dur: 0.05, type: 'bandpass', freq: 700 + Math.random() * 900, q: 3, gain: 0.04 * a });
+          noiseHit({ bus: 'creature', at: i * 0.09, dur: 0.05, type: 'bandpass', freq: 700 + Math.random() * 900, q: 3, gain: 0.04 * a });
         }
       },
       setPhase: setPhase,
@@ -7062,14 +7343,14 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
         var atten = Math.max(0, 1 - dist / 42);
         if (atten <= 0.01) return;
         var v = atten * atten * (chasing ? 1.25 : 1);
-        tone({ freq: 82 + Math.random() * 14, to: 46, dur: 0.16, gain: 0.14 * v });
-        noiseHit({ dur: 0.09, freq: 340, sweepTo: 110, gain: 0.09 * v });
+        tone({ bus: 'creature', freq: 82 + Math.random() * 14, to: 46, dur: 0.16, gain: 0.14 * v });
+        noiseHit({ bus: 'creature', dur: 0.09, freq: 340, sweepTo: 110, gain: 0.09 * v });
         // the gears, always — a small ratchet under every step
-        noiseHit({ at: 0.03, dur: 0.014, type: 'highpass', freq: 3400, gain: 0.02 * v });
-        noiseHit({ at: 0.055, dur: 0.012, type: 'highpass', freq: 3900, gain: 0.014 * v });
+        noiseHit({ bus: 'creature', at: 0.03, dur: 0.014, type: 'highpass', freq: 3400, gain: 0.02 * v });
+        noiseHit({ bus: 'creature', at: 0.055, dur: 0.012, type: 'highpass', freq: 3900, gain: 0.014 * v });
         if (dist < 9) {
           // near enough to hear the joints
-          tone({ at: 0.05, freq: 620 + Math.random() * 300, to: 480, dur: 0.09, type: 'triangle', gain: 0.012 * v, wobble: { rate: 11, depth: 50 } });
+          tone({ bus: 'creature', at: 0.05, freq: 620 + Math.random() * 300, to: 480, dur: 0.09, type: 'triangle', gain: 0.012 * v, wobble: { rate: 11, depth: 50 } });
         }
       },
       doorSlam: function (dist) {
@@ -7080,8 +7361,8 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       },
       spotted: function () {
         // it stops, and the note under everything rises
-        tone({ freq: 46, to: 130, dur: 1.4, type: 'sawtooth', gain: 0.07, attack: 0.25 });
-        noiseHit({ dur: 1.1, type: 'bandpass', freq: 500, sweepTo: 1600, q: 4, gain: 0.05, attack: 0.2 });
+        tone({ bus: 'creature', freq: 46, to: 130, dur: 1.4, type: 'sawtooth', gain: 0.07, attack: 0.25 });
+        noiseHit({ bus: 'creature', dur: 1.1, type: 'bandpass', freq: 500, sweepTo: 1600, q: 4, gain: 0.05, attack: 0.2 });
       },
       woodHit: function () {
         // a round burying itself in birch
@@ -7118,9 +7399,26 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
     var mount = options.mount || document.body;
     var ui = options.ui || {};
 
+    // ---------------- Settings ----------------
+    // Read once at build time and then live-updatable, because a phone
+    // that cannot hold a framerate needs the render scale down NOW, not
+    // after a restart.
+    var S0 = (window.SAVES && window.SAVES.settings) ? window.SAVES.settings() : {};
+    var opt = {
+      sensitivity: S0.sensitivity === undefined ? 1 : S0.sensitivity,
+      invertY: !!S0.invertY,
+      lights: S0.lights === undefined ? 6 : S0.lights,
+      renderScale: S0.renderScale === undefined ? 1 : S0.renderScale,
+      shadows: S0.shadows === undefined ? true : !!S0.shadows,
+      quality: S0.quality || 'high'
+    };
+
     // ---------------- Renderer ----------------
-    var renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    var renderer = new THREE.WebGLRenderer({
+      antialias: opt.quality !== 'low',
+      powerPreference: 'high-performance'
+    });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2) * opt.renderScale);
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.12;
@@ -7254,8 +7552,8 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
     function applyLook() { camera.rotation.set(pitch, yaw, 0, 'YXZ'); }
     applyLook();
     function addLook(dx, dy) {
-      yaw -= dx * LOOK_SENSITIVITY;
-      pitch -= dy * LOOK_SENSITIVITY;
+      yaw -= dx * LOOK_SENSITIVITY * opt.sensitivity;
+      pitch -= dy * LOOK_SENSITIVITY * opt.sensitivity * (opt.invertY ? -1 : 1);
       pitch = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, pitch));
       applyLook();
     }
@@ -8067,6 +8365,29 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
         alive: true, mesh: built.g, type: 'wall', taser: true, fixed: true
       });
     })();
+
+    // Put the camera rig back exactly as it was left. Anything already in
+    // the world is torn down first, so loading twice does not stack two
+    // sets of tripods on top of each other.
+    function restoreCameras(list) {
+      planted.forEach(function (c) { if (c.mesh) scene.remove(c.mesh); });
+      planted.length = 0;
+      camAnims.length = 0;
+      (list || []).forEach(function (c) {
+        var built = c.type === 'wall' ? buildWallCam() : buildTripod();
+        built.g.position.set(c.x, c.type === 'wall' ? 2.3 : 0, c.z);
+        built.g.rotation.y = c.type === 'wall' ? (c.facing - Math.PI) : c.facing;
+        if (built.arm) built.arm.rotation.x = 1.3;
+        scene.add(built.g);
+        built.g.visible = c.alive !== false;
+        planted.push({
+          x: c.x, z: c.z, facing: c.facing, pitch: c.pitch, headY: c.headY,
+          alive: c.alive !== false, mesh: built.g, type: c.type,
+          fixed: !!c.fixed, taser: !!c.taser
+        });
+      });
+      state.cams = state.cams;
+    }
 
     function plantCamera() {
       if (!active || uiOpen || state.dead) return;
@@ -8881,7 +9202,7 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
     var focusTimer = 0, cullTimer = 0;
     var survivalT = 0, thirstAcc = 0, hungerAcc = 0, energyAcc = 0, stillAcc = 0;
     var collapseAcc = 0, fuelLineT = 20, rageRelight = 0;
-    var ACTIVE_LIGHTS = 6;
+    var ACTIVE_LIGHTS = opt.lights;   // live-updatable from Settings
     level.cullLights(camera.position, ACTIVE_LIGHTS);
 
     function tick() {
@@ -10186,6 +10507,110 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
           hipAngles: [playerRig.joints.hipL.rotation.x, playerRig.joints.hipR.rotation.x]
         };
       },
+      // ---------------- settings, applied live ----------------
+      applySettings: function (s) {
+        if (!s) return opt;
+        if (s.sensitivity !== undefined) opt.sensitivity = s.sensitivity;
+        if (s.invertY !== undefined) opt.invertY = !!s.invertY;
+        if (s.lights !== undefined && s.lights !== opt.lights) {
+          opt.lights = s.lights;
+          ACTIVE_LIGHTS = s.lights;
+          level.cullLights(camera.position, ACTIVE_LIGHTS);
+        }
+        if (s.renderScale !== undefined && s.renderScale !== opt.renderScale) {
+          opt.renderScale = s.renderScale;
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2) * opt.renderScale);
+          renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        if (s.shadows !== undefined) {
+          opt.shadows = !!s.shadows;
+          renderer.shadowMap.enabled = opt.shadows;
+        }
+        if (audio && (s.volMusic !== undefined || s.volSfx !== undefined || s.volCreature !== undefined)) {
+          audio.setVolumes({ music: s.volMusic, sfx: s.volSfx, creature: s.volCreature });
+        }
+        return opt;
+      },
+      settingsNow: function () { return JSON.parse(JSON.stringify(opt)); },
+      audioVolumes: function () { return audio ? audio.volumes() : null; },
+      lookBy: function (dx, dy) { addLook(dx, dy); },
+
+      // ---------------- save and load ----------------
+      // Everything that would be missed if it were not here: where you are,
+      // what you are carrying, how far through the story you got, which
+      // doors are open, which items you have already taken, and what the
+      // thing in the building is currently doing.
+      snapshot: function () {
+        var snap = { v: 1, at: Date.now(), state: {} };
+        var SKIP = { room: 1 };
+        Object.keys(state).forEach(function (k) {
+          if (SKIP[k]) return;
+          var v = state[k];
+          if (v === null || typeof v !== 'object') { snap.state[k] = v; return; }
+          snap.state[k] = JSON.parse(JSON.stringify(v));
+        });
+        snap.player = {
+          x: camera.position.x, y: camera.position.y, z: camera.position.z,
+          yaw: yaw, pitch: pitch
+        };
+        // items already taken, so they do not come back on load
+        var root = level.group || scene;
+        snap.hidden = [];
+        root.traverse(function (o) {
+          if (o.isMesh && o.userData.interact && !meshShown(o)) snap.hidden.push(o.userData.interact.id);
+        });
+        snap.listed = level.interactables.map(function (m) { return m.userData.interact.id; });
+        snap.doors = level.doorStates ? level.doorStates() : null;
+        snap.cams = planted.map(function (c) {
+          return { x: c.x, z: c.z, facing: c.facing, pitch: c.pitch, headY: c.headY,
+            alive: c.alive, type: c.type, fixed: !!c.fixed, taser: !!c.taser };
+        });
+        snap.entity = entity ? entity.serialize() : null;
+        snap.crates = openedCrates;
+        return snap;
+      },
+
+      restore: function (snap) {
+        if (!snap || !snap.state) return false;
+        Object.keys(snap.state).forEach(function (k) {
+          if (k === 'room') return;
+          state[k] = snap.state[k];
+        });
+        state.room = level.roomAt(snap.player ? snap.player.x : 0, snap.player ? snap.player.z : 0);
+        if (snap.player) {
+          camera.position.set(snap.player.x, snap.player.y, snap.player.z);
+          yaw = snap.player.yaw; pitch = snap.player.pitch;
+          applyLook();
+        }
+        velocity.set(0, 0, 0);
+        openedCrates = snap.crates || {};
+
+        // items that were picked up stay picked up
+        if (snap.hidden && snap.hidden.length) {
+          var want = {};
+          snap.hidden.forEach(function (id) { want[id] = true; });
+          var root2 = level.group || scene;
+          root2.traverse(function (o) {
+            if (!o.isMesh || !o.userData.interact) return;
+            if (!want[o.userData.interact.id]) return;
+            var node = o.parent && o.parent !== root2 ? o.parent : o;
+            node.visible = false;
+            var i = level.interactables.indexOf(o);
+            if (i >= 0) level.interactables.splice(i, 1);
+          });
+        }
+        if (snap.doors && level.setDoorStates) level.setDoorStates(snap.doors);
+        if (snap.cams) restoreCameras(snap.cams);
+        if (entity && snap.entity) entity.deserialize(snap.entity);
+        if (state.hasFlashlight) setTorch(!!state.torchOn);
+        clearFocus();
+        refreshHud();
+        if (ui.onClock) ui.onClock(state.dayNo, state.phase, Math.max(0, state.clock));
+        if (ui.onObjective) ui.onObjective(beat(), state.beatTimer);
+        checkBeat();
+        return true;
+      },
+
       // the top-level node an item belongs to, so a test can move it
       interactableNode: function (id) {
         var root = level.group || scene;
@@ -11022,6 +11447,68 @@ window.bootUI = function bootUI(THREE) {
   var introPlayed = false;
   var intro = null;
 
+  // ===================================================================
+  // SAVE FILES
+  // Autosaved every minute and on the way out, so a phone that dies mid-
+  // night costs you at most sixty seconds. Each write keeps the previous
+  // contents as a backup, and a load falls back to it without asking.
+  // ===================================================================
+  var SV = window.SAVES;
+  var activeSave = null;          // the id being played
+  var autosaveTimer = null;
+  var pendingLoad = null;         // a snapshot to apply once the world exists
+
+  function fmtWhen(ms) {
+    if (!ms) return 'never';
+    var d = new Date(ms), now = new Date();
+    var sameDay = d.toDateString() === now.toDateString();
+    var yst = new Date(now.getTime() - 86400000).toDateString() === d.toDateString();
+    var t = d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+    if (sameDay) return 'today ' + t;
+    if (yst) return 'yesterday ' + t;
+    return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) + ' ' + t;
+  }
+  function saveMeta() {
+    var s = game.getState();
+    return {
+      day: s.dayNo, phase: s.dayPhase, beat: s.beat,
+      objective: s.beatId, deaths: s.deaths
+    };
+  }
+  function describe(rec) {
+    var m = rec.meta || {};
+    var bits = [];
+    if (m.day) bits.push('Day ' + m.day + (m.phase === 'night' ? ' · night' : ' · daylight'));
+    if (m.beat !== undefined) bits.push('step ' + (m.beat + 1) + ' of 21');
+    if (m.deaths) bits.push(m.deaths + (m.deaths === 1 ? ' death' : ' deaths'));
+    return bits.join('  ·  ');
+  }
+
+  function writeSave() {
+    if (!activeSave || !SV) return false;
+    try {
+      SV.write(activeSave, game.snapshot(), saveMeta());
+      return true;
+    } catch (e) {
+      return false;      // out of room; the previous save is still intact
+    }
+  }
+  function startAutosave() {
+    stopAutosave();
+    autosaveTimer = setInterval(writeSave, 60000);
+  }
+  function stopAutosave() {
+    if (autosaveTimer) clearInterval(autosaveTimer);
+    autosaveTimer = null;
+  }
+  // Quitting saves. So does the tab going away, which on a phone is what
+  // "quitting" actually looks like.
+  window.addEventListener('pagehide', writeSave);
+  window.addEventListener('beforeunload', writeSave);
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'hidden') writeSave();
+  });
+
   function enter() {
     if (dead) {
       dead = false;
@@ -11053,6 +11540,237 @@ window.bootUI = function bootUI(THREE) {
     enterWorld(false);
   }
 
+  // ---------------- menu panels ----------------
+  var mainActions = $('mainActions'), savePanel = $('savePanel'),
+      namePanel = $('namePanel'), setPanel = $('setPanel');
+  var cardMain = document.querySelector('#curtain .card');
+  var selectedSave = null;
+
+  function showPanel(which) {
+    [savePanel, namePanel, setPanel].forEach(function (p) { p.classList.remove('on'); });
+    cardMain.style.display = which ? 'none' : '';
+    if (which) which.classList.add('on');
+  }
+
+  function refreshMainButtons() {
+    if (!SV) return;
+    var latest = SV.latest();
+    enterBtn.textContent = dead ? 'Continue'
+      : latest ? 'Continue — ' + latest.name
+      : 'Create game';
+    $('btnSaves').textContent = SV.count() ? 'Select save (' + SV.count() + ')' : 'Select save';
+  }
+
+  function renderSaves() {
+    var list = SV ? SV.list() : [];
+    var host = $('saveList');
+    host.innerHTML = '';
+    $('saveSub').textContent = SV && SV.available()
+      ? (list.length ? 'Autosaved every minute, and whenever you quit.'
+        : 'No games yet.')
+      : 'Storage is unavailable in this browser, so saves will not survive closing the tab.';
+    if (!list.length) {
+      var e = document.createElement('div');
+      e.className = 'empty';
+      e.textContent = 'Nothing saved. Start a new game and give it a name — you can keep as many as you like.';
+      host.appendChild(e);
+    }
+    list.forEach(function (rec) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'saveRow' + (rec.id === selectedSave ? ' sel' : '');
+      var g = document.createElement('div');
+      g.className = 'grow';
+      var nm = document.createElement('div');
+      nm.className = 'nm'; nm.textContent = rec.name;
+      var mt = document.createElement('div');
+      mt.className = 'meta';
+      mt.textContent = describe(rec) + (describe(rec) ? '\n' : '') +
+        'Last played ' + fmtWhen(rec.played) + '  ·  created ' + fmtWhen(rec.created);
+      mt.style.whiteSpace = 'pre-line';
+      g.appendChild(nm); g.appendChild(mt);
+      b.appendChild(g);
+      if (rec.id === activeSave) {
+        var bd = document.createElement('span');
+        bd.className = 'badge'; bd.textContent = 'Playing';
+        b.appendChild(bd);
+      }
+      b.addEventListener('click', function () {
+        selectedSave = rec.id;
+        renderSaves();
+      });
+      host.appendChild(b);
+    });
+    var has = !!selectedSave;
+    $('saveLoad').disabled = !has;
+    $('saveRename').disabled = !has;
+    $('saveDelete').disabled = !has;
+    $('renameField').hidden = true;
+    $('saveWarn').hidden = true;
+  }
+
+  $('btnSaves').addEventListener('click', function () {
+    selectedSave = activeSave || (SV && SV.latest() ? SV.latest().id : null);
+    renderSaves();
+    showPanel(savePanel);
+  });
+  $('saveBack').addEventListener('click', function () { showPanel(null); refreshMainButtons(); });
+  $('saveNew').addEventListener('click', function () {
+    $('newName').value = SV ? SV.suggestName() : 'Night 1';
+    $('nameWarn').hidden = true;
+    showPanel(namePanel);
+    setTimeout(function () { $('newName').focus(); }, 30);
+  });
+  $('nameBack').addEventListener('click', function () { renderSaves(); showPanel(savePanel); });
+  $('nameOk').addEventListener('click', function () {
+    var name = $('newName').value.trim();
+    if (!name) { warnName('Give it a name.'); return; }
+    if (SV.nameTaken(name)) { warnName('There is already a save called that.'); return; }
+    beginNewGame(name);
+  });
+  $('newName').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); $('nameOk').click(); }
+  });
+  function warnName(t) { var w = $('nameWarn'); w.textContent = t; w.hidden = false; }
+
+  $('saveRename').addEventListener('click', function () {
+    var rec = SV.record(selectedSave);
+    if (!rec) return;
+    $('renameField').hidden = false;
+    $('renameInput').value = rec.name;
+    $('renameInput').focus();
+  });
+  $('renameOk').addEventListener('click', function () {
+    var name = $('renameInput').value.trim();
+    var w = $('saveWarn');
+    if (!name) { w.textContent = 'A save needs a name.'; w.hidden = false; return; }
+    if (!SV.rename(selectedSave, name)) {
+      w.textContent = 'There is already a save called that.'; w.hidden = false; return;
+    }
+    renderSaves();
+    refreshMainButtons();
+  });
+  $('renameInput').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); $('renameOk').click(); }
+  });
+  $('saveDelete').addEventListener('click', function () {
+    var rec = SV.record(selectedSave);
+    if (!rec) return;
+    var w = $('saveWarn');
+    if (this.dataset.armed !== selectedSave) {
+      this.dataset.armed = selectedSave;
+      this.textContent = 'Delete — sure?';
+      w.textContent = 'Deleting "' + rec.name + '" cannot be undone.';
+      w.hidden = false;
+      return;
+    }
+    this.dataset.armed = '';
+    this.textContent = 'Delete';
+    SV.remove(selectedSave);
+    if (activeSave === selectedSave) { activeSave = null; stopAutosave(); }
+    selectedSave = null;
+    renderSaves();
+    refreshMainButtons();
+  });
+  $('saveLoad').addEventListener('click', function () { loadSave(selectedSave); });
+
+  function beginNewGame(name) {
+    var rec = SV.create(name, null, { day: 1, phase: 'night', beat: 0, deaths: 0 });
+    if (!rec) { warnName('That name is taken.'); return; }
+    activeSave = rec.id;
+    pendingLoad = null;
+    showPanel(null);
+    startAutosave();
+    enter();
+  }
+
+  function loadSave(id) {
+    var got = SV.read(id);
+    var rec = SV.record(id);
+    if (!rec) return;
+    activeSave = id;
+    // a brand new save has no snapshot yet — that is just a fresh start
+    pendingLoad = got && got.snap && got.snap.state ? got.snap : null;
+    if (got && got.usedBackup) {
+      say('That save was interrupted mid-write. Loaded the backup from a minute earlier.');
+    }
+    showPanel(null);
+    startAutosave();
+    enter();
+  }
+
+  // ---------------- settings ----------------
+  var SET = SV ? SV.settings() : {};
+  function pushSettings() {
+    SV && SV.saveSettings(SET);
+    game.applySettings({
+      sensitivity: SET.sensitivity, invertY: SET.invertY,
+      lights: SET.lights, renderScale: SET.renderScale, shadows: SET.shadows,
+      volMusic: SET.volMusic, volSfx: SET.volSfx, volCreature: SET.volCreature
+    });
+    document.getElementById('grain').style.display = SET.grain ? '' : 'none';
+    document.getElementById('vignette').style.display = SET.vignette ? '' : 'none';
+  }
+  var PRESETS = {
+    high: { renderScale: 1, lights: 6, shadows: true, grain: true, vignette: true },
+    medium: { renderScale: 0.85, lights: 4, shadows: true, grain: true, vignette: true },
+    low: { renderScale: 0.6, lights: 3, shadows: false, grain: false, vignette: true }
+  };
+  function syncSettingsUI() {
+    $('vMusic').value = Math.round(SET.volMusic * 100);
+    $('vSfx').value = Math.round(SET.volSfx * 100);
+    $('vCreature').value = Math.round(SET.volCreature * 100);
+    $('gScale').value = Math.round(SET.renderScale * 100);
+    $('gLights').value = SET.lights;
+    $('gShadows').value = SET.shadows ? '1' : '0';
+    $('gGrain').value = SET.grain ? '1' : '0';
+    $('gVig').value = SET.vignette ? '1' : '0';
+    $('gSens').value = Math.round(SET.sensitivity * 100);
+    $('gInv').value = SET.invertY ? '1' : '0';
+    $('gQuality').value = SET.quality || 'custom';
+    $('vMusicV').textContent = Math.round(SET.volMusic * 100) + '%';
+    $('vSfxV').textContent = Math.round(SET.volSfx * 100) + '%';
+    $('vCreatureV').textContent = Math.round(SET.volCreature * 100) + '%';
+    $('gScaleV').textContent = Math.round(SET.renderScale * 100) + '%';
+    $('gLightsV').textContent = String(SET.lights);
+    $('gSensV').textContent = Math.round(SET.sensitivity * 100) + '%';
+  }
+  function bindRange(id, key, scale) {
+    $(id).addEventListener('input', function () {
+      SET[key] = Number(this.value) / scale;
+      if (key !== 'volMusic' && key !== 'volSfx' && key !== 'volCreature') SET.quality = 'custom';
+      syncSettingsUI(); pushSettings();
+    });
+  }
+  bindRange('vMusic', 'volMusic', 100);
+  bindRange('vSfx', 'volSfx', 100);
+  bindRange('vCreature', 'volCreature', 100);
+  bindRange('gScale', 'renderScale', 100);
+  bindRange('gSens', 'sensitivity', 100);
+  $('gLights').addEventListener('input', function () {
+    SET.lights = Number(this.value); SET.quality = 'custom'; syncSettingsUI(); pushSettings();
+  });
+  [['gShadows', 'shadows'], ['gGrain', 'grain'], ['gVig', 'vignette'], ['gInv', 'invertY']].forEach(function (p) {
+    $(p[0]).addEventListener('change', function () {
+      SET[p[1]] = this.value === '1';
+      if (p[1] !== 'invertY') SET.quality = 'custom';
+      syncSettingsUI(); pushSettings();
+    });
+  });
+  $('gQuality').addEventListener('change', function () {
+    var p = PRESETS[this.value];
+    if (!p) { SET.quality = 'custom'; return; }
+    SET.quality = this.value;
+    Object.keys(p).forEach(function (k) { SET[k] = p[k]; });
+    syncSettingsUI(); pushSettings();
+  });
+  $('setReset').addEventListener('click', function () {
+    SET = JSON.parse(JSON.stringify(SV.DEFAULTS));
+    syncSettingsUI(); pushSettings();
+  });
+  $('btnSettings').addEventListener('click', function () { syncSettingsUI(); showPanel(setPanel); });
+  $('setBack').addEventListener('click', function () { showPanel(null); refreshMainButtons(); });
+
   function enterWorld(withOpening) {
     blackout.classList.add('on');
     clearTimeout(enterTimer);
@@ -11069,7 +11787,13 @@ window.bootUI = function bootUI(THREE) {
       hideTimer = setTimeout(hideOnce, 340);
 
       game.enter();
-      if (withOpening) {
+      // A save being resumed skips the arrival and the opening beat — you
+      // are already inside, and the story is already wherever you left it.
+      if (pendingLoad) {
+        game.beginCampaign();
+        game.restore(pendingLoad);
+        pendingLoad = null;
+      } else if (withOpening) {
         game.playOpening(function () {
           var splash = document.getElementById('splash');
           splash.classList.add('on');
@@ -11120,7 +11844,21 @@ window.bootUI = function bootUI(THREE) {
     enterBtn.focus();
   }
 
-  enterBtn.addEventListener('click', enter);
+  // The one button on the front. It continues the newest save, resumes the
+  // one you are already in after a death, or — with nothing saved at all —
+  // asks you to name a new game first.
+  enterBtn.addEventListener('click', function () {
+    if (!SV || !SV.available()) { enter(); return; }   // no storage: just play
+    if (dead || activeSave) { enter(); return; }
+    var latest = SV.latest();
+    if (latest) { loadSave(latest.id); return; }
+    // automation takes the same route, it just does not stop to type
+    if (navigator.webdriver) { beginNewGame(SV.suggestName()); return; }
+    $('saveNew').click();
+  });
+  refreshMainButtons();
+  syncSettingsUI();
+  pushSettings();
 
   window.addEventListener('keydown', function (e) {
     if (e.code === 'Tab' && game.isActive) { e.preventDefault(); return; }

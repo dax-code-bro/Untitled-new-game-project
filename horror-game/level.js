@@ -1752,6 +1752,26 @@
       setDim: setDim,
       toggleDoor: doors.toggle,
       isDoorOpen: doors.isOpen,
+      // which doors are standing open, for a save file
+      doorStates: function () {
+        var out = {};
+        Object.keys(doors.runtime).forEach(function (id) {
+          var d = doors.runtime[id];
+          if (d.kind !== 'none') out[id] = d.open ? 1 : 0;
+        });
+        return out;
+      },
+      setDoorStates: function (map) {
+        if (!map) return;
+        Object.keys(map).forEach(function (id) {
+          var d = doors.runtime[id];
+          if (!d || d.kind === 'none') return;
+          var want = !!map[id];
+          if (d.open === want) return;
+          doors.toggle(id);
+          d.angle = d.target;          // already there, not swinging into place
+        });
+      },
       destroyDoor: doors.destroy,
       doorIds: function () { return Object.keys(doors.runtime); },
       lightCount: pointLights.length,
