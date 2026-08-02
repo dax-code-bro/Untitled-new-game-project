@@ -764,6 +764,8 @@
       phase: 'night',          // the first stretch is the shock and the seal
       clock: 0,
       beatTimer: 0,            // counts down on beats that carry one
+      beatSeen: {},            // beats that were ever the live objective
+      sawSealEast: false, sawSealWest: false,
       story: {
         wifiConnected: false, camsPlanted: 0, sawBirch: false, shockedInCage: false,
         sealedEast: false, hasGlock: false, ate: false, drank: false,
@@ -1679,9 +1681,13 @@
       // one shutter at a time — sealing one raises the other
       Object.keys(state.seals).forEach(function (k) { state.seals[k] = false; });
       if (which) state.seals[which] = true;
+      if (audio) audio.sealSlam();
+      // the shutter coming down is its own scene — play it before the flag,
+      // so it leads whatever the flag then unlocks
+      if (which === 'sealEast' && !state.sawSealEast) { state.sawSealEast = true; cinematic('sealedEast'); }
+      if (which === 'sealWest' && !state.sawSealWest) { state.sawSealWest = true; cinematic('sealedWest'); }
       if (which === 'sealEast') flag('sealedEast');
       if (which === 'sealWest') flag('sealedWest');
-      if (audio) audio.sealSlam();
       refreshHud();
       return state.seals;
     }
@@ -1813,33 +1819,54 @@
     // up on the HUD. Beats that carry a timer fail you if it runs out.
     var S = window.STORY;
     var cineLock = false, cineTimers = [];
+    var cineQueue = [], cineBusy = false;
     var beatPoll = 0;          // objectives are re-checked on a timer, not on trust
 
     function beat() { return S.BEATS[state.beat] || null; }
 
     // Play a scripted run of lines. Locks nothing by default — the player
     // usually needs to keep running while their own head talks at them.
+    // Two runs can now be asked for in the same instant (sealing the east
+    // door skips two beats and opens a third), so they queue instead of
+    // talking over each other.
     function cinematic(key, opts, onDone) {
       var lines = S.LINES[key];
       if (!lines) { if (onDone) onDone(); return; }
-      opts = opts || {};
+      queueLines(lines, opts, onDone);
+    }
+    function queueLines(lines, opts, onDone) {
+      cineQueue.push({ lines: lines, opts: opts || {}, onDone: onDone });
+      if (!cineBusy) runNextCinematic();
+    }
+    function runNextCinematic() {
+      var job = cineQueue.shift();
+      if (!job) { cineBusy = false; return; }
+      cineBusy = true;
+      var opts = job.opts;
       if (opts.lock) { cineLock = true; if (ui.onBars) ui.onBars(true); }
       var last = 0;
-      lines.forEach(function (l) {
+      job.lines.forEach(function (l) {
         last = Math.max(last, l[0]);
         cineTimers.push(setTimeout(function () {
           if (ui.onDialogue) ui.onDialogue(l[1], l[2]);
         }, l[0]));
       });
+      // The last line normally sits for a beat before clearing. With another
+      // scene waiting that pause is just dead air, so cut it short.
+      var hold = opts.hold === undefined ? 4200 : opts.hold;
+      if (cineQueue.length) hold = Math.min(hold, 1200);
       cineTimers.push(setTimeout(function () {
         if (ui.onDialogue) ui.onDialogue(null, null);
         if (opts.lock) { cineLock = false; if (ui.onBars) ui.onBars(false); }
-        if (onDone) onDone();
-      }, last + (opts.hold === undefined ? 4200 : opts.hold)));
+        if (job.onDone) job.onDone();
+        runNextCinematic();
+      }, last + hold));
     }
     function stopCinematics() {
       cineTimers.forEach(clearTimeout);
       cineTimers = [];
+      cineQueue = [];
+      cineBusy = false;
       if (ui.onDialogue) ui.onDialogue(null, null);
       cineLock = false;
       if (ui.onBars) ui.onBars(false);
@@ -1873,16 +1900,30 @@
 
     function checkBeat() {
       syncStoryFlags();
-      var guard = 0, moved = false;
+      var guard = 0, moved = false, skipped = [];
       while (guard++ < 40) {
         var b = beat();
         if (!b || !b.done(state.story)) break;
+        // A beat that was already satisfied the moment it came up was never
+        // the live objective — the player did that job early. Note it so the
+        // objective jumping two or three places reads as deliberate.
+        if (!state.beatSeen[b.id] && b.skip) skipped.push(b.skip);
+        state.beatSeen[b.id] = true;
         state.beat++;
         state.beatTimer = 0;
         moved = true;
         var nb = beat();
         if (nb && nb.timer) state.beatTimer = nb.timer;
         if (ui.onObjective) ui.onObjective(nb, 0);
+      }
+      var cur = beat();
+      if (cur && !state.beatSeen[cur.id]) {
+        state.beatSeen[cur.id] = true;
+        // The note goes on the subtitle line rather than into the dialogue
+        // queue: it has to land at the same moment the objective jumps, and
+        // the queue may well be part-way through a scene of its own.
+        if (skipped.length && ui.onMessage) ui.onMessage(skipped.join('  '));
+        if (cur.enter) cinematic(cur.enter);
       }
       // Only touch the HUD when something actually changed. This runs four
       // times a second; redrawing the hotbar on every call replaced its DOM
@@ -2635,6 +2676,7 @@
           hotbar: state.hotbar.slice(), hotbarSel: state.hotbarSel,
           beat: state.beat, beatId: beat() ? beat().id : null,
           beatTimer: state.beatTimer, dayNo: state.dayNo,
+          beatSeen: state.beatSeen,
           dayPhase: state.phase, clock: state.clock,
           story: JSON.parse(JSON.stringify(state.story)),
           beansNamed: state.beansNamed,

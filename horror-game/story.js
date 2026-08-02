@@ -19,6 +19,12 @@
 
   // Each beat: an id, the objective the HUD shows, and where it happens.
   // `done` is evaluated against the game's story flags every tick.
+  //
+  // `skip` is what Brian says if the step was already done by the time the
+  // story got to it — the facility is a sandbox, so a player can find the
+  // Glock or drink the water long before they are told to, and the objective
+  // then jumps past it rather than asking for something already in hand.
+  // `enter` is a cinematic that plays when the beat becomes the live one.
   var BEATS = [
     { id: 'wifi', obj: 'Get the reception terminal online',
       hint: 'There is a password somewhere behind that desk.',
@@ -26,80 +32,100 @@
 
     { id: 'cameras', obj: 'Plant all five security cameras',
       hint: 'The crate in the corner of the waiting room.',
+      skip: 'Cameras are already up.',
       done: function (f) { return f.camsPlanted >= 5; } },
 
     { id: 'findHim', obj: 'Check the feeds — find what is in here with you',
       hint: 'One camera was already here. It still works.',
+      skip: 'I have already seen it.',
       done: function (f) { return f.sawBirch; } },
 
     { id: 'shock', obj: 'CAM 0 has a taser. Use it',
       hint: 'Your cameras are older stock. That one is not.',
+      skip: 'Already put the current through it.',
       done: function (f) { return f.shockedInCage; } },
 
     { id: 'sealEast', obj: 'SEAL THE EAST DOOR', timer: 30,
       hint: 'Hard Seal, on the terminal. Now.',
       fail: 'caught',
+      skip: 'East door is already down.',
       done: function (f) { return f.sealedEast; } },
 
     { id: 'gun', obj: 'Daylight. Unlock the storage unit and take the Glock',
       hint: 'The key was on the reception desk.',
+      skip: 'Glock is already on my hip.',
       done: function (f) { return f.hasGlock; } },
 
     { id: 'food', obj: 'Take water and beans from the warehouse',
       hint: 'The shelf on the west wall.',
+      skip: 'Already ate. Already drank.',
       done: function (f) { return f.ate && f.drank; } },
 
     { id: 'power', obj: 'Restore the facility power',
       hint: 'A panel in the storage unit. The wires are crossed.',
+      enter: 'realise',
+      skip: 'Power is already up.',
       done: function (f) { return f.powerOn; } },
 
     { id: 'sealWest', obj: 'THE ALARM TOLD IT WHERE YOU ARE — SEAL THE WEST DOOR', timer: 25,
       hint: 'Get to the desk.',
       fail: 'caught',
+      skip: 'West door is already down.',
       done: function (f) { return f.sealedWest; } },
 
     { id: 'survive', obj: 'Survive the night',
       hint: 'Sleep when you are fed, watered, rested — and it is not at the door.',
+      skip: 'I already slept.',
       done: function (f) { return f.slept; } },
 
     { id: 'phone', obj: "Take the lead scientist's phone",
       hint: 'Extermination chamber. He is the one in the containment uniform.',
+      skip: 'His phone is already in my pocket.',
       done: function (f) { return f.hasPhone; } },
 
     { id: 'charge', obj: 'Charge the phone at the terminal',
       hint: 'The USB lead runs into the reception computer.',
+      skip: 'It has charge already.',
       done: function (f) { return f.phoneCharged; } },
 
     { id: 'email', obj: 'Open his email and accept the code',
       hint: 'One percent is enough.',
+      skip: 'I already have the code.',
       done: function (f) { return f.emailOpen; } },
 
     { id: 'map', obj: 'Pull the facility layout',
       hint: 'The terminal has a fourth app now.',
+      skip: 'I have seen the layout.',
       done: function (f) { return f.sawMap; } },
 
     { id: 'sledge', obj: 'Get the sledgehammer from the storage unit',
       hint: 'Against the racking.',
+      skip: 'Sledgehammer is already in hand.',
       done: function (f) { return f.hasSledge; } },
 
     { id: 'breakWall', obj: 'Break open the sealed elevator shaft',
       hint: 'The corner of the storage unit reads hollow.',
+      skip: 'The shaft is already open.',
       done: function (f) { return f.shaftOpen; } },
 
     { id: 'descend', obj: 'Climb down',
       hint: 'Tape the torch to your shoulder.',
+      skip: 'I am already down here.',
       done: function (f) { return f.underground; } },
 
     { id: 'cells', obj: 'Find out what they were doing down here',
       hint: 'The keycard is on the desk in the middle of the floor.',
+      skip: 'I have already been in that cell.',
       done: function (f) { return f.openedCell; } },
 
     { id: 'radio', obj: 'That radio is receiving something',
       hint: 'Turn it on.',
+      skip: 'I already heard him.',
       done: function (f) { return f.heardRadio; } },
 
     { id: 'barracks', obj: 'North section — find the Camper Barracks',
       hint: 'Someone down here is still alive.',
+      skip: 'I have already found him.',
       done: function (f) { return f.metJames; } }
   ];
 

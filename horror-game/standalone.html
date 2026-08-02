@@ -214,9 +214,14 @@
     width: min(560px, calc(100vw - 48px)); text-align: center;
     font-size: 13px; line-height: 1.7; color: var(--bone);
     text-shadow: 0 2px 14px #000; pointer-events: none;
-    opacity: 0; transition: opacity 400ms ease;
+    opacity: 0; transition: opacity 400ms ease, bottom 220ms ease;
   }
   #subtitle.on { opacity: 1; }
+  /* both caption lines can be up at once — a scene playing while the world
+     says something. Lift the ambient line clear of the spoken one. */
+  #dialogue.on ~ #subtitle {
+    bottom: max(190px, calc(env(safe-area-inset-bottom) + 174px));
+  }
 
   #sound {
     position: fixed; right: max(18px, env(safe-area-inset-right));
@@ -2177,6 +2182,12 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
 
   // Each beat: an id, the objective the HUD shows, and where it happens.
   // `done` is evaluated against the game's story flags every tick.
+  //
+  // `skip` is what Brian says if the step was already done by the time the
+  // story got to it — the facility is a sandbox, so a player can find the
+  // Glock or drink the water long before they are told to, and the objective
+  // then jumps past it rather than asking for something already in hand.
+  // `enter` is a cinematic that plays when the beat becomes the live one.
   var BEATS = [
     { id: 'wifi', obj: 'Get the reception terminal online',
       hint: 'There is a password somewhere behind that desk.',
@@ -2184,80 +2195,100 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
 
     { id: 'cameras', obj: 'Plant all five security cameras',
       hint: 'The crate in the corner of the waiting room.',
+      skip: 'Cameras are already up.',
       done: function (f) { return f.camsPlanted >= 5; } },
 
     { id: 'findHim', obj: 'Check the feeds — find what is in here with you',
       hint: 'One camera was already here. It still works.',
+      skip: 'I have already seen it.',
       done: function (f) { return f.sawBirch; } },
 
     { id: 'shock', obj: 'CAM 0 has a taser. Use it',
       hint: 'Your cameras are older stock. That one is not.',
+      skip: 'Already put the current through it.',
       done: function (f) { return f.shockedInCage; } },
 
     { id: 'sealEast', obj: 'SEAL THE EAST DOOR', timer: 30,
       hint: 'Hard Seal, on the terminal. Now.',
       fail: 'caught',
+      skip: 'East door is already down.',
       done: function (f) { return f.sealedEast; } },
 
     { id: 'gun', obj: 'Daylight. Unlock the storage unit and take the Glock',
       hint: 'The key was on the reception desk.',
+      skip: 'Glock is already on my hip.',
       done: function (f) { return f.hasGlock; } },
 
     { id: 'food', obj: 'Take water and beans from the warehouse',
       hint: 'The shelf on the west wall.',
+      skip: 'Already ate. Already drank.',
       done: function (f) { return f.ate && f.drank; } },
 
     { id: 'power', obj: 'Restore the facility power',
       hint: 'A panel in the storage unit. The wires are crossed.',
+      enter: 'realise',
+      skip: 'Power is already up.',
       done: function (f) { return f.powerOn; } },
 
     { id: 'sealWest', obj: 'THE ALARM TOLD IT WHERE YOU ARE — SEAL THE WEST DOOR', timer: 25,
       hint: 'Get to the desk.',
       fail: 'caught',
+      skip: 'West door is already down.',
       done: function (f) { return f.sealedWest; } },
 
     { id: 'survive', obj: 'Survive the night',
       hint: 'Sleep when you are fed, watered, rested — and it is not at the door.',
+      skip: 'I already slept.',
       done: function (f) { return f.slept; } },
 
     { id: 'phone', obj: "Take the lead scientist's phone",
       hint: 'Extermination chamber. He is the one in the containment uniform.',
+      skip: 'His phone is already in my pocket.',
       done: function (f) { return f.hasPhone; } },
 
     { id: 'charge', obj: 'Charge the phone at the terminal',
       hint: 'The USB lead runs into the reception computer.',
+      skip: 'It has charge already.',
       done: function (f) { return f.phoneCharged; } },
 
     { id: 'email', obj: 'Open his email and accept the code',
       hint: 'One percent is enough.',
+      skip: 'I already have the code.',
       done: function (f) { return f.emailOpen; } },
 
     { id: 'map', obj: 'Pull the facility layout',
       hint: 'The terminal has a fourth app now.',
+      skip: 'I have seen the layout.',
       done: function (f) { return f.sawMap; } },
 
     { id: 'sledge', obj: 'Get the sledgehammer from the storage unit',
       hint: 'Against the racking.',
+      skip: 'Sledgehammer is already in hand.',
       done: function (f) { return f.hasSledge; } },
 
     { id: 'breakWall', obj: 'Break open the sealed elevator shaft',
       hint: 'The corner of the storage unit reads hollow.',
+      skip: 'The shaft is already open.',
       done: function (f) { return f.shaftOpen; } },
 
     { id: 'descend', obj: 'Climb down',
       hint: 'Tape the torch to your shoulder.',
+      skip: 'I am already down here.',
       done: function (f) { return f.underground; } },
 
     { id: 'cells', obj: 'Find out what they were doing down here',
       hint: 'The keycard is on the desk in the middle of the floor.',
+      skip: 'I have already been in that cell.',
       done: function (f) { return f.openedCell; } },
 
     { id: 'radio', obj: 'That radio is receiving something',
       hint: 'Turn it on.',
+      skip: 'I already heard him.',
       done: function (f) { return f.heardRadio; } },
 
     { id: 'barracks', obj: 'North section — find the Camper Barracks',
       hint: 'Someone down here is still alive.',
+      skip: 'I have already found him.',
       done: function (f) { return f.metJames; } }
   ];
 
@@ -6337,6 +6368,8 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       phase: 'night',          // the first stretch is the shock and the seal
       clock: 0,
       beatTimer: 0,            // counts down on beats that carry one
+      beatSeen: {},            // beats that were ever the live objective
+      sawSealEast: false, sawSealWest: false,
       story: {
         wifiConnected: false, camsPlanted: 0, sawBirch: false, shockedInCage: false,
         sealedEast: false, hasGlock: false, ate: false, drank: false,
@@ -7252,9 +7285,13 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       // one shutter at a time — sealing one raises the other
       Object.keys(state.seals).forEach(function (k) { state.seals[k] = false; });
       if (which) state.seals[which] = true;
+      if (audio) audio.sealSlam();
+      // the shutter coming down is its own scene — play it before the flag,
+      // so it leads whatever the flag then unlocks
+      if (which === 'sealEast' && !state.sawSealEast) { state.sawSealEast = true; cinematic('sealedEast'); }
+      if (which === 'sealWest' && !state.sawSealWest) { state.sawSealWest = true; cinematic('sealedWest'); }
       if (which === 'sealEast') flag('sealedEast');
       if (which === 'sealWest') flag('sealedWest');
-      if (audio) audio.sealSlam();
       refreshHud();
       return state.seals;
     }
@@ -7386,33 +7423,54 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
     // up on the HUD. Beats that carry a timer fail you if it runs out.
     var S = window.STORY;
     var cineLock = false, cineTimers = [];
+    var cineQueue = [], cineBusy = false;
     var beatPoll = 0;          // objectives are re-checked on a timer, not on trust
 
     function beat() { return S.BEATS[state.beat] || null; }
 
     // Play a scripted run of lines. Locks nothing by default — the player
     // usually needs to keep running while their own head talks at them.
+    // Two runs can now be asked for in the same instant (sealing the east
+    // door skips two beats and opens a third), so they queue instead of
+    // talking over each other.
     function cinematic(key, opts, onDone) {
       var lines = S.LINES[key];
       if (!lines) { if (onDone) onDone(); return; }
-      opts = opts || {};
+      queueLines(lines, opts, onDone);
+    }
+    function queueLines(lines, opts, onDone) {
+      cineQueue.push({ lines: lines, opts: opts || {}, onDone: onDone });
+      if (!cineBusy) runNextCinematic();
+    }
+    function runNextCinematic() {
+      var job = cineQueue.shift();
+      if (!job) { cineBusy = false; return; }
+      cineBusy = true;
+      var opts = job.opts;
       if (opts.lock) { cineLock = true; if (ui.onBars) ui.onBars(true); }
       var last = 0;
-      lines.forEach(function (l) {
+      job.lines.forEach(function (l) {
         last = Math.max(last, l[0]);
         cineTimers.push(setTimeout(function () {
           if (ui.onDialogue) ui.onDialogue(l[1], l[2]);
         }, l[0]));
       });
+      // The last line normally sits for a beat before clearing. With another
+      // scene waiting that pause is just dead air, so cut it short.
+      var hold = opts.hold === undefined ? 4200 : opts.hold;
+      if (cineQueue.length) hold = Math.min(hold, 1200);
       cineTimers.push(setTimeout(function () {
         if (ui.onDialogue) ui.onDialogue(null, null);
         if (opts.lock) { cineLock = false; if (ui.onBars) ui.onBars(false); }
-        if (onDone) onDone();
-      }, last + (opts.hold === undefined ? 4200 : opts.hold)));
+        if (job.onDone) job.onDone();
+        runNextCinematic();
+      }, last + hold));
     }
     function stopCinematics() {
       cineTimers.forEach(clearTimeout);
       cineTimers = [];
+      cineQueue = [];
+      cineBusy = false;
       if (ui.onDialogue) ui.onDialogue(null, null);
       cineLock = false;
       if (ui.onBars) ui.onBars(false);
@@ -7446,16 +7504,30 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
 
     function checkBeat() {
       syncStoryFlags();
-      var guard = 0, moved = false;
+      var guard = 0, moved = false, skipped = [];
       while (guard++ < 40) {
         var b = beat();
         if (!b || !b.done(state.story)) break;
+        // A beat that was already satisfied the moment it came up was never
+        // the live objective — the player did that job early. Note it so the
+        // objective jumping two or three places reads as deliberate.
+        if (!state.beatSeen[b.id] && b.skip) skipped.push(b.skip);
+        state.beatSeen[b.id] = true;
         state.beat++;
         state.beatTimer = 0;
         moved = true;
         var nb = beat();
         if (nb && nb.timer) state.beatTimer = nb.timer;
         if (ui.onObjective) ui.onObjective(nb, 0);
+      }
+      var cur = beat();
+      if (cur && !state.beatSeen[cur.id]) {
+        state.beatSeen[cur.id] = true;
+        // The note goes on the subtitle line rather than into the dialogue
+        // queue: it has to land at the same moment the objective jumps, and
+        // the queue may well be part-way through a scene of its own.
+        if (skipped.length && ui.onMessage) ui.onMessage(skipped.join('  '));
+        if (cur.enter) cinematic(cur.enter);
       }
       // Only touch the HUD when something actually changed. This runs four
       // times a second; redrawing the hotbar on every call replaced its DOM
@@ -8208,6 +8280,7 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
           hotbar: state.hotbar.slice(), hotbarSel: state.hotbarSel,
           beat: state.beat, beatId: beat() ? beat().id : null,
           beatTimer: state.beatTimer, dayNo: state.dayNo,
+          beatSeen: state.beatSeen,
           dayPhase: state.phase, clock: state.clock,
           story: JSON.parse(JSON.stringify(state.story)),
           beansNamed: state.beansNamed,

@@ -214,9 +214,14 @@
     width: min(560px, calc(100vw - 48px)); text-align: center;
     font-size: 13px; line-height: 1.7; color: var(--bone);
     text-shadow: 0 2px 14px #000; pointer-events: none;
-    opacity: 0; transition: opacity 400ms ease;
+    opacity: 0; transition: opacity 400ms ease, bottom 220ms ease;
   }
   #subtitle.on { opacity: 1; }
+  /* both caption lines can be up at once — a scene playing while the world
+     says something. Lift the ambient line clear of the spoken one. */
+  #dialogue.on ~ #subtitle {
+    bottom: max(190px, calc(env(safe-area-inset-bottom) + 174px));
+  }
 
   #sound {
     position: fixed; right: max(18px, env(safe-area-inset-right));
