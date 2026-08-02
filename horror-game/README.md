@@ -295,18 +295,47 @@ Waiting's corridor doorways — **one at a time**, so you must seal the side it
 is coming from. Sealed out, it bangs on the metal. Do not open it. Sometimes
 the banging stops and something worse starts.
 
-**Rage.** A smiley face appears, drawn like a child with a sharpie. It stops
-caring whether you watch. It takes to the corridor walls, its head goes all
-the way around, it is faster than you — and every light dies where it walks.
+**It cannot see you and it cannot smell you.** The face is a drawing. What
+it has is the chip that never stopped thinking and a body that reads the room
+off the shifts coming back at it — echolocation. So it finds you by **noise,
+from any direction**. Turning your back on it means nothing. Standing still
+means everything: stood still you are silent and it cannot find you at all,
+crawling carries about two metres, crouch-walking five, walking eleven,
+sprinting nineteen. A gunshot indoors is heard by the entire building.
+
+**How it moves.** Standing upright it is 3.4m and the corridors are 3.4m, so
+it **folds its back to get down them** and unfolds again in a room with
+height. At its leisure it walks — hunched, arms hanging, taking the place
+apart room by room, and at night it is out there doing exactly that. Once it
+has heard you it **jogs**: hunched further, arms thrown out and arched, the
+backs of its hands sweeping the walls, because that is how it knows where the
+walls are. A jog is pitched just under your sprint — **run the moment you
+hear it and you stay ahead; hesitate and you do not.**
+
+**Rage.** Put a bullet in it and it does not come for you. It reels, it
+**runs**, and it is gone for the rest of that night. It comes back the
+**next** night with a smiley drawn on it like a child with a sharpie, and
+that night it hunts you **on the ceiling** — flat to it, limbs splayed, head
+turning all the way round underneath. It stops caring whether you watch, it
+matches your sprint, and every light dies where it walks. You are not
+outrunning that. You are getting a door down.
 
 **The shock.** If it lurks in the cage it once escaped, the terminal can
 electrify the floor: 100 frozen seconds to plant cameras, seal a door, or run.
 
-**The kill.** Flat hand through you; the second hand; two pieces. With riot
-gear the impale can shatter its arm instead — break both and all it has left
-is a desperate headbutt. Headbutt into a riot shield and its own head comes
-off. In the body: a keycard. Tear it out, open the entrance, and walk into
-the orange letters: **MISSION PASSED — RESPECT ++++**, with your $2,000.
+**The kill.** Three of them, and it picks. **Impaled** — the flat hand goes
+in and you stand there looking down at it, shaking, while it fills the
+bottom of your vision; then it is not your eyes any more, and you watch from
+outside as the second hand goes in, it lifts you over its head, and takes
+you apart at the waist. **Slammed** — off your feet and driven into the
+floor, and again, and again, and the fifth one you do not come back up from.
+**Butchered** — a headbutt that puts the lights out, your legs swept from
+under you, and then it kneels into the work with both hands.
+
+With riot gear the impale can shatter its arm instead — break both and all it
+has left is a desperate headbutt. Headbutt into a riot shield and its own head
+comes off. In the body: a keycard. Tear it out, open the entrance, and walk
+into the orange letters: **MISSION PASSED — RESPECT ++++**, with your $2,000.
 
 ### The building
 

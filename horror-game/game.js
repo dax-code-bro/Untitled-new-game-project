@@ -728,6 +728,25 @@
     }
     var walkPhase = 0, lastStance = 'stand';
 
+    // ---------------- The ways it kills you ----------------
+    var kills = (window.buildKills && entity) ? window.buildKills(THREE, {
+      camera: camera, scene: scene, entity: entity, playerRig: playerRig,
+      ui: {
+        onKillStart: function (kind) {
+          uiOpen = false;
+          stopCinematics();
+          if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock();
+          if (ui.onKillStart) ui.onKillStart(kind);
+        },
+        onKillFrame: function (blood, fade) { if (ui.onKillFrame) ui.onKillFrame(blood, fade); },
+        onKillEnd: function (kind) { if (ui.onKillEnd) ui.onKillEnd(kind); }
+      },
+      audio: {
+        doorSlam: function (n) { if (audio) audio.doorSlam(n); },
+        woodHit: function () { if (audio) audio.woodHit(); }
+      }
+    }) : null;
+
     function applyLook() { camera.rotation.set(pitch, yaw, 0, 'YXZ'); }
     applyLook();
     function addLook(dx, dy) {
@@ -783,6 +802,7 @@
       room: null,
       seenAssembly: false,
       dead: false,
+      killing: false,          // a kill animation owns the camera
       deaths: 0,
       deathReason: null,
       // survival
@@ -1685,6 +1705,7 @@
       Object.keys(state.seals).forEach(function (k) { state.seals[k] = false; });
       if (which) state.seals[which] = true;
       if (audio) audio.sealSlam();
+      makeNoise(60);              // a tonne of tungsten hitting the floor
       // the shutter coming down is its own scene — play it before the flag,
       // so it leads whatever the flag then unlocks
       if (which === 'sealEast' && !state.sawSealEast) { state.sawSealEast = true; cinematic('sealedEast'); }
@@ -1723,6 +1744,9 @@
         if (audio) audio.gunshot();
       }
       if (ui.onMuzzleFlash) ui.onMuzzleFlash();
+      // A gunshot indoors is the loudest thing in this building. It does
+      // not need to see the muzzle flash — it heard the room ring.
+      makeNoise(w === 'shotgun' ? 95 : w === 'ar' ? 88 : 78);
 
       camera.updateMatrixWorld();
       var hitsOnEntity = 0;
@@ -1815,6 +1839,27 @@
         }),
         riotEquipped: state.riotEquipped
       });
+    }
+
+    // ---------------- How much noise you are making ----------------
+    // It has no eyes and no nose — it reads the building off the echoes.
+    // So this, and not where you are looking, is what gets you killed.
+    // Standing still is genuinely invisible to it; sprinting is a flare.
+    var noiseSpike = 0;              // a gunshot or a slammed door, decaying
+    function playerNoise() {
+      var N = (entity && entity.NOISE) || { still: 0, crawl: 2.6, crouch: 5.5, walk: 11, sprint: 19 };
+      var moving = Math.hypot(velocity.x, velocity.z) > 0.35;
+      var base;
+      if (!moving) base = N.still;
+      else if (state.stance === 'crawl') base = N.crawl;
+      else if (state.stance === 'crouch') base = N.crouch;
+      else base = state.sprinting ? N.sprint : N.walk;
+      // things that are loud whatever you were doing
+      return Math.max(base, noiseSpike);
+    }
+    // A one-off racket: a shot, a shutter, a door taken off its latch.
+    function makeNoise(metres) {
+      noiseSpike = Math.max(noiseSpike, metres);
     }
 
     // ---------------- The campaign ----------------
@@ -2087,6 +2132,25 @@
       if (ui.onDeath) ui.onDeath(state.deathReason);
     }
 
+    // It does not simply kill you — it does one of three things to you, and
+    // the choreography runs to the end before the death card comes up.
+    function beginKill(forced) {
+      if (!kills || kills.isPlaying() || state.dead || state.ended) {
+        if (!state.dead) die('impaled');
+        return;
+      }
+      var kind = forced || kills.pick();
+      state.killing = true;
+      state.attackCd = 1e9;          // nothing else touches you now
+      var ok = kills.play(kind, {
+        x: camera.position.x, z: camera.position.z, yaw: yaw, eye: camera.position.y
+      }, function (reason) {
+        state.killing = false;
+        die(reason);
+      });
+      if (!ok) { state.killing = false; die('impaled'); }
+    }
+
     if (entity) {
       entity.onCaught = function (armsLeft, headOn) {
         if (state.dead || state.ended || !active) return;
@@ -2117,7 +2181,7 @@
           camera.position.x = pushed.x; camera.position.z = pushed.z;
           return;
         }
-        die('impaled');
+        beginKill();
       };
       entity.onStep = function (dist, chasing) { if (audio) audio.entityStep(dist, chasing); };
       entity.onWindup = function () {
@@ -2313,6 +2377,14 @@
         }
       }
 
+      // While a kill is running it owns the camera and the mannequin —
+      // nothing else may write to either.
+      if (kills && kills.isPlaying()) {
+        kills.update(dt);
+        renderer.render(scene, camera);
+        return;
+      }
+
       if (active && !uiOpen && state.collapseT > 0) {
         // face down on the floor, counting seconds
         state.collapseT -= dt;
@@ -2418,6 +2490,12 @@
         if (focusTimer > 0.08) { focusTimer = 0; updateFocus(); }
 
         if (audio) audio.tick(dt, state.room ? state.room.id : null);
+        // decays fast, and snaps to actually-silent rather than trailing a
+        // millionth of a metre of "noise" behind it forever
+        if (noiseSpike > 0) {
+          noiseSpike -= dt * 26;
+          if (noiseSpike < 0.05) noiseSpike = 0;
+        }
 
         if (entity) {
           // pinned while observed: centred enough in view, close enough, unobstructed
@@ -2427,7 +2505,7 @@
           var fx2 = -Math.sin(yaw), fz2 = -Math.cos(yaw);
           var dot = (vex / vd) * fx2 + (vez / vd) * fz2;
           entity.setWatched(dot > 0.45 && vd < 48 && entity.los(camera.position.x, camera.position.z, es0.x, es0.z));
-          entity.update(dt, camera.position.x, camera.position.z);
+          entity.update(dt, camera.position.x, camera.position.z, playerNoise());
         }
 
         // in its rage, the lights die wherever it walks
@@ -2656,6 +2734,9 @@
       audioBash: function () { if (audio) audio.doorBash(2); },
       audioStart: function () { if (audio) audio.start(); },
       respawn: function () {
+        if (kills) kills.cancel();
+        state.killing = false;
+        if (ui.onKillEnd) ui.onKillEnd(null);
         state.dead = false;
         state.collapseT = 0;
         state.attackCd = 0;
@@ -3176,6 +3257,26 @@
       debugDawn: function () { state.dayNo++; startPhase('day'); },
       debugNightfall: function () { startPhase('night'); },
       debugRedealWires: function () { state.wires = makeWires(); return wiresWrong(state.wires); },
+      // ---- the Birch ----
+      playerNoise: playerNoise,
+      makeNoise: makeNoise,
+      shootEntity: function () { return entity ? entity.hitShot(1.1) : false; },
+      speedTable: function () {
+        var e = entity ? entity.speeds() : { roam: 0, chase: 0, rage: 0 };
+        return {
+          walk: STANCE.stand.speed,
+          sprint: STANCE.stand.speed * 1.7,
+          crouch: STANCE.crouch.speed,
+          roam: e.roam, chase: e.chase, rage: e.rage
+        };
+      },
+      killKinds: function () { return kills ? kills.kinds.slice() : []; },
+      killNow: function (kind) { beginKill(kind); return kills ? kills.current() : null; },
+      killState: function () {
+        return kills
+          ? { playing: kills.isPlaying(), kind: kills.current(), progress: kills.progress() }
+          : { playing: false, kind: null, progress: 0 };
+      },
       debugPlayScene: function (key) { cinematic(key); },
       supplyCount: function () {
         var n = 0;

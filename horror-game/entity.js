@@ -18,12 +18,16 @@
   'use strict';
 
   var RADIUS = 0.5;
+  // The player walks at 2.9 and sprints at just under 5. A jog is pitched
+  // a shade under a sprint on purpose: run the moment you hear it and you
+  // stay ahead, hesitate and you do not. In the rage it matches a sprint,
+  // and you are not outrunning it — you are getting a door down.
   var ROAM_SPEED = 2.2;
-  var CHASE_SPEED = 3.4;
-  var RAGE_SPEED = 4.6;
-  var SIGHT_RANGE = 17;
+  var CHASE_SPEED = 4.45;
+  var RAGE_SPEED = 4.92;
   var SENSE_RANGE = 3;
-  var FOV = Math.PI * 0.42;
+  // how far each kind of noise carries to it, in metres
+  var NOISE = { still: 0, crawl: 2.6, crouch: 5.5, walk: 11, sprint: 19 };
   var LOSE_AFTER = 5;
   var CATCH_DIST = 1.2;
   var WATCH_DOT = 0.45;       // how centred you must have it to pin it
@@ -57,6 +61,10 @@
     var bolt = new THREE.MeshStandardMaterial({ color: 0x3c4144, roughness: 0.35, metalness: 0.85 });
 
     var g = new THREE.Group();
+    // Yaw first, then the tilt, or the two mix: going flat to the ceiling
+    // sets both at once and in the default order the body ends up lying
+    // across the corridor on a diagonal instead of along it.
+    g.rotation.order = 'YXZ';
     var meshes = { arms: {}, blood: [] };
 
     function cylPart(parent, rt, rb, h, x, y, z, mat) {
@@ -80,7 +88,9 @@
       return m;
     }
 
-    // legs: stilt-thin, joints visible as turned balls with bolts through
+    // Legs: stilt-thin, joints visible as turned balls with bolts through.
+    // Hip and knee are separate groups so the thing can crouch, hunch and
+    // splay itself flat against a ceiling instead of only swinging rigid.
     function leg(side) {
       var hip = new THREE.Group();
       hip.position.set(side * 0.17, 1.62, 0);
@@ -90,12 +100,15 @@
       var kneeY = -0.82;
       spherePart(hip, 0.072, 0, kneeY, 0);
       boltAt(hip, 0, kneeY, 0);
-      cylPart(hip, 0.05, 0.046, 0.74, 0, kneeY - 0.4, 0);
+      var knee = new THREE.Group();
+      knee.position.set(0, kneeY, 0);
+      cylPart(knee, 0.05, 0.046, 0.74, 0, -0.4, 0);
       var foot = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.05, 0.3), birch);
-      foot.position.set(0, kneeY - 0.79, 0.07);
-      hip.add(foot);
+      foot.position.set(0, -0.79, 0.07);
+      knee.add(foot);
+      hip.add(knee);
       g.add(hip);
-      return hip;
+      return { hip: hip, knee: knee, foot: foot };
     }
     var legL = leg(-1), legR = leg(1);
 
@@ -103,51 +116,63 @@
     spherePart(g, 0.16, 0, 1.68, 0, 1.25, 0.62, 0.8);
     cylPart(g, 0.035, 0.035, 0.14, 0, 1.84, 0, bolt);   // exposed spine rod
 
+    // Everything above the waist hangs off one hinge. Standing upright it
+    // is eleven feet of mannequin and the corridors are eleven feet tall,
+    // so it folds itself forward to get down them.
+    var spine = new THREE.Group();
+    spine.position.set(0, 1.84, 0);
+    g.add(spine);
+
     // torso: a mannequin's tapered chest, far too thin
     var torso = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.105, 0.98, 14), birch);
-    torso.position.set(0, 2.42, 0);
-    g.add(torso);
-    spherePart(g, 0.155, 0, 2.9, 0, 1.15, 0.5, 0.85);   // chest cap
-    boltAt(g, -0.1, 2.62, 0.12, 0.5);
-    boltAt(g, 0.12, 2.2, -0.1, 1.1);
+    torso.position.set(0, 0.58, 0);
+    spine.add(torso);
+    spherePart(spine, 0.155, 0, 1.06, 0, 1.15, 0.5, 0.85);   // chest cap
+    boltAt(spine, -0.1, 0.78, 0.12, 0.5);
+    boltAt(spine, 0.12, 0.36, -0.1, 1.1);
 
     // blood smears (hidden until it visits Nick)
-    [[0, 2.55, 0.15, 0.22, 0.5], [-0.07, 2.2, 0.12, 0.16, 0.4], [0.09, 2.75, 0.13, 0.18, 0.3]].forEach(function (b) {
+    [[0, 0.71, 0.15, 0.22, 0.5], [-0.07, 0.36, 0.12, 0.16, 0.4], [0.09, 0.91, 0.13, 0.18, 0.3]].forEach(function (b) {
       var s = new THREE.Mesh(new THREE.PlaneGeometry(b[3], b[4]),
         new THREE.MeshStandardMaterial({ color: 0x571812, roughness: 0.55, transparent: true, opacity: 0.85 }));
       s.position.set(b[0], b[1], b[2]);
       s.rotation.z = Math.random();
       s.visible = false;
-      g.add(s);
+      spine.add(s);
       meshes.blood.push(s);
     });
 
-    // arms: hung from bolted shoulder balls, ending in FLAT hands
+    // Arms: hung from bolted shoulder balls, ending in FLAT hands. The
+    // elbow is its own group — it needs to arch them out and sweep the
+    // walls with the backs of its hands, which a rigid arm cannot do.
     function arm(side) {
       var sh = new THREE.Group();
-      sh.position.set(side * 0.26, 2.86, 0);
+      sh.position.set(side * 0.26, 1.02, 0);
       spherePart(sh, 0.08, 0, 0, 0);
       boltAt(sh, 0, 0, 0, 0);
       cylPart(sh, 0.047, 0.042, 0.74, 0, -0.4, 0);
       spherePart(sh, 0.06, 0, -0.8, 0);
       boltAt(sh, 0, -0.8, 0);
-      cylPart(sh, 0.04, 0.036, 0.72, 0, -1.18, 0);
+      var el = new THREE.Group();
+      el.position.set(0, -0.8, 0);
+      cylPart(el, 0.04, 0.036, 0.72, 0, -0.38, 0);
       // the flat hand — a paddle of wood, edge-on it disappears
       var hand = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.34, 0.016), birch);
-      hand.position.set(0, -1.72, 0);
-      sh.add(hand);
-      g.add(sh);
-      return sh;
+      hand.position.set(0, -0.92, 0);
+      el.add(hand);
+      sh.add(el);
+      spine.add(sh);
+      return { shoulder: sh, elbow: el, hand: hand };
     }
     var armL = arm(-1), armR = arm(1);
     meshes.arms.left = armL;
     meshes.arms.right = armR;
 
     // neck and the head: a featureless egg — until something is drawn on it
-    var neck = cylPart(g, 0.035, 0.045, 0.16, 0, 3.02, 0);
+    var neck = cylPart(spine, 0.035, 0.045, 0.16, 0, 1.18, 0);
     void neck;
     var headGroup = new THREE.Group();
-    headGroup.position.set(0, 3.24, 0);
+    headGroup.position.set(0, 1.40, 0);
     var head = new THREE.Mesh(new THREE.SphereGeometry(0.155, 16, 14), birch);
     head.scale.set(0.92, 1.22, 0.98);
     headGroup.add(head);
@@ -161,7 +186,7 @@
       new THREE.MeshBasicMaterial({ map: faceTex, transparent: true }));
     facePlane.position.set(0, 0.01, 0.15);
     headGroup.add(facePlane);
-    g.add(headGroup);
+    spine.add(headGroup);
 
     function drawFace(kind) {
       var x = faceCtx;
@@ -197,30 +222,37 @@
     // ================= Poses =================
     function setPose(name) {
       // reset
-      armL.rotation.set(0, 0, 0); armR.rotation.set(0, 0, 0);
-      legL.rotation.set(0, 0, 0); legR.rotation.set(0, 0, 0);
+      armL.shoulder.rotation.set(0, 0, 0); armR.shoulder.rotation.set(0, 0, 0);
+      armL.elbow.rotation.set(0, 0, 0); armR.elbow.rotation.set(0, 0, 0);
+      legL.hip.rotation.set(0, 0, 0); legR.hip.rotation.set(0, 0, 0);
+      legL.knee.rotation.set(0, 0, 0); legR.knee.rotation.set(0, 0, 0);
       headGroup.rotation.set(0, 0, 0);
+      spine.rotation.set(0, 0, 0);
       g.rotation.z = 0;
+      pose = name;
       if (name === 'hi') {
-        armR.rotation.z = Math.PI - 0.25;         // one flat hand raised: hello
+        armR.shoulder.rotation.z = Math.PI - 0.25;   // one flat hand raised: hello
         headGroup.rotation.z = 0.12;
       } else if (name === 'spin') {
-        armL.rotation.z = -Math.PI / 2 + 0.2;     // a wooden ballerina, stopped
-        armR.rotation.z = Math.PI / 2 - 0.2;
-        legR.rotation.x = -0.9;
+        armL.shoulder.rotation.z = -Math.PI / 2 + 0.2;   // a wooden ballerina, stopped
+        armR.shoulder.rotation.z = Math.PI / 2 - 0.2;
+        legR.hip.rotation.x = -0.9;
+        legR.knee.rotation.x = 0.5;
         g.rotation.z = 0.06;
         headGroup.rotation.y = 0.7;
       } else if (name === 'smear') {
-        g.rotation.z = 0.0;
-        armL.rotation.x = -1.1;                   // both hands at the face
-        armR.rotation.x = -1.15;
-        armL.rotation.z = -0.25; armR.rotation.z = 0.25;
+        armL.shoulder.rotation.x = -1.1;             // both hands at the face
+        armR.shoulder.rotation.x = -1.15;
+        armL.elbow.rotation.x = -1.2; armR.elbow.rotation.x = -1.25;
+        armL.shoulder.rotation.z = -0.25; armR.shoulder.rotation.z = 0.25;
         headGroup.rotation.x = 0.35;
       } else if (name === 'menace') {
-        armR.rotation.x = -Math.PI + 0.4;         // hand high, about to spear
+        armR.shoulder.rotation.x = -Math.PI + 0.4;   // hand high, about to spear
+        armR.elbow.rotation.x = 0.5;
         headGroup.rotation.x = -0.15;
       }
     }
+    var pose = 'walk';
 
     // ================= Brain =================
     // dormant | lurk | roam | chase | rage | frozen | banging | menace | destroyed
@@ -240,6 +272,9 @@
     var armsLeft = 2;
     var headOn = true;
     var spottedOnce = false;
+    var fleeT = 0;
+    var angered = false;        // it has been shot; tomorrow night is worse
+    var frozenForKill = false;  // the kill cam is animating it by hand
     var menaceCam = -1;
     var watched = false;
     var ventsOpen = false;
@@ -310,16 +345,24 @@
       return { x: nx, z: nz };
     }
 
-    function canSee(px, pz) {
-      var dx = px - pos.x, dz = pz - pos.z;
-      var dist = Math.hypot(dx, dz);
-      // it can smell you this close — but not through tungsten
-      if (dist < SENSE_RANGE) return losClear(pos.x, pos.z, px, pz);
-      if (dist > SIGHT_RANGE) return false;
-      var ang = Math.atan2(-dx, -dz);
-      var diff = Math.atan2(Math.sin(ang - facing), Math.cos(ang - facing));
-      if (Math.abs(diff) > FOV) return false;
-      return losClear(pos.x, pos.z, px, pz);
+    // It has no eyes and no nose. The face is a drawing. What it has is a
+    // chip that never stopped thinking and a body that reads the room off
+    // the tiny shifts coming back at it — so it finds you by the noise you
+    // make, from any direction, and it cannot find you at all if you are
+    // still. Turning your back on it means nothing. Standing still means
+    // everything.
+    //
+    // `noise` is how far the sound the player is currently making carries,
+    // in metres, and comes in from the engine each tick.
+    var lastNoise = 0;
+    function canSense(px, pz, noise) {
+      var dist = Math.hypot(px - pos.x, pz - pos.z);
+      if (noise <= 0) return false;
+      if (dist > noise) return false;
+      // straight through the air, or muffled round a corner at less than
+      // half the range. Tungsten stops it dead either way.
+      if (losClear(pos.x, pos.z, px, pz)) return true;
+      return dist < noise * 0.42 && dist < SENSE_RANGE * 2.2;
     }
 
     function nearestWaypoint(x, z) {
@@ -380,18 +423,49 @@
       }
     }
 
-    function beginRage() {
+    function beginChase() {
+      mode = 'chase';
+      lastSeen = 0;
+      setPose('walk');
+    }
+
+    function beginRage(seconds) {
       mode = 'rage';
-      rageT = 75;
+      rageT = seconds === undefined ? 75 : seconds;
       drawFace('sharpie');
       setPose('walk');
       if (api.onRage) api.onRage();
     }
 
+    // Put a bullet in it and it does not come for you — it goes. Away,
+    // fast, out of the room, and it does not come back that night. It
+    // comes back the NEXT night, and it comes back on the ceiling.
+    function beginFlee() {
+      mode = 'flee';
+      fleeT = 12;
+      angered = true;
+      setPose('walk');
+      // pick the lurk furthest from the player's noise and run for it
+      var best = 0, bd = -1;
+      for (var i = 0; i < LURKS.length; i++) {
+        var d = Math.hypot(LURKS[i].x - pos.x, LURKS[i].z - pos.z);
+        if (d > bd) { bd = d; best = i; }
+      }
+      roamTarget = { x: LURKS[best].x, z: LURKS[best].z, hunt: false, lurk: best };
+      wpIndex = nearestWaypoint(pos.x, pos.z);
+      if (api.onFlee) api.onFlee();
+    }
+
     var api = {
       group: g,
       onCaught: null, onDoorSlam: null, onStep: null, onSpotted: null,
-      onLurk: null, onRage: null, onBang: null, onWindup: null,
+      onLurk: null, onRage: null, onBang: null, onWindup: null, onFlee: null,
+      NOISE: NOISE,
+      speeds: function () { return { roam: ROAM_SPEED, chase: CHASE_SPEED, rage: RAGE_SPEED }; },
+      // the kill choreography drives the body directly
+      parts: { spine: spine, head: headGroup, armL: armL, armR: armR, legL: legL, legR: legR },
+      setPose: function (n) { setPose(n); },
+      holdStill: function (on) { frozenForKill = !!on; },
       onCameraDestroyed: null, onArmBroken: null, onHeadBroken: null,
       // supplied by the engine:
       isSealActive: function () { return false; },
@@ -418,20 +492,24 @@
         if (mode === 'lurk' && LURKS[lurkIndex].id === 'cage') return api.freeze(100);
         return false;
       },
+      // Hurting it is a decision, not a defence. It reels, it runs, and it
+      // remembers — every night after this one it hunts you enraged.
       hitShot: function (stagger) {
         if (mode === 'dormant' || mode === 'destroyed') return false;
         hits++;
         staggerT = Math.max(staggerT, stagger || 1.1);
-        if (mode === 'lurk' || mode === 'roam' || mode === 'menace') { mode = 'chase'; lastSeen = 0; setPose('walk'); }
-        if (hits === 6 && rageT <= 0) beginRage();
+        if (mode === 'rage') return true;        // already past caring
+        beginFlee();
         return true;
       },
+      isAngered: function () { return angered; },
       // the riot shield turns its own attacks against it
       breakArm: function () {
         if (armsLeft <= 0) return false;
         armsLeft--;
+        angered = true;          // a bullet is not the only way to hurt it
         var which = armsLeft === 1 ? armR : armL;
-        which.visible = false;
+        which.shoulder.visible = false;
         dropPiece([0.06, 1.5, 0.08], pos.x, pos.z);
         if (api.onArmBroken) api.onArmBroken(armsLeft);
         staggerT = 1.6;
@@ -459,13 +537,15 @@
         if (day) {
           if (mode !== 'dormant') { daylightHold = mode; }
           mode = 'dormant';
+          rageT = 0;
           g.visible = false;
         } else if (daylightHold) {
-          mode = 'lurk';
           lurkT = 0;
           beginLurk(Math.floor(Math.random() * LURKS.length));
           daylightHold = null;
           g.visible = true;
+          // it was shot yesterday. It has had all day to think about it.
+          if (angered) beginRage(Infinity);
         }
       },
       isHidden: function () { return mode === 'dormant'; },
@@ -506,8 +586,11 @@
       los: function (x1, z1, x2, z2) { return losClear(x1, z1, x2, z2); },
       setLurkScale: function (s) { lurkScale = s; },
 
-      update: function (dt, px, pz) {
+      update: function (dt, px, pz, noise) {
         if (mode === 'dormant' || mode === 'destroyed') return;
+        if (frozenForKill) return;              // the kill cam owns the body
+        noise = noise === undefined ? NOISE.walk : noise;
+        lastNoise = noise;
 
         var dx = px - pos.x, dz = pz - pos.z;
         var dist = Math.hypot(dx, dz);
@@ -557,7 +640,7 @@
           // it moves only when nobody is looking at it
           var tRef = mode === 'stand' ? (standT -= dt, standT) : (lurkT -= dt, lurkT);
           if (!watched && tRef <= 0) beginRoam();
-          if (canSee(px, pz) && dist < 7 && !watched) { mode = 'chase'; lastSeen = 0; setPose('walk'); }
+          if (canSense(px, pz, noise) && dist < 9 && !watched) { beginChase(); }
           g.position.set(pos.x, 0, pos.z);
           return;
         }
@@ -565,14 +648,21 @@
         var moving = false;
         var speed = 0, tx = pos.x, tz = pos.z;
 
-        if (mode === 'chase' || mode === 'rage') {
+        if (mode === 'flee') {
+          // straight away from you, then gone for the rest of the night
+          fleeT -= dt;
+          if (fleeT <= 0) { beginLurk(roamTarget ? roamTarget.lurk : undefined); return; }
+          speed = RAGE_SPEED;
+          tx = roamTarget.x; tz = roamTarget.z;
+          moving = true;
+        } else if (mode === 'chase' || mode === 'rage') {
           if (mode === 'rage') {
             rageT -= dt;
-            if (rageT <= 0) { drawFace(bloodied ? 'none' : 'none'); beginLurk(); return; }
+            if (rageT <= 0) { drawFace('none'); beginLurk(); return; }
             speed = RAGE_SPEED; tx = px; tz = pz;      // rage always knows
             moving = true;
           } else {
-            if (canSee(px, pz)) lastSeen = 0; else lastSeen += dt;
+            if (canSense(px, pz, noise)) lastSeen = 0; else lastSeen += dt;
             if (lastSeen > LOSE_AFTER) { beginLurk(); return; }
             speed = CHASE_SPEED; tx = px; tz = pz;
             moving = true;
@@ -580,7 +670,7 @@
         } else if (mode === 'roam' || mode === 'charge') {
           // a roam is pinned by a look; a shocked charge is not
           if (mode === 'roam' && watched) { g.position.set(pos.x, 0, pos.z); return; }
-          if (canSee(px, pz)) {
+          if (canSense(px, pz, noise)) {
             mode = 'chase'; lastSeen = 0;
             if (!spottedOnce) { spottedOnce = true; if (api.onSpotted) api.onSpotted(true); }
             else if (api.onSpotted) api.onSpotted(false);
@@ -603,16 +693,21 @@
             beginLurk(roamTarget.lurk);
             return;
           }
-          // a sealed shutter in its path stops it dead
-          if (roamTarget.hunt) {
-            var sealHit = api.isSealActive('sealWest') && Math.abs(pos.x + 8) < 2.2 && Math.abs(pos.z) < 2.5 ? 'sealWest'
-              : api.isSealActive('sealEast') && Math.abs(pos.x - 8) < 2.2 && Math.abs(pos.z) < 2.5 ? 'sealEast' : null;
-            if (sealHit) {
-              mode = 'banging';
-              bangT = 9;
-              if (api.onBang) api.onBang(dist);
-              return;
-            }
+        }
+
+        // A sealed shutter in its path stops it dead — whichever way it was
+        // coming. This used to be checked only on a roam toward Waiting, so
+        // once it could hear you it would walk into the tungsten and press
+        // there silently instead of hitting it.
+        if (moving && (mode === 'chase' || mode === 'rage' ||
+            (mode !== 'flee' && roamTarget && roamTarget.hunt))) {
+          var sealHit = api.isSealActive('sealWest') && Math.abs(pos.x + 8) < 2.6 && Math.abs(pos.z) < 2.8 ? 'sealWest'
+            : api.isSealActive('sealEast') && Math.abs(pos.x - 8) < 2.6 && Math.abs(pos.z) < 2.8 ? 'sealEast' : null;
+          if (sealHit) {
+            mode = 'banging';
+            bangT = 9;
+            if (api.onBang) api.onBang(dist);
+            return;
           }
         }
 
@@ -629,35 +724,7 @@
         }
 
         // ---------------- presentation ----------------
-        walkT += dt * (mode === 'rage' ? 9 : mode === 'chase' ? 7 : 4.2);
-        var wallCrawl = mode === 'rage' && isInCorridor(pos.x, pos.z);
-        if (wallCrawl) {
-          // in its rage it takes to the walls
-          g.position.set(pos.x, 1.1 + Math.sin(walkT * 0.7) * 0.2, pos.z);
-          g.rotation.z = 0.9;
-        } else {
-          g.rotation.z = 0;
-          g.position.set(pos.x, Math.abs(Math.sin(walkT)) * 0.05, pos.z);
-        }
-        g.rotation.y = facing;
-        if (moving) {
-          legL.rotation.x = Math.sin(walkT) * 0.5;
-          legR.rotation.x = -Math.sin(walkT) * 0.5;
-          if (armsLeft > 0) armL.rotation.x = -Math.sin(walkT) * 0.3;
-          if (armsLeft > 1) armR.rotation.x = Math.sin(walkT) * 0.3;
-          if (mode === 'chase' && armsLeft > 1) armR.rotation.x = -2.4;  // hand already up
-        }
-        if (mode === 'rage') {
-          headGroup.rotation.y += dt * 5;          // the head goes all the way around
-        } else if (mode === 'chase') {
-          headGroup.rotation.y = 0;
-        } else {
-          headGroup.rotation.y = Math.sin(walkT * 0.2) * 0.6;
-        }
-        if (armsLeft === 0 && headOn) {
-          // nothing left but the desperate lean
-          g.rotation.x = 0.28;
-        }
+        animate(dt, moving, dist);
       },
 
       getState: function () {
@@ -665,7 +732,10 @@
           mode: mode, x: pos.x, z: pos.z, hits: hits, facing: facing,
           lurk: mode === 'lurk' ? LURKS[lurkIndex].id : null,
           bloodied: bloodied, armsLeft: armsLeft, headOn: headOn,
-          raging: rageT > 0, watched: watched
+          raging: rageT > 0, watched: watched,
+          angered: angered, noise: lastNoise,
+          hunch: hunch, splay: splay, onCeiling: ceilingT > 0.5,
+          y: g.position.y, headSpin: headGroup.rotation.y, pose: pose
         };
       },
       force: function (x, z, m, lurkId) {
@@ -691,6 +761,121 @@
       }
     };
 
+    // ================= Movement, drawn =================
+    // Three gaits and a fourth thing that is not a gait at all.
+    //
+    //   walk  — hunched, arms hanging, taking the building at its leisure
+    //   jog   — arms thrown out and arched, hands sweeping the walls; this
+    //           is what it does once it has heard you
+    //   crawl — rage only: flat on the ceiling, head turning all the way
+    //           round underneath it
+    //
+    // The hunch is not decoration. Standing straight it is 3.4m and the
+    // corridor ceilings are 3.4m, so it folds itself to fit and unfolds
+    // again the moment it reaches a room with height.
+    var hunch = 0, splay = 0, ceilingT = 0;
+    function ceilingAt(x, z) {
+      var r = level.roomAt(x, z);
+      return (r && r.h) ? r.h : 3.4;
+    }
+    function headroom(x, z) { return ceilingAt(x, z) - 3.46; }   // negative: it does not fit
+
+    function animate(dt, moving, dist) {
+      var raging = mode === 'rage';
+      var jogging = mode === 'chase' || mode === 'charge' || raging;
+      walkT += dt * (raging ? 8.5 : jogging ? 6.4 : 3.1);
+
+      // ---- on the ceiling ----
+      // In its rage it goes up. Flat to the ceiling, limbs splayed out to
+      // the sides, working along on the backs of its hands.
+      var wantCeiling = raging && moving;
+      ceilingT += ((wantCeiling ? 1 : 0) - ceilingT) * Math.min(1, dt * 3.5);
+      if (ceilingT > 0.02) {
+        var ch = ceilingAt(pos.x, pos.z);
+        var flat = ceilingT;
+        g.rotation.x = -Math.PI / 2 * flat;
+        g.rotation.z = 0;
+        // lying prone the model runs along +y, so lift it to the ceiling
+        // and let the interpolation carry it up off the floor
+        g.position.set(pos.x, (ch - 0.42) * flat, pos.z);
+        g.rotation.y = facing;
+        var sp = Math.sin(walkT), sp2 = Math.cos(walkT);
+        // limbs out to the sides, hauling along opposite pairs
+        legL.hip.rotation.z = 1.15 * flat; legR.hip.rotation.z = -1.15 * flat;
+        legL.hip.rotation.x = sp * 0.5 * flat; legR.hip.rotation.x = -sp * 0.5 * flat;
+        legL.knee.rotation.x = (0.7 + sp * 0.4) * flat;
+        legR.knee.rotation.x = (0.7 - sp * 0.4) * flat;
+        if (armsLeft > 0) {
+          armL.shoulder.rotation.z = -1.35 * flat;
+          armL.shoulder.rotation.x = -sp2 * 0.6 * flat;
+          armL.elbow.rotation.x = -1.0 * flat;
+        }
+        if (armsLeft > 1) {
+          armR.shoulder.rotation.z = 1.35 * flat;
+          armR.shoulder.rotation.x = sp2 * 0.6 * flat;
+          armR.elbow.rotation.x = -1.0 * flat;
+        }
+        spine.rotation.x = -0.25 * flat;
+        // the head hangs back off the neck to point at the floor, and keeps
+        // turning — there is nothing in the joint to stop it
+        headGroup.rotation.x = -1.5 * flat;
+        headGroup.rotation.y += dt * 6.2;
+        return;
+      }
+
+      // ---- on the floor ----
+      g.rotation.x = 0;
+      g.rotation.z = 0;
+      g.rotation.y = facing;
+      g.position.set(pos.x, moving ? Math.abs(Math.sin(walkT)) * 0.045 : 0, pos.z);
+
+      // fold to fit the ceiling, and fold further when hurrying
+      var room = headroom(pos.x, pos.z);
+      var wantHunch = (room < 0 ? Math.min(0.62, -room * 1.15 + 0.16) : 0.06)
+        + (jogging ? 0.22 : 0) + (raging ? 0.1 : 0);
+      hunch += (wantHunch - hunch) * Math.min(1, dt * 4);
+      spine.rotation.x = hunch;
+
+      // arms out and arched once it is hunting: it is reading the room off
+      // the walls, and the hands are how it does that
+      var wantSplay = jogging ? 1 : 0;
+      splay += (wantSplay - splay) * Math.min(1, dt * 3);
+
+      if (!moving && !jogging) {
+        // standing still in a lurk pose — leave whatever setPose put there
+        headGroup.rotation.y = Math.sin(walkT * 0.22) * 0.6;
+        return;
+      }
+
+      var s = Math.sin(walkT), c = Math.cos(walkT);
+      legL.hip.rotation.set(s * (jogging ? 0.78 : 0.46), 0, 0);
+      legR.hip.rotation.set(-s * (jogging ? 0.78 : 0.46), 0, 0);
+      // knees only bend one way, and only on the leg coming through
+      legL.knee.rotation.x = Math.max(0, -s) * (jogging ? 1.15 : 0.5);
+      legR.knee.rotation.x = Math.max(0, s) * (jogging ? 1.15 : 0.5);
+
+      if (armsLeft > 0) {
+        armL.shoulder.rotation.x = -c * (0.3 + splay * 0.25) - splay * 0.55;
+        armL.shoulder.rotation.z = -splay * (1.02 + Math.sin(walkT * 0.7) * 0.16);
+        armL.elbow.rotation.x = -splay * (0.95 + c * 0.3);
+        armL.elbow.rotation.z = 0;
+      }
+      if (armsLeft > 1) {
+        armR.shoulder.rotation.x = c * (0.3 + splay * 0.25) - splay * 0.55;
+        armR.shoulder.rotation.z = splay * (1.02 - Math.sin(walkT * 0.7) * 0.16);
+        armR.elbow.rotation.x = -splay * (0.95 - c * 0.3);
+        armR.elbow.rotation.z = 0;
+      }
+
+      // the head: a slow sweep while it walks, a full rotation in the rage,
+      // and locked forward on the last stretch of a chase
+      if (raging) headGroup.rotation.y += dt * 5.5;
+      else if (jogging && dist < 6) headGroup.rotation.set(0.12, 0, 0);
+      else headGroup.rotation.set(0, Math.sin(walkT * 0.28) * 0.75, 0);
+
+      if (armsLeft === 0 && headOn) g.rotation.x = 0.28;   // the desperate lean
+    }
+
     var stepClock = 0;
     function stepAccumulate(dt, speed, dist) {
       stepClock += speed * dt;
@@ -699,11 +884,6 @@
         stepClock = 0;
         if (api.onStep) api.onStep(dist, mode === 'chase' || mode === 'rage');
       }
-    }
-
-    function isInCorridor(x, z) {
-      var r = level.roomAt(x, z);
-      return r && (r.id === 'hallL' || r.id === 'hallR' || r.id === 'hallS' || r.id === 'hallE');
     }
 
     return api;

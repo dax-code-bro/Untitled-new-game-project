@@ -80,6 +80,33 @@
   #curtain[hidden] { display: none; }
   #curtain.dismissing { opacity: 0; backdrop-filter: blur(0px); }
 
+  /* What is on the lens while it kills you. Held on a separate layer from
+     the vignette so a death can run over any lighting state. */
+  #gore {
+    position: fixed; inset: 0; z-index: 26; pointer-events: none; opacity: 0;
+    background:
+      radial-gradient(120% 90% at 50% 55%, rgba(120,10,6,0) 34%, rgba(96,6,4,0.62) 72%, rgba(38,2,2,0.95) 100%),
+      radial-gradient(38% 30% at 34% 42%, rgba(150,14,8,0.5), rgba(150,14,8,0) 70%),
+      radial-gradient(30% 26% at 68% 60%, rgba(132,10,6,0.45), rgba(132,10,6,0) 70%);
+  }
+  /* the running-down-the-lens part */
+  #gore::after {
+    content: ''; position: absolute; inset: 0;
+    background:
+      linear-gradient(to bottom, rgba(88,4,3,0.75) 0%, rgba(88,4,3,0) 26%),
+      radial-gradient(9% 34% at 22% 12%, rgba(104,6,4,0.8), rgba(104,6,4,0) 72%),
+      radial-gradient(6% 26% at 61% 6%, rgba(104,6,4,0.7), rgba(104,6,4,0) 72%),
+      radial-gradient(7% 30% at 84% 16%, rgba(104,6,4,0.7), rgba(104,6,4,0) 72%);
+  }
+  /* everything the player normally reads goes away for the duration */
+  body.killing #crosshair, body.killing #prompt, body.killing #clock,
+  body.killing #objective, body.killing #dialogue, body.killing #subtitle,
+  body.killing #carry, body.killing #ammo, body.killing #meters,
+  body.killing #status, body.killing #stick, body.killing #touchbar,
+  body.killing #hotbar, body.killing #roomname, body.killing #sound {
+    opacity: 0 !important; pointer-events: none !important;
+    transition: opacity 220ms ease;
+  }
   #blackout {
     position: fixed; inset: 0; z-index: 30; background: #000;
     opacity: 0; pointer-events: none; transition: opacity 130ms linear;
@@ -568,6 +595,7 @@
 <div id="vignette"></div>
 <div id="grain"></div>
 <div id="muzzle"></div>
+<div id="gore"></div>
 
 <div id="crosshair"></div>
 <div id="prompt"></div>
@@ -828,6 +856,7 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
 <script src="./intro.js"></script>
 <script src="./weapons.js"></script>
 <script src="./entity.js"></script>
+<script src="./kills.js"></script>
 <script src="./level.js"></script>
 <script src="./game.js"></script>
 <script>
@@ -838,6 +867,7 @@ window.bootUI = function bootUI(THREE) {
   var crosshair = $('crosshair'), prompt = $('prompt'), roomname = $('roomname');
   var statusEl = $('status'), stanceEl = $('stance'), legend = $('legend');
   var soundBtn = $('sound'), hint = $('hint'), subtitle = $('subtitle');
+  var goreEl = $('gore');
   var ammoEl = $('ammo'), carry = $('carry'), muzzle = $('muzzle');
   var stick = $('stick'), stickNub = $('stick-nub'), touchbar = $('touchbar');
   var fileNo = $('file-no'), grain = $('grain');
@@ -1157,6 +1187,21 @@ window.bootUI = function bootUI(THREE) {
         dlgEl.querySelector('.what').textContent = what;
       },
       onBars: function (on) { barsEl.classList.toggle('on', !!on); },
+      // ---- it has you ----
+      onKillStart: function () {
+        document.body.classList.add('killing');
+        goreEl.style.opacity = '0';
+        blackout.classList.remove('slow');
+      },
+      onKillFrame: function (blood, fade) {
+        goreEl.style.opacity = String(Math.min(1, blood));
+        blackout.style.opacity = String(Math.min(1, fade));
+      },
+      onKillEnd: function () {
+        document.body.classList.remove('killing');
+        goreEl.style.opacity = '0';
+        blackout.style.opacity = '';
+      },
       onMessage: say,
       onRoom: function (name) {
         roomname.textContent = name;
@@ -1246,6 +1291,9 @@ window.bootUI = function bootUI(THREE) {
         var label = reason === 'seizure' ? 'File 001 — Cardiac event'
           : reason === 'starved' ? 'File 001 — Starved'
           : reason === 'headbutt' ? 'File 001 — Blunt trauma'
+          : reason === 'slammed' ? 'File 001 — Remains unrecoverable'
+          : reason === 'butchered' ? 'File 001 — Remains unidentifiable'
+          : reason === 'impaled' ? 'File 001 — Dismembered'
           : 'File 001 — Terminated';
         setTimeout(function () {
           fileNo.textContent = label;

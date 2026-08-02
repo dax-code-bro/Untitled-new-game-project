@@ -386,7 +386,12 @@
         return { x: _v.x, y: _v.y, z: _v.z };
       },
       // Everything the figure owns, for layer assignment and culling.
-      each: function (fn) { group.traverse(function (o) { if (o.isMesh) fn(o); }); return api; }
+      each: function (fn) { group.traverse(function (o) { if (o.isMesh) fn(o); }); return api; },
+      // The rig itself. The kill choreography drives these directly — the
+      // torso hangs off the hips, so lifting one away from the other is
+      // how a body comes apart.
+      joints: joints,
+      body: body
     };
     return pose(opts.pose || 'stand');
   };

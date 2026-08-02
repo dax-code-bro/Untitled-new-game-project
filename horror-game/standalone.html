@@ -80,6 +80,33 @@
   #curtain[hidden] { display: none; }
   #curtain.dismissing { opacity: 0; backdrop-filter: blur(0px); }
 
+  /* What is on the lens while it kills you. Held on a separate layer from
+     the vignette so a death can run over any lighting state. */
+  #gore {
+    position: fixed; inset: 0; z-index: 26; pointer-events: none; opacity: 0;
+    background:
+      radial-gradient(120% 90% at 50% 55%, rgba(120,10,6,0) 34%, rgba(96,6,4,0.62) 72%, rgba(38,2,2,0.95) 100%),
+      radial-gradient(38% 30% at 34% 42%, rgba(150,14,8,0.5), rgba(150,14,8,0) 70%),
+      radial-gradient(30% 26% at 68% 60%, rgba(132,10,6,0.45), rgba(132,10,6,0) 70%);
+  }
+  /* the running-down-the-lens part */
+  #gore::after {
+    content: ''; position: absolute; inset: 0;
+    background:
+      linear-gradient(to bottom, rgba(88,4,3,0.75) 0%, rgba(88,4,3,0) 26%),
+      radial-gradient(9% 34% at 22% 12%, rgba(104,6,4,0.8), rgba(104,6,4,0) 72%),
+      radial-gradient(6% 26% at 61% 6%, rgba(104,6,4,0.7), rgba(104,6,4,0) 72%),
+      radial-gradient(7% 30% at 84% 16%, rgba(104,6,4,0.7), rgba(104,6,4,0) 72%);
+  }
+  /* everything the player normally reads goes away for the duration */
+  body.killing #crosshair, body.killing #prompt, body.killing #clock,
+  body.killing #objective, body.killing #dialogue, body.killing #subtitle,
+  body.killing #carry, body.killing #ammo, body.killing #meters,
+  body.killing #status, body.killing #stick, body.killing #touchbar,
+  body.killing #hotbar, body.killing #roomname, body.killing #sound {
+    opacity: 0 !important; pointer-events: none !important;
+    transition: opacity 220ms ease;
+  }
   #blackout {
     position: fixed; inset: 0; z-index: 30; background: #000;
     opacity: 0; pointer-events: none; transition: opacity 130ms linear;
@@ -568,6 +595,7 @@
 <div id="vignette"></div>
 <div id="grain"></div>
 <div id="muzzle"></div>
+<div id="gore"></div>
 
 <div id="crosshair"></div>
 <div id="prompt"></div>
@@ -2153,7 +2181,12 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
         return { x: _v.x, y: _v.y, z: _v.z };
       },
       // Everything the figure owns, for layer assignment and culling.
-      each: function (fn) { group.traverse(function (o) { if (o.isMesh) fn(o); }); return api; }
+      each: function (fn) { group.traverse(function (o) { if (o.isMesh) fn(o); }); return api; },
+      // The rig itself. The kill choreography drives these directly — the
+      // torso hangs off the hips, so lifting one away from the other is
+      // how a body comes apart.
+      joints: joints,
+      body: body
     };
     return pose(opts.pose || 'stand');
   };
@@ -3158,12 +3191,16 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
   'use strict';
 
   var RADIUS = 0.5;
+  // The player walks at 2.9 and sprints at just under 5. A jog is pitched
+  // a shade under a sprint on purpose: run the moment you hear it and you
+  // stay ahead, hesitate and you do not. In the rage it matches a sprint,
+  // and you are not outrunning it — you are getting a door down.
   var ROAM_SPEED = 2.2;
-  var CHASE_SPEED = 3.4;
-  var RAGE_SPEED = 4.6;
-  var SIGHT_RANGE = 17;
+  var CHASE_SPEED = 4.45;
+  var RAGE_SPEED = 4.92;
   var SENSE_RANGE = 3;
-  var FOV = Math.PI * 0.42;
+  // how far each kind of noise carries to it, in metres
+  var NOISE = { still: 0, crawl: 2.6, crouch: 5.5, walk: 11, sprint: 19 };
   var LOSE_AFTER = 5;
   var CATCH_DIST = 1.2;
   var WATCH_DOT = 0.45;       // how centred you must have it to pin it
@@ -3197,6 +3234,10 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
     var bolt = new THREE.MeshStandardMaterial({ color: 0x3c4144, roughness: 0.35, metalness: 0.85 });
 
     var g = new THREE.Group();
+    // Yaw first, then the tilt, or the two mix: going flat to the ceiling
+    // sets both at once and in the default order the body ends up lying
+    // across the corridor on a diagonal instead of along it.
+    g.rotation.order = 'YXZ';
     var meshes = { arms: {}, blood: [] };
 
     function cylPart(parent, rt, rb, h, x, y, z, mat) {
@@ -3220,7 +3261,9 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       return m;
     }
 
-    // legs: stilt-thin, joints visible as turned balls with bolts through
+    // Legs: stilt-thin, joints visible as turned balls with bolts through.
+    // Hip and knee are separate groups so the thing can crouch, hunch and
+    // splay itself flat against a ceiling instead of only swinging rigid.
     function leg(side) {
       var hip = new THREE.Group();
       hip.position.set(side * 0.17, 1.62, 0);
@@ -3230,12 +3273,15 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       var kneeY = -0.82;
       spherePart(hip, 0.072, 0, kneeY, 0);
       boltAt(hip, 0, kneeY, 0);
-      cylPart(hip, 0.05, 0.046, 0.74, 0, kneeY - 0.4, 0);
+      var knee = new THREE.Group();
+      knee.position.set(0, kneeY, 0);
+      cylPart(knee, 0.05, 0.046, 0.74, 0, -0.4, 0);
       var foot = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.05, 0.3), birch);
-      foot.position.set(0, kneeY - 0.79, 0.07);
-      hip.add(foot);
+      foot.position.set(0, -0.79, 0.07);
+      knee.add(foot);
+      hip.add(knee);
       g.add(hip);
-      return hip;
+      return { hip: hip, knee: knee, foot: foot };
     }
     var legL = leg(-1), legR = leg(1);
 
@@ -3243,51 +3289,63 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
     spherePart(g, 0.16, 0, 1.68, 0, 1.25, 0.62, 0.8);
     cylPart(g, 0.035, 0.035, 0.14, 0, 1.84, 0, bolt);   // exposed spine rod
 
+    // Everything above the waist hangs off one hinge. Standing upright it
+    // is eleven feet of mannequin and the corridors are eleven feet tall,
+    // so it folds itself forward to get down them.
+    var spine = new THREE.Group();
+    spine.position.set(0, 1.84, 0);
+    g.add(spine);
+
     // torso: a mannequin's tapered chest, far too thin
     var torso = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.105, 0.98, 14), birch);
-    torso.position.set(0, 2.42, 0);
-    g.add(torso);
-    spherePart(g, 0.155, 0, 2.9, 0, 1.15, 0.5, 0.85);   // chest cap
-    boltAt(g, -0.1, 2.62, 0.12, 0.5);
-    boltAt(g, 0.12, 2.2, -0.1, 1.1);
+    torso.position.set(0, 0.58, 0);
+    spine.add(torso);
+    spherePart(spine, 0.155, 0, 1.06, 0, 1.15, 0.5, 0.85);   // chest cap
+    boltAt(spine, -0.1, 0.78, 0.12, 0.5);
+    boltAt(spine, 0.12, 0.36, -0.1, 1.1);
 
     // blood smears (hidden until it visits Nick)
-    [[0, 2.55, 0.15, 0.22, 0.5], [-0.07, 2.2, 0.12, 0.16, 0.4], [0.09, 2.75, 0.13, 0.18, 0.3]].forEach(function (b) {
+    [[0, 0.71, 0.15, 0.22, 0.5], [-0.07, 0.36, 0.12, 0.16, 0.4], [0.09, 0.91, 0.13, 0.18, 0.3]].forEach(function (b) {
       var s = new THREE.Mesh(new THREE.PlaneGeometry(b[3], b[4]),
         new THREE.MeshStandardMaterial({ color: 0x571812, roughness: 0.55, transparent: true, opacity: 0.85 }));
       s.position.set(b[0], b[1], b[2]);
       s.rotation.z = Math.random();
       s.visible = false;
-      g.add(s);
+      spine.add(s);
       meshes.blood.push(s);
     });
 
-    // arms: hung from bolted shoulder balls, ending in FLAT hands
+    // Arms: hung from bolted shoulder balls, ending in FLAT hands. The
+    // elbow is its own group — it needs to arch them out and sweep the
+    // walls with the backs of its hands, which a rigid arm cannot do.
     function arm(side) {
       var sh = new THREE.Group();
-      sh.position.set(side * 0.26, 2.86, 0);
+      sh.position.set(side * 0.26, 1.02, 0);
       spherePart(sh, 0.08, 0, 0, 0);
       boltAt(sh, 0, 0, 0, 0);
       cylPart(sh, 0.047, 0.042, 0.74, 0, -0.4, 0);
       spherePart(sh, 0.06, 0, -0.8, 0);
       boltAt(sh, 0, -0.8, 0);
-      cylPart(sh, 0.04, 0.036, 0.72, 0, -1.18, 0);
+      var el = new THREE.Group();
+      el.position.set(0, -0.8, 0);
+      cylPart(el, 0.04, 0.036, 0.72, 0, -0.38, 0);
       // the flat hand — a paddle of wood, edge-on it disappears
       var hand = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.34, 0.016), birch);
-      hand.position.set(0, -1.72, 0);
-      sh.add(hand);
-      g.add(sh);
-      return sh;
+      hand.position.set(0, -0.92, 0);
+      el.add(hand);
+      sh.add(el);
+      spine.add(sh);
+      return { shoulder: sh, elbow: el, hand: hand };
     }
     var armL = arm(-1), armR = arm(1);
     meshes.arms.left = armL;
     meshes.arms.right = armR;
 
     // neck and the head: a featureless egg — until something is drawn on it
-    var neck = cylPart(g, 0.035, 0.045, 0.16, 0, 3.02, 0);
+    var neck = cylPart(spine, 0.035, 0.045, 0.16, 0, 1.18, 0);
     void neck;
     var headGroup = new THREE.Group();
-    headGroup.position.set(0, 3.24, 0);
+    headGroup.position.set(0, 1.40, 0);
     var head = new THREE.Mesh(new THREE.SphereGeometry(0.155, 16, 14), birch);
     head.scale.set(0.92, 1.22, 0.98);
     headGroup.add(head);
@@ -3301,7 +3359,7 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       new THREE.MeshBasicMaterial({ map: faceTex, transparent: true }));
     facePlane.position.set(0, 0.01, 0.15);
     headGroup.add(facePlane);
-    g.add(headGroup);
+    spine.add(headGroup);
 
     function drawFace(kind) {
       var x = faceCtx;
@@ -3337,30 +3395,37 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
     // ================= Poses =================
     function setPose(name) {
       // reset
-      armL.rotation.set(0, 0, 0); armR.rotation.set(0, 0, 0);
-      legL.rotation.set(0, 0, 0); legR.rotation.set(0, 0, 0);
+      armL.shoulder.rotation.set(0, 0, 0); armR.shoulder.rotation.set(0, 0, 0);
+      armL.elbow.rotation.set(0, 0, 0); armR.elbow.rotation.set(0, 0, 0);
+      legL.hip.rotation.set(0, 0, 0); legR.hip.rotation.set(0, 0, 0);
+      legL.knee.rotation.set(0, 0, 0); legR.knee.rotation.set(0, 0, 0);
       headGroup.rotation.set(0, 0, 0);
+      spine.rotation.set(0, 0, 0);
       g.rotation.z = 0;
+      pose = name;
       if (name === 'hi') {
-        armR.rotation.z = Math.PI - 0.25;         // one flat hand raised: hello
+        armR.shoulder.rotation.z = Math.PI - 0.25;   // one flat hand raised: hello
         headGroup.rotation.z = 0.12;
       } else if (name === 'spin') {
-        armL.rotation.z = -Math.PI / 2 + 0.2;     // a wooden ballerina, stopped
-        armR.rotation.z = Math.PI / 2 - 0.2;
-        legR.rotation.x = -0.9;
+        armL.shoulder.rotation.z = -Math.PI / 2 + 0.2;   // a wooden ballerina, stopped
+        armR.shoulder.rotation.z = Math.PI / 2 - 0.2;
+        legR.hip.rotation.x = -0.9;
+        legR.knee.rotation.x = 0.5;
         g.rotation.z = 0.06;
         headGroup.rotation.y = 0.7;
       } else if (name === 'smear') {
-        g.rotation.z = 0.0;
-        armL.rotation.x = -1.1;                   // both hands at the face
-        armR.rotation.x = -1.15;
-        armL.rotation.z = -0.25; armR.rotation.z = 0.25;
+        armL.shoulder.rotation.x = -1.1;             // both hands at the face
+        armR.shoulder.rotation.x = -1.15;
+        armL.elbow.rotation.x = -1.2; armR.elbow.rotation.x = -1.25;
+        armL.shoulder.rotation.z = -0.25; armR.shoulder.rotation.z = 0.25;
         headGroup.rotation.x = 0.35;
       } else if (name === 'menace') {
-        armR.rotation.x = -Math.PI + 0.4;         // hand high, about to spear
+        armR.shoulder.rotation.x = -Math.PI + 0.4;   // hand high, about to spear
+        armR.elbow.rotation.x = 0.5;
         headGroup.rotation.x = -0.15;
       }
     }
+    var pose = 'walk';
 
     // ================= Brain =================
     // dormant | lurk | roam | chase | rage | frozen | banging | menace | destroyed
@@ -3380,6 +3445,9 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
     var armsLeft = 2;
     var headOn = true;
     var spottedOnce = false;
+    var fleeT = 0;
+    var angered = false;        // it has been shot; tomorrow night is worse
+    var frozenForKill = false;  // the kill cam is animating it by hand
     var menaceCam = -1;
     var watched = false;
     var ventsOpen = false;
@@ -3450,16 +3518,24 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       return { x: nx, z: nz };
     }
 
-    function canSee(px, pz) {
-      var dx = px - pos.x, dz = pz - pos.z;
-      var dist = Math.hypot(dx, dz);
-      // it can smell you this close — but not through tungsten
-      if (dist < SENSE_RANGE) return losClear(pos.x, pos.z, px, pz);
-      if (dist > SIGHT_RANGE) return false;
-      var ang = Math.atan2(-dx, -dz);
-      var diff = Math.atan2(Math.sin(ang - facing), Math.cos(ang - facing));
-      if (Math.abs(diff) > FOV) return false;
-      return losClear(pos.x, pos.z, px, pz);
+    // It has no eyes and no nose. The face is a drawing. What it has is a
+    // chip that never stopped thinking and a body that reads the room off
+    // the tiny shifts coming back at it — so it finds you by the noise you
+    // make, from any direction, and it cannot find you at all if you are
+    // still. Turning your back on it means nothing. Standing still means
+    // everything.
+    //
+    // `noise` is how far the sound the player is currently making carries,
+    // in metres, and comes in from the engine each tick.
+    var lastNoise = 0;
+    function canSense(px, pz, noise) {
+      var dist = Math.hypot(px - pos.x, pz - pos.z);
+      if (noise <= 0) return false;
+      if (dist > noise) return false;
+      // straight through the air, or muffled round a corner at less than
+      // half the range. Tungsten stops it dead either way.
+      if (losClear(pos.x, pos.z, px, pz)) return true;
+      return dist < noise * 0.42 && dist < SENSE_RANGE * 2.2;
     }
 
     function nearestWaypoint(x, z) {
@@ -3520,18 +3596,49 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       }
     }
 
-    function beginRage() {
+    function beginChase() {
+      mode = 'chase';
+      lastSeen = 0;
+      setPose('walk');
+    }
+
+    function beginRage(seconds) {
       mode = 'rage';
-      rageT = 75;
+      rageT = seconds === undefined ? 75 : seconds;
       drawFace('sharpie');
       setPose('walk');
       if (api.onRage) api.onRage();
     }
 
+    // Put a bullet in it and it does not come for you — it goes. Away,
+    // fast, out of the room, and it does not come back that night. It
+    // comes back the NEXT night, and it comes back on the ceiling.
+    function beginFlee() {
+      mode = 'flee';
+      fleeT = 12;
+      angered = true;
+      setPose('walk');
+      // pick the lurk furthest from the player's noise and run for it
+      var best = 0, bd = -1;
+      for (var i = 0; i < LURKS.length; i++) {
+        var d = Math.hypot(LURKS[i].x - pos.x, LURKS[i].z - pos.z);
+        if (d > bd) { bd = d; best = i; }
+      }
+      roamTarget = { x: LURKS[best].x, z: LURKS[best].z, hunt: false, lurk: best };
+      wpIndex = nearestWaypoint(pos.x, pos.z);
+      if (api.onFlee) api.onFlee();
+    }
+
     var api = {
       group: g,
       onCaught: null, onDoorSlam: null, onStep: null, onSpotted: null,
-      onLurk: null, onRage: null, onBang: null, onWindup: null,
+      onLurk: null, onRage: null, onBang: null, onWindup: null, onFlee: null,
+      NOISE: NOISE,
+      speeds: function () { return { roam: ROAM_SPEED, chase: CHASE_SPEED, rage: RAGE_SPEED }; },
+      // the kill choreography drives the body directly
+      parts: { spine: spine, head: headGroup, armL: armL, armR: armR, legL: legL, legR: legR },
+      setPose: function (n) { setPose(n); },
+      holdStill: function (on) { frozenForKill = !!on; },
       onCameraDestroyed: null, onArmBroken: null, onHeadBroken: null,
       // supplied by the engine:
       isSealActive: function () { return false; },
@@ -3558,20 +3665,24 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
         if (mode === 'lurk' && LURKS[lurkIndex].id === 'cage') return api.freeze(100);
         return false;
       },
+      // Hurting it is a decision, not a defence. It reels, it runs, and it
+      // remembers — every night after this one it hunts you enraged.
       hitShot: function (stagger) {
         if (mode === 'dormant' || mode === 'destroyed') return false;
         hits++;
         staggerT = Math.max(staggerT, stagger || 1.1);
-        if (mode === 'lurk' || mode === 'roam' || mode === 'menace') { mode = 'chase'; lastSeen = 0; setPose('walk'); }
-        if (hits === 6 && rageT <= 0) beginRage();
+        if (mode === 'rage') return true;        // already past caring
+        beginFlee();
         return true;
       },
+      isAngered: function () { return angered; },
       // the riot shield turns its own attacks against it
       breakArm: function () {
         if (armsLeft <= 0) return false;
         armsLeft--;
+        angered = true;          // a bullet is not the only way to hurt it
         var which = armsLeft === 1 ? armR : armL;
-        which.visible = false;
+        which.shoulder.visible = false;
         dropPiece([0.06, 1.5, 0.08], pos.x, pos.z);
         if (api.onArmBroken) api.onArmBroken(armsLeft);
         staggerT = 1.6;
@@ -3599,13 +3710,15 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
         if (day) {
           if (mode !== 'dormant') { daylightHold = mode; }
           mode = 'dormant';
+          rageT = 0;
           g.visible = false;
         } else if (daylightHold) {
-          mode = 'lurk';
           lurkT = 0;
           beginLurk(Math.floor(Math.random() * LURKS.length));
           daylightHold = null;
           g.visible = true;
+          // it was shot yesterday. It has had all day to think about it.
+          if (angered) beginRage(Infinity);
         }
       },
       isHidden: function () { return mode === 'dormant'; },
@@ -3646,8 +3759,11 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       los: function (x1, z1, x2, z2) { return losClear(x1, z1, x2, z2); },
       setLurkScale: function (s) { lurkScale = s; },
 
-      update: function (dt, px, pz) {
+      update: function (dt, px, pz, noise) {
         if (mode === 'dormant' || mode === 'destroyed') return;
+        if (frozenForKill) return;              // the kill cam owns the body
+        noise = noise === undefined ? NOISE.walk : noise;
+        lastNoise = noise;
 
         var dx = px - pos.x, dz = pz - pos.z;
         var dist = Math.hypot(dx, dz);
@@ -3697,7 +3813,7 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
           // it moves only when nobody is looking at it
           var tRef = mode === 'stand' ? (standT -= dt, standT) : (lurkT -= dt, lurkT);
           if (!watched && tRef <= 0) beginRoam();
-          if (canSee(px, pz) && dist < 7 && !watched) { mode = 'chase'; lastSeen = 0; setPose('walk'); }
+          if (canSense(px, pz, noise) && dist < 9 && !watched) { beginChase(); }
           g.position.set(pos.x, 0, pos.z);
           return;
         }
@@ -3705,14 +3821,21 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
         var moving = false;
         var speed = 0, tx = pos.x, tz = pos.z;
 
-        if (mode === 'chase' || mode === 'rage') {
+        if (mode === 'flee') {
+          // straight away from you, then gone for the rest of the night
+          fleeT -= dt;
+          if (fleeT <= 0) { beginLurk(roamTarget ? roamTarget.lurk : undefined); return; }
+          speed = RAGE_SPEED;
+          tx = roamTarget.x; tz = roamTarget.z;
+          moving = true;
+        } else if (mode === 'chase' || mode === 'rage') {
           if (mode === 'rage') {
             rageT -= dt;
-            if (rageT <= 0) { drawFace(bloodied ? 'none' : 'none'); beginLurk(); return; }
+            if (rageT <= 0) { drawFace('none'); beginLurk(); return; }
             speed = RAGE_SPEED; tx = px; tz = pz;      // rage always knows
             moving = true;
           } else {
-            if (canSee(px, pz)) lastSeen = 0; else lastSeen += dt;
+            if (canSense(px, pz, noise)) lastSeen = 0; else lastSeen += dt;
             if (lastSeen > LOSE_AFTER) { beginLurk(); return; }
             speed = CHASE_SPEED; tx = px; tz = pz;
             moving = true;
@@ -3720,7 +3843,7 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
         } else if (mode === 'roam' || mode === 'charge') {
           // a roam is pinned by a look; a shocked charge is not
           if (mode === 'roam' && watched) { g.position.set(pos.x, 0, pos.z); return; }
-          if (canSee(px, pz)) {
+          if (canSense(px, pz, noise)) {
             mode = 'chase'; lastSeen = 0;
             if (!spottedOnce) { spottedOnce = true; if (api.onSpotted) api.onSpotted(true); }
             else if (api.onSpotted) api.onSpotted(false);
@@ -3743,16 +3866,21 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
             beginLurk(roamTarget.lurk);
             return;
           }
-          // a sealed shutter in its path stops it dead
-          if (roamTarget.hunt) {
-            var sealHit = api.isSealActive('sealWest') && Math.abs(pos.x + 8) < 2.2 && Math.abs(pos.z) < 2.5 ? 'sealWest'
-              : api.isSealActive('sealEast') && Math.abs(pos.x - 8) < 2.2 && Math.abs(pos.z) < 2.5 ? 'sealEast' : null;
-            if (sealHit) {
-              mode = 'banging';
-              bangT = 9;
-              if (api.onBang) api.onBang(dist);
-              return;
-            }
+        }
+
+        // A sealed shutter in its path stops it dead — whichever way it was
+        // coming. This used to be checked only on a roam toward Waiting, so
+        // once it could hear you it would walk into the tungsten and press
+        // there silently instead of hitting it.
+        if (moving && (mode === 'chase' || mode === 'rage' ||
+            (mode !== 'flee' && roamTarget && roamTarget.hunt))) {
+          var sealHit = api.isSealActive('sealWest') && Math.abs(pos.x + 8) < 2.6 && Math.abs(pos.z) < 2.8 ? 'sealWest'
+            : api.isSealActive('sealEast') && Math.abs(pos.x - 8) < 2.6 && Math.abs(pos.z) < 2.8 ? 'sealEast' : null;
+          if (sealHit) {
+            mode = 'banging';
+            bangT = 9;
+            if (api.onBang) api.onBang(dist);
+            return;
           }
         }
 
@@ -3769,35 +3897,7 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
         }
 
         // ---------------- presentation ----------------
-        walkT += dt * (mode === 'rage' ? 9 : mode === 'chase' ? 7 : 4.2);
-        var wallCrawl = mode === 'rage' && isInCorridor(pos.x, pos.z);
-        if (wallCrawl) {
-          // in its rage it takes to the walls
-          g.position.set(pos.x, 1.1 + Math.sin(walkT * 0.7) * 0.2, pos.z);
-          g.rotation.z = 0.9;
-        } else {
-          g.rotation.z = 0;
-          g.position.set(pos.x, Math.abs(Math.sin(walkT)) * 0.05, pos.z);
-        }
-        g.rotation.y = facing;
-        if (moving) {
-          legL.rotation.x = Math.sin(walkT) * 0.5;
-          legR.rotation.x = -Math.sin(walkT) * 0.5;
-          if (armsLeft > 0) armL.rotation.x = -Math.sin(walkT) * 0.3;
-          if (armsLeft > 1) armR.rotation.x = Math.sin(walkT) * 0.3;
-          if (mode === 'chase' && armsLeft > 1) armR.rotation.x = -2.4;  // hand already up
-        }
-        if (mode === 'rage') {
-          headGroup.rotation.y += dt * 5;          // the head goes all the way around
-        } else if (mode === 'chase') {
-          headGroup.rotation.y = 0;
-        } else {
-          headGroup.rotation.y = Math.sin(walkT * 0.2) * 0.6;
-        }
-        if (armsLeft === 0 && headOn) {
-          // nothing left but the desperate lean
-          g.rotation.x = 0.28;
-        }
+        animate(dt, moving, dist);
       },
 
       getState: function () {
@@ -3805,7 +3905,10 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
           mode: mode, x: pos.x, z: pos.z, hits: hits, facing: facing,
           lurk: mode === 'lurk' ? LURKS[lurkIndex].id : null,
           bloodied: bloodied, armsLeft: armsLeft, headOn: headOn,
-          raging: rageT > 0, watched: watched
+          raging: rageT > 0, watched: watched,
+          angered: angered, noise: lastNoise,
+          hunch: hunch, splay: splay, onCeiling: ceilingT > 0.5,
+          y: g.position.y, headSpin: headGroup.rotation.y, pose: pose
         };
       },
       force: function (x, z, m, lurkId) {
@@ -3831,6 +3934,121 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       }
     };
 
+    // ================= Movement, drawn =================
+    // Three gaits and a fourth thing that is not a gait at all.
+    //
+    //   walk  — hunched, arms hanging, taking the building at its leisure
+    //   jog   — arms thrown out and arched, hands sweeping the walls; this
+    //           is what it does once it has heard you
+    //   crawl — rage only: flat on the ceiling, head turning all the way
+    //           round underneath it
+    //
+    // The hunch is not decoration. Standing straight it is 3.4m and the
+    // corridor ceilings are 3.4m, so it folds itself to fit and unfolds
+    // again the moment it reaches a room with height.
+    var hunch = 0, splay = 0, ceilingT = 0;
+    function ceilingAt(x, z) {
+      var r = level.roomAt(x, z);
+      return (r && r.h) ? r.h : 3.4;
+    }
+    function headroom(x, z) { return ceilingAt(x, z) - 3.46; }   // negative: it does not fit
+
+    function animate(dt, moving, dist) {
+      var raging = mode === 'rage';
+      var jogging = mode === 'chase' || mode === 'charge' || raging;
+      walkT += dt * (raging ? 8.5 : jogging ? 6.4 : 3.1);
+
+      // ---- on the ceiling ----
+      // In its rage it goes up. Flat to the ceiling, limbs splayed out to
+      // the sides, working along on the backs of its hands.
+      var wantCeiling = raging && moving;
+      ceilingT += ((wantCeiling ? 1 : 0) - ceilingT) * Math.min(1, dt * 3.5);
+      if (ceilingT > 0.02) {
+        var ch = ceilingAt(pos.x, pos.z);
+        var flat = ceilingT;
+        g.rotation.x = -Math.PI / 2 * flat;
+        g.rotation.z = 0;
+        // lying prone the model runs along +y, so lift it to the ceiling
+        // and let the interpolation carry it up off the floor
+        g.position.set(pos.x, (ch - 0.42) * flat, pos.z);
+        g.rotation.y = facing;
+        var sp = Math.sin(walkT), sp2 = Math.cos(walkT);
+        // limbs out to the sides, hauling along opposite pairs
+        legL.hip.rotation.z = 1.15 * flat; legR.hip.rotation.z = -1.15 * flat;
+        legL.hip.rotation.x = sp * 0.5 * flat; legR.hip.rotation.x = -sp * 0.5 * flat;
+        legL.knee.rotation.x = (0.7 + sp * 0.4) * flat;
+        legR.knee.rotation.x = (0.7 - sp * 0.4) * flat;
+        if (armsLeft > 0) {
+          armL.shoulder.rotation.z = -1.35 * flat;
+          armL.shoulder.rotation.x = -sp2 * 0.6 * flat;
+          armL.elbow.rotation.x = -1.0 * flat;
+        }
+        if (armsLeft > 1) {
+          armR.shoulder.rotation.z = 1.35 * flat;
+          armR.shoulder.rotation.x = sp2 * 0.6 * flat;
+          armR.elbow.rotation.x = -1.0 * flat;
+        }
+        spine.rotation.x = -0.25 * flat;
+        // the head hangs back off the neck to point at the floor, and keeps
+        // turning — there is nothing in the joint to stop it
+        headGroup.rotation.x = -1.5 * flat;
+        headGroup.rotation.y += dt * 6.2;
+        return;
+      }
+
+      // ---- on the floor ----
+      g.rotation.x = 0;
+      g.rotation.z = 0;
+      g.rotation.y = facing;
+      g.position.set(pos.x, moving ? Math.abs(Math.sin(walkT)) * 0.045 : 0, pos.z);
+
+      // fold to fit the ceiling, and fold further when hurrying
+      var room = headroom(pos.x, pos.z);
+      var wantHunch = (room < 0 ? Math.min(0.62, -room * 1.15 + 0.16) : 0.06)
+        + (jogging ? 0.22 : 0) + (raging ? 0.1 : 0);
+      hunch += (wantHunch - hunch) * Math.min(1, dt * 4);
+      spine.rotation.x = hunch;
+
+      // arms out and arched once it is hunting: it is reading the room off
+      // the walls, and the hands are how it does that
+      var wantSplay = jogging ? 1 : 0;
+      splay += (wantSplay - splay) * Math.min(1, dt * 3);
+
+      if (!moving && !jogging) {
+        // standing still in a lurk pose — leave whatever setPose put there
+        headGroup.rotation.y = Math.sin(walkT * 0.22) * 0.6;
+        return;
+      }
+
+      var s = Math.sin(walkT), c = Math.cos(walkT);
+      legL.hip.rotation.set(s * (jogging ? 0.78 : 0.46), 0, 0);
+      legR.hip.rotation.set(-s * (jogging ? 0.78 : 0.46), 0, 0);
+      // knees only bend one way, and only on the leg coming through
+      legL.knee.rotation.x = Math.max(0, -s) * (jogging ? 1.15 : 0.5);
+      legR.knee.rotation.x = Math.max(0, s) * (jogging ? 1.15 : 0.5);
+
+      if (armsLeft > 0) {
+        armL.shoulder.rotation.x = -c * (0.3 + splay * 0.25) - splay * 0.55;
+        armL.shoulder.rotation.z = -splay * (1.02 + Math.sin(walkT * 0.7) * 0.16);
+        armL.elbow.rotation.x = -splay * (0.95 + c * 0.3);
+        armL.elbow.rotation.z = 0;
+      }
+      if (armsLeft > 1) {
+        armR.shoulder.rotation.x = c * (0.3 + splay * 0.25) - splay * 0.55;
+        armR.shoulder.rotation.z = splay * (1.02 - Math.sin(walkT * 0.7) * 0.16);
+        armR.elbow.rotation.x = -splay * (0.95 - c * 0.3);
+        armR.elbow.rotation.z = 0;
+      }
+
+      // the head: a slow sweep while it walks, a full rotation in the rage,
+      // and locked forward on the last stretch of a chase
+      if (raging) headGroup.rotation.y += dt * 5.5;
+      else if (jogging && dist < 6) headGroup.rotation.set(0.12, 0, 0);
+      else headGroup.rotation.set(0, Math.sin(walkT * 0.28) * 0.75, 0);
+
+      if (armsLeft === 0 && headOn) g.rotation.x = 0.28;   // the desperate lean
+    }
+
     var stepClock = 0;
     function stepAccumulate(dt, speed, dist) {
       stepClock += speed * dt;
@@ -3841,11 +4059,405 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       }
     }
 
-    function isInCorridor(x, z) {
-      var r = level.roomAt(x, z);
-      return r && (r.id === 'hallL' || r.id === 'hallR' || r.id === 'hallS' || r.id === 'hallE');
+    return api;
+  };
+})();
+
+</script>
+<script>
+/*
+ * THE BIRCH — the ways it kills you.
+ *
+ * Three choreographed deaths. Each one takes the camera off the player,
+ * takes the mannequin's body off its own brain, and runs a hand-animated
+ * timeline until there is nothing left to animate.
+ *
+ * The impale starts in your own eyes — you look down at what is in your
+ * chest — and then leaves them, because the worst of it is the part you
+ * were never meant to see. The other two never let go of first person at
+ * all: one drives you into the floor, the other puts you on it.
+ *
+ *   window.buildKills(THREE, ctx) → { play, update, isPlaying, cancel }
+ *
+ * ctx: { camera, scene, entity, playerRig, ui, audio }
+ */
+(function () {
+  'use strict';
+
+  // ---- little easing helpers ----
+  function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
+  // 0 before `a`, 1 after `b`, smooth in between
+  function ramp(t, a, b) { return clamp01((t - a) / (b - a || 1e-6)); }
+  function ease(v) { return v * v * (3 - 2 * v); }
+  function seg(t, a, b) { return ease(ramp(t, a, b)); }
+  // a single decaying thump, 1 at `a`, gone by `a + d`
+  function hit(t, a, d) {
+    if (t < a) return 0;
+    var k = clamp01((t - a) / d);
+    return (1 - k) * (1 - k);
+  }
+
+  window.buildKills = function buildKills(THREE, ctx) {
+    var camera = ctx.camera, entity = ctx.entity, rig = ctx.playerRig;
+    var ui = ctx.ui || {};
+    var audio = ctx.audio;
+
+    var playing = null;      // { kind, t, dur, onDone, ... }
+    var shake = 0;
+    var _v = new THREE.Vector3();
+    var _q = new THREE.Quaternion();
+    var _e = new THREE.Euler(0, 0, 0, 'YXZ');
+
+    // Where the body was before we took it over, so a cancel puts it back.
+    var saved = null;
+
+    function parts() { return entity.parts; }
+
+    function saveState() {
+      var p = parts();
+      saved = {
+        gPos: entity.group.position.clone(),
+        gRot: entity.group.rotation.clone(),
+        spine: p.spine.rotation.clone(),
+        head: p.head.rotation.clone(),
+        armL: p.armL.shoulder.rotation.clone(),
+        armLe: p.armL.elbow.rotation.clone(),
+        armR: p.armR.shoulder.rotation.clone(),
+        armRe: p.armR.elbow.rotation.clone(),
+        legL: p.legL.hip.rotation.clone(),
+        legR: p.legR.hip.rotation.clone(),
+        camLayer1: camera.layers.isEnabled(1),
+        rigVisible: rig ? rig.group.visible : true
+      };
+    }
+    function restoreState() {
+      if (!saved) return;
+      var p = parts();
+      entity.group.position.copy(saved.gPos);
+      entity.group.rotation.copy(saved.gRot);
+      p.spine.rotation.copy(saved.spine);
+      p.head.rotation.copy(saved.head);
+      p.armL.shoulder.rotation.copy(saved.armL);
+      p.armL.elbow.rotation.copy(saved.armLe);
+      p.armR.shoulder.rotation.copy(saved.armR);
+      p.armR.elbow.rotation.copy(saved.armRe);
+      p.legL.hip.rotation.copy(saved.legL);
+      p.legR.hip.rotation.copy(saved.legR);
+      if (!saved.camLayer1) camera.layers.disable(1);
+      // Put the body back together. It is still the thing mirrors and the
+      // security feeds render, so leaving it torn in half and lying where
+      // it died would follow the player into the next life.
+      if (rig) {
+        rig.group.visible = saved.rigVisible;
+        rig.group.rotation.set(0, 0, 0);
+        if (rig.joints) rig.joints.torso.position.y = 0;
+        if (rig.pose) rig.pose('stand');
+      }
+      saved = null;
     }
 
+    // Stand it directly in front of the player, facing them, at arm's reach.
+    function placeInFront(dist) {
+      var yaw = playing.yaw;
+      var ex = playing.px + Math.sin(yaw) * -dist;
+      var ez = playing.pz + Math.cos(yaw) * -dist;
+      entity.group.position.set(ex, 0, ez);
+      entity.group.rotation.set(0, yaw + Math.PI, 0);
+      return { x: ex, z: ez };
+    }
+
+    // Pull the camera back from a subject along a bearing, but no further
+    // than the room allows — a death cam that ends up inside the wall shows
+    // the player the inside of a polygon at the worst possible moment.
+    function clearRadius(sx, sz, ang, want) {
+      if (!entity.los) return want;
+      for (var r = want; r > 0.9; r -= 0.35) {
+        if (entity.los(sx, sz, sx + Math.sin(ang) * r, sz + Math.cos(ang) * r)) return r;
+      }
+      return 0.9;
+    }
+
+    // Look from `eye` at `at`, written straight into the camera.
+    function lookFrom(eye, at) {
+      camera.position.set(eye.x, eye.y, eye.z);
+      _v.set(at.x - eye.x, at.y - eye.y, at.z - eye.z);
+      var yaw = Math.atan2(-_v.x, -_v.z);
+      var pitch = Math.atan2(_v.y, Math.hypot(_v.x, _v.z));
+      _e.set(pitch, yaw, 0, 'YXZ');
+      camera.rotation.copy(_e);
+    }
+
+    var KINDS = {
+      // ---- 1. impaled, lifted, torn ----
+      // First person for as long as you can stand it, then out to where
+      // you can see all of it.
+      impale: { dur: 9.6, reason: 'impaled' },
+      // ---- 2. taken off your feet and driven into the floor ----
+      slam: { dur: 7.4, reason: 'slammed' },
+      // ---- 3. headbutt, sweep, and then the hands ----
+      butcher: { dur: 9.0, reason: 'butchered' }
+    };
+
+    function drive(t) {
+      var p = parts();
+      var k = playing.kind;
+      var eye = playing.eyeY;
+      var px = playing.px, pz = playing.pz, yaw = playing.yaw;
+      var blood = 0, fade = 0;
+
+      if (k === 'impale') {
+        var spot = placeInFront(1.05);
+        // the arm that is already inside you
+        p.armR.shoulder.rotation.set(-1.62 - seg(t, 0, 0.25) * 0.1, 0, -0.28);
+        p.armR.elbow.rotation.set(0.12, 0, 0);
+        p.spine.rotation.set(0.22 + seg(t, 4.0, 5.4) * -0.5, 0, 0);
+        p.head.rotation.set(0.1, Math.sin(t * 1.4) * 0.5, 0);
+        // the second hand goes in
+        if (t > 4.0) {
+          p.armL.shoulder.rotation.set(-1.55 * seg(t, 4.0, 4.7), 0, 0.3 * seg(t, 4.0, 4.7));
+          p.armL.elbow.rotation.set(0.1, 0, 0);
+        } else {
+          p.armL.shoulder.rotation.set(-0.5 * seg(t, 3.2, 4.0), 0, 0.2);
+        }
+
+        blood = ramp(t, 0.2, 3.0) * 0.55 + ramp(t, 4.0, 6.0) * 0.45;
+
+        if (t < 3.4) {
+          // ---- first person: look down at it ----
+          var look = seg(t, 0.5, 2.9);
+          camera.position.set(px, eye - look * 0.14, pz);
+          _e.set(-look * 1.15, yaw + Math.sin(t * 9) * 0.02 * (1 - look * 0.4), 0, 'YXZ');
+          camera.rotation.copy(_e);
+          shake = Math.max(shake, hit(t, 0, 0.5) * 0.9 + 0.12 * (1 - look));
+          if (rig) rig.group.visible = false;
+        } else {
+          // ---- third person: it lifts you, then opens you ----
+          camera.layers.enable(1);
+          if (rig) rig.group.visible = true;
+          var lift = seg(t, 5.4, 6.9);
+          var rip = seg(t, 7.0, 8.3);
+          var bodyY = 0.0 + lift * 2.05;
+
+          if (rig) {
+            rig.group.position.set(spot.x + Math.sin(yaw) * 0.72, bodyY, spot.z + Math.cos(yaw) * 0.72);
+            rig.group.rotation.set(0, yaw + Math.PI, 0);
+            var j = rig.joints;
+            if (j) {
+              // limp: head back, arms and legs hanging
+              j.head.rotation.set(-0.5 - lift * 0.35, 0.2, 0);
+              j.shoulderL.rotation.set(0.2, 0, 0.5 + lift * 0.5);
+              j.shoulderR.rotation.set(0.2, 0, -0.5 - lift * 0.5);
+              j.hipL.rotation.set(0.3 + lift * 0.2, 0, 0.12);
+              j.hipR.rotation.set(0.25 + lift * 0.2, 0, -0.12);
+              j.kneeL.rotation.set(-0.5 - lift * 0.4, 0, 0);
+              j.kneeR.rotation.set(-0.45 - lift * 0.35, 0, 0);
+              // and then the top half goes one way and the bottom the other.
+              // The torso pivots at the hips, so lifting it off them is
+              // literally the body coming apart at the waist.
+              j.torso.position.y = rip * 0.52;
+              j.torso.rotation.set(-rip * 0.5, rip * 0.7, rip * 0.35);
+              j.hipL.rotation.z = 0.12 + rip * 0.8;
+              j.hipR.rotation.z = -0.12 - rip * 0.8;
+            }
+          }
+          // both its arms haul apart on the rip
+          p.armL.shoulder.rotation.set(-1.55 + lift * -0.5, 0, 0.3 + rip * 0.9);
+          p.armR.shoulder.rotation.set(-1.72 + lift * -0.5, 0, -0.28 - rip * 0.9);
+
+          // camera swings out and around to watch
+          var orbit = seg(t, 3.4, 5.2);
+          var ang = yaw + Math.PI * 0.5 + orbit * 0.9;
+          var rad = clearRadius(spot.x, spot.z, ang, 2.4 + orbit * 1.0);
+          lookFrom(
+            { x: spot.x + Math.sin(ang) * rad, y: 1.5 + orbit * 0.9 + lift * 0.7, z: spot.z + Math.cos(ang) * rad },
+            { x: spot.x, y: 1.35 + lift * 1.1, z: spot.z }
+          );
+          shake = Math.max(shake, hit(t, 4.05, 0.5) * 0.5 + hit(t, 7.05, 0.9) * 1.0);
+          if (rip > 0.1) blood = Math.min(1, blood + rip * 0.5);
+        }
+        fade = ramp(t, 8.5, 9.5);
+        playing.sfx.forEach(function (s) {
+          if (!s.done && t >= s.at) { s.done = true; s.fn(); }
+        });
+        return { blood: blood, fade: fade };
+      }
+
+      if (k === 'slam') {
+        // it has you by the chest, off the ground, and it is using you
+        var spotS = placeInFront(1.15);
+        p.spine.rotation.set(0.3, 0, 0);
+        p.head.rotation.set(0.35, 0, 0);
+        p.armR.shoulder.rotation.set(-1.5, 0, -0.2);
+        p.armR.elbow.rotation.set(0.2, 0, 0);
+        p.armL.shoulder.rotation.set(-1.2, 0, 0.35);
+
+        var hoist = seg(t, 0.1, 0.8);
+        // four times into the floor, then a fifth you do not come back up from
+        var beats = [1.3, 2.5, 3.6, 4.6, 5.5];
+        var FLOOR = 0.24, HOIST = 2.2;
+        var y = FLOOR + (HOIST - FLOOR) * hoist;
+        var down = 0, up = 0;
+        for (var i = 0; i < beats.length; i++) {
+          var b = beats[i];
+          if (t < b - 0.28) break;                  // not into this one yet
+          if (t < b) {                              // driven down
+            down = ease(ramp(t, b - 0.28, b));
+            y = HOIST - (HOIST - FLOOR) * down;
+            break;
+          }
+          if (i === beats.length - 1) { y = FLOOR; break; }
+          // hauled back up, and a little less far every time
+          up = ease(ramp(t, b, b + 0.42));
+          y = FLOOR + (HOIST * (1 - i * 0.13) - FLOOR) * up;
+        }
+        var roll = 0;
+        for (var j = 0; j < beats.length; j++) {
+          roll += hit(t, beats[j], 0.5) * 0.5;
+          shake = Math.max(shake, hit(t, beats[j], 0.65) * 1.6);
+          if (t >= beats[j]) blood = Math.max(blood, 0.2 + j * 0.19);
+        }
+        // its arm follows you down and hauls you back up
+        p.armR.shoulder.rotation.x = -1.5 + down * 1.2 - up * 0.4;
+        camera.position.set(px, y, pz);
+        _e.set(-0.5 - roll * 0.5 + (1 - hoist) * 0.5, yaw + Math.sin(t * 14) * 0.03 * (1 - t / 7), roll, 'YXZ');
+        camera.rotation.copy(_e);
+        if (rig) rig.group.visible = false;
+        void spotS;
+        fade = ramp(t, 6.2, 7.3);
+        playing.sfx.forEach(function (s) { if (!s.done && t >= s.at) { s.done = true; s.fn(); } });
+        return { blood: blood, fade: fade };
+      }
+
+      // ---- butcher: the head, then the legs, then everything ----
+      var spotB = placeInFront(0.95 + seg(t, 0, 0.35) * -0.35);
+      var headbutt = hit(t, 0.35, 0.6);
+      var swept = seg(t, 1.5, 2.1);
+      var onFloor = swept;
+
+      p.spine.rotation.set(0.3 - headbutt * 0.55 + onFloor * 0.5, 0, 0);
+      p.head.rotation.set(-0.2 + headbutt * 0.9 + onFloor * 0.7, 0, 0);
+      // the sweep: one leg comes through low
+      p.legR.hip.rotation.set(-seg(t, 1.35, 1.75) * 1.5 + seg(t, 1.75, 2.2) * 1.4, 0, 0);
+      p.legR.knee.rotation.set(seg(t, 1.6, 2.0) * 0.8, 0, 0);
+
+      // then the hands come down, over and over
+      var mash = [2.9, 3.6, 4.3, 5.0, 5.7, 6.4, 7.1];
+      for (var m = 0; m < mash.length; m++) {
+        shake = Math.max(shake, hit(t, mash[m], 0.4) * 1.25);
+        if (t >= mash[m]) blood = Math.max(blood, Math.min(0.95, 0.25 + m * 0.11));
+      }
+      var swing = 0;
+      for (var m2 = 0; m2 < mash.length; m2++) {
+        var a0 = mash[m2] - 0.34;
+        if (t >= a0 && t < mash[m2]) swing = ramp(t, a0, mash[m2]);
+        else if (t >= mash[m2] && t < mash[m2] + 0.26) swing = 1 - ramp(t, mash[m2], mash[m2] + 0.26);
+      }
+      if (t > 2.4) {
+        p.armL.shoulder.rotation.set(-2.5 + swing * 3.4, 0, 0.25);
+        p.armR.shoulder.rotation.set(-2.4 + swing * 3.5, 0, -0.25);
+        p.armL.elbow.rotation.set(-0.5 + swing * 0.4, 0, 0);
+        p.armR.elbow.rotation.set(-0.5 + swing * 0.4, 0, 0);
+      } else {
+        p.armL.shoulder.rotation.set(-0.3, 0, 0.3);
+        p.armR.shoulder.rotation.set(-0.3, 0, -0.3);
+      }
+
+      // camera: reeling from the headbutt, then flat on the floor looking up
+      var camY = eye - onFloor * (eye - 0.22) + headbutt * 0.1;
+      var whip = seg(t, 1.5, 1.95);
+      camera.position.set(px + Math.sin(yaw + 1.57) * whip * 0.5, camY, pz + Math.cos(yaw + 1.57) * whip * 0.5);
+      _e.set(
+        headbutt * 0.5 + onFloor * 0.95 - swing * 0.05,
+        yaw + whip * 1.15 + Math.sin(t * 7) * 0.02,
+        onFloor * 1.45 + headbutt * 0.3,
+        'YXZ'
+      );
+      camera.rotation.copy(_e);
+      if (rig) rig.group.visible = false;
+      void spotB;
+      fade = ramp(t, 7.8, 8.9);
+      playing.sfx.forEach(function (s) { if (!s.done && t >= s.at) { s.done = true; s.fn(); } });
+      return { blood: blood, fade: fade };
+    }
+
+    function soundsFor(kind) {
+      var a = audio || {};
+      var out = [];
+      function add(at, fn) { out.push({ at: at, fn: fn || function () {}, done: false }); }
+      var thud = function () { if (a.doorSlam) a.doorSlam(1); };
+      var wood = function () { if (a.woodHit) a.woodHit(); };
+      if (kind === 'impale') {
+        add(0.02, wood); add(4.05, wood); add(7.05, thud); add(7.3, wood);
+      } else if (kind === 'slam') {
+        [1.3, 2.5, 3.6, 4.6, 5.5].forEach(function (b) { add(b, thud); });
+      } else {
+        add(0.35, wood); add(1.7, thud);
+        [2.9, 3.6, 4.3, 5.0, 5.7, 6.4, 7.1].forEach(function (b) { add(b, thud); });
+      }
+      return out;
+    }
+
+    var api = {
+      // Which deaths exist, for pickers and for tests.
+      kinds: Object.keys(KINDS),
+      reasonFor: function (kind) { return (KINDS[kind] || KINDS.impale).reason; },
+      pick: function () {
+        var k = api.kinds;
+        return k[Math.floor(Math.random() * k.length)];
+      },
+      isPlaying: function () { return !!playing; },
+      current: function () { return playing ? playing.kind : null; },
+      progress: function () { return playing ? playing.t / playing.dur : 0; },
+
+      play: function (kind, opts, onDone) {
+        if (playing) return false;
+        if (!KINDS[kind]) kind = 'impale';
+        opts = opts || {};
+        saveState();
+        if (entity.holdStill) entity.holdStill(true);
+        playing = {
+          kind: kind,
+          t: 0,
+          dur: KINDS[kind].dur,
+          px: opts.x, pz: opts.z, yaw: opts.yaw || 0, eyeY: opts.eye || 1.68,
+          onDone: onDone || null,
+          sfx: soundsFor(kind)
+        };
+        entity.group.visible = true;
+        if (ui.onKillStart) ui.onKillStart(kind);
+        return true;
+      },
+
+      update: function (dt) {
+        if (!playing) return;
+        shake = 0;
+        playing.t += dt;
+        var out = drive(Math.min(playing.t, playing.dur));
+        if (shake > 0) {
+          camera.rotation.x += (Math.random() - 0.5) * 0.06 * shake;
+          camera.rotation.y += (Math.random() - 0.5) * 0.06 * shake;
+          camera.rotation.z += (Math.random() - 0.5) * 0.05 * shake;
+        }
+        if (ui.onKillFrame) ui.onKillFrame(out.blood, out.fade);
+        if (playing.t >= playing.dur) {
+          var done = playing.onDone;
+          var kind = playing.kind;
+          playing = null;
+          if (entity.holdStill) entity.holdStill(false);
+          restoreState();
+          if (ui.onKillEnd) ui.onKillEnd(kind);
+          if (done) done(KINDS[kind].reason);
+        }
+      },
+
+      cancel: function () {
+        if (!playing) return;
+        playing = null;
+        if (entity.holdStill) entity.holdStill(false);
+        restoreState();
+        if (ui.onKillEnd) ui.onKillEnd(null);
+      }
+    };
     return api;
   };
 })();
@@ -6332,6 +6944,25 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
     }
     var walkPhase = 0, lastStance = 'stand';
 
+    // ---------------- The ways it kills you ----------------
+    var kills = (window.buildKills && entity) ? window.buildKills(THREE, {
+      camera: camera, scene: scene, entity: entity, playerRig: playerRig,
+      ui: {
+        onKillStart: function (kind) {
+          uiOpen = false;
+          stopCinematics();
+          if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock();
+          if (ui.onKillStart) ui.onKillStart(kind);
+        },
+        onKillFrame: function (blood, fade) { if (ui.onKillFrame) ui.onKillFrame(blood, fade); },
+        onKillEnd: function (kind) { if (ui.onKillEnd) ui.onKillEnd(kind); }
+      },
+      audio: {
+        doorSlam: function (n) { if (audio) audio.doorSlam(n); },
+        woodHit: function () { if (audio) audio.woodHit(); }
+      }
+    }) : null;
+
     function applyLook() { camera.rotation.set(pitch, yaw, 0, 'YXZ'); }
     applyLook();
     function addLook(dx, dy) {
@@ -6387,6 +7018,7 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       room: null,
       seenAssembly: false,
       dead: false,
+      killing: false,          // a kill animation owns the camera
       deaths: 0,
       deathReason: null,
       // survival
@@ -7289,6 +7921,7 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       Object.keys(state.seals).forEach(function (k) { state.seals[k] = false; });
       if (which) state.seals[which] = true;
       if (audio) audio.sealSlam();
+      makeNoise(60);              // a tonne of tungsten hitting the floor
       // the shutter coming down is its own scene — play it before the flag,
       // so it leads whatever the flag then unlocks
       if (which === 'sealEast' && !state.sawSealEast) { state.sawSealEast = true; cinematic('sealedEast'); }
@@ -7327,6 +7960,9 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
         if (audio) audio.gunshot();
       }
       if (ui.onMuzzleFlash) ui.onMuzzleFlash();
+      // A gunshot indoors is the loudest thing in this building. It does
+      // not need to see the muzzle flash — it heard the room ring.
+      makeNoise(w === 'shotgun' ? 95 : w === 'ar' ? 88 : 78);
 
       camera.updateMatrixWorld();
       var hitsOnEntity = 0;
@@ -7419,6 +8055,27 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
         }),
         riotEquipped: state.riotEquipped
       });
+    }
+
+    // ---------------- How much noise you are making ----------------
+    // It has no eyes and no nose — it reads the building off the echoes.
+    // So this, and not where you are looking, is what gets you killed.
+    // Standing still is genuinely invisible to it; sprinting is a flare.
+    var noiseSpike = 0;              // a gunshot or a slammed door, decaying
+    function playerNoise() {
+      var N = (entity && entity.NOISE) || { still: 0, crawl: 2.6, crouch: 5.5, walk: 11, sprint: 19 };
+      var moving = Math.hypot(velocity.x, velocity.z) > 0.35;
+      var base;
+      if (!moving) base = N.still;
+      else if (state.stance === 'crawl') base = N.crawl;
+      else if (state.stance === 'crouch') base = N.crouch;
+      else base = state.sprinting ? N.sprint : N.walk;
+      // things that are loud whatever you were doing
+      return Math.max(base, noiseSpike);
+    }
+    // A one-off racket: a shot, a shutter, a door taken off its latch.
+    function makeNoise(metres) {
+      noiseSpike = Math.max(noiseSpike, metres);
     }
 
     // ---------------- The campaign ----------------
@@ -7691,6 +8348,25 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       if (ui.onDeath) ui.onDeath(state.deathReason);
     }
 
+    // It does not simply kill you — it does one of three things to you, and
+    // the choreography runs to the end before the death card comes up.
+    function beginKill(forced) {
+      if (!kills || kills.isPlaying() || state.dead || state.ended) {
+        if (!state.dead) die('impaled');
+        return;
+      }
+      var kind = forced || kills.pick();
+      state.killing = true;
+      state.attackCd = 1e9;          // nothing else touches you now
+      var ok = kills.play(kind, {
+        x: camera.position.x, z: camera.position.z, yaw: yaw, eye: camera.position.y
+      }, function (reason) {
+        state.killing = false;
+        die(reason);
+      });
+      if (!ok) { state.killing = false; die('impaled'); }
+    }
+
     if (entity) {
       entity.onCaught = function (armsLeft, headOn) {
         if (state.dead || state.ended || !active) return;
@@ -7721,7 +8397,7 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
           camera.position.x = pushed.x; camera.position.z = pushed.z;
           return;
         }
-        die('impaled');
+        beginKill();
       };
       entity.onStep = function (dist, chasing) { if (audio) audio.entityStep(dist, chasing); };
       entity.onWindup = function () {
@@ -7917,6 +8593,14 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
         }
       }
 
+      // While a kill is running it owns the camera and the mannequin —
+      // nothing else may write to either.
+      if (kills && kills.isPlaying()) {
+        kills.update(dt);
+        renderer.render(scene, camera);
+        return;
+      }
+
       if (active && !uiOpen && state.collapseT > 0) {
         // face down on the floor, counting seconds
         state.collapseT -= dt;
@@ -8022,6 +8706,12 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
         if (focusTimer > 0.08) { focusTimer = 0; updateFocus(); }
 
         if (audio) audio.tick(dt, state.room ? state.room.id : null);
+        // decays fast, and snaps to actually-silent rather than trailing a
+        // millionth of a metre of "noise" behind it forever
+        if (noiseSpike > 0) {
+          noiseSpike -= dt * 26;
+          if (noiseSpike < 0.05) noiseSpike = 0;
+        }
 
         if (entity) {
           // pinned while observed: centred enough in view, close enough, unobstructed
@@ -8031,7 +8721,7 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
           var fx2 = -Math.sin(yaw), fz2 = -Math.cos(yaw);
           var dot = (vex / vd) * fx2 + (vez / vd) * fz2;
           entity.setWatched(dot > 0.45 && vd < 48 && entity.los(camera.position.x, camera.position.z, es0.x, es0.z));
-          entity.update(dt, camera.position.x, camera.position.z);
+          entity.update(dt, camera.position.x, camera.position.z, playerNoise());
         }
 
         // in its rage, the lights die wherever it walks
@@ -8260,6 +8950,9 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       audioBash: function () { if (audio) audio.doorBash(2); },
       audioStart: function () { if (audio) audio.start(); },
       respawn: function () {
+        if (kills) kills.cancel();
+        state.killing = false;
+        if (ui.onKillEnd) ui.onKillEnd(null);
         state.dead = false;
         state.collapseT = 0;
         state.attackCd = 0;
@@ -8780,6 +9473,26 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       debugDawn: function () { state.dayNo++; startPhase('day'); },
       debugNightfall: function () { startPhase('night'); },
       debugRedealWires: function () { state.wires = makeWires(); return wiresWrong(state.wires); },
+      // ---- the Birch ----
+      playerNoise: playerNoise,
+      makeNoise: makeNoise,
+      shootEntity: function () { return entity ? entity.hitShot(1.1) : false; },
+      speedTable: function () {
+        var e = entity ? entity.speeds() : { roam: 0, chase: 0, rage: 0 };
+        return {
+          walk: STANCE.stand.speed,
+          sprint: STANCE.stand.speed * 1.7,
+          crouch: STANCE.crouch.speed,
+          roam: e.roam, chase: e.chase, rage: e.rage
+        };
+      },
+      killKinds: function () { return kills ? kills.kinds.slice() : []; },
+      killNow: function (kind) { beginKill(kind); return kills ? kills.current() : null; },
+      killState: function () {
+        return kills
+          ? { playing: kills.isPlaying(), kind: kills.current(), progress: kills.progress() }
+          : { playing: false, kind: null, progress: 0 };
+      },
       debugPlayScene: function (key) { cinematic(key); },
       supplyCount: function () {
         var n = 0;
@@ -8888,6 +9601,7 @@ window.bootUI = function bootUI(THREE) {
   var crosshair = $('crosshair'), prompt = $('prompt'), roomname = $('roomname');
   var statusEl = $('status'), stanceEl = $('stance'), legend = $('legend');
   var soundBtn = $('sound'), hint = $('hint'), subtitle = $('subtitle');
+  var goreEl = $('gore');
   var ammoEl = $('ammo'), carry = $('carry'), muzzle = $('muzzle');
   var stick = $('stick'), stickNub = $('stick-nub'), touchbar = $('touchbar');
   var fileNo = $('file-no'), grain = $('grain');
@@ -9207,6 +9921,21 @@ window.bootUI = function bootUI(THREE) {
         dlgEl.querySelector('.what').textContent = what;
       },
       onBars: function (on) { barsEl.classList.toggle('on', !!on); },
+      // ---- it has you ----
+      onKillStart: function () {
+        document.body.classList.add('killing');
+        goreEl.style.opacity = '0';
+        blackout.classList.remove('slow');
+      },
+      onKillFrame: function (blood, fade) {
+        goreEl.style.opacity = String(Math.min(1, blood));
+        blackout.style.opacity = String(Math.min(1, fade));
+      },
+      onKillEnd: function () {
+        document.body.classList.remove('killing');
+        goreEl.style.opacity = '0';
+        blackout.style.opacity = '';
+      },
       onMessage: say,
       onRoom: function (name) {
         roomname.textContent = name;
@@ -9296,6 +10025,9 @@ window.bootUI = function bootUI(THREE) {
         var label = reason === 'seizure' ? 'File 001 — Cardiac event'
           : reason === 'starved' ? 'File 001 — Starved'
           : reason === 'headbutt' ? 'File 001 — Blunt trauma'
+          : reason === 'slammed' ? 'File 001 — Remains unrecoverable'
+          : reason === 'butchered' ? 'File 001 — Remains unidentifiable'
+          : reason === 'impaled' ? 'File 001 — Dismembered'
           : 'File 001 — Terminated';
         setTimeout(function () {
           fileNo.textContent = label;
