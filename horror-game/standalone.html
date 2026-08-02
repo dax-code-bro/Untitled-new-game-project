@@ -4341,10 +4341,13 @@ if ('serviceWorker' in navigator && window.isSecureContext && location.protocol.
       p.legR.knee.rotation.set(seg(t, 1.6, 2.0) * 0.8, 0, 0);
 
       // then the hands come down, over and over
+      // the headbutt opens you up on its own — you do not wait three
+      // seconds for the hands to arrive before there is blood on the lens
+      blood = Math.max(blood, ramp(t, 0.35, 0.9) * 0.34 + seg(t, 1.5, 2.2) * 0.16);
       var mash = [2.9, 3.6, 4.3, 5.0, 5.7, 6.4, 7.1];
       for (var m = 0; m < mash.length; m++) {
         shake = Math.max(shake, hit(t, mash[m], 0.4) * 1.25);
-        if (t >= mash[m]) blood = Math.max(blood, Math.min(0.95, 0.25 + m * 0.11));
+        if (t >= mash[m]) blood = Math.max(blood, Math.min(0.95, 0.5 + m * 0.075));
       }
       var swing = 0;
       for (var m2 = 0; m2 < mash.length; m2++) {
