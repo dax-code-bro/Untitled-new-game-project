@@ -765,6 +765,7 @@
       clock: 0,
       beatTimer: 0,            // counts down on beats that carry one
       beatSeen: {},            // beats that were ever the live objective
+      beatFailed: false,       // this beat's countdown already ran out
       sawSealEast: false, sawSealWest: false,
       story: {
         wifiConnected: false, camsPlanted: 0, sawBirch: false, shockedInCage: false,
@@ -805,6 +806,7 @@
     };
     var planted = [];          // {x,z,facing,alive,mesh}
     var openedCrates = {};
+    var takenSupplies = [];        // bottles and cans, put back at dawn
     var debugChance = {};      // test hook: force named rolls
     function chance(name, p) {
       if (debugChance[name] !== undefined) return debugChance[name];
@@ -1342,10 +1344,11 @@
           refreshHud();
           break;
         case 'supplyItem': {
-          // One item, once. The shelf empties as you strip it.
-          if (d.node && d.node.parent) d.node.parent.remove(d.node);
-          var si = level.interactables.indexOf(focused);
-          if (si >= 0) level.interactables.splice(si, 1);
+          // One item, once — the shelf empties as you strip it. Hidden
+          // rather than destroyed, because the facility restocks at dawn
+          // and a run past day two is unsurvivable otherwise.
+          takenSupplies.push(focused);
+          takePickup(focused, true);
           state.supplies = true;
           if (audio) audio.pickup();
           if (d.kind2 === 'water') { state.waterN++; giveItem('water'); say('A bottle of water. There are not many left.'); }
@@ -1911,7 +1914,12 @@
         state.beatSeen[b.id] = true;
         state.beat++;
         state.beatTimer = 0;
+        state.beatFailed = false;
         moved = true;
+        // "It stopped. It got light out." — holding the east door is what
+        // ends the first night, so the clock has to agree with the script
+        // and with the next objective, which opens on daylight.
+        if (b.id === 'sealEast' && state.phase !== 'day') startPhase('day');
         var nb = beat();
         if (nb && nb.timer) state.beatTimer = nb.timer;
         if (ui.onObjective) ui.onObjective(nb, 0);
@@ -1944,14 +1952,21 @@
     }
 
     // Every morning the facility restocks: crates you emptied are full
-    // again. One-off things — a read newspaper, the torch, the Glock — are
-    // gone for good, so anything taken out of the interactable list stays out.
+    // again, and the bottles and cans are back on their shelves. One-off
+    // things — a read newspaper, the torch, the Glock, the sledgehammer —
+    // are gone for good, so anything else taken out of the list stays out.
     function restockWorld() {
       openedCrates = {};
       level.interactables.forEach(function (m) {
         var d = m.userData.interact;
         if (d.id === 'openCrate') d.taken = m.userData.taken = false;
       });
+      takenSupplies.forEach(function (m) {
+        var d = m.userData.interact;
+        (d && d.node ? d.node : m).visible = true;
+        if (level.interactables.indexOf(m) < 0) level.interactables.push(m);
+      });
+      takenSupplies.length = 0;
     }
 
     // ---------------- The power panel ----------------
@@ -1959,18 +1974,28 @@
     // shuffled and cross-linked, and you drag each one onto its own colour.
     var WIRE_COLOURS = ['yellow', 'purple', 'green', 'blue'];
     function makeWires() {
-      var right = WIRE_COLOURS.slice();
-      // shuffle until at least three are in the wrong place
-      var tries = 0;
+      // The starting links are fixed, so shuffling the right-hand column
+      // alone is not enough: one arrangement in twenty-four lines up with
+      // those links and hands you a panel that is already solved. Deal
+      // until at least three of the four genuinely have to be moved.
+      var w, tries = 0;
       do {
+        var right = WIRE_COLOURS.slice();
         for (var i = right.length - 1; i > 0; i--) {
           var j = Math.floor(Math.random() * (i + 1));
           var t = right[i]; right[i] = right[j]; right[j] = t;
         }
+        // links[i] = which right-hand terminal the left wire i is joined to
+        w = { left: WIRE_COLOURS.slice(), right: right, links: [3, 2, 0, 1] };
         tries++;
-      } while (tries < 20 && right.filter(function (c, k) { return c === WIRE_COLOURS[k]; }).length > 1);
-      // links[i] = which right-hand terminal the left wire i is joined to
-      return { left: WIRE_COLOURS.slice(), right: right, links: [3, 2, 0, 1] };
+      } while (tries < 40 && wiresWrong(w) < 3);
+      return w;
+    }
+    // how many of the four are joined to the wrong terminal right now
+    function wiresWrong(w) {
+      var n = 0;
+      for (var i = 0; i < 4; i++) if (w.right[w.links[i]] !== w.left[i]) n++;
+      return n;
     }
     function wiresCorrect(w) {
       if (!w) return false;
@@ -2055,6 +2080,8 @@
       state.deathReason = reason || 'impaled';
       active = false;
       keys.f = keys.b = keys.l = keys.r = keys.tl = keys.tr = false;
+      // whatever scene was mid-run, it does not carry on over the death card
+      stopCinematics();
       if (audio) audio.death();
       if (document.pointerLockElement === canvas && document.exitPointerLock) document.exitPointerLock();
       if (ui.onDeath) ui.onDeath(state.deathReason);
@@ -2267,8 +2294,12 @@
           // a beat with a countdown: run out and it reaches you
           state.beatTimer -= dt;
           if (ui.onObjective) ui.onObjective(b0, Math.max(0, state.beatTimer));
-          if (state.beatTimer <= 0) {
+          if (state.beatTimer <= 0 && !state.beatFailed) {
+            // Once. This used to re-run every frame, which pinned it to you
+            // permanently and reset its stagger before it could ever finish
+            // a swing — you could neither escape it nor be killed by it.
             state.beatTimer = 0;
+            state.beatFailed = true;
             if (b0.fail === 'caught' && entity) entity.force(camera.position.x + 1.2, camera.position.z, 'chase');
           }
         }
@@ -2676,7 +2707,7 @@
           hotbar: state.hotbar.slice(), hotbarSel: state.hotbarSel,
           beat: state.beat, beatId: beat() ? beat().id : null,
           beatTimer: state.beatTimer, dayNo: state.dayNo,
-          beatSeen: state.beatSeen,
+          beatSeen: state.beatSeen, beatFailed: state.beatFailed,
           dayPhase: state.phase, clock: state.clock,
           story: JSON.parse(JSON.stringify(state.story)),
           beansNamed: state.beansNamed,
@@ -3138,6 +3169,21 @@
       debugFill: function () { state.hunger = 10; state.thirst = 10; state.energy = 20; refreshHud(); },
       debugStarve: function () { state.hunger = 0; state.energy = 0; refreshHud(); },
       debugChargePhone: function () { state.phonePct = 100; flag('phoneCharged'); checkBeat(); },
+      // test seams: the sim clock is wall-clock, so a 30-second countdown
+      // cannot be waited out in a headless run at two frames a second
+      debugExpireBeat: function () { state.beatTimer = 0.001; },
+      debugKill: function (reason) { die(reason || 'impaled'); },
+      debugDawn: function () { state.dayNo++; startPhase('day'); },
+      debugNightfall: function () { startPhase('night'); },
+      debugRedealWires: function () { state.wires = makeWires(); return wiresWrong(state.wires); },
+      debugPlayScene: function (key) { cinematic(key); },
+      supplyCount: function () {
+        var n = 0;
+        for (var i = 0; i < level.interactables.length; i++) {
+          if (level.interactables[i].userData.interact.id === 'supplyItem') n++;
+        }
+        return n;
+      },
       interactId: function (id) {
         for (var i = 0; i < level.interactables.length; i++) {
           var o = level.interactables[i];

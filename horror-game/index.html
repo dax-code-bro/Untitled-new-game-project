@@ -1420,7 +1420,17 @@ window.bootUI = function bootUI(THREE) {
           ev.preventDefault();
           nudge(bt[1], bt[2]);
           clearInterval(ptTimer);
-          ptTimer = setInterval(function () { nudge(bt[1], bt[2]); }, 140);
+          // Sweep by elapsed time rather than by tick. Re-rendering the feed
+          // is the slow part here, and on a weak phone the interval cannot
+          // hold its 140ms — stepping a fixed amount per tick made the head
+          // crawl on exactly the devices that could least afford it.
+          var last = (window.performance || Date).now();
+          ptTimer = setInterval(function () {
+            var now = (window.performance || Date).now();
+            var k = Math.min((now - last) / 140, 8);
+            last = now;
+            if (k > 0) nudge(bt[1] * k, bt[2] * k);
+          }, 60);
         });
         ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (evn) {
           b2.addEventListener(evn, function () { clearInterval(ptTimer); });
