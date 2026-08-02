@@ -275,6 +275,13 @@
     var fleeT = 0;
     var angered = false;        // it has been shot; tomorrow night is worse
     var frozenForKill = false;  // the kill cam is animating it by hand
+    var playerAt = { x: 0, z: 0 };   // where you were this tick
+    var lockOn = false;              // its head is aimed at you and staying there
+    var woundSide = 0;          // which hand is clamped over the hole
+    var woundHeld = 0;          // 1 while it is still holding it
+    var ventTarget = null;      // the duct mouth it is running for
+    var ventT = 0;              // how far into the squeeze it is
+    var stareT = 0;             // it has stopped, and it is facing you
     var menaceCam = -1;
     var watched = false;
     var ventsOpen = false;
@@ -437,29 +444,67 @@
       if (api.onRage) api.onRage();
     }
 
-    // Put a bullet in it and it does not come for you — it goes. Away,
-    // fast, out of the room, and it does not come back that night. It
-    // comes back the NEXT night, and it comes back on the ceiling.
-    function beginFlee() {
+    // Every mouth of every duct in the building, so a wounded thing knows
+    // where the nearest hole is without thinking about it.
+    function ventMouths() {
+      var out = [];
+      (level.vents || []).forEach(function (v) {
+        out.push({ x: v.a.x, z: v.a.z, ry: v.a.ry });
+        out.push({ x: v.b.x, z: v.b.z, ry: v.b.ry });
+      });
+      return out;
+    }
+
+    // Put a bullet in it and it does not come for you. It screams, it
+    // clamps a hand over the hole, and it runs for the nearest duct — and
+    // then it gets down on all fours and folds itself into a hole two feet
+    // across. It does not come back that night. It comes back the NEXT
+    // night, and it comes back on the ceiling.
+    function beginFlee(hitSide) {
       mode = 'flee';
-      fleeT = 12;
+      fleeT = 22;
       angered = true;
+      woundSide = hitSide === undefined ? (Math.random() < 0.5 ? -1 : 1) : hitSide;
+      woundHeld = 1;
       setPose('walk');
-      // pick the lurk furthest from the player's noise and run for it
-      var best = 0, bd = -1;
-      for (var i = 0; i < LURKS.length; i++) {
-        var d = Math.hypot(LURKS[i].x - pos.x, LURKS[i].z - pos.z);
-        if (d > bd) { bd = d; best = i; }
+      var mouths = ventMouths();
+      var best = null, bd = Infinity;
+      for (var i = 0; i < mouths.length; i++) {
+        var m = mouths[i];
+        var d = Math.hypot(m.x - pos.x, m.z - pos.z);
+        // it will not run past you to get to a hole
+        var toward = losClear(pos.x, pos.z, m.x, m.z) ? 1 : 1.6;
+        if (d * toward < bd) { bd = d * toward; best = m; }
       }
-      roamTarget = { x: LURKS[best].x, z: LURKS[best].z, hunt: false, lurk: best };
+      if (best) {
+        ventTarget = best;
+        roamTarget = { x: best.x, z: best.z, hunt: false };
+      } else {
+        // no ducts in this part of the building: away, then gone
+        var far = 0, fd = -1;
+        for (var k = 0; k < LURKS.length; k++) {
+          var dk = Math.hypot(LURKS[k].x - pos.x, LURKS[k].z - pos.z);
+          if (dk > fd) { fd = dk; far = k; }
+        }
+        ventTarget = null;
+        roamTarget = { x: LURKS[far].x, z: LURKS[far].z, hunt: false, lurk: far };
+      }
       wpIndex = nearestWaypoint(pos.x, pos.z);
-      if (api.onFlee) api.onFlee();
+      if (api.onFlee) api.onFlee(pos.x, pos.z);
+    }
+
+    // On all fours, and into the wall.
+    function beginVenting() {
+      mode = 'venting';
+      ventT = 0;
+      if (api.onVentSqueeze) api.onVentSqueeze(pos.x, pos.z);
     }
 
     var api = {
       group: g,
       onCaught: null, onDoorSlam: null, onStep: null, onSpotted: null,
       onLurk: null, onRage: null, onBang: null, onWindup: null, onFlee: null,
+      onScream: null, onVentSqueeze: null,
       NOISE: NOISE,
       speeds: function () { return { roam: ROAM_SPEED, chase: CHASE_SPEED, rage: RAGE_SPEED }; },
       // the kill choreography drives the body directly
@@ -494,12 +539,14 @@
       },
       // Hurting it is a decision, not a defence. It reels, it runs, and it
       // remembers — every night after this one it hunts you enraged.
-      hitShot: function (stagger) {
+      hitShot: function (stagger, side) {
         if (mode === 'dormant' || mode === 'destroyed') return false;
+        if (mode === 'venting') return false;    // already halfway into a wall
         hits++;
         staggerT = Math.max(staggerT, stagger || 1.1);
-        if (mode === 'rage') return true;        // already past caring
-        beginFlee();
+        if (api.onScream) api.onScream(pos.x, pos.z);
+        if (mode === 'rage') { angered = true; return true; }   // past caring
+        beginFlee(side);
         return true;
       },
       isAngered: function () { return angered; },
@@ -592,8 +639,11 @@
         noise = noise === undefined ? NOISE.walk : noise;
         lastNoise = noise;
 
+        playerAt.x = px; playerAt.z = pz;
         var dx = px - pos.x, dz = pz - pos.z;
         var dist = Math.hypot(dx, dz);
+        // in the rage it only bothers looking at you if it can hear you
+        lockOn = noise > 0 || dist < 6;
 
         // being caught does not care what state it is in — but a flat
         // hand cannot pass through a wall or a sealed shutter
@@ -648,13 +698,23 @@
         var moving = false;
         var speed = 0, tx = pos.x, tz = pos.z;
 
+        if (mode === 'venting') {
+          // folding itself into the duct: it goes down, it goes in, it goes
+          animateVenting(dt);
+          return;
+        }
+
         if (mode === 'flee') {
-          // straight away from you, then gone for the rest of the night
+          // for the nearest hole in the wall, holding itself together
           fleeT -= dt;
           if (fleeT <= 0) { beginLurk(roamTarget ? roamTarget.lurk : undefined); return; }
           speed = RAGE_SPEED;
           tx = roamTarget.x; tz = roamTarget.z;
           moving = true;
+          if (ventTarget && Math.hypot(ventTarget.x - pos.x, ventTarget.z - pos.z) < 1.15) {
+            beginVenting();
+            return;
+          }
         } else if (mode === 'chase' || mode === 'rage') {
           if (mode === 'rage') {
             rageT -= dt;
@@ -733,7 +793,8 @@
           lurk: mode === 'lurk' ? LURKS[lurkIndex].id : null,
           bloodied: bloodied, armsLeft: armsLeft, headOn: headOn,
           raging: rageT > 0, watched: watched,
-          angered: angered, noise: lastNoise,
+          angered: angered, noise: lastNoise, wounded: woundHeld > 0,
+          venting: mode === 'venting',
           hunch: hunch, splay: splay, onCeiling: ceilingT > 0.5,
           y: g.position.y, headSpin: headGroup.rotation.y, pose: pose
         };
@@ -779,6 +840,59 @@
       return (r && r.h) ? r.h : 3.4;
     }
     function headroom(x, z) { return ceilingAt(x, z) - 3.46; }   // negative: it does not fit
+
+    // Down onto all fours, and then into a hole two feet across. It takes
+    // about three seconds and none of it looks like something with a spine.
+    function animateVenting(dt) {
+      ventT += dt;
+      var down = Math.min(1, ventT / 1.1);            // onto its hands
+      var into = Math.max(0, Math.min(1, (ventT - 1.0) / 1.9));  // and in
+      var m = ventTarget || { x: pos.x, z: pos.z, ry: facing };
+
+      // face the grate
+      var want = m.ry + Math.PI;
+      facing += Math.atan2(Math.sin(want - facing), Math.cos(want - facing)) * Math.min(1, dt * 6);
+
+      g.rotation.y = facing;
+      // it drops, then slides head-first through the wall
+      g.position.set(
+        m.x - Math.sin(m.ry) * (0.9 - into * 1.5),
+        (1 - down) * 0.0,
+        m.z - Math.cos(m.ry) * (0.9 - into * 1.5)
+      );
+      g.rotation.x = -down * 1.15;                    // pitched forward onto its hands
+
+      spine.rotation.x = down * 0.75 - into * 0.5;
+      legL.hip.rotation.set(down * 1.25, 0, down * 0.5);
+      legR.hip.rotation.set(down * 1.25, 0, -down * 0.5);
+      legL.knee.rotation.x = down * 1.5;
+      legR.knee.rotation.x = down * 1.5;
+      if (armsLeft > 0) {
+        armL.shoulder.rotation.set(-down * 1.5 - into * 0.9, 0, -down * 0.35);
+        armL.elbow.rotation.set(down * 0.5, 0, 0);
+      }
+      if (armsLeft > 1) {
+        armR.shoulder.rotation.set(-down * 1.5 - into * 0.9, 0, down * 0.35);
+        armR.elbow.rotation.set(down * 0.5, 0, 0);
+      }
+      headGroup.rotation.set(down * 0.8, 0, 0);
+      // and it narrows to get through
+      var squeeze = 1 - into * 0.62;
+      g.scale.set(squeeze, 1, squeeze);
+
+      if (ventT > 3.0) {
+        g.scale.set(1, 1, 1);
+        g.rotation.x = 0;
+        g.visible = false;
+        ventTarget = null;
+        // gone. It surfaces somewhere else, later, and it is still angry.
+        var next = Math.floor(Math.random() * LURKS.length);
+        beginLurk(next);
+        lurkT = Math.max(lurkT, 45);
+        g.visible = true;
+        if (api.onVentMove) api.onVentMove(pos.x, pos.z);
+      }
+    }
 
     function animate(dt, moving, dist) {
       var raging = mode === 'rage';
@@ -867,11 +981,35 @@
         armR.elbow.rotation.z = 0;
       }
 
-      // the head: a slow sweep while it walks, a full rotation in the rage,
-      // and locked forward on the last stretch of a chase
-      if (raging) headGroup.rotation.y += dt * 5.5;
-      else if (jogging && dist < 6) headGroup.rotation.set(0.12, 0, 0);
+      // The head. Walking, it sweeps. Hunting, it points at you. In the
+      // rage it turns without stopping — and when it is close it stops
+      // turning and locks on, and the neck simply holds it there while the
+      // rest of the body carries on in whatever direction it was going.
+      if (raging) {
+        if (dist < 14 && lockOn) {
+          // aimed at you, in its own frame, regardless of where it is facing
+          var want = Math.atan2(-(playerAt.x - pos.x), -(playerAt.z - pos.z));
+          var rel = Math.atan2(Math.sin(want - facing), Math.cos(want - facing));
+          headGroup.rotation.y += (rel - headGroup.rotation.y) * Math.min(1, dt * 9);
+          headGroup.rotation.x = -0.18;
+        } else {
+          headGroup.rotation.y += dt * 5.5;
+          headGroup.rotation.x = 0;
+        }
+      } else if (jogging && dist < 6) headGroup.rotation.set(0.12, 0, 0);
       else headGroup.rotation.set(0, Math.sin(walkT * 0.28) * 0.75, 0);
+
+      // a hand clamped over the hole a bullet made, for as long as it holds
+      if (woundHeld > 0) {
+        woundHeld = Math.max(0, woundHeld - dt * 0.055);
+        var a = woundSide < 0 ? armL : armR;
+        if ((woundSide < 0 && armsLeft > 0) || (woundSide > 0 && armsLeft > 1)) {
+          a.shoulder.rotation.x = -0.95 * woundHeld + a.shoulder.rotation.x * (1 - woundHeld);
+          a.shoulder.rotation.z = woundSide * -0.55 * woundHeld;
+          a.elbow.rotation.x = -1.5 * woundHeld;
+        }
+        spine.rotation.x = hunch + 0.2 * woundHeld;
+      }
 
       if (armsLeft === 0 && headOn) g.rotation.x = 0.28;   // the desperate lean
     }

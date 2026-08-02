@@ -1685,13 +1685,21 @@
       }
       return 1;
     }
+    // A single multiplier over every fixture in the building. The flicker
+    // pass owns intensity and runs every frame, so anything else that wants
+    // the lights to drop has to go through here or it just gets overwritten.
+    var dimFactor = 1;
+    function setDim(f) { dimFactor = Math.max(0, Math.min(1, f)); }
+
     updates.push(function (dt, elapsed) {
       for (var i = 0; i < lights.length; i++) {
         var L = lights[i];
-        if (L.style === 'steady') continue;
-        var lvl = flickerLevel(L.style, elapsed, L.seed);
-        L.light.intensity = L.base * lvl;
-        if (L.panel) L.panel.material.emissiveIntensity = 1.6 * Math.max(0.05, lvl);
+        var steady = L.style === 'steady';
+        if (steady && dimFactor >= 0.999) continue;   // nothing to do
+        var lvl = steady ? 1 : flickerLevel(L.style, elapsed, L.seed);
+        if (L.killed) continue;
+        L.light.intensity = L.base * lvl * dimFactor;
+        if (L.panel) L.panel.material.emissiveIntensity = 1.6 * Math.max(0.05, lvl * dimFactor);
       }
       void dt;
     });
@@ -1736,6 +1744,7 @@
       updates: updates,
       roomAt: roomAt,
       cullLights: cullLights,
+      setDim: setDim,
       toggleDoor: doors.toggle,
       isDoorOpen: doors.isOpen,
       destroyDoor: doors.destroy,

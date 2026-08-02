@@ -33,6 +33,8 @@
     var beds = {};
     var currentRoom = null;
     var nextAmbient = 6;
+    var motionBed = null, whisperBed = null;
+    var creakClock = 0;
 
     function now() { return ctx.currentTime; }
 
@@ -99,6 +101,77 @@
     }
 
     // A bed is a filtered noise loop plus optional drones and hiss layer.
+    // The gear layer: a wound whine plus a low metal groan, both always
+    // running and both gated to silence by a single gain, so the thing
+    // fades in as it comes down the corridor rather than snapping on.
+    function makeMotion() {
+      var g = ctx.createGain();
+      g.gain.value = 0;
+      g.connect(master);
+
+      var whine = ctx.createOscillator();
+      whine.type = 'sawtooth';
+      whine.frequency.value = 128;
+      var wf = ctx.createBiquadFilter();
+      wf.type = 'bandpass'; wf.frequency.value = 1100; wf.Q.value = 5.5;
+      var wg = ctx.createGain(); wg.gain.value = 0.022;
+      whine.connect(wf); wf.connect(wg); wg.connect(g);
+      whine.start();
+
+      var groan = ctx.createOscillator();
+      groan.type = 'triangle';
+      groan.frequency.value = 47;
+      var gg2 = ctx.createGain(); gg2.gain.value = 0.05;
+      groan.connect(gg2); gg2.connect(g);
+      groan.start();
+
+      // a slow wobble on the groan so it never sits still
+      var lfo = ctx.createOscillator();
+      lfo.frequency.value = 0.23;
+      var lg = ctx.createGain(); lg.gain.value = 6;
+      lfo.connect(lg); lg.connect(groan.frequency);
+      lfo.start();
+
+      return { gain: g, whine: whine, creakRate: 0.5, near: 0 };
+    }
+
+    // Whispering: bandpassed noise pushed through a moving formant, which
+    // lands somewhere between breath and a voice you cannot quite make out.
+    function makeWhisper() {
+      var g = ctx.createGain();
+      g.gain.value = 0;
+      g.connect(master);
+
+      var src = ctx.createBufferSource();
+      src.buffer = noiseBuffer(5);
+      src.loop = true;
+
+      var f1 = ctx.createBiquadFilter();
+      f1.type = 'bandpass'; f1.frequency.value = 720; f1.Q.value = 7;
+      var f2 = ctx.createBiquadFilter();
+      f2.type = 'bandpass'; f2.frequency.value = 1980; f2.Q.value = 9;
+      var g1 = ctx.createGain(); g1.gain.value = 0.5;
+      var g2 = ctx.createGain(); g2.gain.value = 0.3;
+      src.connect(f1); f1.connect(g1); g1.connect(g);
+      src.connect(f2); f2.connect(g2); g2.connect(g);
+      src.start();
+
+      // the formants drift, which is what makes it read as almost-words
+      var lfo1 = ctx.createOscillator(); lfo1.frequency.value = 1.7;
+      var l1 = ctx.createGain(); l1.gain.value = 260;
+      lfo1.connect(l1); l1.connect(f1.frequency); lfo1.start();
+      var lfo2 = ctx.createOscillator(); lfo2.frequency.value = 0.9;
+      var l2 = ctx.createGain(); l2.gain.value = 620;
+      lfo2.connect(l2); l2.connect(f2.frequency); lfo2.start();
+
+      // and it breathes, in and out, under all of it
+      var breath = ctx.createOscillator(); breath.frequency.value = 0.31;
+      var bg = ctx.createGain(); bg.gain.value = 0.42;
+      breath.connect(bg); bg.connect(g1.gain); breath.start();
+
+      return { gain: g };
+    }
+
     function makeBed(opts) {
       var g = ctx.createGain();
       g.gain.value = 0;
@@ -323,7 +396,22 @@
       }
     }
     function tick(dt, roomId) {
-      if (!started || muted || !roomId) return;
+      if (!started || muted) return;
+      // Individual joint creaks, laid over the continuous gear layer. These
+      // run whatever the room is doing — the thing is louder than the
+      // building it is walking through.
+      if (motionBed && motionBed.creakRate > 0 && motionBed.near > 0.02) {
+        creakClock -= dt * motionBed.creakRate;
+        if (creakClock <= 0) {
+          creakClock = 0.55 + Math.random() * 0.9;
+          var cv = motionBed.near * motionBed.near;
+          noiseHit({ dur: 0.16 + Math.random() * 0.2, type: 'bandpass',
+            freq: 380 + Math.random() * 900, q: 7 + Math.random() * 6, gain: 0.085 * cv });
+          tone({ freq: 210 + Math.random() * 160, to: 120, dur: 0.3, type: 'sawtooth',
+            gain: 0.02 * cv, wobble: { rate: 9 + Math.random() * 8, depth: 40 } });
+        }
+      }
+      if (!roomId) return;
       if (phase !== 'eerie') return;   // the building holds its breath until the pop dies
       if (roomId !== currentRoom) return;
       nextAmbient -= dt;
@@ -429,6 +517,51 @@
         muted = m;
         if (!started) return;
         master.gain.setTargetAtTime(m ? 0 : 0.9, now(), 0.15);
+      },
+      // ---- the two continuous layers the Birch brings with it ----
+      // A body of wood on metal joints does not move silently: gears taking
+      // up slack, a wound spring, and the long creak of something too tall
+      // leaning through a doorway. Driven every frame from its distance.
+      setMotion: function (dist, moving, hunting) {
+        if (!started) return;
+        if (!motionBed) motionBed = makeMotion();
+        var near = Math.max(0, 1 - dist / 34);
+        var amt = moving ? near * near : near * near * 0.16;
+        motionBed.gain.gain.setTargetAtTime(amt * (hunting ? 1.35 : 0.85), now(), 0.18);
+        // the gear whine rises as it hurries
+        motionBed.whine.frequency.setTargetAtTime(
+          moving ? (hunting ? 290 : 190) : 128, now(), 0.35);
+        motionBed.creakRate = moving ? (hunting ? 5.5 : 2.4) : 0.5;
+        motionBed.near = near;
+      },
+      // Whispering. Not words — nearly words, which is worse. It comes up
+      // when it is hunting you and you are the one making the noise.
+      setWhisper: function (amount) {
+        if (!started) return;
+        if (!whisperBed) whisperBed = makeWhisper();
+        whisperBed.gain.gain.setTargetAtTime(Math.max(0, Math.min(1, amount)) * 0.5, now(), 0.5);
+      },
+      // shot, and it does not like it
+      scream: function (dist) {
+        var a = Math.max(0.25, 1 - (dist || 8) / 40);
+        tone({ freq: 900, to: 210, dur: 1.5, type: 'sawtooth', gain: 0.16 * a, wobble: { rate: 17, depth: 190 } });
+        tone({ at: 0.04, freq: 1340, to: 320, dur: 1.3, type: 'square', gain: 0.055 * a, wobble: { rate: 23, depth: 260 } });
+        noiseHit({ dur: 1.4, type: 'bandpass', freq: 1500, sweepTo: 420, q: 2.2, gain: 0.13 * a, attack: 0.05 });
+        tone({ at: 0.2, freq: 62, to: 40, dur: 1.1, gain: 0.1 * a });
+      },
+      // eleven feet of mannequin folding itself into a 560mm duct
+      ventSqueeze: function (dist) {
+        var a = Math.max(0.2, 1 - (dist || 8) / 36);
+        for (var i = 0; i < 7; i++) {
+          noiseHit({ at: i * 0.16, dur: 0.19, type: 'bandpass', freq: 900 + Math.random() * 1800, q: 6, gain: 0.09 * a });
+        }
+        tone({ freq: 148, to: 96, dur: 1.25, type: 'sawtooth', gain: 0.05 * a, wobble: { rate: 6, depth: 30 } });
+        noiseHit({ at: 0.9, dur: 0.35, freq: 420, sweepTo: 120, gain: 0.12 * a });
+      },
+      // your own lungs, and the noise you make without deciding to
+      panic: function (hard) {
+        noiseHit({ dur: hard ? 0.34 : 0.24, type: 'bandpass', freq: 620, sweepTo: 300, q: 1.6, gain: hard ? 0.075 : 0.045 });
+        tone({ freq: hard ? 210 : 160, to: 108, dur: 0.3, type: 'sawtooth', gain: hard ? 0.035 : 0.018 });
       },
       windup: function (dist) {
         // gears taking up slack before it moves
@@ -1780,7 +1913,11 @@
 
       if (hitsOnEntity > 0 && entity) {
         var totalStagger = stagger + (pellets > 1 ? hitsOnEntity * 0.18 : 0);
-        if (entity.hitShot(totalStagger)) {
+        // which side of it you hit, so the right hand goes over the hole
+        var esh = entity.getState();
+        var sideDot = Math.cos(esh.facing) * (camera.position.x - esh.x)
+          - Math.sin(esh.facing) * (camera.position.z - esh.z);
+        if (entity.hitShot(totalStagger, sideDot < 0 ? -1 : 1)) {
           if (audio) setTimeout(function () { audio.woodHit(); }, 40);
           say(pellets > 1
             ? hitsOnEntity + ' of ' + pellets + ' pellets bury themselves in the wood. It does not fall.'
@@ -1846,6 +1983,8 @@
     // So this, and not where you are looking, is what gets you killed.
     // Standing still is genuinely invisible to it; sprinting is a flare.
     var noiseSpike = 0;              // a gunshot or a slammed door, decaying
+    var seenDim = 0, lastSeenDim = 0;   // the lights go when you look at it
+    var panicT = 0;                  // how long since you last said something
     function playerNoise() {
       var N = (entity && entity.NOISE) || { still: 0, crawl: 2.6, crouch: 5.5, walk: 11, sprint: 19 };
       var moving = Math.hypot(velocity.x, velocity.z) > 0.35;
@@ -1860,6 +1999,40 @@
     // A one-off racket: a shot, a shutter, a door taken off its latch.
     function makeNoise(metres) {
       noiseSpike = Math.max(noiseSpike, metres);
+    }
+
+    // What comes out of you when it is behind you and you are running. You
+    // do not choose to say these, which is rather the point — and every one
+    // of them is more noise for the thing that hunts by noise.
+    var PANIC = [
+      'Shit — shit shit shit—',
+      'Oh fuck. Oh fuck oh fuck—',
+      'No no no no NO—',
+      'Get away from me. GET AWAY FROM ME—',
+      'Fuck you! FUCK YOU—',
+      'Please. Please, please, please—',
+      'Not like this. Not like this—',
+      'I am not dying in here. I am NOT dying in here—'
+    ];
+    var BREATH = [
+      'You cannot get the air in fast enough.',
+      'Something in your chest is screaming and it is not stopping.'
+    ];
+    function panicVoice(dt, dist, hunting) {
+      panicT -= dt;
+      if (!hunting || state.dead || state.killing) return;
+      var close = dist < 22;
+      if (!close || !state.sprinting) return;
+      if (panicT > 0) return;
+      panicT = 4.5 + Math.random() * 4;
+      var hard = dist < 10;
+      if (audio) audio.panic(hard);
+      var line = hard || Math.random() < 0.75
+        ? PANIC[Math.floor(Math.random() * PANIC.length)]
+        : BREATH[Math.floor(Math.random() * BREATH.length)];
+      if (ui.onMessage) ui.onMessage(line);
+      // and shouting is the loudest thing you can do while running
+      makeNoise(hard ? 26 : 21);
     }
 
     // ---------------- The campaign ----------------
@@ -2235,6 +2408,25 @@
       entity.onVentMove = function (x, z) {
         if (audio) audio.ventScramble(Math.hypot(x - camera.position.x, z - camera.position.z));
       };
+      entity.onScream = function (x, z) {
+        var d = Math.hypot(x - camera.position.x, z - camera.position.z);
+        if (audio) audio.scream(d);
+        say(d < 14
+          ? 'It SCREAMS. Not a recording of a scream — a scream, out of a thing with no mouth.'
+          : 'Something screams, a long way off, and the sound comes back off every wall.');
+      };
+      entity.onVentSqueeze = function (x, z) {
+        var d = Math.hypot(x - camera.position.x, z - camera.position.z);
+        if (audio) audio.ventSqueeze(d);
+        if (d < 20) say('It goes down on all fours and puts its head into the vent. The rest of it follows.');
+      };
+      entity.onFlee = function () {
+        // a beat behind the scream, or it overwrites it on the same tick
+        setTimeout(function () {
+          if (state.dead || state.killing) return;
+          say('It has its hand clamped over the hole. It is not coming for you. It is going.');
+        }, 2200);
+      };
       entity.findCameraNear = function (x1, z1, x2, z2) {
         for (var i = 0; i < planted.length; i++) {
           var c = planted[i];
@@ -2504,8 +2696,38 @@
           var vd = Math.hypot(vex, vez) || 1;
           var fx2 = -Math.sin(yaw), fz2 = -Math.cos(yaw);
           var dot = (vex / vd) * fx2 + (vez / vd) * fz2;
-          entity.setWatched(dot > 0.45 && vd < 48 && entity.los(camera.position.x, camera.position.z, es0.x, es0.z));
+          var inView = dot > 0.45 && vd < 48 && entity.los(camera.position.x, camera.position.z, es0.x, es0.z);
+          entity.setWatched(inView);
           entity.update(dt, camera.position.x, camera.position.z, playerNoise());
+
+          // ---- everything it drags along with it ----
+          var es1 = entity.getState();
+          var hunting = es1.mode === 'chase' || es1.mode === 'rage' || es1.mode === 'charge' || es1.mode === 'flee';
+          var walking = hunting || es1.mode === 'roam' || es1.mode === 'venting';
+          if (audio && es1.mode !== 'dormant') {
+            audio.setMotion(vd, walking, hunting);
+            // whispering: it is hunting, it is close, and you are the one
+            // making the noise you are trying not to make
+            var wh = hunting ? Math.max(0, 1 - vd / 26) : 0;
+            if (es1.mode === 'rage') wh = Math.max(wh, Math.max(0, 1 - vd / 34) * 1.15);
+            audio.setWhisper(wh * (state.sprinting ? 1 : 0.72));
+          } else if (audio) {
+            audio.setMotion(99, false, false);
+            audio.setWhisper(0);
+          }
+
+          // The lights do not like being looked at with it in the frame.
+          // Seeing it costs you the room you are standing in.
+          seenDim += ((inView && es1.mode !== 'dormant' ? 1 : 0) - seenDim) * Math.min(1, dt * (inView ? 3.2 : 0.9));
+          if (seenDim > 0.004 || lastSeenDim > 0.004) {
+            // a flutter under the dip, so it reads as the building
+            // struggling rather than a slider being moved
+            var flick = 1 - seenDim * 0.16 * Math.abs(Math.sin(elapsed * 21));
+            level.setDim((1 - seenDim * 0.72) * flick);
+            lastSeenDim = seenDim;
+          }
+
+          panicVoice(dt, vd, hunting);
         }
 
         // in its rage, the lights die wherever it walks
@@ -3260,7 +3482,21 @@
       // ---- the Birch ----
       playerNoise: playerNoise,
       makeNoise: makeNoise,
-      shootEntity: function () { return entity ? entity.hitShot(1.1) : false; },
+      shootEntity: function (side) { return entity ? entity.hitShot(1.1, side) : false; },
+      audioApi: function () {
+        return audio ? {
+          setMotion: !!audio.setMotion, setWhisper: !!audio.setWhisper,
+          scream: !!audio.scream, ventSqueeze: !!audio.ventSqueeze, panic: !!audio.panic
+        } : null;
+      },
+      lightLevel: function () {
+        var n = 0;
+        for (var i = 0; i < level.lightFixtures.length; i++) {
+          if (!level.lightFixtures[i].killed) n += level.lightFixtures[i].light.intensity;
+        }
+        return n;
+      },
+      seenDim: function () { return seenDim; },
       speedTable: function () {
         var e = entity ? entity.speeds() : { roam: 0, chase: 0, rage: 0 };
         return {
