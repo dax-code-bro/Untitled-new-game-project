@@ -816,6 +816,8 @@
     // ---------------- Input ----------------
     var keys = { f: false, b: false, l: false, r: false, tl: false, tr: false };
     var running = false;
+    var sprintHold = 0;              // seconds held on a steady line forward
+    var SPRINT_AFTER = 2.0;          // ...before it turns into a run
     var active = false;
     var pointerLocked = false;
     var pointerLockBlocked = false;
@@ -824,6 +826,7 @@
     function setStance(next) {
       if (state.stance === next) next = 'stand';
       state.stance = next;
+      sprintHold = 0;                 // dropping to a crouch ends the run
       if (ui.onStance) ui.onStance(STANCE[state.stance].label, state.stance);
     }
 
@@ -2256,7 +2259,25 @@
 
         var st = STANCE[state.stance];
         var canSprint = state.energy > 0 && state.hunger > 0;
-        var sprintMult = running && state.stance === 'stand' ? (canSprint ? 1.7 : 1.25) : 1;
+
+        // Auto-sprint. Hold a steady line forward for two seconds and you
+        // break into a run on your own — no key to hold, which is the only
+        // way it works on touch. Strafing, backing up, crouching, stopping
+        // or walking into something drops you straight back to a walk.
+        var goingForward = inputZ > 0.55 && Math.abs(inputX) < 0.75;
+        var reallyMoving = Math.hypot(velocity.x, velocity.z) > st.speed * 0.5;
+        if (state.stance === 'stand' && goingForward && reallyMoving && canSprint) {
+          sprintHold += dt;
+        } else {
+          sprintHold = 0;
+        }
+        var wasSprinting = state.sprinting;
+        state.sprinting = (running || sprintHold >= SPRINT_AFTER) && state.stance === 'stand';
+        if (state.sprinting !== wasSprinting && ui.onStance) {
+          ui.onStance(state.sprinting ? 'Running' : STANCE[state.stance].label, state.stance);
+        }
+
+        var sprintMult = state.sprinting ? (canSprint ? 1.7 : 1.25) : 1;
         var speed = st.speed * sprintMult * (state.fueled ? 1.2 : 1);
         if (state.hallucinating) {
           // the corridor will not hold still
@@ -2389,7 +2410,8 @@
           fuelLineT -= dt;
           if (fuelLineT <= 0) { fuelLineT = 22 + Math.random() * 10; say(UNHINGED[Math.floor(Math.random() * UNHINGED.length)]); }
         }
-        var fovTarget = state.fueled ? 84 : 74;
+        // the view opens up a little once you are actually running
+        var fovTarget = (state.fueled ? 84 : 74) + (state.sprinting ? 4 : 0);
         if (Math.abs(camera.fov - fovTarget) > 0.2) {
           camera.fov += (fovTarget - camera.fov) * (1 - Math.exp(-4 * dt));
           camera.updateProjectionMatrix();
@@ -2589,6 +2611,7 @@
           yaw: yaw, pitch: pitch,
           x: camera.position.x, z: camera.position.z, y: camera.position.y,
           stance: state.stance,
+          sprinting: !!state.sprinting, sprintHold: sprintHold,
           room: state.room ? state.room.id : null,
           active: active, locked: pointerLocked, uiOpen: uiOpen,
           pointerLockBlocked: pointerLockBlocked,
@@ -3071,6 +3094,7 @@
       // ---- campaign test hooks ----
       debugConnectWifi: function () { state.wifiConnected = true; flag('wifiConnected'); },
       debugFill: function () { state.hunger = 10; state.thirst = 10; state.energy = 20; refreshHud(); },
+      debugStarve: function () { state.hunger = 0; state.energy = 0; refreshHud(); },
       debugChargePhone: function () { state.phonePct = 100; flag('phoneCharged'); checkBeat(); },
       interactId: function (id) {
         for (var i = 0; i < level.interactables.length; i++) {

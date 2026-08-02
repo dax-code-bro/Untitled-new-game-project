@@ -154,11 +154,19 @@ yourself on it.
 | `E` | Use / read / take |
 | `C` or `Ctrl` | Crouch |
 | `Z` | Crawl — needed for the Wi-Fi note and the barricade |
-| `Shift` | Run |
+| `Shift` | Run immediately |
 | `R` | Reload |
 | `←` `→` / `Q` | Turn, when pointer lock is unavailable |
 | `G` | Flashlight on/off |
 | `Esc` | Pause, or close a document |
+
+**Sprinting is automatic.** Hold a steady line forward for two seconds and
+Brian breaks into a run on his own — there is no key to hold down, which is the
+only way it can work on a touchscreen. Strafing, backing up, crouching,
+stopping, or walking into a wall drops you straight back to a walk, and you
+cannot run at all on an empty stomach. `Shift` still starts a run instantly if
+you would rather not wait. The view opens up a few degrees while you are
+running, and the stance readout says so.
 
 On touch (phones, tablets) the full loop is playable by finger: stick to
 move, drag to look, tap the world (or the **Use** button) to interact, tap a
