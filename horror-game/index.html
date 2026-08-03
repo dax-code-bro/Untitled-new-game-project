@@ -80,6 +80,41 @@
   #curtain[hidden] { display: none; }
   #curtain.dismissing { opacity: 0; backdrop-filter: blur(0px); }
 
+  /* What is on the lens while it kills you. Held on a separate layer from
+     the vignette so a death can run over any lighting state. */
+  #gore {
+    position: fixed; inset: 0; z-index: 26; pointer-events: none; opacity: 0;
+    background:
+      radial-gradient(120% 90% at 50% 55%, rgba(120,10,6,0) 34%, rgba(96,6,4,0.62) 72%, rgba(38,2,2,0.95) 100%),
+      radial-gradient(38% 30% at 34% 42%, rgba(150,14,8,0.5), rgba(150,14,8,0) 70%),
+      radial-gradient(30% 26% at 68% 60%, rgba(132,10,6,0.45), rgba(132,10,6,0) 70%);
+  }
+  /* the running-down-the-lens part */
+  #gore::after {
+    content: ''; position: absolute; inset: 0;
+    background:
+      linear-gradient(to bottom, rgba(88,4,3,0.75) 0%, rgba(88,4,3,0) 26%),
+      radial-gradient(9% 34% at 22% 12%, rgba(104,6,4,0.8), rgba(104,6,4,0) 72%),
+      radial-gradient(6% 26% at 61% 6%, rgba(104,6,4,0.7), rgba(104,6,4,0) 72%),
+      radial-gradient(7% 30% at 84% 16%, rgba(104,6,4,0.7), rgba(104,6,4,0) 72%);
+  }
+  /* everything the player normally reads goes away for the duration */
+  body.killing #crosshair, body.killing #prompt, body.killing #clock,
+  body.killing #objective, body.killing #dialogue, body.killing #subtitle,
+  body.killing #carry, body.killing #ammo, body.killing #meters,
+  body.killing #status, body.killing #stick, body.killing #touchbar,
+  body.killing #hotbar, body.killing #roomname, body.killing #sound {
+    opacity: 0 !important; pointer-events: none !important;
+    transition: opacity 220ms ease;
+  }
+  #blackout {
+    position: fixed; inset: 0; z-index: 30; background: #000;
+    opacity: 0; pointer-events: none; transition: opacity 130ms linear;
+  }
+  #blackout.on { opacity: 1; }
+  /* coming to on the floor, not a scene cut — a slower fade for the opening */
+  #blackout.slow { transition: opacity 2000ms ease; }
+
   /* ---------- menu panels: saves and settings ---------- */
   /* .card sets display:flex and is declared later, so hiding a panel needs
      to out-rank it rather than politely lose to it */
@@ -148,6 +183,162 @@
   .nameField { display: flex; gap: 8px; }
   .nameField input { flex: 1; min-width: 0; }
   .nameField button { width: auto !important; flex: 0 0 auto; }
+
+  /* ---------------- Title card ---------------- */
+  .card { width: min(460px,100%); display: flex; flex-direction: column; gap: 22px; margin: auto; }
+  .eyebrow {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 11px; letter-spacing: 0.34em; text-transform: uppercase;
+    color: var(--concrete-l);
+  }
+  .eyebrow::after {
+    content: ""; flex: 1; height: 1px;
+    background: linear-gradient(90deg, var(--concrete) 0%, transparent 100%);
+  }
+  .mark {
+    width: 7px; height: 7px; flex: none; background: var(--oxide);
+    box-shadow: 0 0 10px rgba(126,53,41,0.9);
+  }
+  .titleblock { display: flex; flex-direction: column; gap: 2px; }
+  .title-sm {
+    font-size: clamp(13px,3vw,16px); letter-spacing: 0.48em;
+    text-transform: uppercase; color: var(--concrete-l);
+  }
+  .title-lg {
+    font-size: clamp(38px,9vw,74px); line-height: 0.94; font-weight: 700;
+    letter-spacing: -0.025em; text-transform: uppercase; color: var(--bone);
+    text-wrap: balance; text-shadow: 0 0 42px rgba(240,190,123,0.14);
+  }
+  .spec { display: flex; flex-direction: column; }
+  .spec-row {
+    display: flex; align-items: baseline; gap: 16px; padding: 9px 0;
+    border-top: 1px solid rgba(107,113,115,0.22); font-size: 12.5px;
+  }
+  .spec-row:last-child { border-bottom: 1px solid rgba(107,113,115,0.22); }
+  .spec-key {
+    flex: none; width: 104px; font-size: 11px; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--concrete-l);
+  }
+  .spec-val { color: var(--bone); font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
+  .failing { color: var(--oxide); animation: failFlicker 4.2s steps(1) infinite; }
+  @keyframes failFlicker {
+    0%,86%,89%,93%,100% { opacity: 1; } 87%,91% { opacity: 0.28; }
+  }
+  .none { color: var(--concrete-l); }
+  .actions { display: flex; flex-direction: column; gap: 14px; }
+  #enter {
+    appearance: none; width: 100%; padding: 15px 20px; background: transparent;
+    border: 1px solid var(--concrete); color: var(--tungsten);
+    font-family: var(--mono); font-size: 12px; letter-spacing: 0.3em;
+    text-transform: uppercase; cursor: pointer;
+    transition: border-color 200ms ease, color 200ms ease, background-color 200ms ease, box-shadow 260ms ease;
+  }
+  #enter:hover { border-color: var(--tungsten); background: rgba(240,190,123,0.06); box-shadow: 0 0 34px rgba(240,190,123,0.12); }
+  #enter:focus-visible { outline: 2px solid var(--tungsten); outline-offset: 3px; }
+  /* scoped to the card: the objective panel has a .hint of its own, and it
+     reads as prose rather than as a control legend */
+  #curtain .hint { font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--concrete); line-height: 1.9; }
+  #curtain .hint b { color: var(--concrete-l); font-weight: 400; }
+
+  /* ---------------- HUD ---------------- */
+  /* A plain white cross dead centre: the thing the camera is pointed at is
+     whatever sits under the middle of it. Two bars rather than a dot, so it
+     stays findable against a bright page or a black corridor alike — the
+     drop-shadows give it a dark edge on light surfaces and a soft glow on
+     dark ones. */
+  #crosshair {
+    position: fixed; top: 50%; left: 50%; z-index: 5;
+    width: 22px; height: 22px; margin: -11px 0 0 -11px;
+    pointer-events: none; opacity: 0;
+    color: #fff;
+    filter: drop-shadow(0 0 1px rgba(0,0,0,0.95)) drop-shadow(0 0 4px rgba(0,0,0,0.55));
+    transition: opacity 400ms ease, color 200ms ease, transform 160ms ease;
+  }
+  /* the two bars, each with a gap at the middle so the target stays visible */
+  #crosshair::before, #crosshair::after {
+    content: ''; position: absolute; background: currentColor;
+  }
+  #crosshair::before { left: 0; right: 0; top: 50%; height: 2px; margin-top: -1px; }
+  #crosshair::after { top: 0; bottom: 0; left: 50%; width: 2px; margin-left: -1px; }
+  #crosshair.on { opacity: 0.92; }
+  /* something under it can actually be used — it warms and opens up, so the
+     cross doubles as the "you can pick this up" tell without changing shape */
+  #crosshair.hot { color: var(--tungsten); opacity: 1; transform: scale(1.3); }
+
+  #prompt {
+    position: fixed; left: 50%; top: calc(50% + 32px); z-index: 6;
+    transform: translateX(-50%);
+    font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--bone); text-shadow: 0 2px 12px #000;
+    pointer-events: none; opacity: 0; transition: opacity 160ms ease;
+    white-space: nowrap;
+  }
+  #prompt.on { opacity: 1; }
+  #prompt .key {
+    display: inline-block; padding: 1px 6px; margin-right: 8px;
+    border: 1px solid var(--concrete-l); color: var(--tungsten);
+  }
+
+  #roomname {
+    position: fixed; left: max(20px, env(safe-area-inset-left));
+    top: max(18px, env(safe-area-inset-top)); z-index: 6;
+    font-size: 11px; letter-spacing: 0.34em; text-transform: uppercase;
+    color: var(--concrete-l); pointer-events: none;
+    opacity: 0; transition: opacity 600ms ease;
+  }
+  #roomname.on { opacity: 1; }
+
+  #status {
+    position: fixed; left: max(20px, env(safe-area-inset-left));
+    bottom: max(18px, env(safe-area-inset-bottom)); z-index: 6;
+    display: flex; flex-direction: column; gap: 6px;
+    font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--concrete); pointer-events: none; opacity: 0;
+    transition: opacity 500ms ease;
+    /* the opening control legend is one long line — let it wrap up the left
+       edge instead of running underneath the hotbar */
+    max-width: min(250px, 44vw);
+  }
+  #status.on { opacity: 1; }
+  #stance { color: var(--concrete-l); }
+  #legend { line-height: 1.9; }
+  #legend b { color: var(--concrete-l); font-weight: 400; }
+
+  #ammo {
+    position: fixed; right: max(20px, env(safe-area-inset-right));
+    bottom: max(18px, env(safe-area-inset-bottom)); z-index: 6;
+    text-align: right; font-variant-numeric: tabular-nums;
+    color: var(--bone); pointer-events: none; opacity: 0;
+    transition: opacity 400ms ease;
+  }
+  #ammo.on { opacity: 1; }
+  #ammo .big { font-size: 30px; letter-spacing: 0.04em; line-height: 1; }
+  #ammo .sub { font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--concrete-l); margin-top: 5px; }
+  #ammo.dry .big { color: var(--oxide); }
+
+  #carry {
+    position: fixed; right: max(20px, env(safe-area-inset-right));
+    top: max(56px, calc(env(safe-area-inset-top) + 48px)); z-index: 6;
+    display: flex; flex-direction: column; gap: 5px; align-items: flex-end;
+    font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--concrete-l); pointer-events: none;
+  }
+  #carry span { border: 1px solid rgba(107,113,115,0.3); padding: 4px 9px; }
+
+  #subtitle {
+    position: fixed; left: 50%; bottom: max(86px, calc(env(safe-area-inset-bottom) + 76px));
+    transform: translateX(-50%); z-index: 6;
+    width: min(560px, calc(100vw - 48px)); text-align: center;
+    font-size: 13px; line-height: 1.7; color: var(--bone);
+    text-shadow: 0 2px 14px #000; pointer-events: none;
+    opacity: 0; transition: opacity 400ms ease, bottom 220ms ease;
+  }
+  #subtitle.on { opacity: 1; }
+  /* both caption lines can be up at once — a scene playing while the world
+     says something. Lift the ambient line clear of the spoken one. */
+  #dialogue.on ~ #subtitle {
+    bottom: max(190px, calc(env(safe-area-inset-bottom) + 174px));
+  }
 
   #sound {
     position: fixed; right: max(18px, env(safe-area-inset-right));
