@@ -14,7 +14,7 @@ re-export instead of re-modeling.
 ## Part list
 | # | File | Prints? | Material (planned) |
 |---|------|---------|--------------------|
-| 1 | `parts/01_barrel.scad` | ✅ | CF-PLA / PETG |
+| 1 | `parts/01_barrel.scad` | ✅ | **CF-PLA / CF-PETG** (locked) |
 | 2 | plunger tube | ⏳ | CF-Nylon / PETG |
 | 3 | plunger head + rod | ⏳ | PLA + rubber seal |
 | 4 | trigger + catch | ⏳ | CF-Nylon |
@@ -24,6 +24,16 @@ re-export instead of re-modeling.
 | 8 | magazine + follower | ⏳ | PETG |
 | 9 | shell halves (L/R) | ⏳ | PLA / PETG |
 | 10 | grip | ⏳ | TPU / PLA |
+
+## Shell connection — snap-fit (no seam screws)
+The shell halves lock together with **cantilever snap hooks** (`lib/snapfit.scad`):
+little barbed tabs on one half snap through **windows** cut into the other half.
+The retention face is angled, so they **snap together but pull apart easily**.
+- `snap_hook()` — the barbed tab (add along shell A's rim)
+- `snap_window()` — the negative to **subtract** from shell B's rim wall
+- `parts/snapfit_demo.scad` — open in OpenSCAD to see it engage
+- Tuning: raise `snap_ret_rise` for easier release, lower it to grip harder;
+  thinner `snap_t` or longer `snap_len` = easier squeeze.
 
 ## Buy list (not printable)
 - Main plunger spring — ~18mm OD, ~90mm free length, 1.4mm wire
