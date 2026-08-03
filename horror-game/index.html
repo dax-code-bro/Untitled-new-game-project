@@ -303,6 +303,13 @@
   #stance { color: var(--concrete-l); }
   #legend { line-height: 1.9; }
   #legend b { color: var(--concrete-l); font-weight: 400; }
+  /* On a phone the hotbar owns the bottom edge and the stick owns the corner.
+     Lift the stance readout clear of both, and stand the control legend down —
+     every touch control is a labelled button, and the card already listed them. */
+  @media (pointer: coarse) {
+    #status { bottom: max(78px, calc(env(safe-area-inset-bottom) + 74px)); }
+    #legend { display: none; }
+  }
 
   #ammo {
     position: fixed; right: max(20px, env(safe-area-inset-right));
@@ -470,6 +477,12 @@
     pointer-events: none; opacity: 0; transition: opacity 400ms ease;
   }
   #meters.on { opacity: 1; }
+  /* The touch buttons stack into the same bottom-right corner and stand up to
+     three rows tall, so on a phone the meters ride above the tallest of them
+     rather than printing over CRAWL and ITEMS. */
+  @media (pointer: coarse) {
+    #meters { bottom: max(232px, calc(env(safe-area-inset-bottom) + 228px)); }
+  }
   .meter { display: flex; align-items: center; gap: 8px; }
   .meter .lbl { font-size: 9px; letter-spacing: 0.22em; color: var(--concrete-l); text-transform: uppercase; }
   .meter .cells { display: flex; gap: 2px; }
