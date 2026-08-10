@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Legend Engine — Demo</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#000;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#E8E8E8}
+  canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+  .ui{position:fixed;z-index:10;pointer-events:none}
+  .top{top:0;left:0;right:0;padding:calc(env(safe-area-inset-top,0px) + 10px) 12px 10px;
+    display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+    background:linear-gradient(180deg,rgba(0,0,0,.65),rgba(0,0,0,0))}
+  .title{font-family:Georgia,serif;letter-spacing:.12em;color:#C9A84C;font-size:14px;margin-right:6px}
+  button{pointer-events:auto;background:rgba(20,20,20,.78);color:#E8E8E8;border:1px solid #3a3a3a;
+    border-radius:7px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit;
+    -webkit-tap-highlight-color:transparent}
+  button:hover{border-color:#C9A84C;color:#F5D78E}
+  button.on{background:#C9A84C;color:#000;border-color:#C9A84C;font-weight:700}
+  .hint{position:fixed;left:0;right:0;bottom:0;padding:12px 14px calc(env(safe-area-inset-bottom,0px) + 14px);
+    font-size:12px;color:#9a9a9a;text-align:center;line-height:1.5;
+    background:linear-gradient(0deg,rgba(0,0,0,.7),rgba(0,0,0,0));pointer-events:none}
+  .hint b{color:#C9A84C;font-weight:600}
+  .stats{position:fixed;top:auto;bottom:64px;right:12px;font:11px/1.6 ui-monospace,Menlo,monospace;
+    color:#7a7a7a;text-align:right;pointer-events:none}
+  .err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:32px;
+    text-align:center;background:#080808;color:#ccc;line-height:1.7;z-index:50}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div class="ui top">
+  <span class="title">LEGEND ENGINE</span>
+  <button data-scene="demolition" class="on">Demolition</button>
+  <button data-scene="water">Water</button>
+  <button data-scene="character">Character</button>
+  <button data-scene="materials">Materials</button>
+  <button data-scene="playground">Playground</button>
+  <button id="act">Boom</button>
+</div>
+
+<div class="stats" id="stats"></div>
+<div class="hint" id="hint"></div>
+<div class="err" id="err"></div>
+
+<script src="legend-engine.js"></script>
+<script>
+(function () {
+  var canvas = document.getElementById('c');
+  var statsEl = document.getElementById('stats');
+  var hintEl = document.getElementById('hint');
+  var errEl = document.getElementById('err');
+  var actBtn = document.getElementById('act');
+  var game = null;
+  var current = null;
+
+  function fail(msg) {
+    errEl.style.display = 'flex';
+    errEl.innerHTML = msg;
+  }
+  if (!window.LE) { fail('Could not load the engine.'); return; }
+
+  /* ---------------- scenes ---------------- */
+
+  var SCENES = {
+    /* A brick tower and a stack of crates, waiting to be knocked down. */
+    demolition: {
+      hint: 'Drag to orbit · scroll to zoom · <b>Boom</b> or tap the ground to detonate there',
+      action: 'Boom',
+      build: function () {
+        var g = LE.create({ canvas: canvas, sky: 'sunset' });
+        g.ground({ material: 'dirt', size: 160, grass: { max: 14000, area: 60 } });
+
+        // A brick tower.
+        for (var y = 0; y < 9; y++) {
+          for (var i = 0; i < 8; i++) {
+            var a = (i / 8) * Math.PI * 2 + (y % 2) * 0.39;
+            g.box({
+              at: [Math.cos(a) * 2.6, 0.5 + y * 1.02, Math.sin(a) * 2.6],
+              size: [1.7, 1, 0.9],
+              rotation: [0, -a * 180 / Math.PI, 0],
+              material: 'brick',
+              breakable: { pieces: 9, threshold: 700 },
+            });
+          }
+        }
+        // Crates off to the side.
+        for (var k = 0; k < 14; k++) {
+          g.box({
+            at: [6 + (k % 3) * 1.05, 0.5 + Math.floor(k / 3) * 1.05, -2 + (k % 4) * 1.05],
+            size: 1, material: 'wood',
+            breakable: { pieces: 7, pattern: 'splinter', threshold: 500 },
+          });
+        }
+        // A few boulders for weight.
+        for (var r = 0; r < 5; r++) {
+          g.rock({ at: [-7 - r * 1.4, 1 + r * 0.4, 2 - r], radius: 0.6 + r * 0.08 });
+        }
+
+        g.orbit({ center: [0, 4, 0], distance: 22, height: 5, autoRotate: 0.06 });
+
+        // Tap the ground to blow a hole in whatever is there.
+        canvas.addEventListener('pointerdown', function (e) {
+          if (e.__handled) return;
+          var hit = g.raycastScreen(e.clientX, e.clientY);
+          if (hit) g.explode(hit.point, { radius: 7, strength: 26 });
+        });
+        return g;
+      },
+      act: function (g) { g.explode([0, 3, 0], { radius: 11, strength: 40, scale: 2 }); },
+    },
+
+    /* A tank of water with objects to drop into it. */
+    water: {
+      hint: 'Drag to orbit · <b>Splash</b> drops a boulder into the tank',
+      action: 'Splash',
+      build: function () {
+        var g = LE.create({ canvas: canvas, sky: 'day' });
+        g.ground({ material: 'rock', size: 120 });
+        var wall = { material: 'concrete', static: true };
+        g.box(Object.assign({ at: [-4, 1.4, 0], size: [0.5, 2.8, 8.5] }, wall));
+        g.box(Object.assign({ at: [4, 1.4, 0], size: [0.5, 2.8, 8.5] }, wall));
+        g.box(Object.assign({ at: [0, 1.4, -4], size: [8.5, 2.8, 0.5] }, wall));
+        g.box(Object.assign({ at: [0, 1.4, 4], size: [8.5, 2.8, 0.5] }, wall));
+        g.water({ at: [0, 2.0, 0], size: [6.6, 2.6, 6.6] });
+        g.orbit({ center: [0, 1.5, 0], distance: 15, height: 5, autoRotate: 0.08 });
+        return g;
+      },
+      act: function (g) {
+        g.rock({
+          at: [(Math.random() - 0.5) * 4, 9, (Math.random() - 0.5) * 4],
+          radius: 0.75, seed: (Math.random() * 100) | 0, lifetime: 25,
+        });
+        g.audio.splash(0.8);
+      },
+    },
+
+    /* A walkable character with an expressive face. */
+    character: {
+      hint: 'Move with <b>WASD / arrows / joystick</b> · <b>Space</b> to jump · drag to look',
+      action: 'Say hello',
+      build: function () {
+        var g = LE.create({ canvas: canvas, sky: 'dawn' });
+        var noise = new LE.Noise(11);
+        var h = function (x, z) { return noise.fbm(x * 0.022, 0, z * 0.022, 4) * 3.2; };
+        g.ground({ material: 'grass', size: 200, segments: 120, heightFn: h, grass: { max: 30000, area: 70, heightFn: h } });
+
+        // Scattered rocks and a low wall to bump into.
+        for (var i = 0; i < 22; i++) {
+          var a = (i / 22) * Math.PI * 2;
+          var d = 8 + (i % 5) * 3;
+          g.rock({ at: [Math.cos(a) * d, 0.5, Math.sin(a) * d], radius: 0.4 + (i % 4) * 0.16, seed: i });
+        }
+        for (var b = 0; b < 8; b++) {
+          g.box({ at: [-6 + b * 1.02, 0.5, -6], size: 1, material: 'stone', static: true });
+        }
+
+        var hero = g.character({ at: [0, 1.4, 0], color: 0x2f5fa8 });
+        hero.face.setEmotion('smile', 0.6);
+        g.follow(hero, { distance: 6, height: 2.4 });
+        g.setWind([1, 0, 0.4], 0.55);
+
+        g.onUpdate(function () {
+          var i = g.input;
+          // Move relative to where the camera is looking.
+          var yaw = g.cameraYaw;
+          var fx = Math.sin(yaw), fz = Math.cos(yaw);
+          var mx = i.axes.x, mz = -i.axes.y;
+          hero.controller.move(mx * fz + mz * fx, -mx * fx + mz * fz, i.down('shift'));
+          if (i.justPressed(' ')) hero.controller.jump();
+        });
+        g.__hero = hero;
+        return g;
+      },
+      act: function (g) {
+        var lines = ['hey there', 'this is the legend engine', 'watch this', 'nice weather today'];
+        var moods = ['smile', 'surprised', 'happy', 'smile'];
+        var k = (Math.random() * lines.length) | 0;
+        g.__hero.face.setEmotion(moods[k], 1);
+        g.__hero.face.say(lines[k]);
+      },
+    },
+
+    /* Every procedural material, side by side. */
+    materials: {
+      hint: 'Drag to orbit · every surface here is generated from noise, nothing is downloaded',
+      action: 'Relight',
+      build: function () {
+        var g = LE.create({ canvas: canvas, sky: 'overcast' });
+        g.ground({ material: 'tile', size: 80 });
+        var mats = ['concrete', 'brick', 'wood', 'metal', 'rust', 'rock', 'grass', 'dirt',
+                    'sand', 'marble', 'ice', 'fabric', 'skin', 'plastic', 'gold', 'copper'];
+        for (var i = 0; i < mats.length; i++) {
+          var x = (i % 4) * 2.6 - 3.9;
+          var z = Math.floor(i / 4) * 2.6 - 3.9;
+          g.sphere({ at: [x, 1.15, z], radius: 0.95, material: mats[i], static: true });
+        }
+        g.orbit({ center: [0, 1, 0], distance: 16, height: 6, autoRotate: 0.12 });
+        g.__hour = 13;
+        return g;
+      },
+      act: function (g) { g.__hour = (g.__hour + 2.5) % 24; g.setTimeOfDay(g.__hour); },
+    },
+
+    /* Everything at once. */
+    playground: {
+      hint: 'Tap anything to blow it up · drag to orbit · <b>Rain</b> drops more objects',
+      action: 'Rain',
+      build: function () {
+        var g = LE.create({ canvas: canvas, sky: 'night' });
+        g.ground({ material: 'concrete', size: 120 });
+
+        for (var i = 0; i < 5; i++) {
+          g.box({ at: [-6 + i * 3, 2, -6], size: [2.4, 4, 2.4], material: 'concrete',
+                  breakable: { pieces: 12, pattern: 'slab', threshold: 800 } });
+        }
+        g.sphere({ at: [0, 1.2, 4], radius: 1, material: 'neon', static: true });
+        g.light({ at: [0, 2.6, 4], color: 0x36e0ff, intensity: 70, radius: 20 });
+        g.box({ at: [5, 0.7, 4], size: 1.4, material: 'lava', static: true });
+        g.light({ at: [5, 1.8, 4], color: 0xff5a20, intensity: 55, radius: 16 });
+
+        g.onUpdate(function () {
+          if (g.frame % 3 === 0) g.particles.fire(new LE.Vec3(5, 1.5, 4), { count: 1, size: 0.8 });
+          if (g.frame % 7 === 0) g.particles.smoke(new LE.Vec3(5, 2.2, 4), { count: 1, size: 0.7 });
+        });
+
+        g.orbit({ center: [0, 2, 0], distance: 20, height: 6, autoRotate: 0.1 });
+        canvas.addEventListener('pointerdown', function (e) {
+          var hit = g.raycastScreen(e.clientX, e.clientY);
+          if (hit) g.explode(hit.point, { radius: 6, strength: 24 });
+        });
+        return g;
+      },
+      act: function (g) {
+        for (var i = 0; i < 10; i++) {
+          var kind = i % 3;
+          var at = [(Math.random() - 0.5) * 12, 12 + i * 0.8, (Math.random() - 0.5) * 12];
+          if (kind === 0) g.box({ at: at, size: 0.9, material: 'wood', lifetime: 30, breakable: { pieces: 6 } });
+          else if (kind === 1) g.sphere({ at: at, radius: 0.45, material: 'metal', lifetime: 30, bounce: 0.5 });
+          else g.rock({ at: at, radius: 0.5, seed: i, lifetime: 30 });
+        }
+      },
+    },
+  };
+
+  /* ---------------- switching ---------------- */
+
+  function load(name) {
+    if (game) { game.dispose(); game = null; }
+    // A fresh canvas per scene: disposing a WebGL context does not reset the
+    // element, and reusing it across contexts is unreliable.
+    var fresh = canvas.cloneNode(false);
+    canvas.parentNode.replaceChild(fresh, canvas);
+    canvas = fresh;
+
+    current = SCENES[name];
+    try {
+      game = current.build();
+      game.start();
+    } catch (err) {
+      fail('This demo needs WebGL2.<br><br><span style="color:#666">' + String(err.message || err) + '</span>');
+      return;
+    }
+    hintEl.innerHTML = current.hint;
+    actBtn.textContent = current.action;
+    var btns = document.querySelectorAll('[data-scene]');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].classList.toggle('on', btns[i].getAttribute('data-scene') === name);
+    }
+  }
+
+  var buttons = document.querySelectorAll('[data-scene]');
+  for (var i = 0; i < buttons.length; i++) {
+    buttons[i].addEventListener('click', function () { load(this.getAttribute('data-scene')); });
+  }
+  actBtn.addEventListener('click', function (e) {
+    e.__handled = true;
+    if (game && current.act) current.act(game);
+  });
+
+  setInterval(function () {
+    if (!game) return;
+    var s = game.stats;
+    statsEl.textContent = s.fps + ' fps · ' + s.draws + ' draws · ' + s.bodies + ' bodies · '
+      + s.particles + ' particles · ' + game.renderer.qualityName;
+  }, 400);
+
+  load('demolition');
+})();
+</script>
+</body>
+</html>
