@@ -290,11 +290,19 @@ no bundler, no import map and no CORS story — which is the whole point, since
 every Legend game is one self-contained file.
 
 ```bash
-node engine/build.js              # -> site/engine/legend-engine.js
-node engine/build.js --watch
-node engine/test/physics.test.js  # solver correctness, headless, no GPU
-node engine/test/browser.test.js  # real WebGL2 in headless Chromium + screenshots
+npm run build:engine       # -> site/engine/legend-engine.js
+npm run watch:engine
+npm run test               # solver, fracture and fluid — headless, no GPU, no deps
+npm run test:engine        # 8 scenes in real WebGL2 + screenshots
+npm run test:integration   # a game in a sandboxed iframe over HTTP (the AIGB path)
+npm run test:all
 ```
+
+The browser tests need Playwright (`npm i --no-save playwright`); the solver
+tests need nothing at all, which is deliberate — the parts most likely to
+break silently are the ones you can check anywhere.
+
+Open `site/engine/demo.html` from any static server to see it running.
 
 Files are concatenated in filename order, so the numeric prefixes are load
 order. Add new modules with a prefix that places them after their dependencies.

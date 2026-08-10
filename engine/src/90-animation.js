@@ -304,14 +304,18 @@ const HUMANOID_BONES = [
   ['chest', 1, [0, 0.18, 0]],
   ['neck', 2, [0, 0.16, 0]],
   ['head', 3, [0, 0.11, 0]],
+  // Arms hang at the sides in bind pose rather than straight out. A T-pose
+  // rig would need every clip to rotate the arms down 80 degrees before doing
+  // anything else, and any bone a clip does not touch would snap back to the
+  // T — which is exactly what "unfinished character" looks like.
   ['shoulderL', 2, [0.08, 0.12, 0]],
-  ['upperArmL', 5, [0.09, 0, 0]],
-  ['lowerArmL', 6, [0.26, 0, 0]],
-  ['handL', 7, [0.24, 0, 0]],
+  ['upperArmL', 5, [0.075, -0.045, 0]],
+  ['lowerArmL', 6, [0.035, -0.255, 0]],
+  ['handL', 7, [0.015, -0.235, 0]],
   ['shoulderR', 2, [-0.08, 0.12, 0]],
-  ['upperArmR', 9, [-0.09, 0, 0]],
-  ['lowerArmR', 10, [-0.26, 0, 0]],
-  ['handR', 11, [-0.24, 0, 0]],
+  ['upperArmR', 9, [-0.075, -0.045, 0]],
+  ['lowerArmR', 10, [-0.035, -0.255, 0]],
+  ['handR', 11, [-0.015, -0.235, 0]],
   ['upperLegL', 0, [0.09, -0.04, 0]],
   ['lowerLegL', 13, [0, -0.42, 0]],
   ['footL', 14, [0, -0.40, 0]],

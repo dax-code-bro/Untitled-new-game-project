@@ -557,7 +557,9 @@ class Renderer {
       bsh.tex('uDepthTex', p.src);
       bsh.v2('uTexel', 1 / p.dst.width, 1 / p.dst.height);
       bsh.v2('uDir', p.dir[0], p.dir[1]);
-      bsh.f('uRadius', 1.0);
+      // Wide enough that adjacent particles fuse into one surface. Too small
+      // and a settled pool still reads as a heap of individual spheres.
+      bsh.f('uRadius', 1.7);
       this.fullscreen.draw();
       this.stats.draws++;
     }

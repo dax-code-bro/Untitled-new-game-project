@@ -513,7 +513,10 @@ class Fluid {
   flush() {
     if (!this.count) return;
     const buf = this.instances;
-    const r = this.particleRadius * 1.55;   // slight overlap so the surface closes
+    // Drawn larger than the physical radius so neighbouring particles overlap
+    // and the depth buffer closes into a continuous surface rather than a
+    // field of separate spheres.
+    const r = this.particleRadius * 1.85;
     for (let i = 0; i < this.count; i++) {
       const o = i * 4;
       buf[o] = this.px[i];

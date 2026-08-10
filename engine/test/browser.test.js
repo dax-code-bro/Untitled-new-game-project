@@ -235,6 +235,10 @@ async function run() {
     }
 
     if (name === 'water') {
+      // Let the pool actually settle. At 90 frames the water is still
+      // mid-splash from its initial drop, so both the assertions and the
+      // screenshot would describe a transient rather than the steady state.
+      await page.evaluate(`(() => { for (let i = 0; i < 260; i++) window.__step(1/60); })()`);
       const fluid = await page.evaluate(`(() => {
         const f = window.__game.fluid;
         let minY = Infinity, maxY = -Infinity, finite = true;
@@ -244,6 +248,7 @@ async function run() {
         }
         return { count: f.count, minY, maxY, finite, speed: f.averageSpeed() };
       })()`);
+      check('water settles down', fluid.speed < 2.5, `avg speed ${fluid.speed.toFixed(2)}`);
       check('water: particles exist', fluid.count > 200, `count=${fluid.count}`);
       check('water: no NaN particles', fluid.finite);
       check('water: settles above the floor', fluid.minY > -0.5, `minY=${fluid.minY.toFixed(3)}`);

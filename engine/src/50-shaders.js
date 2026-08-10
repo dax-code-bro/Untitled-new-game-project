@@ -261,7 +261,6 @@ uniform float uTime;
 #ifdef GRASS
 uniform vec3 uWindDir;
 uniform float uWindStrength;
-uniform float uGrassLod;
 #endif
 
 struct Surface {

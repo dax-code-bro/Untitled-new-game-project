@@ -2383,7 +2383,6 @@ uniform float uTime;
 #ifdef GRASS
 uniform vec3 uWindDir;
 uniform float uWindStrength;
-uniform float uGrassLod;
 #endif
 
 struct Surface {
@@ -3686,7 +3685,9 @@ class Renderer {
       bsh.tex('uDepthTex', p.src);
       bsh.v2('uTexel', 1 / p.dst.width, 1 / p.dst.height);
       bsh.v2('uDir', p.dir[0], p.dir[1]);
-      bsh.f('uRadius', 1.0);
+      // Wide enough that adjacent particles fuse into one surface. Too small
+      // and a settled pool still reads as a heap of individual spheres.
+      bsh.f('uRadius', 1.7);
       this.fullscreen.draw();
       this.stats.draws++;
     }
@@ -6662,7 +6663,10 @@ class Fluid {
   flush() {
     if (!this.count) return;
     const buf = this.instances;
-    const r = this.particleRadius * 1.55;   // slight overlap so the surface closes
+    // Drawn larger than the physical radius so neighbouring particles overlap
+    // and the depth buffer closes into a continuous surface rather than a
+    // field of separate spheres.
+    const r = this.particleRadius * 1.85;
     for (let i = 0; i < this.count; i++) {
       const o = i * 4;
       buf[o] = this.px[i];
@@ -7007,14 +7011,18 @@ const HUMANOID_BONES = [
   ['chest', 1, [0, 0.18, 0]],
   ['neck', 2, [0, 0.16, 0]],
   ['head', 3, [0, 0.11, 0]],
+  // Arms hang at the sides in bind pose rather than straight out. A T-pose
+  // rig would need every clip to rotate the arms down 80 degrees before doing
+  // anything else, and any bone a clip does not touch would snap back to the
+  // T — which is exactly what "unfinished character" looks like.
   ['shoulderL', 2, [0.08, 0.12, 0]],
-  ['upperArmL', 5, [0.09, 0, 0]],
-  ['lowerArmL', 6, [0.26, 0, 0]],
-  ['handL', 7, [0.24, 0, 0]],
+  ['upperArmL', 5, [0.075, -0.045, 0]],
+  ['lowerArmL', 6, [0.035, -0.255, 0]],
+  ['handL', 7, [0.015, -0.235, 0]],
   ['shoulderR', 2, [-0.08, 0.12, 0]],
-  ['upperArmR', 9, [-0.09, 0, 0]],
-  ['lowerArmR', 10, [-0.26, 0, 0]],
-  ['handR', 11, [-0.24, 0, 0]],
+  ['upperArmR', 9, [-0.075, -0.045, 0]],
+  ['lowerArmR', 10, [-0.035, -0.255, 0]],
+  ['handR', 11, [-0.015, -0.235, 0]],
   ['upperLegL', 0, [0.09, -0.04, 0]],
   ['lowerLegL', 13, [0, -0.42, 0]],
   ['footL', 14, [0, -0.40, 0]],
@@ -7516,7 +7524,7 @@ function makeHeadGeometry(opts = {}) {
 
 /* ─────────── 92-grass.js ─────────── */
 /* ============================================================
-   GRASS — instanced blades with wind, clumping and LOD.
+   GRASS — instanced blades with wind and noise-driven clumping.
    One draw call for the whole field; the bend is computed in the
    vertex shader so the CPU never touches a blade after placement.
    ============================================================ */
@@ -7603,16 +7611,6 @@ class Grass {
     this.count = n;
     this.mesh.uploadInstances(this.instances.subarray(0, n * 20), n);
     return n;
-  }
-
-  /* Cull to a radius around the camera and re-upload. Cheap enough to run
-     every few frames, and it keeps huge fields affordable. */
-  cullTo(cameraPos, radius) {
-    // Blades are already uploaded; culling would require a second buffer and
-    // a full repack. Instead the whole field is drawn and the shader's LOD
-    // fade handles distance, which is faster than repacking on the CPU.
-    this.visibleRadius = radius;
-    return this.count;
   }
 
   batch() {
@@ -7929,11 +7927,11 @@ const LIMB_SEGMENTS = [
   ['chest', 'neck', 0.135, 0.070],
   ['neck', 'head', 0.052, 0.058],
   ['shoulderL', 'upperArmL', 0.075, 0.058],
-  ['upperArmL', 'lowerArmL', 0.058, 0.044],
-  ['lowerArmL', 'handL', 0.044, 0.034],
+  ['upperArmL', 'lowerArmL', 0.055, 0.042],
+  ['lowerArmL', 'handL', 0.042, 0.033],
   ['shoulderR', 'upperArmR', 0.075, 0.058],
-  ['upperArmR', 'lowerArmR', 0.058, 0.044],
-  ['lowerArmR', 'handR', 0.044, 0.034],
+  ['upperArmR', 'lowerArmR', 0.055, 0.042],
+  ['lowerArmR', 'handR', 0.042, 0.033],
   ['hips', 'upperLegL', 0.100, 0.086],
   ['upperLegL', 'lowerLegL', 0.086, 0.058],
   ['lowerLegL', 'footL', 0.058, 0.045],
@@ -8307,9 +8305,12 @@ const SKY_PRESETS = {
     fog: 0xa8c0dc, fogDensity: 0.0045, clouds: 0.4, exposure: 1.0,
   },
   sunset: {
-    zenith: 0x1e3266, horizon: 0xff9a4a, ground: 0x3a2a20,
-    sun: [0.86, 0.14, 0.34], sunColor: 0xffb060, sunIntensity: 3.2,
-    fog: 0xe08a50, fogDensity: 0.0055, clouds: 0.55, exposure: 1.05,
+    // Golden hour, not dusk. At 8 degrees of elevation the sun contributes
+    // almost nothing to an upward-facing surface and the whole scene falls
+    // back to ambient, which reads as muddy rather than warm.
+    zenith: 0x1e3266, horizon: 0xff9a4a, ground: 0x4a3628,
+    sun: [0.80, 0.36, 0.32], sunColor: 0xffc078, sunIntensity: 4.4,
+    fog: 0xe08a50, fogDensity: 0.0055, clouds: 0.55, exposure: 1.15,
   },
   night: {
     zenith: 0x06091a, horizon: 0x141c38, ground: 0x0a0c14,
@@ -8322,13 +8323,13 @@ const SKY_PRESETS = {
     fog: 0x9aa4b0, fogDensity: 0.011, clouds: 0.95, exposure: 1.05,
   },
   dawn: {
-    zenith: 0x2a4a80, horizon: 0xffc8a0, ground: 0x3c3830,
-    sun: [-0.7, 0.2, 0.5], sunColor: 0xffd0a0, sunIntensity: 2.6,
-    fog: 0xd8c0b0, fogDensity: 0.008, clouds: 0.45, exposure: 1.05,
+    zenith: 0x2a4a80, horizon: 0xffc8a0, ground: 0x4c473c,
+    sun: [-0.66, 0.38, 0.46], sunColor: 0xffd8b0, sunIntensity: 3.4,
+    fog: 0xd8c0b0, fogDensity: 0.008, clouds: 0.45, exposure: 1.1,
   },
   hell: {
-    zenith: 0x200608, horizon: 0x8a1c08, ground: 0x2a0c06,
-    sun: [0.4, 0.5, 0.6], sunColor: 0xff5a20, sunIntensity: 2.2,
+    zenith: 0x200608, horizon: 0x8a1c08, ground: 0x3a1408,
+    sun: [0.4, 0.55, 0.6], sunColor: 0xff7030, sunIntensity: 3.0,
     fog: 0x601408, fogDensity: 0.015, clouds: 0.7, exposure: 1.1,
   },
   space: {
@@ -8737,6 +8738,15 @@ class Engine {
       const headMesh = new GpuMesh(this.gl, headGeo);
       const face = new Face(this.gl, headGeo, { seed: opts.seed || 5 });
       face.attach(headMesh);
+      // Size the head from the skeleton rather than guessing. The head mesh
+      // is authored ~0.72 units tall (the blendshape regions are tuned to
+      // those coordinates, so the mesh is scaled rather than rebuilt). In the
+      // bind pose the head bone sits 1.47 above the feet on a 1.75-tall rig,
+      // leaving 0.28 for the head — about a seventh of total height, which is
+      // what a human actually is.
+      const HEAD_MESH_HEIGHT = 0.72;
+      const headHeight = 1.75 - 1.47;
+      const headScale = (headHeight / HEAD_MESH_HEIGHT) * scale;
       const headActor = new Actor(this, {
         name: 'head',
         mesh: headMesh,
@@ -8744,9 +8754,11 @@ class Engine {
         face,
         parent: actor,
         parentBone: skeleton.index('head'),
-        offset: [0, 0.10 * scale, 0.005],
-        scale: scale,
-        boundRadius: 0.5 * scale,
+        // Lift by half a head so the jaw meets the neck instead of the
+        // skull's centre sitting on it.
+        offset: [0, headHeight * 0.5 * scale, 0.006 * scale],
+        scale: headScale,
+        boundRadius: 0.4 * scale,
       });
       this.actors.push(headActor);
       actor.head = headActor;
@@ -9001,14 +9013,22 @@ class Engine {
       this._camPitch = clamp(this._camPitch + dy * 0.005, -1.35, 1.4);
     };
     const onUp = () => { dragging = false; };
-    this.canvas.addEventListener('pointerdown', onDown);
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
-    this.canvas.addEventListener('wheel', (e) => {
+    const onWheel = (e) => {
       if (this._camMode === 'manual') return;
       this._camDist = clamp(this._camDist * (1 + Math.sign(e.deltaY) * 0.12), 1.5, 120);
       e.preventDefault();
-    }, { passive: false });
+    };
+
+    // Tracked so dispose() can detach them. The window-level listeners in
+    // particular outlive the canvas, so a page that swaps scenes would end up
+    // with every disposed engine still steering the camera.
+    this._camListeners = [
+      [this.canvas, 'pointerdown', onDown, undefined],
+      [window, 'pointermove', onMove, undefined],
+      [window, 'pointerup', onUp, undefined],
+      [this.canvas, 'wheel', onWheel, { passive: false }],
+    ];
+    for (const [t, type, fn, opts] of this._camListeners) t.addEventListener(type, fn, opts);
   }
 
   _updateCamera(dt) {
@@ -9187,9 +9207,16 @@ class Engine {
           grass: false,
           alphaClip: false,
           sortKey: 0,
+          cx: 0, cy: 0, cz: 0,
         };
         groups.set(key, g);
       }
+      // Running centroid, so transparent groups can be depth-sorted against
+      // each other. A whole instanced group shares one sort key, so this is
+      // approximate by construction — but it is the group's own position,
+      // which is the best approximation available without splitting draws.
+      const ap = actor.position;
+      g.cx += ap.x; g.cy += ap.y; g.cz += ap.z;
       if ((g.count + 1) * 20 > g.data.length) {
         const bigger = new Float32Array(g.data.length * 2);
         bigger.set(g.data);
@@ -9204,8 +9231,16 @@ class Engine {
     for (const g of groups.values()) {
       if (!g.count) continue;
       g.instances = g.data.subarray(0, g.count * 20);
-      // Transparent batches sort by distance; opaque order does not matter.
-      g.sortKey = g.material.transparent ? camPos.distanceToSq(this.actors[0] ? this.actors[0].position : Vec3.ZERO) : 0;
+      // Transparent batches sort back to front; opaque order does not matter.
+      if (g.material.transparent) {
+        const dx = camPos.x - g.cx / g.count;
+        const dy = camPos.y - g.cy / g.count;
+        const dz = camPos.z - g.cz / g.count;
+        g.sortKey = dx * dx + dy * dy + dz * dz;
+      } else {
+        g.sortKey = 0;
+      }
+      g.cx = 0; g.cy = 0; g.cz = 0;
       list.push(g);
     }
 
@@ -9330,9 +9365,15 @@ class Engine {
     this.stop();
     this.input.dispose();
     window.removeEventListener('resize', this._doResize);
+    for (const [t, type, fn, opts] of this._camListeners || []) t.removeEventListener(type, fn, opts);
+    this._camListeners = null;
     for (const m of this.meshCache.values()) m.dispose();
     for (const m of this.materialCache.values()) m.dispose();
+    // Chunk debris carries its own mesh, which the shared caches do not own.
+    for (const a of this.actors) if (a.ownMesh) a.ownMesh.dispose();
     if (this.grass) this.grass.dispose();
+    this.actors.length = 0;
+    this.physics.bodies.length = 0;
   }
 }
 

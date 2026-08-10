@@ -11,6 +11,8 @@
     "watch:engine": "node engine/build.js --watch",
     "test:physics": "node engine/test/physics.test.js",
     "test:engine": "node engine/build.js && node engine/test/browser.test.js",
-    "test": "node engine/test/physics.test.js"
+    "test": "node engine/test/physics.test.js",
+    "test:integration": "node engine/build.js && node engine/test/integration.test.js",
+    "test:all": "node engine/test/physics.test.js && node engine/build.js && node engine/test/browser.test.js && node engine/test/integration.test.js"
   }
 }

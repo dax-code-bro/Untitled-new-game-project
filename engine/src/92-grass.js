@@ -1,5 +1,5 @@
 /* ============================================================
-   GRASS — instanced blades with wind, clumping and LOD.
+   GRASS — instanced blades with wind and noise-driven clumping.
    One draw call for the whole field; the bend is computed in the
    vertex shader so the CPU never touches a blade after placement.
    ============================================================ */
@@ -86,16 +86,6 @@ class Grass {
     this.count = n;
     this.mesh.uploadInstances(this.instances.subarray(0, n * 20), n);
     return n;
-  }
-
-  /* Cull to a radius around the camera and re-upload. Cheap enough to run
-     every few frames, and it keeps huge fields affordable. */
-  cullTo(cameraPos, radius) {
-    // Blades are already uploaded; culling would require a second buffer and
-    // a full repack. Instead the whole field is drawn and the shader's LOD
-    // fade handles distance, which is faster than repacking on the CPU.
-    this.visibleRadius = radius;
-    return this.count;
   }
 
   batch() {
