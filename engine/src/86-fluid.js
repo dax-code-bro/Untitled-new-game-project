@@ -23,6 +23,11 @@ class Fluid {
     this.particleRadius = this.h * 0.52;
     this.restDensity = opts.restDensity || 1000;
     this.mass = this.restDensity * (this.h * 0.5) ** 3 * 0.8;
+    // The spacing at which a lattice of these particles already sits at rest
+    // density. Seeding at any other spacing hands the solver a large
+    // constraint violation on frame one, and the correction that follows is
+    // what launches particles out of the tank.
+    this.restSpacing = Math.cbrt(this.mass / this.restDensity);
     this.iterations = opts.iterations || 3;
     this.viscosity = opts.viscosity != null ? opts.viscosity : 0.02;
     this.vorticity = opts.vorticity != null ? opts.vorticity : 0.12;
@@ -112,7 +117,7 @@ class Fluid {
      breaks the grid symmetry, which otherwise takes many steps to relax. */
   fillBox(min, max, opts = {}) {
     const lo = Vec3.from(min), hi = Vec3.from(max);
-    const spacing = opts.spacing || this.h * 0.62;
+    const spacing = opts.spacing || this.restSpacing;
     const jitter = spacing * 0.12;
     let n = 0;
     for (let x = lo.x; x <= hi.x; x += spacing) {
@@ -315,7 +320,11 @@ class Fluid {
 
         this.density[i] = rho;
         sumGrad2 += gradSumX * gradSumX + gradSumY * gradSumY + gradSumZ * gradSumZ;
-        const C = rho * invRest - 1;
+        // Clamped to zero: an under-dense particle is not violating
+        // incompressibility, and letting the constraint pull inward turns
+        // the free surface into a cohesive blob that periodically collapses
+        // and then explodes.
+        const C = Math.max(0, rho * invRest - 1);
         // Relaxation term keeps the denominator away from zero where the
         // gradient sum vanishes (isolated particles).
         this.lambda[i] = -C / (sumGrad2 + 1 / this.relaxation);
@@ -427,9 +436,20 @@ class Fluid {
         const len = Math.sqrt(nx * nx + ny * ny + nz * nz);
         if (len < 1e-6) continue;
         nx /= len; ny /= len; nz /= len;
-        const fx = (ny * this.wz[i] - nz * this.wy[i]) * this.vorticity;
-        const fy = (nz * this.wx[i] - nx * this.wz[i]) * this.vorticity;
-        const fz = (nx * this.wy[i] - ny * this.wx[i]) * this.vorticity;
+
+        // Omega is normalised before the cross product. The raw curl carries
+        // the spiky kernel's normalisation constant (order 1e5 at these
+        // radii), so using it directly makes the confinement force dwarf
+        // every other term and blows the simulation apart. Only its
+        // direction is meaningful here; the strength is set by `vorticity`.
+        let wx = this.wx[i], wy = this.wy[i], wz = this.wz[i];
+        const wlen = Math.sqrt(wx * wx + wy * wy + wz * wz);
+        if (wlen < 1e-6) continue;
+        wx /= wlen; wy /= wlen; wz /= wlen;
+        const strength = this.vorticity * 6;
+        const fx = (ny * wz - nz * wy) * strength;
+        const fy = (nz * wx - nx * wz) * strength;
+        const fz = (nx * wy - ny * wx) * strength;
         this.vx[i] += fx * h; this.vy[i] += fy * h; this.vz[i] += fz * h;
       }
     }
@@ -447,14 +467,17 @@ class Fluid {
           const r2 = dx * dx + dy * dy + dz * dz;
           if (r2 >= this.h2) continue;
           const diff = this.h2 - r2;
-          const w = this.poly6 * diff * diff * diff;
+          // XSPH weights each neighbour by m/rho_j. Dropping that leaves the
+          // raw kernel value, which is ~1e2 here, and the "blend toward the
+          // neighbourhood average" turns into a huge velocity injection.
+          const w = this.poly6 * diff * diff * diff * (this.mass / Math.max(this.density[j], 1e-3));
           ax += (this.vx[j] - this.vx[i]) * w;
           ay += (this.vy[j] - this.vy[i]) * w;
           az += (this.vz[j] - this.vz[i]) * w;
         }
-        this.dx[i] = ax * this.viscosity * this.mass;
-        this.dy[i] = ay * this.viscosity * this.mass;
-        this.dz[i] = az * this.viscosity * this.mass;
+        this.dx[i] = ax * this.viscosity;
+        this.dy[i] = ay * this.viscosity;
+        this.dz[i] = az * this.viscosity;
       }
       for (let i = 0; i < n; i++) {
         this.vx[i] += this.dx[i];
@@ -466,6 +489,13 @@ class Fluid {
     const damp = Math.pow(1 - this.damping, h * 60);
     for (let i = 0; i < n; i++) {
       this.vx[i] *= damp; this.vy[i] *= damp; this.vz[i] *= damp;
+      // Final backstop, applied after vorticity and viscosity have had their
+      // say. Clamping only mid-step leaves those later terms unbounded.
+      const s2 = this.vx[i] ** 2 + this.vy[i] ** 2 + this.vz[i] ** 2;
+      if (s2 > maxV2) {
+        const sc = this.maxSpeed / Math.sqrt(s2);
+        this.vx[i] *= sc; this.vy[i] *= sc; this.vz[i] *= sc;
+      }
       this.px[i] = this.qx[i];
       this.py[i] = this.qy[i];
       this.pz[i] = this.qz[i];

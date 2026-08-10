@@ -9,12 +9,17 @@ const path = require('path');
 const vm = require('vm');
 
 const SRC = path.join(__dirname, '..', 'src');
-const MODULES = ['10-math.js', '20-gl.js', '30-geometry.js', '70-physics-shapes.js', '71-physics-collide.js', '72-physics-world.js'];
+const MODULES = ['10-math.js', '20-gl.js', '30-geometry.js', '70-physics-shapes.js',
+  '71-physics-collide.js', '72-physics-world.js', '80-fracture.js', '86-fluid.js'];
 
 const code = MODULES.map((f) => fs.readFileSync(path.join(SRC, f), 'utf8')).join('\n');
 const ctx = vm.createContext({ console, Math, Number, Array, Float32Array, Uint8Array, Uint16Array, Uint32Array, Map, Set, JSON, Infinity, NaN });
-vm.runInContext(`${code}\nthis.API = { Vec3, Quat, Shape, Body, PhysicsWorld, convexHull, Shapes, SHAPE, collide, ManifoldPool };`, ctx);
-const { Vec3, Quat, Shape, Body, PhysicsWorld, convexHull, SHAPE, collide, ManifoldPool } = ctx.API;
+vm.runInContext(`${code}\nthis.API = { Vec3, Quat, Shape, Body, PhysicsWorld, convexHull, Shapes, SHAPE, collide, ManifoldPool, Fracture, Fluid };`, ctx);
+const { Vec3, Quat, Shape, Body, PhysicsWorld, convexHull, SHAPE, collide, ManifoldPool, Fracture, Fluid } = ctx.API;
+
+/* The fluid sim itself is pure maths; only its buffer setup touches WebGL.
+   A stub context lets the simulation be tested without a GPU. */
+const STUB_GL = new Proxy({}, { get: () => () => ({}) });
 
 let passed = 0, failed = 0;
 const failures = [];
@@ -330,6 +335,84 @@ section('many bodies');
   check('200 bodies settle above ground', w.bodies.slice(1).every((b) => b.position.y > 0.1));
   check('200 bodies step in under 6ms', perStep < 6, `${perStep.toFixed(2)}ms/step`);
   console.log(`       (${perStep.toFixed(2)} ms per fixed step with 200 bodies)`);
+}
+
+
+/* ---------------- fracture ---------------- */
+
+section('voronoi fracture');
+{
+  for (const pieces of [6, 12, 24]) {
+    const chunks = Fracture.shatterBox(new Vec3(0.5, 0.5, 0.5), { pieces, seed: 7 });
+    let vol = 0;
+    for (const c of chunks) vol += c.volume;
+    // The cells must tile the original volume exactly. Any gap or overlap
+    // means the clipping is wrong, and it shows up as debris that visibly
+    // does not add up to the object that broke.
+    check(`${pieces}-piece fracture conserves volume`, near(vol, 1, 0.02), `got ${vol.toFixed(4)}`);
+    check(`${pieces}-piece fracture yields ${pieces} chunks`, chunks.length === pieces, `got ${chunks.length}`);
+    let bounded = true;
+    for (const c of chunks) if (c.shape.vertices.length > 64) bounded = false;
+    check(`${pieces}-piece chunks stay simple`, bounded);
+  }
+
+  const flat = Fracture.shatterBox(new Vec3(1, 0.25, 0.5), { pieces: 16, seed: 3, pattern: 'slab' });
+  let vol = 0;
+  for (const c of flat) vol += c.volume;
+  check('slab pattern conserves volume on a non-cube', near(vol, 2 * 0.5 * 1, 0.02), `got ${vol.toFixed(4)}`);
+
+  const t0 = Date.now();
+  Fracture.shatterBox(new Vec3(0.5, 0.5, 0.5), { pieces: 12, seed: 99 });
+  const ms = Date.now() - t0;
+  check('12-piece fracture bakes in under 150ms', ms < 150, `${ms}ms`);
+}
+
+/* ---------------- fluid ---------------- */
+
+section('fluid simulation');
+{
+  const f = new Fluid(STUB_GL, { capacity: 1200, radius: 0.24 });
+  f.bounds = { min: new Vec3(-2, 0, -2), max: new Vec3(2, 20, 2) };
+  const n = f.fillBox(new Vec3(-1, 0.2, -1), new Vec3(1, 1.6, 1));
+  check('fluid fills a volume', n > 300 && n <= 1200, `${n} particles`);
+
+  // Seeding must already be near rest density, or frame one delivers a
+  // violent correction.
+  f.qx.set(f.px); f.qy.set(f.py); f.qz.set(f.pz);
+  f._buildNeighbors();
+  let maxNeighbors = 0, totalNeighbors = 0;
+  for (let i = 0; i < f.count; i++) {
+    maxNeighbors = Math.max(maxNeighbors, f.neighborCount[i]);
+    totalNeighbors += f.neighborCount[i];
+  }
+  check('neighbour search finds neighbours', totalNeighbors / f.count > 8,
+    `avg ${(totalNeighbors / f.count).toFixed(1)} neighbours`);
+  check('neighbour lists do not saturate', maxNeighbors <= f.maxNeighbors, `max ${maxNeighbors}`);
+
+  for (let i = 0; i < 240; i++) f.step(1 / 60);
+
+  let escaped = 0, nan = 0, maxY = -Infinity, minY = Infinity, maxSpeed = 0;
+  for (let i = 0; i < f.count; i++) {
+    if (!Number.isFinite(f.px[i]) || !Number.isFinite(f.py[i]) || !Number.isFinite(f.pz[i])) nan++;
+    maxY = Math.max(maxY, f.py[i]);
+    minY = Math.min(minY, f.py[i]);
+    const sp = Math.hypot(f.vx[i], f.vy[i], f.vz[i]);
+    maxSpeed = Math.max(maxSpeed, sp);
+    if (f.px[i] < -2.5 || f.px[i] > 2.5 || f.pz[i] < -2.5 || f.pz[i] > 2.5) escaped++;
+  }
+  check('fluid produces no NaN particles', nan === 0, `${nan} NaN`);
+  check('fluid stays inside its bounds', escaped === 0, `${escaped} escaped`);
+  check('fluid does not launch itself upward', maxY < 4, `maxY ${maxY.toFixed(2)}`);
+  check('fluid settles onto the floor', minY < 0.35, `minY ${minY.toFixed(3)}`);
+  check('fluid comes to rest', f.averageSpeed() < 1.2, `avg speed ${f.averageSpeed().toFixed(3)}`);
+  check('no particle exceeds the speed clamp', maxSpeed <= f.maxSpeed + 1e-3, `max ${maxSpeed.toFixed(2)}`);
+
+  // A settled pool must be roughly level, not a spike or a pit.
+  let above = 0;
+  const surface = maxY - 0.25;
+  for (let i = 0; i < f.count; i++) if (f.py[i] > surface) above++;
+  check('settled fluid has a flat surface', above > f.count * 0.02,
+    `${above} of ${f.count} particles near the top`);
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);
