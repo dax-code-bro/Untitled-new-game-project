@@ -318,8 +318,10 @@ Worth knowing before you hit them:
   pieces. There is no triangle-mesh collider.
 - **Terrain collides as a plane.** Displaced ground is visual; use static
   boxes for surfaces the player stands on.
-- **Water is a particle sim**, so it is a few thousand particles, not an ocean.
-  It is for pools, pours, splashes and floods.
+- **Water is a particle sim** of a few thousand particles — a bathtub, not an
+  ocean. Size the container to the budget: at the default settings the water
+  holds roughly 2-3 cubic metres, so a 6x6 metre tank settles into a 7cm
+  puddle while a 2.5x2.5 one makes a pool deep enough to read as water.
 - **One shadow-casting directional light** plus 8 point lights, and point
   lights do not cast shadows.
 - **No global illumination.** Ambient light comes from an analytic sky, so

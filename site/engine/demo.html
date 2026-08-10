@@ -119,19 +119,22 @@
       build: function () {
         var g = LE.create({ canvas: canvas, sky: 'day' });
         g.ground({ material: 'rock', size: 120 });
+        // The tank is deliberately small. A few thousand particles is a
+        // bathtub, not a swimming pool — spread them over a large floor and
+        // they settle into a puddle too shallow to see.
         var wall = { material: 'concrete', static: true };
-        g.box(Object.assign({ at: [-4, 1.4, 0], size: [0.5, 2.8, 8.5] }, wall));
-        g.box(Object.assign({ at: [4, 1.4, 0], size: [0.5, 2.8, 8.5] }, wall));
-        g.box(Object.assign({ at: [0, 1.4, -4], size: [8.5, 2.8, 0.5] }, wall));
-        g.box(Object.assign({ at: [0, 1.4, 4], size: [8.5, 2.8, 0.5] }, wall));
-        g.water({ at: [0, 2.0, 0], size: [6.6, 2.6, 6.6] });
-        g.orbit({ center: [0, 1.5, 0], distance: 15, height: 5, autoRotate: 0.08 });
+        g.box(Object.assign({ at: [-1.8, 1.1, 0], size: [0.5, 2.2, 4.1] }, wall));
+        g.box(Object.assign({ at: [1.8, 1.1, 0], size: [0.5, 2.2, 4.1] }, wall));
+        g.box(Object.assign({ at: [0, 1.1, -1.8], size: [4.1, 2.2, 0.5] }, wall));
+        g.box(Object.assign({ at: [0, 1.1, 1.8], size: [4.1, 2.2, 0.5] }, wall));
+        g.water({ at: [0, 1.4, 0], size: [3.0, 1.8, 3.0] });
+        g.orbit({ center: [0, 1.0, 0], distance: 9, height: 4, autoRotate: 0.08 });
         return g;
       },
       act: function (g) {
         g.rock({
-          at: [(Math.random() - 0.5) * 4, 9, (Math.random() - 0.5) * 4],
-          radius: 0.75, seed: (Math.random() * 100) | 0, lifetime: 25,
+          at: [(Math.random() - 0.5) * 2, 7, (Math.random() - 0.5) * 2],
+          radius: 0.45, seed: (Math.random() * 100) | 0, lifetime: 25,
         });
         g.audio.splash(0.8);
       },

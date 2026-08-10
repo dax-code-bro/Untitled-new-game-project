@@ -126,12 +126,17 @@ const SCENES = {
     const game = LE.create({ quality: 'medium', canvas: '#c' });
     game.setSky('day');
     game.ground({ material: 'rock', size: 60 });
-    game.box({ at: [-3, 2, 0], size: [0.4, 4, 6], material: 'concrete', static: true });
-    game.box({ at: [3, 2, 0], size: [0.4, 4, 6], material: 'concrete', static: true });
-    game.box({ at: [0, 2, -3], size: [6, 4, 0.4], material: 'concrete', static: true });
-    game.box({ at: [0, 2, 3], size: [6, 4, 0.4], material: 'concrete', static: true });
-    game.water({ at: [0, 1.8, 0], size: [4.4, 2.0, 4.4] });
-    game.lookAt([7, 6, 8], [0, 1, 0]);
+    // Tank sized to the particle budget. A few thousand particles spread over
+    // a 6x6 floor settle into a 7cm puddle; over a 2.4x2.4 floor they make a
+    // pool deep enough to actually read as water.
+    game.box({ at: [-1.4, 1, 0], size: [0.4, 2, 3.2], material: 'concrete', static: true });
+    game.box({ at: [1.4, 1, 0], size: [0.4, 2, 3.2], material: 'concrete', static: true });
+    game.box({ at: [0, 1, -1.4], size: [3.2, 2, 0.4], material: 'concrete', static: true });
+    game.box({ at: [0, 1, 1.4], size: [3.2, 2, 0.4], material: 'concrete', static: true });
+    game.water({ at: [0, 1.2, 0], size: [2.2, 1.4, 2.2] });
+    // Look down into the tank. From a low angle the walls hide the settled
+    // pool entirely, and the screenshot verifies nothing about the water.
+    game.lookAt([3.2, 4.6, 3.8], [0, 0.4, 0]);
     return game;
   `,
 
