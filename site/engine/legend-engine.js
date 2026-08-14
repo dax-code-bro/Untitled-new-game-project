@@ -7178,6 +7178,14 @@ function makeHumanoidClips() {
    count, indistinguishable in cost.
    ============================================================ */
 
+/* A head is far narrower across than it is deep: about 0.67 of its height
+   in breadth against 0.85 in length. The sculpt in makeHeadGeometry is laid
+   out in a wider space — keeping the feature coordinates round numbers is
+   worth a lot when tuning them — and squeezed to the real ratio in one pass
+   at the end. Anything that indexes into the *finished* head by x has to
+   carry the same factor; see dist2 below. */
+const HEAD_SQUEEZE_X = 0.82;
+
 /* Region weights let a blendshape affect only the part of the face it
    should. Each returns 0..1 for a vertex in head-local space, where the
    head is roughly a unit-ish blob centred on the origin. */
@@ -7198,8 +7206,12 @@ const FaceRegions = {
   nose: (p) => Math.max(0, 1 - dist2(p, 0, -0.075, 0.270) / 0.008),
 };
 
+/* Squared distance from a vertex to a region centre. The centre's x is
+   given in pre-squeeze sculpt space — the same numbers makeHeadGeometry
+   uses — and scaled here, so region constants and sculpt constants stay
+   directly comparable. */
 function dist2(p, x, y, z) {
-  const dx = p.x - x, dy = p.y - y, dz = p.z - z;
+  const dx = p.x - x * HEAD_SQUEEZE_X, dy = p.y - y, dz = p.z - z;
   return dx * dx + dy * dy + dz * dz;
 }
 
@@ -7532,21 +7544,72 @@ function makeHeadGeometry(opts = {}) {
       let x = nx * RX, y = ny * RY, z = nz * RZ;
 
       /* --- skull mass --- */
-      // The cranium is fuller and squarer behind; the face is flatter.
+
+      // The cranium's horizontal cross-section is a rounded box, not an
+      // ellipse: there is a real corner where the flat temporal plane turns
+      // into the back of the head, and another at the brow. Squaring the
+      // section up is what puts planes on a skull, and it is the absence of
+      // planes — far more than any proportion — that makes a smooth
+      // ellipsoid read as a ball with a face drawn on it. Continuous at
+      // both ends, since exponent 2 is exactly the ellipse it starts from.
+      if (sp > 1e-4) {
+        const cx0 = nx / sp, cz0 = nz / sp;
+        // Rear half only. The face is genuinely ellipsoidal across the brow
+        // and cheeks, and squaring it up there both widens the head and
+        // shifts the eye region out from under its own socket.
+        const boxy = smoothstep(-0.12, 0.10, y) * (1 - smoothstep(0.22, 0.33, y))
+                   * smoothstep(0.45, 0.0, cz0);
+        const k = 2 / (2 + boxy * 0.75);
+        x += (Math.sign(cx0) * Math.pow(Math.abs(cx0), k) - cx0) * sp * RX;
+        z += (Math.sign(cz0) * Math.pow(Math.abs(cz0), k) - cz0) * sp * RZ;
+      }
+
+      // A cranium is not an ellipsoid, and the ways it departs from one are
+      // exactly what the eye uses to tell a head from an egg.
+
+      // The face plane is flatter; the back of the head is fuller and squarer.
       // Blended, not branched: `if (z < 0)` puts a hard step in the surface
       // exactly at z = 0, which shows up as a crease running down the side
       // of the head that no amount of normal-smoothing will remove.
       const back = smoothstep(0.06, -0.12, z);
-      z *= 1 + back * 0.06;
-      x *= 1 + back * 0.035;
-      // Occiput: a slight shelf at the back of the skull.
-      z -= featureFalloff({ x, y, z }, 0, 0.24, -0.24, 0.24, 0.20, 0.16, 1) * 0.018;
+      z *= 1 + back * 0.035;
+      x *= 1 + back * 0.030;
+
+      // Breadth peaks at the parietal eminences — above and a little behind
+      // the ears — and tucks back in toward the crown. An ellipsoid is widest
+      // at its equator instead, which is why one reads as pinched up top and
+      // bulbous through the middle.
+      x *= 1 + Math.exp(-Math.pow((y - 0.130) / 0.180, 2)) * 0.085;
+      const vault = smoothstep(0.19, 0.34, y);
+      x *= 1 - vault * 0.115;
+      z *= 1 - vault * 0.070;
+      // The crown is a flattened dome rather than the pole of a sphere.
+      y -= smoothstep(0.60, 1.0, ny) * 0.028;
+
+      // The forehead rises close to vertical out of the brow before it turns
+      // back. A sphere starts curving away immediately above the eyes, which
+      // reads as a head permanently leaning backwards.
+      // The front-facing weight has to ease in: clamping at nz = 0 leaves a
+      // derivative discontinuity down the side of the skull, which lights up
+      // as a crease arcing from the brow to the temple.
+      z += smoothstep(0.06, 0.19, y) * (1 - smoothstep(0.22, 0.33, y))
+         * smoothstep(0, 0.55, nz) * 0.022;
+
+      // Occiput: the skull projects furthest back at about ear height, and
+      // the vault above it slopes forward to the crown. Putting the bulge at
+      // the top instead — the usual guess — gives a conehead in profile.
+      z -= featureFalloff({ x, y, z }, 0, 0.06, -0.27, 0.22, 0.19, 0.12, 1) * 0.024;
+      z += featureFalloff({ x, y, z }, 0, 0.27, -0.22, 0.22, 0.16, 0.14, 1) * 0.022;
+      // Below the occiput the skull tucks hard in toward the neck. Leaving
+      // that hollow out is what makes a profile read as a ball on a stick:
+      // every real head has a concave step between cranium and nape.
+      z += featureFalloff({ x, y, z }, 0, -0.235, -0.205, 0.20, 0.135, 0.135, 1) * 0.055;
 
       // Jaw: the lower head narrows and comes forward into a chin.
       // Eased, and it keeps more width than it takes: too much taper here
       // and the head reads as a skull rather than a face.
       const jaw = smoothstep(0.02, -0.32, y);
-      x *= 1 - jaw * 0.185;
+      x *= 1 - jaw * 0.135;
       z *= 1 - jaw * 0.055;
       y -= jaw * 0.008;
 
@@ -7562,9 +7625,20 @@ function makeHeadGeometry(opts = {}) {
       z -= featureFalloff(P, 0, 0.098, 0.230, 0.026, 0.045, 0.06, 1) * 0.014;
 
       // Eye sockets, cut deeper now that a real eyeball and lids fill them.
+      // Eye sockets. These have to be genuinely deep — the orbit floor needs
+      // to sit behind the lids and the cornea, or the whole eye assembly is
+      // swallowed by the surrounding face and the head comes out blank-eyed.
+      // Narrow enough across not to flatten the bridge of the nose.
       for (const sx of [1, -1]) {
-        const socket = featureFalloff(P, sx * 0.098, 0.034, 0.185, 0.086, 0.066, 0.11, 1);
-        z -= socket * 0.056;
+        const socket = featureFalloff(P, sx * 0.091, 0.034, 0.205, 0.072, 0.062, 0.12, 1);
+        z -= socket * 0.085;
+      }
+
+      // The upper-lid fold — the crease between lid and brow. It is a small
+      // feature and it does more for the eye than the socket does, because
+      // it gives the lid an edge to end on instead of blending into the brow.
+      for (const sx of [1, -1]) {
+        z -= featureFalloff(P, sx * 0.091, 0.072, 0.208, 0.062, 0.016, 0.07, 1) * 0.014;
       }
 
       // Temples, gently hollowed.
@@ -7583,8 +7657,11 @@ function makeHeadGeometry(opts = {}) {
 
       // Chin, and the mentolabial sulcus — the crease between lip and chin
       // that gives the lower face two planes instead of one.
-      const chin = featureFalloff(P, 0, -0.288, 0.190, 0.068, 0.066, 0.11, 1);
-      z += chin * 0.046;
+      // The chin has to clear the lips in profile. Under-projecting it is
+      // what makes a face read as weak-jawed and slightly simian.
+      const chin = featureFalloff(P, 0, -0.282, 0.196, 0.072, 0.070, 0.12, 1);
+      z += chin * 0.062;
+      x += (P.x > 0 ? 1 : -1) * chin * 0.006;
       z -= featureFalloff(P, 0, -0.238, 0.212, 0.055, 0.020, 0.06, 1) * 0.022;
 
       // Nasolabial folds, running from the nose wings past the mouth corners.
@@ -7596,9 +7673,10 @@ function makeHeadGeometry(opts = {}) {
 
       // Jawline: a defined corner where the jaw turns up toward the ear.
       for (const sx of [1, -1]) {
-        const angle = featureFalloff(P, sx * 0.135, -0.215, 0.010, 0.070, 0.075, 0.13, 1);
-        x += sx * angle * 0.018;
-        y -= angle * 0.008;
+        const angle = featureFalloff(P, sx * 0.135, -0.212, 0.000, 0.070, 0.078, 0.13, 1);
+        x += sx * angle * 0.026;
+        y -= angle * 0.014;
+        z -= angle * 0.008;
       }
 
       // A whisper of noise so the surface is not machine-perfect.
@@ -7629,27 +7707,45 @@ function makeHeadGeometry(opts = {}) {
   // is supposed to have one. Cheap, and it does more for "this is a head"
   // than any amount of extra sculpting on the surrounding skull.
   for (const sx of [1, -1]) {
-    const eye = Shapes.sphere(0.050, 14, 18);
-    const off = new Vec3(sx * 0.098, 0.030, 0.208);
-    const src = eye.positions;
-    const base = g.positions.length / 3;
-    for (let i = 0; i < src.length; i += 3) {
-      // Flattened front-to-back so the eyeball sits in the socket rather
-      // than bulging out of the face.
-      g.vert(
-        src[i] + off.x, src[i + 1] + off.y, src[i + 2] * 0.66 + off.z,
-        eye.normals[i], eye.normals[i + 1], eye.normals[i + 2],
-        eye.uvs[(i / 3) * 2], eye.uvs[(i / 3) * 2 + 1],
-      );
-    }
-    for (let i = 0; i < eye.indices.length; i += 3) {
-      g.tri(base + eye.indices[i], base + eye.indices[i + 1], base + eye.indices[i + 2]);
+    // The globe, sat back so its front pole falls just behind the lid
+    // aperture, and the cornea — a tighter cap bulging through the opening.
+    // The cornea is doing most of the work here: on an untextured grey head
+    // there is no iris colour to read, so the eye has to be legible from a
+    // specular highlight and the hard circular limbus where the cap meets
+    // the globe. Both come free from intersecting two spheres.
+    const parts = [
+      { r: EYE.globeR, z: EYE.globeZ, flat: EYE.globeFlatten, seg: [14, 18] },
+      { r: EYE.corneaR, z: EYE.globeZ + EYE.corneaOffset, flat: 1, seg: [10, 14] },
+    ];
+    for (const part of parts) {
+      const eye = Shapes.sphere(part.r, part.seg[0], part.seg[1]);
+      const src = eye.positions;
+      const base = g.positions.length / 3;
+      for (let i = 0; i < src.length; i += 3) {
+        g.vert(
+          src[i] + sx * EYE.sx, src[i + 1] + EYE.cy, src[i + 2] * part.flat + part.z,
+          eye.normals[i], eye.normals[i + 1], eye.normals[i + 2],
+          eye.uvs[(i / 3) * 2], eye.uvs[(i / 3) * 2 + 1],
+        );
+      }
+      for (let i = 0; i < eye.indices.length; i += 3) {
+        g.tri(base + eye.indices[i], base + eye.indices[i + 1], base + eye.indices[i + 2]);
+      }
     }
   }
 
-  // Ears sit on the skull surface, which is at x = +/-RX — not at some
-  // fraction of it. Placing them inboard buries them inside the head.
-  if (opts.ears !== false) buildEars(g, { x: RX * 0.96, y: -0.005, z: -0.030 });
+  // Ears sit on the skull surface, which the parietal widening above pushes
+  // out past RX at this height — not at some fraction of it. Placing them
+  // inboard buries them inside the head.
+  if (opts.ears !== false) buildEars(g, { x: RX * 1.02, y: -0.005, z: -0.030 });
+
+  /* Squeeze the whole head — skull, nose, lips, lids, eyeballs and ears
+     together — to a real head's breadth-to-length ratio. Doing it once at
+     the end rather than baking it into every constant keeps the sculpt
+     coordinates above legible, and applying it to the merged features too
+     is what keeps the nose and the eye spacing consistent with the skull.
+     Normals are recomputed below, so the non-uniform scale is safe here. */
+  for (let i = 0; i < g.positions.length; i += 3) g.positions[i] *= HEAD_SQUEEZE_X;
 
   g.finalize();
   g.computeWeldGroups();
@@ -8861,22 +8957,53 @@ function buildLips(g, o = {}) {
 /* Eyelid rims. An eyeball sitting in a bare socket looks like a marble in a
    hole; the lids are what close the form and give the eye a top and bottom
    edge to catch light on. */
+/* Eye metrics, taken from real measurements and scaled to this head, whose
+   chin-to-crown height is ~0.652 in local units:
+
+     globe diameter          24 mm   pupil separation   63 mm
+     palpebral fissure    30 x 10 mm corneal cap        12 mm across
+
+   The globe was previously half again too large, which is why no lid
+   thickness could be made to sit on it properly — the lids were being asked
+   to wrap something the size of a golf ball. */
+const EYE = {
+  sx: 0.091,          // half the pupil separation
+  cy: 0.032,
+  apertureX: 0.046, apertureY: 0.017, apertureZ: 0.234,
+  // The globe sits ~28 mm behind the lid margin. That gap is the whole
+  // trick: it puts the opening in shadow, so the eye reads as a hole with
+  // something wet in it rather than as a bead resting on the cheek.
+  globeR: 0.034, globeZ: 0.186, globeFlatten: 0.85,
+  corneaR: 0.022, corneaOffset: 0.015,
+};
+
 function buildEyelids(g, o = {}) {
   const Z = new Vec3(0, 0, 1);
   for (const sx of [1, -1]) {
-    const cx = sx * 0.098, cy = 0.032, cz = 0.222;
+    const cx = sx * EYE.sx;
     const rings = [];
-    const steps = 16;
+    const steps = 20;
     for (let i = 0; i < steps; i++) {
       const a = (i / steps) * TAU;
       const ca = Math.cos(a), sa = Math.sin(a);
       // The upper lid is heavier than the lower — a real asymmetry, and
       // leaving it out is a large part of why a face looks like a doll.
       const upper = Math.max(0, sa);
-      const thick = 0.0055 + upper * 0.0070;
+      // Radial mass. A rim a few millimetres thick reads as a wire ring
+      // pressed into the eyeball; a lid is a fold of skin with real depth.
+      // `e` is high so the cross-section is nearly square: the sharp inner
+      // corner is the lid margin, and a rounded one has nothing to read as.
+      const w = 0.011 + upper * 0.009;
+      // Deep front-to-back, because the orbit around it is deep: a shallow
+      // lid gets swallowed by the socket wall at the top of its arc, which
+      // leaves the eye as a bead in a hollow.
+      const d = 0.016 + upper * 0.004;
+      // Offset outward by the lid's own half-width so its inner edge — the
+      // one that defines the opening — still lands on the aperture.
       rings.push({
-        p: new Vec3(cx + ca * 0.058, cy + sa * 0.023 + upper * 0.004, cz - Math.abs(sa) * 0.004),
-        w: thick, d: thick * 1.15, e: 2.1,
+        p: new Vec3(cx + ca * (EYE.apertureX + w), EYE.cy + sa * (EYE.apertureY + w),
+                    EYE.apertureZ - Math.abs(sa) * 0.008 - d * 0.3),
+        w, d, e: 3.0,
         right: new Vec3(ca, sa, 0).normalize(), fwd: Z,
         uv: i / steps,
       });

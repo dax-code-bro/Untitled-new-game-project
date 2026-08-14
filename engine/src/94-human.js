@@ -548,22 +548,53 @@ function buildLips(g, o = {}) {
 /* Eyelid rims. An eyeball sitting in a bare socket looks like a marble in a
    hole; the lids are what close the form and give the eye a top and bottom
    edge to catch light on. */
+/* Eye metrics, taken from real measurements and scaled to this head, whose
+   chin-to-crown height is ~0.652 in local units:
+
+     globe diameter          24 mm   pupil separation   63 mm
+     palpebral fissure    30 x 10 mm corneal cap        12 mm across
+
+   The globe was previously half again too large, which is why no lid
+   thickness could be made to sit on it properly — the lids were being asked
+   to wrap something the size of a golf ball. */
+const EYE = {
+  sx: 0.091,          // half the pupil separation
+  cy: 0.032,
+  apertureX: 0.046, apertureY: 0.017, apertureZ: 0.234,
+  // The globe sits ~28 mm behind the lid margin. That gap is the whole
+  // trick: it puts the opening in shadow, so the eye reads as a hole with
+  // something wet in it rather than as a bead resting on the cheek.
+  globeR: 0.034, globeZ: 0.186, globeFlatten: 0.85,
+  corneaR: 0.022, corneaOffset: 0.015,
+};
+
 function buildEyelids(g, o = {}) {
   const Z = new Vec3(0, 0, 1);
   for (const sx of [1, -1]) {
-    const cx = sx * 0.098, cy = 0.032, cz = 0.222;
+    const cx = sx * EYE.sx;
     const rings = [];
-    const steps = 16;
+    const steps = 20;
     for (let i = 0; i < steps; i++) {
       const a = (i / steps) * TAU;
       const ca = Math.cos(a), sa = Math.sin(a);
       // The upper lid is heavier than the lower — a real asymmetry, and
       // leaving it out is a large part of why a face looks like a doll.
       const upper = Math.max(0, sa);
-      const thick = 0.0055 + upper * 0.0070;
+      // Radial mass. A rim a few millimetres thick reads as a wire ring
+      // pressed into the eyeball; a lid is a fold of skin with real depth.
+      // `e` is high so the cross-section is nearly square: the sharp inner
+      // corner is the lid margin, and a rounded one has nothing to read as.
+      const w = 0.011 + upper * 0.009;
+      // Deep front-to-back, because the orbit around it is deep: a shallow
+      // lid gets swallowed by the socket wall at the top of its arc, which
+      // leaves the eye as a bead in a hollow.
+      const d = 0.016 + upper * 0.004;
+      // Offset outward by the lid's own half-width so its inner edge — the
+      // one that defines the opening — still lands on the aperture.
       rings.push({
-        p: new Vec3(cx + ca * 0.058, cy + sa * 0.023 + upper * 0.004, cz - Math.abs(sa) * 0.004),
-        w: thick, d: thick * 1.15, e: 2.1,
+        p: new Vec3(cx + ca * (EYE.apertureX + w), EYE.cy + sa * (EYE.apertureY + w),
+                    EYE.apertureZ - Math.abs(sa) * 0.008 - d * 0.3),
+        w, d, e: 3.0,
         right: new Vec3(ca, sa, 0).normalize(), fwd: Z,
         uv: i / steps,
       });
