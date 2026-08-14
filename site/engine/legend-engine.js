@@ -1235,6 +1235,31 @@ class Geometry {
     return this;
   }
 
+  /* Groups of vertex indices that occupy the same position.
+
+     Every closed surface here duplicates its wrap-around column (s=0 and
+     s=segments are the same point) so UVs can run 0..1. Per-vertex normal
+     averaging therefore never crosses that column, and the seam shows as a
+     hard crease down an otherwise smooth head or torso. Welding the
+     normals afterwards fixes it without merging the vertices themselves,
+     which would break the UVs. */
+  computeWeldGroups(epsilon = 1e-5) {
+    const P = this.positions;
+    const n = P.length / 3;
+    const buckets = new Map();
+    const inv = 1 / epsilon;
+    for (let i = 0; i < n; i++) {
+      const key = `${Math.round(P[i * 3] * inv)},${Math.round(P[i * 3 + 1] * inv)},${Math.round(P[i * 3 + 2] * inv)}`;
+      let b = buckets.get(key);
+      if (!b) { b = []; buckets.set(key, b); }
+      b.push(i);
+    }
+    const groups = [];
+    for (const b of buckets.values()) if (b.length > 1) groups.push(b);
+    this.weldGroups = groups;
+    return groups;
+  }
+
   finalize() {
     this.positions = new Float32Array(this.positions);
     this.normals = new Float32Array(this.normals);
@@ -1242,6 +1267,26 @@ class Geometry {
     if (!this.tangents) this.computeTangents();
     if (!this.bounds) this.computeBounds();
     return this;
+  }
+}
+
+/* Average per-vertex normals across coincident vertices. */
+function weldNormals(normals, groups) {
+  if (!groups) return;
+  for (let gi = 0; gi < groups.length; gi++) {
+    const grp = groups[gi];
+    let nx = 0, ny = 0, nz = 0;
+    for (let k = 0; k < grp.length; k++) {
+      const i = grp[k] * 3;
+      nx += normals[i]; ny += normals[i + 1]; nz += normals[i + 2];
+    }
+    const l = Math.hypot(nx, ny, nz);
+    if (l < 1e-9) continue;
+    nx /= l; ny /= l; nz /= l;
+    for (let k = 0; k < grp.length; k++) {
+      const i = grp[k] * 3;
+      normals[i] = nx; normals[i + 1] = ny; normals[i + 2] = nz;
+    }
   }
 }
 
@@ -7137,20 +7182,20 @@ function makeHumanoidClips() {
    should. Each returns 0..1 for a vertex in head-local space, where the
    head is roughly a unit-ish blob centred on the origin. */
 const FaceRegions = {
-  brow: (p) => smoothstep(0.10, 0.30, p.y) * smoothstep(0.42, 0.24, p.y) * smoothstep(-0.05, 0.22, p.z),
-  eyeL: (p) => Math.max(0, 1 - dist2(p, 0.115, 0.13, 0.20) / 0.010),
-  eyeR: (p) => Math.max(0, 1 - dist2(p, -0.115, 0.13, 0.20) / 0.010),
-  upperLid: (p) => Math.max(0, 1 - dist2(p, 0.115, 0.155, 0.20) / 0.012)
-                 + Math.max(0, 1 - dist2(p, -0.115, 0.155, 0.20) / 0.012),
-  cheek: (p) => (Math.max(0, 1 - dist2(p, 0.17, -0.02, 0.16) / 0.030)
-               + Math.max(0, 1 - dist2(p, -0.17, -0.02, 0.16) / 0.030)),
-  mouth: (p) => Math.max(0, 1 - dist2(p, 0, -0.16, 0.21) / 0.026),
-  mouthCornerL: (p) => Math.max(0, 1 - dist2(p, 0.085, -0.155, 0.19) / 0.012),
-  mouthCornerR: (p) => Math.max(0, 1 - dist2(p, -0.085, -0.155, 0.19) / 0.012),
-  upperLip: (p) => Math.max(0, 1 - dist2(p, 0, -0.125, 0.215) / 0.014),
-  lowerLip: (p) => Math.max(0, 1 - dist2(p, 0, -0.195, 0.212) / 0.014),
-  jaw: (p) => smoothstep(-0.10, -0.34, p.y) * smoothstep(-0.10, 0.16, p.z),
-  nose: (p) => Math.max(0, 1 - dist2(p, 0, -0.02, 0.25) / 0.012),
+  brow: (p) => Math.max(0, 1 - dist2(p, 0, 0.115, 0.215) / 0.026) * smoothstep(-0.02, 0.10, p.z),
+  eyeL: (p) => Math.max(0, 1 - dist2(p, 0.083, 0.030, 0.205) / 0.008),
+  eyeR: (p) => Math.max(0, 1 - dist2(p, -0.083, 0.030, 0.205) / 0.008),
+  upperLid: (p) => Math.max(0, 1 - dist2(p, 0.083, 0.058, 0.205) / 0.007)
+                 + Math.max(0, 1 - dist2(p, -0.083, 0.058, 0.205) / 0.007),
+  cheek: (p) => (Math.max(0, 1 - dist2(p, 0.150, -0.020, 0.150) / 0.020)
+               + Math.max(0, 1 - dist2(p, -0.150, -0.020, 0.150) / 0.020)),
+  mouth: (p) => Math.max(0, 1 - dist2(p, 0, -0.190, 0.235) / 0.014),
+  mouthCornerL: (p) => Math.max(0, 1 - dist2(p, 0.072, -0.188, 0.205) / 0.007),
+  mouthCornerR: (p) => Math.max(0, 1 - dist2(p, -0.072, -0.188, 0.205) / 0.007),
+  upperLip: (p) => Math.max(0, 1 - dist2(p, 0, -0.170, 0.245) / 0.006),
+  lowerLip: (p) => Math.max(0, 1 - dist2(p, 0, -0.212, 0.240) / 0.006),
+  jaw: (p) => smoothstep(-0.08, -0.32, p.y) * smoothstep(-0.14, 0.12, p.z),
+  nose: (p) => Math.max(0, 1 - dist2(p, 0, -0.075, 0.270) / 0.008),
 };
 
 function dist2(p, x, y, z) {
@@ -7416,6 +7461,7 @@ class Face {
       if (l > 1e-8) { N[i] /= l; N[i + 1] /= l; N[i + 2] /= l; }
       else { N[i] = 0; N[i + 1] = 1; N[i + 2] = 0; }
     }
+    weldNormals(N, this.geometry.weldGroups);
   }
 
   attach(mesh) {
@@ -7442,62 +7488,129 @@ class Face {
   }
 }
 
-/* A stylised head with the topology the blendshape regions expect: eye
-   sockets, a brow ridge, a nose and a mouth line, all at positions the
-   region functions above are tuned against. */
+/* An anatomical head.
+
+   Built by displacing an ellipsoid with a set of named features, each a
+   soft ellipsoidal falloff pushing the surface in a direction. Ordering
+   matters: the skull is shaped first, then the face is cut into it, so a
+   later feature never fights an earlier one for the same vertices.
+
+   Proportions are real. A head is markedly taller than it is wide and
+   deeper than it is wide — getting that one ratio wrong is most of what
+   makes a procedural head read as an egg. */
+
+/* Soft ellipsoidal falloff, 1 at the centre and 0 at the boundary. */
+function featureFalloff(p, cx, cy, cz, rx, ry, rz, power) {
+  const dx = (p.x - cx) / rx, dy = (p.y - cy) / ry, dz = (p.z - cz) / rz;
+  const d = dx * dx + dy * dy + dz * dz;
+  if (d >= 1) return 0;
+  const f = 1 - Math.sqrt(d);
+  return power === 1 ? f : Math.pow(f, power);
+}
+
 function makeHeadGeometry(opts = {}) {
-  const rings = opts.rings || 26;
-  const sectors = opts.sectors || 32;
+  const rings = opts.rings || 40;
+  const sectors = opts.sectors || 48;
   const g = new Geometry();
   const noise = new Noise(opts.seed || 5);
+
+  // Base skull. Half-extents: narrow across, tall, deep.
+  const RX = 0.231, RY = 0.348, RZ = 0.272;
+  const mirrored = (fn) => (p) => fn(p, Math.abs(p.x), p.x < 0 ? -1 : 1);
 
   for (let r = 0; r <= rings; r++) {
     const phi = (r / rings) * PI;
     const sp = Math.sin(phi), cp = Math.cos(phi);
     for (let s = 0; s <= sectors; s++) {
       const th = (s / sectors) * TAU;
-      let nx = sp * Math.cos(th), ny = cp, nz = sp * Math.sin(th);
+      const nx = sp * Math.cos(th), ny = cp, nz = sp * Math.sin(th);
 
-      // Base head proportions: taller than wide, flatter at the back.
-      let x = nx * 0.30, y = ny * 0.36, z = nz * 0.30;
-      if (z < 0) z *= 0.86;                        // flatter cranium behind
-      if (y < -0.1) { x *= 0.86; z *= 0.92; }      // jaw tapers in
+      let x = nx * RX, y = ny * RY, z = nz * RZ;
 
-      // Brow ridge.
-      const browAmt = Math.max(0, 1 - dist2({ x, y, z }, 0, 0.16, 0.26) / 0.05);
-      z += browAmt * 0.020;
-      y += browAmt * 0.004;
+      /* --- skull mass --- */
+      // The cranium is fuller and squarer behind; the face is flatter.
+      // Blended, not branched: `if (z < 0)` puts a hard step in the surface
+      // exactly at z = 0, which shows up as a crease running down the side
+      // of the head that no amount of normal-smoothing will remove.
+      const back = smoothstep(0.06, -0.12, z);
+      z *= 1 + back * 0.06;
+      x *= 1 + back * 0.035;
+      // Occiput: a slight shelf at the back of the skull.
+      z -= featureFalloff({ x, y, z }, 0, 0.24, -0.24, 0.24, 0.20, 0.16, 1) * 0.018;
 
-      // Eye sockets, pressed in on both sides.
+      // Jaw: the lower head narrows and comes forward into a chin.
+      // Eased, and it keeps more width than it takes: too much taper here
+      // and the head reads as a skull rather than a face.
+      const jaw = smoothstep(0.02, -0.32, y);
+      x *= 1 - jaw * 0.185;
+      z *= 1 - jaw * 0.055;
+      y -= jaw * 0.008;
+
+      const P = { x, y, z };
+
+      /* --- face --- */
+      // Brow ridge, strongest over the eyes and fading at the temples.
+      const brow = featureFalloff(P, 0, 0.115, 0.20, 0.155, 0.062, 0.16, 1);
+      z += brow * 0.034;
+      y += brow * 0.004;
+
+      // Eye sockets, pressed in behind the brow.
       for (const sx of [1, -1]) {
-        const socket = Math.max(0, 1 - dist2({ x, y, z }, sx * 0.115, 0.125, 0.235) / 0.014);
-        z -= socket * 0.030;
+        const socket = featureFalloff(P, sx * 0.083, 0.030, 0.185, 0.078, 0.062, 0.11, 1);
+        z -= socket * 0.046;
+        // A slight eyeball bulge inside the socket keeps it from being a pit.
+        const ball = featureFalloff(P, sx * 0.080, 0.025, 0.200, 0.045, 0.040, 0.07, 1);
+        z += ball * 0.022;
       }
 
-      // Nose.
-      const nose = Math.max(0, 1 - dist2({ x, y, z }, 0, -0.01, 0.26) / 0.016);
-      z += nose * 0.045;
-      const nostril = Math.max(0, 1 - dist2({ x, y, z }, 0, -0.07, 0.27) / 0.004);
-      z -= nostril * 0.012;
+      // Temples, gently hollowed.
+      for (const sx of [1, -1]) {
+        x -= sx * featureFalloff(P, sx * 0.185, 0.120, 0.070, 0.075, 0.100, 0.12, 1) * 0.014;
+      }
 
-      // Mouth line: a shallow crease so the lips have an edge to move around.
-      const mouth = Math.max(0, 1 - dist2({ x, y, z }, 0, -0.16, 0.255) / 0.020);
-      z -= mouth * 0.016;
-
-      // Chin.
-      const chin = Math.max(0, 1 - dist2({ x, y, z }, 0, -0.28, 0.20) / 0.020);
-      z += chin * 0.018;
-      y -= chin * 0.006;
+      // Nose: a bridge running down into a projecting tip and wings.
+      const bridge = featureFalloff(P, 0, 0.040, 0.235, 0.036, 0.115, 0.09, 1);
+      z += bridge * 0.038;
+      const tip = featureFalloff(P, 0, -0.075, 0.250, 0.042, 0.050, 0.075, 1);
+      z += tip * 0.068;
+      y -= tip * 0.008;
+      for (const sx of [1, -1]) {
+        const wing = featureFalloff(P, sx * 0.040, -0.098, 0.225, 0.032, 0.030, 0.05, 1);
+        z += wing * 0.032;
+        x += sx * wing * 0.010;
+      }
+      // Nostril undercut, so the nose has a base rather than melting away.
+      z -= featureFalloff(P, 0, -0.122, 0.232, 0.050, 0.022, 0.05, 1) * 0.020;
 
       // Cheekbones.
       for (const sx of [1, -1]) {
-        const cheek = Math.max(0, 1 - dist2({ x, y, z }, sx * 0.18, 0.02, 0.18) / 0.030);
+        const cheek = featureFalloff(P, sx * 0.150, -0.020, 0.130, 0.090, 0.080, 0.13, 1);
+        x += sx * cheek * 0.019;
         z += cheek * 0.012;
-        x += cheek * sx * 0.008;
+      }
+
+      // Lips: a forward pad split by a horizontal seam.
+      const mouth = featureFalloff(P, 0, -0.190, 0.215, 0.090, 0.052, 0.09, 1);
+      z += mouth * 0.030;
+      const seam = featureFalloff(P, 0, -0.192, 0.235, 0.085, 0.011, 0.07, 1);
+      z -= seam * 0.026;
+      // Philtrum, the groove between nose and upper lip.
+      z -= featureFalloff(P, 0, -0.150, 0.238, 0.018, 0.030, 0.05, 1) * 0.010;
+
+      // Chin and the crease above it.
+      const chin = featureFalloff(P, 0, -0.290, 0.185, 0.070, 0.070, 0.11, 1);
+      z += chin * 0.038;
+      z -= featureFalloff(P, 0, -0.240, 0.205, 0.060, 0.024, 0.07, 1) * 0.014;
+
+      // Jawline: a defined corner where the jaw turns up toward the ear.
+      for (const sx of [1, -1]) {
+        const angle = featureFalloff(P, sx * 0.135, -0.215, 0.010, 0.070, 0.075, 0.13, 1);
+        x += sx * angle * 0.018;
+        y -= angle * 0.008;
       }
 
       // A whisper of noise so the surface is not machine-perfect.
-      const n = noise.fbm(nx * 3, ny * 3, nz * 3, 3) * 0.004;
+      const n = noise.fbm(nx * 3.4, ny * 3.4, nz * 3.4, 3) * 0.0035;
       x += nx * n; y += ny * n; z += nz * n;
 
       g.vert(x, y, z, nx, ny, nz, s / sectors, r / rings);
@@ -7513,8 +7626,36 @@ function makeHeadGeometry(opts = {}) {
     }
   }
 
+  // Eyeballs. A socket on its own is a dent; the dome inside it is what
+  // the eye reads as an eye, because it catches a highlight where a face
+  // is supposed to have one. Cheap, and it does more for "this is a head"
+  // than any amount of extra sculpting on the surrounding skull.
+  for (const sx of [1, -1]) {
+    const eye = Shapes.sphere(0.036, 12, 16);
+    const off = new Vec3(sx * 0.083, 0.028, 0.214);
+    const src = eye.positions;
+    const base = g.positions.length / 3;
+    for (let i = 0; i < src.length; i += 3) {
+      // Flattened front-to-back so the eyeball sits in the socket rather
+      // than bulging out of the face.
+      g.vert(
+        src[i] + off.x, src[i + 1] + off.y, src[i + 2] * 0.72 + off.z,
+        eye.normals[i], eye.normals[i + 1], eye.normals[i + 2],
+        eye.uvs[(i / 3) * 2], eye.uvs[(i / 3) * 2 + 1],
+      );
+    }
+    for (let i = 0; i < eye.indices.length; i += 3) {
+      g.tri(base + eye.indices[i], base + eye.indices[i + 1], base + eye.indices[i + 2]);
+    }
+  }
+
+  // Ears sit on the skull surface, which is at x = +/-RX — not at some
+  // fraction of it. Placing them inboard buries them inside the head.
+  if (opts.ears !== false) buildEars(g, { x: RX * 0.96, y: -0.005, z: -0.030 });
+
   g.finalize();
-  // Recompute smooth normals from the sculpted positions — the sphere
+  g.computeWeldGroups();
+  // Recompute smooth normals from the sculpted positions — the ellipsoid
   // normals carried through the loop no longer match the surface.
   const face = { workPositions: g.positions, workNormals: g.normals, geometry: g };
   Face.prototype._recomputeNormals.call(face);
@@ -7981,23 +8122,23 @@ function appendLimb(g, from, to, r0, r1, sides = 8) {
   }
 }
 
-/* Build a skinned humanoid mesh in the skeleton's bind pose. */
+/* Build a skinned humanoid mesh in the skeleton's bind pose.
+
+   The surface comes from the anatomical loft in 94-human.js; this
+   function's job is to bind it to the skeleton. */
 function makeHumanoidMesh(skeleton, opts = {}) {
-  const g = new Geometry();
+  const g = makeHumanBodyGeometry(skeleton, opts);
+
+  // Bone segments used only for solving skin weights below.
   const segments = [];
   const pa = new Vec3(), pb = new Vec3();
-
-  for (const [fromName, toName, r0, r1] of LIMB_SEGMENTS) {
+  for (const [fromName, toName] of LIMB_SEGMENTS) {
     const fi = skeleton.index(fromName), ti = skeleton.index(toName);
     if (fi < 0 || ti < 0) continue;
     skeleton.bones[fi].bindMatrix.getTranslation(pa);
     skeleton.bones[ti].bindMatrix.getTranslation(pb);
-    const scale = opts.thickness != null ? opts.thickness : 1;
-    appendLimb(g, pa, pb, r0 * scale, r1 * scale, opts.sides || 8);
     segments.push({ a: pa.clone(), b: pb.clone(), boneA: fi, boneB: ti });
   }
-
-  g.finalize();
 
   /* Skin weights. For each vertex, score every bone segment by inverse
      squared distance to it and keep the four strongest. This is a cheap
@@ -8169,6 +8310,445 @@ class CharacterController {
 }
 
 const _cc = [new Vec3(), new Vec3(), new Vec3()];
+
+
+/* ─────────── 94-human.js ─────────── */
+/* ============================================================
+   HUMAN — an anatomically proportioned body mesh.
+
+   Built by lofting: a stack of cross-sections, each a superellipse
+   of its own width, depth and squareness, stitched into a surface.
+   That is what separates a body from a bundle of tubes — a chest is
+   wide and shallow, a waist is narrower in both axes, a calf bulges
+   behind the shin and not in front. A cylinder cannot say any of
+   that; a cross-section stack says all of it.
+
+   Everything is authored in the skeleton's bind-pose space, where
+   the hips sit at the origin. A 1.75 m figure therefore runs from
+   -0.875 (sole) to +0.875 (crown).
+   ============================================================ */
+
+/* Canonical landmark heights for a 1.75 m adult, hips-at-origin.
+   Real proportions, not stylised: roughly 7.5 heads tall. */
+const HUMAN = {
+  sole: -0.875,
+  ankle: -0.785,
+  calf: -0.60,
+  knee: -0.395,
+  thigh: -0.20,
+  crotch: 0,
+  navel: 0.205,
+  ribs: 0.34,
+  chest: 0.445,
+  shoulder: 0.460,
+  neckBase: 0.508,
+  chin: 0.595,
+  crown: 0.875,
+};
+
+/* A superellipse ring in a local frame.
+   `e` = 2 is a plain ellipse; higher values square the corners off,
+   which is what gives a ribcage its flat front and back instead of
+   the barrel a pure ellipse produces. */
+function ringVertex(out, centre, right, fwd, halfW, halfD, angle, e) {
+  const c = Math.cos(angle), s = Math.sin(angle);
+  const px = Math.sign(c) * Math.pow(Math.abs(c), 2 / e) * halfW;
+  const pz = Math.sign(s) * Math.pow(Math.abs(s), 2 / e) * halfD;
+  return out.set(
+    centre.x + right.x * px + fwd.x * pz,
+    centre.y + right.y * px + fwd.y * pz,
+    centre.z + right.z * px + fwd.z * pz,
+  );
+}
+
+/* Stitch a list of rings into a tube.
+   Each ring: { p:Vec3, w, d, e, right?:Vec3, fwd?:Vec3, uv? }. Rings
+   without an explicit frame get one derived from the path direction. */
+function loftRings(g, rings, segments = 16, capStart = true, capEnd = true) {
+  if (rings.length < 2) return;
+
+  // Build a stable frame per ring from the local path direction.
+  const axis = new Vec3(), ref = new Vec3(0, 0, 1), altRef = new Vec3(1, 0, 0);
+  for (let i = 0; i < rings.length; i++) {
+    const r = rings[i];
+    if (r.right && r.fwd) continue;
+    const prev = rings[Math.max(0, i - 1)], next = rings[Math.min(rings.length - 1, i + 1)];
+    axis.subVectors(next.p, prev.p);
+    if (axis.lengthSq() < 1e-10) axis.set(0, 1, 0);
+    axis.normalize();
+    const useRef = Math.abs(axis.dot(ref)) > 0.95 ? altRef : ref;
+    r.right = new Vec3().crossVectors(useRef, axis).normalize();
+    r.fwd = new Vec3().crossVectors(axis, r.right).normalize();
+  }
+
+  const base = g.positions.length / 3;
+  const tmp = new Vec3();
+  const nrm = new Vec3();
+  const row = segments + 1;
+
+  for (let i = 0; i < rings.length; i++) {
+    const r = rings[i];
+    const v = r.uv != null ? r.uv : i / (rings.length - 1);
+    for (let s = 0; s <= segments; s++) {
+      const a = (s / segments) * TAU;
+      ringVertex(tmp, r.p, r.right, r.fwd, r.w, r.d, a, r.e || 2);
+      // Outward normal of a superellipse, before the smoothing pass.
+      nrm.set(tmp.x - r.p.x, tmp.y - r.p.y, tmp.z - r.p.z).normalize();
+      g.vert(tmp.x, tmp.y, tmp.z, nrm.x, nrm.y, nrm.z, (s / segments) * 2, v * 2);
+    }
+  }
+
+  // Winding matters as much as position: the renderer culls back faces, so
+  // a reversed quad does not merely shade oddly, it disappears and leaves
+  // the inside of the far wall showing through.
+  for (let i = 0; i < rings.length - 1; i++) {
+    for (let s = 0; s < segments; s++) {
+      const a = base + i * row + s;
+      g.quad(a, a + 1, a + row + 1, a + row);
+    }
+  }
+
+  // Flat caps, wound so they face outward along the tube axis.
+  const capOf = (ringIdx, dir) => {
+    const r = rings[ringIdx];
+    const n = new Vec3().crossVectors(r.right, r.fwd).normalize().scale(dir);
+    const centre = g.vert(r.p.x, r.p.y, r.p.z, n.x, n.y, n.z, 0.5, 0.5);
+    const start = base + ringIdx * row;
+    for (let s = 0; s < segments; s++) {
+      if (dir > 0) g.tri(centre, start + s, start + s + 1);
+      else g.tri(centre, start + s + 1, start + s);
+    }
+  };
+  if (capStart) capOf(0, -1);
+  if (capEnd) capOf(rings.length - 1, 1);
+}
+
+/* Rings evenly spaced along a straight run between two points, with
+   width/depth interpolated from a profile. */
+function limbRings(from, to, profile, bulge) {
+  const rings = [];
+  for (let i = 0; i < profile.length; i++) {
+    const t = profile.length === 1 ? 0 : i / (profile.length - 1);
+    const p = new Vec3().copy(from).lerp(to, t);
+    const s = profile[i];
+    // An optional lateral offset lets a calf sit behind the shin bone
+    // rather than being centred on it.
+    if (bulge) p.z += bulge(t);
+    rings.push({ p, w: s[0], d: s[1], e: s[2] || 2, uv: t });
+  }
+  return rings;
+}
+
+/* ---------------- torso ---------------- */
+
+function buildTorso(g, segments) {
+  // width, depth, squareness — the silhouette of a human trunk.
+  const spec = [
+    [-0.062, 0.108, 0.092, 2.3],   // closes inside the thigh tops
+    [-0.045, 0.145, 0.108, 2.4],
+    [-0.022, 0.172, 0.120, 2.4],   // under the glutes
+    [0.000, 0.178, 0.122, 2.4],    // seat — the widest part of the trunk
+    [0.090, 0.161, 0.107, 2.4],
+    [0.175, 0.150, 0.100, 2.5],    // waist, the narrowest point
+    [0.250, 0.161, 0.109, 2.5],
+    [0.320, 0.176, 0.118, 2.6],    // lower ribs flaring out
+    [0.380, 0.187, 0.123, 2.6],
+    [0.425, 0.195, 0.121, 2.6],    // chest
+    [0.460, 0.204, 0.113, 2.7],    // deltoid shelf
+    [0.487, 0.189, 0.103, 2.6],
+    [0.508, 0.132, 0.087, 2.4],    // trapezius sloping in
+    [0.528, 0.079, 0.067, 2.2],
+  ];
+  const rings = spec.map(([y, w, d, e], i) => ({
+    p: new Vec3(0, y, 0), w, d, e, uv: i / (spec.length - 1),
+  }));
+  loftRings(g, rings, segments, true, true);
+}
+
+function buildNeck(g, segments) {
+  const rings = [
+    { p: new Vec3(0, 0.505, 0.002), w: 0.078, d: 0.070, e: 2.3 },
+    { p: new Vec3(0, 0.535, 0.005), w: 0.060, d: 0.056, e: 2.1 },
+    { p: new Vec3(0, 0.575, 0.008), w: 0.055, d: 0.052, e: 2.0 },
+    { p: new Vec3(0, 0.618, 0.010), w: 0.056, d: 0.053, e: 2.0 },
+  ];
+  loftRings(g, rings, segments, false, false);
+}
+
+/* ---------------- limbs ---------------- */
+
+function buildArm(g, side, skeleton, segments) {
+  const S = side > 0 ? 'L' : 'R';
+  const shoulder = new Vec3(), elbow = new Vec3(), wrist = new Vec3();
+  skeleton.bones[skeleton.index('upperArm' + S)].bindMatrix.getTranslation(shoulder);
+  skeleton.bones[skeleton.index('lowerArm' + S)].bindMatrix.getTranslation(elbow);
+  skeleton.bones[skeleton.index('hand' + S)].bindMatrix.getTranslation(wrist);
+
+  // Start the arm inboard and above the joint so the deltoid buries itself
+  // in the torso instead of butting against it and leaving a visible seam.
+  const armRoot = new Vec3().copy(shoulder);
+  armRoot.x -= side * 0.052;
+  armRoot.y += 0.055;
+
+  // One continuous loft from shoulder to wrist. Lofting the upper arm and
+  // forearm separately looks fine on paper — the two rings at the elbow
+  // share a position — but each loft derives its ring frames from its own
+  // path direction, so the two rings are rotated relative to each other and
+  // the surfaces do not line up vertex-for-vertex. The result is a hairline
+  // crack you can see straight through at every joint.
+  const upper = limbRings(armRoot, elbow, [
+    [0.060, 0.060, 2.0],
+    [0.055, 0.056, 2.0],
+    [0.049, 0.051, 2.0],
+    [0.043, 0.045, 2.0],
+    [0.038, 0.041, 2.0],
+  ]);
+  const lower = limbRings(elbow, wrist, [
+    [0.038, 0.041, 2.0],
+    [0.044, 0.046, 2.0],
+    [0.041, 0.043, 2.0],
+    [0.034, 0.036, 2.0],
+    [0.027, 0.031, 2.1],
+  ]);
+  loftRings(g, upper.concat(lower.slice(1)), segments, false, false);
+
+  buildHand(g, side, wrist, segments);
+}
+
+/* A hand as a flattened palm plus a thumb. Not fingers — at the scale
+   a character is actually seen, individual fingers read as noise, but
+   the flattening and the thumb are what make it stop looking like a
+   club. */
+function buildHand(g, side, wrist, segments) {
+  const palmDir = new Vec3(0, -1, 0);
+  const tip = new Vec3().copy(wrist).addScaled(palmDir, 0.185);
+
+  const rings = [
+    { p: new Vec3().copy(wrist), w: 0.028, d: 0.030, e: 2.1 },
+    { p: new Vec3().copy(wrist).addScaled(palmDir, 0.030), w: 0.025, d: 0.041, e: 2.4 },
+    { p: new Vec3().copy(wrist).addScaled(palmDir, 0.085), w: 0.023, d: 0.045, e: 2.6 },
+    { p: new Vec3().copy(wrist).addScaled(palmDir, 0.135), w: 0.021, d: 0.042, e: 2.6 },
+    { p: new Vec3().copy(tip), w: 0.016, d: 0.030, e: 2.4 },
+  ];
+  loftRings(g, rings, segments, false, true);
+
+  // Thumb, angled inward and forward off the palm.
+  const thumbRoot = new Vec3().copy(wrist).addScaled(palmDir, 0.042);
+  thumbRoot.z += 0.030;
+  const thumbTip = new Vec3().copy(thumbRoot);
+  thumbTip.z += 0.026;
+  thumbTip.y -= 0.052;
+  thumbTip.x -= side * 0.006;
+  loftRings(g, limbRings(thumbRoot, thumbTip, [
+    [0.017, 0.016, 2.1],
+    [0.015, 0.014, 2.1],
+    [0.011, 0.011, 2.0],
+  ]), Math.max(8, segments >> 1), true, true);
+}
+
+function buildLeg(g, side, skeleton, segments) {
+  const S = side > 0 ? 'L' : 'R';
+  const hip = new Vec3(), knee = new Vec3(), ankle = new Vec3();
+  skeleton.bones[skeleton.index('upperLeg' + S)].bindMatrix.getTranslation(hip);
+  skeleton.bones[skeleton.index('lowerLeg' + S)].bindMatrix.getTranslation(knee);
+  skeleton.bones[skeleton.index('foot' + S)].bindMatrix.getTranslation(ankle);
+
+  // Same for the hip: push the thigh's first ring up into the pelvis.
+  const legRoot = new Vec3().copy(hip);
+  legRoot.y += 0.075;
+  legRoot.x -= side * 0.010;
+
+  // Thigh and shin as a single loft, for the same reason as the arm.
+  const thigh = limbRings(legRoot, knee, [
+    [0.098, 0.108, 2.2],
+    [0.092, 0.100, 2.1],
+    [0.082, 0.090, 2.1],
+    [0.071, 0.078, 2.0],
+    [0.062, 0.068, 2.0],
+    [0.057, 0.062, 2.0],
+  ]);
+  // The calf bulge sits behind the bone line, which is why the ring centres
+  // are pushed back rather than just widened.
+  const shin = limbRings(knee, ankle, [
+    [0.057, 0.062, 2.0],
+    [0.061, 0.069, 2.0],
+    [0.058, 0.066, 2.0],
+    [0.048, 0.054, 2.0],
+    [0.040, 0.044, 2.0],
+    [0.035, 0.040, 2.1],
+  ], (t) => -Math.sin(Math.min(1, t * 1.9) * PI) * 0.016);
+  loftRings(g, thigh.concat(shin.slice(1)), segments, false, false);
+}
+
+/* ---------------- shoe ---------------- */
+
+/* A shoe rather than a foot: sole, toe box, instep and heel. Lofted
+   along the length of the foot with a flat bottom, so it sits on the
+   ground the way a shoe does instead of a sphere resting on a point. */
+function buildShoe(g, side, skeleton, segments) {
+  const S = side > 0 ? 'L' : 'R';
+  const ankle = new Vec3();
+  skeleton.bones[skeleton.index('foot' + S)].bindMatrix.getTranslation(ankle);
+
+  const sole = HUMAN.sole;
+  // z, halfWidth, topHeight — measured forward from the ankle.
+  const spec = [
+    [-0.070, 0.026, sole + 0.070],
+    [-0.055, 0.038, sole + 0.088],
+    [-0.030, 0.045, sole + 0.098],
+    [0.005, 0.048, sole + 0.100],   // instep, the tallest point
+    [0.055, 0.050, sole + 0.076],
+    [0.105, 0.049, sole + 0.058],
+    [0.150, 0.044, sole + 0.045],
+    [0.185, 0.034, sole + 0.034],
+    [0.207, 0.019, sole + 0.022],   // toe
+  ];
+
+  const cross = Math.max(10, segments);
+  const base = g.positions.length / 3;
+  const row = cross + 1;
+  const n = new Vec3();
+
+  for (let i = 0; i < spec.length; i++) {
+    const [z, hw, top] = spec[i];
+    const cy = (top + sole) * 0.5;
+    const hh = (top - sole) * 0.5;
+    for (let s = 0; s <= cross; s++) {
+      const a = (s / cross) * TAU;
+      const c = Math.cos(a), si = Math.sin(a);
+      // Squared-off cross-section: a shoe has a flat sole and slab sides.
+      const px = Math.sign(c) * Math.pow(Math.abs(c), 2 / 3.0) * hw;
+      const py = Math.sign(si) * Math.pow(Math.abs(si), 2 / 3.2) * hh;
+      const x = ankle.x + px;
+      const y = cy + py;
+      n.set(px / Math.max(hw, 1e-4), py / Math.max(hh, 1e-4), 0).normalize();
+      g.vert(x, y, ankle.z + z, n.x, n.y, n.z, s / cross * 2, i / (spec.length - 1) * 2);
+    }
+  }
+  for (let i = 0; i < spec.length - 1; i++) {
+    for (let s = 0; s < cross; s++) {
+      const a = base + i * row + s;
+      g.quad(a, a + 1, a + row + 1, a + row);
+    }
+  }
+  // Close the heel and the toe.
+  for (const [idx, dir] of [[0, -1], [spec.length - 1, 1]]) {
+    const [z] = spec[idx];
+    const centre = g.vert(ankle.x, (spec[idx][2] + sole) * 0.5, ankle.z + z, 0, 0, dir, 0.5, 0.5);
+    const start = base + idx * row;
+    for (let s = 0; s < cross; s++) {
+      if (dir > 0) g.tri(centre, start + s, start + s + 1);
+      else g.tri(centre, start + s + 1, start + s);
+    }
+  }
+}
+
+/* ---------------- assembly ---------------- */
+
+function makeHumanBodyGeometry(skeleton, opts = {}) {
+  const g = new Geometry();
+  const segments = opts.segments || 16;
+
+  buildTorso(g, segments);
+  buildNeck(g, segments);
+  for (const side of [1, -1]) {
+    buildArm(g, side, skeleton, segments);
+    buildLeg(g, side, skeleton, segments);
+    buildShoe(g, side, skeleton, segments);
+  }
+
+  g.finalize();
+  // The per-ring normals are only radial; recomputing from the finished
+  // surface is what makes the shoulders and calves catch light correctly.
+  g.computeWeldGroups();
+  smoothNormals(g);
+  weldNormals(g.normals, g.weldGroups);
+  return g;
+}
+
+/* Area-weighted smooth normals over the assembled surface. */
+function smoothNormals(g) {
+  const P = g.positions, N = g.normals, I = g.indices;
+  N.fill(0);
+  for (let i = 0; i < I.length; i += 3) {
+    const a = I[i] * 3, b = I[i + 1] * 3, c = I[i + 2] * 3;
+    const ux = P[b] - P[a], uy = P[b + 1] - P[a + 1], uz = P[b + 2] - P[a + 2];
+    const vx = P[c] - P[a], vy = P[c + 1] - P[a + 1], vz = P[c + 2] - P[a + 2];
+    // Un-normalised cross product weights each face by its own area.
+    const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+    N[a] += nx; N[a + 1] += ny; N[a + 2] += nz;
+    N[b] += nx; N[b + 1] += ny; N[b + 2] += nz;
+    N[c] += nx; N[c + 1] += ny; N[c + 2] += nz;
+  }
+  for (let i = 0; i < N.length; i += 3) {
+    const l = Math.hypot(N[i], N[i + 1], N[i + 2]);
+    if (l > 1e-9) { N[i] /= l; N[i + 1] /= l; N[i + 2] /= l; }
+    else { N[i] = 0; N[i + 1] = 1; N[i + 2] = 0; }
+  }
+}
+
+/* Ears, merged onto a head mesh. Positioned by the caller at the actual
+   skull surface — an ear placed at some fraction of the head radius ends
+   up inside the skull, invisible and wondered about.
+
+   Shape: an outer rim, a hollowed bowl inside it, and a lobe. Those three
+   are what the eye reads as an ear; the fine folds of a real one are below
+   the resolution a character is ever seen at. */
+function buildEars(g, opts = {}) {
+  const ex = opts.x != null ? opts.x : 0.20;
+  const ey = opts.y != null ? opts.y : 0;
+  const ez = opts.z != null ? opts.z : -0.03;
+
+  for (const side of [1, -1]) {
+    // Outer shell, leaning out and back from the skull.
+    const rings = [];
+    const steps = 6;
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const flare = Math.sin(t * PI * 0.85);
+      rings.push({
+        p: new Vec3(side * (ex + t * 0.030), ey - t * 0.004, ez - t * 0.006),
+        // `w` runs front-to-back, `d` runs top-to-bottom: an ear is about
+        // twice as tall as it is deep.
+        w: 0.030 + flare * 0.009,
+        d: 0.062 + flare * 0.014,
+        e: 2.3,
+        right: new Vec3(0, 0, 1),
+        fwd: new Vec3(0, 1, 0),
+        uv: t,
+      });
+    }
+    // Thin the outer rim so the edge reads as an edge, not a tube end.
+    const last = rings[rings.length - 1];
+    last.w *= 0.66;
+    last.d *= 0.74;
+    loftRings(g, rings, 16, true, true);
+
+    // The concha: a shallow bowl pressed into the front of the ear.
+    const bowl = [];
+    for (let i = 0; i <= 3; i++) {
+      const t = i / 3;
+      bowl.push({
+        p: new Vec3(side * (ex + 0.012 + t * 0.016), ey + 0.004, ez - 0.004),
+        w: (0.019 - t * 0.006),
+        d: (0.034 - t * 0.011),
+        e: 2.1,
+        right: new Vec3(0, 0, 1),
+        fwd: new Vec3(0, 1, 0),
+        uv: t,
+      });
+    }
+    loftRings(g, bowl, 14, false, true);
+
+    // Lobe.
+    loftRings(g, [
+      { p: new Vec3(side * (ex + 0.012), ey - 0.052, ez - 0.004), w: 0.020, d: 0.016, e: 2.1,
+        right: new Vec3(0, 0, 1), fwd: new Vec3(0, 1, 0) },
+      { p: new Vec3(side * (ex + 0.022), ey - 0.068, ez - 0.008), w: 0.015, d: 0.012, e: 2.0,
+        right: new Vec3(0, 0, 1), fwd: new Vec3(0, 1, 0) },
+    ], 12, true, true);
+  }
+}
 
 
 /* ─────────── 95-engine.js ─────────── */
@@ -8727,10 +9307,10 @@ class Engine {
       body: controller.body,
       boundRadius: 1.4 * scale,
     });
-    // Line the mesh's feet up with the bottom of the physics capsule. The
-    // mesh is authored with the hips at the origin and the feet ~0.86 below;
-    // the capsule is centred, so its bottom is height/2 below its origin.
-    actor.visualOffset = new Vec3(0, (0.86 - 1.75 / 2) * scale, 0);
+    // The body mesh is authored with its soles at exactly -0.875 (half of
+    // 1.75), which is where the centred capsule's bottom already is — so
+    // the visual needs no vertical correction at all.
+    actor.visualOffset = new Vec3(0, 0, 0);
     this.actors.push(actor);
 
     if (opts.face !== false) {
@@ -9176,13 +9756,20 @@ class Engine {
       actor.updateMatrix();
 
       if (this.frustumCulling && !actor.noCull) {
-        const p = actor.position;
+        // Cull against the matrix translation, not actor.position. A
+        // parented actor (a head on a neck bone, a held item) has no
+        // position of its own — its world location only exists once the
+        // parent chain is composed. Testing actor.position culls it against
+        // the origin, so a close-up of a character's face makes the head
+        // disappear while the body stays.
+        const m = actor.matrix.e;
+        const px = m[12], py = m[13], pz = m[14];
         // Scale inflates the bounding radius; use the largest axis.
-        const s = Math.max(actor.scale.x, actor.scale.y, actor.scale.z);
-        const r = actor.boundRadius * Math.max(1, s);
+        const sc = Math.max(actor.scale.x, actor.scale.y, actor.scale.z);
+        const r = actor.boundRadius * Math.max(1, sc);
         let outside = false;
         for (let i = 0; i < 6; i++) {
-          const d = planes[i * 4] * p.x + planes[i * 4 + 1] * p.y + planes[i * 4 + 2] * p.z + planes[i * 4 + 3];
+          const d = planes[i * 4] * px + planes[i * 4 + 1] * py + planes[i * 4 + 2] * pz + planes[i * 4 + 3];
           if (d < -r) { outside = true; break; }
         }
         if (outside) continue;

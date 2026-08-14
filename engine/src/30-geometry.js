@@ -148,6 +148,31 @@ class Geometry {
     return this;
   }
 
+  /* Groups of vertex indices that occupy the same position.
+
+     Every closed surface here duplicates its wrap-around column (s=0 and
+     s=segments are the same point) so UVs can run 0..1. Per-vertex normal
+     averaging therefore never crosses that column, and the seam shows as a
+     hard crease down an otherwise smooth head or torso. Welding the
+     normals afterwards fixes it without merging the vertices themselves,
+     which would break the UVs. */
+  computeWeldGroups(epsilon = 1e-5) {
+    const P = this.positions;
+    const n = P.length / 3;
+    const buckets = new Map();
+    const inv = 1 / epsilon;
+    for (let i = 0; i < n; i++) {
+      const key = `${Math.round(P[i * 3] * inv)},${Math.round(P[i * 3 + 1] * inv)},${Math.round(P[i * 3 + 2] * inv)}`;
+      let b = buckets.get(key);
+      if (!b) { b = []; buckets.set(key, b); }
+      b.push(i);
+    }
+    const groups = [];
+    for (const b of buckets.values()) if (b.length > 1) groups.push(b);
+    this.weldGroups = groups;
+    return groups;
+  }
+
   finalize() {
     this.positions = new Float32Array(this.positions);
     this.normals = new Float32Array(this.normals);
@@ -155,6 +180,26 @@ class Geometry {
     if (!this.tangents) this.computeTangents();
     if (!this.bounds) this.computeBounds();
     return this;
+  }
+}
+
+/* Average per-vertex normals across coincident vertices. */
+function weldNormals(normals, groups) {
+  if (!groups) return;
+  for (let gi = 0; gi < groups.length; gi++) {
+    const grp = groups[gi];
+    let nx = 0, ny = 0, nz = 0;
+    for (let k = 0; k < grp.length; k++) {
+      const i = grp[k] * 3;
+      nx += normals[i]; ny += normals[i + 1]; nz += normals[i + 2];
+    }
+    const l = Math.hypot(nx, ny, nz);
+    if (l < 1e-9) continue;
+    nx /= l; ny /= l; nz /= l;
+    for (let k = 0; k < grp.length; k++) {
+      const i = grp[k] * 3;
+      normals[i] = nx; normals[i + 1] = ny; normals[i + 2] = nz;
+    }
   }
 }
 

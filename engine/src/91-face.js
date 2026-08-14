@@ -11,20 +11,20 @@
    should. Each returns 0..1 for a vertex in head-local space, where the
    head is roughly a unit-ish blob centred on the origin. */
 const FaceRegions = {
-  brow: (p) => smoothstep(0.10, 0.30, p.y) * smoothstep(0.42, 0.24, p.y) * smoothstep(-0.05, 0.22, p.z),
-  eyeL: (p) => Math.max(0, 1 - dist2(p, 0.115, 0.13, 0.20) / 0.010),
-  eyeR: (p) => Math.max(0, 1 - dist2(p, -0.115, 0.13, 0.20) / 0.010),
-  upperLid: (p) => Math.max(0, 1 - dist2(p, 0.115, 0.155, 0.20) / 0.012)
-                 + Math.max(0, 1 - dist2(p, -0.115, 0.155, 0.20) / 0.012),
-  cheek: (p) => (Math.max(0, 1 - dist2(p, 0.17, -0.02, 0.16) / 0.030)
-               + Math.max(0, 1 - dist2(p, -0.17, -0.02, 0.16) / 0.030)),
-  mouth: (p) => Math.max(0, 1 - dist2(p, 0, -0.16, 0.21) / 0.026),
-  mouthCornerL: (p) => Math.max(0, 1 - dist2(p, 0.085, -0.155, 0.19) / 0.012),
-  mouthCornerR: (p) => Math.max(0, 1 - dist2(p, -0.085, -0.155, 0.19) / 0.012),
-  upperLip: (p) => Math.max(0, 1 - dist2(p, 0, -0.125, 0.215) / 0.014),
-  lowerLip: (p) => Math.max(0, 1 - dist2(p, 0, -0.195, 0.212) / 0.014),
-  jaw: (p) => smoothstep(-0.10, -0.34, p.y) * smoothstep(-0.10, 0.16, p.z),
-  nose: (p) => Math.max(0, 1 - dist2(p, 0, -0.02, 0.25) / 0.012),
+  brow: (p) => Math.max(0, 1 - dist2(p, 0, 0.115, 0.215) / 0.026) * smoothstep(-0.02, 0.10, p.z),
+  eyeL: (p) => Math.max(0, 1 - dist2(p, 0.083, 0.030, 0.205) / 0.008),
+  eyeR: (p) => Math.max(0, 1 - dist2(p, -0.083, 0.030, 0.205) / 0.008),
+  upperLid: (p) => Math.max(0, 1 - dist2(p, 0.083, 0.058, 0.205) / 0.007)
+                 + Math.max(0, 1 - dist2(p, -0.083, 0.058, 0.205) / 0.007),
+  cheek: (p) => (Math.max(0, 1 - dist2(p, 0.150, -0.020, 0.150) / 0.020)
+               + Math.max(0, 1 - dist2(p, -0.150, -0.020, 0.150) / 0.020)),
+  mouth: (p) => Math.max(0, 1 - dist2(p, 0, -0.190, 0.235) / 0.014),
+  mouthCornerL: (p) => Math.max(0, 1 - dist2(p, 0.072, -0.188, 0.205) / 0.007),
+  mouthCornerR: (p) => Math.max(0, 1 - dist2(p, -0.072, -0.188, 0.205) / 0.007),
+  upperLip: (p) => Math.max(0, 1 - dist2(p, 0, -0.170, 0.245) / 0.006),
+  lowerLip: (p) => Math.max(0, 1 - dist2(p, 0, -0.212, 0.240) / 0.006),
+  jaw: (p) => smoothstep(-0.08, -0.32, p.y) * smoothstep(-0.14, 0.12, p.z),
+  nose: (p) => Math.max(0, 1 - dist2(p, 0, -0.075, 0.270) / 0.008),
 };
 
 function dist2(p, x, y, z) {
@@ -290,6 +290,7 @@ class Face {
       if (l > 1e-8) { N[i] /= l; N[i + 1] /= l; N[i + 2] /= l; }
       else { N[i] = 0; N[i + 1] = 1; N[i + 2] = 0; }
     }
+    weldNormals(N, this.geometry.weldGroups);
   }
 
   attach(mesh) {
@@ -316,62 +317,129 @@ class Face {
   }
 }
 
-/* A stylised head with the topology the blendshape regions expect: eye
-   sockets, a brow ridge, a nose and a mouth line, all at positions the
-   region functions above are tuned against. */
+/* An anatomical head.
+
+   Built by displacing an ellipsoid with a set of named features, each a
+   soft ellipsoidal falloff pushing the surface in a direction. Ordering
+   matters: the skull is shaped first, then the face is cut into it, so a
+   later feature never fights an earlier one for the same vertices.
+
+   Proportions are real. A head is markedly taller than it is wide and
+   deeper than it is wide — getting that one ratio wrong is most of what
+   makes a procedural head read as an egg. */
+
+/* Soft ellipsoidal falloff, 1 at the centre and 0 at the boundary. */
+function featureFalloff(p, cx, cy, cz, rx, ry, rz, power) {
+  const dx = (p.x - cx) / rx, dy = (p.y - cy) / ry, dz = (p.z - cz) / rz;
+  const d = dx * dx + dy * dy + dz * dz;
+  if (d >= 1) return 0;
+  const f = 1 - Math.sqrt(d);
+  return power === 1 ? f : Math.pow(f, power);
+}
+
 function makeHeadGeometry(opts = {}) {
-  const rings = opts.rings || 26;
-  const sectors = opts.sectors || 32;
+  const rings = opts.rings || 40;
+  const sectors = opts.sectors || 48;
   const g = new Geometry();
   const noise = new Noise(opts.seed || 5);
+
+  // Base skull. Half-extents: narrow across, tall, deep.
+  const RX = 0.231, RY = 0.348, RZ = 0.272;
+  const mirrored = (fn) => (p) => fn(p, Math.abs(p.x), p.x < 0 ? -1 : 1);
 
   for (let r = 0; r <= rings; r++) {
     const phi = (r / rings) * PI;
     const sp = Math.sin(phi), cp = Math.cos(phi);
     for (let s = 0; s <= sectors; s++) {
       const th = (s / sectors) * TAU;
-      let nx = sp * Math.cos(th), ny = cp, nz = sp * Math.sin(th);
+      const nx = sp * Math.cos(th), ny = cp, nz = sp * Math.sin(th);
 
-      // Base head proportions: taller than wide, flatter at the back.
-      let x = nx * 0.30, y = ny * 0.36, z = nz * 0.30;
-      if (z < 0) z *= 0.86;                        // flatter cranium behind
-      if (y < -0.1) { x *= 0.86; z *= 0.92; }      // jaw tapers in
+      let x = nx * RX, y = ny * RY, z = nz * RZ;
 
-      // Brow ridge.
-      const browAmt = Math.max(0, 1 - dist2({ x, y, z }, 0, 0.16, 0.26) / 0.05);
-      z += browAmt * 0.020;
-      y += browAmt * 0.004;
+      /* --- skull mass --- */
+      // The cranium is fuller and squarer behind; the face is flatter.
+      // Blended, not branched: `if (z < 0)` puts a hard step in the surface
+      // exactly at z = 0, which shows up as a crease running down the side
+      // of the head that no amount of normal-smoothing will remove.
+      const back = smoothstep(0.06, -0.12, z);
+      z *= 1 + back * 0.06;
+      x *= 1 + back * 0.035;
+      // Occiput: a slight shelf at the back of the skull.
+      z -= featureFalloff({ x, y, z }, 0, 0.24, -0.24, 0.24, 0.20, 0.16, 1) * 0.018;
 
-      // Eye sockets, pressed in on both sides.
+      // Jaw: the lower head narrows and comes forward into a chin.
+      // Eased, and it keeps more width than it takes: too much taper here
+      // and the head reads as a skull rather than a face.
+      const jaw = smoothstep(0.02, -0.32, y);
+      x *= 1 - jaw * 0.185;
+      z *= 1 - jaw * 0.055;
+      y -= jaw * 0.008;
+
+      const P = { x, y, z };
+
+      /* --- face --- */
+      // Brow ridge, strongest over the eyes and fading at the temples.
+      const brow = featureFalloff(P, 0, 0.115, 0.20, 0.155, 0.062, 0.16, 1);
+      z += brow * 0.034;
+      y += brow * 0.004;
+
+      // Eye sockets, pressed in behind the brow.
       for (const sx of [1, -1]) {
-        const socket = Math.max(0, 1 - dist2({ x, y, z }, sx * 0.115, 0.125, 0.235) / 0.014);
-        z -= socket * 0.030;
+        const socket = featureFalloff(P, sx * 0.083, 0.030, 0.185, 0.078, 0.062, 0.11, 1);
+        z -= socket * 0.046;
+        // A slight eyeball bulge inside the socket keeps it from being a pit.
+        const ball = featureFalloff(P, sx * 0.080, 0.025, 0.200, 0.045, 0.040, 0.07, 1);
+        z += ball * 0.022;
       }
 
-      // Nose.
-      const nose = Math.max(0, 1 - dist2({ x, y, z }, 0, -0.01, 0.26) / 0.016);
-      z += nose * 0.045;
-      const nostril = Math.max(0, 1 - dist2({ x, y, z }, 0, -0.07, 0.27) / 0.004);
-      z -= nostril * 0.012;
+      // Temples, gently hollowed.
+      for (const sx of [1, -1]) {
+        x -= sx * featureFalloff(P, sx * 0.185, 0.120, 0.070, 0.075, 0.100, 0.12, 1) * 0.014;
+      }
 
-      // Mouth line: a shallow crease so the lips have an edge to move around.
-      const mouth = Math.max(0, 1 - dist2({ x, y, z }, 0, -0.16, 0.255) / 0.020);
-      z -= mouth * 0.016;
-
-      // Chin.
-      const chin = Math.max(0, 1 - dist2({ x, y, z }, 0, -0.28, 0.20) / 0.020);
-      z += chin * 0.018;
-      y -= chin * 0.006;
+      // Nose: a bridge running down into a projecting tip and wings.
+      const bridge = featureFalloff(P, 0, 0.040, 0.235, 0.036, 0.115, 0.09, 1);
+      z += bridge * 0.038;
+      const tip = featureFalloff(P, 0, -0.075, 0.250, 0.042, 0.050, 0.075, 1);
+      z += tip * 0.068;
+      y -= tip * 0.008;
+      for (const sx of [1, -1]) {
+        const wing = featureFalloff(P, sx * 0.040, -0.098, 0.225, 0.032, 0.030, 0.05, 1);
+        z += wing * 0.032;
+        x += sx * wing * 0.010;
+      }
+      // Nostril undercut, so the nose has a base rather than melting away.
+      z -= featureFalloff(P, 0, -0.122, 0.232, 0.050, 0.022, 0.05, 1) * 0.020;
 
       // Cheekbones.
       for (const sx of [1, -1]) {
-        const cheek = Math.max(0, 1 - dist2({ x, y, z }, sx * 0.18, 0.02, 0.18) / 0.030);
+        const cheek = featureFalloff(P, sx * 0.150, -0.020, 0.130, 0.090, 0.080, 0.13, 1);
+        x += sx * cheek * 0.019;
         z += cheek * 0.012;
-        x += cheek * sx * 0.008;
+      }
+
+      // Lips: a forward pad split by a horizontal seam.
+      const mouth = featureFalloff(P, 0, -0.190, 0.215, 0.090, 0.052, 0.09, 1);
+      z += mouth * 0.030;
+      const seam = featureFalloff(P, 0, -0.192, 0.235, 0.085, 0.011, 0.07, 1);
+      z -= seam * 0.026;
+      // Philtrum, the groove between nose and upper lip.
+      z -= featureFalloff(P, 0, -0.150, 0.238, 0.018, 0.030, 0.05, 1) * 0.010;
+
+      // Chin and the crease above it.
+      const chin = featureFalloff(P, 0, -0.290, 0.185, 0.070, 0.070, 0.11, 1);
+      z += chin * 0.038;
+      z -= featureFalloff(P, 0, -0.240, 0.205, 0.060, 0.024, 0.07, 1) * 0.014;
+
+      // Jawline: a defined corner where the jaw turns up toward the ear.
+      for (const sx of [1, -1]) {
+        const angle = featureFalloff(P, sx * 0.135, -0.215, 0.010, 0.070, 0.075, 0.13, 1);
+        x += sx * angle * 0.018;
+        y -= angle * 0.008;
       }
 
       // A whisper of noise so the surface is not machine-perfect.
-      const n = noise.fbm(nx * 3, ny * 3, nz * 3, 3) * 0.004;
+      const n = noise.fbm(nx * 3.4, ny * 3.4, nz * 3.4, 3) * 0.0035;
       x += nx * n; y += ny * n; z += nz * n;
 
       g.vert(x, y, z, nx, ny, nz, s / sectors, r / rings);
@@ -387,8 +455,36 @@ function makeHeadGeometry(opts = {}) {
     }
   }
 
+  // Eyeballs. A socket on its own is a dent; the dome inside it is what
+  // the eye reads as an eye, because it catches a highlight where a face
+  // is supposed to have one. Cheap, and it does more for "this is a head"
+  // than any amount of extra sculpting on the surrounding skull.
+  for (const sx of [1, -1]) {
+    const eye = Shapes.sphere(0.036, 12, 16);
+    const off = new Vec3(sx * 0.083, 0.028, 0.214);
+    const src = eye.positions;
+    const base = g.positions.length / 3;
+    for (let i = 0; i < src.length; i += 3) {
+      // Flattened front-to-back so the eyeball sits in the socket rather
+      // than bulging out of the face.
+      g.vert(
+        src[i] + off.x, src[i + 1] + off.y, src[i + 2] * 0.72 + off.z,
+        eye.normals[i], eye.normals[i + 1], eye.normals[i + 2],
+        eye.uvs[(i / 3) * 2], eye.uvs[(i / 3) * 2 + 1],
+      );
+    }
+    for (let i = 0; i < eye.indices.length; i += 3) {
+      g.tri(base + eye.indices[i], base + eye.indices[i + 1], base + eye.indices[i + 2]);
+    }
+  }
+
+  // Ears sit on the skull surface, which is at x = +/-RX — not at some
+  // fraction of it. Placing them inboard buries them inside the head.
+  if (opts.ears !== false) buildEars(g, { x: RX * 0.96, y: -0.005, z: -0.030 });
+
   g.finalize();
-  // Recompute smooth normals from the sculpted positions — the sphere
+  g.computeWeldGroups();
+  // Recompute smooth normals from the sculpted positions — the ellipsoid
   // normals carried through the loop no longer match the surface.
   const face = { workPositions: g.positions, workNormals: g.normals, geometry: g };
   Face.prototype._recomputeNormals.call(face);

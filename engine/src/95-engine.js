@@ -553,10 +553,10 @@ class Engine {
       body: controller.body,
       boundRadius: 1.4 * scale,
     });
-    // Line the mesh's feet up with the bottom of the physics capsule. The
-    // mesh is authored with the hips at the origin and the feet ~0.86 below;
-    // the capsule is centred, so its bottom is height/2 below its origin.
-    actor.visualOffset = new Vec3(0, (0.86 - 1.75 / 2) * scale, 0);
+    // The body mesh is authored with its soles at exactly -0.875 (half of
+    // 1.75), which is where the centred capsule's bottom already is — so
+    // the visual needs no vertical correction at all.
+    actor.visualOffset = new Vec3(0, 0, 0);
     this.actors.push(actor);
 
     if (opts.face !== false) {
@@ -1002,13 +1002,20 @@ class Engine {
       actor.updateMatrix();
 
       if (this.frustumCulling && !actor.noCull) {
-        const p = actor.position;
+        // Cull against the matrix translation, not actor.position. A
+        // parented actor (a head on a neck bone, a held item) has no
+        // position of its own — its world location only exists once the
+        // parent chain is composed. Testing actor.position culls it against
+        // the origin, so a close-up of a character's face makes the head
+        // disappear while the body stays.
+        const m = actor.matrix.e;
+        const px = m[12], py = m[13], pz = m[14];
         // Scale inflates the bounding radius; use the largest axis.
-        const s = Math.max(actor.scale.x, actor.scale.y, actor.scale.z);
-        const r = actor.boundRadius * Math.max(1, s);
+        const sc = Math.max(actor.scale.x, actor.scale.y, actor.scale.z);
+        const r = actor.boundRadius * Math.max(1, sc);
         let outside = false;
         for (let i = 0; i < 6; i++) {
-          const d = planes[i * 4] * p.x + planes[i * 4 + 1] * p.y + planes[i * 4 + 2] * p.z + planes[i * 4 + 3];
+          const d = planes[i * 4] * px + planes[i * 4 + 1] * py + planes[i * 4 + 2] * pz + planes[i * 4 + 3];
           if (d < -r) { outside = true; break; }
         }
         if (outside) continue;

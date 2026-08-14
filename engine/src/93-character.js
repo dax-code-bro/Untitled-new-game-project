@@ -67,23 +67,23 @@ function appendLimb(g, from, to, r0, r1, sides = 8) {
   }
 }
 
-/* Build a skinned humanoid mesh in the skeleton's bind pose. */
+/* Build a skinned humanoid mesh in the skeleton's bind pose.
+
+   The surface comes from the anatomical loft in 94-human.js; this
+   function's job is to bind it to the skeleton. */
 function makeHumanoidMesh(skeleton, opts = {}) {
-  const g = new Geometry();
+  const g = makeHumanBodyGeometry(skeleton, opts);
+
+  // Bone segments used only for solving skin weights below.
   const segments = [];
   const pa = new Vec3(), pb = new Vec3();
-
-  for (const [fromName, toName, r0, r1] of LIMB_SEGMENTS) {
+  for (const [fromName, toName] of LIMB_SEGMENTS) {
     const fi = skeleton.index(fromName), ti = skeleton.index(toName);
     if (fi < 0 || ti < 0) continue;
     skeleton.bones[fi].bindMatrix.getTranslation(pa);
     skeleton.bones[ti].bindMatrix.getTranslation(pb);
-    const scale = opts.thickness != null ? opts.thickness : 1;
-    appendLimb(g, pa, pb, r0 * scale, r1 * scale, opts.sides || 8);
     segments.push({ a: pa.clone(), b: pb.clone(), boneA: fi, boneB: ti });
   }
-
-  g.finalize();
 
   /* Skin weights. For each vertex, score every bone segment by inverse
      squared distance to it and keep the four strongest. This is a cheap
