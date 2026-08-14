@@ -49,7 +49,7 @@ function ringVertex(out, centre, right, fwd, halfW, halfD, angle, e) {
 /* Stitch a list of rings into a tube.
    Each ring: { p:Vec3, w, d, e, right?:Vec3, fwd?:Vec3, uv? }. Rings
    without an explicit frame get one derived from the path direction. */
-function loftRings(g, rings, segments = 16, capStart = true, capEnd = true) {
+function loftRings(g, rings, segments = 16, capStart = true, capEnd = true, flip = false) {
   if (rings.length < 2) return;
 
   // Build a stable frame per ring from the local path direction.
@@ -89,7 +89,10 @@ function loftRings(g, rings, segments = 16, capStart = true, capEnd = true) {
   for (let i = 0; i < rings.length - 1; i++) {
     for (let s = 0; s < segments; s++) {
       const a = base + i * row + s;
-      g.quad(a, a + 1, a + row + 1, a + row);
+      // Flipped, the surface faces inward — which is how you make a recess
+      // (a nostril, an eye socket's interior) out of a closed form.
+      if (flip) g.quad(a, a + row, a + row + 1, a + 1);
+      else g.quad(a, a + 1, a + row + 1, a + row);
     }
   }
 
@@ -100,7 +103,8 @@ function loftRings(g, rings, segments = 16, capStart = true, capEnd = true) {
     const centre = g.vert(r.p.x, r.p.y, r.p.z, n.x, n.y, n.z, 0.5, 0.5);
     const start = base + ringIdx * row;
     for (let s = 0; s < segments; s++) {
-      if (dir > 0) g.tri(centre, start + s, start + s + 1);
+      const front = (dir > 0) !== flip;
+      if (front) g.tri(centre, start + s, start + s + 1);
       else g.tri(centre, start + s + 1, start + s);
     }
   };
@@ -432,5 +436,138 @@ function buildEars(g, opts = {}) {
       { p: new Vec3(side * (ex + 0.022), ey - 0.068, ez - 0.008), w: 0.015, d: 0.012, e: 2.0,
         right: new Vec3(0, 0, 1), fwd: new Vec3(0, 1, 0) },
     ], 12, true, true);
+  }
+}
+
+
+/* A ring path that closes on itself — an eyelid rim, a lip line. The first
+   ring is repeated at the end so the surface joins without a seam. */
+function loftLoop(g, rings, segments = 12, flip = false) {
+  if (rings.length < 3) return;
+  loftRings(g, rings.concat([rings[0]]), segments, false, false, flip);
+}
+
+/* Append another geometry, transformed. Used to drop a separately-built
+   form (a nose, a lip) into a head. */
+function mergeShape(g, src, offset, scale) {
+  const base = g.positions.length / 3;
+  const sx = scale ? scale.x : 1, sy = scale ? scale.y : 1, sz = scale ? scale.z : 1;
+  const P = src.positions, N = src.normals, U = src.uvs;
+  for (let i = 0; i < P.length; i += 3) {
+    g.vert(
+      P[i] * sx + offset.x, P[i + 1] * sy + offset.y, P[i + 2] * sz + offset.z,
+      N[i], N[i + 1], N[i + 2],
+      U ? U[(i / 3) * 2] : 0, U ? U[(i / 3) * 2 + 1] : 0,
+    );
+  }
+  for (let i = 0; i < src.indices.length; i += 3) {
+    g.tri(base + src.indices[i], base + src.indices[i + 1], base + src.indices[i + 2]);
+  }
+}
+
+/* ---------------- face geometry ---------------- */
+
+/* A nose as an actual solid, not a bump pushed out of the skull.
+
+   This is the whole reason the old face read as flat: displacing a sphere
+   can only ever produce a smooth swelling. It cannot make an undercut, and
+   a nose is defined almost entirely by its undercut — the plane beneath it
+   that turns away from the light, and the nostrils set into that plane. */
+function buildNose(g, o = {}) {
+  const X = new Vec3(1, 0, 0), Z = new Vec3(0, 0, 1);
+  // Horizontal slices descending from the brow to the base, drifting
+  // forward as they go: the bridge, then the ball, then the wings.
+  const spec = [
+    [0.145, 0.190, 0.030, 0.010],   // buried in the brow, so no visible cap
+    [0.085, 0.203, 0.028, 0.018],
+    [0.025, 0.216, 0.032, 0.027],
+    [-0.028, 0.232, 0.040, 0.035],
+    [-0.062, 0.244, 0.050, 0.041],   // the ball — as wide as it is deep
+    [-0.086, 0.249, 0.059, 0.038],   // wings
+    [-0.105, 0.243, 0.062, 0.030],
+    [-0.119, 0.233, 0.055, 0.022],   // base — this plane is the undercut
+  ];
+  const rings = spec.map(([y, z, w, d], i) => ({
+    p: new Vec3(0, y, z), w, d, e: 2.0,
+    right: X, fwd: Z, uv: i / (spec.length - 1),
+  }));
+  loftRings(g, rings, 24, true, true);
+
+  // Nostrils: inward-facing pockets set into the underside. Built flipped,
+  // so what you see through the opening is the inside of a closed form.
+  for (const sx of [1, -1]) {
+    loftRings(g, [
+      { p: new Vec3(sx * 0.028, -0.121, 0.234), w: 0.015, d: 0.010, e: 2.0, right: X, fwd: Z },
+      { p: new Vec3(sx * 0.027, -0.103, 0.237), w: 0.013, d: 0.009, e: 2.0, right: X, fwd: Z },
+      { p: new Vec3(sx * 0.022, -0.089, 0.243), w: 0.005, d: 0.004, e: 2.0, right: X, fwd: Z },
+    ], 12, false, true, true);
+  }
+
+  // Columella: the strip of flesh between the nostrils.
+  loftRings(g, [
+    { p: new Vec3(0, -0.125, 0.239), w: 0.009, d: 0.011, e: 2.2, right: X, fwd: Z },
+    { p: new Vec3(0, -0.103, 0.245), w: 0.010, d: 0.013, e: 2.2, right: X, fwd: Z },
+  ], 10, true, true);
+}
+
+/* Lips as two separate forms with a real gap between them. A crease carved
+   into a sphere reads as a line drawn on a face; two protruding volumes
+   that do not touch read as a mouth. */
+function buildLips(g, o = {}) {
+  const Y = new Vec3(0, 1, 0), Z = new Vec3(0, 0, 1);
+  // x, y, z, halfHeight, halfDepth
+  const upper = [
+    [-0.070, -0.183, 0.216, 0.005, 0.006],   // corner
+    [-0.050, -0.179, 0.232, 0.009, 0.011],
+    [-0.028, -0.174, 0.242, 0.012, 0.014],
+    [-0.011, -0.171, 0.245, 0.013, 0.015],   // one peak of the cupid's bow
+    [0.000, -0.176, 0.243, 0.011, 0.014],    // the dip between them
+    [0.011, -0.171, 0.245, 0.013, 0.015],
+    [0.028, -0.174, 0.242, 0.012, 0.014],
+    [0.050, -0.179, 0.232, 0.009, 0.011],
+    [0.070, -0.183, 0.216, 0.005, 0.006],
+  ];
+  const lower = [
+    [-0.066, -0.190, 0.216, 0.005, 0.006],
+    [-0.046, -0.199, 0.233, 0.010, 0.012],
+    [-0.024, -0.205, 0.244, 0.014, 0.016],
+    [0.000, -0.207, 0.248, 0.016, 0.018],
+    [0.024, -0.205, 0.244, 0.014, 0.016],
+    [0.046, -0.199, 0.233, 0.010, 0.012],
+    [0.066, -0.190, 0.216, 0.005, 0.006],
+  ];
+  for (const set of [upper, lower]) {
+    const rings = set.map(([x, y, z, h, d], i) => ({
+      p: new Vec3(x, y, z), w: h, d, e: 2.2,
+      right: Y, fwd: Z, uv: i / (set.length - 1),
+    }));
+    loftRings(g, rings, 14, true, true);
+  }
+}
+
+/* Eyelid rims. An eyeball sitting in a bare socket looks like a marble in a
+   hole; the lids are what close the form and give the eye a top and bottom
+   edge to catch light on. */
+function buildEyelids(g, o = {}) {
+  const Z = new Vec3(0, 0, 1);
+  for (const sx of [1, -1]) {
+    const cx = sx * 0.098, cy = 0.032, cz = 0.222;
+    const rings = [];
+    const steps = 16;
+    for (let i = 0; i < steps; i++) {
+      const a = (i / steps) * TAU;
+      const ca = Math.cos(a), sa = Math.sin(a);
+      // The upper lid is heavier than the lower — a real asymmetry, and
+      // leaving it out is a large part of why a face looks like a doll.
+      const upper = Math.max(0, sa);
+      const thick = 0.0055 + upper * 0.0070;
+      rings.push({
+        p: new Vec3(cx + ca * 0.058, cy + sa * 0.023 + upper * 0.004, cz - Math.abs(sa) * 0.004),
+        w: thick, d: thick * 1.15, e: 2.1,
+        right: new Vec3(ca, sa, 0).normalize(), fwd: Z,
+        uv: i / steps,
+      });
+    }
+    loftLoop(g, rings, 10);
   }
 }
