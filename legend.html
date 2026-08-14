@@ -476,25 +476,23 @@ IMAGE ABILITY: When the user asks you to draw, create, generate, design, show, o
 Rules for the description inside the tag: be specific and visual; if a named character/brand/movie is mentioned, describe its real physical appearance (shapes, colors, materials, features) so it renders correctly; add style and lighting words. You may output multiple [IMAGE: ...] tags for multiple pictures. The app turns each tag into a real image shown to the user, so never say you "can't" make images.
 
 For full 3D or AAA-level games and big builds, point the user to the Code section.`;
-  const CODE_SYS = BASE + `\n\nYou are in the CODE section — Legend's heavy builder. You build ambitious, COMPLETE, actually-playable 2D and 3D browser games with real graphics, animation, and polish. You are NOT writing a document that shows text or code — you are building a living, moving, playable game.
+  const CODE_SYS = BASE + `\n\nYou are in the CODE section — Legend's game builder. The app provides a bulletproof GAME ENGINE SHELL (fullscreen canvas, game loop, input, start/restart screens, touch + controller support). You write ONLY the game logic that plugs into it — this guarantees every game runs with real animation and input.
 
-HARD RULES — every build MUST follow all of these:
-- Output ONE complete, self-contained HTML document inside a single \`\`\`html code block: inline CSS and JavaScript, no external files. For 3D, load three.js from a CDN (https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js).
-- RENDER REAL GRAPHICS. Draw everything on a full-screen <canvas> using the 2D context or WebGL — NEVER a page that just displays text, and NEVER print the source code on screen. The player must see a real game world, not words.
-- MAKE IT LOOK GOOD. Use gradients, glowing effects, particle effects, smooth color palettes, shadows, sprites drawn with canvas shapes, parallax or animated backgrounds. For 3D, use real geometry, lighting, materials, and shaders where they help. Aim for vibrant, polished, "wow" visuals.
-- MOVEMENT & ANIMATION. Everything animates via requestAnimationFrame at ~60fps: things move, rotate, bounce, spawn, and react. No static screens.
-- CONTROLS ARE BUILT IN. Every published game automatically receives Legend Controls: an on-screen joystick + A/B buttons on touchscreens and full gamepad support, all delivered to your game as standard keyboard events. Therefore implement ALL input with KEYBOARD events only: Arrow keys and/or WASD to move, Space = primary action (jump/shoot/select), X = secondary action. Do NOT build your own touch joystick or on-screen buttons — they are provided. In your on-screen instructions say "Move + A/B buttons (or arrows/WASD + Space/X)".
-- STARTING THE GAME: any start/restart screen MUST begin on a tap OR click ANYWHERE on the screen. Attach the start handler to window using BOTH 'pointerdown' and 'touchstart' (plus any key). A start screen that listens only for a key or a small button is BROKEN. Test mentally: "if I tap the middle of the screen, does the game start?" — the answer must be yes.
-- GAMEPLAY. Include a real loop with a goal: moving entities, collision, score and/or win/lose states, increasing challenge, a start prompt, and clear on-screen instructions. Make it genuinely fun.
-- REQUIRED STRUCTURE — follow this exact recipe every time:
-  1) a state variable: 'start' → 'playing' → 'gameover';
-  2) a keys object updated by window keydown/keyup listeners (this is how ALL input arrives, including touch/controller);
-  3) update(dt) that moves everything using dt, and draw() that renders the current state (including the start screen);
-  4) one requestAnimationFrame loop that ALWAYS runs from page load — it draws the start screen, the gameplay, and the game-over screen. The loop never waits for input to start running.
-- The game must run with zero errors and show a moving, drawn scene IMMEDIATELY on load — never a blank or white screen.
-- YOUR GAME IS AUTO-TESTED after you build it: it runs in a hidden test and must produce zero errors and real animation frames. If you receive a message starting with "AUTO-TEST FAILED", it means your previous game was broken exactly as described — fix that exact problem and output the FULL corrected HTML document.
-- FINISH THE ENTIRE DOCUMENT ending with </html>. Never stop partway; if it's long, keep going until complete. NEVER use placeholders, stubs, "// TODO", "// rest of code", "// add more", or "...". Every function fully implemented.
-- KEEP YOUR SPOKEN REPLY VERY SHORT (1-2 sentences on what it is and how to play, including the touch controls). Do NOT narrate or repeat the code — it is shown separately.`;
+OUTPUT FORMAT (default for every 2D game): one short sentence on what it is and how to play, then ONE \`\`\`js code block defining exactly these top-level functions:
+- function init(G) — create/reset ALL game objects, stored on G (e.g. G.player={x:G.W/2,y:G.H-80,w:40,h:40,speed:300}; G.enemies=[]; G.particles=[];). Called on load and on every restart.
+- function update(G, dt) — advance the game by dt seconds: movement, spawning, collisions, difficulty ramping. Read held keys from G.keys. Add to G.score on success. Call G.gameover() when the player loses.
+- function draw(G, ctx) — render EVERYTHING with the 2D canvas every frame: vibrant gradients, glow (ctx.shadowBlur), particles, an animated background, all entities, and the score text. Make it look genuinely great.
+- optional function onTap(G) — extra tap action while playing (shoot/jump/flap).
+
+THE G OBJECT (provided by the shell — do not create it): G.W and G.H (screen size in px), G.keys (currently-held keys, by BOTH e.key and e.code: 'ArrowLeft','ArrowRight','ArrowUp','ArrowDown','a','d','w','s',' ','Space','x','KeyX'), G.state, G.score, G.time, G.gameover(), G.rand(a,b). Store ALL your game state on G. Do NOT touch the DOM, do NOT create canvases or event listeners, do NOT call requestAnimationFrame — the shell does all of that, and the joystick/controller arrive automatically as keyboard keys in G.keys.
+
+RULES:
+- All movement scales with dt (x += speed*dt). Move via arrows AND wasd; primary action is ' ' (Space); secondary is 'x'.
+- Real gameplay: clear goal, collisions, score, rising difficulty. Colorful, animated, polished — never a plain static screen.
+- COMPLETE code only. No TODOs, no placeholders, every function fully written.
+- ONLY for 3D games (three.js from https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js) or non-game apps may you instead output ONE complete self-contained \`\`\`html document.
+- Your build is AUTO-TESTED. If you receive "AUTO-TEST FAILED: <problem>", your previous code had exactly that problem — fix it and resend the complete corrected code block.
+- Keep the spoken reply to 1-2 sentences. Controls to mention to the player: joystick/arrows to move, A or Space for action.`;
 
   /* ── Status ── */
   function setBusy(b){ $('dot').className=b?'dot busy':'dot'; $('statusText').textContent=b?'Thinking…':'Online'; }
@@ -1049,7 +1047,11 @@ HARD RULES — every build MUST follow all of these:
     listPane:'codeListPane', items:'codeItems', empty:'codeEmpty', newBtn:'codeNew', back:'codeBack', convo:'codeConvo',
     messages:'codeMessages', input:'codeInput', send:'codeSend', stop:'codeStop', model:'codeModel',
     systemFn:()=>CODE_SYS, codeMode:true,
-    onReply:(reply)=>{ const code=extractRunnable(reply); if(code) testThenPublish(code); },
+    onReply:(reply)=>{
+      let code=extractRunnable(reply);                       // full HTML (3D / apps)
+      if(!code){ const js=extractGameJS(reply); if(js) code=wrapShell(js); }  // 2D games: logic + engine shell
+      if(code) testThenPublish(code);
+    },
     attach:{btn:$('codeAttach'), input:$('codeFile'), preview:$('codePreview2')},
     greeting:"New build. Tell me what to make — a game, an app, a tool — and I'll build it and publish it straight to your AIGB menu (top right)."
   });
@@ -1120,6 +1122,49 @@ pad.x=ax;pad.y=ay;pad.a=pb(0);pad.b=pb(1);},50);
   }
 
   // ── Auto-test every build: run it hidden, catch crashes and frozen screens ──
+  // ── Legend Game Engine Shell ──
+  // A bulletproof frame written by hand: fullscreen canvas, dt game loop, input
+  // (keyboard + Legend Controls), start/gameover screens, and per-frame error
+  // catching so a bug in game logic shows a banner instead of freezing the game.
+  const GAME_SHELL_TOP = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no"><title>Legend Game</title>
+<style>html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#05060a}canvas{display:block;position:fixed;inset:0}</style></head>
+<body><canvas id="__lg"></canvas><script>
+var canvas=document.getElementById('__lg'),ctx=canvas.getContext('2d');
+function __fit(){canvas.width=window.innerWidth;canvas.height=window.innerHeight}window.addEventListener('resize',__fit);__fit();
+var G={canvas:canvas,ctx:ctx,keys:{},state:'start',score:0,time:0,W:canvas.width,H:canvas.height,
+rand:function(a,b){return a+Math.random()*(b-a)},
+gameover:function(){G.state='gameover'},
+start:function(){G.score=0;G.time=0;G.state='playing';try{if(window.__init)window.__init(G)}catch(e){__err(e)}}};
+window.addEventListener('keydown',function(e){G.keys[e.key]=true;G.keys[e.code]=true;});
+window.addEventListener('keyup',function(e){delete G.keys[e.key];delete G.keys[e.code];});
+var __eb=null;function __err(e){var m=(e&&e.message?e.message:String(e));if(!__eb){__eb=document.createElement('div');__eb.style.cssText='position:fixed;left:8px;right:8px;top:8px;background:rgba(150,20,40,.93);color:#fff;font:12px monospace;padding:8px 10px;border-radius:8px;z-index:99999;white-space:pre-wrap';document.body.appendChild(__eb)}__eb.textContent='⚠ '+m;try{parent.postMessage({__legendErr:m},'*')}catch(x){}}
+window.addEventListener('error',function(ev){__err(ev.message||ev.error||'error')});
+window.addEventListener('pointerdown',function(){if(G.state!=='playing'){G.start()}else{try{if(window.__onTap)window.__onTap(G)}catch(e){__err(e)}}});
+`;
+  const GAME_SHELL_BOTTOM = `
+window.__init=typeof init==='function'?init:null;window.__update=typeof update==='function'?update:null;window.__draw=typeof draw==='function'?draw:null;window.__onTap=typeof onTap==='function'?onTap:null;
+try{if(window.__init)window.__init(G)}catch(e){__err(e)}
+var __last=performance.now();
+function __loop(t){var dt=Math.min((t-__last)/1000,0.05);__last=t;G.W=canvas.width;G.H=canvas.height;
+if(G.state==='playing'){G.time+=dt;try{if(window.__update)window.__update(G,dt)}catch(e){__err(e)}}
+try{ctx.save();if(window.__draw)window.__draw(G,ctx);ctx.restore()}catch(e){__err(e)}
+if(G.state!=='playing'){ctx.save();ctx.fillStyle='rgba(0,0,0,0.45)';ctx.fillRect(0,0,G.W,G.H);ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='bold '+Math.min(G.W/12,44)+'px sans-serif';
+ctx.fillText(G.state==='start'?'TAP TO START':'GAME OVER',G.W/2,G.H/2-10);ctx.font='16px sans-serif';
+ctx.fillText(G.state==='start'?'Joystick/arrows to move · A or Space = action':'Score '+G.score+' — tap to retry',G.W/2,G.H/2+28);ctx.restore()}
+requestAnimationFrame(__loop)}
+requestAnimationFrame(__loop);
+<\/script></body></html>`;
+  function wrapShell(js){ return GAME_SHELL_TOP + '\n' + js + '\n' + GAME_SHELL_BOTTOM; }
+  function extractGameJS(text){
+    const m=text.match(/```(?:js|javascript)?\s*\n?([\s\S]*?)```/);
+    if(!m) return null;
+    const code=m[1].trim();
+    if(!/function\s+(init|update|draw)\s*\(/.test(code)) return null;
+    if(/<html|<body|<script/i.test(code)) return null;
+    return code;
+  }
+
   const TEST_PROBE = '<script>'+
     'window.onerror=function(m,s,l){try{parent.postMessage({__legendErr:String(m)+(l?" (line "+l+")":"")},"*")}catch(e){}};'+
     'window.addEventListener("unhandledrejection",function(e){try{parent.postMessage({__legendErr:String(e.reason)},"*")}catch(x){}});'+
