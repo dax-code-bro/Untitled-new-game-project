@@ -422,20 +422,36 @@ class Animal {
     e.actors.push(this.actor);
     this.parts = [this.actor];
 
-    // Eyes and antlers ride the head bone.
+    // Eyes and antlers ride the head bone. A real eye is two distinct
+    // parts, not one flat ball: a glossy iris (deer/rabbit eyes read as a
+    // rich near-black brown, not pure black) and a smaller true-black
+    // pupil riding just proud of it so it doesn't z-fight. Both are
+    // deliberately very low roughness — the wet-shine catchlight that
+    // sells "alive" comes from real specular reflection off that low
+    // roughness under the actual scene lighting, not a painted highlight.
     const headIdx = this.skeleton.index('head');
     const HL = sp.headLen * k;
-    const eyeM = e.material({ color: 0x150f09, roughness: 0.25 });
+    const irisM = e.material({ color: 0x2b1608, roughness: 0.05, metalness: 0 });
+    const pupilM = e.material({ color: 0x040302, roughness: 0.08, metalness: 0 });
     const sphereMesh = e._mesh('sphere', () => Shapes.sphere(0.5, 20, 28));
     this.eyes = [];
+    this.pupils = [];
     for (const s of [1, -1]) {
       const eye = new Actor(e, {
-        mesh: sphereMesh, material: eyeM,
+        mesh: sphereMesh, material: irisM,
         parent: this.actor, parentBone: headIdx,
         offset: [s * HL * 0.3, HL * 0.14, HL * 0.3],
       });
       eye.scale.setScalar(HL * 0.13);
       e.actors.push(eye); this.parts.push(eye); this.eyes.push(eye);
+
+      const pupil = new Actor(e, {
+        mesh: sphereMesh, material: pupilM,
+        parent: this.actor, parentBone: headIdx,
+        offset: [s * HL * 0.32, HL * 0.14, HL * 0.39],
+      });
+      pupil.scale.setScalar(HL * 0.072);
+      e.actors.push(pupil); this.parts.push(pupil); this.pupils.push(pupil);
     }
     this.antlers = [];
     if (this.species === 'deer' && this.sex === 'male' && !this.isBaby) {
@@ -595,10 +611,11 @@ class Animal {
 
     sk.update();
 
-    // Blink: the lids are a vertical squash of the eye.
+    // Blink: the lids are a vertical squash of the eye and pupil together.
     const lid = this.blink > 0 ? 0.15 : 1;
     const HL = sp.headLen * k;
     for (const eye of this.eyes) eye.scale.set(HL * 0.16, HL * 0.16 * lid, HL * 0.16);
+    for (const pupil of this.pupils) pupil.scale.set(HL * 0.09, HL * 0.09 * lid, HL * 0.09);
   }
 
   destroy() {

@@ -35,7 +35,10 @@
   const acts = document.getElementById('acts');
   function act(label, fn){ const b=document.createElement('button'); b.textContent=label; b.onclick=fn; acts.appendChild(b); }
 
-  const game = LegendEngine.create({ canvas:'#c' });
+  // Animals are the showcase — default straight to the top graphics tier
+  // rather than auto-detecting down for a weaker device. A player who
+  // can't hold the frame rate can still drop it via setGraphicsQuality().
+  const game = LegendEngine.create({ canvas:'#c', quality:'ultra' });
   game.ground({ size: 60, grass: 'standard' });
   // Keep them calm for the showcase: the "threat" starts far away.
   game.animalThreat = { x: 999, y: 0, z: 999 };

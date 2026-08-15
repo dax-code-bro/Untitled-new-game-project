@@ -8517,10 +8517,15 @@ function makeHeadGeometry(opts = {}) {
 const GRASS_PRESETS = {
   standard: {
     colorLow: 0x2f5d24, colorHigh: 0x86a83c,
-    height: 0.42, width: 0.035, density: 1,
+    height: 0.42, width: 0.05, density: 1,
     windScale: 1, lean: 0.14, bare: 0,        // no bald patches
     trampled: 0, weedChance: 0, heightJitter: [0.65, 1.45],
-    clumpSize: 0.42, clumpChance: 0.55, clumpSpread: 0.55,
+    // A healthy meadow is a forest floor of grass, not scattered tufts —
+    // high clump chance and a wide overlap radius means neighboring clumps
+    // blend into each other and true gaps almost never show, while the
+    // per-clump height bias still keeps it reading as real growth instead
+    // of a uniform lawn.
+    clumpSize: 0.4, clumpChance: 0.97, clumpSpread: 1.1,
     ground: 'grass',
   },
   dead: {
@@ -8649,7 +8654,7 @@ class Grass {
     // Clumping concentrates blades into tufts rather than spreading them
     // evenly, so the raw per-area budget goes up — a tuft needs several
     // blades packed close together to read as a clump instead of a sprig.
-    const target = Math.min(this.max, opts.count || Math.floor(this.area * this.area * 20 * this.density));
+    const target = Math.min(this.max, opts.count || Math.floor(this.area * this.area * 26 * this.density));
     const half = this.area / 2;
     const buf = this.instances;
     let n = 0;
@@ -11805,20 +11810,36 @@ class Animal {
     e.actors.push(this.actor);
     this.parts = [this.actor];
 
-    // Eyes and antlers ride the head bone.
+    // Eyes and antlers ride the head bone. A real eye is two distinct
+    // parts, not one flat ball: a glossy iris (deer/rabbit eyes read as a
+    // rich near-black brown, not pure black) and a smaller true-black
+    // pupil riding just proud of it so it doesn't z-fight. Both are
+    // deliberately very low roughness — the wet-shine catchlight that
+    // sells "alive" comes from real specular reflection off that low
+    // roughness under the actual scene lighting, not a painted highlight.
     const headIdx = this.skeleton.index('head');
     const HL = sp.headLen * k;
-    const eyeM = e.material({ color: 0x150f09, roughness: 0.25 });
+    const irisM = e.material({ color: 0x2b1608, roughness: 0.05, metalness: 0 });
+    const pupilM = e.material({ color: 0x040302, roughness: 0.08, metalness: 0 });
     const sphereMesh = e._mesh('sphere', () => Shapes.sphere(0.5, 20, 28));
     this.eyes = [];
+    this.pupils = [];
     for (const s of [1, -1]) {
       const eye = new Actor(e, {
-        mesh: sphereMesh, material: eyeM,
+        mesh: sphereMesh, material: irisM,
         parent: this.actor, parentBone: headIdx,
         offset: [s * HL * 0.3, HL * 0.14, HL * 0.3],
       });
       eye.scale.setScalar(HL * 0.13);
       e.actors.push(eye); this.parts.push(eye); this.eyes.push(eye);
+
+      const pupil = new Actor(e, {
+        mesh: sphereMesh, material: pupilM,
+        parent: this.actor, parentBone: headIdx,
+        offset: [s * HL * 0.32, HL * 0.14, HL * 0.39],
+      });
+      pupil.scale.setScalar(HL * 0.072);
+      e.actors.push(pupil); this.parts.push(pupil); this.pupils.push(pupil);
     }
     this.antlers = [];
     if (this.species === 'deer' && this.sex === 'male' && !this.isBaby) {
@@ -11978,10 +11999,11 @@ class Animal {
 
     sk.update();
 
-    // Blink: the lids are a vertical squash of the eye.
+    // Blink: the lids are a vertical squash of the eye and pupil together.
     const lid = this.blink > 0 ? 0.15 : 1;
     const HL = sp.headLen * k;
     for (const eye of this.eyes) eye.scale.set(HL * 0.16, HL * 0.16 * lid, HL * 0.16);
+    for (const pupil of this.pupils) pupil.scale.set(HL * 0.09, HL * 0.09 * lid, HL * 0.09);
   }
 
   destroy() {

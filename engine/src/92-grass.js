@@ -17,10 +17,15 @@
 const GRASS_PRESETS = {
   standard: {
     colorLow: 0x2f5d24, colorHigh: 0x86a83c,
-    height: 0.42, width: 0.035, density: 1,
+    height: 0.42, width: 0.05, density: 1,
     windScale: 1, lean: 0.14, bare: 0,        // no bald patches
     trampled: 0, weedChance: 0, heightJitter: [0.65, 1.45],
-    clumpSize: 0.42, clumpChance: 0.55, clumpSpread: 0.55,
+    // A healthy meadow is a forest floor of grass, not scattered tufts —
+    // high clump chance and a wide overlap radius means neighboring clumps
+    // blend into each other and true gaps almost never show, while the
+    // per-clump height bias still keeps it reading as real growth instead
+    // of a uniform lawn.
+    clumpSize: 0.4, clumpChance: 0.97, clumpSpread: 1.1,
     ground: 'grass',
   },
   dead: {
@@ -149,7 +154,7 @@ class Grass {
     // Clumping concentrates blades into tufts rather than spreading them
     // evenly, so the raw per-area budget goes up — a tuft needs several
     // blades packed close together to read as a clump instead of a sprig.
-    const target = Math.min(this.max, opts.count || Math.floor(this.area * this.area * 20 * this.density));
+    const target = Math.min(this.max, opts.count || Math.floor(this.area * this.area * 26 * this.density));
     const half = this.area / 2;
     const buf = this.instances;
     let n = 0;
