@@ -11481,6 +11481,19 @@ const ANIMAL_SPECIES = {
     walkSpeed: 1.3, runSpeed: 14, gait: 'quad',
     alertR: 8, safeR: 20, grazes: true,
   },
+  // Real reference: shoulder ~1.2m, body 1.6-2.1m nose-to-base-of-tail,
+  // tail an additional 0.6-1.0m (proportionally long, unlike deer/bear) —
+  // sleek short-coated athletic build built for a 22 m/s (~50mph) sprint,
+  // not the shaggy long-coated bulk of a bear. Carnivore, so grazes:false.
+  lion: {
+    shoulder: 1.2, bodyLen: 1.35, bodyW: 0.19, bodyD: 0.22,
+    neckLen: 0.18, headLen: 0.32, earScale: 0.35, tailLen: 0.8, legW: 0.026,
+    furLen: 0.022, shells: 9,
+    coat: { male: 0xab8a4a, female: 0xb99a5c },
+    texture: { male: 'fur', female: 'fur' },
+    walkSpeed: 1.4, runSpeed: 20, gait: 'quad',
+    alertR: 10, safeR: 22, grazes: false,
+  },
 };
 
 /* Yearling / mature / trophy — the same three tiers the hunting games use. */
