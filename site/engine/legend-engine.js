@@ -1856,7 +1856,9 @@ const TextureLib = {
       }
     }
 
-    const normal = this.heightToNormal(height, size, 3);
+    // Punchier bump strength — the old 3 read flat at gameplay distance;
+    // this is tuned by eye against the material montage, not a physical unit.
+    const normal = this.heightToNormal(height, size, 4.5);
     const maps = { albedo, orm, normal, size };
     this._cache.set(key, maps);
     return maps;
