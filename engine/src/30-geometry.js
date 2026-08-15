@@ -452,20 +452,34 @@ const Shapes = {
 
   /* A single grass blade: a tapered strip that bends along its length.
      Drawn thousands of times through instancing. */
+  /* Two crossed planes instead of one flat card — a single-plane blade is
+     genuinely 2D: edge-on to the camera it vanishes into a sliver, which is
+     exactly what read as flat/Roblox-y. Crossing a second plane at 90°
+     gives every blade real volume from any viewing angle, the same trick
+     billboarded foliage has used since Half-Life 2. */
   grassBlade(height = 0.5, width = 0.05, segments = 4) {
     const g = new Geometry();
-    for (let i = 0; i <= segments; i++) {
-      const t = i / segments;
-      const w = width * (1 - t * 0.9);
-      const y = t * height;
-      // Slight forward lean baked in so even still grass looks organic.
-      const z = t * t * height * 0.15;
-      g.vert(-w, y, z, 0, 0.3, -1, 0, t);
-      g.vert(w, y, z, 0, 0.3, -1, 1, t);
-    }
-    for (let i = 0; i < segments; i++) {
-      const a = i * 2;
-      g.quad(a, a + 2, a + 3, a + 1);
+    const angles = [0, Math.PI / 2];
+    for (const angle of angles) {
+      const ca = Math.cos(angle), sa = Math.sin(angle);
+      const base = g.positions.length / 3;
+      for (let i = 0; i <= segments; i++) {
+        const t = i / segments;
+        const w = width * (1 - t * 0.9);
+        const y = t * height;
+        // Slight forward lean baked in so even still grass looks organic.
+        const lean = t * t * height * 0.15;
+        for (const side of [-1, 1]) {
+          const lx = side * w, lz = lean;
+          const wx = lx * ca - lz * sa, wz = lx * sa + lz * ca;
+          const nwx = -sa, nwz = -ca;   // rotate the unrotated (0,0.3,-1) normal's XZ
+          g.vert(wx, y, wz, nwx, 0.3, nwz, side < 0 ? 0 : 1, t);
+        }
+      }
+      for (let i = 0; i < segments; i++) {
+        const a = base + i * 2;
+        g.quad(a, a + 2, a + 3, a + 1);
+      }
     }
     return g.finalize();
   },
