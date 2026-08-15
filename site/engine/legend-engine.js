@@ -3503,6 +3503,19 @@ class Renderer {
 
     this._initTargets();
     this._initShadowMaps();
+    // Built here, eagerly, rather than the first time an untextured material
+    // (plain-colour grass, a flat-shaded prop) is drawn: Texture upload binds
+    // to whatever unit is CURRENTLY active rather than picking its own, so
+    // building these mid-draw — after _bindShadows has left a shadow unit
+    // active — clobbers that shadow texture's binding for that one draw and
+    // trips a sampler-type mismatch (a depth-comparison sampler suddenly
+    // pointed at a plain RGBA texture). Building them here, before any draw
+    // call exists to corrupt, removes the failure window entirely.
+    const mkFallback = (r, g, b) => new Texture(gl, {
+      internalFormat: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE, mips: false,
+    }).upload(new Uint8Array([r, g, b, 255]), 1, 1);
+    this._fallbackMaps = { albedo: mkFallback(255, 255, 255), normal: mkFallback(128, 128, 255), orm: mkFallback(255, 230, 0) };
+    gl.activeTexture(gl.TEXTURE0);
     this.stats = { draws: 0, tris: 0, instances: 0 };
     // 0 off, 1 shadow, 2 normal, 3 albedo, 4 roughness, 5 depth
     this.debugMode = 0;
@@ -3654,15 +3667,10 @@ class Renderer {
     sh.i('uHasMaps', mat.maps ? 1 : 0);
     // Untextured materials must still bind SOMETHING to the map samplers:
     // an unset sampler defaults to unit 0, where a shadow sampler of a
-    // different type lives, and that mismatch makes every draw call fail
-    // with INVALID_OPERATION (this is why plain-colour grass never drew).
-    const maps = mat.maps || this._fallbackMaps || (this._fallbackMaps = (() => {
-      const mk = (r, g, b) => new Texture(this.gl, {
-        internalFormat: this.gl.RGBA8, format: this.gl.RGBA,
-        type: this.gl.UNSIGNED_BYTE, mips: false,
-      }).upload(new Uint8Array([r, g, b, 255]), 1, 1);
-      return { albedo: mk(255, 255, 255), normal: mk(128, 128, 255), orm: mk(255, 230, 0) };
-    })());
+    // different type lives, and that mismatch makes the draw call fail with
+    // INVALID_OPERATION. _fallbackMaps is built eagerly in the constructor
+    // (see there for why it must not be built lazily, mid-draw, here).
+    const maps = mat.maps || this._fallbackMaps;
     sh.tex('uAlbedoMap', maps.albedo);
     sh.tex('uNormalMap', maps.normal);
     sh.tex('uOrmMap', maps.orm);
