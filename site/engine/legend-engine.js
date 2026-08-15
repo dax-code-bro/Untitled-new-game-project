@@ -2528,7 +2528,7 @@ layout(location=0) in vec3 aPosition;
 layout(location=1) in vec3 aNormal;
 layout(location=2) in vec2 aUv;
 layout(location=3) in vec4 aTangent;
-#ifdef VERTCOLOR
+#if defined(VERTCOLOR) || defined(WATER_FX)
 layout(location=4) in vec3 aColor;
 #endif
 #ifdef SKINNED
@@ -2575,7 +2575,7 @@ struct Surface {
   vec4 tangent;
   vec2 uv;
   vec4 params;
-#ifdef VERTCOLOR
+#if defined(VERTCOLOR) || defined(WATER_FX)
   vec3 vertColor;
 #endif
 };
@@ -2652,7 +2652,7 @@ Surface computeSurface(){
   s.normal = normalize(nm * localNrm);
   s.tangent = vec4(normalize(nm * localTan), aTangent.w);
   s.uv = aUv;
-#ifdef VERTCOLOR
+#if defined(VERTCOLOR) || defined(WATER_FX)
   s.vertColor = aColor;
 #endif
   return s;
@@ -2671,7 +2671,7 @@ out vec4 vTangent;
 out vec2 vUv;
 out vec4 vParams;
 out float vViewDepth;
-#ifdef VERTCOLOR
+#if defined(VERTCOLOR) || defined(WATER_FX)
 out vec3 vVertColor;
 #endif
 
@@ -2682,7 +2682,7 @@ void main(){
   vTangent = s.tangent;
   vUv = s.uv;
   vParams = s.params;
-#ifdef VERTCOLOR
+#if defined(VERTCOLOR) || defined(WATER_FX)
   vVertColor = s.vertColor;
 #endif
   vViewDepth = length(s.worldPos - uCameraPos);
@@ -2703,7 +2703,7 @@ in vec4 vTangent;
 in vec2 vUv;
 in vec4 vParams;
 in float vViewDepth;
-#ifdef VERTCOLOR
+#if defined(VERTCOLOR) || defined(WATER_FX)
 in vec3 vVertColor;
 #endif
 
@@ -2747,6 +2747,17 @@ void main(){
   float rough = uRoughness;
   float metal = uMetalness;
   float ao = 1.0;
+#ifdef WATER_FX
+  // vVertColor.r carries a foam amount painted in by WaterVolume.update()
+  // (wave-crest curvature + wall proximity, with its own persistence/decay
+  // so foam lingers and fades instead of snapping on and off). Foam is a
+  // diffuse, rough, opaque white patch riding on top of the glassy water —
+  // not a tint of the water color, an actual different material.
+  float foam = clamp(vVertColor.r, 0.0, 1.0);
+  albedo = mix(albedo, vec3(0.96), foam);
+  rough = mix(rough, 0.88, foam);
+  metal = mix(metal, 0.0, foam);
+#endif
 
   if (uHasMaps == 1) {
     vec4 tex = texture(uAlbedoMap, uv);
@@ -2862,6 +2873,10 @@ void main(){
   color = applyFog(color, vWorldPos, uCameraPos, viewDir);
 
   float alpha = uOpacity;
+#ifdef WATER_FX
+  // Foam is opaque; the water beneath it is not.
+  alpha = mix(alpha, 1.0, foam);
+#endif
 #ifdef ALPHA_CLIP
   // Grass blades taper to nothing; clipping keeps the silhouette crisp.
   if (uHasMaps == 1) alpha *= texture(uAlbedoMap, uv).a;
@@ -3843,6 +3858,7 @@ class Renderer {
     if (batch.furShell) defines.push('FUR_SHELL');
     if (batch.alphaClip) defines.push('ALPHA_CLIP');
     if (batch.vertexColor) defines.push('VERTCOLOR');
+    if (batch.waterFx) defines.push('WATER_FX');
     const sh = this.program('pbr', GLSL.pbrVert, GLSL.pbrFrag, defines).use();
 
     sh.m4('uViewProj', camera.viewProj);
@@ -7064,6 +7080,11 @@ class WaterVolume {
     const geo = g.finalize();
     this.positions = geo.positions;          // kept CPU-side for updates
     this.normals = geo.normals;
+    // Foam rides in the color buffer's red channel (WATER_FX shader define)
+    // rather than being a second mesh — one draw call still does both the
+    // glassy water and the whitecaps on top of it.
+    this.foam = new Float32Array(n);
+    geo.colors = new Float32Array(n * 3);
     this.mesh = new GpuMesh(engine.gl, geo);
     this.material = new Material(engine.gl, {
       color: this.P.color, opacity: this.P.opacity, transparent: true,
@@ -7353,9 +7374,14 @@ class WaterVolume {
       s.a.setPosition([s.x, this.heightAt(s.x, s.z) + 0.01, s.z]);
     }
 
-    // ---- write the surface mesh ----
-    const pos = this.positions, nrm = this.normals;
+    // ---- write the surface mesh (+ foam: wave-crest whitecaps and, in a
+    // walled tank, a sloshing waterline where the surface meets the wall) ----
+    const pos = this.positions, nrm = this.normals, foam = this.foam, colors = this.mesh.__colorBuf || (this.mesh.__colorBuf = new Float32Array(res * res * 3));
     const inv2c = 1 / (2 * cell);
+    // Steeper/faster water foams more readily; calm pools barely foam at all.
+    const crestFoam = 1.6 + P.speed * 0.12;
+    const velFoam = 0.9;
+    const decay = clamp(1 - 1.6 * dt, 0, 1);
     for (let j = 0; j < res; j++) {
       for (let i = 0; i < res; i++) {
         const idx = j * res + i, vi = idx * 3;
@@ -7365,9 +7391,20 @@ class WaterVolume {
         let nx = (l - r) * inv2c, nz = (u - d) * inv2c;
         const len = Math.sqrt(nx * nx + 1 + nz * nz);
         nrm[vi] = nx / len; nrm[vi + 1] = 1 / len; nrm[vi + 2] = nz / len;
+
+        // Whitecaps: tall, fast-moving crests foam; everything else doesn't.
+        let inject = Math.max(0, h[idx] * crestFoam - 0.5) + Math.max(0, Math.abs(v[idx]) * velFoam - 0.7);
+        // A walled tank always shows a thin foam line at the waterline.
+        if (this.walls) {
+          const edge = Math.min(i, j, res - 1 - i, res - 1 - j);
+          if (edge < 2) inject = Math.max(inject, (Math.abs(v[idx]) + 0.15) * 0.4);
+        }
+        foam[idx] = clamp(Math.max(foam[idx] * decay, Math.min(1, inject)), 0, 1);
+        colors[vi] = foam[idx]; colors[vi + 1] = foam[idx]; colors[vi + 2] = foam[idx];
       }
     }
     this.mesh.updateAttrib(ATTR.POSITION, pos);
+    this.mesh.updateAttrib(ATTR.COLOR, colors);
     this.mesh.updateAttrib(ATTR.NORMAL, nrm);
   }
 
@@ -7375,7 +7412,7 @@ class WaterVolume {
     return {
       mesh: this.mesh, material: this.material,
       model: this._model, params: this._params,
-      count: 1, instanced: false, grass: false, alphaClip: false, sortKey: 1,
+      count: 1, instanced: false, grass: false, alphaClip: false, waterFx: true, sortKey: 1,
     };
   }
 

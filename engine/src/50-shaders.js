@@ -229,7 +229,7 @@ layout(location=0) in vec3 aPosition;
 layout(location=1) in vec3 aNormal;
 layout(location=2) in vec2 aUv;
 layout(location=3) in vec4 aTangent;
-#ifdef VERTCOLOR
+#if defined(VERTCOLOR) || defined(WATER_FX)
 layout(location=4) in vec3 aColor;
 #endif
 #ifdef SKINNED
@@ -276,7 +276,7 @@ struct Surface {
   vec4 tangent;
   vec2 uv;
   vec4 params;
-#ifdef VERTCOLOR
+#if defined(VERTCOLOR) || defined(WATER_FX)
   vec3 vertColor;
 #endif
 };
@@ -353,7 +353,7 @@ Surface computeSurface(){
   s.normal = normalize(nm * localNrm);
   s.tangent = vec4(normalize(nm * localTan), aTangent.w);
   s.uv = aUv;
-#ifdef VERTCOLOR
+#if defined(VERTCOLOR) || defined(WATER_FX)
   s.vertColor = aColor;
 #endif
   return s;
@@ -372,7 +372,7 @@ out vec4 vTangent;
 out vec2 vUv;
 out vec4 vParams;
 out float vViewDepth;
-#ifdef VERTCOLOR
+#if defined(VERTCOLOR) || defined(WATER_FX)
 out vec3 vVertColor;
 #endif
 
@@ -383,7 +383,7 @@ void main(){
   vTangent = s.tangent;
   vUv = s.uv;
   vParams = s.params;
-#ifdef VERTCOLOR
+#if defined(VERTCOLOR) || defined(WATER_FX)
   vVertColor = s.vertColor;
 #endif
   vViewDepth = length(s.worldPos - uCameraPos);
@@ -404,7 +404,7 @@ in vec4 vTangent;
 in vec2 vUv;
 in vec4 vParams;
 in float vViewDepth;
-#ifdef VERTCOLOR
+#if defined(VERTCOLOR) || defined(WATER_FX)
 in vec3 vVertColor;
 #endif
 
@@ -448,6 +448,17 @@ void main(){
   float rough = uRoughness;
   float metal = uMetalness;
   float ao = 1.0;
+#ifdef WATER_FX
+  // vVertColor.r carries a foam amount painted in by WaterVolume.update()
+  // (wave-crest curvature + wall proximity, with its own persistence/decay
+  // so foam lingers and fades instead of snapping on and off). Foam is a
+  // diffuse, rough, opaque white patch riding on top of the glassy water —
+  // not a tint of the water color, an actual different material.
+  float foam = clamp(vVertColor.r, 0.0, 1.0);
+  albedo = mix(albedo, vec3(0.96), foam);
+  rough = mix(rough, 0.88, foam);
+  metal = mix(metal, 0.0, foam);
+#endif
 
   if (uHasMaps == 1) {
     vec4 tex = texture(uAlbedoMap, uv);
@@ -563,6 +574,10 @@ void main(){
   color = applyFog(color, vWorldPos, uCameraPos, viewDir);
 
   float alpha = uOpacity;
+#ifdef WATER_FX
+  // Foam is opaque; the water beneath it is not.
+  alpha = mix(alpha, 1.0, foam);
+#endif
 #ifdef ALPHA_CLIP
   // Grass blades taper to nothing; clipping keeps the silhouette crisp.
   if (uHasMaps == 1) alpha *= texture(uAlbedoMap, uv).a;

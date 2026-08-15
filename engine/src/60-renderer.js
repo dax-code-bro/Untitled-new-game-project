@@ -490,6 +490,7 @@ class Renderer {
     if (batch.furShell) defines.push('FUR_SHELL');
     if (batch.alphaClip) defines.push('ALPHA_CLIP');
     if (batch.vertexColor) defines.push('VERTCOLOR');
+    if (batch.waterFx) defines.push('WATER_FX');
     const sh = this.program('pbr', GLSL.pbrVert, GLSL.pbrFrag, defines).use();
 
     sh.m4('uViewProj', camera.viewProj);
