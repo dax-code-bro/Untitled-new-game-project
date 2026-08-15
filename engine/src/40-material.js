@@ -302,8 +302,11 @@ const TextureLib = {
       c.ao = 0.7 + clump * 0.3;
       c.h = strand * 0.8 + clump * 0.2;
       // Alpha is the strand-density mask the fur shells clip against: only
-      // the cores of strands survive to the outer layers.
-      c.a = clamp(strand * 0.72 + clump * 0.28 + (guard > 0.2 ? 0.3 : 0), 0, 1);
+      // the cores of strands survive to the outer layers. Sharpened with a
+      // power curve so the mask reads as distinct wispy tufts at the outer
+      // shells instead of a soft, uniform fuzz — real fur clumps unevenly.
+      const strandSharp = Math.pow(strand, 1.7);
+      c.a = clamp(strandSharp * 0.78 + clump * 0.22 + (guard > 0.18 ? 0.32 : 0), 0, 1);
     },
 
     /* Whitetail coat: fur strands plus the real markings — dark dorsal

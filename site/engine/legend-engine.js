@@ -2052,8 +2052,11 @@ const TextureLib = {
       c.ao = 0.7 + clump * 0.3;
       c.h = strand * 0.8 + clump * 0.2;
       // Alpha is the strand-density mask the fur shells clip against: only
-      // the cores of strands survive to the outer layers.
-      c.a = clamp(strand * 0.72 + clump * 0.28 + (guard > 0.2 ? 0.3 : 0), 0, 1);
+      // the cores of strands survive to the outer layers. Sharpened with a
+      // power curve so the mask reads as distinct wispy tufts at the outer
+      // shells instead of a soft, uniform fuzz — real fur clumps unevenly.
+      const strandSharp = Math.pow(strand, 1.7);
+      c.a = clamp(strandSharp * 0.78 + clump * 0.22 + (guard > 0.18 ? 0.32 : 0), 0, 1);
     },
 
     /* Whitetail coat: fur strands plus the real markings — dark dorsal
@@ -11440,7 +11443,7 @@ const ANIMAL_SPECIES = {
   deer: {
     shoulder: 0.98, bodyLen: 1.08, bodyW: 0.14, bodyD: 0.225,
     neckLen: 0.5, headLen: 0.3, earScale: 1.05, tailLen: 0.3, legW: 0.017,
-    furLen: 0.03, shells: 10,
+    furLen: 0.038, shells: 14,
     coat: { male: 0xa08454, female: 0xab9060, fawn: 0xb59a68 },
     texture: { male: 'furDeer', female: 'furDeer', fawn: 'furFawn' },
     walkSpeed: 1.2, runSpeed: 11, gait: 'quad',
@@ -11449,7 +11452,7 @@ const ANIMAL_SPECIES = {
   rabbit: {
     shoulder: 0.17, bodyLen: 0.3, bodyW: 0.07, bodyD: 0.095,
     neckLen: 0.06, headLen: 0.095, earScale: 1.35, tailLen: 0.045, legW: 0.011,
-    furLen: 0.016, shells: 7,
+    furLen: 0.021, shells: 10,
     coat: { male: 0x9c8768, female: 0xa8946f, fawn: 0xb4a17e },
     texture: { male: 'fur', female: 'fur', fawn: 'fur' },
     walkSpeed: 0.6, runSpeed: 7.5, gait: 'hop',

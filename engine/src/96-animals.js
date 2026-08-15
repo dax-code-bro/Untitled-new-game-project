@@ -38,7 +38,7 @@ const ANIMAL_SPECIES = {
   deer: {
     shoulder: 0.98, bodyLen: 1.08, bodyW: 0.14, bodyD: 0.225,
     neckLen: 0.5, headLen: 0.3, earScale: 1.05, tailLen: 0.3, legW: 0.017,
-    furLen: 0.03, shells: 10,
+    furLen: 0.038, shells: 14,
     coat: { male: 0xa08454, female: 0xab9060, fawn: 0xb59a68 },
     texture: { male: 'furDeer', female: 'furDeer', fawn: 'furFawn' },
     walkSpeed: 1.2, runSpeed: 11, gait: 'quad',
@@ -47,7 +47,7 @@ const ANIMAL_SPECIES = {
   rabbit: {
     shoulder: 0.17, bodyLen: 0.3, bodyW: 0.07, bodyD: 0.095,
     neckLen: 0.06, headLen: 0.095, earScale: 1.35, tailLen: 0.045, legW: 0.011,
-    furLen: 0.016, shells: 7,
+    furLen: 0.021, shells: 10,
     coat: { male: 0x9c8768, female: 0xa8946f, fawn: 0xb4a17e },
     texture: { male: 'fur', female: 'fur', fawn: 'fur' },
     walkSpeed: 0.6, runSpeed: 7.5, gait: 'hop',
