@@ -289,11 +289,12 @@ const TextureLib = {
        reads as "fur" when light rakes across it. Tint comes from the
        material colour, so one texture serves every coat. */
     fur(u, v, n, c) {
-      const strand = n.fbm(u * 220, v * 16, 5, 2) * 0.5 + 0.5;
-      const clump = n.fbm(u * 42, v * 6, 11, 2) * 0.5 + 0.5;
+      // Fine strands, not wood grain: high frequency along the body too.
+      const strand = n.fbm(u * 340, v * 70, 5, 2) * 0.5 + 0.5;
+      const clump = n.fbm(u * 60, v * 18, 11, 2) * 0.5 + 0.5;
       const patch = n.fbm(u * 6, v * 3, 23, 3) * 0.5 + 0.5;
-      const guard = Math.pow(n.fbm(u * 320, v * 90, 31, 1) * 0.5 + 0.5, 6);
-      const t = (0.52 + patch * 0.26) * (0.70 + strand * 0.38 + clump * 0.14);
+      const guard = Math.pow(n.fbm(u * 420, v * 160, 31, 1) * 0.5 + 0.5, 6);
+      const t = (0.58 + patch * 0.2) * (0.78 + strand * 0.2 + clump * 0.09);
       c.r = t * 1.06; c.g = t * 0.97; c.b = t * 0.86;
       const gh = guard * 0.45;
       c.r += gh; c.g += gh; c.b += gh * 0.9;

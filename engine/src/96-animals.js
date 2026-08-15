@@ -405,7 +405,7 @@ class Animal {
     this.actor = new Actor(e, {
       name: `animal${this.id}`,
       mesh: this.mesh,
-      material: e.material({ texture: tex, color: this.mule ? 0x7d7261 : coat, roughness: 0.95, uvScale: 1, doubleSided: true }),
+      material: e.material({ texture: tex, color: this.mule ? 0x7d7261 : coat, roughness: 0.95, uvScale: 1, doubleSided: true, textureSize: 512 }),
       skeleton: this.skeleton,
       animator: { update: (dt) => this._drive(dt), add() {}, play() {} },
       at: [this.x, this.baseY, this.z],
