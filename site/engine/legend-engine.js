@@ -11465,6 +11465,22 @@ const ANIMAL_SPECIES = {
     walkSpeed: 0.6, runSpeed: 7.5, gait: 'hop',
     alertR: 4.5, safeR: 10, grazes: true,
   },
+  // Real reference (WebSearch, dimensions.com + wildlife biology sources):
+  // shoulder 1.0-1.4m male, body 1.68-2.44m nose-to-tail, heavy-set/broad-
+  // chested with thick limbs and a short tail; dense grizzled brown coat,
+  // silver-tipped guard hairs, darker legs/underside; surprisingly fast for
+  // its bulk (short-burst speed near 35mph / ~15.6 m/s). Reuses the same
+  // generic quadruped skeleton/loft/fur-shell pipeline as deer — a real new
+  // species from real proportions, not a re-skin.
+  bear: {
+    shoulder: 1.2, bodyLen: 1.3, bodyW: 0.26, bodyD: 0.3,
+    neckLen: 0.22, headLen: 0.36, earScale: 0.42, tailLen: 0.06, legW: 0.046,
+    furLen: 0.05, shells: 15,
+    coat: { male: 0x5c4530, female: 0x6b5138 },
+    texture: { male: 'fur', female: 'fur' },
+    walkSpeed: 1.3, runSpeed: 14, gait: 'quad',
+    alertR: 8, safeR: 20, grazes: true,
+  },
 };
 
 /* Yearling / mature / trophy — the same three tiers the hunting games use. */
