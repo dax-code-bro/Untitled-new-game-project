@@ -264,6 +264,7 @@ uniform float uWindStrength;
 #endif
 #ifdef FUR_SHELL
 uniform float uShellOffset;
+uniform vec3 uShellComb;
 #endif
 
 struct Surface {
@@ -305,8 +306,9 @@ Surface computeSurface(){
 #ifdef FUR_SHELL
   // Fur shells: the same mesh re-drawn pushed out along its normals; the
   // fragment stage clips each layer against the strand mask so hair tips
-  // break the silhouette.
-  localPos += localNrm * uShellOffset;
+  // break the silhouette. The comb vector lays the hair backward along the
+  // body the way a real coat lies, instead of puffing straight out.
+  localPos += localNrm * uShellOffset + uShellComb * uShellOffset;
 #endif
 #ifdef GRASS
   // aParams.w carries a per-blade random seed; .xyz is the tint.
@@ -432,7 +434,7 @@ void main(){
     // shell, the fewer strands survive — which is what makes tips. Roots sit
     // in shadow, tips catch light.
     if (tex.a < uShellT) discard;
-    albedo *= mix(0.62, 1.12, uShellT);
+    albedo *= mix(0.74, 1.1, uShellT);
 #endif
     vec3 orm = texture(uOrmMap, uv).rgb;
     ao = orm.r;

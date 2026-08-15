@@ -497,6 +497,8 @@ class Renderer {
     if (batch.furShell) {
       sh.f('uShellOffset', batch.shellOffset || 0.01);
       sh.f('uShellT', batch.shellT || 0.3);
+      const cb = batch.shellComb;
+      sh.v3f('uShellComb', cb ? cb[0] : 0, cb ? cb[1] : -0.2, cb ? cb[2] : -0.6);
     }
 
     if (batch.material.doubleSided) gl.disable(gl.CULL_FACE);

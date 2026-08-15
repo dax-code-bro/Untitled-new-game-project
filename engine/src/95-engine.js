@@ -1242,8 +1242,9 @@ class Engine {
           const t = layer / actor.furShells;
           list.push(Object.assign({}, batch, {
             furShell: true,
-            shellT: 0.22 + t * 0.62,
+            shellT: 0.16 + Math.pow(t, 0.85) * 0.68,
             shellOffset: (actor.furLength || 0.02) * t,
+            shellComb: actor.furComb || null,
             sortKey: batch.sortKey + layer * 0.001,
           }));
         }

@@ -305,6 +305,50 @@ const TextureLib = {
       c.a = clamp(strand * 0.72 + clump * 0.28 + (guard > 0.2 ? 0.3 : 0), 0, 1);
     },
 
+    /* Whitetail coat: fur strands plus the real markings — dark dorsal
+       back fading to a cream belly (countershading), the white throat
+       patch, white muzzle band, dark nose, darker forehead, legs darkening
+       toward baked-in dark hooves. Relies on the deer UV layout:
+       u wraps the body with u=0 at the spine, v runs rump(0)->nose(0.78),
+       legs live in v 0.80-0.955, hooves 0.955-0.97, ears above. */
+    furDeer(u, v, n, c) {
+      TextureLib.kinds.fur(u, v, n, c);
+      const top = Math.cos(u * TAU) * 0.5 + 0.5;      // 1 = spine, 0 = belly
+      if (v < 0.79) {
+        const t = Math.pow(top, 0.75);
+        const m = lerp(1.32, 0.86, t);                 // countershading
+        c.r *= m; c.g *= m * 0.97; c.b *= m * 0.9;
+        if (top < 0.22) {                              // white underside
+          const w = smoothstep(0.22, 0.06, top) * 0.85;
+          c.r = lerp(c.r, 0.93, w); c.g = lerp(c.g, 0.91, w); c.b = lerp(c.b, 0.86, w);
+        }
+        if (v > 0.55 && v < 0.68 && top < 0.42) {      // throat patch
+          const w = smoothstep(0.42, 0.16, top) * smoothstep(0.55, 0.58, v) * smoothstep(0.68, 0.65, v);
+          c.r = lerp(c.r, 0.96, w); c.g = lerp(c.g, 0.95, w); c.b = lerp(c.b, 0.91, w);
+        }
+        if (v > 0.62 && v < 0.74 && top > 0.55) {      // darker forehead/crown
+          c.r *= 0.86; c.g *= 0.85; c.b *= 0.82;
+        }
+        if (v > 0.735 && v < 0.768 && top < 0.6) {     // white muzzle band
+          const w = smoothstep(0.6, 0.3, top);
+          c.r = lerp(c.r, 0.94, w); c.g = lerp(c.g, 0.93, w); c.b = lerp(c.b, 0.9, w);
+        }
+        if (v > 0.772) {                               // dark nose tip
+          c.r *= 0.3; c.g *= 0.27; c.b *= 0.26; c.rough = 0.55;
+        }
+      } else if (v < 0.955) {                          // legs darken downward
+        const m = lerp(1.0, 0.78, (v - 0.8) / 0.155);
+        c.r *= m; c.g *= m; c.b *= m;
+      } else if (v < 0.97) {                           // hooves: dark horn, no fur
+        c.r *= 0.16; c.g *= 0.14; c.b *= 0.13; c.rough = 0.45; c.a = 0;
+      } else {
+        // Ears keep the coat colour but opt out of the shells: 3cm of
+        // shell fur would swallow a 1cm-thick ear whole.
+        c.a = 0;
+      }
+      if (v > 0.772 && v < 0.79) c.a = 0;              // bare nose
+    },
+
     /* Fawn coat: the same fur with cream dapple spots. */
     furFawn(u, v, n, c) {
       TextureLib.kinds.fur(u, v, n, c);
