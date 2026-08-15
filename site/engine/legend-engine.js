@@ -3426,12 +3426,47 @@ class Camera {
 /* Quality presets. Phones and laptops differ by more than an order of
    magnitude, so the engine picks a tier from the device rather than
    shipping one setting that is wrong for most players. */
+// Each tier caps the actual render resolution in real pixels — not just a
+// multiplier on CSS size — so "performance" stays fast on a giant 8K panel
+// and "ultra" can still reach true 4K on a modest window with a capped
+// devicePixelRatio. label/fps are player-facing (a settings menu can read
+// them directly instead of re-describing each tier).
 const QUALITY = {
-  low: { shadowRes: 1024, cascades: 1, bloom: true, bloomIters: 2, fluidScale: 0.5, fxaa: false, msaa: 0, maxGrass: 6000, renderScale: 0.75 },
-  medium: { shadowRes: 1536, cascades: 2, bloom: true, bloomIters: 3, fluidScale: 0.75, fxaa: true, msaa: 0, maxGrass: 20000, renderScale: 1 },
-  high: { shadowRes: 2048, cascades: 2, bloom: true, bloomIters: 3, fluidScale: 1, fxaa: true, msaa: 0, maxGrass: 60000, renderScale: 1 },
-  ultra: { shadowRes: 4096, cascades: 2, bloom: true, bloomIters: 4, fluidScale: 1, fxaa: true, msaa: 0, maxGrass: 150000, renderScale: 1 },
+  // Lean and fast — the "how do I get 300fps" tier. Roughly the visual
+  // bar of a mid-2000s shooter: sharp enough to read, nothing to spare.
+  performance: {
+    shadowRes: 768, cascades: 1, bloom: false, bloomIters: 1, fluidScale: 0.4, fxaa: false, msaa: 0,
+    maxGrass: 3000, renderScale: 0.7, resolutionCap: [1600, 900],
+    label: 'Performance', fps: '200+ fps',
+  },
+  low: {
+    shadowRes: 1024, cascades: 1, bloom: true, bloomIters: 2, fluidScale: 0.5, fxaa: false, msaa: 0,
+    maxGrass: 6000, renderScale: 0.75, resolutionCap: [1600, 900],
+    label: 'Low', fps: '~120 fps',
+  },
+  medium: {
+    shadowRes: 1536, cascades: 2, bloom: true, bloomIters: 3, fluidScale: 0.75, fxaa: true, msaa: 0,
+    maxGrass: 20000, renderScale: 1, resolutionCap: [1920, 1080],
+    label: 'Balanced', fps: '~90 fps',
+  },
+  // The "gorgeous and stable" middle ground — full HD/1440p, every effect
+  // on, tuned to hold a high frame rate rather than chase peak fidelity.
+  high: {
+    shadowRes: 2048, cascades: 2, bloom: true, bloomIters: 3, fluidScale: 1, fxaa: true, msaa: 0,
+    maxGrass: 60000, renderScale: 1, resolutionCap: [2560, 1440],
+    label: 'High', fps: '~75 fps',
+  },
+  // True 4K ceiling: on a 3840x2160 display (or a smaller window at 2x
+  // devicePixelRatio) this tier renders the full 8.3 megapixels, no
+  // upscaling. Costliest tier by a wide margin — every fragment shader
+  // invocation, per pixel, quadruples versus 1080p.
+  ultra: {
+    shadowRes: 4096, cascades: 2, bloom: true, bloomIters: 4, fluidScale: 1, fxaa: true, msaa: 0,
+    maxGrass: 150000, renderScale: 1, resolutionCap: [3840, 2160],
+    label: 'Ultra 4K', fps: '~45-60 fps on capable hardware',
+  },
 };
+const QUALITY_ORDER = ['performance', 'low', 'medium', 'high', 'ultra'];
 
 function detectQuality() {
   const mem = navigator.deviceMemory || 4;
@@ -3465,7 +3500,8 @@ class Renderer {
     this.floatLinear = !!gl.getExtension('OES_texture_float_linear');
 
     this.qualityName = opts.quality && QUALITY[opts.quality] ? opts.quality : detectQuality();
-    this.quality = Object.assign({}, QUALITY[this.qualityName], opts.qualityOverrides || {});
+    this._qualityOverrides = opts.qualityOverrides || null;
+    this.quality = Object.assign({}, QUALITY[this.qualityName], this._qualityOverrides || {});
     this.maxPixelRatio = opts.maxPixelRatio || 2;
 
     this.width = 1; this.height = 1;
@@ -3591,11 +3627,41 @@ class Renderer {
     }
   }
 
+  /* Switch graphics tiers live — a settings menu calling this doesn't need
+     to rebuild the Engine. Existing shadow cascades are resized in place
+     rather than torn down and reallocated where the cascade count matches. */
+  setQuality(name) {
+    if (!QUALITY[name] || name === this.qualityName) return this;
+    this.qualityName = name;
+    this.quality = Object.assign({}, QUALITY[name], this._qualityOverrides || {});
+
+    const res = this.quality.shadowRes;
+    const wantCascades = this.quality.cascades;
+    for (let i = 0; i < Math.min(wantCascades, this.shadowMaps.length); i++) this.shadowMaps[i].resize(res, res);
+    while (this.shadowMaps.length < wantCascades) {
+      this.shadowMaps.push(new Framebuffer(this.gl, { width: res, height: res, depthOnly: true, depthTexture: true, compare: true, depth: true }));
+    }
+    while (this.shadowMaps.length > wantCascades) this.shadowMaps.pop().dispose();
+
+    // The cached width/height would otherwise make the next resize() call
+    // a no-op even though renderScale/resolutionCap just changed.
+    this.width = 0; this.height = 0;
+    return this;
+  }
+
   resize(cssWidth, cssHeight, pixelRatio) {
     const dpr = Math.min(pixelRatio || window.devicePixelRatio || 1, this.maxPixelRatio);
     const scale = this.quality.renderScale;
-    const w = Math.max(2, Math.floor(cssWidth * dpr * scale));
-    const h = Math.max(2, Math.floor(cssHeight * dpr * scale));
+    let w = Math.max(2, Math.floor(cssWidth * dpr * scale));
+    let h = Math.max(2, Math.floor(cssHeight * dpr * scale));
+    // Each tier is a real-pixel resolution ceiling, not just a multiplier —
+    // "performance" must stay fast on an 8K panel, and "ultra" caps exactly
+    // at 4K rather than exceeding it on an unusually dense display.
+    const cap = this.quality.resolutionCap;
+    if (cap) {
+      const capScale = Math.min(1, cap[0] / w, cap[1] / h);
+      if (capScale < 1) { w = Math.max(2, Math.floor(w * capScale)); h = Math.max(2, Math.floor(h * capScale)); }
+    }
     if (w === this.width && h === this.height) return;
     this.width = w; this.height = h;
     this.canvas.width = w;
@@ -10929,6 +10995,21 @@ class Engine {
 
   onUpdate(fn) { this._updateHooks.push(fn); return this; }
   onLateUpdate(fn) { this._lateHooks.push(fn); return this; }
+
+  /* A settings menu's "Graphics" dropdown calls this directly — no reload,
+     no engine rebuild. Options: 'performance' | 'low' | 'medium' | 'high'
+     | 'ultra' (true 4K ceiling on a big enough display). */
+  setGraphicsQuality(name) {
+    this.renderer.setQuality(name);
+    if (this._doResize) this._doResize();
+    return this;
+  }
+
+  get graphicsQuality() { return this.renderer.qualityName; }
+  // For a settings menu to build its dropdown from, in a sensible order.
+  get graphicsQualityOptions() {
+    return QUALITY_ORDER.map((k) => ({ key: k, label: QUALITY[k].label, fps: QUALITY[k].fps }));
+  }
 
   _bindResize() {
     const doResize = () => {

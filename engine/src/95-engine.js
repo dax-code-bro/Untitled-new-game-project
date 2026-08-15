@@ -1056,6 +1056,21 @@ class Engine {
   onUpdate(fn) { this._updateHooks.push(fn); return this; }
   onLateUpdate(fn) { this._lateHooks.push(fn); return this; }
 
+  /* A settings menu's "Graphics" dropdown calls this directly — no reload,
+     no engine rebuild. Options: 'performance' | 'low' | 'medium' | 'high'
+     | 'ultra' (true 4K ceiling on a big enough display). */
+  setGraphicsQuality(name) {
+    this.renderer.setQuality(name);
+    if (this._doResize) this._doResize();
+    return this;
+  }
+
+  get graphicsQuality() { return this.renderer.qualityName; }
+  // For a settings menu to build its dropdown from, in a sensible order.
+  get graphicsQualityOptions() {
+    return QUALITY_ORDER.map((k) => ({ key: k, label: QUALITY[k].label, fps: QUALITY[k].fps }));
+  }
+
   _bindResize() {
     const doResize = () => {
       const w = this.canvas.clientWidth || window.innerWidth;
