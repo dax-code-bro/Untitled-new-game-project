@@ -1178,6 +1178,7 @@ class Engine {
           instanced: true,
           grass: false,
           alphaClip: false,
+          vertexColor: !!actor.material.vertexColor,
           sortKey: 0,
           cx: 0, cy: 0, cz: 0,
         };
@@ -1227,6 +1228,7 @@ class Engine {
         skinned: !!actor.skeleton,
         grass: false,
         alphaClip: false,
+        vertexColor: !!actor.material.vertexColor,
         sortKey: camPos.distanceToSq(actor.position),
       };
       if (actor.skeleton) {

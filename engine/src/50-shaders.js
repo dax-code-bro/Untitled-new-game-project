@@ -229,6 +229,9 @@ layout(location=0) in vec3 aPosition;
 layout(location=1) in vec3 aNormal;
 layout(location=2) in vec2 aUv;
 layout(location=3) in vec4 aTangent;
+#ifdef VERTCOLOR
+layout(location=4) in vec3 aColor;
+#endif
 #ifdef SKINNED
 layout(location=5) in vec4 aJoints;
 layout(location=6) in vec4 aWeights;
@@ -273,6 +276,9 @@ struct Surface {
   vec4 tangent;
   vec2 uv;
   vec4 params;
+#ifdef VERTCOLOR
+  vec3 vertColor;
+#endif
 };
 
 Surface computeSurface(){
@@ -347,6 +353,9 @@ Surface computeSurface(){
   s.normal = normalize(nm * localNrm);
   s.tangent = vec4(normalize(nm * localTan), aTangent.w);
   s.uv = aUv;
+#ifdef VERTCOLOR
+  s.vertColor = aColor;
+#endif
   return s;
 }
 `;
@@ -363,6 +372,9 @@ out vec4 vTangent;
 out vec2 vUv;
 out vec4 vParams;
 out float vViewDepth;
+#ifdef VERTCOLOR
+out vec3 vVertColor;
+#endif
 
 void main(){
   Surface s = computeSurface();
@@ -371,6 +383,9 @@ void main(){
   vTangent = s.tangent;
   vUv = s.uv;
   vParams = s.params;
+#ifdef VERTCOLOR
+  vVertColor = s.vertColor;
+#endif
   vViewDepth = length(s.worldPos - uCameraPos);
   gl_Position = uViewProj * vec4(s.worldPos, 1.0);
 }
@@ -389,6 +404,9 @@ in vec4 vTangent;
 in vec2 vUv;
 in vec4 vParams;
 in float vViewDepth;
+#ifdef VERTCOLOR
+in vec3 vVertColor;
+#endif
 
 uniform vec3 uCameraPos;
 uniform float uTime;
@@ -422,6 +440,11 @@ void main(){
   vec2 uv = vUv * uUvScale;
 
   vec3 albedo = uBaseColor * vParams.rgb;
+#ifdef VERTCOLOR
+  // Carved-from-photos meshes have no UV-mapped texture — each vertex
+  // carries its own baked color instead.
+  albedo *= vVertColor;
+#endif
   float rough = uRoughness;
   float metal = uMetalness;
   float ao = 1.0;

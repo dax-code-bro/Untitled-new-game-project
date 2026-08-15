@@ -35,23 +35,44 @@
   .spin{display:inline-block;width:9px;height:9px;border:2px solid rgba(201,168,76,.3);
     border-top-color:#C9A84C;border-radius:50%;animation:sp .7s linear infinite;margin-right:4px;vertical-align:-1px}
   @keyframes sp{to{transform:rotate(360deg)}}
+  .modes{display:flex;gap:6px}
+  .modes button.on{background:#C9A84C;color:#000;border-color:#C9A84C;font-weight:700}
+  #carveCanvas{position:fixed;left:-9999px;top:0;width:256px;height:256px}
 </style>
 </head>
 <body>
 <div class="top">
   <span class="title">♛ ANIMAL ROSTER</span>
+  <div class="modes">
+    <button id="modeCarve" class="on" title="Built into Legend Engine, no account, no cost">🛠 In-house Carve</button>
+    <button id="modeMeshy" title="Higher fidelity, needs your own Meshy API key">☁ Meshy</button>
+  </div>
   <span class="progress" id="progress"></span>
   <button id="genAll" class="primary">Generate All</button>
   <button onclick="location.href='../index.html'">← Legend</button>
 </div>
 <div class="grid" id="grid"></div>
+<canvas id="carveCanvas" width="512" height="512"></canvas>
 
+<script src="legend-engine.js"></script>
 <script>
 (function () {
   var $ = function (id) { return document.getElementById(id); };
   var roster = [];
   var results = {};   // key -> { status, modelUrl, thumbnailUrl, error }
   var MAX_RETRIES = 1;   // lighter than the single-model studio — this is a bulk pass
+  var mode = 'carve';
+
+  $('modeCarve').addEventListener('click', function () { mode = 'carve'; $('modeCarve').classList.add('on'); $('modeMeshy').classList.remove('on'); });
+  $('modeMeshy').addEventListener('click', function () { mode = 'meshy'; $('modeMeshy').classList.add('on'); $('modeCarve').classList.remove('on'); });
+
+  // One shared hidden engine instance carves every entry in turn — a live
+  // viewport per one of ~37 cards would be wasteful, so each result is
+  // carved, screenshotted for the card thumbnail, then disposed before the
+  // next entry starts.
+  var carveGame = LegendEngine.create({ canvas: '#carveCanvas' });
+  carveGame.orbit({ center: [0, 0.5, 0], distance: 2.2, height: 0.9, autoRotate: 0 });
+  carveGame.start();
 
   function setProgress(done, total) { $('progress').textContent = total ? (done + ' / ' + total + ' generated') : ''; }
 
@@ -98,7 +119,7 @@
     throw new Error('timed out');
   }
 
-  async function generateOne(entry) {
+  async function generateOneMeshy(entry) {
     setState(entry.key, 'running', '<span class="spin"></span>Sketching angles…');
     var prompt = entry.prompt;
     try {
@@ -126,6 +147,48 @@
       return false;
     }
   }
+
+  // No Meshy call at all — carves right here in this tab, screenshots the
+  // result for the card thumbnail, then frees the mesh before the next entry.
+  async function generateOneCarved(entry) {
+    setState(entry.key, 'running', '<span class="spin"></span>Sketching angles…');
+    var prompt = entry.prompt;
+    try {
+      var angles = [
+        { url: angleImageUrl(prompt, 'front'), angle: 0 },
+        { url: angleImageUrl(prompt, 'side'), angle: Math.PI / 2 },
+        { url: angleImageUrl(prompt, 'back'), angle: Math.PI },
+        { url: angleImageUrl(prompt, 'three-quarter'), angle: Math.PI * 1.5 },
+      ];
+      setState(entry.key, 'running', '<span class="spin"></span>Carving…');
+      var carveResult = await carveGame.carveFromImages(angles, { height: 1.1, resolution: 56 });
+
+      var actor = new LegendEngine.Actor(carveGame, { name: entry.key, mesh: carveResult.mesh, material: carveResult.material, at: [0, 0, 0] });
+      carveGame.actors.push(actor);
+      await sleep(300);
+      var thumbDataUrl = $('carveCanvas').toDataURL('image/jpeg', 0.85);
+      var ai = carveGame.actors.indexOf(actor);
+      if (ai >= 0) carveGame.actors.splice(ai, 1);
+      carveResult.mesh.dispose(); carveResult.material.dispose();
+
+      results[entry.key] = { status: 'done', carved: true, prompt: prompt, thumbnailUrl: thumbDataUrl };
+      var thumb = $('thumb-' + entry.key);
+      thumb.innerHTML = '<img src="' + thumbDataUrl + '" alt="">';
+      setState(entry.key, 'done', '✓ Ready (in-house)');
+      var view = $('view-' + entry.key);
+      // No file exists for a carved result — reopening re-carves from the
+      // same prompt in the single-model studio instead of loading a URL.
+      view.href = 'create.html?prompt=' + encodeURIComponent(prompt) + '&mode=carve&autorun=1';
+      view.style.display = 'block';
+      return true;
+    } catch (e) {
+      results[entry.key] = { status: 'failed', error: e.message };
+      setState(entry.key, 'failed', 'Failed: ' + e.message);
+      return false;
+    }
+  }
+
+  function generateOne(entry) { return mode === 'carve' ? generateOneCarved(entry) : generateOneMeshy(entry); }
 
   async function generateAll() {
     $('genAll').disabled = true;

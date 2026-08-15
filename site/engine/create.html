@@ -36,6 +36,9 @@
     border-top-color:#C9A84C;border-radius:50%;animation:sp .7s linear infinite;margin-right:6px;vertical-align:-1px}
   @keyframes sp{to{transform:rotate(360deg)}}
   .hint{font-size:11.5px;color:#7a7a7a;line-height:1.5}
+  .modes{display:flex;gap:6px}
+  .modes button{flex:1;background:rgba(20,20,20,.85)}
+  .modes button.on{background:#C9A84C;color:#000;border-color:#C9A84C;font-weight:700}
 </style>
 </head>
 <body>
@@ -50,6 +53,10 @@
     <button id="clearAttach">✕</button>
   </div>
   <textarea id="prompt" rows="2" placeholder="Describe the model... (e.g. 'a realistic whitetail buck, brown coat, antlers')"></textarea>
+  <div class="modes">
+    <button id="modeCarve" class="on" title="Built into Legend Engine — silhouette carving from 4 sketched angles, no account, no cost">🛠 In-house Carve (free)</button>
+    <button id="modeMeshy" title="Higher fidelity, needs your own Meshy API key set in Vercel">☁ Meshy (needs API key)</button>
+  </div>
   <div class="row">
     <label class="filebtn">📷 Upload photo<input type="file" id="photoFile" accept="image/*"></label>
     <button class="primary" id="genBtn" style="flex:1">Generate Model</button>
@@ -72,23 +79,36 @@
   game.start();
   window.__game = game;
 
-  var current = null;       // current GltfInstance on display
+  var current = null;       // current GltfInstance on display, or {mesh,material,actor} for a carved one
   var attachedDataUrl = null;
   var MAX_RETRIES = 2;
+  var mode = 'carve';       // 'carve' (in-house, free) or 'meshy' (needs MESHY_API_KEY)
+
+  $('modeCarve').addEventListener('click', function () { mode = 'carve'; $('modeCarve').classList.add('on'); $('modeMeshy').classList.remove('on'); });
+  $('modeMeshy').addEventListener('click', function () { mode = 'meshy'; $('modeMeshy').classList.add('on'); $('modeCarve').classList.remove('on'); });
 
   // Opened from the roster gallery with a model already generated — just
-  // display it, no need to regenerate.
+  // display it, no need to regenerate. A carved result has no file to
+  // reload (it's live geometry, never exported), so that case instead
+  // re-carves from the same prompt.
   (function loadFromQuery() {
     var params = new URLSearchParams(location.search);
     var modelUrl = params.get('model');
-    if (!modelUrl) return;
     if (params.get('prompt')) $('prompt').value = params.get('prompt');
-    setStatus('<span class="spin"></span>Loading…');
-    showModel(modelUrl).then(function () {
-      setStatus('✓ Loaded from roster.');
-      $('dlLink').href = modelUrl;
-      $('resultRow').style.display = 'flex';
-    }).catch(function (e) { setStatus('Could not load that model: ' + e.message, true); });
+    if (modelUrl) {
+      setStatus('<span class="spin"></span>Loading…');
+      showModel(modelUrl).then(function () {
+        setStatus('✓ Loaded from roster.');
+        $('dlLink').style.display = '';
+        $('dlLink').href = modelUrl;
+        $('resultRow').style.display = 'flex';
+      }).catch(function (e) { setStatus('Could not load that model: ' + e.message, true); });
+      return;
+    }
+    if (params.get('mode') === 'carve' && params.get('autorun') === '1' && params.get('prompt')) {
+      mode = 'carve'; $('modeCarve').classList.add('on'); $('modeMeshy').classList.remove('on');
+      generate();
+    }
   })();
 
   function setStatus(text, isErr) {
@@ -165,6 +185,24 @@
     await sleep(500);
   }
 
+  // Same disposal shape as a GltfInstance (.destroy()), so generate()'s
+  // retry loop doesn't need to know which pipeline produced the actor.
+  async function showCarved(carveResult) {
+    if (current) { current.destroy(); current = null; }
+    var actor = new LegendEngine.Actor(game, {
+      name: 'carved', mesh: carveResult.mesh, material: carveResult.material, at: [0, 0, 0],
+    });
+    game.actors.push(actor);
+    current = {
+      destroy: function () {
+        var i = game.actors.indexOf(actor);
+        if (i >= 0) game.actors.splice(i, 1);
+        carveResult.mesh.dispose(); carveResult.material.dispose();
+      },
+    };
+    await sleep(500);
+  }
+
   function screenshot() {
     try { return canvas.toDataURL('image/jpeg', 0.85); } catch (e) { return null; }
   }
@@ -177,7 +215,55 @@
     return res.data;
   }
 
-  async function generate() {
+  // In-house path: no server 3D-generation call at all — four AI-sketched
+  // angles feed straight into game.carveFromImages() running in this tab.
+  // Only the (optional) critique step still calls the server, for vision.
+  async function generateCarved() {
+    var prompt = $('prompt').value.trim();
+    if (!prompt) { setStatus('Type a description — in-house carving needs angle references to sketch, so a photo alone isn\'t enough yet.', true); return; }
+    var btn = $('genBtn'); btn.disabled = true;
+    $('resultRow').style.display = 'none';
+    var effectivePrompt = prompt;
+
+    try {
+      for (var attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        setStatus('<span class="spin"></span>' + (attempt === 0 ? 'Sketching 4 reference angles…' : 'Regenerating (attempt ' + (attempt + 1) + ')…'));
+        var angles = [
+          { url: angleImageUrl(effectivePrompt, 'front'), angle: 0 },
+          { url: angleImageUrl(effectivePrompt, 'side'), angle: Math.PI / 2 },
+          { url: angleImageUrl(effectivePrompt, 'back'), angle: Math.PI },
+          { url: angleImageUrl(effectivePrompt, 'three-quarter'), angle: Math.PI * 1.5 },
+        ];
+        setStatus('<span class="spin"></span>Carving from the 4 angles…');
+        var carveResult = await game.carveFromImages(angles, { height: 1.1, resolution: 72 });
+
+        setStatus('<span class="spin"></span>Loading the model…');
+        await showCarved(carveResult);
+
+        setStatus('<span class="spin"></span>Legend is checking the result…');
+        var verdict = await critique(effectivePrompt);
+
+        if (verdict.ok || attempt === MAX_RETRIES) {
+          if (!verdict.ok && verdict.issues) {
+            setStatus('Done, but Legend noticed: ' + verdict.issues + ' — you can Regenerate to try again. (Note: carving can\'t fix concave detail like the gap between legs no matter how many attempts — that\'s a limit of the technique, not this pass.)');
+          } else {
+            setStatus('✓ Model ready' + (attempt > 0 ? ' (took ' + (attempt + 1) + ' attempts)' : '') + '. Built in-house — no external service, no cost.');
+          }
+          $('dlLink').style.display = 'none';   // no file to download — it's live geometry in this scene
+          $('resultRow').style.display = 'flex';
+          break;
+        }
+        setStatus('Legend spotted an issue: ' + (verdict.issues || 'result did not match') + ' — regenerating…');
+        effectivePrompt = verdict.fixPrompt || effectivePrompt;
+        await sleep(500);
+      }
+    } catch (e) {
+      setStatus('Error: ' + e.message, true);
+    }
+    btn.disabled = false;
+  }
+
+  async function generateMeshy() {
     var prompt = $('prompt').value.trim();
     if (!prompt && !attachedDataUrl) { setStatus('Type a description or attach a photo first.', true); return; }
     var btn = $('genBtn'); btn.disabled = true;
@@ -214,6 +300,7 @@
           } else {
             setStatus('✓ Model ready' + (attempt > 0 ? ' (took ' + (attempt + 1) + ' attempts)' : '') + '.');
           }
+          $('dlLink').style.display = '';
           $('dlLink').href = done.modelUrl;
           $('resultRow').style.display = 'flex';
           break;
@@ -230,6 +317,7 @@
     btn.disabled = false;
   }
 
+  function generate() { return mode === 'carve' ? generateCarved() : generateMeshy(); }
   $('genBtn').addEventListener('click', generate);
   $('regenBtn').addEventListener('click', generate);
 })();

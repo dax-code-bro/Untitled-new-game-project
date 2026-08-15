@@ -469,6 +469,9 @@ class Material {
     this.receiveShadow = opts.receiveShadow !== false;
     // Subsurface approximation — foliage and skin look dead without it.
     this.subsurface = opts.subsurface != null ? opts.subsurface : 0;
+    // Per-vertex baked color (carved-from-photos meshes) instead of a
+    // UV-mapped texture.
+    this.vertexColor = !!opts.vertexColor;
 
     this.maps = null;
     if (this.texture) this._buildMaps(opts.textureSize || 256, opts.textureSeed || 1);
