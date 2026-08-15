@@ -54,7 +54,7 @@ const LegendEngine = {
   Geometry, Shapes, convexHull, hullToGeometry,
   Engine, Actor, Material, Body, PhysicsWorld,
   Fluid, WaterVolume, WATER_PRESETS, Animal, ANIMAL_SPECIES, Fracture, ParticleSystem, Skeleton, AnimationClip, Face,
-  Grass, Input, Audio,
+  Grass, Input, Audio, GltfAsset, GltfInstance,
   clamp, lerp, smoothstep,
 };
 

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Legend — Create 3D Model</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#000;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#E8E8E8}
+  canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+  a{color:#F5D78E}
+  .panel{position:fixed;left:0;right:0;bottom:0;z-index:10;
+    padding:12px 14px calc(env(safe-area-inset-bottom,0px) + 14px);
+    background:linear-gradient(0deg,rgba(0,0,0,.88) 40%,rgba(0,0,0,.5) 80%,rgba(0,0,0,0));
+    display:flex;flex-direction:column;gap:8px;max-width:520px}
+  .title{position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);left:14px;z-index:10;
+    font-family:Georgia,serif;letter-spacing:.14em;color:#C9A84C;font-size:14px;
+    text-shadow:0 1px 4px rgba(0,0,0,.8)}
+  .back{position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);right:12px;z-index:10}
+  textarea{resize:none;background:rgba(20,20,20,.85);color:#E8E8E8;border:1px solid #3a3a3a;
+    border-radius:9px;padding:9px 11px;font-family:inherit;font-size:14px;line-height:1.4}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button{background:rgba(20,20,20,.85);color:#E8E8E8;border:1px solid #3a3a3a;
+    border-radius:8px;padding:9px 14px;font-size:13px;cursor:pointer;font-family:inherit;
+    -webkit-tap-highlight-color:transparent}
+  button:hover:not(:disabled){border-color:#C9A84C;color:#F5D78E}
+  button:disabled{opacity:.45;cursor:default}
+  button.primary{background:#C9A84C;color:#000;border-color:#C9A84C;font-weight:700}
+  button.primary:hover:not(:disabled){color:#000}
+  .filebtn{position:relative;overflow:hidden}
+  .filebtn input{position:absolute;inset:0;opacity:0;cursor:pointer}
+  .status{font-size:12.5px;color:#C9A84C;min-height:1.4em;line-height:1.5}
+  .status.err{color:#e08080}
+  .thumb{width:34px;height:34px;border-radius:6px;object-fit:cover;border:1px solid #3a3a3a}
+  .spin{display:inline-block;width:10px;height:10px;border:2px solid rgba(201,168,76,.3);
+    border-top-color:#C9A84C;border-radius:50%;animation:sp .7s linear infinite;margin-right:6px;vertical-align:-1px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .hint{font-size:11.5px;color:#7a7a7a;line-height:1.5}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="title">♛ CREATE 3D MODEL</div>
+<button class="back" onclick="location.href='../index.html'">← Legend</button>
+
+<div class="panel">
+  <div class="row" id="attachRow" style="display:none">
+    <img class="thumb" id="attachThumb" alt="">
+    <span class="hint">Photo attached — Legend will build a 3D model from it.</span>
+    <button id="clearAttach">✕</button>
+  </div>
+  <textarea id="prompt" rows="2" placeholder="Describe the model... (e.g. 'a realistic whitetail buck, brown coat, antlers')"></textarea>
+  <div class="row">
+    <label class="filebtn">📷 Upload photo<input type="file" id="photoFile" accept="image/*"></label>
+    <button class="primary" id="genBtn" style="flex:1">Generate Model</button>
+  </div>
+  <div class="status" id="status"></div>
+  <div class="row" id="resultRow" style="display:none">
+    <a id="dlLink" target="_blank" rel="noopener"><button>⬇ Download .glb</button></a>
+    <button id="regenBtn">↻ Regenerate</button>
+  </div>
+</div>
+
+<script src="legend-engine.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var canvas = $('c');
+  var game = LegendEngine.create({ canvas: '#c' });
+  game.ground({ size: 30, grass: 'standard' });
+  game.orbit({ center: [0, 0.5, 0], distance: 2.5, height: 1.0, autoRotate: 0.15 });
+  game.start();
+  window.__game = game;
+
+  var current = null;       // current GltfInstance on display
+  var attachedDataUrl = null;
+  var MAX_RETRIES = 2;
+
+  function setStatus(text, isErr) {
+    var el = $('status');
+    el.innerHTML = text;
+    el.className = 'status' + (isErr ? ' err' : '');
+  }
+
+  // Shrink an uploaded photo before sending — matches the pattern used
+  // elsewhere in Legend for chat photo attachments.
+  function downscaleImage(file, max, quality) {
+    max = max || 1024; quality = quality || 0.85;
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () {
+        var w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+        var scale = Math.min(1, max / Math.max(w, h));
+        var cw = Math.max(1, Math.round(w * scale)), ch = Math.max(1, Math.round(h * scale));
+        var c = document.createElement('canvas'); c.width = cw; c.height = ch;
+        c.getContext('2d').drawImage(img, 0, 0, cw, ch);
+        URL.revokeObjectURL(url);
+        try { resolve(c.toDataURL('image/jpeg', quality)); } catch (e) { reject(e); }
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('img')); };
+      img.src = url;
+    });
+  }
+
+  $('photoFile').addEventListener('change', function (e) {
+    var f = e.target.files && e.target.files[0];
+    if (!f) return;
+    downscaleImage(f).then(function (dataUrl) {
+      attachedDataUrl = dataUrl;
+      $('attachThumb').src = dataUrl;
+      $('attachRow').style.display = 'flex';
+    }).catch(function () { setStatus('Could not read that photo.', true); });
+  });
+  $('clearAttach').addEventListener('click', function () {
+    attachedDataUrl = null; $('photoFile').value = '';
+    $('attachRow').style.display = 'none';
+  });
+
+  function api(payload) {
+    return fetch('/api/generate3d', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+    }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); });
+  }
+
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+  async function pollUntilDone(taskId) {
+    for (var i = 0; i < 200; i++) {
+      var res = await api({ action: 'status', taskId: taskId });
+      if (!res.ok) throw new Error(res.data.error || 'status check failed');
+      var d = res.data;
+      if (d.status === 'SUCCEEDED') return d;
+      if (d.status === 'FAILED' || d.status === 'CANCELED') throw new Error(d.error || 'generation failed');
+      setStatus('<span class="spin"></span>Modeling… ' + Math.round(d.progress || 0) + '%');
+      await sleep(3000);
+    }
+    throw new Error('timed out waiting for the model');
+  }
+
+  async function showModel(modelUrl) {
+    if (current) { current.destroy(); current = null; }
+    current = await game.spawnModel(modelUrl, { at: [0, 0, 0], height: 1.0 });
+    // Let a couple of frames render before the screenshot is taken.
+    await sleep(500);
+  }
+
+  function screenshot() {
+    try { return canvas.toDataURL('image/jpeg', 0.85); } catch (e) { return null; }
+  }
+
+  async function critique(prompt) {
+    var shot = screenshot();
+    if (!shot) return { ok: true };
+    var res = await api({ action: 'critique', screenshotDataUrl: shot, prompt: prompt });
+    if (!res.ok) return { ok: true };
+    return res.data;
+  }
+
+  async function generate() {
+    var prompt = $('prompt').value.trim();
+    if (!prompt && !attachedDataUrl) { setStatus('Type a description or attach a photo first.', true); return; }
+    var btn = $('genBtn'); btn.disabled = true;
+    $('resultRow').style.display = 'none';
+    var usingPhoto = !!attachedDataUrl;
+    var effectivePrompt = prompt || 'the subject of the attached photo';
+
+    try {
+      for (var attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        var imagePayload = usingPhoto
+          ? { imageDataUrl: attachedDataUrl }
+          : { imageUrl: 'https://image.pollinations.ai/prompt/' + encodeURIComponent(effectivePrompt + ', full body, plain neutral background, product photo') + '?width=1024&height=1024&model=flux&nologo=true' };
+
+        setStatus('<span class="spin"></span>' + (attempt === 0 ? 'Sketching the concept…' : 'Regenerating (attempt ' + (attempt + 1) + ')…'));
+        var startRes = await api(Object.assign({ action: 'start', prompt: effectivePrompt }, imagePayload));
+        if (!startRes.ok) { setStatus(startRes.data.error || 'Generation failed to start.', true); btn.disabled = false; return; }
+
+        var done = await pollUntilDone(startRes.data.taskId);
+        if (!done.modelUrl) throw new Error('no model was returned');
+
+        setStatus('<span class="spin"></span>Loading the model…');
+        await showModel(done.modelUrl);
+
+        setStatus('<span class="spin"></span>Legend is checking the result…');
+        var verdict = await critique(effectivePrompt);
+
+        if (verdict.ok || usingPhoto || attempt === MAX_RETRIES) {
+          if (!verdict.ok && verdict.issues) {
+            setStatus('Done, but Legend noticed: ' + verdict.issues + ' — you can Regenerate to try again.');
+          } else {
+            setStatus('✓ Model ready' + (attempt > 0 ? ' (took ' + (attempt + 1) + ' attempts)' : '') + '.');
+          }
+          $('dlLink').href = done.modelUrl;
+          $('resultRow').style.display = 'flex';
+          break;
+        }
+
+        // Not ok, and there's a text prompt to refine — retry automatically.
+        setStatus('Legend spotted an issue: ' + (verdict.issues || 'result did not match') + ' — regenerating…');
+        effectivePrompt = verdict.fixPrompt || effectivePrompt;
+        await sleep(800);
+      }
+    } catch (e) {
+      setStatus('Error: ' + e.message, true);
+    }
+    btn.disabled = false;
+  }
+
+  $('genBtn').addEventListener('click', generate);
+  $('regenBtn').addEventListener('click', generate);
+})();
+</script>
+</body>
+</html>

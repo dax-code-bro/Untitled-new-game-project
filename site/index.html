@@ -221,6 +221,7 @@
       <button class="nav-btn" data-view="image"><span class="nav-icon">🎨</span><span>Create Image</span></button>
       <button class="nav-btn" data-view="projects"><span class="nav-icon">📁</span><span>Projects</span></button>
       <button class="nav-btn" data-view="games"><span class="nav-icon">🎮</span><span>Games · AIGB</span></button>
+      <button class="nav-btn" id="navModel3d"><span class="nav-icon">🦌</span><span>Create Model</span></button>
     </nav>
     <div class="side-foot">
       <div class="status"><span class="dot" id="dot"></span><span id="statusText">Online</span></div>
@@ -927,6 +928,8 @@ RULES:
   function closeSidebar(){ $('sidebar').classList.remove('open'); $('overlay').classList.remove('show'); }
   $('menuBtn').addEventListener('click', openSidebar);
   $('overlay').addEventListener('click', closeSidebar);
+  // A real 3D-engine viewport, not a SPA view — send it to its own page.
+  $('navModel3d').addEventListener('click', () => { location.href = 'engine/create.html'; });
   const sectionViews={};   // populated after Chat/Code sections are set up
   document.querySelectorAll('.nav-btn[data-view]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
