@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Legend Grass</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#000;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+  canvas{display:block;position:fixed;inset:0}
+  .bar{position:fixed;left:0;right:0;bottom:0;display:flex;gap:6px;flex-wrap:wrap;justify-content:center;padding:10px 8px calc(10px + env(safe-area-inset-bottom,0px));background:rgba(0,0,0,.55);backdrop-filter:blur(6px)}
+  .bar button{background:#1a1a1a;border:1px solid #8B6914;color:#C9A84C;border-radius:14px;padding:8px 12px;font-size:12px;font-weight:600}
+  .bar button.on{background:#C9A84C;color:#000}
+  .tag{position:fixed;top:calc(8px + env(safe-area-inset-top,0px));left:12px;color:#C9A84C;font:700 13px Georgia,serif;letter-spacing:.18em}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="tag">♛ LEGEND GRASS</div>
+<div class="bar" id="bar"></div>
+<script src="legend-engine.js"></script>
+<script>
+  const KINDS = ['standard','standard-tall','standard-trampled',
+                 'dead','dead-insects','dead-tall','dead-mixed',
+                 'mud','mud-duckweed','mud-frogs','mud-puddles'];
+  const kind = new URLSearchParams(location.search).get('g') || 'standard';
+  const bar = document.getElementById('bar');
+  for (const k of KINDS) {
+    const b = document.createElement('button');
+    b.textContent = k.replace('-',' · ');
+    if (k === kind) b.classList.add('on');
+    b.onclick = ()=>{ location.search = '?g=' + k; };
+    bar.appendChild(b);
+  }
+  const game = LegendEngine.create({ canvas:'#c' });
+  game.ground({ size: 30, grass: kind });
+  game.orbit({ center:[0,0.4,0], distance:6.5, height:2.0, autoRotate:0.12 });
+  game.start();
+</script>
+</body>
+</html>
