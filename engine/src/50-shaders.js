@@ -262,6 +262,9 @@ uniform float uTime;
 uniform vec3 uWindDir;
 uniform float uWindStrength;
 #endif
+#ifdef FUR_SHELL
+uniform float uShellOffset;
+#endif
 
 struct Surface {
   vec3 worldPos;
@@ -299,6 +302,12 @@ Surface computeSurface(){
   localTan = mat3(skin) * localTan;
 #endif
 
+#ifdef FUR_SHELL
+  // Fur shells: the same mesh re-drawn pushed out along its normals; the
+  // fragment stage clips each layer against the strand mask so hair tips
+  // break the silhouette.
+  localPos += localNrm * uShellOffset;
+#endif
 #ifdef GRASS
   // aParams.w carries a per-blade random seed; .xyz is the tint.
   float seed = s.params.w;
@@ -382,6 +391,9 @@ in float vViewDepth;
 uniform vec3 uCameraPos;
 uniform float uTime;
 uniform vec3 uBaseColor;
+#ifdef FUR_SHELL
+uniform float uShellT;
+#endif
 uniform float uRoughness;
 uniform float uMetalness;
 uniform vec3 uEmissive;
@@ -415,6 +427,13 @@ void main(){
   if (uHasMaps == 1) {
     vec4 tex = texture(uAlbedoMap, uv);
     albedo *= tex.rgb;
+#ifdef FUR_SHELL
+    // Clip this layer against the strand-density mask: the further out the
+    // shell, the fewer strands survive — which is what makes tips. Roots sit
+    // in shadow, tips catch light.
+    if (tex.a < uShellT) discard;
+    albedo *= mix(0.62, 1.12, uShellT);
+#endif
     vec3 orm = texture(uOrmMap, uv).rgb;
     ao = orm.r;
     rough *= orm.g * 1.25;

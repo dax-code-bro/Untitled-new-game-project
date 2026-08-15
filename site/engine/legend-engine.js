@@ -1823,17 +1823,17 @@ const TextureLib = {
     const height = new Float32Array(size * size);
     const fn = this.kinds[kind] || this.kinds.concrete;
 
-    const c = { r: 1, g: 1, b: 1, ao: 1, rough: 0.8, metal: 0, h: 0.5 };
+    const c = { r: 1, g: 1, b: 1, a: 1, ao: 1, rough: 0.8, metal: 0, h: 0.5 };
     for (let y = 0; y < size; y++) {
       for (let x = 0; x < size; x++) {
         const u = x / size, v = y / size;
-        c.r = c.g = c.b = 1; c.ao = 1; c.rough = 0.8; c.metal = 0; c.h = 0.5;
+        c.r = c.g = c.b = 1; c.a = 1; c.ao = 1; c.rough = 0.8; c.metal = 0; c.h = 0.5;
         fn(u, v, n, c, size);
         const i = (y * size + x) * 4;
         albedo[i] = clamp(c.r, 0, 1) * 255;
         albedo[i + 1] = clamp(c.g, 0, 1) * 255;
         albedo[i + 2] = clamp(c.b, 0, 1) * 255;
-        albedo[i + 3] = 255;
+        albedo[i + 3] = clamp(c.a, 0, 1) * 255;
         orm[i] = clamp(c.ao, 0, 1) * 255;
         orm[i + 1] = clamp(c.rough, 0.03, 1) * 255;
         orm[i + 2] = clamp(c.metal, 0, 1) * 255;
@@ -2036,6 +2036,9 @@ const TextureLib = {
       c.rough = 0.97 - strand * 0.05;
       c.ao = 0.7 + clump * 0.3;
       c.h = strand * 0.8 + clump * 0.2;
+      // Alpha is the strand-density mask the fur shells clip against: only
+      // the cores of strands survive to the outer layers.
+      c.a = clamp(strand * 0.72 + clump * 0.28 + (guard > 0.2 ? 0.3 : 0), 0, 1);
     },
 
     /* Fawn coat: the same fur with cream dapple spots. */
@@ -2510,6 +2513,9 @@ uniform float uTime;
 uniform vec3 uWindDir;
 uniform float uWindStrength;
 #endif
+#ifdef FUR_SHELL
+uniform float uShellOffset;
+#endif
 
 struct Surface {
   vec3 worldPos;
@@ -2547,6 +2553,12 @@ Surface computeSurface(){
   localTan = mat3(skin) * localTan;
 #endif
 
+#ifdef FUR_SHELL
+  // Fur shells: the same mesh re-drawn pushed out along its normals; the
+  // fragment stage clips each layer against the strand mask so hair tips
+  // break the silhouette.
+  localPos += localNrm * uShellOffset;
+#endif
 #ifdef GRASS
   // aParams.w carries a per-blade random seed; .xyz is the tint.
   float seed = s.params.w;
@@ -2630,6 +2642,9 @@ in float vViewDepth;
 uniform vec3 uCameraPos;
 uniform float uTime;
 uniform vec3 uBaseColor;
+#ifdef FUR_SHELL
+uniform float uShellT;
+#endif
 uniform float uRoughness;
 uniform float uMetalness;
 uniform vec3 uEmissive;
@@ -2663,6 +2678,13 @@ void main(){
   if (uHasMaps == 1) {
     vec4 tex = texture(uAlbedoMap, uv);
     albedo *= tex.rgb;
+#ifdef FUR_SHELL
+    // Clip this layer against the strand-density mask: the further out the
+    // shell, the fewer strands survive — which is what makes tips. Roots sit
+    // in shadow, tips catch light.
+    if (tex.a < uShellT) discard;
+    albedo *= mix(0.62, 1.12, uShellT);
+#endif
     vec3 orm = texture(uOrmMap, uv).rgb;
     ao = orm.r;
     rough *= orm.g * 1.25;
@@ -3656,6 +3678,7 @@ class Renderer {
 
       for (const batch of batches) {
         if (!batch.count || !batch.material.castShadow) continue;
+        if (batch.furShell) continue;   // the base mesh already casts the shadow
         if (batch.material.transparent && batch.material.opacity < 0.6) continue;
         const defines = [];
         if (batch.instanced) defines.push('INSTANCED');
@@ -3736,6 +3759,7 @@ class Renderer {
     if (batch.instanced) defines.push('INSTANCED');
     if (batch.skinned) defines.push('SKINNED');
     if (batch.grass) defines.push('GRASS');
+    if (batch.furShell) defines.push('FUR_SHELL');
     if (batch.alphaClip) defines.push('ALPHA_CLIP');
     const sh = this.program('pbr', GLSL.pbrVert, GLSL.pbrFrag, defines).use();
 
@@ -3749,6 +3773,10 @@ class Renderer {
     if (batch.grass) {
       sh.v3('uWindDir', this.wind ? this.wind.direction : _defaultWind);
       sh.f('uWindStrength', this.wind ? this.wind.strength : 0.25);
+    }
+    if (batch.furShell) {
+      sh.f('uShellOffset', batch.shellOffset || 0.01);
+      sh.f('uShellT', batch.shellT || 0.3);
     }
 
     if (batch.material.doubleSided) gl.disable(gl.CULL_FACE);
@@ -10912,6 +10940,20 @@ class Engine {
         batch.boneCount = actor.skeleton.bones.length;
       }
       list.push(batch);
+      // Fur shells: the same skinned mesh re-drawn in inflated layers, each
+      // clipped harder against the strand mask, so hair tips break the
+      // silhouette in 3D instead of living only in the texture.
+      if (actor.furShells) {
+        for (let layer = 1; layer <= actor.furShells; layer++) {
+          const t = layer / actor.furShells;
+          list.push(Object.assign({}, batch, {
+            furShell: true,
+            shellT: 0.22 + t * 0.62,
+            shellOffset: (actor.furLength || 0.02) * t,
+            sortKey: batch.sortKey + layer * 0.001,
+          }));
+        }
+      }
     }
 
     if (this.grass && this.grass.count) list.push(this.grass.batch());
@@ -11109,18 +11151,25 @@ function quickStart(opts = {}) {
    Convention: yaw 0 faces +Z; forward is (sin yaw, 0, cos yaw).
    ============================================================ */
 
+/* Proportions are taken from the real animals. Whitetail reference
+   (a mature buck): shoulder height ~0.95m, torso ~1.15m, chest girth depth
+   ~0.47m but only ~0.32m WIDE — deer are slab-sided, not barrels — a long
+   ~0.55m neck carried high, a ~0.29m wedge head, and thin legs whose cannon
+   bones are barely 5cm across. bodyW/bodyD are half-width/half-depth. */
 const ANIMAL_SPECIES = {
   deer: {
-    shoulder: 0.95, bodyLen: 1.15, bodyR: 0.27, neckLen: 0.48, headLen: 0.30,
-    earScale: 1.0, tailLen: 0.22, legW: 0.085,
+    shoulder: 0.95, bodyLen: 1.15, bodyW: 0.16, bodyD: 0.235,
+    neckLen: 0.55, headLen: 0.29, earScale: 1.0, tailLen: 0.25, legW: 0.024,
+    furLen: 0.02, shells: 6,
     coat: { male: 0x8a6a42, female: 0x97754c, fawn: 0xa8815a },
     texture: { male: 'fur', female: 'fur', fawn: 'furFawn' },
     walkSpeed: 0.9, runSpeed: 6.2, gait: 'quad',
     alertR: 6.5, safeR: 13, grazes: true,
   },
   rabbit: {
-    shoulder: 0.2, bodyLen: 0.38, bodyR: 0.115, neckLen: 0.07, headLen: 0.13,
-    earScale: 2.6, tailLen: 0.05, legW: 0.032,
+    shoulder: 0.2, bodyLen: 0.38, bodyW: 0.085, bodyD: 0.115,
+    neckLen: 0.07, headLen: 0.13, earScale: 2.6, tailLen: 0.05, legW: 0.013,
+    furLen: 0.014, shells: 5,
     coat: { male: 0x9c8768, female: 0xa8946f, fawn: 0xb4a17e },
     texture: { male: 'fur', female: 'fur', fawn: 'fur' },
     walkSpeed: 0.55, runSpeed: 4.6, gait: 'hop',
@@ -11134,30 +11183,34 @@ const ANTLER_POINTS = { small: 2, medium: 4, large: 6 };
 /* ---------------- skeleton ---------------- */
 
 function makeQuadSkeleton(sp, k) {
-  const R = sp.bodyR * k, BL = sp.bodyLen * k, NL = sp.neckLen * k, HL = sp.headLen * k;
-  const spineY = sp.shoulder * k + R * 0.45;
-  const legTop = spineY - R * 0.3;
-  const upper = legTop * 0.52, lower = legTop * 0.44;
+  const W = sp.bodyW * k, D = sp.bodyD * k, BL = sp.bodyLen * k, NL = sp.neckLen * k, HL = sp.headLen * k;
+  // The shoulder measurement is to the TOP of the withers; the spine line
+  // sits half a chest below it, and the legs own everything under the belly.
+  const spineY = sp.shoulder * k - D * 0.45;
+  const legTop = spineY - D * 0.35;
+  const upper = legTop * 0.52, lower = legTop * 0.46;
   const B = [];
   const bone = (name, parent, pos) => { B.push([name, parent, pos]); return B.length - 1; };
 
   const hips = bone('hips', -1, [0, spineY, -BL * 0.34]);
-  const spine = bone('spine', hips, [0, 0.015 * k, BL * 0.3]);
-  const chest = bone('chest', spine, [0, 0.015 * k, BL * 0.3]);
-  const neck1 = bone('neck1', chest, [0, R * 0.5, BL * 0.12]);
-  const neck2 = bone('neck2', neck1, [0, NL * 0.42, NL * 0.3]);
-  const head = bone('head', neck2, [0, NL * 0.4, NL * 0.26]);
-  bone('muzzle', head, [0, -HL * 0.06, HL * 0.62]);
-  bone('earL', head, [HL * 0.32, HL * 0.4, -HL * 0.12]);
-  bone('earR', head, [-HL * 0.32, HL * 0.4, -HL * 0.12]);
-  const tail1 = bone('tail1', hips, [0, R * 0.5, -BL * 0.18]);
+  const spine = bone('spine', hips, [0, 0.01 * k, BL * 0.3]);
+  const chest = bone('chest', spine, [0, 0.01 * k, BL * 0.3]);
+  // A deer's neck leaves the chest at ~55 degrees and is over half a metre
+  // long — most of what makes the silhouette read "deer" lives here.
+  const neck1 = bone('neck1', chest, [0, D * 0.55, BL * 0.1]);
+  const neck2 = bone('neck2', neck1, [0, NL * 0.44, NL * 0.28]);
+  const head = bone('head', neck2, [0, NL * 0.44, NL * 0.26]);
+  bone('muzzle', head, [0, -HL * 0.08, HL * 0.65]);
+  bone('earL', head, [HL * 0.3, HL * 0.42, -HL * 0.14]);
+  bone('earR', head, [-HL * 0.3, HL * 0.42, -HL * 0.14]);
+  const tail1 = bone('tail1', hips, [0, D * 0.42, -BL * 0.2]);
   bone('tail2', tail1, [0, -0.02 * k, -sp.tailLen * k]);
   for (const side of [1, -1]) {
     const s = side > 0 ? 'L' : 'R';
-    const fu = bone('fUp' + s, chest, [side * R * 0.55, -R * 0.3, BL * 0.06]);
+    const fu = bone('fUp' + s, chest, [side * W * 0.6, -D * 0.35, BL * 0.05]);
     const fl = bone('fLo' + s, fu, [0, -upper, 0]);
     bone('fFt' + s, fl, [0, -lower, 0.015 * k]);
-    const ru = bone('rUp' + s, hips, [side * R * 0.58, -R * 0.25, -BL * 0.04]);
+    const ru = bone('rUp' + s, hips, [side * W * 0.62, -D * 0.3, -BL * 0.03]);
     const rl = bone('rLo' + s, ru, [0, -upper, -0.02 * k]);
     bone('rFt' + s, rl, [0, -lower, 0.02 * k]);
   }
@@ -11171,31 +11224,35 @@ function makeQuadSkeleton(sp, k) {
    legs and ears as tapered lofts, tail as a limb. */
 function makeQuadGeometry(skeleton, sp, k, opts = {}) {
   const g = new Geometry();
-  const R = sp.bodyR * k, BL = sp.bodyLen * k, NL = sp.neckLen * k, HL = sp.headLen * k;
+  const W = sp.bodyW * k, D = sp.bodyD * k, BL = sp.bodyLen * k, NL = sp.neckLen * k, HL = sp.headLen * k;
   const P = (name) => { const v = new Vec3(); skeleton.bones[skeleton.index(name)].bindMatrix.getTranslation(v); return v; };
 
   const hips = P('hips'), chest = P('chest'), neck1 = P('neck1'), neck2 = P('neck2');
   const headP = P('head'), muzzle = P('muzzle'), tail1 = P('tail1'), tail2 = P('tail2');
   const spineY = hips.y;
 
-  // Torso: rump -> hips -> belly -> chest -> shoulder point.
+  // Torso, matched to the real animal: slab-sided (much deeper than wide),
+  // deepest at the chest girth, tucked at the waist, rounded at the rump,
+  // with a level topline.
   const ring = (z, y, w, d, e, uv) => ({ p: new Vec3(0, y, z), w, d, e: e || 2.2, uv });
   loftRings(g, [
-    ring(hips.z - BL * 0.2, spineY - R * 0.05, R * 0.55, R * 0.6, 2.0, 0),
-    ring(hips.z, spineY - R * 0.02, R * 0.9, R * 1.0, 2.2, 0.08),
-    ring(hips.z + BL * 0.3, spineY - R * 0.06, R * 1.0, R * 1.12, 2.3, 0.2),
-    ring(chest.z, spineY, R * 0.95, R * 1.16, 2.3, 0.32),
-    ring(chest.z + BL * 0.16, spineY + R * 0.06, R * 0.72, R * 0.95, 2.1, 0.4),
+    ring(hips.z - BL * 0.22, spineY - D * 0.02, W * 0.5, D * 0.62, 2.0, 0),
+    ring(hips.z - BL * 0.06, spineY, W * 0.95, D * 0.95, 2.2, 0.07),
+    ring(hips.z + BL * 0.22, spineY - D * 0.02, W * 0.88, D * 0.8, 2.2, 0.17),   // the waist tuck
+    ring(chest.z - BL * 0.06, spineY - D * 0.05, W * 0.95, D * 1.05, 2.3, 0.28), // chest girth, deepest
+    ring(chest.z + BL * 0.1, spineY + D * 0.02, W * 0.8, D * 0.95, 2.1, 0.36),
+    ring(chest.z + BL * 0.2, spineY + D * 0.05, W * 0.55, D * 0.7, 2.0, 0.4),
   ], 16, true, true);
 
-  // Neck: flows out of the chest top toward the skull.
-  const nr = (t, w) => {
+  // Neck: long and slim, oval in cross-section (deeper than wide), rooted
+  // wide at the chest and tapering hard toward the skull.
+  const nr = (t, w, d) => {
     const p = new Vec3().copy(neck1).lerp(headP, t);
-    return { p, w, d: w * 1.15, e: 2.0, uv: 0.42 + t * 0.14 };
+    return { p, w, d, e: 2.0, uv: 0.42 + t * 0.14 };
   };
   loftRings(g, [
-    { p: new Vec3(neck1.x, neck1.y - R * 0.35, neck1.z - R * 0.2), w: R * 0.62, d: R * 0.72, e: 2.1, uv: 0.4 },
-    nr(0.25, R * 0.5), nr(0.6, R * 0.42), nr(1.0, HL * 0.4),
+    { p: new Vec3(neck1.x, neck1.y - D * 0.5, neck1.z - D * 0.35), w: W * 0.72, d: D * 0.8, e: 2.1, uv: 0.4 },
+    nr(0.22, W * 0.5, D * 0.55), nr(0.55, W * 0.38, D * 0.42), nr(1.0, HL * 0.3, HL * 0.36),
   ], 14, true, true);
 
   // Head: skull -> brow -> muzzle -> nose.
@@ -11204,26 +11261,29 @@ function makeQuadGeometry(skeleton, sp, k, opts = {}) {
     return { p, w, d, e: e || 2.0, uv: 0.58 + t * 0.1 };
   };
   loftRings(g, [
-    headRing(-0.25, HL * 0.34, HL * 0.36),
-    headRing(0.1, HL * 0.44, HL * 0.46),
-    headRing(0.45, HL * 0.34, HL * 0.36),
-    headRing(0.85, HL * 0.2, HL * 0.22),
-    headRing(1.05, HL * 0.12, HL * 0.13),
+    headRing(-0.22, HL * 0.3, HL * 0.34),
+    headRing(0.05, HL * 0.36, HL * 0.42),      // skull, widest at the brow
+    headRing(0.4, HL * 0.26, HL * 0.3),
+    headRing(0.75, HL * 0.15, HL * 0.17),      // the wedge toward the muzzle
+    headRing(1.02, HL * 0.09, HL * 0.1),       // nose
   ], 14, true, true);
 
-  // Legs: thigh buried in the body, tapering to a thin cannon and a hoof.
-  const LW = sp.legW * k;
+  // Legs: a muscled thigh buried in the body collapsing fast to the thin
+  // cannon bone that gives deer legs their signature delicacy, with a small
+  // flare at the fetlock and a hoof.
+  const LW = sp.legW * k;   // cannon-bone radius — genuinely thin
   for (const s of ['L', 'R']) {
     for (const f of ['f', 'r']) {
       const up = P(f + 'Up' + s), lo = P(f + 'Lo' + s), ft = P(f + 'Ft' + s);
-      const hoof = new Vec3(ft.x, 0.005, ft.z + 0.02 * k);
+      const hoof = new Vec3(ft.x, 0.004, ft.z + 0.02 * k);
+      const thighW = f === 'r' ? LW * 3.4 : LW * 2.6;   // hindquarters are heavier
       loftRings(g, [
-        { p: new Vec3(up.x, up.y + R * 0.4, up.z), w: LW * 1.6, d: LW * 2.2, e: 2.1, uv: 0.7 },
-        { p: up.clone().lerp(lo, 0.45), w: LW * 1.1, d: LW * 1.5, e: 2.0, uv: 0.76 },
-        { p: lo, w: LW * 0.55, d: LW * 0.7, e: 2.0, uv: 0.84 },
-        { p: lo.clone().lerp(ft, 0.5), w: LW * 0.42, d: LW * 0.5, e: 2.0, uv: 0.9 },
-        { p: ft, w: LW * 0.48, d: LW * 0.55, e: 2.0, uv: 0.96 },
-        { p: hoof, w: LW * 0.52, d: LW * 0.6, e: 1.6, uv: 1.0 },
+        { p: new Vec3(up.x, up.y + D * 0.45, up.z), w: thighW, d: thighW * 1.5, e: 2.1, uv: 0.7 },
+        { p: up.clone().lerp(lo, 0.5), w: LW * 1.5, d: LW * 1.9, e: 2.0, uv: 0.78 },
+        { p: lo, w: LW * 1.05, d: LW * 1.2, e: 2.0, uv: 0.84 },
+        { p: lo.clone().lerp(ft, 0.55), w: LW * 0.85, d: LW * 0.95, e: 2.0, uv: 0.9 },
+        { p: ft, w: LW * 1.0, d: LW * 1.1, e: 2.0, uv: 0.95 },
+        { p: hoof, w: LW * 1.15, d: LW * 1.25, e: 1.6, uv: 1.0 },
       ], 10, true, true);
     }
   }
@@ -11241,7 +11301,7 @@ function makeQuadGeometry(skeleton, sp, k, opts = {}) {
   }
 
   // Tail.
-  appendLimb(g, tail1, new Vec3(tail2.x, tail2.y, tail2.z - 0.02), R * 0.22, R * 0.08, 8);
+  appendLimb(g, tail1, new Vec3(tail2.x, tail2.y, tail2.z - 0.02), D * 0.2, D * 0.07, 8);
 
   smoothNormals(g);
   const geo = g.finalize();
@@ -11377,6 +11437,10 @@ class Animal {
       at: [this.x, this.baseY, this.z],
       boundRadius: 2.2 * k,
     });
+    // Shell fur: extra inflated, strand-clipped passes give the coat real
+    // depth — hair tips physically break the silhouette.
+    this.actor.furShells = sp.shells || 5;
+    this.actor.furLength = (sp.furLen || 0.02) * k;
     e.actors.push(this.actor);
     this.parts = [this.actor];
 

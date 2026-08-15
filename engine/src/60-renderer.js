@@ -398,6 +398,7 @@ class Renderer {
 
       for (const batch of batches) {
         if (!batch.count || !batch.material.castShadow) continue;
+        if (batch.furShell) continue;   // the base mesh already casts the shadow
         if (batch.material.transparent && batch.material.opacity < 0.6) continue;
         const defines = [];
         if (batch.instanced) defines.push('INSTANCED');
@@ -478,6 +479,7 @@ class Renderer {
     if (batch.instanced) defines.push('INSTANCED');
     if (batch.skinned) defines.push('SKINNED');
     if (batch.grass) defines.push('GRASS');
+    if (batch.furShell) defines.push('FUR_SHELL');
     if (batch.alphaClip) defines.push('ALPHA_CLIP');
     const sh = this.program('pbr', GLSL.pbrVert, GLSL.pbrFrag, defines).use();
 
@@ -491,6 +493,10 @@ class Renderer {
     if (batch.grass) {
       sh.v3('uWindDir', this.wind ? this.wind.direction : _defaultWind);
       sh.f('uWindStrength', this.wind ? this.wind.strength : 0.25);
+    }
+    if (batch.furShell) {
+      sh.f('uShellOffset', batch.shellOffset || 0.01);
+      sh.f('uShellT', batch.shellT || 0.3);
     }
 
     if (batch.material.doubleSided) gl.disable(gl.CULL_FACE);

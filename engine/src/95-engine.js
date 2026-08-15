@@ -1234,6 +1234,20 @@ class Engine {
         batch.boneCount = actor.skeleton.bones.length;
       }
       list.push(batch);
+      // Fur shells: the same skinned mesh re-drawn in inflated layers, each
+      // clipped harder against the strand mask, so hair tips break the
+      // silhouette in 3D instead of living only in the texture.
+      if (actor.furShells) {
+        for (let layer = 1; layer <= actor.furShells; layer++) {
+          const t = layer / actor.furShells;
+          list.push(Object.assign({}, batch, {
+            furShell: true,
+            shellT: 0.22 + t * 0.62,
+            shellOffset: (actor.furLength || 0.02) * t,
+            sortKey: batch.sortKey + layer * 0.001,
+          }));
+        }
+      }
     }
 
     if (this.grass && this.grass.count) list.push(this.grass.batch());

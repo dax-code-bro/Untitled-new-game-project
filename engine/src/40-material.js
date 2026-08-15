@@ -87,17 +87,17 @@ const TextureLib = {
     const height = new Float32Array(size * size);
     const fn = this.kinds[kind] || this.kinds.concrete;
 
-    const c = { r: 1, g: 1, b: 1, ao: 1, rough: 0.8, metal: 0, h: 0.5 };
+    const c = { r: 1, g: 1, b: 1, a: 1, ao: 1, rough: 0.8, metal: 0, h: 0.5 };
     for (let y = 0; y < size; y++) {
       for (let x = 0; x < size; x++) {
         const u = x / size, v = y / size;
-        c.r = c.g = c.b = 1; c.ao = 1; c.rough = 0.8; c.metal = 0; c.h = 0.5;
+        c.r = c.g = c.b = 1; c.a = 1; c.ao = 1; c.rough = 0.8; c.metal = 0; c.h = 0.5;
         fn(u, v, n, c, size);
         const i = (y * size + x) * 4;
         albedo[i] = clamp(c.r, 0, 1) * 255;
         albedo[i + 1] = clamp(c.g, 0, 1) * 255;
         albedo[i + 2] = clamp(c.b, 0, 1) * 255;
-        albedo[i + 3] = 255;
+        albedo[i + 3] = clamp(c.a, 0, 1) * 255;
         orm[i] = clamp(c.ao, 0, 1) * 255;
         orm[i + 1] = clamp(c.rough, 0.03, 1) * 255;
         orm[i + 2] = clamp(c.metal, 0, 1) * 255;
@@ -300,6 +300,9 @@ const TextureLib = {
       c.rough = 0.97 - strand * 0.05;
       c.ao = 0.7 + clump * 0.3;
       c.h = strand * 0.8 + clump * 0.2;
+      // Alpha is the strand-density mask the fur shells clip against: only
+      // the cores of strands survive to the outer layers.
+      c.a = clamp(strand * 0.72 + clump * 0.28 + (guard > 0.2 ? 0.3 : 0), 0, 1);
     },
 
     /* Fawn coat: the same fur with cream dapple spots. */
