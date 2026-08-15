@@ -417,8 +417,15 @@ class Animal {
     // devices get fewer layers.
     const qn = e.renderer.qualityName;
     this.actor.furShells = qn === 'low' ? Math.max(4, Math.round((sp.shells || 8) * 0.5)) : (sp.shells || 8);
-    this.actor.furLength = (sp.furLen || 0.02) * k;
-    this.actor.furComb = [0, -0.28, -0.62];
+    // Longer than real fur, deliberately — biologically accurate 3-4cm
+    // guard hair is invisible as "sticking up" volume at normal camera
+    // distance, it only reads in extreme macro. Games exaggerate shell
+    // length for exactly this reason.
+    this.actor.furLength = (sp.furLen || 0.02) * k * 1.8;
+    // A weak comb: mostly outward-along-the-normal (hair actually stands
+    // up off the silhouette) with only a slight backward lean, not the
+    // near-50/50 mix that was combing it flat against the body everywhere.
+    this.actor.furComb = [0, -0.1, -0.22];
     e.actors.push(this.actor);
     this.parts = [this.actor];
 

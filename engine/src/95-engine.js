@@ -1259,7 +1259,12 @@ class Engine {
           const t = layer / actor.furShells;
           list.push(Object.assign({}, batch, {
             furShell: true,
-            shellT: 0.16 + Math.pow(t, 0.85) * 0.68,
+            // Loosened from the original 0.16 + t^0.85*0.68 (peaked at 0.84,
+            // very strict): combined with the sharpened strand-alpha curve
+            // this left the outer shells sparse — the "sticking up" volume
+            // needs visible density at the tips, not just a few surviving
+            // wisps.
+            shellT: 0.1 + Math.pow(t, 0.8) * 0.52,
             shellOffset: (actor.furLength || 0.02) * t,
             shellComb: actor.furComb || null,
             sortKey: batch.sortKey + layer * 0.001,
