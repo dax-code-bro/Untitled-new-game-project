@@ -76,14 +76,14 @@ function makeQuadSkeleton(sp, k) {
   const chest = bone('chest', spine, [0, 0.01 * k, BL * 0.3]);
   // A deer's neck leaves the chest at ~55 degrees and is over half a metre
   // long — most of what makes the silhouette read "deer" lives here.
-  const neck1 = bone('neck1', chest, [0, D * 0.55, BL * 0.1]);
-  const neck2 = bone('neck2', neck1, [0, NL * 0.44, NL * 0.28]);
-  const head = bone('head', neck2, [0, NL * 0.44, NL * 0.26]);
+  const neck1 = bone('neck1', chest, [0, D * 0.5, BL * 0.1]);
+  const neck2 = bone('neck2', neck1, [0, NL * 0.36, NL * 0.32]);
+  const head = bone('head', neck2, [0, NL * 0.34, NL * 0.32]);
   bone('muzzle', head, [0, -HL * 0.08, HL * 0.65]);
   bone('earL', head, [HL * 0.3, HL * 0.42, -HL * 0.14]);
   bone('earR', head, [-HL * 0.3, HL * 0.42, -HL * 0.14]);
   const tail1 = bone('tail1', hips, [0, D * 0.42, -BL * 0.2]);
-  bone('tail2', tail1, [0, -0.02 * k, -sp.tailLen * k]);
+  bone('tail2', tail1, [0, -sp.tailLen * k * 0.8, -sp.tailLen * k * 0.35]);
   for (const side of [1, -1]) {
     const s = side > 0 ? 'L' : 'R';
     const fu = bone('fUp' + s, chest, [side * W * 0.6, -D * 0.35, BL * 0.05]);
@@ -130,8 +130,8 @@ function makeQuadGeometry(skeleton, sp, k, opts = {}) {
     return { p, w, d, e: 2.0, uv: 0.42 + t * 0.14 };
   };
   loftRings(g, [
-    { p: new Vec3(neck1.x, neck1.y - D * 0.5, neck1.z - D * 0.35), w: W * 0.72, d: D * 0.8, e: 2.1, uv: 0.4 },
-    nr(0.22, W * 0.5, D * 0.55), nr(0.55, W * 0.38, D * 0.42), nr(1.0, HL * 0.3, HL * 0.36),
+    { p: new Vec3(neck1.x, neck1.y - D * 0.55, neck1.z - D * 0.45), w: W * 0.85, d: D * 0.95, e: 2.1, uv: 0.4 },
+    nr(0.18, W * 0.55, D * 0.6), nr(0.5, W * 0.4, D * 0.44), nr(0.8, W * 0.34, D * 0.38), nr(1.0, HL * 0.32, HL * 0.38),
   ], 14, true, true);
 
   // Head: skull -> brow -> muzzle -> nose.
@@ -180,7 +180,7 @@ function makeQuadGeometry(skeleton, sp, k, opts = {}) {
   }
 
   // Tail.
-  appendLimb(g, tail1, new Vec3(tail2.x, tail2.y, tail2.z - 0.02), D * 0.2, D * 0.07, 8);
+  appendLimb(g, tail1, new Vec3(tail2.x, tail2.y - 0.01, tail2.z - 0.015), D * 0.18, D * 0.06, 8);
 
   smoothNormals(g);
   const geo = g.finalize();
@@ -238,20 +238,31 @@ function antlerMesh(engine, points, side) {
   return engine._mesh(`antler:${points}:${side}`, () => {
     const g = new Geometry();
     const sx = side;
+    // A real whitetail main beam rises off the skull, sweeps OUT, then curves
+    // FORWARD and back in toward the nose — a C shape seen from above. Tines
+    // (G2, G3...) rise nearly vertically off the top of that beam, and the
+    // short brow tine (G1) sits just above the base.
     const beam = [
       new Vec3(0, 0, 0),
-      new Vec3(0.06 * sx, 0.14, -0.04),
-      new Vec3(0.14 * sx, 0.27, -0.12),
-      new Vec3(0.25 * sx, 0.35, -0.22),
+      new Vec3(0.07 * sx, 0.10, 0.01),
+      new Vec3(0.15 * sx, 0.19, 0.09),
+      new Vec3(0.18 * sx, 0.24, 0.21),
+      new Vec3(0.13 * sx, 0.27, 0.33),
     ];
     for (let i = 0; i < beam.length - 1; i++) {
-      appendLimb(g, beam[i], beam[i + 1], 0.024 * (1 - i * 0.2), 0.018 * (1 - i * 0.2), 6);
+      appendLimb(g, beam[i], beam[i + 1], 0.017 * (1 - i * 0.16), 0.013 * (1 - i * 0.16), 6);
     }
-    for (let t = 0; t < points; t++) {
-      const f = (t + 1) / (points + 0.5);
-      const base = new Vec3().copy(beam[1]).lerp(beam[3], f);
-      const tip = new Vec3(base.x + 0.03 * sx, base.y + 0.17 - f * 0.05, base.z + 0.02);
-      appendLimb(g, base, tip, 0.012, 0.004, 5);
+    // Brow tine.
+    appendLimb(g, new Vec3(0.03 * sx, 0.06, 0.03), new Vec3(0.015 * sx, 0.16, 0.09), 0.009, 0.003, 5);
+    // Standing tines along the beam, tallest in the middle of the rack.
+    const tines = Math.max(1, points - 1);
+    for (let t = 0; t < tines; t++) {
+      const f = 0.3 + (t / Math.max(1, tines - 1)) * 0.5;
+      const i0 = Math.min(beam.length - 2, Math.floor(f * (beam.length - 1)));
+      const base = new Vec3().copy(beam[i0]).lerp(beam[i0 + 1], f * (beam.length - 1) - i0);
+      const h = 0.2 * Math.sin(PI * (0.25 + 0.6 * (t / Math.max(1, tines - 1))));
+      const tip = new Vec3(base.x - 0.03 * sx, base.y + h + 0.06, base.z + 0.015);
+      appendLimb(g, base, tip, 0.008, 0.0028, 5);
     }
     return g.finalize();
   });
@@ -468,7 +479,7 @@ class Animal {
     // lowers the nose into the grass, negative lifts to full alarm.
     const down = this.headDown;
     const nod = this.speed > 0.05 && !running ? Math.sin(ph * 2) * 0.05 : 0;
-    bone('neck1').localRotation.setEuler(lerp(-0.25, 0.9, down) + nod, 0, 0);
+    bone('neck1').localRotation.setEuler(lerp(-0.12, 0.95, down) + nod, 0, 0);
     bone('neck2').localRotation.setEuler(lerp(-0.15, 0.55, down), 0, 0);
     bone('head').localRotation.setEuler(lerp(0.1, -0.5, down), 0, 0);
 
@@ -492,7 +503,7 @@ class Animal {
     bone('earL').localRotation.setEuler(0, 0, 0.25 + flick);
     bone('earR').localRotation.setEuler(0, 0, -0.25 - flick * 0.4);
     const flag = this.state === 'flee' ? 1 : (this.tailFlick > 0 ? Math.abs(Math.sin(this.tailFlick * 14)) * 0.5 : 0);
-    bone('tail1').localRotation.setEuler(-flag * 1.3, this.tailFlick > 0 ? Math.sin(this.tailFlick * 18) * 0.3 : 0, 0);
+    bone('tail1').localRotation.setEuler(-flag * 1.9, this.tailFlick > 0 ? Math.sin(this.tailFlick * 18) * 0.3 : 0, 0);
 
     sk.update();
 
