@@ -16,24 +16,34 @@ module.exports = async (req, res) => {
   res.status(400).json({ error: 'action must be start, status, or critique' });
 };
 
+// Multiple reference angles (front/side/back/3-4) reconstruct one coherent
+// model instead of guessing the unseen sides from a single photo — real
+// multi-view input, not more single-image attempts.
 async function handleStart(req, res, body) {
   const key = process.env.MESHY_API_KEY;
   if (!key) { res.status(501).json({ error: 'MESHY_API_KEY not configured — add it in Vercel project settings to enable model generation.' }); return; }
 
-  const imageUrl = body.imageDataUrl || body.imageUrl;
-  if (!imageUrl) { res.status(400).json({ error: 'imageUrl or imageDataUrl is required' }); return; }
+  const urls = Array.isArray(body.imageUrls) ? body.imageUrls.filter(Boolean).slice(0, 4) : null;
+  const single = body.imageDataUrl || body.imageUrl;
+  if ((!urls || urls.length < 2) && !single) { res.status(400).json({ error: 'imageUrl/imageDataUrl, or imageUrls (2-4 angles), is required' }); return; }
+
+  const multi = urls && urls.length >= 2;
+  const endpoint = multi ? 'multi-image-to-3d' : 'image-to-3d';
+  const reqBody = multi
+    ? { image_urls: urls, enable_pbr: true, should_texture: true }
+    : { image_url: single, enable_pbr: true, should_texture: true };
 
   try {
-    const r = await fetch('https://api.meshy.ai/openapi/v1/image-to-3d', {
+    const r = await fetch('https://api.meshy.ai/openapi/v1/' + endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
-      body: JSON.stringify({ image_url: imageUrl, enable_pbr: true, should_texture: true }),
+      body: JSON.stringify(reqBody),
     });
     const data = await r.json().catch(() => null);
     if (!r.ok || !data) { res.status(502).json({ error: 'Meshy rejected the request', detail: data }); return; }
     const taskId = data.result || data.id;
     if (!taskId) { res.status(502).json({ error: 'Meshy returned no task id', detail: data }); return; }
-    res.status(200).json({ taskId });
+    res.status(200).json({ taskId, endpoint });
   } catch (e) {
     res.status(502).json({ error: 'Meshy request failed: ' + e.message });
   }
@@ -44,9 +54,10 @@ async function handleStatus(req, res, body) {
   if (!key) { res.status(501).json({ error: 'MESHY_API_KEY not configured' }); return; }
   const taskId = body.taskId;
   if (!taskId) { res.status(400).json({ error: 'taskId is required' }); return; }
+  const endpoint = body.endpoint === 'multi-image-to-3d' ? 'multi-image-to-3d' : 'image-to-3d';
 
   try {
-    const r = await fetch('https://api.meshy.ai/openapi/v1/image-to-3d/' + encodeURIComponent(taskId), {
+    const r = await fetch('https://api.meshy.ai/openapi/v1/' + endpoint + '/' + encodeURIComponent(taskId), {
       headers: { Authorization: 'Bearer ' + key },
     });
     const data = await r.json().catch(() => null);

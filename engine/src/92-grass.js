@@ -20,6 +20,7 @@ const GRASS_PRESETS = {
     height: 0.42, width: 0.035, density: 1,
     windScale: 1, lean: 0.14, bare: 0,        // no bald patches
     trampled: 0, weedChance: 0, heightJitter: [0.65, 1.45],
+    clumpSize: 0.42, clumpChance: 0.55, clumpSpread: 0.55,
     ground: 'grass',
   },
   dead: {
@@ -29,6 +30,7 @@ const GRASS_PRESETS = {
     height: 0.3, width: 0.032, density: 0.8,
     windScale: 0.22, lean: 0.4, bare: 0.4,     // hard bald patches
     trampled: 0.28, weedChance: 0, heightJitter: [0.35, 1.6],
+    clumpSize: 0.55, clumpChance: 0.48, clumpSpread: 0.5,
     ground: 'savanna',
   },
   mud: {
@@ -39,9 +41,21 @@ const GRASS_PRESETS = {
     windScale: 0.55, lean: 0.22, bare: 0.3,
     trampled: 0.08, weedChance: 0.14, heightJitter: [0.5, 1.5],
     weedLow: 0x24371c, weedHigh: 0x44603a,
+    clumpSize: 0.48, clumpChance: 0.46, clumpSpread: 0.5,
     ground: 'mud',
   },
 };
+
+// Deterministic integer hash -> [0,1). Looking up the same (cellX, cellZ,
+// salt) always returns the same value, so clump centers can be reconstructed
+// on demand for any candidate blade instead of stored in a grid array —
+// the field stays infinite and stateless.
+function clumpHash(ix, iz, salt) {
+  let h = (ix * 374761393 + iz * 668265263 + salt * 2246822519) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  h = h ^ (h >>> 16);
+  return ((h >>> 0) % 1000000) / 1000000;
+}
 
 /* Variant modifiers stack on top of a family preset. `decor` names the
    living extras the engine should scatter around the field. */
@@ -125,10 +139,17 @@ class Grass {
     this.scatter(opts);
   }
 
-  /* Place blades. Density is modulated by noise so the field has bare
-     patches and thick clumps rather than a uniform carpet. */
+  /* Place blades. A meadow doesn't grow as an even carpet — it grows in
+     tufts, with visible ground or shorter cover between them. Blades are
+     scattered continuously, but each candidate is accepted or rejected by
+     distance to the nearest procedural clump center, so the field reads as
+     hand-placed grass clumps rather than a lawn of individually-scattered
+     blades. Large-scale noise still layers lush/dry variation on top. */
   scatter(opts = {}) {
-    const target = Math.min(this.max, opts.count || Math.floor(this.area * this.area * 12 * this.density));
+    // Clumping concentrates blades into tufts rather than spreading them
+    // evenly, so the raw per-area budget goes up — a tuft needs several
+    // blades packed close together to read as a clump instead of a sprig.
+    const target = Math.min(this.max, opts.count || Math.floor(this.area * this.area * 20 * this.density));
     const half = this.area / 2;
     const buf = this.instances;
     let n = 0;
@@ -141,14 +162,36 @@ class Grass {
 
     const P = this.P;
     const jit = P.heightJitter || [0.65, 1.45];
-    // Try more candidates than we need; the density mask rejects some.
-    const attempts = target * 2;
+    const cs = P.clumpSize || 0.55;
+    const clumpChance = P.clumpChance != null ? P.clumpChance : 0.6;
+    const clumpRadius = cs * (P.clumpSpread != null ? P.clumpSpread : 0.65);
+    const saltBase = (opts.seed || 31337) * 4;
+    // Clumping rejects most candidates between tufts, so many more attempts
+    // are needed to reach the target blade count than a uniform scatter.
+    const attempts = target * 7;
     for (let i = 0; i < attempts && n < target; i++) {
       const x = this.center.x + this.rng.range(-half, half);
       const z = this.center.z + this.rng.range(-half, half);
 
+      // Nearest clump center among this cell and its 8 neighbors. Cells
+      // roll their own presence, so most cells are empty gaps between tufts.
+      const cellX = Math.floor(x / cs), cellZ = Math.floor(z / cs);
+      let bestDist = Infinity, clumpBias = 0.5;
+      for (let dcx = -1; dcx <= 1; dcx++) {
+        for (let dcz = -1; dcz <= 1; dcz++) {
+          const gx = cellX + dcx, gz = cellZ + dcz;
+          if (clumpHash(gx, gz, saltBase + 1) > clumpChance) continue;
+          const ccx = (gx + 0.5) * cs + (clumpHash(gx, gz, saltBase + 2) - 0.5) * cs;
+          const ccz = (gz + 0.5) * cs + (clumpHash(gx, gz, saltBase + 3) - 0.5) * cs;
+          const d = Math.hypot(x - ccx, z - ccz);
+          if (d < bestDist) { bestDist = d; clumpBias = clumpHash(gx, gz, saltBase + 4); }
+        }
+      }
+      if (bestDist === Infinity) continue;                    // gap between tufts
+      const clumpFalloff = Math.exp(-(bestDist * bestDist) / (clumpRadius * clumpRadius));
+      if (this.rng.next() > clumpFalloff) continue;
+
       const mask = this.noise.fbm(x * 0.05, 0, z * 0.05, 3) * 0.5 + 0.5;
-      if (this.rng.next() > mask * 1.35) continue;
       if (opts.mask && !opts.mask(x, z)) continue;
 
       // Hard bald patches: dead fields show bare hardpan, mud shows mud.
@@ -189,7 +232,11 @@ class Grass {
         );
       }
 
-      let h = this.rng.range(jit[0], jit[1]) * (mask * 0.5 + 0.75);
+      // Blades in the same tuft share a height bias (clumpBias, stable per
+      // clump center) on top of their own random jitter, so a tuft reads as
+      // one coherent clump instead of independent blades that happen to be
+      // near each other.
+      let h = this.rng.range(jit[0], jit[1]) * (mask * 0.5 + 0.75) * lerp(0.82, 1.18, clumpBias);
       let w = this.rng.range(0.8, 1.2);
       if (isWeed) { h *= this.rng.range(2.0, 3.1); w *= 1.6; }
       if (isTall) { h *= this.rng.range(1.8, 2.4); w *= 1.3; }

@@ -76,6 +76,21 @@
   var attachedDataUrl = null;
   var MAX_RETRIES = 2;
 
+  // Opened from the roster gallery with a model already generated — just
+  // display it, no need to regenerate.
+  (function loadFromQuery() {
+    var params = new URLSearchParams(location.search);
+    var modelUrl = params.get('model');
+    if (!modelUrl) return;
+    if (params.get('prompt')) $('prompt').value = params.get('prompt');
+    setStatus('<span class="spin"></span>Loading…');
+    showModel(modelUrl).then(function () {
+      setStatus('✓ Loaded from roster.');
+      $('dlLink').href = modelUrl;
+      $('resultRow').style.display = 'flex';
+    }).catch(function (e) { setStatus('Could not load that model: ' + e.message, true); });
+  })();
+
   function setStatus(text, isErr) {
     var el = $('status');
     el.innerHTML = text;
@@ -125,9 +140,14 @@
 
   function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 
-  async function pollUntilDone(taskId) {
+  function angleImageUrl(prompt, angle) {
+    var suffix = ', full body, ' + angle + ' view, plain neutral gray background, studio product photo, sharp focus';
+    return 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt + suffix) + '?width=1024&height=1024&model=flux&nologo=true';
+  }
+
+  async function pollUntilDone(taskId, endpoint) {
     for (var i = 0; i < 200; i++) {
-      var res = await api({ action: 'status', taskId: taskId });
+      var res = await api({ action: 'status', taskId: taskId, endpoint: endpoint });
       if (!res.ok) throw new Error(res.data.error || 'status check failed');
       var d = res.data;
       if (d.status === 'SUCCEEDED') return d;
@@ -167,15 +187,19 @@
 
     try {
       for (var attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        // A photo upload is one real reference — use it as-is. A text prompt
+        // has no "real" angle to anchor to, so four AI-sketched angles of the
+        // same description give Meshy actual multi-view coverage (front,
+        // side, back, 3/4) instead of it guessing the unseen sides from one.
         var imagePayload = usingPhoto
           ? { imageDataUrl: attachedDataUrl }
-          : { imageUrl: 'https://image.pollinations.ai/prompt/' + encodeURIComponent(effectivePrompt + ', full body, plain neutral background, product photo') + '?width=1024&height=1024&model=flux&nologo=true' };
+          : { imageUrls: ['front', 'side', 'back', 'three-quarter'].map(function (a) { return angleImageUrl(effectivePrompt, a); }) };
 
-        setStatus('<span class="spin"></span>' + (attempt === 0 ? 'Sketching the concept…' : 'Regenerating (attempt ' + (attempt + 1) + ')…'));
+        setStatus('<span class="spin"></span>' + (attempt === 0 ? (usingPhoto ? 'Reading the photo…' : 'Sketching 4 reference angles…') : 'Regenerating (attempt ' + (attempt + 1) + ')…'));
         var startRes = await api(Object.assign({ action: 'start', prompt: effectivePrompt }, imagePayload));
         if (!startRes.ok) { setStatus(startRes.data.error || 'Generation failed to start.', true); btn.disabled = false; return; }
 
-        var done = await pollUntilDone(startRes.data.taskId);
+        var done = await pollUntilDone(startRes.data.taskId, startRes.data.endpoint);
         if (!done.modelUrl) throw new Error('no model was returned');
 
         setStatus('<span class="spin"></span>Loading the model…');

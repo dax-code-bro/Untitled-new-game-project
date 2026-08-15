@@ -1,0 +1,44 @@
+[
+  { "key": "deer-buck-large", "label": "Whitetail Buck (large)", "prompt": "a large adult whitetail buck deer with full antler rack, realistic brown coat, standing broadside" },
+  { "key": "deer-buck-medium", "label": "Whitetail Buck (medium)", "prompt": "a medium adult whitetail buck deer with antlers, realistic brown coat, standing broadside" },
+  { "key": "deer-buck-small", "label": "Whitetail Buck (small/young)", "prompt": "a young whitetail buck deer with small spike antlers, realistic brown coat, standing broadside" },
+  { "key": "deer-doe-large", "label": "Whitetail Doe (large)", "prompt": "a large adult female whitetail deer doe, no antlers, realistic brown coat, standing broadside" },
+  { "key": "deer-doe-medium", "label": "Whitetail Doe (medium)", "prompt": "a medium adult female whitetail deer doe, no antlers, realistic brown coat, standing broadside" },
+  { "key": "deer-doe-small", "label": "Whitetail Doe (small)", "prompt": "a small female whitetail deer doe, no antlers, realistic brown coat, standing broadside" },
+  { "key": "deer-fawn-large", "label": "Whitetail Fawn (large)", "prompt": "a large whitetail deer fawn with white spots, realistic, standing broadside" },
+  { "key": "deer-fawn-medium", "label": "Whitetail Fawn (medium)", "prompt": "a whitetail deer fawn with white spots, realistic, standing broadside" },
+  { "key": "deer-fawn-small", "label": "Whitetail Fawn (small/newborn)", "prompt": "a very young newborn whitetail deer fawn with white spots, realistic, standing broadside" },
+  { "key": "deer-mule", "label": "Mule Deer", "prompt": "a realistic mule deer buck with large mule-ear shaped ears and forked antlers, standing broadside" },
+  { "key": "deer-mount", "label": "Deer Mount (trophy/wall)", "prompt": "a taxidermy whitetail buck shoulder mount trophy on a wood plaque, realistic, isolated" },
+  { "key": "deer-rug", "label": "Deer Hide Rug/Carpet", "prompt": "a whitetail deer hide fur rug laid flat, realistic tanned leather and fur, isolated on floor" },
+  { "key": "deer-coat", "label": "Deer Fur Coat (garment)", "prompt": "a realistic deerskin fur coat garment, brown and white fur, isolated, product photo" },
+
+  { "key": "rabbit-buck-large", "label": "Cottontail Rabbit Male (large)", "prompt": "a large adult male cottontail rabbit, realistic brown fur, sitting" },
+  { "key": "rabbit-buck-medium", "label": "Cottontail Rabbit Male (medium)", "prompt": "a medium adult male cottontail rabbit, realistic brown fur, sitting" },
+  { "key": "rabbit-buck-small", "label": "Cottontail Rabbit Male (small)", "prompt": "a small young male cottontail rabbit, realistic brown fur, sitting" },
+  { "key": "rabbit-doe-large", "label": "Cottontail Rabbit Female (large)", "prompt": "a large adult female cottontail rabbit, realistic brown fur, sitting" },
+  { "key": "rabbit-doe-medium", "label": "Cottontail Rabbit Female (medium)", "prompt": "a medium adult female cottontail rabbit, realistic brown fur, sitting" },
+  { "key": "rabbit-doe-small", "label": "Cottontail Rabbit Female (small)", "prompt": "a small female cottontail rabbit, realistic brown fur, sitting" },
+  { "key": "rabbit-kit-large", "label": "Rabbit Kit (large)", "prompt": "a large baby cottontail rabbit kit, realistic soft brown fur, sitting" },
+  { "key": "rabbit-kit-medium", "label": "Rabbit Kit (medium)", "prompt": "a baby cottontail rabbit kit, realistic soft brown fur, sitting" },
+  { "key": "rabbit-kit-small", "label": "Rabbit Kit (small/newborn)", "prompt": "a tiny newborn cottontail rabbit kit, realistic soft fur, sitting" },
+
+  { "key": "bear-grizzly", "label": "Grizzly Bear", "prompt": "a realistic grizzly bear, brown fur with silver-tipped guard hairs, standing on all fours" },
+  { "key": "bear-polar", "label": "Polar Bear", "prompt": "a realistic polar bear, thick white fur, standing on all fours" },
+  { "key": "bear-black", "label": "Black Bear", "prompt": "a realistic American black bear, black fur, standing on all fours" },
+
+  { "key": "lemur", "label": "Ring-tailed Lemur", "prompt": "a realistic ring-tailed lemur, gray fur, black and white striped tail, sitting" },
+  { "key": "ferret", "label": "Ferret", "prompt": "a realistic domestic ferret, sable fur, elongated body, standing" },
+  { "key": "otter", "label": "River Otter", "prompt": "a realistic river otter, sleek brown wet fur, standing on hind legs" },
+  { "key": "monkey", "label": "Monkey (Capuchin)", "prompt": "a realistic capuchin monkey, brown and tan fur, sitting" },
+  { "key": "lion", "label": "Lion (male)", "prompt": "a realistic male African lion with full mane, tawny fur, standing broadside" },
+  { "key": "tiger", "label": "Bengal Tiger", "prompt": "a realistic Bengal tiger, orange fur with black stripes, standing broadside" },
+  { "key": "cheetah", "label": "Cheetah", "prompt": "a realistic cheetah, tan fur with black spots, standing broadside" },
+
+  { "key": "shark-great-white", "label": "Great White Shark", "prompt": "a realistic great white shark, gray and white countershaded skin, swimming" },
+  { "key": "shark-hammerhead", "label": "Hammerhead Shark", "prompt": "a realistic hammerhead shark with distinctive flat hammer-shaped head, swimming" },
+  { "key": "shark-tiger", "label": "Tiger Shark", "prompt": "a realistic tiger shark with dark vertical stripes, swimming" },
+  { "key": "shark-reef", "label": "Reef Shark", "prompt": "a realistic gray reef shark, swimming" },
+
+  { "key": "whale-blue", "label": "Blue Whale", "prompt": "a realistic blue whale, blue-gray mottled skin, swimming" }
+]

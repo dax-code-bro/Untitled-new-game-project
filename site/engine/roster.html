@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Legend — Animal Roster</title>
+<style>
+  html,body{margin:0;min-height:100%;background:#0a0a0a;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#E8E8E8}
+  a{color:#F5D78E}
+  .top{position:sticky;top:0;z-index:5;padding:14px 16px;background:rgba(10,10,10,.92);
+    backdrop-filter:blur(6px);border-bottom:1px solid #2a2a2a;
+    display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .title{font-family:Georgia,serif;letter-spacing:.14em;color:#C9A84C;font-size:15px;margin-right:auto}
+  button{background:rgba(30,30,30,.9);color:#E8E8E8;border:1px solid #3a3a3a;
+    border-radius:8px;padding:9px 14px;font-size:13px;cursor:pointer;font-family:inherit}
+  button:hover:not(:disabled){border-color:#C9A84C;color:#F5D78E}
+  button:disabled{opacity:.45;cursor:default}
+  button.primary{background:#C9A84C;color:#000;border-color:#C9A84C;font-weight:700}
+  .progress{font-size:12.5px;color:#C9A84C}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;padding:14px}
+  .card{background:#151515;border:1px solid #2a2a2a;border-radius:10px;overflow:hidden;
+    display:flex;flex-direction:column}
+  .thumb{width:100%;aspect-ratio:1;background:#0d0d0d;display:flex;align-items:center;justify-content:center;
+    color:#555;font-size:11px;overflow:hidden}
+  .thumb img{width:100%;height:100%;object-fit:cover}
+  .info{padding:8px 9px 10px;display:flex;flex-direction:column;gap:5px}
+  .name{font-size:12px;font-weight:600;line-height:1.3}
+  .state{font-size:11px;color:#7a7a7a}
+  .state.queued{color:#666}
+  .state.running{color:#C9A84C}
+  .state.done{color:#6fbf6f}
+  .state.failed{color:#e08080}
+  .card a.view{font-size:11px;text-decoration:none}
+  .spin{display:inline-block;width:9px;height:9px;border:2px solid rgba(201,168,76,.3);
+    border-top-color:#C9A84C;border-radius:50%;animation:sp .7s linear infinite;margin-right:4px;vertical-align:-1px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="top">
+  <span class="title">♛ ANIMAL ROSTER</span>
+  <span class="progress" id="progress"></span>
+  <button id="genAll" class="primary">Generate All</button>
+  <button onclick="location.href='../index.html'">← Legend</button>
+</div>
+<div class="grid" id="grid"></div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var roster = [];
+  var results = {};   // key -> { status, modelUrl, thumbnailUrl, error }
+  var MAX_RETRIES = 1;   // lighter than the single-model studio — this is a bulk pass
+
+  function setProgress(done, total) { $('progress').textContent = total ? (done + ' / ' + total + ' generated') : ''; }
+
+  function cardEl(entry) {
+    var el = document.createElement('div');
+    el.className = 'card';
+    el.id = 'card-' + entry.key;
+    el.innerHTML =
+      '<div class="thumb" id="thumb-' + entry.key + '">no preview</div>' +
+      '<div class="info">' +
+        '<div class="name">' + entry.label + '</div>' +
+        '<div class="state queued" id="state-' + entry.key + '">Queued</div>' +
+        '<a class="view" id="view-' + entry.key + '" style="display:none" target="_blank">Open in 3D viewer →</a>' +
+      '</div>';
+    return el;
+  }
+
+  function setState(key, cls, text) {
+    var el = $('state-' + key);
+    if (el) { el.className = 'state ' + cls; el.innerHTML = text; }
+  }
+
+  function api(payload) {
+    return fetch('/api/generate3d', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+    }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); });
+  }
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+  function angleImageUrl(prompt, angle) {
+    var suffix = ', full body, ' + angle + ' view, plain neutral gray background, studio product photo, sharp focus';
+    return 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt + suffix) + '?width=1024&height=1024&model=flux&nologo=true';
+  }
+
+  async function pollUntilDone(taskId, endpoint) {
+    for (var i = 0; i < 200; i++) {
+      var res = await api({ action: 'status', taskId: taskId, endpoint: endpoint });
+      if (!res.ok) throw new Error(res.data.error || 'status check failed');
+      var d = res.data;
+      if (d.status === 'SUCCEEDED') return d;
+      if (d.status === 'FAILED' || d.status === 'CANCELED') throw new Error(d.error || 'generation failed');
+      await sleep(3000);
+    }
+    throw new Error('timed out');
+  }
+
+  async function generateOne(entry) {
+    setState(entry.key, 'running', '<span class="spin"></span>Sketching angles…');
+    var prompt = entry.prompt;
+    try {
+      for (var attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        var imageUrls = ['front', 'side', 'back', 'three-quarter'].map(function (a) { return angleImageUrl(prompt, a); });
+        var startRes = await api({ action: 'start', prompt: prompt, imageUrls: imageUrls });
+        if (!startRes.ok) throw new Error(startRes.data.error || 'failed to start');
+
+        setState(entry.key, 'running', '<span class="spin"></span>Modeling…');
+        var done = await pollUntilDone(startRes.data.taskId, startRes.data.endpoint);
+        if (!done.modelUrl) throw new Error('no model returned');
+
+        results[entry.key] = { status: 'done', modelUrl: done.modelUrl, thumbnailUrl: done.thumbnailUrl };
+        var thumb = $('thumb-' + entry.key);
+        if (done.thumbnailUrl) thumb.innerHTML = '<img src="' + done.thumbnailUrl + '" alt="">';
+        setState(entry.key, 'done', '✓ Ready');
+        var view = $('view-' + entry.key);
+        view.href = 'create.html?model=' + encodeURIComponent(done.modelUrl) + '&prompt=' + encodeURIComponent(prompt);
+        view.style.display = 'block';
+        return true;
+      }
+    } catch (e) {
+      results[entry.key] = { status: 'failed', error: e.message };
+      setState(entry.key, 'failed', 'Failed: ' + e.message);
+      return false;
+    }
+  }
+
+  async function generateAll() {
+    $('genAll').disabled = true;
+    var done = 0;
+    setProgress(done, roster.length);
+    // Sequential, not parallel — Meshy generations are billed per task and
+    // a burst of 47 at once is both costly and likely to hit rate limits.
+    for (var i = 0; i < roster.length; i++) {
+      await generateOne(roster[i]);
+      done++;
+      setProgress(done, roster.length);
+    }
+    $('genAll').disabled = false;
+  }
+
+  fetch('roster.json').then(function (r) { return r.json(); }).then(function (list) {
+    roster = list;
+    var grid = $('grid');
+    list.forEach(function (entry) { grid.appendChild(cardEl(entry)); });
+    setProgress(0, list.length);
+  });
+
+  $('genAll').addEventListener('click', generateAll);
+})();
+</script>
+</body>
+</html>

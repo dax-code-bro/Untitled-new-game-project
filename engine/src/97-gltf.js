@@ -416,3 +416,50 @@ Engine.prototype.spawnModel = async function (assetOrUrl, opts = {}) {
   const asset = typeof assetOrUrl === 'string' ? await this.loadModel(assetOrUrl) : assetOrUrl;
   return new GltfInstance(this, asset, opts);
 };
+
+/* Decode an image URL to raw RGBA and upload it as a Texture. Goes through
+   canvas pixel extraction rather than a direct ImageBitmap upload — several
+   GL drivers silently produce an incomplete (solid black) SRGB texture from
+   a direct upload, the same failure the glTF loader's own textures hit. */
+async function loadImageTexture(gl, url, opts = {}) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`texture fetch failed: ${res.status} ${url}`);
+  const bitmap = await createImageBitmap(await res.blob());
+  const cv = typeof OffscreenCanvas !== 'undefined'
+    ? new OffscreenCanvas(bitmap.width, bitmap.height)
+    : Object.assign(document.createElement('canvas'), { width: bitmap.width, height: bitmap.height });
+  const ctx2d = cv.getContext('2d');
+  ctx2d.drawImage(bitmap, 0, 0);
+  const px = ctx2d.getImageData(0, 0, bitmap.width, bitmap.height).data;
+  const t = new Texture(gl, {
+    internalFormat: opts.srgb !== false ? gl.SRGB8_ALPHA8 : gl.RGBA8,
+    format: gl.RGBA, type: gl.UNSIGNED_BYTE, wrap: gl.REPEAT, aniso: 8,
+  });
+  t.upload(new Uint8Array(px.buffer, px.byteOffset, px.byteLength), bitmap.width, bitmap.height);
+  return t;
+}
+
+/* A real AI-generated photo as a ground/prop material, instead of the
+   procedural noise TextureLib synthesizes. Same Material shape either way —
+   this is a drop-in for `ground({ material })` or any material slot.
+   game.loadAIMaterial('a lush green meadow, top-down, seamless texture') */
+Engine.prototype.loadAIMaterial = async function (prompt, opts = {}) {
+  const gl = this.gl;
+  const size = opts.size || 1024;
+  const style = opts.style || 'seamless tileable texture, top-down flat lighting, photorealistic, no shadows, no watermark';
+  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt + ', ' + style)}?width=${size}&height=${size}&model=${opts.model || 'flux'}&nologo=true`;
+  const albedo = await loadImageTexture(gl, url, { srgb: true });
+  const flat = (r, g2, b2) => new Texture(gl, { internalFormat: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE, mips: false }).upload(new Uint8Array([r, g2, b2, 255]), 1, 1);
+  const mat = new Material(gl, {
+    color: [1, 1, 1],
+    roughness: opts.roughness != null ? opts.roughness : 0.85,
+    metalness: 0,
+    doubleSided: !!opts.doubleSided,
+  });
+  mat.maps = {
+    albedo,
+    normal: flat(128, 128, 255),
+    orm: flat(255, Math.round((opts.roughness != null ? opts.roughness : 0.85) * 255), 0),
+  };
+  return mat;
+};
