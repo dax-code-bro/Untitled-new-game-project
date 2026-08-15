@@ -189,6 +189,7 @@ class Engine {
     this.particles = new ParticleSystem(this.gl, opts.maxParticles || 4000);
     this.fluid = null;
     this.grass = null;
+    this.waters = [];
 
     this.actors = [];
     this.materialCache = new Map();
@@ -611,8 +612,24 @@ class Engine {
     return this.grass;
   }
 
-  /* Water volume. Particle count is capped by quality tier. */
+  /* A BODY of water with a live wave-simulation surface: waves, buoyancy,
+     splashes, draining holes, fish. types: deep | shallow | desert |
+     swamp | contaminated.  game.waterVolume({type:'deep', at:[0,1,0],
+     size:[24,24], depth:3, fish:4, walls:false}) */
+  waterVolume(opts = {}) {
+    const w = new WaterVolume(this, opts);
+    this.waters.push(w);
+    return w;
+  }
+
+  /* Water volume. With a `type`, builds a simulated WaterVolume surface;
+     otherwise the classic particle fluid (count capped by quality tier). */
   water(opts = {}) {
+    if (opts.type && WATER_PRESETS[opts.type]) return this.waterVolume(opts);
+    return this._particleWater(opts);
+  }
+
+  _particleWater(opts = {}) {
     const cap = { low: 900, medium: 2000, high: 3600, ultra: 6000 }[this.renderer.qualityName] || 2000;
     if (!this.fluid) {
       this.fluid = new Fluid(this.gl, {
@@ -845,6 +862,11 @@ class Engine {
       this.particles.dust(impactWorld, { count: 14 + created.length, size: Math.max(half.x, half.y, half.z) * 1.2 });
     }
     this.audio.shatter(clamp(created.length / 12, 0.25, 1));
+    // A broken container that holds a WaterVolume springs a leak where it
+    // was hit — the shot-aquarium moment.
+    if (actor.holdsWater && actor.holdsWater.addHole) {
+      actor.holdsWater.addHole(impactWorld, clamp(Math.max(half.x, half.y, half.z) * 0.3, 0.06, 0.2));
+    }
     if (d && d.onBreak) d.onBreak(actor, created);
     actor.destroy();
     return created;
@@ -1215,6 +1237,7 @@ class Engine {
     }
 
     if (this.grass && this.grass.count) list.push(this.grass.batch());
+    for (const w of this.waters) list.push(w.batch());
     return list;
   }
 
@@ -1229,6 +1252,7 @@ class Engine {
     this.renderer.beginFrame(scaled);
 
     for (const fn of this._updateHooks) fn(scaled, this);
+    for (const w of this.waters) w.update(scaled);
 
     this.physics.step(scaled);
     this._playImpactSounds();
@@ -1322,6 +1346,7 @@ class Engine {
     // Chunk debris carries its own mesh, which the shared caches do not own.
     for (const a of this.actors) if (a.ownMesh) a.ownMesh.dispose();
     if (this.grass) this.grass.dispose();
+    for (const w of this.waters) w.dispose();
     this.actors.length = 0;
     this.physics.bodies.length = 0;
   }

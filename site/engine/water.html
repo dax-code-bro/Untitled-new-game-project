@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Legend Water</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#000;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+  canvas{display:block;position:fixed;inset:0;width:100%;height:100%}
+  .bar{position:fixed;left:0;right:0;bottom:0;display:flex;gap:6px;flex-wrap:wrap;justify-content:center;padding:10px 8px calc(10px + env(safe-area-inset-bottom,0px));background:rgba(0,0,0,.55);backdrop-filter:blur(6px)}
+  .bar button{background:#1a1a1a;border:1px solid #8B6914;color:#C9A84C;border-radius:14px;padding:8px 12px;font-size:12px;font-weight:600}
+  .bar button.on{background:#C9A84C;color:#000}
+  .acts{position:fixed;right:10px;top:calc(50% - 90px);display:flex;flex-direction:column;gap:8px}
+  .acts button{background:rgba(0,0,0,.5);border:1px solid #8B6914;color:#C9A84C;border-radius:12px;padding:10px 12px;font-size:13px;font-weight:700}
+  .tag{position:fixed;top:calc(8px + env(safe-area-inset-top,0px));left:12px;color:#C9A84C;font:700 13px Georgia,serif;letter-spacing:.18em}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="tag">♛ LEGEND WATER</div>
+<div class="acts" id="acts"></div>
+<div class="bar" id="bar"></div>
+<script src="legend-engine.js"></script>
+<script>
+  const SCENES = ['deep','shallow','desert','swamp','contaminated','aquarium'];
+  const kind = new URLSearchParams(location.search).get('g') || 'deep';
+  const bar = document.getElementById('bar');
+  for (const k of SCENES) {
+    const b = document.createElement('button');
+    b.textContent = k;
+    if (k === kind) b.classList.add('on');
+    b.onclick = ()=>{ location.search = '?g=' + k; };
+    bar.appendChild(b);
+  }
+
+  const game = LegendEngine.create({ canvas:'#c' });
+  let vol = null, walls = [];
+  const acts = document.getElementById('acts');
+  function act(label, fn){ const b=document.createElement('button'); b.textContent=label; b.onclick=fn; acts.appendChild(b); }
+  const R = (a,b)=>a+Math.random()*(b-a);
+
+  if (kind === 'aquarium') {
+    game.ground({ size: 40, grass: 'standard' });
+    // Glass tank: floor + four breakable walls that hold the water.
+    const T = 2.6, H = 1.7, th = 0.07;
+    const glass = { color: 0xbfd8e2, opacity: 0.22, transparent: true, roughness: 0.05, metalness: 0 };
+    game.box({ at:[0, 0.05, 0], size:[T, 0.1, T], material: glass, static: true });
+    vol = game.waterVolume({ type:'shallow', at:[0, H*0.82, 0], size:[T-th*2, T-th*2], depth: H*0.72, walls: true, fish: 4 });
+    const mk = (x,z,sx,sz)=>{ const w=game.box({ at:[x, H/2+0.1, z], size:[sx, H, sz], material: glass, static: true, breakable:{ pieces: 10 } }); w.holdsWater = vol; walls.push(w); return w; };
+    mk(-T/2+th/2, 0, th, T); mk(T/2-th/2, 0, th, T); mk(0, -T/2+th/2, T, th); mk(0, T/2-th/2, T, th);
+    game.orbit({ center:[0, 0.9, 0], distance: 4.6, height: 1.7, autoRotate: 0.1 });
+    act('🔫 Shoot tank', ()=>{
+      const w = walls.find(w=>!w.dead);
+      if (!w) return;
+      const p = w.position.clone ? w.position.clone() : {x:w.position.x,y:w.position.y,z:w.position.z};
+      p.y = 0.55;                                  // hit low so it really drains
+      game.shatter(w, { point: p });
+    });
+    act('📦 Drop toy', ()=> game.box({ at:[R(-0.5,0.5), 3.2, R(-0.5,0.5)], size:0.25, material:'wood' }));
+  } else {
+    game.ground({ size: 46, material: kind==='desert' ? 'sand' : (kind==='swamp'||kind==='contaminated' ? 'mud' : 'rock'), at:[0,-2.4,0] });
+    vol = game.waterVolume({ type: kind, at:[0, 0, 0], size:[30, 30], depth: 2.3,
+      fish: (kind==='shallow'||kind==='desert') ? 3 : 0 });
+    game.orbit({ center:[0, 0.2, 0], distance: 11, height: 3.4, autoRotate: 0.1 });
+    act('🔫 Shoot', ()=> vol.splashAt([R(-4,4), 0, R(-4,4)], 1.3));
+    act('💣 Grenade', ()=>{ const x=R(-3,3), z=R(-3,3); game.explode([x, vol.level+0.3, z], { radius: 3, scale: 0.5 }); vol.splashAt([x,0,z], 4.5); });
+    act('📦 Crate', ()=> game.box({ at:[R(-3,3), 5, R(-3,3)], size:R(0.5,0.9), material:'wood' }));
+  }
+  game.start();
+  window.__game = game; window.__vol = vol; window.__walls = walls;
+</script>
+</body>
+</html>

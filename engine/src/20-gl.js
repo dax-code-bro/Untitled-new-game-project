@@ -361,6 +361,19 @@ class GpuMesh {
     gl.enableVertexAttribArray(loc);
     gl.vertexAttribPointer(loc, size, gl.FLOAT, false, 0, 0);
     this.buffers.push(buf);
+    if (!this.attrBuffers) this.attrBuffers = {};
+    this.attrBuffers[loc] = buf;
+  }
+
+  /* Re-upload one vertex attribute in place — for meshes that deform every
+     frame (the simulated water surface). */
+  updateAttrib(loc, data) {
+    const gl = this.gl;
+    const buf = this.attrBuffers && this.attrBuffers[loc];
+    if (!buf) return this;
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, data);
+    return this;
   }
 
   /* Per-instance data: 16 floats of model matrix + 4 of tint//custom = 20.
