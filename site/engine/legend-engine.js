@@ -11351,71 +11351,94 @@ function makeQuadGeometry(skeleton, sp, k, opts = {}) {
   const headP = P('head'), muzzle = P('muzzle'), tail1 = P('tail1'), tail2 = P('tail2');
   const spineY = hips.y;
 
-  // Muscle shapes.
-  const haunch = (a) => 1 + angBump(a, PI * 0.62, 0.55, 0.15) + angBump(a, -PI * 0.62 + TAU, 0.55, 0.15) + angBump(a, 0, 0.35, -0.05);
-  const waist = (a) => 1 + angBump(a, 0, 0.4, -0.06);
-  const brisket = (a) => 1 + angBump(a, PI, 0.5, 0.13) + angBump(a, 0, 0.35, -0.04);
-  const shoulderS = (a) => 1 + angBump(a, PI * 0.42, 0.42, 0.1) + angBump(a, TAU - PI * 0.42, 0.42, 0.1);
+  /* Anatomy as angular shaping functions, not just ellipses: each is a set
+     of wrap-aware gaussian bumps over the ring angle (0 = spine). */
+  const haunch = (a) => 1 + angBump(a, PI * 0.62, 0.55, 0.16) + angBump(a, TAU - PI * 0.62, 0.55, 0.16) + angBump(a, 0, 0.35, -0.05);
+  const croup = (a) => 1 + angBump(a, PI * 0.55, 0.6, 0.1) + angBump(a, TAU - PI * 0.55, 0.6, 0.1);
+  const waist = (a) => 1 + angBump(a, 0, 0.4, -0.06) + angBump(a, PI, 0.7, -0.03);
+  const brisket = (a) => 1 + angBump(a, PI, 0.5, 0.14) + angBump(a, 0, 0.35, -0.04);
+  const shoulderS = (a) => 1 + angBump(a, PI * 0.42, 0.42, 0.11) + angBump(a, TAU - PI * 0.42, 0.42, 0.11);
+  const withers = (a) => 1 + angBump(a, 0, 0.3, 0.09);
+  const throat = (a) => 1 + angBump(a, PI, 0.6, 0.07);
+  const jaw = (a) => 1 + angBump(a, PI * 0.72, 0.5, 0.13) + angBump(a, TAU - PI * 0.72, 0.5, 0.13);
+  const brow = (a) => 1 + angBump(a, PI * 0.3, 0.35, 0.07) + angBump(a, TAU - PI * 0.3, 0.35, 0.07);
 
   const np = (t) => new Vec3().copy(neck1).lerp(headP, t);
   const hp = (t) => new Vec3().copy(headP).lerp(muzzle, t);
   const st = (p, w, d, uv, shape, e) => ({ p, w, d, uv, shape, e });
 
+  /* The whole centreline — rump to nose — as one dense loft. */
   bodyLoft(g, [
-    st(new Vec3(0, spineY - D * 0.12, hips.z - BL * 0.34), W * 0.2, D * 0.24, 0.02, null, 2.0),
-    st(new Vec3(0, spineY - D * 0.04, hips.z - BL * 0.2), W * 0.68, D * 0.76, 0.06, haunch, 2.1),
-    st(new Vec3(0, spineY, hips.z), W * 0.95, D * 0.95, 0.12, haunch, 2.2),
-    st(new Vec3(0, spineY - D * 0.03, hips.z + BL * 0.22), W * 0.85, D * 0.8, 0.2, waist, 2.2),
-    st(new Vec3(0, spineY - D * 0.05, chest.z - BL * 0.08), W * 0.95, D * 1.03, 0.29, brisket, 2.3),
-    st(new Vec3(0, spineY + D * 0.02, chest.z + BL * 0.08), W * 0.85, D * 0.95, 0.36, shoulderS, 2.2),
-    st(new Vec3(0, spineY + D * 0.12, chest.z + BL * 0.17), W * 0.6, D * 0.68, 0.42, null, 2.0),
-    st(np(0.18), W * 0.5, D * 0.56, 0.5, null, 2.0),
-    st(np(0.5), W * 0.4, D * 0.45, 0.57, null, 2.0),
-    st(np(0.82), W * 0.34, D * 0.38, 0.63, null, 2.0),
-    st(hp(-0.05), HL * 0.32, HL * 0.38, 0.665, null, 2.0),
-    st(hp(0.3), HL * 0.28, HL * 0.32, 0.7, null, 2.0),
-    st(hp(0.65), HL * 0.17, HL * 0.19, 0.74, null, 2.0),
-    st(hp(0.95), HL * 0.1, HL * 0.11, 0.772, null, 1.9),
-    st(hp(1.05), HL * 0.045, HL * 0.05, 0.778, null, 1.8),
-  ], 30);
+    st(new Vec3(0, spineY - D * 0.1, hips.z - BL * 0.36), W * 0.18, D * 0.22, 0.02, null, 2.0),
+    st(new Vec3(0, spineY - D * 0.02, hips.z - BL * 0.26), W * 0.6, D * 0.68, 0.05, croup, 2.1),
+    st(new Vec3(0, spineY + D * 0.02, hips.z - BL * 0.1), W * 0.9, D * 0.9, 0.09, haunch, 2.2),
+    st(new Vec3(0, spineY + D * 0.01, hips.z + BL * 0.04), W * 0.97, D * 0.94, 0.13, haunch, 2.2),
+    st(new Vec3(0, spineY - D * 0.02, hips.z + BL * 0.16), W * 0.9, D * 0.85, 0.18, waist, 2.2),
+    st(new Vec3(0, spineY - D * 0.04, hips.z + BL * 0.28), W * 0.85, D * 0.82, 0.22, waist, 2.25),
+    st(new Vec3(0, spineY - D * 0.05, chest.z - BL * 0.12), W * 0.92, D * 0.96, 0.27, brisket, 2.3),
+    st(new Vec3(0, spineY - D * 0.04, chest.z), W * 0.95, D * 1.05, 0.31, brisket, 2.3),
+    st(new Vec3(0, spineY + D * 0.02, chest.z + BL * 0.09), W * 0.85, D * 0.97, 0.36, shoulderS, 2.2),
+    st(new Vec3(0, spineY + D * 0.1, chest.z + BL * 0.16), W * 0.68, D * 0.8, 0.4, withers, 2.1),
+    st(new Vec3(0, spineY + D * 0.16, chest.z + BL * 0.21), W * 0.52, D * 0.62, 0.43, withers, 2.0),
+    st(np(0.12), W * 0.48, D * 0.55, 0.48, throat, 2.0),
+    st(np(0.32), W * 0.42, D * 0.48, 0.52, throat, 2.0),
+    st(np(0.52), W * 0.38, D * 0.43, 0.56, null, 2.0),
+    st(np(0.7), W * 0.35, D * 0.39, 0.6, null, 2.0),
+    st(np(0.86), W * 0.32, D * 0.36, 0.63, null, 2.0),
+    st(hp(-0.18), HL * 0.3, HL * 0.36, 0.655, jaw, 2.0),
+    st(hp(0.04), HL * 0.34, HL * 0.4, 0.675, (a) => jaw(a) * brow(a), 2.0),
+    st(hp(0.26), HL * 0.29, HL * 0.34, 0.695, brow, 2.0),
+    st(hp(0.46), HL * 0.22, HL * 0.26, 0.715, null, 2.0),
+    st(hp(0.66), HL * 0.16, HL * 0.19, 0.735, null, 1.95),
+    st(hp(0.84), HL * 0.12, HL * 0.135, 0.755, null, 1.9),
+    st(hp(0.98), HL * 0.09, HL * 0.1, 0.772, null, 1.85),
+    st(hp(1.06), HL * 0.04, HL * 0.045, 0.778, null, 1.8),
+  ], 36);
 
-  // Legs (UVs remapped into the leg band of the coat texture).
+  /* Legs: 8 stations, joint bulges at knee and fetlock, root buried well
+     inside the body with no cap to poke through. */
   const LW = sp.legW * k;
-  const lu = (t) => 0.8 + t * 0.17;   // 0.8 hip .. 0.97 hoof
-  for (const s of ['L', 'R']) {
+  const lu = (t) => 0.8 + t * 0.17;
+  for (const sSide of ['L', 'R']) {
     for (const f of ['f', 'r']) {
-      const up2 = P(f + 'Up' + s), lo = P(f + 'Lo' + s), ft = P(f + 'Ft' + s);
+      const up2 = P(f + 'Up' + sSide), lo = P(f + 'Lo' + sSide), ft = P(f + 'Ft' + sSide);
       const hoof = new Vec3(ft.x, 0.004, ft.z + 0.02 * k);
       const thighW = f === 'r' ? D * 0.3 : D * 0.23;
       loftRings(g, [
-        { p: new Vec3(up2.x * 0.75, up2.y + D * 0.15, up2.z), w: thighW, d: thighW * 1.4, e: 2.1, uv: lu(0) },
-        { p: up2.clone().lerp(lo, 0.5), w: LW * 1.5, d: LW * 1.9, e: 2.0, uv: lu(0.3) },
-        { p: lo, w: LW * 1.05, d: LW * 1.2, e: 2.0, uv: lu(0.55) },
-        { p: lo.clone().lerp(ft, 0.55), w: LW * 0.85, d: LW * 0.95, e: 2.0, uv: lu(0.75) },
-        { p: ft, w: LW * 1.0, d: LW * 1.1, e: 2.0, uv: lu(0.88) },
-        { p: hoof, w: LW * 1.15, d: LW * 1.25, e: 1.6, uv: lu(1) },
-      ], 12, false, true);
+        { p: new Vec3(up2.x * 0.7, up2.y + D * 0.2, up2.z), w: thighW, d: thighW * 1.45, e: 2.1, uv: lu(0) },
+        { p: up2.clone().lerp(lo, 0.3), w: LW * 2.0, d: LW * 2.6, e: 2.05, uv: lu(0.2) },
+        { p: up2.clone().lerp(lo, 0.62), w: LW * 1.3, d: LW * 1.6, e: 2.0, uv: lu(0.38) },
+        { p: lo, w: LW * 1.12, d: LW * 1.3, e: 2.0, uv: lu(0.52) },        // knee/hock
+        { p: lo.clone().lerp(ft, 0.3), w: LW * 0.88, d: LW * 0.98, e: 2.0, uv: lu(0.66) },
+        { p: lo.clone().lerp(ft, 0.68), w: LW * 0.8, d: LW * 0.88, e: 2.0, uv: lu(0.8) },
+        { p: ft, w: LW * 1.0, d: LW * 1.1, e: 2.0, uv: lu(0.9) },          // fetlock
+        { p: hoof, w: LW * 1.12, d: LW * 1.22, e: 1.6, uv: lu(1) },
+      ], 14, false, true);
     }
   }
 
-  // Ears (flat coat zone of the texture).
+  /* Ears: rooted INSIDE the skull (start ring buried, no cap) so they grow
+     out of the head instead of hovering on it. */
   const earL = P('earL'), earR = P('earR');
   const earLen = HL * 0.55 * sp.earScale;
   for (const [e2, sgn] of [[earL, 1], [earR, -1]]) {
-    const tip = new Vec3(e2.x + sgn * earLen * 0.35, e2.y + earLen, e2.z - earLen * 0.15);
+    const root = new Vec3(e2.x - sgn * HL * 0.14, e2.y - HL * 0.16, e2.z + HL * 0.05);
+    const tip = new Vec3(e2.x + sgn * earLen * 0.38, e2.y + earLen * 0.95, e2.z - earLen * 0.16);
     loftRings(g, [
-      { p: e2, w: HL * 0.16, d: HL * 0.07, e: 1.8, uv: 0.985 },
-      { p: new Vec3().copy(e2).lerp(tip, 0.5), w: HL * 0.2, d: HL * 0.06, e: 1.8, uv: 0.985 },
-      { p: tip, w: HL * 0.05, d: HL * 0.03, e: 1.8, uv: 0.985 },
-    ], 8, true, true);
+      { p: root, w: HL * 0.13, d: HL * 0.1, e: 2.0, uv: 0.98 },
+      { p: e2, w: HL * 0.17, d: HL * 0.08, e: 1.8, uv: 0.98 },
+      { p: new Vec3().copy(e2).lerp(tip, 0.55), w: HL * 0.2, d: HL * 0.06, e: 1.8, uv: 0.98 },
+      { p: tip, w: HL * 0.045, d: HL * 0.028, e: 1.8, uv: 0.98 },
+    ], 10, false, true);
   }
 
-  // Tail (leg-band colouring keeps it coat-brown; the flag flash comes later).
+  /* Tail: rooted inside the rump. */
   loftRings(g, [
-    { p: tail1, w: D * 0.16, d: D * 0.18, e: 2.0, uv: 0.82 },
-    { p: new Vec3().copy(tail1).lerp(tail2, 0.5), w: D * 0.13, d: D * 0.15, e: 2.0, uv: 0.84 },
+    { p: new Vec3(tail1.x, tail1.y - D * 0.1, tail1.z + D * 0.25), w: D * 0.2, d: D * 0.24, e: 2.0, uv: 0.82 },
+    { p: tail1, w: D * 0.16, d: D * 0.18, e: 2.0, uv: 0.83 },
+    { p: new Vec3().copy(tail1).lerp(tail2, 0.5), w: D * 0.13, d: D * 0.15, e: 2.0, uv: 0.845 },
     { p: new Vec3(tail2.x, tail2.y - 0.01, tail2.z - 0.015), w: D * 0.05, d: D * 0.06, e: 2.0, uv: 0.86 },
-  ], 8, true, true);
+  ], 10, false, true);
 
   smoothNormals(g);
   const geo = g.finalize();
@@ -11477,7 +11500,10 @@ function antlerMesh(engine, points, side) {
     // FORWARD and back in toward the nose — a C shape seen from above. Tines
     // (G2, G3...) rise nearly vertically off the top of that beam, and the
     // short brow tine (G1) sits just above the base.
+    // The pedicle starts BELOW the skull surface so the rack grows out of
+    // the head instead of resting on it, with the knobby burr at the skin.
     const beam = [
+      new Vec3(-0.01 * sx, -0.06, 0.0),
       new Vec3(0, 0, 0),
       new Vec3(0.07 * sx, 0.10, 0.01),
       new Vec3(0.15 * sx, 0.19, 0.09),
@@ -11485,8 +11511,11 @@ function antlerMesh(engine, points, side) {
       new Vec3(0.13 * sx, 0.27, 0.33),
     ];
     for (let i = 0; i < beam.length - 1; i++) {
-      appendLimb(g, beam[i], beam[i + 1], 0.017 * (1 - i * 0.16), 0.013 * (1 - i * 0.16), 6);
+      const taper = 1 - Math.max(0, i - 1) * 0.16;
+      appendLimb(g, beam[i], beam[i + 1], 0.017 * taper, 0.014 * taper, 7);
     }
+    // Burr: the swollen ring where antler meets skin.
+    appendLimb(g, new Vec3(0, -0.012, 0), new Vec3(0.005 * sx, 0.012, 0), 0.024, 0.02, 7);
     // Brow tine.
     appendLimb(g, new Vec3(0.03 * sx, 0.06, 0.03), new Vec3(0.015 * sx, 0.16, 0.09), 0.009, 0.003, 5);
     // Standing tines along the beam, tallest in the middle of the rack.
@@ -11583,9 +11612,9 @@ class Animal {
       const eye = new Actor(e, {
         mesh: sphereMesh, material: eyeM,
         parent: this.actor, parentBone: headIdx,
-        offset: [s * HL * 0.36, HL * 0.16, HL * 0.34],
+        offset: [s * HL * 0.3, HL * 0.14, HL * 0.3],
       });
-      eye.scale.setScalar(HL * 0.16);
+      eye.scale.setScalar(HL * 0.13);
       e.actors.push(eye); this.parts.push(eye); this.eyes.push(eye);
     }
     this.antlers = [];
