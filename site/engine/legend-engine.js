@@ -2019,6 +2019,35 @@ const TextureLib = {
       c.h = churn * 0.6 + rut * 0.4 - wet * 0.3;
     },
 
+    /* Animal fur: dense strands running along the body (v), broken into
+       clumps, over large hide-tone patches, with pale guard hairs on top.
+       The height channel turns the strands into micro-relief, which is what
+       reads as "fur" when light rakes across it. Tint comes from the
+       material colour, so one texture serves every coat. */
+    fur(u, v, n, c) {
+      const strand = n.fbm(u * 220, v * 16, 5, 2) * 0.5 + 0.5;
+      const clump = n.fbm(u * 42, v * 6, 11, 2) * 0.5 + 0.5;
+      const patch = n.fbm(u * 6, v * 3, 23, 3) * 0.5 + 0.5;
+      const guard = Math.pow(n.fbm(u * 320, v * 90, 31, 1) * 0.5 + 0.5, 6);
+      const t = (0.52 + patch * 0.26) * (0.70 + strand * 0.38 + clump * 0.14);
+      c.r = t * 1.06; c.g = t * 0.97; c.b = t * 0.86;
+      const gh = guard * 0.45;
+      c.r += gh; c.g += gh; c.b += gh * 0.9;
+      c.rough = 0.97 - strand * 0.05;
+      c.ao = 0.7 + clump * 0.3;
+      c.h = strand * 0.8 + clump * 0.2;
+    },
+
+    /* Fawn coat: the same fur with cream dapple spots. */
+    furFawn(u, v, n, c) {
+      TextureLib.kinds.fur(u, v, n, c);
+      const d = n.fbm(u * 26, v * 46, 77, 1) * 0.5 + 0.5;
+      const spot = smoothstep(0.66, 0.74, d);
+      c.r = lerp(c.r, 0.96, spot * 0.85);
+      c.g = lerp(c.g, 0.93, spot * 0.85);
+      c.b = lerp(c.b, 0.84, spot * 0.85);
+    },
+
     marble(u, v, n, c) {
       // Veins: turbulence pushed through a sine, the classic formulation.
       const turb = n.fbm(u * 4, v * 4, 0, 6);
@@ -11059,58 +11088,217 @@ function quickStart(opts = {}) {
 
 /* ─────────── 96-animals.js ─────────── */
 /* ============================================================
-   ANIMALS — articulated creatures with real gaits and real brains.
+   ANIMALS — sculpted, skinned, furred creatures with real brains.
 
-   Each animal is a set of primitive parts (body, neck, head, ears,
-   legs, tail, eyes, antlers) posed procedurally every frame in
-   world space: walk/trot/bound cycles with correct leg phasing,
-   head bobbing while grazing, ear flicks, tail flicks, eye blinks.
-   Every part is an instanced primitive, so a whole herd costs
-   almost nothing to draw.
+   v2: every animal is ONE connected mesh — a body sculpted with
+   lofted rings around a real quadruped skeleton (the same pipeline
+   the human character uses), auto-skinned by bone distance, and
+   posed by driving bone rotations from the gait system. No more
+   floating parts: neck flows out of the chest, legs grow out of
+   the shoulders and hips, and everything bends at real joints.
 
-   The brain is a state machine per animal:
-     graze -> wander -> alert -> flee            (prey)
-   with herds that drift together and fawns that shadow their
-   mothers. Anything close counts as a threat — by default the
-   camera, so walking up to a deer works like real life: the head
-   snaps up, a frozen beat, then bounding flight, tail flagged.
+   Fur comes from the procedural 'fur' texture: dense strands
+   running along the body, clumping, hide-tone patches and pale
+   guard hairs, with the strand field driving the normal map so
+   raking light shimmers across the coat.
 
-   Species so far: deer (male/female/fawn, small/medium/large —
-   antler points grow with size; mule variant) and rabbit. Every
-   later animal plugs into this same machinery.
+   The brain (graze -> wander -> alert -> flee, herds, fawns that
+   shadow their mothers, blinking, ear and tail flicks) carries
+   over from v1 unchanged.
 
    Convention: yaw 0 faces +Z; forward is (sin yaw, 0, cos yaw).
    ============================================================ */
 
 const ANIMAL_SPECIES = {
   deer: {
-    shoulder: 0.95, bodyLen: 1.2, bodyR: 0.26, legR: 0.045,
-    neckLen: 0.42, headLen: 0.30,
-    coat: { male: 0x6b4f2e, female: 0x7a5c38, fawn: 0x8f6c40 },
-    earScale: 1.0, tailColor: 0xe8e0d0,
+    shoulder: 0.95, bodyLen: 1.15, bodyR: 0.27, neckLen: 0.48, headLen: 0.30,
+    earScale: 1.0, tailLen: 0.22, legW: 0.085,
+    coat: { male: 0x8a6a42, female: 0x97754c, fawn: 0xa8815a },
+    texture: { male: 'fur', female: 'fur', fawn: 'furFawn' },
     walkSpeed: 0.9, runSpeed: 6.2, gait: 'quad',
     alertR: 6.5, safeR: 13, grazes: true,
   },
   rabbit: {
-    shoulder: 0.2, bodyLen: 0.36, bodyR: 0.11, legR: 0.02,
-    neckLen: 0.05, headLen: 0.13,
-    coat: { male: 0x7d6a52, female: 0x8a765c, fawn: 0x96826a },
-    earScale: 2.4, tailColor: 0xefe9dc,
+    shoulder: 0.2, bodyLen: 0.38, bodyR: 0.115, neckLen: 0.07, headLen: 0.13,
+    earScale: 2.6, tailLen: 0.05, legW: 0.032,
+    coat: { male: 0x9c8768, female: 0xa8946f, fawn: 0xb4a17e },
+    texture: { male: 'fur', female: 'fur', fawn: 'fur' },
     walkSpeed: 0.55, runSpeed: 4.6, gait: 'hop',
     alertR: 4.5, safeR: 9, grazes: true,
   },
 };
 
 const ANIMAL_SIZES = { small: 0.8, medium: 1.0, large: 1.18 };
-/* Antler points per side by size: a small buck is a two-point,
-   a large one carries a full rack. */
 const ANTLER_POINTS = { small: 2, medium: 4, large: 6 };
+
+/* ---------------- skeleton ---------------- */
+
+function makeQuadSkeleton(sp, k) {
+  const R = sp.bodyR * k, BL = sp.bodyLen * k, NL = sp.neckLen * k, HL = sp.headLen * k;
+  const spineY = sp.shoulder * k + R * 0.45;
+  const legTop = spineY - R * 0.3;
+  const upper = legTop * 0.52, lower = legTop * 0.44;
+  const B = [];
+  const bone = (name, parent, pos) => { B.push([name, parent, pos]); return B.length - 1; };
+
+  const hips = bone('hips', -1, [0, spineY, -BL * 0.34]);
+  const spine = bone('spine', hips, [0, 0.015 * k, BL * 0.3]);
+  const chest = bone('chest', spine, [0, 0.015 * k, BL * 0.3]);
+  const neck1 = bone('neck1', chest, [0, R * 0.5, BL * 0.12]);
+  const neck2 = bone('neck2', neck1, [0, NL * 0.42, NL * 0.3]);
+  const head = bone('head', neck2, [0, NL * 0.4, NL * 0.26]);
+  bone('muzzle', head, [0, -HL * 0.06, HL * 0.62]);
+  bone('earL', head, [HL * 0.32, HL * 0.4, -HL * 0.12]);
+  bone('earR', head, [-HL * 0.32, HL * 0.4, -HL * 0.12]);
+  const tail1 = bone('tail1', hips, [0, R * 0.5, -BL * 0.18]);
+  bone('tail2', tail1, [0, -0.02 * k, -sp.tailLen * k]);
+  for (const side of [1, -1]) {
+    const s = side > 0 ? 'L' : 'R';
+    const fu = bone('fUp' + s, chest, [side * R * 0.55, -R * 0.3, BL * 0.06]);
+    const fl = bone('fLo' + s, fu, [0, -upper, 0]);
+    bone('fFt' + s, fl, [0, -lower, 0.015 * k]);
+    const ru = bone('rUp' + s, hips, [side * R * 0.58, -R * 0.25, -BL * 0.04]);
+    const rl = bone('rLo' + s, ru, [0, -upper, -0.02 * k]);
+    bone('rFt' + s, rl, [0, -lower, 0.02 * k]);
+  }
+  return new Skeleton(B.map(([n, p, pos]) => new Bone(n, p, pos, null)));
+}
+
+/* ---------------- sculpt ---------------- */
+
+/* One connected body built around the bind pose: torso, neck and head as
+   lofted tubes that overlap into each other (overlap is what hides seams),
+   legs and ears as tapered lofts, tail as a limb. */
+function makeQuadGeometry(skeleton, sp, k, opts = {}) {
+  const g = new Geometry();
+  const R = sp.bodyR * k, BL = sp.bodyLen * k, NL = sp.neckLen * k, HL = sp.headLen * k;
+  const P = (name) => { const v = new Vec3(); skeleton.bones[skeleton.index(name)].bindMatrix.getTranslation(v); return v; };
+
+  const hips = P('hips'), chest = P('chest'), neck1 = P('neck1'), neck2 = P('neck2');
+  const headP = P('head'), muzzle = P('muzzle'), tail1 = P('tail1'), tail2 = P('tail2');
+  const spineY = hips.y;
+
+  // Torso: rump -> hips -> belly -> chest -> shoulder point.
+  const ring = (z, y, w, d, e, uv) => ({ p: new Vec3(0, y, z), w, d, e: e || 2.2, uv });
+  loftRings(g, [
+    ring(hips.z - BL * 0.2, spineY - R * 0.05, R * 0.55, R * 0.6, 2.0, 0),
+    ring(hips.z, spineY - R * 0.02, R * 0.9, R * 1.0, 2.2, 0.08),
+    ring(hips.z + BL * 0.3, spineY - R * 0.06, R * 1.0, R * 1.12, 2.3, 0.2),
+    ring(chest.z, spineY, R * 0.95, R * 1.16, 2.3, 0.32),
+    ring(chest.z + BL * 0.16, spineY + R * 0.06, R * 0.72, R * 0.95, 2.1, 0.4),
+  ], 16, true, true);
+
+  // Neck: flows out of the chest top toward the skull.
+  const nr = (t, w) => {
+    const p = new Vec3().copy(neck1).lerp(headP, t);
+    return { p, w, d: w * 1.15, e: 2.0, uv: 0.42 + t * 0.14 };
+  };
+  loftRings(g, [
+    { p: new Vec3(neck1.x, neck1.y - R * 0.35, neck1.z - R * 0.2), w: R * 0.62, d: R * 0.72, e: 2.1, uv: 0.4 },
+    nr(0.25, R * 0.5), nr(0.6, R * 0.42), nr(1.0, HL * 0.4),
+  ], 14, true, true);
+
+  // Head: skull -> brow -> muzzle -> nose.
+  const headRing = (t, w, d, e) => {
+    const p = new Vec3().copy(headP).lerp(muzzle, t);
+    return { p, w, d, e: e || 2.0, uv: 0.58 + t * 0.1 };
+  };
+  loftRings(g, [
+    headRing(-0.25, HL * 0.34, HL * 0.36),
+    headRing(0.1, HL * 0.44, HL * 0.46),
+    headRing(0.45, HL * 0.34, HL * 0.36),
+    headRing(0.85, HL * 0.2, HL * 0.22),
+    headRing(1.05, HL * 0.12, HL * 0.13),
+  ], 14, true, true);
+
+  // Legs: thigh buried in the body, tapering to a thin cannon and a hoof.
+  const LW = sp.legW * k;
+  for (const s of ['L', 'R']) {
+    for (const f of ['f', 'r']) {
+      const up = P(f + 'Up' + s), lo = P(f + 'Lo' + s), ft = P(f + 'Ft' + s);
+      const hoof = new Vec3(ft.x, 0.005, ft.z + 0.02 * k);
+      loftRings(g, [
+        { p: new Vec3(up.x, up.y + R * 0.4, up.z), w: LW * 1.6, d: LW * 2.2, e: 2.1, uv: 0.7 },
+        { p: up.clone().lerp(lo, 0.45), w: LW * 1.1, d: LW * 1.5, e: 2.0, uv: 0.76 },
+        { p: lo, w: LW * 0.55, d: LW * 0.7, e: 2.0, uv: 0.84 },
+        { p: lo.clone().lerp(ft, 0.5), w: LW * 0.42, d: LW * 0.5, e: 2.0, uv: 0.9 },
+        { p: ft, w: LW * 0.48, d: LW * 0.55, e: 2.0, uv: 0.96 },
+        { p: hoof, w: LW * 0.52, d: LW * 0.6, e: 1.6, uv: 1.0 },
+      ], 10, true, true);
+    }
+  }
+
+  // Ears: flattened petals off the skull.
+  const earL = P('earL'), earR = P('earR');
+  const earLen = HL * 0.55 * sp.earScale;
+  for (const [e, s] of [[earL, 1], [earR, -1]]) {
+    const tip = new Vec3(e.x + s * earLen * 0.35, e.y + earLen, e.z - earLen * 0.15);
+    loftRings(g, [
+      { p: e, w: HL * 0.16, d: HL * 0.07, e: 1.8, uv: 0.6 },
+      { p: new Vec3().copy(e).lerp(tip, 0.5), w: HL * 0.2, d: HL * 0.06, e: 1.8, uv: 0.62 },
+      { p: tip, w: HL * 0.05, d: HL * 0.03, e: 1.8, uv: 0.64 },
+    ], 8, true, true);
+  }
+
+  // Tail.
+  appendLimb(g, tail1, new Vec3(tail2.x, tail2.y, tail2.z - 0.02), R * 0.22, R * 0.08, 8);
+
+  smoothNormals(g);
+  const geo = g.finalize();
+
+  /* Auto-skin: score every bone segment by inverse-quartic distance and
+     keep the strongest four — the same scheme the human uses. */
+  const SEGS = [
+    ['hips', 'spine'], ['spine', 'chest'], ['chest', 'neck1'], ['neck1', 'neck2'],
+    ['neck2', 'head'], ['head', 'muzzle'], ['hips', 'tail1'], ['tail1', 'tail2'],
+    ['head', 'earL'], ['head', 'earR'],
+  ];
+  for (const s of ['L', 'R']) for (const f of ['f', 'r']) {
+    SEGS.push([f + 'Up' + s, f + 'Lo' + s], [f + 'Lo' + s, f + 'Ft' + s]);
+  }
+  const segments = [];
+  const pa = new Vec3(), pb = new Vec3();
+  for (const [a, b] of SEGS) {
+    const ai = skeleton.index(a), bi = skeleton.index(b);
+    if (ai < 0 || bi < 0) continue;
+    skeleton.bones[ai].bindMatrix.getTranslation(pa);
+    skeleton.bones[bi].bindMatrix.getTranslation(pb);
+    segments.push({ a: pa.clone(), b: pb.clone(), boneA: ai, boneB: bi });
+  }
+  const n = geo.positions.length / 3;
+  const joints = new Float32Array(n * 4);
+  const weights = new Float32Array(n * 4);
+  const p = new Vec3(), closest = new Vec3();
+  for (let i = 0; i < n; i++) {
+    p.set(geo.positions[i * 3], geo.positions[i * 3 + 1], geo.positions[i * 3 + 2]);
+    const merged = new Map();
+    for (const seg of segments) {
+      closestPointOnSegment(p, seg.a, seg.b, closest);
+      const d2 = Math.max(closest.distanceToSq(p), 1e-5);
+      const t = clamp(seg.a.distanceTo(closest) / Math.max(seg.a.distanceTo(seg.b), 1e-5), 0, 1);
+      const w = 1 / (d2 * d2);
+      merged.set(seg.boneA, (merged.get(seg.boneA) || 0) + w * (1 - t));
+      merged.set(seg.boneB, (merged.get(seg.boneB) || 0) + w * t);
+    }
+    const top = Array.from(merged.entries()).sort((a, b) => b[1] - a[1]).slice(0, 4);
+    let sum = 0; for (const [, w] of top) sum += w;
+    if (sum < 1e-9) { joints[i * 4] = 0; weights[i * 4] = 1; continue; }
+    for (let q = 0; q < 4; q++) {
+      joints[i * 4 + q] = top[q] ? top[q][0] : 0;
+      weights[i * 4 + q] = top[q] ? top[q][1] / sum : 0;
+    }
+  }
+  geo.joints = joints;
+  geo.weights = weights;
+  return geo;
+}
+
+/* ---------------- antlers (bone-parented attachment) ---------------- */
 
 function antlerMesh(engine, points, side) {
   return engine._mesh(`antler:${points}:${side}`, () => {
     const g = new Geometry();
-    const sx = side;                       // mirror across the skull midline
-    // Main beam sweeps up, out and back (forward is +Z, so back is -Z).
+    const sx = side;
     const beam = [
       new Vec3(0, 0, 0),
       new Vec3(0.06 * sx, 0.14, -0.04),
@@ -11130,11 +11318,11 @@ function antlerMesh(engine, points, side) {
   });
 }
 
+/* ---------------- the animal ---------------- */
+
 let _animalId = 0;
 
 class Animal {
-  /* opts: { species, sex: 'male'|'female'|'fawn', size: 'small'|'medium'|
-     'large', at, mother (Animal), mule, herd ({cx,cz}), groundY, seed } */
   constructor(engine, opts = {}) {
     this.engine = engine;
     this.id = _animalId++;
@@ -11166,48 +11354,63 @@ class Animal {
     this.dead = false;
 
     this._build();
-    this._pose();
   }
 
   _groundAt(x, z) { return this.groundY ? this.groundY(x, z) : this.baseY; }
 
   _build() {
     const e = this.engine, sp = this.spec, k = this.k;
-    const coat = this.isBaby ? sp.coat.fawn : (sp.coat[this.sex] || sp.coat.female);
-    const coatM = e.material({ color: this.mule ? 0x655a48 : coat, roughness: 0.92 });
-    const darkM = e.material({ color: 0x1c130c, roughness: 0.55 });
-    const boneM = e.material({ color: 0xcfc4a8, roughness: 0.7 });
-    const tailM = e.material({ color: sp.tailColor, roughness: 0.92 });
-    const sphere = e._mesh('sphere', () => Shapes.sphere(0.5, 20, 28));
-    const box = e._mesh('box', () => Shapes.box(1, 1, 1, 1));
-    const part = (mesh, mat) => {
-      const a = new Actor(e, { mesh, material: mat, name: `animal${this.id}` });
-      a.boundRadius = 1.2;
-      e.actors.push(a);
-      return a;
-    };
+    // One skeleton per animal (it holds this animal's pose), but the sculpted
+    // skinned mesh is cached per species+size, so a herd shares geometry.
+    this.skeleton = makeQuadSkeleton(sp, k);
+    const meshKey = `quad:${this.species}:${k.toFixed(2)}`;
+    this.mesh = e._mesh(meshKey, () => makeQuadGeometry(this.skeleton, sp, k));
 
-    this.body = part(sphere, coatM);
-    this.parts = [this.body];
-    const add = (mesh, mat) => { const a = part(mesh, mat); this.parts.push(a); return a; };
-    this.neck = add(box, coatM);
-    this.head = add(sphere, coatM);
-    this.snout = add(box, coatM);
-    this.tail = add(sphere, tailM);
-    this.ears = [add(box, coatM), add(box, coatM)];
-    this.eyes = [add(sphere, darkM), add(sphere, darkM)];
-    this.legs = [];
-    for (let i = 0; i < 4; i++) this.legs.push(add(box, coatM));
+    const coat = this.isBaby ? sp.coat.fawn : (sp.coat[this.sex] || sp.coat.female);
+    const tex = (sp.texture && sp.texture[this.isBaby ? 'fawn' : this.sex]) || 'fur';
+    this.actor = new Actor(e, {
+      name: `animal${this.id}`,
+      mesh: this.mesh,
+      material: e.material({ texture: tex, color: this.mule ? 0x7d7261 : coat, roughness: 0.95, uvScale: 1 }),
+      skeleton: this.skeleton,
+      animator: { update: (dt) => this._drive(dt), add() {}, play() {} },
+      at: [this.x, this.baseY, this.z],
+      boundRadius: 2.2 * k,
+    });
+    e.actors.push(this.actor);
+    this.parts = [this.actor];
+
+    // Eyes and antlers ride the head bone.
+    const headIdx = this.skeleton.index('head');
+    const HL = sp.headLen * k;
+    const eyeM = e.material({ color: 0x150f09, roughness: 0.25 });
+    const sphereMesh = e._mesh('sphere', () => Shapes.sphere(0.5, 20, 28));
+    this.eyes = [];
+    for (const s of [1, -1]) {
+      const eye = new Actor(e, {
+        mesh: sphereMesh, material: eyeM,
+        parent: this.actor, parentBone: headIdx,
+        offset: [s * HL * 0.36, HL * 0.16, HL * 0.34],
+      });
+      eye.scale.setScalar(HL * 0.16);
+      e.actors.push(eye); this.parts.push(eye); this.eyes.push(eye);
+    }
     this.antlers = [];
     if (this.species === 'deer' && this.sex === 'male' && !this.isBaby) {
-      this.antlers = [
-        add(antlerMesh(e, ANTLER_POINTS[this.sizeName], 1), boneM),
-        add(antlerMesh(e, ANTLER_POINTS[this.sizeName], -1), boneM),
-      ];
+      const boneM = e.material({ color: 0xcfc4a8, roughness: 0.7 });
+      for (const s of [1, -1]) {
+        const a = new Actor(e, {
+          mesh: antlerMesh(e, ANTLER_POINTS[this.sizeName], s), material: boneM,
+          parent: this.actor, parentBone: headIdx,
+          offset: [s * HL * 0.2, HL * 0.34, -HL * 0.12],
+        });
+        a.scale.setScalar(k);
+        e.actors.push(a); this.parts.push(a); this.antlers.push(a);
+      }
     }
   }
 
-  /* ---------------- the brain ---------------- */
+  /* ---------------- the brain (unchanged from v1) ---------------- */
 
   _threatInfo() {
     const e = this.engine;
@@ -11285,11 +11488,9 @@ class Animal {
     this.x += Math.sin(this.yaw) * this.speed * dt;
     this.z += Math.cos(this.yaw) * this.speed * dt;
 
-    // Gait phase advances with distance covered, so feet never skate.
     const stride = (sp.gait === 'hop' ? 0.7 : 1.4) * k;
     if (this.speed > 0.03) this.phase = (this.phase + (this.speed / stride) * dt) % 1;
 
-    // Micro-life.
     this.blinkT -= dt;
     if (this.blinkT <= 0) { this.blink = 0.12; this.blinkT = this.rng.range(1.5, 5); }
     this.blink = Math.max(0, this.blink - dt);
@@ -11299,100 +11500,63 @@ class Animal {
     this.tailT -= dt;
     if (this.tailT <= 0) { this.tailFlick = 0.5; this.tailT = this.rng.range(2, 7); }
     this.tailFlick = Math.max(0, this.tailFlick - dt);
-
-    this._pose();
   }
 
-  /* ---------------- the puppeteer (all world-space) ---------------- */
+  /* ---------------- bone driver (runs as the actor's animator) ---------------- */
 
-  _pose() {
-    const sp = this.spec, k = this.k;
-    const sinY = Math.sin(this.yaw), cosY = Math.cos(this.yaw);
-    /* local (lx = left/right, ly = up, lz = forward) -> world */
-    const W = (a, lx, ly, lz) => a._position.set(
-      this.x + cosY * lx + sinY * lz,
-      this._y + ly,
-      this.z - sinY * lx + cosY * lz);
-
+  _drive() {
+    const sp = this.spec, k = this.k, sk = this.skeleton;
     const running = this.speed > sp.walkSpeed * k * 2.2;
     const ph = this.phase * TAU;
-    const legLen = sp.shoulder * k;
+
     const hop = sp.gait === 'hop'
       ? (this.speed > 0.1 ? Math.abs(Math.sin(ph)) * 0.14 * k * (1 + this.speed * 0.5) : 0)
-      : (running ? Math.abs(Math.sin(ph)) * 0.3 * k : 0);
-    this._y = this._groundAt(this.x, this.z) + legLen + sp.bodyR * k * 0.6 + hop;
+      : (running ? Math.abs(Math.sin(ph)) * 0.28 * k : 0);
+    this.actor.setPosition([this.x, this._groundAt(this.x, this.z) + hop, this.z]);
+    this.actor.setRotation(new Quat().setEuler(0, this.yaw, 0));
 
-    // Body: a stretched sphere; pitches with the bound while running.
-    W(this.body, 0, 0, 0);
-    this.body._rotation.setEuler(running ? Math.sin(ph) * 0.12 : 0, this.yaw, 0);
-    this.body.scale.set(sp.bodyR * 2 * k, sp.bodyR * 2.3 * k, sp.bodyLen * k);
+    const bone = (name) => sk.bones[sk.index(name)];
 
-    // Legs. Walk: lateral sequence; run/hop: front and hind pairs.
+    // Torso: a touch of pitch with the bound.
+    bone('spine').localRotation.setEuler(running ? Math.sin(ph) * 0.08 : 0, 0, 0);
+    bone('chest').localRotation.setEuler(running ? Math.sin(ph) * 0.06 : 0, 0, 0);
+
+    // Neck chain: bind pose is the natural half-raised carry; positive pitch
+    // lowers the nose into the grass, negative lifts to full alarm.
+    const down = this.headDown;
+    const nod = this.speed > 0.05 && !running ? Math.sin(ph * 2) * 0.05 : 0;
+    bone('neck1').localRotation.setEuler(lerp(-0.25, 0.9, down) + nod, 0, 0);
+    bone('neck2').localRotation.setEuler(lerp(-0.15, 0.55, down), 0, 0);
+    bone('head').localRotation.setEuler(lerp(0.1, -0.5, down), 0, 0);
+
+    // Legs: walk is a lateral sequence, running is bounding pairs. The lower
+    // leg folds as the upper swings back, which is what makes a stride read
+    // as a stride instead of a pendulum.
     const phases = sp.gait === 'hop'
       ? [0.05, 0, 0.5, 0.55]
       : (running ? [0, 0.12, 0.55, 0.65] : [0, 0.5, 0.75, 0.25]);
-    const amp = this.speed < 0.05 ? 0 : (running ? 0.85 : 0.5);
-    const hz = sp.bodyLen * 0.32 * k, hx = sp.bodyR * 0.6 * k;
-    const hips = [[hx, hz], [-hx, hz], [hx, -hz], [-hx, -hz]];
+    const amp = this.speed < 0.05 ? 0 : (running ? 0.8 : 0.45);
+    const legNames = [['fUpL', 'fLoL'], ['fUpR', 'fLoR'], ['rUpL', 'rLoL'], ['rUpR', 'rLoR']];
     for (let i = 0; i < 4; i++) {
       const swing = Math.sin((this.phase + phases[i]) * TAU) * amp;
-      const leg = this.legs[i];
-      const hipY = -sp.bodyR * k * 0.7;
-      W(leg, hips[i][0], hipY - Math.cos(swing) * legLen * 0.5, hips[i][1] + Math.sin(swing) * legLen * 0.5);
-      leg._rotation.setEuler(swing, this.yaw, 0);
-      leg.scale.set(sp.legR * 2 * k, legLen, sp.legR * 2 * k);
+      const fold = Math.max(0, Math.sin((this.phase + phases[i]) * TAU + 1.9)) * amp * (running ? 1.2 : 0.8);
+      bone(legNames[i][0]).localRotation.setEuler(swing, 0, 0);
+      bone(legNames[i][1]).localRotation.setEuler(i < 2 ? fold * 0.7 : -fold * 0.7, 0, 0);
     }
 
-    // Neck and head: buried in the grass or held high, nodding as it walks.
-    const nod = this.speed > 0.05 && !running ? Math.sin(ph * 2) * 0.05 : 0;
-    const down = this.headDown;
-    const neckPitch = lerp(-0.85, 0.9, down);        // -up ... +down
-    const nBase = sp.bodyLen * 0.42 * k;
-    W(this.neck, 0, sp.bodyR * k * (1 - down) * 0.9 - down * 0.1 * k, nBase);
-    this.neck._rotation.setEuler(neckPitch, this.yaw, 0);
-    this.neck.scale.set(sp.bodyR * 0.55 * k, sp.neckLen * k * 1.35, sp.bodyR * 0.6 * k);
-    const hY = sp.bodyR * k * (1 - down) * 1.7 - down * legLen * 0.62 + nod * k;
-    const hZ = nBase + sp.neckLen * k * (0.5 + down * 0.4);
-    W(this.head, 0, hY, hZ);
-    this.head._rotation.setEuler(down * 0.5, this.yaw, 0);
-    this.head.scale.set(sp.headLen * 0.72 * k, sp.headLen * 0.72 * k, sp.headLen * k);
-    W(this.snout, 0, hY - sp.headLen * k * 0.14 - down * 0.03, hZ + sp.headLen * k * 0.55);
-    this.snout._rotation.setEuler(down * 0.5, this.yaw, 0);
-    this.snout.scale.set(sp.headLen * 0.34 * k, sp.headLen * 0.3 * k, sp.headLen * 0.42 * k);
-
-    // Ears — rabbits wear them tall; the flick is a quick rotation shiver.
-    const flick = this.earFlick > 0 ? Math.sin(this.earFlick * 24) * 0.5 : 0;
-    const earL = sp.headLen * 0.6 * sp.earScale * k;
-    for (let i = 0; i < 2; i++) {
-      const s = i ? 1 : -1;
-      W(this.ears[i], s * sp.headLen * 0.35 * k, hY + sp.headLen * 0.5 * k + earL * 0.4, hZ - sp.headLen * 0.2 * k);
-      this.ears[i]._rotation.setEuler(-0.25, this.yaw, s * (0.3 + (i === 0 ? flick : flick * 0.4)));
-      this.ears[i].scale.set(earL * 0.32, earL, earL * 0.14);
-    }
-
-    // Eyes, with blinks (a blink is a vertical squash of the eye).
-    const lid = this.blink > 0 ? 0.15 : 1;
-    const eyeR = sp.headLen * 0.16 * k;
-    for (let i = 0; i < 2; i++) {
-      const s = i ? 1 : -1;
-      W(this.eyes[i], s * sp.headLen * 0.37 * k, hY + sp.headLen * 0.1 * k, hZ + sp.headLen * 0.28 * k);
-      this.eyes[i].scale.set(eyeR, eyeR * lid, eyeR);
-    }
-
-    // Tail: relaxed normally, flagged high in flight (the whitetail flag).
+    // Ears and tail.
+    const flick = this.earFlick > 0 ? Math.sin(this.earFlick * 24) * 0.6 : 0;
+    bone('earL').localRotation.setEuler(0, 0, 0.25 + flick);
+    bone('earR').localRotation.setEuler(0, 0, -0.25 - flick * 0.4);
     const flag = this.state === 'flee' ? 1 : (this.tailFlick > 0 ? Math.abs(Math.sin(this.tailFlick * 14)) * 0.5 : 0);
-    W(this.tail, 0, sp.bodyR * k * (0.4 + flag * 0.9), -sp.bodyLen * 0.5 * k);
-    this.tail._rotation.setEuler(-0.6 - flag * 0.9, this.yaw, 0);
-    this.tail.scale.set(sp.bodyR * 0.7 * k, sp.bodyR * 0.9 * k, sp.bodyR * 0.7 * k);
+    bone('tail1').localRotation.setEuler(-flag * 1.3, this.tailFlick > 0 ? Math.sin(this.tailFlick * 18) * 0.3 : 0, 0);
 
-    // Antlers ride the skull.
-    for (let i = 0; i < this.antlers.length; i++) {
-      const s = i === 0 ? 1 : -1;
-      const a = this.antlers[i];
-      W(a, s * sp.headLen * 0.22 * k, hY + sp.headLen * 0.42 * k, hZ - sp.headLen * 0.15 * k);
-      a._rotation.setEuler(0, this.yaw, 0);
-      a.scale.set(k, k, k);
-    }
+    sk.update();
+
+    // Blink: the lids are a vertical squash of the eye.
+    const lid = this.blink > 0 ? 0.15 : 1;
+    const HL = sp.headLen * k;
+    for (const eye of this.eyes) eye.scale.set(HL * 0.16, HL * 0.16 * lid, HL * 0.16);
   }
 
   destroy() {
@@ -11421,7 +11585,6 @@ Engine.prototype.animal = function (opts = {}) {
   return a;
 };
 
-/* A natural mixed group: bucks, does and their fawns. */
 Engine.prototype.herdOf = function (opts = {}) {
   const n = opts.count || 6;
   const at = Vec3.from(opts.at || [0, 0, 0]);
@@ -11449,8 +11612,6 @@ Engine.prototype.herdOf = function (opts = {}) {
   return out;
 };
 
-/* Test plate: a blank simulation slab, up to 10 square miles, ready to
-   build on. */
 Engine.prototype.testPlate = function (opts = {}) {
   const miles = clamp(opts.miles || 1, 0.02, 10);
   const side = Math.sqrt(miles) * 1609.34;

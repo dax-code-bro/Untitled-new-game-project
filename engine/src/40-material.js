@@ -283,6 +283,35 @@ const TextureLib = {
       c.h = churn * 0.6 + rut * 0.4 - wet * 0.3;
     },
 
+    /* Animal fur: dense strands running along the body (v), broken into
+       clumps, over large hide-tone patches, with pale guard hairs on top.
+       The height channel turns the strands into micro-relief, which is what
+       reads as "fur" when light rakes across it. Tint comes from the
+       material colour, so one texture serves every coat. */
+    fur(u, v, n, c) {
+      const strand = n.fbm(u * 220, v * 16, 5, 2) * 0.5 + 0.5;
+      const clump = n.fbm(u * 42, v * 6, 11, 2) * 0.5 + 0.5;
+      const patch = n.fbm(u * 6, v * 3, 23, 3) * 0.5 + 0.5;
+      const guard = Math.pow(n.fbm(u * 320, v * 90, 31, 1) * 0.5 + 0.5, 6);
+      const t = (0.52 + patch * 0.26) * (0.70 + strand * 0.38 + clump * 0.14);
+      c.r = t * 1.06; c.g = t * 0.97; c.b = t * 0.86;
+      const gh = guard * 0.45;
+      c.r += gh; c.g += gh; c.b += gh * 0.9;
+      c.rough = 0.97 - strand * 0.05;
+      c.ao = 0.7 + clump * 0.3;
+      c.h = strand * 0.8 + clump * 0.2;
+    },
+
+    /* Fawn coat: the same fur with cream dapple spots. */
+    furFawn(u, v, n, c) {
+      TextureLib.kinds.fur(u, v, n, c);
+      const d = n.fbm(u * 26, v * 46, 77, 1) * 0.5 + 0.5;
+      const spot = smoothstep(0.66, 0.74, d);
+      c.r = lerp(c.r, 0.96, spot * 0.85);
+      c.g = lerp(c.g, 0.93, spot * 0.85);
+      c.b = lerp(c.b, 0.84, spot * 0.85);
+    },
+
     marble(u, v, n, c) {
       // Veins: turbulence pushed through a sine, the classic formulation.
       const turb = n.fbm(u * 4, v * 4, 0, 6);
