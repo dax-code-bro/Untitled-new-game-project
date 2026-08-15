@@ -233,7 +233,7 @@ function makeQuadGeometry(skeleton, sp, k, opts = {}) {
         { p: lo.clone().lerp(ft, 0.68), w: LW * 0.8, d: LW * 0.88, e: 2.0, uv: lu(0.8) },
         { p: ft, w: LW * 1.0, d: LW * 1.1, e: 2.0, uv: lu(0.9) },          // fetlock
         { p: hoof, w: LW * 1.12, d: LW * 1.22, e: 1.6, uv: lu(1) },
-      ], 14, false, true);
+      ], 22, false, true);
     }
   }
 
