@@ -25,28 +25,38 @@
    ~0.47m but only ~0.32m WIDE — deer are slab-sided, not barrels — a long
    ~0.55m neck carried high, a ~0.29m wedge head, and thin legs whose cannon
    bones are barely 5cm across. bodyW/bodyD are half-width/half-depth. */
+/* Dimensions are the published biometrics of the real animals, the same way
+   the AAA hunting games author theirs.
+   Whitetail (Odocoileus virginianus), mature buck at k=1.0:
+     shoulder 0.98m (recorded range 0.90-1.05, trophies to ~1.07)
+     nose-to-tail-base ~1.9m, tail 0.30m  (total length range 1.52-2.13m)
+     chest ~0.45m deep but only ~0.28m wide; cannon bone ~3.4cm across
+     neck 0.50m; head 0.30m; ears ~0.16m; flat-out gallop ~13 m/s
+   Eastern cottontail at k=1.0: 0.43m long, ~0.17m at the shoulder,
+     ~6cm ears, ~7.5 m/s in the zigzag sprint. */
 const ANIMAL_SPECIES = {
   deer: {
-    shoulder: 0.95, bodyLen: 1.15, bodyW: 0.16, bodyD: 0.235,
-    neckLen: 0.55, headLen: 0.29, earScale: 1.0, tailLen: 0.25, legW: 0.024,
+    shoulder: 0.98, bodyLen: 1.08, bodyW: 0.14, bodyD: 0.225,
+    neckLen: 0.5, headLen: 0.3, earScale: 1.05, tailLen: 0.3, legW: 0.017,
     furLen: 0.02, shells: 6,
     coat: { male: 0x8a6a42, female: 0x97754c, fawn: 0xa8815a },
     texture: { male: 'fur', female: 'fur', fawn: 'furFawn' },
-    walkSpeed: 0.9, runSpeed: 6.2, gait: 'quad',
-    alertR: 6.5, safeR: 13, grazes: true,
+    walkSpeed: 1.2, runSpeed: 11, gait: 'quad',
+    alertR: 6.5, safeR: 16, grazes: true,
   },
   rabbit: {
-    shoulder: 0.2, bodyLen: 0.38, bodyW: 0.085, bodyD: 0.115,
-    neckLen: 0.07, headLen: 0.13, earScale: 2.6, tailLen: 0.05, legW: 0.013,
-    furLen: 0.014, shells: 5,
+    shoulder: 0.17, bodyLen: 0.3, bodyW: 0.07, bodyD: 0.095,
+    neckLen: 0.06, headLen: 0.095, earScale: 1.35, tailLen: 0.045, legW: 0.011,
+    furLen: 0.013, shells: 5,
     coat: { male: 0x9c8768, female: 0xa8946f, fawn: 0xb4a17e },
     texture: { male: 'fur', female: 'fur', fawn: 'fur' },
-    walkSpeed: 0.55, runSpeed: 4.6, gait: 'hop',
-    alertR: 4.5, safeR: 9, grazes: true,
+    walkSpeed: 0.6, runSpeed: 7.5, gait: 'hop',
+    alertR: 4.5, safeR: 10, grazes: true,
   },
 };
 
-const ANIMAL_SIZES = { small: 0.8, medium: 1.0, large: 1.18 };
+/* Yearling / mature / trophy — the same three tiers the hunting games use. */
+const ANIMAL_SIZES = { small: 0.85, medium: 1.0, large: 1.12 };
 const ANTLER_POINTS = { small: 2, medium: 4, large: 6 };
 
 /* ---------------- skeleton ---------------- */
@@ -145,7 +155,7 @@ function makeQuadGeometry(skeleton, sp, k, opts = {}) {
     for (const f of ['f', 'r']) {
       const up = P(f + 'Up' + s), lo = P(f + 'Lo' + s), ft = P(f + 'Ft' + s);
       const hoof = new Vec3(ft.x, 0.004, ft.z + 0.02 * k);
-      const thighW = f === 'r' ? LW * 3.4 : LW * 2.6;   // hindquarters are heavier
+      const thighW = f === 'r' ? D * 0.34 : D * 0.26;   // hindquarters are heavier
       loftRings(g, [
         { p: new Vec3(up.x, up.y + D * 0.45, up.z), w: thighW, d: thighW * 1.5, e: 2.1, uv: 0.7 },
         { p: up.clone().lerp(lo, 0.5), w: LW * 1.5, d: LW * 1.9, e: 2.0, uv: 0.78 },
