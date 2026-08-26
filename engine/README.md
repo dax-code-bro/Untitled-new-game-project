@@ -328,3 +328,20 @@ Worth knowing before you hit them:
   there is no colour bleeding between surfaces.
 - **Non-uniform scale on curved meshes** shifts normals slightly. Boxes are
   exact; spheres prefer uniform scale.
+
+## Props
+
+```js
+const gun = game.pistol1911({ at: [0, 1, 0], engrave: 'River' });
+```
+
+A dimensioned M1911 Government model — 8.50 in overall, 5.03 in barrel,
+0.900 in slide, grip at 74 degrees to the bore — built from swept profiles
+rather than boxes. Sixteen cocking serrations, an open ejection port, barrel
+bushing and recoil spring plug, a bore that is a real recess rather than a
+dark disc, double-diamond checkered grip panels whose checkering is geometry,
+and a short word engraved on the left flank at the muzzle.
+
+Three actors, three materials: `gun` is the steel, `gun.grips` the panels,
+`gun.mark` the engraving and bore. Set `material` / `gripMaterial` to
+recolour; `physics: false` for a display piece.
