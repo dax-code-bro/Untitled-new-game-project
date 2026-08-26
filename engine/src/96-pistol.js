@@ -30,7 +30,7 @@ const M1911 = {
   slideW: 0.02286,
   slideH: 0.02210,
   slideLen: 0.20168,
-  barrelLen: 0.12776,
+  barrelLen: 0.12700,          // exactly 5.000 in, per spec
   gripW: 0.03251,
   boreToSlideTop: 0.01016,   // 0.400 in
   barrelOD: 0.01460,
@@ -285,12 +285,12 @@ function buildSlide(g) {
   });
 
   const stations = [];
-  // Rear face, then the cocking serrations: sixteen vertical grooves, which
-  // is what an A1 carries. They are the only texture on the slide, so they
-  // are cut as geometry rather than faked in a normal map.
+  // Rear face, then the cocking serrations: nineteen vertical grooves per
+  // side. They are the only texture on the slide, so they are cut as
+  // geometry rather than faked in a normal map.
   const serrFront = slideRear + 0.0395;
   stations.push(st(slideRear));
-  const GROOVES = 16;
+  const GROOVES = 19;
   for (let i = 0; i < GROOVES; i++) {
     const x0 = slideRear + 0.0035 + (serrFront - slideRear - 0.0035) * (i / GROOVES);
     const w = (serrFront - slideRear - 0.0035) / GROOVES;
@@ -549,12 +549,14 @@ function buildFrame(g) {
     gripStation(1.030, 0.0206, 0.0266, 0.0126, 2.4),
   ], false, true);
 
-  /* Grip safety tang — the beavertail the web of the hand sits under. */
+  /* Grip safety: the standard GI tang — a short, stubby spur, not the
+     modern beavertail. It barely clears the hammer's arc, which is why
+     hammer bite was a real complaint and why the beavertail was invented.
+     Historical accuracy means keeping the flaw. */
   sweepPath(g, [
-    { o: new Vec3(0.0180, -0.0140, 0), u: U, v: V, pts: roundRect(0.0088, 0.0088, 0.0092, 2.6, 16) },
-    { o: new Vec3(0.0105, -0.0112, 0), u: U, v: V, pts: roundRect(0.0074, 0.0074, 0.0090, 2.6, 16) },
-    { o: new Vec3(0.0052, -0.0074, 0), u: U, v: V, pts: roundRect(0.0050, 0.0050, 0.0082, 2.5, 16) },
-    { o: new Vec3(0.0028, -0.0038, 0), u: U, v: V, pts: roundRect(0.0032, 0.0032, 0.0072, 2.4, 16) },
+    { o: new Vec3(0.0175, -0.0148, 0), u: U, v: V, pts: roundRect(0.0086, 0.0086, 0.0090, 2.6, 16) },
+    { o: new Vec3(0.0118, -0.0120, 0), u: U, v: V, pts: roundRect(0.0068, 0.0068, 0.0086, 2.5, 16) },
+    { o: new Vec3(0.0082, -0.0092, 0), u: U, v: V, pts: roundRect(0.0042, 0.0042, 0.0074, 2.4, 16) },
   ], true, true);
 
   /* Hammer: a flat plate with a spur, swept through its own thickness.
@@ -570,8 +572,32 @@ function buildFrame(g) {
     { o: new Vec3(0, 0, 0.0021), u: new Vec3(1, 0, 0), v: U, pts: hammerOutline },
   ], true, true);
 
-  /* Trigger, sitting in the guard. */
+  /* Trigger, sitting in the guard — face serrated, not smooth. */
   hardBox(g, 0.0532, -0.0300, 0, 0.0022, 0.0086, 0.0044);
+  for (const tz of [-0.0026, 0, 0.0026]) {
+    hardBox(g, 0.0556, -0.0300, tz, 0.0004, 0.0080, 0.0008);
+  }
+
+  /* Lanyard loop: the M1911A1's small steel staple under the mainspring
+     housing, hanging off the butt. */
+  {
+    const heel = new Vec3(GRIP_TOP.x + GRIP_DOWN.x * (GRIP_LEN * 1.02) - 0.0180,
+                          GRIP_TOP.y + GRIP_DOWN.y * (GRIP_LEN * 1.02) - 0.0035, 0);
+    const ringPts = roundRect(0.0035, 0.0035, 0.0012, 2.2, 10);
+    sweepPath(g, [
+      { o: new Vec3(heel.x, heel.y, -0.0052), u: GRIP_U, v: new Vec3(0, 0, 1), pts: ringPts },
+      { o: new Vec3(heel.x - 0.0015, heel.y - 0.0048, -0.0052), u: GRIP_U, v: new Vec3(0, 0, 1), pts: ringPts },
+    ], true, true);
+    sweepPath(g, [
+      { o: new Vec3(heel.x, heel.y, 0.0052), u: GRIP_U, v: new Vec3(0, 0, 1), pts: ringPts },
+      { o: new Vec3(heel.x - 0.0015, heel.y - 0.0048, 0.0052), u: GRIP_U, v: new Vec3(0, 0, 1), pts: ringPts },
+    ], true, true);
+    hardBox(g, heel.x - 0.0022, heel.y - 0.0052, 0, 0.0011, 0.0011, 0.0060);
+  }
+
+  /* Extractor: the visible seam on the slide's rear right flank — a slim
+     proud strip where the .45-sized claw rides. */
+  hardBox(g, P11.slideRear + 0.0135, 0.0006, P11.slideHalfW - 0.0003, 0.0092, 0.0016, 0.0006);
 
   /* Thumb safety and slide stop — small, but their absence is loud. */
   sweepPath(g, [
@@ -596,13 +622,27 @@ function buildFrame(g) {
 
 function buildSights(g) {
   const top = P11.slideTop;
-  // Front blade, 0.60 in back from the muzzle on a Government slide.
-  hardBox(g, P11.muzzle - 0.0152, top + 0.0021, 0, 0.0018, 0.0021, 0.0009);
-  // Rear leaf, with the notch cut by building it as two posts and a base.
+  const U = new Vec3(0, 1, 0), X = new Vec3(1, 0, 0);
+  // Dovetail base: a low block wider at the bottom than the top, run
+  // across the slide — the profile of a drifted-in sight's foot.
+  const dovetail = (x, halfLen) => {
+    const prof = profileOutline([
+      [0, -0.0058], [0.0011, -0.0044], [0.0011, 0.0044], [0, 0.0058],
+    ].map(([a, b]) => [a + top, b]), 20);
+    sweepPath(g, [
+      { o: new Vec3(x - halfLen, 0, 0), u: U, v: new Vec3(0, 0, 1), pts: prof },
+      { o: new Vec3(x + halfLen, 0, 0), u: U, v: new Vec3(0, 0, 1), pts: prof },
+    ], true, true);
+  };
+  // Front: low GI blade on its dovetail.
+  dovetail(P11.muzzle - 0.0152, 0.0028);
+  hardBox(g, P11.muzzle - 0.0152, top + 0.0032, 0, 0.0016, 0.0021, 0.0009);
+  // Rear: notch leaf between two shoulders, on its dovetail.
   const rx = P11.slideRear + 0.0062;
-  hardBox(g, rx, top + 0.0008, 0, 0.0026, 0.0008, 0.0072);
-  hardBox(g, rx, top + 0.0026, 0.0048, 0.0026, 0.0018, 0.0024);
-  hardBox(g, rx, top + 0.0026, -0.0048, 0.0026, 0.0018, 0.0024);
+  dovetail(rx, 0.0030);
+  hardBox(g, rx, top + 0.0038, 0.0046, 0.0024, 0.0016, 0.0022);
+  hardBox(g, rx, top + 0.0038, -0.0046, 0.0024, 0.0016, 0.0022);
+  hardBox(g, rx, top + 0.0024, 0, 0.0024, 0.0006, 0.0068);
 }
 
 /* ---------------- grip panels ---------------- */
@@ -781,7 +821,11 @@ function markBar(g, x0, y0, x1, y1, hw, z0, z1) {
 function buildEngraving(g, text, opts = {}) {
   const H = opts.height || 0.0026;             // cap height: 2.6 mm
   const stroke = H * 0.135;
-  const x0 = opts.x != null ? opts.x : 0.2072; // 8.7 mm behind the muzzle
+  // Centre the word on the flat between the serrations and the muzzle.
+  let adv0 = 0;
+  for (const ch of text) adv0 += (ENGRAVE_GLYPHS[ch] ? ENGRAVE_GLYPHS[ch].w : 0.32) + 0.10;
+  const serrFront = P11.slideRear + 0.0435;
+  const x0 = opts.x != null ? opts.x : (serrFront + P11.muzzle) / 2 + (adv0 * H) / 2;
   const y0 = opts.y != null ? opts.y : -0.0074;
   const zSurf = -P11.slideHalfW;
   const zA = zSurf - 0.00002, zB = zSurf - 0.00030;   // 0.28 mm proud, clear
@@ -833,7 +877,7 @@ function makePistol1911(opts = {}) {
 
   const mark = new Geometry();
   buildBore(mark);
-  buildEngraving(mark, opts.engrave != null ? opts.engrave : 'River', opts);
+  buildEngraving(mark, opts.engrave != null ? opts.engrave : 'river', opts);
 
   return {
     steel: offsetGeometry(steel, PISTOL_ORIGIN).finalize(),
@@ -857,7 +901,7 @@ const PISTOL_MATERIALS = {
 };
 
 Engine.prototype.pistol1911 = function (opts = {}) {
-  const word = opts.engrave != null ? opts.engrave : 'River';
+  const word = opts.engrave != null ? opts.engrave : 'river';
   const key = `1911:${word}`;
   let parts = this._pistolParts && this._pistolParts[key];
   if (!parts) {

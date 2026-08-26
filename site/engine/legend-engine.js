@@ -10315,7 +10315,7 @@ const M1911 = {
   slideW: 0.02286,
   slideH: 0.02210,
   slideLen: 0.20168,
-  barrelLen: 0.12776,
+  barrelLen: 0.12700,          // exactly 5.000 in, per spec
   gripW: 0.03251,
   boreToSlideTop: 0.01016,   // 0.400 in
   barrelOD: 0.01460,
@@ -10570,12 +10570,12 @@ function buildSlide(g) {
   });
 
   const stations = [];
-  // Rear face, then the cocking serrations: sixteen vertical grooves, which
-  // is what an A1 carries. They are the only texture on the slide, so they
-  // are cut as geometry rather than faked in a normal map.
+  // Rear face, then the cocking serrations: nineteen vertical grooves per
+  // side. They are the only texture on the slide, so they are cut as
+  // geometry rather than faked in a normal map.
   const serrFront = slideRear + 0.0395;
   stations.push(st(slideRear));
-  const GROOVES = 16;
+  const GROOVES = 19;
   for (let i = 0; i < GROOVES; i++) {
     const x0 = slideRear + 0.0035 + (serrFront - slideRear - 0.0035) * (i / GROOVES);
     const w = (serrFront - slideRear - 0.0035) / GROOVES;
@@ -10834,12 +10834,14 @@ function buildFrame(g) {
     gripStation(1.030, 0.0206, 0.0266, 0.0126, 2.4),
   ], false, true);
 
-  /* Grip safety tang — the beavertail the web of the hand sits under. */
+  /* Grip safety: the standard GI tang — a short, stubby spur, not the
+     modern beavertail. It barely clears the hammer's arc, which is why
+     hammer bite was a real complaint and why the beavertail was invented.
+     Historical accuracy means keeping the flaw. */
   sweepPath(g, [
-    { o: new Vec3(0.0180, -0.0140, 0), u: U, v: V, pts: roundRect(0.0088, 0.0088, 0.0092, 2.6, 16) },
-    { o: new Vec3(0.0105, -0.0112, 0), u: U, v: V, pts: roundRect(0.0074, 0.0074, 0.0090, 2.6, 16) },
-    { o: new Vec3(0.0052, -0.0074, 0), u: U, v: V, pts: roundRect(0.0050, 0.0050, 0.0082, 2.5, 16) },
-    { o: new Vec3(0.0028, -0.0038, 0), u: U, v: V, pts: roundRect(0.0032, 0.0032, 0.0072, 2.4, 16) },
+    { o: new Vec3(0.0175, -0.0148, 0), u: U, v: V, pts: roundRect(0.0086, 0.0086, 0.0090, 2.6, 16) },
+    { o: new Vec3(0.0118, -0.0120, 0), u: U, v: V, pts: roundRect(0.0068, 0.0068, 0.0086, 2.5, 16) },
+    { o: new Vec3(0.0082, -0.0092, 0), u: U, v: V, pts: roundRect(0.0042, 0.0042, 0.0074, 2.4, 16) },
   ], true, true);
 
   /* Hammer: a flat plate with a spur, swept through its own thickness.
@@ -10855,8 +10857,32 @@ function buildFrame(g) {
     { o: new Vec3(0, 0, 0.0021), u: new Vec3(1, 0, 0), v: U, pts: hammerOutline },
   ], true, true);
 
-  /* Trigger, sitting in the guard. */
+  /* Trigger, sitting in the guard — face serrated, not smooth. */
   hardBox(g, 0.0532, -0.0300, 0, 0.0022, 0.0086, 0.0044);
+  for (const tz of [-0.0026, 0, 0.0026]) {
+    hardBox(g, 0.0556, -0.0300, tz, 0.0004, 0.0080, 0.0008);
+  }
+
+  /* Lanyard loop: the M1911A1's small steel staple under the mainspring
+     housing, hanging off the butt. */
+  {
+    const heel = new Vec3(GRIP_TOP.x + GRIP_DOWN.x * (GRIP_LEN * 1.02) - 0.0180,
+                          GRIP_TOP.y + GRIP_DOWN.y * (GRIP_LEN * 1.02) - 0.0035, 0);
+    const ringPts = roundRect(0.0035, 0.0035, 0.0012, 2.2, 10);
+    sweepPath(g, [
+      { o: new Vec3(heel.x, heel.y, -0.0052), u: GRIP_U, v: new Vec3(0, 0, 1), pts: ringPts },
+      { o: new Vec3(heel.x - 0.0015, heel.y - 0.0048, -0.0052), u: GRIP_U, v: new Vec3(0, 0, 1), pts: ringPts },
+    ], true, true);
+    sweepPath(g, [
+      { o: new Vec3(heel.x, heel.y, 0.0052), u: GRIP_U, v: new Vec3(0, 0, 1), pts: ringPts },
+      { o: new Vec3(heel.x - 0.0015, heel.y - 0.0048, 0.0052), u: GRIP_U, v: new Vec3(0, 0, 1), pts: ringPts },
+    ], true, true);
+    hardBox(g, heel.x - 0.0022, heel.y - 0.0052, 0, 0.0011, 0.0011, 0.0060);
+  }
+
+  /* Extractor: the visible seam on the slide's rear right flank — a slim
+     proud strip where the .45-sized claw rides. */
+  hardBox(g, P11.slideRear + 0.0135, 0.0006, P11.slideHalfW - 0.0003, 0.0092, 0.0016, 0.0006);
 
   /* Thumb safety and slide stop — small, but their absence is loud. */
   sweepPath(g, [
@@ -10881,13 +10907,27 @@ function buildFrame(g) {
 
 function buildSights(g) {
   const top = P11.slideTop;
-  // Front blade, 0.60 in back from the muzzle on a Government slide.
-  hardBox(g, P11.muzzle - 0.0152, top + 0.0021, 0, 0.0018, 0.0021, 0.0009);
-  // Rear leaf, with the notch cut by building it as two posts and a base.
+  const U = new Vec3(0, 1, 0), X = new Vec3(1, 0, 0);
+  // Dovetail base: a low block wider at the bottom than the top, run
+  // across the slide — the profile of a drifted-in sight's foot.
+  const dovetail = (x, halfLen) => {
+    const prof = profileOutline([
+      [0, -0.0058], [0.0011, -0.0044], [0.0011, 0.0044], [0, 0.0058],
+    ].map(([a, b]) => [a + top, b]), 20);
+    sweepPath(g, [
+      { o: new Vec3(x - halfLen, 0, 0), u: U, v: new Vec3(0, 0, 1), pts: prof },
+      { o: new Vec3(x + halfLen, 0, 0), u: U, v: new Vec3(0, 0, 1), pts: prof },
+    ], true, true);
+  };
+  // Front: low GI blade on its dovetail.
+  dovetail(P11.muzzle - 0.0152, 0.0028);
+  hardBox(g, P11.muzzle - 0.0152, top + 0.0032, 0, 0.0016, 0.0021, 0.0009);
+  // Rear: notch leaf between two shoulders, on its dovetail.
   const rx = P11.slideRear + 0.0062;
-  hardBox(g, rx, top + 0.0008, 0, 0.0026, 0.0008, 0.0072);
-  hardBox(g, rx, top + 0.0026, 0.0048, 0.0026, 0.0018, 0.0024);
-  hardBox(g, rx, top + 0.0026, -0.0048, 0.0026, 0.0018, 0.0024);
+  dovetail(rx, 0.0030);
+  hardBox(g, rx, top + 0.0038, 0.0046, 0.0024, 0.0016, 0.0022);
+  hardBox(g, rx, top + 0.0038, -0.0046, 0.0024, 0.0016, 0.0022);
+  hardBox(g, rx, top + 0.0024, 0, 0.0024, 0.0006, 0.0068);
 }
 
 /* ---------------- grip panels ---------------- */
@@ -11066,7 +11106,11 @@ function markBar(g, x0, y0, x1, y1, hw, z0, z1) {
 function buildEngraving(g, text, opts = {}) {
   const H = opts.height || 0.0026;             // cap height: 2.6 mm
   const stroke = H * 0.135;
-  const x0 = opts.x != null ? opts.x : 0.2072; // 8.7 mm behind the muzzle
+  // Centre the word on the flat between the serrations and the muzzle.
+  let adv0 = 0;
+  for (const ch of text) adv0 += (ENGRAVE_GLYPHS[ch] ? ENGRAVE_GLYPHS[ch].w : 0.32) + 0.10;
+  const serrFront = P11.slideRear + 0.0435;
+  const x0 = opts.x != null ? opts.x : (serrFront + P11.muzzle) / 2 + (adv0 * H) / 2;
   const y0 = opts.y != null ? opts.y : -0.0074;
   const zSurf = -P11.slideHalfW;
   const zA = zSurf - 0.00002, zB = zSurf - 0.00030;   // 0.28 mm proud, clear
@@ -11118,7 +11162,7 @@ function makePistol1911(opts = {}) {
 
   const mark = new Geometry();
   buildBore(mark);
-  buildEngraving(mark, opts.engrave != null ? opts.engrave : 'River', opts);
+  buildEngraving(mark, opts.engrave != null ? opts.engrave : 'river', opts);
 
   return {
     steel: offsetGeometry(steel, PISTOL_ORIGIN).finalize(),
@@ -11142,7 +11186,7 @@ const PISTOL_MATERIALS = {
 };
 
 Engine.prototype.pistol1911 = function (opts = {}) {
-  const word = opts.engrave != null ? opts.engrave : 'River';
+  const word = opts.engrave != null ? opts.engrave : 'river';
   const key = `1911:${word}`;
   let parts = this._pistolParts && this._pistolParts[key];
   if (!parts) {
@@ -11176,6 +11220,279 @@ Engine.prototype.pistol1911 = function (opts = {}) {
   };
   body.grips = child('grip', parts.grip, opts.gripMaterial || PISTOL_MATERIALS.grip);
   body.mark = child('mark', parts.mark, PISTOL_MATERIALS.mark);
+  return body;
+};
+
+
+/* ─────────── 97-thompson.js ─────────── */
+/* ============================================================
+   THOMPSON — an M1A1 submachine gun, dimensioned from the spec.
+
+     overall length  32.0 in   0.8128     barrel   10.5 in  0.2667
+     weight           10 lb    ~4.5 kg    calibre  .45 ACP
+
+   Same datum convention as the 1911 (96-pistol.js): Y = 0 is the
+   bore axis, +X runs to the muzzle, +Z is the weapon's right.
+   The sweep toolkit — profileOutline, sweepPath, ringOutline,
+   roundRect, hardBox — is shared with that module.
+
+   M1A1 pattern deliberately: side charging handle, plain barrel
+   with no cooling fins, no compensator, fixed L rear sight, stick
+   magazine. The drum is the gangster gun; the stick is the war.
+   ============================================================ */
+
+const TOMMY = {
+  overall: 0.8128,
+  barrelLen: 0.2667,
+  muzzle: 0.5200,            // receiver front + barrel
+  receiverFront: 0.2533,
+  receiverRear: -0.0134,
+  stockButt: -0.2928,
+  recHalfW: 0.0190,          // 1.5 in receiver slab
+  recUp: 0.0215,
+  recDown: 0.0180,
+};
+
+/* The wooden furniture and the steel are separate geometries so the
+   gun is two materials and two draw calls: blued steel and walnut. */
+
+function buildTommySteel(g) {
+  const U = new Vec3(0, 1, 0), V = new Vec3(0, 0, 1);
+  const T = TOMMY;
+
+  /* Receiver: a milled slab, flat sides, rounded top corners, flatter
+     bottom. One section dragged the whole length, stepped slightly
+     lower behind the barrel. */
+  const rec = (x, opts = {}) => ({
+    o: new Vec3(x, 0.0018, 0), u: U, v: V,
+    pts: roundRect(T.recUp * (opts.top || 1), T.recDown, T.recHalfW, 3.2, 24),
+  });
+  sweepPath(g, [
+    rec(T.receiverRear),
+    rec(T.receiverRear + 0.030),
+    rec(0.130),
+    rec(0.190, { top: 0.96 }),
+    rec(T.receiverFront, { top: 0.90 }),
+  ], true, true);
+
+  /* Lower frame: shallower slab hung under the receiver carrying the
+     trigger group, mag well and grip mounts. */
+  const low = (x, depth) => ({
+    o: new Vec3(x, -0.012, 0), u: U, v: V,
+    pts: roundRect(0.004, depth, T.recHalfW * 0.88, 2.8, 20),
+  });
+  sweepPath(g, [
+    low(0.000, 0.030),
+    low(0.060, 0.034),
+    low(0.120, 0.034),
+    low(0.170, 0.026),
+    low(T.receiverFront - 0.010, 0.020),
+  ], true, true);
+
+  /* Barrel, tapering, with a step at the receiver. */
+  const ring = (x, r) => ({ o: new Vec3(x, 0, 0), u: U, v: V, pts: ringOutline(r, 22) });
+  sweepPath(g, [
+    ring(T.receiverFront - 0.002, 0.0140),
+    ring(T.receiverFront + 0.018, 0.0140),
+    ring(T.receiverFront + 0.022, 0.0116),
+    ring(T.muzzle - 0.030, 0.0098),
+    ring(T.muzzle, 0.0096),
+  ], false, false);
+  // Muzzle face as an annulus around a recessed bore, exactly the 1911's
+  // trick: a capped disc would hide the hole.
+  {
+    const br = 0.0057;                         // .45 bore
+    const outR = ringOutline(0.0096, 22), inR = ringOutline(br, 22);
+    const X = T.muzzle, base = g.positions.length / 3;
+    for (const p of outR) g.vert(X, p[0], p[1], 1, 0, 0, p[0] * 5, p[1] * 5);
+    for (const p of outR) {
+      const th = Math.atan2(p[1], p[0]);
+      g.vert(X, br * Math.cos(th), br * Math.sin(th), 1, 0, 0, 0, 0);
+    }
+    const n = outR.length;
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n;
+      g.quad(base + i, base + j, base + n + j, base + n + i);
+    }
+    // Bore walls, inward-facing, and a floor.
+    const b2 = g.positions.length / 3;
+    for (const p of inR) g.vert(X, p[0], p[1], 0, -p[2], -p[3], p[0] * 5, p[1] * 5);
+    for (const p of inR) g.vert(X - 0.03, p[0], p[1], 0, -p[2], -p[3], p[0] * 5, p[1] * 5);
+    const m = inR.length;
+    for (let i = 0; i < m; i++) {
+      const j = (i + 1) % m;
+      g.quad(b2 + i, b2 + j, b2 + m + j, b2 + m + i);
+    }
+    const cb = g.positions.length / 3;
+    const c = g.vert(X - 0.03, 0, 0, 1, 0, 0, 0, 0);
+    for (const p of inR) g.vert(X - 0.03, p[0], p[1], 1, 0, 0, p[0] * 5, p[1] * 5);
+    for (let i = 0; i < m; i++) g.tri(c, cb + 1 + i, cb + 1 + (i + 1) % m);
+  }
+
+  /* Front sight blade on its base. */
+  hardBox(g, T.muzzle - 0.014, 0.0125, 0, 0.0060, 0.0028, 0.0048);
+  hardBox(g, T.muzzle - 0.014, 0.0182, 0, 0.0016, 0.0032, 0.0012);
+
+  /* Rear sight: the M1A1's stamped L peep between two protective wings. */
+  const rx = T.receiverRear + 0.0210;
+  hardBox(g, rx, T.recUp + 0.0048, 0.0125, 0.0075, 0.0052, 0.0022);   // wings
+  hardBox(g, rx, T.recUp + 0.0048, -0.0125, 0.0075, 0.0052, 0.0022);
+  hardBox(g, rx, T.recUp + 0.0040, 0, 0.0016, 0.0044, 0.0104);        // peep leaf
+
+  /* Charging handle: right side, the M1A1 signature. */
+  sweepPath(g, [
+    { o: new Vec3(0.085, 0.0090, T.recHalfW - 0.002), u: U, v: new Vec3(1, 0, 0), pts: ringOutline(0.0058, 14) },
+    { o: new Vec3(0.085, 0.0090, T.recHalfW + 0.0105), u: U, v: new Vec3(1, 0, 0), pts: ringOutline(0.0058, 14) },
+  ], false, true);
+  // Its track, a shallow proud rib rather than an impossible slot.
+  hardBox(g, 0.050, 0.0090, T.recHalfW + 0.0002, 0.055, 0.0028, 0.0008);
+
+  /* Selector and safety levers, left side. */
+  for (const lx of [0.010, 0.038]) {
+    sweepPath(g, [
+      { o: new Vec3(lx, -0.004, -T.recHalfW * 0.86), u: U, v: new Vec3(1, 0, 0), pts: ringOutline(0.0036, 12) },
+      { o: new Vec3(lx, -0.004, -T.recHalfW * 0.86 - 0.0062), u: U, v: new Vec3(1, 0, 0), pts: ringOutline(0.0036, 12) },
+    ], false, true);
+  }
+
+  /* Magazine: a 30-round stick. Straight, slightly proud of its well,
+     with a stamped rib up each face. */
+  const magAxis = new Vec3(0.045, -1, 0).normalize();
+  const magU = new Vec3().crossVectors(V, magAxis).normalize();
+  const magAt = (d, grow) => ({
+    o: new Vec3(0.148 + magAxis.x * d, -0.040 + magAxis.y * d, 0),
+    u: magU, v: V,
+    pts: roundRect(0.0148 * grow, 0.0148 * grow, 0.0102 * grow, 2.7, 18),
+  });
+  sweepPath(g, [magAt(0, 1.06), magAt(0.012, 1.06), magAt(0.014, 1.0), magAt(0.165, 1.0), magAt(0.172, 1.02)], true, true);
+  hardBox(g, 0.148 + magAxis.x * 0.09, -0.040 - 0.09, 0.0104, 0.0022, 0.055, 0.0007);
+  hardBox(g, 0.148 + magAxis.x * 0.09, -0.040 - 0.09, -0.0104, 0.0022, 0.055, 0.0007);
+
+  /* Trigger guard and serrated trigger. */
+  const guardPts = [
+    [0.052, -0.0455], [0.056, -0.0560], [0.068, -0.0640], [0.084, -0.0660],
+    [0.100, -0.0635], [0.110, -0.0560], [0.113, -0.0465],
+  ];
+  const guard = guardPts.map(([x, y], i) => {
+    const p = guardPts[Math.max(0, i - 1)], q = guardPts[Math.min(guardPts.length - 1, i + 1)];
+    const dx = q[0] - p[0], dy = q[1] - p[1], L = Math.hypot(dx, dy) || 1;
+    return { o: new Vec3(x, y, 0), u: new Vec3(-dy / L, dx / L, 0), v: V, pts: roundRect(0.0022, 0.0022, 0.0046, 2.5, 12) };
+  });
+  sweepPath(g, guard, true, true);
+  // Trigger, faced with three ridges — serrated, not smooth.
+  hardBox(g, 0.081, -0.0530, 0, 0.0024, 0.0078, 0.0038);
+  for (const ty of [-0.0505, -0.0530, -0.0555]) {
+    hardBox(g, 0.0835, ty, 0, 0.0007, 0.0009, 0.0034);
+  }
+
+  /* Butt plate, and the sling loop under the stock wrist. */
+  hardBox(g, T.stockButt - 0.0022, -0.0560, 0, 0.0025, 0.0575, 0.0195);
+  const loop = (x, y) => {
+    sweepPath(g, [
+      { o: new Vec3(x, y, -0.0035), u: U, v: new Vec3(1, 0, 0), pts: ringOutline(0.0028, 10) },
+      { o: new Vec3(x, y, 0.0035), u: U, v: new Vec3(1, 0, 0), pts: ringOutline(0.0028, 10) },
+    ], true, true);
+  };
+  loop(-0.205, -0.0895);   // resting against the stock's belly
+  loop(0.360, -0.0395);    // under the foregrip, touching it
+}
+
+function buildTommyWood(g) {
+  const U = new Vec3(0, 1, 0), V = new Vec3(0, 0, 1);
+  const T = TOMMY;
+
+  /* Buttstock: tall at the butt, tapering to the wrist, with real drop —
+     the comb falls away from the bore line, which is most of a rifle
+     silhouette. Swept butt-to-receiver so the frame matches the receiver's. */
+  const stock = (x, cy, up, down, hw) => ({
+    o: new Vec3(x, cy, 0), u: U, v: V, pts: roundRect(up, down, hw, 2.35, 22),
+  });
+  sweepPath(g, [
+    stock(T.stockButt, -0.0560, 0.0530, 0.0530, 0.0180),
+    stock(T.stockButt + 0.055, -0.0510, 0.0500, 0.0480, 0.0172),
+    stock(-0.155, -0.0395, 0.0430, 0.0330, 0.0160),
+    stock(-0.085, -0.0270, 0.0330, 0.0210, 0.0150),
+    stock(-0.038, -0.0175, 0.0245, 0.0140, 0.0146),
+    stock(-0.012, -0.0150, 0.0220, 0.0125, 0.0142),
+  ], true, true);
+
+  /* Pistol grip, raked back hard the way a Thompson's is. */
+  const gripAxis = new Vec3(-0.42, -1, 0).normalize();
+  const gripU = new Vec3().crossVectors(V, gripAxis).normalize();
+  const gripAt = (d, up, hb, hw) => ({
+    o: new Vec3(0.030 + gripAxis.x * d, -0.040 + gripAxis.y * d, 0),
+    u: gripU, v: V,
+    pts: roundRect(up, hb, hw, 2.5, 18),
+  });
+  sweepPath(g, [
+    gripAt(0.000, 0.0210, 0.0210, 0.0135),
+    gripAt(0.030, 0.0165, 0.0180, 0.0128),
+    gripAt(0.062, 0.0155, 0.0175, 0.0128),
+    gripAt(0.086, 0.0165, 0.0195, 0.0132),   // flare at the heel
+  ], true, true);
+
+  /* Horizontal foregrip under the barrel — the M1A1's, not the 1928
+     vertical broomhandle. Grooved: three finger scallops read as one. */
+  const fore = (x, r) => ({
+    o: new Vec3(x, -0.0195, 0), u: U, v: V, pts: roundRect(r * 0.72, r, 0.0146, 2.3, 18),
+  });
+  sweepPath(g, [
+    fore(0.262, 0.0165),
+    fore(0.285, 0.0185),
+    fore(0.320, 0.0192),
+    fore(0.355, 0.0192),
+    fore(0.395, 0.0180),
+    fore(0.422, 0.0150),
+  ], true, true);
+}
+
+/* ---------------- engine hook ---------------- */
+
+const TOMMY_MATERIALS = {
+  // Blued steel is nearly black until light rakes it. Roughness sits above
+  // the 1911's polish: wartime parkerised-blue, not a show finish.
+  steel: { color: 0x33383e, texture: 'metal', roughness: 0.34, metalness: 1 },
+  wood: { color: 0x6e4522, texture: 'wood', roughness: 0.62, metalness: 0, uvScale: 4 },
+};
+
+function makeThompson() {
+  const steel = new Geometry();
+  buildTommySteel(steel);
+  const wood = new Geometry();
+  buildTommyWood(wood);
+  // Origin at the pistol grip, matching the 1911's hand-centred datum.
+  const origin = new Vec3(0.030, -0.070, 0);
+  return {
+    steel: offsetGeometry(steel, origin).finalize(),
+    wood: offsetGeometry(wood, origin).finalize(),
+  };
+}
+
+Engine.prototype.thompson = function (opts = {}) {
+  let parts = this._tommyParts;
+  if (!parts) parts = this._tommyParts = makeThompson();
+
+  const b = parts.steel.bounds;
+  const pts = [];
+  for (const x of [b.min.x, b.max.x]) {
+    for (const y of [b.min.y, b.max.y]) {
+      for (const z of [b.min.z, b.max.z]) pts.push(new Vec3(x, y, z));
+    }
+  }
+  const shape = opts.physics === false ? null : Shape.convex(pts);
+  const body = this._spawn(
+    Object.assign({}, opts, {
+      material: opts.material || TOMMY_MATERIALS.steel,
+      mass: opts.mass != null ? opts.mass : 4.5,
+    }),
+    this._mesh('tommy:steel', () => parts.steel), shape, 0.6);
+  body.name = opts.name || 'thompson';
+
+  const wood = this._spawn(
+    { material: opts.woodMaterial || TOMMY_MATERIALS.wood, physics: false },
+    this._mesh('tommy:wood', () => parts.wood), null, 0.6);
+  wood.parent = body;
+  body.wood = wood;
   return body;
 };
 
