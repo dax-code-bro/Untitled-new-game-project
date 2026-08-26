@@ -9578,8 +9578,15 @@ class Engine {
     if (opts.face !== false) {
       const headGeo = makeHeadGeometry({ seed: opts.seed || 5 });
       const headMesh = new GpuMesh(this.gl, headGeo);
-      const face = new Face(this.gl, headGeo, { seed: opts.seed || 5 });
-      face.attach(headMesh);
+      // face: 'static' renders the head but skips the expression rig — no
+      // blendshape build, no per-frame morphing. A crowd of NPCs costs a
+      // fraction of one talking hero, which is exactly the trade a horde
+      // wants to make.
+      let face = null;
+      if (opts.face !== 'static') {
+        face = new Face(this.gl, headGeo, { seed: opts.seed || 5 });
+        face.attach(headMesh);
+      }
       // Size the head from the skeleton rather than guessing. The head mesh
       // is authored ~0.72 units tall (the blendshape regions are tuned to
       // those coordinates, so the mesh is scaled rather than rebuilt). In the

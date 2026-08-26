@@ -345,3 +345,19 @@ and a short word engraved on the left flank at the muzzle.
 Three actors, three materials: `gun` is the steel, `gun.grips` the panels,
 `gun.mark` the engraving and bore. Set `material` / `gripMaterial` to
 recolour; `physics: false` for a display piece.
+
+```js
+const smg = game.thompson({ at: [0, 1, 0] });
+```
+
+An M1A1 Thompson to the same standard: 32.0 in overall, 10.5 in barrel,
+side charging handle, stick magazine, blued steel and walnut. `smg.wood`
+is the furniture actor.
+
+Characters accept `face: 'static'` — the sculpted head without the
+expression rig. A crowd of NPCs costs a fraction of one talking hero;
+this is the switch that makes a horde affordable.
+
+A complete game built on all of this lives at `site/games/bunker-nine.html`
+— round-based survival in a bunker, wall-buy weapons, boarded windows,
+procedural voice acting. It doubles as the engine's reference game.
