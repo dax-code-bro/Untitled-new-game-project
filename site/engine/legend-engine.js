@@ -9368,6 +9368,7 @@ class Engine {
       mesh,
       material,
       body,
+      visible: opts.visible,
       at: opts.at || opts.position,
       rotation: opts.rotation,
       scale: opts.scale,
@@ -9816,8 +9817,8 @@ class Engine {
 
   /* ---------------- queries ---------------- */
 
-  raycast(origin, direction, maxDist = 500) {
-    const hit = this.physics.raycast(origin, direction, maxDist);
+  raycast(origin, direction, maxDist = 500, filter) {
+    const hit = this.physics.raycast(origin, direction, maxDist, filter);
     if (hit) hit.actor = hit.body.actor || null;
     return hit;
   }

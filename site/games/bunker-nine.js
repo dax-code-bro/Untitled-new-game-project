@@ -26,7 +26,7 @@ const ECONOMY = {
   stairGate: 1000,
   wallGun: 1500,      // what the user specced: wall guns are 1500...
   wallAmmo: 500,      // ...and ammo off the same chalk is 500
-  crate: 950,
+  crate: 900,
 };
 
 const WEAPONS = {
@@ -103,7 +103,7 @@ const LINES = {
     [['radio', 'The generator hums, the moths are drawn. Do keep the noise up.']],
   ],
   lowAmmo: [['patch', 'Running dry. Chalk says the wall sells courage at five hundred a box.']],
-  buyThompson: [['patch', 'Chicago typewriter. Time to write something.']],
+  buyThompson: [['patch', 'Eight hundred a minute says nothing else gets through that window.']],
   buyScatter: [['patch', 'Both barrels. Subtlety went out with the lights.']],
   power: [
     ['patch', 'Generator is up. Bunker Nine has a heartbeat again.'],
@@ -159,9 +159,10 @@ function makeSfx(game) {
 
 /* Speak a line: subtitle plus a run of radio blips in the speaker's
    register. Returns total duration so lines can queue. */
-function makeVoice(game, hud) {
+function makeVoice(game, hud, isOver) {
   let busy = 0;
   return function say(lineSet, priority) {
+    if (isOver() && !priority) return;
     const now = performance.now() / 1000;
     if (now < busy && !priority) return;
     let delay = 0;
@@ -169,6 +170,7 @@ function makeVoice(game, hud) {
       const c = CAST[who];
       const dur = Math.max(1.6, text.length * 0.045);
       setTimeout(() => {
+        if (isOver() && !priority) return;
         hud.subtitle(c, text, dur);
         // One blip per word-ish, wandering around the character's pitch.
         const blips = Math.min(14, Math.max(5, Math.round(text.length / 7)));
@@ -310,7 +312,10 @@ function buildMap(game, S) {
   for (const w of WINDOWS) {
     const at = w.sillAt;
     const size = w.face === 'N' ? [1.6, 1.25, 0.5] : [0.5, 1.25, 1.6];
-    game.box({ at, size, material: MAT.wall, static: true, visible: false });
+    const sill = game.box({ at, size, material: MAT.wall, static: true, visible: false });
+    // Solid to feet, transparent to gunfire: shooting the dead THROUGH the
+    // window while they tear at it is half the game.
+    if (sill.body) sill.body.userData = { bulletPassthrough: true };
   }
 
   /* Doors, purchasable. Rendered as planked barricades. */
@@ -335,13 +340,13 @@ function buildMap(game, S) {
      faintly glowing, hung flat against the wall — plus a scrawled price
      the HUD shows when you stand at it. */
   const chalkMat = MAT.chalk;
-  const thompsonChalk = game.thompson({ at: [1.5, 1.55, M.z1 - 0.14], physics: false, material: chalkMat, woodMaterial: chalkMat });
+  const thompsonChalk = game.thompson({ at: [-0.9, 1.55, M.z1 - 0.14], physics: false, material: chalkMat, woodMaterial: chalkMat });
   thompsonChalk.setRotation([0, 180, 0]);
   const scatterChalk = makeScattergun(game, { at: [-4.6, 1.55, M.z1 - 0.14], chalk: true });
   scatterChalk.root.setRotation([0, 180, 0]);
 
   S.buys = [
-    { id: 'thompson', at: [1.5, 1.4, M.z1 - 0.3], weapon: 'thompson', label: 'Thompson' },
+    { id: 'thompson', at: [-0.9, 1.4, M.z1 - 0.3], weapon: 'thompson', label: 'Thompson' },
     { id: 'scatter', at: [-4.6, 1.4, M.z1 - 0.3], weapon: 'scatter', label: 'Scattergun' },
   ];
 
@@ -399,7 +404,7 @@ function buildMap(game, S) {
   lamp(-1.5, 2.9, 0, 115);          // mess
   lamp(-12, 2.9, 0, 115);           // generator room
   lamp(3.3, 5.6, 0.6, 100);         // loft
-  lamp(1.5, 2.4, 3.9, 55, 0xcfe8ff);  // thompson chalk
+  lamp(-0.9, 2.4, 3.9, 55, 0xcfe8ff);  // thompson chalk
   lamp(-4.6, 2.4, 3.9, 55, 0xcfe8ff); // scatter chalk
   // Cold moonlight spilling through the start-room window, so the first
   // thing that ever comes through it arrives as a silhouette.
@@ -607,7 +612,7 @@ function tryFire(game, S, P, hud, sfx, dt) {
   if (P.muzzleWorld) {
     game.particles.sparks(P.muzzleWorld, { count: spec.pellets > 1 ? 14 : 8, speed: 5, color: 0xffd27a });
     const fl = game.light({ at: P.muzzleWorld, color: spec.sfx === 'shotArc' ? 0x66d4ff : 0xffc061, intensity: 130, radius: 8 });
-    fl.decay = 22;
+    fl._decay = 0.05;   // engine removes lights whose _decay is set
   }
 
   const cam = game.camera;
@@ -616,23 +621,30 @@ function tryFire(game, S, P, hud, sfx, dt) {
 
   for (let p = 0; p < spec.pellets; p++) {
     const spread = spec.spread * Math.PI / 180;
-    const dx = (Math.random() - 0.5) * spread, dy = (Math.random() - 0.5) * spread;
-    const dir = [fwd.x + dx + (Math.random() - 0.5) * 0.001, fwd.y + dy, fwd.z + dx * 0.3];
+    // Perturb along camera right and up so the cone is a cone from any
+    // facing; one shared scalar collapses the pattern into a stripe.
+    const rx = (Math.random() - 0.5) * spread, ry = (Math.random() - 0.5) * spread;
+    const rl = Math.hypot(fwd.x, fwd.z) || 1e-6;
+    const rgt = { x: fwd.z / rl, z: -fwd.x / rl };
+    const dir = [fwd.x + rgt.x * rx, fwd.y + ry, fwd.z + rgt.z * rx];
     const hit = game.raycast([cam.position.x, cam.position.y, cam.position.z], dir, 60,
-      (b) => b !== P.actor.body && !b.isTrigger);
+      (b) => b !== P.actor.body && !b.isTrigger && !(b.userData && b.userData.bulletPassthrough));
     if (!hit) continue;
 
     const z = hit.actor && hit.actor.userData && hit.actor.userData.zombie;
     if (z && !z.dead) {
       const headshot = hit.point.y > z.actor.position.y + 0.5;
       const dmg = spec.dmg * (headshot ? spec.headMul : 1);
+      // Snapshot before the kill: death parks the body at the pool lot,
+      // and the chain has to arc from the corpse, not the car park.
+      const diedAt = { x: z.actor.position.x, y: z.actor.position.y, z: z.actor.position.z };
       hurtZombie(game, S, z, dmg, hit.point, headshot);
-      S.addPoints(ECONOMY.hit);
+      let awarded = S.addPoints(ECONOMY.hit);
       if (z.dead) {
         killsThisShot++;
-        S.addPoints(headshot ? ECONOMY.headshotKill : ECONOMY.kill);
-        hud.pointsDelta(headshot ? ECONOMY.headshotKill + ECONOMY.hit : ECONOMY.kill + ECONOMY.hit);
-      } else hud.pointsDelta(ECONOMY.hit);
+        awarded += S.addPoints(headshot ? ECONOMY.headshotKill : ECONOMY.kill);
+      }
+      hud.pointsDelta(awarded);
       headshot ? sfx.headmark() : sfx.hitmark();
       hud.hitmark(headshot);
       // Arc chain: jump to neighbours of the first thing it kills.
@@ -641,9 +653,9 @@ function tryFire(game, S, P, hud, sfx, dt) {
         for (const other of S.zombies) {
           if (jumps >= spec.chain.count) break;
           if (other === z || other.dead) continue;
-          const d = dist2d(other.actor.position, z.actor.position);
+          const d = dist2d(other.actor.position, diedAt);
           if (d < spec.chain.radius) {
-            arcBolt(game, z.actor.position, other.actor.position);
+            arcBolt(game, diedAt, other.actor.position);
             hurtZombie(game, S, other, spec.chain.dmg, other.actor.position, false);
             if (other.dead) { S.addPoints(ECONOMY.kill); hud.pointsDelta(ECONOMY.kill); }
             jumps++;
@@ -824,9 +836,9 @@ function killZombie(game, S, z, headshot) {
 }
 
 const POWERUPS = {
-  maxammo: { label: 'MAX AMMO', color: 0x59ff7a },
+  maxammo: { label: 'FULL RESUPPLY', color: 0x59ff7a },
   blitz: { label: 'BLITZ', color: 0xffd23a },
-  double: { label: 'DOUBLE POINTS', color: 0x66d4ff },
+  double: { label: 'PAYDAY', color: 0x66d4ff },
 };
 
 function dropPowerup(game, S, p) {
@@ -834,10 +846,10 @@ function dropPowerup(game, S, p) {
   const kind = keys[Math.floor(Math.random() * keys.length)];
   const def = POWERUPS[kind];
   const a = game.box({
-    at: [p.x, 1.1, p.z], size: 0.34, physics: false,
+    at: [p.x, p.y + 0.15, p.z], size: 0.34, physics: false,
     material: { color: 0x181818, texture: 'smooth', roughness: 0.3, emissive: def.color, emissiveStrength: 2.4 },
   });
-  S.powerupActive = { kind, actor: a, t: 20, spin: 0 };
+  S.powerupActive = { kind, actor: a, t: 20, spin: 0, baseY: p.y + 0.15 };
 }
 
 function applyPowerup(game, S, P, hud, sfx) {
@@ -899,7 +911,7 @@ function updateZombie(game, S, P, z, dt, sfx) {
     z.tearT -= dt;
     if (z.tearT <= 0) {
       const slot = win.boards.map((b, i) => (b ? i : -1)).filter((i) => i >= 0).pop();
-      if (slot == null || slot < 0) {
+      if (slot == null) {
         // Nothing left to tear: through the window.
         win.zombiesAt--;
         sfx.vault();
@@ -964,6 +976,7 @@ function hurtPlayer(game, S, P, dmg, sfx) {
   if (P.hp <= 0) {
     P.alive = false;
     S.gameOver = true;
+    closeCrate(S);
     document.exitPointerLock && document.exitPointerLock();
     S.voice(LINES.gameOver, true);
     S.hud.gameOver(S.round, S.killsTotal);
@@ -1038,7 +1051,9 @@ function doInteract(game, S, P, hud, sfx, it, dt) {
     closeCrate(S);
     hud.ammo(P);
   } else if (it.kind === 'repair') {
-    S.repairT = (S.repairT || 0) - dt;
+    if (S.repairFrame !== S.frame - 1) S.repairT = 0.45;   // new hold
+    S.repairFrame = S.frame;
+    S.repairT -= dt;
     if (S.repairT <= 0) {
       S.repairT = 0.45;
       const win = it.win;
@@ -1064,7 +1079,7 @@ function openCrate(game, S, P, hud, sfx) {
   c.lid.setRotation([0, 0, -70]);
   c.lid.setPosition([c.at[0] - 0.45, c.at[1] + 0.75, c.at[2]]);
   let disp;
-  if (c.offerId === 'thompson') { const t = game.thompson({ physics: false }); disp = { root: t, parts: [t, t.wood] }; }
+  if (c.offerId === 'thompson') { const t = game.thompson({ physics: false }); disp = { root: t, parts: t.wood ? [t.wood] : [] }; }
   else if (c.offerId === 'scatter') disp = makeScattergun(game);
   else disp = makeArcProjector(game);
   disp.root.setPosition([c.at[0], c.at[1] + 0.2, c.at[2]]);
@@ -1079,7 +1094,7 @@ function openCrate(game, S, P, hud, sfx) {
 function closeCrate(S) {
   const c = S.crate;
   if (c.offer) { for (const p of c.offer.parts) p.destroy(); c.offer.root.destroy(); }
-  if (c.glow) { c.glow.intensity = 0; c.glow = null; }
+  if (c.glow) { c.glow._decay = 0.05; c.glow = null; }   // engine sweeps it out
   if (c.spinInterval) { clearInterval(c.spinInterval); c.spinInterval = null; }
   c.offer = null; c.offerId = null; c.busy = false;
   c.lid.setRotation([0, 0, 0]);
@@ -1091,7 +1106,12 @@ function closeCrate(S) {
    Serif, parchment-on-dark, red where it matters. */
 
 function makeHud() {
+  const old = document.getElementById('b9hud');
+  if (old) old.remove();
+  const oldCss = document.getElementById('b9hud-css');
+  if (oldCss) oldCss.remove();
   const css = document.createElement('style');
+  css.id = 'b9hud-css';
   css.textContent = `
   #b9hud { position:fixed; inset:0; pointer-events:none; font-family:Georgia,'Times New Roman',serif; color:#e8ddc8; z-index:10; }
   #b9hud .round { position:absolute; left:26px; bottom:18px; font-size:64px; color:#b3221c;
@@ -1148,7 +1168,7 @@ function makeHud() {
     prompt: $('.prompt'), subs: $('.subs'), subWho: $('.subs .who'), subText: $('.subs .text'),
     banner: $('.banner'), dmg: $('.dmg'), title: $('.title'), hitm: $('.hitm'), pdelta: $('.pdelta'),
   };
-  let subTimer = 0, hmTimer = 0, pdAcc = 0, pdTimer = 0;
+  let subTimer = 0, hmTimer = 0, pdAcc = 0, pdTimer = 0, bnTimer = 0;
   return {
     els,
     round(n) { els.round.textContent = n; els.round.classList.remove('flick'); void els.round.offsetWidth; els.round.classList.add('flick'); },
@@ -1174,7 +1194,8 @@ function makeHud() {
       els.banner.textContent = text;
       els.banner.style.color = color || '#e8ddc8';
       els.banner.style.opacity = 1;
-      setTimeout(() => { els.banner.style.opacity = 0; }, 2200);
+      clearTimeout(bnTimer);
+      bnTimer = setTimeout(() => { els.banner.style.opacity = 0; }, 2200);
     },
     hitmark(head) {
       els.hitm.classList.toggle('head', !!head);
@@ -1234,7 +1255,8 @@ function updateRounds(game, S, P, hud, sfx, dt) {
     }
   }
 
-  if (S.toSpawn === 0 && alive === 0 && !S.gameOver) {
+  const aliveNow = S.zombies.some((z) => !z.dead);
+  if (S.toSpawn === 0 && !aliveNow && !S.gameOver) {
     S.betweenRounds = true;
     S.lullT = ROUNDS.lull;
     sfx.roundClear();
@@ -1271,12 +1293,12 @@ function start(opts = {}) {
     testMode: !!opts.test, godMode: false,
     input: { fireHeld: false, firePressed: false },
   };
-  S.addPoints = (n) => { S.points += Math.round(n * S.mul); };
+  S.addPoints = (n) => { const a = Math.round(n * S.mul); S.points += a; return a; };
 
   const hud = makeHud();
   S.hud = hud;
   const sfx = makeSfx(game);
-  const voice = makeVoice(game, hud);
+  const voice = makeVoice(game, hud, () => S.gameOver);
   S.voice = voice;
 
   buildMap(game, S);
@@ -1302,7 +1324,7 @@ function start(opts = {}) {
     S.started = true;
     hud.hideTitle();
     setTimeout(() => voice(LINES.intro, true), 900);
-    setTimeout(() => startRound(game, S, hud, sfx), 5200);
+    S.roundStartAt = S.time + 5.2;   // game time, so tests and pauses behave
   };
   hud.els.title.addEventListener('click', startGame);
   if (opts.test) startGame();
@@ -1310,11 +1332,13 @@ function start(opts = {}) {
   game.onUpdate((dt) => {
     if (window.__FREEZE) return;   // test/profiling hatch: engine only
     S.time += dt;
+    S.frame = (S.frame || 0) + 1;
     const i = game.input;
     S.input.fireHeld = i.pointer.down || i.down(' ');
     S.input.firePressed = i.pointer.justDown || i.justPressed(' ');
 
     if (S.gameOver || !S.started) return;
+    if (S.roundStartAt != null && S.time >= S.roundStartAt) { S.roundStartAt = null; startRound(game, S, hud, sfx); }
 
     /* Player movement: camera-relative WASD through the capsule controller. */
     if (P.alive) {
@@ -1323,12 +1347,11 @@ function start(opts = {}) {
       const wx = Math.sin(yaw) * mz + Math.cos(yaw) * mx;
       const wz = Math.cos(yaw) * mz - Math.sin(yaw) * mx;
       P.actor.controller.move(wx, wz, i.down('shift'));
-      if (i.justPressed(' ') && false) P.actor.controller.jump();   // jump disabled: bunny-hopping the dead is not the game
 
       if (i.justPressed('r')) tryReload(P, sfx);
       if (i.justPressed('q') && P.slots.length > 1) { P.slot = 1 - P.slot; P.reloading = 0; hud.ammo(P); }
-      if (i.justPressed('1')) { P.slot = 0; hud.ammo(P); }
-      if (i.justPressed('2') && P.slots.length > 1) { P.slot = 1; hud.ammo(P); }
+      if (i.justPressed('1')) { P.slot = 0; P.reloading = 0; hud.ammo(P); }
+      if (i.justPressed('2') && P.slots.length > 1) { P.slot = 1; P.reloading = 0; hud.ammo(P); }
 
       if (P.reloading > 0) {
         P.reloading -= dt;
@@ -1375,7 +1398,7 @@ function start(opts = {}) {
       pu.t -= dt; pu.spin += dt * 2.4;
       pu.actor.setRotation([0, pu.spin * 57.3, 0]);
       const base = pu.actor.position;
-      pu.actor.setPosition([base.x, 1.05 + Math.sin(pu.spin * 1.8) * 0.12, base.z]);
+      pu.actor.setPosition([base.x, pu.baseY + Math.sin(pu.spin * 1.8) * 0.12, base.z]);
       if (pu.t < 4) pu.actor.visible = Math.floor(pu.t * 6) % 2 === 0;
       if (dist2d(base, P.actor.position) < 1.25 && Math.abs(base.y - P.actor.position.y) < 1.8) applyPowerup(game, S, P, hud, sfx);
       else if (pu.t <= 0) { pu.actor.destroy(); S.powerupActive = null; }
@@ -1406,7 +1429,7 @@ function start(opts = {}) {
     game, S, P, WEAPONS, ECONOMY, LINES,
     spawn(winId) {
       const win = S.windows.find((w) => w.def.id === (winId || S.activeWindows[0]));
-      return spawnZombie(game, S, win);
+      return win ? spawnZombie(game, S, win) : null;
     },
     setPoints(n) { S.points = n; hud.points(n); },
     give(id) { S.player.give(id); hud.ammo(S.player); },
@@ -1414,7 +1437,8 @@ function start(opts = {}) {
     forceRound(n) { S.round = n - 1; S.toSpawn = 0; for (const z of S.zombies) if (!z.dead) killZombie(game, S, z, false); startRound(game, S, hud, sfx); },
     god(on) { S.godMode = on !== false; },
     teleport(x, y, z) { P.actor.controller.teleport(new window.LE.Vec3(x, y, z)); },
-    look(yaw, pitch) { game._camYaw = yaw; game._camPitch = pitch; },
+    look(yaw, pitch) { game._camYaw = yaw; game._camPitch = Math.max(-1.45, Math.min(1.45, pitch)); },
+    idleInPool() { return S.pool.filter((z) => z.parked).length; },
     poolReady() { return S.pool.filter((z) => z.parked).length; },
   };
 
