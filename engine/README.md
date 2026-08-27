@@ -358,6 +358,21 @@ Characters accept `face: 'static'` — the sculpted head without the
 expression rig. A crowd of NPCs costs a fraction of one talking hero;
 this is the switch that makes a horde affordable.
 
+`character({ zombie: true })` builds a starved figure in torn clothing and
+loads a second clip set — `zwalk`, `zrun`, `zcrawl`, `ztear`, `zattack`,
+`zspit`, `zidle`. Set `controller.autoAnimate = false` on any character
+whose clips you want to drive yourself; the controller's own idle/walk
+state machine otherwise reclaims the animator whenever speed crosses a
+threshold.
+
+`game.viewmodelArms(weapon, hands)` parents forearms and hands to a
+weapon actor, so they inherit its bob, sway and recoil with nothing to
+keep in sync.
+
+`input.pad` carries full controller state — `lx/ly/rx/ry`, analog `lt/rt`,
+and named `buttons` / `pressed` / `released` — alongside the legacy fold
+into the keyboard axes.
+
 A complete game built on all of this lives at `site/games/bunker-nine.html`
 — round-based survival in a bunker, wall-buy weapons, boarded windows,
 procedural voice acting. It doubles as the engine's reference game.

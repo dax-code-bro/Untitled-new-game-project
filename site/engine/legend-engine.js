@@ -8449,10 +8449,17 @@ class CharacterController {
     else state = 'idle';
     if (state !== this.state) {
       this.state = state;
-      if (this.animator) this.animator.play(state, state === 'jump' ? 0.08 : 0.2);
+      // autoAnimate: false leaves clip choice to the owner. Without it this
+      // state machine reclaims the animator the moment a character's speed
+      // crosses a threshold, and any custom clip — a shamble, a crawl, a
+      // reload — is silently replaced by 'idle' or 'walk' mid-motion.
+      if (this.animator && this.autoAnimate !== false) {
+        this.animator.play(state, state === 'jump' ? 0.08 : 0.2);
+      }
     }
     // Match stride to actual speed so the feet do not skate.
-    if (this.animator && (state === 'walk' || state === 'run')) {
+    if (this.animator && this.autoAnimate === false) { /* owner drives speed */ }
+    else if (this.animator && (state === 'walk' || state === 'run')) {
       this.animator.speed = clamp(planar / (state === 'run' ? this.runSpeed : this.moveSpeed), 0.45, 1.9);
     } else if (this.animator) {
       this.animator.speed = 1;
@@ -9662,12 +9669,14 @@ class Engine {
 
     const animator = new Animator(skeleton);
     for (const clip of makeHumanoidClips()) animator.add(clip);
+    // The dead get their own set: shamble, sprint, crawl, tear, lunge, spit.
+    if (opts.zombie) for (const clip of makeZombieClips()) animator.add(clip);
     animator.play('idle', 0);
 
     const controller = new CharacterController(this, {
       position: opts.at || opts.position || [0, 1.1, 0],
-      height: 1.75 * scale,
-      radius: 0.3 * scale,
+      height: opts.height != null ? opts.height : 1.75 * scale,
+      radius: opts.radius != null ? opts.radius : 0.3 * scale,
       speed: opts.speed,
       runSpeed: opts.runSpeed,
       jumpSpeed: opts.jumpSpeed,
@@ -9693,6 +9702,12 @@ class Engine {
     if (opts.face !== false) {
       const headGeo = makeHeadGeometry({ seed: opts.seed || 5 });
       const headMesh = new GpuMesh(this.gl, headGeo);
+      // A head with no expression rig has neither skeleton nor face, so the
+      // renderer batches it through the instanced path — which needs an
+      // instance buffer this mesh would otherwise never be given, and the
+      // draw silently produces nothing. Every static-faced character came
+      // out headless because of it.
+      headMesh.setupInstancing(20);   // stride in floats, matching _mesh()
       // face: 'static' renders the head but skips the expression rig — no
       // blendshape build, no per-frame morphing. A crowd of NPCs costs a
       // fraction of one talking hero, which is exactly the trade a horde
@@ -11687,66 +11702,79 @@ function buildViewArm(g, shoulder, hand, side) {
     );
     rings.push({ p, w: spec[i][0], d: spec[i][1], e: 2.1, uv: t });
   }
-  loftRings(g, rings, 14, true, false);
+  loftRings(g, rings, 14, true, true);
 }
 
-/* A hand wrapped around something. Palm block plus four fingers curled
-   over and a thumb laid along the far side — at viewmodel scale that is
-   the whole read, and anything more is polygons nobody will ever see. */
+/* A hand wrapped around something.
+
+   Every piece here starts *inside* the piece it grows from — the palm
+   overlaps the wrist, the fingers start buried in the palm, the thumb
+   starts buried in both. Built as separate lofts that merely meet at a
+   shared point, they read as a bag of parts floating near each other the
+   moment anything moves, because nothing guarantees the surfaces touch. */
 function buildViewHand(g, at, side, opts = {}) {
   const grip = opts.grip || 'pistol';
-  const wristDir = opts.wrist || new Vec3(-0.6, -0.8, 0).normalize();
+  // Which way the fingers point: down and forward around a pistol grip,
+  // straight along the weapon on a forend.
+  const dir = grip === 'fore'
+    ? new Vec3(0.86, -0.5, 0).normalize()
+    : new Vec3(0.28, -0.94, 0).normalize();
+  const outw = new Vec3(0, 0, side);
 
-  // Palm: a slab sitting across the grip.
+  /* Palm. Starts behind the wrist so it swallows the sleeve's end ring. */
   const palm = [];
-  const steps = 4;
-  for (let i = 0; i <= steps; i++) {
-    const t = i / steps;
+  const PN = 5;
+  for (let i = 0; i <= PN; i++) {
+    const t = i / PN;
+    const d = -0.022 + t * 0.086;
     palm.push({
-      p: new Vec3(
-        at.x + wristDir.x * 0.055 * (1 - t) * -1 + (grip === 'fore' ? t * 0.012 : 0),
-        at.y + wristDir.y * 0.055 * (1 - t) * -1,
-        at.z + side * 0.004,
-      ),
-      w: 0.030 - t * 0.003, d: 0.021 + t * 0.003, e: 2.5, uv: t,
+      p: new Vec3(at.x + dir.x * d, at.y + dir.y * d, at.z + dir.z * d + side * 0.002),
+      // Widens out of the wrist into the knuckles, then rounds off.
+      w: 0.019 + Math.sin(t * Math.PI * 0.85) * 0.010,
+      d: 0.014 + Math.sin(t * Math.PI * 0.9) * 0.008,
+      e: 2.6, uv: t,
     });
   }
   loftRings(g, palm, 12, true, true);
 
-  // Fingers, curled around the grip axis.
-  const fingerAxis = grip === 'fore' ? new Vec3(1, 0, 0) : new Vec3(0.15, -1, 0).normalize();
+  /* Fingers, curling back under the palm and gripping. Each one begins
+     0.02 back inside the palm volume, so the join is never visible. */
   for (let f = 0; f < 4; f++) {
-    const spread = (f - 1.5) * 0.024;
-    const along = grip === 'fore' ? spread : spread * 0.2;
-    const base = new Vec3(
-      at.x + fingerAxis.x * 0.012 + (grip === 'fore' ? along : 0.020),
-      at.y + fingerAxis.y * 0.012 - (grip === 'fore' ? 0.004 : 0),
-      at.z + side * (0.014 + (grip === 'fore' ? 0 : along * 0.9)),
-    );
+    const lane = (f - 1.5) * 0.0165;
+    const startD = 0.052;
     const rings = [];
-    const curl = 0.030 + f * 0.001;
-    for (let i = 0; i <= 3; i++) {
-      const t = i / 3;
+    for (let i = 0; i <= 4; i++) {
+      const t = i / 4;
+      // Out along the palm, then hooking back toward the palm's underside.
+      const along = startD - 0.020 + t * 0.030;
+      const curlBack = t * t * 0.030;
       rings.push({
         p: new Vec3(
-          base.x - t * curl * 0.9,
-          base.y - t * curl * 0.55 - t * t * 0.010,
-          base.z - side * t * curl * 0.75,
+          at.x + dir.x * along - dir.y * curlBack * 0.6 + outw.x * lane,
+          at.y + dir.y * along + dir.x * curlBack * 0.6 + outw.y * lane,
+          at.z + dir.z * along + outw.z * lane,
         ),
-        w: 0.0078 - t * 0.0015, d: 0.0078 - t * 0.0015, e: 2.2, uv: t,
+        w: 0.0082 - t * 0.0016, d: 0.0082 - t * 0.0016, e: 2.3, uv: t,
       });
     }
     loftRings(g, rings, 8, true, true);
   }
 
-  // Thumb, laid along the near face.
+  /* Thumb, laid across the near side and rooted inside the palm. */
   const th = [];
-  for (let i = 0; i <= 3; i++) {
-    const t = i / 3;
-    th.push({
-      p: new Vec3(at.x + 0.006 + t * 0.030, at.y - 0.006 - t * 0.014, at.z - side * (0.014 + t * 0.006)),
-      w: 0.0092 - t * 0.002, d: 0.0092 - t * 0.002, e: 2.2, uv: t,
-    });
+  for (let i = 0; i <= 4; i++) {
+    const t = i / 4;
+    const along = 0.004 + t * 0.052;
+    rings0: {
+      th.push({
+        p: new Vec3(
+          at.x + dir.x * along - outw.x * (0.012 + t * 0.004) - dir.y * t * 0.012,
+          at.y + dir.y * along - outw.y * (0.012 + t * 0.004) + dir.x * t * 0.012,
+          at.z + dir.z * along - outw.z * (0.012 + t * 0.004),
+        ),
+        w: 0.0098 - t * 0.0026, d: 0.0098 - t * 0.0026, e: 2.3, uv: t,
+      });
+    }
   }
   loftRings(g, th, 8, true, true);
 }
@@ -11811,6 +11839,153 @@ Engine.prototype.viewmodelArms = function (weapon, hands, opts = {}) {
 };
 
 
+/* ─────────── 99-zombie-anim.js ─────────── */
+/* ============================================================
+   ZOMBIE ANIMATION — clips for the dead.
+
+   The human walk cycle is symmetric, balanced and efficient,
+   which is exactly what a corpse is not. Everything here breaks
+   one of those three on purpose:
+
+     asymmetry  one leg drives, the other drags. The single
+                strongest cue that something is wrong with a
+                walk, and it costs nothing but different keys
+                on the left and right tracks.
+     imbalance  the head leads the hips. A living walker keeps
+                its head over its centre of mass; a shambler
+                falls forwards and catches itself, forever.
+     slack      arms hang and swing from the shoulder with no
+                elbow control, lagging the body instead of
+                counter-swinging with it.
+
+   Keys are [normalisedTime, xDeg, yDeg, zDeg].
+   ============================================================ */
+
+function makeZombieClips() {
+  const clips = [];
+
+  /* ---- shamble: the default walk ---- */
+  clips.push(buildClip('zwalk', 1.85, {
+    // Hips roll heavily and drop on the dragging side.
+    hips: { keys: [[0, 4, -3, 5], [0.25, 4, 0, -2], [0.5, 4, 3, -6], [0.75, 4, 0, 1], [1, 4, -3, 5]] },
+    spine: { keys: [[0, 15, 2, 3], [0.5, 17, -2, -3], [1, 15, 2, 3]] },
+    chest: { keys: [[0, 10, -3, -2], [0.5, 12, 3, 2], [1, 10, -3, -2]] },
+    // Head lolls, and never quite comes back to level.
+    head: { keys: [[0, -8, 7, -9], [0.3, -11, 2, -12], [0.6, -7, -6, -6], [1, -8, 7, -9]] },
+
+    // Left leg drives: a full stride with a real knee bend.
+    upperLegL: { keys: [[0, 30, 0, 2], [0.5, -20, 0, 2], [1, 30, 0, 2]] },
+    lowerLegL: { keys: [[0, -8, 0, 0], [0.3, -6, 0, 0], [0.62, 46, 0, 0], [1, -8, 0, 0]] },
+    footL: { keys: [[0, -14, 0, 0], [0.5, 10, 0, 0], [1, -14, 0, 0]] },
+
+    // Right leg drags: barely lifts, knee stays locked, toe scrapes.
+    upperLegR: { keys: [[0, -12, 0, -4], [0.5, 14, 0, -4], [1, -12, 0, -4]] },
+    lowerLegR: { keys: [[0, 12, 0, 0], [0.5, 6, 0, 0], [1, 12, 0, 0]] },
+    footR: { keys: [[0, 16, 0, 0], [0.5, 14, 0, 0], [1, 16, 0, 0]] },
+
+    // Arms hang and trail. They swing late, and one is held higher than
+    // the other because nothing is correcting it.
+    upperArmL: { keys: [[0, -18, 0, -14], [0.5, 10, 0, -12], [1, -18, 0, -14]] },
+    upperArmR: { keys: [[0, 14, 0, 20], [0.5, -12, 0, 24], [1, 14, 0, 20]] },
+    lowerArmL: { keys: [[0, 34, 0, 0], [0.5, 26, 0, 0], [1, 34, 0, 0]] },
+    lowerArmR: { keys: [[0, 58, 0, 0], [0.5, 66, 0, 0], [1, 58, 0, 0]] },
+  }));
+
+  /* ---- sprint: the ones that run ---- */
+  clips.push(buildClip('zrun', 0.72, {
+    hips: { keys: [[0, 12, -4, 4], [0.25, 12, 0, 0], [0.5, 12, 4, -4], [0.75, 12, 0, 0], [1, 12, -4, 4]] },
+    spine: { keys: [[0, 26, 3, 0], [0.5, 28, -3, 0], [1, 26, 3, 0]] },
+    chest: { keys: [[0, 12, -4, 0], [0.5, 14, 4, 0], [1, 12, -4, 0]] },
+    // Head thrust forward ahead of the body — running at you, not with you.
+    head: { keys: [[0, -26, 4, -4], [0.5, -28, -4, 4], [1, -26, 4, -4]] },
+    upperLegL: { keys: [[0, 52, 0, 0], [0.5, -34, 0, 0], [1, 52, 0, 0]] },
+    lowerLegL: { keys: [[0, -16, 0, 0], [0.28, -8, 0, 0], [0.58, 78, 0, 0], [1, -16, 0, 0]] },
+    footL: { keys: [[0, -18, 0, 0], [0.5, 16, 0, 0], [1, -18, 0, 0]] },
+    upperLegR: { keys: [[0, -34, 0, 0], [0.5, 52, 0, 0], [1, -34, 0, 0]] },
+    lowerLegR: { keys: [[0, 78, 0, 0], [0.08, 10, 0, 0], [0.5, -16, 0, 0], [1, 78, 0, 0]] },
+    footR: { keys: [[0, 16, 0, 0], [0.5, -18, 0, 0], [1, 16, 0, 0]] },
+    // Arms reach rather than pump: hands up and forward, grasping.
+    upperArmL: { keys: [[0, -62, 0, -26], [0.5, -74, 0, -22], [1, -62, 0, -26]] },
+    upperArmR: { keys: [[0, -74, 0, 26], [0.5, -62, 0, 22], [1, -74, 0, 26]] },
+    lowerArmL: { keys: [[0, 46, 0, 0], [0.5, 34, 0, 0], [1, 46, 0, 0]] },
+    lowerArmR: { keys: [[0, 34, 0, 0], [0.5, 46, 0, 0], [1, 34, 0, 0]] },
+  }));
+
+  /* ---- crawl: no working legs, hauling on the arms ----
+     The skeleton stays upright, so the crawl is made by folding the whole
+     figure at the hips and packing the legs away behind it. Rotating the
+     actor instead would fight the controller, which owns yaw and nothing
+     else. */
+  clips.push(buildClip('zcrawl', 1.6, {
+    hips: { keys: [[0, 74, -6, 0], [0.5, 78, 6, 0], [1, 74, -6, 0]] },
+    spine: { keys: [[0, -16, 4, 0], [0.5, -20, -4, 0], [1, -16, 4, 0]] },
+    chest: { keys: [[0, -10, 6, 0], [0.5, -8, -6, 0], [1, -10, 6, 0]] },
+    head: { keys: [[0, -46, 6, 0], [0.5, -44, -6, 0], [1, -46, 6, 0]] },
+    // Legs folded up and back, dragging uselessly.
+    upperLegL: { keys: [[0, -72, 0, 10], [0.5, -66, 0, 12], [1, -72, 0, 10]] },
+    upperLegR: { keys: [[0, -66, 0, -12], [0.5, -72, 0, -10], [1, -66, 0, -12]] },
+    lowerLegL: { keys: [[0, 84, 0, 0], [0.5, 76, 0, 0], [1, 84, 0, 0]] },
+    lowerLegR: { keys: [[0, 76, 0, 0], [0.5, 84, 0, 0], [1, 76, 0, 0]] },
+    // Arms alternate: reach far forward, then haul the body over.
+    upperArmL: { keys: [[0, -96, 0, -18], [0.35, -40, 0, -26], [0.7, -20, 0, -20], [1, -96, 0, -18]] },
+    upperArmR: { keys: [[0, -20, 0, 20], [0.35, -96, 0, 18], [0.7, -50, 0, 26], [1, -20, 0, 20]] },
+    lowerArmL: { keys: [[0, 12, 0, 0], [0.35, 44, 0, 0], [1, 12, 0, 0]] },
+    lowerArmR: { keys: [[0, 44, 0, 0], [0.35, 12, 0, 0], [1, 44, 0, 0]] },
+  }));
+
+  /* ---- tearing at a barricade ---- */
+  clips.push(buildClip('ztear', 1.05, {
+    hips: { keys: [[0, 2, 0, 0], [0.5, 6, 0, 0], [1, 2, 0, 0]] },
+    spine: { keys: [[0, 12, -6, 0], [0.5, 20, 6, 0], [1, 12, -6, 0]] },
+    chest: { keys: [[0, 6, -8, 0], [0.5, 10, 8, 0], [1, 6, -8, 0]] },
+    head: { keys: [[0, -14, -6, -4], [0.5, -18, 6, 4], [1, -14, -6, -4]] },
+    // Both arms rip downward, out of phase, so the pull never stops.
+    upperArmL: { keys: [[0, -118, 0, -20], [0.28, -30, 0, -30], [0.55, -110, 0, -22], [1, -118, 0, -20]] },
+    upperArmR: { keys: [[0, -34, 0, 28], [0.28, -114, 0, 20], [0.55, -30, 0, 30], [1, -34, 0, 28]] },
+    lowerArmL: { keys: [[0, 20, 0, 0], [0.28, 62, 0, 0], [1, 20, 0, 0]] },
+    lowerArmR: { keys: [[0, 58, 0, 0], [0.28, 18, 0, 0], [1, 58, 0, 0]] },
+    upperLegL: { keys: [[0, 6, 0, 4], [1, 6, 0, 4]] },
+    upperLegR: { keys: [[0, -4, 0, -4], [1, -4, 0, -4]] },
+  }));
+
+  /* ---- lunge: the swipe that lands a hit ---- */
+  clips.push(buildClip('zattack', 0.62, {
+    hips: { keys: [[0, 2, 0, 0], [0.4, 12, 0, 0], [1, 2, 0, 0]] },
+    spine: { keys: [[0, 14, 0, 0], [0.35, 26, 0, 0], [1, 14, 0, 0]] },
+    head: { keys: [[0, -12, 0, 0], [0.35, -30, 0, 0], [1, -12, 0, 0]] },
+    upperArmL: { keys: [[0, -40, 0, -18], [0.3, -128, 0, -34], [0.6, -96, 0, -10], [1, -40, 0, -18]] },
+    upperArmR: { keys: [[0, -44, 0, 18], [0.36, -132, 0, 34], [0.66, -92, 0, 10], [1, -44, 0, 18]] },
+    lowerArmL: { keys: [[0, 40, 0, 0], [0.3, 8, 0, 0], [1, 40, 0, 0]] },
+    lowerArmR: { keys: [[0, 44, 0, 0], [0.36, 10, 0, 0], [1, 44, 0, 0]] },
+  }, { loop: false }));
+
+  /* ---- the throw, for the ones that spit ---- */
+  clips.push(buildClip('zspit', 0.95, {
+    hips: { keys: [[0, 2, -14, 0], [0.45, 4, 16, 0], [1, 2, -14, 0]] },
+    spine: { keys: [[0, 10, -20, 0], [0.45, 18, 22, 0], [1, 10, -20, 0]] },
+    chest: { keys: [[0, 6, -16, 0], [0.45, 8, 18, 0], [1, 6, -16, 0]] },
+    head: { keys: [[0, -18, -8, 0], [0.45, -24, 8, 0], [1, -18, -8, 0]] },
+    // Right arm winds back over the shoulder, then whips through.
+    upperArmR: { keys: [[0, -20, 0, 40], [0.3, -150, 0, 30], [0.5, -70, 0, 12], [1, -20, 0, 40]] },
+    lowerArmR: { keys: [[0, 30, 0, 0], [0.3, 96, 0, 0], [0.5, 6, 0, 0], [1, 30, 0, 0]] },
+    upperArmL: { keys: [[0, -50, 0, -22], [0.45, -30, 0, -16], [1, -50, 0, -22]] },
+    lowerArmL: { keys: [[0, 40, 0, 0], [1, 40, 0, 0]] },
+  }, { loop: false }));
+
+  /* ---- standing idle, for the moment before it notices you ---- */
+  clips.push(buildClip('zidle', 4.2, {
+    spine: { keys: [[0, 14, -2, 2], [0.5, 16, 2, -2], [1, 14, -2, 2]] },
+    head: { keys: [[0, -10, 5, -8], [0.5, -13, -5, -5], [1, -10, 5, -8]] },
+    upperArmL: { keys: [[0, -14, 0, -14], [0.5, -10, 0, -16], [1, -14, 0, -14]] },
+    upperArmR: { keys: [[0, -10, 0, 16], [0.5, -14, 0, 14], [1, -10, 0, 16]] },
+    lowerArmL: { keys: [[0, 40, 0, 0], [0.5, 46, 0, 0], [1, 40, 0, 0]] },
+    lowerArmR: { keys: [[0, 46, 0, 0], [0.5, 40, 0, 0], [1, 46, 0, 0]] },
+  }));
+
+  return clips;
+}
+
+
 /* ─────────── public surface ─────────── */
 const LegendEngine = {
   version: '1.0.0',
@@ -11822,7 +11997,7 @@ const LegendEngine = {
   Geometry, Shapes, convexHull, hullToGeometry,
   Engine, Actor, Material, Body, PhysicsWorld,
   Fluid, Fracture, ParticleSystem, Skeleton, AnimationClip, Face,
-  makePistol1911, makeViewmodelArms,
+  makePistol1911, makeViewmodelArms, makeZombieClips,
   Grass, Input, Audio,
   clamp, lerp, smoothstep,
 };

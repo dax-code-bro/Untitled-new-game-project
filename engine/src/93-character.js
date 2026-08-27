@@ -238,10 +238,17 @@ class CharacterController {
     else state = 'idle';
     if (state !== this.state) {
       this.state = state;
-      if (this.animator) this.animator.play(state, state === 'jump' ? 0.08 : 0.2);
+      // autoAnimate: false leaves clip choice to the owner. Without it this
+      // state machine reclaims the animator the moment a character's speed
+      // crosses a threshold, and any custom clip — a shamble, a crawl, a
+      // reload — is silently replaced by 'idle' or 'walk' mid-motion.
+      if (this.animator && this.autoAnimate !== false) {
+        this.animator.play(state, state === 'jump' ? 0.08 : 0.2);
+      }
     }
     // Match stride to actual speed so the feet do not skate.
-    if (this.animator && (state === 'walk' || state === 'run')) {
+    if (this.animator && this.autoAnimate === false) { /* owner drives speed */ }
+    else if (this.animator && (state === 'walk' || state === 'run')) {
       this.animator.speed = clamp(planar / (state === 'run' ? this.runSpeed : this.moveSpeed), 0.45, 1.9);
     } else if (this.animator) {
       this.animator.speed = 1;

@@ -21,6 +21,7 @@ const ECONOMY = {
   hit: 10,            // per bullet that lands
   kill: 60,           // on top of hits
   headshotKill: 100,  // instead of the 60
+  knifeKill: 230,     // the blade pays better than the gun, and should
   board: 10,          // per board repaired
   doorGenerator: 750,
   stairGate: 1000,
@@ -60,6 +61,15 @@ const WEAPONS = {
     recoil: { up: 2.6, side: 0.9, climb: 0.75, recover: 7 },
     hands: { right: [-0.055, -0.062, 0], left: [0.300, -0.016, 0] },
   },
+  knife: {
+    name: 'Trench Knife', slotName: 'KNIFE',
+    dmg: 100, headMul: 1.0, mag: Infinity, reserve: Infinity, refire: 0.42,
+    reload: 0, auto: false, pellets: 1, spread: 0,
+    kick: 1.0, sfx: 'knife', melee: true, range: 2.2,
+    sightH: 0.05, sightFov: 0.95, adsTime: 0.18,
+    recoil: { up: 0.5, side: 0.4, climb: 0, recover: 12 },
+    hands: { right: [-0.01, -0.03, 0], left: null },
+  },
   arc: {
     name: 'AX-9 Arc Projector', slotName: 'ARC PROJECTOR',
     dmg: 900, headMul: 1.0, mag: 6, reserve: 30, refire: 0.55,
@@ -72,9 +82,41 @@ const WEAPONS = {
   },
 };
 
+/* Perks. Bought once from a wall station, kept until you die. Each one
+   changes a rule rather than a number where it can — a perk you can feel
+   without reading the HUD is worth three that adjust a multiplier. */
+const PERKS = {
+  supersoldier: {
+    name: 'SUPER SOLDIER', cost: 2500, color: 0xff6a3a,
+    blurb: 'Maximum health 100 to 300. Slightly quicker on your feet.',
+  },
+  deflect: {
+    name: 'DEFLECT', cost: 2000, color: 0x66d4ff,
+    blurb: 'Immune to all projectile damage.',
+  },
+  shieldup: {
+    name: 'SHIELD UP', cost: 3000, color: 0xb08cff,
+    blurb: 'Hold a shield. Nothing touches you, and they forget where you are.',
+  },
+  adrenaline: {
+    name: 'ADRENALINE', cost: 2000, color: 0xffd23a,
+    blurb: 'Move markedly faster, always.',
+  },
+  athlete: {
+    name: 'ATHLETE', cost: 2000, color: 0x59ff7a,
+    blurb: 'Slide from a sprint, and sprint far longer.',
+  },
+};
+
+const SHIELD = { duration: 5.0, cooldown: 22 };
+const SLIDE = { speed: 11.5, duration: 0.62, cooldown: 1.1, height: 0.9 };
+
 const ROUNDS = {
   countFor: (r) => Math.min(4 + Math.ceil(r * 2.6), 33),
   hpFor: (r) => (r <= 9 ? 110 + (r - 1) * 55 : 550 * Math.pow(1.09, r - 9)),
+  // They hit harder as well as soak more. Without this, a late round is
+  // only a longer round rather than a more dangerous one.
+  dmgFor: (r) => Math.min(60, 18 + (r - 1) * 2.4),
   maxAlive: (r) => Math.min(7 + r, 13),
   spawnGap: (r) => Math.max(2.6 - r * 0.12, 0.9),
   lull: 8,
@@ -91,7 +133,7 @@ const PLAYER = {
   adsSpread: 0.28,        // aimed shots tighten to this fraction of hip spread
   sprintSpeed: 7.4, walkSpeed: 4.2, adsSpeed: 2.3,
   fov: 1.0, sprintFov: 1.06,
-  hitDamage: 25, attackRange: 1.45, attackCooldown: 0.9,
+  attackRange: 1.45, attackCooldown: 0.9,
   interactRange: 2.0,
 };
 
@@ -172,6 +214,13 @@ function makeSfx(game) {
     },
     crateSpin() { t(880, 0.04, 'square', 0.06); },
     vault() { A.impact(0.5); t(110, 0.1, 'sawtooth', 0.08); },
+    knife() { t(2600, 0.035, 'sawtooth', 0.07); t(900, 0.06, 'triangle', 0.05); },
+    spit() { t(300, 0.1, 'sawtooth', 0.09); t(160, 0.16, 'square', 0.07); },
+    splat() { A.impact(0.45); t(90, 0.18, 'sawtooth', 0.1); },
+    deflect() { t(1400, 0.06, 'sine', 0.09); t(2100, 0.05, 'sine', 0.06); },
+    shieldUp() { for (let i = 0; i < 3; i++) setTimeout(() => t(420 + i * 190, 0.14, 'sine', 0.09), i * 55); },
+    perk() { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => t(f, 0.16, 'triangle', 0.1), i * 90)); },
+    slide() { t(220, 0.3, 'sawtooth', 0.07); A.impact(0.3); },
   };
 }
 
@@ -368,13 +417,51 @@ function buildMap(game, S) {
     { id: 'scatter', at: [-4.6, 1.4, M.z1 - 0.3], weapon: 'scatter', label: 'Scattergun' },
   ];
 
-  /* The generator itself, the power switch, the supply crate. */
+  /* The generator, and the wall panel that wakes it.
+
+     Built properly rather than as a box with a stick on it: a mounting
+     backplate, a cast housing, a hinged cage over the throw lever, two
+     indicator lamps, a fuse row and conduit running up into the ceiling.
+     It is the one thing in the map every player walks to on purpose, so
+     it is worth the polygons. */
   game.box({ at: [-14.9, 0.75, -3.2], size: [1.8, 1.5, 1.3], material: MAT.steel, static: true });
   game.cylinder({ at: [-13.7, 0.5, -3.4], radius: 0.32, height: 1.0, material: MAT.steel, static: true });
-  S.powerSwitch = { at: [-14.9, 1.5, -2.4], on: false };
-  const lever = game.box({ at: [-14.9, 1.5, -2.48], size: [0.1, 0.5, 0.08], material: { color: 0xa03028, texture: 'smooth', roughness: 0.5 }, physics: false });
-  lever.setRotation([25, 0, 0]);
-  S.powerSwitch.lever = lever;
+  // Flywheel and exhaust stack, so the generator reads as a machine.
+  const wheel = game.cylinder({ at: [-13.92, 0.95, -3.2], radius: 0.30, height: 0.09, material: MAT.steel, static: true });
+  wheel.setRotation([0, 0, 90]);
+  game.cylinder({ at: [-15.55, 1.85, -3.2], radius: 0.075, height: 1.4, material: { color: 0x2a2622, texture: 'metal', roughness: 0.8, metalness: 1 }, static: true });
+
+  const PANEL_X = -15.9, PANEL_Y = 1.52, PANEL_Z = -2.10;
+  const panelSteel = { color: 0x53585e, texture: 'metal', roughness: 0.55, metalness: 1 };
+  const panelDark = { color: 0x24272b, texture: 'metal', roughness: 0.65, metalness: 1 };
+  // Backplate against the wall, then the housing proud of it.
+  game.box({ at: [PANEL_X, PANEL_Y, PANEL_Z], size: [0.05, 0.78, 0.60], material: panelDark, static: true });
+  game.box({ at: [PANEL_X + 0.07, PANEL_Y, PANEL_Z], size: [0.14, 0.62, 0.46], material: panelSteel, static: true });
+  // Bolt heads at the corners.
+  for (const dy of [-0.27, 0.27]) for (const dz of [-0.20, 0.20]) {
+    const bolt = game.cylinder({ at: [PANEL_X + 0.035, PANEL_Y + dy, PANEL_Z + dz], radius: 0.018, height: 0.02, material: panelSteel, physics: false });
+    bolt.setRotation([0, 0, 90]);
+  }
+  // Throw lever in its slot, with a cage over it.
+  const lever = game.box({ at: [PANEL_X + 0.20, PANEL_Y + 0.06, PANEL_Z - 0.10], size: [0.22, 0.045, 0.045], material: { color: 0xa8302a, texture: 'metal', roughness: 0.42, metalness: 1 }, physics: false });
+  lever.setRotation([0, 0, 34]);
+  const knob = game.sphere({ at: [PANEL_X + 0.30, PANEL_Y + 0.14, PANEL_Z - 0.10], radius: 0.042, material: { color: 0xc4423a, texture: 'smooth', roughness: 0.35 }, physics: false });
+  for (const dz of [-0.175, -0.025]) {
+    game.box({ at: [PANEL_X + 0.20, PANEL_Y + 0.02, PANEL_Z + dz], size: [0.30, 0.024, 0.024], material: panelDark, static: true });
+  }
+  game.box({ at: [PANEL_X + 0.345, PANEL_Y + 0.02, PANEL_Z - 0.10], size: [0.024, 0.024, 0.175], material: panelDark, static: true });
+  // Two indicators: red live, green once it runs.
+  const lampRed = game.sphere({ at: [PANEL_X + 0.15, PANEL_Y + 0.235, PANEL_Z + 0.15], radius: 0.032, material: { color: 0x2a0a08, texture: 'smooth', roughness: 0.3, emissive: 0xff2a1e, emissiveStrength: 2.2 }, physics: false });
+  const lampGreen = game.sphere({ at: [PANEL_X + 0.15, PANEL_Y + 0.235, PANEL_Z + 0.02], radius: 0.032, material: { color: 0x081a08, texture: 'smooth', roughness: 0.3, emissive: 0x1a3a12, emissiveStrength: 0.2 }, physics: false });
+  // Fuse row along the bottom.
+  for (let f = 0; f < 4; f++) {
+    const fu = game.cylinder({ at: [PANEL_X + 0.15, PANEL_Y - 0.20, PANEL_Z - 0.16 + f * 0.105], radius: 0.026, height: 0.055, material: { color: 0x8a6a3a, texture: 'metal', roughness: 0.5, metalness: 1 }, physics: false });
+    fu.setRotation([0, 0, 90]);
+  }
+  // Conduit up to the ceiling.
+  game.cylinder({ at: [PANEL_X + 0.06, PANEL_Y + 0.85, PANEL_Z + 0.24], radius: 0.032, height: 1.1, material: panelDark, static: true });
+  S.powerSwitch = { at: [PANEL_X + 0.55, PANEL_Y, PANEL_Z], on: false, lever, knob, lampRed, lampGreen,
+    lx: PANEL_X, ly: PANEL_Y, lz: PANEL_Z };
 
   S.crate = {
     at: [-15.2, 0.4, 3.3], busy: false, cost: ECONOMY.crate,
@@ -399,6 +486,38 @@ function buildMap(game, S) {
     const t = game.cylinder({ at: [x, 0.5, z], radius: 0.16, height: len, material: { color: 0x2c2620, texture: 'wood', roughness: 0.95 }, static: true });
     t.setRotation([84, ry, 0]);
   }
+
+  /* Perk stations. One crate-and-lamp each, colour-coded to its perk, in
+     the rooms you have to fight through to reach them. */
+  const PERK_SPOTS = [
+    ['supersoldier', [-5.4, 0, -3.4]],
+    ['athlete', [5.2, 0, 3.2]],
+    ['adrenaline', [-15.4, 0, -1.2]],
+    ['deflect', [-7.6, 0, 3.6]],
+    ['shieldup', [1.4, 3.1, -3.2]],
+  ];
+  S.perkStations = PERK_SPOTS.map(([id, at]) => {
+    const def = PERKS[id];
+    const body = game.box({ at: [at[0], at[1] + 0.55, at[2]], size: [0.62, 1.1, 0.5], material: MAT.steel, static: true });
+    game.box({ at: [at[0], at[1] + 1.16, at[2]], size: [0.68, 0.12, 0.56], material: MAT.wallDark, static: true });
+    const glow = game.box({
+      at: [at[0], at[1] + 0.78, at[2] + 0.26], size: [0.34, 0.34, 0.03], physics: false,
+      material: { color: 0x101010, texture: 'smooth', roughness: 0.3, emissive: def.color, emissiveStrength: 1.6 },
+    });
+    // No point light per station: the renderer uploads only the first eight
+    // lights, and five stations plus the room lamps silently pushed the
+    // muzzle flash and crate glow out of the budget entirely. The emissive
+    // panel carries the colour on its own and costs nothing.
+    return { id, def, at: [at[0], at[1] + 1.0, at[2]], glow, body };
+  });
+
+  /* The shield bubble, hidden until raised. */
+  S.shieldMesh = game.sphere({
+    at: [0, -50, 0], radius: 1.15, physics: false,
+    material: { color: 0x6a4aa8, texture: 'smooth', roughness: 0.1, metalness: 0,
+      opacity: 0.30, emissive: 0xb08cff, emissiveStrength: 1.1 },
+  });
+  S.shieldMesh.visible = false;
 
   /* Boards on every window. */
   S.windows = WINDOWS.map((w) => {
@@ -484,6 +603,26 @@ function makeScattergun(game, opts = {}) {
   return { root, parts };
 }
 
+/* A trench knife: blade, guard, ribbed grip. Small enough that its whole
+   job is silhouette, so the blade gets a bevel and the grip gets rings. */
+function makeKnife(game, opts = {}) {
+  const steel = { color: 0xc8ccd2, texture: 'metal', roughness: 0.24, metalness: 1 };
+  const grip = { color: 0x2e2a24, texture: 'fabric', roughness: 0.9, metalness: 0, uvScale: 6 };
+  const brass = { color: 0xb08d4a, texture: 'metal', roughness: 0.38, metalness: 1 };
+  const root = game.box({ at: opts.at || [0, 0, 0], size: 1, physics: false, visible: false });
+  const parts = [];
+  const add = (a, pos, rot) => { a.parent = root; a.setPosition(pos); if (rot) a.setRotation(rot); parts.push(a); return a; };
+  // Blade: two wedges back to back give an edge without a custom mesh.
+  add(game.box({ size: [0.155, 0.026, 0.005], material: steel, physics: false }), [0.115, 0.004, 0], [0, 0, 1.5]);
+  add(game.box({ size: [0.075, 0.017, 0.0035], material: steel, physics: false }), [0.208, 0.001, 0], [0, 0, -7]);
+  add(game.box({ size: [0.012, 0.040, 0.022], material: brass, physics: false }), [0.034, 0, 0]);   // guard
+  for (let i = 0; i < 4; i++) {
+    add(game.cylinder({ radius: 0.0125, height: 0.020, material: grip, physics: false }), [-0.002 - i * 0.022, -0.002, 0], [0, 0, 90]);
+  }
+  add(game.box({ size: [0.014, 0.026, 0.024], material: brass, physics: false }), [-0.102, -0.003, 0]);  // pommel
+  return { root, parts };
+}
+
 function makeArcProjector(game, opts = {}) {
   const dark = { color: 0x23262c, texture: 'metal', roughness: 0.45, metalness: 1 };
   const coil = { color: 0x142430, texture: 'smooth', roughness: 0.3, emissive: 0x39c8ff, emissiveStrength: 2.2 };
@@ -517,14 +656,21 @@ function makePlayer(game, S, hud, sfx, voice) {
 
   const P = {
     actor: hero, hp: PLAYER.hp, lastHit: -99, downs: 0,
-    slots: ['m1911'], slot: 0,
-    ammo: { m1911: { mag: WEAPONS.m1911.mag, reserve: WEAPONS.m1911.reserve } },
+    slots: ['m1911'], slot: 0, knifeSlot: 'knife',
+    ammo: {
+      m1911: { mag: WEAPONS.m1911.mag, reserve: WEAPONS.m1911.reserve },
+      knife: { mag: Infinity, reserve: Infinity },
+    },
     cooldown: 0, reloading: 0, swayT: 0, kickPitch: 0,
     view: {}, muzzleT: 0, alive: true,
     // Aim, sprint and recoil state.
     ads: 0, adsWant: false, sprint: 0, sprinting: false,
     recoil: { pitch: 0, yaw: 0 }, recoilApplied: { pitch: 0, yaw: 0 },
     arms: {},
+    perks: {}, maxHp: PLAYER.hp,
+    stamina: 1, sliding: 0, slideCd: 0, slideDir: null,
+    shieldT: 0, shieldCd: 0,
+    prevSlot: 0, knifeOut: false,
   };
 
   /* View models: one instance of each weapon, shown when equipped. */
@@ -532,6 +678,7 @@ function makePlayer(game, S, hud, sfx, voice) {
   P.view.thompson = { kind: 'single', actor: game.thompson({ physics: false }), muzzle: 0.55 };
   P.view.scatter = Object.assign(makeScattergun(game), { kind: 'group', muzzle: 0.58 });
   P.view.arc = Object.assign(makeArcProjector(game), { kind: 'group', muzzle: 0.52 });
+  P.view.knife = Object.assign(makeKnife(game), { kind: 'group', muzzle: 0.26 });
   // Hands, parented to each weapon so they inherit its every motion.
   for (const [id, v] of Object.entries(P.view)) {
     const root = v.kind === 'single' ? v.actor : v.root;
@@ -698,11 +845,39 @@ function tryFire(game, S, P, hud, sfx, dt) {
   const wantFire = spec.auto ? S.input.fireHeld : S.input.firePressed;
   if (!wantFire || P.cooldown > 0) return;
 
-  if (am.mag <= 0) {
+  if (spec.melee) { /* no magazine to check */ } else if (am.mag <= 0) {
     sfx.dryFire();
     if (am.reserve <= 0 && Math.random() < 0.4) S.voice(LINES.lowAmmo);
     else tryReload(P, sfx);
     P.cooldown = 0.25;
+    return;
+  }
+
+  /* Melee: a short cone-ish probe instead of a bullet, its own kill
+     bounty, and no ammo to spend. */
+  if (spec.melee) {
+    P.cooldown = spec.refire;
+    P.kickPitch = Math.min(3, P.kickPitch + spec.kick);
+    sfx.knife();
+    const cam0 = game.camera;
+    const fw = _vTmp1.copy(cam0.target).sub(cam0.position).normalize();
+    const hitM = game.raycast([cam0.position.x, cam0.position.y, cam0.position.z],
+      [fw.x, fw.y, fw.z], spec.range,
+      (b) => b !== P.actor.body && !b.isTrigger && !(b.userData && b.userData.bulletPassthrough));
+    const zm = hitM && hitM.actor && hitM.actor.userData && hitM.actor.userData.zombie;
+    if (zm && !zm.dead) {
+      hurtZombie(game, S, zm, spec.dmg, hitM.point, false);
+      sfx.hitmark();
+      hud.hitmark(false);
+      if (zm.dead) {
+        S.killsTotal++;
+        const pts = S.addPoints(ECONOMY.knifeKill);
+        hud.pointsDelta(pts);
+      } else {
+        hud.pointsDelta(S.addPoints(ECONOMY.hit));
+      }
+      hud.points(S.points);
+    }
     return;
   }
 
@@ -765,7 +940,8 @@ function tryFire(game, S, P, hud, sfx, dt) {
       let awarded = S.addPoints(ECONOMY.hit);
       if (z.dead) {
         killsThisShot++;
-        awarded += S.addPoints(headshot ? ECONOMY.headshotKill : ECONOMY.kill);
+        const mult = z.V ? z.V.points : 1;
+        awarded += S.addPoints((headshot ? ECONOMY.headshotKill : ECONOMY.kill) * mult);
       }
       hud.pointsDelta(awarded);
       headshot ? sfx.headmark() : sfx.hitmark();
@@ -833,7 +1009,60 @@ function dist2d(a, b) { const dx = a.x - b.x, dz = a.z - b.z; return Math.hypot(
    subsurface than living skin, which is what stops it glowing warm at the
    edges the way the player's own hands do. */
 const ZOMBIE_SKIN = { color: 0x8d9c78, texture: 'skin', roughness: 0.88, metalness: 0, subsurface: 0.12 };
-const ZOMBIE_RAGS = { color: 0x3c3629, texture: 'fabric', roughness: 0.99, metalness: 0, uvScale: 3 };
+
+/* Torn clothing, varied. A horde in one uniform reads as clones; a spread
+   of faded field greys, dried blood and dirty canvas reads as a crowd that
+   used to be people with different jobs. */
+const RAG_COLORS = [0x6e6650, 0x596b57, 0x7d6449, 0x555f6a, 0x71584c, 0x4c5d50, 0x7a7157, 0x64505a];
+const SKIN_TONES = [0x8d9c78, 0x9aa384, 0x7f8f6e, 0x94916f, 0x86977f];
+
+/* The four kinds. Health and damage multiply on top of the round curve,
+   so a runner at round 12 is still a runner — the variant changes how it
+   plays, the round changes how hard it hits. */
+const VARIANTS = {
+  walker: {
+    weight: 1.0, speed: [0.95, 1.55], hp: 1.0, dmg: 1.0, points: 1.0,
+    clip: 'zwalk', clipSpeed: 1.0, eye: 0xff7a2a,
+  },
+  runner: {
+    weight: 0.0, speed: [3.1, 4.3], hp: 0.8, dmg: 1.0, points: 1.15,
+    clip: 'zrun', clipSpeed: 1.0, eye: 0xff3a18, from: 4,
+  },
+  crawler: {
+    // Low, quiet and easy to lose track of — worth less because it is
+    // slow, but it comes through gaps the standing ones cannot use.
+    weight: 0.0, speed: [1.2, 1.7], hp: 0.55, dmg: 1.15, points: 0.9,
+    clip: 'zcrawl', clipSpeed: 1.0, eye: 0xffb02a, from: 3,
+    crawl: true, height: 0.95,
+  },
+  spitter: {
+    // Keeps its distance and throws. The only ranged threat in the game,
+    // and the reason Deflect is worth buying.
+    weight: 0.0, speed: [1.0, 1.4], hp: 1.25, dmg: 1.0, points: 1.4,
+    clip: 'zwalk', clipSpeed: 0.85, eye: 0x7cff5a, from: 6,
+    ranged: { range: 11, minRange: 4.5, cooldown: 3.4, speed: 14, dmg: 22, splash: 2.2 },
+  },
+};
+
+/* How the mix shifts with the round. Early rounds are all walkers; the
+   others fade in so each one gets a round of its own to be noticed. */
+function variantWeights(round) {
+  return {
+    walker: 1.0,
+    runner: round < 4 ? 0 : Math.min(0.85, (round - 3) * 0.14),
+    crawler: round < 3 ? 0 : Math.min(0.45, (round - 2) * 0.09),
+    spitter: round < 6 ? 0 : Math.min(0.32, (round - 5) * 0.07),
+  };
+}
+
+function pickVariant(round, rng) {
+  const w = variantWeights(round);
+  let total = 0;
+  for (const k in w) total += w[k];
+  let r = rng() * total;
+  for (const k in w) { r -= w[k]; if (r <= 0) return k; }
+  return 'walker';
+}
 
 function roomOf(p) {
   if (p.y > 2.4 && p.x > MAP.loft.x0 - 0.5) return 'loft';
@@ -862,12 +1091,17 @@ function routeTo(fromRoom, toRoom, S) {
    a teleport and a reset; dying is a parking job. */
 
 function buildPooledZombie(game, S, i) {
+  const rag = RAG_COLORS[i % RAG_COLORS.length];
+  const tone = SKIN_TONES[i % SKIN_TONES.length];
   const a = game.character({
-    at: [200 + i * 4, 1.1, 0],
-    material: ZOMBIE_RAGS, skin: ZOMBIE_SKIN, seed: 20 + (i % 9),
-    face: 'static',
+    at: [200 + i * 4, -38, 0],
+    material: { color: rag, texture: 'fabric', roughness: 0.99, metalness: 0, uvScale: 2.5 },
+    skin: { color: tone, texture: 'skin', roughness: 0.88, metalness: 0, subsurface: 0.12 },
+    seed: 20 + (i % 9),
+    face: 'static', zombie: true,
   });
   a.controller.body.gravityScale = 0;
+  a.controller.autoAnimate = false;   // the zombie brain owns the clips
   const eyes = [];
   if (a.head && a.skeleton) {
     for (const sx of [-0.036, 0.036]) {
@@ -878,29 +1112,33 @@ function buildPooledZombie(game, S, i) {
       eyes.push(e);
     }
   }
-  /* Posture. The walk clip animates the limbs, but the spine and head are
-     left alone by it, so biasing those bones once gives every zombie the
-     stooped, head-thrust carriage that reads as wrong from across a room —
-     without touching the animation system at all. */
+  /* Posture. The clips animate the limbs; biasing the spine and head in the
+     animator's rest pose gives every one of them a slightly different
+     stooped carriage on top of whatever it is playing. */
   if (a.skeleton && a.animator) {
-    // The animator resets every bone to its captured rest pose each frame
-    // before applying clips, so the posture has to be written into that rest
-    // pose. Writing it to the bone instead lasts exactly one frame.
     const bend = (name, x, y, zr) => {
       const bi = a.skeleton.index(name);
       if (bi < 0 || !a.animator.restRotations[bi]) return;
       a.animator.restRotations[bi].setEuler(x, y, zr);
     };
-    const lean = 0.13 + (i % 5) * 0.02;
+    const lean = 0.10 + (i % 5) * 0.022;
     bend('spine', lean, 0, 0);
-    bend('chest', lean * 0.7, (i % 3 - 1) * 0.05, 0);
-    bend('head', -lean * 0.5, (i % 4 - 1.5) * 0.06, 0);
+    bend('chest', lean * 0.6, (i % 3 - 1) * 0.06, 0);
+    bend('head', -lean * 0.45, (i % 4 - 1.5) * 0.07, (i % 3 - 1) * 0.05);
   }
-  const z = { actor: a, eyes, parked: true, dead: true, poolSlot: i };
+  const z = { actor: a, eyes, parked: true, dead: true, poolSlot: i, anim: '' };
   a.userData = { zombie: z };
   setZombieVisible(z, false);
   S.pool.push(z);
   return z;
+}
+
+/* One place that decides what a zombie is playing, so a state change can
+   never leave two clips fighting over the same bones. */
+function playZombieAnim(z, name, fade) {
+  if (z.anim === name || !z.actor.animator) return;
+  z.anim = name;
+  z.actor.animator.play(name, fade != null ? fade : 0.18);
 }
 
 function setZombieVisible(z, on) {
@@ -920,10 +1158,12 @@ function parkZombie(game, S, z) {
   z.actor.controller.move(0, 0);
 }
 
-function spawnZombie(game, S, win) {
+function spawnZombie(game, S, win, forceVariant) {
   const z = S.pool.find((q) => q.parked);
   if (!z) return null;
-  const speed = ROUNDS.speedFor(S.round, Math.random);
+  const kind = forceVariant || pickVariant(S.round, Math.random);
+  const V = VARIANTS[kind];
+  const speed = V.speed[0] + Math.random() * (V.speed[1] - V.speed[0]);
   const b = z.actor.controller.body;
   b.gravityScale = 1;
   b.velocity.setScalar(0);
@@ -935,13 +1175,22 @@ function spawnZombie(game, S, win) {
   z.actor.controller.moveSpeed = speed;
   z.actor.controller.runSpeed = speed * 1.35;
   Object.assign(z, {
-    parked: false, dead: false, hp: ROUNDS.hpFor(S.round),
+    parked: false, dead: false,
+    kind, V,
+    hp: ROUNDS.hpFor(S.round) * V.hp,
+    dmg: ROUNDS.dmgFor(S.round) * V.dmg,
     state: 'toWindow', win, speed,
     tearT: 0, attackT: 0, groanT: 1 + Math.random() * 3, stuckT: 0, lastPos: null,
-    vault: null,
+    vault: null, spitT: 1 + Math.random() * 2, anim: '',
   });
+  // Crawlers ride a shorter capsule so the folded body sits on the floor.
+  z.actor.controller.height = V.crawl ? V.height : 1.75;
+  for (const e of z.eyes) {
+    e.material = game.material({ color: 0x100804, texture: 'smooth', roughness: 0.4,
+      emissive: V.eye, emissiveStrength: 2.6 });
+  }
   setZombieVisible(z, true);
-  if (z.actor.animator) z.actor.animator.play('walk', 0.2);
+  playZombieAnim(z, V.clip, 0.25);
   win.zombiesAt++;
   if (!S.zombies.includes(z)) S.zombies.push(z);
   return z;
@@ -991,7 +1240,7 @@ function dropPowerup(game, S, p) {
   const def = POWERUPS[kind];
   const a = game.box({
     at: [p.x, p.y + 0.15, p.z], size: 0.34, physics: false,
-    material: { color: 0x181818, texture: 'smooth', roughness: 0.3, emissive: def.color, emissiveStrength: 2.4 },
+    material: { color: 0x181818, texture: 'smooth', roughness: 0.3, emissive: def.color, emissiveStrength: 1.6 },
   });
   S.powerupActive = { kind, actor: a, t: 20, spin: 0, baseY: p.y + 0.15 };
 }
@@ -1024,18 +1273,22 @@ function updateZombie(game, S, P, z, dt, sfx) {
   if (z.dead || z.parked) return;
   const a = z.actor;
   const pos = a.position;
+  const V = z.V;
 
   z.groanT -= dt;
-  if (z.groanT < 0) { z.groanT = 2.5 + Math.random() * 4; if (dist2d(pos, P.actor.position) < 14) sfx.groan(Math.random()); }
+  if (z.groanT < 0) {
+    z.groanT = 2.5 + Math.random() * 4;
+    if (dist2d(pos, P.actor.position) < 14) sfx.groan(z.kind === 'runner' ? 0.9 : Math.random() * 0.5);
+  }
 
   if (z.vault) {
     const v = z.vault;
     v.t += dt / v.dur;
     const t = Math.min(1, v.t);
-    const arc = Math.sin(t * Math.PI) * 0.6;
+    const arc = Math.sin(t * PI_ARC) * 0.6;
     a.body.setPosition({ x: v.from[0] + (v.to[0] - v.from[0]) * t, y: v.from[1] + (v.to[1] - v.from[1]) * t + arc + 1.0, z: v.from[2] + (v.to[2] - v.from[2]) * t });
     a.body.velocity.setScalar(0);
-    if (t >= 1) { z.vault = null; z.state = 'hunt'; }
+    if (t >= 1) { z.vault = null; z.state = 'hunt'; playZombieAnim(z, V.clip, 0.2); }
     return;
   }
 
@@ -1045,51 +1298,84 @@ function updateZombie(game, S, P, z, dt, sfx) {
     a.controller.move(dx / d, dz / d, urgency > 1.2);
   };
 
+  /* Where the zombie thinks the player is. A raised shield does not make
+     the player invisible so much as forgettable: the horde keeps walking
+     to the last place it saw them and then mills about there. */
+  const target = S.shieldActive ? (S.lastKnown || P.actor.position) : P.actor.position;
+
   if (z.state === 'toWindow') {
+    playZombieAnim(z, V.clip);
     const sill = z.win.def.sillAt;
     move(z.win.def.pad[0] * 0.15 + sill[0] * 0.85, z.win.def.pad[2] * 0.15 + sill[2] * 0.85);
     if (dist2d(pos, { x: sill[0], z: sill[2] }) < 1.5) { z.state = 'tearing'; z.tearT = 0.8; }
   } else if (z.state === 'tearing') {
     a.controller.move(0, 0);
+    // The tear loop runs the whole time it is working at the boards, so the
+    // arms are ripping between planks instead of snapping to a pose only on
+    // the frame a board actually comes off.
+    playZombieAnim(z, 'ztear', 0.22);
     const win = z.win;
     z.tearT -= dt;
     if (z.tearT <= 0) {
       const slot = win.boards.map((b, i) => (b ? i : -1)).filter((i) => i >= 0).pop();
       if (slot == null) {
-        // Nothing left to tear: through the window.
         win.zombiesAt--;
         sfx.vault();
         z.vault = { from: [pos.x, pos.y - 1.0, pos.z], to: [win.def.inside[0], win.def.inside[1] + 1.0, win.def.inside[2]], t: 0, dur: win.def.high ? 1.5 : 0.9 };
         z.state = 'vaulting';
-        if (z.actor.animator) z.actor.animator.play('jump', 0.1);
       } else {
         const b = win.boards[slot];
         win.boards[slot] = null;
         sfx.tear();
-        if (z.actor.animator) { z.actor.animator.play('wave', 0.08); setTimeout(() => { if (!z.dead && z.state === 'tearing' && z.actor.animator) z.actor.animator.play('idle', 0.3); }, 500); }
         S.debris.push({ actor: b, vel: [(Math.random() - 0.5) * 2, 2 + Math.random() * 2, (Math.random() - 0.5) * 2 + (z.win.def.face === 'N' ? 1.5 : 0)], spin: (Math.random() - 0.5) * 8, t: 1.4 });
+        game.particles.dust([b.position.x, b.position.y, b.position.z], { count: 5, color: 0x7d5c36 });
         z.tearT = 2.1;
       }
     }
   } else if (z.state === 'hunt') {
-    const zr = roomOf(pos), pr = roomOf(P.actor.position);
+    const zr = roomOf(pos), pr = roomOf(target);
+    const d = dist2d(pos, target);
+
+    /* Spitters hold a firing line rather than closing. */
+    if (V.ranged && zr === pr && !S.shieldActive) {
+      const R = V.ranged;
+      z.spitT -= dt;
+      if (d < R.range && d > R.minRange) {
+        a.controller.move(0, 0);
+        playZombieAnim(z, 'zidle', 0.2);
+        if (z.spitT <= 0 && hasLineOfSight(game, z, P)) {
+          z.spitT = R.cooldown;
+          playZombieAnim(z, 'zspit', 0.06);
+          z.anim = '';                       // one-shot: let the next state retake it
+          throwBile(game, S, z, P, R, sfx);
+        }
+        return;
+      }
+      if (d <= R.minRange) {                 // too close — back off
+        move(pos.x * 2 - target.x, pos.z * 2 - target.z);
+        playZombieAnim(z, V.clip);
+        return;
+      }
+    }
+
     if (zr === pr) {
-      move(P.actor.position.x, P.actor.position.z, z.speed > 2.4 ? 2 : 1);
-      const d = dist2d(pos, P.actor.position);
+      move(target.x, target.z, z.speed > 2.4 ? 2 : 1);
+      playZombieAnim(z, V.clip);
       z.attackT -= dt;
-      if (d < PLAYER.attackRange && z.attackT <= 0 && Math.abs(pos.y - P.actor.position.y) < 1.6) {
+      if (!S.shieldActive && d < PLAYER.attackRange && z.attackT <= 0 && Math.abs(pos.y - P.actor.position.y) < 1.6) {
         z.attackT = PLAYER.attackCooldown;
-        if (z.actor.animator) { z.actor.animator.play('wave', 0.06); }
-        hurtPlayer(game, S, P, PLAYER.hitDamage, sfx);
+        playZombieAnim(z, 'zattack', 0.05);
+        z.anim = '';
+        hurtPlayer(game, S, P, z.dmg, sfx);
       }
     } else {
       const route = routeTo(zr, pr, S);
       let wp = route[0];
       for (const r of route) { wp = r; if (dist2d(pos, { x: r[0], z: r[2] }) > 0.9 && Math.abs(pos.y - r[1]) < 1.8) break; }
-      if (wp) move(wp[0], wp[2]);
-      else move(P.actor.position.x, P.actor.position.z);
+      if (wp) move(wp[0], wp[2]); else move(target.x, target.z);
+      playZombieAnim(z, V.clip);
     }
-    // Un-stick: zombies wedge on door frames; a sideways shove fixes most.
+
     if (z.lastPos != null) {
       const moved = dist2d(pos, z.lastPos);
       z.stuckT = moved < 0.02 ? z.stuckT + dt : 0;
@@ -1098,9 +1384,10 @@ function updateZombie(game, S, P, z, dt, sfx) {
     z.lastPos = { x: pos.x, z: pos.z };
   }
 
-  // Soft separation, so a pack does not fuse into one many-armed thing.
+  if (z.actor.animator) z.actor.animator.speed = V.clipSpeed;
+
   for (const other of S.zombies) {
-    if (other === z || other.dead) continue;
+    if (other === z || other.dead || other.parked) continue;
     const d = dist2d(pos, other.actor.position);
     if (d < 0.62 && d > 1e-4) {
       const push = (0.62 - d) * 2.4;
@@ -1110,13 +1397,50 @@ function updateZombie(game, S, P, z, dt, sfx) {
   }
 }
 
-function hurtPlayer(game, S, P, dmg, sfx) {
+const PI_ARC = Math.PI;
+
+function hasLineOfSight(game, z, P) {
+  const a = z.actor.position, b = P.actor.position;
+  const dx = b.x - a.x, dy = (b.y + 0.2) - (a.y + 0.6), dz = b.z - a.z;
+  const L = Math.hypot(dx, dy, dz) || 1;
+  const hit = game.raycast([a.x, a.y + 0.6, a.z], [dx / L, dy / L, dz / L], L + 0.2,
+    (bd) => bd !== z.actor.body && !bd.isTrigger && !(bd.userData && bd.userData.bulletPassthrough));
+  return !hit || hit.body === P.actor.body;
+}
+
+/* A thrown clot of something that used to be inside it. Travels as a real
+   projectile so it can be dodged, blocked by geometry, and stopped dead by
+   the Deflect perk. */
+function throwBile(game, S, z, P, R, sfx) {
+  const from = { x: z.actor.position.x, y: z.actor.position.y + 0.75, z: z.actor.position.z };
+  const to = P.actor.position;
+  const dx = to.x - from.x, dz = to.z - from.z;
+  const flat = Math.hypot(dx, dz) || 1;
+  const t = flat / R.speed;
+  // Lead the arc so it lands where the player is, not where they were.
+  const vy = (to.y - from.y) / t + 0.5 * 19.6 * t;
+  const proj = game.sphere({
+    at: [from.x, from.y, from.z], radius: 0.11, physics: false,
+    material: { color: 0x2c3a18, texture: 'smooth', roughness: 0.35,
+      emissive: 0x6ad83a, emissiveStrength: 1.4 },
+  });
+  S.projectiles.push({
+    actor: proj, vel: [dx / flat * R.speed, vy, dz / flat * R.speed],
+    dmg: R.dmg, splash: R.splash, life: 4,
+  });
+  sfx.spit();
+}
+
+function hurtPlayer(game, S, P, dmg, sfx, kind) {
   if (!P.alive || S.godMode) return;
+  if (P.shieldT > 0) return;                                   // nothing gets through
+  if (kind === 'projectile' && P.perks.deflect) { sfx.deflect(); return; }
   P.hp -= dmg;
   P.lastHit = S.time;
   sfx.hurt();
-  S.hud.damage(P.hp);
-  if (P.hp <= 25 && P.hp + dmg > 25) S.voice(LINES.nearDeath);
+  S.hud.damage(P.hp / P.maxHp);
+  const lowAt = P.maxHp * 0.25;
+  if (P.hp <= lowAt && P.hp + dmg > lowAt) S.voice(LINES.nearDeath);
   if (P.hp <= 0) {
     P.alive = false;
     S.gameOver = true;
@@ -1138,6 +1462,12 @@ function nearestInteract(S, P) {
       const owned = P.slots.includes(b.weapon);
       const cost = owned ? ECONOMY.wallAmmo : ECONOMY.wallGun;
       return { kind: 'buy', buy: b, cost, label: `${b.label} — ${owned ? 'AMMO ' : ''}${cost}` };
+    }
+  }
+  for (const st of S.perkStations) {
+    if (dist2d(p, { x: st.at[0], z: st.at[2] }) < R && Math.abs(p.y - st.at[1]) < 2.2) {
+      if (P.perks[st.id]) return { kind: 'perkOwned', cost: 0, label: `${st.def.name} — held`, inert: true };
+      return { kind: 'perk', st, cost: st.def.cost, label: `${st.def.name} — ${st.def.cost}   ${st.def.blurb}` };
     }
   }
   for (const [id, d] of Object.entries(S.doors)) {
@@ -1164,7 +1494,18 @@ function nearestInteract(S, P) {
 }
 
 function doInteract(game, S, P, hud, sfx, it, dt) {
+  if (it.inert) return;
   if (it.cost > S.points) { sfx.denied(); hud.prompt(it.label + '  — need more points', true); return; }
+  if (it.kind === 'perk') {
+    S.points -= it.cost;
+    P.perks[it.st.id] = true;
+    sfx.perk();
+    hud.banner(it.st.def.name, '#' + it.st.def.color.toString(16).padStart(6, '0'));
+    hud.perks(P.perks);
+    if (it.st.id === 'supersoldier') { P.maxHp = 300; P.hp = 300; hud.damage(1); }
+    hud.points(S.points);
+    return;
+  }
   if (it.kind === 'buy') {
     S.points -= it.cost; sfx.buy();
     const owned = P.slots.includes(it.buy.weapon);
@@ -1181,7 +1522,12 @@ function doInteract(game, S, P, hud, sfx, it, dt) {
   } else if (it.kind === 'power') {
     setPower(game, S, true);
     sfx.powerOn();
-    S.powerSwitch.lever.setRotation([-25, 0, 0]);
+    const ps = S.powerSwitch;
+    ps.on = true;
+    ps.lever.setRotation([0, 0, -34]);
+    ps.knob.setPosition([ps.lx + 0.30, ps.ly - 0.10, ps.lz - 0.10]);
+    ps.lampRed.material = game.material({ color: 0x2a0a08, texture: 'smooth', roughness: 0.3, emissive: 0x3a0a08, emissiveStrength: 0.2 });
+    ps.lampGreen.material = game.material({ color: 0x081a08, texture: 'smooth', roughness: 0.3, emissive: 0x3aff5a, emissiveStrength: 2.6 });
     S.voice(LINES.power);
   } else if (it.kind === 'crate') {
     S.points -= it.cost; sfx.buy();
@@ -1289,6 +1635,11 @@ function makeHud() {
   #b9hud .title h1 { font-size:64px; letter-spacing:.3em; color:#e8ddc8; margin:0 0 8px; font-weight:400; }
   #b9hud .title h1 span { color:#b3221c; }
   #b9hud .title p { color:#8c7f68; letter-spacing:.2em; font-size:14px; margin:4px 0; }
+  #b9hud .stam { position:absolute; left:50%; bottom:19%; transform:translateX(-50%); width:150px; height:3px;
+    background:rgba(0,0,0,.55); opacity:0; transition:opacity .25s; }
+  #b9hud .stamfill { height:100%; background:#e8ddc8; width:100%; }
+  #b9hud .shield { position:absolute; right:26px; bottom:118px; font-size:12px; letter-spacing:.22em; color:#8c7f68; }
+  #b9hud .perks { position:absolute; left:26px; bottom:112px; font-size:11px; letter-spacing:.18em; }
   #b9hud .pdelta { position:absolute; right:30px; bottom:100px; font-size:18px; color:#ffd27a; opacity:0; }
   #b9hud .flick { animation:b9flick 1.4s ease-out; }
   @keyframes b9flick { 0%{opacity:0} 12%{opacity:1} 22%{opacity:.2} 34%{opacity:1} 44%{opacity:.35} 60%{opacity:1} 100%{opacity:1} }
@@ -1304,11 +1655,15 @@ function makeHud() {
     <div class="prompt"></div>
     <div class="subs"><span class="who"></span><span class="text"></span></div>
     <div class="banner"></div>
+    <div class="stam"><div class="stamfill"></div></div>
+    <div class="shield"></div><div class="perks"></div>
     <div class="title"><h1>BUNKER <span>NINE</span></h1>
       <p>THE DEAD COME THROUGH THE WINDOWS. POINTS BUY EVERYTHING.</p>
       <p>WASD MOVE &nbsp;·&nbsp; MOUSE LOOK &nbsp;·&nbsp; RIGHT-CLICK AIM &nbsp;·&nbsp; SHIFT SPRINT</p>
       <p>F USE &nbsp;·&nbsp; R RELOAD &nbsp;·&nbsp; Q SWAP</p>
-      <p style="color:#7ad7ff">CONTROLLER &nbsp; STICKS MOVE/LOOK &nbsp;·&nbsp; RT FIRE &nbsp;·&nbsp; LT AIM &nbsp;·&nbsp; L3 SPRINT &nbsp;·&nbsp; B USE &nbsp;·&nbsp; X RELOAD &nbsp;·&nbsp; Y SWAP</p>
+      <p>V KNIFE &nbsp;·&nbsp; G SHIELD &nbsp;·&nbsp; CTRL SLIDE (ATHLETE)</p>
+      <p style="color:#7ad7ff">CONTROLLER &nbsp; STICKS MOVE/LOOK &nbsp;·&nbsp; RT FIRE &nbsp;·&nbsp; LT AIM &nbsp;·&nbsp; L3 SPRINT &nbsp;·&nbsp; RB KNIFE &nbsp;·&nbsp; B USE/SLIDE &nbsp;·&nbsp; X RELOAD &nbsp;·&nbsp; Y SWAP</p>
+      <p class="padstate" style="color:#6b6455">NO CONTROLLER DETECTED — press a button on it to wake it</p>
       <p class="go" style="color:#e8ddc8;margin-top:22px">CLICK TO STAND POST</p></div>`;
   document.body.appendChild(root);
   const $ = (c) => root.querySelector(c);
@@ -1316,7 +1671,7 @@ function makeHud() {
     round: $('.round'), points: $('.points'), ammo: $('.ammo .nums'), wname: $('.ammo .wname'),
     prompt: $('.prompt'), subs: $('.subs'), subWho: $('.subs .who'), subText: $('.subs .text'), vig: $('.advig'),
     banner: $('.banner'), dmg: $('.dmg'), title: $('.title'), hitm: $('.hitm'), pdelta: $('.pdelta'),
-    cross: $('.cross'),
+    cross: $('.cross'), stam: $('.stam'), stamFill: $('.stamfill'), shield: $('.shield'), perks: $('.perks'),
   };
   let subTimer = 0, hmTimer = 0, pdAcc = 0, pdTimer = 0, bnTimer = 0;
   return {
@@ -1353,7 +1708,21 @@ function makeHud() {
       clearTimeout(hmTimer);
       hmTimer = setTimeout(() => { els.hitm.style.opacity = 0; }, 90);
     },
-    damage(hp) { els.dmg.style.opacity = Math.min(1, (100 - hp) / 90); },
+    damage(frac) { els.dmg.style.opacity = Math.min(1, (1 - frac) * 1.12); },
+    stamina(frac, athlete) {
+      els.stam.style.opacity = frac < 0.999 ? 1 : 0;
+      els.stamFill.style.width = (frac * 100).toFixed(1) + '%';
+      els.stamFill.style.background = athlete ? '#59ff7a' : '#e8ddc8';
+    },
+    shield(active, cd) {
+      if (active > 0) { els.shield.textContent = 'SHIELD ' + Math.ceil(active * SHIELD.duration) + 's'; els.shield.style.color = '#b08cff'; els.shield.style.opacity = 1; }
+      else if (cd > 0) { els.shield.textContent = 'SHIELD ' + Math.ceil(cd) + 's'; els.shield.style.color = '#6b6455'; els.shield.style.opacity = 1; }
+      else { els.shield.textContent = 'SHIELD READY [G]'; els.shield.style.color = '#8c7f68'; els.shield.style.opacity = 1; }
+    },
+    perks(held) {
+      els.perks.innerHTML = Object.keys(held).map((k) =>
+        `<span style="color:#${PERKS[k].color.toString(16).padStart(6, '0')}">${PERKS[k].name}</span>`).join(' &nbsp;·&nbsp; ');
+    },
     /* Aiming hides the crosshair — the sights are the crosshair now, and
        leaving a dot floating over the front blade is the tell that a game's
        iron sights are decorative. */
@@ -1437,18 +1806,23 @@ function start(opts = {}) {
     gravity: -19.6,
     preserveDrawingBuffer: !!opts.preserveDrawingBuffer,
   });
+  /* Night that you can still fight in. The ground colour matters more than
+     it looks: metal and wet concrete take their downward light from it, and
+     a black floor drains every surface in the room from below. */
   game.setSky('night', {
-    fogDensity: 0.020, fog: 0x0a0d16,
-    zenith: 0x0d1430, horizon: 0x24304e, sunIntensity: 0.9, exposure: 1.9,
+    fogDensity: 0.016, fog: 0x0c1018,
+    zenith: 0x141d3c, horizon: 0x30405f, ground: 0x2a2c30,
+    sunIntensity: 1.15, exposure: 2.05,
   });
-  game.renderer.post.vignette = 0.34;
-  game.renderer.post.grain = 0.035;
+  game.renderer.post.vignette = 0.28;
+  game.renderer.post.grain = 0.022;
   game.camera.near = 0.02;
 
   const S = {
     time: 0, points: ECONOMY.start, mul: 1, mulT: 0,
     round: 0, toSpawn: 0, spawnT: 0, betweenRounds: false, lullT: 0,
     zombies: [], pool: [], debris: [], windows: [], buys: [], doors: {},
+    projectiles: [], perkStations: [], shieldActive: false, lastKnown: null,
     activeWindows: ['W1', 'W2'], powered: false,
     killsTotal: 0, gameOver: false, started: false,
     firstBloodDone: false, powerupActive: null,
@@ -1490,6 +1864,21 @@ function start(opts = {}) {
     S.roundStartAt = S.time + 5.2;   // game time, so tests and pauses behave
   };
   hud.els.title.addEventListener('click', startGame);
+  /* A controller cannot click. Without this the title screen is a wall for
+     anyone playing on a pad — which is exactly what "controller support
+     doesn't work" looks like from the sofa. Any button, or any key, starts. */
+  window.addEventListener('keydown', startGame);
+  const padWatch = setInterval(() => {
+    const pd = game.input.pad;
+    const el = hud.els.title.querySelector('.padstate');
+    if (pd.connected && el) {
+      el.textContent = 'CONTROLLER READY — ' + (pd.id || 'gamepad').slice(0, 34);
+      el.style.color = '#59ff7a';
+    }
+    if (pd.connected && Object.values(pd.buttons).some(Boolean)) { startGame(); }
+    if (S.started) clearInterval(padWatch);
+  }, 120);
+  window.addEventListener('gamepadconnected', () => game.input._pollGamepad());
   if (opts.test) startGame();
 
   game.onUpdate((dt) => {
@@ -1529,14 +1918,43 @@ function start(opts = {}) {
       const mx = i.axes.x, mz = -i.axes.y;
       const wx = Math.sin(yaw) * mz + Math.cos(yaw) * mx;
       const wz = Math.cos(yaw) * mz - Math.sin(yaw) * mx;
-      /* Sprint: only forward, only unaimed, only when actually moving —
+      /* Sprint: only forward, only unaimed, only while there is stamina —
          and it locks out firing, which is what makes taking it a decision
-         rather than a free speed boost. */
-      const wantSprint = S.input.sprintHeld && mz > 0.35 && !P.adsWant && P.reloading <= 0;
-      P.sprinting = wantSprint && (Math.abs(mx) + Math.abs(mz)) > 0.1;
+         rather than a free speed boost. Athlete triples the tank. */
+      const maxStam = P.perks.athlete ? 3.0 : 1.0;
+      const wantSprint = S.input.sprintHeld && mz > 0.35 && !P.adsWant
+        && P.reloading <= 0 && P.stamina > 0.02;
+      P.sprinting = wantSprint && (Math.abs(mx) + Math.abs(mz)) > 0.1 && P.sliding <= 0;
+      P.stamina = Math.max(0, Math.min(maxStam,
+        P.stamina + (P.sprinting ? -dt : dt * (P.perks.athlete ? 0.55 : 0.32))));
       P.sprint += ((P.sprinting ? 1 : 0) - P.sprint) * Math.min(1, dt * 11);
-      P.actor.controller.moveSpeed = P.adsWant ? PLAYER.adsSpeed : PLAYER.walkSpeed;
-      P.actor.controller.move(wx, wz, P.sprinting);
+
+      /* Slide, for Athlete. A sprint committed to a direction: you keep the
+         speed you had, you cannot steer much, and you come out of it low. */
+      P.slideCd = Math.max(0, P.slideCd - dt);
+      if (P.perks.athlete && P.sliding <= 0 && P.slideCd <= 0 && P.sprinting
+          && (i.justPressed('control') || i.justPressed('c') || pad.pressed.b)) {
+        P.sliding = SLIDE.duration;
+        P.slideCd = SLIDE.cooldown;
+        P.slideDir = { x: wx, z: wz };
+        sfx.slide();
+      }
+
+      const perkSpeed = (P.perks.adrenaline ? 1.42 : 1) * (P.perks.supersoldier ? 1.12 : 1);
+      const knifeSpeed = P.equipped() === 'knife' ? 1.30 : 1;
+      let base = P.adsWant ? PLAYER.adsSpeed : PLAYER.walkSpeed;
+      P.actor.controller.runSpeed = PLAYER.sprintSpeed * perkSpeed * knifeSpeed;
+      P.actor.controller.moveSpeed = base * perkSpeed * knifeSpeed;
+
+      if (P.sliding > 0) {
+        P.sliding -= dt;
+        const d = P.slideDir;
+        const k = Math.max(0.25, P.sliding / SLIDE.duration);
+        P.actor.controller.moveSpeed = SLIDE.speed * k * perkSpeed;
+        P.actor.controller.move(d.x, d.z, false);
+      } else {
+        P.actor.controller.move(wx, wz, P.sprinting);
+      }
 
       /* Aim down sights. */
       P.adsWant = S.input.aimHeld && !P.sprinting && P.reloading <= 0;
@@ -1551,6 +1969,39 @@ function start(opts = {}) {
       hud.aim(P.ads, P.sprinting);
 
       if (i.justPressed('r') || pad.pressed.x) tryReload(P, sfx);
+
+      /* Knife on a hold-to-swap key, so it never costs you a weapon slot. */
+      const wantKnife = i.down('v') || i.down('e') || !!pad.buttons.rb;
+      if (wantKnife !== P.knifeOut) {
+        P.knifeOut = wantKnife;
+        if (wantKnife) { P.prevSlot = P.slot; P.slots.push('knife'); P.slot = P.slots.length - 1; }
+        else { P.slots = P.slots.filter((w) => w !== 'knife'); P.slot = Math.min(P.prevSlot, P.slots.length - 1); }
+        P.reloading = 0;
+        hud.ammo(P);
+      }
+
+      /* Shield Up. */
+      P.shieldCd = Math.max(0, P.shieldCd - dt);
+      if (P.shieldT > 0) {
+        P.shieldT -= dt;
+        if (P.shieldT <= 0) { S.shieldActive = false; hud.shield(0, P.shieldCd); if (S.shieldMesh) S.shieldMesh.visible = false; }
+      } else if (P.perks.shieldup && P.shieldCd <= 0
+                 && (i.justPressed('g') || pad.pressed.ls)) {
+        P.shieldT = SHIELD.duration;
+        P.shieldCd = SHIELD.cooldown;
+        S.shieldActive = true;
+        // They keep going to where you were, not where you are.
+        S.lastKnown = { x: P.actor.position.x, y: P.actor.position.y, z: P.actor.position.z };
+        if (S.shieldMesh) S.shieldMesh.visible = true;
+        sfx.shieldUp();
+        hud.banner('SHIELD', '#b08cff');
+      }
+      if (S.shieldMesh && P.shieldT > 0) {
+        const pp = P.actor.position;
+        S.shieldMesh.setPosition([pp.x, pp.y + 0.1, pp.z]);
+      }
+      hud.shield(P.shieldT / SHIELD.duration, P.shieldCd);
+      hud.stamina(P.stamina / maxStam, !!P.perks.athlete);
       if ((i.justPressed('q') || pad.pressed.y) && P.slots.length > 1) { P.slot = 1 - P.slot; P.reloading = 0; hud.ammo(P); }
       if (i.justPressed('1')) { P.slot = 0; P.reloading = 0; hud.ammo(P); }
       if (i.justPressed('2') && P.slots.length > 1) { P.slot = 1; P.reloading = 0; hud.ammo(P); }
@@ -1575,16 +2026,46 @@ function start(opts = {}) {
       } else hud.prompt(null);
 
       /* Regen. */
-      if (P.hp < PLAYER.hp && S.time - P.lastHit > PLAYER.regenDelay) {
-        P.hp = Math.min(PLAYER.hp, P.hp + PLAYER.regenRate * dt);
-        hud.damage(P.hp);
+      if (P.hp < P.maxHp && S.time - P.lastHit > PLAYER.regenDelay) {
+        P.hp = Math.min(P.maxHp, P.hp + PLAYER.regenRate * dt);
+        hud.damage(P.hp / P.maxHp);
       }
-      if (P.hp < 30 && Math.floor(S.time * 1.1) !== Math.floor((S.time - dt) * 1.1)) sfx.heartbeat();
+      if (P.hp < P.maxHp * 0.3 && Math.floor(S.time * 1.1) !== Math.floor((S.time - dt) * 1.1)) sfx.heartbeat();
+    }
+
+    if (!S.shieldActive) {
+      S.lastKnown = { x: P.actor.position.x, y: P.actor.position.y, z: P.actor.position.z };
     }
 
     /* World systems. */
     updateRounds(game, S, P, hud, sfx, dt);
     for (const z of S.zombies) updateZombie(game, S, P, z, dt, sfx);
+
+    /* Thrown bile in flight. Gravity, a splash on impact, and Deflect
+       gets its own sound so the perk is audibly doing something. */
+    for (let k = S.projectiles.length - 1; k >= 0; k--) {
+      const pr = S.projectiles[k];
+      pr.life -= dt;
+      pr.vel[1] -= 19.6 * dt;
+      const q = pr.actor.position;
+      const nx = q.x + pr.vel[0] * dt, ny = q.y + pr.vel[1] * dt, nz = q.z + pr.vel[2] * dt;
+      const seg = Math.hypot(nx - q.x, ny - q.y, nz - q.z) || 1e-5;
+      const hit = game.raycast([q.x, q.y, q.z], [(nx - q.x) / seg, (ny - q.y) / seg, (nz - q.z) / seg], seg + 0.05,
+        (b) => !b.isTrigger && !(b.userData && b.userData.zombie));
+      const near = dist2d(q, P.actor.position) < 0.9 && Math.abs(q.y - P.actor.position.y) < 1.3;
+      if (hit || near || ny < 0.05 || pr.life <= 0) {
+        const at = [q.x, Math.max(0.06, q.y), q.z];
+        game.particles.sparks(at, { count: 14, speed: 3, color: 0x8aff4a, colorEnd: 0x1c3a10 });
+        game.particles.smoke(at, { count: 5, color: 0x3c5a20 });
+        const d2 = Math.hypot(P.actor.position.x - at[0], P.actor.position.z - at[2]);
+        if (d2 < pr.splash) hurtPlayer(game, S, P, pr.dmg * (1 - d2 / pr.splash), sfx, 'projectile');
+        sfx.splat();
+        pr.actor.destroy();
+        S.projectiles.splice(k, 1);
+        continue;
+      }
+      pr.actor.setPosition([nx, ny, nz]);
+    }
 
     /* Torn boards tumble. */
     for (let k = S.debris.length - 1; k >= 0; k--) {
@@ -1646,6 +2127,12 @@ function start(opts = {}) {
     look(yaw, pitch) { game._camYaw = yaw; game._camPitch = Math.max(-1.45, Math.min(1.45, pitch)); },
     idleInPool() { return S.pool.filter((z) => z.parked).length; },
     poolReady() { return S.pool.filter((z) => z.parked).length; },
+    spawnKind(kind, winId) {
+      const win = S.windows.find((w) => w.def.id === (winId || S.activeWindows[0]));
+      return win ? spawnZombie(game, S, win, kind) : null;
+    },
+    variantOdds(r) { return variantWeights(r); },
+    buildPool(n) { while (S.pool.length < n) buildPooledZombie(game, S, S.pool.length); return S.pool.length; },
   };
 
   if (!opts.test) game.start();

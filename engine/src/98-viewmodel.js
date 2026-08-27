@@ -54,66 +54,79 @@ function buildViewArm(g, shoulder, hand, side) {
     );
     rings.push({ p, w: spec[i][0], d: spec[i][1], e: 2.1, uv: t });
   }
-  loftRings(g, rings, 14, true, false);
+  loftRings(g, rings, 14, true, true);
 }
 
-/* A hand wrapped around something. Palm block plus four fingers curled
-   over and a thumb laid along the far side — at viewmodel scale that is
-   the whole read, and anything more is polygons nobody will ever see. */
+/* A hand wrapped around something.
+
+   Every piece here starts *inside* the piece it grows from — the palm
+   overlaps the wrist, the fingers start buried in the palm, the thumb
+   starts buried in both. Built as separate lofts that merely meet at a
+   shared point, they read as a bag of parts floating near each other the
+   moment anything moves, because nothing guarantees the surfaces touch. */
 function buildViewHand(g, at, side, opts = {}) {
   const grip = opts.grip || 'pistol';
-  const wristDir = opts.wrist || new Vec3(-0.6, -0.8, 0).normalize();
+  // Which way the fingers point: down and forward around a pistol grip,
+  // straight along the weapon on a forend.
+  const dir = grip === 'fore'
+    ? new Vec3(0.86, -0.5, 0).normalize()
+    : new Vec3(0.28, -0.94, 0).normalize();
+  const outw = new Vec3(0, 0, side);
 
-  // Palm: a slab sitting across the grip.
+  /* Palm. Starts behind the wrist so it swallows the sleeve's end ring. */
   const palm = [];
-  const steps = 4;
-  for (let i = 0; i <= steps; i++) {
-    const t = i / steps;
+  const PN = 5;
+  for (let i = 0; i <= PN; i++) {
+    const t = i / PN;
+    const d = -0.022 + t * 0.086;
     palm.push({
-      p: new Vec3(
-        at.x + wristDir.x * 0.055 * (1 - t) * -1 + (grip === 'fore' ? t * 0.012 : 0),
-        at.y + wristDir.y * 0.055 * (1 - t) * -1,
-        at.z + side * 0.004,
-      ),
-      w: 0.030 - t * 0.003, d: 0.021 + t * 0.003, e: 2.5, uv: t,
+      p: new Vec3(at.x + dir.x * d, at.y + dir.y * d, at.z + dir.z * d + side * 0.002),
+      // Widens out of the wrist into the knuckles, then rounds off.
+      w: 0.019 + Math.sin(t * Math.PI * 0.85) * 0.010,
+      d: 0.014 + Math.sin(t * Math.PI * 0.9) * 0.008,
+      e: 2.6, uv: t,
     });
   }
   loftRings(g, palm, 12, true, true);
 
-  // Fingers, curled around the grip axis.
-  const fingerAxis = grip === 'fore' ? new Vec3(1, 0, 0) : new Vec3(0.15, -1, 0).normalize();
+  /* Fingers, curling back under the palm and gripping. Each one begins
+     0.02 back inside the palm volume, so the join is never visible. */
   for (let f = 0; f < 4; f++) {
-    const spread = (f - 1.5) * 0.024;
-    const along = grip === 'fore' ? spread : spread * 0.2;
-    const base = new Vec3(
-      at.x + fingerAxis.x * 0.012 + (grip === 'fore' ? along : 0.020),
-      at.y + fingerAxis.y * 0.012 - (grip === 'fore' ? 0.004 : 0),
-      at.z + side * (0.014 + (grip === 'fore' ? 0 : along * 0.9)),
-    );
+    const lane = (f - 1.5) * 0.0165;
+    const startD = 0.052;
     const rings = [];
-    const curl = 0.030 + f * 0.001;
-    for (let i = 0; i <= 3; i++) {
-      const t = i / 3;
+    for (let i = 0; i <= 4; i++) {
+      const t = i / 4;
+      // Out along the palm, then hooking back toward the palm's underside.
+      const along = startD - 0.020 + t * 0.030;
+      const curlBack = t * t * 0.030;
       rings.push({
         p: new Vec3(
-          base.x - t * curl * 0.9,
-          base.y - t * curl * 0.55 - t * t * 0.010,
-          base.z - side * t * curl * 0.75,
+          at.x + dir.x * along - dir.y * curlBack * 0.6 + outw.x * lane,
+          at.y + dir.y * along + dir.x * curlBack * 0.6 + outw.y * lane,
+          at.z + dir.z * along + outw.z * lane,
         ),
-        w: 0.0078 - t * 0.0015, d: 0.0078 - t * 0.0015, e: 2.2, uv: t,
+        w: 0.0082 - t * 0.0016, d: 0.0082 - t * 0.0016, e: 2.3, uv: t,
       });
     }
     loftRings(g, rings, 8, true, true);
   }
 
-  // Thumb, laid along the near face.
+  /* Thumb, laid across the near side and rooted inside the palm. */
   const th = [];
-  for (let i = 0; i <= 3; i++) {
-    const t = i / 3;
-    th.push({
-      p: new Vec3(at.x + 0.006 + t * 0.030, at.y - 0.006 - t * 0.014, at.z - side * (0.014 + t * 0.006)),
-      w: 0.0092 - t * 0.002, d: 0.0092 - t * 0.002, e: 2.2, uv: t,
-    });
+  for (let i = 0; i <= 4; i++) {
+    const t = i / 4;
+    const along = 0.004 + t * 0.052;
+    rings0: {
+      th.push({
+        p: new Vec3(
+          at.x + dir.x * along - outw.x * (0.012 + t * 0.004) - dir.y * t * 0.012,
+          at.y + dir.y * along - outw.y * (0.012 + t * 0.004) + dir.x * t * 0.012,
+          at.z + dir.z * along - outw.z * (0.012 + t * 0.004),
+        ),
+        w: 0.0098 - t * 0.0026, d: 0.0098 - t * 0.0026, e: 2.3, uv: t,
+      });
+    }
   }
   loftRings(g, th, 8, true, true);
 }

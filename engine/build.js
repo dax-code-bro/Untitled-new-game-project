@@ -54,7 +54,7 @@ const LegendEngine = {
   Geometry, Shapes, convexHull, hullToGeometry,
   Engine, Actor, Material, Body, PhysicsWorld,
   Fluid, Fracture, ParticleSystem, Skeleton, AnimationClip, Face,
-  makePistol1911, makeViewmodelArms,
+  makePistol1911, makeViewmodelArms, makeZombieClips,
   Grass, Input, Audio,
   clamp, lerp, smoothstep,
 };

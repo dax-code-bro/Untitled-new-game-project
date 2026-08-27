@@ -535,12 +535,14 @@ class Engine {
 
     const animator = new Animator(skeleton);
     for (const clip of makeHumanoidClips()) animator.add(clip);
+    // The dead get their own set: shamble, sprint, crawl, tear, lunge, spit.
+    if (opts.zombie) for (const clip of makeZombieClips()) animator.add(clip);
     animator.play('idle', 0);
 
     const controller = new CharacterController(this, {
       position: opts.at || opts.position || [0, 1.1, 0],
-      height: 1.75 * scale,
-      radius: 0.3 * scale,
+      height: opts.height != null ? opts.height : 1.75 * scale,
+      radius: opts.radius != null ? opts.radius : 0.3 * scale,
       speed: opts.speed,
       runSpeed: opts.runSpeed,
       jumpSpeed: opts.jumpSpeed,
@@ -566,6 +568,12 @@ class Engine {
     if (opts.face !== false) {
       const headGeo = makeHeadGeometry({ seed: opts.seed || 5 });
       const headMesh = new GpuMesh(this.gl, headGeo);
+      // A head with no expression rig has neither skeleton nor face, so the
+      // renderer batches it through the instanced path — which needs an
+      // instance buffer this mesh would otherwise never be given, and the
+      // draw silently produces nothing. Every static-faced character came
+      // out headless because of it.
+      headMesh.setupInstancing(20);   // stride in floats, matching _mesh()
       // face: 'static' renders the head but skips the expression rig — no
       // blendshape build, no per-frame morphing. A crowd of NPCs costs a
       // fraction of one talking hero, which is exactly the trade a horde
