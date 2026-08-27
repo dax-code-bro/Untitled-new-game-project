@@ -7891,6 +7891,13 @@ class Input {
     this.released = new Set();
     this.pointer = { x: 0, y: 0, dx: 0, dy: 0, down: false, justDown: false, justUp: false };
     this.axes = { x: 0, y: 0 };
+    /* Full controller state, for games that want more than the WASD fold:
+       analog sticks, analog triggers, and edge-triggered named buttons. */
+    this.pad = {
+      connected: false, id: '',
+      lx: 0, ly: 0, rx: 0, ry: 0, lt: 0, rt: 0,
+      buttons: {}, pressed: {}, released: {}, _prev: {},
+    };
     this.anyPressed = false;
     this._listeners = [];
     this._bind(target);
@@ -7941,20 +7948,60 @@ class Input {
     this._on(target, 'touchstart', () => { this.anyPressed = true; }, { passive: true });
   }
 
-  /* Gamepad state is polled, not evented, so it is sampled once per frame
-     and folded into the same key set the keyboard fills. */
+  /* Gamepad state is polled, not evented, so it is sampled once per frame.
+     Two surfaces come out of it: `pad`, the full analog state a first-person
+     game needs, and the legacy fold into the keyboard's key set so a game
+     written for WASD keeps working on a controller with no changes. */
   _pollGamepad() {
+    const pad = this.pad;
+    pad.connected = false;
     if (!navigator.getGamepads) return;
     const pads = navigator.getGamepads();
-    for (const pad of pads) {
-      if (!pad) continue;
-      const dz = 0.22;
-      const lx = pad.axes[0] || 0, ly = pad.axes[1] || 0;
-      if (Math.abs(lx) > dz) this.axes.x += lx;
-      if (Math.abs(ly) > dz) this.axes.y += ly;
-      const press = (i, key) => { if (pad.buttons[i] && pad.buttons[i].pressed) { if (!this.keys.has(key)) this.pressed.add(key); this.keys.add(key); this.anyPressed = true; } };
-      press(0, ' '); press(1, 'x'); press(2, 'x'); press(3, ' ');
-      press(12, 'arrowup'); press(13, 'arrowdown'); press(14, 'arrowleft'); press(15, 'arrowright');
+    for (const gp of pads) {
+      if (!gp) continue;
+      pad.connected = true;
+      pad.id = gp.id;
+
+      // Radial dead zone, rescaled so the stick still reaches 1.0 at the rim.
+      // Per-axis dead zones are what make diagonal movement feel notchy.
+      const stick = (ax, ay, dz) => {
+        const x = gp.axes[ax] || 0, y = gp.axes[ay] || 0;
+        const m = Math.hypot(x, y);
+        if (m < dz) return [0, 0];
+        const k = ((m - dz) / (1 - dz)) / m;
+        return [clamp(x * k, -1, 1), clamp(y * k, -1, 1)];
+      };
+      [pad.lx, pad.ly] = stick(0, 1, 0.18);
+      [pad.rx, pad.ry] = stick(2, 3, 0.14);
+
+      const btn = (i) => (gp.buttons[i] ? gp.buttons[i].value || (gp.buttons[i].pressed ? 1 : 0) : 0);
+      const held = (i) => !!(gp.buttons[i] && gp.buttons[i].pressed);
+      // Triggers are analog on every modern pad; some old ones report them
+      // as axes 4/5 instead, so fall back to that.
+      pad.lt = gp.buttons.length > 6 ? btn(6) : Math.max(0, (gp.axes[4] || -1) * 0.5 + 0.5);
+      pad.rt = gp.buttons.length > 7 ? btn(7) : Math.max(0, (gp.axes[5] || -1) * 0.5 + 0.5);
+
+      const B = pad.buttons;
+      const prev = pad._prev;
+      const names = ['a', 'b', 'x', 'y', 'lb', 'rb', 'lt', 'rt', 'back', 'start', 'ls', 'rs', 'up', 'down', 'left', 'right'];
+      for (let i = 0; i < names.length; i++) {
+        const n = names[i];
+        const on = i === 6 ? pad.lt > 0.5 : i === 7 ? pad.rt > 0.5 : held(i);
+        B[n] = on;
+        pad.pressed[n] = on && !prev[n];
+        pad.released[n] = !on && prev[n];
+        prev[n] = on;
+        if (on) this.anyPressed = true;
+      }
+
+      // Legacy fold: left stick drives the same axes as WASD, and the face
+      // buttons press the same keys the keyboard-only path listens for.
+      if (Math.abs(pad.lx) > 0.01) this.axes.x += pad.lx;
+      if (Math.abs(pad.ly) > 0.01) this.axes.y += pad.ly;
+      const press = (on, key) => { if (on) { if (!this.keys.has(key)) this.pressed.add(key); this.keys.add(key); } };
+      press(B.a, ' '); press(B.b, 'x'); press(B.x, 'x'); press(B.y, ' ');
+      press(B.up, 'arrowup'); press(B.down, 'arrowdown');
+      press(B.left, 'arrowleft'); press(B.right, 'arrowright');
       break;
     }
   }
@@ -7975,6 +8022,8 @@ class Input {
 
   /* Call once per frame, after game logic, to clear edge-triggered state. */
   endFrame() {
+    for (const k in this.pad.pressed) this.pad.pressed[k] = false;
+    for (const k in this.pad.released) this.pad.released[k] = false;
     this.pressed.clear();
     this.released.clear();
     this.pointer.justDown = false;
@@ -7990,6 +8039,8 @@ class Input {
   get action() { return this.down(' '); }
   get actionPressed() { return this.justPressed(' '); }
   get secondaryPressed() { return this.justPressed('x'); }
+  padDown(name) { return !!this.pad.buttons[name]; }
+  padPressed(name) { return !!this.pad.pressed[name]; }
 
   dispose() {
     for (const [t, type, fn, opts] of this._listeners) t.removeEventListener(type, fn, opts);
@@ -8550,7 +8601,7 @@ function limbRings(from, to, profile, bulge) {
 
 /* ---------------- torso ---------------- */
 
-function buildTorso(g, segments) {
+function buildTorso(g, segments, k = 1) {
   // width, depth, squareness — the silhouette of a human trunk.
   const spec = [
     [-0.062, 0.108, 0.092, 2.3],   // closes inside the thigh tops
@@ -8569,7 +8620,7 @@ function buildTorso(g, segments) {
     [0.528, 0.079, 0.067, 2.2],
   ];
   const rings = spec.map(([y, w, d, e], i) => ({
-    p: new Vec3(0, y, 0), w, d, e, uv: i / (spec.length - 1),
+    p: new Vec3(0, y, 0), w: w * k, d: d * k, e, uv: i / (spec.length - 1),
   }));
   loftRings(g, rings, segments, true, true);
 }
@@ -8586,7 +8637,7 @@ function buildNeck(g, segments) {
 
 /* ---------------- limbs ---------------- */
 
-function buildArm(g, side, skeleton, segments) {
+function buildArm(g, side, skeleton, segments, k = 1) {
   const S = side > 0 ? 'L' : 'R';
   const shoulder = new Vec3(), elbow = new Vec3(), wrist = new Vec3();
   skeleton.bones[skeleton.index('upperArm' + S)].bindMatrix.getTranslation(shoulder);
@@ -8619,6 +8670,8 @@ function buildArm(g, side, skeleton, segments) {
     [0.034, 0.036, 2.0],
     [0.027, 0.031, 2.1],
   ]);
+  for (const r of upper) { r.w *= k; r.d *= k; }
+  for (const r of lower) { r.w *= k; r.d *= k; }
   loftRings(g, upper.concat(lower.slice(1)), segments, false, false);
 
   buildHand(g, side, wrist, segments);
@@ -8655,7 +8708,7 @@ function buildHand(g, side, wrist, segments) {
   ]), Math.max(8, segments >> 1), true, true);
 }
 
-function buildLeg(g, side, skeleton, segments) {
+function buildLeg(g, side, skeleton, segments, k = 1) {
   const S = side > 0 ? 'L' : 'R';
   const hip = new Vec3(), knee = new Vec3(), ankle = new Vec3();
   skeleton.bones[skeleton.index('upperLeg' + S)].bindMatrix.getTranslation(hip);
@@ -8757,14 +8810,19 @@ function buildShoe(g, side, skeleton, segments) {
 function makeHumanBodyGeometry(skeleton, opts = {}) {
   const g = new Geometry();
   const segments = opts.segments || 16;
+  // `gaunt` thins the whole figure. At 0.82 the silhouette reads as
+  // starved rather than merely slim, which is most of what tells a
+  // shambling body apart from a living one at fighting distance.
+  const k = opts.gaunt != null ? opts.gaunt : (opts.thickness || 1);
 
-  buildTorso(g, segments);
+  buildTorso(g, segments, k);
   buildNeck(g, segments);
   for (const side of [1, -1]) {
-    buildArm(g, side, skeleton, segments);
-    buildLeg(g, side, skeleton, segments);
+    buildArm(g, side, skeleton, segments, k);
+    buildLeg(g, side, skeleton, segments, k);
     buildShoe(g, side, skeleton, segments);
   }
+  if (opts.rags) buildRags(g, opts.ragSeed || 3);
 
   g.finalize();
   // The per-ring normals are only radial; recomputing from the finished
@@ -8773,6 +8831,48 @@ function makeHumanBodyGeometry(skeleton, opts = {}) {
   smoothNormals(g);
   weldNormals(g.normals, g.weldGroups);
   return g;
+}
+
+/* Torn clothing. Strips of cloth hanging off the torso, each one a thin
+   ragged panel with a jagged hem. They are appended to the body geometry
+   rather than made a separate mesh, so the existing vertex-to-bone solve
+   skins them for free — a strip near the hips gets hip weights and swings
+   with the hips, which is what makes a walk read as clothed rather than
+   as a figure with decals on it. */
+function buildRags(g, seed) {
+  const rng = new Rng(seed);
+  const STRIPS = 22;
+  for (let i = 0; i < STRIPS; i++) {
+    const a = (i / STRIPS) * TAU + rng.range(-0.1, 0.1);
+    const top = rng.range(0.02, 0.30);          // where on the trunk it hangs from
+    const len = rng.range(0.10, 0.34);
+    const halfW = rng.range(0.018, 0.045);
+    // Follow the trunk's own silhouette so cloth sits on the body, not in it.
+    const rad = (y) => (y > 0.24 ? 0.176 : y > 0.10 ? 0.156 : 0.170) * 1.02;
+    const ca = Math.cos(a), sa = Math.sin(a);
+    const base = g.positions.length / 3;
+    const rows = 4;
+    for (let r = 0; r <= rows; r++) {
+      const t = r / rows;
+      const y = top - len * t;
+      // The hem tapers and wanders; a straight-cut rectangle reads as a flag.
+      const w = halfW * (1 - t * rng.range(0.25, 0.7));
+      const rr = rad(y) + t * 0.012;
+      const drift = Math.sin(t * 3.1 + i) * 0.02 * t;
+      for (const sgn of [-1, 1]) {
+        const ang = a + sgn * (w / Math.max(rr, 0.02)) + drift;
+        g.vert(Math.cos(ang) * rr, y, Math.sin(ang) * rr,
+               Math.cos(ang), 0.15, Math.sin(ang), (sgn + 1) / 2, t);
+      }
+    }
+    for (let r = 0; r < rows; r++) {
+      const q = base + r * 2;
+      // Both faces: cloth this thin is visible from inside the swing arc.
+      g.quad(q, q + 1, q + 3, q + 2);
+      g.quad(q, q + 2, q + 3, q + 1);
+    }
+    void ca; void sa;
+  }
 }
 
 /* Area-weighted smooth normals over the assembled surface. */
@@ -9554,7 +9654,10 @@ class Engine {
   character(opts = {}) {
     const scale = opts.scale != null ? opts.scale : 1;
     const skeleton = makeHumanoidSkeleton(scale);
-    const geo = makeHumanoidMesh(skeleton, { thickness: opts.build || 1 });
+    // `zombie: true` swaps in the starved silhouette and torn clothing.
+    const geo = makeHumanoidMesh(skeleton, opts.zombie
+      ? { gaunt: 0.82, rags: true, ragSeed: (opts.seed || 3) * 7 + 1 }
+      : { thickness: opts.build || 1 });
     const mesh = new GpuMesh(this.gl, geo);
 
     const animator = new Animator(skeleton);
@@ -10032,9 +10135,17 @@ class Engine {
     const planes = this._planes;
     const camPos = this.camera.position;
 
+    /* Transforms first, for every actor, visible or not. Updating inside
+       the visibility filter below looks equivalent and is not: an invisible
+       actor is a legitimate parent — a group root, a mount point, a hidden
+       pivot — and skipping it leaves its children composing against a stale
+       matrix, so a whole assembly silently renders somewhere else. */
+    for (const actor of this.actors) {
+      if (!actor.dead) actor.updateMatrix();
+    }
+
     for (const actor of this.actors) {
       if (!actor.visible || !actor.mesh || actor.dead) continue;
-      actor.updateMatrix();
 
       if (this.frustumCulling && !actor.noCull) {
         // Cull against the matrix translation, not actor.position. A
@@ -11348,9 +11459,12 @@ function buildTommySteel(g) {
     for (let i = 0; i < m; i++) g.tri(c, cb + 1 + i, cb + 1 + (i + 1) % m);
   }
 
-  /* Front sight blade on its base. */
-  hardBox(g, T.muzzle - 0.014, 0.0125, 0, 0.0060, 0.0028, 0.0048);
-  hardBox(g, T.muzzle - 0.014, 0.0182, 0, 0.0016, 0.0032, 0.0012);
+  /* Front sight blade on its base. Its tip is set level with the rear
+     aperture's centre (recUp + 0.0040 = 0.0255): a front sight that does
+     not share a line with the rear one cannot be aimed with, however
+     correct each is on its own. */
+  hardBox(g, T.muzzle - 0.014, 0.0143, 0, 0.0060, 0.0048, 0.0048);
+  hardBox(g, T.muzzle - 0.014, 0.0223, 0, 0.0016, 0.0032, 0.0012);
 
   /* Rear sight: the M1A1's stamped L peep between two protective wings. */
   const rx = T.receiverRear + 0.0210;
@@ -11471,7 +11585,7 @@ const TOMMY_MATERIALS = {
   // Blued steel is nearly black until light rakes it. Roughness sits above
   // the 1911's polish: wartime parkerised-blue, not a show finish.
   steel: { color: 0x33383e, texture: 'metal', roughness: 0.34, metalness: 1 },
-  wood: { color: 0x6e4522, texture: 'wood', roughness: 0.62, metalness: 0, uvScale: 4 },
+  wood: { color: 0x5c4028, texture: 'wood', roughness: 0.66, metalness: 0, uvScale: 1.6 },
 };
 
 function makeThompson() {
@@ -11516,6 +11630,187 @@ Engine.prototype.thompson = function (opts = {}) {
 };
 
 
+/* ─────────── 98-viewmodel.js ─────────── */
+/* ============================================================
+   VIEWMODEL ARMS — the hands that hold the gun.
+
+   A first-person weapon floating unsupported is the single most
+   obvious tell that a game is a prototype. These are built in the
+   weapon's own local space (muzzle +X, up +Y, right +Z) and
+   parented to the weapon root, so they inherit every bob, sway and
+   recoil kick the gun gets, for free and in perfect sync — no
+   second animation system, and nothing to drift out of alignment.
+
+   Two geometries because two materials: sleeve and skin.
+   ============================================================ */
+
+/* Where the hands sit on each weapon, in that weapon's local space,
+   and where the arms enter frame from. The shoulder anchors are behind
+   and below the camera, which is what gives the forearms their
+   foreshortened run up to the grip. */
+function armPath(shoulder, hand, k) {
+  // A slight outward bow, so the forearm reads as a limb with an elbow
+  // rather than a rod drawn between two points.
+  const mid = new Vec3(
+    (shoulder.x + hand.x) * 0.5,
+    (shoulder.y + hand.y) * 0.5 - 0.012,
+    (shoulder.z + hand.z) * 0.5 + k * 0.030,
+  );
+  return [shoulder, mid, hand];
+}
+
+/* One arm: a tapered loft from the sleeve opening to the wrist. */
+function buildViewArm(g, shoulder, hand, side) {
+  const path = armPath(shoulder, hand, side);
+  const rings = [];
+  /* Slim, because a viewmodel arm is only 20-25 cm from the eye and at
+     that range an anatomically-correct forearm covers a third of the
+     screen. Real engines dodge this by drawing the viewmodel at its own
+     narrow field of view; with one shared camera the arm has to be
+     slimmed instead, and the eye reads it as foreshortening. */
+  const spec = [
+    [0.032, 0.031],   // sleeve mouth at the frame edge
+    [0.029, 0.028],
+    [0.026, 0.025],
+    [0.023, 0.022],
+    [0.020, 0.020],   // wrist
+  ];
+  for (let i = 0; i < spec.length; i++) {
+    const t = i / (spec.length - 1);
+    // Quadratic through the three control points.
+    const a = path[0], b = path[1], c = path[2];
+    const u = 1 - t;
+    const p = new Vec3(
+      u * u * a.x + 2 * u * t * b.x + t * t * c.x,
+      u * u * a.y + 2 * u * t * b.y + t * t * c.y,
+      u * u * a.z + 2 * u * t * b.z + t * t * c.z,
+    );
+    rings.push({ p, w: spec[i][0], d: spec[i][1], e: 2.1, uv: t });
+  }
+  loftRings(g, rings, 14, true, false);
+}
+
+/* A hand wrapped around something. Palm block plus four fingers curled
+   over and a thumb laid along the far side — at viewmodel scale that is
+   the whole read, and anything more is polygons nobody will ever see. */
+function buildViewHand(g, at, side, opts = {}) {
+  const grip = opts.grip || 'pistol';
+  const wristDir = opts.wrist || new Vec3(-0.6, -0.8, 0).normalize();
+
+  // Palm: a slab sitting across the grip.
+  const palm = [];
+  const steps = 4;
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    palm.push({
+      p: new Vec3(
+        at.x + wristDir.x * 0.055 * (1 - t) * -1 + (grip === 'fore' ? t * 0.012 : 0),
+        at.y + wristDir.y * 0.055 * (1 - t) * -1,
+        at.z + side * 0.004,
+      ),
+      w: 0.030 - t * 0.003, d: 0.021 + t * 0.003, e: 2.5, uv: t,
+    });
+  }
+  loftRings(g, palm, 12, true, true);
+
+  // Fingers, curled around the grip axis.
+  const fingerAxis = grip === 'fore' ? new Vec3(1, 0, 0) : new Vec3(0.15, -1, 0).normalize();
+  for (let f = 0; f < 4; f++) {
+    const spread = (f - 1.5) * 0.024;
+    const along = grip === 'fore' ? spread : spread * 0.2;
+    const base = new Vec3(
+      at.x + fingerAxis.x * 0.012 + (grip === 'fore' ? along : 0.020),
+      at.y + fingerAxis.y * 0.012 - (grip === 'fore' ? 0.004 : 0),
+      at.z + side * (0.014 + (grip === 'fore' ? 0 : along * 0.9)),
+    );
+    const rings = [];
+    const curl = 0.030 + f * 0.001;
+    for (let i = 0; i <= 3; i++) {
+      const t = i / 3;
+      rings.push({
+        p: new Vec3(
+          base.x - t * curl * 0.9,
+          base.y - t * curl * 0.55 - t * t * 0.010,
+          base.z - side * t * curl * 0.75,
+        ),
+        w: 0.0078 - t * 0.0015, d: 0.0078 - t * 0.0015, e: 2.2, uv: t,
+      });
+    }
+    loftRings(g, rings, 8, true, true);
+  }
+
+  // Thumb, laid along the near face.
+  const th = [];
+  for (let i = 0; i <= 3; i++) {
+    const t = i / 3;
+    th.push({
+      p: new Vec3(at.x + 0.006 + t * 0.030, at.y - 0.006 - t * 0.014, at.z - side * (0.014 + t * 0.006)),
+      w: 0.0092 - t * 0.002, d: 0.0092 - t * 0.002, e: 2.2, uv: t,
+    });
+  }
+  loftRings(g, th, 8, true, true);
+}
+
+/* Build both arms for one weapon.
+   `hands` gives the two grip points in weapon-local space; `shoulders`
+   defaults to a pair of anchors down and back from the camera. */
+function makeViewmodelArms(hands, opts = {}) {
+  const sleeve = new Geometry();
+  const skin = new Geometry();
+  /* The anchor has to sit IN FRONT of the eye. The weapon rides about
+     0.30 m out, so a shoulder placed further back than that puts the
+     forearm through the near plane and it fills the screen with sleeve —
+     these are forearms entering frame from the lower corners, not whole
+     arms hung off a torso that is not there. */
+  const back = opts.back != null ? opts.back : -0.07;
+  const drop = opts.drop != null ? opts.drop : -0.21;
+
+  const pairs = [
+    { hand: hands.right, side: -1, grip: hands.rightGrip || 'pistol' },
+    { hand: hands.left, side: 1, grip: hands.leftGrip || 'fore' },
+  ];
+  for (const { hand, side, grip } of pairs) {
+    if (!hand) continue;
+    const h = new Vec3(hand[0], hand[1], hand[2]);
+    const shoulder = new Vec3(back, drop, side * 0.105);
+    buildViewArm(sleeve, shoulder, h, side);
+    buildViewHand(skin, h, side, { grip });
+  }
+  for (const g of [sleeve, skin]) {
+    g.finalize();
+    g.computeWeldGroups();
+    smoothNormals(g);
+    weldNormals(g.normals, g.weldGroups);
+  }
+  return { sleeve, skin };
+}
+
+const VIEW_ARM_MATERIALS = {
+  sleeve: { color: 0x3d3a2c, texture: 'fabric', roughness: 0.96, metalness: 0, uvScale: 1.4 },
+  skin: { color: 0xb08462, texture: 'skin', roughness: 0.68, metalness: 0, subsurface: 0.4 },
+};
+
+/* Spawn arms parented to a weapon actor. They move with it exactly. */
+Engine.prototype.viewmodelArms = function (weapon, hands, opts = {}) {
+  const key = 'arms:' + (opts.key || JSON.stringify(hands));
+  let parts = this._armCache && this._armCache[key];
+  if (!parts) {
+    parts = makeViewmodelArms(hands, opts);
+    (this._armCache || (this._armCache = {}))[key] = parts;
+  }
+  const mk = (geo, mat) => {
+    const a = this._spawn({ material: mat, physics: false },
+      this._mesh(key + ':' + (mat === opts.skinMaterial ? 'skin' : 'sleeve') + (mat.color || ''),
+        () => geo), null, 1.2);
+    a.parent = weapon;
+    return a;
+  };
+  const sleeve = mk(parts.sleeve, opts.sleeveMaterial || VIEW_ARM_MATERIALS.sleeve);
+  const skin = mk(parts.skin, opts.skinMaterial || VIEW_ARM_MATERIALS.skin);
+  return { sleeve, skin, parts: [sleeve, skin] };
+};
+
+
 /* ─────────── public surface ─────────── */
 const LegendEngine = {
   version: '1.0.0',
@@ -11527,7 +11822,7 @@ const LegendEngine = {
   Geometry, Shapes, convexHull, hullToGeometry,
   Engine, Actor, Material, Body, PhysicsWorld,
   Fluid, Fracture, ParticleSystem, Skeleton, AnimationClip, Face,
-  makePistol1911,
+  makePistol1911, makeViewmodelArms,
   Grass, Input, Audio,
   clamp, lerp, smoothstep,
 };

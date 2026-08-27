@@ -120,6 +120,13 @@ class Input {
     this.released = new Set();
     this.pointer = { x: 0, y: 0, dx: 0, dy: 0, down: false, justDown: false, justUp: false };
     this.axes = { x: 0, y: 0 };
+    /* Full controller state, for games that want more than the WASD fold:
+       analog sticks, analog triggers, and edge-triggered named buttons. */
+    this.pad = {
+      connected: false, id: '',
+      lx: 0, ly: 0, rx: 0, ry: 0, lt: 0, rt: 0,
+      buttons: {}, pressed: {}, released: {}, _prev: {},
+    };
     this.anyPressed = false;
     this._listeners = [];
     this._bind(target);
@@ -170,20 +177,60 @@ class Input {
     this._on(target, 'touchstart', () => { this.anyPressed = true; }, { passive: true });
   }
 
-  /* Gamepad state is polled, not evented, so it is sampled once per frame
-     and folded into the same key set the keyboard fills. */
+  /* Gamepad state is polled, not evented, so it is sampled once per frame.
+     Two surfaces come out of it: `pad`, the full analog state a first-person
+     game needs, and the legacy fold into the keyboard's key set so a game
+     written for WASD keeps working on a controller with no changes. */
   _pollGamepad() {
+    const pad = this.pad;
+    pad.connected = false;
     if (!navigator.getGamepads) return;
     const pads = navigator.getGamepads();
-    for (const pad of pads) {
-      if (!pad) continue;
-      const dz = 0.22;
-      const lx = pad.axes[0] || 0, ly = pad.axes[1] || 0;
-      if (Math.abs(lx) > dz) this.axes.x += lx;
-      if (Math.abs(ly) > dz) this.axes.y += ly;
-      const press = (i, key) => { if (pad.buttons[i] && pad.buttons[i].pressed) { if (!this.keys.has(key)) this.pressed.add(key); this.keys.add(key); this.anyPressed = true; } };
-      press(0, ' '); press(1, 'x'); press(2, 'x'); press(3, ' ');
-      press(12, 'arrowup'); press(13, 'arrowdown'); press(14, 'arrowleft'); press(15, 'arrowright');
+    for (const gp of pads) {
+      if (!gp) continue;
+      pad.connected = true;
+      pad.id = gp.id;
+
+      // Radial dead zone, rescaled so the stick still reaches 1.0 at the rim.
+      // Per-axis dead zones are what make diagonal movement feel notchy.
+      const stick = (ax, ay, dz) => {
+        const x = gp.axes[ax] || 0, y = gp.axes[ay] || 0;
+        const m = Math.hypot(x, y);
+        if (m < dz) return [0, 0];
+        const k = ((m - dz) / (1 - dz)) / m;
+        return [clamp(x * k, -1, 1), clamp(y * k, -1, 1)];
+      };
+      [pad.lx, pad.ly] = stick(0, 1, 0.18);
+      [pad.rx, pad.ry] = stick(2, 3, 0.14);
+
+      const btn = (i) => (gp.buttons[i] ? gp.buttons[i].value || (gp.buttons[i].pressed ? 1 : 0) : 0);
+      const held = (i) => !!(gp.buttons[i] && gp.buttons[i].pressed);
+      // Triggers are analog on every modern pad; some old ones report them
+      // as axes 4/5 instead, so fall back to that.
+      pad.lt = gp.buttons.length > 6 ? btn(6) : Math.max(0, (gp.axes[4] || -1) * 0.5 + 0.5);
+      pad.rt = gp.buttons.length > 7 ? btn(7) : Math.max(0, (gp.axes[5] || -1) * 0.5 + 0.5);
+
+      const B = pad.buttons;
+      const prev = pad._prev;
+      const names = ['a', 'b', 'x', 'y', 'lb', 'rb', 'lt', 'rt', 'back', 'start', 'ls', 'rs', 'up', 'down', 'left', 'right'];
+      for (let i = 0; i < names.length; i++) {
+        const n = names[i];
+        const on = i === 6 ? pad.lt > 0.5 : i === 7 ? pad.rt > 0.5 : held(i);
+        B[n] = on;
+        pad.pressed[n] = on && !prev[n];
+        pad.released[n] = !on && prev[n];
+        prev[n] = on;
+        if (on) this.anyPressed = true;
+      }
+
+      // Legacy fold: left stick drives the same axes as WASD, and the face
+      // buttons press the same keys the keyboard-only path listens for.
+      if (Math.abs(pad.lx) > 0.01) this.axes.x += pad.lx;
+      if (Math.abs(pad.ly) > 0.01) this.axes.y += pad.ly;
+      const press = (on, key) => { if (on) { if (!this.keys.has(key)) this.pressed.add(key); this.keys.add(key); } };
+      press(B.a, ' '); press(B.b, 'x'); press(B.x, 'x'); press(B.y, ' ');
+      press(B.up, 'arrowup'); press(B.down, 'arrowdown');
+      press(B.left, 'arrowleft'); press(B.right, 'arrowright');
       break;
     }
   }
@@ -204,6 +251,8 @@ class Input {
 
   /* Call once per frame, after game logic, to clear edge-triggered state. */
   endFrame() {
+    for (const k in this.pad.pressed) this.pad.pressed[k] = false;
+    for (const k in this.pad.released) this.pad.released[k] = false;
     this.pressed.clear();
     this.released.clear();
     this.pointer.justDown = false;
@@ -219,6 +268,8 @@ class Input {
   get action() { return this.down(' '); }
   get actionPressed() { return this.justPressed(' '); }
   get secondaryPressed() { return this.justPressed('x'); }
+  padDown(name) { return !!this.pad.buttons[name]; }
+  padPressed(name) { return !!this.pad.pressed[name]; }
 
   dispose() {
     for (const [t, type, fn, opts] of this._listeners) t.removeEventListener(type, fn, opts);

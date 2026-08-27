@@ -102,9 +102,12 @@ function buildTommySteel(g) {
     for (let i = 0; i < m; i++) g.tri(c, cb + 1 + i, cb + 1 + (i + 1) % m);
   }
 
-  /* Front sight blade on its base. */
-  hardBox(g, T.muzzle - 0.014, 0.0125, 0, 0.0060, 0.0028, 0.0048);
-  hardBox(g, T.muzzle - 0.014, 0.0182, 0, 0.0016, 0.0032, 0.0012);
+  /* Front sight blade on its base. Its tip is set level with the rear
+     aperture's centre (recUp + 0.0040 = 0.0255): a front sight that does
+     not share a line with the rear one cannot be aimed with, however
+     correct each is on its own. */
+  hardBox(g, T.muzzle - 0.014, 0.0143, 0, 0.0060, 0.0048, 0.0048);
+  hardBox(g, T.muzzle - 0.014, 0.0223, 0, 0.0016, 0.0032, 0.0012);
 
   /* Rear sight: the M1A1's stamped L peep between two protective wings. */
   const rx = T.receiverRear + 0.0210;
@@ -225,7 +228,7 @@ const TOMMY_MATERIALS = {
   // Blued steel is nearly black until light rakes it. Roughness sits above
   // the 1911's polish: wartime parkerised-blue, not a show finish.
   steel: { color: 0x33383e, texture: 'metal', roughness: 0.34, metalness: 1 },
-  wood: { color: 0x6e4522, texture: 'wood', roughness: 0.62, metalness: 0, uvScale: 4 },
+  wood: { color: 0x5c4028, texture: 'wood', roughness: 0.66, metalness: 0, uvScale: 1.6 },
 };
 
 function makeThompson() {

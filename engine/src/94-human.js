@@ -130,7 +130,7 @@ function limbRings(from, to, profile, bulge) {
 
 /* ---------------- torso ---------------- */
 
-function buildTorso(g, segments) {
+function buildTorso(g, segments, k = 1) {
   // width, depth, squareness — the silhouette of a human trunk.
   const spec = [
     [-0.062, 0.108, 0.092, 2.3],   // closes inside the thigh tops
@@ -149,7 +149,7 @@ function buildTorso(g, segments) {
     [0.528, 0.079, 0.067, 2.2],
   ];
   const rings = spec.map(([y, w, d, e], i) => ({
-    p: new Vec3(0, y, 0), w, d, e, uv: i / (spec.length - 1),
+    p: new Vec3(0, y, 0), w: w * k, d: d * k, e, uv: i / (spec.length - 1),
   }));
   loftRings(g, rings, segments, true, true);
 }
@@ -166,7 +166,7 @@ function buildNeck(g, segments) {
 
 /* ---------------- limbs ---------------- */
 
-function buildArm(g, side, skeleton, segments) {
+function buildArm(g, side, skeleton, segments, k = 1) {
   const S = side > 0 ? 'L' : 'R';
   const shoulder = new Vec3(), elbow = new Vec3(), wrist = new Vec3();
   skeleton.bones[skeleton.index('upperArm' + S)].bindMatrix.getTranslation(shoulder);
@@ -199,6 +199,8 @@ function buildArm(g, side, skeleton, segments) {
     [0.034, 0.036, 2.0],
     [0.027, 0.031, 2.1],
   ]);
+  for (const r of upper) { r.w *= k; r.d *= k; }
+  for (const r of lower) { r.w *= k; r.d *= k; }
   loftRings(g, upper.concat(lower.slice(1)), segments, false, false);
 
   buildHand(g, side, wrist, segments);
@@ -235,7 +237,7 @@ function buildHand(g, side, wrist, segments) {
   ]), Math.max(8, segments >> 1), true, true);
 }
 
-function buildLeg(g, side, skeleton, segments) {
+function buildLeg(g, side, skeleton, segments, k = 1) {
   const S = side > 0 ? 'L' : 'R';
   const hip = new Vec3(), knee = new Vec3(), ankle = new Vec3();
   skeleton.bones[skeleton.index('upperLeg' + S)].bindMatrix.getTranslation(hip);
@@ -337,14 +339,19 @@ function buildShoe(g, side, skeleton, segments) {
 function makeHumanBodyGeometry(skeleton, opts = {}) {
   const g = new Geometry();
   const segments = opts.segments || 16;
+  // `gaunt` thins the whole figure. At 0.82 the silhouette reads as
+  // starved rather than merely slim, which is most of what tells a
+  // shambling body apart from a living one at fighting distance.
+  const k = opts.gaunt != null ? opts.gaunt : (opts.thickness || 1);
 
-  buildTorso(g, segments);
+  buildTorso(g, segments, k);
   buildNeck(g, segments);
   for (const side of [1, -1]) {
-    buildArm(g, side, skeleton, segments);
-    buildLeg(g, side, skeleton, segments);
+    buildArm(g, side, skeleton, segments, k);
+    buildLeg(g, side, skeleton, segments, k);
     buildShoe(g, side, skeleton, segments);
   }
+  if (opts.rags) buildRags(g, opts.ragSeed || 3);
 
   g.finalize();
   // The per-ring normals are only radial; recomputing from the finished
@@ -353,6 +360,48 @@ function makeHumanBodyGeometry(skeleton, opts = {}) {
   smoothNormals(g);
   weldNormals(g.normals, g.weldGroups);
   return g;
+}
+
+/* Torn clothing. Strips of cloth hanging off the torso, each one a thin
+   ragged panel with a jagged hem. They are appended to the body geometry
+   rather than made a separate mesh, so the existing vertex-to-bone solve
+   skins them for free — a strip near the hips gets hip weights and swings
+   with the hips, which is what makes a walk read as clothed rather than
+   as a figure with decals on it. */
+function buildRags(g, seed) {
+  const rng = new Rng(seed);
+  const STRIPS = 22;
+  for (let i = 0; i < STRIPS; i++) {
+    const a = (i / STRIPS) * TAU + rng.range(-0.1, 0.1);
+    const top = rng.range(0.02, 0.30);          // where on the trunk it hangs from
+    const len = rng.range(0.10, 0.34);
+    const halfW = rng.range(0.018, 0.045);
+    // Follow the trunk's own silhouette so cloth sits on the body, not in it.
+    const rad = (y) => (y > 0.24 ? 0.176 : y > 0.10 ? 0.156 : 0.170) * 1.02;
+    const ca = Math.cos(a), sa = Math.sin(a);
+    const base = g.positions.length / 3;
+    const rows = 4;
+    for (let r = 0; r <= rows; r++) {
+      const t = r / rows;
+      const y = top - len * t;
+      // The hem tapers and wanders; a straight-cut rectangle reads as a flag.
+      const w = halfW * (1 - t * rng.range(0.25, 0.7));
+      const rr = rad(y) + t * 0.012;
+      const drift = Math.sin(t * 3.1 + i) * 0.02 * t;
+      for (const sgn of [-1, 1]) {
+        const ang = a + sgn * (w / Math.max(rr, 0.02)) + drift;
+        g.vert(Math.cos(ang) * rr, y, Math.sin(ang) * rr,
+               Math.cos(ang), 0.15, Math.sin(ang), (sgn + 1) / 2, t);
+      }
+    }
+    for (let r = 0; r < rows; r++) {
+      const q = base + r * 2;
+      // Both faces: cloth this thin is visible from inside the swing arc.
+      g.quad(q, q + 1, q + 3, q + 2);
+      g.quad(q, q + 2, q + 3, q + 1);
+    }
+    void ca; void sa;
+  }
 }
 
 /* Area-weighted smooth normals over the assembled surface. */

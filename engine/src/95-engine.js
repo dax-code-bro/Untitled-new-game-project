@@ -527,7 +527,10 @@ class Engine {
   character(opts = {}) {
     const scale = opts.scale != null ? opts.scale : 1;
     const skeleton = makeHumanoidSkeleton(scale);
-    const geo = makeHumanoidMesh(skeleton, { thickness: opts.build || 1 });
+    // `zombie: true` swaps in the starved silhouette and torn clothing.
+    const geo = makeHumanoidMesh(skeleton, opts.zombie
+      ? { gaunt: 0.82, rags: true, ragSeed: (opts.seed || 3) * 7 + 1 }
+      : { thickness: opts.build || 1 });
     const mesh = new GpuMesh(this.gl, geo);
 
     const animator = new Animator(skeleton);
@@ -1005,9 +1008,17 @@ class Engine {
     const planes = this._planes;
     const camPos = this.camera.position;
 
+    /* Transforms first, for every actor, visible or not. Updating inside
+       the visibility filter below looks equivalent and is not: an invisible
+       actor is a legitimate parent — a group root, a mount point, a hidden
+       pivot — and skipping it leaves its children composing against a stale
+       matrix, so a whole assembly silently renders somewhere else. */
+    for (const actor of this.actors) {
+      if (!actor.dead) actor.updateMatrix();
+    }
+
     for (const actor of this.actors) {
       if (!actor.visible || !actor.mesh || actor.dead) continue;
-      actor.updateMatrix();
 
       if (this.frustumCulling && !actor.noCull) {
         // Cull against the matrix translation, not actor.position. A

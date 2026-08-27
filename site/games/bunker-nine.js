@@ -35,24 +35,39 @@ const WEAPONS = {
     dmg: 55, headMul: 3.0, mag: 7, reserve: 42, refire: 0.16,
     reload: 1.5, auto: false, pellets: 1, spread: 0.4,
     kick: 1.6, sfx: 'shotPistol',
+    // sightH: height of the sight line above the weapon's own origin, so
+    // aiming can place the gun such that the real notch-and-blade land on
+    // the camera axis. Measured off the model, not eyeballed.
+    sightH: 0.0455, sightFov: 0.74, adsTime: 0.16,
+    recoil: { up: 1.15, side: 0.5, climb: 0.28, recover: 9 },
+    hands: { right: [-0.005, -0.012, 0], left: [0.012, -0.058, -0.014], leftGrip: 'pistol' },
   },
   thompson: {
     name: 'Thompson', slotName: 'THOMPSON',
     dmg: 40, headMul: 2.2, mag: 30, reserve: 210, refire: 0.1,
     reload: 2.3, auto: true, pellets: 1, spread: 1.1,
     kick: 0.9, sfx: 'shotSmg',
+    sightH: 0.0955, sightFov: 0.80, adsTime: 0.22,
+    recoil: { up: 0.42, side: 0.30, climb: 0.13, recover: 11 },
+    hands: { right: [-0.004, -0.014, 0], left: [0.290, 0.036, 0] },
   },
   scatter: {
     name: 'Scattergun', slotName: 'SCATTERGUN',
     dmg: 22, headMul: 1.6, mag: 2, reserve: 38, refire: 0.5,
     reload: 2.6, auto: false, pellets: 8, spread: 5.5,
     kick: 3.2, sfx: 'shotScatter',
+    sightH: 0.0275, sightFov: 0.86, adsTime: 0.24, adsSpread: 0.55,
+    recoil: { up: 2.6, side: 0.9, climb: 0.75, recover: 7 },
+    hands: { right: [-0.055, -0.062, 0], left: [0.300, -0.016, 0] },
   },
   arc: {
     name: 'AX-9 Arc Projector', slotName: 'ARC PROJECTOR',
     dmg: 900, headMul: 1.0, mag: 6, reserve: 30, refire: 0.55,
     reload: 2.9, auto: false, pellets: 1, spread: 0,
     kick: 1.2, sfx: 'shotArc',
+    sightH: 0.0580, sightFov: 0.82, adsTime: 0.26,
+    recoil: { up: 0.9, side: 0.2, climb: 0.2, recover: 8 },
+    hands: { right: [-0.060, -0.070, 0], left: [0.150, -0.030, 0] },
     chain: { count: 3, radius: 4.0, dmg: 500 },
   },
 };
@@ -73,6 +88,9 @@ const ROUNDS = {
 
 const PLAYER = {
   hp: 100, regenDelay: 3.5, regenRate: 40,
+  adsSpread: 0.28,        // aimed shots tighten to this fraction of hip spread
+  sprintSpeed: 7.4, walkSpeed: 4.2, adsSpeed: 2.3,
+  fov: 1.0, sprintFov: 1.06,
   hitDamage: 25, attackRange: 1.45, attackCooldown: 0.9,
   interactRange: 2.0,
 };
@@ -439,7 +457,9 @@ function makeScattergun(game, opts = {}) {
     ? { color: 0xf5f2e6, texture: 'smooth', roughness: 0.9, emissive: 0xcfe8ff, emissiveStrength: 0.35 }
     : { color: 0x3a3f45, texture: 'metal', roughness: 0.4, metalness: 1 };
   const wood = opts.chalk ? steel : { color: 0x5e3d1f, texture: 'wood', roughness: 0.7, uvScale: 3 };
-  const root = game.box({ at: opts.at || [0, 0, 0], size: 0.02, physics: false, visible: false });
+  // size:1, not a tiny marker — box() maps size onto the actor's scale, and
+  // a 0.02 root silently scales every parented part by 1/50.
+  const root = game.box({ at: opts.at || [0, 0, 0], size: 1, physics: false, visible: false });
   const parts = [];
   const add = (a, pos, rot) => {
     a.parent = root;
@@ -458,6 +478,9 @@ function makeScattergun(game, opts = {}) {
   add(game.box({ size: [0.05, 0.09, 0.036], material: wood, physics: false }), [-0.055, -0.062, 0], [0, 0, 18]); // grip
   add(game.box({ size: [0.2, 0.03, 0.044], material: wood, physics: false }), [0.30, -0.016, 0]);        // forend
   add(game.box({ size: [0.05, 0.018, 0.03], material: steel, physics: false }), [-0.02, -0.052, 0]);     // guard
+  // Bead, on the rib between the barrels — what a side-by-side aims with.
+  add(game.sphere({ radius: 0.0035, material: steel, physics: false }), [0.545, 0.0275, 0]);
+  add(game.box({ size: [0.44, 0.006, 0.010], material: steel, physics: false }), [0.33, 0.0235, 0]);
   return { root, parts };
 }
 
@@ -465,7 +488,7 @@ function makeArcProjector(game, opts = {}) {
   const dark = { color: 0x23262c, texture: 'metal', roughness: 0.45, metalness: 1 };
   const coil = { color: 0x142430, texture: 'smooth', roughness: 0.3, emissive: 0x39c8ff, emissiveStrength: 2.2 };
   const brass = { color: 0xb08d4a, texture: 'metal', roughness: 0.35, metalness: 1 };
-  const root = game.box({ at: opts.at || [0, 0, 0], size: 0.02, physics: false, visible: false });
+  const root = game.box({ at: opts.at || [0, 0, 0], size: 1, physics: false, visible: false });
   const parts = [];
   const add = (a, pos, rot) => { a.parent = root; a.setPosition(pos); if (rot) a.setRotation(rot); parts.push(a); return a; };
   add(game.box({ size: [0.34, 0.09, 0.075], material: dark, physics: false }), [0.05, 0, 0]);
@@ -476,6 +499,10 @@ function makeArcProjector(game, opts = {}) {
   add(game.sphere({ radius: 0.023, material: coil, physics: false }), [0.5, 0.01, 0]);
   add(game.box({ size: [0.05, 0.1, 0.04], material: dark, physics: false }), [-0.06, -0.075, 0], [0, 0, 14]);
   add(game.box({ size: [0.1, 0.05, 0.06], material: brass, physics: false }), [-0.11, 0.01, 0]);
+  // Sight post and rear notch, so the arc aims like everything else.
+  add(game.box({ size: [0.008, 0.018, 0.006], material: dark, physics: false }), [0.28, 0.050, 0]);
+  add(game.box({ size: [0.010, 0.014, 0.008], material: dark, physics: false }), [-0.06, 0.050, 0.013]);
+  add(game.box({ size: [0.010, 0.014, 0.008], material: dark, physics: false }), [-0.06, 0.050, -0.013]);
   return { root, parts };
 }
 
@@ -494,6 +521,10 @@ function makePlayer(game, S, hud, sfx, voice) {
     ammo: { m1911: { mag: WEAPONS.m1911.mag, reserve: WEAPONS.m1911.reserve } },
     cooldown: 0, reloading: 0, swayT: 0, kickPitch: 0,
     view: {}, muzzleT: 0, alive: true,
+    // Aim, sprint and recoil state.
+    ads: 0, adsWant: false, sprint: 0, sprinting: false,
+    recoil: { pitch: 0, yaw: 0 }, recoilApplied: { pitch: 0, yaw: 0 },
+    arms: {},
   };
 
   /* View models: one instance of each weapon, shown when equipped. */
@@ -501,6 +532,11 @@ function makePlayer(game, S, hud, sfx, voice) {
   P.view.thompson = { kind: 'single', actor: game.thompson({ physics: false }), muzzle: 0.55 };
   P.view.scatter = Object.assign(makeScattergun(game), { kind: 'group', muzzle: 0.58 });
   P.view.arc = Object.assign(makeArcProjector(game), { kind: 'group', muzzle: 0.52 });
+  // Hands, parented to each weapon so they inherit its every motion.
+  for (const [id, v] of Object.entries(P.view)) {
+    const root = v.kind === 'single' ? v.actor : v.root;
+    v.arms = game.viewmodelArms(root, WEAPONS[id].hands, { key: id });
+  }
   for (const v of Object.values(P.view)) setViewVisible(v, false);
 
   /* Pointer lock: click to capture, mouse drives engine yaw/pitch. */
@@ -509,6 +545,9 @@ function makePlayer(game, S, hud, sfx, voice) {
     if (S.testMode || S.gameOver) return;
     if (document.pointerLockElement !== canvas) canvas.requestPointerLock();
   });
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+  window.addEventListener('mousedown', (e) => { if (e.button === 2) game.input.pointer.rightDown = true; });
+  window.addEventListener('mouseup', (e) => { if (e.button === 2) game.input.pointer.rightDown = false; });
   window.addEventListener('mousemove', (e) => {
     if (document.pointerLockElement !== canvas) return;
     game._camYaw -= e.movementX * 0.0021;
@@ -534,6 +573,7 @@ function makePlayer(game, S, hud, sfx, voice) {
 }
 
 function setViewVisible(v, on) {
+  if (v.arms) for (const a of v.arms.parts) a.visible = on;
   if (v.kind === 'single') {
     v.actor.visible = on;
     if (v.actor.grips) v.actor.grips.visible = on;
@@ -554,35 +594,99 @@ function updateViewmodel(game, P, dt, moving) {
 
   const cam = game.camera;
   const f = _vTmp1.copy(cam.target).sub(cam.position).normalize();
-  const up = _vTmp2.set(0, 1, 0);
-  const right = _vTmp3.copy(f).cross(up).normalize();
+  const right = _vTmp3.copy(f).cross(_vTmp2.set(0, 1, 0)).normalize();
+  // True camera up = right x forward. Negating it flips every vertical
+  // offset, which sends a gun meant to sit low in frame up into the sky.
+  const up = _vTmp4.copy(right).cross(f).normalize();
 
   P.swayT += dt * (moving ? 7.2 : 1.6);
-  const bobY = Math.sin(P.swayT * 2) * (moving ? 0.006 : 0.0016);
-  const bobX = Math.cos(P.swayT) * (moving ? 0.004 : 0.001);
+  const sway = 1 - P.ads * 0.88;                 // aiming kills the bob
+  const bobY = Math.sin(P.swayT * 2) * (moving ? 0.006 : 0.0016) * sway;
+  const bobX = Math.cos(P.swayT) * (moving ? 0.004 : 0.001) * sway;
   P.kickPitch = Math.max(0, P.kickPitch - dt * 9);
   const dip = P.reloading > 0 ? Math.sin(Math.min(1, 1 - P.reloading / spec.reload) * Math.PI) * 0.09 : 0;
 
   const root = v.kind === 'single' ? v.actor : v.root;
-  const px = cam.position.x + f.x * 0.44 + right.x * (0.17 + bobX);
-  const py = cam.position.y - 0.19 + bobY - dip + f.y * 0.44;
-  const pz = cam.position.z + f.z * 0.44 + right.z * (0.17 + bobX);
+
+  /* Hip carry, aimed carry, and the sprint cant, blended.
+
+     Aimed: the gun goes dead-centre and drops by its own sight height, so
+     the real rear notch and front blade land exactly on the camera axis.
+     That is why every weapon carries a measured sightH — nothing here is
+     tuned by eye, and every gun aims correctly because the geometry says
+     where its sights are. */
+  const hipX = 0.15 + bobX, hipY = -0.17 + bobY - dip, hipD = 0.34;
+  const adsX = 0, adsY = -spec.sightH, adsD = 0.30;
+  const a = P.ads;
+  const offR = hipX * (1 - a) + adsX * a;
+  const offU = hipY * (1 - a) + adsY * a;
+  const dist = hipD * (1 - a) + adsD * a;
+
+  // Sprinting: gun canted down and inboard, out of the sight line.
+  const sp = P.sprint * (1 - a);
+  const sprintDrop = sp * 0.10, sprintIn = sp * 0.05;
+
+  const px = cam.position.x + f.x * dist + right.x * (offR - sprintIn) + up.x * (offU - sprintDrop);
+  const py = cam.position.y + f.y * dist + right.y * (offR - sprintIn) + up.y * (offU - sprintDrop);
+  const pz = cam.position.z + f.z * dist + right.z * (offR - sprintIn) + up.z * (offU - sprintDrop);
   root.setPosition([px, py, pz]);
 
-  // Gun +X aligns to camera forward; kick tips the muzzle up briefly.
   const fh = Math.hypot(f.x, f.z) || 1e-6;
   const yaw = Math.atan2(-f.z / fh, f.x / fh);
   const pitch = Math.asin(Math.max(-1, Math.min(1, f.y))) + P.kickPitch * 0.06;
-  _vQuat1.setEuler(0, yaw, pitch);
+  // Roll the weapon inboard while sprinting; hold it level while aimed.
+  const roll = sp * 0.42 + (1 - a) * 0.03;
+  /* Composed from explicit axis-angles rather than Euler triples. setEuler
+     takes (pitch, yaw, roll) in YXZ, which is easy to feed in the wrong
+     order and gives a weapon that rolls when it should pitch — and the
+     mistake stays invisible until the player looks up. */
+  _vQuat1.setAxisAngle(_vAxisY, yaw);
+  _vQuat2.setAxisAngle(_vAxisZ, pitch);
+  _vQuat1.mulQuats(_vQuat1, _vQuat2);
+  if (roll > 1e-4) {
+    _vQuat2.setAxisAngle(_vAxisX, roll);
+    _vQuat1.mulQuats(_vQuat1, _vQuat2);
+  }
   root.setRotation(_vQuat1);
 
-  P.muzzleWorld = [px + f.x * v.muzzle, py + f.y * v.muzzle + 0.03, pz + f.z * v.muzzle];
+  P.muzzleWorld = [px + f.x * v.muzzle, py + f.y * v.muzzle + 0.03 * (1 - a), pz + f.z * v.muzzle];
+}
+
+/* Recoil, applied to the camera itself rather than only to the gun.
+
+   Two components, because real recoil has two: a kick that snaps the
+   muzzle up and settles back, and a climb that does not give itself back
+   — the player has to pull down against it. A gun with only the first
+   feels weightless; one with only the second feels like a broken mouse. */
+function updateRecoil(game, P, dt) {
+  const R = P.recoil, A = P.recoilApplied;
+  // Take back last frame's offset before re-applying, so recoil never
+  // eats the player's own aim.
+  game._camPitch -= A.pitch;
+  game._camYaw -= A.yaw;
+
+  const spec = P.spec();
+  const k = Math.exp(-(spec.recoil ? spec.recoil.recover : 9) * dt);
+  R.pitch *= k;
+  R.yaw *= k;
+  if (Math.abs(R.pitch) < 1e-5) R.pitch = 0;
+  if (Math.abs(R.yaw) < 1e-5) R.yaw = 0;
+
+  A.pitch = R.pitch;
+  A.yaw = R.yaw;
+  game._camPitch += A.pitch;
+  game._camYaw += A.yaw;
+  game._camPitch = Math.max(-1.45, Math.min(1.45, game._camPitch));
 }
 
 const _vTmp1 = { x: 0, y: 0, z: 0, copy(o) { this.x = o.x; this.y = o.y; this.z = o.z; return this; }, sub(o) { this.x -= o.x; this.y -= o.y; this.z -= o.z; return this; }, cross(o) { const x = this.y * o.z - this.z * o.y, y = this.z * o.x - this.x * o.z, z = this.x * o.y - this.y * o.x; this.x = x; this.y = y; this.z = z; return this; }, normalize() { const l = Math.hypot(this.x, this.y, this.z) || 1; this.x /= l; this.y /= l; this.z /= l; return this; }, set(x, y, z) { this.x = x; this.y = y; this.z = z; return this; } };
-const _vTmp2 = Object.assign(Object.create(Object.getPrototypeOf(_vTmp1)), _vTmp1);
-const _vTmp3 = Object.assign(Object.create(Object.getPrototypeOf(_vTmp1)), _vTmp1);
-let _vQuat1 = null;   // needs LE at boot; assigned in start()
+_vTmp1.scale = function (k) { this.x *= k; this.y *= k; this.z *= k; return this; };
+const _clone = () => Object.assign(Object.create(Object.getPrototypeOf(_vTmp1)), _vTmp1);
+const _vTmp2 = _clone();
+const _vTmp3 = _clone();
+const _vTmp4 = _clone();
+let _vQuat1 = null, _vQuat2 = null;   // need LE at boot; assigned in start()
+let _vAxisX = null, _vAxisY = null, _vAxisZ = null;
 
 /* Fire the equipped weapon. Raycasts from the camera, damage to
    zombies, points per hit, gore on kill. */
@@ -605,6 +709,22 @@ function tryFire(game, S, P, hud, sfx, dt) {
   am.mag--;
   P.cooldown = spec.refire;
   P.kickPitch = Math.min(3, P.kickPitch + spec.kick);
+
+  /* Muzzle rise. Negative pitch is up in this camera, so recoil subtracts.
+     Aiming braces the weapon: about a third less climb, the way a shouldered
+     gun actually behaves. */
+  const rc = spec.recoil;
+  if (rc) {
+    const brace = 1 - P.ads * 0.35;
+    const deg = Math.PI / 180;
+    P.recoil.pitch -= rc.up * deg * (0.85 + Math.random() * 0.3) * brace;
+    P.recoil.yaw += rc.side * deg * (Math.random() - 0.5) * 2 * brace;
+    // The part that does not come back — the player has to fight this down.
+    game._camPitch -= rc.climb * deg * brace;
+    // recoilApplied is owned by updateRecoil alone. Writing the new value
+    // here makes the next frame subtract an offset it never added, which
+    // inverts the whole effect and pushes the muzzle down.
+  }
   sfx[spec.sfx]();
   hud.ammo(P);
 
@@ -619,8 +739,11 @@ function tryFire(game, S, P, hud, sfx, dt) {
   const fwd = _vTmp1.copy(cam.target).sub(cam.position).normalize();
   let killsThisShot = 0;
 
+  // Aimed fire tightens the cone; a shotgun tightens less than a rifle,
+  // which is what its own adsSpread is for.
+  const aimTighten = 1 - P.ads * (1 - (spec.adsSpread != null ? spec.adsSpread : PLAYER.adsSpread));
   for (let p = 0; p < spec.pellets; p++) {
-    const spread = spec.spread * Math.PI / 180;
+    const spread = spec.spread * aimTighten * Math.PI / 180;
     // Perturb along camera right and up so the cone is a cone from any
     // facing; one shared scalar collapses the pattern into a stripe.
     const rx = (Math.random() - 0.5) * spread, ry = (Math.random() - 0.5) * spread;
@@ -706,8 +829,11 @@ function dist2d(a, b) { const dx = a.x - b.x, dz = a.z - b.z; return Math.hypot(
 
 /* ---------------- the dead ---------------- */
 
-const ZOMBIE_SKIN = { color: 0x93a37c, texture: 'skin', roughness: 0.75, metalness: 0 };
-const ZOMBIE_RAGS = { color: 0x453f33, texture: 'fabric', roughness: 0.98, metalness: 0 };
+/* Dead flesh reads green-grey and dry — high roughness, and much less
+   subsurface than living skin, which is what stops it glowing warm at the
+   edges the way the player's own hands do. */
+const ZOMBIE_SKIN = { color: 0x8d9c78, texture: 'skin', roughness: 0.88, metalness: 0, subsurface: 0.12 };
+const ZOMBIE_RAGS = { color: 0x3c3629, texture: 'fabric', roughness: 0.99, metalness: 0, uvScale: 3 };
 
 function roomOf(p) {
   if (p.y > 2.4 && p.x > MAP.loft.x0 - 0.5) return 'loft';
@@ -751,6 +877,24 @@ function buildPooledZombie(game, S, i) {
       e.localOffset = new window.LE.Vec3(sx, 0.31, 0.085);
       eyes.push(e);
     }
+  }
+  /* Posture. The walk clip animates the limbs, but the spine and head are
+     left alone by it, so biasing those bones once gives every zombie the
+     stooped, head-thrust carriage that reads as wrong from across a room —
+     without touching the animation system at all. */
+  if (a.skeleton && a.animator) {
+    // The animator resets every bone to its captured rest pose each frame
+    // before applying clips, so the posture has to be written into that rest
+    // pose. Writing it to the bone instead lasts exactly one frame.
+    const bend = (name, x, y, zr) => {
+      const bi = a.skeleton.index(name);
+      if (bi < 0 || !a.animator.restRotations[bi]) return;
+      a.animator.restRotations[bi].setEuler(x, y, zr);
+    };
+    const lean = 0.13 + (i % 5) * 0.02;
+    bend('spine', lean, 0, 0);
+    bend('chest', lean * 0.7, (i % 3 - 1) * 0.05, 0);
+    bend('head', -lean * 0.5, (i % 4 - 1.5) * 0.06, 0);
   }
   const z = { actor: a, eyes, parked: true, dead: true, poolSlot: i };
   a.userData = { zombie: z };
@@ -1135,6 +1279,9 @@ function makeHud() {
   #b9hud .subs .who { font-size:12px; letter-spacing:.3em; display:block; margin-bottom:4px; }
   #b9hud .banner { position:absolute; left:50%; top:20%; transform:translateX(-50%); font-size:34px;
     letter-spacing:.28em; opacity:0; text-shadow:0 0 22px currentColor; transition:opacity .3s; }
+  #b9hud .advig { position:absolute; inset:0; opacity:0; transition:opacity .05s;
+    background:radial-gradient(ellipse at center, transparent 34%, rgba(0,0,0,.82) 92%); }
+  #b9hud .cross { transition:opacity .08s; }
   #b9hud .dmg { position:absolute; inset:0; opacity:0;
     background:radial-gradient(ellipse at center, transparent 42%, rgba(140,10,6,.75) 100%); transition:opacity .25s; }
   #b9hud .title { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center;
@@ -1150,7 +1297,7 @@ function makeHud() {
   const root = document.createElement('div');
   root.id = 'b9hud';
   root.innerHTML = `
-    <div class="dmg"></div><div class="cross"></div><div class="hitm"></div>
+    <div class="dmg"></div><div class="advig"></div><div class="cross"></div><div class="hitm"></div>
     <div class="roundlbl">ROUND</div><div class="round">1</div>
     <div class="points">500</div><div class="pdelta"></div>
     <div class="ammo"><span class="wname">SIDEARM</span><span class="nums">7 / 42</span></div>
@@ -1159,14 +1306,17 @@ function makeHud() {
     <div class="banner"></div>
     <div class="title"><h1>BUNKER <span>NINE</span></h1>
       <p>THE DEAD COME THROUGH THE WINDOWS. POINTS BUY EVERYTHING.</p>
-      <p>WASD MOVE &nbsp;·&nbsp; MOUSE AIM &nbsp;·&nbsp; F USE &nbsp;·&nbsp; R RELOAD &nbsp;·&nbsp; Q SWAP</p>
+      <p>WASD MOVE &nbsp;·&nbsp; MOUSE LOOK &nbsp;·&nbsp; RIGHT-CLICK AIM &nbsp;·&nbsp; SHIFT SPRINT</p>
+      <p>F USE &nbsp;·&nbsp; R RELOAD &nbsp;·&nbsp; Q SWAP</p>
+      <p style="color:#7ad7ff">CONTROLLER &nbsp; STICKS MOVE/LOOK &nbsp;·&nbsp; RT FIRE &nbsp;·&nbsp; LT AIM &nbsp;·&nbsp; L3 SPRINT &nbsp;·&nbsp; B USE &nbsp;·&nbsp; X RELOAD &nbsp;·&nbsp; Y SWAP</p>
       <p class="go" style="color:#e8ddc8;margin-top:22px">CLICK TO STAND POST</p></div>`;
   document.body.appendChild(root);
   const $ = (c) => root.querySelector(c);
   const els = {
     round: $('.round'), points: $('.points'), ammo: $('.ammo .nums'), wname: $('.ammo .wname'),
-    prompt: $('.prompt'), subs: $('.subs'), subWho: $('.subs .who'), subText: $('.subs .text'),
+    prompt: $('.prompt'), subs: $('.subs'), subWho: $('.subs .who'), subText: $('.subs .text'), vig: $('.advig'),
     banner: $('.banner'), dmg: $('.dmg'), title: $('.title'), hitm: $('.hitm'), pdelta: $('.pdelta'),
+    cross: $('.cross'),
   };
   let subTimer = 0, hmTimer = 0, pdAcc = 0, pdTimer = 0, bnTimer = 0;
   return {
@@ -1204,6 +1354,14 @@ function makeHud() {
       hmTimer = setTimeout(() => { els.hitm.style.opacity = 0; }, 90);
     },
     damage(hp) { els.dmg.style.opacity = Math.min(1, (100 - hp) / 90); },
+    /* Aiming hides the crosshair — the sights are the crosshair now, and
+       leaving a dot floating over the front blade is the tell that a game's
+       iron sights are decorative. */
+    aim(ads, sprinting) {
+      els.cross.style.opacity = (1 - ads) * (sprinting ? 0.25 : 1);
+      root.style.setProperty('--ads', ads.toFixed(3));
+      els.vig.style.opacity = (ads * 0.55).toFixed(3);
+    },
     hideTitle() { els.title.style.opacity = 0; setTimeout(() => { els.title.style.display = 'none'; }, 1500); },
     gameOver(round, kills) {
       els.title.innerHTML = `<h1 style="color:#b3221c">YOU FELL</h1>
@@ -1268,6 +1426,10 @@ function updateRounds(game, S, P, hud, sfx, dt) {
 function start(opts = {}) {
   const LE = window.LE;
   _vQuat1 = new LE.Quat();
+  _vQuat2 = new LE.Quat();
+  _vAxisX = new LE.Vec3(1, 0, 0);
+  _vAxisY = new LE.Vec3(0, 1, 0);
+  _vAxisZ = new LE.Vec3(0, 0, 1);
 
   const game = LE.create({
     canvas: opts.canvas || '#game',
@@ -1291,7 +1453,8 @@ function start(opts = {}) {
     killsTotal: 0, gameOver: false, started: false,
     firstBloodDone: false, powerupActive: null,
     testMode: !!opts.test, godMode: false,
-    input: { fireHeld: false, firePressed: false },
+    input: { fireHeld: false, firePressed: false, aimHeld: false, sprintHeld: false },
+    testHold: {},
   };
   S.addPoints = (n) => { const a = Math.round(n * S.mul); S.points += a; return a; };
 
@@ -1334,8 +1497,28 @@ function start(opts = {}) {
     S.time += dt;
     S.frame = (S.frame || 0) + 1;
     const i = game.input;
-    S.input.fireHeld = i.pointer.down || i.down(' ');
-    S.input.firePressed = i.pointer.justDown || i.justPressed(' ');
+    const pad = i.pad;
+    /* Controller: right stick aims, triggers fire and aim, and the face
+       buttons carry everything the keyboard does. Look is applied here
+       rather than folded into keys because aiming needs the analog value —
+       a stick mapped to arrow keys can only ever look at one speed. */
+    if (pad.connected && P.alive && !S.gameOver) {
+      const look = 2.6 * dt;
+      // Squared response: fine control near centre, fast whip at the rim.
+      const sx = pad.rx * Math.abs(pad.rx), sy = pad.ry * Math.abs(pad.ry);
+      const sens = 1 - P.ads * 0.45;            // aiming slows the turn rate
+      game._camYaw -= sx * look * sens;
+      game._camPitch = Math.max(-1.45, Math.min(1.45,
+        game._camPitch + sy * look * sens * (S.invertY ? -1 : 1)));
+    }
+    // testHold lets a headless harness drive held inputs without simulating
+    // devices — the same code path a real button takes, just another source.
+    const th = S.testHold;
+    S.input.fireHeld = i.pointer.down || i.down(' ') || pad.rt > 0.45 || !!th.fire;
+    S.input.firePressed = i.pointer.justDown || i.justPressed(' ') || pad.pressed.rt || (!!th.fire && !th._firePrev);
+    S.input.aimHeld = i.down('control') || i.pointer.rightDown || pad.lt > 0.4 || !!th.aim;
+    S.input.sprintHeld = i.down('shift') || !!pad.buttons.ls || !!th.sprint;
+    th._firePrev = !!th.fire;
 
     if (S.gameOver || !S.started) return;
     if (S.roundStartAt != null && S.time >= S.roundStartAt) { S.roundStartAt = null; startRound(game, S, hud, sfx); }
@@ -1346,10 +1529,29 @@ function start(opts = {}) {
       const mx = i.axes.x, mz = -i.axes.y;
       const wx = Math.sin(yaw) * mz + Math.cos(yaw) * mx;
       const wz = Math.cos(yaw) * mz - Math.sin(yaw) * mx;
-      P.actor.controller.move(wx, wz, i.down('shift'));
+      /* Sprint: only forward, only unaimed, only when actually moving —
+         and it locks out firing, which is what makes taking it a decision
+         rather than a free speed boost. */
+      const wantSprint = S.input.sprintHeld && mz > 0.35 && !P.adsWant && P.reloading <= 0;
+      P.sprinting = wantSprint && (Math.abs(mx) + Math.abs(mz)) > 0.1;
+      P.sprint += ((P.sprinting ? 1 : 0) - P.sprint) * Math.min(1, dt * 11);
+      P.actor.controller.moveSpeed = P.adsWant ? PLAYER.adsSpeed : PLAYER.walkSpeed;
+      P.actor.controller.move(wx, wz, P.sprinting);
 
-      if (i.justPressed('r')) tryReload(P, sfx);
-      if (i.justPressed('q') && P.slots.length > 1) { P.slot = 1 - P.slot; P.reloading = 0; hud.ammo(P); }
+      /* Aim down sights. */
+      P.adsWant = S.input.aimHeld && !P.sprinting && P.reloading <= 0;
+      const at = P.spec().adsTime || 0.2;
+      P.ads += ((P.adsWant ? 1 : 0) - P.ads) * Math.min(1, dt / at);
+      if (P.ads < 0.002) P.ads = 0;
+      if (P.ads > 0.998) P.ads = 1;
+      // Field of view follows the aim: narrowing is most of what sells it.
+      const spec0 = P.spec();
+      const fovK = PLAYER.fov * (1 - P.ads) + (spec0.sightFov || 0.8) * P.ads;
+      game.camera.fov = 55 * (fovK + P.sprint * (PLAYER.sprintFov - 1)) * Math.PI / 180;
+      hud.aim(P.ads, P.sprinting);
+
+      if (i.justPressed('r') || pad.pressed.x) tryReload(P, sfx);
+      if ((i.justPressed('q') || pad.pressed.y) && P.slots.length > 1) { P.slot = 1 - P.slot; P.reloading = 0; hud.ammo(P); }
       if (i.justPressed('1')) { P.slot = 0; P.reloading = 0; hud.ammo(P); }
       if (i.justPressed('2') && P.slots.length > 1) { P.slot = 1; P.reloading = 0; hud.ammo(P); }
 
@@ -1358,14 +1560,16 @@ function start(opts = {}) {
         if (P.reloading <= 0) { P.reloading = 0; finishReload(P, hud); }
       }
 
-      tryFire(game, S, P, hud, sfx, dt);
+      if (!P.sprinting) tryFire(game, S, P, hud, sfx, dt);
+      updateRecoil(game, P, dt);
       updateViewmodel(game, P, dt, Math.abs(mx) + Math.abs(mz) > 0.1);
 
       /* Interact. */
       const it = nearestInteract(S, P);
       if (it) {
         hud.prompt(it.label + (it.hold ? ' (hold)' : ''));
-        if (it.hold ? i.down('f') || i.down('x') : (i.justPressed('f') || i.justPressed('x'))) {
+        if (it.hold ? (i.down('f') || i.down('x') || pad.buttons.b)
+                    : (i.justPressed('f') || i.justPressed('x') || pad.pressed.b)) {
           doInteract(game, S, P, hud, sfx, it, dt);
         }
       } else hud.prompt(null);
@@ -1436,6 +1640,8 @@ function start(opts = {}) {
     killAll() { for (const z of S.zombies) if (!z.dead) killZombie(game, S, z, false); },
     forceRound(n) { S.round = n - 1; S.toSpawn = 0; for (const z of S.zombies) if (!z.dead) killZombie(game, S, z, false); startRound(game, S, hud, sfx); },
     god(on) { S.godMode = on !== false; },
+    hold(o) { Object.assign(S.testHold, o); },
+    release() { S.testHold = {}; },
     teleport(x, y, z) { P.actor.controller.teleport(new window.LE.Vec3(x, y, z)); },
     look(yaw, pitch) { game._camYaw = yaw; game._camPitch = Math.max(-1.45, Math.min(1.45, pitch)); },
     idleInPool() { return S.pool.filter((z) => z.parked).length; },
