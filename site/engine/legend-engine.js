@@ -1024,7 +1024,18 @@ class GpuMesh {
   uploadInstances(float32, count) {
     const gl = this.gl;
     gl.bindBuffer(gl.ARRAY_BUFFER, this.instanceBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, float32, gl.DYNAMIC_DRAW);
+    // Allocate capacity once and update in place. Re-specifying with
+    // bufferData every frame orphans the old storage, and a scene with a
+    // few dozen instanced groups orphans thousands of backing buffers in
+    // the first seconds — on some drivers (SwiftShader in particular) the
+    // allocation pool eventually jams and every subsequent GL call syncs
+    // against it, permanently. bufferSubData into a persistent allocation
+    // is the canonical dynamic-data path and never touches the allocator.
+    if (!this._instanceCapacity || this._instanceCapacity < float32.byteLength) {
+      this._instanceCapacity = Math.max(float32.byteLength, (this._instanceCapacity || 0) * 2);
+      gl.bufferData(gl.ARRAY_BUFFER, this._instanceCapacity, gl.DYNAMIC_DRAW);
+    }
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, float32);
     this.instanceCount = count;
     return this;
   }

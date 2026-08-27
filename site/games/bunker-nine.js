@@ -219,10 +219,10 @@ const WINDOWS = [
 
 function buildMap(game, S) {
   const MAT = {
-    wall: { color: 0x8d8a82, texture: 'concrete', roughness: 0.94, metalness: 0, uvScale: 0.6 },
+    wall: { color: 0x8f8c85, texture: 'concrete', roughness: 0.94, metalness: 0, uvScale: 1.3, normalStrength: 0.45 },
     wallDark: { color: 0x6f6c66, texture: 'concrete', roughness: 0.95, metalness: 0 },
-    floor: { color: 0x7a766e, texture: 'concrete', roughness: 0.9, metalness: 0, uvScale: 0.5 },
-    wood: { color: 0x6b4a2a, texture: 'wood', roughness: 0.8, metalness: 0, uvScale: 2 },
+    floor: { color: 0x76736c, texture: 'concrete', roughness: 0.9, metalness: 0, uvScale: 1.2, normalStrength: 0.45 },
+    wood: { color: 0x584023, texture: 'wood', roughness: 0.8, metalness: 0, uvScale: 2 },
     board: { color: 0x7d5c36, texture: 'wood', roughness: 0.85, metalness: 0, uvScale: 3 },
     steel: { color: 0x4a4e54, texture: 'metal', roughness: 0.5, metalness: 1 },
     sand: { color: 0x8a7f5e, texture: 'fabric', roughness: 0.98, metalness: 0, uvScale: 2 },
@@ -389,21 +389,23 @@ function buildMap(game, S) {
      room ground floor, one in the loft, one over each chalk, all dim until
      the generator runs. Muzzle flash borrows the last slot. */
   S.lamps = [];
-  const lamp = (x, y, z, intensity, color = 0xffb46a) => {
+  const lamp = (x, y, z, intensity, color = 0xffc98f) => {
     const l = game.light({ at: [x, y, z], color, intensity, radius: 9 });
     const shade = game.cone({ at: [x, y + 0.22, z], radius: 0.16, height: 0.18, material: MAT.steel, physics: false });
     shade.setRotation([180, 0, 0]);
     S.lamps.push({ light: l, full: intensity });
     return l;
   };
-  lamp(-1.5, 2.9, 0, 26);          // mess
-  lamp(-12, 2.9, 0, 26);           // generator room
-  lamp(3.3, 5.6, 0.6, 22);         // loft
-  lamp(1.5, 2.4, 3.9, 9, 0xcfe8ff);  // thompson chalk
-  lamp(-4.6, 2.4, 3.9, 9, 0xcfe8ff); // scatter chalk
+  lamp(-1.5, 2.9, 0, 115);          // mess
+  lamp(-12, 2.9, 0, 115);           // generator room
+  lamp(3.3, 5.6, 0.6, 100);         // loft
+  lamp(1.5, 2.4, 3.9, 55, 0xcfe8ff);  // thompson chalk
+  lamp(-4.6, 2.4, 3.9, 55, 0xcfe8ff); // scatter chalk
   // Cold moonlight spilling through the start-room window, so the first
   // thing that ever comes through it arrives as a silhouette.
-  game.light({ at: [-2.5, 2.2, -5.6], color: 0x9db8e8, intensity: 12, radius: 10 });
+  game.light({ at: [-2.5, 2.2, -5.6], color: 0x9db8e8, intensity: 45, radius: 11 });
+  // A whisper of ambient so unlit corners are gloom, not void.
+  game.renderer.sky.intensity = 1.5;
   setPower(game, S, false);
 }
 
@@ -418,7 +420,7 @@ function spawnBoard(game, w, slot, mat) {
 }
 
 function setPower(game, S, on) {
-  for (const L of S.lamps) L.light.intensity = on ? L.full : L.full * 0.38;
+  for (const L of S.lamps) L.light.intensity = on ? L.full : L.full * 0.45;
   S.powered = on;
 }
 
@@ -557,9 +559,9 @@ function updateViewmodel(game, P, dt, moving) {
   const dip = P.reloading > 0 ? Math.sin(Math.min(1, 1 - P.reloading / spec.reload) * Math.PI) * 0.09 : 0;
 
   const root = v.kind === 'single' ? v.actor : v.root;
-  const px = cam.position.x + f.x * 0.34 + right.x * (0.15 + bobX) + (0.0) - up.x * 0;
-  const py = cam.position.y - 0.17 + bobY - dip + f.y * 0.34;
-  const pz = cam.position.z + f.z * 0.34 + right.z * (0.15 + bobX);
+  const px = cam.position.x + f.x * 0.44 + right.x * (0.17 + bobX);
+  const py = cam.position.y - 0.19 + bobY - dip + f.y * 0.44;
+  const pz = cam.position.z + f.z * 0.44 + right.z * (0.17 + bobX);
   root.setPosition([px, py, pz]);
 
   // Gun +X aligns to camera forward; kick tips the muzzle up briefly.
@@ -604,7 +606,7 @@ function tryFire(game, S, P, hud, sfx, dt) {
   // Muzzle flash: light + sparks, one frame of each.
   if (P.muzzleWorld) {
     game.particles.sparks(P.muzzleWorld, { count: spec.pellets > 1 ? 14 : 8, speed: 5, color: 0xffd27a });
-    const fl = game.light({ at: P.muzzleWorld, color: spec.sfx === 'shotArc' ? 0x66d4ff : 0xffc061, intensity: 26, radius: 7 });
+    const fl = game.light({ at: P.muzzleWorld, color: spec.sfx === 'shotArc' ? 0x66d4ff : 0xffc061, intensity: 130, radius: 8 });
     fl.decay = 22;
   }
 
@@ -723,7 +725,7 @@ function routeTo(fromRoom, toRoom, S) {
 
 function buildPooledZombie(game, S, i) {
   const a = game.character({
-    at: [200 + i * 4, -38, 0],
+    at: [200 + i * 4, 1.1, 0],
     material: ZOMBIE_RAGS, skin: ZOMBIE_SKIN, seed: 20 + (i % 9),
     face: 'static',
   });
@@ -758,7 +760,7 @@ function parkZombie(game, S, z) {
   const b = z.actor.controller.body;
   b.gravityScale = 0;
   b.velocity.setScalar(0);
-  b.setPosition({ x: 200 + z.poolSlot * 4, y: -38, z: 0 });
+  b.setPosition({ x: 200 + z.poolSlot * 4, y: 1.1, z: 0 });
   z.actor.controller.move(0, 0);
 }
 
@@ -1069,7 +1071,7 @@ function openCrate(game, S, P, hud, sfx) {
   c.offer = disp;
   c.rise = 0;
   c.timer = 8;
-  c.glow = game.light({ at: [c.at[0], c.at[1] + 1, c.at[2]], color: 0x86e2ff, intensity: 8, radius: 5 });
+  c.glow = game.light({ at: [c.at[0], c.at[1] + 1, c.at[2]], color: 0x86e2ff, intensity: 70, radius: 6 });
   let spins = 0;
   c.spinInterval = setInterval(() => { sfx.crateSpin(); if (++spins > 10) { clearInterval(c.spinInterval); c.spinInterval = null; } }, 160);
 }
@@ -1306,6 +1308,7 @@ function start(opts = {}) {
   if (opts.test) startGame();
 
   game.onUpdate((dt) => {
+    if (window.__FREEZE) return;   // test/profiling hatch: engine only
     S.time += dt;
     const i = game.input;
     S.input.fireHeld = i.pointer.down || i.down(' ');
@@ -1392,7 +1395,7 @@ function start(opts = {}) {
     /* Lamp flicker: dying grid before power, breathing warmth after. */
     for (let li = 0; li < S.lamps.length; li++) {
       const L = S.lamps[li];
-      const base = S.powered ? L.full : L.full * 0.38;
+      const base = S.powered ? L.full : L.full * 0.45;
       const n = Math.sin(S.time * (S.powered ? 2.1 : 13) + li * 7.3) * 0.5 + Math.sin(S.time * 27 + li * 3.1) * 0.5;
       L.light.intensity = base * (S.powered ? 1 + n * 0.06 : Math.max(0.35, 0.8 + n * 0.35));
     }
