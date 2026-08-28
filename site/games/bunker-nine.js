@@ -79,6 +79,29 @@ const WEAPONS = {
     recoil: { up: 0.5, side: 0.4, climb: 0, recover: 12 },
     hands: { right: [-0.01, -0.036, 0.014], left: null },
   },
+  /* The two answers to plate. Both are melee, both are slow, and both are
+     mystery-box only — you do not get to plan for an armoured runner, you
+     get to be glad you happen to be holding one. */
+  ram: {
+    name: 'Battering Ram', slotName: 'BATTERING RAM',
+    dmg: 480, headMul: 1.0, mag: Infinity, reserve: Infinity, refire: 1.05,
+    reload: 0, auto: false, pellets: 1, spread: 0,
+    kick: 3.2, sfx: 'ramHit', melee: true, range: 2.6, heavy: true,
+    knockback: 9.5, sweep: 1.15,
+    sightH: 0.08, sightFov: 1.0, adsTime: 0.30,
+    recoil: { up: 2.2, side: 0.8, climb: 0, recover: 8 },
+    hands: { right: [-0.02, -0.055, -0.03], left: [0.10, -0.05, 0.12] },
+  },
+  shield: {
+    name: 'Riot Shield', slotName: 'RIOT SHIELD',
+    dmg: 190, headMul: 1.0, mag: Infinity, reserve: Infinity, refire: 0.58,
+    reload: 0, auto: false, pellets: 1, spread: 0,
+    kick: 1.4, sfx: 'shieldHit', melee: true, range: 2.1,
+    knockback: 5.0, sweep: 0.9, blocks: true,
+    sightH: 0.05, sightFov: 1.0, adsTime: 0.22,
+    recoil: { up: 0.9, side: 0.5, climb: 0, recover: 11 },
+    hands: { right: [-0.02, -0.045, -0.02], left: [0.02, -0.02, 0.10] },
+  },
   arc: {
     name: 'AX-9 Arc Projector', slotName: 'ARC PROJECTOR',
     dmg: 900, headMul: 1.0, mag: 6, reserve: 30, refire: 0.55,
@@ -234,6 +257,10 @@ function makeSfx(game) {
     shieldUp() { for (let i = 0; i < 3; i++) setTimeout(() => t(420 + i * 190, 0.14, 'sine', 0.09), i * 55); },
     perk() { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => t(f, 0.16, 'triangle', 0.1), i * 90)); },
     slide() { t(220, 0.3, 'sawtooth', 0.07); A.impact(0.3); },
+    ramHit() { A.impact(1); t(70, 0.28, 'sawtooth', 0.16); t(190, 0.12, 'square', 0.10); },
+    ramSwing() { t(230, 0.16, 'sine', 0.05); },
+    shieldHit() { A.impact(0.7); t(430, 0.10, 'square', 0.10); t(160, 0.16, 'sawtooth', 0.08); },
+    shieldBlock() { A.impact(0.45); t(620, 0.07, 'square', 0.09); t(300, 0.09, 'triangle', 0.06); },
     blast() { A.impact(1); t(48, 0.55, 'sawtooth', 0.20); t(120, 0.30, 'square', 0.13); t(1800, 0.10, 'sawtooth', 0.06); },
     pinPull() { t(1900, 0.03, 'square', 0.06); t(900, 0.04, 'square', 0.04); },
   };
@@ -652,6 +679,71 @@ function makeKnife(game, opts = {}) {
 
 /* A claw hammer. Handle, head, claw — held like a tool, not a gun, so it
    gets its own hand pose. */
+/* ---------------- riot shield ----------------
+   A polycarbonate slab in a steel frame, with a viewport band, two
+   handles and a bar across the back. It is carried, not swung: raised it
+   eats damage from the front, and a bash with its edge goes through plate
+   because nothing about a shield edge cares what a bullet cannot get
+   through. */
+function makeRiotShield(game, opts = {}) {
+  const frame = { color: 0x3d434a, texture: 'metal', roughness: 0.46, metalness: 1 };
+  const poly = { color: 0x8fa4b4, texture: 'smooth', roughness: 0.16, metalness: 0 };
+  const grip = { color: 0x1d1f22, texture: 'fabric', roughness: 0.9, metalness: 0 };
+  const stripe = { color: 0xc8ccd0, texture: 'smooth', roughness: 0.4, metalness: 0 };
+  const root = game.box({ at: opts.at || [0, 0, 0], size: 1, physics: false, visible: false });
+  const parts = [];
+  const add = (a, pos, rot) => { a.parent = root; a.setPosition(pos); if (rot) a.setRotation(rot); parts.push(a); return a; };
+  const W = 0.30, H = 0.50;
+  // The face, curved by three shallow panels rather than one flat slab.
+  add(game.box({ size: [W * 1.30, H * 2, 0.014], material: poly, physics: false }), [0, 0, 0.004]);
+  add(game.box({ size: [W * 0.36, H * 2, 0.014], material: poly, physics: false }), [ W * 0.80, 0, -0.020], [0, 22, 0]);
+  add(game.box({ size: [W * 0.36, H * 2, 0.014], material: poly, physics: false }), [-W * 0.80, 0, -0.020], [0, -22, 0]);
+  // Steel frame down both edges and across top and bottom.
+  for (const sx of [-1, 1]) add(game.box({ size: [0.026, H * 2, 0.030], material: frame, physics: false }), [sx * (W * 0.98), 0, -0.004]);
+  for (const sy of [-1, 1]) add(game.box({ size: [W * 2.0, 0.026, 0.030], material: frame, physics: false }), [0, sy * H, -0.004]);
+  // Viewport band, and the hazard stripe under it.
+  add(game.box({ size: [W * 1.9, 0.012, 0.020], material: frame, physics: false }), [0, H * 0.42, -0.006]);
+  add(game.box({ size: [W * 1.9, 0.012, 0.020], material: frame, physics: false }), [0, H * 0.16, -0.006]);
+  add(game.box({ size: [W * 1.7, 0.052, 0.006], material: stripe, physics: false }), [0, -H * 0.52, -0.014]);
+  // Handles and the forearm cuff on the back.
+  add(game.cylinder({ radius: 0.017, height: 0.150, material: grip, physics: false }), [-0.045, -0.045, -0.072], [90, 0, 0]);
+  add(game.cylinder({ radius: 0.013, height: 0.115, material: frame, physics: false }), [-0.045, 0.105, -0.062], [0, 0, 90]);
+  for (const sy of [-1, 1]) add(game.box({ size: [0.020, 0.052, 0.070], material: frame, physics: false }), [-0.045, 0.105 + sy * 0.052, -0.034]);
+  // Every group model in here hands back { root, parts }; the viewmodel
+  // code reads v.root, and a bare actor leaves it undefined.
+  return { root, parts, plate: parts[0] };
+}
+
+/* ---------------- battering ram ----------------
+   A steel cylinder on a frame with four grab handles and a capped head.
+   Slow, enormous, and the only thing in the map that will put an armoured
+   runner through a wall. */
+function makeBatteringRam(game, opts = {}) {
+  const steel = { color: 0x5b6068, texture: 'metal', roughness: 0.5, metalness: 1 };
+  const dark = { color: 0x2e3237, texture: 'metal', roughness: 0.62, metalness: 1 };
+  const grip = { color: 0x22242a, texture: 'fabric', roughness: 0.9, metalness: 0 };
+  const brass = { color: 0x9a7a3a, texture: 'metal', roughness: 0.34, metalness: 1 };
+  const root = game.box({ at: opts.at || [0, 0, 0], size: 1, physics: false, visible: false });
+  const parts = [];
+  const add = (a, pos, rot) => { a.parent = root; a.setPosition(pos); if (rot) a.setRotation(rot); parts.push(a); return a; };
+  // Body, pointing down +z.
+  add(game.cylinder({ radius: 0.062, height: 0.62, material: steel, physics: false }), [0, 0, 0.02], [90, 0, 0]);
+  // Reinforcing bands.
+  for (const z of [-0.16, 0.02, 0.20]) add(game.cylinder({ radius: 0.070, height: 0.030, material: dark, physics: false }), [0, 0, z], [90, 0, 0]);
+  // The head: a heavier cap with a brass ring behind it.
+  add(game.cylinder({ radius: 0.080, height: 0.11, material: dark, physics: false }), [0, 0, 0.375], [90, 0, 0]);
+  add(game.cylinder({ radius: 0.083, height: 0.016, material: brass, physics: false }), [0, 0, 0.312], [90, 0, 0]);
+  add(game.sphere({ radius: 0.074, material: dark, physics: false }), [0, 0, 0.424]);
+  // Two pairs of grab handles, offset so both hands have somewhere to go.
+  for (const z of [-0.10, 0.12]) for (const sx of [-1, 1]) {
+    add(game.cylinder({ radius: 0.020, height: 0.115, material: grip, physics: false }), [sx * 0.098, -0.010, z], [0, 0, 90]);
+    for (const sy of [-1, 1]) add(game.cylinder({ radius: 0.010, height: 0.062, material: steel, physics: false }), [sx * 0.070, -0.010, z + sy * 0.048], [0, 0, 90]);
+  }
+  // Butt cap.
+  add(game.cylinder({ radius: 0.068, height: 0.030, material: dark, physics: false }), [0, 0, -0.30], [90, 0, 0]);
+  return { root, parts };
+}
+
 function makeHammer(game, opts = {}) {
   const steel = { color: 0x6a6f75, texture: 'metal', roughness: 0.42, metalness: 1 };
   const wood = { color: 0x7a5a34, texture: 'wood', roughness: 0.74, metalness: 0, uvScale: 3 };
@@ -708,8 +800,11 @@ function makePlayer(game, S, hud, sfx, voice) {
       m1911: { mag: WEAPONS.m1911.mag, reserve: WEAPONS.m1911.reserve },
       knife: { mag: Infinity, reserve: Infinity },
       hammer: { mag: Infinity, reserve: Infinity },
+      ram: { mag: Infinity, reserve: Infinity },
+      shield: { mag: Infinity, reserve: Infinity },
     },
     nades: GRENADE.start, nadeCd: 0,
+    swingT: 0, blocking: false, blockT: 0,
     cooldown: 0, reloading: 0, reloadStage: 0, swayT: 0, kickPitch: 0,
     slideCycle: 0, slideCycleMax: 0.085,
     view: {}, muzzleT: 0, alive: true,
@@ -731,6 +826,8 @@ function makePlayer(game, S, hud, sfx, voice) {
   P.view.arc = Object.assign(makeArcProjector(game), { kind: 'group', muzzle: 0.52 });
   P.view.knife = Object.assign(makeKnife(game), { kind: 'group', muzzle: 0.26 });
   P.view.hammer = Object.assign(makeHammer(game), { kind: 'group', muzzle: 0.24 });
+  P.view.ram = Object.assign(makeBatteringRam(game), { kind: 'group', muzzle: 0.44 });
+  P.view.shield = Object.assign(makeRiotShield(game), { kind: 'group', muzzle: 0.30 });
   // Hands, parented to each weapon so they inherit its every motion.
   for (const [id, v] of Object.entries(P.view)) {
     const root = v.kind === 'single' ? v.actor : v.root;
@@ -867,6 +964,48 @@ function updateViewmodel(game, P, dt, moving) {
     root.setPosition([px + f.x * lunge, py + f.y * lunge - lunge * 0.25, pz + f.z * lunge]);
   }
 
+  /* Melee swings. Each weapon gets its own arc off one clock that counts
+     down from the moment of the strike, so the animation and the hit are
+     the same event rather than two things that happen near each other.
+
+       ram     hauled back past the shoulder, then driven straight forward
+               along the look vector — it is a thrust, not a swing
+       shield  turned edge-on and shoved, a short flat push
+       knife   a diagonal slash across the body */
+  const swingSpec = MELEE_SWING[P.equipped()];
+  if (swingSpec && P.swingT > 0) {
+    const u = 1 - P.swingT / swingSpec.time;          // 0 at the strike, 1 done
+    // Hard out, slow back.
+    const drive = u < swingSpec.out
+      ? Math.pow(u / swingSpec.out, 0.6)
+      : 1 - (u - swingSpec.out) / (1 - swingSpec.out);
+    if (swingSpec.thrust) {
+      const reach = drive * swingSpec.reach;
+      root.setPosition([px + f.x * reach, py + f.y * reach - 0.02 * (1 - drive), pz + f.z * reach]);
+      _vQuat2.setAxisAngle(_vAxisZ, -0.30 * (1 - drive));
+      _vQuat1.mulQuats(_vQuat1, _vQuat2);
+      root.setRotation(_vQuat1);
+    } else {
+      _vQuat2.setAxisAngle(_vAxisZ, swingSpec.arc * (drive - 0.35));
+      _vQuat1.mulQuats(_vQuat1, _vQuat2);
+      if (swingSpec.yaw) {
+        _vQuat2.setAxisAngle(_vAxisY, swingSpec.yaw * (0.5 - drive));
+        _vQuat1.mulQuats(_vQuat1, _vQuat2);
+      }
+      root.setRotation(_vQuat1);
+      const lunge = drive * swingSpec.reach;
+      root.setPosition([px + f.x * lunge, py + f.y * lunge, pz + f.z * lunge]);
+    }
+  } else if (P.equipped() === 'shield' && P.blocking) {
+    /* Raised: the face comes across the view and turns square to the front,
+       which is both the read and the hitbox. */
+    const b = P.blockT;
+    _vQuat2.setAxisAngle(_vAxisY, -0.55 * b);
+    _vQuat1.mulQuats(_vQuat1, _vQuat2);
+    root.setRotation(_vQuat1);
+    root.setPosition([px + f.x * 0.10 * b, py + 0.055 * b, pz + f.z * 0.10 * b]);
+  }
+
   /* Reciprocating slide. A half-sine over the cycle time: back hard, forward
      on the return, which is the shape the real thing traces. */
   const gunActor = v.kind === 'single' ? v.actor : v.root;
@@ -942,7 +1081,8 @@ function tryFire(game, S, P, hud, sfx, dt) {
   if (spec.melee) {
     P.cooldown = spec.refire;
     P.kickPitch = Math.min(3, P.kickPitch + spec.kick);
-    sfx.knife();
+    P.swingT = (MELEE_SWING[P.equipped()] || { time: 0.34 }).time;
+    if (spec.sfx === 'ramHit') sfx.ramSwing(); else sfx.knife();
     const cam0 = game.camera;
     const fw = _vTmp1.copy(cam0.target).sub(cam0.position).normalize();
     const hitM = game.raycast([cam0.position.x, cam0.position.y, cam0.position.z],
@@ -950,6 +1090,24 @@ function tryFire(game, S, P, hud, sfx, dt) {
       (b) => b !== P.actor.body && !b.isTrigger && !(b.userData && b.userData.bulletPassthrough));
     const zm = hitM && hitM.actor && hitM.actor.userData && hitM.actor.userData.zombie;
     if (zm && !zm.dead) {
+      if (sfx[spec.sfx]) sfx[spec.sfx]();
+      // A ram or a shield shoves what it hits, and a wide one catches more
+      // than the single body the ray found.
+      if (spec.knockback) {
+        for (const other of S.zombies) {
+          if (other.dead || other.parked) continue;
+          const op = other.actor.position;
+          const dx = op.x - P.actor.position.x, dz = op.z - P.actor.position.z;
+          const d = Math.hypot(dx, dz);
+          if (d > spec.range + 0.5 || d < 1e-4) continue;
+          const along = (dx / d) * fw.x + (dz / d) * fw.z;
+          if (along < spec.sweep - 1) continue;         // outside the arc
+          const b = other.actor.controller.body;
+          b.velocity.x += (dx / d) * spec.knockback;
+          b.velocity.z += (dz / d) * spec.knockback;
+          if (other !== zm) hurtZombie(game, S, other, spec.dmg * 0.55, [op.x, op.y + 0.9, op.z], false, 'melee');
+        }
+      }
       hurtZombie(game, S, zm, spec.dmg, hitM.point, false, spec.melee ? 'melee' : 'bullet');
       sfx.hitmark();
       hud.hitmark(false);
@@ -1161,6 +1319,19 @@ const ZOMBIE_SKIN = { color: 0x8d9c78, texture: 'skin', roughness: 0.88, metalne
    four copies of one man. 'walker' is the imported body; the rest dress the
    procedural one. */
 const MALE_LOOKS = ['walker', 'street', 'college', 'prison'];
+
+/* How each melee weapon moves. `out` is the fraction of the animation spent
+   driving forward; the rest is the recovery, which is always slower. */
+const MELEE_SWING = {
+  ram: { time: 0.95, out: 0.30, reach: 0.62, thrust: true },
+  shield: { time: 0.50, out: 0.34, reach: 0.34, arc: 0.5, yaw: 0.9 },
+  knife: { time: 0.34, out: 0.38, reach: 0.20, arc: 1.5, yaw: 1.1 },
+  hammer: { time: 0.40, out: 0.35, reach: 0.16, arc: 1.7 },
+};
+
+/* Raising the shield. It eats damage from the front and slows you down;
+   it does not make you invulnerable, and nothing gets blocked from behind. */
+const SHIELD_BLOCK = { arc: 0.55, slow: 0.45, raise: 6.0 };
 
 /* Grenades. The inner radius kills outright; between there and the outer
    one the blast wounds, and anything that lives through it inside legRadius
@@ -1801,7 +1972,7 @@ function updateZombie(game, S, P, z, dt, sfx) {
         z.attackT = PLAYER.attackCooldown;
         playZombieAnim(z, 'zattack', 0.05);
         z.anim = '';
-        hurtPlayer(game, S, P, z.dmg, sfx);
+        hurtPlayer(game, S, P, z.dmg, sfx, 'melee', pos);
       }
     } else {
       const route = routeTo(zr, pr, S);
@@ -1928,10 +2099,26 @@ function throwChunk(game, S, z, P, R, sfx, face) {
   sfx.spit();
 }
 
-function hurtPlayer(game, S, P, dmg, sfx, kind) {
+function hurtPlayer(game, S, P, dmg, sfx, kind, from) {
   if (!P.alive || S.godMode) return;
   if (P.shieldT > 0) return;                                   // nothing gets through
   if (kind === 'projectile' && P.perks.deflect) { sfx.deflect(); return; }
+  /* A raised riot shield stops what comes at its face. Only from the front:
+     the whole trade is that holding it costs you your back and half your
+     speed. */
+  if (P.blocking && P.blockT > 0.55 && from) {
+    const pp = P.actor.position;
+    const dx = from.x - pp.x, dz = from.z - pp.z;
+    const d = Math.hypot(dx, dz) || 1;
+    const fwd = game.camera ? { x: game.camera.target.x - game.camera.position.x, z: game.camera.target.z - game.camera.position.z } : null;
+    if (fwd) {
+      const fl = Math.hypot(fwd.x, fwd.z) || 1;
+      if (((dx / d) * (fwd.x / fl) + (dz / d) * (fwd.z / fl)) > SHIELD_BLOCK.arc) {
+        sfx.shieldBlock();
+        return;
+      }
+    }
+  }
   P.hp -= dmg;
   P.lastHit = S.time;
   sfx.hurt();
@@ -2156,13 +2343,20 @@ function openCrate(game, S, P, hud, sfx) {
   const c = S.crate;
   c.busy = true;
   const roll = Math.random();
-  c.offerId = roll < 0.38 ? 'thompson' : roll < 0.72 ? 'scatter' : 'arc';
+  /* The melee pair only turn up once the generator is running, so the
+     answer to armour arrives at roughly the round armour does. */
+  c.offerId = S.powered
+    ? (roll < 0.26 ? 'thompson' : roll < 0.50 ? 'scatter' : roll < 0.68 ? 'arc'
+      : roll < 0.85 ? 'ram' : 'shield')
+    : (roll < 0.38 ? 'thompson' : roll < 0.72 ? 'scatter' : 'arc');
   S.voice(LINES.crateOpen);
   // Lid swings, the prize rises out of the box glowing.
   c.lid.setRotation([0, 0, -70]);
   c.lid.setPosition([c.at[0] - 0.45, c.at[1] + 0.75, c.at[2]]);
   let disp;
   if (c.offerId === 'thompson') { const t = game.thompson({ physics: false }); disp = { root: t, parts: t.wood ? [t.wood] : [] }; }
+  else if (c.offerId === 'ram') disp = makeBatteringRam(game);
+  else if (c.offerId === 'shield') disp = makeRiotShield(game);
   else if (c.offerId === 'scatter') disp = makeScattergun(game);
   else disp = makeArcProjector(game);
   disp.root.setPosition([c.at[0], c.at[1] + 0.2, c.at[2]]);
@@ -2547,7 +2741,8 @@ function start(opts = {}) {
         sfx.slide();
       }
 
-      const perkSpeed = (P.perks.adrenaline ? 1.42 : 1) * (P.perks.supersoldier ? 1.12 : 1);
+      const perkSpeed = (P.perks.adrenaline ? 1.42 : 1) * (P.perks.supersoldier ? 1.12 : 1)
+        * (1 - SHIELD_BLOCK.slow * P.blockT);
       const knifeSpeed = P.equipped() === 'knife' ? 1.30 : 1;
       let base = P.adsWant ? PLAYER.adsSpeed : PLAYER.walkSpeed;
       P.actor.controller.runSpeed = PLAYER.sprintSpeed * perkSpeed * knifeSpeed;
@@ -2576,6 +2771,10 @@ function start(opts = {}) {
       hud.aim(P.ads, P.sprinting);
 
       if (i.justPressed('r') || pad.pressed.x) tryReload(P, sfx);
+      P.swingT = Math.max(0, P.swingT - dt);
+      /* Aim, on a shield, means put it between you and them. */
+      P.blocking = P.equipped() === 'shield' && S.input.aimHeld && P.swingT <= 0;
+      P.blockT += ((P.blocking ? 1 : 0) - P.blockT) * Math.min(1, dt * SHIELD_BLOCK.raise);
       P.nadeCd = Math.max(0, P.nadeCd - dt);
       if ((i.justPressed('t') || pad.pressed.lb) && P.nadeCd <= 0 && P.nades > 0) {
         P.nadeCd = 0.55;
@@ -2880,5 +3079,9 @@ async function preload(base) {
   return !!WALKER;
 }
 
-window.BUNKER = { start, preload, WEAPONS, ECONOMY, LINES, CAST };
+window.BUNKER = {
+  start, preload, WEAPONS, ECONOMY, LINES, CAST,
+  // Exposed so the models can be inspected on their own, outside the map.
+  models: { makeRiotShield, makeBatteringRam, makeHammer, makeKnife, makeScattergun, makeArcProjector },
+};
 })();
