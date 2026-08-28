@@ -234,6 +234,8 @@ function makeSfx(game) {
     shieldUp() { for (let i = 0; i < 3; i++) setTimeout(() => t(420 + i * 190, 0.14, 'sine', 0.09), i * 55); },
     perk() { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => t(f, 0.16, 'triangle', 0.1), i * 90)); },
     slide() { t(220, 0.3, 'sawtooth', 0.07); A.impact(0.3); },
+    blast() { A.impact(1); t(48, 0.55, 'sawtooth', 0.20); t(120, 0.30, 'square', 0.13); t(1800, 0.10, 'sawtooth', 0.06); },
+    pinPull() { t(1900, 0.03, 'square', 0.06); t(900, 0.04, 'square', 0.04); },
   };
 }
 
@@ -429,6 +431,18 @@ function buildMap(game, S) {
     { id: 'thompson', at: [-0.9, 1.4, M.z1 - 0.3], weapon: 'thompson', label: 'Thompson' },
     { id: 'scatter', at: [-4.6, 1.4, M.z1 - 0.3], weapon: 'scatter', label: 'Scattergun' },
   ];
+
+  /* Grenade crate, stencilled and open, on the wall between the two guns. */
+  const nadeAt = [-2.75, 1.05, M.z1 - 0.26];
+  game.box({ at: nadeAt, size: [0.52, 0.34, 0.30], static: true,
+    material: { color: 0x4c5340, texture: 'wood', roughness: 0.92, uvScale: 3 } });
+  game.box({ at: [nadeAt[0], nadeAt[1] + 0.19, nadeAt[2] - 0.02], size: [0.54, 0.05, 0.32], static: true,
+    material: { color: 0x3e4436, texture: 'wood', roughness: 0.92, uvScale: 3 } });
+  for (let k = 0; k < 3; k++) {
+    game.sphere({ at: [nadeAt[0] - 0.15 + k * 0.15, nadeAt[1] + 0.24, nadeAt[2] + 0.02], radius: 0.052,
+      physics: false, material: { color: 0x3f4a33, texture: 'metal', roughness: 0.62, metalness: 1 } });
+  }
+  S.nadeBuy = { at: nadeAt };
 
   /* The generator, and the wall panel that wakes it.
 
@@ -695,6 +709,7 @@ function makePlayer(game, S, hud, sfx, voice) {
       knife: { mag: Infinity, reserve: Infinity },
       hammer: { mag: Infinity, reserve: Infinity },
     },
+    nades: GRENADE.start, nadeCd: 0,
     cooldown: 0, reloading: 0, reloadStage: 0, swayT: 0, kickPitch: 0,
     slideCycle: 0, slideCycleMax: 0.085,
     view: {}, muzzleT: 0, alive: true,
@@ -1147,6 +1162,20 @@ const ZOMBIE_SKIN = { color: 0x8d9c78, texture: 'skin', roughness: 0.88, metalne
    procedural one. */
 const MALE_LOOKS = ['walker', 'street', 'college', 'prison'];
 
+/* Grenades. The inner radius kills outright; between there and the outer
+   one the blast wounds, and anything that lives through it inside legRadius
+   loses its legs and comes on as a crawler — which is what the outer edge of
+   a frag does to something that no longer bleeds out. Late rounds have so
+   much health that the blast never kills, and that is the point: past a
+   certain round grenades stop being a clear and start being a way to put a
+   whole group on the floor. */
+const GRENADE = {
+  start: 2, max: 4, cost: 750, fuse: 2.9,
+  throwSpeed: 14.5, grav: 19.6, bounce: 0.34,
+  damage: 1400, killRadius: 2.4, outerRadius: 5.6, legRadius: 4.6,
+  playerDamage: 55, playerRadius: 3.4,
+};
+
 const RAG_COLORS = [0x6f6c5c, 0x7a6a52, 0x5e6355, 0x83795f,
                     0x615c4e, 0x726446, 0x555a4d, 0x7d7460];
 /* Dead skin, darker than it wants to be. The procedural skin texture warms
@@ -1516,8 +1545,14 @@ function spawnZombie(game, S, win, forceVariant) {
     tearT: 0, attackT: 0, groanT: 1 + Math.random() * 3, stuckT: 0, lastPos: null,
     vault: null, spitT: 1 + Math.random() * 2, anim: '',
     ripStage: 0, ripT: 0, throwT: 0, ripFace: false,
+    legless: false,
   });
   healWounds(z);
+  // A body coming back out of the pool has its legs again.
+  if (z.actor.skeleton) for (const nm of ['lowerLegL', 'lowerLegR']) {
+    const bn = z.actor.skeleton.bone(nm);
+    if (bn) bn.localScale.set(1, 1, 1);
+  }
   // Crawlers ride a shorter capsule so the folded body sits on the floor.
   z.actor.controller.height = V.crawl ? V.height : 1.75;
   for (let k = 1; k < z.eyes.length; k += 2) {
@@ -1591,6 +1626,7 @@ function applyPowerup(game, S, P, hud, sfx) {
   hud.banner(def.label, '#' + def.color.toString(16).padStart(6, '0'));
   if (pu.kind === 'maxammo') {
     for (const id of Object.keys(P.ammo)) { P.ammo[id].mag = WEAPONS[id].mag; P.ammo[id].reserve = WEAPONS[id].reserve; }
+    P.nades = GRENADE.max;
     hud.ammo(P);
   } else if (pu.kind === 'blitz') {
     let n = 0;
@@ -1865,6 +1901,81 @@ function hurtPlayer(game, S, P, dmg, sfx, kind) {
   }
 }
 
+/* A grenade in the air: thrown along the look vector, bounces off whatever
+   it hits, and goes off on its fuse rather than on contact. */
+function throwGrenade(game, S, P, sfx) {
+  if (P.nades <= 0 || !P.alive) return;
+  P.nades--;
+  const cam = game.camera;
+  const f = _vTmp1.copy(cam.target).sub(cam.position).normalize();
+  const a = game.sphere({
+    at: [cam.position.x + f.x * 0.45, cam.position.y + f.y * 0.45 - 0.08, cam.position.z + f.z * 0.45],
+    radius: 0.055, physics: false,
+    material: { color: 0x3f4a33, texture: 'metal', roughness: 0.62, metalness: 1 },
+  });
+  S.grenades.push({
+    actor: a, t: GRENADE.fuse, spin: 9,  rot: 0,
+    vel: [f.x * GRENADE.throwSpeed, f.y * GRENADE.throwSpeed + 2.2, f.z * GRENADE.throwSpeed],
+  });
+  sfx.magRelease();
+}
+
+/* Take a zombie's legs off. It keeps its health and its points value; it
+   simply cannot stand up any more. The shins are collapsed on the skeleton
+   rather than the mesh being rebuilt, so it costs nothing and the crawl
+   clip drives what is left. */
+function makeCrawler(game, S, z) {
+  if (z.dead || z.legless) return;
+  z.legless = true;
+  z.kind = 'crawler';
+  z.V = VARIANTS.crawler;
+  z.moveClip = 'zcrawl';
+  z.anim = '';
+  z.speed = VARIANTS.crawler.speed[0] + Math.random() * (VARIANTS.crawler.speed[1] - VARIANTS.crawler.speed[0]);
+  z.actor.controller.moveSpeed = z.speed;
+  z.actor.controller.runSpeed = z.speed;
+  z.actor.controller.height = VARIANTS.crawler.height;
+  const sk = z.actor.skeleton;
+  if (sk) for (const n of ['lowerLegL', 'lowerLegR']) {
+    const b = sk.bone(n);
+    if (b) b.localScale.set(0.02, 0.02, 0.02);
+  }
+  const p = z.actor.position;
+  game.particles.sparks([p.x, p.y + 0.2, p.z], { count: 18, speed: 4.2, color: 0x8a1a12, colorEnd: 0x2c0605 });
+  for (let i = 0; i < 2; i++) {
+    game.box({
+      at: [p.x + (Math.random() - 0.5) * 0.4, p.y + 0.25, p.z + (Math.random() - 0.5) * 0.4],
+      size: [0.10, 0.30, 0.10], material: { color: 0x5a120c, texture: 'smooth', roughness: 0.7 },
+      lifetime: 2.4, velocity: [(Math.random() - 0.5) * 4, 2.2 + Math.random() * 2, (Math.random() - 0.5) * 4],
+    });
+  }
+  playZombieAnim(z, 'zcrawl', 0.12);
+}
+
+function detonate(game, S, P, at, sfx) {
+  game.particles.sparks(at, { count: 42, speed: 9, color: 0xffd27a, colorEnd: 0x5a1e08 });
+  game.particles.smoke(at, { count: 14, color: 0x4a4640 });
+  const fl = game.light({ at, color: 0xffca7a, intensity: 26, range: 11 });
+  fl._decay = 0.09;
+  sfx.blast();
+  game.audio.impact(1);
+  for (const z of S.zombies) {
+    if (z.dead || z.parked) continue;
+    const p = z.actor.position;
+    const d = Math.hypot(p.x - at[0], p.y + 0.9 - at[1], p.z - at[2]);
+    if (d > GRENADE.outerRadius) continue;
+    const fall = Math.pow(1 - d / GRENADE.outerRadius, 1.5);
+    const dmg = d < GRENADE.killRadius ? 1e6 : GRENADE.damage * fall;
+    hurtZombie(game, S, z, dmg, [p.x, p.y + 0.9, p.z], false);
+    if (!z.dead && d < GRENADE.legRadius) makeCrawler(game, S, z);
+  }
+  const pp = P.actor.position;
+  const pd = Math.hypot(pp.x - at[0], pp.y - at[1], pp.z - at[2]);
+  if (pd < GRENADE.playerRadius) {
+    hurtPlayer(game, S, P, GRENADE.playerDamage * (1 - pd / GRENADE.playerRadius), sfx, 'blast');
+  }
+}
+
 /* ---------------- interaction ---------------- */
 
 function nearestInteract(S, P) {
@@ -1877,6 +1988,10 @@ function nearestInteract(S, P) {
       const cost = owned ? ECONOMY.wallAmmo : ECONOMY.wallGun;
       return { kind: 'buy', buy: b, cost, label: `${b.label} — ${owned ? 'AMMO ' : ''}${cost}` };
     }
+  }
+  if (S.nadeBuy && dist2d(p, { x: S.nadeBuy.at[0], z: S.nadeBuy.at[2] }) < R && Math.abs(p.y - 1) < 2) {
+    if (P.nades >= GRENADE.max) return { kind: 'nadeFull', cost: 0, label: 'Grenades — full', inert: true };
+    return { kind: 'nades', cost: GRENADE.cost, label: `Grenades — ${GRENADE.cost}` };
   }
   for (const st of S.perkStations) {
     if (dist2d(p, { x: st.at[0], z: st.at[2] }) < R && Math.abs(p.y - st.at[1]) < 2.2) {
@@ -1910,6 +2025,14 @@ function nearestInteract(S, P) {
 function doInteract(game, S, P, hud, sfx, it, dt) {
   if (it.inert) return;
   if (it.cost > S.points) { sfx.denied(); hud.prompt(it.label + '  — need more points', true); return; }
+  if (it.kind === 'nades') {
+    S.points -= it.cost;
+    P.nades = GRENADE.max;
+    sfx.buy();
+    hud.ammo(P);
+    hud.points(S.points);
+    return;
+  }
   if (it.kind === 'perk') {
     S.points -= it.cost;
     P.perks[it.st.id] = true;
@@ -2102,7 +2225,11 @@ function makeHud() {
     round(n) { els.round.textContent = n; els.round.classList.remove('flick'); void els.round.offsetWidth; els.round.classList.add('flick'); },
     points(n) { els.points.textContent = n; },
     pointsDelta(n) { pdAcc += n; els.pdelta.textContent = '+' + pdAcc; els.pdelta.style.opacity = 1; clearTimeout(pdTimer); pdTimer = setTimeout(() => { els.pdelta.style.opacity = 0; pdAcc = 0; }, 700); },
-    ammo(P) { const am = P.ammoFor(P.equipped()); els.ammo.textContent = `${am.mag} / ${am.reserve}`; els.wname.textContent = P.spec().slotName; },
+    ammo(P) {
+      const am = P.ammoFor(P.equipped());
+      els.ammo.textContent = `${am.mag} / ${am.reserve}`;
+      els.wname.textContent = P.spec().slotName + (P.nades > 0 ? `   ✚${P.nades}` : '');
+    },
     flashWeapon(name) { els.wname.textContent = name; },
     prompt(text, warn) {
       if (!text) { els.prompt.style.display = 'none'; return; }
@@ -2252,6 +2379,7 @@ function start(opts = {}) {
     testMode: !!opts.test, godMode: false,
     input: { fireHeld: false, firePressed: false, aimHeld: false, sprintHeld: false },
     testHold: {},
+    grenades: [],
   };
   S.addPoints = (n) => { const a = Math.round(n * S.mul); S.points += a; return a; };
 
@@ -2401,6 +2529,13 @@ function start(opts = {}) {
       hud.aim(P.ads, P.sprinting);
 
       if (i.justPressed('r') || pad.pressed.x) tryReload(P, sfx);
+      P.nadeCd = Math.max(0, P.nadeCd - dt);
+      if ((i.justPressed('t') || pad.pressed.lb) && P.nadeCd <= 0 && P.nades > 0) {
+        P.nadeCd = 0.55;
+        sfx.pinPull();
+        throwGrenade(game, S, P, sfx);
+        hud.ammo(P);
+      }
 
       /* Hammer while building. It takes the weapon's place for as long as
          the hold lasts, which is why boarding up costs you your gun. The
@@ -2540,6 +2675,39 @@ function start(opts = {}) {
         continue;
       }
       pr.actor.setPosition([nx, ny, nz]);
+    }
+
+    /* Grenades: thrown, bounced, and off on the fuse rather than on
+       contact, so one can be rolled round a corner or bounced off a wall
+       into a group. */
+    for (let k = S.grenades.length - 1; k >= 0; k--) {
+      const gr = S.grenades[k];
+      gr.t -= dt;
+      gr.vel[1] -= GRENADE.grav * dt;
+      const q = gr.actor.position;
+      let nx = q.x + gr.vel[0] * dt, ny = q.y + gr.vel[1] * dt, nz = q.z + gr.vel[2] * dt;
+      const seg = Math.hypot(nx - q.x, ny - q.y, nz - q.z) || 1e-5;
+      const hit = game.raycast([q.x, q.y, q.z], [(nx - q.x) / seg, (ny - q.y) / seg, (nz - q.z) / seg], seg + 0.06,
+        (b) => !b.isTrigger && !(b.userData && b.userData.zombie) && b !== P.actor.body);
+      if (hit) {
+        // Reflect off the surface and lose most of the energy to it.
+        const nvec = hit.normal || { x: 0, y: 1, z: 0 };
+        const dot = gr.vel[0] * nvec.x + gr.vel[1] * nvec.y + gr.vel[2] * nvec.z;
+        gr.vel[0] = (gr.vel[0] - 2 * dot * nvec.x) * GRENADE.bounce;
+        gr.vel[1] = (gr.vel[1] - 2 * dot * nvec.y) * GRENADE.bounce;
+        gr.vel[2] = (gr.vel[2] - 2 * dot * nvec.z) * GRENADE.bounce;
+        nx = hit.point.x + nvec.x * 0.07; ny = hit.point.y + nvec.y * 0.07; nz = hit.point.z + nvec.z * 0.07;
+        if (Math.hypot(gr.vel[0], gr.vel[1], gr.vel[2]) > 1.2) game.audio.impact(0.22);
+      }
+      if (ny < 0.06) { ny = 0.06; gr.vel[1] = Math.abs(gr.vel[1]) * GRENADE.bounce; }
+      gr.rot += gr.spin * dt;
+      gr.actor.setPosition([nx, ny, nz]);
+      gr.actor.setRotation([gr.rot * 57.3, gr.rot * 41, 0]);
+      if (gr.t <= 0) {
+        detonate(game, S, P, [nx, ny, nz], sfx);
+        gr.actor.destroy();
+        S.grenades.splice(k, 1);
+      }
     }
 
     /* Torn boards tumble. */
