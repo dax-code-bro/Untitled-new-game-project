@@ -1092,22 +1092,42 @@ function buildMap(game, S) {
      the top of a wall reads as daylight through a crack. A timber that is
      actually there is a better answer than chasing the rasteriser. */
   {
-    const CY = R.y0, TH = 0.16, DP = 0.12;
-    const beam = { color: 0x6b5133, texture: 'wood', roughness: 0.86, metalness: 0, uvScale: 6 };
-    // Main room, all four walls, inside faces.
-    slab(M.x0, M.x1, CY - TH, CY + 0.02, M.z0, M.z0 + DP, beam);
-    slab(M.x0, M.x1, CY - TH, CY + 0.02, M.z1 - DP, M.z1, beam);
-    slab(M.x0, M.x0 + DP, CY - TH, CY + 0.02, M.z0, M.z1, beam);
-    slab(M.x1 - DP, M.x1, CY - TH, CY + 0.02, M.z0, M.z1, beam);
+    /* A soffit, not a moulding. Deep enough and dark enough to occlude the
+       junction itself from anywhere below it.
+
+       The wall meets the slab in a line that renders bright whatever the
+       geometry does — overlapped, butted, capped with a shallow beam, it
+       came back every time, and a bright straight line at the top of a wall
+       reads as daylight through a crack no matter what is actually causing
+       it. Thirty centimetres of dark timber standing proud of the wall puts
+       the whole junction behind something solid. */
+    const CY = R.y0, TH = 0.30, DP = 0.30;
+    const beam = { color: 0x4a3722, texture: 'wood', roughness: 0.92, metalness: 0, uvScale: 5 };
+    const face = { color: 0x3a2b1a, texture: 'wood', roughness: 0.94, metalness: 0, uvScale: 4 };
+    // Main room, all four walls. Top buried a full ten centimetres into the
+    // slab so no edge of it lands anywhere near the junction line.
+    const run = (x0, x1, z0, z1) => {
+      slab(x0, x1, CY - TH, CY + 0.10, z0, z1, beam);
+      // A fascia hanging below the soffit's outer edge, which is what makes
+      // it read as built rather than as a stripe of darker wall.
+      slab(x0, x1, CY - TH - 0.06, CY - TH + 0.02, z0, z1, face);
+    };
+    /* Everywhere except over the stair. The soffit hangs to 2.99 and the
+       flight climbs to 3.6, so a course carried across the stairwell is a
+       beam through the top four treads and the landing you step onto. */
+    run(M.x0, SLOT.x0 - 0.1, M.z0, M.z0 + DP);        // back wall, west of the slot
+    run(M.x0, M.x1, M.z1 - DP, M.z1);                 // front wall
+    run(M.x0, M.x0 + DP, M.z0, M.z1);                 // west wall
+    run(M.x1 - DP, M.x1, SLOT.z1, M.z1);              // east wall, south of the slot
     // Joists across the short way, clear of the stair slot.
     for (let x = M.x0 + 2.2; x < SLOT.x0 - 0.4; x += 2.2) {
-      slab(x - 0.09, x + 0.09, CY - TH * 0.8, CY + 0.02, M.z0, M.z1, beam);
+      slab(x - 0.10, x + 0.10, CY - 0.26, CY + 0.10, M.z0, M.z1, beam);
     }
     // The wing gets the same treatment.
     const WY = SD.y1 - 0.11;
-    slab(SD.x0, SD.x1, WY - TH, WY + 0.02, SD.z0, SD.z0 + DP, beam);
-    slab(SD.x0, SD.x1, WY - TH, WY + 0.02, SD.z1 - DP, SD.z1, beam);
-    slab(SD.x0, SD.x0 + DP, WY - TH, WY + 0.02, SD.z0, SD.z1, beam);
+    slab(SD.x0, SD.x1, WY - TH, WY + 0.10, SD.z0, SD.z0 + DP, beam);
+    slab(SD.x0, SD.x1, WY - TH, WY + 0.10, SD.z1 - DP, SD.z1, beam);
+    slab(SD.x0, SD.x0 + DP, WY - TH, WY + 0.10, SD.z0, SD.z1, beam);
   }
 
   /* ---------------- doors ---------------- */
@@ -1310,15 +1330,25 @@ function buildMap(game, S) {
   /* ---------------- light ---------------- */
   S.lamps = [];
   const lamp = (x, y, z, intensity, color = 0xffc98f) => {
-    const l = game.light({ at: [x, y, z], color, intensity, radius: 9 });
-    const shade = game.cone({ at: [x, y + 0.22, z], radius: 0.16, height: 0.18, material: MAT.steel, physics: false });
+    const l = game.light({ at: [x, y, z], color, intensity, radius: 8 });
+    const shade = game.cone({ at: [x, y + 0.20, z], radius: 0.17, height: 0.20, material: MAT.steel, physics: false });
     shade.setRotation([180, 0, 0]);
+    // Flex up to the slab, and the bulb under the shade.
+    const drop = Math.max(0.05, R.y0 - (y + 0.30));
+    game.cylinder({ at: [x, y + 0.30 + drop / 2, z], radius: 0.011, height: drop,
+      material: { color: 0x1d1f22, texture: 'fabric', roughness: 0.9 }, physics: false });
+    game.sphere({ at: [x, y + 0.04, z], radius: 0.055, physics: false, material: {
+      color: 0x2a2412, texture: 'smooth', roughness: 0.25, emissive: 0xffd9a0, emissiveStrength: 2.6 } });
     S.lamps.push({ light: l, full: intensity });
     return l;
   };
-  lamp(-1.0, 3.0, 0.5, 115);
-  lamp(3.6, 3.0, 4.0, 95);
-  lamp(-12.4, 3.0, 1.2, 105);
+  /* Hung well clear of the deck. At 3.0 they sat twenty-nine centimetres
+     under a ceiling at 3.29, which blew the underside of the slab to white
+     — and a white ceiling meeting a darker wall reads as a strip of daylight
+     coming through a gap, which is exactly what it was mistaken for. */
+  lamp(-1.0, 2.42, 0.5, 88);
+  lamp(3.6, 2.42, 4.0, 74);
+  lamp(-12.4, 2.42, 1.2, 80);
   lamp(-2.0, 2.4, M.z0 + 1.4, 55, 0xcfe8ff);
   lamp(-5.4, 2.4, M.z0 + 1.4, 55, 0xcfe8ff);
   lamp(SD.x0 + 1.3, 2.4, 0.6, 48, 0xcfe8ff);
