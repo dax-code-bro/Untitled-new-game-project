@@ -3493,9 +3493,31 @@ class Renderer {
   }
 
   _bindLights(sh) {
-    const n = Math.min(this.lights.length, 8);
+    /* Eight lights reach the shader, and which eight matters. Taking them
+       in creation order means a scene with eight static lights anywhere in
+       the world leaves nothing for a muzzle flash at the camera, and a room
+       lit by a lamp on the far side of the map is lit by nothing at all.
+       Nearest to the camera wins instead, which is both what a player
+       notices and what a light can actually reach. */
+    const all = this.lights;
+    let list = all;
+    if (all.length > 8) {
+      const cam = this.camera ? this.camera.position : null;
+      if (cam) {
+        if (!this._lightSort || this._lightSort.length !== all.length) this._lightSort = new Array(all.length);
+        for (let i = 0; i < all.length; i++) {
+          const l = all[i];
+          const dx = l.position.x - cam.x, dy = l.position.y - cam.y, dz = l.position.z - cam.z;
+          // Bias by reach: a bright, wide light matters further away.
+          this._lightSort[i] = { l, d: (dx * dx + dy * dy + dz * dz) - (l.radius || 0) * (l.radius || 0) };
+        }
+        this._lightSort.sort((a, b) => a.d - b.d);
+        list = this._lightSort.slice(0, 8).map((e) => e.l);
+      }
+    }
+    const n = Math.min(list.length, 8);
     for (let i = 0; i < n; i++) {
-      const l = this.lights[i];
+      const l = list[i];
       this._lightPos[i * 4] = l.position.x;
       this._lightPos[i * 4 + 1] = l.position.y;
       this._lightPos[i * 4 + 2] = l.position.z;

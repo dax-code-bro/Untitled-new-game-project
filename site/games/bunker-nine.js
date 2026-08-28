@@ -379,8 +379,11 @@ const MAP = {
   door1: { x: -6.6, z0: -0.3, z1: 1.3, h: 2.4 },            // MESS <-> GEN
   stair: { z0: 2.9, z1: 4.3, x0: 1.0, x1: 5.7, top: 3.1 },  // MESS -> LOFT
   // Down from the mess, behind a steel door that shuts on its own.
-  down: { x0: -5.6, x1: -3.4, z0: 2.6, z1: 4.2, floor: -3.4 },
-  shop: { x0: -12.0, x1: -3.0, z0: -1.2, z1: 4.2, y0: -3.5, y1: -0.6 },
+  /* The flight needs a run, not a shaft. Three and a half metres of drop
+     down 1.6 of floor is a 60-degree ladder with a 14 cm tread, which a
+     capsule catches on all the way down. Longer run, shallower room. */
+  down: { x0: -5.6, x1: -3.4, z0: 0.9, z1: 4.2, floor: -2.9 },
+  shop: { x0: -12.0, x1: -3.0, z0: -1.2, z1: 4.2, y0: -2.9, y1: -0.6 },
 };
 
 const WINDOWS = [
@@ -436,8 +439,43 @@ function buildMap(game, S) {
   const M = MAP.mess, G = MAP.gen, L = MAP.loft;
 
   /* Ground, and the bunker floor pad. */
-  game.ground({ material: { color: 0x3d3a33, texture: 'dirt', roughness: 0.97 }, size: 90 });
-  slab(G.x0 - 0.4, M.x1 + 0.4, -0.05, 0.02, M.z0 - 0.4, M.z1 + 0.4, MAT.floor);
+  /* The ground is drawn but does not collide. An infinite plane at y = 0 is
+     the floor under everything in the world, which is why the first
+     basement was sealed off no matter how many holes were cut in the
+     bunker's own floor above it — the stairwell was under the plane. The
+     collision is four slabs instead, with the stairwell left out. */
+  game.ground({ material: { color: 0x3d3a33, texture: 'dirt', roughness: 0.97 }, size: 90, physics: false });
+  {
+    const H = MAP.down, E = 60;
+    slab(-E, E, -0.6, 0.0, -E, H.z0, MAT.wallDark);
+    slab(-E, E, -0.6, 0.0, H.z1, E, MAT.wallDark);
+    slab(-E, H.x0, -0.6, 0.0, H.z0, H.z1, MAT.wallDark);
+    slab(H.x1, E, -0.6, 0.0, H.z0, H.z1, MAT.wallDark);
+  }
+  /* The floor, in four pieces around the stairwell. One slab across the
+     whole bunker is simpler and seals the basement off completely — the
+     stairs were built underneath a solid lid. */
+  {
+    const H = MAP.down;
+    const fx0 = G.x0 - 0.4, fx1 = M.x1 + 0.4, fz0 = M.z0 - 0.4, fz1 = M.z1 + 0.4;
+    slab(fx0, fx1, -0.05, 0.02, fz0, H.z0, MAT.floor);
+    slab(fx0, fx1, -0.05, 0.02, H.z1, fz1, MAT.floor);
+    slab(fx0, H.x0, -0.05, 0.02, H.z0, H.z1, MAT.floor);
+    slab(H.x1, fx1, -0.05, 0.02, H.z0, H.z1, MAT.floor);
+    // A lip round the opening so you can see it is a hole, not a seam.
+    for (const [ax0, ax1, az0, az1] of [
+      [H.x0 - 0.12, H.x1 + 0.12, H.z0 - 0.12, H.z0], [H.x0 - 0.12, H.x1 + 0.12, H.z1, H.z1 + 0.12],
+      [H.x0 - 0.12, H.x0, H.z0, H.z1], [H.x1, H.x1 + 0.12, H.z0, H.z1],
+    ]) slab(ax0, ax1, 0.02, 0.10, az0, az1, MAT.steel);
+    // Handrail down both sides of the opening.
+    for (const rx of [H.x0 - 0.06, H.x1 + 0.06]) {
+      game.cylinder({ at: [rx, 0.98, (H.z0 + H.z1) / 2], radius: 0.028, height: H.z1 - H.z0,
+        material: MAT.steel, static: true, rotation: [90, 0, 0] });
+      for (const rz of [H.z0 + 0.2, (H.z0 + H.z1) / 2, H.z1 - 0.2]) {
+        game.cylinder({ at: [rx, 0.52, rz], radius: 0.022, height: 0.92, material: MAT.steel, static: true });
+      }
+    }
+  }
 
   /* MESS shell. North wall holds W1; east wall holds W2 low and W5 high. */
   wallX(M.z0 - 0.4, M.z0, M.x0, M.x1 + 0.4, L.y1, [WINDOWS[0].wx]);        // north, full height (loft shares it)
@@ -573,30 +611,45 @@ function buildMap(game, S) {
     slab(D.x1, D.x1 + 0.4, D.floor, 0.02, D.z0 - 0.4, D.z1 + 0.4, MAT.wallDark);
     slab(D.x0 - 0.4, D.x1 + 0.4, D.floor, 0.02, D.z1, D.z1 + 0.4, MAT.wallDark);
     // Steps down.
-    const steps = 14;
+    /* Steps run down toward -z, so you come off the mess floor at the far
+       edge of the opening and arrive at the bottom facing the room, with
+       the door as the threshold rather than a frame standing in the middle
+       of the floor. */
+    const steps = 12;
     for (let k = 0; k < steps; k++) {
       const y = -0.02 - (k + 1) * (Math.abs(D.floor) / steps);
-      const z0 = D.z0 + (D.z1 - D.z0) * (k / steps);
-      slab(D.x0, D.x1, y, y + 0.20, z0, z0 + (D.z1 - D.z0) / steps + 0.03, MAT.floor);
+      const z1 = D.z1 - (D.z1 - D.z0) * (k / steps);
+      const w = (D.z1 - D.z0) / steps;
+      slab(D.x0, D.x1, y, y + 0.22, z1 - w - 0.03, z1, MAT.floor);
     }
     // Shop shell: floor, ceiling, four walls.
     slab(SH.x0 - 0.4, SH.x1 + 0.4, SH.y0 - 0.4, SH.y0, SH.z0 - 0.4, SH.z1 + 0.4, MAT.floor);
-    slab(SH.x0 - 0.4, SH.x1 + 0.4, SH.y1, SH.y1 + 0.4, SH.z0 - 0.4, SH.z1 + 0.4, MAT.wallDark);
+    /* Ceiling, with the shaft cut out of it — the stairs pass through here,
+       and a solid lid at this height blocks them just as surely as the one
+       at ground level did. */
+    slab(SH.x0 - 0.4, SH.x1 + 0.4, SH.y1, SH.y1 + 0.4, SH.z0 - 0.4, D.z0, MAT.wallDark);
+    slab(SH.x0 - 0.4, SH.x1 + 0.4, SH.y1, SH.y1 + 0.4, D.z1, SH.z1 + 0.4, MAT.wallDark);
+    slab(SH.x0 - 0.4, D.x0, SH.y1, SH.y1 + 0.4, D.z0, D.z1, MAT.wallDark);
+    slab(D.x1, SH.x1 + 0.4, SH.y1, SH.y1 + 0.4, D.z0, D.z1, MAT.wallDark);
     slab(SH.x0 - 0.4, SH.x0, SH.y0, SH.y1, SH.z0 - 0.4, SH.z1 + 0.4, MAT.wall);
     slab(SH.x1, SH.x1 + 0.4, SH.y0, SH.y1, SH.z0 - 0.4, D.z0 - 0.2, MAT.wall);
     slab(SH.x0 - 0.4, SH.x1 + 0.4, SH.y0, SH.y1, SH.z0 - 0.4, SH.z0, MAT.wall);
     slab(SH.x0 - 0.4, SH.x1 + 0.4, SH.y0, SH.y1, SH.z1, SH.z1 + 0.4, MAT.wall);
 
     // The door at the bottom of the stair, on a hinge post.
+    /* The door is kinematic and starts open, tucked into its pocket. It is
+       what shuts behind you — a static slab here would simply wall the room
+       off for good, which is what the first pass did. */
     const doorAt = [D.x0 + (D.x1 - D.x0) / 2, D.floor + 1.05, D.z0 - 0.1];
-    const door = game.box({ at: doorAt, size: [2.0, 2.1, 0.10], material: MAT.steel, static: true });
+    const doorOpenAt = [doorAt[0] - 2.15, doorAt[1], doorAt[2]];
+    const door = game.box({ at: doorOpenAt, size: [2.0, 2.1, 0.10], material: MAT.steel, kinematic: true });
     for (const sx of [-1, 1]) {
       game.box({ at: [doorAt[0] + sx * 1.02, doorAt[1], doorAt[2]], size: [0.10, 2.3, 0.24], material: MAT.steel, static: true });
     }
     game.cylinder({ at: [doorAt[0] + 0.6, doorAt[1], doorAt[2] - 0.10], radius: 0.07, height: 0.10, material: MAT.steel, static: true });
 
     // Counter across the room, with the crate behind it.
-    const cx = -7.6, cz = 1.6, cy = SH.y0;
+    const cx = -8.4, cz = 1.6, cy = SH.y0;
     game.box({ at: [cx, cy + 0.52, cz], size: [4.4, 1.04, 0.55], material: MAT.wood, static: true });
     game.box({ at: [cx, cy + 1.07, cz], size: [4.6, 0.07, 0.72], material: { color: 0x3c3a35, texture: 'metal', roughness: 0.6, metalness: 1 }, static: true });
     // Shelving down the back wall.
@@ -606,7 +659,7 @@ function buildMap(game, S) {
     // The crate the donations pile up in.
     // The crate the donations pile up in, on the player's side of the room
     // so what you gave up is in front of you every time you come back.
-    game.box({ at: [-4.6, cy + 0.36, 2.4], size: [1.15, 0.72, 1.0], material: MAT.board, static: true });
+    game.box({ at: [-6.4, cy + 0.36, 3.4], size: [1.15, 0.72, 1.0], material: MAT.board, static: true });
 
     /* Him. There is nothing behind the counter but a shape, and the only
        parts of it that resolve are two points of light where a face would
@@ -619,7 +672,33 @@ function buildMap(game, S) {
       game.sphere({ at: [cx + sx * 0.10, cy + 2.06, cz - 0.38], radius: 0.032, physics: false, material: {
         color: 0x101010, texture: 'smooth', roughness: 0.3, emissive: 0xffb04a, emissiveStrength: 3.0 } });
     }
-    game.light({ at: [cx, cy + 2.3, cz + 0.5], color: 0xffb877, intensity: 5.5, range: 7 });
+    /* One light for the whole basement. The renderer uploads eight and no
+       more, and there are already seven in the map — spending the last slot
+       on the stairwell would cost every muzzle flash in the game its light,
+       so the stair is lit by emissive fixtures instead and this one carries
+       the room. */
+    game.light({ at: [cx, cy + 2.1, cz + 1.2], color: 0xffb877, intensity: 8.5, range: 11 });
+    // One over the stairs, now that the renderer picks the nearest eight
+    // rather than the first eight and a ninth light costs nothing up top.
+    game.light({ at: [(D.x0 + D.x1) / 2, -0.9, (D.z0 + D.z1) / 2], color: 0xffcf9a, intensity: 6.0, range: 8 });
+
+    /* Strip lights down the stairwell. They do not illuminate anything —
+       nothing here bounces — but they read as a lit shaft and give the eye
+       an edge to follow down. */
+    const strip = { color: 0xd8c79a, texture: 'smooth', roughness: 0.4,
+      emissive: 0xffd9a0, emissiveStrength: 2.6 };
+    const cage = { color: 0x2e3238, texture: 'metal', roughness: 0.6, metalness: 1 };
+    for (let k = 0; k < 4; k++) {
+      const t = (k + 0.5) / 4;
+      const z = D.z1 - (D.z1 - D.z0) * t;
+      const y = -0.35 - (Math.abs(D.floor) - 0.4) * t;
+      game.box({ at: [D.x0 + 0.10, y, z], size: [0.05, 0.10, 0.44], material: strip, physics: false });
+      game.box({ at: [D.x0 + 0.14, y, z], size: [0.03, 0.14, 0.50], material: cage, physics: false });
+    }
+    // And a pair over the counter, so he is under something.
+    for (const lx of [cx - 1.3, cx + 1.3]) {
+      game.box({ at: [lx, SH.y1 - 0.10, cz + 0.6], size: [0.70, 0.06, 0.16], material: strip, physics: false });
+    }
 
     /* Two turrets on the ceiling. They do not track anything until
        something that should not be down here comes through the door. */
@@ -636,22 +715,22 @@ function buildMap(game, S) {
        crate opposite. Spread out on purpose: every one of these is an
        interact point, and the first match wins, so two of them within a
        stride of each other means one can never be reached. */
-    const standAt = [[-11.2, 0.0], [-11.2, 1.5], [-11.2, 3.0]];
+    const standAt = [[-11.4, 0.4], [-11.4, 1.8], [-11.4, 3.2]];
     for (const [sx, sz] of standAt) {
       game.box({ at: [sx, cy + 0.44, sz], size: [0.46, 0.88, 0.46], material: MAT.board, static: true });
       game.box({ at: [sx, cy + 0.92, sz], size: [0.56, 0.08, 0.56], material: MAT.steel, static: true });
     }
-    const perkAt = [-4.6, 0.2];
+    const perkAt = [-6.4, -0.6];
     game.box({ at: [perkAt[0] + 0.30, cy + 1.45, perkAt[1]], size: [0.10, 1.30, 1.60], material: MAT.board, static: true });
     for (let k = 0; k < 3; k++) {
       game.box({ at: [perkAt[0] + 0.22, cy + 1.85 - k * 0.36, perkAt[1]], size: [0.03, 0.24, 0.34],
         material: { color: [0x7ad7ff, 0xb08cff, 0xffd23a][k], texture: 'smooth', roughness: 0.4,
           emissive: [0x7ad7ff, 0xb08cff, 0xffd23a][k], emissiveStrength: 0.8 }, static: true });
     }
-    const crateFloorAt = [-4.6, 2.4];
+    const crateFloorAt = [-6.4, 3.4];
 
     S.shop = {
-      room: SH, doorAt, door, fig, turrets,
+      room: SH, doorAt, doorOpenAt, doorT: 0, door, fig, turrets,
       crateAt: [crateFloorAt[0], cy + 0.36, crateFloorAt[1]],
       standAt, perkAt,
       counterAt: [cx, cy, cz + 0.9],
@@ -2802,6 +2881,12 @@ function nearestInteract(S, P) {
     }
   }
 
+  /* Everything past here is on the surface. Most of these checks are
+     distance in the horizontal plane only, so from the basement — directly
+     under the mess — you could reach up through the floor and buy the
+     generator door. */
+  if (p.y < -0.5) return null;
+
   if (S.nadeBuy && dist2d(p, { x: S.nadeBuy.at[0], z: S.nadeBuy.at[2] }) < R && Math.abs(p.y - 1) < 2) {
     if (P.nades >= GRENADE.max) return { kind: 'nadeFull', cost: 0, label: 'Grenades — full', inert: true };
     return { kind: 'nades', cost: GRENADE.cost, label: `Grenades — ${GRENADE.cost}` };
@@ -3585,9 +3670,21 @@ function start(opts = {}) {
     if (S.shop) {
       const sh = S.shop;
       const inside = P.actor.position.y < -0.5;
+      /* Shut behind you once you are in the room, and open again when you
+         come back to it. Latching it closed for as long as you are
+         downstairs locks the player in with him, which is a different game
+         to the one described. */
+      const pz = P.actor.position.z;
+      const want = (P.actor.position.y < -1.9 && pz < MAP.down.z0 - 0.6) ? 1 : 0;
+      if (Math.abs(sh.doorT - want) > 1e-3) {
+        sh.doorT += (want - sh.doorT) * Math.min(1, dt * 3.4);
+        sh.door.setPosition([
+          sh.doorOpenAt[0] + (sh.doorAt[0] - sh.doorOpenAt[0]) * sh.doorT,
+          sh.doorAt[1], sh.doorAt[2],
+        ]);
+      }
       if (inside && !sh.wasIn) {
         sh.wasIn = true;
-        sh.door.setPosition([sh.doorAt[0], sh.doorAt[1], sh.doorAt[2]]);
         game.audio.impact(0.9);
         if (!sh.greeted) { sh.greeted = true; S.voice(LINES.shopFirst); }
         if (sh.hostile) {
