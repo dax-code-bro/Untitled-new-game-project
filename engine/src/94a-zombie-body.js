@@ -20,7 +20,11 @@
    lofting toolkit rather than duplicating it.
    ============================================================ */
 
-/* Torso cross-sections per build: [y, halfWidth, halfDepth, squareness]. */
+/* Torso cross-sections per build: [y, halfWidth, halfDepth, squareness,
+   forwardOffset]. The fifth number is what lets a gut hang off the front
+   instead of the body simply becoming a wider barrel — a ring centred on
+   the spine can only ever describe a drum, and a drum reads as "big", not
+   as "fat". */
 const ZOMBIE_BUILDS = {
   male: {
     scale: 1.0, shoulder: 1.0,
@@ -33,8 +37,10 @@ const ZOMBIE_BUILDS = {
       [0.460, 0.172, 0.095, 2.7], [0.487, 0.159, 0.087, 2.6],
       [0.508, 0.113, 0.074, 2.4], [0.528, 0.068, 0.058, 2.2],
     ],
-    arm: [0.052, 0.041, 0.034, 0.028, 0.024],
-    leg: [0.077, 0.066, 0.055, 0.045, 0.038],
+    arm: [0.062, 0.052, 0.047, 0.040, 0.031],
+    leg: [0.090, 0.079, 0.066, 0.058, 0.045],
+    shoulderCaps: 0.068,
+    garment: 'shirt',
     coat: { hem: -0.26, collar: 0.53, flare: 1.10, colorIdx: 0 },
   },
   female: {
@@ -50,24 +56,29 @@ const ZOMBIE_BUILDS = {
       [0.460, 0.150, 0.090, 2.6], [0.487, 0.138, 0.082, 2.5],
       [0.508, 0.101, 0.070, 2.3], [0.528, 0.062, 0.055, 2.2],
     ],
-    arm: [0.045, 0.036, 0.030, 0.025, 0.021],
-    leg: [0.072, 0.062, 0.051, 0.042, 0.035],
+    arm: [0.054, 0.045, 0.041, 0.035, 0.027],
+    leg: [0.083, 0.073, 0.060, 0.053, 0.041],
+    shoulderCaps: 0.058,
+    bust: { x: 0.058, y: 0.408, z: 0.078, out: 0.048, drop: 0.052, r: 0.050 },
+    garment: 'dress',
     coat: { hem: -0.30, collar: 0.51, flare: 1.06, colorIdx: 1 },
   },
   heavy: {
     // A gut that overhangs the belt and a chest that carries above it.
     scale: 1.02, shoulder: 1.06,
     torso: [
-      [-0.062, 0.118, 0.104, 2.5], [-0.045, 0.152, 0.126, 2.6],
-      [-0.022, 0.178, 0.148, 2.6], [0.000, 0.186, 0.160, 2.6],
-      [0.090, 0.190, 0.176, 2.5], [0.175, 0.192, 0.184, 2.4],
-      [0.250, 0.188, 0.176, 2.5], [0.320, 0.186, 0.158, 2.6],
+      [-0.062, 0.118, 0.104, 2.5], [-0.045, 0.152, 0.126, 2.6, 0.008],
+      [-0.022, 0.178, 0.148, 2.6, 0.018], [0.000, 0.186, 0.160, 2.6, 0.026],
+      [0.090, 0.190, 0.176, 2.5, 0.030], [0.175, 0.192, 0.184, 2.4, 0.038],
+      [0.250, 0.188, 0.176, 2.5, 0.030], [0.320, 0.186, 0.158, 2.6, 0.014],
       [0.380, 0.188, 0.142, 2.6], [0.425, 0.192, 0.133, 2.6],
       [0.460, 0.200, 0.122, 2.7], [0.487, 0.184, 0.110, 2.6],
       [0.508, 0.136, 0.094, 2.4], [0.528, 0.082, 0.072, 2.2],
     ],
-    arm: [0.066, 0.055, 0.046, 0.038, 0.030],
-    leg: [0.098, 0.086, 0.070, 0.056, 0.045],
+    arm: [0.078, 0.068, 0.060, 0.050, 0.037],
+    leg: [0.108, 0.096, 0.082, 0.070, 0.052],
+    shoulderCaps: 0.082,
+    garment: 'overalls',
     coat: { hem: -0.20, collar: 0.53, flare: 1.14, colorIdx: 2 },
   },
   armored: {
@@ -83,8 +94,10 @@ const ZOMBIE_BUILDS = {
       [0.460, 0.196, 0.118, 2.9], [0.487, 0.178, 0.104, 2.7],
       [0.508, 0.126, 0.082, 2.4], [0.528, 0.074, 0.062, 2.2],
     ],
-    arm: [0.058, 0.046, 0.038, 0.031, 0.026],
-    leg: [0.084, 0.072, 0.060, 0.049, 0.040],
+    arm: [0.070, 0.059, 0.053, 0.045, 0.034],
+    leg: [0.096, 0.085, 0.072, 0.063, 0.049],
+    shoulderCaps: 0.078,
+    garment: 'tunic',
     coat: { hem: -0.10, collar: 0.55, flare: 1.02, colorIdx: 3 },
   },
 };
@@ -131,6 +144,45 @@ function buildZombieNeck(g, segments, build) {
   }
 }
 
+/* A bust, as two forms merged into the chest. A centred ring cannot make
+   one — it would push the back out as far as the front — so this is
+   separate geometry, skinned by the same vertex-to-bone solve as
+   everything else. */
+function buildBust(g, build) {
+  const B = build.bust;
+  for (const side of [-1, 1]) {
+    const rings = [];
+    const N = 5;
+    for (let i = 0; i <= N; i++) {
+      const t = i / N;
+      // Out from the ribs, forward, and drooping as it goes.
+      const proj = Math.sin(t * PI * 0.62);
+      rings.push({
+        p: new Vec3(side * B.x * (1 - t * 0.18), B.y - t * B.drop, B.z + proj * B.out),
+        w: B.r * Math.sin((1 - t * 0.62) * PI * 0.5) + 0.004,
+        d: B.r * Math.sin((1 - t * 0.62) * PI * 0.5) + 0.004,
+        e: 2.2, uv: t,
+      });
+    }
+    loftRings(g, rings, 12, true, true);
+  }
+}
+
+/* Deltoid caps: the shoulder mass that makes a frame read as broad. */
+function buildShoulderCaps(g, skeleton, build) {
+  const a = new Vec3();
+  for (const sideName of ['L', 'R']) {
+    const side = sideName === 'L' ? 1 : -1;
+    skeleton.bones[skeleton.index('upperArm' + sideName)].bindMatrix.getTranslation(a);
+    const r = build.shoulderCaps;
+    loftRings(g, [
+      { p: new Vec3(a.x - side * 0.030, a.y + 0.055, a.z), w: r * 0.72, d: r * 0.80, e: 2.3 },
+      { p: new Vec3(a.x + side * 0.010, a.y + 0.030, a.z), w: r, d: r * 0.94, e: 2.2 },
+      { p: new Vec3(a.x + side * 0.040, a.y - 0.020, a.z), w: r * 0.86, d: r * 0.82, e: 2.1 },
+    ], 12, true, true);
+  }
+}
+
 /* ---------------- garments ----------------
    A tube that is torn rather than merely irregular: the hem is cut into
    teeth of differing depth, whole panels are punched out to leave holes
@@ -172,33 +224,104 @@ function loftGarment(g, rings, segments, rng, opts = {}) {
 const _zRight = new Vec3(1, 0, 0);
 const _zFwd = new Vec3(0, 0, 1);
 
-/* The coat: collar, body, and a hem that hangs past the hips. */
-function buildZombieCoat(g, build, rng, segments) {
-  const c = build.coat;
-  const T = build.torso;
-  const lift = 0.012;                       // stand-off, so cloth is not skin
-  const rings = [];
-  // Follow the trunk's own silhouette upward from the hem to the collar.
-  const stops = [c.hem, c.hem + 0.10, 0.00, 0.175, 0.320, 0.425, 0.487, c.collar];
-  for (const y of stops) {
-    // Nearest authored trunk section, widened into cloth.
-    let best = T[0];
-    for (const t of T) if (Math.abs(t[0] - y) < Math.abs(best[0] - y)) best = t;
-    const spread = y < 0.02 ? c.flare : 1.0;
-    rings.push({
-      p: new Vec3(0, y, 0),
-      w: (best[1] + lift) * spread, d: (best[2] + lift) * spread,
-      e: best[3], right: _zRight, fwd: _zFwd,
-    });
-  }
-  rings.reverse();                           // hem last, so the teeth land there
-  loftGarment(g, rings, segments, rng, { holes: 0.07 });
+/* The wardrobe. Each build died in something different, and the garment is
+   as much of the silhouette as the body under it: a dress with a skirt
+   reads female from across a room in a way that a coat on a narrow frame
+   never will. */
+function torsoAt(T, y) {
+  let best = T[0];
+  for (const t of T) if (Math.abs(t[0] - y) < Math.abs(best[0] - y)) best = t;
+  return best;
+}
 
-  // Collar: a short stand-up band, always intact, so the coat has a top edge.
-  const top = rings[0];
+function garmentRing(T, y, lift, spread) {
+  const b = torsoAt(T, y);
+  return {
+    p: new Vec3(0, y, (b[4] || 0) * 0.9),
+    w: (b[1] + lift) * (spread || 1), d: (b[2] + lift) * (spread || 1),
+    e: b[3], right: _zRight, fwd: _zFwd,
+  };
+}
+
+function buildZombieGarment(g, build, rng, segments) {
+  const T = build.torso;
+  const c = build.coat;
+  const lift = 0.012;
+  const kind = build.garment || 'shirt';
+
+  if (kind === 'dress') {
+    /* Bodice down to the waist, then a skirt that flares to the knee. The
+       flare is the whole point — it is a shape no trouser leg can make. */
+    const bodice = [0.51, 0.487, 0.425, 0.380, 0.320, 0.250, 0.175]
+      .map((y) => garmentRing(T, y, lift));
+    loftGarment(g, bodice, segments, rng, { holes: 0.05, hemTeeth: false });
+    const waist = garmentRing(T, 0.175, lift);
+    const skirt = [
+      { p: new Vec3(0, 0.175, 0), w: waist.w, d: waist.d, e: 2.4, right: _zRight, fwd: _zFwd },
+      { p: new Vec3(0, 0.060, 0), w: waist.w * 1.22, d: waist.d * 1.30, e: 2.4, right: _zRight, fwd: _zFwd },
+      { p: new Vec3(0, -0.090, 0), w: waist.w * 1.46, d: waist.d * 1.58, e: 2.3, right: _zRight, fwd: _zFwd },
+      { p: new Vec3(0, -0.250, 0), w: waist.w * 1.60, d: waist.d * 1.74, e: 2.2, right: _zRight, fwd: _zFwd },
+      { p: new Vec3(0, -0.380, 0), w: waist.w * 1.58, d: waist.d * 1.72, e: 2.2, right: _zRight, fwd: _zFwd },
+    ];
+    loftGarment(g, skirt, segments, rng, { holes: 0.09 });
+    // A collar band, so the bodice has a top edge.
+    const top = garmentRing(T, 0.51, lift);
+    loftRings(g, [
+      { p: new Vec3(0, 0.505, 0), w: top.w * 0.60, d: top.d * 0.68, e: 2.3, right: _zRight, fwd: _zFwd },
+      { p: new Vec3(0, 0.540, -0.006), w: top.w * 0.62, d: top.d * 0.72, e: 2.3, right: _zRight, fwd: _zFwd },
+    ], segments, false, false);
+    return;
+  }
+
+  if (kind === 'overalls') {
+    /* A shirt to the waist, then a bib and straps over it — the bib is
+       what tells you it is workwear and not a coat. */
+    const shirt = [0.53, 0.487, 0.425, 0.380, 0.320, 0.250, 0.175, 0.090, -0.02]
+      .map((y) => garmentRing(T, y, lift));
+    loftGarment(g, shirt, segments, rng, { holes: 0.06 });
+    // Trouser body over the seat.
+    const seat = [0.20, 0.09, 0.0, -0.10].map((y) => garmentRing(T, y, lift + 0.010, 1.02));
+    loftGarment(g, seat, segments, rng, { holes: 0.04, hemTeeth: false });
+    // Bib across the chest.
+    const bibW = torsoAt(T, 0.36)[1] * 0.72;
+    loftRings(g, [
+      { p: new Vec3(0, 0.200, torsoAt(T, 0.20)[2] + lift + 0.008), w: bibW, d: 0.014, e: 3.0, right: _zRight, fwd: _zFwd },
+      { p: new Vec3(0, 0.430, torsoAt(T, 0.43)[2] + lift + 0.008), w: bibW * 1.02, d: 0.014, e: 3.0, right: _zRight, fwd: _zFwd },
+    ], 12, true, true);
+    for (const side of [-1, 1]) {
+      loftRings(g, [
+        { p: new Vec3(side * bibW * 0.72, 0.430, torsoAt(T, 0.43)[2] + lift), w: 0.020, d: 0.010, e: 2.6 },
+        { p: new Vec3(side * 0.082, 0.500, 0.020), w: 0.020, d: 0.010, e: 2.6 },
+        { p: new Vec3(side * 0.084, 0.480, -0.070), w: 0.020, d: 0.010, e: 2.6 },
+        { p: new Vec3(side * 0.070, 0.330, -0.110), w: 0.020, d: 0.010, e: 2.6 },
+      ], 10, true, true);
+    }
+    return;
+  }
+
+  if (kind === 'tunic') {
+    // Short field tunic, cut at the hip, over the webbing.
+    const tunic = [c.collar, 0.487, 0.425, 0.380, 0.320, 0.250, 0.175, 0.090, c.hem]
+      .map((y) => garmentRing(T, y, lift, y < 0.05 ? c.flare : 1));
+    loftGarment(g, tunic, segments, rng, { holes: 0.05 });
+    const top = garmentRing(T, c.collar, lift);
+    loftRings(g, [
+      { p: new Vec3(0, c.collar, 0), w: top.w * 0.62, d: top.d * 0.70, e: 2.3, right: _zRight, fwd: _zFwd },
+      { p: new Vec3(0, c.collar + 0.050, -0.008), w: top.w * 0.66, d: top.d * 0.78, e: 2.3, right: _zRight, fwd: _zFwd },
+    ], segments, false, false);
+    return;
+  }
+
+  /* Default: a work shirt, untucked, over trousers. */
+  const shirt = [c.collar, 0.487, 0.425, 0.380, 0.320, 0.250, 0.175, 0.090, -0.05]
+    .map((y) => garmentRing(T, y, lift, y < 0.05 ? 1.06 : 1));
+  loftGarment(g, shirt, segments, rng, { holes: 0.06 });
+  const seat = [0.16, 0.06, -0.04, -0.14].map((y) => garmentRing(T, y, lift + 0.012, 1.03));
+  loftGarment(g, seat, segments, rng, { holes: 0.04, hemTeeth: false });
+  const top = garmentRing(T, c.collar, lift);
   loftRings(g, [
     { p: new Vec3(0, c.collar, 0), w: top.w * 0.62, d: top.d * 0.70, e: 2.3, right: _zRight, fwd: _zFwd },
-    { p: new Vec3(0, c.collar + 0.055, -0.008), w: top.w * 0.66, d: top.d * 0.78, e: 2.3, right: _zRight, fwd: _zFwd },
+    { p: new Vec3(0, c.collar + 0.052, -0.008), w: top.w * 0.66, d: top.d * 0.78, e: 2.3, right: _zRight, fwd: _zFwd },
   ], segments, false, false);
 }
 
@@ -271,7 +394,175 @@ function buildWebbing(g, build) {
   ], 12, true, true);
 }
 
-/* The whole figure: flesh, then clothes over it. */
+/* Blood, as geometry rather than tint. Patches conform to the trunk a
+   millimetre off the cloth, so they darken the garment where something
+   ran down it — which is what a stain is. Kept in its own geometry so it
+   can carry its own wet, dark material; painted into the cloth mesh it
+   would just be a differently-coloured coat. */
+function buildBloodStains(g, build, rng) {
+  const T = build.torso;
+  const N = 5 + Math.floor(rng.range(0, 4));
+  for (let i = 0; i < N; i++) {
+    // Stains start high and run down: chest, throat, belly.
+    const y0 = rng.range(0.06, 0.50);
+    const len = rng.range(0.06, 0.26);
+    const ang = rng.range(-1.2, 1.2);           // mostly on the front
+    const wide = rng.range(0.035, 0.085);
+    const rows = 4, cols = 5;
+    const base = g.positions.length / 3;
+    for (let r = 0; r <= rows; r++) {
+      const t = r / rows;
+      const y = y0 - len * t;
+      const sec = torsoAt(T, y);
+      // Narrows as it runs, the way a drip does.
+      const halfA = (wide / Math.max(sec[1], 0.05)) * (1 - t * 0.45);
+      for (let cI = 0; cI <= cols; cI++) {
+        const u = cI / cols;
+        const a = ang + (u - 0.5) * 2 * halfA + Math.sin(t * 5 + i) * 0.05;
+        const rw = sec[1] + 0.014, rd = sec[2] + 0.014;
+        const px = Math.sin(a) * rw, pz = Math.cos(a) * rd + (sec[4] || 0) * 0.9;
+        const nl = Math.hypot(px, pz) || 1;
+        g.vert(px, y, pz, px / nl, 0.12, pz / nl, u, t);
+      }
+    }
+    for (let r = 0; r < rows; r++) {
+      for (let cI = 0; cI < cols; cI++) {
+        const q = base + r * (cols + 1) + cI;
+        g.quad(q, q + 1, q + cols + 2, q + cols + 1);
+      }
+    }
+  }
+}
+
+/* Where a thrower can tear itself open, in bind-pose space. Five down the
+   left flank working downward, then the face. Returned as data rather than
+   geometry so the game can hang two actors on each — a wet cavity and the
+   bone in it, which one mesh could only ever be one of. */
+function zombieWoundSpots(buildName) {
+  const build = ZOMBIE_BUILDS[buildName] || ZOMBIE_BUILDS.male;
+  const T = build.torso;
+  const spots = [];
+  const heights = [0.44, 0.355, 0.27, 0.185, 0.10];
+  for (let i = 0; i < heights.length; i++) {
+    const y = heights[i];
+    const sec = torsoAt(T, y);
+    const a = 1.38;                              // round onto the left flank
+    spots.push({
+      bone: y > 0.30 ? 'chest' : 'spine',
+      pos: [Math.sin(a) * (sec[1] - 0.006), y, Math.cos(a) * (sec[2] - 0.006) + (sec[4] || 0) * 0.9],
+      r: 0.030 + i * 0.0035,
+      bone_r: 0.013 + i * 0.001,
+    });
+  }
+  // The last one: the face. Taken in bone space directly.
+  spots.push({ bone: 'head', pos: [0.030, 0.150, 0.070], r: 0.030, bone_r: 0.016, face: true });
+  return spots;
+}
+
+/* The whole figure: flesh, then clothes over it. *//* The clothes, as their own mesh over the same skeleton.
+
+   This is the difference between a dressed figure and a painted one. Flesh
+   and cloth in a single geometry share a single material, so the coat can
+   only ever be the colour the skin is — which is exactly what "you are just
+   colouring the body" looks like. Two meshes, two materials, one skeleton,
+   and the skin solver weights both the same way so they move together. */
+function buildZombieClothGeometry(skeleton, opts = {}) {
+  const g = new Geometry();
+  const segments = opts.segments || 16;
+  const build = ZOMBIE_BUILDS[opts.build] || ZOMBIE_BUILDS.male;
+  const rng = new Rng((opts.seed || 7) * 3 + 11);
+
+  buildZombieGarment(g, build, rng, segments);
+  buildZombieLimbCloth(g, skeleton, build, rng, segments);
+  buildGarmentDetail(g, skeleton, build, rng);
+  if (opts.build === 'armored') buildWebbing(g, build);
+
+  g.finalize();
+  g.computeWeldGroups();
+  smoothNormals(g);
+  weldNormals(g.normals, g.weldGroups);
+  return g;
+}
+
+/* The bits that make cloth read as tailored rather than as a tube: a belt
+   with a buckle, a button placket down the front, turned cuffs at wrist and
+   ankle, and lapels where a collar opens. Small pieces, but they are what
+   the eye uses to decide it is looking at a garment. */
+function buildGarmentDetail(g, skeleton, build, rng) {
+  const T = build.torso;
+  const kind = build.garment || 'shirt';
+  const lift = 0.014;
+
+  // Belt at the waist, with a buckle.
+  const beltY = kind === 'dress' ? 0.175 : 0.150;
+  const bs = torsoAt(T, beltY);
+  loftRings(g, [
+    { p: new Vec3(0, beltY - 0.020, (bs[4] || 0) * 0.9), w: bs[1] + lift + 0.004, d: bs[2] + lift + 0.004, e: bs[3], right: _zRight, fwd: _zFwd },
+    { p: new Vec3(0, beltY + 0.020, (bs[4] || 0) * 0.9), w: bs[1] + lift + 0.004, d: bs[2] + lift + 0.004, e: bs[3], right: _zRight, fwd: _zFwd },
+  ], 18, false, false);
+  loftRings(g, [
+    { p: new Vec3(0, beltY, bs[2] + lift + 0.008 + (bs[4] || 0) * 0.9), w: 0.030, d: 0.010, e: 3.0, right: _zRight, fwd: _zFwd },
+    { p: new Vec3(0, beltY, bs[2] + lift + 0.016 + (bs[4] || 0) * 0.9), w: 0.030, d: 0.010, e: 3.0, right: _zRight, fwd: _zFwd },
+  ], 8, true, true);
+
+  // Button placket, down the centre of the front.
+  if (kind !== 'tunic') {
+    const yTop = kind === 'dress' ? 0.48 : build.coat.collar - 0.06;
+    for (let i = 0; i < 6; i++) {
+      const y = yTop - i * ((yTop - beltY - 0.02) / 5);
+      const sec = torsoAt(T, y);
+      const z = sec[2] + lift + 0.006 + (sec[4] || 0) * 0.9;
+      loftRings(g, [
+        { p: new Vec3(0, y, z), w: 0.009, d: 0.004, e: 2.4, right: _zRight, fwd: _zFwd },
+        { p: new Vec3(0, y, z + 0.006), w: 0.009, d: 0.004, e: 2.4, right: _zRight, fwd: _zFwd },
+      ], 8, true, true);
+    }
+    // The placket strip they sit on.
+    const a = torsoAt(T, yTop), b2 = torsoAt(T, beltY);
+    loftRings(g, [
+      { p: new Vec3(0, yTop, a[2] + lift + 0.003 + (a[4] || 0) * 0.9), w: 0.020, d: 0.004, e: 3.0, right: _zRight, fwd: _zFwd },
+      { p: new Vec3(0, beltY, b2[2] + lift + 0.003 + (b2[4] || 0) * 0.9), w: 0.020, d: 0.004, e: 3.0, right: _zRight, fwd: _zFwd },
+    ], 8, true, true);
+  }
+
+  // Lapels: two panels folded back off the collar.
+  if (kind === 'shirt' || kind === 'overalls') {
+    const sec = torsoAt(T, 0.44);
+    for (const side of [-1, 1]) {
+      loftRings(g, [
+        { p: new Vec3(side * 0.030, build.coat.collar - 0.02, sec[2] + lift + (sec[4] || 0) * 0.9), w: 0.024, d: 0.006, e: 2.8 },
+        { p: new Vec3(side * 0.058, 0.400, sec[2] + lift - 0.004 + (sec[4] || 0) * 0.9), w: 0.030, d: 0.006, e: 2.8 },
+        { p: new Vec3(side * 0.040, 0.330, sec[2] + lift - 0.010 + (sec[4] || 0) * 0.9), w: 0.020, d: 0.005, e: 2.8 },
+      ], 8, true, true);
+    }
+  }
+
+  // Turned cuffs at the wrists, and boot tops at the ankles.
+  const w = new Vec3(), e = new Vec3(), k = new Vec3(), f = new Vec3();
+  for (const sideName of ['L', 'R']) {
+    skeleton.bones[skeleton.index('lowerArm' + sideName)].bindMatrix.getTranslation(e);
+    skeleton.bones[skeleton.index('hand' + sideName)].bindMatrix.getTranslation(w);
+    const cuffAt = new Vec3().copy(e).lerp(w, 0.80);
+    const cuffEnd = new Vec3().copy(e).lerp(w, 0.94);
+    loftRings(g, [
+      { p: cuffAt, w: build.arm[4] + 0.016, d: build.arm[4] + 0.016, e: 2.2 },
+      { p: cuffEnd, w: build.arm[4] + 0.013, d: build.arm[4] + 0.013, e: 2.2 },
+    ], 12, true, true);
+
+    skeleton.bones[skeleton.index('lowerLeg' + sideName)].bindMatrix.getTranslation(k);
+    skeleton.bones[skeleton.index('foot' + sideName)].bindMatrix.getTranslation(f);
+    const bootTop = new Vec3().copy(k).lerp(f, 0.52);
+    const bootLow = new Vec3().copy(k).lerp(f, 0.99);
+    loftRings(g, [
+      { p: bootTop, w: build.leg[4] + 0.020, d: build.leg[4] + 0.020, e: 2.3 },
+      { p: new Vec3().copy(bootTop).lerp(bootLow, 0.5), w: build.leg[4] + 0.017, d: build.leg[4] + 0.019, e: 2.3 },
+      { p: bootLow, w: build.leg[4] + 0.015, d: build.leg[4] + 0.018, e: 2.3 },
+    ], 12, true, true);
+  }
+  void rng;
+}
+
+/* The whole figure: flesh only. Clothes are a separate mesh. */
 function buildZombieBodyGeometry(skeleton, opts = {}) {
   const g = new Geometry();
   const segments = opts.segments || 16;
@@ -279,11 +570,13 @@ function buildZombieBodyGeometry(skeleton, opts = {}) {
   const rng = new Rng(opts.seed || 7);
 
   // Flesh.
-  const rings = build.torso.map(([y, w, d, e], i) => ({
-    p: new Vec3(0, y, 0), w, d, e, uv: i / (build.torso.length - 1),
+  const rings = build.torso.map(([y, w, d, e, zo], i) => ({
+    p: new Vec3(0, y, zo || 0), w, d, e, uv: i / (build.torso.length - 1),
   }));
   loftRings(g, rings, segments, true, true);
   buildZombieNeck(g, segments, build);
+  if (build.bust) buildBust(g, build);
+  if (build.shoulderCaps) buildShoulderCaps(g, skeleton, build);
 
   const a = new Vec3(), b = new Vec3(), c = new Vec3();
   for (const sideName of ['L', 'R']) {
@@ -294,15 +587,21 @@ function buildZombieBodyGeometry(skeleton, opts = {}) {
     const root = new Vec3().copy(a);
     root.x -= side * 0.048 * build.shoulder;
     root.y += 0.052;
+    /* Upper arm swells at the biceps and necks in above the elbow; the
+       forearm swells again at the flexors and runs down to a narrow wrist.
+       A single monotonic taper from shoulder to hand is what turns an arm
+       into a noodle, however thick you make the top of it. */
     const up = limbRings(root, b, [
-      [build.arm[0] * 1.14, build.arm[0] * 1.14, 2.0],
-      [build.arm[0], build.arm[0], 2.0],
-      [build.arm[1], build.arm[1], 2.0],
+      [build.arm[0] * 1.16, build.arm[0] * 1.16, 2.0],
+      [build.arm[0] * 1.02, build.arm[0] * 1.02, 2.0],
+      [build.arm[1] * 1.06, build.arm[1] * 1.06, 2.0],
+      [build.arm[1] * 0.92, build.arm[1] * 0.92, 2.0],
     ]);
     const lo = limbRings(b, c, [
-      [build.arm[2] * 1.10, build.arm[2] * 1.10, 2.0],
+      [build.arm[2] * 1.02, build.arm[2] * 1.02, 2.0],
+      [build.arm[2] * 1.12, build.arm[2] * 1.12, 2.0],
       [build.arm[3], build.arm[3], 2.0],
-      [build.arm[4], build.arm[4], 2.1],
+      [build.arm[4], build.arm[4] * 1.06, 2.1],
     ]);
     loftRings(g, up.concat(lo.slice(1)), segments, false, false);
     buildHand(g, side, c, segments);
@@ -310,25 +609,37 @@ function buildZombieBodyGeometry(skeleton, opts = {}) {
     skeleton.bones[skeleton.index('upperLeg' + sideName)].bindMatrix.getTranslation(a);
     skeleton.bones[skeleton.index('lowerLeg' + sideName)].bindMatrix.getTranslation(b);
     skeleton.bones[skeleton.index('foot' + sideName)].bindMatrix.getTranslation(c);
+    /* Thigh full at the top, knee narrow, calf belly behind the shin, thin
+       at the ankle. Same reasoning as the arm. */
     const th = limbRings(a, b, [
-      [build.leg[0], build.leg[0], 2.2],
+      [build.leg[0] * 1.06, build.leg[0] * 1.06, 2.2],
       [build.leg[1], build.leg[1], 2.2],
-      [build.leg[2], build.leg[2], 2.1],
+      [build.leg[2] * 1.04, build.leg[2] * 1.04, 2.1],
+      [build.leg[2] * 0.94, build.leg[2] * 0.96, 2.1],
     ]);
     const sh = limbRings(b, c, [
-      [build.leg[2] * 1.08, build.leg[2] * 1.08, 2.1],
-      [build.leg[3], build.leg[3] * 1.14, 2.1],
+      [build.leg[2] * 0.98, build.leg[2] * 1.02, 2.1],
+      [build.leg[3] * 1.12, build.leg[3] * 1.22, 2.1],
+      [build.leg[3] * 0.92, build.leg[3] * 0.96, 2.1],
       [build.leg[4], build.leg[4], 2.1],
-    ], (t) => -0.010 * Math.sin(t * PI));
+    ], (t) => -0.014 * Math.sin(t * PI));
     loftRings(g, th.concat(sh.slice(1)), segments, false, false);
     buildShoe(g, side, skeleton, segments);
   }
 
-  // Clothes.
-  buildZombieCoat(g, build, rng, segments);
-  buildZombieLimbCloth(g, skeleton, build, rng, segments);
-  if (opts.build === 'armored') buildWebbing(g, build);
+  g.finalize();
+  g.computeWeldGroups();
+  smoothNormals(g);
+  weldNormals(g.normals, g.weldGroups);
+  return g;
+}
 
+/* Blood is a second mesh over the same skeleton, so it can be its own
+   material and still move with the body. */
+function buildZombieBloodGeometry(skeleton, opts = {}) {
+  const g = new Geometry();
+  const build = ZOMBIE_BUILDS[opts.build] || ZOMBIE_BUILDS.male;
+  buildBloodStains(g, build, new Rng((opts.seed || 7) * 13 + 5));
   g.finalize();
   g.computeWeldGroups();
   smoothNormals(g);

@@ -1187,7 +1187,10 @@ function buildPooledZombie(game, S, i) {
   const body = BODY_TYPES[i % BODY_TYPES.length];
   const a = game.character({
     at: [200 + i * 4, -38, 0],
-    material: { color: rag, texture: 'fabric', roughness: 0.98, metalness: 0, uvScale: 2.2 },
+    // The body material is now flesh only — the coat is its own mesh.
+    material: { color: tone, texture: 'rust', roughness: 0.92, metalness: 0, subsurface: 0.05, uvScale: 3 },
+    clothMaterial: { color: rag, texture: 'fabric', roughness: 0.97, metalness: 0, uvScale: 2.4 },
+    bloodMaterial: { color: 0x37100b, texture: 'smooth', roughness: 0.30, metalness: 0 },
     // Rotted flesh reads as mottled, not as an even tint. The skin texture
     // warms whatever colour it is given into something living; a corroded
     // one blotches it instead, which is the difference between a pale head

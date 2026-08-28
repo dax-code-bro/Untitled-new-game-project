@@ -74,9 +74,13 @@ function appendLimb(g, from, to, r0, r1, sides = 8) {
 function makeHumanoidMesh(skeleton, opts = {}) {
   // A zombie build is a different body, not the same body scaled — its own
   // cross-section stack, its own neck, and its own clothes.
-  const g = opts.zombieBuild
-    ? buildZombieBodyGeometry(skeleton, { build: opts.zombieBuild, seed: opts.seed, segments: opts.segments })
-    : makeHumanBodyGeometry(skeleton, opts);
+  const g = opts.bloodOnly
+    ? buildZombieBloodGeometry(skeleton, { build: opts.zombieBuild, seed: opts.seed })
+    : opts.clothOnly
+    ? buildZombieClothGeometry(skeleton, { build: opts.zombieBuild, seed: opts.seed, segments: opts.segments })
+    : opts.zombieBuild
+      ? buildZombieBodyGeometry(skeleton, { build: opts.zombieBuild, seed: opts.seed, segments: opts.segments })
+      : makeHumanBodyGeometry(skeleton, opts);
 
   // Bone segments used only for solving skin weights below.
   const segments = [];

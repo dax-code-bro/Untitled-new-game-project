@@ -155,6 +155,34 @@ function makeZombieClips() {
     lowerArmR: { keys: [[0, 44, 0, 0], [0.36, 10, 0, 0], [1, 44, 0, 0]] },
   }, { loop: false }));
 
+  /* ---- tearing a piece out of itself ----
+     The far arm crosses the body, digs into the flank, and pulls. The spine
+     folds around the hand rather than the hand simply moving to the ribs,
+     which is the difference between reaching for something and wrenching
+     something loose. */
+  clips.push(buildClip('zrip', 1.25, {
+    hips: { keys: [[0, 3, 6, 0], [0.4, 5, 12, 0], [0.7, 4, 4, 0], [1, 3, 6, 0]] },
+    spine: { keys: [[0, 14, -10, -6], [0.4, 24, -22, -14], [0.7, 16, -8, -6], [1, 14, -10, -6]] },
+    chest: { keys: [[0, 8, -8, -4], [0.4, 14, -18, -10], [1, 8, -8, -4]] },
+    head: { keys: [[0, -14, -12, 0], [0.4, -6, -26, -6], [0.75, -18, -6, 0], [1, -14, -12, 0]] },
+    // Right hand crosses to the left flank, grips, and hauls outward.
+    upperArmR: { keys: [[0, -30, 0, 34], [0.3, -78, 0, 62], [0.5, -74, 0, 58], [0.75, -40, 0, 20], [1, -30, 0, 34]] },
+    lowerArmR: { keys: [[0, 40, 0, 0], [0.3, 104, 0, 0], [0.5, 96, 0, 0], [0.75, 30, 0, 0], [1, 40, 0, 0]] },
+    upperArmL: { keys: [[0, -18, 0, -18], [0.4, -34, 0, -30], [1, -18, 0, -18]] },
+    lowerArmL: { keys: [[0, 44, 0, 0], [0.4, 62, 0, 0], [1, 44, 0, 0]] },
+  }, { loop: false }));
+
+  /* ---- the last one: tearing at its own face ---- */
+  clips.push(buildClip('zripface', 1.35, {
+    spine: { keys: [[0, 14, 0, 0], [0.45, 22, 0, 0], [1, 14, 0, 0]] },
+    head: { keys: [[0, -12, 0, 0], [0.35, 16, 8, 0], [0.7, 4, -6, 0], [1, -12, 0, 0]] },
+    // Both hands to the face, then wrenched away and down.
+    upperArmR: { keys: [[0, -34, 0, 30], [0.3, -142, 0, 26], [0.55, -128, 0, 34], [0.8, -50, 0, 24], [1, -34, 0, 30]] },
+    upperArmL: { keys: [[0, -34, 0, -30], [0.3, -138, 0, -26], [0.55, -124, 0, -34], [0.8, -46, 0, -24], [1, -34, 0, -30]] },
+    lowerArmR: { keys: [[0, 40, 0, 0], [0.3, 92, 0, 0], [0.55, 84, 0, 0], [1, 40, 0, 0]] },
+    lowerArmL: { keys: [[0, 40, 0, 0], [0.3, 90, 0, 0], [0.55, 82, 0, 0], [1, 40, 0, 0]] },
+  }, { loop: false }));
+
   /* ---- the throw, for the ones that spit ---- */
   clips.push(buildClip('zspit', 0.95, {
     hips: { keys: [[0, 2, -14, 0], [0.45, 4, 16, 0], [1, 2, -14, 0]] },

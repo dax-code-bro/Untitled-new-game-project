@@ -565,6 +565,51 @@ class Engine {
     actor.visualOffset = new Vec3(0, 0, 0);
     this.actors.push(actor);
 
+    /* Clothes: their own skinned mesh, so cloth can be canvas while the
+       skin under it is flesh. Sharing one mesh means sharing one material,
+       and a coat that has to be the same colour as the body it covers is
+       not clothing — it is a paint job. */
+    if (opts.zombie) {
+      const clothGeo = makeHumanoidMesh(skeleton, {
+        zombieBuild: opts.zombieBuild || 'male', seed: opts.seed || 3, clothOnly: true,
+      });
+      if (clothGeo.indices.length) {
+        const clothActor = new Actor(this, {
+          name: 'cloth', mesh: new GpuMesh(this.gl, clothGeo),
+          material: this.material(opts.clothMaterial || {
+            color: 0x6b6450, texture: 'fabric', roughness: 0.97, metalness: 0, uvScale: 2.4,
+          }),
+          skeleton, animator, controller, body: controller.body,
+          boundRadius: 1.4 * scale,
+        });
+        this.actors.push(clothActor);
+        actor.cloth = clothActor;
+      }
+    }
+
+    /* Blood: a second skinned mesh over the same skeleton, so stains are
+       real geometry with their own wet material and still deform with the
+       body. Tinting the garment could only ever make a differently
+       coloured coat. */
+    if (opts.zombie && opts.blood !== false) {
+      const bloodGeo = makeHumanoidMesh(skeleton, {
+        zombieBuild: opts.zombieBuild || 'male', seed: opts.seed || 3, bloodOnly: true,
+      });
+      if (bloodGeo.indices.length) {
+        const bloodMesh = new GpuMesh(this.gl, bloodGeo);
+        const bloodActor = new Actor(this, {
+          name: 'blood', mesh: bloodMesh,
+          material: this.material(opts.bloodMaterial || {
+            color: 0x3a0c08, texture: 'smooth', roughness: 0.34, metalness: 0,
+          }),
+          skeleton, animator, controller, body: controller.body,
+          boundRadius: 1.4 * scale,
+        });
+        this.actors.push(bloodActor);
+        actor.blood = bloodActor;
+      }
+    }
+
     if (opts.face !== false) {
       const headGeo = makeHeadGeometry({ seed: opts.seed || 5, type: opts.faceType });
       const headMesh = new GpuMesh(this.gl, headGeo);
