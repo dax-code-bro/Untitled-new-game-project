@@ -157,7 +157,9 @@ function solveSkinWeights(g, skeleton) {
 function makeHumanoidMesh(skeleton, opts = {}) {
   // A zombie build is a different body, not the same body scaled — its own
   // cross-section stack, its own neck, and its own clothes.
-  const g = opts.bloodOnly
+  const g = opts.armorOnly
+    ? buildZombieArmorGeometry(skeleton, { build: opts.zombieBuild, seed: opts.seed, segments: opts.segments })
+    : opts.bloodOnly
     ? buildZombieBloodGeometry(skeleton, { build: opts.zombieBuild, seed: opts.seed })
     : opts.clothOnly
     ? buildZombieClothGeometry(skeleton, { build: opts.zombieBuild, seed: opts.seed, segments: opts.segments, outfit: opts.outfit })

@@ -8449,7 +8449,9 @@ function solveSkinWeights(g, skeleton) {
 function makeHumanoidMesh(skeleton, opts = {}) {
   // A zombie build is a different body, not the same body scaled — its own
   // cross-section stack, its own neck, and its own clothes.
-  const g = opts.bloodOnly
+  const g = opts.armorOnly
+    ? buildZombieArmorGeometry(skeleton, { build: opts.zombieBuild, seed: opts.seed, segments: opts.segments })
+    : opts.bloodOnly
     ? buildZombieBloodGeometry(skeleton, { build: opts.zombieBuild, seed: opts.seed })
     : opts.clothOnly
     ? buildZombieClothGeometry(skeleton, { build: opts.zombieBuild, seed: opts.seed, segments: opts.segments, outfit: opts.outfit })
@@ -10019,6 +10021,82 @@ function buildBloodStains(g, build, rng) {
   }
 }
 
+/* ============================================================
+   ARMOUR — the thin plate the running ones wear.
+
+   Its own skinned mesh over the same skeleton, so it can be
+   steel while the cloth under it stays cloth. Deliberately
+   sparse: a chest and back plate, shoulder caps, bracers and
+   shin guards. It is a layer someone strapped on in a hurry,
+   not a suit — the point is that it reads as metal from across
+   a room, because a player has to know at a glance that
+   shooting it is a waste of ammunition.
+   ============================================================ */
+function buildZombieArmorGeometry(skeleton, opts = {}) {
+  const g = new Geometry();
+  const segments = opts.segments || 14;
+  const build = ZOMBIE_BUILDS[opts.build] || ZOMBIE_BUILDS.male;
+  const T = build.torso;
+  const a = new Vec3(), b = new Vec3(), c = new Vec3();
+
+  g.part = PART.BODY;
+  // Cuirass, sitting proud of whatever coat is under it.
+  const lift = 0.052;
+  const rows = [0.470, 0.420, 0.360, 0.300, 0.240, 0.180];
+  loftRings(g, rows.map((y, i) => {
+    const r = garmentRing(T, y, lift - i * 0.002);
+    return { p: r.p, w: r.w, d: r.d, e: 2.9, right: _zRight, fwd: _zFwd };
+  }), segments, false, false);
+  // A raised rib at each band join, so it is plate and not a barrel.
+  for (const y of [0.420, 0.300]) {
+    const r = garmentRing(T, y, lift + 0.008);
+    loftRings(g, [
+      { p: new Vec3(0, y - 0.012, 0), w: r.w, d: r.d, e: 2.9, right: _zRight, fwd: _zFwd },
+      { p: new Vec3(0, y + 0.012, 0), w: r.w, d: r.d, e: 2.9, right: _zRight, fwd: _zFwd },
+    ], segments, false, false);
+  }
+  // A gorget at the throat.
+  const neck = garmentRing(T, 0.487, lift - 0.014);
+  loftRings(g, [
+    { p: new Vec3(0, 0.487, 0), w: neck.w * 0.68, d: neck.d * 0.76, e: 2.6, right: _zRight, fwd: _zFwd },
+    { p: new Vec3(0, 0.524, -0.004), w: neck.w * 0.60, d: neck.d * 0.70, e: 2.5, right: _zRight, fwd: _zFwd },
+  ], segments, false, false);
+
+  for (const sideName of ['L', 'R']) {
+    const side = sideName === 'L' ? 1 : -1;
+    g.part = sideName === 'L' ? PART.ARM_L : PART.ARM_R;
+    skeleton.bones[skeleton.index('upperArm' + sideName)].bindMatrix.getTranslation(a);
+    skeleton.bones[skeleton.index('lowerArm' + sideName)].bindMatrix.getTranslation(b);
+    skeleton.bones[skeleton.index('hand' + sideName)].bindMatrix.getTranslation(c);
+    const r = build.shoulderCaps * 1.24;
+    loftRings(g, [
+      { p: new Vec3(a.x + side * 0.004, a.y + 0.070, a.z), w: r * 0.74, d: r * 0.82, e: 2.5 },
+      { p: new Vec3(a.x + side * 0.014, a.y + 0.026, a.z), w: r, d: r * 0.98, e: 2.5 },
+      { p: new Vec3(a.x + side * 0.020, a.y - 0.040, a.z), w: r * 0.90, d: r * 0.86, e: 2.4 },
+    ], segments, true, false);
+    const w0 = new Vec3().copy(b).lerp(c, 0.12), w1 = new Vec3().copy(b).lerp(c, 0.78);
+    loftRings(g, [
+      { p: w0, w: build.arm[2] + 0.030, d: build.arm[2] + 0.030, e: 2.6 },
+      { p: w1, w: build.arm[3] + 0.026, d: build.arm[3] + 0.026, e: 2.6 },
+    ], segments, true, true);
+
+    g.part = sideName === 'L' ? PART.LEG_L : PART.LEG_R;
+    skeleton.bones[skeleton.index('lowerLeg' + sideName)].bindMatrix.getTranslation(b);
+    skeleton.bones[skeleton.index('foot' + sideName)].bindMatrix.getTranslation(c);
+    const s0 = new Vec3().copy(b).lerp(c, 0.10), s1 = new Vec3().copy(b).lerp(c, 0.80);
+    loftRings(g, [
+      { p: s0, w: build.leg[3] + 0.034, d: build.leg[3] + 0.036, e: 2.7 },
+      { p: s1, w: build.leg[4] + 0.030, d: build.leg[4] + 0.032, e: 2.7 },
+    ], segments, true, true);
+  }
+  g.part = PART.BODY;
+  g.finalize();
+  g.computeWeldGroups();
+  smoothNormals(g);
+  weldNormals(g.normals, g.weldGroups);
+  return g;
+}
+
 /* Where a thrower can tear itself open, in bind-pose space. Five down the
    left flank working downward, then the face. Returned as data rather than
    geometry so the game can hang two actors on each — a wet cavity and the
@@ -10406,7 +10484,13 @@ class Actor {
     this.boundRadius = opts.boundRadius != null ? opts.boundRadius : 1;
     this.dead = false;
 
-    if (this.body) this.body.actor = this;
+    /* First actor to take a body owns the back-reference. A character is
+       several actors over one rigid body — flesh, clothes, blood, plate —
+       and if each claimed it in turn the last one built would win. Raycasts
+       resolve a hit through body.actor, so that silently pointed every shot
+       at a layer with no game state on it: bullets stopped registering on
+       zombies at all, with no error anywhere. */
+    if (this.body && !this.body.actor) this.body.actor = this;
   }
 
   get position() { return this.body ? this.body.position : this._position; }
@@ -10978,6 +11062,26 @@ class Engine {
         });
         this.actors.push(bloodActor);
         actor.blood = bloodActor;
+      }
+    }
+
+    /* Plate, for the ones that wear it: a third skinned mesh so the metal
+       has a metal material while the cloth under it stays cloth. */
+    if (opts.armor) {
+      const armorGeo = makeHumanoidMesh(skeleton, {
+        zombieBuild: opts.zombieBuild || 'male', seed: opts.seed || 3, armorOnly: true,
+      });
+      if (armorGeo.indices.length) {
+        const armorActor = new Actor(this, {
+          name: 'armor', mesh: new GpuMesh(this.gl, armorGeo),
+          material: this.material(opts.armorMaterial || {
+            color: 0x6b7078, texture: 'metal', roughness: 0.44, metalness: 1,
+          }),
+          skeleton, animator, controller, body: controller.body,
+          boundRadius: 1.4 * scale,
+        });
+        this.actors.push(armorActor);
+        actor.armor = armorActor;
       }
     }
 
@@ -13411,6 +13515,48 @@ function makeZombieClips() {
     lowerArmR: { keys: [[0, -32, 0, 0], [0.3, -8, 0, 0], [0.6, -38, 0, 0], [1, -32, 0, 0]] },
     handL: { keys: [[0, 20, 0, -12], [0.5, -12, 0, 10], [1, 20, 0, -12]] },
     handR: { keys: [[0, -12, 0, 11], [0.5, 22, 0, -10], [1, -12, 0, 11]] },
+  }));
+
+  /* ---------------------------------------------------------
+     REMEMBERED SPRINT — the few seconds where it runs like a
+     person again.
+
+     Everything the shamble breaks on purpose, this puts back:
+     the arms counter-swing at the shoulder with the elbows held
+     at ninety, the legs are symmetric, the head stays over the
+     centre of mass, and the pelvis drives cleanly. Played
+     against zrun it reads as a body remembering how this used to
+     work — which is the only reason to have a correct human
+     sprint in a game with no humans left in it.
+     --------------------------------------------------------- */
+  clips.push(buildClip('zrun_human', 0.62, {
+    hips: {
+      keys: [[0, 8, -10, 2], [0.25, 8, 0, 0], [0.5, 8, 10, -2], [0.75, 8, 0, 0], [1, 8, -10, 2]],
+      pos: [[0, 0.010, -0.030, 0], [0.20, 0.014, 0.030, 0], [0.5, -0.010, -0.030, 0],
+            [0.70, -0.014, 0.030, 0], [1, 0.010, -0.030, 0]],
+    },
+    spine: { keys: [[0, 15, 8, 0], [0.25, 16, 0, 0], [0.5, 15, -8, 0], [0.75, 16, 0, 0], [1, 15, 8, 0]] },
+    chest: { keys: [[0, 6, 7, 0], [0.5, 7, -7, 0], [1, 6, 7, 0]] },
+    // Head level and forward, over the feet rather than ahead of them.
+    head: { keys: [[0, -10, 4, 0], [0.5, -11, -4, 0], [1, -10, 4, 0]] },
+    upperLegL: { keys: [[0, -46, 0, 0], [0.14, -20, 0, 0], [0.30, 6, 0, 0], [0.44, 30, 0, 0],
+                        [0.60, 2, 0, 0], [0.80, -30, 0, 0], [1, -46, 0, 0]] },
+    lowerLegL: { keys: [[0, 14, 0, 0], [0.18, 4, 0, 0], [0.44, 24, 0, 0], [0.60, 88, 0, 0],
+                        [0.78, 42, 0, 0], [0.92, 12, 0, 0], [1, 14, 0, 0]] },
+    footL: { keys: [[0, 12, 0, 0], [0.22, -4, 0, 0], [0.44, -26, 0, 0], [0.64, 14, 0, 0], [1, 12, 0, 0]] },
+    upperLegR: { keys: [[0, 30, 0, 0], [0.10, 2, 0, 0], [0.30, -30, 0, 0], [0.5, -46, 0, 0],
+                        [0.64, -20, 0, 0], [0.80, 6, 0, 0], [1, 30, 0, 0]] },
+    lowerLegR: { keys: [[0, 24, 0, 0], [0.10, 88, 0, 0], [0.28, 42, 0, 0], [0.42, 12, 0, 0],
+                        [0.5, 14, 0, 0], [0.68, 4, 0, 0], [0.94, 24, 0, 0], [1, 24, 0, 0]] },
+    footR: { keys: [[0, -26, 0, 0], [0.14, 14, 0, 0], [0.5, 12, 0, 0], [0.72, -4, 0, 0], [1, -26, 0, 0]] },
+    /* Arms driving, not reaching: elbows locked near ninety, shoulders
+       swinging opposite the legs. */
+    upperArmL: { keys: [[0, -58, 0, -8], [0.5, 26, 0, -8], [1, -58, 0, -8]] },
+    upperArmR: { keys: [[0, 26, 0, 8], [0.5, -58, 0, 8], [1, 26, 0, 8]] },
+    lowerArmL: { keys: [[0, -88, 0, 0], [0.5, -74, 0, 0], [1, -88, 0, 0]] },
+    lowerArmR: { keys: [[0, -74, 0, 0], [0.5, -88, 0, 0], [1, -74, 0, 0]] },
+    handL: { keys: [[0, 0, 0, 0], [1, 0, 0, 0]] },
+    handR: { keys: [[0, 0, 0, 0], [1, 0, 0, 0]] },
   }));
 
   /* ---------------------------------------------------------

@@ -192,6 +192,48 @@ function makeZombieClips() {
   }));
 
   /* ---------------------------------------------------------
+     REMEMBERED SPRINT — the few seconds where it runs like a
+     person again.
+
+     Everything the shamble breaks on purpose, this puts back:
+     the arms counter-swing at the shoulder with the elbows held
+     at ninety, the legs are symmetric, the head stays over the
+     centre of mass, and the pelvis drives cleanly. Played
+     against zrun it reads as a body remembering how this used to
+     work — which is the only reason to have a correct human
+     sprint in a game with no humans left in it.
+     --------------------------------------------------------- */
+  clips.push(buildClip('zrun_human', 0.62, {
+    hips: {
+      keys: [[0, 8, -10, 2], [0.25, 8, 0, 0], [0.5, 8, 10, -2], [0.75, 8, 0, 0], [1, 8, -10, 2]],
+      pos: [[0, 0.010, -0.030, 0], [0.20, 0.014, 0.030, 0], [0.5, -0.010, -0.030, 0],
+            [0.70, -0.014, 0.030, 0], [1, 0.010, -0.030, 0]],
+    },
+    spine: { keys: [[0, 15, 8, 0], [0.25, 16, 0, 0], [0.5, 15, -8, 0], [0.75, 16, 0, 0], [1, 15, 8, 0]] },
+    chest: { keys: [[0, 6, 7, 0], [0.5, 7, -7, 0], [1, 6, 7, 0]] },
+    // Head level and forward, over the feet rather than ahead of them.
+    head: { keys: [[0, -10, 4, 0], [0.5, -11, -4, 0], [1, -10, 4, 0]] },
+    upperLegL: { keys: [[0, -46, 0, 0], [0.14, -20, 0, 0], [0.30, 6, 0, 0], [0.44, 30, 0, 0],
+                        [0.60, 2, 0, 0], [0.80, -30, 0, 0], [1, -46, 0, 0]] },
+    lowerLegL: { keys: [[0, 14, 0, 0], [0.18, 4, 0, 0], [0.44, 24, 0, 0], [0.60, 88, 0, 0],
+                        [0.78, 42, 0, 0], [0.92, 12, 0, 0], [1, 14, 0, 0]] },
+    footL: { keys: [[0, 12, 0, 0], [0.22, -4, 0, 0], [0.44, -26, 0, 0], [0.64, 14, 0, 0], [1, 12, 0, 0]] },
+    upperLegR: { keys: [[0, 30, 0, 0], [0.10, 2, 0, 0], [0.30, -30, 0, 0], [0.5, -46, 0, 0],
+                        [0.64, -20, 0, 0], [0.80, 6, 0, 0], [1, 30, 0, 0]] },
+    lowerLegR: { keys: [[0, 24, 0, 0], [0.10, 88, 0, 0], [0.28, 42, 0, 0], [0.42, 12, 0, 0],
+                        [0.5, 14, 0, 0], [0.68, 4, 0, 0], [0.94, 24, 0, 0], [1, 24, 0, 0]] },
+    footR: { keys: [[0, -26, 0, 0], [0.14, 14, 0, 0], [0.5, 12, 0, 0], [0.72, -4, 0, 0], [1, -26, 0, 0]] },
+    /* Arms driving, not reaching: elbows locked near ninety, shoulders
+       swinging opposite the legs. */
+    upperArmL: { keys: [[0, -58, 0, -8], [0.5, 26, 0, -8], [1, -58, 0, -8]] },
+    upperArmR: { keys: [[0, 26, 0, 8], [0.5, -58, 0, 8], [1, 26, 0, 8]] },
+    lowerArmL: { keys: [[0, -88, 0, 0], [0.5, -74, 0, 0], [1, -88, 0, 0]] },
+    lowerArmR: { keys: [[0, -74, 0, 0], [0.5, -88, 0, 0], [1, -74, 0, 0]] },
+    handL: { keys: [[0, 0, 0, 0], [1, 0, 0, 0]] },
+    handR: { keys: [[0, 0, 0, 0], [1, 0, 0, 0]] },
+  }));
+
+  /* ---------------------------------------------------------
      CRAWL — no working legs, hauling on the arms.
      The skeleton stays upright, so the crawl is made by folding
      the whole figure at the hips and packing the legs away

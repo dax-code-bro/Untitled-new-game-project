@@ -762,6 +762,82 @@ function buildBloodStains(g, build, rng) {
   }
 }
 
+/* ============================================================
+   ARMOUR — the thin plate the running ones wear.
+
+   Its own skinned mesh over the same skeleton, so it can be
+   steel while the cloth under it stays cloth. Deliberately
+   sparse: a chest and back plate, shoulder caps, bracers and
+   shin guards. It is a layer someone strapped on in a hurry,
+   not a suit — the point is that it reads as metal from across
+   a room, because a player has to know at a glance that
+   shooting it is a waste of ammunition.
+   ============================================================ */
+function buildZombieArmorGeometry(skeleton, opts = {}) {
+  const g = new Geometry();
+  const segments = opts.segments || 14;
+  const build = ZOMBIE_BUILDS[opts.build] || ZOMBIE_BUILDS.male;
+  const T = build.torso;
+  const a = new Vec3(), b = new Vec3(), c = new Vec3();
+
+  g.part = PART.BODY;
+  // Cuirass, sitting proud of whatever coat is under it.
+  const lift = 0.052;
+  const rows = [0.470, 0.420, 0.360, 0.300, 0.240, 0.180];
+  loftRings(g, rows.map((y, i) => {
+    const r = garmentRing(T, y, lift - i * 0.002);
+    return { p: r.p, w: r.w, d: r.d, e: 2.9, right: _zRight, fwd: _zFwd };
+  }), segments, false, false);
+  // A raised rib at each band join, so it is plate and not a barrel.
+  for (const y of [0.420, 0.300]) {
+    const r = garmentRing(T, y, lift + 0.008);
+    loftRings(g, [
+      { p: new Vec3(0, y - 0.012, 0), w: r.w, d: r.d, e: 2.9, right: _zRight, fwd: _zFwd },
+      { p: new Vec3(0, y + 0.012, 0), w: r.w, d: r.d, e: 2.9, right: _zRight, fwd: _zFwd },
+    ], segments, false, false);
+  }
+  // A gorget at the throat.
+  const neck = garmentRing(T, 0.487, lift - 0.014);
+  loftRings(g, [
+    { p: new Vec3(0, 0.487, 0), w: neck.w * 0.68, d: neck.d * 0.76, e: 2.6, right: _zRight, fwd: _zFwd },
+    { p: new Vec3(0, 0.524, -0.004), w: neck.w * 0.60, d: neck.d * 0.70, e: 2.5, right: _zRight, fwd: _zFwd },
+  ], segments, false, false);
+
+  for (const sideName of ['L', 'R']) {
+    const side = sideName === 'L' ? 1 : -1;
+    g.part = sideName === 'L' ? PART.ARM_L : PART.ARM_R;
+    skeleton.bones[skeleton.index('upperArm' + sideName)].bindMatrix.getTranslation(a);
+    skeleton.bones[skeleton.index('lowerArm' + sideName)].bindMatrix.getTranslation(b);
+    skeleton.bones[skeleton.index('hand' + sideName)].bindMatrix.getTranslation(c);
+    const r = build.shoulderCaps * 1.24;
+    loftRings(g, [
+      { p: new Vec3(a.x + side * 0.004, a.y + 0.070, a.z), w: r * 0.74, d: r * 0.82, e: 2.5 },
+      { p: new Vec3(a.x + side * 0.014, a.y + 0.026, a.z), w: r, d: r * 0.98, e: 2.5 },
+      { p: new Vec3(a.x + side * 0.020, a.y - 0.040, a.z), w: r * 0.90, d: r * 0.86, e: 2.4 },
+    ], segments, true, false);
+    const w0 = new Vec3().copy(b).lerp(c, 0.12), w1 = new Vec3().copy(b).lerp(c, 0.78);
+    loftRings(g, [
+      { p: w0, w: build.arm[2] + 0.030, d: build.arm[2] + 0.030, e: 2.6 },
+      { p: w1, w: build.arm[3] + 0.026, d: build.arm[3] + 0.026, e: 2.6 },
+    ], segments, true, true);
+
+    g.part = sideName === 'L' ? PART.LEG_L : PART.LEG_R;
+    skeleton.bones[skeleton.index('lowerLeg' + sideName)].bindMatrix.getTranslation(b);
+    skeleton.bones[skeleton.index('foot' + sideName)].bindMatrix.getTranslation(c);
+    const s0 = new Vec3().copy(b).lerp(c, 0.10), s1 = new Vec3().copy(b).lerp(c, 0.80);
+    loftRings(g, [
+      { p: s0, w: build.leg[3] + 0.034, d: build.leg[3] + 0.036, e: 2.7 },
+      { p: s1, w: build.leg[4] + 0.030, d: build.leg[4] + 0.032, e: 2.7 },
+    ], segments, true, true);
+  }
+  g.part = PART.BODY;
+  g.finalize();
+  g.computeWeldGroups();
+  smoothNormals(g);
+  weldNormals(g.normals, g.weldGroups);
+  return g;
+}
+
 /* Where a thrower can tear itself open, in bind-pose space. Five down the
    left flank working downward, then the face. Returned as data rather than
    geometry so the game can hang two actors on each — a wet cavity and the

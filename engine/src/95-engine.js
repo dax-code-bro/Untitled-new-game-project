@@ -42,7 +42,13 @@ class Actor {
     this.boundRadius = opts.boundRadius != null ? opts.boundRadius : 1;
     this.dead = false;
 
-    if (this.body) this.body.actor = this;
+    /* First actor to take a body owns the back-reference. A character is
+       several actors over one rigid body — flesh, clothes, blood, plate —
+       and if each claimed it in turn the last one built would win. Raycasts
+       resolve a hit through body.actor, so that silently pointed every shot
+       at a layer with no game state on it: bullets stopped registering on
+       zombies at all, with no error anywhere. */
+    if (this.body && !this.body.actor) this.body.actor = this;
   }
 
   get position() { return this.body ? this.body.position : this._position; }
@@ -614,6 +620,26 @@ class Engine {
         });
         this.actors.push(bloodActor);
         actor.blood = bloodActor;
+      }
+    }
+
+    /* Plate, for the ones that wear it: a third skinned mesh so the metal
+       has a metal material while the cloth under it stays cloth. */
+    if (opts.armor) {
+      const armorGeo = makeHumanoidMesh(skeleton, {
+        zombieBuild: opts.zombieBuild || 'male', seed: opts.seed || 3, armorOnly: true,
+      });
+      if (armorGeo.indices.length) {
+        const armorActor = new Actor(this, {
+          name: 'armor', mesh: new GpuMesh(this.gl, armorGeo),
+          material: this.material(opts.armorMaterial || {
+            color: 0x6b7078, texture: 'metal', roughness: 0.44, metalness: 1,
+          }),
+          skeleton, animator, controller, body: controller.body,
+          boundRadius: 1.4 * scale,
+        });
+        this.actors.push(armorActor);
+        actor.armor = armorActor;
       }
     }
 

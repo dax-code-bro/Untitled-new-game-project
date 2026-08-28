@@ -276,6 +276,27 @@ async function run() {
       check('character: skeleton built', hero.bones === 19, `bones=${hero.bones}`);
       check('character: walks forward', hero.moved > 0.6, `z=${hero.moved.toFixed(2)}`);
       check('character: enters a locomotion state', hero.state === 'walk' || hero.state === 'run', `state=${hero.state}`);
+
+      /* A layered character is several actors over one rigid body. Raycasts
+         resolve a hit through body.actor, so if a later layer claimed it,
+         every shot would report the wrong actor and games would silently
+         stop registering hits. */
+      const layered = await page.evaluate(() => {
+        const g = window.__hero.engine;
+        const z = g.character({
+          at: [4, 1.1, 0], zombie: true, face: 'static', armor: true, zombieBuild: 'male',
+        });
+        const owner = z.controller.body.actor;
+        return {
+          owner: owner ? owner.name : null,
+          isMain: owner === z,
+          layers: ['cloth', 'blood', 'armor'].filter((k) => !!z[k]),
+        };
+      });
+      check('character: layers do not steal the body back-reference',
+        layered.isMain, `body.actor="${layered.owner}", layers=[${layered.layers.join(',')}]`);
+      check('character: the extra skinned layers are actually built',
+        layered.layers.length >= 2, `layers=[${layered.layers.join(',')}]`);
       check('character: expression applied', hero.smile > 0.5, `smile=${(hero.smile || 0).toFixed(2)}`);
       check('character: position stays finite', hero.finite);
     }

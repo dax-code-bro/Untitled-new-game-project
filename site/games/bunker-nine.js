@@ -950,7 +950,7 @@ function tryFire(game, S, P, hud, sfx, dt) {
       (b) => b !== P.actor.body && !b.isTrigger && !(b.userData && b.userData.bulletPassthrough));
     const zm = hitM && hitM.actor && hitM.actor.userData && hitM.actor.userData.zombie;
     if (zm && !zm.dead) {
-      hurtZombie(game, S, zm, spec.dmg, hitM.point, false);
+      hurtZombie(game, S, zm, spec.dmg, hitM.point, false, spec.melee ? 'melee' : 'bullet');
       sfx.hitmark();
       hud.hitmark(false);
       if (zm.dead) {
@@ -1023,7 +1023,7 @@ function tryFire(game, S, P, hud, sfx, dt) {
       // Snapshot before the kill: death parks the body at the pool lot,
       // and the chain has to arc from the corpse, not the car park.
       const diedAt = { x: z.actor.position.x, y: z.actor.position.y, z: z.actor.position.z };
-      hurtZombie(game, S, z, dmg, hit.point, headshot);
+      hurtZombie(game, S, z, dmg, hit.point, headshot, P.goldAmmo ? 'gold' : 'bullet');
       let awarded = S.addPoints(ECONOMY.hit);
       if (z.dead) {
         killsThisShot++;
@@ -1042,7 +1042,7 @@ function tryFire(game, S, P, hud, sfx, dt) {
           const d = dist2d(other.actor.position, diedAt);
           if (d < spec.chain.radius) {
             arcBolt(game, diedAt, other.actor.position);
-            hurtZombie(game, S, other, spec.chain.dmg, other.actor.position, false);
+            hurtZombie(game, S, other, spec.chain.dmg, other.actor.position, false, 'bullet');
             if (other.dead) { S.addPoints(ECONOMY.kill); hud.pointsDelta(ECONOMY.kill); }
             jumps++;
           }
@@ -1210,6 +1210,7 @@ const VARIANTS = {
   runner: {
     weight: 0.0, speed: [3.1, 4.3], hp: 0.8, dmg: 1.0, points: 1.15,
     clip: 'zrun', clipSpeed: 1.0, eye: 0xff3a18, from: 4,
+    run: true,
   },
   crawler: {
     // Low, quiet and easy to lose track of — worth less because it is
@@ -1217,6 +1218,15 @@ const VARIANTS = {
     weight: 0.0, speed: [1.2, 1.7], hp: 0.55, dmg: 1.15, points: 0.9,
     clip: 'zcrawl', clipSpeed: 1.0, eye: 0xffb02a, from: 3,
     crawl: true, height: 0.95,
+  },
+  /* The armoured runner. Not a variant of the walker — the point of it is
+     that a thing already too fast to fight comfortably is also wearing
+     something bullets will not go through. Guns are wasted on it; the
+     battering ram, the riot shield and eighteen carat rounds are not. */
+  armored: {
+    weight: 0.0, speed: [2.8, 3.7], hp: 1.0, dmg: 1.25, points: 1.8,
+    clip: 'zrun', clipSpeed: 1.0, eye: 0x8fd0ff, from: 8,
+    plated: true, run: true,
   },
   spitter: {
     // Keeps its distance and throws. The only ranged threat in the game,
@@ -1258,6 +1268,7 @@ function variantWeights(round) {
     runner: round < 4 ? 0 : Math.min(0.85, (round - 3) * 0.14),
     crawler: round < 3 ? 0 : Math.min(0.45, (round - 2) * 0.09),
     spitter: round < 6 ? 0 : Math.min(0.32, (round - 5) * 0.07),
+    armored: round < 8 ? 0 : Math.min(0.26, (round - 7) * 0.05),
   };
 }
 
@@ -1331,6 +1342,10 @@ function buildPooledZombie(game, S, i) {
     skin: { color: tone, texture: 'rust', roughness: 0.92, metalness: 0, subsurface: 0.05, uvScale: 3 },
     seed: 20 + (i * 5) % 11,
     face: 'static', zombie: true,
+    // Every pooled body carries plate; it is only made visible on the ones
+    // that spawn armoured, which costs one hidden mesh and no rebuild.
+    armor: true,
+    armorMaterial: { color: 0x6a7078, texture: 'metal', roughness: 0.42, metalness: 1, uvScale: 2 },
     zombieBuild: body.id, faceType: body.faceType,
   });
   a.bodyType = body.id;
@@ -1486,6 +1501,7 @@ function playZombieAnim(z, name, fade) {
 function setZombieVisible(z, on) {
   z.actor.visible = on;
   if (z.actor.head) z.actor.head.visible = on;
+  if (z.actor.armor) z.actor.armor.visible = on && !!z.plated;
   // The coat and the stains are separate meshes on the same skeleton, so
   // they need hiding too — otherwise a parked body leaves its clothes
   // standing out at the far end of the world where the pool lives.
@@ -1545,7 +1561,9 @@ function spawnZombie(game, S, win, forceVariant) {
     tearT: 0, attackT: 0, groanT: 1 + Math.random() * 3, stuckT: 0, lastPos: null,
     vault: null, spitT: 1 + Math.random() * 2, anim: '',
     ripStage: 0, ripT: 0, throwT: 0, ripFace: false,
-    legless: false,
+    legless: false, plated: !!V.plated, clangT: 0,
+    // Runners drop in and out of a remembered human sprint.
+    lucid: 0, lucidT: 2 + Math.random() * 4,
   });
   healWounds(z);
   // A body coming back out of the pool has its legs again.
@@ -1570,8 +1588,19 @@ function spawnZombie(game, S, win, forceVariant) {
   return z;
 }
 
-function hurtZombie(game, S, z, dmg, at, headshot) {
+/* `source` decides whether the hit lands at all. Plate turns bullets: the
+   round sparks off it and does nothing, which is the whole identity of the
+   armoured runner and the reason the melee weapons and the gold rounds
+   exist. Everything else — a ram, a shield edge, an eighteen carat round —
+   goes straight through it. */
+function hurtZombie(game, S, z, dmg, at, headshot, source) {
   if (z.dead) return;
+  if (z.plated && (source === 'bullet' || source === 'blast')) {
+    game.particles.sparks(at, { count: 7, speed: 4.5, color: 0xffe6a8, colorEnd: 0x6a5a30 });
+    game.audio.impact(0.28);
+    z.clangT = 0.2;
+    return;
+  }
   z.hp -= dmg;
   game.particles.sparks(at, { count: 5, speed: 2.5, color: 0x7a1610, colorEnd: 0x2c0605 });
   if (z.hp <= 0) killZombie(game, S, z, headshot);
@@ -1790,7 +1819,25 @@ function updateZombie(game, S, P, z, dt, sfx) {
     z.lastPos = { x: pos.x, z: pos.z };
   }
 
-  if (z.actor.animator) z.actor.animator.speed = V.clipSpeed;
+  /* A runner is trying to remember how this used to work. Most of the time
+     it does not, and runs on the disorderly clip. Every few seconds
+     something lands and it sprints properly for a moment — faster, cleaner,
+     head over its feet — and then it comes apart again. */
+  if (V.run && z.state === 'hunt' && !z.legless) {
+    z.lucidT -= dt;
+    if (z.lucidT <= 0) {
+      if (z.lucid > 0) { z.lucid = 0; z.lucidT = 3.5 + Math.random() * 5; }
+      else { z.lucid = 1; z.lucidT = 1.4 + Math.random() * 2.2; }
+      z.moveClip = z.lucid ? 'zrun_human' : 'zrun';
+      // The remembered sprint is a real one, and it closes ground faster.
+      const boost = z.lucid ? 1.22 : 1;
+      z.actor.controller.moveSpeed = z.speed * boost;
+      z.actor.controller.runSpeed = z.speed * 1.35 * boost;
+      if (z.anim === 'zrun' || z.anim === 'zrun_human') playZombieAnim(z, z.moveClip, 0.22);
+    }
+  }
+
+  if (z.actor.animator) z.actor.animator.speed = V.clipSpeed * (z.lucid ? 1.05 : 1);
 
   for (const other of S.zombies) {
     if (other === z || other.dead || other.parked) continue;
@@ -1966,7 +2013,7 @@ function detonate(game, S, P, at, sfx) {
     if (d > GRENADE.outerRadius) continue;
     const fall = Math.pow(1 - d / GRENADE.outerRadius, 1.5);
     const dmg = d < GRENADE.killRadius ? 1e6 : GRENADE.damage * fall;
-    hurtZombie(game, S, z, dmg, [p.x, p.y + 0.9, p.z], false);
+    hurtZombie(game, S, z, dmg, [p.x, p.y + 0.9, p.z], false, 'blast');
     if (!z.dead && d < GRENADE.legRadius) makeCrawler(game, S, z);
   }
   const pp = P.actor.position;
