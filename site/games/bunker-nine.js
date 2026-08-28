@@ -79,6 +79,28 @@ const WEAPONS = {
     recoil: { up: 0.5, side: 0.4, climb: 0, recover: 12 },
     hands: { right: [-0.01, -0.036, 0.014], left: null },
   },
+  /* What a sheriff was carrying. Four chambers, a barrel you could lose
+     your nerve looking down, and enough behind each round to carry it
+     through two more bodies. */
+  obliterator: {
+    name: 'Obliterated Model 5', slotName: 'MODEL 5',
+    dmg: 620, headMul: 2.0, mag: 4, reserve: 32, refire: 0.44,
+    reload: 3.1, auto: false, pellets: 1, spread: 0.5,
+    kick: 3.4, sfx: 'shotMagnum', revolver: true,
+    pierce: 2, pierceFalloff: 0.62,
+    sightH: 0.030, sightFov: 0.86, adsTime: 0.26, adsSpread: 0.18,
+    recoil: { up: 4.2, side: 1.5, climb: 0.30, recover: 7 },
+    hands: { right: [-0.012, -0.040, 0.010], left: [0.030, -0.030, 0.030] },
+  },
+  mauser: {
+    name: 'Mauser C96', slotName: 'MAUSER',
+    dmg: 165, headMul: 2.4, mag: 10, reserve: 90, refire: 0.16,
+    reload: 2.3, auto: false, pellets: 1, spread: 0.7,
+    kick: 1.5, sfx: 'shotPistol',
+    sightH: 0.036, sightFov: 0.90, adsTime: 0.20, adsSpread: 0.22,
+    recoil: { up: 1.5, side: 0.6, climb: 0.06, recover: 11 },
+    hands: { right: [-0.010, -0.036, 0.012], left: null },
+  },
   /* The two answers to plate. Both are melee, both are slow, and both are
      mystery-box only — you do not get to plan for an armoured runner, you
      get to be glad you happen to be holding one. */
@@ -204,6 +226,12 @@ const LINES = {
   ],
   crateOpen: [['radio', 'Ah, the supply crate. Property of no army that admits to it.']],
   crateArc: [['patch', 'This is not standard issue. This is not any issue.']],
+  model5: [
+    ['patch', 'He was still holding it. Four chambers, and every one of them a mistake for whoever is stood behind the first.'],
+  ],
+  mauser: [
+    ['patch', 'A Mauser. Somebody brought this a long way to end up down here.'],
+  ],
   gold: [
     ['patch', 'Something just came out of the east wall. A belt line.'],
     ['radio', 'Feeding what, exactly.'],
@@ -263,6 +291,10 @@ function makeSfx(game) {
     shieldUp() { for (let i = 0; i < 3; i++) setTimeout(() => t(420 + i * 190, 0.14, 'sine', 0.09), i * 55); },
     perk() { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => t(f, 0.16, 'triangle', 0.1), i * 90)); },
     slide() { t(220, 0.3, 'sawtooth', 0.07); A.impact(0.3); },
+    shotMagnum() { A.impact(1); t(1350, 0.045, 'square', 0.14); t(150, 0.20, 'sawtooth', 0.17); t(62, 0.26, 'sine', 0.10); },
+    shotPistol() { A.impact(0.8); t(1600, 0.03, 'square', 0.10); t(230, 0.09, 'sawtooth', 0.11); },
+    cylinderOut() { t(520, 0.05, 'square', 0.06); t(240, 0.07, 'triangle', 0.05); },
+    cylinderIn() { A.impact(0.4); t(700, 0.05, 'square', 0.08); },
     ramHit() { A.impact(1); t(70, 0.28, 'sawtooth', 0.16); t(190, 0.12, 'square', 0.10); },
     ramSwing() { t(230, 0.16, 'sine', 0.05); },
     shieldHit() { A.impact(0.7); t(430, 0.10, 'square', 0.10); t(160, 0.16, 'sawtooth', 0.08); },
@@ -712,6 +744,79 @@ function makeKnife(game, opts = {}) {
 
 /* A claw hammer. Handle, head, claw — held like a tool, not a gun, so it
    gets its own hand pose. */
+/* ---------------- Obliterated Model 5 ----------------
+   Four chambers, a barrel you could look down and lose your nerve, and
+   enough behind each round to carry it through two bodies and into a
+   third. Built as a real revolver: frame, top strap, fluted cylinder with
+   four visible chambers, crane, ejector rod under the barrel, hammer,
+   trigger inside a guard, and a chequered grip. */
+function makeObliterator(game, opts = {}) {
+  const steel = { color: 0x585d64, texture: 'metal', roughness: 0.34, metalness: 1 };
+  const blued = { color: 0x24262b, texture: 'metal', roughness: 0.26, metalness: 1 };
+  const wood = { color: 0x50331c, texture: 'wood', roughness: 0.62, metalness: 0, uvScale: 5 };
+  const brass = { color: 0xa8843c, texture: 'metal', roughness: 0.3, metalness: 1 };
+  const root = game.box({ at: opts.at || [0, 0, 0], size: 1, physics: false, visible: false });
+  const parts = [];
+  const add = (a, pos, rot) => { a.parent = root; a.setPosition(pos); if (rot) a.setRotation(rot); parts.push(a); return a; };
+  // Barrel: a heavy tube with a full-length underlug.
+  add(game.cylinder({ radius: 0.0125, height: 0.185, material: blued, physics: false }), [0, 0.012, 0.145], [90, 0, 0]);
+  add(game.box({ size: [0.020, 0.021, 0.170], material: blued, physics: false }), [0, -0.004, 0.140]);
+  // Ejector rod in the lug.
+  add(game.cylinder({ radius: 0.0045, height: 0.135, material: steel, physics: false }), [0, -0.010, 0.130], [90, 0, 0]);
+  // Frame and top strap.
+  add(game.box({ size: [0.026, 0.030, 0.088], material: steel, physics: false }), [0, 0.008, 0.030]);
+  add(game.box({ size: [0.024, 0.008, 0.086], material: steel, physics: false }), [0, 0.028, 0.030]);
+  // Cylinder, fluted, four chambers.
+  const cyl = add(game.cylinder({ radius: 0.0225, height: 0.052, material: blued, physics: false }), [0, 0.008, 0.036], [90, 0, 0]);
+  for (let k = 0; k < 4; k++) {
+    const a2 = (k / 4) * Math.PI * 2;
+    add(game.cylinder({ radius: 0.0058, height: 0.054, material: brass, physics: false }),
+      [Math.sin(a2) * 0.0125, 0.008 + Math.cos(a2) * 0.0125, 0.036], [90, 0, 0]);
+    add(game.box({ size: [0.005, 0.010, 0.040], material: blued, physics: false }),
+      [Math.sin(a2 + 0.78) * 0.020, 0.008 + Math.cos(a2 + 0.78) * 0.020, 0.036]);
+  }
+  // Crane, hammer, trigger and guard.
+  add(game.cylinder({ radius: 0.007, height: 0.050, material: steel, physics: false }), [-0.022, 0.008, 0.036], [90, 0, 0]);
+  add(game.box({ size: [0.012, 0.026, 0.020], material: steel, physics: false }), [0, 0.026, -0.020], [-18, 0, 0]);
+  add(game.box({ size: [0.007, 0.020, 0.008], material: steel, physics: false }), [0, -0.020, -0.002]);
+  add(game.cylinder({ radius: 0.019, height: 0.010, material: steel, physics: false }), [0, -0.022, -0.002], [0, 90, 0]);
+  // Grip: backstrap and two chequered panels.
+  add(game.box({ size: [0.020, 0.086, 0.034], material: steel, physics: false }), [0, -0.056, -0.044], [17, 0, 0]);
+  for (const sx of [-1, 1]) add(game.box({ size: [0.008, 0.082, 0.032], material: wood, physics: false }), [sx * 0.013, -0.056, -0.044], [17, 0, 0]);
+  // Front sight and rear notch.
+  add(game.box({ size: [0.004, 0.011, 0.010], material: blued, physics: false }), [0, 0.030, 0.222]);
+  add(game.box({ size: [0.016, 0.007, 0.010], material: blued, physics: false }), [0, 0.032, -0.008]);
+  root.cylinder = cyl;
+  return { root, parts, cylinder: cyl };
+}
+
+/* ---------------- Mauser ----------------
+   Slab-sided, box magazine ahead of the trigger, that long thin barrel and
+   the broom-handle grip. */
+function makeMauser(game, opts = {}) {
+  const blued = { color: 0x272a30, texture: 'metal', roughness: 0.28, metalness: 1 };
+  const steel = { color: 0x5a6068, texture: 'metal', roughness: 0.36, metalness: 1 };
+  const wood = { color: 0x6b4622, texture: 'wood', roughness: 0.66, metalness: 0, uvScale: 5 };
+  const root = game.box({ at: opts.at || [0, 0, 0], size: 1, physics: false, visible: false });
+  const parts = [];
+  const add = (a, pos, rot) => { a.parent = root; a.setPosition(pos); if (rot) a.setRotation(rot); parts.push(a); return a; };
+  add(game.cylinder({ radius: 0.0068, height: 0.150, material: blued, physics: false }), [0, 0.016, 0.150], [90, 0, 0]);
+  add(game.box({ size: [0.019, 0.026, 0.120], material: blued, physics: false }), [0, 0.014, 0.062]);
+  // Bolt housing and the bolt itself.
+  add(game.cylinder({ radius: 0.0105, height: 0.070, material: steel, physics: false }), [0, 0.020, 0.010], [90, 0, 0]);
+  add(game.cylinder({ radius: 0.0072, height: 0.026, material: steel, physics: false }), [0, 0.020, -0.030], [90, 0, 0]);
+  // Box magazine ahead of the trigger — the shape that names it.
+  add(game.box({ size: [0.018, 0.046, 0.036], material: blued, physics: false }), [0, -0.020, 0.030]);
+  add(game.box({ size: [0.007, 0.018, 0.008], material: steel, physics: false }), [0, -0.026, -0.006]);
+  add(game.cylinder({ radius: 0.017, height: 0.009, material: steel, physics: false }), [0, -0.028, -0.006], [0, 90, 0]);
+  // Broom-handle grip.
+  add(game.cylinder({ radius: 0.017, height: 0.078, material: wood, physics: false }), [0, -0.056, -0.046], [22, 0, 0]);
+  add(game.sphere({ radius: 0.017, material: wood, physics: false }), [0, -0.090, -0.060]);
+  add(game.box({ size: [0.012, 0.010, 0.012], material: blued, physics: false }), [0, 0.036, 0.212]);
+  add(game.box({ size: [0.018, 0.008, 0.012], material: blued, physics: false }), [0, 0.036, -0.020]);
+  return { root, parts };
+}
+
 /* ---------------- riot shield ----------------
    A polycarbonate slab in a steel frame, with a viewport band, two
    handles and a bar across the back. It is carried, not swung: raised it
@@ -862,6 +967,8 @@ function makePlayer(game, S, hud, sfx, voice) {
   P.view.hammer = Object.assign(makeHammer(game), { kind: 'group', muzzle: 0.24 });
   P.view.ram = Object.assign(makeBatteringRam(game), { kind: 'group', muzzle: 0.44 });
   P.view.shield = Object.assign(makeRiotShield(game), { kind: 'group', muzzle: 0.30 });
+  P.view.obliterator = Object.assign(makeObliterator(game), { kind: 'group', muzzle: 0.26 });
+  P.view.mauser = Object.assign(makeMauser(game), { kind: 'group', muzzle: 0.24 });
   // Hands, parented to each weapon so they inherit its every motion.
   for (const [id, v] of Object.entries(P.view)) {
     const root = v.kind === 'single' ? v.actor : v.root;
@@ -1040,6 +1147,25 @@ function updateViewmodel(game, P, dt, moving) {
     root.setPosition([px + f.x * 0.10 * b, py + 0.055 * b, pz + f.z * 0.10 * b]);
   }
 
+  /* Revolver reload: the cylinder swings out on its crane, hangs there
+     while it is fed, and snaps back. Three beats over the reload time
+     rather than one continuous move, because that is how the hands work —
+     out, load, shut. */
+  if (spec.revolver && v.cylinder) {
+    if (P.reloading > 0) {
+      const u = 1 - P.reloading / spec.reload;      // 0 at the start, 1 done
+      const outAmt = u < 0.20 ? u / 0.20 : (u < 0.78 ? 1 : 1 - (u - 0.78) / 0.22);
+      v.cylinder.setPosition([-0.030 * outAmt, 0.008, 0.036]);
+      v.cylinder.setRotation([90, 0, -62 * outAmt]);
+      if (!P.cylOut && u > 0.05) { P.cylOut = true; sfx.cylinderOut(); }
+      if (P.cylOut && u > 0.86) { P.cylOut = false; sfx.cylinderIn(); }
+    } else {
+      v.cylinder.setPosition([0, 0.008, 0.036]);
+      v.cylinder.setRotation([90, 0, 0]);
+      P.cylOut = false;
+    }
+  }
+
   /* Reciprocating slide. A half-sine over the cycle time: back hard, forward
      on the return, which is the shape the real thing traces. */
   const gunActor = v.kind === 'single' ? v.actor : v.root;
@@ -1214,6 +1340,8 @@ function tryFire(game, S, P, hud, sfx, dt) {
     const rl = Math.hypot(fwd.x, fwd.z) || 1e-6;
     const rgt = { x: fwd.z / rl, z: -fwd.x / rl };
     const dir = [fwd.x + rgt.x * rx, fwd.y + ry, fwd.z + rgt.z * rx];
+    // Bodies this pellet has already gone through, for penetrating rounds.
+    const pierced = [];
     const hit = game.raycast([cam.position.x, cam.position.y, cam.position.z], dir, 60,
       (b) => b !== P.actor.body && !b.isTrigger && !(b.userData && b.userData.bulletPassthrough));
     if (!hit) continue;
@@ -1235,6 +1363,30 @@ function tryFire(game, S, P, hud, sfx, dt) {
       hud.pointsDelta(awarded);
       headshot ? sfx.headmark() : sfx.hitmark();
       hud.hitmark(headshot);
+      /* Penetration. A round that pierces carries on through the body it
+         hit, losing a share each pass, until it runs out of passes or meets
+         something that is not a zombie. Skipping the ones already hit is
+         what stops it spending every pass on the same torso. */
+      if (spec.pierce) {
+        let carry = dmg, passes = spec.pierce;
+        let from = hit.point;
+        while (passes-- > 0) {
+          pierced.push(z);
+          carry *= spec.pierceFalloff;
+          const nxt = game.raycast([from.x + dir[0] * 0.06, from.y + dir[1] * 0.06, from.z + dir[2] * 0.06], dir, 40,
+            (b) => b !== P.actor.body && !b.isTrigger && !(b.userData && b.userData.bulletPassthrough)
+              && !(b.userData && b.userData.zombie && pierced.indexOf(b.userData.zombie) >= 0));
+          if (!nxt) break;
+          const z2 = nxt.actor && nxt.actor.userData && nxt.actor.userData.zombie;
+          if (!z2 || z2.dead) break;                     // it stopped in a wall
+          const head2 = nxt.point.y > z2.actor.position.y + 0.5;
+          hurtZombie(game, S, z2, carry * (head2 ? spec.headMul : 1), nxt.point, head2,
+            P.goldAmmo ? 'gold' : 'bullet');
+          const pts2 = S.addPoints(head2 ? ECONOMY.headshotKill : ECONOMY.hit);
+          hud.pointsDelta(pts2);
+          from = nxt.point;
+        }
+      }
       // Arc chain: jump to neighbours of the first thing it kills.
       if (spec.chain) {
         let jumps = 0;
@@ -1365,6 +1517,13 @@ const ZOMBIE_SKIN = { color: 0x8d9c78, texture: 'skin', roughness: 0.88, metalne
    four copies of one man. 'walker' is the imported body; the rest dress the
    procedural one. */
 const MALE_LOOKS = ['walker', 'street', 'college', 'prison'];
+
+/* The heavy build in uniform. A sheriff was carrying something; an officer
+   was not, which is the whole difference between them for the player. */
+const HEAVY_LOOKS = ['sheriff', 'officer'];
+
+/* What a dead sheriff leaves behind, and how often. */
+const SHERIFF_DROP = { model5: 0.16, mauser: 0.22, life: 26 };
 
 /* How each melee weapon moves. `out` is the fraction of the animation spent
    driving forward; the rest is the recovery, which is always slower. */
@@ -1546,8 +1705,10 @@ function buildPooledZombie(game, S, i) {
      Anything with a model skips the procedural garment, blood and head
      layers entirely — it already has them. */
   const look = body.id === 'male' ? MALE_LOOKS[(i / BODY_TYPES.length | 0) % MALE_LOOKS.length] : null;
+  // The heavy build turns up in uniform: half sheriffs, half officers.
+  const heavyLook = body.id === 'heavy' ? HEAVY_LOOKS[(i / BODY_TYPES.length | 0) % HEAVY_LOOKS.length] : null;
   const model = look === 'walker' && WALKER ? WALKER : null;
-  const outfit = look && look !== 'walker' ? look : null;
+  const outfit = heavyLook || (look && look !== 'walker' ? look : null);
   const a = game.character({
     model, outfit,
     at: [200 + i * 4, -38, 0],
@@ -1579,6 +1740,7 @@ function buildPooledZombie(game, S, i) {
   });
   a.bodyType = body.id;
   a.buildDef = body;
+  a.outfitName = outfit;
   a.controller.body.gravityScale = 0;
   a.controller.autoAnimate = false;   // the zombie brain owns the clips
   /* Eyes, as two pieces each: a dark wet iris sitting on the head's own
@@ -1854,6 +2016,15 @@ function killZombie(game, S, z, headshot) {
     });
     if (g.body) g.body.angularVelocity.set(Math.random() * 8, Math.random() * 8, Math.random() * 8);
   }
+  /* A sheriff sometimes goes down still holding it. Officers never do —
+     they are a big body worth no drop, which is what makes the sheriff
+     worth picking out of a crowd. */
+  if (z.actor.outfitName === 'sheriff') {
+    const roll = Math.random();
+    const id = roll < SHERIFF_DROP.model5 ? 'obliterator'
+      : roll < SHERIFF_DROP.model5 + SHERIFF_DROP.mauser ? 'mauser' : null;
+    if (id) dropWeapon(game, S, [p.x, p.y + 0.25, p.z], id);
+  }
   // Powerup roll.
   if (!S.powerupActive && Math.random() < 0.04) dropPowerup(game, S, p);
   parkZombie(game, S, z);
@@ -1865,6 +2036,14 @@ const POWERUPS = {
   blitz: { label: 'BLITZ', color: 0xffd23a },
   double: { label: 'PAYDAY', color: 0x66d4ff },
 };
+
+/* A gun on the floor, spinning, with its own model. Walk over it to take
+   it — it goes into a free slot, or replaces what you are holding. */
+function dropWeapon(game, S, at, id) {
+  const built = id === 'obliterator' ? makeObliterator(game) : makeMauser(game);
+  built.root.setPosition(at);
+  S.drops.push({ id, root: built.root, parts: built.parts, t: SHERIFF_DROP.life, spin: 0, baseY: at[1] });
+}
 
 function dropPowerup(game, S, p) {
   const keys = Object.keys(POWERUPS);
@@ -2680,7 +2859,7 @@ function start(opts = {}) {
     testMode: !!opts.test, godMode: false,
     input: { fireHeld: false, firePressed: false, aimHeld: false, sprintHeld: false },
     testHold: {},
-    grenades: [], goldPickups: [], belt: null,
+    grenades: [], goldPickups: [], belt: null, drops: [],
   };
   S.addPoints = (n) => { const a = Math.round(n * S.mul); S.points += a; return a; };
 
@@ -3080,6 +3259,30 @@ function start(opts = {}) {
       if (d.t <= 0) { d.actor.destroy(); S.debris.splice(k, 1); }
     }
 
+    /* Dropped guns: spin on the floor, and go in the hands of whoever
+       walks over them. */
+    for (let k = S.drops.length - 1; k >= 0; k--) {
+      const d = S.drops[k];
+      d.t -= dt; d.spin += dt * 1.9;
+      const at = d.root.position;
+      d.root.setPosition([at.x, d.baseY + Math.sin(d.spin * 1.7) * 0.05, at.z]);
+      d.root.setRotation([0, d.spin * 57.3, 0]);
+      if (d.t < 5) { const on = Math.floor(d.t * 5) % 2 === 0; d.root.visible = on; for (const q of d.parts) q.visible = on; }
+      const gone = d.t <= 0;
+      const taken = !gone && dist2d(at, P.actor.position) < 1.15 && Math.abs(at.y - P.actor.position.y) < 1.8;
+      if (taken) {
+        P.give(d.id);
+        sfx.buy();
+        hud.flashWeapon(WEAPONS[d.id].name);
+        hud.ammo(P);
+        S.voice(d.id === 'obliterator' ? LINES.model5 : LINES.mauser);
+      }
+      if (gone || taken) {
+        d.root.destroy(); for (const q of d.parts) q.destroy();
+        S.drops.splice(k, 1);
+      }
+    }
+
     /* Powerup float, pickup, expiry. */
     if (S.powerupActive) {
       const pu = S.powerupActive;
@@ -3141,6 +3344,7 @@ function start(opts = {}) {
       return win ? spawnZombie(game, S, win, kind) : null;
     },
     variantOdds(r) { return variantWeights(r); },
+    kill(z) { killZombie(game, S, z, false); },
     buildPool(n) { while (S.pool.length < n) buildPooledZombie(game, S, S.pool.length); return S.pool.length; },
     ripState() {
       return S.zombies.filter((z) => !z.parked && z.V && z.V.ranged).map((z) => ({

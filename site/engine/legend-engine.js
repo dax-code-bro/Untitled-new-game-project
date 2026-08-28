@@ -9598,6 +9598,26 @@ const OUTFITS = {
     shoes: { kind: 'sneaker', color: 0xe2e0da, sole: 0xa8323c },
     hat: { color: 0x7d2233, brim: 0x5e1a27 }, wire: false,
   },
+  /* The heavy build in uniform. A sheriff carried a revolver, and
+     sometimes it is still on him. */
+  sheriff: {
+    top: { color: 0x3f4a53, collar: 0.516, hem: -0.070, sleeve: 0.90, tears: 0.035 },
+    under: { color: 0xb9bcc0, collar: 0.500, hem: -0.09 },
+    bottom: { color: 0x2b323a, hem: 0.99, tears: 0.03 },
+    shoes: { kind: 'boot', color: 0x1e1a17 },
+    hat: { color: 0x2f3740, brim: 0x232a31 }, wire: false,
+    badge: 0xd9b13a, belt: 0x241f1a,
+  },
+  /* An officer, of one army or the other. He is not carrying anything you
+     want, which is the point of him: a big body worth no drop at all. */
+  officer: {
+    top: { color: 0x4b4f3c, collar: 0.520, hem: -0.080, sleeve: 0.94, tears: 0.04 },
+    under: { color: 0x8d8a72, collar: 0.502, hem: -0.10 },
+    bottom: { color: 0x3e4232, hem: 0.99, tears: 0.035 },
+    shoes: { kind: 'boot', color: 0x241d18 },
+    hat: { color: 0x4b4f3c, brim: 0x2b2e22 }, wire: false,
+    badge: 0xb8b2a0, belt: 0x2a221c,
+  },
   /* Z=3. Prison issue, and the wire he went through to get out. */
   prison: {
     top: { color: 0xd07227, collar: 0.508, hem: -0.045, sleeve: 0.42, tears: 0.05 },
@@ -9731,6 +9751,33 @@ function buildCap(g, skeleton, segments, spec) {
   ], 12, true, true);
   g.setColor(null);
   g.part = PART.BODY;
+}
+
+/* A duty belt with a buckle, and a badge on the chest. What separates a
+   uniform from a shirt in a colour. */
+function buildDutyBelt(g, build, outfit) {
+  const T = build.torso;
+  g.part = PART.BODY;
+  g.setColor(outfit.belt);
+  const y = 0.150;
+  const b = torsoAt(T, y);
+  loftRings(g, [
+    { p: new Vec3(0, y - 0.028, (b[4] || 0) * 0.9), w: b[1] + 0.040, d: b[2] + 0.040, e: b[3], right: _zRight, fwd: _zFwd },
+    { p: new Vec3(0, y + 0.028, (b[4] || 0) * 0.9), w: b[1] + 0.040, d: b[2] + 0.040, e: b[3], right: _zRight, fwd: _zFwd },
+  ], 16, false, false);
+  g.setColor(0xc9b072);
+  loftRings(g, [
+    { p: new Vec3(0, y, b[2] + 0.050 + (b[4] || 0) * 0.9), w: 0.038, d: 0.012, e: 3.0, right: _zRight, fwd: _zFwd },
+    { p: new Vec3(0, y, b[2] + 0.058 + (b[4] || 0) * 0.9), w: 0.034, d: 0.010, e: 3.0, right: _zRight, fwd: _zFwd },
+  ], 10, true, true);
+  // Badge, high on the left breast.
+  const c = torsoAt(T, 0.400);
+  g.setColor(outfit.badge);
+  loftRings(g, [
+    { p: new Vec3(c[1] * 0.46, 0.400, c[2] + 0.034 + (c[4] || 0) * 0.9), w: 0.028, d: 0.006, e: 2.2, right: _zRight, fwd: _zFwd },
+    { p: new Vec3(c[1] * 0.46, 0.400, c[2] + 0.042 + (c[4] || 0) * 0.9), w: 0.020, d: 0.004, e: 2.2, right: _zRight, fwd: _zFwd },
+  ], 10, true, true);
+  g.setColor(null);
 }
 
 /* Barbed wire, wound round the trunk. Cosmetic — it does nothing but say
@@ -10150,6 +10197,7 @@ function buildZombieClothGeometry(skeleton, opts = {}) {
     buildZombieLimbCloth(g, skeleton, build, rng, segments, outfit);
     buildTrousers(g, skeleton, build, rng, segments, outfit.bottom);
     buildShoes(g, skeleton, build, segments, outfit.shoes);
+    if (outfit.belt) buildDutyBelt(g, build, outfit);
     if (outfit.hat) buildCap(g, skeleton, segments, outfit.hat);
     if (outfit.wire) buildBarbwire(g, build, rng);
     g.part = PART.BODY;
