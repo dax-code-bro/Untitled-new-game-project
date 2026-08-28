@@ -236,6 +236,13 @@ const LINES = {
   ],
   crateOpen: [['radio', 'Ah, the supply crate. Property of no army that admits to it.']],
   crateArc: [['patch', 'This is not standard issue. This is not any issue.']],
+  dealFair: [['patch', 'He gave me more than it was worth. That is somehow worse.']],
+  dealRobbed: [['patch', 'That was robbery and he knows it.']],
+  dealAngry: [['radio', 'Whatever is behind that counter has stopped pretending to be a shopkeeper.']],
+  shopFirst: [
+    ['patch', 'The door just shut behind me.'],
+    ['radio', 'Then whatever is down there wants a word. There is a counter. Do not put your hands on it.'],
+  ],
   boss: [
     ['radio', 'Movement on the stair. Heavy. Slow. Not stopping.'],
     ['patch', 'That is a lot of man behind a lot of plastic.'],
@@ -371,6 +378,9 @@ const MAP = {
   loft: { x0: 0.5, x1: 6.0, z0: -4.5, z1: 4.5, y0: 3.1, y1: 6.0 },
   door1: { x: -6.6, z0: -0.3, z1: 1.3, h: 2.4 },            // MESS <-> GEN
   stair: { z0: 2.9, z1: 4.3, x0: 1.0, x1: 5.7, top: 3.1 },  // MESS -> LOFT
+  // Down from the mess, behind a steel door that shuts on its own.
+  down: { x0: -5.6, x1: -3.4, z0: 2.6, z1: 4.2, floor: -3.4 },
+  shop: { x0: -12.0, x1: -3.0, z0: -1.2, z1: 4.2, y0: -3.5, y1: -0.6 },
 };
 
 const WINDOWS = [
@@ -549,6 +559,105 @@ function buildMap(game, S) {
     root.visible = false;
     for (const q of parts) q.visible = false;
     S.belt = { root, parts, rollers, lamp, at: [bx, by, bz], out: 0, running: false, dropT: 0, spin: 0 };
+  }
+
+  /* ---------------- the way down ----------------
+
+     A stairwell out of the south-west corner of the mess, a landing, and a
+     steel door that shuts behind you. Below it, a workshop nobody will
+     admit to running. */
+  {
+    const D = MAP.down, SH = MAP.shop;
+    // Shaft walls around the stair opening.
+    slab(D.x0 - 0.4, D.x0, D.floor, 0.02, D.z0 - 0.4, D.z1 + 0.4, MAT.wallDark);
+    slab(D.x1, D.x1 + 0.4, D.floor, 0.02, D.z0 - 0.4, D.z1 + 0.4, MAT.wallDark);
+    slab(D.x0 - 0.4, D.x1 + 0.4, D.floor, 0.02, D.z1, D.z1 + 0.4, MAT.wallDark);
+    // Steps down.
+    const steps = 14;
+    for (let k = 0; k < steps; k++) {
+      const y = -0.02 - (k + 1) * (Math.abs(D.floor) / steps);
+      const z0 = D.z0 + (D.z1 - D.z0) * (k / steps);
+      slab(D.x0, D.x1, y, y + 0.20, z0, z0 + (D.z1 - D.z0) / steps + 0.03, MAT.floor);
+    }
+    // Shop shell: floor, ceiling, four walls.
+    slab(SH.x0 - 0.4, SH.x1 + 0.4, SH.y0 - 0.4, SH.y0, SH.z0 - 0.4, SH.z1 + 0.4, MAT.floor);
+    slab(SH.x0 - 0.4, SH.x1 + 0.4, SH.y1, SH.y1 + 0.4, SH.z0 - 0.4, SH.z1 + 0.4, MAT.wallDark);
+    slab(SH.x0 - 0.4, SH.x0, SH.y0, SH.y1, SH.z0 - 0.4, SH.z1 + 0.4, MAT.wall);
+    slab(SH.x1, SH.x1 + 0.4, SH.y0, SH.y1, SH.z0 - 0.4, D.z0 - 0.2, MAT.wall);
+    slab(SH.x0 - 0.4, SH.x1 + 0.4, SH.y0, SH.y1, SH.z0 - 0.4, SH.z0, MAT.wall);
+    slab(SH.x0 - 0.4, SH.x1 + 0.4, SH.y0, SH.y1, SH.z1, SH.z1 + 0.4, MAT.wall);
+
+    // The door at the bottom of the stair, on a hinge post.
+    const doorAt = [D.x0 + (D.x1 - D.x0) / 2, D.floor + 1.05, D.z0 - 0.1];
+    const door = game.box({ at: doorAt, size: [2.0, 2.1, 0.10], material: MAT.steel, static: true });
+    for (const sx of [-1, 1]) {
+      game.box({ at: [doorAt[0] + sx * 1.02, doorAt[1], doorAt[2]], size: [0.10, 2.3, 0.24], material: MAT.steel, static: true });
+    }
+    game.cylinder({ at: [doorAt[0] + 0.6, doorAt[1], doorAt[2] - 0.10], radius: 0.07, height: 0.10, material: MAT.steel, static: true });
+
+    // Counter across the room, with the crate behind it.
+    const cx = -7.6, cz = 1.6, cy = SH.y0;
+    game.box({ at: [cx, cy + 0.52, cz], size: [4.4, 1.04, 0.55], material: MAT.wood, static: true });
+    game.box({ at: [cx, cy + 1.07, cz], size: [4.6, 0.07, 0.72], material: { color: 0x3c3a35, texture: 'metal', roughness: 0.6, metalness: 1 }, static: true });
+    // Shelving down the back wall.
+    for (let k = 0; k < 3; k++) {
+      game.box({ at: [cx - 1.0, cy + 0.7 + k * 0.62, cz - 1.5], size: [4.0, 0.06, 0.45], material: MAT.board, static: true });
+    }
+    // The crate the donations pile up in.
+    // The crate the donations pile up in, on the player's side of the room
+    // so what you gave up is in front of you every time you come back.
+    game.box({ at: [-4.6, cy + 0.36, 2.4], size: [1.15, 0.72, 1.0], material: MAT.board, static: true });
+
+    /* Him. There is nothing behind the counter but a shape, and the only
+       parts of it that resolve are two points of light where a face would
+       be. Building him as an absence rather than a person is the whole
+       effect: a black silhouette takes no light back. */
+    const abyss = { color: 0x05060a, texture: 'smooth', roughness: 1, metalness: 0 };
+    const fig = game.box({ at: [cx, cy + 1.05, cz - 0.62], size: [0.86, 2.1, 0.5], material: abyss, physics: false });
+    game.sphere({ at: [cx, cy + 2.02, cz - 0.62], radius: 0.28, material: abyss, physics: false });
+    for (const sx of [-1, 1]) {
+      game.sphere({ at: [cx + sx * 0.10, cy + 2.06, cz - 0.38], radius: 0.032, physics: false, material: {
+        color: 0x101010, texture: 'smooth', roughness: 0.3, emissive: 0xffb04a, emissiveStrength: 3.0 } });
+    }
+    game.light({ at: [cx, cy + 2.3, cz + 0.5], color: 0xffb877, intensity: 5.5, range: 7 });
+
+    /* Two turrets on the ceiling. They do not track anything until
+       something that should not be down here comes through the door. */
+    const turrets = [];
+    for (const tx of [cx - 1.8, cx + 1.8]) {
+      const base = game.cylinder({ at: [tx, SH.y1 - 0.14, cz + 1.9], radius: 0.16, height: 0.22, material: MAT.steel, static: true });
+      const barrel = game.cylinder({ at: [tx, SH.y1 - 0.42, cz + 1.9], radius: 0.055, height: 0.46, material: { color: 0x2a2d31, texture: 'metal', roughness: 0.5, metalness: 1 }, physics: false });
+      const eye = game.sphere({ at: [tx, SH.y1 - 0.30, cz + 2.06], radius: 0.035, physics: false, material: {
+        color: 0x180404, texture: 'smooth', roughness: 0.3, emissive: 0xff2a1a, emissiveStrength: 2.4 } });
+      turrets.push({ base, barrel, eye, at: [tx, SH.y1 - 0.42, cz + 1.9] });
+    }
+
+    /* Three stands down the west wall, a perk board by the door, and the
+       crate opposite. Spread out on purpose: every one of these is an
+       interact point, and the first match wins, so two of them within a
+       stride of each other means one can never be reached. */
+    const standAt = [[-11.2, 0.0], [-11.2, 1.5], [-11.2, 3.0]];
+    for (const [sx, sz] of standAt) {
+      game.box({ at: [sx, cy + 0.44, sz], size: [0.46, 0.88, 0.46], material: MAT.board, static: true });
+      game.box({ at: [sx, cy + 0.92, sz], size: [0.56, 0.08, 0.56], material: MAT.steel, static: true });
+    }
+    const perkAt = [-4.6, 0.2];
+    game.box({ at: [perkAt[0] + 0.30, cy + 1.45, perkAt[1]], size: [0.10, 1.30, 1.60], material: MAT.board, static: true });
+    for (let k = 0; k < 3; k++) {
+      game.box({ at: [perkAt[0] + 0.22, cy + 1.85 - k * 0.36, perkAt[1]], size: [0.03, 0.24, 0.34],
+        material: { color: [0x7ad7ff, 0xb08cff, 0xffd23a][k], texture: 'smooth', roughness: 0.4,
+          emissive: [0x7ad7ff, 0xb08cff, 0xffd23a][k], emissiveStrength: 0.8 }, static: true });
+    }
+    const crateFloorAt = [-4.6, 2.4];
+
+    S.shop = {
+      room: SH, doorAt, door, fig, turrets,
+      crateAt: [crateFloorAt[0], cy + 0.36, crateFloorAt[1]],
+      standAt, perkAt,
+      counterAt: [cx, cy, cz + 0.9],
+      stock: [], prices: {}, buyback: {},
+      donated: [], discount: 0, stolen: 0, hostile: false, sealT: 0,
+    };
   }
 
   /* The generator, and the wall panel that wakes it.
@@ -1546,6 +1655,27 @@ const SHERIFF_DROP = { model5: 0.16, mauser: 0.22, life: 26 };
    Obese, fully kitted, and quick for his size. He carries a shield that
    eats everything from the front — but only in bursts: it takes a beating
    and then it is gone for half a minute, and that window is the fight. */
+/* The workshop.
+
+   Stock is rolled once a match, so what he has is what he has. Buyback is
+   rolled per gun and per match too, and it is not always in your favour —
+   the same Thompson might be worth 1700 or 900 depending on how he feels
+   about you this run, and you find out by selling it.
+
+   Perks come at a discount you have to buy with things you already own.
+   Every gun you donate lifts the discount and lands in the crate behind
+   him, where you can see exactly what you gave up. You can take it back
+   out. Twice. */
+const SHOP = {
+  stockSize: 3,
+  guns: ['thompson', 'scatter', 'arc', 'mauser', 'obliterator', 'ram', 'shield'],
+  markup: [1.0, 1.45],
+  buybackLow: 0.55, buybackHigh: 1.15,
+  bribeStep: 0.14, maxDiscount: 0.55,
+  stealsAllowed: 2,
+  turretDps: 900,
+};
+
 const BOSS = {
   // Fast for his size — a little under a runner once the heavy build's own
   // speed multiplier is applied, which is the brief.
@@ -1710,6 +1840,8 @@ function pickVariant(round, rng) {
 }
 
 function roomOf(p) {
+  // Anything below the floor slab is downstairs, and nothing follows you.
+  if (p.y < -0.5) return 'shop';
   if (p.y > 2.4 && p.x > MAP.loft.x0 - 0.5) return 'loft';
   if (p.x < MAP.gen.x1 + 0.2) return 'gen';
   return 'mess';
@@ -2143,6 +2275,16 @@ function dropWeapon(game, S, at, id) {
   S.drops.push({ id, root: built.root, parts: built.parts, t: SHERIFF_DROP.life, spin: 0, baseY: at[1] });
 }
 
+/* Take a weapon out of the player's hands, leaving the sidearm behind. */
+function dropFromHands(P, id) {
+  const at = P.slots.indexOf(id);
+  if (at < 0) return;
+  P.slots.splice(at, 1);
+  if (!P.slots.length) P.slots.push('m1911');
+  P.slot = Math.min(P.slot, P.slots.length - 1);
+  P.reloading = 0;
+}
+
 function dropPowerup(game, S, p) {
   const keys = Object.keys(POWERUPS);
   const kind = keys[Math.floor(Math.random() * keys.length)];
@@ -2562,6 +2704,42 @@ function detonate(game, S, P, at, sfx) {
   }
 }
 
+/* Roll the workshop for this match: what is on the shelf, what he is
+   asking, and what he is willing to give you back. */
+function rollShop(S) {
+  const sh = S.shop;
+  if (!sh) return;
+  const pool = SHOP.guns.slice();
+  sh.stock = [];
+  for (let k = 0; k < SHOP.stockSize && pool.length; k++) {
+    sh.stock.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+  }
+  for (const id of SHOP.guns) {
+    const base = ECONOMY.wallGun;
+    sh.prices[id] = Math.round(base * (SHOP.markup[0] + Math.random() * (SHOP.markup[1] - SHOP.markup[0])) / 50) * 50;
+    sh.buyback[id] = Math.round(base * (SHOP.buybackLow + Math.random() * (SHOP.buybackHigh - SHOP.buybackLow)) / 50) * 50;
+  }
+}
+
+/* Something he does not want down here. The turrets do not negotiate. */
+function shopTurrets(game, S, dt, sfx) {
+  const sh = S.shop;
+  if (!sh) return;
+  for (const z of S.zombies) {
+    if (z.dead || z.parked) continue;
+    const p = z.actor.position;
+    if (p.y > sh.room.y1 || p.y < sh.room.y0 - 1) continue;
+    if (p.x < sh.room.x0 || p.x > sh.room.x1 + 1.2) continue;
+    for (const t of sh.turrets) {
+      game.particles.sparks([p.x, p.y + 1.1, p.z], { count: 6, speed: 7, color: 0xffe08a, colorEnd: 0x7a3a10 });
+      void t;
+    }
+    hurtZombie(game, S, z, SHOP.turretDps * dt, [p.x, p.y + 1.0, p.z], false, 'gold');
+    if (Math.random() < 0.2) sfx.hitmark();
+  }
+  void dt;
+}
+
 /* ---------------- interaction ---------------- */
 
 function nearestInteract(S, P) {
@@ -2575,6 +2753,55 @@ function nearestInteract(S, P) {
       return { kind: 'buy', buy: b, cost, label: `${b.label} — ${owned ? 'AMMO ' : ''}${cost}` };
     }
   }
+  /* Downstairs. Everything he offers is an interact point rather than a
+     menu — same key, same prompt line as the rest of the map. */
+  const sh = S.shop;
+  if (sh && p.y < -0.5) {
+    const c = sh.counterAt;
+    for (let k = 0; k < sh.stock.length; k++) {
+      const st = sh.standAt[k];
+      if (st && dist2d(p, { x: st[0], z: st[1] }) < 0.95) {
+        const id = sh.stock[k];
+        if (!id) continue;
+        const cost = Math.round(sh.prices[id] * (1 - sh.discount));
+        return { kind: 'shopBuy', id, cost, label: `${WEAPONS[id].name} — ${cost}${sh.discount > 0 ? '  (discounted)' : ''}` };
+      }
+    }
+    // Perk board at the far end of the counter.
+    if (dist2d(p, { x: sh.perkAt[0], z: sh.perkAt[1] }) < 1.0) {
+      const owed = Object.keys(PERKS).filter((k) => !P.perks[k]);
+      if (!owed.length) return { kind: 'shopNone', cost: 0, label: 'He has nothing left you do not have', inert: true };
+      const id = owed[S.round % owed.length];
+      const cost = Math.round(PERKS[id].cost * (1 - sh.discount));
+      return { kind: 'shopPerk', id, cost, label: `${PERKS[id].name} — ${cost}   (${Math.round(sh.discount * 100)}% off)` };
+    }
+    // Sell or donate what you are holding, at the counter itself.
+    if (dist2d(p, { x: c[0], z: c[2] }) < 1.3) {
+      const held = P.equipped();
+      if (held === 'm1911' || held === 'knife' || held === 'hammer') {
+        return { kind: 'shopNone', cost: 0, label: 'He does not want that', inert: true };
+      }
+      const back = sh.buyback[held] || 600;
+      return { kind: 'shopSell', id: held, cost: 0, back,
+        label: `Sell the ${WEAPONS[held].name} — he offers ${back}   [hold to donate instead]`, hold: false };
+    }
+    // The crate: donate into it, or take something back out.
+    if (dist2d(p, { x: sh.crateAt[0], z: sh.crateAt[2] }) < 1.15) {
+      const held = P.equipped();
+      const canGive = held !== 'm1911' && held !== 'knife' && held !== 'hammer';
+      if (canGive) {
+        return { kind: 'shopDonate', id: held, cost: 0,
+          label: `Give up the ${WEAPONS[held].name} — discount goes to ${Math.round(Math.min(SHOP.maxDiscount, sh.discount + SHOP.bribeStep) * 100)}%` };
+      }
+      if (sh.donated.length) {
+        const id = sh.donated[sh.donated.length - 1];
+        return { kind: 'shopSteal', id, cost: 0,
+          label: `Take the ${WEAPONS[id].name} back${sh.stolen >= SHOP.stealsAllowed ? '  — he is watching' : ''}` };
+      }
+      return { kind: 'shopNone', cost: 0, label: 'The crate is empty', inert: true };
+    }
+  }
+
   if (S.nadeBuy && dist2d(p, { x: S.nadeBuy.at[0], z: S.nadeBuy.at[2] }) < R && Math.abs(p.y - 1) < 2) {
     if (P.nades >= GRENADE.max) return { kind: 'nadeFull', cost: 0, label: 'Grenades — full', inert: true };
     return { kind: 'nades', cost: GRENADE.cost, label: `Grenades — ${GRENADE.cost}` };
@@ -2611,6 +2838,69 @@ function nearestInteract(S, P) {
 function doInteract(game, S, P, hud, sfx, it, dt) {
   if (it.inert) return;
   if (it.cost > S.points) { sfx.denied(); hud.prompt(it.label + '  — need more points', true); return; }
+  if (it.kind === 'shopBuy') {
+    S.points -= it.cost;
+    P.give(it.id);
+    S.shop.stock[S.shop.stock.indexOf(it.id)] = null;
+    sfx.buy(); hud.points(S.points); hud.ammo(P);
+    return;
+  }
+  if (it.kind === 'shopPerk') {
+    S.points -= it.cost;
+    P.perks[it.id] = true;
+    sfx.perk();
+    hud.banner(PERKS[it.id].name, '#' + PERKS[it.id].color.toString(16).padStart(6, '0'));
+    hud.perks(P.perks); hud.points(S.points);
+    return;
+  }
+  if (it.kind === 'shopSell') {
+    S.addPoints(it.back);
+    hud.pointsDelta(it.back);
+    dropFromHands(P, it.id);
+    sfx.buy(); hud.points(S.points); hud.ammo(P);
+    S.voice(it.back > ECONOMY.wallGun ? LINES.dealFair : LINES.dealRobbed);
+    return;
+  }
+  if (it.kind === 'shopDonate') {
+    const sh = S.shop;
+    sh.discount = Math.min(SHOP.maxDiscount, sh.discount + SHOP.bribeStep);
+    sh.donated.push(it.id);
+    // It goes in the crate, and you can see it in there.
+    const k = sh.donated.length - 1;
+    const built = it.id === 'obliterator' ? makeObliterator(game)
+      : it.id === 'mauser' ? makeMauser(game)
+      : it.id === 'ram' ? makeBatteringRam(game)
+      : (it.id === 'shield' || it.id === 'shieldWorn') ? makeRiotShield(game)
+      : it.id === 'scatter' ? makeScattergun(game)
+      : it.id === 'arc' ? makeArcProjector(game)
+      : { root: game.thompson({ physics: false }), parts: [] };
+    built.root.setPosition([sh.crateAt[0] + ((k % 3) - 1) * 0.28, sh.crateAt[1] + 0.42 + (k / 3 | 0) * 0.12, sh.crateAt[2] + (((k / 3 | 0) % 2) - 0.5) * 0.26]);
+    built.root.setRotation([0, k * 37, 74]);
+    sh.pile = sh.pile || [];
+    sh.pile.push(built);
+    dropFromHands(P, it.id);
+    sfx.buy(); hud.ammo(P);
+    hud.banner(`DISCOUNT ${Math.round(sh.discount * 100)}%`, '#f0c256');
+    return;
+  }
+  if (it.kind === 'shopSteal') {
+    const sh = S.shop;
+    sh.donated.pop();
+    const built = sh.pile && sh.pile.pop();
+    if (built) { built.root.destroy(); for (const q of built.parts) q.destroy(); }
+    sh.discount = Math.max(0, sh.discount - SHOP.bribeStep);
+    P.give(it.id);
+    sh.stolen++;
+    sfx.buy(); hud.ammo(P);
+    if (sh.stolen > SHOP.stealsAllowed) {
+      sh.hostile = true;
+      S.voice(LINES.dealAngry);
+      hud.banner('HE SAW THAT', '#b3221c');
+    } else {
+      hud.banner(`TAKEN BACK  (${SHOP.stealsAllowed + 1 - sh.stolen} left)`, '#f0c256');
+    }
+    return;
+  }
   if (it.kind === 'nades') {
     S.points -= it.cost;
     P.nades = GRENADE.max;
@@ -2986,7 +3276,7 @@ function start(opts = {}) {
     testMode: !!opts.test, godMode: false,
     input: { fireHeld: false, firePressed: false, aimHeld: false, sprintHeld: false },
     testHold: {},
-    grenades: [], goldPickups: [], belt: null, drops: [],
+    grenades: [], goldPickups: [], belt: null, drops: [], shop: null,
   };
   S.addPoints = (n) => { const a = Math.round(n * S.mul); S.points += a; return a; };
 
@@ -3289,6 +3579,35 @@ function start(opts = {}) {
       pr.actor.setPosition([nx, ny, nz]);
     }
 
+    /* Downstairs. The door shuts once you are through it, the turrets deal
+       with anything that followed, and if you have taken back more than he
+       allows, the miniguns are already turning when you come down. */
+    if (S.shop) {
+      const sh = S.shop;
+      const inside = P.actor.position.y < -0.5;
+      if (inside && !sh.wasIn) {
+        sh.wasIn = true;
+        sh.door.setPosition([sh.doorAt[0], sh.doorAt[1], sh.doorAt[2]]);
+        game.audio.impact(0.9);
+        if (!sh.greeted) { sh.greeted = true; S.voice(LINES.shopFirst); }
+        if (sh.hostile) {
+          hud.banner('HE WAS WAITING', '#b3221c');
+          sh.firing = 3.0;
+        }
+      } else if (!inside && sh.wasIn) {
+        sh.wasIn = false;
+      }
+      if (inside) shopTurrets(game, S, dt, sfx);
+      if (sh.firing > 0) {
+        sh.firing -= dt;
+        for (const t of sh.turrets) {
+          game.particles.sparks(t.at, { count: 4, speed: 12, color: 0xffd27a, colorEnd: 0x6a2a08 });
+        }
+        if (Math.random() < 0.55) { sfx.shotSmg(); }
+        hurtPlayer(game, S, P, 120 * dt, sfx, 'turret', { x: P.actor.position.x, z: P.actor.position.z - 1 });
+      }
+    }
+
     /* The eighteen carat conveyor. Nothing announces the conditions; the
        belt arriving is the announcement. */
     if (S.belt) {
@@ -3449,7 +3768,7 @@ function start(opts = {}) {
   });
 
   /* Test hooks: everything QA needs to drive the game headless. */
-  window.__T = {
+  const __THooks = window.__T = {
     game, S, P, WEAPONS, ECONOMY, LINES,
     spawn(winId) {
       const win = S.windows.find((w) => w.def.id === (winId || S.activeWindows[0]));
@@ -3472,6 +3791,28 @@ function start(opts = {}) {
     },
     variantOdds(r) { return variantWeights(r); },
     kill(z) { killZombie(game, S, z, false); },
+    shop() {
+      const sh = S.shop;
+      return sh && {
+        stock: sh.stock.filter(Boolean), discount: sh.discount, stolen: sh.stolen,
+        hostile: sh.hostile, donated: sh.donated.slice(),
+        prices: sh.stock.filter(Boolean).map((id) => [id, sh.prices[id], sh.buyback[id]]),
+      };
+    },
+    goDown() { const c = S.shop.counterAt; __THooks.teleport(c[0], c[1] + 1.1, c[2] + 0.4); },
+    interactAt(x, y, z) {
+      __THooks.teleport(x, y, z);
+      game.step(1 / 60);
+      const it = nearestInteract(S, P);
+      return it && { kind: it.kind, label: it.label, cost: it.cost };
+    },
+    doInteractAt(x, y, z) {
+      __THooks.teleport(x, y, z);
+      game.step(1 / 60);
+      const it = nearestInteract(S, P);
+      if (it) doInteract(game, S, P, hud, sfx, it, 1 / 60);
+      return it && it.kind;
+    },
     buildPool(n) { while (S.pool.length < n) buildPooledZombie(game, S, S.pool.length); return S.pool.length; },
     ripState() {
       return S.zombies.filter((z) => !z.parked && z.V && z.V.ranged).map((z) => ({
@@ -3502,6 +3843,7 @@ function start(opts = {}) {
     },
   };
 
+  rollShop(S);
   if (!opts.test) game.start();
   return { game, S, P };
 }
