@@ -1266,8 +1266,20 @@ function buildPooledZombie(game, S, i) {
   const rag = RAG_COLORS[i % RAG_COLORS.length];
   const tone = SKIN_TONES[(i * 3) % SKIN_TONES.length];
   const body = BODY_TYPES[i % BODY_TYPES.length];
+  // The male build is an imported model: it arrives with its clothes, its
+  // head and its rot already sculpted into one mesh, so the procedural
+  // garment, blood and head layers are all skipped for it.
+  const model = body.id === 'male' && WALKER ? WALKER : null;
   const a = game.character({
+    model,
     at: [200 + i * 4, -38, 0],
+    // The imported body carries its own UV layout, so it wants its own
+    // texture density and a tone chosen against its sculpted detail rather
+    // than the flat one the procedural flesh uses.
+    ...(model ? { material: {
+      color: 0x84906a, texture: 'rust', roughness: 0.95, metalness: 0,
+      subsurface: 0.03, uvScale: 1,
+    } } : {}),
     // The body material is now flesh only — the coat is its own mesh.
     material: { color: tone, texture: 'rust', roughness: 0.92, metalness: 0, subsurface: 0.05, uvScale: 3 },
     clothMaterial: { color: rag, texture: 'fabric', roughness: 0.97, metalness: 0, uvScale: 2.4 },
@@ -1295,7 +1307,7 @@ function buildPooledZombie(game, S, i) {
      bone-space numbers by hand is how the old glowing beads ended up
      hovering a hand's width above everyone's skull. */
   const eyes = [];
-  if (a.head && a.skeleton) {
+  if (a.head && a.skeleton && !model) {
     const hb = a.skeleton.index('head');
     const hs = a.head.scale.y;                       // head mesh scale
     const ho = a.head.localOffset;                   // head mesh offset on the bone
@@ -1374,7 +1386,9 @@ function buildZombieWounds(game, a, buildName) {
       /* Derived from the head actor's own transform for exactly the reason
          the eyes are: the head mesh is a child of the head bone with its
          own offset and scale, and a number typed by hand in bone space is
-         how you get a wound hovering beside a skull instead of in it. */
+         how you get a wound hovering beside a skull instead of in it. An
+         imported body has no separate head actor, so it falls back to the
+         nominal figures. */
       const hs = a.head ? a.head.scale.y : 0.389;
       const ho = a.head ? a.head.localOffset : { x: 0, y: 0.14, z: 0.006 };
       ox = ho.x + 0.098 * 0.82 * hs;        // cheek, just outboard of the eye
@@ -2622,5 +2636,23 @@ function start(opts = {}) {
   return { game, S, P };
 }
 
-window.BUNKER = { start, WEAPONS, ECONOMY, LINES, CAST };
+/* The imported body for the male zombie. Loaded once before the game
+   starts; every male in the horde shares its geometry and gets its own
+   skeleton. If the fetch fails the procedural body is used instead, so the
+   game still runs with no model file present. */
+let WALKER = null;
+
+async function preload(base) {
+  try {
+    const res = await fetch((base || '') + 'models/walker.bin');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    WALKER = window.LE.parseRiggedMesh(await res.arrayBuffer());
+  } catch (err) {
+    WALKER = null;
+    console.warn('walker model unavailable, falling back to the procedural body:', err.message);
+  }
+  return !!WALKER;
+}
+
+window.BUNKER = { start, preload, WEAPONS, ECONOMY, LINES, CAST };
 })();

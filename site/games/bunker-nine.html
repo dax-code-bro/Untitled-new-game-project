@@ -13,6 +13,11 @@
 <canvas id="game"></canvas>
 <script src="../engine/legend-engine.js"></script>
 <script src="bunker-nine.js"></script>
-<script>BUNKER.start({ canvas: '#game' });</script>
+<script>
+// The imported zombie body is fetched before the first frame so the pool can
+// be built with it; if it is missing the game starts anyway on the
+// procedural body.
+BUNKER.preload().then(() => BUNKER.start({ canvas: '#game' }));
+</script>
 </body>
 </html>

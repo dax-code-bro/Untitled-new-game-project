@@ -346,7 +346,33 @@ function buildClip(name, duration, spec, opts = {}) {
       else q.setAxisAngle(Vec3.from(entry.axis || [1, 0, 0]), key[1] * DEG);
       rotations.push(q);
     }
-    tracks[boneName] = { times, rotations };
+    /* An optional position track on the same bone: [t, x, y, z] in metres,
+       absolute in the bone's parent space. A track carries one time array
+       for both channels, so the position keys are resampled onto the
+       rotation key times rather than forcing the two to line up by hand.
+
+       This is what lets a walk have a bob. Rotations alone can only ever
+       swing a skeleton around a pelvis nailed to one height, which is what
+       makes a rotation-only walk cycle read as gliding. */
+    if (entry.pos && entry.pos.length) {
+      const pk = entry.pos;
+      const positions = times.map((tAbs) => {
+        const tN = duration > 1e-6 ? tAbs / duration : 0;
+        let i = 0;
+        while (i < pk.length - 1 && pk[i + 1][0] < tN) i++;
+        const a = pk[i], b = pk[Math.min(i + 1, pk.length - 1)];
+        const span = b[0] - a[0];
+        const f = span > 1e-6 ? clamp((tN - a[0]) / span, 0, 1) : 0;
+        return new Vec3(
+          a[1] + (b[1] - a[1]) * f,
+          a[2] + (b[2] - a[2]) * f,
+          a[3] + (b[3] - a[3]) * f,
+        );
+      });
+      tracks[boneName] = { times, rotations, positions };
+    } else {
+      tracks[boneName] = { times, rotations };
+    }
   }
   return new AnimationClip(name, duration, tracks, opts);
 }

@@ -15,12 +15,19 @@ class Geometry {
     this.joints = null;
     this.weights = null;
     this.bounds = null;
+    /* Which body part is currently being emitted. Purely advisory: the skin
+       solver uses it to stop a vertex binding to a bone it has no business
+       binding to, however close that bone happens to pass. A builder sets
+       `part` before a section and everything it emits is tagged. */
+    this.part = 0;
+    this.parts = [];
   }
 
   vert(px, py, pz, nx, ny, nz, u, v) {
     this.positions.push(px, py, pz);
     this.normals.push(nx, ny, nz);
     this.uvs.push(u, v);
+    this.parts.push(this.part);
     return this.positions.length / 3 - 1;
   }
 

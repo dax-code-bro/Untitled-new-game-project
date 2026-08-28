@@ -526,12 +526,18 @@ class Engine {
   /* A humanoid with a skinned body, an expressive head, and a controller. */
   character(opts = {}) {
     const scale = opts.scale != null ? opts.scale : 1;
-    const skeleton = makeHumanoidSkeleton(scale);
+    /* An imported body brings its own rig and its own bind pose, already
+       solved offline. It also brings its own clothes and head, sculpted into
+       the one mesh, so none of the procedural layers below apply to it. */
+    const model = opts.model || null;
+    const skeleton = model ? skeletonFromRig(model.rig) : makeHumanoidSkeleton(scale);
     // `zombie: true` swaps in the starved silhouette and torn clothing.
-    const geo = makeHumanoidMesh(skeleton, opts.zombie
+    const geo = model ? model.geometry : makeHumanoidMesh(skeleton, opts.zombie
       ? { zombieBuild: opts.zombieBuild || 'male', seed: opts.seed || 3 }
       : { thickness: opts.build || 1 });
-    const mesh = new GpuMesh(this.gl, geo);
+    // One model, many copies: the GPU buffers are built once and shared.
+    if (model && !model._mesh) model._mesh = new GpuMesh(this.gl, geo);
+    const mesh = model ? model._mesh : new GpuMesh(this.gl, geo);
 
     const animator = new Animator(skeleton);
     for (const clip of makeHumanoidClips()) animator.add(clip);
@@ -569,7 +575,7 @@ class Engine {
        skin under it is flesh. Sharing one mesh means sharing one material,
        and a coat that has to be the same colour as the body it covers is
        not clothing — it is a paint job. */
-    if (opts.zombie) {
+    if (opts.zombie && !model) {
       const clothGeo = makeHumanoidMesh(skeleton, {
         zombieBuild: opts.zombieBuild || 'male', seed: opts.seed || 3, clothOnly: true,
       });
@@ -591,7 +597,7 @@ class Engine {
        real geometry with their own wet material and still deform with the
        body. Tinting the garment could only ever make a differently
        coloured coat. */
-    if (opts.zombie && opts.blood !== false) {
+    if (opts.zombie && opts.blood !== false && !model) {
       const bloodGeo = makeHumanoidMesh(skeleton, {
         zombieBuild: opts.zombieBuild || 'male', seed: opts.seed || 3, bloodOnly: true,
       });
@@ -610,7 +616,7 @@ class Engine {
       }
     }
 
-    if (opts.face !== false) {
+    if (opts.face !== false && !model) {
       const headGeo = makeHeadGeometry({ seed: opts.seed || 5, type: opts.faceType });
       const headMesh = new GpuMesh(this.gl, headGeo);
       // A head with no expression rig has neither skeleton nor face, so the
@@ -657,6 +663,34 @@ class Engine {
 
     controller.actor = actor;
     return actor;
+  }
+
+  /* Drop an already-built Geometry into the world. The way an imported
+     model gets on screen: everything upstream of this — parsing, normals,
+     UVs, skin weights — is the caller's business, and this just makes it an
+     actor. Pass `skeleton`/`animator` to have it skinned like a character. */
+  meshFrom(geo, opts = {}) {
+    const mesh = new GpuMesh(this.gl, geo);
+    if (!geo.joints) mesh.setupInstancing(20);
+    const r = opts.boundRadius != null ? opts.boundRadius
+      : (geo.bounds ? geo.bounds.max.distanceTo(geo.bounds.min) * 0.5 : 1.5);
+    if (opts.skeleton) {
+      const actor = new Actor(this, {
+        name: opts.name || 'mesh',
+        mesh,
+        material: this.material(opts.material != null ? opts.material : 0xcccccc),
+        skeleton: opts.skeleton,
+        animator: opts.animator,
+        controller: opts.controller,
+        body: opts.controller ? opts.controller.body : null,
+        boundRadius: r,
+      });
+      if (!opts.controller) actor.setPosition(opts.at || opts.position || [0, 0, 0]);
+      actor.visible = opts.visible !== false;
+      this.actors.push(actor);
+      return actor;
+    }
+    return this._spawn(opts, mesh, null, r);
   }
 
   /* Arbitrary convex from a point cloud — useful for level geometry that is

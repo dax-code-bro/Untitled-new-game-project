@@ -180,10 +180,14 @@ function buildJoint(g, at, r) {
 }
 
 /* Deltoid caps: the shoulder mass that makes a frame read as broad. */
+/* Caps sit on the torso but belong to the arm: a deltoid left behind when
+   the shoulder lifts tears a hole at the top of the sleeve. */
 function buildShoulderCaps(g, skeleton, build) {
   const a = new Vec3();
+  const was = g.part;
   for (const sideName of ['L', 'R']) {
     const side = sideName === 'L' ? 1 : -1;
+    g.part = sideName === 'L' ? PART.ARM_L : PART.ARM_R;
     skeleton.bones[skeleton.index('upperArm' + sideName)].bindMatrix.getTranslation(a);
     const r = build.shoulderCaps;
     loftRings(g, [
@@ -192,6 +196,7 @@ function buildShoulderCaps(g, skeleton, build) {
       { p: new Vec3(a.x + side * 0.040, a.y - 0.020, a.z), w: r * 0.86, d: r * 0.82, e: 2.1 },
     ], 12, true, true);
   }
+  g.part = was;
 }
 
 /* ---------------- garments ----------------
@@ -202,32 +207,73 @@ function buildShoulderCaps(g, skeleton, build) {
 function loftGarment(g, rings, segments, rng, opts = {}) {
   const holes = opts.holes != null ? opts.holes : 0.06;
   const hemTeeth = opts.hemTeeth !== false;
-  const base = g.positions.length / 3;
+  const thick = opts.thick != null ? opts.thick : 0.006;
   const row = segments + 1;
   const tmp = new Vec3(), nrm = new Vec3();
 
+  /* Cloth is built as two shells a few millimetres apart — an outside and a
+     lining — rather than one surface emitted twice.
+
+     Emitting the same quad with both windings puts two triangles at exactly
+     the same depth: they z-fight, and whichever wins carries an outward
+     normal while facing away, so it shades as though lit from inside. That
+     is where the hard black patches across every chest came from. Two real
+     shells also give the garment an edge you can see at every hem, cuff and
+     torn opening, which is most of what separates a coat from a paint job.
+
+     Both shells share one hole mask and one set of hem teeth so a tear goes
+     cleanly through the material instead of stopping at the lining. */
+  const tooth = [], wob = [];
   for (let i = 0; i < rings.length; i++) {
-    const r = rings[i];
     const last = i === rings.length - 1;
     for (let s = 0; s <= segments; s++) {
-      const a = (s / segments) * TAU;
-      // Ragged hem: the final ring rides up and down around the body.
-      const tooth = (last && hemTeeth)
+      tooth.push((last && hemTeeth)
         ? (Math.sin(s * 2.3 + rng.range(0, 0.4)) * 0.5 + 0.5) * 0.055 + rng.range(0, 0.02)
-        : 0;
-      const wob = 1 + rng.range(-0.012, 0.012);
-      ringVertex(tmp, r.p, r.right || _zRight, r.fwd || _zFwd, r.w * wob, r.d * wob, a, r.e || 2);
-      nrm.set(tmp.x - r.p.x, tmp.y - r.p.y, tmp.z - r.p.z).normalize();
-      g.vert(tmp.x, tmp.y + tooth, tmp.z, nrm.x, nrm.y, nrm.z, (s / segments) * 2, i / (rings.length - 1) * 2);
+        : 0);
+      wob.push(1 + rng.range(-0.012, 0.012));
     }
   }
+  const cut = [];
   for (let i = 0; i < rings.length - 1; i++) {
+    for (let s = 0; s < segments; s++) cut.push(rng.next() < holes);
+  }
+
+  const shell = (inset, flip) => {
+    const base = g.positions.length / 3;
+    for (let i = 0; i < rings.length; i++) {
+      const r = rings[i];
+      for (let s = 0; s <= segments; s++) {
+        const k = i * row + s;
+        const a = (s / segments) * TAU;
+        const w = Math.max(r.w * wob[k] - inset, 0.004);
+        const d = Math.max(r.d * wob[k] - inset, 0.004);
+        ringVertex(tmp, r.p, r.right || _zRight, r.fwd || _zFwd, w, d, a, r.e || 2);
+        nrm.set(tmp.x - r.p.x, tmp.y - r.p.y, tmp.z - r.p.z).normalize();
+        if (flip) nrm.set(-nrm.x, -nrm.y, -nrm.z);
+        g.vert(tmp.x, tmp.y + tooth[k], tmp.z, nrm.x, nrm.y, nrm.z,
+          (s / segments) * 2, i / (rings.length - 1) * 2);
+      }
+    }
+    for (let i = 0; i < rings.length - 1; i++) {
+      for (let s = 0; s < segments; s++) {
+        if (cut[i * segments + s]) continue;   // punched out: this is the tear
+        const a = base + i * row + s;
+        if (flip) g.quad(a, a + row, a + row + 1, a + 1);
+        else g.quad(a, a + 1, a + row + 1, a + row);
+      }
+    }
+    return base;
+  };
+  const outer = shell(0, false);
+  const inner = shell(thick, true);
+
+  /* Close the two shells to each other at the openings, so a collar, a cuff
+     and a hem all show the thickness of the material end-on. */
+  for (const i of [0, rings.length - 1]) {
     for (let s = 0; s < segments; s++) {
-      // Punch a panel out entirely: this is the tear.
-      if (rng.next() < holes) continue;
-      const a = base + i * row + s;
-      g.quad(a, a + 1, a + row + 1, a + row);
-      g.quad(a, a + row, a + row + 1, a + 1);   // inside face, so holes read
+      const o = outer + i * row + s, n = inner + i * row + s;
+      if (i === 0) g.quad(o, n, n + 1, o + 1);
+      else g.quad(o, o + 1, n + 1, n);
     }
   }
 }
@@ -257,7 +303,11 @@ function garmentRing(T, y, lift, spread) {
 function buildZombieGarment(g, build, rng, segments) {
   const T = build.torso;
   const c = build.coat;
-  const lift = 0.012;
+  /* How far the garment floats off the skin. At 12 mm on a trunk 150 mm
+     across, a coat is 8 % bigger than the body inside it — which is not a
+     coat, it is a paint job, and it reads on screen as bare skin in a
+     different colour. Cloth hangs. */
+  const lift = 0.028;
   const kind = build.garment || 'shirt';
 
   if (kind === 'dress') {
@@ -338,37 +388,53 @@ function buildZombieGarment(g, build, rng, segments) {
 
 /* Sleeves and trouser legs, lofted along the actual bones. */
 function buildZombieLimbCloth(g, skeleton, build, rng, segments) {
-  const lift = 0.010;
+  const lift = 0.019;
   const a = new Vec3(), b = new Vec3(), c = new Vec3();
   for (const side of ['L', 'R']) {
     // Sleeve: shoulder to somewhere down the forearm, torn off at the end.
+    g.part = side === 'L' ? PART.ARM_L : PART.ARM_R;
     skeleton.bones[skeleton.index('upperArm' + side)].bindMatrix.getTranslation(a);
     skeleton.bones[skeleton.index('lowerArm' + side)].bindMatrix.getTranslation(b);
     skeleton.bones[skeleton.index('hand' + side)].bindMatrix.getTranslation(c);
     const cut = rng.range(0.35, 1.0);        // where the sleeve gives out
     const wrist = new Vec3().copy(b).lerp(c, cut);
+    // Same ring density as the arm underneath, for the same reason: a
+    // sleeve with one ring at the elbow folds flat when the elbow does.
     const upper = limbRings(a, b, [
-      [build.arm[0] + lift + 0.014, build.arm[0] + lift + 0.012, 2.1],
+      [build.arm[0] + lift + 0.016, build.arm[0] + lift + 0.014, 2.1],
+      [build.arm[0] + lift + 0.013, build.arm[0] + lift + 0.012, 2.1],
+      [build.arm[1] + lift + 0.014, build.arm[1] + lift + 0.013, 2.1],
+      [build.arm[1] + lift + 0.010, build.arm[1] + lift + 0.010, 2.1],
       [build.arm[1] + lift + 0.008, build.arm[1] + lift + 0.008, 2.1],
     ]);
     const lower = limbRings(b, wrist, [
-      [build.arm[2] + lift + 0.006, build.arm[2] + lift + 0.006, 2.1],
+      [build.arm[2] + lift + 0.008, build.arm[2] + lift + 0.008, 2.1],
+      [build.arm[2] + lift + 0.007, build.arm[2] + lift + 0.007, 2.1],
+      [build.arm[2] + lift + 0.005, build.arm[2] + lift + 0.005, 2.1],
+      [build.arm[3] + lift + 0.002, build.arm[3] + lift + 0.002, 2.1],
       [build.arm[3] + lift, build.arm[3] + lift, 2.1],
     ]);
     loftGarment(g, upper.concat(lower.slice(1)), segments, rng, { holes: 0.05 });
 
     // Trouser leg, torn off below the knee on some.
+    g.part = side === 'L' ? PART.LEG_L : PART.LEG_R;
     skeleton.bones[skeleton.index('upperLeg' + side)].bindMatrix.getTranslation(a);
     skeleton.bones[skeleton.index('lowerLeg' + side)].bindMatrix.getTranslation(b);
     skeleton.bones[skeleton.index('foot' + side)].bindMatrix.getTranslation(c);
     const legCut = rng.range(0.3, 1.0);
     const ankle = new Vec3().copy(b).lerp(c, legCut);
     const thigh = limbRings(a, b, [
+      [build.leg[0] + lift + 0.014, build.leg[0] + lift + 0.014, 2.2],
       [build.leg[0] + lift + 0.010, build.leg[0] + lift + 0.010, 2.2],
+      [build.leg[1] + lift + 0.010, build.leg[1] + lift + 0.010, 2.2],
+      [build.leg[2] + lift + 0.009, build.leg[2] + lift + 0.009, 2.2],
       [build.leg[2] + lift + 0.006, build.leg[2] + lift + 0.006, 2.2],
     ]);
     const shin = limbRings(b, ankle, [
+      [build.leg[2] + lift + 0.006, build.leg[2] + lift + 0.006, 2.2],
+      [build.leg[3] + lift + 0.008, build.leg[3] + lift + 0.010, 2.2],
       [build.leg[3] + lift + 0.004, build.leg[3] + lift + 0.004, 2.2],
+      [build.leg[4] + lift + 0.002, build.leg[4] + lift + 0.002, 2.2],
       [build.leg[4] + lift, build.leg[4] + lift, 2.2],
     ]);
     loftGarment(g, thigh.concat(shin.slice(1)), segments, rng, { holes: 0.05 });
@@ -488,9 +554,12 @@ function buildZombieClothGeometry(skeleton, opts = {}) {
   const build = ZOMBIE_BUILDS[opts.build] || ZOMBIE_BUILDS.male;
   const rng = new Rng((opts.seed || 7) * 3 + 11);
 
+  g.part = PART.BODY;
   buildZombieGarment(g, build, rng, segments);
   buildZombieLimbCloth(g, skeleton, build, rng, segments);
+  g.part = PART.BODY;
   buildGarmentDetail(g, skeleton, build, rng);
+  g.part = PART.BODY;
   if (opts.build === 'armored') buildWebbing(g, build);
 
   g.finalize();
@@ -556,6 +625,7 @@ function buildGarmentDetail(g, skeleton, build, rng) {
   // Turned cuffs at the wrists, and boot tops at the ankles.
   const w = new Vec3(), e = new Vec3(), k = new Vec3(), f = new Vec3();
   for (const sideName of ['L', 'R']) {
+    g.part = sideName === 'L' ? PART.ARM_L : PART.ARM_R;
     skeleton.bones[skeleton.index('lowerArm' + sideName)].bindMatrix.getTranslation(e);
     skeleton.bones[skeleton.index('hand' + sideName)].bindMatrix.getTranslation(w);
     const cuffAt = new Vec3().copy(e).lerp(w, 0.80);
@@ -565,6 +635,7 @@ function buildGarmentDetail(g, skeleton, build, rng) {
       { p: cuffEnd, w: build.arm[4] + 0.013, d: build.arm[4] + 0.013, e: 2.2 },
     ], 12, true, true);
 
+    g.part = sideName === 'L' ? PART.LEG_L : PART.LEG_R;
     skeleton.bones[skeleton.index('lowerLeg' + sideName)].bindMatrix.getTranslation(k);
     skeleton.bones[skeleton.index('foot' + sideName)].bindMatrix.getTranslation(f);
     const bootTop = new Vec3().copy(k).lerp(f, 0.52);
@@ -589,14 +660,18 @@ function buildZombieBodyGeometry(skeleton, opts = {}) {
   const rings = build.torso.map(([y, w, d, e, zo], i) => ({
     p: new Vec3(0, y, zo || 0), w, d, e, uv: i / (build.torso.length - 1),
   }));
+  g.part = PART.BODY;
   loftRings(g, rings, segments, true, true);
+  g.part = PART.NECK;
   buildZombieNeck(g, segments, build);
+  g.part = PART.BODY;
   if (build.bust) buildBust(g, build);
   if (build.shoulderCaps) buildShoulderCaps(g, skeleton, build);
 
   const a = new Vec3(), b = new Vec3(), c = new Vec3();
   for (const sideName of ['L', 'R']) {
     const side = sideName === 'L' ? 1 : -1;
+    g.part = sideName === 'L' ? PART.ARM_L : PART.ARM_R;
     skeleton.bones[skeleton.index('upperArm' + sideName)].bindMatrix.getTranslation(a);
     skeleton.bones[skeleton.index('lowerArm' + sideName)].bindMatrix.getTranslation(b);
     skeleton.bones[skeleton.index('hand' + sideName)].bindMatrix.getTranslation(c);
@@ -607,15 +682,25 @@ function buildZombieBodyGeometry(skeleton, opts = {}) {
        forearm swells again at the flexors and runs down to a narrow wrist.
        A single monotonic taper from shoulder to hand is what turns an arm
        into a noodle, however thick you make the top of it. */
+    /* Six rings a segment, not four. The skin solver weights a vertex by
+       which bone it is nearest, so a ring sitting alone at a joint gets
+       split half and half between the two bones and collapses into the
+       chord the moment the joint closes — which is what turned a bent arm
+       into a flat sheet from shoulder to hand. Rings either side of the
+       hinge stay dominated by one bone each and hold the limb open. */
     const up = limbRings(root, b, [
       [build.arm[0] * 1.16, build.arm[0] * 1.16, 2.0],
+      [build.arm[0] * 1.09, build.arm[0] * 1.09, 2.0],
       [build.arm[0] * 1.02, build.arm[0] * 1.02, 2.0],
-      [build.arm[1] * 1.06, build.arm[1] * 1.06, 2.0],
+      [build.arm[1] * 1.10, build.arm[1] * 1.10, 2.0],
+      [build.arm[1] * 1.02, build.arm[1] * 1.02, 2.0],
       [build.arm[1] * 0.92, build.arm[1] * 0.92, 2.0],
     ]);
     const lo = limbRings(b, c, [
       [build.arm[2] * 1.02, build.arm[2] * 1.02, 2.0],
+      [build.arm[2] * 1.09, build.arm[2] * 1.09, 2.0],
       [build.arm[2] * 1.12, build.arm[2] * 1.12, 2.0],
+      [build.arm[2] * 1.02, build.arm[2] * 1.02, 2.0],
       [build.arm[3], build.arm[3], 2.0],
       [build.arm[4], build.arm[4] * 1.06, 2.1],
     ]);
@@ -627,6 +712,7 @@ function buildZombieBodyGeometry(skeleton, opts = {}) {
     buildJoint(g, b, build.arm[1] * 1.04);
     buildHand(g, side, c, segments);
 
+    g.part = sideName === 'L' ? PART.LEG_L : PART.LEG_R;
     skeleton.bones[skeleton.index('upperLeg' + sideName)].bindMatrix.getTranslation(a);
     skeleton.bones[skeleton.index('lowerLeg' + sideName)].bindMatrix.getTranslation(b);
     skeleton.bones[skeleton.index('foot' + sideName)].bindMatrix.getTranslation(c);
@@ -634,13 +720,17 @@ function buildZombieBodyGeometry(skeleton, opts = {}) {
        at the ankle. Same reasoning as the arm. */
     const th = limbRings(a, b, [
       [build.leg[0] * 1.06, build.leg[0] * 1.06, 2.2],
+      [build.leg[0] * 0.99, build.leg[0] * 0.99, 2.2],
       [build.leg[1], build.leg[1], 2.2],
+      [build.leg[2] * 1.08, build.leg[2] * 1.08, 2.1],
       [build.leg[2] * 1.04, build.leg[2] * 1.04, 2.1],
       [build.leg[2] * 0.94, build.leg[2] * 0.96, 2.1],
     ]);
     const sh = limbRings(b, c, [
       [build.leg[2] * 0.98, build.leg[2] * 1.02, 2.1],
+      [build.leg[3] * 1.08, build.leg[3] * 1.16, 2.1],
       [build.leg[3] * 1.12, build.leg[3] * 1.22, 2.1],
+      [build.leg[3] * 1.00, build.leg[3] * 1.06, 2.1],
       [build.leg[3] * 0.92, build.leg[3] * 0.96, 2.1],
       [build.leg[4], build.leg[4], 2.1],
     ], (t) => -0.014 * Math.sin(t * PI));
@@ -649,6 +739,7 @@ function buildZombieBodyGeometry(skeleton, opts = {}) {
     buildJoint(g, a, build.leg[0] * 0.92);          // hip socket
     buildShoe(g, side, skeleton, segments);
   }
+  g.part = PART.BODY;
 
   g.finalize();
   g.computeWeldGroups();

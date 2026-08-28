@@ -1,222 +1,372 @@
 /* ============================================================
    ZOMBIE ANIMATION — clips for the dead.
 
-   The human walk cycle is symmetric, balanced and efficient,
-   which is exactly what a corpse is not. Everything here breaks
-   one of those three on purpose:
+   Keys are [normalisedTime, xDeg, yDeg, zDeg]; an optional `pos`
+   track is [normalisedTime, x, y, z] in metres.
 
-     asymmetry  one leg drives, the other drags. The single
-                strongest cue that something is wrong with a
-                walk, and it costs nothing but different keys
-                on the left and right tracks.
-     imbalance  the head leads the hips. A living walker keeps
-                its head over its centre of mass; a shambler
-                falls forwards and catches itself, forever.
-     slack      arms hang and swing from the shoulder with no
-                elbow control, lagging the body instead of
-                counter-swinging with it.
+   ---- WHICH WAY THE JOINTS GO ----
+   Measured off the rig rather than guessed, because guessing is
+   how the first pass ended up with every zombie's elbows bent
+   backwards. Bones that point down the limb (-Y) turn the
+   opposite way to the spine, which points up it (+Y):
 
-   Keys are [normalisedTime, xDeg, yDeg, zDeg].
+     upperArm.x   NEGATIVE raises the arm forward.  -80 is a reach.
+     lowerArm.x   NEGATIVE flexes the elbow, bringing the hand up
+                  and forward. POSITIVE IS HYPEREXTENSION — a hand
+                  that droops to the waist while the shoulder is
+                  raised, which is what "arms just wobble and
+                  nothing moves" looks like on screen.
+     upperLeg.x   NEGATIVE swings the leg forward.
+     lowerLeg.x   POSITIVE flexes the knee (heel toward the seat).
+                  Negative is hyperextension.
+     foot.x       POSITIVE lifts the toe, negative points it.
+     spine/chest/hips.x  POSITIVE leans forward.
+
+   ---- WHAT MAKES IT A WALK ----
+   A gait is four things happening at once, and dropping any one
+   of them leaves a figure swaying on the spot:
+
+     stride     hips and knees through a real range, with the
+                knee flexing hard in swing so the foot clears the
+                floor and near-straight at contact.
+     bob        the pelvis rides down at each heel strike and up
+                over each mid-stance — twice per cycle. This needs
+                a position track; rotations alone nail the pelvis
+                to one height and the result glides.
+     sway       weight shifts laterally over the stance foot,
+                once per cycle, so the body is carried by a leg
+                rather than floating between two.
+     counter    shoulders rotate against the hips. Without it the
+                torso is one rigid block above the legs.
+
+   On top of that, the dead break the things the living hold to:
+   one leg drives and the other drags, the head leads the hips
+   instead of staying over them, and the arms hang out in front
+   reaching rather than counter-swinging.
    ============================================================ */
 
 function makeZombieClips() {
   const clips = [];
 
-  /* ---- shamble: the default walk ---- */
-  clips.push(buildClip('zwalk', 1.85, {
-    // Hips roll heavily and drop on the dragging side.
-    hips: { keys: [[0, 4, -3, 5], [0.25, 4, 0, -2], [0.5, 4, 3, -6], [0.75, 4, 0, 1], [1, 4, -3, 5]] },
-    spine: { keys: [[0, 15, 2, 3], [0.5, 17, -2, -3], [1, 15, 2, 3]] },
-    chest: { keys: [[0, 10, -3, -2], [0.5, 12, 3, 2], [1, 10, -3, -2]] },
-    // Head lolls, and never quite comes back to level.
-    head: { keys: [[0, -8, 7, -9], [0.3, -11, 2, -12], [0.6, -7, -6, -6], [1, -8, 7, -9]] },
+  /* ---------------------------------------------------------
+     SHAMBLE — the default walk. Left leg drives, right drags.
+     Cycle: left heel strike at 0, right heel strike at 0.5.
+     --------------------------------------------------------- */
+  clips.push(buildClip('zwalk', 1.70, {
+    hips: {
+      // Roll onto the stance leg, pelvis rotating against the shoulders.
+      keys: [[0, 6, -7, 6], [0.25, 5, 0, -2], [0.5, 6, 7, -6], [0.75, 5, 0, 2], [1, 6, -7, 6]],
+      // Down at each strike, up over each mid-stance; weight carried left,
+      // then right. This is the track that stops it gliding.
+      pos: [[0, 0.018, -0.014, 0], [0.25, 0.026, 0.018, 0], [0.5, -0.018, -0.016, 0],
+            [0.75, -0.026, 0.016, 0], [1, 0.018, -0.014, 0]],
+    },
+    spine: { keys: [[0, 16, 6, -4], [0.25, 18, 0, 1], [0.5, 16, -6, 4], [0.75, 18, 0, -1], [1, 16, 6, -4]] },
+    chest: { keys: [[0, 9, 5, -3], [0.5, 11, -5, 3], [1, 9, 5, -3]] },
+    // Lolls, lags the chest, and never quite comes back to level.
+    head: { keys: [[0, -10, 8, -10], [0.28, -14, 1, -13], [0.55, -7, -7, -5], [0.8, -12, 0, -9], [1, -10, 8, -10]] },
 
-    // Left leg drives: a full stride with a real knee bend.
-    upperLegL: { keys: [[0, 30, 0, 2], [0.5, -20, 0, 2], [1, 30, 0, 2]] },
-    lowerLegL: { keys: [[0, -8, 0, 0], [0.3, -6, 0, 0], [0.62, 46, 0, 0], [1, -8, 0, 0]] },
-    footL: { keys: [[0, -14, 0, 0], [0.5, 10, 0, 0], [1, -14, 0, 0]] },
+    /* Left leg drives: a full stride. Contact at 0 with the knee nearly
+       straight, roll through stance, push off at 0.45, then a hard knee
+       flex through swing so the foot actually clears the floor. */
+    upperLegL: { keys: [[0, -26, 0, 2], [0.15, -14, 0, 2], [0.30, 0, 0, 2], [0.45, 16, 0, 2],
+                        [0.55, 14, 0, 2], [0.70, -8, 0, 2], [0.85, -24, 0, 2], [1, -26, 0, 2]] },
+    lowerLegL: { keys: [[0, 4, 0, 0], [0.15, 2, 0, 0], [0.30, 6, 0, 0], [0.45, 20, 0, 0],
+                        [0.62, 56, 0, 0], [0.80, 30, 0, 0], [0.92, 6, 0, 0], [1, 4, 0, 0]] },
+    footL: { keys: [[0, 8, 0, 0], [0.20, -2, 0, 0], [0.42, -22, 0, 0], [0.60, 10, 0, 0], [0.85, 6, 0, 0], [1, 8, 0, 0]] },
 
-    // Right leg drags: barely lifts, knee stays locked, toe scrapes.
-    upperLegR: { keys: [[0, -12, 0, -4], [0.5, 14, 0, -4], [1, -12, 0, -4]] },
-    lowerLegR: { keys: [[0, 12, 0, 0], [0.5, 6, 0, 0], [1, 12, 0, 0]] },
-    footR: { keys: [[0, 16, 0, 0], [0.5, 14, 0, 0], [1, 16, 0, 0]] },
+    /* Right leg drags: half the swing, a knee that never really unlocks,
+       and a toe that stays down and scrapes. */
+    upperLegR: { keys: [[0, 14, 0, -4], [0.15, 8, 0, -4], [0.30, -6, 0, -4], [0.50, -15, 0, -4],
+                        [0.65, -8, 0, -4], [0.80, 2, 0, -4], [1, 14, 0, -4]] },
+    lowerLegR: { keys: [[0, 14, 0, 0], [0.20, 22, 0, 0], [0.35, 16, 0, 0], [0.50, 8, 0, 0],
+                        [0.70, 6, 0, 0], [0.85, 10, 0, 0], [1, 14, 0, 0]] },
+    footR: { keys: [[0, -8, 0, 0], [0.25, -12, 0, 0], [0.50, 4, 0, 0], [0.75, -6, 0, 0], [1, -8, 0, 0]] },
 
-    /* Arms up and out in front, reaching — and never still. Both shoulders
-       are driven on all three axes across four keys, so the reach wanders,
-       drifts apart and comes back rather than locking into one pose while
-       the legs walk underneath it. A held arm on a moving body is the tell
-       that a rig is being animated in pieces. */
-    upperArmL: { keys: [[0, -74, 6, -22], [0.28, -66, -4, -30], [0.55, -82, 8, -18], [0.78, -70, 2, -26], [1, -74, 6, -22]] },
-    upperArmR: { keys: [[0, -80, -8, 20], [0.28, -70, 4, 27], [0.55, -66, -6, 17], [0.78, -84, 3, 24], [1, -80, -8, 20]] },
-    // Elbows bent, and the bend breathes with the shoulder.
-    lowerArmL: { keys: [[0, 46, 0, 0], [0.3, 34, 0, 0], [0.62, 52, 0, 0], [1, 46, 0, 0]] },
-    lowerArmR: { keys: [[0, 36, 0, 0], [0.3, 50, 0, 0], [0.62, 32, 0, 0], [1, 36, 0, 0]] },
-    // Hands loll on the wrists.
-    handL: { keys: [[0, 14, 0, -8], [0.5, -6, 0, 6], [1, 14, 0, -8]] },
-    handR: { keys: [[0, -8, 0, 7], [0.5, 16, 0, -6], [1, -8, 0, 7]] },
+    /* Arms out in front, elbows flexed, hands at chest height about half a
+       metre clear of the body — and never still. Both shoulders run on all
+       three axes so the reach wanders, drifts apart and comes back instead
+       of locking into one pose while the legs work underneath it. */
+    upperArmL: { keys: [[0, -103, 7, -16], [0.25, -95, -3, -23], [0.5, -109, 9, -12], [0.75, -99, 2, -19], [1, -103, 7, -16]] },
+    upperArmR: { keys: [[0, -108, -8, 15], [0.25, -98, 4, 21], [0.5, -94, -6, 12], [0.75, -111, 3, 18], [1, -108, -8, 15]] },
+    lowerArmL: { keys: [[0, -14, 0, 0], [0.30, -26, 0, 0], [0.62, -8, 0, 0], [1, -14, 0, 0]] },
+    lowerArmR: { keys: [[0, -22, 0, 0], [0.30, -10, 0, 0], [0.62, -28, 0, 0], [1, -22, 0, 0]] },
+    handL: { keys: [[0, 14, 0, -10], [0.5, -8, 0, 8], [1, 14, 0, -10]] },
+    handR: { keys: [[0, -9, 0, 9], [0.5, 16, 0, -8], [1, -9, 0, 9]] },
   }));
 
-  /* ---- heavy shamble: wide stance, weight thrown side to side ---- */
-  clips.push(buildClip('zwalk_heavy', 2.25, {
-    hips: { keys: [[0, 3, -5, 9], [0.25, 3, 0, -3], [0.5, 3, 5, -10], [0.75, 3, 0, 2], [1, 3, -5, 9]] },
-    spine: { keys: [[0, 11, 4, 5], [0.5, 13, -4, -5], [1, 11, 4, 5]] },
-    chest: { keys: [[0, 7, -5, -4], [0.5, 9, 5, 4], [1, 7, -5, -4]] },
-    head: { keys: [[0, -6, 8, -7], [0.5, -8, -8, 4], [1, -6, 8, -7]] },
-    // Legs swing wide and low: the feet barely clear the floor.
-    upperLegL: { keys: [[0, 20, 0, 9], [0.5, -13, 0, 11], [1, 20, 0, 9]] },
-    lowerLegL: { keys: [[0, -4, 0, 0], [0.62, 30, 0, 0], [1, -4, 0, 0]] },
-    upperLegR: { keys: [[0, -13, 0, -11], [0.5, 20, 0, -9], [1, -13, 0, -11]] },
-    lowerLegR: { keys: [[0, 30, 0, 0], [0.12, 4, 0, 0], [0.5, -4, 0, 0], [1, 30, 0, 0]] },
-    footL: { keys: [[0, -8, 0, 0], [0.5, 6, 0, 0], [1, -8, 0, 0]] },
-    footR: { keys: [[0, 6, 0, 0], [0.5, -8, 0, 0], [1, 6, 0, 0]] },
-    // Reaching, but pushed wide by the trunk and swinging with its roll.
-    upperArmL: { keys: [[0, -62, 8, -42], [0.3, -54, -3, -48], [0.6, -70, 10, -38], [1, -62, 8, -42]] },
-    upperArmR: { keys: [[0, -68, -9, 40], [0.3, -58, 5, 46], [0.6, -54, -7, 36], [1, -68, -9, 40]] },
-    lowerArmL: { keys: [[0, 40, 0, 0], [0.35, 30, 0, 0], [0.7, 46, 0, 0], [1, 40, 0, 0]] },
-    lowerArmR: { keys: [[0, 32, 0, 0], [0.35, 44, 0, 0], [0.7, 28, 0, 0], [1, 32, 0, 0]] },
-    handL: { keys: [[0, 12, 0, -6], [0.5, -8, 0, 8], [1, 12, 0, -6]] },
-    handR: { keys: [[0, -10, 0, 6], [0.5, 14, 0, -7], [1, -10, 0, 6]] },
+  /* ---------------------------------------------------------
+     HEAVY SHAMBLE — wide track, weight thrown side to side.
+     --------------------------------------------------------- */
+  clips.push(buildClip('zwalk_heavy', 2.05, {
+    hips: {
+      keys: [[0, 5, -6, 10], [0.25, 4, 0, -3], [0.5, 5, 6, -10], [0.75, 4, 0, 3], [1, 5, -6, 10]],
+      // A bigger body rolls further and drops harder onto each foot.
+      pos: [[0, 0.030, -0.020, 0], [0.25, 0.042, 0.016, 0], [0.5, -0.030, -0.022, 0],
+            [0.75, -0.042, 0.014, 0], [1, 0.030, -0.020, 0]],
+    },
+    spine: { keys: [[0, 12, 5, -6], [0.25, 14, 0, 2], [0.5, 12, -5, 6], [0.75, 14, 0, -2], [1, 12, 5, -6]] },
+    chest: { keys: [[0, 7, 5, -4], [0.5, 9, -5, 4], [1, 7, 5, -4]] },
+    head: { keys: [[0, -7, 8, -8], [0.3, -10, 1, -10], [0.6, -5, -8, -3], [1, -7, 8, -8]] },
+    // Legs swing wide and low — the feet barely clear the floor.
+    upperLegL: { keys: [[0, -20, 0, 9], [0.15, -11, 0, 9], [0.32, 0, 0, 10], [0.46, 13, 0, 11],
+                        [0.62, 4, 0, 11], [0.80, -12, 0, 10], [1, -20, 0, 9]] },
+    lowerLegL: { keys: [[0, 6, 0, 0], [0.30, 8, 0, 0], [0.46, 18, 0, 0], [0.64, 38, 0, 0], [0.86, 12, 0, 0], [1, 6, 0, 0]] },
+    footL: { keys: [[0, 6, 0, 0], [0.25, -3, 0, 0], [0.45, -16, 0, 0], [0.65, 8, 0, 0], [1, 6, 0, 0]] },
+    upperLegR: { keys: [[0, 12, 0, -11], [0.18, 3, 0, -11], [0.34, -8, 0, -10], [0.52, -14, 0, -9],
+                        [0.70, -6, 0, -10], [0.86, 3, 0, -11], [1, 12, 0, -11]] },
+    lowerLegR: { keys: [[0, 16, 0, 0], [0.16, 34, 0, 0], [0.36, 14, 0, 0], [0.52, 7, 0, 0], [0.80, 10, 0, 0], [1, 16, 0, 0]] },
+    footR: { keys: [[0, -6, 0, 0], [0.3, -10, 0, 0], [0.55, 5, 0, 0], [1, -6, 0, 0]] },
+    // Reaching, but pushed wide by the trunk and rolling with it.
+    upperArmL: { keys: [[0, -89, 8, -40], [0.3, -81, -3, -46], [0.6, -97, 10, -35], [1, -89, 8, -40]] },
+    upperArmR: { keys: [[0, -95, -9, 38], [0.3, -84, 5, 44], [0.6, -80, -7, 34], [1, -95, -9, 38]] },
+    lowerArmL: { keys: [[0, -18, 0, 0], [0.35, -30, 0, 0], [0.7, -12, 0, 0], [1, -18, 0, 0]] },
+    lowerArmR: { keys: [[0, -26, 0, 0], [0.35, -14, 0, 0], [0.7, -32, 0, 0], [1, -26, 0, 0]] },
+    handL: { keys: [[0, 12, 0, -8], [0.5, -9, 0, 9], [1, 12, 0, -8]] },
+    handR: { keys: [[0, -11, 0, 8], [0.5, 15, 0, -8], [1, -11, 0, 8]] },
   }));
 
-  /* ---- light shamble: narrower track, more hip, quicker ---- */
-  clips.push(buildClip('zwalk_light', 1.55, {
-    hips: { keys: [[0, 4, -2, 8], [0.25, 4, 0, -2], [0.5, 4, 2, -9], [0.75, 4, 0, 1], [1, 4, -2, 8]] },
-    spine: { keys: [[0, 17, 3, 2], [0.5, 19, -3, -2], [1, 17, 3, 2]] },
-    chest: { keys: [[0, 11, -4, -1], [0.5, 13, 4, 1], [1, 11, -4, -1]] },
-    head: { keys: [[0, -10, 9, -12], [0.35, -13, 3, -14], [0.7, -8, -7, -8], [1, -10, 9, -12]] },
-    upperLegL: { keys: [[0, 33, 0, -2], [0.5, -23, 0, -2], [1, 33, 0, -2]] },
-    lowerLegL: { keys: [[0, -9, 0, 0], [0.3, -6, 0, 0], [0.62, 50, 0, 0], [1, -9, 0, 0]] },
-    upperLegR: { keys: [[0, -15, 0, 2], [0.5, 17, 0, 2], [1, -15, 0, 2]] },
-    lowerLegR: { keys: [[0, 16, 0, 0], [0.5, 8, 0, 0], [1, 16, 0, 0]] },
-    footL: { keys: [[0, -15, 0, 0], [0.5, 11, 0, 0], [1, -15, 0, 0]] },
-    footR: { keys: [[0, 18, 0, 0], [0.5, 15, 0, 0], [1, 18, 0, 0]] },
-    upperArmL: { keys: [[0, -80, 7, -18], [0.3, -70, -5, -25], [0.6, -88, 9, -14], [1, -80, 7, -18]] },
-    upperArmR: { keys: [[0, -86, -8, 16], [0.3, -74, 6, 23], [0.6, -70, -7, 13], [1, -86, -8, 16]] },
-    lowerArmL: { keys: [[0, 52, 0, 0], [0.3, 40, 0, 0], [0.62, 58, 0, 0], [1, 52, 0, 0]] },
-    lowerArmR: { keys: [[0, 42, 0, 0], [0.3, 56, 0, 0], [0.62, 38, 0, 0], [1, 42, 0, 0]] },
-    handL: { keys: [[0, 16, 0, -9], [0.5, -7, 0, 7], [1, 16, 0, -9]] },
-    handR: { keys: [[0, -9, 0, 8], [0.5, 18, 0, -7], [1, -9, 0, 8]] },
+  /* ---------------------------------------------------------
+     LIGHT SHAMBLE — narrower track, more hip, quicker.
+     --------------------------------------------------------- */
+  clips.push(buildClip('zwalk_light', 1.45, {
+    hips: {
+      keys: [[0, 6, -8, 8], [0.25, 5, 0, -3], [0.5, 6, 8, -8], [0.75, 5, 0, 3], [1, 6, -8, 8]],
+      pos: [[0, 0.014, -0.012, 0], [0.25, 0.020, 0.020, 0], [0.5, -0.014, -0.014, 0],
+            [0.75, -0.020, 0.018, 0], [1, 0.014, -0.012, 0]],
+    },
+    spine: { keys: [[0, 15, 7, -3], [0.25, 17, 0, 1], [0.5, 15, -7, 3], [0.75, 17, 0, -1], [1, 15, 7, -3]] },
+    chest: { keys: [[0, 11, 5, -2], [0.5, 13, -5, 2], [1, 11, 5, -2]] },
+    head: { keys: [[0, -12, 9, -12], [0.3, -16, 2, -14], [0.6, -8, -8, -6], [1, -12, 9, -12]] },
+    upperLegL: { keys: [[0, -30, 0, -2], [0.15, -16, 0, -2], [0.30, 0, 0, -2], [0.45, 18, 0, -2],
+                        [0.55, 15, 0, -2], [0.70, -10, 0, -2], [0.85, -28, 0, -2], [1, -30, 0, -2]] },
+    lowerLegL: { keys: [[0, 3, 0, 0], [0.15, 2, 0, 0], [0.30, 6, 0, 0], [0.45, 20, 0, 0],
+                        [0.62, 50, 0, 0], [0.80, 28, 0, 0], [0.92, 5, 0, 0], [1, 3, 0, 0]] },
+    footL: { keys: [[0, 9, 0, 0], [0.20, -2, 0, 0], [0.42, -24, 0, 0], [0.60, 12, 0, 0], [1, 9, 0, 0]] },
+    upperLegR: { keys: [[0, 16, 0, 2], [0.15, 9, 0, 2], [0.30, -7, 0, 2], [0.50, -18, 0, 2],
+                        [0.65, -9, 0, 2], [0.80, 3, 0, 2], [1, 16, 0, 2]] },
+    lowerLegR: { keys: [[0, 15, 0, 0], [0.20, 26, 0, 0], [0.35, 17, 0, 0], [0.50, 7, 0, 0], [0.85, 10, 0, 0], [1, 15, 0, 0]] },
+    footR: { keys: [[0, -9, 0, 0], [0.25, -13, 0, 0], [0.50, 5, 0, 0], [1, -9, 0, 0]] },
+    upperArmL: { keys: [[0, -106, 8, -14], [0.3, -96, -5, -21], [0.6, -112, 10, -10], [1, -106, 8, -14]] },
+    upperArmR: { keys: [[0, -110, -9, 13], [0.3, -99, 6, 19], [0.6, -95, -8, 10], [1, -110, -9, 13]] },
+    lowerArmL: { keys: [[0, -10, 0, 0], [0.3, -24, 0, 0], [0.62, -6, 0, 0], [1, -10, 0, 0]] },
+    lowerArmR: { keys: [[0, -20, 0, 0], [0.3, -8, 0, 0], [0.62, -26, 0, 0], [1, -20, 0, 0]] },
+    handL: { keys: [[0, 17, 0, -11], [0.5, -8, 0, 9], [1, 17, 0, -11]] },
+    handR: { keys: [[0, -10, 0, 10], [0.5, 19, 0, -8], [1, -10, 0, 10]] },
   }));
 
-  /* ---- sprint: the ones that run ---- */
-  clips.push(buildClip('zrun', 0.72, {
-    hips: { keys: [[0, 12, -4, 4], [0.25, 12, 0, 0], [0.5, 12, 4, -4], [0.75, 12, 0, 0], [1, 12, -4, 4]] },
-    spine: { keys: [[0, 26, 3, 0], [0.5, 28, -3, 0], [1, 26, 3, 0]] },
-    chest: { keys: [[0, 12, -4, 0], [0.5, 14, 4, 0], [1, 12, -4, 0]] },
-    // Head thrust forward ahead of the body — running at you, not with you.
-    head: { keys: [[0, -26, 4, -4], [0.5, -28, -4, 4], [1, -26, 4, -4]] },
-    upperLegL: { keys: [[0, 52, 0, 0], [0.5, -34, 0, 0], [1, 52, 0, 0]] },
-    lowerLegL: { keys: [[0, -16, 0, 0], [0.28, -8, 0, 0], [0.58, 78, 0, 0], [1, -16, 0, 0]] },
-    footL: { keys: [[0, -18, 0, 0], [0.5, 16, 0, 0], [1, -18, 0, 0]] },
-    upperLegR: { keys: [[0, -34, 0, 0], [0.5, 52, 0, 0], [1, -34, 0, 0]] },
-    lowerLegR: { keys: [[0, 78, 0, 0], [0.08, 10, 0, 0], [0.5, -16, 0, 0], [1, 78, 0, 0]] },
-    footR: { keys: [[0, 16, 0, 0], [0.5, -18, 0, 0], [1, 16, 0, 0]] },
-    // Arms reach rather than pump: hands up and forward, grasping.
-    upperArmL: { keys: [[0, -62, 0, -26], [0.5, -74, 0, -22], [1, -62, 0, -26]] },
-    upperArmR: { keys: [[0, -74, 0, 26], [0.5, -62, 0, 22], [1, -74, 0, 26]] },
-    lowerArmL: { keys: [[0, 46, 0, 0], [0.5, 34, 0, 0], [1, 46, 0, 0]] },
-    lowerArmR: { keys: [[0, 34, 0, 0], [0.5, 46, 0, 0], [1, 34, 0, 0]] },
+  /* ---------------------------------------------------------
+     SPRINT — the ones that run. Deep forward lean, long stride,
+     a real flight phase, and hands clawing ahead of the body.
+     --------------------------------------------------------- */
+  clips.push(buildClip('zrun', 0.68, {
+    hips: {
+      keys: [[0, 14, -9, 3], [0.25, 13, 0, 0], [0.5, 14, 9, -3], [0.75, 13, 0, 0], [1, 14, -9, 3]],
+      // Driven down onto each foot and thrown up off it: a run is mostly
+      // this. Twice the travel of the walk.
+      pos: [[0, 0.014, -0.034, 0], [0.18, 0.020, 0.026, 0], [0.5, -0.014, -0.036, 0],
+            [0.68, -0.020, 0.024, 0], [1, 0.014, -0.034, 0]],
+    },
+    spine: { keys: [[0, 25, 6, 0], [0.25, 27, 0, 0], [0.5, 25, -6, 0], [0.75, 27, 0, 0], [1, 25, 6, 0]] },
+    chest: { keys: [[0, 13, 6, 0], [0.5, 15, -6, 0], [1, 13, 6, 0]] },
+    // Head thrust out ahead of the body — running at you, not with you.
+    head: { keys: [[0, -30, 5, -5], [0.5, -33, -5, 5], [1, -30, 5, -5]] },
+    upperLegL: { keys: [[0, -42, 0, 0], [0.14, -20, 0, 0], [0.28, 4, 0, 0], [0.42, 27, 0, 0],
+                        [0.58, 4, 0, 0], [0.78, -27, 0, 0], [1, -42, 0, 0]] },
+    lowerLegL: { keys: [[0, 12, 0, 0], [0.18, 4, 0, 0], [0.42, 26, 0, 0], [0.58, 74, 0, 0],
+                        [0.76, 44, 0, 0], [0.92, 14, 0, 0], [1, 12, 0, 0]] },
+    footL: { keys: [[0, 10, 0, 0], [0.22, -6, 0, 0], [0.42, -28, 0, 0], [0.62, 14, 0, 0], [1, 10, 0, 0]] },
+    upperLegR: { keys: [[0, 27, 0, 0], [0.08, 4, 0, 0], [0.28, -27, 0, 0], [0.5, -42, 0, 0],
+                        [0.64, -20, 0, 0], [0.78, 4, 0, 0], [1, 27, 0, 0]] },
+    lowerLegR: { keys: [[0, 26, 0, 0], [0.08, 74, 0, 0], [0.26, 44, 0, 0], [0.42, 14, 0, 0],
+                        [0.5, 12, 0, 0], [0.68, 4, 0, 0], [0.92, 26, 0, 0], [1, 26, 0, 0]] },
+    footR: { keys: [[0, -28, 0, 0], [0.12, 14, 0, 0], [0.5, 10, 0, 0], [0.72, -6, 0, 0], [1, -28, 0, 0]] },
+    /* Arms reach rather than pump, and they claw: the elbows open and close
+       across the stride so the hands snatch at the air in front. */
+    upperArmL: { keys: [[0, -113, 4, -20], [0.3, -101, -6, -28], [0.6, -123, 6, -16], [1, -113, 4, -20]] },
+    upperArmR: { keys: [[0, -121, -5, 19], [0.3, -109, 5, 26], [0.6, -103, -7, 15], [1, -121, -5, 19]] },
+    lowerArmL: { keys: [[0, -12, 0, 0], [0.3, -36, 0, 0], [0.6, -6, 0, 0], [1, -12, 0, 0]] },
+    lowerArmR: { keys: [[0, -32, 0, 0], [0.3, -8, 0, 0], [0.6, -38, 0, 0], [1, -32, 0, 0]] },
+    handL: { keys: [[0, 20, 0, -12], [0.5, -12, 0, 10], [1, 20, 0, -12]] },
+    handR: { keys: [[0, -12, 0, 11], [0.5, 22, 0, -10], [1, -12, 0, 11]] },
   }));
 
-  /* ---- crawl: no working legs, hauling on the arms ----
-     The skeleton stays upright, so the crawl is made by folding the whole
-     figure at the hips and packing the legs away behind it. Rotating the
-     actor instead would fight the controller, which owns yaw and nothing
-     else. */
+  /* ---------------------------------------------------------
+     CRAWL — no working legs, hauling on the arms.
+     The skeleton stays upright, so the crawl is made by folding
+     the whole figure at the hips and packing the legs away
+     behind it. Rotating the actor instead would fight the
+     controller, which owns yaw and nothing else.
+     --------------------------------------------------------- */
   clips.push(buildClip('zcrawl', 1.6, {
-    hips: { keys: [[0, 74, -6, 0], [0.5, 78, 6, 0], [1, 74, -6, 0]] },
-    spine: { keys: [[0, -16, 4, 0], [0.5, -20, -4, 0], [1, -16, 4, 0]] },
-    chest: { keys: [[0, -10, 6, 0], [0.5, -8, -6, 0], [1, -10, 6, 0]] },
-    head: { keys: [[0, -46, 6, 0], [0.5, -44, -6, 0], [1, -46, 6, 0]] },
+    hips: {
+      keys: [[0, 74, -8, 0], [0.5, 78, 8, 0], [1, 74, -8, 0]],
+      // Hauled forward in surges, and the whole body drops between them.
+      pos: [[0, 0.010, -0.030, 0], [0.35, 0.014, -0.010, 0], [0.7, -0.012, -0.034, 0], [1, 0.010, -0.030, 0]],
+    },
+    spine: { keys: [[0, -16, 5, 0], [0.5, -20, -5, 0], [1, -16, 5, 0]] },
+    chest: { keys: [[0, -10, 7, 0], [0.5, -8, -7, 0], [1, -10, 7, 0]] },
+    head: { keys: [[0, -46, 7, 0], [0.5, -44, -7, 0], [1, -46, 7, 0]] },
     // Legs folded up and back, dragging uselessly.
     upperLegL: { keys: [[0, -72, 0, 10], [0.5, -66, 0, 12], [1, -72, 0, 10]] },
     upperLegR: { keys: [[0, -66, 0, -12], [0.5, -72, 0, -10], [1, -66, 0, -12]] },
     lowerLegL: { keys: [[0, 84, 0, 0], [0.5, 76, 0, 0], [1, 84, 0, 0]] },
     lowerLegR: { keys: [[0, 76, 0, 0], [0.5, 84, 0, 0], [1, 76, 0, 0]] },
-    // Arms alternate: reach far forward, then haul the body over.
-    upperArmL: { keys: [[0, -96, 0, -18], [0.35, -40, 0, -26], [0.7, -20, 0, -20], [1, -96, 0, -18]] },
-    upperArmR: { keys: [[0, -20, 0, 20], [0.35, -96, 0, 18], [0.7, -50, 0, 26], [1, -20, 0, 20]] },
-    lowerArmL: { keys: [[0, 12, 0, 0], [0.35, 44, 0, 0], [1, 12, 0, 0]] },
-    lowerArmR: { keys: [[0, 44, 0, 0], [0.35, 12, 0, 0], [1, 44, 0, 0]] },
+    // Arms alternate: plant far forward, then haul the body over the hand.
+    upperArmL: { keys: [[0, -100, 0, -16], [0.35, -44, 0, -24], [0.7, -22, 0, -18], [1, -100, 0, -16]] },
+    upperArmR: { keys: [[0, -22, 0, 18], [0.35, -100, 0, 16], [0.7, -54, 0, 24], [1, -22, 0, 18]] },
+    lowerArmL: { keys: [[0, -8, 0, 0], [0.35, -46, 0, 0], [1, -8, 0, 0]] },
+    lowerArmR: { keys: [[0, -46, 0, 0], [0.35, -8, 0, 0], [1, -46, 0, 0]] },
   }));
 
-  /* ---- tearing at a barricade ---- */
+  /* ---------------------------------------------------------
+     TEARING AT A BARRICADE — both arms haul boards off the wall,
+     out of phase, so the pull never stops. The whole body works:
+     the legs brace and the pelvis drives each pull.
+     --------------------------------------------------------- */
   clips.push(buildClip('ztear', 1.05, {
-    hips: { keys: [[0, 2, 0, 0], [0.5, 6, 0, 0], [1, 2, 0, 0]] },
-    spine: { keys: [[0, 12, -6, 0], [0.5, 20, 6, 0], [1, 12, -6, 0]] },
-    chest: { keys: [[0, 6, -8, 0], [0.5, 10, 8, 0], [1, 6, -8, 0]] },
-    head: { keys: [[0, -14, -6, -4], [0.5, -18, 6, 4], [1, -14, -6, -4]] },
-    // Both arms rip downward, out of phase, so the pull never stops.
-    upperArmL: { keys: [[0, -118, 0, -20], [0.28, -30, 0, -30], [0.55, -110, 0, -22], [1, -118, 0, -20]] },
-    upperArmR: { keys: [[0, -34, 0, 28], [0.28, -114, 0, 20], [0.55, -30, 0, 30], [1, -34, 0, 28]] },
-    lowerArmL: { keys: [[0, 20, 0, 0], [0.28, 62, 0, 0], [1, 20, 0, 0]] },
-    lowerArmR: { keys: [[0, 58, 0, 0], [0.28, 18, 0, 0], [1, 58, 0, 0]] },
-    upperLegL: { keys: [[0, 6, 0, 4], [1, 6, 0, 4]] },
-    upperLegR: { keys: [[0, -4, 0, -4], [1, -4, 0, -4]] },
+    hips: {
+      keys: [[0, 2, 6, 0], [0.28, 8, -4, 0], [0.55, 3, -6, 0], [0.8, 9, 4, 0], [1, 2, 6, 0]],
+      pos: [[0, 0.008, -0.008, 0.010], [0.28, -0.006, 0.006, -0.014], [0.55, -0.008, -0.008, 0.010],
+            [0.8, 0.006, 0.006, -0.014], [1, 0.008, -0.008, 0.010]],
+    },
+    spine: { keys: [[0, 12, -8, 0], [0.28, 22, 6, 0], [0.55, 13, 8, 0], [0.8, 21, -6, 0], [1, 12, -8, 0]] },
+    chest: { keys: [[0, 6, -9, 0], [0.5, 10, 9, 0], [1, 6, -9, 0]] },
+    head: { keys: [[0, -14, -7, -4], [0.5, -18, 7, 4], [1, -14, -7, -4]] },
+    // Reach high onto the plank, then wrench down and back.
+    upperArmL: { keys: [[0, -122, 0, -18], [0.28, -34, 0, -30], [0.55, -114, 0, -20], [1, -122, 0, -18]] },
+    upperArmR: { keys: [[0, -38, 0, 26], [0.28, -118, 0, 18], [0.55, -34, 0, 30], [1, -38, 0, 26]] },
+    lowerArmL: { keys: [[0, -20, 0, 0], [0.28, -62, 0, 0], [1, -20, 0, 0]] },
+    lowerArmR: { keys: [[0, -58, 0, 0], [0.28, -18, 0, 0], [1, -58, 0, 0]] },
+    // Braced: one foot forward, and the legs take each pull.
+    upperLegL: { keys: [[0, -14, 0, 4], [0.28, -6, 0, 4], [1, -14, 0, 4]] },
+    upperLegR: { keys: [[0, 6, 0, -5], [0.28, 12, 0, -5], [1, 6, 0, -5]] },
+    lowerLegL: { keys: [[0, 16, 0, 0], [0.28, 6, 0, 0], [1, 16, 0, 0]] },
+    lowerLegR: { keys: [[0, 8, 0, 0], [0.28, 20, 0, 0], [1, 8, 0, 0]] },
   }));
 
-  /* ---- lunge: the swipe that lands a hit ---- */
+  /* ---------------------------------------------------------
+     LUNGE — the swipe that lands a hit. The elbows open as the
+     arms go out: a strike is an extension, not a wave.
+     --------------------------------------------------------- */
   clips.push(buildClip('zattack', 0.62, {
-    hips: { keys: [[0, 2, 0, 0], [0.4, 12, 0, 0], [1, 2, 0, 0]] },
-    spine: { keys: [[0, 14, 0, 0], [0.35, 26, 0, 0], [1, 14, 0, 0]] },
-    head: { keys: [[0, -12, 0, 0], [0.35, -30, 0, 0], [1, -12, 0, 0]] },
-    upperArmL: { keys: [[0, -40, 0, -18], [0.3, -128, 0, -34], [0.6, -96, 0, -10], [1, -40, 0, -18]] },
-    upperArmR: { keys: [[0, -44, 0, 18], [0.36, -132, 0, 34], [0.66, -92, 0, 10], [1, -44, 0, 18]] },
-    lowerArmL: { keys: [[0, 40, 0, 0], [0.3, 8, 0, 0], [1, 40, 0, 0]] },
-    lowerArmR: { keys: [[0, 44, 0, 0], [0.36, 10, 0, 0], [1, 44, 0, 0]] },
+    hips: {
+      keys: [[0, 2, 0, 0], [0.35, 14, 0, 0], [1, 2, 0, 0]],
+      pos: [[0, 0, 0, 0], [0.35, 0, 0.020, 0.055], [0.7, 0, -0.010, 0.010], [1, 0, 0, 0]],
+    },
+    spine: { keys: [[0, 14, 0, 0], [0.35, 28, 0, 0], [1, 14, 0, 0]] },
+    chest: { keys: [[0, 8, 0, 0], [0.35, 14, 0, 0], [1, 8, 0, 0]] },
+    head: { keys: [[0, -12, 0, 0], [0.35, -32, 0, 0], [1, -12, 0, 0]] },
+    upperArmL: { keys: [[0, -46, 0, -18], [0.30, -118, 0, -32], [0.60, -92, 0, -10], [1, -46, 0, -18]] },
+    upperArmR: { keys: [[0, -50, 0, 18], [0.36, -122, 0, 32], [0.66, -88, 0, 10], [1, -50, 0, 18]] },
+    // Cocked and flexed, then snapped almost straight on the strike.
+    lowerArmL: { keys: [[0, -52, 0, 0], [0.30, -6, 0, 0], [0.60, -20, 0, 0], [1, -52, 0, 0]] },
+    lowerArmR: { keys: [[0, -56, 0, 0], [0.36, -5, 0, 0], [0.66, -22, 0, 0], [1, -56, 0, 0]] },
+    upperLegL: { keys: [[0, -8, 0, 3], [0.35, -22, 0, 3], [1, -8, 0, 3]] },
+    upperLegR: { keys: [[0, 6, 0, -4], [0.35, 16, 0, -4], [1, 6, 0, -4]] },
+    lowerLegL: { keys: [[0, 10, 0, 0], [0.35, 22, 0, 0], [1, 10, 0, 0]] },
+    lowerLegR: { keys: [[0, 12, 0, 0], [0.35, 6, 0, 0], [1, 12, 0, 0]] },
   }, { loop: false }));
 
-  /* ---- tearing a piece out of itself ----
-     The far arm crosses the body, digs into the flank, and pulls. The spine
-     folds around the hand rather than the hand simply moving to the ribs,
-     which is the difference between reaching for something and wrenching
-     something loose. */
+  /* ---------------------------------------------------------
+     TEARING A PIECE OUT OF ITSELF — the far arm crosses the
+     body, digs into the flank and pulls. The spine folds around
+     the hand rather than the hand simply arriving at the ribs,
+     which is the difference between reaching for something and
+     wrenching something loose.
+     --------------------------------------------------------- */
   clips.push(buildClip('zrip', 1.25, {
-    hips: { keys: [[0, 3, 6, 0], [0.4, 5, 12, 0], [0.7, 4, 4, 0], [1, 3, 6, 0]] },
-    spine: { keys: [[0, 14, -10, -6], [0.4, 24, -22, -14], [0.7, 16, -8, -6], [1, 14, -10, -6]] },
-    chest: { keys: [[0, 8, -8, -4], [0.4, 14, -18, -10], [1, 8, -8, -4]] },
-    head: { keys: [[0, -14, -12, 0], [0.4, -6, -26, -6], [0.75, -18, -6, 0], [1, -14, -12, 0]] },
-    // Right hand crosses to the left flank, grips, and hauls outward.
-    upperArmR: { keys: [[0, -30, 0, 34], [0.3, -78, 0, 62], [0.5, -74, 0, 58], [0.75, -40, 0, 20], [1, -30, 0, 34]] },
-    lowerArmR: { keys: [[0, 40, 0, 0], [0.3, 104, 0, 0], [0.5, 96, 0, 0], [0.75, 30, 0, 0], [1, 40, 0, 0]] },
-    upperArmL: { keys: [[0, -18, 0, -18], [0.4, -34, 0, -30], [1, -18, 0, -18]] },
-    lowerArmL: { keys: [[0, 44, 0, 0], [0.4, 62, 0, 0], [1, 44, 0, 0]] },
+    hips: {
+      keys: [[0, 3, 6, 0], [0.4, 5, 14, 0], [0.7, 4, 4, 0], [1, 3, 6, 0]],
+      pos: [[0, 0, 0, 0], [0.4, -0.012, -0.014, 0], [0.7, 0.010, 0.004, 0], [1, 0, 0, 0]],
+    },
+    spine: { keys: [[0, 14, -10, -6], [0.4, 26, -24, -16], [0.7, 16, -8, -6], [1, 14, -10, -6]] },
+    chest: { keys: [[0, 8, -8, -4], [0.4, 15, -20, -11], [1, 8, -8, -4]] },
+    head: { keys: [[0, -14, -12, 0], [0.4, -4, -28, -8], [0.75, -20, -6, 0], [1, -14, -12, 0]] },
+    // Right hand crosses to the left flank, grips, and hauls outward. The
+    // elbow has to fold hard for the hand to reach the ribs at all.
+    upperArmR: { keys: [[0, -32, 0, 34], [0.3, -66, 0, 62], [0.5, -60, 0, 58], [0.75, -40, 0, 22], [1, -32, 0, 34]] },
+    lowerArmR: { keys: [[0, -40, 0, 0], [0.3, -108, 0, 0], [0.5, -96, 0, 0], [0.75, -34, 0, 0], [1, -40, 0, 0]] },
+    handR: { keys: [[0, 0, 0, 0], [0.3, 18, 0, 0], [0.55, -14, 0, 0], [1, 0, 0, 0]] },
+    upperArmL: { keys: [[0, -60, 0, -18], [0.4, -44, 0, -32], [1, -60, 0, -18]] },
+    lowerArmL: { keys: [[0, -24, 0, 0], [0.4, -40, 0, 0], [1, -24, 0, 0]] },
+    upperLegL: { keys: [[0, -6, 0, 4], [0.4, -14, 0, 4], [1, -6, 0, 4]] },
+    upperLegR: { keys: [[0, 4, 0, -4], [0.4, 10, 0, -4], [1, 4, 0, -4]] },
+    lowerLegL: { keys: [[0, 10, 0, 0], [0.4, 20, 0, 0], [1, 10, 0, 0]] },
+    lowerLegR: { keys: [[0, 12, 0, 0], [0.4, 6, 0, 0], [1, 12, 0, 0]] },
   }, { loop: false }));
 
   /* ---- the last one: tearing at its own face ---- */
   clips.push(buildClip('zripface', 1.35, {
-    spine: { keys: [[0, 14, 0, 0], [0.45, 22, 0, 0], [1, 14, 0, 0]] },
-    head: { keys: [[0, -12, 0, 0], [0.35, 16, 8, 0], [0.7, 4, -6, 0], [1, -12, 0, 0]] },
-    // Both hands to the face, then wrenched away and down.
-    upperArmR: { keys: [[0, -34, 0, 30], [0.3, -142, 0, 26], [0.55, -128, 0, 34], [0.8, -50, 0, 24], [1, -34, 0, 30]] },
-    upperArmL: { keys: [[0, -34, 0, -30], [0.3, -138, 0, -26], [0.55, -124, 0, -34], [0.8, -46, 0, -24], [1, -34, 0, -30]] },
-    lowerArmR: { keys: [[0, 40, 0, 0], [0.3, 92, 0, 0], [0.55, 84, 0, 0], [1, 40, 0, 0]] },
-    lowerArmL: { keys: [[0, 40, 0, 0], [0.3, 90, 0, 0], [0.55, 82, 0, 0], [1, 40, 0, 0]] },
+    hips: {
+      keys: [[0, 4, 0, 0], [0.45, 8, 0, 0], [1, 4, 0, 0]],
+      pos: [[0, 0, 0, 0], [0.3, 0, -0.018, -0.012], [0.62, 0, 0.010, 0.008], [1, 0, 0, 0]],
+    },
+    spine: { keys: [[0, 14, 0, 0], [0.45, 24, 0, 0], [1, 14, 0, 0]] },
+    chest: { keys: [[0, 8, 0, 0], [0.45, 13, 0, 0], [1, 8, 0, 0]] },
+    head: { keys: [[0, -12, 0, 0], [0.35, 18, 8, 0], [0.7, 2, -6, 0], [1, -12, 0, 0]] },
+    // Both hands to the face, then wrenched away and down. Hands only get
+    // to a face with the elbows folded right up.
+    upperArmR: { keys: [[0, -36, 0, 30], [0.3, -104, 0, 30], [0.55, -96, 0, 38], [0.8, -52, 0, 24], [1, -36, 0, 30]] },
+    upperArmL: { keys: [[0, -36, 0, -30], [0.3, -102, 0, -30], [0.55, -94, 0, -38], [0.8, -48, 0, -24], [1, -36, 0, -30]] },
+    lowerArmR: { keys: [[0, -40, 0, 0], [0.3, -104, 0, 0], [0.55, -92, 0, 0], [0.8, -30, 0, 0], [1, -40, 0, 0]] },
+    lowerArmL: { keys: [[0, -40, 0, 0], [0.3, -102, 0, 0], [0.55, -90, 0, 0], [0.8, -28, 0, 0], [1, -40, 0, 0]] },
+    handR: { keys: [[0, 0, 0, 0], [0.35, 22, 0, 0], [0.6, -18, 0, 0], [1, 0, 0, 0]] },
+    handL: { keys: [[0, 0, 0, 0], [0.35, 20, 0, 0], [0.6, -16, 0, 0], [1, 0, 0, 0]] },
+    upperLegL: { keys: [[0, -6, 0, 5], [0.45, -16, 0, 5], [1, -6, 0, 5]] },
+    upperLegR: { keys: [[0, -4, 0, -5], [0.45, -14, 0, -5], [1, -4, 0, -5]] },
+    lowerLegL: { keys: [[0, 12, 0, 0], [0.45, 26, 0, 0], [1, 12, 0, 0]] },
+    lowerLegR: { keys: [[0, 12, 0, 0], [0.45, 24, 0, 0], [1, 12, 0, 0]] },
   }, { loop: false }));
 
-  /* ---- the throw, for the ones that spit ---- */
+  /* ---------------------------------------------------------
+     THROW — winds the arm back over the shoulder with the elbow
+     folded, then whips it through and opens the elbow at
+     release. The hips and the far arm counter it.
+     --------------------------------------------------------- */
   clips.push(buildClip('zspit', 0.95, {
-    hips: { keys: [[0, 2, -14, 0], [0.45, 4, 16, 0], [1, 2, -14, 0]] },
-    spine: { keys: [[0, 10, -20, 0], [0.45, 18, 22, 0], [1, 10, -20, 0]] },
-    chest: { keys: [[0, 6, -16, 0], [0.45, 8, 18, 0], [1, 6, -16, 0]] },
-    head: { keys: [[0, -18, -8, 0], [0.45, -24, 8, 0], [1, -18, -8, 0]] },
-    // Right arm winds back over the shoulder, then whips through.
-    upperArmR: { keys: [[0, -20, 0, 40], [0.3, -150, 0, 30], [0.5, -70, 0, 12], [1, -20, 0, 40]] },
-    lowerArmR: { keys: [[0, 30, 0, 0], [0.3, 96, 0, 0], [0.5, 6, 0, 0], [1, 30, 0, 0]] },
-    upperArmL: { keys: [[0, -50, 0, -22], [0.45, -30, 0, -16], [1, -50, 0, -22]] },
-    lowerArmL: { keys: [[0, 40, 0, 0], [1, 40, 0, 0]] },
+    hips: {
+      keys: [[0, 2, -16, 0], [0.45, 6, 18, 0], [1, 2, -16, 0]],
+      pos: [[0, 0, 0, -0.014], [0.45, 0, 0.008, 0.020], [1, 0, 0, -0.014]],
+    },
+    spine: { keys: [[0, 10, -22, 0], [0.45, 20, 24, 0], [1, 10, -22, 0]] },
+    chest: { keys: [[0, 6, -18, 0], [0.45, 9, 20, 0], [1, 6, -18, 0]] },
+    head: { keys: [[0, -18, -10, 0], [0.45, -26, 9, 0], [1, -18, -10, 0]] },
+    // Cocked behind the head with the elbow shut, then thrown open.
+    upperArmR: { keys: [[0, -24, 0, 40], [0.30, -128, 0, 34], [0.50, -74, 0, 14], [0.68, -40, 0, 24], [1, -24, 0, 40]] },
+    lowerArmR: { keys: [[0, -34, 0, 0], [0.30, -112, 0, 0], [0.50, -8, 0, 0], [0.68, -26, 0, 0], [1, -34, 0, 0]] },
+    handR: { keys: [[0, 0, 0, 0], [0.30, 26, 0, 0], [0.52, -22, 0, 0], [1, 0, 0, 0]] },
+    upperArmL: { keys: [[0, -54, 0, -22], [0.45, -34, 0, -16], [1, -54, 0, -22]] },
+    lowerArmL: { keys: [[0, -30, 0, 0], [0.45, -18, 0, 0], [1, -30, 0, 0]] },
+    upperLegL: { keys: [[0, -10, 0, 4], [0.45, -18, 0, 4], [1, -10, 0, 4]] },
+    upperLegR: { keys: [[0, 8, 0, -4], [0.45, 14, 0, -4], [1, 8, 0, -4]] },
+    lowerLegL: { keys: [[0, 12, 0, 0], [0.45, 22, 0, 0], [1, 12, 0, 0]] },
+    lowerLegR: { keys: [[0, 14, 0, 0], [0.45, 8, 0, 0], [1, 14, 0, 0]] },
   }, { loop: false }));
 
-  /* ---- standing idle, for the moment before it notices you ---- */
+  /* ---------------------------------------------------------
+     IDLE — standing, but never still. It sways over its feet,
+     breathes at the shoulders and the hands drift.
+     --------------------------------------------------------- */
   clips.push(buildClip('zidle', 4.2, {
-    spine: { keys: [[0, 14, -2, 2], [0.5, 16, 2, -2], [1, 14, -2, 2]] },
-    head: { keys: [[0, -10, 5, -8], [0.5, -13, -5, -5], [1, -10, 5, -8]] },
-    upperArmL: { keys: [[0, -72, 5, -20], [0.33, -66, -3, -26], [0.66, -78, 7, -16], [1, -72, 5, -20]] },
-    upperArmR: { keys: [[0, -76, -6, 18], [0.33, -70, 4, 24], [0.66, -64, -5, 15], [1, -76, -6, 18]] },
-    lowerArmL: { keys: [[0, 44, 0, 0], [0.5, 36, 0, 0], [1, 44, 0, 0]] },
-    lowerArmR: { keys: [[0, 38, 0, 0], [0.5, 48, 0, 0], [1, 38, 0, 0]] },
-    handL: { keys: [[0, 10, 0, -6], [0.5, -6, 0, 5], [1, 10, 0, -6]] },
-    handR: { keys: [[0, -7, 0, 5], [0.5, 12, 0, -6], [1, -7, 0, 5]] },
+    hips: {
+      keys: [[0, 5, -3, 3], [0.33, 5, 2, -1], [0.66, 5, -1, -3], [1, 5, -3, 3]],
+      // Weight rocking slowly from one foot to the other.
+      pos: [[0, 0.012, -0.004, 0], [0.33, -0.010, 0.002, 0], [0.66, 0.006, -0.006, 0], [1, 0.012, -0.004, 0]],
+    },
+    spine: { keys: [[0, 15, -3, 2], [0.5, 17, 3, -2], [1, 15, -3, 2]] },
+    chest: { keys: [[0, 8, 2, -1], [0.5, 10, -2, 1], [1, 8, 2, -1]] },
+    head: { keys: [[0, -10, 6, -9], [0.35, -14, -2, -11], [0.7, -8, -6, -5], [1, -10, 6, -9]] },
+    upperArmL: { keys: [[0, -100, 6, -18], [0.33, -92, -4, -25], [0.66, -106, 8, -14], [1, -100, 6, -18]] },
+    upperArmR: { keys: [[0, -104, -7, 17], [0.33, -96, 5, 23], [0.66, -91, -6, 13], [1, -104, -7, 17]] },
+    lowerArmL: { keys: [[0, -16, 0, 0], [0.5, -28, 0, 0], [1, -16, 0, 0]] },
+    lowerArmR: { keys: [[0, -26, 0, 0], [0.5, -12, 0, 0], [1, -26, 0, 0]] },
+    handL: { keys: [[0, 12, 0, -8], [0.5, -7, 0, 7], [1, 12, 0, -8]] },
+    handR: { keys: [[0, -8, 0, 7], [0.5, 14, 0, -8], [1, -8, 0, 7]] },
+    upperLegL: { keys: [[0, -5, 0, 3], [0.5, -8, 0, 3], [1, -5, 0, 3]] },
+    upperLegR: { keys: [[0, 4, 0, -4], [0.5, 2, 0, -4], [1, 4, 0, -4]] },
+    lowerLegL: { keys: [[0, 8, 0, 0], [0.5, 12, 0, 0], [1, 8, 0, 0]] },
+    lowerLegR: { keys: [[0, 11, 0, 0], [0.5, 7, 0, 0], [1, 11, 0, 0]] },
   }));
 
   return clips;

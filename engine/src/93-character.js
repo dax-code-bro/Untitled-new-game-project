@@ -71,18 +71,33 @@ function appendLimb(g, from, to, r0, r1, sides = 8) {
 
    The surface comes from the anatomical loft in 94-human.js; this
    function's job is to bind it to the skeleton. */
-function makeHumanoidMesh(skeleton, opts = {}) {
-  // A zombie build is a different body, not the same body scaled — its own
-  // cross-section stack, its own neck, and its own clothes.
-  const g = opts.bloodOnly
-    ? buildZombieBloodGeometry(skeleton, { build: opts.zombieBuild, seed: opts.seed })
-    : opts.clothOnly
-    ? buildZombieClothGeometry(skeleton, { build: opts.zombieBuild, seed: opts.seed, segments: opts.segments })
-    : opts.zombieBuild
-      ? buildZombieBodyGeometry(skeleton, { build: opts.zombieBuild, seed: opts.seed, segments: opts.segments })
-      : makeHumanBodyGeometry(skeleton, opts);
+/* Body parts, for skin binding. The problem they solve: in the bind pose an
+   arm hangs against the flank, so a vertex on the ribs at shoulder height is
+   genuinely nearer the upper-arm bone than the spine — about 60 mm against
+   100 mm, which under an inverse-fourth-power falloff makes the arm seven
+   times the stronger claim. Bind by distance alone and the upper flank is
+   welded to the arm, so raising the arm drags a sheet of torso up with it:
+   the webbing between chest and wrist that made every reaching zombie look
+   like it had wings.
 
-  // Bone segments used only for solving skin weights below.
+   The builders know exactly which piece of anatomy they are emitting, so
+   they say so, and each part may only bind to the bones that actually move
+   it. */
+const PART = { BODY: 0, ARM_L: 1, ARM_R: 2, LEG_L: 3, LEG_R: 4, NECK: 5 };
+
+const PART_BONES = {
+  0: ['hips', 'spine', 'chest', 'neck', 'shoulderL', 'shoulderR'],
+  1: ['shoulderL', 'upperArmL', 'lowerArmL', 'handL'],
+  2: ['shoulderR', 'upperArmR', 'lowerArmR', 'handR'],
+  3: ['hips', 'upperLegL', 'lowerLegL', 'footL'],
+  4: ['hips', 'upperLegR', 'lowerLegR', 'footR'],
+  5: ['chest', 'neck', 'head'],
+};
+
+/* Bind an arbitrary geometry to a skeleton in its current bind pose. Split
+   out of makeHumanoidMesh so an imported model can be skinned by the same
+   solver the procedural bodies use. */
+function solveSkinWeights(g, skeleton) {
   const segments = [];
   const pa = new Vec3(), pb = new Vec3();
   for (const [fromName, toName] of LIMB_SEGMENTS) {
@@ -93,30 +108,36 @@ function makeHumanoidMesh(skeleton, opts = {}) {
     segments.push({ a: pa.clone(), b: pb.clone(), boneA: fi, boneB: ti });
   }
 
-  /* Skin weights. For each vertex, score every bone segment by inverse
-     squared distance to it and keep the four strongest. This is a cheap
-     stand-in for bone-heat diffusion and holds up well on a tube-shaped
-     body where every vertex is genuinely near its own bone. */
   const n = g.positions.length / 3;
   const joints = new Float32Array(n * 4);
   const weights = new Float32Array(n * 4);
   const p = new Vec3(), closest = new Vec3();
   const scores = [];
 
+  const allow = {};
+  for (const key in PART_BONES) {
+    const set = new Set();
+    for (const name of PART_BONES[key]) { const bi = skeleton.index(name); if (bi >= 0) set.add(bi); }
+    allow[key] = set;
+  }
+  /* Part tags are advisory and opt-in: a geometry whose builder never set
+     one leaves them all at BODY, and honouring that would bind an entire
+     model to the spine. Only restrict when something actually tagged. */
+  const parts = g.parts && g.parts.length === n && g.parts.some((v) => v !== 0) ? g.parts : null;
+
   for (let i = 0; i < n; i++) {
     p.set(g.positions[i * 3], g.positions[i * 3 + 1], g.positions[i * 3 + 2]);
     scores.length = 0;
+    const ok = parts ? allow[parts[i]] : null;
     for (const seg of segments) {
+      if (ok && !ok.has(seg.boneA) && !ok.has(seg.boneB)) continue;
       closestPointOnSegment(p, seg.a, seg.b, closest);
       const d2 = Math.max(closest.distanceToSq(p), 1e-5);
-      // Which end of the segment the vertex is nearer decides which of the
-      // two bones it leans toward, so elbows and knees bend properly.
       const t = clamp(seg.a.distanceTo(closest) / Math.max(seg.a.distanceTo(seg.b), 1e-5), 0, 1);
       const w = 1 / (d2 * d2);
-      scores.push({ bone: seg.boneA, w: w * (1 - t) });
-      scores.push({ bone: seg.boneB, w: w * t });
+      if (!ok || ok.has(seg.boneA)) scores.push({ bone: seg.boneA, w: w * (1 - t) });
+      if (!ok || ok.has(seg.boneB)) scores.push({ bone: seg.boneB, w: w * t });
     }
-    // Merge duplicates, then take the top four.
     const merged = new Map();
     for (const s of scores) merged.set(s.bone, (merged.get(s.bone) || 0) + s.w);
     const top = Array.from(merged.entries()).sort((a, b) => b[1] - a[1]).slice(0, 4);
@@ -128,10 +149,23 @@ function makeHumanoidMesh(skeleton, opts = {}) {
       weights[i * 4 + k] = top[k] ? top[k][1] / sum : 0;
     }
   }
-
   g.joints = joints;
   g.weights = weights;
   return g;
+}
+
+function makeHumanoidMesh(skeleton, opts = {}) {
+  // A zombie build is a different body, not the same body scaled — its own
+  // cross-section stack, its own neck, and its own clothes.
+  const g = opts.bloodOnly
+    ? buildZombieBloodGeometry(skeleton, { build: opts.zombieBuild, seed: opts.seed })
+    : opts.clothOnly
+    ? buildZombieClothGeometry(skeleton, { build: opts.zombieBuild, seed: opts.seed, segments: opts.segments })
+    : opts.zombieBuild
+      ? buildZombieBodyGeometry(skeleton, { build: opts.zombieBuild, seed: opts.seed, segments: opts.segments })
+      : makeHumanBodyGeometry(skeleton, opts);
+
+  return solveSkinWeights(g, skeleton);
 }
 
 /* ---------------- character controller ---------------- */
