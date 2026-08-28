@@ -116,17 +116,25 @@ const TextureLib = {
      These are tuned by eye for readability at gameplay distance rather
      than for physical accuracy at macro-photography range. */
   kinds: {
+    /* Concrete. The albedo here multiplies whatever colour the material
+       asks for, so it has to sit near the middle of the range or every
+       concrete surface in every scene comes out darker than it was
+       authored — the first version centred on 0.42 sRGB, which is 0.15 in
+       linear, and a daylit roof deck rendered as a black slab. Pits knock
+       the albedo and the ambient down together; both are gentler now, since
+       a texture that carries its own deep shadowing cannot be lit back out
+       of it. */
     concrete(u, v, n, c) {
       const g = n.fbm(u * 8, v * 8, 0, 5) * 0.5 + 0.5;
       const pits = Math.max(0, n.fbm(u * 26, v * 26, 3.3, 3));
       const stain = n.fbm(u * 3, v * 3, 9, 3) * 0.5 + 0.5;
-      const base = 0.42 + g * 0.16 - pits * 0.18;
+      const base = 0.66 + g * 0.18 - pits * 0.12;
       c.r = base * (0.98 + stain * 0.06);
       c.g = base * (0.97 + stain * 0.05);
       c.b = base * 0.95;
       c.rough = 0.82 + g * 0.12;
-      c.ao = 1 - pits * 0.55;
-      c.h = g * 0.6 - pits * 0.7;
+      c.ao = 1 - pits * 0.28;
+      c.h = g * 0.42 - pits * 0.46;
     },
 
     brick(u, v, n, c) {

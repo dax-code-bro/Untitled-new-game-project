@@ -30,6 +30,11 @@ const ECONOMY = {
   crate: 900,
 };
 
+/* The generator is turned by hand, and the five seconds it takes are the
+   whole design of it: the horde does not stop while you are holding a crank,
+   so the round you choose to do this in matters. */
+const GEN = { crank: 5.0, reach: 2.4, rpm: 190 };
+
 const WEAPONS = {
   m1911: {
     name: 'M1911', slotName: 'SIDEARM',
@@ -230,6 +235,10 @@ const LINES = {
   lowAmmo: [['patch', 'Running dry. Chalk says the wall sells courage at five hundred a box.']],
   buyThompson: [['patch', 'Eight hundred a minute says nothing else gets through that window.']],
   buyScatter: [['patch', 'Both barrels. Subtlety went out with the lights.']],
+  powerStart: [
+    ['patch', 'Both hands on it. Five seconds. Do not let go.'],
+    ['radio', 'Turn it, corporal. Turn it and do not look at the window.'],
+  ],
   power: [
     ['patch', 'Generator is up. Bunker Nine has a heartbeat again.'],
     ['radio', 'Warm light in the window. That is how they will find you, corporal.'],
@@ -372,38 +381,71 @@ function makeVoice(game, hud, isOver) {
    openings at 0.9 sill, framed by splitting the wall run into
    sill / header / side pieces. */
 
+/* The bunker is a square blockhouse with a roof you can fight on, one wing
+   off the west wall, and a battlefield around it that you can see and never
+   reach. Back wall is -Z, front is +Z, and the stairs are in the back-right
+   corner, which from the door means +X and -Z. */
 const MAP = {
-  mess: { x0: -6.4, x1: 6.0, z0: -4.5, z1: 4.5, y0: 0, y1: 3.2 },
-  gen: { x0: -16.4, x1: -6.8, z0: -4.5, z1: 4.5, y0: 0, y1: 3.2 },
-  loft: { x0: 0.5, x1: 6.0, z0: -4.5, z1: 4.5, y0: 3.1, y1: 6.0 },
-  door1: { x: -6.6, z0: -0.3, z1: 1.3, h: 2.4 },            // MESS <-> GEN
-  stair: { z0: 2.9, z1: 4.3, x0: 1.0, x1: 5.7, top: 3.1 },  // MESS -> LOFT
-  // Down from the mess, behind a steel door that shuts on its own.
-  /* The flight needs a run, not a shaft. Three and a half metres of drop
-     down 1.6 of floor is a 60-degree ladder with a 14 cm tread, which a
-     capsule catches on all the way down. Longer run, shallower room. */
-  down: { x0: -5.6, x1: -3.4, z0: 0.9, z1: 4.2, floor: -2.9 },
-  shop: { x0: -12.0, x1: -3.0, z0: -1.2, z1: 4.2, y0: -2.9, y1: -0.6 },
+  main:  { x0: -7.0, x1: 7.0, z0: -7.0, z1: 7.0, y0: 0, y1: 3.4 },
+  // The wing behind the door on the left, where the power is.
+  side:  { x0: -16.0, x1: -7.4, z0: -5.0, z1: 5.0, y0: 0, y1: 3.4 },
+  // The roof deck sits on the blockhouse and is open to the sky.
+  roof:  { x0: -7.0, x1: 7.0, z0: -7.0, z1: 7.0, y0: 3.4, y1: 3.6, rail: 0.82 },
+  /* Fifteen risers of 0.233 up a 4.05 run — 27 cm of tread, which a capsule
+     walks rather than catches on. Against the east wall, climbing toward the
+     back corner so the flight ends where the roof hatch is. */
+  stair: { x0: 4.5, x1: 6.9, zBot: -1.35, zTop: -5.4, steps: 15 },
+  // Free to climb: no gate, no cost. The way up is supposed to be obvious.
+  door1: { x: -7.4, z0: -1.1, z1: 1.1, h: 2.4 },   // main <-> side wing
+  // Where the meteorite came through the wing roof.
+  hole:  { x: -12.6, z: 1.0, r: 1.5 },
 };
 
+/* Zombies do not appear in the room. They come up out of the ground far out
+   in the battlefield and walk in, so the pads are thirty metres out and the
+   window is only where they finally get through. */
 const WINDOWS = [
-  { id: 'W1', room: 'mess', inside: [-2.5, 0, -3.4], sillAt: [-2.5, 1.5, -4.7], pad: [-2.5, 0, -8.2], face: 'N', wx: [-3.3, -1.7] },
-  { id: 'W2', room: 'mess', inside: [4.9, 0, -2.0], sillAt: [6.2, 1.5, -2.0], pad: [9.6, 0, -2.0], face: 'E', wz: [-2.8, -1.2] },
-  { id: 'W3', room: 'gen', inside: [-12.2, 0, -3.4], sillAt: [-12.2, 1.5, -4.7], pad: [-15.6, 0, -8.4], face: 'N', wx: [-13.0, -11.4] },
-  { id: 'W4', room: 'gen', inside: [-15.3, 0, 1.0], sillAt: [-16.6, 1.5, 1.0], pad: [-19.8, 0, 1.0], face: 'W', wz: [0.2, 1.8] },
-  { id: 'W5', room: 'loft', inside: [4.9, 3.1, 1.0], sillAt: [6.2, 4.5, 1.0], pad: [9.6, 0, 2.6], face: 'E', wz: [0.2, 1.8], high: true },
+  { id: 'W1', room: 'main', inside: [-2.8, 0, -6.0], sillAt: [-2.8, 1.5, -7.2], pad: [-4.5, 0, -26.0], face: 'N', wx: [-3.6, -2.0] },
+  { id: 'W2', room: 'main', inside: [ 1.2, 0, -6.0], sillAt: [ 1.2, 1.5, -7.2], pad: [ 3.0, 0, -30.0], face: 'N', wx: [ 0.4,  2.0] },
+  { id: 'W3', room: 'main', inside: [ 6.0, 0,  2.0], sillAt: [ 7.2, 1.5,  2.0], pad: [ 27.0, 0, 4.5], face: 'E', wz: [ 1.2,  2.8] },
+  { id: 'W4', room: 'main', inside: [-1.2, 0,  6.0], sillAt: [-1.2, 1.5,  7.2], pad: [-2.0, 0,  28.0], face: 'S', wx: [-2.0, -0.4] },
+  { id: 'W5', room: 'side', inside: [-14.8, 0, -0.8], sillAt: [-16.2, 1.5, -0.8], pad: [-31.0, 0, -3.0], face: 'W', wz: [-1.6, 0.0] },
 ];
+
+// Boards span X on the two walls that run along X, and Z on the other two.
+const WIN_SPANS_X = (face) => face === 'N' || face === 'S';
 
 function buildMap(game, S) {
   const MAT = {
-    wall: { color: 0x8f8c85, texture: 'concrete', roughness: 0.94, metalness: 0, uvScale: 1.3, normalStrength: 0.45 },
-    wallDark: { color: 0x6f6c66, texture: 'concrete', roughness: 0.95, metalness: 0 },
-    floor: { color: 0x76736c, texture: 'concrete', roughness: 0.9, metalness: 0, uvScale: 1.2, normalStrength: 0.45 },
+    /* uvScale is tiles-per-face, not tiles-per-metre, and every wall and
+       floor in here is a single slab twelve to fifteen metres long. At 1.3
+       the 256-pixel concrete stretched across the whole of it, so each
+       surface showed one magnified blotch of the texture — which is why the
+       roof deck came out as a dark red-brown stain in full daylight while a
+       test box beside it was properly sunlit. These tile at roughly a metre
+       and a half now. */
+    /* These read about three times darker than their hex suggests. The
+       concrete texture multiplies albedo by its own mid-grey and then knocks
+       ambient down again through the AO channel, so a nominal 0x76736c
+       surface lands near 0x2a2a28. Under lamps at night nobody noticed; in
+       daylight the roof deck came out black. The colours are pre-multiplied
+       up to compensate — bright here, correct on screen. */
+    wall: { color: 0xd6d1c4, texture: 'concrete', roughness: 0.94, metalness: 0, uvScale: 5, normalStrength: 0.45 },
+    wallDark: { color: 0xa9a49a, texture: 'concrete', roughness: 0.95, metalness: 0, uvScale: 5 },
+    floor: { color: 0xb8b3a7, texture: 'concrete', roughness: 0.9, metalness: 0, uvScale: 7, normalStrength: 0.45 },
     wood: { color: 0x584023, texture: 'wood', roughness: 0.8, metalness: 0, uvScale: 2 },
     board: { color: 0x7d5c36, texture: 'wood', roughness: 0.85, metalness: 0, uvScale: 3 },
     steel: { color: 0x4a4e54, texture: 'metal', roughness: 0.5, metalness: 1 },
     sand: { color: 0x8a7f5e, texture: 'fabric', roughness: 0.98, metalness: 0, uvScale: 2 },
     chalk: { color: 0xf5f2e6, texture: 'smooth', roughness: 0.9, metalness: 0, emissive: 0xcfe8ff, emissiveStrength: 0.35 },
+    // Outside. Churned mud, scorched steel, and wire.
+    mud: { color: 0x4e4436, texture: 'dirt', roughness: 0.98, metalness: 0, uvScale: 3 },
+    mudDark: { color: 0x342d24, texture: 'dirt', roughness: 0.99, metalness: 0, uvScale: 2 },
+    burnt: { color: 0x2b2a28, texture: 'metal', roughness: 0.82, metalness: 1 },
+    hull: { color: 0x4a4c3e, texture: 'metal', roughness: 0.72, metalness: 1, uvScale: 2 },
+    wire: { color: 0x53504a, texture: 'metal', roughness: 0.6, metalness: 1 },
+    cloth: { color: 0x4b4a3c, texture: 'fabric', roughness: 0.96, metalness: 0, uvScale: 3 },
+    bark: { color: 0x261f1a, texture: 'wood', roughness: 0.96, metalness: 0, uvScale: 4 },
   };
 
   // A static slab from bounds, the whole bunker is made of these.
@@ -411,6 +453,12 @@ function buildMap(game, S) {
     at: [(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2],
     size: [x1 - x0, y1 - y0, z1 - z0],
     material, static: true,
+  });
+  // Decoration outside the fight: drawn, never collided with.
+  const deco = (x0, x1, y0, y1, z0, z1, material) => game.box({
+    at: [(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2],
+    size: [x1 - x0, y1 - y0, z1 - z0],
+    material, physics: false,
   });
   // A wall run along X or Z with window holes cut into it.
   const wallX = (z0, z1, x0, x1, y1, holes = []) => {
@@ -423,8 +471,6 @@ function buildMap(game, S) {
     }
     if (cur < x1) slab(cur, x1, 0, y1, z0, z1);
   };
-  // sill/head are absolute heights, so the same helper cuts a ground-floor
-  // window and the loft's high one without any relative-offset arithmetic.
   const wallZ = (x0, x1, z0, z1, y1, holes = [], yBase = 0, sill = 0.9, head = 2.1) => {
     let cur = z0;
     for (const [hz0, hz1] of holes) {
@@ -436,393 +482,538 @@ function buildMap(game, S) {
     if (cur < z1) slab(x0, x1, yBase, y1, cur, z1);
   };
 
-  const M = MAP.mess, G = MAP.gen, L = MAP.loft;
+  const M = MAP.main, SD = MAP.side, R = MAP.roof, ST = MAP.stair, D1 = MAP.door1;
+  const W = 0.4;   // wall thickness
 
-  /* Ground, and the bunker floor pad. */
-  /* The ground is drawn but does not collide. An infinite plane at y = 0 is
-     the floor under everything in the world, which is why the first
-     basement was sealed off no matter how many holes were cut in the
-     bunker's own floor above it — the stairwell was under the plane. The
-     collision is four slabs instead, with the stairwell left out. */
-  game.ground({ material: { color: 0x3d3a33, texture: 'dirt', roughness: 0.97 }, size: 90, physics: false });
-  {
-    const H = MAP.down, E = 60;
-    slab(-E, E, -0.6, 0.0, -E, H.z0, MAT.wallDark);
-    slab(-E, E, -0.6, 0.0, H.z1, E, MAT.wallDark);
-    slab(-E, H.x0, -0.6, 0.0, H.z0, H.z1, MAT.wallDark);
-    slab(H.x1, E, -0.6, 0.0, H.z0, H.z1, MAT.wallDark);
+  /* ---------------- the ground, and the war on it ----------------
+
+     Everything from here to the treeline is scenery. None of it collides
+     except the ground itself: it exists to be looked at over the parapet and
+     to be the place the dead climb out of. Keeping it non-colliding means a
+     zombie walking in from thirty metres never snags on a tank track, and
+     the whole field costs four draw calls instead of four hundred. */
+  game.ground({ material: MAT.mud, size: 160 });
+
+  // Shell holes. A dark disc for the pit and a raised lip of spoil round it.
+  const crater = (x, z, r) => {
+    game.cylinder({ at: [x, 0.02, z], radius: r, height: 0.04, material: MAT.mudDark, physics: false });
+    for (let k = 0; k < 9; k++) {
+      const a = (k / 9) * Math.PI * 2 + (x + z) * 0.3;
+      game.sphere({ at: [x + Math.cos(a) * r * 0.94, 0.06, z + Math.sin(a) * r * 0.94],
+        radius: r * 0.17, material: MAT.mud, physics: false });
+    }
+  };
+
+  /* A trench: a dark cut in the ground with a sandbag parapet either side and
+     duckboards along the bottom. Not a hole — nothing here is walked in, and
+     a real cut would be a trap for anything pathing across it. */
+  const trench = (x0, z0, x1, z1, w = 1.5) => {
+    const dx = x1 - x0, dz = z1 - z0, len = Math.hypot(dx, dz);
+    const ang = Math.atan2(dx, dz) * 57.2958;
+    const mid = [(x0 + x1) / 2, 0, (z0 + z1) / 2];
+    const cut = game.box({ at: [mid[0], 0.015, mid[2]], size: [w, 0.03, len], material: MAT.mudDark, physics: false });
+    cut.setRotation([0, ang, 0]);
+    // Duckboards down the middle.
+    for (let t = 0.05; t < 1; t += 0.11) {
+      const b = game.box({ at: [x0 + dx * t, 0.035, z0 + dz * t], size: [w * 0.7, 0.05, 0.22], material: MAT.bark, physics: false });
+      b.setRotation([0, ang, 0]);
+    }
+    // Sandbags stacked along both lips, two courses, offset like real ones.
+    for (const side of [-1, 1]) {
+      const nx = (dz / len) * side * (w / 2 + 0.18), nz = (-dx / len) * side * (w / 2 + 0.18);
+      for (let t = 0; t < 1; t += 0.055) {
+        for (let c = 0; c < 2; c++) {
+          const j = ((t * 100 + c * 7) % 5 - 2) * 0.02;
+          const bag = game.box({
+            at: [x0 + dx * t + nx + j, 0.11 + c * 0.20, z0 + dz * t + nz + j],
+            size: [0.46, 0.20, 0.30], material: MAT.sand, physics: false });
+          bag.setRotation([0, ang + (c ? 9 : -6), 0]);
+        }
+      }
+    }
+  };
+
+  /* Wire: angle-iron pickets with a coil strung between them. The coil is a
+     ring of short bars rather than a real helix — at this distance the
+     silhouette is the whole of it. */
+  const wireRun = (x0, z0, x1, z1) => {
+    const dx = x1 - x0, dz = z1 - z0, len = Math.hypot(dx, dz);
+    const n = Math.max(2, Math.round(len / 2.2));
+    for (let k = 0; k <= n; k++) {
+      const t = k / n;
+      deco(x0 + dx * t - 0.04, x0 + dx * t + 0.04, 0, 1.15, z0 + dz * t - 0.04, z0 + dz * t + 0.04, MAT.wire);
+    }
+    for (let k = 0; k < n * 5; k++) {
+      const t = (k + 0.5) / (n * 5);
+      const cx = x0 + dx * t, cz = z0 + dz * t;
+      for (let s = 0; s < 5; s++) {
+        const a = (s / 5) * Math.PI * 2 + k * 0.7;
+        const bar = game.box({ at: [cx + Math.cos(a) * 0.30, 0.62 + Math.sin(a) * 0.30, cz],
+          size: [0.035, 0.30, 0.035], material: MAT.wire, physics: false });
+        bar.setRotation([0, Math.atan2(dx, dz) * 57.2958, a * 57.2958 + 90]);
+      }
+    }
+  };
+
+  /* A dead tank. Hull low and square, one track thrown and lying beside it,
+     the turret blown off its ring and sitting nose-down in the mud — which is
+     the only silhouette that reads as "destroyed" rather than "parked". */
+  const tankWreck = (x, z, yaw) => {
+    const g = game.box({ at: [x, 0.55, z], size: [3.1, 0.85, 5.4], material: MAT.hull, physics: false });
+    g.setRotation([0, yaw, 0]);
+    const s = game.box({ at: [x, 1.15, z - 0.4], size: [2.4, 0.5, 3.2], material: MAT.hull, physics: false });
+    s.setRotation([0, yaw, 0]);
+    // Running gear both sides, and one track shed into the mud.
+    for (const side of [-1, 1]) {
+      const rad = Math.atan2(1, 0);
+      for (let k = 0; k < 6; k++) {
+        const w2 = game.cylinder({ at: [x + Math.cos(yaw / 57.2958) * side * 1.45, 0.42,
+          z - 2.1 + k * 0.84 + Math.sin(yaw / 57.2958) * side * 1.45],
+          radius: 0.36, height: 0.34, material: MAT.burnt, physics: false });
+        w2.setRotation([0, yaw, 90]);
+        void rad;
+      }
+    }
+    const thrown = game.box({ at: [x + 2.6, 0.09, z + 1.2], size: [0.5, 0.18, 4.0], material: MAT.burnt, physics: false });
+    thrown.setRotation([0, yaw + 24, 0]);
+    // Turret, off the ring and face down.
+    const tur = game.box({ at: [x - 1.9, 0.62, z + 2.4], size: [2.2, 1.0, 2.6], material: MAT.burnt, physics: false });
+    tur.setRotation([28, yaw + 62, 14]);
+    const bar = game.cylinder({ at: [x - 2.9, 0.35, z + 3.9], radius: 0.13, height: 3.0, material: MAT.burnt, physics: false });
+    bar.setRotation([72, yaw + 62, 0]);
+    // Blast scorch under it.
+    game.cylinder({ at: [x, 0.012, z], radius: 4.2, height: 0.02, material: MAT.mudDark, physics: false });
+  };
+
+  /* A body in the mud. Deliberately not a character rig: these never move,
+     there are dozens of them, and a skinned mesh each would cost more than
+     the entire bunker. Boxes and a helmet, face down. */
+  const bodyProne = (x, z, yaw) => {
+    const put = (dx, dy, dz, sx, sy, sz, mat, rx = 0) => {
+      const c = Math.cos(yaw / 57.2958), s2 = Math.sin(yaw / 57.2958);
+      const a = game.box({ at: [x + dx * c - dz * s2, dy, z + dx * s2 + dz * c], size: [sx, sy, sz], material: mat, physics: false });
+      a.setRotation([rx, yaw, 0]);
+      return a;
+    };
+    put(0, 0.14, 0, 0.46, 0.24, 0.72, MAT.cloth);          // torso
+    put(0, 0.13, 0.52, 0.24, 0.22, 0.34, MAT.cloth);       // hips
+    put(-0.34, 0.10, 0.05, 0.60, 0.16, 0.18, MAT.cloth, 8);  // arm out
+    put(0.30, 0.10, 0.16, 0.52, 0.16, 0.18, MAT.cloth, -5);  // arm under
+    put(-0.12, 0.11, 0.98, 0.18, 0.18, 0.78, MAT.cloth);   // leg
+    put(0.14, 0.11, 0.92, 0.18, 0.18, 0.70, MAT.cloth, 6); // leg
+    const helm = game.sphere({ at: [x - Math.sin(yaw / 57.2958) * 0.52, 0.16, z - Math.cos(yaw / 57.2958) * 0.52],
+      radius: 0.17, material: { color: 0x3f4436, texture: 'metal', roughness: 0.78, metalness: 1 }, physics: false });
+    helm.scale.y *= 0.6;
+  };
+
+  // A gun pit: sandbag horseshoe with a wrecked barrel poking over the lip.
+  const emplacement = (x, z, yaw) => {
+    for (let k = 0; k < 13; k++) {
+      const a = -1.5 + (k / 12) * 4.2 + yaw / 57.2958;
+      for (let c = 0; c < 3; c++) {
+        const bag = game.box({ at: [x + Math.cos(a) * 1.9, 0.11 + c * 0.20, z + Math.sin(a) * 1.9],
+          size: [0.46, 0.20, 0.30], material: MAT.sand, physics: false });
+        bag.setRotation([0, -a * 57.2958 + (c ? 8 : -6), 0]);
+      }
+    }
+    const mount = game.cylinder({ at: [x, 0.35, z], radius: 0.22, height: 0.7, material: MAT.burnt, physics: false });
+    const bar = game.cylinder({ at: [x + Math.sin(yaw / 57.2958) * 0.9, 0.95, z + Math.cos(yaw / 57.2958) * 0.9],
+      radius: 0.07, height: 1.9, material: MAT.burnt, physics: false });
+    bar.setRotation([64, yaw, 0]);
+    void mount;
+  };
+
+  /* The treeline. Burnt, limbless, and close enough together to read as a
+     wood — it is what stops the world ending in a hard edge, so it wants to
+     be a wall of trunks rather than a scatter of sticks. */
+  /* A cone, not a cylinder. Every one of these is seen against a bright
+     smoke-lit sky, which means it is read as a silhouette and nothing else —
+     and the silhouette of a cylinder is a plank. Tapering it is the whole
+     difference between a wood and a row of fence posts. */
+  const deadTree = (x, z, h, lean) => {
+    /* Trunk for the bottom two thirds, taper only above that. A cone from
+       the mud to the tip is a spike, and a field of spikes is a fence, not a
+       wood — the trunk is most of what the eye uses to tell them apart. */
+    const r0 = 0.19 + h * 0.017;
+    const t = game.cylinder({ at: [x, h * 0.38, z], radius: r0, height: h * 0.76, material: MAT.bark, physics: false });
+    t.setRotation([lean, (x * 37 + z * 11) % 360, lean * 0.6]);
+    const cap = game.cone({ at: [x + lean * 0.006 * h, h * 0.86, z], radius: r0 * 0.94, height: h * 0.24, material: MAT.bark, physics: false });
+    cap.setRotation([lean, 0, lean * 0.6]);
+    for (let k = 0; k < 4; k++) {
+      const a = (x * 13 + z * 7 + k * 97) % 360;
+      const len = 1.5 - k * 0.26;
+      const br = game.cone({ at: [x + Math.cos(a / 57.2958) * len * 0.4, h * (0.42 + k * 0.14), z + Math.sin(a / 57.2958) * len * 0.4],
+        radius: 0.07, height: len, material: MAT.bark, physics: false });
+      br.setRotation([58 + k * 6, a, 0]);
+    }
+  };
+
+  /* Smoke standing over the field. Stacked soft spheres, widening and fading
+     as they rise, which is what a column of smoke does and what a billboard
+     sprite cannot do from a rooftop you can walk around. */
+  const smokeColumn = (x, z, h, tint = 0x2a2723) => {
+    for (let k = 0; k < 9; k++) {
+      const t = k / 8;
+      const s = game.sphere({ at: [x + Math.sin(t * 3 + x) * t * 2.2, 1.2 + t * h, z + Math.cos(t * 2 + z) * t * 1.6],
+        radius: 1.1 + t * 3.4, physics: false,
+        material: { color: tint, texture: 'smooth', roughness: 1, metalness: 0, opacity: 0.30 - t * 0.20 } });
+      void s;
+    }
+  };
+
+  // Laid out so the two ends of the field read differently: trench system and
+  // wire to the north where most of the horde comes from, armour graveyard to
+  // the east, and a shelled wood all the way round the outside.
+  trench(-34, -21, 12, -19, 1.7);
+  trench(10, -19, 30, -25, 1.6);
+  trench(-26, -30, -8, -33, 1.5);
+  trench(-33, 4, -26, 22, 1.5);
+  trench(14, 16, 32, 21, 1.5);
+  trench(-17, -8.5, 16, -8.5, 1.6);
+  trench(-10.5, 9.5, 12, 9.5, 1.5);
+  for (const [cx, cz, cr] of [[-15, -16, 2.6], [4, -22, 3.4], [19, -12, 2.2], [-24, 6, 3.0],
+    [11, 18, 2.8], [-9, 24, 2.4], [26, 2, 3.6], [-30, -6, 2.0], [0, -33, 4.0],
+    [-11, -11, 2.2], [8, -12, 1.8], [13, 4, 2.4], [-13, 8, 2.0], [3, 14, 2.6],
+    [-19, -3, 1.7], [21, -3, 2.1], [-6, -17, 1.9], [17, 12, 2.3]]) crater(cx, cz, cr);
+  wireRun(-31, -14, -10, -14);
+  wireRun(-8, -15, 13, -15);
+  wireRun(15, -13, 31, -9);
+  wireRun(-30, 12, -14, 15);
+  wireRun(8, 25, 28, 22);
+  // A second belt of wire close in, which is the one you shoot over.
+  wireRun(-20, -10.5, -9.5, -10.5);
+  wireRun(-9, -11, 11, -11);
+  wireRun(11.5, -10, 22, -8);
+  wireRun(-11, 11, 10, 11.5);
+  wireRun(11, 9, 20, 6);
+  tankWreck(21, -20, 34);
+  tankWreck(27, 8, -108);
+  tankWreck(-22, -25, 71);
+  tankWreck(-27, 17, 152);
+  tankWreck(-14, -17, 12);
+  tankWreck(15, 15, -46);
+  emplacement(-18, -12, 20);
+  emplacement(12, -12, -14);
+  emplacement(24, 14, 190);
+  emplacement(-13, 12, 118);
+  emplacement(15, 8, -70);
+  // Bodies, thickest where the wire is.
+  for (let k = 0; k < 120; k++) {
+    const a = (k * 2.39996), rr = 9.5 + ((k * 7919) % 1000) / 1000 * 16;
+    const bx = Math.cos(a) * rr, bz = Math.sin(a) * rr;
+    if (Math.abs(bx) < 9.5 && Math.abs(bz) < 9.5) continue;
+    bodyProne(bx, bz, (k * 47) % 360);
   }
-  /* The floor, in four pieces around the stairwell. One slab across the
-     whole bunker is simpler and seals the basement off completely — the
-     stairs were built underneath a solid lid. */
+  /* Three rings of them, staggered, so there is depth in the wood rather
+     than one row with sky behind it. The far ring is what the render
+     distance ends on and it wants to be solid. */
+  for (const [count, r0, spread, h0, hv, phase] of [
+    [120, 31, 4, 6.0, 4.5, 0], [96, 37, 4, 5.4, 4.0, 0.03], [80, 43, 5, 5.0, 3.5, 0.06],
+  ]) {
+    for (let k = 0; k < count; k++) {
+      const a = (k / count) * Math.PI * 2 + phase;
+      const rr = r0 + ((k * 613) % 100) / 100 * spread;
+      deadTree(Math.cos(a) * rr, Math.sin(a) * rr, h0 + ((k * 311) % 100) / 100 * hv, ((k * 53) % 14) - 7);
+    }
+  }
+  smokeColumn(21, -20, 15);
+  smokeColumn(-22, -25, 13);
+  smokeColumn(27, 8, 17, 0x322c26);
+  smokeColumn(-28, 18, 12);
+  smokeColumn(2, -34, 20, 0x26241f);
+
+  /* ---------------- the blockhouse ---------------- */
+
+  // Floor pad, a step proud of the mud, and an apron round the outside.
+  slab(M.x0 - W - 1.2, M.x1 + W + 1.2, -0.30, 0.02, M.z0 - W - 1.2, M.z1 + W + 1.2, MAT.floor);
+  slab(SD.x0 - W - 0.8, M.x0, -0.30, 0.02, SD.z0 - W - 0.8, SD.z1 + W + 0.8, MAT.floor);
+
+  // Four walls of the square, with the window holes cut in.
+  wallX(M.z0 - W, M.z0, M.x0 - W, M.x1 + W, M.y1, [[-3.6, -2.0], [0.4, 2.0]]);
+  wallX(M.z1, M.z1 + W, M.x0 - W, M.x1 + W, M.y1, [[-2.0, -0.4]]);
+  wallZ(M.x1, M.x1 + W, M.z0, M.z1, M.y1, [[1.2, 2.8]]);
+  // West wall carries the doorway through to the wing.
+  wallZ(M.x0 - W, M.x0, M.z0, D1.z0, M.y1);
+  wallZ(M.x0 - W, M.x0, D1.z1, M.z1, M.y1);
+  slab(M.x0 - W, M.x0, D1.h, M.y1, D1.z0, D1.z1, MAT.wall);   // door header
+
+  // The wing: three outside walls, its own window, and a shared partition.
+  wallZ(SD.x0 - W, SD.x0, SD.z0, SD.z1, SD.y1, [[-1.6, 0.0]]);
+  wallX(SD.z0 - W, SD.z0, SD.x0 - W, SD.x1, SD.y1);
+  wallX(SD.z1, SD.z1 + W, SD.x0 - W, SD.x1, SD.y1);
+  slab(SD.x1, M.x0 - W, 0, SD.y1, SD.z0 - W, D1.z0, MAT.wall);
+  slab(SD.x1, M.x0 - W, 0, SD.y1, D1.z1, SD.z1 + W, MAT.wall);
+
+  /* Roof over the wing, with a ragged hole punched in it where the rock came
+     through. The hole is eight wedges rather than a ring so the edge reads as
+     torn concrete instead of a drilled circle. */
   {
-    const H = MAP.down;
-    const fx0 = G.x0 - 0.4, fx1 = M.x1 + 0.4, fz0 = M.z0 - 0.4, fz1 = M.z1 + 0.4;
-    slab(fx0, fx1, -0.05, 0.02, fz0, H.z0, MAT.floor);
-    slab(fx0, fx1, -0.05, 0.02, H.z1, fz1, MAT.floor);
-    slab(fx0, H.x0, -0.05, 0.02, H.z0, H.z1, MAT.floor);
-    slab(H.x1, fx1, -0.05, 0.02, H.z0, H.z1, MAT.floor);
-    // A lip round the opening so you can see it is a hole, not a seam.
-    for (const [ax0, ax1, az0, az1] of [
-      [H.x0 - 0.12, H.x1 + 0.12, H.z0 - 0.12, H.z0], [H.x0 - 0.12, H.x1 + 0.12, H.z1, H.z1 + 0.12],
-      [H.x0 - 0.12, H.x0, H.z0, H.z1], [H.x1, H.x1 + 0.12, H.z0, H.z1],
-    ]) slab(ax0, ax1, 0.02, 0.10, az0, az1, MAT.steel);
-    // Handrail down both sides of the opening.
-    for (const rx of [H.x0 - 0.06, H.x1 + 0.06]) {
-      game.cylinder({ at: [rx, 0.98, (H.z0 + H.z1) / 2], radius: 0.028, height: H.z1 - H.z0,
-        material: MAT.steel, static: true, rotation: [90, 0, 0] });
-      for (const rz of [H.z0 + 0.2, (H.z0 + H.z1) / 2, H.z1 - 0.2]) {
-        game.cylinder({ at: [rx, 0.52, rz], radius: 0.022, height: 0.92, material: MAT.steel, static: true });
+    const H = MAP.hole, r = H.r;
+    slab(SD.x0 - W, SD.x1, SD.y1, SD.y1 + 0.3, SD.z0 - W, H.z - r, MAT.wallDark);
+    slab(SD.x0 - W, SD.x1, SD.y1, SD.y1 + 0.3, H.z + r, SD.z1 + W, MAT.wallDark);
+    slab(SD.x0 - W, H.x - r, SD.y1, SD.y1 + 0.3, H.z - r, H.z + r, MAT.wallDark);
+    slab(H.x + r, SD.x1, SD.y1, SD.y1 + 0.3, H.z - r, H.z + r, MAT.wallDark);
+    for (let k = 0; k < 8; k++) {
+      const a = (k / 8) * Math.PI * 2;
+      const w2 = game.box({ at: [H.x + Math.cos(a) * r * 0.86, SD.y1 + 0.15, H.z + Math.sin(a) * r * 0.86],
+        size: [0.7, 0.3, 0.5], material: MAT.wallDark, physics: false });
+      w2.setRotation([0, -a * 57.2958, 0]);
+    }
+    // Daylight and smoke coming down through it.
+    game.light({ at: [H.x, SD.y1 - 0.6, H.z], color: 0xd8c9a4, intensity: 26, radius: 7.0 });
+  }
+
+  /* ---------------- the stair, and what holds it up ----------------
+
+     Back-right corner, against the east wall, climbing toward -Z. Nothing is
+     bought to use it and nothing stands in the way of it: it is the one route
+     in the map that is supposed to be read at a glance. */
+  const RISE = (R.y1 - 0) / ST.steps, RUN = (ST.zBot - ST.zTop) / ST.steps;
+  for (let k = 0; k < ST.steps; k++) {
+    const y = (k + 1) * RISE;
+    const z1 = ST.zBot - k * RUN;
+    slab(ST.x0, ST.x1, y - 0.24, y, z1 - RUN - 0.02, z1, MAT.floor);
+    // Stringer under each tread, so from below it is a staircase and not a
+    // stack of floating slabs.
+    if (k % 2 === 0) deco(ST.x0 - 0.06, ST.x0, 0, y - 0.24, z1 - RUN, z1, MAT.bark);
+  }
+  /* Landing at the head of the flight, spanning the whole slot: a landing
+     the width of the stair alone leaves a slot of open sky down each side of
+     it, which you fall through on the way to the parapet. */
+  slab(ST.x0 - 0.1, M.x1, R.y0, R.y1, M.z0 - W, ST.zTop - RUN, MAT.floor);
+  // Handrail down the open side.
+  for (let k = 0; k <= ST.steps; k += 3) {
+    const y = k * RISE, z1 = ST.zBot - k * RUN;
+    deco(ST.x0 - 0.05, ST.x0 + 0.03, y, y + 1.0, z1 - 0.05, z1 + 0.05, MAT.steel);
+  }
+  for (let k = 0; k < ST.steps; k++) {
+    const y = k * RISE + 1.0, z1 = ST.zBot - k * RUN;
+    deco(ST.x0 - 0.04, ST.x0 + 0.02, y, y + 0.07, z1 - RUN, z1, MAT.steel);
+  }
+
+  /* Under the stair: the supplies, and the beams holding the flight up. Six
+     props on a sole plate, braced, with crates and sacks stacked between
+     them. The beams are the reason the stair is standing and they are placed
+     to look like it — under the stringer, not decorating the wall. */
+  /* Three pairs of props, not six: the point is that something is holding
+     the flight up, and a post every sixty centimetres reads as a palisade
+     across the corner of the room instead. */
+  for (let k = 0; k < 3; k++) {
+    const z1 = ST.zBot - 0.7 - k * 1.25;
+    const h = Math.min(Math.max(0.6, (k + 1) * RISE * 4.6), R.y1 - 0.35);
+    deco(ST.x0 + 0.18, ST.x0 + 0.32, 0, h, z1 - 0.07, z1 + 0.07, MAT.wood);
+    deco(ST.x1 - 0.32, ST.x1 - 0.18, 0, h, z1 - 0.07, z1 + 0.07, MAT.wood);
+    const br = game.box({ at: [(ST.x0 + ST.x1) / 2, h - 0.10, z1],
+      size: [ST.x1 - ST.x0 - 0.4, 0.11, 0.11], material: MAT.wood, physics: false });
+    br.setRotation([0, 0, 3]);
+  }
+  deco(ST.x0 + 0.1, ST.x1 - 0.1, 0, 0.09, ST.zTop, ST.zBot, MAT.wood);   // sole plate
+  // Crates, sacks and a coil of rope, stacked where the headroom allows.
+  const supply = [[5.0, 0.34, -2.2, 0.68], [5.75, 0.30, -2.9, 0.60], [5.1, 0.28, -3.6, 0.56],
+    [6.2, 0.26, -2.2, 0.52], [5.6, 0.86, -2.25, 0.52], [6.35, 0.24, -3.4, 0.48]];
+  for (const [sx, sy, sz, ss] of supply) {
+    const c = game.box({ at: [sx, sy, sz], size: [ss, ss * 0.9, ss], material: MAT.wood, physics: false });
+    c.setRotation([0, (sx * 53 + sz * 17) % 40 - 20, 0]);
+  }
+  for (const [sx, sz] of [[4.95, -1.75], [5.45, -1.62], [6.15, -1.8]]) {
+    const bag = game.box({ at: [sx, 0.17, sz], size: [0.5, 0.34, 0.34], material: MAT.sand, physics: false });
+    bag.setRotation([0, (sx * 31) % 30 - 15, 0]);
+  }
+
+  /* ---------------- the roof ---------------- */
+
+  /* Deck, with a slot cut out of it for the stair.
+
+     The slot is not the size of the opening at the top: it has to start
+     where the treads run out of headroom. A tread at height y needs the
+     ceiling gone above y + 2.0, the ceiling is at 3.4, so everything from
+     the sixth step back is open sky. Cut only the top of the flight and the
+     player walks face-first into the underside of their own roof. */
+  const SLOT = { x0: ST.x0 - 0.1, x1: M.x1, z0: M.z0 - W, z1: -2.9 };
+  {
+    slab(M.x0 - W, M.x1 + W, R.y0, R.y1, SLOT.z1, M.z1 + W, MAT.floor);
+    slab(M.x0 - W, SLOT.x0, R.y0, R.y1, SLOT.z0, SLOT.z1, MAT.floor);
+    slab(SLOT.x1, M.x1 + W, R.y0, R.y1, SLOT.z0, SLOT.z1, MAT.floor);
+  }
+  // Rail round the open side of the slot, so the hole reads as a hole.
+  const RT = R.y1, RH = RT + R.rail;
+  {
+    for (const zz of [SLOT.z1]) {
+      deco(SLOT.x0 - 0.05, SLOT.x1, RT, RT + 0.05, zz - 0.05, zz + 0.05, MAT.steel);
+      deco(SLOT.x0 - 0.05, SLOT.x1, RT + 0.95, RT + 1.0, zz - 0.04, zz + 0.04, MAT.steel);
+      for (let x = SLOT.x0; x <= SLOT.x1; x += 1.2) deco(x - 0.04, x + 0.04, RT, RT + 1.0, zz - 0.04, zz + 0.04, MAT.steel);
+    }
+    deco(SLOT.x0 - 0.05, SLOT.x0 + 0.03, RT, RT + 1.0, ST.zTop - 1.6, SLOT.z1, MAT.steel);
+    deco(SLOT.x0 - 0.05, SLOT.x0 + 0.03, RT + 0.95, RT + 1.0, SLOT.z0, SLOT.z1, MAT.steel);
+  }
+  slab(M.x0 - W, M.x1 + W, RT, RH, M.z1, M.z1 + W, MAT.wall);
+  slab(M.x0 - W, M.x1 + W, RT, RH, M.z0 - W, M.z0, MAT.wall);
+  slab(M.x0 - W, M.x0, RT, RH, M.z0, M.z1, MAT.wall);
+  slab(M.x1, M.x1 + W, RT, RH, M.z0, ST.zTop - RUN, MAT.wall);
+  slab(M.x1, M.x1 + W, RT, RH, ST.zTop - RUN, M.z1, MAT.wall);
+  {
+    // Pickets leaning outward with two coils strung along them, all the way
+    // round. This is the edge of the playable world and it should look like
+    // somebody meant it to be.
+    /* Short and leaning out, not a picket fence. The first pass stood
+       0.72 m of steel every 90 cm all the way round the deck and the roof
+       became a stockade you could not see the war through — the entire
+       point of going up there. */
+    const stake = (x, z, ox, oz) => {
+      const a = game.box({ at: [x, RH + 0.19, z], size: [0.04, 0.40, 0.04], material: MAT.wire, physics: false });
+      a.setRotation([oz * 34, 0, -ox * 34]);
+    };
+    // Three strands the length of each run, with barbs whipped onto the
+    // middle one. Strands read as wire from any distance; a coil of little
+    // boxes only read as a row of black posts across the view.
+    const strand = (alongX, at, y, from, to) => {
+      const b2 = alongX
+        ? game.box({ at: [(from + to) / 2, y, at], size: [to - from, 0.022, 0.022], material: MAT.wire, physics: false })
+        : game.box({ at: [at, y, (from + to) / 2], size: [0.022, 0.022, to - from], material: MAT.wire, physics: false });
+      return b2;
+    };
+    const barb = (x, y, z, ang) => {
+      for (let q = 0; q < 2; q++) {
+        const c2 = game.box({ at: [x, y, z], size: [0.012, 0.09, 0.012], material: MAT.wire, physics: false });
+        c2.setRotation([q ? 52 : -52, ang, q ? 40 : -40]);
+      }
+    };
+    for (const [alongX, at, ox, oz] of [[true, M.z1 + 0.2, 0, 1], [true, M.z0 - 0.2, 0, -1],
+      [false, M.x0 - 0.2, -1, 0], [false, M.x1 + 0.2, 1, 0]]) {
+      const lo = alongX ? M.x0 : M.z0, hi = alongX ? M.x1 : M.z1;
+      for (let t = lo; t <= hi; t += 2.6) alongX ? stake(t, at, ox, oz) : stake(at, t, ox, oz);
+      for (const dy of [0.10, 0.22, 0.34]) strand(alongX, at, RH + dy, lo, hi);
+      for (let t = lo + 0.3; t <= hi; t += 0.55) {
+        if (alongX) barb(t, RH + 0.22, at, 0); else barb(at, RH + 0.22, t, 90);
       }
     }
   }
 
-  /* MESS shell. North wall holds W1; east wall holds W2 low and W5 high. */
-  wallX(M.z0 - 0.4, M.z0, M.x0, M.x1 + 0.4, L.y1, [WINDOWS[0].wx]);        // north, full height (loft shares it)
-  wallX(M.z1, M.z1 + 0.4, M.x0, M.x1 + 0.4, L.y1);                          // south
-  wallZ(M.x1, M.x1 + 0.4, M.z0, M.z1, 3.2, [WINDOWS[1].wz]);               // east low, W2
-  wallZ(M.x1, M.x1 + 0.4, M.z0, M.z1, L.y1, [WINDOWS[4].wz], 3.2, 4.3, 5.5); // east upper, W5 (sill 4.3, header 5.5)
-
-  /* Shared MESS/GEN wall with the 750 doorway. */
-  const D = MAP.door1;
-  slab(M.x0 - 0.4, M.x0, 0, L.y1, M.z0, D.z0);
-  slab(M.x0 - 0.4, M.x0, 0, L.y1, D.z1, M.z1);
-  slab(M.x0 - 0.4, M.x0, D.h, L.y1, D.z0, D.z1);
-
-  /* GENERATOR shell. */
-  wallX(G.z0 - 0.4, G.z0, G.x0 - 0.4, G.x0 + 9.6, 3.2, [WINDOWS[2].wx]);   // north, W3
-  wallX(G.z1, G.z1 + 0.4, G.x0 - 0.4, M.x0, 3.2);                           // south
-  wallZ(G.x0 - 0.4, G.x0, G.z0, G.z1, 3.2, [WINDOWS[3].wz]);               // west, W4
-
-  /* Ceilings. GEN and MESS west get a lid at 3.2; the loft floor covers
-     MESS east; the loft gets its own lid. */
-  slab(G.x0 - 0.4, G.x1, 3.2, 3.5, G.z0 - 0.4, G.z1 + 0.4);
-  slab(M.x0 - 0.4, L.x0, 3.2, 3.5, M.z0 - 0.4, M.z1 + 0.4, MAT.wallDark);
-  slab(L.x0, L.x1 + 0.4, L.y1, L.y1 + 0.3, L.z0 - 0.4, L.z1 + 0.4, MAT.wallDark);
-
-  /* Loft floor: a wooden deck with a stairwell hole over the ramp lane. */
-  slab(L.x0, L.x1, 2.9, 3.1, L.z0, MAP.stair.z0, MAT.wood);
-  slab(L.x0, 1.2, 2.9, 3.1, MAP.stair.z0, L.z1, MAT.wood);   // small landing strip
-  /* West edge of the loft: railing, with the stair gap left open. */
-  slab(L.x0, L.x0 + 0.12, 3.1, 4.1, L.z0, MAP.stair.z0 - 0.1, MAT.steel);
-
-  /* Stairs: one ramp. The capsule controller walks ramps well and a real
-     step stack just rattles it. Boxed in below so nothing hides under it. */
-  const st = MAP.stair;
-  const ramp = game.box({
-    at: [(st.x0 + st.x1) / 2, st.top / 2 - 0.15, (st.z0 + st.z1) / 2],
-    size: [Math.hypot(st.x1 - st.x0, st.top) + 0.2, 0.25, st.z1 - st.z0],
-    material: MAT.wood, static: true,
-  });
-  ramp.setRotation([0, 0, -Math.atan2(st.top, st.x1 - st.x0) * 180 / Math.PI]);
-  slab(st.x0, st.x1, 0, 0.4, st.z0, st.z1, MAT.wallDark);
-
-  /* Window sill colliders: the opening is passable to nothing physical.
-     Zombies come through by vaulting (animated), players never do. */
-  for (const w of WINDOWS) {
-    const at = w.sillAt;
-    const size = w.face === 'N' ? [1.6, 1.25, 0.5] : [0.5, 1.25, 1.6];
-    const sill = game.box({ at, size, material: MAT.wall, static: true, visible: false });
-    // Solid to feet, transparent to gunfire: shooting the dead THROUGH the
-    // window while they tear at it is half the game.
-    if (sill.body) sill.body.userData = { bulletPassthrough: true };
-  }
-
-  /* Doors, purchasable. Rendered as planked barricades. */
+  /* ---------------- doors ---------------- */
   S.doors = {
-    gen: {
-      cost: ECONOMY.doorGenerator, open: false, label: 'Clear the doorway',
-      at: [M.x0 - 0.2, 1.2, (D.z0 + D.z1) / 2],
+    side: {
+      cost: ECONOMY.doorGenerator, open: false, label: 'Force the wing door',
+      at: [M.x0 - 0.2, 1.2, (D1.z0 + D1.z1) / 2],
       actors: [
-        game.box({ at: [M.x0 - 0.2, 1.2, (D.z0 + D.z1) / 2], size: [0.3, 2.4, D.z1 - D.z0], material: MAT.board, static: true }),
-      ],
-    },
-    stair: {
-      cost: ECONOMY.stairGate, open: false, label: 'Open the stair gate',
-      at: [st.x0 + 0.3, 1.2, (st.z0 + st.z1) / 2],
-      actors: [
-        game.box({ at: [st.x0 + 0.3, 1.1, (st.z0 + st.z1) / 2], size: [0.25, 2.2, st.z1 - st.z0], material: MAT.steel, static: true }),
+        game.box({ at: [M.x0 - 0.2, 1.2, (D1.z0 + D1.z1) / 2], size: [0.3, 2.4, D1.z1 - D1.z0], material: MAT.board, static: true }),
       ],
     },
   };
 
-  /* Chalk guns. The wall drawing is the actual gun model, ghost-white and
-     faintly glowing, hung flat against the wall — plus a scrawled price
-     the HUD shows when you stand at it. */
+  /* ---------------- chalk guns ---------------- */
   const chalkMat = MAT.chalk;
-  const thompsonChalk = game.thompson({ at: [-0.9, 1.55, M.z1 - 0.14], physics: false, material: chalkMat, woodMaterial: chalkMat });
-  thompsonChalk.setRotation([0, 180, 0]);
-  const scatterChalk = makeScattergun(game, { at: [-4.6, 1.55, M.z1 - 0.14], chalk: true });
-  scatterChalk.root.setRotation([0, 180, 0]);
+  const thompsonChalk = game.thompson({ at: [-2.0, 1.55, M.z0 + 0.14], physics: false, material: chalkMat, woodMaterial: chalkMat });
+  const scatterChalk = makeScattergun(game, { at: [-5.4, 1.55, M.z0 + 0.14], chalk: true });
+  void thompsonChalk; void scatterChalk;
 
   S.buys = [
-    { id: 'thompson', at: [-0.9, 1.4, M.z1 - 0.3], weapon: 'thompson', label: 'Thompson' },
-    { id: 'scatter', at: [-4.6, 1.4, M.z1 - 0.3], weapon: 'scatter', label: 'Scattergun' },
+    { id: 'thompson', at: [-2.0, 1.4, M.z0 + 0.3], weapon: 'thompson', label: 'Thompson' },
+    { id: 'scatter', at: [-5.4, 1.4, M.z0 + 0.3], weapon: 'scatter', label: 'Scattergun' },
   ];
 
   /* Grenade crate, stencilled and open, on the wall between the two guns. */
-  const nadeAt = [-2.75, 1.05, M.z1 - 0.26];
+  const nadeAt = [-3.7, 1.05, M.z0 + 0.26];
   game.box({ at: nadeAt, size: [0.52, 0.34, 0.30], static: true,
     material: { color: 0x4c5340, texture: 'wood', roughness: 0.92, uvScale: 3 } });
-  game.box({ at: [nadeAt[0], nadeAt[1] + 0.19, nadeAt[2] - 0.02], size: [0.54, 0.05, 0.32], static: true,
+  game.box({ at: [nadeAt[0], nadeAt[1] + 0.19, nadeAt[2] + 0.02], size: [0.54, 0.05, 0.32], static: true,
     material: { color: 0x3e4436, texture: 'wood', roughness: 0.92, uvScale: 3 } });
   for (let k = 0; k < 3; k++) {
-    game.sphere({ at: [nadeAt[0] - 0.15 + k * 0.15, nadeAt[1] + 0.24, nadeAt[2] + 0.02], radius: 0.052,
+    game.sphere({ at: [nadeAt[0] - 0.15 + k * 0.15, nadeAt[1] + 0.24, nadeAt[2] - 0.02], radius: 0.052,
       physics: false, material: { color: 0x3f4a33, texture: 'metal', roughness: 0.62, metalness: 1 } });
   }
   S.nadeBuy = { at: nadeAt };
 
-  /* The conveyor. Built at map load and parked out of sight; when the
-     three conditions land it slides out of the wall and starts running. */
-  {
-    // Parked inside the east wall, so what the player sees is a belt line
-    // coming out of solid concrete rather than one that was always there.
-    const bx = 6.15, by = 1.62, bz = -3.0;
-    /* Dusty painted machinery, not a mirror. At metalness 1 a lamp beside
-       it does almost nothing — a metal has no diffuse term, so it shows only
-       the environment, and the belt lives in the darkest corner of the map. */
-    const steel = { color: 0x6b7178, texture: 'metal', roughness: 0.52, metalness: 0.45 };
-    const dark = { color: 0x35393e, texture: 'metal', roughness: 0.68, metalness: 0.3 };
-    const root = game.box({ at: [bx, by, bz], size: 1, physics: false, visible: false });
-    const parts = [];
-    const add = (a, pos, rot) => { a.parent = root; a.setPosition(pos); if (rot) a.setRotation(rot); parts.push(a); return a; };
-    add(game.box({ size: [1.35, 0.075, 0.44], material: dark, physics: false }), [0, 0, 0]);
-    for (const sz of [-1, 1]) add(game.box({ size: [1.35, 0.11, 0.035], material: steel, physics: false }), [0, 0.055, sz * 0.225]);
-    for (const sx of [-1, 1]) add(game.cylinder({ radius: 0.055, height: 0.42, material: steel, physics: false }), [sx * 0.64, 0.012, 0], [90, 0, 0]);
-    // Legs and a hopper at the wall end.
-    for (const sx of [-1, 1]) add(game.cylinder({ radius: 0.022, height: 0.55, material: dark, physics: false }), [sx * 0.5, -0.31, 0.16]);
-    add(game.box({ size: [0.34, 0.36, 0.40], material: steel, physics: false }), [0.74, 0.16, 0]);
-    // Rollers, which turn while it runs.
-    const rollers = [];
-    for (let k = -4; k <= 4; k++) {
-      rollers.push(add(game.cylinder({ radius: 0.034, height: 0.40, material: steel, physics: false }), [k * 0.135, 0.048, 0], [90, 0, 0]));
-    }
-    const lamp = add(game.sphere({ radius: 0.038, physics: false, material: {
-      color: 0x3a2f12, texture: 'smooth', roughness: 0.3, emissive: 0xffc23a, emissiveStrength: 0 } }), [0.74, 0.40, 0]);
-    root.visible = false;
-    for (const q of parts) q.visible = false;
-    S.belt = { root, parts, rollers, lamp, at: [bx, by, bz], out: 0, running: false, dropT: 0, spin: 0 };
-  }
-
-  /* ---------------- the way down ----------------
-
-     A stairwell out of the south-west corner of the mess, a landing, and a
-     steel door that shuts behind you. Below it, a workshop nobody will
-     admit to running. */
-  {
-    const D = MAP.down, SH = MAP.shop;
-    // Shaft walls around the stair opening.
-    slab(D.x0 - 0.4, D.x0, D.floor, 0.02, D.z0 - 0.4, D.z1 + 0.4, MAT.wallDark);
-    slab(D.x1, D.x1 + 0.4, D.floor, 0.02, D.z0 - 0.4, D.z1 + 0.4, MAT.wallDark);
-    slab(D.x0 - 0.4, D.x1 + 0.4, D.floor, 0.02, D.z1, D.z1 + 0.4, MAT.wallDark);
-    // Steps down.
-    /* Steps run down toward -z, so you come off the mess floor at the far
-       edge of the opening and arrive at the bottom facing the room, with
-       the door as the threshold rather than a frame standing in the middle
-       of the floor. */
-    const steps = 12;
-    for (let k = 0; k < steps; k++) {
-      const y = -0.02 - (k + 1) * (Math.abs(D.floor) / steps);
-      const z1 = D.z1 - (D.z1 - D.z0) * (k / steps);
-      const w = (D.z1 - D.z0) / steps;
-      slab(D.x0, D.x1, y, y + 0.22, z1 - w - 0.03, z1, MAT.floor);
-    }
-    // Shop shell: floor, ceiling, four walls.
-    slab(SH.x0 - 0.4, SH.x1 + 0.4, SH.y0 - 0.4, SH.y0, SH.z0 - 0.4, SH.z1 + 0.4, MAT.floor);
-    /* Ceiling, with the shaft cut out of it — the stairs pass through here,
-       and a solid lid at this height blocks them just as surely as the one
-       at ground level did. */
-    slab(SH.x0 - 0.4, SH.x1 + 0.4, SH.y1, SH.y1 + 0.4, SH.z0 - 0.4, D.z0, MAT.wallDark);
-    slab(SH.x0 - 0.4, SH.x1 + 0.4, SH.y1, SH.y1 + 0.4, D.z1, SH.z1 + 0.4, MAT.wallDark);
-    slab(SH.x0 - 0.4, D.x0, SH.y1, SH.y1 + 0.4, D.z0, D.z1, MAT.wallDark);
-    slab(D.x1, SH.x1 + 0.4, SH.y1, SH.y1 + 0.4, D.z0, D.z1, MAT.wallDark);
-    slab(SH.x0 - 0.4, SH.x0, SH.y0, SH.y1, SH.z0 - 0.4, SH.z1 + 0.4, MAT.wall);
-    slab(SH.x1, SH.x1 + 0.4, SH.y0, SH.y1, SH.z0 - 0.4, D.z0 - 0.2, MAT.wall);
-    slab(SH.x0 - 0.4, SH.x1 + 0.4, SH.y0, SH.y1, SH.z0 - 0.4, SH.z0, MAT.wall);
-    slab(SH.x0 - 0.4, SH.x1 + 0.4, SH.y0, SH.y1, SH.z1, SH.z1 + 0.4, MAT.wall);
-
-    // The door at the bottom of the stair, on a hinge post.
-    /* The door is kinematic and starts open, tucked into its pocket. It is
-       what shuts behind you — a static slab here would simply wall the room
-       off for good, which is what the first pass did. */
-    const doorAt = [D.x0 + (D.x1 - D.x0) / 2, D.floor + 1.05, D.z0 - 0.1];
-    const doorOpenAt = [doorAt[0] - 2.15, doorAt[1], doorAt[2]];
-    const door = game.box({ at: doorOpenAt, size: [2.0, 2.1, 0.10], material: MAT.steel, kinematic: true });
-    for (const sx of [-1, 1]) {
-      game.box({ at: [doorAt[0] + sx * 1.02, doorAt[1], doorAt[2]], size: [0.10, 2.3, 0.24], material: MAT.steel, static: true });
-    }
-    game.cylinder({ at: [doorAt[0] + 0.6, doorAt[1], doorAt[2] - 0.10], radius: 0.07, height: 0.10, material: MAT.steel, static: true });
-
-    // Counter across the room, with the crate behind it.
-    const cx = -8.4, cz = 1.6, cy = SH.y0;
-    game.box({ at: [cx, cy + 0.52, cz], size: [4.4, 1.04, 0.55], material: MAT.wood, static: true });
-    game.box({ at: [cx, cy + 1.07, cz], size: [4.6, 0.07, 0.72], material: { color: 0x3c3a35, texture: 'metal', roughness: 0.6, metalness: 1 }, static: true });
-    // Shelving down the back wall.
-    for (let k = 0; k < 3; k++) {
-      game.box({ at: [cx - 1.0, cy + 0.7 + k * 0.62, cz - 1.5], size: [4.0, 0.06, 0.45], material: MAT.board, static: true });
-    }
-    // The crate the donations pile up in.
-    // The crate the donations pile up in, on the player's side of the room
-    // so what you gave up is in front of you every time you come back.
-    game.box({ at: [-6.4, cy + 0.36, 3.4], size: [1.15, 0.72, 1.0], material: MAT.board, static: true });
-
-    /* Him. There is nothing behind the counter but a shape, and the only
-       parts of it that resolve are two points of light where a face would
-       be. Building him as an absence rather than a person is the whole
-       effect: a black silhouette takes no light back. */
-    const abyss = { color: 0x05060a, texture: 'smooth', roughness: 1, metalness: 0 };
-    const fig = game.box({ at: [cx, cy + 1.05, cz - 0.62], size: [0.86, 2.1, 0.5], material: abyss, physics: false });
-    game.sphere({ at: [cx, cy + 2.02, cz - 0.62], radius: 0.28, material: abyss, physics: false });
-    for (const sx of [-1, 1]) {
-      game.sphere({ at: [cx + sx * 0.10, cy + 2.06, cz - 0.38], radius: 0.032, physics: false, material: {
-        color: 0x101010, texture: 'smooth', roughness: 0.3, emissive: 0xffb04a, emissiveStrength: 3.0 } });
-    }
-    /* Lights for the basement. The renderer uploads the eight nearest the
-       camera, so lights down here cost the rooms upstairs nothing — they are
-       never among the nearest eight while the player is on the surface.
-       (`range` is not an option the engine reads; these were silently
-       defaulting to radius 12 and reaching further than intended.) */
-    game.light({ at: [cx, cy + 2.1, cz + 1.2], color: 0xffb877, intensity: 11, radius: 7.0 });
-    game.light({ at: [cx - 3.4, cy + 2.0, cz + 0.4], color: 0xffb877, intensity: 7, radius: 6.0 });
-    game.light({ at: [cx + 2.9, cy + 2.0, cz + 0.8], color: 0xffb877, intensity: 7, radius: 6.0 });
-    // One over the stairs, so the way down is a lit shaft and not a hole.
-    game.light({ at: [(D.x0 + D.x1) / 2, -0.9, (D.z0 + D.z1) / 2], color: 0xffcf9a, intensity: 7, radius: 5.0 });
-
-    /* Strip lights down the stairwell. They do not illuminate anything —
-       nothing here bounces — but they read as a lit shaft and give the eye
-       an edge to follow down. */
-    const strip = { color: 0xd8c79a, texture: 'smooth', roughness: 0.4,
-      emissive: 0xffd9a0, emissiveStrength: 2.6 };
-    const cage = { color: 0x2e3238, texture: 'metal', roughness: 0.6, metalness: 1 };
-    for (let k = 0; k < 4; k++) {
-      const t = (k + 0.5) / 4;
-      const z = D.z1 - (D.z1 - D.z0) * t;
-      const y = -0.35 - (Math.abs(D.floor) - 0.4) * t;
-      game.box({ at: [D.x0 + 0.10, y, z], size: [0.05, 0.10, 0.44], material: strip, physics: false });
-      game.box({ at: [D.x0 + 0.14, y, z], size: [0.03, 0.14, 0.50], material: cage, physics: false });
-    }
-    // And a pair over the counter, so he is under something.
-    for (const lx of [cx - 1.3, cx + 1.3]) {
-      game.box({ at: [lx, SH.y1 - 0.10, cz + 0.6], size: [0.70, 0.06, 0.16], material: strip, physics: false });
-    }
-
-    /* Two turrets on the ceiling. They do not track anything until
-       something that should not be down here comes through the door. */
-    const turrets = [];
-    for (const tx of [cx - 1.8, cx + 1.8]) {
-      const base = game.cylinder({ at: [tx, SH.y1 - 0.14, cz + 1.9], radius: 0.16, height: 0.22, material: MAT.steel, static: true });
-      const barrel = game.cylinder({ at: [tx, SH.y1 - 0.42, cz + 1.9], radius: 0.055, height: 0.46, material: { color: 0x2a2d31, texture: 'metal', roughness: 0.5, metalness: 1 }, physics: false });
-      const eye = game.sphere({ at: [tx, SH.y1 - 0.30, cz + 2.06], radius: 0.035, physics: false, material: {
-        color: 0x180404, texture: 'smooth', roughness: 0.3, emissive: 0xff2a1a, emissiveStrength: 2.4 } });
-      turrets.push({ base, barrel, eye, at: [tx, SH.y1 - 0.42, cz + 1.9] });
-    }
-
-    /* Three stands down the west wall, a perk board by the door, and the
-       crate opposite. Spread out on purpose: every one of these is an
-       interact point, and the first match wins, so two of them within a
-       stride of each other means one can never be reached. */
-    const standAt = [[-11.4, 0.4], [-11.4, 1.8], [-11.4, 3.2]];
-    for (const [sx, sz] of standAt) {
-      game.box({ at: [sx, cy + 0.44, sz], size: [0.46, 0.88, 0.46], material: MAT.board, static: true });
-      game.box({ at: [sx, cy + 0.92, sz], size: [0.56, 0.08, 0.56], material: MAT.steel, static: true });
-    }
-    const perkAt = [-6.4, -0.6];
-    game.box({ at: [perkAt[0] + 0.30, cy + 1.45, perkAt[1]], size: [0.10, 1.30, 1.60], material: MAT.board, static: true });
-    for (let k = 0; k < 3; k++) {
-      game.box({ at: [perkAt[0] + 0.22, cy + 1.85 - k * 0.36, perkAt[1]], size: [0.03, 0.24, 0.34],
-        material: { color: [0x7ad7ff, 0xb08cff, 0xffd23a][k], texture: 'smooth', roughness: 0.4,
-          emissive: [0x7ad7ff, 0xb08cff, 0xffd23a][k], emissiveStrength: 0.8 }, static: true });
-    }
-    const crateFloorAt = [-6.4, 3.4];
-
-    S.shop = {
-      room: SH, doorAt, doorOpenAt, doorT: 0, door, fig, turrets,
-      crateAt: [crateFloorAt[0], cy + 0.36, crateFloorAt[1]],
-      standAt, perkAt,
-      counterAt: [cx, cy, cz + 0.9],
-      stock: [], prices: {}, buyback: {},
-      donated: [], discount: 0, stolen: 0, hostile: false, sealT: 0,
-    };
-  }
-
-  /* The generator, and the wall panel that wakes it.
-
-     Built properly rather than as a box with a stick on it: a mounting
-     backplate, a cast housing, a hinged cage over the throw lever, two
-     indicator lamps, a fuse row and conduit running up into the ceiling.
-     It is the one thing in the map every player walks to on purpose, so
-     it is worth the polygons. */
-  game.box({ at: [-14.9, 0.75, -3.2], size: [1.8, 1.5, 1.3], material: MAT.steel, static: true });
-  game.cylinder({ at: [-13.7, 0.5, -3.4], radius: 0.32, height: 1.0, material: MAT.steel, static: true });
-  // Flywheel and exhaust stack, so the generator reads as a machine.
-  const wheel = game.cylinder({ at: [-13.92, 0.95, -3.2], radius: 0.30, height: 0.09, material: MAT.steel, static: true });
+  /* ---------------- the generator, in the wing ----------------
+     Cranked by hand, and until it turns nothing in the bunker draws power. */
+  const GX = -13.4, GZ = -3.0;
+  game.box({ at: [GX, 0.75, GZ], size: [1.8, 1.5, 1.3], material: MAT.steel, static: true });
+  game.cylinder({ at: [GX + 1.2, 0.5, GZ - 0.2], radius: 0.32, height: 1.0, material: MAT.steel, static: true });
+  const wheel = game.cylinder({ at: [GX + 0.98, 0.95, GZ], radius: 0.30, height: 0.09, material: MAT.steel, static: true });
   wheel.setRotation([0, 0, 90]);
-  game.cylinder({ at: [-15.55, 1.85, -3.2], radius: 0.075, height: 1.4, material: { color: 0x2a2622, texture: 'metal', roughness: 0.8, metalness: 1 }, static: true });
+  game.cylinder({ at: [GX - 0.65, 1.85, GZ], radius: 0.075, height: 1.4, material: { color: 0x2a2622, texture: 'metal', roughness: 0.8, metalness: 1 }, static: true });
+  // The crank itself: a shaft out of the housing with a bent handle on it.
+  const crankShaft = game.cylinder({ at: [GX + 0.95, 0.95, GZ + 0.72], radius: 0.035, height: 0.34, material: MAT.steel, physics: false });
+  crankShaft.setRotation([90, 0, 0]);
+  const crankArm = game.box({ at: [GX + 0.95, 1.18, GZ + 0.90], size: [0.06, 0.46, 0.06], material: MAT.steel, physics: false });
+  const crankGrip = game.cylinder({ at: [GX + 0.95, 1.40, GZ + 0.99], radius: 0.045, height: 0.16, material: { color: 0x2e2a24, texture: 'fabric', roughness: 0.9 }, physics: false });
+  crankGrip.setRotation([90, 0, 0]);
 
-  const PANEL_X = -15.9, PANEL_Y = 1.52, PANEL_Z = -2.10;
+  const PANEL_X = SD.x0 + 0.1, PANEL_Y = 1.52, PANEL_Z = -3.0;
   const panelSteel = { color: 0x53585e, texture: 'metal', roughness: 0.55, metalness: 1 };
   const panelDark = { color: 0x24272b, texture: 'metal', roughness: 0.65, metalness: 1 };
-  // Backplate against the wall, then the housing proud of it.
   game.box({ at: [PANEL_X, PANEL_Y, PANEL_Z], size: [0.05, 0.78, 0.60], material: panelDark, static: true });
   game.box({ at: [PANEL_X + 0.07, PANEL_Y, PANEL_Z], size: [0.14, 0.62, 0.46], material: panelSteel, static: true });
-  // Bolt heads at the corners.
-  for (const dy of [-0.27, 0.27]) for (const dz of [-0.20, 0.20]) {
-    const bolt = game.cylinder({ at: [PANEL_X + 0.035, PANEL_Y + dy, PANEL_Z + dz], radius: 0.018, height: 0.02, material: panelSteel, physics: false });
-    bolt.setRotation([0, 0, 90]);
-  }
-  // Throw lever in its slot, with a cage over it.
-  const lever = game.box({ at: [PANEL_X + 0.20, PANEL_Y + 0.06, PANEL_Z - 0.10], size: [0.22, 0.045, 0.045], material: { color: 0xa8302a, texture: 'metal', roughness: 0.42, metalness: 1 }, physics: false });
-  lever.setRotation([0, 0, 34]);
-  const knob = game.sphere({ at: [PANEL_X + 0.30, PANEL_Y + 0.14, PANEL_Z - 0.10], radius: 0.042, material: { color: 0xc4423a, texture: 'smooth', roughness: 0.35 }, physics: false });
-  for (const dz of [-0.175, -0.025]) {
-    game.box({ at: [PANEL_X + 0.20, PANEL_Y + 0.02, PANEL_Z + dz], size: [0.30, 0.024, 0.024], material: panelDark, static: true });
-  }
-  game.box({ at: [PANEL_X + 0.345, PANEL_Y + 0.02, PANEL_Z - 0.10], size: [0.024, 0.024, 0.175], material: panelDark, static: true });
-  // Two indicators: red live, green once it runs.
   const lampRed = game.sphere({ at: [PANEL_X + 0.15, PANEL_Y + 0.235, PANEL_Z + 0.15], radius: 0.032, material: { color: 0x2a0a08, texture: 'smooth', roughness: 0.3, emissive: 0xff2a1e, emissiveStrength: 2.2 }, physics: false });
   const lampGreen = game.sphere({ at: [PANEL_X + 0.15, PANEL_Y + 0.235, PANEL_Z + 0.02], radius: 0.032, material: { color: 0x081a08, texture: 'smooth', roughness: 0.3, emissive: 0x1a3a12, emissiveStrength: 0.2 }, physics: false });
-  // Fuse row along the bottom.
   for (let f = 0; f < 4; f++) {
     const fu = game.cylinder({ at: [PANEL_X + 0.15, PANEL_Y - 0.20, PANEL_Z - 0.16 + f * 0.105], radius: 0.026, height: 0.055, material: { color: 0x8a6a3a, texture: 'metal', roughness: 0.5, metalness: 1 }, physics: false });
     fu.setRotation([0, 0, 90]);
   }
-  // Conduit up to the ceiling.
   game.cylinder({ at: [PANEL_X + 0.06, PANEL_Y + 0.85, PANEL_Z + 0.24], radius: 0.032, height: 1.1, material: panelDark, static: true });
-  S.powerSwitch = { at: [PANEL_X + 0.55, PANEL_Y, PANEL_Z], on: false, lever, knob, lampRed, lampGreen,
-    lx: PANEL_X, ly: PANEL_Y, lz: PANEL_Z };
-
-  S.crate = {
-    at: [-15.2, 0.4, 3.3], busy: false, cost: ECONOMY.crate,
-    base: game.box({ at: [-15.2, 0.4, 3.3], size: [1.15, 0.8, 0.8], material: MAT.wood, static: true }),
-    lid: game.box({ at: [-15.2, 0.84, 3.3], size: [1.15, 0.1, 0.8], material: MAT.steel, physics: false }),
-    offer: null, offerId: null, timer: 0,
+  S.powerSwitch = {
+    at: [GX + 0.95, 1.1, GZ + 1.35], on: false, cranking: 0, crankSpin: 0,
+    crankShaft, crankArm, crankGrip, wheel, lampRed, lampGreen,
+    lx: PANEL_X, ly: PANEL_Y, lz: PANEL_Z,
   };
 
-  /* Sandbags and clutter: the difference between a diagram and a place. */
-  const bag = (x, y, z, ry) => {
-    const b = game.box({ at: [x, y, z], size: [0.85, 0.34, 0.45], material: MAT.sand, static: true });
-    b.setRotation([0, ry, 0]);
-  };
-  bag(4.7, 3.28, -3.6, 8); bag(4.7, 3.62, -3.5, -6); bag(3.8, 3.28, -3.7, -14);
-  bag(-3.2, 0.17, 3.8, 20); bag(-2.3, 0.17, 3.9, -12);
-  game.box({ at: [-1.0, 0.42, -0.6], size: [2.2, 0.84, 0.9], material: MAT.wood, static: true }); // mess table
-  game.box({ at: [-1.0, 0.95, -0.6], size: [0.5, 0.22, 0.34], material: MAT.steel, static: true }); // radio set on it
-  game.box({ at: [-11.5, 0.5, 3.6], size: [1.0, 1.0, 0.7], material: MAT.wood, static: true });
-
-  /* Outside: dead ground, wrecked timber, fog shapes. Lit by moon only. */
-  for (const [x, z, ry, len] of [[-4, -11, 15, 5], [10, -6, -30, 4], [-19, 5, 60, 6], [12, 4, 10, 5]]) {
-    const t = game.cylinder({ at: [x, 0.5, z], radius: 0.16, height: len, material: { color: 0x2c2620, texture: 'wood', roughness: 0.95 }, static: true });
-    t.setRotation([84, ry, 0]);
+  /* ---------------- the meteorite, and what it is good for ----------------
+     It came through the wing roof and is lying beside the generator, half
+     sunk in the slab it cracked. Once there is power it will take a gun. */
+  {
+    const H = MAP.hole;
+    // The rock: overlapping spheres so it has no single silhouette, sitting
+    // in a crater of broken floor. Beside the generator, not inside it.
+    const rockMat = { color: 0x241f1c, texture: 'concrete', roughness: 0.86, metalness: 0, uvScale: 3 };
+    const veinMat = { color: 0x2a0d05, texture: 'smooth', roughness: 0.42, metalness: 0,
+      emissive: 0xff5a12, emissiveStrength: 2.6 };
+    const core = game.sphere({ at: [H.x, 0.62, H.z], radius: 0.92, material: rockMat, static: true });
+    void core;
+    for (let k = 0; k < 7; k++) {
+      const a = (k / 7) * Math.PI * 2;
+      const l = game.sphere({ at: [H.x + Math.cos(a) * 0.62, 0.5 + ((k * 37) % 10) / 10 * 0.55, H.z + Math.sin(a) * 0.62],
+        radius: 0.34 + ((k * 71) % 10) / 10 * 0.22, material: rockMat, physics: false });
+      void l;
+    }
+    // Molten seams through the cracks.
+    for (let k = 0; k < 9; k++) {
+      const a = (k / 9) * Math.PI * 2 + 0.3;
+      const v = game.box({ at: [H.x + Math.cos(a) * 0.80, 0.55 + Math.sin(k * 2.1) * 0.35, H.z + Math.sin(a) * 0.80],
+        size: [0.10, 0.42, 0.10], material: veinMat, physics: false });
+      v.setRotation([Math.sin(k) * 40, -a * 57.2958, Math.cos(k) * 35]);
+    }
+    // Broken floor and spoil thrown out round the impact.
+    game.cylinder({ at: [H.x, 0.03, H.z], radius: 2.3, height: 0.06, material: MAT.mudDark, physics: false });
+    for (let k = 0; k < 12; k++) {
+      const a = (k / 12) * Math.PI * 2;
+      const c = game.box({ at: [H.x + Math.cos(a) * 1.9, 0.10, H.z + Math.sin(a) * 1.9],
+        size: [0.6, 0.2, 0.45], material: MAT.floor, physics: false });
+      c.setRotation([((k * 17) % 20) - 10, -a * 57.2958, ((k * 29) % 24) - 12]);
+    }
+    // The cradle you put a gun in: two steel forks driven into the rock.
+    const cradle = [];
+    for (const dz of [-0.3, 0.3]) {
+      cradle.push(game.box({ at: [H.x + 0.95, 1.05, H.z + dz], size: [0.10, 0.55, 0.10], material: MAT.steel, physics: false }));
+    }
+    game.light({ at: [H.x, 1.5, H.z], color: 0xff7a2a, intensity: 30, radius: 6.5 });
+    S.meteor = { at: [H.x + 1.55, 1.0, H.z], busy: false, timer: 0, holding: null, cradle,
+      slot: [H.x + 0.95, 1.25, H.z] };
   }
 
-  /* Perk stations. One crate-and-lamp each, colour-coded to its perk, in
-     the rooms you have to fight through to reach them. */
+  /* ---------------- mystery box, against the side of the stair ---------- */
+  const BX = [ST.x0 - 0.85, 0.4, -2.4];
+  S.crate = {
+    at: BX, busy: false, cost: ECONOMY.crate,
+    base: game.box({ at: BX, size: [1.15, 0.8, 0.8], material: MAT.wood, static: true }),
+    lid: game.box({ at: [BX[0], BX[1] + 0.44, BX[2]], size: [1.15, 0.1, 0.8], material: MAT.steel, physics: false }),
+    offer: null, offerId: null, timer: 0, flash: null, flashT: 0,
+  };
+
+  /* ---------------- perks ---------------- */
   const PERK_SPOTS = [
-    ['supersoldier', [-5.4, 0, -3.4]],
-    ['athlete', [5.2, 0, 3.2]],
-    ['adrenaline', [-15.4, 0, -1.2]],
-    ['deflect', [-7.6, 0, 3.6]],
-    ['shieldup', [1.4, 3.1, -3.2]],
+    ['supersoldier', [2.2, R.y1, -6.2]],      // roof, by the stair head
+    ['adrenaline', [-14.9, 0, 3.6]],           // wing, past the generator
+    ['deflect', [6.1, 0, 5.7]],                // ground floor, front-right
+    ['shieldup', [-6.0, 0, -6.1]],             // ground floor, back-left
   ];
   S.perkStations = PERK_SPOTS.map(([id, at]) => {
     const def = PERKS[id];
@@ -832,10 +1023,6 @@ function buildMap(game, S) {
       at: [at[0], at[1] + 0.78, at[2] + 0.26], size: [0.34, 0.34, 0.03], physics: false,
       material: { color: 0x101010, texture: 'smooth', roughness: 0.3, emissive: def.color, emissiveStrength: 1.6 },
     });
-    // No point light per station: the renderer uploads only the first eight
-    // lights, and five stations plus the room lamps silently pushed the
-    // muzzle flash and crate glow out of the budget entirely. The emissive
-    // panel carries the colour on its own and costs nothing.
     return { id, def, at: [at[0], at[1] + 1.0, at[2]], glow, body };
   });
 
@@ -847,7 +1034,7 @@ function buildMap(game, S) {
   });
   S.shieldMesh.visible = false;
 
-  /* Boards on every window. */
+  /* ---------------- boards on every window ---------------- */
   S.windows = WINDOWS.map((w) => {
     const win = { def: w, boards: [], zombiesAt: 0 };
     for (let i = 0; i < 5; i++) win.boards.push(spawnBoard(game, w, i, MAT.board));
@@ -855,9 +1042,7 @@ function buildMap(game, S) {
   });
   S.boardMat = MAT.board;
 
-  /* Lights. Budget is 8. Moon is the sun; interiors get one cage bulb per
-     room ground floor, one in the loft, one over each chalk, all dim until
-     the generator runs. Muzzle flash borrows the last slot. */
+  /* ---------------- light ---------------- */
   S.lamps = [];
   const lamp = (x, y, z, intensity, color = 0xffc98f) => {
     const l = game.light({ at: [x, y, z], color, intensity, radius: 9 });
@@ -866,26 +1051,32 @@ function buildMap(game, S) {
     S.lamps.push({ light: l, full: intensity });
     return l;
   };
-  lamp(-1.5, 2.9, 0, 115);          // mess
-  lamp(-12, 2.9, 0, 115);           // generator room
-  lamp(3.3, 5.6, 0.6, 100);         // loft
-  lamp(-0.9, 2.4, 3.9, 55, 0xcfe8ff);  // thompson chalk
-  lamp(-4.6, 2.4, 3.9, 55, 0xcfe8ff); // scatter chalk
-  // Cold moonlight spilling through the start-room window, so the first
-  // thing that ever comes through it arrives as a silhouette.
-  game.light({ at: [-2.5, 2.2, -5.6], color: 0x9db8e8, intensity: 45, radius: 11 });
-  // A whisper of ambient so unlit corners are gloom, not void.
-  game.renderer.sky.intensity = 1.5;
+  lamp(-1.0, 3.0, 0.5, 115);
+  lamp(3.6, 3.0, 4.0, 95);
+  lamp(-12.4, 3.0, 1.2, 105);
+  lamp(-2.0, 2.4, M.z0 + 1.4, 55, 0xcfe8ff);
+  lamp(-5.4, 2.4, M.z0 + 1.4, 55, 0xcfe8ff);
+  /* Daylight arrives as much from the whole smoke-lit sky as from the sun,
+     and it is the sky term that lights every upward-facing surface — the
+     roof deck most of all. At the night map's 1.5 the deck read as a black
+     slab under an overcast noon. */
+  game.renderer.sky.intensity = 2.2;
   setPower(game, S, false);
+
+  // No basement in this map. The workshop code is left in place and simply
+  // never built, so switching it back on is one call rather than a rewrite.
+  S.shop = null;
+  S.belt = null;
 }
 
 function spawnBoard(game, w, slot, mat) {
   const at = w.sillAt.slice();
   at[1] = w.sillAt[1] - 0.45 + slot * 0.24 + (slot % 2) * 0.03;
-  const size = w.face === 'N' ? [1.78, 0.19, 0.06] : [0.06, 0.19, 1.78];
+  const alongX = WIN_SPANS_X(w.face);
+  const size = alongX ? [1.78, 0.19, 0.06] : [0.06, 0.19, 1.78];
   const b = game.box({ at, size, material: mat, physics: false });
   const jitter = ((slot * 37) % 10 - 5) * 1.1;
-  b.setRotation(w.face === 'N' ? [0, jitter * 0.3, jitter] : [jitter, jitter * 0.3, 0]);
+  b.setRotation(alongX ? [0, jitter * 0.3, jitter] : [jitter, jitter * 0.3, 0]);
   return b;
 }
 
@@ -1138,11 +1329,12 @@ function makeArcProjector(game, opts = {}) {
 /* ---------------- player ---------------- */
 
 function makePlayer(game, S, hud, sfx, voice) {
-  const hero = game.character({ at: [-2, 1.1, 1], face: false, name: 'player' });
+  const hero = game.character({ at: [0.5, 1.1, 4.4], face: false, name: 'player' });
   hero.visible = false;
   if (hero.head) hero.head.visible = false;
   game.firstPerson(hero, { eyeHeight: 1.62 });
-  game._camYaw = Math.PI / 2;
+  // Facing -Z, which is the back wall, the Thompson and the stair beyond it.
+  game._camYaw = Math.PI;
 
   const P = {
     actor: hero, hp: PLAYER.hp, lastHit: -99, downs: 0,
@@ -1930,24 +2122,27 @@ function pickVariant(round, rng) {
 }
 
 function roomOf(p) {
-  // Anything below the floor slab is downstairs, and nothing follows you.
-  if (p.y < -0.5) return 'shop';
-  if (p.y > 2.4 && p.x > MAP.loft.x0 - 0.5) return 'loft';
-  if (p.x < MAP.gen.x1 + 0.2) return 'gen';
-  return 'mess';
+  /* Three places to be: the blockhouse floor, the wing through the door, and
+     the roof. Height decides the roof because the stair is the only way onto
+     it and the whole deck is above the ceiling slab. */
+  if (p.y > MAP.roof.y0 - 0.6) return 'roof';
+  if (p.x < MAP.side.x1 + 0.2) return 'side';
+  return 'main';
 }
 
 /* Waypoint chains between rooms. Small map, hand-authored graph. */
 function routeTo(fromRoom, toRoom, S) {
   const D = MAP.door1, st = MAP.stair;
-  const door = [-6.6, 0, (D.z0 + D.z1) / 2];
-  const base = [st.x0 - 0.9, 0, (st.z0 + st.z1) / 2];
-  const top = [st.x1 + 0.2, st.top, (st.z0 + st.z1) / 2];
+  const door = [MAP.main.x0 - 0.3, 0, (D.z0 + D.z1) / 2];
+  // Foot of the flight, then the head of it. Two points is enough: the run is
+  // straight, and a walker that reaches the bottom step can see the top one.
+  const base = [(st.x0 + st.x1) / 2, 0, st.zBot + 0.6];
+  const top = [(st.x0 + st.x1) / 2, MAP.roof.y1, st.zTop - 0.8];
   const key = fromRoom + '>' + toRoom;
   const table = {
-    'gen>mess': [door], 'mess>gen': [door],
-    'mess>loft': [base, top], 'loft>mess': [top, base],
-    'gen>loft': [door, base, top], 'loft>gen': [top, base, door],
+    'side>main': [door], 'main>side': [door],
+    'main>roof': [base, top], 'roof>main': [top, base],
+    'side>roof': [door, base, top], 'roof>side': [top, base, door],
   };
   return table[key] || [];
 }
@@ -2812,6 +3007,7 @@ function detonate(game, S, P, at, sfx) {
 function rollShop(S) {
   const sh = S.shop;
   if (!sh) return;
+  if (!sh) return;
   const pool = SHOP.guns.slice();
   sh.stock = [];
   for (let k = 0; k < SHOP.stockSize && pool.length; k++) {
@@ -3038,19 +3234,15 @@ function doInteract(game, S, P, hud, sfx, it, dt) {
     S.points -= it.cost; sfx.doorOpen();
     it.door.open = true;
     for (const a of it.door.actors) a.destroy();
-    if (it.id === 'gen') S.activeWindows.push('W3', 'W4');
-    if (it.id === 'stair') S.activeWindows.push('W5');
+    // The wing has its own window, and it only matters once you are in there.
+    if (it.id === 'side') S.activeWindows.push('W5');
     hud.points(S.points);
   } else if (it.kind === 'power') {
-    setPower(game, S, true);
-    sfx.powerOn();
+    /* Nothing happens on the press. You take hold of the crank and you turn
+       it for five seconds, and the whole time the horde is still coming —
+       which is the point of making it take five seconds. */
     const ps = S.powerSwitch;
-    ps.on = true;
-    ps.lever.setRotation([0, 0, -34]);
-    ps.knob.setPosition([ps.lx + 0.30, ps.ly - 0.10, ps.lz - 0.10]);
-    ps.lampRed.material = game.material({ color: 0x2a0a08, texture: 'smooth', roughness: 0.3, emissive: 0x3a0a08, emissiveStrength: 0.2 });
-    ps.lampGreen.material = game.material({ color: 0x081a08, texture: 'smooth', roughness: 0.3, emissive: 0x3aff5a, emissiveStrength: 2.6 });
-    S.voice(LINES.power);
+    if (!ps.cranking) { ps.cranking = GEN.crank; sfx.doorOpen(); S.voice(LINES.powerStart || LINES.power); }
   } else if (it.kind === 'crate') {
     S.points -= it.cost; sfx.buy();
     openCrate(game, S, P, hud, sfx);
@@ -3365,14 +3557,16 @@ function start(opts = {}) {
   /* Night that you can still fight in. The ground colour matters more than
      it looks: metal and wet concrete take their downward light from it, and
      a black floor drains every surface in the room from below. */
-  game.setSky('night', {
-    fogDensity: 0.016, fog: 0x0c1018,
-    /* The horizon colour is the reflection probe as much as it is the sky,
-       and every metal in the map is indoors reflecting it. Left night-blue it
-       turned the player's own pistol navy; neutral grey gives gunmetal back
-       without warming the room, which the lamps already do. */
-    zenith: 0x1a2136, horizon: 0x4a4a4c, ground: 0x33302c,
-    sunIntensity: 1.15, exposure: 2.05,
+  /* Daylight, and none of it clean. The sun is up and the whole sky is
+     working through smoke, which is why the zenith is brown rather than blue
+     and the fog is the colour of the field rather than of air. The horizon
+     doubles as the reflection probe for every metal in the map, so it stays
+     neutral: warm it and the guns turn to brass. */
+  game.setSky('day', {
+    fogDensity: 0.013, fog: 0x8c8578,
+    zenith: 0x6f6f6a, horizon: 0x9a9184, ground: 0x4c463b,
+    sun: [0.35, 0.62, -0.70], sunColor: 0xffe0b4,
+    sunIntensity: 1.6, exposure: 1.08, clouds: 0.55,
   });
   game.renderer.post.vignette = 0.28;
   game.renderer.post.grain = 0.022;
@@ -3383,7 +3577,7 @@ function start(opts = {}) {
     round: 0, toSpawn: 0, spawnT: 0, betweenRounds: false, lullT: 0,
     zombies: [], pool: [], debris: [], brass: [], windows: [], buys: [], doors: {},
     projectiles: [], perkStations: [], shieldActive: false, lastKnown: null,
-    activeWindows: ['W1', 'W2'], powered: false,
+    activeWindows: ['W1', 'W2', 'W3', 'W4'], powered: false,
     killsTotal: 0, gameOver: false, started: false,
     firstBloodDone: false, powerupActive: null,
     testMode: !!opts.test, godMode: false,
@@ -3703,7 +3897,7 @@ function start(opts = {}) {
          downstairs locks the player in with him, which is a different game
          to the one described. */
       const pz = P.actor.position.z;
-      const want = (P.actor.position.y < -1.9 && pz < MAP.down.z0 - 0.6) ? 1 : 0;
+      const want = (P.actor.position.y < -1.9 && pz < sh.doorAt[2] - 0.5) ? 1 : 0;
       if (Math.abs(sh.doorT - want) > 1e-3) {
         sh.doorT += (want - sh.doorT) * Math.min(1, dt * 3.4);
         sh.door.setPosition([
@@ -3730,6 +3924,40 @@ function start(opts = {}) {
         }
         if (Math.random() < 0.55) { sfx.shotSmg(); }
         hurtPlayer(game, S, P, 120 * dt, sfx, 'turret', { x: P.actor.position.x, z: P.actor.position.z - 1 });
+      }
+    }
+
+    /* Turning the generator. Hold still and it comes up; walk off and it
+       spins down and you start again. The handle actually goes round — a
+       progress bar with no moving part in the world reads as a menu. */
+    {
+      const ps = S.powerSwitch;
+      if (ps.cranking > 0 && !ps.on) {
+        const away = dist2d(P.actor.position, { x: ps.at[0], z: ps.at[2] }) > GEN.reach;
+        if (away) {
+          ps.cranking = 0;
+          hud.banner('LET GO OF THE CRANK', '#c8562e');
+        } else {
+          ps.cranking -= dt;
+          ps.crankSpin += dt * GEN.rpm * 6;
+          const r = ps.crankSpin;
+          const c = Math.cos(r / 57.2958), sn = Math.sin(r / 57.2958);
+          ps.crankArm.setPosition([ps.crankArm.position.x, 0.95 + c * 0.23, ps.crankGrip.position.z]);
+          ps.crankArm.setRotation([0, 0, r]);
+          ps.crankGrip.setPosition([ps.crankGrip.position.x, 0.95 + c * 0.46, ps.crankGrip.position.z + sn * 0.02]);
+          ps.wheel.setRotation([0, 0, 90 + r * 0.6]);
+          hud.banner(`CRANKING  ${Math.max(0, ps.cranking).toFixed(1)}`, '#e8ddc8');
+          if (ps.cranking <= 0) {
+            ps.on = true;
+            ps.cranking = 0;
+            setPower(game, S, true);
+            sfx.powerOn();
+            ps.lampRed.material = game.material({ color: 0x2a0a08, texture: 'smooth', roughness: 0.3, emissive: 0x3a0a08, emissiveStrength: 0.2 });
+            ps.lampGreen.material = game.material({ color: 0x081a08, texture: 'smooth', roughness: 0.3, emissive: 0x3aff5a, emissiveStrength: 2.6 });
+            hud.banner('POWER', '#8ce8a0');
+            S.voice(LINES.power);
+          }
+        }
       }
     }
 
