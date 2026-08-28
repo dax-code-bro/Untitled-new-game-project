@@ -114,6 +114,16 @@ const WEAPONS = {
     recoil: { up: 2.2, side: 0.8, climb: 0, recover: 8 },
     hands: { right: [-0.02, -0.055, -0.03], left: [0.10, -0.05, 0.12] },
   },
+  shieldWorn: {
+    name: 'Cracked Riot Shield', slotName: 'CRACKED SHIELD',
+    dmg: 130, headMul: 1.0, mag: Infinity, reserve: Infinity, refire: 0.66,
+    reload: 0, auto: false, pellets: 1, spread: 0,
+    kick: 1.4, sfx: 'shieldHit', melee: true, range: 2.0,
+    knockback: 3.8, sweep: 0.9, blocks: true,
+    sightH: 0.05, sightFov: 1.0, adsTime: 0.26,
+    recoil: { up: 0.9, side: 0.5, climb: 0, recover: 11 },
+    hands: { right: [-0.02, -0.045, -0.02], left: [0.02, -0.02, 0.10] },
+  },
   shield: {
     name: 'Riot Shield', slotName: 'RIOT SHIELD',
     dmg: 190, headMul: 1.0, mag: Infinity, reserve: Infinity, refire: 0.58,
@@ -226,6 +236,11 @@ const LINES = {
   ],
   crateOpen: [['radio', 'Ah, the supply crate. Property of no army that admits to it.']],
   crateArc: [['patch', 'This is not standard issue. This is not any issue.']],
+  boss: [
+    ['radio', 'Movement on the stair. Heavy. Slow. Not stopping.'],
+    ['patch', 'That is a lot of man behind a lot of plastic.'],
+    ['radio', 'He cannot hold that shield up forever. Nobody can.'],
+  ],
   model5: [
     ['patch', 'He was still holding it. Four chambers, and every one of them a mistake for whoever is stood behind the first.'],
   ],
@@ -969,6 +984,7 @@ function makePlayer(game, S, hud, sfx, voice) {
   P.view.shield = Object.assign(makeRiotShield(game), { kind: 'group', muzzle: 0.30 });
   P.view.obliterator = Object.assign(makeObliterator(game), { kind: 'group', muzzle: 0.26 });
   P.view.mauser = Object.assign(makeMauser(game), { kind: 'group', muzzle: 0.24 });
+  P.view.shieldWorn = Object.assign(makeRiotShield(game), { kind: 'group', muzzle: 0.30 });
   // Hands, parented to each weapon so they inherit its every motion.
   for (const [id, v] of Object.entries(P.view)) {
     const root = v.kind === 'single' ? v.actor : v.root;
@@ -1137,7 +1153,7 @@ function updateViewmodel(game, P, dt, moving) {
       const lunge = drive * swingSpec.reach;
       root.setPosition([px + f.x * lunge, py + f.y * lunge, pz + f.z * lunge]);
     }
-  } else if (P.equipped() === 'shield' && P.blocking) {
+  } else if (spec.blocks && P.blocking) {
     /* Raised: the face comes across the view and turns square to the front,
        which is both the read and the hitbox. */
     const b = P.blockT;
@@ -1525,11 +1541,25 @@ const HEAVY_LOOKS = ['sheriff', 'officer'];
 /* What a dead sheriff leaves behind, and how often. */
 const SHERIFF_DROP = { model5: 0.16, mauser: 0.22, life: 26 };
 
+/* The one that comes for you from round ten.
+
+   Obese, fully kitted, and quick for his size. He carries a shield that
+   eats everything from the front — but only in bursts: it takes a beating
+   and then it is gone for half a minute, and that window is the fight. */
+const BOSS = {
+  // Fast for his size — a little under a runner once the heavy build's own
+  // speed multiplier is applied, which is the brief.
+  from: 10, hp: 1000, speed: [3.5, 3.8], dmg: 2.4, points: 3.5,
+  shieldHp: 420, shieldUp: 7.5, shieldCd: 32, shieldArc: 0.42,
+  dropShield: 0.28, everyRounds: 4,
+};
+
 /* How each melee weapon moves. `out` is the fraction of the animation spent
    driving forward; the rest is the recovery, which is always slower. */
 const MELEE_SWING = {
   ram: { time: 0.95, out: 0.30, reach: 0.62, thrust: true },
   shield: { time: 0.50, out: 0.34, reach: 0.34, arc: 0.5, yaw: 0.9 },
+  shieldWorn: { time: 0.58, out: 0.34, reach: 0.30, arc: 0.45, yaw: 0.8 },
   knife: { time: 0.34, out: 0.38, reach: 0.20, arc: 1.5, yaw: 1.1 },
   hammer: { time: 0.40, out: 0.35, reach: 0.16, arc: 1.7 },
 };
@@ -1615,6 +1645,16 @@ const VARIANTS = {
     weight: 0.0, speed: [2.8, 3.7], hp: 1.0, dmg: 1.25, points: 1.8,
     clip: 'zrun', clipSpeed: 1.0, eye: 0x8fd0ff, from: 8,
     plated: true, run: true,
+  },
+  /* Not rolled into the mix like the others: the boss is scheduled by the
+     round, one at a time. */
+  boss: {
+    weight: 0.0, speed: BOSS.speed, hp: 1.0, dmg: BOSS.dmg, points: BOSS.points,
+    clip: 'zwalk_heavy', clipSpeed: 1.45, eye: 0x9ad8ff, from: BOSS.from,
+    /* Deliberately not plated. His defence is the shield and the thousand
+       health behind it — make him bulletproof as well and there is no fight
+       left in the window where the shield is down. */
+    boss: true,
   },
   spitter: {
     // Keeps its distance and throws. The only ranged threat in the game,
@@ -1779,6 +1819,21 @@ function buildPooledZombie(game, S, i) {
     }
   }
   const wounds = buildZombieWounds(game, a, body.id);
+  /* The boss carries a full-height riot shield on his left arm. Built with
+     the body and hidden, so a boss round costs no construction; it is
+     parented to the forearm bone so it swings with him. */
+  let bossShield = null;
+  if (a.skeleton) {
+    const sh = makeRiotShield(game);
+    const bi = a.skeleton.index('lowerArmL');
+    sh.root.parent = a; sh.root.parentBone = bi;
+    sh.root.localOffset = new window.LE.Vec3(0.10, -0.14, 0.10);
+    sh.root.setRotation([0, 90, 8]);
+    sh.root.scale.set(1.25, 1.25, 1.25);
+    sh.root.visible = false;
+    for (const q of sh.parts) q.visible = false;
+    bossShield = sh;
+  }
   /* Posture. The clips animate the limbs; biasing the spine and head in the
      animator's rest pose gives every one of them a slightly different
      stooped carriage on top of whatever it is playing. */
@@ -1793,7 +1848,7 @@ function buildPooledZombie(game, S, i) {
     bend('chest', lean * 0.6, (i % 3 - 1) * 0.06, 0);
     bend('head', -lean * 0.45, (i % 4 - 1.5) * 0.07, (i % 3 - 1) * 0.05);
   }
-  const z = { actor: a, eyes, wounds, parked: true, dead: true, poolSlot: i, anim: '',
+  const z = { actor: a, eyes, wounds, bossShield, parked: true, dead: true, poolSlot: i, anim: '',
     ripStage: 0, ripT: 0, throwT: 0, ripFace: false };
   a.userData = { zombie: z };
   setZombieVisible(z, false);
@@ -1893,6 +1948,11 @@ function setZombieVisible(z, on) {
   z.actor.visible = on;
   if (z.actor.head) z.actor.head.visible = on;
   if (z.actor.armor) z.actor.armor.visible = on && !!z.plated;
+  if (z.bossShield) {
+    const show = on && !!z.boss && z.bUp > 0;
+    z.bossShield.root.visible = show;
+    for (const q of z.bossShield.parts) q.visible = show;
+  }
   // The coat and the stains are separate meshes on the same skeleton, so
   // they need hiding too — otherwise a parked body leaves its clothes
   // standing out at the far end of the world where the pool lives.
@@ -1926,7 +1986,12 @@ function parkZombie(game, S, z) {
 }
 
 function spawnZombie(game, S, win, forceVariant) {
-  const z = S.pool.find((q) => q.parked);
+  /* A boss is a big man, so he needs a big body — take a heavy slot out of
+     the pool if one is free rather than putting a thousand health on
+     whatever came up next. */
+  const z = forceVariant === 'boss'
+    ? (S.pool.find((q) => q.parked && q.actor.bodyType === 'heavy') || S.pool.find((q) => q.parked))
+    : S.pool.find((q) => q.parked);
   if (!z) return null;
   const kind = forceVariant || pickVariant(S.round, Math.random);
   const V = VARIANTS[kind];
@@ -1942,7 +2007,9 @@ function spawnZombie(game, S, win, forceVariant) {
   });
   z.actor.controller.moveSpeed = speed;
   z.actor.controller.runSpeed = speed * 1.35;
-  const maxHp = ROUNDS.hpFor(S.round) * V.hp * B.hp;
+  // A boss has a flat pool that does not scale with the round — the shield
+  // is what makes him harder later, not the number.
+  const maxHp = V.boss ? BOSS.hp : ROUNDS.hpFor(S.round) * V.hp * B.hp;
   Object.assign(z, {
     parked: false, dead: false,
     kind, V, build: B.id,
@@ -1953,6 +2020,8 @@ function spawnZombie(game, S, win, forceVariant) {
     vault: null, spitT: 1 + Math.random() * 2, anim: '',
     ripStage: 0, ripT: 0, throwT: 0, ripFace: false,
     legless: false, plated: !!V.plated, clangT: 0,
+    boss: !!V.boss, bShield: V.boss ? BOSS.shieldHp : 0,
+    bUp: V.boss ? 1 : 0, bUpT: V.boss ? BOSS.shieldUp : 0, bCd: 0,
     // Runners drop in and out of a remembered human sprint.
     lucid: 0, lucidT: 2 + Math.random() * 4,
   });
@@ -1986,6 +2055,26 @@ function spawnZombie(game, S, win, forceVariant) {
    goes straight through it. */
 function hurtZombie(game, S, z, dmg, at, headshot, source) {
   if (z.dead) return;
+  /* The boss's shield is a health pool of its own, not an immunity. Hit it
+     from the front while it is up and it takes the damage instead of him;
+     break it and he is open until it comes back. */
+  if (z.boss && z.bUp > 0 && z.bShield > 0) {
+    const zp = z.actor.position;
+    const dx = at[0] - zp.x, dz = at[2] - zp.z;
+    const d = Math.hypot(dx, dz) || 1;
+    const fx = Math.sin(z.actor.controller.facing), fz = Math.cos(z.actor.controller.facing);
+    if ((dx / d) * fx + (dz / d) * fz > BOSS.shieldArc) {
+      z.bShield -= dmg;
+      game.particles.sparks(at, { count: 9, speed: 5, color: 0xdff0ff, colorEnd: 0x4a6070 });
+      game.audio.impact(0.34);
+      if (z.bShield <= 0) {
+        z.bShield = 0; z.bUp = 0; z.bCd = BOSS.shieldCd;
+        game.particles.sparks([zp.x, zp.y + 1.0, zp.z], { count: 30, speed: 8, color: 0xdff0ff, colorEnd: 0x24303a });
+        game.audio.impact(1);
+      }
+      return;
+    }
+  }
   if (z.plated && (source === 'bullet' || source === 'blast')) {
     game.particles.sparks(at, { count: 7, speed: 4.5, color: 0xffe6a8, colorEnd: 0x6a5a30 });
     game.audio.impact(0.28);
@@ -2019,6 +2108,11 @@ function killZombie(game, S, z, headshot) {
   /* A sheriff sometimes goes down still holding it. Officers never do —
      they are a big body worth no drop, which is what makes the sheriff
      worth picking out of a crowd. */
+  /* His shield sometimes comes off him in one piece — a worse one than the
+     box gives you, because it has already been through this. */
+  if (z.boss && Math.random() < BOSS.dropShield) {
+    dropWeapon(game, S, [p.x + 0.4, p.y + 0.25, p.z], 'shieldWorn');
+  }
   if (z.actor.outfitName === 'sheriff') {
     const roll = Math.random();
     const id = roll < SHERIFF_DROP.model5 ? 'obliterator'
@@ -2040,7 +2134,11 @@ const POWERUPS = {
 /* A gun on the floor, spinning, with its own model. Walk over it to take
    it — it goes into a free slot, or replaces what you are holding. */
 function dropWeapon(game, S, at, id) {
-  const built = id === 'obliterator' ? makeObliterator(game) : makeMauser(game);
+  const built = id === 'obliterator' ? makeObliterator(game)
+    : id === 'mauser' ? makeMauser(game)
+    : id === 'shieldWorn' || id === 'shield' ? makeRiotShield(game)
+    : id === 'ram' ? makeBatteringRam(game)
+    : makeMauser(game);
   built.root.setPosition(at);
   S.drops.push({ id, root: built.root, parts: built.parts, t: SHERIFF_DROP.life, spin: 0, baseY: at[1] });
 }
@@ -2225,6 +2323,23 @@ function updateZombie(game, S, P, z, dt, sfx) {
       if (z.stuckT > 1.6) { a.body.velocity.x += (Math.random() - 0.5) * 4; a.body.velocity.z += (Math.random() - 0.5) * 4; z.stuckT = 0; }
     }
     z.lastPos = { x: pos.x, z: pos.z };
+  }
+
+  /* The shield runs on a clock: up for a while, then gone for thirty-two
+     seconds whether it broke or simply timed out. He cannot hide behind it
+     for the whole fight, and that gap is the fight. */
+  if (z.boss) {
+    if (z.bUp > 0) {
+      z.bUpT -= dt;
+      if (z.bUpT <= 0) { z.bUp = 0; z.bCd = BOSS.shieldCd; }
+    } else {
+      z.bCd -= dt;
+      if (z.bCd <= 0) { z.bUp = 1; z.bUpT = BOSS.shieldUp; z.bShield = BOSS.shieldHp; }
+    }
+    if (z.bossShield) {
+      z.bossShield.root.visible = z.bUp > 0;
+      for (const q of z.bossShield.parts) q.visible = z.bUp > 0;
+    }
   }
 
   /* A runner is trying to remember how this used to work. Most of the time
@@ -2778,6 +2893,10 @@ function makeHud() {
 function startRound(game, S, hud, sfx) {
   S.round++;
   S.toSpawn = ROUNDS.countFor(S.round);
+  /* One of him on round ten, and every fourth round after. Announced,
+     because a thing with a thousand health arriving unannounced is not a
+     fight, it is an ambush. */
+  S.bossDue = S.round >= BOSS.from && (S.round - BOSS.from) % BOSS.everyRounds === 0;
   S.spawnT = 1.5;
   S.betweenRounds = false;
   hud.round(S.round);
@@ -2808,7 +2927,15 @@ function updateRounds(game, S, P, hud, sfx, dt) {
       const near = options.filter((w) => w.def.room === pr);
       const pickFrom = near.length && Math.random() < 0.65 ? near : options;
       const win = pickFrom[Math.floor(Math.random() * pickFrom.length)];
-      if (win && spawnZombie(game, S, win)) S.toSpawn--;
+      if (S.bossDue) {
+        const bz = win && spawnZombie(game, S, win, 'boss');
+        if (bz) {
+          S.bossDue = false;
+          S.toSpawn--;
+          hud.banner('SOMETHING BIG IS COMING THROUGH', '#9ad8ff');
+          S.voice(LINES.boss);
+        }
+      } else if (win && spawnZombie(game, S, win)) S.toSpawn--;
     }
   }
 
@@ -3012,7 +3139,7 @@ function start(opts = {}) {
       if (i.justPressed('r') || pad.pressed.x) tryReload(P, sfx);
       P.swingT = Math.max(0, P.swingT - dt);
       /* Aim, on a shield, means put it between you and them. */
-      P.blocking = P.equipped() === 'shield' && S.input.aimHeld && P.swingT <= 0;
+      P.blocking = !!(P.spec() && P.spec().blocks) && S.input.aimHeld && P.swingT <= 0;
       P.blockT += ((P.blocking ? 1 : 0) - P.blockT) * Math.min(1, dt * SHIELD_BLOCK.raise);
       P.nadeCd = Math.max(0, P.nadeCd - dt);
       if ((i.justPressed('t') || pad.pressed.lb) && P.nadeCd <= 0 && P.nades > 0) {
