@@ -3994,7 +3994,11 @@ let WALKER = null;
 
 async function preload(base) {
   try {
-    const res = await fetch((base || '') + 'models/walker.bin');
+    /* Relative to the page, which lives in games/ — the model does not.
+       Left as a bare 'models/...' this resolved to games/models/walker.bin
+       on every host that is not the repo root, so the deployed build has
+       been quietly falling back to the procedural body. */
+    const res = await fetch((base || '../') + 'models/walker.bin');
     if (!res.ok) throw new Error('HTTP ' + res.status);
     WALKER = window.LE.parseRiggedMesh(await res.arrayBuffer());
   } catch (err) {
