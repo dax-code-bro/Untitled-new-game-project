@@ -90,23 +90,31 @@ function buildViewHand(g, at, side, opts = {}) {
   loftRings(g, palm, 12, true, true);
 
   /* Fingers, curling back under the palm and gripping. Each one begins
-     0.02 back inside the palm volume, so the join is never visible. */
+     0.02 back inside the palm volume, so the join is never visible.
+
+     On a trigger hand the index finger does not curl with the rest — it
+     runs forward and lies along the trigger. A fist wrapped uniformly
+     round a grip is a hand holding a stick; the separated index is what
+     makes it a hand holding a gun. */
+  const trigger = opts.trigger !== false && grip !== 'fore';
   for (let f = 0; f < 4; f++) {
+    const isIndex = trigger && f === 3;
     const lane = (f - 1.5) * 0.0165;
-    const startD = 0.052;
+    const startD = isIndex ? 0.030 : 0.052;
     const rings = [];
     for (let i = 0; i <= 4; i++) {
       const t = i / 4;
       // Out along the palm, then hooking back toward the palm's underside.
-      const along = startD - 0.020 + t * 0.030;
-      const curlBack = t * t * 0.030;
+      const along = startD - 0.020 + t * (isIndex ? 0.044 : 0.030);
+      const curlBack = isIndex ? t * t * 0.008 : t * t * 0.030;
       rings.push({
         p: new Vec3(
           at.x + dir.x * along - dir.y * curlBack * 0.6 + outw.x * lane,
           at.y + dir.y * along + dir.x * curlBack * 0.6 + outw.y * lane,
           at.z + dir.z * along + outw.z * lane,
         ),
-        w: 0.0082 - t * 0.0016, d: 0.0082 - t * 0.0016, e: 2.3, uv: t,
+        w: (isIndex ? 0.0080 : 0.0082) - t * 0.0016,
+        d: (isIndex ? 0.0080 : 0.0082) - t * 0.0016, e: 2.3, uv: t,
       });
     }
     loftRings(g, rings, 8, true, true);

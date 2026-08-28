@@ -168,6 +168,17 @@ function buildBust(g, build) {
   }
 }
 
+/* A joint ball, centred on a bone head. */
+function buildJoint(g, at, r) {
+  loftRings(g, [
+    { p: new Vec3(at.x, at.y - r * 0.86, at.z), w: r * 0.52, d: r * 0.52, e: 2.1 },
+    { p: new Vec3(at.x, at.y - r * 0.40, at.z), w: r * 0.94, d: r * 0.94, e: 2.1 },
+    { p: new Vec3(at.x, at.y + r * 0.06, at.z), w: r, d: r, e: 2.1 },
+    { p: new Vec3(at.x, at.y + r * 0.52, at.z), w: r * 0.88, d: r * 0.88, e: 2.1 },
+    { p: new Vec3(at.x, at.y + r * 0.90, at.z), w: r * 0.48, d: r * 0.48, e: 2.1 },
+  ], 12, true, true);
+}
+
 /* Deltoid caps: the shoulder mass that makes a frame read as broad. */
 function buildShoulderCaps(g, skeleton, build) {
   const a = new Vec3();
@@ -604,6 +615,11 @@ function buildZombieBodyGeometry(skeleton, opts = {}) {
       [build.arm[4], build.arm[4] * 1.06, 2.1],
     ]);
     loftRings(g, up.concat(lo.slice(1)), segments, false, false);
+    /* An elbow. A limb lofted straight through its joint pinches to a
+       crease the moment the skin solver bends it — there is nothing at the
+       hinge to hold the volume. A ball at the joint is what keeps an arm
+       an arm through its whole range. */
+    buildJoint(g, b, build.arm[1] * 1.04);
     buildHand(g, side, c, segments);
 
     skeleton.bones[skeleton.index('upperLeg' + sideName)].bindMatrix.getTranslation(a);
@@ -624,6 +640,8 @@ function buildZombieBodyGeometry(skeleton, opts = {}) {
       [build.leg[4], build.leg[4], 2.1],
     ], (t) => -0.014 * Math.sin(t * PI));
     loftRings(g, th.concat(sh.slice(1)), segments, false, false);
+    buildJoint(g, b, build.leg[2] * 1.06);          // knee
+    buildJoint(g, a, build.leg[0] * 0.92);          // hip socket
     buildShoe(g, side, skeleton, segments);
   }
 

@@ -61,6 +61,15 @@ const WEAPONS = {
     recoil: { up: 2.6, side: 0.9, climb: 0.75, recover: 7 },
     hands: { right: [-0.055, -0.070, 0.018], left: [0.300, -0.026, -0.019] },
   },
+  hammer: {
+    name: 'Claw Hammer', slotName: 'HAMMER',
+    dmg: 0, headMul: 1, mag: Infinity, reserve: Infinity, refire: 9,
+    reload: 0, auto: false, pellets: 0, spread: 0,
+    kick: 0, sfx: 'dryFire', tool: true,
+    sightH: 0.05, sightFov: 0.95, adsTime: 0.2,
+    recoil: { up: 0, side: 0, climb: 0, recover: 12 },
+    hands: { right: [-0.020, -0.030, 0.016], left: null, rightGrip: 'pistol' },
+  },
   knife: {
     name: 'Trench Knife', slotName: 'KNIFE',
     dmg: 100, headMul: 1.0, mag: Infinity, reserve: Infinity, refire: 0.42,
@@ -131,6 +140,7 @@ const ROUNDS = {
 const PLAYER = {
   hp: 100, regenDelay: 3.5, regenRate: 40,
   adsSpread: 0.28,        // aimed shots tighten to this fraction of hip spread
+  plankTime: 1.0,         // one second a plank, five for a window
   sprintSpeed: 7.4, walkSpeed: 4.2, adsSpeed: 2.3,
   fov: 1.0, sprintFov: 1.06,
   attackRange: 1.45, attackCooldown: 0.9,
@@ -199,7 +209,8 @@ function makeSfx(game) {
     headmark() { t(2800, 0.025, 'square', 0.06); t(3400, 0.02, 'square', 0.04); },
     groan(pitch) { t(58 + pitch * 30, 0.5, 'sawtooth', 0.05); t(74 + pitch * 26, 0.42, 'triangle', 0.06); },
     tear() { t(140, 0.08, 'sawtooth', 0.1); A.impact(0.25); },
-    board() { A.impact(0.4); t(95, 0.05, 'square', 0.1); },
+    board() { A.impact(0.55); t(95, 0.06, 'square', 0.11); t(210, 0.05, 'square', 0.06); },
+    nail() { A.impact(0.30); t(2100, 0.022, 'square', 0.075); t(760, 0.035, 'square', 0.05); },
     buy() { t(1250, 0.05, 'square', 0.1); t(1650, 0.06, 'square', 0.08); A.impact(0.3); },
     denied() { t(160, 0.12, 'square', 0.09); },
     doorOpen() { A.impact(0.9); t(70, 0.3, 'sawtooth', 0.12); },
@@ -625,6 +636,26 @@ function makeKnife(game, opts = {}) {
   return { root, parts };
 }
 
+/* A claw hammer. Handle, head, claw — held like a tool, not a gun, so it
+   gets its own hand pose. */
+function makeHammer(game, opts = {}) {
+  const steel = { color: 0x6a6f75, texture: 'metal', roughness: 0.42, metalness: 1 };
+  const wood = { color: 0x7a5a34, texture: 'wood', roughness: 0.74, metalness: 0, uvScale: 3 };
+  const root = game.box({ at: opts.at || [0, 0, 0], size: 1, physics: false, visible: false });
+  const parts = [];
+  const add = (a, pos, rot) => { a.parent = root; a.setPosition(pos); if (rot) a.setRotation(rot); parts.push(a); return a; };
+  add(game.cylinder({ radius: 0.0135, height: 0.255, material: wood, physics: false }), [0.052, -0.010, 0], [0, 0, 90]);
+  add(game.box({ size: [0.030, 0.032, 0.030], material: steel, physics: false }), [0.196, 0.006, 0]);
+  add(game.cylinder({ radius: 0.0155, height: 0.042, material: steel, physics: false }), [0.222, 0.006, 0], [0, 0, 90]);
+  // Claw, split into two prongs curving back.
+  for (const dz of [-0.008, 0.008]) {
+    add(game.box({ size: [0.040, 0.010, 0.007], material: steel, physics: false }), [0.176, 0.020, dz], [0, 0, 22]);
+    add(game.box({ size: [0.026, 0.009, 0.006], material: steel, physics: false }), [0.150, 0.035, dz], [0, 0, 48]);
+  }
+  add(game.box({ size: [0.016, 0.020, 0.026], material: wood, physics: false }), [-0.072, -0.014, 0]);
+  return { root, parts };
+}
+
 function makeArcProjector(game, opts = {}) {
   const dark = { color: 0x23262c, texture: 'metal', roughness: 0.45, metalness: 1 };
   const coil = { color: 0x142430, texture: 'smooth', roughness: 0.3, emissive: 0x39c8ff, emissiveStrength: 2.2 };
@@ -662,6 +693,7 @@ function makePlayer(game, S, hud, sfx, voice) {
     ammo: {
       m1911: { mag: WEAPONS.m1911.mag, reserve: WEAPONS.m1911.reserve },
       knife: { mag: Infinity, reserve: Infinity },
+      hammer: { mag: Infinity, reserve: Infinity },
     },
     cooldown: 0, reloading: 0, reloadStage: 0, swayT: 0, kickPitch: 0,
     slideCycle: 0, slideCycleMax: 0.085,
@@ -674,6 +706,7 @@ function makePlayer(game, S, hud, sfx, voice) {
     stamina: 1, sliding: 0, slideCd: 0, slideDir: null,
     shieldT: 0, shieldCd: 0,
     prevSlot: 0, knifeOut: false,
+    building: false, buildingWas: false, buildT: 0, lastBeat: -1, prevSlotBuild: 0,
   };
 
   /* View models: one instance of each weapon, shown when equipped. */
@@ -682,6 +715,7 @@ function makePlayer(game, S, hud, sfx, voice) {
   P.view.scatter = Object.assign(makeScattergun(game), { kind: 'group', muzzle: 0.58 });
   P.view.arc = Object.assign(makeArcProjector(game), { kind: 'group', muzzle: 0.52 });
   P.view.knife = Object.assign(makeKnife(game), { kind: 'group', muzzle: 0.26 });
+  P.view.hammer = Object.assign(makeHammer(game), { kind: 'group', muzzle: 0.24 });
   // Hands, parented to each weapon so they inherit its every motion.
   for (const [id, v] of Object.entries(P.view)) {
     const root = v.kind === 'single' ? v.actor : v.root;
@@ -800,6 +834,23 @@ function updateViewmodel(game, P, dt, moving) {
   root.setRotation(_vQuat1);
 
   P.muzzleWorld = [px + f.x * v.muzzle, py + f.y * v.muzzle + 0.03 * (1 - a), pz + f.z * v.muzzle];
+
+  /* Hammer swing. Two strikes a plank: wind up over the shoulder, drive
+     down, recover — driven off the same clock that places the plank, so
+     the nail sound lands on the blow rather than near it. */
+  if (P.equipped() === 'hammer') {
+    const period = 0.5;                         // two swings per second
+    const ph = ((P.buildT || 0) % period) / period;
+    // Fast down-stroke, slower recovery: ease the two halves differently.
+    const swing = ph < 0.35
+      ? -0.55 + Math.pow(ph / 0.35, 2) * 1.55
+      : 1.0 - (ph - 0.35) / 0.65 * 1.55;
+    _vQuat2.setAxisAngle(_vAxisZ, swing);
+    _vQuat1.mulQuats(_vQuat1, _vQuat2);
+    root.setRotation(_vQuat1);
+    const lunge = Math.max(0, swing) * 0.05;
+    root.setPosition([px + f.x * lunge, py + f.y * lunge - lunge * 0.25, pz + f.z * lunge]);
+  }
 
   /* Reciprocating slide. A half-sine over the cycle time: back hard, forward
      on the return, which is the shape the real thing traces. */
@@ -1088,12 +1139,19 @@ const ZOMBIE_SKIN = { color: 0x8d9c78, texture: 'skin', roughness: 0.88, metalne
 /* Torn clothing, varied. A horde in one uniform reads as clones; a spread
    of faded field greys, dried blood and dirty canvas reads as a crowd that
    used to be people with different jobs. */
-const RAG_COLORS = [0x8a8168, 0x6e8270, 0x9a7d5c, 0x5f6a5e, 0x8d7566, 0x6a7d68, 0x968a6a, 0x7b6a72];
+/* Cloth people actually wore, filthy: field grey, brown canvas, dirty
+   drill, oiled wool. Saturated teal and orange read as costume, and a
+   costume on a green body reads as a painted body. */
+const RAG_COLORS = [0x6f6c5c, 0x7a6a52, 0x5e6355, 0x83795f,
+                    0x615c4e, 0x726446, 0x555a4d, 0x7d7460];
 /* Dead skin, darker than it wants to be. The procedural skin texture warms
    whatever tint it is given, so a colour picked to look right on a swatch
    comes out as a bright tan head floating over a dark body. */
-const SKIN_TONES = [0x7e8a6a, 0x8a8f72, 0x74805f, 0x828566, 0x77855f,
-                    0x6d7a5c, 0x8d8e74, 0x798060];
+/* One rotten green, varied only slightly — the body under the clothes
+   should read as the same dead thing the head is, not as a second colour
+   scheme competing with it. */
+const SKIN_TONES = [0x76835f, 0x7c8664, 0x6f7d59, 0x79815e,
+                    0x738060, 0x707c5a, 0x7e8767, 0x74815c];
 
 /* Four builds, each with its own body model, and what being that build
    does to it. A heavy one is slower and much harder to put down; one in
@@ -1459,7 +1517,21 @@ function updateZombie(game, S, P, z, dt, sfx) {
         const b = win.boards[slot];
         win.boards[slot] = null;
         sfx.tear();
-        S.debris.push({ actor: b, vel: [(Math.random() - 0.5) * 2, 2 + Math.random() * 2, (Math.random() - 0.5) * 2 + (z.win.def.face === 'N' ? 1.5 : 0)], spin: (Math.random() - 0.5) * 8, t: 1.4 });
+        /* The plank goes where the hands went. Throwing it in a random
+           direction reads as the board exploding off the wall; throwing it
+           along the line from the window to the zombie reads as being torn
+           off by the thing standing there. */
+        const bp = b.position;
+        const dx = pos.x - bp.x, dy = (pos.y + 0.6) - bp.y, dz = pos.z - bp.z;
+        const dl = Math.hypot(dx, dy, dz) || 1;
+        const yank = 3.4 + Math.random() * 1.6;
+        S.debris.push({
+          actor: b,
+          vel: [dx / dl * yank + (Math.random() - 0.5) * 0.8,
+                dy / dl * yank + 1.6,
+                dz / dl * yank + (Math.random() - 0.5) * 0.8],
+          spin: (Math.random() - 0.5) * 12, t: 1.6,
+        });
         game.particles.dust([b.position.x, b.position.y, b.position.z], { count: 5, color: 0x7d5c36 });
         z.tearT = 2.1;
       }
@@ -1673,18 +1745,27 @@ function doInteract(game, S, P, hud, sfx, it, dt) {
     closeCrate(S);
     hud.ammo(P);
   } else if (it.kind === 'repair') {
-    if (S.repairFrame !== S.frame - 1) S.repairT = 0.45;   // new hold
+    /* Boarding up takes a second a plank, five for a full window, and it
+       is done with a hammer rather than by standing near the wall: the
+       tool comes out, the arm swings, the nail goes in. Being unable to
+       shoot while you do it is the whole cost of repairing. */
+    if (S.repairFrame !== S.frame - 1) { S.repairT = PLAYER.plankTime; P.buildT = 0; }
     S.repairFrame = S.frame;
+    P.building = true;
     S.repairT -= dt;
+    P.buildT = (P.buildT || 0) + dt;
+    // Two strikes per plank, on the beat.
+    const beat = Math.floor((PLAYER.plankTime - S.repairT) / (PLAYER.plankTime / 2));
+    if (beat !== P.lastBeat) { P.lastBeat = beat; if (beat > 0) sfx.nail(); }
     if (S.repairT <= 0) {
-      S.repairT = 0.45;
+      S.repairT = PLAYER.plankTime;
       const win = it.win;
       const slot = win.boards.findIndex((b) => !b);
       if (slot >= 0) {
         win.boards[slot] = spawnBoard(game, win.def, slot, S.boardMat);
         sfx.board();
-        S.addPoints(ECONOMY.board);
-        hud.pointsDelta(ECONOMY.board);
+        game.particles.dust([win.def.sillAt[0], win.def.sillAt[1], win.def.sillAt[2]], { count: 4, color: 0x7d5c36 });
+        hud.pointsDelta(S.addPoints(ECONOMY.board));
         hud.points(S.points);
       }
     }
@@ -2110,6 +2191,26 @@ function start(opts = {}) {
       hud.aim(P.ads, P.sprinting);
 
       if (i.justPressed('r') || pad.pressed.x) tryReload(P, sfx);
+
+      /* Hammer while building. It takes the weapon's place for as long as
+         the hold lasts, which is why boarding up costs you your gun. The
+         flag is raised by the repair interaction later in the frame and
+         cleared here, so one frame without a repair puts the gun back. */
+      if (P.building !== P.buildingWas) {
+        P.buildingWas = P.building;
+        if (P.building) {
+          P.prevSlotBuild = P.slot;
+          if (!P.slots.includes('hammer')) P.slots.push('hammer');
+          P.slot = P.slots.indexOf('hammer');
+        } else {
+          P.slots = P.slots.filter((w) => w !== 'hammer');
+          P.slot = Math.min(P.prevSlotBuild || 0, Math.max(0, P.slots.length - 1));
+          P.lastBeat = -1;
+        }
+        P.reloading = 0;
+        hud.ammo(P);
+      }
+      P.building = false;
 
       /* Knife on a hold-to-swap key, so it never costs you a weapon slot. */
       const wantKnife = i.down('v') || i.down('e') || !!pad.buttons.rb;

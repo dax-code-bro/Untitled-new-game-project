@@ -9322,6 +9322,17 @@ function buildBust(g, build) {
   }
 }
 
+/* A joint ball, centred on a bone head. */
+function buildJoint(g, at, r) {
+  loftRings(g, [
+    { p: new Vec3(at.x, at.y - r * 0.86, at.z), w: r * 0.52, d: r * 0.52, e: 2.1 },
+    { p: new Vec3(at.x, at.y - r * 0.40, at.z), w: r * 0.94, d: r * 0.94, e: 2.1 },
+    { p: new Vec3(at.x, at.y + r * 0.06, at.z), w: r, d: r, e: 2.1 },
+    { p: new Vec3(at.x, at.y + r * 0.52, at.z), w: r * 0.88, d: r * 0.88, e: 2.1 },
+    { p: new Vec3(at.x, at.y + r * 0.90, at.z), w: r * 0.48, d: r * 0.48, e: 2.1 },
+  ], 12, true, true);
+}
+
 /* Deltoid caps: the shoulder mass that makes a frame read as broad. */
 function buildShoulderCaps(g, skeleton, build) {
   const a = new Vec3();
@@ -9758,6 +9769,11 @@ function buildZombieBodyGeometry(skeleton, opts = {}) {
       [build.arm[4], build.arm[4] * 1.06, 2.1],
     ]);
     loftRings(g, up.concat(lo.slice(1)), segments, false, false);
+    /* An elbow. A limb lofted straight through its joint pinches to a
+       crease the moment the skin solver bends it — there is nothing at the
+       hinge to hold the volume. A ball at the joint is what keeps an arm
+       an arm through its whole range. */
+    buildJoint(g, b, build.arm[1] * 1.04);
     buildHand(g, side, c, segments);
 
     skeleton.bones[skeleton.index('upperLeg' + sideName)].bindMatrix.getTranslation(a);
@@ -9778,6 +9794,8 @@ function buildZombieBodyGeometry(skeleton, opts = {}) {
       [build.leg[4], build.leg[4], 2.1],
     ], (t) => -0.014 * Math.sin(t * PI));
     loftRings(g, th.concat(sh.slice(1)), segments, false, false);
+    buildJoint(g, b, build.leg[2] * 1.06);          // knee
+    buildJoint(g, a, build.leg[0] * 0.92);          // hip socket
     buildShoe(g, side, skeleton, segments);
   }
 
@@ -12516,23 +12534,31 @@ function buildViewHand(g, at, side, opts = {}) {
   loftRings(g, palm, 12, true, true);
 
   /* Fingers, curling back under the palm and gripping. Each one begins
-     0.02 back inside the palm volume, so the join is never visible. */
+     0.02 back inside the palm volume, so the join is never visible.
+
+     On a trigger hand the index finger does not curl with the rest — it
+     runs forward and lies along the trigger. A fist wrapped uniformly
+     round a grip is a hand holding a stick; the separated index is what
+     makes it a hand holding a gun. */
+  const trigger = opts.trigger !== false && grip !== 'fore';
   for (let f = 0; f < 4; f++) {
+    const isIndex = trigger && f === 3;
     const lane = (f - 1.5) * 0.0165;
-    const startD = 0.052;
+    const startD = isIndex ? 0.030 : 0.052;
     const rings = [];
     for (let i = 0; i <= 4; i++) {
       const t = i / 4;
       // Out along the palm, then hooking back toward the palm's underside.
-      const along = startD - 0.020 + t * 0.030;
-      const curlBack = t * t * 0.030;
+      const along = startD - 0.020 + t * (isIndex ? 0.044 : 0.030);
+      const curlBack = isIndex ? t * t * 0.008 : t * t * 0.030;
       rings.push({
         p: new Vec3(
           at.x + dir.x * along - dir.y * curlBack * 0.6 + outw.x * lane,
           at.y + dir.y * along + dir.x * curlBack * 0.6 + outw.y * lane,
           at.z + dir.z * along + outw.z * lane,
         ),
-        w: 0.0082 - t * 0.0016, d: 0.0082 - t * 0.0016, e: 2.3, uv: t,
+        w: (isIndex ? 0.0080 : 0.0082) - t * 0.0016,
+        d: (isIndex ? 0.0080 : 0.0082) - t * 0.0016, e: 2.3, uv: t,
       });
     }
     loftRings(g, rings, 8, true, true);
@@ -12661,12 +12687,19 @@ function makeZombieClips() {
     lowerLegR: { keys: [[0, 12, 0, 0], [0.5, 6, 0, 0], [1, 12, 0, 0]] },
     footR: { keys: [[0, 16, 0, 0], [0.5, 14, 0, 0], [1, 16, 0, 0]] },
 
-    // Arms hang and trail. They swing late, and one is held higher than
-    // the other because nothing is correcting it.
-    upperArmL: { keys: [[0, -18, 0, -14], [0.5, 10, 0, -12], [1, -18, 0, -14]] },
-    upperArmR: { keys: [[0, 14, 0, 20], [0.5, -12, 0, 24], [1, 14, 0, 20]] },
-    lowerArmL: { keys: [[0, 34, 0, 0], [0.5, 26, 0, 0], [1, 34, 0, 0]] },
-    lowerArmR: { keys: [[0, 58, 0, 0], [0.5, 66, 0, 0], [1, 58, 0, 0]] },
+    /* Arms up and out in front, reaching — and never still. Both shoulders
+       are driven on all three axes across four keys, so the reach wanders,
+       drifts apart and comes back rather than locking into one pose while
+       the legs walk underneath it. A held arm on a moving body is the tell
+       that a rig is being animated in pieces. */
+    upperArmL: { keys: [[0, -74, 6, -22], [0.28, -66, -4, -30], [0.55, -82, 8, -18], [0.78, -70, 2, -26], [1, -74, 6, -22]] },
+    upperArmR: { keys: [[0, -80, -8, 20], [0.28, -70, 4, 27], [0.55, -66, -6, 17], [0.78, -84, 3, 24], [1, -80, -8, 20]] },
+    // Elbows bent, and the bend breathes with the shoulder.
+    lowerArmL: { keys: [[0, 46, 0, 0], [0.3, 34, 0, 0], [0.62, 52, 0, 0], [1, 46, 0, 0]] },
+    lowerArmR: { keys: [[0, 36, 0, 0], [0.3, 50, 0, 0], [0.62, 32, 0, 0], [1, 36, 0, 0]] },
+    // Hands loll on the wrists.
+    handL: { keys: [[0, 14, 0, -8], [0.5, -6, 0, 6], [1, 14, 0, -8]] },
+    handR: { keys: [[0, -8, 0, 7], [0.5, 16, 0, -6], [1, -8, 0, 7]] },
   }));
 
   /* ---- heavy shamble: wide stance, weight thrown side to side ---- */
@@ -12682,11 +12715,13 @@ function makeZombieClips() {
     lowerLegR: { keys: [[0, 30, 0, 0], [0.12, 4, 0, 0], [0.5, -4, 0, 0], [1, 30, 0, 0]] },
     footL: { keys: [[0, -8, 0, 0], [0.5, 6, 0, 0], [1, -8, 0, 0]] },
     footR: { keys: [[0, 6, 0, 0], [0.5, -8, 0, 0], [1, 6, 0, 0]] },
-    // Arms pushed out by the trunk, hanging well clear of the body.
-    upperArmL: { keys: [[0, -12, 0, -30], [0.5, 8, 0, -28], [1, -12, 0, -30]] },
-    upperArmR: { keys: [[0, 10, 0, 32], [0.5, -10, 0, 34], [1, 10, 0, 32]] },
-    lowerArmL: { keys: [[0, 30, 0, 0], [0.5, 24, 0, 0], [1, 30, 0, 0]] },
-    lowerArmR: { keys: [[0, 52, 0, 0], [0.5, 58, 0, 0], [1, 52, 0, 0]] },
+    // Reaching, but pushed wide by the trunk and swinging with its roll.
+    upperArmL: { keys: [[0, -62, 8, -42], [0.3, -54, -3, -48], [0.6, -70, 10, -38], [1, -62, 8, -42]] },
+    upperArmR: { keys: [[0, -68, -9, 40], [0.3, -58, 5, 46], [0.6, -54, -7, 36], [1, -68, -9, 40]] },
+    lowerArmL: { keys: [[0, 40, 0, 0], [0.35, 30, 0, 0], [0.7, 46, 0, 0], [1, 40, 0, 0]] },
+    lowerArmR: { keys: [[0, 32, 0, 0], [0.35, 44, 0, 0], [0.7, 28, 0, 0], [1, 32, 0, 0]] },
+    handL: { keys: [[0, 12, 0, -6], [0.5, -8, 0, 8], [1, 12, 0, -6]] },
+    handR: { keys: [[0, -10, 0, 6], [0.5, 14, 0, -7], [1, -10, 0, 6]] },
   }));
 
   /* ---- light shamble: narrower track, more hip, quicker ---- */
@@ -12701,10 +12736,12 @@ function makeZombieClips() {
     lowerLegR: { keys: [[0, 16, 0, 0], [0.5, 8, 0, 0], [1, 16, 0, 0]] },
     footL: { keys: [[0, -15, 0, 0], [0.5, 11, 0, 0], [1, -15, 0, 0]] },
     footR: { keys: [[0, 18, 0, 0], [0.5, 15, 0, 0], [1, 18, 0, 0]] },
-    upperArmL: { keys: [[0, -22, 0, -10], [0.5, 13, 0, -9], [1, -22, 0, -10]] },
-    upperArmR: { keys: [[0, 17, 0, 15], [0.5, -14, 0, 18], [1, 17, 0, 15]] },
-    lowerArmL: { keys: [[0, 38, 0, 0], [0.5, 30, 0, 0], [1, 38, 0, 0]] },
-    lowerArmR: { keys: [[0, 62, 0, 0], [0.5, 70, 0, 0], [1, 62, 0, 0]] },
+    upperArmL: { keys: [[0, -80, 7, -18], [0.3, -70, -5, -25], [0.6, -88, 9, -14], [1, -80, 7, -18]] },
+    upperArmR: { keys: [[0, -86, -8, 16], [0.3, -74, 6, 23], [0.6, -70, -7, 13], [1, -86, -8, 16]] },
+    lowerArmL: { keys: [[0, 52, 0, 0], [0.3, 40, 0, 0], [0.62, 58, 0, 0], [1, 52, 0, 0]] },
+    lowerArmR: { keys: [[0, 42, 0, 0], [0.3, 56, 0, 0], [0.62, 38, 0, 0], [1, 42, 0, 0]] },
+    handL: { keys: [[0, 16, 0, -9], [0.5, -7, 0, 7], [1, 16, 0, -9]] },
+    handR: { keys: [[0, -9, 0, 8], [0.5, 18, 0, -7], [1, -9, 0, 8]] },
   }));
 
   /* ---- sprint: the ones that run ---- */
@@ -12820,10 +12857,12 @@ function makeZombieClips() {
   clips.push(buildClip('zidle', 4.2, {
     spine: { keys: [[0, 14, -2, 2], [0.5, 16, 2, -2], [1, 14, -2, 2]] },
     head: { keys: [[0, -10, 5, -8], [0.5, -13, -5, -5], [1, -10, 5, -8]] },
-    upperArmL: { keys: [[0, -14, 0, -14], [0.5, -10, 0, -16], [1, -14, 0, -14]] },
-    upperArmR: { keys: [[0, -10, 0, 16], [0.5, -14, 0, 14], [1, -10, 0, 16]] },
-    lowerArmL: { keys: [[0, 40, 0, 0], [0.5, 46, 0, 0], [1, 40, 0, 0]] },
-    lowerArmR: { keys: [[0, 46, 0, 0], [0.5, 40, 0, 0], [1, 46, 0, 0]] },
+    upperArmL: { keys: [[0, -72, 5, -20], [0.33, -66, -3, -26], [0.66, -78, 7, -16], [1, -72, 5, -20]] },
+    upperArmR: { keys: [[0, -76, -6, 18], [0.33, -70, 4, 24], [0.66, -64, -5, 15], [1, -76, -6, 18]] },
+    lowerArmL: { keys: [[0, 44, 0, 0], [0.5, 36, 0, 0], [1, 44, 0, 0]] },
+    lowerArmR: { keys: [[0, 38, 0, 0], [0.5, 48, 0, 0], [1, 38, 0, 0]] },
+    handL: { keys: [[0, 10, 0, -6], [0.5, -6, 0, 5], [1, 10, 0, -6]] },
+    handR: { keys: [[0, -7, 0, 5], [0.5, 12, 0, -6], [1, -7, 0, 5]] },
   }));
 
   return clips;
