@@ -358,9 +358,14 @@ Characters accept `face: 'static'` — the sculpted head without the
 expression rig. A crowd of NPCs costs a fraction of one talking hero;
 this is the switch that makes a horde affordable.
 
-`character({ zombie: true })` builds a starved figure in torn clothing and
-loads a second clip set — `zwalk`, `zrun`, `zcrawl`, `ztear`, `zattack`,
-`zspit`, `zidle`. Set `controller.autoAnimate = false` on any character
+`character({ zombie: true, zombieBuild: 'heavy' })` builds one of four
+bodies — `male`, `female`, `heavy`, `armored` — each with its own
+cross-section stack rather than one silhouette scaled, plus a coat with a
+collar, sleeves and trousers lofted over it and then torn: hems cut into
+teeth, panels punched out, holes you can see the body through. It loads a
+second clip set: `zwalk`, `zwalk_heavy`, `zwalk_light`, `zrun`, `zcrawl`,
+`ztear`, `zattack`, `zspit`, `zidle`. `faceType` picks the head archetype
+(`male` / `female` / `heavy`). Set `controller.autoAnimate = false` on any character
 whose clips you want to drive yourself; the controller's own idle/walk
 state machine otherwise reclaims the animator whenever speed crosses a
 threshold.

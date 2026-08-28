@@ -1088,22 +1088,23 @@ const ZOMBIE_SKIN = { color: 0x8d9c78, texture: 'skin', roughness: 0.88, metalne
 /* Torn clothing, varied. A horde in one uniform reads as clones; a spread
    of faded field greys, dried blood and dirty canvas reads as a crowd that
    used to be people with different jobs. */
-const RAG_COLORS = [0x6e6650, 0x596b57, 0x7d6449, 0x555f6a, 0x71584c, 0x4c5d50, 0x7a7157, 0x64505a];
+const RAG_COLORS = [0x8a8168, 0x6e8270, 0x9a7d5c, 0x5f6a5e, 0x8d7566, 0x6a7d68, 0x968a6a, 0x7b6a72];
 /* Dead skin, darker than it wants to be. The procedural skin texture warms
    whatever tint it is given, so a colour picked to look right on a swatch
    comes out as a bright tan head floating over a dark body. */
-const SKIN_TONES = [0x5f6b52, 0x6a705a, 0x55604a, 0x63614a, 0x5a6654,
-                    0x4d5844, 0x6f7060, 0x5c6051];
+const SKIN_TONES = [0x7e8a6a, 0x8a8f72, 0x74805f, 0x828566, 0x77855f,
+                    0x6d7a5c, 0x8d8e74, 0x798060];
 
-/* Three builds, reusing one body and one head sculptor with different
-   numbers rather than three authored models. Between build, face
-   archetype, rag colour, skin tone and per-head jitter there are enough
-   permutations that a crowd stops looking cloned — while still being the
-   same handful of meshes underneath. */
+/* Four builds, each with its own body model, and what being that build
+   does to it. A heavy one is slower and much harder to put down; one in
+   webbing is harder still; a light one is quicker and softer. Crossed with
+   the four movement types that is sixteen distinct things coming at you,
+   from four bodies and one head sculptor. */
 const BODY_TYPES = [
-  { id: 'male',   gaunt: 0.84, scale: 1.00, faceType: 'male' },
-  { id: 'female', gaunt: 0.76, scale: 0.94, faceType: 'female' },
-  { id: 'heavy',  gaunt: 1.06, scale: 1.02, faceType: 'heavy' },
+  { id: 'male',    faceType: 'male',   hp: 1.00, speed: 1.00, walk: 'zwalk' },
+  { id: 'female',  faceType: 'female', hp: 0.90, speed: 1.12, walk: 'zwalk_light' },
+  { id: 'heavy',   faceType: 'heavy',  hp: 1.45, speed: 0.80, walk: 'zwalk_heavy' },
+  { id: 'armored', faceType: 'male',   hp: 1.80, speed: 0.92, walk: 'zwalk' },
 ];
 
 /* The four kinds. Health and damage multiply on top of the round curve,
@@ -1186,13 +1187,18 @@ function buildPooledZombie(game, S, i) {
   const body = BODY_TYPES[i % BODY_TYPES.length];
   const a = game.character({
     at: [200 + i * 4, -38, 0],
-    material: { color: rag, texture: 'fabric', roughness: 0.99, metalness: 0, uvScale: 2.5 },
-    skin: { color: tone, texture: 'skin', roughness: 0.88, metalness: 0, subsurface: 0.12 },
+    material: { color: rag, texture: 'fabric', roughness: 0.98, metalness: 0, uvScale: 2.2 },
+    // Rotted flesh reads as mottled, not as an even tint. The skin texture
+    // warms whatever colour it is given into something living; a corroded
+    // one blotches it instead, which is the difference between a pale head
+    // and a dead one.
+    skin: { color: tone, texture: 'rust', roughness: 0.92, metalness: 0, subsurface: 0.05, uvScale: 3 },
     seed: 20 + (i * 5) % 11,
     face: 'static', zombie: true,
-    faceType: body.faceType, gauntness: body.gaunt, scale: body.scale,
+    zombieBuild: body.id, faceType: body.faceType,
   });
   a.bodyType = body.id;
+  a.buildDef = body;
   a.controller.body.gravityScale = 0;
   a.controller.autoAnimate = false;   // the zombie brain owns the clips
   /* Eyes, as two pieces each: a dark wet iris sitting on the head's own
@@ -1281,7 +1287,8 @@ function spawnZombie(game, S, win, forceVariant) {
   if (!z) return null;
   const kind = forceVariant || pickVariant(S.round, Math.random);
   const V = VARIANTS[kind];
-  const speed = V.speed[0] + Math.random() * (V.speed[1] - V.speed[0]);
+  const B = z.actor.buildDef || BODY_TYPES[0];
+  const speed = (V.speed[0] + Math.random() * (V.speed[1] - V.speed[0])) * B.speed;
   const b = z.actor.controller.body;
   b.gravityScale = 1;
   b.velocity.setScalar(0);
@@ -1294,8 +1301,8 @@ function spawnZombie(game, S, win, forceVariant) {
   z.actor.controller.runSpeed = speed * 1.35;
   Object.assign(z, {
     parked: false, dead: false,
-    kind, V,
-    hp: ROUNDS.hpFor(S.round) * V.hp,
+    kind, V, build: B.id,
+    hp: ROUNDS.hpFor(S.round) * V.hp * B.hp,
     dmg: ROUNDS.dmgFor(S.round) * V.dmg,
     state: 'toWindow', win, speed,
     tearT: 0, attackT: 0, groanT: 1 + Math.random() * 3, stuckT: 0, lastPos: null,
@@ -1307,8 +1314,12 @@ function spawnZombie(game, S, win, forceVariant) {
     z.eyes[k].material = game.material({ color: 0x120903, texture: 'smooth', roughness: 0.3,
       emissive: V.eye, emissiveStrength: 2.4 });
   }
+  // The walk belongs to the body; the run, crawl and throw belong to the
+  // variant. A heavy walker waddles, a light one has a quicker, narrower
+  // track — and both still sprint the same way if they are runners.
+  z.moveClip = V.clip === 'zwalk' ? B.walk : V.clip;
   setZombieVisible(z, true);
-  playZombieAnim(z, V.clip, 0.25);
+  playZombieAnim(z, z.moveClip, 0.25);
   win.zombiesAt++;
   if (!S.zombies.includes(z)) S.zombies.push(z);
   return z;
@@ -1406,7 +1417,7 @@ function updateZombie(game, S, P, z, dt, sfx) {
     const arc = Math.sin(t * PI_ARC) * 0.6;
     a.body.setPosition({ x: v.from[0] + (v.to[0] - v.from[0]) * t, y: v.from[1] + (v.to[1] - v.from[1]) * t + arc + 1.0, z: v.from[2] + (v.to[2] - v.from[2]) * t });
     a.body.velocity.setScalar(0);
-    if (t >= 1) { z.vault = null; z.state = 'hunt'; playZombieAnim(z, V.clip, 0.2); }
+    if (t >= 1) { z.vault = null; z.state = 'hunt'; playZombieAnim(z, z.moveClip, 0.2); }
     return;
   }
 
@@ -1422,7 +1433,7 @@ function updateZombie(game, S, P, z, dt, sfx) {
   const target = S.shieldActive ? (S.lastKnown || P.actor.position) : P.actor.position;
 
   if (z.state === 'toWindow') {
-    playZombieAnim(z, V.clip);
+    playZombieAnim(z, z.moveClip);
     const sill = z.win.def.sillAt;
     move(z.win.def.pad[0] * 0.15 + sill[0] * 0.85, z.win.def.pad[2] * 0.15 + sill[2] * 0.85);
     if (dist2d(pos, { x: sill[0], z: sill[2] }) < 1.5) { z.state = 'tearing'; z.tearT = 0.8; }
@@ -1471,14 +1482,14 @@ function updateZombie(game, S, P, z, dt, sfx) {
       }
       if (d <= R.minRange) {                 // too close — back off
         move(pos.x * 2 - target.x, pos.z * 2 - target.z);
-        playZombieAnim(z, V.clip);
+        playZombieAnim(z, z.moveClip);
         return;
       }
     }
 
     if (zr === pr) {
       move(target.x, target.z, z.speed > 2.4 ? 2 : 1);
-      playZombieAnim(z, V.clip);
+      playZombieAnim(z, z.moveClip);
       z.attackT -= dt;
       if (!S.shieldActive && d < PLAYER.attackRange && z.attackT <= 0 && Math.abs(pos.y - P.actor.position.y) < 1.6) {
         z.attackT = PLAYER.attackCooldown;
@@ -1491,7 +1502,7 @@ function updateZombie(game, S, P, z, dt, sfx) {
       let wp = route[0];
       for (const r of route) { wp = r; if (dist2d(pos, { x: r[0], z: r[2] }) > 0.9 && Math.abs(pos.y - r[1]) < 1.8) break; }
       if (wp) move(wp[0], wp[2]); else move(target.x, target.z);
-      playZombieAnim(z, V.clip);
+      playZombieAnim(z, z.moveClip);
     }
 
     if (z.lastPos != null) {

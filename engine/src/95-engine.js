@@ -529,8 +529,7 @@ class Engine {
     const skeleton = makeHumanoidSkeleton(scale);
     // `zombie: true` swaps in the starved silhouette and torn clothing.
     const geo = makeHumanoidMesh(skeleton, opts.zombie
-      ? { gaunt: opts.gauntness != null ? opts.gauntness : 0.82,
-          rags: true, ragSeed: (opts.seed || 3) * 7 + 1 }
+      ? { zombieBuild: opts.zombieBuild || 'male', seed: opts.seed || 3 }
       : { thickness: opts.build || 1 });
     const mesh = new GpuMesh(this.gl, geo);
 

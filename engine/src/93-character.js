@@ -72,7 +72,11 @@ function appendLimb(g, from, to, r0, r1, sides = 8) {
    The surface comes from the anatomical loft in 94-human.js; this
    function's job is to bind it to the skeleton. */
 function makeHumanoidMesh(skeleton, opts = {}) {
-  const g = makeHumanBodyGeometry(skeleton, opts);
+  // A zombie build is a different body, not the same body scaled — its own
+  // cross-section stack, its own neck, and its own clothes.
+  const g = opts.zombieBuild
+    ? buildZombieBodyGeometry(skeleton, { build: opts.zombieBuild, seed: opts.seed, segments: opts.segments })
+    : makeHumanBodyGeometry(skeleton, opts);
 
   // Bone segments used only for solving skin weights below.
   const segments = [];
