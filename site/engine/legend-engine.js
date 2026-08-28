@@ -9607,16 +9607,21 @@ function zombieWoundSpots(buildName) {
   const build = ZOMBIE_BUILDS[buildName] || ZOMBIE_BUILDS.male;
   const T = build.torso;
   const spots = [];
-  const heights = [0.44, 0.355, 0.27, 0.185, 0.10];
+  /* Staggered down the flank rather than stacked: five holes in a straight
+     vertical line read as a row of buttons, not as somewhere a hand went in
+     five times. The angles walk fore and aft around the ribs, and the
+     heights are uneven. */
+  const heights = [0.445, 0.352, 0.283, 0.196, 0.108];
+  const angles  = [1.21,  1.55,  1.12,  1.63,  1.34];
   for (let i = 0; i < heights.length; i++) {
     const y = heights[i];
     const sec = torsoAt(T, y);
-    const a = 1.38;                              // round onto the left flank
+    const a = angles[i];                         // round onto the left flank
     spots.push({
       bone: y > 0.30 ? 'chest' : 'spine',
       pos: [Math.sin(a) * (sec[1] - 0.006), y, Math.cos(a) * (sec[2] - 0.006) + (sec[4] || 0) * 0.9],
-      r: 0.030 + i * 0.0035,
-      bone_r: 0.013 + i * 0.001,
+      r: 0.027 + i * 0.0032,
+      bone_r: 0.011 + i * 0.001,
     });
   }
   // The last one: the face. Taken in bone space directly.

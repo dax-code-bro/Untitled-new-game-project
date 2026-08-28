@@ -1189,8 +1189,31 @@ const VARIANTS = {
     // and the reason Deflect is worth buying.
     weight: 0.0, speed: [1.0, 1.4], hp: 1.25, dmg: 1.0, points: 1.4,
     clip: 'zwalk', clipSpeed: 0.85, eye: 0x7cff5a, from: 6,
-    ranged: { range: 11, minRange: 4.5, cooldown: 3.4, speed: 14, dmg: 22, splash: 2.2 },
+    ranged: {
+      // Far enough to pick you off across a room, slow enough that the
+      // chunk is a thing you watch coming and step out of. Reduced gravity
+      // keeps the arc flat and readable instead of mortaring it into the
+      // ceiling, which is what a real lob does at this speed.
+      range: 17, minRange: 5.0, cooldown: 3.6, speed: 9.5, grav: 7.0,
+      dmg: 18, splash: 2.2,
+    },
   },
+};
+
+/* Throwers carry no ammunition, so they make it. Five chunks come out of
+   the flank, one socket at a time, each one costing them a share of what
+   they have and leaving a hole that stays open — by the fourth there is
+   bone in it. The sixth is their own face, and that one kills them on the
+   way out, which is why it hits hardest. */
+const RIP = {
+  bodyThrows: 5,
+  bodyTime: 0.62,        // into zrip, where the hand comes free of the ribs
+  faceTime: 0.72,        // into zripface
+  throwTime: 0.46,       // into zspit, where the arm whips through
+  boneFrom: 3,           // the socket at which bone starts showing
+  selfCost: 0.15,        // of max hp, per body rip
+  faceDmg: 2.4,
+  faceSplash: 1.35,
 };
 
 /* How the mix shifts with the round. Early rounds are all walkers; the
@@ -1297,6 +1320,7 @@ function buildPooledZombie(game, S, i) {
       eyes.push(iris, pupil);
     }
   }
+  const wounds = buildZombieWounds(game, a, body.id);
   /* Posture. The clips animate the limbs; biasing the spine and head in the
      animator's rest pose gives every one of them a slightly different
      stooped carriage on top of whatever it is playing. */
@@ -1311,11 +1335,90 @@ function buildPooledZombie(game, S, i) {
     bend('chest', lean * 0.6, (i % 3 - 1) * 0.06, 0);
     bend('head', -lean * 0.45, (i % 4 - 1.5) * 0.07, (i % 3 - 1) * 0.05);
   }
-  const z = { actor: a, eyes, parked: true, dead: true, poolSlot: i, anim: '' };
+  const z = { actor: a, eyes, wounds, parked: true, dead: true, poolSlot: i, anim: '',
+    ripStage: 0, ripT: 0, throwT: 0, ripFace: false };
   a.userData = { zombie: z };
   setZombieVisible(z, false);
   S.pool.push(z);
   return z;
+}
+
+/* Wound sockets: five down the flank and one on the face, built hidden on
+   every pooled body and revealed one at a time as a thrower opens itself up
+   for ammunition. Building them with the body rather than at the moment of
+   the throw means throwing costs nothing, and a zombie that has already
+   given up four chunks still walks around carrying all four holes.
+
+   Each socket is a wet cavity with a splinter of bone sunk in it. The
+   cavity is squashed flat against the surface it sits on so it reads as a
+   torn opening rather than a lump stuck to the ribs. */
+function buildZombieWounds(game, a, buildName) {
+  const wounds = [];
+  if (!a.skeleton || !window.LE.zombieWoundSpots) return wounds;
+  const spots = window.LE.zombieWoundSpots(buildName);
+  // Bind-pose heights of the spine chain, hips at the origin. The torso
+  // sockets are authored in that space, so the bone-local offset is simply
+  // the socket minus the bone it hangs on.
+  const BONE_Y = { hips: 0, spine: 0.16, chest: 0.34, neck: 0.50, head: 0.61 };
+  for (const s of spots) {
+    const bi = a.skeleton.index(s.bone);
+    if (bi < 0) continue;
+    let ox = s.pos[0], oy = s.pos[1] - (BONE_Y[s.bone] || 0), oz = s.pos[2];
+    /* Flat against the surface, not sitting on it. The thin axis is the
+       one pointing out of the body: at 0.15 the shape is a disc half-buried
+       in the flesh, so the mesh hides its edges and what is left reads as an
+       opening. A rounder one is a bead glued to the ribs, which is what the
+       first pass looked like. */
+    let sx = 0.15, sy = 1.35, sz = 1.05;
+    if (s.face) {
+      /* Derived from the head actor's own transform for exactly the reason
+         the eyes are: the head mesh is a child of the head bone with its
+         own offset and scale, and a number typed by hand in bone space is
+         how you get a wound hovering beside a skull instead of in it. */
+      const hs = a.head ? a.head.scale.y : 0.389;
+      const ho = a.head ? a.head.localOffset : { x: 0, y: 0.14, z: 0.006 };
+      ox = ho.x + 0.098 * 0.82 * hs;        // cheek, just outboard of the eye
+      oy = ho.y - 0.030 * hs;
+      oz = ho.z + 0.196 * hs;
+      sx = 0.95; sy = 1.10; sz = 0.16;
+    }
+    /* Outward normal at the socket, so everything below can be sunk along
+       it. A sphere left centred on the skin is a bead stuck to the ribs;
+       sunk past its own middle, only a shallow cap shows and the eye reads
+       it as an opening. */
+    let nx, ny = 0, nz;
+    if (s.face) { nx = 0.42; ny = -0.10; nz = 0.90; }
+    else { const L = Math.hypot(ox, oz) || 1; nx = ox / L; nz = oz / L; }
+    /* The socket is authored 6 mm inside the skin, so each layer is pushed
+       back out along the normal and then a hair further, stacking a raw red
+       border under a black opening under a splinter of bone. */
+    const at = (d) => new window.LE.Vec3(ox + nx * d, oy + ny * d, oz + nz * d);
+    // Torn edge: a wider, matte ring of raw muscle that the hole sits in.
+    const rim = game.sphere({ radius: s.r * 1.45, physics: false, material: {
+      color: 0x4c1712, texture: 'rust', roughness: 0.90, metalness: 0, uvScale: 9 } });
+    rim.parent = a; rim.parentBone = bi;
+    rim.localOffset = at(0.005);
+    // sphere() bakes the radius into actor.scale, so squashing multiplies
+    // that scale rather than replacing it.
+    rim.scale.x *= sx * 0.80; rim.scale.y *= sy * 0.95; rim.scale.z *= sz * 0.95;
+    rim.visible = false;
+    const cavity = game.sphere({ radius: s.r, physics: false, material: {
+      color: 0x140403, texture: 'smooth', roughness: 0.66, metalness: 0 } });
+    cavity.parent = a; cavity.parentBone = bi;
+    cavity.localOffset = at(0.0082);
+    cavity.scale.x *= sx; cavity.scale.y *= sy; cavity.scale.z *= sz;
+    cavity.visible = false;
+    // The splinter, standing out of the hole far enough to catch a light.
+    const bone = game.sphere({ radius: s.bone_r, physics: false, material: {
+      color: 0xafa48a, texture: 'smooth', roughness: 0.62, metalness: 0 } });
+    bone.parent = a; bone.parentBone = bi;
+    bone.localOffset = at(0.0115);
+    // A sliver lying across the opening, not a plug filling it.
+    bone.scale.x *= sx * 2.0; bone.scale.y *= 1.30; bone.scale.z *= sz * 0.42;
+    bone.visible = false;
+    wounds.push({ rim, cavity, bone, shown: false, boneShown: false, face: !!s.face });
+  }
+  return wounds;
 }
 
 /* One place that decides what a zombie is playing, so a state change can
@@ -1329,7 +1432,25 @@ function playZombieAnim(z, name, fade) {
 function setZombieVisible(z, on) {
   z.actor.visible = on;
   if (z.actor.head) z.actor.head.visible = on;
+  // The coat and the stains are separate meshes on the same skeleton, so
+  // they need hiding too — otherwise a parked body leaves its clothes
+  // standing out at the far end of the world where the pool lives.
+  if (z.actor.cloth) z.actor.cloth.visible = on;
+  if (z.actor.blood) z.actor.blood.visible = on;
   for (const e of z.eyes) e.visible = on;
+  for (const w of z.wounds || []) {
+    w.rim.visible = on && w.shown;
+    w.cavity.visible = on && w.shown;
+    w.bone.visible = on && w.boneShown;
+  }
+}
+
+/* A body coming back out of the pool is whole again. */
+function healWounds(z) {
+  for (const w of z.wounds || []) {
+    w.shown = false; w.boneShown = false;
+    w.rim.visible = false; w.cavity.visible = false; w.bone.visible = false;
+  }
 }
 
 function parkZombie(game, S, z) {
@@ -1360,15 +1481,18 @@ function spawnZombie(game, S, win, forceVariant) {
   });
   z.actor.controller.moveSpeed = speed;
   z.actor.controller.runSpeed = speed * 1.35;
+  const maxHp = ROUNDS.hpFor(S.round) * V.hp * B.hp;
   Object.assign(z, {
     parked: false, dead: false,
     kind, V, build: B.id,
-    hp: ROUNDS.hpFor(S.round) * V.hp * B.hp,
+    hp: maxHp, maxHp,
     dmg: ROUNDS.dmgFor(S.round) * V.dmg,
     state: 'toWindow', win, speed,
     tearT: 0, attackT: 0, groanT: 1 + Math.random() * 3, stuckT: 0, lastPos: null,
     vault: null, spitT: 1 + Math.random() * 2, anim: '',
+    ripStage: 0, ripT: 0, throwT: 0, ripFace: false,
   });
+  healWounds(z);
   // Crawlers ride a shorter capsule so the folded body sits on the floor.
   z.actor.controller.height = V.crawl ? V.height : 1.75;
   for (let k = 1; k < z.eyes.length; k += 2) {
@@ -1540,18 +1664,35 @@ function updateZombie(game, S, P, z, dt, sfx) {
     const zr = roomOf(pos), pr = roomOf(target);
     const d = dist2d(pos, target);
 
-    /* Spitters hold a firing line rather than closing. */
+    /* Throwers hold a firing line rather than closing — and each throw
+       starts with tearing the ammunition out of themselves, which is a real
+       animation with a real cost, not a chunk appearing in a hand. */
     if (V.ranged && zr === pr && !S.shieldActive) {
       const R = V.ranged;
+      if (z.ripT > 0) {                      // mid-rip: the hand is in the wound
+        a.controller.move(0, 0);
+        z.ripT -= dt;
+        if (z.ripT <= 0) releaseChunk(game, S, z, sfx);
+        return;
+      }
+      if (z.throwT > 0) {                    // chunk in hand, arm winding back
+        a.controller.move(0, 0);
+        z.throwT -= dt;
+        if (z.throwT <= 0) {
+          throwChunk(game, S, z, P, R, sfx, z.ripFace);
+          // The face is the one they do not survive — but they get it away
+          // first, which is the whole reason it is worth dodging.
+          if (z.ripFace) killZombie(game, S, z, false);
+        }
+        return;
+      }
       z.spitT -= dt;
       if (d < R.range && d > R.minRange) {
         a.controller.move(0, 0);
         playZombieAnim(z, 'zidle', 0.2);
         if (z.spitT <= 0 && hasLineOfSight(game, z, P)) {
           z.spitT = R.cooldown;
-          playZombieAnim(z, 'zspit', 0.06);
-          z.anim = '';                       // one-shot: let the next state retake it
-          throwBile(game, S, z, P, R, sfx);
+          beginRip(game, S, z, sfx);
         }
         return;
       }
@@ -1615,22 +1756,66 @@ function hasLineOfSight(game, z, P) {
 /* A thrown clot of something that used to be inside it. Travels as a real
    projectile so it can be dodged, blocked by geometry, and stopped dead by
    the Deflect perk. */
-function throwBile(game, S, z, P, R, sfx) {
-  const from = { x: z.actor.position.x, y: z.actor.position.y + 0.75, z: z.actor.position.z };
+/* Reach in and take hold. The chunk does not exist yet — it comes free
+   partway through the clip, which is what releaseChunk is waiting for. */
+function beginRip(game, S, z, sfx) {
+  const face = z.ripStage >= RIP.bodyThrows;
+  z.ripFace = face;
+  z.ripT = face ? RIP.faceTime : RIP.bodyTime;
+  playZombieAnim(z, face ? 'zripface' : 'zrip', 0.07);
+  z.anim = '';                          // one-shot: the next state retakes the bones
+  sfx.tear();
+  sfx.groan(face ? 0.9 : 0.4);
+}
+
+/* The chunk comes away: the hole it came out of opens for good and the body
+   pays for it. The arm is still holding the thing — the throw is the next
+   beat, so the chunk is visibly in a hand before it is in the air. */
+function releaseChunk(game, S, z, sfx) {
+  z.ripT = 0;
+  if (z.dead) return;
+  const face = z.ripFace;
+  const w = z.wounds[Math.min(z.ripStage, z.wounds.length - 1)];
+  const p = z.actor.position;
+  if (w) {
+    w.shown = true;
+    w.rim.visible = true;
+    w.cavity.visible = true;
+    // Deep enough now that there is something white in it.
+    if (face || z.ripStage >= RIP.boneFrom) { w.boneShown = true; w.bone.visible = true; }
+  }
+  game.particles.sparks([p.x, p.y + (face ? 1.42 : 0.95), p.z],
+    { count: face ? 14 : 9, speed: 2.4, color: 0x8a1a12, colorEnd: 0x2a0705 });
+  z.ripStage++;
+  // Never fatal on its own: the flank costs them, the face finishes them.
+  if (!face) z.hp = Math.max(1, z.hp - z.maxHp * RIP.selfCost);
+  z.throwT = RIP.throwTime;
+  playZombieAnim(z, 'zspit', 0.08);
+  z.anim = '';
+}
+
+function throwChunk(game, S, z, P, R, sfx, face) {
+  const from = { x: z.actor.position.x, y: z.actor.position.y + 0.95, z: z.actor.position.z };
   const to = P.actor.position;
   const dx = to.x - from.x, dz = to.z - from.z;
   const flat = Math.hypot(dx, dz) || 1;
+  const grav = R.grav || 19.6;
   const t = flat / R.speed;
   // Lead the arc so it lands where the player is, not where they were.
-  const vy = (to.y - from.y) / t + 0.5 * 19.6 * t;
+  const vy = (to.y - from.y) / t + 0.5 * grav * t;
+  // Meat, not a glowing pip: dark and wet, with only enough sick green in
+  // the emissive to stay legible crossing an unlit bunker.
   const proj = game.sphere({
-    at: [from.x, from.y, from.z], radius: 0.11, physics: false,
-    material: { color: 0x2c3a18, texture: 'smooth', roughness: 0.35,
-      emissive: 0x6ad83a, emissiveStrength: 1.4 },
+    at: [from.x, from.y, from.z], radius: face ? 0.15 : 0.115, physics: false,
+    material: { color: 0x4a1410, texture: 'smooth', roughness: 0.28,
+      emissive: 0x54831e, emissiveStrength: face ? 1.2 : 0.8 },
   });
+  proj.scale.x *= 1.3; proj.scale.z *= 0.78;     // a torn lump, not a ball
   S.projectiles.push({
     actor: proj, vel: [dx / flat * R.speed, vy, dz / flat * R.speed],
-    dmg: R.dmg, splash: R.splash, life: 4,
+    dmg: R.dmg * (face ? RIP.faceDmg : 1),
+    splash: R.splash * (face ? RIP.faceSplash : 1),
+    grav, spin: (Math.random() - 0.5) * 11, rot: 0, life: 5,
   });
   sfx.spit();
 }
@@ -2310,7 +2495,8 @@ function start(opts = {}) {
     for (let k = S.projectiles.length - 1; k >= 0; k--) {
       const pr = S.projectiles[k];
       pr.life -= dt;
-      pr.vel[1] -= 19.6 * dt;
+      pr.vel[1] -= (pr.grav || 19.6) * dt;
+      if (pr.spin) { pr.rot += pr.spin * dt; pr.actor.setRotation([pr.rot * 57.3, pr.rot * 34, 0]); }
       const q = pr.actor.position;
       const nx = q.x + pr.vel[0] * dt, ny = q.y + pr.vel[1] * dt, nz = q.z + pr.vel[2] * dt;
       const seg = Math.hypot(nx - q.x, ny - q.y, nz - q.z) || 1e-5;
@@ -2403,6 +2589,33 @@ function start(opts = {}) {
     },
     variantOdds(r) { return variantWeights(r); },
     buildPool(n) { while (S.pool.length < n) buildPooledZombie(game, S, S.pool.length); return S.pool.length; },
+    ripState() {
+      return S.zombies.filter((z) => !z.parked && z.V && z.V.ranged).map((z) => ({
+        kind: z.kind, dead: z.dead, hp: Math.round(z.hp * 10) / 10, maxHp: Math.round(z.maxHp * 10) / 10,
+        ripStage: z.ripStage, ripT: z.ripT, throwT: z.throwT, face: z.ripFace,
+        holes: z.wounds.filter((w) => w.shown).length,
+        bones: z.wounds.filter((w) => w.boneShown).length,
+        faceHole: z.wounds.some((w) => w.face && w.shown),
+      }));
+    },
+    projectiles() {
+      return S.projectiles.map((pr) => ({
+        at: [pr.actor.position.x, pr.actor.position.y, pr.actor.position.z],
+        speed: Math.hypot(pr.vel[0], pr.vel[1], pr.vel[2]),
+        dmg: Math.round(pr.dmg * 10) / 10, grav: pr.grav,
+      }));
+    },
+    woundSockets(slot) {
+      // Bone-parented actors keep their world transform in the matrix, not
+      // in .position — .position is the local offset and never moves.
+      const z = S.pool[slot || 0];
+      if (!z || !z.wounds) return [];
+      const w3 = (a) => [a.matrix.e[12], a.matrix.e[13], a.matrix.e[14]];
+      return z.wounds.map((w) => ({
+        face: w.face, root: w3(z.actor), head: z.actor.head ? w3(z.actor.head) : null,
+        cavity: w3(w.cavity), bone: w3(w.bone),
+      }));
+    },
   };
 
   if (!opts.test) game.start();
