@@ -140,7 +140,7 @@ const WEAPONS = {
     pierce: 2, pierceFalloff: 0.62,
     sightH: 0.030, sightFov: 0.86, adsTime: 0.26, adsSpread: 0.18,
     recoil: { up: 4.2, side: 1.5, climb: 0.30, recover: 7 },
-    hands: { right: [-0.012, -0.040, 0.010], left: [0.030, -0.030, 0.030] },
+    hands: { right: [-0.048, -0.068, 0.014], left: [0.038, -0.034, -0.030] },
   },
   mauser: {
     name: 'Mauser C96', slotName: 'MAUSER',
@@ -149,7 +149,7 @@ const WEAPONS = {
     kick: 1.5, sfx: 'shotPistol', reloadKind: 'clip',
     sightH: 0.036, sightFov: 0.90, adsTime: 0.20, adsSpread: 0.22,
     recoil: { up: 1.5, side: 0.6, climb: 0.06, recover: 11 },
-    hands: { right: [-0.010, -0.036, 0.012], left: null },
+    hands: { right: [-0.050, -0.062, 0.014], left: null },
   },
   /* The two answers to plate. Both are melee, both are slow, and both are
      mystery-box only — you do not get to plan for an armoured runner, you
@@ -188,7 +188,7 @@ const WEAPONS = {
     name: 'AX-9 Arc Projector', slotName: 'ARC PROJECTOR',
     dmg: 900, headMul: 1.0, mag: 6, reserve: 30, refire: 0.55,
     reload: 2.9, auto: false, pellets: 1, spread: 0,
-    kick: 1.2, sfx: 'shotArc',
+    kick: 1.2, sfx: 'shotArc', reloadKind: 'cell',
     sightH: 0.0580, sightFov: 0.82, adsTime: 0.26,
     recoil: { up: 0.9, side: 0.2, climb: 0.2, recover: 8 },
     hands: { right: [-0.060, -0.078, 0.018], left: [0.150, -0.038, -0.019] },
@@ -838,55 +838,86 @@ function buildMap(game, S) {
      bought to use it and nothing stands in the way of it: it is the one route
      in the map that is supposed to be read at a glance. */
 
-  for (let k = 0; k < ST.steps; k++) {
-    const y = (k + 1) * RISE;
-    const z1 = ST.zBot - k * RUN;
-    slab(ST.x0, ST.x1, y - 0.24, y, z1 - RUN - 0.02, z1, MAT.floor);
-    // Stringer under each tread, so from below it is a staircase and not a
-    // stack of floating slabs.
-    if (k % 2 === 0) deco(ST.x0 - 0.06, ST.x0, 0, y - 0.24, z1 - RUN, z1, MAT.bark);
-  }
-  /* Landing at the head of the flight, spanning the whole slot: a landing
-     the width of the stair alone leaves a slot of open sky down each side of
-     it, which you fall through on the way to the parapet. */
-  slab(ST.x0 - 0.1, M.x1, R.y0, R.y1, M.z0 - W, ST.zBot - (ST.steps - 1) * RUN, MAT.floor);
-  // Handrail down the open side.
-  for (let k = 0; k <= ST.steps; k += 3) {
-    const y = k * RISE, z1 = ST.zBot - k * RUN;
-    deco(ST.x0 - 0.05, ST.x0 + 0.03, y, y + 1.0, z1 - 0.05, z1 + 0.05, MAT.steel);
-  }
-  for (let k = 0; k < ST.steps; k++) {
-    const y = k * RISE + 1.0, z1 = ST.zBot - k * RUN;
-    deco(ST.x0 - 0.04, ST.x0 + 0.02, y, y + 0.07, z1 - RUN, z1, MAT.steel);
-  }
+  {
+    /* Built the way a stair is built: two raked stringers, treads sitting on
+       them, one continuous handrail on the open side, and props under the
+       stringers carrying the load down to a sole plate.
 
-  /* Under the stair: the supplies, and the beams holding the flight up. Six
-     props on a sole plate, braced, with crates and sacks stacked between
-     them. The beams are the reason the stair is standing and they are placed
-     to look like it — under the stringer, not decorating the wall. */
-  /* Three pairs of props, not six: the point is that something is holding
-     the flight up, and a post every sixty centimetres reads as a palisade
-     across the corner of the room instead. */
-  for (let k = 0; k < 3; k++) {
-    const z1 = ST.zBot - 0.7 - k * 1.25;
-    const h = Math.min(Math.max(0.6, (k + 1) * RISE * 4.6), R.y1 - 0.35);
-    deco(ST.x0 + 0.18, ST.x0 + 0.32, 0, h, z1 - 0.07, z1 + 0.07, MAT.wood);
-    deco(ST.x1 - 0.32, ST.x1 - 0.18, 0, h, z1 - 0.07, z1 + 0.07, MAT.wood);
-    const br = game.box({ at: [(ST.x0 + ST.x1) / 2, h - 0.10, z1],
-      size: [ST.x1 - ST.x0 - 0.4, 0.11, 0.11], material: MAT.wood, physics: false });
-    br.setRotation([0, 0, 3]);
-  }
-  deco(ST.x0 + 0.1, ST.x1 - 0.1, 0, 0.09, ST.zTop, ST.zBot, MAT.wood);   // sole plate
-  // Crates, sacks and a coil of rope, stacked where the headroom allows.
-  const supply = [[5.0, 0.34, -2.2, 0.68], [5.75, 0.30, -2.9, 0.60], [5.1, 0.28, -3.6, 0.56],
-    [6.2, 0.26, -2.2, 0.52], [5.6, 0.86, -2.25, 0.52], [6.35, 0.24, -3.4, 0.48]];
-  for (const [sx, sy, sz, ss] of supply) {
-    const c = game.box({ at: [sx, sy, sz], size: [ss, ss * 0.9, ss], material: MAT.wood, physics: false });
-    c.setRotation([0, (sx * 53 + sz * 17) % 40 - 20, 0]);
-  }
-  for (const [sx, sz] of [[4.95, -1.75], [5.45, -1.62], [6.15, -1.8]]) {
-    const bag = game.box({ at: [sx, 0.17, sz], size: [0.5, 0.34, 0.34], material: MAT.sand, physics: false });
-    bag.setRotation([0, (sx * 31) % 30 - 15, 0]);
+       The first pass drew each of these as a per-step fragment — a rail bar
+       for every tread, a stringer chunk every other tread, props sized to
+       the ceiling — and the corner of the room filled with floating black
+       bars that read as wreckage rather than as a staircase. Every long
+       member here is one box rotated to the pitch instead. */
+    const PITCH = Math.atan2(RISE, RUN);              // 41.6 degrees
+    const RUN_LEN = Math.hypot(ST.zBot - ST.zTop, R.y1);
+    const midZ = (ST.zBot + ST.zTop) / 2, midY = R.y1 / 2;
+    const raked = (x0, x1, dy, th, mat) => {
+      const a = game.box({
+        at: [(x0 + x1) / 2, midY + dy, midZ],
+        size: [x1 - x0, th, RUN_LEN], material: mat, physics: false,
+      });
+      a.setRotation([PITCH * 57.2958, 0, 0]);
+      return a;
+    };
+
+    // Treads. These are the collision — everything else here is drawn only.
+    for (let k = 0; k < ST.steps; k++) {
+      const y = (k + 1) * RISE;
+      const z1 = ST.zBot - k * RUN;
+      slab(ST.x0, ST.x1, y - 0.24, y, z1 - RUN - 0.02, z1, MAT.floor);
+      // Riser board closing the front of each step.
+      deco(ST.x0 + 0.02, ST.x1 - 0.02, y - 0.24, y - 0.02, z1 - RUN - 0.04, z1 - RUN + 0.01, MAT.wood);
+    }
+    // Stringers down both sides, under the nosings.
+    raked(ST.x0 - 0.02, ST.x0 + 0.13, -0.20, 0.34, MAT.wood);
+    raked(ST.x1 - 0.13, ST.x1 + 0.02, -0.20, 0.34, MAT.wood);
+
+    /* Handrail: outboard of the stair edge, not through it. The old posts
+       sat at x 4.45-4.53 and the treads start at 4.50, so the rail ran
+       inside the steps you were trying to walk up. */
+    const RX = ST.x0 - 0.11;
+    raked(RX - 0.035, RX + 0.035, 0.95, 0.06, MAT.steel);         // top rail
+    raked(RX - 0.025, RX + 0.025, 0.52, 0.04, MAT.steel);         // mid rail
+    for (let k = 0; k <= ST.steps; k += 3) {
+      const y = k * RISE, z1 = ST.zBot - k * RUN;
+      deco(RX - 0.035, RX + 0.035, y, y + 1.0, z1 - 0.035, z1 + 0.035, MAT.steel);
+    }
+    // Newel at the bottom, so the rail lands on something.
+    deco(RX - 0.05, RX + 0.05, 0, 1.06, ST.zBot - 0.05, ST.zBot + 0.05, MAT.steel);
+
+    /* Landing at the head of the flight, spanning the whole slot: a landing
+       the width of the stair alone leaves a slot of open sky down each side
+       of it, which you fall through on the way to the parapet. */
+    slab(ST.x0 - 0.1, M.x1, R.y0, R.y1, M.z0 - W, ST.zBot - (ST.steps - 1) * RUN, MAT.floor);
+
+    /* Under the stair. Props that stop at the stringer, not at the ceiling:
+       a post that runs the full height of the room is not holding a
+       staircase up, it is a fence across the corner. */
+    deco(ST.x0 + 0.06, ST.x1 - 0.06, 0, 0.09, ST.zTop + 0.2, ST.zBot, MAT.wood);   // sole plate
+    for (let k = 0; k < 4; k++) {
+      const z1 = ST.zBot - 0.55 - k * 0.95;
+      const h = Math.max(0.35, ((ST.zBot - z1) / RUN) * RISE - 0.30);
+      for (const px of [ST.x0 + 0.16, ST.x1 - 0.16]) {
+        deco(px - 0.06, px + 0.06, 0.09, h, z1 - 0.06, z1 + 0.06, MAT.wood);
+      }
+      // Cross brace between the pair, just under the stringer.
+      deco(ST.x0 + 0.16, ST.x1 - 0.16, h - 0.11, h, z1 - 0.05, z1 + 0.05, MAT.wood);
+    }
+
+    /* Supplies, low enough to sit under the flight and clear of the treads
+       you walk on. Nothing here has physics: it is stores, not an obstacle
+       course, and the user could not get up the stairs for the furniture. */
+    const supply = [[5.10, -2.05, 0.62], [5.80, -2.35, 0.54], [5.25, -3.05, 0.50],
+      [6.30, -2.15, 0.48], [6.05, -2.95, 0.44], [5.65, -3.55, 0.40]];
+    for (const [sx, sz, ss] of supply) {
+      const c = game.box({ at: [sx, 0.09 + ss * 0.45, sz], size: [ss, ss * 0.9, ss],
+        material: MAT.wood, physics: false });
+      c.setRotation([0, (sx * 53 + sz * 17) % 34 - 17, 0]);
+    }
+    for (const [sx, sz] of [[4.98, -1.72], [5.52, -1.62], [6.24, -1.78]]) {
+      const bag = game.box({ at: [sx, 0.26, sz], size: [0.5, 0.34, 0.34], material: MAT.sand, physics: false });
+      bag.setRotation([0, (sx * 31) % 30 - 15, 0]);
+    }
   }
 
   /* ---------------- the roof ---------------- */
@@ -1217,27 +1248,34 @@ function makeScattergun(game, opts = {}) {
   // a 0.02 root silently scales every parented part by 1/50.
   const root = game.box({ at: opts.at || [0, 0, 0], size: 1, physics: false, visible: false });
   const parts = [];
-  const add = (a, pos, rot) => {
+  // Everything forward of the hinge, with the transform it rests at, so the
+  // break-open reload can swing it. A double gun that reloads by dipping out
+  // of frame is the thing the whole reload rework exists to stop.
+  const swing = [];
+  const add = (a, pos, rot, into) => {
     a.parent = root;
     a.setPosition(pos);
     if (rot) a.setRotation(rot);
     parts.push(a);
+    if (into) into.push({ a, p: pos.slice(), r: rot ? rot.slice() : [0, 0, 0] });
     return a;
   };
   // Two barrels side by side, muzzles at +X like every gun here.
   for (const dz of [-0.014, 0.014]) {
-    add(game.cylinder({ radius: 0.0125, height: 0.50, material: steel, physics: false }), [0.30, 0.012, dz], [0, 0, 90]);
-    add(game.cylinder({ radius: 0.0095, height: 0.012, material: steel, physics: false }), [0.552, 0.012, dz], [0, 0, 90]);
+    add(game.cylinder({ radius: 0.0125, height: 0.50, material: steel, physics: false }), [0.30, 0.012, dz], [0, 0, 90], swing);
+    add(game.cylinder({ radius: 0.0095, height: 0.012, material: steel, physics: false }), [0.552, 0.012, dz], [0, 0, 90], swing);
   }
   add(game.box({ size: [0.16, 0.062, 0.052], material: steel, physics: false }), [0.0, 0.004, 0]);       // receiver
   add(game.box({ size: [0.26, 0.056, 0.04], material: wood, physics: false }), [-0.20, -0.03, 0], [0, 0, 6]); // stock
   add(game.box({ size: [0.05, 0.09, 0.036], material: wood, physics: false }), [-0.055, -0.062, 0], [0, 0, 18]); // grip
-  add(game.box({ size: [0.2, 0.03, 0.044], material: wood, physics: false }), [0.30, -0.016, 0]);        // forend
+  add(game.box({ size: [0.2, 0.03, 0.044], material: wood, physics: false }), [0.30, -0.016, 0], null, swing); // forend
   add(game.box({ size: [0.05, 0.018, 0.03], material: steel, physics: false }), [-0.02, -0.052, 0]);     // guard
   // Bead, on the rib between the barrels — what a side-by-side aims with.
-  add(game.sphere({ radius: 0.0035, material: steel, physics: false }), [0.545, 0.0275, 0]);
-  add(game.box({ size: [0.44, 0.006, 0.010], material: steel, physics: false }), [0.33, 0.0235, 0]);
-  return { root, parts };
+  add(game.sphere({ radius: 0.0035, material: steel, physics: false }), [0.545, 0.0275, 0], null, swing);
+  add(game.box({ size: [0.44, 0.006, 0.010], material: steel, physics: false }), [0.33, 0.0235, 0], null, swing);
+  // Hinge pin, and the pin the barrels turn on.
+  add(game.cylinder({ radius: 0.009, height: 0.056, material: steel, physics: false }), [0.075, -0.022, 0], [90, 0, 0]);
+  return { root, parts, swing, hinge: [0.075, -0.022, 0] };
 }
 
 /* ---------------- the stun gun ----------------
@@ -1444,7 +1482,16 @@ function makeObliterator(game, opts = {}) {
   const brass = { color: 0xa8843c, texture: 'metal', roughness: 0.3, metalness: 1 };
   const root = game.box({ at: opts.at || [0, 0, 0], size: 1, physics: false, visible: false });
   const parts = [];
-  const add = (a, pos, rot) => { a.parent = root; a.setPosition(pos); if (rot) a.setRotation(rot); parts.push(a); return a; };
+  /* This model is authored with the muzzle down +Z, and everything else in
+     the game — and the viewmodel code that aims it — uses +X. Rather than
+     rewrite every coordinate, the parts hang off a pivot turned a quarter
+     turn, so the model keeps its own frame and still points where the
+     player is looking. Without this it is held broadside: the sights face
+     the wall and the grip points at the ceiling. */
+  const pivot = game.box({ at: [0, 0, 0], size: 1, physics: false, visible: false });
+  pivot.parent = root; pivot.setRotation([0, 90, 0]);
+  const add = (a, pos, rot) => { a.parent = pivot; a.setPosition(pos); if (rot) a.setRotation(rot); parts.push(a); return a; };
+  parts.push(pivot);
   // Barrel: a heavy tube with a full-length underlug.
   add(game.cylinder({ radius: 0.0125, height: 0.185, material: blued, physics: false }), [0, 0.012, 0.145], [90, 0, 0]);
   add(game.box({ size: [0.020, 0.021, 0.170], material: blued, physics: false }), [0, -0.004, 0.140]);
@@ -1484,9 +1531,19 @@ function makeMauser(game, opts = {}) {
   const blued = { color: 0x272a30, texture: 'metal', roughness: 0.28, metalness: 1 };
   const steel = { color: 0x5a6068, texture: 'metal', roughness: 0.36, metalness: 1 };
   const wood = { color: 0x6b4622, texture: 'wood', roughness: 0.66, metalness: 0, uvScale: 5 };
+  const brass = { color: 0xa8843c, texture: 'metal', roughness: 0.30, metalness: 1 };
   const root = game.box({ at: opts.at || [0, 0, 0], size: 1, physics: false, visible: false });
   const parts = [];
-  const add = (a, pos, rot) => { a.parent = root; a.setPosition(pos); if (rot) a.setRotation(rot); parts.push(a); return a; };
+  /* This model is authored with the muzzle down +Z, and everything else in
+     the game — and the viewmodel code that aims it — uses +X. Rather than
+     rewrite every coordinate, the parts hang off a pivot turned a quarter
+     turn, so the model keeps its own frame and still points where the
+     player is looking. Without this it is held broadside: the sights face
+     the wall and the grip points at the ceiling. */
+  const pivot = game.box({ at: [0, 0, 0], size: 1, physics: false, visible: false });
+  pivot.parent = root; pivot.setRotation([0, 90, 0]);
+  const add = (a, pos, rot) => { a.parent = pivot; a.setPosition(pos); if (rot) a.setRotation(rot); parts.push(a); return a; };
+  parts.push(pivot);
   add(game.cylinder({ radius: 0.0068, height: 0.150, material: blued, physics: false }), [0, 0.016, 0.150], [90, 0, 0]);
   add(game.box({ size: [0.019, 0.026, 0.120], material: blued, physics: false }), [0, 0.014, 0.062]);
   // Bolt housing and the bolt itself.
@@ -1501,7 +1558,14 @@ function makeMauser(game, opts = {}) {
   add(game.sphere({ radius: 0.017, material: wood, physics: false }), [0, -0.090, -0.060]);
   add(game.box({ size: [0.012, 0.010, 0.012], material: blued, physics: false }), [0, 0.036, 0.212]);
   add(game.box({ size: [0.018, 0.008, 0.012], material: blued, physics: false }), [0, 0.036, -0.020]);
-  return { root, parts };
+  /* The bolt, and the stripper clip that feeds it. A C96 is loaded from the
+     top through the open action: bolt back, clip pressed down into the
+     magazine, clip flicked away, bolt forward. Both of these are driven by
+     the reload, so both have to exist as their own parts. */
+  const bolt = add(game.cylinder({ radius: 0.0105, height: 0.070, material: steel, physics: false }), [0, 0.020, 0.010], [90, 0, 0]);
+  const clip = add(game.box({ size: [0.016, 0.052, 0.011], material: brass, physics: false }), [0, 0.075, 0.030]);
+  clip.visible = false;
+  return { root, parts, bolt, clip, boltRest: [0, 0.020, 0.010], clipRest: [0, 0.075, 0.030] };
 }
 
 /* ---------------- riot shield ----------------
@@ -1606,11 +1670,18 @@ function makeArcProjector(game, opts = {}) {
   add(game.sphere({ radius: 0.023, material: coil, physics: false }), [0.5, 0.01, 0]);
   add(game.box({ size: [0.05, 0.1, 0.04], material: dark, physics: false }), [-0.06, -0.075, 0], [0, 0, 14]);
   add(game.box({ size: [0.1, 0.05, 0.06], material: brass, physics: false }), [-0.11, 0.01, 0]);
+  /* The cell. It is what the thing runs on and what the reload swaps, so it
+     is a part rather than a painted-on detail: it drops clear of the
+     housing, a fresh one seats, and the coils come back up. */
+  const cell = add(game.cylinder({ radius: 0.028, height: 0.10, material: {
+    color: 0x1a2a34, texture: 'metal', roughness: 0.32, metalness: 1,
+    emissive: 0x2a86b8, emissiveStrength: 1.4 } }), [0.02, -0.062, 0], [0, 0, 90]);
+  add(game.box({ size: [0.11, 0.014, 0.070], material: dark, physics: false }), [0.02, -0.012, 0]);
   // Sight post and rear notch, so the arc aims like everything else.
   add(game.box({ size: [0.008, 0.018, 0.006], material: dark, physics: false }), [0.28, 0.050, 0]);
   add(game.box({ size: [0.010, 0.014, 0.008], material: dark, physics: false }), [-0.06, 0.050, 0.013]);
   add(game.box({ size: [0.010, 0.014, 0.008], material: dark, physics: false }), [-0.06, 0.050, -0.013]);
-  return { root, parts };
+  return { root, parts, cell, cellRest: [0.02, -0.062, 0], coils: parts.slice(2, 5) };
 }
 
 /* ---------------- player ---------------- */
@@ -1687,9 +1758,9 @@ function makePlayer(game, S, hud, sfx, voice) {
     game._camPitch = Math.max(-1.45, Math.min(1.45, game._camPitch + e.movementY * 0.0021));
   });
 
-  P.equipped = () => P.slots[P.slot];
-  P.spec = () => WEAPONS[P.equipped()];
-  P.ammoFor = (id) => P.ammo[id];
+  P.equipped = () => P.slots[Math.max(0, Math.min(P.slot, P.slots.length - 1))] || P.slots[0] || 'm1911';
+  P.spec = () => WEAPONS[P.equipped()] || WEAPONS.m1911;
+  P.ammoFor = (id) => P.ammo[id] || { mag: Infinity, reserve: Infinity };
 
   P.give = (id) => {
     if (!P.ammo[id]) P.ammo[id] = { mag: WEAPONS[id].mag, reserve: WEAPONS[id].reserve };
@@ -1748,7 +1819,12 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
      That is why every weapon carries a measured sightH — nothing here is
      tuned by eye, and every gun aims correctly because the geometry says
      where its sights are. */
-  const hipX = 0.15 + bobX, hipY = -0.17 + bobY - dip, hipD = 0.34;
+  /* Hip carry. -0.17 at 0.34 m is 26 degrees below the camera axis, and
+     half the vertical field of view is 28 — the weapon sat on the very
+     bottom edge of the frame with only the barrel showing, which is most
+     of what "the guns look broken" was. */
+  const po = P.poseOverride;
+  const hipX = (po ? po.x : 0.13) + bobX, hipY = (po ? po.y : -0.105) + bobY - dip, hipD = po ? po.d : 0.32;
   const adsX = 0, adsY = -spec.sightH, adsD = 0.30;
   const a = P.ads;
   const offR = hipX * (1 - a) + adsX * a;
@@ -1878,6 +1954,50 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
       const t = P.reloading > 0 && P.reloadStage >= 2
         ? Math.sin(Math.min(1, (1 - P.reloading / spec.reload - 0.70) / 0.18) * Math.PI) : 0;
       v.bolt.setPosition([0.255 - 0.055 * Math.max(0, t), 0.040, -0.034]);
+    }
+  }
+
+  /* Stripper clip. Bolt back, clip pressed down into the open action, clip
+     flicked away, bolt home. The clip is hidden until it is wanted, which
+     is why it exists as its own part rather than as a moment of hand
+     animation nobody can see. */
+  if (spec.reloadKind === 'clip' && v.clip && v.bolt) {
+    if (P.reloading > 0) {
+      const u = 1 - P.reloading / spec.reload;
+      const back = u < 0.22 ? u / 0.22 : (u < 0.80 ? 1 : 1 - (u - 0.80) / 0.20);
+      v.bolt.setPosition([v.boltRest[0], v.boltRest[1], v.boltRest[2] - 0.038 * back]);
+      const inClip = u > 0.28 && u < 0.74;
+      v.clip.visible = inClip;
+      if (inClip) {
+        const t = Math.min(1, (u - 0.28) / 0.28);
+        v.clip.setPosition([v.clipRest[0], v.clipRest[1] - 0.048 * t, v.clipRest[2]]);
+      }
+      if (!P.clipIn && u > 0.30) { P.clipIn = true; sfx.magIn(); }
+      if (P.clipIn && u > 0.76) { P.clipIn = false; sfx.slideRelease(); }
+    } else {
+      v.bolt.setPosition(v.boltRest);
+      v.clip.visible = false;
+      P.clipIn = false;
+    }
+  }
+
+  /* Battery cell. Drops clear of the housing, a fresh one seats, and the
+     coils come back up as it takes charge. */
+  if (spec.reloadKind === 'cell' && v.cell) {
+    if (P.reloading > 0) {
+      const u = 1 - P.reloading / spec.reload;
+      const outAmt = u < 0.26 ? u / 0.26 : (u < 0.62 ? 1 : Math.max(0, 1 - (u - 0.62) / 0.24));
+      v.cell.setPosition([v.cellRest[0], v.cellRest[1] - 0.13 * outAmt, v.cellRest[2]]);
+      v.cell.setRotation([0, 0, 90 - 26 * outAmt]);
+      if (!P.cellOut && u > 0.10) { P.cellOut = true; sfx.magOut(); }
+      if (P.cellOut && u > 0.66) { P.cellOut = false; sfx.magIn(); }
+      if (u > 0.86 && Math.random() < 0.4) {
+        game.particles.sparks(P.muzzleWorld || [0, 0, 0], { count: 3, speed: 2.2, color: 0x7fd8ff, colorEnd: 0x1a3a4a });
+      }
+    } else {
+      v.cell.setPosition(v.cellRest);
+      v.cell.setRotation([0, 0, 90]);
+      P.cellOut = false;
     }
   }
 
@@ -3808,8 +3928,9 @@ function makeHud() {
     points(n) { els.points.textContent = n; },
     pointsDelta(n) { pdAcc += n; els.pdelta.textContent = '+' + pdAcc; els.pdelta.style.opacity = 1; clearTimeout(pdTimer); pdTimer = setTimeout(() => { els.pdelta.style.opacity = 0; pdAcc = 0; }, 700); },
     ammo(P) {
-      const am = P.ammoFor(P.equipped());
-      els.ammo.textContent = `${am.mag} / ${am.reserve}`;
+      const am = P.ammoFor(P.equipped()) || { mag: 0, reserve: 0 };
+      const show = (n) => (n === Infinity ? '∞' : n);
+      els.ammo.textContent = `${show(am.mag)} / ${show(am.reserve)}`;
       els.wname.textContent = P.spec().slotName
         + (P.goldAmmo ? `   ★${P.gold}` : '')
         + (P.nades > 0 ? `   ✚${P.nades}` : '');
@@ -4196,9 +4317,25 @@ function start(opts = {}) {
       }
       hud.shield(P.shieldT / SHIELD.duration, P.shieldCd);
       hud.stamina(P.stamina / maxStam, !!P.perks.athlete);
-      if ((i.justPressed('q') || pad.pressed.y) && P.slots.length > 1) { P.slot = 1 - P.slot; P.reloading = 0; hud.ammo(P); }
-      if (i.justPressed('1')) { P.slot = 0; P.reloading = 0; hud.ammo(P); }
-      if (i.justPressed('2') && P.slots.length > 1) { P.slot = 1; P.reloading = 0; hud.ammo(P); }
+      /* Swapping. The knife and the hammer are temporary slots pushed onto
+         the end of the list, so the two carried weapons are always slots 0
+         and 1 and the swap has to be expressed in those terms — never as
+         `1 - P.slot`, which with a third slot out resolves to -1 and takes
+         the whole frame down with it. */
+      const swapTo = (n) => {
+        if (P.slots.length <= n || n < 0) return;
+        if (P.knifeOut) { P.knifeOut = false; P.slots = P.slots.filter((w) => w !== 'knife'); }
+        P.slot = Math.max(0, Math.min(n, P.slots.length - 1));
+        P.reloading = 0; P.reloadStage = 0;
+        hud.ammo(P);
+        hud.flashWeapon(P.spec().slotName);
+      };
+      if (i.justPressed('q') || pad.pressed.y) {
+        const cur = P.knifeOut ? (P.prevSlot || 0) : P.slot;
+        swapTo(cur === 0 ? 1 : 0);
+      }
+      if (i.justPressed('1')) swapTo(0);
+      if (i.justPressed('2')) swapTo(1);
 
       if (P.reloading > 0) {
         const spec = P.spec();
@@ -4553,6 +4690,9 @@ function start(opts = {}) {
     give(id) { S.player.give(id); hud.ammo(S.player); },
     // Drive a reload from a test without going through the key handler.
     reload() { tryReload(S.player, sfx); },
+    /* Override the hip carry so a screenshot can frame the weapon instead
+       of catching the corner of it. Null clears the override. */
+    viewPose(x, y, d) { P.poseOverride = (x == null) ? null : { x, y, d }; },
     killAll() { for (const z of S.zombies) if (!z.dead) killZombie(game, S, z, false); },
     forceRound(n) { S.round = n - 1; S.toSpawn = 0; for (const z of S.zombies) if (!z.dead) killZombie(game, S, z, false); startRound(game, S, hud, sfx); },
     god(on) { S.godMode = on !== false; },
