@@ -35,6 +35,9 @@ const ECONOMY = {
    so the round you choose to do this in matters. */
 const GEN = { crank: 5.0, reach: 2.4, rpm: 190 };
 
+/* How far under the mud a body starts and how long it takes to get out. */
+const RISE_DEPTH = 1.9, RISE_TIME = 1.9;
+
 const WEAPONS = {
   m1911: {
     name: 'M1911', slotName: 'SIDEARM',
@@ -390,7 +393,12 @@ const MAP = {
   // The wing behind the door on the left, where the power is.
   side:  { x0: -16.0, x1: -7.4, z0: -5.0, z1: 5.0, y0: 0, y1: 3.4 },
   // The roof deck sits on the blockhouse and is open to the sky.
-  roof:  { x0: -7.0, x1: 7.0, z0: -7.0, z1: 7.0, y0: 3.4, y1: 3.6, rail: 0.82 },
+  /* The deck starts below the top of the walls on purpose. Butted at
+     exactly 3.4 the two faces are coincident, and a coincident edge is a
+     hairline the rasteriser fills with whatever is behind it — which from
+     inside the blockhouse is the sky. A line of daylight ran round the top
+     of every wall. Eleven centimetres of overlap and the seam is gone. */
+  roof:  { x0: -7.0, x1: 7.0, z0: -7.0, z1: 7.0, y0: 3.29, y1: 3.6, rail: 0.82 },
   /* Fifteen risers of 0.233 up a 4.05 run — 27 cm of tread, which a capsule
      walks rather than catches on. Against the east wall, climbing toward the
      back corner so the flight ends where the roof hatch is. */
@@ -405,11 +413,15 @@ const MAP = {
    in the battlefield and walk in, so the pads are thirty metres out and the
    window is only where they finally get through. */
 const WINDOWS = [
-  { id: 'W1', room: 'main', inside: [-2.8, 0, -6.0], sillAt: [-2.8, 1.5, -7.2], pad: [-4.5, 0, -26.0], face: 'N', wx: [-3.6, -2.0] },
-  { id: 'W2', room: 'main', inside: [ 1.2, 0, -6.0], sillAt: [ 1.2, 1.5, -7.2], pad: [ 3.0, 0, -30.0], face: 'N', wx: [ 0.4,  2.0] },
-  { id: 'W3', room: 'main', inside: [ 6.0, 0,  2.0], sillAt: [ 7.2, 1.5,  2.0], pad: [ 27.0, 0, 4.5], face: 'E', wz: [ 1.2,  2.8] },
-  { id: 'W4', room: 'main', inside: [-1.2, 0,  6.0], sillAt: [-1.2, 1.5,  7.2], pad: [-2.0, 0,  28.0], face: 'S', wx: [-2.0, -0.4] },
-  { id: 'W5', room: 'side', inside: [-14.8, 0, -0.8], sillAt: [-16.2, 1.5, -0.8], pad: [-31.0, 0, -3.0], face: 'W', wz: [-1.6, 0.0] },
+  /* Sixteen metres out, not thirty. Far enough that you watch them come and
+     have time to decide which window to stand at; near enough that the walk
+     is under fifteen seconds, which at thirty was a twenty-five second
+     commute per body and made round one feel empty. */
+  { id: 'W1', room: 'main', inside: [-2.8, 0, -6.0], sillAt: [-2.8, 1.5, -7.2], pad: [-4.5, 0, -17.0], face: 'N', wx: [-3.6, -2.0] },
+  { id: 'W2', room: 'main', inside: [ 1.2, 0, -6.0], sillAt: [ 1.2, 1.5, -7.2], pad: [ 3.5, 0, -19.5], face: 'N', wx: [ 0.4,  2.0] },
+  { id: 'W3', room: 'main', inside: [ 6.0, 0,  2.0], sillAt: [ 7.2, 1.5,  2.0], pad: [ 18.5, 0, 5.0], face: 'E', wz: [ 1.2,  2.8] },
+  { id: 'W4', room: 'main', inside: [-1.2, 0,  6.0], sillAt: [-1.2, 1.5,  7.2], pad: [-2.5, 0,  18.0], face: 'S', wx: [-2.0, -0.4] },
+  { id: 'W5', room: 'side', inside: [-14.8, 0, -0.8], sillAt: [-16.2, 1.5, -0.8], pad: [-25.0, 0, -3.0], face: 'W', wz: [-1.6, 0.0] },
 ];
 
 // Boards span X on the two walls that run along X, and Z on the other two.
@@ -430,9 +442,12 @@ function buildMap(game, S) {
        surface lands near 0x2a2a28. Under lamps at night nobody noticed; in
        daylight the roof deck came out black. The colours are pre-multiplied
        up to compensate — bright here, correct on screen. */
-    wall: { color: 0xd6d1c4, texture: 'concrete', roughness: 0.94, metalness: 0, uvScale: 5, normalStrength: 0.45 },
-    wallDark: { color: 0xa9a49a, texture: 'concrete', roughness: 0.95, metalness: 0, uvScale: 5 },
-    floor: { color: 0xb8b3a7, texture: 'concrete', roughness: 0.9, metalness: 0, uvScale: 7, normalStrength: 0.45 },
+    /* Corrected once, not twice. These were pushed up to compensate for the
+       concrete texture eating three quarters of the albedo; the texture
+       itself is fixed now, so the same lift again just bleaches the room. */
+    wall: { color: 0xa6a29a, texture: 'concrete', roughness: 0.94, metalness: 0, uvScale: 5, normalStrength: 0.45 },
+    wallDark: { color: 0x827e77, texture: 'concrete', roughness: 0.95, metalness: 0, uvScale: 5 },
+    floor: { color: 0x8d8981, texture: 'concrete', roughness: 0.9, metalness: 0, uvScale: 7, normalStrength: 0.45 },
     wood: { color: 0x584023, texture: 'wood', roughness: 0.8, metalness: 0, uvScale: 2 },
     board: { color: 0x7d5c36, texture: 'wood', roughness: 0.85, metalness: 0, uvScale: 3 },
     steel: { color: 0x4a4e54, texture: 'metal', roughness: 0.5, metalness: 1 },
@@ -749,10 +764,11 @@ function buildMap(game, S) {
      torn concrete instead of a drilled circle. */
   {
     const H = MAP.hole, r = H.r;
-    slab(SD.x0 - W, SD.x1, SD.y1, SD.y1 + 0.3, SD.z0 - W, H.z - r, MAT.wallDark);
-    slab(SD.x0 - W, SD.x1, SD.y1, SD.y1 + 0.3, H.z + r, SD.z1 + W, MAT.wallDark);
-    slab(SD.x0 - W, H.x - r, SD.y1, SD.y1 + 0.3, H.z - r, H.z + r, MAT.wallDark);
-    slab(H.x + r, SD.x1, SD.y1, SD.y1 + 0.3, H.z - r, H.z + r, MAT.wallDark);
+    const RY = SD.y1 - 0.11;   // overlap the walls, same reason as the deck
+    slab(SD.x0 - W, SD.x1, RY, SD.y1 + 0.3, SD.z0 - W, H.z - r, MAT.wallDark);
+    slab(SD.x0 - W, SD.x1, RY, SD.y1 + 0.3, H.z + r, SD.z1 + W, MAT.wallDark);
+    slab(SD.x0 - W, H.x - r, RY, SD.y1 + 0.3, H.z - r, H.z + r, MAT.wallDark);
+    slab(H.x + r, SD.x1, RY, SD.y1 + 0.3, H.z - r, H.z + r, MAT.wallDark);
     for (let k = 0; k < 8; k++) {
       const a = (k / 8) * Math.PI * 2;
       const w2 = game.box({ at: [H.x + Math.cos(a) * r * 0.86, SD.y1 + 0.15, H.z + Math.sin(a) * r * 0.86],
@@ -763,12 +779,14 @@ function buildMap(game, S) {
     game.light({ at: [H.x, SD.y1 - 0.6, H.z], color: 0xd8c9a4, intensity: 26, radius: 7.0 });
   }
 
+  const RISE = R.y1 / ST.steps, RUN = (ST.zBot - ST.zTop) / ST.steps;
+
   /* ---------------- the stair, and what holds it up ----------------
 
      Back-right corner, against the east wall, climbing toward -Z. Nothing is
      bought to use it and nothing stands in the way of it: it is the one route
      in the map that is supposed to be read at a glance. */
-  const RISE = (R.y1 - 0) / ST.steps, RUN = (ST.zBot - ST.zTop) / ST.steps;
+
   for (let k = 0; k < ST.steps; k++) {
     const y = (k + 1) * RISE;
     const z1 = ST.zBot - k * RUN;
@@ -780,7 +798,7 @@ function buildMap(game, S) {
   /* Landing at the head of the flight, spanning the whole slot: a landing
      the width of the stair alone leaves a slot of open sky down each side of
      it, which you fall through on the way to the parapet. */
-  slab(ST.x0 - 0.1, M.x1, R.y0, R.y1, M.z0 - W, ST.zTop - RUN, MAT.floor);
+  slab(ST.x0 - 0.1, M.x1, R.y0, R.y1, M.z0 - W, ST.zBot - (ST.steps - 1) * RUN, MAT.floor);
   // Handrail down the open side.
   for (let k = 0; k <= ST.steps; k += 3) {
     const y = k * RISE, z1 = ST.zBot - k * RUN;
@@ -829,14 +847,23 @@ function buildMap(game, S) {
      ceiling gone above y + 2.0, the ceiling is at 3.4, so everything from
      the sixth step back is open sky. Cut only the top of the flight and the
      player walks face-first into the underside of their own roof. */
-  const SLOT = { x0: ST.x0 - 0.1, x1: M.x1, z0: M.z0 - W, z1: -2.9 };
+  /* Where the slot has to start is set by the player's head, not by the
+     tread. A body is about two metres tall and stands on the step, so the
+     ceiling at 3.4 has to be gone from the point where tread + 2.0 exceeds
+     it — plus the radius of the capsule, because they are walking into it
+     rather than teleporting onto it. Cut to the tread height instead and
+     you climb five steps and stop dead with your head in the concrete,
+     which is exactly what happened. */
+  const HEAD = 2.05, BODY_R = 0.45;
+  const zClear = ST.zBot - ((R.y0 - HEAD) / RISE) * RUN + BODY_R;
+  const SLOT = { x0: ST.x0 - 0.1, x1: M.x1, z0: M.z0 - W, z1: Math.min(-2.0, zClear) };
   {
     slab(M.x0 - W, M.x1 + W, R.y0, R.y1, SLOT.z1, M.z1 + W, MAT.floor);
     slab(M.x0 - W, SLOT.x0, R.y0, R.y1, SLOT.z0, SLOT.z1, MAT.floor);
     slab(SLOT.x1, M.x1 + W, R.y0, R.y1, SLOT.z0, SLOT.z1, MAT.floor);
   }
   // Rail round the open side of the slot, so the hole reads as a hole.
-  const RT = R.y1, RH = RT + R.rail;
+  const RT = R.y1 - 0.06, RH = R.y1 + R.rail;
   {
     for (const zz of [SLOT.z1]) {
       deco(SLOT.x0 - 0.05, SLOT.x1, RT, RT + 0.05, zz - 0.05, zz + 0.05, MAT.steel);
@@ -887,6 +914,34 @@ function buildMap(game, S) {
         if (alongX) barb(t, RH + 0.22, at, 0); else barb(at, RH + 0.22, t, 90);
       }
     }
+  }
+
+  /* ---------------- where the walls meet the roof ----------------
+
+     A beam course round the top of every wall, and joists across the
+     ceiling. It is the right detail for a poured blockhouse — nothing here
+     was cast in one piece — and it also settles the seam. Butted or
+     overlapped, the wall/ceiling join renders as a hard bright line one
+     pixel tall all the way round the room, and a bright straight line at
+     the top of a wall reads as daylight through a crack. A timber that is
+     actually there is a better answer than chasing the rasteriser. */
+  {
+    const CY = R.y0, TH = 0.16, DP = 0.12;
+    const beam = { color: 0x6b5133, texture: 'wood', roughness: 0.86, metalness: 0, uvScale: 6 };
+    // Main room, all four walls, inside faces.
+    slab(M.x0, M.x1, CY - TH, CY + 0.02, M.z0, M.z0 + DP, beam);
+    slab(M.x0, M.x1, CY - TH, CY + 0.02, M.z1 - DP, M.z1, beam);
+    slab(M.x0, M.x0 + DP, CY - TH, CY + 0.02, M.z0, M.z1, beam);
+    slab(M.x1 - DP, M.x1, CY - TH, CY + 0.02, M.z0, M.z1, beam);
+    // Joists across the short way, clear of the stair slot.
+    for (let x = M.x0 + 2.2; x < SLOT.x0 - 0.4; x += 2.2) {
+      slab(x - 0.09, x + 0.09, CY - TH * 0.8, CY + 0.02, M.z0, M.z1, beam);
+    }
+    // The wing gets the same treatment.
+    const WY = SD.y1 - 0.11;
+    slab(SD.x0, SD.x1, WY - TH, WY + 0.02, SD.z0, SD.z0 + DP, beam);
+    slab(SD.x0, SD.x1, WY - TH, WY + 0.02, SD.z1 - DP, SD.z1, beam);
+    slab(SD.x0, SD.x0 + DP, WY - TH, WY + 0.02, SD.z0, SD.z1, beam);
   }
 
   /* ---------------- doors ---------------- */
@@ -2431,11 +2486,13 @@ function spawnZombie(game, S, win, forceVariant) {
   const b = z.actor.controller.body;
   b.gravityScale = 1;
   b.velocity.setScalar(0);
-  b.setPosition({
-    x: win.def.pad[0] + (Math.random() - 0.5) * 1.4,
-    y: 1.1,
-    z: win.def.pad[2] + (Math.random() - 0.5) * 1.4,
-  });
+  /* Underground, and climbing out. They are visible across open field from
+     the moment they arrive, so appearing fully upright reads as a spawn;
+     coming up out of the mud reads as the map. */
+  const px = win.def.pad[0] + (Math.random() - 0.5) * 2.6;
+  const pz = win.def.pad[2] + (Math.random() - 0.5) * 2.6;
+  b.gravityScale = 0;
+  b.setPosition({ x: px, y: 1.1 - RISE_DEPTH, z: pz });
   z.actor.controller.moveSpeed = speed;
   z.actor.controller.runSpeed = speed * 1.35;
   // A boss has a flat pool that does not scale with the round — the shield
@@ -2446,7 +2503,7 @@ function spawnZombie(game, S, win, forceVariant) {
     kind, V, build: B.id,
     hp: maxHp, maxHp,
     dmg: ROUNDS.dmgFor(S.round) * V.dmg,
-    state: 'toWindow', win, speed,
+    state: 'rising', riseT: RISE_TIME * (0.8 + Math.random() * 0.5), riseAt: [px, pz], win, speed,
     tearT: 0, attackT: 0, groanT: 1 + Math.random() * 3, stuckT: 0, lastPos: null,
     vault: null, spitT: 1 + Math.random() * 2, anim: '',
     ripStage: 0, ripT: 0, throwT: 0, ripFace: false,
@@ -2520,7 +2577,7 @@ function hurtZombie(game, S, z, dmg, at, headshot, source) {
 function killZombie(game, S, z, headshot) {
   z.dead = true;
   S.killsTotal++;
-  if (z.state === 'toWindow' || z.state === 'tearing') z.win.zombiesAt--;
+  if (z.state === 'rising' || z.state === 'toWindow' || z.state === 'tearing') z.win.zombiesAt--;
   const p = z.actor.position;
   // Gibs: a burst of dark red chunks with real physics, plus dust. The
   // engine pools nothing here, so they get lifetimes and stay few.
@@ -2654,10 +2711,44 @@ function updateZombie(game, S, P, z, dt, sfx) {
      to the last place it saw them and then mills about there. */
   const target = S.shieldActive ? (S.lastKnown || P.actor.position) : P.actor.position;
 
-  if (z.state === 'toWindow') {
+  if (z.state === 'rising') {
+    /* Clawing up out of the ground. Gravity is off for the climb — a capsule
+       started below the floor and left to the solver either shoots out or
+       jams under it, and neither looks like a body pulling itself free. */
+    a.controller.move(0, 0);
+    playZombieAnim(z, 'zcrawl', 0.2);
+    z.riseT -= dt;
+    const k = 1 - Math.max(0, z.riseT) / (RISE_TIME * 1.3);
+    const body = a.controller.body;
+    body.velocity.setScalar(0);
+    body.setPosition({ x: z.riseAt[0], y: 1.1 - RISE_DEPTH * (1 - Math.min(1, k * 1.15)), z: z.riseAt[1] });
+    // Spoil thrown up round the shoulders while it works its way out.
+    if (Math.random() < 0.35) {
+      game.particles.dust([z.riseAt[0] + (Math.random() - 0.5) * 0.7, 0.15,
+        z.riseAt[1] + (Math.random() - 0.5) * 0.7], { count: 3, color: 0x4e4436 });
+    }
+    if (z.riseT <= 0) {
+      body.gravityScale = 1;
+      body.setPosition({ x: z.riseAt[0], y: 1.1, z: z.riseAt[1] });
+      z.state = 'toWindow';
+      playZombieAnim(z, z.moveClip, 0.3);
+    }
+  } else if (z.state === 'toWindow') {
     playZombieAnim(z, z.moveClip);
-    const sill = z.win.def.sillAt;
-    move(z.win.def.pad[0] * 0.15 + sill[0] * 0.85, z.win.def.pad[2] * 0.15 + sill[2] * 0.85);
+    const sill = z.win.def.sillAt, ins = z.win.def.inside;
+    /* Straight at the sill, standing off it by the length of an arm.
+
+       This used to steer to a fixed blend of the spawn pad and the sill —
+       fifteen per cent of the way back toward where it came from. That was
+       invisible while the pads sat three metres outside the window. The pads
+       are twenty-six to thirty-one metres out in the field now, and fifteen
+       per cent of that is four metres of open ground: the walkers crossed
+       the whole battlefield, stopped short of the wall, and stood there,
+       because the switch into 'tearing' wants to be within 1.5 m of the
+       sill and they never got closer than three. */
+    const ox = sill[0] - ins[0], oz = sill[2] - ins[2];
+    const ol = Math.hypot(ox, oz) || 1;
+    move(sill[0] + (ox / ol) * 0.55, sill[2] + (oz / ol) * 0.55);
     if (dist2d(pos, { x: sill[0], z: sill[2] }) < 1.5) { z.state = 'tearing'; z.tearT = 0.8; }
   } else if (z.state === 'tearing') {
     a.controller.move(0, 0);
@@ -4134,6 +4225,12 @@ function start(opts = {}) {
   });
 
   /* Test hooks: everything QA needs to drive the game headless. */
+  // Layout constants, so a walk-the-stairs or path-to-the-window test can
+  // ask the map where things are instead of hard-coding coordinates that
+  // drift the moment the map does.
+  window.__T_MAP = MAP;
+  window.__T_WINDOWS = WINDOWS;
+  window.__T_roomOf = roomOf;
   const __THooks = window.__T = {
     game, S, P, WEAPONS, ECONOMY, LINES,
     spawn(winId) {
