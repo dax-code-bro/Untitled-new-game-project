@@ -41,7 +41,7 @@ const WEAPONS = {
     // the camera axis. Measured off the model, not eyeballed.
     sightH: 0.0455, sightFov: 0.74, adsTime: 0.16,
     recoil: { up: 1.15, side: 0.5, climb: 0.28, recover: 9 },
-    hands: { right: [-0.005, -0.012, 0], left: [0.012, -0.058, -0.014], leftGrip: 'pistol' },
+    hands: { right: [-0.004, -0.020, 0.017], left: [0.016, -0.052, -0.021], leftGrip: 'pistol' },
   },
   thompson: {
     name: 'Thompson', slotName: 'THOMPSON',
@@ -50,7 +50,7 @@ const WEAPONS = {
     kick: 0.9, sfx: 'shotSmg',
     sightH: 0.0955, sightFov: 0.80, adsTime: 0.22,
     recoil: { up: 0.42, side: 0.30, climb: 0.13, recover: 11 },
-    hands: { right: [-0.004, -0.014, 0], left: [0.290, 0.036, 0] },
+    hands: { right: [-0.004, -0.022, 0.019], left: [0.290, 0.028, -0.019] },
   },
   scatter: {
     name: 'Scattergun', slotName: 'SCATTERGUN',
@@ -59,7 +59,7 @@ const WEAPONS = {
     kick: 3.2, sfx: 'shotScatter',
     sightH: 0.0275, sightFov: 0.86, adsTime: 0.24, adsSpread: 0.55,
     recoil: { up: 2.6, side: 0.9, climb: 0.75, recover: 7 },
-    hands: { right: [-0.055, -0.062, 0], left: [0.300, -0.016, 0] },
+    hands: { right: [-0.055, -0.070, 0.018], left: [0.300, -0.026, -0.019] },
   },
   knife: {
     name: 'Trench Knife', slotName: 'KNIFE',
@@ -68,7 +68,7 @@ const WEAPONS = {
     kick: 1.0, sfx: 'knife', melee: true, range: 2.2,
     sightH: 0.05, sightFov: 0.95, adsTime: 0.18,
     recoil: { up: 0.5, side: 0.4, climb: 0, recover: 12 },
-    hands: { right: [-0.01, -0.03, 0], left: null },
+    hands: { right: [-0.01, -0.036, 0.014], left: null },
   },
   arc: {
     name: 'AX-9 Arc Projector', slotName: 'ARC PROJECTOR',
@@ -77,7 +77,7 @@ const WEAPONS = {
     kick: 1.2, sfx: 'shotArc',
     sightH: 0.0580, sightFov: 0.82, adsTime: 0.26,
     recoil: { up: 0.9, side: 0.2, climb: 0.2, recover: 8 },
-    hands: { right: [-0.060, -0.070, 0], left: [0.150, -0.030, 0] },
+    hands: { right: [-0.060, -0.078, 0.018], left: [0.150, -0.038, -0.019] },
     chain: { count: 3, radius: 4.0, dmg: 500 },
   },
 };
@@ -191,8 +191,10 @@ function makeSfx(game) {
     shotScatter() { A.impact(1.0); t(950, 0.05, 'sawtooth', 0.14); t(120, 0.16, 'sawtooth', 0.16); },
     shotArc() { t(1900, 0.06, 'sawtooth', 0.09); t(640, 0.12, 'square', 0.10); t(96, 0.2, 'sine', 0.14); },
     dryFire() { t(1300, 0.02, 'square', 0.06); },
-    reload1() { t(800, 0.03, 'square', 0.08); },
-    reload2() { t(1100, 0.03, 'square', 0.08); t(500, 0.04, 'square', 0.06); },
+    magRelease() { t(1500, 0.022, 'square', 0.07); },
+    magOut() { t(420, 0.05, 'square', 0.07); A.impact(0.2); },
+    magIn() { t(300, 0.06, 'square', 0.09); A.impact(0.35); t(900, 0.03, 'square', 0.05); },
+    slideRelease() { A.impact(0.55); t(1250, 0.035, 'square', 0.09); t(600, 0.05, 'sawtooth', 0.07); },
     hitmark() { t(2300, 0.02, 'square', 0.05); },
     headmark() { t(2800, 0.025, 'square', 0.06); t(3400, 0.02, 'square', 0.04); },
     groan(pitch) { t(58 + pitch * 30, 0.5, 'sawtooth', 0.05); t(74 + pitch * 26, 0.42, 'triangle', 0.06); },
@@ -661,7 +663,8 @@ function makePlayer(game, S, hud, sfx, voice) {
       m1911: { mag: WEAPONS.m1911.mag, reserve: WEAPONS.m1911.reserve },
       knife: { mag: Infinity, reserve: Infinity },
     },
-    cooldown: 0, reloading: 0, swayT: 0, kickPitch: 0,
+    cooldown: 0, reloading: 0, reloadStage: 0, swayT: 0, kickPitch: 0,
+    slideCycle: 0, slideCycleMax: 0.085,
     view: {}, muzzleT: 0, alive: true,
     // Aim, sprint and recoil state.
     ads: 0, adsWant: false, sprint: 0, sprinting: false,
@@ -797,6 +800,21 @@ function updateViewmodel(game, P, dt, moving) {
   root.setRotation(_vQuat1);
 
   P.muzzleWorld = [px + f.x * v.muzzle, py + f.y * v.muzzle + 0.03 * (1 - a), pz + f.z * v.muzzle];
+
+  /* Reciprocating slide. A half-sine over the cycle time: back hard, forward
+     on the return, which is the shape the real thing traces. */
+  const gunActor = v.kind === 'single' ? v.actor : v.root;
+  if (gunActor.slide) {
+    if (P.slideCycle > 0) {
+      P.slideCycle = Math.max(0, P.slideCycle - dt);
+      const cyc = P.slideCycleMax || 0.085;
+      const u = 1 - P.slideCycle / cyc;
+      const back = Math.sin(Math.min(1, Math.max(0, u)) * Math.PI);
+      gunActor.slide.setPosition([-(gunActor.slideTravel || 0.02) * back, 0, 0]);
+    } else {
+      gunActor.slide.setPosition([0, 0, 0]);
+    }
+  }
 }
 
 /* Recoil, applied to the camera itself rather than only to the gun.
@@ -902,6 +920,9 @@ function tryFire(game, S, P, hud, sfx, dt) {
   }
   sfx[spec.sfx]();
   hud.ammo(P);
+  P.slideCycle = spec.auto ? 0.055 : 0.085;
+  P.slideCycleMax = P.slideCycle;
+  ejectShell(game, S, P, P.view[P.equipped()]);
 
   // Muzzle flash: light + sparks, one frame of each.
   if (P.muzzleWorld) {
@@ -982,13 +1003,67 @@ function arcBolt(game, a, b) {
   }
 }
 
+/* Eject a case. A real little brass cylinder with velocity and spin,
+   thrown up and to the right out of the port, that lands and stays for a
+   moment. Nothing sells a gun firing like brass leaving it. */
+function ejectShell(game, S, P, v) {
+  const gun = v.kind === 'single' ? v.actor : v.root;
+  if (!gun.ejectPort) return;
+  const m = gun.matrix.e;
+  const lp = gun.ejectPort;
+  // Transform the port and the ejection direction by the gun's own matrix,
+  // so brass leaves the port in the direction the gun is actually pointing.
+  const wx = m[0] * lp[0] + m[4] * lp[1] + m[8] * lp[2] + m[12];
+  const wy = m[1] * lp[0] + m[5] * lp[1] + m[9] * lp[2] + m[13];
+  const wz = m[2] * lp[0] + m[6] * lp[1] + m[10] * lp[2] + m[14];
+  const dir = [0.35, 0.75, 1.0];                       // up, right and back
+  const ex = m[0] * dir[0] + m[4] * dir[1] + m[8] * dir[2];
+  const ey = m[1] * dir[0] + m[5] * dir[1] + m[9] * dir[2];
+  const ez = m[2] * dir[0] + m[6] * dir[1] + m[10] * dir[2];
+  const sp = 2.4 + Math.random() * 1.2;
+  const shell = game.cylinder({
+    at: [wx, wy, wz], radius: 0.0058, height: 0.023, lifetime: 3.4,
+    material: { color: 0xc79a43, texture: 'metal', roughness: 0.3, metalness: 1 },
+    velocity: [ex * sp + (Math.random() - 0.5), ey * sp + 1.2, ez * sp + (Math.random() - 0.5)],
+    bounce: 0.35, friction: 0.6, mass: 0.012,
+  });
+  if (shell.body) {
+    shell.body.angularVelocity.set(
+      (Math.random() - 0.5) * 26, (Math.random() - 0.5) * 26, (Math.random() - 0.5) * 26);
+  }
+  S.brass.push(shell);
+  if (S.brass.length > 24) { const old = S.brass.shift(); if (old && !old.dead) old.destroy(); }
+}
+
+/* Drop the spent magazine. It falls, bounces once and lies there. */
+function dropMagazine(game, S, P, v) {
+  const gun = v.kind === 'single' ? v.actor : v.root;
+  if (!gun.magWell || !gun.mag) return;
+  const m = gun.matrix.e;
+  const lp = gun.magWell;
+  const wx = m[0] * lp[0] + m[4] * lp[1] + m[8] * lp[2] + m[12];
+  const wy = m[1] * lp[0] + m[5] * lp[1] + m[9] * lp[2] + m[13];
+  const wz = m[2] * lp[0] + m[6] * lp[1] + m[10] * lp[2] + m[14];
+  const drop = game.box({
+    at: [wx, wy, wz], size: [0.026, 0.10, 0.021], lifetime: 6,
+    material: { color: 0x53585e, texture: 'metal', roughness: 0.5, metalness: 1 },
+    velocity: [(Math.random() - 0.5) * 0.6, -0.8, (Math.random() - 0.5) * 0.6],
+    bounce: 0.2, friction: 0.8, mass: 0.09,
+  });
+  if (drop.body) drop.body.angularVelocity.set((Math.random() - 0.5) * 5, 0, (Math.random() - 0.5) * 5);
+  S.brass.push(drop);
+}
+
 function tryReload(P, sfx) {
   const spec = P.spec();
   const am = P.ammoFor(P.equipped());
-  if (P.reloading > 0 || am.mag >= spec.mag || am.reserve <= 0) return;
+  if (spec.melee || P.reloading > 0 || am.mag >= spec.mag || am.reserve <= 0) return;
   P.reloading = spec.reload;
-  sfx.reload1();
-  setTimeout(() => sfx.reload2(), spec.reload * 600);
+  /* Staged, so the hands do the job in order rather than dipping for a
+     second and coming up full: release the catch, the old magazine falls
+     clear, the fresh one goes in, and the slide runs forward on it. */
+  P.reloadStage = 0;
+  sfx.magRelease();
 }
 
 function finishReload(P, hud) {
@@ -1014,7 +1089,22 @@ const ZOMBIE_SKIN = { color: 0x8d9c78, texture: 'skin', roughness: 0.88, metalne
    of faded field greys, dried blood and dirty canvas reads as a crowd that
    used to be people with different jobs. */
 const RAG_COLORS = [0x6e6650, 0x596b57, 0x7d6449, 0x555f6a, 0x71584c, 0x4c5d50, 0x7a7157, 0x64505a];
-const SKIN_TONES = [0x8d9c78, 0x9aa384, 0x7f8f6e, 0x94916f, 0x86977f];
+/* Dead skin, darker than it wants to be. The procedural skin texture warms
+   whatever tint it is given, so a colour picked to look right on a swatch
+   comes out as a bright tan head floating over a dark body. */
+const SKIN_TONES = [0x5f6b52, 0x6a705a, 0x55604a, 0x63614a, 0x5a6654,
+                    0x4d5844, 0x6f7060, 0x5c6051];
+
+/* Three builds, reusing one body and one head sculptor with different
+   numbers rather than three authored models. Between build, face
+   archetype, rag colour, skin tone and per-head jitter there are enough
+   permutations that a crowd stops looking cloned — while still being the
+   same handful of meshes underneath. */
+const BODY_TYPES = [
+  { id: 'male',   gaunt: 0.84, scale: 1.00, faceType: 'male' },
+  { id: 'female', gaunt: 0.76, scale: 0.94, faceType: 'female' },
+  { id: 'heavy',  gaunt: 1.06, scale: 1.02, faceType: 'heavy' },
+];
 
 /* The four kinds. Health and damage multiply on top of the round curve,
    so a runner at round 12 is still a runner — the variant changes how it
@@ -1092,24 +1182,52 @@ function routeTo(fromRoom, toRoom, S) {
 
 function buildPooledZombie(game, S, i) {
   const rag = RAG_COLORS[i % RAG_COLORS.length];
-  const tone = SKIN_TONES[i % SKIN_TONES.length];
+  const tone = SKIN_TONES[(i * 3) % SKIN_TONES.length];
+  const body = BODY_TYPES[i % BODY_TYPES.length];
   const a = game.character({
     at: [200 + i * 4, -38, 0],
     material: { color: rag, texture: 'fabric', roughness: 0.99, metalness: 0, uvScale: 2.5 },
     skin: { color: tone, texture: 'skin', roughness: 0.88, metalness: 0, subsurface: 0.12 },
-    seed: 20 + (i % 9),
+    seed: 20 + (i * 5) % 11,
     face: 'static', zombie: true,
+    faceType: body.faceType, gauntness: body.gaunt, scale: body.scale,
   });
+  a.bodyType = body.id;
   a.controller.body.gravityScale = 0;
   a.controller.autoAnimate = false;   // the zombie brain owns the clips
+  /* Eyes, as two pieces each: a dark wet iris sitting on the head's own
+     globe, and a small hot pupil inside it. One glowing bead reads as a
+     lamp; iris-inside-socket reads as something looking at you. */
+  /* Eye placement is derived from the head's own transform rather than
+     guessed. The head mesh is a child of the head bone with its own offset
+     and scale, and the sockets are at known coordinates inside that mesh —
+     so bone-space position is offset + meshCoordinate * headScale. Typing
+     bone-space numbers by hand is how the old glowing beads ended up
+     hovering a hand's width above everyone's skull. */
   const eyes = [];
   if (a.head && a.skeleton) {
-    for (const sx of [-0.036, 0.036]) {
-      const e = game.sphere({ radius: 0.016, physics: false, material: { color: 0x100804, texture: 'smooth', roughness: 0.4, emissive: 0xff7a2a, emissiveStrength: 2.6 } });
-      e.parent = a;
-      e.parentBone = a.skeleton.index('head');
-      e.localOffset = new window.LE.Vec3(sx, 0.31, 0.085);
-      eyes.push(e);
+    const hb = a.skeleton.index('head');
+    const hs = a.head.scale.y;                       // head mesh scale
+    const ho = a.head.localOffset;                   // head mesh offset on the bone
+    const EX = 0.091 * 0.82, EY = 0.032, EZ = 0.2335;   // socket, in head-mesh space
+    for (const side of [-1, 1]) {
+      const bx = ho.x + side * EX * hs;
+      const by = ho.y + EY * hs;
+      const bz = ho.z + EZ * hs;
+      const iris = game.sphere({ radius: 0.0088 * hs / 0.389, physics: false, material: {
+        color: 0x1a1408, texture: 'smooth', roughness: 0.16, metalness: 0 } });
+      iris.parent = a; iris.parentBone = hb;
+      iris.localOffset = new window.LE.Vec3(bx, by, bz);
+      // sphere() bakes the radius into actor.scale, so flattening has to
+      // multiply that scale, not replace it.
+      iris.scale.z *= 0.40;
+      const pupil = game.sphere({ radius: 0.0040 * hs / 0.389, physics: false, material: {
+        color: 0x120903, texture: 'smooth', roughness: 0.3,
+        emissive: 0xff7a2a, emissiveStrength: 2.4 } });
+      pupil.parent = a; pupil.parentBone = hb;
+      pupil.localOffset = new window.LE.Vec3(bx, by, bz + 0.0016);
+      pupil.scale.z *= 0.5;
+      eyes.push(iris, pupil);
     }
   }
   /* Posture. The clips animate the limbs; biasing the spine and head in the
@@ -1185,9 +1303,9 @@ function spawnZombie(game, S, win, forceVariant) {
   });
   // Crawlers ride a shorter capsule so the folded body sits on the floor.
   z.actor.controller.height = V.crawl ? V.height : 1.75;
-  for (const e of z.eyes) {
-    e.material = game.material({ color: 0x100804, texture: 'smooth', roughness: 0.4,
-      emissive: V.eye, emissiveStrength: 2.6 });
+  for (let k = 1; k < z.eyes.length; k += 2) {
+    z.eyes[k].material = game.material({ color: 0x120903, texture: 'smooth', roughness: 0.3,
+      emissive: V.eye, emissiveStrength: 2.4 });
   }
   setZombieVisible(z, true);
   playZombieAnim(z, V.clip, 0.25);
@@ -1821,7 +1939,7 @@ function start(opts = {}) {
   const S = {
     time: 0, points: ECONOMY.start, mul: 1, mulT: 0,
     round: 0, toSpawn: 0, spawnT: 0, betweenRounds: false, lullT: 0,
-    zombies: [], pool: [], debris: [], windows: [], buys: [], doors: {},
+    zombies: [], pool: [], debris: [], brass: [], windows: [], buys: [], doors: {},
     projectiles: [], perkStations: [], shieldActive: false, lastKnown: null,
     activeWindows: ['W1', 'W2'], powered: false,
     killsTotal: 0, gameOver: false, started: false,
@@ -1915,9 +2033,18 @@ function start(opts = {}) {
     /* Player movement: camera-relative WASD through the capsule controller. */
     if (P.alive) {
       const yaw = game.cameraYaw;
-      const mx = i.axes.x, mz = -i.axes.y;
-      const wx = Math.sin(yaw) * mz + Math.cos(yaw) * mx;
-      const wz = Math.cos(yaw) * mz - Math.sin(yaw) * mx;
+      let mx = i.axes.x, mz = -i.axes.y;
+      /* A last dead zone on the combined stick, in the game rather than the
+         driver. Anything that leaks through here keeps `_desired` non-zero,
+         and the controller only applies stopping friction when the desired
+         direction is exactly zero — so a few hundredths of stick drift reads
+         as skating across the floor forever. */
+      if (Math.hypot(mx, mz) < 0.12) { mx = 0; mz = 0; }
+      /* forward = (sin yaw, 0, cos yaw); right = forward x up = (-cos, 0, sin).
+         Adding the lateral term on x and subtracting on z mirrors the strafe,
+         which is why A and D — and the whole left stick — felt inverted. */
+      const wx = Math.sin(yaw) * mz - Math.cos(yaw) * mx;
+      const wz = Math.cos(yaw) * mz + Math.sin(yaw) * mx;
       /* Sprint: only forward, only unaimed, only while there is stamina —
          and it locks out firing, which is what makes taking it a decision
          rather than a free speed boost. Athlete triples the tank. */
@@ -2007,13 +2134,35 @@ function start(opts = {}) {
       if (i.justPressed('2') && P.slots.length > 1) { P.slot = 1; P.reloading = 0; hud.ammo(P); }
 
       if (P.reloading > 0) {
+        const spec = P.spec();
+        const prog = 1 - P.reloading / spec.reload;
+        const v = P.view[P.equipped()];
+        if (P.reloadStage === 0 && prog > 0.16) {
+          P.reloadStage = 1;
+          if (v.kind === 'single' && v.actor.mag) v.actor.mag.visible = false;
+          dropMagazine(game, S, P, v);
+          sfx.magOut();
+        } else if (P.reloadStage === 1 && prog > 0.62) {
+          P.reloadStage = 2;
+          if (v.kind === 'single' && v.actor.mag) v.actor.mag.visible = true;
+          sfx.magIn();
+        } else if (P.reloadStage === 2 && prog > 0.88) {
+          P.reloadStage = 3;
+          P.slideCycle = 0.16; P.slideCycleMax = 0.16;   // runs forward on the fresh mag
+          sfx.slideRelease();
+        }
         P.reloading -= dt;
-        if (P.reloading <= 0) { P.reloading = 0; finishReload(P, hud); }
+        if (P.reloading <= 0) { P.reloading = 0; P.reloadStage = 0; finishReload(P, hud); }
       }
 
       if (!P.sprinting) tryFire(game, S, P, hud, sfx, dt);
       updateRecoil(game, P, dt);
-      updateViewmodel(game, P, dt, Math.abs(mx) + Math.abs(mz) > 0.1);
+      // The viewmodel is NOT placed here. Update hooks run before the
+      // camera moves, so a gun positioned from cam.position in this pass is
+      // hung off last frame's camera — it lags the view by a frame and
+      // whips around whenever the player walks. It goes in a late hook,
+      // after _updateCamera, where the camera is final for the frame.
+      P._moving = Math.abs(mx) + Math.abs(mz) > 0.1;
 
       /* Interact. */
       const it = nearestInteract(S, P);
@@ -2107,6 +2256,12 @@ function start(opts = {}) {
       const n = Math.sin(S.time * (S.powered ? 2.1 : 13) + li * 7.3) * 0.5 + Math.sin(S.time * 27 + li * 3.1) * 0.5;
       L.light.intensity = base * (S.powered ? 1 + n * 0.06 : Math.max(0.35, 0.8 + n * 0.35));
     }
+  });
+
+  /* Weapon placement, after the camera is final for this frame. */
+  game.onLateUpdate((dt) => {
+    if (!S.started || S.gameOver || !P.alive) return;
+    updateViewmodel(game, P, dt, !!P._moving);
   });
 
   /* Test hooks: everything QA needs to drive the game headless. */

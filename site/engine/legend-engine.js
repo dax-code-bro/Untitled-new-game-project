@@ -7541,8 +7541,20 @@ function makeHeadGeometry(opts = {}) {
   const g = new Geometry();
   const noise = new Noise(opts.seed || 5);
 
+  /* Archetype. One sculptor, three sets of numbers — a wider jaw and heavier
+     brow, a finer jaw and softer brow, or a broad skull with a full lower
+     face. Reusing the sculpt rather than authoring three heads is what keeps
+     a crowd of individuals affordable. */
+  const T = opts.type || 'male';
+  const A = T === 'female'
+    ? { rx: 0.238, ry: 0.330, rz: 0.268, brow: 0.026, jaw: 0.165, chin: 0.050, cheek: 0.024 }
+    : T === 'heavy'
+      ? { rx: 0.268, ry: 0.322, rz: 0.286, brow: 0.040, jaw: 0.085, chin: 0.048, cheek: 0.030 }
+      : { rx: 0.246, ry: 0.336, rz: 0.276, brow: 0.040, jaw: 0.135, chin: 0.062, cheek: 0.019 };
+  // A per-head nudge so no two of the same archetype are identical.
+  const vary = ((opts.seed || 5) % 7) / 7 - 0.5;
   // Base skull. Half-extents: narrow across, tall, deep.
-  const RX = 0.246, RY = 0.336, RZ = 0.276;
+  const RX = A.rx * (1 + vary * 0.05), RY = A.ry * (1 - vary * 0.04), RZ = A.rz * (1 + vary * 0.03);
   const mirrored = (fn) => (p) => fn(p, Math.abs(p.x), p.x < 0 ? -1 : 1);
 
   for (let r = 0; r <= rings; r++) {
@@ -7620,7 +7632,7 @@ function makeHeadGeometry(opts = {}) {
       // Eased, and it keeps more width than it takes: too much taper here
       // and the head reads as a skull rather than a face.
       const jaw = smoothstep(0.02, -0.32, y);
-      x *= 1 - jaw * 0.135;
+      x *= 1 - jaw * A.jaw;
       z *= 1 - jaw * 0.055;
       y -= jaw * 0.008;
 
@@ -7629,7 +7641,7 @@ function makeHeadGeometry(opts = {}) {
       /* --- face --- */
       // Brow ridge, strongest over the eyes and fading at the temples.
       const brow = featureFalloff(P, 0, 0.112, 0.205, 0.150, 0.058, 0.15, 1);
-      z += brow * 0.040;
+      z += brow * A.brow;
       y += brow * 0.004;
       // Glabella: the flat between the brows, which stops them merging into
       // one shelf across the face.
@@ -7661,7 +7673,7 @@ function makeHeadGeometry(opts = {}) {
       // Cheekbones.
       for (const sx of [1, -1]) {
         const cheek = featureFalloff(P, sx * 0.150, -0.020, 0.130, 0.090, 0.080, 0.13, 1);
-        x += sx * cheek * 0.019;
+        x += sx * cheek * A.cheek;
         z += cheek * 0.012;
       }
 
@@ -7671,7 +7683,7 @@ function makeHeadGeometry(opts = {}) {
       // The chin has to clear the lips in profile. Under-projecting it is
       // what makes a face read as weak-jawed and slightly simian.
       const chin = featureFalloff(P, 0, -0.282, 0.196, 0.072, 0.070, 0.12, 1);
-      z += chin * 0.062;
+      z += chin * A.chin;
       x += (P.x > 0 ? 1 : -1) * chin * 0.006;
       z -= featureFalloff(P, 0, -0.238, 0.212, 0.055, 0.020, 0.06, 1) * 0.022;
 
@@ -9663,7 +9675,8 @@ class Engine {
     const skeleton = makeHumanoidSkeleton(scale);
     // `zombie: true` swaps in the starved silhouette and torn clothing.
     const geo = makeHumanoidMesh(skeleton, opts.zombie
-      ? { gaunt: 0.82, rags: true, ragSeed: (opts.seed || 3) * 7 + 1 }
+      ? { gaunt: opts.gauntness != null ? opts.gauntness : 0.82,
+          rags: true, ragSeed: (opts.seed || 3) * 7 + 1 }
       : { thickness: opts.build || 1 });
     const mesh = new GpuMesh(this.gl, geo);
 
@@ -9700,7 +9713,7 @@ class Engine {
     this.actors.push(actor);
 
     if (opts.face !== false) {
-      const headGeo = makeHeadGeometry({ seed: opts.seed || 5 });
+      const headGeo = makeHeadGeometry({ seed: opts.seed || 5, type: opts.faceType });
       const headMesh = new GpuMesh(this.gl, headGeo);
       // A head with no expression rig has neither skeleton nor face, so the
       // renderer batches it through the instanced path — which needs an
@@ -10972,12 +10985,6 @@ function buildFrame(g) {
     gripStation(1.00, 0.0196, 0.0256, 0.0119, 2.6),
   ], true, true);
 
-  // Magazine floorplate, proud of the butt on all sides.
-  sweepPath(g, [
-    gripStation(1.00, 0.0196, 0.0256, 0.0119, 2.6),
-    gripStation(1.008, 0.0206, 0.0266, 0.0126, 2.4),
-    gripStation(1.030, 0.0206, 0.0266, 0.0126, 2.4),
-  ], false, true);
 
   /* Grip safety: the standard GI tang — a short, stubby spur, not the
      modern beavertail. It barely clears the hammer's arc, which is why
@@ -11278,6 +11285,30 @@ function buildEngraving(g, text, opts = {}) {
   }
 }
 
+/* The magazine. Sized off the grip's own cross-section so it sits flush in
+   the well, with a floorplate that stands proud — the part you actually see
+   drop when it falls out. */
+function buildMagazine(g) {
+  const at = (t, hf, hb, hw) => gripStation(t, hf, hb, hw, 2.7);
+  sweepPath(g, [
+    at(0.08, 0.0150, 0.0150, 0.0086),
+    at(0.35, 0.0148, 0.0152, 0.0086),
+    at(0.72, 0.0146, 0.0150, 0.0086),
+    at(0.99, 0.0148, 0.0152, 0.0088),
+  ], true, true);
+  // Floorplate.
+  sweepPath(g, [
+    at(0.99, 0.0196, 0.0256, 0.0119),
+    at(1.008, 0.0206, 0.0266, 0.0126),
+    at(1.030, 0.0206, 0.0266, 0.0126),
+  ], true, true);
+  // Witness holes down the side, as a row of shallow dimples.
+  for (let i = 0; i < 5; i++) {
+    const c = gripStation(0.30 + i * 0.14, 0.0146, 0.0150, 0.0086, 2.7);
+    hardBox(g, c.o.x + GRIP_U.x * -0.004, c.o.y + GRIP_U.y * -0.004, 0.0088, 0.0016, 0.0016, 0.0004);
+  }
+}
+
 /* ---------------- assembly ---------------- */
 
 /* Origin at the web of the shooting hand, so an actor placed at a point
@@ -11295,11 +11326,20 @@ function offsetGeometry(geo, o) {
    the mark. Splitting by material rather than by part keeps it to three
    draw calls. */
 function makePistol1911(opts = {}) {
+  /* Split by what moves, not by what it is made of. The slide and barrel
+     travel together under recoil, the magazine drops out of the frame, and
+     the frame stays in the hand — so they are three actors, and animating
+     the gun is then just moving them relative to each other. */
+  const slide = new Geometry();
+  buildSlide(slide);
+  buildBarrel(slide);
+  buildSights(slide);
+
   const steel = new Geometry();
-  buildSlide(steel);
-  buildBarrel(steel);
   buildFrame(steel);
-  buildSights(steel);
+
+  const mag = new Geometry();
+  buildMagazine(mag);
 
   const grip = new Geometry();
   buildGripPanels(grip, 1);
@@ -11311,6 +11351,8 @@ function makePistol1911(opts = {}) {
 
   return {
     steel: offsetGeometry(steel, PISTOL_ORIGIN).finalize(),
+    slide: offsetGeometry(slide, PISTOL_ORIGIN).finalize(),
+    mag: offsetGeometry(mag, PISTOL_ORIGIN).finalize(),
     grip: offsetGeometry(grip, PISTOL_ORIGIN).finalize(),
     mark: offsetGeometry(mark, PISTOL_ORIGIN).finalize(),
   };
@@ -11365,6 +11407,13 @@ Engine.prototype.pistol1911 = function (opts = {}) {
   };
   body.grips = child('grip', parts.grip, opts.gripMaterial || PISTOL_MATERIALS.grip);
   body.mark = child('mark', parts.mark, PISTOL_MATERIALS.mark);
+  body.slide = child('slide', parts.slide, opts.material || PISTOL_MATERIALS.steel);
+  body.mag = child('mag', parts.mag, opts.material || PISTOL_MATERIALS.steel);
+  // Where the brass leaves and where a dropped magazine starts, in gun-local
+  // space, so the game never has to know the model's internals.
+  body.ejectPort = [0.0900, 0.0400, 0.0110];
+  body.magWell = [-0.0120, -0.0850, 0];
+  body.slideTravel = 0.026;
   return body;
 };
 
@@ -11487,12 +11536,8 @@ function buildTommySteel(g) {
   hardBox(g, rx, T.recUp + 0.0048, -0.0125, 0.0075, 0.0052, 0.0022);
   hardBox(g, rx, T.recUp + 0.0040, 0, 0.0016, 0.0044, 0.0104);        // peep leaf
 
-  /* Charging handle: right side, the M1A1 signature. */
-  sweepPath(g, [
-    { o: new Vec3(0.085, 0.0090, T.recHalfW - 0.002), u: U, v: new Vec3(1, 0, 0), pts: ringOutline(0.0058, 14) },
-    { o: new Vec3(0.085, 0.0090, T.recHalfW + 0.0105), u: U, v: new Vec3(1, 0, 0), pts: ringOutline(0.0058, 14) },
-  ], false, true);
-  // Its track, a shallow proud rib rather than an impossible slot.
+  // Its track stays with the receiver; the handle itself reciprocates and
+  // lives in its own geometry.
   hardBox(g, 0.050, 0.0090, T.recHalfW + 0.0002, 0.055, 0.0028, 0.0008);
 
   /* Selector and safety levers, left side. */
@@ -11503,18 +11548,6 @@ function buildTommySteel(g) {
     ], false, true);
   }
 
-  /* Magazine: a 30-round stick. Straight, slightly proud of its well,
-     with a stamped rib up each face. */
-  const magAxis = new Vec3(0.045, -1, 0).normalize();
-  const magU = new Vec3().crossVectors(V, magAxis).normalize();
-  const magAt = (d, grow) => ({
-    o: new Vec3(0.148 + magAxis.x * d, -0.040 + magAxis.y * d, 0),
-    u: magU, v: V,
-    pts: roundRect(0.0148 * grow, 0.0148 * grow, 0.0102 * grow, 2.7, 18),
-  });
-  sweepPath(g, [magAt(0, 1.06), magAt(0.012, 1.06), magAt(0.014, 1.0), magAt(0.165, 1.0), magAt(0.172, 1.02)], true, true);
-  hardBox(g, 0.148 + magAxis.x * 0.09, -0.040 - 0.09, 0.0104, 0.0022, 0.055, 0.0007);
-  hardBox(g, 0.148 + magAxis.x * 0.09, -0.040 - 0.09, -0.0104, 0.0022, 0.055, 0.0007);
 
   /* Trigger guard and serrated trigger. */
   const guardPts = [
@@ -11543,6 +11576,30 @@ function buildTommySteel(g) {
   };
   loop(-0.205, -0.0895);   // resting against the stock's belly
   loop(0.360, -0.0395);    // under the foregrip, touching it
+}
+
+/* The charging handle, on its own so it can ride back with each shot. */
+function buildTommyBolt(g) {
+  const U = new Vec3(0, 1, 0), T = TOMMY;
+  sweepPath(g, [
+    { o: new Vec3(0.085, 0.0090, T.recHalfW - 0.002), u: U, v: new Vec3(1, 0, 0), pts: ringOutline(0.0058, 14) },
+    { o: new Vec3(0.085, 0.0090, T.recHalfW + 0.0105), u: U, v: new Vec3(1, 0, 0), pts: ringOutline(0.0058, 14) },
+  ], false, true);
+}
+
+/* Magazine: a 30-round stick, stamped ribs up each face. */
+function buildTommyMag(g) {
+  const V = new Vec3(0, 0, 1);
+  const magAxis = new Vec3(0.045, -1, 0).normalize();
+  const magU = new Vec3().crossVectors(V, magAxis).normalize();
+  const magAt = (d, grow) => ({
+    o: new Vec3(0.148 + magAxis.x * d, -0.040 + magAxis.y * d, 0),
+    u: magU, v: V,
+    pts: roundRect(0.0148 * grow, 0.0148 * grow, 0.0102 * grow, 2.7, 18),
+  });
+  sweepPath(g, [magAt(0, 1.06), magAt(0.012, 1.06), magAt(0.014, 1.0), magAt(0.165, 1.0), magAt(0.172, 1.02)], true, true);
+  hardBox(g, 0.148 + magAxis.x * 0.09, -0.040 - 0.09, 0.0104, 0.0022, 0.055, 0.0007);
+  hardBox(g, 0.148 + magAxis.x * 0.09, -0.040 - 0.09, -0.0104, 0.0022, 0.055, 0.0007);
 }
 
 function buildTommyWood(g) {
@@ -11608,11 +11665,17 @@ function makeThompson() {
   buildTommySteel(steel);
   const wood = new Geometry();
   buildTommyWood(wood);
+  const bolt = new Geometry();
+  buildTommyBolt(bolt);
+  const mag = new Geometry();
+  buildTommyMag(mag);
   // Origin at the pistol grip, matching the 1911's hand-centred datum.
   const origin = new Vec3(0.030, -0.070, 0);
   return {
     steel: offsetGeometry(steel, origin).finalize(),
     wood: offsetGeometry(wood, origin).finalize(),
+    bolt: offsetGeometry(bolt, origin).finalize(),
+    mag: offsetGeometry(mag, origin).finalize(),
   };
 }
 
@@ -11641,6 +11704,18 @@ Engine.prototype.thompson = function (opts = {}) {
     this._mesh('tommy:wood', () => parts.wood), null, 0.6);
   wood.parent = body;
   body.wood = wood;
+
+  const child = (suffix, geo, mat) => {
+    const a = this._spawn({ material: mat, physics: false },
+      this._mesh('tommy:' + suffix, () => geo), null, 0.6);
+    a.parent = body;
+    return a;
+  };
+  body.slide = child('bolt', parts.bolt, opts.material || TOMMY_MATERIALS.steel);
+  body.mag = child('mag', parts.mag, opts.material || TOMMY_MATERIALS.steel);
+  body.ejectPort = [0.0700, 0.0930, 0.0210];
+  body.magWell = [0.1180, -0.0300, 0];
+  body.slideTravel = 0.030;
   return body;
 };
 

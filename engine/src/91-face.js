@@ -359,8 +359,20 @@ function makeHeadGeometry(opts = {}) {
   const g = new Geometry();
   const noise = new Noise(opts.seed || 5);
 
+  /* Archetype. One sculptor, three sets of numbers — a wider jaw and heavier
+     brow, a finer jaw and softer brow, or a broad skull with a full lower
+     face. Reusing the sculpt rather than authoring three heads is what keeps
+     a crowd of individuals affordable. */
+  const T = opts.type || 'male';
+  const A = T === 'female'
+    ? { rx: 0.238, ry: 0.330, rz: 0.268, brow: 0.026, jaw: 0.165, chin: 0.050, cheek: 0.024 }
+    : T === 'heavy'
+      ? { rx: 0.268, ry: 0.322, rz: 0.286, brow: 0.040, jaw: 0.085, chin: 0.048, cheek: 0.030 }
+      : { rx: 0.246, ry: 0.336, rz: 0.276, brow: 0.040, jaw: 0.135, chin: 0.062, cheek: 0.019 };
+  // A per-head nudge so no two of the same archetype are identical.
+  const vary = ((opts.seed || 5) % 7) / 7 - 0.5;
   // Base skull. Half-extents: narrow across, tall, deep.
-  const RX = 0.246, RY = 0.336, RZ = 0.276;
+  const RX = A.rx * (1 + vary * 0.05), RY = A.ry * (1 - vary * 0.04), RZ = A.rz * (1 + vary * 0.03);
   const mirrored = (fn) => (p) => fn(p, Math.abs(p.x), p.x < 0 ? -1 : 1);
 
   for (let r = 0; r <= rings; r++) {
@@ -438,7 +450,7 @@ function makeHeadGeometry(opts = {}) {
       // Eased, and it keeps more width than it takes: too much taper here
       // and the head reads as a skull rather than a face.
       const jaw = smoothstep(0.02, -0.32, y);
-      x *= 1 - jaw * 0.135;
+      x *= 1 - jaw * A.jaw;
       z *= 1 - jaw * 0.055;
       y -= jaw * 0.008;
 
@@ -447,7 +459,7 @@ function makeHeadGeometry(opts = {}) {
       /* --- face --- */
       // Brow ridge, strongest over the eyes and fading at the temples.
       const brow = featureFalloff(P, 0, 0.112, 0.205, 0.150, 0.058, 0.15, 1);
-      z += brow * 0.040;
+      z += brow * A.brow;
       y += brow * 0.004;
       // Glabella: the flat between the brows, which stops them merging into
       // one shelf across the face.
@@ -479,7 +491,7 @@ function makeHeadGeometry(opts = {}) {
       // Cheekbones.
       for (const sx of [1, -1]) {
         const cheek = featureFalloff(P, sx * 0.150, -0.020, 0.130, 0.090, 0.080, 0.13, 1);
-        x += sx * cheek * 0.019;
+        x += sx * cheek * A.cheek;
         z += cheek * 0.012;
       }
 
@@ -489,7 +501,7 @@ function makeHeadGeometry(opts = {}) {
       // The chin has to clear the lips in profile. Under-projecting it is
       // what makes a face read as weak-jawed and slightly simian.
       const chin = featureFalloff(P, 0, -0.282, 0.196, 0.072, 0.070, 0.12, 1);
-      z += chin * 0.062;
+      z += chin * A.chin;
       x += (P.x > 0 ? 1 : -1) * chin * 0.006;
       z -= featureFalloff(P, 0, -0.238, 0.212, 0.055, 0.020, 0.06, 1) * 0.022;
 

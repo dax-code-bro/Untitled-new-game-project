@@ -529,7 +529,8 @@ class Engine {
     const skeleton = makeHumanoidSkeleton(scale);
     // `zombie: true` swaps in the starved silhouette and torn clothing.
     const geo = makeHumanoidMesh(skeleton, opts.zombie
-      ? { gaunt: 0.82, rags: true, ragSeed: (opts.seed || 3) * 7 + 1 }
+      ? { gaunt: opts.gauntness != null ? opts.gauntness : 0.82,
+          rags: true, ragSeed: (opts.seed || 3) * 7 + 1 }
       : { thickness: opts.build || 1 });
     const mesh = new GpuMesh(this.gl, geo);
 
@@ -566,7 +567,7 @@ class Engine {
     this.actors.push(actor);
 
     if (opts.face !== false) {
-      const headGeo = makeHeadGeometry({ seed: opts.seed || 5 });
+      const headGeo = makeHeadGeometry({ seed: opts.seed || 5, type: opts.faceType });
       const headMesh = new GpuMesh(this.gl, headGeo);
       // A head with no expression rig has neither skeleton nor face, so the
       // renderer batches it through the instanced path — which needs an

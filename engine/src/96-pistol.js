@@ -542,12 +542,6 @@ function buildFrame(g) {
     gripStation(1.00, 0.0196, 0.0256, 0.0119, 2.6),
   ], true, true);
 
-  // Magazine floorplate, proud of the butt on all sides.
-  sweepPath(g, [
-    gripStation(1.00, 0.0196, 0.0256, 0.0119, 2.6),
-    gripStation(1.008, 0.0206, 0.0266, 0.0126, 2.4),
-    gripStation(1.030, 0.0206, 0.0266, 0.0126, 2.4),
-  ], false, true);
 
   /* Grip safety: the standard GI tang — a short, stubby spur, not the
      modern beavertail. It barely clears the hammer's arc, which is why
@@ -848,6 +842,30 @@ function buildEngraving(g, text, opts = {}) {
   }
 }
 
+/* The magazine. Sized off the grip's own cross-section so it sits flush in
+   the well, with a floorplate that stands proud — the part you actually see
+   drop when it falls out. */
+function buildMagazine(g) {
+  const at = (t, hf, hb, hw) => gripStation(t, hf, hb, hw, 2.7);
+  sweepPath(g, [
+    at(0.08, 0.0150, 0.0150, 0.0086),
+    at(0.35, 0.0148, 0.0152, 0.0086),
+    at(0.72, 0.0146, 0.0150, 0.0086),
+    at(0.99, 0.0148, 0.0152, 0.0088),
+  ], true, true);
+  // Floorplate.
+  sweepPath(g, [
+    at(0.99, 0.0196, 0.0256, 0.0119),
+    at(1.008, 0.0206, 0.0266, 0.0126),
+    at(1.030, 0.0206, 0.0266, 0.0126),
+  ], true, true);
+  // Witness holes down the side, as a row of shallow dimples.
+  for (let i = 0; i < 5; i++) {
+    const c = gripStation(0.30 + i * 0.14, 0.0146, 0.0150, 0.0086, 2.7);
+    hardBox(g, c.o.x + GRIP_U.x * -0.004, c.o.y + GRIP_U.y * -0.004, 0.0088, 0.0016, 0.0016, 0.0004);
+  }
+}
+
 /* ---------------- assembly ---------------- */
 
 /* Origin at the web of the shooting hand, so an actor placed at a point
@@ -865,11 +883,20 @@ function offsetGeometry(geo, o) {
    the mark. Splitting by material rather than by part keeps it to three
    draw calls. */
 function makePistol1911(opts = {}) {
+  /* Split by what moves, not by what it is made of. The slide and barrel
+     travel together under recoil, the magazine drops out of the frame, and
+     the frame stays in the hand — so they are three actors, and animating
+     the gun is then just moving them relative to each other. */
+  const slide = new Geometry();
+  buildSlide(slide);
+  buildBarrel(slide);
+  buildSights(slide);
+
   const steel = new Geometry();
-  buildSlide(steel);
-  buildBarrel(steel);
   buildFrame(steel);
-  buildSights(steel);
+
+  const mag = new Geometry();
+  buildMagazine(mag);
 
   const grip = new Geometry();
   buildGripPanels(grip, 1);
@@ -881,6 +908,8 @@ function makePistol1911(opts = {}) {
 
   return {
     steel: offsetGeometry(steel, PISTOL_ORIGIN).finalize(),
+    slide: offsetGeometry(slide, PISTOL_ORIGIN).finalize(),
+    mag: offsetGeometry(mag, PISTOL_ORIGIN).finalize(),
     grip: offsetGeometry(grip, PISTOL_ORIGIN).finalize(),
     mark: offsetGeometry(mark, PISTOL_ORIGIN).finalize(),
   };
@@ -935,5 +964,12 @@ Engine.prototype.pistol1911 = function (opts = {}) {
   };
   body.grips = child('grip', parts.grip, opts.gripMaterial || PISTOL_MATERIALS.grip);
   body.mark = child('mark', parts.mark, PISTOL_MATERIALS.mark);
+  body.slide = child('slide', parts.slide, opts.material || PISTOL_MATERIALS.steel);
+  body.mag = child('mag', parts.mag, opts.material || PISTOL_MATERIALS.steel);
+  // Where the brass leaves and where a dropped magazine starts, in gun-local
+  // space, so the game never has to know the model's internals.
+  body.ejectPort = [0.0900, 0.0400, 0.0110];
+  body.magWell = [-0.0120, -0.0850, 0];
+  body.slideTravel = 0.026;
   return body;
 };

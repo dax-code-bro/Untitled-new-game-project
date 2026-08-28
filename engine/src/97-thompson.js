@@ -115,12 +115,8 @@ function buildTommySteel(g) {
   hardBox(g, rx, T.recUp + 0.0048, -0.0125, 0.0075, 0.0052, 0.0022);
   hardBox(g, rx, T.recUp + 0.0040, 0, 0.0016, 0.0044, 0.0104);        // peep leaf
 
-  /* Charging handle: right side, the M1A1 signature. */
-  sweepPath(g, [
-    { o: new Vec3(0.085, 0.0090, T.recHalfW - 0.002), u: U, v: new Vec3(1, 0, 0), pts: ringOutline(0.0058, 14) },
-    { o: new Vec3(0.085, 0.0090, T.recHalfW + 0.0105), u: U, v: new Vec3(1, 0, 0), pts: ringOutline(0.0058, 14) },
-  ], false, true);
-  // Its track, a shallow proud rib rather than an impossible slot.
+  // Its track stays with the receiver; the handle itself reciprocates and
+  // lives in its own geometry.
   hardBox(g, 0.050, 0.0090, T.recHalfW + 0.0002, 0.055, 0.0028, 0.0008);
 
   /* Selector and safety levers, left side. */
@@ -131,18 +127,6 @@ function buildTommySteel(g) {
     ], false, true);
   }
 
-  /* Magazine: a 30-round stick. Straight, slightly proud of its well,
-     with a stamped rib up each face. */
-  const magAxis = new Vec3(0.045, -1, 0).normalize();
-  const magU = new Vec3().crossVectors(V, magAxis).normalize();
-  const magAt = (d, grow) => ({
-    o: new Vec3(0.148 + magAxis.x * d, -0.040 + magAxis.y * d, 0),
-    u: magU, v: V,
-    pts: roundRect(0.0148 * grow, 0.0148 * grow, 0.0102 * grow, 2.7, 18),
-  });
-  sweepPath(g, [magAt(0, 1.06), magAt(0.012, 1.06), magAt(0.014, 1.0), magAt(0.165, 1.0), magAt(0.172, 1.02)], true, true);
-  hardBox(g, 0.148 + magAxis.x * 0.09, -0.040 - 0.09, 0.0104, 0.0022, 0.055, 0.0007);
-  hardBox(g, 0.148 + magAxis.x * 0.09, -0.040 - 0.09, -0.0104, 0.0022, 0.055, 0.0007);
 
   /* Trigger guard and serrated trigger. */
   const guardPts = [
@@ -171,6 +155,30 @@ function buildTommySteel(g) {
   };
   loop(-0.205, -0.0895);   // resting against the stock's belly
   loop(0.360, -0.0395);    // under the foregrip, touching it
+}
+
+/* The charging handle, on its own so it can ride back with each shot. */
+function buildTommyBolt(g) {
+  const U = new Vec3(0, 1, 0), T = TOMMY;
+  sweepPath(g, [
+    { o: new Vec3(0.085, 0.0090, T.recHalfW - 0.002), u: U, v: new Vec3(1, 0, 0), pts: ringOutline(0.0058, 14) },
+    { o: new Vec3(0.085, 0.0090, T.recHalfW + 0.0105), u: U, v: new Vec3(1, 0, 0), pts: ringOutline(0.0058, 14) },
+  ], false, true);
+}
+
+/* Magazine: a 30-round stick, stamped ribs up each face. */
+function buildTommyMag(g) {
+  const V = new Vec3(0, 0, 1);
+  const magAxis = new Vec3(0.045, -1, 0).normalize();
+  const magU = new Vec3().crossVectors(V, magAxis).normalize();
+  const magAt = (d, grow) => ({
+    o: new Vec3(0.148 + magAxis.x * d, -0.040 + magAxis.y * d, 0),
+    u: magU, v: V,
+    pts: roundRect(0.0148 * grow, 0.0148 * grow, 0.0102 * grow, 2.7, 18),
+  });
+  sweepPath(g, [magAt(0, 1.06), magAt(0.012, 1.06), magAt(0.014, 1.0), magAt(0.165, 1.0), magAt(0.172, 1.02)], true, true);
+  hardBox(g, 0.148 + magAxis.x * 0.09, -0.040 - 0.09, 0.0104, 0.0022, 0.055, 0.0007);
+  hardBox(g, 0.148 + magAxis.x * 0.09, -0.040 - 0.09, -0.0104, 0.0022, 0.055, 0.0007);
 }
 
 function buildTommyWood(g) {
@@ -236,11 +244,17 @@ function makeThompson() {
   buildTommySteel(steel);
   const wood = new Geometry();
   buildTommyWood(wood);
+  const bolt = new Geometry();
+  buildTommyBolt(bolt);
+  const mag = new Geometry();
+  buildTommyMag(mag);
   // Origin at the pistol grip, matching the 1911's hand-centred datum.
   const origin = new Vec3(0.030, -0.070, 0);
   return {
     steel: offsetGeometry(steel, origin).finalize(),
     wood: offsetGeometry(wood, origin).finalize(),
+    bolt: offsetGeometry(bolt, origin).finalize(),
+    mag: offsetGeometry(mag, origin).finalize(),
   };
 }
 
@@ -269,5 +283,17 @@ Engine.prototype.thompson = function (opts = {}) {
     this._mesh('tommy:wood', () => parts.wood), null, 0.6);
   wood.parent = body;
   body.wood = wood;
+
+  const child = (suffix, geo, mat) => {
+    const a = this._spawn({ material: mat, physics: false },
+      this._mesh('tommy:' + suffix, () => geo), null, 0.6);
+    a.parent = body;
+    return a;
+  };
+  body.slide = child('bolt', parts.bolt, opts.material || TOMMY_MATERIALS.steel);
+  body.mag = child('mag', parts.mag, opts.material || TOMMY_MATERIALS.steel);
+  body.ejectPort = [0.0700, 0.0930, 0.0210];
+  body.magWell = [0.1180, -0.0300, 0];
+  body.slideTravel = 0.030;
   return body;
 };
