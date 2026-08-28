@@ -204,6 +204,12 @@ const LINES = {
   ],
   crateOpen: [['radio', 'Ah, the supply crate. Property of no army that admits to it.']],
   crateArc: [['patch', 'This is not standard issue. This is not any issue.']],
+  gold: [
+    ['patch', 'Something just came out of the east wall. A belt line.'],
+    ['radio', 'Feeding what, exactly.'],
+    ['patch', 'Gold. They were casting rounds in gold down here.'],
+    ['radio', 'Somebody was very sure the ordinary kind would not be enough.'],
+  ],
   blitz: [['radio', 'And the lightning takes the whole choir at once. Marvelous.']],
   nearDeath: [['patch', 'Still here. Angrier, but still here.']],
   gameOver: [['radio', 'Rest now, Bunker Nine. I will keep a light on for the next one.']],
@@ -470,6 +476,33 @@ function buildMap(game, S) {
       physics: false, material: { color: 0x3f4a33, texture: 'metal', roughness: 0.62, metalness: 1 } });
   }
   S.nadeBuy = { at: nadeAt };
+
+  /* The conveyor. Built at map load and parked out of sight; when the
+     three conditions land it slides out of the wall and starts running. */
+  {
+    const bx = 4.9, by = 1.62, bz = -3.0;
+    const steel = { color: 0x565b62, texture: 'metal', roughness: 0.5, metalness: 1 };
+    const dark = { color: 0x2a2d31, texture: 'metal', roughness: 0.66, metalness: 1 };
+    const root = game.box({ at: [bx, by, bz], size: 1, physics: false, visible: false });
+    const parts = [];
+    const add = (a, pos, rot) => { a.parent = root; a.setPosition(pos); if (rot) a.setRotation(rot); parts.push(a); return a; };
+    add(game.box({ size: [1.35, 0.075, 0.44], material: dark, physics: false }), [0, 0, 0]);
+    for (const sz of [-1, 1]) add(game.box({ size: [1.35, 0.11, 0.035], material: steel, physics: false }), [0, 0.055, sz * 0.225]);
+    for (const sx of [-1, 1]) add(game.cylinder({ radius: 0.055, height: 0.42, material: steel, physics: false }), [sx * 0.64, 0.012, 0], [90, 0, 0]);
+    // Legs and a hopper at the wall end.
+    for (const sx of [-1, 1]) add(game.cylinder({ radius: 0.022, height: 0.55, material: dark, physics: false }), [sx * 0.5, -0.31, 0.16]);
+    add(game.box({ size: [0.34, 0.36, 0.40], material: steel, physics: false }), [0.74, 0.16, 0]);
+    // Rollers, which turn while it runs.
+    const rollers = [];
+    for (let k = -4; k <= 4; k++) {
+      rollers.push(add(game.cylinder({ radius: 0.034, height: 0.40, material: steel, physics: false }), [k * 0.135, 0.048, 0], [90, 0, 0]));
+    }
+    const lamp = add(game.sphere({ radius: 0.038, physics: false, material: {
+      color: 0x3a2f12, texture: 'smooth', roughness: 0.3, emissive: 0xffc23a, emissiveStrength: 0 } }), [0.74, 0.40, 0]);
+    root.visible = false;
+    for (const q of parts) q.visible = false;
+    S.belt = { root, parts, rollers, lamp, at: [bx, by, bz], out: 0, running: false, dropT: 0, spin: 0 };
+  }
 
   /* The generator, and the wall panel that wakes it.
 
@@ -805,6 +838,7 @@ function makePlayer(game, S, hud, sfx, voice) {
     },
     nades: GRENADE.start, nadeCd: 0,
     swingT: 0, blocking: false, blockT: 0,
+    gold: 0, goldAmmo: false,
     cooldown: 0, reloading: 0, reloadStage: 0, swayT: 0, kickPitch: 0,
     slideCycle: 0, slideCycleMax: 0.085,
     view: {}, muzzleT: 0, alive: true,
@@ -1078,6 +1112,12 @@ function tryFire(game, S, P, hud, sfx, dt) {
 
   /* Melee: a short cone-ish probe instead of a bullet, its own kill
      bounty, and no ammo to spend. */
+  /* Gold is spent by the shot, not the pellet, so a shotgun does not eat
+     eight of them at a time. */
+  if (P.goldAmmo && !spec.melee) {
+    P.gold--;
+    if (P.gold <= 0) { P.gold = 0; P.goldAmmo = false; }
+  }
   if (spec.melee) {
     P.cooldown = spec.refire;
     P.kickPitch = Math.min(3, P.kickPitch + spec.kick);
@@ -1134,10 +1174,14 @@ function tryFire(game, S, P, hud, sfx, dt) {
   if (rc) {
     const brace = 1 - P.ads * 0.35;
     const deg = Math.PI / 180;
-    P.recoil.pitch -= rc.up * deg * (0.85 + Math.random() * 0.3) * brace;
-    P.recoil.yaw += rc.side * deg * (Math.random() - 0.5) * 2 * brace;
+    // Eighteen carat is heavier and hotter: more kick, and a climb that
+    // builds faster over a burst. That is the price of the damage.
+    const gk = P.goldAmmo ? GOLD.recoilMul : 1;
+    const gc = P.goldAmmo ? GOLD.climbMul : 1;
+    P.recoil.pitch -= rc.up * deg * (0.85 + Math.random() * 0.3) * brace * gk;
+    P.recoil.yaw += rc.side * deg * (Math.random() - 0.5) * 2 * brace * gk;
     // The part that does not come back — the player has to fight this down.
-    game._camPitch -= rc.climb * deg * brace;
+    game._camPitch -= rc.climb * deg * brace * gc;
     // recoilApplied is owned by updateRecoil alone. Writing the new value
     // here makes the next frame subtract an offset it never added, which
     // inverts the whole effect and pushes the muzzle down.
@@ -1177,7 +1221,7 @@ function tryFire(game, S, P, hud, sfx, dt) {
     const z = hit.actor && hit.actor.userData && hit.actor.userData.zombie;
     if (z && !z.dead) {
       const headshot = hit.point.y > z.actor.position.y + 0.5;
-      const dmg = spec.dmg * (headshot ? spec.headMul : 1);
+      const dmg = spec.dmg * (headshot ? spec.headMul : 1) * (P.goldAmmo ? GOLD.dmgMul : 1);
       // Snapshot before the kill: death parks the body at the pool lot,
       // and the chain has to arc from the corpse, not the car park.
       const diedAt = { x: z.actor.position.x, y: z.actor.position.y, z: z.actor.position.z };
@@ -1247,7 +1291,9 @@ function ejectShell(game, S, P, v) {
   const sp = 2.4 + Math.random() * 1.2;
   const shell = game.cylinder({
     at: [wx, wy, wz], radius: 0.0058, height: 0.023, lifetime: 3.4,
-    material: { color: 0xc79a43, texture: 'metal', roughness: 0.3, metalness: 1 },
+    material: P.goldAmmo
+      ? { color: 0xf5c93f, texture: 'metal', roughness: 0.10, metalness: 1, emissive: 0x5a3f06, emissiveStrength: 0.55 }
+      : { color: 0xc79a43, texture: 'metal', roughness: 0.3, metalness: 1 },
     velocity: [ex * sp + (Math.random() - 0.5), ey * sp + 1.2, ez * sp + (Math.random() - 0.5)],
     bounce: 0.35, friction: 0.6, mass: 0.012,
   });
@@ -1332,6 +1378,18 @@ const MELEE_SWING = {
 /* Raising the shield. It eats damage from the front and slows you down;
    it does not make you invulnerable, and nothing gets blocked from behind. */
 const SHIELD_BLOCK = { arc: 0.55, slow: 0.45, raise: 6.0 };
+
+/* Eighteen carat.
+
+   Three conditions, none of them signposted: the generator running, Super
+   Soldier held, and Shield Up held. Meet all three and a conveyor runs out
+   of the east wall and starts dropping rounds. They double every gun's
+   damage, they go through plate, and they cost you a harder climb on every
+   shot — the extra mass has to go somewhere. The casings come out gold. */
+const GOLD = {
+  rounds: 120, dmgMul: 2.0, recoilMul: 1.7, climbMul: 2.1,
+  beltSpeed: 0.55, dropEvery: 1.5,
+};
 
 /* Grenades. The inner radius kills outright; between there and the outer
    one the blast wounds, and anything that lives through it inside legRadius
@@ -2469,7 +2527,9 @@ function makeHud() {
     ammo(P) {
       const am = P.ammoFor(P.equipped());
       els.ammo.textContent = `${am.mag} / ${am.reserve}`;
-      els.wname.textContent = P.spec().slotName + (P.nades > 0 ? `   ✚${P.nades}` : '');
+      els.wname.textContent = P.spec().slotName
+        + (P.goldAmmo ? `   ★${P.gold}` : '')
+        + (P.nades > 0 ? `   ✚${P.nades}` : '');
     },
     flashWeapon(name) { els.wname.textContent = name; },
     prompt(text, warn) {
@@ -2620,7 +2680,7 @@ function start(opts = {}) {
     testMode: !!opts.test, godMode: false,
     input: { fireHeld: false, firePressed: false, aimHeld: false, sprintHeld: false },
     testHold: {},
-    grenades: [],
+    grenades: [], goldPickups: [], belt: null,
   };
   S.addPoints = (n) => { const a = Math.round(n * S.mul); S.points += a; return a; };
 
@@ -2921,6 +2981,60 @@ function start(opts = {}) {
         continue;
       }
       pr.actor.setPosition([nx, ny, nz]);
+    }
+
+    /* The eighteen carat conveyor. Nothing announces the conditions; the
+       belt arriving is the announcement. */
+    if (S.belt) {
+      const bl = S.belt;
+      const earned = S.powered && P.perks.supersoldier && P.perks.shieldup;
+      if (earned && !bl.running) {
+        bl.running = true;
+        for (const q of bl.parts) q.visible = true;
+        bl.root.visible = true;
+        bl.lamp.material = game.material({ color: 0x3a2f12, texture: 'smooth', roughness: 0.3,
+          emissive: 0xffc23a, emissiveStrength: 3.2 });
+        sfx.powerOn();
+        S.voice(LINES.gold);
+        hud.banner('EIGHTEEN CARAT', '#f0c256');
+      }
+      if (bl.running) {
+        // Slide it out of the wall, then run it.
+        bl.out = Math.min(1, bl.out + dt * GOLD.beltSpeed);
+        bl.root.setPosition([bl.at[0] - bl.out * 0.95, bl.at[1], bl.at[2]]);
+        bl.spin += dt * 4.2;
+        for (const r of bl.rollers) r.setRotation([90, 0, bl.spin * 57.3]);
+        if (bl.out >= 1) {
+          bl.dropT -= dt;
+          if (bl.dropT <= 0) {
+            bl.dropT = GOLD.dropEvery;
+            const px2 = bl.at[0] - 1.55, pz2 = bl.at[2] + (Math.random() - 0.5) * 0.3;
+            const round = game.cylinder({
+              at: [px2, bl.at[1] + 0.06, pz2], radius: 0.010, height: 0.040, lifetime: 22,
+              material: { color: 0xf2c141, texture: 'metal', roughness: 0.16, metalness: 1,
+                emissive: 0x6a4c08, emissiveStrength: 0.5 },
+              velocity: [-0.7, 0.4, (Math.random() - 0.5) * 0.6],
+            });
+            if (round.body) round.body.angularVelocity.set(4, 2, 6);
+            S.goldPickups.push({ actor: round, t: 22 });
+          }
+        }
+      }
+      // Walk over a round and it goes in the gun.
+      for (let k = S.goldPickups.length - 1; k >= 0; k--) {
+        const gp = S.goldPickups[k];
+        gp.t -= dt;
+        const q = gp.actor.position;
+        if (gp.t <= 0) { gp.actor.destroy(); S.goldPickups.splice(k, 1); continue; }
+        if (dist2d(q, P.actor.position) < 1.0 && Math.abs(q.y - P.actor.position.y) < 1.6) {
+          P.gold = Math.min(GOLD.rounds, (P.gold || 0) + 20);
+          P.goldAmmo = true;
+          sfx.powerup();
+          hud.ammo(P);
+          gp.actor.destroy();
+          S.goldPickups.splice(k, 1);
+        }
+      }
     }
 
     /* Grenades: thrown, bounced, and off on the fuse rather than on
