@@ -1142,6 +1142,11 @@ const ZOMBIE_SKIN = { color: 0x8d9c78, texture: 'skin', roughness: 0.88, metalne
 /* Cloth people actually wore, filthy: field grey, brown canvas, dirty
    drill, oiled wool. Saturated teal and orange read as costume, and a
    costume on a green body reads as a painted body. */
+/* The male looks, cycled through the pool so a horde is mixed rather than
+   four copies of one man. 'walker' is the imported body; the rest dress the
+   procedural one. */
+const MALE_LOOKS = ['walker', 'street', 'college', 'prison'];
+
 const RAG_COLORS = [0x6f6c5c, 0x7a6a52, 0x5e6355, 0x83795f,
                     0x615c4e, 0x726446, 0x555a4d, 0x7d7460];
 /* Dead skin, darker than it wants to be. The procedural skin texture warms
@@ -1266,12 +1271,16 @@ function buildPooledZombie(game, S, i) {
   const rag = RAG_COLORS[i % RAG_COLORS.length];
   const tone = SKIN_TONES[(i * 3) % SKIN_TONES.length];
   const body = BODY_TYPES[i % BODY_TYPES.length];
-  // The male build is an imported model: it arrives with its clothes, its
-  // head and its rot already sculpted into one mesh, so the procedural
-  // garment, blood and head layers are all skipped for it.
-  const model = body.id === 'male' && WALKER ? WALKER : null;
+  /* Male zombies come in four looks that cycle through the pool: the
+     imported body, which arrives with its clothes, head and rot sculpted
+     into one mesh, and three dressed variants of the procedural body.
+     Anything with a model skips the procedural garment, blood and head
+     layers entirely — it already has them. */
+  const look = body.id === 'male' ? MALE_LOOKS[(i / BODY_TYPES.length | 0) % MALE_LOOKS.length] : null;
+  const model = look === 'walker' && WALKER ? WALKER : null;
+  const outfit = look && look !== 'walker' ? look : null;
   const a = game.character({
-    model,
+    model, outfit,
     at: [200 + i * 4, -38, 0],
     // The imported body carries its own UV layout, so it wants its own
     // texture density and a tone chosen against its sculpted detail rather
@@ -1282,7 +1291,9 @@ function buildPooledZombie(game, S, i) {
     } } : {}),
     // The body material is now flesh only — the coat is its own mesh.
     material: { color: tone, texture: 'rust', roughness: 0.92, metalness: 0, subsurface: 0.05, uvScale: 3 },
-    clothMaterial: { color: rag, texture: 'fabric', roughness: 0.97, metalness: 0, uvScale: 2.4 },
+    // A dressed variant carries its colours per vertex, so its material has
+    // to be white or every tint would be multiplied down by a rag colour.
+    clothMaterial: { color: outfit ? 0xffffff : rag, texture: 'fabric', roughness: 0.96, metalness: 0, uvScale: 2.2 },
     bloodMaterial: { color: 0x37100b, texture: 'smooth', roughness: 0.30, metalness: 0 },
     // Rotted flesh reads as mottled, not as an even tint. The skin texture
     // warms whatever colour it is given into something living; a corroded

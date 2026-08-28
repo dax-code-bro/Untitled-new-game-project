@@ -21,6 +21,24 @@ class Geometry {
        `part` before a section and everything it emits is tagged. */
     this.part = 0;
     this.parts = [];
+    this._color = null;
+  }
+
+  /* Start tinting subsequent vertices. Opt-in: a geometry that never calls
+     this carries no colour buffer at all and costs nothing, and one that
+     does gets a white shirt, blue jeans and brown boots out of a single
+     mesh with a single material. Call with no arguments for white. */
+  setColor(r, g, b) {
+    if (!this.colors) {
+      this.colors = [];
+      // Anything already emitted was untinted.
+      for (let i = this.positions.length / 3; i > 0; i--) this.colors.push(1, 1, 1);
+    }
+    if (r == null) this._color = null;
+    else if (typeof r === 'number' && g == null) {
+      this._color = [((r >> 16) & 255) / 255, ((r >> 8) & 255) / 255, (r & 255) / 255];
+    } else this._color = [r, g, b];
+    return this;
   }
 
   vert(px, py, pz, nx, ny, nz, u, v) {
@@ -28,6 +46,10 @@ class Geometry {
     this.normals.push(nx, ny, nz);
     this.uvs.push(u, v);
     this.parts.push(this.part);
+    if (this.colors) {
+      const c = this._color;
+      if (c) this.colors.push(c[0], c[1], c[2]); else this.colors.push(1, 1, 1);
+    }
     return this.positions.length / 3 - 1;
   }
 
@@ -184,6 +206,7 @@ class Geometry {
     this.positions = new Float32Array(this.positions);
     this.normals = new Float32Array(this.normals);
     this.uvs = new Float32Array(this.uvs);
+    if (this.colors && !(this.colors instanceof Float32Array)) this.colors = new Float32Array(this.colors);
     if (!this.tangents) this.computeTangents();
     if (!this.bounds) this.computeBounds();
     return this;

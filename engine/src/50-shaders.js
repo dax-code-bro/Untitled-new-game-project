@@ -229,6 +229,11 @@ layout(location=0) in vec3 aPosition;
 layout(location=1) in vec3 aNormal;
 layout(location=2) in vec2 aUv;
 layout(location=3) in vec4 aTangent;
+/* Per-vertex tint. A mesh that never sets one leaves this array disabled and
+   picks up the generic attribute, which the renderer holds at white — so a
+   plain model is unaffected, while one that wants a white shirt over blue
+   jeans gets both out of a single mesh and a single draw. */
+layout(location=4) in vec3 aColor;
 #ifdef SKINNED
 layout(location=5) in vec4 aJoints;
 layout(location=6) in vec4 aWeights;
@@ -346,6 +351,7 @@ out vec3 vWorldPos;
 out vec3 vNormal;
 out vec4 vTangent;
 out vec2 vUv;
+out vec3 vTint;
 out vec4 vParams;
 out float vViewDepth;
 
@@ -355,6 +361,7 @@ void main(){
   vNormal = s.normal;
   vTangent = s.tangent;
   vUv = s.uv;
+  vTint = aColor;
   vParams = s.params;
   vViewDepth = length(s.worldPos - uCameraPos);
   gl_Position = uViewProj * vec4(s.worldPos, 1.0);
@@ -372,6 +379,7 @@ in vec3 vWorldPos;
 in vec3 vNormal;
 in vec4 vTangent;
 in vec2 vUv;
+in vec3 vTint;
 in vec4 vParams;
 in float vViewDepth;
 
@@ -403,7 +411,7 @@ layout(location=0) out vec4 outColor;
 void main(){
   vec2 uv = vUv * uUvScale;
 
-  vec3 albedo = uBaseColor * vParams.rgb;
+  vec3 albedo = uBaseColor * vParams.rgb * vTint;
   float rough = uRoughness;
   float metal = uMetalness;
   float ao = 1.0;

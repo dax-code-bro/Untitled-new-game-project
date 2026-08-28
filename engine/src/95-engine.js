@@ -578,6 +578,7 @@ class Engine {
     if (opts.zombie && !model) {
       const clothGeo = makeHumanoidMesh(skeleton, {
         zombieBuild: opts.zombieBuild || 'male', seed: opts.seed || 3, clothOnly: true,
+        outfit: opts.outfit,
       });
       if (clothGeo.indices.length) {
         const clothActor = new Actor(this, {

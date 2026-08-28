@@ -160,7 +160,7 @@ function makeHumanoidMesh(skeleton, opts = {}) {
   const g = opts.bloodOnly
     ? buildZombieBloodGeometry(skeleton, { build: opts.zombieBuild, seed: opts.seed })
     : opts.clothOnly
-    ? buildZombieClothGeometry(skeleton, { build: opts.zombieBuild, seed: opts.seed, segments: opts.segments })
+    ? buildZombieClothGeometry(skeleton, { build: opts.zombieBuild, seed: opts.seed, segments: opts.segments, outfit: opts.outfit })
     : opts.zombieBuild
       ? buildZombieBodyGeometry(skeleton, { build: opts.zombieBuild, seed: opts.seed, segments: opts.segments })
       : makeHumanBodyGeometry(skeleton, opts);

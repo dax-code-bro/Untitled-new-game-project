@@ -333,6 +333,11 @@ class GpuMesh {
     this.bounds = geometry.bounds || null;
 
     gl.bindVertexArray(this.vao);
+    /* Location 4 is the per-vertex tint. When a mesh has no colour buffer
+       the array stays disabled and every vertex reads the generic attribute
+       instead, whose default is opaque black — which would render every
+       untinted model in the engine black. Hold it at white. */
+    gl.vertexAttrib3f(ATTR.COLOR, 1, 1, 1);
     this._attrib(ATTR.POSITION, geometry.positions, 3);
     if (geometry.normals) this._attrib(ATTR.NORMAL, geometry.normals, 3);
     if (geometry.uvs) this._attrib(ATTR.UV, geometry.uvs, 2);

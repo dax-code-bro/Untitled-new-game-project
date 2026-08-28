@@ -958,6 +958,11 @@ class GpuMesh {
     this.bounds = geometry.bounds || null;
 
     gl.bindVertexArray(this.vao);
+    /* Location 4 is the per-vertex tint. When a mesh has no colour buffer
+       the array stays disabled and every vertex reads the generic attribute
+       instead, whose default is opaque black — which would render every
+       untinted model in the engine black. Hold it at white. */
+    gl.vertexAttrib3f(ATTR.COLOR, 1, 1, 1);
     this._attrib(ATTR.POSITION, geometry.positions, 3);
     if (geometry.normals) this._attrib(ATTR.NORMAL, geometry.normals, 3);
     if (geometry.uvs) this._attrib(ATTR.UV, geometry.uvs, 2);
@@ -1119,6 +1124,24 @@ class Geometry {
        `part` before a section and everything it emits is tagged. */
     this.part = 0;
     this.parts = [];
+    this._color = null;
+  }
+
+  /* Start tinting subsequent vertices. Opt-in: a geometry that never calls
+     this carries no colour buffer at all and costs nothing, and one that
+     does gets a white shirt, blue jeans and brown boots out of a single
+     mesh with a single material. Call with no arguments for white. */
+  setColor(r, g, b) {
+    if (!this.colors) {
+      this.colors = [];
+      // Anything already emitted was untinted.
+      for (let i = this.positions.length / 3; i > 0; i--) this.colors.push(1, 1, 1);
+    }
+    if (r == null) this._color = null;
+    else if (typeof r === 'number' && g == null) {
+      this._color = [((r >> 16) & 255) / 255, ((r >> 8) & 255) / 255, (r & 255) / 255];
+    } else this._color = [r, g, b];
+    return this;
   }
 
   vert(px, py, pz, nx, ny, nz, u, v) {
@@ -1126,6 +1149,10 @@ class Geometry {
     this.normals.push(nx, ny, nz);
     this.uvs.push(u, v);
     this.parts.push(this.part);
+    if (this.colors) {
+      const c = this._color;
+      if (c) this.colors.push(c[0], c[1], c[2]); else this.colors.push(1, 1, 1);
+    }
     return this.positions.length / 3 - 1;
   }
 
@@ -1282,6 +1309,7 @@ class Geometry {
     this.positions = new Float32Array(this.positions);
     this.normals = new Float32Array(this.normals);
     this.uvs = new Float32Array(this.uvs);
+    if (this.colors && !(this.colors instanceof Float32Array)) this.colors = new Float32Array(this.colors);
     if (!this.tangents) this.computeTangents();
     if (!this.bounds) this.computeBounds();
     return this;
@@ -2414,6 +2442,11 @@ layout(location=0) in vec3 aPosition;
 layout(location=1) in vec3 aNormal;
 layout(location=2) in vec2 aUv;
 layout(location=3) in vec4 aTangent;
+/* Per-vertex tint. A mesh that never sets one leaves this array disabled and
+   picks up the generic attribute, which the renderer holds at white — so a
+   plain model is unaffected, while one that wants a white shirt over blue
+   jeans gets both out of a single mesh and a single draw. */
+layout(location=4) in vec3 aColor;
 #ifdef SKINNED
 layout(location=5) in vec4 aJoints;
 layout(location=6) in vec4 aWeights;
@@ -2531,6 +2564,7 @@ out vec3 vWorldPos;
 out vec3 vNormal;
 out vec4 vTangent;
 out vec2 vUv;
+out vec3 vTint;
 out vec4 vParams;
 out float vViewDepth;
 
@@ -2540,6 +2574,7 @@ void main(){
   vNormal = s.normal;
   vTangent = s.tangent;
   vUv = s.uv;
+  vTint = aColor;
   vParams = s.params;
   vViewDepth = length(s.worldPos - uCameraPos);
   gl_Position = uViewProj * vec4(s.worldPos, 1.0);
@@ -2557,6 +2592,7 @@ in vec3 vWorldPos;
 in vec3 vNormal;
 in vec4 vTangent;
 in vec2 vUv;
+in vec3 vTint;
 in vec4 vParams;
 in float vViewDepth;
 
@@ -2588,7 +2624,7 @@ layout(location=0) out vec4 outColor;
 void main(){
   vec2 uv = vUv * uUvScale;
 
-  vec3 albedo = uBaseColor * vParams.rgb;
+  vec3 albedo = uBaseColor * vParams.rgb * vTint;
   float rough = uRoughness;
   float metal = uMetalness;
   float ao = 1.0;
@@ -8416,7 +8452,7 @@ function makeHumanoidMesh(skeleton, opts = {}) {
   const g = opts.bloodOnly
     ? buildZombieBloodGeometry(skeleton, { build: opts.zombieBuild, seed: opts.seed })
     : opts.clothOnly
-    ? buildZombieClothGeometry(skeleton, { build: opts.zombieBuild, seed: opts.seed, segments: opts.segments })
+    ? buildZombieClothGeometry(skeleton, { build: opts.zombieBuild, seed: opts.seed, segments: opts.segments, outfit: opts.outfit })
     : opts.zombieBuild
       ? buildZombieBodyGeometry(skeleton, { build: opts.zombieBuild, seed: opts.seed, segments: opts.segments })
       : makeHumanBodyGeometry(skeleton, opts);
@@ -9429,6 +9465,11 @@ function loftGarment(g, rings, segments, rng, opts = {}) {
   const holes = opts.holes != null ? opts.holes : 0.06;
   const hemTeeth = opts.hemTeeth !== false;
   const thick = opts.thick != null ? opts.thick : 0.006;
+  /* Where tears are allowed. Punching panels out anywhere leaves a bare
+     stomach and bare shoulders, which is not a torn shirt — it is a shirt
+     with the middle missing. Cloth gives out at the hem and the elbows and
+     knees, so a band restricts the damage to the rows that should take it. */
+  const band = opts.tearBand || null;
   const row = segments + 1;
   const tmp = new Vec3(), nrm = new Vec3();
 
@@ -9456,7 +9497,9 @@ function loftGarment(g, rings, segments, rng, opts = {}) {
   }
   const cut = [];
   for (let i = 0; i < rings.length - 1; i++) {
-    for (let s = 0; s < segments; s++) cut.push(rng.next() < holes);
+    const y = rings[i].p.y;
+    const allowed = !band || (y >= band[0] && y <= band[1]);
+    for (let s = 0; s < segments; s++) cut.push(allowed && rng.next() < holes);
   }
 
   const shell = (inset, flip) => {
@@ -9521,9 +9564,213 @@ function garmentRing(T, y, lift, spread) {
   };
 }
 
-function buildZombieGarment(g, build, rng, segments) {
+/* ============================================================
+   OUTFITS
+
+   What a zombie died in, as a description rather than a switch
+   buried in the builder. Every piece is a colour and a cut, and
+   the whole outfit is emitted into one mesh with per-vertex
+   tints, so a white shirt over blue jeans over brown boots is
+   still one material and one draw call.
+
+   Coverage is the rule the old garments broke: the trunk is
+   closed from the collar to below the seat, a yoke curves over
+   each shoulder to meet the sleeve, and the trousers run to the
+   ankle. Tears are confined to bands where cloth actually gives
+   out — hems, elbows, knees — because a hole punched anywhere
+   reads as a missing shirt rather than a ruined one.
+   ============================================================ */
+const OUTFITS = {
+  /* Z=1. The standard male: whatever he had on when it happened. */
+  street: {
+    top: { color: 0xe4e2db, collar: 0.512, hem: -0.055, sleeve: 0.22, tears: 0.05 },
+    bottom: { color: 0x46587a, hem: 0.99, tears: 0.07, knees: true },
+    shoes: { kind: 'boot', color: 0x3b2c1e },
+    hat: null, wire: false,
+  },
+  /* Z=2. Sweatshirt over a black tee, and the cap never came off. */
+  college: {
+    top: { color: 0x7d2233, collar: 0.520, hem: -0.075, sleeve: 0.93, tears: 0.035 },
+    under: { color: 0x15171b, collar: 0.500, hem: -0.10 },
+    bottom: { color: 0x1b1d21, hem: 0.99, tears: 0.03 },
+    shoes: { kind: 'sneaker', color: 0xe2e0da, sole: 0xa8323c },
+    hat: { color: 0x7d2233, brim: 0x5e1a27 }, wire: false,
+  },
+  /* Z=3. Prison issue, and the wire he went through to get out. */
+  prison: {
+    top: { color: 0xd07227, collar: 0.508, hem: -0.045, sleeve: 0.42, tears: 0.05 },
+    under: { color: 0xd6d2c8, collar: 0.498, hem: -0.02 },
+    bottom: { color: 0xd07227, hem: 0.99, tears: 0.05 },
+    shoes: { kind: 'boot', color: 0x241f1b },
+    hat: null, wire: true,
+  },
+};
+
+/* A shoulder yoke: the piece that was missing.
+
+   A sleeve is a tube down the arm and the trunk shell is an ellipse round
+   the spine, and between the two — over the top of the deltoid — neither
+   reaches. That gap is why every zombie had bare shoulders. The yoke is a
+   short curved tube from the collar, over the shoulder, down to where the
+   sleeve begins, which closes it and reads as a seam rather than a patch. */
+function buildShoulderYoke(g, skeleton, build, lift, segments) {
+  const a = new Vec3();
+  for (const sideName of ['L', 'R']) {
+    const side = sideName === 'L' ? 1 : -1;
+    g.part = sideName === 'L' ? PART.ARM_L : PART.ARM_R;
+    skeleton.bones[skeleton.index('upperArm' + sideName)].bindMatrix.getTranslation(a);
+    const neck = torsoAt(build.torso, 0.487);
+    const r0 = build.shoulderCaps * 0.92, r1 = build.arm[0] + lift + 0.018;
+    loftRings(g, [
+      { p: new Vec3(side * neck[1] * 0.42, 0.505, 0), w: r0 * 0.80, d: r0 * 0.94, e: 2.2 },
+      { p: new Vec3(side * (neck[1] * 0.82), 0.496, 0), w: r0 * 0.96, d: r0 * 1.02, e: 2.2 },
+      { p: new Vec3(a.x + side * 0.012, a.y + 0.062, a.z), w: r0 * 1.10, d: r0 * 1.12, e: 2.2 },
+      { p: new Vec3(a.x + side * 0.004, a.y + 0.012, a.z), w: r1, d: r1, e: 2.1 },
+    ], segments, false, false);
+  }
+  g.part = PART.BODY;
+}
+
+/* Trousers as one closed garment: seat over the hips, then a leg down each
+   side to the ankle. The old version stopped at mid-thigh and left the rest
+   to a separate tube that did not meet it. */
+function buildTrousers(g, skeleton, build, rng, segments, spec) {
+  // Trousers hang close. Adding the garment standoff on top of a generous
+  // limb radius is how a leg ends up wider than the torso above it.
+  const T = build.torso, lift = 0.018;
+  g.part = PART.BODY;
+  g.setColor(spec.color);
+  const seat = [0.215, 0.150, 0.075, 0.000, -0.075, -0.140]
+    .map((y) => garmentRing(T, y, lift, 1.012));
+  loftGarment(g, seat, segments, rng, { holes: 0.02, hemTeeth: false, thick: 0.007 });
+
+  const a = new Vec3(), b = new Vec3(), c = new Vec3();
+  for (const sideName of ['L', 'R']) {
+    g.part = sideName === 'L' ? PART.LEG_L : PART.LEG_R;
+    skeleton.bones[skeleton.index('upperLeg' + sideName)].bindMatrix.getTranslation(a);
+    skeleton.bones[skeleton.index('lowerLeg' + sideName)].bindMatrix.getTranslation(b);
+    skeleton.bones[skeleton.index('foot' + sideName)].bindMatrix.getTranslation(c);
+    const ankle = new Vec3().copy(b).lerp(c, spec.hem);
+    const L = 0.014;
+    const thigh = limbRings(a, b, [
+      [build.leg[0] + L + 0.008, build.leg[0] + L + 0.008, 2.2],
+      [build.leg[0] + L + 0.005, build.leg[0] + L + 0.005, 2.2],
+      [build.leg[1] + L + 0.004, build.leg[1] + L + 0.004, 2.2],
+      [build.leg[2] + L + 0.005, build.leg[2] + L + 0.005, 2.2],
+      [build.leg[2] + L + 0.003, build.leg[2] + L + 0.003, 2.2],
+    ]);
+    const shin = limbRings(b, ankle, [
+      [build.leg[2] + L + 0.003, build.leg[2] + L + 0.003, 2.2],
+      [build.leg[3] + L + 0.005, build.leg[3] + L + 0.006, 2.2],
+      [build.leg[3] + L + 0.003, build.leg[3] + L + 0.003, 2.2],
+      [build.leg[4] + L + 0.004, build.leg[4] + L + 0.004, 2.2],
+      [build.leg[4] + L + 0.002, build.leg[4] + L + 0.002, 2.2],
+    ]);
+    // Ripped jeans go at the knee, which is the only place denim ever goes.
+    const knee = b.y;
+    loftGarment(g, thigh.concat(shin.slice(1)), segments, rng, {
+      holes: spec.tears, hemTeeth: false, thick: 0.007,
+      tearBand: spec.knees ? [knee - 0.10, knee + 0.13] : null,
+    });
+  }
+  g.part = PART.BODY;
+}
+
+function buildShoes(g, skeleton, build, segments, spec) {
+  const b = new Vec3(), c = new Vec3();
+  for (const sideName of ['L', 'R']) {
+    g.part = sideName === 'L' ? PART.LEG_L : PART.LEG_R;
+    skeleton.bones[skeleton.index('lowerLeg' + sideName)].bindMatrix.getTranslation(b);
+    skeleton.bones[skeleton.index('foot' + sideName)].bindMatrix.getTranslation(c);
+    const r = build.leg[4];
+    const top = new Vec3().copy(b).lerp(c, spec.kind === 'boot' ? 0.55 : 0.86);
+    g.setColor(spec.color);
+    // Upper: a boot climbs the shin, a sneaker sits at the ankle.
+    loftRings(g, [
+      { p: top, w: r + 0.030, d: r + 0.030, e: 2.3 },
+      { p: new Vec3().copy(top).lerp(c, 0.55), w: r + 0.034, d: r + 0.036, e: 2.3 },
+      { p: new Vec3(c.x, c.y + 0.030, c.z + 0.012), w: r + 0.032, d: r + 0.046, e: 2.4 },
+    ], segments, true, false);
+    // Foot box, running forward over the toes.
+    loftRings(g, [
+      { p: new Vec3(c.x, c.y + 0.030, c.z + 0.010), w: r + 0.032, d: 0.052, e: 2.6, right: _zRight, fwd: _zFwd },
+      { p: new Vec3(c.x, c.y + 0.022, c.z + 0.070), w: r + 0.036, d: 0.062, e: 2.7, right: _zRight, fwd: _zFwd },
+      { p: new Vec3(c.x, c.y + 0.016, c.z + 0.128), w: r + 0.028, d: 0.040, e: 2.6, right: _zRight, fwd: _zFwd },
+    ], segments, true, true);
+    // Sole, in its own colour on a sneaker.
+    g.setColor(spec.sole != null ? spec.sole : spec.color);
+    loftRings(g, [
+      { p: new Vec3(c.x, c.y + 0.006, c.z + 0.006), w: r + 0.036, d: 0.056, e: 3.0, right: _zRight, fwd: _zFwd },
+      { p: new Vec3(c.x, c.y + 0.006, c.z + 0.072), w: r + 0.040, d: 0.066, e: 3.0, right: _zRight, fwd: _zFwd },
+      { p: new Vec3(c.x, c.y + 0.008, c.z + 0.132), w: r + 0.032, d: 0.044, e: 2.8, right: _zRight, fwd: _zFwd },
+    ], segments, true, true);
+  }
+  g.setColor(null);
+  g.part = PART.BODY;
+}
+
+/* A ball cap: crown, then a brim over the brow. */
+function buildCap(g, skeleton, segments, spec) {
+  g.part = PART.NECK;
+  const h = new Vec3();
+  skeleton.bones[skeleton.index('head')].bindMatrix.getTranslation(h);
+  g.setColor(spec.color);
+  loftRings(g, [
+    { p: new Vec3(h.x, h.y + 0.075, h.z - 0.004), w: 0.104, d: 0.108, e: 2.4, right: _zRight, fwd: _zFwd },
+    { p: new Vec3(h.x, h.y + 0.135, h.z - 0.004), w: 0.100, d: 0.104, e: 2.4, right: _zRight, fwd: _zFwd },
+    { p: new Vec3(h.x, h.y + 0.180, h.z - 0.006), w: 0.074, d: 0.078, e: 2.3, right: _zRight, fwd: _zFwd },
+    { p: new Vec3(h.x, h.y + 0.205, h.z - 0.006), w: 0.030, d: 0.032, e: 2.2, right: _zRight, fwd: _zFwd },
+  ], segments, false, true);
+  g.setColor(spec.brim != null ? spec.brim : spec.color);
+  loftRings(g, [
+    { p: new Vec3(h.x, h.y + 0.078, h.z + 0.060), w: 0.092, d: 0.048, e: 3.0, right: _zRight, fwd: _zFwd },
+    { p: new Vec3(h.x, h.y + 0.070, h.z + 0.135), w: 0.078, d: 0.040, e: 3.0, right: _zRight, fwd: _zFwd },
+    { p: new Vec3(h.x, h.y + 0.066, h.z + 0.178), w: 0.050, d: 0.020, e: 2.8, right: _zRight, fwd: _zFwd },
+  ], 12, true, true);
+  g.setColor(null);
+  g.part = PART.BODY;
+}
+
+/* Barbed wire, wound round the trunk. Cosmetic — it does nothing but say
+   where this one came from and what it went through on the way out. */
+function buildBarbwire(g, build, rng) {
+  const T = build.torso;
+  g.part = PART.BODY;
+  g.setColor(0x6e6a60);
+  const turns = 3.4, steps = 96, y0 = 0.44, y1 = -0.02;
+  const pts = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const y = y0 + (y1 - y0) * t;
+    const sec = torsoAt(T, y);
+    const ang = t * turns * TAU;
+    const r = 0.010;
+    pts.push({
+      p: new Vec3(Math.sin(ang) * (sec[1] + 0.050), y, Math.cos(ang) * (sec[2] + 0.050) + (sec[4] || 0) * 0.9),
+      w: r, d: r, e: 2.0,
+    });
+  }
+  loftRings(g, pts, 5, true, true);
+  // Barbs, every few turns of the strand.
+  for (let i = 6; i < pts.length - 6; i += 7) {
+    const c = pts[i].p;
+    const out = new Vec3(c.x, 0, c.z);
+    if (out.lengthSq() > 1e-6) out.normalize();
+    for (const k of [-1, 1]) {
+      loftRings(g, [
+        { p: new Vec3(c.x, c.y, c.z), w: 0.005, d: 0.005, e: 2 },
+        { p: new Vec3(c.x + out.x * 0.026, c.y + k * 0.022, c.z + out.z * 0.026), w: 0.0015, d: 0.0015, e: 2 },
+      ], 4, true, true);
+    }
+  }
+  g.setColor(null);
+  void rng;
+}
+
+function buildZombieGarment(g, build, rng, segments, outfit) {
   const T = build.torso;
   const c = build.coat;
+  if (outfit) { buildOutfitTop(g, build, rng, segments, outfit); return; }
   /* How far the garment floats off the skin. At 12 mm on a trunk 150 mm
      across, a coat is 8 % bigger than the body inside it — which is not a
      coat, it is a paint job, and it reads on screen as bare skin in a
@@ -9607,8 +9854,36 @@ function buildZombieGarment(g, build, rng, segments) {
   ], segments, false, false);
 }
 
+/* The top half of an outfit: an undershirt if there is one, then the shirt
+   or sweatshirt over it, closed from the collar to below the seat so there
+   is no bare stomach anywhere in the middle. */
+function buildOutfitTop(g, build, rng, segments, outfit) {
+  const T = build.torso;
+  const lift = 0.028;
+  g.part = PART.BODY;
+  if (outfit.under) {
+    const u = outfit.under;
+    g.setColor(u.color);
+    const rows = [u.collar, 0.470, 0.400, 0.330, 0.250, 0.170, 0.090, 0.010, u.hem];
+    loftGarment(g, rows.map((y) => garmentRing(T, y, lift - 0.012)), segments, rng,
+      { holes: 0.02, hemTeeth: false, thick: 0.005 });
+  }
+  const t = outfit.top;
+  g.setColor(t.color);
+  const rows = [t.collar, 0.487, 0.440, 0.390, 0.330, 0.270, 0.205, 0.140, 0.070, 0.000, -0.070, t.hem];
+  loftGarment(g, rows.map((y, i) => garmentRing(T, y, lift, i > 8 ? 1.02 : 1)), segments, rng,
+    { holes: t.tears, thick: 0.007, tearBand: [t.hem, 0.16] });
+  // A rolled collar, so the neck opening has an edge rather than a raw rim.
+  const top = garmentRing(T, t.collar, lift);
+  loftRings(g, [
+    { p: new Vec3(0, t.collar, 0), w: top.w * 0.64, d: top.d * 0.72, e: 2.3, right: _zRight, fwd: _zFwd },
+    { p: new Vec3(0, t.collar + 0.048, -0.006), w: top.w * 0.70, d: top.d * 0.80, e: 2.3, right: _zRight, fwd: _zFwd },
+  ], segments, false, false);
+  g.setColor(null);
+}
+
 /* Sleeves and trouser legs, lofted along the actual bones. */
-function buildZombieLimbCloth(g, skeleton, build, rng, segments) {
+function buildZombieLimbCloth(g, skeleton, build, rng, segments, outfit) {
   const lift = 0.019;
   const a = new Vec3(), b = new Vec3(), c = new Vec3();
   for (const side of ['L', 'R']) {
@@ -9617,11 +9892,20 @@ function buildZombieLimbCloth(g, skeleton, build, rng, segments) {
     skeleton.bones[skeleton.index('upperArm' + side)].bindMatrix.getTranslation(a);
     skeleton.bones[skeleton.index('lowerArm' + side)].bindMatrix.getTranslation(b);
     skeleton.bones[skeleton.index('hand' + side)].bindMatrix.getTranslation(c);
-    const cut = rng.range(0.35, 1.0);        // where the sleeve gives out
+    /* Sleeve length runs over the whole arm, shoulder to wrist, so a
+       T-shirt can stop halfway down the bicep. Measured only along the
+       forearm, the shortest sleeve any outfit could have still reached past
+       the elbow. Below the halfway mark the sleeve ends on the upper arm
+       and the forearm section is not built at all. */
+    const sleeve = outfit ? outfit.top.sleeve : rng.range(0.68, 1.0);
+    const shortSleeve = sleeve < 0.5;
+    const cut = shortSleeve ? 0 : (sleeve - 0.5) * 2;
+    if (outfit) g.setColor(outfit.top.color);
     const wrist = new Vec3().copy(b).lerp(c, cut);
     // Same ring density as the arm underneath, for the same reason: a
     // sleeve with one ring at the elbow folds flat when the elbow does.
-    const upper = limbRings(a, b, [
+    const upperEnd = shortSleeve ? new Vec3().copy(a).lerp(b, Math.max(sleeve * 2, 0.18)) : b;
+    const upper = limbRings(a, upperEnd, [
       [build.arm[0] + lift + 0.016, build.arm[0] + lift + 0.014, 2.1],
       [build.arm[0] + lift + 0.013, build.arm[0] + lift + 0.012, 2.1],
       [build.arm[1] + lift + 0.014, build.arm[1] + lift + 0.013, 2.1],
@@ -9635,7 +9919,10 @@ function buildZombieLimbCloth(g, skeleton, build, rng, segments) {
       [build.arm[3] + lift + 0.002, build.arm[3] + lift + 0.002, 2.1],
       [build.arm[3] + lift, build.arm[3] + lift, 2.1],
     ]);
-    loftGarment(g, upper.concat(lower.slice(1)), segments, rng, { holes: 0.05 });
+    loftGarment(g, shortSleeve ? upper : upper.concat(lower.slice(1)), segments, rng,
+      { holes: outfit ? outfit.top.tears : 0.05, thick: 0.006,
+        tearBand: outfit ? [b.y - 0.10, b.y + 0.10] : null });
+    if (outfit) { g.setColor(null); continue; }   // trousers are their own piece
 
     // Trouser leg, torn off below the knee on some.
     g.part = side === 'L' ? PART.LEG_L : PART.LEG_R;
@@ -9775,13 +10062,26 @@ function buildZombieClothGeometry(skeleton, opts = {}) {
   const build = ZOMBIE_BUILDS[opts.build] || ZOMBIE_BUILDS.male;
   const rng = new Rng((opts.seed || 7) * 3 + 11);
 
+  const outfit = OUTFITS[opts.outfit] || null;
   g.part = PART.BODY;
-  buildZombieGarment(g, build, rng, segments);
-  buildZombieLimbCloth(g, skeleton, build, rng, segments);
-  g.part = PART.BODY;
-  buildGarmentDetail(g, skeleton, build, rng);
-  g.part = PART.BODY;
-  if (opts.build === 'armored') buildWebbing(g, build);
+  buildZombieGarment(g, build, rng, segments, outfit);
+  if (outfit) {
+    /* Every piece is its own closed shell, and together they leave no bare
+       skin anywhere between the collar and the shoes. */
+    buildShoulderYoke(g, skeleton, build, 0.019, segments);
+    buildZombieLimbCloth(g, skeleton, build, rng, segments, outfit);
+    buildTrousers(g, skeleton, build, rng, segments, outfit.bottom);
+    buildShoes(g, skeleton, build, segments, outfit.shoes);
+    if (outfit.hat) buildCap(g, skeleton, segments, outfit.hat);
+    if (outfit.wire) buildBarbwire(g, build, rng);
+    g.part = PART.BODY;
+  } else {
+    buildZombieLimbCloth(g, skeleton, build, rng, segments);
+    g.part = PART.BODY;
+    buildGarmentDetail(g, skeleton, build, rng);
+    g.part = PART.BODY;
+    if (opts.build === 'armored') buildWebbing(g, build);
+  }
 
   g.finalize();
   g.computeWeldGroups();
@@ -10642,6 +10942,7 @@ class Engine {
     if (opts.zombie && !model) {
       const clothGeo = makeHumanoidMesh(skeleton, {
         zombieBuild: opts.zombieBuild || 'male', seed: opts.seed || 3, clothOnly: true,
+        outfit: opts.outfit,
       });
       if (clothGeo.indices.length) {
         const clothActor = new Actor(this, {
