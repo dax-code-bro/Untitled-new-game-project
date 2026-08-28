@@ -2093,10 +2093,19 @@ const TextureLib = {
     },
 
     /* A flat surface — for when a material wants pure colour and the
-       normal/ORM detail would only add noise. */
+       normal/ORM detail would only add noise.
+
+       The green channel has to be 0.8, not 0.4. The shader does
+       `rough *= orm.g * 1.25`, so 0.8 is the identity and anything else
+       silently overrides the roughness the material asked for. At 0.4 every
+       `texture: 'smooth'` surface in every scene rendered at half the
+       roughness it was authored with — the glass preset asked for 0.05 and
+       got the clamp, rubber asked for 0.95 and came out at 0.48, and a
+       matte black meant to read as an absence picked up a specular sheen and
+       went warm under a lamp. */
     smooth(u, v, n, c) {
       c.r = c.g = c.b = 1;
-      c.rough = 0.4; c.ao = 1; c.h = 0.5;
+      c.rough = 0.8; c.ao = 1; c.h = 0.5;
     },
   },
 };

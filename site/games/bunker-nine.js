@@ -677,15 +677,16 @@ function buildMap(game, S) {
       game.sphere({ at: [cx + sx * 0.10, cy + 2.06, cz - 0.38], radius: 0.032, physics: false, material: {
         color: 0x101010, texture: 'smooth', roughness: 0.3, emissive: 0xffb04a, emissiveStrength: 3.0 } });
     }
-    /* One light for the whole basement. The renderer uploads eight and no
-       more, and there are already seven in the map — spending the last slot
-       on the stairwell would cost every muzzle flash in the game its light,
-       so the stair is lit by emissive fixtures instead and this one carries
-       the room. */
-    game.light({ at: [cx, cy + 2.1, cz + 1.2], color: 0xffb877, intensity: 8.5, range: 11 });
-    // One over the stairs, now that the renderer picks the nearest eight
-    // rather than the first eight and a ninth light costs nothing up top.
-    game.light({ at: [(D.x0 + D.x1) / 2, -0.9, (D.z0 + D.z1) / 2], color: 0xffcf9a, intensity: 6.0, range: 8 });
+    /* Lights for the basement. The renderer uploads the eight nearest the
+       camera, so lights down here cost the rooms upstairs nothing — they are
+       never among the nearest eight while the player is on the surface.
+       (`range` is not an option the engine reads; these were silently
+       defaulting to radius 12 and reaching further than intended.) */
+    game.light({ at: [cx, cy + 2.1, cz + 1.2], color: 0xffb877, intensity: 11, radius: 7.0 });
+    game.light({ at: [cx - 3.4, cy + 2.0, cz + 0.4], color: 0xffb877, intensity: 7, radius: 6.0 });
+    game.light({ at: [cx + 2.9, cy + 2.0, cz + 0.8], color: 0xffb877, intensity: 7, radius: 6.0 });
+    // One over the stairs, so the way down is a lit shaft and not a hole.
+    game.light({ at: [(D.x0 + D.x1) / 2, -0.9, (D.z0 + D.z1) / 2], color: 0xffcf9a, intensity: 7, radius: 5.0 });
 
     /* Strip lights down the stairwell. They do not illuminate anything —
        nothing here bounces — but they read as a lit shaft and give the eye
