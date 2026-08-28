@@ -575,9 +575,14 @@ function buildMap(game, S) {
   /* The conveyor. Built at map load and parked out of sight; when the
      three conditions land it slides out of the wall and starts running. */
   {
-    const bx = 4.9, by = 1.62, bz = -3.0;
-    const steel = { color: 0x565b62, texture: 'metal', roughness: 0.5, metalness: 1 };
-    const dark = { color: 0x2a2d31, texture: 'metal', roughness: 0.66, metalness: 1 };
+    // Parked inside the east wall, so what the player sees is a belt line
+    // coming out of solid concrete rather than one that was always there.
+    const bx = 6.15, by = 1.62, bz = -3.0;
+    /* Dusty painted machinery, not a mirror. At metalness 1 a lamp beside
+       it does almost nothing — a metal has no diffuse term, so it shows only
+       the environment, and the belt lives in the darkest corner of the map. */
+    const steel = { color: 0x6b7178, texture: 'metal', roughness: 0.52, metalness: 0.45 };
+    const dark = { color: 0x35393e, texture: 'metal', roughness: 0.68, metalness: 0.3 };
     const root = game.box({ at: [bx, by, bz], size: 1, physics: false, visible: false });
     const parts = [];
     const add = (a, pos, rot) => { a.parent = root; a.setPosition(pos); if (rot) a.setRotation(rot); parts.push(a); return a; };
@@ -1028,7 +1033,11 @@ function makeMauser(game, opts = {}) {
    through. */
 function makeRiotShield(game, opts = {}) {
   const frame = { color: 0x3d434a, texture: 'metal', roughness: 0.46, metalness: 1 };
-  const poly = { color: 0x8fa4b4, texture: 'smooth', roughness: 0.16, metalness: 0 };
+  /* The boss's is smoked rather than clear. A pale polycarbonate slab under
+     the bunker's warm lamps reads as a white void with a man behind it. */
+  const poly = opts.smoked
+    ? { color: 0x39434c, texture: 'smooth', roughness: 0.22, metalness: 0 }
+    : { color: 0x8fa4b4, texture: 'smooth', roughness: 0.16, metalness: 0 };
   const grip = { color: 0x1d1f22, texture: 'fabric', roughness: 0.9, metalness: 0 };
   const stripe = { color: 0xc8ccd0, texture: 'smooth', roughness: 0.4, metalness: 0 };
   const root = game.box({ at: opts.at || [0, 0, 0], size: 1, physics: false, visible: false });
@@ -1860,10 +1869,11 @@ const VARIANTS = {
   boss: {
     weight: 0.0, speed: BOSS.speed, hp: 1.0, dmg: BOSS.dmg, points: BOSS.points,
     clip: 'zwalk_heavy', clipSpeed: 1.45, eye: 0x9ad8ff, from: BOSS.from,
-    /* Deliberately not plated. His defence is the shield and the thousand
-       health behind it — make him bulletproof as well and there is no fight
-       left in the window where the shield is down. */
-    boss: true,
+    /* Wearing the plate but not immune behind it. Those are two different
+       things and conflating them cost him his kit: his defence is the shield
+       and the thousand health, and making him bulletproof as well leaves
+       nothing to do in the window where the shield is down. */
+    wearsPlate: true, boss: true,
   },
   spitter: {
     // Keeps its distance and throws. The only ranged threat in the game,
@@ -2035,12 +2045,23 @@ function buildPooledZombie(game, S, i) {
      parented to the forearm bone so it swings with him. */
   let bossShield = null;
   if (a.skeleton) {
-    const sh = makeRiotShield(game);
+    const sh = makeRiotShield(game, { smoked: true });
     const bi = a.skeleton.index('lowerArmL');
     sh.root.parent = a; sh.root.parentBone = bi;
-    sh.root.localOffset = new window.LE.Vec3(0.10, -0.14, 0.10);
-    sh.root.setRotation([0, 90, 8]);
-    sh.root.scale.set(1.25, 1.25, 1.25);
+    /* Orientation is in the forearm's frame, not the world's. With the arm
+       raised forward — which is where every zombie clip puts it — the bone's
+       local -Y points the way he is going and local +Z points up, so the
+       shield has to be turned a quarter turn about X for its face to look
+       forward and its height to stand upright. Left flat, it hangs broadside
+       across him and hides the whole man. */
+    /* Out past the fist, not level with it. The forearm bone is the elbow;
+       measured on the boss, his hand sits 0.24 down the bone from it and the
+       fist ends around 0.30, so a shield hung at 0.15 has his whole hand
+       standing through the front face. -X in this frame is across his chest,
+       which is where a carried shield actually covers. */
+    sh.root.localOffset = new window.LE.Vec3(-0.05, -0.40, 0.04);
+    sh.root.setRotation([90, 0, 6]);
+    sh.root.scale.set(0.94, 0.94, 0.94);
     sh.root.visible = false;
     for (const q of sh.parts) q.visible = false;
     bossShield = sh;
@@ -2158,10 +2179,13 @@ function playZombieAnim(z, name, fade) {
 function setZombieVisible(z, on) {
   z.actor.visible = on;
   if (z.actor.head) z.actor.head.visible = on;
-  if (z.actor.armor) z.actor.armor.visible = on && !!z.plated;
+  if (z.actor.armor) z.actor.armor.visible = on && !!z.wearsPlate;
   if (z.bossShield) {
+    /* Only the parts, never the root: the root of a group model is the
+       1x1x1 placeholder box every builder pivots on, and it is built
+       invisible on purpose. Showing it hangs a metre-wide default-material
+       cube in front of the shield. */
     const show = on && !!z.boss && z.bUp > 0;
-    z.bossShield.root.visible = show;
     for (const q of z.bossShield.parts) q.visible = show;
   }
   // The coat and the stains are separate meshes on the same skeleton, so
@@ -2230,7 +2254,7 @@ function spawnZombie(game, S, win, forceVariant) {
     tearT: 0, attackT: 0, groanT: 1 + Math.random() * 3, stuckT: 0, lastPos: null,
     vault: null, spitT: 1 + Math.random() * 2, anim: '',
     ripStage: 0, ripT: 0, throwT: 0, ripFace: false,
-    legless: false, plated: !!V.plated, clangT: 0,
+    legless: false, plated: !!V.plated, wearsPlate: !!(V.plated || V.wearsPlate), clangT: 0,
     boss: !!V.boss, bShield: V.boss ? BOSS.shieldHp : 0,
     bUp: V.boss ? 1 : 0, bUpT: V.boss ? BOSS.shieldUp : 0, bCd: 0,
     // Runners drop in and out of a remembered human sprint.
@@ -2558,7 +2582,6 @@ function updateZombie(game, S, P, z, dt, sfx) {
       if (z.bCd <= 0) { z.bUp = 1; z.bUpT = BOSS.shieldUp; z.bShield = BOSS.shieldHp; }
     }
     if (z.bossShield) {
-      z.bossShield.root.visible = z.bUp > 0;
       for (const q of z.bossShield.parts) q.visible = z.bUp > 0;
     }
   }
@@ -3343,7 +3366,11 @@ function start(opts = {}) {
      a black floor drains every surface in the room from below. */
   game.setSky('night', {
     fogDensity: 0.016, fog: 0x0c1018,
-    zenith: 0x141d3c, horizon: 0x30405f, ground: 0x2a2c30,
+    /* The horizon colour is the reflection probe as much as it is the sky,
+       and every metal in the map is indoors reflecting it. Left night-blue it
+       turned the player's own pistol navy; neutral grey gives gunmetal back
+       without warming the room, which the lamps already do. */
+    zenith: 0x1a2136, horizon: 0x4a4a4c, ground: 0x33302c,
     sunIntensity: 1.15, exposure: 2.05,
   });
   game.renderer.post.vignette = 0.28;
@@ -3712,10 +3739,20 @@ function start(opts = {}) {
       const earned = S.powered && P.perks.supersoldier && P.perks.shieldup;
       if (earned && !bl.running) {
         bl.running = true;
+        // Parts only. The root is the group's invisible pivot cube.
         for (const q of bl.parts) q.visible = true;
-        bl.root.visible = true;
         bl.lamp.material = game.material({ color: 0x3a2f12, texture: 'smooth', roughness: 0.3,
           emissive: 0xffc23a, emissiveStrength: 3.2 });
+        /* Its own lamp is emissive, which makes the bulb glow and lights
+           nothing. The belt lives in a dark corner of the east wall, so it
+           gets a real light too — created here rather than at map load, so
+           an easter egg nobody has earned costs no light slot. */
+        /* Off the open end and only slightly above it. Hung directly over
+           the belt it lit nothing you can see: the faces the player looks at
+           are the end caps and the near rail, and a lamp overhead sits
+           behind all of them. Out at the drop point it catches the rounds. */
+        bl.light = game.light({ at: [bl.at[0] - 1.0, bl.at[1] + 0.42, bl.at[2]],
+          color: 0xffc884, intensity: 6, radius: 4.2 });
         sfx.powerOn();
         S.voice(LINES.gold);
         hud.banner('EIGHTEEN CARAT', '#f0c256');
@@ -3723,18 +3760,20 @@ function start(opts = {}) {
       if (bl.running) {
         // Slide it out of the wall, then run it.
         bl.out = Math.min(1, bl.out + dt * GOLD.beltSpeed);
-        bl.root.setPosition([bl.at[0] - bl.out * 0.95, bl.at[1], bl.at[2]]);
+        bl.root.setPosition([bl.at[0] - bl.out * 1.25, bl.at[1], bl.at[2]]);
+        if (bl.light) bl.light.position.x = bl.root.position.x - 1.0;
         bl.spin += dt * 4.2;
         for (const r of bl.rollers) r.setRotation([90, 0, bl.spin * 57.3]);
         if (bl.out >= 1) {
           bl.dropT -= dt;
           if (bl.dropT <= 0) {
             bl.dropT = GOLD.dropEvery;
-            const px2 = bl.at[0] - 1.55, pz2 = bl.at[2] + (Math.random() - 0.5) * 0.3;
+            // Off the inboard end of the belt, wherever the belt has got to.
+            const px2 = bl.root.position.x - 0.72, pz2 = bl.at[2] + (Math.random() - 0.5) * 0.3;
             const round = game.cylinder({
               at: [px2, bl.at[1] + 0.06, pz2], radius: 0.010, height: 0.040, lifetime: 22,
-              material: { color: 0xf2c141, texture: 'metal', roughness: 0.16, metalness: 1,
-                emissive: 0x6a4c08, emissiveStrength: 0.5 },
+              material: { color: 0xf2c141, texture: 'metal', roughness: 0.16, metalness: 0.72,
+                emissive: 0x8a6210, emissiveStrength: 0.7 },
               velocity: [-0.7, 0.4, (Math.random() - 0.5) * 0.6],
             });
             if (round.body) round.body.angularVelocity.set(4, 2, 6);
@@ -3810,7 +3849,8 @@ function start(opts = {}) {
       const at = d.root.position;
       d.root.setPosition([at.x, d.baseY + Math.sin(d.spin * 1.7) * 0.05, at.z]);
       d.root.setRotation([0, d.spin * 57.3, 0]);
-      if (d.t < 5) { const on = Math.floor(d.t * 5) % 2 === 0; d.root.visible = on; for (const q of d.parts) q.visible = on; }
+      // Blink out the last five seconds — parts only, never the pivot.
+      if (d.t < 5) { const on = Math.floor(d.t * 5) % 2 === 0; for (const q of d.parts) q.visible = on; }
       const gone = d.t <= 0;
       const taken = !gone && dist2d(at, P.actor.position) < 1.15 && Math.abs(at.y - P.actor.position.y) < 1.8;
       if (taken) {

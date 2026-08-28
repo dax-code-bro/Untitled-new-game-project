@@ -3682,6 +3682,11 @@ class Renderer {
   /* ---------------- main pass ---------------- */
 
   renderScene(batches, camera) {
+    /* _bindLights picks the eight lights nearest the camera, and it needs
+       the camera to do it. Without this it silently fell back to creation
+       order, so the ninth light ever created — whatever it was, wherever the
+       player stood — was never uploaded at all. */
+    this.camera = camera;
     const gl = this.gl;
     this.hdrA.bind(true, 0, 0, 0, 1);
     gl.enable(gl.DEPTH_TEST);
