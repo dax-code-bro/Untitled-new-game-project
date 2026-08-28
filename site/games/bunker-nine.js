@@ -38,12 +38,17 @@ const GEN = { crank: 5.0, reach: 2.4, rpm: 190 };
 /* How far under the mud a body starts and how long it takes to get out. */
 const RISE_DEPTH = 1.9, RISE_TIME = 1.9;
 
+/* What the Arc Breaker leaves behind: ten seconds locked rigid, taking
+   current the whole time, arcing and twitching so you can see which ones
+   are safe to turn your back on. */
+const STUN = { time: 10, dps: 5, arcEvery: 0.16 };
+
 const WEAPONS = {
   m1911: {
     name: 'M1911', slotName: 'SIDEARM',
     dmg: 55, headMul: 3.0, mag: 7, reserve: 42, refire: 0.16,
     reload: 1.5, auto: false, pellets: 1, spread: 0.4,
-    kick: 1.6, sfx: 'shotPistol',
+    kick: 1.6, sfx: 'shotPistol', reloadKind: 'mag',
     // sightH: height of the sight line above the weapon's own origin, so
     // aiming can place the gun such that the real notch-and-blade land on
     // the camera axis. Measured off the model, not eyeballed.
@@ -55,7 +60,7 @@ const WEAPONS = {
     name: 'Thompson', slotName: 'THOMPSON',
     dmg: 40, headMul: 2.2, mag: 30, reserve: 210, refire: 0.1,
     reload: 2.3, auto: true, pellets: 1, spread: 1.1,
-    kick: 0.9, sfx: 'shotSmg',
+    kick: 0.9, sfx: 'shotSmg', reloadKind: 'mag',
     sightH: 0.0955, sightFov: 0.80, adsTime: 0.22,
     recoil: { up: 0.42, side: 0.30, climb: 0.13, recover: 11 },
     hands: { right: [-0.004, -0.022, 0.019], left: [0.290, 0.028, -0.019] },
@@ -64,10 +69,47 @@ const WEAPONS = {
     name: 'Scattergun', slotName: 'SCATTERGUN',
     dmg: 22, headMul: 1.6, mag: 2, reserve: 38, refire: 0.5,
     reload: 2.6, auto: false, pellets: 8, spread: 5.5,
-    kick: 3.2, sfx: 'shotScatter',
+    kick: 3.2, sfx: 'shotScatter', reloadKind: 'break',
     sightH: 0.0275, sightFov: 0.86, adsTime: 0.24, adsSpread: 0.55,
     recoil: { up: 2.6, side: 0.9, climb: 0.75, recover: 7 },
     hands: { right: [-0.055, -0.070, 0.018], left: [0.300, -0.026, -0.019] },
+  },
+  /* The stun gun. A double gun with no wood on it: a capacitor bank where
+     the rib should be, copper wound round both barrels, emitter rings at
+     the muzzles. The slug is only half of what it does — everything it
+     touches locks up for ten seconds and takes current the whole time,
+     which is worth more than the damage from about round fifteen on, when
+     the slug itself has stopped mattering. */
+  stungun: {
+    name: 'Arc Breaker', slotName: 'ARC BREAKER',
+    dmg: 12, headMul: 1.8, mag: 2, reserve: 40, refire: 0.62,
+    reload: 2.4, auto: false, pellets: 10, spread: 4.6,
+    kick: 3.0, sfx: 'shotArc', reloadKind: 'break',
+    pierce: 3, pierceFalloff: 0.86, stun: true,
+    sightH: 0.0425, sightFov: 0.86, adsTime: 0.26, adsSpread: 0.62,
+    recoil: { up: 2.4, side: 0.85, climb: 0.60, recover: 7.5 },
+    moveMul: 0.94, muzzleVel: 62,
+    hands: { right: [-0.062, -0.072, 0.018], left: [0.270, -0.042, -0.019] },
+  },
+  mp5: {
+    name: 'MP5', slotName: 'MP5',
+    dmg: 34, headMul: 2.3, mag: 30, reserve: 240, refire: 0.075,
+    reload: 2.1, auto: true, pellets: 1, spread: 0.95,
+    kick: 0.8, sfx: 'shotSmg', reloadKind: 'mag',
+    sightH: 0.0435, sightFov: 0.80, adsTime: 0.19,
+    recoil: { up: 0.36, side: 0.26, climb: 0.11, recover: 12 },
+    moveMul: 1.0, muzzleVel: 400,
+    hands: { right: [-0.055, -0.068, 0.017], left: [0.215, -0.030, -0.019] },
+  },
+  sawnoff: {
+    name: 'Sawn-Off', slotName: 'SAWN-OFF',
+    dmg: 30, headMul: 1.5, mag: 2, reserve: 34, refire: 0.34,
+    reload: 2.0, auto: false, pellets: 12, spread: 9.5,
+    kick: 4.2, sfx: 'shotScatter', reloadKind: 'break',
+    sightH: 0.026, sightFov: 0.94, adsTime: 0.18, adsSpread: 0.85,
+    recoil: { up: 3.6, side: 1.6, climb: 1.05, recover: 6.5 },
+    moveMul: 1.06, muzzleVel: 48,
+    hands: { right: [-0.075, -0.058, 0.018], left: [0.140, -0.034, -0.019] },
   },
   hammer: {
     name: 'Claw Hammer', slotName: 'HAMMER',
@@ -94,7 +136,7 @@ const WEAPONS = {
     name: 'Obliterated Model 5', slotName: 'MODEL 5',
     dmg: 620, headMul: 2.0, mag: 4, reserve: 32, refire: 0.44,
     reload: 3.1, auto: false, pellets: 1, spread: 0.5,
-    kick: 3.4, sfx: 'shotMagnum', revolver: true,
+    kick: 3.4, sfx: 'shotMagnum', revolver: true, reloadKind: 'revolver',
     pierce: 2, pierceFalloff: 0.62,
     sightH: 0.030, sightFov: 0.86, adsTime: 0.26, adsSpread: 0.18,
     recoil: { up: 4.2, side: 1.5, climb: 0.30, recover: 7 },
@@ -104,7 +146,7 @@ const WEAPONS = {
     name: 'Mauser C96', slotName: 'MAUSER',
     dmg: 165, headMul: 2.4, mag: 10, reserve: 90, refire: 0.16,
     reload: 2.3, auto: false, pellets: 1, spread: 0.7,
-    kick: 1.5, sfx: 'shotPistol',
+    kick: 1.5, sfx: 'shotPistol', reloadKind: 'clip',
     sightH: 0.036, sightFov: 0.90, adsTime: 0.20, adsSpread: 0.22,
     recoil: { up: 1.5, side: 0.6, climb: 0.06, recover: 11 },
     hands: { right: [-0.010, -0.036, 0.012], left: null },
@@ -236,7 +278,16 @@ const LINES = {
     [['radio', 'The generator hums, the moths are drawn. Do keep the noise up.']],
   ],
   lowAmmo: [['patch', 'Running dry. Chalk says the wall sells courage at five hundred a box.']],
-  buyThompson: [['patch', 'Eight hundred a minute says nothing else gets through that window.']],
+  buy_thompson: [['patch', 'Eight hundred a minute says nothing else gets through that window.']],
+  buy_scatter: [['patch', 'Both barrels. Subtlety went out with the lights.']],
+  buy_mp5: [
+    ['patch', 'Nine millimetre, thirty in the box, and it does not climb. Take it.'],
+    ['radio', 'That one was not here yesterday, corporal. Do not think about that.'],
+  ],
+  buy_stungun: [
+    ['patch', 'Whoever built this was not trying to kill anything. They were trying to hold it still.'],
+    ['radio', 'Ten seconds of current. Ten seconds is a long time up here.'],
+  ],
   buyScatter: [['patch', 'Both barrels. Subtlety went out with the lights.']],
   powerStart: [
     ['patch', 'Both hands on it. Five seconds. Do not let go.'],
@@ -961,10 +1012,21 @@ function buildMap(game, S) {
   const scatterChalk = makeScattergun(game, { at: [-5.4, 1.55, M.z0 + 0.14], chalk: true });
   void thompsonChalk; void scatterChalk;
 
+  /* The MP5 is on the far wall of the wing, so it is the first thing the
+     power run pays for on the way back. */
+  const mp5Chalk = makeMP5(game, { at: [SD.x0 + 0.16, 1.55, 0.6], chalk: true });
+  mp5Chalk.root.setRotation([0, 90, 0]);
+  /* And the Arc Breaker is on the roof, behind the parapet, where you have
+     to have already been up the stairs to know it exists. */
+  const arcChalk = makeStunGun(game, { at: [-4.4, R.y1 + 1.45, M.z0 + 0.16], chalk: true });
+
   S.buys = [
     { id: 'thompson', at: [-2.0, 1.4, M.z0 + 0.3], weapon: 'thompson', label: 'Thompson' },
     { id: 'scatter', at: [-5.4, 1.4, M.z0 + 0.3], weapon: 'scatter', label: 'Scattergun' },
+    { id: 'mp5', at: [SD.x0 + 0.5, 1.4, 0.6], weapon: 'mp5', label: 'MP5' },
+    { id: 'stungun', at: [-4.4, R.y1 + 1.3, M.z0 + 0.45], weapon: 'stungun', label: 'Arc Breaker' },
   ];
+  void mp5Chalk; void arcChalk;
 
   /* Grenade crate, stencilled and open, on the wall between the two guns. */
   const nadeAt = [-3.7, 1.05, M.z0 + 0.26];
@@ -1111,6 +1173,7 @@ function buildMap(game, S) {
   lamp(-12.4, 3.0, 1.2, 105);
   lamp(-2.0, 2.4, M.z0 + 1.4, 55, 0xcfe8ff);
   lamp(-5.4, 2.4, M.z0 + 1.4, 55, 0xcfe8ff);
+  lamp(SD.x0 + 1.3, 2.4, 0.6, 48, 0xcfe8ff);
   /* Daylight arrives as much from the whole smoke-lit sky as from the sun,
      and it is the sky term that lights every upward-facing surface — the
      roof deck most of all. At the night map's 1.5 the deck read as a black
@@ -1175,6 +1238,175 @@ function makeScattergun(game, opts = {}) {
   add(game.sphere({ radius: 0.0035, material: steel, physics: false }), [0.545, 0.0275, 0]);
   add(game.box({ size: [0.44, 0.006, 0.010], material: steel, physics: false }), [0.33, 0.0235, 0]);
   return { root, parts };
+}
+
+/* ---------------- the stun gun ----------------
+   A break-action double gun that was never made for shooting birds: no
+   wood on it anywhere, a capacitor bank sitting where a rib would be,
+   copper wound round both barrels and a pair of emitter rings at the
+   muzzles. It throws a heavy slug and a current with it — anything it
+   touches spends ten seconds locked up and twitching. */
+function makeStunGun(game, opts = {}) {
+  const chalk = { color: 0xf5f2e6, texture: 'smooth', roughness: 0.9, emissive: 0xcfe8ff, emissiveStrength: 0.35 };
+  const steel = opts.chalk ? chalk : { color: 0x6f767e, texture: 'metal', roughness: 0.34, metalness: 1 };
+  const dark = opts.chalk ? chalk : { color: 0x2b3036, texture: 'metal', roughness: 0.46, metalness: 1 };
+  const copper = opts.chalk ? chalk : { color: 0xb4763a, texture: 'metal', roughness: 0.30, metalness: 1 };
+  const glass = opts.chalk ? chalk : { color: 0x2a4a5e, texture: 'smooth', roughness: 0.12, metalness: 0,
+    emissive: 0x3ea8ff, emissiveStrength: 2.4 };
+  const grip = opts.chalk ? chalk : { color: 0x24262a, texture: 'fabric', roughness: 0.92, metalness: 0, uvScale: 5 };
+  const root = game.box({ at: opts.at || [0, 0, 0], size: 1, physics: false, visible: false });
+  const parts = [];
+  /* Everything forward of the hinge lives in this list, with the transform
+     it rests at. The break-open reload swings the lot about the hinge pin
+     as one piece, which is what a break gun does — animating the barrels
+     alone leaves the forend and the capacitor bank hanging in the air. */
+  const swing = [];
+  const add = (a, pos, rot, into) => {
+    a.parent = root; a.setPosition(pos); if (rot) a.setRotation(rot);
+    parts.push(a);
+    if (into) into.push({ a, p: pos.slice(), r: rot ? rot.slice() : [0, 0, 0] });
+    return a;
+  };
+
+  // Twin barrels, over and under, each wound with copper at two stations.
+  for (const dy of [0.020, -0.010]) {
+    add(game.cylinder({ radius: 0.0145, height: 0.46, material: steel, physics: false }), [0.28, dy, 0], [0, 0, 90], swing);
+    for (const bx of [0.16, 0.36]) {
+      for (let k = 0; k < 5; k++) {
+        add(game.cylinder({ radius: 0.0182, height: 0.008, material: copper, physics: false }),
+          [bx + k * 0.010, dy, 0], [0, 0, 90], swing);
+      }
+    }
+    // Emitter ring at the muzzle: four segments round a glowing core.
+    add(game.cylinder({ radius: 0.021, height: 0.016, material: dark, physics: false }), [0.502, dy, 0], [0, 0, 90], swing);
+    add(game.cylinder({ radius: 0.0125, height: 0.020, material: glass, physics: false }), [0.508, dy, 0], [0, 0, 90], swing);
+  }
+  // The capacitor bank across the top: three cylinders in a cradle.
+  for (let k = 0; k < 3; k++) {
+    add(game.cylinder({ radius: 0.0165, height: 0.11, material: dark, physics: false }), [0.12 + k * 0.052, 0.058, 0], [0, 0, 90], swing);
+    add(game.cylinder({ radius: 0.0175, height: 0.010, material: copper, physics: false }), [0.075 + k * 0.052, 0.058, 0], [0, 0, 90], swing);
+  }
+  add(game.box({ size: [0.20, 0.012, 0.044], material: steel, physics: false }), [0.17, 0.040, 0], null, swing);
+  // Cable from the bank down into the receiver, sagging the way cable does.
+  for (let k = 0; k < 5; k++) {
+    const t = k / 4;
+    add(game.cylinder({ radius: 0.0042, height: 0.034, material: grip, physics: false }),
+      [0.075 - t * 0.075, 0.050 - Math.sin(t * Math.PI) * 0.012 - t * 0.028, 0.020], [0, 0, 62 - t * 20], swing);
+  }
+  // Forend under the barrels.
+  add(game.box({ size: [0.17, 0.032, 0.044], material: dark, physics: false }), [0.27, -0.032, 0], null, swing);
+  for (let k = 0; k < 4; k++) {
+    add(game.box({ size: [0.006, 0.030, 0.046], material: steel, physics: false }), [0.21 + k * 0.038, -0.032, 0], null, swing);
+  }
+
+  // Receiver, hinge, breech face.
+  add(game.box({ size: [0.15, 0.070, 0.050], material: steel, physics: false }), [0.005, 0.006, 0]);
+  add(game.cylinder({ radius: 0.010, height: 0.052, material: dark, physics: false }), [0.062, -0.020, 0], [90, 0, 0]);
+  add(game.box({ size: [0.020, 0.058, 0.046], material: dark, physics: false }), [0.070, 0.012, 0]);
+  // Top lever, thumb piece, trigger and guard.
+  add(game.box({ size: [0.050, 0.010, 0.016], material: steel, physics: false }), [-0.030, 0.044, 0]);
+  add(game.box({ size: [0.014, 0.026, 0.010], material: dark, physics: false }), [-0.014, -0.048, 0], [0, 0, -12]);
+  add(game.box({ size: [0.058, 0.014, 0.030], material: steel, physics: false }), [-0.020, -0.062, 0]);
+  // Pistol grip and a skeleton stock, both metal.
+  add(game.box({ size: [0.052, 0.100, 0.038], material: grip, physics: false }), [-0.062, -0.062, 0], [0, 0, 20]);
+  add(game.box({ size: [0.052, 0.028, 0.040], material: steel, physics: false }), [-0.105, 0.008, 0]);
+  for (const dy of [0.030, -0.030]) {
+    add(game.box({ size: [0.16, 0.014, 0.020], material: steel, physics: false }), [-0.195, dy * 0.7 + 0.004, 0], [0, 0, dy > 0 ? -5 : 5]);
+  }
+  add(game.box({ size: [0.020, 0.088, 0.042], material: grip, physics: false }), [-0.278, 0.002, 0], [0, 0, -4]);
+  // A meter on the left of the receiver, so the thing reads as instrumented.
+  add(game.cylinder({ radius: 0.014, height: 0.008, material: glass, physics: false }), [0.010, 0.016, -0.028], [90, 0, 0]);
+  add(game.cylinder({ radius: 0.017, height: 0.006, material: dark, physics: false }), [0.010, 0.016, -0.031], [90, 0, 0]);
+  // Rib and bead between the barrels.
+  add(game.box({ size: [0.40, 0.005, 0.009], material: dark, physics: false }), [0.31, 0.038, 0], null, swing);
+  add(game.sphere({ radius: 0.0038, material: glass, physics: false }), [0.500, 0.0425, 0], null, swing);
+  return { root, parts, swing, hinge: [0.062, -0.020, 0] };
+}
+
+/* ---------------- MP5 ----------------
+   Roller-locked, sliding stock, curved thirty-round magazine. On the wall
+   in the wing, which is the first thing power buys you. */
+function makeMP5(game, opts = {}) {
+  const chalk = { color: 0xf5f2e6, texture: 'smooth', roughness: 0.9, emissive: 0xcfe8ff, emissiveStrength: 0.35 };
+  const black = opts.chalk ? chalk : { color: 0x25282c, texture: 'metal', roughness: 0.52, metalness: 1 };
+  const steel = opts.chalk ? chalk : { color: 0x4c5158, texture: 'metal', roughness: 0.36, metalness: 1 };
+  const poly = opts.chalk ? chalk : { color: 0x1b1d20, texture: 'fabric', roughness: 0.88, metalness: 0, uvScale: 6 };
+  const root = game.box({ at: opts.at || [0, 0, 0], size: 1, physics: false, visible: false });
+  const parts = [];
+  const add = (a, pos, rot) => { a.parent = root; a.setPosition(pos); if (rot) a.setRotation(rot); parts.push(a); return a; };
+  // Receiver, barrel, shroud.
+  add(game.box({ size: [0.26, 0.052, 0.042], material: black, physics: false }), [0.06, 0.010, 0]);
+  add(game.cylinder({ radius: 0.0115, height: 0.20, material: steel, physics: false }), [0.27, 0.012, 0], [0, 0, 90]);
+  add(game.cylinder({ radius: 0.017, height: 0.115, material: black, physics: false }), [0.245, 0.012, 0], [0, 0, 90]);
+  // Three-lug muzzle.
+  for (let k = 0; k < 3; k++) {
+    add(game.box({ size: [0.016, 0.008, 0.020], material: steel, physics: false }), [0.352, 0.012, 0], [0, 0, 0]);
+    add(game.box({ size: [0.016, 0.020, 0.008], material: steel, physics: false }), [0.352, 0.012, 0], [k * 60, 0, 0]);
+  }
+  // Cocking tube up the left with its handle — the part the reload throws.
+  add(game.cylinder({ radius: 0.011, height: 0.17, material: black, physics: false }), [0.20, 0.040, -0.021], [0, 0, 90]);
+  const bolt = add(game.box({ size: [0.030, 0.016, 0.030], material: steel, physics: false }), [0.255, 0.040, -0.034]);
+  // Curved magazine, four segments so it actually bends.
+  const mag = [];
+  for (let k = 0; k < 4; k++) {
+    const m = add(game.box({ size: [0.030, 0.050, 0.026], material: black, physics: false }),
+      [-0.012 - k * 0.008, -0.050 - k * 0.046, 0], [0, 0, -7 - k * 4]);
+    mag.push(m);
+  }
+  // Handguard, grip, stock rails and butt.
+  add(game.box({ size: [0.135, 0.040, 0.044], material: poly, physics: false }), [0.215, -0.020, 0]);
+  add(game.box({ size: [0.044, 0.098, 0.034], material: poly, physics: false }), [-0.055, -0.058, 0], [0, 0, 14]);
+  add(game.box({ size: [0.052, 0.014, 0.030], material: black, physics: false }), [-0.018, -0.058, 0]);
+  for (const dz of [-0.017, 0.017]) {
+    add(game.box({ size: [0.15, 0.012, 0.012], material: steel, physics: false }), [-0.175, 0.004, dz]);
+  }
+  add(game.box({ size: [0.022, 0.062, 0.046], material: poly, physics: false }), [-0.256, 0.002, 0]);
+  // Hooded front post and the drum rear aperture.
+  add(game.cylinder({ radius: 0.012, height: 0.030, material: black, physics: false }), [0.30, 0.040, 0], [0, 0, 90]);
+  add(game.box({ size: [0.006, 0.020, 0.004], material: steel, physics: false }), [0.30, 0.044, 0]);
+  add(game.cylinder({ radius: 0.014, height: 0.020, material: black, physics: false }), [-0.052, 0.044, 0], [0, 0, 90]);
+  return { root, parts, mag, bolt };
+}
+
+/* ---------------- sawed-off ----------------
+   Both barrels cut back to the forend and the stock cut to a stub. No
+   range at all and it does not care. */
+function makeSawedOff(game, opts = {}) {
+  const chalk = { color: 0xf5f2e6, texture: 'smooth', roughness: 0.9, emissive: 0xcfe8ff, emissiveStrength: 0.35 };
+  const steel = opts.chalk ? chalk : { color: 0x3f444a, texture: 'metal', roughness: 0.44, metalness: 1 };
+  const wood = opts.chalk ? chalk : { color: 0x4e3319, texture: 'wood', roughness: 0.78, uvScale: 4 };
+  const brass = opts.chalk ? chalk : { color: 0xa8843c, texture: 'metal', roughness: 0.32, metalness: 1 };
+  const root = game.box({ at: opts.at || [0, 0, 0], size: 1, physics: false, visible: false });
+  const parts = [];
+  const swing = [];
+  const add = (a, pos, rot, into) => {
+    a.parent = root; a.setPosition(pos); if (rot) a.setRotation(rot);
+    parts.push(a);
+    if (into) into.push({ a, p: pos.slice(), r: rot ? rot.slice() : [0, 0, 0] });
+    return a;
+  };
+  for (const dz of [-0.015, 0.015]) {
+    add(game.cylinder({ radius: 0.0155, height: 0.20, material: steel, physics: false }), [0.15, 0.010, dz], [0, 0, 90], swing);
+    // Sawn muzzle: a raw ring, no bead, no choke.
+    add(game.cylinder({ radius: 0.0165, height: 0.008, material: steel, physics: false }), [0.252, 0.010, dz], [0, 0, 90], swing);
+  }
+  add(game.box({ size: [0.10, 0.030, 0.048], material: wood, physics: false }), [0.14, -0.024, 0], null, swing);
+  add(game.box({ size: [0.13, 0.064, 0.052], material: steel, physics: false }), [0.005, 0.004, 0]);
+  add(game.cylinder({ radius: 0.009, height: 0.052, material: steel, physics: false }), [0.052, -0.020, 0], [90, 0, 0]);
+  // Exposed hammers, which is most of the silhouette from the side.
+  for (const dz of [-0.014, 0.014]) {
+    add(game.box({ size: [0.018, 0.034, 0.010], material: steel, physics: false }), [-0.048, 0.030, dz], [0, 0, -22]);
+  }
+  add(game.box({ size: [0.046, 0.010, 0.014], material: steel, physics: false }), [-0.026, 0.040, 0]);
+  add(game.box({ size: [0.014, 0.024, 0.010], material: steel, physics: false }), [-0.012, -0.044, 0], [0, 0, -14]);
+  add(game.box({ size: [0.052, 0.012, 0.028], material: steel, physics: false }), [-0.018, -0.058, 0]);
+  // Cut stock: a stub grip and a rough saw line.
+  add(game.box({ size: [0.085, 0.096, 0.040], material: wood, physics: false }), [-0.075, -0.048, 0], [0, 0, 26]);
+  add(game.box({ size: [0.012, 0.070, 0.042], material: wood, physics: false }), [-0.113, -0.075, 0], [0, 0, 26]);
+  for (const dz of [-0.012, 0.012]) {
+    add(game.cylinder({ radius: 0.0085, height: 0.012, material: brass, physics: false }), [-0.058, 0.006, dz], [0, 0, 90]);
+  }
+  return { root, parts, swing, hinge: [0.052, -0.020, 0] };
 }
 
 /* A trench knife: blade, guard, ribbed grip. Small enough that its whole
@@ -1429,6 +1661,9 @@ function makePlayer(game, S, hud, sfx, voice) {
   P.view.shield = Object.assign(makeRiotShield(game), { kind: 'group', muzzle: 0.30 });
   P.view.obliterator = Object.assign(makeObliterator(game), { kind: 'group', muzzle: 0.26 });
   P.view.mauser = Object.assign(makeMauser(game), { kind: 'group', muzzle: 0.24 });
+  P.view.stungun = Object.assign(makeStunGun(game), { kind: 'group', muzzle: 0.52 });
+  P.view.mp5 = Object.assign(makeMP5(game), { kind: 'group', muzzle: 0.37 });
+  P.view.sawnoff = Object.assign(makeSawedOff(game), { kind: 'group', muzzle: 0.26 });
   P.view.shieldWorn = Object.assign(makeRiotShield(game), { kind: 'group', muzzle: 0.30 });
   // Hands, parented to each weapon so they inherit its every motion.
   for (const [id, v] of Object.entries(P.view)) {
@@ -1484,7 +1719,7 @@ function setViewVisible(v, on) {
 
 /* Position the equipped weapon against the camera every frame — bob,
    sway, recoil, reload dip. This is the whole first-person feel. */
-function updateViewmodel(game, P, dt, moving) {
+function updateViewmodel(game, P, dt, moving, S, sfx) {
   const spec = P.spec();
   const v = P.view[P.equipped()];
   for (const [id, view] of Object.entries(P.view)) setViewVisible(view, id === P.equipped() && P.alive);
@@ -1606,6 +1841,44 @@ function updateViewmodel(game, P, dt, moving) {
     _vQuat1.mulQuats(_vQuat1, _vQuat2);
     root.setRotation(_vQuat1);
     root.setPosition([px + f.x * 0.10 * b, py + 0.055 * b, pz + f.z * 0.10 * b]);
+  }
+
+  /* Break-action reload: the top lever goes over, the whole front end
+     drops on the hinge pin, the empties come out over your shoulder, two
+     fresh ones go in and it snaps shut. Open fast, hang while it is fed,
+     shut fast — a single linear sweep across the whole reload reads as the
+     gun sagging rather than as a person working it. */
+  if (spec.reloadKind === 'break' && v.swing) {
+    let open = 0;
+    if (P.reloading > 0) {
+      const u = 1 - P.reloading / spec.reload;
+      open = u < 0.17 ? u / 0.17 : (u < 0.70 ? 1 : Math.max(0, 1 - (u - 0.70) / 0.20));
+      if (!P.breakOpen && u > 0.06) { P.breakOpen = true; sfx.cylinderOut(); ejectShell(game, S, P, v); ejectShell(game, S, P, v); }
+      if (P.breakOpen && u > 0.62) { P.breakOpen = false; sfx.magIn(); }
+      if (P.reloadStage < 3 && u > 0.88) { P.reloadStage = 3; sfx.cylinderIn(); }
+    } else if (P.breakOpen) { P.breakOpen = false; }
+    const hx = v.hinge[0], hy = v.hinge[1];
+    const ang = -0.62 * open;                 // radians; muzzle drops
+    const c = Math.cos(ang), sn = Math.sin(ang);
+    for (const e of v.swing) {
+      const dx = e.p[0] - hx, dy = e.p[1] - hy;
+      e.a.setPosition([hx + dx * c - dy * sn, hy + dx * sn + dy * c, e.p[2]]);
+      e.a.setRotation([e.r[0], e.r[1], e.r[2] + ang * 57.2958]);
+    }
+  }
+
+  /* Box magazine on a group model. The single-actor path below drives
+     v.actor.mag; a group hangs its magazine off several parts (a curved
+     thirty-rounder is four boxes), so they move together. */
+  if (spec.reloadKind === 'mag' && Array.isArray(v.mag)) {
+    const out = P.reloading > 0 && P.reloadStage >= 1 && P.reloadStage < 2;
+    for (const m of v.mag) m.visible = !out;
+    if (v.bolt) {
+      // Cocking handle: thrown back and released on the last beat.
+      const t = P.reloading > 0 && P.reloadStage >= 2
+        ? Math.sin(Math.min(1, (1 - P.reloading / spec.reload - 0.70) / 0.18) * Math.PI) : 0;
+      v.bolt.setPosition([0.255 - 0.055 * Math.max(0, t), 0.040, -0.034]);
+    }
   }
 
   /* Revolver reload: the cylinder swings out on its crane, hangs there
@@ -1814,7 +2087,7 @@ function tryFire(game, S, P, hud, sfx, dt) {
       // Snapshot before the kill: death parks the body at the pool lot,
       // and the chain has to arc from the corpse, not the car park.
       const diedAt = { x: z.actor.position.x, y: z.actor.position.y, z: z.actor.position.z };
-      hurtZombie(game, S, z, dmg, hit.point, headshot, P.goldAmmo ? 'gold' : 'bullet');
+      hurtZombie(game, S, z, dmg, hit.point, headshot, spec.stun ? 'arc' : (P.goldAmmo ? 'gold' : 'bullet'));
       let awarded = S.addPoints(ECONOMY.hit);
       if (z.dead) {
         killsThisShot++;
@@ -1842,7 +2115,7 @@ function tryFire(game, S, P, hud, sfx, dt) {
           if (!z2 || z2.dead) break;                     // it stopped in a wall
           const head2 = nxt.point.y > z2.actor.position.y + 0.5;
           hurtZombie(game, S, z2, carry * (head2 ? spec.headMul : 1), nxt.point, head2,
-            P.goldAmmo ? 'gold' : 'bullet');
+            spec.stun ? 'arc' : (P.goldAmmo ? 'gold' : 'bullet'));
           const pts2 = S.addPoints(head2 ? ECONOMY.headshotKill : ECONOMY.hit);
           hud.pointsDelta(pts2);
           from = nxt.point;
@@ -2512,7 +2785,9 @@ function spawnZombie(game, S, win, forceVariant) {
     bUp: V.boss ? 1 : 0, bUpT: V.boss ? BOSS.shieldUp : 0, bCd: 0,
     // Runners drop in and out of a remembered human sprint.
     lucid: 0, lucidT: 2 + Math.random() * 4,
+    stunT: 0, arcT: 0, stunSeed: 0,
   });
+  if (z.actor.visualOffset) z.actor.visualOffset.set(0, 0, 0);
   healWounds(z);
   // A body coming back out of the pool has its legs again.
   if (z.actor.skeleton) for (const nm of ['lowerLegL', 'lowerLegR']) {
@@ -2563,7 +2838,7 @@ function hurtZombie(game, S, z, dmg, at, headshot, source) {
       return;
     }
   }
-  if (z.plated && (source === 'bullet' || source === 'blast')) {
+  if (z.plated && (source === 'bullet' || source === 'blast' || source === 'arc')) {
     game.particles.sparks(at, { count: 7, speed: 4.5, color: 0xffe6a8, colorEnd: 0x6a5a30 });
     game.audio.impact(0.28);
     z.clangT = 0.2;
@@ -2571,6 +2846,13 @@ function hurtZombie(game, S, z, dmg, at, headshot, source) {
   }
   z.hp -= dmg;
   game.particles.sparks(at, { count: 5, speed: 2.5, color: 0x7a1610, colorEnd: 0x2c0605 });
+  if (source === 'arc') {
+    /* Current, not damage. The slug is worth less every round and the ten
+       seconds are worth more — by the twenties the Arc Breaker is a crowd
+       control weapon that happens to also shoot. */
+    z.stunT = Math.max(z.stunT || 0, STUN.time);
+    z.stunSeed = Math.random() * 6.28;
+  }
   if (z.hp <= 0) killZombie(game, S, z, headshot);
 }
 
@@ -2687,6 +2969,31 @@ function updateZombie(game, S, P, z, dt, sfx) {
   if (z.groanT < 0) {
     z.groanT = 2.5 + Math.random() * 4;
     if (dist2d(pos, P.actor.position) < 14) sfx.groan(z.kind === 'runner' ? 0.9 : Math.random() * 0.5);
+  }
+
+  /* Paralysed. Nothing else in the AI runs — it cannot walk, tear, throw
+     or swing — and the current keeps working the whole time. The body is
+     not still, though: a rigid corpse reads as a bug, so it shakes on the
+     spot and throws arcs off itself. */
+  if (z.stunT > 0) {
+    z.stunT -= dt;
+    a.controller.move(0, 0);
+    hurtZombie(game, S, z, STUN.dps * dt, [pos.x, pos.y + 1.0, pos.z], false, 'gold');
+    if (z.dead) return;
+    const t = S.time * 34 + (z.stunSeed || 0);
+    a.visualOffset = a.visualOffset || new window.LE.Vec3(0, 0, 0);
+    a.visualOffset.set(Math.sin(t) * 0.030, Math.abs(Math.sin(t * 1.7)) * 0.022, Math.cos(t * 1.3) * 0.030);
+    a.controller.facing += Math.sin(t * 0.9) * 0.06;
+    z.arcT = (z.arcT || 0) - dt;
+    if (z.arcT <= 0) {
+      z.arcT = STUN.arcEvery;
+      const h = 0.35 + Math.random() * 1.4;
+      arcBolt(game,
+        [pos.x + (Math.random() - 0.5) * 0.5, pos.y + h, pos.z + (Math.random() - 0.5) * 0.5],
+        [pos.x + (Math.random() - 0.5) * 0.9, pos.y + h + (Math.random() - 0.5) * 0.7, pos.z + (Math.random() - 0.5) * 0.9]);
+    }
+    if (z.stunT <= 0 && a.visualOffset) a.visualOffset.set(0, 0, 0);
+    return;
   }
 
   if (z.vault) {
@@ -3319,7 +3626,7 @@ function doInteract(game, S, P, hud, sfx, it, dt) {
     S.points -= it.cost; sfx.buy();
     const owned = P.slots.includes(it.buy.weapon);
     P.give(it.buy.weapon);
-    if (!owned) S.voice(it.buy.weapon === 'thompson' ? LINES.buyThompson : LINES.buyScatter);
+    if (!owned) S.voice(LINES['buy_' + it.buy.weapon] || LINES.buyScatter);
     hud.ammo(P); hud.points(S.points);
   } else if (it.kind === 'door') {
     S.points -= it.cost; sfx.doorOpen();
@@ -4221,7 +4528,7 @@ function start(opts = {}) {
   /* Weapon placement, after the camera is final for this frame. */
   game.onLateUpdate((dt) => {
     if (!S.started || S.gameOver || !P.alive) return;
-    updateViewmodel(game, P, dt, !!P._moving);
+    updateViewmodel(game, P, dt, !!P._moving, S, sfx);
   });
 
   /* Test hooks: everything QA needs to drive the game headless. */
@@ -4231,6 +4538,11 @@ function start(opts = {}) {
   window.__T_MAP = MAP;
   window.__T_WINDOWS = WINDOWS;
   window.__T_roomOf = roomOf;
+  window.__T_WEAPONS = WEAPONS;
+  // Model builders, so a test can stand one on a bench and photograph it
+  // without having to equip it and fight the viewmodel for the frame.
+  window.__T_MAKE = { makeStunGun, makeMP5, makeSawedOff, makeScattergun, makeObliterator,
+    makeMauser, makeArcProjector, makeKnife, makeHammer, makeRiotShield, makeBatteringRam };
   const __THooks = window.__T = {
     game, S, P, WEAPONS, ECONOMY, LINES,
     spawn(winId) {
@@ -4239,6 +4551,8 @@ function start(opts = {}) {
     },
     setPoints(n) { S.points = n; hud.points(n); },
     give(id) { S.player.give(id); hud.ammo(S.player); },
+    // Drive a reload from a test without going through the key handler.
+    reload() { tryReload(S.player, sfx); },
     killAll() { for (const z of S.zombies) if (!z.dead) killZombie(game, S, z, false); },
     forceRound(n) { S.round = n - 1; S.toSpawn = 0; for (const z of S.zombies) if (!z.dead) killZombie(game, S, z, false); startRound(game, S, hud, sfx); },
     god(on) { S.godMode = on !== false; },
