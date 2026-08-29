@@ -235,7 +235,8 @@ function buildTommyWood(g) {
 const TOMMY_MATERIALS = {
   // Blued steel is nearly black until light rakes it. Roughness sits above
   // the 1911's polish: wartime parkerised-blue, not a show finish.
-  steel: { color: 0x33383e, texture: 'metal', roughness: 0.34, metalness: 1 },
+  // Parkerised, but a metal all the same: see the note on ARM_MAT.blued.
+  steel: { color: 0x4d565f, texture: 'metal', roughness: 0.34, metalness: 1 },
   wood: { color: 0x5c4028, texture: 'wood', roughness: 0.66, metalness: 0, uvScale: 18 },
 };
 

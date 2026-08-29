@@ -23,9 +23,11 @@
    ============================================================ */
 
 const ATT_MAT = {
-  black: { color: 0x1a1d21, texture: 'metal', roughness: 0.52, metalness: 1 },
+  // Reflectance, not albedo — see ARM_MAT.blued. A black metal that
+  // reflects nothing is a hole in the gun, not a finish.
+  black: { color: 0x3c4147, texture: 'metal', roughness: 0.52, metalness: 1 },
   steel: { color: 0x50555c, texture: 'metal', roughness: 0.40, metalness: 1 },
-  poly: { color: 0x141619, texture: 'smooth', roughness: 0.70, metalness: 0 },
+  poly: { color: 0x1e2226, texture: 'smooth', roughness: 0.70, metalness: 0 },
   bright: { color: 0x9ba2aa, texture: 'metal', roughness: 0.30, metalness: 1 },
   glassR: { color: 0x2a1008, texture: 'smooth', roughness: 0.10, metalness: 0,
     emissive: 0xff2a1e, emissiveStrength: 1.4 },

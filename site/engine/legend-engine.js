@@ -13304,7 +13304,8 @@ function buildTommyWood(g) {
 const TOMMY_MATERIALS = {
   // Blued steel is nearly black until light rakes it. Roughness sits above
   // the 1911's polish: wartime parkerised-blue, not a show finish.
-  steel: { color: 0x33383e, texture: 'metal', roughness: 0.34, metalness: 1 },
+  // Parkerised, but a metal all the same: see the note on ARM_MAT.blued.
+  steel: { color: 0x4d565f, texture: 'metal', roughness: 0.34, metalness: 1 },
   wood: { color: 0x5c4028, texture: 'wood', roughness: 0.66, metalness: 0, uvScale: 18 },
 };
 
@@ -15174,13 +15175,22 @@ function buildMgBelt(g) {
    ============================================================ */
 
 const ARM_MAT = {
-  // Wartime parkerised blue: nearly black until light rakes it.
-  blued: { color: 0x33383e, texture: 'metal', roughness: 0.36, metalness: 1 },
+  /* Wartime parkerised blue.
+
+     At metalness 1 the colour is not an albedo, it is the reflectance — a
+     metal has no diffuse term at all, so a dark colour here does not make a
+     dark grey object, it makes a mirror that reflects almost nothing. The
+     old 0x33383e was about a fifth of steel's real reflectance, which is
+     why the MP5's receiver, the scope tubes and the MG's shroud all fell to
+     flat black indoors with the lamps behind the player: there was nothing
+     for them to be dark *with*. Oxide-blued steel sits nearer half of bare
+     steel, tinted cold. */
+  blued: { color: 0x596470, texture: 'metal', roughness: 0.36, metalness: 1 },
   // Machined bright — the Paralyzer and the Model 5 are instruments.
   bright: { color: 0x9ba2aa, texture: 'metal', roughness: 0.32, metalness: 1 },
   // A greyer, rougher steel for things that get hit.
   grey: { color: 0x6b7076, texture: 'metal', roughness: 0.48, metalness: 1 },
-  poly: { color: 0x121417, texture: 'smooth', roughness: 0.72, metalness: 0 },
+  poly: { color: 0x1e2226, texture: 'smooth', roughness: 0.72, metalness: 0 },
   rubber: { color: 0x141618, texture: 'smooth', roughness: 0.86, metalness: 0 },
   walnut: { color: 0x5c4028, texture: 'wood', roughness: 0.64, metalness: 0, uvScale: 18 },
   copper: { color: 0xb46a33, texture: 'metal', roughness: 0.34, metalness: 1 },
@@ -15586,9 +15596,11 @@ Engine.prototype.mg42 = function (opts = {}) {
    ============================================================ */
 
 const ATT_MAT = {
-  black: { color: 0x1a1d21, texture: 'metal', roughness: 0.52, metalness: 1 },
+  // Reflectance, not albedo — see ARM_MAT.blued. A black metal that
+  // reflects nothing is a hole in the gun, not a finish.
+  black: { color: 0x3c4147, texture: 'metal', roughness: 0.52, metalness: 1 },
   steel: { color: 0x50555c, texture: 'metal', roughness: 0.40, metalness: 1 },
-  poly: { color: 0x141619, texture: 'smooth', roughness: 0.70, metalness: 0 },
+  poly: { color: 0x1e2226, texture: 'smooth', roughness: 0.70, metalness: 0 },
   bright: { color: 0x9ba2aa, texture: 'metal', roughness: 0.30, metalness: 1 },
   glassR: { color: 0x2a1008, texture: 'smooth', roughness: 0.10, metalness: 0,
     emissive: 0xff2a1e, emissiveStrength: 1.4 },

@@ -145,7 +145,7 @@ const ATTACH = {
     scope7x: { slot: 'optic', name: '7x Sniper Optic', cost: 2750,
       blurb: 'Seven times, and no use at all up close',
       fold: (w) => ({ sightH: w.sightH + 0.020, sightFov: 0.22, adsTime: w.adsTime * 1.5,
-        adsSpread: 0.05 }),
+        adsSpread: 0.05, scoped: true }),
       bans: ['scatter', 'sawnoff', 'paralyzer', 'mp5', 'remington', 'killstreak'] },
     /* --- stock --- */
     dual: { slot: 'stock', name: "What's Better Than One", cost: 4000,
@@ -325,7 +325,7 @@ const WEAPONS = {
     reload: 3.0, auto: false, pellets: 1, spread: 0.16,
     kick: 3.0, sfx: 'shotMagnum', reloadKind: 'clip',
     pierce: 1, pierceFalloff: 0.78,
-    sightH: 0.098, sightFov: 0.34, adsTime: 0.34, adsSpread: 0.03,
+    sightH: 0.098, sightFov: 0.34, adsTime: 0.34, adsSpread: 0.03, scoped: true,
     recoil: { up: 3.4, side: 0.8, climb: 0.20, recover: 7 },
     moveMul: 0.90, muzzleVel: 800,
     hands: { right: [-0.012, -0.028, 0.016], left: [0.300, -0.006, -0.021] },
@@ -340,7 +340,7 @@ const WEAPONS = {
     reload: 3.7, auto: false, pellets: 1, spread: 0.06,
     kick: 7.0, sfx: 'shotMagnum', reloadKind: 'clip',
     pierce: 5, pierceFalloff: 0.94,
-    sightH: 0.116, sightFov: 0.20, adsTime: 0.46, adsSpread: 0.015,
+    sightH: 0.116, sightFov: 0.20, adsTime: 0.46, adsSpread: 0.015, scoped: true,
     recoil: { up: 7.5, side: 1.6, climb: 1.30, recover: 5 },
     moveMul: 0.78, muzzleVel: 1400,
     hands: { right: [-0.012, -0.030, 0.016], left: [0.357, -0.007, -0.021] },
@@ -2343,7 +2343,17 @@ function setViewVisible(v, on) {
 function updateViewmodel(game, P, dt, moving, S, sfx) {
   const spec = P.spec();
   const v = P.view[P.equipped()];
-  for (const [id, view] of Object.entries(P.view)) setViewVisible(view, id === P.equipped() && P.alive);
+  /* Behind a scope the weapon is not drawn at all. The eye is at the
+     ocular; a rifle you can still see the outside of is a rifle you are not
+     looking through, and at 7x the viewmodel shares the camera's field of
+     view so it swells to fill the screen. The sight picture is the HUD's
+     job from here. */
+  const shown = P.alive && !P.scoped;
+  for (const [id, view] of Object.entries(P.view)) setViewVisible(view, id === P.equipped() && shown);
+  /* Still positioned while it is hidden: the muzzle's world point, the
+     ejection port and the reload state all come out of this function, and a
+     shot fired through a scope still has to throw its flash and its brass
+     from the right place. */
   if (!P.alive) return;
 
   const cam = game.camera;
@@ -5086,6 +5096,40 @@ function makeHud() {
   #b9hud .advig { position:absolute; inset:0; opacity:0; transition:opacity .05s;
     background:radial-gradient(ellipse at center, transparent 34%, rgba(0,0,0,.82) 92%); }
   #b9hud .cross { transition:opacity .08s; }
+  /* The scope picture.
+
+     A seven-power optic drawn as geometry is a losing proposition: the
+     viewmodel shares the camera, so narrowing the field of view to zoom
+     magnifies the rifle by exactly as much as it magnifies the target, and
+     the scope swells until the tube is most of the screen and the eye
+     relief is two centimetres. Every game that ships a sniper solves it
+     the same way — put the rifle away at full magnification and draw the
+     sight picture instead. The black is the tube, the ring is the ocular
+     bell, and the world shows through the hole at whatever field of view
+     the optic is worth.
+
+     The surround is one enormous box-shadow spread rather than a mask, so
+     it covers any aspect ratio and needs nothing from the compositor. */
+  #b9hud .scope { position:absolute; inset:0; opacity:0; pointer-events:none;
+    transition:opacity .06s; --sd:64vmin; }
+  #b9hud .scope .glass { position:absolute; left:50%; top:50%; margin:calc(var(--sd) / -2);
+    width:var(--sd); height:var(--sd); border-radius:50%;
+    background:radial-gradient(circle at 38% 30%, rgba(150,190,210,.09), transparent 56%);
+    box-shadow:0 0 0 9999px #000, inset 0 0 38px 12px rgba(0,0,0,.7),
+      inset 0 0 0 2px rgba(30,27,23,.95); }
+  /* The reticle rides inside the tube, so it is clipped by the bell the way
+     a real one is and the posts run out to the edge instead of past it. */
+  #b9hud .scope .ret { position:absolute; left:50%; top:50%; width:var(--sd); height:var(--sd);
+    margin:calc(var(--sd) / -2); border-radius:50%; overflow:hidden; }
+  #b9hud .scope i { position:absolute; display:block; background:#0b0908; }
+  #b9hud .scope .vh { left:50%; width:3.2px; margin-left:-1.6px; }
+  #b9hud .scope .hz { top:50%; height:3.2px; margin-top:-1.6px; }
+  /* Duplex: four thick posts stopping short of the middle, thin arms
+     carrying on in. It is what keeps a crosshair from disappearing into a
+     dark target, and it is the reason a scope reads as a scope. */
+  #b9hud .scope .fine { opacity:.85; }
+  #b9hud .scope .dot { left:50%; top:50%; width:2.6px; height:2.6px; margin:-1.3px 0 0 -1.3px;
+    border-radius:50%; background:#c8352a; box-shadow:0 0 6px #ff5a3c; }
   #b9hud .dmg { position:absolute; inset:0; opacity:0;
     background:radial-gradient(ellipse at center, transparent 42%, rgba(140,10,6,.75) 100%); transition:opacity .25s; }
   #b9hud .title { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center;
@@ -5106,7 +5150,16 @@ function makeHud() {
   const root = document.createElement('div');
   root.id = 'b9hud';
   root.innerHTML = `
-    <div class="dmg"></div><div class="advig"></div><div class="cross"></div><div class="hitm"></div>
+    <div class="dmg"></div><div class="advig"></div><div class="scope">
+      <div class="glass"></div>
+      <div class="ret">
+        <i class="vh" style="top:0;height:34%"></i><i class="vh" style="top:66%;height:34%"></i>
+        <i class="hz" style="left:0;width:34%"></i><i class="hz" style="left:66%;width:34%"></i>
+        <i class="vh fine" style="top:34%;height:32%;width:1px;margin-left:-.5px"></i>
+        <i class="hz fine" style="left:34%;width:32%;height:1px;margin-top:-.5px"></i>
+        <i class="dot"></i>
+      </div>
+    </div><div class="cross"></div><div class="hitm"></div>
     <div class="roundlbl">ROUND</div><div class="round">1</div>
     <div class="points">500</div><div class="pdelta"></div>
     <div class="ammo"><span class="wname">SIDEARM</span><span class="nums">7 / 42</span></div>
@@ -5141,7 +5194,7 @@ function makeHud() {
   const $ = (c) => root.querySelector(c);
   const els = {
     round: $('.round'), points: $('.points'), ammo: $('.ammo .nums'), wname: $('.ammo .wname'),
-    prompt: $('.prompt'), subs: $('.subs'), subWho: $('.subs .who'), subText: $('.subs .text'), vig: $('.advig'),
+    prompt: $('.prompt'), subs: $('.subs'), subWho: $('.subs .who'), subText: $('.subs .text'), vig: $('.advig'), scope: $('.scope'), glass: $('.scope .glass'),
     banner: $('.banner'), dmg: $('.dmg'), title: $('.title'), hitm: $('.hitm'), pdelta: $('.pdelta'),
     cross: $('.cross'), stam: $('.stam'), stamFill: $('.stamfill'), shield: $('.shield'), perks: $('.perks'),
     bench: $('.bench'), bhead: $('.bhead'), brow: $('.brow'), bfoot: $('.bfoot'),
@@ -5225,11 +5278,43 @@ function makeHud() {
         return `<div class="${cls}" style="left:${clampX(m.lx)}px; top:${m.ly}px">`
           + `<span class="slot">${ATTACH.slotName[m.slot]}</span>${body}</div>`;
       }).join('');
+      /* Then push each label clear of the panels by its own width.
+
+         Clamping the anchor point is not enough: a label is centred on it,
+         so "Skull Splitter Barrel" clamped to the edge of the control list
+         still hangs half of itself underneath. Nothing knows how wide a
+         label is until it has been laid out, so the shove happens after,
+         measured off the panels that are actually on screen. */
+      const shoved = [];
+      const boxOf = (el) => (el && el.style.display !== 'none' ? el.getBoundingClientRect() : null);
+      const wrapBox = els.benchwrap.getBoundingClientRect();
+      const guards = [boxOf(els.bkeys), boxOf(els.bench)].filter(Boolean);
+      const nodes = els.bmarks.children;
+      for (let i = 0; i < nodes.length; i++) {
+        const el = nodes[i], m = state.marks[i];
+        let x = clampX(m.lx);
+        const r = el.getBoundingClientRect();
+        const half = r.width / 2 + 12;
+        const top = r.top - wrapBox.top, bot = top + r.height;
+        for (const g of guards) {
+          const gt = g.top - wrapBox.top, gb = g.bottom - wrapBox.top;
+          if (bot < gt || top > gb) continue;      // clear of it vertically
+          const gl = g.left - wrapBox.left, gr = g.right - wrapBox.left;
+          if (x + half > gl && x - half < gr) {
+            // Out the near side, whichever that is.
+            x = (x < (gl + gr) / 2) ? gl - half : gr + half;
+          }
+        }
+        el.style.left = x + 'px';
+        shoved.push(x);
+      }
+
       const w = els.bsvg.clientWidth || 1, h = els.bsvg.clientHeight || 1;
       els.bsvg.setAttribute('viewBox', `0 0 ${w} ${h}`);
-      els.bsvg.innerHTML = state.marks.map((m) => {
+      els.bsvg.innerHTML = state.marks.map((m, i) => {
         const c = m.slot === state.slot ? '#ffd27a' : '#8a8272';
-        return `<line x1="${m.ax}" y1="${m.ay}" x2="${clampX(m.lx)}" y2="${m.ly}" stroke="${c}" stroke-width="1"/>`
+        const lx = shoved[i] != null ? shoved[i] : clampX(m.lx);
+        return `<line x1="${m.ax}" y1="${m.ay}" x2="${lx}" y2="${m.ly}" stroke="${c}" stroke-width="1"/>`
           + `<circle cx="${m.ax}" cy="${m.ay}" r="2.5" fill="${c}"/>`;
       }).join('');
 
@@ -5350,13 +5435,33 @@ function makeHud() {
     /* Aiming hides the crosshair — the sights are the crosshair now, and
        leaving a dot floating over the front blade is the tell that a game's
        iron sights are decorative. */
-    aim(ads, sprinting) {
+    aim(ads, sprinting, scoped) {
       els.cross.style.opacity = (1 - ads) * (sprinting ? 0.25 : 1);
       root.style.setProperty('--ads', ads.toFixed(3));
       els.vig.style.opacity = (ads * 0.55).toFixed(3);
+      /* The glass only comes up over the last of the movement, so the rifle
+         is still visible while it is being shouldered and only gives way
+         once the eye is behind the optic. */
+      const k = scoped ? Math.max(0, (ads - 0.72) / 0.28) : 0;
+      els.scope.style.opacity = k.toFixed(3);
+      // The tube opens up into place rather than snapping to full size.
+      els.scope.style.setProperty('--sd', (64 - 10 * (1 - k)).toFixed(2) + 'vmin');
+    },
+    /* The tube drifts, the reticle does not.
+
+       Recoil in this game is applied to the camera itself, so the middle of
+       the screen already is where the bullet goes; moving the crosshair off
+       it would be a lie about the point of aim. What can move honestly is
+       the eye behind the glass, so the bell wanders a few pixels with the
+       shooter's breathing and the crosshair stays put. */
+    scopeOffset(x, y) {
+      els.glass.style.transform = `translate(${x.toFixed(2)}px, ${y.toFixed(2)}px)`;
     },
     hideTitle() { els.title.style.opacity = 0; setTimeout(() => { els.title.style.display = 'none'; }, 1500); },
     gameOver(round, kills) {
+      // The update loop stops calling aim() once you are down, so the glass
+      // would otherwise stay up over the death screen.
+      els.scope.style.opacity = 0;
       els.title.innerHTML = `<h1 style="color:#b3221c">YOU FELL</h1>
         <p>SURVIVED TO ROUND ${round} &nbsp;·&nbsp; ${kills} OF THE DEAD PUT DOWN</p>
         <p class="go" style="color:#e8ddc8;margin-top:22px;cursor:pointer">CLICK TO STAND POST AGAIN</p>`;
@@ -5691,7 +5796,18 @@ function start(opts = {}) {
       const spec0 = P.spec();
       const fovK = PLAYER.fov * (1 - P.ads) + (spec0.sightFov || 0.8) * P.ads;
       game.camera.fov = 55 * (fovK + P.sprint * (PLAYER.sprintFov - 1)) * Math.PI / 180;
-      hud.aim(P.ads, P.sprinting);
+      /* Behind the glass the rifle itself is out of the picture: the eye is
+         at the ocular, and a scope you can see the outside of is a scope you
+         are not looking through. P.scoped is read by the viewmodel, which
+         puts every part of the weapon away while it is true. */
+      P.scoped = !!spec0.scoped && P.ads > 0.72;
+      hud.aim(P.ads, P.sprinting, !!spec0.scoped);
+      if (P.scoped) {
+        // A held breath is never quite still. Two slow beats, a few pixels.
+        const t = S.time || 0;
+        hud.scopeOffset(Math.sin(t * 0.83) * 3.4 + Math.sin(t * 2.10) * 1.1,
+          Math.sin(t * 0.61) * 2.8 + Math.cos(t * 1.70) * 1.0);
+      }
 
       if (i.justPressed('r') || pad.pressed.x) tryReload(P, sfx);
       P.swingT = Math.max(0, P.swingT - dt);
