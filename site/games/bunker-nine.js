@@ -298,11 +298,7 @@ const PERKS = {
   },
   adrenaline: {
     name: 'ADRENALINE', cost: 2000, color: 0xffd23a,
-    blurb: 'Move markedly faster, always.',
-  },
-  athlete: {
-    name: 'ATHLETE', cost: 2000, color: 0x59ff7a,
-    blurb: 'Slide from a sprint, and sprint far longer.',
+    blurb: 'Faster on your feet, three minutes of sprint, slide and slide-cancel, and you reload at double speed.',
   },
 };
 
@@ -1031,13 +1027,24 @@ function buildMap(game, S) {
   // Rail round the open side of the slot, so the hole reads as a hole.
   const RT = R.y1 - 0.06, RH = R.y1 + R.rail;
   {
-    for (const zz of [SLOT.z1]) {
-      deco(SLOT.x0 - 0.05, SLOT.x1, RT, RT + 0.05, zz - 0.05, zz + 0.05, MAT.steel);
-      deco(SLOT.x0 - 0.05, SLOT.x1, RT + 0.95, RT + 1.0, zz - 0.04, zz + 0.04, MAT.steel);
-      for (let x = SLOT.x0; x <= SLOT.x1; x += 1.2) deco(x - 0.04, x + 0.04, RT, RT + 1.0, zz - 0.04, zz + 0.04, MAT.steel);
-    }
-    deco(SLOT.x0 - 0.05, SLOT.x0 + 0.03, RT, RT + 1.0, ST.zTop - 1.6, SLOT.z1, MAT.steel);
-    deco(SLOT.x0 - 0.05, SLOT.x0 + 0.03, RT + 0.95, RT + 1.0, SLOT.z0, SLOT.z1, MAT.steel);
+    /* Guard rail all the way round the stairwell, with a kick plate at the
+       deck. Railed on two sides only, the opening read as a black rectangle
+       you could walk into — the first thing you meet when you step off the
+       flight should be a roof, not a hole. */
+    const zTopEdge = ST.zBot - (ST.steps - 1) * RUN;   // where the landing ends
+    const rail = (x0, x1, z0, z1) => {
+      deco(x0, x1, RT, RT + 0.06, z0, z1, MAT.steel);              // kick plate
+      deco(x0, x1, RT + 0.94, RT + 1.00, z0, z1, MAT.steel);       // top rail
+      deco(x0, x1, RT + 0.50, RT + 0.55, z0, z1, MAT.steel);       // mid rail
+    };
+    const post = (x, z) => deco(x - 0.04, x + 0.04, RT, RT + 1.0, z - 0.04, z + 0.04, MAT.steel);
+    // Front edge of the opening, and the landing edge behind it.
+    rail(SLOT.x0 - 0.05, SLOT.x1, SLOT.z1 - 0.05, SLOT.z1 + 0.05);
+    rail(SLOT.x0 - 0.05, SLOT.x1, zTopEdge - 0.05, zTopEdge + 0.05);
+    // West edge, between the two.
+    rail(SLOT.x0 - 0.05, SLOT.x0 + 0.05, zTopEdge, SLOT.z1);
+    for (let x = SLOT.x0; x <= SLOT.x1; x += 1.1) { post(x, SLOT.z1); post(x, zTopEdge); }
+    for (let z = zTopEdge; z <= SLOT.z1; z += 1.1) post(SLOT.x0, z);
   }
   slab(M.x0 - W, M.x1 + W, RT, RH, M.z1, M.z1 + W, MAT.wall);
   slab(M.x0 - W, M.x1 + W, RT, RH, M.z0 - W, M.z0, MAT.wall);
@@ -1153,13 +1160,13 @@ function buildMap(game, S) {
   mp5Chalk.root.setRotation([0, 90, 0]);
   /* And the Arc Breaker is on the roof, behind the parapet, where you have
      to have already been up the stairs to know it exists. */
-  const paraChalk = makeParalyzer(game, { at: [-4.4, R.y1 + 1.45, M.z0 + 0.16], chalk: true });
+  const paraChalk = makeParalyzer(game, { at: [-4.4, R.y1 + 0.46, M.z0 + 0.14], chalk: true });
 
   S.buys = [
     { id: 'thompson', at: [-2.0, 1.4, M.z0 + 0.3], weapon: 'thompson', label: 'Thompson' },
     { id: 'scatter', at: [-5.4, 1.4, M.z0 + 0.3], weapon: 'scatter', label: 'Scattergun' },
     { id: 'mp5', at: [SD.x0 + 0.5, 1.4, 0.6], weapon: 'mp5', label: 'MP5' },
-    { id: 'paralyzer', at: [-4.4, R.y1 + 1.3, M.z0 + 0.45], weapon: 'paralyzer', label: 'Paralyzer' },
+    { id: 'paralyzer', at: [-4.4, R.y1 + 1.15, M.z0 + 0.5], weapon: 'paralyzer', label: 'Paralyzer' },
   ];
   void mp5Chalk; void paraChalk;
 
@@ -2157,7 +2164,7 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
      bottom edge of the frame with only the barrel showing, which is most
      of what "the guns look broken" was. */
   const po = P.poseOverride;
-  const hipX = (po ? po.x : 0.13) + bobX, hipY = (po ? po.y : -0.105) + bobY - dip, hipD = po ? po.d : 0.32;
+  const hipX = (po ? po.x : 0.085) + bobX, hipY = (po ? po.y : -0.10) + bobY - dip, hipD = po ? po.d : 0.34;
   const adsX = 0, adsY = -spec.sightH, adsD = 0.30;
   const a = P.ads;
   const offR = hipX * (1 - a) + adsX * a;
@@ -2668,7 +2675,8 @@ function tryReload(P, sfx) {
   const spec = P.spec();
   const am = P.ammoFor(P.equipped());
   if (spec.melee || P.reloading > 0 || am.mag >= spec.mag || am.reserve <= 0) return;
-  P.reloading = spec.reload;
+  // Adrenaline works the hands as well as the legs.
+  P.reloading = spec.reload / (P.perks.adrenaline ? 2 : 1);
   /* Staged, so the hands do the job in order rather than dipping for a
      second and coming up full: release the catch, the old magazine falls
      clear, the fresh one goes in, and the slide runs forward on it. */
@@ -3240,6 +3248,7 @@ function spawnZombie(game, S, win, forceVariant) {
     // Runners drop in and out of a remembered human sprint.
     lucid: 0, lucidT: 2 + Math.random() * 4,
     stunT: 0, arcT: 0, stunSeed: 0,
+    routeKey: '', wpIdx: 0,
   });
   if (z.actor.visualOffset) z.actor.visualOffset.set(0, 0, 0);
   healWounds(z);
@@ -3610,9 +3619,23 @@ function updateZombie(game, S, P, z, dt, sfx) {
         hurtPlayer(game, S, P, z.dmg, sfx, 'melee', pos);
       }
     } else {
+      /* Walk the route in order and remember where you are on it.
+
+         The old picker re-derived the waypoint every frame from distance:
+         take the first one further than 0.9 m away and within 1.8 m of your
+         height. On a staircase the body sits almost exactly 0.9 m from the
+         foot of the flight, so one frame it was 0.97 away and the answer was
+         "go back to the bottom", the next it was 0.85 and the answer was "go
+         to the top" — and it stood there rocking on the third step until the
+         round ended. Waypoints advance and never go back. */
       const route = routeTo(zr, pr, S);
-      let wp = route[0];
-      for (const r of route) { wp = r; if (dist2d(pos, { x: r[0], z: r[2] }) > 0.9 && Math.abs(pos.y - r[1]) < 1.8) break; }
+      const key = zr + '>' + pr;
+      if (z.routeKey !== key) { z.routeKey = key; z.wpIdx = 0; }
+      let wp = route[Math.min(z.wpIdx, route.length - 1)];
+      if (wp && dist2d(pos, { x: wp[0], z: wp[2] }) < 1.3) {
+        z.wpIdx = Math.min(z.wpIdx + 1, route.length - 1);
+        wp = route[z.wpIdx];
+      }
       if (wp) move(wp[0], wp[2]); else move(target.x, target.z);
       playZombieAnim(z, z.moveClip);
     }
@@ -3918,7 +3941,10 @@ function nearestInteract(S, P) {
   }
   // Wall buys.
   for (const b of S.buys) {
-    if (dist2d(p, { x: b.at[0], z: b.at[2] }) < R && Math.abs(p.y - 1) < 2) {
+    /* Against the buy's own height, not against a hard-coded 1.0. The
+       Paralyzer is on the roof: measured against the ground floor it could
+       never be reached from anywhere you can actually stand. */
+    if (dist2d(p, { x: b.at[0], z: b.at[2] }) < R && Math.abs(p.y - b.at[1]) < 2.0) {
       const owned = P.slots.includes(b.weapon);
       const cost = owned ? ECONOMY.wallAmmo : ECONOMY.wallGun;
       return { kind: 'buy', buy: b, cost, label: `${b.label} — ${owned ? 'AMMO ' : ''}${cost}` };
@@ -4279,7 +4305,7 @@ function makeHud() {
     <div class="title"><h1>BUNKER <span>NINE</span></h1>
       <p>THE DEAD COME THROUGH THE WINDOWS. POINTS BUY EVERYTHING.</p>
       <p>WASD MOVE &nbsp;·&nbsp; MOUSE LOOK &nbsp;·&nbsp; RIGHT-CLICK AIM &nbsp;·&nbsp; SHIFT SPRINT</p>
-      <p>F USE &nbsp;·&nbsp; R RELOAD &nbsp;·&nbsp; Q SWAP</p>
+      <p>F USE &nbsp;·&nbsp; R RELOAD &nbsp;·&nbsp; Q SWAP &nbsp;·&nbsp; SPACE JUMP</p>
       <p>V KNIFE &nbsp;·&nbsp; G SHIELD &nbsp;·&nbsp; CTRL SLIDE (ADRENALINE)</p>
       <p style="color:#ffd27a">AT THE WORKBENCH &nbsp; A/D SLOT &nbsp;·&nbsp; W/S PART &nbsp;·&nbsp; F FIT &nbsp;·&nbsp; TAB LEAVE</p>
       <p style="color:#7ad7ff">CONTROLLER &nbsp; STICKS MOVE/LOOK &nbsp;·&nbsp; RT FIRE &nbsp;·&nbsp; LT AIM &nbsp;·&nbsp; L3 SPRINT &nbsp;·&nbsp; RB KNIFE &nbsp;·&nbsp; B USE/SLIDE &nbsp;·&nbsp; X RELOAD &nbsp;·&nbsp; Y SWAP</p>
@@ -4570,8 +4596,20 @@ function start(opts = {}) {
     // testHold lets a headless harness drive held inputs without simulating
     // devices — the same code path a real button takes, just another source.
     const th = S.testHold;
-    S.input.fireHeld = i.pointer.down || i.down(' ') || pad.rt > 0.45 || !!th.fire;
-    S.input.firePressed = i.pointer.justDown || i.justPressed(' ') || pad.pressed.rt || (!!th.fire && !th._firePrev);
+    /* The right trigger has to be seen released before it is believed.
+
+       A pad whose trigger axis rests above the threshold — and plenty of
+       them do, depending on how the browser maps it — reads as held from
+       the moment it is plugged in. A semi-automatic weapon wants an edge so
+       it fires once and stops; an automatic one wants the level, so it
+       empties the magazine the instant you draw it and never stops. That is
+       exactly the shape of the bug: only the full-autos ran away. */
+    if (pad.rt <= 0.2) S.padTriggerArmed = true;
+    const rtHeld = S.padTriggerArmed && pad.rt > 0.45;
+    // Space is the jump now, so it is not also the trigger.
+    S.input.fireHeld = i.pointer.down || rtHeld || !!th.fire;
+    S.input.firePressed = i.pointer.justDown || (S.padTriggerArmed && pad.pressed.rt) || (!!th.fire && !th._firePrev);
+    S.input.jumpPressed = i.justPressed(' ') || !!pad.pressed.a;
     S.input.aimHeld = i.down('control') || i.pointer.rightDown || pad.lt > 0.4 || !!th.aim;
     S.input.sprintHeld = i.down('shift') || !!pad.buttons.ls || !!th.sprint;
     th._firePrev = !!th.fire;
@@ -4583,6 +4621,9 @@ function start(opts = {}) {
     if (P.alive) {
       const yaw = game.cameraYaw;
       let mx = i.axes.x, mz = -i.axes.y;
+      // A harness can steer the player through the same path a key does.
+      if (S.testHold.mx != null) mx = S.testHold.mx;
+      if (S.testHold.mz != null) mz = S.testHold.mz;
       /* With the bench panel open the movement keys drive the list, so they
          must not also drive the player — otherwise picking a scope walks you
          out of range of the bench that is showing it to you. */
@@ -4601,18 +4642,19 @@ function start(opts = {}) {
       /* Sprint: only forward, only unaimed, only while there is stamina —
          and it locks out firing, which is what makes taking it a decision
          rather than a free speed boost. Athlete triples the tank. */
-      const maxStam = P.perks.athlete ? 3.0 : 1.0;
+      // Three minutes of continuous sprint against the base one.
+      const maxStam = P.perks.adrenaline ? 3.0 : 1.0;
       const wantSprint = S.input.sprintHeld && mz > 0.35 && !P.adsWant
         && P.reloading <= 0 && P.stamina > 0.02;
       P.sprinting = wantSprint && (Math.abs(mx) + Math.abs(mz)) > 0.1 && P.sliding <= 0;
       P.stamina = Math.max(0, Math.min(maxStam,
-        P.stamina + (P.sprinting ? -dt : dt * (P.perks.athlete ? 0.55 : 0.32))));
+        P.stamina + (P.sprinting ? -dt / (P.perks.adrenaline ? 3.0 : 1.0) : dt * (P.perks.adrenaline ? 0.55 : 0.32))));
       P.sprint += ((P.sprinting ? 1 : 0) - P.sprint) * Math.min(1, dt * 11);
 
       /* Slide, for Athlete. A sprint committed to a direction: you keep the
          speed you had, you cannot steer much, and you come out of it low. */
       P.slideCd = Math.max(0, P.slideCd - dt);
-      if (P.perks.athlete && P.sliding <= 0 && P.slideCd <= 0 && P.sprinting
+      if (P.perks.adrenaline && P.sliding <= 0 && P.slideCd <= 0 && P.sprinting
           && (i.justPressed('control') || i.justPressed('c') || pad.pressed.b)) {
         P.sliding = SLIDE.duration;
         P.slideCd = SLIDE.cooldown;
@@ -4679,6 +4721,7 @@ function start(opts = {}) {
           P.lastBeat = -1;
         }
         P.reloading = 0;
+        P.cooldown = Math.min(P.cooldown, P.spec().refire);
         hud.ammo(P);
       }
       P.building = false;
@@ -4690,6 +4733,7 @@ function start(opts = {}) {
         if (wantKnife) { P.prevSlot = P.slot; P.slots.push('knife'); P.slot = P.slots.length - 1; }
         else { P.slots = P.slots.filter((w) => w !== 'knife'); P.slot = Math.min(P.prevSlot, P.slots.length - 1); }
         P.reloading = 0;
+        P.cooldown = Math.min(P.cooldown, P.spec().refire);
         hud.ammo(P);
       }
 
@@ -4714,7 +4758,7 @@ function start(opts = {}) {
         S.shieldMesh.setPosition([pp.x, pp.y + 0.1, pp.z]);
       }
       hud.shield(P.shieldT / SHIELD.duration, P.shieldCd);
-      hud.stamina(P.stamina / maxStam, !!P.perks.athlete);
+      hud.stamina(P.stamina / maxStam, !!P.perks.adrenaline);
 
       /* The workbench panel. While it is open the movement keys drive the
          list instead of the player, and nothing can reach you — the horde
@@ -4781,6 +4825,12 @@ function start(opts = {}) {
         if (P.knifeOut) { P.knifeOut = false; P.slots = P.slots.filter((w) => w !== 'knife'); }
         P.slot = Math.max(0, Math.min(n, P.slots.length - 1));
         P.reloading = 0; P.reloadStage = 0;
+        /* The cooldown belongs to the weapon that set it, not to the player.
+           The hammer's refire is nine seconds — swing it once while boarding
+           a window and the gun you swap back to is dead for the next nine,
+           which is the ritual that had to be performed to get it shooting
+           again. */
+        P.cooldown = Math.min(P.cooldown, P.spec().refire);
         hud.ammo(P);
         hud.flashWeapon(P.spec().slotName);
       };
@@ -4821,6 +4871,12 @@ function start(opts = {}) {
       // whips around whenever the player walks. It goes in a late hook,
       // after _updateCamera, where the camera is final for the frame.
       P._moving = Math.abs(mx) + Math.abs(mz) > 0.1;
+
+      /* Jump. Off the same controller as everything else, so it gets the
+         coyote time and the buffered press the engine already implements. */
+      if (S.input.jumpPressed && !(S.bench && S.bench.open) && P.sliding <= 0) {
+        P.actor.controller.jump();
+      }
 
       /* Interact. */
       const it = (S.bench && S.bench.open) ? null : nearestInteract(S, P);

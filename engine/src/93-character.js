@@ -185,6 +185,9 @@ class CharacterController {
     this.acceleration = opts.acceleration || 34;
     this.airControl = opts.airControl != null ? opts.airControl : 0.28;
     this.turnSpeed = opts.turnSpeed || 12;
+    /* How tall a step this thing will walk up without being asked. Anything
+       taller is a wall. A stair with a 24 cm riser needs at least that. */
+    this.stepHeight = opts.stepHeight != null ? opts.stepHeight : 0.42;
 
     this.grounded = false;
     this.groundNormal = new Vec3(0, 1, 0);
@@ -233,6 +236,28 @@ class CharacterController {
     } else {
       this.coyote = Math.max(0, this.coyote - dt);
     }
+    /* Snap down off a nosing. Walking off the edge of a tread launches a
+       capsule into a short fall, and on a flight of fifteen that is fifteen
+       little hops where there should be a walk — and a body that is airborne
+       cannot step up, so it never climbs the next one either. If we were on
+       the ground last frame and there is ground within a step below us, we
+       are still on the ground. */
+    /* Only far enough to bridge a nosing. Given the whole step height to
+       play with it reaches past the tread you have just climbed onto and
+       drags you back down to the one below, and you and the step-up spend
+       the rest of the flight undoing each other. */
+    if (!this.grounded && wasGrounded && body.velocity.y <= 0.2) {
+      const reach = this.radius * 0.9 + 0.12 + 0.20;
+      const snap = this.engine.physics.raycast(origin, _cc[1].set(0, -1, 0), reach,
+        (b) => b !== body && !b.isTrigger);
+      if (snap && snap.normal.y > 0.6) {
+        body.position.y = snap.point.y + this.height * 0.5;
+        if (body.velocity.y < 0) body.velocity.y = 0;
+        this.grounded = true;
+        this.groundNormal.copy(snap.normal);
+      }
+    }
+    if (this.grounded) this.coyote = 0.12;
     this.jumpBuffer = Math.max(0, this.jumpBuffer - dt);
 
     /* Horizontal movement: accelerate toward the desired velocity rather
@@ -261,6 +286,45 @@ class CharacterController {
       this.coyote = 0;
       this.grounded = false;
       if (this.onJump) this.onJump();
+    }
+
+    /* Stairs.
+
+       There was no step-up here at all: a capsule walked into a riser and
+       stopped, and only ever got over it when the solver happened to squeeze
+       it up — which is why climbing a flight felt like a ritual of jiggling
+       against every tread, and why nothing that was not being driven by a
+       player ever got up one at all.
+
+       Probe ahead at ankle height. If the way is blocked by something steep
+       but there is walkable ground within stepHeight above the obstruction,
+       lift onto it and keep the horizontal speed. This is a teleport of a
+       few centimetres a frame, which is what every character controller
+       does and what makes stairs feel like a ramp rather than a wall. */
+    if (this.grounded && this._desired.lengthSq() > 1e-4 && this.jumpBuffer <= 0) {
+      const dir = _cc[2].copy(this._desired).normalize();
+      const feet = body.position.y - this.height * 0.5;
+      const ahead = _cc[3].set(
+        body.position.x, feet + 0.06, body.position.z);
+      const blocked = this.engine.physics.raycast(ahead, dir, this.radius + 0.24,
+        (b) => b !== body && !b.isTrigger);
+      if (blocked && Math.abs(blocked.normal.y) < 0.55) {
+        // Something steep in the way. Is its top within a step?
+        const probe = _cc[4].set(
+          body.position.x + dir.x * (this.radius + 0.20),
+          feet + this.stepHeight + 0.12,
+          body.position.z + dir.z * (this.radius + 0.20));
+        const top = this.engine.physics.raycast(probe, _cc[5].set(0, -1, 0), this.stepHeight + 0.16,
+          (b) => b !== body && !b.isTrigger);
+        if (top && top.normal.y > 0.6) {
+          const rise = top.point.y - feet;
+          if (rise > 0.008 && rise <= this.stepHeight) {
+            body.position.y += rise + 0.015;
+            if (body.velocity.y < 0) body.velocity.y = 0;
+            this.grounded = true;
+          }
+        }
+      }
     }
 
     /* Face the movement direction. */
@@ -305,4 +369,4 @@ class CharacterController {
   teleport(p) { this.body.setPosition(p); this.body.velocity.setScalar(0); }
 }
 
-const _cc = [new Vec3(), new Vec3(), new Vec3()];
+const _cc = [new Vec3(), new Vec3(), new Vec3(), new Vec3(), new Vec3(), new Vec3()];
