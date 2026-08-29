@@ -30,6 +30,54 @@ const ECONOMY = {
   crate: 900,
 };
 
+/* ---------------- where a round lands ----------------
+
+   Eleven regions down a body, as fractions of its height from the soles up,
+   with the lateral offset from the spine deciding arm from torso. The
+   multipliers here are what the diagram on the bench reads out — it is
+   generated from this table rather than drawn beside it, so it cannot drift
+   away from what the gun actually does. */
+const HIT_REGIONS = [
+  { id: 'head', label: 'Head', lo: 0.895, hi: 1.02, mul: null, crit: true },
+  { id: 'neck', label: 'Neck', lo: 0.855, hi: 0.895, mul: null, critScale: 0.78, crit: true },
+  { id: 'shoulder', label: 'Shoulders', lo: 0.775, hi: 0.855, mul: 1.05, lateral: 0.17 },
+  { id: 'upperTorso', label: 'Upper torso', lo: 0.715, hi: 0.855, mul: 1.15 },
+  { id: 'midTorso', label: 'Mid torso', lo: 0.615, hi: 0.715, mul: 1.0 },
+  { id: 'lowerTorso', label: 'Lower torso', lo: 0.495, hi: 0.615, mul: 0.9 },
+  { id: 'hand', label: 'Hands', lo: 0.44, hi: 0.60, mul: 0.7, lateral: 0.26 },
+  { id: 'arm', label: 'Arms', lo: 0.545, hi: 0.80, mul: 0.8, lateral: 0.20 },
+  { id: 'upperLeg', label: 'Upper legs', lo: 0.28, hi: 0.495, mul: 0.85 },
+  { id: 'lowerLeg', label: 'Lower legs', lo: 0.06, hi: 0.28, mul: 0.75 },
+  { id: 'foot', label: 'Feet', lo: -0.05, hi: 0.06, mul: 0.7 },
+];
+
+/* Which region a hit point falls in. A limb wins over the central region
+   covering the same band: an arm is in front of the chest from most angles,
+   and a round that clips it should read as an arm rather than as a torso
+   shot that happened to be off centre. */
+function hitRegion(z, point) {
+  const H = 1.75;
+  const feet = z.actor.position.y - H * 0.5;
+  const f = (point.y - feet) / H;
+  const dx = point.x - z.actor.position.x, dz = point.z - z.actor.position.z;
+  const lat = Math.hypot(dx, dz);
+  for (const r of HIT_REGIONS) {
+    if (f < r.lo || f >= r.hi) continue;
+    if (r.lateral && lat < r.lateral) continue;
+    if (!r.lateral) {
+      const limb = HIT_REGIONS.find((q) => q.lateral && f >= q.lo && f < q.hi && lat >= q.lateral);
+      if (limb) return limb;
+    }
+    return r;
+  }
+  return HIT_REGIONS.find((q) => q.id === 'midTorso');
+}
+
+function regionMul(region, spec) {
+  if (region.crit) return spec.headMul * (region.critScale || 1);
+  return region.mul;
+}
+
 /* ---------------- the workbench ----------------
 
    Five slots on a gun, one part in each. Everything here changes both the
@@ -1294,8 +1342,57 @@ function buildMap(game, S) {
       game.box({ at: [BX + dx, 1.03, BZ + 0.22], size: [0.34, 0.09, 0.24], material: vice, physics: false });
     }
     game.box({ at: [BX + 0.2, 1.94, BZ], size: [0.30, 0.06, 0.20], material: vice, physics: false });
+
+    /* Shelves either side, with the parts on them. Everything the bench
+       sells is sitting somewhere on this wall — scopes and drums and muzzle
+       devices in rows — so the bench reads as a place where the work gets
+       done rather than as a table with a menu attached to it. */
+    const blk = { color: 0x24272b, texture: 'metal', roughness: 0.55, metalness: 1 };
+    const gls = { color: 0x14202a, texture: 'smooth', roughness: 0.14, metalness: 0,
+      emissive: 0x2a6a90, emissiveStrength: 0.7 };
+    for (const [sy, sx0, sx1] of [[1.30, -1.16, -0.12], [1.62, -1.16, -0.12], [1.30, 0.18, 1.16], [1.62, 0.18, 1.16]]) {
+      game.box({ at: [BX + (sx0 + sx1) / 2, sy, BZ + 0.42], size: [sx1 - sx0, 0.045, 0.24], material: MAT.board, static: true });
+      for (const br of [sx0 + 0.06, sx1 - 0.06]) {
+        game.box({ at: [BX + br, sy - 0.09, BZ + 0.46], size: [0.03, 0.14, 0.14], material: vice, physics: false });
+      }
+    }
+    // Scopes on the upper left shelf.
+    for (let k = 0; k < 4; k++) {
+      const sx = BX - 1.05 + k * 0.27;
+      game.cylinder({ at: [sx, 1.685, BZ + 0.42], radius: 0.026, height: 0.17, material: blk, physics: false })
+        .setRotation([0, 0, 90]);
+      game.cylinder({ at: [sx + 0.09, 1.685, BZ + 0.42], radius: 0.024, height: 0.010, material: gls, physics: false })
+        .setRotation([0, 0, 90]);
+    }
+    // Magazines standing in a row on the lower left.
+    for (let k = 0; k < 5; k++) {
+      game.box({ at: [BX - 1.06 + k * 0.21, 1.41, BZ + 0.42], size: [0.030, 0.17, 0.055], material: blk, physics: false })
+        .setRotation([0, 0, (k * 11) % 9 - 4]);
+    }
+    // A drum and two muzzle devices on the upper right.
+    game.cylinder({ at: [BX + 0.34, 1.70, BZ + 0.42], radius: 0.085, height: 0.05, material: blk, physics: false })
+      .setRotation([90, 0, 0]);
+    for (let k = 0; k < 3; k++) {
+      game.cylinder({ at: [BX + 0.62 + k * 0.16, 1.665, BZ + 0.42], radius: 0.027, height: 0.13, material: vice, physics: false })
+        .setRotation([0, 0, 90]);
+    }
+    // Barrels leaning in the corner of the lower right shelf.
+    for (let k = 0; k < 3; k++) {
+      game.cylinder({ at: [BX + 0.30 + k * 0.15, 1.44, BZ + 0.42], radius: 0.014, height: 0.24, material: vice, physics: false })
+        .setRotation([0, 0, 78 + k * 5]);
+    }
+    // Oil can, rag and a box of shells on the bench top itself.
+    game.cylinder({ at: [BX + 0.95, 1.06, BZ - 0.10], radius: 0.045, height: 0.15, material: vice, physics: false });
+    game.cylinder({ at: [BX + 0.95, 1.16, BZ - 0.16], radius: 0.010, height: 0.11, material: vice, physics: false })
+      .setRotation([44, 0, 0]);
+    game.box({ at: [BX - 0.30, 1.02, BZ - 0.06], size: [0.20, 0.07, 0.14], material: MAT.board, physics: false });
+    for (let k = 0; k < 4; k++) {
+      game.cylinder({ at: [BX - 0.34 + k * 0.026, 1.07, BZ - 0.06], radius: 0.009, height: 0.045,
+        material: { color: 0xa8843c, texture: 'metal', roughness: 0.3, metalness: 1 }, physics: false });
+    }
     S.bench = {
       at: [BX, 1.0, BZ - 0.62], open: false, slot: 0, index: 0,
+      spin: 0.9, preview: false, picking: false, damage: false,
       light: game.light({ at: [BX + 0.2, 1.82, BZ], color: 0xfff0d0, intensity: 26, radius: 4.2 }),
     };
   }
@@ -1928,6 +2025,7 @@ function makePlayer(game, S, hud, sfx, voice) {
     nades: GRENADE.start, nadeCd: 0,
     swingT: 0, blocking: false, blockT: 0,
     gold: 0, goldAmmo: false,
+    upgraded: {}, camoOff: {}, fitted: {},
     cooldown: 0, reloading: 0, reloadStage: 0, swayT: 0, kickPitch: 0,
     slideCycle: 0, slideCycleMax: 0.085,
     view: {}, muzzleT: 0, alive: true,
@@ -2112,6 +2210,112 @@ function applyAttachmentLooks(game, P, id) {
   }
 }
 
+/* Where each slot hangs off a weapon, in that weapon's own space. Derived
+   from its measured muzzle distance and sight height rather than listed per
+   gun, so a marker lands on the right part of every weapon including the
+   ones that do not exist yet. */
+function attachAnchor(slot, id, v) {
+  const base = WEAPONS[id] || WEAPONS.m1911;
+  const M = v.muzzle || 0.3, H = base.sightH || 0.04;
+  switch (slot) {
+    case 'muzzle': return [M - 0.01, H * 0.30, 0];
+    case 'barrel': return [M * 0.68, H * 0.30 - 0.022, 0];
+    case 'optic': return [0.03, H + 0.030, 0];
+    case 'mag': return [-0.010, -0.080, 0];
+    default: return [-0.215, 0.004, 0];        // stock
+  }
+}
+
+/* World point to canvas pixels. Behind the camera comes back null so a
+   marker for something off-screen is dropped rather than drawn mirrored. */
+function toScreen(game, p) {
+  const m = game.camera.viewProj.e;
+  const x = p[0], y = p[1], z = p[2];
+  const cw = m[3] * x + m[7] * y + m[11] * z + m[15];
+  if (cw <= 1e-4) return null;
+  const cx = (m[0] * x + m[4] * y + m[8] * z + m[12]) / cw;
+  const cy = (m[1] * x + m[5] * y + m[9] * z + m[13]) / cw;
+  const r = game.canvas.getBoundingClientRect();
+  return [(cx * 0.5 + 0.5) * r.width, (1 - (cy * 0.5 + 0.5)) * r.height];
+}
+
+/* Pros and cons, read off the fold rather than written twice. Comparing the
+   folded spec against the base is the only way these can never disagree
+   with what the part actually does. */
+function attachEffects(id, partId) {
+  const base = WEAPONS[id];
+  const part = ATTACH.parts[partId];
+  if (!base || !part) return { pros: [], cons: [] };
+  const after = Object.assign({}, base, part.fold(base));
+  const pros = [], cons = [];
+  const cmp = (label, a, b, higherIsBetter, fmt) => {
+    if (a == null || b == null || Math.abs(b - a) < 1e-6) return;
+    const better = higherIsBetter ? b > a : b < a;
+    const pct = Math.round(Math.abs(b - a) / (Math.abs(a) || 1) * 100);
+    const text = `${label} ${fmt ? fmt(b) : (pct + '%')}`;
+    (better ? pros : cons).push(text);
+  };
+  cmp('magazine', base.mag, after.mag, true, (v2) => v2 + ' rounds');
+  cmp('reload', base.reload, after.reload, false, (v2) => v2.toFixed(2) + ' s');
+  cmp('damage', base.dmg, after.dmg, true);
+  cmp('spread', base.spread, after.spread, false);
+  cmp('muzzle rise', base.recoil.up, after.recoil.up, false);
+  cmp('sideways kick', base.recoil.side, after.recoil.side, false);
+  cmp('handling', base.moveMul || 1, after.moveMul || 1, true);
+  cmp('velocity', base.muzzleVel || 300, after.muzzleVel || 300, true);
+  if (after.headBonus) pros.push(`+${after.headBonus} on the head`);
+  if (after.bayonet) pros.push('butt-strokes hit like the knife');
+  if (after.quiet) pros.push('quiet');
+  if (after.noAds) cons.push('no sights at all');
+  if (after.dual) pros.push('two of them');
+  return { pros: pros.slice(0, 4), cons: cons.slice(0, 4) };
+}
+
+/* The damage diagram: a body out of eleven boxes, each carrying what this
+   gun does to it. Laid out in percentages of the panel. */
+const DMG_BOXES = {
+  head:       { x: 40, y: 0,  w: 20, h: 11, short: 'HEAD' },
+  neck:       { x: 42, y: 11, w: 16, h: 5,  short: 'NECK' },
+  shoulder:   { x: 26, y: 16, w: 48, h: 7,  short: 'SHOULDERS' },
+  upperTorso: { x: 36, y: 23, w: 28, h: 12, short: 'UPPER' },
+  midTorso:   { x: 36, y: 35, w: 28, h: 11, short: 'MID' },
+  lowerTorso: { x: 36, y: 46, w: 28, h: 10, short: 'LOWER' },
+  arm:        { x: 22, y: 23, w: 12, h: 24, short: 'ARM' },
+  hand:       { x: 22, y: 47, w: 12, h: 8,  short: 'HAND' },
+  upperLeg:   { x: 37, y: 56, w: 26, h: 17, short: 'UPPER LEG' },
+  lowerLeg:   { x: 37, y: 73, w: 26, h: 19, short: 'LOWER LEG' },
+  foot:       { x: 37, y: 92, w: 26, h: 8,  short: 'FEET' },
+};
+
+function damageTable(spec) {
+  return HIT_REGIONS.map((r) => {
+    const box = DMG_BOXES[r.id];
+    if (!box) return null;
+    const per = spec.dmg * regionMul(r, spec) + (r.crit ? (spec.headBonus || 0) : 0);
+    const total = per * (spec.pellets > 1 ? spec.pellets : 1);
+    return Object.assign({}, box, {
+      crit: !!r.crit,
+      dmg: Math.round(total),
+    });
+  }).filter(Boolean);
+}
+
+/* The upgraded finish. The meteorite writes P.upgraded[id]; the bench can
+   turn the camo off and on again without giving up the upgrade itself. */
+function applyUpgradeLook(game, P, id) {
+  const v = P.view[id];
+  if (!v) return;
+  const on = !!(P.upgraded && P.upgraded[id]) && !(P.camoOff && P.camoOff[id]);
+  const parts = v.kind === 'single' ? [v.actor] : v.parts;
+  for (const a of parts) {
+    if (!a.__baseMat) a.__baseMat = a.material;
+    a.material = on
+      ? game.material({ color: 0x2a0f06, texture: 'metal', roughness: 0.34, metalness: 1,
+        emissive: 0xff5a12, emissiveStrength: 1.5 })
+      : a.__baseMat;
+  }
+}
+
 function setViewVisible(v, on) {
   if (v.arms) for (const a of v.arms.parts) a.visible = on;
   if (v.kind === 'single') {
@@ -2163,8 +2367,15 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
      half the vertical field of view is 28 — the weapon sat on the very
      bottom edge of the frame with only the barrel showing, which is most
      of what "the guns look broken" was. */
-  const po = P.poseOverride;
-  const hipX = (po ? po.x : 0.085) + bobX, hipY = (po ? po.y : -0.10) + bobY - dip, hipD = po ? po.d : 0.34;
+  /* On the bench the weapon is held out at arm's length, dead centre, with
+     the hands taken off it — it is the same viewmodel, so what you inspect
+     is exactly what you carry, down to the attachments. */
+  const bench = S && S.bench && S.bench.open ? S.bench : null;
+  const po = bench ? { x: bench.damage ? -0.115 : 0, y: 0.012, d: 0.60 } : P.poseOverride;
+  if (bench && v.arms) for (const q of v.arms.parts) q.visible = false;
+  const hipX = (po ? po.x : 0.085) + bobX * (bench ? 0 : 1),
+        hipY = (po ? po.y : -0.10) + (bench ? 0 : bobY - dip),
+        hipD = po ? po.d : 0.34;
   const adsX = 0, adsY = -spec.sightH, adsD = 0.30;
   const a = P.ads;
   const offR = hipX * (1 - a) + adsX * a;
@@ -2194,6 +2405,13 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
   _vQuat1.mulQuats(_vQuat1, _vQuat2);
   if (roll > 1e-4) {
     _vQuat2.setAxisAngle(_vAxisX, roll);
+    _vQuat1.mulQuats(_vQuat1, _vQuat2);
+  }
+  if (bench) {
+    // Turn it on the spot, and tip it slightly so it is not a flat side-on.
+    _vQuat2.setAxisAngle(_vAxisY, bench.spin || 0);
+    _vQuat1.mulQuats(_vQuat1, _vQuat2);
+    _vQuat2.setAxisAngle(_vAxisX, 0.30);
     _vQuat1.mulQuats(_vQuat1, _vQuat2);
   }
   root.setRotation(_vQuat1);
@@ -2542,8 +2760,9 @@ function tryFire(game, S, P, hud, sfx, dt) {
 
     const z = hit.actor && hit.actor.userData && hit.actor.userData.zombie;
     if (z && !z.dead) {
-      const headshot = hit.point.y > z.actor.position.y + 0.5;
-      const dmg = (spec.dmg * (headshot ? spec.headMul : 1) + (headshot ? (spec.headBonus || 0) : 0))
+      const region = hitRegion(z, hit.point);
+      const headshot = !!region.crit;
+      const dmg = (spec.dmg * regionMul(region, spec) + (headshot ? (spec.headBonus || 0) : 0))
         * (P.goldAmmo ? GOLD.dmgMul : 1);
       // Snapshot before the kill: death parks the body at the pool lot,
       // and the chain has to arc from the corpse, not the car park.
@@ -2574,8 +2793,9 @@ function tryFire(game, S, P, hud, sfx, dt) {
           if (!nxt) break;
           const z2 = nxt.actor && nxt.actor.userData && nxt.actor.userData.zombie;
           if (!z2 || z2.dead) break;                     // it stopped in a wall
-          const head2 = nxt.point.y > z2.actor.position.y + 0.5;
-          hurtZombie(game, S, z2, carry * (head2 ? spec.headMul : 1) + (head2 ? (spec.headBonus || 0) : 0), nxt.point, head2,
+          const reg2 = hitRegion(z2, nxt.point);
+          const head2 = !!reg2.crit;
+          hurtZombie(game, S, z2, carry * regionMul(reg2, spec) + (head2 ? (spec.headBonus || 0) : 0), nxt.point, head2,
             spec.stun ? 'shock' : (P.goldAmmo ? 'gold' : 'bullet'));
           const pts2 = S.addPoints(head2 ? ECONOMY.headshotKill : ECONOMY.hit);
           hud.pointsDelta(pts2);
@@ -4142,7 +4362,8 @@ function doInteract(game, S, P, hud, sfx, it, dt) {
     const ps = S.powerSwitch;
     if (!ps.cranking) { ps.cranking = GEN.crank; sfx.doorOpen(); S.voice(LINES.powerStart || LINES.power); }
   } else if (it.kind === 'bench') {
-    S.bench.open = true; S.bench.slot = 0; S.bench.index = 0;
+    Object.assign(S.bench, { open: true, slot: 0, index: 0, spin: 0.9,
+      preview: false, picking: false, damage: false });
     sfx.buy();
   } else if (it.kind === 'benchNo') {
     hud.banner('NOTHING FITS THAT', '#c8562e');
@@ -4264,6 +4485,36 @@ function makeHud() {
   #b9hud .bench .opt.banned { color:#6b6455; }
   #b9hud .bench .opt .why { color:#8a8272; font-size:12.5px; }
   #b9hud .bench .bfoot { margin-top:13px; padding-top:9px; border-top:1px solid #4a4234; color:#8a8272; font-size:13px; }
+  /* The bench screen. The weapon is the real viewmodel, turned on the spot
+     and pushed out to arm's length; everything here is drawn over it. */
+  #b9hud .benchwrap { position:absolute; inset:0; display:none; }
+  #b9hud .bsvg { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+  #b9hud .bmarks { position:absolute; inset:0; }
+  #b9hud .mark { position:absolute; transform:translate(-50%,-50%); white-space:nowrap;
+    font-size:13px; letter-spacing:.08em; color:#e8ddc8; text-shadow:0 0 6px #000; }
+  #b9hud .mark .plus { display:inline-block; width:23px; height:23px; line-height:21px; text-align:center;
+    border:1px solid #e8ddc8; border-radius:50%; font-size:16px; background:rgba(8,6,4,.55); }
+  #b9hud .mark .nm { display:inline-block; padding:3px 9px; border:1px solid #6b6455;
+    background:rgba(8,6,4,.72); }
+  #b9hud .mark.sel .plus, #b9hud .mark.sel .nm { border-color:#ffd27a; color:#ffd27a; }
+  #b9hud .mark .slot { display:block; font-size:10.5px; color:#8a8272; margin-bottom:3px; letter-spacing:.14em; }
+  #b9hud .bhint { position:absolute; left:50%; bottom:5%; transform:translateX(-50%); color:#8a8272;
+    font-size:13px; letter-spacing:.06em; text-align:center; }
+  #b9hud .bhint b { color:#ffd27a; font-weight:normal; }
+  /* Damage diagram. A body drawn out of eleven boxes, each labelled with
+     what this gun actually does to it. */
+  #b9hud .bdmg { position:absolute; right:3%; top:50%; transform:translateY(-50%);
+    width:min(330px,30vw); background:rgba(8,6,4,.90); border:1px solid #5a5140; padding:14px 16px;
+    display:none; font-size:13px; letter-spacing:.05em; }
+  #b9hud .bdmg h4 { margin:0 0 10px; font-size:14px; font-weight:normal; color:#e8ddc8; letter-spacing:.10em; }
+  #b9hud .bdmg .body { position:relative; height:270px; margin:4px 0 8px; }
+  #b9hud .bdmg .reg { position:absolute; border:1px solid #6b6455; background:rgba(120,96,60,.20);
+    font-size:10.5px; color:#e8ddc8; text-align:center; }
+  #b9hud .bdmg .reg.crit { border-color:#c8562e; background:rgba(200,86,46,.26); }
+  #b9hud .bdmg .reg span { position:absolute; right:3px; top:50%; transform:translateY(-50%);
+    color:#ffd27a; font-size:11.5px; }
+  #b9hud .bdmg .reg { padding-right:26px; box-sizing:border-box; line-height:1.1; }
+  #b9hud .bdmg .note { color:#8a8272; font-size:11.5px; margin-top:6px; }
   #b9hud .subs { position:absolute; left:50%; bottom:12%; transform:translateX(-50%); width:min(760px,80vw);
     text-align:center; font-size:18px; text-shadow:0 2px 3px #000; display:none; }
   #b9hud .subs .who { font-size:12px; letter-spacing:.3em; display:block; margin-bottom:4px; }
@@ -4301,7 +4552,13 @@ function makeHud() {
     <div class="banner"></div>
     <div class="stam"><div class="stamfill"></div></div>
     <div class="shield"></div><div class="perks"></div>
-    <div class="bench"><div class="bhead"></div><div class="brow"></div><div class="bfoot"></div></div>
+    <div class="benchwrap">
+      <svg class="bsvg"></svg>
+      <div class="bmarks"></div>
+      <div class="bench"><div class="bhead"></div><div class="brow"></div><div class="bfoot"></div></div>
+      <div class="bhint"></div>
+      <div class="bdmg"></div>
+    </div>
     <div class="title"><h1>BUNKER <span>NINE</span></h1>
       <p>THE DEAD COME THROUGH THE WINDOWS. POINTS BUY EVERYTHING.</p>
       <p>WASD MOVE &nbsp;·&nbsp; MOUSE LOOK &nbsp;·&nbsp; RIGHT-CLICK AIM &nbsp;·&nbsp; SHIFT SPRINT</p>
@@ -4319,6 +4576,8 @@ function makeHud() {
     banner: $('.banner'), dmg: $('.dmg'), title: $('.title'), hitm: $('.hitm'), pdelta: $('.pdelta'),
     cross: $('.cross'), stam: $('.stam'), stamFill: $('.stamfill'), shield: $('.shield'), perks: $('.perks'),
     bench: $('.bench'), bhead: $('.bhead'), brow: $('.brow'), bfoot: $('.bfoot'),
+    benchwrap: $('.benchwrap'), bsvg: $('.bsvg'), bmarks: $('.bmarks'),
+    bhint: $('.bhint'), bdmg: $('.bdmg'),
   };
   let subTimer = 0, hmTimer = 0, pdAcc = 0, pdTimer = 0, bnTimer = 0;
   return {
@@ -4335,25 +4594,80 @@ function makeHud() {
         + (P.nades > 0 ? `   ✚${P.nades}` : '');
     },
     flashWeapon(name) { els.wname.textContent = name; },
-    /* The bench. Rendered from state every time it changes rather than
-       patched in place — it is a list of at most six things and rebuilding
-       it is cheaper than keeping a second copy of the truth. */
+    /* The bench screen. Rendered from state every time it changes rather
+       than patched in place — it is a handful of markers and a short list,
+       and rebuilding is cheaper than keeping a second copy of the truth. */
     bench(state) {
-      if (!state) { els.bench.style.display = 'none'; return; }
-      els.bench.style.display = 'block';
-      els.bhead.textContent = `WORKBENCH — ${state.weapon}     ${ATTACH.slotName[state.slot]}`;
-      els.brow.innerHTML = state.options.map((o, i) => {
-        const cls = ['opt', i === state.index ? 'sel' : '', o.fitted ? 'fitted' : '', o.banned ? 'banned' : ''].join(' ');
-        const right = o.banned ? 'will not fit this weapon'
-          : o.fitted ? 'FITTED  ·  [F] strip it off'
-          : `${o.cost}`;
-        return `<div class="${cls}"><span>${o.name}<br><span class="why">${o.blurb}</span></span><span>${right}</span></div>`;
+      if (!state) {
+        if (els.benchwrap.style.display !== 'none') els.cross.style.display = '';
+        els.benchwrap.style.display = 'none';
+        return;
+      }
+      els.benchwrap.style.display = 'block';
+      // The room's HUD has no business over a screen you are reading.
+      els.subs.style.display = 'none';
+      els.cross.style.display = 'none';
+
+      /* Preview: everything except the weapon goes away. */
+      const show = !state.preview;
+      els.bmarks.style.display = show ? 'block' : 'none';
+      els.bsvg.style.display = show ? 'block' : 'none';
+
+      // Anchor markers, one per slot, sitting on the part of the gun they
+      // belong to, with a leader line back to it.
+      els.bmarks.innerHTML = state.marks.map((m) => {
+        const cls = ['mark', m.slot === state.slot ? 'sel' : ''].join(' ');
+        const body = m.fitted
+          ? `<span class="nm">${m.fitted}</span>`
+          : '<span class="plus">+</span>';
+        return `<div class="${cls}" style="left:${m.lx}px; top:${m.ly}px">`
+          + `<span class="slot">${ATTACH.slotName[m.slot]}</span>${body}</div>`;
       }).join('');
-      els.bfoot.innerHTML = '<span style="color:#ffd27a">A / D</span> slot &nbsp;&nbsp;'
-        + '<span style="color:#ffd27a">W / S</span> part &nbsp;&nbsp;'
-        + '<span style="color:#ffd27a">F</span> fit or strip &nbsp;&nbsp;'
-        + '<span style="color:#ffd27a">TAB</span> leave &nbsp;&nbsp;&nbsp;'
-        + `points <span style="color:#e8ddc8">${state.points}</span>`;
+      const w = els.bsvg.clientWidth || 1, h = els.bsvg.clientHeight || 1;
+      els.bsvg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+      els.bsvg.innerHTML = state.marks.map((m) => {
+        const c = m.slot === state.slot ? '#ffd27a' : '#8a8272';
+        return `<line x1="${m.ax}" y1="${m.ay}" x2="${m.lx}" y2="${m.ly}" stroke="${c}" stroke-width="1"/>`
+          + `<circle cx="${m.ax}" cy="${m.ay}" r="2.5" fill="${c}"/>`;
+      }).join('');
+
+      // The option list, only while a slot is actually being worked on.
+      if (state.picking && show) {
+        els.bench.style.display = 'block';
+        els.bhead.textContent = `${state.weapon}  —  ${ATTACH.slotName[state.slot]}`;
+        els.brow.innerHTML = state.options.map((o, i) => {
+          const cls = ['opt', i === state.index ? 'sel' : '', o.fitted ? 'fitted' : '', o.banned ? 'banned' : ''].join(' ');
+          const right = o.banned ? 'will not fit this weapon'
+            : o.fitted ? 'FITTED  ·  [F] strip it off'
+            : `${o.cost}`;
+          const pros = (o.pros || []).map((t) => `<span style="color:#8ce8a0">+ ${t}</span>`).join('&nbsp; ');
+          const cons = (o.cons || []).map((t) => `<span style="color:#e07a5a">− ${t}</span>`).join('&nbsp; ');
+          return `<div class="${cls}"><span>${o.name}<br><span class="why">${o.blurb}</span>`
+            + (pros || cons ? `<br><span class="why">${pros} ${cons}</span>` : '')
+            + `</span><span>${right}</span></div>`;
+        }).join('');
+        els.bfoot.innerHTML = '<span style="color:#ffd27a">W / S</span> part &nbsp;&nbsp;'
+          + '<span style="color:#ffd27a">F</span> fit or strip &nbsp;&nbsp;'
+          + '<span style="color:#ffd27a">TAB</span> back &nbsp;&nbsp;&nbsp;'
+          + `points <span style="color:#e8ddc8">${state.points}</span>`;
+      } else {
+        els.bench.style.display = 'none';
+      }
+
+      els.bhint.innerHTML = state.preview
+        ? '<b>P</b> leave preview &nbsp;·&nbsp; <b>A / D</b> turn it &nbsp;·&nbsp; <b>TAB</b> put it down'
+        : '<b>A / D</b> slot &nbsp;·&nbsp; <b>Q / E</b> turn it &nbsp;·&nbsp; <b>F</b> work on it'
+          + ' &nbsp;·&nbsp; <b>P</b> preview' + (state.camo ? ' &nbsp;·&nbsp; <b>C</b> camo' : '')
+          + ' &nbsp;·&nbsp; hold <b>SHIFT</b> damage &nbsp;·&nbsp; <b>TAB</b> put it down';
+
+      // The damage diagram, on a hold.
+      if (state.damage && show) {
+        els.bdmg.style.display = 'block';
+        els.bdmg.innerHTML = `<h4>${state.weapon} — DAMAGE BY PLACEMENT</h4><div class="body">`
+          + state.damage.map((d) => `<div class="reg${d.crit ? ' crit' : ''}" style="left:${d.x}%; `
+            + `top:${d.y}%; width:${d.w}%; height:${d.h}%">${d.short}<span>${d.dmg}</span></div>`).join('')
+          + `</div><div class="note">${state.damageNote}</div>`;
+      } else els.bdmg.style.display = 'none';
     },
     prompt(text, warn) {
       if (!text) { els.prompt.style.display = 'none'; return; }
@@ -4769,49 +5083,110 @@ function start(opts = {}) {
         const held = P.equipped();
         const fit = P.fitted[held] || (P.fitted[held] = {});
         const slot = ATTACH.slots[bench.slot];
+
+        /* Turning it. The weapon on the bench is the real viewmodel, pushed
+           out to arm's length and spun on the spot, so what you are looking
+           at is exactly what you will be holding — including every
+           attachment, because they are the same actors. */
+        const turn = (i.down('q') || i.down('a') ? -1 : 0) + (i.down('e') || i.down('d') ? 1 : 0);
+        if (bench.preview || bench.picking) bench.spin += turn * dt * 2.2;
+        else if (!bench.picking) bench.spin += turn * dt * (bench.preview ? 2.2 : 0);
+        if (i.justPressed('p')) bench.preview = !bench.preview;
+        bench.damage = i.down('shift') || pad.lt > 0.4 || !!S.testHold.damage;
+
         const options = Object.entries(ATTACH.parts)
           .filter(([, q]) => q.slot === slot)
-          .map(([id, q]) => ({
-            id, name: q.name, blurb: q.blurb, cost: q.cost,
-            fitted: fit[slot] === id,
-            banned: !!(q.bans && q.bans.includes(held)),
-          }));
+          .map(([id2, q]) => {
+            const eff = attachEffects(held, id2);
+            return {
+              id: id2, name: q.name, blurb: q.blurb, cost: q.cost,
+              fitted: fit[slot] === id2,
+              banned: !!(q.bans && q.bans.includes(held)),
+              pros: eff.pros, cons: eff.cons,
+            };
+          });
         bench.index = Math.max(0, Math.min(bench.index, options.length - 1));
-        if (i.justPressed('a') || i.justPressed('arrowleft')) { bench.slot = (bench.slot + ATTACH.slots.length - 1) % ATTACH.slots.length; bench.index = 0; }
-        if (i.justPressed('d') || i.justPressed('arrowright')) { bench.slot = (bench.slot + 1) % ATTACH.slots.length; bench.index = 0; }
-        if (i.justPressed('w') || i.justPressed('arrowup')) bench.index = (bench.index + options.length - 1) % options.length;
-        if (i.justPressed('s') || i.justPressed('arrowdown')) bench.index = (bench.index + 1) % options.length;
-        if (i.justPressed('f')) {
-          const o = options[bench.index];
-          if (o && !o.banned) {
-            if (o.fitted) {
-              delete fit[slot];
-              S.addPoints(Math.round(ATTACH.parts[o.id].cost * 0.4));
-              sfx.buy(); hud.banner('STRIPPED', '#8a8272');
-            } else if (S.points >= o.cost) {
-              S.points -= o.cost;
-              fit[slot] = o.id;
-              sfx.buy(); hud.banner(ATTACH.parts[o.id].name.toUpperCase(), '#ffd27a');
-            } else {
-              hud.banner('NOT ENOUGH', '#c8562e');
+
+        if (!bench.picking && !bench.preview) {
+          // Choosing which slot to work on.
+          if (i.justPressed('a') || i.justPressed('arrowleft')) { bench.slot = (bench.slot + ATTACH.slots.length - 1) % ATTACH.slots.length; bench.index = 0; }
+          if (i.justPressed('d') || i.justPressed('arrowright')) { bench.slot = (bench.slot + 1) % ATTACH.slots.length; bench.index = 0; }
+          if (i.justPressed('f')) { bench.picking = true; sfx.buy(); }
+        } else if (bench.picking) {
+          if (i.justPressed('w') || i.justPressed('arrowup')) bench.index = (bench.index + options.length - 1) % options.length;
+          if (i.justPressed('s') || i.justPressed('arrowdown')) bench.index = (bench.index + 1) % options.length;
+          if (i.justPressed('f')) {
+            const o = options[bench.index];
+            if (o && !o.banned) {
+              if (o.fitted) {
+                delete fit[slot];
+                S.addPoints(Math.round(ATTACH.parts[o.id].cost * 0.4));
+                sfx.buy(); hud.banner('STRIPPED', '#8a8272');
+              } else if (S.points >= o.cost) {
+                S.points -= o.cost;
+                fit[slot] = o.id;
+                sfx.buy(); hud.banner(ATTACH.parts[o.id].name.toUpperCase(), '#ffd27a');
+              } else hud.banner('NOT ENOUGH', '#c8562e');
+              hud.points(S.points);
+              const am2 = P.ammo[held];
+              const sp2 = P.specFor(held);
+              if (am2) am2.mag = Math.min(am2.mag, sp2.mag);
+              applyAttachmentLooks(game, P, held);
+              hud.ammo(P);
             }
-            hud.points(S.points);
-            // Fitting can change the magazine, so top the gun back up to
-            // whatever it now holds rather than leaving it over or under.
-            const am = P.ammo[held];
-            const sp = P.specFor(held);
-            if (am) am.mag = Math.min(am.mag, sp.mag);
-            applyAttachmentLooks(game, P, held);
-            hud.ammo(P);
           }
         }
-        if (i.justPressed('tab') || i.justPressed('escape')
-            || dist2d(P.actor.position, { x: bench.at[0], z: bench.at[2] }) > PLAYER.interactRange + 1.2) {
-          bench.open = false;
+
+        /* Camo, once the meteorite has been through the gun: you can put it
+           back to how it left the factory and change your mind again. */
+        if (P.upgraded && P.upgraded[held] && i.justPressed('c')) {
+          P.camoOff = P.camoOff || {};
+          P.camoOff[held] = !P.camoOff[held];
+          applyUpgradeLook(game, P, held);
+          hud.banner(P.camoOff[held] ? 'ORIGINAL FINISH' : 'LAVA', '#ff7a2a');
         }
-        hud.bench(bench.open ? {
-          weapon: P.spec().name, slot, options, index: bench.index, points: S.points,
-        } : null);
+
+        if (i.justPressed('tab') || i.justPressed('escape')) {
+          if (bench.picking) bench.picking = false;
+          else if (bench.preview) bench.preview = false;
+          else bench.open = false;
+        }
+        if (dist2d(P.actor.position, { x: bench.at[0], z: bench.at[2] }) > PLAYER.interactRange + 1.6) bench.open = false;
+
+        // Markers, projected from the weapon's own anchors.
+        const v = P.view[held];
+        const root = v && (v.kind === 'single' ? v.actor : v.root);
+        const marks = [];
+        if (root && !bench.preview) {
+          for (const sl of ATTACH.slots) {
+            const anch = attachAnchor(sl, held, v);
+            const m = root.matrix.e;
+            const wp = [
+              m[0] * anch[0] + m[4] * anch[1] + m[8] * anch[2] + m[12],
+              m[1] * anch[0] + m[5] * anch[1] + m[9] * anch[2] + m[13],
+              m[2] * anch[0] + m[6] * anch[1] + m[10] * anch[2] + m[14],
+            ];
+            const sc = toScreen(game, wp);
+            if (!sc) continue;
+            const up = sl === 'mag' ? 1 : -1;
+            marks.push({
+              slot: sl, ax: sc[0], ay: sc[1],
+              lx: sc[0] + (sl === 'stock' ? -96 : sl === 'muzzle' ? 96 : 0),
+              ly: sc[1] + up * (sl === 'optic' ? 88 : sl === 'mag' ? 58 : 70),
+              fitted: fit[sl] ? ATTACH.parts[fit[sl]].name : null,
+            });
+          }
+        }
+        const spec2 = P.specFor(held);
+        hud.bench({
+          weapon: spec2.name, slot, options, index: bench.index, points: S.points,
+          marks, preview: bench.preview, picking: bench.picking,
+          camo: !!(P.upgraded && P.upgraded[held]),
+          damage: bench.damage ? damageTable(spec2) : null,
+          damageNote: spec2.pellets > 1
+            ? `${spec2.pellets} pellets — figures are a full pattern on the spot`
+            : `per round${spec2.pierce ? `, and it carries through ${spec2.pierce} more` : ''}`,
+        });
       } else if (bench) {
         hud.bench(null);
       }
