@@ -2149,74 +2149,47 @@ function applyAttachmentLooks(game, P, id) {
   const M = v.muzzle || 0.3, H = base.sightH || 0.04;
   const B = root && root.boreAt != null ? root.boreAt : H * 0.30;
   if (!v.att) {
-    const steel = { color: 0x4a4e54, texture: 'metal', roughness: 0.42, metalness: 1 };
-    const black = { color: 0x1d2024, texture: 'metal', roughness: 0.58, metalness: 1 };
-    const glassR = { color: 0x140808, texture: 'smooth', roughness: 0.12, metalness: 0,
-      emissive: 0xff2a1e, emissiveStrength: 2.2 };
-    const glassG = { color: 0x081408, texture: 'smooth', roughness: 0.12, metalness: 0,
-      emissive: 0x4affa0, emissiveStrength: 2.0 };
-    const mk = (spec, pos, rot) => {
-      const a = spec(); a.parent = root; a.setPosition(pos); if (rot) a.setRotation(rot);
-      a.visible = false; return a;
+    /* Every part is a real model out of the engine now, authored around its
+       own mount point — so all that is left here is deciding where on this
+       particular weapon each mount sits, which comes off the weapon's own
+       measurements rather than off a table of guesses per gun.
+
+       They used to be built here out of boxes and cylinders: a suppressor
+       was one cylinder, a red dot was a box with a red slab on the front, a
+       seven-power scope was three cylinders in a row. These are the parts
+       the bench exists to show off, so they were the most conspicuous pile
+       of boxes left in the game. */
+    const mount = (partId, pos, rot) => {
+      const grp = game.gunPart(partId);
+      if (!grp) return [];
+      grp.setPosition(pos);
+      if (rot) grp.setRotation(rot);
+      grp.parent = root;
+      const list = [grp];
+      for (const nm of (grp.partNames || []).slice(1)) if (grp[nm]) list.push(grp[nm]);
+      for (const q of list) q.visible = false;
+      return list;
     };
-    const cyl = (r, h, m) => () => game.cylinder({ radius: r, height: h, material: m, physics: false });
-    const box = (sz, m) => () => game.box({ size: sz, material: m, physics: false });
+    // Muzzle devices go on the bore at the muzzle; barrels replace the
+    // front of it; optics sit on the sight line; magazines under the well.
+    const muz = [M - 0.012, B, 0];
+    const opt = [0.012, H - 0.010, 0];
     v.att = {
-      suppressor: [
-        mk(cyl(0.024, 0.17, black), [M - 0.02, B, 0], [0, 0, 90]),
-        mk(cyl(0.027, 0.012, steel), [M - 0.10, B, 0], [0, 0, 90]),
-      ],
-      compensator: [
-        mk(cyl(0.021, 0.055, steel), [M - 0.02, B, 0], [0, 0, 90]),
-        mk(box([0.045, 0.030, 0.006], black), [M - 0.02, B + 0.017, 0]),
-      ],
-      annihilator: [
-        mk(box([0.085, 0.044, 0.044], black), [M + 0.01, B, 0]),
-        mk(box([0.020, 0.056, 0.010], steel), [M + 0.03, B, 0]),
-        mk(box([0.020, 0.010, 0.056], steel), [M + 0.03, B, 0]),
-        mk(cyl(0.028, 0.014, steel), [M - 0.03, B, 0], [0, 0, 90]),
-      ],
-      longbarrel: [mk(cyl(0.013, 0.19, steel), [M + 0.06, B, 0], [0, 0, 90])],
-      shortbarrel: [mk(cyl(0.020, 0.035, steel), [M * 0.62, B, 0], [0, 0, 90])],
-      skullsplitter: [
-        mk(cyl(0.018, 0.13, black), [M * 0.72, B, 0], [0, 0, 90]),
-        mk(box([0.10, 0.008, 0.030], steel), [M * 0.72, B + 0.019, 0]),
-      ],
-      bayonet: [
-        mk(box([0.17, 0.024, 0.005], steel), [M * 0.86, B - 0.020, 0], [0, 0, 2]),
-        mk(box([0.055, 0.016, 0.012], black), [M * 0.62, B - 0.020, 0]),
-      ],
-      reddot: [
-        mk(box([0.055, 0.030, 0.040], black), [0.02, H + 0.030, 0]),
-        mk(box([0.004, 0.026, 0.034], glassR), [0.046, H + 0.032, 0]),
-      ],
-      thermal: [
-        mk(cyl(0.026, 0.115, black), [0.03, H + 0.036, 0], [0, 0, 90]),
-        mk(cyl(0.024, 0.008, glassG), [0.086, H + 0.036, 0], [0, 0, 90]),
-        mk(box([0.05, 0.020, 0.040], black), [0.02, H + 0.012, 0]),
-      ],
-      nightvision: [
-        mk(cyl(0.030, 0.125, black), [0.03, H + 0.038, 0], [0, 0, 90]),
-        mk(cyl(0.028, 0.008, glassG), [0.092, H + 0.038, 0], [0, 0, 90]),
-      ],
-      rangefinder: [
-        mk(box([0.10, 0.038, 0.046], black), [0.03, H + 0.034, 0]),
-        mk(box([0.004, 0.022, 0.030], glassR), [0.079, H + 0.036, 0]),
-        mk(box([0.028, 0.016, 0.016], steel), [0.03, H + 0.056, 0.026]),
-      ],
-      scope7x: [
-        mk(cyl(0.023, 0.24, black), [0.06, H + 0.044, 0], [0, 0, 90]),
-        mk(cyl(0.032, 0.030, black), [0.17, H + 0.044, 0], [0, 0, 90]),
-        mk(cyl(0.028, 0.030, black), [-0.05, H + 0.044, 0], [0, 0, 90]),
-        mk(box([0.030, 0.030, 0.030], steel), [0.02, H + 0.020, 0]),
-        mk(box([0.030, 0.030, 0.030], steel), [0.12, H + 0.020, 0]),
-      ],
-      extmag: [mk(box([0.036, 0.055, 0.030], black), [-0.010, -0.098, 0])],
-      drummag: [
-        mk(cyl(0.070, 0.042, black), [0.005, -0.105, 0], [90, 0, 0]),
-        mk(cyl(0.050, 0.048, steel), [0.005, -0.105, 0], [90, 0, 0]),
-      ],
-      fastmag: [mk(box([0.040, 0.020, 0.034], steel), [-0.010, -0.062, 0])],
+      suppressor: mount('suppressor', muz),
+      compensator: mount('compensator', muz),
+      annihilator: mount('annihilator', muz),
+      skullsplitter: mount('skullsplitter', [M * 0.70, B, 0]),
+      longbarrel: mount('longbarrel', [M - 0.030, B, 0]),
+      shortbarrel: mount('shortbarrel', [M * 0.66, B, 0]),
+      bayonet: mount('bayonet', [M * 0.72, B - 0.019, 0]),
+      reddot: mount('reddot', opt),
+      thermal: mount('thermal', opt),
+      nightvision: mount('nightvision', opt),
+      rangefinder: mount('rangefinder', opt),
+      scope7x: mount('scope7x', [0.006, H - 0.014, 0]),
+      fastmag: mount('fastmag', [-0.010, -0.092, 0]),
+      extmag: mount('extmag', [-0.008, -0.086, 0]),
+      drummag: mount('drummag', [0.004, -0.030, 0]),
     };
   }
   const fit = P.fitted[id] || {};
