@@ -1733,24 +1733,61 @@ function buildMgStock(g) {
   for (const sd of [-1, 1]) checker(g, K.gripTopX - 0.030, K.gripTopY - 0.056, sd * 0.0176, 0.26, -0.96, sd, 4, 7, 0.0060, 0.0010);
 }
 
+/* A box turned about Z. hardBox is axis-aligned, and a belt link that
+   does not tilt with the curve it is on reads as a stack of bricks. */
+function game_hardBoxRot(g, cx, cy, cz, hx, hy, hz, degZ) {
+  const a = degZ * PI / 180, c = Math.cos(a), s2 = Math.sin(a);
+  const u = [c, s2, 0], v = [-s2, c, 0], w = [0, 0, 1];
+  const faces = [[u, hx], [v, hy], [w, hz]];
+  for (const [n, h] of faces) {
+    for (const sgn of [1, -1]) {
+      const o = [cx + n[0] * h * sgn, cy + n[1] * h * sgn, cz + n[2] * h * sgn];
+      const [p, q] = faces.filter((f) => f[0] !== n);
+      const base = g.positions.length / 3;
+      for (const [a2, b2] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+        const aa = a2 * sgn;
+        g.vert(o[0] + p[0][0] * p[1] * aa + q[0][0] * q[1] * b2,
+               o[1] + p[0][1] * p[1] * aa + q[0][1] * q[1] * b2,
+               o[2] + p[0][2] * p[1] * aa + q[0][2] * q[1] * b2,
+               n[0] * sgn, n[1] * sgn, n[2] * sgn,
+               (a2 + 1) / 2 * p[1] * 2, (b2 + 1) / 2 * q[1] * 2);
+      }
+      g.quad(base, base + 1, base + 2, base + 3);
+    }
+  }
+}
+
 /* The belt: fifty rounds hanging out of the feed and swinging. Its own
    actor, because it is the part that moves and the part you notice. */
 function buildMgBelt(g) {
   const K = MG42;
   /* Down out of the tray and then curling back — a belt that leaves in a
      straight line reads as a ruler. */
-  for (let i = 0; i < 22; i++) {
-    const t = i / 21;
-    const drop = t * 0.230;
-    const x = K.gripTopX + 0.130 - t * 0.055 + Math.sin(t * 2.4) * 0.020;
-    const y = K.feedY - 0.020 - drop;
-    const z = K.beltZ - t * 0.010;
-    // A link, and the round sitting in it.
-    hardBox(g, x, y, z, 0.0058, 0.0075, 0.0110);
+  /* Twenty-four links on a real hanging curve.
+
+     A belt that leaves the tray in a straight line reads as a ruler and a
+     belt on a single arc reads as a rope. What it actually does is come
+     out level, turn over at the tray lip and then fall nearly vertically
+     under its own weight — so the curve is a quarter turn followed by a
+     drop, and the links tilt with it. Pitch is 16 mm, which is what an
+     8 mm belt link is; at the 10 mm it was, the rounds overlapped and the
+     whole thing read as one cord. */
+  const N = 24, PITCH = 0.0158;
+  let x = K.gripTopX + 0.150, y = K.feedY - 0.014, z = K.beltZ;
+  for (let i = 0; i < N; i++) {
+    const t = i / (N - 1);
+    // Level out of the tray, then over and down.
+    const ang = Math.min(1, t * 2.3) * (PI / 2) * 0.92;
+    const dx = -Math.cos(ang), dy = -Math.sin(ang);
+    const roll = ang * 57.2958;
+    // The link, and the round lying in it, both canted with the curve.
+    const link = game_hardBoxRot(g, x, y, z, 0.0062, 0.0082, 0.0115, roll);
+    void link;
     spin(g, [
-      [x - 0.0060, 0], [x - 0.0060, 0.0040], [x + 0.0070, 0.0040],
-      [x + 0.0105, 0.0026], [x + 0.0125, 0],
-    ], 10, 34, y, z);
+      [-0.0062, 0], [-0.0062, 0.0040], [0.0068, 0.0040],
+      [0.0102, 0.0026, ], [0.0122, 0],
+    ].map(([a, b]) => [x + a * Math.cos(ang * 0.35) , b]), 10, 34, y, z);
+    x += dx * PITCH; y += dy * PITCH; z -= 0.0007;
   }
 }
 
@@ -2132,7 +2169,10 @@ Engine.prototype.mg42 = function (opts = {}) {
     return fin({ steel, wood, belt }, MG42_ORIGIN);
   });
   const body = mountArm(this, 'mg42', parts, {
-    steel: ARM_MAT.blued, wood: { color: 0x4a2a18, texture: 'smooth', roughness: 0.58, metalness: 0 },
+    steel: ARM_MAT.blued,
+    // Bakelite: a dark red-brown that reads brown, not orange. At 0x4a2a18
+    // under a bright sky it came out the colour of a traffic cone.
+    wood: { color: 0x2b1c14, texture: 'smooth', roughness: 0.66, metalness: 0 },
     belt: { color: 0x7a6a3c, texture: 'metal', roughness: 0.46, metalness: 1 },
   }, opts, 0.76, 11.6, 'steel');
   body.boreAt = -MG42_ORIGIN.y;

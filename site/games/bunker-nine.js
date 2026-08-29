@@ -5202,21 +5202,34 @@ function makeHud() {
       els.bmarks.style.display = show ? 'block' : 'none';
       els.bsvg.style.display = show ? 'block' : 'none';
 
-      // Anchor markers, one per slot, sitting on the part of the gun they
-      // belong to, with a leader line back to it.
+      /* Anchor markers, one per slot, sitting on the part of the gun they
+         belong to, with a leader line back to it.
+
+         Their labels are clamped into the band between the two panels. A
+         marker sits where its part is, and on a long gun the muzzle end of
+         that is off behind the control list — so the label for the barrel
+         was rendering half underneath the panel explaining how to fit one.
+         The leader line still ends at the real anchor, so nothing lies
+         about where the part is; only the text moves. */
+      const W = els.benchwrap.clientWidth || 1;
+      const padL = Math.min(252, W * 0.24) + W * 0.03 + 14;
+      const padR = W - (Math.min(600, W * 0.58) + 44) - W * 0.03 - 14;
+      const clampX = (x) => (state.picking || !state.preview
+        ? Math.max(padL, Math.min(padR > padL ? padR : x, x))
+        : x);
       els.bmarks.innerHTML = state.marks.map((m) => {
         const cls = ['mark', m.slot === state.slot ? 'sel' : ''].join(' ');
         const body = m.fitted
           ? `<span class="nm">${m.fitted}</span>`
           : '<span class="plus">+</span>';
-        return `<div class="${cls}" style="left:${m.lx}px; top:${m.ly}px">`
+        return `<div class="${cls}" style="left:${clampX(m.lx)}px; top:${m.ly}px">`
           + `<span class="slot">${ATTACH.slotName[m.slot]}</span>${body}</div>`;
       }).join('');
       const w = els.bsvg.clientWidth || 1, h = els.bsvg.clientHeight || 1;
       els.bsvg.setAttribute('viewBox', `0 0 ${w} ${h}`);
       els.bsvg.innerHTML = state.marks.map((m) => {
         const c = m.slot === state.slot ? '#ffd27a' : '#8a8272';
-        return `<line x1="${m.ax}" y1="${m.ay}" x2="${m.lx}" y2="${m.ly}" stroke="${c}" stroke-width="1"/>`
+        return `<line x1="${m.ax}" y1="${m.ay}" x2="${clampX(m.lx)}" y2="${m.ly}" stroke="${c}" stroke-width="1"/>`
           + `<circle cx="${m.ax}" cy="${m.ay}" r="2.5" fill="${c}"/>`;
       }).join('');
 
