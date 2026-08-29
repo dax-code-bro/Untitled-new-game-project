@@ -295,5 +295,8 @@ Engine.prototype.thompson = function (opts = {}) {
   body.ejectPort = [0.0700, 0.0930, 0.0210];
   body.magWell = [0.1180, -0.0300, 0];
   body.slideTravel = 0.030;
+  body.boreAt = 0.070;                 // the origin sits 70 mm under the bore
+  body.muzzleAt = TOMMY.muzzle + 0.030;
+  body.sightAt = TOMMY.recUp + 0.0040 + 0.070;
   return body;
 };

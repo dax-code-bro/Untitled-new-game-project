@@ -1008,5 +1008,10 @@ Engine.prototype.pistol1911 = function (opts = {}) {
   body.ejectPort = [0.0900, 0.0400, 0.0110];
   body.magWell = [-0.0120, -0.0850, 0];
   body.slideTravel = 0.026;
+  // Where the bore sits above the grip, so anything bolted to the muzzle
+  // lands on the barrel's own line rather than on a guess at it.
+  body.boreAt = -PISTOL_ORIGIN.y;
+  body.muzzleAt = M1911.length - PISTOL_ORIGIN.x;
+  body.sightAt = 0.0155 - PISTOL_ORIGIN.y;
   return body;
 };

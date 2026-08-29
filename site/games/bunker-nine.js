@@ -2062,7 +2062,13 @@ function applyAttachmentLooks(game, P, id) {
   if (!v) return;
   const root = v.kind === 'single' ? v.actor : v.root;
   const base = WEAPONS[id];
+  /* Three measurements off the weapon itself: how far the muzzle is, how
+     high the sight line runs, and where the bore sits. The last was
+     guessed as three tenths of the sight height, which was near enough on
+     one gun and two centimetres out on the rest — a suppressor floating
+     below its own barrel. Every model reports its own bore now. */
   const M = v.muzzle || 0.3, H = base.sightH || 0.04;
+  const B = root && root.boreAt != null ? root.boreAt : H * 0.30;
   if (!v.att) {
     const steel = { color: 0x4a4e54, texture: 'metal', roughness: 0.42, metalness: 1 };
     const black = { color: 0x1d2024, texture: 'metal', roughness: 0.58, metalness: 1 };
@@ -2078,28 +2084,28 @@ function applyAttachmentLooks(game, P, id) {
     const box = (sz, m) => () => game.box({ size: sz, material: m, physics: false });
     v.att = {
       suppressor: [
-        mk(cyl(0.024, 0.17, black), [M - 0.02, H * 0.30, 0], [0, 0, 90]),
-        mk(cyl(0.027, 0.012, steel), [M - 0.10, H * 0.30, 0], [0, 0, 90]),
+        mk(cyl(0.024, 0.17, black), [M - 0.02, B, 0], [0, 0, 90]),
+        mk(cyl(0.027, 0.012, steel), [M - 0.10, B, 0], [0, 0, 90]),
       ],
       compensator: [
-        mk(cyl(0.021, 0.055, steel), [M - 0.02, H * 0.30, 0], [0, 0, 90]),
-        mk(box([0.045, 0.030, 0.006], black), [M - 0.02, H * 0.30 + 0.017, 0]),
+        mk(cyl(0.021, 0.055, steel), [M - 0.02, B, 0], [0, 0, 90]),
+        mk(box([0.045, 0.030, 0.006], black), [M - 0.02, B + 0.017, 0]),
       ],
       annihilator: [
-        mk(box([0.085, 0.044, 0.044], black), [M + 0.01, H * 0.30, 0]),
-        mk(box([0.020, 0.056, 0.010], steel), [M + 0.03, H * 0.30, 0]),
-        mk(box([0.020, 0.010, 0.056], steel), [M + 0.03, H * 0.30, 0]),
-        mk(cyl(0.028, 0.014, steel), [M - 0.03, H * 0.30, 0], [0, 0, 90]),
+        mk(box([0.085, 0.044, 0.044], black), [M + 0.01, B, 0]),
+        mk(box([0.020, 0.056, 0.010], steel), [M + 0.03, B, 0]),
+        mk(box([0.020, 0.010, 0.056], steel), [M + 0.03, B, 0]),
+        mk(cyl(0.028, 0.014, steel), [M - 0.03, B, 0], [0, 0, 90]),
       ],
-      longbarrel: [mk(cyl(0.013, 0.19, steel), [M + 0.06, H * 0.30, 0], [0, 0, 90])],
-      shortbarrel: [mk(cyl(0.020, 0.035, steel), [M * 0.62, H * 0.30, 0], [0, 0, 90])],
+      longbarrel: [mk(cyl(0.013, 0.19, steel), [M + 0.06, B, 0], [0, 0, 90])],
+      shortbarrel: [mk(cyl(0.020, 0.035, steel), [M * 0.62, B, 0], [0, 0, 90])],
       skullsplitter: [
-        mk(cyl(0.018, 0.13, black), [M * 0.72, H * 0.30, 0], [0, 0, 90]),
-        mk(box([0.10, 0.008, 0.030], steel), [M * 0.72, H * 0.30 + 0.019, 0]),
+        mk(cyl(0.018, 0.13, black), [M * 0.72, B, 0], [0, 0, 90]),
+        mk(box([0.10, 0.008, 0.030], steel), [M * 0.72, B + 0.019, 0]),
       ],
       bayonet: [
-        mk(box([0.17, 0.024, 0.005], steel), [M * 0.86, H * 0.30 - 0.020, 0], [0, 0, 2]),
-        mk(box([0.055, 0.016, 0.012], black), [M * 0.62, H * 0.30 - 0.020, 0]),
+        mk(box([0.17, 0.024, 0.005], steel), [M * 0.86, B - 0.020, 0], [0, 0, 2]),
+        mk(box([0.055, 0.016, 0.012], black), [M * 0.62, B - 0.020, 0]),
       ],
       reddot: [
         mk(box([0.055, 0.030, 0.040], black), [0.02, H + 0.030, 0]),
@@ -2148,10 +2154,12 @@ function applyAttachmentLooks(game, P, id) {
    ones that do not exist yet. */
 function attachAnchor(slot, id, v) {
   const base = WEAPONS[id] || WEAPONS.m1911;
+  const r = v.kind === 'single' ? v.actor : v.root;
   const M = v.muzzle || 0.3, H = base.sightH || 0.04;
+  const B = r && r.boreAt != null ? r.boreAt : H * 0.30;
   switch (slot) {
-    case 'muzzle': return [M - 0.01, H * 0.30, 0];
-    case 'barrel': return [M * 0.68, H * 0.30 - 0.022, 0];
+    case 'muzzle': return [M - 0.01, B, 0];
+    case 'barrel': return [M * 0.68, B - 0.022, 0];
     case 'optic': return [0.03, H + 0.030, 0];
     case 'mag': return [-0.010, -0.080, 0];
     default: return [-0.215, 0.004, 0];        // stock

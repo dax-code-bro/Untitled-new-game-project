@@ -13057,6 +13057,11 @@ Engine.prototype.pistol1911 = function (opts = {}) {
   body.ejectPort = [0.0900, 0.0400, 0.0110];
   body.magWell = [-0.0120, -0.0850, 0];
   body.slideTravel = 0.026;
+  // Where the bore sits above the grip, so anything bolted to the muzzle
+  // lands on the barrel's own line rather than on a guess at it.
+  body.boreAt = -PISTOL_ORIGIN.y;
+  body.muzzleAt = M1911.length - PISTOL_ORIGIN.x;
+  body.sightAt = 0.0155 - PISTOL_ORIGIN.y;
   return body;
 };
 
@@ -13359,6 +13364,9 @@ Engine.prototype.thompson = function (opts = {}) {
   body.ejectPort = [0.0700, 0.0930, 0.0210];
   body.magWell = [0.1180, -0.0300, 0];
   body.slideTravel = 0.030;
+  body.boreAt = 0.070;                 // the origin sits 70 mm under the bore
+  body.muzzleAt = TOMMY.muzzle + 0.030;
+  body.sightAt = TOMMY.recUp + 0.0040 + 0.070;
   return body;
 };
 
@@ -14834,6 +14842,7 @@ Engine.prototype.mp5 = function (opts = {}) {
   body.magWell = [0.0900, -0.0600, 0];
   body.boltRest = [0, 0, 0];
   body.boltThrow = [-0.030, 0, 0];
+  body.boreAt = -MP5_ORIGIN.y;
   body.muzzleAt = MP5.muzzle - MP5_ORIGIN.x;
   body.sightAt = MP5.sightY - MP5_ORIGIN.y;
   return body;
@@ -14888,6 +14897,7 @@ function doubleGun(E, kind, opts) {
   // Every part forward of the pin, so the caller can swing them together.
   body.swingParts = ['swing', 'forend'].concat(C.science ? ['copper', 'glow'] : []);
   body.ejectPort = [DOUBLE.breech - o.x, -o.y + 0.004, 0.0140];
+  body.boreAt = -o.y;
   body.muzzleAt = C.barrelLen - o.x + (C.science ? 0.030 : 0);
   body.sightAt = (C.overUnder ? DOUBLE.breechR + 0.0094 : 0.0124) - o.y;
   return body;
@@ -14920,6 +14930,7 @@ Engine.prototype.mauserC96 = function (opts = {}) {
   // It only exists during a reload; the rest of the time a clip standing in
   // the air above the action is just a bug with brass on it.
   if (body.clip) body.clip.visible = false;
+  body.boreAt = -C96_ORIGIN.y;
   body.muzzleAt = C96.muzzle - C96_ORIGIN.x;
   body.sightAt = 0.0238 - C96_ORIGIN.y;
   return body;
@@ -14944,6 +14955,7 @@ Engine.prototype.model5 = function (opts = {}) {
   // a swing-out revolver has and the reason it looks right when it opens.
   body.crane = [MOD5.cylX1 + 0.014 - MOD5_ORIGIN.x, -0.0150 - MOD5_ORIGIN.y, -0.0150];
   body.ejectPort = [MOD5.cylX0 - MOD5_ORIGIN.x, -MOD5_ORIGIN.y + 0.014, 0.0250];
+  body.boreAt = -MOD5_ORIGIN.y;
   body.muzzleAt = MOD5.muzzle - MOD5_ORIGIN.x;
   body.sightAt = MOD5.cylR + 0.0186 - MOD5_ORIGIN.y;
   return body;
@@ -14970,6 +14982,7 @@ Engine.prototype.arcBreaker = function (opts = {}) {
   body.cellRest = [0, 0, 0];
   body.cellDrop = [0.010, -0.150, 0];
   body.ejectPort = [0.0600 - ARC_ORIGIN.x, 0.0100 - ARC_ORIGIN.y, 0.0270];
+  body.boreAt = ARC.tubeY - ARC_ORIGIN.y;
   body.muzzleAt = ARC.tip - ARC_ORIGIN.x;
   body.sightAt = 0.0349 - ARC_ORIGIN.y;
   return body;
