@@ -1258,8 +1258,7 @@ function makeSfx(game) {
    fastest way to make a talkative character unbearable. So: a cooldown, a
    bag that empties before it refills so you do not hear the same line
    twice running, and a per-event chance for the ones that fire often. */
-function makeHeroVoice(game, hud, getHero, isOver) {
-  let busy = 0;
+function makeHeroVoice(game, hud, getHero, isOver, floor) {
   const bags = {};
   const HOT = { headshot: 0.16, reload: 0.30, dry: 0.5, melee: 0.22, firstBlood: 1,
     crawler: 0.25, spitter: 0.35, multiKill: 0.55, regen: 0.5 };
@@ -1268,7 +1267,7 @@ function makeHeroVoice(game, hud, getHero, isOver) {
     const hero = getHero();
     if (!hero) return;
     const now = performance.now() / 1000;
-    if (now < busy && !force) return;
+    if (now < floor.until && !force) return;
     const chance = HOT[event];
     if (chance != null && !force && Math.random() > chance) return;
     const set = (hero.lines && hero.lines[event]) || COMMON[event];
@@ -1278,7 +1277,20 @@ function makeHeroVoice(game, hud, getHero, isOver) {
     const idx = Math.floor(Math.random() * bags[key].length);
     const text = bags[key].splice(idx, 1)[0];
     const dur = Math.max(1.3, text.length * 0.042);
-    busy = now + dur * 0.62;
+    /* Quiet until the line has finished, and then some.
+     *
+     * This was `dur * 0.62`, which is shorter than the line's own subtitle
+     * stays on screen — so the next bark could replace a sentence you were
+     * still reading, and a typical forty-five character line could be
+     * followed by another one 1.2 seconds later. A character who speaks
+     * every 1.2 seconds is not a character, it is a fault.
+     *
+     * The floor is now the line's own length plus a breath, which puts a
+     * natural gap of about three and a half seconds between anything the
+     * character says off their own bat. Forced lines — a round starting,
+     * the boss arriving, going down, anything Exit Four Two says — skip
+     * this entirely and always land. */
+    floor.until = now + dur + 1.6;
     const c = { name: hero.name, color: hero.voice.color };
     hud.subtitle(c, text, dur);
     const blips = Math.min(13, Math.max(4, Math.round(text.length / 7)));
@@ -1292,12 +1304,19 @@ function makeHeroVoice(game, hud, getHero, isOver) {
   };
 }
 
-function makeVoice(game, hud, isOver) {
-  let busy = 0;
+/* One mouth at a time.
+
+   The radio and the character kept separate clocks, so a scripted exchange
+   could start while the character was mid-sentence and replace the line on
+   screen — there is one subtitle slot and two things writing to it. They
+   share a floor now: whoever is speaking holds it until they have finished,
+   and the character's own remarks yield to the radio, which is scripted and
+   is usually telling you something you need. */
+function makeVoice(game, hud, isOver, floor) {
   return function say(lineSet, priority) {
     if (isOver() && !priority) return;
     const now = performance.now() / 1000;
-    if (now < busy && !priority) return;
+    if (now < floor.until && !priority) return;
     let delay = 0;
     for (const [who, text] of lineSet) {
       const c = CAST[who];
@@ -1317,7 +1336,7 @@ function makeVoice(game, hud, isOver) {
       }, delay * 1000);
       delay += dur + 0.25;
     }
-    busy = now + delay;
+    floor.until = now + delay;
     return delay;
   };
 }
@@ -7117,7 +7136,10 @@ function start(opts = {}) {
   // Exposed for the reload test, which counts how often each one fires:
   // twice now a stage held in a boolean has played its sound every frame.
   S.__sfx = sfx;
-  const voice = makeVoice(game, hud, () => S.gameOver);
+  // Shared between the radio and the character, so only one of them is
+  // ever writing to the single subtitle slot.
+  const speech = { until: 0 };
+  const voice = makeVoice(game, hud, () => S.gameOver, speech);
   S.voice = voice;
 
   /* Who you are.
@@ -7131,7 +7153,7 @@ function start(opts = {}) {
     if (saved && HEROES[saved]) S.heroId = saved;
   } catch (e) { /* storage off; the default stands */ }
   S.hero = () => Object.assign({ id: S.heroId }, HEROES[S.heroId]);
-  const bark = makeHeroVoice(game, hud, S.hero, () => S.gameOver);
+  const bark = makeHeroVoice(game, hud, S.hero, () => S.gameOver, speech);
   S.bark = bark;
   hud.picker(() => S.heroId, (id) => {
     S.heroId = id;
