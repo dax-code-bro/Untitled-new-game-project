@@ -931,12 +931,23 @@ function buildModel5Cylinder(g) {
 /* Grips: rubber, finger-grooved, wrapping the backstrap. */
 function buildModel5Grip(g) {
   const K = MOD5, topX = K.cylX0 - 0.040;
+  /* A revolver grip, not a tube.
+
+     The old sections held the front-to-back depth within half a millimetre
+     of 40 mm down the whole length, which is a straight taper — from the
+     side it read as a cardboard tube stuck under the frame, and it is the
+     part your hand is on for the entire game. A real one sweeps its
+     backstrap out from the frame, swells to its deepest under the palm at
+     about forty per cent, and comes back in to a rounded butt. That is the
+     shape you feel when you take hold of one, and it is the shape that
+     makes the silhouette read. */
   const axis = gripStack(g, topX, -0.0300, 0.1080, 0.34, [
-    [0.00, 0.0195, 0.0210, 0.0175, 2.5],
-    [0.20, 0.0185, 0.0225, 0.0192, 2.4],
-    [0.48, 0.0180, 0.0230, 0.0196, 2.4],
-    [0.76, 0.0182, 0.0232, 0.0196, 2.4],
-    [1.00, 0.0175, 0.0215, 0.0180, 2.7],
+    [0.00, 0.0176, 0.0206, 0.0166, 2.6],
+    [0.18, 0.0181, 0.0251, 0.0183, 2.4],
+    [0.42, 0.0187, 0.0291, 0.0197, 2.3],
+    [0.68, 0.0185, 0.0287, 0.0199, 2.3],
+    [0.88, 0.0171, 0.0251, 0.0189, 2.5],
+    [1.00, 0.0151, 0.0216, 0.0169, 2.8],
   ]);
   for (let i = 0; i < 3; i++) {
     const d = 0.026 + i * 0.026;
