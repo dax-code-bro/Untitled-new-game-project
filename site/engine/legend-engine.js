@@ -16218,7 +16218,7 @@ function buildViewArm(g, shoulder, hand, side) {
    round a grip is the thing that makes a first-person hand look wrong
    without anyone being able to say why. Three straight bones with sharp
    angles between them reads as a hand even at this size. */
-function buildViewHand(g, at, side, opts = {}) {
+function buildViewHand(g, rawAt, side, opts = {}) {
   const fore = (opts.grip || 'pistol') === 'fore';
 
   /* Four axes, and every part of the hand follows from them.
@@ -16246,6 +16246,19 @@ function buildViewHand(g, at, side, opts = {}) {
   const lane = fore ? V(1, 0, 0) : V(0.28, -0.94, 0);
   // Toward whatever is being held, from the hand's own centre.
   const grasp = fore ? V(0, 1, 0) : V(0.94, 0.28, 0);
+
+  /* The support hand goes UNDER the forend, not around the middle of it.
+
+     Built centred on the anchor, four fifths of its skin came out above the
+     line — it was resting on top of the handguard rather than holding it,
+     which from the front is a lump of hand sitting on a gun. Measured, not
+     guessed: gripcheck counts which side of the anchor each vertex is on,
+     and the support hand was 132/68/15/13 across the four quadrants where
+     the firing hand is 37/44/117/120. Drop it by a finger's width and the
+     forend lands in the crook where it belongs. */
+  const at = fore
+    ? new Vec3(rawAt.x - grasp.x * 0.019, rawAt.y - grasp.y * 0.019, rawAt.z - grasp.z * 0.019)
+    : rawAt;
 
   const at3 = (b, d) => new Vec3(at.x + b.x * d, at.y + b.y * d, at.z + b.z * d);
 
@@ -16332,7 +16345,11 @@ function buildViewHand(g, at, side, opts = {}) {
        way — the tips come back under the palm, and a hand whose fingertips
        stop in mid-air is a hand not holding anything. Over a forend they
        close less, because there is more of it to go round. */
-    const close = fore ? 0.84 : 1.0;
+    /* Round a forend they close nearly as far as round a grip: the hand is
+       under it and the fingers have to come up the far side and over. At
+       0.84 they stopped short and the hand read as an open palm with the
+       gun balanced on it. */
+    const close = fore ? 0.97 : 1.0;
     const bends = isIndex ? [0.28, 0.36, 0.30] : [0.88 * close, 1.18 * close, 0.88 * close];
     let d0 = new Vec3(point.x, point.y, point.z);
     if (isIndex) {
