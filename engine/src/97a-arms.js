@@ -428,6 +428,14 @@ const DOUBLE = {
   breech: 0.0180,
 };
 
+/* Where the bead sits, in the barrels' own space. One definition, used by
+   the model that draws it and by the mount that reports the sight line —
+   they were two numbers three and a half millimetres apart, which is why
+   aiming a double put the target just above the bead. */
+function doubleBeadY(C) {
+  return C.overUnder ? DOUBLE.breechR + 0.0060 : 0.0090;
+}
+
 function doubleBores(C) {
   const D = DOUBLE, s = C.spacing != null ? C.spacing : 0.0245;
   return C.overUnder ? [[0, 0], [0, -s]] : [[0, -s / 2], [0, s / 2]];
@@ -461,9 +469,24 @@ function buildDoubleBarrels(g, C) {
       ax(L - 0.006, roundRect(0.0020, 0.0085, s / 2 - 0.0008, 3.4, 16), 0.0035),
     ], true, true);
   }
-  // Bead: a small silver ball, proud of the rib, at the muzzle.
+  /* Bead: a small silver ball, proud of the rib, at the muzzle. Its centre
+     is the sight line — see doubleGun(), which reads BEAD_Y rather than
+     carrying its own second opinion about where the bead is. */
+  const beadY = doubleBeadY(C);
   spin(g, [[L - 0.012, 0], [L - 0.008, 0.0034], [L - 0.004, 0.0034], [L - 0.001, 0]],
-    14, 40, (C.overUnder ? DOUBLE.breechR + 0.0060 : 0.0090), 0);
+    14, 40, beadY, 0);
+
+  /* A rear notch, at the breech end of the rib and on the same line.
+
+     A bead on its own is honest for a bird gun and useless in a game: with
+     nothing behind it there is no way to know whether the barrel is level,
+     and the aim reads as looking over the top of the gun. Two shoulders and
+     a gap between them, low enough to see the bead through. */
+  const nx = D.breech + 0.052;
+  for (const sz of [-1, 1]) {
+    hardBox(g, nx, beadY + 0.0026, sz * 0.0056, 0.0026, 0.0040, 0.0018);
+  }
+  hardBox(g, nx, beadY - 0.0012, 0, 0.0026, 0.0016, 0.0056);
 
   /* Barrel bands: two hoops that hold the pair together. Without them a
      side-by-side reads as two loose pipes. */
@@ -1986,7 +2009,7 @@ function doubleGun(E, kind, opts) {
   body.ejectPort = [DOUBLE.breech - o.x, -o.y + 0.004, 0.0140];
   body.boreAt = -o.y;
   body.muzzleAt = C.barrelLen - o.x + (C.science ? 0.030 : 0);
-  body.sightAt = (C.overUnder ? DOUBLE.breechR + 0.0094 : 0.0124) - o.y;
+  body.sightAt = doubleBeadY(C) - o.y;
   return body;
 }
 

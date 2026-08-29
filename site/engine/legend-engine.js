@@ -13883,6 +13883,14 @@ const DOUBLE = {
   breech: 0.0180,
 };
 
+/* Where the bead sits, in the barrels' own space. One definition, used by
+   the model that draws it and by the mount that reports the sight line —
+   they were two numbers three and a half millimetres apart, which is why
+   aiming a double put the target just above the bead. */
+function doubleBeadY(C) {
+  return C.overUnder ? DOUBLE.breechR + 0.0060 : 0.0090;
+}
+
 function doubleBores(C) {
   const D = DOUBLE, s = C.spacing != null ? C.spacing : 0.0245;
   return C.overUnder ? [[0, 0], [0, -s]] : [[0, -s / 2], [0, s / 2]];
@@ -13916,9 +13924,24 @@ function buildDoubleBarrels(g, C) {
       ax(L - 0.006, roundRect(0.0020, 0.0085, s / 2 - 0.0008, 3.4, 16), 0.0035),
     ], true, true);
   }
-  // Bead: a small silver ball, proud of the rib, at the muzzle.
+  /* Bead: a small silver ball, proud of the rib, at the muzzle. Its centre
+     is the sight line — see doubleGun(), which reads BEAD_Y rather than
+     carrying its own second opinion about where the bead is. */
+  const beadY = doubleBeadY(C);
   spin(g, [[L - 0.012, 0], [L - 0.008, 0.0034], [L - 0.004, 0.0034], [L - 0.001, 0]],
-    14, 40, (C.overUnder ? DOUBLE.breechR + 0.0060 : 0.0090), 0);
+    14, 40, beadY, 0);
+
+  /* A rear notch, at the breech end of the rib and on the same line.
+
+     A bead on its own is honest for a bird gun and useless in a game: with
+     nothing behind it there is no way to know whether the barrel is level,
+     and the aim reads as looking over the top of the gun. Two shoulders and
+     a gap between them, low enough to see the bead through. */
+  const nx = D.breech + 0.052;
+  for (const sz of [-1, 1]) {
+    hardBox(g, nx, beadY + 0.0026, sz * 0.0056, 0.0026, 0.0040, 0.0018);
+  }
+  hardBox(g, nx, beadY - 0.0012, 0, 0.0026, 0.0016, 0.0056);
 
   /* Barrel bands: two hoops that hold the pair together. Without them a
      side-by-side reads as two loose pipes. */
@@ -15441,7 +15464,7 @@ function doubleGun(E, kind, opts) {
   body.ejectPort = [DOUBLE.breech - o.x, -o.y + 0.004, 0.0140];
   body.boreAt = -o.y;
   body.muzzleAt = C.barrelLen - o.x + (C.science ? 0.030 : 0);
-  body.sightAt = (C.overUnder ? DOUBLE.breechR + 0.0094 : 0.0124) - o.y;
+  body.sightAt = doubleBeadY(C) - o.y;
   return body;
 }
 
@@ -16364,24 +16387,34 @@ function makeViewmodelArms(hands, opts = {}) {
      left. Having these the wrong way round puts each thumb through the
      weapon and each forearm in from the far corner, which is exactly what
      "the hands are phasing through the gun" looks like. */
+  /* The support arm is built into its own pair of meshes.
+
+     Both arms used to share one sleeve and one skin, which is cheaper and
+     is fine right up until the support hand has to do something the firing
+     hand is not doing — carry a magazine to the well, thumb rounds off a
+     clip, feed a shell. One mesh cannot move half of itself, so the reload
+     was an invisible force loading the gun. Four meshes: the firing arm,
+     which never leaves the grip, and the support arm, which does. */
+  const lSleeve = new Geometry();
+  const lSkin = new Geometry();
   const pairs = [
-    { hand: hands.right, side: 1, grip: hands.rightGrip || 'pistol' },
-    { hand: hands.left, side: -1, grip: hands.leftGrip || 'fore' },
+    { hand: hands.right, side: 1, grip: hands.rightGrip || 'pistol', sl: sleeve, sk: skin },
+    { hand: hands.left, side: -1, grip: hands.leftGrip || 'fore', sl: lSleeve, sk: lSkin },
   ];
-  for (const { hand, side, grip } of pairs) {
+  for (const { hand, side, grip, sl, sk } of pairs) {
     if (!hand) continue;
     const h = new Vec3(hand[0], hand[1], hand[2]);
     const shoulder = new Vec3(back, drop, side * 0.105);
-    buildViewArm(sleeve, shoulder, h, side);
-    buildViewHand(skin, h, side, { grip });
+    buildViewArm(sl, shoulder, h, side);
+    buildViewHand(sk, h, side, { grip });
   }
-  for (const g of [sleeve, skin]) {
+  for (const g of [sleeve, skin, lSleeve, lSkin]) {
     g.finalize();
     g.computeWeldGroups();
     smoothNormals(g);
     weldNormals(g.normals, g.weldGroups);
   }
-  return { sleeve, skin };
+  return { sleeve, skin, lSleeve, lSkin, hasLeft: !!hands.left };
 }
 
 const VIEW_ARM_MATERIALS = {
@@ -16397,16 +16430,30 @@ Engine.prototype.viewmodelArms = function (weapon, hands, opts = {}) {
     parts = makeViewmodelArms(hands, opts);
     (this._armCache || (this._armCache = {}))[key] = parts;
   }
-  const mk = (geo, mat) => {
+  const mk = (geo, mat, tag) => {
+    /* The cache key has to name the actual mesh. It used to be derived from
+       whether the material happened to be the caller's skin override, which
+       is the same string for the left sleeve and the right, so the second
+       spawn got the first one's geometry back. */
     const a = this._spawn({ material: mat, physics: false },
-      this._mesh(key + ':' + (mat === opts.skinMaterial ? 'skin' : 'sleeve') + (mat.color || ''),
-        () => geo), null, 1.2);
+      this._mesh(key + ':' + tag + ':' + (mat.texture || '') + (mat.color || ''), () => geo), null, 1.2);
     a.parent = weapon;
     return a;
   };
-  const sleeve = mk(parts.sleeve, opts.sleeveMaterial || VIEW_ARM_MATERIALS.sleeve);
-  const skin = mk(parts.skin, opts.skinMaterial || VIEW_ARM_MATERIALS.skin);
-  return { sleeve, skin, parts: [sleeve, skin] };
+  const sleeveMat = opts.sleeveMaterial || VIEW_ARM_MATERIALS.sleeve;
+  const skinMat = opts.skinMaterial || VIEW_ARM_MATERIALS.skin;
+  const sleeve = mk(parts.sleeve, sleeveMat, 'r');
+  const skin = mk(parts.skin, skinMat, 'r');
+  const all = [sleeve, skin];
+  let lSleeve = null, lSkin = null;
+  if (parts.hasLeft) {
+    lSleeve = mk(parts.lSleeve, sleeveMat, 'l');
+    lSkin = mk(parts.lSkin, skinMat, 'l');
+    all.push(lSleeve, lSkin);
+  }
+  /* `support` is the pair that may be moved away from the weapon during a
+     reload. Everything else about them is identical to the firing arm. */
+  return { sleeve, skin, lSleeve, lSkin, support: lSleeve ? [lSleeve, lSkin] : [], parts: all };
 };
 
 

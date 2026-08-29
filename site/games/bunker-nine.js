@@ -2585,7 +2585,7 @@ function makePlayer(game, S, hud, sfx, voice) {
     swingT: 0, blocking: false, blockT: 0,
     gold: 0, goldAmmo: false,
     upgraded: {}, camoOff: {}, fitted: {},
-    cooldown: 0, reloading: 0, reloadStage: 0, breakStage: 0, swayT: 0, kickPitch: 0,
+    cooldown: 0, reloading: 0, reloadStage: 0, breakStage: 0, cylStage: 0, swayT: 0, kickPitch: 0,
     slideCycle: 0, slideCycleMax: 0.085,
     view: {}, muzzleT: 0, alive: true,
     // Aim, sprint and recoil state.
@@ -2918,6 +2918,9 @@ function setViewVisible(v, on) {
   // showing the whole set on draw hangs every scope and muzzle device the
   // gun has ever worn off it at once.
   if (v.att) for (const arr of Object.values(v.att)) for (const a of arr) a.visible = on && !!a.__attOn;
+  // The magazine in the support hand only exists during a reload, and never
+  // for a weapon that has been put away.
+  if (v.prop) for (const a of v.prop.parts) a.visible = false;
 }
 
 /* Position the equipped weapon against the camera every frame — bob,
@@ -3184,6 +3187,65 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
     }
   }
 
+  /* The support hand doing the loading.
+
+     Everything below this point used to happen by itself: the magazine
+     vanished, a magazine appeared, and the arms sat on the gun throughout.
+     Now the support arm leaves the forend, drops out of frame, comes back
+     up with something in it, and puts it in — and the something is a real
+     actor you can watch travel.
+
+     The path is described in the weapon's own space, so it works on a
+     pistol and on a belt-fed machine gun without a table of offsets: down
+     and outboard to fetch, then up to the magazine well, then away. */
+  if (v.arms && v.arms.support && v.arms.support.length) {
+    const kind = spec.reloadKind;
+    const carries = kind === 'mag' || kind === 'clip' || kind === 'cell' || kind === 'break';
+    let ox = 0, oy = 0, oz = 0, propT = -1;
+    if (P.reloading > 0 && carries) {
+      const u = 1 - P.reloading / spec.reload;
+      /* Four beats: away from the gun, out of shot, back with the load,
+         and home. Smoothed, because a hand that moves linearly between
+         poses reads as a lift rather than as an arm. */
+      const ease = (t) => t * t * (3 - 2 * t);
+      const seg = (a, b) => Math.max(0, Math.min(1, (u - a) / (b - a)));
+      const away = ease(seg(0.05, 0.30));
+      const back = ease(seg(0.42, 0.74));
+      const settle = ease(seg(0.74, 0.94));
+      // Reach: down and to the support side, then back up to the well.
+      const reach = away * (1 - back);
+      ox = -0.055 * reach;
+      oy = -0.150 * reach - 0.030 * back * (1 - settle);
+      oz = -0.075 * reach;
+      // The load is in the hand between fetching it and seating it.
+      if (u > 0.34 && u < 0.80) propT = (u - 0.34) / 0.46;
+    }
+    for (const q of v.arms.support) q.setPosition([ox, oy, oz]);
+
+    /* The thing being carried. One prop per weapon, built the first time it
+       is needed and then hidden — a magazine for a box gun, a stripper clip
+       for the bolt guns, a cell for the Arc, a pair of shells for a break
+       gun. It rides the same path as the hand, a few centimetres in front
+       of where the fingers close. */
+    if (propT >= 0) {
+      const prop = reloadProp(game, P, v, spec, kind);
+      if (prop) {
+        for (const q of prop.parts) q.visible = true;
+        const well = v.magWell || (v.root && v.root.magWell) || [M_WELL_X(v), -0.055, 0];
+        // Start low and outboard, arrive at the well.
+        const t = Math.min(1, propT);
+        const e = t * t * (3 - 2 * t);
+        prop.root.setPosition([
+          well[0] + (-0.050) * (1 - e),
+          well[1] + (-0.175) * (1 - e),
+          well[2] + (-0.070) * (1 - e),
+        ]);
+      }
+    } else if (v.prop) {
+      for (const q of v.prop.parts) q.visible = false;
+    }
+  }
+
   /* Revolver reload: the cylinder swings out on its crane, hangs there
      while it is fed, and snaps back. Three beats over the reload time
      rather than one continuous move, because that is how the hands work —
@@ -3203,12 +3265,17 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
       const dx = -px, dz = -pz;
       v.cylinder.setPosition([px + dx * c + dz * sn, 0, pz - dx * sn + dz * c]);
       v.cylinder.setRotation([0, ang * 57.2958, 0]);
-      if (!P.cylOut && u > 0.05) { P.cylOut = true; sfx.cylinderOut(); }
-      if (P.cylOut && u > 0.86) { P.cylOut = false; sfx.cylinderIn(); }
+      /* A stage counter, for the same reason the break gun has one: a
+         boolean set at 5% and cleared at 86% passes its own opening test
+         again on the very next frame, and plays the cylinder swinging out
+         once per frame for the rest of the reload. */
+      if (P.cylStage < 1 && u > 0.05) { P.cylStage = 1; sfx.cylinderOut(); }
+      if (P.cylStage < 2 && u > 0.50) { P.cylStage = 2; sfx.shellIn(); }
+      if (P.cylStage < 3 && u > 0.86) { P.cylStage = 3; sfx.cylinderIn(); }
     } else {
       v.cylinder.setPosition([0, 0, 0]);
       v.cylinder.setRotation([0, 0, 0]);
-      P.cylOut = false;
+      P.cylStage = 0;
     }
   }
 
@@ -3526,6 +3593,69 @@ function arcBolt(game, a, b) {
   }
 }
 
+/* Where the magazine goes in, when the model has not said. */
+function M_WELL_X(v) {
+  const root = v.kind === 'single' ? v.actor : v.root;
+  return (root && root.magWell && root.magWell[0]) || 0.02;
+}
+
+/* The thing the support hand is carrying.
+
+   Built once per weapon and kept, because a reload happens every few
+   seconds and spawning a magazine each time is a mesh upload each time.
+   Parented to the weapon, so it inherits every bit of sway and recoil the
+   gun has and does not swim about relative to the hand holding it. */
+function reloadProp(game, P, v, spec, kind) {
+  P.props = P.props || {};
+  const id = P.equipped();
+  if (P.props[id]) return P.props[id];
+  const root = v.kind === 'single' ? v.actor : v.root;
+  if (!root) return null;
+  const steel = { color: 0x4d565f, texture: 'metal', roughness: 0.46, metalness: 1 };
+  const brass = { color: 0xc9a227, texture: 'metal', roughness: 0.30, metalness: 1 };
+  const parts = [];
+  /* The first piece is the holder and everything after hangs off it, so
+     moving one actor moves the whole magazine. Parenting the pieces to the
+     weapon instead leaves them behind when the hand carries it. */
+  let holder = null;
+  const add = (a, at) => {
+    if (!holder) { a.parent = root; holder = a; } else a.parent = holder;
+    a.setPosition(at);
+    parts.push(a);
+    return a;
+  };
+  if (kind === 'mag') {
+    // A box magazine, as long as the gun's own and slightly curved out of
+    // the vertical the way a real one sits in the hand.
+    add(game.box({ size: [0.026, 0.105, 0.021], material: steel, physics: false }), [0, 0, 0]);
+    add(game.box({ size: [0.030, 0.010, 0.025], material: steel, physics: false }), [0, -0.056, 0]);
+  } else if (kind === 'clip') {
+    // A stripper clip: the steel strip and five rounds standing in it.
+    add(game.box({ size: [0.010, 0.012, 0.052], material: steel, physics: false }), [0, 0, 0]);
+    for (let i = 0; i < 5; i++) {
+      const c = game.cylinder({ radius: 0.0042, height: 0.052, material: brass, physics: false });
+      c.setRotation([0, 0, 90]);
+      add(c, [0.028, 0.004, -0.020 + i * 0.010]);
+    }
+  } else if (kind === 'cell') {
+    add(game.box({ size: [0.052, 0.070, 0.038], material: steel, physics: false }), [0, 0, 0]);
+    add(game.box({ size: [0.012, 0.048, 0.040], material: {
+      color: 0x9fe8ff, texture: 'smooth', roughness: 0.3, metalness: 0,
+      emissive: 0x54c8ff, emissiveStrength: 1.4 }, physics: false }), [0.028, 0, 0]);
+  } else if (kind === 'break') {
+    // Two shells held between the fingers, which is how you load a double.
+    add(game.cylinder({ radius: 0.0093, height: 0.062, material: brass, physics: false }), [0, 0, -0.012])
+      .setRotation([0, 0, 90]);
+    const b = game.cylinder({ radius: 0.0093, height: 0.062, material: brass, physics: false });
+    b.setRotation([0, 0, 90]);
+    add(b, [0, 0, 0.012]);
+  } else return null;
+  for (const q of parts) q.visible = false;
+  P.props[id] = { root: holder, parts };
+  v.prop = P.props[id];
+  return P.props[id];
+}
+
 /* Eject a case. A real little brass cylinder with velocity and spin,
    thrown up and to the right out of the port, that lands and stays for a
    moment. Nothing sells a gun firing like brass leaving it. */
@@ -3591,6 +3721,7 @@ function tryReload(P, sfx, S) {
      clear, the fresh one goes in, and the slide runs forward on it. */
   P.reloadStage = 0;
   P.breakStage = 0;
+  P.cylStage = 0;
   sfx.magRelease();
   if (S && S.bark) S.bark('reload');
 }
