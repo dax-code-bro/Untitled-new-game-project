@@ -159,8 +159,30 @@ function sweepPath(g, stations, capStart = true, capEnd = true) {
     }
   }
 
+  /* Skip the quads that have no width.
+
+     profileOutline emits TWO vertices at every corner of the outline, one
+     carrying each adjoining edge's normal, and it does so at every corner
+     whether the corner is sharp or smooth -- deliberately, because two
+     stations of the same outline have to agree on their vertex count or
+     the rows cannot be stitched. The consequence is that between each such
+     pair the quad is a strip of zero width, and it was being emitted
+     anyway: half of every triangle in this game had no area. The MP5's
+     receiver alone was 2324 zero-area triangles out of 4756.
+
+     They rasterise nothing, so nothing looked wrong -- but the vertex
+     shader still runs over them, the index buffer is twice the size it
+     needs to be, and this is a browser game with a low graphics tier. The
+     vertices stay exactly as they were, so stitching, welding and the
+     normal smoothing are untouched; only the empty quads go. */
+  const flat = new Uint8Array(n);
+  for (let k = 0; k < n; k++) {
+    const p = stations[0].pts[k], q = stations[0].pts[(k + 1) % n];
+    flat[k] = (Math.abs(p[0] - q[0]) < 1e-9 && Math.abs(p[1] - q[1]) < 1e-9) ? 1 : 0;
+  }
   for (let i = 0; i < ns - 1; i++) {
     for (let k = 0; k < n; k++) {
+      if (flat[k]) continue;
       const k2 = (k + 1) % n;
       const a = base + i * n + k, b = base + i * n + k2;
       const c = base + (i + 1) * n + k2, d = base + (i + 1) * n + k;

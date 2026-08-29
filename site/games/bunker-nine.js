@@ -4322,8 +4322,19 @@ const VARIANTS = {
     weight: 1.0, speed: [0.95, 1.55], hp: 1.0, dmg: 1.0, points: 1.0,
     clip: 'zwalk', clipSpeed: 1.0, eye: 0xff7a2a, attack: ['zattack_grab', 'zattack'],
   },
+  /* Runners.
+
+     `speed` is the cruise; the controller's runSpeed is 1.35x that, and a
+     lucid one gets another 1.22 on top. At 4.3 that compounded to 7.08 m/s
+     against a player sprint of 7.4 -- a runner was moving at very nearly
+     the speed you can run away at, which is why they crossed the map
+     before you could turn round. A runner should be frightening because
+     you cannot ignore it, not because it is already on you: 3.0 peaks at
+     4.94, two thirds of a sprint, so you can break contact by running but
+     not by walking, and it still closes about two and a half times faster
+     than a walker. */
   runner: {
-    weight: 0.0, speed: [3.1, 4.3], hp: 0.8, dmg: 1.0, points: 1.15,
+    weight: 0.0, speed: [2.2, 3.0], hp: 0.8, dmg: 1.0, points: 1.15,
     clip: 'zrun', clipSpeed: 1.0, eye: 0xff3a18, from: 4, attack: ['zattack_bite'],
     run: true,
   },
@@ -4339,7 +4350,8 @@ const VARIANTS = {
      something bullets will not go through. Guns are wasted on it; the
      battering ram, the riot shield and eighteen carat rounds are not. */
   armored: {
-    weight: 0.0, speed: [2.8, 3.7], hp: 1.0, dmg: 1.25, points: 1.8,
+    // Slower than a bare runner, because it is carrying the plate.
+    weight: 0.0, speed: [1.9, 2.6], hp: 1.0, dmg: 1.25, points: 1.8,
     clip: 'zrun', clipSpeed: 1.0, eye: 0x8fd0ff, from: 8, attack: ['zattack_slam', 'zattack_bite'],
     plated: true, run: true,
   },
@@ -5319,7 +5331,20 @@ function updateZombie(game, S, P, z, dt, sfx) {
       if (slot == null) {
         win.zombiesAt--;
         sfx.vault();
-        z.vault = { from: [pos.x, pos.y - 1.0, pos.z], to: [win.def.inside[0], win.def.inside[1] + 1.0, win.def.inside[2]], t: 0, dur: win.def.high ? 1.5 : 0.9 };
+        /* Both ends in the same space, which they were not.
+
+           The vault interpolates from `from` to `to` and then adds 1.0 to
+           the result, because a window's `inside` is a point on the FLOOR
+           and a body's position is its centre a metre up -- which is why
+           `from` is the body's position minus one. But `to` had the metre
+           added to it as well, so it was already in body-centre space when
+           the interpolation added another: every zombie that came through
+           a window finished its climb standing two metres above the floor
+           and then dropped a metre into the room. That is the fifteen
+           metres a second the speed trace kept catching on runners,
+           crawlers and armoured alike and never on a walker -- not because
+           of what they are, but because those are the ones that vault. */
+        z.vault = { from: [pos.x, pos.y - 1.0, pos.z], to: [win.def.inside[0], win.def.inside[1], win.def.inside[2]], t: 0, dur: win.def.high ? 1.5 : 0.9 };
         z.state = 'vaulting';
       } else {
         const b = win.boards[slot];
@@ -5422,7 +5447,10 @@ function updateZombie(game, S, P, z, dt, sfx) {
           }
         }
       } else z.navPath = null;
-      move(tx, tz, z.speed > 2.4 ? 2 : 1);
+      /* Runs because it is a runner, not because its speed happens to be
+         over a number. The threshold was 2.4, which slowing the runners
+         down would have quietly dropped half of them back to a walk. */
+      move(tx, tz, (V.run || V.boss) ? 2 : 1);
       playZombieAnim(z, z.moveClip);
       z.attackT -= dt;
       if (!S.shieldActive && d < PLAYER.attackRange && z.attackT <= 0 && Math.abs(pos.y - P.actor.position.y) < 1.6) {

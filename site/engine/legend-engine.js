@@ -1305,11 +1305,52 @@ class Geometry {
     return groups;
   }
 
+  /* Throw away the triangles that have no area.
+
+     Half the triangles in this game had none. The swept-profile builders
+     put two vertices at every corner of an outline -- one carrying each
+     adjoining edge's normal, at every corner whether it is sharp or
+     smooth, because two stations of one outline must agree on their vertex
+     count or the rows will not stitch -- and the quad between such a pair
+     is a strip of zero width. The same thing happens at the poles of a
+     revolve and at the seams of a loft.
+
+     Nothing looked wrong, because a zero-area triangle rasterises nothing.
+     But the vertex shader still runs over every one of them and the index
+     buffer is twice the size it needs to be, and this game ships a low
+     graphics tier for people whose machines need it. Dropping them cannot
+     change a single pixel: these are indexed triangles, not strips, so no
+     degenerate is load-bearing.
+
+     Positions are untouched, so welding, normal smoothing and anything
+     holding a vertex index of its own still line up. */
+  dropDegenerateTriangles() {
+    const I = this.indices, P = this.positions;
+    if (!I || !P || !I.length) return this;
+    const keep = [];
+    for (let i = 0; i + 2 < I.length; i += 3) {
+      const a = I[i] * 3, b = I[i + 1] * 3, c = I[i + 2] * 3;
+      const ux = P[b] - P[a], uy = P[b + 1] - P[a + 1], uz = P[b + 2] - P[a + 2];
+      const vx = P[c] - P[a], vy = P[c + 1] - P[a + 1], vz = P[c + 2] - P[a + 2];
+      const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+      // A millionth of a square millimetre. Real detail on these models is
+      // a tenth of a millimetre across, which is a thousand times bigger.
+      if (nx * nx + ny * ny + nz * nz < 1e-24) continue;
+      keep.push(I[i], I[i + 1], I[i + 2]);
+    }
+    if (keep.length !== I.length) {
+      this.indices = (I instanceof Uint32Array || I instanceof Uint16Array)
+        ? new I.constructor(keep) : keep;
+    }
+    return this;
+  }
+
   finalize() {
     this.positions = new Float32Array(this.positions);
     this.normals = new Float32Array(this.normals);
     this.uvs = new Float32Array(this.uvs);
     if (this.colors && !(this.colors instanceof Float32Array)) this.colors = new Float32Array(this.colors);
+    this.dropDegenerateTriangles();
     if (!this.tangents) this.computeTangents();
     if (!this.bounds) this.computeBounds();
     return this;
@@ -12288,8 +12329,30 @@ function sweepPath(g, stations, capStart = true, capEnd = true) {
     }
   }
 
+  /* Skip the quads that have no width.
+
+     profileOutline emits TWO vertices at every corner of the outline, one
+     carrying each adjoining edge's normal, and it does so at every corner
+     whether the corner is sharp or smooth -- deliberately, because two
+     stations of the same outline have to agree on their vertex count or
+     the rows cannot be stitched. The consequence is that between each such
+     pair the quad is a strip of zero width, and it was being emitted
+     anyway: half of every triangle in this game had no area. The MP5's
+     receiver alone was 2324 zero-area triangles out of 4756.
+
+     They rasterise nothing, so nothing looked wrong -- but the vertex
+     shader still runs over them, the index buffer is twice the size it
+     needs to be, and this is a browser game with a low graphics tier. The
+     vertices stay exactly as they were, so stitching, welding and the
+     normal smoothing are untouched; only the empty quads go. */
+  const flat = new Uint8Array(n);
+  for (let k = 0; k < n; k++) {
+    const p = stations[0].pts[k], q = stations[0].pts[(k + 1) % n];
+    flat[k] = (Math.abs(p[0] - q[0]) < 1e-9 && Math.abs(p[1] - q[1]) < 1e-9) ? 1 : 0;
+  }
   for (let i = 0; i < ns - 1; i++) {
     for (let k = 0; k < n; k++) {
+      if (flat[k]) continue;
       const k2 = (k + 1) % n;
       const a = base + i * n + k, b = base + i * n + k2;
       const c = base + (i + 1) * n + k2, d = base + (i + 1) * n + k;
