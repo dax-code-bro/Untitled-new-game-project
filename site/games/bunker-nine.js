@@ -466,6 +466,447 @@ const PLAYER = {
 const CAST = {
   patch: { name: 'CPL. "PATCH" OKAFOR', base: 215, spread: 60, type: 'triangle', color: '#ffd27a' },
   radio: { name: 'THE NIGHTWATCHMAN', base: 122, spread: 26, type: 'square', color: '#7ad7ff' },
+  stalker: { name: 'STALKER', base: 88, spread: 14, type: 'sine', color: '#9de89d' },
+  exit42: { name: 'EXIT FOUR TWO', base: 244, spread: 70, type: 'square', color: '#ff9a6a' },
+};
+
+/* ---------------- the people who hold the gun ----------------
+
+   Ten of them, and the difference between them is meant to be audible
+   before it is readable: each has a pitch, a spread and a waveform, so the
+   blips under the subtitle are that person's voice and you learn who is
+   talking without looking. What they say is the other half.
+
+   Every line here is written for this game. None of them are quotes.
+
+   `lines` is keyed by event. A character who has nothing to say about an
+   event falls through to COMMON, so nothing is ever silent, and the picker
+   never repeats a line until it has been through the set. */
+const HEROES = {
+  adams: {
+    name: 'CPL. ADAMS',
+    bio: 'Eighty-five. Soviet officer. Pinned here when the line broke and never got the order to leave.',
+    voice: { base: 104, spread: 20, type: 'sawtooth', color: '#d8a05a' },
+    lines: {
+      pick: ['I was told to hold this position. Nobody has told me otherwise.'],
+      start: ['Another night. The night is not the problem.',
+        'Stand where you can see the door. Everything else is detail.'],
+      roundStart: ['Here they come. Count them if it helps you.',
+        'Positions.', 'Again.'],
+      roundClear: ['Quiet. Use it.', 'Reload now. Not later.'],
+      deepRound: ['I have been in worse. Not many. But worse.'],
+      firstBlood: ['That one is finished.'],
+      headshot: ['Through the eye. Old habit.', 'Head. Always the head.'],
+      multiKill: ['Three of them in a line. They should have spread out.'],
+      lastStand: ['I am still standing. That is the whole of it.',
+        'Not tonight. I have plans tonight.'],
+      regen: ['Better. Keep moving.'],
+      reload: ['Reloading. Cover the door.', 'Empty. Give me a moment.'],
+      dry: ['Nothing. Nothing at all.'],
+      melee: ['Close work. Fine.'],
+      buyGun: ['This will do.'],
+      buyPerk: ['A young man\'s advantage. I will take it.'],
+      box: ['A box that gives you a rifle. I have stopped asking.'],
+      boxGood: ['Now that is a weapon.'],
+      door: ['Open. Do not stand in it.'],
+      power: ['Lights. Every moth on the coast will know.'],
+      grenade: ['Grenade. Move.'],
+      boss: ['That one is armoured. Aim for what is not.'],
+      bossDown: ['Down. It took long enough.'],
+      amalgam: ['That is several of them wearing one skin.'],
+      meteor: ['A rock from the sky. Of course.'],
+      upgrade: ['The rock has done something to it. I do not ask what.'],
+      bench: ['Tools. Good. A soldier should mend his own rifle.'],
+      grace: ['Ten seconds. Do not waste them standing here.'],
+      crawler: ['It lost its legs and kept coming. So would I.'],
+      spitter: ['It spits. Do not let it land on you.'],
+      death: ['So. Here.'],
+      planeCrash: ['He nearly made it. They usually nearly make it.'],
+    },
+  },
+
+  carlos: {
+    name: 'CARLOS',
+    bio: 'Kept the generators running at the depot. Knows every fuse in the building and half the prayers.',
+    voice: { base: 158, spread: 32, type: 'triangle', color: '#ffb066' },
+    lines: {
+      pick: ['I fix things. Tonight I am fixing this.'],
+      start: ['Okay. Okay. We can work with this.',
+        'Windows, door, stairs. That is three things to watch. I can count to three.'],
+      roundStart: ['They are up.', 'Here we go again, hermano.', 'Back to work.'],
+      roundClear: ['Breathe. Board something.', 'That is one more we lived through.'],
+      deepRound: ['I stopped counting rounds. I count doors now.'],
+      firstBlood: ['One down. Only the whole coast to go.'],
+      headshot: ['Right between them.', 'Clean.'],
+      multiKill: ['All of you? All of you at once? Fine.'],
+      lastStand: ['No no no — not like this.', 'Still here. Still here.'],
+      regen: ['Okay. Okay, I am okay.'],
+      reload: ['Reloading — hold them!', 'Give me two seconds.'],
+      dry: ['Empty! Empty!'],
+      melee: ['Get off me!'],
+      buyGun: ['That is better than what I had.'],
+      buyPerk: ['I do not know what is in this. I drank it anyway.'],
+      box: ['It hums when you open it. That cannot be good.'],
+      boxGood: ['Oh, that is beautiful.'],
+      door: ['Door is open. New problems that way.'],
+      power: ['Power is up! Everything works now — everything.'],
+      grenade: ['Fire in the hole!'],
+      boss: ['That one is wearing a wall.'],
+      bossDown: ['It is down. Somebody tell me it is down.'],
+      amalgam: ['What — what is that? That is too many arms.'],
+      meteor: ['Something came down out there. Something big.'],
+      upgrade: ['The rock ate my gun and gave it back angry.'],
+      bench: ['A proper bench. Now I can actually do something.'],
+      grace: ['Go, go — while they are still turning around!'],
+      crawler: ['It is on the floor and it is faster!'],
+      spitter: ['Acid — do not let it touch you!'],
+      death: ['I am sorry. I am so sorry.'],
+      planeCrash: ['He was almost here. He was almost here.'],
+    },
+  },
+
+  sam: {
+    name: 'SAM',
+    bio: 'Was driving a supply run when the road stopped meaning anything. Dry, quick, and hard to rattle.',
+    voice: { base: 228, spread: 42, type: 'triangle', color: '#9fd8ff' },
+    lines: {
+      pick: ['I only came here for the fuel.'],
+      start: ['Right. Let us be professional about this.',
+        'Four windows, one door, one staircase. That is a floor plan, not a fortress.'],
+      roundStart: ['Up they get.', 'Company.', 'Round two of infinity.'],
+      roundClear: ['Quiet. Suspiciously quiet.', 'Board a window. Earn your keep.'],
+      deepRound: ['At this point I am just curious how far this goes.'],
+      firstBlood: ['That is one.'],
+      headshot: ['Neat.', 'Straight through.'],
+      multiKill: ['You all lined up. That was polite of you.'],
+      lastStand: ['That is a lot of red. That is too much red.',
+        'Fine. Fine. Walking it off.'],
+      regen: ['There we go. Much better.'],
+      reload: ['Reloading, do not die.', 'Give me a second — a real one.'],
+      dry: ['Click. Fantastic.'],
+      melee: ['Personal space.'],
+      buyGun: ['Upgrade. About time.'],
+      buyPerk: ['Tastes like a battery. Worth it.'],
+      box: ['A magic box. Sure. Why not.'],
+      boxGood: ['Oh, I am keeping this.'],
+      door: ['Door is open. Try to look pleased.'],
+      power: ['Power. Now the interesting things work.'],
+      grenade: ['Grenade out!'],
+      boss: ['Big one. Armoured. Wonderful.'],
+      bossDown: ['And that is why we aim low.'],
+      amalgam: ['That is several people who have stopped being several people.'],
+      meteor: ['Something just landed and it was not a plane.'],
+      upgrade: ['The rock rebuilt it. I am not going to argue with the rock.'],
+      bench: ['A workbench. Finally, someone who thinks ahead.'],
+      grace: ['Ten seconds head start. Use every one.'],
+      crawler: ['Low one! Watch your feet.'],
+      spitter: ['It spits. Move sideways, not backwards.'],
+      death: ['Well. That is that, then.'],
+      planeCrash: ['He got so close. That is the part I hate.'],
+    },
+  },
+
+  chrissy: {
+    name: 'CHRISSY',
+    bio: 'Nineteen. Out hunting with her father until he started acting strange. Hid in an empty house for two days.',
+    voice: { base: 272, spread: 50, type: 'sine', color: '#ffc0e0' },
+    lines: {
+      pick: ['I hid for two days. I am not hiding tonight.'],
+      start: ['I have hunted before. This is not that. But it is closer than nothing.',
+        'Dad taught me to wait for the shot. I am going to wait for the shot.'],
+      roundStart: ['They are coming.', 'Okay. Okay, here.', 'Ready. I am ready.'],
+      roundClear: ['It stopped. It actually stopped.', 'Reload while it is quiet. He always said that.'],
+      deepRound: ['I have lasted longer than I thought I would.'],
+      firstBlood: ['Got it. I got it.'],
+      headshot: ['One shot. Like he taught me.', 'Right there.'],
+      multiKill: ['All of them — I got all of them!'],
+      lastStand: ['I cannot — I cannot take another one.', 'Please. Please, not yet.'],
+      regen: ['Okay. I am okay. I am okay.'],
+      reload: ['Reloading! Do not let them in!', 'Empty — cover me!'],
+      dry: ['No, no, no, not now!'],
+      melee: ['Back off!'],
+      buyGun: ['This is heavier than the rifle at home.'],
+      buyPerk: ['That was disgusting. Do I feel different?'],
+      box: ['It is glowing. Things that glow have not helped so far.'],
+      boxGood: ['Oh — oh, this is good, this is really good.'],
+      door: ['It is open. I do not like what is behind it.'],
+      power: ['The lights came on. I forgot what that looked like.'],
+      grenade: ['Throwing! Get down!'],
+      boss: ['That one is huge. That one is really huge.'],
+      bossDown: ['It fell. It actually fell.'],
+      amalgam: ['That was people. That was people once.'],
+      meteor: ['Something fell out of the sky. I felt it in the floor.'],
+      upgrade: ['My gun is warm. It should not be warm.'],
+      bench: ['I can fix it here? Show me. Show me how.'],
+      grace: ['Go now — go, go, go!'],
+      crawler: ['On the ground! It is on the ground!'],
+      spitter: ['It spat at me! What is that, what is that?'],
+      death: ['Dad. I tried.'],
+      planeCrash: ['He was coming for us. Somebody was actually coming for us.'],
+    },
+  },
+
+  rebecca: {
+    name: 'REBECCA',
+    bio: 'Forty. Twenty of them in a ring, a cage, or somewhere with no referee. Fights like it is arithmetic.',
+    voice: { base: 202, spread: 34, type: 'triangle', color: '#ff8a8a' },
+    lines: {
+      pick: ['I have never lost a fight I understood. Let me understand this one.'],
+      start: ['Footwork first. Everything else is footwork.',
+        'Do not stand still and do not get surrounded. That is the whole sport.'],
+      roundStart: ['Bell.', 'Round starts. Move your feet.', 'Up we go.'],
+      roundClear: ['Corner. Breathe. Reload.', 'Good round. Next one is harder.'],
+      deepRound: ['This is the round where people get tired and stop moving. Do not.'],
+      firstBlood: ['First one.'],
+      headshot: ['Head shot. Lights out.', 'Straight down the middle.'],
+      multiKill: ['Four. That is a combination.'],
+      lastStand: ['I have been hurt worse in a ring with a referee.',
+        'Get up. Get up.'],
+      regen: ['Back in it.'],
+      reload: ['Reloading — hold the line.', 'Two seconds. Cover.'],
+      dry: ['Dry. Working on it.'],
+      melee: ['Come on then.'],
+      buyGun: ['Heavier. Good.'],
+      buyPerk: ['Every fighter has something in the bottle. This one is honest about it.'],
+      box: ['A box that hands out weapons. Every gym has a superstition.'],
+      boxGood: ['Now we are talking.'],
+      door: ['Door is open. New ground, same rules.'],
+      power: ['Lights up. Everybody can see everybody now.'],
+      grenade: ['Grenade — clear out!'],
+      boss: ['Big, slow, armoured. I have fought this exact man.'],
+      bossDown: ['And he goes down like all of them.'],
+      amalgam: ['That is not one opponent. Do not treat it like one.'],
+      meteor: ['Something landed hard enough to move the floor.'],
+      upgrade: ['It kicks worse and it hits harder. Fair trade.'],
+      bench: ['Tape your hands, check your gear. Same thing.'],
+      grace: ['Ten seconds. Get to open ground.'],
+      crawler: ['Low! Watch the low one!'],
+      spitter: ['Ranged. Break the line of sight.'],
+      death: ['Beaten. Fairly, even.'],
+      planeCrash: ['He was in the air. He was in the air and they still got him.'],
+    },
+  },
+
+  hank: {
+    name: 'HANK',
+    bio: 'Big. Was big before all this and it has only become more useful. Enjoys the work more than he should.',
+    voice: { base: 116, spread: 24, type: 'square', color: '#c9a06a' },
+    lines: {
+      pick: ['Point me at it.'],
+      start: ['Good. A small room and a lot of them. That suits me.',
+        'You lot stay behind me. There is a lot of me.'],
+      roundStart: ['Come on then!', 'Up.', 'More of you. Good.'],
+      roundClear: ['That is it? Already?', 'Load up. I am not tired.'],
+      deepRound: ['This is the best night I have had in years.'],
+      firstBlood: ['One!'],
+      headshot: ['Popped it.', 'Head off.'],
+      multiKill: ['All of you! All of you at once!'],
+      lastStand: ['That actually hurt. That one actually hurt.',
+        'Not done. Not nearly done.'],
+      regen: ['Right. Better.'],
+      reload: ['Reloading! Hold them off me!', 'Empty — busy!'],
+      dry: ['Out! Out!'],
+      melee: ['Fine. Hands it is.'],
+      buyGun: ['Heavy. I like heavy.'],
+      buyPerk: ['Tastes like a fight. Good.'],
+      box: ['Give me something big.'],
+      boxGood: ['Ha! Look at it!'],
+      door: ['Door is down. Move up.'],
+      power: ['Lights! Now I can see what I am hitting!'],
+      grenade: ['Grenade! Down!'],
+      boss: ['Finally. Something my size.'],
+      bossDown: ['Down you go. Big lad.'],
+      amalgam: ['That is a lot of arms for one thing.'],
+      meteor: ['Something hit the field. Felt it in my boots.'],
+      upgrade: ['It is heavier and it is hotter. Perfect.'],
+      bench: ['I break them, I might as well learn to mend them.'],
+      grace: ['Ten seconds! Run!'],
+      crawler: ['On the deck! Stamp on it!'],
+      spitter: ['It is spitting! Do not stand there!'],
+      death: ['Ah. Should have ducked.'],
+      planeCrash: ['He came for us. Nobody comes for us. And look.'],
+    },
+  },
+
+  frank: {
+    name: 'OLD MAN FRANK',
+    bio: 'Eighty. A Black Native American in a winter trenchcoat who was fighting a war in 1855 and stepped through something that should not have been open.',
+    voice: { base: 130, spread: 22, type: 'sawtooth', color: '#a8d8b8' },
+    lines: {
+      pick: ['I walked through a door in a field and it was a hundred years later. So be it.'],
+      start: ['I do not know the year and I do not know the enemy. I know the work.',
+        'The coat has been through one war already. It will manage another.'],
+      roundStart: ['They come.', 'Steady now.', 'Again they come.'],
+      roundClear: ['Quiet. Load the piece.', 'Rest a moment. Only a moment.'],
+      deepRound: ['I have stood a long night before. This one is longer.'],
+      firstBlood: ['One is finished.'],
+      headshot: ['Through the head. It is the only kindness left.', 'Straight and true.'],
+      multiKill: ['Several at once. The line broke.'],
+      lastStand: ['I have bled more than this and walked further.',
+        'Not here. Not in a strange year.'],
+      regen: ['The bleeding has stopped. Good.'],
+      reload: ['Charging the piece! Hold!', 'A moment — I am loading.'],
+      dry: ['Empty. Empty and they still come.'],
+      melee: ['Then we do it close.'],
+      buyGun: ['A strange rifle. It will speak the same language.'],
+      buyPerk: ['Medicine, they call it. Very well.'],
+      box: ['A chest that gives up a weapon. There are stories about chests.'],
+      boxGood: ['Now this is a good gun. I can feel it.'],
+      door: ['The door is open. Beyond is more of the same.'],
+      power: ['Light without fire. I will never be used to it.'],
+      grenade: ['Shell away! Down!'],
+      boss: ['That one wears iron. Find where the iron ends.'],
+      bossDown: ['It has fallen. Iron and all.'],
+      amalgam: ['That is more than one soul in one body. That is wrong.'],
+      meteor: ['A star came down. I have seen a star come down before.'],
+      upgrade: ['The stone has changed the gun. I will not ask how.'],
+      bench: ['A bench and tools. A man can mend his own things. Good.'],
+      grace: ['Ten seconds of grace. Take the ground.'],
+      crawler: ['It crawls. It does not stop.'],
+      spitter: ['It throws poison! Stand aside!'],
+      death: ['A hundred years for this. Well.'],
+      planeCrash: ['A machine that flies, and they pulled it down. Even here.'],
+    },
+  },
+
+  chris: {
+    name: 'CHRIS',
+    bio: 'An intelligence quotient of two hundred and forty, and no useful instinct for when to stop explaining.',
+    voice: { base: 188, spread: 28, type: 'sine', color: '#b6a8ff' },
+    lines: {
+      pick: ['I have modelled this. The model says run. I am overruling the model.'],
+      start: ['Four ingress points, one chokepoint, one elevated position. This is survivable.',
+        'They come in waves, which means they have a scheduler. Everything with a scheduler has a flaw.'],
+      roundStart: ['Wave incoming. Expect roughly a third more than last time.',
+        'They are up.', 'Next iteration.'],
+      roundClear: ['Wave cleared. Use the interval — the interval is the only free thing here.',
+        'Reload now. The cost of reloading later is much higher.'],
+      deepRound: ['The difficulty curve is superlinear. At some point it wins. Not yet.'],
+      firstBlood: ['One removed.'],
+      headshot: ['Cranial. Three times the damage for the same round.',
+        'The head is worth aiming at. The maths is not close.'],
+      multiKill: ['Four in one burst. That is efficient.'],
+      lastStand: ['Twenty-five health. That is one more contact. Exactly one.',
+        'I would like to revise my earlier estimate.'],
+      regen: ['Regenerating. Do not spend it immediately.'],
+      reload: ['Reloading — I am briefly useless.', 'Magazine change. Cover the interval.'],
+      dry: ['Empty. Entirely predictable and I still did it.'],
+      melee: ['Suboptimal. Doing it anyway.'],
+      buyGun: ['Better damage per second. Marginally worse handling. Net positive.'],
+      buyPerk: ['I have no idea what is in this and I drank all of it.'],
+      box: ['A random weapon dispenser. The expected value is genuinely good.'],
+      boxGood: ['Oh, that is well above the mean.'],
+      door: ['Door open. The map just got larger and so did the problem.'],
+      power: ['Power restored. Everything that was decorative is now functional.'],
+      grenade: ['Grenade — mind the radius!'],
+      boss: ['Heavily armoured. The armour is not everywhere. Find the gap.'],
+      bossDown: ['Down. That took more ammunition than it should have.'],
+      amalgam: ['That is multiple bodies sharing a nervous system. I would love an hour with it.'],
+      meteor: ['Impact, outside, roughly a hundred metres. Nothing we launched.'],
+      upgrade: ['It has restructured the metal. I can see the grain and it is wrong.'],
+      bench: ['Attachments. Now the numbers become interesting.'],
+      grace: ['Ten seconds of invulnerability. Convert it into distance.'],
+      crawler: ['Low profile — your sights are above it.'],
+      spitter: ['Ranged acid. Break line of sight, it cannot lead a target.'],
+      death: ['I did the sums. The sums were right. I was still here.'],
+      planeCrash: ['He had the altitude. He had everything. And a biological threw acid at an aircraft.'],
+    },
+  },
+
+  remi: {
+    name: 'VALENTINE REMI',
+    bio: 'Never once let a bad moment pass without a remark. It is not clear whether this is courage or a condition.',
+    voice: { base: 198, spread: 56, type: 'triangle', color: '#ffe08a' },
+    lines: {
+      pick: ['Marvellous. A small room, poor lighting, and an audience.'],
+      start: ['I want it on record that I asked to be posted somewhere warm.',
+        'They are slow, they are stupid, and there are thousands. Two out of three is not bad.'],
+      roundStart: ['Curtain up.', 'Ah — the guests.', 'And here they are, right on time, as ever.'],
+      roundClear: ['A pause! How generous of them.', 'Reload, darling. The next act is bigger.'],
+      deepRound: ['I have outlived my own funeral arrangements at this point.'],
+      firstBlood: ['One! Only a great many left.'],
+      headshot: ['Oh, that was lovely.', 'Straight through the thinking part.'],
+      multiKill: ['A group booking! Delightful.'],
+      lastStand: ['This is the bit where I make a joke and it does not help.',
+        'I am fine. I am very obviously not fine.'],
+      regen: ['Better! Mostly better. Better-ish.'],
+      reload: ['Reloading — do entertain them for me.', 'Empty! Terribly sorry!'],
+      dry: ['Click. The saddest sound in the world.'],
+      melee: ['Very well — the personal touch.'],
+      buyGun: ['Ooh. Heavier than it looks and twice as rude.'],
+      buyPerk: ['I have drunk worse in nicer rooms.'],
+      box: ['A box that gives you a gun. Do not think about it. I am thinking about it.'],
+      boxGood: ['Oh, you beautiful thing. Come here.'],
+      door: ['A door! And behind it, more of the same, I expect.'],
+      power: ['Light! Now we can all see how bad this is.'],
+      grenade: ['Present for you!'],
+      boss: ['Oh, they have sent the big one. I feel quite flattered.'],
+      bossDown: ['Timber.'],
+      amalgam: ['That is several people who have had a dreadful committee meeting.'],
+      meteor: ['Something has fallen out of the sky. I refuse to be surprised.'],
+      upgrade: ['The rock has improved my gun and I am choosing not to think about the rest.'],
+      bench: ['A workbench! I shall be insufferable about this.'],
+      grace: ['Ten seconds! Do run, it is undignified but effective.'],
+      crawler: ['It has lost its legs and gained enthusiasm.'],
+      spitter: ['It spits! Rude, and also corrosive!'],
+      death: ['Ah. Well. It was going so well.'],
+      planeCrash: ['He was in the air. Actually airborne. And they spat him out of the sky.'],
+    },
+  },
+
+  rodriguez: {
+    name: 'RODRIGUEZ',
+    bio: 'Walks into rooms like the room has been waiting for him. Annoyingly, it usually has.',
+    voice: { base: 142, spread: 38, type: 'square', color: '#ff9a5a' },
+    lines: {
+      pick: ['You picked right.'],
+      start: ['Small room, bad odds, no way out. My kind of night.',
+        'Stay near me and stay behind me. In that order.'],
+      roundStart: ['Let us go.', 'Bring it.', 'Up and at them.'],
+      roundClear: ['Too easy. Say it with me.', 'Reload. Look impressive doing it.'],
+      deepRound: ['At this point they are just sending them to watch.'],
+      firstBlood: ['That is one for me.'],
+      headshot: ['Boom. Right there.', 'Head shot. Naturally.'],
+      multiKill: ['All of you! Every one of you!'],
+      lastStand: ['Alright — alright, that one landed.', 'Still standing. Watch me.'],
+      regen: ['Yeah. Back.'],
+      reload: ['Reloading — buy me a second!', 'Dry! Hold them!'],
+      dry: ['Empty! Come on!'],
+      melee: ['Alright. Close.'],
+      buyGun: ['Now this is a gun.'],
+      buyPerk: ['Whatever is in this, give me two.'],
+      box: ['Alright, box. Impress me.'],
+      boxGood: ['Yes! Yes, that is the one!'],
+      door: ['Door is open. Follow me.'],
+      power: ['Lights on. Let them see who did this.'],
+      grenade: ['Grenade — heads down!'],
+      boss: ['Big one. Good. I was getting bored.'],
+      bossDown: ['And down goes the big one.'],
+      amalgam: ['That thing is wearing four people. Still going down.'],
+      meteor: ['Something big just hit the field.'],
+      upgrade: ['The rock made it meaner. So did I.'],
+      bench: ['Give me ten minutes with this and a screwdriver.'],
+      grace: ['Ten seconds — move!'],
+      crawler: ['Low one, low one!'],
+      spitter: ['It spits acid! Do not eat it!'],
+      death: ['No. Not like this.'],
+      planeCrash: ['He was up there. He was actually up there.'],
+    },
+  },
+};
+
+const HERO_ORDER = ['rodriguez', 'sam', 'adams', 'chrissy', 'rebecca', 'hank',
+  'frank', 'chris', 'remi', 'carlos'];
+
+/* Anything a character has nothing of their own to say about. Deliberately
+   plain — it is a floor, not a voice. */
+const COMMON = {
+  roundStart: ['Here they come.'],
+  roundClear: ['Clear. For now.'],
+  reload: ['Reloading!'],
+  dry: ['Empty!'],
+  headshot: ['Head shot.'],
+  firstBlood: ['One down.'],
 };
 
 /* ---------------- graphics presets ----------------
@@ -661,6 +1102,17 @@ function makeSfx(game) {
     blitz() { A.impact(1); t(60, 0.6, 'sawtooth', 0.18); t(2400, 0.3, 'sawtooth', 0.06); },
     hurt() { t(85, 0.2, 'sawtooth', 0.14); },
     heartbeat() { t(46, 0.11, 'sine', 0.2); setTimeout(() => t(40, 0.09, 'sine', 0.16), 180); },
+    /* Taking a hit, in the character's own pitch. Not a word — a sound. The
+       voice table gives the pitch, so Chrissy yelps and Hank barks and it
+       is the same three lines of code. */
+    playerGrunt(frac, voice) {
+      const v = voice || { base: 170, spread: 30, type: 'sawtooth' };
+      const hurt = 1 - Math.max(0, Math.min(1, frac));
+      const f = v.base * (0.86 + hurt * 0.34);
+      t(f, 0.13 + hurt * 0.09, v.type, 0.075);
+      setTimeout(() => t(f * 0.84, 0.10, 'sine', 0.05), 80);
+      A.impact(0.10, { volume: 0.5 });
+    },
     /* A breath drawn through the teeth: filtered noise, in and out. */
     breath() { A.impact(0.12, { volume: 0.7 }); setTimeout(() => A.impact(0.09, { volume: 0.5 }), 330); },
     /* The wound closing. Quiet, and low enough not to be mistaken for a
@@ -717,6 +1169,48 @@ function makeSfx(game) {
 
 /* Speak a line: subtitle plus a run of radio blips in the speaker's
    register. Returns total duration so lines can queue. */
+/* The chosen character speaking for themselves.
+
+   Kept apart from say(): the radio conversations are scripted exchanges
+   between two named people, whereas this is one person reacting, and it
+   needs a shorter leash — a bark that steps on the last bark is the single
+   fastest way to make a talkative character unbearable. So: a cooldown, a
+   bag that empties before it refills so you do not hear the same line
+   twice running, and a per-event chance for the ones that fire often. */
+function makeHeroVoice(game, hud, getHero, isOver) {
+  let busy = 0;
+  const bags = {};
+  const HOT = { headshot: 0.16, reload: 0.30, dry: 0.5, melee: 0.22, firstBlood: 1,
+    crawler: 0.25, spitter: 0.35, multiKill: 0.55, regen: 0.5 };
+  return function bark(event, force) {
+    if (isOver && isOver() && !force) return;
+    const hero = getHero();
+    if (!hero) return;
+    const now = performance.now() / 1000;
+    if (now < busy && !force) return;
+    const chance = HOT[event];
+    if (chance != null && !force && Math.random() > chance) return;
+    const set = (hero.lines && hero.lines[event]) || COMMON[event];
+    if (!set || !set.length) return;
+    const key = hero.id + ':' + event;
+    if (!bags[key] || !bags[key].length) bags[key] = set.slice();
+    const idx = Math.floor(Math.random() * bags[key].length);
+    const text = bags[key].splice(idx, 1)[0];
+    const dur = Math.max(1.3, text.length * 0.042);
+    busy = now + dur * 0.62;
+    const c = { name: hero.name, color: hero.voice.color };
+    hud.subtitle(c, text, dur);
+    const blips = Math.min(13, Math.max(4, Math.round(text.length / 7)));
+    for (let i = 0; i < blips; i++) {
+      setTimeout(() => {
+        const f = hero.voice.base + (Math.sin(i * 2.7) * 0.5 + Math.random() * 0.5) * hero.voice.spread;
+        game.audio.tone(f, 0.05, hero.voice.type, 0.05);
+      }, 70 + i * (dur * 480 / blips));
+    }
+    return dur;
+  };
+}
+
 function makeVoice(game, hud, isOver) {
   let busy = 0;
   return function say(lineSet, priority) {
@@ -1924,6 +2418,18 @@ function buildMap(game, S) {
     for (const q of parts) q.visible = false;
     S.belt = { root, parts, rollers, lamp, at: [bx, by, bz], out: 0, running: false, dropT: 0, spin: 0 };
   }
+
+  /* The nav grids, built last so everything solid is already standing.
+
+     Chest height rather than floor height: the sweep is looking for what a
+     walking body cannot pass, and a body's shoulders clear a kerb its shins
+     do not. Two levels, since the stair between them is the room graph's
+     business. */
+  S.nav = {
+    ground: buildNavLevel(game, { x0: MAP.side.x0, x1: MAP.main.x1, z0: MAP.main.z0, z1: MAP.main.z1 }, 1.05),
+    roof: buildNavLevel(game, { x0: MAP.roof.x0, x1: MAP.roof.x1, z0: MAP.roof.z0, z1: MAP.roof.z1 },
+      MAP.roof.y1 + 1.05),
+  };
 }
 
 function spawnBoard(game, w, slot, mat) {
@@ -2792,8 +3298,8 @@ function tryFire(game, S, P, hud, sfx, dt) {
 
   if (spec.melee) { /* no magazine to check */ } else if (am.mag <= 0) {
     sfx.dryFire();
-    if (am.reserve <= 0 && Math.random() < 0.4) S.voice(LINES.lowAmmo);
-    else tryReload(P, sfx);
+    if (am.reserve <= 0) { if (Math.random() < 0.4) S.voice(LINES.lowAmmo); S.bark('dry'); }
+    else tryReload(P, sfx, S);
     P.cooldown = 0.25;
     return;
   }
@@ -2994,6 +3500,7 @@ function tryFire(game, S, P, hud, sfx, dt) {
     }
   }
   if (anyHit) {
+    if (anyHead) S.bark('headshot');
     anyHead ? sfx.headmark() : sfx.hitmark();
     hud.hitmark(anyHead);
     if (pointsThisShot) hud.pointsDelta(pointsThisShot);
@@ -3002,7 +3509,8 @@ function tryFire(game, S, P, hud, sfx, dt) {
     // A little bigger for a pattern than for a single round, but one cloud.
     game.particles.dust(wallHit, { count: Math.min(4 + wallCount, 10), color: 0x8d8a82 });
   }
-  if (killsThisShot && !S.firstBloodDone) { S.firstBloodDone = true; S.voice(LINES.firstBlood); }
+  if (killsThisShot >= 3) S.bark('multiKill');
+  if (killsThisShot && !S.firstBloodDone) { S.firstBloodDone = true; S.voice(LINES.firstBlood); S.bark('firstBlood'); }
   hud.points(S.points);
 }
 
@@ -3072,7 +3580,7 @@ function dropMagazine(game, S, P, v) {
   S.brass.push(drop);
 }
 
-function tryReload(P, sfx) {
+function tryReload(P, sfx, S) {
   const spec = P.spec();
   const am = P.ammoFor(P.equipped());
   if (spec.melee || P.reloading > 0 || am.mag >= spec.mag || am.reserve <= 0) return;
@@ -3084,6 +3592,7 @@ function tryReload(P, sfx) {
   P.reloadStage = 0;
   P.breakStage = 0;
   sfx.magRelease();
+  if (S && S.bark) S.bark('reload');
 }
 
 function finishReload(P, hud) {
@@ -3226,18 +3735,18 @@ const BODY_TYPES = [
 const VARIANTS = {
   walker: {
     weight: 1.0, speed: [0.95, 1.55], hp: 1.0, dmg: 1.0, points: 1.0,
-    clip: 'zwalk', clipSpeed: 1.0, eye: 0xff7a2a,
+    clip: 'zwalk', clipSpeed: 1.0, eye: 0xff7a2a, attack: ['zattack_grab', 'zattack'],
   },
   runner: {
     weight: 0.0, speed: [3.1, 4.3], hp: 0.8, dmg: 1.0, points: 1.15,
-    clip: 'zrun', clipSpeed: 1.0, eye: 0xff3a18, from: 4,
+    clip: 'zrun', clipSpeed: 1.0, eye: 0xff3a18, from: 4, attack: ['zattack_bite'],
     run: true,
   },
   crawler: {
     // Low, quiet and easy to lose track of — worth less because it is
     // slow, but it comes through gaps the standing ones cannot use.
     weight: 0.0, speed: [1.2, 1.7], hp: 0.55, dmg: 1.15, points: 0.9,
-    clip: 'zcrawl', clipSpeed: 1.0, eye: 0xffb02a, from: 3,
+    clip: 'zcrawl', clipSpeed: 1.0, eye: 0xffb02a, from: 3, attack: ['zattack_rake'],
     crawl: true, height: 0.95,
   },
   /* The armoured runner. Not a variant of the walker — the point of it is
@@ -3246,7 +3755,7 @@ const VARIANTS = {
      battering ram, the riot shield and eighteen carat rounds are not. */
   armored: {
     weight: 0.0, speed: [2.8, 3.7], hp: 1.0, dmg: 1.25, points: 1.8,
-    clip: 'zrun', clipSpeed: 1.0, eye: 0x8fd0ff, from: 8,
+    clip: 'zrun', clipSpeed: 1.0, eye: 0x8fd0ff, from: 8, attack: ['zattack_slam', 'zattack_bite'],
     plated: true, run: true,
   },
   /* Not rolled into the mix like the others: the boss is scheduled by the
@@ -3254,6 +3763,7 @@ const VARIANTS = {
   boss: {
     weight: 0.0, speed: BOSS.speed, hp: 1.0, dmg: BOSS.dmg, points: BOSS.points,
     clip: 'zwalk_heavy', clipSpeed: 1.45, eye: 0x9ad8ff, from: BOSS.from,
+    attack: ['zattack_slam', 'zattack_hook'],
     /* Wearing the plate but not immune behind it. Those are two different
        things and conflating them cost him his kit: his defence is the shield
        and the thousand health, and making him bulletproof as well leaves
@@ -3273,6 +3783,7 @@ const VARIANTS = {
   amalgam: {
     weight: 0.0, speed: [0.85, 1.15], hp: 6.0, dmg: 2.4, points: 4.0,
     clip: 'zwalk_heavy', clipSpeed: 0.72, eye: 0xc86aff, from: 12,
+    attack: ['zattack_hook', 'zattack_slam', 'zattack_grab'],
     amalgam: true, heavy: true, solo: true,
   },
   spitter: {
@@ -3348,6 +3859,164 @@ function roomOf(p) {
   if (p.y > MAP.roof.y0 - 0.6) return 'roof';
   if (p.x < MAP.side.x1 + 0.2) return 'side';
   return 'main';
+}
+
+/* ---------------- navigation ----------------
+
+   Between rooms the graph below is enough — there are three of them and two
+   ways between them. Inside a room the horde used to walk straight at the
+   player, which is right up until something is in the way: the workbench,
+   the crates, the shop counter, the meteorite. Then they pressed into it
+   and stayed there, and the complaint was that they do not always find a
+   route. So there is a grid now, and A* over it.
+
+   The grid is built once, at map build, by marching rays along every row
+   and every column at chest height and marking whatever they hit. Two
+   levels — the floor and the roof deck — because the stair is the only way
+   between them and the room graph already owns that. */
+const NAV = { cell: 0.5 };
+
+function buildNavLevel(game, box, y) {
+  const c = NAV.cell;
+  const w = Math.ceil((box.x1 - box.x0) / c);
+  const h = Math.ceil((box.z1 - box.z0) / c);
+  const g = new Uint8Array(w * h);
+  const solid = (b) => b && !b.isTrigger && !(b.userData && b.userData.zombie)
+    && !(b.userData && b.userData.player);
+  const mark = (x, z) => {
+    const i = Math.floor((x - box.x0) / c), j = Math.floor((z - box.z0) / c);
+    if (i >= 0 && i < w && j >= 0 && j < h) g[j * w + i] = 1;
+  };
+  /* March, do not single-cast. One ray down a row reports only the first
+     thing it meets; restarting a little past each hit walks the whole row
+     and finds the far side of the bench as well as the near side. */
+  const sweep = (along) => {
+    const n = along === 'x' ? h : w;
+    for (let k = 0; k < n; k++) {
+      const fixed = (along === 'x' ? box.z0 : box.x0) + (k + 0.5) * c;
+      let t = 0;
+      const span = along === 'x' ? box.x1 - box.x0 : box.z1 - box.z0;
+      for (let guard = 0; guard < 200 && t < span; guard++) {
+        const ox = along === 'x' ? box.x0 + t : fixed;
+        const oz = along === 'x' ? fixed : box.z0 + t;
+        const dir = along === 'x' ? [1, 0, 0] : [0, 0, 1];
+        const hit = game.raycast([ox, y, oz], dir, span - t, solid);
+        if (!hit) break;
+        const d = Math.hypot(hit.point.x - ox, hit.point.z - oz);
+        mark(hit.point.x, hit.point.z);
+        t += d + c * 0.5;
+      }
+    }
+  };
+  sweep('x');
+  sweep('z');
+  return { box, w, h, c, g };
+}
+
+function navBlocked(nav, i, j) {
+  if (i < 0 || j < 0 || i >= nav.w || j >= nav.h) return true;
+  return nav.g[j * nav.w + i] === 1;
+}
+
+/* A* over one level. Returns world-space waypoints, or null when there is
+   no route — in which case the caller falls back to walking straight at the
+   player, which is what it always used to do. */
+function navPath(nav, from, to) {
+  const c = nav.c, b = nav.box, w = nav.w, h = nav.h;
+  const ci = (x) => Math.max(0, Math.min(w - 1, Math.floor((x - b.x0) / c)));
+  const cj = (z) => Math.max(0, Math.min(h - 1, Math.floor((z - b.z0) / c)));
+  const si = ci(from.x), sj = cj(from.z);
+  let ti = ci(to.x), tj = cj(to.z);
+  if (si === ti && sj === tj) return [];
+  /* If the player is standing in a cell the sweep called solid — against a
+     wall, on the stairs — walk out to the nearest cell that is not. */
+  if (navBlocked(nav, ti, tj)) {
+    let best = null, bd = 1e9;
+    for (let j = Math.max(0, tj - 4); j <= Math.min(h - 1, tj + 4); j++) {
+      for (let i = Math.max(0, ti - 4); i <= Math.min(w - 1, ti + 4); i++) {
+        if (navBlocked(nav, i, j)) continue;
+        const d = (i - ti) * (i - ti) + (j - tj) * (j - tj);
+        if (d < bd) { bd = d; best = [i, j]; }
+      }
+    }
+    if (!best) return null;
+    ti = best[0]; tj = best[1];
+  }
+  const n = w * h;
+  const gScore = new Float32Array(n).fill(Infinity);
+  const came = new Int32Array(n).fill(-1);
+  const closed = new Uint8Array(n);
+  const start = sj * w + si, goal = tj * w + ti;
+  gScore[start] = 0;
+  // A binary heap would be tidier; the grid is under two thousand cells and
+  // a linear scan over the open set costs less than the code to avoid it.
+  const open = [start];
+  const hEst = (k) => {
+    const i = k % w, j = (k / w) | 0;
+    const dx = Math.abs(i - ti), dz = Math.abs(j - tj);
+    return (dx + dz) + (Math.SQRT2 - 2) * Math.min(dx, dz);
+  };
+  let found = false;
+  let guard = 0;
+  while (open.length && guard++ < 20000) {
+    let bi = 0, bf = Infinity;
+    for (let k = 0; k < open.length; k++) {
+      const f = gScore[open[k]] + hEst(open[k]);
+      if (f < bf) { bf = f; bi = k; }
+    }
+    const cur = open.splice(bi, 1)[0];
+    if (cur === goal) { found = true; break; }
+    closed[cur] = 1;
+    const i = cur % w, j = (cur / w) | 0;
+    for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+      if (!di && !dj) continue;
+      const ni = i + di, nj = j + dj;
+      if (navBlocked(nav, ni, nj)) continue;
+      // No cutting a corner diagonally through two walls that meet.
+      if (di && dj && (navBlocked(nav, i + di, j) || navBlocked(nav, i, j + dj))) continue;
+      const k = nj * w + ni;
+      if (closed[k]) continue;
+      const step = (di && dj) ? Math.SQRT2 : 1;
+      const g2 = gScore[cur] + step;
+      if (g2 < gScore[k]) {
+        gScore[k] = g2; came[k] = cur;
+        if (open.indexOf(k) < 0) open.push(k);
+      }
+    }
+  }
+  if (!found) return null;
+  const out = [];
+  for (let k = goal; k !== -1 && k !== start; k = came[k]) {
+    out.push([b.x0 + (k % w + 0.5) * c, 0, b.z0 + (((k / w) | 0) + 0.5) * c]);
+  }
+  out.reverse();
+  /* Smooth: a grid path is a staircase, and a body walking a staircase
+     zigzags. Drop any waypoint the one after it can be reached from
+     directly, which turns the staircase back into the two or three corners
+     that were actually the point. */
+  const keep = [];
+  let at = { x: from.x, z: from.z };
+  for (let k = 0; k < out.length; k++) {
+    const next = out[k + 1];
+    if (next && navClear(nav, at, { x: next[0], z: next[2] })) continue;
+    keep.push(out[k]);
+    at = { x: out[k][0], z: out[k][2] };
+  }
+  return keep;
+}
+
+/* Bresenham-ish walk between two points over the grid. */
+function navClear(nav, a, b) {
+  const c = nav.c;
+  const d = Math.hypot(b.x - a.x, b.z - a.z);
+  const steps = Math.ceil(d / (c * 0.5));
+  for (let k = 1; k < steps; k++) {
+    const t = k / steps;
+    const x = a.x + (b.x - a.x) * t, z = a.z + (b.z - a.z) * t;
+    const i = Math.floor((x - nav.box.x0) / c), j = Math.floor((z - nav.box.z0) / c);
+    if (navBlocked(nav, i, j)) return false;
+  }
+  return true;
 }
 
 /* Waypoint chains between rooms. Small map, hand-authored graph. */
@@ -4134,12 +4803,52 @@ function updateZombie(game, S, P, z, dt, sfx) {
     }
 
     if (zr === pr) {
-      move(target.x, target.z, z.speed > 2.4 ? 2 : 1);
+      /* Same room, and now with something between you and them.
+
+         Straight at the player is right until the bench, the crates, the
+         counter or the rock is in the way — then it is a body pressing into
+         a wall for the rest of the round, which is what "they do not find a
+         route" looked like. Walk the direct line when it is clear, and put
+         a path round the obstacle when it is not. The path is recomputed
+         only when the player has moved a metre and a half or the old one has
+         gone stale, so a room full of them is not a room full of searches. */
+      const nav = S.nav && (zr === 'roof' ? S.nav.roof : S.nav.ground);
+      let tx = target.x, tz = target.z;
+      if (nav && d > 1.6) {
+        const straight = navClear(nav, pos, target);
+        if (straight) { z.navPath = null; }
+        else {
+          const stale = !z.navPath || (z.navAt == null) || (S.time - z.navAt > 0.7)
+            || dist2d(z.navFor || { x: 1e9, z: 0 }, target) > 1.5;
+          if (stale) {
+            z.navPath = navPath(nav, pos, target);
+            z.navAt = S.time;
+            z.navFor = { x: target.x, z: target.z };
+            z.navIdx = 0;
+          }
+          const path = z.navPath;
+          if (path && path.length) {
+            let wp = path[Math.min(z.navIdx, path.length - 1)];
+            if (dist2d(pos, { x: wp[0], z: wp[2] }) < 0.55) {
+              z.navIdx = Math.min(z.navIdx + 1, path.length - 1);
+              wp = path[z.navIdx];
+            }
+            tx = wp[0]; tz = wp[2];
+          }
+        }
+      } else z.navPath = null;
+      move(tx, tz, z.speed > 2.4 ? 2 : 1);
       playZombieAnim(z, z.moveClip);
       z.attackT -= dt;
       if (!S.shieldActive && d < PLAYER.attackRange && z.attackT <= 0 && Math.abs(pos.y - P.actor.position.y) < 1.6) {
         z.attackT = PLAYER.attackCooldown;
-        playZombieAnim(z, 'zattack', 0.05);
+        /* Each kind strikes its own way — the walkers grab, the runners
+           bite, the crawler rakes at your ankles, and the heavy ones bring
+           both arms over. A variant with more than one takes turns, so a
+           crowd of walkers is not one animation played twelve times. */
+        const set = (z.V && z.V.attack) || ['zattack'];
+        z.atkIdx = ((z.atkIdx || 0) + 1) % set.length;
+        playZombieAnim(z, set[z.atkIdx], 0.05);
         z.anim = '';
         hurtPlayer(game, S, P, z.dmg, sfx, 'melee', pos);
       }
@@ -4312,6 +5021,7 @@ function closeBench(S, sfx) {
   S.bench.open = false;
   S.grace = BENCH_GRACE;
   if (sfx && sfx.graceStart) sfx.graceStart();
+  if (S.bark) S.bark('grace', true);
 }
 
 function hurtPlayer(game, S, P, dmg, sfx, kind, from) {
@@ -4345,7 +5055,7 @@ function hurtPlayer(game, S, P, dmg, sfx, kind, from) {
   sfx.hurt();
   // The character, not the HUD. A different grunt each time and not one
   // every single hit, so a crowd does not turn him into a metronome.
-  if (Math.random() < 0.55) sfx.playerGrunt(P.hp / P.maxHp);
+  if (Math.random() < 0.55) sfx.playerGrunt(P.hp / P.maxHp, S.hero && S.hero().voice);
 
   /* Flinch. The head goes away from whatever hit it and rolls with the
      blow, then comes back — the roll is what makes it read as being struck
@@ -4375,12 +5085,13 @@ function hurtPlayer(game, S, P, dmg, sfx, kind, from) {
   S.hud.hitFlash(Math.min(1, 0.35 + dmg / 60));
   S.hud.damage(P.hp / P.maxHp);
   const lowAt = PLAYER.lowAt;   // absolute, so it means the same to a Supersoldier
-  if (P.hp <= lowAt && P.hp + dmg > lowAt) S.voice(LINES.nearDeath);
+  if (P.hp <= lowAt && P.hp + dmg > lowAt) { S.voice(LINES.nearDeath); S.bark('lastStand', true); }
   if (P.hp <= 0) {
     P.alive = false;
     S.gameOver = true;
     closeCrate(S);
     document.exitPointerLock && document.exitPointerLock();
+    S.bark('death', true);
     S.voice(LINES.gameOver, true);
     S.hud.gameOver(S.round, S.killsTotal);
   }
@@ -4547,6 +5258,7 @@ function updateMeteor(game, S, P, hud, sfx, dt) {
       m.state = 'falling';
       m.fall = 4.0;
       if (LINES.meteorFall) S.voice(LINES.meteorFall);
+      S.bark('meteor', true);
       hud.banner('SOMETHING IS COMING DOWN', '#ff7a2a');
       if (sfx.incoming) sfx.incoming();
     }
@@ -4998,6 +5710,7 @@ function doInteract(game, S, P, hud, sfx, it, dt) {
     if (P.ammo[id]) { P.ammo[id].mag = w.mag; P.ammo[id].reserve = w.reserve; }
     P.give(id);
     sfx.buy();
+    S.bark('buyGun');
     hud.ammo(P);
     hud.banner(w.slotName, '#ff7a2a');
   } else if (it.kind === 'crate') {
@@ -5008,6 +5721,7 @@ function doInteract(game, S, P, hud, sfx, it, dt) {
     const c = S.crate;
     P.give(c.offerId);
     sfx.buy();
+    S.bark('boxGood');
     if (c.offerId === 'arc') S.voice(LINES.crateArc);
     closeCrate(S);
     hud.ammo(P);
@@ -5087,6 +5801,7 @@ function openCrate(game, S, P, hud, sfx) {
     : (roll < 0.28 ? 'thompson' : roll < 0.50 ? 'scatter' : roll < 0.68 ? 'mauser'
       : roll < 0.86 ? 'blaze' : 'arc');
   S.voice(LINES.crateOpen);
+  S.bark('box');
   // Lid swings, and the reel starts turning over.
   c.lid.setRotation([0, 0, -70]);
   c.lid.setPosition([c.at[0] - 0.45, c.at[1] + 0.75, c.at[2]]);
@@ -5308,6 +6023,18 @@ function makeHud() {
   #b9hud .title h1 { font-size:64px; letter-spacing:.3em; color:#e8ddc8; margin:0 0 8px; font-weight:400; }
   #b9hud .title h1 span { color:#b3221c; }
   #b9hud .title p { color:#8c7f68; letter-spacing:.2em; font-size:14px; margin:4px 0; }
+  /* Ten of them, and the one you pick is remembered. Names only — the bio
+     of whichever is under the cursor sits underneath, so the grid stays a
+     grid instead of ten paragraphs. */
+  #b9hud .picker { margin:20px 0 2px; text-align:center; }
+  #b9hud .picker .plbl { display:block; font-size:11px; letter-spacing:.28em; color:#6b6455; margin-bottom:10px; }
+  #b9hud .pgrid { display:flex; flex-wrap:wrap; justify-content:center; gap:6px; max-width:min(720px,86vw); }
+  #b9hud .pgrid .who { padding:6px 12px; border:1px solid #4a4234; color:#8c7f68; font-size:11.5px;
+    letter-spacing:.16em; cursor:pointer; pointer-events:auto; background:rgba(0,0,0,.25); }
+  #b9hud .pgrid .who:hover { border-color:#6b6455; color:#c8bfa8; }
+  #b9hud .pgrid .who.on { border-color:#ffd27a; color:#ffd27a; background:rgba(255,210,122,.10); }
+  #b9hud .pbio { margin-top:11px; min-height:34px; max-width:min(640px,84vw); color:#8a8272;
+    font-size:12.5px; letter-spacing:.04em; line-height:1.5; }
   #b9hud .stam { position:absolute; left:50%; bottom:19%; transform:translateX(-50%); width:150px; height:3px;
     background:rgba(0,0,0,.55); opacity:0; transition:opacity .25s; }
   #b9hud .stamfill { height:100%; background:#e8ddc8; width:100%; }
@@ -5370,7 +6097,10 @@ function makeHud() {
       <p>V KNIFE &nbsp;·&nbsp; G SHIELD &nbsp;·&nbsp; CTRL SLIDE (ADRENALINE)</p>
       <p style="color:#ffd27a">AT THE WORKBENCH &nbsp; A/D SLOT &nbsp;·&nbsp; W/S PART &nbsp;·&nbsp; F FIT &nbsp;·&nbsp; TAB LEAVE</p>
       <p style="color:#7ad7ff">CONTROLLER &nbsp; STICKS MOVE/LOOK &nbsp;·&nbsp; RT FIRE &nbsp;·&nbsp; LT AIM &nbsp;·&nbsp; L3 SPRINT &nbsp;·&nbsp; RB KNIFE &nbsp;·&nbsp; B USE/SLIDE &nbsp;·&nbsp; X RELOAD &nbsp;·&nbsp; Y SWAP</p>
+      <p style="color:#6b6455">PICK A NAME BELOW &nbsp;·&nbsp; ON A PAD, LB / RB CHANGE IT</p>
       <p class="padstate" style="color:#6b6455">NO CONTROLLER DETECTED — press a button on it to wake it</p>
+      <div class="picker"><span class="plbl">WHO ARE YOU TONIGHT?</span>
+        <div class="pgrid"></div><div class="pbio"></div></div>
       <p class="go" style="color:#e8ddc8;margin-top:22px">CLICK TO STAND POST</p></div>`;
   document.body.appendChild(root);
   const $ = (c) => root.querySelector(c);
@@ -5680,6 +6410,31 @@ function makeHud() {
         els.flash.style.opacity = 0;
       }));
     },
+    /* The character grid on the title screen. Rendered once, then only the
+       selected class and the bio line move. */
+    picker(current, onPick) {
+      const grid = els.title.querySelector('.pgrid');
+      const bio = els.title.querySelector('.pbio');
+      if (!grid) return;
+      const paint = (id) => {
+        for (const el of grid.children) el.className = 'who' + (el.dataset.id === id ? ' on' : '');
+        bio.textContent = HEROES[id] ? HEROES[id].bio : '';
+      };
+      grid.innerHTML = HERO_ORDER.map((id) =>
+        `<div class="who" data-id="${id}">${HEROES[id].name}</div>`).join('');
+      for (const el of grid.children) {
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          paint(el.dataset.id);
+          onPick(el.dataset.id);
+        });
+        el.addEventListener('mouseenter', () => {
+          bio.textContent = HEROES[el.dataset.id].bio;
+        });
+        el.addEventListener('mouseleave', () => paint(current()));
+      }
+      paint(current());
+    },
     hideTitle() { els.title.style.opacity = 0; setTimeout(() => { els.title.style.display = 'none'; }, 1500); },
     gameOver(round, kills) {
       // The update loop stops calling aim() once you are down, so the glass
@@ -5708,6 +6463,7 @@ function startRound(game, S, hud, sfx) {
   S.betweenRounds = false;
   hud.round(S.round);
   sfx.roundSting();
+  S.bark(S.round === 1 ? 'start' : (S.round >= 15 && S.round % 5 === 0 ? 'deepRound' : 'roundStart'), true);
   if (S.round > 1 && S.round % 2 === 0) {
     const pool = LINES.roundStart;
     S.voice(pool[Math.floor(Math.random() * pool.length)]);
@@ -5741,6 +6497,7 @@ function updateRounds(game, S, P, hud, sfx, dt) {
           S.toSpawn--;
           hud.banner('SOMETHING BIG IS COMING THROUGH', '#9ad8ff');
           S.voice(LINES.boss);
+          S.bark('boss', true);
           // You feel him arrive before you see him.
           addShake(S, 0.10, 1.6);
           game.audio.impact(0.9);
@@ -5755,6 +6512,7 @@ function updateRounds(game, S, P, hud, sfx, dt) {
           if (nz.kind === 'amalgam') {
             hud.banner('AMALGAMATION', '#c86aff');
             S.voice(LINES.amalgam);
+            S.bark('amalgam', true);
             addShake(S, 0.06, 1.1);
             game.audio.impact(0.7);
           }
@@ -5768,6 +6526,7 @@ function updateRounds(game, S, P, hud, sfx, dt) {
     S.betweenRounds = true;
     S.lullT = ROUNDS.lull;
     sfx.roundClear();
+    S.bark('roundClear', true);
   }
 }
 
@@ -5857,6 +6616,27 @@ function start(opts = {}) {
   const voice = makeVoice(game, hud, () => S.gameOver);
   S.voice = voice;
 
+  /* Who you are.
+
+     Remembered on the machine, so the person who has decided they are
+     Old Man Frank does not have to choose again every night. The title
+     screen offers the ten; anything unrecognised falls back to the first. */
+  S.heroId = HERO_ORDER[0];
+  try {
+    const saved = localStorage.getItem('b9.hero');
+    if (saved && HEROES[saved]) S.heroId = saved;
+  } catch (e) { /* storage off; the default stands */ }
+  S.hero = () => Object.assign({ id: S.heroId }, HEROES[S.heroId]);
+  const bark = makeHeroVoice(game, hud, S.hero, () => S.gameOver);
+  S.bark = bark;
+  hud.picker(() => S.heroId, (id) => {
+    S.heroId = id;
+    try { localStorage.setItem('b9.hero', id); } catch (e) { /* storage off */ }
+    sfx.buy();
+    // A word in their own voice, so you hear who you have chosen.
+    bark('pick', true);
+  });
+
   buildMap(game, S);
 
   /* Whatever was chosen last time on this machine, or the tier the
@@ -5903,6 +6683,7 @@ function start(opts = {}) {
      anyone playing on a pad — which is exactly what "controller support
      doesn't work" looks like from the sofa. Any button, or any key, starts. */
   window.addEventListener('keydown', startGame);
+  let padPick = false;
   const padWatch = setInterval(() => {
     const pd = game.input.pad;
     const el = hud.els.title.querySelector('.padstate');
@@ -5910,7 +6691,25 @@ function start(opts = {}) {
       el.textContent = 'CONTROLLER READY — ' + (pd.id || 'gamepad').slice(0, 34);
       el.style.color = '#59ff7a';
     }
-    if (pd.connected && Object.values(pd.buttons).some(Boolean)) { startGame(); }
+    /* On a pad the bumpers walk the cast rather than starting the game —
+       otherwise the picker is mouse-only and someone on a sofa is stuck
+       with whoever the game chose for them. */
+    if (pd.connected && (pd.buttons.lb || pd.buttons.rb)) {
+      if (!padPick) {
+        padPick = true;
+        const n = HERO_ORDER.length;
+        let k = HERO_ORDER.indexOf(S.heroId);
+        k = (k + (pd.buttons.rb ? 1 : n - 1) + n) % n;
+        S.heroId = HERO_ORDER[k];
+        try { localStorage.setItem('b9.hero', S.heroId); } catch (e) { /* storage off */ }
+        hud.picker(() => S.heroId, () => {});
+        sfx.buy();
+        bark('pick', true);
+      }
+    } else {
+      padPick = false;
+      if (pd.connected && Object.values(pd.buttons).some(Boolean)) { startGame(); }
+    }
     if (S.started) clearInterval(padWatch);
   }, 120);
   window.addEventListener('gamepadconnected', () => game.input._pollGamepad());
@@ -6049,7 +6848,7 @@ function start(opts = {}) {
           Math.sin(t * 0.61) * 2.8 + Math.cos(t * 1.70) * 1.0);
       }
 
-      if (i.justPressed('r') || pad.pressed.x) tryReload(P, sfx);
+      if (i.justPressed('r') || pad.pressed.x) tryReload(P, sfx, S);
       P.swingT = Math.max(0, P.swingT - dt);
       /* Aim, on a shield, means put it between you and them. */
       P.blocking = !!(P.spec() && P.spec().blocks) && S.input.aimHeld && P.swingT <= 0;
@@ -6545,6 +7344,7 @@ function start(opts = {}) {
             ps.lampGreen.material = game.material({ color: 0x081a08, texture: 'smooth', roughness: 0.3, emissive: 0x3aff5a, emissiveStrength: 2.6 });
             hud.banner('POWER', '#8ce8a0');
             S.voice(LINES.power);
+            S.bark('power', true);
           }
         }
       }
@@ -6755,7 +7555,7 @@ function start(opts = {}) {
     setPoints(n) { S.points = n; hud.points(n); },
     give(id) { S.player.give(id); hud.ammo(S.player); },
     // Drive a reload from a test without going through the key handler.
-    reload() { tryReload(S.player, sfx); },
+    reload() { tryReload(S.player, sfx, S); },
     /* Override the hip carry so a screenshot can frame the weapon instead
        of catching the corner of it. Null clears the override. */
     viewPose(x, y, d) { P.poseOverride = (x == null) ? null : { x, y, d }; },

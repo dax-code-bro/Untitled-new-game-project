@@ -16724,6 +16724,131 @@ function makeZombieClips() {
   }, { loop: false }));
 
   /* ---------------------------------------------------------
+     THE HOOK — one arm only, swung round on a turning body.
+     The heavy ones do this: they have the mass to put behind it
+     and none of the speed to do anything else. The hips lead and
+     the arm arrives late, which is what a swing is.
+     --------------------------------------------------------- */
+  clips.push(buildClip('zattack_hook', 0.82, {
+    hips: {
+      keys: [[0, 2, -22, 0], [0.30, 6, -30, 0], [0.55, 10, 26, 0], [1, 2, -22, 0]],
+      pos: [[0, 0, 0, 0], [0.55, 0, 0.012, 0.070], [1, 0, 0, 0]],
+    },
+    spine: { keys: [[0, 12, -14, 0], [0.30, 16, -20, 0], [0.55, 20, 18, 0], [1, 12, -14, 0]] },
+    chest: { keys: [[0, 7, -10, 0], [0.55, 12, 14, 0], [1, 7, -10, 0]] },
+    head: { keys: [[0, -10, -12, 0], [0.55, -22, 12, 0], [1, -10, -12, 0]] },
+    // The left arm cocks back behind the body, then comes across the front.
+    upperArmL: { keys: [[0, -40, 0, -14], [0.30, -30, -46, -30], [0.58, -104, 44, -46], [1, -40, 0, -14]] },
+    lowerArmL: { keys: [[0, -48, 0, 0], [0.30, -70, 0, 0], [0.58, -14, 0, 0], [1, -48, 0, 0]] },
+    // The right hangs and trails, which is most of why it reads as one arm.
+    upperArmR: { keys: [[0, -34, 0, 12], [0.55, -48, 0, 22], [1, -34, 0, 12]] },
+    lowerArmR: { keys: [[0, -40, 0, 0], [0.55, -30, 0, 0], [1, -40, 0, 0]] },
+    upperLegL: { keys: [[0, -6, 0, 3], [0.55, -26, 0, 3], [1, -6, 0, 3]] },
+    upperLegR: { keys: [[0, 5, 0, -4], [0.55, 20, 0, -4], [1, 5, 0, -4]] },
+    lowerLegL: { keys: [[0, 9, 0, 0], [0.55, 26, 0, 0], [1, 9, 0, 0]] },
+    lowerLegR: { keys: [[0, 11, 0, 0], [0.55, 4, 0, 0], [1, 11, 0, 0]] },
+  }, { loop: false }));
+
+  /* ---------------------------------------------------------
+     THE GRAB — both hands out and closing, the head following
+     them in. The walkers do this. It is slower than the swipe
+     and it commits the whole body forward, which is why it is
+     the one that gets them shot.
+     --------------------------------------------------------- */
+  clips.push(buildClip('zattack_grab', 0.90, {
+    hips: {
+      keys: [[0, 3, 0, 0], [0.45, 18, 0, 0], [1, 3, 0, 0]],
+      pos: [[0, 0, 0, 0], [0.45, 0, -0.030, 0.110], [0.75, 0, -0.010, 0.030], [1, 0, 0, 0]],
+    },
+    spine: { keys: [[0, 13, 0, 0], [0.45, 30, 0, 0], [1, 13, 0, 0]] },
+    chest: { keys: [[0, 8, 0, 0], [0.45, 16, 0, 0], [1, 8, 0, 0]] },
+    head: { keys: [[0, -12, 0, 0], [0.45, -40, 0, 0], [0.8, -26, 0, 0], [1, -12, 0, 0]] },
+    // Straight out, wide, then closing in on each other at the end.
+    upperArmL: { keys: [[0, -44, 0, -16], [0.42, -96, 0, -34], [0.68, -92, 0, -8], [1, -44, 0, -16]] },
+    upperArmR: { keys: [[0, -44, 0, 16], [0.42, -96, 0, 34], [0.68, -92, 0, 8], [1, -44, 0, 16]] },
+    lowerArmL: { keys: [[0, -50, 0, 0], [0.42, -12, 0, 0], [0.68, -34, 0, 0], [1, -50, 0, 0]] },
+    lowerArmR: { keys: [[0, -50, 0, 0], [0.42, -12, 0, 0], [0.68, -34, 0, 0], [1, -50, 0, 0]] },
+    handL: { keys: [[0, 0, 0, -10], [0.42, 0, 0, -22], [0.70, 0, 0, 14], [1, 0, 0, -10]] },
+    handR: { keys: [[0, 0, 0, 10], [0.42, 0, 0, 22], [0.70, 0, 0, -14], [1, 0, 0, 10]] },
+    upperLegL: { keys: [[0, -8, 0, 3], [0.45, -30, 0, 3], [1, -8, 0, 3]] },
+    upperLegR: { keys: [[0, 6, 0, -4], [0.45, 22, 0, -4], [1, 6, 0, -4]] },
+    lowerLegL: { keys: [[0, 10, 0, 0], [0.45, 30, 0, 0], [1, 10, 0, 0]] },
+    lowerLegR: { keys: [[0, 12, 0, 0], [0.45, 4, 0, 0], [1, 12, 0, 0]] },
+  }, { loop: false }));
+
+  /* ---------------------------------------------------------
+     THE BITE — the runners do not swing. They arrive, the hands
+     take hold of whatever is in front, and the head drives in.
+     Short and fast, and the arms pull inward rather than push.
+     --------------------------------------------------------- */
+  clips.push(buildClip('zattack_bite', 0.48, {
+    hips: {
+      keys: [[0, 6, 0, 0], [0.30, 22, 0, 0], [1, 6, 0, 0]],
+      pos: [[0, 0, 0, 0], [0.30, 0, -0.020, 0.130], [0.65, 0, 0, 0.040], [1, 0, 0, 0]],
+    },
+    spine: { keys: [[0, 18, 0, 0], [0.30, 36, 0, 0], [1, 18, 0, 0]] },
+    chest: { keys: [[0, 10, 0, 0], [0.30, 20, 0, 0], [1, 10, 0, 0]] },
+    // The head is the weapon: it goes furthest and it goes last.
+    head: { keys: [[0, -14, 0, 0], [0.24, -20, 0, 0], [0.44, -54, 0, 0], [0.72, -30, 0, 0], [1, -14, 0, 0]] },
+    upperArmL: { keys: [[0, -50, 0, -20], [0.26, -104, 0, -30], [0.52, -76, 0, -6], [1, -50, 0, -20]] },
+    upperArmR: { keys: [[0, -50, 0, 20], [0.26, -104, 0, 30], [0.52, -76, 0, 6], [1, -50, 0, 20]] },
+    // Cocked, thrown out, then hauled back in — a pull, not a push.
+    lowerArmL: { keys: [[0, -56, 0, 0], [0.26, -18, 0, 0], [0.52, -84, 0, 0], [1, -56, 0, 0]] },
+    lowerArmR: { keys: [[0, -56, 0, 0], [0.26, -18, 0, 0], [0.52, -84, 0, 0], [1, -56, 0, 0]] },
+    upperLegL: { keys: [[0, -10, 0, 3], [0.30, -34, 0, 3], [1, -10, 0, 3]] },
+    upperLegR: { keys: [[0, 8, 0, -4], [0.30, 26, 0, -4], [1, 8, 0, -4]] },
+    lowerLegL: { keys: [[0, 12, 0, 0], [0.30, 34, 0, 0], [1, 12, 0, 0]] },
+    lowerLegR: { keys: [[0, 14, 0, 0], [0.30, 2, 0, 0], [1, 14, 0, 0]] },
+  }, { loop: false }));
+
+  /* ---------------------------------------------------------
+     THE RAKE — from the floor. A crawler cannot swing at a
+     standing man's chest, so it goes for the ankles: one arm
+     sweeps across the ground while the shoulders roll behind it.
+     --------------------------------------------------------- */
+  clips.push(buildClip('zattack_rake', 0.66, {
+    hips: {
+      keys: [[0, 78, -8, 0], [0.35, 80, -16, 0], [0.6, 78, 12, 0], [1, 78, -8, 0]],
+      pos: [[0, 0, 0, 0], [0.4, 0, 0.020, 0.060], [1, 0, 0, 0]],
+    },
+    spine: { keys: [[0, -18, -10, 0], [0.4, -26, -18, 0], [0.62, -22, 14, 0], [1, -18, -10, 0]] },
+    chest: { keys: [[0, -10, -6, 0], [0.62, -14, 10, 0], [1, -10, -6, 0]] },
+    head: { keys: [[0, -46, -8, 0], [0.4, -58, -14, 0], [0.62, -52, 12, 0], [1, -46, -8, 0]] },
+    upperArmR: { keys: [[0, -62, 0, 24], [0.32, -40, -30, 40], [0.60, -96, 36, 18], [1, -62, 0, 24]] },
+    lowerArmR: { keys: [[0, -34, 0, 0], [0.32, -58, 0, 0], [0.60, -8, 0, 0], [1, -34, 0, 0]] },
+    upperArmL: { keys: [[0, -74, 0, -20], [0.5, -80, 0, -26], [1, -74, 0, -20]] },
+    lowerArmL: { keys: [[0, -24, 0, 0], [0.5, -18, 0, 0], [1, -24, 0, 0]] },
+    upperLegL: { keys: [[0, -34, 0, 6], [0.5, -42, 0, 6], [1, -34, 0, 6]] },
+    upperLegR: { keys: [[0, -30, 0, -6], [0.5, -22, 0, -6], [1, -30, 0, -6]] },
+    lowerLegL: { keys: [[0, 62, 0, 0], [0.5, 70, 0, 0], [1, 62, 0, 0]] },
+    lowerLegR: { keys: [[0, 58, 0, 0], [0.5, 50, 0, 0], [1, 58, 0, 0]] },
+  }, { loop: false }));
+
+  /* ---------------------------------------------------------
+     THE OVERHEAD — both arms up and brought down together. The
+     armoured one and the boss, who are too heavy to reach and too
+     slow to be stopped once it has started.
+     --------------------------------------------------------- */
+  clips.push(buildClip('zattack_slam', 1.05, {
+    hips: {
+      keys: [[0, 2, 0, 0], [0.36, -8, 0, 0], [0.58, 22, 0, 0], [1, 2, 0, 0]],
+      pos: [[0, 0, 0, 0], [0.36, 0, 0.055, -0.030], [0.60, 0, -0.055, 0.085], [1, 0, 0, 0]],
+    },
+    spine: { keys: [[0, 12, 0, 0], [0.36, -12, 0, 0], [0.58, 34, 0, 0], [1, 12, 0, 0]] },
+    chest: { keys: [[0, 8, 0, 0], [0.36, -8, 0, 0], [0.58, 20, 0, 0], [1, 8, 0, 0]] },
+    head: { keys: [[0, -10, 0, 0], [0.36, 6, 0, 0], [0.58, -44, 0, 0], [1, -10, 0, 0]] },
+    // All the way overhead on the wind-up, all the way down on the strike.
+    upperArmL: { keys: [[0, -44, 0, -16], [0.36, -166, 0, -20], [0.60, -34, 0, -12], [1, -44, 0, -16]] },
+    upperArmR: { keys: [[0, -44, 0, 16], [0.36, -166, 0, 20], [0.60, -34, 0, 12], [1, -44, 0, 16]] },
+    lowerArmL: { keys: [[0, -46, 0, 0], [0.36, -30, 0, 0], [0.60, -6, 0, 0], [1, -46, 0, 0]] },
+    lowerArmR: { keys: [[0, -46, 0, 0], [0.36, -30, 0, 0], [0.60, -6, 0, 0], [1, -46, 0, 0]] },
+    upperLegL: { keys: [[0, -8, 0, 3], [0.36, 4, 0, 3], [0.58, -30, 0, 3], [1, -8, 0, 3]] },
+    upperLegR: { keys: [[0, 6, 0, -4], [0.36, -4, 0, -4], [0.58, 24, 0, -4], [1, 6, 0, -4]] },
+    lowerLegL: { keys: [[0, 10, 0, 0], [0.58, 34, 0, 0], [1, 10, 0, 0]] },
+    lowerLegR: { keys: [[0, 12, 0, 0], [0.58, 2, 0, 0], [1, 12, 0, 0]] },
+  }, { loop: false }));
+
+  /* ---------------------------------------------------------
      TEARING A PIECE OUT OF ITSELF — the far arm crosses the
      body, digs into the flank and pulls. The spine folds around
      the hand rather than the hand simply arriving at the ribs,
