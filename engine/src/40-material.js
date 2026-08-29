@@ -106,10 +106,23 @@ const TextureLib = {
       }
     }
 
-    const normal = this.heightToNormal(height, size, 3);
+    /* Normal strength is per surface, not one number for everything.
+
+       Concrete and rock are genuinely rough at the millimetre and want a
+       strong map. Machined steel is not: pushing its height field at the
+       same strength turns the brushing into a field of steep facets, and
+       under a bright sky every one of them catches a specular highlight —
+       a blued receiver comes out looking like it has been sprinkled with
+       salt. That is the speckle, and it was never in the albedo. */
+    const normal = this.heightToNormal(height, size, this.normalStrength[kind] || 3);
     const maps = { albedo, orm, normal, size };
     this._cache.set(key, maps);
     return maps;
+  },
+
+  normalStrength: {
+    metal: 0.7, smooth: 0.35, glass: 0.2, wood: 1.3, fabric: 1.6,
+    concrete: 3, brick: 3, rock: 3, rust: 2.2,
   },
 
   /* Surface recipes. Each writes into `c` for one texel.
@@ -186,16 +199,27 @@ const TextureLib = {
     },
 
     metal(u, v, n, c) {
-      // Brushed: strongly anisotropic noise, plus a few deeper scratches.
-      const brush = n.fbm(u * 400, v * 3, 1, 2) * 0.5 + 0.5;
+      /* Brushed: strongly anisotropic noise, plus a few deeper scratches.
+
+         The brush frequency has to stay under the bake's own resolution.
+         At 400 cycles across a 256-pixel tile every stroke lands inside a
+         single texel, so what gets baked is not brushing at all — it is
+         white noise, and steel comes out looking like television static.
+         Ninety cycles is about three texels a stroke, which survives the
+         bake and still reads as machining. */
+      const brush = n.fbm(u * 90, v * 3, 1, 2) * 0.5 + 0.5;
       const patina = n.fbm(u * 6, v * 6, 11, 4) * 0.5 + 0.5;
-      const scratch = Math.pow(Math.max(0, n.fbm(u * 90, v * 5, 21, 2)), 3) * 3;
+      /* Scratches were cubed and tripled, which turns a handful of texels
+         into near-mirrors: on a dark blued gun those read as a snowstorm of
+         white sparkles rather than as wear. Softer, and with a roughness
+         floor, so a scratch catches light instead of becoming one. */
+      const scratch = Math.pow(Math.max(0, n.fbm(u * 34, v * 5, 21, 2)), 4) * 1.5;
       const base = 0.62 + brush * 0.12 - patina * 0.08;
       c.r = base; c.g = base * 1.01; c.b = base * 1.04;
       c.metal = 1;
-      c.rough = clamp(0.28 + brush * 0.18 + patina * 0.12 - scratch * 0.15, 0.06, 0.9);
+      c.rough = clamp(0.30 + brush * 0.16 + patina * 0.10 - scratch * 0.07, 0.16, 0.9);
       c.ao = 1;
-      c.h = brush * 0.5 + scratch * 0.4;
+      c.h = brush * 0.45 + scratch * 0.22;
     },
 
     rust(u, v, n, c) {

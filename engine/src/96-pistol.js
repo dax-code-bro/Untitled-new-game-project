@@ -116,6 +116,27 @@ function sweepPath(g, stations, capStart = true, capEnd = true) {
     st.o.z + st.u.z * a + st.v.z * b,
   )));
 
+  /* UVs in metres, not in zero-to-one.
+
+     A swept surface parameterised by (k/n, i/ns) stretches its texture to
+     fit whatever it happens to be: a 20 cm buttstock and a 2 cm trigger
+     guard each get exactly one tile, so the wood grain on the stock comes
+     out as half a dozen stripes a centimetre wide while the same material
+     on a small part is a smooth blur. Measuring instead — arc length round
+     the profile, travelled distance along the path — makes the material
+     mean one thing everywhere, and `uvScale` becomes tiles per metre. */
+  const uArc = new Float64Array(n + 1);
+  for (let k = 1; k <= n; k++) {
+    const a = stations[0].pts[k - 1], b = stations[0].pts[k % n];
+    uArc[k] = uArc[k - 1] + Math.hypot(b[0] - a[0], b[1] - a[1]);
+  }
+  const vRun = new Float64Array(ns);
+  for (let i = 1; i < ns; i++) {
+    let d = 0;
+    for (let k = 0; k < n; k++) d += world[i][k].distanceTo(world[i - 1][k]);
+    vRun[i] = vRun[i - 1] + d / n;
+  }
+
   const t = new Vec3(), ax = new Vec3(), nrm = new Vec3(), fallback = new Vec3();
   for (let i = 0; i < ns; i++) {
     const st = stations[i];
@@ -132,7 +153,9 @@ function sweepPath(g, stations, capStart = true, capEnd = true) {
       if (nrm.lengthSq() < 1e-14) nrm.set(st.u.x * na + st.v.x * nb, st.u.y * na + st.v.y * nb, st.u.z * na + st.v.z * nb);
       nrm.normalize();
       const w = world[i][k];
-      g.vert(w.x, w.y, w.z, nrm.x, nrm.y, nrm.z, k / n, i / (ns - 1));
+      // Length along U, girth along V: the wood texture lays its grain
+      // along V, and a stock's grain runs down its length, not across it.
+      g.vert(w.x, w.y, w.z, nrm.x, nrm.y, nrm.z, vRun[i], uArc[k]);
     }
   }
 
@@ -164,7 +187,7 @@ function sweepPath(g, stations, capStart = true, capEnd = true) {
       st.o.x + st.u.x * ca + st.v.x * cb,
       st.o.y + st.u.y * ca + st.v.y * cb,
       st.o.z + st.u.z * ca + st.v.z * cb,
-      nx.x, nx.y, nx.z, (ca - lo0) * 5, (cb - lo1) * 5,
+      nx.x, nx.y, nx.z, ca - lo0, cb - lo1,
     );
     // The rim needs its own vertices: the swept ones carry side normals.
     // UVs are normalised across the outline's own extent. Feeding the raw
@@ -179,7 +202,7 @@ function sweepPath(g, stations, capStart = true, capEnd = true) {
       // an end cap is not textured at a wildly different grain to the flank
       // it belongs to.
       rim.push(g.vert(w.x, w.y, w.z, nx.x, nx.y, nx.z,
-        (st.pts[k][0] - lo0) * 5, (st.pts[k][1] - lo1) * 5));
+        st.pts[k][0] - lo0, st.pts[k][1] - lo1));
     }
     for (let k = 0; k < n; k++) {
       const k2 = (k + 1) % n;
@@ -207,8 +230,10 @@ function hardBox(g, cx, cy, cz, hx, hy, hz) {
     const sv = Math.abs(vx) * hx + Math.abs(vy) * hy + Math.abs(vz) * hz;
     const base = g.positions.length / 3;
     for (const [a, b] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+      // Metres, like every other surface here, so one material describes
+      // the same grain whatever it lands on.
       g.vert(ox + ux * su * a + vx * sv * b, oy + uy * su * a + vy * sv * b,
-             oz + uz * su * a + vz * sv * b, nx, ny, nz, (a + 1) / 2, (b + 1) / 2);
+             oz + uz * su * a + vz * sv * b, nx, ny, nz, (a + 1) / 2 * su * 2, (b + 1) / 2 * sv * 2);
     }
     g.quad(base, base + 1, base + 2, base + 3);
   }

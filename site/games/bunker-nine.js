@@ -690,7 +690,7 @@ function buildMap(game, S) {
 
   // Shell holes. A dark disc for the pit and a raised lip of spoil round it.
   const crater = (x, z, r) => {
-    game.cylinder({ at: [x, 0.02, z], radius: r, height: 0.04, material: MAT.mudDark, physics: false });
+    game.cylinder({ at: [x, 0.055, z], radius: r, height: 0.05, material: MAT.mudDark, physics: false });
     for (let k = 0; k < 9; k++) {
       const a = (k / 9) * Math.PI * 2 + (x + z) * 0.3;
       game.sphere({ at: [x + Math.cos(a) * r * 0.94, 0.06, z + Math.sin(a) * r * 0.94],
@@ -705,11 +705,11 @@ function buildMap(game, S) {
     const dx = x1 - x0, dz = z1 - z0, len = Math.hypot(dx, dz);
     const ang = Math.atan2(dx, dz) * 57.2958;
     const mid = [(x0 + x1) / 2, 0, (z0 + z1) / 2];
-    const cut = game.box({ at: [mid[0], 0.015, mid[2]], size: [w, 0.03, len], material: MAT.mudDark, physics: false });
+    const cut = game.box({ at: [mid[0], 0.050, mid[2]], size: [w, 0.04, len], material: MAT.mudDark, physics: false });
     cut.setRotation([0, ang, 0]);
     // Duckboards down the middle.
     for (let t = 0.05; t < 1; t += 0.11) {
-      const b = game.box({ at: [x0 + dx * t, 0.035, z0 + dz * t], size: [w * 0.7, 0.05, 0.22], material: MAT.bark, physics: false });
+      const b = game.box({ at: [x0 + dx * t, 0.090, z0 + dz * t], size: [w * 0.7, 0.05, 0.22], material: MAT.bark, physics: false });
       b.setRotation([0, ang, 0]);
     }
     // Sandbags stacked along both lips, two courses, offset like real ones.
@@ -776,7 +776,7 @@ function buildMap(game, S) {
     const bar = game.cylinder({ at: [x - 2.9, 0.35, z + 3.9], radius: 0.13, height: 3.0, material: MAT.burnt, physics: false });
     bar.setRotation([72, yaw + 62, 0]);
     // Blast scorch under it.
-    game.cylinder({ at: [x, 0.012, z], radius: 4.2, height: 0.02, material: MAT.mudDark, physics: false });
+    game.cylinder({ at: [x, 0.045, z], radius: 4.2, height: 0.03, material: MAT.mudDark, physics: false });
   };
 
   /* A body in the mud. Deliberately not a character rig: these never move,
@@ -1289,7 +1289,7 @@ function buildMap(game, S) {
       v.setRotation([Math.sin(k) * 40, -a * 57.2958, Math.cos(k) * 35]);
     }
     // Broken floor and spoil thrown out round the impact.
-    game.cylinder({ at: [H.x, 0.03, H.z], radius: 2.3, height: 0.06, material: MAT.mudDark, physics: false });
+    game.cylinder({ at: [H.x, 0.075, H.z], radius: 2.3, height: 0.07, material: MAT.mudDark, physics: false });
     for (let k = 0; k < 12; k++) {
       const a = (k / 12) * Math.PI * 2;
       const c = game.box({ at: [H.x + Math.cos(a) * 1.9, 0.10, H.z + Math.sin(a) * 1.9],
@@ -1315,85 +1315,160 @@ function buildMap(game, S) {
     offer: null, offerId: null, timer: 0, flash: null, flashT: 0,
   };
 
-  /* ---------------- the workbench ----------------
-     Front-left corner, off the traffic between the windows and the stair,
-     because standing at it takes your attention off the room entirely. */
-  {
-    const BX = -5.4, BZ = 5.4;
-    const vice = { color: 0x4a4e54, texture: 'metal', roughness: 0.5, metalness: 1 };
-    // Top, apron and four legs.
-    game.box({ at: [BX, 0.94, BZ], size: [2.4, 0.09, 0.85], material: MAT.wood, static: true });
-    game.box({ at: [BX, 0.83, BZ - 0.36], size: [2.4, 0.16, 0.10], material: MAT.wood, static: true });
-    for (const dx of [-1.05, 1.05]) for (const dz of [-0.32, 0.32]) {
-      game.box({ at: [BX + dx, 0.45, BZ + dz], size: [0.11, 0.90, 0.11], material: MAT.wood, static: true });
-    }
-    // Bench vice on the near corner, and a tool rail on the wall behind.
-    game.box({ at: [BX - 0.92, 1.05, BZ - 0.30], size: [0.24, 0.14, 0.20], material: vice, physics: false });
-    game.cylinder({ at: [BX - 0.92, 1.05, BZ - 0.52], radius: 0.020, height: 0.22, material: vice, physics: false })
-      .setRotation([90, 0, 0]);
-    game.box({ at: [BX, 1.86, BZ + 0.40], size: [2.2, 0.05, 0.06], material: vice, static: true });
-    for (let k = 0; k < 9; k++) {
-      const tx = BX - 0.95 + k * 0.24;
-      game.box({ at: [tx, 1.68, BZ + 0.40], size: [0.035, 0.30, 0.035],
-        material: k % 3 === 0 ? MAT.wood : vice, physics: false }).setRotation([0, 0, (k * 17) % 14 - 7]);
-    }
-    // Parts trays and a work light over the top.
-    for (const dx of [-0.55, 0.05, 0.62]) {
-      game.box({ at: [BX + dx, 1.03, BZ + 0.22], size: [0.34, 0.09, 0.24], material: vice, physics: false });
-    }
-    game.box({ at: [BX + 0.2, 1.94, BZ], size: [0.30, 0.06, 0.20], material: vice, physics: false });
+  /* ---------------- the workshop ----------------
 
-    /* Shelves either side, with the parts on them. Everything the bench
-       sells is sitting somewhere on this wall — scopes and drums and muzzle
-       devices in rows — so the bench reads as a place where the work gets
-       done rather than as a table with a menu attached to it. */
+     Its own corner, not a table in the middle of the floor. The bench runs
+     along two walls in the front-left angle of the blockhouse and the
+     shelves are bracketed to those walls above it, which is the whole
+     point: a shelf standing in open air is a shelf nobody built, and a
+     bench a metre off the wall with its tool rail floating behind it reads
+     as scenery rather than as a place someone works.
+
+     A mesh screen closes the fourth side with a gap to walk in by, so the
+     corner is a room you step into. Standing at the bench takes your
+     attention off the floor entirely, so it wants to be somewhere you have
+     to choose to go. */
+  {
+    const WX = M.x0, WZ = M.z1;                       // the corner's two walls
+    const BX = -5.50, BZ = WZ - 0.48;                 // main bench, along +Z
+    const RX = WX + 0.48, RZ = 5.00;                  // return bench, along -X
+    const vice = { color: 0x4a4e54, texture: 'metal', roughness: 0.5, metalness: 1 };
     const blk = { color: 0x24272b, texture: 'metal', roughness: 0.55, metalness: 1 };
     const gls = { color: 0x14202a, texture: 'smooth', roughness: 0.14, metalness: 0,
       emissive: 0x2a6a90, emissiveStrength: 0.7 };
-    for (const [sy, sx0, sx1] of [[1.30, -1.16, -0.12], [1.62, -1.16, -0.12], [1.30, 0.18, 1.16], [1.62, 0.18, 1.16]]) {
-      game.box({ at: [BX + (sx0 + sx1) / 2, sy, BZ + 0.42], size: [sx1 - sx0, 0.045, 0.24], material: MAT.board, static: true });
-      for (const br of [sx0 + 0.06, sx1 - 0.06]) {
-        game.box({ at: [BX + br, sy - 0.09, BZ + 0.46], size: [0.03, 0.14, 0.14], material: vice, physics: false });
+    const mesh = { color: 0x3a3f45, texture: 'metal', roughness: 0.62, metalness: 1 };
+
+    /* Pegboard, screwed flat to both walls. Everything else in the corner
+       hangs off it, which is how a workshop wall actually gets built. */
+    game.box({ at: [-5.30, 1.62, WZ - 0.045], size: [3.30, 1.30, 0.05], material: MAT.board, static: true });
+    game.box({ at: [WX + 0.045, 1.62, 5.35], size: [0.05, 1.30, 2.60], material: MAT.board, static: true });
+
+    /* Benches: top, apron, legs at the front only — the back edge is
+       carried on a ledger screwed to the wall, the way a fitted bench is. */
+    const benchRun = (cx, cz, sx, sz, alongX) => {
+      game.box({ at: [cx, 0.94, cz], size: [sx, 0.09, sz], material: MAT.wood, static: true });
+      if (alongX) {
+        game.box({ at: [cx, 0.83, cz - sz / 2 + 0.06], size: [sx, 0.16, 0.09], material: MAT.wood, static: true });
+        game.box({ at: [cx, 0.86, cz + sz / 2 - 0.03], size: [sx, 0.10, 0.06], material: MAT.board, static: true });
+        for (const dx of [-sx / 2 + 0.16, sx / 2 - 0.16]) {
+          game.box({ at: [cx + dx, 0.45, cz - sz / 2 + 0.12], size: [0.11, 0.90, 0.11], material: MAT.wood, static: true });
+        }
+      } else {
+        game.box({ at: [cx + sx / 2 - 0.06, 0.83, cz], size: [0.09, 0.16, sz], material: MAT.wood, static: true });
+        game.box({ at: [cx - sx / 2 + 0.03, 0.86, cz], size: [0.06, 0.10, sz], material: MAT.board, static: true });
+        for (const dz of [-sz / 2 + 0.16, sz / 2 - 0.16]) {
+          game.box({ at: [cx + sx / 2 - 0.12, 0.45, cz + dz], size: [0.11, 0.90, 0.11], material: MAT.wood, static: true });
+        }
       }
+    };
+    benchRun(BX, BZ, 3.10, 0.86, true);
+    benchRun(RX, RZ, 0.86, 2.40, false);
+
+    /* Shelves, on brackets, against the pegboard on both walls. */
+    const shelf = (cx, cz, sx, sz, y, alongX) => {
+      game.box({ at: [cx, y, cz], size: [sx, 0.045, sz], material: MAT.board, static: true });
+      const ends = alongX ? [[-sx / 2 + 0.07, 0], [sx / 2 - 0.07, 0]] : [[0, -sz / 2 + 0.07], [0, sz / 2 - 0.07]];
+      for (const [ox, oz] of ends) {
+        game.box({ at: [cx + ox, y - 0.10, cz + (alongX ? sz / 2 - 0.06 : oz)],
+          size: [0.03, 0.16, 0.14], material: vice, physics: false })
+          .setRotation(alongX ? [0, 0, 0] : [0, 90, 0]);
+      }
+    };
+    for (const y of [1.34, 1.70, 2.06]) {
+      shelf(-6.10, WZ - 0.20, 1.55, 0.30, y, true);
+      shelf(-4.20, WZ - 0.20, 1.55, 0.30, y, true);
     }
-    // Scopes on the upper left shelf.
-    for (let k = 0; k < 4; k++) {
-      const sx = BX - 1.05 + k * 0.27;
-      game.cylinder({ at: [sx, 1.685, BZ + 0.42], radius: 0.026, height: 0.17, material: blk, physics: false })
-        .setRotation([0, 0, 90]);
-      game.cylinder({ at: [sx + 0.09, 1.685, BZ + 0.42], radius: 0.024, height: 0.010, material: gls, physics: false })
-        .setRotation([0, 0, 90]);
-    }
-    // Magazines standing in a row on the lower left.
+    for (const y of [1.34, 1.70]) shelf(WX + 0.20, 5.20, 0.30, 2.10, y, false);
+
+    /* What the bench sells, sitting on those shelves. Scopes in a row,
+       magazines stood on end, a drum, muzzle devices, spare barrels — so
+       the menu is a list of things you can already see on the wall. */
     for (let k = 0; k < 5; k++) {
-      game.box({ at: [BX - 1.06 + k * 0.21, 1.41, BZ + 0.42], size: [0.030, 0.17, 0.055], material: blk, physics: false })
+      const sx = -6.72 + k * 0.29;
+      game.cylinder({ at: [sx, 1.775, WZ - 0.22], radius: 0.026, height: 0.17, material: blk, physics: false })
+        .setRotation([0, 0, 90]);
+      game.cylinder({ at: [sx + 0.09, 1.775, WZ - 0.22], radius: 0.024, height: 0.010, material: gls, physics: false })
+        .setRotation([0, 0, 90]);
+    }
+    for (let k = 0; k < 7; k++) {
+      game.box({ at: [-6.74 + k * 0.23, 1.455, WZ - 0.22], size: [0.030, 0.17, 0.055], material: blk, physics: false })
         .setRotation([0, 0, (k * 11) % 9 - 4]);
     }
-    // A drum and two muzzle devices on the upper right.
-    game.cylinder({ at: [BX + 0.34, 1.70, BZ + 0.42], radius: 0.085, height: 0.05, material: blk, physics: false })
+    game.cylinder({ at: [-4.80, 1.815, WZ - 0.22], radius: 0.085, height: 0.05, material: blk, physics: false })
       .setRotation([90, 0, 0]);
-    for (let k = 0; k < 3; k++) {
-      game.cylinder({ at: [BX + 0.62 + k * 0.16, 1.665, BZ + 0.42], radius: 0.027, height: 0.13, material: vice, physics: false })
+    for (let k = 0; k < 4; k++) {
+      game.cylinder({ at: [-4.45 + k * 0.17, 1.785, WZ - 0.22], radius: 0.027, height: 0.13, material: vice, physics: false })
         .setRotation([0, 0, 90]);
     }
-    // Barrels leaning in the corner of the lower right shelf.
-    for (let k = 0; k < 3; k++) {
-      game.cylinder({ at: [BX + 0.30 + k * 0.15, 1.44, BZ + 0.42], radius: 0.014, height: 0.24, material: vice, physics: false })
-        .setRotation([0, 0, 78 + k * 5]);
-    }
-    // Oil can, rag and a box of shells on the bench top itself.
-    game.cylinder({ at: [BX + 0.95, 1.06, BZ - 0.10], radius: 0.045, height: 0.15, material: vice, physics: false });
-    game.cylinder({ at: [BX + 0.95, 1.16, BZ - 0.16], radius: 0.010, height: 0.11, material: vice, physics: false })
-      .setRotation([44, 0, 0]);
-    game.box({ at: [BX - 0.30, 1.02, BZ - 0.06], size: [0.20, 0.07, 0.14], material: MAT.board, physics: false });
     for (let k = 0; k < 4; k++) {
-      game.cylinder({ at: [BX - 0.34 + k * 0.026, 1.07, BZ - 0.06], radius: 0.009, height: 0.045,
+      game.cylinder({ at: [-4.70 + k * 0.16, 1.470, WZ - 0.22], radius: 0.014, height: 0.26, material: vice, physics: false })
+        .setRotation([0, 0, 74 + k * 6]);
+    }
+    // Stock parts and a stripped receiver on the top shelf.
+    for (let k = 0; k < 3; k++) {
+      game.box({ at: [-6.50 + k * 0.42, 2.13, WZ - 0.22], size: [0.36, 0.09, 0.10], material: MAT.wood, physics: false })
+        .setRotation([0, 0, 3 - k * 3]);
+    }
+    game.box({ at: [-4.40, 2.13, WZ - 0.22], size: [0.52, 0.08, 0.09], material: blk, physics: false });
+    // Ammunition boxes on the return shelves.
+    for (let k = 0; k < 4; k++) {
+      game.box({ at: [WX + 0.22, 1.40, 4.35 + k * 0.44], size: [0.20, 0.11, 0.30],
+        material: MAT.board, physics: false });
+    }
+    for (let k = 0; k < 3; k++) {
+      game.cylinder({ at: [WX + 0.22, 1.79, 4.55 + k * 0.55], radius: 0.055, height: 0.20, material: vice, physics: false })
+        .setRotation([90, 0, 0]);
+    }
+
+    /* Tool rail on the pegboard, above the main bench: hammers, files,
+       drivers, a hacksaw, hanging where a hand can reach them. */
+    game.box({ at: [-5.30, 1.18, WZ - 0.10], size: [3.10, 0.05, 0.06], material: vice, static: true });
+    for (let k = 0; k < 13; k++) {
+      const tx = -6.72 + k * 0.24;
+      game.box({ at: [tx, 1.03, WZ - 0.12], size: [0.035, 0.28, 0.035],
+        material: k % 3 === 0 ? MAT.wood : vice, physics: false }).setRotation([0, 0, (k * 17) % 14 - 7]);
+    }
+    game.box({ at: [-3.95, 1.55, WZ - 0.10], size: [0.42, 0.30, 0.03], material: vice, physics: false })
+      .setRotation([0, 0, 12]);
+
+    /* Bench vice, parts trays, oil can, a box of shells, and the lamp. */
+    game.box({ at: [-6.72, 1.05, BZ - 0.24], size: [0.24, 0.14, 0.20], material: vice, physics: false });
+    game.cylinder({ at: [-6.72, 1.05, BZ - 0.46], radius: 0.020, height: 0.22, material: vice, physics: false })
+      .setRotation([90, 0, 0]);
+    for (const dx of [-0.85, -0.30, 0.28]) {
+      game.box({ at: [BX + dx, 1.03, BZ + 0.22], size: [0.34, 0.09, 0.24], material: vice, physics: false });
+    }
+    game.cylinder({ at: [BX + 1.10, 1.06, BZ - 0.10], radius: 0.045, height: 0.15, material: vice, physics: false });
+    game.cylinder({ at: [BX + 1.10, 1.16, BZ - 0.16], radius: 0.010, height: 0.11, material: vice, physics: false })
+      .setRotation([44, 0, 0]);
+    game.box({ at: [BX + 0.62, 1.02, BZ - 0.16], size: [0.20, 0.07, 0.14], material: MAT.board, physics: false });
+    for (let k = 0; k < 4; k++) {
+      game.cylinder({ at: [BX + 0.58 + k * 0.026, 1.07, BZ - 0.16], radius: 0.009, height: 0.045,
         material: { color: 0xa8843c, texture: 'metal', roughness: 0.3, metalness: 1 }, physics: false });
     }
+    // Conduit and the shade over the bench, hung off the ceiling.
+    game.cylinder({ at: [BX, 2.72, BZ + 0.10], radius: 0.014, height: 0.62, material: vice, physics: false });
+    game.box({ at: [BX, 2.36, BZ + 0.10], size: [0.60, 0.09, 0.24], material: vice, physics: false });
+
+    /* The screen that makes it a corner: a steel mesh panel on posts,
+       with a gap at the far end to walk in by. */
+    for (const [zc, zl] of [[6.20, 1.55], [4.62, 0.60]]) {
+      game.box({ at: [-3.72, 1.10, zc], size: [0.05, 2.05, zl], material: mesh, static: true });
+      game.box({ at: [-3.72, 2.16, zc], size: [0.09, 0.09, zl], material: vice, static: true });
+    }
+    for (const zc of [WZ - 0.08, 5.42, 4.32]) {
+      game.box({ at: [-3.72, 1.10, zc], size: [0.10, 2.20, 0.10], material: vice, static: true });
+    }
+    // Duckboard on the floor, so the corner has a floor of its own.
+    for (let k = 0; k < 8; k++) {
+      game.box({ at: [-5.60 + k * 0.00, 0.035, 4.35 + k * 0.30], size: [3.20, 0.05, 0.16],
+        material: MAT.wood, physics: false });
+    }
+
     S.bench = {
-      at: [BX, 1.0, BZ - 0.62], open: false, slot: 0, index: 0,
+      at: [BX, 1.0, BZ - 0.72], open: false, slot: 0, index: 0,
       spin: 0.9, preview: false, picking: false, damage: false,
-      light: game.light({ at: [BX + 0.2, 1.82, BZ], color: 0xfff0d0, intensity: 26, radius: 4.2 }),
+      light: game.light({ at: [BX, 2.28, BZ + 0.10], color: 0xfff0d0, intensity: 26, radius: 4.6 }),
     };
   }
 
@@ -1485,521 +1560,98 @@ function setPower(game, S, on) {
   S.powered = on;
 }
 
-/* ---------------- composite guns ----------------
-   The Thompson and 1911 are real engine models. The other two are
-   assembled from primitives — parented to an invisible root so a
-   whole gun moves as one actor. */
+/* ---------------- the rack ----------------
 
-function makeScattergun(game, opts = {}) {
-  const steel = opts.chalk
-    ? { color: 0xf5f2e6, texture: 'smooth', roughness: 0.9, emissive: 0xcfe8ff, emissiveStrength: 0.35 }
-    : { color: 0x3a3f45, texture: 'metal', roughness: 0.4, metalness: 1 };
-  const wood = opts.chalk ? steel : { color: 0x5e3d1f, texture: 'wood', roughness: 0.7, uvScale: 3 };
-  // size:1, not a tiny marker — box() maps size onto the actor's scale, and
-  // a 0.02 root silently scales every parented part by 1/50.
-  const root = game.box({ at: opts.at || [0, 0, 0], size: 1, physics: false, visible: false });
-  const parts = [];
-  // Everything forward of the hinge, with the transform it rests at, so the
-  // break-open reload can swing it. A double gun that reloads by dipping out
-  // of frame is the thing the whole reload rework exists to stop.
-  const swing = [];
-  const add = (a, pos, rot, into) => {
-    a.parent = root;
-    a.setPosition(pos);
-    if (rot) a.setRotation(rot);
-    parts.push(a);
-    if (into) into.push({ a, p: pos.slice(), r: rot ? rot.slice() : [0, 0, 0] });
-    return a;
-  };
-  // Two barrels side by side, muzzles at +X like every gun here.
-  for (const dz of [-0.014, 0.014]) {
-    add(game.cylinder({ radius: 0.0125, height: 0.50, material: steel, physics: false }), [0.30, 0.012, dz], [0, 0, 90], swing);
-    add(game.cylinder({ radius: 0.0095, height: 0.012, material: steel, physics: false }), [0.552, 0.012, dz], [0, 0, 90], swing);
-  }
-  add(game.box({ size: [0.16, 0.062, 0.052], material: steel, physics: false }), [0.0, 0.004, 0]);       // receiver
-  add(game.box({ size: [0.26, 0.056, 0.04], material: wood, physics: false }), [-0.20, -0.03, 0], [0, 0, 6]); // stock
-  add(game.box({ size: [0.05, 0.09, 0.036], material: wood, physics: false }), [-0.055, -0.062, 0], [0, 0, 18]); // grip
-  add(game.box({ size: [0.2, 0.03, 0.044], material: wood, physics: false }), [0.30, -0.016, 0], null, swing); // forend
-  add(game.box({ size: [0.05, 0.018, 0.03], material: steel, physics: false }), [-0.02, -0.052, 0]);     // guard
-  // Bead, on the rib between the barrels — what a side-by-side aims with.
-  add(game.sphere({ radius: 0.0035, material: steel, physics: false }), [0.545, 0.0275, 0], null, swing);
-  add(game.box({ size: [0.44, 0.006, 0.010], material: steel, physics: false }), [0.33, 0.0235, 0], null, swing);
-  // Hinge pin, and the pin the barrels turn on.
-  add(game.cylinder({ radius: 0.009, height: 0.056, material: steel, physics: false }), [0.075, -0.022, 0], [90, 0, 0]);
-  return { root, parts, swing, hinge: [0.075, -0.022, 0] };
+   Every weapon in the game is now a real model out of the engine —
+   swept profiles at real dimensions, the same way the Thompson and the
+   1911 are built — rather than an assembly of stretched cubes. They used
+   to be, and it showed: the MP5's rear sight was a sphere, the Arc
+   Breaker was a black lump, and next to the two real models the rest of
+   the rack looked like it had been thrown together in a lunch break,
+   because it had.
+
+   What is left here is the adaptor. The game moves weapons as
+   `{ root, parts }` groups with named moving pieces, so each of these
+   turns an engine actor and its children into that shape. `opts.chalk`
+   paints the whole thing in the wall-buy's chalk, which works because
+   every part goes through one tint.
+
+   The pieces each gun exposes are the pieces its reload animation moves:
+
+     swing / hinge   the break guns' barrels, and the pin they drop on
+     mag / bolt      a box magazine and a cocking handle
+     clip / bolt     a stripper clip and the bolt it feeds past
+     cylinder/crane  a revolver's cylinder and the arm it swings out on
+     cell            the Arc Breaker's battery
+*/
+
+const CHALK_MAT = {
+  color: 0xf5f2e6, texture: 'smooth', roughness: 0.9,
+  emissive: 0xcfe8ff, emissiveStrength: 0.35,
+};
+
+/* Turn an engine weapon actor into the group the game moves. */
+function rackGroup(body, extra = {}) {
+  const parts = [body];
+  for (const name of (body.partNames || []).slice(1)) if (body[name]) parts.push(body[name]);
+  return Object.assign({ root: body, parts }, extra);
 }
 
-/* ---------------- the Paralyzer ----------------
-   A break-action double gun that was never made for shooting birds: no
-   wood on it anywhere, a capacitor bank sitting where a rib would be,
-   copper wound round both barrels and a pair of emitter rings at the
-   muzzles. It throws a heavy slug and a current with it — anything it
-   touches spends ten seconds locked up and twitching. */
-function makeParalyzer(game, opts = {}) {
-  const chalk = { color: 0xf5f2e6, texture: 'smooth', roughness: 0.9, emissive: 0xcfe8ff, emissiveStrength: 0.35 };
-  const steel = opts.chalk ? chalk : { color: 0x6f767e, texture: 'metal', roughness: 0.34, metalness: 1 };
-  const dark = opts.chalk ? chalk : { color: 0x2b3036, texture: 'metal', roughness: 0.46, metalness: 1 };
-  const copper = opts.chalk ? chalk : { color: 0xb4763a, texture: 'metal', roughness: 0.30, metalness: 1 };
-  const glass = opts.chalk ? chalk : { color: 0x2a4a5e, texture: 'smooth', roughness: 0.12, metalness: 0,
-    emissive: 0x3ea8ff, emissiveStrength: 2.4 };
-  const grip = opts.chalk ? chalk : { color: 0x24262a, texture: 'fabric', roughness: 0.92, metalness: 0, uvScale: 5 };
-  const root = game.box({ at: opts.at || [0, 0, 0], size: 1, physics: false, visible: false });
-  const parts = [];
-  /* Everything forward of the hinge lives in this list, with the transform
-     it rests at. The break-open reload swings the lot about the hinge pin
-     as one piece, which is what a break gun does — animating the barrels
-     alone leaves the forend and the capacitor bank hanging in the air. */
-  const swing = [];
-  const add = (a, pos, rot, into) => {
-    a.parent = root; a.setPosition(pos); if (rot) a.setRotation(rot);
-    parts.push(a);
-    if (into) into.push({ a, p: pos.slice(), r: rot ? rot.slice() : [0, 0, 0] });
-    return a;
-  };
-
-  // Twin barrels, over and under, each wound with copper at two stations.
-  for (const dy of [0.020, -0.010]) {
-    add(game.cylinder({ radius: 0.0145, height: 0.46, material: steel, physics: false }), [0.28, dy, 0], [0, 0, 90], swing);
-    for (const bx of [0.16, 0.36]) {
-      for (let k = 0; k < 5; k++) {
-        add(game.cylinder({ radius: 0.0182, height: 0.008, material: copper, physics: false }),
-          [bx + k * 0.010, dy, 0], [0, 0, 90], swing);
-      }
-    }
-    // Emitter ring at the muzzle: four segments round a glowing core.
-    add(game.cylinder({ radius: 0.021, height: 0.016, material: dark, physics: false }), [0.502, dy, 0], [0, 0, 90], swing);
-    add(game.cylinder({ radius: 0.0125, height: 0.020, material: glass, physics: false }), [0.508, dy, 0], [0, 0, 90], swing);
-  }
-  // The capacitor bank across the top: three cylinders in a cradle.
-  for (let k = 0; k < 3; k++) {
-    add(game.cylinder({ radius: 0.0165, height: 0.11, material: dark, physics: false }), [0.12 + k * 0.052, 0.058, 0], [0, 0, 90], swing);
-    add(game.cylinder({ radius: 0.0175, height: 0.010, material: copper, physics: false }), [0.075 + k * 0.052, 0.058, 0], [0, 0, 90], swing);
-  }
-  add(game.box({ size: [0.20, 0.012, 0.044], material: steel, physics: false }), [0.17, 0.040, 0], null, swing);
-  // Cable from the bank down into the receiver, sagging the way cable does.
-  for (let k = 0; k < 5; k++) {
-    const t = k / 4;
-    add(game.cylinder({ radius: 0.0042, height: 0.034, material: grip, physics: false }),
-      [0.075 - t * 0.075, 0.050 - Math.sin(t * Math.PI) * 0.012 - t * 0.028, 0.020], [0, 0, 62 - t * 20], swing);
-  }
-  // Forend under the barrels.
-  add(game.box({ size: [0.17, 0.032, 0.044], material: dark, physics: false }), [0.27, -0.032, 0], null, swing);
-  for (let k = 0; k < 4; k++) {
-    add(game.box({ size: [0.006, 0.030, 0.046], material: steel, physics: false }), [0.21 + k * 0.038, -0.032, 0], null, swing);
-  }
-
-  // Receiver, hinge, breech face.
-  add(game.box({ size: [0.15, 0.070, 0.050], material: steel, physics: false }), [0.005, 0.006, 0]);
-  add(game.cylinder({ radius: 0.010, height: 0.052, material: dark, physics: false }), [0.062, -0.020, 0], [90, 0, 0]);
-  add(game.box({ size: [0.020, 0.058, 0.046], material: dark, physics: false }), [0.070, 0.012, 0]);
-  // Top lever, thumb piece, trigger and guard.
-  add(game.box({ size: [0.050, 0.010, 0.016], material: steel, physics: false }), [-0.030, 0.044, 0]);
-  add(game.box({ size: [0.014, 0.026, 0.010], material: dark, physics: false }), [-0.014, -0.048, 0], [0, 0, -12]);
-  add(game.box({ size: [0.058, 0.014, 0.030], material: steel, physics: false }), [-0.020, -0.062, 0]);
-  // Pistol grip and a skeleton stock, both metal.
-  add(game.box({ size: [0.052, 0.100, 0.038], material: grip, physics: false }), [-0.062, -0.062, 0], [0, 0, 20]);
-  add(game.box({ size: [0.052, 0.028, 0.040], material: steel, physics: false }), [-0.105, 0.008, 0]);
-  for (const dy of [0.030, -0.030]) {
-    add(game.box({ size: [0.16, 0.014, 0.020], material: steel, physics: false }), [-0.195, dy * 0.7 + 0.004, 0], [0, 0, dy > 0 ? -5 : 5]);
-  }
-  add(game.box({ size: [0.020, 0.088, 0.042], material: grip, physics: false }), [-0.278, 0.002, 0], [0, 0, -4]);
-  // A meter on the left of the receiver, so the thing reads as instrumented.
-  add(game.cylinder({ radius: 0.014, height: 0.008, material: glass, physics: false }), [0.010, 0.016, -0.028], [90, 0, 0]);
-  add(game.cylinder({ radius: 0.017, height: 0.006, material: dark, physics: false }), [0.010, 0.016, -0.031], [90, 0, 0]);
-  // Rib and bead between the barrels.
-  add(game.box({ size: [0.40, 0.005, 0.009], material: dark, physics: false }), [0.31, 0.038, 0], null, swing);
-  add(game.sphere({ radius: 0.0038, material: glass, physics: false }), [0.500, 0.0425, 0], null, swing);
-  return { root, parts, swing, hinge: [0.062, -0.020, 0] };
+function rackOpts(opts) {
+  const o = { physics: false, at: opts.at || [0, 0, 0] };
+  if (opts.chalk) o.tint = CHALK_MAT;
+  return o;
 }
 
-/* ---------------- MP5 ----------------
-   Roller-locked, sliding stock, curved thirty-round magazine. On the wall
-   in the wing, which is the first thing power buys you. */
+/* The three break guns. Their barrels, forend and — on the Paralyzer —
+   coils and charge tube all travel together on the hinge pin, so they are
+   handed over as one swing list with a rest transform apiece. */
+function rackBreak(body) {
+  const swing = [];
+  for (const name of body.swingParts) {
+    if (body[name]) swing.push({ a: body[name], p: [0, 0, 0], r: [0, 0, 0] });
+  }
+  return rackGroup(body, { swing, hinge: body.hinge });
+}
+
+function makeScattergun(game, opts = {}) { return rackBreak(game.scattergun(rackOpts(opts))); }
+function makeSawedOff(game, opts = {}) { return rackBreak(game.sawnOff(rackOpts(opts))); }
+function makeParalyzer(game, opts = {}) { return rackBreak(game.paralyzer(rackOpts(opts))); }
+
 function makeMP5(game, opts = {}) {
-  const chalk = { color: 0xf5f2e6, texture: 'smooth', roughness: 0.9, emissive: 0xcfe8ff, emissiveStrength: 0.35 };
-  const black = opts.chalk ? chalk : { color: 0x25282c, texture: 'metal', roughness: 0.52, metalness: 1 };
-  const steel = opts.chalk ? chalk : { color: 0x4c5158, texture: 'metal', roughness: 0.36, metalness: 1 };
-  const poly = opts.chalk ? chalk : { color: 0x1b1d20, texture: 'fabric', roughness: 0.88, metalness: 0, uvScale: 6 };
-  const root = game.box({ at: opts.at || [0, 0, 0], size: 1, physics: false, visible: false });
-  const parts = [];
-  const add = (a, pos, rot) => { a.parent = root; a.setPosition(pos); if (rot) a.setRotation(rot); parts.push(a); return a; };
-  // Receiver, barrel, shroud.
-  add(game.box({ size: [0.26, 0.052, 0.042], material: black, physics: false }), [0.06, 0.010, 0]);
-  add(game.cylinder({ radius: 0.0115, height: 0.20, material: steel, physics: false }), [0.27, 0.012, 0], [0, 0, 90]);
-  add(game.cylinder({ radius: 0.017, height: 0.115, material: black, physics: false }), [0.245, 0.012, 0], [0, 0, 90]);
-  // Three-lug muzzle.
-  for (let k = 0; k < 3; k++) {
-    add(game.box({ size: [0.016, 0.008, 0.020], material: steel, physics: false }), [0.352, 0.012, 0], [0, 0, 0]);
-    add(game.box({ size: [0.016, 0.020, 0.008], material: steel, physics: false }), [0.352, 0.012, 0], [k * 60, 0, 0]);
-  }
-  // Cocking tube up the left with its handle — the part the reload throws.
-  add(game.cylinder({ radius: 0.011, height: 0.17, material: black, physics: false }), [0.20, 0.040, -0.021], [0, 0, 90]);
-  const bolt = add(game.box({ size: [0.030, 0.016, 0.030], material: steel, physics: false }), [0.255, 0.040, -0.034]);
-  // Curved magazine, four segments so it actually bends.
-  const mag = [];
-  for (let k = 0; k < 4; k++) {
-    const m = add(game.box({ size: [0.030, 0.050, 0.026], material: black, physics: false }),
-      [-0.012 - k * 0.008, -0.050 - k * 0.046, 0], [0, 0, -7 - k * 4]);
-    mag.push(m);
-  }
-  // Handguard, grip, stock rails and butt.
-  add(game.box({ size: [0.135, 0.040, 0.044], material: poly, physics: false }), [0.215, -0.020, 0]);
-  add(game.box({ size: [0.044, 0.098, 0.034], material: poly, physics: false }), [-0.055, -0.058, 0], [0, 0, 14]);
-  add(game.box({ size: [0.052, 0.014, 0.030], material: black, physics: false }), [-0.018, -0.058, 0]);
-  for (const dz of [-0.017, 0.017]) {
-    add(game.box({ size: [0.15, 0.012, 0.012], material: steel, physics: false }), [-0.175, 0.004, dz]);
-  }
-  add(game.box({ size: [0.022, 0.062, 0.046], material: poly, physics: false }), [-0.256, 0.002, 0]);
-  // Hooded front post and the drum rear aperture.
-  add(game.cylinder({ radius: 0.012, height: 0.030, material: black, physics: false }), [0.30, 0.040, 0], [0, 0, 90]);
-  add(game.box({ size: [0.006, 0.020, 0.004], material: steel, physics: false }), [0.30, 0.044, 0]);
-  add(game.cylinder({ radius: 0.014, height: 0.020, material: black, physics: false }), [-0.052, 0.044, 0], [0, 0, 90]);
-  return { root, parts, mag, bolt };
+  const b = game.mp5(rackOpts(opts));
+  return rackGroup(b, { mag: [b.mag], bolt: b.bolt, boltRest: b.boltRest, boltThrow: b.boltThrow });
 }
 
-/* ---------------- sawed-off ----------------
-   Both barrels cut back to the forend and the stock cut to a stub. No
-   range at all and it does not care. */
-function makeSawedOff(game, opts = {}) {
-  const chalk = { color: 0xf5f2e6, texture: 'smooth', roughness: 0.9, emissive: 0xcfe8ff, emissiveStrength: 0.35 };
-  const steel = opts.chalk ? chalk : { color: 0x3f444a, texture: 'metal', roughness: 0.44, metalness: 1 };
-  const wood = opts.chalk ? chalk : { color: 0x4e3319, texture: 'wood', roughness: 0.78, uvScale: 4 };
-  const brass = opts.chalk ? chalk : { color: 0xa8843c, texture: 'metal', roughness: 0.32, metalness: 1 };
-  const root = game.box({ at: opts.at || [0, 0, 0], size: 1, physics: false, visible: false });
-  const parts = [];
-  const swing = [];
-  const add = (a, pos, rot, into) => {
-    a.parent = root; a.setPosition(pos); if (rot) a.setRotation(rot);
-    parts.push(a);
-    if (into) into.push({ a, p: pos.slice(), r: rot ? rot.slice() : [0, 0, 0] });
-    return a;
-  };
-  for (const dz of [-0.015, 0.015]) {
-    add(game.cylinder({ radius: 0.0155, height: 0.20, material: steel, physics: false }), [0.15, 0.010, dz], [0, 0, 90], swing);
-    // Sawn muzzle: a raw ring, no bead, no choke.
-    add(game.cylinder({ radius: 0.0165, height: 0.008, material: steel, physics: false }), [0.252, 0.010, dz], [0, 0, 90], swing);
-  }
-  add(game.box({ size: [0.10, 0.030, 0.048], material: wood, physics: false }), [0.14, -0.024, 0], null, swing);
-  add(game.box({ size: [0.13, 0.064, 0.052], material: steel, physics: false }), [0.005, 0.004, 0]);
-  add(game.cylinder({ radius: 0.009, height: 0.052, material: steel, physics: false }), [0.052, -0.020, 0], [90, 0, 0]);
-  // Exposed hammers, which is most of the silhouette from the side.
-  for (const dz of [-0.014, 0.014]) {
-    add(game.box({ size: [0.018, 0.034, 0.010], material: steel, physics: false }), [-0.048, 0.030, dz], [0, 0, -22]);
-  }
-  add(game.box({ size: [0.046, 0.010, 0.014], material: steel, physics: false }), [-0.026, 0.040, 0]);
-  add(game.box({ size: [0.014, 0.024, 0.010], material: steel, physics: false }), [-0.012, -0.044, 0], [0, 0, -14]);
-  add(game.box({ size: [0.052, 0.012, 0.028], material: steel, physics: false }), [-0.018, -0.058, 0]);
-  // Cut stock: a stub grip and a rough saw line.
-  add(game.box({ size: [0.085, 0.096, 0.040], material: wood, physics: false }), [-0.075, -0.048, 0], [0, 0, 26]);
-  add(game.box({ size: [0.012, 0.070, 0.042], material: wood, physics: false }), [-0.113, -0.075, 0], [0, 0, 26]);
-  for (const dz of [-0.012, 0.012]) {
-    add(game.cylinder({ radius: 0.0085, height: 0.012, material: brass, physics: false }), [-0.058, 0.006, dz], [0, 0, 90]);
-  }
-  return { root, parts, swing, hinge: [0.052, -0.020, 0] };
-}
-
-/* A trench knife: blade, guard, ribbed grip. Small enough that its whole
-   job is silhouette, so the blade gets a bevel and the grip gets rings. */
-function makeKnife(game, opts = {}) {
-  const steel = { color: 0xc8ccd2, texture: 'metal', roughness: 0.24, metalness: 1 };
-  const grip = { color: 0x2e2a24, texture: 'fabric', roughness: 0.9, metalness: 0, uvScale: 6 };
-  const brass = { color: 0xb08d4a, texture: 'metal', roughness: 0.38, metalness: 1 };
-  const root = game.box({ at: opts.at || [0, 0, 0], size: 1, physics: false, visible: false });
-  const parts = [];
-  const add = (a, pos, rot) => { a.parent = root; a.setPosition(pos); if (rot) a.setRotation(rot); parts.push(a); return a; };
-  // Blade: two wedges back to back give an edge without a custom mesh.
-  add(game.box({ size: [0.155, 0.026, 0.005], material: steel, physics: false }), [0.115, 0.004, 0], [0, 0, 1.5]);
-  add(game.box({ size: [0.075, 0.017, 0.0035], material: steel, physics: false }), [0.208, 0.001, 0], [0, 0, -7]);
-  add(game.box({ size: [0.012, 0.040, 0.022], material: brass, physics: false }), [0.034, 0, 0]);   // guard
-  for (let i = 0; i < 4; i++) {
-    add(game.cylinder({ radius: 0.0125, height: 0.020, material: grip, physics: false }), [-0.002 - i * 0.022, -0.002, 0], [0, 0, 90]);
-  }
-  add(game.box({ size: [0.014, 0.026, 0.024], material: brass, physics: false }), [-0.102, -0.003, 0]);  // pommel
-  return { root, parts };
-}
-
-/* A claw hammer. Handle, head, claw — held like a tool, not a gun, so it
-   gets its own hand pose. */
-/* ---------------- Obliterated Model 5 ----------------
-   Four chambers, a barrel you could look down and lose your nerve, and
-   enough behind each round to carry it through two bodies and into a
-   third. Built as a real revolver: frame, top strap, fluted cylinder with
-   four visible chambers, crane, ejector rod under the barrel, hammer,
-   trigger inside a guard, and a chequered grip. */
-function makeObliterator(game, opts = {}) {
-  const steel = { color: 0x585d64, texture: 'metal', roughness: 0.34, metalness: 1 };
-  const blued = { color: 0x24262b, texture: 'metal', roughness: 0.26, metalness: 1 };
-  const wood = { color: 0x50331c, texture: 'wood', roughness: 0.62, metalness: 0, uvScale: 5 };
-  const brass = { color: 0xa8843c, texture: 'metal', roughness: 0.3, metalness: 1 };
-  const root = game.box({ at: opts.at || [0, 0, 0], size: 1, physics: false, visible: false });
-  const parts = [];
-  /* This model is authored with the muzzle down +Z, and everything else in
-     the game — and the viewmodel code that aims it — uses +X. Rather than
-     rewrite every coordinate, the parts hang off a pivot turned a quarter
-     turn, so the model keeps its own frame and still points where the
-     player is looking. Without this it is held broadside: the sights face
-     the wall and the grip points at the ceiling. */
-  const pivot = game.box({ at: [0, 0, 0], size: 1, physics: false, visible: false });
-  pivot.parent = root; pivot.setRotation([0, 90, 0]);
-  const add = (a, pos, rot) => { a.parent = pivot; a.setPosition(pos); if (rot) a.setRotation(rot); parts.push(a); return a; };
-  parts.push(pivot);
-  // Barrel: a heavy tube with a full-length underlug.
-  add(game.cylinder({ radius: 0.0125, height: 0.185, material: blued, physics: false }), [0, 0.012, 0.145], [90, 0, 0]);
-  add(game.box({ size: [0.020, 0.021, 0.170], material: blued, physics: false }), [0, -0.004, 0.140]);
-  // Ejector rod in the lug.
-  add(game.cylinder({ radius: 0.0045, height: 0.135, material: steel, physics: false }), [0, -0.010, 0.130], [90, 0, 0]);
-  // Frame and top strap.
-  add(game.box({ size: [0.026, 0.030, 0.088], material: steel, physics: false }), [0, 0.008, 0.030]);
-  add(game.box({ size: [0.024, 0.008, 0.086], material: steel, physics: false }), [0, 0.028, 0.030]);
-  // Cylinder, fluted, four chambers.
-  const cyl = add(game.cylinder({ radius: 0.0225, height: 0.052, material: blued, physics: false }), [0, 0.008, 0.036], [90, 0, 0]);
-  for (let k = 0; k < 4; k++) {
-    const a2 = (k / 4) * Math.PI * 2;
-    add(game.cylinder({ radius: 0.0058, height: 0.054, material: brass, physics: false }),
-      [Math.sin(a2) * 0.0125, 0.008 + Math.cos(a2) * 0.0125, 0.036], [90, 0, 0]);
-    add(game.box({ size: [0.005, 0.010, 0.040], material: blued, physics: false }),
-      [Math.sin(a2 + 0.78) * 0.020, 0.008 + Math.cos(a2 + 0.78) * 0.020, 0.036]);
-  }
-  // Crane, hammer, trigger and guard.
-  add(game.cylinder({ radius: 0.007, height: 0.050, material: steel, physics: false }), [-0.022, 0.008, 0.036], [90, 0, 0]);
-  add(game.box({ size: [0.012, 0.026, 0.020], material: steel, physics: false }), [0, 0.026, -0.020], [-18, 0, 0]);
-  add(game.box({ size: [0.007, 0.020, 0.008], material: steel, physics: false }), [0, -0.020, -0.002]);
-  add(game.cylinder({ radius: 0.019, height: 0.010, material: steel, physics: false }), [0, -0.022, -0.002], [0, 90, 0]);
-  // Grip: backstrap and two chequered panels.
-  add(game.box({ size: [0.020, 0.086, 0.034], material: steel, physics: false }), [0, -0.056, -0.044], [17, 0, 0]);
-  for (const sx of [-1, 1]) add(game.box({ size: [0.008, 0.082, 0.032], material: wood, physics: false }), [sx * 0.013, -0.056, -0.044], [17, 0, 0]);
-  // Front sight and rear notch.
-  add(game.box({ size: [0.004, 0.011, 0.010], material: blued, physics: false }), [0, 0.030, 0.222]);
-  add(game.box({ size: [0.016, 0.007, 0.010], material: blued, physics: false }), [0, 0.032, -0.008]);
-  root.cylinder = cyl;
-  return { root, parts, cylinder: cyl };
-}
-
-/* ---------------- Mauser ----------------
-   Slab-sided, box magazine ahead of the trigger, that long thin barrel and
-   the broom-handle grip. */
 function makeMauser(game, opts = {}) {
-  const blued = { color: 0x272a30, texture: 'metal', roughness: 0.28, metalness: 1 };
-  const steel = { color: 0x5a6068, texture: 'metal', roughness: 0.36, metalness: 1 };
-  const wood = { color: 0x6b4622, texture: 'wood', roughness: 0.66, metalness: 0, uvScale: 5 };
-  const brass = { color: 0xa8843c, texture: 'metal', roughness: 0.30, metalness: 1 };
-  const root = game.box({ at: opts.at || [0, 0, 0], size: 1, physics: false, visible: false });
-  const parts = [];
-  /* This model is authored with the muzzle down +Z, and everything else in
-     the game — and the viewmodel code that aims it — uses +X. Rather than
-     rewrite every coordinate, the parts hang off a pivot turned a quarter
-     turn, so the model keeps its own frame and still points where the
-     player is looking. Without this it is held broadside: the sights face
-     the wall and the grip points at the ceiling. */
-  const pivot = game.box({ at: [0, 0, 0], size: 1, physics: false, visible: false });
-  pivot.parent = root; pivot.setRotation([0, 90, 0]);
-  const add = (a, pos, rot) => { a.parent = pivot; a.setPosition(pos); if (rot) a.setRotation(rot); parts.push(a); return a; };
-  parts.push(pivot);
-  add(game.cylinder({ radius: 0.0068, height: 0.150, material: blued, physics: false }), [0, 0.016, 0.150], [90, 0, 0]);
-  add(game.box({ size: [0.019, 0.026, 0.120], material: blued, physics: false }), [0, 0.014, 0.062]);
-  // Bolt housing and the bolt itself.
-  add(game.cylinder({ radius: 0.0105, height: 0.070, material: steel, physics: false }), [0, 0.020, 0.010], [90, 0, 0]);
-  add(game.cylinder({ radius: 0.0072, height: 0.026, material: steel, physics: false }), [0, 0.020, -0.030], [90, 0, 0]);
-  // Box magazine ahead of the trigger — the shape that names it.
-  add(game.box({ size: [0.018, 0.046, 0.036], material: blued, physics: false }), [0, -0.020, 0.030]);
-  add(game.box({ size: [0.007, 0.018, 0.008], material: steel, physics: false }), [0, -0.026, -0.006]);
-  add(game.cylinder({ radius: 0.017, height: 0.009, material: steel, physics: false }), [0, -0.028, -0.006], [0, 90, 0]);
-  // Broom-handle grip.
-  add(game.cylinder({ radius: 0.017, height: 0.078, material: wood, physics: false }), [0, -0.056, -0.046], [22, 0, 0]);
-  add(game.sphere({ radius: 0.017, material: wood, physics: false }), [0, -0.090, -0.060]);
-  add(game.box({ size: [0.012, 0.010, 0.012], material: blued, physics: false }), [0, 0.036, 0.212]);
-  add(game.box({ size: [0.018, 0.008, 0.012], material: blued, physics: false }), [0, 0.036, -0.020]);
-  /* The bolt, and the stripper clip that feeds it. A C96 is loaded from the
-     top through the open action: bolt back, clip pressed down into the
-     magazine, clip flicked away, bolt forward. Both of these are driven by
-     the reload, so both have to exist as their own parts. */
-  const bolt = add(game.cylinder({ radius: 0.0105, height: 0.070, material: steel, physics: false }), [0, 0.020, 0.010], [90, 0, 0]);
-  const clip = add(game.box({ size: [0.016, 0.052, 0.011], material: brass, physics: false }), [0, 0.075, 0.030]);
-  clip.visible = false;
-  return { root, parts, bolt, clip, boltRest: [0, 0.020, 0.010], clipRest: [0, 0.075, 0.030] };
+  const b = game.mauserC96(rackOpts(opts));
+  return rackGroup(b, {
+    bolt: b.bolt, boltRest: b.boltRest, boltThrow: b.boltThrow,
+    clip: b.clip, clipRest: b.clipRest,
+  });
 }
 
-/* ---------------- riot shield ----------------
-   A polycarbonate slab in a steel frame, with a viewport band, two
-   handles and a bar across the back. It is carried, not swung: raised it
-   eats damage from the front, and a bash with its edge goes through plate
-   because nothing about a shield edge cares what a bullet cannot get
-   through. */
-function makeRiotShield(game, opts = {}) {
-  const frame = { color: 0x3d434a, texture: 'metal', roughness: 0.46, metalness: 1 };
-  /* The boss's is smoked rather than clear. A pale polycarbonate slab under
-     the bunker's warm lamps reads as a white void with a man behind it. */
-  const poly = opts.smoked
-    ? { color: 0x39434c, texture: 'smooth', roughness: 0.22, metalness: 0 }
-    : { color: 0x8fa4b4, texture: 'smooth', roughness: 0.16, metalness: 0 };
-  const grip = { color: 0x1d1f22, texture: 'fabric', roughness: 0.9, metalness: 0 };
-  const stripe = { color: 0xc8ccd0, texture: 'smooth', roughness: 0.4, metalness: 0 };
-  const root = game.box({ at: opts.at || [0, 0, 0], size: 1, physics: false, visible: false });
-  const parts = [];
-  const add = (a, pos, rot) => { a.parent = root; a.setPosition(pos); if (rot) a.setRotation(rot); parts.push(a); return a; };
-  const W = 0.30, H = 0.50;
-  // The face, curved by three shallow panels rather than one flat slab.
-  add(game.box({ size: [W * 1.30, H * 2, 0.014], material: poly, physics: false }), [0, 0, 0.004]);
-  add(game.box({ size: [W * 0.36, H * 2, 0.014], material: poly, physics: false }), [ W * 0.80, 0, -0.020], [0, 22, 0]);
-  add(game.box({ size: [W * 0.36, H * 2, 0.014], material: poly, physics: false }), [-W * 0.80, 0, -0.020], [0, -22, 0]);
-  // Steel frame down both edges and across top and bottom.
-  for (const sx of [-1, 1]) add(game.box({ size: [0.026, H * 2, 0.030], material: frame, physics: false }), [sx * (W * 0.98), 0, -0.004]);
-  for (const sy of [-1, 1]) add(game.box({ size: [W * 2.0, 0.026, 0.030], material: frame, physics: false }), [0, sy * H, -0.004]);
-  // Viewport band, and the hazard stripe under it.
-  add(game.box({ size: [W * 1.9, 0.012, 0.020], material: frame, physics: false }), [0, H * 0.42, -0.006]);
-  add(game.box({ size: [W * 1.9, 0.012, 0.020], material: frame, physics: false }), [0, H * 0.16, -0.006]);
-  add(game.box({ size: [W * 1.7, 0.052, 0.006], material: stripe, physics: false }), [0, -H * 0.52, -0.014]);
-  // Handles and the forearm cuff on the back.
-  add(game.cylinder({ radius: 0.017, height: 0.150, material: grip, physics: false }), [-0.045, -0.045, -0.072], [90, 0, 0]);
-  add(game.cylinder({ radius: 0.013, height: 0.115, material: frame, physics: false }), [-0.045, 0.105, -0.062], [0, 0, 90]);
-  for (const sy of [-1, 1]) add(game.box({ size: [0.020, 0.052, 0.070], material: frame, physics: false }), [-0.045, 0.105 + sy * 0.052, -0.034]);
-  // Every group model in here hands back { root, parts }; the viewmodel
-  // code reads v.root, and a bare actor leaves it undefined.
-  return { root, parts, plate: parts[0] };
-}
-
-/* ---------------- battering ram ----------------
-   A steel cylinder on a frame with four grab handles and a capped head.
-   Slow, enormous, and the only thing in the map that will put an armoured
-   runner through a wall. */
-function makeBatteringRam(game, opts = {}) {
-  const steel = { color: 0x5b6068, texture: 'metal', roughness: 0.5, metalness: 1 };
-  const dark = { color: 0x2e3237, texture: 'metal', roughness: 0.62, metalness: 1 };
-  const grip = { color: 0x22242a, texture: 'fabric', roughness: 0.9, metalness: 0 };
-  const brass = { color: 0x9a7a3a, texture: 'metal', roughness: 0.34, metalness: 1 };
-  const root = game.box({ at: opts.at || [0, 0, 0], size: 1, physics: false, visible: false });
-  const parts = [];
-  const add = (a, pos, rot) => { a.parent = root; a.setPosition(pos); if (rot) a.setRotation(rot); parts.push(a); return a; };
-  // Body, pointing down +z.
-  add(game.cylinder({ radius: 0.062, height: 0.62, material: steel, physics: false }), [0, 0, 0.02], [90, 0, 0]);
-  // Reinforcing bands.
-  for (const z of [-0.16, 0.02, 0.20]) add(game.cylinder({ radius: 0.070, height: 0.030, material: dark, physics: false }), [0, 0, z], [90, 0, 0]);
-  // The head: a heavier cap with a brass ring behind it.
-  add(game.cylinder({ radius: 0.080, height: 0.11, material: dark, physics: false }), [0, 0, 0.375], [90, 0, 0]);
-  add(game.cylinder({ radius: 0.083, height: 0.016, material: brass, physics: false }), [0, 0, 0.312], [90, 0, 0]);
-  add(game.sphere({ radius: 0.074, material: dark, physics: false }), [0, 0, 0.424]);
-  // Two pairs of grab handles, offset so both hands have somewhere to go.
-  for (const z of [-0.10, 0.12]) for (const sx of [-1, 1]) {
-    add(game.cylinder({ radius: 0.020, height: 0.115, material: grip, physics: false }), [sx * 0.098, -0.010, z], [0, 0, 90]);
-    for (const sy of [-1, 1]) add(game.cylinder({ radius: 0.010, height: 0.062, material: steel, physics: false }), [sx * 0.070, -0.010, z + sy * 0.048], [0, 0, 90]);
-  }
-  // Butt cap.
-  add(game.cylinder({ radius: 0.068, height: 0.030, material: dark, physics: false }), [0, 0, -0.30], [90, 0, 0]);
-  return { root, parts };
-}
-
-function makeHammer(game, opts = {}) {
-  const steel = { color: 0x6a6f75, texture: 'metal', roughness: 0.42, metalness: 1 };
-  const wood = { color: 0x7a5a34, texture: 'wood', roughness: 0.74, metalness: 0, uvScale: 3 };
-  const root = game.box({ at: opts.at || [0, 0, 0], size: 1, physics: false, visible: false });
-  const parts = [];
-  const add = (a, pos, rot) => { a.parent = root; a.setPosition(pos); if (rot) a.setRotation(rot); parts.push(a); return a; };
-  add(game.cylinder({ radius: 0.0135, height: 0.255, material: wood, physics: false }), [0.052, -0.010, 0], [0, 0, 90]);
-  add(game.box({ size: [0.030, 0.032, 0.030], material: steel, physics: false }), [0.196, 0.006, 0]);
-  add(game.cylinder({ radius: 0.0155, height: 0.042, material: steel, physics: false }), [0.222, 0.006, 0], [0, 0, 90]);
-  // Claw, split into two prongs curving back.
-  for (const dz of [-0.008, 0.008]) {
-    add(game.box({ size: [0.040, 0.010, 0.007], material: steel, physics: false }), [0.176, 0.020, dz], [0, 0, 22]);
-    add(game.box({ size: [0.026, 0.009, 0.006], material: steel, physics: false }), [0.150, 0.035, dz], [0, 0, 48]);
-  }
-  add(game.box({ size: [0.016, 0.020, 0.026], material: wood, physics: false }), [-0.072, -0.014, 0]);
-  return { root, parts };
+function makeObliterator(game, opts = {}) {
+  const b = game.model5(rackOpts(opts));
+  return rackGroup(b, { cylinder: b.cylinder, crane: b.crane });
 }
 
 function makeArcProjector(game, opts = {}) {
-  /* The Arc Breaker. The wonder weapon of this map, and the only thing in
-     the game that was never issued to anybody — so it is built like a
-     laboratory piece that somebody welded a grip onto: a cast receiver, a
-     caged coil stack running the length of it, copper wound at every
-     station, a capacitor drum under the barrel and a four-pronged emitter
-     that the bolt jumps between before it leaves. */
-  const dark = { color: 0x23262c, texture: 'metal', roughness: 0.45, metalness: 1 };
-  const cast = { color: 0x363c44, texture: 'metal', roughness: 0.58, metalness: 1 };
-  const brass = { color: 0xb08d4a, texture: 'metal', roughness: 0.35, metalness: 1 };
-  const copper = { color: 0xb4763a, texture: 'metal', roughness: 0.28, metalness: 1 };
-  const glow = { color: 0x142430, texture: 'smooth', roughness: 0.22, metalness: 0,
-    emissive: 0x39c8ff, emissiveStrength: 2.6 };
-  const hot = { color: 0x0e1a24, texture: 'smooth', roughness: 0.18, metalness: 0,
-    emissive: 0x7fe4ff, emissiveStrength: 3.6 };
-  const grip = { color: 0x24262a, texture: 'fabric', roughness: 0.92, metalness: 0, uvScale: 5 };
-  const root = game.box({ at: opts.at || [0, 0, 0], size: 1, physics: false, visible: false });
-  const parts = [];
-  const add = (a, pos, rot) => { a.parent = root; a.setPosition(pos); if (rot) a.setRotation(rot); parts.push(a); return a; };
+  const b = game.arcBreaker(rackOpts(opts));
+  // The cell and its window drop out together.
+  const cell = [b.cell, b.cellGlow].filter(Boolean);
+  return rackGroup(b, { cell: b.cell, cellParts: cell, cellRest: b.cellRest, cellDrop: b.cellDrop, coils: b.copper });
+}
 
-  // Receiver: a cast body with a raised spine and cooling fins down the side.
-  add(game.box({ size: [0.30, 0.095, 0.082], material: cast, physics: false }), [0.03, 0.004, 0]);
-  add(game.box({ size: [0.26, 0.030, 0.052], material: dark, physics: false }), [0.05, 0.062, 0]);
-  for (let k = 0; k < 7; k++) {
-    add(game.box({ size: [0.008, 0.062, 0.096], material: dark, physics: false }), [-0.08 + k * 0.032, 0.004, 0]);
-  }
-  // Brass maker's plate on the left flank.
-  add(game.box({ size: [0.075, 0.032, 0.004], material: brass, physics: false }), [0.02, 0.010, -0.044]);
+function makeKnife(game, opts = {}) { return rackGroup(game.trenchKnife(rackOpts(opts))); }
+function makeHammer(game, opts = {}) { return rackGroup(game.clawHammer(rackOpts(opts))); }
+function makeBatteringRam(game, opts = {}) { return rackGroup(game.batteringRam(rackOpts(opts))); }
 
-  /* The coil stack. Four rings of decreasing diameter down the barrel, each
-     wound with copper, sitting inside a cage of four rails — the cage is
-     what makes it read as apparatus rather than as a muzzle attachment. */
-  const coils = [];
-  for (let i = 0; i < 4; i++) {
-    const x = 0.215 + i * 0.072;
-    const r = 0.040 - i * 0.005;
-    coils.push(add(game.cylinder({ radius: r, height: 0.028, material: glow, physics: false }), [x, 0.012, 0], [0, 0, 90]));
-    for (let w = 0; w < 4; w++) {
-      add(game.cylinder({ radius: r + 0.006, height: 0.006, material: copper, physics: false }),
-        [x - 0.012 + w * 0.008, 0.012, 0], [0, 0, 90]);
-    }
-  }
-  for (let q = 0; q < 4; q++) {
-    const a2 = (q / 4) * Math.PI * 2 + 0.78;
-    add(game.box({ size: [0.36, 0.011, 0.011], material: dark, physics: false }),
-      [0.30, 0.012 + Math.sin(a2) * 0.046, Math.cos(a2) * 0.046]);
-  }
-  // Core rod running through the stack.
-  add(game.cylinder({ radius: 0.011, height: 0.34, material: brass, physics: false }), [0.30, 0.012, 0], [0, 0, 90]);
-
-  /* Emitter: four prongs opening off the muzzle with a spark gap between
-     them, and the bead of light the bolt forms on. */
-  for (let q = 0; q < 4; q++) {
-    const a2 = (q / 4) * Math.PI * 2;
-    const pr = add(game.box({ size: [0.075, 0.013, 0.013], material: brass, physics: false }),
-      [0.515, 0.012 + Math.sin(a2) * 0.020, Math.cos(a2) * 0.020]);
-    pr.setRotation([a2 * 57.2958, 0, -13]);
-  }
-  add(game.sphere({ radius: 0.019, material: hot, physics: false }), [0.545, 0.012, 0]);
-
-  /* Capacitor drum under the barrel, and the cell that charges it. The cell
-     is what the reload swaps, so it is its own part. */
-  add(game.cylinder({ radius: 0.036, height: 0.15, material: dark, physics: false }), [0.20, -0.052, 0], [0, 0, 90]);
-  for (const bx of [0.135, 0.265]) {
-    add(game.cylinder({ radius: 0.039, height: 0.010, material: brass, physics: false }), [bx, -0.052, 0], [0, 0, 90]);
-  }
-  add(game.cylinder({ radius: 0.022, height: 0.012, material: glow, physics: false }), [0.20, -0.052, 0.037], [90, 0, 0]);
-  const cell = add(game.cylinder({ radius: 0.028, height: 0.10, material: {
-    color: 0x1a2a34, texture: 'metal', roughness: 0.32, metalness: 1,
-    emissive: 0x2a86b8, emissiveStrength: 1.4 } }), [0.02, -0.062, 0], [0, 0, 90]);
-  add(game.box({ size: [0.11, 0.014, 0.070], material: dark, physics: false }), [0.02, -0.012, 0]);
-
-  // Cable from the drum back into the receiver, sagging.
-  for (let k = 0; k < 6; k++) {
-    const t = k / 5;
-    add(game.cylinder({ radius: 0.0055, height: 0.036, material: grip, physics: false }),
-      [0.125 - t * 0.115, -0.042 - Math.sin(t * Math.PI) * 0.016, 0.044], [0, 0, 74 - t * 30]);
-  }
-
-  // Grip, trigger, guard and a folding stock strut.
-  add(game.box({ size: [0.050, 0.104, 0.038], material: grip, physics: false }), [-0.075, -0.066, 0], [0, 0, 17]);
-  add(game.box({ size: [0.013, 0.024, 0.010], material: dark, physics: false }), [-0.030, -0.050, 0], [0, 0, -12]);
-  add(game.box({ size: [0.058, 0.013, 0.030], material: cast, physics: false }), [-0.036, -0.064, 0]);
-  add(game.box({ size: [0.13, 0.016, 0.022], material: dark, physics: false }), [-0.20, 0.004, 0]);
-  add(game.box({ size: [0.020, 0.078, 0.040], material: grip, physics: false }), [-0.268, -0.006, 0], [0, 0, -5]);
-  // Foregrip under the drum.
-  add(game.box({ size: [0.036, 0.078, 0.034], material: grip, physics: false }), [0.235, -0.108, 0], [0, 0, -8]);
-
-  // Sight post and rear notch, so the arc aims like everything else.
-  add(game.box({ size: [0.008, 0.020, 0.006], material: dark, physics: false }), [0.185, 0.078, 0]);
-  for (const dz of [0.014, -0.014]) {
-    add(game.box({ size: [0.010, 0.016, 0.008], material: dark, physics: false }), [-0.075, 0.062, dz]);
-  }
-  return { root, parts, cell, cellRest: [0.02, -0.062, 0], coils };
+function makeRiotShield(game, opts = {}) {
+  const o = rackOpts(opts);
+  // The cracked one you take off the mini boss is smoked and scarred.
+  if (opts.smoked) o.panelMaterial = { color: 0x6a6f74, texture: 'smooth', roughness: 0.42, metalness: 0, opacity: 0.62 };
+  return rackGroup(game.riotShield(o));
 }
 
 /* ---------------- player ---------------- */
@@ -2043,18 +1695,29 @@ function makePlayer(game, S, hud, sfx, voice) {
   /* View models: one instance of each weapon, shown when equipped. */
   P.view.m1911 = { kind: 'single', actor: game.pistol1911({ physics: false }), muzzle: 0.24 };
   P.view.thompson = { kind: 'single', actor: game.thompson({ physics: false }), muzzle: 0.55 };
-  P.view.scatter = Object.assign(makeScattergun(game), { kind: 'group', muzzle: 0.58 });
-  P.view.arc = Object.assign(makeArcProjector(game), { kind: 'group', muzzle: 0.52 });
-  P.view.knife = Object.assign(makeKnife(game), { kind: 'group', muzzle: 0.26 });
-  P.view.hammer = Object.assign(makeHammer(game), { kind: 'group', muzzle: 0.24 });
-  P.view.ram = Object.assign(makeBatteringRam(game), { kind: 'group', muzzle: 0.44 });
-  P.view.shield = Object.assign(makeRiotShield(game), { kind: 'group', muzzle: 0.30 });
-  P.view.obliterator = Object.assign(makeObliterator(game), { kind: 'group', muzzle: 0.26 });
-  P.view.mauser = Object.assign(makeMauser(game), { kind: 'group', muzzle: 0.24 });
-  P.view.paralyzer = Object.assign(makeParalyzer(game), { kind: 'group', muzzle: 0.52 });
-  P.view.mp5 = Object.assign(makeMP5(game), { kind: 'group', muzzle: 0.37 });
-  P.view.sawnoff = Object.assign(makeSawedOff(game), { kind: 'group', muzzle: 0.26 });
-  P.view.shieldWorn = Object.assign(makeRiotShield(game), { kind: 'group', muzzle: 0.30 });
+  /* Muzzle distance and sight height come off each model rather than from
+     a number typed here. A gun whose muzzle flash is 4 cm from where the
+     barrel ends, or whose sights are aligned to a guess, is a gun that
+     never quite looks or aims right, and no amount of tuning by eye fixes
+     it — the model knows where its own muzzle is, so it is asked. */
+  const rack = (id, made) => {
+    const v = Object.assign(made, { kind: 'group', muzzle: made.root.muzzleAt || 0.3 });
+    P.view[id] = v;
+    if (made.root.sightAt != null && WEAPONS[id]) WEAPONS[id].sightH = made.root.sightAt;
+    return v;
+  };
+  rack('scatter', makeScattergun(game));
+  rack('arc', makeArcProjector(game));
+  rack('knife', makeKnife(game));
+  rack('hammer', makeHammer(game));
+  rack('ram', makeBatteringRam(game));
+  rack('shield', makeRiotShield(game));
+  rack('obliterator', makeObliterator(game));
+  rack('mauser', makeMauser(game));
+  rack('paralyzer', makeParalyzer(game));
+  rack('mp5', makeMP5(game));
+  rack('sawnoff', makeSawedOff(game));
+  rack('shieldWorn', makeRiotShield(game));
   // Hands, parented to each weapon so they inherit its every motion.
   for (const [id, v] of Object.entries(P.view)) {
     const root = v.kind === 'single' ? v.actor : v.root;
@@ -2507,11 +2170,13 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
   if (spec.reloadKind === 'mag' && Array.isArray(v.mag)) {
     const out = P.reloading > 0 && P.reloadStage >= 1 && P.reloadStage < 2;
     for (const m of v.mag) m.visible = !out;
-    if (v.bolt) {
-      // Cocking handle: thrown back and released on the last beat.
+    if (v.bolt && v.boltThrow) {
+      // Cocking handle: thrown back and released on the last beat. The
+      // throw is the model's own, along the axis its tube actually runs.
       const t = P.reloading > 0 && P.reloadStage >= 2
-        ? Math.sin(Math.min(1, (1 - P.reloading / spec.reload - 0.70) / 0.18) * Math.PI) : 0;
-      v.bolt.setPosition([0.255 - 0.055 * Math.max(0, t), 0.040, -0.034]);
+        ? Math.sin(Math.min(1, Math.max(0, 1 - P.reloading / spec.reload - 0.70) / 0.18) * Math.PI) : 0;
+      const R = v.boltRest, T = v.boltThrow;
+      v.bolt.setPosition([R[0] + T[0] * t, R[1] + T[1] * t, R[2] + T[2] * t]);
     }
   }
 
@@ -2520,20 +2185,23 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
      is why it exists as its own part rather than as a moment of hand
      animation nobody can see. */
   if (spec.reloadKind === 'clip' && v.clip && v.bolt) {
+    const R = v.boltRest, T = v.boltThrow || [-0.038, 0, 0];
     if (P.reloading > 0) {
       const u = 1 - P.reloading / spec.reload;
       const back = u < 0.22 ? u / 0.22 : (u < 0.80 ? 1 : 1 - (u - 0.80) / 0.20);
-      v.bolt.setPosition([v.boltRest[0], v.boltRest[1], v.boltRest[2] - 0.038 * back]);
+      v.bolt.setPosition([R[0] + T[0] * back, R[1] + T[1] * back, R[2] + T[2] * back]);
       const inClip = u > 0.28 && u < 0.74;
       v.clip.visible = inClip;
       if (inClip) {
+        // The clip comes down into the open action and the rounds are
+        // stripped off it, so it travels and then leaves.
         const t = Math.min(1, (u - 0.28) / 0.28);
-        v.clip.setPosition([v.clipRest[0], v.clipRest[1] - 0.048 * t, v.clipRest[2]]);
+        v.clip.setPosition([v.clipRest[0], v.clipRest[1] - 0.040 * t, v.clipRest[2]]);
       }
       if (!P.clipIn && u > 0.30) { P.clipIn = true; sfx.magIn(); }
       if (P.clipIn && u > 0.76) { P.clipIn = false; sfx.slideRelease(); }
     } else {
-      v.bolt.setPosition(v.boltRest);
+      v.bolt.setPosition(R);
       v.clip.visible = false;
       P.clipIn = false;
     }
@@ -2542,19 +2210,21 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
   /* Battery cell. Drops clear of the housing, a fresh one seats, and the
      coils come back up as it takes charge. */
   if (spec.reloadKind === 'cell' && v.cell) {
+    const CP = v.cellParts || [v.cell], R = v.cellRest || [0, 0, 0], D = v.cellDrop || [0, -0.15, 0];
     if (P.reloading > 0) {
       const u = 1 - P.reloading / spec.reload;
       const outAmt = u < 0.26 ? u / 0.26 : (u < 0.62 ? 1 : Math.max(0, 1 - (u - 0.62) / 0.24));
-      v.cell.setPosition([v.cellRest[0], v.cellRest[1] - 0.13 * outAmt, v.cellRest[2]]);
-      v.cell.setRotation([0, 0, 90 - 26 * outAmt]);
+      for (const c of CP) {
+        c.setPosition([R[0] + D[0] * outAmt, R[1] + D[1] * outAmt, R[2] + D[2] * outAmt]);
+        c.setRotation([0, 0, -22 * outAmt]);
+      }
       if (!P.cellOut && u > 0.10) { P.cellOut = true; sfx.magOut(); }
       if (P.cellOut && u > 0.66) { P.cellOut = false; sfx.magIn(); }
       if (u > 0.86 && Math.random() < 0.4) {
         game.particles.sparks(P.muzzleWorld || [0, 0, 0], { count: 3, speed: 2.2, color: 0x7fd8ff, colorEnd: 0x1a3a4a });
       }
     } else {
-      v.cell.setPosition(v.cellRest);
-      v.cell.setRotation([0, 0, 90]);
+      for (const c of CP) { c.setPosition(R); c.setRotation([0, 0, 0]); }
       P.cellOut = false;
     }
   }
@@ -2563,17 +2233,26 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
      while it is fed, and snaps back. Three beats over the reload time
      rather than one continuous move, because that is how the hands work —
      out, load, shut. */
-  if (spec.revolver && v.cylinder) {
+  if (spec.revolver && v.cylinder && v.crane) {
+    /* The cylinder swings out about the crane pin — a vertical axis
+       forward of it and to the left — and nothing else. Sliding it
+       sideways and calling that a swing is the usual shortcut, and it
+       reads as the cylinder falling off the gun. */
     if (P.reloading > 0) {
       const u = 1 - P.reloading / spec.reload;      // 0 at the start, 1 done
       const outAmt = u < 0.20 ? u / 0.20 : (u < 0.78 ? 1 : 1 - (u - 0.78) / 0.22);
-      v.cylinder.setPosition([-0.030 * outAmt, 0.008, 0.036]);
-      v.cylinder.setRotation([90, 0, -62 * outAmt]);
+      const ang = -1.08 * outAmt;                   // radians, out to the left
+      const c = Math.cos(ang), sn = Math.sin(ang);
+      // Rotate the cylinder's own origin about the pin, then turn it to match.
+      const px = v.crane[0], pz = v.crane[2];
+      const dx = -px, dz = -pz;
+      v.cylinder.setPosition([px + dx * c + dz * sn, 0, pz - dx * sn + dz * c]);
+      v.cylinder.setRotation([0, ang * 57.2958, 0]);
       if (!P.cylOut && u > 0.05) { P.cylOut = true; sfx.cylinderOut(); }
       if (P.cylOut && u > 0.86) { P.cylOut = false; sfx.cylinderIn(); }
     } else {
-      v.cylinder.setPosition([0, 0.008, 0.036]);
-      v.cylinder.setRotation([90, 0, 0]);
+      v.cylinder.setPosition([0, 0, 0]);
+      v.cylinder.setRotation([0, 0, 0]);
       P.cylOut = false;
     }
   }
@@ -4501,6 +4180,21 @@ function makeHud() {
   #b9hud .bhint { position:absolute; left:50%; bottom:5%; transform:translateX(-50%); color:#8a8272;
     font-size:13px; letter-spacing:.06em; text-align:center; }
   #b9hud .bhint b { color:#ffd27a; font-weight:normal; }
+  /* The controls, spelled out and always on screen while the bench is open.
+     A hint strip along the bottom is fine for a control you already know;
+     it is no use at all for a screen nobody has seen before, and the bench
+     has ten of them. */
+  #b9hud .bkeys { position:absolute; left:3%; top:50%; transform:translateY(-50%);
+    width:min(266px,25vw); background:rgba(8,6,4,.88); border:1px solid #5a5140; padding:13px 15px;
+    font-size:12.5px; letter-spacing:.05em; }
+  #b9hud .bkeys h4 { margin:0 0 4px; font-size:12px; font-weight:normal; color:#e8ddc8; letter-spacing:.14em; }
+  #b9hud .bkeys .step { color:#8a8272; font-size:11.5px; margin:0 0 10px; line-height:1.45; }
+  #b9hud .bkeys .step b { color:#ffd27a; font-weight:normal; }
+  #b9hud .bkeys dl { margin:0; display:grid; grid-template-columns:auto 1fr; gap:4px 10px; align-items:baseline; }
+  #b9hud .bkeys dt { color:#ffd27a; white-space:nowrap; }
+  #b9hud .bkeys dd { margin:0; color:#c8bfa8; }
+  #b9hud .bkeys .pad { margin-top:9px; padding-top:8px; border-top:1px solid #4a4234; color:#6f8fa8; font-size:11.5px; line-height:1.5; }
+  #b9hud .bkeys .pad b { color:#7ad7ff; font-weight:normal; }
   /* Damage diagram. A body drawn out of eleven boxes, each labelled with
      what this gun actually does to it. */
   #b9hud .bdmg { position:absolute; right:3%; top:50%; transform:translateY(-50%);
@@ -4556,6 +4250,7 @@ function makeHud() {
       <svg class="bsvg"></svg>
       <div class="bmarks"></div>
       <div class="bench"><div class="bhead"></div><div class="brow"></div><div class="bfoot"></div></div>
+      <div class="bkeys"></div>
       <div class="bhint"></div>
       <div class="bdmg"></div>
     </div>
@@ -4577,7 +4272,7 @@ function makeHud() {
     cross: $('.cross'), stam: $('.stam'), stamFill: $('.stamfill'), shield: $('.shield'), perks: $('.perks'),
     bench: $('.bench'), bhead: $('.bhead'), brow: $('.brow'), bfoot: $('.bfoot'),
     benchwrap: $('.benchwrap'), bsvg: $('.bsvg'), bmarks: $('.bmarks'),
-    bhint: $('.bhint'), bdmg: $('.bdmg'),
+    bhint: $('.bhint'), bdmg: $('.bdmg'), bkeys: $('.bkeys'),
   };
   let subTimer = 0, hmTimer = 0, pdAcc = 0, pdTimer = 0, bnTimer = 0;
   return {
@@ -4659,6 +4354,40 @@ function makeHud() {
         : '<b>A / D</b> slot &nbsp;·&nbsp; <b>Q / E</b> turn it &nbsp;·&nbsp; <b>F</b> work on it'
           + ' &nbsp;·&nbsp; <b>P</b> preview' + (state.camo ? ' &nbsp;·&nbsp; <b>C</b> camo' : '')
           + ' &nbsp;·&nbsp; hold <b>SHIFT</b> damage &nbsp;·&nbsp; <b>TAB</b> put it down';
+
+      /* The full control list. Two states, because the keys mean different
+         things depending on whether you are choosing a slot or choosing a
+         part for it, and a list that shows both at once is the reason
+         people cannot work out how to fit anything. */
+      els.bkeys.style.display = show ? 'block' : 'none';
+      if (show) {
+        const rows = state.picking
+          ? [['W / S', 'move through the parts'],
+             ['F', 'fit the highlighted part'],
+             ['F', 'on a fitted part, strip it off'],
+             ['Q / E', 'turn the weapon'],
+             ['TAB', 'back to the slots'],
+             ['P', 'preview — hide all of this'],
+             ['hold SHIFT', 'damage by placement']]
+          : [['A / D', 'choose a slot'],
+             ['F', 'open that slot'],
+             ['Q / E', 'turn the weapon'],
+             ['P', 'preview — hide all of this']]
+            .concat(state.camo ? [['C', 'switch the camo']] : [])
+            .concat([['hold SHIFT', 'damage by placement'],
+                     ['TAB', 'put the weapon down']]);
+        els.bkeys.innerHTML =
+          '<h4>WORKING ON A WEAPON</h4>'
+          + '<p class="step">' + (state.picking
+            ? 'Pick a part and press <b>F</b>. It comes off the shelf, costs points, and goes on the gun where you can see it.'
+            : 'A slot with a <b>+</b> is empty. Line one up, press <b>F</b>, then pick a part.')
+          + '</p><dl>'
+          + rows.map(([k, t]) => `<dt>${k}</dt><dd>${t}</dd>`).join('')
+          + '</dl>'
+          + '<div class="pad">Controller &nbsp; <b>' + (state.picking ? 'Stick ↑↓' : 'Stick ←→')
+          + '</b> move &nbsp; <b>X</b> ' + (state.picking ? 'fit' : 'open')
+          + ' &nbsp; <b>R2</b> damage &nbsp; <b>◯</b> back</div>';
+      }
 
       // The damage diagram, on a hold.
       if (state.damage && show) {
@@ -4822,7 +4551,19 @@ function start(opts = {}) {
   });
   game.renderer.post.vignette = 0.28;
   game.renderer.post.grain = 0.022;
-  game.camera.near = 0.02;
+  /* Depth precision, which is what all the "glitchy black slabs" were.
+
+     A 24-bit depth buffer over near 0.02 / far 500 is a ratio of 25000 to
+     one, and non-linear: by thirty metres out neighbouring surfaces a
+     centimetre apart land in the same depth bucket and fight over which is
+     in front, flickering to black as the camera turns. Every flat thing on
+     that ground — crater floors, trench cuts, blast scorch — sat one to two
+     centimetres proud of it. Near 0.09 with the far plane pulled in to the
+     treeline is nine times the precision, and the decals stand further off
+     as well. The viewmodel rides at 0.34 m, so a 0.09 near plane is nowhere
+     near it. */
+  game.camera.near = 0.09;
+  game.camera.far = 220;
 
   const S = {
     time: 0, points: ECONOMY.start, mul: 1, mulT: 0,
