@@ -446,7 +446,9 @@ const ROUNDS = {
 };
 
 const PLAYER = {
-  hp: 100, regenDelay: 3.5, regenRate: 40,
+  /* Two seconds after the last hit, and quick once it starts: the fight is
+     meant to be about position, not about nursing a health bar. */
+  hp: 100, regenDelay: 2.0, regenRate: 55, lowAt: 25,
   adsSpread: 0.28,        // aimed shots tighten to this fraction of hip spread
   plankTime: 1.0,         // one second a plank, five for a window
   sprintSpeed: 7.4, walkSpeed: 4.2, adsSpeed: 2.3,
@@ -506,6 +508,40 @@ const GRAPHICS = {
   },
 };
 const GRAPHICS_ORDER = ['low', 'normal', 'high', 'ultra'];
+
+/* Things that are a matter of taste rather than of hardware.
+
+   They live in the same menu below the tiers and the cursor walks straight
+   from one section into the other, so there is one list and one index. */
+const TOGGLES = {
+  autoRepair: {
+    name: 'AUTO REPAIR', def: false,
+    blurb: 'Off: hold the use key to board a window. On: standing at one boards it.',
+  },
+  flinch: {
+    name: 'HIT FLINCH', def: true,
+    blurb: 'The view rolls away from a blow. Turn it off if it makes you ill.',
+  },
+  shellCasings: {
+    name: 'SPENT BRASS', def: true,
+    blurb: 'Cases stay on the floor for a few seconds after they leave the gun.',
+  },
+};
+const TOGGLE_ORDER = ['autoRepair', 'flinch', 'shellCasings'];
+
+function loadToggles() {
+  const out = {};
+  for (const k of TOGGLE_ORDER) out[k] = TOGGLES[k].def;
+  try {
+    const raw = JSON.parse(localStorage.getItem('b9.toggles') || '{}');
+    for (const k of TOGGLE_ORDER) if (typeof raw[k] === 'boolean') out[k] = raw[k];
+  } catch (e) { /* a browser with storage turned off still gets the defaults */ }
+  return out;
+}
+
+function saveToggles(t) {
+  try { localStorage.setItem('b9.toggles', JSON.stringify(t)); } catch (e) { /* no matter */ }
+}
 
 const LINES = {
   /* The rock. Nobody knows what it is and nobody is going to find out;
@@ -596,10 +632,16 @@ function makeSfx(game) {
   const A = game.audio;
   const t = (f, d, ty, v) => A.tone(f, d, ty, v);
   return {
-    shotPistol() { A.impact(0.85); t(1750, 0.03, 'square', 0.10); t(210, 0.09, 'sawtooth', 0.12); },
-    shotSmg() { A.impact(0.7); t(1450, 0.025, 'square', 0.09); t(240, 0.07, 'sawtooth', 0.11); },
-    shotScatter() { A.impact(1.0); t(950, 0.05, 'sawtooth', 0.14); t(120, 0.16, 'sawtooth', 0.16); },
-    shotArc() { t(1900, 0.06, 'sawtooth', 0.09); t(640, 0.12, 'square', 0.10); t(96, 0.2, 'sine', 0.14); },
+    /* Guns are reports, not tones. Each one is the same noise transient at a
+       different bore, with a little tonal colour on top for character —
+       the mechanical ring of a slide, the crack of a rifle. The scattergun
+       used to be a 950 Hz sawtooth, which is the noise a kazoo makes and
+       which is what it sounded like. */
+    shotPistol() { A.report(0.30); t(1750, 0.022, 'square', 0.045); },
+    shotSmg() { A.report(0.22, { volume: 0.9 }); t(1450, 0.018, 'square', 0.04); },
+    shotScatter() { A.report(1.0); },
+    shotMagnum() { A.report(0.72); t(2300, 0.02, 'square', 0.04); },
+    shotArc() { A.report(0.34, { volume: 0.75 }); t(1900, 0.05, 'sawtooth', 0.06); t(640, 0.1, 'square', 0.07); },
     dryFire() { t(1300, 0.02, 'square', 0.06); },
     magRelease() { t(1500, 0.022, 'square', 0.07); },
     magOut() { t(420, 0.05, 'square', 0.07); A.impact(0.2); },
@@ -619,6 +661,11 @@ function makeSfx(game) {
     blitz() { A.impact(1); t(60, 0.6, 'sawtooth', 0.18); t(2400, 0.3, 'sawtooth', 0.06); },
     hurt() { t(85, 0.2, 'sawtooth', 0.14); },
     heartbeat() { t(46, 0.11, 'sine', 0.2); setTimeout(() => t(40, 0.09, 'sine', 0.16), 180); },
+    /* A breath drawn through the teeth: filtered noise, in and out. */
+    breath() { A.impact(0.12, { volume: 0.7 }); setTimeout(() => A.impact(0.09, { volume: 0.5 }), 330); },
+    /* The wound closing. Quiet, and low enough not to be mistaken for a
+       pickup — it is information, not a reward. */
+    regenStart() { t(392, 0.18, 'sine', 0.055); setTimeout(() => t(523, 0.22, 'sine', 0.05), 110); },
     roundSting() {
       [220, 185, 147].forEach((f, i) => setTimeout(() => { t(f, 0.5, 'triangle', 0.12); t(f / 2, 0.55, 'sine', 0.1); }, i * 260));
     },
@@ -634,9 +681,30 @@ function makeSfx(game) {
     shieldUp() { for (let i = 0; i < 3; i++) setTimeout(() => t(420 + i * 190, 0.14, 'sine', 0.09), i * 55); },
     perk() { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => t(f, 0.16, 'triangle', 0.1), i * 90)); },
     slide() { t(220, 0.3, 'sawtooth', 0.07); A.impact(0.3); },
-    shotMagnum() { A.impact(1); t(1350, 0.045, 'square', 0.14); t(150, 0.20, 'sawtooth', 0.17); t(62, 0.26, 'sine', 0.10); },
-    shotPistol() { A.impact(0.8); t(1600, 0.03, 'square', 0.10); t(230, 0.09, 'sawtooth', 0.11); },
+    /* shotMagnum and shotPistol were declared a second time here, further
+       down the same object literal. A later key wins in an object literal,
+       silently, so the versions at the top of this table were dead and
+       every rewrite of them changed nothing. */
     cylinderOut() { t(520, 0.05, 'square', 0.06); t(240, 0.07, 'triangle', 0.05); },
+    /* A break gun sounds nothing like a magazine. The lever, the hinge
+       taking the weight of the barrels, two brass cases going in against
+       the chamber walls, and the snap of the action closing. */
+    breakOpen() { t(1100, 0.028, 'square', 0.07); A.impact(0.30); t(300, 0.09, 'triangle', 0.06); },
+    shellIn() { t(360, 0.045, 'triangle', 0.06); setTimeout(() => t(330, 0.045, 'triangle', 0.055), 90); },
+    breakShut() { A.impact(0.55); t(820, 0.035, 'square', 0.10); t(1400, 0.02, 'square', 0.05); },
+    /* A bolt is a long steel noise in two parts: the handle turning up and
+       the body running back, then the same in reverse with a round under it. */
+    boltBack() { t(240, 0.05, 'square', 0.06); setTimeout(() => t(180, 0.11, 'sawtooth', 0.07), 60); },
+    boltHome() { t(200, 0.09, 'sawtooth', 0.07); setTimeout(() => { A.impact(0.42); t(760, 0.03, 'square', 0.08); }, 90); },
+    clipIn() { t(1900, 0.02, 'square', 0.05);
+      for (let i = 0; i < 3; i++) setTimeout(() => t(520 - i * 40, 0.03, 'triangle', 0.05), 70 + i * 55); },
+    cellOut() { t(880, 0.05, 'triangle', 0.06); t(160, 0.10, 'sawtooth', 0.05); },
+    cellIn() { A.impact(0.35); t(300, 0.06, 'square', 0.07);
+      setTimeout(() => t(1240, 0.09, 'sine', 0.06), 80); },
+    /* The bench grace: a rising two-note all-clear, and a falling one when
+       it runs out and they can reach you again. */
+    graceStart() { [660, 990].forEach((f, i) => setTimeout(() => t(f, 0.14, 'triangle', 0.09), i * 90)); },
+    graceEnd() { [520, 390].forEach((f, i) => setTimeout(() => t(f, 0.16, 'triangle', 0.08), i * 110)); },
     cylinderIn() { A.impact(0.4); t(700, 0.05, 'square', 0.08); },
     ramHit() { A.impact(1); t(70, 0.28, 'sawtooth', 0.16); t(190, 0.12, 'square', 0.10); },
     ramSwing() { t(230, 0.16, 'sine', 0.05); },
@@ -2011,7 +2079,7 @@ function makePlayer(game, S, hud, sfx, voice) {
     swingT: 0, blocking: false, blockT: 0,
     gold: 0, goldAmmo: false,
     upgraded: {}, camoOff: {}, fitted: {},
-    cooldown: 0, reloading: 0, reloadStage: 0, swayT: 0, kickPitch: 0,
+    cooldown: 0, reloading: 0, reloadStage: 0, breakStage: 0, swayT: 0, kickPitch: 0,
     slideCycle: 0, slideCycleMax: 0.085,
     view: {}, muzzleT: 0, alive: true,
     // Aim, sprint and recoil state.
@@ -2519,10 +2587,22 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
     if (P.reloading > 0) {
       const u = 1 - P.reloading / spec.reload;
       open = u < 0.17 ? u / 0.17 : (u < 0.70 ? 1 : Math.max(0, 1 - (u - 0.70) / 0.20));
-      if (!P.breakOpen && u > 0.06) { P.breakOpen = true; sfx.cylinderOut(); ejectShell(game, S, P, v); ejectShell(game, S, P, v); }
-      if (P.breakOpen && u > 0.62) { P.breakOpen = false; sfx.magIn(); }
-      if (P.reloadStage < 3 && u > 0.88) { P.reloadStage = 3; sfx.cylinderIn(); }
-    } else if (P.breakOpen) { P.breakOpen = false; }
+      /* A stage counter that only ever goes up.
+
+         This used to be a boolean: set at u > 0.06, cleared again at
+         u > 0.62 — and cleared meant the first test passed again on the very
+         next frame, so from there to the end of the reload it threw two
+         empties and played the break sound EVERY FRAME. About fifty-five
+         frames of a scattergun reload, which is a hundred and ten cases on
+         the floor and fifty-five overlapping clacks. That is the shower of
+         shells and most of the noise. */
+      if (P.breakStage < 1 && u > 0.06) {
+        P.breakStage = 1; sfx.breakOpen();
+        ejectShell(game, S, P, v); ejectShell(game, S, P, v);
+      }
+      if (P.breakStage < 2 && u > 0.62) { P.breakStage = 2; sfx.shellIn(); }
+      if (P.breakStage < 3 && u > 0.88) { P.breakStage = 3; sfx.breakShut(); }
+    } else if (P.breakStage) { P.breakStage = 0; }
     const hx = v.hinge[0], hy = v.hinge[1];
     const ang = -0.62 * open;                 // radians; muzzle drops
     const c = Math.cos(ang), sn = Math.sin(ang);
@@ -2814,6 +2894,16 @@ function tryFire(game, S, P, hud, sfx, dt) {
   // Aimed fire tightens the cone; a shotgun tightens less than a rifle,
   // which is what its own adsSpread is for.
   const aimTighten = 1 - P.ads * (1 - (spec.adsSpread != null ? spec.adsSpread : PLAYER.adsSpread));
+  /* One shot, one piece of feedback.
+
+     Every one of these used to fire per pellet. A scattergun throws eight,
+     so putting a barrel into a body played eight hit chimes stacked inside
+     the same frame — eight square waves at 2300 Hz on top of each other,
+     which is a screech rather than a hit marker — and a barrel into a wall
+     threw eight dust puffs at once. The pellets still each do their own
+     damage; it is the noise about them that is collected. */
+  let anyHit = false, anyHead = false, pointsThisShot = 0;
+  let wallHit = null, wallCount = 0;
   for (let p = 0; p < spec.pellets; p++) {
     const spread = spec.spread * aimTighten * Math.PI / 180;
     // Perturb along camera right and up so the cone is a cone from any
@@ -2854,9 +2944,9 @@ function tryFire(game, S, P, hud, sfx, dt) {
         const mult = z.V ? z.V.points : 1;
         awarded += S.addPoints((headshot ? ECONOMY.headshotKill : ECONOMY.kill) * mult);
       }
-      hud.pointsDelta(awarded);
-      headshot ? sfx.headmark() : sfx.hitmark();
-      hud.hitmark(headshot);
+      pointsThisShot += awarded;
+      anyHit = true;
+      if (headshot) anyHead = true;
       /* Penetration. A round that pierces carries on through the body it
          hit, losing a share each pass, until it runs out of passes or meets
          something that is not a zombie. Skipping the ones already hit is
@@ -2878,8 +2968,7 @@ function tryFire(game, S, P, hud, sfx, dt) {
           hurtZombie(game, S, z2, carry * regionMul(reg2, spec) + (head2 ? (spec.headBonus || 0) : 0), nxt.point, head2,
             spec.stun ? 'shock' : spec.burn ? 'fire' : (P.goldAmmo ? 'gold' : 'bullet'),
             spec.burn ? { burn: spec.burn } : null);
-          const pts2 = S.addPoints(head2 ? ECONOMY.headshotKill : ECONOMY.hit);
-          hud.pointsDelta(pts2);
+          pointsThisShot += S.addPoints(head2 ? ECONOMY.headshotKill : ECONOMY.hit);
           from = nxt.point;
         }
       }
@@ -2899,9 +2988,19 @@ function tryFire(game, S, P, hud, sfx, dt) {
         }
       }
     } else {
-      // Wall hit: dust and a chip sound at the point.
-      game.particles.dust(hit.point, { count: 4, color: 0x8d8a82 });
+      // Wall hit, remembered rather than puffed: one cloud for the shot.
+      wallCount++;
+      if (!wallHit) wallHit = hit.point;
     }
+  }
+  if (anyHit) {
+    anyHead ? sfx.headmark() : sfx.hitmark();
+    hud.hitmark(anyHead);
+    if (pointsThisShot) hud.pointsDelta(pointsThisShot);
+  }
+  if (wallCount) {
+    // A little bigger for a pattern than for a single round, but one cloud.
+    game.particles.dust(wallHit, { count: Math.min(4 + wallCount, 10), color: 0x8d8a82 });
   }
   if (killsThisShot && !S.firstBloodDone) { S.firstBloodDone = true; S.voice(LINES.firstBlood); }
   hud.points(S.points);
@@ -2923,6 +3022,7 @@ function arcBolt(game, a, b) {
    thrown up and to the right out of the port, that lands and stays for a
    moment. Nothing sells a gun firing like brass leaving it. */
 function ejectShell(game, S, P, v) {
+  if (S.toggles && !S.toggles.shellCasings) return;
   const gun = v.kind === 'single' ? v.actor : v.root;
   if (!gun.ejectPort) return;
   const m = gun.matrix.e;
@@ -2982,6 +3082,7 @@ function tryReload(P, sfx) {
      second and coming up full: release the catch, the old magazine falls
      clear, the fresh one goes in, and the slide runs forward on it. */
   P.reloadStage = 0;
+  P.breakStage = 0;
   sfx.magRelease();
 }
 
@@ -3893,9 +3994,20 @@ function updateZombie(game, S, P, z, dt, sfx) {
      the player invisible so much as forgettable: the horde keeps walking
      to the last place it saw them and then mills about there. */
   const atBench = !!(S.bench && S.bench.open);
+  /* Working at the bench sends them away, not merely off by a few metres.
+
+     The old version scattered their idea of the player by up to two and a
+     half metres, which is no distance at all — they milled about on top of
+     you, and closing the bench was a coin toss between walking out into a
+     clean train and walking out into the middle of the horde. They now walk
+     to the far corner of the room, which at this map's size is a good
+     thirteen metres and the length of the floor. */
   if (atBench && !S.benchLastKnown) {
-    S.benchLastKnown = { x: P.actor.position.x + (Math.random() - 0.5) * 5, y: P.actor.position.y,
-      z: P.actor.position.z + (Math.random() - 0.5) * 5 };
+    const p = P.actor.position;
+    S.benchLastKnown = {
+      x: p.x > 0 ? MAP.main.x0 + 1.4 : MAP.main.x1 - 1.4, y: p.y,
+      z: p.z > 0 ? MAP.main.z0 + 1.4 : MAP.main.z1 - 1.4,
+    };
   } else if (!atBench) S.benchLastKnown = null;
   const target = (S.shieldActive || atBench)
     ? (S.benchLastKnown || S.lastKnown || P.actor.position)
@@ -4186,10 +4298,28 @@ function throwChunk(game, S, z, P, R, sfx, face) {
   sfx.spit();
 }
 
+/* Putting the weapon down and stepping away from the bench.
+
+   You have been standing still with your back to the room; the ten seconds
+   are the game's half of that bargain. Nothing can touch you and you can
+   shoot the whole time, which is long enough to get moving and start a
+   train rather than to be caught flat-footed against the wall you were
+   working at. */
+const BENCH_GRACE = 10;
+
+function closeBench(S, sfx) {
+  if (!S.bench || !S.bench.open) return;
+  S.bench.open = false;
+  S.grace = BENCH_GRACE;
+  if (sfx && sfx.graceStart) sfx.graceStart();
+}
+
 function hurtPlayer(game, S, P, dmg, sfx, kind, from) {
   // Working at the bench means you are not there as far as the horde is
   // concerned. Anything already swinging when you opened it misses too.
   if (S.bench && S.bench.open) return;
+  // And for ten seconds after, while you get clear of the corner.
+  if (S.grace > 0) return;
   if (!P.alive || S.godMode) return;
   if (P.shieldT > 0) return;                                   // nothing gets through
   if (kind === 'projectile' && P.perks.deflect) { sfx.deflect(); return; }
@@ -4211,9 +4341,40 @@ function hurtPlayer(game, S, P, dmg, sfx, kind, from) {
   }
   P.hp -= dmg;
   P.lastHit = S.time;
+  P.regenning = false;
   sfx.hurt();
+  // The character, not the HUD. A different grunt each time and not one
+  // every single hit, so a crowd does not turn him into a metronome.
+  if (Math.random() < 0.55) sfx.playerGrunt(P.hp / P.maxHp);
+
+  /* Flinch. The head goes away from whatever hit it and rolls with the
+     blow, then comes back — the roll is what makes it read as being struck
+     rather than as the camera being nudged. It goes through the recoil
+     system, so it is taken back off the player's aim next frame instead of
+     stealing it. */
+  {
+    const mag = Math.min(1, dmg / 45);
+    let side = (Math.random() - 0.5) * 2;
+    if (from && game.camera) {
+      const pp = P.actor.position;
+      const dx = from.x - pp.x, dz = from.z - pp.z;
+      const dl = Math.hypot(dx, dz) || 1;
+      const fw = { x: game.camera.target.x - game.camera.position.x, z: game.camera.target.z - game.camera.position.z };
+      const fl = Math.hypot(fw.x, fw.z) || 1;
+      // Cross product's y: positive when the blow came from the left.
+      side = ((fw.z / fl) * (dx / dl) - (fw.x / fl) * (dz / dl));
+    }
+    if (S.toggles.flinch) {
+      const deg = Math.PI / 180;
+      P.recoil.pitch += (2.6 + mag * 5.0) * deg;
+      P.recoil.yaw += side * (3.0 + mag * 5.5) * deg;
+      P.flinchRoll = (P.flinchRoll || 0) - side * (2.4 + mag * 4.0) * deg;
+    }
+  }
+  // A single frame of white-hot red, on top of the standing wound vignette.
+  S.hud.hitFlash(Math.min(1, 0.35 + dmg / 60));
   S.hud.damage(P.hp / P.maxHp);
-  const lowAt = P.maxHp * 0.25;
+  const lowAt = PLAYER.lowAt;   // absolute, so it means the same to a Supersoldier
   if (P.hp <= lowAt && P.hp + dmg > lowAt) S.voice(LINES.nearDeath);
   if (P.hp <= 0) {
     P.alive = false;
@@ -5079,6 +5240,7 @@ function makeHud() {
   #b9hud .settings .opt .use { color:#8ce8a0; font-size:11px; width:44px; text-align:right; }
   #b9hud .settings .opt .why { display:block; color:#8a8272; font-size:12px; margin-top:3px; }
   #b9hud .settings .opt .fps { color:#8ce8a0; font-size:12.5px; white-space:nowrap; }
+  #b9hud .settings .sec { margin:18px 0 8px; font-size:12.5px; letter-spacing:.2em; color:#8a8272; }
   #b9hud .settings .sfoot { margin-top:16px; padding-top:11px; border-top:1px solid #4a4234;
     color:#8a8272; font-size:12.5px; }
   #b9hud .settings .sfoot b { color:#ffd27a; font-weight:normal; }
@@ -5138,6 +5300,7 @@ function makeHud() {
   #b9hud .scope .fine { opacity:.85; }
   #b9hud .scope .dot { left:50%; top:50%; width:2.6px; height:2.6px; margin:-1.3px 0 0 -1.3px;
     border-radius:50%; background:#c8352a; box-shadow:0 0 6px #ff5a3c; }
+  #b9hud .hitflash { position:absolute; inset:0; opacity:0; background:#8c0a06; mix-blend-mode:screen; }
   #b9hud .dmg { position:absolute; inset:0; opacity:0;
     background:radial-gradient(ellipse at center, transparent 42%, rgba(140,10,6,.75) 100%); transition:opacity .25s; }
   #b9hud .title { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center;
@@ -5149,6 +5312,15 @@ function makeHud() {
     background:rgba(0,0,0,.55); opacity:0; transition:opacity .25s; }
   #b9hud .stamfill { height:100%; background:#e8ddc8; width:100%; }
   #b9hud .shield { position:absolute; right:26px; bottom:118px; font-size:12px; letter-spacing:.22em; color:#8c7f68; }
+  /* The ten seconds after the bench. A ring rather than a number, because
+     what you need to know while running is how much of it is left, not what
+     second it is. */
+  #b9hud .grace { position:absolute; left:50%; top:14%; transform:translateX(-50%); text-align:center;
+    opacity:0; transition:opacity .2s; }
+  #b9hud .grace .lbl { display:block; font-size:11px; letter-spacing:.28em; color:#7ad7ff; margin-bottom:5px; }
+  #b9hud .grace .bar { width:190px; height:3px; background:rgba(0,0,0,.5); }
+  #b9hud .grace .fill { height:100%; background:#7ad7ff; width:100%; box-shadow:0 0 8px #7ad7ff; }
+  #b9hud .grace .num { display:block; margin-top:5px; font-size:22px; color:#e8ddc8; }
   #b9hud .perks { position:absolute; left:26px; bottom:112px; font-size:11px; letter-spacing:.18em; }
   #b9hud .pdelta { position:absolute; right:30px; bottom:100px; font-size:18px; color:#ffd27a; opacity:0; }
   #b9hud .flick { animation:b9flick 1.4s ease-out; }
@@ -5158,7 +5330,7 @@ function makeHud() {
   const root = document.createElement('div');
   root.id = 'b9hud';
   root.innerHTML = `
-    <div class="dmg"></div><div class="advig"></div><div class="scope">
+    <div class="dmg"></div><div class="hitflash"></div><div class="advig"></div><div class="scope">
       <div class="glass"></div>
       <div class="ret">
         <i class="vh" style="top:0;height:34%"></i><i class="vh" style="top:66%;height:34%"></i>
@@ -5174,6 +5346,8 @@ function makeHud() {
     <div class="prompt"></div>
     <div class="subs"><span class="who"></span><span class="text"></span></div>
     <div class="banner"></div>
+    <div class="grace"><span class="lbl">CLEAR &nbsp;·&nbsp; THEY CANNOT TOUCH YOU</span>
+      <div class="bar"><div class="fill"></div></div><span class="num">10</span></div>
     <div class="stam"><div class="stamfill"></div></div>
     <div class="shield"></div><div class="perks"></div>
     <div class="benchwrap">
@@ -5203,6 +5377,8 @@ function makeHud() {
   const els = {
     round: $('.round'), points: $('.points'), ammo: $('.ammo .nums'), wname: $('.ammo .wname'),
     prompt: $('.prompt'), subs: $('.subs'), subWho: $('.subs .who'), subText: $('.subs .text'), vig: $('.advig'), scope: $('.scope'), glass: $('.scope .glass'),
+    grace: $('.grace'), graceFill: $('.grace .fill'), graceNum: $('.grace .num'),
+    flash: $('.hitflash'),
     banner: $('.banner'), dmg: $('.dmg'), title: $('.title'), hitm: $('.hitm'), pdelta: $('.pdelta'),
     cross: $('.cross'), stam: $('.stam'), stamFill: $('.stamfill'), shield: $('.shield'), perks: $('.perks'),
     bench: $('.bench'), bhead: $('.bhead'), brow: $('.brow'), bfoot: $('.bfoot'),
@@ -5230,14 +5406,23 @@ function makeHud() {
     settings(st) {
       if (!st) { els.settings.style.display = 'none'; return; }
       els.settings.style.display = 'flex';
-      els.sopts.innerHTML = GRAPHICS_ORDER.map((k, i) => {
+      const gfx = GRAPHICS_ORDER.map((k, i) => {
         const g = GRAPHICS[k];
         const cls = ['opt', i === st.index ? 'sel' : '', k === st.current ? 'on' : ''].join(' ');
         return `<div class="${cls}"><span>${g.name}<span class="why">${g.blurb}</span></span>`
           + `<span class="rt"><span class="fps">${g.target}</span>`
           + `<span class="use">${k === st.current ? 'IN USE' : ''}</span></span></div>`;
       }).join('');
-      els.sfoot.innerHTML = '<b>W / S</b> or <b>↑ ↓</b> choose &nbsp;·&nbsp; <b>F</b> or <b>ENTER</b> apply'
+      const tog = TOGGLE_ORDER.map((k, j) => {
+        const T = TOGGLES[k], on = !!st.toggles[k];
+        const i = GRAPHICS_ORDER.length + j;
+        const cls = ['opt', i === st.index ? 'sel' : ''].join(' ');
+        return `<div class="${cls}"><span>${T.name}<span class="why">${T.blurb}</span></span>`
+          + `<span class="rt"><span class="fps" style="color:${on ? '#8ce8a0' : '#6b6455'}">`
+          + `${on ? 'ON' : 'OFF'}</span><span class="use"></span></span></div>`;
+      }).join('');
+      els.sopts.innerHTML = gfx + '<div class="sec">GAMEPLAY</div>' + tog;
+      els.sfoot.innerHTML = '<b>W / S</b> or <b>↑ ↓</b> choose &nbsp;·&nbsp; <b>F</b> or <b>ENTER</b> apply or flip'
         + ' &nbsp;·&nbsp; <b>ESC</b> back to the fight'
         + '<br><span style="color:#6f8fa8">Controller &nbsp; <b style="color:#7ad7ff">Stick ↑↓</b> choose'
         + ' &nbsp; <b style="color:#7ad7ff">X</b> apply &nbsp; <b style="color:#7ad7ff">◯</b> back</span>'
@@ -5425,7 +5610,18 @@ function makeHud() {
       clearTimeout(hmTimer);
       hmTimer = setTimeout(() => { els.hitm.style.opacity = 0; }, 90);
     },
-    damage(frac) { els.dmg.style.opacity = Math.min(1, (1 - frac) * 1.12); },
+    /* The red at the edges. Below the low mark it pulses with the heart
+       rather than sitting still, which is the difference between a hud
+       element and a character who is in trouble. */
+    damage(frac, lowT) {
+      let o = Math.min(1, (1 - frac) * 1.12);
+      if (lowT > 0) {
+        const beat = 60 / 110;
+        const ph = (lowT % beat) / beat;
+        o = Math.min(1, o * (0.86 + Math.pow(1 - ph, 6) * 0.5));
+      }
+      els.dmg.style.opacity = o;
+    },
     stamina(frac, athlete) {
       els.stam.style.opacity = frac < 0.999 ? 1 : 0;
       els.stamFill.style.width = (frac * 100).toFixed(1) + '%';
@@ -5464,6 +5660,25 @@ function makeHud() {
        shooter's breathing and the crosshair stays put. */
     scopeOffset(x, y) {
       els.glass.style.transform = `translate(${x.toFixed(2)}px, ${y.toFixed(2)}px)`;
+    },
+    /* Left of the ten seconds. Zero hides it. */
+    grace(t, total) {
+      els.grace.style.opacity = t > 0 ? 1 : 0;
+      if (t <= 0) return;
+      els.graceFill.style.width = ((t / total) * 100).toFixed(1) + '%';
+      els.graceNum.textContent = Math.ceil(t);
+    },
+    /* One frame of red across the whole screen, gone in a fifth of a second.
+       Separate from the wound vignette, which is a standing state — this is
+       the moment of contact. */
+    hitFlash(k) {
+      els.flash.style.transition = 'none';
+      els.flash.style.opacity = Math.min(0.75, k).toFixed(2);
+      // Two frames, so the browser has a value to animate away from.
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        els.flash.style.transition = 'opacity .22s ease-out';
+        els.flash.style.opacity = 0;
+      }));
     },
     hideTitle() { els.title.style.opacity = 0; setTimeout(() => { els.title.style.display = 'none'; }, 1500); },
     gameOver(round, kills) {
@@ -5632,6 +5847,7 @@ function start(opts = {}) {
     testHold: {},
     grenades: [], goldPickups: [], belt: null, drops: [], shop: null,
     settings: { open: false, index: 1, current: 'normal' }, particleScale: 1,
+    grace: 0, toggles: loadToggles(),
   };
   S.addPoints = (n) => { const a = Math.round(n * S.mul); S.points += a; return a; };
 
@@ -5703,6 +5919,10 @@ function start(opts = {}) {
   game.onUpdate((dt) => {
     if (window.__FREEZE) return;   // test/profiling hatch: engine only
     S.time += dt;
+    if (S.grace > 0) {
+      S.grace = Math.max(0, S.grace - dt);
+      if (S.grace === 0 && sfx.graceEnd) sfx.graceEnd();
+    }
     S.frame = (S.frame || 0) + 1;
     const i = game.input;
     const pad = i.pad;
@@ -5896,6 +6116,7 @@ function start(opts = {}) {
       }
       hud.shield(P.shieldT / SHIELD.duration, P.shieldCd);
       hud.stamina(P.stamina / maxStam, !!P.perks.adrenaline);
+      hud.grace(S.grace, BENCH_GRACE);
 
       /* Settings. Escape opens it anywhere except at the bench, where
          escape already means "put the gun down". The game keeps running
@@ -5909,18 +6130,26 @@ function start(opts = {}) {
         }
       }
       if (S.settings.open) {
-        const n = GRAPHICS_ORDER.length;
+        const ng = GRAPHICS_ORDER.length;
+        const n = ng + TOGGLE_ORDER.length;
         const up = i.justPressed('w') || i.justPressed('arrowup') || pad.pressed.up;
         const dn = i.justPressed('s') || i.justPressed('arrowdown') || pad.pressed.down;
         if (up) S.settings.index = (S.settings.index + n - 1) % n;
         if (dn) S.settings.index = (S.settings.index + 1) % n;
         if (i.justPressed('f') || i.justPressed('enter') || pad.pressed.x) {
-          applyGraphics(game, S, GRAPHICS_ORDER[S.settings.index]);
-          hud.banner(GRAPHICS[S.settings.current].name, '#8ce8a0');
+          if (S.settings.index < ng) {
+            applyGraphics(game, S, GRAPHICS_ORDER[S.settings.index]);
+            hud.banner(GRAPHICS[S.settings.current].name, '#8ce8a0');
+          } else {
+            const k = TOGGLE_ORDER[S.settings.index - ng];
+            S.toggles[k] = !S.toggles[k];
+            saveToggles(S.toggles);
+            hud.banner(TOGGLES[k].name + (S.toggles[k] ? ' ON' : ' OFF'), '#8ce8a0');
+          }
           sfx.buy();
         }
         if (pad.pressed.b) S.settings.open = false;
-        hud.settings({ index: S.settings.index, current: S.settings.current });
+        hud.settings({ index: S.settings.index, current: S.settings.current, toggles: S.toggles });
         // Nothing else takes input while it is up.
         mx = 0; mz = 0;
       } else {
@@ -6002,9 +6231,9 @@ function start(opts = {}) {
         if (i.justPressed('tab') || i.justPressed('escape')) {
           if (bench.picking) bench.picking = false;
           else if (bench.preview) bench.preview = false;
-          else bench.open = false;
+          else closeBench(S, sfx);
         }
-        if (dist2d(P.actor.position, { x: bench.at[0], z: bench.at[2] }) > PLAYER.interactRange + 1.6) bench.open = false;
+        if (dist2d(P.actor.position, { x: bench.at[0], z: bench.at[2] }) > PLAYER.interactRange + 1.6) closeBench(S, sfx);
 
         // Markers, projected from the weapon's own anchors.
         const v = P.view[held];
@@ -6071,7 +6300,7 @@ function start(opts = {}) {
         if (P.slots.length <= n || n < 0) return;
         if (P.knifeOut) { P.knifeOut = false; P.slots = P.slots.filter((w) => w !== 'knife'); }
         P.slot = Math.max(0, Math.min(n, P.slots.length - 1));
-        P.reloading = 0; P.reloadStage = 0;
+        P.reloading = 0; P.reloadStage = 0; P.breakStage = 0;
         /* The cooldown belongs to the weapon that set it, not to the player.
            The hammer's refire is nine seconds — swing it once while boarding
            a window and the gun you swap back to is dead for the next nine,
@@ -6092,26 +6321,68 @@ function start(opts = {}) {
         const spec = P.spec();
         const prog = 1 - P.reloading / spec.reload;
         const v = P.view[P.equipped()];
+        /* The stages every reload passes through — but only a box magazine
+           actually drops a magazine and runs a slide. This block used to do
+           both for every weapon, so a break-action shotgun played a magazine
+           release, a magazine seating and a slide going forward while its
+           own code was working the hinge, and a revolver did the same over
+           its cylinder. Each kind gets its own sounds now, and the ones with
+           their own animation code are left to it. */
+        const kind = spec.reloadKind;
         if (P.reloadStage === 0 && prog > 0.16) {
           P.reloadStage = 1;
-          if (v.kind === 'single' && v.actor.mag) v.actor.mag.visible = false;
-          dropMagazine(game, S, P, v);
-          sfx.magOut();
+          if (kind === 'mag') {
+            if (v.kind === 'single' && v.actor.mag) v.actor.mag.visible = false;
+            dropMagazine(game, S, P, v);
+            sfx.magOut();
+          } else if (kind === 'revolver') sfx.cylinderOut();
+          else if (kind === 'clip') sfx.boltBack();
+          else if (kind === 'cell') sfx.cellOut();
         } else if (P.reloadStage === 1 && prog > 0.62) {
           P.reloadStage = 2;
-          if (v.kind === 'single' && v.actor.mag) v.actor.mag.visible = true;
-          sfx.magIn();
+          if (kind === 'mag') {
+            if (v.kind === 'single' && v.actor.mag) v.actor.mag.visible = true;
+            sfx.magIn();
+          } else if (kind === 'revolver') sfx.cylinderIn();
+          else if (kind === 'clip') sfx.clipIn();
+          else if (kind === 'cell') sfx.cellIn();
         } else if (P.reloadStage === 2 && prog > 0.88) {
           P.reloadStage = 3;
-          P.slideCycle = 0.16; P.slideCycleMax = 0.16;   // runs forward on the fresh mag
-          sfx.slideRelease();
+          if (kind === 'mag') {
+            P.slideCycle = 0.16; P.slideCycleMax = 0.16; // runs forward on the fresh mag
+            sfx.slideRelease();
+          } else if (kind === 'clip') sfx.boltHome();
         }
         P.reloading -= dt;
-        if (P.reloading <= 0) { P.reloading = 0; P.reloadStage = 0; finishReload(P, hud); }
+        if (P.reloading <= 0) { P.reloading = 0; P.reloadStage = 0; P.breakStage = 0; finishReload(P, hud); }
       }
 
       if (!P.sprinting && !(S.bench && S.bench.open)) tryFire(game, S, P, hud, sfx, dt);
       updateRecoil(game, P, dt, S);
+
+      /* The flinch roll, spun into the camera's up vector.
+
+         lookAt takes an up, so tilting that about the look direction is a
+         roll and nothing else in the engine has to learn a new concept.
+         Rodrigues about the forward axis; it decays back to level in about
+         a third of a second, which is a flinch rather than a lurch. */
+      P.flinchRoll = (P.flinchRoll || 0) * Math.exp(-6.5 * dt);
+      if (Math.abs(P.flinchRoll) < 2e-4) P.flinchRoll = 0;
+      {
+        const cam = game.camera;
+        const a = P.flinchRoll;
+        if (a === 0) cam.up.set(0, 1, 0);
+        else {
+          const fx = cam.target.x - cam.position.x, fy = cam.target.y - cam.position.y,
+            fz = cam.target.z - cam.position.z;
+          const fl = Math.hypot(fx, fy, fz) || 1;
+          const ux = fx / fl, uy = fy / fl, uz = fz / fl;
+          const c = Math.cos(a), sn = Math.sin(a);
+          // u = (0,1,0); f x u = (-uz, 0, ux); f.u = uy
+          const k = uy * (1 - c);
+          cam.up.set(-uz * sn + ux * k, c + uy * k, ux * sn + uz * k);
+        }
+      }
       // The viewmodel is NOT placed here. Update hooks run before the
       // camera moves, so a gun positioned from cam.position in this pass is
       // hung off last frame's camera — it lags the view by a frame and
@@ -6128,19 +6399,45 @@ function start(opts = {}) {
       /* Interact. */
       const it = (S.bench && S.bench.open) ? null : nearestInteract(S, P);
       if (it) {
-        hud.prompt(it.label + (it.hold ? ' (hold)' : ''));
-        if (it.hold ? (i.down('f') || i.down('x') || pad.buttons.b)
-                    : (i.justPressed('f') || i.justPressed('x') || pad.pressed.b)) {
+        /* Boarding a window is work, and work is a key you are holding
+           rather than a place you are standing. With AUTO REPAIR on it goes
+           back to happening by proximity, for anyone who liked it that way. */
+        const auto = it.kind === 'repair' && S.toggles.autoRepair;
+        hud.prompt(it.label + (auto ? '' : it.hold ? ' (hold)' : ''));
+        if (auto
+            || (it.hold ? (i.down('f') || i.down('x') || pad.buttons.b)
+                        : (i.justPressed('f') || i.justPressed('x') || pad.pressed.b))) {
           doInteract(game, S, P, hud, sfx, it, dt);
         }
       } else hud.prompt(null);
 
-      /* Regen. */
-      if (P.hp < P.maxHp && S.time - P.lastHit > PLAYER.regenDelay) {
+      /* Regen, and the sound of nearly not making it.
+
+         The threshold is an absolute twenty-five rather than a fraction, so
+         it means the same thing to a Supersoldier on three hundred as to
+         everyone else: twenty-five is one more swing. Below it the edges of
+         the screen star out red, and you can hear the character — a heart
+         going at about a hundred and ten, and a breath drawn between beats.
+         The moment the wound starts closing there is a note for it, so you
+         know to stop running before you have counted the seconds. */
+      const regenning = P.hp < P.maxHp && S.time - P.lastHit > PLAYER.regenDelay;
+      if (regenning) {
+        if (!P.regenning) { P.regenning = true; sfx.regenStart(); }
         P.hp = Math.min(P.maxHp, P.hp + PLAYER.regenRate * dt);
-        hud.damage(P.hp / P.maxHp);
-      }
-      if (P.hp < P.maxHp * 0.3 && Math.floor(S.time * 1.1) !== Math.floor((S.time - dt) * 1.1)) sfx.heartbeat();
+      } else if (P.hp >= P.maxHp) P.regenning = false;
+      if (!regenning && S.time - P.lastHit < PLAYER.regenDelay) P.regenning = false;
+
+      const low = P.hp > 0 && P.hp <= PLAYER.lowAt;
+      if (low) {
+        P.lowT = (P.lowT || 0) + dt;
+        // 110 bpm. The breath lands between beats, not on them.
+        const beat = 60 / 110;
+        const n = Math.floor(P.lowT / beat);
+        if (n !== P.lastBeat) { P.lastBeat = n; sfx.heartbeat(); }
+        const m = Math.floor((P.lowT + beat * 0.5) / (beat * 3));
+        if (m !== P.lastBreath) { P.lastBreath = m; sfx.breath(); }
+      } else { P.lowT = 0; P.lastBeat = -1; P.lastBreath = -1; }
+      hud.damage(P.hp / P.maxHp, low ? P.lowT : 0);
     }
 
     if (!S.shieldActive) {

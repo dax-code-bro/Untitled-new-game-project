@@ -372,6 +372,67 @@ class Audio {
     osc.start(now); osc.stop(now + dur);
   }
 
+  /* A gunshot.
+
+     Not a tone. Every gun in this game was a stack of oscillators, and an
+     oscillator is a buzz — the shotgun in particular was a 950 Hz sawtooth,
+     which is a kazoo. A real report is a wideband noise transient: a bright
+     crack that is over in forty milliseconds, a body with some low in it
+     that is the part which carries down a corridor, and a thump you feel
+     rather than hear. `bore` walks it from a pistol's snap at 0 to a
+     shotgun's boom at 1.
+
+     Its own rate limit, kept apart from impact()'s: a belt gun at twelve
+     hundred a minute must not be starved by falling masonry, and neither
+     should stack into clipping. */
+  report(bore = 0.5, opts = {}) {
+    if (!this.enabled) return;
+    const ctx = this.ensure();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    if (now - (this._lastShot || 0) < 0.014) return;
+    this._lastShot = now;
+
+    const b = clamp(bore, 0, 1);
+    const vol = (opts.volume != null ? opts.volume : 1) * lerp(0.24, 0.46, b);
+    const dur = lerp(0.11, 0.40, b);
+
+    const crack = ctx.createBufferSource();
+    crack.buffer = this._noiseBuffer(0.05);
+    const hp = ctx.createBiquadFilter();
+    hp.type = 'highpass';
+    hp.frequency.value = lerp(2800, 1100, b);
+    const cg = ctx.createGain();
+    cg.gain.setValueAtTime(vol * 0.85, now);
+    cg.gain.exponentialRampToValueAtTime(0.0001, now + 0.045);
+    crack.connect(hp).connect(cg).connect(this.master);
+
+    const body = ctx.createBufferSource();
+    body.buffer = this._noiseBuffer(dur);
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(lerp(1600, 850, b), now);
+    lp.frequency.exponentialRampToValueAtTime(lerp(300, 120, b), now + dur);
+    lp.Q.value = 0.8;
+    const bg = ctx.createGain();
+    bg.gain.setValueAtTime(vol, now);
+    bg.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+    body.connect(lp).connect(bg).connect(this.master);
+
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(lerp(155, 76, b), now);
+    osc.frequency.exponentialRampToValueAtTime(lerp(66, 33, b), now + dur * 0.7);
+    const og = ctx.createGain();
+    og.gain.setValueAtTime(vol * 0.7, now);
+    og.gain.exponentialRampToValueAtTime(0.0001, now + dur * 0.8);
+    osc.connect(og).connect(this.master);
+
+    crack.start(now); crack.stop(now + 0.05);
+    body.start(now); body.stop(now + dur);
+    osc.start(now); osc.stop(now + dur);
+  }
+
   /* Shattering: a cloud of short, bright, detuned pings. */
   shatter(strength = 1) {
     if (!this.enabled) return;
