@@ -8075,7 +8075,12 @@ function start(opts = {}) {
   // without having to equip it and fight the viewmodel for the frame.
   // Things a test needs to reach that the game keeps to itself.
   window.__T_SYS = { ATTACH, GRAPHICS, GRAPHICS_ORDER, applyGraphics, meteorShot,
-    nearestInteract, doInteract, applyAttachmentLooks, applyUpgradeLook, UPGRADE_NAMES };
+    nearestInteract, doInteract, applyAttachmentLooks, applyUpgradeLook, UPGRADE_NAMES,
+    /* PLAYER, so a test can narrow the field of view and get a close look
+       at the hands. The viewmodel shares the camera, so there is no other
+       way to magnify it — and the fov is recomputed from the aim every
+       frame, which makes setting camera.fov directly useless. */
+    PLAYER, TOGGLES, TOGGLE_ORDER, HEROES, HERO_ORDER, EXIT42, updateExit42, exitStep };
   window.__T_MAKE = { makeParalyzer, makeMP5, makeSawedOff, makeScattergun, makeObliterator,
     makeMauser, makeArcProjector, makeKnife, makeHammer, makeRiotShield, makeBatteringRam };
   const __THooks = window.__T = {
