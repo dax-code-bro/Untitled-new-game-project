@@ -4599,8 +4599,12 @@ function makeHud() {
   #b9hud .prompt { position:absolute; left:50%; bottom:26%; transform:translateX(-50%); font-size:19px;
     background:rgba(8,6,4,.72); padding:8px 22px; border:1px solid #4a4234; letter-spacing:.06em; display:none; }
   #b9hud .prompt .key { color:#ffd27a; }
-  #b9hud .bench { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-    width:min(720px,86vw); background:rgba(10,8,6,.90); border:1px solid #5a5140; padding:18px 22px;
+  /* The parts list lives on the right and the controls on the left, with
+     the weapon between them. Both were centred to begin with and they sat
+     on top of each other — the list you are reading through the panel that
+     tells you how to read it. */
+  #b9hud .bench { position:absolute; right:3%; top:50%; transform:translateY(-50%);
+    width:min(600px,58vw); background:rgba(10,8,6,.93); border:1px solid #5a5140; padding:18px 22px;
     display:none; letter-spacing:.05em; }
   #b9hud .bench .bhead { font-size:19px; color:#e8ddc8; border-bottom:1px solid #4a4234; padding-bottom:9px; margin-bottom:11px; }
   #b9hud .bench .brow { display:flex; flex-direction:column; gap:6px; }
@@ -4631,7 +4635,7 @@ function makeHud() {
      it is no use at all for a screen nobody has seen before, and the bench
      has ten of them. */
   #b9hud .bkeys { position:absolute; left:3%; top:50%; transform:translateY(-50%);
-    width:min(266px,25vw); background:rgba(8,6,4,.88); border:1px solid #5a5140; padding:13px 15px;
+    width:min(252px,24vw); background:rgba(8,6,4,.92); border:1px solid #5a5140; padding:13px 15px;
     font-size:12.5px; letter-spacing:.05em; }
   #b9hud .bkeys h4 { margin:0 0 4px; font-size:12px; font-weight:normal; color:#e8ddc8; letter-spacing:.14em; }
   #b9hud .bkeys .step { color:#8a8272; font-size:11.5px; margin:0 0 10px; line-height:1.45; }
@@ -4661,7 +4665,7 @@ function makeHud() {
   #b9hud .settings .sfoot b { color:#ffd27a; font-weight:normal; }
   /* Damage diagram. A body drawn out of eleven boxes, each labelled with
      what this gun actually does to it. */
-  #b9hud .bdmg { position:absolute; right:3%; top:50%; transform:translateY(-50%);
+  #b9hud .bdmg { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
     width:min(330px,30vw); background:rgba(8,6,4,.90); border:1px solid #5a5140; padding:14px 16px;
     display:none; font-size:13px; letter-spacing:.05em; }
   #b9hud .bdmg h4 { margin:0 0 10px; font-size:14px; font-weight:normal; color:#e8ddc8; letter-spacing:.10em; }
