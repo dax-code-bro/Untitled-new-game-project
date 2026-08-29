@@ -1654,7 +1654,13 @@ function buildMap(game, S) {
     }
     add(game.box({ size: [0.42, 0.20, 0.30], material: gunMat, physics: false }), [-0.02, 0.02, 0]);   // receiver
     // Six barrels in a cluster, on their own actor so the cluster spins.
-    const cluster = add(game.box({ size: 1, physics: false, visible: false }), [0.22, 0.02, 0]);
+    /* The cluster's pivot is an invisible unit cube and must stay that way:
+       it is in `parts` so it moves with the yoke, and anything that turns
+       the whole list visible turns it into a one-metre white box sitting on
+       the roof. Kept out of the list instead. */
+    const cluster = game.box({ size: 1, physics: false, visible: false });
+    cluster.parent = yoke;
+    cluster.setPosition([0.22, 0.02, 0]);
     const barrels = [];
     for (let k = 0; k < 6; k++) {
       const a2 = (k / 6) * Math.PI * 2;
@@ -1674,6 +1680,7 @@ function buildMap(game, S) {
     // Shield plate, and a lamp on the mount that comes on with it.
     add(game.box({ size: [0.04, 0.30, 0.44], material: gunMat, physics: false }), [-0.20, 0.06, 0]);
     for (const q of parts) q.visible = true;
+    yoke.visible = false; cluster.visible = false;
     S.minigun = {
       at: [MG[0], MG[1] + 0.9, MG[2] - 0.9], mount: MG, yoke, cluster, barrels,
       t: 0, cool: 0, spin: 0, spinUp: 0, owed: 0, target: null, aim: -Math.PI / 2,
@@ -4502,7 +4509,7 @@ function nearestInteract(S, P) {
   }
 
   const c = S.crate;
-  if (dist2d(p, { x: c.at[0], z: c.at[2] }) < R + 0.4) {
+  if (dist2d(p, { x: c.at[0], z: c.at[2] }) < R + 0.4 && Math.abs(p.y - c.at[1]) < 2.2) {
     // Nothing to take while the reel is still turning over.
     if (c.offer && !(c.reelT > 0)) return { kind: 'take', cost: 0, label: `Take ${WEAPONS[c.offerId].name}` };
     if (c.offer) return { kind: 'crateSpin', cost: 0, inert: true, label: 'Wait for it' };
