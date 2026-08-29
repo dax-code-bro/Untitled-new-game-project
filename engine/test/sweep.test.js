@@ -259,6 +259,16 @@ const SWEEP = () => {
       if (!(window.__T_WEAPONS[id] || {}).melee) continue;
       const row = { id, hurt: false, err: '' };
       try {
+        /* Back to round one first.
+         *
+         * runFrames pins toSpawn at zero so the sweep is not fighting a
+         * room filling with bodies -- but that ends each round the instant
+         * it starts, so by the time the fourth melee weapon comes up the
+         * round counter has raced into the hundreds and a walker spawns
+         * with eighteen thousand health and moves accordingly. The riot
+         * shield "failed" this check for that reason and kills a walker in
+         * one swing when it is asked on its own. */
+        if (typeof SS.round === 'number') SS.round = 1;
         PP.give(id);
         PP.slot = PP.slots.indexOf(id);
         __T.killAll(); runFrames(20);
@@ -271,15 +281,26 @@ const SWEEP = () => {
            and a teleported player is not a test of the weapon -- it is a
            test of the wall, and it failed all four including the knife,
            which is what gave the probe away. */
+        /* Level the view first.
+         *
+         * The weapon loop above fires several hundred rounds, and recoil
+         * pitch is cumulative -- by the time the melee block runs the
+         * camera is aimed well above the horizon. The probe was placing
+         * the target horizontally in front of the player while the melee
+         * ray, which uses the camera's real three-dimensional forward,
+         * went over its head. Every melee weapon "failed" and all four
+         * kill a walker in one swing when asked on their own. */
+        __T.look(G._camYaw || 0, 0);
+        PP.kickPitch = 0;
+        runFrames(4);
         const cam = G.camera;
-        const fw = { x: cam.target.x - cam.position.x, y: 0, z: cam.target.z - cam.position.z };
-        const L = Math.hypot(fw.x, fw.z) || 1;
         const put = () => {
-          const at = new window.LE.Vec3(
-            cam.position.x + fw.x / L * 1.3,
+          const fx = cam.target.x - cam.position.x, fz = cam.target.z - cam.position.z;
+          const L = Math.hypot(fx, fz) || 1;
+          z.actor.controller.teleport(new window.LE.Vec3(
+            cam.position.x + fx / L * 1.3,
             PP.actor.position.y,
-            cam.position.z + fw.z / L * 1.3);
-          z.actor.controller.teleport(at);
+            cam.position.z + fz / L * 1.3));
         };
         put(); runFrames(4);
         const hp0 = z.hp;
@@ -294,7 +315,17 @@ const SWEEP = () => {
         }
         __T.release();
         row.hurt = !!(z.dead || z.hp < hp0);
-        row.hp = z.hp; row.hp0 = hp0;
+        row.hp = Math.round(z.hp); row.hp0 = Math.round(hp0); row.round = SS.round;
+        // Enough state to tell a broken weapon from a broken probe.
+        row.equipped = PP.equipped();
+        row.slot = PP.slot;
+        row.cooldown = +PP.cooldown.toFixed(2);
+        row.reloading = +PP.reloading.toFixed(2);
+        row.swingT = +(PP.swingT || 0).toFixed(2);
+        row.dist = +Math.hypot(z.actor.position.x - PP.actor.position.x,
+          z.actor.position.z - PP.actor.position.z).toFixed(2);
+        row.parked = !!z.parked;
+        row.zState = z.state;
       } catch (e) { row.err = e.message; }
       out.sys.melee.push(row);
     }
@@ -403,6 +434,19 @@ function check(name, cond, detail = '') {
   check('no mesh is empty', empty.length === 0,
     list(empty, (m) => `${m.key}: ${m.verts} vertices, ${m.tris} triangles`));
 
+  /* A mesh far heavier than everything around it.
+   *
+   * This is a budget, not a correctness check: the two 1911 grip panels
+   * come out at 11,824 triangles each because the checkering is real
+   * geometry rather than a normal map -- every other grid node raised, so
+   * the surface is a field of diamond pyramids. That is nine per cent of
+   * the game's entire triangle count for two small panels, on a gun whose
+   * whole receiver is 2,800. Worth knowing about before something worse
+   * lands. */
+  const heavy = bad((m) => m.tris > 15000);
+  check('no single mesh runs away with the triangle budget', heavy.length === 0,
+    list(heavy, (m) => `${m.key}: ${m.tris} triangles`));
+
   const flat = bad((m) => Math.max(...m.size) < 1e-5);
   check('no mesh has collapsed to a point', flat.length === 0,
     list(flat, (m) => `${m.key}: ${m.size.map((v) => v.toFixed(5)).join(' x ')}`));
@@ -449,7 +493,7 @@ function check(name, cond, detail = '') {
 
   const limp = (sy.melee || []).filter((m) => !m.err && !m.hurt);
   check('every melee weapon hurts what it is swung at', limp.length === 0,
-    list(limp, (m) => `${m.id}: a zombie 1.3 m in front of the camera went from ${m.hp0} to ${m.hp} hp`));
+    list(limp, (m) => `${m.id}: ${m.hp0} -> ${m.hp} hp; ` + JSON.stringify({ equipped: m.equipped, slot: m.slot, cooldown: m.cooldown, reloading: m.reloading, swingT: m.swingT, dist: m.dist, parked: m.parked, state: m.zState })));
   const mErr = (sy.melee || []).filter((m) => m.err);
   check('every melee weapon can be swung', mErr.length === 0,
     list(mErr, (m) => `${m.id}: ${m.err}`));
