@@ -14748,6 +14748,387 @@ function buildArcGrip(g) {
 }
 
 /* ============================================================
+   BOLT RIFLES — the Remington and the Kill Streak.
+
+   Two guns, one action. A bolt rifle is a tube with a barrel
+   screwed into the front of it, a bolt that runs in the tube, a
+   magazine under it and a stock round the whole thing, and the
+   difference between a deer rifle and an anti-materiel gun is
+   almost entirely proportion: how thick the barrel is, how big
+   the brake on the end of it is, and how much of the stock has
+   been cut away to save weight.
+
+   Real dimensions again. A Remington 700 is 1067 mm overall on a
+   610 mm barrel; both are shortened here, because a metre of
+   rifle held at the hip fills a third of the screen and the
+   player is looking at a gun, not carrying a fence post.
+   ============================================================ */
+
+function buildRifleSteel(g, K) {
+  /* Receiver: a round tube with a flat-bottomed lug, the way a bolt gun's
+     is, running from the tang to the barrel shank. */
+  sweepPath(g, [
+    ax(K.recRear, roundRect(K.recR, K.recR * 0.86, K.recR * 0.94, 3.0, 24)),
+    ax(K.recRear + 0.014, roundRect(K.recR, K.recR, K.recR, 3.0, 24)),
+    ax(0.0400, roundRect(K.recR, K.recR, K.recR, 3.0, 24)),
+    ax(K.barrelRear - 0.002, roundRect(K.recR, K.recR, K.recR, 3.0, 24)),
+  ], true, true);
+  // Ejection port, cut into the top right of the tube.
+  hardBox(g, -0.0050, K.recR * 0.62, K.recR * 0.70, 0.0300, K.recR * 0.40, 0.0030);
+  // Recoil lug and the flat the action beds on.
+  hardBox(g, K.barrelRear - 0.010, -K.recR - 0.004, 0, 0.0060, 0.0090, 0.0130);
+
+  /* Barrel. A taper, and on the heavy rifle six flutes milled down it —
+     which is what a barrel that thick actually has, and what stops it
+     reading as a length of pipe. */
+  tubeRun(g, [
+    [K.barrelRear - 0.004, K.barrelR0],
+    [K.barrelRear + 0.030, K.barrelR0],
+    [K.muzzle - (K.brake ? K.brake.len : 0.030) - 0.010, K.barrelR1],
+    [K.muzzle - (K.brake ? K.brake.len : 0.002), K.barrelR1],
+  ], 24, true, false);
+  if (K.fluted) {
+    for (let i = 0; i < 6; i++) {
+      const th = (i / 6) * TAU + 0.3;
+      const rr = K.barrelR0 + 0.0040;
+      spin(g, [
+        [K.barrelRear + 0.055, 0], [K.barrelRear + 0.055, 0.0058],
+        [K.muzzle - K.brake.len - 0.040, 0.0058], [K.muzzle - K.brake.len - 0.040, 0],
+      ], 12, 34, Math.cos(th) * rr, Math.sin(th) * rr);
+    }
+  }
+
+  if (K.brake) {
+    /* Muzzle brake: a can with ports cut through it, and it is enormous
+       because the rifle behind it is. */
+    const b = K.brake, x0 = K.muzzle - b.len;
+    spin(g, [
+      [x0, K.barrelR1], [x0 + 0.010, b.r], [K.muzzle - 0.006, b.r],
+      [K.muzzle, b.r * 0.88], [K.muzzle, K.bore + 0.0018], [x0, K.bore + 0.0018],
+    ], 26, 34);
+    for (let i = 0; i < b.ports; i++) {
+      const x = x0 + 0.020 + i * ((b.len - 0.032) / b.ports);
+      for (const sz of [-1, 1]) {
+        hardBox(g, x, 0, sz * b.r * 0.86, 0.0075, b.r * 0.72, 0.0060);
+      }
+    }
+    crown(g, K.muzzle, K.bore + 0.0022, K.bore, 0.060);
+  } else {
+    crown(g, K.muzzle, K.barrelR1, K.bore, 0.050);
+  }
+
+  /* Trigger group, guard, and the safety on the tang. */
+  guardBow(g, [
+    [-0.0480, -K.recR - 0.006], [-0.0455, -K.recR - 0.018], [-0.0330, -K.recR - 0.026],
+    [-0.0180, -K.recR - 0.025], [-0.0105, -K.recR - 0.017], [-0.0085, -K.recR - 0.006],
+  ], 0.0028, 0.0028, 0.0058);
+  triggerBlade(g, -0.0300, -K.recR - 0.006, 0, 0.022, 0.0040);
+  hardBox(g, K.recRear + 0.008, K.recR + 0.004, 0.0060, 0.0080, 0.0026, 0.0040);
+
+  /* Magazine box, a hinged floorplate under it, and the release. */
+  sweepPath(g, [
+    ax(K.magX - K.magLen / 2, roundRect(0.0090, 0.0090, 0.0110, 3.2, 18), -K.recR - 0.010),
+    ax(K.magX - K.magLen / 2 + 0.006, roundRect(0.0110, 0.0170, 0.0140, 3.2, 18), -K.recR - 0.010),
+    ax(K.magX + K.magLen / 2 - 0.006, roundRect(0.0110, 0.0170, 0.0140, 3.2, 18), -K.recR - 0.010),
+    ax(K.magX + K.magLen / 2, roundRect(0.0090, 0.0090, 0.0110, 3.2, 18), -K.recR - 0.010),
+  ], true, true);
+  hardBox(g, K.magX, -K.recR - 0.028, 0, K.magLen / 2, 0.0030, 0.0146);
+
+  /* Sling swivels, front and rear. */
+  for (const sx of [K.muzzle * 0.62, K.stockButt + 0.070]) {
+    strut(g, [sx, -K.recR - 0.030, -0.0035], [sx, -K.recR - 0.030, 0.0035], ringOutline(0.0030, 10));
+  }
+
+  if (K.bipod) {
+    /* Bipod, folded back along the forend — it is a rifle you shoot lying
+       down and it should look like one even when you are not. */
+    for (const sz of [-1, 1]) {
+      strut(g, [K.muzzle * 0.56, -K.recR - 0.014, sz * 0.010],
+        [K.muzzle * 0.30, -K.recR - 0.052, sz * 0.030], ringOutline(0.0055, 10));
+      strut(g, [K.muzzle * 0.30, -K.recR - 0.052, sz * 0.030],
+        [K.muzzle * 0.24, -K.recR - 0.046, sz * 0.034], ringOutline(0.0070, 10));
+    }
+    hardBox(g, K.muzzle * 0.56, -K.recR - 0.012, 0, 0.0130, 0.0090, 0.0150);
+  }
+}
+
+/* The bolt: body, handle, knob. It runs straight back, which is the whole
+   of a bolt gun's reload. */
+function buildRifleBolt(g, K) {
+  sweepPath(g, [
+    ax(K.recRear + 0.010, ringOutline(K.recR * 0.62, 18)),
+    ax(K.barrelRear - 0.006, ringOutline(K.recR * 0.62, 18)),
+  ], true, true);
+  // Handle out of the right flank, swept down and back, with a round knob.
+  strut(g, [-0.0180, 0, K.recR * 0.50], [-0.0210, -0.0090, K.recR + 0.0230], ringOutline(0.0048, 12));
+  spin(g, [[-0.0300, 0], [-0.0250, 0.0105], [-0.0180, 0.0105], [-0.0140, 0]],
+    16, 36, -0.0110, K.recR + 0.0290);
+  // Shroud and the cocking piece at the back.
+  spin(g, [[K.recRear + 0.002, 0], [K.recRear + 0.002, K.recR * 0.56],
+           [K.recRear + 0.014, K.recR * 0.56], [K.recRear + 0.014, 0]], 18, 36);
+}
+
+/* Stock. Synthetic on both, so it is the same shape twice with the heavy
+   rifle's cut away into a skeleton and given a cheek riser. */
+function buildRifleStock(g, K) {
+  const st = (x, cy, up, down, hw) => ax(x, roundRect(up, down, hw, 2.4, 22), cy);
+  sweepPath(g, [
+    st(K.stockButt, -0.0420, 0.0470, 0.0430, 0.0175),
+    st(K.stockButt + 0.050, -0.0380, 0.0430, 0.0370, 0.0170),
+    st(K.stockButt + 0.130, -0.0300, K.comb + 0.0180, 0.0300, 0.0165),
+    st(K.recRear - 0.030, -0.0180, K.comb + 0.0120, 0.0230, 0.0180),
+    st(K.recRear + 0.010, -0.0120, K.recR + 0.0030, 0.0210, 0.0195),
+  ], true, true);
+  // Butt pad.
+  hardBox(g, K.stockButt - 0.0030, -0.0420, 0, 0.0035, 0.0480, 0.0175);
+  if (K.cheek) {
+    hardBox(g, K.stockButt + 0.120, K.comb + 0.0090, 0, 0.0520, 0.0110, 0.0165);
+    // Two lightening cuts through the wrist, so it reads as a chassis.
+    for (const sx of [K.stockButt + 0.075, K.stockButt + 0.145]) {
+      strut(g, [sx, -0.0300, -0.0180], [sx, -0.0300, 0.0180], ringOutline(0.0135, 14));
+    }
+  }
+  /* Forend, running under the barrel and free-floated — the gap is the
+     point on a target rifle and it is visible from every angle. */
+  const fy = -K.recR - 0.008;
+  sweepPath(g, [
+    ax(K.barrelRear - 0.020, roundRect(0.0130, 0.0175, 0.0220, 2.6, 22), fy),
+    ax(K.barrelRear + 0.030, roundRect(0.0150, 0.0230, 0.0265, 2.5, 22), fy),
+    ax(K.muzzle * 0.55, roundRect(0.0150, 0.0230, 0.0265, 2.5, 22), fy),
+    ax(K.muzzle * 0.62, roundRect(0.0120, 0.0150, 0.0210, 2.7, 22), fy),
+  ], true, true);
+  // Pistol grip.
+  gripStack(g, K.gripTopX, K.gripTopY, K.gripLen, K.gripRake, [
+    [0.00, 0.0180, 0.0220, 0.0175, 2.6],
+    [0.30, 0.0165, 0.0200, 0.0168, 2.5],
+    [0.70, 0.0162, 0.0200, 0.0168, 2.5],
+    [1.00, 0.0170, 0.0212, 0.0176, 2.8],
+  ]);
+  for (const sd of [-1, 1]) {
+    checker(g, K.gripTopX - 0.028, K.gripTopY - 0.052, sd * 0.0172, K.gripRake, -0.94, sd, 4, 7, 0.0060, 0.0010);
+  }
+}
+
+/* Scope, rings and mount. A telescopic sight is a tube with a bell on the
+   front, an ocular bell on the back and a turret housing in the middle,
+   and every one of those three is what makes it read as glass rather than
+   as a length of pipe lying on the receiver. */
+function buildRifleScope(g, K) {
+  const S2 = K.scope;
+  /* A tube, and it has to be a real one.
+
+     The outline runs down the inside from the objective to the ocular,
+     steps out at the back, and comes forward again over the bells and the
+     waist. Closing it to the axis instead — which is what a naive lathe
+     outline does — puts a solid disc across the front of the scope, and
+     what you get is a beautifully machined black hole you cannot see
+     through. The inner wall is what gives the sight picture its dark ring;
+     the hole down the middle is what makes it a sight. */
+  const rIn = S2.bell * 0.66;
+  spin(g, [
+    [S2.x0 + 0.004, rIn], [S2.x1 - 0.002, rIn],
+    [S2.x1, S2.bell * 0.94], [S2.x1 - 0.006, S2.bell], [S2.x1 - 0.048, S2.bell],
+    [S2.x1 - 0.075, S2.r], [S2.x0 + 0.055, S2.r],
+    [S2.x0 + 0.030, S2.r * 1.06], [S2.x0 + 0.004, S2.bell * 0.92],
+  ], 26, 34, S2.y);
+  // Turrets: elevation on top, windage on the right.
+  const tx = (S2.x0 + S2.x1) / 2 + 0.010;
+  hardBox(g, tx, S2.y + S2.r + 0.0130, 0, 0.0135, 0.0130, 0.0135);
+  hardBox(g, tx, S2.y, S2.r + 0.0130, 0.0125, 0.0125, 0.0130);
+  // Magnification ring, knurled, behind the turrets.
+  band(g, S2.x1 - 0.100, S2.x1 - 0.082, S2.r, S2.r + 0.0035, 22, S2.y);
+  // Rings and the rail they clamp to.
+  for (const rx of [S2.x0 + 0.070, S2.x1 - 0.115]) {
+    band(g, rx - 0.008, rx + 0.008, S2.r, S2.r + 0.0055, 22, S2.y);
+    hardBox(g, rx, (S2.y - S2.r - K.recR) / 2 + K.recR / 2 + S2.r * 0, 0,
+      0.0080, (S2.y - S2.r - K.recR) / 2 + 0.004, 0.0090);
+  }
+  hardBox(g, (S2.x0 + S2.x1) / 2, K.recR + 0.0035, 0, (S2.x1 - S2.x0) / 2 * 0.7, 0.0035, 0.0105);
+}
+
+/* The lens. Its own geometry so it can be glass while the tube is steel —
+   a scope whose objective is the same material as its body is a pipe. */
+function buildRifleGlass(g, K) {
+  const S2 = K.scope;
+  /* Rims, not discs.
+
+     A lens modelled as a filled circle is opaque, and an opaque circle
+     across the back of a scope is a black hole you cannot aim through —
+     which is exactly what it was. Real scopes in games are either rendered
+     to a texture or left open, and open is right here: you look down the
+     tube at the world, the tube's own inner wall gives you the black ring
+     round the edge that a scope actually has, and the reticle floats in
+     the middle of it. These two rings are just the glass edges catching
+     light at the front and back. */
+  const rim = (x0, x1, rIn, rOut) => spin(g, [
+    [x0, rIn], [x1, rIn], [x1, rOut], [x0, rOut],
+  ], 24, 40, S2.y);
+  rim(S2.x0 + 0.006, S2.x0 + 0.010, S2.bell * 0.62, S2.bell * 0.70);
+  rim(S2.x1 - 0.010, S2.x1 - 0.006, S2.bell * 0.60, S2.bell * 0.68);
+}
+
+/* The reticle: a duplex cross on the first focal plane, which here means
+   a few very thin bars sitting a little way inside the ocular. A scope
+   that is a black circle can be looked through and not aimed with, and
+   the whole reason to carry either of these rifles is the aiming. */
+function buildRifleReticle(g, K) {
+  const S2 = K.scope, r = S2.bell * 0.80, x = S2.x1 - 0.030;
+  const t = 0.00035, thick = 0.0011;
+  // Four arms, thick at the rim and hairline toward the middle.
+  for (const [dy, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    hardBox(g, x, S2.y + dy * r * 0.62, dz * r * 0.62,
+      t, dy ? r * 0.38 : thick, dz ? r * 0.38 : thick);
+    hardBox(g, x, S2.y + dy * r * 0.20, dz * r * 0.20,
+      t, dy ? r * 0.20 : t * 1.6, dz ? r * 0.20 : t * 1.6);
+  }
+  // Centre dot.
+  hardBox(g, x, S2.y, 0, t, 0.00055, 0.00055);
+}
+
+/* ============================================================
+   MG 42 — the machine gun.
+
+   Belt-fed, air-cooled, and the fastest thing on the map at
+   twelve hundred rounds a minute. Its silhouette is three
+   features and nothing else matters: the perforated barrel
+   shroud with the great cut-out down the right side, the top
+   cover that hinges up over the feed, and the belt hanging out
+   of it. Miss any of those and it is a length of pipe on a
+   bipod; get them and it is recognisable from across the room.
+
+     overall  1.220   barrel  0.533   weight  11.6 kg
+   ============================================================ */
+
+const MG42 = {
+  muzzle: 0.7600, shroudRear: 0.1350, shroudFront: 0.5100,
+  shroudR: 0.0345, barrelR: 0.0125, bore: 0.00395,
+  recRear: -0.1000, recR: 0.0330,
+  gripTopX: -0.0740, gripTopY: -0.0260,
+  stockButt: -0.3600, feedY: 0.0345, beltZ: -0.0360,
+};
+
+function buildMgSteel(g) {
+  const K = MG42;
+  /* Receiver: a stamped box, square-sided with a radiused top, running
+     from the buttstock collar to the shroud. */
+  const rec = (x, s = 1) => ax(x, roundRect(K.recR * s, K.recR * 0.86 * s, K.recR * 0.80 * s, 3.0, 24));
+  sweepPath(g, [
+    rec(K.recRear, 0.86), rec(K.recRear + 0.020, 0.94), rec(-0.0300), rec(0.0800),
+    rec(K.shroudRear - 0.002, 0.98),
+  ], true, true);
+
+  /* Barrel shroud: a perforated jacket with the long cut-out down the
+     right flank the barrel is changed through. The holes are real
+     geometry — this gun is nothing without them. */
+  sweepPath(g, [
+    ax(K.shroudRear, ringOutline(K.shroudR, 24)),
+    ax(K.shroudFront - 0.020, ringOutline(K.shroudR, 24)),
+    ax(K.shroudFront, ringOutline(K.shroudR * 0.86, 24)),
+  ], true, true);
+  for (let row = 0; row < 3; row++) {
+    for (let i = 0; i < 11; i++) {
+      const x = K.shroudRear + 0.030 + i * 0.0330;
+      const th = -0.95 + row * 0.95;                 // left and top; the right
+      const cy = Math.cos(th) * K.shroudR;           // side is the cut-out
+      const cz = Math.sin(th) * K.shroudR;
+      spin(g, [[x - 0.0085, 0], [x - 0.0085, 0.0095], [x + 0.0085, 0.0095], [x + 0.0085, 0]],
+        10, 40, cy, cz);
+    }
+  }
+  // The cut-out itself: a long slot down the right, with a lipped edge.
+  hardBox(g, (K.shroudRear + K.shroudFront) / 2 + 0.020, 0, K.shroudR - 0.002,
+    (K.shroudFront - K.shroudRear) / 2 - 0.050, K.shroudR * 0.46, 0.0060);
+  // Barrel inside it, and a conical flash hider on the end.
+  tubeRun(g, [[K.shroudRear - 0.010, K.barrelR], [K.shroudFront + 0.010, K.barrelR * 0.90],
+              [K.muzzle - 0.070, K.barrelR * 0.84]], 20, true, false);
+  spin(g, [
+    [K.muzzle - 0.072, K.barrelR * 0.84], [K.muzzle - 0.060, 0.0215], [K.muzzle - 0.008, 0.0230],
+    [K.muzzle, 0.0215], [K.muzzle, K.bore + 0.0018], [K.muzzle - 0.072, K.bore + 0.0018],
+  ], 24, 34);
+  crown(g, K.muzzle, K.bore + 0.0022, K.bore, 0.055);
+
+  /* Top cover, hinged at the back, with the feed tray under it. */
+  sweepPath(g, [
+    ax(-0.0400, roundRect(0.0130, 0.0060, K.recR * 0.76, 3.0, 20), K.feedY),
+    ax(0.0100, roundRect(0.0150, 0.0060, K.recR * 0.80, 3.0, 20), K.feedY),
+    ax(0.1000, roundRect(0.0130, 0.0060, K.recR * 0.74, 3.0, 20), K.feedY),
+  ], true, true);
+  strut(g, [-0.0460, K.feedY, -0.0180], [-0.0460, K.feedY, 0.0180], ringOutline(0.0060, 12));
+  // Feed pawl housing on top of the cover.
+  hardBox(g, 0.0200, K.feedY + 0.0180, 0, 0.0280, 0.0055, 0.0110);
+
+  /* Sights: a folding leaf at the back on a tall base, a hooded post at
+     the front of the shroud. Both stand well clear of the cover. */
+  hardBox(g, -0.0620, K.feedY + 0.0180, 0, 0.0110, 0.0130, 0.0090);
+  band(g, -0.0680, -0.0560, 0.0042, 0.0105, 20, K.feedY + 0.0330);
+  band(g, K.shroudFront - 0.030, K.shroudFront - 0.010, 0.0090, 0.0120, 20, K.feedY + 0.0330);
+  hardBox(g, K.shroudFront - 0.020, K.feedY + 0.0270, 0, 0.0018, 0.0055, 0.0016);
+  hardBox(g, K.shroudFront - 0.020, K.feedY + 0.0125, 0, 0.0090, 0.0090, 0.0075);
+
+  /* Trigger group and the spade-ish grip. */
+  guardBow(g, [
+    [-0.0500, -K.recR - 0.008], [-0.0475, -K.recR - 0.021], [-0.0345, -K.recR - 0.030],
+    [-0.0185, -K.recR - 0.029], [-0.0105, -K.recR - 0.020], [-0.0085, -K.recR - 0.008],
+  ], 0.0030, 0.0030, 0.0062);
+  triggerBlade(g, -0.0300, -K.recR - 0.008, 0, 0.024, 0.0044);
+
+  /* Bipod, folded down under the shroud. */
+  for (const sz of [-1, 1]) {
+    strut(g, [K.shroudFront - 0.040, -K.shroudR + 0.006, sz * 0.008],
+      [K.shroudFront - 0.150, -K.shroudR - 0.150, sz * 0.075], ringOutline(0.0070, 10));
+    strut(g, [K.shroudFront - 0.150, -K.shroudR - 0.150, sz * 0.075],
+      [K.shroudFront - 0.168, -K.shroudR - 0.142, sz * 0.082], ringOutline(0.0090, 10));
+  }
+  hardBox(g, K.shroudFront - 0.040, -K.shroudR - 0.004, 0, 0.0140, 0.0100, 0.0160);
+
+  /* Carrying handle on the left of the receiver. */
+  strut(g, [-0.0200, 0.0100, -K.recR * 0.80], [-0.0200, 0.0100, -K.recR - 0.030], ringOutline(0.0055, 10));
+  strut(g, [-0.0200, 0.0100, -K.recR - 0.030], [0.0500, 0.0100, -K.recR - 0.030], ringOutline(0.0075, 12));
+  strut(g, [0.0500, 0.0100, -K.recR - 0.030], [0.0500, 0.0100, -K.recR * 0.80], ringOutline(0.0055, 10));
+}
+
+/* Stock and grip: bakelite, so their own material. */
+function buildMgStock(g) {
+  const K = MG42;
+  const st = (x, cy, up, down, hw) => ax(x, roundRect(up, down, hw, 2.5, 20), cy);
+  sweepPath(g, [
+    st(K.stockButt, -0.0300, 0.0400, 0.0380, 0.0165),
+    st(K.stockButt + 0.060, -0.0250, 0.0330, 0.0300, 0.0160),
+    st(K.stockButt + 0.150, -0.0170, 0.0270, 0.0250, 0.0170),
+    st(K.recRear + 0.004, -0.0080, 0.0290, 0.0250, 0.0210),
+  ], true, true);
+  hardBox(g, K.stockButt - 0.0030, -0.0300, 0, 0.0035, 0.0410, 0.0165);
+  gripStack(g, K.gripTopX, K.gripTopY, 0.1080, 0.26, [
+    [0.00, 0.0190, 0.0225, 0.0180, 2.6],
+    [0.30, 0.0170, 0.0200, 0.0170, 2.5],
+    [0.70, 0.0168, 0.0200, 0.0170, 2.5],
+    [1.00, 0.0176, 0.0218, 0.0180, 2.8],
+  ]);
+  for (const sd of [-1, 1]) checker(g, K.gripTopX - 0.030, K.gripTopY - 0.056, sd * 0.0176, 0.26, -0.96, sd, 4, 7, 0.0060, 0.0010);
+}
+
+/* The belt: fifty rounds hanging out of the feed and swinging. Its own
+   actor, because it is the part that moves and the part you notice. */
+function buildMgBelt(g) {
+  const K = MG42;
+  /* Down out of the tray and then curling back — a belt that leaves in a
+     straight line reads as a ruler. */
+  for (let i = 0; i < 22; i++) {
+    const t = i / 21;
+    const drop = t * 0.230;
+    const x = K.gripTopX + 0.130 - t * 0.055 + Math.sin(t * 2.4) * 0.020;
+    const y = K.feedY - 0.020 - drop;
+    const z = K.beltZ - t * 0.010;
+    // A link, and the round sitting in it.
+    hardBox(g, x, y, z, 0.0058, 0.0075, 0.0110);
+    spin(g, [
+      [x - 0.0060, 0], [x - 0.0060, 0.0040], [x + 0.0070, 0.0040],
+      [x + 0.0105, 0.0026], [x + 0.0125, 0],
+    ], 10, 34, y, z);
+  }
+}
+
+/* ============================================================
    ENGINE HOOKS
 
    One material table for the whole rack, so a part named "steel"
@@ -14769,6 +15150,9 @@ const ARM_MAT = {
   brass: { color: 0xc9a227, texture: 'metal', roughness: 0.30, metalness: 1 },
   glow: { color: 0x9fe8ff, texture: 'smooth', roughness: 0.30, metalness: 0, emissive: 0x54c8ff, emissiveStrength: 1.5 },
   glass: { color: 0xb6c6cc, texture: 'smooth', roughness: 0.12, metalness: 0, opacity: 0.42 },
+  // The reticle has to be visible against mud and against a bright sky,
+  // so it is emissive rather than merely dark.
+  reticle: { color: 0x1a0603, texture: 'smooth', roughness: 0.9, metalness: 0, emissive: 0xff2a1e, emissiveStrength: 2.0 },
 };
 
 /* Mount a built set of geometries as one actor with named children.
@@ -14849,6 +15233,37 @@ Engine.prototype.mp5 = function (opts = {}) {
 };
 
 /* ---------------- the break-action three ---------------- */
+
+const RIFLE_KINDS = {
+  remington: {
+    muzzle: 0.6200, barrelRear: 0.1050, recRear: -0.0900,
+    barrelR0: 0.0155, barrelR1: 0.0098, bore: 0.00385,
+    recR: 0.0175, brake: null, fluted: false,
+    gripTopX: -0.0640, gripTopY: -0.0180, gripLen: 0.1000, gripRake: 0.42,
+    stockButt: -0.3400, comb: 0.0180, cheek: false,
+    magX: 0.0350, magRows: 1, magLen: 0.0850,
+    scope: { x0: -0.0700, x1: 0.1600, r: 0.0175, bell: 0.0245, y: 0.0500 },
+    bipod: false,
+    origin: new Vec3(-0.0640, -0.0480, 0), mass: 3.9, bound: 0.62,
+    mats: { steel: ARM_MAT.blued, wood: ARM_MAT.poly, bolt: ARM_MAT.bright, scope: ARM_MAT.blued, glass: ARM_MAT.glass, reticle: ARM_MAT.reticle },
+  },
+  killstreak: {
+    /* Two millimetres of bore inside forty of steel. Everything about
+       this rifle is the wrong way round on purpose: the barrel is as
+       thick as a wrist and the hole down the middle of it is the size of
+       a pencil lead, which is where the thousand comes from. */
+    muzzle: 0.7400, barrelRear: 0.1350, recRear: -0.1050,
+    barrelR0: 0.0250, barrelR1: 0.0205, bore: 0.0010,
+    recR: 0.0225, brake: { len: 0.1100, r: 0.0330, ports: 5 }, fluted: true,
+    gripTopX: -0.0700, gripTopY: -0.0200, gripLen: 0.1080, gripRake: 0.30,
+    stockButt: -0.3900, comb: 0.0240, cheek: true,
+    magX: 0.0400, magRows: 1, magLen: 0.1250,
+    scope: { x0: -0.0850, x1: 0.2100, r: 0.0230, bell: 0.0330, y: 0.0640 },
+    bipod: true,
+    origin: new Vec3(-0.0700, -0.0520, 0), mass: 12.4, bound: 0.74,
+    mats: { steel: ARM_MAT.grey, wood: ARM_MAT.poly, bolt: ARM_MAT.bright, scope: ARM_MAT.blued, glass: ARM_MAT.glass, reticle: ARM_MAT.reticle },
+  },
+};
 
 const DOUBLE_KINDS = {
   scatter: {
@@ -15041,6 +15456,66 @@ Engine.prototype.riotShield = function (opts = {}) {
   const body = mountArm(this, 'shield', parts,
     { frame: ARM_MAT.grey, panel: ARM_MAT.glass }, opts, 0.56, 5.5, 'frame');
   body.muzzleAt = 0.2000;
+  return body;
+};
+
+/* ---------------- the bolt rifles ---------------- */
+
+function makeRifle(kind) {
+  const K = RIFLE_KINDS[kind];
+  const geos = {};
+  geos.steel = new Geometry(); buildRifleSteel(geos.steel, K);
+  geos.wood = new Geometry(); buildRifleStock(geos.wood, K);
+  geos.bolt = new Geometry(); buildRifleBolt(geos.bolt, K);
+  geos.scope = new Geometry(); buildRifleScope(geos.scope, K);
+  geos.glass = new Geometry(); buildRifleGlass(geos.glass, K);
+  geos.reticle = new Geometry(); buildRifleReticle(geos.reticle, K);
+  geos.clip = new Geometry(); buildStripperClip(geos.clip, 5, K.bore + 0.0016, K.bore * 2 + 0.0060);
+  return fin(geos, K.origin);
+}
+
+function boltRifle(E, kind, opts) {
+  const K = RIFLE_KINDS[kind];
+  const parts = armCache(E, 'rifle:' + kind, () => makeRifle(kind));
+  const body = mountArm(E, 'rifle:' + kind, parts, K.mats, opts, K.bound, K.mass, 'steel');
+  const o = K.origin;
+  body.boreAt = -o.y;
+  body.muzzleAt = K.muzzle - o.x;
+  // Aimed through glass, so the sight line is the scope's axis.
+  body.sightAt = K.scope.y - o.y;
+  body.ejectPort = [-0.005 - o.x, K.recR * 0.62 - o.y, K.recR + 0.004];
+  body.boltRest = [0, 0, 0];
+  body.boltThrow = [-0.075, 0, 0];
+  body.clipRest = [K.magX - o.x, K.recR + 0.030 - o.y, 0];
+  if (body.clip) body.clip.visible = false;
+  return body;
+}
+
+Engine.prototype.remington700 = function (opts = {}) { return boltRifle(this, 'remington', opts); };
+Engine.prototype.killStreak = function (opts = {}) { return boltRifle(this, 'killstreak', opts); };
+
+/* ---------------- MG 42 ---------------- */
+
+const MG42_ORIGIN = new Vec3(-0.0740, -0.0560, 0);
+
+Engine.prototype.mg42 = function (opts = {}) {
+  const parts = armCache(this, 'mg42', () => {
+    const steel = new Geometry(); buildMgSteel(steel);
+    const wood = new Geometry(); buildMgStock(wood);
+    const belt = new Geometry(); buildMgBelt(belt);
+    return fin({ steel, wood, belt }, MG42_ORIGIN);
+  });
+  const body = mountArm(this, 'mg42', parts, {
+    steel: ARM_MAT.blued, wood: { color: 0x4a2a18, texture: 'smooth', roughness: 0.58, metalness: 0 },
+    belt: { color: 0x7a6a3c, texture: 'metal', roughness: 0.46, metalness: 1 },
+  }, opts, 0.76, 11.6, 'steel');
+  body.boreAt = -MG42_ORIGIN.y;
+  body.muzzleAt = MG42.muzzle - MG42_ORIGIN.x;
+  body.sightAt = MG42.feedY + 0.0330 - MG42_ORIGIN.y;
+  body.ejectPort = [0.010 - MG42_ORIGIN.x, -MG42.recR * 0.5 - MG42_ORIGIN.y, 0];
+  // The belt is what a machine gun reloads: it swings out and a new one in.
+  body.beltRest = [0, 0, 0];
+  body.beltDrop = [0.02, -0.34, -0.06];
   return body;
 };
 

@@ -146,14 +146,15 @@ const ATTACH = {
       blurb: 'Seven times, and no use at all up close',
       fold: (w) => ({ sightH: w.sightH + 0.020, sightFov: 0.22, adsTime: w.adsTime * 1.5,
         adsSpread: 0.05 }),
-      bans: ['scatter', 'sawnoff', 'paralyzer', 'mp5'] },
+      bans: ['scatter', 'sawnoff', 'paralyzer', 'mp5', 'remington', 'killstreak'] },
     /* --- stock --- */
     dual: { slot: 'stock', name: "What's Better Than One", cost: 4000,
       blurb: 'Two of them. No optic, no sights, and you are slow',
       fold: (w) => ({ dual: true, mag: w.mag * 2, dmg: w.dmg * 1.85,
         moveMul: (w.moveMul || 1) * 0.72, noAds: true, reload: w.reload * 1.5,
         recoil: Object.assign({}, w.recoil, { side: w.recoil.side * 1.7 }) }),
-      bans: ['arc', 'ram', 'shield', 'knife', 'hammer', 'obliterator'] },
+      bans: ['arc', 'ram', 'shield', 'knife', 'hammer', 'obliterator',
+        'remington', 'killstreak', 'mg42'] },
   },
   /* Wonder weapons and the melee kit take nothing at all. */
   noWork: ['arc', 'knife', 'hammer', 'ram', 'shield', 'shieldWorn'],
@@ -315,6 +316,48 @@ const WEAPONS = {
     recoil: { up: 1.5, side: 0.6, climb: 0.06, recover: 11 },
     hands: { right: [-0.010, -0.020, 0.014], left: null },
   },
+  /* A rifle for the long shots across the field. Bolt action, so it is
+     five rounds and then you are working the handle while they close —
+     the whole of its character is that it does not forgive a miss. */
+  remington: {
+    name: 'Remington 700', slotName: 'REMINGTON',
+    dmg: 320, headMul: 3.0, mag: 5, reserve: 50, refire: 1.05,
+    reload: 3.0, auto: false, pellets: 1, spread: 0.16,
+    kick: 3.0, sfx: 'shotMagnum', reloadKind: 'clip',
+    pierce: 1, pierceFalloff: 0.78,
+    sightH: 0.098, sightFov: 0.34, adsTime: 0.34, adsSpread: 0.03,
+    recoil: { up: 3.4, side: 0.8, climb: 0.20, recover: 7 },
+    moveMul: 0.90, muzzleVel: 800,
+    hands: { right: [-0.014, -0.046, 0.016], left: [0.300, -0.030, -0.020] },
+  },
+  /* The Kill Streak. Two millimetres of bore inside forty of steel, and a
+     thousand behind every one of the three rounds it holds. It goes
+     through whatever is in front of what you were aiming at, and it will
+     take the muzzle off the top of the screen every time. */
+  killstreak: {
+    name: 'The Kill Streak', slotName: 'KILL STREAK',
+    dmg: 1000, headMul: 2.0, mag: 3, reserve: 21, refire: 1.55,
+    reload: 3.7, auto: false, pellets: 1, spread: 0.06,
+    kick: 7.0, sfx: 'shotMagnum', reloadKind: 'clip',
+    pierce: 5, pierceFalloff: 0.94,
+    sightH: 0.116, sightFov: 0.20, adsTime: 0.46, adsSpread: 0.015,
+    recoil: { up: 7.5, side: 1.6, climb: 1.30, recover: 5 },
+    moveMul: 0.78, muzzleVel: 1400,
+    hands: { right: [-0.014, -0.048, 0.016], left: [0.330, -0.036, -0.020] },
+  },
+  /* Belt-fed, twelve hundred a minute, and it weighs as much as the door
+     it is standing behind. Fifty rounds go in about two and a half
+     seconds, which is the trade. */
+  mg42: {
+    name: 'MG 42', slotName: 'MG 42',
+    dmg: 46, headMul: 1.9, mag: 50, reserve: 350, refire: 0.05,
+    reload: 4.4, auto: true, pellets: 1, spread: 1.9,
+    kick: 1.5, sfx: 'shotSmg', reloadKind: 'cell',
+    sightH: 0.1235, sightFov: 0.86, adsTime: 0.34, adsSpread: 0.30,
+    recoil: { up: 0.55, side: 0.42, climb: 0.16, recover: 9 },
+    moveMul: 0.76, muzzleVel: 755,
+    hands: { right: [-0.014, -0.050, 0.016], left: [0.330, -0.052, -0.020] },
+  },
   /* The two answers to plate. Both are melee, both are slow, and both are
      mystery-box only — you do not get to plan for an armoured runner, you
      get to be glad you happen to be holding one. */
@@ -465,6 +508,11 @@ const LINES = {
   ],
   meteorWake: [
     ['patch', 'It took the round. It did not mind the round.'],
+  ],
+  amalgam: [
+    ['patch', 'That is more than one of them.'],
+    ['radio', 'Say again, Bunker Nine.'],
+    ['patch', 'I said it is more than one of them and they have stopped arguing about it.'],
   ],
   intro: [
     ['radio', 'Good evening, Bunker Nine. Lights out on the whole coast except you.'],
@@ -1339,11 +1387,21 @@ function buildMap(game, S) {
      to have already been up the stairs to know it exists. */
   const paraChalk = makeParalyzer(game, { at: [-4.4, R.y1 + 0.46, M.z0 + 0.14], chalk: true });
 
+  /* Chalk for the two long guns as well: the rifle at the back of the
+     wing, where you would be if you were shooting out of the west window,
+     and the machine gun on the roof, where you would be if you were
+     shooting at everything. */
+  const remChalk = makeRemington(game, { at: [SD.x0 + 0.16, 1.55, -3.4], chalk: true });
+  const mgChalk = makeMG42(game, { at: [4.2, R.y1 + 0.46, M.z0 + 0.14], chalk: true });
+  void remChalk; void mgChalk;
+
   S.buys = [
     { id: 'thompson', at: [-2.0, 1.4, M.z0 + 0.3], weapon: 'thompson', label: 'Thompson' },
     { id: 'scatter', at: [-5.4, 1.4, M.z0 + 0.3], weapon: 'scatter', label: 'Scattergun' },
     { id: 'mp5', at: [SD.x0 + 0.5, 1.4, 0.6], weapon: 'mp5', label: 'MP5' },
     { id: 'paralyzer', at: [-4.4, R.y1 + 1.15, M.z0 + 0.5], weapon: 'paralyzer', label: 'Paralyzer' },
+    { id: 'remington', at: [SD.x0 + 0.5, 1.4, -3.4], weapon: 'remington', label: 'Remington 700' },
+    { id: 'mg42', at: [4.2, R.y1 + 1.15, M.z0 + 0.5], weapon: 'mg42', label: 'MG 42' },
   ];
   void mp5Chalk; void paraChalk;
 
@@ -1892,6 +1950,24 @@ function makeArcProjector(game, opts = {}) {
   return rackGroup(b, { cell: b.cell, cellParts: cell, cellRest: b.cellRest, cellDrop: b.cellDrop, coils: b.copper });
 }
 
+/* The two bolt rifles and the machine gun. The rifles feed off a stripper
+   clip through the open action, which is the reload the game already
+   animates; the MG drops its belt and takes another. */
+function boltRifleGroup(b) {
+  return rackGroup(b, {
+    bolt: b.bolt, boltRest: b.boltRest, boltThrow: b.boltThrow,
+    clip: b.clip, clipRest: b.clipRest,
+  });
+}
+function makeRemington(game, opts = {}) { return boltRifleGroup(game.remington700(rackOpts(opts))); }
+function makeKillStreak(game, opts = {}) { return boltRifleGroup(game.killStreak(rackOpts(opts))); }
+
+function makeMG42(game, opts = {}) {
+  const b = game.mg42(rackOpts(opts));
+  // The belt is the magazine as far as the reload is concerned.
+  return rackGroup(b, { cell: b.belt, cellParts: [b.belt], cellRest: b.beltRest, cellDrop: b.beltDrop });
+}
+
 function makeKnife(game, opts = {}) { return rackGroup(game.trenchKnife(rackOpts(opts))); }
 function makeHammer(game, opts = {}) { return rackGroup(game.clawHammer(rackOpts(opts))); }
 function makeBatteringRam(game, opts = {}) { return rackGroup(game.batteringRam(rackOpts(opts))); }
@@ -1986,6 +2062,9 @@ function makePlayer(game, S, hud, sfx, voice) {
   rack('paralyzer', makeParalyzer(game));
   rack('mp5', makeMP5(game));
   rack('sawnoff', makeSawedOff(game));
+  rack('remington', makeRemington(game));
+  rack('killstreak', makeKillStreak(game));
+  rack('mg42', makeMG42(game));
   rack('shieldWorn', makeRiotShield(game));
   // Hands, parented to each weapon so they inherit its every motion.
   for (const [id, v] of Object.entries(P.view)) {
@@ -2245,6 +2324,7 @@ function damageTable(spec) {
    name apiece is most of what makes putting a gun in worth doing. */
 const UPGRADE_NAMES = {
   m1911: 'Riverbed', blaze: 'Wildfire', thompson: 'Chicago Ironworks', mp5: 'Nine Millimetre Sermon',
+  remington: 'Seven Hundred Yards', killstreak: 'The Long Goodbye', mg42: 'Forty-Three',
   scatter: 'Both Barrels', sawnoff: 'Last Word', paralyzer: 'Grand Mal',
   mauser: 'Kaiser', obliterator: 'Total Obliteration', arc: 'Arc Angel',
   knife: 'Wound Man', hammer: 'Hard Labour', ram: 'Door Policy',
@@ -3088,6 +3168,21 @@ const VARIANTS = {
        nothing to do in the window where the shield is down. */
     wearsPlate: true, boss: true,
   },
+  /* The Amalgamation.
+
+     Several of them that did not come apart cleanly. It is one body
+     carrying the parts of three more: a second head grown out of the
+     shoulder, two spare arms hanging off the back, and the fused mass
+     between them. It is slow, it does not stagger, and it has more health
+     than the boss — the answer to it is the Paralyzer, the rock, or
+     running away and letting the minigun have it.
+
+     It arrives from twelve and never more than one at a time. */
+  amalgam: {
+    weight: 0.0, speed: [0.85, 1.15], hp: 6.0, dmg: 2.4, points: 4.0,
+    clip: 'zwalk_heavy', clipSpeed: 0.72, eye: 0xc86aff, from: 12,
+    amalgam: true, heavy: true, solo: true,
+  },
   spitter: {
     // Keeps its distance and throws. The only ranged threat in the game,
     // and the reason Deflect is worth buying.
@@ -3129,11 +3224,24 @@ function variantWeights(round) {
     crawler: round < 3 ? 0 : Math.min(0.45, (round - 2) * 0.09),
     spitter: round < 6 ? 0 : Math.min(0.32, (round - 5) * 0.07),
     armored: round < 8 ? 0 : Math.min(0.26, (round - 7) * 0.05),
+    /* Rare on purpose. One in twenty bodies from round twelve, and the
+       spawner will not put a second one in the room while the first is up
+       — two of these at once is not a fight, it is a wall. */
+    amalgam: round < 12 ? 0 : Math.min(0.05, (round - 11) * 0.012),
   };
 }
 
-function pickVariant(round, rng) {
+function pickVariant(round, rng, S) {
   const w = variantWeights(round);
+  /* A variant marked solo is not rolled while one of it is already up.
+     There is a difference between a rare heavy body and two rare heavy
+     bodies in the same doorway, and only one of them is a fight. */
+  if (S && S.zombies) {
+    for (const k in w) {
+      const V = VARIANTS[k];
+      if (V && V.solo && S.zombies.some((z) => !z.dead && !z.parked && z.kind === k)) w[k] = 0;
+    }
+  }
   let total = 0;
   for (const k in w) total += w[k];
   let r = rng() * total;
@@ -3282,6 +3390,53 @@ function buildPooledZombie(game, S, i) {
     for (const q of sh.parts) q.visible = false;
     bossShield = sh;
   }
+
+  /* The Amalgamation's spare parts.
+
+     Built on every body in the pool and hidden, because the alternative is
+     spawning a dozen actors in the frame one arrives — and it arrives in
+     the middle of round twelve, which is the worst possible moment for a
+     stutter. Each piece hangs off a real bone, so they move with whatever
+     the body is doing rather than floating alongside it. */
+  const grafts = [];
+  if (a.skeleton) {
+    const flesh = { color: 0x6b5346, texture: 'skin', roughness: 0.74, metalness: 0, subsurface: 0.3 };
+    const dead = { color: 0x4e4038, texture: 'skin', roughness: 0.82, metalness: 0, subsurface: 0.2 };
+    const graft = (boneName, mk, off, rot, sc) => {
+      const q = mk();
+      q.parent = a;
+      q.parentBone = a.skeleton.index(boneName);
+      q.localOffset = new window.LE.Vec3(off[0], off[1], off[2]);
+      if (rot) q.setRotation(rot);
+      if (sc) q.scale.set(sc, sc, sc);
+      q.visible = false;
+      grafts.push(q);
+      return q;
+    };
+    // A second head, growing out of the right shoulder and turned away.
+    graft('upperArmR', () => game.sphere({ radius: 0.105, material: flesh, physics: false }),
+      [0.02, -0.09, 0.05], [0, 40, 24]);
+    graft('upperArmR', () => game.box({ size: [0.10, 0.07, 0.05], material: dead, physics: false }),
+      [0.02, -0.15, 0.09], [0, 40, 24]);
+    // Two spare arms off the back, hanging.
+    for (const [side, bn] of [[-1, 'spine'], [1, 'spine']]) {
+      graft(bn, () => game.capsule({ radius: 0.052, height: 0.30, material: dead, physics: false }),
+        [side * 0.20, 0.02, -0.16], [26, 0, side * 34]);
+      graft(bn, () => game.capsule({ radius: 0.044, height: 0.26, material: dead, physics: false }),
+        [side * 0.30, -0.22, -0.22], [48, 0, side * 20]);
+      graft(bn, () => game.sphere({ radius: 0.055, material: dead, physics: false }),
+        [side * 0.36, -0.38, -0.25]);
+    }
+    // The fused mass across the back and shoulders that holds it together.
+    graft('spine', () => game.sphere({ radius: 0.17, material: flesh, physics: false }), [0, 0.06, -0.13]);
+    graft('chest', () => game.sphere({ radius: 0.15, material: flesh, physics: false }), [0.10, 0.04, -0.10]);
+    graft('chest', () => game.sphere({ radius: 0.13, material: dead, physics: false }), [-0.13, -0.02, -0.09]);
+    // A third pair of legs, dragging.
+    for (const side of [-1, 1]) {
+      graft('hips', () => game.capsule({ radius: 0.056, height: 0.34, material: dead, physics: false }),
+        [side * 0.17, -0.10, -0.18], [34, 0, side * 12]);
+    }
+  }
   /* Posture. The clips animate the limbs; biasing the spine and head in the
      animator's rest pose gives every one of them a slightly different
      stooped carriage on top of whatever it is playing. */
@@ -3296,7 +3451,7 @@ function buildPooledZombie(game, S, i) {
     bend('chest', lean * 0.6, (i % 3 - 1) * 0.06, 0);
     bend('head', -lean * 0.45, (i % 4 - 1.5) * 0.07, (i % 3 - 1) * 0.05);
   }
-  const z = { actor: a, eyes, wounds, bossShield, parked: true, dead: true, poolSlot: i, anim: '',
+  const z = { actor: a, eyes, wounds, bossShield, grafts, parked: true, dead: true, poolSlot: i, anim: '',
     ripStage: 0, ripT: 0, throwT: 0, ripFace: false };
   a.userData = { zombie: z };
   setZombieVisible(z, false);
@@ -3404,6 +3559,8 @@ function setZombieVisible(z, on) {
     const show = on && !!z.boss && z.bUp > 0;
     for (const q of z.bossShield.parts) q.visible = show;
   }
+  // The spare bodies, on the one variant that has them.
+  if (z.grafts) for (const q of z.grafts) q.visible = on && !!(z.V && z.V.amalgam);
   // The coat and the stains are separate meshes on the same skeleton, so
   // they need hiding too — otherwise a parked body leaves its clothes
   // standing out at the far end of the world where the pool lives.
@@ -3440,11 +3597,16 @@ function spawnZombie(game, S, win, forceVariant) {
   /* A boss is a big man, so he needs a big body — take a heavy slot out of
      the pool if one is free rather than putting a thousand health on
      whatever came up next. */
-  const z = forceVariant === 'boss'
+  /* Pick the kind first, then the body, because two of them want a heavy
+     one — the boss because he is a big man, and the Amalgamation because
+     it is four of them. */
+  const kind0 = forceVariant || pickVariant(S.round, Math.random, S);
+  const wantsHeavy = kind0 === 'boss' || (VARIANTS[kind0] && VARIANTS[kind0].heavy);
+  const z = wantsHeavy
     ? (S.pool.find((q) => q.parked && q.actor.bodyType === 'heavy') || S.pool.find((q) => q.parked))
     : S.pool.find((q) => q.parked);
   if (!z) return null;
-  const kind = forceVariant || pickVariant(S.round, Math.random);
+  const kind = kind0;
   const V = VARIANTS[kind];
   const B = z.actor.buildDef || BODY_TYPES[0];
   const speed = (V.speed[0] + Math.random() * (V.speed[1] - V.speed[0])) * B.speed;
@@ -3489,6 +3651,13 @@ function spawnZombie(game, S, win, forceVariant) {
   }
   // Crawlers ride a shorter capsule so the folded body sits on the floor.
   z.actor.controller.height = V.crawl ? V.height : 1.75;
+  /* The Amalgamation gets its bulk from the parts bolted to it and from
+     taking a heavy body out of the pool, not from a scale multiplier.
+     Scaling the actor would scale a skinned mesh whose head, coat and eyes
+     are separate actors riding its bones, and the hit regions are measured
+     against a fixed capsule — so a body at 1.34 would take head shots to
+     its collarbone. Bigger by construction, same capsule. */
+  if (z.grafts) for (const q of z.grafts) q.visible = !!V.amalgam;
   for (let k = 1; k < z.eyes.length; k += 2) {
     z.eyes[k].material = game.material({ color: 0x120903, texture: 'smooth', roughness: 0.3,
       emissive: V.eye, emissiveStrength: 2.4 });
@@ -4722,7 +4891,7 @@ function doInteract(game, S, P, hud, sfx, it, dt) {
    weapons on each open would allocate eight sets of actors every time and
    destroy them again; the meshes are cached by the engine anyway, so the
    only thing that costs is the actors, and they are worth keeping. */
-const CRATE_POOL = ['thompson', 'scatter', 'arc', 'obliterator', 'mauser', 'blaze', 'ram', 'shield'];
+const CRATE_POOL = ['thompson', 'scatter', 'arc', 'obliterator', 'mauser', 'blaze', 'ram', 'shield', 'killstreak'];
 
 function crateDisplay(game, id) {
   if (id === 'thompson') { const t = game.thompson({ physics: false }); return { root: t, parts: [t, t.wood, t.slide, t.mag].filter(Boolean) }; }
@@ -4731,6 +4900,7 @@ function crateDisplay(game, id) {
       gripMaterial: { color: 0x8f1c10, texture: 'smooth', roughness: 0.50, metalness: 0 } });
     return { root: t, parts: [t, t.grips, t.slide, t.mag, t.mark].filter(Boolean) };
   }
+  if (id === 'killstreak') return makeKillStreak(game);
   if (id === 'ram') return makeBatteringRam(game);
   if (id === 'shield') return makeRiotShield(game);
   if (id === 'scatter') return makeScattergun(game);
@@ -4759,10 +4929,11 @@ function openCrate(game, S, P, hud, sfx) {
   /* The melee pair only turn up once the generator is running, so the
      answer to armour arrives at roughly the round armour does. */
   c.offerId = S.powered
-    ? (roll < 0.20 ? 'thompson' : roll < 0.38 ? 'scatter' : roll < 0.52 ? 'arc'
-      : roll < 0.64 ? 'obliterator' : roll < 0.76 ? 'blaze' : roll < 0.88 ? 'ram' : 'shield')
-    : (roll < 0.30 ? 'thompson' : roll < 0.54 ? 'scatter' : roll < 0.72 ? 'mauser'
-      : roll < 0.88 ? 'blaze' : 'arc');
+    ? (roll < 0.17 ? 'thompson' : roll < 0.32 ? 'scatter' : roll < 0.45 ? 'arc'
+      : roll < 0.56 ? 'obliterator' : roll < 0.67 ? 'blaze' : roll < 0.78 ? 'ram'
+      : roll < 0.90 ? 'shield' : 'killstreak')
+    : (roll < 0.28 ? 'thompson' : roll < 0.50 ? 'scatter' : roll < 0.68 ? 'mauser'
+      : roll < 0.86 ? 'blaze' : 'arc');
   S.voice(LINES.crateOpen);
   // Lid swings, and the reel starts turning over.
   c.lid.setRotation([0, 0, -70]);
@@ -5260,7 +5431,21 @@ function updateRounds(game, S, P, hud, sfx, dt) {
           addShake(S, 0.10, 1.6);
           game.audio.impact(0.9);
         }
-      } else if (win && spawnZombie(game, S, win)) S.toSpawn--;
+      } else {
+        const nz = win && spawnZombie(game, S, win);
+        if (nz) {
+          S.toSpawn--;
+          /* The Amalgamation announces itself. It is one in twenty from
+             round twelve and it takes half a magazine to notice — the
+             player should know which one it is before it is on them. */
+          if (nz.kind === 'amalgam') {
+            hud.banner('AMALGAMATION', '#c86aff');
+            S.voice(LINES.amalgam);
+            addShake(S, 0.06, 1.1);
+            game.audio.impact(0.7);
+          }
+        }
+      }
     }
   }
 
@@ -6144,9 +6329,9 @@ function start(opts = {}) {
     makeMauser, makeArcProjector, makeKnife, makeHammer, makeRiotShield, makeBatteringRam };
   const __THooks = window.__T = {
     game, S, P, WEAPONS, ECONOMY, LINES,
-    spawn(winId) {
+    spawn(winId, variant) {
       const win = S.windows.find((w) => w.def.id === (winId || S.activeWindows[0]));
-      return win ? spawnZombie(game, S, win) : null;
+      return win ? spawnZombie(game, S, win, variant) : null;
     },
     setPoints(n) { S.points = n; hud.points(n); },
     give(id) { S.player.give(id); hud.ammo(S.player); },
