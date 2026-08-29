@@ -1060,6 +1060,50 @@ const LINES = {
   ],
   blitz: [['radio', 'And the lightning takes the whole choir at once. Marvelous.']],
   nearDeath: [['patch', 'Still here. Angrier, but still here.']],
+
+  /* ---- Exit Four Two ----
+     He is not a pilot. That is the whole of it. Everything he says is a
+     man reading a placard out loud and hoping somebody corrects him. */
+  exit1: [
+    ['exit42', 'Hello? Hello — is somebody there? Please say somebody is there.'],
+    ['radio', 'Bunker Nine, that is not my traffic. Somebody has found a live set.'],
+    ['exit42', 'My name is — they called me Exit Four Two. I am in an aircraft. I do not fly aircraft.'],
+  ],
+  exit2: [
+    ['exit42', 'That — was that it? That is what it is meant to sound like?'],
+    ['exit42', 'Alright. Alright. It is turning. It is actually turning.'],
+  ],
+  exit3: [
+    ['exit42', 'I heard three. Three is all of them, is it? Tell me three is all of them.'],
+    ['radio', 'Three is all of them, son.'],
+  ],
+  exit4: [
+    ['exit42', 'Bearing. Bearing, yes. I am writing it on my hand.'],
+  ],
+  exit5: [
+    ['exit42', 'I can see your lights. I can see them from here. I am coming.'],
+    ['radio', 'Bunker Nine — get off the roof.'],
+  ],
+  exitInbound: [
+    ['exit42', 'Wheels down in ninety seconds. Ninety seconds and we are all going home.'],
+  ],
+  exitHit: [
+    ['exit42', 'Something hit the — the glass, something is on the glass, it is coming THROUGH the—'],
+    ['radio', 'Exit Four Two. Exit Four Two, pull up.'],
+  ],
+  exitCrash: [
+    ['radio', 'Exit Four Two is down. Exit Four Two is down in the trees.'],
+    ['radio', '...Bunker Nine, take what he brought and hold your post.'],
+  ],
+
+  /* ---- Stalker ----
+     Something in the treeline that is not one of them and is not one of us.
+     Says very little and never twice. */
+  stalker1: [['stalker', 'You board the windows. Good. They come through the windows.']],
+  stalker2: [['stalker', 'The rock is not from here. Neither am I. Do not touch it barehanded.']],
+  stalker3: [['stalker', 'I counted them tonight. There are more than there were.']],
+  stalker4: [['stalker', 'The one with four arms. Leave it to the gun on the roof.']],
+  stalker5: [['stalker', 'You are lasting longer than the last one. Do not let that comfort you.']],
   gameOver: [['radio', 'Rest now, Bunker Nine. I will keep a light on for the next one.']],
 };
 
@@ -1157,6 +1201,43 @@ function makeSfx(game) {
        it runs out and they can reach you again. */
     graceStart() { [660, 990].forEach((f, i) => setTimeout(() => t(f, 0.14, 'triangle', 0.09), i * 90)); },
     graceEnd() { [520, 390].forEach((f, i) => setTimeout(() => t(f, 0.16, 'triangle', 0.08), i * 110)); },
+    /* Exit Four Two. A field telephone is a bell struck twice, a step is a
+       single acknowledging beep, a drum going up is a big soft one, and the
+       aeroplane hitting the trees is the largest noise this game makes. */
+    phoneRing() {
+      for (let k = 0; k < 2; k++) setTimeout(() => {
+        for (let i = 0; i < 7; i++) setTimeout(() => t(1180, 0.03, 'triangle', 0.055), i * 42);
+      }, k * 420);
+    },
+    exitBeep() { t(880, 0.07, 'square', 0.06); setTimeout(() => t(1320, 0.09, 'square', 0.055), 90); },
+    drumBlast() { A.report(0.95, { volume: 1.1 }); setTimeout(() => A.impact(0.8), 70); },
+    planeCrash() {
+      A.report(1.0, { volume: 1.2 });
+      for (let i = 1; i < 5; i++) setTimeout(() => A.impact(1 - i * 0.13), i * 130);
+      t(48, 1.6, 'sawtooth', 0.16);
+      t(31, 2.2, 'sine', 0.14);
+    },
+    /* The aircraft itself, heard before it is seen: two engines slightly
+       out of step with each other, which is the beat you hear from a piston
+       twin and the reason it sounds like an aeroplane and not a tone. */
+    planeEngine() { t(96, 0.5, 'sawtooth', 0.035); t(101, 0.5, 'sawtooth', 0.033); },
+
+    /* The small constant things.
+
+       Footsteps were missing entirely, which is why moving felt like
+       sliding: a room with a concrete floor answers when you cross it, and
+       the absence of that is felt long before it is noticed. Kept very
+       quiet — a sound that plays twice a second has to be almost nothing or
+       it becomes the whole soundtrack. */
+    step(hard) { A.impact(hard ? 0.16 : 0.11, { volume: hard ? 0.30 : 0.22 }); },
+    land(force) { A.impact(Math.min(0.5, 0.22 + force * 0.3), { volume: 0.5 }); },
+    jump() { t(220, 0.05, 'sine', 0.035); },
+    /* Swapping weapons: cloth, then the weight of the next one arriving. */
+    swap() { t(700, 0.04, 'triangle', 0.045); setTimeout(() => A.impact(0.22, { volume: 0.4 }), 90); },
+    /* The window boards going on and the horde working at them from outside
+       already have sounds. This is the one for a board coming off in your
+       face, which had none. */
+    boardLost() { A.impact(0.6); t(150, 0.13, 'sawtooth', 0.09); t(420, 0.06, 'square', 0.05); },
     cylinderIn() { A.impact(0.4); t(700, 0.05, 'square', 0.08); },
     ramHit() { A.impact(1); t(70, 0.28, 'sawtooth', 0.16); t(190, 0.12, 'square', 0.10); },
     ramSwing() { t(230, 0.16, 'sine', 0.05); },
@@ -1297,6 +1378,251 @@ const WINDOWS = [
 
 // Boards span X on the two walls that run along X, and Z on the other two.
 const WIN_SPANS_X = (face) => face === 'N' || face === 'S';
+
+/* ---------------- Exit Four Two ----------------
+
+ Somebody is alive on the other end of the radio and he is not a soldier.
+ He is sitting in an aircraft he has never flown, at an airfield nobody is
+ left to run, and the only person who can talk him into the air is the one
+ standing in a bunker being eaten.
+
+ Five steps, and none of them is a button that says DO THE EASTER EGG.
+ Each is a thing you would plausibly do anyway, done in an order that only
+ makes sense once he has asked for it:
+
+   1  ANSWER      the handset on the mess wall, once the power is on.
+   2  LISTEN      hold the generator so he can hear one catch.
+   3  PRIME       put a round through each of the three fuel drums.
+   4  BEARING     stand on the roof facing the treeline and read it to him.
+   5  LIGHTS      every window boarded at once, lit from inside.
+
+ And then he comes. And then a spitter puts acid through the canopy.
+
+ The steps are checked here rather than scattered through the systems they
+ watch, so the whole egg is one thing you can read top to bottom. */
+const EXIT42 = {
+bearing: Math.PI,          // due north-ish, out over the treeline
+bearingTol: 0.30,
+listenFor: 2.2,            // seconds of held generator
+flyIn: 16,                 // how long the aircraft is in the sky
+hitAt: 0.62,               // where on that flight the acid lands
+};
+
+function buildExit42(game, S) {
+/* The handset. It only matters after the power is on, so it hangs dead on
+   the mess wall until then and is nothing but a prop. */
+const dark = { color: 0x22252a, texture: 'smooth', roughness: 0.8, metalness: 0 };
+const steel = { color: 0x4d565f, texture: 'metal', roughness: 0.5, metalness: 1 };
+const at = [MAP.main.x1 - 0.34, 1.34, -1.15];
+const box = game.box({ at, size: [0.18, 0.26, 0.13], material: dark, physics: false });
+const cradle = game.box({ at: [at[0] - 0.11, at[1] + 0.09, at[2]], size: [0.09, 0.05, 0.16],
+  material: steel, physics: false });
+const handset = game.box({ at: [at[0] - 0.15, at[1] + 0.14, at[2]], size: [0.05, 0.05, 0.19],
+  material: dark, physics: false });
+const bell = game.light({ at: [at[0] - 0.4, at[1] + 0.2, at[2]], color: 0x7ad7ff, intensity: 0, radius: 3 });
+S.exit = {
+  step: 0, at, parts: [box, cradle, handset], bell, ring: 0, listen: 0,
+  drums: [], plane: null, flight: 0, done: false, said: {},
+};
+
+/* Three drums out in the mud, where you can see them from a window and
+   put a round through them. They are props until he asks for them. */
+const rust = { color: 0x6b4a2c, texture: 'rust', roughness: 0.92, metalness: 0.25 };
+for (const [dx, dz] of [[-3.4, -12.2], [6.2, -10.6], [11.4, -3.8]]) {
+  const d = game.cylinder({ at: [dx, 0.44, dz], radius: 0.29, height: 0.88,
+    material: rust, physics: true, mass: 0, static: true });
+  for (const ry of [0.24, 0.64]) {
+    game.cylinder({ at: [dx, ry, dz], radius: 0.305, height: 0.05, material: rust, physics: false });
+  }
+  S.exit.drums.push({ actor: d, lit: false, at: [dx, 0.44, dz] });
+}
+}
+
+/* One step done. Announces itself and lets the character answer. */
+function exitStep(S, hud, sfx, n, banner) {
+if (S.exit.step >= n) return;
+S.exit.step = n;
+sfx.exitBeep();
+hud.banner(banner, '#ff9a6a');
+S.voice(LINES['exit' + n]);
+}
+
+function updateExit42(game, S, P, hud, sfx, dt) {
+const E = S.exit;
+if (!E || E.done) return;
+
+/* 0 -> 1  The handset rings once the lights are on, and keeps ringing
+   until somebody picks it up. A light behind it so you can find the wall
+   it is on rather than hunting a dark room for a noise. */
+if (E.step === 0) {
+  if (!S.powered) return;
+  E.ring -= dt;
+  if (E.ring <= 0) { E.ring = 2.6; sfx.phoneRing(); }
+  E.bell.intensity = 3.5 + Math.sin(S.time * 9) * 3;
+  return;
+}
+E.bell.intensity = Math.max(0, E.bell.intensity - dt * 6);
+
+/* 1 -> 2  He cannot find the master switch and does not believe the
+   engine will catch. Hold the generator crank while he listens. */
+if (E.step === 1) {
+  const ps = S.powerSwitch;
+  const near = ps && dist2d(P.actor.position, { x: ps.at[0], z: ps.at[2] }) < 2.6;
+  /* Standing at it is not enough — he wants to hear the thing turning
+     over, so the key has to be down and you have to hold it there while
+     the horde is behind you. */
+  if (near && S.input.useDown) {
+    E.listen += dt;
+    if (E.listen >= EXIT42.listenFor) exitStep(S, hud, sfx, 2, 'HE HEARD IT');
+  } else E.listen = Math.max(0, E.listen - dt * 0.6);
+  return;
+}
+
+/* 2 -> 3  Three drums, one round each. He counts the bangs down the
+   line and primes a cylinder for every one of them. */
+if (E.step === 2) {
+  let lit = 0;
+  for (const d of E.drums) if (d.lit) lit++;
+  if (lit >= E.drums.length) exitStep(S, hud, sfx, 3, 'THREE PRIMED');
+  return;
+}
+
+/* 3 -> 4  A bearing, read off the parapet. You have to be on the roof
+   and looking the way he has to fly. */
+if (E.step === 3) {
+  const p = P.actor.position;
+  if (p.y > MAP.roof.y0) {
+    let d = ((game._camYaw - EXIT42.bearing) % (Math.PI * 2) + Math.PI * 3) % (Math.PI * 2) - Math.PI;
+    if (Math.abs(d) < EXIT42.bearingTol) {
+      E.listen += dt;
+      if (E.listen >= 1.6) { E.listen = 0; exitStep(S, hud, sfx, 4, 'BEARING PASSED'); }
+    } else E.listen = 0;
+  }
+  return;
+}
+
+/* 4 -> 5  Runway lights: every window whole at the same time, with the
+   power on behind them. It is the hardest of the five on purpose — it is
+   the one that asks you to stop shooting and go and build. */
+if (E.step === 4) {
+  const allUp = S.windows.every((w) => w.boards.every(Boolean));
+  if (allUp && S.powered) {
+    exitStep(S, hud, sfx, 5, 'HE IS COMING');
+    E.flight = 0;
+    E.plane = buildPlane(game, S);
+  }
+  return;
+}
+
+/* 5  The flight. He crosses the field, banks, and lines up on the strip
+   of light. At sixty-two per cent of it a spitter puts a piece of itself
+   through the canopy, and the rest is a long way down. */
+if (E.step === 5 && E.plane) {
+  E.flight += dt;
+  const u = Math.min(1, E.flight / EXIT42.flyIn);
+  const pl = E.plane;
+  // A long arc in from the treeline, dropping and turning as it comes.
+  const x = 82 - u * 96;
+  const z = -74 + u * 62;
+  const y = 34 - u * 26 - (u > EXIT42.hitAt ? Math.pow((u - EXIT42.hitAt) / (1 - EXIT42.hitAt), 2) * 7 : 0);
+  pl.root.setPosition([x, Math.max(1.5, y), z]);
+  const bank = (u > EXIT42.hitAt ? -70 * (u - EXIT42.hitAt) / (1 - EXIT42.hitAt) : -14);
+  pl.root.setRotation([bank, 34 - u * 26, -6 - u * 4]);
+  if (u > 0.04 && !E.said.inbound) { E.said.inbound = true; S.voice(LINES.exitInbound); }
+
+  if (u >= EXIT42.hitAt && !E.hit) {
+    E.hit = true;
+    sfx.spit();
+    S.voice(LINES.exitHit);
+    addShake(S, 0.5, 0.6);
+  }
+  if (E.hit) {
+    // Smoke off the cowling and a fire that grows the whole way down.
+    if (Math.random() < dt * 40) {
+      game.particles.smoke([x + (Math.random() - 0.5) * 2, Math.max(1.5, y) + 1, z + (Math.random() - 0.5) * 2],
+        { count: 2, color: 0x2a2622 });
+    }
+    if (Math.random() < dt * 22) {
+      game.particles.sparks([x, Math.max(1.5, y), z],
+        { count: 3, speed: 3, color: 0xffb03a, colorEnd: 0x5a1a06 });
+    }
+  }
+  if (u >= 1) {
+    exitCrash(game, S, P, hud, sfx, [x, 1.2, z]);
+  }
+}
+}
+
+/* The aircraft. Not much of one — it is seen from a bunker roof at fifty
+ metres and then it is on fire — but it has a fuselage, a wing, a tail and
+ two engines, and that is the difference between an aeroplane and a dart. */
+function buildPlane(game, S) {
+const skin = { color: 0x6a7078, texture: 'metal', roughness: 0.52, metalness: 1 };
+const dark = { color: 0x25282c, texture: 'smooth', roughness: 0.8, metalness: 0 };
+const glass = { color: 0x9fc4d8, texture: 'smooth', roughness: 0.12, metalness: 0, opacity: 0.5 };
+const parts = [];
+const root = game.box({ at: [0, -400, 0], size: [1, 1, 1], material: skin, physics: false });
+root.visible = false;
+const add = (a, at, rot) => { a.parent = root; a.setPosition(at); if (rot) a.setRotation(rot); parts.push(a); return a; };
+// Fuselage, nose to tail.
+const fus = game.cylinder({ radius: 0.85, height: 11.5, material: skin, physics: false });
+add(fus, [0, 0, 0], [0, 0, 90]);
+add(game.cone({ radius: 0.85, height: 1.8, material: skin, physics: false }), [6.4, 0, 0], [0, 0, -90]);
+// Canopy, which is the part that matters later.
+add(game.box({ size: [2.6, 0.7, 1.1], material: glass, physics: false }), [2.2, 0.72, 0]);
+// Wing, one slab with a taper faked by a second thinner one outboard.
+add(game.box({ size: [2.9, 0.30, 16.5], material: skin, physics: false }), [0.4, -0.25, 0]);
+add(game.box({ size: [1.6, 0.22, 5.0], material: skin, physics: false }), [0.2, -0.25, 8.6]);
+add(game.box({ size: [1.6, 0.22, 5.0], material: skin, physics: false }), [0.2, -0.25, -8.6]);
+// Two engines and their discs.
+for (const ez of [-3.6, 3.6]) {
+  add(game.cylinder({ radius: 0.62, height: 2.6, material: dark, physics: false }), [1.5, -0.2, ez], [0, 0, 90]);
+  add(game.cylinder({ radius: 1.55, height: 0.06, material: {
+    color: 0x8a8a8a, texture: 'smooth', roughness: 0.4, metalness: 0, opacity: 0.28 },
+    physics: false }), [2.9, -0.2, ez], [0, 0, 90]);
+}
+// Tail: fin and stabiliser.
+add(game.box({ size: [2.2, 2.6, 0.22], material: skin, physics: false }), [-5.2, 1.3, 0]);
+add(game.box({ size: [1.7, 0.20, 6.2], material: skin, physics: false }), [-5.0, 0.2, 0]);
+S.exitPlane = { root, parts };
+return S.exitPlane;
+}
+
+function exitCrash(game, S, P, hud, sfx, at) {
+const E = S.exit;
+E.done = true;
+E.step = 6;
+if (E.plane) { for (const q of E.plane.parts) q.visible = false; E.plane.root.visible = false; }
+// A long orange bloom out in the field, and the floor moving under you.
+const fl = game.light({ at: [at[0], at[1] + 3, at[2]], color: 0xffb04a, intensity: 400, radius: 60 });
+fl._decay = 1.4;
+for (let i = 0; i < 26; i++) {
+  game.particles.sparks([at[0] + (Math.random() - 0.5) * 9, at[1] + Math.random() * 5, at[2] + (Math.random() - 0.5) * 9],
+    { count: 5, speed: 14, color: 0xffd27a, colorEnd: 0x5a1a06 });
+}
+for (let i = 0; i < 16; i++) {
+  game.particles.smoke([at[0] + (Math.random() - 0.5) * 12, at[1] + Math.random() * 8, at[2] + (Math.random() - 0.5) * 12],
+    { count: 3, color: 0x1d1a17 });
+}
+sfx.planeCrash();
+addShake(S, 1.0, 1.9);
+S.voice(LINES.exitCrash, true);
+// Every character has their own way of taking it. Delayed, so it lands in
+// the silence after the noise rather than on top of it.
+setTimeout(() => S.bark('planeCrash', true), 3200);
+/* What it leaves. He was carrying what he could and it is scattered over
+   a hundred metres of mud, so: everything you were out of, and the rifle
+   out of the wreck. */
+for (const id of Object.keys(P.ammo)) {
+  if (WEAPONS[id]) { P.ammo[id].mag = WEAPONS[id].mag; P.ammo[id].reserve = WEAPONS[id].reserve; }
+}
+P.give('killstreak');
+hud.ammo(P);
+hud.pointsDelta(S.addPoints(5000));
+hud.points(S.points);
+hud.banner('EXIT FOUR TWO', '#ff9a6a');
+}
+
 
 function buildMap(game, S) {
   const MAT = {
@@ -2387,7 +2713,7 @@ function buildMap(game, S) {
   // never built, so switching it back on is one call rather than a rewrite.
   S.shop = null;
 
-  /* ---------------- the eighteen carat conveyor ----------------
+/* ---------------- the eighteen carat conveyor ----------------
 
      Parked inside the east wall so that what the player sees, when the
      three conditions land, is a belt line coming out of solid concrete
@@ -2425,6 +2751,8 @@ function buildMap(game, S) {
      walking body cannot pass, and a body's shoulders clear a kerb its shins
      do not. Two levels, since the stair between them is the room graph's
      business. */
+  buildExit42(game, S);
+
   S.nav = {
     ground: buildNavLevel(game, { x0: MAP.side.x0, x1: MAP.main.x1, z0: MAP.main.z0, z1: MAP.main.z1 }, 1.05),
     roof: buildNavLevel(game, { x0: MAP.roof.x0, x1: MAP.roof.x1, z0: MAP.roof.z0, z1: MAP.roof.z1 },
@@ -3564,6 +3892,22 @@ function tryFire(game, S, P, hud, sfx, dt) {
       // Wall hit, remembered rather than puffed: one cloud for the shot.
       wallCount++;
       if (!wallHit) wallHit = hit.point;
+      // A drum he is waiting on. One round each and he counts the bangs.
+      if (S.exit && S.exit.step === 2 && hit.actor) {
+        for (const dr of S.exit.drums) {
+          if (dr.lit || dr.actor !== hit.actor) continue;
+          dr.lit = true;
+          dr.actor.material = game.material({ color: 0x2a1a10, texture: 'rust',
+            roughness: 0.95, metalness: 0.2, emissive: 0xff5a12, emissiveStrength: 1.1 });
+          const l = game.light({ at: [dr.at[0], dr.at[1] + 1.2, dr.at[2]],
+            color: 0xffa03a, intensity: 90, radius: 12 });
+          l._decay = 1.1;
+          game.particles.sparks([dr.at[0], dr.at[1] + 0.5, dr.at[2]],
+            { count: 22, speed: 9, color: 0xffd27a, colorEnd: 0x5a1a06 });
+          game.particles.smoke([dr.at[0], dr.at[1] + 1.4, dr.at[2]], { count: 6, color: 0x1d1a17 });
+          sfx.drumBlast();
+        }
+      }
     }
   }
   if (anyHit) {
@@ -5688,6 +6032,13 @@ function nearestInteract(S, P) {
     if (c.offer) return { kind: 'crateSpin', cost: 0, inert: true, label: 'Wait for it' };
     if (!c.busy) return { kind: 'crate', cost: c.cost, label: `Supply crate — ${c.cost}` };
   }
+  // The handset, while it is ringing and nobody has answered it.
+  if (S.exit && S.exit.step === 0 && S.powered) {
+    const e = S.exit.at;
+    if (Math.abs(p.y + 0.5 - e[1]) < 2.2 && dist2d(p, { x: e[0], z: e[2] }) < R) {
+      return { kind: 'exitPhone', cost: 0, label: 'Answer the handset' };
+    }
+  }
   // Window repair.
   for (const win of S.windows) {
     const s = win.def.sillAt;
@@ -5801,6 +6152,8 @@ function doInteract(game, S, P, hud, sfx, it, dt) {
        which is the point of making it take five seconds. */
     const ps = S.powerSwitch;
     if (!ps.cranking) { ps.cranking = GEN.crank; sfx.doorOpen(); S.voice(LINES.powerStart || LINES.power); }
+  } else if (it.kind === 'exitPhone') {
+    exitStep(S, hud, sfx, 1, 'SOMEBODY IS ON THE LINE');
   } else if (it.kind === 'bench') {
     Object.assign(S.bench, { open: true, slot: 0, index: 0, spin: 0.9,
       preview: false, picking: false, damage: false });
@@ -6658,6 +7011,15 @@ function updateRounds(game, S, P, hud, sfx, dt) {
     S.lullT = ROUNDS.lull;
     sfx.roundClear();
     S.bark('roundClear', true);
+    /* Stalker. Whoever he is, he is in the treeline and he is watching, and
+       he says one thing every fourth round from the fifth on — never twice,
+       and never enough to explain himself. */
+    S.stalkerSaid = S.stalkerSaid || 0;
+    if (S.round >= 5 && (S.round - 5) % 4 === 0 && S.stalkerSaid < 5) {
+      S.stalkerSaid++;
+      const line = LINES['stalker' + S.stalkerSaid];
+      if (line) setTimeout(() => S.voice(line), 3600);
+    }
   }
 }
 
@@ -6733,7 +7095,7 @@ function start(opts = {}) {
     killsTotal: 0, gameOver: false, started: false,
     firstBloodDone: false, powerupActive: null,
     testMode: !!opts.test, godMode: false,
-    input: { fireHeld: false, firePressed: false, aimHeld: false, sprintHeld: false },
+    input: { fireHeld: false, firePressed: false, aimHeld: false, sprintHeld: false, useDown: false },
     testHold: {},
     grenades: [], goldPickups: [], belt: null, drops: [], shop: null,
     settings: { open: false, index: 1, current: 'normal' }, particleScale: 1,
@@ -6744,6 +7106,9 @@ function start(opts = {}) {
   const hud = makeHud();
   S.hud = hud;
   const sfx = makeSfx(game);
+  // Exposed for the reload test, which counts how often each one fires:
+  // twice now a stage held in a boolean has played its sound every frame.
+  S.__sfx = sfx;
   const voice = makeVoice(game, hud, () => S.gameOver);
   S.voice = voice;
 
@@ -6888,6 +7253,9 @@ function start(opts = {}) {
     S.input.jumpPressed = i.justPressed(' ') || !!pad.pressed.a;
     S.input.aimHeld = i.down('control') || i.pointer.rightDown || pad.lt > 0.4 || !!th.aim;
     S.input.sprintHeld = i.down('shift') || !!pad.buttons.ls || !!th.sprint;
+    // Held rather than pressed: the easter egg wants to know you are
+    // standing at the generator with your hand on it, not that you tapped it.
+    S.input.useDown = i.down('f') || i.down('x') || !!pad.buttons.b;
     th._firePrev = !!th.fire;
 
     if (S.gameOver || !S.started) return;
@@ -7237,6 +7605,7 @@ function start(opts = {}) {
            which is the ritual that had to be performed to get it shooting
            again. */
         P.cooldown = Math.min(P.cooldown, P.spec().refire);
+        sfx.swap();
         hud.ammo(P);
         hud.flashWeapon(P.spec().slotName);
       };
@@ -7320,10 +7689,34 @@ function start(opts = {}) {
       // after _updateCamera, where the camera is final for the frame.
       P._moving = Math.abs(mx) + Math.abs(mz) > 0.1;
 
+      /* Footsteps.
+
+         There were none at all, which is why walking felt like sliding — a
+         concrete floor answers when you cross it, and the absence of that
+         is felt long before it is noticed. Paced off the same clock as the
+         view bob, so the foot lands when the camera drops, and a little
+         harder when you are running. */
+      const ctl = P.actor.controller;
+      const grounded = !ctl || ctl.grounded !== false;
+      if (P._moving && grounded && P.alive) {
+        const rate = P.sprinting ? 3.05 : (P.ads > 0.5 ? 1.55 : 2.10);
+        P.stepPhase = (P.stepPhase || 0) + dt * rate;
+        if (P.stepPhase >= 1) { P.stepPhase -= 1; sfx.step(P.sprinting); }
+      } else P.stepPhase = 0.62;   // most of the way, so the next step is prompt
+
+      /* And landing, which needs to know how far you fell. */
+      if (ctl) {
+        const wasAir = P._air;
+        P._air = ctl.grounded === false;
+        if (wasAir && !P._air) sfx.land(Math.min(1, Math.abs(P._fallV || 0) / 9));
+        if (P._air) P._fallV = P.actor.body ? P.actor.body.velocity.y : 0;
+      }
+
       /* Jump. Off the same controller as everything else, so it gets the
          coyote time and the buffered press the engine already implements. */
       if (S.input.jumpPressed && !(S.bench && S.bench.open) && P.sliding <= 0) {
         P.actor.controller.jump();
+        sfx.jump();
       }
 
       /* Interact. */
@@ -7483,6 +7876,14 @@ function start(opts = {}) {
 
     updateMinigun(game, S, P, hud, sfx, dt);
     updateMeteor(game, S, P, hud, sfx, dt);
+
+    updateExit42(game, S, P, hud, sfx, dt);
+    // The engines, while it is in the air. One note a beat, so it grows as
+    // it comes in rather than arriving all at once.
+    if (S.exit && S.exit.step === 5 && S.exit.plane) {
+      S.exitEngT = (S.exitEngT || 0) - dt;
+      if (S.exitEngT <= 0) { S.exitEngT = 0.5; sfx.planeEngine(); }
+    }
 
     /* The eighteen carat conveyor. Nothing announces the conditions; the
        belt arriving is the announcement. */

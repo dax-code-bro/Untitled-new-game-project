@@ -279,7 +279,9 @@ function makeViewmodelArms(hands, opts = {}) {
 
 const VIEW_ARM_MATERIALS = {
   sleeve: { color: 0x3d3a2c, texture: 'fabric', roughness: 0.96, metalness: 0, uvScale: 1.4 },
-  skin: { color: 0xb08462, texture: 'skin', roughness: 0.68, metalness: 0, subsurface: 0.4 },
+  /* Hands under warm lamplight, and not a carrot. 0xb08462 with the room
+     probe behind it came out orange enough to read as a glove. */
+  skin: { color: 0x9c7657, texture: 'skin', roughness: 0.72, metalness: 0, subsurface: 0.32 },
 };
 
 /* Spawn arms parented to a weapon actor. They move with it exactly. */

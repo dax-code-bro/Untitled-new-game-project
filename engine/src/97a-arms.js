@@ -1835,7 +1835,14 @@ const ARM_MAT = {
      steel, tinted cold. */
   blued: { color: 0x596470, texture: 'metal', roughness: 0.36, metalness: 1 },
   // Machined bright — the Paralyzer and the Model 5 are instruments.
-  bright: { color: 0x9ba2aa, texture: 'metal', roughness: 0.32, metalness: 1 },
+  /* Machined bright — the Paralyzer and the Model 5 are instruments.
+
+     Toned down from 0x9ba2aa when the room probe arrived: with something
+     for a mirror to reflect indoors, a reflectance that high stopped
+     reading as polished steel and started reading as a white blob with no
+     shape in it. Rougher as well, so the highlight spreads over the form
+     instead of blowing out one band of it. */
+  bright: { color: 0x848c95, texture: 'metal', roughness: 0.38, metalness: 1 },
   // A greyer, rougher steel for things that get hit.
   grey: { color: 0x6b7076, texture: 'metal', roughness: 0.48, metalness: 1 },
   poly: { color: 0x1e2226, texture: 'smooth', roughness: 0.72, metalness: 0 },

@@ -15290,7 +15290,14 @@ const ARM_MAT = {
      steel, tinted cold. */
   blued: { color: 0x596470, texture: 'metal', roughness: 0.36, metalness: 1 },
   // Machined bright — the Paralyzer and the Model 5 are instruments.
-  bright: { color: 0x9ba2aa, texture: 'metal', roughness: 0.32, metalness: 1 },
+  /* Machined bright — the Paralyzer and the Model 5 are instruments.
+
+     Toned down from 0x9ba2aa when the room probe arrived: with something
+     for a mirror to reflect indoors, a reflectance that high stopped
+     reading as polished steel and started reading as a white blob with no
+     shape in it. Rougher as well, so the highlight spreads over the form
+     instead of blowing out one band of it. */
+  bright: { color: 0x848c95, texture: 'metal', roughness: 0.38, metalness: 1 },
   // A greyer, rougher steel for things that get hit.
   grey: { color: 0x6b7076, texture: 'metal', roughness: 0.48, metalness: 1 },
   poly: { color: 0x1e2226, texture: 'smooth', roughness: 0.72, metalness: 0 },
@@ -16419,7 +16426,9 @@ function makeViewmodelArms(hands, opts = {}) {
 
 const VIEW_ARM_MATERIALS = {
   sleeve: { color: 0x3d3a2c, texture: 'fabric', roughness: 0.96, metalness: 0, uvScale: 1.4 },
-  skin: { color: 0xb08462, texture: 'skin', roughness: 0.68, metalness: 0, subsurface: 0.4 },
+  /* Hands under warm lamplight, and not a carrot. 0xb08462 with the room
+     probe behind it came out orange enough to read as a glove. */
+  skin: { color: 0x9c7657, texture: 'skin', roughness: 0.72, metalness: 0, subsurface: 0.32 },
 };
 
 /* Spawn arms parented to a weapon actor. They move with it exactly. */

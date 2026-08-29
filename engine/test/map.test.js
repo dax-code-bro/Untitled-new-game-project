@@ -187,6 +187,65 @@ function check(name, cond, detail = '') {
     r.badWeapons.length === 0, r.badWeapons.join(', '));
   check('no group model is showing its pivot', r.suspectPivots === 0, `${r.suspectPivots} suspect`);
   check('nothing flicks to black as the view turns', r.pops.length === 0, r.pops.join(', '));
+
+  /* One reload, one of each thing.
+   *
+   * This has now been the same bug twice. A reload stage held in a boolean
+   * that is set at 6% and cleared again at 62% passes its own opening test
+   * on the very next frame, so it fires for every frame of the rest of the
+   * reload: a hundred and ten shell casings on the floor of a scattergun
+   * reload and fifty-five overlapping clacks, and the same shape again in
+   * the revolver's cylinder. It is invisible in code review and obvious in
+   * play, which is exactly what a test is for.
+   *
+   * Run a full reload of every weapon with the sound bank and the case
+   * ejector counted, and fail anything that does a one-off more than a
+   * handful of times. */
+  const rl = await page.evaluate(() => {
+    const out = [];
+    const S = B.S, P = B.P;
+    B.game.step(1 / 60);
+    for (const id of Object.keys(B.P.view)) {
+      if (!__T_WEAPONS[id] || __T_WEAPONS[id].melee || !__T_WEAPONS[id].mag) continue;
+      P.give(id);
+      P.slot = P.slots.indexOf(id);
+      if (P.slot < 0) continue;
+      B.game.step(1 / 60);
+      const am = P.ammoFor(id);
+      am.mag = 0;
+      am.reserve = __T_WEAPONS[id].reserve || 30;
+      // Count what the reload throws and what it plays.
+      const before = S.brass.length;
+      const counts = {};
+      const sfx = S.__sfx;
+      let wrapped = null;
+      if (sfx) {
+        wrapped = {};
+        for (const k of Object.keys(sfx)) {
+          if (typeof sfx[k] !== 'function') continue;
+          const orig = sfx[k];
+          wrapped[k] = orig;
+          sfx[k] = function () { counts[k] = (counts[k] || 0) + 1; };
+        }
+      }
+      __T.reload();
+      const spec = P.spec();
+      const frames = Math.ceil((spec.reload + 0.4) * 60);
+      for (let i = 0; i < frames; i++) { B.game.step(1 / 60); S.toSpawn = 0; S.spawnT = 1e9; }
+      if (wrapped) for (const k in wrapped) sfx[k] = wrapped[k];
+      const cases = Math.max(0, S.brass.length - before);
+      let worst = 0, worstK = '';
+      for (const k in counts) if (counts[k] > worst) { worst = counts[k]; worstK = k; }
+      out.push({ id, cases, worst, worstK });
+    }
+    return out;
+  });
+  const spammy = rl.filter((x) => x.worst > 6).map((x) => `${x.id}:${x.worstK} x${x.worst}`);
+  const showers = rl.filter((x) => x.cases > 8).map((x) => `${x.id} ${x.cases} cases`);
+  check('a reload plays each of its sounds a few times, not once a frame',
+    spammy.length === 0, spammy.join(', '));
+  check('a reload does not empty a bandolier onto the floor',
+    showers.length === 0, showers.join(', '));
   const real = errors.filter((e) => !/SwiftShader|Fallback|favicon/i.test(e));
   check('the map builds without errors', real.length === 0, real.slice(0, 3).join(' | '));
 
