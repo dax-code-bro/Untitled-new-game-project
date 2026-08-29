@@ -2,7 +2,7 @@
   "private": true,
   "name": "legend",
   "version": "1.0.0",
-  "description": "Legend — the ultimate AI (static PWA + AI proxy function)",
+  "description": "Legend \u2014 the ultimate AI (static PWA + AI proxy function)",
   "engines": {
     "node": "20.x"
   },
@@ -13,6 +13,7 @@
     "test:engine": "node engine/build.js && node engine/test/browser.test.js",
     "test": "node engine/test/physics.test.js",
     "test:integration": "node engine/build.js && node engine/test/integration.test.js",
-    "test:all": "node engine/test/physics.test.js && node engine/build.js && node engine/test/browser.test.js && node engine/test/integration.test.js"
+    "test:all": "node engine/test/physics.test.js && node engine/build.js && node engine/test/browser.test.js && node engine/test/map.test.js && node engine/test/integration.test.js",
+    "test:map": "node engine/build.js && node engine/test/map.test.js"
   }
 }
