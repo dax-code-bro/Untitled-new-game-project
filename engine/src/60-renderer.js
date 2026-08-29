@@ -59,10 +59,10 @@ class Camera {
    magnitude, so the engine picks a tier from the device rather than
    shipping one setting that is wrong for most players. */
 const QUALITY = {
-  low: { shadowRes: 1024, cascades: 1, bloom: true, bloomIters: 2, fluidScale: 0.5, fxaa: false, msaa: 0, maxGrass: 6000, renderScale: 0.75 },
+  low: { shadowRes: 768, cascades: 1, bloom: false, bloomIters: 0, fluidScale: 0.5, fxaa: false, msaa: 0, maxGrass: 3000, renderScale: 0.62 },
   medium: { shadowRes: 1536, cascades: 2, bloom: true, bloomIters: 3, fluidScale: 0.75, fxaa: true, msaa: 0, maxGrass: 20000, renderScale: 1 },
   high: { shadowRes: 2048, cascades: 2, bloom: true, bloomIters: 3, fluidScale: 1, fxaa: true, msaa: 0, maxGrass: 60000, renderScale: 1 },
-  ultra: { shadowRes: 4096, cascades: 2, bloom: true, bloomIters: 4, fluidScale: 1, fxaa: true, msaa: 0, maxGrass: 150000, renderScale: 1 },
+  ultra: { shadowRes: 4096, cascades: 2, bloom: true, bloomIters: 5, fluidScale: 1, fxaa: true, msaa: 0, maxGrass: 150000, renderScale: 1.25 },
 };
 
 function detectQuality() {
@@ -203,11 +203,36 @@ class Renderer {
     const gl = this.gl;
     const res = this.quality.shadowRes;
     this.shadowMaps = [];
-    for (let i = 0; i < this.quality.cascades; i++) {
+    /* Two, whatever the tier asks for. There are two cascade matrices and
+       the shader binds two maps, so a third would be rendered every frame
+       and then never sampled — and asking for one walks off the end of
+       _shadowMats and throws on the first frame. Clamped here rather than
+       trusted to the table, because the table is the easy place to change
+       a number without knowing what else depends on it. */
+    const n = Math.min(this.quality.cascades, this._shadowMats.length);
+    for (let i = 0; i < n; i++) {
       this.shadowMaps.push(new Framebuffer(gl, {
         width: res, height: res, depthOnly: true, depthTexture: true, compare: true, depth: true,
       }));
     }
+  }
+
+  /* Change tier at runtime.
+
+     Everything the tier decides is allocated: the shadow cascades are
+     framebuffers of a fixed size, and the colour targets are sized off
+     `renderScale`. So switching tiers means throwing the shadow maps away
+     and rebuilding them, then forcing a resize by invalidating the cached
+     dimensions — without that last part `resize` early-returns on the
+     unchanged CSS size and the new render scale never takes effect. */
+  setQuality(name, overrides) {
+    if (!QUALITY[name]) return this.qualityName;
+    this.qualityName = name;
+    this.quality = Object.assign({}, QUALITY[name], overrides || {});
+    for (const m of this.shadowMaps || []) if (m.dispose) m.dispose();
+    this._initShadowMaps();
+    this.width = -1; this.height = -1;
+    return this.qualityName;
   }
 
   resize(cssWidth, cssHeight, pixelRatio) {

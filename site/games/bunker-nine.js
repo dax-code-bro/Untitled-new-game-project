@@ -28,6 +28,7 @@ const ECONOMY = {
   wallGun: 1500,      // what the user specced: wall guns are 1500...
   wallAmmo: 500,      // ...and ammo off the same chalk is 500
   crate: 900,
+  upgrade: 5000,     // what the rock asks, and it is worth it
 };
 
 /* ---------------- where a round lands ----------------
@@ -157,7 +158,7 @@ const ATTACH = {
   /* Wonder weapons and the melee kit take nothing at all. */
   noWork: ['arc', 'knife', 'hammer', 'ram', 'shield', 'shieldWorn'],
   /* A gun that gains a second copy of itself gains a name with it. */
-  dualName: { m1911: 'River & Blaze', mp5: 'Twin MP5', thompson: 'Double Thompson',
+  dualName: { m1911: 'River & Blaze', blaze: 'Blaze & River', mp5: 'Twin MP5', thompson: 'Double Thompson',
     scatter: 'Both Barrels Twice', sawnoff: 'Sawn-Off Pair', mauser: 'Twin Mauser',
     paralyzer: 'Twin Paralyzer' },
 };
@@ -186,7 +187,25 @@ const WEAPONS = {
     // the camera axis. Measured off the model, not eyeballed.
     sightH: 0.0455, sightFov: 0.74, adsTime: 0.16,
     recoil: { up: 1.15, side: 0.5, climb: 0.28, recover: 9 },
-    hands: { right: [-0.004, -0.020, 0.017], left: [0.016, -0.052, -0.021], leftGrip: 'pistol' },
+    hands: { right: [-0.004, -0.020, 0.017], left: [0.014, -0.056, -0.022], leftGrip: 'pistol' },
+  },
+  /* River's twin. Same pistol, different loading: the rounds carry an
+     incendiary compound, so what they leave behind burns for a while after
+     the shot has stopped mattering. Half the sidearm's impact and rather
+     more than half its damage once the fire has had its say.
+
+     The pair of them is the point. Fit both with the dual-wield stock and
+     you are holding two 1911s; put both through the rock and the pair
+     becomes something else again. */
+  blaze: {
+    name: 'Blaze', slotName: 'BLAZE',
+    dmg: 34, headMul: 2.6, mag: 8, reserve: 56, refire: 0.16,
+    reload: 1.5, auto: false, pellets: 1, spread: 0.5,
+    kick: 1.5, sfx: 'shotPistol', reloadKind: 'mag',
+    burn: { dps: 26, time: 5 },
+    sightH: 0.0455, sightFov: 0.74, adsTime: 0.16,
+    recoil: { up: 1.10, side: 0.5, climb: 0.26, recover: 9 },
+    hands: { right: [-0.004, -0.020, 0.017], left: [0.014, -0.056, -0.022], leftGrip: 'pistol' },
   },
   thompson: {
     name: 'Thompson', slotName: 'THOMPSON',
@@ -195,7 +214,7 @@ const WEAPONS = {
     kick: 0.9, sfx: 'shotSmg', reloadKind: 'mag',
     sightH: 0.0955, sightFov: 0.80, adsTime: 0.22,
     recoil: { up: 0.42, side: 0.30, climb: 0.13, recover: 11 },
-    hands: { right: [-0.004, -0.022, 0.019], left: [0.290, 0.028, -0.019] },
+    hands: { right: [-0.006, -0.024, 0.016], left: [0.330, -0.020, -0.017] },
   },
   scatter: {
     name: 'Scattergun', slotName: 'SCATTERGUN',
@@ -204,7 +223,7 @@ const WEAPONS = {
     kick: 3.2, sfx: 'shotScatter', reloadKind: 'break',
     sightH: 0.0275, sightFov: 0.86, adsTime: 0.24, adsSpread: 0.55,
     recoil: { up: 2.6, side: 0.9, climb: 0.75, recover: 7 },
-    hands: { right: [-0.055, -0.070, 0.018], left: [0.300, -0.026, -0.019] },
+    hands: { right: [-0.014, -0.046, 0.016], left: [0.242, -0.006, -0.020] },
   },
   /* The stun gun. A double gun with no wood on it: a capacitor bank where
      the rib should be, copper wound round both barrels, emitter rings at
@@ -221,7 +240,7 @@ const WEAPONS = {
     sightH: 0.0425, sightFov: 0.86, adsTime: 0.26, adsSpread: 0.62,
     recoil: { up: 2.4, side: 0.85, climb: 0.60, recover: 7.5 },
     moveMul: 0.94, muzzleVel: 62,
-    hands: { right: [-0.062, -0.072, 0.018], left: [0.270, -0.042, -0.019] },
+    hands: { right: [-0.014, -0.046, 0.016], left: [0.268, -0.010, -0.020] },
   },
   mp5: {
     name: 'MP5', slotName: 'MP5',
@@ -231,7 +250,7 @@ const WEAPONS = {
     sightH: 0.0435, sightFov: 0.80, adsTime: 0.19,
     recoil: { up: 0.36, side: 0.26, climb: 0.11, recover: 12 },
     moveMul: 1.0, muzzleVel: 400,
-    hands: { right: [-0.055, -0.068, 0.017], left: [0.215, -0.030, -0.019] },
+    hands: { right: [-0.012, -0.044, 0.016], left: [0.232, -0.014, -0.020] },
   },
   sawnoff: {
     name: 'Sawn-Off', slotName: 'SAWN-OFF',
@@ -241,7 +260,7 @@ const WEAPONS = {
     sightH: 0.026, sightFov: 0.94, adsTime: 0.18, adsSpread: 0.85,
     recoil: { up: 3.6, side: 1.6, climb: 1.05, recover: 6.5 },
     moveMul: 1.06, muzzleVel: 48,
-    hands: { right: [-0.075, -0.058, 0.018], left: [0.140, -0.034, -0.019] },
+    hands: { right: [-0.016, -0.048, 0.016], left: [0.170, -0.004, -0.020] },
   },
   hammer: {
     name: 'Claw Hammer', slotName: 'HAMMER',
@@ -250,7 +269,7 @@ const WEAPONS = {
     kick: 0, sfx: 'dryFire', tool: true,
     sightH: 0.05, sightFov: 0.95, adsTime: 0.2,
     recoil: { up: 0, side: 0, climb: 0, recover: 12 },
-    hands: { right: [-0.020, -0.030, 0.016], left: null, rightGrip: 'pistol' },
+    hands: { right: [0.006, -0.002, 0.012], left: null, rightGrip: 'pistol' },
   },
   knife: {
     name: 'Trench Knife', slotName: 'KNIFE',
@@ -259,7 +278,7 @@ const WEAPONS = {
     kick: 1.0, sfx: 'knife', melee: true, range: 2.2,
     sightH: 0.05, sightFov: 0.95, adsTime: 0.18,
     recoil: { up: 0.5, side: 0.4, climb: 0, recover: 12 },
-    hands: { right: [-0.01, -0.036, 0.014], left: null },
+    hands: { right: [-0.006, -0.002, 0.012], left: null },
   },
   /* What a sheriff was carrying. Four chambers, a barrel you could lose
      your nerve looking down, and enough behind each round to carry it
@@ -272,7 +291,7 @@ const WEAPONS = {
     pierce: 2, pierceFalloff: 0.62,
     sightH: 0.030, sightFov: 0.86, adsTime: 0.26, adsSpread: 0.18,
     recoil: { up: 4.2, side: 1.5, climb: 0.30, recover: 7 },
-    hands: { right: [-0.048, -0.068, 0.014], left: [0.038, -0.034, -0.030] },
+    hands: { right: [-0.014, -0.044, 0.014], left: [0.026, -0.056, -0.028], leftGrip: 'pistol' },
   },
   mauser: {
     name: 'Mauser C96', slotName: 'MAUSER',
@@ -281,7 +300,7 @@ const WEAPONS = {
     kick: 1.5, sfx: 'shotPistol', reloadKind: 'clip',
     sightH: 0.036, sightFov: 0.90, adsTime: 0.20, adsSpread: 0.22,
     recoil: { up: 1.5, side: 0.6, climb: 0.06, recover: 11 },
-    hands: { right: [-0.050, -0.062, 0.014], left: null },
+    hands: { right: [-0.010, -0.020, 0.014], left: null },
   },
   /* The two answers to plate. Both are melee, both are slow, and both are
      mystery-box only — you do not get to plan for an armoured runner, you
@@ -323,7 +342,7 @@ const WEAPONS = {
     kick: 1.2, sfx: 'shotArc', reloadKind: 'cell',
     sightH: 0.0580, sightFov: 0.82, adsTime: 0.26,
     recoil: { up: 0.9, side: 0.2, climb: 0.2, recover: 8 },
-    hands: { right: [-0.075, -0.080, 0.018], left: [0.235, -0.120, -0.019] },
+    hands: { right: [-0.014, -0.046, 0.016], left: [0.188, -0.052, -0.020] },
     chain: { count: 3, radius: 4.0, dmg: 500 },
   },
 };
@@ -391,7 +410,49 @@ const CAST = {
   radio: { name: 'THE NIGHTWATCHMAN', base: 122, spread: 26, type: 'square', color: '#7ad7ff' },
 };
 
+/* ---------------- graphics presets ----------------
+
+   Four tiers, and each one is a whole position rather than a slider.
+   `tier` is what the renderer is told; the rest is the game's own share of
+   the cost, which on this map is most of it — the battlefield outside is
+   several hundred props and the lamps each cost a shadow pass.
+
+   The frame-rate figures are the target the tier is aimed at, not a
+   promise: they are what it should hold on the hardware it is meant for. */
+const GRAPHICS = {
+  low: {
+    name: 'LOW', tier: 'low', target: '30–50 FPS',
+    blurb: 'Simplest shapes. No bloom, no far battlefield, one shadow cascade.',
+    far: false, decals: false, smoke: false, lamps: 5, particles: 0.35, shadows: true,
+  },
+  normal: {
+    name: 'NORMAL', tier: 'medium', target: '50–70 FPS',
+    blurb: 'What the game was built to look like.',
+    far: true, decals: true, smoke: true, lamps: 99, particles: 1, shadows: true,
+  },
+  high: {
+    name: 'HIGH', tier: 'high', target: '60–100 FPS',
+    blurb: 'Sharper shadows, the full battlefield, every lamp.',
+    far: true, decals: true, smoke: true, lamps: 99, particles: 1.3, shadows: true,
+  },
+  ultra: {
+    name: 'ULTRA', tier: 'ultra', target: '100–200 FPS',
+    blurb: 'Rendered above the display and downsampled. Wants the hardware.',
+    far: true, decals: true, smoke: true, lamps: 99, particles: 1.8, shadows: true,
+  },
+};
+const GRAPHICS_ORDER = ['low', 'normal', 'high', 'ultra'];
+
 const LINES = {
+  /* The rock. Nobody knows what it is and nobody is going to find out;
+     what matters is that it takes a gun and gives it back worse. */
+  meteorFall: [
+    ['radio', 'Bunker Nine, we have something inbound and it is not ours.'],
+    ['patch', 'It is not theirs either by the look of it.'],
+  ],
+  meteorWake: [
+    ['patch', 'It took the round. It did not mind the round.'],
+  ],
   intro: [
     ['radio', 'Good evening, Bunker Nine. Lights out on the whole coast except you.'],
     ['patch', 'Then somebody should tell whatever is out in that fog to stop knocking.'],
@@ -577,7 +638,7 @@ const MAP = {
      hairline the rasteriser fills with whatever is behind it — which from
      inside the blockhouse is the sky. A line of daylight ran round the top
      of every wall. Eleven centimetres of overlap and the seam is gone. */
-  roof:  { x0: -7.0, x1: 7.0, z0: -7.0, z1: 7.0, y0: 3.29, y1: 3.6, rail: 0.82 },
+  roof:  { x0: -7.0, x1: 7.0, z0: -7.0, z1: 7.0, y0: 3.29, y1: 3.6, rail: 0.62 },
   /* Fifteen risers of 0.233 up a 4.05 run — 27 cm of tread, which a capsule
      walks rather than catches on. Against the east wall, climbing toward the
      back corner so the flight ends where the roof hatch is. */
@@ -633,8 +694,8 @@ function buildMap(game, S) {
     sand: { color: 0x8a7f5e, texture: 'fabric', roughness: 0.98, metalness: 0, uvScale: 2 },
     chalk: { color: 0xf5f2e6, texture: 'smooth', roughness: 0.9, metalness: 0, emissive: 0xcfe8ff, emissiveStrength: 0.35 },
     // Outside. Churned mud, scorched steel, and wire.
-    mud: { color: 0x4e4436, texture: 'dirt', roughness: 0.98, metalness: 0, uvScale: 3 },
-    mudDark: { color: 0x342d24, texture: 'dirt', roughness: 0.99, metalness: 0, uvScale: 2 },
+    mud: { color: 0x3b3327, texture: 'dirt', roughness: 1.0, metalness: 0, uvScale: 3 },
+    mudDark: { color: 0x241f18, texture: 'dirt', roughness: 1.0, metalness: 0, uvScale: 2 },
     burnt: { color: 0x2b2a28, texture: 'metal', roughness: 0.82, metalness: 1 },
     hull: { color: 0x4a4c3e, texture: 'metal', roughness: 0.72, metalness: 1, uvScale: 2 },
     wire: { color: 0x53504a, texture: 'metal', roughness: 0.6, metalness: 1 },
@@ -687,6 +748,22 @@ function buildMap(game, S) {
      zombie walking in from thirty metres never snags on a tank track, and
      the whole field costs four draw calls instead of four hundred. */
   game.ground({ material: MAT.mud, size: 160 });
+
+  /* Everything the battlefield builds gets registered as it is made, so the
+     graphics setting can take the whole of it away in one go rather than
+     hunting for handles afterwards. Done by wrapping the three spawners for
+     the length of the section: the alternative is threading a bucket
+     through nine helper functions and remembering it in each of them, and
+     one of them would eventually be forgotten. */
+  S.detail = { far: [], smoke: [] };
+  const rawSpawn = { box: game.box, cylinder: game.cylinder, sphere: game.sphere, cone: game.cone };
+  const collect = (bucket) => {
+    for (const k of Object.keys(rawSpawn)) {
+      game[k] = function (o) { const a = rawSpawn[k].call(game, o); bucket.push(a); return a; };
+    }
+  };
+  const stopCollecting = () => { for (const k of Object.keys(rawSpawn)) game[k] = rawSpawn[k]; };
+  collect(S.detail.far);
 
   // Shell holes. A dark disc for the pit and a raised lip of spoil round it.
   const crater = (x, z, r) => {
@@ -825,20 +902,55 @@ function buildMap(game, S) {
      and the silhouette of a cylinder is a plank. Tapering it is the whole
      difference between a wood and a row of fence posts. */
   const deadTree = (x, z, h, lean) => {
-    /* Trunk for the bottom two thirds, taper only above that. A cone from
-       the mud to the tip is a spike, and a field of spikes is a fence, not a
-       wood — the trunk is most of what the eye uses to tell them apart. */
+    /* Three silhouettes, not one.
+
+       A shelled wood is mostly broken: trunks snapped off at head height,
+       trunks split lengthways, and a few that survived with a point on
+       them. Building every one as a cone gives a hundred identical
+       triangles round the horizon, and what that reads as is a picket
+       fence — which is exactly what it looked like. The kind is picked off
+       the position so the ring is deterministic and the same tree is the
+       same tree every time the map loads. */
+    const kind = Math.abs(Math.round(x * 7 + z * 13)) % 5;
+    const yaw = (x * 37 + z * 11) % 360;
     const r0 = 0.19 + h * 0.017;
+
+    if (kind < 2) {
+      // Snapped: a stump with a torn top, a third to a half of full height.
+      const hs = h * (0.30 + (Math.abs(Math.round(x * 3 + z * 5)) % 20) / 100);
+      const t = game.cylinder({ at: [x, hs * 0.5, z], radius: r0 * 1.05, height: hs, material: MAT.bark, physics: false });
+      t.setRotation([lean, yaw, lean * 0.6]);
+      // Splinters standing off the break, which is what says "snapped".
+      for (let k = 0; k < 3; k++) {
+        const a2 = (yaw + k * 118) / 57.2958;
+        const sp = game.cone({ at: [x + Math.cos(a2) * r0 * 0.5, hs + 0.34, z + Math.sin(a2) * r0 * 0.5],
+          radius: r0 * 0.30, height: 0.75, material: MAT.bark, physics: false });
+        sp.setRotation([10 - k * 7, yaw + k * 40, 8 - k * 9]);
+      }
+      return;
+    }
+
+    /* Trunk for the bottom two thirds, taper only above that. A cone from
+       the mud to the tip is a spike; the parallel trunk is most of what the
+       eye uses to tell a wood from a fence. */
     const t = game.cylinder({ at: [x, h * 0.38, z], radius: r0, height: h * 0.76, material: MAT.bark, physics: false });
-    t.setRotation([lean, (x * 37 + z * 11) % 360, lean * 0.6]);
-    const cap = game.cone({ at: [x + lean * 0.006 * h, h * 0.86, z], radius: r0 * 0.94, height: h * 0.24, material: MAT.bark, physics: false });
-    cap.setRotation([lean, 0, lean * 0.6]);
+    t.setRotation([lean, yaw, lean * 0.6]);
+    if (kind === 4) {
+      // Split: the top has come apart into two leaning limbs.
+      for (const sgn of [-1, 1]) {
+        const lb = game.cone({ at: [x + sgn * 0.5, h * 0.90, z + sgn * 0.2], radius: r0 * 0.62, height: h * 0.36, material: MAT.bark, physics: false });
+        lb.setRotation([sgn * 16, yaw, sgn * 13]);
+      }
+    } else {
+      const cap = game.cone({ at: [x + lean * 0.006 * h, h * 0.86, z], radius: r0 * 0.94, height: h * 0.24, material: MAT.bark, physics: false });
+      cap.setRotation([lean, 0, lean * 0.6]);
+    }
     for (let k = 0; k < 4; k++) {
-      const a = (x * 13 + z * 7 + k * 97) % 360;
+      const a2 = (x * 13 + z * 7 + k * 97) % 360;
       const len = 1.5 - k * 0.26;
-      const br = game.cone({ at: [x + Math.cos(a / 57.2958) * len * 0.4, h * (0.42 + k * 0.14), z + Math.sin(a / 57.2958) * len * 0.4],
+      const br = game.cone({ at: [x + Math.cos(a2 / 57.2958) * len * 0.4, h * (0.42 + k * 0.14), z + Math.sin(a2 / 57.2958) * len * 0.4],
         radius: 0.07, height: len, material: MAT.bark, physics: false });
-      br.setRotation([58 + k * 6, a, 0]);
+      br.setRotation([58 + k * 6, a2, 0]);
     }
   };
 
@@ -902,7 +1014,7 @@ function buildMap(game, S) {
      than one row with sky behind it. The far ring is what the render
      distance ends on and it wants to be solid. */
   for (const [count, r0, spread, h0, hv, phase] of [
-    [120, 31, 4, 6.0, 4.5, 0], [96, 37, 4, 5.4, 4.0, 0.03], [80, 43, 5, 5.0, 3.5, 0.06],
+    [120, 31, 4, 4.2, 8.0, 0], [96, 37, 4, 3.8, 7.2, 0.03], [80, 43, 5, 3.4, 6.4, 0.06],
   ]) {
     for (let k = 0; k < count; k++) {
       const a = (k / count) * Math.PI * 2 + phase;
@@ -910,11 +1022,15 @@ function buildMap(game, S) {
       deadTree(Math.cos(a) * rr, Math.sin(a) * rr, h0 + ((k * 311) % 100) / 100 * hv, ((k * 53) % 14) - 7);
     }
   }
+  stopCollecting();
+  collect(S.detail.smoke);
   smokeColumn(21, -20, 15);
   smokeColumn(-22, -25, 13);
   smokeColumn(27, 8, 17, 0x322c26);
   smokeColumn(-28, 18, 12);
   smokeColumn(2, -34, 20, 0x26241f);
+
+  stopCollecting();
 
   /* ---------------- the blockhouse ---------------- */
 
@@ -1263,47 +1379,65 @@ function buildMap(game, S) {
     lx: PANEL_X, ly: PANEL_Y, lz: PANEL_Z,
   };
 
-  /* ---------------- the meteorite, and what it is good for ----------------
-     It came through the wing roof and is lying beside the generator, half
-     sunk in the slab it cracked. Once there is power it will take a gun. */
+  /* ---------------- the meteorite ----------------
+
+     It is not there when the round starts. Somewhere before round ten it
+     comes through the wing roof, and the arrival is the event: a whistle,
+     a bang you feel through the floor, the lights swinging, dust off the
+     ceiling. Everything below is built at load and hidden, because
+     spawning two dozen actors in the frame the thing lands is a stutter
+     at exactly the moment the player is looking.
+
+     Once it is down it is inert. Put a round into it and it wakes up,
+     which is the only instruction anybody gets. */
   {
     const H = MAP.hole;
-    // The rock: overlapping spheres so it has no single silhouette, sitting
-    // in a crater of broken floor. Beside the generator, not inside it.
+    const hidden = [];
     const rockMat = { color: 0x241f1c, texture: 'concrete', roughness: 0.86, metalness: 0, uvScale: 3 };
     const veinMat = { color: 0x2a0d05, texture: 'smooth', roughness: 0.42, metalness: 0,
       emissive: 0xff5a12, emissiveStrength: 2.6 };
-    const core = game.sphere({ at: [H.x, 0.62, H.z], radius: 0.92, material: rockMat, static: true });
-    void core;
+    // The rock: overlapping spheres, so it has no single silhouette.
+    hidden.push(game.sphere({ at: [H.x, 0.62, H.z], radius: 0.92, material: rockMat, static: true }));
     for (let k = 0; k < 7; k++) {
-      const a = (k / 7) * Math.PI * 2;
-      const l = game.sphere({ at: [H.x + Math.cos(a) * 0.62, 0.5 + ((k * 37) % 10) / 10 * 0.55, H.z + Math.sin(a) * 0.62],
-        radius: 0.34 + ((k * 71) % 10) / 10 * 0.22, material: rockMat, physics: false });
-      void l;
+      const a2 = (k / 7) * Math.PI * 2;
+      hidden.push(game.sphere({ at: [H.x + Math.cos(a2) * 0.62, 0.5 + ((k * 37) % 10) / 10 * 0.55, H.z + Math.sin(a2) * 0.62],
+        radius: 0.34 + ((k * 71) % 10) / 10 * 0.22, material: rockMat, physics: false }));
     }
     // Molten seams through the cracks.
+    const veins = [];
     for (let k = 0; k < 9; k++) {
-      const a = (k / 9) * Math.PI * 2 + 0.3;
-      const v = game.box({ at: [H.x + Math.cos(a) * 0.80, 0.55 + Math.sin(k * 2.1) * 0.35, H.z + Math.sin(a) * 0.80],
+      const a2 = (k / 9) * Math.PI * 2 + 0.3;
+      const v = game.box({ at: [H.x + Math.cos(a2) * 0.80, 0.55 + Math.sin(k * 2.1) * 0.35, H.z + Math.sin(a2) * 0.80],
         size: [0.10, 0.42, 0.10], material: veinMat, physics: false });
-      v.setRotation([Math.sin(k) * 40, -a * 57.2958, Math.cos(k) * 35]);
+      v.setRotation([Math.sin(k) * 40, -a2 * 57.2958, Math.cos(k) * 35]);
+      veins.push(v); hidden.push(v);
     }
     // Broken floor and spoil thrown out round the impact.
-    game.cylinder({ at: [H.x, 0.075, H.z], radius: 2.3, height: 0.07, material: MAT.mudDark, physics: false });
+    hidden.push(game.cylinder({ at: [H.x, 0.075, H.z], radius: 2.3, height: 0.07, material: MAT.mudDark, physics: false }));
     for (let k = 0; k < 12; k++) {
-      const a = (k / 12) * Math.PI * 2;
-      const c = game.box({ at: [H.x + Math.cos(a) * 1.9, 0.10, H.z + Math.sin(a) * 1.9],
+      const a2 = (k / 12) * Math.PI * 2;
+      const c = game.box({ at: [H.x + Math.cos(a2) * 1.9, 0.10, H.z + Math.sin(a2) * 1.9],
         size: [0.6, 0.2, 0.45], material: MAT.floor, physics: false });
-      c.setRotation([((k * 17) % 20) - 10, -a * 57.2958, ((k * 29) % 24) - 12]);
+      c.setRotation([((k * 17) % 20) - 10, -a2 * 57.2958, ((k * 29) % 24) - 12]);
+      hidden.push(c);
     }
     // The cradle you put a gun in: two steel forks driven into the rock.
     const cradle = [];
     for (const dz of [-0.3, 0.3]) {
-      cradle.push(game.box({ at: [H.x + 0.95, 1.05, H.z + dz], size: [0.10, 0.55, 0.10], material: MAT.steel, physics: false }));
+      const f2 = game.box({ at: [H.x + 0.95, 1.05, H.z + dz], size: [0.10, 0.55, 0.10], material: MAT.steel, physics: false });
+      cradle.push(f2); hidden.push(f2);
     }
-    game.light({ at: [H.x, 1.5, H.z], color: 0xff7a2a, intensity: 30, radius: 6.5 });
-    S.meteor = { at: [H.x + 1.55, 1.0, H.z], busy: false, timer: 0, holding: null, cradle,
-      slot: [H.x + 0.95, 1.25, H.z] };
+    for (const q of hidden) q.visible = false;
+    const glow = game.light({ at: [H.x, 1.5, H.z], color: 0xff7a2a, intensity: 0, radius: 6.5 });
+
+    S.meteor = {
+      at: [H.x + 1.55, 1.0, H.z], busy: false, timer: 0, holding: null, cradle,
+      slot: [H.x + 0.95, 1.25, H.z], centre: [H.x, 0.85, H.z], radius: 1.55,
+      // Somewhere from three to nine. It has to be before ten, and it wants
+      // to be after you have had time to buy something worth upgrading.
+      round: 3 + Math.floor(Math.random() * 7),
+      state: 'waiting', fall: 0, armed: false, parts: hidden, veins, glow,
+    };
   }
 
   /* ---------------- mystery box, against the side of the stair ---------- */
@@ -1453,8 +1587,22 @@ function buildMap(game, S) {
     /* The screen that makes it a corner: a steel mesh panel on posts,
        with a gap at the far end to walk in by. */
     for (const [zc, zl] of [[6.20, 1.55], [4.62, 0.60]]) {
-      game.box({ at: [-3.72, 1.10, zc], size: [0.05, 2.05, zl], material: mesh, static: true });
+      // Frame first, then the mesh itself as a grid of bars. A solid panel
+      // here is a black wall across the corner: it is metal, it faces away
+      // from every lamp in the room, and a metal has no diffuse term to
+      // catch what little light does reach it.
       game.box({ at: [-3.72, 2.16, zc], size: [0.09, 0.09, zl], material: vice, static: true });
+      game.box({ at: [-3.72, 0.06, zc], size: [0.09, 0.09, zl], material: vice, static: true });
+      for (let k = 0; k <= 6; k++) {
+        game.box({ at: [-3.72, 0.12 + k * 0.335, zc], size: [0.03, 0.022, zl], material: mesh, physics: false });
+      }
+      const n = Math.max(2, Math.round(zl / 0.26));
+      for (let k = 0; k <= n; k++) {
+        game.box({ at: [-3.72, 1.11, zc - zl / 2 + (zl * k) / n], size: [0.03, 2.10, 0.022], material: mesh, physics: false });
+      }
+      // One invisible slab carries the collision, so the mesh is a barrier
+      // without being a hundred colliders.
+      game.box({ at: [-3.72, 1.10, zc], size: [0.05, 2.05, zl], material: mesh, static: true, visible: false });
     }
     for (const zc of [WZ - 0.08, 5.42, 4.32]) {
       game.box({ at: [-3.72, 1.10, zc], size: [0.10, 2.20, 0.10], material: vice, static: true });
@@ -1541,7 +1689,38 @@ function buildMap(game, S) {
   // No basement in this map. The workshop code is left in place and simply
   // never built, so switching it back on is one call rather than a rewrite.
   S.shop = null;
-  S.belt = null;
+
+  /* ---------------- the eighteen carat conveyor ----------------
+
+     Parked inside the east wall so that what the player sees, when the
+     three conditions land, is a belt line coming out of solid concrete
+     rather than one that was standing there all along. Clear of the
+     stairwell and of the window on that wall. */
+  {
+    const bx = 6.15, by = 1.62, bz = 4.0;
+    /* Dusty painted machinery, not a mirror. At metalness 1 a lamp beside
+       it does almost nothing — a metal has no diffuse term, and the belt
+       lives in the darkest corner of the room. */
+    const steel = { color: 0x6b7178, texture: 'metal', roughness: 0.52, metalness: 0.45 };
+    const dark = { color: 0x35393e, texture: 'metal', roughness: 0.68, metalness: 0.3 };
+    const root = game.box({ at: [bx, by, bz], size: 1, physics: false, visible: false });
+    const parts = [];
+    const add = (a, pos, rot) => { a.parent = root; a.setPosition(pos); if (rot) a.setRotation(rot); parts.push(a); return a; };
+    add(game.box({ size: [1.35, 0.075, 0.44], material: dark, physics: false }), [0, 0, 0]);
+    for (const sz of [-1, 1]) add(game.box({ size: [1.35, 0.11, 0.035], material: steel, physics: false }), [0, 0.055, sz * 0.225]);
+    for (const sx of [-1, 1]) add(game.cylinder({ radius: 0.055, height: 0.42, material: steel, physics: false }), [sx * 0.64, 0.012, 0], [90, 0, 0]);
+    for (const sx of [-1, 1]) add(game.cylinder({ radius: 0.022, height: 0.55, material: dark, physics: false }), [sx * 0.5, -0.31, 0.16]);
+    add(game.box({ size: [0.34, 0.36, 0.40], material: steel, physics: false }), [0.74, 0.16, 0]);
+    const rollers = [];
+    for (let k = -4; k <= 4; k++) {
+      rollers.push(add(game.cylinder({ radius: 0.034, height: 0.40, material: steel, physics: false }), [k * 0.135, 0.048, 0], [90, 0, 0]));
+    }
+    const lamp = add(game.sphere({ radius: 0.038, physics: false, material: {
+      color: 0x3a2f12, texture: 'smooth', roughness: 0.3, emissive: 0xffc23a, emissiveStrength: 0 } }), [0.74, 0.40, 0]);
+    root.visible = false;
+    for (const q of parts) q.visible = false;
+    S.belt = { root, parts, rollers, lamp, at: [bx, by, bz], out: 0, running: false, dropT: 0, spin: 0 };
+  }
 }
 
 function spawnBoard(game, w, slot, mat) {
@@ -1556,7 +1735,8 @@ function spawnBoard(game, w, slot, mat) {
 }
 
 function setPower(game, S, on) {
-  for (const L of S.lamps) L.light.intensity = on ? L.full : L.full * 0.45;
+  // A lamp the graphics setting has switched off stays off.
+  for (const L of S.lamps) L.light.intensity = L.off ? 0 : (on ? L.full : L.full * 0.45);
   S.powered = on;
 }
 
@@ -1694,12 +1874,32 @@ function makePlayer(game, S, hud, sfx, voice) {
 
   /* View models: one instance of each weapon, shown when equipped. */
   P.view.m1911 = { kind: 'single', actor: game.pistol1911({ physics: false }), muzzle: 0.24 };
+  /* Blaze is River's pistol in the other hand: the same model, engraved
+     with its own name and gripped in red instead of blue. Building it as
+     a second model would be two of everything for a colour change. */
+  P.view.blaze = { kind: 'single', muzzle: 0.24, actor: game.pistol1911({
+    physics: false, engrave: 'Blaze',
+    gripMaterial: { color: 0x8f1c10, texture: 'smooth', roughness: 0.50, metalness: 0 },
+    material: { color: 0xd8ccc4, texture: 'metal', roughness: 0.26, metalness: 1 },
+  }) };
   P.view.thompson = { kind: 'single', actor: game.thompson({ physics: false }), muzzle: 0.55 };
   /* Muzzle distance and sight height come off each model rather than from
      a number typed here. A gun whose muzzle flash is 4 cm from where the
      barrel ends, or whose sights are aligned to a guess, is a gun that
      never quite looks or aims right, and no amount of tuning by eye fixes
      it — the model knows where its own muzzle is, so it is asked. */
+  /* Single-actor weapons get the same `parts` list the groups have, so
+     everything downstream — showing, hiding, retinting for the upgrade —
+     works off one list rather than off a hand-written set of names. */
+  const singleParts = (a) => {
+    const out = [a];
+    for (const k of ['slide', 'mag', 'wood', 'grips', 'mark', 'bolt']) if (a[k]) out.push(a[k]);
+    return out;
+  };
+  for (const id of ['m1911', 'thompson', 'blaze']) {
+    if (P.view[id]) P.view[id].parts = singleParts(P.view[id].actor);
+  }
+
   const rack = (id, made) => {
     const v = Object.assign(made, { kind: 'group', muzzle: made.root.muzzleAt || 0.3 });
     P.view[id] = v;
@@ -1963,13 +2163,25 @@ function damageTable(spec) {
   }).filter(Boolean);
 }
 
+/* What each gun is called after the rock has had it. A single "Upgraded"
+   prefix is the lazy version and it makes every weapon feel the same; a
+   name apiece is most of what makes putting a gun in worth doing. */
+const UPGRADE_NAMES = {
+  m1911: 'Riverbed', blaze: 'Wildfire', thompson: 'Chicago Ironworks', mp5: 'Nine Millimetre Sermon',
+  scatter: 'Both Barrels', sawnoff: 'Last Word', paralyzer: 'Grand Mal',
+  mauser: 'Kaiser', obliterator: 'Total Obliteration', arc: 'Arc Angel',
+  knife: 'Wound Man', hammer: 'Hard Labour', ram: 'Door Policy',
+  shield: 'Wall Order', shieldWorn: 'Wall Order',
+};
+
 /* The upgraded finish. The meteorite writes P.upgraded[id]; the bench can
    turn the camo off and on again without giving up the upgrade itself. */
 function applyUpgradeLook(game, P, id) {
   const v = P.view[id];
   if (!v) return;
   const on = !!(P.upgraded && P.upgraded[id]) && !(P.camoOff && P.camoOff[id]);
-  const parts = v.kind === 'single' ? [v.actor] : v.parts;
+  // The whole weapon takes the camo, not just its frame.
+  const parts = v.parts || [v.actor];
   for (const a of parts) {
     if (!a.__baseMat) a.__baseMat = a.material;
     a.material = on
@@ -1981,14 +2193,15 @@ function applyUpgradeLook(game, P, id) {
 
 function setViewVisible(v, on) {
   if (v.arms) for (const a of v.arms.parts) a.visible = on;
-  if (v.kind === 'single') {
-    v.actor.visible = on;
-    if (v.actor.grips) v.actor.grips.visible = on;
-    if (v.actor.mark) v.actor.mark.visible = on;
-    if (v.actor.wood) v.actor.wood.visible = on;
-  } else {
-    for (const p of v.parts) p.visible = on;
-  }
+  /* Every part, from one list.
+
+     Visibility does not cascade to children in this engine — each actor is
+     tested on its own — so a weapon is only put away if every piece of it
+     is. The old version named three children by hand and missed the two
+     that every gun has: the slide and the magazine stayed on screen after
+     you swapped away, hanging in the air where the gun used to be. That is
+     the other half of "my old gun is still floating there". */
+  for (const p of v.parts) p.visible = on;
   // Attachment parts follow the weapon, but only the ones actually fitted:
   // showing the whole set on draw hangs every scope and muzzle device the
   // gun has ever worn off it at once.
@@ -2036,9 +2249,17 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
   const bench = S && S.bench && S.bench.open ? S.bench : null;
   const po = bench ? { x: bench.damage ? -0.115 : 0, y: 0.012, d: 0.60 } : P.poseOverride;
   if (bench && v.arms) for (const q of v.arms.parts) q.visible = false;
-  const hipX = (po ? po.x : 0.085) + bobX * (bench ? 0 : 1),
-        hipY = (po ? po.y : -0.10) + (bench ? 0 : bobY - dip),
-        hipD = po ? po.d : 0.34;
+  /* Hip carry, scaled to the weapon. A pistol and a submachine gun cannot
+     sit in the same place: the pistol is 24 cm long and reads as held out
+     in front, while the SMG is 37 cm and at the same offset its receiver
+     fills a third of the screen. Longer guns go further right, further
+     down and slightly further out, which is what a rifle carried at the
+     hip actually does. */
+  const len = Math.max(0.2, v.muzzle || 0.3);
+  const bulk = Math.min(1, Math.max(0, (len - 0.24) / 0.34));
+  const hipX = (po ? po.x : 0.085 + bulk * 0.055) + bobX * (bench ? 0 : 1),
+        hipY = (po ? po.y : -0.10 - bulk * 0.045) + (bench ? 0 : bobY - dip),
+        hipD = po ? po.d : 0.34 + bulk * 0.05;
   const adsX = 0, adsY = -spec.sightH, adsD = 0.30;
   const a = P.ads;
   const offR = hipX * (1 - a) + adsX * a;
@@ -2279,12 +2500,34 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
    muzzle up and settles back, and a climb that does not give itself back
    — the player has to pull down against it. A gun with only the first
    feels weightless; one with only the second feels like a broken mouse. */
-function updateRecoil(game, P, dt) {
+/* World shake. Not recoil — this is the room moving, and it is applied to
+   the same two angles for the same reason: one place adds it, one place
+   takes it back, so it can never accumulate into the player's own aim. */
+function addShake(S, mag, time) {
+  S.shake = S.shake || { t: 0, mag: 0, max: 0 };
+  S.shake.mag = Math.max(S.shake.mag, mag);
+  S.shake.max = Math.max(S.shake.max, mag);
+  S.shake.t = Math.max(S.shake.t, time);
+  S.shake.life = S.shake.t;
+}
+
+function updateRecoil(game, P, dt, S) {
   const R = P.recoil, A = P.recoilApplied;
   // Take back last frame's offset before re-applying, so recoil never
   // eats the player's own aim.
   game._camPitch -= A.pitch;
   game._camYaw -= A.yaw;
+  if (S && S.shake && S.shake.t > 0) {
+    S.shake.t = Math.max(0, S.shake.t - dt);
+    // Decays over its own life, and rattles fast enough to read as impact
+    // rather than as a wobble.
+    const k = S.shake.life > 0 ? S.shake.t / S.shake.life : 0;
+    const amp = S.shake.mag * k * k;
+    const tt = (S.frame || 0) * 0.9;
+    R.pitch += Math.sin(tt * 3.1) * amp * 0.6 + (Math.random() - 0.5) * amp * 0.5;
+    R.yaw += Math.cos(tt * 2.3) * amp * 0.5 + (Math.random() - 0.5) * amp * 0.4;
+    if (S.shake.t <= 0) { S.shake.mag = 0; S.shake.max = 0; }
+  }
 
   const spec = P.spec();
   const k = Math.exp(-(spec.recoil ? spec.recoil.recover : 9) * dt);
@@ -2433,6 +2676,14 @@ function tryFire(game, S, P, hud, sfx, dt) {
     const dir = [fwd.x + rgt.x * rx, fwd.y + ry, fwd.z + rgt.z * rx];
     // Bodies this pellet has already gone through, for penetrating rounds.
     const pierced = [];
+    // A round into the rock wakes it up. Checked on the pellet's own ray,
+    // because the meteorite is a dozen overlapping spheres and hitting any
+    // one of them is hitting it.
+    if (p === 0) {
+      const dl = Math.hypot(dir[0], dir[1], dir[2]) || 1;
+      meteorShot(S, [cam.position.x, cam.position.y, cam.position.z],
+        [dir[0] / dl, dir[1] / dl, dir[2] / dl], hud, sfx);
+    }
     const hit = game.raycast([cam.position.x, cam.position.y, cam.position.z], dir, 60,
       (b) => b !== P.actor.body && !b.isTrigger && !(b.userData && b.userData.bulletPassthrough));
     if (!hit) continue;
@@ -2446,7 +2697,9 @@ function tryFire(game, S, P, hud, sfx, dt) {
       // Snapshot before the kill: death parks the body at the pool lot,
       // and the chain has to arc from the corpse, not the car park.
       const diedAt = { x: z.actor.position.x, y: z.actor.position.y, z: z.actor.position.z };
-      hurtZombie(game, S, z, dmg, hit.point, headshot, spec.stun ? 'shock' : (P.goldAmmo ? 'gold' : 'bullet'));
+      hurtZombie(game, S, z, dmg, hit.point, headshot,
+        spec.stun ? 'shock' : spec.burn ? 'fire' : (P.goldAmmo ? 'gold' : 'bullet'),
+        spec.burn ? { burn: spec.burn } : null);
       let awarded = S.addPoints(ECONOMY.hit);
       if (z.dead) {
         killsThisShot++;
@@ -2475,7 +2728,8 @@ function tryFire(game, S, P, hud, sfx, dt) {
           const reg2 = hitRegion(z2, nxt.point);
           const head2 = !!reg2.crit;
           hurtZombie(game, S, z2, carry * regionMul(reg2, spec) + (head2 ? (spec.headBonus || 0) : 0), nxt.point, head2,
-            spec.stun ? 'shock' : (P.goldAmmo ? 'gold' : 'bullet'));
+            spec.stun ? 'shock' : spec.burn ? 'fire' : (P.goldAmmo ? 'gold' : 'bullet'),
+            spec.burn ? { burn: spec.burn } : null);
           const pts2 = S.addPoints(head2 ? ECONOMY.headshotKill : ECONOMY.hit);
           hud.pointsDelta(pts2);
           from = nxt.point;
@@ -3146,7 +3400,7 @@ function spawnZombie(game, S, win, forceVariant) {
     bUp: V.boss ? 1 : 0, bUpT: V.boss ? BOSS.shieldUp : 0, bCd: 0,
     // Runners drop in and out of a remembered human sprint.
     lucid: 0, lucidT: 2 + Math.random() * 4,
-    stunT: 0, arcT: 0, stunSeed: 0,
+    stunT: 0, arcT: 0, stunSeed: 0, burnT: 0, burnDps: 0,
     routeKey: '', wpIdx: 0,
   });
   if (z.actor.visualOffset) z.actor.visualOffset.set(0, 0, 0);
@@ -3178,7 +3432,7 @@ function spawnZombie(game, S, win, forceVariant) {
    armoured runner and the reason the melee weapons and the gold rounds
    exist. Everything else — a ram, a shield edge, an eighteen carat round —
    goes straight through it. */
-function hurtZombie(game, S, z, dmg, at, headshot, source) {
+function hurtZombie(game, S, z, dmg, at, headshot, source, opts) {
   if (z.dead) return;
   /* The boss's shield is a health pool of its own, not an immunity. Hit it
      from the front while it is up and it takes the damage instead of him;
@@ -3208,6 +3462,14 @@ function hurtZombie(game, S, z, dmg, at, headshot, source) {
   }
   z.hp -= dmg;
   game.particles.sparks(at, { count: 5, speed: 2.5, color: 0x7a1610, colorEnd: 0x2c0605 });
+  if (source === 'fire') {
+    /* Incendiary. The hit itself is light; what the round is for is what
+       it leaves behind, and it stacks its clock rather than its damage —
+       a second shot into a burning body resets the timer, it does not
+       double the rate. */
+    z.burnT = Math.max(z.burnT || 0, opts && opts.burn ? opts.burn.time : 5);
+    z.burnDps = Math.max(z.burnDps || 0, opts && opts.burn ? opts.burn.dps : 20);
+  }
   if (source === 'shock') {
     /* Current, not damage. The slug is worth less every round and the ten
        seconds are worth more — by the twenties the Arc Breaker is a crowd
@@ -3331,6 +3593,21 @@ function updateZombie(game, S, P, z, dt, sfx) {
   if (z.groanT < 0) {
     z.groanT = 2.5 + Math.random() * 4;
     if (dist2d(pos, P.actor.position) < 14) sfx.groan(z.kind === 'runner' ? 0.9 : Math.random() * 0.5);
+  }
+
+  /* Burning. Unlike the current this does not stop the body: it keeps
+     coming and it keeps cooking, which is the whole character of the
+     weapon — you are not buying a stun, you are buying the next five
+     seconds' worth of damage in advance. */
+  if (z.burnT > 0) {
+    z.burnT -= dt;
+    hurtZombie(game, S, z, (z.burnDps || 20) * dt, [pos.x, pos.y + 1.0, pos.z], false, 'burn');
+    if (z.dead) return;
+    if (Math.random() < dt * 26) {
+      game.particles.sparks([pos.x + (Math.random() - 0.5) * 0.4, pos.y + 0.4 + Math.random() * 1.3, pos.z + (Math.random() - 0.5) * 0.4],
+        { count: 2, speed: 1.4, color: 0xffb03a, colorEnd: 0x5a1a06 });
+    }
+    if (z.burnT <= 0) z.burnDps = 0;
   }
 
   /* Paralysed. Nothing else in the AI runs — it cannot walk, tear, throw
@@ -3823,6 +4100,122 @@ function shopTurrets(game, S, dt, sfx) {
   void dt;
 }
 
+/* ---------------- graphics ----------------
+
+   One function applies a whole preset, and it is the only thing that
+   writes the renderer's tier or hides scenery, so what you see always
+   matches what the menu says. Called on boot from whatever was saved, and
+   again every time somebody picks a line. */
+function applyGraphics(game, S, key) {
+  const g = GRAPHICS[key];
+  if (!g) return;
+  S.settings.current = key;
+  game.renderer.setQuality(g.tier);
+  game.renderer.resize(game.canvas.clientWidth, game.canvas.clientHeight);
+  game.renderer.post.bloom = g.tier === 'low' ? 0 : (S.baseBloom != null ? S.baseBloom : game.renderer.post.bloom);
+
+  if (S.detail) {
+    for (const a of S.detail.far) a.visible = g.far;
+    for (const a of S.detail.smoke) a.visible = g.smoke;
+  }
+  /* Lamps past the budget are switched off rather than dimmed. Only Low
+     has a budget worth having: the renderer already uploads the eight
+     nearest the camera every frame, so culling further up the range takes
+     light out of rooms for nothing — which on a map with a dozen lamps
+     leaves whole corners black. */
+  if (S.lamps) {
+    S.lamps.forEach((L, k) => {
+      L.off = k >= g.lamps;
+      if (L.light) L.light.intensity = L.off ? 0 : (L.full || L.light.intensity);
+    });
+  }
+  S.particleScale = g.particles;
+  try { localStorage.setItem('b9.graphics', key); } catch (e) { void e; }
+}
+
+/* ---------------- the meteorite ----------------
+
+   Three states. It waits somewhere out past the atmosphere until its round
+   comes up; it falls, which takes four seconds of rising whistle and ends
+   in a bang you feel; and then it is down, dead, until somebody puts a
+   round into it. Nothing tells the player that last part except the rock
+   itself, which sits there doing nothing until it is hit. */
+function updateMeteor(game, S, P, hud, sfx, dt) {
+  const m = S.meteor;
+  if (!m) return;
+
+  if (m.state === 'waiting') {
+    if (S.started && S.round >= m.round && S.alive !== false) {
+      m.state = 'falling';
+      m.fall = 4.0;
+      if (LINES.meteorFall) S.voice(LINES.meteorFall);
+      hud.banner('SOMETHING IS COMING DOWN', '#ff7a2a');
+      if (sfx.incoming) sfx.incoming();
+    }
+    return;
+  }
+
+  if (m.state === 'falling') {
+    m.fall -= dt;
+    // The shake builds the whole way down, so the impact is the end of
+    // something rather than a single jolt out of nowhere.
+    const u = 1 - Math.max(0, m.fall) / 4.0;
+    addShake(S, 0.004 + u * u * 0.016, 0.12);
+    if (m.fall <= 0) {
+      m.state = 'down';
+      for (const q of m.parts) q.visible = true;
+      m.glow.intensity = 30;
+      addShake(S, 0.16, 1.5);
+      game.audio.impact(1.0);
+      if (sfx.powerOn) sfx.powerOn();
+      const H = MAP.hole;
+      game.particles.sparks([H.x, 1.2, H.z], { count: 90, speed: 14, color: 0xffb060, colorEnd: 0x40180a });
+      game.particles.smoke([H.x, 1.6, H.z], { count: 40, speed: 3.2, color: 0x3a3128 });
+      hud.banner('IT CAME THROUGH THE ROOF', '#ff7a2a');
+    }
+    return;
+  }
+
+  // Down. The seams breathe, and the light with them.
+  const b = 0.72 + Math.sin((S.time || 0) * 1.7) * 0.28;
+  m.glow.intensity = (m.armed ? 34 : 18) * b;
+
+  if (m.busy) {
+    m.timer -= dt;
+    // Sparks off the cradle while it works, and a shake on the last beat.
+    if (Math.random() < 0.6) {
+      game.particles.sparks(m.slot, { count: 4, speed: 6, color: 0xffb060, colorEnd: 0x40180a });
+    }
+    if (m.timer <= 0) {
+      m.busy = false;
+      m.holding = m.pending;
+      m.pending = null;
+      addShake(S, 0.05, 0.5);
+      game.audio.impact(0.6);
+      hud.banner('READY', '#ff7a2a');
+    }
+  }
+}
+
+/* A shot that goes into the rock wakes it up. Checked against the shot's
+   own ray rather than against the physics world, because the rock is a
+   dozen static spheres and any one of them is a hit. */
+function meteorShot(S, from, dir, hud, sfx) {
+  const m = S.meteor;
+  if (!m || m.state !== 'down' || m.armed) return false;
+  const c = m.centre;
+  const ox = c[0] - from[0], oy = c[1] - from[1], oz = c[2] - from[2];
+  const t = ox * dir[0] + oy * dir[1] + oz * dir[2];
+  if (t < 0 || t > 60) return false;
+  const px = from[0] + dir[0] * t, py = from[1] + dir[1] * t, pz = from[2] + dir[2] * t;
+  if (Math.hypot(px - c[0], py - c[1], pz - c[2]) > m.radius) return false;
+  m.armed = true;
+  addShake(S, 0.09, 1.0);
+  hud.banner('IT IS AWAKE', '#ff7a2a');
+  if (sfx && sfx.powerOn) sfx.powerOn();
+  return true;
+}
+
 /* ---------------- interaction ---------------- */
 
 function nearestInteract(S, P) {
@@ -3922,6 +4315,25 @@ function nearestInteract(S, P) {
   if (!S.powered && dist2d(p, { x: S.powerSwitch.at[0], z: S.powerSwitch.at[2] }) < R) {
     return { kind: 'power', cost: 0, label: 'Start the generator' };
   }
+  /* The upgrade cradle. Three seconds with the gun in the rock and it
+     comes back out with twice the damage, twice the magazine and a name
+     nobody sanctioned. It will not take a wonder weapon and it will not
+     take a tool. */
+  const mt = S.meteor;
+  if (mt && mt.state === 'down' && dist2d(p, { x: mt.at[0], z: mt.at[2] }) < R + 0.5 && Math.abs(p.y - 1) < 2.4) {
+    if (!mt.armed) return { kind: 'meteorCold', cost: 0, label: 'The rock is dead. Put a round into it.', inert: true };
+    if (!S.powered) return { kind: 'meteorCold', cost: 0, label: 'No power to the wing', inert: true };
+    if (mt.holding) return { kind: 'meteorTake', cost: 0, label: `Take the ${WEAPONS[mt.holding].name}` };
+    if (mt.busy) return { kind: 'meteorCold', cost: 0, label: 'Working', inert: true };
+    const held = P.equipped();
+    if (ATTACH.noWork.includes(held) || P.upgraded[held]) {
+      return { kind: 'meteorCold', cost: 0,
+        label: P.upgraded[held] ? `The ${P.spec().name} has been through already` : `It will not take the ${P.spec().name}`,
+        inert: true };
+    }
+    return { kind: 'meteor', cost: ECONOMY.upgrade, label: `Upgrade the ${WEAPONS[held].name} — ${ECONOMY.upgrade}` };
+  }
+
   const c = S.crate;
   if (dist2d(p, { x: c.at[0], z: c.at[2] }) < R + 0.4) {
     if (c.offer) return { kind: 'take', cost: 0, label: `Take ${WEAPONS[c.offerId].name}` };
@@ -4046,6 +4458,36 @@ function doInteract(game, S, P, hud, sfx, it, dt) {
     sfx.buy();
   } else if (it.kind === 'benchNo') {
     hud.banner('NOTHING FITS THAT', '#c8562e');
+  } else if (it.kind === 'meteor') {
+    /* The gun goes into the cradle and the player stands there without one
+       for three seconds, which is the whole cost of the thing — five
+       thousand points and three seconds in a room that does not stop. */
+    S.points -= it.cost; sfx.buy();
+    const id = P.equipped();
+    S.meteor.busy = true;
+    S.meteor.timer = 3.0;
+    S.meteor.pending = id;
+    hud.points(S.points);
+    hud.banner('IN THE ROCK', '#ff7a2a');
+  } else if (it.kind === 'meteorTake') {
+    const id = S.meteor.holding;
+    S.meteor.holding = null;
+    if (S.meteor.display) { for (const q of S.meteor.display) q.visible = false; }
+    P.upgraded[id] = true;
+    applyUpgradeLook(game, P, id);
+    const w = WEAPONS[id];
+    if (!w.__preUpgrade) w.__preUpgrade = { dmg: w.dmg, mag: w.mag, name: w.name, slotName: w.slotName };
+    w.dmg = w.__preUpgrade.dmg * 2;
+    w.mag = w.__preUpgrade.mag * 2;
+    w.reserve = Math.round(w.reserve * 1.5);
+    w.name = UPGRADE_NAMES[id] || w.__preUpgrade.name;
+    w.slotName = w.name.toUpperCase();
+    w.__cacheKey = null;
+    if (P.ammo[id]) { P.ammo[id].mag = w.mag; P.ammo[id].reserve = w.reserve; }
+    P.give(id);
+    sfx.buy();
+    hud.ammo(P);
+    hud.banner(w.slotName, '#ff7a2a');
   } else if (it.kind === 'crate') {
     S.points -= it.cost; sfx.buy();
     openCrate(game, S, P, hud, sfx);
@@ -4092,18 +4534,22 @@ function openCrate(game, S, P, hud, sfx) {
   /* The melee pair only turn up once the generator is running, so the
      answer to armour arrives at roughly the round armour does. */
   c.offerId = S.powered
-    ? (roll < 0.26 ? 'thompson' : roll < 0.50 ? 'scatter' : roll < 0.68 ? 'arc'
-      : roll < 0.85 ? 'ram' : 'shield')
-    : (roll < 0.38 ? 'thompson' : roll < 0.72 ? 'scatter' : 'arc');
+    ? (roll < 0.20 ? 'thompson' : roll < 0.38 ? 'scatter' : roll < 0.52 ? 'arc'
+      : roll < 0.64 ? 'obliterator' : roll < 0.76 ? 'blaze' : roll < 0.88 ? 'ram' : 'shield')
+    : (roll < 0.30 ? 'thompson' : roll < 0.54 ? 'scatter' : roll < 0.72 ? 'mauser'
+      : roll < 0.88 ? 'blaze' : 'arc');
   S.voice(LINES.crateOpen);
   // Lid swings, the prize rises out of the box glowing.
   c.lid.setRotation([0, 0, -70]);
   c.lid.setPosition([c.at[0] - 0.45, c.at[1] + 0.75, c.at[2]]);
   let disp;
   if (c.offerId === 'thompson') { const t = game.thompson({ physics: false }); disp = { root: t, parts: t.wood ? [t.wood] : [] }; }
+  else if (c.offerId === 'blaze') { const t = game.pistol1911({ physics: false, engrave: 'Blaze' }); disp = { root: t, parts: t.grips ? [t.grips, t.slide, t.mag, t.mark] : [] }; }
   else if (c.offerId === 'ram') disp = makeBatteringRam(game);
   else if (c.offerId === 'shield') disp = makeRiotShield(game);
   else if (c.offerId === 'scatter') disp = makeScattergun(game);
+  else if (c.offerId === 'obliterator') disp = makeObliterator(game);
+  else if (c.offerId === 'mauser') disp = makeMauser(game);
   else disp = makeArcProjector(game);
   disp.root.setPosition([c.at[0], c.at[1] + 0.2, c.at[2]]);
   c.offer = disp;
@@ -4195,6 +4641,24 @@ function makeHud() {
   #b9hud .bkeys dd { margin:0; color:#c8bfa8; }
   #b9hud .bkeys .pad { margin-top:9px; padding-top:8px; border-top:1px solid #4a4234; color:#6f8fa8; font-size:11.5px; line-height:1.5; }
   #b9hud .bkeys .pad b { color:#7ad7ff; font-weight:normal; }
+  /* Settings. One screen, four positions, and it says what each one costs
+     — a preset called "high" that does not say what it is for is a guess
+     the player has to make with their own frame rate. */
+  #b9hud .settings { position:absolute; inset:0; background:rgba(6,5,4,.86); display:none;
+    align-items:center; justify-content:center; }
+  #b9hud .settings .panel { width:min(640px,88vw); background:rgba(12,10,8,.96); border:1px solid #5a5140;
+    padding:22px 26px; letter-spacing:.05em; }
+  #b9hud .settings h3 { margin:0 0 4px; font-size:19px; font-weight:normal; color:#e8ddc8; letter-spacing:.16em; }
+  #b9hud .settings .sub { color:#8a8272; font-size:12.5px; margin-bottom:16px; }
+  #b9hud .settings .opt { display:flex; justify-content:space-between; align-items:baseline;
+    padding:9px 12px; border:1px solid transparent; font-size:15px; color:#c8bfa8; }
+  #b9hud .settings .opt.sel { border-color:#ffd27a; background:rgba(255,210,122,.10); color:#ffd27a; }
+  #b9hud .settings .opt.on:after { content:'IN USE'; color:#8ce8a0; font-size:11px; margin-left:10px; }
+  #b9hud .settings .opt .why { display:block; color:#8a8272; font-size:12px; margin-top:3px; }
+  #b9hud .settings .opt .fps { color:#8ce8a0; font-size:12.5px; white-space:nowrap; }
+  #b9hud .settings .sfoot { margin-top:16px; padding-top:11px; border-top:1px solid #4a4234;
+    color:#8a8272; font-size:12.5px; }
+  #b9hud .settings .sfoot b { color:#ffd27a; font-weight:normal; }
   /* Damage diagram. A body drawn out of eleven boxes, each labelled with
      what this gun actually does to it. */
   #b9hud .bdmg { position:absolute; right:3%; top:50%; transform:translateY(-50%);
@@ -4254,6 +4718,11 @@ function makeHud() {
       <div class="bhint"></div>
       <div class="bdmg"></div>
     </div>
+    <div class="settings"><div class="panel">
+      <h3>SETTINGS</h3><div class="sub">GRAPHICS</div>
+      <div class="sopts"></div>
+      <div class="sfoot"></div>
+    </div></div>
     <div class="title"><h1>BUNKER <span>NINE</span></h1>
       <p>THE DEAD COME THROUGH THE WINDOWS. POINTS BUY EVERYTHING.</p>
       <p>WASD MOVE &nbsp;·&nbsp; MOUSE LOOK &nbsp;·&nbsp; RIGHT-CLICK AIM &nbsp;·&nbsp; SHIFT SPRINT</p>
@@ -4273,6 +4742,7 @@ function makeHud() {
     bench: $('.bench'), bhead: $('.bhead'), brow: $('.brow'), bfoot: $('.bfoot'),
     benchwrap: $('.benchwrap'), bsvg: $('.bsvg'), bmarks: $('.bmarks'),
     bhint: $('.bhint'), bdmg: $('.bdmg'), bkeys: $('.bkeys'),
+    settings: $('.settings'), sopts: $('.sopts'), sfoot: $('.sfoot'),
   };
   let subTimer = 0, hmTimer = 0, pdAcc = 0, pdTimer = 0, bnTimer = 0;
   return {
@@ -4289,6 +4759,24 @@ function makeHud() {
         + (P.nades > 0 ? `   ✚${P.nades}` : '');
     },
     flashWeapon(name) { els.wname.textContent = name; },
+    /* The settings screen. Same shape as the bench: rendered from state,
+       never patched, because it is nine lines of markup. */
+    settings(st) {
+      if (!st) { els.settings.style.display = 'none'; return; }
+      els.settings.style.display = 'flex';
+      els.sopts.innerHTML = GRAPHICS_ORDER.map((k, i) => {
+        const g = GRAPHICS[k];
+        const cls = ['opt', i === st.index ? 'sel' : '', k === st.current ? 'on' : ''].join(' ');
+        return `<div class="${cls}"><span>${g.name}<span class="why">${g.blurb}</span></span>`
+          + `<span class="fps">${g.target}</span></div>`;
+      }).join('');
+      els.sfoot.innerHTML = '<b>W / S</b> or <b>↑ ↓</b> choose &nbsp;·&nbsp; <b>F</b> or <b>ENTER</b> apply'
+        + ' &nbsp;·&nbsp; <b>ESC</b> back to the fight'
+        + '<br><span style="color:#6f8fa8">Controller &nbsp; <b style="color:#7ad7ff">Stick ↑↓</b> choose'
+        + ' &nbsp; <b style="color:#7ad7ff">X</b> apply &nbsp; <b style="color:#7ad7ff">◯</b> back</span>'
+        + '<br>Your choice is remembered on this machine.';
+    },
+
     /* The bench screen. Rendered from state every time it changes rather
        than patched in place — it is a handful of markers and a short list,
        and rebuilding is cheaper than keeping a second copy of the truth. */
@@ -4506,6 +4994,9 @@ function updateRounds(game, S, P, hud, sfx, dt) {
           S.toSpawn--;
           hud.banner('SOMETHING BIG IS COMING THROUGH', '#9ad8ff');
           S.voice(LINES.boss);
+          // You feel him arrive before you see him.
+          addShake(S, 0.10, 1.6);
+          game.audio.impact(0.9);
         }
       } else if (win && spawnZombie(game, S, win)) S.toSpawn--;
     }
@@ -4577,6 +5068,7 @@ function start(opts = {}) {
     input: { fireHeld: false, firePressed: false, aimHeld: false, sprintHeld: false },
     testHold: {},
     grenades: [], goldPickups: [], belt: null, drops: [], shop: null,
+    settings: { open: false, index: 1, current: 'normal' }, particleScale: 1,
   };
   S.addPoints = (n) => { const a = Math.round(n * S.mul); S.points += a; return a; };
 
@@ -4587,6 +5079,22 @@ function start(opts = {}) {
   S.voice = voice;
 
   buildMap(game, S);
+
+  /* Whatever was chosen last time on this machine, or the tier the
+     renderer worked out for itself on the way in — so a first run on a
+     laptop does not open on Ultra and a returning player does not have to
+     set it again. */
+  S.baseBloom = game.renderer.post.bloom;
+  {
+    let want = null;
+    try { want = localStorage.getItem('b9.graphics'); } catch (e) { void e; }
+    if (!GRAPHICS[want]) {
+      const t = game.renderer.qualityName;
+      want = t === 'low' ? 'low' : t === 'ultra' ? 'ultra' : t === 'high' ? 'high' : 'normal';
+    }
+    S.settings.index = Math.max(0, GRAPHICS_ORDER.indexOf(want));
+    applyGraphics(game, S, want);
+  }
   // Three zombies up front so round one is ready; the rest of the pool
   // fills in one at a time behind the title card and early rounds.
   const POOL_SIZE = 13;
@@ -4815,6 +5323,36 @@ function start(opts = {}) {
       hud.shield(P.shieldT / SHIELD.duration, P.shieldCd);
       hud.stamina(P.stamina / maxStam, !!P.perks.adrenaline);
 
+      /* Settings. Escape opens it anywhere except at the bench, where
+         escape already means "put the gun down". The game keeps running
+         behind it — this is a shooter, and a pause menu that stops the
+         round is a pause menu you can hide in. */
+      if (!(S.bench && S.bench.open)) {
+        if (i.justPressed('escape') || i.justPressed('o') || pad.pressed.start) {
+          S.settings.open = !S.settings.open;
+          if (S.settings.open) S.settings.index = GRAPHICS_ORDER.indexOf(S.settings.current);
+          sfx.buy();
+        }
+      }
+      if (S.settings.open) {
+        const n = GRAPHICS_ORDER.length;
+        const up = i.justPressed('w') || i.justPressed('arrowup') || pad.pressed.up;
+        const dn = i.justPressed('s') || i.justPressed('arrowdown') || pad.pressed.down;
+        if (up) S.settings.index = (S.settings.index + n - 1) % n;
+        if (dn) S.settings.index = (S.settings.index + 1) % n;
+        if (i.justPressed('f') || i.justPressed('enter') || pad.pressed.x) {
+          applyGraphics(game, S, GRAPHICS_ORDER[S.settings.index]);
+          hud.banner(GRAPHICS[S.settings.current].name, '#8ce8a0');
+          sfx.buy();
+        }
+        if (pad.pressed.b) S.settings.open = false;
+        hud.settings({ index: S.settings.index, current: S.settings.current });
+        // Nothing else takes input while it is up.
+        mx = 0; mz = 0;
+      } else {
+        hud.settings(null);
+      }
+
       /* The workbench panel. While it is open the movement keys drive the
          list instead of the player, and nothing can reach you — the horde
          loses interest and mills about, which is the whole reason you can
@@ -4980,7 +5518,7 @@ function start(opts = {}) {
       }
 
       if (!P.sprinting && !(S.bench && S.bench.open)) tryFire(game, S, P, hud, sfx, dt);
-      updateRecoil(game, P, dt);
+      updateRecoil(game, P, dt, S);
       // The viewmodel is NOT placed here. Update hooks run before the
       // camera moves, so a gun positioned from cam.position in this pass is
       // hung off last frame's camera — it lags the view by a frame and
@@ -5121,6 +5659,8 @@ function start(opts = {}) {
         }
       }
     }
+
+    updateMeteor(game, S, P, hud, sfx, dt);
 
     /* The eighteen carat conveyor. Nothing announces the conditions; the
        belt arriving is the announcement. */
@@ -5304,6 +5844,9 @@ function start(opts = {}) {
   window.__T_WEAPONS = WEAPONS;
   // Model builders, so a test can stand one on a bench and photograph it
   // without having to equip it and fight the viewmodel for the frame.
+  // Things a test needs to reach that the game keeps to itself.
+  window.__T_SYS = { ATTACH, GRAPHICS, GRAPHICS_ORDER, applyGraphics, meteorShot,
+    nearestInteract, doInteract, applyAttachmentLooks, applyUpgradeLook, UPGRADE_NAMES };
   window.__T_MAKE = { makeParalyzer, makeMP5, makeSawedOff, makeScattergun, makeObliterator,
     makeMauser, makeArcProjector, makeKnife, makeHammer, makeRiotShield, makeBatteringRam };
   const __THooks = window.__T = {

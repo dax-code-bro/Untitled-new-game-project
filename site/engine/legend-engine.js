@@ -3327,10 +3327,10 @@ class Camera {
    magnitude, so the engine picks a tier from the device rather than
    shipping one setting that is wrong for most players. */
 const QUALITY = {
-  low: { shadowRes: 1024, cascades: 1, bloom: true, bloomIters: 2, fluidScale: 0.5, fxaa: false, msaa: 0, maxGrass: 6000, renderScale: 0.75 },
+  low: { shadowRes: 768, cascades: 1, bloom: false, bloomIters: 0, fluidScale: 0.5, fxaa: false, msaa: 0, maxGrass: 3000, renderScale: 0.62 },
   medium: { shadowRes: 1536, cascades: 2, bloom: true, bloomIters: 3, fluidScale: 0.75, fxaa: true, msaa: 0, maxGrass: 20000, renderScale: 1 },
   high: { shadowRes: 2048, cascades: 2, bloom: true, bloomIters: 3, fluidScale: 1, fxaa: true, msaa: 0, maxGrass: 60000, renderScale: 1 },
-  ultra: { shadowRes: 4096, cascades: 2, bloom: true, bloomIters: 4, fluidScale: 1, fxaa: true, msaa: 0, maxGrass: 150000, renderScale: 1 },
+  ultra: { shadowRes: 4096, cascades: 2, bloom: true, bloomIters: 5, fluidScale: 1, fxaa: true, msaa: 0, maxGrass: 150000, renderScale: 1.25 },
 };
 
 function detectQuality() {
@@ -3471,11 +3471,36 @@ class Renderer {
     const gl = this.gl;
     const res = this.quality.shadowRes;
     this.shadowMaps = [];
-    for (let i = 0; i < this.quality.cascades; i++) {
+    /* Two, whatever the tier asks for. There are two cascade matrices and
+       the shader binds two maps, so a third would be rendered every frame
+       and then never sampled — and asking for one walks off the end of
+       _shadowMats and throws on the first frame. Clamped here rather than
+       trusted to the table, because the table is the easy place to change
+       a number without knowing what else depends on it. */
+    const n = Math.min(this.quality.cascades, this._shadowMats.length);
+    for (let i = 0; i < n; i++) {
       this.shadowMaps.push(new Framebuffer(gl, {
         width: res, height: res, depthOnly: true, depthTexture: true, compare: true, depth: true,
       }));
     }
+  }
+
+  /* Change tier at runtime.
+
+     Everything the tier decides is allocated: the shadow cascades are
+     framebuffers of a fixed size, and the colour targets are sized off
+     `renderScale`. So switching tiers means throwing the shadow maps away
+     and rebuilding them, then forcing a resize by invalidating the cached
+     dimensions — without that last part `resize` early-returns on the
+     unchanged CSS size and the new render scale never takes effect. */
+  setQuality(name, overrides) {
+    if (!QUALITY[name]) return this.qualityName;
+    this.qualityName = name;
+    this.quality = Object.assign({}, QUALITY[name], overrides || {});
+    for (const m of this.shadowMaps || []) if (m.dispose) m.dispose();
+    this._initShadowMaps();
+    this.width = -1; this.height = -1;
+    return this.qualityName;
   }
 
   resize(cssWidth, cssHeight, pixelRatio) {
@@ -12830,6 +12855,18 @@ const ENGRAVE_GLYPHS = {
                      [0.25, 0.66], [0.11, 0.61], [0.03, 0.46], [0.03, 0.28],
                      [0.11, 0.11], [0.27, 0.03], [0.45, 0.09]]] },
   r: { w: 0.44, s: [[[0.06, 0], [0.06, 0.66]], [[0.06, 0.50], [0.17, 0.62], [0.35, 0.66]]] },
+  // Enough for the second pistol's name as well. Still nothing general —
+  // two words, cut into two flats.
+  B: { w: 0.70, s: [
+    [[0, 0], [0, 1]],
+    [[0, 1], [0.42, 1], [0.55, 0.88], [0.55, 0.64], [0.42, 0.54], [0, 0.54]],
+    [[0, 0.54], [0.46, 0.54], [0.60, 0.42], [0.60, 0.13], [0.46, 0], [0, 0]]] },
+  l: { w: 0.24, s: [[[0.10, 0], [0.10, 1]]] },
+  a: { w: 0.58, s: [
+    [[0.50, 0], [0.50, 0.66]],
+    [[0.50, 0.52], [0.36, 0.66], [0.16, 0.63], [0.04, 0.48], [0.04, 0.20],
+     [0.14, 0.05], [0.34, 0.02], [0.50, 0.14]]] },
+  z: { w: 0.54, s: [[[0.03, 0.66], [0.50, 0.66], [0.03, 0], [0.52, 0]]] },
 };
 
 /* One stroke: a bar in the XY plane, extruded through Z. */
@@ -15070,126 +15107,158 @@ function buildViewArm(g, shoulder, hand, side) {
    without anyone being able to say why. Three straight bones with sharp
    angles between them reads as a hand even at this size. */
 function buildViewHand(g, at, side, opts = {}) {
-  const grip = opts.grip || 'pistol';
-  // Which way the fingers leave the knuckles: down and forward around a
-  // pistol grip, straight along the weapon on a forend.
-  const dir = grip === 'fore'
-    ? new Vec3(0.86, -0.5, 0).normalize()
-    : new Vec3(0.28, -0.94, 0).normalize();
-  // The direction the fingers curl toward — across the front of whatever
-  // is being held. Perpendicular to `dir` in the weapon's own vertical
-  // plane, so a hand on a raked grip closes round that rake.
-  const curl = new Vec3(-dir.y, dir.x, 0).normalize();
-  const outw = new Vec3(0, 0, side);
+  const fore = (opts.grip || 'pistol') === 'fore';
 
-  /* Palm. Starts behind the wrist so it swallows the sleeve's end ring. */
-  const palm = [];
+  /* Four axes, and every part of the hand follows from them.
+
+       palm    wrist to knuckles
+       point   the way the proximal phalanx leaves the knuckle
+       curl    the way the fingers close
+       lane    the way the four of them are spaced apart
+
+     The one that is nearly always got wrong is `point`. Fingers do not run
+     down a pistol grip alongside the palm — they run ACROSS it, wrap round
+     the front strap and close back into the palm, and the four of them are
+     stacked one above another down the grip rather than side by side. Build
+     them pointing the way the palm runs and you get four parallel prongs:
+     a claw, not a hand. Under a forend it is the same relationship turned
+     ninety degrees — across the guard, closing upward, spaced along the
+     barrel.
+
+     side = which way the back of the hand faces. The firing hand grips from
+     the weapon's right, the support hand from its left. */
+  const V = (x, y, z) => new Vec3(x, y, z).normalize();
+  const palm = fore ? V(1, 0, 0) : V(0.28, -0.94, 0);
+  const point = new Vec3(0, 0, -side);
+  const curl = fore ? V(0, 1, 0) : V(-0.94, -0.28, 0);
+  const lane = fore ? V(1, 0, 0) : V(0.28, -0.94, 0);
+  // Toward whatever is being held, from the hand's own centre.
+  const grasp = fore ? V(0, 1, 0) : V(0.94, 0.28, 0);
+
+  const at3 = (b, d) => new Vec3(at.x + b.x * d, at.y + b.y * d, at.z + b.z * d);
+
+  /* Palm, running from behind the wrist so it swallows the sleeve's last
+     ring, out to the knuckles. Slightly cupped toward the grip. */
+  const rings = [];
   const PN = 5;
   for (let i = 0; i <= PN; i++) {
     const t = i / PN;
-    const d = -0.022 + t * 0.082;
-    palm.push({
+    const d = -0.026 + t * 0.080;
+    rings.push({
       p: new Vec3(
-        at.x + dir.x * d + curl.x * t * 0.006,
-        at.y + dir.y * d + curl.y * t * 0.006,
-        at.z + dir.z * d + side * 0.002,
+        at.x + palm.x * d + grasp.x * t * 0.006,
+        at.y + palm.y * d + grasp.y * t * 0.006,
+        at.z + palm.z * d + grasp.z * t * 0.006,
       ),
-      // Widens out of the wrist into the knuckles, then rounds off.
-      w: 0.019 + Math.sin(t * PI * 0.85) * 0.010,
-      d: 0.014 + Math.sin(t * PI * 0.9) * 0.008,
+      w: 0.018 + Math.sin(t * PI * 0.85) * 0.010,
+      d: 0.013 + Math.sin(t * PI * 0.9) * 0.008,
       e: 2.6, uv: t,
     });
   }
-  loftRings(g, palm, 12, true, true);
+  loftRings(g, rings, 12, true, true);
 
-  /* One bone: a short loft from a point in a direction, returning where it
-     ends so the next one can start there. Each is capped, and each starts
-     a little way back inside the one before, so the knuckles close. */
-  const bone = (p, d, len, r0, r1) => {
-    const rings = [];
-    for (let i = 0; i <= 2; i++) {
-      const t = i / 2, q = -0.0022 + t * (len + 0.0022);
-      rings.push({
-        p: new Vec3(p.x + d.x * q, p.y + d.y * q, p.z + d.z * q),
-        w: lerp(r0, r1, t), d: lerp(r0, r1, t) * 0.94, e: 2.4, uv: t,
-      });
-    }
-    loftRings(g, rings, 8, true, true);
-    return new Vec3(p.x + d.x * len, p.y + d.y * len, p.z + d.z * len);
-  };
-  // Turn a direction by `a` radians in the (dir, curl) plane.
-  const turn = (d, a) => {
-    const c = Math.cos(a), s = Math.sin(a);
-    const along = d.x * dir.x + d.y * dir.y, across = d.x * curl.x + d.y * curl.y;
-    const na = along * c - across * s, nc = along * s + across * c;
-    return new Vec3(dir.x * na + curl.x * nc, dir.y * na + curl.y * nc, d.z);
-  };
-  // A knuckle: a small ball at a joint, so the segments do not read as
-  // a broken stick where they meet.
-  const knuckle = (p, r) => {
-    const rings = [];
-    for (let i = 0; i <= 3; i++) {
-      const t = i / 3;
-      rings.push({
-        p: new Vec3(p.x, p.y, p.z + outw.z * (t - 0.5) * 0.001),
-        w: r * Math.sin((0.15 + t * 0.7) * PI), d: r * Math.sin((0.15 + t * 0.7) * PI),
-        e: 2.2, uv: t,
-      });
-    }
-    void rings;
-  };
-  void knuckle;
+  /* A finger, as ONE surface.
 
-  /* Fingers. Three bones each, with the curl split across the two joints
-     the way a closed hand splits it — most at the middle knuckle.
-
-     On a trigger hand the index does not close with the rest: it reaches
-     forward off the knuckle, takes one small bend, and lies along the
-     trigger. A fist wrapped uniformly round a grip is a hand holding a
-     stick; the separated index is what makes it a hand holding a gun. */
-  const trigger = opts.trigger !== false && grip !== 'fore';
-  const LEN = [0.0300, 0.0210, 0.0155];               // proximal, middle, distal
-  for (let f = 0; f < 4; f++) {
-    const isIndex = trigger && f === 3;
-    const lane = (f - 1.5) * 0.0168;
-    // Fingers get shorter away from the index, and the little finger sits
-    // lower on the palm.
-    const scale = isIndex ? 1.0 : [0.86, 0.97, 1.0, 1.0][f];
-    const root = new Vec3(
-      at.x + dir.x * (0.050 - (f === 0 ? 0.008 : 0)) + curl.x * 0.008 + outw.x * lane,
-      at.y + dir.y * (0.050 - (f === 0 ? 0.008 : 0)) + curl.y * 0.008 + outw.y * lane,
-      at.z + dir.z * 0.050 + outw.z * lane,
-    );
-    // How hard this finger closes. Around a grip it closes almost fully;
-    // on a forend it lies over the top and closes less.
-    const close = grip === 'fore' ? 0.72 : 1.0;
-    const bends = isIndex ? [0.34, 0.30, 0.22] : [0.70 * close, 1.05 * close, 0.72 * close];
-    let p = root, d = new Vec3(dir.x, dir.y, dir.z);
-    // The index reaches forward before it bends, which is how it gets to
-    // the trigger from a hand that is behind the grip.
-    if (isIndex) d = turn(d, 0.86);
+     Built bone by bone it comes out beaded: each segment is a capped
+     capsule, so every joint shows two end discs and the finger reads as a
+     string of sausages. One loft walked along the bent path instead gives
+     continuous skin, with the knuckles a small swelling in the radius at
+     each bend rather than a seam. */
+  const turn = (d, a2) => {
+    const c = Math.cos(a2), sn = Math.sin(a2);
+    const along = d.x * point.x + d.y * point.y + d.z * point.z;
+    const across = d.x * curl.x + d.y * curl.y + d.z * curl.z;
+    const na = along * c - across * sn, nc = along * sn + across * c;
+    return new Vec3(point.x * na + curl.x * nc, point.y * na + curl.y * nc, point.z * na + curl.z * nc);
+  };
+  const digit = (root, dir0, bends, lens, r0) => {
+    const rs = [];
+    let d = dir0;
+    // Start back inside the palm so the knuckle is buried in it.
+    let p = new Vec3(root.x - d.x * 0.009, root.y - d.y * 0.009, root.z - d.z * 0.009);
+    const total = lens[0] + lens[1] + lens[2] + 0.009;
+    let travelled = 0;
+    const push = (r) => rs.push({ p: new Vec3(p.x, p.y, p.z), w: r, d: r * 0.92, e: 2.4, uv: travelled / total });
+    push(r0 * 1.08);
     for (let k = 0; k < 3; k++) {
       d = turn(d, bends[k]);
-      const r0 = (isIndex ? 0.0082 : 0.0084) * (1 - k * 0.10);
-      const r1 = (isIndex ? 0.0082 : 0.0084) * (1 - (k + 1) * 0.10);
-      p = bone(p, d, LEN[k] * scale, r0, r1);
+      const step = lens[k] / 2;
+      for (let j = 1; j <= 2; j++) {
+        p = new Vec3(p.x + d.x * step, p.y + d.y * step, p.z + d.z * step);
+        travelled += step;
+        // Swollen at the joint, tapering toward the tip.
+        push(r0 * (j === 2 ? 1.10 : 1.0) * (1 - (travelled / total) * 0.28));
+      }
     }
+    p = new Vec3(p.x + d.x * 0.0045, p.y + d.y * 0.0045, p.z + d.z * 0.0045);
+    travelled += 0.0045;
+    push(r0 * 0.44);
+    loftRings(g, rs, 9, true, true);
+  };
+
+  /* Fingers: three bones each, with the closing split across the two
+     joints the way a real hand splits it — most at the middle knuckle.
+
+     On the firing hand the index does not close with the rest. It comes
+     off its knuckle forward, takes one small bend, and lies along the
+     trigger. That one separated finger is most of what makes the hand read
+     as a hand holding a gun rather than a fist round a stick. */
+  const trigger = opts.trigger !== false && !fore;
+  const LEN = [0.0300, 0.0210, 0.0155];
+  const knuckle0 = at3(palm, 0.040);
+  for (let f = 0; f < 4; f++) {
+    const isIndex = trigger && f === 3;
+    // Index nearest the muzzle, little finger furthest from it.
+    const off = (f - 1.5) * (fore ? 0.0186 : 0.0172);
+    const scale = isIndex ? 1.0 : [0.84, 0.96, 1.0, 0.99][f];
+    const root = new Vec3(
+      knuckle0.x + lane.x * off + grasp.x * 0.011 + point.x * 0.006,
+      knuckle0.y + lane.y * off + grasp.y * 0.011 + point.y * 0.006,
+      knuckle0.z + lane.z * off + grasp.z * 0.011 + point.z * 0.006,
+    );
+    /* How far each finger closes. Round a grip they close nearly all the
+       way — the tips come back under the palm, and a hand whose fingertips
+       stop in mid-air is a hand not holding anything. Over a forend they
+       close less, because there is more of it to go round. */
+    const close = fore ? 0.84 : 1.0;
+    const bends = isIndex ? [0.28, 0.36, 0.30] : [0.88 * close, 1.18 * close, 0.88 * close];
+    let d0 = new Vec3(point.x, point.y, point.z);
+    if (isIndex) {
+      d0 = new Vec3(
+        point.x * 0.40 - curl.x * 0.92,
+        point.y * 0.40 - curl.y * 0.92,
+        point.z * 0.40 - curl.z * 0.92,
+      ).normalize();
+    }
+    digit(root, d0, bends, [LEN[0] * scale, LEN[1] * scale, LEN[2] * scale], 0.0079);
   }
 
-  /* Thumb: rooted low on the near side of the palm, laid up and across the
-     front of the fingers — two bones, one joint, the way a real one folds
-     over a grip. */
+  /* Thumb: off the near side of the palm, laid along the weapon and folded
+     over the fingers. One surface as well, and it is the part that makes
+     the hand look like it is gripping rather than resting against. */
   {
-    let d = turn(new Vec3(dir.x, dir.y, dir.z), 0.55);
+    const V2 = (x, y, z) => new Vec3(x, y, z).normalize();
+    const near = new Vec3(0, 0, side);
     let p = new Vec3(
-      at.x + dir.x * 0.012 - outw.x * 0.014,
-      at.y + dir.y * 0.012 - outw.y * 0.014,
-      at.z + dir.z * 0.012 - outw.z * 0.014,
+      at.x + palm.x * 0.004 + near.x * 0.014 + grasp.x * 0.006,
+      at.y + palm.y * 0.004 + near.y * 0.014 + grasp.y * 0.006,
+      at.z + palm.z * 0.004 + near.z * 0.014 + grasp.z * 0.006,
     );
-    p = bone(p, d, 0.0300, 0.0102, 0.0092);
-    d = turn(d, grip === 'fore' ? 0.50 : 0.80);
-    bone(p, d, 0.0230, 0.0092, 0.0078);
+    let d = fore ? V2(0.90, 0.36, -side * 0.24) : V2(0.60, 0.64, -side * 0.48);
+    const rs = [{ p: new Vec3(p.x, p.y, p.z), w: 0.0114, d: 0.0102, e: 2.4, uv: 0 }];
+    const step = (len, r, k) => {
+      p = new Vec3(p.x + d.x * len, p.y + d.y * len, p.z + d.z * len);
+      rs.push({ p: new Vec3(p.x, p.y, p.z), w: r, d: r * 0.9, e: 2.4, uv: k });
+    };
+    step(0.016, 0.0106, 0.22);
+    step(0.014, 0.0100, 0.44);
+    d = fore ? V2(0.78, 0.00, -side * 0.62) : V2(0.86, 0.04, -side * 0.54);
+    step(0.013, 0.0096, 0.66);
+    step(0.011, 0.0084, 0.86);
+    step(0.005, 0.0038, 1.0);
+    loftRings(g, rs, 9, true, true);
   }
+
 }
 
 /* Build both arms for one weapon.
@@ -15206,9 +15275,16 @@ function makeViewmodelArms(hands, opts = {}) {
   const back = opts.back != null ? opts.back : -0.07;
   const drop = opts.drop != null ? opts.drop : -0.21;
 
+  /* `side` is which way the back of the hand faces, and it decides where
+     the thumb goes, which way the fingers are spread and which corner of
+     the frame the forearm enters from. The firing hand grips from the
+     weapon's right, so its back faces +Z; the support hand comes from the
+     left. Having these the wrong way round puts each thumb through the
+     weapon and each forearm in from the far corner, which is exactly what
+     "the hands are phasing through the gun" looks like. */
   const pairs = [
-    { hand: hands.right, side: -1, grip: hands.rightGrip || 'pistol' },
-    { hand: hands.left, side: 1, grip: hands.leftGrip || 'fore' },
+    { hand: hands.right, side: 1, grip: hands.rightGrip || 'pistol' },
+    { hand: hands.left, side: -1, grip: hands.leftGrip || 'fore' },
   ];
   for (const { hand, side, grip } of pairs) {
     if (!hand) continue;
