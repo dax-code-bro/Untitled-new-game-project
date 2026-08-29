@@ -108,6 +108,62 @@ function check(name, cond, detail = '') {
     }
     out.badWeapons = bad;
 
+    /* Does anything flick to black as you turn?
+
+       This was reported over and over — "the walls go black and glitchy if
+       you change your look slightly", "the distant slabs turn black" — and
+       answered every time by looking at a screenshot, which cannot see it
+       because it is a difference between frames. The cause was depth
+       precision: near 0.02 against far 500 is a 25000:1 ratio, and by
+       thirty metres two surfaces a centimetre apart shared a depth bucket
+       and fought over every pixel.
+
+       So it is measured. Sweep the view slowly past each wall, the
+       ceiling, the roof and the field beyond it, and watch the brightness
+       of a patch at the middle of the screen. Lighting and shading change
+       smoothly; a surface losing its depth fight does not. A step of forty
+       five per cent between neighbouring samples is far above anything
+       geometry produces and far below what a pop looks like. */
+    const gl = B.game.renderer.gl, cv = B.game.canvas;
+    // readPixels counts y from the bottom, which is upside down from every
+    // other coordinate here and has caught this codebase before.
+    const patch = () => {
+      const w = 40, h = 30;
+      const px = new Uint8Array(w * h * 4);
+      gl.readPixels(Math.floor(cv.width / 2 - w / 2), Math.floor(cv.height / 2 - h / 2),
+        w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      let sum = 0;
+      for (let i = 0; i < px.length; i += 4) sum += px[i] * 0.30 + px[i + 1] * 0.59 + px[i + 2] * 0.11;
+      return sum / (w * h);
+    };
+    B.S.powered = true;
+    for (const L of B.S.lamps) L.light.intensity = L.off ? 0 : L.full;
+    const pops = [];
+    for (const [name, at2, yaw0, pitch] of [
+      ['north wall', [0, 1.1, 3.0], Math.PI, 0.02],
+      ['east wall', [0, 1.1, 0.0], Math.PI * 1.5, 0.02],
+      ['west wall', [-3, 1.1, 0.0], Math.PI * 0.5, 0.02],
+      ['south wall', [0, 1.1, -3.0], 0, 0.02],
+      ['ceiling', [0, 1.1, 0.0], Math.PI, 0.85],
+      ['roof deck', [0, 3.75, -5.0], Math.PI, -0.05],
+      ['battlefield', [0, 3.75, -5.0], Math.PI, -0.16],
+    ]) {
+      __T.teleport(at2[0], at2[1], at2[2]);
+      let prev = null, worst = 0;
+      for (let k = -18; k <= 18; k++) {
+        __T.look(yaw0 + k * 0.012, pitch);
+        B.game.step(1 / 60);
+        const cur = patch();
+        if (prev != null) {
+          const rel = Math.abs(cur - prev) / Math.max(6, Math.max(prev, cur));
+          if (rel > worst) worst = rel;
+        }
+        prev = cur;
+      }
+      if (worst > 0.45) pops.push(name + ' ' + worst.toFixed(2));
+    }
+    out.pops = pops;
+
     /* No group model may have a visible pivot. Every one of them is an
        invisible 1x1x1 box, and showing one puts a metre-wide default-grey
        cube in the middle of whatever it belongs to. It has happened three
@@ -130,6 +186,7 @@ function check(name, cond, detail = '') {
   check('every weapon has a model, a muzzle and a sight line',
     r.badWeapons.length === 0, r.badWeapons.join(', '));
   check('no group model is showing its pivot', r.suspectPivots === 0, `${r.suspectPivots} suspect`);
+  check('nothing flicks to black as the view turns', r.pops.length === 0, r.pops.join(', '));
   const real = errors.filter((e) => !/SwiftShader|Fallback|favicon/i.test(e));
   check('the map builds without errors', real.length === 0, real.slice(0, 3).join(' | '));
 
