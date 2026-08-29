@@ -93,9 +93,20 @@ function buildViewHand(g, rawAt, side, opts = {}) {
      side = which way the back of the hand faces. The firing hand grips from
      the weapon's right, the support hand from its left. */
   const V = (x, y, z) => new Vec3(x, y, z).normalize();
-  const palm = fore ? V(1, 0, 0) : V(0.28, -0.94, 0);
-  const point = new Vec3(0, 0, -side);
-  const curl = fore ? V(0, 1, 0) : V(-0.94, -0.28, 0);
+  /* The support hand's four axes, rebuilt.
+
+     They had `palm` and `lane` as the same vector — both along the barrel —
+     so the wrist-to-knuckle run and the spacing between the fingers went
+     the same way: a ninety-five millimetre sausage lying lengthwise on the
+     handguard with the fingers coming off the front of it. What a hand
+     under a bar actually does is sit beneath it with the wrist low and
+     behind, the knuckles up the near side, and the fingers leaving the
+     knuckles UP and ACROSS the top before curling down the far side. The
+     thumb stays on the near side and the four fingers are spaced along the
+     bar, which is the one part that was right. */
+  const palm = fore ? V(0.30, 0.95, 0) : V(0.28, -0.94, 0);
+  const point = fore ? V(0, 0.45, -side * 0.89) : new Vec3(0, 0, -side);
+  const curl = fore ? V(0, -0.89, -side * 0.45) : V(-0.94, -0.28, 0);
   const lane = fore ? V(1, 0, 0) : V(0.28, -0.94, 0);
   // Toward whatever is being held, from the hand's own centre.
   const grasp = fore ? V(0, 1, 0) : V(0.94, 0.28, 0);
@@ -121,15 +132,19 @@ function buildViewHand(g, rawAt, side, opts = {}) {
   const PN = 5;
   for (let i = 0; i <= PN; i++) {
     const t = i / PN;
-    const d = -0.026 + t * 0.080;
+    // Wrist to knuckles: 95 mm, which is the length of a hand.
+    const d = -0.028 + t * 0.095;
     rings.push({
       p: new Vec3(
         at.x + palm.x * d + grasp.x * t * 0.006,
         at.y + palm.y * d + grasp.y * t * 0.006,
         at.z + palm.z * d + grasp.z * t * 0.006,
       ),
-      w: 0.018 + Math.sin(t * PI * 0.85) * 0.010,
-      d: 0.013 + Math.sin(t * PI * 0.9) * 0.008,
+      /* A palm, not a fist-sized sphere. It was 56 mm across and 42 mm
+         through — a hand is about that wide and half that thick, and the
+         extra depth is most of why this read as a ball. */
+      w: 0.019 + Math.sin(t * PI * 0.85) * 0.011,
+      d: 0.0085 + Math.sin(t * PI * 0.9) * 0.0055,
       e: 2.6, uv: t,
     });
   }
@@ -182,8 +197,19 @@ function buildViewHand(g, rawAt, side, opts = {}) {
      trigger. That one separated finger is most of what makes the hand read
      as a hand holding a gun rather than a fist round a stick. */
   const trigger = opts.trigger !== false && !fore;
-  const LEN = [0.0300, 0.0210, 0.0155];
-  const knuckle0 = at3(palm, 0.040);
+  /* Bone lengths, and the reason the hand was a ball.
+
+     These were 30/21/15.5 mm — 66 mm of finger — with 168 degrees of total
+     curl packed into it. The radius of that arc is 66/2.94, about 22 mm, so
+     the finger traced a circle 45 mm across while being 16 mm thick: the
+     flesh was nearly as wide as the curve it was following, and four of
+     them round a palm came out as one lump with stubs on it. A real index
+     finger is about 87 mm over three bones, and a hand closed on a grip
+     turns through roughly a hundred and forty degrees, not a hundred and
+     seventy — over 87 mm of bone that is an arc about 70 mm across, which
+     is a hand round a 34 mm grip with flesh on it. */
+  const LEN = [0.0420, 0.0262, 0.0190];
+  const knuckle0 = at3(palm, 0.052);
   for (let f = 0; f < 4; f++) {
     const isIndex = trigger && f === 3;
     // Index nearest the muzzle, little finger furthest from it.
@@ -199,11 +225,13 @@ function buildViewHand(g, rawAt, side, opts = {}) {
        stop in mid-air is a hand not holding anything. Over a forend they
        close less, because there is more of it to go round. */
     /* Round a forend they close nearly as far as round a grip: the hand is
-       under it and the fingers have to come up the far side and over. At
-       0.84 they stopped short and the hand read as an open palm with the
-       gun balanced on it. */
-    const close = fore ? 0.97 : 1.0;
-    const bends = isIndex ? [0.28, 0.36, 0.30] : [0.88 * close, 1.18 * close, 0.88 * close];
+       under it and the fingers have to come up the far side and over. */
+    const close = fore ? 0.96 : 1.0;
+    /* A hundred degrees over three joints, weighted to the middle knuckle,
+       which is where a hand actually does most of its closing. Over 87 mm
+       of bone that is an arc about 50 mm across — a hand round a grip
+       rather than a fist eating itself. */
+    const bends = isIndex ? [0.26, 0.34, 0.28] : [0.80 * close, 1.05 * close, 0.65 * close];
     let d0 = new Vec3(point.x, point.y, point.z);
     if (isIndex) {
       d0 = new Vec3(
@@ -212,7 +240,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
         point.z * 0.40 - curl.z * 0.92,
       ).normalize();
     }
-    digit(root, d0, bends, [LEN[0] * scale, LEN[1] * scale, LEN[2] * scale], 0.0079);
+    digit(root, d0, bends, [LEN[0] * scale, LEN[1] * scale, LEN[2] * scale], 0.0072);
   }
 
   /* Thumb: off the near side of the palm, laid along the weapon and folded

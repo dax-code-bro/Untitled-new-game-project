@@ -49,11 +49,52 @@ for (const id in HANDS) {
       }
     }
     const sides = quad.filter((n) => n > near * 0.06).length;
-    if (sides < 4) bad++;
+
+    /* Enclosure is not enough, and this test learned that the hard way: it
+     * passed a hand that turned out to be a ball with four stubs on it,
+     * because a ball also has skin on all four sides of its centre. What
+     * separates a hand from a lump is that it is long and thin and has
+     * things sticking out of it.
+     *
+     *   reach   the share of skin further than 45 mm from the centroid.
+     *           Fingers put it there; a lump has none.
+     *
+     * Aspect ratio was the obvious second measure and it is the wrong one:
+     * an OPEN hand is 95 x 60 x 28 mm and beautifully anisotropic, but a
+     * hand closed on a grip is a fist and measures about 1.3 to 1 — nearly
+     * cubic, same as the ball it is meant to be distinguished from. It was
+     * tried, it failed every hand in the game, and it is recorded here so
+     * it does not get tried again.
+     *
+     * The thresholds differ by grip because the hands legitimately do: the
+     * firing hand's fingers wrap a 34 mm grip and stick well out (measures
+     * ~50%), while the support hand's lie along a fat forend and stay close
+     * to the palm (~14%).
+     */
+    let cx = 0, cy = 0, cz = 0;
+    for (let i = 0; i < pos.length; i += 3) {
+      cx += pos[i]; cy += pos[i + 1]; cz += pos[i + 2];
+    }
+    const n3 = pos.length / 3;
+    cx /= n3; cy /= n3; cz /= n3;
+    let reach = 0;
+    for (let i = 0; i < pos.length; i += 3) {
+      if (Math.hypot(pos[i] - cx, pos[i + 1] - cy, pos[i + 2] - cz) > 0.045) reach++;
+    }
+    const reachPct = reach / n3 * 100;
+
+    const wantReach = which === 'right' ? 34 : 11;
+    const faults = [];
+    if (sides < 4) faults.push('skin on only ' + sides + ' sides of the grip');
+    if (reachPct < wantReach) {
+      faults.push('only ' + reachPct.toFixed(1) + '% of skin reaches past 45mm (want '
+        + wantReach + '%) — the fingers have collapsed into the palm');
+    }
+    if (faults.length) bad++;
     console.log(String(id).padEnd(12), which.padEnd(6),
-      'within 55mm ' + String((near / Math.max(1, total) * 100).toFixed(1)).padStart(5) + '%',
-      'quadrants ' + JSON.stringify(quad).padEnd(26),
-      sides < 4 ? '<<< skin on only ' + sides + ' sides' : 'closed');
+      'quadrants ' + JSON.stringify(quad).padEnd(22),
+      'reach ' + reachPct.toFixed(1).padStart(5) + '%',
+      faults.length ? '<<< ' + faults.join('; ') : 'a hand, closed on it');
   }
 }
 console.log(bad ? `\n${bad} hand(s) not closed on the grip` : '\nevery hand is closed on its grip');
