@@ -621,14 +621,25 @@ function buildDoubleStock(g, C) {
 function buildParalyzerFront(g, C) {
   const D = DOUBLE, L = C.barrelLen, s = C.spacing || 0.0245;
   /* Ceramic standoffs the coil is wound between, and the muzzle shroud
-     the arc jumps across. */
+     the arc jumps across.
+
+     Their tops used to finish at 17.75 mm with the bead at 17.05 — seven
+     tenths of a millimetre proud of the sight line, three times over, down
+     the whole length of the barrel. Seven tenths of a millimetre at thirty
+     centimetres from the eye is a wall. Everything forward of the bead now
+     stops two millimetres under the line, which is the rule the rest of
+     this file already follows and this one did not. */
+  const clear = doubleBeadY(C) - 0.0020;
+  const bot = -s - D.muzzleR - 0.0075;
   for (const x of [0.090, 0.170, 0.250]) {
-    hardBox(g, x, -s / 2, 0, 0.0060, s / 2 + D.muzzleR + 0.0075, 0.0290);
+    hardBox(g, x, (clear + bot) / 2, 0, 0.0060, (clear - bot) / 2, 0.0290);
   }
-  // Electrode prongs: four, in a square around the pair, standing forward
-  // of the crowns so the gap is visible.
-  for (const py of [D.muzzleR + 0.008, -s - D.muzzleR - 0.008]) {
-    for (const pz of [-0.017, 0.017]) {
+  /* Electrode prongs: four, in a square around the pair, standing forward
+     of the crowns so the gap is visible. Moved outboard rather than down —
+     they are the whole look of the muzzle, and at 17 mm they sat just
+     inside the sight picture and cluttered it. */
+  for (const py of [clear, bot + 0.010]) {
+    for (const pz of [-0.025, 0.025]) {
       strut(g, [L - 0.020, py, pz], [L + 0.022, py * 0.62, pz * 0.62], ringOutline(0.0028, 10));
       spin(g, [[L + 0.022, 0], [L + 0.026, 0.0034], [L + 0.030, 0]], 10, 40, py * 0.62, pz * 0.62);
     }
@@ -727,16 +738,34 @@ function buildMauserSteel(g) {
     [K.barrelRear + 0.017, 0.0072], [K.muzzle - 0.002, 0.0068],
   ], 20, true, false);
   crown(g, K.muzzle, 0.0068, 0.00385, 0.030);
-  // Front blade on its ramp.
-  hardBox(g, K.muzzle - 0.014, 0.0090, 0, 0.0060, 0.0028, 0.0030);
-  hardBox(g, K.muzzle - 0.014, 0.0128, 0, 0.0014, 0.0028, 0.0011);
+  /* The two sights, and they have to agree.
+
+     The blade's tip was at 15.6 mm and the rear notch at 23.8 mm — eight
+     millimetres of disagreement over a 28 cm sight radius, which is a gun
+     that shoots low even when it is aimed perfectly. Two sights that are
+     each correct on their own and not on the same line cannot be aimed
+     with, and that is worth more than either of them being pretty.
+
+     C96_SIGHT is the line. Both ends are built from it. */
+  const C96_SIGHT = 0.0238;
+  hardBox(g, K.muzzle - 0.014, 0.0140, 0, 0.0060, 0.0074, 0.0030);          // blade ramp
+  hardBox(g, K.muzzle - 0.014, C96_SIGHT - 0.0026, 0, 0.0014, 0.0030, 0.0011); // blade
+  hardBox(g, K.muzzle - 0.014, C96_SIGHT - 0.0060, 0, 0.0050, 0.0044, 0.0026); // its base
 
   /* Tangent rear sight — the C96's absurd 1000-metre ladder, laid flat.
-     Even folded it is the landmark that identifies the gun from behind. */
-  hardBox(g, -0.0180, 0.0192, 0, 0.0240, 0.0026, 0.0058);
-  hardBox(g, -0.0400, 0.0200, 0, 0.0060, 0.0034, 0.0072);
-  hardBox(g, -0.0400, 0.0228, 0, 0.0018, 0.0026, 0.0072);          // the notch's wings
-  for (const s of [-1, 1]) hardBox(g, -0.0400, 0.0238, s * 0.0056, 0.0018, 0.0018, 0.0016);
+     Even folded it is the landmark that identifies the gun from behind.
+
+     The piece labelled "the notch's wings" was one solid box 14.4 mm wide
+     spanning 20.2 to 25.4 mm, and the sight line runs through the middle of
+     that at 23.8. A notch with no gap in it is a plate across your aim, and
+     it is the same mistake as the Thompson's peep. */
+  hardBox(g, -0.0180, 0.0192, 0, 0.0240, 0.0026, 0.0058);          // the ladder, laid flat
+  hardBox(g, -0.0400, 0.0196, 0, 0.0060, 0.0030, 0.0072);          // the base, under the line
+  const nz = 0.0031;                                               // half the open notch
+  for (const sd of [-1, 1]) {                                      // the shoulders either side
+    hardBox(g, -0.0400, C96_SIGHT + 0.0004, sd * (nz + 0.0021), 0.0018, 0.0030, 0.0021);
+  }
+  for (const s of [-1, 1]) hardBox(g, -0.0400, C96_SIGHT + 0.0016, s * 0.0068, 0.0018, 0.0018, 0.0016);
 
   /* Magazine box, ahead of the guard, with its stamped floor and the
      follower slot up the right side. */

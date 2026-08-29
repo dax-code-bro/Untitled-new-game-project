@@ -109,11 +109,27 @@ function buildTommySteel(g) {
   hardBox(g, T.muzzle - 0.014, 0.0143, 0, 0.0060, 0.0048, 0.0048);
   hardBox(g, T.muzzle - 0.014, 0.0223, 0, 0.0016, 0.0032, 0.0012);
 
-  /* Rear sight: the M1A1's stamped L peep between two protective wings. */
+  /* Rear sight: the M1A1's stamped L peep between two protective wings.
+
+     The leaf was one solid box 8.8 mm tall and 20.8 mm wide sitting exactly
+     on the sight line — a peep with no hole in it, which is a steel plate
+     welded across your aim. It is the whole of "you cannot see through the
+     iron sights", and the same mistake is easy to make on every gun here
+     because a sight modelled as one hardBox looks right from outside and is
+     a wall from behind.
+
+     A frame instead: two uprights and a bridge over the top, leaving a
+     3.4 mm aperture centred on the line. */
   const rx = T.receiverRear + 0.0210;
   hardBox(g, rx, T.recUp + 0.0048, 0.0125, 0.0075, 0.0052, 0.0022);   // wings
   hardBox(g, rx, T.recUp + 0.0048, -0.0125, 0.0075, 0.0052, 0.0022);
-  hardBox(g, rx, T.recUp + 0.0040, 0, 0.0016, 0.0044, 0.0104);        // peep leaf
+  const ap = 0.0034;                                     // aperture half-size
+  const ay = T.recUp + 0.0040;
+  for (const sz of [-1, 1]) {                            // uprights
+    hardBox(g, rx, ay, sz * (ap + 0.0022), 0.0016, 0.0044, 0.0022);
+  }
+  hardBox(g, rx, ay + ap + 0.0016, 0, 0.0016, 0.0016, ap + 0.0044);   // bridge
+  hardBox(g, rx, ay - ap - 0.0016, 0, 0.0016, 0.0016, ap + 0.0044);   // and the base
 
   // Its track stays with the receiver; the handle itself reciprocates and
   // lives in its own geometry.

@@ -35,12 +35,17 @@ function buildViewArm(g, shoulder, hand, side) {
      screen. Real engines dodge this by drawing the viewmodel at its own
      narrow field of view; with one shared camera the arm has to be
      slimmed instead, and the eye reads it as foreshortening. */
+  /* Slimmed, but not to a pipe.
+
+     40 mm at the wrist against an 85 mm hand is a hand stuck on a stick,
+     and the mismatch reads worse than an arm that is slightly too big. A
+     wrist is about seventy per cent of the width across the knuckles. */
   const spec = [
-    [0.032, 0.031],   // sleeve mouth at the frame edge
-    [0.029, 0.028],
-    [0.026, 0.025],
-    [0.023, 0.022],
-    [0.020, 0.020],   // wrist
+    [0.044, 0.042],   // sleeve mouth at the frame edge
+    [0.040, 0.038],
+    [0.036, 0.034],
+    [0.032, 0.030],
+    [0.029, 0.027],   // wrist
   ];
   for (let i = 0; i < spec.length; i++) {
     const t = i / (spec.length - 1);
@@ -140,11 +145,15 @@ function buildViewHand(g, rawAt, side, opts = {}) {
         at.y + palm.y * d + grasp.y * t * 0.006,
         at.z + palm.z * d + grasp.z * t * 0.006,
       ),
-      /* A palm, not a fist-sized sphere. It was 56 mm across and 42 mm
-         through — a hand is about that wide and half that thick, and the
-         extra depth is most of why this read as a ball. */
-      w: 0.019 + Math.sin(t * PI * 0.85) * 0.011,
-      d: 0.0085 + Math.sin(t * PI * 0.9) * 0.0055,
+      /* A palm, not a sphere and not a wafer.
+
+         It was 56 mm across and 42 mm THROUGH, which was a ball. Cutting
+         the depth to 28 mm fixed the ball and made a slice of bread — and
+         I never re-rendered to see it. A hand across the knuckles is about
+         85 mm and a palm with the fingers folded onto it is 38 to 42 mm
+         through, because the folded fingers are part of the thickness. */
+      w: 0.023 + Math.sin(t * PI * 0.85) * 0.0145,
+      d: 0.0125 + Math.sin(t * PI * 0.9) * 0.0075,
       e: 2.6, uv: t,
     });
   }
@@ -213,7 +222,10 @@ function buildViewHand(g, rawAt, side, opts = {}) {
   for (let f = 0; f < 4; f++) {
     const isIndex = trigger && f === 3;
     // Index nearest the muzzle, little finger furthest from it.
-    const off = (f - 1.5) * (fore ? 0.0186 : 0.0172);
+    /* Spaced so they touch. Four 19 mm fingers side by side span 76 mm,
+       which is a hand; at the old 17 mm pitch they had daylight between
+       them and read as separate prongs. */
+    const off = (f - 1.5) * (fore ? 0.0202 : 0.0194);
     const scale = isIndex ? 1.0 : [0.84, 0.96, 1.0, 0.99][f];
     const root = new Vec3(
       knuckle0.x + lane.x * off + grasp.x * 0.011 + point.x * 0.006,
@@ -240,7 +252,9 @@ function buildViewHand(g, rawAt, side, opts = {}) {
         point.z * 0.40 - curl.z * 0.92,
       ).normalize();
     }
-    digit(root, d0, bends, [LEN[0] * scale, LEN[1] * scale, LEN[2] * scale], 0.0072);
+    /* 19 mm through the proximal phalanx, which is a finger. It was 14,
+       and 14 mm of flesh on 87 mm of bone is a worm. */
+    digit(root, d0, bends, [LEN[0] * scale, LEN[1] * scale, LEN[2] * scale], 0.0095);
   }
 
   /* Thumb: off the near side of the palm, laid along the weapon and folded

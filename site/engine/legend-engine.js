@@ -13258,11 +13258,27 @@ function buildTommySteel(g) {
   hardBox(g, T.muzzle - 0.014, 0.0143, 0, 0.0060, 0.0048, 0.0048);
   hardBox(g, T.muzzle - 0.014, 0.0223, 0, 0.0016, 0.0032, 0.0012);
 
-  /* Rear sight: the M1A1's stamped L peep between two protective wings. */
+  /* Rear sight: the M1A1's stamped L peep between two protective wings.
+
+     The leaf was one solid box 8.8 mm tall and 20.8 mm wide sitting exactly
+     on the sight line — a peep with no hole in it, which is a steel plate
+     welded across your aim. It is the whole of "you cannot see through the
+     iron sights", and the same mistake is easy to make on every gun here
+     because a sight modelled as one hardBox looks right from outside and is
+     a wall from behind.
+
+     A frame instead: two uprights and a bridge over the top, leaving a
+     3.4 mm aperture centred on the line. */
   const rx = T.receiverRear + 0.0210;
   hardBox(g, rx, T.recUp + 0.0048, 0.0125, 0.0075, 0.0052, 0.0022);   // wings
   hardBox(g, rx, T.recUp + 0.0048, -0.0125, 0.0075, 0.0052, 0.0022);
-  hardBox(g, rx, T.recUp + 0.0040, 0, 0.0016, 0.0044, 0.0104);        // peep leaf
+  const ap = 0.0034;                                     // aperture half-size
+  const ay = T.recUp + 0.0040;
+  for (const sz of [-1, 1]) {                            // uprights
+    hardBox(g, rx, ay, sz * (ap + 0.0022), 0.0016, 0.0044, 0.0022);
+  }
+  hardBox(g, rx, ay + ap + 0.0016, 0, 0.0016, 0.0016, ap + 0.0044);   // bridge
+  hardBox(g, rx, ay - ap - 0.0016, 0, 0.0016, 0.0016, ap + 0.0044);   // and the base
 
   // Its track stays with the receiver; the handle itself reciprocates and
   // lives in its own geometry.
@@ -14076,14 +14092,25 @@ function buildDoubleStock(g, C) {
 function buildParalyzerFront(g, C) {
   const D = DOUBLE, L = C.barrelLen, s = C.spacing || 0.0245;
   /* Ceramic standoffs the coil is wound between, and the muzzle shroud
-     the arc jumps across. */
+     the arc jumps across.
+
+     Their tops used to finish at 17.75 mm with the bead at 17.05 — seven
+     tenths of a millimetre proud of the sight line, three times over, down
+     the whole length of the barrel. Seven tenths of a millimetre at thirty
+     centimetres from the eye is a wall. Everything forward of the bead now
+     stops two millimetres under the line, which is the rule the rest of
+     this file already follows and this one did not. */
+  const clear = doubleBeadY(C) - 0.0020;
+  const bot = -s - D.muzzleR - 0.0075;
   for (const x of [0.090, 0.170, 0.250]) {
-    hardBox(g, x, -s / 2, 0, 0.0060, s / 2 + D.muzzleR + 0.0075, 0.0290);
+    hardBox(g, x, (clear + bot) / 2, 0, 0.0060, (clear - bot) / 2, 0.0290);
   }
-  // Electrode prongs: four, in a square around the pair, standing forward
-  // of the crowns so the gap is visible.
-  for (const py of [D.muzzleR + 0.008, -s - D.muzzleR - 0.008]) {
-    for (const pz of [-0.017, 0.017]) {
+  /* Electrode prongs: four, in a square around the pair, standing forward
+     of the crowns so the gap is visible. Moved outboard rather than down —
+     they are the whole look of the muzzle, and at 17 mm they sat just
+     inside the sight picture and cluttered it. */
+  for (const py of [clear, bot + 0.010]) {
+    for (const pz of [-0.025, 0.025]) {
       strut(g, [L - 0.020, py, pz], [L + 0.022, py * 0.62, pz * 0.62], ringOutline(0.0028, 10));
       spin(g, [[L + 0.022, 0], [L + 0.026, 0.0034], [L + 0.030, 0]], 10, 40, py * 0.62, pz * 0.62);
     }
@@ -14182,16 +14209,34 @@ function buildMauserSteel(g) {
     [K.barrelRear + 0.017, 0.0072], [K.muzzle - 0.002, 0.0068],
   ], 20, true, false);
   crown(g, K.muzzle, 0.0068, 0.00385, 0.030);
-  // Front blade on its ramp.
-  hardBox(g, K.muzzle - 0.014, 0.0090, 0, 0.0060, 0.0028, 0.0030);
-  hardBox(g, K.muzzle - 0.014, 0.0128, 0, 0.0014, 0.0028, 0.0011);
+  /* The two sights, and they have to agree.
+
+     The blade's tip was at 15.6 mm and the rear notch at 23.8 mm — eight
+     millimetres of disagreement over a 28 cm sight radius, which is a gun
+     that shoots low even when it is aimed perfectly. Two sights that are
+     each correct on their own and not on the same line cannot be aimed
+     with, and that is worth more than either of them being pretty.
+
+     C96_SIGHT is the line. Both ends are built from it. */
+  const C96_SIGHT = 0.0238;
+  hardBox(g, K.muzzle - 0.014, 0.0140, 0, 0.0060, 0.0074, 0.0030);          // blade ramp
+  hardBox(g, K.muzzle - 0.014, C96_SIGHT - 0.0026, 0, 0.0014, 0.0030, 0.0011); // blade
+  hardBox(g, K.muzzle - 0.014, C96_SIGHT - 0.0060, 0, 0.0050, 0.0044, 0.0026); // its base
 
   /* Tangent rear sight — the C96's absurd 1000-metre ladder, laid flat.
-     Even folded it is the landmark that identifies the gun from behind. */
-  hardBox(g, -0.0180, 0.0192, 0, 0.0240, 0.0026, 0.0058);
-  hardBox(g, -0.0400, 0.0200, 0, 0.0060, 0.0034, 0.0072);
-  hardBox(g, -0.0400, 0.0228, 0, 0.0018, 0.0026, 0.0072);          // the notch's wings
-  for (const s of [-1, 1]) hardBox(g, -0.0400, 0.0238, s * 0.0056, 0.0018, 0.0018, 0.0016);
+     Even folded it is the landmark that identifies the gun from behind.
+
+     The piece labelled "the notch's wings" was one solid box 14.4 mm wide
+     spanning 20.2 to 25.4 mm, and the sight line runs through the middle of
+     that at 23.8. A notch with no gap in it is a plate across your aim, and
+     it is the same mistake as the Thompson's peep. */
+  hardBox(g, -0.0180, 0.0192, 0, 0.0240, 0.0026, 0.0058);          // the ladder, laid flat
+  hardBox(g, -0.0400, 0.0196, 0, 0.0060, 0.0030, 0.0072);          // the base, under the line
+  const nz = 0.0031;                                               // half the open notch
+  for (const sd of [-1, 1]) {                                      // the shoulders either side
+    hardBox(g, -0.0400, C96_SIGHT + 0.0004, sd * (nz + 0.0021), 0.0018, 0.0030, 0.0021);
+  }
+  for (const s of [-1, 1]) hardBox(g, -0.0400, C96_SIGHT + 0.0016, s * 0.0068, 0.0018, 0.0018, 0.0016);
 
   /* Magazine box, ahead of the guard, with its stamped floor and the
      follower slot up the right side. */
@@ -16193,12 +16238,17 @@ function buildViewArm(g, shoulder, hand, side) {
      screen. Real engines dodge this by drawing the viewmodel at its own
      narrow field of view; with one shared camera the arm has to be
      slimmed instead, and the eye reads it as foreshortening. */
+  /* Slimmed, but not to a pipe.
+
+     40 mm at the wrist against an 85 mm hand is a hand stuck on a stick,
+     and the mismatch reads worse than an arm that is slightly too big. A
+     wrist is about seventy per cent of the width across the knuckles. */
   const spec = [
-    [0.032, 0.031],   // sleeve mouth at the frame edge
-    [0.029, 0.028],
-    [0.026, 0.025],
-    [0.023, 0.022],
-    [0.020, 0.020],   // wrist
+    [0.044, 0.042],   // sleeve mouth at the frame edge
+    [0.040, 0.038],
+    [0.036, 0.034],
+    [0.032, 0.030],
+    [0.029, 0.027],   // wrist
   ];
   for (let i = 0; i < spec.length; i++) {
     const t = i / (spec.length - 1);
@@ -16298,11 +16348,15 @@ function buildViewHand(g, rawAt, side, opts = {}) {
         at.y + palm.y * d + grasp.y * t * 0.006,
         at.z + palm.z * d + grasp.z * t * 0.006,
       ),
-      /* A palm, not a fist-sized sphere. It was 56 mm across and 42 mm
-         through — a hand is about that wide and half that thick, and the
-         extra depth is most of why this read as a ball. */
-      w: 0.019 + Math.sin(t * PI * 0.85) * 0.011,
-      d: 0.0085 + Math.sin(t * PI * 0.9) * 0.0055,
+      /* A palm, not a sphere and not a wafer.
+
+         It was 56 mm across and 42 mm THROUGH, which was a ball. Cutting
+         the depth to 28 mm fixed the ball and made a slice of bread — and
+         I never re-rendered to see it. A hand across the knuckles is about
+         85 mm and a palm with the fingers folded onto it is 38 to 42 mm
+         through, because the folded fingers are part of the thickness. */
+      w: 0.023 + Math.sin(t * PI * 0.85) * 0.0145,
+      d: 0.0125 + Math.sin(t * PI * 0.9) * 0.0075,
       e: 2.6, uv: t,
     });
   }
@@ -16371,7 +16425,10 @@ function buildViewHand(g, rawAt, side, opts = {}) {
   for (let f = 0; f < 4; f++) {
     const isIndex = trigger && f === 3;
     // Index nearest the muzzle, little finger furthest from it.
-    const off = (f - 1.5) * (fore ? 0.0186 : 0.0172);
+    /* Spaced so they touch. Four 19 mm fingers side by side span 76 mm,
+       which is a hand; at the old 17 mm pitch they had daylight between
+       them and read as separate prongs. */
+    const off = (f - 1.5) * (fore ? 0.0202 : 0.0194);
     const scale = isIndex ? 1.0 : [0.84, 0.96, 1.0, 0.99][f];
     const root = new Vec3(
       knuckle0.x + lane.x * off + grasp.x * 0.011 + point.x * 0.006,
@@ -16398,7 +16455,9 @@ function buildViewHand(g, rawAt, side, opts = {}) {
         point.z * 0.40 - curl.z * 0.92,
       ).normalize();
     }
-    digit(root, d0, bends, [LEN[0] * scale, LEN[1] * scale, LEN[2] * scale], 0.0072);
+    /* 19 mm through the proximal phalanx, which is a finger. It was 14,
+       and 14 mm of flesh on 87 mm of bone is a worm. */
+    digit(root, d0, bends, [LEN[0] * scale, LEN[1] * scale, LEN[2] * scale], 0.0095);
   }
 
   /* Thumb: off the near side of the palm, laid along the weapon and folded
