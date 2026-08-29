@@ -168,6 +168,19 @@ const ATTACH = {
    so the round you choose to do this in matters. */
 const GEN = { crank: 5.0, reach: 2.4, rpm: 190 };
 
+/* The minigun on the roof. Three minutes, three thousand rounds a minute,
+   ten a round — five hundred a second into whatever it is looking at, and
+   then it is finished and you buy it again.
+
+   Fifty shots a second is more than the frame rate, so the gun works out
+   how many rounds it owes since the last frame and spends them together.
+   Firing once a frame instead would silently cap it at sixty a second and
+   turn a minigun into a rifle. */
+const MINIGUN = {
+  cost: 4500, time: 180, dps: 500, rpm: 3000, dmg: 10,
+  range: 34, arc: 1.15, spin: 62, cool: 12,
+};
+
 /* How far under the mud a body starts and how long it takes to get out. */
 const RISE_DEPTH = 1.9, RISE_TIME = 1.9;
 
@@ -1617,6 +1630,54 @@ function buildMap(game, S) {
       at: [BX, 1.0, BZ - 0.72], open: false, slot: 0, index: 0,
       spin: 0.9, preview: false, picking: false, damage: false,
       light: game.light({ at: [BX, 2.28, BZ + 0.10], color: 0xfff0d0, intensity: 26, radius: 4.6 }),
+    };
+  }
+
+  /* ---------------- the minigun on the roof ----------------
+
+     Bolted to the parapet on the north side, looking out over the ground
+     the dead walk in across. It is not a weapon you carry — you buy three
+     minutes of it and go back to the window. */
+  {
+    const gunMat = { color: 0x3a3f45, texture: 'metal', roughness: 0.42, metalness: 1 };
+    const boxMat = { color: 0x3f4a33, texture: 'metal', roughness: 0.62, metalness: 1 };
+    const MG = [0.0, R.y1, M.z0 + 0.85];
+    // Pedestal, and the yoke the gun turns in.
+    game.cylinder({ at: [MG[0], MG[1] + 0.22, MG[2]], radius: 0.14, height: 0.44, material: gunMat, static: true });
+    game.cylinder({ at: [MG[0], MG[1] + 0.46, MG[2]], radius: 0.20, height: 0.06, material: gunMat, physics: false });
+    // Everything that turns hangs off this pivot.
+    const yoke = game.box({ at: [MG[0], MG[1] + 0.62, MG[2]], size: 1, physics: false, visible: false });
+    const parts = [];
+    const add = (a, pos, rot) => { a.parent = yoke; a.setPosition(pos); if (rot) a.setRotation(rot); parts.push(a); return a; };
+    for (const sz of [-1, 1]) {
+      add(game.box({ size: [0.10, 0.34, 0.05], material: gunMat, physics: false }), [-0.10, -0.06, sz * 0.20]);
+    }
+    add(game.box({ size: [0.42, 0.20, 0.30], material: gunMat, physics: false }), [-0.02, 0.02, 0]);   // receiver
+    // Six barrels in a cluster, on their own actor so the cluster spins.
+    const cluster = add(game.box({ size: 1, physics: false, visible: false }), [0.22, 0.02, 0]);
+    const barrels = [];
+    for (let k = 0; k < 6; k++) {
+      const a2 = (k / 6) * Math.PI * 2;
+      const bl = game.cylinder({ radius: 0.019, height: 0.62, material: gunMat, physics: false });
+      bl.parent = cluster;
+      bl.setPosition([0.31, Math.cos(a2) * 0.048, Math.sin(a2) * 0.048]);
+      bl.setRotation([0, 0, 90]);
+      barrels.push(bl); parts.push(bl);
+    }
+    add(game.cylinder({ radius: 0.062, height: 0.06, material: gunMat, physics: false }), [0.02, 0.02, 0], [0, 0, 90]);
+    // Ammunition box and the belt running up into the receiver.
+    add(game.box({ size: [0.34, 0.26, 0.22], material: boxMat, physics: false }), [-0.26, -0.16, 0.22]);
+    for (let k = 0; k < 6; k++) {
+      add(game.box({ size: [0.05, 0.03, 0.09], material: { color: 0xa8843c, texture: 'metal', roughness: 0.3, metalness: 1 }, physics: false }),
+        [-0.22 + k * 0.045, -0.05 - Math.sin(k * 0.5) * 0.04, 0.16], [0, 0, -14 - k * 3]);
+    }
+    // Shield plate, and a lamp on the mount that comes on with it.
+    add(game.box({ size: [0.04, 0.30, 0.44], material: gunMat, physics: false }), [-0.20, 0.06, 0]);
+    for (const q of parts) q.visible = true;
+    S.minigun = {
+      at: [MG[0], MG[1] + 0.9, MG[2] - 0.9], mount: MG, yoke, cluster, barrels,
+      t: 0, cool: 0, spin: 0, spinUp: 0, owed: 0, target: null, aim: -Math.PI / 2,
+      lamp: game.light({ at: [MG[0], MG[1] + 1.0, MG[2]], color: 0xffc061, intensity: 0, radius: 5 }),
     };
   }
 
@@ -4197,6 +4258,98 @@ function updateMeteor(game, S, P, hud, sfx, dt) {
   }
 }
 
+/* ---------------- the minigun ----------------
+
+   Runs itself. It picks the nearest body inside its arc, turns onto it,
+   spins up, and then spends rounds — as many as the elapsed time says it
+   owes, because at fifty a second the gun fires faster than the game
+   draws and one shot per frame would quietly make it a rifle. */
+function updateMinigun(game, S, P, hud, sfx, dt) {
+  const mg = S.minigun;
+  if (!mg) return;
+  if (mg.cool > 0) mg.cool = Math.max(0, mg.cool - dt);
+  if (mg.t <= 0) {
+    // Wind down.
+    mg.spinUp = Math.max(0, mg.spinUp - dt * 0.8);
+    mg.lamp.intensity = 0;
+    if (mg.spinUp > 0) {
+      mg.spin += dt * MINIGUN.spin * mg.spinUp;
+      mg.cluster.setRotation([mg.spin * 57.2958, 0, 0]);
+    }
+    return;
+  }
+
+  const was = mg.t;
+  mg.t -= dt;
+  if (mg.t <= 0) {
+    mg.t = 0; mg.cool = MINIGUN.cool; mg.target = null;
+    hud.banner('MINIGUN DRY', '#8a8272');
+    return;
+  }
+  // Ten seconds out, the lamp starts blinking.
+  const blink = mg.t < 10 ? (Math.floor(mg.t * 4) % 2 === 0 ? 1 : 0.2) : 1;
+  mg.lamp.intensity = 26 * blink;
+  void was;
+
+  /* Pick a target: nearest live body inside the arc and range, measured
+     from the mount rather than from the player. */
+  const M = mg.mount;
+  let best = null, bestD = Infinity;
+  for (const z of S.zombies) {
+    if (z.dead || z.parked) continue;
+    const zp = z.actor.position;
+    const dx = zp.x - M[0], dz = zp.z - M[2];
+    const d = Math.hypot(dx, dz);
+    if (d > MINIGUN.range) continue;
+    // It looks out over the north face; it will not shoot into its own roof.
+    const ang = Math.atan2(dz, dx);
+    let rel = ang - (-Math.PI / 2);
+    while (rel > Math.PI) rel -= Math.PI * 2;
+    while (rel < -Math.PI) rel += Math.PI * 2;
+    if (Math.abs(rel) > MINIGUN.arc) continue;
+    if (d < bestD) { bestD = d; best = z; }
+  }
+  mg.target = best;
+
+  // Turn onto it, and spin up only while there is something to shoot.
+  if (best) {
+    const zp = best.actor.position;
+    const want = Math.atan2(zp.z - M[2], zp.x - M[0]);
+    let diff = want - mg.aim;
+    while (diff > Math.PI) diff -= Math.PI * 2;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    mg.aim += diff * Math.min(1, dt * 6);
+    mg.spinUp = Math.min(1, mg.spinUp + dt * 1.6);
+  } else {
+    mg.spinUp = Math.max(0, mg.spinUp - dt * 0.9);
+  }
+  mg.yoke.setRotation([0, -mg.aim * 57.2958 - 90, 0]);
+  mg.spin += dt * MINIGUN.spin * mg.spinUp;
+  mg.cluster.setRotation([mg.spin * 57.2958, 0, 0]);
+
+  if (!best || mg.spinUp < 0.65) return;
+
+  /* Spend the rounds the clock says are due. Capped per frame so a hitch
+     cannot dump a whole magazine into one body in a single step. */
+  mg.owed += dt * (MINIGUN.rpm / 60) * mg.spinUp;
+  const shots = Math.min(Math.floor(mg.owed), 90);
+  if (shots <= 0) return;
+  mg.owed -= shots;
+  const zp = best.actor.position;
+  const muzzle = [M[0] + Math.cos(mg.aim) * 0.55, M[1] + 0.62, M[2] + Math.sin(mg.aim) * 0.55];
+  hurtZombie(game, S, best, MINIGUN.dmg * shots, [zp.x, zp.y + 1.0, zp.z], false, 'bullet');
+  S.addPoints(Math.round(ECONOMY.hit * 0.15 * shots));
+  if (best.dead) S.addPoints(ECONOMY.kill);
+  // One flash and one burst of sparks a frame, however many rounds went.
+  game.particles.sparks(muzzle, { count: 4, speed: 9, color: 0xffd27a, colorEnd: 0x6a2a08 });
+  game.particles.sparks([zp.x, zp.y + 1.0, zp.z], { count: 3, speed: 3, color: 0x7a1610, colorEnd: 0x2c0605 });
+  mg.flash = mg.flash || game.light({ at: muzzle, color: 0xffc061, intensity: 0, radius: 6 });
+  mg.flash.position.set(muzzle[0], muzzle[1], muzzle[2]);
+  mg.flash.intensity = 70;
+  if (!mg.sfxT || mg.sfxT <= 0) { sfx.shotSmg(); mg.sfxT = 0.05; }
+  mg.sfxT -= dt;
+}
+
 /* A shot that goes into the rock wakes it up. Checked against the shot's
    own ray rather than against the physics world, because the rock is a
    dozen static spheres and any one of them is a hit. */
@@ -4315,6 +4468,20 @@ function nearestInteract(S, P) {
   if (!S.powered && dist2d(p, { x: S.powerSwitch.at[0], z: S.powerSwitch.at[2] }) < R) {
     return { kind: 'power', cost: 0, label: 'Start the generator' };
   }
+  /* The minigun. Buying it starts a clock, not a weapon: you cannot carry
+     it and you cannot aim it, and three minutes is long enough that the
+     round it covers is a choice worth making. */
+  const mg = S.minigun;
+  if (mg && dist2d(p, { x: mg.at[0], z: mg.at[2] }) < R + 0.6 && Math.abs(p.y - mg.at[1]) < 2.2) {
+    if (mg.t > 0) {
+      return { kind: 'mgOn', cost: 0, inert: true,
+        label: `Minigun — ${Math.ceil(mg.t)}s left` };
+    }
+    if (!S.powered) return { kind: 'mgOn', cost: 0, inert: true, label: 'No power to the roof' };
+    if (mg.cool > 0) return { kind: 'mgOn', cost: 0, inert: true, label: `Minigun — cooling, ${Math.ceil(mg.cool)}s` };
+    return { kind: 'minigun', cost: MINIGUN.cost, label: `Minigun — ${MINIGUN.cost}   (three minutes)` };
+  }
+
   /* The upgrade cradle. Three seconds with the gun in the rock and it
      comes back out with twice the damage, twice the magazine and a name
      nobody sanctioned. It will not take a wonder weapon and it will not
@@ -4336,7 +4503,9 @@ function nearestInteract(S, P) {
 
   const c = S.crate;
   if (dist2d(p, { x: c.at[0], z: c.at[2] }) < R + 0.4) {
-    if (c.offer) return { kind: 'take', cost: 0, label: `Take ${WEAPONS[c.offerId].name}` };
+    // Nothing to take while the reel is still turning over.
+    if (c.offer && !(c.reelT > 0)) return { kind: 'take', cost: 0, label: `Take ${WEAPONS[c.offerId].name}` };
+    if (c.offer) return { kind: 'crateSpin', cost: 0, inert: true, label: 'Wait for it' };
     if (!c.busy) return { kind: 'crate', cost: c.cost, label: `Supply crate — ${c.cost}` };
   }
   // Window repair.
@@ -4458,6 +4627,12 @@ function doInteract(game, S, P, hud, sfx, it, dt) {
     sfx.buy();
   } else if (it.kind === 'benchNo') {
     hud.banner('NOTHING FITS THAT', '#c8562e');
+  } else if (it.kind === 'minigun') {
+    S.points -= it.cost; sfx.buy();
+    S.minigun.t = MINIGUN.time;
+    S.minigun.owed = 0;
+    hud.points(S.points);
+    hud.banner('THREE MINUTES', '#ffd27a');
   } else if (it.kind === 'meteor') {
     /* The gun goes into the cradle and the player stands there without one
        for three seconds, which is the whole cost of the thing — five
@@ -4527,6 +4702,40 @@ function doInteract(game, S, P, hud, sfx, it, dt) {
   }
 }
 
+/* Every gun the box can give you, built once and kept. Spawning eight
+   weapons on each open would allocate eight sets of actors every time and
+   destroy them again; the meshes are cached by the engine anyway, so the
+   only thing that costs is the actors, and they are worth keeping. */
+const CRATE_POOL = ['thompson', 'scatter', 'arc', 'obliterator', 'mauser', 'blaze', 'ram', 'shield'];
+
+function crateDisplay(game, id) {
+  if (id === 'thompson') { const t = game.thompson({ physics: false }); return { root: t, parts: [t, t.wood, t.slide, t.mag].filter(Boolean) }; }
+  if (id === 'blaze') {
+    const t = game.pistol1911({ physics: false, engrave: 'Blaze',
+      gripMaterial: { color: 0x8f1c10, texture: 'smooth', roughness: 0.50, metalness: 0 } });
+    return { root: t, parts: [t, t.grips, t.slide, t.mag, t.mark].filter(Boolean) };
+  }
+  if (id === 'ram') return makeBatteringRam(game);
+  if (id === 'shield') return makeRiotShield(game);
+  if (id === 'scatter') return makeScattergun(game);
+  if (id === 'obliterator') return makeObliterator(game);
+  if (id === 'mauser') return makeMauser(game);
+  return makeArcProjector(game);
+}
+
+function crateReel(game, S) {
+  const c = S.crate;
+  if (c.reel) return c.reel;
+  c.reel = {};
+  for (const id of CRATE_POOL) {
+    const d = crateDisplay(game, id);
+    d.root.setPosition([c.at[0], c.at[1] + 0.2, c.at[2]]);
+    for (const q of d.parts) q.visible = false;
+    c.reel[id] = d;
+  }
+  return c.reel;
+}
+
 function openCrate(game, S, P, hud, sfx) {
   const c = S.crate;
   c.busy = true;
@@ -4539,33 +4748,60 @@ function openCrate(game, S, P, hud, sfx) {
     : (roll < 0.30 ? 'thompson' : roll < 0.54 ? 'scatter' : roll < 0.72 ? 'mauser'
       : roll < 0.88 ? 'blaze' : 'arc');
   S.voice(LINES.crateOpen);
-  // Lid swings, the prize rises out of the box glowing.
+  // Lid swings, and the reel starts turning over.
   c.lid.setRotation([0, 0, -70]);
   c.lid.setPosition([c.at[0] - 0.45, c.at[1] + 0.75, c.at[2]]);
-  let disp;
-  if (c.offerId === 'thompson') { const t = game.thompson({ physics: false }); disp = { root: t, parts: t.wood ? [t.wood] : [] }; }
-  else if (c.offerId === 'blaze') { const t = game.pistol1911({ physics: false, engrave: 'Blaze' }); disp = { root: t, parts: t.grips ? [t.grips, t.slide, t.mag, t.mark] : [] }; }
-  else if (c.offerId === 'ram') disp = makeBatteringRam(game);
-  else if (c.offerId === 'shield') disp = makeRiotShield(game);
-  else if (c.offerId === 'scatter') disp = makeScattergun(game);
-  else if (c.offerId === 'obliterator') disp = makeObliterator(game);
-  else if (c.offerId === 'mauser') disp = makeMauser(game);
-  else disp = makeArcProjector(game);
-  disp.root.setPosition([c.at[0], c.at[1] + 0.2, c.at[2]]);
-  c.offer = disp;
+
+  /* The reel. Every gun the box can hand out flashes past before it stops,
+     which is the whole ritual of the thing — the box is not a random
+     number, it is eight seconds of hoping. */
+  crateReel(game, S);
+  c.offer = c.reel[c.offerId];
+  c.reelT = 2.6;                 // how long it flashes before it settles
+  c.reelStep = 0;
+  c.reelIdx = 0;
   c.rise = 0;
-  c.timer = 8;
+  c.timer = 8 + c.reelT;
   c.glow = game.light({ at: [c.at[0], c.at[1] + 1, c.at[2]], color: 0x86e2ff, intensity: 70, radius: 6 });
   let spins = 0;
   c.spinInterval = setInterval(() => { sfx.crateSpin(); if (++spins > 10) { clearInterval(c.spinInterval); c.spinInterval = null; } }, 160);
 }
 
+/* One frame of the reel: show one gun, hide the rest, and slow down as it
+   runs out — a reel that stops dead is a list, a reel that decelerates is
+   a decision being made. */
+function updateCrateReel(game, S, dt, sfx) {
+  const c = S.crate;
+  if (!c.reel || c.reelT == null || c.reelT <= 0) return false;
+  c.reelT -= dt;
+  const u = 1 - Math.max(0, c.reelT) / 2.6;
+  const every = 0.045 + u * u * 0.34;            // slows toward the end
+  c.reelStep -= dt;
+  if (c.reelStep <= 0) {
+    c.reelStep = every;
+    c.reelIdx = (c.reelIdx + 1) % CRATE_POOL.length;
+    if (sfx && sfx.crateSpin && u > 0.5) sfx.crateSpin();
+  }
+  const showing = c.reelT <= 0 ? c.offerId : CRATE_POOL[c.reelIdx];
+  for (const id of CRATE_POOL) {
+    const on = id === showing;
+    for (const q of c.reel[id].parts) q.visible = on;
+    if (on) {
+      c.reel[id].root.setPosition([c.at[0], c.at[1] + 0.55, c.at[2]]);
+      c.reel[id].root.setRotation([0, (S.time * 90) % 360, 0]);
+    }
+  }
+  if (c.reelT <= 0) { c.reelT = 0; if (sfx && sfx.buy) sfx.buy(); }
+  return true;
+}
+
 function closeCrate(S) {
   const c = S.crate;
-  if (c.offer) { for (const p of c.offer.parts) p.destroy(); c.offer.root.destroy(); }
+  // The reel is kept between opens, so putting a gun away is hiding it.
+  if (c.reel) for (const id of CRATE_POOL) for (const q of c.reel[id].parts) q.visible = false;
   if (c.glow) { c.glow._decay = 0.05; c.glow = null; }   // engine sweeps it out
   if (c.spinInterval) { clearInterval(c.spinInterval); c.spinInterval = null; }
-  c.offer = null; c.offerId = null; c.busy = false;
+  c.offer = null; c.offerId = null; c.busy = false; c.reelT = 0;
   c.lid.setRotation([0, 0, 0]);
   c.lid.setPosition([c.at[0], c.at[1] + 0.44, c.at[2]]);
 }
@@ -4876,9 +5112,9 @@ function makeHud() {
           + '</p><dl>'
           + rows.map(([k, t]) => `<dt>${k}</dt><dd>${t}</dd>`).join('')
           + '</dl>'
-          + '<div class="pad">Controller &nbsp; <b>' + (state.picking ? 'Stick ↑↓' : 'Stick ←→')
+          + '<div class="pad">Controller<br><b>' + (state.picking ? 'Stick ↑↓' : 'Stick ←→')
           + '</b> move &nbsp; <b>X</b> ' + (state.picking ? 'fit' : 'open')
-          + ' &nbsp; <b>R2</b> damage &nbsp; <b>◯</b> back</div>';
+          + '<br><b>R2</b> damage &nbsp; <b>◯</b> back</div>';
       }
 
       // The damage diagram, on a hold.
@@ -5461,6 +5697,24 @@ function start(opts = {}) {
           }
         }
         const spec2 = P.specFor(held);
+        /* A light on the weapon itself while it is up.
+
+           The bench is in the darkest corner of the room by design, which
+           is fine for standing at and useless for looking at a gun: on the
+           inspection screen the whole point is that you can see what you
+           just bolted to it. The light rides with the weapon rather than
+           sitting on the bench, so it works wherever the pose puts it. */
+        if (!bench.inspect) {
+          bench.inspect = game.light({ at: bench.at, color: 0xfff2dc, intensity: 0, radius: 3.2 });
+        }
+        {
+          const rp = root ? root.position : null;
+          const cp = game.camera.position;
+          if (rp) {
+            bench.inspect.position.set(rp.x + (cp.x - rp.x) * 0.45, rp.y + 0.34, rp.z + (cp.z - rp.z) * 0.45);
+            bench.inspect.intensity = 26;
+          }
+        }
         hud.bench({
           weapon: spec2.name, slot, options, index: bench.index, points: S.points,
           marks, preview: bench.preview, picking: bench.picking,
@@ -5472,6 +5726,7 @@ function start(opts = {}) {
         });
       } else if (bench) {
         hud.bench(null);
+        if (bench.inspect) bench.inspect.intensity = 0;
       }
       /* Swapping. The knife and the hammer are temporary slots pushed onto
          the end of the list, so the two carried weapons are always slots 0
@@ -5664,6 +5919,7 @@ function start(opts = {}) {
       }
     }
 
+    updateMinigun(game, S, P, hud, sfx, dt);
     updateMeteor(game, S, P, hud, sfx, dt);
 
     /* The eighteen carat conveyor. Nothing announces the conditions; the
@@ -5813,13 +6069,19 @@ function start(opts = {}) {
     }
     if (S.mulT > 0) { S.mulT -= dt; if (S.mulT <= 0) S.mul = 1; }
 
-    /* Crate lifecycle. */
+    /* Crate lifecycle: the reel turns over first, and only when it has
+       settled does the gun it landed on rise out of the box. */
     const c = S.crate;
     if (c.offer) {
-      c.rise = Math.min(1, c.rise + dt / 2.2);
-      c.offer.root.setPosition([c.at[0], c.at[1] + 0.2 + c.rise * 0.85, c.at[2]]);
-      c.offer.root.setRotation([0, S.time * 40 % 360, 0]);
       c.timer -= dt;
+      if (updateCrateReel(game, S, dt, sfx)) {
+        // Still turning. Nothing rises while it is undecided.
+        c.rise = 0;
+      } else {
+        c.rise = Math.min(1, c.rise + dt / 1.6);
+        c.offer.root.setPosition([c.at[0], c.at[1] + 0.55 + c.rise * 0.50, c.at[2]]);
+        c.offer.root.setRotation([0, S.time * 40 % 360, 0]);
+      }
       if (c.timer <= 0) closeCrate(S);
     }
 
