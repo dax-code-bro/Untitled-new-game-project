@@ -328,7 +328,7 @@ const WEAPONS = {
     sightH: 0.098, sightFov: 0.34, adsTime: 0.34, adsSpread: 0.03,
     recoil: { up: 3.4, side: 0.8, climb: 0.20, recover: 7 },
     moveMul: 0.90, muzzleVel: 800,
-    hands: { right: [-0.014, -0.046, 0.016], left: [0.300, -0.030, -0.020] },
+    hands: { right: [-0.012, -0.028, 0.016], left: [0.300, -0.006, -0.021] },
   },
   /* The Kill Streak. Two millimetres of bore inside forty of steel, and a
      thousand behind every one of the three rounds it holds. It goes
@@ -343,7 +343,7 @@ const WEAPONS = {
     sightH: 0.116, sightFov: 0.20, adsTime: 0.46, adsSpread: 0.015,
     recoil: { up: 7.5, side: 1.6, climb: 1.30, recover: 5 },
     moveMul: 0.78, muzzleVel: 1400,
-    hands: { right: [-0.014, -0.048, 0.016], left: [0.330, -0.036, -0.020] },
+    hands: { right: [-0.012, -0.030, 0.016], left: [0.357, -0.007, -0.021] },
   },
   /* Belt-fed, twelve hundred a minute, and it weighs as much as the door
      it is standing behind. Fifty rounds go in about two and a half
@@ -356,7 +356,7 @@ const WEAPONS = {
     sightH: 0.1235, sightFov: 0.86, adsTime: 0.34, adsSpread: 0.30,
     recoil: { up: 0.55, side: 0.42, climb: 0.16, recover: 9 },
     moveMul: 0.76, muzzleVel: 755,
-    hands: { right: [-0.014, -0.050, 0.016], left: [0.330, -0.052, -0.020] },
+    hands: { right: [-0.012, -0.032, 0.016], left: [0.400, -0.008, -0.022] },
   },
   /* The two answers to plate. Both are melee, both are slow, and both are
      mystery-box only — you do not get to plan for an armoured runner, you
