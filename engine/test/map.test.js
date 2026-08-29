@@ -205,8 +205,22 @@ function check(name, cond, detail = '') {
     const out = [];
     const S = B.S, P = B.P;
     B.game.step(1 / 60);
+    /* One weapon per reload kind, not all seventeen. The bug belongs to the
+     * kind — it is the shape of the code that drives the animation, and every
+     * gun sharing a kind shares that code. Stepping seventeen full reloads
+     * through the whole map costs minutes and proves the same thing five
+     * times over. */
+    const seen = {};
+    const pick = [];
     for (const id of Object.keys(B.P.view)) {
-      if (!__T_WEAPONS[id] || __T_WEAPONS[id].melee || !__T_WEAPONS[id].mag) continue;
+      const w = __T_WEAPONS[id];
+      if (!w || w.melee || !w.mag) continue;
+      const k = w.reloadKind || 'mag';
+      if (seen[k]) continue;
+      seen[k] = 1;
+      pick.push(id);
+    }
+    for (const id of pick) {
       P.give(id);
       P.slot = P.slots.indexOf(id);
       if (P.slot < 0) continue;

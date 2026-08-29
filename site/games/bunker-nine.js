@@ -2913,7 +2913,8 @@ function makePlayer(game, S, hud, sfx, voice) {
     swingT: 0, blocking: false, blockT: 0,
     gold: 0, goldAmmo: false,
     upgraded: {}, camoOff: {}, fitted: {},
-    cooldown: 0, reloading: 0, reloadStage: 0, breakStage: 0, cylStage: 0, swayT: 0, kickPitch: 0,
+    cooldown: 0, reloading: 0, reloadStage: 0, breakStage: 0, cylStage: 0,
+    clipStage: 0, cellStage: 0, swayT: 0, kickPitch: 0,
     slideCycle: 0, slideCycleMax: 0.085,
     view: {}, muzzleT: 0, alive: true,
     // Aim, sprint and recoil state.
@@ -3484,12 +3485,17 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
         const t = Math.min(1, (u - 0.28) / 0.28);
         v.clip.setPosition([v.clipRest[0], v.clipRest[1] - 0.040 * t, v.clipRest[2]]);
       }
-      if (!P.clipIn && u > 0.30) { P.clipIn = true; sfx.magIn(); }
-      if (P.clipIn && u > 0.76) { P.clipIn = false; sfx.slideRelease(); }
+      /* A stage counter, and the fourth place this was a boolean. Set at
+         30% and cleared at 76% means the opening test passes again on the
+         very next frame, so the clip seats once a frame for the last
+         quarter of the reload. The reload test in engine/test/map.test.js
+         is what found these two; the other two were found in play. */
+      if (P.clipStage < 1 && u > 0.30) { P.clipStage = 1; sfx.clipIn(); }
+      if (P.clipStage < 2 && u > 0.76) { P.clipStage = 2; sfx.boltHome(); }
     } else {
       v.bolt.setPosition(R);
       v.clip.visible = false;
-      P.clipIn = false;
+      P.clipStage = 0;
     }
   }
 
@@ -3504,14 +3510,14 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
         c.setPosition([R[0] + D[0] * outAmt, R[1] + D[1] * outAmt, R[2] + D[2] * outAmt]);
         c.setRotation([0, 0, -22 * outAmt]);
       }
-      if (!P.cellOut && u > 0.10) { P.cellOut = true; sfx.magOut(); }
-      if (P.cellOut && u > 0.66) { P.cellOut = false; sfx.magIn(); }
+      if (P.cellStage < 1 && u > 0.10) { P.cellStage = 1; sfx.cellOut(); }
+      if (P.cellStage < 2 && u > 0.66) { P.cellStage = 2; sfx.cellIn(); }
       if (u > 0.86 && Math.random() < 0.4) {
         game.particles.sparks(P.muzzleWorld || [0, 0, 0], { count: 3, speed: 2.2, color: 0x7fd8ff, colorEnd: 0x1a3a4a });
       }
     } else {
       for (const c of CP) { c.setPosition(R); c.setRotation([0, 0, 0]); }
-      P.cellOut = false;
+      P.cellStage = 0;
     }
   }
 
@@ -4066,6 +4072,8 @@ function tryReload(P, sfx, S) {
   P.reloadStage = 0;
   P.breakStage = 0;
   P.cylStage = 0;
+  P.clipStage = 0;
+  P.cellStage = 0;
   sfx.magRelease();
   if (S && S.bark) S.bark('reload');
 }
