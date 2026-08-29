@@ -261,6 +261,9 @@ class Engine {
     parseColor(cfg.fog, r.fog.color);
     if (cfg.fogDensity != null) r.fog.density = cfg.fogDensity;
     if (cfg.exposure != null) r.post.exposure = cfg.exposure;
+    // The reflection environment for anything under a roof. Left alone by
+    // the presets, since only a game with interiors knows it needs one.
+    if (cfg.room != null) parseColor(cfg.room, r.sky.room);
     this.skyName = typeof name === 'string' ? name : 'custom';
     return this;
   }

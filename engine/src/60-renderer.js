@@ -117,6 +117,10 @@ class Renderer {
       ground: new Vec3(0.26, 0.24, 0.22),
       intensity: 1.0,
       clouds: 0.4,
+      /* What a mirror sees when it is indoors and the sky is not an answer.
+         Zero outdoors; a game with interiors sets it to roughly the colour
+         and brightness of its lit walls. */
+      room: new Vec3(0, 0, 0),
     };
     this.fog = {
       color: new Vec3(0.62, 0.72, 0.85),
@@ -273,6 +277,7 @@ class Renderer {
     sh.v3('uSunColor', this.sun.color);
     sh.f('uSunIntensity', this.sun.intensity);
     sh.f('uSkyIntensity', this.sky.intensity);
+    sh.v3('uRoomAmbient', this.sky.room);
     sh.v3('uFogColor', this.fog.color);
     sh.f('uFogDensity', this.fog.density);
     sh.f('uFogHeight', this.fog.height);

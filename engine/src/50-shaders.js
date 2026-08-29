@@ -62,6 +62,17 @@ uniform vec3 uSunDir;
 uniform vec3 uSunColor;
 uniform float uSunIntensity;
 uniform float uSkyIntensity;
+/* A stand-in for a reflection probe.
+
+   The sky doubles as the environment for every metal, which works outdoors
+   and fails completely inside a building: the shader has no occlusion, so a
+   receiver indoors reflects a sky it cannot see, and because that reflection
+   arrives from a direction the walls are actually in, what it mostly gets is
+   the dim ground term. A metal has no diffuse to fall back on, so it comes
+   out as a silhouette — which is what every dark gun in a lamp-lit room was
+   doing. This is the room itself: the lit walls a lamp is bouncing off are,
+   to a mirror, the environment. */
+uniform vec3 uRoomAmbient;
 
 vec3 skyRadiance(vec3 dir){
   float up = dir.y;
@@ -490,7 +501,7 @@ void main(){
   vec3 kD = (vec3(1.0) - kS) * (1.0 - metal);
   vec3 R = reflect(-V, N);
   // Rough surfaces reflect an increasingly averaged sky.
-  vec3 envSpec = mix(skyRadiance(R), skyIrradiance(N), rough * rough);
+  vec3 envSpec = mix(skyRadiance(R), skyIrradiance(N), rough * rough) + uRoomAmbient;
   color += (kD * diffuseColor * irradiance + envSpec * envBRDFApprox(F0, rough, NoV)) * ao;
 
   /* --- punctual lights --- */

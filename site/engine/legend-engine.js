@@ -2316,6 +2316,17 @@ uniform vec3 uSunDir;
 uniform vec3 uSunColor;
 uniform float uSunIntensity;
 uniform float uSkyIntensity;
+/* A stand-in for a reflection probe.
+
+   The sky doubles as the environment for every metal, which works outdoors
+   and fails completely inside a building: the shader has no occlusion, so a
+   receiver indoors reflects a sky it cannot see, and because that reflection
+   arrives from a direction the walls are actually in, what it mostly gets is
+   the dim ground term. A metal has no diffuse to fall back on, so it comes
+   out as a silhouette — which is what every dark gun in a lamp-lit room was
+   doing. This is the room itself: the lit walls a lamp is bouncing off are,
+   to a mirror, the environment. */
+uniform vec3 uRoomAmbient;
 
 vec3 skyRadiance(vec3 dir){
   float up = dir.y;
@@ -2744,7 +2755,7 @@ void main(){
   vec3 kD = (vec3(1.0) - kS) * (1.0 - metal);
   vec3 R = reflect(-V, N);
   // Rough surfaces reflect an increasingly averaged sky.
-  vec3 envSpec = mix(skyRadiance(R), skyIrradiance(N), rough * rough);
+  vec3 envSpec = mix(skyRadiance(R), skyIrradiance(N), rough * rough) + uRoomAmbient;
   color += (kD * diffuseColor * irradiance + envSpec * envBRDFApprox(F0, rough, NoV)) * ao;
 
   /* --- punctual lights --- */
@@ -3385,6 +3396,10 @@ class Renderer {
       ground: new Vec3(0.26, 0.24, 0.22),
       intensity: 1.0,
       clouds: 0.4,
+      /* What a mirror sees when it is indoors and the sky is not an answer.
+         Zero outdoors; a game with interiors sets it to roughly the colour
+         and brightness of its lit walls. */
+      room: new Vec3(0, 0, 0),
     };
     this.fog = {
       color: new Vec3(0.62, 0.72, 0.85),
@@ -3541,6 +3556,7 @@ class Renderer {
     sh.v3('uSunColor', this.sun.color);
     sh.f('uSunIntensity', this.sun.intensity);
     sh.f('uSkyIntensity', this.sky.intensity);
+    sh.v3('uRoomAmbient', this.sky.room);
     sh.v3('uFogColor', this.fog.color);
     sh.f('uFogDensity', this.fog.density);
     sh.f('uFogHeight', this.fog.height);
@@ -10908,6 +10924,9 @@ class Engine {
     parseColor(cfg.fog, r.fog.color);
     if (cfg.fogDensity != null) r.fog.density = cfg.fogDensity;
     if (cfg.exposure != null) r.post.exposure = cfg.exposure;
+    // The reflection environment for anything under a roof. Left alone by
+    // the presets, since only a game with interiors knows it needs one.
+    if (cfg.room != null) parseColor(cfg.room, r.sky.room);
     this.skyName = typeof name === 'string' ? name : 'custom';
     return this;
   }

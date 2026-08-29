@@ -475,24 +475,32 @@ const CAST = {
 
    The frame-rate figures are the target the tier is aimed at, not a
    promise: they are what it should hold on the hardware it is meant for. */
+/* The four tiers.
+
+   The column beside each name used to promise a framerate — and had them
+   the wrong way round, so LOW advertised 30-50 and ULTRA 100-200, which is
+   backwards: the cheap setting is the fast one. No build can know what
+   frames a machine will turn in anyway, so the column says what a tier
+   costs relative to the others, which is the part that is actually true. */
 const GRAPHICS = {
   low: {
-    name: 'LOW', tier: 'low', target: '30–50 FPS',
+    name: 'LOW', tier: 'low', target: 'FASTEST',
     blurb: 'Simplest shapes. No bloom, no far battlefield, one shadow cascade.',
     far: false, decals: false, smoke: false, lamps: 5, particles: 0.35, shadows: true,
+    // Measured at roughly a quarter of Normal's frame time.
   },
   normal: {
-    name: 'NORMAL', tier: 'medium', target: '50–70 FPS',
+    name: 'NORMAL', tier: 'medium', target: 'BASELINE',
     blurb: 'What the game was built to look like.',
     far: true, decals: true, smoke: true, lamps: 99, particles: 1, shadows: true,
   },
   high: {
-    name: 'HIGH', tier: 'high', target: '60–100 FPS',
+    name: 'HIGH', tier: 'high', target: 'COSTS MORE',
     blurb: 'Sharper shadows, the full battlefield, every lamp.',
     far: true, decals: true, smoke: true, lamps: 99, particles: 1.3, shadows: true,
   },
   ultra: {
-    name: 'ULTRA', tier: 'ultra', target: '100–200 FPS',
+    name: 'ULTRA', tier: 'ultra', target: 'COSTS MOST',
     blurb: 'Rendered above the display and downsampled. Wants the hardware.',
     far: true, decals: true, smoke: true, lamps: 99, particles: 1.8, shadows: true,
   },
@@ -5582,6 +5590,18 @@ function start(opts = {}) {
     zenith: 0x7d7469, horizon: 0x9d9385, ground: 0x4c463b,
     sun: [0.35, 0.62, -0.70], sunColor: 0xffe0b4,
     sunIntensity: 1.6, exposure: 1.08, clouds: 0.55,
+    /* The reflection environment inside the bunker.
+
+       The sky doubles as the probe for every metal, and the shader has no
+       occlusion, so a receiver indoors reflects a sky it cannot see —
+       mostly the dim ground term, since that is the direction the walls are
+       in. A metal has no diffuse to fall back on, so the guns came out as
+       silhouettes: black shapes with a hard edge and a lamp glint. This is
+       the lit concrete standing in for the probe, in the lamps' colour and
+       at about their brightness off a wall. The value is a colour, so it is
+       read through the same sRGB curve as every other one here: 0x908c85 is
+       about 0.28 linear, which is what the sweep that chose it measured. */
+    room: 0x908c85,
   });
   game.renderer.post.vignette = 0.28;
   game.renderer.post.grain = 0.022;
