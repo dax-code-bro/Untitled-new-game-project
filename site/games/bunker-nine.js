@@ -1750,8 +1750,9 @@ function buildMap(game, S) {
   /* Daylight arrives as much from the whole smoke-lit sky as from the sun,
      and it is the sky term that lights every upward-facing surface — the
      roof deck most of all. At the night map's 1.5 the deck read as a black
-     slab under an overcast noon. */
-  game.renderer.sky.intensity = 2.2;
+     slab under an overcast noon; at 2.2 it read as standing water, which is
+     the same mistake from the other side. */
+  game.renderer.sky.intensity = 1.75;
   setPower(game, S, false);
 
   // No basement in this map. The workshop code is left in place and simply
@@ -4900,7 +4901,12 @@ function makeHud() {
   #b9hud .settings .opt { display:flex; justify-content:space-between; align-items:baseline;
     padding:9px 12px; border:1px solid transparent; font-size:15px; color:#c8bfa8; }
   #b9hud .settings .opt.sel { border-color:#ffd27a; background:rgba(255,210,122,.10); color:#ffd27a; }
-  #b9hud .settings .opt.on:after { content:'IN USE'; color:#8ce8a0; font-size:11px; margin-left:10px; }
+  /* The badge lives inside the right-hand column rather than after it.
+     Appended to the row it became a third flex item and shoved the frame
+     rate out of line with every other row. */
+  #b9hud .settings .opt .rt { display:flex; align-items:baseline; gap:12px;
+    justify-content:flex-end; min-width:150px; white-space:nowrap; }
+  #b9hud .settings .opt .use { color:#8ce8a0; font-size:11px; width:44px; text-align:right; }
   #b9hud .settings .opt .why { display:block; color:#8a8272; font-size:12px; margin-top:3px; }
   #b9hud .settings .opt .fps { color:#8ce8a0; font-size:12.5px; white-space:nowrap; }
   #b9hud .settings .sfoot { margin-top:16px; padding-top:11px; border-top:1px solid #4a4234;
@@ -5015,7 +5021,8 @@ function makeHud() {
         const g = GRAPHICS[k];
         const cls = ['opt', i === st.index ? 'sel' : '', k === st.current ? 'on' : ''].join(' ');
         return `<div class="${cls}"><span>${g.name}<span class="why">${g.blurb}</span></span>`
-          + `<span class="fps">${g.target}</span></div>`;
+          + `<span class="rt"><span class="fps">${g.target}</span>`
+          + `<span class="use">${k === st.current ? 'IN USE' : ''}</span></span></div>`;
       }).join('');
       els.sfoot.innerHTML = '<b>W / S</b> or <b>↑ ↓</b> choose &nbsp;·&nbsp; <b>F</b> or <b>ENTER</b> apply'
         + ' &nbsp;·&nbsp; <b>ESC</b> back to the fight'
@@ -5283,7 +5290,12 @@ function start(opts = {}) {
      neutral: warm it and the guns turn to brass. */
   game.setSky('day', {
     fogDensity: 0.013, fog: 0x8c8578,
-    zenith: 0x6f6f6a, horizon: 0x9a9184, ground: 0x4c463b,
+    /* The zenith was a neutral grey and the sky was turned up to 2.2, and
+       between them every up-facing surface in the map — the roof deck, the
+       mud, the top of every crate — came out pale and slightly cool while
+       the walls stayed warm. On a smoke-lit day that reads as standing
+       water. Warmer above, and less of it. */
+    zenith: 0x7d7469, horizon: 0x9d9385, ground: 0x4c463b,
     sun: [0.35, 0.62, -0.70], sunColor: 0xffe0b4,
     sunIntensity: 1.6, exposure: 1.08, clouds: 0.55,
   });
