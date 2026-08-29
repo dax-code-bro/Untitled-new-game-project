@@ -14382,57 +14382,147 @@ function buildMauserGrip(g) {
    you could lose a finger in.
    ============================================================ */
 
-const MOD5 = { muzzle: 0.2050, cylX0: -0.0060, cylX1: 0.0500, cylR: 0.0270, bore: 0.0064 };
+const MOD5 = {
+  muzzle: 0.2050,
+  cylX0: -0.0060, cylX1: 0.0500, cylR: 0.0270,
+  /* The chamber pitch radius, and therefore how far the bore sits ABOVE
+     the cylinder's axis.
+
+     The barrel used to run down the cylinder's own centreline, which meant
+     no chamber ever lined up with it: the four holes sat on a circle 14.8
+     mm out and the bore went through the middle of them. That is what made
+     the gun read as a barrel stuck on the front of a cylinder rather than
+     a revolver. On a real one the barrel is offset by exactly this, so the
+     chamber at twelve o'clock is the bore's continuation, and the top
+     strap has to arch over the cylinder to get above it. Everything about
+     a revolver's proportions falls out of this one number. */
+  pcd: 0.0148,
+  barR: 0.0140,
+  bore: 0.0127,                 // .50 -- half an inch, as the name says
+  chR: 0.0098,
+  gap: 0.0020,                  // the cylinder gap, and you can see through it
+};
+MOD5.boreY = MOD5.pcd;
+MOD5.barRear = MOD5.cylX1 + MOD5.gap;
+
+/* The sight line: over the top strap, which has to arch over a 54 mm
+   cylinder, so it sits high and the front sight is a tall ramp off the
+   vent rib. One constant; the rear leaf, the front blade and the mount all
+   read it rather than each having an opinion. */
+const MOD5_SIGHT = 0.0396;
+
+/* Where the hammer turns. The spur is 30 mm up and 21 mm back from here,
+   which is what puts it under the shooter's thumb. */
+const MOD5_HAMMER = [MOD5.cylX0 - 0.0420, 0.0060];
 
 function buildModel5Steel(g) {
   const K = MOD5;
-  /* Frame: top strap over the cylinder, standing breech behind it, forcing
-     cone in front. Three runs, because the cylinder window between them is
-     a gap rather than a section. */
-  sweepPath(g, [
-    ax(K.cylX0 - 0.006, roundRect(0.0055, 0.0055, 0.0110, 3.2, 20), K.cylR + 0.0060),
-    ax(K.cylX1 + 0.010, roundRect(0.0060, 0.0060, 0.0112, 3.2, 20), K.cylR + 0.0060),
-  ], true, true);
-  sweepPath(g, [                                        // recoil shield and grip frame
-    ax(K.cylX0 - 0.048, roundRect(0.0230, 0.0300, 0.0160, 3.0, 24), 0),
-    ax(K.cylX0 - 0.026, roundRect(K.cylR + 0.0115, 0.0300, 0.0175, 3.0, 24), 0),
-    ax(K.cylX0 - 0.004, roundRect(K.cylR + 0.0115, 0.0300, 0.0175, 3.0, 24), 0),
-  ], true, true);
-  sweepPath(g, [                                        // forcing cone
-    ax(K.cylX1 + 0.002, roundRect(K.cylR + 0.0110, 0.0250, 0.0170, 3.0, 24), 0),
-    ax(K.cylX1 + 0.020, roundRect(K.cylR + 0.0110, 0.0250, 0.0170, 3.0, 24), 0),
-  ], true, true);
-  // The floor under the window, joining the two halves of the frame.
-  hardBox(g, (K.cylX0 + K.cylX1) / 2, -K.cylR - 0.0060, 0, (K.cylX1 - K.cylX0) / 2 + 0.012, 0.0050, 0.0105);
+  const STRAP = 0.0352;               // top of the frame's top strap
 
-  /* Barrel: a heavy underlugged bull with a vent rib. */
+  /* Top strap: it arches over the cylinder to reach the bore, which is why
+     a revolver's rear sight sits so much higher than its barrel. */
+  sweepPath(g, [
+    ax(K.cylX0 - 0.008, roundRect(0.0040, 0.0044, 0.0108, 3.2, 20), STRAP - 0.0040),
+    ax(K.cylX1 + 0.014, roundRect(0.0040, 0.0046, 0.0112, 3.2, 20), STRAP - 0.0040),
+  ], true, true);
+
+  /* Recoil shield and grip frame: the standing breech the cases head
+     against, and the wall the hammer falls through. */
+  /* Raising the strap raised this too, and the frame's underside came up
+     five millimetres off the top of the grip: the gun floated over its own
+     handle. The bottom is pinned to -30 mm, where the grip's top is, and
+     only the top follows the strap. */
+  sweepPath(g, [
+    ax(K.cylX0 - 0.048, roundRect(0.0300, 0.0352, 0.0160, 3.0, 24), 0.0052),
+    ax(K.cylX0 - 0.026, roundRect(0.0300, 0.0352, 0.0175, 3.0, 24), 0.0052),
+    ax(K.cylX0 - 0.004, roundRect(0.0300, 0.0352, 0.0175, 3.0, 24), 0.0052),
+  ], true, true);
+  // The floor under the cylinder window, joining the two halves of the frame.
+  hardBox(g, (K.cylX0 + K.cylX1) / 2, -K.cylR - 0.0060, 0,
+    (K.cylX1 - K.cylX0) / 2 + 0.010, 0.0050, 0.0105);
+
+  /* The frame's nose: the boss the barrel screws into, bringing the top
+     strap down onto the bore. It starts 6 mm forward of the cylinder face,
+     so the cylinder gap and the forcing cone in front of it are both open
+     to the side, the way they are on a gun you could actually fire. */
+  sweepPath(g, [
+    ax(K.cylX1 + 0.006, roundRect(STRAP - K.boreY, 0.0168, 0.0158, 3.0, 22), K.boreY),
+    ax(K.cylX1 + 0.020, roundRect(STRAP - K.boreY - 0.0026, 0.0168, 0.0152, 3.0, 22), K.boreY),
+  ], true, true);
+
+  /* Barrel: a heavy bull tube on the bore line, its rear face stepped out
+     for the forcing cone, crowned at the muzzle. */
   tubeRun(g, [
-    [K.cylX1 + 0.014, 0.0135], [K.cylX1 + 0.030, 0.0135],
-    [K.muzzle - 0.008, 0.0128], [K.muzzle - 0.002, 0.0128],
-  ], 22, false, false);
-  crown(g, K.muzzle, 0.0128, K.bore / 2, 0.045, 0.0016);
-  sweepPath(g, [
-    ax(K.cylX1 + 0.016, roundRect(0.0075, 0.0130, 0.0100, 3.2, 18), -0.0110),
-    ax(K.muzzle - 0.030, roundRect(0.0075, 0.0130, 0.0100, 3.2, 18), -0.0110),
-    ax(K.muzzle - 0.002, roundRect(0.0075, 0.0110, 0.0095, 3.2, 18), -0.0110),
-  ], true, true);
-  sweepPath(g, [
-    ax(K.cylX1 + 0.016, roundRect(0.0038, 0.0090, 0.0072, 3.4, 16), 0.0135),
-    ax(K.muzzle - 0.002, roundRect(0.0038, 0.0090, 0.0072, 3.4, 16), 0.0135),
-  ], true, true);
-  for (let i = 0; i < 6; i++) {
-    hardBox(g, K.cylX1 + 0.034 + i * 0.0190, 0.0176, 0, 0.0058, 0.0016, 0.0044);
-  }
-  // Front ramp and the rear notch, on one line.
-  hardBox(g, K.muzzle - 0.016, 0.0198, 0, 0.0090, 0.0035, 0.0032);
-  hardBox(g, K.muzzle - 0.016, 0.0244, 0, 0.0016, 0.0040, 0.0014);
-  hardBox(g, K.cylX0 - 0.012, K.cylR + 0.0130, 0, 0.0075, 0.0035, 0.0090);
-  for (const s of [-1, 1]) hardBox(g, K.cylX0 - 0.012, K.cylR + 0.0160, s * 0.0062, 0.0075, 0.0026, 0.0028);
+    [K.barRear, 0.0158], [K.barRear + 0.0055, 0.0158],
+    [K.barRear + 0.0090, K.barR], [K.muzzle - 0.010, K.barR],
+    [K.muzzle - 0.002, K.barR],
+  ], 24, true, false, K.boreY);
+  crown(g, K.muzzle, K.barR, K.bore / 2, 0.045, 0.0018);
+  // The cone itself, standing in the gap: a short funnel off the breech
+  // face, which is the detail that says a bullet jumps this gap.
+  spin(g, [
+    [K.barRear - 0.0004, 0], [K.barRear - 0.0004, 0.0104],
+    [K.barRear + 0.0090, 0.0082], [K.barRear + 0.0090, 0],
+  ], 20, 30, K.boreY, 0);
 
-  /* Hammer, spurred and checkered, behind the breech. */
-  hardBox(g, K.cylX0 - 0.046, 0.0230, 0, 0.0120, 0.0060, 0.0038);
-  hardBox(g, K.cylX0 - 0.054, 0.0290, 0, 0.0080, 0.0035, 0.0055);
-  for (let i = 0; i < 5; i++) hardBox(g, K.cylX0 - 0.062 + i * 0.0028, 0.0322, 0, 0.0009, 0.0012, 0.0050);
+  /* Full-length underlug, the shape this gun is named for: a slab under
+     the barrel running unbroken to the muzzle, deep enough to swallow the
+     ejector rod when the cylinder is shut. */
+  /* Slab-sided and flat-bottomed, a touch wider than the barrel, so there
+     is a shoulder where the two meet. Narrower and round it blended into
+     the barrel and the pair read as one fat tube -- the Python's lug is
+     the line down the side of the gun, and a lug you cannot see is not
+     one. */
+  sweepPath(g, [
+    ax(K.cylX1 + 0.008, roundRect(0.0104, 0.0130, 0.0146, 4.6, 22), -0.0010),
+    ax(K.cylX1 + 0.030, roundRect(0.0104, 0.0138, 0.0148, 4.6, 22), -0.0010),
+    ax(K.muzzle - 0.024, roundRect(0.0104, 0.0138, 0.0148, 4.6, 22), -0.0010),
+    ax(K.muzzle - 0.002, roundRect(0.0104, 0.0126, 0.0144, 4.6, 22), -0.0010),
+  ], true, true);
+  // The rod's mouth at the front of the lug, where its knurled tip shows.
+  spin(g, [
+    [K.muzzle - 0.014, 0], [K.muzzle - 0.014, 0.0074],
+    [K.muzzle - 0.002, 0.0074], [K.muzzle - 0.002, 0],
+  ], 18, 30, -0.0010, 0);
+
+  /* Vent rib: two rails down the barrel's crown with the slots open
+     between them. Built as raised bars on a solid strip it read as a
+     ladder lying on the barrel; a vent rib is a roof with holes in it, so
+     the holes are the gaps between the cross pieces. */
+  const ribY = K.boreY + K.barR, ribTop = ribY + 0.0034;
+  const rib0 = K.cylX1 + 0.022, rib1 = K.muzzle - 0.002;
+  for (const rz of [-1, 1]) {
+    sweepPath(g, [
+      ax(rib0, roundRect(0.0017, 0.0034, 0.0018, 3.0, 12), ribTop - 0.0017, rz * 0.0064),
+      ax(rib1, roundRect(0.0017, 0.0034, 0.0018, 3.0, 12), ribTop - 0.0017, rz * 0.0064),
+    ], true, true);
+  }
+  const bays = 7, bayL = (rib1 - rib0) / bays;
+  for (let i = 0; i <= bays; i++) {
+    hardBox(g, rib0 + i * bayL, ribTop - 0.0017, 0, 0.0026, 0.0017, 0.0064);
+  }
+
+  /* Front sight: a ramp off the rib carrying a blade whose tip finishes on
+     the sight line -- not a millimetre over it, which is a gun that shoots
+     low by however far over it is. */
+  sweepPath(g, [
+    ax(K.muzzle - 0.034, roundRect(0.0004, 0.0030, 0.0034, 2.8, 14), ribTop),
+    ax(K.muzzle - 0.018, roundRect(MOD5_SIGHT - ribTop - 0.0036, 0.0030, 0.0038, 2.8, 14), ribTop),
+    ax(K.muzzle - 0.012, roundRect(MOD5_SIGHT - ribTop - 0.0036, 0.0030, 0.0038, 2.8, 14), ribTop),
+  ], true, true);
+  hardBox(g, K.muzzle - 0.015, MOD5_SIGHT - 0.0018, 0, 0.0018, 0.0018, 0.0016);
+
+  /* Rear sight: an adjustable leaf on the top strap, its notch open to the
+     sky and its shoulders standing either side of the line. */
+  const rx = K.cylX0 - 0.012;
+  hardBox(g, rx, (STRAP + MOD5_SIGHT) / 2 - 0.0008, 0, 0.0090, (MOD5_SIGHT - STRAP) / 2 + 0.0008, 0.0092);
+  hardBox(g, rx, MOD5_SIGHT - 0.0014, 0, 0.0080, 0.0014, 0.0034);          // notch floor
+  for (const sd of [-1, 1]) {
+    hardBox(g, rx, MOD5_SIGHT + 0.0022, sd * 0.0056, 0.0080, 0.0040, 0.0022);
+  }
+  // Windage and elevation screws, because an adjustable sight has them.
+  strut(g, [rx - 0.0092, MOD5_SIGHT - 0.0030, 0], [rx - 0.0064, MOD5_SIGHT - 0.0030, 0], ringOutline(0.0022, 10));
+  strut(g, [rx, MOD5_SIGHT + 0.0010, -0.0090], [rx, MOD5_SIGHT + 0.0010, -0.0064], ringOutline(0.0020, 10));
 
   /* Trigger in its guard, under the breech. */
   guardBow(g, [
@@ -14447,10 +14537,40 @@ function buildModel5Steel(g) {
   strut(g, [K.cylX1 + 0.004, -0.0150, -0.0150], [K.cylX1 + 0.026, -0.0150, -0.0150], ringOutline(0.0056, 14));
 }
 
+/* The hammer, and it is its own part because the player's thumb pulls it
+   back before every shot. Built about its pivot so the game can swing it
+   with the same rotate-about-a-pin arithmetic the cylinder uses. */
+function buildModel5Hammer(g) {
+  const K = MOD5, px = MOD5_HAMMER[0], py = MOD5_HAMMER[1];
+  // The body, rising from the pivot to behind the strap.
+  sweepPath(g, [
+    ax(px - 0.0052, roundRect(0.0230, 0.0090, 0.0044, 2.8, 16), py),
+    ax(px + 0.0052, roundRect(0.0230, 0.0090, 0.0044, 2.8, 16), py),
+  ], true, true);
+  /* The spur, swept back and up behind the strap where a thumb can reach
+     it -- and finishing UNDER the sight line, because at rest it sits
+     directly between the eye and the rear sight. Two and a half
+     millimetres of clearance: a hammer you have to look over is a hammer
+     you cannot aim past. */
+  sweepPath(g, [
+    ax(px - 0.0010, roundRect(0.0044, 0.0044, 0.0042, 2.6, 14), py + 0.0198),
+    ax(px - 0.0150, roundRect(0.0046, 0.0046, 0.0050, 2.6, 14), py + 0.0236),
+    ax(px - 0.0250, roundRect(0.0040, 0.0040, 0.0054, 2.6, 14), py + 0.0238),
+  ], true, true);
+  // Checkering on the spur's top, which is the surface the thumb is on.
+  for (let i = 0; i < 5; i++) {
+    hardBox(g, px - 0.0272 + i * 0.0032, py + 0.0280, 0, 0.0010, 0.0012, 0.0050);
+  }
+  // The nose that reaches the firing pin, and the pivot boss itself.
+  hardBox(g, px + 0.0064, py + 0.0210, 0, 0.0030, 0.0044, 0.0034);
+  strut(g, [px, py, -0.0048], [px, py, 0.0048], ringOutline(0.0062, 14));
+  void K;
+}
+
 /* The cylinder: four chambers, fluted between them, its own actor so it
    can swing out on the crane. */
 function buildModel5Cylinder(g) {
-  const K = MOD5, N = 4, chR = 0.0098, pcd = 0.0148;
+  const K = MOD5, N = 4, chR = K.chR, pcd = K.pcd;
   spin(g, [
     [K.cylX0, 0], [K.cylX0, 0.0090], [K.cylX0 - 0.0080, 0.0090], [K.cylX0 - 0.0080, 0],
   ], 18, 36);
@@ -14459,7 +14579,12 @@ function buildModel5Cylinder(g) {
     [K.cylX1 - 0.0025, K.cylR], [K.cylX1, K.cylR - 0.0025], [K.cylX1, 0],
   ], 30, 36);
   for (let i = 0; i < N; i++) {
-    const th = i * TAU / N + PI / 4;
+    /* Chamber zero sits at twelve o'clock, on the bore. The angles used to
+       start at 45 degrees, so the four chambers straddled the top and the
+       barrel looked through the steel between two of them. A revolver is
+       the one gun where the barrel has to agree with the cylinder about
+       where a chamber is, and this is where they agree. */
+    const th = i * TAU / N;
     const cy = Math.cos(th) * pcd, cz = Math.sin(th) * pcd;
     // A bored chamber, open at the muzzle end, with a case head showing at
     // the back — four holes you can see into is the whole point of it.
@@ -14477,9 +14602,12 @@ function buildModel5Cylinder(g) {
       [K.cylX1 - 0.0080, 0.0100], [K.cylX1 - 0.0080, 0],
     ], 14, 34, fy, fz);
   }
-  // Ejector rod, standing forward under the barrel.
-  spin(g, [[K.cylX1, 0], [K.cylX1, 0.0042], [K.cylX1 + 0.030, 0.0042],
-           [K.cylX1 + 0.034, 0.0060], [K.cylX1 + 0.038, 0]], 14, 36);
+  /* Ejector rod, standing forward on the cylinder's own axis — which is
+     now below the bore, so it runs inside the underlug when the gun is
+     shut and comes out with the cylinder when it is opened. That is the
+     whole reason a full-lug revolver has a lug. */
+  spin(g, [[K.cylX1, 0], [K.cylX1, 0.0042], [K.muzzle - 0.020, 0.0042],
+           [K.muzzle - 0.016, 0.0058], [K.muzzle - 0.012, 0]], 14, 36);
 }
 
 /* Grips: rubber, finger-grooved, wrapping the backstrap. */
@@ -15655,19 +15783,28 @@ Engine.prototype.model5 = function (opts = {}) {
     const steel = new Geometry(); buildModel5Steel(steel);
     const grip = new Geometry(); buildModel5Grip(grip);
     const cylinder = new Geometry(); buildModel5Cylinder(cylinder);
-    return fin({ steel, grip, cylinder }, MOD5_ORIGIN);
+    const hammer = new Geometry(); buildModel5Hammer(hammer);
+    return fin({ steel, grip, cylinder, hammer }, MOD5_ORIGIN);
   });
   const body = mountArm(this, 'mod5', parts,
-    { steel: ARM_MAT.bright, grip: ARM_MAT.rubber, cylinder: ARM_MAT.bright },
+    { steel: ARM_MAT.bright, grip: ARM_MAT.rubber, cylinder: ARM_MAT.bright,
+      hammer: ARM_MAT.blued },
     opts, 0.20, 2.1, 'steel');
   // The crane pin: forward of the cylinder, low and left. The cylinder
   // swings out about a vertical axis through it, which is the only motion
   // a swing-out revolver has and the reason it looks right when it opens.
   body.crane = [MOD5.cylX1 + 0.014 - MOD5_ORIGIN.x, -0.0150 - MOD5_ORIGIN.y, -0.0150];
   body.ejectPort = [MOD5.cylX0 - MOD5_ORIGIN.x, -MOD5_ORIGIN.y + 0.014, 0.0250];
-  body.boreAt = -MOD5_ORIGIN.y;
+  /* The hammer's pin, so the game can thumb-cock it with the same
+     rotate-about-a-point arithmetic the cylinder's crane uses. */
+  body.hammerPin = [MOD5_HAMMER[0] - MOD5_ORIGIN.x, MOD5_HAMMER[1] - MOD5_ORIGIN.y];
+  /* Positive, because cocking rotates the spur BACK and DOWN. The other
+     sign swings it forward and up, which is the motion of a hammer
+     falling. */
+  body.hammerCock = 0.52;                        // radians back to full cock
+  body.boreAt = MOD5.boreY - MOD5_ORIGIN.y;
   body.muzzleAt = MOD5.muzzle - MOD5_ORIGIN.x;
-  body.sightAt = MOD5.cylR + 0.0186 - MOD5_ORIGIN.y;
+  body.sightAt = MOD5_SIGHT - MOD5_ORIGIN.y;
   return body;
 };
 
@@ -16420,15 +16557,23 @@ function buildViewHand(g, rawAt, side, opts = {}) {
      ring, out to the knuckles. Slightly cupped toward the grip. */
   const rings = [];
   const PN = 5;
+  /* The palm lies flat ON the grip's near face rather than being threaded
+     onto its centreline, so it needs pushing out by half its own
+     thickness. Centred, half of it was inside the gun and the visible half
+     read as a swelling growing out of the grip. */
+  const off0 = fore ? 0 : 0.011;
   for (let i = 0; i <= PN; i++) {
     const t = i / PN;
-    // Wrist to knuckles: 95 mm, which is the length of a hand.
-    const d = -0.028 + t * 0.095;
+    // Wrist to knuckles: 80 mm along the grip, which is a knuckle span.
+    /* Starting 24 mm above the anchor left the top-rear corner of the
+       grip panel bare -- the web of the hand sits ON the beavertail, and
+       a gap there is the first thing the eye finds. */
+    const d = -0.032 + t * 0.088;
     rings.push({
       p: new Vec3(
         at.x + palm.x * d + grasp.x * t * 0.006,
         at.y + palm.y * d + grasp.y * t * 0.006,
-        at.z + palm.z * d + grasp.z * t * 0.006,
+        at.z + palm.z * d + grasp.z * t * 0.006 + side * off0,
       ),
       /* A palm, not a sphere and not a wafer.
 
@@ -16437,8 +16582,24 @@ function buildViewHand(g, rawAt, side, opts = {}) {
          I never re-rendered to see it. A hand across the knuckles is about
          85 mm and a palm with the fingers folded onto it is 38 to 42 mm
          through, because the folded fingers are part of the thickness. */
-      w: 0.023 + Math.sin(t * PI * 0.85) * 0.0145,
-      d: 0.0125 + Math.sin(t * PI * 0.9) * 0.0075,
+      /* loftRings builds the frame from the path direction, and for a hand
+         on a grip that puts `w` front-to-back and `d` across the gun. So
+         these are: how far the palm stands off the front and back of the
+         grip, and how thick it is.
+
+         They were 75 mm and 40 mm. A pistol grip is about 30 mm front to
+         back, so the palm was two and a half times deeper than the thing
+         it was holding and nearly spherical -- the kidney-bean blob with
+         stubs on it that has survived three rounds of me calling the
+         hands fixed. A palm folded onto a grip is 50 to 56 mm front to
+         back including the grip itself, and 24 to 28 mm of flesh. */
+      /* Full at the wrist end as well as the middle. A plain sin() starts
+         at zero, so the top of the palm tapered to a stalk and left the
+         upper third of the grip bare above the hand -- the gun looked
+         held by its bottom corner. The heel of a hand is already most of
+         its width where it leaves the wrist. */
+      w: (fore ? 0.020 : 0.0165) + Math.sin((0.24 + t * 0.76) * PI * 0.88) * (fore ? 0.0125 : 0.0112),
+      d: (fore ? 0.0110 : 0.0088) + Math.sin((0.24 + t * 0.76) * PI * 0.92) * (fore ? 0.0060 : 0.0044),
       e: 2.6, uv: t,
     });
   }
@@ -16451,14 +16612,23 @@ function buildViewHand(g, rawAt, side, opts = {}) {
      string of sausages. One loft walked along the bent path instead gives
      continuous skin, with the knuckles a small swelling in the radius at
      each bend rather than a seam. */
-  const turn = (d, a2) => {
+  /* Turning happens in the plane a finger closes in, and that plane is an
+     argument rather than always (point, curl).
+
+     turn() rebuilds the direction ENTIRELY from the two axes it is given,
+     which silently throws away anything pointing out of their plane. The
+     trigger finger was aimed forward along the frame and then turned in
+     the closing plane, so its forward reach was discarded on the first
+     bend and it came out lying across the gun. A finger doing a different
+     job closes in a different plane. */
+  const turn = (d, a2, pt, cl) => {
     const c = Math.cos(a2), sn = Math.sin(a2);
-    const along = d.x * point.x + d.y * point.y + d.z * point.z;
-    const across = d.x * curl.x + d.y * curl.y + d.z * curl.z;
+    const along = d.x * pt.x + d.y * pt.y + d.z * pt.z;
+    const across = d.x * cl.x + d.y * cl.y + d.z * cl.z;
     const na = along * c - across * sn, nc = along * sn + across * c;
-    return new Vec3(point.x * na + curl.x * nc, point.y * na + curl.y * nc, point.z * na + curl.z * nc);
+    return new Vec3(pt.x * na + cl.x * nc, pt.y * na + cl.y * nc, pt.z * na + cl.z * nc).normalize();
   };
-  const digit = (root, dir0, bends, lens, r0) => {
+  const digit = (root, dir0, bends, lens, r0, pt = point, cl = curl) => {
     const rs = [];
     let d = dir0;
     // Start back inside the palm so the knuckle is buried in it.
@@ -16468,7 +16638,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
     const push = (r) => rs.push({ p: new Vec3(p.x, p.y, p.z), w: r, d: r * 0.92, e: 2.4, uv: travelled / total });
     push(r0 * 1.08);
     for (let k = 0; k < 3; k++) {
-      d = turn(d, bends[k]);
+      d = turn(d, bends[k], pt, cl);
       const step = lens[k] / 2;
       for (let j = 1; j <= 2; j++) {
         p = new Vec3(p.x + d.x * step, p.y + d.y * step, p.z + d.z * step);
@@ -16503,14 +16673,22 @@ function buildViewHand(g, rawAt, side, opts = {}) {
      seventy — over 87 mm of bone that is an arc about 70 mm across, which
      is a hand round a 34 mm grip with flesh on it. */
   const LEN = [0.0420, 0.0262, 0.0190];
-  const knuckle0 = at3(palm, 0.052);
+  const knuckle0 = at3(palm, 0.044);
   for (let f = 0; f < 4; f++) {
     const isIndex = trigger && f === 3;
     // Index nearest the muzzle, little finger furthest from it.
     /* Spaced so they touch. Four 19 mm fingers side by side span 76 mm,
        which is a hand; at the old 17 mm pitch they had daylight between
        them and read as separate prongs. */
-    const off = (f - 1.5) * (fore ? 0.0202 : 0.0194);
+    /* On a pistol grip `lane` runs DOWN it, so a positive offset is
+       toward the butt — and the index, which is f = 3, was being put at
+       the BOTTOM of the grip and then built nearly straight because it is
+       the trigger finger. That is the finger sticking out into mid-air
+       below the gun in every screenshot of every pistol in this game. The
+       index belongs at the top, by the trigger, and the little finger at
+       the butt. Under a forend `lane` runs toward the muzzle and the
+       original sign is the right one: index forward. */
+    const off = (fore ? f - 1.5 : 1.5 - f) * (fore ? 0.0202 : 0.0194);
     const scale = isIndex ? 1.0 : [0.84, 0.96, 1.0, 0.99][f];
     const root = new Vec3(
       knuckle0.x + lane.x * off + grasp.x * 0.011 + point.x * 0.006,
@@ -16528,24 +16706,43 @@ function buildViewHand(g, rawAt, side, opts = {}) {
        which is where a hand actually does most of its closing. Over 87 mm
        of bone that is an arc about 50 mm across — a hand round a grip
        rather than a fist eating itself. */
-    const bends = isIndex ? [0.26, 0.34, 0.28] : [0.80 * close, 1.05 * close, 0.65 * close];
-    let d0 = new Vec3(point.x, point.y, point.z);
+    /* Where the bend goes, not just how much of it.
+
+       The proximal phalanx is 42 mm and the front of a pistol grip is
+       about 32 mm across: that bone spans the front strap and should be
+       nearly straight, with the closing happening at the two joints past
+       it. Putting 0.80 rad in before the first bone sent it diagonally
+       backwards on leaving the knuckle, so the finger wrapped along the
+       gun instead of around the grip and the tip finished 62 mm behind
+       the knuckle -- twice the depth of the thing it was holding. */
+    const bends = isIndex ? [0.16, 0.52, 0.46]
+      : [0.25 * close, 1.30 * close, 1.05 * close];
     if (isIndex) {
-      d0 = new Vec3(
-        point.x * 0.40 - curl.x * 0.92,
-        point.y * 0.40 - curl.y * 0.92,
-        point.z * 0.40 - curl.z * 0.92,
-      ).normalize();
+      /* The trigger finger reaches forward along the frame and closes
+         inward onto the blade, which is a different plane from the one
+         the other three close in. */
+      const ipt = V(0.90, -0.10, -side * 0.42);
+      const icl = V(-0.38, -0.34, -side * 0.86);
+      digit(root, ipt, bends, [LEN[0] * scale, LEN[1] * scale, LEN[2] * scale], 0.0095, ipt, icl);
+    } else {
+      /* 19 mm through the proximal phalanx, which is a finger. It was 14,
+         and 14 mm of flesh on 87 mm of bone is a worm. */
+      digit(root, new Vec3(point.x, point.y, point.z), bends,
+        [LEN[0] * scale, LEN[1] * scale, LEN[2] * scale], 0.0095);
     }
-    /* 19 mm through the proximal phalanx, which is a finger. It was 14,
-       and 14 mm of flesh on 87 mm of bone is a worm. */
-    digit(root, d0, bends, [LEN[0] * scale, LEN[1] * scale, LEN[2] * scale], 0.0095);
   }
 
   /* Thumb: off the near side of the palm, laid along the weapon and folded
      over the fingers. One surface as well, and it is the part that makes
      the hand look like it is gripping rather than resting against. */
   {
+    /* Its own mesh when the caller asks for one.
+
+       A thumb that cannot move is a thumb that cannot cock a hammer, and
+       the Model 5 is a single action -- the shooter's thumb drags the spur
+       back between every shot. One static hand mesh can only ever be a
+       hand that is already holding the gun. */
+    const tg = opts.thumbGeo || g;
     const V2 = (x, y, z) => new Vec3(x, y, z).normalize();
     const near = new Vec3(0, 0, side);
     let p = new Vec3(
@@ -16553,19 +16750,23 @@ function buildViewHand(g, rawAt, side, opts = {}) {
       at.y + palm.y * 0.004 + near.y * 0.014 + grasp.y * 0.006,
       at.z + palm.z * 0.004 + near.z * 0.014 + grasp.z * 0.006,
     );
+    // The base joint, which is what a moving thumb turns about.
+    if (opts.out) opts.out.thumbPivot = [p.x, p.y, p.z];
     let d = fore ? V2(0.90, 0.36, -side * 0.24) : V2(0.60, 0.64, -side * 0.48);
     const rs = [{ p: new Vec3(p.x, p.y, p.z), w: 0.0114, d: 0.0102, e: 2.4, uv: 0 }];
     const step = (len, r, k) => {
       p = new Vec3(p.x + d.x * len, p.y + d.y * len, p.z + d.z * len);
       rs.push({ p: new Vec3(p.x, p.y, p.z), w: r, d: r * 0.9, e: 2.4, uv: k });
     };
-    step(0.016, 0.0106, 0.22);
-    step(0.014, 0.0100, 0.44);
+    /* 59 mm of thumb was short even for a hand: a thumb is about 70 mm
+       from the base joint to the tip, and this one has to reach a hammer. */
+    step(0.019, 0.0108, 0.22);
+    step(0.017, 0.0102, 0.44);
     d = fore ? V2(0.78, 0.00, -side * 0.62) : V2(0.86, 0.04, -side * 0.54);
-    step(0.013, 0.0096, 0.66);
-    step(0.011, 0.0084, 0.86);
-    step(0.005, 0.0038, 1.0);
-    loftRings(g, rs, 9, true, true);
+    step(0.016, 0.0097, 0.66);
+    step(0.013, 0.0085, 0.86);
+    step(0.006, 0.0039, 1.0);
+    loftRings(tg, rs, 9, true, true);
   }
 
 }
@@ -16601,31 +16802,43 @@ function makeViewmodelArms(hands, opts = {}) {
      which never leaves the grip, and the support arm, which does. */
   const lSleeve = new Geometry();
   const lSkin = new Geometry();
+  /* The firing thumb, separately, when the weapon needs it to do something
+     -- which on a single action means reaching up to the hammer between
+     every shot. */
+  const thumb = opts.thumb ? new Geometry() : null;
+  const out = {};
   const pairs = [
-    { hand: hands.right, side: 1, grip: hands.rightGrip || 'pistol', sl: sleeve, sk: skin },
-    { hand: hands.left, side: -1, grip: hands.leftGrip || 'fore', sl: lSleeve, sk: lSkin },
+    { hand: hands.right, side: 1, grip: hands.rightGrip || 'pistol', sl: sleeve, sk: skin, tg: thumb },
+    { hand: hands.left, side: -1, grip: hands.leftGrip || 'fore', sl: lSleeve, sk: lSkin, tg: null },
   ];
-  for (const { hand, side, grip, sl, sk } of pairs) {
+  for (const { hand, side, grip, sl, sk, tg } of pairs) {
     if (!hand) continue;
     const h = new Vec3(hand[0], hand[1], hand[2]);
     const shoulder = new Vec3(back, drop, side * 0.105);
     buildViewArm(sl, shoulder, h, side);
-    buildViewHand(sk, h, side, { grip });
+    buildViewHand(sk, h, side, { grip, thumbGeo: tg, out: tg ? out : null });
   }
-  for (const g of [sleeve, skin, lSleeve, lSkin]) {
+  for (const g of [sleeve, skin, lSleeve, lSkin, thumb]) {
+    if (!g) continue;
     g.finalize();
     g.computeWeldGroups();
     smoothNormals(g);
     weldNormals(g.normals, g.weldGroups);
   }
-  return { sleeve, skin, lSleeve, lSkin, hasLeft: !!hands.left };
+  return { sleeve, skin, lSleeve, lSkin, thumb, thumbPivot: out.thumbPivot,
+    hasLeft: !!hands.left };
 }
 
 const VIEW_ARM_MATERIALS = {
   sleeve: { color: 0x3d3a2c, texture: 'fabric', roughness: 0.96, metalness: 0, uvScale: 1.4 },
   /* Hands under warm lamplight, and not a carrot. 0xb08462 with the room
      probe behind it came out orange enough to read as a glove. */
-  skin: { color: 0x9c7657, texture: 'skin', roughness: 0.72, metalness: 0, subsurface: 0.32 },
+  /* Skin, and it was reading as a traffic cone. The texture carries its
+     own warm tint and the subsurface term adds red on top of it, so a base
+     this saturated compounds three times over. Desaturated, and the
+     scatter pulled back to something that warms the thin edges rather than
+     dyeing the whole hand. */
+  skin: { color: 0x9d8570, texture: 'skin', roughness: 0.74, metalness: 0, subsurface: 0.16 },
 };
 
 /* Spawn arms parented to a weapon actor. They move with it exactly. */
@@ -16657,9 +16870,12 @@ Engine.prototype.viewmodelArms = function (weapon, hands, opts = {}) {
     lSkin = mk(parts.lSkin, skinMat, 'l');
     all.push(lSleeve, lSkin);
   }
+  let thumb = null;
+  if (parts.thumb) { thumb = mk(parts.thumb, skinMat, 't'); all.push(thumb); }
   /* `support` is the pair that may be moved away from the weapon during a
      reload. Everything else about them is identical to the firing arm. */
-  return { sleeve, skin, lSleeve, lSkin, support: lSleeve ? [lSleeve, lSkin] : [], parts: all };
+  return { sleeve, skin, lSleeve, lSkin, thumb, thumbPivot: parts.thumbPivot,
+    support: lSleeve ? [lSleeve, lSkin] : [], parts: all };
 };
 
 

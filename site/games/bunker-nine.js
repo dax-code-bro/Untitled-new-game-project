@@ -302,10 +302,17 @@ const WEAPONS = {
     dmg: 620, headMul: 2.0, mag: 4, reserve: 32, refire: 0.44,
     reload: 3.1, auto: false, pellets: 1, spread: 0.5,
     kick: 3.4, sfx: 'shotMagnum', revolver: true, reloadKind: 'revolver',
+    /* Single action: the hammer has to come back before every shot, and it
+       is the shooter's thumb that does it. */
+    thumbCock: true,
     pierce: 2, pierceFalloff: 0.62,
     sightH: 0.030, sightFov: 0.86, adsTime: 0.26, adsSpread: 0.18,
     recoil: { up: 4.2, side: 1.5, climb: 0.30, recover: 7 },
-    hands: { right: [-0.014, -0.044, 0.014], left: [0.026, -0.056, -0.028], leftGrip: 'pistol' },
+    /* The web of the hand, and it was 44 mm below the model's own origin --
+       which IS the web by construction. The hand sat halfway down a 108 mm
+       grip with the frame towering over it, and the shooter's thumb ended
+       up a hundred millimetres short of a hammer it is supposed to cock. */
+    hands: { right: [-0.010, -0.013, 0.015], left: [0.030, -0.030, -0.028], leftGrip: 'pistol' },
   },
   mauser: {
     name: 'Mauser C96', slotName: 'MAUSER',
@@ -1182,6 +1189,14 @@ function makeSfx(game) {
        silently, so the versions at the top of this table were dead and
        every rewrite of them changed nothing. */
     cylinderOut() { t(520, 0.05, 'square', 0.06); t(240, 0.07, 'triangle', 0.05); },
+    /* A single action coming to full cock: the sear dragging over the
+       half-cock notch, then the hard click of it dropping into full. Two
+       sounds, not one, and the second is the one the player is waiting
+       for -- it is the gun telling them it will fire again. */
+    hammerCock() {
+      t(180, 0.05, 'sawtooth', 0.045);
+      setTimeout(() => { t(1500, 0.018, 'square', 0.075); t(760, 0.03, 'square', 0.05); }, 42);
+    },
     /* A break gun sounds nothing like a magazine. The lever, the hinge
        taking the weight of the barrels, two brass cases going in against
        the chamber walls, and the snap of the action closing. */
@@ -2869,7 +2884,8 @@ function makeMauser(game, opts = {}) {
 
 function makeObliterator(game, opts = {}) {
   const b = game.model5(rackOpts(opts));
-  return rackGroup(b, { cylinder: b.cylinder, crane: b.crane });
+  return rackGroup(b, { cylinder: b.cylinder, crane: b.crane,
+    hammer: b.hammer, hammerPin: b.hammerPin, hammerCock: b.hammerCock });
 }
 
 function makeArcProjector(game, opts = {}) {
@@ -2935,6 +2951,10 @@ function makePlayer(game, S, hud, sfx, voice) {
     cooldown: 0, reloading: 0, reloadStage: 0, breakStage: 0, cylStage: 0,
     clipStage: 0, cellStage: 0, swayT: 0, kickPitch: 0,
     slideCycle: 0, slideCycleMax: 0.085,
+    /* Single-action cocking. cockT runs from the shot to the moment the
+       hammer is back; before the first shot of a magazine it is already
+       there, which is why it starts at its finished value. */
+    cockT: 1, cockMax: 0.30, cockStage: 1,
     view: {}, muzzleT: 0, alive: true,
     // Aim, sprint and recoil state.
     ads: 0, adsWant: false, sprint: 0, sprinting: false,
@@ -2999,7 +3019,10 @@ function makePlayer(game, S, hud, sfx, voice) {
   // Hands, parented to each weapon so they inherit its every motion.
   for (const [id, v] of Object.entries(P.view)) {
     const root = v.kind === 'single' ? v.actor : v.root;
-    v.arms = game.viewmodelArms(root, WEAPONS[id].hands, { key: id });
+    /* The single-action revolver gets its thumb as a separate mesh, because
+       its thumb has a job: dragging the hammer back between shots. */
+    v.arms = game.viewmodelArms(root, WEAPONS[id].hands,
+      { key: id, thumb: !!WEAPONS[id].thumbCock });
   }
   for (const v of Object.values(P.view)) setViewVisible(v, false);
 
@@ -3330,9 +3353,15 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
      hip actually does. */
   const len = Math.max(0.2, v.muzzle || 0.3);
   const bulk = Math.min(1, Math.max(0, (len - 0.24) / 0.34));
-  const hipX = (po ? po.x : 0.085 + bulk * 0.055) + bobX * (bench ? 0 : 1),
-        hipY = (po ? po.y : -0.10 - bulk * 0.045) + (bench ? 0 : bobY - dip),
-        hipD = po ? po.d : 0.34 + bulk * 0.05;
+  /* Hip carry: down and out to the right, and further of both than it
+     was. At -100 mm the sight line of a rifle came out only 50 mm below
+     the eye, which is a gun carried at the chin -- it filled the right of
+     the screen at eye level and read as being held up rather than at the
+     hip. Down another 30 mm and out another 15, and the muzzle sits below
+     the horizon where a carried gun sits. */
+  const hipX = (po ? po.x : 0.098 + bulk * 0.062) + bobX * (bench ? 0 : 1),
+        hipY = (po ? po.y : -0.128 - bulk * 0.058) + (bench ? 0 : bobY - dip),
+        hipD = po ? po.d : 0.355 + bulk * 0.055;
   const adsX = 0, adsY = -spec.sightH, adsD = 0.30;
   const a = P.ads;
   const offR = hipX * (1 - a) + adsX * a;
@@ -3632,6 +3661,51 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
     }
   }
 
+  /* Thumb-cocking, which is the whole ceremony of a single action: the
+     hammer falls with the shot, then the thumb comes off the grip, reaches
+     up over the strap, drags the spur back to full cock and drops away
+     again. The player fires no faster than the thumb works.
+
+     The hammer turns about its pin and the thumb about its base joint, both
+     with the same rotate-about-a-point arithmetic the cylinder's crane
+     uses -- an actor turns about its own origin, and neither of these has
+     its origin where its joint is. */
+  if (v.hammer && v.hammerPin) {
+    const pin = v.hammerPin, pv = v.arms && v.arms.thumbPivot;
+    // Eased, and lagging the thumb slightly: the spur moves because the
+    // thumb is on it, so the thumb leads and the hammer follows.
+    const u = Math.min(1, Math.max(0, P.cockT));
+    const reach = Math.sin(Math.min(1, u * 1.35) * Math.PI * 0.5);        // thumb up and back
+    const drag = u < 0.18 ? 0 : Math.min(1, (u - 0.18) / 0.82);      // hammer follows
+    const pull = drag * drag * (3 - 2 * drag);
+    const ang = (v.hammerCock || 0.52) * pull;
+    const c = Math.cos(ang), sn = Math.sin(ang);
+    // Rotating about the pin: move the actor's origin the way the pin
+    // would carry it, then turn it by the same angle.
+    const dx = -pin[0], dy = -pin[1];
+    v.hammer.setPosition([pin[0] + dx * c - dy * sn, pin[1] + dx * sn + dy * c, 0]);
+    v.hammer.setRotation([0, 0, ang * 57.2958]);
+    if (v.arms && v.arms.thumb && pv) {
+      /* The thumb lifts, swings back over the strap and returns. It is one
+         rotation about its base joint, out and back, so the tip travels
+         the arc a thumb travels and the web never leaves the grip. */
+      /* Positive: a positive turn about +Z takes the thumb from pointing
+         forward to pointing up, which is the way it has to go to reach a
+         hammer spur above it. Negative laid it flat along the frame --
+         the direction a thumb goes to get OFF the hammer. */
+      const lift = 1.02 * reach * (1 - u * 0.28);
+      const cl = Math.cos(lift), sl = Math.sin(lift);
+      const tx = -pv[0], ty = -pv[1];
+      v.arms.thumb.setPosition([pv[0] + tx * cl - ty * sl, pv[1] + tx * sl + ty * cl, 0]);
+      v.arms.thumb.setRotation([0, 0, lift * 57.2958]);
+    }
+    if (P.cockT < 1) {
+      P.cockT = Math.min(1, P.cockT + dt / (P.cockMax || 0.30));
+      if (P.cockStage < 1 && P.cockT > 0.86) { P.cockStage = 1; sfx.hammerCock(); }
+    }
+    if (P.cockT >= 1) P.cockStage = 1;
+  }
+
   /* Reciprocating slide. A half-sine over the cycle time: back hard, forward
      on the return, which is the shape the real thing traces. */
   const gunActor = v.kind === 'single' ? v.actor : v.root;
@@ -3804,6 +3878,15 @@ function tryFire(game, S, P, hud, sfx, dt) {
   hud.ammo(P);
   P.slideCycle = spec.auto ? 0.055 : 0.085;
   P.slideCycleMax = P.slideCycle;
+  if (spec.thumbCock) {
+    // The hammer has just fallen. The thumb starts again from nothing, and
+    // so does the stage counter -- the shot is the only place that can
+    // reset it, because by the time the viewmodel next runs the timer has
+    // already moved off zero and a test for zero there never fires.
+    P.cockT = 0;
+    P.cockStage = 0;
+    P.cockMax = Math.min(0.34, spec.refire * 0.72);
+  }
   ejectShell(game, S, P, P.view[P.equipped()]);
 
   // Muzzle flash: light + sparks, one frame of each.

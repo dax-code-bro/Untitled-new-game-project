@@ -906,57 +906,147 @@ function buildMauserGrip(g) {
    you could lose a finger in.
    ============================================================ */
 
-const MOD5 = { muzzle: 0.2050, cylX0: -0.0060, cylX1: 0.0500, cylR: 0.0270, bore: 0.0064 };
+const MOD5 = {
+  muzzle: 0.2050,
+  cylX0: -0.0060, cylX1: 0.0500, cylR: 0.0270,
+  /* The chamber pitch radius, and therefore how far the bore sits ABOVE
+     the cylinder's axis.
+
+     The barrel used to run down the cylinder's own centreline, which meant
+     no chamber ever lined up with it: the four holes sat on a circle 14.8
+     mm out and the bore went through the middle of them. That is what made
+     the gun read as a barrel stuck on the front of a cylinder rather than
+     a revolver. On a real one the barrel is offset by exactly this, so the
+     chamber at twelve o'clock is the bore's continuation, and the top
+     strap has to arch over the cylinder to get above it. Everything about
+     a revolver's proportions falls out of this one number. */
+  pcd: 0.0148,
+  barR: 0.0140,
+  bore: 0.0127,                 // .50 -- half an inch, as the name says
+  chR: 0.0098,
+  gap: 0.0020,                  // the cylinder gap, and you can see through it
+};
+MOD5.boreY = MOD5.pcd;
+MOD5.barRear = MOD5.cylX1 + MOD5.gap;
+
+/* The sight line: over the top strap, which has to arch over a 54 mm
+   cylinder, so it sits high and the front sight is a tall ramp off the
+   vent rib. One constant; the rear leaf, the front blade and the mount all
+   read it rather than each having an opinion. */
+const MOD5_SIGHT = 0.0396;
+
+/* Where the hammer turns. The spur is 30 mm up and 21 mm back from here,
+   which is what puts it under the shooter's thumb. */
+const MOD5_HAMMER = [MOD5.cylX0 - 0.0420, 0.0060];
 
 function buildModel5Steel(g) {
   const K = MOD5;
-  /* Frame: top strap over the cylinder, standing breech behind it, forcing
-     cone in front. Three runs, because the cylinder window between them is
-     a gap rather than a section. */
-  sweepPath(g, [
-    ax(K.cylX0 - 0.006, roundRect(0.0055, 0.0055, 0.0110, 3.2, 20), K.cylR + 0.0060),
-    ax(K.cylX1 + 0.010, roundRect(0.0060, 0.0060, 0.0112, 3.2, 20), K.cylR + 0.0060),
-  ], true, true);
-  sweepPath(g, [                                        // recoil shield and grip frame
-    ax(K.cylX0 - 0.048, roundRect(0.0230, 0.0300, 0.0160, 3.0, 24), 0),
-    ax(K.cylX0 - 0.026, roundRect(K.cylR + 0.0115, 0.0300, 0.0175, 3.0, 24), 0),
-    ax(K.cylX0 - 0.004, roundRect(K.cylR + 0.0115, 0.0300, 0.0175, 3.0, 24), 0),
-  ], true, true);
-  sweepPath(g, [                                        // forcing cone
-    ax(K.cylX1 + 0.002, roundRect(K.cylR + 0.0110, 0.0250, 0.0170, 3.0, 24), 0),
-    ax(K.cylX1 + 0.020, roundRect(K.cylR + 0.0110, 0.0250, 0.0170, 3.0, 24), 0),
-  ], true, true);
-  // The floor under the window, joining the two halves of the frame.
-  hardBox(g, (K.cylX0 + K.cylX1) / 2, -K.cylR - 0.0060, 0, (K.cylX1 - K.cylX0) / 2 + 0.012, 0.0050, 0.0105);
+  const STRAP = 0.0352;               // top of the frame's top strap
 
-  /* Barrel: a heavy underlugged bull with a vent rib. */
+  /* Top strap: it arches over the cylinder to reach the bore, which is why
+     a revolver's rear sight sits so much higher than its barrel. */
+  sweepPath(g, [
+    ax(K.cylX0 - 0.008, roundRect(0.0040, 0.0044, 0.0108, 3.2, 20), STRAP - 0.0040),
+    ax(K.cylX1 + 0.014, roundRect(0.0040, 0.0046, 0.0112, 3.2, 20), STRAP - 0.0040),
+  ], true, true);
+
+  /* Recoil shield and grip frame: the standing breech the cases head
+     against, and the wall the hammer falls through. */
+  /* Raising the strap raised this too, and the frame's underside came up
+     five millimetres off the top of the grip: the gun floated over its own
+     handle. The bottom is pinned to -30 mm, where the grip's top is, and
+     only the top follows the strap. */
+  sweepPath(g, [
+    ax(K.cylX0 - 0.048, roundRect(0.0300, 0.0352, 0.0160, 3.0, 24), 0.0052),
+    ax(K.cylX0 - 0.026, roundRect(0.0300, 0.0352, 0.0175, 3.0, 24), 0.0052),
+    ax(K.cylX0 - 0.004, roundRect(0.0300, 0.0352, 0.0175, 3.0, 24), 0.0052),
+  ], true, true);
+  // The floor under the cylinder window, joining the two halves of the frame.
+  hardBox(g, (K.cylX0 + K.cylX1) / 2, -K.cylR - 0.0060, 0,
+    (K.cylX1 - K.cylX0) / 2 + 0.010, 0.0050, 0.0105);
+
+  /* The frame's nose: the boss the barrel screws into, bringing the top
+     strap down onto the bore. It starts 6 mm forward of the cylinder face,
+     so the cylinder gap and the forcing cone in front of it are both open
+     to the side, the way they are on a gun you could actually fire. */
+  sweepPath(g, [
+    ax(K.cylX1 + 0.006, roundRect(STRAP - K.boreY, 0.0168, 0.0158, 3.0, 22), K.boreY),
+    ax(K.cylX1 + 0.020, roundRect(STRAP - K.boreY - 0.0026, 0.0168, 0.0152, 3.0, 22), K.boreY),
+  ], true, true);
+
+  /* Barrel: a heavy bull tube on the bore line, its rear face stepped out
+     for the forcing cone, crowned at the muzzle. */
   tubeRun(g, [
-    [K.cylX1 + 0.014, 0.0135], [K.cylX1 + 0.030, 0.0135],
-    [K.muzzle - 0.008, 0.0128], [K.muzzle - 0.002, 0.0128],
-  ], 22, false, false);
-  crown(g, K.muzzle, 0.0128, K.bore / 2, 0.045, 0.0016);
-  sweepPath(g, [
-    ax(K.cylX1 + 0.016, roundRect(0.0075, 0.0130, 0.0100, 3.2, 18), -0.0110),
-    ax(K.muzzle - 0.030, roundRect(0.0075, 0.0130, 0.0100, 3.2, 18), -0.0110),
-    ax(K.muzzle - 0.002, roundRect(0.0075, 0.0110, 0.0095, 3.2, 18), -0.0110),
-  ], true, true);
-  sweepPath(g, [
-    ax(K.cylX1 + 0.016, roundRect(0.0038, 0.0090, 0.0072, 3.4, 16), 0.0135),
-    ax(K.muzzle - 0.002, roundRect(0.0038, 0.0090, 0.0072, 3.4, 16), 0.0135),
-  ], true, true);
-  for (let i = 0; i < 6; i++) {
-    hardBox(g, K.cylX1 + 0.034 + i * 0.0190, 0.0176, 0, 0.0058, 0.0016, 0.0044);
-  }
-  // Front ramp and the rear notch, on one line.
-  hardBox(g, K.muzzle - 0.016, 0.0198, 0, 0.0090, 0.0035, 0.0032);
-  hardBox(g, K.muzzle - 0.016, 0.0244, 0, 0.0016, 0.0040, 0.0014);
-  hardBox(g, K.cylX0 - 0.012, K.cylR + 0.0130, 0, 0.0075, 0.0035, 0.0090);
-  for (const s of [-1, 1]) hardBox(g, K.cylX0 - 0.012, K.cylR + 0.0160, s * 0.0062, 0.0075, 0.0026, 0.0028);
+    [K.barRear, 0.0158], [K.barRear + 0.0055, 0.0158],
+    [K.barRear + 0.0090, K.barR], [K.muzzle - 0.010, K.barR],
+    [K.muzzle - 0.002, K.barR],
+  ], 24, true, false, K.boreY);
+  crown(g, K.muzzle, K.barR, K.bore / 2, 0.045, 0.0018);
+  // The cone itself, standing in the gap: a short funnel off the breech
+  // face, which is the detail that says a bullet jumps this gap.
+  spin(g, [
+    [K.barRear - 0.0004, 0], [K.barRear - 0.0004, 0.0104],
+    [K.barRear + 0.0090, 0.0082], [K.barRear + 0.0090, 0],
+  ], 20, 30, K.boreY, 0);
 
-  /* Hammer, spurred and checkered, behind the breech. */
-  hardBox(g, K.cylX0 - 0.046, 0.0230, 0, 0.0120, 0.0060, 0.0038);
-  hardBox(g, K.cylX0 - 0.054, 0.0290, 0, 0.0080, 0.0035, 0.0055);
-  for (let i = 0; i < 5; i++) hardBox(g, K.cylX0 - 0.062 + i * 0.0028, 0.0322, 0, 0.0009, 0.0012, 0.0050);
+  /* Full-length underlug, the shape this gun is named for: a slab under
+     the barrel running unbroken to the muzzle, deep enough to swallow the
+     ejector rod when the cylinder is shut. */
+  /* Slab-sided and flat-bottomed, a touch wider than the barrel, so there
+     is a shoulder where the two meet. Narrower and round it blended into
+     the barrel and the pair read as one fat tube -- the Python's lug is
+     the line down the side of the gun, and a lug you cannot see is not
+     one. */
+  sweepPath(g, [
+    ax(K.cylX1 + 0.008, roundRect(0.0104, 0.0130, 0.0146, 4.6, 22), -0.0010),
+    ax(K.cylX1 + 0.030, roundRect(0.0104, 0.0138, 0.0148, 4.6, 22), -0.0010),
+    ax(K.muzzle - 0.024, roundRect(0.0104, 0.0138, 0.0148, 4.6, 22), -0.0010),
+    ax(K.muzzle - 0.002, roundRect(0.0104, 0.0126, 0.0144, 4.6, 22), -0.0010),
+  ], true, true);
+  // The rod's mouth at the front of the lug, where its knurled tip shows.
+  spin(g, [
+    [K.muzzle - 0.014, 0], [K.muzzle - 0.014, 0.0074],
+    [K.muzzle - 0.002, 0.0074], [K.muzzle - 0.002, 0],
+  ], 18, 30, -0.0010, 0);
+
+  /* Vent rib: two rails down the barrel's crown with the slots open
+     between them. Built as raised bars on a solid strip it read as a
+     ladder lying on the barrel; a vent rib is a roof with holes in it, so
+     the holes are the gaps between the cross pieces. */
+  const ribY = K.boreY + K.barR, ribTop = ribY + 0.0034;
+  const rib0 = K.cylX1 + 0.022, rib1 = K.muzzle - 0.002;
+  for (const rz of [-1, 1]) {
+    sweepPath(g, [
+      ax(rib0, roundRect(0.0017, 0.0034, 0.0018, 3.0, 12), ribTop - 0.0017, rz * 0.0064),
+      ax(rib1, roundRect(0.0017, 0.0034, 0.0018, 3.0, 12), ribTop - 0.0017, rz * 0.0064),
+    ], true, true);
+  }
+  const bays = 7, bayL = (rib1 - rib0) / bays;
+  for (let i = 0; i <= bays; i++) {
+    hardBox(g, rib0 + i * bayL, ribTop - 0.0017, 0, 0.0026, 0.0017, 0.0064);
+  }
+
+  /* Front sight: a ramp off the rib carrying a blade whose tip finishes on
+     the sight line -- not a millimetre over it, which is a gun that shoots
+     low by however far over it is. */
+  sweepPath(g, [
+    ax(K.muzzle - 0.034, roundRect(0.0004, 0.0030, 0.0034, 2.8, 14), ribTop),
+    ax(K.muzzle - 0.018, roundRect(MOD5_SIGHT - ribTop - 0.0036, 0.0030, 0.0038, 2.8, 14), ribTop),
+    ax(K.muzzle - 0.012, roundRect(MOD5_SIGHT - ribTop - 0.0036, 0.0030, 0.0038, 2.8, 14), ribTop),
+  ], true, true);
+  hardBox(g, K.muzzle - 0.015, MOD5_SIGHT - 0.0018, 0, 0.0018, 0.0018, 0.0016);
+
+  /* Rear sight: an adjustable leaf on the top strap, its notch open to the
+     sky and its shoulders standing either side of the line. */
+  const rx = K.cylX0 - 0.012;
+  hardBox(g, rx, (STRAP + MOD5_SIGHT) / 2 - 0.0008, 0, 0.0090, (MOD5_SIGHT - STRAP) / 2 + 0.0008, 0.0092);
+  hardBox(g, rx, MOD5_SIGHT - 0.0014, 0, 0.0080, 0.0014, 0.0034);          // notch floor
+  for (const sd of [-1, 1]) {
+    hardBox(g, rx, MOD5_SIGHT + 0.0022, sd * 0.0056, 0.0080, 0.0040, 0.0022);
+  }
+  // Windage and elevation screws, because an adjustable sight has them.
+  strut(g, [rx - 0.0092, MOD5_SIGHT - 0.0030, 0], [rx - 0.0064, MOD5_SIGHT - 0.0030, 0], ringOutline(0.0022, 10));
+  strut(g, [rx, MOD5_SIGHT + 0.0010, -0.0090], [rx, MOD5_SIGHT + 0.0010, -0.0064], ringOutline(0.0020, 10));
 
   /* Trigger in its guard, under the breech. */
   guardBow(g, [
@@ -971,10 +1061,40 @@ function buildModel5Steel(g) {
   strut(g, [K.cylX1 + 0.004, -0.0150, -0.0150], [K.cylX1 + 0.026, -0.0150, -0.0150], ringOutline(0.0056, 14));
 }
 
+/* The hammer, and it is its own part because the player's thumb pulls it
+   back before every shot. Built about its pivot so the game can swing it
+   with the same rotate-about-a-pin arithmetic the cylinder uses. */
+function buildModel5Hammer(g) {
+  const K = MOD5, px = MOD5_HAMMER[0], py = MOD5_HAMMER[1];
+  // The body, rising from the pivot to behind the strap.
+  sweepPath(g, [
+    ax(px - 0.0052, roundRect(0.0230, 0.0090, 0.0044, 2.8, 16), py),
+    ax(px + 0.0052, roundRect(0.0230, 0.0090, 0.0044, 2.8, 16), py),
+  ], true, true);
+  /* The spur, swept back and up behind the strap where a thumb can reach
+     it -- and finishing UNDER the sight line, because at rest it sits
+     directly between the eye and the rear sight. Two and a half
+     millimetres of clearance: a hammer you have to look over is a hammer
+     you cannot aim past. */
+  sweepPath(g, [
+    ax(px - 0.0010, roundRect(0.0044, 0.0044, 0.0042, 2.6, 14), py + 0.0198),
+    ax(px - 0.0150, roundRect(0.0046, 0.0046, 0.0050, 2.6, 14), py + 0.0236),
+    ax(px - 0.0250, roundRect(0.0040, 0.0040, 0.0054, 2.6, 14), py + 0.0238),
+  ], true, true);
+  // Checkering on the spur's top, which is the surface the thumb is on.
+  for (let i = 0; i < 5; i++) {
+    hardBox(g, px - 0.0272 + i * 0.0032, py + 0.0280, 0, 0.0010, 0.0012, 0.0050);
+  }
+  // The nose that reaches the firing pin, and the pivot boss itself.
+  hardBox(g, px + 0.0064, py + 0.0210, 0, 0.0030, 0.0044, 0.0034);
+  strut(g, [px, py, -0.0048], [px, py, 0.0048], ringOutline(0.0062, 14));
+  void K;
+}
+
 /* The cylinder: four chambers, fluted between them, its own actor so it
    can swing out on the crane. */
 function buildModel5Cylinder(g) {
-  const K = MOD5, N = 4, chR = 0.0098, pcd = 0.0148;
+  const K = MOD5, N = 4, chR = K.chR, pcd = K.pcd;
   spin(g, [
     [K.cylX0, 0], [K.cylX0, 0.0090], [K.cylX0 - 0.0080, 0.0090], [K.cylX0 - 0.0080, 0],
   ], 18, 36);
@@ -983,7 +1103,12 @@ function buildModel5Cylinder(g) {
     [K.cylX1 - 0.0025, K.cylR], [K.cylX1, K.cylR - 0.0025], [K.cylX1, 0],
   ], 30, 36);
   for (let i = 0; i < N; i++) {
-    const th = i * TAU / N + PI / 4;
+    /* Chamber zero sits at twelve o'clock, on the bore. The angles used to
+       start at 45 degrees, so the four chambers straddled the top and the
+       barrel looked through the steel between two of them. A revolver is
+       the one gun where the barrel has to agree with the cylinder about
+       where a chamber is, and this is where they agree. */
+    const th = i * TAU / N;
     const cy = Math.cos(th) * pcd, cz = Math.sin(th) * pcd;
     // A bored chamber, open at the muzzle end, with a case head showing at
     // the back — four holes you can see into is the whole point of it.
@@ -1001,9 +1126,12 @@ function buildModel5Cylinder(g) {
       [K.cylX1 - 0.0080, 0.0100], [K.cylX1 - 0.0080, 0],
     ], 14, 34, fy, fz);
   }
-  // Ejector rod, standing forward under the barrel.
-  spin(g, [[K.cylX1, 0], [K.cylX1, 0.0042], [K.cylX1 + 0.030, 0.0042],
-           [K.cylX1 + 0.034, 0.0060], [K.cylX1 + 0.038, 0]], 14, 36);
+  /* Ejector rod, standing forward on the cylinder's own axis — which is
+     now below the bore, so it runs inside the underlug when the gun is
+     shut and comes out with the cylinder when it is opened. That is the
+     whole reason a full-lug revolver has a lug. */
+  spin(g, [[K.cylX1, 0], [K.cylX1, 0.0042], [K.muzzle - 0.020, 0.0042],
+           [K.muzzle - 0.016, 0.0058], [K.muzzle - 0.012, 0]], 14, 36);
 }
 
 /* Grips: rubber, finger-grooved, wrapping the backstrap. */
@@ -2179,19 +2307,28 @@ Engine.prototype.model5 = function (opts = {}) {
     const steel = new Geometry(); buildModel5Steel(steel);
     const grip = new Geometry(); buildModel5Grip(grip);
     const cylinder = new Geometry(); buildModel5Cylinder(cylinder);
-    return fin({ steel, grip, cylinder }, MOD5_ORIGIN);
+    const hammer = new Geometry(); buildModel5Hammer(hammer);
+    return fin({ steel, grip, cylinder, hammer }, MOD5_ORIGIN);
   });
   const body = mountArm(this, 'mod5', parts,
-    { steel: ARM_MAT.bright, grip: ARM_MAT.rubber, cylinder: ARM_MAT.bright },
+    { steel: ARM_MAT.bright, grip: ARM_MAT.rubber, cylinder: ARM_MAT.bright,
+      hammer: ARM_MAT.blued },
     opts, 0.20, 2.1, 'steel');
   // The crane pin: forward of the cylinder, low and left. The cylinder
   // swings out about a vertical axis through it, which is the only motion
   // a swing-out revolver has and the reason it looks right when it opens.
   body.crane = [MOD5.cylX1 + 0.014 - MOD5_ORIGIN.x, -0.0150 - MOD5_ORIGIN.y, -0.0150];
   body.ejectPort = [MOD5.cylX0 - MOD5_ORIGIN.x, -MOD5_ORIGIN.y + 0.014, 0.0250];
-  body.boreAt = -MOD5_ORIGIN.y;
+  /* The hammer's pin, so the game can thumb-cock it with the same
+     rotate-about-a-point arithmetic the cylinder's crane uses. */
+  body.hammerPin = [MOD5_HAMMER[0] - MOD5_ORIGIN.x, MOD5_HAMMER[1] - MOD5_ORIGIN.y];
+  /* Positive, because cocking rotates the spur BACK and DOWN. The other
+     sign swings it forward and up, which is the motion of a hammer
+     falling. */
+  body.hammerCock = 0.52;                        // radians back to full cock
+  body.boreAt = MOD5.boreY - MOD5_ORIGIN.y;
   body.muzzleAt = MOD5.muzzle - MOD5_ORIGIN.x;
-  body.sightAt = MOD5.cylR + 0.0186 - MOD5_ORIGIN.y;
+  body.sightAt = MOD5_SIGHT - MOD5_ORIGIN.y;
   return body;
 };
 

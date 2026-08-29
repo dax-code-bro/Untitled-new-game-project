@@ -256,6 +256,41 @@ function check(name, cond, detail = '') {
   });
   const spammy = rl.filter((x) => x.worst > 6).map((x) => `${x.id}:${x.worstK} x${x.worst}`);
   const showers = rl.filter((x) => x.cases > 8).map((x) => `${x.id} ${x.cases} cases`);
+  /* Firing a single action should cock it once per shot, not once per
+     frame. The same defect has now shipped four times in this game -- the
+     break gun, the revolver's cylinder, the Arc's cell and the Mauser's
+     clip -- every one of them a flag set inside a window that passes its
+     own test again on the very next frame. The thumb-cocking animation is
+     the same shape of code, so it is checked rather than trusted. */
+  const ck = await page.evaluate(() => {
+    const S = window.B.S, P = S.player, sfx = S.__sfx;
+    P.give('obliterator');
+    P.slot = P.slots.indexOf('obliterator');
+    for (let i = 0; i < 40; i++) { window.B.game.step(1 / 60); S.toSpawn = 0; S.spawnT = 1e9; }
+    let cocks = 0, shots = 0;
+    const rc = sfx.hammerCock, rs = sfx.shotMagnum;
+    sfx.hammerCock = () => { cocks++; };
+    sfx.shotMagnum = () => { shots++; };
+    /* Through the test-hold hook, because the game rebuilds S.input from
+       the device every frame and anything written straight into it is gone
+       before the fire code reads it. */
+    for (let i = 0; i < 300; i++) {
+      if ((i % 34) === 0) __T.hold({ fire: true });
+      else if ((i % 34) === 6) __T.release();
+      window.B.game.step(1 / 60);
+      S.toSpawn = 0; S.spawnT = 1e9;
+    }
+    __T.release();
+    sfx.hammerCock = rc; sfx.shotMagnum = rs;
+    const v = P.view.obliterator;
+    return { shots, cocks, hammer: !!v.hammer, thumb: !!(v.arms && v.arms.thumb) };
+  });
+  check('the single action has a hammer and a thumb that can move',
+    ck.hammer && ck.thumb, JSON.stringify(ck));
+  check('the hammer is cocked once per shot, not once per frame',
+    ck.shots > 0 && ck.cocks === ck.shots,
+    `${ck.shots} shots, ${ck.cocks} cocks`);
+
   check('a reload plays each of its sounds a few times, not once a frame',
     spammy.length === 0, spammy.join(', '));
   check('a reload does not empty a bandolier onto the floor',
