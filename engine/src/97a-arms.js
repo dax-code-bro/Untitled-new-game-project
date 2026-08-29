@@ -256,8 +256,10 @@ function buildMP5Steel(g) {
   // The hood's base, bridging it down to the cocking tube well under the
   // sight line — anything that crosses that line is a wall across the aim.
   hardBox(g, 0.3280, 0.0270, 0, 0.0080, 0.0075, 0.0060);
-  hardBox(g, 0.3280, K.sightY - 0.0085, 0, 0.0022, 0.0060, 0.0020);        // post
-  hardBox(g, 0.3280, K.sightY - 0.0014, 0, 0.0015, 0.0028, 0.0012);        // blade tip
+  hardBox(g, 0.3280, K.sightY - 0.0099, 0, 0.0022, 0.0060, 0.0020);        // post
+  // The tip finishes ON the line, not 1.4 mm over it. A post whose tip is
+  // proud of the line is a gun that shoots low by however proud it is.
+  hardBox(g, 0.3280, K.sightY - 0.0028, 0, 0.0015, 0.0028, 0.0012);        // blade tip
 
   /* Rear sight: an aperture you look through, on the same line. The MP5's
      is a rotary drum, so the ring is drum-sized and carries the four click
@@ -433,7 +435,7 @@ const DOUBLE = {
    they were two numbers three and a half millimetres apart, which is why
    aiming a double put the target just above the bead. */
 function doubleBeadY(C) {
-  return C.overUnder ? DOUBLE.breechR + 0.0060 : 0.0090;
+  return C.overUnder ? DOUBLE.breechR + 0.0060 : 0.0128;
 }
 
 function doubleBores(C) {
@@ -463,10 +465,16 @@ function buildDoubleBarrels(g, C) {
       ax(L - 0.006, roundRect(0.0018, 0.0055, 0.0072, 3.2, 14), D.muzzleR + 0.0006),
     ], true, true);
   } else {
+    /* The rib on a side-by-side runs level with the tops of the barrels,
+       not down in the valley between them. It sat 5 mm low, which put the
+       bead below the barrel crowns: aiming the gun meant looking at the
+       backs of the two tubes with the bead hidden between them. It tapers
+       down towards the muzzle, as a real one does, so the sight line over
+       it stays clear along its whole length. */
     const s = C.spacing != null ? C.spacing : 0.0245;
     sweepPath(g, [
-      ax(D.breech + 0.020, roundRect(0.0020, 0.0090, s / 2, 3.4, 16), 0.0035),
-      ax(L - 0.006, roundRect(0.0020, 0.0085, s / 2 - 0.0008, 3.4, 16), 0.0035),
+      ax(D.breech + 0.020, roundRect(0.0022, 0.0150, s / 2, 3.4, 16), 0.0086),
+      ax(L - 0.006, roundRect(0.0022, 0.0140, s / 2 - 0.0008, 3.4, 16), 0.0072),
     ], true, true);
   }
   /* Bead: a small silver ball, proud of the rib, at the muzzle. Its centre
@@ -530,7 +538,15 @@ function buildDoubleForend(g, C) {
 /* Receiver, trigger group and the top lever. Stays in the hand. */
 function buildDoubleAction(g, C) {
   const D = DOUBLE;
-  const top = C.overUnder ? D.breechR + 0.006 : D.breechR + 0.004;
+  /* The top of the action, and it goes UNDER the sight line rather than
+     wherever the barrels' radius happens to put it. It was two and a
+     quarter millimetres over the bead on the side-by-sides — a low wall
+     thirty centimetres from the eye, which is closer than anything else on
+     the gun and so the widest thing in the sight picture. Both the vertex
+     scan and the rendered column missed it, because the swept profile's
+     apex falls between sample points and the bead sits at almost the same
+     angle; only casting the ray at the triangles found it. */
+  const top = doubleBeadY(C) - 0.0012;
   const bot = C.overUnder ? -(C.spacing || 0.0245) - D.breechR - 0.006 : -D.breechR - 0.016;
   const halfW = C.overUnder ? 0.0195 : (C.spacing || 0.0245) / 2 + D.breechR + 0.0020;
   const cy = (top + bot) / 2, hh = (top - bot) / 2;
@@ -540,11 +556,20 @@ function buildDoubleAction(g, C) {
   ], true, true);
 
   /* Top lever: the thumb piece that opens it, canted right the way a
-     worn one always ends up. */
-  hardBox(g, -0.0330, top + 0.0040, 0, 0.0170, 0.0038, 0.0090);
+     worn one always ends up.
+
+     It lies IN the top strap, not on it. Built off the action's own top it
+     stood eleven millimetres above the bead, a hand's breadth in front of
+     the eye — aiming either shotgun meant looking at the opening lever. On
+     a real break-action the barrels sit on top of the action and the lever
+     is recessed below their line, so the rib runs clear over it. Built off
+     the bead now, so it cannot drift above the sight line again whatever
+     the action's proportions do. */
+  const lev = doubleBeadY(C) - 0.0008;
+  hardBox(g, -0.0330, lev - 0.0019, 0, 0.0170, 0.0019, 0.0090);
   sweepPath(g, [
-    ax(-0.0230, roundRect(0.0032, 0.0032, 0.0056, 2.6, 12), top + 0.0055),
-    ax(-0.0170, roundRect(0.0030, 0.0030, 0.0040, 2.6, 12), top + 0.0055, 0.0050),
+    ax(-0.0230, roundRect(0.0021, 0.0032, 0.0056, 2.6, 12), lev - 0.0021),
+    ax(-0.0170, roundRect(0.0020, 0.0030, 0.0040, 2.6, 12), lev - 0.0021, 0.0050),
   ], true, true);
 
   /* Trigger group: two blades in one guard on the shotguns, one on the
@@ -559,8 +584,9 @@ function buildDoubleAction(g, C) {
   } else {
     triggerBlade(g, -0.0300, bot - 0.0020, 0, 0.021, 0.0042);
   }
-  // Safety on the tang, and the hinge pin's bosses.
-  hardBox(g, -0.0560, top + 0.0030, 0, 0.0075, 0.0026, 0.0048);
+  // Safety on the tang, and the hinge pin's bosses. The safety is on the
+  // same strap as the lever, so it takes its height from the same line.
+  hardBox(g, -0.0560, lev - 0.0018, 0, 0.0075, 0.0018, 0.0048);
   for (const s of [-1, 1]) {
     strut(g, [D.hinge[0] - 0.006, D.hinge[1], s * (halfW - 0.0040)],
       [D.hinge[0] - 0.006, D.hinge[1], s * (halfW + 0.0010)], ringOutline(0.0072, 14));
@@ -677,19 +703,31 @@ function buildParalyzerCoil(g, C) {
       ], 20, 44, cy);
     }
   }
-  // The two leads, running back along the top into the action.
-  strut(g, [0.100, cy + rMaj, 0], [-0.010, D.breechR + 0.010, 0], ringOutline(wire, 8));
-  strut(g, [0.242, cy + rMaj, 0.004], [0.100, cy + rMaj, 0.004], ringOutline(wire, 8));
+  /* The two leads, running back into the action along the right flank —
+     not over the rib, where they crossed the bead line at exactly the
+     bead's own height and put a copper bar across the sight picture. */
+  const lz = 0.0104;
+  strut(g, [0.100, cy + rMaj, lz], [-0.010, D.breechR + 0.004, lz], ringOutline(wire, 8));
+  strut(g, [0.242, cy + rMaj, lz + 0.0058], [0.100, cy + rMaj, lz + 0.0058], ringOutline(wire, 8));
 }
 
 /* The parts that light: the charge tube along the top and the arc gap at
    the muzzle. Their material is emissive, so they are their own geometry. */
 function buildParalyzerGlow(g, C) {
   const D = DOUBLE, L = C.barrelLen, s = C.spacing || 0.0245;
-  // Charge tube, lying in the valley on top of the barrels.
-  spin(g, [
-    [0.055, 0], [0.058, 0.0090], [0.250, 0.0090], [0.253, 0],
-  ], 18, 34, D.breechR + 0.0085);
+  /* Charge tubes, in the waist either side of the stacked barrels.
+     
+     There used to be one, lying along the top, and it stood eleven and a
+     half millimetres above the bead for the whole length of the gun: the
+     sight line ran straight through the middle of it. Two tubes in the
+     figure-eight's waist light the same amount of gun and leave the rib
+     clear, which is where a charge tube would sit on something built to be
+     aimed. */
+  for (const cz of [-1, 1]) {
+    spin(g, [
+      [0.055, 0], [0.058, 0.0072], [0.250, 0.0072], [0.253, 0],
+    ], 16, 34, -s / 2, cz * (D.muzzleR + 0.0072));
+  }
   // The gap itself: a disc of light standing between the prongs.
   spin(g, [[L + 0.017, 0], [L + 0.018, 0.0165], [L + 0.019, 0]], 22, 40, -s / 2);
 }
@@ -784,10 +822,21 @@ function buildMauserSteel(g) {
   ], 0.0024, 0.0024, 0.0050);
   triggerBlade(g, -0.0330, -0.0230, 0, 0.019, 0.0034);
 
-  /* Hammer, at the very back, ring-cut the way the small-ring guns are. */
-  spin(g, [[0, 0], [0, 0.0090], [0.0030, 0.0090], [0.0030, 0]], 16, 40, 0.0225, 0);
-  hardBox(g, K.recRear + 0.0130, 0.0225, 0, 0.0060, 0.0080, 0.0030);
-  strut(g, [K.recRear + 0.0150, 0.0225, -0.0016], [K.recRear + 0.0150, 0.0225, 0.0016], ringOutline(0.0044, 12));
+  /* Hammer, at the very back, ring-cut the way the small-ring guns are.
+
+     The ring was drawn at x = 0 — spin() takes absolute stations, and
+     these were written as though they were offsets — so the hammer was a
+     disc floating in the middle of the frame, 77 mm forward of the spur it
+     belongs to and seven and a half millimetres above the sight line. It
+     was the wall you saw when you aimed this pistol. It is at the back of
+     the frame now, and its crown sits under the line, which is where a
+     C96's hammer is: the tangent sight rides above it on the barrel
+     extension. */
+  const hx = K.recRear + 0.0130;
+  spin(g, [[hx - 0.0016, 0], [hx - 0.0016, 0.0074], [hx + 0.0016, 0.0074], [hx + 0.0016, 0]],
+    16, 40, 0.0150, 0);
+  hardBox(g, hx, 0.0132, 0, 0.0058, 0.0072, 0.0030);
+  strut(g, [hx + 0.0020, 0.0158, -0.0016], [hx + 0.0020, 0.0158, 0.0016], ringOutline(0.0040, 12));
 }
 
 /* The bolt: it runs straight back in its housing, which is what the
@@ -1005,6 +1054,12 @@ const ARC = {
   butt: -0.2400,
 };
 
+/* The Arc Breaker's sight line, over the top of everything the tube
+   carries: the tube crowns at 46 mm, its insulator collars at 53.5 and the
+   copper ring terminals at 57. One constant, used by the tower, the front
+   post and the mount that reports it. */
+const ARC_SIGHT = 0.0625;
+
 function buildArcSteel(g) {
   const K = ARC;
   /* Receiver: a milled block with a flat top rail, cut away at the sides
@@ -1023,13 +1078,35 @@ function buildArcSteel(g) {
       hardBox(g, x, -0.0040, s * 0.0268, 0.0130, 0.0110, 0.0022);
     }
   }
-  /* Top rail with a set of iron sights, because a wonder weapon you cannot
-     aim is a toy. Rear notch at the back of the rail, blade at the front. */
-  hardBox(g, 0.0300, 0.0268, 0, 0.0900, 0.0034, 0.0110);
-  hardBox(g, -0.0400, 0.0330, 0, 0.0070, 0.0038, 0.0090);
-  for (const s of [-1, 1]) hardBox(g, -0.0400, 0.0364, s * 0.0062, 0.0070, 0.0028, 0.0028);
-  hardBox(g, 0.1180, 0.0340, 0, 0.0060, 0.0050, 0.0034);
-  hardBox(g, 0.1180, 0.0398, 0, 0.0016, 0.0030, 0.0013);
+  /* Sights, on a bridge over the accelerator tube.
+
+     They used to sit on the top rail, at 34.9 mm — and the tube, its
+     insulator collars and the copper ring terminals rise to 57 mm and run
+     the whole length of the gun above them. Aiming this thing meant
+     looking into the side of its own barrel. A weapon whose barrel sits
+     this high carries its sights on a bridge over it, the way a Lewis or a
+     Bren does, so that is what it has now: a tower at the back of the rail
+     and a post standing off the tube at the front, half a metre apart.
+
+     ARC_SIGHT is the line both are built to, and the number the mount
+     reports. Nothing forward of the tower may cross it. */
+  hardBox(g, 0.0300, 0.0268, 0, 0.0900, 0.0034, 0.0110);          // the rail itself
+
+  // Rear tower: two uprights off the rail with the notch bridged between.
+  for (const sz of [-1, 1]) {
+    hardBox(g, -0.0400, (0.0302 + ARC_SIGHT) / 2, sz * 0.0074,
+      0.0032, (ARC_SIGHT - 0.0302) / 2, 0.0026);
+  }
+  hardBox(g, -0.0400, ARC_SIGHT - 0.0016, 0, 0.0032, 0.0016, 0.0074);          // notch floor
+  for (const sz of [-1, 1]) hardBox(g, -0.0400, ARC_SIGHT + 0.0026, sz * 0.0048, 0.0032, 0.0042, 0.0026);
+  // A protective ear each side, outboard of the notch.
+  for (const sz of [-1, 1]) hardBox(g, -0.0400, ARC_SIGHT + 0.0050, sz * 0.0092, 0.0030, 0.0066, 0.0022);
+
+  // Front post: a pillar off the tube's crown, blade tipped, with wings.
+  const fx = 0.4300, ftop = K.tubeY + K.tubeR;
+  hardBox(g, fx, (ftop + ARC_SIGHT) / 2, 0, 0.0038, (ARC_SIGHT - ftop) / 2, 0.0044);
+  hardBox(g, fx, ARC_SIGHT - 0.0014, 0, 0.0016, 0.0030, 0.0013);               // blade
+  for (const sz of [-1, 1]) hardBox(g, fx, ARC_SIGHT + 0.0016, sz * 0.0072, 0.0030, 0.0062, 0.0022);
 
   /* Accelerator tube: the barrel's replacement. Stepped up at each coil
      pack, and it does not end in a muzzle — it ends in a gap. */
@@ -2141,7 +2218,7 @@ Engine.prototype.arcBreaker = function (opts = {}) {
   body.ejectPort = [0.0600 - ARC_ORIGIN.x, 0.0100 - ARC_ORIGIN.y, 0.0270];
   body.boreAt = ARC.tubeY - ARC_ORIGIN.y;
   body.muzzleAt = ARC.tip - ARC_ORIGIN.x;
-  body.sightAt = 0.0349 - ARC_ORIGIN.y;
+  body.sightAt = ARC_SIGHT - ARC_ORIGIN.y;
   return body;
 };
 

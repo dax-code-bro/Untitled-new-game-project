@@ -278,6 +278,11 @@ function makeThompson() {
 Engine.prototype.thompson = function (opts = {}) {
   let parts = this._tommyParts;
   if (!parts) parts = this._tommyParts = makeThompson();
+  /* Register the CPU-side meshes where every other weapon puts them, so
+     the sight-line test can reach this one too. The Thompson is the gun
+     whose rear peep shipped as a solid plate; leaving it out of the test
+     that catches exactly that would be a poor joke. */
+  (this._armParts || (this._armParts = {})).thompson = parts;
 
   const b = parts.steel.bounds;
   const pts = [];
