@@ -623,6 +623,17 @@ const SWEEP = () => {
          downstream inherits it. */
       const wasTier = SS.settings.current;
       window.__T_SYS.applyGraphics(G, SS, 'high');
+      /* And standing in a known spot facing a known wall.
+       *
+       * Wherever the sweep happened to have left the camera, the control
+       * read the "wall" patch at B/R 0.78 rather than 1.00 -- it was not
+       * looking at that wall at all, so neither box meant what it was named
+       * and the hand figure beside it was worth nothing. A colour reading
+       * is only a colour reading if the frame is the one it was calibrated
+       * against. This is the mess room's north wall, from the spot the
+       * tones were tuned at. */
+      __T.teleport(-2.4, 1.1, 1.4);
+      __T.look(Math.PI * 0.98, 0.02);
       SS.player.give('m1911');
       runFrames(40);
       const gl = G.gl, W = gl.drawingBufferWidth, H = gl.drawingBufferHeight;
