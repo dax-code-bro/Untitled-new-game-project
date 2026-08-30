@@ -358,6 +358,182 @@ const SWEEP = () => {
       out.sys.variants.push(row);
     }
 
+    /* A window with AUTO REPAIR off must stay broken while you stand at
+       it, and go back up when it is on. The gate has been correct all
+       along; what was not correct was a saved setting from an older build
+       overriding the default, which nothing was watching for. */
+    out.sys.repair = [];
+    // Read after the boot: __T_SYS does not exist until the game starts.
+    out.autoRepairDefault = (window.__T_SYS && window.__T_SYS.TOGGLES
+      && window.__T_SYS.TOGGLES.autoRepair) ? window.__T_SYS.TOGGLES.autoRepair.def : null;
+    try {
+      const strip = (w) => {
+        for (let i = 0; i < w.boards.length; i++) {
+          if (!w.boards[i]) continue;
+          if (w.boards[i].destroy) w.boards[i].destroy(); else w.boards[i].visible = false;
+          w.boards[i] = null;
+        }
+      };
+      /* A window where REPAIR is the nearest thing: at W1 the Thompson
+         wall-buy sits on the same spot and shadows it. */
+      let win = null, spot = null;
+      for (const w of SS.windows) {
+        strip(w);
+        const ins = w.def.inside, sill = w.def.sillAt;
+        for (const t of [0, 0.2, 0.4, 0.6, 0.8]) {
+          const x = ins[0] + (sill[0] - ins[0]) * t, z = ins[2] + (sill[2] - ins[2]) * t;
+          const it = __T.interactAt(x, ins[1] + 1.0, z);
+          if (it && it.kind === 'repair') { win = w; spot = [x, ins[1] + 1.0, z]; break; }
+        }
+        if (win) break;
+      }
+      if (!win) out.sys.repair.push({ err: 'no window offers a repair prompt' });
+      else {
+        for (const auto of [false, true]) {
+          SS.toggles.autoRepair = auto;
+          strip(win);
+          __T.teleport(spot[0], spot[1], spot[2]);
+          runFrames(20);
+          runFrames(420);
+          out.sys.repair.push({ auto, boards: win.boards.filter(Boolean).length });
+        }
+        SS.toggles.autoRepair = false;
+      }
+    } catch (e) { out.sys.repair.push({ err: e.message }); }
+
+    /* Every hand on every grip, measured against the weapon table the
+       game actually ships.
+
+       This used to be its own headless file with its own copy of the hand
+       data, and the copy went stale the moment the grips were reworked:
+       it built every hand with the default pistol grip and then failed
+       eight of them for not matching poses they no longer have. A test
+       carrying a second copy of the data it is testing is a test of the
+       copy. It reads __T_WEAPONS now, like everything else here. */
+    out.sys.grips = [];
+    try {
+      for (const id of Object.keys(window.__T_WEAPONS || {})) {
+        const hands = window.__T_WEAPONS[id].hands;
+        if (!hands) continue;
+        const parts = LE.makeViewmodelArms(hands, {});
+        for (const which of ['right', 'left']) {
+          const h = hands[which];
+          if (!h) continue;
+          const geo = which === 'right' ? parts.skin : parts.lSkin;
+          const pos = geo && geo.positions;
+          if (!pos || !pos.length) { out.sys.grips.push({ id, which, err: 'no mesh' }); continue; }
+          /* Quadrants in the GRIP's own frame, not in world Y and Z.
+
+             The old split was `above/below the anchor` and `near/far side
+             of it`, which encodes the assumption that everything is held
+             either on a vertical grip or under a horizontal forend. Now
+             that each weapon describes what it is holding, a spade grip
+             wraps around X and a knife haft around a diagonal, and a
+             fixed world-axis split measures the wrong plane -- it failed
+             fourteen hands that are perfectly closed. Split along the way
+             the fingers travel and along the held part's axis instead. */
+          const gspec = hands[which + 'Grip'];
+          const GK = LE.GRIP_KINDS || {};
+          const Gd = Object.assign({}, GK.pistol,
+            (typeof gspec === 'string' ? GK[gspec] : null) || GK.pistol,
+            (gspec && typeof gspec === 'object') ? gspec : {});
+          const nrm = (v) => { const L = Math.hypot(v[0], v[1], v[2]) || 1;
+            return [v[0] / L, v[1] / L, v[2] / L]; };
+          const ax = nrm(Gd.axis), rd = nrm(Gd.round);
+          const side3 = nrm([ax[1] * rd[2] - ax[2] * rd[1],
+            ax[2] * rd[0] - ax[0] * rd[2], ax[0] * rd[1] - ax[1] * rd[0]]);
+          let near = 0, cx = 0, cy = 0, cz = 0;
+          const quad = [0, 0, 0, 0];
+          for (let i = 0; i < pos.length; i += 3) {
+            const dx = pos[i] - h[0], dy = pos[i + 1] - h[1], dz = pos[i + 2] - h[2];
+            cx += pos[i]; cy += pos[i + 1]; cz += pos[i + 2];
+            if (Math.hypot(dx, dy, dz) < 0.055) {
+              near++;
+              const a1 = dx * rd[0] + dy * rd[1] + dz * rd[2];
+              const a2 = dx * side3[0] + dy * side3[1] + dz * side3[2];
+              quad[(a1 >= 0 ? 0 : 2) + (a2 >= 0 ? 0 : 1)]++;
+            }
+          }
+          const n3 = pos.length / 3;
+          cx /= n3; cy /= n3; cz /= n3;
+          /* Enclosure alone is not enough, and this measurement learned
+             that the hard way: it once passed a hand that was a ball with
+             four stubs on it, because a ball also has skin on all four
+             sides of its centre. What separates a hand from a lump is
+             that things stick out of it -- so `reach` is the share of
+             skin further than 45 mm from the centroid, which fingers put
+             there and a lump cannot. */
+          let reach = 0;
+          for (let i = 0; i < pos.length; i += 3) {
+            if (Math.hypot(pos[i] - cx, pos[i + 1] - cy, pos[i + 2] - cz) > 0.045) reach++;
+          }
+          out.sys.grips.push({ id, which,
+            sides: quad.filter((n) => n > near * 0.06).length,
+            reach: +(reach / n3 * 100).toFixed(1) });
+        }
+      }
+    } catch (e) { out.sys.grips.push({ id: '?', which: '?', err: e.message }); }
+
+    /* Does hitting a body actually throw blood off it?
+       The emitter can be right and the call site still missing. */
+    out.sys.gore = { hit: 0, kill: 0, err: '' };
+    try {
+      SS.round = 1;
+      __T.killAll(); runFrames(20);
+      const z = __T.spawnKind('walker');
+      const alive = () => (G.particles && (G.particles.count != null
+        ? G.particles.count : G.particles.live)) || 0;
+      const before = alive();
+      __T.hurt(z, 10, null, false, 'bullet');
+      out.sys.gore.hit = alive() - before;
+      const mid = alive();
+      __T.hurt(z, 1e6, null, true, 'bullet');      // a killing head shot
+      out.sys.gore.kill = alive() - mid;
+    } catch (e) { out.sys.gore.err = e.message; }
+
+    /* Anything paper-thin standing inside the bunker.
+
+       Two 3.4 x 4.3 metre boxes with no depth at all were built where the
+       wing's east wall meets the bunker's west wall: the partition
+       between them spanned from one to the other and they are the same
+       plane, so the slab came out zero wide. Lit from one side, invisible
+       edge-on, and solid to walk into. Nothing was watching for it. */
+    out.sys.flat = [];
+    try {
+      const M = window.__T_MAP.main;
+      const seen2 = new Set();
+      const walk = (a) => {
+        if (!a || seen2.has(a)) return;
+        seen2.add(a);
+        const m = a.matrix && a.matrix.e, bb = a.mesh && a.mesh.bounds;
+        if (m && bb && a.visible !== false) {
+          let lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];
+          for (const X of [bb.min.x, bb.max.x]) {
+            for (const Y of [bb.min.y, bb.max.y]) {
+              for (const Z of [bb.min.z, bb.max.z]) {
+                const wx = m[0] * X + m[4] * Y + m[8] * Z + m[12];
+                const wy = m[1] * X + m[5] * Y + m[9] * Z + m[13];
+                const wz = m[2] * X + m[6] * Y + m[10] * Z + m[14];
+                lo = [Math.min(lo[0], wx), Math.min(lo[1], wy), Math.min(lo[2], wz)];
+                hi = [Math.max(hi[0], wx), Math.max(hi[1], wy), Math.max(hi[2], wz)];
+              }
+            }
+          }
+          const size = [hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]];
+          const c = [(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2];
+          const inside = c[0] > M.x0 - 0.5 && c[0] < M.x1 + 0.5
+            && c[2] > M.z0 - 0.5 && c[2] < M.z1 + 0.5 && c[1] > -0.5 && c[1] < M.y1 + 0.5;
+          if (inside && Math.min.apply(null, size) < 0.02 && Math.max.apply(null, size) > 0.30) {
+            out.sys.flat.push({ name: a.name || '(unnamed)',
+              key: (a.mesh && a.mesh.__key) || '?',
+              size: size.map((v) => +v.toFixed(3)), at: c.map((v) => +v.toFixed(2)) });
+          }
+        }
+        for (const ch of (a.children || [])) walk(ch);
+      };
+      for (const a of (G.actors || [])) walk(a);
+    } catch (e) { out.sys.flat.push({ name: 'scan failed', key: e.message, size: [], at: [] }); }
+
     /* Every playable character: can it be selected and does it speak. */
     for (const h of (window.__T_SYS && window.__T_SYS.HERO_ORDER) || []) {
       const row = { h, err: '' };
@@ -524,6 +700,43 @@ function check(name, cond, detail = '') {
   const air = sy.variants.filter((v) => !v.err && v.maxAir > 1.2);
   check('nothing finishes a window vault hanging in the air', air.length === 0,
     list(air, (v) => `${v.kind}: ended a vault ${v.maxAir} m above the floor`));
+
+  const gr = sy.grips || [];
+  const grErr = gr.filter((g2) => g2.err);
+  check('every hand builds a mesh', grErr.length === 0,
+    list(grErr, (g2) => `${g2.id} ${g2.which}: ${g2.err}`));
+  const claw = gr.filter((g2) => !g2.err && g2.sides < 4);
+  check('every hand has skin on all four sides of what it holds', claw.length === 0,
+    list(claw, (g2) => `${g2.id} ${g2.which}: skin on only ${g2.sides} sides`));
+  /* Fingers reach; a lump does not. The bar is low because it has to hold
+     for a fist round a 34 mm grip and for a hand laid open on a 108 mm
+     tube, which are legitimately different shapes. */
+  const lump = gr.filter((g2) => !g2.err && g2.reach < 10);
+  check('no hand is a lump with no fingers on it', lump.length === 0,
+    list(lump, (g2) => `${g2.id} ${g2.which}: only ${g2.reach}% of skin reaches past the palm`));
+
+  const go = sy.gore || {};
+  check('a hit throws blood off the body', !go.err && go.hit > 6,
+    go.err || `${go.hit} particles`);
+  check('a killing blow makes more of a mess than a hit', !go.err && go.kill > go.hit,
+    go.err || `hit ${go.hit}, kill ${go.kill}`);
+
+  /* The ground plane is legitimately flat; nothing else in the room is. */
+  const flat2 = (sy.flat || []).filter((f) => f.name !== 'ground');
+  check('nothing paper-thin is standing inside the bunker', flat2.length === 0,
+    list(flat2, (f) => `${f.name} (${f.key}) ${f.size.join(' x ')} at ${f.at.join(', ')}`));
+
+  const rp = sy.repair || [];
+  const rpErr = rp.filter((r) => r.err);
+  const off = rp.find((r) => r.auto === false), on = rp.find((r) => r.auto === true);
+  check('a barricade does not rebuild itself with auto repair off',
+    !rpErr.length && off && off.boards === 0,
+    rpErr.length ? rpErr[0].err : off ? `${off.boards} boards went back on their own` : 'no reading');
+  check('a barricade does rebuild itself with auto repair on',
+    !rpErr.length && on && on.boards > 0,
+    on ? `${on.boards} boards` : 'no reading');
+  check('the settings default to auto repair off',
+    r.autoRepairDefault === false, 'default is ' + r.autoRepairDefault);
 
   const hErr = sy.heroes.filter((h) => h.err);
   check('every playable character can be selected', hErr.length === 0,

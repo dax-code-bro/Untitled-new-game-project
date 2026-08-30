@@ -1098,10 +1098,49 @@ function buildModel5Cylinder(g) {
   spin(g, [
     [K.cylX0, 0], [K.cylX0, 0.0090], [K.cylX0 - 0.0080, 0.0090], [K.cylX0 - 0.0080, 0],
   ], 18, 36);
-  spin(g, [
-    [K.cylX0, 0], [K.cylX0, K.cylR - 0.0025], [K.cylX0 + 0.0025, K.cylR],
-    [K.cylX1 - 0.0025, K.cylR], [K.cylX1, K.cylR - 0.0025], [K.cylX1, 0],
-  ], 30, 36);
+  /* The cylinder body, with the flutes cut INTO it.
+
+     They used to be four separate tubes of ten millimetre radius sitting
+     on a circle 32.5 mm out -- outside the cylinder's own 27 mm surface.
+     A flute is a groove milled into the steel between the chambers, and
+     this modeller has no way to subtract one solid from another, so
+     placing a tube outside and hoping it reads as a groove is what was
+     done. It does not: it reads as four pipes bolted to the sides, which
+     is exactly what the player saw hanging off it.
+
+     Cut into the profile instead. The cross-section is a circle at cylR
+     that dips toward the axis at the four angles halfway between the
+     chambers, and sweeping THAT along the cylinder gives a fluted
+     cylinder rather than a plain one with things stuck on. */
+  const fluteAt = (i) => (i + 0.5) * TAU / N;
+  const cylProfile = (r) => {
+    const raw = [];
+    const STEPS = 96;
+    for (let i = 0; i < STEPS; i++) {
+      const th = i * TAU / STEPS;
+      let dip = 0;
+      for (let k = 0; k < N; k++) {
+        // How far into this flute we are, as an angle either side of it.
+        let d = th - fluteAt(k);
+        while (d > PI) d -= TAU;
+        while (d < -PI) d += TAU;
+        const halfWidth = TAU / (N * 2) * 0.62;
+        if (Math.abs(d) < halfWidth) {
+          // A cosine scallop, deepest in the middle of the flute.
+          dip = Math.max(dip, Math.cos(d / halfWidth * PI * 0.5) * 0.0042);
+        }
+      }
+      const rr = r - dip;
+      raw.push([Math.cos(th) * rr, Math.sin(th) * rr]);
+    }
+    return profileOutline(raw, 80);
+  };
+  sweepPath(g, [
+    { o: new Vec3(K.cylX0, 0, 0), u: AU, v: AV, pts: cylProfile(K.cylR - 0.0025) },
+    { o: new Vec3(K.cylX0 + 0.0025, 0, 0), u: AU, v: AV, pts: cylProfile(K.cylR) },
+    { o: new Vec3(K.cylX1 - 0.0025, 0, 0), u: AU, v: AV, pts: cylProfile(K.cylR) },
+    { o: new Vec3(K.cylX1, 0, 0), u: AU, v: AV, pts: cylProfile(K.cylR - 0.0025) },
+  ], true, true);
   for (let i = 0; i < N; i++) {
     /* Chamber zero sits at twelve o'clock, on the bore. The angles used to
        start at 45 degrees, so the four chambers straddled the top and the
@@ -1118,13 +1157,7 @@ function buildModel5Cylinder(g) {
       [K.cylX1 + 0.0004, chR + 0.0010], [K.cylX0 - 0.0002, chR + 0.0010],
       [K.cylX0 - 0.0002, 0],
     ], 16, 30, cy, cz);
-    // Flute milled between this chamber and the next.
-    const fth = th + TAU / (N * 2);
-    const fy = Math.cos(fth) * (K.cylR + 0.0055), fz = Math.sin(fth) * (K.cylR + 0.0055);
-    spin(g, [
-      [K.cylX0 + 0.0080, 0], [K.cylX0 + 0.0080, 0.0100],
-      [K.cylX1 - 0.0080, 0.0100], [K.cylX1 - 0.0080, 0],
-    ], 14, 34, fy, fz);
+    // The flutes are in the body's own profile now, not tubes beside it.
   }
   /* Ejector rod, standing forward on the cylinder's own axis — which is
      now below the bore, so it runs inside the underlug when the gun is
@@ -2262,6 +2295,11 @@ function doubleGun(E, kind, opts) {
   body.boreAt = -o.y;
   body.muzzleAt = C.barrelLen - o.x + (C.science ? 0.030 : 0);
   body.sightAt = doubleBeadY(C) - o.y;
+  /* Where the chamber mouths are when the gun is broken open, so a
+     reload can put shells into them rather than at a magazine well the
+     gun does not have. */
+  body.breechAt = DOUBLE.breech - o.x;
+  body.chamberZ = (C.spacing != null ? C.spacing : 0.0245) / 2;
   return body;
 }
 
@@ -2330,6 +2368,103 @@ Engine.prototype.model5 = function (opts = {}) {
   body.muzzleAt = MOD5.muzzle - MOD5_ORIGIN.x;
   body.sightAt = MOD5_SIGHT - MOD5_ORIGIN.y;
   return body;
+};
+
+/* ---------------- ammunition, magazines and loaders ----------------
+
+   Spawned as their own actors so the support hand can carry them, and
+   cached like every other model. The cartridge dimensions are real and
+   live in the game's weapon table; everything here just builds what it
+   is handed. */
+
+const AMMO_MAT = {
+  brass: { color: 0xb08b32, texture: 'metal', roughness: 0.28, metalness: 1 },
+  lead: { color: 0x8e8b84, texture: 'metal', roughness: 0.44, metalness: 1 },
+  hull: { color: 0x9c2f24, texture: 'smooth', roughness: 0.62, metalness: 0 },
+  steel: { color: 0x565f68, texture: 'metal', roughness: 0.44, metalness: 1 },
+  glow: { color: 0x9fe8ff, texture: 'smooth', roughness: 0.30, metalness: 0,
+    emissive: 0x54c8ff, emissiveStrength: 1.5 },
+};
+
+/* One loose round, for a revolver being fed by hand or a shotgun shell
+   going into a chamber. */
+Engine.prototype.cartridge = function (opts = {}) {
+  const C = opts.round || { headR: 0.0058, caseR: 0.0053, neckR: 0.0048,
+    caseLen: 0.0230, overall: 0.0320 };
+  const key = 'cart:' + JSON.stringify(C);
+  const parts = armCache(this, key, () => {
+    const brass = new Geometry(), lead = new Geometry();
+    ammoCartridge(brass, lead, C);
+    return fin({ brass, lead }, new Vec3(0, 0, 0));
+  });
+  return mountArm(this, key, parts,
+    { brass: AMMO_MAT.brass, lead: AMMO_MAT.lead }, opts, 0.04, 0.02, 'brass');
+};
+
+Engine.prototype.shotShell = function (opts = {}) {
+  const C = opts.shell || {};
+  const key = 'shell:' + JSON.stringify(C);
+  const parts = armCache(this, key, () => {
+    const brass = new Geometry(), hull = new Geometry();
+    ammoShell(brass, hull, C);
+    return fin({ brass, hull }, new Vec3(0, 0, 0));
+  });
+  return mountArm(this, key, parts,
+    { brass: AMMO_MAT.brass, hull: opts.hullMaterial || AMMO_MAT.hull },
+    opts, 0.05, 0.04, 'hull');
+};
+
+Engine.prototype.boxMagazine = function (opts = {}) {
+  const C = opts.mag || { w: 0.026, d: 0.021, len: 0.105, curve: 0, witness: 3 };
+  const key = 'mag:' + JSON.stringify(C);
+  const parts = armCache(this, key, () => {
+    const steel = new Geometry(), brass = new Geometry(), lead = new Geometry();
+    ammoMagazine(steel, brass, lead, C);
+    return fin({ steel, brass, lead }, new Vec3(0, 0, 0));
+  });
+  return mountArm(this, key, parts,
+    { steel: opts.bodyMaterial || AMMO_MAT.steel, brass: AMMO_MAT.brass, lead: AMMO_MAT.lead },
+    opts, 0.09, 0.35, 'steel');
+};
+
+Engine.prototype.stripperClip = function (opts = {}) {
+  const C = opts.clip || { count: 10, pitch: 0.0098,
+    round: { headR: 0.0049, caseR: 0.0047, neckR: 0.0040, caseLen: 0.0251, overall: 0.0350 } };
+  const key = 'clip:' + JSON.stringify(C);
+  const parts = armCache(this, key, () => {
+    const steel = new Geometry(), brass = new Geometry(), lead = new Geometry();
+    ammoStripperClip(steel, brass, lead, C);
+    return fin({ steel, brass, lead }, new Vec3(0, 0, 0));
+  });
+  return mountArm(this, key, parts,
+    { steel: AMMO_MAT.steel, brass: AMMO_MAT.brass, lead: AMMO_MAT.lead },
+    opts, 0.07, 0.12, 'steel');
+};
+
+Engine.prototype.speedloader = function (opts = {}) {
+  const C = opts.loader || { count: 4, pcd: 0.0148,
+    round: { headR: 0.0074, caseR: 0.0068, neckR: 0.0064, caseLen: 0.0410, overall: 0.0530 } };
+  const key = 'loader:' + JSON.stringify(C);
+  const parts = armCache(this, key, () => {
+    const steel = new Geometry(), brass = new Geometry(), lead = new Geometry();
+    ammoSpeedloader(steel, brass, lead, C);
+    return fin({ steel, brass, lead }, new Vec3(0, 0, 0));
+  });
+  return mountArm(this, key, parts,
+    { steel: AMMO_MAT.steel, brass: AMMO_MAT.brass, lead: AMMO_MAT.lead },
+    opts, 0.06, 0.20, 'steel');
+};
+
+Engine.prototype.powerCell = function (opts = {}) {
+  const C = opts.cell || { w: 0.052, h: 0.070, d: 0.038 };
+  const key = 'cell:' + JSON.stringify(C);
+  const parts = armCache(this, key, () => {
+    const steel = new Geometry(), glow = new Geometry();
+    ammoCell(steel, glow, C);
+    return fin({ steel, glow }, new Vec3(0, 0, 0));
+  });
+  return mountArm(this, key, parts,
+    { steel: AMMO_MAT.steel, glow: AMMO_MAT.glow }, opts, 0.06, 0.4, 'steel');
 };
 
 /* ---------------- Arc Breaker ---------------- */

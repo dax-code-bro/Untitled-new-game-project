@@ -190,6 +190,32 @@ const RISE_DEPTH = 1.9, RISE_TIME = 1.9;
    are safe to turn your back on. */
 const STUN = { time: 10, dps: 5, arcEvery: 0.16 };
 
+/* What the support hand fetches and carries, per weapon.
+
+   These were primitives: a box for a magazine, a strip with five plain
+   cylinders for a clip, two smooth tubes for shotgun shells. They are the
+   closest objects in the game -- twenty-five centimetres from the eye and
+   filling a quarter of the screen while the hand brings them up -- and at
+   that distance a smooth tube reads as a smooth tube.
+
+   They are real models now, built from the real cartridge's dimensions,
+   and each weapon says which one it carries and how big its rounds are. */
+const AMMO = {
+  /* .45 ACP: 11.5 mm rim, 23 mm case, 32.4 mm overall. Straight-walled,
+     so the neck is the same as the case. */
+  acp45: { headR: 0.00575, caseR: 0.00560, neckR: 0.00560, caseLen: 0.0230, overall: 0.0324 },
+  // 9x19: 9.93 mm rim, 19.15 mm case, 29.7 mm overall, slight taper.
+  para9: { headR: 0.00497, caseR: 0.00480, neckR: 0.00450, caseLen: 0.0192, overall: 0.0297 },
+  // 7.63 Mauser: a bottlenecked little rifle round in a pistol.
+  mau763: { headR: 0.00490, caseR: 0.00470, neckR: 0.00400, caseLen: 0.0251, overall: 0.0350 },
+  // .30-06 class, for the bolt rifles.
+  rifle30: { headR: 0.00600, caseR: 0.00580, neckR: 0.00430, caseLen: 0.0633, overall: 0.0846 },
+  // .500-class magnum for the Model 5, straight-walled and enormous.
+  mag500: { headR: 0.00740, caseR: 0.00700, neckR: 0.00680, caseLen: 0.0410, overall: 0.0530 },
+  // 7.92x57 for the MG.
+  mauser8: { headR: 0.00595, caseR: 0.00570, neckR: 0.00420, caseLen: 0.0570, overall: 0.0805 },
+};
+
 const WEAPONS = {
   m1911: {
     name: 'M1911', slotName: 'SIDEARM',
@@ -201,7 +227,8 @@ const WEAPONS = {
     // the camera axis. Measured off the model, not eyeballed.
     sightH: 0.0455, sightFov: 0.74, adsTime: 0.16,
     recoil: { up: 1.15, side: 0.5, climb: 0.28, recover: 9 },
-    hands: { right: [-0.004, -0.020, 0.017], left: [0.014, -0.056, -0.022], leftGrip: 'pistol' },
+    ammo: { mag: { w: 0.024, d: 0.020, len: 0.086, curve: 0, witness: 0, round: AMMO.acp45 } },
+    hands: { right: [-0.004, -0.020, 0.017], rightGrip: 'pistol', left: [0.014, -0.056, -0.022], leftGrip: { axis: [0.28, -0.94, 0], round: [0, 0, 1], girth: 0.070, spread: 0.0190, close: 0.92, index: 'wrap', thumb: 'along', drop: 0 } },
   },
   /* River's twin. Same pistol, different loading: the rounds carry an
      incendiary compound, so what they leave behind burns for a while after
@@ -219,7 +246,8 @@ const WEAPONS = {
     burn: { dps: 26, time: 5 },
     sightH: 0.0455, sightFov: 0.74, adsTime: 0.16,
     recoil: { up: 1.10, side: 0.5, climb: 0.26, recover: 9 },
-    hands: { right: [-0.004, -0.020, 0.017], left: [0.014, -0.056, -0.022], leftGrip: 'pistol' },
+    ammo: { mag: { w: 0.024, d: 0.020, len: 0.086, curve: 0, witness: 0, round: AMMO.acp45 } },
+    hands: { right: [-0.004, -0.020, 0.017], rightGrip: 'pistol', left: [0.014, -0.056, -0.022], leftGrip: { axis: [0.28, -0.94, 0], round: [0, 0, 1], girth: 0.070, spread: 0.0190, close: 0.92, index: 'wrap', thumb: 'along', drop: 0 } },
   },
   thompson: {
     name: 'Thompson', slotName: 'THOMPSON',
@@ -228,7 +256,8 @@ const WEAPONS = {
     kick: 0.9, sfx: 'shotSmg', reloadKind: 'mag',
     sightH: 0.0955, sightFov: 0.80, adsTime: 0.22,
     recoil: { up: 0.42, side: 0.30, climb: 0.13, recover: 11 },
-    hands: { right: [-0.006, -0.024, 0.016], left: [0.330, -0.020, -0.017] },
+    ammo: { mag: { w: 0.028, d: 0.024, len: 0.112, curve: 0, witness: 0, round: AMMO.acp45 } },
+    hands: { right: [-0.006, -0.024, 0.016], rightGrip: 'pistol', left: [0.330, -0.020, -0.017], leftGrip: 'woodFore' },
   },
   scatter: {
     name: 'Scattergun', slotName: 'SCATTERGUN',
@@ -237,7 +266,8 @@ const WEAPONS = {
     kick: 3.2, sfx: 'shotScatter', reloadKind: 'break',
     sightH: 0.0275, sightFov: 0.86, adsTime: 0.24, adsSpread: 0.55,
     recoil: { up: 2.6, side: 0.9, climb: 0.75, recover: 7 },
-    hands: { right: [-0.014, -0.046, 0.016], left: [0.242, -0.006, -0.020] },
+    ammo: { shell: { r: 0.00925, len: 0.0700, head: 0.0220 } },
+    hands: { right: [-0.014, -0.046, 0.016], rightGrip: 'wrist', left: [0.242, -0.006, -0.020], leftGrip: 'woodFore' },
   },
   /* The stun gun. A double gun with no wood on it: a capacitor bank where
      the rib should be, copper wound round both barrels, emitter rings at
@@ -254,7 +284,8 @@ const WEAPONS = {
     sightH: 0.0425, sightFov: 0.86, adsTime: 0.26, adsSpread: 0.62,
     recoil: { up: 2.4, side: 0.85, climb: 0.60, recover: 7.5 },
     moveMul: 0.94, muzzleVel: 62,
-    hands: { right: [-0.014, -0.046, 0.016], left: [0.268, -0.010, -0.020] },
+    ammo: { shell: { r: 0.00925, len: 0.0640, head: 0.0260 }, hullMaterial: { color: 0x2b5c74, texture: 'smooth', roughness: 0.5, metalness: 0, emissive: 0x1d6c92, emissiveStrength: 0.55 } },
+    hands: { right: [-0.014, -0.046, 0.016], rightGrip: 'wrist', left: [0.268, -0.010, -0.020], leftGrip: 'tube' },
   },
   mp5: {
     name: 'MP5', slotName: 'MP5',
@@ -264,7 +295,8 @@ const WEAPONS = {
     sightH: 0.0435, sightFov: 0.80, adsTime: 0.19,
     recoil: { up: 0.36, side: 0.26, climb: 0.11, recover: 12 },
     moveMul: 1.0, muzzleVel: 400,
-    hands: { right: [-0.012, -0.044, 0.016], left: [0.232, -0.014, -0.020] },
+    ammo: { mag: { w: 0.026, d: 0.021, len: 0.126, curve: 0.011, witness: 4, round: AMMO.para9 } },
+    hands: { right: [-0.012, -0.044, 0.016], rightGrip: 'pistol', left: [0.232, -0.014, -0.020], leftGrip: 'fore' },
   },
   sawnoff: {
     name: 'Sawn-Off', slotName: 'SAWN-OFF',
@@ -274,7 +306,8 @@ const WEAPONS = {
     sightH: 0.026, sightFov: 0.94, adsTime: 0.18, adsSpread: 0.85,
     recoil: { up: 3.6, side: 1.6, climb: 1.05, recover: 6.5 },
     moveMul: 1.06, muzzleVel: 48,
-    hands: { right: [-0.016, -0.048, 0.016], left: [0.170, -0.004, -0.020] },
+    ammo: { shell: { r: 0.00925, len: 0.0700, head: 0.0220 } },
+    hands: { right: [-0.016, -0.048, 0.016], rightGrip: 'pistol', left: [0.170, -0.004, -0.020], leftGrip: 'woodFore' },
   },
   hammer: {
     name: 'Claw Hammer', slotName: 'HAMMER',
@@ -283,7 +316,7 @@ const WEAPONS = {
     kick: 0, sfx: 'dryFire', tool: true,
     sightH: 0.05, sightFov: 0.95, adsTime: 0.2,
     recoil: { up: 0, side: 0, climb: 0, recover: 12 },
-    hands: { right: [0.006, -0.002, 0.012], left: null, rightGrip: 'pistol' },
+    hands: { right: [0.006, -0.002, 0.012], left: null, rightGrip: 'haft' },
   },
   knife: {
     name: 'Trench Knife', slotName: 'KNIFE',
@@ -292,7 +325,7 @@ const WEAPONS = {
     kick: 1.0, sfx: 'knife', melee: true, range: 2.2,
     sightH: 0.05, sightFov: 0.95, adsTime: 0.18,
     recoil: { up: 0.5, side: 0.4, climb: 0, recover: 12 },
-    hands: { right: [-0.006, -0.002, 0.012], left: null },
+    hands: { right: [-0.006, -0.002, 0.012], left: null, rightGrip: 'haft' },
   },
   /* What a sheriff was carrying. Four chambers, a barrel you could lose
      your nerve looking down, and enough behind each round to carry it
@@ -312,7 +345,8 @@ const WEAPONS = {
        which IS the web by construction. The hand sat halfway down a 108 mm
        grip with the frame towering over it, and the shooter's thumb ended
        up a hundred millimetres short of a hammer it is supposed to cock. */
-    hands: { right: [-0.010, -0.013, 0.015], left: [0.030, -0.030, -0.028], leftGrip: 'pistol' },
+    ammo: { loader: { count: 4, pcd: 0.0148, round: AMMO.mag500 } },
+    hands: { right: [-0.010, -0.013, 0.015], rightGrip: 'pistol', left: [0.030, -0.030, -0.028], leftGrip: { axis: [0.28, -0.94, 0], round: [0, 0, 1], girth: 0.074, spread: 0.0192, close: 0.90, index: 'wrap', thumb: 'along', drop: 0 } },
   },
   mauser: {
     name: 'Mauser C96', slotName: 'MAUSER',
@@ -321,7 +355,8 @@ const WEAPONS = {
     kick: 1.5, sfx: 'shotPistol', reloadKind: 'clip',
     sightH: 0.036, sightFov: 0.90, adsTime: 0.20, adsSpread: 0.22,
     recoil: { up: 1.5, side: 0.6, climb: 0.06, recover: 11 },
-    hands: { right: [-0.010, -0.020, 0.014], left: null },
+    ammo: { clip: { count: 10, pitch: 0.0096, round: AMMO.mau763 } },
+    hands: { right: [-0.010, -0.020, 0.014], left: null, rightGrip: { axis: [0.10, -0.99, 0], round: [0, 0, -1], girth: 0.062, spread: 0.0196, close: 0.98, index: 'trigger', thumb: 'over', drop: 0 } },
   },
   /* A rifle for the long shots across the field. Bolt action, so it is
      five rounds and then you are working the handle while they close —
@@ -335,7 +370,8 @@ const WEAPONS = {
     sightH: 0.098, sightFov: 0.34, adsTime: 0.34, adsSpread: 0.03, scoped: true,
     recoil: { up: 3.4, side: 0.8, climb: 0.20, recover: 7 },
     moveMul: 0.90, muzzleVel: 800,
-    hands: { right: [-0.012, -0.028, 0.016], left: [0.300, -0.006, -0.021] },
+    ammo: { clip: { count: 5, pitch: 0.0126, round: AMMO.rifle30 } },
+    hands: { right: [-0.012, -0.028, 0.016], rightGrip: 'wrist', left: [0.300, -0.006, -0.021], leftGrip: 'woodFore' },
   },
   /* The Kill Streak. Two millimetres of bore inside forty of steel, and a
      thousand behind every one of the three rounds it holds. It goes
@@ -350,7 +386,8 @@ const WEAPONS = {
     sightH: 0.116, sightFov: 0.20, adsTime: 0.46, adsSpread: 0.015, scoped: true,
     recoil: { up: 7.5, side: 1.6, climb: 1.30, recover: 5 },
     moveMul: 0.78, muzzleVel: 1400,
-    hands: { right: [-0.012, -0.030, 0.016], left: [0.357, -0.007, -0.021] },
+    ammo: { clip: { count: 5, pitch: 0.0130, round: AMMO.rifle30 } },
+    hands: { right: [-0.012, -0.030, 0.016], rightGrip: 'wrist', left: [0.357, -0.007, -0.021], leftGrip: 'woodFore' },
   },
   /* Belt-fed, twelve hundred a minute, and it weighs as much as the door
      it is standing behind. Fifty rounds go in about two and a half
@@ -363,7 +400,8 @@ const WEAPONS = {
     sightH: 0.1235, sightFov: 0.86, adsTime: 0.34, adsSpread: 0.30,
     recoil: { up: 0.55, side: 0.42, climb: 0.16, recover: 9 },
     moveMul: 0.76, muzzleVel: 755,
-    hands: { right: [-0.012, -0.032, 0.016], left: [0.400, -0.008, -0.022] },
+    ammo: { mag: { w: 0.062, d: 0.048, len: 0.086, curve: 0, witness: 0, round: AMMO.mauser8 } },
+    hands: { right: [-0.012, -0.032, 0.016], rightGrip: { axis: [0.06, -0.998, 0], round: [1, 0, 0], girth: 0.056, spread: 0.0192, close: 1.0, index: 'wrap', thumb: 'up', drop: 0 }, left: [0.400, -0.008, -0.022], leftGrip: 'tube' },
   },
   /* The two answers to plate. Both are melee, both are slow, and both are
      mystery-box only — you do not get to plan for an armoured runner, you
@@ -376,7 +414,7 @@ const WEAPONS = {
     knockback: 9.5, sweep: 1.15,
     sightH: 0.08, sightFov: 1.0, adsTime: 0.30,
     recoil: { up: 2.2, side: 0.8, climb: 0, recover: 8 },
-    hands: { right: [-0.02, -0.055, -0.03], left: [0.10, -0.05, 0.12] },
+    hands: { right: [-0.02, -0.055, -0.03], rightGrip: 'haft', left: [0.10, -0.05, 0.12], leftGrip: { axis: [0.55, -0.83, 0], round: [0, 0, 1], girth: 0.052, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 } },
   },
   shieldWorn: {
     name: 'Cracked Riot Shield', slotName: 'CRACKED SHIELD',
@@ -386,7 +424,7 @@ const WEAPONS = {
     knockback: 3.8, sweep: 0.9, blocks: true,
     sightH: 0.05, sightFov: 1.0, adsTime: 0.26,
     recoil: { up: 0.9, side: 0.5, climb: 0, recover: 11 },
-    hands: { right: [-0.02, -0.045, -0.02], left: [0.02, -0.02, 0.10] },
+    hands: { right: [-0.02, -0.045, -0.02], rightGrip: 'haft', left: [0.02, -0.02, 0.10], leftGrip: { axis: [0.20, -0.98, 0], round: [0, 0, 1], girth: 0.050, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 } },
   },
   shield: {
     name: 'Riot Shield', slotName: 'RIOT SHIELD',
@@ -396,7 +434,7 @@ const WEAPONS = {
     knockback: 5.0, sweep: 0.9, blocks: true,
     sightH: 0.05, sightFov: 1.0, adsTime: 0.22,
     recoil: { up: 0.9, side: 0.5, climb: 0, recover: 11 },
-    hands: { right: [-0.02, -0.045, -0.02], left: [0.02, -0.02, 0.10] },
+    hands: { right: [-0.02, -0.045, -0.02], rightGrip: 'haft', left: [0.02, -0.02, 0.10], leftGrip: { axis: [0.20, -0.98, 0], round: [0, 0, 1], girth: 0.050, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 } },
   },
   arc: {
     name: 'Arc Breaker', slotName: 'ARC BREAKER',
@@ -405,7 +443,8 @@ const WEAPONS = {
     kick: 1.2, sfx: 'shotArc', reloadKind: 'cell',
     sightH: 0.0580, sightFov: 0.82, adsTime: 0.26,
     recoil: { up: 0.9, side: 0.2, climb: 0.2, recover: 8 },
-    hands: { right: [-0.014, -0.046, 0.016], left: [0.188, -0.052, -0.020] },
+    ammo: { cell: { w: 0.052, h: 0.070, d: 0.038 } },
+    hands: { right: [-0.014, -0.046, 0.016], rightGrip: 'pistol', left: [0.188, -0.052, -0.020], leftGrip: { axis: [0.10, -0.99, 0], round: [0, 0, 1], girth: 0.058, spread: 0.0196, close: 1.0, index: 'wrap', thumb: 'over', drop: 0 } },
     chain: { count: 3, radius: 4.0, dmg: 500 },
   },
 };
@@ -970,25 +1009,38 @@ const TOGGLES = {
     name: 'HIT FLINCH', def: true,
     blurb: 'The view rolls away from a blow. Turn it off if it makes you ill.',
   },
+  gore: {
+    name: 'BLOOD AND GORE', def: true,
+    blurb: 'Hits throw blood along the bullet\'s path and killing blows make a mess.',
+  },
   shellCasings: {
     name: 'SPENT BRASS', def: true,
     blurb: 'Cases stay on the floor for a few seconds after they leave the gun.',
   },
 };
-const TOGGLE_ORDER = ['autoRepair', 'flinch', 'shellCasings'];
+const TOGGLE_ORDER = ['autoRepair', 'flinch', 'gore', 'shellCasings'];
 
 function loadToggles() {
   const out = {};
   for (const k of TOGGLE_ORDER) out[k] = TOGGLES[k].def;
   try {
-    const raw = JSON.parse(localStorage.getItem('b9.toggles') || '{}');
+    /* Versioned, and the version was bumped deliberately.
+
+       AUTO REPAIR defaults to off, and the gate that reads it is correct
+       -- measured: with it off nothing rebuilds in seven seconds standing
+       at a stripped window, with it on all five boards go back. But a
+       saved value overrides the default, and anyone who played a build
+       from before the toggle existed has one sitting in their browser
+       telling the game to board windows by proximity forever. Reading a
+       new key throws those away once, so the default actually applies. */
+    const raw = JSON.parse(localStorage.getItem('b9.toggles.v2') || '{}');
     for (const k of TOGGLE_ORDER) if (typeof raw[k] === 'boolean') out[k] = raw[k];
   } catch (e) { /* a browser with storage turned off still gets the defaults */ }
   return out;
 }
 
 function saveToggles(t) {
-  try { localStorage.setItem('b9.toggles', JSON.stringify(t)); } catch (e) { /* no matter */ }
+  try { localStorage.setItem('b9.toggles.v2', JSON.stringify(t)); } catch (e) { /* no matter */ }
 }
 
 const LINES = {
@@ -1695,17 +1747,31 @@ function buildMap(game, S) {
   };
 
   // A static slab from bounds, the whole bunker is made of these.
-  const slab = (x0, x1, y0, y1, z0, z1, material = MAT.wall) => game.box({
-    at: [(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2],
-    size: [x1 - x0, y1 - y0, z1 - z0],
-    material, static: true,
-  });
+  /* A slab with no thickness is not a wall, it is a card.
+
+     Two of these were being built: the partition between the wing and the
+     main room ran from SD.x1 to M.x0 - W, and those are the same plane --
+     the wing's east wall and the bunker's west wall are one wall, so the
+     gap they were filling is zero wide. The result was a pair of
+     3.4 x 4.3 metre boxes with no depth standing inside the room: lit
+     from one side, invisible edge-on, and exactly the flat block the
+     player kept walking into. Anything under a millimetre in any axis is
+     a mistake in the arithmetic that made it, so it does not get built. */
+  const slab = (x0, x1, y0, y1, z0, z1, material = MAT.wall) => {
+    if (x1 - x0 < 0.001 || y1 - y0 < 0.001 || z1 - z0 < 0.001) return null;
+    return game.box({
+      at: [(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2],
+      size: [x1 - x0, y1 - y0, z1 - z0],
+      material, static: true,
+    });
+  };
   // Decoration outside the fight: drawn, never collided with.
-  const deco = (x0, x1, y0, y1, z0, z1, material) => game.box({
-    at: [(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2],
-    size: [x1 - x0, y1 - y0, z1 - z0],
-    material, physics: false,
-  });
+  const deco = (x0, x1, y0, y1, z0, z1, material) => (
+    (x1 - x0 < 0.001 || y1 - y0 < 0.001 || z1 - z0 < 0.001) ? null : game.box({
+      at: [(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2],
+      size: [x1 - x0, y1 - y0, z1 - z0],
+      material, physics: false,
+    }));
   // A wall run along X or Z with window holes cut into it.
   const wallX = (z0, z1, x0, x1, y1, holes = []) => {
     let cur = x0;
@@ -3324,7 +3390,18 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
   const bobY = Math.sin(P.swayT * 2) * (moving ? 0.006 : 0.0016) * sway;
   const bobX = Math.cos(P.swayT) * (moving ? 0.004 : 0.001) * sway;
   P.kickPitch = Math.max(0, P.kickPitch - dt * 9);
-  const dip = P.reloading > 0 ? Math.sin(Math.min(1, 1 - P.reloading / spec.reload) * Math.PI) * 0.09 : 0;
+  /* A reload brings the weapon UP and inboard, not down.
+
+     It used to dip 90 mm, which on top of a hip carry that already sits
+     128 mm below the eye put the whole gun off the bottom of the screen:
+     the character loaded it somewhere around his knees and the player
+     watched an empty room. You cannot see the shells go in if you cannot
+     see the gun. It lifts to where the hands are working and rolls
+     inboard so the breech faces the camera, then settles back. */
+  const rl = P.reloading > 0 ? Math.sin(Math.min(1, 1 - P.reloading / spec.reload) * Math.PI) : 0;
+  const dip = -rl * 0.078;
+  const drawIn = rl * 0.052;
+  const rollIn = rl * 18;
 
   const root = v.kind === 'single' ? v.actor : v.root;
 
@@ -3359,7 +3436,7 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
      the screen at eye level and read as being held up rather than at the
      hip. Down another 30 mm and out another 15, and the muzzle sits below
      the horizon where a carried gun sits. */
-  const hipX = (po ? po.x : 0.098 + bulk * 0.062) + bobX * (bench ? 0 : 1),
+  const hipX = (po ? po.x : 0.098 + bulk * 0.062) - drawIn + bobX * (bench ? 0 : 1),
         hipY = (po ? po.y : -0.128 - bulk * 0.058) + (bench ? 0 : bobY - dip),
         hipD = po ? po.d : 0.355 + bulk * 0.055;
   const adsX = 0, adsY = -spec.sightH, adsD = 0.30;
@@ -3380,8 +3457,10 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
   const fh = Math.hypot(f.x, f.z) || 1e-6;
   const yaw = Math.atan2(-f.z / fh, f.x / fh);
   const pitch = Math.asin(Math.max(-1, Math.min(1, f.y))) + P.kickPitch * 0.06;
-  // Roll the weapon inboard while sprinting; hold it level while aimed.
-  const roll = sp * 0.42 + (1 - a) * 0.03;
+  /* Roll the weapon inboard while sprinting, and again while reloading so
+     the breech, the magazine well or the open cylinder turns to face the
+     camera. A gun reloaded side-on hides the one thing worth watching. */
+  const roll = sp * 0.42 + (1 - a) * 0.03 + rollIn * 0.0175;
   /* Composed from explicit axis-angles rather than Euler triples. setEuler
      takes (pitch, yaw, roll) in YXZ, which is easy to feed in the wrong
      order and gives a weapon that rolls when it should pitch — and the
@@ -3582,7 +3661,11 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
      and outboard to fetch, then up to the magazine well, then away. */
   if (v.arms && v.arms.support && v.arms.support.length) {
     const kind = spec.reloadKind;
-    const carries = kind === 'mag' || kind === 'clip' || kind === 'cell' || kind === 'break';
+    /* The revolver joins the list. Its cylinder swung out and four
+       rounds appeared in it by themselves -- the one reload in the game
+       still being done by an invisible hand. */
+    const carries = kind === 'mag' || kind === 'clip' || kind === 'cell'
+      || kind === 'break' || kind === 'revolver';
     let ox = 0, oy = 0, oz = 0, propT = -1;
     if (P.reloading > 0 && carries) {
       const u = 1 - P.reloading / spec.reload;
@@ -3612,15 +3695,71 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
     if (propT >= 0) {
       const prop = reloadProp(game, P, v, spec, kind);
       if (prop) {
-        for (const q of prop.parts) q.visible = true;
-        const well = v.magWell || (v.root && v.root.magWell) || [M_WELL_X(v), -0.055, 0];
-        // Start low and outboard, arrive at the well.
-        const t = Math.min(1, propT);
-        const e = t * t * (3 - 2 * t);
+        /* Where the load is going, and how it gets there.
+
+           Everything used to travel the same path to the same place: up
+           from below-outboard to the magazine well, whatever it was. A
+           stripper clip does not go into a magazine well, it goes into the
+           guide on TOP of the receiver and the rounds are pressed down out
+           of it. Shotgun shells go into the chamber mouths, nose first,
+           and stay there. A speedloader goes onto the face of an open
+           cylinder and is twisted off. Sending all of them to the same
+           point is the invisible reload with a prop attached to it. */
+        const u2 = Math.min(1, Math.max(0, propT));
+        const e = u2 * u2 * (3 - 2 * u2);
+        const bore = (v.root && v.root.boreAt) || 0.06;
+        const muzzle = (v.root && v.root.muzzleAt) || 0.3;
+        let to = v.magWell || (v.root && v.root.magWell) || [M_WELL_X(v), -0.055, 0];
+        let from = [to[0] - 0.050, to[1] - 0.175, to[2] - 0.070];
+        let rot = [0, 0, 0], rot0 = [0, 0, 0];
+        let show = true;
+
+        if (kind === 'break') {
+          /* Into the chamber mouths of the broken-open barrels: the pair
+             comes up from below the breech, noses forward, and slides in.
+             Once they are home the shells stay -- the gun's own barrels
+             carry them from there. */
+          const bx = (v.root && v.root.breechAt) || 0.030;
+          to = [bx + 0.004, bore - 0.0002, -0.0122];
+          from = [bx - 0.075, bore - 0.150, -0.075];
+          rot = [0, 0, 0]; rot0 = [0, -34, -22];
+          show = u2 < 0.995;
+        } else if (kind === 'revolver') {
+          /* Onto the face of the swung-out cylinder, which is out to the
+             left on its crane, and pressed straight in along the bore. */
+          const cr = v.crane || [0.09, bore, -0.015];
+          to = [cr[0] - 0.052, bore + 0.001, cr[2] - 0.045];
+          from = [to[0] - 0.060, to[1] - 0.170, to[2] - 0.055];
+          rot = [0, -62, 0]; rot0 = [0, -18, -34];
+          // Withdrawn empty once the rounds are in.
+          show = u2 < 0.90;
+        } else if (kind === 'clip') {
+          /* Into the stripper guide on top of the action, standing up,
+             and the empty strip is flicked clear at the end. */
+          to = [0.012, bore + 0.030, 0];
+          from = [-0.030, bore - 0.150, -0.075];
+          rot = [0, 0, 0]; rot0 = [22, -30, 16];
+          show = u2 < 0.93;
+        } else if (kind === 'cell') {
+          to = [to[0], to[1] + 0.004, to[2]];
+          from = [to[0] - 0.045, to[1] - 0.170, to[2] - 0.080];
+          rot0 = [0, -24, -18];
+        } else {
+          /* A magazine goes up the well nose-first, tipped a little as
+             the hand brings it round, straightening as it seats. */
+          rot0 = [0, -12, -16];
+        }
+        void muzzle;
+        for (const q of prop.parts) q.visible = show;
         prop.root.setPosition([
-          well[0] + (-0.050) * (1 - e),
-          well[1] + (-0.175) * (1 - e),
-          well[2] + (-0.070) * (1 - e),
+          to[0] + (from[0] - to[0]) * (1 - e),
+          to[1] + (from[1] - to[1]) * (1 - e),
+          to[2] + (from[2] - to[2]) * (1 - e),
+        ]);
+        prop.root.setRotation([
+          rot[0] + (rot0[0] - rot[0]) * (1 - e),
+          rot[1] + (rot0[1] - rot[1]) * (1 - e),
+          rot[2] + (rot0[2] - rot[2]) * (1 - e),
         ]);
       }
     } else if (v.prop) {
@@ -4057,53 +4196,64 @@ function M_WELL_X(v) {
    seconds and spawning a magazine each time is a mesh upload each time.
    Parented to the weapon, so it inherits every bit of sway and recoil the
    gun has and does not swim about relative to the hand holding it. */
+
 function reloadProp(game, P, v, spec, kind) {
   P.props = P.props || {};
   const id = P.equipped();
   if (P.props[id]) return P.props[id];
   const root = v.kind === 'single' ? v.actor : v.root;
   if (!root) return null;
-  const steel = { color: 0x4d565f, texture: 'metal', roughness: 0.46, metalness: 1 };
-  const brass = { color: 0xc9a227, texture: 'metal', roughness: 0.30, metalness: 1 };
-  const parts = [];
-  /* The first piece is the holder and everything after hangs off it, so
-     moving one actor moves the whole magazine. Parenting the pieces to the
-     weapon instead leaves them behind when the hand carries it. */
-  let holder = null;
-  const add = (a, at) => {
-    if (!holder) { a.parent = root; holder = a; } else a.parent = holder;
-    a.setPosition(at);
-    parts.push(a);
-    return a;
-  };
+
+  const A = spec.ammo || {};
+  let made = null;
   if (kind === 'mag') {
-    // A box magazine, as long as the gun's own and slightly curved out of
-    // the vertical the way a real one sits in the hand.
-    add(game.box({ size: [0.026, 0.105, 0.021], material: steel, physics: false }), [0, 0, 0]);
-    add(game.box({ size: [0.030, 0.010, 0.025], material: steel, physics: false }), [0, -0.056, 0]);
+    made = game.boxMagazine({ physics: false, mag: Object.assign({
+      w: 0.026, d: 0.021, len: 0.105, curve: 0, witness: 0, round: AMMO.para9,
+    }, A.mag || {}), bodyMaterial: A.magMaterial });
   } else if (kind === 'clip') {
-    // A stripper clip: the steel strip and five rounds standing in it.
-    add(game.box({ size: [0.010, 0.012, 0.052], material: steel, physics: false }), [0, 0, 0]);
-    for (let i = 0; i < 5; i++) {
-      const c = game.cylinder({ radius: 0.0042, height: 0.052, material: brass, physics: false });
-      c.setRotation([0, 0, 90]);
-      add(c, [0.028, 0.004, -0.020 + i * 0.010]);
-    }
+    made = game.stripperClip({ physics: false, clip: Object.assign({
+      count: 10, pitch: 0.0098, round: AMMO.mau763,
+    }, A.clip || {}) });
   } else if (kind === 'cell') {
-    add(game.box({ size: [0.052, 0.070, 0.038], material: steel, physics: false }), [0, 0, 0]);
-    add(game.box({ size: [0.012, 0.048, 0.040], material: {
-      color: 0x9fe8ff, texture: 'smooth', roughness: 0.3, metalness: 0,
-      emissive: 0x54c8ff, emissiveStrength: 1.4 }, physics: false }), [0.028, 0, 0]);
+    made = game.powerCell({ physics: false, cell: Object.assign({
+      w: 0.052, h: 0.070, d: 0.038,
+    }, A.cell || {}) });
   } else if (kind === 'break') {
-    // Two shells held between the fingers, which is how you load a double.
-    add(game.cylinder({ radius: 0.0093, height: 0.062, material: brass, physics: false }), [0, 0, -0.012])
-      .setRotation([0, 0, 90]);
-    const b = game.cylinder({ radius: 0.0093, height: 0.062, material: brass, physics: false });
-    b.setRotation([0, 0, 90]);
-    add(b, [0, 0, 0.012]);
+    /* Two shells held between the fingers, which is how you load a
+       double: the pair goes in together. They are their own actors so
+       they can be left in the chambers rather than vanishing. */
+    const shells = [];
+    for (let i = 0; i < 2; i++) {
+      const sh = game.shotShell({ physics: false,
+        shell: Object.assign({ r: 0.00925, len: 0.0700, head: 0.0220 }, A.shell || {}),
+        hullMaterial: A.hullMaterial });
+      sh.setRotation([0, 0, 0]);
+      shells.push(sh);
+    }
+    // The first is the holder; the second rides beside it.
+    shells[0].parent = root;
+    shells[1].parent = shells[0];
+    shells[1].setPosition([0, 0, 0.0212]);
+    const parts0 = [];
+    for (const sh of shells) {
+      parts0.push(sh);
+      for (const n of sh.partNames || []) if (sh[n]) parts0.push(sh[n]);
+    }
+    for (const q of parts0) q.visible = false;
+    P.props[id] = { root: shells[0], parts: parts0, shells };
+    v.prop = P.props[id];
+    return P.props[id];
+  } else if (kind === 'revolver') {
+    made = game.speedloader({ physics: false, loader: Object.assign({
+      count: spec.mag || 4, pcd: 0.0148, round: AMMO.mag500,
+    }, A.loader || {}) });
   } else return null;
+
+  made.parent = root;
+  const parts = [made];
+  for (const n of made.partNames || []) if (made[n]) parts.push(made[n]);
   for (const q of parts) q.visible = false;
-  P.props[id] = { root: holder, parts };
+  P.props[id] = { root: made, parts };
   v.prop = P.props[id];
   return P.props[id];
 }
@@ -5065,7 +5215,46 @@ function hurtZombie(game, S, z, dmg, at, headshot, source, opts) {
     return;
   }
   z.hp -= dmg;
-  game.particles.sparks(at, { count: 5, speed: 2.5, color: 0x7a1610, colorEnd: 0x2c0605 });
+  /* Blood, and it comes out the way the round went in.
+
+     This was five sparks in a dark red -- confetti, and the same confetti
+     whether you had touched something with a knife or put a .50 through
+     its chest. A hit should throw spray along the bullet's path, leave a
+     mist hanging where it went in, and get worse the harder it was.
+
+     `dir` is the direction of travel: from the shooter to the wound for a
+     shot, and away from the body's centre for a blow that has no ray.
+     Blood that sprays evenly in every direction reads as a burst pipe. */
+  const zp0 = z.actor.position;
+  let dir = null;
+  if (opts && opts.dir) dir = opts.dir;
+  else if (S.player && S.player.actor) {
+    const pp = S.player.actor.position;
+    const dx = at[0] - pp.x, dy = at[1] - (pp.y + 0.6), dz = at[2] - pp.z;
+    const L = Math.hypot(dx, dy, dz) || 1;
+    dir = [dx / L, dy / L, dz / L];
+  }
+  if (S.toggles && S.toggles.gore !== false) {
+    /* Scaled by how hard the hit was, against this round's own health, so
+       a graze off a big one is a spatter and a magnum is a fountain. */
+    const bite = Math.max(0.25, Math.min(2.4, dmg / Math.max(40, z.maxHp * 0.25)));
+    const head = headshot ? 1.7 : 1;
+    game.particles.blood(at, {
+      count: Math.round(7 + bite * 9 * head),
+      speed: 3.2 + bite * 2.6,
+      direction: dir,
+      spread: source === 'melee' ? 0.75 : 0.5,
+      size: 0.8 + bite * 0.35,
+    });
+    /* A headshot is its own event: the spray goes up and back, and there
+       is something more than mist in it. */
+    if (headshot) {
+      game.particles.gore([at[0], at[1] + 0.04, at[2]], {
+        count: 5, speed: 3.0, direction: dir, size: 0.75,
+      });
+    }
+  }
+  void zp0;
   if (source === 'fire') {
     /* Incendiary. The hit itself is light; what the round is for is what
        it leaves behind, and it stacks its clock rather than its damage —
@@ -5081,7 +5270,20 @@ function hurtZombie(game, S, z, dmg, at, headshot, source, opts) {
     z.stunT = Math.max(z.stunT || 0, STUN.time);
     z.stunSeed = Math.random() * 6.28;
   }
-  if (z.hp <= 0) killZombie(game, S, z, headshot);
+  if (z.hp <= 0) {
+    /* The killing blow makes a mess. Everything above is the wound; this
+       is the body coming apart, and it is worth being bigger than any
+       single hit that led to it. */
+    if (S.toggles && S.toggles.gore !== false) {
+      game.particles.gore([at[0], at[1], at[2]], {
+        count: headshot ? 16 : 11,
+        speed: headshot ? 5.4 : 4.0,
+        direction: dir,
+        size: headshot ? 1.15 : 0.95,
+      });
+    }
+    killZombie(game, S, z, headshot);
+  }
 }
 
 function killZombie(game, S, z, headshot) {
@@ -8240,6 +8442,12 @@ function start(opts = {}) {
     killAll() { for (const z of S.zombies) if (!z.dead) killZombie(game, S, z, false); },
     forceRound(n) { S.round = n - 1; S.toSpawn = 0; for (const z of S.zombies) if (!z.dead) killZombie(game, S, z, false); startRound(game, S, hud, sfx); },
     god(on) { S.godMode = on !== false; },
+    /* Hurt a body directly, so a harness can look at what a hit throws
+       off it without having to line up a shot first. */
+    hurt(z, dmg, at, headshot, source) {
+      const p = z.actor.position;
+      hurtZombie(game, S, z, dmg, at || [p.x, p.y + 0.9, p.z], !!headshot, source || 'bullet');
+    },
     hold(o) { Object.assign(S.testHold, o); },
     release() { S.testHold = {}; },
     teleport(x, y, z) { P.actor.controller.teleport(new window.LE.Vec3(x, y, z)); },

@@ -76,8 +76,84 @@ function buildViewArm(g, shoulder, hand, side) {
    round a grip is the thing that makes a first-person hand look wrong
    without anyone being able to say why. Three straight bones with sharp
    angles between them reads as a hand even at this size. */
+/* What a hand is holding, described rather than chosen from a list of two.
+ *
+ * There used to be exactly two poses -- 'pistol' and 'fore' -- and every
+ * weapon in the game was forced into one of them. A hand on a Thompson's
+ * vertical foregrip, a hand under a shotgun's fat wooden forend, a hand on
+ * the MG42's spade grip and a hand round the Arc Breaker's accelerator
+ * tube are four different shapes, and giving all four the same fingers is
+ * why they all read as the same generic claw.
+ *
+ * So a grip is a description of the thing being held, in the weapon's own
+ * space, and the hand is built to fit it:
+ *
+ *   axis    the direction the held part runs. Fingers are spaced along
+ *           this, one above the next, and the palm lies against it.
+ *   round   the direction from the HAND toward what it is holding, and
+ *           on round the far side. Its sign therefore depends on which
+ *           side the hand comes from: a left hand on a vertical grip has
+ *           the opposite `round` to a right one. Getting it backwards
+ *           builds a hand facing away from the thing it holds, which the
+ *           enclosure check catches as skin on three sides instead of
+ *           four -- that is what it caught on the MG42's spade grip and
+ *           the Arc Breaker's foregrip.
+ *   girth   how far there is to go round: half the cross-section's
+ *           perimeter. A 1911's front strap is about 55 mm, a shotgun
+ *           forend nearer 85, the Arc's tube 100.
+ *   spread  the pitch between fingers along the axis.
+ *   close   how far they close at the end of the wrap. A thin grip closes
+ *           further than a fat tube.
+ *   index   what the forefinger does: 'trigger' lays it forward along the
+ *           frame, 'wrap' closes it with the rest, 'point' lays it flat.
+ *   thumb   'over' the fingers, 'along' the weapon, or 'up' beside it.
+ *   drop    how far the anchor is from the middle of what is held, along
+ *           `round` -- a hand under a forend sits below it.
+ */
+const GRIP_KINDS = {
+  /* A vertical pistol grip, held by the firing hand. The palm is on the
+     backstrap, the fingers cross the front strap and close back in. */
+  pistol: { axis: [0.28, -0.94, 0], round: [0, 0, -1], girth: 0.055,
+    spread: 0.0194, close: 1.0, index: 'trigger', thumb: 'over', drop: 0 },
+  /* Under a horizontal forend: wrist low and behind, knuckles up the near
+     side, fingers over the top and down the far side. */
+  fore: { axis: [1, 0, 0], round: [0, 1, 0], girth: 0.078,
+    spread: 0.0202, close: 0.96, index: 'wrap', thumb: 'along', drop: 0.019 },
+  /* A vertical foregrip, gripped like a pistol grip but with nothing to
+     put a trigger finger on, so all four fingers wrap. */
+  foregrip: { axis: [0.10, -0.99, 0], round: [0, 0, -1], girth: 0.058,
+    spread: 0.0196, close: 1.0, index: 'wrap', thumb: 'over', drop: 0 },
+  /* A fat wooden shotgun forend: more to go round, so the fingers do not
+     close as far and sit further apart. */
+  woodFore: { axis: [1, 0, 0], round: [0, 1, 0], girth: 0.092,
+    spread: 0.0210, close: 0.86, index: 'wrap', thumb: 'along', drop: 0.023 },
+  /* A big tube -- the Arc Breaker's accelerator, the MG42's shroud. The
+     hand lies along it and barely closes. */
+  tube: { axis: [1, 0, 0], round: [0, 1, 0], girth: 0.108,
+    spread: 0.0214, close: 0.74, index: 'wrap', thumb: 'along', drop: 0.028 },
+  /* Spade grips: gripped from behind with the thumb up on a butterfly
+     trigger, so the thumb goes UP rather than over the fingers. */
+  spade: { axis: [0.06, -0.998, 0], round: [-1, 0, 0], girth: 0.056,
+    spread: 0.0192, close: 1.0, index: 'wrap', thumb: 'up', drop: 0 },
+  /* A slim rifle wrist behind the action -- a stock's small of the grip,
+     which is raked further back than a pistol grip and is thinner. */
+  wrist: { axis: [0.42, -0.91, 0], round: [0, 0, -1], girth: 0.050,
+    spread: 0.0188, close: 1.0, index: 'trigger', thumb: 'over', drop: 0 },
+  /* A haft or a shaft held across the body: a knife, a hammer, the
+     battering ram's grip. Nothing to point a trigger finger at. */
+  haft: { axis: [0.55, -0.83, 0], round: [0, 0, -1], girth: 0.048,
+    spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 },
+};
+
 function buildViewHand(g, rawAt, side, opts = {}) {
-  const fore = (opts.grip || 'pistol') === 'fore';
+  /* The grip may be named, or given inline as an object so one weapon can
+     tune a shape nothing else shares. */
+  const named = typeof opts.grip === 'string' ? GRIP_KINDS[opts.grip] : null;
+  const G = Object.assign({}, GRIP_KINDS.pistol,
+    named || GRIP_KINDS.pistol, (opts.grip && typeof opts.grip === 'object') ? opts.grip : {});
+  // `fore` still means "held from underneath, along its length", which
+  // several of the measurements below are phrased in terms of.
+  const fore = Math.abs(G.round[1]) > 0.5;
 
   /* Four axes, and every part of the hand follows from them.
 
@@ -109,12 +185,25 @@ function buildViewHand(g, rawAt, side, opts = {}) {
      knuckles UP and ACROSS the top before curling down the far side. The
      thumb stays on the near side and the four fingers are spaced along the
      bar, which is the one part that was right. */
-  const palm = fore ? V(0.30, 0.95, 0) : V(0.28, -0.94, 0);
-  const point = fore ? V(0, 0.45, -side * 0.89) : new Vec3(0, 0, -side);
-  const curl = fore ? V(0, -0.89, -side * 0.45) : V(-0.94, -0.28, 0);
-  const lane = fore ? V(1, 0, 0) : V(0.28, -0.94, 0);
-  // Toward whatever is being held, from the hand's own centre.
-  const grasp = fore ? V(0, 1, 0) : V(0.94, 0.28, 0);
+  /* All four fall out of the grip's own two directions.
+
+     `lane` is the held part's axis: the fingers are spaced along it.
+     `grasp` points from the hand at what it is holding, which is `round`.
+     `palm` runs from the wrist to the knuckles, which is BACK along the
+     axis on a vertical grip (the wrist is above the knuckles) and up the
+     near side under a forend. `point` is the way a proximal phalanx
+     leaves its knuckle -- across the front of the held part, sideways --
+     and `curl` is where it goes next, on round the far side. */
+  const lane = V(G.axis[0], G.axis[1], G.axis[2]);
+  const grasp = V(G.round[0], G.round[1], G.round[2]);
+  const palm = fore
+    ? V(grasp.x * 0.95 + lane.x * 0.30, grasp.y * 0.95 + lane.y * 0.30, grasp.z * 0.95 + lane.z * 0.30)
+    : new Vec3(-lane.x, -lane.y, -lane.z);
+  /* Across the front, perpendicular to both -- which side depends on
+     which hand it is, because the two wrap opposite ways round. */
+  const point = new Vec3().crossVectors(lane, grasp).normalize().scale(-side);
+  // And on round: away from the hand, past the far side.
+  const curl = new Vec3(-grasp.x, -grasp.y, -grasp.z);
 
   /* The support hand goes UNDER the forend, not around the middle of it.
 
@@ -125,8 +214,8 @@ function buildViewHand(g, rawAt, side, opts = {}) {
      and the support hand was 132/68/15/13 across the four quadrants where
      the firing hand is 37/44/117/120. Drop it by a finger's width and the
      forend lands in the crook where it belongs. */
-  const at = fore
-    ? new Vec3(rawAt.x - grasp.x * 0.019, rawAt.y - grasp.y * 0.019, rawAt.z - grasp.z * 0.019)
+  const at = G.drop
+    ? new Vec3(rawAt.x - grasp.x * G.drop, rawAt.y - grasp.y * G.drop, rawAt.z - grasp.z * G.drop)
     : rawAt;
 
   const at3 = (b, d) => new Vec3(at.x + b.x * d, at.y + b.y * d, at.z + b.z * d);
@@ -140,6 +229,20 @@ function buildViewHand(g, rawAt, side, opts = {}) {
      thickness. Centred, half of it was inside the gun and the visible half
      read as a swelling growing out of the grip. */
   const off0 = fore ? 0 : 0.011;
+  /* Palm cross-section, from the girth. `w` is how far it reaches round
+     the front and back of what is held, `d` is its own thickness -- and
+     flesh does not change thickness with what it is gripping, so only the
+     first grows. */
+  /* Gently. Scaling straight off the girth gave a hand on a shotgun
+     forend a palm a hundred millimetres front to back, which swallowed
+     its own fingers -- from the side it was a featureless mitten. A palm
+     spreads a little over something fat; it does not double. The
+     wrapping is the fingers' job. */
+  const girthMul = Math.max(0.94, Math.min(1.16, 1 + (G.girth - 0.055) * 2.6));
+  const pw0 = (fore ? 0.020 : 0.0165) * girthMul;
+  const pw1 = (fore ? 0.0125 : 0.0112) * girthMul;
+  const pd0 = fore ? 0.0110 : 0.0088;
+  const pd1 = fore ? 0.0060 : 0.0044;
   for (let i = 0; i <= PN; i++) {
     const t = i / PN;
     // Wrist to knuckles: 80 mm along the grip, which is a knuckle span.
@@ -176,8 +279,12 @@ function buildViewHand(g, rawAt, side, opts = {}) {
          upper third of the grip bare above the hand -- the gun looked
          held by its bottom corner. The heel of a hand is already most of
          its width where it leaves the wrist. */
-      w: (fore ? 0.020 : 0.0165) + Math.sin((0.24 + t * 0.76) * PI * 0.88) * (fore ? 0.0125 : 0.0112),
-      d: (fore ? 0.0110 : 0.0088) + Math.sin((0.24 + t * 0.76) * PI * 0.92) * (fore ? 0.0060 : 0.0044),
+      /* The palm spreads over what it is holding, so the girth sets how
+         far around the front and back of it the flesh reaches. A hand on
+         a 55 mm grip is a fist; the same hand on a 108 mm tube is laid
+         open across it. */
+      w: pw0 + Math.sin((0.24 + t * 0.76) * PI * 0.88) * pw1,
+      d: pd0 + Math.sin((0.24 + t * 0.76) * PI * 0.92) * pd1,
       e: 2.6, uv: t,
     });
   }
@@ -238,7 +345,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
      off its knuckle forward, takes one small bend, and lies along the
      trigger. That one separated finger is most of what makes the hand read
      as a hand holding a gun rather than a fist round a stick. */
-  const trigger = opts.trigger !== false && !fore;
+  const trigger = opts.trigger !== false && G.index === 'trigger';
   /* Bone lengths, and the reason the hand was a ball.
 
      These were 30/21/15.5 mm — 66 mm of finger — with 168 degrees of total
@@ -253,6 +360,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
   const LEN = [0.0420, 0.0262, 0.0190];
   const knuckle0 = at3(palm, 0.044);
   for (let f = 0; f < 4; f++) {
+    // Which finger, if any, leaves the wrap to lie on a trigger.
     const isIndex = trigger && f === 3;
     // Index nearest the muzzle, little finger furthest from it.
     /* Spaced so they touch. Four 19 mm fingers side by side span 76 mm,
@@ -266,7 +374,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
        index belongs at the top, by the trigger, and the little finger at
        the butt. Under a forend `lane` runs toward the muzzle and the
        original sign is the right one: index forward. */
-    const off = (fore ? f - 1.5 : 1.5 - f) * (fore ? 0.0202 : 0.0194);
+    const off = (fore ? f - 1.5 : 1.5 - f) * G.spread;
     const scale = isIndex ? 1.0 : [0.84, 0.96, 1.0, 0.99][f];
     const root = new Vec3(
       knuckle0.x + lane.x * off + grasp.x * 0.011 + point.x * 0.006,
@@ -279,7 +387,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
        close less, because there is more of it to go round. */
     /* Round a forend they close nearly as far as round a grip: the hand is
        under it and the fingers have to come up the far side and over. */
-    const close = fore ? 0.96 : 1.0;
+    const close = G.close;
     /* A hundred degrees over three joints, weighted to the middle knuckle,
        which is where a hand actually does most of its closing. Over 87 mm
        of bone that is an arc about 50 mm across — a hand round a grip
@@ -293,8 +401,17 @@ function buildViewHand(g, rawAt, side, opts = {}) {
        backwards on leaving the knuckle, so the finger wrapped along the
        gun instead of around the grip and the tip finished 62 mm behind
        the knuckle -- twice the depth of the thing it was holding. */
+    /* How far round is set by the girth of what is being held.
+
+       87 mm of finger wrapping a 55 mm half-perimeter turns through about
+       2.6 radians; wrapping the Arc Breaker's 108 mm tube it barely turns
+       at all, because the tube uses up the whole finger before it can
+       curl. Scaling the total by the girth is what makes a hand on a fat
+       forend read as a different hand from one on a pistol grip instead
+       of the same claw at a different angle. */
+    const wrap = Math.max(0.52, Math.min(1.22, 0.055 / G.girth)) * close;
     const bends = isIndex ? [0.16, 0.52, 0.46]
-      : [0.25 * close, 1.30 * close, 1.05 * close];
+      : [0.25 * wrap, 1.30 * wrap, 1.05 * wrap];
     if (isIndex) {
       /* The trigger finger reaches forward along the frame and closes
          inward onto the blade, which is a different plane from the one
@@ -330,7 +447,14 @@ function buildViewHand(g, rawAt, side, opts = {}) {
     );
     // The base joint, which is what a moving thumb turns about.
     if (opts.out) opts.out.thumbPivot = [p.x, p.y, p.z];
-    let d = fore ? V2(0.90, 0.36, -side * 0.24) : V2(0.60, 0.64, -side * 0.48);
+    /* Where the thumb goes, which is a property of the grip and not of
+       whether the hand happens to be underneath something. On a pistol
+       grip it folds OVER the fingers; along a forend it lies ALONG the
+       weapon; on spade grips it stands UP beside them, where a butterfly
+       trigger is. */
+    let d = G.thumb === 'along' ? V2(0.90, 0.36, -side * 0.24)
+      : G.thumb === 'up' ? V2(0.10, 0.95, -side * 0.30)
+        : V2(0.60, 0.64, -side * 0.48);
     const rs = [{ p: new Vec3(p.x, p.y, p.z), w: 0.0114, d: 0.0102, e: 2.4, uv: 0 }];
     const step = (len, r, k) => {
       p = new Vec3(p.x + d.x * len, p.y + d.y * len, p.z + d.z * len);
@@ -340,7 +464,9 @@ function buildViewHand(g, rawAt, side, opts = {}) {
        from the base joint to the tip, and this one has to reach a hammer. */
     step(0.019, 0.0108, 0.22);
     step(0.017, 0.0102, 0.44);
-    d = fore ? V2(0.78, 0.00, -side * 0.62) : V2(0.86, 0.04, -side * 0.54);
+    d = G.thumb === 'along' ? V2(0.78, 0.00, -side * 0.62)
+      : G.thumb === 'up' ? V2(0.16, 0.86, -side * 0.48)
+        : V2(0.86, 0.04, -side * 0.54);
     step(0.016, 0.0097, 0.66);
     step(0.013, 0.0085, 0.86);
     step(0.006, 0.0039, 1.0);

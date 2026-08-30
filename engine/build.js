@@ -54,7 +54,7 @@ const LegendEngine = {
   Geometry, Shapes, convexHull, hullToGeometry,
   Engine, Actor, Material, Body, PhysicsWorld,
   Fluid, Fracture, ParticleSystem, Skeleton, AnimationClip, Face, Bone, makeHumanoidSkeleton, makeHumanoidMesh, solveSkinWeights, smoothNormals, parseRiggedMesh, skeletonFromRig,
-  makePistol1911, makeViewmodelArms, makeZombieClips, buildZombieBodyGeometry, buildZombieClothGeometry, zombieWoundSpots,
+  makePistol1911, makeViewmodelArms, GRIP_KINDS, makeZombieClips, buildZombieBodyGeometry, buildZombieClothGeometry, zombieWoundSpots,
   Grass, Input, Audio,
   clamp, lerp, smoothstep,
 };

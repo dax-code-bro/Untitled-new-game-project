@@ -237,6 +237,106 @@ class ParticleSystem {
     }
   }
 
+  /* Blood.
+   *
+   * Three things happen when a bullet goes into a body and they look
+   * nothing alike, so they are three emitters rather than one:
+   *
+   *   spray   heavy droplets thrown out along the bullet's path, fast,
+   *           falling fast, bouncing once off whatever they land on.
+   *           This is the part that reads as an impact.
+   *   mist    a fine cloud that hangs for a moment where the round went
+   *           in, drifting and fading. Without it the spray reads as
+   *           confetti; with it there is a shape in the air.
+   *   gouts   for a killing blow or a limb coming off -- fewer, bigger,
+   *           slower, arcing further and landing wet.
+   *
+   * Directional by default: `direction` is the way the round was
+   * travelling, and most of what comes out follows it. Blood that sprays
+   * evenly in all directions looks like a burst pipe rather than a hit.
+   */
+  blood(position, opts = {}) {
+    const n = opts.count || 16;
+    const speed = opts.speed || 5.5;
+    const dir = opts.direction ? Vec3.from(opts.direction).normalize() : null;
+    const spread = opts.spread != null ? opts.spread : 0.55;
+    const color = parseColor(opts.color != null ? opts.color : 0x8e0f0a);
+    const colorEnd = parseColor(opts.colorEnd != null ? opts.colorEnd : 0x36070a);
+    const v = new Vec3();
+    for (let i = 0; i < n; i++) {
+      this.rng.unitVec3(v);
+      if (dir) v.lerp(dir, 1 - spread).normalize();
+      v.scale(speed * this.rng.range(0.30, 1));
+      v.y += this.rng.range(0.2, 1.6);
+      this.spawn({
+        position,
+        velocity: v,
+        life: this.rng.range(0.5, 1.3) * (opts.life || 1),
+        size: this.rng.range(0.020, 0.055) * (opts.size || 1),
+        sizeEnd: this.rng.range(0.010, 0.026) * (opts.size || 1),
+        color,
+        colorEnd,
+        alpha: 1,
+        drag: 0.5,
+        gravity: -13,
+        type: PARTICLE.SPARK,
+        bounce: 0.12,
+      });
+    }
+    // The mist that hangs where the round went in.
+    const m = opts.mist != null ? opts.mist : Math.max(3, Math.round(n * 0.4));
+    for (let i = 0; i < m; i++) {
+      this.rng.unitVec3(v);
+      if (dir) v.lerp(dir, 0.55).normalize();
+      v.scale(this.rng.range(0.25, 1.1));
+      this.spawn({
+        position,
+        velocity: v,
+        life: this.rng.range(0.35, 0.85),
+        size: this.rng.range(0.05, 0.12) * (opts.size || 1),
+        sizeEnd: this.rng.range(0.18, 0.34) * (opts.size || 1),
+        color,
+        colorEnd: parseColor(0x4a1512),
+        alpha: 0.42,
+        drag: 2.6,
+        gravity: -1.2,
+        spin: this.rng.range(-2, 2),
+        type: PARTICLE.SMOKE,
+      });
+    }
+  }
+
+  /* A killing blow, or something coming off. Fewer pieces, heavier, and
+     they travel -- this is the one that should make a mess of the floor. */
+  gore(position, opts = {}) {
+    const n = opts.count || 10;
+    const speed = opts.speed || 4.2;
+    const dir = opts.direction ? Vec3.from(opts.direction).normalize() : null;
+    const v = new Vec3();
+    for (let i = 0; i < n; i++) {
+      this.rng.unitVec3(v);
+      if (dir) v.lerp(dir, 0.45).normalize();
+      v.scale(speed * this.rng.range(0.4, 1));
+      v.y += this.rng.range(1.2, 3.4);
+      this.spawn({
+        position,
+        velocity: v,
+        life: this.rng.range(1.1, 2.2) * (opts.life || 1),
+        size: this.rng.range(0.045, 0.105) * (opts.size || 1),
+        sizeEnd: this.rng.range(0.030, 0.070) * (opts.size || 1),
+        color: parseColor(opts.color != null ? opts.color : 0x6f0c09),
+        colorEnd: parseColor(0x2a0607),
+        alpha: 1,
+        drag: 0.35,
+        gravity: -15,
+        spin: this.rng.range(-6, 6),
+        type: PARTICLE.SPARK,
+        bounce: 0.06,
+      });
+    }
+    this.blood(position, Object.assign({}, opts, { count: (opts.count || 10) * 2, speed: 6.5 }));
+  }
+
   smoke(position, opts = {}) {
     const n = opts.count || 10;
     const v = new Vec3();

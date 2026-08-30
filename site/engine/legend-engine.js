@@ -6338,6 +6338,106 @@ class ParticleSystem {
     }
   }
 
+  /* Blood.
+   *
+   * Three things happen when a bullet goes into a body and they look
+   * nothing alike, so they are three emitters rather than one:
+   *
+   *   spray   heavy droplets thrown out along the bullet's path, fast,
+   *           falling fast, bouncing once off whatever they land on.
+   *           This is the part that reads as an impact.
+   *   mist    a fine cloud that hangs for a moment where the round went
+   *           in, drifting and fading. Without it the spray reads as
+   *           confetti; with it there is a shape in the air.
+   *   gouts   for a killing blow or a limb coming off -- fewer, bigger,
+   *           slower, arcing further and landing wet.
+   *
+   * Directional by default: `direction` is the way the round was
+   * travelling, and most of what comes out follows it. Blood that sprays
+   * evenly in all directions looks like a burst pipe rather than a hit.
+   */
+  blood(position, opts = {}) {
+    const n = opts.count || 16;
+    const speed = opts.speed || 5.5;
+    const dir = opts.direction ? Vec3.from(opts.direction).normalize() : null;
+    const spread = opts.spread != null ? opts.spread : 0.55;
+    const color = parseColor(opts.color != null ? opts.color : 0x8e0f0a);
+    const colorEnd = parseColor(opts.colorEnd != null ? opts.colorEnd : 0x36070a);
+    const v = new Vec3();
+    for (let i = 0; i < n; i++) {
+      this.rng.unitVec3(v);
+      if (dir) v.lerp(dir, 1 - spread).normalize();
+      v.scale(speed * this.rng.range(0.30, 1));
+      v.y += this.rng.range(0.2, 1.6);
+      this.spawn({
+        position,
+        velocity: v,
+        life: this.rng.range(0.5, 1.3) * (opts.life || 1),
+        size: this.rng.range(0.020, 0.055) * (opts.size || 1),
+        sizeEnd: this.rng.range(0.010, 0.026) * (opts.size || 1),
+        color,
+        colorEnd,
+        alpha: 1,
+        drag: 0.5,
+        gravity: -13,
+        type: PARTICLE.SPARK,
+        bounce: 0.12,
+      });
+    }
+    // The mist that hangs where the round went in.
+    const m = opts.mist != null ? opts.mist : Math.max(3, Math.round(n * 0.4));
+    for (let i = 0; i < m; i++) {
+      this.rng.unitVec3(v);
+      if (dir) v.lerp(dir, 0.55).normalize();
+      v.scale(this.rng.range(0.25, 1.1));
+      this.spawn({
+        position,
+        velocity: v,
+        life: this.rng.range(0.35, 0.85),
+        size: this.rng.range(0.05, 0.12) * (opts.size || 1),
+        sizeEnd: this.rng.range(0.18, 0.34) * (opts.size || 1),
+        color,
+        colorEnd: parseColor(0x4a1512),
+        alpha: 0.42,
+        drag: 2.6,
+        gravity: -1.2,
+        spin: this.rng.range(-2, 2),
+        type: PARTICLE.SMOKE,
+      });
+    }
+  }
+
+  /* A killing blow, or something coming off. Fewer pieces, heavier, and
+     they travel -- this is the one that should make a mess of the floor. */
+  gore(position, opts = {}) {
+    const n = opts.count || 10;
+    const speed = opts.speed || 4.2;
+    const dir = opts.direction ? Vec3.from(opts.direction).normalize() : null;
+    const v = new Vec3();
+    for (let i = 0; i < n; i++) {
+      this.rng.unitVec3(v);
+      if (dir) v.lerp(dir, 0.45).normalize();
+      v.scale(speed * this.rng.range(0.4, 1));
+      v.y += this.rng.range(1.2, 3.4);
+      this.spawn({
+        position,
+        velocity: v,
+        life: this.rng.range(1.1, 2.2) * (opts.life || 1),
+        size: this.rng.range(0.045, 0.105) * (opts.size || 1),
+        sizeEnd: this.rng.range(0.030, 0.070) * (opts.size || 1),
+        color: parseColor(opts.color != null ? opts.color : 0x6f0c09),
+        colorEnd: parseColor(0x2a0607),
+        alpha: 1,
+        drag: 0.35,
+        gravity: -15,
+        spin: this.rng.range(-6, 6),
+        type: PARTICLE.SPARK,
+        bounce: 0.06,
+      });
+    }
+    this.blood(position, Object.assign({}, opts, { count: (opts.count || 10) * 2, speed: 6.5 }));
+  }
+
   smoke(position, opts = {}) {
     const n = opts.count || 10;
     const v = new Vec3();
@@ -14637,10 +14737,49 @@ function buildModel5Cylinder(g) {
   spin(g, [
     [K.cylX0, 0], [K.cylX0, 0.0090], [K.cylX0 - 0.0080, 0.0090], [K.cylX0 - 0.0080, 0],
   ], 18, 36);
-  spin(g, [
-    [K.cylX0, 0], [K.cylX0, K.cylR - 0.0025], [K.cylX0 + 0.0025, K.cylR],
-    [K.cylX1 - 0.0025, K.cylR], [K.cylX1, K.cylR - 0.0025], [K.cylX1, 0],
-  ], 30, 36);
+  /* The cylinder body, with the flutes cut INTO it.
+
+     They used to be four separate tubes of ten millimetre radius sitting
+     on a circle 32.5 mm out -- outside the cylinder's own 27 mm surface.
+     A flute is a groove milled into the steel between the chambers, and
+     this modeller has no way to subtract one solid from another, so
+     placing a tube outside and hoping it reads as a groove is what was
+     done. It does not: it reads as four pipes bolted to the sides, which
+     is exactly what the player saw hanging off it.
+
+     Cut into the profile instead. The cross-section is a circle at cylR
+     that dips toward the axis at the four angles halfway between the
+     chambers, and sweeping THAT along the cylinder gives a fluted
+     cylinder rather than a plain one with things stuck on. */
+  const fluteAt = (i) => (i + 0.5) * TAU / N;
+  const cylProfile = (r) => {
+    const raw = [];
+    const STEPS = 96;
+    for (let i = 0; i < STEPS; i++) {
+      const th = i * TAU / STEPS;
+      let dip = 0;
+      for (let k = 0; k < N; k++) {
+        // How far into this flute we are, as an angle either side of it.
+        let d = th - fluteAt(k);
+        while (d > PI) d -= TAU;
+        while (d < -PI) d += TAU;
+        const halfWidth = TAU / (N * 2) * 0.62;
+        if (Math.abs(d) < halfWidth) {
+          // A cosine scallop, deepest in the middle of the flute.
+          dip = Math.max(dip, Math.cos(d / halfWidth * PI * 0.5) * 0.0042);
+        }
+      }
+      const rr = r - dip;
+      raw.push([Math.cos(th) * rr, Math.sin(th) * rr]);
+    }
+    return profileOutline(raw, 80);
+  };
+  sweepPath(g, [
+    { o: new Vec3(K.cylX0, 0, 0), u: AU, v: AV, pts: cylProfile(K.cylR - 0.0025) },
+    { o: new Vec3(K.cylX0 + 0.0025, 0, 0), u: AU, v: AV, pts: cylProfile(K.cylR) },
+    { o: new Vec3(K.cylX1 - 0.0025, 0, 0), u: AU, v: AV, pts: cylProfile(K.cylR) },
+    { o: new Vec3(K.cylX1, 0, 0), u: AU, v: AV, pts: cylProfile(K.cylR - 0.0025) },
+  ], true, true);
   for (let i = 0; i < N; i++) {
     /* Chamber zero sits at twelve o'clock, on the bore. The angles used to
        start at 45 degrees, so the four chambers straddled the top and the
@@ -14657,13 +14796,7 @@ function buildModel5Cylinder(g) {
       [K.cylX1 + 0.0004, chR + 0.0010], [K.cylX0 - 0.0002, chR + 0.0010],
       [K.cylX0 - 0.0002, 0],
     ], 16, 30, cy, cz);
-    // Flute milled between this chamber and the next.
-    const fth = th + TAU / (N * 2);
-    const fy = Math.cos(fth) * (K.cylR + 0.0055), fz = Math.sin(fth) * (K.cylR + 0.0055);
-    spin(g, [
-      [K.cylX0 + 0.0080, 0], [K.cylX0 + 0.0080, 0.0100],
-      [K.cylX1 - 0.0080, 0.0100], [K.cylX1 - 0.0080, 0],
-    ], 14, 34, fy, fz);
+    // The flutes are in the body's own profile now, not tubes beside it.
   }
   /* Ejector rod, standing forward on the cylinder's own axis — which is
      now below the bore, so it runs inside the underlug when the gun is
@@ -15801,6 +15934,11 @@ function doubleGun(E, kind, opts) {
   body.boreAt = -o.y;
   body.muzzleAt = C.barrelLen - o.x + (C.science ? 0.030 : 0);
   body.sightAt = doubleBeadY(C) - o.y;
+  /* Where the chamber mouths are when the gun is broken open, so a
+     reload can put shells into them rather than at a magazine well the
+     gun does not have. */
+  body.breechAt = DOUBLE.breech - o.x;
+  body.chamberZ = (C.spacing != null ? C.spacing : 0.0245) / 2;
   return body;
 }
 
@@ -15869,6 +16007,103 @@ Engine.prototype.model5 = function (opts = {}) {
   body.muzzleAt = MOD5.muzzle - MOD5_ORIGIN.x;
   body.sightAt = MOD5_SIGHT - MOD5_ORIGIN.y;
   return body;
+};
+
+/* ---------------- ammunition, magazines and loaders ----------------
+
+   Spawned as their own actors so the support hand can carry them, and
+   cached like every other model. The cartridge dimensions are real and
+   live in the game's weapon table; everything here just builds what it
+   is handed. */
+
+const AMMO_MAT = {
+  brass: { color: 0xb08b32, texture: 'metal', roughness: 0.28, metalness: 1 },
+  lead: { color: 0x8e8b84, texture: 'metal', roughness: 0.44, metalness: 1 },
+  hull: { color: 0x9c2f24, texture: 'smooth', roughness: 0.62, metalness: 0 },
+  steel: { color: 0x565f68, texture: 'metal', roughness: 0.44, metalness: 1 },
+  glow: { color: 0x9fe8ff, texture: 'smooth', roughness: 0.30, metalness: 0,
+    emissive: 0x54c8ff, emissiveStrength: 1.5 },
+};
+
+/* One loose round, for a revolver being fed by hand or a shotgun shell
+   going into a chamber. */
+Engine.prototype.cartridge = function (opts = {}) {
+  const C = opts.round || { headR: 0.0058, caseR: 0.0053, neckR: 0.0048,
+    caseLen: 0.0230, overall: 0.0320 };
+  const key = 'cart:' + JSON.stringify(C);
+  const parts = armCache(this, key, () => {
+    const brass = new Geometry(), lead = new Geometry();
+    ammoCartridge(brass, lead, C);
+    return fin({ brass, lead }, new Vec3(0, 0, 0));
+  });
+  return mountArm(this, key, parts,
+    { brass: AMMO_MAT.brass, lead: AMMO_MAT.lead }, opts, 0.04, 0.02, 'brass');
+};
+
+Engine.prototype.shotShell = function (opts = {}) {
+  const C = opts.shell || {};
+  const key = 'shell:' + JSON.stringify(C);
+  const parts = armCache(this, key, () => {
+    const brass = new Geometry(), hull = new Geometry();
+    ammoShell(brass, hull, C);
+    return fin({ brass, hull }, new Vec3(0, 0, 0));
+  });
+  return mountArm(this, key, parts,
+    { brass: AMMO_MAT.brass, hull: opts.hullMaterial || AMMO_MAT.hull },
+    opts, 0.05, 0.04, 'hull');
+};
+
+Engine.prototype.boxMagazine = function (opts = {}) {
+  const C = opts.mag || { w: 0.026, d: 0.021, len: 0.105, curve: 0, witness: 3 };
+  const key = 'mag:' + JSON.stringify(C);
+  const parts = armCache(this, key, () => {
+    const steel = new Geometry(), brass = new Geometry(), lead = new Geometry();
+    ammoMagazine(steel, brass, lead, C);
+    return fin({ steel, brass, lead }, new Vec3(0, 0, 0));
+  });
+  return mountArm(this, key, parts,
+    { steel: opts.bodyMaterial || AMMO_MAT.steel, brass: AMMO_MAT.brass, lead: AMMO_MAT.lead },
+    opts, 0.09, 0.35, 'steel');
+};
+
+Engine.prototype.stripperClip = function (opts = {}) {
+  const C = opts.clip || { count: 10, pitch: 0.0098,
+    round: { headR: 0.0049, caseR: 0.0047, neckR: 0.0040, caseLen: 0.0251, overall: 0.0350 } };
+  const key = 'clip:' + JSON.stringify(C);
+  const parts = armCache(this, key, () => {
+    const steel = new Geometry(), brass = new Geometry(), lead = new Geometry();
+    ammoStripperClip(steel, brass, lead, C);
+    return fin({ steel, brass, lead }, new Vec3(0, 0, 0));
+  });
+  return mountArm(this, key, parts,
+    { steel: AMMO_MAT.steel, brass: AMMO_MAT.brass, lead: AMMO_MAT.lead },
+    opts, 0.07, 0.12, 'steel');
+};
+
+Engine.prototype.speedloader = function (opts = {}) {
+  const C = opts.loader || { count: 4, pcd: 0.0148,
+    round: { headR: 0.0074, caseR: 0.0068, neckR: 0.0064, caseLen: 0.0410, overall: 0.0530 } };
+  const key = 'loader:' + JSON.stringify(C);
+  const parts = armCache(this, key, () => {
+    const steel = new Geometry(), brass = new Geometry(), lead = new Geometry();
+    ammoSpeedloader(steel, brass, lead, C);
+    return fin({ steel, brass, lead }, new Vec3(0, 0, 0));
+  });
+  return mountArm(this, key, parts,
+    { steel: AMMO_MAT.steel, brass: AMMO_MAT.brass, lead: AMMO_MAT.lead },
+    opts, 0.06, 0.20, 'steel');
+};
+
+Engine.prototype.powerCell = function (opts = {}) {
+  const C = opts.cell || { w: 0.052, h: 0.070, d: 0.038 };
+  const key = 'cell:' + JSON.stringify(C);
+  const parts = armCache(this, key, () => {
+    const steel = new Geometry(), glow = new Geometry();
+    ammoCell(steel, glow, C);
+    return fin({ steel, glow }, new Vec3(0, 0, 0));
+  });
+  return mountArm(this, key, parts,
+    { steel: AMMO_MAT.steel, glow: AMMO_MAT.glow }, opts, 0.06, 0.4, 'steel');
 };
 
 /* ---------------- Arc Breaker ---------------- */
@@ -16016,6 +16251,320 @@ Engine.prototype.mg42 = function (opts = {}) {
   body.beltDrop = [0.02, -0.34, -0.06];
   return body;
 };
+
+
+/* ─────────── 97b-ammo.js ─────────── */
+/* ============================================================
+   AMMUNITION, and the things that carry it.
+
+   Everything here is prefixed `ammo` because the engine's modules are
+   concatenated into one scope, and 96-pistol already has a
+   ammoMagazine and 97a-arms a ammoStripperClip. A later file silently
+   wins, so naming a function the same as one in another module does not
+   collide -- it replaces it, and the first symptom was the Remington
+   failing to build.
+
+   These are the models the player watches go into the gun during a
+   reload, and they are held at arm's length -- twenty-five centimetres
+   from the eye, filling a quarter of the screen. Everything else on a
+   weapon is seen at half a metre; a magazine is the closest object in
+   the game.
+
+   They were boxes and plain cylinders: a shotgun shell was one smooth
+   tube of brass with no head, no rim, no crimp; a magazine was a
+   rectangular block with a smaller block stuck on the bottom. At the
+   distance they are actually seen, a smooth tube reads as a smooth tube.
+
+   Every model here is built from the real object's dimensions:
+
+     12 gauge shell   18.5 mm across the hull, 70 mm long, 22 mm brass
+                      head, rim 1.3 mm proud, six-point crimp
+     .45 ACP          11.5 mm rim, 23 mm case, 32 mm overall
+     9x19             9.9 mm rim, 19.15 mm case, 29.7 mm overall
+     7.63 Mauser      25.1 mm case on a stripper clip of ten
+     .500 magnum      13.7 mm rim, 41 mm case
+   ============================================================ */
+
+/* A cartridge: rimmed or rimless head, extractor groove, a case that
+   tapers into a shoulder and neck where the calibre has one, and a
+   bullet seated in it. Built along +X with the bullet forward, base at
+   the origin, so it can be laid into a magazine or a chamber by its
+   own transform. */
+function ammoCartridge(gBrass, gLead, C) {
+  const headR = C.headR, caseR = C.caseR != null ? C.caseR : headR * 0.94;
+  const neckR = C.neckR != null ? C.neckR : caseR;
+  const L = C.caseLen, tip = C.overall;
+  /* Head: the rim, the extractor groove cut behind it, then the web.
+     The groove is the detail that says this is a cartridge and not a
+     length of tube -- it is the only thing on a case that is not a
+     smooth taper, so it is what the eye finds. */
+  spin(gBrass, [
+    [0, 0], [0, headR],
+    [0.0013, headR],                       // rim, standing proud
+    [0.0016, headR - 0.0011],              // into the extractor groove
+    [0.0030, headR - 0.0011],
+    [0.0040, headR],                       // and back out to the web
+    [L * 0.82, caseR],
+    [L * 0.90, neckR + (caseR - neckR) * 0.35],
+    [L, neckR],                            // the case mouth
+    [L, 0],
+  ], 18, 34);
+  // Primer, in the middle of the head, slightly dished.
+  spin(gBrass, [
+    [-0.0004, 0], [-0.0004, headR * 0.42], [0.0006, headR * 0.44], [0.0006, 0],
+  ], 14, 40);
+  /* Bullet: seated in the neck, so it starts inside the case and comes
+     out of it. An ogive rather than a cone -- a cone reads as a pencil. */
+  const nose = tip - L;
+  const og = [];
+  for (let i = 0; i <= 7; i++) {
+    const t = i / 7;
+    // A tangent ogive, flattened to a small meplat at the tip.
+    const r = (neckR + 0.0001) * Math.sqrt(Math.max(0, 1 - Math.pow(t, 2.4)));
+    og.push([L - 0.004 + nose * t, i === 7 ? Math.max(r, neckR * 0.16) : r]);
+  }
+  /* The bullet sits flush in the case mouth, a hair proud of it. At 97
+     per cent of the neck it left the case's own mouth cap showing as a
+     dark ring round the bullet, and every round in a speedloader looked
+     like an empty tube with a nail in it. */
+  spin(gLead, [[L - 0.006, 0], [L - 0.006, neckR + 0.0001],
+    [L + 0.0004, neckR + 0.0001]].concat(og)
+    .concat([[L + nose, 0]]), 16, 30);
+}
+
+/* A shotgun shell: brass head, a rim you can see, a ribbed plastic hull
+   and the folded star crimp at the mouth. Built along +X, base at the
+   origin. */
+function ammoShell(gBrass, gHull, C) {
+  const R = C.r != null ? C.r : 0.00925, L = C.len != null ? C.len : 0.0700;
+  const head = C.head != null ? C.head : 0.0220;
+  spin(gBrass, [
+    [0, 0], [0, R + 0.0013],               // the rim, 1.3 mm proud
+    [0.0016, R + 0.0013],
+    [0.0020, R + 0.0002],
+    [head - 0.006, R + 0.0002],
+    [head, R],                             // where the brass ends
+    [head, 0],
+  ], 18, 34);
+  spin(gBrass, [
+    [-0.0004, 0], [-0.0004, R * 0.40], [0.0006, R * 0.42], [0.0006, 0],
+  ], 14, 40);
+  /* The hull, up to the crimp. Very slightly barrelled, the way a fired
+     and reloaded one is. */
+  /* The hull starts INSIDE the brass, not level with its lip: at the
+     same station and two tenths of a millimetre wider it pushed a red
+     ring out through the brass. */
+  spin(gHull, [
+    [head - 0.006, 0], [head - 0.006, R - 0.0004],
+    [head + 0.004, R + 0.0002],
+    [L - 0.012, R + 0.0002],
+    [L - 0.004, R - 0.0004],
+    [L - 0.0015, R - 0.0022],              // rolling in toward the crimp
+    [L, R - 0.0060],
+    [L, 0],
+  ], 18, 34);
+  /* The crimp: six folds meeting at the centre. Six little wedges rather
+     than a flat disc, because the star is the whole silhouette of the end
+     of a shell and a flat end reads as a pipe. */
+  for (let i = 0; i < 6; i++) {
+    const th = i * TAU / 6;
+    const c = Math.cos(th), sn = Math.sin(th);
+    const rr = R - 0.0026;
+    strut(gHull,
+      [L - 0.0016, c * rr * 0.62, sn * rr * 0.62],
+      [L - 0.0002, c * rr, sn * rr],
+      ringOutline(0.0016, 6));
+  }
+  // Ribs round the hull, faint, where the wad sits.
+  for (const bx of [head + 0.012, head + 0.024]) {
+    band(gHull, bx - 0.0009, bx + 0.0009, R - 0.0004, R + 0.0009, 20);
+  }
+}
+
+/* A box magazine: the body, the feed lips, a witness slot down the side,
+   the floorplate and the baseplate catch -- and a round showing at the
+   top, because a loaded magazine has one and it is the thing that says
+   it is loaded.
+
+   Built with the feed lips at +Y and the floorplate at -Y, its own
+   origin at the top, so the hand can carry it by the top and push it up
+   into a well. */
+function ammoMagazine(gSteel, gBrass, gLead, C) {
+  const w = C.w, d = C.d, L = C.len;
+  const curve = C.curve || 0;
+  /* The body, swept down in stations so a curved magazine actually
+     curves instead of being a leaning box. */
+  const N = 7;
+  const st = [];
+  for (let i = 0; i <= N; i++) {
+    const t = i / N;
+    const y = -L * t;
+    // A banana magazine's curve is an arc, deepest at the bottom.
+    const x = curve * t * t;
+    st.push({
+      o: new Vec3(x, y, 0),
+      u: new Vec3(1, 0, 0), v: new Vec3(0, 0, 1),
+      pts: roundRect(d * 0.5, d * 0.5, w * 0.5, 3.2, 22),
+    });
+  }
+  sweepPath(gSteel, st, false, true);
+  /* Feed lips: two shoulders at the mouth with the gap between them the
+     round comes out of. */
+  for (const sz of [-1, 1]) {
+    hardBox(gSteel, 0, 0.0030, sz * (w * 0.5 - 0.0016), d * 0.5, 0.0034, 0.0018);
+  }
+  hardBox(gSteel, -d * 0.5 + 0.0016, 0.0026, 0, 0.0018, 0.0030, w * 0.5 - 0.0020);
+  /* Witness slots down the flank -- the little holes that show how many
+     rounds are left. Raised rims round them, so they read at arm's
+     length rather than being invisible dots. */
+  for (let i = 0; i < (C.witness || 0); i++) {
+    const y = -L * (0.24 + i * 0.17);
+    const x = curve * Math.pow(0.24 + i * 0.17, 2);
+    for (const sz of [-1, 1]) {
+      band(gSteel, sz * (w * 0.5 - 0.0006), sz * (w * 0.5 + 0.0008),
+        0.0022, 0.0038, 12, y, 0);
+      void x;
+    }
+  }
+  /* Ribs along the back, which is what a stamped magazine has and what
+     catches the light on one. */
+  for (let i = 0; i < 4; i++) {
+    const t = 0.18 + i * 0.19;
+    const y = -L * t, x = curve * t * t;
+    hardBox(gSteel, x - d * 0.5 - 0.0006, y, 0, 0.0010, 0.0026, w * 0.5 - 0.0030);
+  }
+  // Floorplate, standing proud of the body all the way round, and its catch.
+  const fy = -L, fx = curve;
+  sweepPath(gSteel, [
+    { o: new Vec3(fx, fy + 0.0030, 0), u: new Vec3(1, 0, 0), v: new Vec3(0, 0, 1),
+      pts: roundRect(d * 0.5 + 0.0016, d * 0.5 + 0.0016, w * 0.5 + 0.0016, 3.4, 20) },
+    { o: new Vec3(fx, fy - 0.0042, 0), u: new Vec3(1, 0, 0), v: new Vec3(0, 0, 1),
+      pts: roundRect(d * 0.5 + 0.0016, d * 0.5 + 0.0016, w * 0.5 + 0.0016, 3.4, 20) },
+  ], true, true);
+  hardBox(gSteel, fx + d * 0.5 - 0.0020, fy - 0.0064, 0, 0.0034, 0.0026, w * 0.28);
+  /* The top round, sitting under the lips at the feed angle. This is the
+     detail that makes a magazine look loaded instead of like a box. */
+  if (C.round) {
+    const R = C.round;
+    const bg = new Geometry(), bl = new Geometry();
+    ammoCartridge(bg, bl, R);
+    // Lay it across the magazine, nose forward and slightly up.
+    const lay = (src, dst) => {
+      const P = src.positions, I = src.indices, N2 = src.normals;
+      const base = dst.positions.length / 3;
+      const ca = Math.cos(0.16), sa = Math.sin(0.16);
+      for (let i = 0; i < P.length; i += 3) {
+        // Along the magazine's own +X (out of the front), nose up a little.
+        const x = P[i], y = P[i + 1], z = P[i + 2];
+        const px = -R.overall * 0.5 + x, py = y, pz = z;
+        dst.vert(px * ca - py * sa + 0.0004, px * sa + py * ca - 0.0022, pz,
+          N2 ? N2[i] : 0, N2 ? N2[i + 1] : 1, N2 ? N2[i + 2] : 0, 0, 0);
+      }
+      for (let i = 0; i < I.length; i += 3) dst.tri(base + I[i], base + I[i + 1], base + I[i + 2]);
+    };
+    lay(bg.finalize(), gBrass);
+    lay(bl.finalize(), gLead);
+  }
+}
+
+/* A stripper clip: the pressed steel spring strip and the rounds standing
+   in it, held by their extractor grooves. */
+function ammoStripperClip(gSteel, gBrass, gLead, C) {
+  const n = C.count || 10, pitch = C.pitch || 0.0098;
+  const span = (n - 1) * pitch;
+  // The strip, a channel with turned-over edges.
+  sweepPath(gSteel, [
+    { o: new Vec3(0, 0, -span * 0.5 - 0.004), u: new Vec3(1, 0, 0), v: new Vec3(0, 0, 1),
+      pts: roundRect(0.0052, 0.0018, 0.0028, 3.0, 14) },
+    { o: new Vec3(0, 0, span * 0.5 + 0.004), u: new Vec3(1, 0, 0), v: new Vec3(0, 0, 1),
+      pts: roundRect(0.0052, 0.0018, 0.0028, 3.0, 14) },
+  ], true, true);
+  for (const sz of [-1, 1]) {
+    hardBox(gSteel, 0.0044, 0, sz * (span * 0.5 + 0.0034), 0.0020, 0.0040, 0.0016);
+  }
+  // The rounds, nose up, alternating a hair fore and aft the way they sit.
+  const bg = new Geometry(), bl = new Geometry();
+  ammoCartridge(bg, bl, C.round);
+  const stamp = (src, dst, dz, dx) => {
+    const P = src.positions, I = src.indices, N2 = src.normals;
+    const base = dst.positions.length / 3;
+    for (let i = 0; i < P.length; i += 3) {
+      // The cartridge is built along +X; stand it up along +Y.
+      dst.vert(P[i + 1] + dx, P[i] + 0.0026, P[i + 2] + dz,
+        N2 ? N2[i + 1] : 0, N2 ? N2[i] : 1, N2 ? N2[i + 2] : 0, 0, 0);
+    }
+    for (let i = 0; i < I.length; i += 3) dst.tri(base + I[i], base + I[i + 1], base + I[i + 2]);
+  };
+  const fb = bg.finalize(), fl = bl.finalize();
+  for (let i = 0; i < n; i++) {
+    const dz = -span * 0.5 + i * pitch;
+    const dx = (i % 2) * 0.0006;
+    stamp(fb, gBrass, dz, dx);
+    stamp(fl, gLead, dz, dx);
+  }
+}
+
+/* A speedloader: the knob, the body, and however many rounds hanging
+   nose-down out of it on the cylinder's own pitch circle. */
+function ammoSpeedloader(gSteel, gBrass, gLead, C) {
+  const n = C.count || 6, pcd = C.pcd || 0.0148;
+  spin(gSteel, [
+    [0, 0], [0, 0.0128], [0.0060, 0.0140], [0.0140, 0.0140],
+    [0.0150, 0.0120], [0.0150, 0], 
+  ], 20, 34);
+  // The knurled release knob on the back.
+  spin(gSteel, [
+    [0.0150, 0], [0.0150, 0.0070], [0.0210, 0.0068], [0.0210, 0],
+  ], 16, 34);
+  for (let i = 0; i < 10; i++) {
+    const th = i * TAU / 10;
+    strut(gSteel, [0.0158, Math.cos(th) * 0.0068, Math.sin(th) * 0.0068],
+      [0.0204, Math.cos(th) * 0.0072, Math.sin(th) * 0.0072], ringOutline(0.0009, 5));
+  }
+  const bg = new Geometry(), bl = new Geometry();
+  ammoCartridge(bg, bl, C.round);
+  const fb = bg.finalize(), fl = bl.finalize();
+  const stamp = (src, dst, cy, cz) => {
+    const P = src.positions, I = src.indices, N2 = src.normals;
+    const base = dst.positions.length / 3;
+    for (let i = 0; i < P.length; i += 3) {
+      // Nose pointing out of the loader, i.e. along -X from its face.
+      dst.vert(0.0040 - P[i], P[i + 1] + cy, P[i + 2] + cz,
+        N2 ? -N2[i] : 0, N2 ? N2[i + 1] : 1, N2 ? N2[i + 2] : 0, 0, 0);
+    }
+    for (let i = 0; i < I.length; i += 3) dst.tri(base + I[i], base + I[i + 2], base + I[i + 1]);
+  };
+  for (let i = 0; i < n; i++) {
+    const th = i * TAU / n;
+    stamp(fb, gBrass, Math.cos(th) * pcd, Math.sin(th) * pcd);
+    stamp(fl, gLead, Math.cos(th) * pcd, Math.sin(th) * pcd);
+  }
+}
+
+/* An energy cell: a finned block with a window down the side showing the
+   charge, and the two contacts it seats on. */
+function ammoCell(gSteel, gGlow, C) {
+  const w = C.w || 0.052, h = C.h || 0.070, d = C.d || 0.038;
+  sweepPath(gSteel, [
+    { o: new Vec3(-w * 0.5, 0, 0), u: new Vec3(0, 1, 0), v: new Vec3(0, 0, 1),
+      pts: roundRect(h * 0.5, h * 0.5, d * 0.5, 3.6, 22) },
+    { o: new Vec3(w * 0.5, 0, 0), u: new Vec3(0, 1, 0), v: new Vec3(0, 0, 1),
+      pts: roundRect(h * 0.5, h * 0.5, d * 0.5, 3.6, 22) },
+  ], true, true);
+  // Cooling fins along the top.
+  for (let i = 0; i < 5; i++) {
+    hardBox(gSteel, -w * 0.5 + 0.006 + i * (w - 0.012) / 4, h * 0.5 + 0.0022, 0,
+      0.0016, 0.0026, d * 0.42);
+  }
+  // Contacts on the bottom face.
+  for (const sz of [-1, 1]) {
+    hardBox(gSteel, 0, -h * 0.5 - 0.0018, sz * d * 0.22, w * 0.30, 0.0020, 0.0044);
+  }
+  // The charge window, lit, recessed into both flanks.
+  for (const sz of [-1, 1]) {
+    hardBox(gGlow, 0, 0, sz * (d * 0.5 - 0.0004), w * 0.34, h * 0.28, 0.0016);
+  }
+}
 
 
 /* ─────────── 97b-attach.js ─────────── */
@@ -16561,8 +17110,84 @@ function buildViewArm(g, shoulder, hand, side) {
    round a grip is the thing that makes a first-person hand look wrong
    without anyone being able to say why. Three straight bones with sharp
    angles between them reads as a hand even at this size. */
+/* What a hand is holding, described rather than chosen from a list of two.
+ *
+ * There used to be exactly two poses -- 'pistol' and 'fore' -- and every
+ * weapon in the game was forced into one of them. A hand on a Thompson's
+ * vertical foregrip, a hand under a shotgun's fat wooden forend, a hand on
+ * the MG42's spade grip and a hand round the Arc Breaker's accelerator
+ * tube are four different shapes, and giving all four the same fingers is
+ * why they all read as the same generic claw.
+ *
+ * So a grip is a description of the thing being held, in the weapon's own
+ * space, and the hand is built to fit it:
+ *
+ *   axis    the direction the held part runs. Fingers are spaced along
+ *           this, one above the next, and the palm lies against it.
+ *   round   the direction from the HAND toward what it is holding, and
+ *           on round the far side. Its sign therefore depends on which
+ *           side the hand comes from: a left hand on a vertical grip has
+ *           the opposite `round` to a right one. Getting it backwards
+ *           builds a hand facing away from the thing it holds, which the
+ *           enclosure check catches as skin on three sides instead of
+ *           four -- that is what it caught on the MG42's spade grip and
+ *           the Arc Breaker's foregrip.
+ *   girth   how far there is to go round: half the cross-section's
+ *           perimeter. A 1911's front strap is about 55 mm, a shotgun
+ *           forend nearer 85, the Arc's tube 100.
+ *   spread  the pitch between fingers along the axis.
+ *   close   how far they close at the end of the wrap. A thin grip closes
+ *           further than a fat tube.
+ *   index   what the forefinger does: 'trigger' lays it forward along the
+ *           frame, 'wrap' closes it with the rest, 'point' lays it flat.
+ *   thumb   'over' the fingers, 'along' the weapon, or 'up' beside it.
+ *   drop    how far the anchor is from the middle of what is held, along
+ *           `round` -- a hand under a forend sits below it.
+ */
+const GRIP_KINDS = {
+  /* A vertical pistol grip, held by the firing hand. The palm is on the
+     backstrap, the fingers cross the front strap and close back in. */
+  pistol: { axis: [0.28, -0.94, 0], round: [0, 0, -1], girth: 0.055,
+    spread: 0.0194, close: 1.0, index: 'trigger', thumb: 'over', drop: 0 },
+  /* Under a horizontal forend: wrist low and behind, knuckles up the near
+     side, fingers over the top and down the far side. */
+  fore: { axis: [1, 0, 0], round: [0, 1, 0], girth: 0.078,
+    spread: 0.0202, close: 0.96, index: 'wrap', thumb: 'along', drop: 0.019 },
+  /* A vertical foregrip, gripped like a pistol grip but with nothing to
+     put a trigger finger on, so all four fingers wrap. */
+  foregrip: { axis: [0.10, -0.99, 0], round: [0, 0, -1], girth: 0.058,
+    spread: 0.0196, close: 1.0, index: 'wrap', thumb: 'over', drop: 0 },
+  /* A fat wooden shotgun forend: more to go round, so the fingers do not
+     close as far and sit further apart. */
+  woodFore: { axis: [1, 0, 0], round: [0, 1, 0], girth: 0.092,
+    spread: 0.0210, close: 0.86, index: 'wrap', thumb: 'along', drop: 0.023 },
+  /* A big tube -- the Arc Breaker's accelerator, the MG42's shroud. The
+     hand lies along it and barely closes. */
+  tube: { axis: [1, 0, 0], round: [0, 1, 0], girth: 0.108,
+    spread: 0.0214, close: 0.74, index: 'wrap', thumb: 'along', drop: 0.028 },
+  /* Spade grips: gripped from behind with the thumb up on a butterfly
+     trigger, so the thumb goes UP rather than over the fingers. */
+  spade: { axis: [0.06, -0.998, 0], round: [-1, 0, 0], girth: 0.056,
+    spread: 0.0192, close: 1.0, index: 'wrap', thumb: 'up', drop: 0 },
+  /* A slim rifle wrist behind the action -- a stock's small of the grip,
+     which is raked further back than a pistol grip and is thinner. */
+  wrist: { axis: [0.42, -0.91, 0], round: [0, 0, -1], girth: 0.050,
+    spread: 0.0188, close: 1.0, index: 'trigger', thumb: 'over', drop: 0 },
+  /* A haft or a shaft held across the body: a knife, a hammer, the
+     battering ram's grip. Nothing to point a trigger finger at. */
+  haft: { axis: [0.55, -0.83, 0], round: [0, 0, -1], girth: 0.048,
+    spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 },
+};
+
 function buildViewHand(g, rawAt, side, opts = {}) {
-  const fore = (opts.grip || 'pistol') === 'fore';
+  /* The grip may be named, or given inline as an object so one weapon can
+     tune a shape nothing else shares. */
+  const named = typeof opts.grip === 'string' ? GRIP_KINDS[opts.grip] : null;
+  const G = Object.assign({}, GRIP_KINDS.pistol,
+    named || GRIP_KINDS.pistol, (opts.grip && typeof opts.grip === 'object') ? opts.grip : {});
+  // `fore` still means "held from underneath, along its length", which
+  // several of the measurements below are phrased in terms of.
+  const fore = Math.abs(G.round[1]) > 0.5;
 
   /* Four axes, and every part of the hand follows from them.
 
@@ -16594,12 +17219,25 @@ function buildViewHand(g, rawAt, side, opts = {}) {
      knuckles UP and ACROSS the top before curling down the far side. The
      thumb stays on the near side and the four fingers are spaced along the
      bar, which is the one part that was right. */
-  const palm = fore ? V(0.30, 0.95, 0) : V(0.28, -0.94, 0);
-  const point = fore ? V(0, 0.45, -side * 0.89) : new Vec3(0, 0, -side);
-  const curl = fore ? V(0, -0.89, -side * 0.45) : V(-0.94, -0.28, 0);
-  const lane = fore ? V(1, 0, 0) : V(0.28, -0.94, 0);
-  // Toward whatever is being held, from the hand's own centre.
-  const grasp = fore ? V(0, 1, 0) : V(0.94, 0.28, 0);
+  /* All four fall out of the grip's own two directions.
+
+     `lane` is the held part's axis: the fingers are spaced along it.
+     `grasp` points from the hand at what it is holding, which is `round`.
+     `palm` runs from the wrist to the knuckles, which is BACK along the
+     axis on a vertical grip (the wrist is above the knuckles) and up the
+     near side under a forend. `point` is the way a proximal phalanx
+     leaves its knuckle -- across the front of the held part, sideways --
+     and `curl` is where it goes next, on round the far side. */
+  const lane = V(G.axis[0], G.axis[1], G.axis[2]);
+  const grasp = V(G.round[0], G.round[1], G.round[2]);
+  const palm = fore
+    ? V(grasp.x * 0.95 + lane.x * 0.30, grasp.y * 0.95 + lane.y * 0.30, grasp.z * 0.95 + lane.z * 0.30)
+    : new Vec3(-lane.x, -lane.y, -lane.z);
+  /* Across the front, perpendicular to both -- which side depends on
+     which hand it is, because the two wrap opposite ways round. */
+  const point = new Vec3().crossVectors(lane, grasp).normalize().scale(-side);
+  // And on round: away from the hand, past the far side.
+  const curl = new Vec3(-grasp.x, -grasp.y, -grasp.z);
 
   /* The support hand goes UNDER the forend, not around the middle of it.
 
@@ -16610,8 +17248,8 @@ function buildViewHand(g, rawAt, side, opts = {}) {
      and the support hand was 132/68/15/13 across the four quadrants where
      the firing hand is 37/44/117/120. Drop it by a finger's width and the
      forend lands in the crook where it belongs. */
-  const at = fore
-    ? new Vec3(rawAt.x - grasp.x * 0.019, rawAt.y - grasp.y * 0.019, rawAt.z - grasp.z * 0.019)
+  const at = G.drop
+    ? new Vec3(rawAt.x - grasp.x * G.drop, rawAt.y - grasp.y * G.drop, rawAt.z - grasp.z * G.drop)
     : rawAt;
 
   const at3 = (b, d) => new Vec3(at.x + b.x * d, at.y + b.y * d, at.z + b.z * d);
@@ -16625,6 +17263,20 @@ function buildViewHand(g, rawAt, side, opts = {}) {
      thickness. Centred, half of it was inside the gun and the visible half
      read as a swelling growing out of the grip. */
   const off0 = fore ? 0 : 0.011;
+  /* Palm cross-section, from the girth. `w` is how far it reaches round
+     the front and back of what is held, `d` is its own thickness -- and
+     flesh does not change thickness with what it is gripping, so only the
+     first grows. */
+  /* Gently. Scaling straight off the girth gave a hand on a shotgun
+     forend a palm a hundred millimetres front to back, which swallowed
+     its own fingers -- from the side it was a featureless mitten. A palm
+     spreads a little over something fat; it does not double. The
+     wrapping is the fingers' job. */
+  const girthMul = Math.max(0.94, Math.min(1.16, 1 + (G.girth - 0.055) * 2.6));
+  const pw0 = (fore ? 0.020 : 0.0165) * girthMul;
+  const pw1 = (fore ? 0.0125 : 0.0112) * girthMul;
+  const pd0 = fore ? 0.0110 : 0.0088;
+  const pd1 = fore ? 0.0060 : 0.0044;
   for (let i = 0; i <= PN; i++) {
     const t = i / PN;
     // Wrist to knuckles: 80 mm along the grip, which is a knuckle span.
@@ -16661,8 +17313,12 @@ function buildViewHand(g, rawAt, side, opts = {}) {
          upper third of the grip bare above the hand -- the gun looked
          held by its bottom corner. The heel of a hand is already most of
          its width where it leaves the wrist. */
-      w: (fore ? 0.020 : 0.0165) + Math.sin((0.24 + t * 0.76) * PI * 0.88) * (fore ? 0.0125 : 0.0112),
-      d: (fore ? 0.0110 : 0.0088) + Math.sin((0.24 + t * 0.76) * PI * 0.92) * (fore ? 0.0060 : 0.0044),
+      /* The palm spreads over what it is holding, so the girth sets how
+         far around the front and back of it the flesh reaches. A hand on
+         a 55 mm grip is a fist; the same hand on a 108 mm tube is laid
+         open across it. */
+      w: pw0 + Math.sin((0.24 + t * 0.76) * PI * 0.88) * pw1,
+      d: pd0 + Math.sin((0.24 + t * 0.76) * PI * 0.92) * pd1,
       e: 2.6, uv: t,
     });
   }
@@ -16723,7 +17379,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
      off its knuckle forward, takes one small bend, and lies along the
      trigger. That one separated finger is most of what makes the hand read
      as a hand holding a gun rather than a fist round a stick. */
-  const trigger = opts.trigger !== false && !fore;
+  const trigger = opts.trigger !== false && G.index === 'trigger';
   /* Bone lengths, and the reason the hand was a ball.
 
      These were 30/21/15.5 mm — 66 mm of finger — with 168 degrees of total
@@ -16738,6 +17394,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
   const LEN = [0.0420, 0.0262, 0.0190];
   const knuckle0 = at3(palm, 0.044);
   for (let f = 0; f < 4; f++) {
+    // Which finger, if any, leaves the wrap to lie on a trigger.
     const isIndex = trigger && f === 3;
     // Index nearest the muzzle, little finger furthest from it.
     /* Spaced so they touch. Four 19 mm fingers side by side span 76 mm,
@@ -16751,7 +17408,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
        index belongs at the top, by the trigger, and the little finger at
        the butt. Under a forend `lane` runs toward the muzzle and the
        original sign is the right one: index forward. */
-    const off = (fore ? f - 1.5 : 1.5 - f) * (fore ? 0.0202 : 0.0194);
+    const off = (fore ? f - 1.5 : 1.5 - f) * G.spread;
     const scale = isIndex ? 1.0 : [0.84, 0.96, 1.0, 0.99][f];
     const root = new Vec3(
       knuckle0.x + lane.x * off + grasp.x * 0.011 + point.x * 0.006,
@@ -16764,7 +17421,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
        close less, because there is more of it to go round. */
     /* Round a forend they close nearly as far as round a grip: the hand is
        under it and the fingers have to come up the far side and over. */
-    const close = fore ? 0.96 : 1.0;
+    const close = G.close;
     /* A hundred degrees over three joints, weighted to the middle knuckle,
        which is where a hand actually does most of its closing. Over 87 mm
        of bone that is an arc about 50 mm across — a hand round a grip
@@ -16778,8 +17435,17 @@ function buildViewHand(g, rawAt, side, opts = {}) {
        backwards on leaving the knuckle, so the finger wrapped along the
        gun instead of around the grip and the tip finished 62 mm behind
        the knuckle -- twice the depth of the thing it was holding. */
+    /* How far round is set by the girth of what is being held.
+
+       87 mm of finger wrapping a 55 mm half-perimeter turns through about
+       2.6 radians; wrapping the Arc Breaker's 108 mm tube it barely turns
+       at all, because the tube uses up the whole finger before it can
+       curl. Scaling the total by the girth is what makes a hand on a fat
+       forend read as a different hand from one on a pistol grip instead
+       of the same claw at a different angle. */
+    const wrap = Math.max(0.52, Math.min(1.22, 0.055 / G.girth)) * close;
     const bends = isIndex ? [0.16, 0.52, 0.46]
-      : [0.25 * close, 1.30 * close, 1.05 * close];
+      : [0.25 * wrap, 1.30 * wrap, 1.05 * wrap];
     if (isIndex) {
       /* The trigger finger reaches forward along the frame and closes
          inward onto the blade, which is a different plane from the one
@@ -16815,7 +17481,14 @@ function buildViewHand(g, rawAt, side, opts = {}) {
     );
     // The base joint, which is what a moving thumb turns about.
     if (opts.out) opts.out.thumbPivot = [p.x, p.y, p.z];
-    let d = fore ? V2(0.90, 0.36, -side * 0.24) : V2(0.60, 0.64, -side * 0.48);
+    /* Where the thumb goes, which is a property of the grip and not of
+       whether the hand happens to be underneath something. On a pistol
+       grip it folds OVER the fingers; along a forend it lies ALONG the
+       weapon; on spade grips it stands UP beside them, where a butterfly
+       trigger is. */
+    let d = G.thumb === 'along' ? V2(0.90, 0.36, -side * 0.24)
+      : G.thumb === 'up' ? V2(0.10, 0.95, -side * 0.30)
+        : V2(0.60, 0.64, -side * 0.48);
     const rs = [{ p: new Vec3(p.x, p.y, p.z), w: 0.0114, d: 0.0102, e: 2.4, uv: 0 }];
     const step = (len, r, k) => {
       p = new Vec3(p.x + d.x * len, p.y + d.y * len, p.z + d.z * len);
@@ -16825,7 +17498,9 @@ function buildViewHand(g, rawAt, side, opts = {}) {
        from the base joint to the tip, and this one has to reach a hammer. */
     step(0.019, 0.0108, 0.22);
     step(0.017, 0.0102, 0.44);
-    d = fore ? V2(0.78, 0.00, -side * 0.62) : V2(0.86, 0.04, -side * 0.54);
+    d = G.thumb === 'along' ? V2(0.78, 0.00, -side * 0.62)
+      : G.thumb === 'up' ? V2(0.16, 0.86, -side * 0.48)
+        : V2(0.86, 0.04, -side * 0.54);
     step(0.016, 0.0097, 0.66);
     step(0.013, 0.0085, 0.86);
     step(0.006, 0.0039, 1.0);
@@ -17496,7 +18171,7 @@ const LegendEngine = {
   Geometry, Shapes, convexHull, hullToGeometry,
   Engine, Actor, Material, Body, PhysicsWorld,
   Fluid, Fracture, ParticleSystem, Skeleton, AnimationClip, Face, Bone, makeHumanoidSkeleton, makeHumanoidMesh, solveSkinWeights, smoothNormals, parseRiggedMesh, skeletonFromRig,
-  makePistol1911, makeViewmodelArms, makeZombieClips, buildZombieBodyGeometry, buildZombieClothGeometry, zombieWoundSpots,
+  makePistol1911, makeViewmodelArms, GRIP_KINDS, makeZombieClips, buildZombieBodyGeometry, buildZombieClothGeometry, zombieWoundSpots,
   Grass, Input, Audio,
   clamp, lerp, smoothstep,
 };
