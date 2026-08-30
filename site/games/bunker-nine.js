@@ -569,7 +569,7 @@ const HEROES = {
        and what the sleeve is made of. Bear in mind the skin texture bakes
        its own warmth and the subsurface term adds red on top, so these
        bases run cold -- a hex that looks grey here lands on skin. */
-    look: { skin: 0xc2a189, rough: 0.80, sleeve: 0x3a3c31, sleeveTex: 'fabric', sleeveRough: 0.97 }, // Soviet greatcoat wool, and eighty-five years of weather
+    look: { skin: 0xaba5a2, rough: 0.80, sleeve: 0x3a3c31, sleeveTex: 'fabric', sleeveRough: 0.97 }, // Soviet greatcoat wool, and eighty-five years of weather
     lines: {
       pick: ['I was told to hold this position. Nobody has told me otherwise.'],
       start: ['Another night. The night is not the problem.',
@@ -613,7 +613,7 @@ const HEROES = {
     bio: 'Kept the generators running at the depot. Knows every fuse in the building and half the prayers.',
     voice: { base: 158, spread: 32, type: 'triangle', color: '#ffb066' },
     voiceBox: { pitch: 126, tract: 1.03, rasp: 0.16, breath: 0.08, rate: 5.4, swing: 0.17, say: { pitch: 0.92, rate: 1.02 } },
-    look: { skin: 0xa87551, rough: 0.70, sleeve: 0x2f3a48, sleeveTex: 'fabric', sleeveRough: 0.90 }, // depot coveralls, oil into the weave
+    look: { skin: 0x847c76, rough: 0.70, sleeve: 0x2f3a48, sleeveTex: 'fabric', sleeveRough: 0.90 }, // depot coveralls, oil into the weave
     lines: {
       pick: ['I fix things. Tonight I am fixing this.'],
       start: ['Okay. Okay. We can work with this.',
@@ -655,7 +655,7 @@ const HEROES = {
     bio: 'Was driving a supply run when the road stopped meaning anything. Dry, quick, and hard to rattle.',
     voice: { base: 228, spread: 42, type: 'triangle', color: '#9fd8ff' },
     voiceBox: { pitch: 196, tract: 0.88, rasp: 0.08, breath: 0.12, rate: 5.6, swing: 0.20, say: { pitch: 1.24, rate: 1.05 } },
-    look: { skin: 0xbb9070, rough: 0.72, sleeve: 0x54492f, sleeveTex: 'fabric', sleeveRough: 0.95 }, // canvas driving jacket
+    look: { skin: 0x9d9691, rough: 0.72, sleeve: 0x54492f, sleeveTex: 'fabric', sleeveRough: 0.95 }, // canvas driving jacket
     lines: {
       pick: ['I only came here for the fuel.'],
       start: ['Right. Let us be professional about this.',
@@ -698,7 +698,7 @@ const HEROES = {
     bio: 'Nineteen. Out hunting with her father until he started acting strange. Hid in an empty house for two days.',
     voice: { base: 272, spread: 50, type: 'sine', color: '#ffc0e0' },
     voiceBox: { pitch: 232, tract: 0.83, rasp: 0.05, breath: 0.30, rate: 6.4, swing: 0.30, say: { pitch: 1.42, rate: 1.16 } }, // nineteen, and frightened
-    look: { skin: 0xcbaa8c, rough: 0.62, sleeve: 0x6b3230, sleeveTex: 'fabric', sleeveRough: 0.98 }, // her father's flannel, far too big for her
+    look: { skin: 0xb4aea9, rough: 0.62, sleeve: 0x6b3230, sleeveTex: 'fabric', sleeveRough: 0.98 }, // her father's flannel, far too big for her
     lines: {
       pick: ['I hid for two days. I am not hiding tonight.'],
       start: ['I have hunted before. This is not that. But it is closer than nothing.',
@@ -740,7 +740,7 @@ const HEROES = {
     bio: 'Forty. Twenty of them in a ring, a cage, or somewhere with no referee. Fights like it is arithmetic.',
     voice: { base: 202, spread: 34, type: 'triangle', color: '#ff8a8a' },
     voiceBox: { pitch: 172, tract: 0.93, rasp: 0.14, breath: 0.07, rate: 4.9, swing: 0.12, say: { pitch: 1.10, rate: 0.96 } }, // forty, and steady
-    look: { skin: 0xa87c58, rough: 0.66, sleeve: 0x2b2b2e, sleeveTex: 'fabric', sleeveRough: 0.99 }, // hand wraps and nothing over them
+    look: { skin: 0x89827c, rough: 0.66, sleeve: 0x2b2b2e, sleeveTex: 'fabric', sleeveRough: 0.99 }, // hand wraps and nothing over them
     lines: {
       pick: ['I have never lost a fight I understood. Let me understand this one.'],
       start: ['Footwork first. Everything else is footwork.',
@@ -783,7 +783,7 @@ const HEROES = {
     bio: 'Big. Was big before all this and it has only become more useful. Enjoys the work more than he should.',
     voice: { base: 116, spread: 24, type: 'square', color: '#c9a06a' },
     voiceBox: { pitch: 78, tract: 1.24, rasp: 0.34, breath: 0.05, rate: 4.2, swing: 0.10, say: { pitch: 0.52, rate: 0.88 } }, // the biggest chest in the room
-    look: { skin: 0xc09070, rough: 0.74, sleeve: 0x4a5560, sleeveTex: 'fabric', sleeveRough: 0.94 }, // work shirt, sleeves rolled past the elbow
+    look: { skin: 0x9f9792, rough: 0.74, sleeve: 0x4a5560, sleeveTex: 'fabric', sleeveRough: 0.94 }, // work shirt, sleeves rolled past the elbow
     lines: {
       pick: ['Point me at it.'],
       start: ['Good. A small room and a lot of them. That suits me.',
@@ -826,7 +826,7 @@ const HEROES = {
     bio: 'Eighty. A Black Native American in a winter trenchcoat who was fighting a war in 1855 and stepped through something that should not have been open.',
     voice: { base: 130, spread: 22, type: 'sawtooth', color: '#a8d8b8' },
     voiceBox: { pitch: 94, tract: 1.20, rasp: 0.52, breath: 0.22, rate: 3.6, swing: 0.13, say: { pitch: 0.66, rate: 0.76 } }, // eighty, warm, weathered
-    look: { skin: 0x6b4a34, rough: 0.82, sleeve: 0x35291f, sleeveTex: 'fabric', sleeveRough: 0.97 }, // the winter trenchcoat he walked in wearing
+    look: { skin: 0x544e4b, rough: 0.82, sleeve: 0x35291f, sleeveTex: 'fabric', sleeveRough: 0.97 }, // the winter trenchcoat he walked in wearing
     lines: {
       pick: ['I walked through a door in a field and it was a hundred years later. So be it.'],
       start: ['I do not know the year and I do not know the enemy. I know the work.',
@@ -869,7 +869,7 @@ const HEROES = {
     bio: 'An intelligence quotient of two hundred and forty, and no useful instinct for when to stop explaining.',
     voice: { base: 188, spread: 28, type: 'sine', color: '#b6a8ff' },
     voiceBox: { pitch: 138, tract: 0.99, rasp: 0.06, breath: 0.04, rate: 7.1, swing: 0.07, say: { pitch: 1.00, rate: 1.22 } }, // fast and level: nothing is a surprise
-    look: { skin: 0xc39c7e, rough: 0.68, sleeve: 0x585c60, sleeveTex: 'fabric', sleeveRough: 0.88 }, // whatever was hanging in the laboratory
+    look: { skin: 0xa8a29d, rough: 0.68, sleeve: 0x585c60, sleeveTex: 'fabric', sleeveRough: 0.88 }, // whatever was hanging in the laboratory
     lines: {
       pick: ['I have modelled this. The model says run. I am overruling the model.'],
       start: ['Four ingress points, one chokepoint, one elevated position. This is survivable.',
@@ -915,7 +915,7 @@ const HEROES = {
     bio: 'Never once let a bad moment pass without a remark. It is not clear whether this is courage or a condition.',
     voice: { base: 198, spread: 56, type: 'triangle', color: '#ffe08a' },
     voiceBox: { pitch: 154, tract: 0.95, rasp: 0.12, breath: 0.09, rate: 5.8, swing: 0.42, say: { pitch: 1.12, rate: 1.08 } }, // the pitch does the joking
-    look: { skin: 0xba8b68, rough: 0.70, sleeve: 0x5c2a34, sleeveTex: 'fabric', sleeveRough: 0.86 }, // a colour nobody else would have picked
+    look: { skin: 0x99918c, rough: 0.70, sleeve: 0x5c2a34, sleeveTex: 'fabric', sleeveRough: 0.86 }, // a colour nobody else would have picked
     lines: {
       pick: ['Marvellous. A small room, poor lighting, and an audience.'],
       start: ['I want it on record that I asked to be posted somewhere warm.',
@@ -958,7 +958,7 @@ const HEROES = {
     bio: 'Walks into rooms like the room has been waiting for him. Annoyingly, it usually has.',
     voice: { base: 142, spread: 38, type: 'square', color: '#ff9a5a' },
     voiceBox: { pitch: 108, tract: 1.10, rasp: 0.24, breath: 0.06, rate: 5.0, swing: 0.19, say: { pitch: 0.74, rate: 1.00 } },
-    look: { skin: 0x9a6b48, rough: 0.69, sleeve: 0x2a211c, sleeveTex: 'plastic', sleeveRough: 0.44 }, // leather, and he knows it
+    look: { skin: 0x79716c, rough: 0.69, sleeve: 0x2a211c, sleeveTex: 'plastic', sleeveRough: 0.44 }, // leather, and he knows it
     lines: {
       pick: ['You picked right.'],
       start: ['Small room, bad odds, no way out. My kind of night.',

@@ -110,7 +110,9 @@ const SWEEP = () => {
   /* Boot the game itself: that builds the map, the props, the zombie
      bodies and every weapon that gets racked. */
   try {
-    window.B = BUNKER.start({ canvas: '#game', test: true, quality: 'low' });
+    window.B = BUNKER.start({ canvas: '#game', test: true, quality: 'low',
+      // readPixels on the default framebuffer needs the frame to survive it.
+      preserveDrawingBuffer: true });
     for (let i = 0; i < 40; i++) window.B.game.step(1 / 60);
   } catch (e) { out.errors.push('boot: ' + e.message); }
 
@@ -600,6 +602,59 @@ const SWEEP = () => {
       out.sys.voices.push(row);
     }
 
+    /* What colour the hands COME OUT, not what colour they were set to.
+     *
+     * This has shipped orange three times -- once from the material, once
+     * from the texture baking its own warmth on top, and once from ten
+     * per-character tones picked by eye in a hex editor without accounting
+     * for either. Every one of those was argued about by looking at a
+     * screenshot and calling it "a bit warm". The ratio of the channels is
+     * not a matter of opinion: a hand under warm indoor light lands near
+     * G/R 0.76-0.88 and B/R 0.52-0.72, and a traffic cone is B/R under 0.45.
+     *
+     * A patch of wall is read in the same frame as a control. If the wall
+     * is neutral and the hand is not, it is the hands; if both are warm, it
+     * is the light, and that is a different repair. */
+    out.sys.skin = [];
+    try {
+      /* At High, because that is the tier the tones were measured and
+         tuned against -- reading them at Low would be a band from one
+         lighting setup applied to another. Put back afterwards so nothing
+         downstream inherits it. */
+      const wasTier = SS.settings.current;
+      window.__T_SYS.applyGraphics(G, SS, 'high');
+      SS.player.give('m1911');
+      runFrames(40);
+      const gl = G.gl, W = gl.drawingBufferWidth, H = gl.drawingBufferHeight;
+      const px = new Uint8Array(W * H * 4);
+      // NDC box over the firing hand, measured from the projected mesh.
+      const box = (x0, x1, y0, y1) => {
+        let r = 0, g = 0, b = 0, n = 0;
+        const i0 = Math.round((x0 + 1) / 2 * W), i1 = Math.round((x1 + 1) / 2 * W);
+        // readPixels counts y from the bottom, which is also NDC's direction.
+        const j0 = Math.round((y0 + 1) / 2 * H), j1 = Math.round((y1 + 1) / 2 * H);
+        for (let j = Math.max(0, j0); j < Math.min(H, j1); j++)
+          for (let i = Math.max(0, i0); i < Math.min(W, i1); i++) {
+            const k = (j * W + i) * 4;
+            if (px[k] < 12 && px[k + 1] < 12 && px[k + 2] < 12) continue;
+            r += px[k]; g += px[k + 1]; b += px[k + 2]; n++;
+          }
+        if (!n) return null;
+        return { gr: +(g / r).toFixed(3), br: +(b / r).toFixed(3), n };
+      };
+      for (const h of (window.__T_SYS.HERO_ORDER || [])) {
+        SS.setHero(h);
+        runFrames(4);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.readPixels(0, 0, W, H, gl.RGBA, gl.UNSIGNED_BYTE, px);
+        const hand = box(0.20, 0.48, -0.98, -0.52);
+        const wall = box(-0.30, 0.10, 0.10, 0.35);
+        out.sys.skin.push({ h, hand, wall });
+      }
+      window.__T_SYS.applyGraphics(G, SS, wasTier);
+      runFrames(4);
+    } catch (e) { out.sys.skin.push({ h: '?', err: e.message }); }
+
     /* Every settings toggle, flipped both ways with the game running.
      *
      * Through SS.setToggle, which is the same call the settings menu makes.
@@ -816,6 +871,21 @@ function check(name, cond, detail = '') {
   check('every weapon\'s arms follow the character, not just the first',
     looks.every((h) => h.look.split('/').length === 4),
     list(looks.filter((h) => h.look.split('/').length !== 4), (h) => `${h.h}: ${h.look}`));
+
+  const sk = (sy.skin || []).filter((q) => !q.err);
+  const skErr = (sy.skin || []).filter((q) => q.err);
+  const orange = sk.filter((q) => !q.hand || q.hand.br < 0.50 || q.hand.br > 0.78
+    || q.hand.gr < 0.74 || q.hand.gr > 0.92);
+  check('the hands come out the colour of hands',
+    !skErr.length && sk.length > 0 && orange.length === 0,
+    skErr.length ? skErr[0].err
+      : list(orange, (q) => q.hand
+        ? `${q.h}: G/R ${q.hand.gr}, B/R ${q.hand.br}` + (q.hand.br < 0.50 ? '  (orange)' : '')
+        : `${q.h}: no hand pixels found`));
+  // The control. If this drifts the reading above means something different.
+  const cw = sk.filter((q) => q.wall && (q.wall.br < 0.9 || q.wall.br > 1.1));
+  check('the wall behind them is still neutral, so the reading is about the hands',
+    cw.length === 0, list(cw, (q) => `${q.h}: wall B/R ${q.wall.br}`));
 
   const vo = sy.voices || [];
   const voErr = vo.filter((v) => v.err);

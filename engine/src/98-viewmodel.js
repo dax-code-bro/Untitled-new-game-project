@@ -487,7 +487,21 @@ function makeViewmodelArms(hands, opts = {}) {
      these are forearms entering frame from the lower corners, not whole
      arms hung off a torso that is not there. */
   const back = opts.back != null ? opts.back : -0.07;
-  const drop = opts.drop != null ? opts.drop : -0.21;
+  const drop = opts.drop != null ? opts.drop : -0.28;
+  /* How far apart the two sleeve mouths are.
+   *
+   * This was 0.105 -- 21 cm between the shoulders, half a real shoulder
+   * width -- and the consequence was measurable rather than arguable:
+   * projected into the frame, the support sleeve ran from x -0.11 to 0.29
+   * with half its vertices on screen. That is not a forearm entering from
+   * the lower left, it is a cone standing in the middle of the picture
+   * pointing at the gun, and next to the firing sleeve at 0.28..0.95 the
+   * pair read as two claws meeting at the bottom of the screen.
+   *
+   * At 0.27 each mouth is out past the lower corner it belongs to, so what
+   * is left on screen is the tapered part near the wrist -- which is what
+   * a forearm entering frame actually looks like. */
+  const spread = opts.spread != null ? opts.spread : 0.27;
 
   /* `side` is which way the back of the hand faces, and it decides where
      the thumb goes, which way the fingers are spread and which corner of
@@ -518,7 +532,7 @@ function makeViewmodelArms(hands, opts = {}) {
   for (const { hand, side, grip, sl, sk, tg } of pairs) {
     if (!hand) continue;
     const h = new Vec3(hand[0], hand[1], hand[2]);
-    const shoulder = new Vec3(back, drop, side * 0.105);
+    const shoulder = new Vec3(back, drop, side * spread);
     buildViewArm(sl, shoulder, h, side);
     buildViewHand(sk, h, side, { grip, thumbGeo: tg, out: tg ? out : null });
   }
