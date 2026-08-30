@@ -1308,6 +1308,21 @@ class Engine {
       this._lastTime = t;
       // Clamp so a backgrounded tab does not resume with a one-second step.
       dt = Math.min(dt, 0.1);
+      /* A frame rate cap, for the tiers that want one.
+       *
+       * The retro tier is pinned at 24 because the stutter is half of what
+       * makes it read as a machine from 1996 -- a quarter-resolution image
+       * running at a smooth 144 just looks like a bug. Skipping the frame
+       * entirely rather than sleeping keeps the browser's own scheduling
+       * intact, and the skipped time is carried into the next step so the
+       * simulation still runs in real time. */
+      const cap = this.renderer && this.renderer.quality.fpsCap;
+      if (cap) {
+        this._capAcc = (this._capAcc || 0) + dt;
+        if (this._capAcc < 1 / cap) return;
+        dt = this._capAcc;
+        this._capAcc = 0;
+      }
       if (!this.paused) {
         try {
           this.step(dt);

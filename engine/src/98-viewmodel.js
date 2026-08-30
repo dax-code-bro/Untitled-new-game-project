@@ -542,7 +542,11 @@ const VIEW_ARM_MATERIALS = {
      this saturated compounds three times over. Desaturated, and the
      scatter pulled back to something that warms the thin edges rather than
      dyeing the whole hand. */
-  skin: { color: 0x9d8570, texture: 'skin', roughness: 0.74, metalness: 0, subsurface: 0.16 },
+  /* Still a carrot at 0x9d8570. The texture carries its own warm tint and
+     the scatter term adds red on top, so the base has to be almost
+     neutral for the result to land on skin -- what looks far too grey in
+     the hex is what comes out right on screen. */
+  skin: { color: 0xbc8f6d, texture: 'skin', roughness: 0.72, metalness: 0, subsurface: 0.12 },
 };
 
 /* Spawn arms parented to a weapon actor. They move with it exactly. */

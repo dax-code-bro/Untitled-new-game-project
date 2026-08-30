@@ -972,6 +972,16 @@ const COMMON = {
    frames a machine will turn in anyway, so the column says what a tier
    costs relative to the others, which is the part that is actually true. */
 const GRAPHICS = {
+  /* Deliberately a machine from 1996: a quarter of the display resolution
+     upscaled with no filtering at all, the palette quantised, and the
+     frame rate pinned at 24 so the motion has that stutter too. It is not
+     "low with a filter on" -- everything is off and the pixels are the
+     point. */
+  retro: {
+    name: 'RETRO', tier: 'retro', target: '24 FPS, ON PURPOSE',
+    blurb: 'Quarter resolution, hard pixels, a small palette and 24 frames a second.',
+    far: false, decals: false, smoke: false, lamps: 4, particles: 0.2, shadows: false,
+  },
   low: {
     name: 'LOW', tier: 'low', target: 'FASTEST',
     blurb: 'Simplest shapes. No bloom, no far battlefield, one shadow cascade.',
@@ -979,22 +989,22 @@ const GRAPHICS = {
     // Measured at roughly a quarter of Normal's frame time.
   },
   normal: {
-    name: 'NORMAL', tier: 'medium', target: 'BASELINE',
+    name: 'NORMAL', tier: 'normal', target: 'BASELINE',
     blurb: 'What the game was built to look like.',
     far: true, decals: true, smoke: true, lamps: 99, particles: 1, shadows: true,
   },
   high: {
     name: 'HIGH', tier: 'high', target: 'COSTS MORE',
-    blurb: 'Sharper shadows, the full battlefield, every lamp.',
+    blurb: 'Ambient occlusion, soft shadows, supersampled and sharpened back.',
     far: true, decals: true, smoke: true, lamps: 99, particles: 1.3, shadows: true,
   },
   ultra: {
     name: 'ULTRA', tier: 'ultra', target: 'COSTS MOST',
-    blurb: 'Rendered above the display and downsampled. Wants the hardware.',
+    blurb: 'Rendered at nearly twice the display and resolved down. Wants the hardware.',
     far: true, decals: true, smoke: true, lamps: 99, particles: 1.8, shadows: true,
   },
 };
-const GRAPHICS_ORDER = ['low', 'normal', 'high', 'ultra'];
+const GRAPHICS_ORDER = ['retro', 'low', 'normal', 'high', 'ultra'];
 
 /* Things that are a matter of taste rather than of hardware.
 
@@ -6036,7 +6046,13 @@ function applyGraphics(game, S, key) {
   S.settings.current = key;
   game.renderer.setQuality(g.tier);
   game.renderer.resize(game.canvas.clientWidth, game.canvas.clientHeight);
-  game.renderer.post.bloom = g.tier === 'low' ? 0 : (S.baseBloom != null ? S.baseBloom : game.renderer.post.bloom);
+  game.renderer.post.bloom = (g.tier === 'low' || g.tier === 'retro') ? 0
+    : (S.baseBloom != null ? S.baseBloom : game.renderer.post.bloom);
+  /* Retro wants its pixels hard. The canvas is a quarter of the display
+     and the browser would smooth it back up into mush without this, which
+     would be the one thing the tier exists to avoid. */
+  game.canvas.style.imageRendering = g.tier === 'retro' ? 'pixelated' : '';
+  S.fpsCap = game.renderer.quality.fpsCap || 0;
 
   if (S.detail) {
     for (const a of S.detail.far) a.visible = g.far;
@@ -7488,7 +7504,7 @@ function start(opts = {}) {
     try { want = localStorage.getItem('b9.graphics'); } catch (e) { void e; }
     if (!GRAPHICS[want]) {
       const t = game.renderer.qualityName;
-      want = t === 'low' ? 'low' : t === 'ultra' ? 'ultra' : t === 'high' ? 'high' : 'normal';
+      want = GRAPHICS[t] ? t : 'normal';
     }
     S.settings.index = Math.max(0, GRAPHICS_ORDER.indexOf(want));
     applyGraphics(game, S, want);

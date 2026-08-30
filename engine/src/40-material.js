@@ -317,10 +317,17 @@ const TextureLib = {
       // Pores at high frequency, subtle blotching underneath.
       const pore = Math.pow(n.fbm(u * 180, v * 180, 3, 2) * 0.5 + 0.5, 3);
       const blotch = n.fbm(u * 9, v * 9, 12, 4) * 0.5 + 0.5;
-      const base = 0.82 + blotch * 0.1;
-      c.r = base * 0.92;
-      c.g = base * 0.68 + blotch * 0.03;
-      c.b = base * 0.58;
+      /* Nearly neutral, so the MATERIAL decides the skin tone.
+         
+         This baked a 0.92 / 0.68 / 0.58 ratio into the texture itself --
+         a saturated orange that every material using it was multiplied
+         by, which is why the viewmodel hands stayed a traffic cone
+         through two attempts at desaturating the material colour. A
+         texture supplies variation; a colour supplies colour. */
+      const base = 0.86 + blotch * 0.1;
+      c.r = base * 0.96;
+      c.g = base * 0.90 + blotch * 0.02;
+      c.b = base * 0.86;
       c.rough = 0.55 + pore * 0.2 - blotch * 0.06;
       c.ao = 1 - pore * 0.2;
       c.h = pore * 0.5 + blotch * 0.1;

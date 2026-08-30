@@ -58,20 +58,55 @@ class Camera {
 /* Quality presets. Phones and laptops differ by more than an order of
    magnitude, so the engine picks a tier from the device rather than
    shipping one setting that is wrong for most players. */
+/* Five tiers, and each one is meant to be a different thing to look at
+   rather than the same picture with the shadow map resized.
+
+     retro    a quarter resolution, upscaled hard with no filtering, the
+              colours quantised to a small palette and the frame rate
+              pinned at 24. No shadows, no bloom, no antialiasing --
+              deliberately a machine from 1996.
+     low      simple and fast: no shadows worth the name, no post, two
+              thirds resolution. For anything that struggles.
+     normal   what the game was built and balanced on.
+     high     shadows get soft, ambient occlusion comes in, and the image
+              is supersampled slightly and sharpened back.
+     ultra    everything, and rendered at nearly twice the display
+              resolution before being scaled down -- which is what
+              actually buys "every little detail, not blocky".
+
+   `renderScale` above 1 is supersampling: the canvas is allocated bigger
+   than its CSS size and the browser resolves it down, which removes
+   stair-stepping that no amount of FXAA can. It is also the single most
+   expensive number here, which is why it is the one that separates the
+   top two tiers. */
 const QUALITY = {
-  low: { shadowRes: 768, cascades: 1, bloom: false, bloomIters: 0, fluidScale: 0.5, fxaa: false, msaa: 0, maxGrass: 3000, renderScale: 0.62 },
-  medium: { shadowRes: 1536, cascades: 2, bloom: true, bloomIters: 3, fluidScale: 0.75, fxaa: true, msaa: 0, maxGrass: 20000, renderScale: 1 },
-  high: { shadowRes: 2048, cascades: 2, bloom: true, bloomIters: 3, fluidScale: 1, fxaa: true, msaa: 0, maxGrass: 60000, renderScale: 1 },
-  ultra: { shadowRes: 4096, cascades: 2, bloom: true, bloomIters: 5, fluidScale: 1, fxaa: true, msaa: 0, maxGrass: 150000, renderScale: 1.25 },
+  retro: { shadowRes: 512, cascades: 1, bloom: false, bloomIters: 0, fluidScale: 0.35,
+    fxaa: false, msaa: 0, maxGrass: 500, renderScale: 0.26,
+    ssao: 0, ssaoSamples: 0, sharpen: 0, posterize: 9, pixelated: true, fpsCap: 24 },
+  low: { shadowRes: 768, cascades: 1, bloom: false, bloomIters: 0, fluidScale: 0.5,
+    fxaa: false, msaa: 0, maxGrass: 2500, renderScale: 0.66,
+    ssao: 0, ssaoSamples: 0, sharpen: 0, posterize: 0 },
+  normal: { shadowRes: 1536, cascades: 2, bloom: true, bloomIters: 3, fluidScale: 0.75,
+    fxaa: true, msaa: 0, maxGrass: 20000, renderScale: 1,
+    ssao: 0, ssaoSamples: 0, sharpen: 0.12, posterize: 0 },
+  high: { shadowRes: 2560, cascades: 2, bloom: true, bloomIters: 4, fluidScale: 1,
+    fxaa: true, msaa: 0, maxGrass: 60000, renderScale: 1.25,
+    ssao: 0.70, ssaoSamples: 12, ssaoRadius: 0.55, sharpen: 0.34, posterize: 0 },
+  ultra: { shadowRes: 4096, cascades: 2, bloom: true, bloomIters: 5, fluidScale: 1,
+    fxaa: true, msaa: 0, maxGrass: 160000, renderScale: 1.85,
+    ssao: 0.95, ssaoSamples: 26, ssaoRadius: 0.70, sharpen: 0.52, posterize: 0 },
 };
+// `medium` is what the old auto-detect asked for and what several callers
+// still pass; it is this tier's previous name.
+QUALITY.medium = QUALITY.normal;
 
 function detectQuality() {
   const mem = navigator.deviceMemory || 4;
   const cores = navigator.hardwareConcurrency || 4;
   const mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
-  if (mobile) return (mem >= 6 && cores >= 6) ? 'medium' : 'low';
+  if (mobile) return (mem >= 6 && cores >= 6) ? 'normal' : 'low';
   if (mem >= 8 && cores >= 8) return 'high';
-  if (mem >= 4 && cores >= 4) return 'medium';
+  if (mem >= 4 && cores >= 4) return 'normal';
   return 'low';
 }
 
@@ -182,7 +217,11 @@ class Renderer {
       ? { internalFormat: gl.RGBA16F, format: gl.RGBA, type: gl.HALF_FLOAT }
       : { internalFormat: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE };
     this._hdrSpec = hdr;
-    this.hdrA = new Framebuffer(gl, { width: 4, height: 4, colors: [hdr], depth: true });
+    /* The main target's depth is a texture rather than a renderbuffer, so
+       ambient occlusion can read the scene's depth without a second
+       geometry pass. It is still blitted into the fluid target the same
+       way. */
+    this.hdrA = new Framebuffer(gl, { width: 4, height: 4, colors: [hdr], depth: true, depthTexture: true });
     this.hdrB = new Framebuffer(gl, { width: 4, height: 4, colors: [hdr], depth: false });
     this.bloomChain = [];
     for (let i = 0; i < 4; i++) {
@@ -192,6 +231,15 @@ class Renderer {
       });
     }
     this.ldr = new Framebuffer(gl, { width: 4, height: 4, colors: [{}], depth: false });
+
+    /* Ambient occlusion, at half resolution and blurred back up. Full
+       resolution buys nothing here: the signal is low frequency and the
+       blur that takes the sampling noise out would throw the extra detail
+       away again. */
+    const aoSpec = { internalFormat: gl.R8, format: gl.RED, type: gl.UNSIGNED_BYTE };
+    this.aoA = new Framebuffer(gl, { width: 4, height: 4, colors: [aoSpec], depth: false });
+    this.aoB = new Framebuffer(gl, { width: 4, height: 4, colors: [aoSpec], depth: false });
+    this._aoWhite = null;
 
     const rSpec = this.floatBuffers
       ? { internalFormat: gl.R32F, format: gl.RED, type: gl.FLOAT }
@@ -265,6 +313,9 @@ class Renderer {
     this.fluidBlurA.resize(fw, fh);
     this.fluidBlurB.resize(fw, fh);
     this.fluidThick.resize(fw, fh);
+    const aw = Math.max(2, w >> 1), ah = Math.max(2, h >> 1);
+    this.aoA.resize(aw, ah);
+    this.aoB.resize(aw, ah);
   }
 
   /* ---------------- uniform blocks ---------------- */
@@ -724,6 +775,43 @@ class Renderer {
       this.stats.draws += iters * 3;
     }
 
+    /* Ambient occlusion, before the composite so it can be multiplied
+       into the light. Half resolution, then two separated blurs that
+       refuse to cross a depth edge. */
+    let aoTex = null;
+    if (this.quality.ssao > 0 && this.quality.ssaoSamples > 0
+        && this.hdrA.depthTexture && this.camera) {
+      const ssao = this.program('ssao', FULLSCREEN_VS, GLSL.ssaoFrag).use();
+      this.aoA.bind(true, 1, 1, 1, 1);
+      ssao.tex('uDepth', this.hdrA.depthTexture);
+      // The camera already keeps both, updated once per frame.
+      /* present() runs after renderScene, which stashes the camera on
+         the renderer -- there is no camera argument in this scope, and
+         reaching for one threw on the first ultra frame. */
+      ssao.m4('uInvProj', this.camera.invProj);
+      ssao.m4('uProj', this.camera.proj);
+      ssao.v2('uTexel', 1 / this.aoA.width, 1 / this.aoA.height);
+      ssao.f('uRadius', this.quality.ssaoRadius || 0.6);
+      ssao.f('uBias', 0.10);
+      ssao.f('uIntensity', 2.9);
+      ssao.i('uSamples', this.quality.ssaoSamples | 0);
+      ssao.f('uTime', this.time);
+      this.fullscreen.draw();
+
+      const ab = this.program('ssaoBlur', FULLSCREEN_VS, GLSL.ssaoBlurFrag);
+      for (const [src2, dst, dx, dy] of [[this.aoA, this.aoB, 1, 0], [this.aoB, this.aoA, 0, 1]]) {
+        ab.use();
+        dst.bind(true, 1, 1, 1, 1);
+        ab.tex('uTex', src2.color);
+        ab.tex('uDepth', this.hdrA.depthTexture);
+        ab.v2('uTexel', 1 / src2.width, 1 / src2.height);
+        ab.v2('uDir', dx, dy);
+        this.fullscreen.draw();
+      }
+      aoTex = this.aoA.color;
+      this.stats.draws += 3;
+    }
+
     const useFxaa = this.quality.fxaa;
     const target = useFxaa ? this.ldr : null;
     if (target) target.bind(true, 0, 0, 0, 1);
@@ -745,6 +833,11 @@ class Renderer {
     comp.f('uContrast', this.post.contrast);
     comp.f('uGrain', this.post.grain);
     comp.f('uTime', this.time);
+    comp.f('uSharpen', this.quality.sharpen || 0);
+    comp.f('uPosterize', this.quality.posterize || 0);
+    comp.v2('uTexel', 1 / this.width, 1 / this.height);
+    comp.tex('uAo', aoTex || this.hdrA.color);
+    comp.f('uAoStrength', aoTex ? this.quality.ssao : 0);
     this.fullscreen.draw();
     this.stats.draws++;
 

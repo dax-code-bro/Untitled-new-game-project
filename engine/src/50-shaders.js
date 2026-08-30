@@ -922,6 +922,11 @@ uniform float uSaturation;
 uniform float uContrast;
 uniform float uGrain;
 uniform float uTime;
+uniform float uSharpen;
+uniform float uPosterize;
+uniform sampler2D uAo;
+uniform float uAoStrength;
+uniform vec2 uTexel;
 layout(location=0) out vec4 outColor;
 
 /* ACES filmic tonemap (Narkowicz fit). Without a real tonemapper, bright
@@ -947,6 +952,38 @@ void main(){
     color = texture(uScene, uv).rgb;
   }
 
+  /* Contrast-adaptive sharpening.
+   *
+   * Supersampling at 1.75x and letting the browser scale the canvas down
+   * gives a clean image with no stair-stepping, but downsampling always
+   * costs a little acuity -- edges come back very slightly soft. A small
+   * unsharp mask against the four neighbours puts the definition back
+   * without the white haloes a naive sharpen leaves, because the amount
+   * is scaled by how much local contrast there already is: flat walls are
+   * left alone, edges get the lift. This is what "not blocky and not
+   * smooth" actually means as an operation. */
+  if (uSharpen > 0.0) {
+    vec3 n1 = texture(uScene, uv + vec2( uTexel.x, 0.0)).rgb;
+    vec3 n2 = texture(uScene, uv + vec2(-uTexel.x, 0.0)).rgb;
+    vec3 n3 = texture(uScene, uv + vec2(0.0,  uTexel.y)).rgb;
+    vec3 n4 = texture(uScene, uv + vec2(0.0, -uTexel.y)).rgb;
+    vec3 blur = (n1 + n2 + n3 + n4) * 0.25;
+    vec3 d = color - blur;
+    // How much the neighbourhood already varies, so flat areas stay flat
+    // and noise does not get amplified into sparkle.
+    float local = length(max(max(abs(n1 - color), abs(n2 - color)),
+                             max(abs(n3 - color), abs(n4 - color))));
+    color += d * uSharpen * saturate1(local * 6.0);
+  }
+
+  /* Ambient occlusion, multiplied in before the light is tonemapped.
+     Contact darkening where surfaces meet is most of what separates a
+     rendered room from a lit box. */
+  if (uAoStrength > 0.0) {
+    float ao = texture(uAo, uv).r;
+    color *= mix(1.0, ao, uAoStrength);
+  }
+
   vec3 bloom = texture(uBloom0, uv).rgb * 0.5
              + texture(uBloom1, uv).rgb * 0.32
              + texture(uBloom2, uv).rgb * 0.18;
@@ -970,7 +1007,149 @@ void main(){
   // Linear to sRGB. The default framebuffer is not sRGB-encoded, so this
   // conversion has to be explicit or everything reads too dark.
   color = pow(saturate3(color), vec3(1.0 / 2.2));
+
+  /* Retro: quantise to a small palette AFTER the grade, the way a machine
+     with an eight-bit framebuffer would. Doing it in linear space instead
+     bands the shadows and leaves the highlights smooth, which is the
+     opposite of how those machines looked. */
+  if (uPosterize > 0.0) {
+    color = floor(color * uPosterize + 0.5) / uPosterize;
+  }
   outColor = vec4(color, 1.0);
+}
+`;
+
+/* Screen-space ambient occlusion.
+ *
+ * The single biggest thing missing from this renderer's look. Every
+ * surface was lit as though nothing around it existed, so a concrete room
+ * came out as a set of evenly lit planes -- the corners, the underside of
+ * every beam, the join where a crate meets the floor, all of it as bright
+ * as an open wall. Contact darkening is most of what makes a rendered
+ * room read as a room.
+ *
+ * Normals are reconstructed from depth rather than carried in a G-buffer.
+ * That costs a little accuracy at silhouettes and saves an entire
+ * render target and a second geometry pass, which on a browser game is
+ * the right trade. The derivative pair is chosen per-pixel from whichever
+ * neighbour is closer in depth, so the reconstruction does not smear a
+ * normal across an edge and put a halo round everything.
+ */
+GLSL.ssaoFrag = `
+${GLSL.common}
+in vec2 vUv;
+uniform sampler2D uDepth;
+uniform mat4 uInvProj;
+uniform mat4 uProj;
+uniform vec2 uTexel;
+uniform float uRadius;
+uniform float uBias;
+uniform float uIntensity;
+uniform int uSamples;
+uniform float uTime;
+layout(location=0) out vec4 outColor;
+
+vec3 viewPos(vec2 uv){
+  float d = texture(uDepth, uv).r;
+  vec4 c = vec4(uv * 2.0 - 1.0, d * 2.0 - 1.0, 1.0);
+  vec4 v = uInvProj * c;
+  return v.xyz / v.w;
+}
+
+void main(){
+  float d0 = texture(uDepth, vUv).r;
+  // Nothing behind the sky.
+  if (d0 >= 0.99999) { outColor = vec4(1.0); return; }
+  vec3 P = viewPos(vUv);
+
+  /* Reconstruct the normal from the closer neighbour on each axis, so an
+     edge does not blend two surfaces into one bogus normal. */
+  vec3 pxR = viewPos(vUv + vec2(uTexel.x, 0.0)) - P;
+  vec3 pxL = P - viewPos(vUv - vec2(uTexel.x, 0.0));
+  vec3 pyU = viewPos(vUv + vec2(0.0, uTexel.y)) - P;
+  vec3 pyD = P - viewPos(vUv - vec2(0.0, uTexel.y));
+  vec3 dx = abs(pxR.z) < abs(pxL.z) ? pxR : pxL;
+  vec3 dy = abs(pyU.z) < abs(pyD.z) ? pyU : pyD;
+  vec3 N = normalize(cross(dx, dy));
+  if (N.z < 0.0) N = -N;
+
+  // A per-pixel rotation, so the sample pattern does not print itself
+  // onto the image as a repeating grid.
+  float ang = hash12(gl_FragCoord.xy) * 6.2831853;
+  float ca = cos(ang), sa = sin(ang);
+
+  /* Occlusion measured against the SURFACE NORMAL, not against depth.
+   *
+   * The first version asked "is the scene in front of this sample point",
+   * which on a large flat surface is true for half the samples simply
+   * because they are coplanar with it -- the floor of the bunker came out
+   * pure black. What actually occludes a point is a neighbour standing
+   * ABOVE its plane, so the contribution is how far above that plane the
+   * neighbour is: dot(normalize(Q - P), N). Coplanar neighbours give zero
+   * and a flat floor is left alone, which is the whole difference between
+   * ambient occlusion and a dark smear. */
+  float occ = 0.0;
+  int n = uSamples;
+  for (int i = 0; i < 32; i++) {
+    if (i >= n) break;
+    float fi = float(i) + 0.5;
+    // A spiral: golden angle around, square root out, so the samples are
+    // spread evenly by area instead of clumping in the middle.
+    float t = fi / float(n);
+    float r = sqrt(t);
+    float phi = fi * 2.3999632;
+    vec2 disk = vec2(cos(phi), sin(phi)) * r;
+    vec2 rot = vec2(disk.x * ca - disk.y * sa, disk.x * sa + disk.y * ca);
+    vec3 dir = normalize(vec3(rot, 0.45 + 0.55 * t));
+    if (dot(dir, N) < 0.0) dir = -dir;
+    vec3 S = P + dir * uRadius * (0.30 + 0.70 * t);
+
+    vec4 clip = uProj * vec4(S, 1.0);
+    vec2 suv = clip.xy / clip.w * 0.5 + 0.5;
+    if (suv.x < 0.0 || suv.x > 1.0 || suv.y < 0.0 || suv.y > 1.0) continue;
+    vec3 Q = viewPos(suv);
+    vec3 v = Q - P;
+    float len = length(v);
+    if (len < 0.0001) continue;
+    // How far above P's own plane the neighbour sits. Zero when coplanar.
+    float above = dot(v / len, N) - uBias;
+    if (above <= 0.0) continue;
+    // And a wall a long way behind must not darken what is in front of
+    // it, which is the classic halo.
+    float range = uRadius / (uRadius + max(0.0, len - uRadius));
+    occ += above * range;
+  }
+  float ao = 1.0 - (occ / float(n)) * uIntensity;
+  outColor = vec4(saturate1(ao), 0.0, 0.0, 1.0);
+}
+`;
+
+/* A cross blur over the AO, to take the sampling noise out of it without
+   crossing a depth edge and bleeding occlusion onto a foreground object. */
+GLSL.ssaoBlurFrag = `
+${GLSL.common}
+in vec2 vUv;
+uniform sampler2D uTex;
+uniform sampler2D uDepth;
+uniform vec2 uTexel;
+uniform vec2 uDir;
+layout(location=0) out vec4 outColor;
+void main(){
+  float centre = texture(uDepth, vUv).r;
+  float sum = 0.0, wsum = 0.0;
+  // Wider than it looks like it needs to be: at half resolution with a
+  // per-pixel rotated sample pattern the AO comes out blotchy, and the
+  // blotches are lower frequency than the noise.
+  for (int i = -5; i <= 5; i++) {
+    vec2 o = uDir * uTexel * float(i);
+    float d = texture(uDepth, vUv + o).r;
+    // Weight by how close in depth: past a small difference it is a
+    // different surface and must not be averaged in.
+    float w = exp(-abs(d - centre) * 900.0) * exp(-float(i * i) * 0.09);
+    sum += texture(uTex, vUv + o).r * w;
+    wsum += w;
+  }
+  outColor = vec4(wsum > 0.0 ? sum / wsum : texture(uTex, vUv).r, 0.0, 0.0, 1.0);
 }
 `;
 
