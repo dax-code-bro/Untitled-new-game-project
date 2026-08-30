@@ -2426,9 +2426,19 @@ function buildMap(game, S) {
   slab(SD.x1, M.x0 - W, 0, SD.y1, SD.z0 - W, D1.z0, MAT.wall);
   slab(SD.x1, M.x0 - W, 0, SD.y1, D1.z1, SD.z1 + W, MAT.wall);
 
-  /* Roof over the wing, with a ragged hole punched in it where the rock came
-     through. The hole is eight wedges rather than a ring so the edge reads as
-     torn concrete instead of a drilled circle. */
+  /* Roof over the wing.
+   *
+   * The hole was here from the moment the map was built: four slabs laid
+   * round a gap, eight torn wedges at its edge and a shaft of daylight
+   * coming down through it -- all of it standing there on round one, hours
+   * before anything came through the roof. The rock hides itself until it
+   * falls; the hole it makes never did.
+   *
+   * So the roof is whole to start with. The patch over the impact point is
+   * solid concrete like the rest of it, the torn edge is built but not
+   * shown, and the daylight is at zero. The meteorite takes all three when
+   * it lands. The hole is eight wedges rather than a ring so the edge reads
+   * as torn concrete rather than as a drilled circle. */
   {
     const H = MAP.hole, r = H.r;
     const RY = SD.y1 - 0.11;   // overlap the walls, same reason as the deck
@@ -2436,14 +2446,20 @@ function buildMap(game, S) {
     slab(SD.x0 - W, SD.x1, RY, SD.y1 + 0.3, H.z + r, SD.z1 + W, MAT.wallDark);
     slab(SD.x0 - W, H.x - r, RY, SD.y1 + 0.3, H.z - r, H.z + r, MAT.wallDark);
     slab(H.x + r, SD.x1, RY, SD.y1 + 0.3, H.z - r, H.z + r, MAT.wallDark);
+    // The bit that is still there until it is not.
+    const patch = slab(H.x - r, H.x + r, RY, SD.y1 + 0.3, H.z - r, H.z + r, MAT.wallDark);
+    const edge = [];
     for (let k = 0; k < 8; k++) {
       const a = (k / 8) * Math.PI * 2;
       const w2 = game.box({ at: [H.x + Math.cos(a) * r * 0.86, SD.y1 + 0.15, H.z + Math.sin(a) * r * 0.86],
         size: [0.7, 0.3, 0.5], material: MAT.wallDark, physics: false });
       w2.setRotation([0, -a * 57.2958, 0]);
+      w2.visible = false;
+      edge.push(w2);
     }
-    // Daylight and smoke coming down through it.
-    game.light({ at: [H.x, SD.y1 - 0.6, H.z], color: 0xd8c9a4, intensity: 26, radius: 7.0 });
+    // Daylight and smoke coming down through it, once there is a through.
+    const shaft = game.light({ at: [H.x, SD.y1 - 0.6, H.z], color: 0xd8c9a4, intensity: 0, radius: 7.0 });
+    S.roofHole = { patch, edge, shaft, at: [H.x, SD.y1, H.z], open: false };
   }
 
   const RISE = R.y1 / ST.steps, RUN = (ST.zBot - ST.zTop) / ST.steps;
@@ -6680,6 +6696,28 @@ function applyGraphics(game, S, key) {
    in a bang you feel; and then it is down, dead, until somebody puts a
    round into it. Nothing tells the player that last part except the rock
    itself, which sits there doing nothing until it is hit. */
+/* Punch the hole. Called once, when the rock lands.
+ *
+ * The concrete does not simply vanish: the patch is broken into chunks that
+ * fall into the wing, which is what a two-tonne rock going through a roof
+ * does and is also the difference between a hole appearing and a hole
+ * having been made. Guarded so a second call cannot double the debris. */
+function openRoofHole(game, S) {
+  const R = S.roofHole;
+  if (!R || R.open) return;
+  R.open = true;
+  if (R.patch) {
+    /* Break it up if the engine can, and take it away either way -- a
+       fracture that fails must not leave the roof intact. */
+    try { game.shatter(R.patch, { pieces: 14, point: R.at, impulse: 6 }); } catch (e) { void e; }
+    if (R.patch.destroy) { try { R.patch.destroy(); } catch (e) { void e; } }
+  }
+  for (const w of R.edge) w.visible = true;
+  R.shaft.intensity = 26;
+  // Dust off the broken edge, falling rather than blowing out.
+  game.particles.dust([R.at[0], R.at[1] - 0.4, R.at[2]], { count: 46, speed: 2.4, color: 0x6b6154 });
+}
+
 function updateMeteor(game, S, P, hud, sfx, dt) {
   const m = S.meteor;
   if (!m) return;
@@ -6710,6 +6748,11 @@ function updateMeteor(game, S, P, hud, sfx, dt) {
       game.audio.impact(1.0);
       if (sfx.powerOn) sfx.powerOn();
       const H = MAP.hole;
+      /* And NOW there is a hole in the roof. The slab over the impact point
+         goes, the torn edge appears, and the daylight comes on -- so the
+         banner is describing something that just happened rather than
+         pointing at a hole that has been there all night. */
+      openRoofHole(game, S);
       game.particles.sparks([H.x, 1.2, H.z], { count: 90, speed: 14, color: 0xffb060, colorEnd: 0x40180a });
       game.particles.smoke([H.x, 1.6, H.z], { count: 40, speed: 3.2, color: 0x3a3128 });
       hud.banner('IT CAME THROUGH THE ROOF', '#ff7a2a');

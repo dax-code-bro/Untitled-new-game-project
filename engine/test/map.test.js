@@ -64,6 +64,27 @@ function check(name, cond, detail = '') {
     }
     out.roofHoles = up;
 
+    /* The wing roof, before and after the rock.
+     *
+     * The hole over the wing was built into the map: four slabs laid round
+     * a gap, a torn concrete edge and a shaft of daylight, all standing on
+     * round one. Straight up from under it there should be concrete until
+     * the meteorite lands, and sky afterwards. Both halves are checked,
+     * because a roof that never opens is the same bug the other way round. */
+    {
+      const H = __T_MAP.hole;
+      out.wingBefore = !!hit([H.x, 2.6, H.z], [0, 1, 0], 4);
+      out.wingLightBefore = B.S.roofHole ? B.S.roofHole.shaft.intensity : -1;
+      try {
+        const m = B.S.meteor;
+        m.state = 'falling'; m.fall = 0.0001;
+        for (let i = 0; i < 8; i++) B.game.step(1 / 60);
+      } catch (e) { out.wingErr = e.message; }
+      out.wingAfter = !!hit([H.x, 2.6, H.z], [0, 1, 0], 4);
+      out.wingLightAfter = B.S.roofHole ? B.S.roofHole.shaft.intensity : -1;
+      out.wingEdge = B.S.roofHole ? B.S.roofHole.edge.filter((w) => w.visible).length : -1;
+    }
+
     /* Is the wall-to-roof-to-parapet seam continuous, from outside?
        Probing from inside starts the ray within the roof slab itself, so it
        never crosses a front face on the way out and every sample reads as a
@@ -181,6 +202,12 @@ function check(name, cond, detail = '') {
   });
 
   check('the roof has no holes over the floor', r.roofHoles === 0, `${r.roofHoles} openings`);
+  check('the wing roof is whole before the meteorite falls',
+    r.wingBefore === true && r.wingLightBefore === 0,
+    `overhead ${r.wingBefore ? 'solid' : 'OPEN'}, daylight ${r.wingLightBefore}`);
+  check('the meteorite makes the hole it comes through',
+    !r.wingErr && r.wingAfter === false && r.wingLightAfter > 0 && r.wingEdge === 8,
+    r.wingErr || `overhead ${r.wingAfter ? 'still solid' : 'open'}, daylight ${r.wingLightAfter}, ${r.wingEdge}/8 torn edges shown`);
   check('the wall-to-roof seam is continuous', r.seamHoles === 0, `${r.seamHoles} gaps`);
   check('the floor has no holes', r.floorHoles === 0, `${r.floorHoles} openings`);
   check('every weapon has a model, a muzzle and a sight line',

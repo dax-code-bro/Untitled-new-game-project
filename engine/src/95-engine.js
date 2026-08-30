@@ -1239,6 +1239,42 @@ class Engine {
 
   /* ---------------- frame ---------------- */
 
+  /* Draw one frame from anywhere, without touching the simulation.
+   *
+   * step() renders from this.camera, and this.camera is recomputed from
+   * whatever is driving it every frame -- a first-person game overwrites it
+   * from the player's eye before every draw, so there is no way to look at
+   * something from the outside without moving the player there and aiming
+   * them at it by hand. That is fine for playing and useless for a killcam,
+   * a security monitor, a cutscene, or an automated look at a model.
+   *
+   * Nothing advances: no physics, no particles, no hooks. It is the same
+   * world, drawn from somewhere else. Restores the camera afterwards so the
+   * next real frame is unaffected. */
+  renderFrom(position, target, opts = {}) {
+    const cam = this.camera;
+    const keep = {
+      px: cam.position.x, py: cam.position.y, pz: cam.position.z,
+      tx: cam.target.x, ty: cam.target.y, tz: cam.target.z, fov: cam.fov,
+    };
+    cam.position.set(position[0], position[1], position[2]);
+    cam.target.set(target[0], target[1], target[2]);
+    if (opts.fov) cam.fov = opts.fov * Math.PI / 180;
+    const w = this.canvas.clientWidth || window.innerWidth;
+    const h = this.canvas.clientHeight || window.innerHeight;
+    cam.update(w / Math.max(1, h));
+    const batches = this._buildBatches();
+    this.renderer.renderShadows(batches, cam);
+    this.renderer.renderScene(batches, cam);
+    if (this.fluid && this.fluid.count) this.renderer.renderFluid(this.fluid, cam);
+    this.renderer.renderParticles(this.particles, cam);
+    this.renderer.present();
+    cam.position.set(keep.px, keep.py, keep.pz);
+    cam.target.set(keep.tx, keep.ty, keep.tz);
+    cam.fov = keep.fov;
+    cam.update(w / Math.max(1, h));
+  }
+
   step(dt) {
     const scaled = dt * this.timeScale;
     this.time += scaled;
