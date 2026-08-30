@@ -549,10 +549,18 @@ const SWEEP = () => {
            each weapon has its own arms and only one of them was ever going
            to be the one that got updated. */
         const seen = [];
+        /* Material.color is a linear Vec3, not the hex it was built from --
+           reading it straight gave "[object Object]" for all ten and the
+           check compared ten identical strings, which cannot fail for the
+           right reason or pass for one either. Roughness too, since two
+           characters could share a colour and differ in finish. */
+        const read = (m) => (m && m.color
+          ? [m.color.x, m.color.y, m.color.z, m.roughness].map((v) => v.toFixed(4)).join(',')
+          : 'none');
         for (const wid of ['m1911', 'thompson']) {
           const arms = ((SS.player && SS.player.view[wid]) || {}).arms;
           if (!arms || !arms.skin) continue;
-          seen.push((arms.skin.material || {}).color, (arms.sleeve.material || {}).color);
+          seen.push(read(arms.skin.material), read(arms.sleeve.material));
         }
         row.look = seen.join('/');
       } catch (e) { row.err = e.message; }
