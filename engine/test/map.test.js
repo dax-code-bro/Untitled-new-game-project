@@ -268,9 +268,14 @@ function check(name, cond, detail = '') {
     P.slot = P.slots.indexOf('obliterator');
     for (let i = 0; i < 40; i++) { window.B.game.step(1 / 60); S.toSpawn = 0; S.spawnT = 1e9; }
     let cocks = 0, shots = 0;
-    const rc = sfx.hammerCock, rs = sfx.shotMagnum;
+    /* The weapon's own firing sound, read from its spec rather than named
+       here: this counted shotMagnum, and when the Model 5 was given a
+       sound of its own the test reported zero shots and four cocks for a
+       gun that was working perfectly. */
+    const shotKey = __T_WEAPONS.obliterator.sfx;
+    const rc = sfx.hammerCock, rs = sfx[shotKey];
     sfx.hammerCock = () => { cocks++; };
-    sfx.shotMagnum = () => { shots++; };
+    sfx[shotKey] = () => { shots++; };
     /* Through the test-hold hook, because the game rebuilds S.input from
        the device every frame and anything written straight into it is gone
        before the fire code reads it. */
@@ -281,7 +286,7 @@ function check(name, cond, detail = '') {
       S.toSpawn = 0; S.spawnT = 1e9;
     }
     __T.release();
-    sfx.hammerCock = rc; sfx.shotMagnum = rs;
+    sfx.hammerCock = rc; sfx[shotKey] = rs;
     const v = P.view.obliterator;
     return { shots, cocks, hammer: !!v.hammer, thumb: !!(v.arms && v.arms.thumb) };
   });

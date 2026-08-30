@@ -221,12 +221,12 @@ const WEAPONS = {
     name: 'M1911', slotName: 'SIDEARM',
     dmg: 55, headMul: 3.0, mag: 7, reserve: 42, refire: 0.16,
     reload: 1.5, auto: false, pellets: 1, spread: 0.4,
-    kick: 1.6, sfx: 'shotPistol', reloadKind: 'mag',
+    kick: 1.6, sfx: 'shot1911', reloadKind: 'mag',
     // sightH: height of the sight line above the weapon's own origin, so
     // aiming can place the gun such that the real notch-and-blade land on
     // the camera axis. Measured off the model, not eyeballed.
     sightH: 0.0455, sightFov: 0.74, adsTime: 0.16,
-    recoil: { up: 1.15, side: 0.5, climb: 0.28, recover: 9 },
+    recoil: { up: 1.15, side: 0.5, climb: 0.28, recover: 9, back: 0.016, roll: 0.006, impulse: 9 },
     ammo: { mag: { w: 0.024, d: 0.020, len: 0.086, curve: 0, witness: 0, round: AMMO.acp45 } },
     hands: { right: [-0.004, -0.020, 0.017], rightGrip: 'pistol', left: [0.014, -0.056, -0.022], leftGrip: { axis: [0.28, -0.94, 0], round: [0, 0, 1], girth: 0.070, spread: 0.0190, close: 0.92, index: 'wrap', thumb: 'along', drop: 0 } },
   },
@@ -242,10 +242,10 @@ const WEAPONS = {
     name: 'Blaze', slotName: 'BLAZE',
     dmg: 34, headMul: 2.6, mag: 8, reserve: 56, refire: 0.16,
     reload: 1.5, auto: false, pellets: 1, spread: 0.5,
-    kick: 1.5, sfx: 'shotPistol', reloadKind: 'mag',
+    kick: 1.5, sfx: 'shotBlaze', reloadKind: 'mag',
     burn: { dps: 26, time: 5 },
     sightH: 0.0455, sightFov: 0.74, adsTime: 0.16,
-    recoil: { up: 1.10, side: 0.5, climb: 0.26, recover: 9 },
+    recoil: { up: 1.10, side: 0.5, climb: 0.26, recover: 9, back: 0.017, roll: 0.007, impulse: 9 },
     ammo: { mag: { w: 0.024, d: 0.020, len: 0.086, curve: 0, witness: 0, round: AMMO.acp45 } },
     hands: { right: [-0.004, -0.020, 0.017], rightGrip: 'pistol', left: [0.014, -0.056, -0.022], leftGrip: { axis: [0.28, -0.94, 0], round: [0, 0, 1], girth: 0.070, spread: 0.0190, close: 0.92, index: 'wrap', thumb: 'along', drop: 0 } },
   },
@@ -253,9 +253,9 @@ const WEAPONS = {
     name: 'Thompson', slotName: 'THOMPSON',
     dmg: 40, headMul: 2.2, mag: 30, reserve: 210, refire: 0.1,
     reload: 2.3, auto: true, pellets: 1, spread: 1.1,
-    kick: 0.9, sfx: 'shotSmg', reloadKind: 'mag',
+    kick: 0.9, sfx: 'shotThompson', reloadKind: 'mag',
     sightH: 0.0955, sightFov: 0.80, adsTime: 0.22,
-    recoil: { up: 0.42, side: 0.30, climb: 0.13, recover: 11 },
+    recoil: { up: 0.42, side: 0.30, climb: 0.13, recover: 11, back: 0.011, roll: 0.004, impulse: 5 },
     ammo: { mag: { w: 0.028, d: 0.024, len: 0.112, curve: 0, witness: 0, round: AMMO.acp45 } },
     hands: { right: [-0.006, -0.024, 0.016], rightGrip: 'pistol', left: [0.330, -0.020, -0.017], leftGrip: 'woodFore' },
   },
@@ -265,7 +265,7 @@ const WEAPONS = {
     reload: 2.6, auto: false, pellets: 8, spread: 5.5,
     kick: 3.2, sfx: 'shotScatter', reloadKind: 'break',
     sightH: 0.0275, sightFov: 0.86, adsTime: 0.24, adsSpread: 0.55,
-    recoil: { up: 2.6, side: 0.9, climb: 0.75, recover: 7 },
+    recoil: { up: 2.6, side: 0.9, climb: 0.75, recover: 7, back: 0.038, roll: 0.013, impulse: 20 },
     ammo: { shell: { r: 0.00925, len: 0.0700, head: 0.0220 } },
     hands: { right: [-0.014, -0.046, 0.016], rightGrip: 'wrist', left: [0.242, -0.006, -0.020], leftGrip: 'woodFore' },
   },
@@ -279,10 +279,10 @@ const WEAPONS = {
     name: 'Paralyzer', slotName: 'PARALYZER',
     dmg: 12, headMul: 1.8, mag: 2, reserve: 40, refire: 0.62,
     reload: 2.4, auto: false, pellets: 10, spread: 4.6,
-    kick: 3.0, sfx: 'shotArc', reloadKind: 'break',
+    kick: 3.0, sfx: 'shotParalyzer', reloadKind: 'break',
     pierce: 3, pierceFalloff: 0.86, stun: true,
     sightH: 0.0425, sightFov: 0.86, adsTime: 0.26, adsSpread: 0.62,
-    recoil: { up: 2.4, side: 0.85, climb: 0.60, recover: 7.5 },
+    recoil: { up: 2.4, side: 0.85, climb: 0.60, recover: 7.5, back: 0.034, roll: 0.012, impulse: 18 },
     moveMul: 0.94, muzzleVel: 62,
     ammo: { shell: { r: 0.00925, len: 0.0640, head: 0.0260 }, hullMaterial: { color: 0x2b5c74, texture: 'smooth', roughness: 0.5, metalness: 0, emissive: 0x1d6c92, emissiveStrength: 0.55 } },
     hands: { right: [-0.014, -0.046, 0.016], rightGrip: 'wrist', left: [0.268, -0.010, -0.020], leftGrip: 'tube' },
@@ -291,9 +291,9 @@ const WEAPONS = {
     name: 'MP5', slotName: 'MP5',
     dmg: 34, headMul: 2.3, mag: 30, reserve: 240, refire: 0.075,
     reload: 2.1, auto: true, pellets: 1, spread: 0.95,
-    kick: 0.8, sfx: 'shotSmg', reloadKind: 'mag',
+    kick: 0.8, sfx: 'shotMP5', reloadKind: 'mag',
     sightH: 0.0435, sightFov: 0.80, adsTime: 0.19,
-    recoil: { up: 0.36, side: 0.26, climb: 0.11, recover: 12 },
+    recoil: { up: 0.36, side: 0.26, climb: 0.11, recover: 12, back: 0.008, roll: 0.003, impulse: 4 },
     moveMul: 1.0, muzzleVel: 400,
     ammo: { mag: { w: 0.026, d: 0.021, len: 0.126, curve: 0.011, witness: 4, round: AMMO.para9 } },
     hands: { right: [-0.012, -0.044, 0.016], rightGrip: 'pistol', left: [0.232, -0.014, -0.020], leftGrip: 'fore' },
@@ -302,9 +302,9 @@ const WEAPONS = {
     name: 'Sawn-Off', slotName: 'SAWN-OFF',
     dmg: 30, headMul: 1.5, mag: 2, reserve: 34, refire: 0.34,
     reload: 2.0, auto: false, pellets: 12, spread: 9.5,
-    kick: 4.2, sfx: 'shotScatter', reloadKind: 'break',
+    kick: 4.2, sfx: 'shotSawn', reloadKind: 'break',
     sightH: 0.026, sightFov: 0.94, adsTime: 0.18, adsSpread: 0.85,
-    recoil: { up: 3.6, side: 1.6, climb: 1.05, recover: 6.5 },
+    recoil: { up: 3.6, side: 1.6, climb: 1.05, recover: 6.5, back: 0.052, roll: 0.021, impulse: 27 },
     moveMul: 1.06, muzzleVel: 48,
     ammo: { shell: { r: 0.00925, len: 0.0700, head: 0.0220 } },
     hands: { right: [-0.016, -0.048, 0.016], rightGrip: 'pistol', left: [0.170, -0.004, -0.020], leftGrip: 'woodFore' },
@@ -334,27 +334,29 @@ const WEAPONS = {
     name: 'Obliterated Model 5', slotName: 'MODEL 5',
     dmg: 620, headMul: 2.0, mag: 4, reserve: 32, refire: 0.44,
     reload: 3.1, auto: false, pellets: 1, spread: 0.5,
-    kick: 3.4, sfx: 'shotMagnum', revolver: true, reloadKind: 'revolver',
+    kick: 3.4, sfx: 'shotModel5', revolver: true, reloadKind: 'revolver',
     /* Single action: the hammer has to come back before every shot, and it
        is the shooter's thumb that does it. */
     thumbCock: true,
     pierce: 2, pierceFalloff: 0.62,
     sightH: 0.030, sightFov: 0.86, adsTime: 0.26, adsSpread: 0.18,
-    recoil: { up: 4.2, side: 1.5, climb: 0.30, recover: 7 },
+    recoil: { up: 4.2, side: 1.5, climb: 0.30, recover: 7, back: 0.062, roll: 0.030, impulse: 34 },
     /* The web of the hand, and it was 44 mm below the model's own origin --
        which IS the web by construction. The hand sat halfway down a 108 mm
        grip with the frame towering over it, and the shooter's thumb ended
        up a hundred millimetres short of a hammer it is supposed to cock. */
     ammo: { loader: { count: 4, pcd: 0.0148, round: AMMO.mag500 } },
+    // Punches armour: half an inch of lead goes through riot plate.
+    punchesPlate: true,
     hands: { right: [-0.010, -0.013, 0.015], rightGrip: 'pistol', left: [0.030, -0.030, -0.028], leftGrip: { axis: [0.28, -0.94, 0], round: [0, 0, 1], girth: 0.074, spread: 0.0192, close: 0.90, index: 'wrap', thumb: 'along', drop: 0 } },
   },
   mauser: {
     name: 'Mauser C96', slotName: 'MAUSER',
     dmg: 165, headMul: 2.4, mag: 10, reserve: 90, refire: 0.16,
     reload: 2.3, auto: false, pellets: 1, spread: 0.7,
-    kick: 1.5, sfx: 'shotPistol', reloadKind: 'clip',
+    kick: 1.5, sfx: 'shotMauser', reloadKind: 'clip',
     sightH: 0.036, sightFov: 0.90, adsTime: 0.20, adsSpread: 0.22,
-    recoil: { up: 1.5, side: 0.6, climb: 0.06, recover: 11 },
+    recoil: { up: 1.5, side: 0.6, climb: 0.06, recover: 11, back: 0.013, roll: 0.005, impulse: 8 },
     ammo: { clip: { count: 10, pitch: 0.0096, round: AMMO.mau763 } },
     hands: { right: [-0.010, -0.020, 0.014], left: null, rightGrip: { axis: [0.10, -0.99, 0], round: [0, 0, -1], girth: 0.062, spread: 0.0196, close: 0.98, index: 'trigger', thumb: 'over', drop: 0 } },
   },
@@ -365,10 +367,10 @@ const WEAPONS = {
     name: 'Remington 700', slotName: 'REMINGTON',
     dmg: 320, headMul: 3.0, mag: 5, reserve: 50, refire: 1.05,
     reload: 3.0, auto: false, pellets: 1, spread: 0.16,
-    kick: 3.0, sfx: 'shotMagnum', reloadKind: 'clip',
+    kick: 3.0, sfx: 'shotRifle', reloadKind: 'clip',
     pierce: 1, pierceFalloff: 0.78,
     sightH: 0.098, sightFov: 0.34, adsTime: 0.34, adsSpread: 0.03, scoped: true,
-    recoil: { up: 3.4, side: 0.8, climb: 0.20, recover: 7 },
+    recoil: { up: 3.4, side: 0.8, climb: 0.20, recover: 7, back: 0.040, roll: 0.010, impulse: 21 },
     moveMul: 0.90, muzzleVel: 800,
     ammo: { clip: { count: 5, pitch: 0.0126, round: AMMO.rifle30 } },
     hands: { right: [-0.012, -0.028, 0.016], rightGrip: 'wrist', left: [0.300, -0.006, -0.021], leftGrip: 'woodFore' },
@@ -381,12 +383,14 @@ const WEAPONS = {
     name: 'The Kill Streak', slotName: 'KILL STREAK',
     dmg: 1000, headMul: 2.0, mag: 3, reserve: 21, refire: 1.55,
     reload: 3.7, auto: false, pellets: 1, spread: 0.06,
-    kick: 7.0, sfx: 'shotMagnum', reloadKind: 'clip',
+    kick: 7.0, sfx: 'shotKillStreak', reloadKind: 'clip',
     pierce: 5, pierceFalloff: 0.94,
     sightH: 0.116, sightFov: 0.20, adsTime: 0.46, adsSpread: 0.015, scoped: true,
-    recoil: { up: 7.5, side: 1.6, climb: 1.30, recover: 5 },
+    recoil: { up: 7.5, side: 1.6, climb: 1.30, recover: 5, back: 0.055, roll: 0.014, impulse: 29 },
     moveMul: 0.78, muzzleVel: 1400,
     ammo: { clip: { count: 5, pitch: 0.0130, round: AMMO.rifle30 } },
+    // Punches armour: an anti-materiel round does not care about plate.
+    punchesPlate: true,
     hands: { right: [-0.012, -0.030, 0.016], rightGrip: 'wrist', left: [0.357, -0.007, -0.021], leftGrip: 'woodFore' },
   },
   /* Belt-fed, twelve hundred a minute, and it weighs as much as the door
@@ -396,9 +400,9 @@ const WEAPONS = {
     name: 'MG 42', slotName: 'MG 42',
     dmg: 46, headMul: 1.9, mag: 50, reserve: 350, refire: 0.05,
     reload: 4.4, auto: true, pellets: 1, spread: 1.9,
-    kick: 1.5, sfx: 'shotSmg', reloadKind: 'cell',
+    kick: 1.5, sfx: 'shotMG42', reloadKind: 'cell',
     sightH: 0.1235, sightFov: 0.86, adsTime: 0.34, adsSpread: 0.30,
-    recoil: { up: 0.55, side: 0.42, climb: 0.16, recover: 9 },
+    recoil: { up: 0.55, side: 0.42, climb: 0.16, recover: 9, back: 0.010, roll: 0.004, impulse: 5 },
     moveMul: 0.76, muzzleVel: 755,
     ammo: { mag: { w: 0.062, d: 0.048, len: 0.086, curve: 0, witness: 0, round: AMMO.mauser8 } },
     hands: { right: [-0.012, -0.032, 0.016], rightGrip: { axis: [0.06, -0.998, 0], round: [1, 0, 0], girth: 0.056, spread: 0.0192, close: 1.0, index: 'wrap', thumb: 'up', drop: 0 }, left: [0.400, -0.008, -0.022], leftGrip: 'tube' },
@@ -442,7 +446,7 @@ const WEAPONS = {
     reload: 2.9, auto: false, pellets: 1, spread: 0,
     kick: 1.2, sfx: 'shotArc', reloadKind: 'cell',
     sightH: 0.0580, sightFov: 0.82, adsTime: 0.26,
-    recoil: { up: 0.9, side: 0.2, climb: 0.2, recover: 8 },
+    recoil: { up: 0.9, side: 0.2, climb: 0.2, recover: 8, back: 0.018, roll: 0.006, impulse: 9 },
     ammo: { cell: { w: 0.052, h: 0.070, d: 0.038 } },
     hands: { right: [-0.014, -0.046, 0.016], rightGrip: 'pistol', left: [0.188, -0.052, -0.020], leftGrip: { axis: [0.10, -0.99, 0], round: [0, 0, 1], girth: 0.058, spread: 0.0196, close: 1.0, index: 'wrap', thumb: 'over', drop: 0 } },
     chain: { count: 3, radius: 4.0, dmg: 500 },
@@ -1191,11 +1195,108 @@ function makeSfx(game) {
        the mechanical ring of a slide, the crack of a rifle. The scattergun
        used to be a 950 Hz sawtooth, which is the noise a kazoo makes and
        which is what it sounded like. */
+    /* One voice per weapon.
+     
+       There used to be five shared sounds -- pistol, smg, scatter,
+       magnum, arc -- and eighteen weapons drawing on them, so a .45
+       and a 7.63 Mauser were the same noise and the Thompson and the MP5
+       were indistinguishable. Every one of these is built from what the
+       gun actually is: how much powder, how long the barrel, what the
+       action does, and how the room answers it. */
+
+    // .45 ACP, subsonic: no real crack, a fat low blast, hard slide.
+    shot1911() {
+      A.report(0.34, { crack: 0.34, crackHz: 1500, bodyHz0: 1250, bodyHz1: 240,
+        thump: 0.85, thumpHz: 132, dur: 0.16, mech: 0.30, mechHz: 2600, mechLen: 0.045,
+        tail: 0.16, tailLen: 0.34 });
+    },
+    // The same pistol with a fire load: a hiss riding out behind it.
+    shotBlaze() {
+      A.report(0.36, { crack: 0.40, crackHz: 1700, bodyHz0: 1400, bodyHz1: 280,
+        thump: 0.8, thumpHz: 138, dur: 0.19, mech: 0.28, mechHz: 2600,
+        tail: 0.22, tailHz: 1400, tailLen: 0.5 });
+      t(3400, 0.20, 'sawtooth', 0.022);
+    },
+    /* Thompson: heavy open-bolt .45. The bolt slamming forward is half of
+       what you hear, and it is the reason it chugs rather than cracks. */
+    shotThompson() {
+      A.report(0.40, { crack: 0.30, crackHz: 1300, bodyHz0: 1150, bodyHz1: 210,
+        thump: 0.95, thumpHz: 118, dur: 0.17, mech: 0.55, mechHz: 1500, mechLen: 0.06,
+        mechDelay: 0.012, tail: 0.18, tailLen: 0.30, minGap: 0.03 });
+    },
+    // MP5: closed bolt 9 mm, tight and high and over very fast.
+    shotMP5() {
+      A.report(0.20, { crack: 0.95, crackHz: 3100, crackLen: 0.030,
+        bodyHz0: 1800, bodyHz1: 420, thump: 0.42, thumpHz: 168, dur: 0.10,
+        mech: 0.34, mechHz: 3000, mechLen: 0.035, tail: 0.12, tailLen: 0.22, minGap: 0.02 });
+    },
+    // 12 gauge from a full-length barrel: a big soft boom with a long room.
+    shotScatter() {
+      A.report(0.92, { crack: 0.45, crackHz: 900, bodyHz0: 900, bodyHz1: 105,
+        thump: 1.0, thumpHz: 82, dur: 0.34, mech: 0, tail: 0.34, tailHz: 700, tailLen: 1.0 });
+    },
+    /* Sawn-off: the same shell with none of the barrel to burn it in, so
+       far more of it happens outside the gun. Louder, harsher, shorter. */
+    shotSawn() {
+      A.report(1.0, { crack: 0.80, crackHz: 1500, crackLen: 0.06, volume: 1.15,
+        bodyHz0: 1500, bodyHz1: 130, thump: 1.0, thumpHz: 74, dur: 0.30,
+        tail: 0.42, tailHz: 800, tailLen: 1.2 });
+    },
+    // The Paralyzer: a shotgun with a capacitor bank behind it.
+    shotParalyzer() {
+      A.report(0.80, { crack: 0.5, crackHz: 2000, bodyHz0: 1300, bodyHz1: 180,
+        thump: 0.85, thumpHz: 90, dur: 0.26, tail: 0.30, tailHz: 1600, tailLen: 0.8 });
+      t(2600, 0.09, 'sawtooth', 0.05);
+      setTimeout(() => t(1200, 0.14, 'triangle', 0.035), 40);
+    },
+    // 7.63 Mauser: a little bottlenecked rifle round out of a pistol.
+    shotMauser() {
+      A.report(0.26, { crack: 1.0, crackHz: 3400, crackLen: 0.026,
+        bodyHz0: 2000, bodyHz1: 380, thump: 0.45, thumpHz: 152, dur: 0.12,
+        mech: 0.36, mechHz: 2800, tail: 0.16, tailLen: 0.30 });
+    },
+    /* The Model 5. Half an inch of straight-walled case out of a six-inch
+       barrel in a concrete room: the loudest thing in the game, and the
+       tail goes on long after the shot. */
+    shotModel5() {
+      A.report(1.0, { crack: 0.9, crackHz: 1800, crackLen: 0.07, volume: 1.3,
+        bodyHz0: 1300, bodyHz1: 90, thump: 1.25, thumpHz: 62, dur: 0.42,
+        tail: 0.55, tailHz: 900, tailLen: 1.9, minGap: 0.05 });
+      setTimeout(() => t(120, 0.5, 'sine', 0.05), 20);
+    },
+    // The Arc Breaker: a capacitor emptying itself.
+    shotArc() {
+      A.report(0.34, { volume: 0.75, crack: 0.5, crackHz: 2600,
+        bodyHz0: 1700, bodyHz1: 300, thump: 0.5, thumpHz: 110, dur: 0.18,
+        tail: 0.25, tailHz: 2200, tailLen: 0.7 });
+      t(1900, 0.05, 'sawtooth', 0.06); t(640, 0.1, 'square', 0.07);
+    },
+    // A full-power rifle round: a whip-crack, and the room a long time after.
+    shotRifle() {
+      A.report(0.62, { crack: 1.15, crackHz: 3600, crackLen: 0.05, volume: 1.1,
+        bodyHz0: 1600, bodyHz1: 150, thump: 0.9, thumpHz: 96, dur: 0.26,
+        tail: 0.45, tailHz: 1300, tailLen: 1.5 });
+    },
+    // The KillStreak: the same, with more of everything.
+    shotKillStreak() {
+      A.report(0.78, { crack: 1.25, crackHz: 3300, crackLen: 0.06, volume: 1.2,
+        bodyHz0: 1500, bodyHz1: 120, thump: 1.05, thumpHz: 84, dur: 0.32,
+        tail: 0.5, tailHz: 1100, tailLen: 1.8 });
+    },
+    /* MG42 at twelve hundred rounds a minute. The individual shots are not
+       separable by ear -- what you hear is the belt and the bolt, which is
+       why it is the one gun that gets more mech than blast. */
+    shotMG42() {
+      A.report(0.52, { crack: 0.85, crackHz: 2900, crackLen: 0.022, volume: 0.85,
+        bodyHz0: 1500, bodyHz1: 320, thump: 0.6, thumpHz: 104, dur: 0.09,
+        mech: 0.55, mechHz: 2200, mechLen: 0.030, mechDelay: 0.008,
+        tail: 0.16, tailLen: 0.24, minGap: 0.012 });
+    },
+    /* Kept because the minigun and the turret still call for them: a
+       generic burst that is nobody's signature weapon. */
     shotPistol() { A.report(0.30); t(1750, 0.022, 'square', 0.045); },
     shotSmg() { A.report(0.22, { volume: 0.9 }); t(1450, 0.018, 'square', 0.04); },
-    shotScatter() { A.report(1.0); },
     shotMagnum() { A.report(0.72); t(2300, 0.02, 'square', 0.04); },
-    shotArc() { A.report(0.34, { volume: 0.75 }); t(1900, 0.05, 'sawtooth', 0.06); t(640, 0.1, 'square', 0.07); },
     dryFire() { t(1300, 0.02, 'square', 0.06); },
     magRelease() { t(1500, 0.022, 'square', 0.07); },
     magOut() { t(420, 0.05, 'square', 0.07); A.impact(0.2); },
@@ -1250,6 +1351,19 @@ function makeSfx(game) {
        down the same object literal. A later key wins in an object literal,
        silently, so the versions at the top of this table were dead and
        every rewrite of them changed nothing. */
+    /* A gun hitting a concrete floor: the receiver landing, then the
+       lighter parts of it rattling once and stopping. */
+    gunDrop() {
+      A.impact(0.55);
+      t(180, 0.12, 'sawtooth', 0.055);
+      setTimeout(() => { A.impact(0.22); t(900, 0.04, 'square', 0.04); }, 110);
+      setTimeout(() => t(1400, 0.03, 'square', 0.025), 190);
+    },
+    gunPickup() {
+      t(420, 0.05, 'triangle', 0.055);
+      setTimeout(() => t(680, 0.06, 'triangle', 0.05), 60);
+      A.impact(0.18);
+    },
     cylinderOut() { t(520, 0.05, 'square', 0.06); t(240, 0.07, 'triangle', 0.05); },
     /* A single action coming to full cock: the sear dragging over the
        half-cock notch, then the hard click of it dropping into full. Two
@@ -3025,7 +3139,9 @@ function makePlayer(game, S, hud, sfx, voice) {
     gold: 0, goldAmmo: false,
     upgraded: {}, camoOff: {}, fitted: {},
     cooldown: 0, reloading: 0, reloadStage: 0, breakStage: 0, cylStage: 0,
-    clipStage: 0, cellStage: 0, swayT: 0, kickPitch: 0,
+    clipStage: 0, cellStage: 0, swayT: 0,
+    // Three springs: muzzle rise, drive back along the bore, and twist.
+    kickPitch: 0, kickVel: 0, kickBack: 0, backVel: 0, kickRoll: 0, rollVel: 0,
     slideCycle: 0, slideCycleMax: 0.085,
     /* Single-action cocking. cockT runs from the shot to the moment the
        hammer is back; before the first shot of a magazine it is already
@@ -3149,7 +3265,16 @@ function makePlayer(game, S, hud, sfx, voice) {
     const have = P.slots.indexOf(id);
     if (have >= 0) { P.slot = have; }
     else if (P.slots.length < 2) { P.slots.push(id); P.slot = P.slots.length - 1; }
-    else { P.slots[P.slot] = id; }
+    else {
+      /* Both hands full: the one being replaced goes on the FLOOR rather
+         than out of existence. Losing a gun you paid for because you
+         picked up the wrong thing is the single worst way this game could
+         take something from you, and it is entirely avoidable -- it lands
+         where you were standing and it is still there. */
+      const gone = P.slots[P.slot];
+      P.slots[P.slot] = id;
+      if (gone && gone !== id) dropWeapon(game, S, P, gone);
+    }
     P.reloading = 0;
     hud.flashWeapon(WEAPONS[id].slotName);
   };
@@ -3399,7 +3524,32 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
   const sway = 1 - P.ads * 0.88;                 // aiming kills the bob
   const bobY = Math.sin(P.swayT * 2) * (moving ? 0.006 : 0.0016) * sway;
   const bobX = Math.cos(P.swayT) * (moving ? 0.004 : 0.001) * sway;
-  P.kickPitch = Math.max(0, P.kickPitch - dt * 9);
+  /* Recoil on the weapon itself, as a spring rather than a fade.
+   *
+   * kickPitch used to bleed off linearly at a fixed rate and that was the
+   * whole of it: the muzzle tilted up and drifted back down, and nothing
+   * else happened. A gun going off does not tilt, it is DRIVEN -- back
+   * into the hand along the bore, up, and twisted, and then the shooter
+   * pulls it back down and slightly past where it started before it
+   * settles. That overshoot is what reads as mass. An exponential decay
+   * has none: it approaches zero and stops, which feels like the gun is
+   * being lowered rather than fighting you.
+   *
+   * So each of the three axes is a damped spring. Stiffness sets how
+   * quickly it comes back, damping how much it overshoots on the way --
+   * under 1.0 it rings, which is what a light gun does, and the heavy
+   * ones are damped nearer to critical so they come back slowly and
+   * once. */
+  const KS = 190, KD = 15;                 // stiffness, damping
+  P.kickVel = (P.kickVel || 0) + (-P.kickPitch * KS - (P.kickVel || 0) * KD) * dt;
+  P.kickPitch += P.kickVel * dt;
+  P.backVel = (P.backVel || 0) + (-(P.kickBack || 0) * KS * 1.15 - (P.backVel || 0) * KD * 1.05) * dt;
+  P.kickBack = (P.kickBack || 0) + P.backVel * dt;
+  P.rollVel = (P.rollVel || 0) + (-(P.kickRoll || 0) * KS * 0.8 - (P.rollVel || 0) * KD * 0.9) * dt;
+  P.kickRoll = (P.kickRoll || 0) + P.rollVel * dt;
+  if (Math.abs(P.kickPitch) < 1e-5 && Math.abs(P.kickVel) < 1e-4) { P.kickPitch = 0; P.kickVel = 0; }
+  if (Math.abs(P.kickBack) < 1e-6 && Math.abs(P.backVel) < 1e-5) { P.kickBack = 0; P.backVel = 0; }
+  if (Math.abs(P.kickRoll) < 1e-5 && Math.abs(P.rollVel) < 1e-4) { P.kickRoll = 0; P.rollVel = 0; }
   /* A reload brings the weapon UP and inboard, not down.
 
      It used to dip 90 mm, which on top of a hip carry that already sits
@@ -3462,7 +3612,13 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
   const px = cam.position.x + f.x * dist + right.x * (offR - sprintIn) + up.x * (offU - sprintDrop);
   const py = cam.position.y + f.y * dist + right.y * (offR - sprintIn) + up.y * (offU - sprintDrop);
   const pz = cam.position.z + f.z * dist + right.z * (offR - sprintIn) + up.z * (offU - sprintDrop);
-  root.setPosition([px, py, pz]);
+  /* The gun driven back along its own bore. This is the part that was
+     missing entirely -- a weapon that rises but never moves reads as a
+     picture being rotated, not as something with mass being shoved into
+     your hand. It comes toward the eye, so it also gets momentarily
+     bigger, which is most of the punch. */
+  const kb = P.kickBack || 0;
+  root.setPosition([px - f.x * kb, py - f.y * kb, pz - f.z * kb]);
 
   const fh = Math.hypot(f.x, f.z) || 1e-6;
   const yaw = Math.atan2(-f.z / fh, f.x / fh);
@@ -3470,7 +3626,7 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
   /* Roll the weapon inboard while sprinting, and again while reloading so
      the breech, the magazine well or the open cylinder turns to face the
      camera. A gun reloaded side-on hides the one thing worth watching. */
-  const roll = sp * 0.42 + (1 - a) * 0.03 + rollIn * 0.0175;
+  const roll = sp * 0.42 + (1 - a) * 0.03 + rollIn * 0.0175 + (P.kickRoll || 0);
   /* Composed from explicit axis-angles rather than Euler triples. setEuler
      takes (pitch, yaw, roll) in YXZ, which is easy to feed in the wrong
      order and gives a weapon that rolls when it should pitch — and the
@@ -4023,6 +4179,21 @@ function tryFire(game, S, P, hud, sfx, dt) {
     // here makes the next frame subtract an offset it never added, which
     // inverts the whole effect and pushes the muzzle down.
   }
+  /* Drive the three recoil springs.
+
+     `kick` was the only number a weapon had and it only ever tilted the
+     muzzle. `back` is how far the gun is shoved along its own bore, and
+     it is the one that gives a shot weight; `roll` is the twist, and it
+     takes a random sign so a burst walks rather than tracking a straight
+     line up the screen. These add to VELOCITY, because a shot is an
+     impulse -- something hits the gun and then the spring deals with it,
+     which is why the muzzle keeps climbing for a moment after the round
+     has gone and then comes back past centre. */
+  const rcS = spec.recoil || {};
+  P.kickVel = (P.kickVel || 0) + (rcS.impulse != null ? rcS.impulse : spec.kick * 5.5);
+  P.backVel = (P.backVel || 0) - (rcS.back != null ? rcS.back : 0.010 + spec.kick * 0.011) * 34;
+  P.rollVel = (P.rollVel || 0) + (Math.random() < 0.5 ? -1 : 1)
+    * (rcS.roll != null ? rcS.roll : 0.004 + spec.kick * 0.004) * 26;
   sfx[spec.sfx]();
   hud.ammo(P);
   P.slideCycle = spec.auto ? 0.055 : 0.085;
@@ -4094,7 +4265,8 @@ function tryFire(game, S, P, hud, sfx, dt) {
       // and the chain has to arc from the corpse, not the car park.
       const diedAt = { x: z.actor.position.x, y: z.actor.position.y, z: z.actor.position.z };
       hurtZombie(game, S, z, dmg, hit.point, headshot,
-        spec.stun ? 'shock' : spec.burn ? 'fire' : (P.goldAmmo ? 'gold' : 'bullet'),
+        spec.stun ? 'shock' : spec.burn ? 'fire'
+          : (P.goldAmmo ? 'gold' : spec.punchesPlate ? 'heavy' : 'bullet'),
         spec.burn ? { burn: spec.burn } : null);
       let awarded = S.addPoints(ECONOMY.hit);
       if (z.dead) {
@@ -4124,7 +4296,8 @@ function tryFire(game, S, P, hud, sfx, dt) {
           const reg2 = hitRegion(z2, nxt.point);
           const head2 = !!reg2.crit;
           hurtZombie(game, S, z2, carry * regionMul(reg2, spec) + (head2 ? (spec.headBonus || 0) : 0), nxt.point, head2,
-            spec.stun ? 'shock' : spec.burn ? 'fire' : (P.goldAmmo ? 'gold' : 'bullet'),
+            spec.stun ? 'shock' : spec.burn ? 'fire'
+          : (P.goldAmmo ? 'gold' : spec.punchesPlate ? 'heavy' : 'bullet'),
             spec.burn ? { burn: spec.burn } : null);
           pointsThisShot += S.addPoints(head2 ? ECONOMY.headshotKill : ECONOMY.hit);
           from = nxt.point;
@@ -5218,11 +5391,23 @@ function hurtZombie(game, S, z, dmg, at, headshot, source, opts) {
       return;
     }
   }
+  /* Plate turns bullets -- but not everything that comes out of a barrel
+     is a bullet in the sense the plate was designed for. A half-inch
+     magnum and an anti-materiel rifle round go through it; that is what
+     the calibre is FOR, and it is the reason to carry something that
+     heavy when the armoured ones start coming. Gold rounds and every
+     melee weapon already went through, and 'heavy' joins them. */
   if (z.plated && (source === 'bullet' || source === 'blast' || source === 'shock')) {
     game.particles.sparks(at, { count: 7, speed: 4.5, color: 0xffe6a8, colorEnd: 0x6a5a30 });
     game.audio.impact(0.28);
     z.clangT = 0.2;
     return;
+  }
+  if (z.plated && source === 'heavy') {
+    // It goes through, and it is loud about it.
+    game.particles.sparks(at, { count: 14, speed: 7, color: 0xfff0c0, colorEnd: 0x6a5a30 });
+    game.audio.impact(0.6);
+    z.clangT = 0.12;
   }
   z.hp -= dmg;
   /* Blood, and it comes out the way the round went in.
@@ -5321,13 +5506,13 @@ function killZombie(game, S, z, headshot) {
   /* His shield sometimes comes off him in one piece — a worse one than the
      box gives you, because it has already been through this. */
   if (z.boss && Math.random() < BOSS.dropShield) {
-    dropWeapon(game, S, [p.x + 0.4, p.y + 0.25, p.z], 'shieldWorn');
+    spawnEnemyDrop(game, S, [p.x + 0.4, p.y + 0.25, p.z], 'shieldWorn');
   }
   if (z.actor.outfitName === 'sheriff') {
     const roll = Math.random();
     const id = roll < SHERIFF_DROP.model5 ? 'obliterator'
       : roll < SHERIFF_DROP.model5 + SHERIFF_DROP.mauser ? 'mauser' : null;
-    if (id) dropWeapon(game, S, [p.x, p.y + 0.25, p.z], id);
+    if (id) spawnEnemyDrop(game, S, [p.x, p.y + 0.25, p.z], id);
   }
   // Powerup roll.
   if (!S.powerupActive && Math.random() < 0.04) dropPowerup(game, S, p);
@@ -5341,14 +5526,19 @@ const POWERUPS = {
   double: { label: 'PAYDAY', color: 0x66d4ff },
 };
 
-/* A gun on the floor, spinning, with its own model. Walk over it to take
-   it — it goes into a free slot, or replaces what you are holding. */
-function dropWeapon(game, S, at, id) {
-  const built = id === 'obliterator' ? makeObliterator(game)
-    : id === 'mauser' ? makeMauser(game)
-    : id === 'shieldWorn' || id === 'shield' ? makeRiotShield(game)
-    : id === 'ram' ? makeBatteringRam(game)
-    : makeMauser(game);
+/* A gun an enemy left behind: spinning, on its own clock, and it has to
+   be picked up rather than walked over.
+
+   Renamed from dropWeapon. There are two different things called
+   "dropping a weapon" in this game -- a reward an enemy leaves, which
+   floats and expires, and the gun the player just swapped away from,
+   which falls where it was and stays. A second function called
+   dropWeapon was added for the latter with a different signature, and in
+   one concatenated scope the later declaration silently won: killing the
+   boss then called the player's version with a position where it wanted
+   a player, and threw. Two jobs, two names. */
+function spawnEnemyDrop(game, S, at, id) {
+  const built = buildWorldWeapon(game, id) || makeMauser(game);
   built.root.setPosition(at);
   S.drops.push({ id, root: built.root, parts: built.parts, t: SHERIFF_DROP.life, spin: 0, baseY: at[1] });
 }
@@ -5361,6 +5551,103 @@ function dropFromHands(P, id) {
   if (!P.slots.length) P.slots.push('m1911');
   P.slot = Math.min(P.slot, P.slots.length - 1);
   P.reloading = 0;
+}
+
+/* A weapon on the floor.
+ *
+ * It is a real model with a real rigid body, thrown out in front of the
+ * player with a bit of spin, and it bounces and settles wherever it
+ * lands. Ammunition travels with it, so a gun put down half-empty comes
+ * back half-empty rather than being quietly refilled -- and it does NOT
+ * pick itself up when you walk over it, because a gun you have just
+ * swapped away from is lying exactly where you are standing and would
+ * come straight back.
+ */
+function dropWeapon(game, S, P, id) {
+  const w = WEAPONS[id];
+  if (!w || w.noDrop) return null;
+  const built = buildWorldWeapon(game, id);
+  if (!built) return null;
+  const cam = game.camera;
+  const fx = cam.target.x - cam.position.x, fy = cam.target.y - cam.position.y,
+    fz = cam.target.z - cam.position.z;
+  const L = Math.hypot(fx, fy, fz) || 1;
+  const p = P.actor.position;
+  const at = [p.x + fx / L * 0.55, p.y + 0.35, p.z + fz / L * 0.55];
+  built.root.setPosition(at);
+  built.root.setRotation([Math.random() * 40 - 20, Math.random() * 360, 70 + Math.random() * 40]);
+  const am = P.ammo[id] || { mag: w.mag, reserve: w.reserve };
+  const drop = {
+    id, actor: built.root, parts: built.parts,
+    mag: am.mag, reserve: am.reserve,
+    t: 0, vy: 1.6, spin: (Math.random() - 0.5) * 6,
+    vx: fx / L * 1.9, vz: fz / L * 1.9,
+    at: at.slice(), rest: false, rot: [0, Math.random() * 360, 78],
+  };
+  S.floorGuns = S.floorGuns || [];
+  S.floorGuns.push(drop);
+  if (S.__sfx && S.__sfx.gunDrop) S.__sfx.gunDrop();
+  return drop;
+}
+
+/* Fall, tumble, land. Its own integrator rather than the rigid-body
+   solver: a weapon is a group of a dozen parented actors and giving the
+   root a body would have the parts inherit a physics transform they were
+   never authored for -- the Model 5's cylinder would swing off its crane
+   the first time it hit the floor. */
+function updateDrops(game, S, dt) {
+  if (!S.floorGuns || !S.floorGuns.length) return;
+  for (const d of S.floorGuns) {
+    d.t += dt;
+    if (!d.rest) {
+      d.vy -= 17 * dt;
+      d.at[0] += d.vx * dt;
+      d.at[1] += d.vy * dt;
+      d.at[2] += d.vz * dt;
+      d.vx *= 0.90; d.vz *= 0.90;
+      d.rot[2] += d.spin * dt * 57.2958;
+      // The floor it fell onto, whatever height that is.
+      const hit = game.raycast([d.at[0], d.at[1] + 0.4, d.at[2]], [0, -1, 0], 3.0,
+        (b) => !b.isTrigger && b !== P_BODY(S));
+      const floorY = hit ? hit.point[1] : 0;
+      if (d.at[1] <= floorY + 0.055) {
+        d.at[1] = floorY + 0.055;
+        if (Math.abs(d.vy) < 1.1) {
+          // Settled: lie flat.
+          d.rest = true;
+          d.vy = 0; d.vx = 0; d.vz = 0;
+          d.rot = [0, d.rot[1], 82];
+        } else {
+          d.vy = -d.vy * 0.32;
+          d.spin *= 0.4;
+        }
+      }
+      d.actor.setPosition(d.at);
+      d.actor.setRotation(d.rot);
+    }
+  }
+}
+
+function P_BODY(S) { return S.player && S.player.actor && S.player.actor.body; }
+
+/* The world model for a weapon, for the floor and for the shop crate.
+   One place that knows which factory builds which id, instead of the
+   four-branch chain that had grown in three separate spots. */
+function buildWorldWeapon(game, id) {
+  const F = {
+    obliterator: makeObliterator, mauser: makeMauser, ram: makeBatteringRam,
+    shield: makeRiotShield, shieldWorn: makeRiotShield, scatter: makeScattergun,
+    sawnoff: makeSawedOff, paralyzer: makeParalyzer, arc: makeArcProjector,
+    mp5: makeMP5, remington: makeRemington, killstreak: makeKillStreak,
+    mg42: makeMG42, knife: makeKnife, hammer: makeHammer,
+  };
+  if (F[id]) return F[id](game);
+  if (id === 'm1911' || id === 'blaze') {
+    const b = game.pistol1911({ physics: false });
+    return { root: b, parts: [b].concat((b.partNames || []).map((n) => b[n]).filter(Boolean)) };
+  }
+  const b = game.thompson({ physics: false });
+  return { root: b, parts: [b].concat((b.partNames || []).map((n) => b[n]).filter(Boolean)) };
 }
 
 function dropPowerup(game, S, p) {
@@ -6381,6 +6668,35 @@ function nearestInteract(S, P) {
     return { kind: 'meteor', cost: ECONOMY.upgrade, label: `Upgrade the ${WEAPONS[held].name} — ${ECONOMY.upgrade}` };
   }
 
+  /* A gun an enemy left behind: it spins and it expires, but it still
+     has to be asked for. */
+  if (S.drops && S.drops.length) {
+    for (const d of S.drops) {
+      const q = d.root && d.root.position;
+      if (!q) continue;
+      if (dist2d(p, q) < 1.35 && Math.abs(p.y - q.y) < 1.9) {
+        return { kind: 'takeDrop', drop: d, cost: 0, hold: false,
+          label: `Pick up the ${WEAPONS[d.id].name}` };
+      }
+    }
+  }
+
+  /* A gun someone dropped. Deliberately NOT automatic: the one you just
+     swapped away from is lying where you are standing, and picking it up
+     by walking would put it straight back in your hands. */
+  if (S.floorGuns && S.floorGuns.length) {
+    let best = null, bestD = 2.0;
+    for (const d of S.floorGuns) {
+      if (!d.rest && d.t < 0.6) continue;          // still in the air
+      const dd = dist2d(p, { x: d.at[0], z: d.at[2] });
+      if (dd < bestD && Math.abs(p.y - d.at[1]) < 2.0) { bestD = dd; best = d; }
+    }
+    if (best) {
+      return { kind: 'pickup', drop: best, cost: 0, hold: false,
+        label: `Pick up the ${WEAPONS[best.id].name}  —  ${best.mag} + ${best.reserve}` };
+    }
+  }
+
   const c = S.crate;
   if (dist2d(p, { x: c.at[0], z: c.at[2] }) < R + 0.4 && Math.abs(p.y - c.at[1]) < 2.2) {
     // Nothing to take while the reel is still turning over.
@@ -6565,6 +6881,19 @@ function doInteract(game, S, P, hud, sfx, it, dt) {
     if (c.offerId === 'arc') S.voice(LINES.crateArc);
     closeCrate(S);
     hud.ammo(P);
+  } else if (it.kind === 'takeDrop') {
+    it.drop.want = true;
+  } else if (it.kind === 'pickup') {
+    const d = it.drop;
+    const i = S.floorGuns.indexOf(d);
+    if (i >= 0) S.floorGuns.splice(i, 1);
+    for (const q of d.parts) { if (q.destroy) q.destroy(); else q.visible = false; }
+    P.give(d.id);
+    // It comes back with the ammunition it had when it went down, not full.
+    P.ammo[d.id] = { mag: d.mag, reserve: d.reserve };
+    sfx.gunPickup();
+    hud.ammo(P);
+    S.bark('buyGun');
   } else if (it.kind === 'repair') {
     /* Boarding up takes a second a plank, five for a full window, and it
        is done with a hammer rather than by standing near the wall: the
@@ -8078,6 +8407,8 @@ function start(opts = {}) {
         sfx.jump();
       }
 
+      updateDrops(game, S, dt);
+
       /* Interact. */
       const it = (S.bench && S.bench.open) ? null : nearestInteract(S, P);
       if (it) {
@@ -8363,11 +8694,19 @@ function start(opts = {}) {
       d.root.setRotation([0, d.spin * 57.3, 0]);
       // Blink out the last five seconds — parts only, never the pivot.
       if (d.t < 5) { const on = Math.floor(d.t * 5) % 2 === 0; for (const q of d.parts) q.visible = on; }
+      /* Taken by pressing, not by walking.
+       
+         A gun on the floor that jumps into your hands as you run past
+         will take the weapon you are holding and replace it with a
+         Mauser at the worst possible moment. It waits to be picked up
+         now, like everything else you can interact with -- `d.want` is
+         set by the interact code when the player actually asks. */
       const gone = d.t <= 0;
-      const taken = !gone && dist2d(at, P.actor.position) < 1.15 && Math.abs(at.y - P.actor.position.y) < 1.8;
+      const taken = !gone && d.want;
       if (taken) {
+        d.want = false;
         P.give(d.id);
-        sfx.buy();
+        sfx.gunPickup();
         hud.flashWeapon(WEAPONS[d.id].name);
         hud.ammo(P);
         S.voice(d.id === 'obliterator' ? LINES.model5 : LINES.mauser);

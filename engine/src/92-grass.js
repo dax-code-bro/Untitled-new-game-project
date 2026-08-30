@@ -385,52 +385,123 @@ class Audio {
      Its own rate limit, kept apart from impact()'s: a belt gun at twelve
      hundred a minute must not be starved by falling masonry, and neither
      should stack into clipping. */
+  /* A gunshot, built from the four things a gunshot is made of.
+   *
+   * This took one number -- bore, nought to one -- so every weapon in the
+   * game was the same sound at a different size, and a 9 mm submachine gun
+   * and a .50 revolver differed only in how loud and how long. They do not
+   * sound like the same event at all. What separates them is:
+   *
+   *   crack   the supersonic snap off the bullet. Sharp and very short.
+   *           High and thin on a rifle, almost absent on a subsonic
+   *           pistol round, and it is the part that travels.
+   *   body    the muzzle blast: expanding gas, filtered noise sweeping
+   *           down as the pressure falls. Its length is the powder.
+   *   thump   the low pressure wave you feel rather than hear. Deep on a
+   *           big straight-walled case, barely there on a small one.
+   *   mech    the gun working -- a bolt, a slide, a link stripping. On an
+   *           open-bolt Thompson this is half the sound of firing it.
+   *   tail    the room answering. Concrete gives a hard slap back; the
+   *           bigger the charge the longer it rings.
+   *
+   * Everything has a default so the old single-argument calls still work.
+   */
   report(bore = 0.5, opts = {}) {
     if (!this.enabled) return;
     const ctx = this.ensure();
     if (!ctx) return;
     const now = ctx.currentTime;
-    if (now - (this._lastShot || 0) < 0.014) return;
+    const gap = opts.minGap != null ? opts.minGap : 0.014;
+    if (now - (this._lastShot || 0) < gap) return;
     this._lastShot = now;
 
     const b = clamp(bore, 0, 1);
     const vol = (opts.volume != null ? opts.volume : 1) * lerp(0.24, 0.46, b);
-    const dur = lerp(0.11, 0.40, b);
+    const dur = opts.dur != null ? opts.dur : lerp(0.11, 0.40, b);
 
-    const crack = ctx.createBufferSource();
-    crack.buffer = this._noiseBuffer(0.05);
-    const hp = ctx.createBiquadFilter();
-    hp.type = 'highpass';
-    hp.frequency.value = lerp(2800, 1100, b);
-    const cg = ctx.createGain();
-    cg.gain.setValueAtTime(vol * 0.85, now);
-    cg.gain.exponentialRampToValueAtTime(0.0001, now + 0.045);
-    crack.connect(hp).connect(cg).connect(this.master);
+    // Crack: the snap. `crack` scales it, `crackHz` places it.
+    const crackAmt = opts.crack != null ? opts.crack : 0.85;
+    if (crackAmt > 0) {
+      const crack = ctx.createBufferSource();
+      crack.buffer = this._noiseBuffer(0.05);
+      const hp = ctx.createBiquadFilter();
+      hp.type = 'highpass';
+      hp.frequency.value = opts.crackHz != null ? opts.crackHz : lerp(2800, 1100, b);
+      const cg = ctx.createGain();
+      cg.gain.setValueAtTime(vol * crackAmt, now);
+      cg.gain.exponentialRampToValueAtTime(0.0001, now + (opts.crackLen || 0.045));
+      crack.connect(hp).connect(cg).connect(this.master);
+      crack.start(now); crack.stop(now + 0.05);
+    }
 
+    // Body: the blast, sweeping down as the gas leaves.
     const body = ctx.createBufferSource();
     body.buffer = this._noiseBuffer(dur);
     const lp = ctx.createBiquadFilter();
     lp.type = 'lowpass';
-    lp.frequency.setValueAtTime(lerp(1600, 850, b), now);
-    lp.frequency.exponentialRampToValueAtTime(lerp(300, 120, b), now + dur);
-    lp.Q.value = 0.8;
+    lp.frequency.setValueAtTime(opts.bodyHz0 != null ? opts.bodyHz0 : lerp(1600, 850, b), now);
+    lp.frequency.exponentialRampToValueAtTime(
+      opts.bodyHz1 != null ? opts.bodyHz1 : lerp(300, 120, b), now + dur);
+    lp.Q.value = opts.bodyQ != null ? opts.bodyQ : 0.8;
     const bg = ctx.createGain();
-    bg.gain.setValueAtTime(vol, now);
+    bg.gain.setValueAtTime(vol * (opts.body != null ? opts.body : 1), now);
     bg.gain.exponentialRampToValueAtTime(0.0001, now + dur);
     body.connect(lp).connect(bg).connect(this.master);
-
-    const osc = ctx.createOscillator();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(lerp(155, 76, b), now);
-    osc.frequency.exponentialRampToValueAtTime(lerp(66, 33, b), now + dur * 0.7);
-    const og = ctx.createGain();
-    og.gain.setValueAtTime(vol * 0.7, now);
-    og.gain.exponentialRampToValueAtTime(0.0001, now + dur * 0.8);
-    osc.connect(og).connect(this.master);
-
-    crack.start(now); crack.stop(now + 0.05);
     body.start(now); body.stop(now + dur);
-    osc.start(now); osc.stop(now + dur);
+
+    // Thump: the pressure wave.
+    const thumpAmt = opts.thump != null ? opts.thump : 0.7;
+    if (thumpAmt > 0) {
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      const f0 = opts.thumpHz != null ? opts.thumpHz : lerp(155, 76, b);
+      osc.frequency.setValueAtTime(f0, now);
+      osc.frequency.exponentialRampToValueAtTime(f0 * 0.42, now + dur * 0.7);
+      const og = ctx.createGain();
+      og.gain.setValueAtTime(vol * thumpAmt, now);
+      og.gain.exponentialRampToValueAtTime(0.0001, now + dur * 0.8);
+      osc.connect(og).connect(this.master);
+      osc.start(now); osc.stop(now + dur);
+    }
+
+    /* Mech: the action working. Bandpassed noise with a fast attack, a
+       few milliseconds behind the shot because the bolt has not moved
+       yet at the instant the primer goes. */
+    if (opts.mech > 0) {
+      const at = now + (opts.mechDelay != null ? opts.mechDelay : 0.018);
+      const ml = opts.mechLen || 0.05;
+      const m = ctx.createBufferSource();
+      m.buffer = this._noiseBuffer(ml + 0.02);
+      const bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.value = opts.mechHz || 1900;
+      bp.Q.value = 1.4;
+      const mg = ctx.createGain();
+      mg.gain.setValueAtTime(0.0001, at);
+      mg.gain.exponentialRampToValueAtTime(vol * opts.mech, at + 0.004);
+      mg.gain.exponentialRampToValueAtTime(0.0001, at + ml);
+      m.connect(bp).connect(mg).connect(this.master);
+      m.start(at); m.stop(at + ml + 0.02);
+    }
+
+    /* Tail: the room. A long, quiet, dark noise decay behind everything
+       else -- the difference between a shot fired in a field and one
+       fired in a concrete box, and this game is set in a concrete box. */
+    if (opts.tail > 0) {
+      const tl = opts.tailLen || (dur * 3.5);
+      const tn = ctx.createBufferSource();
+      tn.buffer = this._noiseBuffer(tl);
+      const tf = ctx.createBiquadFilter();
+      tf.type = 'lowpass';
+      tf.frequency.setValueAtTime(opts.tailHz || 900, now);
+      tf.frequency.exponentialRampToValueAtTime(160, now + tl);
+      const tg = ctx.createGain();
+      tg.gain.setValueAtTime(0.0001, now);
+      tg.gain.exponentialRampToValueAtTime(vol * opts.tail, now + 0.03);
+      tg.gain.exponentialRampToValueAtTime(0.0001, now + tl);
+      tn.connect(tf).connect(tg).connect(this.master);
+      tn.start(now); tn.stop(now + tl);
+    }
   }
 
   /* Shattering: a cloud of short, bright, detuned pings. */
