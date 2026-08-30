@@ -17662,8 +17662,12 @@ Engine.prototype.gunPart = function (id, opts = {}) {
     glass: opts.tint || ATT_MAT[D.glassMat || 'lens'],
     reticle: opts.tint || ATT_MAT.glassR,
   };
+  /* physics off by default, because an attachment is normally bolted to a
+     gun and inherits its motion -- but the caller can ask for a body, which
+     is how a drum magazine dropped during a reload falls on the floor as
+     itself rather than as a generic grey brick. */
   return mountArm(this, 'att:' + id, parts, mats,
-    Object.assign({}, opts, { physics: false }), D.bound, 0.2, 'body');
+    Object.assign({ physics: false }, opts), D.bound, 0.2, 'body');
 };
 
 

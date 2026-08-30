@@ -3524,6 +3524,35 @@ function makePlayer(game, S, hud, sfx, voice) {
    the weapon's own measurements — its muzzle distance and its sight height
    — so a scope sits above the real sight line on every gun rather than
    above a guessed one. */
+/* What each attachment stands IN FOR on each weapon.
+ *
+ * An extended magazine used to be drawn as well as the magazine already in
+ * the gun -- two magazines in the same well, one inside the other, on every
+ * weapon that takes one. Same for the drum and the fast mag. An attachment
+ * that adds a part without taking the old one away is not a modification,
+ * it is a second gun growing out of the first.
+ *
+ * Keyed by slot and then by weapon, because the part is called something
+ * different on nearly every model: an MP5 has a `mag`, a Mauser has a
+ * `clip`, an MG 42 has a `belt` and the Arc Breaker has a `cell` with its
+ * own glow. Read off the models rather than assumed -- every name here was
+ * taken from the built weapon, not from memory. */
+const REPLACES = {
+  mag: {
+    m1911: ['mag'], blaze: ['mag'], thompson: ['mag'], mp5: ['mag'],
+    mauser: ['clip'], remington: ['clip'], killstreak: ['clip'],
+    mg42: ['belt'], arc: ['cell', 'cellGlow'],
+  },
+};
+
+/* The magazine the ANIMATION should move: the fitted one if there is one,
+   the gun's own otherwise. Without this the reload drops and returns a
+   magazine that is not on screen while the drum hanging off the gun sits
+   perfectly still through the whole thing. */
+function activeMag(v) {
+  return (v.magSwap && v.magSwap.length) ? v.magSwap : (v.magOwn || null);
+}
+
 function applyAttachmentLooks(game, P, id) {
   const v = P.view[id];
   if (!v) return;
@@ -3580,12 +3609,33 @@ function applyAttachmentLooks(game, P, id) {
       drummag: mount('drummag', [0.004, -0.030, 0]),
     };
   }
+  /* The gun's own magazine, found once. `v.mag` is set by the racking code
+     on the models that already animate one; everything else is looked up by
+     the name this weapon calls it. */
+  if (!v.magOwn) {
+    const names = (REPLACES.mag && REPLACES.mag[id]) || [];
+    const own = Array.isArray(v.mag) ? v.mag.slice() : [];
+    for (const nm of names) if (root && root[nm] && own.indexOf(root[nm]) < 0) own.push(root[nm]);
+    v.magOwn = own;
+  }
+
   const fit = P.fitted[id] || {};
   const wanted = new Set(ATTACH.slots.map((sl) => fit[sl]).filter(Boolean));
   for (const [k, arr] of Object.entries(v.att)) {
     const on = wanted.has(k);
     for (const a of arr) { a.visible = on; a.__attOn = on; }
   }
+
+  /* Out with the old. A fitted magazine hides the one the gun came with,
+     and becomes the one the reload animates -- so the drum drops out of the
+     well and comes back rather than the invisible stock magazine doing it
+     while the drum stays bolted on. */
+  const magPart = fit.mag;
+  v.magSwap = magPart && v.att[magPart] ? v.att[magPart].slice() : null;
+  for (const a of (v.magOwn || [])) { a.__replaced = !!v.magSwap; a.visible = !v.magSwap; }
+  /* And `v.mag` is what the group reload path reads, so it has to point at
+     whichever magazine is actually on the gun. */
+  if (Array.isArray(v.mag) || v.magSwap) v.mag = activeMag(v) || [];
 }
 
 /* Where each slot hangs off a weapon, in that weapon's own space. Derived
@@ -3981,9 +4031,10 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
   /* Box magazine on a group model. The single-actor path below drives
      v.actor.mag; a group hangs its magazine off several parts (a curved
      thirty-rounder is four boxes), so they move together. */
-  if (spec.reloadKind === 'mag' && Array.isArray(v.mag)) {
+  const magParts = spec.reloadKind === 'mag' ? activeMag(v) : null;
+  if (magParts && magParts.length) {
     const out = P.reloading > 0 && P.reloadStage >= 1 && P.reloadStage < 2;
-    for (const m of v.mag) m.visible = !out;
+    for (const m of magParts) m.visible = !out;
     if (v.bolt && v.boltThrow) {
       // Cocking handle: thrown back and released on the last beat. The
       // throw is the model's own, along the axis its tube actually runs.
@@ -4711,22 +4762,50 @@ function ejectShell(game, S, P, v) {
 }
 
 /* Drop the spent magazine. It falls, bounces once and lies there. */
+/* The magazine that just hit the floor.
+ *
+ * This dropped one grey 26 x 100 x 21 box for every weapon in the game --
+ * the same brick out of a 1911, an MP5 and a drum-fed Thompson -- and only
+ * on the two guns that happen to call their magazine `mag`, so the Mauser
+ * and the MG 42 dropped nothing at all. It is the real magazine now: the
+ * weapon's own ammunition description gives its width, depth, length and
+ * curve, and a fitted drum drops a drum. */
 function dropMagazine(game, S, P, v) {
   const gun = v.kind === 'single' ? v.actor : v.root;
-  if (!gun.magWell || !gun.mag) return;
+  if (!gun || !gun.magWell) return;
   const m = gun.matrix.e;
   const lp = gun.magWell;
   const wx = m[0] * lp[0] + m[4] * lp[1] + m[8] * lp[2] + m[12];
   const wy = m[1] * lp[0] + m[5] * lp[1] + m[9] * lp[2] + m[13];
   const wz = m[2] * lp[0] + m[6] * lp[1] + m[10] * lp[2] + m[14];
-  const drop = game.box({
-    at: [wx, wy, wz], size: [0.026, 0.10, 0.021], lifetime: 6,
-    material: { color: 0x53585e, texture: 'metal', roughness: 0.5, metalness: 1 },
-    velocity: [(Math.random() - 0.5) * 0.6, -0.8, (Math.random() - 0.5) * 0.6],
-    bounce: 0.2, friction: 0.8, mass: 0.09,
-  });
-  if (drop.body) drop.body.angularVelocity.set((Math.random() - 0.5) * 5, 0, (Math.random() - 0.5) * 5);
-  S.brass.push(drop);
+  const spec = P.spec();
+  const A = (spec && spec.ammo) || {};
+  const fit = (P.fitted[P.equipped()] || {}).mag;
+  const vel = [(Math.random() - 0.5) * 0.6, -0.8, (Math.random() - 0.5) * 0.6];
+  let drop = null;
+  try {
+    if (fit === 'drummag') {
+      /* A drum is not a stick with more rounds in it, so what hits the
+         floor is the drum's own model -- the same one that was on the gun a
+         moment ago. */
+      drop = game.gunPart('drummag', { at: [wx, wy, wz], lifetime: 6, mass: 0.55,
+        physics: true, velocity: vel, bounce: 0.15, friction: 0.9 });
+    } else {
+      // Longer for an extended magazine, stubbier for a fast one.
+      const shape = fit === 'extmag' ? { len: 0.150 } : fit === 'fastmag' ? { len: 0.078 } : {};
+      drop = game.boxMagazine({
+        at: [wx, wy, wz], lifetime: 6, mass: 0.13,
+        mag: Object.assign({ w: 0.026, d: 0.021, len: 0.105, curve: 0, witness: 0,
+          round: AMMO.para9 }, A.mag || {}, shape),
+        bodyMaterial: A.magMaterial,
+        velocity: vel, bounce: 0.2, friction: 0.8,
+      });
+    }
+  } catch (e) { void e; }
+  if (!drop) return;
+  const body = drop.root || drop;
+  if (body.body) body.body.angularVelocity.set((Math.random() - 0.5) * 5, 0, (Math.random() - 0.5) * 5);
+  S.brass.push(body);
 }
 
 function tryReload(P, sfx, S) {
@@ -8574,7 +8653,9 @@ function start(opts = {}) {
         if (P.reloadStage === 0 && prog > 0.16) {
           P.reloadStage = 1;
           if (kind === 'mag') {
-            if (v.kind === 'single' && v.actor.mag) v.actor.mag.visible = false;
+            // Whichever magazine is actually fitted -- the drum if there is
+            // one, otherwise the gun's own.
+            for (const m of (activeMag(v) || [])) m.visible = false;
             dropMagazine(game, S, P, v);
             sfx.magOut();
           } else if (kind === 'revolver') sfx.cylinderOut();
@@ -8583,7 +8664,7 @@ function start(opts = {}) {
         } else if (P.reloadStage === 1 && prog > 0.62) {
           P.reloadStage = 2;
           if (kind === 'mag') {
-            if (v.kind === 'single' && v.actor.mag) v.actor.mag.visible = true;
+            for (const m of (activeMag(v) || [])) m.visible = true;
             sfx.magIn();
           } else if (kind === 'revolver') sfx.cylinderIn();
           else if (kind === 'clip') sfx.clipIn();
