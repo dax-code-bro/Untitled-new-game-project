@@ -193,7 +193,7 @@ const SWEEP = () => {
    * player, so the second half of the sweep drives the game rather than
    * measuring it. Every check here is something that has actually gone
    * wrong in this project at least once. */
-  out.sys = { weapons: [], variants: [], heroes: [], toggles: [], errors: [] };
+  out.sys = { weapons: [], variants: [], heroes: [], toggles: [], voices: [], errors: [] };
   const G = window.B && window.B.game, SS = window.B && window.B.S;
   const PP = SS && SS.player;
   const runFrames = (n) => {
@@ -542,17 +542,74 @@ const SWEEP = () => {
         if (SS.setHero) SS.setHero(h);
         runFrames(10);
         row.spoke = SS.bark ? !!SS.bark('round', true) : null;
+        /* And what they look like, read off the mesh rather than off the
+           table -- the question is whether choosing a character reaches the
+           arms, and a table can be full of ten different colours while every
+           pair of forearms on screen stays the same. Two weapons, because
+           each weapon has its own arms and only one of them was ever going
+           to be the one that got updated. */
+        const seen = [];
+        for (const wid of ['m1911', 'thompson']) {
+          const arms = ((SS.player && SS.player.view[wid]) || {}).arms;
+          if (!arms || !arms.skin) continue;
+          seen.push((arms.skin.material || {}).color, (arms.sleeve.material || {}).color);
+        }
+        row.look = seen.join('/');
       } catch (e) { row.err = e.message; }
       out.sys.heroes.push(row);
     }
 
-    /* Every settings toggle, flipped both ways with the game running. */
-    const TG = window.__T_SYS && window.__T_SYS.TOGGLES;
-    for (const key of (window.__T_SYS && window.__T_SYS.TOGGLE_ORDER) || []) {
-      const row = { key, err: '' };
+    /* Every mouth in the game, asked to say the same sentence.
+     *
+     * What this measures is the SYNTHESISER, not the audio device -- there
+     * is no sound card here and there never will be. So: does the speaker
+     * have a throat at all, does speak() run on it without throwing, and
+     * does the length it comes back with actually move when the throat
+     * changes. A voiceBox that is read but ignored gives every character
+     * the same number, and that is the failure this is looking for: ten
+     * characters who are described differently and sound identical. */
+    const LINE = 'Hold the door and count them as they come.';
+    const speakers = [];
+    for (const h of (window.__T_SYS && window.__T_SYS.HERO_ORDER) || []) {
+      const H = (window.__T_SYS.HEROES || {})[h];
+      if (H) speakers.push({ who: h, box: H.voiceBox, kind: 'hero' });
+    }
+    for (const k of Object.keys((window.__T_SYS && window.__T_SYS.CAST) || {})) {
+      speakers.push({ who: k, box: window.__T_SYS.CAST[k].voiceBox, kind: 'cast' });
+    }
+    for (const sp of speakers) {
+      const row = { who: sp.who, kind: sp.kind, err: '', box: !!sp.box, dur: 0 };
       try {
-        const was = TG[key];
-        for (const v of [!was, was]) { TG[key] = v; runFrames(30); }
+        if (sp.box) {
+          row.pitch = sp.box.pitch; row.tract = sp.box.tract; row.rate = sp.box.rate;
+          row.words = !!sp.box.say;
+        }
+        // Through sayLine, so the game's own path is what is exercised --
+        // including the words layer, which must not throw where there is
+        // no speechSynthesis.
+        row.dur = window.__T_SYS.sayLine(G, LINE, sp.box) || 0;
+      } catch (e) { row.err = e.message; }
+      out.sys.voices.push(row);
+    }
+
+    /* Every settings toggle, flipped both ways with the game running.
+     *
+     * Through SS.setToggle, which is the same call the settings menu makes.
+     * This used to write booleans into __T_SYS.TOGGLES -- the table of
+     * NAMES and DEFAULTS -- so it replaced `{name, def, blurb}` with `false`
+     * and never touched the live settings at all. Thirty frames later
+     * nothing had happened, and the check passed, because a check that
+     * flips the wrong object cannot fail. */
+    for (const key of (window.__T_SYS && window.__T_SYS.TOGGLE_ORDER) || []) {
+      const row = { key, err: '', took: false };
+      try {
+        const was = SS.toggles[key];
+        for (const v of [!was, was]) {
+          SS.setToggle(key, v);
+          if (SS.toggles[key] !== v) throw new Error('flip did not take');
+          runFrames(30);
+        }
+        row.took = SS.toggles[key] === was;
       } catch (e) { row.err = e.message; }
       out.sys.toggles.push(row);
     }
@@ -742,9 +799,37 @@ function check(name, cond, detail = '') {
   check('every playable character can be selected', hErr.length === 0,
     list(hErr, (h) => `${h.h}: ${h.err}`));
 
+  const looks = sy.heroes.filter((h) => h.look);
+  const distinct = new Set(looks.map((h) => h.look));
+  check('choosing a character changes the arms you are looking at',
+    looks.length === sy.heroes.length && distinct.size === sy.heroes.length,
+    `${distinct.size} distinct looks across ${sy.heroes.length} characters` +
+    (looks.length < sy.heroes.length ? `; ${sy.heroes.length - looks.length} read nothing` : ''));
+  check('every weapon\'s arms follow the character, not just the first',
+    looks.every((h) => h.look.split('/').length === 4),
+    list(looks.filter((h) => h.look.split('/').length !== 4), (h) => `${h.h}: ${h.look}`));
+
+  const vo = sy.voices || [];
+  const voErr = vo.filter((v) => v.err);
+  check('every speaking part has a voice to speak with', vo.length > 0 && vo.every((v) => v.box),
+    list(vo.filter((v) => !v.box), (v) => `${v.who} (${v.kind}) has no voiceBox`));
+  check('saying a line never throws', voErr.length === 0,
+    list(voErr, (v) => `${v.who}: ${v.err}`));
+  /* Two throats, not two names. Pitch and tract together are what make one
+     character sound eighty and another nineteen; if the table were copied
+     around, these would collapse. */
+  const throats = new Set(vo.filter((v) => v.box).map((v) => `${v.pitch}/${v.tract}/${v.rate}`));
+  check('no two characters share a throat', throats.size === vo.length,
+    `${throats.size} distinct settings across ${vo.length} speakers`);
+  check('every voice also carries the words layer', vo.every((v) => !v.box || v.words),
+    list(vo.filter((v) => v.box && !v.words), (v) => `${v.who} has no say{} block`));
+
   const tErr = sy.toggles.filter((t) => t.err);
   check('every settings toggle can be flipped while playing', tErr.length === 0,
     list(tErr, (t) => `${t.key}: ${t.err}`));
+  check('a flipped setting comes back where it started',
+    sy.toggles.length > 0 && sy.toggles.every((t) => t.took),
+    list(sy.toggles.filter((t) => !t.took), (t) => t.key));
 
   check('the game booted and ran without throwing',
     r.errors.length === 0 && pageErrors.length === 0,

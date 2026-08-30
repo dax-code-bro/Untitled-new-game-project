@@ -237,10 +237,32 @@ game.audio.impact(0.8);
 game.audio.shatter(1);
 game.audio.splash(0.6);
 game.audio.tone(880, 0.1);
+
+// A gunshot, built from a bore diameter rather than from a sample.
+game.audio.report(0.45, { crack: 1.1, body: 0.9, thumpHz: 62, mech: 0.5 });
+
+// A character saying something. Returns how long it takes, in seconds.
+game.audio.speak('Hold the door and count them as they come.', {
+  pitch: 88,     // larynx, in Hz -- who is talking
+  tract: 1.17,   // vocal tract length; scales all formants, so this is size and age
+  rasp: 0.62,    // jitter on the glottal source
+  breath: 0.16,  // unvoiced air through the same formants
+  rate: 3.9,     // syllables per second
+  swing: 0.09,   // how far the pitch moves across the sentence
+  rise: false,   // rising contour instead of falling -- a question, or panic
+  radio: true,   // 480-2600 Hz and a little drive: a set, not a room
+});
 ```
 
 Impacts and shatters fire automatically from collisions. Audio starts on the
 first user gesture, as browsers require.
+
+`speak()` is a formant synthesiser, not a text-to-speech engine: it says the
+*rhythm* of the line, in a throat you describe, and it sounds the same on
+every machine because it is built here. It does not say English. If you want
+the words as well, layer the browser's own `speechSynthesis` underneath it at
+low volume — where the device has one — and keep a subtitle either way, so
+nothing is lost on the machines that have neither.
 
 ## Queries
 

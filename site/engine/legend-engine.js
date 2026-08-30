@@ -8702,10 +8702,38 @@ class Audio {
     return this.ctx;
   }
 
+  /* White noise, and it used to be minted fresh on every call.
+   *
+   * Almost everything in here is a noise burst -- every report, every
+   * impact, every breath and fricative in a spoken line -- and each one was
+   * allocating a buffer and filling it a sample at a time. A single spoken
+   * sentence with breath on it is twenty-odd buffers, and a gun firing at
+   * eight hundred rounds a minute is thirteen a second, all of them thrown
+   * away immediately.
+   *
+   * Four two-second buffers, made once, picked at random. Random because
+   * one shared buffer would mean every burst is the same noise, and the ear
+   * hears a repeated noise texture as a loop rather than as noise. Anything
+   * longer than the pool still gets its own buffer, which nothing currently
+   * asks for. */
   _noiseBuffer(duration) {
     const ctx = this.ctx;
-    const len = Math.max(1, Math.floor(ctx.sampleRate * duration));
-    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const rate = ctx.sampleRate;
+    if (duration <= 2) {
+      if (!this._noisePool || this._noiseRate !== rate) {
+        this._noiseRate = rate;
+        this._noisePool = [];
+        for (let k = 0; k < 4; k++) {
+          const b = ctx.createBuffer(1, Math.floor(rate * 2), rate);
+          const d = b.getChannelData(0);
+          for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+          this._noisePool.push(b);
+        }
+      }
+      return this._noisePool[(Math.random() * 4) | 0];
+    }
+    const len = Math.max(1, Math.floor(rate * duration));
+    const buf = ctx.createBuffer(1, len, rate);
     const data = buf.getChannelData(0);
     for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
     return buf;
@@ -8883,6 +8911,249 @@ class Audio {
       tn.connect(tf).connect(tg).connect(this.master);
       tn.start(now); tn.stop(now + tl);
     }
+  }
+
+  /* ---------------- speech ----------------
+
+     A voice, synthesised from formants, so a character sounds the same on
+     every machine that runs the game.
+
+     The browser has a speech synthesiser built into it and it says real
+     words, which is worth having -- but the VOICE it uses belongs to the
+     player's operating system, so the same character is a different person
+     on Windows, on a Mac and on a phone, and on some devices there is no
+     voice at all. An eighty-year-old man cannot be made to sound eighty by
+     asking politely for a lower pitch.
+
+     So the voice is built here instead. Speech is a buzzing source shaped
+     by the resonances of the throat and mouth -- the formants -- and the
+     vowel you hear is decided almost entirely by where the first two of
+     them sit. Move F1 and F2 and you move between "ee" and "ah" and "oo"
+     without changing anything else. That is what makes this a voice rather
+     than a beep: three bandpass filters over a glottal buzz, the buzz
+     given jitter so it is a throat and not an oscillator, and consonants
+     as short noise bursts between the vowels.
+
+     What a character IS comes out of six numbers:
+
+       pitch     the larynx. 80 Hz is a big man, 210 a young woman.
+       tract     vocal tract length, which scales every formant. A long
+                 tract is a large body and a dark voice; short is small
+                 and bright. This is the number that carries age and size,
+                 and it is why simply lowering the pitch of a young voice
+                 sounds like a slowed-down recording rather than an old man.
+       rasp      irregularity in the glottal pulse: smoke, age, damage.
+       breath    unvoiced air leaking through, which is what makes a
+                 whisper a whisper.
+       rate      syllables a second.
+       swing     how far the pitch moves across a line. Flat is deadpan;
+                 wide is theatrical.
+  */
+  /* How long speak() will take, without saying anything.
+   *
+   * Needed because a queue of lines has to be laid out BEFORE any of them
+   * is spoken, and the only alternative is an estimate from the character
+   * count -- which is wrong by whole seconds for a slow speaker, and puts
+   * the next line on screen while the last one is still being said. Same
+   * arithmetic as speak(), deliberately: if one changes the other has to. */
+  speakLength(text, V = {}) {
+    const rate = (V && V.rate) || 5.2;
+    const syl = this._syllables(text);
+    let total = 0;
+    for (const S of syl) {
+      const len = (1 / rate) * S.len;
+      total += len;
+      if (S.pause) total += len * 0.9;
+    }
+    return total;
+  }
+
+  speak(text, V = {}) {
+    if (!this.enabled) return 0;
+    const ctx = this.ensure();
+    if (!ctx) return 0;
+    const now = ctx.currentTime;
+
+    const pitch = V.pitch || 130;
+    const tract = V.tract || 1;
+    const rasp = V.rasp || 0;
+    const breath = V.breath || 0;
+    const rate = V.rate || 5.2;
+    const swing = V.swing != null ? V.swing : 0.14;
+    const vol = (V.volume != null ? V.volume : 1) * 0.16;
+
+    /* Turn the written line into something to say. Real speech is not
+       needed and is not wanted -- the subtitle carries the words. What is
+       needed is the right NUMBER of syllables with the right shapes, so
+       the rhythm matches the sentence being read. */
+    const syl = this._syllables(text);
+    if (!syl.length) return 0;
+
+    const out = ctx.createGain();
+    out.gain.value = vol;
+    out.connect(this.master);
+
+    /* A telephone or a radio is a band, not a voice: everything outside
+       300-3000 Hz is simply not there, and that missing bottom is most of
+       what makes a radio sound like a radio. */
+    let sink = out;
+    if (V.radio) {
+      const hp = ctx.createBiquadFilter();
+      hp.type = 'highpass'; hp.frequency.value = 480; hp.Q.value = 0.9;
+      const lp = ctx.createBiquadFilter();
+      lp.type = 'lowpass'; lp.frequency.value = 2600; lp.Q.value = 0.9;
+      const drive = ctx.createWaveShaper();
+      const curve = new Float32Array(257);
+      for (let i = 0; i <= 256; i++) {
+        const x = i / 128 - 1;
+        curve[i] = Math.tanh(x * 2.6) * 0.85;
+      }
+      drive.curve = curve;
+      hp.connect(lp).connect(drive).connect(out);
+      sink = hp;
+    }
+
+    let t = now;
+    let total = 0;
+    for (let i = 0; i < syl.length; i++) {
+      const S = syl[i];
+      const len = (1 / rate) * S.len;
+      // A falling contour across the sentence, with a lift at a question.
+      const frac = i / Math.max(1, syl.length - 1);
+      const shape = V.rise ? frac : (1 - frac * 0.75);
+      const f0 = pitch * (1 + (shape - 0.5) * swing * 2)
+        * (1 + (Math.random() - 0.5) * (0.03 + rasp * 0.16));
+
+      if (S.stop) {
+        // A plosive: silence, then a click. The silence is the sound.
+        t += len * 0.45;
+        const cl = ctx.createBufferSource();
+        cl.buffer = this._noiseBuffer(0.03);
+        const cf = ctx.createBiquadFilter();
+        cf.type = 'bandpass';
+        cf.frequency.value = 1400 / tract; cf.Q.value = 0.8;
+        const cg = ctx.createGain();
+        cg.gain.setValueAtTime(0.9, t);
+        cg.gain.exponentialRampToValueAtTime(0.0001, t + 0.035);
+        cl.connect(cf).connect(cg).connect(sink);
+        cl.start(t); cl.stop(t + 0.04);
+        t += len * 0.55;
+        total += len;
+        continue;
+      }
+
+      /* The voiced part. A sawtooth is a decent glottal source -- it has
+         the harmonic series a vocal fold does -- and the formants pick
+         three of those harmonics out of it. */
+      const src = ctx.createOscillator();
+      src.type = 'sawtooth';
+      src.frequency.setValueAtTime(f0, t);
+      src.frequency.linearRampToValueAtTime(f0 * (0.94 + Math.random() * 0.1), t + len);
+
+      const env = ctx.createGain();
+      env.gain.setValueAtTime(0.0001, t);
+      env.gain.exponentialRampToValueAtTime(0.9, t + len * 0.16);
+      env.gain.setValueAtTime(0.9, t + len * 0.55);
+      env.gain.exponentialRampToValueAtTime(0.0001, t + len);
+      src.connect(env);
+
+      // Three formants. Their frequencies are the vowel; the tract scales
+      // all of them together, which is body size.
+      for (let k = 0; k < 3; k++) {
+        const bp = ctx.createBiquadFilter();
+        bp.type = 'bandpass';
+        bp.frequency.value = S.f[k] / tract;
+        bp.Q.value = [7, 9, 11][k];
+        const g = ctx.createGain();
+        g.gain.value = [1, 0.55, 0.22][k];
+        env.connect(bp).connect(g).connect(sink);
+      }
+      src.start(t); src.stop(t + len + 0.02);
+
+      // Breath: unvoiced air through the same formants.
+      if (breath > 0) {
+        const air = ctx.createBufferSource();
+        air.buffer = this._noiseBuffer(len + 0.02);
+        const af = ctx.createBiquadFilter();
+        af.type = 'bandpass';
+        af.frequency.value = S.f[1] / tract; af.Q.value = 1.2;
+        const ag = ctx.createGain();
+        ag.gain.setValueAtTime(0.0001, t);
+        ag.gain.exponentialRampToValueAtTime(breath * 0.5, t + len * 0.2);
+        ag.gain.exponentialRampToValueAtTime(0.0001, t + len);
+        air.connect(af).connect(ag).connect(sink);
+        air.start(t); air.stop(t + len + 0.02);
+      }
+
+      // A fricative on the way out of the syllable: s, f, sh.
+      if (S.fric) {
+        const fr = ctx.createBufferSource();
+        fr.buffer = this._noiseBuffer(0.07);
+        const ff = ctx.createBiquadFilter();
+        ff.type = 'highpass';
+        ff.frequency.value = S.fric === 's' ? 4200 : 2200;
+        const fg = ctx.createGain();
+        fg.gain.setValueAtTime(0.0001, t + len * 0.7);
+        fg.gain.exponentialRampToValueAtTime(0.45, t + len * 0.8);
+        fg.gain.exponentialRampToValueAtTime(0.0001, t + len + 0.05);
+        fr.connect(ff).connect(fg).connect(sink);
+        fr.start(t + len * 0.7); fr.stop(t + len + 0.07);
+      }
+
+      t += len;
+      total += len;
+      if (S.pause) { t += len * 0.9; total += len * 0.9; }
+    }
+    return total;
+  }
+
+  /* The written line, turned into syllables to say.
+   *
+   * Not a pronunciation dictionary -- the subtitle already carries the
+   * words. What this needs to get right is the RHYTHM: the same number of
+   * beats as the sentence has, stresses in roughly the right places, and
+   * the punctuation heard as pauses. Vowel letters choose the formant
+   * pair, so a line with a lot of "ee" in it sounds brighter than one full
+   * of "oh", which is enough to stop every line sounding identical.
+   */
+  _syllables(text) {
+    // F1/F2/F3 for the vowels, in Hz, for a neutral adult tract.
+    const VOW = {
+      a: [730, 1090, 2440], e: [530, 1840, 2480], i: [390, 1990, 2550],
+      o: [570, 840, 2410], u: [440, 1020, 2240], y: [440, 1700, 2400],
+    };
+    const out = [];
+    const words = String(text).toLowerCase().split(/\s+/).filter(Boolean);
+    for (let w = 0; w < words.length; w++) {
+      const word = words[w];
+      const ends = /[.!?,;:]$/.test(word);
+      const letters = word.replace(/[^a-z]/g, '');
+      if (!letters) continue;
+      let made = 0;
+      for (let i = 0; i < letters.length; i++) {
+        const c = letters[i];
+        if (!VOW[c]) continue;
+        // Run of vowels counts once.
+        if (i > 0 && VOW[letters[i - 1]]) continue;
+        const nxt = letters[i + 1] || '';
+        out.push({
+          f: VOW[c],
+          len: 0.75 + (made === 0 ? 0.35 : 0),          // first syllable stressed
+          fric: (nxt === 's' || nxt === 'z') ? 's' : (nxt === 'f' || nxt === 'h') ? 'f' : null,
+          stop: false,
+          pause: false,
+        });
+        made++;
+      }
+      // A word with no vowel in it at all still takes a beat.
+      if (!made) out.push({ f: VOW.u, len: 0.7, fric: null, stop: false, pause: false });
+      // Plosives between words give speech its edges.
+      if (/^[bdgkpt]/.test(letters) && out.length > 1) out[out.length - 1].stop = false;
+      if (ends && out.length) out[out.length - 1].pause = true;
+    }
+    // Long lines are trimmed: past about twenty syllables it stops being a
+    // line of dialogue and starts being a monologue nobody waits through.
+    return out.slice(0, 22);
   }
 
   /* Shattering: a cloud of short, bright, detuned pings. */

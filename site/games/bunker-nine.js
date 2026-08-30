@@ -514,10 +514,36 @@ const PLAYER = {
    cheerful in a way that stops being comforting.  */
 
 const CAST = {
-  patch: { name: 'CPL. "PATCH" OKAFOR', base: 215, spread: 60, type: 'triangle', color: '#ffd27a' },
-  radio: { name: 'THE NIGHTWATCHMAN', base: 122, spread: 26, type: 'square', color: '#7ad7ff' },
-  stalker: { name: 'STALKER', base: 88, spread: 14, type: 'sine', color: '#9de89d' },
-  exit42: { name: 'EXIT FOUR TWO', base: 244, spread: 70, type: 'square', color: '#ff9a6a' },
+  /* Four voices, and they are meant to be told apart with your eyes shut.
+     `voiceBox` is the throat the engine's formant synthesiser is given;
+     `say` is what the browser's own synthesiser is set to underneath it,
+     where the device has one. See sayLine(). */
+  patch: {
+    name: 'CPL. "PATCH" OKAFOR', base: 215, spread: 60, type: 'triangle', color: '#ffd27a',
+    // In the room with you. Nothing between the two of you, so: no band, no rasp.
+    voiceBox: { pitch: 152, tract: 1.02, rasp: 0.10, breath: 0.12, rate: 5.4, swing: 0.20,
+      say: { pitch: 1.02, rate: 1.04 } },
+  },
+  radio: {
+    name: 'THE NIGHTWATCHMAN', base: 122, spread: 26, type: 'square', color: '#7ad7ff',
+    /* A man on the other end of a set. The 300-2600 band and the drive are
+       most of why he sounds like a radio and not like a person; the slow
+       rate is the rest of it -- he is reading, not talking. */
+    voiceBox: { pitch: 106, tract: 1.14, rasp: 0.30, breath: 0.06, rate: 4.4, swing: 0.08,
+      radio: true, say: { pitch: 0.74, rate: 0.92 } },
+  },
+  stalker: {
+    name: 'STALKER', base: 88, spread: 14, type: 'sine', color: '#9de89d',
+    // Close, low and mostly air. Quiet on purpose: you should lean in.
+    voiceBox: { pitch: 72, tract: 1.30, rasp: 0.55, breath: 0.60, rate: 3.1, swing: 0.05,
+      volume: 0.72, say: { pitch: 0.30, rate: 0.72 } },
+  },
+  exit42: {
+    name: 'EXIT FOUR TWO', base: 244, spread: 70, type: 'square', color: '#ff9a6a',
+    // Rising pitch on every syllable, fast, and never settling. Panic.
+    voiceBox: { pitch: 238, tract: 0.82, rasp: 0.22, breath: 0.18, rate: 6.9, swing: 0.48,
+      rise: true, say: { pitch: 1.66, rate: 1.28 } },
+  },
 };
 
 /* ---------------- the people who hold the gun ----------------
@@ -537,6 +563,13 @@ const HEROES = {
     name: 'CPL. ADAMS',
     bio: 'Eighty-five. Soviet officer. Pinned here when the line broke and never got the order to leave.',
     voice: { base: 104, spread: 20, type: 'sawtooth', color: '#d8a05a' },
+    voiceBox: { pitch: 88, tract: 1.17, rasp: 0.62, breath: 0.16, rate: 3.9, swing: 0.09, say: { pitch: 0.62, rate: 0.80 } }, // 85, a career of shouting over artillery
+    /* What you actually see of a character in a first-person game is two
+       forearms. So that is where the ten of them are made to differ: skin,
+       and what the sleeve is made of. Bear in mind the skin texture bakes
+       its own warmth and the subsurface term adds red on top, so these
+       bases run cold -- a hex that looks grey here lands on skin. */
+    look: { skin: 0xc2a189, rough: 0.80, sleeve: 0x3a3c31, sleeveTex: 'fabric', sleeveRough: 0.97 }, // Soviet greatcoat wool, and eighty-five years of weather
     lines: {
       pick: ['I was told to hold this position. Nobody has told me otherwise.'],
       start: ['Another night. The night is not the problem.',
@@ -579,6 +612,8 @@ const HEROES = {
     name: 'CARLOS',
     bio: 'Kept the generators running at the depot. Knows every fuse in the building and half the prayers.',
     voice: { base: 158, spread: 32, type: 'triangle', color: '#ffb066' },
+    voiceBox: { pitch: 126, tract: 1.03, rasp: 0.16, breath: 0.08, rate: 5.4, swing: 0.17, say: { pitch: 0.92, rate: 1.02 } },
+    look: { skin: 0xa87551, rough: 0.70, sleeve: 0x2f3a48, sleeveTex: 'fabric', sleeveRough: 0.90 }, // depot coveralls, oil into the weave
     lines: {
       pick: ['I fix things. Tonight I am fixing this.'],
       start: ['Okay. Okay. We can work with this.',
@@ -619,6 +654,8 @@ const HEROES = {
     name: 'SAM',
     bio: 'Was driving a supply run when the road stopped meaning anything. Dry, quick, and hard to rattle.',
     voice: { base: 228, spread: 42, type: 'triangle', color: '#9fd8ff' },
+    voiceBox: { pitch: 196, tract: 0.88, rasp: 0.08, breath: 0.12, rate: 5.6, swing: 0.20, say: { pitch: 1.24, rate: 1.05 } },
+    look: { skin: 0xbb9070, rough: 0.72, sleeve: 0x54492f, sleeveTex: 'fabric', sleeveRough: 0.95 }, // canvas driving jacket
     lines: {
       pick: ['I only came here for the fuel.'],
       start: ['Right. Let us be professional about this.',
@@ -660,6 +697,8 @@ const HEROES = {
     name: 'CHRISSY',
     bio: 'Nineteen. Out hunting with her father until he started acting strange. Hid in an empty house for two days.',
     voice: { base: 272, spread: 50, type: 'sine', color: '#ffc0e0' },
+    voiceBox: { pitch: 232, tract: 0.83, rasp: 0.05, breath: 0.30, rate: 6.4, swing: 0.30, say: { pitch: 1.42, rate: 1.16 } }, // nineteen, and frightened
+    look: { skin: 0xcbaa8c, rough: 0.62, sleeve: 0x6b3230, sleeveTex: 'fabric', sleeveRough: 0.98 }, // her father's flannel, far too big for her
     lines: {
       pick: ['I hid for two days. I am not hiding tonight.'],
       start: ['I have hunted before. This is not that. But it is closer than nothing.',
@@ -700,6 +739,8 @@ const HEROES = {
     name: 'REBECCA',
     bio: 'Forty. Twenty of them in a ring, a cage, or somewhere with no referee. Fights like it is arithmetic.',
     voice: { base: 202, spread: 34, type: 'triangle', color: '#ff8a8a' },
+    voiceBox: { pitch: 172, tract: 0.93, rasp: 0.14, breath: 0.07, rate: 4.9, swing: 0.12, say: { pitch: 1.10, rate: 0.96 } }, // forty, and steady
+    look: { skin: 0xa87c58, rough: 0.66, sleeve: 0x2b2b2e, sleeveTex: 'fabric', sleeveRough: 0.99 }, // hand wraps and nothing over them
     lines: {
       pick: ['I have never lost a fight I understood. Let me understand this one.'],
       start: ['Footwork first. Everything else is footwork.',
@@ -741,6 +782,8 @@ const HEROES = {
     name: 'HANK',
     bio: 'Big. Was big before all this and it has only become more useful. Enjoys the work more than he should.',
     voice: { base: 116, spread: 24, type: 'square', color: '#c9a06a' },
+    voiceBox: { pitch: 78, tract: 1.24, rasp: 0.34, breath: 0.05, rate: 4.2, swing: 0.10, say: { pitch: 0.52, rate: 0.88 } }, // the biggest chest in the room
+    look: { skin: 0xc09070, rough: 0.74, sleeve: 0x4a5560, sleeveTex: 'fabric', sleeveRough: 0.94 }, // work shirt, sleeves rolled past the elbow
     lines: {
       pick: ['Point me at it.'],
       start: ['Good. A small room and a lot of them. That suits me.',
@@ -782,6 +825,8 @@ const HEROES = {
     name: 'OLD MAN FRANK',
     bio: 'Eighty. A Black Native American in a winter trenchcoat who was fighting a war in 1855 and stepped through something that should not have been open.',
     voice: { base: 130, spread: 22, type: 'sawtooth', color: '#a8d8b8' },
+    voiceBox: { pitch: 94, tract: 1.20, rasp: 0.52, breath: 0.22, rate: 3.6, swing: 0.13, say: { pitch: 0.66, rate: 0.76 } }, // eighty, warm, weathered
+    look: { skin: 0x6b4a34, rough: 0.82, sleeve: 0x35291f, sleeveTex: 'fabric', sleeveRough: 0.97 }, // the winter trenchcoat he walked in wearing
     lines: {
       pick: ['I walked through a door in a field and it was a hundred years later. So be it.'],
       start: ['I do not know the year and I do not know the enemy. I know the work.',
@@ -823,6 +868,8 @@ const HEROES = {
     name: 'CHRIS',
     bio: 'An intelligence quotient of two hundred and forty, and no useful instinct for when to stop explaining.',
     voice: { base: 188, spread: 28, type: 'sine', color: '#b6a8ff' },
+    voiceBox: { pitch: 138, tract: 0.99, rasp: 0.06, breath: 0.04, rate: 7.1, swing: 0.07, say: { pitch: 1.00, rate: 1.22 } }, // fast and level: nothing is a surprise
+    look: { skin: 0xc39c7e, rough: 0.68, sleeve: 0x585c60, sleeveTex: 'fabric', sleeveRough: 0.88 }, // whatever was hanging in the laboratory
     lines: {
       pick: ['I have modelled this. The model says run. I am overruling the model.'],
       start: ['Four ingress points, one chokepoint, one elevated position. This is survivable.',
@@ -867,6 +914,8 @@ const HEROES = {
     name: 'VALENTINE REMI',
     bio: 'Never once let a bad moment pass without a remark. It is not clear whether this is courage or a condition.',
     voice: { base: 198, spread: 56, type: 'triangle', color: '#ffe08a' },
+    voiceBox: { pitch: 154, tract: 0.95, rasp: 0.12, breath: 0.09, rate: 5.8, swing: 0.42, say: { pitch: 1.12, rate: 1.08 } }, // the pitch does the joking
+    look: { skin: 0xba8b68, rough: 0.70, sleeve: 0x5c2a34, sleeveTex: 'fabric', sleeveRough: 0.86 }, // a colour nobody else would have picked
     lines: {
       pick: ['Marvellous. A small room, poor lighting, and an audience.'],
       start: ['I want it on record that I asked to be posted somewhere warm.',
@@ -908,6 +957,8 @@ const HEROES = {
     name: 'RODRIGUEZ',
     bio: 'Walks into rooms like the room has been waiting for him. Annoyingly, it usually has.',
     voice: { base: 142, spread: 38, type: 'square', color: '#ff9a5a' },
+    voiceBox: { pitch: 108, tract: 1.10, rasp: 0.24, breath: 0.06, rate: 5.0, swing: 0.19, say: { pitch: 0.74, rate: 1.00 } },
+    look: { skin: 0x9a6b48, rough: 0.69, sleeve: 0x2a211c, sleeveTex: 'plastic', sleeveRough: 0.44 }, // leather, and he knows it
     lines: {
       pick: ['You picked right.'],
       start: ['Small room, bad odds, no way out. My kind of night.',
@@ -1031,8 +1082,12 @@ const TOGGLES = {
     name: 'SPENT BRASS', def: true,
     blurb: 'Cases stay on the floor for a few seconds after they leave the gun.',
   },
+  spokenWords: {
+    name: 'SPOKEN WORDS', def: true,
+    blurb: 'Lines are read aloud by the browser under the character\'s own voice. Off leaves the voice and the subtitle.',
+  },
 };
-const TOGGLE_ORDER = ['autoRepair', 'flinch', 'gore', 'shellCasings'];
+const TOGGLE_ORDER = ['autoRepair', 'flinch', 'gore', 'shellCasings', 'spokenWords'];
 
 function loadToggles() {
   const out = {};
@@ -1124,6 +1179,19 @@ const LINES = {
   ],
   mauser: [
     ['patch', 'A Mauser. Somebody brought this a long way to end up down here.'],
+  ],
+  /* Said once, the first time a lamp on the tell-tale lights. It names the
+     shape of the puzzle -- three, and the third one is the one that starts
+     it -- without naming any of the three. The plate does the counting;
+     this is only there so the plate is understood to be a counter and not
+     a fault light. */
+  goldFirst: [
+    ['patch', 'There is a plate on the east wall with three lamps on it. One of them has just come on.'],
+    ['radio', 'Then two of them have not. Whatever it is counting, it wants all three.'],
+  ],
+  goldSecond: [
+    ['patch', 'Two lamps. Same plate.'],
+    ['radio', 'One to go, Bunker Nine. Keep doing whatever it is you have been doing.'],
   ],
   gold: [
     ['patch', 'Something just came out of the east wall. A belt line.'],
@@ -1312,6 +1380,15 @@ function makeSfx(game) {
     denied() { t(160, 0.12, 'square', 0.09); },
     doorOpen() { A.impact(0.9); t(70, 0.3, 'sawtooth', 0.12); },
     powerOn() { t(52, 0.7, 'sawtooth', 0.14); t(104, 0.5, 'sine', 0.1); t(208, 0.4, 'sine', 0.06); },
+    /* A relay closing behind a steel plate, and the filament coming up
+       behind it. Deliberately small: the tell-tale is confirmation, not a
+       reward, and a fanfare on the second lamp would make the third one an
+       anticlimax. */
+    tellLamp() {
+      A.impact(0.16);
+      t(146, 0.05, 'square', 0.06);
+      setTimeout(() => { t(880, 0.16, 'sine', 0.05); t(1320, 0.12, 'sine', 0.025); }, 60);
+    },
     powerup() { for (let i = 0; i < 4; i++) setTimeout(() => t(660 * Math.pow(1.25, i), 0.09, 'triangle', 0.1), i * 70); },
     blitz() { A.impact(1); t(60, 0.6, 'sawtooth', 0.18); t(2400, 0.3, 'sawtooth', 0.06); },
     hurt() { t(85, 0.2, 'sawtooth', 0.14); },
@@ -1449,6 +1526,103 @@ function makeSfx(game) {
    fastest way to make a talkative character unbearable. So: a cooldown, a
    bag that empties before it refills so you do not hear the same line
    twice running, and a per-event chance for the ones that fire often. */
+/* Saying a line out loud.
+ *
+ * Two layers, because neither is enough on its own.
+ *
+ * The engine's formant synthesiser is the one that always runs: it is
+ * built here, so a character sounds identical on every machine, and the
+ * throat it is given is what makes Frank eighty and Chrissy nineteen.
+ * But it does not say English -- it says the RHYTHM of the line.
+ *
+ * The browser's own synthesiser does say English, and where it exists it
+ * is layered underneath at low volume with the character's pitch and rate
+ * applied. Where it does not -- and it does not, on plenty of devices --
+ * nothing is missing, because the voice was never carrying the words.
+ * The subtitle carries the words. This is the part everybody gets wrong:
+ * building on speechSynthesis alone means the character has no voice at
+ * all on the machines that lack it.
+ */
+let _sayVoices = null;
+/* The words layer is the one that can grate -- it is a stock system voice
+   and it is not the character. It is a toggle for that reason, and the
+   flag lives here rather than on the run state because sayLine() is called
+   from places that do not have the run state in hand. */
+let _spokenWords = true;
+function setSpokenWords(on) { _spokenWords = !!on; if (!on) { try { speechSynthesis.cancel(); } catch (e) { void e; } } }
+function pickSystemVoice(pitchScale) {
+  if (typeof speechSynthesis === 'undefined') return null;
+  if (!_sayVoices || !_sayVoices.length) {
+    try { _sayVoices = speechSynthesis.getVoices() || []; } catch (e) { _sayVoices = []; }
+  }
+  if (!_sayVoices.length) return null;
+  /* Prefer an English voice, and among those pick a stable one per
+     character rather than whatever happens to be first -- the index comes
+     off the character's own pitch so the same character gets the same
+     system voice every time the game is opened. */
+  const en = _sayVoices.filter((v) => /^en/i.test(v.lang || ''));
+  const pool = en.length ? en : _sayVoices;
+  return pool[Math.floor(Math.abs(pitchScale * 977)) % pool.length] || null;
+}
+
+/* How long a line will be on screen: as long as it takes to say, with a
+   floor for the short ones and a fallback for a browser with the audio
+   context still locked. */
+function lineLength(game, text, V) {
+  let spoken = 0;
+  try { spoken = game.audio.speakLength(text, V || {}) || 0; } catch (e) { void e; }
+  return Math.max(1.6, Math.max(spoken + 0.35, text.length * 0.042));
+}
+
+function sayLine(game, text, V, opts = {}) {
+  const box = Object.assign({}, V || {}, opts.box || {});
+  let dur = 0;
+  try { dur = game.audio.speak(text, box) || 0; } catch (e) { void e; }
+  const say = (V && V.say) || null;
+  if (say && _spokenWords && typeof speechSynthesis !== 'undefined' && !opts.noWords) {
+    try {
+      const u = new SpeechSynthesisUtterance(String(text));
+      u.pitch = Math.max(0, Math.min(2, say.pitch || 1));
+      u.rate = Math.max(0.1, Math.min(2, say.rate || 1));
+      // Under the synthesised voice, not over it: it is the words, and the
+      // character is the thing on top.
+      u.volume = opts.wordVolume != null ? opts.wordVolume : 0.62;
+      const sv = pickSystemVoice(say.pitch || 1);
+      if (sv) u.voice = sv;
+      speechSynthesis.cancel();
+      speechSynthesis.speak(u);
+    } catch (e) { void e; }
+  }
+  return dur;
+}
+
+/* The character you picked, on the only part of them you can see.
+ *
+ * The arms are built once, with the weapons, long before anybody has
+ * chosen anyone -- so this reassigns the materials rather than rebuilding
+ * the meshes. Every weapon has its own pair of arms, so it is every
+ * weapon's arms that have to change, or you would be Frank until you drew
+ * the Thompson.
+ *
+ * Geometry is deliberately not touched. Hands that differ in shape per
+ * character would mean ten sets of grip solutions per gun, and the grip is
+ * the thing the player has already told me twice is wrong -- one set of
+ * hands that is right is worth more than ten that are nearly. */
+function applyHeroLook(game, P, hero) {
+  const L = (hero && hero.look) || null;
+  if (!L || !P || !P.view) return;
+  const skinMat = game.material({ color: L.skin, texture: 'skin',
+    roughness: L.rough != null ? L.rough : 0.72, metalness: 0, subsurface: 0.12 });
+  const sleeveMat = game.material({ color: L.sleeve, texture: L.sleeveTex || 'fabric',
+    roughness: L.sleeveRough != null ? L.sleeveRough : 0.96, metalness: 0, uvScale: 1.4 });
+  for (const v of Object.values(P.view)) {
+    const a = v.arms;
+    if (!a) continue;
+    for (const m of [a.skin, a.lSkin, a.thumb]) if (m) m.material = skinMat;
+    for (const m of [a.sleeve, a.lSleeve]) if (m) m.material = sleeveMat;
+  }
+}
+
 function makeHeroVoice(game, hud, getHero, isOver, floor) {
   const bags = {};
   const HOT = { headshot: 0.16, reload: 0.30, dry: 0.5, melee: 0.22, firstBlood: 1,
@@ -1467,7 +1641,9 @@ function makeHeroVoice(game, hud, getHero, isOver, floor) {
     if (!bags[key] || !bags[key].length) bags[key] = set.slice();
     const idx = Math.floor(Math.random() * bags[key].length);
     const text = bags[key].splice(idx, 1)[0];
-    const dur = Math.max(1.3, text.length * 0.042);
+    // Out loud, in this character's own voice.
+    const dur = lineLength(game, text, hero.voiceBox);
+    const spoken = sayLine(game, text, hero.voiceBox);
     /* Quiet until the line has finished, and then some.
      *
      * This was `dur * 0.62`, which is shorter than the line's own subtitle
@@ -1484,12 +1660,16 @@ function makeHeroVoice(game, hud, getHero, isOver, floor) {
     floor.until = now + dur + 1.6;
     const c = { name: hero.name, color: hero.voice.color };
     hud.subtitle(c, text, dur);
-    const blips = Math.min(13, Math.max(4, Math.round(text.length / 7)));
-    for (let i = 0; i < blips; i++) {
-      setTimeout(() => {
-        const f = hero.voice.base + (Math.sin(i * 2.7) * 0.5 + Math.random() * 0.5) * hero.voice.spread;
-        game.audio.tone(f, 0.05, hero.voice.type, 0.05);
-      }, 70 + i * (dur * 480 / blips));
+    // Same rule as the radio: the blips are what you get when the voice
+    // could not run, not a layer on top of it.
+    if (spoken <= 0) {
+      const blips = Math.min(13, Math.max(4, Math.round(text.length / 7)));
+      for (let i = 0; i < blips; i++) {
+        setTimeout(() => {
+          const f = hero.voice.base + (Math.sin(i * 2.7) * 0.5 + Math.random() * 0.5) * hero.voice.spread;
+          game.audio.tone(f, 0.05, hero.voice.type, 0.05);
+        }, 70 + i * (dur * 480 / blips));
+      }
     }
     return dur;
   };
@@ -1511,11 +1691,20 @@ function makeVoice(game, hud, isOver, floor) {
     let delay = 0;
     for (const [who, text] of lineSet) {
       const c = CAST[who];
-      const dur = Math.max(1.6, text.length * 0.045);
+      /* The subtitle has to be on screen for as long as the line takes to
+         say. That length is known before anything is spoken -- speakLength
+         does the same arithmetic speak() does -- which is what lets the
+         whole exchange be laid out here without the second speaker landing
+         on top of the first. A floor of 1.6s covers the two-word lines,
+         which are spoken faster than they are read. */
+      const dur = lineLength(game, text, c.voiceBox);
       setTimeout(() => {
         if (isOver() && !priority) return;
+        const spoken = sayLine(game, text, c.voiceBox);
         hud.subtitle(c, text, dur);
-        // One blip per word-ish, wandering around the character's pitch.
+        /* Blips are the fallback, not the voice. If the synthesiser spoke
+           -- audio enabled, context alive -- they would only muddy it. */
+        if (spoken > 0) return;
         const blips = Math.min(14, Math.max(5, Math.round(text.length / 7)));
         for (let i = 0; i < blips; i++) {
           setTimeout(() => {
@@ -1525,7 +1714,9 @@ function makeVoice(game, hud, isOver, floor) {
           }, 90 + i * (dur * 500 / blips));
         }
       }, delay * 1000);
-      delay += dur + 0.25;
+      // A beat between speakers, because two people in a scripted exchange
+      // do not start talking the instant the other stops.
+      delay += dur + 0.45;
     }
     floor.until = now + delay;
     return delay;
@@ -2966,7 +3157,50 @@ function buildMap(game, S) {
       color: 0x3a2f12, texture: 'smooth', roughness: 0.3, emissive: 0xffc23a, emissiveStrength: 0 } }), [0.74, 0.40, 0]);
     root.visible = false;
     for (const q of parts) q.visible = false;
-    S.belt = { root, parts, rollers, lamp, at: [bx, by, bz], out: 0, running: false, dropT: 0, spin: 0 };
+
+    /* The tell-tale.
+     *
+     * The belt used to arrive out of a blank wall with nothing anywhere in
+     * the map saying it existed or what woke it. That is not a secret, it
+     * is a coin flip -- three conditions in a particular combination is not
+     * something anybody guesses, and an easter egg nobody can reach is the
+     * same as one that was never built.
+     *
+     * So: a stencilled plate bolted to the wall above where the belt comes
+     * out, with three dead lamps in a row. You can see it on the first
+     * round. It tells you nothing about WHAT the three things are -- that
+     * is still yours to work out -- but it tells you there are exactly
+     * three of them, and it lights one at a time so you know when you have
+     * got one right. That is the whole difference between a puzzle and a
+     * rumour. */
+    /* Bolted to the east wall itself, not floating where the belt is parked
+       -- the belt sits a metre out into the room because it has to slide,
+       and a plate hanging in mid-air a metre off the wall reads as a bug,
+       not as a fixture. MAP.main.x1 is the inner face; the plate's back is
+       flush with it and everything on the plate stands proud toward the
+       player, who is looking east at it. */
+    const px = MAP.main.x1 - 0.025, py = by + 0.92;
+    const plate = game.box({ at: [px, py, bz], size: [0.05, 0.30, 0.72],
+      material: { color: 0x4c4136, texture: 'metal', roughness: 0.72, metalness: 0.42 },
+      physics: false });
+    // Four bolts, because a plate with no fixings reads as a decal.
+    for (const sy2 of [-1, 1]) for (const sz2 of [-1, 1]) {
+      game.sphere({ at: [px - 0.030, py + sy2 * 0.115, bz + sz2 * 0.305], radius: 0.017,
+        material: { color: 0x6d6558, texture: 'metal', roughness: 0.5, metalness: 0.8 },
+        physics: false });
+    }
+    const tell = [];
+    for (let k = 0; k < 3; k++) {
+      // Recessed in a housing, so a dead lamp still reads as a lamp.
+      game.cylinder({ at: [px - 0.030, py, bz + (k - 1) * 0.21], radius: 0.048, height: 0.05,
+        material: { color: 0x2b2721, texture: 'metal', roughness: 0.65, metalness: 0.5 },
+        rotation: [0, 0, 90], physics: false });
+      tell.push(game.sphere({ at: [px - 0.057, py, bz + (k - 1) * 0.21], radius: 0.033,
+        material: { color: 0x3a2f12, texture: 'smooth', roughness: 0.28,
+          emissive: 0xffc23a, emissiveStrength: 0 }, physics: false }));
+    }
+    S.belt = { root, parts, rollers, lamp, plate, tell, lit: -1,
+      at: [bx, by, bz], out: 0, running: false, dropT: 0, spin: 0 };
   }
 
   /* The nav grids, built last so everything solid is already standing.
@@ -7787,6 +8021,7 @@ function start(opts = {}) {
     grace: 0, toggles: loadToggles(),
   };
   S.addPoints = (n) => { const a = Math.round(n * S.mul); S.points += a; return a; };
+  setSpokenWords(S.toggles.spokenWords);
 
   const hud = makeHud();
   S.hud = hud;
@@ -7814,7 +8049,7 @@ function start(opts = {}) {
   const bark = makeHeroVoice(game, hud, S.hero, () => S.gameOver, speech);
   S.bark = bark;
   hud.picker(() => S.heroId, (id) => {
-    S.heroId = id;
+    S.setHero(id);
     try { localStorage.setItem('b9.hero', id); } catch (e) { /* storage off */ }
     sfx.buy();
     // A word in their own voice, so you hear who you have chosen.
@@ -7851,6 +8086,27 @@ function start(opts = {}) {
   setTimeout(trickle, 1200);
   const P = makePlayer(game, S, hud, sfx, voice);
   S.player = P;
+  /* The chosen character, on the arms. Applied here rather than at the
+     picker, because the saved choice from last night never goes through the
+     picker -- and the arms do not exist until makePlayer has built them. */
+  applyHeroLook(game, P, S.hero());
+  /* One way to change character, so the mouse, the pad and the test cannot
+     each remember a different half of what changing character means. */
+  S.setHero = (id) => {
+    if (!HEROES[id]) return;
+    S.heroId = id;
+    applyHeroLook(game, P, S.hero());
+  };
+  /* And one way to flip a setting, for the same reason. Flipping the value
+     is the small half of it; saving it and telling whatever the setting
+     actually controls is the half that gets forgotten in the second place
+     that flips it. */
+  S.setToggle = (k, on) => {
+    if (!TOGGLES[k]) return;
+    S.toggles[k] = !!on;
+    if (k === 'spokenWords') setSpokenWords(S.toggles[k]);
+    saveToggles(S.toggles);
+  };
   hud.ammo(P);
   hud.points(S.points);
 
@@ -7884,7 +8140,7 @@ function start(opts = {}) {
         const n = HERO_ORDER.length;
         let k = HERO_ORDER.indexOf(S.heroId);
         k = (k + (pd.buttons.rb ? 1 : n - 1) + n) % n;
-        S.heroId = HERO_ORDER[k];
+        S.setHero(HERO_ORDER[k]);
         try { localStorage.setItem('b9.hero', S.heroId); } catch (e) { /* storage off */ }
         hud.picker(() => S.heroId, () => {});
         sfx.buy();
@@ -8128,8 +8384,7 @@ function start(opts = {}) {
             hud.banner(GRAPHICS[S.settings.current].name, '#8ce8a0');
           } else {
             const k = TOGGLE_ORDER[S.settings.index - ng];
-            S.toggles[k] = !S.toggles[k];
-            saveToggles(S.toggles);
+            S.setToggle(k, !S.toggles[k]);
             hud.banner(TOGGLES[k].name + (S.toggles[k] ? ' ON' : ' OFF'), '#8ce8a0');
           }
           sfx.buy();
@@ -8579,7 +8834,30 @@ function start(opts = {}) {
        belt arriving is the announcement. */
     if (S.belt) {
       const bl = S.belt;
-      const earned = S.powered && P.perks.supersoldier && P.perks.shieldup;
+      /* The three, in the order the plate reads them. Kept as a list so the
+         lamp and the gate cannot drift apart: the gate is `every one lit`. */
+      const cond = [S.powered, !!P.perks.supersoldier, !!P.perks.shieldup];
+      const nLit = cond.reduce((a, c) => a + (c ? 1 : 0), 0);
+      if (nLit !== bl.lit) {
+        for (let k = 0; k < bl.tell.length; k++) {
+          // Lit in order, not in place: three scattered lamps read as
+          // faults, three filling left to right reads as progress.
+          const on = k < nLit;
+          bl.tell[k].material = game.material({ color: on ? 0xffd270 : 0x3a2f12, texture: 'smooth',
+            roughness: 0.28, emissive: 0xffc23a, emissiveStrength: on ? 3.4 : 0 });
+        }
+        // Only when something was gained, and not for the last one -- the
+        // belt's own arrival is louder than any confirmation could be.
+        if (nLit > bl.lit && bl.lit >= 0 && nLit < 3) {
+          sfx.tellLamp();
+          /* Once each, and only on the way up -- losing power puts a lamp
+             out and nobody needs to be told about that twice. */
+          if (nLit === 1 && !bl.said1) { bl.said1 = true; S.voice(LINES.goldFirst); }
+          if (nLit === 2 && !bl.said2) { bl.said2 = true; S.voice(LINES.goldSecond); }
+        }
+        bl.lit = nLit;
+      }
+      const earned = nLit === 3;
       if (earned && !bl.running) {
         bl.running = true;
         // Parts only. The root is the group's invisible pivot cube.
@@ -8778,7 +9056,8 @@ function start(opts = {}) {
        at the hands. The viewmodel shares the camera, so there is no other
        way to magnify it — and the fov is recomputed from the aim every
        frame, which makes setting camera.fov directly useless. */
-    PLAYER, TOGGLES, TOGGLE_ORDER, HEROES, HERO_ORDER, EXIT42, updateExit42, exitStep };
+    PLAYER, TOGGLES, TOGGLE_ORDER, HEROES, HERO_ORDER, EXIT42, updateExit42, exitStep,
+    CAST, sayLine, setSpokenWords, applyHeroLook };
   window.__T_MAKE = { makeParalyzer, makeMP5, makeSawedOff, makeScattergun, makeObliterator,
     makeMauser, makeArcProjector, makeKnife, makeHammer, makeRiotShield, makeBatteringRam };
   const __THooks = window.__T = {
