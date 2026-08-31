@@ -597,7 +597,7 @@ const SWEEP = () => {
         // Through sayLine, so the game's own path is what is exercised --
         // including the words layer, which must not throw where there is
         // no speechSynthesis.
-        row.dur = window.__T_SYS.sayLine(G, LINE, sp.box) || 0;
+        row.dur = window.__T_SYS.sayLine(G, LINE, sp.box, { who: sp.who }) || 0;
       } catch (e) { row.err = e.message; }
       out.sys.voices.push(row);
     }

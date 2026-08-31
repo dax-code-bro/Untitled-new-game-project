@@ -1544,25 +1544,116 @@ function makeSfx(game) {
  * all on the machines that lack it.
  */
 let _sayVoices = null;
-/* The words layer is the one that can grate -- it is a stock system voice
-   and it is not the character. It is a toggle for that reason, and the
-   flag lives here rather than on the run state because sayLine() is called
-   from places that do not have the run state in hand. */
+let _voiceOf = null;          // characterId -> SpeechSynthesisVoice
+/* The words layer can be turned off, and the flag lives here rather than on
+   the run state because sayLine() is called from places that do not have the
+   run state in hand. */
 let _spokenWords = true;
-function setSpokenWords(on) { _spokenWords = !!on; if (!on) { try { speechSynthesis.cancel(); } catch (e) { void e; } } }
-function pickSystemVoice(pitchScale) {
-  if (typeof speechSynthesis === 'undefined') return null;
+function setSpokenWords(on) {
+  _spokenWords = !!on;
+  if (!on) { try { speechSynthesis.cancel(); } catch (e) { void e; } }
+}
+
+/* Real voices, one each.
+ *
+ * The formant synthesiser in the engine gives every character a throat, and
+ * it is honest about what it is: it says the rhythm of a line in a body of a
+ * particular size. But ten characters out of one synthesiser at different
+ * frequencies is ten settings of one voice, and that is what it sounds like.
+ *
+ * Every desktop and phone browser ships a set of genuinely different
+ * recorded voices -- different speakers, different accents, actually
+ * different people. There is no fetching anything from anywhere: they are
+ * already on the machine. What was missing was USING them as voices rather
+ * than as a quiet layer of words under the synth, and handing each character
+ * their own instead of hashing them all into the same one.
+ *
+ * Assignment is stable and distinct: characters are dealt voices in a fixed
+ * order from a pool sorted by how well each voice matches the character's
+ * register, and a voice already dealt is not dealt again while unused ones
+ * remain. So Frank and Chrissy are two different people on every machine
+ * that has two voices, and the same two people every time the game opens.
+ */
+function voicePool() {
+  if (typeof speechSynthesis === 'undefined') return [];
   if (!_sayVoices || !_sayVoices.length) {
     try { _sayVoices = speechSynthesis.getVoices() || []; } catch (e) { _sayVoices = []; }
   }
-  if (!_sayVoices.length) return null;
-  /* Prefer an English voice, and among those pick a stable one per
-     character rather than whatever happens to be first -- the index comes
-     off the character's own pitch so the same character gets the same
-     system voice every time the game is opened. */
+  if (!_sayVoices || !_sayVoices.length) return [];
   const en = _sayVoices.filter((v) => /^en/i.test(v.lang || ''));
-  const pool = en.length ? en : _sayVoices;
-  return pool[Math.floor(Math.abs(pitchScale * 977)) % pool.length] || null;
+  return en.length ? en : _sayVoices;
+}
+
+/* A guess at where a voice sits, from its name. Nothing else is on offer --
+   the API exposes a name, a language and a flag for local or remote, and
+   nothing about the speaker. Names are all most platforms give, so names are
+   what this reads, and it falls back to neutral for anything it does not
+   recognise rather than pretending. */
+const VOICE_FEM = /(female|woman|samantha|karen|moira|tessa|fiona|victoria|allison|ava|susan|zira|hazel|serena|kate|amelie|joana|luciana|nicky|sandy|shelley|grandma)/i;
+const VOICE_MASC = /(male|man|daniel|alex|fred|tom|oliver|rishi|aaron|arthur|gordon|david|mark|george|james|reed|eddy|junior|ralph|albert|grandpa)/i;
+function voiceRegister(v) {
+  const n = (v && v.name) || '';
+  if (VOICE_FEM.test(n)) return 1;         // higher
+  if (VOICE_MASC.test(n)) return -1;       // lower
+  return 0;
+}
+
+/* Deal the voices out. Called once, and again if the browser fills in its
+   voice list late -- which Chrome does, so a first line spoken before the
+   list arrives would otherwise fix everybody on nothing. */
+function assignVoices() {
+  /* Read the list fresh. It is cached for the common case, but this is the
+     one call that must never work from a stale copy: it runs when the
+     browser says the voices changed, and a cached list would deal out
+     voices the machine no longer has. */
+  _sayVoices = null;
+  const pool = voicePool();
+  if (!pool.length) { _voiceOf = null; return false; }
+  const people = [];
+  for (const id of HERO_ORDER) if (HEROES[id]) people.push({ id, box: HEROES[id].voiceBox });
+  for (const id of Object.keys(CAST)) people.push({ id, box: CAST[id].voiceBox });
+  /* Lowest voices dealt first, so the deepest character gets first pick of
+     the deepest voice on the machine rather than whatever is left after
+     everybody above them has taken one. */
+  people.sort((a, b) => ((a.box && a.box.pitch) || 130) - ((b.box && b.box.pitch) || 130));
+  const used = new Array(pool.length).fill(0);
+  const out = {};
+  for (const q of people) {
+    const pitch = (q.box && q.box.pitch) || 130;
+    // Under about 120 Hz reads as a low voice, over about 175 as a high one.
+    const want = pitch < 120 ? -1 : pitch > 175 ? 1 : 0;
+    let best = null, bestScore = -1e9;
+    for (let i = 0; i < pool.length; i++) {
+      const v = pool[i];
+      let score = -Math.abs(voiceRegister(v) - want) * 10;
+      /* Least-used first, and by a wide margin. A machine with four voices
+         and fourteen characters cannot give everybody their own -- but it
+         can give three or four people each voice instead of handing the
+         same one to all fourteen, which is what a plain "unused" bonus does
+         the moment the unused ones run out. The pitch and rate on top of a
+         shared voice then keep those three apart. */
+      score -= used[i] * 100;
+      // Local voices are recorded; remote ones need the network and may not
+      // arrive at all.
+      if (v.localService) score += 3;
+      if (score > bestScore) { bestScore = score; best = i; }
+    }
+    if (best != null) { used[best]++; out[q.id] = pool[best]; }
+  }
+  _voiceOf = out;
+  return true;
+}
+
+function systemVoiceFor(who) {
+  if (typeof speechSynthesis === 'undefined') return null;
+  // Chrome populates the list asynchronously, so a first line spoken before
+  // it lands must not fix everybody on nothing: keep trying until there is
+  // something to deal.
+  if (!_voiceOf || !Object.keys(_voiceOf).length) assignVoices();
+  return (_voiceOf && _voiceOf[who]) || null;
+}
+if (typeof speechSynthesis !== 'undefined') {
+  try { speechSynthesis.onvoiceschanged = () => { _sayVoices = null; assignVoices(); }; } catch (e) { void e; }
 }
 
 /* How long a line will be on screen: as long as it takes to say, with a
@@ -1574,21 +1665,48 @@ function lineLength(game, text, V) {
   return Math.max(1.6, Math.max(spoken + 0.35, text.length * 0.042));
 }
 
+/* Say it.
+ *
+ * The real voice leads. Where the machine has one, it is the character
+ * speaking -- at full volume, with that character's own voice, pitch and
+ * rate -- and the engine's synthesiser drops to a quiet breath underneath
+ * for body. Where the machine has none, the synthesiser is the voice and
+ * carries the line on its own. Either way the subtitle is there.
+ *
+ * This was the wrong way round: the synth ran at full and the words were
+ * mixed in underneath at 0.62, so ten characters came out as one instrument
+ * at ten frequencies with a stock voice murmuring behind it.
+ *
+ * `who` names the character, so the voice dealt to them is the voice they
+ * get. Falling back to the pitch means two characters with the same pitch
+ * would share, which is the thing being fixed.
+ */
 function sayLine(game, text, V, opts = {}) {
+  const say = (V && V.say) || null;
+  const who = opts.who || (V && V.id) || null;
+  let real = null;
+  if (say && _spokenWords && typeof speechSynthesis !== 'undefined' && !opts.noWords) {
+    real = systemVoiceFor(who);
+  }
+  /* Under a real voice the synth is body, not speech -- quiet, and without
+     the fricatives and plosives, which would fight the consonants of a
+     voice actually saying them. */
   const box = Object.assign({}, V || {}, opts.box || {});
+  if (real) box.volume = (box.volume != null ? box.volume : 1) * 0.22;
   let dur = 0;
   try { dur = game.audio.speak(text, box) || 0; } catch (e) { void e; }
-  const say = (V && V.say) || null;
-  if (say && _spokenWords && typeof speechSynthesis !== 'undefined' && !opts.noWords) {
+
+  if (real) {
     try {
       const u = new SpeechSynthesisUtterance(String(text));
-      u.pitch = Math.max(0, Math.min(2, say.pitch || 1));
-      u.rate = Math.max(0.1, Math.min(2, say.rate || 1));
-      // Under the synthesised voice, not over it: it is the words, and the
-      // character is the thing on top.
-      u.volume = opts.wordVolume != null ? opts.wordVolume : 0.62;
-      const sv = pickSystemVoice(say.pitch || 1);
-      if (sv) u.voice = sv;
+      /* The voice is the person; pitch and rate are how that person is
+         feeling. Kept near 1 so a real voice is not warped back into
+         sounding like a synthesiser -- the whole point of using it is that
+         it is somebody rather than a setting. */
+      u.pitch = Math.max(0.55, Math.min(1.6, 1 + ((say.pitch || 1) - 1) * 0.45));
+      u.rate = Math.max(0.6, Math.min(1.5, 1 + ((say.rate || 1) - 1) * 0.7));
+      u.volume = opts.wordVolume != null ? opts.wordVolume : 1;
+      u.voice = real;
       speechSynthesis.cancel();
       speechSynthesis.speak(u);
     } catch (e) { void e; }
@@ -1643,7 +1761,7 @@ function makeHeroVoice(game, hud, getHero, isOver, floor) {
     const text = bags[key].splice(idx, 1)[0];
     // Out loud, in this character's own voice.
     const dur = lineLength(game, text, hero.voiceBox);
-    const spoken = sayLine(game, text, hero.voiceBox);
+    const spoken = sayLine(game, text, hero.voiceBox, { who: hero.id });
     /* Quiet until the line has finished, and then some.
      *
      * This was `dur * 0.62`, which is shorter than the line's own subtitle
@@ -1700,7 +1818,7 @@ function makeVoice(game, hud, isOver, floor) {
       const dur = lineLength(game, text, c.voiceBox);
       setTimeout(() => {
         if (isOver() && !priority) return;
-        const spoken = sayLine(game, text, c.voiceBox);
+        const spoken = sayLine(game, text, c.voiceBox, { who });
         hud.subtitle(c, text, dur);
         /* Blips are the fallback, not the voice. If the synthesiser spoke
            -- audio enabled, context alive -- they would only muddy it. */
@@ -9181,7 +9299,7 @@ function start(opts = {}) {
        way to magnify it — and the fov is recomputed from the aim every
        frame, which makes setting camera.fov directly useless. */
     PLAYER, TOGGLES, TOGGLE_ORDER, HEROES, HERO_ORDER, EXIT42, updateExit42, exitStep,
-    CAST, sayLine, setSpokenWords, applyHeroLook };
+    CAST, sayLine, setSpokenWords, applyHeroLook, assignVoices, systemVoiceFor, voicePool };
   window.__T_MAKE = { makeParalyzer, makeMP5, makeSawedOff, makeScattergun, makeObliterator,
     makeMauser, makeArcProjector, makeKnife, makeHammer, makeRiotShield, makeBatteringRam };
   const __THooks = window.__T = {
