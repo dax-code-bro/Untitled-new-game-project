@@ -488,6 +488,306 @@ const PERKS = {
   },
 };
 
+/* ---------------- writing ----------------
+
+   A five by seven pixel alphabet, so a sign in this game can actually say
+   something. Every label in the bunker until now was either a coloured
+   panel or nothing at all -- "a machine with writing on it" is not a
+   texture job when there are no textures with words in them, it is a font.
+
+   Each glyph is seven rows of five bits, low bit on the left. Rendered as
+   small boxes, which at a centimetre a pixel is a stencilled sign from
+   across a room and a legible one from in front of it. */
+const FONT57 = {
+  A: [0x0E, 0x11, 0x11, 0x1F, 0x11, 0x11, 0x11], B: [0x0F, 0x11, 0x11, 0x0F, 0x11, 0x11, 0x0F],
+  C: [0x0E, 0x11, 0x01, 0x01, 0x01, 0x11, 0x0E], D: [0x07, 0x09, 0x11, 0x11, 0x11, 0x09, 0x07],
+  E: [0x1F, 0x01, 0x01, 0x0F, 0x01, 0x01, 0x1F], F: [0x1F, 0x01, 0x01, 0x0F, 0x01, 0x01, 0x01],
+  G: [0x0E, 0x11, 0x01, 0x1D, 0x11, 0x11, 0x1E], H: [0x11, 0x11, 0x11, 0x1F, 0x11, 0x11, 0x11],
+  I: [0x0E, 0x04, 0x04, 0x04, 0x04, 0x04, 0x0E], J: [0x1C, 0x08, 0x08, 0x08, 0x08, 0x09, 0x06],
+  K: [0x11, 0x09, 0x05, 0x03, 0x05, 0x09, 0x11], L: [0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x1F],
+  M: [0x11, 0x1B, 0x15, 0x15, 0x11, 0x11, 0x11], N: [0x11, 0x13, 0x15, 0x19, 0x11, 0x11, 0x11],
+  O: [0x0E, 0x11, 0x11, 0x11, 0x11, 0x11, 0x0E], P: [0x0F, 0x11, 0x11, 0x0F, 0x01, 0x01, 0x01],
+  Q: [0x0E, 0x11, 0x11, 0x11, 0x15, 0x09, 0x16], R: [0x0F, 0x11, 0x11, 0x0F, 0x05, 0x09, 0x11],
+  S: [0x1E, 0x01, 0x01, 0x0E, 0x10, 0x10, 0x0F], T: [0x1F, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04],
+  U: [0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x0E], V: [0x11, 0x11, 0x11, 0x11, 0x11, 0x0A, 0x04],
+  W: [0x11, 0x11, 0x11, 0x15, 0x15, 0x15, 0x0A], X: [0x11, 0x11, 0x0A, 0x04, 0x0A, 0x11, 0x11],
+  Y: [0x11, 0x11, 0x0A, 0x04, 0x04, 0x04, 0x04], Z: [0x1F, 0x10, 0x08, 0x04, 0x02, 0x01, 0x1F],
+  0: [0x0E, 0x11, 0x19, 0x15, 0x13, 0x11, 0x0E], 1: [0x04, 0x06, 0x04, 0x04, 0x04, 0x04, 0x0E],
+  2: [0x0E, 0x11, 0x10, 0x08, 0x04, 0x02, 0x1F], 3: [0x1F, 0x08, 0x04, 0x08, 0x10, 0x11, 0x0E],
+  4: [0x08, 0x0C, 0x0A, 0x09, 0x1F, 0x08, 0x08], 5: [0x1F, 0x01, 0x0F, 0x10, 0x10, 0x11, 0x0E],
+  6: [0x0C, 0x02, 0x01, 0x0F, 0x11, 0x11, 0x0E], 7: [0x1F, 0x10, 0x08, 0x04, 0x02, 0x02, 0x02],
+  8: [0x0E, 0x11, 0x11, 0x0E, 0x11, 0x11, 0x0E], 9: [0x0E, 0x11, 0x11, 0x1E, 0x10, 0x08, 0x06],
+  ' ': [0, 0, 0, 0, 0, 0, 0], '-': [0, 0, 0, 0x1F, 0, 0, 0], '.': [0, 0, 0, 0, 0, 0x06, 0x06],
+};
+
+/* Write a word onto a wall, in boxes.
+ *
+ * `at` is the centre of the line; `right` and `up` are the two axes it runs
+ * along, which is what lets the same call letter a machine's front, the
+ * side of a crate or the lid of a box without any of them needing to be
+ * axis-aligned. Returns the actors so a sign can be lit, hidden or thrown. */
+function writeText(game, text, at, right, up, opts = {}) {
+  const px = opts.px || 0.012;                 // one pixel
+  const gap = opts.gap || 1;                   // pixels between letters
+  const mat = opts.material || { color: 0xf0e6d0, texture: 'smooth', roughness: 0.55, metalness: 0 };
+  const str = String(text).toUpperCase();
+  const w = 5, h = 7;
+  const advance = w + gap;
+  const total = str.length * advance - gap;
+  const out = [];
+  const R = right, U = up;
+  for (let i = 0; i < str.length; i++) {
+    const rows = FONT57[str[i]];
+    if (!rows) continue;
+    const x0 = (i * advance - total / 2) * px;
+    for (let r = 0; r < h; r++) {
+      const bits = rows[r];
+      if (!bits) continue;
+      /* Runs of lit pixels become ONE box rather than five. A four letter
+         word is about a hundred pixels and a hundred actors for a sign is
+         a hundred draw calls nobody needs. */
+      let c = 0;
+      while (c < w) {
+        if (!(bits & (1 << c))) { c++; continue; }
+        let n = 0;
+        while (c + n < w && (bits & (1 << (c + n)))) n++;
+        const cx = x0 + (c + n / 2 - w / 2 + 0.5) * px;
+        const cy = ((h - 1) / 2 - r) * px;
+        const a = game.box({
+          at: [at[0] + R[0] * cx + U[0] * cy, at[1] + R[1] * cx + U[1] * cy, at[2] + R[2] * cx + U[2] * cy],
+          size: [Math.max(px * n, px * 0.9), px, px * (opts.depth || 0.5)],
+          material: mat, physics: false,
+        });
+        // Boxes are axis-aligned; turn each one onto the sign's own plane.
+        if (opts.rotation) a.setRotation(opts.rotation);
+        out.push(a);
+        c += n;
+      }
+    }
+  }
+  return out;
+}
+
+/* ---------------- the perk machines ----------------
+
+   Each perk was a steel box with a coloured square on the front, and the
+   four of them were the same box. They are machines now, and each one is
+   its own machine: a cabinet with a lit header carrying the perk's name in
+   stencilled letters, a glass front with its own bottles standing behind
+   it, a dispensing slot with a flap, a coin plate, a vent, and feet.
+
+   Every one is built from the perk's own colour, so the light it throws on
+   the floor tells you which one you are walking toward before you can read
+   it. */
+function buildPerkMachine(game, S, id, def, at) {
+  const c = def.color;
+  const steel = { color: 0x4a5058, texture: 'metal', roughness: 0.46, metalness: 0.7 };
+  const shell = { color: 0x2c3138, texture: 'metal', roughness: 0.52, metalness: 0.55 };
+  const dark = { color: 0x14171b, texture: 'metal', roughness: 0.7, metalness: 0.3 };
+  const lit = { color: 0x0a0a0c, texture: 'smooth', roughness: 0.25, metalness: 0,
+    emissive: c, emissiveStrength: 2.4 };
+  const glass = { color: 0x9fb4c4, texture: 'smooth', roughness: 0.06, metalness: 0,
+    opacity: 0.24, transparent: true };
+  const X = at[0], Y = at[1], Z = at[2];
+  const parts = [];
+  const box = (pos, size, m, phys) => {
+    const a = game.box({ at: pos, size, material: m, static: !!phys, physics: phys !== false });
+    if (phys === false) parts.push(a);
+    return a;
+  };
+  // Cabinet: the solid part, and the only part with collision on it.
+  const body = box([X, Y + 0.80, Z], [0.74, 1.60, 0.62], shell, true);
+  // Shoulders and a sloped top, so it is not a fridge.
+  box([X, Y + 1.62, Z], [0.80, 0.06, 0.68], steel, false);
+  box([X, Y + 1.70, Z - 0.06], [0.80, 0.12, 0.50], steel, false);
+  // Header sign, lit, with the name across it.
+  box([X, Y + 1.44, Z + 0.33], [0.70, 0.22, 0.03], lit, false);
+  for (const a of writeText(game, def.name.split(' ')[0], [X, Y + 1.44, Z + 0.355],
+    [1, 0, 0], [0, 1, 0], { px: 0.0135, material: { color: 0x07080a, texture: 'smooth', roughness: 0.8 } })) parts.push(a);
+  if (def.name.split(' ')[1]) {
+    box([X, Y + 1.22, Z + 0.33], [0.70, 0.18, 0.03], lit, false);
+    for (const a of writeText(game, def.name.split(' ')[1], [X, Y + 1.22, Z + 0.355],
+      [1, 0, 0], [0, 1, 0], { px: 0.0115, material: { color: 0x07080a, texture: 'smooth', roughness: 0.8 } })) parts.push(a);
+  }
+  // The window, its frame, and what is behind it.
+  box([X, Y + 0.86, Z + 0.315], [0.56, 0.62, 0.02], glass, false);
+  for (const sx of [-1, 1]) box([X + sx * 0.30, Y + 0.86, Z + 0.315], [0.06, 0.68, 0.05], steel, false);
+  box([X, Y + 1.19, Z + 0.315], [0.66, 0.05, 0.05], steel, false);
+  box([X, Y + 0.53, Z + 0.315], [0.66, 0.05, 0.05], steel, false);
+  // Two shelves of bottles standing in the dark behind the glass.
+  for (let r = 0; r < 2; r++) {
+    box([X, Y + 0.62 + r * 0.30, Z + 0.16], [0.54, 0.02, 0.26], dark, false);
+    for (let k = -2; k <= 2; k++) {
+      const bt = buildPerkBottle(game, def, [X + k * 0.105, Y + 0.70 + r * 0.30, Z + 0.16], 0.72);
+      for (const q of bt.parts) parts.push(q);
+    }
+  }
+  // Dispensing slot, with a flap that swings when one comes out.
+  box([X, Y + 0.26, Z + 0.315], [0.34, 0.03, 0.05], steel, false);
+  const flap = game.box({ at: [X, Y + 0.20, Z + 0.325], size: [0.32, 0.13, 0.015],
+    material: dark, physics: false });
+  parts.push(flap);
+  box([X, Y + 0.135, Z + 0.20], [0.30, 0.02, 0.24], dark, false);
+  // Coin plate, a slot in it, and a vent down the side.
+  box([X + 0.26, Y + 0.42, Z + 0.315], [0.16, 0.20, 0.02], steel, false);
+  box([X + 0.26, Y + 0.46, Z + 0.328], [0.015, 0.06, 0.01], dark, false);
+  for (let k = 0; k < 6; k++) box([X - 0.30, Y + 0.30 + k * 0.035, Z + 0.20], [0.02, 0.014, 0.30], dark, false);
+  // Feet, so it stands on the floor rather than growing out of it.
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    box([X + sx * 0.30, Y + 0.025, Z + sz * 0.24], [0.09, 0.05, 0.09], dark, false);
+  }
+  // And the light it throws, which is how you know which one it is from
+  // across a dark room.
+  const glow = game.box({ at: [X, Y + 0.86, Z + 0.322], size: [0.50, 0.56, 0.01],
+    material: { color: 0x0a0a0c, texture: 'smooth', roughness: 0.3, emissive: c, emissiveStrength: 0.9 },
+    physics: false });
+  parts.push(glow);
+  const light = game.light({ at: [X, Y + 1.0, Z + 0.7], color: c, intensity: 7, radius: 3.4 });
+  return { id, def, at: [X, Y + 1.0, Z + 0.55], glow, body, parts, flap, light,
+    face: [X, Y + 0.30, Z + 0.42] };
+}
+
+/* Buying one, which takes as long as drinking one.
+ *
+ * Five seconds, and every part of it is on screen: the machine kicks the
+ * bottle out of its slot fast enough that you have to catch it, the hand
+ * takes it out of the air, the thumb goes under the cap and flicks it off,
+ * it goes up, and the empty is thrown away. The perk lands when the bottle
+ * is empty rather than when the money leaves -- which is also five seconds
+ * in a room that does not stop, and that is the point.
+ *
+ * The bottle is a real model in the hand, not a sprite: the same one that
+ * was standing behind the glass a moment ago. */
+function startDrink(game, S, P, hud, sfx, st) {
+  if (S.drink) return;
+  const at = st.face;
+  const b = buildPerkBottle(game, st.def, [at[0], at[1], at[2]], 1);
+  const holder = game.box({ at: [at[0], at[1], at[2]], size: 0.01, physics: false, visible: false });
+  for (const q of b.parts) { q.parent = holder; }
+  // Re-centre the parts on the holder now they are parented to it.
+  let k = 0;
+  const ys = [-0.055, 0.000, 0.000, 0.062, 0.086, 0.101, 0.005];
+  for (const q of b.parts) { q.setPosition([0, ys[k] || 0, 0]); k++; }
+  const cap = b.parts[5];
+  if (S.perkFlap) void S.perkFlap;
+  sfx.perkPop ? sfx.perkPop() : sfx.buy();
+  S.drink = { st, holder, parts: b.parts, cap, t: 0, dur: 5.0, done: false, flap: st.flap,
+    from: at.slice(), thrown: false };
+}
+
+/* Run it. Five beats, and the hand is where the bottle is for four of them. */
+function updateDrink(game, S, P, hud, sfx, dt) {
+  const D = S.drink;
+  if (!D) return;
+  D.t += dt;
+  const f = Math.min(1, D.t / D.dur);
+  const cam = game.camera;
+  // The hand's position, in front of the eye and a little to the right.
+  const eye = cam.position;
+  const fwd = _vTmp1.copy(cam.target).sub(eye).normalize();
+  // Right and up from the view direction. These little vector helpers carry
+  // cross(), not crossVectors(), so the order is this-cross-argument.
+  const right = _vTmp2.set(fwd.x, fwd.y, fwd.z).cross({ x: 0, y: 1, z: 0 }).normalize();
+  const up = { x: right.y * fwd.z - right.z * fwd.y,
+    y: right.z * fwd.x - right.x * fwd.z,
+    z: right.x * fwd.y - right.y * fwd.x };
+  const hand = (out2, into2, rise) => [
+    eye.x + fwd.x * out2 + right.x * into2 + up.x * rise,
+    eye.y + fwd.y * out2 + right.y * into2 + up.y * rise,
+    eye.z + fwd.z * out2 + right.z * into2 + up.z * rise,
+  ];
+  if (f < 0.16) {
+    // Out of the slot, fast, on an arc toward the hand.
+    const u = f / 0.16;
+    const to = hand(0.34, 0.13, -0.18);
+    const p = [
+      D.from[0] + (to[0] - D.from[0]) * u,
+      D.from[1] + (to[1] - D.from[1]) * u + Math.sin(u * Math.PI) * 0.35,
+      D.from[2] + (to[2] - D.from[2]) * u,
+    ];
+    D.holder.setPosition(p);
+    D.holder.setRotation([u * 520, u * 300, 0]);
+    if (D.flap) D.flap.setRotation([Math.sin(u * Math.PI) * 62, 0, 0]);
+  } else if (f < 0.30) {
+    // Caught, and turned upright.
+    const u = (f - 0.16) / 0.14;
+    D.holder.setPosition(hand(0.34, 0.13, -0.18 + u * 0.04));
+    D.holder.setRotation([(1 - u) * 40, 0, (1 - u) * -30]);
+    if (D.flap) D.flap.setRotation([0, 0, 0]);
+  } else if (f < 0.40) {
+    // The thumb goes under the cap and flicks it off.
+    if (!D.popped) {
+      D.popped = true;
+      sfx.perk();
+      if (D.cap) {
+        D.cap.parent = null;
+        const c = D.cap.position;
+        const fly = game.cylinder({ at: [c.x, c.y, c.z], radius: 0.017, height: 0.012,
+          material: { color: 0xb9a15c, texture: 'metal', roughness: 0.35, metalness: 0.9 },
+          lifetime: 5, mass: 0.008, velocity: [right.x * 1.4 + fwd.x, 1.6, right.z * 1.4 + fwd.z],
+          bounce: 0.4, friction: 0.6 });
+        if (fly.body) fly.body.angularVelocity.set(9, 5, 7);
+        D.cap.visible = false;
+      }
+    }
+    D.holder.setPosition(hand(0.32, 0.12, -0.14));
+  } else if (f < 0.82) {
+    /* Up and back. Tipped further the emptier it gets, which is what a
+       bottle being drunk actually does. */
+    const u = (f - 0.40) / 0.42;
+    D.holder.setPosition(hand(0.26, 0.09, -0.06 + u * 0.05));
+    D.holder.setRotation([-20 - u * 78, 0, -8]);
+    if (!D.gulp || D.t - D.gulp > 0.42) { D.gulp = D.t; if (sfx.gulp) sfx.gulp(); }
+  } else if (!D.thrown) {
+    // Thrown away, and it is a real bottle that lands and rolls.
+    D.thrown = true;
+    const p = D.holder.position;
+    for (const q of D.parts) { if (q !== D.cap) q.destroy(); }
+    const empty = game.cylinder({ at: [p.x, p.y, p.z], radius: 0.033, height: 0.104,
+      material: { color: 0x2a3a30, texture: 'smooth', roughness: 0.10, opacity: 0.55, transparent: true },
+      lifetime: 12, mass: 0.22, bounce: 0.25, friction: 0.7,
+      velocity: [fwd.x * 3.4 + right.x * 1.2, 1.4, fwd.z * 3.4 + right.z * 1.2] });
+    if (empty.body) empty.body.angularVelocity.set(7, 3, 11);
+    D.holder.destroy();
+    // And NOW you have the perk.
+    P.perks[D.st.id] = true;
+    hud.banner(D.st.def.name, '#' + D.st.def.color.toString(16).padStart(6, '0'));
+    hud.perks(P.perks);
+    if (D.st.id === 'supersoldier') { P.maxHp = 300; P.hp = 300; hud.damage(1); }
+    if (S.bark) S.bark('perk', true);
+  }
+  if (f >= 1) S.drink = null;
+}
+
+/* One bottle. Not a blob: a base, a body with a waist, a shoulder, a neck,
+   a crimped cap and a label band in the perk's own colour. */
+function buildPerkBottle(game, def, at, scale = 1) {
+  const s = scale;
+  const glassM = { color: 0x2a3a30, texture: 'smooth', roughness: 0.10, metalness: 0,
+    opacity: 0.55, transparent: true };
+  const juice = { color: 0x101014, texture: 'smooth', roughness: 0.2, metalness: 0,
+    emissive: def.color, emissiveStrength: 1.5 };
+  const capM = { color: 0xb9a15c, texture: 'metal', roughness: 0.35, metalness: 0.9 };
+  const parts = [];
+  const cyl = (y, r, h, m) => {
+    const a = game.cylinder({ at: [at[0], at[1] + y * s, at[2]], radius: r * s, height: h * s,
+      material: m, physics: false });
+    parts.push(a); return a;
+  };
+  cyl(-0.055, 0.031, 0.012, glassM);          // base
+  cyl(0.000, 0.030, 0.100, juice);            // what is in it
+  cyl(0.000, 0.033, 0.104, glassM);           // the glass round it
+  cyl(0.062, 0.026, 0.028, glassM);           // shoulder
+  cyl(0.086, 0.014, 0.026, glassM);           // neck
+  cyl(0.101, 0.017, 0.012, capM);             // crimped cap
+  // The label: a band round the middle in the perk's colour.
+  const band = game.cylinder({ at: [at[0], at[1] + 0.005 * s, at[2]], radius: 0.0345 * s,
+    height: 0.042 * s, material: { color: def.color, texture: 'fabric', roughness: 0.8 },
+    physics: false });
+  parts.push(band);
+  return { parts, root: parts[1] };
+}
+
 const SHIELD = { duration: 5.0, cooldown: 22 };
 const SLIDE = { speed: 11.5, duration: 0.62, cooldown: 1.1, height: 0.9 };
 
@@ -1403,6 +1703,22 @@ function makeSfx(game) {
       setTimeout(() => { t(880, 0.16, 'sine', 0.05); t(1320, 0.12, 'sine', 0.025); }, 60);
     },
     powerup() { for (let i = 0; i < 4; i++) setTimeout(() => t(660 * Math.pow(1.25, i), 0.09, 'triangle', 0.1), i * 70); },
+    /* A vending machine letting go of a bottle: a solenoid clack, the
+       bottle hitting the flap, and the flap swinging back. */
+    perkPop() {
+      A.impact(0.32);
+      t(96, 0.05, 'square', 0.09);
+      setTimeout(() => { A.impact(0.5); t(1400, 0.05, 'triangle', 0.05); }, 110);
+      setTimeout(() => t(210, 0.09, 'sine', 0.04), 190);
+    },
+    // A mouthful going down. Pitch falls as the bottle empties.
+    gulp() {
+      const f = 150 + Math.random() * 40;
+      t(f, 0.09, 'sine', 0.07);
+      setTimeout(() => t(f * 0.72, 0.07, 'sine', 0.05), 55);
+    },
+    // Glass on concrete.
+    bottleDrop() { A.impact(0.35); t(2400, 0.05, 'triangle', 0.04); },
     blitz() { A.impact(1); t(60, 0.6, 'sawtooth', 0.18); t(2400, 0.3, 'sawtooth', 0.06); },
     hurt() { t(85, 0.2, 'sawtooth', 0.14); },
     heartbeat() { t(46, 0.11, 'sine', 0.2); setTimeout(() => t(40, 0.09, 'sine', 0.16), 180); },
@@ -3278,16 +3594,7 @@ function buildMap(game, S) {
     ['deflect', [6.1, 0, 5.7]],                // ground floor, front-right
     ['shieldup', [-6.0, 0, -6.1]],             // ground floor, back-left
   ];
-  S.perkStations = PERK_SPOTS.map(([id, at]) => {
-    const def = PERKS[id];
-    const body = game.box({ at: [at[0], at[1] + 0.55, at[2]], size: [0.62, 1.1, 0.5], material: MAT.steel, static: true });
-    game.box({ at: [at[0], at[1] + 1.16, at[2]], size: [0.68, 0.12, 0.56], material: MAT.wallDark, static: true });
-    const glow = game.box({
-      at: [at[0], at[1] + 0.78, at[2] + 0.26], size: [0.34, 0.34, 0.03], physics: false,
-      material: { color: 0x101010, texture: 'smooth', roughness: 0.3, emissive: def.color, emissiveStrength: 1.6 },
-    });
-    return { id, def, at: [at[0], at[1] + 1.0, at[2]], glow, body };
-  });
+  S.perkStations = PERK_SPOTS.map(([id, at]) => buildPerkMachine(game, S, id, PERKS[id], at));
 
   /* The shield bubble, hidden until raised. */
   S.shieldMesh = game.sphere({
@@ -7600,12 +7907,12 @@ function doInteract(game, S, P, hud, sfx, it, dt) {
   }
   if (it.kind === 'perk') {
     S.points -= it.cost;
-    P.perks[it.st.id] = true;
-    sfx.perk();
-    hud.banner(it.st.def.name, '#' + it.st.def.color.toString(16).padStart(6, '0'));
-    hud.perks(P.perks);
-    if (it.st.id === 'supersoldier') { P.maxHp = 300; P.hp = 300; hud.damage(1); }
+    sfx.buy();
     hud.points(S.points);
+    /* The perk lands when the bottle is empty, not when the money leaves.
+       Buying it used to be instantaneous -- a banner and a number -- and a
+       thing you drink should take as long as drinking it. */
+    startDrink(game, S, P, hud, sfx, it.st);
     return;
   }
   if (it.kind === 'buy') {
@@ -9431,6 +9738,7 @@ function start(opts = {}) {
 
     updateMinigun(game, S, P, hud, sfx, dt);
     updateMeteor(game, S, P, hud, sfx, dt);
+    updateDrink(game, S, P, hud, sfx, dt);
 
     updateExit42(game, S, P, hud, sfx, dt);
     // The engines, while it is in the air. One note a beat, so it grows as
