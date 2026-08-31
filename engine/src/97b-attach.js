@@ -173,16 +173,68 @@ function buildSkullSplitter(g, bore) {
   band(g, L - 0.0055, L - 0.0010, R * 0.80, R * 1.02, 20);
 }
 
-function buildLongBarrel(g, bore) {
-  const L = 0.2000;
-  tubeRun(g, [[0, 0.0128], [0.0100, 0.0128], [0.0135, 0.0104], [L - 0.0180, 0.0092],
-              [L - 0.0140, 0.0104], [L - 0.0020, 0.0104]], 22, true, false);
-  crown(g, L, 0.0104, bore, 0.050);
-  band(g, L - 0.036, L - 0.022, 0.0092, 0.0108, 20);
+/* Barrels, and why there is more than one of each.
+ *
+ * There was ONE long barrel and it went on everything -- the same 200 mm
+ * tube with the same profile bolted to a 1911, an MP5 and an MG 42. A long
+ * barrel for a pistol is not a long barrel for a rifle: a pistol gets a
+ * threaded extension a hand's length long with a compensator profile on the
+ * end, a submachine gun gets a slim shrouded tube, and a rifle gets a heavy
+ * fluted bull barrel with a gas block on it. They are different objects
+ * that happen to share a slot.
+ *
+ * `host` says which kind of weapon it is going on. The bore comes from the
+ * host too, so a .50 does not get a 9 mm muzzle. */
+function buildLongBarrel(g, bore, host) {
+  if (host === 'rifle') {
+    /* Heavy, fluted, with a gas block. Long enough to change the gun's
+       silhouette from the side, which is the point of buying one. */
+    const L = 0.3000;
+    tubeRun(g, [[0, 0.0150], [0.0140, 0.0150], [0.0180, 0.0136], [L - 0.0400, 0.0124],
+      [L - 0.0360, 0.0132], [L - 0.0020, 0.0130]], 24, true, false);
+    // Six flutes down the length, which is what a bull barrel is for.
+    for (let k = 0; k < 6; k++) {
+      const a = k * TAU / 6;
+      spin(g, [[0.055, 0.0126], [0.075, 0.0112], [L - 0.075, 0.0112], [L - 0.055, 0.0126]],
+        10, true, Math.sin(a) * 0.0128, Math.cos(a) * 0.0128);
+    }
+    // Gas block, squared off, with a port in the top of it.
+    hardBox(g, 0.0620, 0.0000, 0, 0.0170, 0.0175, 0.0150);
+    hardBox(g, 0.0620, 0.0180, 0, 0.0060, 0.0055, 0.0060);
+    band(g, L - 0.030, L - 0.016, 0.0128, 0.0146, 22);
+    crown(g, L, 0.0130, bore, 0.060);
+    return;
+  }
+  if (host === 'smg') {
+    // Slim, shrouded, with a vented sleeve over the tube.
+    const L = 0.2200;
+    tubeRun(g, [[0, 0.0118], [0.0090, 0.0118], [0.0120, 0.0096], [L - 0.0020, 0.0092]], 22, true, false);
+    for (let k = 0; k < 5; k++) {
+      band(g, 0.040 + k * 0.032, 0.052 + k * 0.032, 0.0094, 0.0122, 18);
+    }
+    crown(g, L, 0.0092, bore, 0.045);
+    return;
+  }
+  /* A pistol: a threaded extension about a hand long, stepped down from the
+     bushing and knurled at the muzzle so it can be turned on by hand. */
+  const L = 0.1150;
+  tubeRun(g, [[0, 0.0128], [0.0100, 0.0128], [0.0135, 0.0104], [L - 0.0220, 0.0100],
+    [L - 0.0180, 0.0116], [L - 0.0020, 0.0116]], 22, true, false);
+  knurl(g, L - 0.0170, L - 0.0040, 0.0117, 20);
+  crown(g, L, 0.0116, bore, 0.050);
+  band(g, 0.0180, 0.0300, 0.0104, 0.0120, 20);
 }
 
-function buildShortBarrel(g, bore) {
-  const L = 0.0480;
+function buildShortBarrel(g, bore, host) {
+  if (host === 'rifle') {
+    // A cut-down rifle barrel keeps its heavier profile and gains a brake.
+    const L = 0.0720;
+    tubeRun(g, [[0, 0.0150], [0.0100, 0.0150], [0.0130, 0.0164], [L - 0.0020, 0.0164]], 22, true, false);
+    for (let k = 0; k < 3; k++) hardBox(g, 0.028 + k * 0.016, 0.0130, 0, 0.0045, 0.0055, 0.0170);
+    crown(g, L, 0.0164, bore, 0.030, 0.0010);
+    return;
+  }
+  const L = host === 'smg' ? 0.0560 : 0.0480;
   tubeRun(g, [[0, 0.0128], [0.0080, 0.0128], [0.0110, 0.0142], [L - 0.0020, 0.0142]], 22, true, false);
   knurl(g, 0.0140, L - 0.0060, 0.0143, 20);
   crown(g, L, 0.0142, bore, 0.030, 0.0010);
@@ -352,15 +404,16 @@ function buildScope7xReticle(g) {
 
 /* ---------------- magazines ---------------- */
 
-function buildFastMag(g) {
+function buildFastMag(g, o) {
+  const wide = (o && o.host) !== 'pistol' ? 1.42 : 1;
   /* A baseplate extension with a pull loop: the part that makes a magazine
      quicker to strip is a handle on the bottom of it, and that is what it
      should look like. */
   sweepPath(g, [
-    ax(0, roundRect(0.0060, 0.0060, 0.0125, 3.2, 18), 0),
-    ax(0.0060, roundRect(0.0125, 0.0125, 0.0140, 3.2, 18), -0.0060),
-    ax(0.0300, roundRect(0.0125, 0.0125, 0.0140, 3.2, 18), -0.0060),
-    ax(0.0360, roundRect(0.0060, 0.0060, 0.0125, 3.2, 18), 0),
+    ax(0, roundRect(0.0060, 0.0060, 0.0125 * wide, 3.2, 18), 0),
+    ax(0.0060, roundRect(0.0125, 0.0125, 0.0140 * wide, 3.2, 18), -0.0060),
+    ax(0.0300, roundRect(0.0125, 0.0125, 0.0140 * wide, 3.2, 18), -0.0060),
+    ax(0.0360, roundRect(0.0060, 0.0060, 0.0125 * wide, 3.2, 18), 0),
   ], true, true);
   // Loop under it.
   const bow = [];
@@ -371,18 +424,54 @@ function buildFastMag(g) {
   guardBow(g, bow, 0.0026, 0.0026, 0.0058);
 }
 
-function buildExtMag(g) {
-  // A longer body below the well, ribbed, with witness holes.
-  const axis = new Vec3(0.20, -1, 0).normalize();
+/* Extended magazines, and why a submachine gun does not wear a pistol's.
+ *
+ * There was one of these and it went on everything: a short single-stack
+ * box hanging below the well, on the 1911 where it belongs and equally on
+ * the MP5, which feeds from a 30-round curved double-stack twice as long
+ * and bent to follow the taper of the cartridge. It is the same slot and it
+ * is not the same object.
+ *
+ * A pistol gets a straight single-stack extension. A submachine gun gets a
+ * long curved double-stack. A rifle gets a short straight double-stack with
+ * a steel floor plate. The rake and the curve are the difference you see
+ * from the side, which is the only angle a magazine is ever seen from. */
+function buildExtMag(g, o) {
+  const host = (o && o.host) || 'pistol';
+  const rake = host === 'smg' ? 0.10 : host === 'rifle' ? 0.06 : 0.20;
+  const axis = new Vec3(rake, -1, 0).normalize();
   const u = new Vec3().crossVectors(AV, axis).normalize();
-  const at = (d, s) => ({
-    o: new Vec3(axis.x * d, axis.y * d, 0), u, v: AV,
-    pts: roundRect(0.0150 * s, 0.0150 * s, 0.0112 * s, 2.9, 20),
-  });
-  sweepPath(g, [at(-0.004, 1.05), at(0.004, 1.0), at(0.056, 1.0), at(0.062, 1.04)], true, true);
-  for (let i = 0; i < 3; i++) {
-    const d = 0.014 + i * 0.016;
-    strut(g, [axis.x * d, axis.y * d, 0.0106], [axis.x * d, axis.y * d, 0.0122], ringOutline(0.0024, 10));
+  // Width across, depth front-to-back, and how far it hangs.
+  const W = host === 'pistol' ? 0.0112 : 0.0165;
+  const D = host === 'pistol' ? 0.0150 : host === 'smg' ? 0.0145 : 0.0170;
+  const LEN = host === 'smg' ? 0.145 : host === 'rifle' ? 0.078 : 0.062;
+  const curve = host === 'smg' ? 0.055 : host === 'rifle' ? 0.012 : 0;
+  const st = [];
+  const N = 7;
+  for (let i = 0; i <= N; i++) {
+    const t = i / N;
+    const d = -0.004 + t * (LEN + 0.004);
+    // The bend, growing with depth, which is what a curved magazine is.
+    const bend = curve * t * t;
+    const sc = i === 0 ? 1.05 : (i === N ? 1.04 : 1.0);
+    st.push({
+      o: new Vec3(axis.x * d + bend, axis.y * d, 0), u, v: AV,
+      pts: roundRect(D * sc, D * sc, W * sc, 2.9, 20),
+    });
+  }
+  sweepPath(g, st, true, true);
+  // Witness holes down the spine, and a floor plate on the double-stacks.
+  const holes = host === 'pistol' ? 3 : 5;
+  for (let i = 0; i < holes; i++) {
+    const t = (i + 1) / (holes + 1);
+    const d = t * LEN, bend = curve * t * t;
+    strut(g, [axis.x * d + bend, axis.y * d, W - 0.0006],
+      [axis.x * d + bend, axis.y * d, W + 0.0010], ringOutline(0.0024, 10));
+  }
+  if (host !== 'pistol') {
+    const d = LEN, bend = curve;
+    strut(g, [axis.x * d + bend, axis.y * d, -W - 0.004],
+      [axis.x * d + bend, axis.y * d, W + 0.004], roundRect(D * 1.06, D * 1.06, 0.0030, 2.6, 16));
   }
 }
 
@@ -424,8 +513,8 @@ const ATT_BUILD = {
   compensator: { body: (g) => buildCompensator(g, 0.0046), mat: 'steel', bound: 0.08 },
   annihilator: { body: (g) => buildAnnihilator(g, 0.0046), mat: 'black', bound: 0.12 },
   skullsplitter: { body: (g) => buildSkullSplitter(g, 0.0046), mat: 'black', bound: 0.16 },
-  longbarrel: { body: (g) => buildLongBarrel(g, 0.0046), mat: 'steel', bound: 0.22 },
-  shortbarrel: { body: (g) => buildShortBarrel(g, 0.0046), mat: 'steel', bound: 0.07 },
+  longbarrel: { perHost: true, body: (g, o) => buildLongBarrel(g, o.bore, o.host), mat: 'steel', bound: 0.32 },
+  shortbarrel: { perHost: true, body: (g, o) => buildShortBarrel(g, o.bore, o.host), mat: 'steel', bound: 0.09 },
   bayonet: { body: buildBayonet, mat: 'bright', bound: 0.20 },
   reddot: { body: buildRedDot, glass: buildRedDotGlass, glassMat: 'glassR', mat: 'black', bound: 0.09 },
   thermal: { body: buildThermal, glass: buildThermalGlass, glassMat: 'glassG', mat: 'poly', bound: 0.14 },
@@ -433,8 +522,8 @@ const ATT_BUILD = {
   rangefinder: { body: buildRangefinder, glass: buildRangefinderGlass, glassMat: 'glassR', mat: 'poly', bound: 0.13 },
   scope7x: { body: buildScope7x, glass: buildScope7xGlass, glassMat: 'lens',
     reticle: buildScope7xReticle, mat: 'black', bound: 0.27 },
-  fastmag: { body: buildFastMag, mat: 'steel', bound: 0.06 },
-  extmag: { body: buildExtMag, mat: 'black', bound: 0.09 },
+  fastmag: { perHost: true, body: (g, o) => buildFastMag(g, o), mat: 'steel', bound: 0.06 },
+  extmag: { perHost: true, body: buildExtMag, mat: 'black', bound: 0.09 },
   drummag: { body: buildDrumMag, mat: 'black', bound: 0.12 },
 };
 
@@ -443,11 +532,23 @@ const ATT_BUILD = {
 Engine.prototype.gunPart = function (id, opts = {}) {
   const D = ATT_BUILD[id];
   if (!D) return null;
-  const parts = armCache(this, 'att:' + id, () => {
+  /* Which weapon it is going on, and how big that weapon's bore is.
+   *
+   * Every attachment used to be built once and hung on everything, so a
+   * pistol's long barrel was a rifle's long barrel and an MP5 wore a
+   * pistol's magazine. The parts that CARE about the host build a version
+   * for it; the ones that do not -- an optic is an optic -- fall back to a
+   * single shared model and the same cache key they always had. */
+  const host = opts.host || 'pistol';
+  const bore = opts.bore || 0.0046;
+  const varies = !!D.perHost;
+  const key = 'att:' + id + (varies ? ':' + host + ':' + bore.toFixed(4) : '');
+  const build = { host, bore };
+  const parts = armCache(this, key, () => {
     const out = { body: new Geometry() };
-    D.body(out.body);
-    if (D.glass) { out.glass = new Geometry(); D.glass(out.glass); }
-    if (D.reticle) { out.reticle = new Geometry(); D.reticle(out.reticle); }
+    D.body(out.body, build);
+    if (D.glass) { out.glass = new Geometry(); D.glass(out.glass, build); }
+    if (D.reticle) { out.reticle = new Geometry(); D.reticle(out.reticle, build); }
     for (const k of Object.keys(out)) out[k].finalize();
     return out;
   });
@@ -460,6 +561,6 @@ Engine.prototype.gunPart = function (id, opts = {}) {
      gun and inherits its motion -- but the caller can ask for a body, which
      is how a drum magazine dropped during a reload falls on the floor as
      itself rather than as a generic grey brick. */
-  return mountArm(this, 'att:' + id, parts, mats,
+  return mountArm(this, key, parts, mats,
     Object.assign({ physics: false }, opts), D.bound, 0.2, 'body');
 };

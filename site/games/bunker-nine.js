@@ -4095,6 +4095,15 @@ function makePlayer(game, S, hud, sfx, voice) {
  * `clip`, an MG 42 has a `belt` and the Arc Breaker has a `cell` with its
  * own glow. Read off the models rather than assumed -- every name here was
  * taken from the built weapon, not from memory. */
+/* Which family each weapon belongs to, where its muzzle distance alone
+   would get it wrong -- a Mauser is 247 mm long and takes a pistol's parts;
+   the Kill Streak is a rifle whatever else it is. */
+const HOST_CLASS = {
+  m1911: 'pistol', blaze: 'pistol', obliterator: 'pistol', mauser: 'pistol',
+  thompson: 'smg', mp5: 'smg', sawnoff: 'smg', scatter: 'smg', paralyzer: 'smg',
+  remington: 'rifle', killstreak: 'rifle', mg42: 'rifle', arc: 'rifle',
+};
+
 const REPLACES = {
   mag: {
     m1911: ['mag'], blaze: ['mag'], thompson: ['mag'], mp5: ['mag'],
@@ -4134,8 +4143,15 @@ function applyAttachmentLooks(game, P, id) {
        seven-power scope was three cylinders in a row. These are the parts
        the bench exists to show off, so they were the most conspicuous pile
        of boxes left in the game. */
+    /* What KIND of weapon this is, so a part can be built for it.
+     *
+     * A long barrel for a pistol is not a long barrel for a rifle and an
+     * MP5 does not take a 1911's magazine -- they are different objects
+     * sharing a slot. One model per attachment, hung on everything, is what
+     * put a pistol magazine on a submachine gun. */
+    const cls = HOST_CLASS[id] || (base.melee ? 'pistol' : M > 0.60 ? 'rifle' : M > 0.30 ? 'smg' : 'pistol');
     const mount = (partId, pos, rot) => {
-      const grp = game.gunPart(partId);
+      const grp = game.gunPart(partId, { host: cls, bore: (base.bore || 0.0046) });
       if (!grp) return [];
       grp.setPosition(pos);
       if (rot) grp.setRotation(rot);
