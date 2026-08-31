@@ -3030,7 +3030,10 @@ function buildMap(game, S) {
       // to be after you have had time to buy something worth upgrading.
       round: 3 + Math.floor(Math.random() * 7),
       state: 'waiting', fall: 0, armed: false, parts: hidden, veins, glow,
+      shell: hidden.slice(0, 8),   // the rock's own spheres, which break open
     };
+    buildVortex(game, S);
+    buildAlien(game, S);
   }
 
   /* ---------------- mystery box, against the side of the stair ---------- */
@@ -7047,11 +7050,52 @@ function updateMeteor(game, S, P, hud, sfx, dt) {
   const b = 0.72 + Math.sin((S.time || 0) * 1.7) * 0.28;
   m.glow.intensity = (m.armed ? 34 : 18) * b;
 
+  // The rings fall into each other, each faster than the one outside it.
+  const V = S.vortex;
+  if (V && V.open) {
+    V.t += dt;
+    for (const r of V.rings) {
+      r.a.setRotation([r.tilt + Math.sin(V.t * 0.7) * 3, r.spin * V.t * 57.2958, 0]);
+    }
+    V.light.intensity = 14 + Math.sin(V.t * 2.3) * 5;
+    if (Math.random() < 0.25) {
+      game.particles.sparks([V.at[0], V.at[1] + 0.1, V.at[2]],
+        { count: 2, speed: 1.6, color: 0x9a6aff, colorEnd: 0x1a0a3a });
+    }
+  }
+
+  /* The thing in the hole does the work.
+   *
+   * Four beats over the three seconds the upgrade takes: it comes up out of
+   * the vortex, it takes the weapon, it goes back down with it, and it
+   * comes back up holding it. The gun is genuinely off the player for the
+   * whole of it -- that is the cost of the thing, along with the points,
+   * and it only reads as a cost if your hands are actually empty. */
   if (m.busy) {
     m.timer -= dt;
-    // Sparks off the cradle while it works, and a shake on the last beat.
-    if (Math.random() < 0.6) {
-      game.particles.sparks(m.slot, { count: 4, speed: 6, color: 0xffb060, colorEnd: 0x40180a });
+    const A = S.alien;
+    const done = 1 - Math.max(0, Math.min(1, m.timer / 3.0));
+    if (A) {
+      if (!A.visible) { A.visible = true; for (const q of A.parts) q.visible = true; }
+      /* Up, hold, down, up. Rising out of a hole and sinking back into it
+         is one number: how far above the floor it is. */
+      const rise = done < 0.22 ? done / 0.22
+        : done < 0.42 ? 1
+          : done < 0.62 ? 1 - (done - 0.42) / 0.20 * 1.35
+            : done < 0.80 ? -0.35
+              : Math.min(1, -0.35 + (done - 0.80) / 0.20 * 1.35);
+      const y = V ? V.at[1] - 0.42 + rise * 0.95 : 1;
+      A.root.setPosition([V ? V.at[0] : 0, y, V ? V.at[2] : 0]);
+      // Turning slowly on the way up, looking at whoever is standing there.
+      A.root.setRotation([0, Math.sin(done * 5.2) * 26, 0]);
+      if (m.display) {
+        // The weapon rides in its hands, so it goes down and comes back.
+        for (const q of m.display) q.setPosition([0, y + 0.14, 0.11]);
+      }
+    }
+    if (Math.random() < 0.5) {
+      game.particles.sparks([V ? V.at[0] : m.slot[0], (V ? V.at[1] : m.slot[1]) + 0.2, V ? V.at[2] : m.slot[2]],
+        { count: 3, speed: 4, color: 0x9a6aff, colorEnd: 0x1a0a3a });
     }
     if (m.timer <= 0) {
       m.busy = false;
@@ -7059,8 +7103,15 @@ function updateMeteor(game, S, P, hud, sfx, dt) {
       m.pending = null;
       addShake(S, 0.05, 0.5);
       game.audio.impact(0.6);
-      hud.banner('READY', '#ff7a2a');
+      hud.banner('IT IS HOLDING IT OUT TO YOU', '#9a6aff');
     }
+  } else if (S.alien && S.alien.visible && !m.holding) {
+    // Back down the hole once nobody needs it.
+    const A = S.alien;
+    const p = A.root.position;
+    const floor = (S.vortex ? S.vortex.at[1] : 0.6) - 0.9;
+    if (p.y > floor) A.root.setPosition([p.x, p.y - dt * 0.9, p.z]);
+    else { A.visible = false; for (const q of A.parts) q.visible = false; }
   }
 }
 
@@ -7159,6 +7210,96 @@ function updateMinigun(game, S, P, hud, sfx, dt) {
 /* A shot that goes into the rock wakes it up. Checked against the shot's
    own ray rather than against the physics world, because the rock is a
    dozen static spheres and any one of them is a hit. */
+/* What is inside the rock.
+ *
+ * The rock used to "wake up" -- a banner, a shake, and its seams glowing a
+ * bit brighter -- and then work like a machine with a cradle on it. Nothing
+ * ever came out. This cracks it open properly: the shell breaks, and what
+ * is underneath is a hole that is not a hole in anything, with something
+ * living in it.
+ *
+ * The vortex is five rings falling into each other, each turning faster
+ * than the one outside it and each a little darker, over a hole that is
+ * simply black. Nothing about it is a texture -- it is depth done with
+ * geometry, because a flat disc with a swirl painted on it reads as a
+ * sticker on the floor from any angle but straight down. */
+function buildVortex(game, S) {
+  const H = MAP.hole;
+  const at = [H.x, 0.62, H.z];
+  const rings = [];
+  for (let k = 0; k < 5; k++) {
+    const f = k / 4;
+    const r = 1.05 - f * 0.72;
+    const a = game.torus
+      ? game.torus({ at: [at[0], at[1] + f * -0.16, at[2]], radius: r, tube: 0.055 - f * 0.024,
+        material: { color: 0x120a2e, texture: 'smooth', roughness: 0.25, metalness: 0.1,
+          emissive: k % 2 ? 0x6a2fd0 : 0x2fd0c0, emissiveStrength: 2.6 - f * 0.8 },
+        physics: false })
+      : game.cylinder({ at: [at[0], at[1] + f * -0.16, at[2]], radius: r, height: 0.03,
+        material: { color: 0x120a2e, texture: 'smooth', roughness: 0.25, metalness: 0.1,
+          emissive: k % 2 ? 0x6a2fd0 : 0x2fd0c0, emissiveStrength: 2.6 - f * 0.8 },
+        physics: false });
+    a.visible = false;
+    rings.push({ a, spin: (k % 2 ? -1 : 1) * (0.5 + k * 0.55), tilt: f * 6 });
+  }
+  // The hole itself: black, and below the rings so they read as descending
+  // into it rather than as hoops lying on the floor.
+  const maw = game.cylinder({ at: [at[0], at[1] - 0.30, at[2]], radius: 0.42, height: 0.04,
+    material: { color: 0x02020a, texture: 'smooth', roughness: 1, metalness: 0 }, physics: false });
+  maw.visible = false;
+  const light = game.light({ at: [at[0], at[1] + 0.5, at[2]], color: 0x7a4cff, intensity: 0, radius: 6 });
+  S.vortex = { at, rings, maw, light, open: false, t: 0 };
+}
+
+/* The thing that comes out of it.
+ *
+ * Small -- a metre and a bit -- because something that has to reach up out
+ * of a hole in the floor, take a rifle off you and carry it back down is
+ * more unsettling at that size than at three metres. Built rather than
+ * hinted at: a long skull, two black eyes set too far round the sides, a
+ * neck, a narrow chest, and two arms with too many joints in them. */
+function buildAlien(game, S) {
+  const skin = { color: 0x6f7f74, texture: 'skin', roughness: 0.42, metalness: 0, subsurface: 0.2 };
+  const dark = { color: 0x07090c, texture: 'smooth', roughness: 0.12, metalness: 0.1 };
+  const glow = { color: 0x143a34, texture: 'smooth', roughness: 0.3, metalness: 0,
+    emissive: 0x3fe0c0, emissiveStrength: 2.2 };
+  const root = game.box({ at: [0, -5, 0], size: 0.02, physics: false, visible: false });
+  const parts = [];
+  const add = (a, pos, rot) => { a.parent = root; a.setPosition(pos); if (rot) a.setRotation(rot); parts.push(a); return a; };
+  // Chest and the ribs showing through it.
+  add(game.cylinder({ radius: 0.075, height: 0.30, material: skin, physics: false }), [0, 0.30, 0]);
+  add(game.sphere({ radius: 0.098, material: skin, physics: false }), [0, 0.40, 0]);
+  for (let k = 0; k < 3; k++) {
+    add(game.box({ size: [0.14, 0.012, 0.10], material: glow, physics: false }), [0, 0.24 + k * 0.055, 0.055]);
+  }
+  // Neck and skull.
+  add(game.cylinder({ radius: 0.028, height: 0.10, material: skin, physics: false }), [0, 0.50, 0]);
+  const skull = add(game.sphere({ radius: 0.088, material: skin, physics: false }), [0, 0.60, 0]);
+  add(game.sphere({ radius: 0.052, material: skin, physics: false }), [0, 0.585, 0.055]);
+  for (const sz of [-1, 1]) {
+    add(game.sphere({ radius: 0.030, material: dark, physics: false }), [sz * 0.055, 0.605, 0.045]);
+  }
+  // Two arms, three segments each, and long.
+  const arms = [];
+  for (const sz of [-1, 1]) {
+    const seg = [];
+    seg.push(add(game.cylinder({ radius: 0.020, height: 0.20, material: skin, physics: false }),
+      [sz * 0.085, 0.38, 0], [0, 0, sz * 28]));
+    seg.push(add(game.cylinder({ radius: 0.017, height: 0.20, material: skin, physics: false }),
+      [sz * 0.155, 0.24, 0.02], [18, 0, sz * 14]));
+    seg.push(add(game.cylinder({ radius: 0.013, height: 0.14, material: skin, physics: false }),
+      [sz * 0.185, 0.11, 0.06], [34, 0, sz * 6]));
+    // Three long fingers, no thumb.
+    for (let f = 0; f < 3; f++) {
+      seg.push(add(game.cylinder({ radius: 0.006, height: 0.075, material: skin, physics: false }),
+        [sz * 0.19 + (f - 1) * 0.014, 0.035, 0.085], [48, 0, 0]));
+    }
+    arms.push(seg);
+  }
+  for (const q of parts) q.visible = false;
+  S.alien = { root, parts, skull, arms, at: [0, -5, 0], visible: false };
+}
+
 function meteorShot(S, from, dir, hud, sfx) {
   const m = S.meteor;
   if (!m || m.state !== 'down' || m.armed) return false;
@@ -7169,10 +7310,33 @@ function meteorShot(S, from, dir, hud, sfx) {
   const px = from[0] + dir[0] * t, py = from[1] + dir[1] * t, pz = from[2] + dir[2] * t;
   if (Math.hypot(px - c[0], py - c[1], pz - c[2]) > m.radius) return false;
   m.armed = true;
-  addShake(S, 0.09, 1.0);
-  hud.banner('IT IS AWAKE', '#ff7a2a');
-  if (sfx && sfx.powerOn) sfx.powerOn();
+  addShake(S, 0.16, 1.6);
+  hud.banner('IT IS OPEN', '#9a6aff');
+  if (sfx && sfx.crack) sfx.crack();
+  else if (sfx && sfx.powerOn) sfx.powerOn();
+  crackRock(S);
   return true;
+}
+
+/* The shell comes off and the hole underneath opens.
+ *
+ * Called once, when a round goes into the rock. The outer spheres go, the
+ * rings come on, and the light under them starts. Everything that follows
+ * -- the thing that lives in it, taking a gun down and bringing it back --
+ * hangs off this moment, so it has to read as the rock BREAKING rather than
+ * as the rock switching on, which is what a banner and a brighter glow was. */
+function crackRock(S) {
+  const V = S.vortex;
+  if (!V || V.open) return;
+  V.open = true;
+  const m = S.meteor;
+  // The top half of the shell falls away; the base stays as a broken rim.
+  for (let i = 0; i < (m.shell || []).length; i++) {
+    if (i % 2 === 0) m.shell[i].visible = false;
+  }
+  for (const r of V.rings) r.a.visible = true;
+  V.maw.visible = true;
+  V.light.intensity = 14;
 }
 
 /* ---------------- interaction ---------------- */
@@ -7486,12 +7650,49 @@ function doInteract(game, S, P, hud, sfx, it, dt) {
     S.meteor.busy = true;
     S.meteor.timer = 3.0;
     S.meteor.pending = id;
+    /* It takes the gun off you. Actually off you: out of the slot list, so
+       your hands are empty and the round does not stop while they are. That
+       is half the price of an upgrade and it never used to be charged --
+       the weapon stayed in view the whole time it was supposedly in the
+       rock. */
+    S.meteor.tookFrom = P.slots.indexOf(id);
+    if (S.meteor.tookFrom >= 0) {
+      P.slots = P.slots.filter((w) => w !== id);
+      P.slot = Math.max(0, Math.min(P.slot, P.slots.length - 1));
+      P.reloading = 0;
+      hud.ammo(P);
+    }
+    /* And carries it down the hole, as a real model in its hands.
+       Parented to the creature, so the weapon inherits every bit of the
+       rise and the sink rather than being animated alongside it. */
+    try {
+      const made = buildWorldWeapon(game, id);
+      if (made && made.root) {
+        made.root.parent = S.alien ? S.alien.root : null;
+        made.root.setPosition([0, 0.14, 0.11]);
+        made.root.setRotation([0, 0, -18]);
+        S.meteor.display = [made.root];
+        S.meteor.displayRoot = made.root;
+      }
+    } catch (e) { void e; }
     hud.points(S.points);
-    hud.banner('IN THE ROCK', '#ff7a2a');
+    hud.banner('IT HAS TAKEN IT', '#9a6aff');
   } else if (it.kind === 'meteorTake') {
     const id = S.meteor.holding;
     S.meteor.holding = null;
+    if (S.meteor.displayRoot) {
+      try { S.meteor.displayRoot.destroy(); } catch (e) { void e; }
+      S.meteor.displayRoot = null;
+    }
     if (S.meteor.display) { for (const q of S.meteor.display) q.visible = false; }
+    S.meteor.display = null;
+    // Back in your hands, in the slot it came out of.
+    if (S.meteor.tookFrom != null && S.meteor.tookFrom >= 0 && !P.slots.includes(id)) {
+      P.slots.splice(Math.min(S.meteor.tookFrom, P.slots.length), 0, id);
+      P.slot = P.slots.indexOf(id);
+      hud.ammo(P);
+    }
+    S.meteor.tookFrom = null;
     P.upgraded[id] = true;
     applyUpgradeLook(game, P, id);
     const w = WEAPONS[id];

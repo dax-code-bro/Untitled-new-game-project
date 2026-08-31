@@ -451,6 +451,24 @@ class Engine {
     return a;
   }
 
+  /* A ring. Nothing on the Engine made one, so anything wanting a hoop --
+     a portal, a scope mount, a barrel band, a manhole -- was faked with a
+     squashed cylinder, which from the side is a disc. Shapes.torus was
+     already here; it just had no way in. */
+  torus(opts = {}) {
+    const R = opts.radius != null ? opts.radius : 0.5;
+    const t = opts.tube != null ? opts.tube : 0.12;
+    const rings = opts.rings || 14, sectors = opts.sectors || 28;
+    // Built at radius 1 and scaled, so one mesh serves every size with the
+    // same proportions rather than a new upload per ring.
+    const rr = t / R;
+    const key = `torus:${rings}:${sectors}:${rr.toFixed(3)}`;
+    const mesh = this._mesh(key, () => Shapes.torus(1, rr, rings, sectors));
+    const a = this._spawn(opts, mesh, null, R + t);
+    a.scale.set(R, R, R);
+    return a;
+  }
+
   cone(opts = {}) {
     const r = opts.radius != null ? opts.radius : 0.5;
     const h = opts.height != null ? opts.height : 1;
