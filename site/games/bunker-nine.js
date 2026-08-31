@@ -1665,6 +1665,66 @@ function lineLength(game, text, V) {
   return Math.max(1.6, Math.max(spoken + 0.35, text.length * 0.042));
 }
 
+/* Recorded voices, if there are any.
+ *
+ * The browser's own voices are the ones every text-to-speech video on the
+ * internet uses, and they sound like it. The engine's synthesiser is
+ * honest but it is a synthesiser. Neither is a person.
+ *
+ * So: any line can have a real recording. `tools/voice-lines.js` writes out
+ * every line in the game with a stable id derived from the speaker and the
+ * exact words; drop `voice/<id>.mp3` next to the game and it plays instead.
+ * The id is computed the same way here, so there is no lookup table to
+ * drift out of step with the script.
+ *
+ * A manifest is fetched once at boot listing which ids exist, so a missing
+ * recording costs nothing -- no failed request per line, no pause while a
+ * 404 comes back. Anything not in it falls through to the synthesised
+ * voice, which means a half-finished voice pack is a game with some lines
+ * acted and the rest spoken, never a game with silent characters.
+ */
+const VOICE_DIR = 'voice/';
+let _clipHave = null;          // Set of ids that exist, or null until loaded
+const _clipCache = new Map();
+
+function lineId(who, text) {
+  const s = who + '|' + String(text).trim();
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0).toString(36);
+}
+
+function loadVoicePack() {
+  if (_clipHave) return;
+  _clipHave = new Set();
+  if (typeof fetch === 'undefined') return;
+  fetch(VOICE_DIR + 'have.json')
+    .then((r) => (r.ok ? r.json() : null))
+    .then((list) => { if (Array.isArray(list)) _clipHave = new Set(list); })
+    .catch(() => { /* no pack; the synthesised voices carry it */ });
+}
+
+/* Play the recording if there is one. Returns its length in seconds, or 0
+   if there is nothing to play -- which is the caller's signal to speak. */
+function playClip(game, who, text) {
+  if (!_clipHave || !_clipHave.size) return 0;
+  const id = lineId(who, text);
+  if (!_clipHave.has(id)) return 0;
+  try {
+    let a = _clipCache.get(id);
+    if (!a) { a = new Audio(VOICE_DIR + id + '.mp3'); a.preload = 'auto'; _clipCache.set(id, a); }
+    a.currentTime = 0;
+    a.volume = 1;
+    const pr = a.play();
+    if (pr && pr.catch) pr.catch(() => { /* autoplay refused; subtitle stands */ });
+    // duration is NaN until the file has loaded at least its header.
+    return isFinite(a.duration) && a.duration > 0 ? a.duration : 0.001;
+  } catch (e) { return 0; }
+}
+
 /* Say it.
  *
  * The real voice leads. Where the machine has one, it is the character
@@ -1684,6 +1744,10 @@ function lineLength(game, text, V) {
 function sayLine(game, text, V, opts = {}) {
   const say = (V && V.say) || null;
   const who = opts.who || (V && V.id) || null;
+  /* A real recording beats everything and plays alone -- layering a
+     synthesiser under an actor is how you make an actor sound synthetic. */
+  const clip = who ? playClip(game, who, text) : 0;
+  if (clip > 0) return clip > 0.01 ? clip : 0;
   let real = null;
   if (say && _spokenWords && typeof speechSynthesis !== 'undefined' && !opts.noWords) {
     real = systemVoiceFor(who);
@@ -8262,6 +8326,8 @@ function start(opts = {}) {
   };
   S.addPoints = (n) => { const a = Math.round(n * S.mul); S.points += a; return a; };
   setSpokenWords(S.toggles.spokenWords);
+  // Ask once whether there is a voice pack. Nothing waits on the answer.
+  loadVoicePack();
 
   const hud = makeHud();
   S.hud = hud;
@@ -9299,7 +9365,8 @@ function start(opts = {}) {
        way to magnify it — and the fov is recomputed from the aim every
        frame, which makes setting camera.fov directly useless. */
     PLAYER, TOGGLES, TOGGLE_ORDER, HEROES, HERO_ORDER, EXIT42, updateExit42, exitStep,
-    CAST, sayLine, setSpokenWords, applyHeroLook, assignVoices, systemVoiceFor, voicePool };
+    CAST, sayLine, setSpokenWords, applyHeroLook, assignVoices, systemVoiceFor, voicePool,
+    lineId, loadVoicePack };
   window.__T_MAKE = { makeParalyzer, makeMP5, makeSawedOff, makeScattergun, makeObliterator,
     makeMauser, makeArcProjector, makeKnife, makeHammer, makeRiotShield, makeBatteringRam };
   const __THooks = window.__T = {
