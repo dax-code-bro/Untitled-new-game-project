@@ -13,9 +13,10 @@
     "test:engine": "node engine/build.js && node engine/test/browser.test.js",
     "test": "node engine/test/physics.test.js",
     "test:integration": "node engine/build.js && node engine/test/integration.test.js",
-    "test:all": "node engine/test/physics.test.js && node engine/build.js && node engine/test/browser.test.js && node engine/test/map.test.js && node engine/test/sights.test.js && node engine/test/sweep.test.js && node engine/test/integration.test.js",
+    "test:all": "node engine/test/physics.test.js && node engine/build.js && node engine/test/browser.test.js && node engine/test/map.test.js && node engine/test/sights.test.js && node engine/test/sweep.test.js && node engine/test/attach.test.js && node engine/test/integration.test.js",
     "test:map": "node engine/build.js && node engine/test/map.test.js",
     "test:sights": "node engine/build.js && node engine/test/sights.test.js",
-    "test:sweep": "node engine/build.js && node engine/test/sweep.test.js"
+    "test:sweep": "node engine/build.js && node engine/test/sweep.test.js",
+    "test:attach": "node engine/test/attach.test.js"
   }
 }
