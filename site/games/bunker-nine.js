@@ -2966,9 +2966,22 @@ function buildMap(game, S) {
 
   /* ---------------- the blockhouse ---------------- */
 
-  // Floor pad, a step proud of the mud, and an apron round the outside.
+  /* Floor pad, a step proud of the mud, and an apron round the outside.
+   *
+   * The wing's pad runs 1.6 m under the blockhouse's, and until now both
+   * had their top face at exactly y = 0.02. Two outward-facing surfaces on
+   * the same plane, overlapping over 19.8 square metres: the rasteriser has
+   * no way to choose between them, so which one is drawn flips from pixel
+   * to pixel and frame to frame as the camera moves. That is nineteen
+   * square metres of crawling, shimmering floor in the doorway between the
+   * two rooms -- and it throws no error, which is why it survived every
+   * test that looks for exceptions.
+   *
+   * The wing's pad drops two millimetres, top and bottom, so the two share
+   * no plane at all. In the overlap the blockhouse's floor simply wins, and
+   * two millimetres is neither visible nor something you can walk into. */
   slab(M.x0 - W - 1.2, M.x1 + W + 1.2, -0.30, 0.02, M.z0 - W - 1.2, M.z1 + W + 1.2, MAT.floor);
-  slab(SD.x0 - W - 0.8, M.x0, -0.30, 0.02, SD.z0 - W - 0.8, SD.z1 + W + 0.8, MAT.floor);
+  slab(SD.x0 - W - 0.8, M.x0, -0.302, 0.018, SD.z0 - W - 0.8, SD.z1 + W + 0.8, MAT.floor);
 
   // Four walls of the square, with the window holes cut in.
   wallX(M.z0 - W, M.z0, M.x0 - W, M.x1 + W, M.y1, [[-3.6, -2.0], [0.4, 2.0]]);
@@ -3002,9 +3015,14 @@ function buildMap(game, S) {
   {
     const H = MAP.hole, r = H.r;
     const RY = SD.y1 - 0.11;   // overlap the walls, same reason as the deck
-    slab(SD.x0 - W, SD.x1, RY, SD.y1 + 0.3, SD.z0 - W, H.z - r, MAT.wallDark);
-    slab(SD.x0 - W, SD.x1, RY, SD.y1 + 0.3, H.z + r, SD.z1 + W, MAT.wallDark);
-    slab(SD.x0 - W, H.x - r, RY, SD.y1 + 0.3, H.z - r, H.z + r, MAT.wallDark);
+    /* And the same 40 mm lip as the blockhouse deck, for the same reason:
+       a roof ending flush with the outer face of its walls puts the roof's
+       edge and the wall's face on one plane, both pointing outward, and
+       that shimmers along the whole top of the wing as you walk past. */
+    const OH = 0.04;
+    slab(SD.x0 - W - OH, SD.x1, RY, SD.y1 + 0.3, SD.z0 - W - OH, H.z - r, MAT.wallDark);
+    slab(SD.x0 - W - OH, SD.x1, RY, SD.y1 + 0.3, H.z + r, SD.z1 + W + OH, MAT.wallDark);
+    slab(SD.x0 - W - OH, H.x - r, RY, SD.y1 + 0.3, H.z - r, H.z + r, MAT.wallDark);
     slab(H.x + r, SD.x1, RY, SD.y1 + 0.3, H.z - r, H.z + r, MAT.wallDark);
     // The bit that is still there until it is not.
     const patch = slab(H.x - r, H.x + r, RY, SD.y1 + 0.3, H.z - r, H.z + r, MAT.wallDark);
@@ -3052,9 +3070,16 @@ function buildMap(game, S) {
       return a;
     };
 
-    // Treads. These are the collision — everything else here is drawn only.
+    /* Treads. These are the collision -- everything else here is drawn only.
+     *
+     * The last one arrives at exactly R.y1, which is also the top face of
+     * the landing it runs under: two upward faces on one plane over 0.7
+     * square metres, right where the player steps off the stairs and looks
+     * down. Two millimetres of drop settles it in the landing's favour --
+     * and the landing IS the top step, so nothing is lost by the tread
+     * being fractionally under it. */
     for (let k = 0; k < ST.steps; k++) {
-      const y = (k + 1) * RISE;
+      const y = (k + 1) * RISE - (k === ST.steps - 1 ? 0.002 : 0);
       const z1 = ST.zBot - k * RUN;
       slab(ST.x0, ST.x1, y - 0.24, y, z1 - RUN - 0.02, z1, MAT.floor);
       // Riser board closing the front of each step.
@@ -3132,9 +3157,22 @@ function buildMap(game, S) {
   const zClear = ST.zBot - ((R.y0 - HEAD) / RISE) * RUN + BODY_R;
   const SLOT = { x0: ST.x0 - 0.1, x1: M.x1, z0: M.z0 - W, z1: Math.min(-2.0, zClear) };
   {
-    slab(M.x0 - W, M.x1 + W, R.y0, R.y1, SLOT.z1, M.z1 + W, MAT.floor);
-    slab(M.x0 - W, SLOT.x0, R.y0, R.y1, SLOT.z0, SLOT.z1, MAT.floor);
-    slab(SLOT.x1, M.x1 + W, R.y0, R.y1, SLOT.z0, SLOT.z1, MAT.floor);
+    /* The deck overhangs the walls by 40 mm.
+     *
+     * It used to end exactly flush with their outer faces, which put the
+     * edge of the deck and the face of the wall on the same plane, both
+     * pointing outward, over half a square metre on each of the four sides.
+     * Two outward faces on one plane is a fight the rasteriser cannot
+     * settle -- it shimmers along every top edge of the building as you
+     * walk. A real roof has a lip on it anyway; that is what throws the
+     * shadow line that says where a building stops. */
+    const OH = 0.04;
+    slab(M.x0 - W - OH, M.x1 + W + OH, R.y0, R.y1, SLOT.z1, M.z1 + W + OH, MAT.floor);
+    slab(M.x0 - W - OH, SLOT.x0, R.y0, R.y1, SLOT.z0 - OH, SLOT.z1, MAT.floor);
+    /* Started 20 mm inside the wall rather than flush with its inner face:
+       flush put the deck's edge and the wall's face on one plane inside the
+       stairwell, where you look straight at both of them on the way up. */
+    slab(SLOT.x1 - 0.02, M.x1 + W + OH, R.y0, R.y1, SLOT.z0 - OH, SLOT.z1, MAT.floor);
   }
   // Rail round the open side of the slot, so the hole reads as a hole.
   const RT = R.y1 - 0.06, RH = R.y1 + R.rail;

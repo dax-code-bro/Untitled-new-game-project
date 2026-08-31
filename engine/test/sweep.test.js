@@ -601,11 +601,23 @@ const SWEEP = () => {
         for (let ax = 0; ax < 3; ax++) {
           for (const sgn of [-1, 1]) {
             const at = c[ax] + sgn * h[ax];
-            // A millimetre of tolerance: closer than that and they fight.
-            const key = ax + ':' + Math.round(at * 1000);
+            /* Keyed by which WAY the face points as well as where it is.
+             *
+             * Two boxes butted together share a plane and do not fight: each
+             * one's face is buried inside the other's solid and neither is
+             * ever drawn. That is how this whole map is built -- walls
+             * meeting floors meeting parapets -- and counting it flagged a
+             * hundred and sixty pairs of perfectly good joinery.
+             *
+             * Two faces pointing the SAME way on the same plane is the
+             * fault: both are outside surfaces, both get drawn, and the
+             * rasteriser has no way to choose. */
+            const key = ax + ':' + sgn + ':' + Math.round(at * 1000);
             let list = planes.get(key);
             if (!list) { list = []; planes.set(key, list); }
-            list.push({ a, c, h, ax });
+            // `at` is the PLANE, not the box's centre. Reporting the centre
+            // made every one of these take arithmetic to locate.
+            list.push({ a, c, h, ax, at, sgn });
           }
         }
       }
@@ -630,9 +642,11 @@ const SWEEP = () => {
             if (seen.has(id)) continue;
             seen.add(id);
             out.sys.zfight.push({
-              ax: AX[A.ax], at: +A.c[A.ax].toFixed(3), area: +area.toFixed(2),
+              ax: AX[A.ax], at: +A.at.toFixed(3), area: +area.toFixed(2),
               a: A.a.name || 'actor' + A.a.id, b: B.a.name || 'actor' + B.a.id,
-              at2: A.c.map((v2) => +v2.toFixed(1)),
+              sizeA: [A.h[0] * 2, A.h[1] * 2, A.h[2] * 2].map((v2) => +v2.toFixed(2)),
+              sizeB: [B.h[0] * 2, B.h[1] * 2, B.h[2] * 2].map((v2) => +v2.toFixed(2)),
+              atA: A.c.map((v2) => +v2.toFixed(2)), atB: B.c.map((v2) => +v2.toFixed(2)),
             });
           }
         }
@@ -1049,7 +1063,8 @@ function check(name, cond, detail = '') {
   check('no two surfaces are fighting for the same plane',
     !zfErr.length && zf.length === 0,
     zfErr.length ? zfErr[0].err
-      : list(zf, (q) => `${q.a} and ${q.b} share the ${q.ax} = ${q.at} plane over ${q.area} m2, near ${q.at2.join(', ')}`));
+      : list(zf, (q) => `${q.area} m2 on ${q.ax} = ${q.at}: `
+        + `${q.sizeA.join('x')} at ${q.atA.join(',')} and ${q.sizeB.join('x')} at ${q.atB.join(',')}`));
 
   check('nothing has left the world', (sy.lost || []).length === 0,
     list(sy.lost || [], (q) => `${q.name}: ${q.why} ${q.why === 'position' ? q.at.join(', ') : q.scale.join(', ')}`));
