@@ -17797,12 +17797,21 @@ function buildViewArm(g, shoulder, hand, side) {
      40 mm at the wrist against an 85 mm hand is a hand stuck on a stick,
      and the mismatch reads worse than an arm that is slightly too big. A
      wrist is about seventy per cent of the width across the knuckles. */
+  /* Thicker, and thickest where you can see it.
+   *
+   * These were right on paper -- 29 mm at the wrist is a 58 mm wrist, which
+   * is a wrist -- and still read as pencils on screen, because the sleeve
+   * mouth now leaves the frame at the corner and the only part actually
+   * visible is the last third before the hand. A forearm is not a cone
+   * narrowing to nothing over its whole length: it is thick at the elbow,
+   * thick through the belly of the muscle, and only tapers over the last
+   * hand's width into the wrist. */
   const spec = [
-    [0.044, 0.042],   // sleeve mouth at the frame edge
-    [0.040, 0.038],
-    [0.036, 0.034],
-    [0.032, 0.030],
-    [0.029, 0.027],   // wrist
+    [0.052, 0.050],   // sleeve mouth at the frame edge
+    [0.050, 0.048],
+    [0.047, 0.045],
+    [0.041, 0.039],
+    [0.033, 0.031],   // wrist
   ];
   for (let i = 0; i < spec.length; i++) {
     const t = i / (spec.length - 1);
@@ -18024,15 +18033,21 @@ function buildViewHand(g, rawAt, side, opts = {}) {
         for (const ax of [grasp, lane, point]) {
           for (const sgn of [1, -1]) {
             const nx = bx + ax.x * step * sgn, ny = by + ax.y * step * sgn, nz = bz + ax.z * step * sgn;
-            // Never wander more than a hand's length from where it was put.
-            if (Math.hypot(nx, ny, nz) > 0.09) continue;
+            /* Bounded, but generously. A hand 15 cm from the battering ram
+               -- which is where the support hand on it started -- is beyond
+               any correction a tight bound would allow, and refusing to fix
+               it leaves an arm stretching off to a hand holding nothing,
+               which is what "my arms got cut off" looks like. */
+            if (Math.hypot(nx, ny, nz) > 0.18) continue;
             const e = rowErr(nx, ny, nz);
             if (e < bestErr - 1e-7) { bestErr = e; bx = nx; by = ny; bz = nz; improved = true; }
           }
         }
       }
     }
-    if (bestErr < 0.02) {
+    // Accept anything that got the row within a couple of centimetres; a
+    // hand that could not be seated at all keeps its authored position.
+    if (bestErr < 0.05) {
       at = new Vec3(at.x + bx, at.y + by, at.z + bz);
       if (opts.out) opts.out.seated = [+bx.toFixed(4), +by.toFixed(4), +bz.toFixed(4)];
     }

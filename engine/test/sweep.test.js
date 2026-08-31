@@ -569,6 +569,75 @@ const SWEEP = () => {
       out.sys.heroes.push(row);
     }
 
+    /* Are the fingers on the gun?
+     *
+     * Every digit reports where it starts and ends in the weapon's own
+     * space, so for each fingertip the question is how far the nearest bit
+     * of weapon is. Measured before this existed: every fingertip in the
+     * game sat 15 to 45 mm off the thing it was holding.
+     *
+     * The knuckle is reported too, because the two failures look identical
+     * on screen and need opposite repairs -- a knuckle on the weapon with
+     * the tip in the air is a finger not closing far enough, and a knuckle
+     * already 40 mm out is a hand in the wrong place. */
+    out.sys.contact = [];
+    try {
+      for (const [id, v] of Object.entries(PP.view)) {
+        const arms = v.arms;
+        if (!arms || !arms.digits) continue;
+        const root = v.kind === 'single' ? v.actor : v.root;
+        const pts = [];
+        const skin = new Set([arms.skin, arms.lSkin, arms.sleeve, arms.lSleeve, arms.thumb]);
+        const walk = (a, local) => {
+          if (a.mesh && !skin.has(a)) {
+            const geo = G.geometryOf(a.mesh);
+            if (geo && geo.positions) {
+              const q = geo.positions, m = local ? local.e : null;
+              for (let i = 0; i < q.length; i += 9) {
+                let x = q[i], y = q[i + 1], z = q[i + 2];
+                if (m) {
+                  const wx = m[0]*x + m[4]*y + m[8]*z + m[12];
+                  const wy = m[1]*x + m[5]*y + m[9]*z + m[13];
+                  const wz = m[2]*x + m[6]*y + m[10]*z + m[14];
+                  x = wx; y = wy; z = wz;
+                }
+                pts.push(x, y, z);
+              }
+            }
+          }
+          for (const c of (a.children || [])) {
+            const cm = new LegendEngine.Mat4();
+            cm.compose(c._position, c._rotation, c.scale);
+            if (local) { const t = new LegendEngine.Mat4(); t.mulMatrices(local, cm); walk(c, t); }
+            else walk(c, cm);
+          }
+        };
+        walk(root, null);
+        if (!pts.length) continue;
+        const near = (P2) => {
+          let best = 1e9;
+          for (let i = 0; i < pts.length; i += 3) {
+            const dx = pts[i]-P2[0], dy = pts[i+1]-P2[1], dz = pts[i+2]-P2[2];
+            const d = dx*dx + dy*dy + dz*dz;
+            if (d < best) best = d;
+          }
+          return Math.sqrt(best);
+        };
+        for (const sideName of ['right', 'left']) {
+          const rec = arms.digits[sideName];
+          if (!rec || !rec.digits) continue;
+          const ds = rec.digits.map((d) => ({
+            gap: +(near(d.tip) - d.r).toFixed(4),
+            kgap: +(near(d.knuckle) - d.r).toFixed(4),
+          }));
+          out.sys.contact.push({ id, side: sideName, n: ds.length,
+            // The last digit is the trigger finger: it rests inside a guard
+            // rather than wrapping, so it is reported apart from the rest.
+            wrap: ds.slice(0, 3), trigger: ds[3] || null });
+        }
+      }
+    } catch (e) { out.sys.contact.push({ id: '?', err: e.message }); }
+
     /* Every mouth in the game, asked to say the same sentence.
      *
      * What this measures is the SYNTHESISER, not the audio device -- there
@@ -882,6 +951,21 @@ function check(name, cond, detail = '') {
   check('every weapon\'s arms follow the character, not just the first',
     looks.every((h) => h.look.split('/').length === 4),
     list(looks.filter((h) => h.look.split('/').length !== 4), (h) => `${h.h}: ${h.look}`));
+
+  const ct = (sy.contact || []).filter((q) => !q.err);
+  const ctErr = (sy.contact || []).filter((q) => q.err);
+  const floating = ct.filter((q) => q.wrap.some((d) => d.gap > 0.008));
+  check('the fingers that wrap a weapon are touching it',
+    !ctErr.length && ct.length > 0 && floating.length === 0,
+    ctErr.length ? ctErr[0].err
+      : list(floating, (q) => `${q.id}/${q.side}: tips ${q.wrap.map((d) => Math.round(d.gap * 1000)).join(', ')} mm off`));
+  const misplaced = ct.filter((q) => q.wrap.some((d) => d.kgap > 0.018));
+  check('every hand is in the right place on its weapon',
+    misplaced.length === 0,
+    list(misplaced, (q) => `${q.id}/${q.side}: knuckles ${q.wrap.map((d) => Math.round(d.kgap * 1000)).join(', ')} mm off`));
+  const noFingers = ct.filter((q) => q.n !== 4);
+  check('every hand has four fingers on it and no more',
+    noFingers.length === 0, list(noFingers, (q) => `${q.id}/${q.side}: ${q.n}`));
 
   const sk = (sy.skin || []).filter((q) => !q.err);
   const skErr = (sy.skin || []).filter((q) => q.err);

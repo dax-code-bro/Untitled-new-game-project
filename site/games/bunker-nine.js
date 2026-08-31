@@ -418,7 +418,12 @@ const WEAPONS = {
     knockback: 9.5, sweep: 1.15,
     sightH: 0.08, sightFov: 1.0, adsTime: 0.30,
     recoil: { up: 2.2, side: 0.8, climb: 0, recover: 8 },
-    hands: { right: [-0.02, -0.055, -0.03], rightGrip: 'haft', left: [0.10, -0.05, 0.12], leftGrip: { axis: [0.55, -0.83, 0], round: [0, 0, 1], girth: 0.052, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 } },
+    /* Both hands on the haft, one behind the other, which is how a ram is
+       carried. The support hand was at z +0.12 -- four centimetres outside
+       the ram's own body -- so it held nothing and the arm stretched out to
+       meet it. Measured at 146 mm from the weapon; the seating solver could
+       not rescue it because there was no surface anywhere near to seat on. */
+    hands: { right: [-0.02, -0.055, -0.03], rightGrip: 'haft', left: [0.17, -0.055, -0.03], leftGrip: { axis: [0.55, -0.83, 0], round: [0, 0, 1], girth: 0.052, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 } },
   },
   shieldWorn: {
     name: 'Cracked Riot Shield', slotName: 'CRACKED SHIELD',
@@ -428,7 +433,11 @@ const WEAPONS = {
     knockback: 3.8, sweep: 0.9, blocks: true,
     sightH: 0.05, sightFov: 1.0, adsTime: 0.26,
     recoil: { up: 0.9, side: 0.5, climb: 0, recover: 11 },
-    hands: { right: [-0.02, -0.045, -0.02], rightGrip: 'haft', left: [0.02, -0.02, 0.10], leftGrip: { axis: [0.20, -0.98, 0], round: [0, 0, 1], girth: 0.050, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 } },
+    /* On the shield's own hardware. SHIELD_ORIGIN is placed on the grip
+       bar, so the firing hand belongs at the origin and the support arm in
+       the forearm cuff, 170 mm up and 40 mm forward of it. Both hands were
+       out in front of the panel holding nothing. */
+    hands: { right: [0, 0, 0], rightGrip: 'haft', left: [0.040, 0.170, 0], leftGrip: { axis: [0, 0, 1], round: [-1, 0, 0], girth: 0.050, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 } },
   },
   shield: {
     name: 'Riot Shield', slotName: 'RIOT SHIELD',
@@ -438,7 +447,11 @@ const WEAPONS = {
     knockback: 5.0, sweep: 0.9, blocks: true,
     sightH: 0.05, sightFov: 1.0, adsTime: 0.22,
     recoil: { up: 0.9, side: 0.5, climb: 0, recover: 11 },
-    hands: { right: [-0.02, -0.045, -0.02], rightGrip: 'haft', left: [0.02, -0.02, 0.10], leftGrip: { axis: [0.20, -0.98, 0], round: [0, 0, 1], girth: 0.050, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 } },
+    /* On the shield's own hardware. SHIELD_ORIGIN is placed on the grip
+       bar, so the firing hand belongs at the origin and the support arm in
+       the forearm cuff, 170 mm up and 40 mm forward of it. Both hands were
+       out in front of the panel holding nothing. */
+    hands: { right: [0, 0, 0], rightGrip: 'haft', left: [0.040, 0.170, 0], leftGrip: { axis: [0, 0, 1], round: [-1, 0, 0], girth: 0.050, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 } },
   },
   arc: {
     name: 'Arc Breaker', slotName: 'ARC BREAKER',
