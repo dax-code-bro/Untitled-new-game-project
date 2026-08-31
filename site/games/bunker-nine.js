@@ -4104,12 +4104,28 @@ const HOST_CLASS = {
   remington: 'rifle', killstreak: 'rifle', mg42: 'rifle', arc: 'rifle',
 };
 
+/* Which of the gun's own parts each attachment stands IN FOR.
+ *
+ * Keyed by the PART, not by the slot, because not every part in a slot
+ * replaces anything. An extended magazine and a drum are whole magazines
+ * and the gun's own has to go; a fast magazine is a baseplate extension
+ * with a pull loop on it, which bolts to the bottom of the magazine you
+ * already have and would look absurd floating on its own. Keying this by
+ * slot hid the magazine under all three, which is the opposite error to the
+ * one it was written to fix.
+ *
+ * The part names differ on nearly every model -- an MP5 has a `mag`, a
+ * Mauser a `clip`, an MG 42 a `belt`, the Arc Breaker a `cell` with its own
+ * glow -- and every name here was read off the built weapon. */
+const MAG_PART = {
+  m1911: ['mag'], blaze: ['mag'], thompson: ['mag'], mp5: ['mag'],
+  mauser: ['clip'], remington: ['clip'], killstreak: ['clip'],
+  mg42: ['belt'], arc: ['cell', 'cellGlow'],
+};
 const REPLACES = {
-  mag: {
-    m1911: ['mag'], blaze: ['mag'], thompson: ['mag'], mp5: ['mag'],
-    mauser: ['clip'], remington: ['clip'], killstreak: ['clip'],
-    mg42: ['belt'], arc: ['cell', 'cellGlow'],
-  },
+  extmag: MAG_PART,
+  drummag: MAG_PART,
+  // fastmag deliberately absent: it is an addition, not a replacement.
 };
 
 /* The magazine the ANIMATION should move: the fitted one if there is one,
@@ -4187,7 +4203,7 @@ function applyAttachmentLooks(game, P, id) {
      on the models that already animate one; everything else is looked up by
      the name this weapon calls it. */
   if (!v.magOwn) {
-    const names = (REPLACES.mag && REPLACES.mag[id]) || [];
+    const names = MAG_PART[id] || [];
     const own = Array.isArray(v.mag) ? v.mag.slice() : [];
     for (const nm of names) if (root && root[nm] && own.indexOf(root[nm]) < 0) own.push(root[nm]);
     v.magOwn = own;
@@ -4204,8 +4220,13 @@ function applyAttachmentLooks(game, P, id) {
      and becomes the one the reload animates -- so the drum drops out of the
      well and comes back rather than the invisible stock magazine doing it
      while the drum stays bolted on. */
+  /* A fitted magazine hides the one the gun came with and becomes the one
+     the reload animates -- so the drum drops out of the well and comes back
+     rather than an invisible stock magazine doing it while the drum stays
+     bolted on. A part that only ADDS to the magazine leaves it alone. */
   const magPart = fit.mag;
-  v.magSwap = magPart && v.att[magPart] ? v.att[magPart].slice() : null;
+  const swaps = !!(magPart && REPLACES[magPart] && REPLACES[magPart][id]);
+  v.magSwap = swaps && v.att[magPart] ? v.att[magPart].slice() : null;
   for (const a of (v.magOwn || [])) { a.__replaced = !!v.magSwap; a.visible = !v.magSwap; }
   /* And `v.mag` is what the group reload path reads, so it has to point at
      whichever magazine is actually on the gun. */
