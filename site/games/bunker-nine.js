@@ -1740,6 +1740,10 @@ function makeSfx(game) {
     powerup() { for (let i = 0; i < 4; i++) setTimeout(() => t(660 * Math.pow(1.25, i), 0.09, 'triangle', 0.1), i * 70); },
     /* A vending machine letting go of a bottle: a solenoid clack, the
        bottle hitting the flap, and the flap swinging back. */
+    /* A drum is two kilos of steel and brass. It does not click out, it
+       drops, and it goes back in with a rock and a heavy catch. */
+    drumOut() { A.impact(0.55); t(88, 0.09, 'square', 0.10); setTimeout(() => A.impact(0.3), 90); },
+    drumIn() { A.impact(0.42); setTimeout(() => { A.impact(0.7); t(120, 0.07, 'square', 0.11); }, 140); },
     perkPop() {
       A.impact(0.32);
       t(96, 0.05, 'square', 0.09);
@@ -4919,8 +4923,29 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
           rot0 = [0, -24, -18];
         } else {
           /* A magazine goes up the well nose-first, tipped a little as
-             the hand brings it round, straightening as it seats. */
-          rot0 = [0, -12, -16];
+             the hand brings it round, straightening as it seats.
+             
+             And what is fitted changes how it is done, because the object
+             in the hand is a different weight and shape. A drum is heavy
+             and wide: it comes in from further out, low, and is rocked in
+             back-first the way a drum has to be. An extended magazine is
+             long enough that it has to be brought up steeper or its nose
+             catches the well. A fast magazine has a loop on it and is
+             snapped in from a shorter reach, which is what it is for. */
+          const fitted = (P.fitted[P.equipped()] || {}).mag;
+          if (fitted === 'drummag') {
+            from = [to[0] - 0.105, to[1] - 0.150, to[2] - 0.130];
+            rot0 = [0, -34, -40];
+            rot = [0, 0, -6];
+          } else if (fitted === 'extmag') {
+            from = [to[0] - 0.030, to[1] - 0.235, to[2] - 0.055];
+            rot0 = [0, -8, -26];
+          } else if (fitted === 'fastmag') {
+            from = [to[0] - 0.038, to[1] - 0.120, to[2] - 0.050];
+            rot0 = [0, -14, -12];
+          } else {
+            rot0 = [0, -12, -16];
+          }
         }
         void muzzle;
         // Recompute, since a per-round path above resets how far along it is.
@@ -9671,7 +9696,9 @@ function start(opts = {}) {
             // one, otherwise the gun's own.
             for (const m of (activeMag(v) || [])) m.visible = false;
             dropMagazine(game, S, P, v);
-            sfx.magOut();
+            // A drum coming out of a well is a heavier noise than a stick.
+            const fm = (P.fitted[P.equipped()] || {}).mag;
+            if (fm === 'drummag' && sfx.drumOut) sfx.drumOut(); else sfx.magOut();
           } else if (kind === 'revolver') sfx.cylinderOut();
           else if (kind === 'clip') sfx.boltBack();
           else if (kind === 'cell') sfx.cellOut();
@@ -9679,7 +9706,8 @@ function start(opts = {}) {
           P.reloadStage = 2;
           if (kind === 'mag') {
             for (const m of (activeMag(v) || [])) m.visible = true;
-            sfx.magIn();
+            const fm2 = (P.fitted[P.equipped()] || {}).mag;
+            if (fm2 === 'drummag' && sfx.drumIn) sfx.drumIn(); else sfx.magIn();
           } else if (kind === 'revolver') sfx.cylinderIn();
           else if (kind === 'clip') sfx.clipIn();
           else if (kind === 'cell') sfx.cellIn();
