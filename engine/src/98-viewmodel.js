@@ -295,6 +295,11 @@ function buildViewHand(g, rawAt, side, opts = {}) {
       if (opts.out) opts.out.seated = [+bx.toFixed(4), +by.toFixed(4), +bz.toFixed(4)];
     }
   }
+  /* Where this hand finished up. Reported because the position a caller
+     asked for is not the position the hand ends at -- it is dropped for a
+     forend and then seated against the weapon -- and anything wanting to
+     put something INTO the hand needs the real one. */
+  if (opts.out) opts.out.at = [at.x, at.y, at.z];
 
   const at3 = (b, d) => new Vec3(at.x + b.x * d, at.y + b.y * d, at.z + b.z * d);
 

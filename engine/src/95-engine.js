@@ -49,6 +49,8 @@ class Actor {
      * `a.parent = b` keeps both directions in step however it is written. */
     this._parent = null;
     this.children = [];
+    // Set once its transform has been composed and nothing has changed it.
+    this._still = false;
     this.parent = opts.parent || null;
     this.localOffset = Vec3.from(opts.offset || [0, 0, 0]);
     this.lifetime = opts.lifetime != null ? opts.lifetime : Infinity;
@@ -72,14 +74,16 @@ class Actor {
   setPosition(p) {
     const v = Vec3.from(p);
     if (this.body) this.body.setPosition(v); else this._position.copy(v);
+    this._still = false;
     return this;
   }
   setRotation(r) {
     const q = Quat.from(r);
     if (this.body) { this.body.quaternion.copy(q); this.body.wake(); } else this._rotation.copy(q);
+    this._still = false;
     return this;
   }
-  setScale(s) { this.scale.copy(Vec3.from(s)); return this; }
+  setScale(s) { this.scale.copy(Vec3.from(s)); this._still = false; return this; }
   setTint(c) { parseColor(c, this.tint); return this; }
 
   /* Impulse expressed in "how fast should this end up moving" rather than
@@ -96,6 +100,21 @@ class Actor {
   get velocity() { return this.body ? this.body.velocity : Vec3.ZERO; }
 
   updateMatrix() {
+    /* A wall does not need its matrix recomposed sixty times a second.
+     *
+     * Every frame walked all seven thousand actors and rebuilt every one of
+     * their transforms, and about six thousand seven hundred of those are
+     * scenery -- walls, boards, rubble, the battlefield, the letters on a
+     * vending machine -- with no body, no parent and no reason to have
+     * moved since the map was built. Measured: 1.85 ms a frame to build the
+     * draw list against 0.27 ms for the entire physics step. Seven times the
+     * physics, to recompute numbers that had not changed.
+     *
+     * An actor with no body, no parent and no controller composes once and
+     * then holds still until something calls a setter on it. Anything that
+     * can move -- a body, a parent, a controller, a bone -- is untouched by
+     * this and recomposes every frame as before. */
+    if (this._still && !this.body && !this.parent && !this.controller) return this.matrix;
     if (this.controller) {
       // A character's visual transform comes from its controller, not from
       // the rigid body's orientation: the body has rotation locked (so it
@@ -118,6 +137,8 @@ class Actor {
       this.matrix.mulMatrices(this.parent.matrix, _aTmp);
     } else {
       this.matrix.compose(this.position, this.rotation, this.scale);
+      // Nothing can move it now until a setter says otherwise.
+      this._still = true;
     }
     return this.matrix;
   }

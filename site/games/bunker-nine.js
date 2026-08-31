@@ -614,12 +614,24 @@ function buildPerkMachine(game, S, id, def, at) {
   for (const sx of [-1, 1]) box([X + sx * 0.30, Y + 0.86, Z + 0.315], [0.06, 0.68, 0.05], steel, false);
   box([X, Y + 1.19, Z + 0.315], [0.66, 0.05, 0.05], steel, false);
   box([X, Y + 0.53, Z + 0.315], [0.66, 0.05, 0.05], steel, false);
-  // Two shelves of bottles standing in the dark behind the glass.
+  /* Two shelves of bottles standing in the dark behind the glass.
+   *
+   * Stock, not hero models: three a shelf and three pieces each rather than
+   * the full seven-piece bottle. Ten detailed bottles per machine is
+   * seventy actors apiece and two hundred and eighty across the four, all
+   * of them behind a pane of glass in a dark cabinet where the difference
+   * between a crimped cap and a cylinder cannot be seen. The one that comes
+   * out of the slot and into your hand is the detailed one. */
   for (let r = 0; r < 2; r++) {
     box([X, Y + 0.62 + r * 0.30, Z + 0.16], [0.54, 0.02, 0.26], dark, false);
-    for (let k = -2; k <= 2; k++) {
-      const bt = buildPerkBottle(game, def, [X + k * 0.105, Y + 0.70 + r * 0.30, Z + 0.16], 0.72);
-      for (const q of bt.parts) parts.push(q);
+    for (let k = -1; k <= 1; k++) {
+      const bx2 = X + k * 0.155, by2 = Y + 0.70 + r * 0.30;
+      box([bx2, by2, Z + 0.16], [0.048, 0.075, 0.048],
+        { color: 0x2a3a30, texture: 'smooth', roughness: 0.1, opacity: 0.6, transparent: true }, false);
+      box([bx2, by2 + 0.004, Z + 0.16], [0.052, 0.030, 0.052],
+        { color: def.color, texture: 'fabric', roughness: 0.8 }, false);
+      box([bx2, by2 + 0.052, Z + 0.16], [0.024, 0.030, 0.024],
+        { color: 0xb9a15c, texture: 'metal', roughness: 0.35, metalness: 0.9 }, false);
     }
   }
   // Dispensing slot, with a flap that swings when one comes out.
@@ -636,12 +648,18 @@ function buildPerkMachine(game, S, id, def, at) {
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
     box([X + sx * 0.30, Y + 0.025, Z + sz * 0.24], [0.09, 0.05, 0.09], dark, false);
   }
-  // And the light it throws, which is how you know which one it is from
-  // across a dark room.
-  const glow = game.box({ at: [X, Y + 0.86, Z + 0.322], size: [0.50, 0.56, 0.01],
-    material: { color: 0x0a0a0c, texture: 'smooth', roughness: 0.3, emissive: c, emissiveStrength: 0.9 },
-    physics: false });
-  parts.push(glow);
+  /* A lit edge round the window rather than a lit panel across it.
+   *
+   * A full pane of emissive colour at the front covered the glass, the
+   * shelves and every bottle behind it -- the machine had a cabinet with a
+   * window and you could not see into it, which is the one thing a vending
+   * machine's window is for. Four thin strips frame it instead, so the
+   * colour is still the first thing you see from across a dark room and the
+   * stock is still visible when you get to it. */
+  const strip = { color: 0x0a0a0c, texture: 'smooth', roughness: 0.3, emissive: c, emissiveStrength: 2.2 };
+  const glow = box([X, Y + 1.175, Z + 0.325], [0.58, 0.018, 0.012], strip, false);
+  box([X, Y + 0.545, Z + 0.325], [0.58, 0.018, 0.012], strip, false);
+  for (const sx of [-1, 1]) box([X + sx * 0.29, Y + 0.86, Z + 0.325], [0.018, 0.65, 0.012], strip, false);
   const light = game.light({ at: [X, Y + 1.0, Z + 0.7], color: c, intensity: 7, radius: 3.4 });
   return { id, def, at: [X, Y + 1.0, Z + 0.55], glow, body, parts, flap, light,
     face: [X, Y + 0.30, Z + 0.42] };
@@ -4745,7 +4763,12 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
       // The load is in the hand between fetching it and seating it.
       if (u > 0.34 && u < 0.80) propT = (u - 0.34) / 0.46;
     }
-    for (const q of v.arms.support) q.setPosition([ox, oy, oz]);
+    /* Where the support hand goes. If it is carrying something, it is put
+       where that thing is a few lines below instead -- the hand and the
+       load have to be one movement, and running them on two paths that
+       merely pass near each other is why the magazine looked like it was
+       flying alongside the hand rather than being held by it. */
+    let handSet = false;
 
     /* The thing being carried. One prop per weapon, built the first time it
        is needed and then hidden — a magazine for a box gun, a stripper clip
@@ -4811,20 +4834,46 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
         }
         void muzzle;
         for (const q of prop.parts) q.visible = show;
-        prop.root.setPosition([
-          to[0] + (from[0] - to[0]) * (1 - e),
-          to[1] + (from[1] - to[1]) * (1 - e),
-          to[2] + (from[2] - to[2]) * (1 - e),
-        ]);
+        const px = to[0] + (from[0] - to[0]) * (1 - e);
+        const py = to[1] + (from[1] - to[1]) * (1 - e);
+        const pz = to[2] + (from[2] - to[2]) * (1 - e);
+        prop.root.setPosition([px, py, pz]);
         prop.root.setRotation([
           rot[0] + (rot0[0] - rot[0]) * (1 - e),
           rot[1] + (rot0[1] - rot[1]) * (1 - e),
           rot[2] + (rot0[2] - rot[2]) * (1 - e),
         ]);
+        /* And the hand goes to it.
+         *
+         * The hand and the load were on two separate paths that happened to
+         * run near each other, so the magazine travelled beside the hand
+         * rather than in it -- which is what "he doesn't even hold a
+         * magazine" looks like. The hand is placed FROM the load's position
+         * now, offset by where the fingers close on it, so the two cannot
+         * drift apart however either path is changed.
+         *
+         * The offset is where a hand grips each kind: a magazine is held
+         * near its base, a clip by its spine, a pair of shells at their
+         * heads, a cell by its body. */
+        const hold = kind === 'break' ? [-0.030, -0.008, -0.010]
+          : kind === 'clip' ? [-0.006, -0.048, -0.004]
+            : kind === 'revolver' ? [-0.010, -0.030, -0.012]
+              : [0.000, -0.052, -0.006];
+        /* Where the support hand sits when it is on the weapon. Taken from
+           the built hand rather than from the weapon table, because the
+           builder drops it for a forend and then seats it against the
+           surface -- so the authored number is not where the hand is. */
+        const dl = v.arms.digits && v.arms.digits.left;
+        const home = (dl && dl.at) || (WEAPONS[P.equipped()].hands.left) || [0, 0, 0];
+        for (const q of v.arms.support) {
+          q.setPosition([px + hold[0] - home[0], py + hold[1] - home[1], pz + hold[2] - home[2]]);
+        }
+        handSet = true;
       }
     } else if (v.prop) {
       for (const q of v.prop.parts) q.visible = false;
     }
+    if (!handSet) for (const q of v.arms.support) q.setPosition([ox, oy, oz]);
   }
 
   /* Revolver reload: the cylinder swings out on its crane, hangs there
@@ -7532,7 +7581,7 @@ function updateMinigun(game, S, P, hud, sfx, dt) {
  * sticker on the floor from any angle but straight down. */
 function buildVortex(game, S) {
   const H = MAP.hole;
-  const at = [H.x, 0.62, H.z];
+  const at = [H.x, 0.72, H.z];
   const rings = [];
   for (let k = 0; k < 5; k++) {
     const f = k / 4;
@@ -7637,10 +7686,26 @@ function crackRock(S) {
   if (!V || V.open) return;
   V.open = true;
   const m = S.meteor;
-  // The top half of the shell falls away; the base stays as a broken rim.
-  for (let i = 0; i < (m.shell || []).length; i++) {
-    if (i % 2 === 0) m.shell[i].visible = false;
+  /* The shell has to come off, not thin out.
+   *
+   * Hiding every other sphere left a rock that still looked like a rock,
+   * sitting squarely on top of the vortex and hiding all of it -- the
+   * player would see one glowing ring poking out from under a boulder. The
+   * big central mass goes entirely, and the seven round it are pushed out
+   * and down into a broken rim, which is what is left when something comes
+   * up through the middle of a rock. */
+  const shell = m.shell || [];
+  if (shell[0]) shell[0].visible = false;
+  for (let i = 1; i < shell.length; i++) {
+    const a = shell[i];
+    if (!a) continue;
+    const p2 = a.position;
+    const dx = p2.x - S.vortex.at[0], dz = p2.z - S.vortex.at[2];
+    const d = Math.hypot(dx, dz) || 1;
+    a.setPosition([S.vortex.at[0] + dx / d * (d + 0.42), Math.max(0.22, p2.y - 0.30),
+      S.vortex.at[2] + dz / d * (d + 0.42)]);
   }
+  for (const v2 of (m.veins || [])) v2.visible = false;
   for (const r of V.rings) r.a.visible = true;
   V.maw.visible = true;
   V.light.intensity = 14;
