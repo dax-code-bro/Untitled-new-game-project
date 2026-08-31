@@ -3645,8 +3645,10 @@ function makePlayer(game, S, hud, sfx, voice) {
     const root = v.kind === 'single' ? v.actor : v.root;
     /* The single-action revolver gets its thumb as a separate mesh, because
        its thumb has a job: dragging the hammer back between shots. */
+    /* The weapon's own surface goes with them, so each finger is closed
+       until it touches this gun rather than curled by a constant. */
     v.arms = game.viewmodelArms(root, WEAPONS[id].hands,
-      { key: id, thumb: !!WEAPONS[id].thumbCock });
+      { key: id, thumb: !!WEAPONS[id].thumbCock, surface: weaponSurface(game, root) });
   }
   for (const v of Object.values(P.view)) setViewVisible(v, false);
 
@@ -3834,6 +3836,92 @@ function applyAttachmentLooks(game, P, id) {
   /* And `v.mag` is what the group reload path reads, so it has to point at
      whichever magazine is actually on the gun. */
   if (Array.isArray(v.mag) || v.magSwap) v.mag = activeMag(v) || [];
+}
+
+/* The weapon's skin, as a distance from any point to it.
+ *
+ * Handed to the hand builder so a finger can be CLOSED until it touches
+ * rather than curled by a constant and hoped over. Every fingertip in the
+ * game was sitting 15 to 45 mm off the weapon because how far a hand closes
+ * was a property of the grip KIND, and the girth of an actual gun at an
+ * actual grip point is not a constant.
+ *
+ * Built once per weapon at startup and thrown away after. A uniform grid
+ * over the model's own vertices: exact enough at these scales -- the meshes
+ * run to twenty thousand vertices on a pistol -- and fast enough that
+ * solving five digits on two hands for eighteen weapons is not noticeable.
+ *
+ * Everything is read in the weapon's LOCAL space, which is the space the
+ * hands are authored in. Using actor.matrix here would mix in the world
+ * transform of a gun that is at that moment somewhere in the bunker, and
+ * every distance out of it would be meaningless. */
+function weaponSurface(game, root) {
+  if (!root || !game.geometryOf) return null;
+  const pts = [];
+  const walk = (a, local) => {
+    const geo = a.mesh && game.geometryOf(a.mesh);
+    if (geo && geo.positions) {
+      const q = geo.positions;
+      const m = local ? local.e : null;
+      // Every third vertex: a fingertip is 10 mm across and these meshes are
+      // far finer than that, so a third of them describes the same surface.
+      for (let i = 0; i < q.length; i += 9) {
+        let x = q[i], y = q[i + 1], z = q[i + 2];
+        if (m) {
+          const wx = m[0] * x + m[4] * y + m[8] * z + m[12];
+          const wy = m[1] * x + m[5] * y + m[9] * z + m[13];
+          const wz = m[2] * x + m[6] * y + m[10] * z + m[14];
+          x = wx; y = wy; z = wz;
+        }
+        pts.push(x, y, z);
+      }
+    }
+    for (const c of (a.children || [])) {
+      const cm = new LegendEngine.Mat4();
+      cm.compose(c._position, c._rotation, c.scale);
+      if (local) { const t = new LegendEngine.Mat4(); t.mulMatrices(local, cm); walk(c, t); }
+      else walk(c, cm);
+    }
+  };
+  walk(root, null);
+  if (pts.length < 30) return null;
+
+  // A grid, so a lookup touches a handful of points instead of thousands.
+  const CELL = 0.012;
+  const grid = new Map();
+  const key = (i, j, k) => i + ',' + j + ',' + k;
+  for (let i = 0; i < pts.length; i += 3) {
+    const kk = key(Math.floor(pts[i] / CELL), Math.floor(pts[i + 1] / CELL), Math.floor(pts[i + 2] / CELL));
+    let cell = grid.get(kk);
+    if (!cell) { cell = []; grid.set(kk, cell); }
+    cell.push(i);
+  }
+  return (x, y, z) => {
+    const gi = Math.floor(x / CELL), gj = Math.floor(y / CELL), gk = Math.floor(z / CELL);
+    let best = 1e9;
+    // Widen the ring until something is found, so a point out in mid-air
+    // still gets a real answer rather than infinity.
+    for (let r = 1; r <= 7; r++) {
+      for (let a = -r; a <= r; a++) {
+        for (let b = -r; b <= r; b++) {
+          for (let c = -r; c <= r; c++) {
+            if (r > 1 && Math.max(Math.abs(a), Math.abs(b), Math.abs(c)) < r) continue;
+            const cell = grid.get(key(gi + a, gj + b, gk + c));
+            if (!cell) continue;
+            for (const i of cell) {
+              const dx = pts[i] - x, dy = pts[i + 1] - y, dz = pts[i + 2] - z;
+              const d = dx * dx + dy * dy + dz * dz;
+              if (d < best) best = d;
+            }
+          }
+        }
+      }
+      // One more ring past the first hit, since a nearer point can live in
+      // a diagonal cell the first ring did not reach.
+      if (best < 1e9 && r >= 2) break;
+    }
+    return best < 1e9 ? Math.sqrt(best) : 1;
+  };
 }
 
 /* Where each slot hangs off a weapon, in that weapon's own space. Derived
@@ -9366,7 +9454,7 @@ function start(opts = {}) {
        frame, which makes setting camera.fov directly useless. */
     PLAYER, TOGGLES, TOGGLE_ORDER, HEROES, HERO_ORDER, EXIT42, updateExit42, exitStep,
     CAST, sayLine, setSpokenWords, applyHeroLook, assignVoices, systemVoiceFor, voicePool,
-    lineId, loadVoicePack };
+    lineId, loadVoicePack, weaponSurface };
   window.__T_MAKE = { makeParalyzer, makeMP5, makeSawedOff, makeScattergun, makeObliterator,
     makeMauser, makeArcProjector, makeKnife, makeHammer, makeRiotShield, makeBatteringRam };
   const __THooks = window.__T = {

@@ -11520,6 +11520,21 @@ class Actor {
     this.destructible = opts.destructible || null;
     this.controller = opts.controller || null;
     this.parentBone = opts.parentBone != null ? opts.parentBone : -1;
+    /* Parenting kept both ways.
+     *
+     * `parent` was a plain field, so an actor knew what it hung off and
+     * nothing knew what hung off it. Every walk of a model in this codebase
+     * -- the sweep's scan for paper-thin geometry, the check for a hand
+     * touching what it holds, anything that wants "this weapon and all its
+     * parts" -- was written as `for (const c of a.children || [])`, which
+     * on an object with no `children` is a loop over nothing. Those walks
+     * have been visiting root actors only and reporting on a fraction of
+     * the scene while looking like they covered it.
+     *
+     * `children` is maintained now, through a setter so that assigning
+     * `a.parent = b` keeps both directions in step however it is written. */
+    this._parent = null;
+    this.children = [];
     this.parent = opts.parent || null;
     this.localOffset = Vec3.from(opts.offset || [0, 0, 0]);
     this.lifetime = opts.lifetime != null ? opts.lifetime : Infinity;
@@ -11601,9 +11616,28 @@ class Actor {
     buffer[offset + 19] = this.custom;
   }
 
+  get parent() { return this._parent; }
+  set parent(p) {
+    if (this._parent === p) return;
+    if (this._parent) {
+      const k = this._parent.children.indexOf(this);
+      if (k >= 0) this._parent.children.splice(k, 1);
+    }
+    this._parent = p || null;
+    if (p) {
+      if (!p.children) p.children = [];
+      if (p.children.indexOf(this) < 0) p.children.push(this);
+    }
+  }
+
   destroy() {
     if (this.dead) return;
     this.dead = true;
+    // Off the parent's list as well, or a destroyed part keeps being walked.
+    if (this._parent) {
+      const k = this._parent.children.indexOf(this);
+      if (k >= 0) this._parent.children.splice(k, 1);
+    }
     if (this.body) this.engine.physics.remove(this.body);
     this.engine._removeActor(this);
   }
@@ -11793,10 +11827,23 @@ class Engine {
   /* Meshes are cached by key and always unit-sized: size is applied through
      the transform, so every box in the scene shares one mesh and therefore
      one instanced draw call. */
+  /* The Geometry a GpuMesh was built from.
+   *
+   * A GpuMesh is buffers on the card and keeps no vertices, so anything
+   * that needs to ask a question ABOUT a model -- where its surface is,
+   * how big it is, whether a hand is touching it -- had no way to. Kept by
+   * key alongside the mesh; the geometry is built once and cached anyway,
+   * so this holds no memory that was not already held. */
+  geometryOf(mesh) {
+    if (!mesh || !this._geoByKey) return null;
+    return this._geoByKey.get(mesh.__key) || null;
+  }
+
   _mesh(key, build) {
     let m = this.meshCache.get(key);
     if (!m) {
       const geo = build();
+      (this._geoByKey || (this._geoByKey = new Map())).set(key, geo);
       m = new GpuMesh(this.gl, geo);
       m.setupInstancing(20);
       m.__key = key;
@@ -17924,9 +17971,72 @@ function buildViewHand(g, rawAt, side, opts = {}) {
      and the support hand was 132/68/15/13 across the four quadrants where
      the firing hand is 37/44/117/120. Drop it by a finger's width and the
      forend lands in the crook where it belongs. */
-  const at = G.drop
+  let at = G.drop
     ? new Vec3(rawAt.x - grasp.x * G.drop, rawAt.y - grasp.y * G.drop, rawAt.z - grasp.z * G.drop)
     : rawAt;
+
+  /* Seat the hand on the weapon before building anything on it.
+   *
+   * Where each hand goes was a set of numbers typed per weapon, and typed
+   * numbers drift: measured against the models, the support hand was 16 mm
+   * off the Thompson, 41 mm off the scattergun, 52 to 81 mm off the Kill
+   * Streak and 146 mm off the battering ram -- holding thin air a hand's
+   * length from the weapon while the firing hand sat correctly on the grip.
+   * That is the "hand positions from the base gun" fault: a number that was
+   * right for one weapon left in place on another.
+   *
+   * With the weapon's own surface to hand there is no need to guess. Slide
+   * the anchor along the grasp axis -- the line from the hand toward what
+   * it is holding, which is the one direction that cannot rotate the wrist
+   * or twist the wrap -- until the palm is against the thing. The authored
+   * position still decides WHERE on the weapon the hand sits, along and
+   * across; only the standoff is corrected. */
+  if (opts.surface) {
+    const surf = opts.surface;
+    // How far the palm's own flesh holds the knuckles off the surface.
+    const want = 0.010;
+    /* Judged on the whole knuckle row, not on one point.
+     *
+     * A single anchor sample can be perfect while the hand is lying at an
+     * angle across a forend with one knuckle buried and another 40 mm out
+     * -- which is exactly what the scattergun's support hand was doing.
+     * Four samples across the row is the cheapest thing that notices. */
+    const rowErr = (ox, oy, oz) => {
+      let e = 0;
+      for (let f = 0; f < 4; f++) {
+        const off = (fore ? f - 1.5 : 1.5 - f) * G.spread;
+        const bx = at.x + ox + palm.x * 0.044 + lane.x * off;
+        const by = at.y + oy + palm.y * 0.044 + lane.y * off;
+        const bz = at.z + oz + palm.z * 0.044 + lane.z * off;
+        e += Math.abs(surf(bx, by, bz) - want);
+      }
+      return e / 4;
+    };
+    /* Along three axes, not one. Sliding only toward the weapon fixes a
+       hand held too far out; it does nothing for one sitting 60 mm up the
+       barrel from the forend, which is what several of these were. */
+    let bx = 0, by = 0, bz = 0, bestErr = rowErr(0, 0, 0);
+    let stepList = [0.006, 0.002, 0.0007];
+    for (const step of stepList) {
+      let improved = true, guard = 0;
+      while (improved && guard++ < 40) {
+        improved = false;
+        for (const ax of [grasp, lane, point]) {
+          for (const sgn of [1, -1]) {
+            const nx = bx + ax.x * step * sgn, ny = by + ax.y * step * sgn, nz = bz + ax.z * step * sgn;
+            // Never wander more than a hand's length from where it was put.
+            if (Math.hypot(nx, ny, nz) > 0.09) continue;
+            const e = rowErr(nx, ny, nz);
+            if (e < bestErr - 1e-7) { bestErr = e; bx = nx; by = ny; bz = nz; improved = true; }
+          }
+        }
+      }
+    }
+    if (bestErr < 0.02) {
+      at = new Vec3(at.x + bx, at.y + by, at.z + bz);
+      if (opts.out) opts.out.seated = [+bx.toFixed(4), +by.toFixed(4), +bz.toFixed(4)];
+    }
+  }
 
   const at3 = (b, d) => new Vec3(at.x + b.x * d, at.y + b.y * d, at.z + b.z * d);
 
@@ -18023,6 +18133,64 @@ function buildViewHand(g, rawAt, side, opts = {}) {
     const na = along * c - across * sn, nc = along * sn + across * c;
     return new Vec3(pt.x * na + cl.x * nc, pt.y * na + cl.y * nc, pt.z * na + cl.z * nc).normalize();
   };
+  /* Where a finger's tip ends up, without building it.
+   *
+   * Needed so the curl can be SOLVED rather than guessed: run the chain,
+   * look at where the tip lands, adjust, run it again. Same arithmetic as
+   * digit() below and deliberately so -- if the two ever disagree the solve
+   * is optimising something the mesh does not do. */
+  const tipOf = (root, dir0, bends, lens, k, pt, cl) => {
+    let d = dir0;
+    let p = new Vec3(root.x - d.x * 0.009, root.y - d.y * 0.009, root.z - d.z * 0.009);
+    for (let i = 0; i < 3; i++) {
+      d = turn(d, bends[i] * k, pt, cl);
+      p = new Vec3(p.x + d.x * lens[i], p.y + d.y * lens[i], p.z + d.z * lens[i]);
+    }
+    return new Vec3(p.x + d.x * 0.0045, p.y + d.y * 0.0045, p.z + d.z * 0.0045);
+  };
+
+  /* Close the finger until it is on the thing it is holding.
+   *
+   * Every fingertip in the game sat between 15 and 45 mm off the weapon,
+   * worsening from index to little finger, because how far a finger closes
+   * was a constant per grip KIND and the actual girth of the actual gun at
+   * the actual grip point is not a constant. A hand whose fingertips stop
+   * short is a hand not holding anything, and at 25 mm that is an inch of
+   * daylight -- which is exactly what it was described as.
+   *
+   * `surface` gives the distance from a point to the weapon's skin. Scale
+   * the whole curl until the tip is one finger-radius plus a hair off it:
+   * touching, not buried. Bounded, so a finger that cannot reach stops at
+   * a hand's limit instead of tying itself in a knot, and one that would
+   * reach immediately still closes enough to look gripped. */
+  const solveCurl = (root, dir0, bends, lens, r0, pt, cl) => {
+    const surf = opts.surface;
+    if (!surf) return { k: 1, err: 1e9 };
+    const want = r0 + 0.0012;
+    let best = 1, bestErr = 1e9;
+    // Coarse pass over the whole range a hand can do, then refine.
+    for (let i = 0; i <= 24; i++) {
+      const k = 0.45 + i * (2.05 - 0.45) / 24;
+      const t = tipOf(root, dir0, bends, lens, k, pt, cl);
+      const err = Math.abs(surf(t.x, t.y, t.z) - want);
+      if (err < bestErr) { bestErr = err; best = k; }
+    }
+    let lo = Math.max(0.45, best - 0.07), hi = Math.min(2.05, best + 0.07);
+    for (let i = 0; i < 12; i++) {
+      const a = lo + (hi - lo) / 3, b2 = hi - (hi - lo) / 3;
+      const ta = tipOf(root, dir0, bends, lens, a, pt, cl);
+      const tb = tipOf(root, dir0, bends, lens, b2, pt, cl);
+      const ea = Math.abs(surf(ta.x, ta.y, ta.z) - want);
+      const eb = Math.abs(surf(tb.x, tb.y, tb.z) - want);
+      if (ea < eb) hi = b2; else lo = a;
+    }
+    const k = (lo + hi) / 2;
+    const t = tipOf(root, dir0, bends, lens, k, pt, cl);
+    // The error comes back too, so a finger with two possible paths can be
+    // given the one that actually reaches rather than the first one tried.
+    return { k, err: Math.abs(surf(t.x, t.y, t.z) - want) };
+  };
+
   const digit = (root, dir0, bends, lens, r0, pt = point, cl = curl) => {
     const rs = [];
     let d = dir0;
@@ -18046,6 +18214,20 @@ function buildViewHand(g, rawAt, side, opts = {}) {
     travelled += 0.0045;
     push(r0 * 0.44);
     loftRings(g, rs, 9, true, true);
+    /* Where this digit starts, ends, and how thick it is.
+     *
+     * Reported rather than inferred, because "is the finger touching the
+     * gun" cannot be answered from a finished mesh -- once four fingers, a
+     * thumb and a palm are welded into one surface there is no way to tell
+     * which vertex belonged to which finger, and a measurement that cannot
+     * name the finger cannot say which one is wrong. */
+    if (opts.out) {
+      (opts.out.digits || (opts.out.digits = [])).push({
+        knuckle: [root.x, root.y, root.z],
+        tip: [p.x, p.y, p.z],
+        r: r0,
+      });
+    }
   };
 
   /* Fingers: three bones each, with the closing split across the two
@@ -18122,18 +18304,48 @@ function buildViewHand(g, rawAt, side, opts = {}) {
     const wrap = Math.max(0.52, Math.min(1.22, 0.055 / G.girth)) * close;
     const bends = isIndex ? [0.16, 0.52, 0.46]
       : [0.25 * wrap, 1.30 * wrap, 1.05 * wrap];
+    const lens = [LEN[0] * scale, LEN[1] * scale, LEN[2] * scale];
     if (isIndex) {
       /* The trigger finger reaches forward along the frame and closes
          inward onto the blade, which is a different plane from the one
-         the other three close in. */
+         the other three close in. It is not solved onto the surface: it is
+         meant to lie on a trigger, not to wrap, and closing it until it
+         touched would curl it round the front of the guard. */
+      /* The trigger finger.
+       *
+       * It was aimed forward along the frame in a plane of its own and left
+       * unsolved, on the grounds that it lies on a trigger rather than
+       * wrapping. But "not wrapping" is not "ending 30 to 50 mm out in
+       * front of the muzzle", which is where it was on every pistol in the
+       * game -- a finger pointing at nothing.
+       *
+       * There are two ways for it to get there and which one works depends
+       * on the weapon. Round a submachine gun's grip it closes in the same
+       * plane as the other three and lands on the trigger. On a pistol that
+       * plane has nothing in it -- the finger starts at the top of the grip
+       * and the guard is forward and below -- so it has to reach along the
+       * frame first and bend down into the guard.
+       *
+       * Both are solved and the one that actually reaches wins. Picking
+       * either by hand left half the guns with a finger pointing at nothing:
+       * the wrap plane alone put the 1911's index 52 mm out in front of the
+       * muzzle, and the forward plane alone did the same to the Thompson's. */
       const ipt = V(0.90, -0.10, -side * 0.42);
       const icl = V(-0.38, -0.34, -side * 0.86);
-      digit(root, ipt, bends, [LEN[0] * scale, LEN[1] * scale, LEN[2] * scale], 0.0095, ipt, icl);
+      const d0 = new Vec3(point.x, point.y, point.z);
+      const a = solveCurl(root, d0, bends, lens, 0.0095, point, curl);
+      const b2 = solveCurl(root, ipt, bends, lens, 0.0095, ipt, icl);
+      if (a.err <= b2.err) {
+        digit(root, d0, [bends[0] * a.k, bends[1] * a.k, bends[2] * a.k], lens, 0.0095);
+      } else {
+        digit(root, ipt, [bends[0] * b2.k, bends[1] * b2.k, bends[2] * b2.k], lens, 0.0095, ipt, icl);
+      }
     } else {
       /* 19 mm through the proximal phalanx, which is a finger. It was 14,
          and 14 mm of flesh on 87 mm of bone is a worm. */
-      digit(root, new Vec3(point.x, point.y, point.z), bends,
-        [LEN[0] * scale, LEN[1] * scale, LEN[2] * scale], 0.0095);
+      const d0 = new Vec3(point.x, point.y, point.z);
+      const sol = solveCurl(root, d0, bends, lens, 0.0095, point, curl);
+      digit(root, d0, [bends[0] * sol.k, bends[1] * sol.k, bends[2] * sol.k], lens, 0.0095);
     }
   }
 
@@ -18181,6 +18393,10 @@ function buildViewHand(g, rawAt, side, opts = {}) {
     step(0.013, 0.0085, 0.86);
     step(0.006, 0.0039, 1.0);
     loftRings(tg, rs, 9, true, true);
+    if (opts.out) {
+      opts.out.thumbTip = [p.x, p.y, p.z];
+      opts.out.thumbR = 0.0114;
+    }
   }
 
 }
@@ -18244,7 +18460,15 @@ function makeViewmodelArms(hands, opts = {}) {
     const h = new Vec3(hand[0], hand[1], hand[2]);
     const shoulder = new Vec3(back, drop, side * spread);
     buildViewArm(sl, shoulder, h, side);
-    buildViewHand(sk, h, side, { grip, thumbGeo: tg, out: tg ? out : null });
+    /* `out` collects where every digit finished, for both hands. It used to
+       be passed only when the caller wanted a separate thumb mesh, so the
+       support hand reported nothing at all and could not be checked. */
+    const rec = {};
+    // `surface` has to reach the hand or the fingers cannot be closed onto
+    // anything -- it was being taken by makeViewmodelArms and dropped here.
+    buildViewHand(sk, h, side, { grip, thumbGeo: tg, out: rec, surface: opts.surface });
+    if (tg && rec.thumbPivot) out.thumbPivot = rec.thumbPivot;
+    out[side > 0 ? 'right' : 'left'] = rec;
   }
   for (const g of [sleeve, skin, lSleeve, lSkin, thumb]) {
     if (!g) continue;
@@ -18254,6 +18478,8 @@ function makeViewmodelArms(hands, opts = {}) {
     weldNormals(g.normals, g.weldGroups);
   }
   return { sleeve, skin, lSleeve, lSkin, thumb, thumbPivot: out.thumbPivot,
+    // Where every finger and thumb ended up, in the weapon's own space.
+    digits: { right: out.right || null, left: out.left || null },
     hasLeft: !!hands.left };
 }
 
@@ -18307,6 +18533,7 @@ Engine.prototype.viewmodelArms = function (weapon, hands, opts = {}) {
   /* `support` is the pair that may be moved away from the weapon during a
      reload. Everything else about them is identical to the firing arm. */
   return { sleeve, skin, lSleeve, lSkin, thumb, thumbPivot: parts.thumbPivot,
+    digits: parts.digits,
     support: lSleeve ? [lSleeve, lSkin] : [], parts: all };
 };
 

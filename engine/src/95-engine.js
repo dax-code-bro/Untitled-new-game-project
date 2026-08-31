@@ -34,6 +34,21 @@ class Actor {
     this.destructible = opts.destructible || null;
     this.controller = opts.controller || null;
     this.parentBone = opts.parentBone != null ? opts.parentBone : -1;
+    /* Parenting kept both ways.
+     *
+     * `parent` was a plain field, so an actor knew what it hung off and
+     * nothing knew what hung off it. Every walk of a model in this codebase
+     * -- the sweep's scan for paper-thin geometry, the check for a hand
+     * touching what it holds, anything that wants "this weapon and all its
+     * parts" -- was written as `for (const c of a.children || [])`, which
+     * on an object with no `children` is a loop over nothing. Those walks
+     * have been visiting root actors only and reporting on a fraction of
+     * the scene while looking like they covered it.
+     *
+     * `children` is maintained now, through a setter so that assigning
+     * `a.parent = b` keeps both directions in step however it is written. */
+    this._parent = null;
+    this.children = [];
     this.parent = opts.parent || null;
     this.localOffset = Vec3.from(opts.offset || [0, 0, 0]);
     this.lifetime = opts.lifetime != null ? opts.lifetime : Infinity;
@@ -115,9 +130,28 @@ class Actor {
     buffer[offset + 19] = this.custom;
   }
 
+  get parent() { return this._parent; }
+  set parent(p) {
+    if (this._parent === p) return;
+    if (this._parent) {
+      const k = this._parent.children.indexOf(this);
+      if (k >= 0) this._parent.children.splice(k, 1);
+    }
+    this._parent = p || null;
+    if (p) {
+      if (!p.children) p.children = [];
+      if (p.children.indexOf(this) < 0) p.children.push(this);
+    }
+  }
+
   destroy() {
     if (this.dead) return;
     this.dead = true;
+    // Off the parent's list as well, or a destroyed part keeps being walked.
+    if (this._parent) {
+      const k = this._parent.children.indexOf(this);
+      if (k >= 0) this._parent.children.splice(k, 1);
+    }
     if (this.body) this.engine.physics.remove(this.body);
     this.engine._removeActor(this);
   }
@@ -307,10 +341,23 @@ class Engine {
   /* Meshes are cached by key and always unit-sized: size is applied through
      the transform, so every box in the scene shares one mesh and therefore
      one instanced draw call. */
+  /* The Geometry a GpuMesh was built from.
+   *
+   * A GpuMesh is buffers on the card and keeps no vertices, so anything
+   * that needs to ask a question ABOUT a model -- where its surface is,
+   * how big it is, whether a hand is touching it -- had no way to. Kept by
+   * key alongside the mesh; the geometry is built once and cached anyway,
+   * so this holds no memory that was not already held. */
+  geometryOf(mesh) {
+    if (!mesh || !this._geoByKey) return null;
+    return this._geoByKey.get(mesh.__key) || null;
+  }
+
   _mesh(key, build) {
     let m = this.meshCache.get(key);
     if (!m) {
       const geo = build();
+      (this._geoByKey || (this._geoByKey = new Map())).set(key, geo);
       m = new GpuMesh(this.gl, geo);
       m.setupInstancing(20);
       m.__key = key;
