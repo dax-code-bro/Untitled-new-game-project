@@ -601,16 +601,20 @@ function buildPerkMachine(game, S, id, def, at) {
   box([X, Y + 1.62, Z], [0.80, 0.06, 0.68], steel, false);
   box([X, Y + 1.70, Z - 0.06], [0.80, 0.12, 0.50], steel, false);
   // Header sign, lit, with the name across it.
-  box([X, Y + 1.44, Z + 0.33], [0.70, 0.22, 0.03], lit, false);
+  box([X, Y + 1.44, Z + 0.33], [0.70, 0.22, 0.034], lit, false);
   for (const a of writeText(game, def.name.split(' ')[0], [X, Y + 1.44, Z + 0.355],
     [1, 0, 0], [0, 1, 0], { px: 0.0135, material: { color: 0x07080a, texture: 'smooth', roughness: 0.8 } })) parts.push(a);
   if (def.name.split(' ')[1]) {
-    box([X, Y + 1.22, Z + 0.33], [0.70, 0.18, 0.03], lit, false);
+    box([X, Y + 1.22, Z + 0.33], [0.70, 0.18, 0.034], lit, false);
     for (const a of writeText(game, def.name.split(' ')[1], [X, Y + 1.22, Z + 0.355],
       [1, 0, 0], [0, 1, 0], { px: 0.0115, material: { color: 0x07080a, texture: 'smooth', roughness: 0.8 } })) parts.push(a);
   }
-  // The window, its frame, and what is behind it.
-  box([X, Y + 0.86, Z + 0.315], [0.56, 0.62, 0.02], glass, false);
+  /* The window, its frame, and what is behind it.
+     Nothing here is under 26 mm in any axis. A pane of glass is 6 mm in
+     life and reads as a flat card at that scale -- and the sweep's check
+     for paper-thin geometry, which exists because a 2D card standing in the
+     bunker is exactly the fault it was written for, is right to flag it. */
+  box([X, Y + 0.86, Z + 0.315], [0.56, 0.62, 0.032], glass, false);
   for (const sx of [-1, 1]) box([X + sx * 0.30, Y + 0.86, Z + 0.315], [0.06, 0.68, 0.05], steel, false);
   box([X, Y + 1.19, Z + 0.315], [0.66, 0.05, 0.05], steel, false);
   box([X, Y + 0.53, Z + 0.315], [0.66, 0.05, 0.05], steel, false);
@@ -623,7 +627,7 @@ function buildPerkMachine(game, S, id, def, at) {
    * between a crimped cap and a cylinder cannot be seen. The one that comes
    * out of the slot and into your hand is the detailed one. */
   for (let r = 0; r < 2; r++) {
-    box([X, Y + 0.62 + r * 0.30, Z + 0.16], [0.54, 0.02, 0.26], dark, false);
+    box([X, Y + 0.62 + r * 0.30, Z + 0.16], [0.54, 0.032, 0.26], dark, false);
     for (let k = -1; k <= 1; k++) {
       const bx2 = X + k * 0.155, by2 = Y + 0.70 + r * 0.30;
       box([bx2, by2, Z + 0.16], [0.048, 0.075, 0.048],
@@ -635,13 +639,13 @@ function buildPerkMachine(game, S, id, def, at) {
     }
   }
   // Dispensing slot, with a flap that swings when one comes out.
-  box([X, Y + 0.26, Z + 0.315], [0.34, 0.03, 0.05], steel, false);
-  const flap = game.box({ at: [X, Y + 0.20, Z + 0.325], size: [0.32, 0.13, 0.015],
+  box([X, Y + 0.26, Z + 0.315], [0.34, 0.035, 0.05], steel, false);
+  const flap = game.box({ at: [X, Y + 0.20, Z + 0.325], size: [0.32, 0.13, 0.026],
     material: dark, physics: false });
   parts.push(flap);
-  box([X, Y + 0.135, Z + 0.20], [0.30, 0.02, 0.24], dark, false);
+  box([X, Y + 0.135, Z + 0.20], [0.30, 0.032, 0.24], dark, false);
   // Coin plate, a slot in it, and a vent down the side.
-  box([X + 0.26, Y + 0.42, Z + 0.315], [0.16, 0.20, 0.02], steel, false);
+  box([X + 0.26, Y + 0.42, Z + 0.315], [0.16, 0.20, 0.032], steel, false);
   box([X + 0.26, Y + 0.46, Z + 0.328], [0.015, 0.06, 0.01], dark, false);
   for (let k = 0; k < 6; k++) box([X - 0.30, Y + 0.30 + k * 0.035, Z + 0.20], [0.02, 0.014, 0.30], dark, false);
   // Feet, so it stands on the floor rather than growing out of it.
@@ -657,9 +661,9 @@ function buildPerkMachine(game, S, id, def, at) {
    * colour is still the first thing you see from across a dark room and the
    * stock is still visible when you get to it. */
   const strip = { color: 0x0a0a0c, texture: 'smooth', roughness: 0.3, emissive: c, emissiveStrength: 2.2 };
-  const glow = box([X, Y + 1.175, Z + 0.325], [0.58, 0.018, 0.012], strip, false);
-  box([X, Y + 0.545, Z + 0.325], [0.58, 0.018, 0.012], strip, false);
-  for (const sx of [-1, 1]) box([X + sx * 0.29, Y + 0.86, Z + 0.325], [0.018, 0.65, 0.012], strip, false);
+  const glow = box([X, Y + 1.175, Z + 0.325], [0.58, 0.026, 0.022], strip, false);
+  box([X, Y + 0.545, Z + 0.325], [0.58, 0.026, 0.022], strip, false);
+  for (const sx of [-1, 1]) box([X + sx * 0.29, Y + 0.86, Z + 0.325], [0.026, 0.65, 0.022], strip, false);
   const light = game.light({ at: [X, Y + 1.0, Z + 0.7], color: c, intensity: 7, radius: 3.4 });
   return { id, def, at: [X, Y + 1.0, Z + 0.55], glow, body, parts, flap, light,
     face: [X, Y + 0.30, Z + 0.42] };

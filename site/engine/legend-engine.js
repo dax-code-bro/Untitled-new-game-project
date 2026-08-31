@@ -18227,14 +18227,23 @@ function buildViewHand(g, rawAt, side, opts = {}) {
     if (!surf) return { k: 1, err: 1e9 };
     const want = r0 + 0.0012;
     let best = 1, bestErr = 1e9;
-    // Coarse pass over the whole range a hand can do, then refine.
-    for (let i = 0; i <= 24; i++) {
-      const k = 0.45 + i * (2.05 - 0.45) / 24;
+    /* The range a hand can actually do.
+     *
+     * The top was 2.05, and every FIRING hand solved inside it while every
+     * SUPPORT hand on a long gun ran out of travel and stopped 7 to 37 mm
+     * short. A hand under a forend has further to go than one round a
+     * pistol grip -- it comes up the far side and over the top, which is
+     * most of a full turn more -- so a ceiling set from what a pistol needs
+     * is a ceiling the other hand hits every time. 4.3 radians over three
+     * joints is a closed fist, and nothing can be asked for past that. */
+    const hi0 = 4.3;
+    for (let i = 0; i <= 44; i++) {
+      const k = 0.45 + i * (hi0 - 0.45) / 44;
       const t = tipOf(root, dir0, bends, lens, k, pt, cl);
       const err = Math.abs(surf(t.x, t.y, t.z) - want);
       if (err < bestErr) { bestErr = err; best = k; }
     }
-    let lo = Math.max(0.45, best - 0.07), hi = Math.min(2.05, best + 0.07);
+    let lo = Math.max(0.45, best - 0.10), hi = Math.min(hi0, best + 0.10);
     for (let i = 0; i < 12; i++) {
       const a = lo + (hi - lo) / 3, b2 = hi - (hi - lo) / 3;
       const ta = tipOf(root, dir0, bends, lens, a, pt, cl);
