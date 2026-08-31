@@ -569,6 +569,98 @@ const SWEEP = () => {
       out.sys.heroes.push(row);
     }
 
+    /* Two surfaces in the same place.
+     *
+     * When two flat faces sit at exactly the same depth the rasteriser has
+     * no way to choose between them, so which one wins flips from pixel to
+     * pixel and from frame to frame as the camera moves. It reads as a
+     * shimmering, crawling patch on a wall -- and there is no error
+     * anywhere, which is why this kind of fault survives every test that
+     * looks for exceptions.
+     *
+     * The map is built from overlapping slabs on purpose, so an overlap is
+     * not the fault; two faces landing on the SAME PLANE is. Boxes are
+     * bucketed by the plane each of their six faces lies in, and any bucket
+     * holding two faces that also overlap in the other two axes is a
+     * fight. Bucketing rather than comparing every pair, because seven
+     * thousand actors is twenty-four million pairs. */
+    out.sys.zfight = [];
+    try {
+      const planes = new Map();
+      const AX = ['x', 'y', 'z'];
+      for (const a of G.actors) {
+        if (!a.mesh || a.visible === false || a.dead) continue;
+        if (a.parent) continue;               // parts of a model, not scenery
+        const m = a.matrix.e;
+        // Axis-aligned only: a rotated box does not have axis-aligned faces
+        // and the cheap test would be a lie about it.
+        if (Math.abs(m[1]) + Math.abs(m[2]) + Math.abs(m[4]) > 1e-4) continue;
+        const c = [m[12], m[13], m[14]];
+        const h = [Math.abs(m[0]) / 2, Math.abs(m[5]) / 2, Math.abs(m[10]) / 2];
+        if (Math.max(h[0], h[1], h[2]) > 40) continue;    // the ground plane
+        for (let ax = 0; ax < 3; ax++) {
+          for (const sgn of [-1, 1]) {
+            const at = c[ax] + sgn * h[ax];
+            // A millimetre of tolerance: closer than that and they fight.
+            const key = ax + ':' + Math.round(at * 1000);
+            let list = planes.get(key);
+            if (!list) { list = []; planes.set(key, list); }
+            list.push({ a, c, h, ax });
+          }
+        }
+      }
+      const seen = new Set();
+      for (const list of planes.values()) {
+        if (list.length < 2) continue;
+        for (let i = 0; i < list.length && out.sys.zfight.length < 40; i++) {
+          for (let j = i + 1; j < list.length && out.sys.zfight.length < 40; j++) {
+            const A = list[i], B = list[j];
+            if (A.a === B.a) continue;
+            // Do they overlap in the other two axes, by enough to see?
+            let over = true, area = 1;
+            for (let k = 0; k < 3; k++) {
+              if (k === A.ax) continue;
+              const lo = Math.max(A.c[k] - A.h[k], B.c[k] - B.h[k]);
+              const hi = Math.min(A.c[k] + A.h[k], B.c[k] + B.h[k]);
+              if (hi - lo < 0.08) { over = false; break; }
+              area *= (hi - lo);
+            }
+            if (!over || area < 0.02) continue;
+            const id = Math.min(A.a.id, B.a.id) + '-' + Math.max(A.a.id, B.a.id);
+            if (seen.has(id)) continue;
+            seen.add(id);
+            out.sys.zfight.push({
+              ax: AX[A.ax], at: +A.c[A.ax].toFixed(3), area: +area.toFixed(2),
+              a: A.a.name || 'actor' + A.a.id, b: B.a.name || 'actor' + B.a.id,
+              at2: A.c.map((v2) => +v2.toFixed(1)),
+            });
+          }
+        }
+      }
+    } catch (e) { out.sys.zfight.push({ err: e.message }); }
+
+    /* Anything that has left the world.
+     *
+     * A NaN in a transform propagates silently -- the actor vanishes and
+     * everything parented to it goes with it -- and a position of 1e9 is
+     * the same fault with a different symptom. Neither throws. */
+    out.sys.lost = [];
+    for (const a of G.actors) {
+      if (a.dead) continue;
+      const p2 = a.position;
+      const bad = !isFinite(p2.x) || !isFinite(p2.y) || !isFinite(p2.z)
+        || Math.abs(p2.x) > 400 || Math.abs(p2.y) > 400 || Math.abs(p2.z) > 400;
+      const sc = a.scale;
+      const flat = sc.x === 0 || sc.y === 0 || sc.z === 0
+        || sc.x < 0 || sc.y < 0 || sc.z < 0 || !isFinite(sc.x) || !isFinite(sc.y) || !isFinite(sc.z);
+      if (bad || flat) {
+        out.sys.lost.push({ name: a.name || 'actor' + a.id,
+          at: [p2.x, p2.y, p2.z].map((v2) => (isFinite(v2) ? +v2.toFixed(1) : String(v2))),
+          scale: [sc.x, sc.y, sc.z], why: bad ? 'position' : 'scale' });
+      }
+      if (out.sys.lost.length > 30) break;
+    }
+
     /* Are the fingers on the gun?
      *
      * Every digit reports where it starts and ends in the weapon's own
@@ -951,6 +1043,16 @@ function check(name, cond, detail = '') {
   check('every weapon\'s arms follow the character, not just the first',
     looks.every((h) => h.look.split('/').length === 4),
     list(looks.filter((h) => h.look.split('/').length !== 4), (h) => `${h.h}: ${h.look}`));
+
+  const zf = (sy.zfight || []).filter((q) => !q.err);
+  const zfErr = (sy.zfight || []).filter((q) => q.err);
+  check('no two surfaces are fighting for the same plane',
+    !zfErr.length && zf.length === 0,
+    zfErr.length ? zfErr[0].err
+      : list(zf, (q) => `${q.a} and ${q.b} share the ${q.ax} = ${q.at} plane over ${q.area} m2, near ${q.at2.join(', ')}`));
+
+  check('nothing has left the world', (sy.lost || []).length === 0,
+    list(sy.lost || [], (q) => `${q.name}: ${q.why} ${q.why === 'position' ? q.at.join(', ') : q.scale.join(', ')}`));
 
   const ct = (sy.contact || []).filter((q) => !q.err);
   const ctErr = (sy.contact || []).filter((q) => q.err);
