@@ -4454,7 +4454,15 @@ function setViewVisible(v, on) {
      that every gun has: the slide and the magazine stayed on screen after
      you swapped away, hanging in the air where the gun used to be. That is
      the other half of "my old gun is still floating there". */
-  for (const p of v.parts) p.visible = on;
+  /* Except the parts an attachment has taken the place of.
+   *
+   * This runs every frame for every weapon, and it turned the gun's own
+   * magazine back on immediately after applyAttachmentLooks had hidden it
+   * -- so an extended magazine and a drum were still drawn over the top of
+   * the stock magazine on six weapons, which is the exact fault the
+   * replacement table was written to fix, undone one line later by the
+   * function that puts guns away. Marked parts stay off. */
+  for (const p of v.parts) p.visible = on && !p.__replaced;
   // Attachment parts follow the weapon, but only the ones actually fitted:
   // showing the whole set on draw hangs every scope and muzzle device the
   // gun has ever worn off it at once.
