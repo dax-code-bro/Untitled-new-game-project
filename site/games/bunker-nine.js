@@ -358,7 +358,20 @@ const WEAPONS = {
     sightH: 0.036, sightFov: 0.90, adsTime: 0.20, adsSpread: 0.22,
     recoil: { up: 1.5, side: 0.6, climb: 0.06, recover: 11, back: 0.013, roll: 0.005, impulse: 8 },
     ammo: { clip: { count: 10, pitch: 0.0096, round: AMMO.mau763 } },
-    hands: { right: [-0.010, -0.020, 0.014], left: null, rightGrip: { axis: [0.10, -0.99, 0], round: [0, 0, -1], girth: 0.062, spread: 0.0196, close: 0.98, index: 'trigger', thumb: 'over', drop: 0 } },
+    /* Two hands, and the second one is not decoration.
+     *
+     * This had `left: null` -- one hand on the grip and nothing else -- and
+     * the entire carry-the-load path is gated on there being a support arm,
+     * so the Mauser was the one weapon in the game that reloaded with an
+     * invisible hand: the clip never appeared, on any frame, while every
+     * other gun's load travelled up in plain sight. Measured: 0 of 138
+     * frames.
+     *
+     * A C96 is loaded with the off hand pushing a stripper clip down into
+     * the guide, and it is held with the off hand under the magazine
+     * housing in front of the trigger guard, which is where this one goes. */
+    hands: { right: [-0.010, -0.020, 0.014], rightGrip: { axis: [0.10, -0.99, 0], round: [0, 0, -1], girth: 0.062, spread: 0.0196, close: 0.98, index: 'trigger', thumb: 'over', drop: 0 },
+      left: [0.052, -0.016, -0.018], leftGrip: { axis: [0.20, -0.98, 0], round: [0, 0, 1], girth: 0.048, spread: 0.0186, close: 0.94, index: 'wrap', thumb: 'along', drop: 0 } },
   },
   /* A rifle for the long shots across the field. Bolt action, so it is
      five rounds and then you are working the handle while they close —
@@ -4792,8 +4805,11 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
            and stay there. A speedloader goes onto the face of an open
            cylinder and is twisted off. Sending all of them to the same
            point is the invisible reload with a prop attached to it. */
-        const u2 = Math.min(1, Math.max(0, propT));
-        const e = u2 * u2 * (3 - 2 * u2);
+        let u2 = Math.min(1, Math.max(0, propT));
+        let e = u2 * u2 * (3 - 2 * u2);
+        // Which actor actually travels. For most weapons it is the whole
+        // prop; the revolver moves one cartridge at a time out of four.
+        let propRoot = prop.root;
         const bore = (v.root && v.root.boreAt) || 0.06;
         const muzzle = (v.root && v.root.muzzleAt) || 0.3;
         let to = v.magWell || (v.root && v.root.magWell) || [M_WELL_X(v), -0.055, 0];
@@ -4812,14 +4828,47 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
           rot = [0, 0, 0]; rot0 = [0, -34, -22];
           show = u2 < 0.995;
         } else if (kind === 'revolver') {
-          /* Onto the face of the swung-out cylinder, which is out to the
-             left on its crane, and pressed straight in along the bore. */
+          /* Four rounds, one chamber at a time.
+           *
+           * The hand makes the same short trip four times over the length
+           * of the reload: down to the pocket, up to the cylinder face,
+           * press, back down. Each round stops in the chamber it was put in
+           * and stays there -- they are the gun's rounds now -- so by the
+           * end of the reload there are four cartridges sitting in the
+           * cylinder rather than a speedloader that has vanished.
+           *
+           * The prop path below carries the one currently in the fingers;
+           * the ones already seated are placed and left alone. */
           const cr = v.crane || [0.09, bore, -0.015];
-          to = [cr[0] - 0.052, bore + 0.001, cr[2] - 0.045];
-          from = [to[0] - 0.060, to[1] - 0.170, to[2] - 0.055];
-          rot = [0, -62, 0]; rot0 = [0, -18, -34];
-          // Withdrawn empty once the rounds are in.
-          show = u2 < 0.90;
+          const N = Math.max(1, spec.mag || 4);
+          const seat = (i) => {
+            // Round the cylinder face, in the order a thumb would use them.
+            const th = (i / N) * Math.PI * 2 + 0.4;
+            const pcd = 0.0148;
+            return [cr[0] - 0.030, bore + Math.sin(th) * pcd, cr[2] - 0.045 + Math.cos(th) * pcd];
+          };
+          const each = 1 / N;
+          const which = Math.min(N - 1, Math.floor(u2 / each));
+          const sub = (u2 - which * each) / each;      // 0..1 within this one
+          if (prop.rounds) {
+            for (let i = 0; i < N; i++) {
+              const grp = prop.rounds.filter((q, k) => Math.floor(k / (prop.rounds.length / N)) === i);
+              const done2 = i < which;
+              const now2 = i === which;
+              for (const q of grp) {
+                q.visible = done2 || (now2 && sub > 0.12);
+                if (done2) { q.setPosition(seat(i)); q.setRotation([0, 0, 90]); }
+              }
+            }
+          }
+          const sTo = seat(which);
+          to = sTo;
+          from = [sTo[0] - 0.055, sTo[1] - 0.160, sTo[2] - 0.060];
+          rot = [0, 0, 90]; rot0 = [0, -24, 52];
+          // Only the one being loaded rides the path.
+          propRoot = prop.rounds ? prop.rounds[Math.floor(which * (prop.rounds.length / N))] : prop.root;
+          propT = sub;
+          show = true;
         } else if (kind === 'clip') {
           /* Into the stripper guide on top of the action, standing up,
              and the empty strip is flicked clear at the end. */
@@ -4837,12 +4886,15 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
           rot0 = [0, -12, -16];
         }
         void muzzle;
-        for (const q of prop.parts) q.visible = show;
+        // Recompute, since a per-round path above resets how far along it is.
+        u2 = Math.min(1, Math.max(0, propT));
+        e = u2 * u2 * (3 - 2 * u2);
+        if (kind !== 'revolver') for (const q of prop.parts) q.visible = show;
         const px = to[0] + (from[0] - to[0]) * (1 - e);
         const py = to[1] + (from[1] - to[1]) * (1 - e);
         const pz = to[2] + (from[2] - to[2]) * (1 - e);
-        prop.root.setPosition([px, py, pz]);
-        prop.root.setRotation([
+        propRoot.setPosition([px, py, pz]);
+        propRoot.setRotation([
           rot[0] + (rot0[0] - rot[0]) * (1 - e),
           rot[1] + (rot0[1] - rot[1]) * (1 - e),
           rot[2] + (rot0[2] - rot[2]) * (1 - e),
@@ -5374,9 +5426,29 @@ function reloadProp(game, P, v, spec, kind) {
     v.prop = P.props[id];
     return P.props[id];
   } else if (kind === 'revolver') {
-    made = game.speedloader({ physics: false, loader: Object.assign({
-      count: spec.mag || 4, pcd: 0.0148, round: AMMO.mag500,
-    }, A.loader || {}) });
+    /* Loose rounds, thumbed in one at a time.
+     *
+     * It was a speedloader -- a moon clip with four rounds in it, pressed
+     * on and twisted off, which takes about a second. That is a competition
+     * shooter's tool and this is a man in a bunker with a handful of .50
+     * out of his coat pocket. Four separate cartridges now, each going into
+     * its own chamber in turn, which is what the reload time was already
+     * paying for and what "I want him to load the round" describes.
+     *
+     * They are their own actors so they can be left IN the chambers rather
+     * than vanishing at the end -- the cylinder carries them from there. */
+    const rounds = [];
+    for (let i = 0; i < (spec.mag || 4); i++) {
+      const r = game.cartridge({ physics: false,
+        round: Object.assign({}, AMMO.mag500, A.round || {}) });
+      r.parent = root;
+      rounds.push(r);
+      for (const n of r.partNames || []) if (r[n]) rounds.push(r[n]);
+    }
+    for (const q of rounds) q.visible = false;
+    P.props[id] = { root: rounds[0], parts: rounds, rounds };
+    v.prop = P.props[id];
+    return P.props[id];
   } else return null;
 
   made.parent = root;

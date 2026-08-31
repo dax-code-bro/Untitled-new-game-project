@@ -954,12 +954,29 @@ function check(name, cond, detail = '') {
 
   const ct = (sy.contact || []).filter((q) => !q.err);
   const ctErr = (sy.contact || []).filter((q) => q.err);
-  const floating = ct.filter((q) => q.wrap.some((d) => d.gap > 0.008));
+  /* Two different faults, and the max alone cannot tell them apart.
+   *
+   * A hand where three fingers touch within a millimetre and the fourth is
+   * 16 mm off IS holding the weapon -- that is a hand on a forend that
+   * tapers, and the finger nearest the muzzle is round a thinner part. A
+   * hand where all four are 30 mm off is holding nothing. Judging on the
+   * worst finger calls both of those the same thing and flags correct
+   * anatomy along with the fault.
+   *
+   * So: the MIDDLE finger's gap says whether the hand is on the weapon, and
+   * the WORST finger says whether one is sticking out on its own -- which
+   * is its own complaint and worth catching separately. */
+  const mid = (a) => { const v = a.slice().sort((x, y) => x - y); return v[Math.floor(v.length / 2)]; };
+  const floating = ct.filter((q) => mid(q.wrap.map((d) => d.gap)) > 0.008);
   check('the fingers that wrap a weapon are touching it',
     !ctErr.length && ct.length > 0 && floating.length === 0,
     ctErr.length ? ctErr[0].err
       : list(floating, (q) => `${q.id}/${q.side}: tips ${q.wrap.map((d) => Math.round(d.gap * 1000)).join(', ')} mm off`));
-  const misplaced = ct.filter((q) => q.wrap.some((d) => d.kgap > 0.018));
+  const stickOut = ct.filter((q) => Math.max.apply(null, q.wrap.map((d) => d.gap)) > 0.030);
+  check('no single finger is left sticking out on its own',
+    stickOut.length === 0,
+    list(stickOut, (q) => `${q.id}/${q.side}: tips ${q.wrap.map((d) => Math.round(d.gap * 1000)).join(', ')} mm off`));
+  const misplaced = ct.filter((q) => mid(q.wrap.map((d) => d.kgap)) > 0.018);
   check('every hand is in the right place on its weapon',
     misplaced.length === 0,
     list(misplaced, (q) => `${q.id}/${q.side}: knuckles ${q.wrap.map((d) => Math.round(d.kgap * 1000)).join(', ')} mm off`));
