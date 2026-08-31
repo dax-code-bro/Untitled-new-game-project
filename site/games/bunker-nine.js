@@ -660,7 +660,17 @@ function buildPerkMachine(game, S, id, def, at) {
   // Coin plate, a slot in it, and a vent down the side.
   box([X + 0.26, Y + 0.42, Z + 0.315], [0.16, 0.20, 0.032], steel, false);
   box([X + 0.26, Y + 0.46, Z + 0.328], [0.015, 0.06, 0.01], dark, false);
-  for (let k = 0; k < 6; k++) box([X - 0.30, Y + 0.30 + k * 0.035, Z + 0.20], [0.02, 0.014, 0.30], dark, false);
+  /* The vent, as a louvre rather than six floating slivers.
+   *
+   * It was six boxes 14 mm thick and 300 mm long -- a stack of cards, and
+   * the sweep was right to flag them, because that is exactly the shape
+   * that reads as a 2D glitch when you walk past it. A recessed panel with
+   * ribs standing proud of it is what a vent in a steel cabinet looks like,
+   * and every piece of it has thickness. */
+  box([X - 0.305, Y + 0.40, Z + 0.20], [0.03, 0.26, 0.34], dark, false);
+  for (let k = 0; k < 5; k++) {
+    box([X - 0.318, Y + 0.315 + k * 0.045, Z + 0.20], [0.026, 0.026, 0.30], steel, false);
+  }
   // Feet, so it stands on the floor rather than growing out of it.
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
     box([X + sx * 0.30, Y + 0.025, Z + sz * 0.24], [0.09, 0.05, 0.09], dark, false);
