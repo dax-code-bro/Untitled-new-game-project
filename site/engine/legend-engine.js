@@ -18341,6 +18341,31 @@ function buildViewHand(g, rawAt, side, opts = {}) {
       knuckle0.y + lane.y * off + grasp.y * 0.011 + point.y * 0.006,
       knuckle0.z + lane.z * off + grasp.z * 0.011 + point.z * 0.006,
     );
+    /* The knuckle row curves round what it is holding.
+     *
+     * Four knuckles at 19 mm apart span 57 mm, and laid in a STRAIGHT line
+     * across a 40 mm forend the two outer ones are past the edge of it --
+     * they are not touching because there is nothing there to touch. That
+     * is not a hand in the wrong place, which is why moving the hand did
+     * not fix it and the seating solver kept putting it back: it is a hand
+     * shaped like a plank.
+     *
+     * Each knuckle is pushed along the grasp axis until it is a knuckle's
+     * thickness off the surface, so the row follows the curve of the thing
+     * the way a real hand does. Bounded to a centimetre either way, because
+     * past that it stops being a hand curving and starts being knuckles at
+     * unrelated depths. */
+    if (opts.surface) {
+      const surf = opts.surface;
+      const want = 0.010;
+      let bt = 0, be = Math.abs(surf(root.x, root.y, root.z) - want);
+      for (let i = -14; i <= 14; i++) {
+        const t = i * 0.0008;
+        const e2 = Math.abs(surf(root.x + grasp.x * t, root.y + grasp.y * t, root.z + grasp.z * t) - want);
+        if (e2 < be - 1e-7) { be = e2; bt = t; }
+      }
+      root.x += grasp.x * bt; root.y += grasp.y * bt; root.z += grasp.z * bt;
+    }
     /* How far each finger closes. Round a grip they close nearly all the
        way — the tips come back under the palm, and a hand whose fingertips
        stop in mid-air is a hand not holding anything. Over a forend they

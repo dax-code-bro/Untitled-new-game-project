@@ -257,7 +257,7 @@ const WEAPONS = {
     sightH: 0.0955, sightFov: 0.80, adsTime: 0.22,
     recoil: { up: 0.42, side: 0.30, climb: 0.13, recover: 11, back: 0.011, roll: 0.004, impulse: 5 },
     ammo: { mag: { w: 0.028, d: 0.024, len: 0.112, curve: 0, witness: 0, round: AMMO.acp45 } },
-    hands: { right: [-0.006, -0.024, 0.016], rightGrip: 'pistol', left: [0.330, -0.020, -0.017], leftGrip: 'woodFore' },
+    hands: { right: [-0.006, -0.024, 0.016], rightGrip: 'pistol', left: [0.356, -0.020, -0.017], leftGrip: 'woodFore' },
   },
   scatter: {
     name: 'Scattergun', slotName: 'SCATTERGUN',
@@ -386,7 +386,7 @@ const WEAPONS = {
     recoil: { up: 3.4, side: 0.8, climb: 0.20, recover: 7, back: 0.040, roll: 0.010, impulse: 21 },
     moveMul: 0.90, muzzleVel: 800,
     ammo: { clip: { count: 5, pitch: 0.0126, round: AMMO.rifle30 } },
-    hands: { right: [-0.012, -0.028, 0.016], rightGrip: 'wrist', left: [0.300, -0.006, -0.021], leftGrip: 'woodFore' },
+    hands: { right: [-0.012, -0.028, 0.016], rightGrip: 'wrist', left: [0.328, -0.006, -0.021], leftGrip: 'woodFore' },
   },
   /* The Kill Streak. Two millimetres of bore inside forty of steel, and a
      thousand behind every one of the three rounds it holds. It goes
@@ -450,7 +450,7 @@ const WEAPONS = {
        bar, so the firing hand belongs at the origin and the support arm in
        the forearm cuff, 170 mm up and 40 mm forward of it. Both hands were
        out in front of the panel holding nothing. */
-    hands: { right: [0, 0, 0], rightGrip: 'haft', left: [0.040, 0.170, 0], leftGrip: { axis: [0, 0, 1], round: [-1, 0, 0], girth: 0.050, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 } },
+    hands: { right: [0, 0, 0], rightGrip: 'haft', left: [0.040, 0.150, 0], leftGrip: { axis: [0, 0, 1], round: [-1, 0, 0], girth: 0.050, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 } },
   },
   shield: {
     name: 'Riot Shield', slotName: 'RIOT SHIELD',
@@ -464,7 +464,7 @@ const WEAPONS = {
        bar, so the firing hand belongs at the origin and the support arm in
        the forearm cuff, 170 mm up and 40 mm forward of it. Both hands were
        out in front of the panel holding nothing. */
-    hands: { right: [0, 0, 0], rightGrip: 'haft', left: [0.040, 0.170, 0], leftGrip: { axis: [0, 0, 1], round: [-1, 0, 0], girth: 0.050, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 } },
+    hands: { right: [0, 0, 0], rightGrip: 'haft', left: [0.040, 0.150, 0], leftGrip: { axis: [0, 0, 1], round: [-1, 0, 0], girth: 0.050, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 } },
   },
   arc: {
     name: 'Arc Breaker', slotName: 'ARC BREAKER',
