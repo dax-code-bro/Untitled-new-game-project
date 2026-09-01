@@ -493,6 +493,10 @@ function buildViewHand(g, rawAt, side, opts = {}) {
 
   const digit = (root, dir0, bends, lens, r0, pt = point, cl = curl) => {
     const rs = [];
+    // Where the two knuckles past the first one land, so the measurement
+    // can ask the same question the solve now answers: is the finger lying
+    // ALONG the thing it holds, or poking it with one fingertip.
+    const joints = [];
     let d = dir0;
     // Start back inside the palm so the knuckle is buried in it.
     let p = new Vec3(root.x - d.x * 0.009, root.y - d.y * 0.009, root.z - d.z * 0.009);
@@ -509,6 +513,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
         // Swollen at the joint, tapering toward the tip.
         push(r0 * (j === 2 ? 1.10 : 1.0) * (1 - (travelled / total) * 0.28));
       }
+      if (k < 2) joints.push([p.x, p.y, p.z]);
     }
     p = new Vec3(p.x + d.x * 0.0045, p.y + d.y * 0.0045, p.z + d.z * 0.0045);
     travelled += 0.0045;
@@ -524,6 +529,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
     if (opts.out) {
       (opts.out.digits || (opts.out.digits = [])).push({
         knuckle: [root.x, root.y, root.z],
+        joints,
         tip: [p.x, p.y, p.z],
         r: r0,
       });

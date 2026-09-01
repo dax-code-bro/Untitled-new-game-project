@@ -4104,6 +4104,20 @@ function makePlayer(game, S, hud, sfx, voice) {
     v.arms = game.viewmodelArms(root, WEAPONS[id].hands,
       { key: id, thumb: !!WEAPONS[id].thumbCock, surface: weaponSurface(game, root) });
   }
+  /* Every reload prop, built now.
+
+     A magazine, a stripper clip, a belt, a pair of shells and four loose
+     cartridges: fourteen weapons' worth, made once at start-up so that
+     nothing is uploaded to the card during a fight. They are hidden
+     immediately; the reload shows them. */
+  for (const [id, v] of Object.entries(P.view)) {
+    const sp = WEAPONS[id];
+    if (!sp || sp.melee || !sp.reloadKind) continue;
+    try {
+      const pr = reloadProp(game, P, v, sp, sp.reloadKind, id);
+      if (pr) for (const q of pr.parts) q.visible = false;
+    } catch (e) { void e; }
+  }
   for (const v of Object.values(P.view)) setViewVisible(v, false);
 
   /* Pointer lock: click to capture, mouse drives engine yaw/pitch. */
@@ -4609,6 +4623,17 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
    * under 1.0 it rings, which is what a light gun does, and the heavy
    * ones are damped nearer to critical so they come back slowly and
    * once. */
+  /* The muzzle flash fading. It is a kept light rather than a disposable
+     one (see the firing code), so it is put out here instead of by the
+     engine's decay list -- 0.05 s, the same life it had before. */
+  if (P.flashLights) {
+    for (const fl of Object.values(P.flashLights)) {
+      if (fl.intensity <= 0) continue;
+      fl.intensity -= fl.intensity * Math.min(1, dt / 0.05);
+      if (fl.intensity < 0.5) fl.intensity = 0;
+    }
+  }
+
   const KS = 190, KD = 15;                 // stiffness, damping
   P.kickVel = (P.kickVel || 0) + (-P.kickPitch * KS - (P.kickVel || 0) * KD) * dt;
   P.kickPitch += P.kickVel * dt;
@@ -4734,7 +4759,11 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
      is that aiming is geometry and not taste, and a cant that survived
      into ADS would break all of it. A little more while sprinting, on top
      of the cant the sprint already has. */
-  const hipTip = bench ? 0 : (1 - a) * (0.122 + sp * 0.10);
+  /* ...and levelled again during a reload, on top of the lift. The gun
+     comes up to where the hands are working precisely so the breech, the
+     well and the port face the camera; leaving seven degrees of muzzle
+     droop in tips all three of them away again. */
+  const hipTip = bench ? 0 : (1 - a) * (0.122 + sp * 0.10) * (1 - rl * 0.85);
   const pitch = Math.asin(Math.max(-1, Math.min(1, f.y))) + P.kickPitch * 0.06 - hipTip;
   /* Roll the weapon inboard while sprinting, and again while reloading so
      the breech, the magazine well or the open cylinder turns to face the
@@ -5543,11 +5572,29 @@ function tryFire(game, S, P, hud, sfx, dt) {
   }
   ejectShell(game, S, P, P.view[P.equipped()]);
 
-  // Muzzle flash: light + sparks, one frame of each.
+  /* Muzzle flash: light plus sparks, one frame of each.
+   *
+   * ONE light, kept and re-lit. This made a new one every shot and let the
+   * engine decay and delete it, which at the MG 42's twelve hundred rounds
+   * a minute is twenty actors created and destroyed every second while the
+   * gun is held down -- churn, in the middle of the busiest thing the game
+   * ever does. The same lamp is simply moved and turned back up. */
   if (P.muzzleWorld) {
     game.particles.sparks(P.muzzleWorld, { count: spec.pellets > 1 ? 14 : 8, speed: 5, color: 0xffd27a });
-    const fl = game.light({ at: P.muzzleWorld, color: spec.sfx === 'shotArc' ? 0x66d4ff : 0xffc061, intensity: 130, radius: 8 });
-    fl._decay = 0.05;   // engine removes lights whose _decay is set
+    /* One lamp per flash colour, kept. A light is a plain record in the
+       renderer's list with no decay on it, so it survives to be used
+       again; it is faded out by hand in updateViewmodel. Two of them ever
+       exist -- muzzle orange and the Arc Breaker's blue. */
+    const warm = spec.sfx !== 'shotArc';
+    P.flashLights = P.flashLights || {};
+    const k = warm ? 'warm' : 'arc';
+    if (!P.flashLights[k]) {
+      P.flashLights[k] = game.light({ at: P.muzzleWorld,
+        color: warm ? 0xffc061 : 0x66d4ff, intensity: 0, radius: 8 });
+    }
+    const fl = P.flashLights[k];
+    fl.position.set(P.muzzleWorld[0], P.muzzleWorld[1], P.muzzleWorld[2]);
+    fl.intensity = 130;
   }
 
   const cam = game.camera;
@@ -5764,9 +5811,15 @@ function M_WELL_X(v) {
    Parented to the weapon, so it inherits every bit of sway and recoil the
    gun has and does not swim about relative to the hand holding it. */
 
-function reloadProp(game, P, v, spec, kind) {
+function reloadProp(game, P, v, spec, kind, forId) {
   P.props = P.props || {};
-  const id = P.equipped();
+  /* The id is a parameter now, so these can be built at start-up instead
+     of the first time each weapon is reloaded. A magazine is a few hundred
+     triangles and a mesh upload, and doing it on the frame a man with an
+     empty gun reaches for one is a hitch at the worst possible moment --
+     the same class of fault as the stutter this pass is chasing, just
+     spread over fourteen weapons instead of one. */
+  const id = forId || P.equipped();
   const cached = P.props[id];
   /* Kept between reloads, but only while it is still the right object.
      The clip guns hand back the WEAPON's own clip actor, and a weapon

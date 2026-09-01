@@ -732,10 +732,20 @@ const SWEEP = () => {
         for (const sideName of ['right', 'left']) {
           const rec = arms.digits[sideName];
           if (!rec || !rec.digits) continue;
-          const ds = rec.digits.map((d) => ({
-            gap: +(near(d.tip) - d.r).toFixed(4),
-            kgap: +(near(d.knuckle) - d.r).toFixed(4),
-          }));
+          const ds = rec.digits.map((d) => {
+            /* The middle of the finger, which is the measurement that was
+               missing. Both this and the solve used to look only at the
+               tip, so they agreed with each other and disagreed with the
+               screen: every finger touched its weapon at exactly one point
+               and stood clear along all three bones, which reads as four
+               sausages laid on a grip. */
+            const js = (d.joints || []).map((j) => +(near(j) - d.r).toFixed(4));
+            return {
+              gap: +(near(d.tip) - d.r).toFixed(4),
+              kgap: +(near(d.knuckle) - d.r).toFixed(4),
+              mid: js.length ? +Math.max.apply(null, js).toFixed(4) : 0,
+            };
+          });
           out.sys.contact.push({ id, side: sideName, n: ds.length,
             // The last digit is the trigger finger: it rests inside a guard
             // rather than wrapping, so it is reported apart from the rest.
@@ -1093,6 +1103,18 @@ function check(name, cond, detail = '') {
   check('no single finger is left sticking out on its own',
     stickOut.length === 0,
     list(stickOut, (q) => `${q.id}/${q.side}: tips ${q.wrap.map((d) => Math.round(d.gap * 1000)).join(', ')} mm off`));
+  /* The finger between its knuckle and its tip.
+   *
+   * A finger round a grip lies against it along its length. Solving and
+   * checking only the tip gave a hand that touched its weapon at four
+   * points with daylight down every bone -- and the check passed, because
+   * it was asking the solve to confirm itself. This is the same question
+   * asked of the middle of the finger, where 12 mm of standoff on a 19 mm
+   * finger is a finger not on the gun. */
+  const standoff = ct.filter((q) => mid(q.wrap.map((d) => d.mid)) > 0.012);
+  check('a wrapped finger lies along the weapon, not just touching it',
+    standoff.length === 0,
+    list(standoff, (q) => `${q.id}/${q.side}: middles ${q.wrap.map((d) => Math.round(d.mid * 1000)).join(', ')} mm off`));
   const misplaced = ct.filter((q) => mid(q.wrap.map((d) => d.kgap)) > 0.018);
   check('every hand is in the right place on its weapon',
     misplaced.length === 0,
