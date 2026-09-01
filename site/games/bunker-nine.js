@@ -2667,8 +2667,26 @@ function buildMap(game, S) {
     sand: { color: 0x8a7f5e, texture: 'fabric', roughness: 0.98, metalness: 0, uvScale: 2 },
     chalk: { color: 0xf5f2e6, texture: 'smooth', roughness: 0.9, metalness: 0, emissive: 0xcfe8ff, emissiveStrength: 0.35 },
     // Outside. Churned mud, scorched steel, and wire.
-    mud: { color: 0x3b3327, texture: 'dirt', roughness: 1.0, metalness: 0, uvScale: 3 },
-    mudDark: { color: 0x241f18, texture: 'dirt', roughness: 1.0, metalness: 0, uvScale: 2 },
+    /* uvScale is tiles-per-FACE, and this face is the whole battlefield --
+       a hundred and sixty metres of it. At 3 that is one 256-pixel tile
+       stretched over fifty-three metres, so at the player's feet a single
+       texel covers a fifth of a metre and the strength-3 normal map built
+       from it turns into a field of steep facets, every one of them
+       catching a specular highlight. That is the dithered crimson mess in
+       front of the camera: the dirt recipe's red channel is its strongest,
+       so a blown-out one goes red.
+
+       Exactly the mistake the walls had ("At 1.3 the 256-pixel concrete
+       stretched across the whole of it"), fixed there and never checked
+       here. These tile at about two metres now. */
+    /* And desaturated. 0x453c2e reads as a reasonable brown as a swatch
+       and is 1 : 0.76 : 0.46 once it is linear, which under a warm sun is
+       terracotta. Churned wet earth is a grey-brown; it is only orange in
+       a paint catalogue. */
+    // For the small props -- crater spoil, mounds -- which are a metre or
+    // two across. The ground plane passes its own, see buildMap.
+    mud: { color: 0x4a443b, texture: 'dirt', roughness: 1.0, metalness: 0, uvScale: 2 },
+    mudDark: { color: 0x2f2b25, texture: 'dirt', roughness: 1.0, metalness: 0, uvScale: 12 },
     burnt: { color: 0x2b2a28, texture: 'metal', roughness: 0.82, metalness: 1 },
     hull: { color: 0x4a4c3e, texture: 'metal', roughness: 0.72, metalness: 1, uvScale: 2 },
     wire: { color: 0x53504a, texture: 'metal', roughness: 0.6, metalness: 1 },
@@ -2734,7 +2752,30 @@ function buildMap(game, S) {
      to be the place the dead climb out of. Keeping it non-colliding means a
      zombie walking in from thirty metres never snags on a tank track, and
      the whole field costs four draw calls instead of four hundred. */
-  game.ground({ material: MAT.mud, size: 160 });
+  /* The battlefield floor, and why it rendered crimson.
+
+     uvScale here is NOT the material's uvScale: ground() bakes its own
+     into the terrain mesh (span = uvScale x size) and the material's then
+     multiplies again in the shader. So the two numbers compound, and both
+     of them were wrong in opposite directions.
+
+     ground() defaults to 0.35, which across a hundred and sixty metres is
+     one 256-pixel tile every four hundred and fifty-seven metres. Raising
+     the MATERIAL's uvScale to fix it did nothing visible twice, then
+     raising ground()'s to 105 as well made it far worse: 105 x 160 x 88
+     put a whole tile in every centimetre, so every screen pixel averaged
+     a random scatter of texels -- and the average of a texture lands on
+     its dominant channel, which for dirt is red. That was the dithered
+     crimson slick in front of the player. It was never the colour.
+
+     Measured rather than argued: a plain box of this exact material
+     rendered (95, 83, 63) -- clean grey-brown -- while the ground beside
+     it in the same frame rendered (32, 20, 12). Same material, same
+     light, same shader. The only difference was UV density.
+
+     0.57 x 160 = 91 tiles across the field, about one every metre and
+     three quarters, with the material at 1 so it does not multiply. */
+  game.ground({ material: { ...MAT.mud, uvScale: 1 }, size: 160, uvScale: 0.57, segments: 48 });
 
   /* Everything the battlefield builds gets registered as it is made, so the
      graphics setting can take the whole of it away in one go rather than
@@ -2744,9 +2785,38 @@ function buildMap(game, S) {
      one of them would eventually be forgotten. */
   S.detail = { far: [], smoke: [] };
   const rawSpawn = { box: game.box, cylinder: game.cylinder, sphere: game.sphere, cone: game.cone };
+  /* Anything under half a metre out here does not cast a shadow.
+
+     The battlefield is about three and a half thousand separate pieces
+     within thirty metres of the door -- wire, splinters, shell fragments,
+     rubble. Every one of them was a shadow caster, and a shadow map
+     covering the whole map gives each of them a few texels at a grazing
+     sun angle, so what they actually rendered was a field of dithered
+     speckle over the near ground. That is the noise in front of the
+     player, and it is why the shadowed ground read as a dark red fizz
+     rather than as mud: the mean of a heavily dithered dark region is
+     dominated by whichever pixels came through lit, and a lit dirt texel
+     is warm.
+
+     The stakes, hulls and sandbags are all bigger than this and still
+     cast. Materials are cached by spec, so this adds a handful of
+     material objects, not one per piece. */
+  const SHADOW_MIN = 0.55;
+  const spanOf = (o) => {
+    const s = o.size;
+    const box = Array.isArray(s) ? Math.max(s[0], s[1], s[2]) : (typeof s === 'number' ? s : 0);
+    return Math.max(box, (o.radius || 0) * 2, o.height || 0);
+  };
   const collect = (bucket) => {
     for (const k of Object.keys(rawSpawn)) {
-      game[k] = function (o) { const a = rawSpawn[k].call(game, o); bucket.push(a); return a; };
+      game[k] = function (o) {
+        let spec = o;
+        if (o && o.material && typeof o.material === 'object' && spanOf(o) > 0
+          && spanOf(o) < SHADOW_MIN) {
+          spec = Object.assign({}, o, { material: Object.assign({}, o.material, { castShadow: false }) });
+        }
+        const a = rawSpawn[k].call(game, spec); bucket.push(a); return a;
+      };
     }
   };
   const stopCollecting = () => { for (const k of Object.keys(rawSpawn)) game[k] = rawSpawn[k]; };

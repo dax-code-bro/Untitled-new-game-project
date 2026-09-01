@@ -478,11 +478,18 @@ function buildShoes(g, skeleton, build, segments, spec) {
        either side of the toe cap. A boot is squarer than a foot, not
        rounder. */
     const CLEAR_W = 0.008, CLEAR_H = 0.009;
+    /* Extra room at the toe. The foot's last two cross-sections are tiny
+       -- 19 mm half-width at the tip -- and a flat 8 mm of leather round a
+       section that small still let the foot's square corners through the
+       boot's rounder ones. A boot toe is chunky anyway; a toe cap is the
+       one place on a boot that is obviously bigger than the foot in it. */
+    const toe = (bz) => smoothstep(0.09, 0.21, bz);
     const bootRings = (padW, padH, lift) => HUMAN_SHOE.map(([bz, hw, up]) => {
-      const top = HUMAN.sole + up + padH;
+      const t = toe(bz);
+      const top = HUMAN.sole + up + padH + t * 0.011;
       const bot = HUMAN.sole - lift;
       return { p: new Vec3(c.x, (top + bot) * 0.5, c.z + bz),
-        w: hw + padW, d: (top - bot) * 0.5, e: 3.3, right: _zRight, fwd: _yFwd };
+        w: hw + padW + t * 0.013, d: (top - bot) * 0.5, e: 3.3, right: _zRight, fwd: _yFwd };
     });
     loftRings(g, bootRings(CLEAR_W, CLEAR_H, 0.004), segments, true, true);
     // Sole: a slab under the same outline, in its own colour.
@@ -490,7 +497,8 @@ function buildShoes(g, skeleton, build, segments, spec) {
     loftRings(g, HUMAN_SHOE.map(([bz, hw]) => {
       const top = HUMAN.sole + 0.016, bot = HUMAN.sole - 0.010;
       return { p: new Vec3(c.x, (top + bot) * 0.5, c.z + bz),
-        w: hw + CLEAR_W + 0.003, d: (top - bot) * 0.5, e: 3.6, right: _zRight, fwd: _yFwd };
+        w: hw + CLEAR_W + 0.005 + toe(bz) * 0.013, d: (top - bot) * 0.5,
+        e: 3.6, right: _zRight, fwd: _yFwd };
     }), segments, true, true);
   }
   g.setColor(null);
@@ -1178,11 +1186,11 @@ function grimeCloth(g, rng, seed) {
     /* Knees and the seat: a band that catches whatever the legs went
        through, independent of how low down the garment reaches. */
     const knee = (1 - smoothstep(0.06, 0.20, Math.abs(y + 0.36))) * 0.5;
-    let k = low * (0.30 + splash * 0.55) + knee * splash + wear * 0.10;
-    k = Math.min(0.78, k);
-    C[v * 3] *= 1 - k * 0.46;
-    C[v * 3 + 1] *= 1 - k * 0.55;
-    C[v * 3 + 2] *= 1 - k * 0.68;
+    let k = low * (0.42 + splash * 0.70) + knee * splash * 1.3 + wear * 0.16;
+    k = Math.min(0.88, k);
+    C[v * 3] *= 1 - k * 0.52;
+    C[v * 3 + 1] *= 1 - k * 0.61;
+    C[v * 3 + 2] *= 1 - k * 0.74;
   }
 }
 

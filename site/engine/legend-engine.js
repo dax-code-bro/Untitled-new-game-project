@@ -2027,6 +2027,12 @@ const TextureLib = {
   normalStrength: {
     metal: 0.7, smooth: 0.35, glass: 0.2, wood: 1.3, fabric: 1.6,
     concrete: 3, brick: 3, rock: 3, rust: 2.2,
+    /* Dirt was falling through to the default 3, and its height field
+       carries grit at 80 cycles across a 256-pixel tile -- about three
+       texels a cycle. At strength 3 that is a facet per texel, and on a
+       surface as large as the battlefield the ground fizzed. Same
+       reasoning as the note on metal above. */
+    dirt: 1.4, sand: 1.2, grass: 1.2,
   },
 
   /* Surface recipes. Each writes into `c` for one texel.
@@ -2105,7 +2111,11 @@ const TextureLib = {
       const rings = Math.abs(((v * 9 + wob) % 1) * 2 - 1);
       const fibre = n.fbm(u * 4, v * 90, 2, 2) * 0.5 + 0.5;
       const dark = smoothstep(0.35, 0.85, rings);
-      const base = 0.82 - dark * 0.34 + fibre * 0.12;
+      // The ring contrast was 1.7 to 1, which at the scale the boards and
+      // beams are tiled at reads as painted corduroy rather than as grain.
+      // The height field still carries the full swing, so the normal map
+      // keeps the texture of it.
+      const base = 0.82 - dark * 0.21 + fibre * 0.10;
       c.r = base * 1.04;
       c.g = base * 0.96;
       c.b = base * 0.86;
@@ -2192,7 +2202,12 @@ const TextureLib = {
       const clod = n.fbm(u * 12, v * 12, 3, 4) * 0.5 + 0.5;
       const grit = n.fbm(u * 80, v * 80, 9, 2) * 0.5 + 0.5;
       const base = 0.66 + clod * 0.20 + grit * 0.08;
-      c.r = base * 1.06; c.g = base * 0.98; c.b = base * 0.88;
+      /* The last of the baked-in colour. 1.06 / 0.98 / 0.88 is a 1 : 0.92
+         : 0.83 warm cast, which on a material that is ALSO warm compounds
+         into terracotta -- and the battlefield mud came out crimson under
+         a warm sun once its albedo was correct. Every other recipe in
+         here had this taken out; this one kept a third of it. */
+      c.r = base * 1.02; c.g = base; c.b = base * 0.96;
       c.rough = 0.95;
       c.ao = 0.72 + clod * 0.28;
       c.h = clod * 0.7 + grit * 0.3;
@@ -2202,7 +2217,10 @@ const TextureLib = {
       const dune = n.fbm(u * 4, v * 16, 1, 3) * 0.5 + 0.5;
       const grain = n.fbm(u * 150, v * 150, 6, 2) * 0.5 + 0.5;
       const base = 0.62 + dune * 0.12 + grain * 0.06;
-      c.r = base * 1.06; c.g = base * 0.94; c.b = base * 0.68;
+      // Was 1.06 / 0.94 / 0.68 -- a yellow baked into the texture, on top
+      // of the khaki its materials already ask for. Sandbags came out
+      // mustard. The material has the colour; this just varies it.
+      c.r = base * 1.03; c.g = base * 0.99; c.b = base * 0.92;
       c.rough = 0.9;
       c.ao = 0.85 + dune * 0.15;
       c.h = dune * 0.6 + grain * 0.4;
@@ -11107,11 +11125,18 @@ function buildShoes(g, skeleton, build, segments, spec) {
        either side of the toe cap. A boot is squarer than a foot, not
        rounder. */
     const CLEAR_W = 0.008, CLEAR_H = 0.009;
+    /* Extra room at the toe. The foot's last two cross-sections are tiny
+       -- 19 mm half-width at the tip -- and a flat 8 mm of leather round a
+       section that small still let the foot's square corners through the
+       boot's rounder ones. A boot toe is chunky anyway; a toe cap is the
+       one place on a boot that is obviously bigger than the foot in it. */
+    const toe = (bz) => smoothstep(0.09, 0.21, bz);
     const bootRings = (padW, padH, lift) => HUMAN_SHOE.map(([bz, hw, up]) => {
-      const top = HUMAN.sole + up + padH;
+      const t = toe(bz);
+      const top = HUMAN.sole + up + padH + t * 0.011;
       const bot = HUMAN.sole - lift;
       return { p: new Vec3(c.x, (top + bot) * 0.5, c.z + bz),
-        w: hw + padW, d: (top - bot) * 0.5, e: 3.3, right: _zRight, fwd: _yFwd };
+        w: hw + padW + t * 0.013, d: (top - bot) * 0.5, e: 3.3, right: _zRight, fwd: _yFwd };
     });
     loftRings(g, bootRings(CLEAR_W, CLEAR_H, 0.004), segments, true, true);
     // Sole: a slab under the same outline, in its own colour.
@@ -11119,7 +11144,8 @@ function buildShoes(g, skeleton, build, segments, spec) {
     loftRings(g, HUMAN_SHOE.map(([bz, hw]) => {
       const top = HUMAN.sole + 0.016, bot = HUMAN.sole - 0.010;
       return { p: new Vec3(c.x, (top + bot) * 0.5, c.z + bz),
-        w: hw + CLEAR_W + 0.003, d: (top - bot) * 0.5, e: 3.6, right: _zRight, fwd: _yFwd };
+        w: hw + CLEAR_W + 0.005 + toe(bz) * 0.013, d: (top - bot) * 0.5,
+        e: 3.6, right: _zRight, fwd: _yFwd };
     }), segments, true, true);
   }
   g.setColor(null);
@@ -11807,11 +11833,11 @@ function grimeCloth(g, rng, seed) {
     /* Knees and the seat: a band that catches whatever the legs went
        through, independent of how low down the garment reaches. */
     const knee = (1 - smoothstep(0.06, 0.20, Math.abs(y + 0.36))) * 0.5;
-    let k = low * (0.30 + splash * 0.55) + knee * splash + wear * 0.10;
-    k = Math.min(0.78, k);
-    C[v * 3] *= 1 - k * 0.46;
-    C[v * 3 + 1] *= 1 - k * 0.55;
-    C[v * 3 + 2] *= 1 - k * 0.68;
+    let k = low * (0.42 + splash * 0.70) + knee * splash * 1.3 + wear * 0.16;
+    k = Math.min(0.88, k);
+    C[v * 3] *= 1 - k * 0.52;
+    C[v * 3 + 1] *= 1 - k * 0.61;
+    C[v * 3 + 2] *= 1 - k * 0.74;
   }
 }
 

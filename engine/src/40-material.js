@@ -123,6 +123,12 @@ const TextureLib = {
   normalStrength: {
     metal: 0.7, smooth: 0.35, glass: 0.2, wood: 1.3, fabric: 1.6,
     concrete: 3, brick: 3, rock: 3, rust: 2.2,
+    /* Dirt was falling through to the default 3, and its height field
+       carries grit at 80 cycles across a 256-pixel tile -- about three
+       texels a cycle. At strength 3 that is a facet per texel, and on a
+       surface as large as the battlefield the ground fizzed. Same
+       reasoning as the note on metal above. */
+    dirt: 1.4, sand: 1.2, grass: 1.2,
   },
 
   /* Surface recipes. Each writes into `c` for one texel.
@@ -201,7 +207,11 @@ const TextureLib = {
       const rings = Math.abs(((v * 9 + wob) % 1) * 2 - 1);
       const fibre = n.fbm(u * 4, v * 90, 2, 2) * 0.5 + 0.5;
       const dark = smoothstep(0.35, 0.85, rings);
-      const base = 0.82 - dark * 0.34 + fibre * 0.12;
+      // The ring contrast was 1.7 to 1, which at the scale the boards and
+      // beams are tiled at reads as painted corduroy rather than as grain.
+      // The height field still carries the full swing, so the normal map
+      // keeps the texture of it.
+      const base = 0.82 - dark * 0.21 + fibre * 0.10;
       c.r = base * 1.04;
       c.g = base * 0.96;
       c.b = base * 0.86;
@@ -288,7 +298,12 @@ const TextureLib = {
       const clod = n.fbm(u * 12, v * 12, 3, 4) * 0.5 + 0.5;
       const grit = n.fbm(u * 80, v * 80, 9, 2) * 0.5 + 0.5;
       const base = 0.66 + clod * 0.20 + grit * 0.08;
-      c.r = base * 1.06; c.g = base * 0.98; c.b = base * 0.88;
+      /* The last of the baked-in colour. 1.06 / 0.98 / 0.88 is a 1 : 0.92
+         : 0.83 warm cast, which on a material that is ALSO warm compounds
+         into terracotta -- and the battlefield mud came out crimson under
+         a warm sun once its albedo was correct. Every other recipe in
+         here had this taken out; this one kept a third of it. */
+      c.r = base * 1.02; c.g = base; c.b = base * 0.96;
       c.rough = 0.95;
       c.ao = 0.72 + clod * 0.28;
       c.h = clod * 0.7 + grit * 0.3;
@@ -298,7 +313,10 @@ const TextureLib = {
       const dune = n.fbm(u * 4, v * 16, 1, 3) * 0.5 + 0.5;
       const grain = n.fbm(u * 150, v * 150, 6, 2) * 0.5 + 0.5;
       const base = 0.62 + dune * 0.12 + grain * 0.06;
-      c.r = base * 1.06; c.g = base * 0.94; c.b = base * 0.68;
+      // Was 1.06 / 0.94 / 0.68 -- a yellow baked into the texture, on top
+      // of the khaki its materials already ask for. Sandbags came out
+      // mustard. The material has the colour; this just varies it.
+      c.r = base * 1.03; c.g = base * 0.99; c.b = base * 0.92;
       c.rough = 0.9;
       c.ao = 0.85 + dune * 0.15;
       c.h = dune * 0.6 + grain * 0.4;
