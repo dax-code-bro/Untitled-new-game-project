@@ -484,13 +484,24 @@ function buildShoes(g, skeleton, build, segments, spec) {
        boot's rounder ones. A boot toe is chunky anyway; a toe cap is the
        one place on a boot that is obviously bigger than the foot in it. */
     const toe = (bz) => smoothstep(0.09, 0.21, bz);
-    const bootRings = (padW, padH, lift) => HUMAN_SHOE.map(([bz, hw, up]) => {
-      const t = toe(bz);
-      const top = HUMAN.sole + up + padH + t * 0.011;
-      const bot = HUMAN.sole - lift;
-      return { p: new Vec3(c.x, (top + bot) * 0.5, c.z + bz),
-        w: hw + padW + t * 0.013, d: (top - bot) * 0.5, e: 3.3, right: _zRight, fwd: _yFwd };
-    });
+    const bootRings = (padW, padH, lift) => {
+      const rings = HUMAN_SHOE.map(([bz, hw, up]) => {
+        const t = toe(bz);
+        const top = HUMAN.sole + up + padH + t * 0.019;
+        const bot = HUMAN.sole - lift;
+        return { p: new Vec3(c.x, (top + bot) * 0.5, c.z + bz),
+          w: hw + padW + t * 0.019, d: (top - bot) * 0.5, e: 3.3, right: _zRight, fwd: _yFwd };
+      });
+      /* One ring past the end. HUMAN_SHOE's last station IS the toe, and
+         the flesh foot closes with a cap a few millimetres beyond it --
+         so a boot that stops exactly on the last station leaves the very
+         apex of the toe outside, which is one vertex and was visible as
+         a pale spot on two of the four builds. */
+      const last = rings[rings.length - 1];
+      rings.push({ p: new Vec3(c.x, last.p.y, last.p.z + 0.018),
+        w: last.w * 0.55, d: last.d * 0.60, e: 3.0, right: _zRight, fwd: _yFwd });
+      return rings;
+    };
     loftRings(g, bootRings(CLEAR_W, CLEAR_H, 0.004), segments, true, true);
     // Sole: a slab under the same outline, in its own colour.
     g.setColor(spec.sole != null ? spec.sole : spec.color);
