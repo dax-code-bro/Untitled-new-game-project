@@ -327,6 +327,14 @@ const WEAPONS = {
     name: 'Claw Hammer', slotName: 'HAMMER',
     dmg: 0, headMul: 1, mag: Infinity, reserve: Infinity, refire: 9,
     reload: 0, auto: false, pellets: 0, spread: 0,
+    /* `tool`, not `melee`, and the distinction is load-bearing.
+     *
+     * It swings and it hits things, but it does no damage and it exists to
+     * put boards back on a window -- so it must not go down the melee
+     * ATTACK path. Anything sweeping "the weapons" has to exclude it on
+     * `tool` as well as on `melee`, or it turns up in places it makes no
+     * sense: it was measured for a sight picture it does not have, and it
+     * was built a set of magazines and optics nobody will ever see. */
     kick: 0, sfx: 'dryFire', tool: true,
     sightH: 0.05, sightFov: 0.95, adsTime: 0.2,
     recoil: { up: 0, side: 0, climb: 0, recover: 12 },
