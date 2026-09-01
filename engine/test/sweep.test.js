@@ -417,11 +417,59 @@ const SWEEP = () => {
       for (const id of Object.keys(window.__T_WEAPONS || {})) {
         const hands = window.__T_WEAPONS[id].hands;
         if (!hands) continue;
-        const parts = LE.makeViewmodelArms(hands, {});
+        /* Read the hands the GAME built, not a fresh pair built here.
+         *
+         * This called makeViewmodelArms(hands, {}) -- with no `surface`
+         * in the options -- and solveCurl returns immediately when there
+         * is no surface, because there is nothing to close a finger onto.
+         * So every hand this check has ever measured was built with its
+         * fingers at their default curl, in mid-air, with no weapon
+         * present, and was then judged on how well it wrapped the weapon.
+         *
+         * That is why it disagreed with every direct measurement of the
+         * real hands, why the Thompson and the Mauser stayed at "three
+         * sides" through four separate attempts to fix them, and why one
+         * of those attempts appeared to make eight hands worse. None of
+         * it was about the hands. A test that builds its own copy of the
+         * thing it is testing is a test of the copy -- which the comment
+         * forty lines above this one already says, about the weapon
+         * table, in this same block. */
+        const live = (SS.player && SS.player.view && SS.player.view[id]) || null;
+        const arms = live && live.arms;
+        if (!arms) { out.sys.grips.push({ id, which: '-', err: 'no arms in play' }); continue; }
+        // The weapon's own vertices, arms excluded, for the centre below.
+        const gunPts = [];
+        {
+          const armSet = new Set(arms.parts || []);
+          const wroot = live.kind === 'single' ? live.actor : live.root;
+          const wwalk = (a, local) => {
+            if (!a) return;
+            if (a.mesh && !armSet.has(a)) {
+              const geo = G.geometryOf(a.mesh);
+              if (geo && geo.positions) {
+                const q = geo.positions, m = local ? local.e : null;
+                for (let i = 0; i < q.length; i += 3) {
+                  const x = q[i], y = q[i+1], z = q[i+2];
+                  if (!m) gunPts.push(x, y, z);
+                  else gunPts.push(m[0]*x + m[4]*y + m[8]*z + m[12],
+                    m[1]*x + m[5]*y + m[9]*z + m[13], m[2]*x + m[6]*y + m[10]*z + m[14]);
+                }
+              }
+            }
+            for (const c of (a.children || [])) {
+              const cm = new LE.Mat4();
+              cm.compose(c._position, c._rotation, c.scale);
+              if (local) { const t = new LE.Mat4(); t.mulMatrices(local, cm); wwalk(c, t); }
+              else wwalk(c, cm);
+            }
+          };
+          wwalk(wroot, null);
+        }
         for (const which of ['right', 'left']) {
           const h = hands[which];
           if (!h) continue;
-          const geo = which === 'right' ? parts.skin : parts.lSkin;
+          const actor = which === 'right' ? arms.skin : arms.lSkin;
+          const geo = actor && G.geometryOf(actor.mesh);
           const pos = geo && geo.positions;
           if (!pos || !pos.length) { out.sys.grips.push({ id, which, err: 'no mesh' }); continue; }
           /* Quadrants in the GRIP's own frame, not in world Y and Z.
@@ -460,6 +508,23 @@ const SWEEP = () => {
           for (let i = 0; i < pos.length; i += 3) { hx += pos[i]; hy += pos[i+1]; hz += pos[i+2]; }
           const nAll = pos.length / 3;
           hx /= nAll; hy /= nAll; hz /= nAll;
+          /* And then onto the WEAPON, at the point this hand is holding.
+             
+             Three candidates were compared on all 26 hands. The authored
+             anchor is wrong because the hand is not there -- the curl
+             solve stretches it to reach the gun. The hand's own centroid
+             is worse than wrong, it is close to a tautology: skin
+             surrounds its own centre of mass whether or not it is holding
+             anything, and it duly passed all 26. The question is "skin on
+             all four sides of WHAT IT HOLDS", so the centre belongs on
+             what it holds. */
+          let wx = hx, wy = hy, wz = hz, wd = 1e9;
+          for (let i = 0; i < gunPts.length; i += 3) {
+            const d = (gunPts[i]-hx)*(gunPts[i]-hx) + (gunPts[i+1]-hy)*(gunPts[i+1]-hy)
+              + (gunPts[i+2]-hz)*(gunPts[i+2]-hz);
+            if (d < wd) { wd = d; wx = gunPts[i]; wy = gunPts[i+1]; wz = gunPts[i+2]; }
+          }
+          if (gunPts.length) { hx = wx; hy = wy; hz = wz; }
           let near = 0, cx = 0, cy = 0, cz = 0;
           const quad = [0, 0, 0, 0];
           for (let i = 0; i < pos.length; i += 3) {
@@ -709,13 +774,29 @@ const SWEEP = () => {
         if (!arms || !arms.digits) continue;
         const root = v.kind === 'single' ? v.actor : v.root;
         const pts = [];
-        const skin = new Set([arms.skin, arms.lSkin, arms.sleeve, arms.lSleeve, arms.thumb]);
+        /* Every piece of ARM, so none of it counts as weapon. `index` was
+           missing: the firing hand's trigger finger is its own mesh now,
+           so it was being treated as part of the gun, and a support-hand
+           fingertip could read as "touching the weapon" when what it was
+           near was another finger. */
+        const skin = new Set([arms.skin, arms.lSkin, arms.sleeve, arms.lSleeve,
+          arms.thumb, arms.index]);
         const walk = (a, local) => {
           if (a.mesh && !skin.has(a)) {
             const geo = G.geometryOf(a.mesh);
             if (geo && geo.positions) {
               const q = geo.positions, m = local ? local.e : null;
-              for (let i = 0; i < q.length; i += 9) {
+              /* Every vertex, not every third.
+               
+                 This stepped by 9 -- one vertex in three -- and the whole
+                 measurement is a distance to the NEAREST vertex, so
+                 throwing two thirds of them away does not blur the number,
+                 it inflates it: the nearest surviving vertex is further
+                 away than the nearest real one. Measured directly, the
+                 Mauser's support fingertips sit 1 mm off the gun; this
+                 block reported 15 and 14, and I spent a round of solver
+                 work on the gap between those two figures. */
+              for (let i = 0; i < q.length; i += 3) {
                 let x = q[i], y = q[i + 1], z = q[i + 2];
                 if (m) {
                   const wx = m[0]*x + m[4]*y + m[8]*z + m[12];
