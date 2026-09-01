@@ -19546,6 +19546,8 @@ function buildViewHand(g, rawAt, side, opts = {}) {
     [1.00, 1.00, 1.00],   // even, what it always did
     [1.34, 1.06, 0.72],   // base-heavy: round something thick
     [0.72, 1.02, 1.36],   // tip-heavy: round something thin
+    [1.90, 0.88, 0.42],   // knuckle-down: onto a fat tube
+    [0.48, 1.30, 1.22],   // hooked: a fingertip over an edge
   ];
   const solveCurlOne = (root, dir0, bends, lens, r0, pt, cl, lim) => {
     const surf = opts.surface;
@@ -19610,6 +19612,12 @@ function buildViewHand(g, rawAt, side, opts = {}) {
       if (tipOnly) {
         e = at1(t.x, t.y, t.z);
       } else {
+        /* The tip weighted double, because it is the point the eye
+           follows and the one that must not go through the gun. Tried at
+           1.5 to give the knuckles more of the say, and every one of the
+           26 hands came back with byte-identical numbers -- the optimum
+           here is set by the spread choice and the bury penalty, not by
+           this ratio. Left as it was. */
         e = at1(t.x, t.y, t.z) * 2;
         for (const j of js) e += at1(j.x, j.y, j.z);
         e /= 4;
@@ -19663,6 +19671,27 @@ function buildViewHand(g, rawAt, side, opts = {}) {
       const sol = solveCurlOne(root, dir0, b, lens, r0, pt, cl, lim);
       if (sol.reach != null && sol.reach < reach) reach = sol.reach;
       if (!best || sol.fit < best.fit) { sol.bends = b; best = sol; }
+    }
+    /* Then polish. Five hand-picked shapes get close; which one wins is
+       a coarse choice, and the right shape for a given grip is rarely
+       exactly one of them. Two passes of coordinate descent over the
+       three joints -- the third degree of freedom the search never had
+       -- costs about a dozen more evaluations against the three hundred
+       the scan already spends, and it is a proper local search rather
+       than a sixth and seventh guess at what shapes hands make. */
+    if (best && best.bends) {
+      for (let pass = 0; pass < 2; pass++) {
+        const step = pass === 0 ? 0.22 : 0.09;
+        for (let j = 0; j < 3; j++) {
+          for (const d of [1 + step, 1 - step]) {
+            const b = best.bends.slice();
+            b[j] *= d;
+            const sol = solveCurlOne(root, dir0, b, lens, r0, pt, cl, lim);
+            if (sol.reach != null && sol.reach < reach) reach = sol.reach;
+            if (sol.fit < best.fit) { sol.bends = b; best = sol; }
+          }
+        }
+      }
     }
     if (best) best.reach = reach < 1e8 ? reach : null;
     return best;
