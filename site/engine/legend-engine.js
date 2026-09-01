@@ -11769,7 +11769,50 @@ function buildZombieClothGeometry(skeleton, opts = {}) {
      drawn on it. Gentler than the flesh -- cloth is a shell a few
      millimetres off the body, so a hard AO would band along every seam. */
   bakeCavityAO(g, { radius: 0.070, strength: 0.62, floor: 0.42, samples: 700 });
+  // Then the dirt, over the top of it.
+  grimeCloth(g, rng, opts.seed || 7);
   return g;
+}
+
+/* ---------------- grime ----------------
+
+   Nothing in this game has been indoors for eighty-five years, and every
+   garment on every zombie was showroom clean -- which reads as costume,
+   not as clothing, and is most of why the dressed variants looked like
+   fancy dress next to the filthy map they walk across.
+
+   Dirt is not distributed evenly. It climbs a trouser leg from the hem,
+   collects at the knee and the seat and the cuff, and turns up as
+   splashes wherever something was walked through. So the tint is a
+   function of height with patches over it, multiplied into the vertex
+   colour after the cavity pass so a soiled hem is dark AND occluded
+   rather than one or the other.
+
+   It darkens and browns together: mud takes blue out of a colour before
+   it takes red, which is why a lightly muddied garment goes warm and a
+   heavily muddied one goes brown, and why simply multiplying every
+   channel equally just looks like the light went out. */
+function grimeCloth(g, rng, seed) {
+  const P = g.positions, C = g.colors;
+  if (!C) return;
+  const noise = new Noise((seed || 7) * 41 + 19);
+  const n = P.length / 3;
+  for (let v = 0; v < n; v++) {
+    const x = P[v * 3], y = P[v * 3 + 1], z = P[v * 3 + 2];
+    // Up from the hem: everything below the waist, hardest at the ankle.
+    const low = 1 - smoothstep(-0.55, 0.20, y);
+    // Splashes and hand-wear, at two scales.
+    const splash = noise.fbm(x * 7.0, y * 5.0, z * 7.0, 3) * 0.5 + 0.5;
+    const wear = noise.fbm(x * 19.0, y * 15.0, z * 19.0, 2) * 0.5 + 0.5;
+    /* Knees and the seat: a band that catches whatever the legs went
+       through, independent of how low down the garment reaches. */
+    const knee = (1 - smoothstep(0.06, 0.20, Math.abs(y + 0.36))) * 0.5;
+    let k = low * (0.30 + splash * 0.55) + knee * splash + wear * 0.10;
+    k = Math.min(0.78, k);
+    C[v * 3] *= 1 - k * 0.46;
+    C[v * 3 + 1] *= 1 - k * 0.55;
+    C[v * 3 + 2] *= 1 - k * 0.68;
+  }
 }
 
 /* The bits that make cloth read as tailored rather than as a tube: a belt
@@ -20554,6 +20597,7 @@ const LegendEngine = {
      from outside the bundle, because the bank was a module-level const
      nobody could reach. engine/test/texture.test.js reaches it now. */
   Textures: TextureLib,
+  bakeCavityAO,
   clamp, lerp, smoothstep,
 };
 

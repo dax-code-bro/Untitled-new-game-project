@@ -3790,7 +3790,17 @@ function buildMap(game, S) {
 
   /* ---------------- light ---------------- */
   S.lamps = [];
-  const lamp = (x, y, z, intensity, color = 0xffc98f) => {
+  /* 0xffc98f -- (255, 201, 143) -- is a very saturated tungsten, and while
+     every surface in the room was rendering at a third of its albedo that
+     did not matter: the walls, floor and crates were near black and the
+     lamp colour had almost nothing to tint. With the textures corrected
+     the room came back at full brightness and every single thing in it
+     was the same orange, because one strongly coloured source lighting
+     correct albedo IS a monochrome. A hanging bulb in a bunker is warm;
+     it is not amber gel. Pulled back toward white, and the cold fills
+     over the stairs and the side door brought up so the room is lit from
+     two directions in two colours and has some shape to it. */
+  const lamp = (x, y, z, intensity, color = 0xffd8ae) => {
     const l = game.light({ at: [x, y, z], color, intensity, radius: 8 });
     const shade = game.cone({ at: [x, y + 0.20, z], radius: 0.17, height: 0.20, material: MAT.steel, physics: false });
     shade.setRotation([180, 0, 0]);
@@ -3810,9 +3820,9 @@ function buildMap(game, S) {
   lamp(-1.0, 2.42, 0.5, 88);
   lamp(3.6, 2.42, 4.0, 74);
   lamp(-12.4, 2.42, 1.2, 80);
-  lamp(-2.0, 2.4, M.z0 + 1.4, 55, 0xcfe8ff);
-  lamp(-5.4, 2.4, M.z0 + 1.4, 55, 0xcfe8ff);
-  lamp(SD.x0 + 1.3, 2.4, 0.6, 48, 0xcfe8ff);
+  lamp(-2.0, 2.4, M.z0 + 1.4, 70, 0xcfe8ff);
+  lamp(-5.4, 2.4, M.z0 + 1.4, 70, 0xcfe8ff);
+  lamp(SD.x0 + 1.3, 2.4, 0.6, 62, 0xcfe8ff);
   /* Daylight arrives as much from the whole smoke-lit sky as from the sun,
      and it is the sky term that lights every upward-facing surface — the
      roof deck most of all. At the night map's 1.5 the deck read as a black

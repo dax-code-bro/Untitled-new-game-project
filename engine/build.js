@@ -64,6 +64,7 @@ const LegendEngine = {
      from outside the bundle, because the bank was a module-level const
      nobody could reach. engine/test/texture.test.js reaches it now. */
   Textures: TextureLib,
+  bakeCavityAO,
   clamp, lerp, smoothstep,
 };
 
