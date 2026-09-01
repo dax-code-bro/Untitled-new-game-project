@@ -676,8 +676,17 @@ class Engine {
         outfit: opts.outfit,
       });
       if (clothGeo.indices.length) {
+        /* Registered, like the head, so a question about the clothing can
+           be asked from outside the engine -- "does this garment carry the
+           vertex colours its outfit is painted with, or is it a white
+           material multiplied by nothing" is not answerable from a
+           GpuMesh, and that is exactly the question the black torsos
+           raised. */
+        const clothMesh = new GpuMesh(this.gl, clothGeo);
+        clothMesh.__key = 'cloth:' + (opts.zombieBuild || 'male') + ':' + (opts.seed || 3) + ':' + (opts.outfit || '-');
+        (this._geoByKey || (this._geoByKey = new Map())).set(clothMesh.__key, clothGeo);
         const clothActor = new Actor(this, {
-          name: 'cloth', mesh: new GpuMesh(this.gl, clothGeo),
+          name: 'cloth', mesh: clothMesh,
           material: this.material(opts.clothMaterial || {
             color: 0x6b6450, texture: 'fabric', roughness: 0.97, metalness: 0, uvScale: 2.4,
           }),
