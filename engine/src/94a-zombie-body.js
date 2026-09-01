@@ -287,6 +287,15 @@ function loftGarment(g, rings, segments, rng, opts = {}) {
 
 const _zRight = new Vec3(1, 0, 0);
 const _zFwd = new Vec3(0, 0, 1);
+/* A ring whose cross-section stands UP: width across X, height up Y.
+   `_zFwd` puts the section flat in the XZ plane, which is right for a
+   band lofted vertically and catastrophically wrong for anything lofted
+   along Z -- the sections then lie in the plane they are being stacked
+   in, and what you get is a set of overlapping horizontal discs with no
+   height at all. Every boot in the game was that: a flat pancake in the
+   ground plane, invisible inside the foot it was supposed to cover, and
+   the bare flesh foot was what the player actually saw. */
+const _yFwd = new Vec3(0, 1, 0);
 
 /* The wardrobe. Each build died in something different, and the garment is
    as much of the silhouette as the body under it: a dress with a skirt
@@ -454,19 +463,35 @@ function buildShoes(g, skeleton, build, segments, spec) {
       { p: new Vec3().copy(top).lerp(c, 0.55), w: r + 0.034, d: r + 0.036, e: 2.3 },
       { p: new Vec3(c.x, c.y + 0.030, c.z + 0.012), w: r + 0.032, d: r + 0.046, e: 2.4 },
     ], segments, true, false);
-    // Foot box, running forward over the toes.
-    loftRings(g, [
-      { p: new Vec3(c.x, c.y + 0.030, c.z + 0.010), w: r + 0.032, d: 0.052, e: 2.6, right: _zRight, fwd: _zFwd },
-      { p: new Vec3(c.x, c.y + 0.022, c.z + 0.070), w: r + 0.036, d: 0.062, e: 2.7, right: _zRight, fwd: _zFwd },
-      { p: new Vec3(c.x, c.y + 0.016, c.z + 0.128), w: r + 0.028, d: 0.040, e: 2.6, right: _zRight, fwd: _zFwd },
-    ], segments, true, true);
-    // Sole, in its own colour on a sneaker.
+    /* The boot, built over the foot's OWN cross-sections.
+
+       This was a second list of numbers hand-typed to sit near the first
+       one, and they disagreed: the flesh foot runs to z + 0.207 and the
+       boot stopped at + 0.128, so eighty millimetres of bare green toe
+       stuck out the front of it, and there was nothing behind the heel
+       either. Widening it by guesswork fixed the length and left the toe
+       poking through the top instead. Derived from HUMAN_SHOE with a few
+       millimetres of leather round it, it cannot disagree again. */
+    /* The flesh foot's cross-section is a hard superellipse (exponent 3),
+       the boot's was a rounder 2.6, so at the toe the foot's square
+       corners came through the leather's rounded ones -- two pale patches
+       either side of the toe cap. A boot is squarer than a foot, not
+       rounder. */
+    const CLEAR_W = 0.008, CLEAR_H = 0.009;
+    const bootRings = (padW, padH, lift) => HUMAN_SHOE.map(([bz, hw, up]) => {
+      const top = HUMAN.sole + up + padH;
+      const bot = HUMAN.sole - lift;
+      return { p: new Vec3(c.x, (top + bot) * 0.5, c.z + bz),
+        w: hw + padW, d: (top - bot) * 0.5, e: 3.3, right: _zRight, fwd: _yFwd };
+    });
+    loftRings(g, bootRings(CLEAR_W, CLEAR_H, 0.004), segments, true, true);
+    // Sole: a slab under the same outline, in its own colour.
     g.setColor(spec.sole != null ? spec.sole : spec.color);
-    loftRings(g, [
-      { p: new Vec3(c.x, c.y + 0.006, c.z + 0.006), w: r + 0.036, d: 0.056, e: 3.0, right: _zRight, fwd: _zFwd },
-      { p: new Vec3(c.x, c.y + 0.006, c.z + 0.072), w: r + 0.040, d: 0.066, e: 3.0, right: _zRight, fwd: _zFwd },
-      { p: new Vec3(c.x, c.y + 0.008, c.z + 0.132), w: r + 0.032, d: 0.044, e: 2.8, right: _zRight, fwd: _zFwd },
-    ], segments, true, true);
+    loftRings(g, HUMAN_SHOE.map(([bz, hw]) => {
+      const top = HUMAN.sole + 0.016, bot = HUMAN.sole - 0.010;
+      return { p: new Vec3(c.x, (top + bot) * 0.5, c.z + bz),
+        w: hw + CLEAR_W + 0.003, d: (top - bot) * 0.5, e: 3.6, right: _zRight, fwd: _yFwd };
+    }), segments, true, true);
   }
   g.setColor(null);
   g.part = PART.BODY;
@@ -915,6 +940,146 @@ function zombieWoundSpots(buildName) {
   return spots;
 }
 
+/* ---------------- and then it died ----------------
+
+   The head has had a rot pass for a while: eyes sunk, temples caved,
+   cheeks fallen, lips retreated. The BODY never did. So every zombie in
+   the game was a healthy anatomical figure -- correct biceps, correct
+   calf belly, correct shoulder-to-hip ratio -- wearing a corpse's head
+   and a green material. That mismatch is most of what "they look
+   middling" was: nothing below the jaw said dead.
+
+   What actually happens to a body is that the soft tissue goes and the
+   skeleton stops being an inference. So this works on the flesh only,
+   after the limbs are lofted and before the normals are computed, and it
+   does five things, all of them derived from position alone so they land
+   correctly on four different builds without a table per build:
+
+     - the muscle bellies waste, and the joints do not, which is what
+       throws an elbow and a knee into relief without enlarging either
+     - the ribs surface through the flank, deepest at the side and fading
+       to nothing at the sternum and the spine, where there is bone
+       immediately under the skin either way
+     - the belly falls in toward the spine
+     - the collarbones, the shoulder blades, the spine and the hip points
+       come up proud
+     - one side goes further than the other, seeded, so a crowd is a crowd
+
+   `limbs` is the list of bone segments the flesh was lofted along; the
+   caller has them already and passing them beats re-deriving them. */
+function rotZombieBody(g, build, limbs, rot, seed) {
+  const R = clamp(rot, 0, 1);
+  if (R <= 0) return;
+  const P = g.positions;
+  const k = build.scale;
+  const noise = new Noise(seed * 977 + 3);
+  const lean = (seed % 5) / 4 - 0.5;          // which side went first
+  const cp = new Vec3(), pv = new Vec3();
+
+  for (let i = 0; i < P.length; i += 3) {
+    let x = P[i], y = P[i + 1], z = P[i + 2];
+    const sx = x >= 0 ? 1 : -1;
+    /* How far gone this side is. A body does not decompose symmetrically
+       and a symmetric one looks manufactured. */
+    const S = R * (1 + sx * lean * 0.5);
+
+    /* --- the limbs waste --- */
+    pv.set(x, y, z);
+    let near = null, nearD = 1e9, nearT = 0;
+    for (const L of limbs) {
+      closestPointOnSegment(pv, L.a, L.b, cp);
+      const d = cp.distanceTo(pv);
+      if (d < nearD) {
+        nearD = d; near = L;
+        const len = Math.max(L.a.distanceTo(L.b), 1e-5);
+        nearT = clamp(L.a.distanceTo(cp) / len, 0, 1);
+      }
+    }
+    if (near && nearD < near.r * 2.2) {
+      /* Peaks at the middle of the bone and goes to zero at both ends, so
+         a wasted forearm still meets a full-size elbow and wrist. That
+         difference IS the read: a limb thinned evenly just looks thin. */
+      const belly = Math.sin(nearT * PI);
+      const pull = belly * belly * 0.30 * S;
+      closestPointOnSegment(pv, near.a, near.b, cp);
+      x += (cp.x - x) * pull; y += (cp.y - y) * pull; z += (cp.z - z) * pull;
+      /* And the tendons stand out where there is no muscle to hide them:
+         a shallow corrugation along the bone, strongest at the ends. */
+      const cord = noise.fbm(x * 26, y * 26, z * 26, 2) * (1 - belly) * 0.0045 * S;
+      const dx = x - cp.x, dy = y - cp.y, dz = z - cp.z;
+      const dl = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
+      x += (dx / dl) * cord; y += (dy / dl) * cord; z += (dz / dl) * cord;
+    }
+
+    /* --- the trunk --- *
+       Everything below is gated to the trunk by position: the arms hang
+       outboard of 0.22 and the legs start below the hips, so a spatial
+       gate needs no per-vertex part array and cannot get out of step with
+       one. */
+    const inTrunk = Math.abs(x) < 0.235 * k && y > -0.075 && y < 0.545;
+    if (inTrunk) {
+      const rad = Math.sqrt(x * x + z * z) || 1e-5;
+      const ux = x / rad, uz = z / rad;
+      /* Where round the trunk this vertex is. 0 at the sternum, 1 at the
+         flank, back to 0 at the spine -- the two places where bone is
+         directly under skin and there is nothing to fall in. */
+      const round = Math.abs(ux);
+      const front = clamp(uz, 0, 1);
+      const back = clamp(-uz, 0, 1);
+
+      // Ribs: six of them, surfacing through the flank.
+      const ribBand = smoothstep(0.255, 0.310, y) * (1 - smoothstep(0.455, 0.500, y));
+      if (ribBand > 0) {
+        const rib = Math.cos((y - 0.262) * (PI * 2 / 0.0345));
+        // Sharp troughs, soft crests: the gaps between ribs are what you
+        // see, not the ribs themselves.
+        const cut = -Math.max(0, -rib) * 0.5 - rib * 0.5 + 0.5;
+        const amp = ribBand * round * (0.4 + front * 0.6) * 0.0135 * S;
+        x -= ux * cut * amp; z -= uz * cut * amp;
+      }
+
+      // The belly falls in toward the spine.
+      const gut = smoothstep(-0.010, 0.070, y) * (1 - smoothstep(0.175, 0.265, y));
+      z -= front * gut * 0.052 * S * k;
+      x -= ux * front * gut * 0.016 * S * k;
+
+      // Sternum: a ridge left standing between the two fallen sides.
+      const stern = smoothstep(0.285, 0.330, y) * (1 - smoothstep(0.460, 0.505, y))
+        * (1 - smoothstep(0.020, 0.062, Math.abs(x)));
+      z += stern * front * 0.010 * S;
+
+      // Collarbones, running out from the notch to each shoulder.
+      const clav = (1 - smoothstep(0.014, 0.030, Math.abs(y - 0.470 - Math.abs(x) * 0.055)))
+        * smoothstep(0.012, 0.045, Math.abs(x)) * (1 - smoothstep(0.130, 0.180, Math.abs(x)));
+      z += clav * front * 0.0115 * S;
+
+      // Shoulder blades on the back, and the spine down the middle of it.
+      const scap = smoothstep(0.315, 0.360, y) * (1 - smoothstep(0.440, 0.485, y))
+        * smoothstep(0.028, 0.070, Math.abs(x)) * (1 - smoothstep(0.115, 0.165, Math.abs(x)));
+      z -= scap * back * 0.0125 * S;
+      const spineY = 0.5 + 0.5 * Math.cos((y + 0.06) * (PI * 2 / 0.052));
+      const spine = (1 - smoothstep(0.012, 0.042, Math.abs(x)))
+        * smoothstep(0.020, 0.090, y) * (1 - smoothstep(0.440, 0.510, y));
+      z -= spine * back * (0.006 + spineY * 0.006) * S;
+
+      // Hip points.
+      const ilium = (1 - smoothstep(0.020, 0.055, Math.abs(y + 0.012)))
+        * smoothstep(0.075, 0.115, Math.abs(x)) * (1 - smoothstep(0.150, 0.200, Math.abs(x)));
+      x += ux * ilium * 0.009 * S; z += uz * ilium * 0.006 * S;
+    }
+
+    /* And the skin dries: a fine ridging over everything, stronger the
+       further gone the body is. The head pass does the same thing, at the
+       same frequencies, so the two surfaces match where they meet. */
+    const dry = noise.fbm(x * 9.0, y * 9.0, z * 9.0, 3) * 0.0026 * (1 + R * 2.2)
+      + noise.fbm(x * 27.0, y * 27.0, z * 27.0, 2) * 0.0016 * R;
+    const nl = Math.sqrt(x * x + z * z) || 1;
+    x += (x / nl) * dry; z += (z / nl) * dry;
+
+    P[i] = x; P[i + 1] = y; P[i + 2] = z;
+  }
+}
+
 /* The whole figure: flesh, then clothes over it. *//* The clothes, as their own mesh over the same skeleton.
 
    This is the difference between a dressed figure and a painted one. Flesh
@@ -947,6 +1112,21 @@ function buildZombieClothGeometry(skeleton, opts = {}) {
     g.part = PART.BODY;
     buildGarmentDetail(g, skeleton, build, rng);
     g.part = PART.BODY;
+    /* Boots on the ones without a named outfit too. They had none: the
+       foot geometry is fine -- 277 mm long and 100 wide, which is a
+       shoe -- but it lives in the FLESH mesh, so an undressed zombie
+       walked around on two bare pale-green flippers that read, against
+       dark trouser legs, as the biggest thing in the silhouette. Nobody
+       died barefoot. A worn work boot, in one of four colours off the
+       same seed that picks everything else. */
+    const BOOTS = [
+      { kind: 'boot', color: 0x35291f, sole: 0x241d17 },
+      { kind: 'boot', color: 0x2b2b2e, sole: 0x1d1d20 },
+      { kind: 'boot', color: 0x463524, sole: 0x2a211a },
+      { kind: 'boot', color: 0x3a3a33, sole: 0x25251f },
+    ];
+    buildShoes(g, skeleton, build, segments, BOOTS[(opts.seed || 7) % BOOTS.length]);
+    g.part = PART.BODY;
     if (opts.build === 'armored') buildWebbing(g, build);
   }
 
@@ -954,6 +1134,12 @@ function buildZombieClothGeometry(skeleton, opts = {}) {
   g.computeWeldGroups();
   smoothNormals(g);
   weldNormals(g.normals, g.weldGroups);
+  /* And on the clothes, where it does the most obvious work of all: a
+     collar, a cuff, a lapel and the inside of a torn opening are all
+     cavities, and without this a coat is one flat colour with creases
+     drawn on it. Gentler than the flesh -- cloth is a shell a few
+     millimetres off the body, so a hard AO would band along every seam. */
+  bakeCavityAO(g, { radius: 0.070, strength: 0.62, floor: 0.42, samples: 700 });
   return g;
 }
 
@@ -1057,6 +1243,11 @@ function buildZombieBodyGeometry(skeleton, opts = {}) {
   if (build.shoulderCaps) buildShoulderCaps(g, skeleton, build);
 
   const a = new Vec3(), b = new Vec3(), c = new Vec3();
+  /* Every bone the flesh is lofted along, kept so the rot pass can waste
+     the muscle between the joints without re-deriving any of it. `r` is
+     roughly how far the flesh reaches from that bone, which is what tells
+     a torso vertex from a limb one. */
+  const limbs = [];
   for (const sideName of ['L', 'R']) {
     const side = sideName === 'L' ? 1 : -1;
     g.part = sideName === 'L' ? PART.ARM_L : PART.ARM_R;
@@ -1093,6 +1284,8 @@ function buildZombieBodyGeometry(skeleton, opts = {}) {
       [build.arm[4], build.arm[4] * 1.06, 2.1],
     ]);
     loftRings(g, up.concat(lo.slice(1)), segments, false, false);
+    limbs.push({ a: root.clone(), b: b.clone(), r: build.arm[0] * 1.16 },
+      { a: b.clone(), b: c.clone(), r: build.arm[2] * 1.12 });
     /* An elbow. A limb lofted straight through its joint pinches to a
        crease the moment the skin solver bends it — there is nothing at the
        hinge to hold the volume. A ball at the joint is what keeps an arm
@@ -1126,16 +1319,33 @@ function buildZombieBodyGeometry(skeleton, opts = {}) {
       [build.leg[4], build.leg[4], 2.1],
     ], (t) => -0.014 * Math.sin(t * PI));
     loftRings(g, th.concat(sh.slice(1)), segments, false, false);
+    limbs.push({ a: a.clone(), b: b.clone(), r: build.leg[0] * 1.06 },
+      { a: b.clone(), b: c.clone(), r: build.leg[3] * 1.22 });
     buildJoint(g, b, build.leg[2] * 1.06);          // knee
     buildJoint(g, a, build.leg[0] * 0.92);          // hip socket
     buildShoe(g, side, skeleton, segments);
   }
   g.part = PART.BODY;
 
+  /* Decomposition, over the finished flesh. Before finalize, so the
+     normals are computed from the sculpted surface rather than from the
+     healthy one -- displace after they are computed and the ribs are
+     invisible however deep they are cut. Same default as the head takes,
+     off the same seed, so a body and its face are equally far gone. */
+  rotZombieBody(g, build, limbs,
+    opts.rot != null ? opts.rot : 0.55 + (((opts.seed || 5) * 7) % 9) / 20,
+    opts.seed || 5);
+
   g.finalize();
   g.computeWeldGroups();
   smoothNormals(g);
   weldNormals(g.normals, g.weldGroups);
+  /* The same contact shading the face gets. On a body it is the armpit,
+     the hollow between the ribs the rot pass just cut, the inside of the
+     elbow and the knee, and the gaps between the fingers -- the places
+     that were rendering exactly as bright as the shoulder on top of
+     them. A wider radius than the head, because the cavities are. */
+  bakeCavityAO(g, { radius: 0.085, strength: 0.85, floor: 0.30, samples: 800 });
   return g;
 }
 

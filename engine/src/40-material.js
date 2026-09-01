@@ -183,16 +183,28 @@ const TextureLib = {
       }
     },
 
+    /* Timber. Averaged 0.21 -- the darkest generator in the set, and the
+       brown was baked into it as well as into every material that uses it.
+       Every one of them is authored brown already (0x584023 crates,
+       0x5c4028 gun furniture, 0x261f1a bark), so the tint was being applied
+       twice: a walnut stock came out at about 1.6% reflectance, which is
+       charcoal, and the boards over the windows were indistinguishable
+       from the gaps between them.
+
+       The grain stays -- the ring contrast is if anything stronger now,
+       since it has room to swing -- but it varies around mid-grey and only
+       leans warm. The colour comes from the material, where it was always
+       written down. */
     wood(u, v, n, c) {
       // Rings: distance from a slightly wobbled axis, wrapped.
       const wob = n.fbm(u * 3, v * 1.2, 5, 3) * 0.35;
       const rings = Math.abs(((v * 9 + wob) % 1) * 2 - 1);
       const fibre = n.fbm(u * 4, v * 90, 2, 2) * 0.5 + 0.5;
       const dark = smoothstep(0.35, 0.85, rings);
-      const base = 0.55 - dark * 0.28 + fibre * 0.08;
-      c.r = base * 0.72;
-      c.g = base * 0.46;
-      c.b = base * 0.24;
+      const base = 0.82 - dark * 0.34 + fibre * 0.12;
+      c.r = base * 1.04;
+      c.g = base * 0.96;
+      c.b = base * 0.86;
       c.rough = 0.62 + dark * 0.2;
       c.ao = 1 - dark * 0.15;
       c.h = 0.5 + (1 - dark) * 0.3 + fibre * 0.12;
@@ -222,13 +234,19 @@ const TextureLib = {
       c.h = brush * 0.45 + scratch * 0.22;
     },
 
+    /* Corroded steel. Averaged 0.43 and the orange was baked in, so a
+       rusted panel came out a stop and a half below whatever colour it was
+       given and always the same orange whatever that colour was. The
+       blotches still darken -- corrosion is genuinely darker than the metal
+       around it, and that contrast is the whole texture -- they just do it
+       around the material's colour rather than underneath it. */
     rust(u, v, n, c) {
       const blotch = n.fbm(u * 5, v * 5, 4, 5) * 0.5 + 0.5;
       const grit = n.fbm(u * 60, v * 60, 8, 3) * 0.5 + 0.5;
       const rusty = smoothstep(0.35, 0.75, blotch);
-      c.r = lerp(0.55, 0.42, rusty) * (0.85 + grit * 0.3);
-      c.g = lerp(0.56, 0.19, rusty) * (0.85 + grit * 0.3);
-      c.b = lerp(0.58, 0.09, rusty) * (0.85 + grit * 0.3);
+      c.r = lerp(0.72, 0.58, rusty) * (0.85 + grit * 0.3);
+      c.g = lerp(0.72, 0.36, rusty) * (0.85 + grit * 0.3);
+      c.b = lerp(0.73, 0.24, rusty) * (0.85 + grit * 0.3);
       c.metal = 1 - rusty * 0.95;
       c.rough = lerp(0.35, 0.95, rusty);
       c.ao = 1 - rusty * 0.25;
@@ -258,13 +276,21 @@ const TextureLib = {
       c.h = blade * 0.7 + patch * 0.3;
     },
 
+    /* Ground. Averaged 0.31, for the same reason and with the same result:
+       the battlefield mud is authored at 0x3b3327, which is 0.043 linear,
+       and a third of that is 0.013 -- one and a third percent reflectance.
+       Real churned earth is nearer ten. The field rendered as a void with
+       wire silhouettes standing in it, and no amount of sky fill could
+       lift a surface that was throwing away two thirds of its light before
+       the lighting ever ran. Centred properly now; the warmth stays, at a
+       strength that tints rather than darkens. */
     dirt(u, v, n, c) {
       const clod = n.fbm(u * 12, v * 12, 3, 4) * 0.5 + 0.5;
       const grit = n.fbm(u * 80, v * 80, 9, 2) * 0.5 + 0.5;
-      const base = 0.24 + clod * 0.16 + grit * 0.07;
-      c.r = base * 1.15; c.g = base * 0.85; c.b = base * 0.60;
+      const base = 0.66 + clod * 0.20 + grit * 0.08;
+      c.r = base * 1.06; c.g = base * 0.98; c.b = base * 0.88;
       c.rough = 0.95;
-      c.ao = 0.6 + clod * 0.4;
+      c.ao = 0.72 + clod * 0.28;
       c.h = clod * 0.7 + grit * 0.3;
     },
 
@@ -301,16 +327,45 @@ const TextureLib = {
       c.h = crack * 0.8;
     },
 
+    /* Cloth. Same rule as concrete, and it was broken here for longer.
+
+       This averaged 0.36 -- the weave sat at 0.43 and the channel tints
+       took another 17% off it. Every garment in the game was therefore
+       multiplied down to about a THIRD of the colour it was authored in,
+       while bare skin (a texture that averages 0.86) kept nearly all of
+       its own. That is the whole of "the zombies look middling": out on
+       the field their heads and hands were lit and everything from the
+       collar down was a black hole with rips in it, so none of the
+       tailoring -- collar, placket, cuffs, torn hem, webbing -- was
+       visible at any distance. It was never a modelling problem.
+
+       The weave now varies around mid-grey instead of scaling everything
+       down to it, and the blue cast is gone: a texture supplies variation,
+       a colour supplies colour. */
     fabric(u, v, n, c) {
-      // Over-under weave from two out-of-phase square waves.
-      const wu = Math.sin(u * PI * 120), wv = Math.sin(v * PI * 120);
-      const weave = (wu > 0 ? 1 : 0) ^ (wv > 0 ? 1 : 0);
+      /* The weave was a hard XOR of two square waves -- a literal
+         chessboard, 60 squares across the tile. While cloth was rendering
+         at a third of its colour nobody could see it; the moment the
+         garments came up to full brightness every coat in the game was
+         wearing a checkerboard, and on a sheriff at forty metres it was
+         the only thing you could see.
+
+         Over-under is a SOFT alternation, not a tiled square: the product
+         of the two waves gives the same interlace with a rounded profile,
+         and at nearly twice the frequency it sits at thread scale instead
+         of tile scale. The hard version stays in the height field, where
+         a crisp edge is what a normal map wants. Slub -- thread-count
+         variation over a couple of centimetres -- carries most of the
+         visible variety now, which is what cloth actually looks like. */
+      const wu = Math.sin(u * PI * 220), wv = Math.sin(v * PI * 220);
+      const weave = wu * wv * 0.5 + 0.5;
       const fuzz = n.fbm(u * 200, v * 200, 4, 2) * 0.5 + 0.5;
-      const base = 0.35 + weave * 0.08 + fuzz * 0.08;
-      c.r = base * 0.75; c.g = base * 0.8; c.b = base * 0.95;
-      c.rough = 0.96;
-      c.ao = 0.75 + weave * 0.25;
-      c.h = weave * 0.6 + fuzz * 0.2;
+      const slub = n.fbm(u * 26, v * 26, 17, 3) * 0.5 + 0.5;
+      const base = 0.80 + weave * 0.06 + fuzz * 0.07 + slub * 0.05;
+      c.r = base * 0.99; c.g = base; c.b = base * 1.02;
+      c.rough = 0.96 - slub * 0.04;
+      c.ao = 0.86 + weave * 0.14;
+      c.h = weave * 0.5 + fuzz * 0.2 + slub * 0.3;
     },
 
     skin(u, v, n, c) {

@@ -56,6 +56,14 @@ const LegendEngine = {
   Fluid, Fracture, ParticleSystem, Skeleton, AnimationClip, Face, Bone, makeHumanoidSkeleton, makeHumanoidMesh, solveSkinWeights, smoothNormals, parseRiggedMesh, skeletonFromRig,
   makePistol1911, makeViewmodelArms, GRIP_KINDS, makeZombieClips, buildZombieBodyGeometry, buildZombieClothGeometry, zombieWoundSpots,
   Grass, Input, Audio,
+  /* The procedural texture bank, exported so it can be MEASURED.
+
+     Every surface recipe multiplies the colour its material asks for, and
+     three separate "the lighting is wrong" investigations turned out to be
+     a recipe averaging a third of mid-grey. None of them could be settled
+     from outside the bundle, because the bank was a module-level const
+     nobody could reach. engine/test/texture.test.js reaches it now. */
+  Textures: TextureLib,
   clamp, lerp, smoothstep,
 };
 

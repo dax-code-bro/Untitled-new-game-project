@@ -228,12 +228,21 @@ function buildHand(g, side, wrist, segments, claw) {
   const palmDir = new Vec3(0, -1, 0);
   const curl = claw == null ? 0.42 : claw;
   // Palm: wrist to knuckle line, 100 mm, thickening through the middle.
+  /* Width and thickness were the wrong way round, and had been from the
+     start. `w` runs across X, which is the axis the four fingers are
+     spread along, so it is the palm's WIDTH; `d` runs fore-and-aft, which
+     is its THICKNESS. They were authored as w 44-56 mm and d 84-92 mm --
+     a hand 50 mm wide and 90 mm deep, when a real one is 85 wide and 30
+     deep. Measured by skin weight, the whole hand came out 119 mm thick.
+     That is why every zombie appeared to be wearing boxing gloves, and no
+     amount of shrinking it overall would have helped: shrunk, it would
+     have been a smaller block. */
   const knuck = new Vec3().copy(wrist).addScaled(palmDir, 0.100);
   const rings = [
-    { p: new Vec3().copy(wrist), w: 0.028, d: 0.030, e: 2.1 },
-    { p: new Vec3().copy(wrist).addScaled(palmDir, 0.030), w: 0.026, d: 0.042, e: 2.4 },
-    { p: new Vec3().copy(wrist).addScaled(palmDir, 0.070), w: 0.024, d: 0.046, e: 2.6 },
-    { p: new Vec3().copy(knuck), w: 0.022, d: 0.044, e: 2.6 },
+    { p: new Vec3().copy(wrist), w: 0.030, d: 0.0170, e: 2.1 },
+    { p: new Vec3().copy(wrist).addScaled(palmDir, 0.030), w: 0.040, d: 0.0165, e: 2.4 },
+    { p: new Vec3().copy(wrist).addScaled(palmDir, 0.070), w: 0.043, d: 0.0160, e: 2.6 },
+    { p: new Vec3().copy(knuck), w: 0.042, d: 0.0150, e: 2.6 },
   ];
   loftRings(g, rings, segments, false, true);
 
@@ -243,10 +252,13 @@ function buildHand(g, side, wrist, segments, claw) {
      Index nearest the thumb, little finger furthest. */
   const seg = Math.max(6, segments >> 1);
   const LEN = [0.038, 0.024, 0.018];
-  const R0 = [0.0125, 0.0130, 0.0122, 0.0104];
+  // 20, 20, 19 and 16 mm across -- what fingers measure. They were 25 to
+  // 21, which on a palm the right width reads as a bunch of bananas.
+  const R0 = [0.0098, 0.0102, 0.0096, 0.0082];
   for (let f = 0; f < 4; f++) {
     // Spread across the knuckle line, and shortened toward the little one.
-    const across = (f - 1.5) * 0.0165;
+    // Spread to fill the corrected palm: four fingers across 85 mm.
+    const across = (f - 1.5) * 0.0215;
     const scale = [0.96, 1.0, 0.97, 0.86][f];
     const root = new Vec3().copy(knuck);
     root.x += side * across;
@@ -275,25 +287,30 @@ function buildHand(g, side, wrist, segments, claw) {
     loftRings(g, fr, seg, true, true);
   }
 
-  // Thumb, angled inward and forward off the palm, and closing with them.
-  const thumbRoot = new Vec3().copy(wrist).addScaled(palmDir, 0.042);
-  thumbRoot.z += 0.030;
+  /* Thumb, off the radial edge -- the same side the index finger is on,
+     one spacing beyond it -- and only just proud of the palm's front
+     face. It used to start 30 mm forward of the palm centre, which was
+     inside a 92 mm-deep palm and is now 15 mm outside a 30 mm one; on the
+     corrected hand it would have hung in the air. */
+  const thumbRoot = new Vec3().copy(wrist).addScaled(palmDir, 0.038);
+  thumbRoot.x -= side * 0.036;
+  thumbRoot.z += 0.010;
   const thumbMid = new Vec3().copy(thumbRoot);
-  thumbMid.z += 0.020 + curl * 0.006;
+  thumbMid.x += side * 0.007;
+  thumbMid.z += 0.020 + curl * 0.008;
   thumbMid.y -= 0.030;
-  thumbMid.x -= side * 0.004;
   const thumbTip = new Vec3().copy(thumbMid);
-  thumbTip.z += 0.008 + curl * 0.014;
-  thumbTip.y -= 0.026 - curl * 0.008;
-  thumbTip.x -= side * 0.003;
+  thumbTip.x += side * 0.010;
+  thumbTip.z += 0.009 + curl * 0.014;
+  thumbTip.y -= 0.025 - curl * 0.008;
   loftRings(g, limbRings(thumbRoot, thumbMid, [
-    [0.017, 0.016, 2.1],
-    [0.015, 0.014, 2.1],
+    [0.0125, 0.0118, 2.1],
+    [0.0112, 0.0104, 2.1],
   ]), seg, true, false);
   loftRings(g, limbRings(thumbMid, thumbTip, [
-    [0.015, 0.014, 2.1],
-    [0.0105, 0.0100, 2.0],
-    [0.0044, 0.0042, 2.0],
+    [0.0112, 0.0104, 2.1],
+    [0.0082, 0.0078, 2.0],
+    [0.0038, 0.0036, 2.0],
   ]), seg, false, true);
 }
 
@@ -333,6 +350,26 @@ function buildLeg(g, side, skeleton, segments, k = 1) {
 
 /* ---------------- shoe ---------------- */
 
+/* The foot's own cross-sections: z forward from the ankle, half-width,
+   and how far the top of the foot stands above the sole.
+
+   Shared, because the CLOTH boot in 94a-zombie-body.js has to be built
+   over exactly this and was instead built from numbers typed next to it.
+   They disagreed by 79 mm and every booted zombie walked around with bare
+   green toes sticking out the front. Two lists that have to agree should
+   be one list. */
+const HUMAN_SHOE = [
+  [-0.070, 0.026, 0.070],
+  [-0.055, 0.038, 0.088],
+  [-0.030, 0.045, 0.098],
+  [0.005, 0.048, 0.100],   // instep, the tallest point
+  [0.055, 0.050, 0.076],
+  [0.105, 0.049, 0.058],
+  [0.150, 0.044, 0.045],
+  [0.185, 0.034, 0.034],
+  [0.207, 0.019, 0.022],   // toe
+];
+
 /* A shoe rather than a foot: sole, toe box, instep and heel. Lofted
    along the length of the foot with a flat bottom, so it sits on the
    ground the way a shoe does instead of a sphere resting on a point. */
@@ -342,18 +379,7 @@ function buildShoe(g, side, skeleton, segments) {
   skeleton.bones[skeleton.index('foot' + S)].bindMatrix.getTranslation(ankle);
 
   const sole = HUMAN.sole;
-  // z, halfWidth, topHeight — measured forward from the ankle.
-  const spec = [
-    [-0.070, 0.026, sole + 0.070],
-    [-0.055, 0.038, sole + 0.088],
-    [-0.030, 0.045, sole + 0.098],
-    [0.005, 0.048, sole + 0.100],   // instep, the tallest point
-    [0.055, 0.050, sole + 0.076],
-    [0.105, 0.049, sole + 0.058],
-    [0.150, 0.044, sole + 0.045],
-    [0.185, 0.034, sole + 0.034],
-    [0.207, 0.019, sole + 0.022],   // toe
-  ];
+  const spec = HUMAN_SHOE.map(([z, hw, up]) => [z, hw, sole + up]);
 
   const cross = Math.max(10, segments);
   const base = g.positions.length / 3;

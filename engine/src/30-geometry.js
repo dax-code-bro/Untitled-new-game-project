@@ -267,6 +267,87 @@ class Geometry {
   }
 }
 
+/* ---------------- baked cavity shading ----------------
+
+   Why a well-sculpted head still renders as a potato.
+
+   The face carries a real nose with real nostril pockets, two lids round
+   a real eyeball, two lip volumes with a gap between them, and an ear
+   with a canal. Under any light with a decent fill -- which is every
+   light in this game, indoors under lamps or outdoors under an overcast
+   sky -- none of it is visible, because a shading model with no occlusion
+   term lights the inside of a nostril exactly as brightly as the end of
+   the nose. Every recess on the face comes back the same flat colour as
+   every prominence, and what is left is a smooth blob with dents in it.
+   No amount of further sculpting fixes that; the detail is already there
+   and is being erased at shading time.
+
+   What a face actually reads by is its dark places. So bake them in:
+   for every vertex, measure how enclosed it is, and multiply that into
+   the vertex colour. Nostrils, eye apertures, the lip line, the ear
+   canal, under the brow, the armpit, between the fingers, inside a
+   collar -- all of them go dark, and the form appears.
+
+   The measure is accessibility: sample other surface points nearby, and
+   count how much of the hemisphere over this vertex they block. Against
+   a subsampled point set so it stays linear enough to run at load time
+   on a pooled character (a few milliseconds a head), and it only has to
+   be approximately right -- this is contact shadow, not radiosity. */
+function bakeCavityAO(g, opts = {}) {
+  const P = g.positions, N = g.normals;
+  const n = P.length / 3;
+  if (!n) return g;
+  const radius = opts.radius != null ? opts.radius : 0.09;
+  const strength = opts.strength != null ? opts.strength : 0.85;
+  const floor = opts.floor != null ? opts.floor : 0.30;
+  /* Sample every Nth vertex. Enough of them to describe the shape of a
+     cavity, few enough that this stays cheap on a 4000-vertex head. */
+  const want = opts.samples || 700;
+  const step = Math.max(1, Math.floor(n / want));
+  const sx = [], sy = [], sz = [];
+  for (let i = 0; i < n; i += step) { sx.push(P[i * 3]); sy.push(P[i * 3 + 1]); sz.push(P[i * 3 + 2]); }
+  const m = sx.length;
+  const r2 = radius * radius;
+
+  if (!g.colors) {
+    g.colors = new Float32Array(n * 3);
+    for (let i = 0; i < g.colors.length; i++) g.colors[i] = 1;
+  } else if (g.colors.length < n * 3) {
+    const c = new Float32Array(n * 3);
+    for (let i = 0; i < c.length; i++) c[i] = i < g.colors.length ? g.colors[i] : 1;
+    g.colors = c;
+  }
+
+  for (let v = 0; v < n; v++) {
+    const px = P[v * 3], py = P[v * 3 + 1], pz = P[v * 3 + 2];
+    const nx = N[v * 3], ny = N[v * 3 + 1], nz = N[v * 3 + 2];
+    let occ = 0, wsum = 0;
+    for (let k = 0; k < m; k++) {
+      const dx = sx[k] - px, dy = sy[k] - py, dz = sz[k] - pz;
+      const d2 = dx * dx + dy * dy + dz * dz;
+      if (d2 > r2 || d2 < 1e-8) continue;
+      const d = Math.sqrt(d2);
+      /* Only points ABOVE the surface occlude it. A neighbour lying in
+         the tangent plane is the flat case and must contribute nothing,
+         or every vertex on a sphere comes out equally grey. */
+      const up = (dx * nx + dy * ny + dz * nz) / d;
+      if (up <= 0) continue;
+      // Nearer blocks more. Linear in distance is close enough here.
+      const fall = 1 - d / radius;
+      occ += up * fall;
+      wsum += fall;
+    }
+    /* Normalised against how many samples were in range at all, so a
+       sparse region is not darkened merely for being sparse. */
+    const a = wsum > 1e-6 ? occ / wsum : 0;
+    const ao = Math.max(floor, 1 - a * strength);
+    g.colors[v * 3] *= ao;
+    g.colors[v * 3 + 1] *= ao;
+    g.colors[v * 3 + 2] *= ao;
+  }
+  return g;
+}
+
 /* Average per-vertex normals across coincident vertices. */
 function weldNormals(normals, groups) {
   if (!groups) return;

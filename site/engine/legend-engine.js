@@ -1370,6 +1370,87 @@ class Geometry {
   }
 }
 
+/* ---------------- baked cavity shading ----------------
+
+   Why a well-sculpted head still renders as a potato.
+
+   The face carries a real nose with real nostril pockets, two lids round
+   a real eyeball, two lip volumes with a gap between them, and an ear
+   with a canal. Under any light with a decent fill -- which is every
+   light in this game, indoors under lamps or outdoors under an overcast
+   sky -- none of it is visible, because a shading model with no occlusion
+   term lights the inside of a nostril exactly as brightly as the end of
+   the nose. Every recess on the face comes back the same flat colour as
+   every prominence, and what is left is a smooth blob with dents in it.
+   No amount of further sculpting fixes that; the detail is already there
+   and is being erased at shading time.
+
+   What a face actually reads by is its dark places. So bake them in:
+   for every vertex, measure how enclosed it is, and multiply that into
+   the vertex colour. Nostrils, eye apertures, the lip line, the ear
+   canal, under the brow, the armpit, between the fingers, inside a
+   collar -- all of them go dark, and the form appears.
+
+   The measure is accessibility: sample other surface points nearby, and
+   count how much of the hemisphere over this vertex they block. Against
+   a subsampled point set so it stays linear enough to run at load time
+   on a pooled character (a few milliseconds a head), and it only has to
+   be approximately right -- this is contact shadow, not radiosity. */
+function bakeCavityAO(g, opts = {}) {
+  const P = g.positions, N = g.normals;
+  const n = P.length / 3;
+  if (!n) return g;
+  const radius = opts.radius != null ? opts.radius : 0.09;
+  const strength = opts.strength != null ? opts.strength : 0.85;
+  const floor = opts.floor != null ? opts.floor : 0.30;
+  /* Sample every Nth vertex. Enough of them to describe the shape of a
+     cavity, few enough that this stays cheap on a 4000-vertex head. */
+  const want = opts.samples || 700;
+  const step = Math.max(1, Math.floor(n / want));
+  const sx = [], sy = [], sz = [];
+  for (let i = 0; i < n; i += step) { sx.push(P[i * 3]); sy.push(P[i * 3 + 1]); sz.push(P[i * 3 + 2]); }
+  const m = sx.length;
+  const r2 = radius * radius;
+
+  if (!g.colors) {
+    g.colors = new Float32Array(n * 3);
+    for (let i = 0; i < g.colors.length; i++) g.colors[i] = 1;
+  } else if (g.colors.length < n * 3) {
+    const c = new Float32Array(n * 3);
+    for (let i = 0; i < c.length; i++) c[i] = i < g.colors.length ? g.colors[i] : 1;
+    g.colors = c;
+  }
+
+  for (let v = 0; v < n; v++) {
+    const px = P[v * 3], py = P[v * 3 + 1], pz = P[v * 3 + 2];
+    const nx = N[v * 3], ny = N[v * 3 + 1], nz = N[v * 3 + 2];
+    let occ = 0, wsum = 0;
+    for (let k = 0; k < m; k++) {
+      const dx = sx[k] - px, dy = sy[k] - py, dz = sz[k] - pz;
+      const d2 = dx * dx + dy * dy + dz * dz;
+      if (d2 > r2 || d2 < 1e-8) continue;
+      const d = Math.sqrt(d2);
+      /* Only points ABOVE the surface occlude it. A neighbour lying in
+         the tangent plane is the flat case and must contribute nothing,
+         or every vertex on a sphere comes out equally grey. */
+      const up = (dx * nx + dy * ny + dz * nz) / d;
+      if (up <= 0) continue;
+      // Nearer blocks more. Linear in distance is close enough here.
+      const fall = 1 - d / radius;
+      occ += up * fall;
+      wsum += fall;
+    }
+    /* Normalised against how many samples were in range at all, so a
+       sparse region is not darkened merely for being sparse. */
+    const a = wsum > 1e-6 ? occ / wsum : 0;
+    const ao = Math.max(floor, 1 - a * strength);
+    g.colors[v * 3] *= ao;
+    g.colors[v * 3 + 1] *= ao;
+    g.colors[v * 3 + 2] *= ao;
+  }
+  return g;
+}
+
 /* Average per-vertex normals across coincident vertices. */
 function weldNormals(normals, groups) {
   if (!groups) return;
@@ -2006,16 +2087,28 @@ const TextureLib = {
       }
     },
 
+    /* Timber. Averaged 0.21 -- the darkest generator in the set, and the
+       brown was baked into it as well as into every material that uses it.
+       Every one of them is authored brown already (0x584023 crates,
+       0x5c4028 gun furniture, 0x261f1a bark), so the tint was being applied
+       twice: a walnut stock came out at about 1.6% reflectance, which is
+       charcoal, and the boards over the windows were indistinguishable
+       from the gaps between them.
+
+       The grain stays -- the ring contrast is if anything stronger now,
+       since it has room to swing -- but it varies around mid-grey and only
+       leans warm. The colour comes from the material, where it was always
+       written down. */
     wood(u, v, n, c) {
       // Rings: distance from a slightly wobbled axis, wrapped.
       const wob = n.fbm(u * 3, v * 1.2, 5, 3) * 0.35;
       const rings = Math.abs(((v * 9 + wob) % 1) * 2 - 1);
       const fibre = n.fbm(u * 4, v * 90, 2, 2) * 0.5 + 0.5;
       const dark = smoothstep(0.35, 0.85, rings);
-      const base = 0.55 - dark * 0.28 + fibre * 0.08;
-      c.r = base * 0.72;
-      c.g = base * 0.46;
-      c.b = base * 0.24;
+      const base = 0.82 - dark * 0.34 + fibre * 0.12;
+      c.r = base * 1.04;
+      c.g = base * 0.96;
+      c.b = base * 0.86;
       c.rough = 0.62 + dark * 0.2;
       c.ao = 1 - dark * 0.15;
       c.h = 0.5 + (1 - dark) * 0.3 + fibre * 0.12;
@@ -2045,13 +2138,19 @@ const TextureLib = {
       c.h = brush * 0.45 + scratch * 0.22;
     },
 
+    /* Corroded steel. Averaged 0.43 and the orange was baked in, so a
+       rusted panel came out a stop and a half below whatever colour it was
+       given and always the same orange whatever that colour was. The
+       blotches still darken -- corrosion is genuinely darker than the metal
+       around it, and that contrast is the whole texture -- they just do it
+       around the material's colour rather than underneath it. */
     rust(u, v, n, c) {
       const blotch = n.fbm(u * 5, v * 5, 4, 5) * 0.5 + 0.5;
       const grit = n.fbm(u * 60, v * 60, 8, 3) * 0.5 + 0.5;
       const rusty = smoothstep(0.35, 0.75, blotch);
-      c.r = lerp(0.55, 0.42, rusty) * (0.85 + grit * 0.3);
-      c.g = lerp(0.56, 0.19, rusty) * (0.85 + grit * 0.3);
-      c.b = lerp(0.58, 0.09, rusty) * (0.85 + grit * 0.3);
+      c.r = lerp(0.72, 0.58, rusty) * (0.85 + grit * 0.3);
+      c.g = lerp(0.72, 0.36, rusty) * (0.85 + grit * 0.3);
+      c.b = lerp(0.73, 0.24, rusty) * (0.85 + grit * 0.3);
       c.metal = 1 - rusty * 0.95;
       c.rough = lerp(0.35, 0.95, rusty);
       c.ao = 1 - rusty * 0.25;
@@ -2081,13 +2180,21 @@ const TextureLib = {
       c.h = blade * 0.7 + patch * 0.3;
     },
 
+    /* Ground. Averaged 0.31, for the same reason and with the same result:
+       the battlefield mud is authored at 0x3b3327, which is 0.043 linear,
+       and a third of that is 0.013 -- one and a third percent reflectance.
+       Real churned earth is nearer ten. The field rendered as a void with
+       wire silhouettes standing in it, and no amount of sky fill could
+       lift a surface that was throwing away two thirds of its light before
+       the lighting ever ran. Centred properly now; the warmth stays, at a
+       strength that tints rather than darkens. */
     dirt(u, v, n, c) {
       const clod = n.fbm(u * 12, v * 12, 3, 4) * 0.5 + 0.5;
       const grit = n.fbm(u * 80, v * 80, 9, 2) * 0.5 + 0.5;
-      const base = 0.24 + clod * 0.16 + grit * 0.07;
-      c.r = base * 1.15; c.g = base * 0.85; c.b = base * 0.60;
+      const base = 0.66 + clod * 0.20 + grit * 0.08;
+      c.r = base * 1.06; c.g = base * 0.98; c.b = base * 0.88;
       c.rough = 0.95;
-      c.ao = 0.6 + clod * 0.4;
+      c.ao = 0.72 + clod * 0.28;
       c.h = clod * 0.7 + grit * 0.3;
     },
 
@@ -2124,16 +2231,45 @@ const TextureLib = {
       c.h = crack * 0.8;
     },
 
+    /* Cloth. Same rule as concrete, and it was broken here for longer.
+
+       This averaged 0.36 -- the weave sat at 0.43 and the channel tints
+       took another 17% off it. Every garment in the game was therefore
+       multiplied down to about a THIRD of the colour it was authored in,
+       while bare skin (a texture that averages 0.86) kept nearly all of
+       its own. That is the whole of "the zombies look middling": out on
+       the field their heads and hands were lit and everything from the
+       collar down was a black hole with rips in it, so none of the
+       tailoring -- collar, placket, cuffs, torn hem, webbing -- was
+       visible at any distance. It was never a modelling problem.
+
+       The weave now varies around mid-grey instead of scaling everything
+       down to it, and the blue cast is gone: a texture supplies variation,
+       a colour supplies colour. */
     fabric(u, v, n, c) {
-      // Over-under weave from two out-of-phase square waves.
-      const wu = Math.sin(u * PI * 120), wv = Math.sin(v * PI * 120);
-      const weave = (wu > 0 ? 1 : 0) ^ (wv > 0 ? 1 : 0);
+      /* The weave was a hard XOR of two square waves -- a literal
+         chessboard, 60 squares across the tile. While cloth was rendering
+         at a third of its colour nobody could see it; the moment the
+         garments came up to full brightness every coat in the game was
+         wearing a checkerboard, and on a sheriff at forty metres it was
+         the only thing you could see.
+
+         Over-under is a SOFT alternation, not a tiled square: the product
+         of the two waves gives the same interlace with a rounded profile,
+         and at nearly twice the frequency it sits at thread scale instead
+         of tile scale. The hard version stays in the height field, where
+         a crisp edge is what a normal map wants. Slub -- thread-count
+         variation over a couple of centimetres -- carries most of the
+         visible variety now, which is what cloth actually looks like. */
+      const wu = Math.sin(u * PI * 220), wv = Math.sin(v * PI * 220);
+      const weave = wu * wv * 0.5 + 0.5;
       const fuzz = n.fbm(u * 200, v * 200, 4, 2) * 0.5 + 0.5;
-      const base = 0.35 + weave * 0.08 + fuzz * 0.08;
-      c.r = base * 0.75; c.g = base * 0.8; c.b = base * 0.95;
-      c.rough = 0.96;
-      c.ao = 0.75 + weave * 0.25;
-      c.h = weave * 0.6 + fuzz * 0.2;
+      const slub = n.fbm(u * 26, v * 26, 17, 3) * 0.5 + 0.5;
+      const base = 0.80 + weave * 0.06 + fuzz * 0.07 + slub * 0.05;
+      c.r = base * 0.99; c.g = base; c.b = base * 1.02;
+      c.rough = 0.96 - slub * 0.04;
+      c.ao = 0.86 + weave * 0.14;
+      c.h = weave * 0.5 + fuzz * 0.2 + slub * 0.3;
     },
 
     skin(u, v, n, c) {
@@ -8413,6 +8549,92 @@ function makeHeadGeometry(opts = {}) {
     }
   }
 
+  /* ---------------- hair ----------------
+
+     Every character in the game was bald, living and dead, and a bald
+     head is the single loudest thing a crowd of them can have in common.
+     Four builds, four outfits, ten skin tones and a seeded rot pass, all
+     of it undone by everybody having the same scalp.
+
+     Built as a second shell over the skull's OWN vertices rather than as
+     a sampled cap: the grid is already there, already sculpted, and
+     already carries a normal, so pushing the masked part of it outward
+     gives hair that follows the head exactly and cannot drift off it.
+     Where the mask cuts, the skull shows through, which is what a bald
+     patch is; the shell faces outward only, so the skull under it is
+     what you see there rather than the inside of a wig.
+
+     The mask is a hairline that runs high at the front and low at the
+     nape, minus noise patches, minus however far gone the head is -- a
+     corpse that has been out a while has lost most of it in clumps, and
+     the clumps are the point. */
+  if (opts.hair !== false) {
+    const HAIR = [0x2a2118, 0x1c1a18, 0x4a3a28, 0x6b5f4e, 0x8a8378, 0x3a2a22];
+    const hairCol = HAIR[(opts.seed || 5) % HAIR.length];
+    const R = Math.max(0, Math.min(1, opts.rot || 0));
+    const row = sectors + 1;
+    const P = g.positions, N = g.normals;
+    // How receded this one is, before the rot takes its share.
+    const recede = ((opts.seed || 5) % 4) * 0.028;
+    const maskAt = (i) => {
+      const x = P[i * 3], y = P[i * 3 + 1], z = P[i * 3 + 2];
+      const len = Math.sqrt(x * x + y * y + z * z) || 1;
+      const dz = z / len;
+      const front = Math.max(0, dz), back = Math.max(0, -dz);
+      /* The hairline: high over the brow, dropping down the sides, and
+         low at the nape. A widow's peak at the middle of the forehead. */
+      const peak = (1 - smoothstep(0.02, 0.12, Math.abs(x))) * front * 0.030;
+      const lineY = 0.086 + front * 0.048 - back * 0.170 + recede - peak;
+      let m = smoothstep(lineY - 0.020, lineY + 0.055, y);
+      // Never over an ear.
+      m *= smoothstep(0.055, 0.135, y + Math.abs(x) * 0.35);
+      // Clumps: what is left comes away in patches, not evenly.
+      const patch = noise.fbm(x * 21.0, y * 21.0, z * 21.0, 3) * 0.5 + 0.5;
+      /* First cut at this thresholded at 0.52 to 0.79 on an fbm that
+         rarely reaches 0.79, so what survived was a scatter of specks on
+         the crown. Most of the scalp should have hair on it; the clumps
+         that are gone are the exception, and the rot decides how many. */
+      m *= smoothstep(0.12 + R * 0.20, 0.40 + R * 0.20, patch);
+      return m;
+    };
+    const mask = new Float32Array((rings + 1) * row);
+    for (let i = 0; i < mask.length; i++) mask[i] = maskAt(i);
+    g.setColor(hairCol);
+    const base = g.positions.length / 3;
+    const idx = new Int32Array(mask.length).fill(-1);
+    for (let i = 0; i < mask.length; i++) {
+      if (mask[i] <= 0.004) continue;
+      /* Thickness, plus a fine ripple so it reads as matted strands and
+         not as a swim cap. */
+      const x = P[i * 3], y = P[i * 3 + 1], z = P[i * 3 + 2];
+      const strand = noise.fbm(x * 90.0, y * 34.0, z * 90.0, 2) * 0.5 + 0.5;
+      /* Thickness has to go to ZERO at the edge of the mask. Clamping it
+         to full thickness over most of the range left every boundary quad
+         standing at its full height, and since a quad is either emitted or
+         not, the result was a crenellated wall -- a battlement round the
+         crown, which is what a wig looks like when it is quantised to the
+         grid it is built on. Squared, so it feathers. */
+      const t = (0.011 + strand * 0.012) * mask[i] * mask[i];
+      idx[i] = g.positions.length / 3;
+      g.vert(x + N[i * 3] * t, y + N[i * 3 + 1] * t, z + N[i * 3 + 2] * t,
+        N[i * 3], N[i * 3 + 1], N[i * 3 + 2],
+        (i % row) / sectors, ((i / row) | 0) / rings);
+    }
+    for (let r = 0; r < rings; r++) {
+      for (let sct = 0; sct < sectors; sct++) {
+        const a = r * row + sct, b2 = a + 1, c2 = a + row, d2 = a + row + 1;
+        if (idx[a] < 0 || idx[b2] < 0 || idx[c2] < 0 || idx[d2] < 0) continue;
+        // Average, not all-four: with the thickness feathering to nothing
+        // the edge fades out instead of stopping at a grid line.
+        if ((mask[a] + mask[b2] + mask[c2] + mask[d2]) * 0.25 < 0.05) continue;
+        g.tri(idx[a], idx[b2], idx[c2]);
+        g.tri(idx[b2], idx[d2], idx[c2]);
+      }
+    }
+    g.setColor(null);
+    void base;
+  }
+
   // Ears sit on the skull surface, which the parietal widening above pushes
   // out past RX at this height — not at some fraction of it. Placing them
   // inboard buries them inside the head.
@@ -8432,6 +8654,14 @@ function makeHeadGeometry(opts = {}) {
   // normals carried through the loop no longer match the surface.
   const face = { workPositions: g.positions, workNormals: g.normals, geometry: g };
   Face.prototype._recomputeNormals.call(face);
+  /* Bake the face's own shadows in, AFTER the normals are right -- the
+     pass needs a correct normal per vertex to know which side is "above"
+     the surface. This is what turns the sculpt into a face: the nostrils,
+     the eye apertures, the gap between the lips, the ear canal and the
+     shelf under the brow all go dark, and the form stops depending on a
+     directional light happening to rake across it. On a head this small
+     the radius is a couple of centimetres. */
+  bakeCavityAO(g, { radius: 0.052, strength: 0.95, floor: 0.22, samples: 900 });
   return g;
 }
 
@@ -9446,7 +9676,7 @@ function makeHumanoidMesh(skeleton, opts = {}) {
     : opts.clothOnly
     ? buildZombieClothGeometry(skeleton, { build: opts.zombieBuild, seed: opts.seed, segments: opts.segments, outfit: opts.outfit })
     : opts.zombieBuild
-      ? buildZombieBodyGeometry(skeleton, { build: opts.zombieBuild, seed: opts.seed, segments: opts.segments })
+      ? buildZombieBodyGeometry(skeleton, { build: opts.zombieBuild, seed: opts.seed, segments: opts.segments, rot: opts.rot })
       : makeHumanBodyGeometry(skeleton, opts);
 
   return solveSkinWeights(g, skeleton);
@@ -9885,12 +10115,21 @@ function buildHand(g, side, wrist, segments, claw) {
   const palmDir = new Vec3(0, -1, 0);
   const curl = claw == null ? 0.42 : claw;
   // Palm: wrist to knuckle line, 100 mm, thickening through the middle.
+  /* Width and thickness were the wrong way round, and had been from the
+     start. `w` runs across X, which is the axis the four fingers are
+     spread along, so it is the palm's WIDTH; `d` runs fore-and-aft, which
+     is its THICKNESS. They were authored as w 44-56 mm and d 84-92 mm --
+     a hand 50 mm wide and 90 mm deep, when a real one is 85 wide and 30
+     deep. Measured by skin weight, the whole hand came out 119 mm thick.
+     That is why every zombie appeared to be wearing boxing gloves, and no
+     amount of shrinking it overall would have helped: shrunk, it would
+     have been a smaller block. */
   const knuck = new Vec3().copy(wrist).addScaled(palmDir, 0.100);
   const rings = [
-    { p: new Vec3().copy(wrist), w: 0.028, d: 0.030, e: 2.1 },
-    { p: new Vec3().copy(wrist).addScaled(palmDir, 0.030), w: 0.026, d: 0.042, e: 2.4 },
-    { p: new Vec3().copy(wrist).addScaled(palmDir, 0.070), w: 0.024, d: 0.046, e: 2.6 },
-    { p: new Vec3().copy(knuck), w: 0.022, d: 0.044, e: 2.6 },
+    { p: new Vec3().copy(wrist), w: 0.030, d: 0.0170, e: 2.1 },
+    { p: new Vec3().copy(wrist).addScaled(palmDir, 0.030), w: 0.040, d: 0.0165, e: 2.4 },
+    { p: new Vec3().copy(wrist).addScaled(palmDir, 0.070), w: 0.043, d: 0.0160, e: 2.6 },
+    { p: new Vec3().copy(knuck), w: 0.042, d: 0.0150, e: 2.6 },
   ];
   loftRings(g, rings, segments, false, true);
 
@@ -9900,10 +10139,13 @@ function buildHand(g, side, wrist, segments, claw) {
      Index nearest the thumb, little finger furthest. */
   const seg = Math.max(6, segments >> 1);
   const LEN = [0.038, 0.024, 0.018];
-  const R0 = [0.0125, 0.0130, 0.0122, 0.0104];
+  // 20, 20, 19 and 16 mm across -- what fingers measure. They were 25 to
+  // 21, which on a palm the right width reads as a bunch of bananas.
+  const R0 = [0.0098, 0.0102, 0.0096, 0.0082];
   for (let f = 0; f < 4; f++) {
     // Spread across the knuckle line, and shortened toward the little one.
-    const across = (f - 1.5) * 0.0165;
+    // Spread to fill the corrected palm: four fingers across 85 mm.
+    const across = (f - 1.5) * 0.0215;
     const scale = [0.96, 1.0, 0.97, 0.86][f];
     const root = new Vec3().copy(knuck);
     root.x += side * across;
@@ -9932,25 +10174,30 @@ function buildHand(g, side, wrist, segments, claw) {
     loftRings(g, fr, seg, true, true);
   }
 
-  // Thumb, angled inward and forward off the palm, and closing with them.
-  const thumbRoot = new Vec3().copy(wrist).addScaled(palmDir, 0.042);
-  thumbRoot.z += 0.030;
+  /* Thumb, off the radial edge -- the same side the index finger is on,
+     one spacing beyond it -- and only just proud of the palm's front
+     face. It used to start 30 mm forward of the palm centre, which was
+     inside a 92 mm-deep palm and is now 15 mm outside a 30 mm one; on the
+     corrected hand it would have hung in the air. */
+  const thumbRoot = new Vec3().copy(wrist).addScaled(palmDir, 0.038);
+  thumbRoot.x -= side * 0.036;
+  thumbRoot.z += 0.010;
   const thumbMid = new Vec3().copy(thumbRoot);
-  thumbMid.z += 0.020 + curl * 0.006;
+  thumbMid.x += side * 0.007;
+  thumbMid.z += 0.020 + curl * 0.008;
   thumbMid.y -= 0.030;
-  thumbMid.x -= side * 0.004;
   const thumbTip = new Vec3().copy(thumbMid);
-  thumbTip.z += 0.008 + curl * 0.014;
-  thumbTip.y -= 0.026 - curl * 0.008;
-  thumbTip.x -= side * 0.003;
+  thumbTip.x += side * 0.010;
+  thumbTip.z += 0.009 + curl * 0.014;
+  thumbTip.y -= 0.025 - curl * 0.008;
   loftRings(g, limbRings(thumbRoot, thumbMid, [
-    [0.017, 0.016, 2.1],
-    [0.015, 0.014, 2.1],
+    [0.0125, 0.0118, 2.1],
+    [0.0112, 0.0104, 2.1],
   ]), seg, true, false);
   loftRings(g, limbRings(thumbMid, thumbTip, [
-    [0.015, 0.014, 2.1],
-    [0.0105, 0.0100, 2.0],
-    [0.0044, 0.0042, 2.0],
+    [0.0112, 0.0104, 2.1],
+    [0.0082, 0.0078, 2.0],
+    [0.0038, 0.0036, 2.0],
   ]), seg, false, true);
 }
 
@@ -9990,6 +10237,26 @@ function buildLeg(g, side, skeleton, segments, k = 1) {
 
 /* ---------------- shoe ---------------- */
 
+/* The foot's own cross-sections: z forward from the ankle, half-width,
+   and how far the top of the foot stands above the sole.
+
+   Shared, because the CLOTH boot in 94a-zombie-body.js has to be built
+   over exactly this and was instead built from numbers typed next to it.
+   They disagreed by 79 mm and every booted zombie walked around with bare
+   green toes sticking out the front. Two lists that have to agree should
+   be one list. */
+const HUMAN_SHOE = [
+  [-0.070, 0.026, 0.070],
+  [-0.055, 0.038, 0.088],
+  [-0.030, 0.045, 0.098],
+  [0.005, 0.048, 0.100],   // instep, the tallest point
+  [0.055, 0.050, 0.076],
+  [0.105, 0.049, 0.058],
+  [0.150, 0.044, 0.045],
+  [0.185, 0.034, 0.034],
+  [0.207, 0.019, 0.022],   // toe
+];
+
 /* A shoe rather than a foot: sole, toe box, instep and heel. Lofted
    along the length of the foot with a flat bottom, so it sits on the
    ground the way a shoe does instead of a sphere resting on a point. */
@@ -9999,18 +10266,7 @@ function buildShoe(g, side, skeleton, segments) {
   skeleton.bones[skeleton.index('foot' + S)].bindMatrix.getTranslation(ankle);
 
   const sole = HUMAN.sole;
-  // z, halfWidth, topHeight — measured forward from the ankle.
-  const spec = [
-    [-0.070, 0.026, sole + 0.070],
-    [-0.055, 0.038, sole + 0.088],
-    [-0.030, 0.045, sole + 0.098],
-    [0.005, 0.048, sole + 0.100],   // instep, the tallest point
-    [0.055, 0.050, sole + 0.076],
-    [0.105, 0.049, sole + 0.058],
-    [0.150, 0.044, sole + 0.045],
-    [0.185, 0.034, sole + 0.034],
-    [0.207, 0.019, sole + 0.022],   // toe
-  ];
+  const spec = HUMAN_SHOE.map(([z, hw, up]) => [z, hw, sole + up]);
 
   const cross = Math.max(10, segments);
   const base = g.positions.length / 3;
@@ -10660,6 +10916,15 @@ function loftGarment(g, rings, segments, rng, opts = {}) {
 
 const _zRight = new Vec3(1, 0, 0);
 const _zFwd = new Vec3(0, 0, 1);
+/* A ring whose cross-section stands UP: width across X, height up Y.
+   `_zFwd` puts the section flat in the XZ plane, which is right for a
+   band lofted vertically and catastrophically wrong for anything lofted
+   along Z -- the sections then lie in the plane they are being stacked
+   in, and what you get is a set of overlapping horizontal discs with no
+   height at all. Every boot in the game was that: a flat pancake in the
+   ground plane, invisible inside the foot it was supposed to cover, and
+   the bare flesh foot was what the player actually saw. */
+const _yFwd = new Vec3(0, 1, 0);
 
 /* The wardrobe. Each build died in something different, and the garment is
    as much of the silhouette as the body under it: a dress with a skirt
@@ -10827,19 +11092,35 @@ function buildShoes(g, skeleton, build, segments, spec) {
       { p: new Vec3().copy(top).lerp(c, 0.55), w: r + 0.034, d: r + 0.036, e: 2.3 },
       { p: new Vec3(c.x, c.y + 0.030, c.z + 0.012), w: r + 0.032, d: r + 0.046, e: 2.4 },
     ], segments, true, false);
-    // Foot box, running forward over the toes.
-    loftRings(g, [
-      { p: new Vec3(c.x, c.y + 0.030, c.z + 0.010), w: r + 0.032, d: 0.052, e: 2.6, right: _zRight, fwd: _zFwd },
-      { p: new Vec3(c.x, c.y + 0.022, c.z + 0.070), w: r + 0.036, d: 0.062, e: 2.7, right: _zRight, fwd: _zFwd },
-      { p: new Vec3(c.x, c.y + 0.016, c.z + 0.128), w: r + 0.028, d: 0.040, e: 2.6, right: _zRight, fwd: _zFwd },
-    ], segments, true, true);
-    // Sole, in its own colour on a sneaker.
+    /* The boot, built over the foot's OWN cross-sections.
+
+       This was a second list of numbers hand-typed to sit near the first
+       one, and they disagreed: the flesh foot runs to z + 0.207 and the
+       boot stopped at + 0.128, so eighty millimetres of bare green toe
+       stuck out the front of it, and there was nothing behind the heel
+       either. Widening it by guesswork fixed the length and left the toe
+       poking through the top instead. Derived from HUMAN_SHOE with a few
+       millimetres of leather round it, it cannot disagree again. */
+    /* The flesh foot's cross-section is a hard superellipse (exponent 3),
+       the boot's was a rounder 2.6, so at the toe the foot's square
+       corners came through the leather's rounded ones -- two pale patches
+       either side of the toe cap. A boot is squarer than a foot, not
+       rounder. */
+    const CLEAR_W = 0.008, CLEAR_H = 0.009;
+    const bootRings = (padW, padH, lift) => HUMAN_SHOE.map(([bz, hw, up]) => {
+      const top = HUMAN.sole + up + padH;
+      const bot = HUMAN.sole - lift;
+      return { p: new Vec3(c.x, (top + bot) * 0.5, c.z + bz),
+        w: hw + padW, d: (top - bot) * 0.5, e: 3.3, right: _zRight, fwd: _yFwd };
+    });
+    loftRings(g, bootRings(CLEAR_W, CLEAR_H, 0.004), segments, true, true);
+    // Sole: a slab under the same outline, in its own colour.
     g.setColor(spec.sole != null ? spec.sole : spec.color);
-    loftRings(g, [
-      { p: new Vec3(c.x, c.y + 0.006, c.z + 0.006), w: r + 0.036, d: 0.056, e: 3.0, right: _zRight, fwd: _zFwd },
-      { p: new Vec3(c.x, c.y + 0.006, c.z + 0.072), w: r + 0.040, d: 0.066, e: 3.0, right: _zRight, fwd: _zFwd },
-      { p: new Vec3(c.x, c.y + 0.008, c.z + 0.132), w: r + 0.032, d: 0.044, e: 2.8, right: _zRight, fwd: _zFwd },
-    ], segments, true, true);
+    loftRings(g, HUMAN_SHOE.map(([bz, hw]) => {
+      const top = HUMAN.sole + 0.016, bot = HUMAN.sole - 0.010;
+      return { p: new Vec3(c.x, (top + bot) * 0.5, c.z + bz),
+        w: hw + CLEAR_W + 0.003, d: (top - bot) * 0.5, e: 3.6, right: _zRight, fwd: _yFwd };
+    }), segments, true, true);
   }
   g.setColor(null);
   g.part = PART.BODY;
@@ -11288,6 +11569,146 @@ function zombieWoundSpots(buildName) {
   return spots;
 }
 
+/* ---------------- and then it died ----------------
+
+   The head has had a rot pass for a while: eyes sunk, temples caved,
+   cheeks fallen, lips retreated. The BODY never did. So every zombie in
+   the game was a healthy anatomical figure -- correct biceps, correct
+   calf belly, correct shoulder-to-hip ratio -- wearing a corpse's head
+   and a green material. That mismatch is most of what "they look
+   middling" was: nothing below the jaw said dead.
+
+   What actually happens to a body is that the soft tissue goes and the
+   skeleton stops being an inference. So this works on the flesh only,
+   after the limbs are lofted and before the normals are computed, and it
+   does five things, all of them derived from position alone so they land
+   correctly on four different builds without a table per build:
+
+     - the muscle bellies waste, and the joints do not, which is what
+       throws an elbow and a knee into relief without enlarging either
+     - the ribs surface through the flank, deepest at the side and fading
+       to nothing at the sternum and the spine, where there is bone
+       immediately under the skin either way
+     - the belly falls in toward the spine
+     - the collarbones, the shoulder blades, the spine and the hip points
+       come up proud
+     - one side goes further than the other, seeded, so a crowd is a crowd
+
+   `limbs` is the list of bone segments the flesh was lofted along; the
+   caller has them already and passing them beats re-deriving them. */
+function rotZombieBody(g, build, limbs, rot, seed) {
+  const R = clamp(rot, 0, 1);
+  if (R <= 0) return;
+  const P = g.positions;
+  const k = build.scale;
+  const noise = new Noise(seed * 977 + 3);
+  const lean = (seed % 5) / 4 - 0.5;          // which side went first
+  const cp = new Vec3(), pv = new Vec3();
+
+  for (let i = 0; i < P.length; i += 3) {
+    let x = P[i], y = P[i + 1], z = P[i + 2];
+    const sx = x >= 0 ? 1 : -1;
+    /* How far gone this side is. A body does not decompose symmetrically
+       and a symmetric one looks manufactured. */
+    const S = R * (1 + sx * lean * 0.5);
+
+    /* --- the limbs waste --- */
+    pv.set(x, y, z);
+    let near = null, nearD = 1e9, nearT = 0;
+    for (const L of limbs) {
+      closestPointOnSegment(pv, L.a, L.b, cp);
+      const d = cp.distanceTo(pv);
+      if (d < nearD) {
+        nearD = d; near = L;
+        const len = Math.max(L.a.distanceTo(L.b), 1e-5);
+        nearT = clamp(L.a.distanceTo(cp) / len, 0, 1);
+      }
+    }
+    if (near && nearD < near.r * 2.2) {
+      /* Peaks at the middle of the bone and goes to zero at both ends, so
+         a wasted forearm still meets a full-size elbow and wrist. That
+         difference IS the read: a limb thinned evenly just looks thin. */
+      const belly = Math.sin(nearT * PI);
+      const pull = belly * belly * 0.30 * S;
+      closestPointOnSegment(pv, near.a, near.b, cp);
+      x += (cp.x - x) * pull; y += (cp.y - y) * pull; z += (cp.z - z) * pull;
+      /* And the tendons stand out where there is no muscle to hide them:
+         a shallow corrugation along the bone, strongest at the ends. */
+      const cord = noise.fbm(x * 26, y * 26, z * 26, 2) * (1 - belly) * 0.0045 * S;
+      const dx = x - cp.x, dy = y - cp.y, dz = z - cp.z;
+      const dl = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
+      x += (dx / dl) * cord; y += (dy / dl) * cord; z += (dz / dl) * cord;
+    }
+
+    /* --- the trunk --- *
+       Everything below is gated to the trunk by position: the arms hang
+       outboard of 0.22 and the legs start below the hips, so a spatial
+       gate needs no per-vertex part array and cannot get out of step with
+       one. */
+    const inTrunk = Math.abs(x) < 0.235 * k && y > -0.075 && y < 0.545;
+    if (inTrunk) {
+      const rad = Math.sqrt(x * x + z * z) || 1e-5;
+      const ux = x / rad, uz = z / rad;
+      /* Where round the trunk this vertex is. 0 at the sternum, 1 at the
+         flank, back to 0 at the spine -- the two places where bone is
+         directly under skin and there is nothing to fall in. */
+      const round = Math.abs(ux);
+      const front = clamp(uz, 0, 1);
+      const back = clamp(-uz, 0, 1);
+
+      // Ribs: six of them, surfacing through the flank.
+      const ribBand = smoothstep(0.255, 0.310, y) * (1 - smoothstep(0.455, 0.500, y));
+      if (ribBand > 0) {
+        const rib = Math.cos((y - 0.262) * (PI * 2 / 0.0345));
+        // Sharp troughs, soft crests: the gaps between ribs are what you
+        // see, not the ribs themselves.
+        const cut = -Math.max(0, -rib) * 0.5 - rib * 0.5 + 0.5;
+        const amp = ribBand * round * (0.4 + front * 0.6) * 0.0135 * S;
+        x -= ux * cut * amp; z -= uz * cut * amp;
+      }
+
+      // The belly falls in toward the spine.
+      const gut = smoothstep(-0.010, 0.070, y) * (1 - smoothstep(0.175, 0.265, y));
+      z -= front * gut * 0.052 * S * k;
+      x -= ux * front * gut * 0.016 * S * k;
+
+      // Sternum: a ridge left standing between the two fallen sides.
+      const stern = smoothstep(0.285, 0.330, y) * (1 - smoothstep(0.460, 0.505, y))
+        * (1 - smoothstep(0.020, 0.062, Math.abs(x)));
+      z += stern * front * 0.010 * S;
+
+      // Collarbones, running out from the notch to each shoulder.
+      const clav = (1 - smoothstep(0.014, 0.030, Math.abs(y - 0.470 - Math.abs(x) * 0.055)))
+        * smoothstep(0.012, 0.045, Math.abs(x)) * (1 - smoothstep(0.130, 0.180, Math.abs(x)));
+      z += clav * front * 0.0115 * S;
+
+      // Shoulder blades on the back, and the spine down the middle of it.
+      const scap = smoothstep(0.315, 0.360, y) * (1 - smoothstep(0.440, 0.485, y))
+        * smoothstep(0.028, 0.070, Math.abs(x)) * (1 - smoothstep(0.115, 0.165, Math.abs(x)));
+      z -= scap * back * 0.0125 * S;
+      const spineY = 0.5 + 0.5 * Math.cos((y + 0.06) * (PI * 2 / 0.052));
+      const spine = (1 - smoothstep(0.012, 0.042, Math.abs(x)))
+        * smoothstep(0.020, 0.090, y) * (1 - smoothstep(0.440, 0.510, y));
+      z -= spine * back * (0.006 + spineY * 0.006) * S;
+
+      // Hip points.
+      const ilium = (1 - smoothstep(0.020, 0.055, Math.abs(y + 0.012)))
+        * smoothstep(0.075, 0.115, Math.abs(x)) * (1 - smoothstep(0.150, 0.200, Math.abs(x)));
+      x += ux * ilium * 0.009 * S; z += uz * ilium * 0.006 * S;
+    }
+
+    /* And the skin dries: a fine ridging over everything, stronger the
+       further gone the body is. The head pass does the same thing, at the
+       same frequencies, so the two surfaces match where they meet. */
+    const dry = noise.fbm(x * 9.0, y * 9.0, z * 9.0, 3) * 0.0026 * (1 + R * 2.2)
+      + noise.fbm(x * 27.0, y * 27.0, z * 27.0, 2) * 0.0016 * R;
+    const nl = Math.sqrt(x * x + z * z) || 1;
+    x += (x / nl) * dry; z += (z / nl) * dry;
+
+    P[i] = x; P[i + 1] = y; P[i + 2] = z;
+  }
+}
+
 /* The whole figure: flesh, then clothes over it. *//* The clothes, as their own mesh over the same skeleton.
 
    This is the difference between a dressed figure and a painted one. Flesh
@@ -11320,6 +11741,21 @@ function buildZombieClothGeometry(skeleton, opts = {}) {
     g.part = PART.BODY;
     buildGarmentDetail(g, skeleton, build, rng);
     g.part = PART.BODY;
+    /* Boots on the ones without a named outfit too. They had none: the
+       foot geometry is fine -- 277 mm long and 100 wide, which is a
+       shoe -- but it lives in the FLESH mesh, so an undressed zombie
+       walked around on two bare pale-green flippers that read, against
+       dark trouser legs, as the biggest thing in the silhouette. Nobody
+       died barefoot. A worn work boot, in one of four colours off the
+       same seed that picks everything else. */
+    const BOOTS = [
+      { kind: 'boot', color: 0x35291f, sole: 0x241d17 },
+      { kind: 'boot', color: 0x2b2b2e, sole: 0x1d1d20 },
+      { kind: 'boot', color: 0x463524, sole: 0x2a211a },
+      { kind: 'boot', color: 0x3a3a33, sole: 0x25251f },
+    ];
+    buildShoes(g, skeleton, build, segments, BOOTS[(opts.seed || 7) % BOOTS.length]);
+    g.part = PART.BODY;
     if (opts.build === 'armored') buildWebbing(g, build);
   }
 
@@ -11327,6 +11763,12 @@ function buildZombieClothGeometry(skeleton, opts = {}) {
   g.computeWeldGroups();
   smoothNormals(g);
   weldNormals(g.normals, g.weldGroups);
+  /* And on the clothes, where it does the most obvious work of all: a
+     collar, a cuff, a lapel and the inside of a torn opening are all
+     cavities, and without this a coat is one flat colour with creases
+     drawn on it. Gentler than the flesh -- cloth is a shell a few
+     millimetres off the body, so a hard AO would band along every seam. */
+  bakeCavityAO(g, { radius: 0.070, strength: 0.62, floor: 0.42, samples: 700 });
   return g;
 }
 
@@ -11430,6 +11872,11 @@ function buildZombieBodyGeometry(skeleton, opts = {}) {
   if (build.shoulderCaps) buildShoulderCaps(g, skeleton, build);
 
   const a = new Vec3(), b = new Vec3(), c = new Vec3();
+  /* Every bone the flesh is lofted along, kept so the rot pass can waste
+     the muscle between the joints without re-deriving any of it. `r` is
+     roughly how far the flesh reaches from that bone, which is what tells
+     a torso vertex from a limb one. */
+  const limbs = [];
   for (const sideName of ['L', 'R']) {
     const side = sideName === 'L' ? 1 : -1;
     g.part = sideName === 'L' ? PART.ARM_L : PART.ARM_R;
@@ -11466,6 +11913,8 @@ function buildZombieBodyGeometry(skeleton, opts = {}) {
       [build.arm[4], build.arm[4] * 1.06, 2.1],
     ]);
     loftRings(g, up.concat(lo.slice(1)), segments, false, false);
+    limbs.push({ a: root.clone(), b: b.clone(), r: build.arm[0] * 1.16 },
+      { a: b.clone(), b: c.clone(), r: build.arm[2] * 1.12 });
     /* An elbow. A limb lofted straight through its joint pinches to a
        crease the moment the skin solver bends it — there is nothing at the
        hinge to hold the volume. A ball at the joint is what keeps an arm
@@ -11499,16 +11948,33 @@ function buildZombieBodyGeometry(skeleton, opts = {}) {
       [build.leg[4], build.leg[4], 2.1],
     ], (t) => -0.014 * Math.sin(t * PI));
     loftRings(g, th.concat(sh.slice(1)), segments, false, false);
+    limbs.push({ a: a.clone(), b: b.clone(), r: build.leg[0] * 1.06 },
+      { a: b.clone(), b: c.clone(), r: build.leg[3] * 1.22 });
     buildJoint(g, b, build.leg[2] * 1.06);          // knee
     buildJoint(g, a, build.leg[0] * 0.92);          // hip socket
     buildShoe(g, side, skeleton, segments);
   }
   g.part = PART.BODY;
 
+  /* Decomposition, over the finished flesh. Before finalize, so the
+     normals are computed from the sculpted surface rather than from the
+     healthy one -- displace after they are computed and the ribs are
+     invisible however deep they are cut. Same default as the head takes,
+     off the same seed, so a body and its face are equally far gone. */
+  rotZombieBody(g, build, limbs,
+    opts.rot != null ? opts.rot : 0.55 + (((opts.seed || 5) * 7) % 9) / 20,
+    opts.seed || 5);
+
   g.finalize();
   g.computeWeldGroups();
   smoothNormals(g);
   weldNormals(g.normals, g.weldGroups);
+  /* The same contact shading the face gets. On a body it is the armpit,
+     the hollow between the ribs the rot pass just cut, the inside of the
+     elbow and the knee, and the gaps between the fingers -- the places
+     that were rendering exactly as bright as the shoulder on top of
+     them. A wider radius than the head, because the cavities are. */
+  bakeCavityAO(g, { radius: 0.085, strength: 0.85, floor: 0.30, samples: 800 });
   return g;
 }
 
@@ -12233,13 +12699,29 @@ class Engine {
        the one mesh, so none of the procedural layers below apply to it. */
     const model = opts.model || null;
     const skeleton = model ? skeletonFromRig(model.rig) : makeHumanoidSkeleton(scale);
+    /* How far gone this one is. Derived ONCE, here, and handed to both the
+       body and the head -- they used to compute it separately from the same
+       formula, which worked only for as long as nobody passed opts.rot, and
+       the day someone did they would have got a skull-faced corpse on a
+       healthy body. */
+    const rot = opts.zombie
+      ? (opts.rot != null ? opts.rot : 0.55 + (((opts.seed || 5) * 7) % 9) / 20)
+      : 0;
     // `zombie: true` swaps in the starved silhouette and torn clothing.
     const geo = model ? model.geometry : makeHumanoidMesh(skeleton, opts.zombie
-      ? { zombieBuild: opts.zombieBuild || 'male', seed: opts.seed || 3 }
+      ? { zombieBuild: opts.zombieBuild || 'male', seed: opts.seed || 3, rot }
       : { thickness: opts.build || 1 });
     // One model, many copies: the GPU buffers are built once and shared.
     if (model && !model._mesh) model._mesh = new GpuMesh(this.gl, geo);
     const mesh = model ? model._mesh : new GpuMesh(this.gl, geo);
+    /* Registered so the flesh can be MEASURED too, the same way the head
+       and the clothing already are. "Do the ribs actually surface?" is a
+       question about vertex positions, and it should never have to be
+       settled by squinting at a screenshot. */
+    if (!model && opts.zombie) {
+      mesh.__key = 'zbody:' + (opts.zombieBuild || 'male') + ':' + (opts.seed || 3) + ':' + rot.toFixed(3);
+      (this._geoByKey || (this._geoByKey = new Map())).set(mesh.__key, geo);
+    }
 
     const animator = new Animator(skeleton);
     for (const clip of makeHumanoidClips()) animator.add(clip);
@@ -12353,9 +12835,6 @@ class Engine {
          varies body to body off the same seed that varies everything
          else, so a crowd is a crowd of corpses at different stages rather
          than one corpse repeated. */
-      const rot = opts.zombie
-        ? (opts.rot != null ? opts.rot : 0.55 + (((opts.seed || 5) * 7) % 9) / 20)
-        : 0;
       const headGeo = makeHeadGeometry({ seed: opts.seed || 5, type: opts.faceType, rot });
       const headMesh = new GpuMesh(this.gl, headGeo);
       /* Registered so it can be MEASURED. A head built straight into a
@@ -12386,7 +12865,15 @@ class Engine {
       // leaving 0.28 for the head — about a seventh of total height, which is
       // what a human actually is.
       const HEAD_MESH_HEIGHT = 0.72;
-      const headHeight = 1.75 - 1.47;
+      /* 0.28 was derived from where the head bone sits on the rig, which
+         is a fine way to place a head and a poor way to size one -- the
+         bone is at the atlas, not at the chin. Measured, the head came out
+         258 mm tall and 177 wide against a real 232 and 152, and the
+         figure stood 5.95 heads high where a person is seven and a half.
+         Six heads is the proportion of a stylised toy, and it was doing
+         more damage to how these read than any amount of sculpting could
+         undo. This is a head. */
+      const headHeight = 0.252;
       const headScale = (headHeight / HEAD_MESH_HEIGHT) * scale;
       const headActor = new Actor(this, {
         name: 'head',
@@ -20059,6 +20546,14 @@ const LegendEngine = {
   Fluid, Fracture, ParticleSystem, Skeleton, AnimationClip, Face, Bone, makeHumanoidSkeleton, makeHumanoidMesh, solveSkinWeights, smoothNormals, parseRiggedMesh, skeletonFromRig,
   makePistol1911, makeViewmodelArms, GRIP_KINDS, makeZombieClips, buildZombieBodyGeometry, buildZombieClothGeometry, zombieWoundSpots,
   Grass, Input, Audio,
+  /* The procedural texture bank, exported so it can be MEASURED.
+
+     Every surface recipe multiplies the colour its material asks for, and
+     three separate "the lighting is wrong" investigations turned out to be
+     a recipe averaging a third of mid-grey. None of them could be settled
+     from outside the bundle, because the bank was a module-level const
+     nobody could reach. engine/test/texture.test.js reaches it now. */
+  Textures: TextureLib,
   clamp, lerp, smoothstep,
 };
 

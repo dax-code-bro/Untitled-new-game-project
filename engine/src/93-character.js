@@ -164,7 +164,7 @@ function makeHumanoidMesh(skeleton, opts = {}) {
     : opts.clothOnly
     ? buildZombieClothGeometry(skeleton, { build: opts.zombieBuild, seed: opts.seed, segments: opts.segments, outfit: opts.outfit })
     : opts.zombieBuild
-      ? buildZombieBodyGeometry(skeleton, { build: opts.zombieBuild, seed: opts.seed, segments: opts.segments })
+      ? buildZombieBodyGeometry(skeleton, { build: opts.zombieBuild, seed: opts.seed, segments: opts.segments, rot: opts.rot })
       : makeHumanBodyGeometry(skeleton, opts);
 
   return solveSkinWeights(g, skeleton);

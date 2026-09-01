@@ -626,13 +626,29 @@ class Engine {
        the one mesh, so none of the procedural layers below apply to it. */
     const model = opts.model || null;
     const skeleton = model ? skeletonFromRig(model.rig) : makeHumanoidSkeleton(scale);
+    /* How far gone this one is. Derived ONCE, here, and handed to both the
+       body and the head -- they used to compute it separately from the same
+       formula, which worked only for as long as nobody passed opts.rot, and
+       the day someone did they would have got a skull-faced corpse on a
+       healthy body. */
+    const rot = opts.zombie
+      ? (opts.rot != null ? opts.rot : 0.55 + (((opts.seed || 5) * 7) % 9) / 20)
+      : 0;
     // `zombie: true` swaps in the starved silhouette and torn clothing.
     const geo = model ? model.geometry : makeHumanoidMesh(skeleton, opts.zombie
-      ? { zombieBuild: opts.zombieBuild || 'male', seed: opts.seed || 3 }
+      ? { zombieBuild: opts.zombieBuild || 'male', seed: opts.seed || 3, rot }
       : { thickness: opts.build || 1 });
     // One model, many copies: the GPU buffers are built once and shared.
     if (model && !model._mesh) model._mesh = new GpuMesh(this.gl, geo);
     const mesh = model ? model._mesh : new GpuMesh(this.gl, geo);
+    /* Registered so the flesh can be MEASURED too, the same way the head
+       and the clothing already are. "Do the ribs actually surface?" is a
+       question about vertex positions, and it should never have to be
+       settled by squinting at a screenshot. */
+    if (!model && opts.zombie) {
+      mesh.__key = 'zbody:' + (opts.zombieBuild || 'male') + ':' + (opts.seed || 3) + ':' + rot.toFixed(3);
+      (this._geoByKey || (this._geoByKey = new Map())).set(mesh.__key, geo);
+    }
 
     const animator = new Animator(skeleton);
     for (const clip of makeHumanoidClips()) animator.add(clip);
@@ -746,9 +762,6 @@ class Engine {
          varies body to body off the same seed that varies everything
          else, so a crowd is a crowd of corpses at different stages rather
          than one corpse repeated. */
-      const rot = opts.zombie
-        ? (opts.rot != null ? opts.rot : 0.55 + (((opts.seed || 5) * 7) % 9) / 20)
-        : 0;
       const headGeo = makeHeadGeometry({ seed: opts.seed || 5, type: opts.faceType, rot });
       const headMesh = new GpuMesh(this.gl, headGeo);
       /* Registered so it can be MEASURED. A head built straight into a
@@ -779,7 +792,15 @@ class Engine {
       // leaving 0.28 for the head — about a seventh of total height, which is
       // what a human actually is.
       const HEAD_MESH_HEIGHT = 0.72;
-      const headHeight = 1.75 - 1.47;
+      /* 0.28 was derived from where the head bone sits on the rig, which
+         is a fine way to place a head and a poor way to size one -- the
+         bone is at the atlas, not at the chin. Measured, the head came out
+         258 mm tall and 177 wide against a real 232 and 152, and the
+         figure stood 5.95 heads high where a person is seven and a half.
+         Six heads is the proportion of a stylised toy, and it was doing
+         more damage to how these read than any amount of sculpting could
+         undo. This is a head. */
+      const headHeight = 0.252;
       const headScale = (headHeight / HEAD_MESH_HEIGHT) * scale;
       const headActor = new Actor(this, {
         name: 'head',

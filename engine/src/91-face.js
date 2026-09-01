@@ -620,6 +620,92 @@ function makeHeadGeometry(opts = {}) {
     }
   }
 
+  /* ---------------- hair ----------------
+
+     Every character in the game was bald, living and dead, and a bald
+     head is the single loudest thing a crowd of them can have in common.
+     Four builds, four outfits, ten skin tones and a seeded rot pass, all
+     of it undone by everybody having the same scalp.
+
+     Built as a second shell over the skull's OWN vertices rather than as
+     a sampled cap: the grid is already there, already sculpted, and
+     already carries a normal, so pushing the masked part of it outward
+     gives hair that follows the head exactly and cannot drift off it.
+     Where the mask cuts, the skull shows through, which is what a bald
+     patch is; the shell faces outward only, so the skull under it is
+     what you see there rather than the inside of a wig.
+
+     The mask is a hairline that runs high at the front and low at the
+     nape, minus noise patches, minus however far gone the head is -- a
+     corpse that has been out a while has lost most of it in clumps, and
+     the clumps are the point. */
+  if (opts.hair !== false) {
+    const HAIR = [0x2a2118, 0x1c1a18, 0x4a3a28, 0x6b5f4e, 0x8a8378, 0x3a2a22];
+    const hairCol = HAIR[(opts.seed || 5) % HAIR.length];
+    const R = Math.max(0, Math.min(1, opts.rot || 0));
+    const row = sectors + 1;
+    const P = g.positions, N = g.normals;
+    // How receded this one is, before the rot takes its share.
+    const recede = ((opts.seed || 5) % 4) * 0.028;
+    const maskAt = (i) => {
+      const x = P[i * 3], y = P[i * 3 + 1], z = P[i * 3 + 2];
+      const len = Math.sqrt(x * x + y * y + z * z) || 1;
+      const dz = z / len;
+      const front = Math.max(0, dz), back = Math.max(0, -dz);
+      /* The hairline: high over the brow, dropping down the sides, and
+         low at the nape. A widow's peak at the middle of the forehead. */
+      const peak = (1 - smoothstep(0.02, 0.12, Math.abs(x))) * front * 0.030;
+      const lineY = 0.086 + front * 0.048 - back * 0.170 + recede - peak;
+      let m = smoothstep(lineY - 0.020, lineY + 0.055, y);
+      // Never over an ear.
+      m *= smoothstep(0.055, 0.135, y + Math.abs(x) * 0.35);
+      // Clumps: what is left comes away in patches, not evenly.
+      const patch = noise.fbm(x * 21.0, y * 21.0, z * 21.0, 3) * 0.5 + 0.5;
+      /* First cut at this thresholded at 0.52 to 0.79 on an fbm that
+         rarely reaches 0.79, so what survived was a scatter of specks on
+         the crown. Most of the scalp should have hair on it; the clumps
+         that are gone are the exception, and the rot decides how many. */
+      m *= smoothstep(0.12 + R * 0.20, 0.40 + R * 0.20, patch);
+      return m;
+    };
+    const mask = new Float32Array((rings + 1) * row);
+    for (let i = 0; i < mask.length; i++) mask[i] = maskAt(i);
+    g.setColor(hairCol);
+    const base = g.positions.length / 3;
+    const idx = new Int32Array(mask.length).fill(-1);
+    for (let i = 0; i < mask.length; i++) {
+      if (mask[i] <= 0.004) continue;
+      /* Thickness, plus a fine ripple so it reads as matted strands and
+         not as a swim cap. */
+      const x = P[i * 3], y = P[i * 3 + 1], z = P[i * 3 + 2];
+      const strand = noise.fbm(x * 90.0, y * 34.0, z * 90.0, 2) * 0.5 + 0.5;
+      /* Thickness has to go to ZERO at the edge of the mask. Clamping it
+         to full thickness over most of the range left every boundary quad
+         standing at its full height, and since a quad is either emitted or
+         not, the result was a crenellated wall -- a battlement round the
+         crown, which is what a wig looks like when it is quantised to the
+         grid it is built on. Squared, so it feathers. */
+      const t = (0.011 + strand * 0.012) * mask[i] * mask[i];
+      idx[i] = g.positions.length / 3;
+      g.vert(x + N[i * 3] * t, y + N[i * 3 + 1] * t, z + N[i * 3 + 2] * t,
+        N[i * 3], N[i * 3 + 1], N[i * 3 + 2],
+        (i % row) / sectors, ((i / row) | 0) / rings);
+    }
+    for (let r = 0; r < rings; r++) {
+      for (let sct = 0; sct < sectors; sct++) {
+        const a = r * row + sct, b2 = a + 1, c2 = a + row, d2 = a + row + 1;
+        if (idx[a] < 0 || idx[b2] < 0 || idx[c2] < 0 || idx[d2] < 0) continue;
+        // Average, not all-four: with the thickness feathering to nothing
+        // the edge fades out instead of stopping at a grid line.
+        if ((mask[a] + mask[b2] + mask[c2] + mask[d2]) * 0.25 < 0.05) continue;
+        g.tri(idx[a], idx[b2], idx[c2]);
+        g.tri(idx[b2], idx[d2], idx[c2]);
+      }
+    }
+    g.setColor(null);
+    void base;
+  }
+
   // Ears sit on the skull surface, which the parietal widening above pushes
   // out past RX at this height — not at some fraction of it. Placing them
   // inboard buries them inside the head.
@@ -639,5 +725,13 @@ function makeHeadGeometry(opts = {}) {
   // normals carried through the loop no longer match the surface.
   const face = { workPositions: g.positions, workNormals: g.normals, geometry: g };
   Face.prototype._recomputeNormals.call(face);
+  /* Bake the face's own shadows in, AFTER the normals are right -- the
+     pass needs a correct normal per vertex to know which side is "above"
+     the surface. This is what turns the sculpt into a face: the nostrils,
+     the eye apertures, the gap between the lips, the ear canal and the
+     shelf under the brow all go dark, and the form stops depending on a
+     directional light happening to rake across it. On a head this small
+     the radius is a couple of centimetres. */
+  bakeCavityAO(g, { radius: 0.052, strength: 0.95, floor: 0.22, samples: 900 });
   return g;
 }
