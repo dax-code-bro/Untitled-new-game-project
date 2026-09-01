@@ -252,7 +252,10 @@ const WEAPONS = {
     sightH: 0.0455, sightFov: 0.74, adsTime: 0.16,
     recoil: { up: 1.10, side: 0.5, climb: 0.26, recover: 9, back: 0.017, roll: 0.007, impulse: 9 },
     ammo: { mag: { w: 0.024, d: 0.020, len: 0.086, curve: 0, witness: 0, round: AMMO.acp45 } },
-    hands: { right: [-0.004, -0.020, 0.017], rightGrip: 'pistol', left: [0.014, -0.056, -0.022], leftGrip: { axis: [0.28, -0.94, 0], round: [0, 0, 1], girth: 0.070, spread: 0.0190, close: 0.92, index: 'wrap', thumb: 'along', drop: 0 } },
+    /* The 1911's twin, and it had been left behind on the old two-handed
+       numbers -- a second hand beside the grip lower down, with a thumb
+       that mirrored across the top of the slide. Same gun, same hold. */
+    hands: { right: [-0.004, -0.020, 0.017], rightGrip: 'pistol', left: [0.006, -0.030, -0.034], leftGrip: { axis: [0.28, -0.94, 0], round: [0, 0, 1], girth: 0.078, spread: 0.0184, close: 0.90, index: 'wrap', thumb: 'stack', drop: 0 } },
   },
   thompson: {
     name: 'Thompson', slotName: 'THOMPSON',
@@ -262,7 +265,13 @@ const WEAPONS = {
     sightH: 0.0955, sightFov: 0.80, adsTime: 0.22,
     recoil: { up: 0.42, side: 0.30, climb: 0.13, recover: 11, back: 0.011, roll: 0.004, impulse: 5 },
     ammo: { mag: { w: 0.028, d: 0.024, len: 0.112, curve: 0, witness: 0, round: AMMO.acp45 } },
-    hands: { right: [-0.006, -0.024, 0.016], rightGrip: 'pistol', left: [0.356, -0.020, -0.017], leftGrip: 'woodFore' },
+    /* It has a VERTICAL foregrip -- the thing the gun is famous for -- and
+       it was being held with `woodFore`, which is the grip for a fat
+       horizontal shotgun forend: the hand laid along the top with the
+       thumb pointing at the muzzle. So the support thumb came out lying
+       flat down the receiver. `foregrip` wraps all four fingers round a
+       vertical grip with the thumb over them, which is how you hold one. */
+    hands: { right: [-0.006, -0.024, 0.016], rightGrip: 'pistol', left: [0.356, -0.052, -0.008], leftGrip: 'foregrip' },
   },
   scatter: {
     name: 'Scattergun', slotName: 'SCATTERGUN',
