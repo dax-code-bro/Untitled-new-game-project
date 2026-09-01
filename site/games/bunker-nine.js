@@ -4968,7 +4968,7 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
         // Hidden only in the gap between the old one leaving and the new
         // one being in the tray, so the feed is never simply empty-looking
         // for half the reload.
-        v.belt.visible = !(u > 0.44 && u < 0.62);
+        v.belt.visible = !(u > 0.44 && u < 0.66);
       }
       if (P.beltStage < 1 && u > 0.04) { P.beltStage = 1; sfx.boltHome(); }
       if (P.beltStage < 2 && u > 0.16) { P.beltStage = 2; sfx.coverUp(); }
@@ -5746,8 +5746,8 @@ const RELOAD_WINDOW = {
   mag: [0.14, 0.63],
   clip: [0.10, 0.86],
   cell: [0.16, 0.63],
-  belt: [0.34, 0.68],
-  break: [0.22, 0.82],
+  belt: [0.34, 0.66],
+  break: [0.20, 0.68],
   revolver: [0.22, 0.78],
 };
 
@@ -5767,7 +5767,17 @@ function M_WELL_X(v) {
 function reloadProp(game, P, v, spec, kind) {
   P.props = P.props || {};
   const id = P.equipped();
-  if (P.props[id]) return P.props[id];
+  const cached = P.props[id];
+  /* Kept between reloads, but only while it is still the right object.
+     The clip guns hand back the WEAPON's own clip actor, and a weapon
+     given again is a new viewmodel with a new clip -- a cache that
+     returned the old one would drive an actor no longer in the scene, and
+     the reload would go invisible in exactly the way this whole pass is
+     about. */
+  if (cached && (kind !== 'clip' || cached.root === v.clip)) {
+    v.prop = cached;
+    return cached;
+  }
   const root = v.kind === 'single' ? v.actor : v.root;
   if (!root) return null;
 

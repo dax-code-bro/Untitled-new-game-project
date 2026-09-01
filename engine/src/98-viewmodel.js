@@ -410,12 +410,13 @@ function buildViewHand(g, rawAt, side, opts = {}) {
    * look at where the tip lands, adjust, run it again. Same arithmetic as
    * digit() below and deliberately so -- if the two ever disagree the solve
    * is optimising something the mesh does not do. */
-  const tipOf = (root, dir0, bends, lens, k, pt, cl) => {
+  const tipOf = (root, dir0, bends, lens, k, pt, cl, joints) => {
     let d = dir0;
     let p = new Vec3(root.x - d.x * 0.009, root.y - d.y * 0.009, root.z - d.z * 0.009);
     for (let i = 0; i < 3; i++) {
       d = turn(d, bends[i] * k, pt, cl);
       p = new Vec3(p.x + d.x * lens[i], p.y + d.y * lens[i], p.z + d.z * lens[i]);
+      if (joints && i < 2) joints.push(new Vec3(p.x, p.y, p.z));
     }
     return new Vec3(p.x + d.x * 0.0045, p.y + d.y * 0.0045, p.z + d.z * 0.0045);
   };
@@ -449,26 +450,45 @@ function buildViewHand(g, rawAt, side, opts = {}) {
      * is a ceiling the other hand hits every time. 4.3 radians over three
      * joints is a closed fist, and nothing can be asked for past that. */
     const hi0 = 4.3;
+    /* Score the WHOLE finger, not the end of it.
+     *
+     * This solved the fingertip onto the surface and nothing else, so
+     * every finger touched the gun at exactly one point and stood off it
+     * everywhere else -- four fingers poking a grip at their tips with
+     * daylight along all three bones, which from behind reads as four
+     * sausages laid over the gun rather than a hand closed on it. The
+     * numeric check agreed with the solve because it measured the same
+     * one point, which is why "the fingers touch" and "the fingers are
+     * still wrong" were both true for weeks.
+     *
+     * A finger round a grip lies against it along its length: the middle
+     * knuckle and the last joint are on the object too. All three are
+     * scored, the tip weighted double because it is the one the eye
+     * follows and the one that must not go through the gun. */
+    const err3 = (k) => {
+      const js = [];
+      const t = tipOf(root, dir0, bends, lens, k, pt, cl, js);
+      let e = Math.abs(surf(t.x, t.y, t.z) - want) * 2;
+      for (const j of js) e += Math.abs(surf(j.x, j.y, j.z) - want);
+      return e / 4;
+    };
     for (let i = 0; i <= 44; i++) {
       const k = 0.45 + i * (hi0 - 0.45) / 44;
-      const t = tipOf(root, dir0, bends, lens, k, pt, cl);
-      const err = Math.abs(surf(t.x, t.y, t.z) - want);
+      const err = err3(k);
       if (err < bestErr) { bestErr = err; best = k; }
     }
     let lo = Math.max(0.45, best - 0.10), hi = Math.min(hi0, best + 0.10);
     for (let i = 0; i < 12; i++) {
       const a = lo + (hi - lo) / 3, b2 = hi - (hi - lo) / 3;
-      const ta = tipOf(root, dir0, bends, lens, a, pt, cl);
-      const tb = tipOf(root, dir0, bends, lens, b2, pt, cl);
-      const ea = Math.abs(surf(ta.x, ta.y, ta.z) - want);
-      const eb = Math.abs(surf(tb.x, tb.y, tb.z) - want);
-      if (ea < eb) hi = b2; else lo = a;
+      if (err3(a) < err3(b2)) hi = b2; else lo = a;
     }
     const k = (lo + hi) / 2;
     const t = tipOf(root, dir0, bends, lens, k, pt, cl);
-    // The error comes back too, so a finger with two possible paths can be
-    // given the one that actually reaches rather than the first one tried.
-    return { k, err: Math.abs(surf(t.x, t.y, t.z) - want) };
+    /* Two errors come back. `err` is the tip alone, because choosing
+       between two possible paths for a trigger finger is a question about
+       where the tip lands; `fit` is the whole-finger score the solve
+       actually minimised. */
+    return { k, err: Math.abs(surf(t.x, t.y, t.z) - want), fit: bestErr };
   };
 
   const digit = (root, dir0, bends, lens, r0, pt = point, cl = curl) => {
@@ -718,7 +738,15 @@ function makeViewmodelArms(hands, opts = {}) {
      these are forearms entering frame from the lower corners, not whole
      arms hung off a torso that is not there. */
   const back = opts.back != null ? opts.back : -0.07;
-  const drop = opts.drop != null ? opts.drop : -0.28;
+  /* Deeper, so less forearm crosses the picture.
+   *
+   * Both arms used to run diagonally from the middle of the lower edge
+   * right across the frame to the gun -- two tubes over the whole bottom
+   * half of the screen, with the weapon somewhere behind them. Dropping
+   * the anchor takes the sleeve mouth below the frame sooner, so what is
+   * on screen is the last third of the forearm and the hand, which is
+   * what a first-person view of your own arms actually contains. */
+  const drop = opts.drop != null ? opts.drop : -0.335;
   /* How far apart the two sleeve mouths are.
    *
    * This was 0.105 -- 21 cm between the shoulders, half a real shoulder
@@ -732,7 +760,7 @@ function makeViewmodelArms(hands, opts = {}) {
    * At 0.27 each mouth is out past the lower corner it belongs to, so what
    * is left on screen is the tapered part near the wrist -- which is what
    * a forearm entering frame actually looks like. */
-  const spread = opts.spread != null ? opts.spread : 0.27;
+  const spread = opts.spread != null ? opts.spread : 0.315;
 
   /* `side` is which way the back of the hand faces, and it decides where
      the thumb goes, which way the fingers are spread and which corner of
