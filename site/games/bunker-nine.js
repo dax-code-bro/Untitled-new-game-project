@@ -228,7 +228,12 @@ const WEAPONS = {
     sightH: 0.0455, sightFov: 0.74, adsTime: 0.16,
     recoil: { up: 1.15, side: 0.5, climb: 0.28, recover: 9, back: 0.016, roll: 0.006, impulse: 9 },
     ammo: { mag: { w: 0.024, d: 0.020, len: 0.086, curve: 0, witness: 0, round: AMMO.acp45 } },
-    hands: { right: [-0.004, -0.020, 0.017], rightGrip: 'pistol', left: [0.014, -0.056, -0.022], leftGrip: { axis: [0.28, -0.94, 0], round: [0, 0, 1], girth: 0.070, spread: 0.0190, close: 0.92, index: 'wrap', thumb: 'along', drop: 0 } },
+    /* Two hands on a pistol means the support palm against the BACK of
+       the firing fingers and its own fingers over them -- not a second
+       hand beside the grip lower down, which is where this was and which
+       reads as two people holding the same gun. Up level with the firing
+       hand and outboard by the thickness of its fingers. */
+    hands: { right: [-0.004, -0.020, 0.017], rightGrip: 'pistol', left: [0.006, -0.030, -0.034], leftGrip: { axis: [0.28, -0.94, 0], round: [0, 0, 1], girth: 0.078, spread: 0.0184, close: 0.90, index: 'wrap', thumb: 'stack', drop: 0 } },
   },
   /* River's twin. Same pistol, different loading: the rounds carry an
      incendiary compound, so what they leave behind burns for a while after
@@ -425,7 +430,13 @@ const WEAPONS = {
     recoil: { up: 0.55, side: 0.42, climb: 0.16, recover: 9, back: 0.010, roll: 0.004, impulse: 5 },
     moveMul: 0.76, muzzleVel: 755,
     ammo: { mag: { w: 0.062, d: 0.048, len: 0.086, curve: 0, witness: 0, round: AMMO.mauser8 } },
-    hands: { right: [-0.012, -0.032, 0.016], rightGrip: { axis: [0.06, -0.998, 0], round: [1, 0, 0], girth: 0.056, spread: 0.0192, close: 1.0, index: 'wrap', thumb: 'up', drop: 0 }, left: [0.400, -0.008, -0.022], leftGrip: 'tube' },
+    hands: { right: [-0.012, -0.032, 0.016], /* It has a pistol grip and a trigger in a guard, like everything else
+       on this list -- it was the one weapon whose index finger was told to
+       wrap with the other three, so it closed into the grip and finished
+       27 mm BEHIND its own knuckle while the other twelve reached forward
+       onto their triggers. `thumb: 'up'` belongs on a spade grip, which
+       this is not. */
+      rightGrip: { axis: [0.06, -0.998, 0], round: [1, 0, 0], girth: 0.056, spread: 0.0192, close: 1.0, index: 'trigger', thumb: 'over', drop: 0 }, left: [0.400, -0.008, -0.022], leftGrip: 'tube' },
   },
   /* The two answers to plate. Both are melee, both are slow, and both are
      mystery-box only — you do not get to plan for an armoured runner, you
@@ -4125,8 +4136,13 @@ function makePlayer(game, S, hud, sfx, voice) {
        its thumb has a job: dragging the hammer back between shots. */
     /* The weapon's own surface goes with them, so each finger is closed
        until it touches this gun rather than curled by a constant. */
+    /* The bore height goes with them. It is what tells the trigger finger
+       where a trigger cannot be -- above the bore is the top of the slide,
+       and the solve was perfectly happy to lay the finger along it. */
     v.arms = game.viewmodelArms(root, WEAPONS[id].hands,
-      { key: id, thumb: !!WEAPONS[id].thumbCock, surface: weaponSurface(game, root) });
+      { key: id, thumb: !!WEAPONS[id].thumbCock,
+        boreY: (root && root.boreAt != null) ? root.boreAt : null,
+        surface: weaponSurface(game, root) });
   }
   /* Every reload prop, built now.
 

@@ -57,12 +57,19 @@ function buildViewArm(g, shoulder, hand, side) {
    * narrowing to nothing over its whole length: it is thick at the elbow,
    * thick through the belly of the muscle, and only tapers over the last
    * hand's width into the wrist. */
+  /* And it has to END thinner than the hand.
+   *
+   * The wrist was 66 mm across against a palm 56 mm across: the arm was
+   * WIDER than the hand on the end of it, which is backwards and is most
+   * of why the hands read as small on huge arms. A wrist is about 55 mm
+   * and the knuckles are 85 -- the hand is the wide end. Same mass through
+   * the forearm, taken in harder over the last hand's width. */
   const spec = [
     [0.052, 0.050],   // sleeve mouth at the frame edge
     [0.050, 0.048],
-    [0.047, 0.045],
-    [0.041, 0.039],
-    [0.033, 0.031],   // wrist
+    [0.046, 0.044],
+    [0.037, 0.035],
+    [0.0275, 0.0260], // wrist
   ];
   for (let i = 0; i < spec.length; i++) {
     const t = i / (spec.length - 1);
@@ -330,10 +337,15 @@ function buildViewHand(g, rawAt, side, opts = {}) {
      spreads a little over something fat; it does not double. The
      wrapping is the fingers' job. */
   const girthMul = Math.max(0.94, Math.min(1.16, 1 + (G.girth - 0.055) * 2.6));
-  const pw0 = (fore ? 0.020 : 0.0165) * girthMul;
-  const pw1 = (fore ? 0.0125 : 0.0112) * girthMul;
-  const pd0 = fore ? 0.0110 : 0.0088;
-  const pd1 = fore ? 0.0060 : 0.0044;
+  /* A fifth bigger. Measured against the arm rather than argued about: the
+     forearm ended 66 mm across and the palm was 56, so every hand in the
+     game was smaller than the wrist it grew out of. The wrist has come in
+     to 55; this takes the palm out to about 68 front-to-back and 31 thick,
+     which puts the hand back at the wide end of the arm where it belongs. */
+  const pw0 = (fore ? 0.0238 : 0.0198) * girthMul;
+  const pw1 = (fore ? 0.0148 : 0.0134) * girthMul;
+  const pd0 = fore ? 0.0128 : 0.0104;
+  const pd1 = fore ? 0.0070 : 0.0053;
   for (let i = 0; i <= PN; i++) {
     const t = i / PN;
     // Wrist to knuckles: 80 mm along the grip, which is a knuckle span.
@@ -435,9 +447,31 @@ function buildViewHand(g, rawAt, side, opts = {}) {
    * touching, not buried. Bounded, so a finger that cannot reach stops at
    * a hand's limit instead of tying itself in a knot, and one that would
    * reach immediately still closes enough to look gripped. */
-  const solveCurl = (root, dir0, bends, lens, r0, pt, cl) => {
+  /* Where a trigger cannot be. Handed the weapon's bore height, anything
+     the trigger finger reaches above it is charged for the difference --
+     a hand's own geometry then decides where in the guard it lands. */
+  const trigLimit = { tipOnly: true, fwd: 0.020,
+    ceil: opts.boreY != null ? opts.boreY - 0.010 : null };
+  /* `lim` is how a finger is allowed to finish.
+   *
+   *   ceil  the tip must end below this height -- the bore, for a trigger
+   *         finger, because above the bore is the top of the slide.
+   *   fwd   the tip must end at least this far FORWARD of its own knuckle.
+   *   tipOnly a trigger finger is not wrapped round anything, so scoring
+   *         its whole length against the nearest surface is wrong: the
+   *         nearest surface is the grip, and the best fit against the grip
+   *         is a finger curled into a fist. Measured before this existed:
+   *         on eleven of thirteen weapons the trigger fingertip finished
+   *         BEHIND its own knuckle, tucked under the palm. A hand making a
+   *         fist round a pistol is exactly what "the fingers are messed
+   *         up" looks like, and it passed every check I had because a fist
+   *         touches the gun beautifully. */
+  const solveCurl = (root, dir0, bends, lens, r0, pt, cl, lim) => {
     const surf = opts.surface;
     if (!surf) return { k: 1, err: 1e9 };
+    const ceil = lim && lim.ceil != null ? lim.ceil : null;
+    const fwd = lim && lim.fwd != null ? lim.fwd : null;
+    const tipOnly = !!(lim && lim.tipOnly);
     const want = r0 + 0.0012;
     let best = 1, bestErr = 1e9;
     /* The range a hand can actually do.
@@ -480,9 +514,17 @@ function buildViewHand(g, rawAt, side, opts = {}) {
     const err3 = (k) => {
       const js = [];
       const t = tipOf(root, dir0, bends, lens, k, pt, cl, js);
-      let e = at1(t.x, t.y, t.z) * 2;
-      for (const j of js) e += at1(j.x, j.y, j.z);
-      return e / 4;
+      let e;
+      if (tipOnly) {
+        e = at1(t.x, t.y, t.z);
+      } else {
+        e = at1(t.x, t.y, t.z) * 2;
+        for (const j of js) e += at1(j.x, j.y, j.z);
+        e /= 4;
+      }
+      if (ceil != null && t.y > ceil) e += (t.y - ceil) * 4;
+      if (fwd != null && t.x < root.x + fwd) e += (root.x + fwd - t.x) * 5;
+      return e;
     };
     for (let i = 0; i <= 44; i++) {
       const k = 0.45 + i * (hi0 - 0.45) / 44;
@@ -496,11 +538,15 @@ function buildViewHand(g, rawAt, side, opts = {}) {
     }
     const k = (lo + hi) / 2;
     const t = tipOf(root, dir0, bends, lens, k, pt, cl);
+    // The reported tip error carries the ceiling too, so choosing between
+    // two planes for a trigger finger prefers the one under the bore.
+    const over = ((ceil != null && t.y > ceil) ? (t.y - ceil) * 4 : 0)
+      + ((fwd != null && t.x < root.x + fwd) ? (root.x + fwd - t.x) * 5 : 0);
     /* Two errors come back. `err` is the tip alone, because choosing
        between two possible paths for a trigger finger is a question about
        where the tip lands; `fit` is the whole-finger score the solve
        actually minimised. */
-    return { k, err: Math.abs(surf(t.x, t.y, t.z) - want), fit: bestErr };
+    return { k, err: Math.abs(surf(t.x, t.y, t.z) - want) + over, fit: bestErr };
   };
 
   const digitTo = (gg, root, dir0, bends, lens, r0, pt = point, cl = curl) => {
@@ -562,6 +608,10 @@ function buildViewHand(g, rawAt, side, opts = {}) {
      off its knuckle forward, takes one small bend, and lies along the
      trigger. That one separated finger is most of what makes the hand read
      as a hand holding a gun rather than a fist round a stick. */
+  /* Finger radius, in one place. 19 mm of flesh on 87 mm of bone was a
+     worm; 21 on 96 is a finger, and it has to grow with the palm or a
+     bigger hand comes out with the same small digits stuck on it. */
+  const FR = 0.0106;
   const trigger = opts.trigger !== false && G.index === 'trigger';
   /* Bone lengths, and the reason the hand was a ball.
 
@@ -574,7 +624,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
      turns through roughly a hundred and forty degrees, not a hundred and
      seventy — over 87 mm of bone that is an arc about 70 mm across, which
      is a hand round a 34 mm grip with flesh on it. */
-  const LEN = [0.0420, 0.0262, 0.0190];
+  const LEN = [0.0464, 0.0290, 0.0210];
   const knuckle0 = at3(palm, 0.044);
   for (let f = 0; f < 4; f++) {
     // Which finger, if any, leaves the wrap to lie on a trigger.
@@ -683,8 +733,22 @@ function buildViewHand(g, rawAt, side, opts = {}) {
       const ipt = V(0.90, -0.10, -side * 0.42);
       const icl = V(-0.38, -0.34, -side * 0.86);
       const d0 = new Vec3(point.x, point.y, point.z);
-      const a = solveCurl(root, d0, bends, lens, 0.0095, point, curl);
-      const b2 = solveCurl(root, ipt, bends, lens, 0.0095, ipt, icl);
+      /* Below the bore, or it is not on a trigger.
+       *
+       * The solve picked whichever plane got the fingertip nearest the
+       * weapon's SURFACE -- and the top of the slide is a surface. So on
+       * the pistols the trigger finger came to rest lying along the top of
+       * the slide, touching the gun perfectly and pointing at nothing, and
+       * from the front it reads as a sausage laid over the barrel. A
+       * trigger is always below the bore and behind the muzzle; anything
+       * that ends above the bore line is disqualified however well it
+       * touches. */
+      const a = solveCurl(root, d0, bends, lens, FR, point, curl, trigLimit);
+      const b2 = solveCurl(root, ipt, bends, lens, FR, ipt, icl, trigLimit);
+      /* Neither plane reaches on some weapons -- the guard is further
+         forward than a finger can get from that knuckle in either -- and
+         the honest answer there is a straighter finger pointing at it
+         rather than a curled one pointing at nothing. */
       /* Its own mesh when the caller asks for one, for the same reason the
          thumb has one: a finger welded into the hand is a finger that can
          never pull a trigger, and a first-person shooter in which the
@@ -693,10 +757,18 @@ function buildViewHand(g, rawAt, side, opts = {}) {
          it actually bends at. */
       const ig = opts.indexGeo || g;
       const before = ig === g ? null : (opts.out || {});
+      /* Which plane won, and by how much, reported -- because "the trigger
+         finger is in the wrong place" has three different causes and they
+         need opposite repairs: the wrong plane chosen, the right plane
+         chosen but out of reach, or the constraint not binding at all. */
+      if (opts.out) {
+        opts.out.indexPlane = a.err <= b2.err ? 'wrap' : 'fwd';
+        opts.out.indexErr = [+a.err.toFixed(4), +b2.err.toFixed(4)];
+      }
       if (a.err <= b2.err) {
-        digitTo(ig, root, d0, [bends[0] * a.k, bends[1] * a.k, bends[2] * a.k], lens, 0.0095);
+        digitTo(ig, root, d0, [bends[0] * a.k, bends[1] * a.k, bends[2] * a.k], lens, FR);
       } else {
-        digitTo(ig, root, ipt, [bends[0] * b2.k, bends[1] * b2.k, bends[2] * b2.k], lens, 0.0095, ipt, icl);
+        digitTo(ig, root, ipt, [bends[0] * b2.k, bends[1] * b2.k, bends[2] * b2.k], lens, FR, ipt, icl);
       }
       if (opts.out) opts.out.indexPivot = [root.x, root.y, root.z];
       void before;
@@ -704,8 +776,8 @@ function buildViewHand(g, rawAt, side, opts = {}) {
       /* 19 mm through the proximal phalanx, which is a finger. It was 14,
          and 14 mm of flesh on 87 mm of bone is a worm. */
       const d0 = new Vec3(point.x, point.y, point.z);
-      const sol = solveCurl(root, d0, bends, lens, 0.0095, point, curl);
-      digit(root, d0, [bends[0] * sol.k, bends[1] * sol.k, bends[2] * sol.k], lens, 0.0095);
+      const sol = solveCurl(root, d0, bends, lens, FR, point, curl);
+      digit(root, d0, [bends[0] * sol.k, bends[1] * sol.k, bends[2] * sol.k], lens, FR);
     }
   }
 
@@ -734,9 +806,25 @@ function buildViewHand(g, rawAt, side, opts = {}) {
        grip it folds OVER the fingers; along a forend it lies ALONG the
        weapon; on spade grips it stands UP beside them, where a butterfly
        trigger is. */
-    let d = G.thumb === 'along' ? V2(0.90, 0.36, -side * 0.24)
-      : G.thumb === 'up' ? V2(0.10, 0.95, -side * 0.30)
-        : V2(0.60, 0.64, -side * 0.48);
+    /* A thumb on a pistol rides the FRAME, not the slide.
+     *
+     * 'over' pointed it up at 0.64 against 0.60 forward, which is a thumb
+     * raised over the top of the gun -- and that is exactly where it came
+     * out: a sausage lying along the top of the slide, in the sight line,
+     * on every pistol in the game. A right thumb on a 1911 lies along the
+     * left of the frame just under the slide, pointing at the muzzle,
+     * which is mostly forward with a little lift. */
+    /* 'stack' is the SUPPORT thumb on a two-handed pistol grip, and it is
+       the one case where the thumb must not mirror. Every other thumb
+       direction flips with `side`, which is right for two hands doing the
+       same job on opposite ends of a rifle -- and wrong here, because both
+       thumbs on a pistol lie along the SAME side of the frame, one over
+       the other, pointing at the muzzle. Mirrored, the support thumb came
+       across the top of the slide and sat in the sight line. */
+    let d = G.thumb === 'stack' ? V2(0.94, 0.08, side * 0.30)
+      : G.thumb === 'along' ? V2(0.90, 0.36, -side * 0.24)
+        : G.thumb === 'up' ? V2(0.10, 0.95, -side * 0.30)
+          : V2(0.88, 0.26, -side * 0.42);
     const rs = [{ p: new Vec3(p.x, p.y, p.z), w: 0.0114, d: 0.0102, e: 2.4, uv: 0 }];
     const step = (len, r, k) => {
       p = new Vec3(p.x + d.x * len, p.y + d.y * len, p.z + d.z * len);
@@ -746,9 +834,10 @@ function buildViewHand(g, rawAt, side, opts = {}) {
        from the base joint to the tip, and this one has to reach a hammer. */
     step(0.019, 0.0108, 0.22);
     step(0.017, 0.0102, 0.44);
-    d = G.thumb === 'along' ? V2(0.78, 0.00, -side * 0.62)
-      : G.thumb === 'up' ? V2(0.16, 0.86, -side * 0.48)
-        : V2(0.86, 0.04, -side * 0.54);
+    d = G.thumb === 'stack' ? V2(0.97, -0.04, side * 0.22)
+      : G.thumb === 'along' ? V2(0.78, 0.00, -side * 0.62)
+        : G.thumb === 'up' ? V2(0.16, 0.86, -side * 0.48)
+          : V2(0.94, -0.08, -side * 0.33);
     step(0.016, 0.0097, 0.66);
     step(0.013, 0.0085, 0.86);
     step(0.006, 0.0039, 1.0);
@@ -840,7 +929,7 @@ function makeViewmodelArms(hands, opts = {}) {
     const rec = {};
     // `surface` has to reach the hand or the fingers cannot be closed onto
     // anything -- it was being taken by makeViewmodelArms and dropped here.
-    buildViewHand(sk, h, side, { grip, thumbGeo: tg, out: rec,
+    buildViewHand(sk, h, side, { grip, thumbGeo: tg, out: rec, boreY: opts.boreY,
       // Only the FIRING hand's index is separated: the support hand's
       // fingers are wrapped round a forend and have nothing to pull.
       indexGeo: side > 0 ? index : null, surface: opts.surface });
