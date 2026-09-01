@@ -19524,7 +19524,29 @@ function buildViewHand(g, rawAt, side, opts = {}) {
    *         fist round a pistol is exactly what "the fingers are messed
    *         up" looks like, and it passed every check I had because a fist
    *         touches the gun beautifully. */
-  const solveCurl = (root, dir0, bends, lens, r0, pt, cl, lim) => {
+  /* How the curl is DISTRIBUTED between the three joints.
+   *
+   * solveCurl has one degree of freedom -- a single scalar `k` scaling all
+   * three bend angles together -- so a finger can only ever curl
+   * uniformly. Round a cylinder that is nearly right; round a slab-sided
+   * receiver or a fat forend it is not, and the best a uniform curl can do
+   * is put the TIP on the weapon and let both knuckles ride 12 to 23 mm
+   * clear. Measured, that was six of the thirteen hands: tips touching,
+   * middles out, which reads as a finger arched over the gun rather than
+   * lying along it.
+   *
+   * A real finger closes more at the base round something thick and more
+   * at the end round something thin. Rather than search two parameters at
+   * once -- which would multiply a load-time solve by an order of
+   * magnitude -- run the existing one-parameter solve against three
+   * distributions and keep whichever fits the whole finger best. Three
+   * times the cost of one solve, and it recovers most of the freedom. */
+  const SPREADS = [
+    [1.00, 1.00, 1.00],   // even, what it always did
+    [1.34, 1.06, 0.72],   // base-heavy: round something thick
+    [0.72, 1.02, 1.36],   // tip-heavy: round something thin
+  ];
+  const solveCurlOne = (root, dir0, bends, lens, r0, pt, cl, lim) => {
     const surf = opts.surface;
     if (!surf) return { k: 1, err: 1e9 };
     const ceil = lim && lim.ceil != null ? lim.ceil : null;
@@ -19596,6 +19618,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
     }
     const k = (lo + hi) / 2;
     const t = tipOf(root, dir0, bends, lens, k, pt, cl);
+    void bestErr;
     // The reported tip error carries the ceiling too, so choosing between
     // two planes for a trigger finger prefers the one under the bore.
     const over = ((ceil != null && t.y > ceil) ? (t.y - ceil) * 4 : 0)
@@ -19605,6 +19628,26 @@ function buildViewHand(g, rawAt, side, opts = {}) {
        where the tip lands; `fit` is the whole-finger score the solve
        actually minimised. */
     return { k, err: Math.abs(surf(t.x, t.y, t.z) - want) + over, fit: bestErr };
+  };
+
+  /* The wrapper: try each distribution, keep the best whole-finger fit,
+     and hand back the reshaped bends along with the scale so the caller
+     builds the finger the solve actually chose. A trigger finger is not
+     wrapped round anything, so it keeps the even distribution -- there is
+     nothing for a redistributed curl to hug. */
+  const solveCurl = (root, dir0, bends, lens, r0, pt, cl, lim) => {
+    if (lim && lim.tipOnly) {
+      const one = solveCurlOne(root, dir0, bends, lens, r0, pt, cl, lim);
+      one.bends = bends;
+      return one;
+    }
+    let best = null;
+    for (const sp of SPREADS) {
+      const b = [bends[0] * sp[0], bends[1] * sp[1], bends[2] * sp[2]];
+      const sol = solveCurlOne(root, dir0, b, lens, r0, pt, cl, lim);
+      if (!best || sol.fit < best.fit) { sol.bends = b; best = sol; }
+    }
+    return best;
   };
 
   const digitTo = (gg, root, dir0, bends, lens, r0, pt = point, cl = curl) => {
@@ -19831,7 +19874,8 @@ function buildViewHand(g, rawAt, side, opts = {}) {
          and 14 mm of flesh on 87 mm of bone is a worm. */
       const d0 = new Vec3(point.x, point.y, point.z);
       const sol = solveCurl(root, d0, bends, lens, FR, point, curl);
-      digit(root, d0, [bends[0] * sol.k, bends[1] * sol.k, bends[2] * sol.k], lens, FR);
+      const sb = sol.bends || bends;
+      digit(root, d0, [sb[0] * sol.k, sb[1] * sol.k, sb[2] * sol.k], lens, FR);
     }
   }
 
@@ -20057,10 +20101,19 @@ Engine.prototype.viewmodelArms = function (weapon, hands, opts = {}) {
     lSkin = mk(parts.lSkin, skinMat, 'l');
     all.push(lSleeve, lSkin);
   }
+  /* A Geometry object is always returned for these; whether anything was
+     ever emitted into it is a different question. The index finger is
+     built by the trigger solve, and a knife, a hammer, a battering ram
+     and a riot shield have no trigger -- so five weapons were each
+     spawning an actor around an empty mesh, with bounds at negative two
+     billion in every axis because nothing had ever been min'd into them.
+     A degenerate bound is not free: it is a draw call and a culling
+     candidate for a thing that cannot be seen. */
+  const solid = (geo) => geo && geo.indices && geo.indices.length > 0;
   let thumb = null;
-  if (parts.thumb) { thumb = mk(parts.thumb, skinMat, 't'); all.push(thumb); }
+  if (solid(parts.thumb)) { thumb = mk(parts.thumb, skinMat, 't'); all.push(thumb); }
   let index = null;
-  if (parts.index) { index = mk(parts.index, skinMat, 'i'); all.push(index); }
+  if (solid(parts.index)) { index = mk(parts.index, skinMat, 'i'); all.push(index); }
   /* `support` is the pair that may be moved away from the weapon during a
      reload. Everything else about them is identical to the firing arm. */
   return { sleeve, skin, lSleeve, lSkin, thumb, thumbPivot: parts.thumbPivot,

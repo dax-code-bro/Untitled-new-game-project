@@ -3420,19 +3420,33 @@ function buildMap(game, S) {
     /* Everywhere except over the stair. The soffit hangs to 2.99 and the
        flight climbs to 3.6, so a course carried across the stairwell is a
        beam through the top four treads and the landing you step onto. */
+    /* Timbers that meet run INTO each other, not up against each other.
+     *
+     * Everything crossing the short way used to terminate at M.z0 and
+     * M.z1 -- exactly the plane the front and back courses present -- so
+     * every joist end cap and both side courses were coplanar with the
+     * course they butt into. Twenty-five pairs of surfaces fighting for
+     * the same plane, all along the top of the room, which is where a
+     * bright flickering line is least welcome given the whole reason
+     * this soffit exists is to hide a bright line at the top of a wall.
+     *
+     * A joist buried six centimetres into a thirty-centimetre course is
+     * how it would actually be built, and its end cap is then inside
+     * something rather than level with its face. */
+    const IN = 0.06;
     run(M.x0, SLOT.x0 - 0.1, M.z0, M.z0 + DP);        // back wall, west of the slot
     run(M.x0, M.x1, M.z1 - DP, M.z1);                 // front wall
-    run(M.x0, M.x0 + DP, M.z0, M.z1);                 // west wall
-    run(M.x1 - DP, M.x1, SLOT.z1, M.z1);              // east wall, south of the slot
+    run(M.x0, M.x0 + DP, M.z0 + IN, M.z1 - IN);       // west wall, into both courses
+    run(M.x1 - DP, M.x1, SLOT.z1, M.z1 - IN);         // east wall, south of the slot
     // Joists across the short way, clear of the stair slot.
     for (let x = M.x0 + 2.2; x < SLOT.x0 - 0.4; x += 2.2) {
-      slab(x - 0.10, x + 0.10, CY - 0.26, CY + 0.10, M.z0, M.z1, beam);
+      slab(x - 0.10, x + 0.10, CY - 0.26, CY + 0.10, M.z0 + IN, M.z1 - IN, beam);
     }
-    // The wing gets the same treatment.
+    // The wing gets the same treatment, and the same joinery.
     const WY = SD.y1 - 0.11;
     slab(SD.x0, SD.x1, WY - TH, WY + 0.10, SD.z0, SD.z0 + DP, beam);
     slab(SD.x0, SD.x1, WY - TH, WY + 0.10, SD.z1 - DP, SD.z1, beam);
-    slab(SD.x0, SD.x0 + DP, WY - TH, WY + 0.10, SD.z0, SD.z1, beam);
+    slab(SD.x0, SD.x0 + DP, WY - TH, WY + 0.10, SD.z0 + IN, SD.z1 - IN, beam);
   }
 
   /* ---------------- doors ---------------- */
