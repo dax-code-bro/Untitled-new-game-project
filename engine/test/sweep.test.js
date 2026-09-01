@@ -444,10 +444,26 @@ const SWEEP = () => {
           const ax = nrm(Gd.axis), rd = nrm(Gd.round);
           const side3 = nrm([ax[1] * rd[2] - ax[2] * rd[1],
             ax[2] * rd[0] - ax[0] * rd[2], ax[0] * rd[1] - ax[1] * rd[0]]);
+          /* Measured around the hand's own centre of mass, not around
+             the anchor it was authored at.
+             
+             Those are not the same point: the curl solve stretches the
+             fingers until they reach the weapon, so a hand anchored 60 mm
+             off the gun ends up with most of itself somewhere else. The
+             Thompson had 34 skin vertices within 55 mm of its anchor
+             where a hand that passes has 425 to 503 -- so its quadrant
+             split was being computed over a tenth of the sample, and this
+             check was partly measuring "is the anchor where the hand is"
+             rather than "does the hand wrap what it holds". Ask the
+             question about the hand. */
+          let hx = 0, hy = 0, hz = 0;
+          for (let i = 0; i < pos.length; i += 3) { hx += pos[i]; hy += pos[i+1]; hz += pos[i+2]; }
+          const nAll = pos.length / 3;
+          hx /= nAll; hy /= nAll; hz /= nAll;
           let near = 0, cx = 0, cy = 0, cz = 0;
           const quad = [0, 0, 0, 0];
           for (let i = 0; i < pos.length; i += 3) {
-            const dx = pos[i] - h[0], dy = pos[i + 1] - h[1], dz = pos[i + 2] - h[2];
+            const dx = pos[i] - hx, dy = pos[i + 1] - hy, dz = pos[i + 2] - hz;
             cx += pos[i]; cy += pos[i + 1]; cz += pos[i + 2];
             if (Math.hypot(dx, dy, dz) < 0.055) {
               near++;

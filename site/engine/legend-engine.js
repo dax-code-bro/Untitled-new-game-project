@@ -20078,6 +20078,31 @@ function makeViewmodelArms(hands, opts = {}) {
   for (const { hand, side, grip, sl, sk, tg } of pairs) {
     if (!hand) continue;
     const h = new Vec3(hand[0], hand[1], hand[2]);
+    /* MEASURED, and not acted on. Every FIRING hand's anchor sits 2 to
+     * 13 mm from its weapon's surface; every SUPPORT hand's sits 14 to
+     * 78, and on the Scatter, Killstreak and Remington there is no
+     * geometry within 20 mm of the anchor's station at all. The curl
+     * solve scales the fingers until their tips reach, so an anchor held
+     * 60 mm off the gun gives a palm out in the air with four long
+     * fingers stretching to the forend -- and the hands whose skin sits
+     * furthest from their own anchor (94 mm on the Thompson against 22
+     * on the Sawn-off) are exactly the ones the sweep reports as having
+     * skin on only three sides.
+     *
+     * Closing the anchor onto the surface along the grip's own axis was
+     * tried here and reverted. It left the reach untouched (6 mm worst
+     * slack either way) and made the quadrant numbers worse -- but that
+     * comparison is not worth anything, because both that check and the
+     * sweep's measure the spread of skin around `hands[which]`, the
+     * AUTHORED anchor, and moving the hand moves it away from the point
+     * it is being measured around. Every instrument I have for this is
+     * anchor-relative and cannot judge a change that moves the anchor.
+     *
+     * So the instrument gets fixed before the geometry does. Note also
+     * that the three-sides failure may itself be an artefact of the same
+     * thing: the Thompson has 34 skin vertices within 55 mm of its
+     * anchor where a hand that passes has 425 to 503, so its quadrant
+     * split is computed over a sample too small to mean much. */
     const shoulder = new Vec3(back, drop, side * spread);
     buildViewArm(sl, shoulder, h, side);
     /* `out` collects where every digit finished, for both hands. It used to
