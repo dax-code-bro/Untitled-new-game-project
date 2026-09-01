@@ -816,7 +816,14 @@ const SWEEP = () => {
           }
         };
         walk(root, null);
-        if (!pts.length) continue;
+        /* Loudly, not silently. My own probes walked `v.root` for every
+           weapon and quietly skipped the three whose meshes hang off
+           `actor` instead -- the 1911, the Blaze and the Thompson, which
+           is the starting pistol and two of the first guns anyone picks
+           up. They were missing from every table I read all evening and
+           nothing said so. A measurement with nothing to measure is a
+           fault, not a row to leave out. */
+        if (!pts.length) { out.sys.contact.push({ id, err: 'no weapon points' }); continue; }
         const near = (P2) => {
           let best = 1e9;
           for (let i = 0; i < pts.length; i += 3) {
@@ -848,6 +855,18 @@ const SWEEP = () => {
             };
           });
           out.sys.contact.push({ id, side: sideName, n: ds.length,
+            /* How many weapon points this was measured against.
+             
+               Carried because the Mauser's support fingertips read 1 mm
+               off the gun from every direct measurement I could build and
+               15 and 14 from here, and after eliminating the subtree
+               walked, the vertex stride, and which meshes count as arm, I
+               still cannot say which is right. The two candidates left are
+               that this block runs with the weapon in a state my probes do
+               not reproduce, or that it is walking a different amount of
+               gun -- and a point count distinguishes those in one run
+               instead of five. */
+            pts: pts.length / 3,
             // The last digit is the trigger finger: it rests inside a guard
             // rather than wrapping, so it is reported apart from the rest.
             wrap: ds.slice(0, 3), trigger: ds[3] || null });
