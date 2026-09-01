@@ -18595,6 +18595,15 @@ function buildViewArm(g, shoulder, hand, side) {
  *   drop    how far the anchor is from the middle of what is held, along
  *           `round` -- a hand under a forend sits below it.
  */
+/* Every one of these carries its own knuckle spacing, and the finger
+   radius now sets a floor under it -- the two used to be independent
+   numbers and the fingers ended up welded together. The floor is about
+   22.5 mm, which is what four fingers pressed side by side comes to, and
+   most of these sat just under it: taking the maximum quietly flattened
+   every grip to the same spacing and lost the distinction the table
+   exists for. The two FAT ones are lifted clear of the floor, because a
+   hand laid over a shotgun forend or the Arc Breaker's tube really does
+   splay wider than one closed round a pistol grip. */
 const GRIP_KINDS = {
   /* A vertical pistol grip, held by the firing hand. The palm is on the
      backstrap, the fingers cross the front strap and close back in. */
@@ -18611,11 +18620,11 @@ const GRIP_KINDS = {
   /* A fat wooden shotgun forend: more to go round, so the fingers do not
      close as far and sit further apart. */
   woodFore: { axis: [1, 0, 0], round: [0, 1, 0], girth: 0.092,
-    spread: 0.0210, close: 0.86, index: 'wrap', thumb: 'along', drop: 0.023 },
+    spread: 0.0238, close: 0.86, index: 'wrap', thumb: 'along', drop: 0.023 },
   /* A big tube -- the Arc Breaker's accelerator, the MG42's shroud. The
      hand lies along it and barely closes. */
   tube: { axis: [1, 0, 0], round: [0, 1, 0], girth: 0.108,
-    spread: 0.0214, close: 0.74, index: 'wrap', thumb: 'along', drop: 0.028 },
+    spread: 0.0246, close: 0.74, index: 'wrap', thumb: 'along', drop: 0.028 },
   /* Spade grips: gripped from behind with the thumb up on a butterfly
      trigger, so the thumb goes UP rather than over the fingers. */
   spade: { axis: [0.06, -0.998, 0], round: [-1, 0, 0], girth: 0.056,
