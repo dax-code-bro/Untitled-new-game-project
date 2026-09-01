@@ -3190,11 +3190,18 @@ function buildMap(game, S) {
        a roof ending flush with the outer face of its walls puts the roof's
        edge and the wall's face on one plane, both pointing outward, and
        that shimmers along the whole top of the wing as you walk past. */
+    /* The lip was applied on three sides and not on the fourth. SD.x1 is
+       where the wing meets the main room, and the connector wall starts
+       at exactly that x -- so the roof's edge and the wall's face shared
+       a plane along the whole join, which is the same shimmer this lip
+       exists to prevent, on the one edge it was left off. The wall is
+       solid from SD.x1 inward, so four centimetres of roof inside it is
+       buried rather than showing. */
     const OH = 0.04;
-    slab(SD.x0 - W - OH, SD.x1, RY, SD.y1 + 0.3, SD.z0 - W - OH, H.z - r, MAT.wallDark);
-    slab(SD.x0 - W - OH, SD.x1, RY, SD.y1 + 0.3, H.z + r, SD.z1 + W + OH, MAT.wallDark);
+    slab(SD.x0 - W - OH, SD.x1 + OH, RY, SD.y1 + 0.3, SD.z0 - W - OH, H.z - r, MAT.wallDark);
+    slab(SD.x0 - W - OH, SD.x1 + OH, RY, SD.y1 + 0.3, H.z + r, SD.z1 + W + OH, MAT.wallDark);
     slab(SD.x0 - W - OH, H.x - r, RY, SD.y1 + 0.3, H.z - r, H.z + r, MAT.wallDark);
-    slab(H.x + r, SD.x1, RY, SD.y1 + 0.3, H.z - r, H.z + r, MAT.wallDark);
+    slab(H.x + r, SD.x1 + OH, RY, SD.y1 + 0.3, H.z - r, H.z + r, MAT.wallDark);
     // The bit that is still there until it is not.
     const patch = slab(H.x - r, H.x + r, RY, SD.y1 + 0.3, H.z - r, H.z + r, MAT.wallDark);
     const edge = [];
@@ -3467,8 +3474,10 @@ function buildMap(game, S) {
     }
     // The wing gets the same treatment, and the same joinery.
     const WY = SD.y1 - 0.11;
-    slab(SD.x0, SD.x1, WY - TH, WY + 0.10, SD.z0, SD.z0 + DP, beam);
-    slab(SD.x0, SD.x1, WY - TH, WY + 0.10, SD.z1 - DP, SD.z1, beam);
+    // And these stop short of SD.x1 for the same reason: the connector
+    // wall's face is on that plane.
+    slab(SD.x0, SD.x1 - IN, WY - TH, WY + 0.10, SD.z0, SD.z0 + DP, beam);
+    slab(SD.x0, SD.x1 - IN, WY - TH, WY + 0.10, SD.z1 - DP, SD.z1, beam);
     slab(SD.x0, SD.x0 + DP, WY - TH, WY + 0.10, SD.z0 + IN, SD.z1 - IN, beam);
   }
 
