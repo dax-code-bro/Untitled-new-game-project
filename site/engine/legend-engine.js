@@ -18054,7 +18054,15 @@ function armPath(shoulder, hand, k) {
   return [shoulder, mid, hand];
 }
 
-/* One arm: a tapered loft from the sleeve opening to the wrist. */
+/* Nine sides round a finger and twelve round a palm is a prism.
+
+   At the range these are drawn -- and they are drawn closer than anything
+   else in the game -- the facets are plainly visible, and a hand made of
+   flat panels is half of why a correct hand still reads as wrong. Twelve
+   and sixteen. Ten fingers, two thumbs and two palms at these counts is
+   about four hundred extra triangles a frame, which is nothing.
+
+   One arm: a tapered loft from the sleeve opening to the wrist. */
 function buildViewArm(g, shoulder, hand, side) {
   const path = armPath(shoulder, hand, side);
   const rings = [];
@@ -18399,7 +18407,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
       e: 2.6, uv: t,
     });
   }
-  loftRings(g, rings, 12, true, true);
+  loftRings(g, rings, 16, true, true);
 
   /* A finger, as ONE surface.
 
@@ -18513,7 +18521,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
     p = new Vec3(p.x + d.x * 0.0045, p.y + d.y * 0.0045, p.z + d.z * 0.0045);
     travelled += 0.0045;
     push(r0 * 0.44);
-    loftRings(g, rs, 9, true, true);
+    loftRings(g, rs, 12, true, true);
     /* Where this digit starts, ends, and how thick it is.
      *
      * Reported rather than inferred, because "is the finger touching the
@@ -18717,7 +18725,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
     step(0.016, 0.0097, 0.66);
     step(0.013, 0.0085, 0.86);
     step(0.006, 0.0039, 1.0);
-    loftRings(tg, rs, 9, true, true);
+    loftRings(tg, rs, 12, true, true);
     if (opts.out) {
       opts.out.thumbTip = [p.x, p.y, p.z];
       opts.out.thumbR = 0.0114;

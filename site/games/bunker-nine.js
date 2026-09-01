@@ -371,7 +371,14 @@ const WEAPONS = {
      * the guide, and it is held with the off hand under the magazine
      * housing in front of the trigger guard, which is where this one goes. */
     hands: { right: [-0.010, -0.020, 0.014], rightGrip: { axis: [0.10, -0.99, 0], round: [0, 0, -1], girth: 0.062, spread: 0.0196, close: 0.98, index: 'trigger', thumb: 'over', drop: 0 },
-      left: [0.052, -0.016, -0.018], leftGrip: { axis: [0.20, -0.98, 0], round: [0, 0, 1], girth: 0.048, spread: 0.0186, close: 0.94, index: 'wrap', thumb: 'along', drop: 0 } },
+      /* Forward of the magazine housing, on the barrel extension.
+       *
+       * It was 62 mm in front of the firing hand, which on a life-size
+       * hand is inside it: aimed, the two came out as one skin-coloured
+       * lump across the middle of the screen with the gun invisible
+       * behind them. A C96 is held with the off hand well forward under
+       * the barrel extension, which is both correct and 110 mm clear. */
+      left: [0.112, -0.026, -0.020], leftGrip: { axis: [0.96, -0.28, 0], round: [0, 1, 0], girth: 0.042, spread: 0.0186, close: 0.92, index: 'wrap', thumb: 'along', drop: 0 } },
   },
   /* A rifle for the long shots across the field. Bolt action, so it is
      five rounds and then you are working the handle while they close —
@@ -3320,8 +3327,8 @@ function buildMap(game, S) {
 
   /* ---------------- chalk guns ---------------- */
   const chalkMat = MAT.chalk;
-  const thompsonChalk = game.thompson({ at: [-2.0, 1.55, M.z0 + 0.14], physics: false, material: chalkMat, woodMaterial: chalkMat });
-  const scatterChalk = makeScattergun(game, { at: [-5.4, 1.55, M.z0 + 0.14], chalk: true });
+  const thompsonChalk = game.thompson({ at: [-1.4, 1.55, M.z0 + 0.14], physics: false, material: chalkMat, woodMaterial: chalkMat });
+  const scatterChalk = makeScattergun(game, { at: [-6.3, 1.55, M.z0 + 0.14], chalk: true });
   void thompsonChalk; void scatterChalk;
 
   /* The MP5 is on the far wall of the wing, so it is the first thing the
@@ -3341,8 +3348,15 @@ function buildMap(game, S) {
   void remChalk; void mgChalk;
 
   S.buys = [
-    { id: 'thompson', at: [-2.0, 1.4, M.z0 + 0.3], weapon: 'thompson', label: 'Thompson' },
-    { id: 'scatter', at: [-5.4, 1.4, M.z0 + 0.3], weapon: 'scatter', label: 'Scattergun' },
+    /* Spread along the wall so that the interact radius cannot reach two
+       of them at once. They were 1.7 m apart with a 2.0 m reach, so from
+       anywhere along that wall two or three were live together and half a
+       step changed the answer -- "I move slightly and I accidentally buy
+       the other thing". Facing decides between them now, but the honest
+       fix is not to have to decide: 2.45 m apart is wider than the reach,
+       so each is on its own. */
+    { id: 'thompson', at: [-1.4, 1.4, M.z0 + 0.3], weapon: 'thompson', label: 'Thompson' },
+    { id: 'scatter', at: [-6.3, 1.4, M.z0 + 0.3], weapon: 'scatter', label: 'Scattergun' },
     { id: 'mp5', at: [SD.x0 + 0.5, 1.4, 0.6], weapon: 'mp5', label: 'MP5' },
     { id: 'paralyzer', at: [-4.4, R.y1 + 1.15, M.z0 + 0.5], weapon: 'paralyzer', label: 'Paralyzer' },
     { id: 'remington', at: [SD.x0 + 0.5, 1.4, -3.4], weapon: 'remington', label: 'Remington 700' },
@@ -3351,7 +3365,7 @@ function buildMap(game, S) {
   void mp5Chalk; void paraChalk;
 
   /* Grenade crate, stencilled and open, on the wall between the two guns. */
-  const nadeAt = [-3.7, 1.05, M.z0 + 0.26];
+  const nadeAt = [-3.85, 1.05, M.z0 + 0.26];
   game.box({ at: nadeAt, size: [0.52, 0.34, 0.30], static: true,
     material: { color: 0x4c5340, texture: 'wood', roughness: 0.92, uvScale: 3 } });
   game.box({ at: [nadeAt[0], nadeAt[1] + 0.19, nadeAt[2] + 0.02], size: [0.54, 0.05, 0.32], static: true,
@@ -4645,20 +4659,56 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
      hip actually does. */
   const len = Math.max(0.2, v.muzzle || 0.3);
   const bulk = Math.min(1, Math.max(0, (len - 0.24) / 0.34));
-  /* Hip carry: down and out to the right, and further of both than it
-     was. At -100 mm the sight line of a rifle came out only 50 mm below
-     the eye, which is a gun carried at the chin -- it filled the right of
-     the screen at eye level and read as being held up rather than at the
-     hip. Down another 30 mm and out another 15, and the muzzle sits below
-     the horizon where a carried gun sits. */
-  const hipX = (po ? po.x : 0.098 + bulk * 0.062) - drawIn + bobX * (bench ? 0 : 1),
-        hipY = (po ? po.y : -0.128 - bulk * 0.058) + (bench ? 0 : bobY - dip),
+  /* Hip carry.
+
+     This has been argued with itself twice. At -100 mm the sight line of
+     a rifle came out 50 mm below the eye and the gun read as carried at
+     the chin, so it went down to -186 for a rifle -- and at -186, with
+     half the frame at the weapon's distance being 213, the receiver sat
+     87% of the way to the bottom corner. A screenshot of a Thompson
+     reload shows the whole receiver off the bottom right and two forearms
+     where the gun should be.
+
+     Both attempts were solving the wrong variable. A carried weapon is
+     not level with the eye and lower down: it is level with the ribs and
+     POINTED DOWN. Move the origin back up to where you can see it, and
+     tip the muzzle instead -- the gun then reads as slung at the hip
+     because the barrel goes down and away, which is what a hip carry
+     actually looks like, and the receiver, the ejection port, the bolt
+     and the magazine well are all on screen where the animation is.
+
+     A rifle now sits 67% of the way down instead of 87, and its muzzle,
+     seven degrees below the axis over half a metre of barrel, still comes
+     out well under the horizon. */
+  const hipX = (po ? po.x : 0.092 + bulk * 0.046) - drawIn + bobX * (bench ? 0 : 1),
+        hipY = (po ? po.y : -0.106 - bulk * 0.036) + (bench ? 0 : bobY - dip),
         hipD = po ? po.d : 0.355 + bulk * 0.055;
   const adsX = 0, adsY = -spec.sightH, adsD = 0.30;
   const a = P.ads;
-  const offR = hipX * (1 - a) + adsX * a;
-  const offU = hipY * (1 - a) + adsY * a;
-  const dist = hipD * (1 - a) + adsD * a;
+  /* Hold the whole viewmodel further out.
+   *
+   * A screenshot of the Mauser aimed is two life-size hands filling the
+   * middle of the screen with the gun somewhere behind them -- which is
+   * what "every time I aim down sights with the Mauser I'm getting
+   * flashing white" is: a pale skin-coloured mass across the view, not a
+   * light. The hands are not too big; they are correct, and 300 mm from
+   * the eye a correct hand is enormous. This is the whole reason real
+   * engines draw the viewmodel at its own narrow field of view.
+   *
+   * With one shared camera the same effect comes from holding the model
+   * further away, so it subtends less. The lateral offsets go out with
+   * the distance so the framing is unchanged -- the gun sits in the same
+   * part of the picture, it is simply smaller and no longer pressed
+   * against the eye.
+   *
+   * The aimed VERTICAL offset is deliberately NOT scaled. It is -sightH
+   * exactly, because that is what puts the front blade and the rear notch
+   * on the camera axis, and it is -sightH at any distance. Scaling it
+   * would take every measured sight line in this file off axis at once. */
+  const OUT = 1.30;
+  const offR = hipX * OUT * (1 - a) + adsX * a;
+  const offU = hipY * OUT * (1 - a) + adsY * a;
+  const dist = (hipD * (1 - a) + adsD * a) * OUT;
 
   // Sprinting: gun canted down and inboard, out of the sight line.
   const sp = P.sprint * (1 - a);
@@ -4677,7 +4727,15 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
 
   const fh = Math.hypot(f.x, f.z) || 1e-6;
   const yaw = Math.atan2(-f.z / fh, f.x / fh);
-  const pitch = Math.asin(Math.max(-1, Math.min(1, f.y))) + P.kickPitch * 0.06;
+  /* Muzzle down at the hip, level at the sights.
+
+     Seven degrees, blended out entirely with the aim so the sight picture
+     is untouched -- the whole point of every measured sightH in this file
+     is that aiming is geometry and not taste, and a cant that survived
+     into ADS would break all of it. A little more while sprinting, on top
+     of the cant the sprint already has. */
+  const hipTip = bench ? 0 : (1 - a) * (0.122 + sp * 0.10);
+  const pitch = Math.asin(Math.max(-1, Math.min(1, f.y))) + P.kickPitch * 0.06 - hipTip;
   /* Roll the weapon inboard while sprinting, and again while reloading so
      the breech, the magazine well or the open cylinder turns to face the
      camera. A gun reloaded side-on hides the one thing worth watching. */

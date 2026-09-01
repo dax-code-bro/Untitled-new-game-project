@@ -327,6 +327,45 @@ function check(name, cond, detail = '') {
     spammy.length === 0, spammy.join(', '));
   check('a reload does not empty a bandolier onto the floor',
     showers.length === 0, showers.join(', '));
+  /* Every perk machine must face the room it is sold in.
+   *
+   * All four were built facing +Z whatever wall they stood against, so the
+   * one on the south wall had its lettering, its window and its dispensing
+   * slot pressed into the concrete and its blank back to the player --
+   * "deflect is backwards". They take a quarter-turn yaw now, and this is
+   * the check that the yaw is the right one, because "I turned it round"
+   * is exactly the claim that has been wrong before.
+   *
+   * The test is geometric and needs no art: the point a bottle comes out
+   * at must be in open air. Drop a probe body at the dispensing slot and
+   * one the same distance behind the cabinet; the front one must fall to
+   * the floor and the back one must be inside the wall. */
+  const perk = await page.evaluate(() => {
+    const S = window.B.S, game = window.B.game;
+    const out = [];
+    for (const st of S.perkStations) {
+      const b = st.body.position, f = st.face;
+      // Which way it is pointing, from the cabinet to its own slot.
+      const dx = f[0] - b.x, dz = f[2] - b.z;
+      const L = Math.hypot(dx, dz) || 1;
+      const nx = dx / L, nz = dz / L;
+      // A metre in front and a metre behind, at chest height.
+      const clear = (sx, sz) => {
+        const hit = game.raycast
+          ? game.raycast([b.x, 1.0, b.z], [sx, 0, sz], 1.4)
+          : null;
+        return hit ? hit.distance : 99;
+      };
+      out.push({ id: st.id, yaw: st.yaw,
+        front: +clear(nx, nz).toFixed(2), back: +clear(-nx, -nz).toFixed(2) });
+    }
+    return out;
+  });
+  const backwards = perk.filter((q) => q.front < q.back).map((q) => `${q.id} yaw ${q.yaw}: ${q.front}m front, ${q.back}m back`);
+  check('every perk machine faces the room and not the wall',
+    perk.length === 4 && backwards.length === 0,
+    backwards.length ? backwards.join(' | ') : JSON.stringify(perk));
+
   const real = errors.filter((e) => !/SwiftShader|Fallback|favicon/i.test(e));
   check('the map builds without errors', real.length === 0, real.slice(0, 3).join(' | '));
 
