@@ -166,11 +166,18 @@ class Input {
     this._on(target, 'pointermove', pointerPos);
     this._on(target, 'pointerdown', (e) => {
       pointerPos(e);
+      this.anyPressed = true;
+      /* The PRIMARY button only. This set `down` for any button at all, and
+         `down` is what games read as "fire" -- so right-clicking to aim
+         also pulled the trigger, on every game built on this engine. Touch
+         and pen report button 0 as well, so they still work. */
+      if (e.button != null && e.button !== 0) { this.pointer.rightDown = e.button === 2 || this.pointer.rightDown; return; }
       this.pointer.down = true;
       this.pointer.justDown = true;
-      this.anyPressed = true;
     });
-    this._on(target, 'pointerup', () => {
+    this._on(target, 'pointerup', (e) => {
+      if (e && e.button === 2) this.pointer.rightDown = false;
+      if (e && e.button != null && e.button !== 0) return;
       this.pointer.down = false;
       this.pointer.justUp = true;
     });
@@ -200,15 +207,51 @@ class Input {
         const k = ((m - dz) / (1 - dz)) / m;
         return [clamp(x * k, -1, 1), clamp(y * k, -1, 1)];
       };
+      /* Every index below is only true of the STANDARD mapping, and this
+         never asked whether it had one.
+
+         The W3C gamepad spec defines `mapping === 'standard'` precisely so
+         a game knows the layout: axes 0/1 left stick, 2/3 right stick,
+         buttons 6/7 triggers, and the sixteen-button order below. A pad
+         the browser cannot recognise reports `mapping: ''` and hands over
+         whatever order the device happens to use -- which is common on
+         Bluetooth pads, phone clip-ons, and anything not an Xbox
+         controller.
+
+         Read blind, that puts the LEFT stick on axes 2 and 3 on a good
+         number of pads, and axes 2/3 is where this game reads LOOK from.
+         So the movement stick aims. And a face or d-pad button landing on
+         index 0 or 3 becomes `a` or `y`, both of which the legacy fold
+         below presses SPACE for, which is jump. Both halves of "the move
+         button acts as my aiming input and my character goes up" fall out
+         of the same missing check.
+
+         There is no honest way to guess a layout the browser could not
+         identify, so this does not try. Non-standard pads keep the two
+         things that are near-universal -- axes 0/1 for the left stick and
+         the raw button list -- and lose the parts that are pure
+         convention: the right stick, the analog triggers, and the fold
+         onto keyboard keys. A pad that only walks is a great deal better
+         than one that aims when you try to walk. `pad.standard` says
+         which you have, so the HUD can tell the player. */
+      pad.standard = gp.mapping === 'standard';
       [pad.lx, pad.ly] = stick(0, 1, 0.18);
-      [pad.rx, pad.ry] = stick(2, 3, 0.14);
+      [pad.rx, pad.ry] = pad.standard ? stick(2, 3, 0.14) : [0, 0];
 
       const btn = (i) => (gp.buttons[i] ? gp.buttons[i].value || (gp.buttons[i].pressed ? 1 : 0) : 0);
       const held = (i) => !!(gp.buttons[i] && gp.buttons[i].pressed);
       // Triggers are analog on every modern pad; some old ones report them
       // as axes 4/5 instead, so fall back to that.
-      pad.lt = gp.buttons.length > 6 ? btn(6) : Math.max(0, (gp.axes[4] || -1) * 0.5 + 0.5);
-      pad.rt = gp.buttons.length > 7 ? btn(7) : Math.max(0, (gp.axes[5] || -1) * 0.5 + 0.5);
+      if (pad.standard) {
+        pad.lt = gp.buttons.length > 6 ? btn(6) : Math.max(0, (gp.axes[4] || -1) * 0.5 + 0.5);
+        pad.rt = gp.buttons.length > 7 ? btn(7) : Math.max(0, (gp.axes[5] || -1) * 0.5 + 0.5);
+      } else {
+        /* Not guessed. On an unknown layout button 6 is as likely to be a
+           shoulder or a d-pad direction as a trigger, and `lt` is the aim
+           button -- so a wrong guess here is the reported bug wearing a
+           different hat. */
+        pad.lt = 0; pad.rt = 0;
+      }
 
       const B = pad.buttons;
       const prev = pad._prev;
@@ -227,10 +270,17 @@ class Input {
       // buttons press the same keys the keyboard-only path listens for.
       if (Math.abs(pad.lx) > 0.01) this.axes.x += pad.lx;
       if (Math.abs(pad.ly) > 0.01) this.axes.y += pad.ly;
-      const press = (on, key) => { if (on) { if (!this.keys.has(key)) this.pressed.add(key); this.keys.add(key); } };
-      press(B.a, ' '); press(B.b, 'x'); press(B.x, 'x'); press(B.y, ' ');
-      press(B.up, 'arrowup'); press(B.down, 'arrowdown');
-      press(B.left, 'arrowleft'); press(B.right, 'arrowright');
+      /* Only on a pad whose layout the browser vouches for. The fold is
+         what turns a button index into a keyboard key, so on an unknown
+         layout it is a machine for pressing the wrong key -- and the key
+         it presses most is space, because two of the four face buttons
+         are folded onto it. */
+      if (pad.standard) {
+        const press = (on, key) => { if (on) { if (!this.keys.has(key)) this.pressed.add(key); this.keys.add(key); } };
+        press(B.a, ' '); press(B.b, 'x'); press(B.x, 'x'); press(B.y, ' ');
+        press(B.up, 'arrowup'); press(B.down, 'arrowdown');
+        press(B.left, 'arrowleft'); press(B.right, 'arrowright');
+      }
       break;
     }
   }

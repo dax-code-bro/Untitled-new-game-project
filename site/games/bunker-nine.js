@@ -10307,8 +10307,21 @@ function start(opts = {}) {
     const pd = game.input.pad;
     const el = hud.els.title.querySelector('.padstate');
     if (pd.connected && el) {
-      el.textContent = 'CONTROLLER READY — ' + (pd.id || 'gamepad').slice(0, 34);
-      el.style.color = '#59ff7a';
+      /* Say whether the browser recognised the layout.
+       *
+       * Every button index and both trigger readings depend on the pad
+       * reporting `mapping: "standard"`, and one that does not is handed
+       * over in whatever order the device happens to use. On an unknown
+       * layout the game now takes movement and the raw buttons and leaves
+       * the right stick and the triggers alone, rather than guessing --
+       * so it walks and shoots but does not aim on the stick. That is a
+       * real difference in what the pad can do, and the player is the one
+       * holding it, so it says so instead of quietly behaving oddly. */
+      el.textContent = pd.standard
+        ? 'CONTROLLER READY — ' + (pd.id || 'gamepad').slice(0, 34)
+        : 'CONTROLLER: LAYOUT NOT RECOGNISED — move and fire only. '
+          + (pd.id || 'gamepad').slice(0, 30);
+      el.style.color = pd.standard ? '#59ff7a' : '#ffc061';
     }
     /* On a pad the bumpers walk the cast rather than starting the game —
        otherwise the picker is mouse-only and someone on a sofa is stuck
