@@ -465,11 +465,23 @@ function buildViewHand(g, rawAt, side, opts = {}) {
      * knuckle and the last joint are on the object too. All three are
      * scored, the tip weighted double because it is the one the eye
      * follows and the one that must not go through the gun. */
+    /* A point closer to the weapon's skin than half a finger's radius is
+       not touching it, it is INSIDE it. The distance field here is
+       unsigned -- it is the range to the nearest vertex -- so a finger
+       driven through a trigger guard scores as well as one lying on it,
+       and "the hands are clipping through the gun" is what that looks
+       like. Anything that far in is charged for it, so the solve backs
+       the finger out rather than pushing it further through. */
+    const bury = r0 * 0.45;
+    const at1 = (x, y, z) => {
+      const d = surf(x, y, z);
+      return d < bury ? Math.abs(d - want) + (bury - d) * 6 : Math.abs(d - want);
+    };
     const err3 = (k) => {
       const js = [];
       const t = tipOf(root, dir0, bends, lens, k, pt, cl, js);
-      let e = Math.abs(surf(t.x, t.y, t.z) - want) * 2;
-      for (const j of js) e += Math.abs(surf(j.x, j.y, j.z) - want);
+      let e = at1(t.x, t.y, t.z) * 2;
+      for (const j of js) e += at1(j.x, j.y, j.z);
       return e / 4;
     };
     for (let i = 0; i <= 44; i++) {
