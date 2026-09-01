@@ -281,7 +281,22 @@ const WEAPONS = {
     sightH: 0.0275, sightFov: 0.86, adsTime: 0.24, adsSpread: 0.55,
     recoil: { up: 2.6, side: 0.9, climb: 0.75, recover: 7, back: 0.038, roll: 0.013, impulse: 20 },
     ammo: { shell: { r: 0.00925, len: 0.0700, head: 0.0220 } },
-    hands: { right: [-0.014, -0.046, 0.016], rightGrip: 'wrist', left: [0.242, -0.006, -0.020], leftGrip: 'woodFore' },
+    hands: { right: [-0.014, -0.046, 0.016], rightGrip: 'wrist', /* NOTE, measured and left alone. `woodFore` declares 92 mm of girth
+       and this gun's forend measures 48 across by 33 deep -- so the hand
+       opens for something twice the thickness of what is there. Setting
+       it to the measured 50 moved the quadrant split from 75/1/24/0 to
+       69/1/30/0, which is to say it changed nothing that matters, so the
+       girth is not what is wrong with this hand and I have not altered
+       how the gun is held on the strength of a number that did not
+       respond. The same is true of the Mauser's 62-against-43.
+       
+       What IS wrong is elsewhere: the support hands that fail to straddle
+       their grips are exactly the ones whose skin is far from their own
+       anchor -- 34, 71, 108, 108 and 152 vertices within 55 mm of it,
+       against 425 to 503 for every hand that passes. That is the thread
+       to pull, and it is a question about where the hand mesh is built
+       rather than about how wide it opens. */
+      left: [0.242, -0.006, -0.020], leftGrip: 'woodFore' },
   },
   /* The stun gun. A double gun with no wood on it: a capacitor bank where
      the rib should be, copper wound round both barrels, emitter rings at
@@ -392,15 +407,15 @@ const WEAPONS = {
      * A C96 is loaded with the off hand pushing a stripper clip down into
      * the guide, and it is held with the off hand under the magazine
      * housing in front of the trigger guard, which is where this one goes. */
-    /* girth 0.062 was a guess and the model disagrees with it. The C96's
-       grip part measures 54 mm fore-and-aft by 30 mm across, which is an
-       effective 42 -- a broomhandle is a slim grip, that is the whole
-       shape of the gun. Curl scales as 0.055/girth, so at 62 the fingers
-       closed 38% less than that grip needs and the Mauser became the one
-       hand in the game whose knuckles could not reach the weapon under
-       any curl the solver could try: 35 mm at best, where the next worst
-       gun manages 16. Measured off the part, not guessed at again. */
-    hands: { right: [-0.010, -0.020, 0.014], rightGrip: { axis: [0.10, -0.99, 0], round: [0, 0, -1], girth: 0.043, spread: 0.0196, close: 0.98, index: 'trigger', thumb: 'over', drop: 0 },
+    /* NOTE, measured and left alone. This declares 62 mm of girth and the
+       C96's grip part measures 54 fore-and-aft by 30 across -- about 43.
+       Correcting it moved the fingers' best achievable reach from 35 mm
+       to 32, which is to say it was not the cause of anything, so the
+       number stays as it is rather than changing how the gun sits in the
+       hand on the strength of a measurement that did not respond. The
+       reach is limited by the grip being narrower than a hand, which is
+       what a broomhandle is. */
+    hands: { right: [-0.010, -0.020, 0.014], rightGrip: { axis: [0.10, -0.99, 0], round: [0, 0, -1], girth: 0.062, spread: 0.0196, close: 0.98, index: 'trigger', thumb: 'over', drop: 0 },
       /* Forward of the magazine housing, on the barrel extension.
        *
        * It was 62 mm in front of the firing hand, which on a life-size
