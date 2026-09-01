@@ -170,6 +170,13 @@ const GRIP_KINDS = {
 };
 
 function buildViewHand(g, rawAt, side, opts = {}) {
+  /* Finger radius, in one place and declared before anything reads it.
+     19 mm of flesh on 87 mm of bone was a worm; 21 on 96 is a finger, and
+     it has to grow with the palm or a bigger hand comes out with the same
+     small digits stuck on it. The knuckle spacing is derived from this
+     further down, which is why it has to exist this early. */
+  const FR = 0.0106;
+
   /* The grip may be named, or given inline as an object so one weapon can
      tune a shape nothing else shares. */
   const named = typeof opts.grip === 'string' ? GRIP_KINDS[opts.grip] : null;
@@ -271,7 +278,21 @@ function buildViewHand(g, rawAt, side, opts = {}) {
     const rowErr = (ox, oy, oz) => {
       let e = 0;
       for (let f = 0; f < 4; f++) {
-        const off = (fore ? f - 1.5 : 1.5 - f) * G.spread;
+        /* Spacing comes off the FINGER, not off a number beside it.
+     *
+     * Every grip carries its own `spread` -- 18.8 to 21.4 mm -- and the
+     * fingers were widened to 21.2 mm across when the hands were scaled up
+     * to match the arms. On a pistol grip at 19.4 mm pitch that puts four
+     * 21.2 mm fingers 1.8 mm INSIDE each other, and four overlapping
+     * cylinders weld into one continuous slab: what comes out is not a
+     * hand with fingers, it is a paddle with grooves in it, which is what
+     * a submachine gun's grip looked like close up.
+     *
+     * Taking the maximum means a grip may space them WIDER than a finger
+     * -- a fat shotgun forend does, and should -- but never narrower than
+     * one, so the two numbers cannot drift apart again. */
+    const pitch = Math.max(G.spread, FR * 2.12);
+    const off = (fore ? f - 1.5 : 1.5 - f) * pitch;
         const bx = at.x + ox + palm.x * 0.044 + lane.x * off;
         const by = at.y + oy + palm.y * 0.044 + lane.y * off;
         const bz = at.z + oz + palm.z * 0.044 + lane.z * off;
@@ -608,10 +629,6 @@ function buildViewHand(g, rawAt, side, opts = {}) {
      off its knuckle forward, takes one small bend, and lies along the
      trigger. That one separated finger is most of what makes the hand read
      as a hand holding a gun rather than a fist round a stick. */
-  /* Finger radius, in one place. 19 mm of flesh on 87 mm of bone was a
-     worm; 21 on 96 is a finger, and it has to grow with the palm or a
-     bigger hand comes out with the same small digits stuck on it. */
-  const FR = 0.0106;
   const trigger = opts.trigger !== false && G.index === 'trigger';
   /* Bone lengths, and the reason the hand was a ball.
 
@@ -825,22 +842,29 @@ function buildViewHand(g, rawAt, side, opts = {}) {
       : G.thumb === 'along' ? V2(0.90, 0.36, -side * 0.24)
         : G.thumb === 'up' ? V2(0.10, 0.95, -side * 0.30)
           : V2(0.88, 0.26, -side * 0.42);
-    const rs = [{ p: new Vec3(p.x, p.y, p.z), w: 0.0114, d: 0.0102, e: 2.4, uv: 0 }];
+    /* Round, and no thicker than the fingers beside it.
+     *
+     * It was 23 mm by 20 at an exponent of 2.4, which is a squared-off
+     * section a fifth wider than a finger -- so beside four now-separate
+     * digits it read as a plaster stuck along the frame rather than as a
+     * thumb. A thumb is thicker than a finger through the base and about
+     * the same by the tip, and it is round. */
+    const rs = [{ p: new Vec3(p.x, p.y, p.z), w: 0.0118, d: 0.0112, e: 2.1, uv: 0 }];
     const step = (len, r, k) => {
       p = new Vec3(p.x + d.x * len, p.y + d.y * len, p.z + d.z * len);
-      rs.push({ p: new Vec3(p.x, p.y, p.z), w: r, d: r * 0.9, e: 2.4, uv: k });
+      rs.push({ p: new Vec3(p.x, p.y, p.z), w: r, d: r * 0.94, e: 2.1, uv: k });
     };
     /* 59 mm of thumb was short even for a hand: a thumb is about 70 mm
        from the base joint to the tip, and this one has to reach a hammer. */
-    step(0.019, 0.0108, 0.22);
-    step(0.017, 0.0102, 0.44);
+    step(0.019, 0.0112, 0.22);
+    step(0.017, 0.0104, 0.44);
     d = G.thumb === 'stack' ? V2(0.97, -0.04, side * 0.22)
       : G.thumb === 'along' ? V2(0.78, 0.00, -side * 0.62)
         : G.thumb === 'up' ? V2(0.16, 0.86, -side * 0.48)
           : V2(0.94, -0.08, -side * 0.33);
-    step(0.016, 0.0097, 0.66);
-    step(0.013, 0.0085, 0.86);
-    step(0.006, 0.0039, 1.0);
+    step(0.016, 0.0098, 0.66);
+    step(0.013, 0.0086, 0.86);
+    step(0.006, 0.0040, 1.0);
     loftRings(tg, rs, 12, true, true);
     if (opts.out) {
       opts.out.thumbTip = [p.x, p.y, p.z];

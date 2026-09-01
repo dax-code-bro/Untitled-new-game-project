@@ -27,7 +27,30 @@ const R = path.join(__dirname, '..', '..') + '/';
       // The trigger finger is the last of the four.
       const ds = dg.digits || [];
       const trig = ds.length ? ds[ds.length - 1] : null;
+      /* Do the fingers overlap each other?
+       *
+       * Every grip carries its own knuckle spacing and the fingers carry
+       * their own radius, and the two were separate numbers. When the
+       * hands were scaled up to match the arms, four 21.2 mm fingers ended
+       * up on a 19.4 mm pitch -- 1.8 mm inside each other, which welds
+       * them into one continuous slab. A grip close up was a paddle with
+       * grooves in it. Adjacent knuckles must be at least a finger apart. */
+      let tight = 0, worstGap = 9;
+      const wrap = ds.filter((d2, i2) => i2 < ds.length - (trig ? 1 : 0));
+      for (let i2 = 1; i2 < wrap.length; i2++) {
+        const a2 = wrap[i2 - 1].knuckle, b2 = wrap[i2].knuckle;
+        const gap = Math.hypot(a2[0]-b2[0], a2[1]-b2[1], a2[2]-b2[2]) - (wrap[i2].r * 2);
+        if (gap < worstGap) worstGap = gap;
+        /* Touching is correct -- adjacent fingers on a grip are pressed
+           together, and the knuckle row is CURVED round the object as
+           well, which shortens the chord between neighbours by a few
+           millimetres more. What is wrong is MERGING: two cylinders far
+           enough inside each other that the surfaces weld and the pair
+           reads as one slab. A quarter of a finger is the line. */
+        if (gap < -wrap[i2].r * 0.5) tight++;
+      }
       out.push({ id, bore: +bore.toFixed(3),
+        tight, gap: worstGap > 8 ? null : +worstGap.toFixed(4),
         thumbY: dg.thumbTip ? +(dg.thumbTip[1] - bore).toFixed(3) : null,
         trigY: trig ? +(trig.tip[1] - bore).toFixed(3) : null,
         trigX: trig ? +trig.tip[0].toFixed(3) : null,
@@ -67,6 +90,10 @@ const R = path.join(__dirname, '..', '..') + '/';
   check('every trigger finger reaches forward rather than curling into a fist',
     curled.length === 0,
     curled.map((q) => q.id + ' ' + Math.round((q.trigX - q.knuckX) * 1000) + 'mm').join(', '));
+  const merged = r.filter((q) => q.tight > 0);
+  check('the fingers of a hand do not overlap into one slab',
+    merged.length === 0,
+    merged.map((q) => q.id + ' ' + q.tight + ' pairs, worst ' + Math.round(q.gap * 1000) + 'mm').join(', '));
   const noPlane = r.filter((q) => q.plane === '-');
   check('every weapon has a finger on its trigger',
     noPlane.length === 0, noPlane.map((q) => q.id).join(', '));
