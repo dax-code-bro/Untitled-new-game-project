@@ -8300,8 +8300,53 @@ function makeHeadGeometry(opts = {}) {
         z -= angle * 0.008;
       }
 
-      // A whisper of noise so the surface is not machine-perfect.
-      const n = noise.fbm(nx * 3.4, ny * 3.4, nz * 3.4, 3) * 0.0035;
+      /* --- and then it died ---
+       *
+       * Every zombie in the game was wearing a living face with a green
+       * material on it. The head is well sculpted and that is exactly the
+       * problem: it is a healthy head, tinted. What separates a corpse from
+       * a person is not colour, it is where the flesh has gone -- the eyes
+       * sink back into their orbits, the temples hollow, the cheeks fall in
+       * against the bone so the cheekbone and the jaw angle stand out, the
+       * lips shrink back off the teeth, and the whole surface goes to
+       * leather.
+       *
+       * All of it on the same feature falloffs the living face is built
+       * from, so it deforms the sculpt rather than fighting it. The
+       * asymmetry is seeded: one side of every face has taken more than the
+       * other, which is most of why a crowd stops reading as one model. */
+      if (opts.rot) {
+        const R = Math.max(0, Math.min(1, opts.rot));
+        const lean = ((opts.seed || 5) % 5) / 4 - 0.5;      // which side went first
+        const Q = { x, y, z };
+        for (const sx of [1, -1]) {
+          const side = R * (1 + sx * lean * 0.55);
+          // Eyes back into the skull, and the orbit rim left standing.
+          z -= featureFalloff(Q, sx * 0.091, 0.030, 0.205, 0.058, 0.052, 0.10, 1) * 0.040 * side;
+          // Temples caved in.
+          x -= sx * featureFalloff(Q, sx * 0.182, 0.118, 0.062, 0.070, 0.095, 0.12, 1) * 0.026 * side;
+          // Cheek fallen in under the bone, which is what throws the
+          // cheekbone and the jaw angle into relief without moving either.
+          x -= sx * featureFalloff(Q, sx * 0.118, -0.108, 0.150, 0.070, 0.085, 0.12, 1) * 0.030 * side;
+          z -= featureFalloff(Q, sx * 0.118, -0.108, 0.150, 0.070, 0.085, 0.12, 1) * 0.024 * side;
+          // The hollow behind the jaw angle, under the ear.
+          z -= featureFalloff(Q, sx * 0.150, -0.150, 0.010, 0.060, 0.080, 0.11, 1) * 0.018 * side;
+        }
+        // Lips shrunk back off the teeth: the whole mouth region retreats.
+        z -= featureFalloff(Q, 0, -0.196, 0.226, 0.078, 0.048, 0.09, 1) * 0.026 * R;
+        // The throat under the chin falls away with everything else.
+        z -= featureFalloff(Q, 0, -0.300, 0.120, 0.090, 0.080, 0.14, 1) * 0.020 * R;
+        // And the skin over the vault dries onto the bone.
+        const dry = smoothstep(0.10, 0.34, y);
+        x *= 1 - dry * 0.022 * R; z *= 1 - dry * 0.020 * R;
+      }
+
+      // A whisper of noise so the surface is not machine-perfect. A dead
+      // one is not smooth at all -- the skin has dried and drawn into
+      // ridges, so the roughness comes up with the rot.
+      const rough = 1 + (opts.rot ? opts.rot * 2.6 : 0);
+      const n = noise.fbm(nx * 3.4, ny * 3.4, nz * 3.4, 3) * 0.0035 * rough
+        + (opts.rot ? noise.fbm(nx * 11.0, ny * 11.0, nz * 11.0, 2) * 0.0022 * opts.rot : 0);
       x += nx * n; y += ny * n; z += nz * n;
 
       g.vert(x, y, z, nx, ny, nz, s / sectors, r / rings);
@@ -12282,8 +12327,21 @@ class Engine {
     }
 
     if (opts.face !== false && !model) {
-      const headGeo = makeHeadGeometry({ seed: opts.seed || 5, type: opts.faceType });
+      /* A dead face is not a live one tinted green. How far gone it is
+         varies body to body off the same seed that varies everything
+         else, so a crowd is a crowd of corpses at different stages rather
+         than one corpse repeated. */
+      const rot = opts.zombie
+        ? (opts.rot != null ? opts.rot : 0.55 + (((opts.seed || 5) * 7) % 9) / 20)
+        : 0;
+      const headGeo = makeHeadGeometry({ seed: opts.seed || 5, type: opts.faceType, rot });
       const headMesh = new GpuMesh(this.gl, headGeo);
+      /* Registered so it can be MEASURED. A head built straight into a
+         GpuMesh is invisible to geometryOf, so nothing outside the engine
+         could ever ask a question about a face -- which is why "the
+         zombies look middling" had to stay an opinion. */
+      headMesh.__key = 'head:' + (opts.seed || 5) + ':' + (opts.faceType || 'male') + ':' + rot.toFixed(3);
+      (this._geoByKey || (this._geoByKey = new Map())).set(headMesh.__key, headGeo);
       // A head with no expression rig has neither skeleton nor face, so the
       // renderer batches it through the instanced path — which needs an
       // instance buffer this mesh would otherwise never be given, and the

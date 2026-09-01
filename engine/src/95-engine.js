@@ -733,8 +733,21 @@ class Engine {
     }
 
     if (opts.face !== false && !model) {
-      const headGeo = makeHeadGeometry({ seed: opts.seed || 5, type: opts.faceType });
+      /* A dead face is not a live one tinted green. How far gone it is
+         varies body to body off the same seed that varies everything
+         else, so a crowd is a crowd of corpses at different stages rather
+         than one corpse repeated. */
+      const rot = opts.zombie
+        ? (opts.rot != null ? opts.rot : 0.55 + (((opts.seed || 5) * 7) % 9) / 20)
+        : 0;
+      const headGeo = makeHeadGeometry({ seed: opts.seed || 5, type: opts.faceType, rot });
       const headMesh = new GpuMesh(this.gl, headGeo);
+      /* Registered so it can be MEASURED. A head built straight into a
+         GpuMesh is invisible to geometryOf, so nothing outside the engine
+         could ever ask a question about a face -- which is why "the
+         zombies look middling" had to stay an opinion. */
+      headMesh.__key = 'head:' + (opts.seed || 5) + ':' + (opts.faceType || 'male') + ':' + rot.toFixed(3);
+      (this._geoByKey || (this._geoByKey = new Map())).set(headMesh.__key, headGeo);
       // A head with no expression rig has neither skeleton nor face, so the
       // renderer batches it through the instanced path — which needs an
       // instance buffer this mesh would otherwise never be given, and the
