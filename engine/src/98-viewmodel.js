@@ -503,6 +503,13 @@ function buildViewHand(g, rawAt, side, opts = {}) {
     return { k, err: Math.abs(surf(t.x, t.y, t.z) - want), fit: bestErr };
   };
 
+  const digitTo = (gg, root, dir0, bends, lens, r0, pt = point, cl = curl) => {
+    const save = digitG;
+    digitG = gg;
+    digit(root, dir0, bends, lens, r0, pt, cl);
+    digitG = save;
+  };
+  let digitG = null;
   const digit = (root, dir0, bends, lens, r0, pt = point, cl = curl) => {
     const rs = [];
     // Where the two knuckles past the first one land, so the measurement
@@ -530,7 +537,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
     p = new Vec3(p.x + d.x * 0.0045, p.y + d.y * 0.0045, p.z + d.z * 0.0045);
     travelled += 0.0045;
     push(r0 * 0.44);
-    loftRings(g, rs, 12, true, true);
+    loftRings(digitG || g, rs, 12, true, true);
     /* Where this digit starts, ends, and how thick it is.
      *
      * Reported rather than inferred, because "is the finger touching the
@@ -678,11 +685,21 @@ function buildViewHand(g, rawAt, side, opts = {}) {
       const d0 = new Vec3(point.x, point.y, point.z);
       const a = solveCurl(root, d0, bends, lens, 0.0095, point, curl);
       const b2 = solveCurl(root, ipt, bends, lens, 0.0095, ipt, icl);
+      /* Its own mesh when the caller asks for one, for the same reason the
+         thumb has one: a finger welded into the hand is a finger that can
+         never pull a trigger, and a first-person shooter in which the
+         trigger finger does not move is a photograph of a hand. The base
+         knuckle comes back with it so the game can turn it about the joint
+         it actually bends at. */
+      const ig = opts.indexGeo || g;
+      const before = ig === g ? null : (opts.out || {});
       if (a.err <= b2.err) {
-        digit(root, d0, [bends[0] * a.k, bends[1] * a.k, bends[2] * a.k], lens, 0.0095);
+        digitTo(ig, root, d0, [bends[0] * a.k, bends[1] * a.k, bends[2] * a.k], lens, 0.0095);
       } else {
-        digit(root, ipt, [bends[0] * b2.k, bends[1] * b2.k, bends[2] * b2.k], lens, 0.0095, ipt, icl);
+        digitTo(ig, root, ipt, [bends[0] * b2.k, bends[1] * b2.k, bends[2] * b2.k], lens, 0.0095, ipt, icl);
       }
+      if (opts.out) opts.out.indexPivot = [root.x, root.y, root.z];
+      void before;
     } else {
       /* 19 mm through the proximal phalanx, which is a finger. It was 14,
          and 14 mm of flesh on 87 mm of bone is a worm. */
@@ -801,6 +818,12 @@ function makeViewmodelArms(hands, opts = {}) {
      -- which on a single action means reaching up to the hammer between
      every shot. */
   const thumb = opts.thumb ? new Geometry() : null;
+  /* And the trigger finger, always. It is the one finger on the weapon
+     that has a job every time you press the button, and welded into the
+     hand it can never do it -- a first-person shooter whose trigger finger
+     does not move is a photograph of a hand laid over a gun. One extra
+     mesh and one extra draw per weapon. */
+  const index = new Geometry();
   const out = {};
   const pairs = [
     { hand: hands.right, side: 1, grip: hands.rightGrip || 'pistol', sl: sleeve, sk: skin, tg: thumb },
@@ -817,18 +840,23 @@ function makeViewmodelArms(hands, opts = {}) {
     const rec = {};
     // `surface` has to reach the hand or the fingers cannot be closed onto
     // anything -- it was being taken by makeViewmodelArms and dropped here.
-    buildViewHand(sk, h, side, { grip, thumbGeo: tg, out: rec, surface: opts.surface });
+    buildViewHand(sk, h, side, { grip, thumbGeo: tg, out: rec,
+      // Only the FIRING hand's index is separated: the support hand's
+      // fingers are wrapped round a forend and have nothing to pull.
+      indexGeo: side > 0 ? index : null, surface: opts.surface });
     if (tg && rec.thumbPivot) out.thumbPivot = rec.thumbPivot;
+    if (side > 0 && rec.indexPivot) out.indexPivot = rec.indexPivot;
     out[side > 0 ? 'right' : 'left'] = rec;
   }
-  for (const g of [sleeve, skin, lSleeve, lSkin, thumb]) {
+  for (const g of [sleeve, skin, lSleeve, lSkin, thumb, index]) {
     if (!g) continue;
     g.finalize();
     g.computeWeldGroups();
     smoothNormals(g);
     weldNormals(g.normals, g.weldGroups);
   }
-  return { sleeve, skin, lSleeve, lSkin, thumb, thumbPivot: out.thumbPivot,
+  return { sleeve, skin, lSleeve, lSkin, thumb, index,
+    thumbPivot: out.thumbPivot, indexPivot: out.indexPivot,
     // Where every finger and thumb ended up, in the weapon's own space.
     digits: { right: out.right || null, left: out.left || null },
     hasLeft: !!hands.left };
@@ -881,9 +909,12 @@ Engine.prototype.viewmodelArms = function (weapon, hands, opts = {}) {
   }
   let thumb = null;
   if (parts.thumb) { thumb = mk(parts.thumb, skinMat, 't'); all.push(thumb); }
+  let index = null;
+  if (parts.index) { index = mk(parts.index, skinMat, 'i'); all.push(index); }
   /* `support` is the pair that may be moved away from the weapon during a
      reload. Everything else about them is identical to the firing arm. */
   return { sleeve, skin, lSleeve, lSkin, thumb, thumbPivot: parts.thumbPivot,
+    index, indexPivot: parts.indexPivot,
     digits: parts.digits,
     support: lSleeve ? [lSleeve, lSkin] : [], parts: all };
 };

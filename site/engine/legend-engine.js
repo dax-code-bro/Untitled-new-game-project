@@ -9805,35 +9805,95 @@ function buildArm(g, side, skeleton, segments, k = 1) {
   buildHand(g, side, wrist, segments);
 }
 
-/* A hand as a flattened palm plus a thumb. Not fingers — at the scale
-   a character is actually seen, individual fingers read as noise, but
-   the flattening and the thumb are what make it stop looking like a
-   club. */
-function buildHand(g, side, wrist, segments) {
+/* A hand with fingers on it.
+ *
+ * This was a flattened palm and a thumb, on the argument that at the scale
+ * a character is seen individual fingers read as noise. That argument is
+ * wrong for THIS game: the thing a zombie does, every time, is put a hand
+ * through a window and reach for your face, and at that range a mitten is
+ * the first thing you notice. It is the single most visible remaining
+ * shortcut on the body.
+ *
+ * So: a palm that ends at the knuckles, four fingers off the front of it
+ * with a bend at each joint, and the thumb it already had. The fingers are
+ * CURLED -- a dead hand is not a flat paddle, the tendons pull it into a
+ * hook, and a hook is also what reaching looks like. Four fingers of three
+ * short lofts is about six hundred triangles a hand, which against a
+ * twenty-thousand-triangle body is nothing.
+ *
+ * `claw` is how far they close: 0 is an open hand, 1 a fist. The reach
+ * clips ask for more of it than the walk does. */
+function buildHand(g, side, wrist, segments, claw) {
   const palmDir = new Vec3(0, -1, 0);
-  const tip = new Vec3().copy(wrist).addScaled(palmDir, 0.185);
-
+  const curl = claw == null ? 0.42 : claw;
+  // Palm: wrist to knuckle line, 100 mm, thickening through the middle.
+  const knuck = new Vec3().copy(wrist).addScaled(palmDir, 0.100);
   const rings = [
     { p: new Vec3().copy(wrist), w: 0.028, d: 0.030, e: 2.1 },
-    { p: new Vec3().copy(wrist).addScaled(palmDir, 0.030), w: 0.025, d: 0.041, e: 2.4 },
-    { p: new Vec3().copy(wrist).addScaled(palmDir, 0.085), w: 0.023, d: 0.045, e: 2.6 },
-    { p: new Vec3().copy(wrist).addScaled(palmDir, 0.135), w: 0.021, d: 0.042, e: 2.6 },
-    { p: new Vec3().copy(tip), w: 0.016, d: 0.030, e: 2.4 },
+    { p: new Vec3().copy(wrist).addScaled(palmDir, 0.030), w: 0.026, d: 0.042, e: 2.4 },
+    { p: new Vec3().copy(wrist).addScaled(palmDir, 0.070), w: 0.024, d: 0.046, e: 2.6 },
+    { p: new Vec3().copy(knuck), w: 0.022, d: 0.044, e: 2.6 },
   ];
   loftRings(g, rings, segments, false, true);
 
-  // Thumb, angled inward and forward off the palm.
+  /* Four fingers. Each one is three bones with a bend between them, walked
+     the same way the viewmodel's are -- a smooth taper reads as a tentacle
+     and three straight bones with angles between them reads as a finger.
+     Index nearest the thumb, little finger furthest. */
+  const seg = Math.max(6, segments >> 1);
+  const LEN = [0.038, 0.024, 0.018];
+  const R0 = [0.0125, 0.0130, 0.0122, 0.0104];
+  for (let f = 0; f < 4; f++) {
+    // Spread across the knuckle line, and shortened toward the little one.
+    const across = (f - 1.5) * 0.0165;
+    const scale = [0.96, 1.0, 0.97, 0.86][f];
+    const root = new Vec3().copy(knuck);
+    root.x += side * across;
+    // Fingers of a hanging hand splay very slightly and drop away.
+    let dir = new Vec3(side * across * 0.9, -1, 0.10).normalize();
+    let p = new Vec3().copy(root);
+    const fr = [];
+    fr.push({ p: new Vec3().copy(p), w: R0[f], d: R0[f], e: 2.3 });
+    for (let b = 0; b < 3; b++) {
+      // The bend: most of it at the middle knuckle, which is where a hand
+      // actually closes.
+      const bend = [0.30, 0.95, 0.72][b] * curl;
+      const c = Math.cos(bend), sn = Math.sin(bend);
+      // Turning in the plane of the palm: -Y toward +Z as it closes.
+      const ny = dir.y * c - dir.z * sn;
+      const nz = dir.y * sn + dir.z * c;
+      dir = new Vec3(dir.x, ny, nz).normalize();
+      const L = LEN[b] * scale;
+      p = new Vec3(p.x + dir.x * L, p.y + dir.y * L, p.z + dir.z * L);
+      const rr = R0[f] * (b === 2 ? 0.72 : 1 - b * 0.10);
+      fr.push({ p: new Vec3().copy(p), w: rr, d: rr, e: 2.3 });
+    }
+    // Rounded tip.
+    fr.push({ p: new Vec3(p.x + dir.x * 0.004, p.y + dir.y * 0.004, p.z + dir.z * 0.004),
+      w: R0[f] * 0.36, d: R0[f] * 0.36, e: 2.2 });
+    loftRings(g, fr, seg, true, true);
+  }
+
+  // Thumb, angled inward and forward off the palm, and closing with them.
   const thumbRoot = new Vec3().copy(wrist).addScaled(palmDir, 0.042);
   thumbRoot.z += 0.030;
-  const thumbTip = new Vec3().copy(thumbRoot);
-  thumbTip.z += 0.026;
-  thumbTip.y -= 0.052;
-  thumbTip.x -= side * 0.006;
-  loftRings(g, limbRings(thumbRoot, thumbTip, [
+  const thumbMid = new Vec3().copy(thumbRoot);
+  thumbMid.z += 0.020 + curl * 0.006;
+  thumbMid.y -= 0.030;
+  thumbMid.x -= side * 0.004;
+  const thumbTip = new Vec3().copy(thumbMid);
+  thumbTip.z += 0.008 + curl * 0.014;
+  thumbTip.y -= 0.026 - curl * 0.008;
+  thumbTip.x -= side * 0.003;
+  loftRings(g, limbRings(thumbRoot, thumbMid, [
     [0.017, 0.016, 2.1],
     [0.015, 0.014, 2.1],
-    [0.011, 0.011, 2.0],
-  ]), Math.max(8, segments >> 1), true, true);
+  ]), seg, true, false);
+  loftRings(g, limbRings(thumbMid, thumbTip, [
+    [0.015, 0.014, 2.1],
+    [0.0105, 0.0100, 2.0],
+    [0.0044, 0.0042, 2.0],
+  ]), seg, false, true);
 }
 
 function buildLeg(g, side, skeleton, segments, k = 1) {
@@ -11353,7 +11413,10 @@ function buildZombieBodyGeometry(skeleton, opts = {}) {
        hinge to hold the volume. A ball at the joint is what keeps an arm
        an arm through its whole range. */
     buildJoint(g, b, build.arm[1] * 1.04);
-    buildHand(g, side, c, segments);
+    /* Hooked. A dead hand is pulled into a claw by its own tendons, and
+       a claw is also what reaching through a window looks like -- the
+       open paddle a living hand gets would read as waving. */
+    buildHand(g, side, c, segments, 0.62);
 
     g.part = sideName === 'L' ? PART.LEG_L : PART.LEG_R;
     skeleton.bones[skeleton.index('upperLeg' + sideName)].bindMatrix.getTranslation(a);
@@ -17982,6 +18045,245 @@ function buildDrumMag(g) {
   ], true, true);
 }
 
+/* ---------------- what a gun that has no magazine wears ----------------
+
+   The three magazine slots were built for one thing -- a box hanging under
+   a well -- and then hung on all fourteen weapons. On the ones that have a
+   box that is right. On the Model 5, which is a revolver, an extended
+   magazine was a straight box hanging in the air under a cylinder, bolted
+   to nothing, feeding nowhere. That is "the Model 5 attachments are so
+   weird", and the same fault is on the break guns, the two bolt rifles,
+   the machine gun and the Arc Breaker.
+
+   A magazine is not a shape, it is an answer to "where does the next round
+   come from". So each action gets its own answer, and each answer is a
+   real object that belongs on that gun:
+
+     box       a longer box, a drum, a baseplate with a loop  (as before)
+     cylinder  a cartridge slide, a canister, a moon-clip pouch
+     break     a side saddle, a bandolier, a rubber shell caddy
+     clip      a box below the action, a drum, a spare clip in a guide
+     belt      a longer belt, the drum the MG 42 actually took, a starter
+     cell      a stacked cell, a back canister with a hose, a snap latch
+
+   Every one of them is mounted on the FRAME rather than on the part that
+   moves, so nothing is left hanging in the air when a cylinder swings out
+   or a barrel breaks open. */
+
+/* A single cartridge lying along X, nose forward. Used by everything that
+   carries loose ammunition on the outside of the gun. */
+function attRound(g, x, y, z, len, r, dir) {
+  const d = dir || 1;
+  strut(g, [x, y, z], [x + d * len * 0.70, y, z], ringOutline(r, 9));
+  strut(g, [x + d * len * 0.70, y, z], [x + d * len * 0.80, y, z], ringOutline(r * 0.80, 9));
+  strut(g, [x + d * len * 0.80, y, z], [x + d * len, y, z], ringOutline(r * 0.70, 9), true, true);
+  // Rim at the head.
+  strut(g, [x - d * 0.0016, y, z], [x, y, z], ringOutline(r * 1.14, 9));
+}
+
+/* A strap: a thin band swept along a list of points, for saddles, pouches
+   and bandoliers. Everything that is made of webbing rather than steel. */
+function attStrap(g, pts, w, t) {
+  const st = pts.map(([x, y, z]) => ({ o: new Vec3(x, y, z),
+    u: new Vec3(0, 1, 0), v: new Vec3(0, 0, 1), pts: roundRect(t, t, w, 2.2, 10) }));
+  sweepPath(g, st, true, true);
+}
+
+/* CYLINDER: a cartridge slide down the frame, six rounds in it, heads out.
+   The real accessory for a big revolver and the one that reads instantly
+   as "more ammunition" without pretending the gun has a magazine well. */
+function buildCartridgeSlide(g, o) {
+  const R = (o && o.roundR) || 0.0072, L = (o && o.roundLen) || 0.052;
+  const z = -(o && o.side ? o.side : 0.020);
+  // Backing plate along the frame.
+  hardBox(g, 0.016, -0.004, z, 0.048, 0.013, 0.0028);
+  for (let i = 0; i < 6; i++) {
+    const x = -0.026 + i * 0.0175;
+    // A loop round each round, and the round in it.
+    strut(g, [x, -0.004, z], [x, -0.004, z - R * 1.5], roundRect(R * 1.3, R * 1.3, 0.0024, 2.4, 12));
+    attRound(g, x - 0.0005, -0.004, z - R * 0.9, L * 0.34, R, 0);
+  }
+  void L;
+}
+
+/* CYLINDER, forty rounds: a canister slung under the barrel with a feed
+   strip climbing to the frame. Big, deliberate, and obviously bolted on. */
+function buildCanister(g, o) {
+  const R = 0.036, cx = 0.048, cy = -0.040;
+  strut(g, [cx - 0.030, cy, 0], [cx + 0.030, cy, 0], roundRect(R, R, R * 0.62, 4.2, 22));
+  for (const sx of [-1, 1]) {
+    strut(g, [cx + sx * 0.030, cy, 0], [cx + sx * 0.034, cy, 0], roundRect(R * 0.96, R * 0.96, R * 0.60, 4.2, 22));
+  }
+  // Ribs round it, and a latch on top.
+  for (let i = 0; i < 3; i++) {
+    strut(g, [cx - 0.018 + i * 0.018, cy, 0], [cx - 0.015 + i * 0.018, cy, 0],
+      roundRect(R * 1.03, R * 1.03, R * 0.64, 4.2, 20));
+  }
+  hardBox(g, cx, cy + R + 0.004, 0, 0.012, 0.006, 0.010);
+  // Feed strip up the side to the frame, with rounds standing in it.
+  const rise = [];
+  for (let i = 0; i <= 5; i++) {
+    const t = i / 5;
+    rise.push([cx - 0.028 - t * 0.036, cy + R - 0.004 + t * 0.040, 0.014]);
+  }
+  attStrap(g, rise, 0.010, 0.0022);
+  for (let i = 0; i < 4; i++) {
+    const t = i / 4;
+    attRound(g, cx - 0.030 - t * 0.034, cy + R + t * 0.040, 0.014, 0.020, 0.0062, 0);
+  }
+  void o;
+}
+
+/* CYLINDER, quick: two loaded moon clips in an open pouch on the frame. */
+function buildMoonPouch(g, o) {
+  const R = (o && o.pcd) || 0.0155;
+  const z = -0.026;
+  hardBox(g, 0.004, -0.030, z, 0.026, 0.026, 0.0030);
+  for (let k = 0; k < 2; k++) {
+    const zz = z - 0.0075 - k * 0.0090;
+    // The clip: a flat ring.
+    strut(g, [0.004, -0.030, zz], [0.004, -0.030, zz - 0.0016],
+      roundRect(R * 1.25, R * 1.25, R * 1.25, 5.0, 20));
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * TAU;
+      strut(g, [0.004 + Math.cos(a) * R, -0.030 + Math.sin(a) * R, zz],
+        [0.004 + Math.cos(a) * R, -0.030 + Math.sin(a) * R, zz - 0.0135], ringOutline(0.0064, 8));
+    }
+  }
+}
+
+/* BREAK: a side saddle of shells on the receiver flank. */
+function buildShellSaddle(g, o) {
+  const z = -(o && o.side ? o.side : 0.022);
+  hardBox(g, 0.010, 0.004, z, 0.052, 0.016, 0.0030);
+  for (let i = 0; i < 5; i++) {
+    const x = -0.036 + i * 0.023;
+    strut(g, [x, 0.004, z], [x, 0.004, z - 0.026], roundRect(0.0112, 0.0112, 0.0024, 2.4, 12));
+    // Hull and brass head.
+    strut(g, [x, 0.004, z - 0.004], [x, 0.004, z - 0.030], ringOutline(0.0092, 12));
+    strut(g, [x, 0.004, z - 0.030], [x, 0.004, z - 0.037], ringOutline(0.0100, 12), true, true);
+  }
+}
+
+/* BREAK, forty: a bandolier wound round the receiver and hanging. */
+function buildBandolier(g) {
+  const path = [];
+  for (let i = 0; i <= 14; i++) {
+    const t = i / 14, a = -0.5 + t * 4.2;
+    path.push([-0.020 + t * 0.070, Math.cos(a) * 0.030 - 0.006, Math.sin(a) * 0.030]);
+  }
+  attStrap(g, path, 0.017, 0.0026);
+  for (let i = 0; i < 11; i++) {
+    const t = (i + 0.5) / 11, a = -0.5 + t * 4.2;
+    const x = -0.020 + t * 0.070;
+    const cy = Math.cos(a) * 0.030 - 0.006, cz = Math.sin(a) * 0.030;
+    const nx = Math.cos(a), nz = Math.sin(a);
+    strut(g, [x, cy, cz], [x, cy + nx * 0.030, cz + nz * 0.030], ringOutline(0.0092, 10));
+    strut(g, [x, cy + nx * 0.030, cz + nz * 0.030], [x, cy + nx * 0.037, cz + nz * 0.037],
+      ringOutline(0.0100, 10), true, true);
+  }
+}
+
+/* BREAK, quick: two shells in a rubber caddy, heads out, ready. */
+function buildShellCaddy(g) {
+  hardBox(g, 0.004, -0.010, -0.020, 0.014, 0.022, 0.0044);
+  for (let k = 0; k < 2; k++) {
+    const yy = -0.002 - k * 0.021;
+    strut(g, [0.004, yy, -0.024], [0.004, yy, -0.052], ringOutline(0.0092, 12));
+    strut(g, [0.004, yy, -0.052], [0.004, yy, -0.059], ringOutline(0.0100, 12), true, true);
+  }
+}
+
+/* CLIP: a spare stripper clip standing in a guide on the receiver. */
+function buildSpareClip(g, o) {
+  const n = (o && o.clipCount) || 5;
+  const pitch = (o && o.clipPitch) || 0.0126;
+  const R = (o && o.roundR) || 0.0042;
+  const z = -0.024;
+  hardBox(g, 0.004, 0.004, z, 0.014, 0.020, 0.0030);
+  // The clip's spine, and the rounds standing off it.
+  hardBox(g, 0.004, 0.004, z - 0.006, 0.0032, n * pitch * 0.5, 0.0034);
+  for (let i = 0; i < n; i++) {
+    const y = 0.004 - (n - 1) * pitch * 0.5 + i * pitch;
+    strut(g, [0.004, y, z - 0.009], [0.004, y, z - 0.056], ringOutline(R, 9));
+    strut(g, [0.004, y, z - 0.056], [0.004, y, z - 0.070], ringOutline(R * 0.72, 9), true, true);
+  }
+}
+
+/* BELT: a longer run of belt hanging off the feed, on the side the gun
+   actually feeds to. Twice the links of the one it comes with. */
+function buildLongBelt(g, o) {
+  const n = (o && o.links) || 26, P2 = 0.0158;
+  let y = -0.004, x = 0;
+  for (let i = 0; i < n; i++) {
+    const lean = 0.06 + i * 0.010;
+    const rx = -Math.sin(lean), ry = -Math.cos(lean);
+    strut(g, [x - rx * 0.006, y - ry * 0.006, 0], [x + rx * 0.006, y + ry * 0.006, 0], ringOutline(0.0072, 8));
+    attRound(g, x, y, -0.028, 0.056, 0.0042, 1);
+    x += rx * P2; y += ry * P2;
+  }
+}
+
+/* BELT, forty: the drum the MG 42 actually took -- a shallow can clipped
+   to the side of the receiver with the belt climbing out of the top. */
+function buildBeltDrum(g) {
+  const R = 0.052, cz = -0.048, cy = -0.014;
+  strut(g, [0, cy, cz - 0.026], [0, cy, cz + 0.026], roundRect(R, R, R, 5.0, 28));
+  for (const dz of [-0.030, 0.030]) {
+    strut(g, [0, cy, cz + dz], [0, cy, cz + dz * 1.12], roundRect(R * 0.97, R * 0.97, R * 0.97, 5.0, 28));
+  }
+  // The clamp that holds it on, and the carrying strap over the top.
+  hardBox(g, 0, cy + R * 0.62, cz + 0.030, 0.014, 0.022, 0.012);
+  attStrap(g, [[0, cy + R, cz - 0.020], [0, cy + R + 0.008, cz + 0.006], [0, cy + R, cz + 0.026]], 0.014, 0.0022);
+  // Belt out of the top, curving to the feed.
+  for (let i = 0; i < 6; i++) {
+    const t = i / 5;
+    const zz = cz + 0.020 + t * 0.030, yy = cy + R - 0.004 + t * 0.020;
+    strut(g, [-0.006, yy, zz], [0.006, yy, zz], ringOutline(0.0072, 8));
+    attRound(g, 0, yy, zz, 0.050, 0.0042, 1);
+  }
+}
+
+/* BELT, quick: a starter tab and a carrying handle on the feed cover. */
+function buildBeltTab(g) {
+  attStrap(g, [[-0.010, -0.006, -0.030], [0.014, -0.010, -0.038], [0.034, -0.006, -0.030]], 0.012, 0.0026);
+  strut(g, [0.030, -0.004, -0.032], [0.046, -0.004, -0.032], ringOutline(0.0044, 10));
+  hardBox(g, 0.046, -0.004, -0.032, 0.006, 0.012, 0.010);
+}
+
+/* CELL: a second cell stacked on the first, tied in with a bus bar. */
+function buildCellTwin(g) {
+  const W = 0.026, H = 0.034, D = 0.019;
+  strut(g, [0, -0.052, -D], [0, -0.052, D], roundRect(H, H, W, 3.0, 18));
+  hardBox(g, 0, -0.052 + H, 0, 0.006, 0.008, W * 0.7);
+  for (const sz of [-1, 1]) strut(g, [0, -0.030, sz * 0.012], [0, -0.052, sz * 0.012], ringOutline(0.0032, 8));
+}
+
+/* CELL, forty: a canister on the back of the housing with a hose to it. */
+function buildCellPack(g) {
+  const R = 0.030;
+  strut(g, [-0.070, -0.014, 0], [-0.020, -0.014, 0], roundRect(R, R, R * 0.74, 4.4, 22));
+  for (const dx of [-0.074, -0.016]) {
+    strut(g, [dx, -0.014, 0], [dx + Math.sign(dx + 0.045) * 0.004, -0.014, 0],
+      roundRect(R * 0.96, R * 0.96, R * 0.72, 4.4, 20));
+  }
+  // Hose, in a sag, from the canister to the housing.
+  const hose = [];
+  for (let i = 0; i <= 6; i++) {
+    const t = i / 6;
+    hose.push([-0.020 + t * 0.026, -0.014 - Math.sin(t * PI) * 0.016, R * 0.62]);
+  }
+  attStrap(g, hose, 0.007, 0.0060);
+}
+
+/* CELL, quick: a snap latch and a pull ring on the cell's own face. */
+function buildCellLatch(g) {
+  hardBox(g, 0, -0.030, 0.020, 0.016, 0.006, 0.0040);
+  const bow = [];
+  for (let i = 0; i <= 7; i++) { const a = PI * (i / 7); bow.push([-Math.cos(a) * 0.012, -0.044 - Math.sin(a) * 0.010]); }
+  guardBow(g, bow, 0.0022, 0.0022, 0.0048, 0.020);
+}
+
 /* ---------------- engine hook ---------------- */
 
 /* One geometry per material an attachment needs. Most are a body and
@@ -18000,9 +18302,32 @@ const ATT_BUILD = {
   rangefinder: { body: buildRangefinder, glass: buildRangefinderGlass, glassMat: 'glassR', mat: 'poly', bound: 0.13 },
   scope7x: { body: buildScope7x, glass: buildScope7xGlass, glassMat: 'lens',
     reticle: buildScope7xReticle, mat: 'black', bound: 0.27 },
-  fastmag: { perHost: true, body: (g, o) => buildFastMag(g, o), mat: 'steel', bound: 0.06 },
-  extmag: { perHost: true, body: buildExtMag, mat: 'black', bound: 0.09 },
-  drummag: { body: buildDrumMag, mat: 'black', bound: 0.12 },
+  /* The three magazine slots dispatch on what the gun FEEDS FROM, not on
+     how long it is. Everything below `box` is a weapon with no magazine
+     well at all, which is why an extended magazine on the Model 5 was a
+     box hanging in mid-air bolted to nothing. */
+  fastmag: { perHost: true, mat: 'steel', bound: 0.07, body: (g, o) => {
+    if (o.feed === 'cylinder') return buildMoonPouch(g, o);
+    if (o.feed === 'break') return buildShellCaddy(g, o);
+    if (o.feed === 'clip') return buildSpareClip(g, o);
+    if (o.feed === 'belt') return buildBeltTab(g, o);
+    if (o.feed === 'cell') return buildCellLatch(g, o);
+    return buildFastMag(g, o);
+  } },
+  extmag: { perHost: true, mat: 'black', bound: 0.10, body: (g, o) => {
+    if (o.feed === 'cylinder') return buildCartridgeSlide(g, o);
+    if (o.feed === 'break') return buildShellSaddle(g, o);
+    if (o.feed === 'belt') return buildLongBelt(g, o);
+    if (o.feed === 'cell') return buildCellTwin(g, o);
+    return buildExtMag(g, o);
+  } },
+  drummag: { perHost: true, mat: 'black', bound: 0.14, body: (g, o) => {
+    if (o.feed === 'cylinder') return buildCanister(g, o);
+    if (o.feed === 'break') return buildBandolier(g, o);
+    if (o.feed === 'belt') return buildBeltDrum(g, o);
+    if (o.feed === 'cell') return buildCellPack(g, o);
+    return buildDrumMag(g, o);
+  } },
 };
 
 /* Spawn one attachment as a small group. `tint` paints every piece at
@@ -18019,9 +18344,18 @@ Engine.prototype.gunPart = function (id, opts = {}) {
    * single shared model and the same cache key they always had. */
   const host = opts.host || 'pistol';
   const bore = opts.bore || 0.0046;
+  /* What the weapon feeds from, which is a different question from how
+     long it is. `host` decides whether a long barrel is a pistol's or a
+     rifle's; `feed` decides whether the magazine slot is a magazine at
+     all. A Model 5 is host 'pistol' and feed 'cylinder'. */
+  const feed = opts.feed || 'box';
   const varies = !!D.perHost;
-  const key = 'att:' + id + (varies ? ':' + host + ':' + bore.toFixed(4) : '');
-  const build = { host, bore };
+  const extra = opts.dims || {};
+  const key = 'att:' + id + (varies
+    ? ':' + host + ':' + feed + ':' + bore.toFixed(4)
+      + (Object.keys(extra).length ? ':' + Object.keys(extra).sort().map((k) => k + extra[k]).join(',') : '')
+    : '');
+  const build = Object.assign({ host, bore, feed }, extra);
   const parts = armCache(this, key, () => {
     const out = { body: new Geometry() };
     D.body(out.body, build);
@@ -18550,6 +18884,13 @@ function buildViewHand(g, rawAt, side, opts = {}) {
     return { k, err: Math.abs(surf(t.x, t.y, t.z) - want), fit: bestErr };
   };
 
+  const digitTo = (gg, root, dir0, bends, lens, r0, pt = point, cl = curl) => {
+    const save = digitG;
+    digitG = gg;
+    digit(root, dir0, bends, lens, r0, pt, cl);
+    digitG = save;
+  };
+  let digitG = null;
   const digit = (root, dir0, bends, lens, r0, pt = point, cl = curl) => {
     const rs = [];
     // Where the two knuckles past the first one land, so the measurement
@@ -18577,7 +18918,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
     p = new Vec3(p.x + d.x * 0.0045, p.y + d.y * 0.0045, p.z + d.z * 0.0045);
     travelled += 0.0045;
     push(r0 * 0.44);
-    loftRings(g, rs, 12, true, true);
+    loftRings(digitG || g, rs, 12, true, true);
     /* Where this digit starts, ends, and how thick it is.
      *
      * Reported rather than inferred, because "is the finger touching the
@@ -18725,11 +19066,21 @@ function buildViewHand(g, rawAt, side, opts = {}) {
       const d0 = new Vec3(point.x, point.y, point.z);
       const a = solveCurl(root, d0, bends, lens, 0.0095, point, curl);
       const b2 = solveCurl(root, ipt, bends, lens, 0.0095, ipt, icl);
+      /* Its own mesh when the caller asks for one, for the same reason the
+         thumb has one: a finger welded into the hand is a finger that can
+         never pull a trigger, and a first-person shooter in which the
+         trigger finger does not move is a photograph of a hand. The base
+         knuckle comes back with it so the game can turn it about the joint
+         it actually bends at. */
+      const ig = opts.indexGeo || g;
+      const before = ig === g ? null : (opts.out || {});
       if (a.err <= b2.err) {
-        digit(root, d0, [bends[0] * a.k, bends[1] * a.k, bends[2] * a.k], lens, 0.0095);
+        digitTo(ig, root, d0, [bends[0] * a.k, bends[1] * a.k, bends[2] * a.k], lens, 0.0095);
       } else {
-        digit(root, ipt, [bends[0] * b2.k, bends[1] * b2.k, bends[2] * b2.k], lens, 0.0095, ipt, icl);
+        digitTo(ig, root, ipt, [bends[0] * b2.k, bends[1] * b2.k, bends[2] * b2.k], lens, 0.0095, ipt, icl);
       }
+      if (opts.out) opts.out.indexPivot = [root.x, root.y, root.z];
+      void before;
     } else {
       /* 19 mm through the proximal phalanx, which is a finger. It was 14,
          and 14 mm of flesh on 87 mm of bone is a worm. */
@@ -18848,6 +19199,12 @@ function makeViewmodelArms(hands, opts = {}) {
      -- which on a single action means reaching up to the hammer between
      every shot. */
   const thumb = opts.thumb ? new Geometry() : null;
+  /* And the trigger finger, always. It is the one finger on the weapon
+     that has a job every time you press the button, and welded into the
+     hand it can never do it -- a first-person shooter whose trigger finger
+     does not move is a photograph of a hand laid over a gun. One extra
+     mesh and one extra draw per weapon. */
+  const index = new Geometry();
   const out = {};
   const pairs = [
     { hand: hands.right, side: 1, grip: hands.rightGrip || 'pistol', sl: sleeve, sk: skin, tg: thumb },
@@ -18864,18 +19221,23 @@ function makeViewmodelArms(hands, opts = {}) {
     const rec = {};
     // `surface` has to reach the hand or the fingers cannot be closed onto
     // anything -- it was being taken by makeViewmodelArms and dropped here.
-    buildViewHand(sk, h, side, { grip, thumbGeo: tg, out: rec, surface: opts.surface });
+    buildViewHand(sk, h, side, { grip, thumbGeo: tg, out: rec,
+      // Only the FIRING hand's index is separated: the support hand's
+      // fingers are wrapped round a forend and have nothing to pull.
+      indexGeo: side > 0 ? index : null, surface: opts.surface });
     if (tg && rec.thumbPivot) out.thumbPivot = rec.thumbPivot;
+    if (side > 0 && rec.indexPivot) out.indexPivot = rec.indexPivot;
     out[side > 0 ? 'right' : 'left'] = rec;
   }
-  for (const g of [sleeve, skin, lSleeve, lSkin, thumb]) {
+  for (const g of [sleeve, skin, lSleeve, lSkin, thumb, index]) {
     if (!g) continue;
     g.finalize();
     g.computeWeldGroups();
     smoothNormals(g);
     weldNormals(g.normals, g.weldGroups);
   }
-  return { sleeve, skin, lSleeve, lSkin, thumb, thumbPivot: out.thumbPivot,
+  return { sleeve, skin, lSleeve, lSkin, thumb, index,
+    thumbPivot: out.thumbPivot, indexPivot: out.indexPivot,
     // Where every finger and thumb ended up, in the weapon's own space.
     digits: { right: out.right || null, left: out.left || null },
     hasLeft: !!hands.left };
@@ -18928,9 +19290,12 @@ Engine.prototype.viewmodelArms = function (weapon, hands, opts = {}) {
   }
   let thumb = null;
   if (parts.thumb) { thumb = mk(parts.thumb, skinMat, 't'); all.push(thumb); }
+  let index = null;
+  if (parts.index) { index = mk(parts.index, skinMat, 'i'); all.push(index); }
   /* `support` is the pair that may be moved away from the weapon during a
      reload. Everything else about them is identical to the firing arm. */
   return { sleeve, skin, lSleeve, lSkin, thumb, thumbPivot: parts.thumbPivot,
+    index, indexPivot: parts.indexPivot,
     digits: parts.digits,
     support: lSleeve ? [lSleeve, lSkin] : [], parts: all };
 };

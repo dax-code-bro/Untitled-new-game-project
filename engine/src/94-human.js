@@ -206,35 +206,95 @@ function buildArm(g, side, skeleton, segments, k = 1) {
   buildHand(g, side, wrist, segments);
 }
 
-/* A hand as a flattened palm plus a thumb. Not fingers — at the scale
-   a character is actually seen, individual fingers read as noise, but
-   the flattening and the thumb are what make it stop looking like a
-   club. */
-function buildHand(g, side, wrist, segments) {
+/* A hand with fingers on it.
+ *
+ * This was a flattened palm and a thumb, on the argument that at the scale
+ * a character is seen individual fingers read as noise. That argument is
+ * wrong for THIS game: the thing a zombie does, every time, is put a hand
+ * through a window and reach for your face, and at that range a mitten is
+ * the first thing you notice. It is the single most visible remaining
+ * shortcut on the body.
+ *
+ * So: a palm that ends at the knuckles, four fingers off the front of it
+ * with a bend at each joint, and the thumb it already had. The fingers are
+ * CURLED -- a dead hand is not a flat paddle, the tendons pull it into a
+ * hook, and a hook is also what reaching looks like. Four fingers of three
+ * short lofts is about six hundred triangles a hand, which against a
+ * twenty-thousand-triangle body is nothing.
+ *
+ * `claw` is how far they close: 0 is an open hand, 1 a fist. The reach
+ * clips ask for more of it than the walk does. */
+function buildHand(g, side, wrist, segments, claw) {
   const palmDir = new Vec3(0, -1, 0);
-  const tip = new Vec3().copy(wrist).addScaled(palmDir, 0.185);
-
+  const curl = claw == null ? 0.42 : claw;
+  // Palm: wrist to knuckle line, 100 mm, thickening through the middle.
+  const knuck = new Vec3().copy(wrist).addScaled(palmDir, 0.100);
   const rings = [
     { p: new Vec3().copy(wrist), w: 0.028, d: 0.030, e: 2.1 },
-    { p: new Vec3().copy(wrist).addScaled(palmDir, 0.030), w: 0.025, d: 0.041, e: 2.4 },
-    { p: new Vec3().copy(wrist).addScaled(palmDir, 0.085), w: 0.023, d: 0.045, e: 2.6 },
-    { p: new Vec3().copy(wrist).addScaled(palmDir, 0.135), w: 0.021, d: 0.042, e: 2.6 },
-    { p: new Vec3().copy(tip), w: 0.016, d: 0.030, e: 2.4 },
+    { p: new Vec3().copy(wrist).addScaled(palmDir, 0.030), w: 0.026, d: 0.042, e: 2.4 },
+    { p: new Vec3().copy(wrist).addScaled(palmDir, 0.070), w: 0.024, d: 0.046, e: 2.6 },
+    { p: new Vec3().copy(knuck), w: 0.022, d: 0.044, e: 2.6 },
   ];
   loftRings(g, rings, segments, false, true);
 
-  // Thumb, angled inward and forward off the palm.
+  /* Four fingers. Each one is three bones with a bend between them, walked
+     the same way the viewmodel's are -- a smooth taper reads as a tentacle
+     and three straight bones with angles between them reads as a finger.
+     Index nearest the thumb, little finger furthest. */
+  const seg = Math.max(6, segments >> 1);
+  const LEN = [0.038, 0.024, 0.018];
+  const R0 = [0.0125, 0.0130, 0.0122, 0.0104];
+  for (let f = 0; f < 4; f++) {
+    // Spread across the knuckle line, and shortened toward the little one.
+    const across = (f - 1.5) * 0.0165;
+    const scale = [0.96, 1.0, 0.97, 0.86][f];
+    const root = new Vec3().copy(knuck);
+    root.x += side * across;
+    // Fingers of a hanging hand splay very slightly and drop away.
+    let dir = new Vec3(side * across * 0.9, -1, 0.10).normalize();
+    let p = new Vec3().copy(root);
+    const fr = [];
+    fr.push({ p: new Vec3().copy(p), w: R0[f], d: R0[f], e: 2.3 });
+    for (let b = 0; b < 3; b++) {
+      // The bend: most of it at the middle knuckle, which is where a hand
+      // actually closes.
+      const bend = [0.30, 0.95, 0.72][b] * curl;
+      const c = Math.cos(bend), sn = Math.sin(bend);
+      // Turning in the plane of the palm: -Y toward +Z as it closes.
+      const ny = dir.y * c - dir.z * sn;
+      const nz = dir.y * sn + dir.z * c;
+      dir = new Vec3(dir.x, ny, nz).normalize();
+      const L = LEN[b] * scale;
+      p = new Vec3(p.x + dir.x * L, p.y + dir.y * L, p.z + dir.z * L);
+      const rr = R0[f] * (b === 2 ? 0.72 : 1 - b * 0.10);
+      fr.push({ p: new Vec3().copy(p), w: rr, d: rr, e: 2.3 });
+    }
+    // Rounded tip.
+    fr.push({ p: new Vec3(p.x + dir.x * 0.004, p.y + dir.y * 0.004, p.z + dir.z * 0.004),
+      w: R0[f] * 0.36, d: R0[f] * 0.36, e: 2.2 });
+    loftRings(g, fr, seg, true, true);
+  }
+
+  // Thumb, angled inward and forward off the palm, and closing with them.
   const thumbRoot = new Vec3().copy(wrist).addScaled(palmDir, 0.042);
   thumbRoot.z += 0.030;
-  const thumbTip = new Vec3().copy(thumbRoot);
-  thumbTip.z += 0.026;
-  thumbTip.y -= 0.052;
-  thumbTip.x -= side * 0.006;
-  loftRings(g, limbRings(thumbRoot, thumbTip, [
+  const thumbMid = new Vec3().copy(thumbRoot);
+  thumbMid.z += 0.020 + curl * 0.006;
+  thumbMid.y -= 0.030;
+  thumbMid.x -= side * 0.004;
+  const thumbTip = new Vec3().copy(thumbMid);
+  thumbTip.z += 0.008 + curl * 0.014;
+  thumbTip.y -= 0.026 - curl * 0.008;
+  thumbTip.x -= side * 0.003;
+  loftRings(g, limbRings(thumbRoot, thumbMid, [
     [0.017, 0.016, 2.1],
     [0.015, 0.014, 2.1],
-    [0.011, 0.011, 2.0],
-  ]), Math.max(8, segments >> 1), true, true);
+  ]), seg, true, false);
+  loftRings(g, limbRings(thumbMid, thumbTip, [
+    [0.015, 0.014, 2.1],
+    [0.0105, 0.0100, 2.0],
+    [0.0044, 0.0042, 2.0],
+  ]), seg, false, true);
 }
 
 function buildLeg(g, side, skeleton, segments, k = 1) {

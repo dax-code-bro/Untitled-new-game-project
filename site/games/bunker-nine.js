@@ -4025,6 +4025,7 @@ function makePlayer(game, S, hud, sfx, voice) {
     gold: 0, goldAmmo: false,
     upgraded: {}, camoOff: {}, fitted: {},
     cooldown: 0, reloading: 0, reloadStage: 0, breakStage: 0, cylStage: 0, beltStage: 0,
+    trigT: 0, trigHold: 0,
     clipStage: 0, cellStage: 0, swayT: 0,
     // Three springs: muzzle rise, drive back along the bore, and twist.
     kickPitch: 0, kickVel: 0, kickBack: 0, backVel: 0, kickRoll: 0, rollVel: 0,
@@ -4120,11 +4121,47 @@ function makePlayer(game, S, hud, sfx, voice) {
   }
   for (const v of Object.values(P.view)) setViewVisible(v, false);
 
-  /* Pointer lock: click to capture, mouse drives engine yaw/pitch. */
+  /* Pointer lock: click to capture, mouse drives engine yaw/pitch.
+
+     And on a controller, WITHOUT a click.
+
+     This is the bug that has been closing the tab mid-round. Pointer lock
+     was only ever asked for on a mouse click, and someone playing on a pad
+     never clicks -- so the lock is never taken, the operating system's
+     cursor stays live on top of the page, and the pad drives it. A stray
+     press then lands on whatever browser furniture the pointer happens to
+     be sitting over, and the game is gone.
+
+     With the lock held the cursor is hidden and swallowed: nothing outside
+     the canvas can be hit at all. So the moment a pad is seen doing
+     anything, the lock is taken and kept -- re-taken if it drops, with a
+     little patience, because a browser refuses the request for about a
+     second after Escape and will refuse it forever if it is asked in a
+     loop. */
   const canvas = game.canvas;
-  canvas.addEventListener('click', () => {
-    if (S.testMode || S.gameOver) return;
-    if (document.pointerLockElement !== canvas) canvas.requestPointerLock();
+  canvas.style.cursor = 'none';
+  const lockNow = () => {
+    if (S.testMode || S.gameOver || S.paused) return;
+    if (document.pointerLockElement === canvas) return;
+    if (S._lockAt && performance.now() - S._lockAt < 1400) return;
+    S._lockAt = performance.now();
+    try {
+      const r = canvas.requestPointerLock();
+      // Chrome returns a promise now; a refusal here is normal and must not
+      // reach the console as an unhandled rejection every second.
+      if (r && r.catch) r.catch(() => {});
+    } catch (e) { void e; }
+  };
+  S.lockPointer = lockNow;
+  canvas.addEventListener('click', lockNow);
+  /* Losing it is a signal, not an accident: Escape, an alt-tab, or the pad
+     nudging something. If a pad is connected and the game is live, take it
+     back. If it is not, leave the cursor alone -- someone on a mouse may
+     have pressed Escape on purpose. */
+  document.addEventListener('pointerlockchange', () => {
+    if (document.pointerLockElement === canvas) return;
+    if (!game.input.pad.connected) return;
+    setTimeout(lockNow, 1500);
   });
   canvas.addEventListener('contextmenu', (e) => e.preventDefault());
   window.addEventListener('mousedown', (e) => { if (e.button === 2) game.input.pointer.rightDown = true; });
@@ -4214,6 +4251,56 @@ const HOST_CLASS = {
   remington: 'rifle', killstreak: 'rifle', mg42: 'rifle', arc: 'rifle',
 };
 
+/* And what each one FEEDS FROM, which is a different question.
+ *
+ * `HOST_CLASS` decides whether a long barrel is a pistol's or a rifle's.
+ * It does not decide whether the weapon has a magazine well, and eight of
+ * the fourteen do not: the Model 5 is a revolver, three are break guns,
+ * three feed off a stripper clip, one off a belt and one off a battery.
+ * Every one of them was being given a box magazine to hang under a well it
+ * does not have -- a straight black box in mid-air below a cylinder, bolted
+ * to nothing, which is what "the Model 5 attachments are so weird" is.
+ *
+ * The magazine slots build against this instead, so each action gets the
+ * thing that action actually carries more ammunition in. */
+const HOST_FEED = {
+  m1911: 'box', blaze: 'box', thompson: 'box', mp5: 'box',
+  obliterator: 'cylinder',
+  scatter: 'break', sawnoff: 'break', paralyzer: 'break',
+  mauser: 'clip', remington: 'clip', killstreak: 'clip',
+  mg42: 'belt', arc: 'cell',
+};
+
+/* Where the magazine slot's part hangs, per weapon, in the weapon's own
+   space. Under the well on the guns that have one, on the frame or the
+   receiver flank on the ones that do not -- and never on a part that
+   moves, so nothing is left floating when a cylinder swings out or a
+   barrel breaks open.
+   
+   A single number here was the other half of the fault: every gun had its
+   magazine parts hung at [-0.010, -0.092, 0], which is under the well of a
+   1911 and thin air on a Thompson, a break gun or a machine gun. */
+const MAG_MOUNT = {
+  m1911: { fastmag: [-0.010, -0.092, 0], extmag: [-0.008, -0.086, 0], drummag: [0.004, -0.030, 0] },
+  blaze: { fastmag: [-0.010, -0.092, 0], extmag: [-0.008, -0.086, 0], drummag: [0.004, -0.030, 0] },
+  mp5: { fastmag: [0.090, -0.118, 0], extmag: [0.090, -0.100, 0], drummag: [0.092, -0.046, 0] },
+  thompson: { fastmag: [0.092, -0.104, 0], extmag: [0.092, -0.088, 0], drummag: [0.094, -0.030, 0] },
+  // Revolver: all three live on the frame, clear of the cylinder's swing.
+  obliterator: { fastmag: [-0.004, 0.010, 0], extmag: [0.030, 0.030, 0], drummag: [0.040, 0.020, 0] },
+  // Break guns: on the receiver flank, behind the hinge so the barrels can drop.
+  scatter: { fastmag: [-0.020, 0.026, 0], extmag: [-0.026, 0.030, 0], drummag: [-0.040, 0.020, 0] },
+  sawnoff: { fastmag: [-0.014, 0.022, 0], extmag: [-0.018, 0.026, 0], drummag: [-0.030, 0.016, 0] },
+  paralyzer: { fastmag: [-0.020, 0.030, 0], extmag: [-0.026, 0.034, 0], drummag: [-0.040, 0.024, 0] },
+  // Clip guns: the spare clip stands on the receiver, the boxes hang below it.
+  mauser: { fastmag: [0.004, 0.030, 0], extmag: [0.016, -0.030, 0], drummag: [0.020, -0.026, 0] },
+  remington: { fastmag: [0.010, 0.034, 0], extmag: [0.020, -0.024, 0], drummag: [0.024, -0.020, 0] },
+  killstreak: { fastmag: [0.014, 0.040, 0], extmag: [0.026, -0.026, 0], drummag: [0.030, -0.022, 0] },
+  // Machine gun: everything hangs off the feed, on the side the belt runs.
+  mg42: { fastmag: [0.060, 0.084, 0.020], extmag: [0.086, 0.076, 0.048], drummag: [0.030, 0.060, 0.030] },
+  // Arc Breaker: on and behind the cell housing.
+  arc: { fastmag: [0.020, 0.010, 0], extmag: [0.020, 0.020, 0], drummag: [0.020, 0.030, 0] },
+};
+
 /* Which of the gun's own parts each attachment stands IN FOR.
  *
  * Keyed by the PART, not by the slot, because not every part in a slot
@@ -4232,9 +4319,28 @@ const MAG_PART = {
   mauser: ['clip'], remington: ['clip'], killstreak: ['clip'],
   mg42: ['belt'], arc: ['cell', 'cellGlow'],
 };
+/* And which of those an attachment actually stands in for.
+ *
+ * This used to be "extended magazine and drum replace whatever the gun
+ * calls its magazine", on all fourteen. On the four weapons with a
+ * magazine well that is right. Everywhere else it was wrong twice over:
+ * the part being fitted is not a magazine at all now -- a cartridge slide,
+ * a side saddle, a spare clip -- and the thing being hidden was load-
+ * bearing. Fitting an extended magazine to the Mauser hid the stripper
+ * clip, which is the actor the RELOAD animates: the gun quietly lost its
+ * reload animation the moment you bought an attachment for it.
+ *
+ * So: only a real magazine replaces a real magazine. A longer belt
+ * replaces the belt it is longer than, and the belt drum contains it. A
+ * cartridge slide, a side saddle, a bandolier, a spare clip, a second
+ * cell and a back canister are all ADDITIONS, and hide nothing. */
+const BOX_MAG = {
+  m1911: ['mag'], blaze: ['mag'], thompson: ['mag'], mp5: ['mag'],
+};
+const BELT_MAG = { mg42: ['belt'] };
 const REPLACES = {
-  extmag: MAG_PART,
-  drummag: MAG_PART,
+  extmag: Object.assign({}, BOX_MAG, BELT_MAG),
+  drummag: Object.assign({}, BOX_MAG, BELT_MAG),
   // fastmag deliberately absent: it is an addition, not a replacement.
 };
 
@@ -4244,6 +4350,49 @@ const REPLACES = {
    perfectly still through the whole thing. */
 function activeMag(v) {
   return (v.magSwap && v.magSwap.length) ? v.magSwap : (v.magOwn || null);
+}
+
+/* Where the barrel really ends, measured off the model.
+ *
+ * Every weapon reports a `muzzleAt`, and on some of them it is the point
+ * the flash comes from rather than the crown -- the Thompson's is 48 mm
+ * past its own barrel, because a Cutts compensator sits on the front and
+ * the number was written for the flash. A suppressor hung off it is a
+ * suppressor screwed to nothing, floating in front of the gun.
+ *
+ * So it is measured instead: the furthest-forward vertex that lies within
+ * 20 mm of the bore axis, which is the barrel and nothing else -- a stock,
+ * a drum or a foregrip is nowhere near the bore. Walked once per weapon at
+ * start-up, and it cannot drift out of step with a model that changes. */
+function boreEnd(game, root, bore, fallback) {
+  if (!root || !game.geometryOf) return fallback;
+  let best = -1e9;
+  const walk = (a, local) => {
+    const geo = a.mesh && game.geometryOf(a.mesh);
+    if (geo && geo.positions) {
+      const q = geo.positions, m = local ? local.e : null;
+      for (let i = 0; i < q.length; i += 9) {
+        let x = q[i], y = q[i + 1], z = q[i + 2];
+        if (m) {
+          const wx = m[0] * x + m[4] * y + m[8] * z + m[12];
+          const wy = m[1] * x + m[5] * y + m[9] * z + m[13];
+          const wz = m[2] * x + m[6] * y + m[10] * z + m[14];
+          x = wx; y = wy; z = wz;
+        }
+        if (Math.hypot(y - bore, z) < 0.020 && x > best) best = x;
+      }
+    }
+    for (const c of (a.children || [])) {
+      const cm = new LegendEngine.Mat4();
+      cm.compose(c._position, c._rotation, c.scale);
+      if (local) { const t = new LegendEngine.Mat4(); t.mulMatrices(local, cm); walk(c, t); }
+      else walk(c, cm);
+    }
+  };
+  try { walk(root, null); } catch (e) { void e; return fallback; }
+  // A weapon whose bore is nowhere near where it says keeps its own number.
+  if (best < -1e8) return fallback;
+  return best;
 }
 
 function applyAttachmentLooks(game, P, id) {
@@ -4256,8 +4405,20 @@ function applyAttachmentLooks(game, P, id) {
      guessed as three tenths of the sight height, which was near enough on
      one gun and two centimetres out on the rest — a suppressor floating
      below its own barrel. Every model reports its own bore now. */
+  /* Not this weapon's kit at all. Building three magazine parts, four
+     optics and four barrels for a claw hammer is fourteen models nobody
+     will ever see, and it is how a hammer ended up measurably wearing an
+     extended magazine 73 mm off its own head. */
+  if (ATTACH.noWork.includes(id) || base.melee) return;
   const M = v.muzzle || 0.3, H = base.sightH || 0.04;
   const B = root && root.boreAt != null ? root.boreAt : H * 0.30;
+  /* Where the barrel actually ENDS, which is not where the muzzle flash
+     goes. `v.muzzle` is the flash point and it is deliberately a little
+     past the crown -- on the 1911 it is 240 mm against a 190 mm barrel.
+     Hanging a suppressor off it put every muzzle device on the two pistols
+     and the Thompson 38 to 48 mm out in front of the gun, screwed to
+     nothing. The models report their own crown; use it. */
+  const MZ = boreEnd(game, root, B, root && root.muzzleAt != null ? root.muzzleAt : M);
   if (!v.att) {
     /* Every part is a real model out of the engine now, authored around its
        own mount point — so all that is left here is deciding where on this
@@ -4276,8 +4437,19 @@ function applyAttachmentLooks(game, P, id) {
      * sharing a slot. One model per attachment, hung on everything, is what
      * put a pistol magazine on a submachine gun. */
     const cls = HOST_CLASS[id] || (base.melee ? 'pistol' : M > 0.60 ? 'rifle' : M > 0.30 ? 'smg' : 'pistol');
+    const feed = HOST_FEED[id] || 'box';
+    /* The weapon's own ammunition, handed to the part builder so a
+       cartridge slide on the Model 5 carries .50 and a side saddle on the
+       scattergun carries twelve gauge -- rather than every gun's spare
+       rounds being the same generic pill. */
+    const A = base.ammo || {};
+    const dims = {};
+    if (A.round) { dims.roundR = +(A.round.headR || 0.0072).toFixed(4); dims.roundLen = +(A.round.overall || 0.052).toFixed(4); }
+    if (A.shell) { dims.roundR = +(A.shell.r || 0.0092).toFixed(4); dims.roundLen = +(A.shell.len || 0.070).toFixed(4); }
+    if (A.clip) { dims.clipCount = A.clip.count || 5; dims.clipPitch = +(A.clip.pitch || 0.0126).toFixed(4); dims.roundR = +((A.clip.round && A.clip.round.headR) || 0.0042).toFixed(4); }
+    if (A.loader) { dims.pcd = +(A.loader.pcd || 0.0155).toFixed(4); dims.roundR = +((A.loader.round && A.loader.round.headR) || 0.0072).toFixed(4); }
     const mount = (partId, pos, rot) => {
-      const grp = game.gunPart(partId, { host: cls, bore: (base.bore || 0.0046) });
+      const grp = game.gunPart(partId, { host: cls, feed, dims, bore: (base.bore || 0.0046) });
       if (!grp) return [];
       grp.setPosition(pos);
       if (rot) grp.setRotation(rot);
@@ -4287,26 +4459,41 @@ function applyAttachmentLooks(game, P, id) {
       for (const q of list) q.visible = false;
       return list;
     };
+    /* Where a magazine part goes on THIS gun. The table first, then the
+       model's own magazine well if it has one, then a guess -- so a weapon
+       added later still gets its parts somewhere sane rather than under a
+       1911's well. */
+    const mm = MAG_MOUNT[id];
+    const magAt = (partId, fallback) => {
+      if (mm && mm[partId]) return mm[partId];
+      const w = (root && root.magWell) || null;
+      if (w) return [w[0] + (partId === 'drummag' ? 0.006 : 0), w[1] - (partId === 'drummag' ? 0.004 : 0.014), w[2]];
+      return fallback;
+    };
     // Muzzle devices go on the bore at the muzzle; barrels replace the
     // front of it; optics sit on the sight line; magazines under the well.
-    const muz = [M - 0.012, B, 0];
+    const muz = [MZ - 0.012, B, 0];
     const opt = [0.012, H - 0.010, 0];
     v.att = {
       suppressor: mount('suppressor', muz),
       compensator: mount('compensator', muz),
       annihilator: mount('annihilator', muz),
-      skullsplitter: mount('skullsplitter', [M * 0.70, B, 0]),
-      longbarrel: mount('longbarrel', [M - 0.030, B, 0]),
-      shortbarrel: mount('shortbarrel', [M * 0.66, B, 0]),
-      bayonet: mount('bayonet', [M * 0.72, B - 0.019, 0]),
+      skullsplitter: mount('skullsplitter', [MZ * 0.70, B, 0]),
+      longbarrel: mount('longbarrel', [MZ - 0.030, B, 0]),
+      shortbarrel: mount('shortbarrel', [MZ * 0.66, B, 0]),
+      bayonet: mount('bayonet', [MZ * 0.72, B - 0.019, 0]),
       reddot: mount('reddot', opt),
       thermal: mount('thermal', opt),
       nightvision: mount('nightvision', opt),
       rangefinder: mount('rangefinder', opt),
       scope7x: mount('scope7x', [0.006, H - 0.014, 0]),
-      fastmag: mount('fastmag', [-0.010, -0.092, 0]),
-      extmag: mount('extmag', [-0.008, -0.086, 0]),
-      drummag: mount('drummag', [0.004, -0.030, 0]),
+      /* Where the magazine slot hangs, per weapon. Under the well on the
+         guns that have one; on the frame or the receiver flank on the ones
+         that do not. If a gun is not in the table it falls back to its own
+         reported magazine well, and only then to a guess. */
+      fastmag: mount('fastmag', magAt('fastmag', [-0.010, -0.092, 0])),
+      extmag: mount('extmag', magAt('extmag', [-0.008, -0.086, 0])),
+      drummag: mount('drummag', magAt('drummag', [0.004, -0.030, 0])),
     };
   }
   /* The gun's own magazine, found once. `v.mag` is set by the racking code
@@ -4988,22 +5175,24 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
       const open = ease(seg(0.14, 0.30)) * (1 - Math.pow(seg(0.68, 0.80), 0.7));
       v.cover.setRotation([0, 0, (v.coverOpen || 96) * open]);
       /* The old belt leaves. It swings off the lip and falls away rather
-         than blinking out -- you can watch it go. */
-      if (v.belt) {
+         than blinking out -- you can watch it go.
+         
+         Whichever belt is actually fitted: with a longer belt bought at
+         the bench it is that one that has to move, not the stock belt
+         hidden underneath it. */
+      const beltNow = (v.magSwap && v.magSwap.length) ? v.magSwap : (v.belt ? [v.belt] : []);
+      for (const bp of beltNow) {
         const goneT = ease(seg(0.26, 0.42));
         const backT = ease(seg(0.60, 0.72));
         const D = v.beltDrop || [-0.03, -0.42, 0.10];
         const k = goneT * (1 - backT);
-        v.belt.setPosition([
-          (v.beltRest || [0, 0, 0])[0] + D[0] * k,
-          (v.beltRest || [0, 0, 0])[1] + D[1] * k,
-          (v.beltRest || [0, 0, 0])[2] + D[2] * k,
-        ]);
-        v.belt.setRotation([0, 0, -46 * k]);
+        const R0 = bp.__beltRest || (bp.__beltRest = [bp.position.x, bp.position.y, bp.position.z]);
+        bp.setPosition([R0[0] + D[0] * k, R0[1] + D[1] * k, R0[2] + D[2] * k]);
+        bp.setRotation([0, 0, -46 * k]);
         // Hidden only in the gap between the old one leaving and the new
         // one being in the tray, so the feed is never simply empty-looking
         // for half the reload.
-        v.belt.visible = !(u > 0.44 && u < 0.66);
+        bp.visible = !(u > 0.44 && u < 0.66);
       }
       if (P.beltStage < 1 && u > 0.04) { P.beltStage = 1; sfx.boltHome(); }
       if (P.beltStage < 2 && u > 0.16) { P.beltStage = 2; sfx.coverUp(); }
@@ -5012,10 +5201,11 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
       if (P.beltStage < 5 && u > 0.86) { P.beltStage = 5; sfx.boltHome(); }
     } else {
       v.cover.setRotation([0, 0, 0]);
-      if (v.belt) {
-        v.belt.setPosition(v.beltRest || [0, 0, 0]);
-        v.belt.setRotation([0, 0, 0]);
-        v.belt.visible = true;
+      const beltNow = (v.magSwap && v.magSwap.length) ? v.magSwap : (v.belt ? [v.belt] : []);
+      for (const bp of beltNow) {
+        if (bp.__beltRest) bp.setPosition(bp.__beltRest);
+        bp.setRotation([0, 0, 0]);
+        bp.visible = true;
       }
       if (v.bolt) v.bolt.setPosition(v.boltRest || [0, 0, 0]);
       P.beltStage = 0;
@@ -5174,14 +5364,23 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
               const now2 = i === which;
               for (const q of grp) {
                 q.visible = done2 || (now2 && sub > 0.12);
-                if (done2) { q.setPosition(seat(i)); q.setRotation([0, 0, 90]); }
+                /* Nose forward, down the chamber.
+                 *
+                 * These were turned ninety degrees about Z, which takes a
+                 * cartridge from pointing at the muzzle to standing
+                 * vertically -- so every round already loaded was stood on
+                 * end in the cylinder like a row of little chimneys. A
+                 * cartridge model runs along +X by construction, and +X is
+                 * where the barrel is, so the seated rotation is zero. */
+                if (done2) { q.setPosition(seat(i)); q.setRotation([0, 0, 0]); }
               }
             }
           }
           const sTo = seat(which);
           to = sTo;
           from = FETCH(sTo);
-          rot = [0, 0, 90]; rot0 = [0, -24, 52];
+          // Home is nose-down-the-chamber; it arrives tipped and straightens.
+          rot = [0, 0, 0]; rot0 = [0, -28, 34];
           // Only the one being loaded rides the path.
           propRoot = prop.rounds ? prop.rounds[Math.floor(which * (prop.rounds.length / N))] : prop.root;
           propT = sub;
@@ -5225,9 +5424,15 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
           rot = [0, 0, 0]; rot0 = [0, -34, -30];
           show = u2 < 0.96;
         } else if (kind === 'cell') {
-          to = [to[0], to[1] + 0.004, to[2]];
+          /* Into the housing the cell actually lives in. This went to the
+             magazine well -- which the Arc Breaker does not have, so it
+             fell through to a guess and the cell was posted into the air
+             below the accelerator tube. The weapon reports where its cell
+             rests; use that. */
+          const cr = v.cellRest || [to[0], to[1] + 0.004, to[2]];
+          to = [cr[0], cr[1], cr[2]];
           from = FETCH(to, -0.058);
-          rot0 = [0, -24, -18];
+          rot = [0, 0, 0]; rot0 = [0, -24, -18];
         } else {
           /* A magazine goes up the well nose-first, tipped a little as
              the hand brings it round, straightening as it seats.
@@ -5378,6 +5583,45 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
       if (P.cockStage < 1 && P.cockT > 0.86) { P.cockStage = 1; sfx.hammerCock(); }
     }
     if (P.cockT >= 1) P.cockStage = 1;
+  }
+
+  /* The trigger finger, which had never moved.
+   *
+   * "The fingers need to move and all that -- on the Model 5 I need them
+   *  to pull the trigger."
+   *
+   * It was welded into the hand mesh, so it could not. It is its own mesh
+   * now, like the thumb, and it turns about its own base knuckle: back and
+   * in as the trigger breaks, forward again as it resets. One rotation, on
+   * the same clock as the shot, so the finger and the bang are the same
+   * event rather than two things that happen near each other.
+   *
+   * Held on an automatic weapon -- a finger that flutters at twelve
+   * hundred rounds a minute is a vibration, not a trigger pull -- and one
+   * clean cycle per shot on everything else. */
+  if (v.arms && v.arms.index && v.arms.indexPivot) {
+    const iv = v.arms.indexPivot;
+    const auto = !!spec.auto;
+    const held = S.input && S.input.fireHeld && P.ammoFor(P.equipped()).mag > 0 && P.reloading <= 0;
+    let pull;
+    if (auto) {
+      // Rides in to the break and stays there while the gun is firing.
+      P.trigHold = Math.max(0, Math.min(1, (P.trigHold || 0) + (held ? dt / 0.06 : -dt / 0.09)));
+      pull = P.trigHold;
+    } else {
+      // One press per shot, off the refire clock: fast in, slower out.
+      const cyc = Math.max(0.06, Math.min(0.30, spec.refire || 0.16));
+      P.trigT = Math.max(0, (P.trigT || 0) - dt);
+      const t = 1 - P.trigT / cyc;
+      pull = P.trigT > 0 ? (t < 0.35 ? t / 0.35 : 1 - (t - 0.35) / 0.65) : 0;
+    }
+    // Taking the slack out of a trigger and breaking it is about nine
+    // degrees at the knuckle. More reads as a finger curling into a fist.
+    const ang = -0.158 * Math.max(0, Math.min(1, pull));
+    const c = Math.cos(ang), sn = Math.sin(ang);
+    const dx = -iv[0], dy = -iv[1];
+    v.arms.index.setPosition([iv[0] + dx * c - dy * sn, iv[1] + dx * sn + dy * c, 0]);
+    v.arms.index.setRotation([0, 0, ang * 57.2958]);
   }
 
   /* Reciprocating slide. A half-sine over the cycle time: back hard, forward
@@ -5565,6 +5809,8 @@ function tryFire(game, S, P, hud, sfx, dt) {
     * (rcS.roll != null ? rcS.roll : 0.004 + spec.kick * 0.004) * 26;
   sfx[spec.sfx]();
   hud.ammo(P);
+  // The trigger breaks with the shot, so the finger's clock starts here.
+  P.trigT = Math.max(0.06, Math.min(0.30, spec.refire || 0.16));
   P.slideCycle = spec.auto ? 0.055 : 0.085;
   P.slideCycleMax = P.slideCycle;
   if (spec.thumbCock) {
@@ -7982,11 +8228,28 @@ function updateMeteor(game, S, P, hud, sfx, dt) {
               : Math.min(1, -0.35 + (done - 0.80) / 0.20 * 1.35);
       const y = V ? V.at[1] - 0.42 + rise * 0.95 : 1;
       A.root.setPosition([V ? V.at[0] : 0, y, V ? V.at[2] : 0]);
-      // Turning slowly on the way up, looking at whoever is standing there.
-      A.root.setRotation([0, Math.sin(done * 5.2) * 26, 0]);
-      if (m.display) {
-        // The weapon rides in its hands, so it goes down and comes back.
-        for (const q of m.display) q.setPosition([0, y + 0.14, 0.11]);
+      /* Facing you while it works, rather than spinning on the spot. */
+      const pp = S.player && S.player.actor ? S.player.actor.position : null;
+      const fy = pp ? Math.atan2(pp.x - (V ? V.at[0] : 0), pp.z - (V ? V.at[2] : 0)) * 57.2958 : 0;
+      A.root.setRotation([0, fy + Math.sin(done * 4.0) * 5, 0]);
+      /* And the arms do the work.
+       *
+       * Five beats, and the weapon is in its hands for four of them: up
+       * out of the hole with the arms hanging; reaching out and closing on
+       * the gun; carrying it in against the chest and down; coming back up
+       * with it; holding it out to you. The gun is parented to a holder
+       * between its two hands, so it goes exactly where they go rather
+       * than being placed near them each frame -- which is what made it
+       * read as floating beside the alien instead of being carried. */
+      const segA = (a2, b2) => Math.max(0, Math.min(1, (done - a2) / (b2 - a2)));
+      if (done < 0.20) alienPose(A, 'down', 'down', 0);
+      else if (done < 0.32) alienPose(A, 'down', 'reach', segA(0.20, 0.32));
+      else if (done < 0.44) alienPose(A, 'reach', 'carry', segA(0.32, 0.44));
+      else if (done < 0.86) alienPose(A, 'carry', 'carry', 0);
+      else alienPose(A, 'carry', 'offer', segA(0.86, 1.00));
+      if (m.display && !m.parented && A.hold) {
+        for (const q of m.display) { q.parent = A.hold; q.setPosition([0, 0, 0]); }
+        m.parented = true;
       }
     }
     if (Math.random() < 0.5) {
@@ -8006,6 +8269,8 @@ function updateMeteor(game, S, P, hud, sfx, dt) {
     const A = S.alien;
     const p = A.root.position;
     const floor = (S.vortex ? S.vortex.at[1] : 0.6) - 0.9;
+    // Arms back down as it sinks, so it does not go under still offering.
+    alienPose(A, 'offer', 'down', 1);
     if (p.y > floor) A.root.setPosition([p.x, p.y - dt * 0.9, p.z]);
     else { A.visible = false; for (const q of A.parts) q.visible = false; }
   }
@@ -8154,6 +8419,20 @@ function buildVortex(game, S) {
  * more unsettling at that size than at three metres. Built rather than
  * hinted at: a long skull, two black eyes set too far round the sides, a
  * neck, a narrow chest, and two arms with too many joints in them. */
+/* The thing that lives in the vortex.
+ *
+ * Built as a JOINTED figure rather than a heap of cylinders parented to
+ * one root. It had no joints at all: the arms were nine fixed pieces hung
+ * off the body, and the upgraded weapon was placed at a point in the air
+ * near its chest and called "riding in its hands". So it never actually
+ * took anything and never actually gave anything back -- it went down, it
+ * came up, and the gun was in your hands again.
+ *
+ * Now each arm is a chain -- shoulder, elbow, wrist -- and the weapon is
+ * parented to a holder BETWEEN the two hands, so where the hands go the
+ * gun goes. It can reach out, close on the weapon, carry it down, and hold
+ * it out to you at the end, which is what was asked for and what the
+ * moment is for. */
 function buildAlien(game, S) {
   const skin = { color: 0x6f7f74, texture: 'skin', roughness: 0.42, metalness: 0, subsurface: 0.2 };
   const dark = { color: 0x07090c, texture: 'smooth', roughness: 0.12, metalness: 0.1 };
@@ -8161,39 +8440,99 @@ function buildAlien(game, S) {
     emissive: 0x3fe0c0, emissiveStrength: 2.2 };
   const root = game.box({ at: [0, -5, 0], size: 0.02, physics: false, visible: false });
   const parts = [];
-  const add = (a, pos, rot) => { a.parent = root; a.setPosition(pos); if (rot) a.setRotation(rot); parts.push(a); return a; };
-  // Chest and the ribs showing through it.
-  add(game.cylinder({ radius: 0.075, height: 0.30, material: skin, physics: false }), [0, 0.30, 0]);
-  add(game.sphere({ radius: 0.098, material: skin, physics: false }), [0, 0.40, 0]);
-  for (let k = 0; k < 3; k++) {
-    add(game.box({ size: [0.14, 0.012, 0.10], material: glow, physics: false }), [0, 0.24 + k * 0.055, 0.055]);
+  const add = (a, parent, pos, rot) => {
+    a.parent = parent; a.setPosition(pos); if (rot) a.setRotation(rot); parts.push(a); return a;
+  };
+  const joint = (parent, pos) => {
+    const a = game.box({ size: 0.008, physics: false, visible: false });
+    a.parent = parent; a.setPosition(pos); parts.push(a); return a;
+  };
+
+  /* Torso: a tapered ribcage rather than a can, with the light showing
+     through between the ribs. */
+  add(game.cylinder({ radius: 0.082, height: 0.20, material: skin, physics: false }), root, [0, 0.30, 0]);
+  add(game.cylinder({ radius: 0.062, height: 0.14, material: skin, physics: false }), root, [0, 0.19, 0]);
+  add(game.sphere({ radius: 0.094, material: skin, physics: false }), root, [0, 0.41, 0]);
+  for (let k = 0; k < 4; k++) {
+    add(game.box({ size: [0.145 - k * 0.012, 0.011, 0.10], material: glow, physics: false }),
+      root, [0, 0.23 + k * 0.050, 0.050]);
   }
-  // Neck and skull.
-  add(game.cylinder({ radius: 0.028, height: 0.10, material: skin, physics: false }), [0, 0.50, 0]);
-  const skull = add(game.sphere({ radius: 0.088, material: skin, physics: false }), [0, 0.60, 0]);
-  add(game.sphere({ radius: 0.052, material: skin, physics: false }), [0, 0.585, 0.055]);
-  for (const sz of [-1, 1]) {
-    add(game.sphere({ radius: 0.030, material: dark, physics: false }), [sz * 0.055, 0.605, 0.045]);
+  // Spine down the back, which is what makes it read as a body and not a pot.
+  for (let k = 0; k < 5; k++) {
+    add(game.sphere({ radius: 0.017 - k * 0.0016, material: skin, physics: false }),
+      root, [0, 0.20 + k * 0.058, -0.062]);
   }
-  // Two arms, three segments each, and long.
-  const arms = [];
+  // Neck and skull: long, with a jaw under it.
+  add(game.cylinder({ radius: 0.026, height: 0.11, material: skin, physics: false }), root, [0, 0.51, -0.006]);
+  const skull = add(game.sphere({ radius: 0.086, material: skin, physics: false }), root, [0, 0.615, 0]);
+  add(game.sphere({ radius: 0.058, material: skin, physics: false }), root, [0, 0.598, 0.052]);
+  add(game.box({ size: [0.070, 0.030, 0.062], material: skin, physics: false }), root, [0, 0.560, 0.040]);
+  add(game.box({ size: [0.052, 0.010, 0.020], material: dark, physics: false }), root, [0, 0.549, 0.062]);
   for (const sz of [-1, 1]) {
-    const seg = [];
-    seg.push(add(game.cylinder({ radius: 0.020, height: 0.20, material: skin, physics: false }),
-      [sz * 0.085, 0.38, 0], [0, 0, sz * 28]));
-    seg.push(add(game.cylinder({ radius: 0.017, height: 0.20, material: skin, physics: false }),
-      [sz * 0.155, 0.24, 0.02], [18, 0, sz * 14]));
-    seg.push(add(game.cylinder({ radius: 0.013, height: 0.14, material: skin, physics: false }),
-      [sz * 0.185, 0.11, 0.06], [34, 0, sz * 6]));
-    // Three long fingers, no thumb.
+    add(game.sphere({ radius: 0.029, material: dark, physics: false }), root, [sz * 0.052, 0.622, 0.046]);
+    // A ridge over each eye, so the face has a brow.
+    add(game.box({ size: [0.040, 0.012, 0.030], material: skin, physics: false }), root, [sz * 0.050, 0.650, 0.040]);
+  }
+
+  /* Two arms, jointed. Every segment hangs off the joint above it, so
+     turning a shoulder carries the whole arm and whatever it is holding. */
+  const shoulders = [], elbows = [], wrists = [];
+  for (const sz of [-1, 1]) {
+    const sh = joint(root, [sz * 0.086, 0.400, 0]);
+    add(game.cylinder({ radius: 0.020, height: 0.19, material: skin, physics: false }), sh, [0, -0.095, 0]);
+    add(game.sphere({ radius: 0.023, material: skin, physics: false }), sh, [0, 0, 0]);
+    const el = joint(sh, [0, -0.190, 0]);
+    add(game.cylinder({ radius: 0.0165, height: 0.18, material: skin, physics: false }), el, [0, -0.090, 0]);
+    add(game.sphere({ radius: 0.019, material: skin, physics: false }), el, [0, 0, 0]);
+    const wr = joint(el, [0, -0.180, 0]);
+    // The hand: a narrow palm and three long fingers, no thumb.
+    add(game.box({ size: [0.034, 0.052, 0.018], material: skin, physics: false }), wr, [0, -0.026, 0]);
     for (let f = 0; f < 3; f++) {
-      seg.push(add(game.cylinder({ radius: 0.006, height: 0.075, material: skin, physics: false }),
-        [sz * 0.19 + (f - 1) * 0.014, 0.035, 0.085], [48, 0, 0]));
+      const fx = (f - 1) * 0.013;
+      add(game.cylinder({ radius: 0.0058, height: 0.044, material: skin, physics: false }),
+        wr, [fx, -0.070, 0.004], [10, 0, 0]);
+      add(game.cylinder({ radius: 0.0050, height: 0.038, material: skin, physics: false }),
+        wr, [fx, -0.104, 0.016], [34, 0, 0]);
     }
-    arms.push(seg);
+    shoulders.push(sh); elbows.push(el); wrists.push(wr);
   }
+  /* Where a carried weapon sits: between the two hands, so it goes exactly
+     where they go. Parented to the LEFT wrist, with the right hand posed
+     to meet it. */
+  const hold = joint(wrists[0], [0.086, -0.070, 0.030]);
+
   for (const q of parts) q.visible = false;
-  S.alien = { root, parts, skull, arms, at: [0, -5, 0], visible: false };
+  S.alien = { root, parts, skull, shoulders, elbows, wrists, hold,
+    at: [0, -5, 0], visible: false };
+}
+
+/* The poses it moves between, as three angles an arm. Blended, because a
+   figure that snaps between poses is a puppet and one that eases between
+   them is a creature. */
+const ALIEN_POSE = {
+  // Hanging, on the way up and on the way down.
+  down: { sh: [6, 0, 26], el: [16, 0, 10], wr: [22, 0, 4] },
+  // Reaching out for the weapon, arms straight, palms up.
+  reach: { sh: [-74, 0, 12], el: [-16, 0, 4], wr: [-26, 0, 0] },
+  // Carrying it in against the chest.
+  carry: { sh: [-40, 0, 20], el: [-64, 0, 8], wr: [-14, 0, 0] },
+  // Holding it out to you: further than reach, and lower, so it is offered
+  // rather than presented.
+  offer: { sh: [-86, 0, 14], el: [-8, 0, 3], wr: [-34, 0, 0] },
+};
+
+function alienPose(A, a, b, t) {
+  if (!A || !A.shoulders) return;
+  const P1 = ALIEN_POSE[a] || ALIEN_POSE.down, P2 = ALIEN_POSE[b] || P1;
+  const k = Math.max(0, Math.min(1, t));
+  const e = k * k * (3 - 2 * k);
+  const mix = (u, v) => u + (v - u) * e;
+  for (let i = 0; i < 2; i++) {
+    const sz = i === 0 ? -1 : 1;
+    A.shoulders[i].setRotation([mix(P1.sh[0], P2.sh[0]), 0, sz * mix(P1.sh[2], P2.sh[2])]);
+    A.elbows[i].setRotation([mix(P1.el[0], P2.el[0]), 0, sz * mix(P1.el[2], P2.el[2])]);
+    A.wrists[i].setRotation([mix(P1.wr[0], P2.wr[0]), 0, sz * mix(P1.wr[2], P2.wr[2])]);
+  }
 }
 
 function meteorShot(S, from, dir, hud, sfx) {
@@ -8627,11 +8966,16 @@ function doInteract(game, S, P, hud, sfx, it, dt) {
     try {
       const made = buildWorldWeapon(game, id);
       if (made && made.root) {
-        made.root.parent = S.alien ? S.alien.root : null;
-        made.root.setPosition([0, 0.14, 0.11]);
+        /* Into the HOLDER between its two hands, not onto its body. Hung
+           off the root, the gun sat at a fixed point near the chest while
+           the arms did whatever they liked -- which is why it read as
+           floating beside the creature rather than being carried by it. */
+        made.root.parent = (S.alien && S.alien.hold) ? S.alien.hold : (S.alien ? S.alien.root : null);
+        made.root.setPosition([0, 0, 0]);
         made.root.setRotation([0, 0, -18]);
         S.meteor.display = [made.root];
         S.meteor.displayRoot = made.root;
+        S.meteor.parented = true;
       }
     } catch (e) { void e; }
     hud.points(S.points);
@@ -8645,6 +8989,7 @@ function doInteract(game, S, P, hud, sfx, it, dt) {
     }
     if (S.meteor.display) { for (const q of S.meteor.display) q.visible = false; }
     S.meteor.display = null;
+    S.meteor.parented = false;
     // Back in your hands, in the slot it came out of.
     if (S.meteor.tookFrom != null && S.meteor.tookFrom >= 0 && !P.slots.includes(id)) {
       P.slots.splice(Math.min(S.meteor.tookFrom, P.slots.length), 0, id);
@@ -8944,6 +9289,12 @@ function makeHud() {
   #b9hud .subs { position:absolute; left:50%; bottom:12%; transform:translateX(-50%); width:min(760px,80vw);
     text-align:center; font-size:18px; text-shadow:0 2px 3px #000; display:none; }
   #b9hud .subs .who { font-size:12px; letter-spacing:.3em; display:block; margin-bottom:4px; }
+  /* Shown only while a controller is live and the pointer is not locked --
+     the state in which a stray press lands on browser furniture and takes
+     the tab with it. It says the one thing that fixes it. */
+  #b9hud .cursorwarn { position:absolute; left:50%; top:6%; transform:translateX(-50%);
+    font-size:14px; letter-spacing:.18em; color:#ffd27a; background:rgba(0,0,0,.62);
+    border:1px solid #6a5a34; padding:7px 16px; display:none; text-align:center; }
   #b9hud .banner { position:absolute; left:50%; top:20%; transform:translateX(-50%); font-size:34px;
     letter-spacing:.28em; opacity:0; text-shadow:0 0 22px currentColor; transition:opacity .3s; }
   #b9hud .advig { position:absolute; inset:0; opacity:0; transition:opacity .05s;
@@ -9039,6 +9390,7 @@ function makeHud() {
     <div class="points">500</div><div class="pdelta"></div>
     <div class="ammo"><span class="wname">SIDEARM</span><span class="nums">7 / 42</span></div>
     <div class="prompt"></div>
+    <div class="cursorwarn">CLICK ONCE TO LOCK THE CURSOR — the pad is moving it</div>
     <div class="subs"><span class="who"></span><span class="text"></span></div>
     <div class="banner"></div>
     <div class="grace"><span class="lbl">CLEAR &nbsp;·&nbsp; THEY CANNOT TOUCH YOU</span>
@@ -9074,7 +9426,7 @@ function makeHud() {
   const $ = (c) => root.querySelector(c);
   const els = {
     round: $('.round'), points: $('.points'), ammo: $('.ammo .nums'), wname: $('.ammo .wname'),
-    prompt: $('.prompt'), subs: $('.subs'), subWho: $('.subs .who'), subText: $('.subs .text'), vig: $('.advig'), scope: $('.scope'), glass: $('.scope .glass'),
+    prompt: $('.prompt'), cursorwarn: $('.cursorwarn'), subs: $('.subs'), subWho: $('.subs .who'), subText: $('.subs .text'), vig: $('.advig'), scope: $('.scope'), glass: $('.scope .glass'),
     grace: $('.grace'), graceFill: $('.grace .fill'), graceNum: $('.grace .num'),
     flash: $('.hitflash'),
     banner: $('.banner'), dmg: $('.dmg'), title: $('.title'), hitm: $('.hitm'), pdelta: $('.pdelta'),
@@ -9742,6 +10094,22 @@ function start(opts = {}) {
        rather than folded into keys because aiming needs the analog value —
        a stick mapped to arrow keys can only ever look at one speed. */
     if (pad.connected && P.alive && !S.gameOver) {
+      /* A pad that is being USED takes the pointer. Merely being plugged
+         in is not enough -- someone with a controller sitting on the desk
+         and a hand on the mouse should keep their cursor. Any stick past
+         the dead zone or any button down means the pad is in play. */
+      const locked = document.pointerLockElement === game.canvas;
+      if (!locked && S.lockPointer) {
+        const busy = Math.abs(pad.lx) + Math.abs(pad.ly) + Math.abs(pad.rx) + Math.abs(pad.ry) > 0.12
+          || pad.lt > 0.2 || pad.rt > 0.2
+          || Object.keys(pad.buttons).some((k) => pad.buttons[k]);
+        if (busy) S.lockPointer();
+      }
+      /* And say so. A browser will only give the lock to a page the person
+         has interacted with, and a gamepad button is not an interaction as
+         far as it is concerned -- so if the request keeps being refused,
+         the one thing that fixes it has to be on screen. */
+      if (hud.els.cursorwarn) hud.els.cursorwarn.style.display = locked ? 'none' : 'block';
       const look = 2.6 * dt;
       // Squared response: fine control near centre, fast whip at the rim.
       const sx = pad.rx * Math.abs(pad.rx), sy = pad.ry * Math.abs(pad.ry);

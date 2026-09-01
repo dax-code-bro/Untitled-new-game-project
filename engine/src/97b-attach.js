@@ -504,6 +504,245 @@ function buildDrumMag(g) {
   ], true, true);
 }
 
+/* ---------------- what a gun that has no magazine wears ----------------
+
+   The three magazine slots were built for one thing -- a box hanging under
+   a well -- and then hung on all fourteen weapons. On the ones that have a
+   box that is right. On the Model 5, which is a revolver, an extended
+   magazine was a straight box hanging in the air under a cylinder, bolted
+   to nothing, feeding nowhere. That is "the Model 5 attachments are so
+   weird", and the same fault is on the break guns, the two bolt rifles,
+   the machine gun and the Arc Breaker.
+
+   A magazine is not a shape, it is an answer to "where does the next round
+   come from". So each action gets its own answer, and each answer is a
+   real object that belongs on that gun:
+
+     box       a longer box, a drum, a baseplate with a loop  (as before)
+     cylinder  a cartridge slide, a canister, a moon-clip pouch
+     break     a side saddle, a bandolier, a rubber shell caddy
+     clip      a box below the action, a drum, a spare clip in a guide
+     belt      a longer belt, the drum the MG 42 actually took, a starter
+     cell      a stacked cell, a back canister with a hose, a snap latch
+
+   Every one of them is mounted on the FRAME rather than on the part that
+   moves, so nothing is left hanging in the air when a cylinder swings out
+   or a barrel breaks open. */
+
+/* A single cartridge lying along X, nose forward. Used by everything that
+   carries loose ammunition on the outside of the gun. */
+function attRound(g, x, y, z, len, r, dir) {
+  const d = dir || 1;
+  strut(g, [x, y, z], [x + d * len * 0.70, y, z], ringOutline(r, 9));
+  strut(g, [x + d * len * 0.70, y, z], [x + d * len * 0.80, y, z], ringOutline(r * 0.80, 9));
+  strut(g, [x + d * len * 0.80, y, z], [x + d * len, y, z], ringOutline(r * 0.70, 9), true, true);
+  // Rim at the head.
+  strut(g, [x - d * 0.0016, y, z], [x, y, z], ringOutline(r * 1.14, 9));
+}
+
+/* A strap: a thin band swept along a list of points, for saddles, pouches
+   and bandoliers. Everything that is made of webbing rather than steel. */
+function attStrap(g, pts, w, t) {
+  const st = pts.map(([x, y, z]) => ({ o: new Vec3(x, y, z),
+    u: new Vec3(0, 1, 0), v: new Vec3(0, 0, 1), pts: roundRect(t, t, w, 2.2, 10) }));
+  sweepPath(g, st, true, true);
+}
+
+/* CYLINDER: a cartridge slide down the frame, six rounds in it, heads out.
+   The real accessory for a big revolver and the one that reads instantly
+   as "more ammunition" without pretending the gun has a magazine well. */
+function buildCartridgeSlide(g, o) {
+  const R = (o && o.roundR) || 0.0072, L = (o && o.roundLen) || 0.052;
+  const z = -(o && o.side ? o.side : 0.020);
+  // Backing plate along the frame.
+  hardBox(g, 0.016, -0.004, z, 0.048, 0.013, 0.0028);
+  for (let i = 0; i < 6; i++) {
+    const x = -0.026 + i * 0.0175;
+    // A loop round each round, and the round in it.
+    strut(g, [x, -0.004, z], [x, -0.004, z - R * 1.5], roundRect(R * 1.3, R * 1.3, 0.0024, 2.4, 12));
+    attRound(g, x - 0.0005, -0.004, z - R * 0.9, L * 0.34, R, 0);
+  }
+  void L;
+}
+
+/* CYLINDER, forty rounds: a canister slung under the barrel with a feed
+   strip climbing to the frame. Big, deliberate, and obviously bolted on. */
+function buildCanister(g, o) {
+  const R = 0.036, cx = 0.048, cy = -0.040;
+  strut(g, [cx - 0.030, cy, 0], [cx + 0.030, cy, 0], roundRect(R, R, R * 0.62, 4.2, 22));
+  for (const sx of [-1, 1]) {
+    strut(g, [cx + sx * 0.030, cy, 0], [cx + sx * 0.034, cy, 0], roundRect(R * 0.96, R * 0.96, R * 0.60, 4.2, 22));
+  }
+  // Ribs round it, and a latch on top.
+  for (let i = 0; i < 3; i++) {
+    strut(g, [cx - 0.018 + i * 0.018, cy, 0], [cx - 0.015 + i * 0.018, cy, 0],
+      roundRect(R * 1.03, R * 1.03, R * 0.64, 4.2, 20));
+  }
+  hardBox(g, cx, cy + R + 0.004, 0, 0.012, 0.006, 0.010);
+  // Feed strip up the side to the frame, with rounds standing in it.
+  const rise = [];
+  for (let i = 0; i <= 5; i++) {
+    const t = i / 5;
+    rise.push([cx - 0.028 - t * 0.036, cy + R - 0.004 + t * 0.040, 0.014]);
+  }
+  attStrap(g, rise, 0.010, 0.0022);
+  for (let i = 0; i < 4; i++) {
+    const t = i / 4;
+    attRound(g, cx - 0.030 - t * 0.034, cy + R + t * 0.040, 0.014, 0.020, 0.0062, 0);
+  }
+  void o;
+}
+
+/* CYLINDER, quick: two loaded moon clips in an open pouch on the frame. */
+function buildMoonPouch(g, o) {
+  const R = (o && o.pcd) || 0.0155;
+  const z = -0.026;
+  hardBox(g, 0.004, -0.030, z, 0.026, 0.026, 0.0030);
+  for (let k = 0; k < 2; k++) {
+    const zz = z - 0.0075 - k * 0.0090;
+    // The clip: a flat ring.
+    strut(g, [0.004, -0.030, zz], [0.004, -0.030, zz - 0.0016],
+      roundRect(R * 1.25, R * 1.25, R * 1.25, 5.0, 20));
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * TAU;
+      strut(g, [0.004 + Math.cos(a) * R, -0.030 + Math.sin(a) * R, zz],
+        [0.004 + Math.cos(a) * R, -0.030 + Math.sin(a) * R, zz - 0.0135], ringOutline(0.0064, 8));
+    }
+  }
+}
+
+/* BREAK: a side saddle of shells on the receiver flank. */
+function buildShellSaddle(g, o) {
+  const z = -(o && o.side ? o.side : 0.022);
+  hardBox(g, 0.010, 0.004, z, 0.052, 0.016, 0.0030);
+  for (let i = 0; i < 5; i++) {
+    const x = -0.036 + i * 0.023;
+    strut(g, [x, 0.004, z], [x, 0.004, z - 0.026], roundRect(0.0112, 0.0112, 0.0024, 2.4, 12));
+    // Hull and brass head.
+    strut(g, [x, 0.004, z - 0.004], [x, 0.004, z - 0.030], ringOutline(0.0092, 12));
+    strut(g, [x, 0.004, z - 0.030], [x, 0.004, z - 0.037], ringOutline(0.0100, 12), true, true);
+  }
+}
+
+/* BREAK, forty: a bandolier wound round the receiver and hanging. */
+function buildBandolier(g) {
+  const path = [];
+  for (let i = 0; i <= 14; i++) {
+    const t = i / 14, a = -0.5 + t * 4.2;
+    path.push([-0.020 + t * 0.070, Math.cos(a) * 0.030 - 0.006, Math.sin(a) * 0.030]);
+  }
+  attStrap(g, path, 0.017, 0.0026);
+  for (let i = 0; i < 11; i++) {
+    const t = (i + 0.5) / 11, a = -0.5 + t * 4.2;
+    const x = -0.020 + t * 0.070;
+    const cy = Math.cos(a) * 0.030 - 0.006, cz = Math.sin(a) * 0.030;
+    const nx = Math.cos(a), nz = Math.sin(a);
+    strut(g, [x, cy, cz], [x, cy + nx * 0.030, cz + nz * 0.030], ringOutline(0.0092, 10));
+    strut(g, [x, cy + nx * 0.030, cz + nz * 0.030], [x, cy + nx * 0.037, cz + nz * 0.037],
+      ringOutline(0.0100, 10), true, true);
+  }
+}
+
+/* BREAK, quick: two shells in a rubber caddy, heads out, ready. */
+function buildShellCaddy(g) {
+  hardBox(g, 0.004, -0.010, -0.020, 0.014, 0.022, 0.0044);
+  for (let k = 0; k < 2; k++) {
+    const yy = -0.002 - k * 0.021;
+    strut(g, [0.004, yy, -0.024], [0.004, yy, -0.052], ringOutline(0.0092, 12));
+    strut(g, [0.004, yy, -0.052], [0.004, yy, -0.059], ringOutline(0.0100, 12), true, true);
+  }
+}
+
+/* CLIP: a spare stripper clip standing in a guide on the receiver. */
+function buildSpareClip(g, o) {
+  const n = (o && o.clipCount) || 5;
+  const pitch = (o && o.clipPitch) || 0.0126;
+  const R = (o && o.roundR) || 0.0042;
+  const z = -0.024;
+  hardBox(g, 0.004, 0.004, z, 0.014, 0.020, 0.0030);
+  // The clip's spine, and the rounds standing off it.
+  hardBox(g, 0.004, 0.004, z - 0.006, 0.0032, n * pitch * 0.5, 0.0034);
+  for (let i = 0; i < n; i++) {
+    const y = 0.004 - (n - 1) * pitch * 0.5 + i * pitch;
+    strut(g, [0.004, y, z - 0.009], [0.004, y, z - 0.056], ringOutline(R, 9));
+    strut(g, [0.004, y, z - 0.056], [0.004, y, z - 0.070], ringOutline(R * 0.72, 9), true, true);
+  }
+}
+
+/* BELT: a longer run of belt hanging off the feed, on the side the gun
+   actually feeds to. Twice the links of the one it comes with. */
+function buildLongBelt(g, o) {
+  const n = (o && o.links) || 26, P2 = 0.0158;
+  let y = -0.004, x = 0;
+  for (let i = 0; i < n; i++) {
+    const lean = 0.06 + i * 0.010;
+    const rx = -Math.sin(lean), ry = -Math.cos(lean);
+    strut(g, [x - rx * 0.006, y - ry * 0.006, 0], [x + rx * 0.006, y + ry * 0.006, 0], ringOutline(0.0072, 8));
+    attRound(g, x, y, -0.028, 0.056, 0.0042, 1);
+    x += rx * P2; y += ry * P2;
+  }
+}
+
+/* BELT, forty: the drum the MG 42 actually took -- a shallow can clipped
+   to the side of the receiver with the belt climbing out of the top. */
+function buildBeltDrum(g) {
+  const R = 0.052, cz = -0.048, cy = -0.014;
+  strut(g, [0, cy, cz - 0.026], [0, cy, cz + 0.026], roundRect(R, R, R, 5.0, 28));
+  for (const dz of [-0.030, 0.030]) {
+    strut(g, [0, cy, cz + dz], [0, cy, cz + dz * 1.12], roundRect(R * 0.97, R * 0.97, R * 0.97, 5.0, 28));
+  }
+  // The clamp that holds it on, and the carrying strap over the top.
+  hardBox(g, 0, cy + R * 0.62, cz + 0.030, 0.014, 0.022, 0.012);
+  attStrap(g, [[0, cy + R, cz - 0.020], [0, cy + R + 0.008, cz + 0.006], [0, cy + R, cz + 0.026]], 0.014, 0.0022);
+  // Belt out of the top, curving to the feed.
+  for (let i = 0; i < 6; i++) {
+    const t = i / 5;
+    const zz = cz + 0.020 + t * 0.030, yy = cy + R - 0.004 + t * 0.020;
+    strut(g, [-0.006, yy, zz], [0.006, yy, zz], ringOutline(0.0072, 8));
+    attRound(g, 0, yy, zz, 0.050, 0.0042, 1);
+  }
+}
+
+/* BELT, quick: a starter tab and a carrying handle on the feed cover. */
+function buildBeltTab(g) {
+  attStrap(g, [[-0.010, -0.006, -0.030], [0.014, -0.010, -0.038], [0.034, -0.006, -0.030]], 0.012, 0.0026);
+  strut(g, [0.030, -0.004, -0.032], [0.046, -0.004, -0.032], ringOutline(0.0044, 10));
+  hardBox(g, 0.046, -0.004, -0.032, 0.006, 0.012, 0.010);
+}
+
+/* CELL: a second cell stacked on the first, tied in with a bus bar. */
+function buildCellTwin(g) {
+  const W = 0.026, H = 0.034, D = 0.019;
+  strut(g, [0, -0.052, -D], [0, -0.052, D], roundRect(H, H, W, 3.0, 18));
+  hardBox(g, 0, -0.052 + H, 0, 0.006, 0.008, W * 0.7);
+  for (const sz of [-1, 1]) strut(g, [0, -0.030, sz * 0.012], [0, -0.052, sz * 0.012], ringOutline(0.0032, 8));
+}
+
+/* CELL, forty: a canister on the back of the housing with a hose to it. */
+function buildCellPack(g) {
+  const R = 0.030;
+  strut(g, [-0.070, -0.014, 0], [-0.020, -0.014, 0], roundRect(R, R, R * 0.74, 4.4, 22));
+  for (const dx of [-0.074, -0.016]) {
+    strut(g, [dx, -0.014, 0], [dx + Math.sign(dx + 0.045) * 0.004, -0.014, 0],
+      roundRect(R * 0.96, R * 0.96, R * 0.72, 4.4, 20));
+  }
+  // Hose, in a sag, from the canister to the housing.
+  const hose = [];
+  for (let i = 0; i <= 6; i++) {
+    const t = i / 6;
+    hose.push([-0.020 + t * 0.026, -0.014 - Math.sin(t * PI) * 0.016, R * 0.62]);
+  }
+  attStrap(g, hose, 0.007, 0.0060);
+}
+
+/* CELL, quick: a snap latch and a pull ring on the cell's own face. */
+function buildCellLatch(g) {
+  hardBox(g, 0, -0.030, 0.020, 0.016, 0.006, 0.0040);
+  const bow = [];
+  for (let i = 0; i <= 7; i++) { const a = PI * (i / 7); bow.push([-Math.cos(a) * 0.012, -0.044 - Math.sin(a) * 0.010]); }
+  guardBow(g, bow, 0.0022, 0.0022, 0.0048, 0.020);
+}
+
 /* ---------------- engine hook ---------------- */
 
 /* One geometry per material an attachment needs. Most are a body and
@@ -522,9 +761,32 @@ const ATT_BUILD = {
   rangefinder: { body: buildRangefinder, glass: buildRangefinderGlass, glassMat: 'glassR', mat: 'poly', bound: 0.13 },
   scope7x: { body: buildScope7x, glass: buildScope7xGlass, glassMat: 'lens',
     reticle: buildScope7xReticle, mat: 'black', bound: 0.27 },
-  fastmag: { perHost: true, body: (g, o) => buildFastMag(g, o), mat: 'steel', bound: 0.06 },
-  extmag: { perHost: true, body: buildExtMag, mat: 'black', bound: 0.09 },
-  drummag: { body: buildDrumMag, mat: 'black', bound: 0.12 },
+  /* The three magazine slots dispatch on what the gun FEEDS FROM, not on
+     how long it is. Everything below `box` is a weapon with no magazine
+     well at all, which is why an extended magazine on the Model 5 was a
+     box hanging in mid-air bolted to nothing. */
+  fastmag: { perHost: true, mat: 'steel', bound: 0.07, body: (g, o) => {
+    if (o.feed === 'cylinder') return buildMoonPouch(g, o);
+    if (o.feed === 'break') return buildShellCaddy(g, o);
+    if (o.feed === 'clip') return buildSpareClip(g, o);
+    if (o.feed === 'belt') return buildBeltTab(g, o);
+    if (o.feed === 'cell') return buildCellLatch(g, o);
+    return buildFastMag(g, o);
+  } },
+  extmag: { perHost: true, mat: 'black', bound: 0.10, body: (g, o) => {
+    if (o.feed === 'cylinder') return buildCartridgeSlide(g, o);
+    if (o.feed === 'break') return buildShellSaddle(g, o);
+    if (o.feed === 'belt') return buildLongBelt(g, o);
+    if (o.feed === 'cell') return buildCellTwin(g, o);
+    return buildExtMag(g, o);
+  } },
+  drummag: { perHost: true, mat: 'black', bound: 0.14, body: (g, o) => {
+    if (o.feed === 'cylinder') return buildCanister(g, o);
+    if (o.feed === 'break') return buildBandolier(g, o);
+    if (o.feed === 'belt') return buildBeltDrum(g, o);
+    if (o.feed === 'cell') return buildCellPack(g, o);
+    return buildDrumMag(g, o);
+  } },
 };
 
 /* Spawn one attachment as a small group. `tint` paints every piece at
@@ -541,9 +803,18 @@ Engine.prototype.gunPart = function (id, opts = {}) {
    * single shared model and the same cache key they always had. */
   const host = opts.host || 'pistol';
   const bore = opts.bore || 0.0046;
+  /* What the weapon feeds from, which is a different question from how
+     long it is. `host` decides whether a long barrel is a pistol's or a
+     rifle's; `feed` decides whether the magazine slot is a magazine at
+     all. A Model 5 is host 'pistol' and feed 'cylinder'. */
+  const feed = opts.feed || 'box';
   const varies = !!D.perHost;
-  const key = 'att:' + id + (varies ? ':' + host + ':' + bore.toFixed(4) : '');
-  const build = { host, bore };
+  const extra = opts.dims || {};
+  const key = 'att:' + id + (varies
+    ? ':' + host + ':' + feed + ':' + bore.toFixed(4)
+      + (Object.keys(extra).length ? ':' + Object.keys(extra).sort().map((k) => k + extra[k]).join(',') : '')
+    : '');
+  const build = Object.assign({ host, bore, feed }, extra);
   const parts = armCache(this, key, () => {
     const out = { body: new Geometry() };
     D.body(out.body, build);

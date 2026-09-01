@@ -1098,7 +1098,10 @@ function buildZombieBodyGeometry(skeleton, opts = {}) {
        hinge to hold the volume. A ball at the joint is what keeps an arm
        an arm through its whole range. */
     buildJoint(g, b, build.arm[1] * 1.04);
-    buildHand(g, side, c, segments);
+    /* Hooked. A dead hand is pulled into a claw by its own tendons, and
+       a claw is also what reaching through a window looks like -- the
+       open paddle a living hand gets would read as waving. */
+    buildHand(g, side, c, segments, 0.62);
 
     g.part = sideName === 'L' ? PART.LEG_L : PART.LEG_R;
     skeleton.bones[skeleton.index('upperLeg' + sideName)].bindMatrix.getTranslation(a);

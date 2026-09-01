@@ -48,6 +48,82 @@ const R = path.join(__dirname, '..', '..') + '/';
       walk(root);
       return seen;
     };
+    /* Nothing may hang in the air.
+     *
+     * "Make sure the animations are good and nothing's hovering in the
+     *  air. No mags are sideways."
+     *
+     * Measured, not looked at: for every gun and every part it will take,
+     * how far is the NEAREST piece of the weapon from the nearest piece of
+     * the attachment. A part bolted to a gun touches it. Three faults came
+     * out of this the first time it was run -- every muzzle device on both
+     * pistols and the Thompson screwed to a point in front of the barrel,
+     * and a claw hammer wearing a magazine. */
+    const gunPts = (v, skip) => {
+      const root = v.kind === 'single' ? v.actor : v.root;
+      const pts = [];
+      const walk = (a, local, into, bare) => {
+        if (a.mesh && (bare || !skip.has(a))) {
+          const geo = B.game.geometryOf(a.mesh);
+          if (geo && geo.positions) {
+            const q = geo.positions, m = local ? local.e : null;
+            for (let i = 0; i < q.length; i += 27) {
+              let x = q[i], y = q[i+1], z = q[i+2];
+              if (m) {
+                const wx = m[0]*x + m[4]*y + m[8]*z + m[12];
+                const wy = m[1]*x + m[5]*y + m[9]*z + m[13];
+                const wz = m[2]*x + m[6]*y + m[10]*z + m[14];
+                x = wx; y = wy; z = wz;
+              }
+              into.push(x, y, z);
+            }
+          }
+        }
+        for (const c of (a.children || [])) {
+          const cm = new LegendEngine.Mat4();
+          cm.compose(c._position, c._rotation, c.scale);
+          if (local) { const t = new LegendEngine.Mat4(); t.mulMatrices(local, cm); walk(c, t, into, bare); }
+          else walk(c, cm, into, bare);
+        }
+      };
+      walk(root, null, pts, false);
+      return { pts, walk };
+    };
+    out.floating = [];
+    for (const g of GUNS) {
+      const v = P.view[g];
+      if (!v || !v.att) continue;
+      const skip = new Set();
+      if (v.arms) for (const q of v.arms.parts) skip.add(q);
+      for (const arr of Object.values(v.att)) for (const q of arr) skip.add(q);
+      if (v.prop) for (const q of v.prop.parts) skip.add(q);
+      const { pts, walk } = gunPts(v, skip);
+      if (!pts.length) continue;
+      const near = (x, y, z) => {
+        let best = 1e9;
+        for (let i = 0; i < pts.length; i += 3) {
+          const dx = pts[i]-x, dy = pts[i+1]-y, dz = pts[i+2]-z;
+          const d = dx*dx + dy*dy + dz*dz;
+          if (d < best) best = d;
+        }
+        return Math.sqrt(best);
+      };
+      for (const [name, arr] of Object.entries(v.att)) {
+        if (!arr.length || (A.parts[name].bans || []).includes(g)) continue;
+        const ap = [];
+        const m0 = new LegendEngine.Mat4();
+        m0.compose(arr[0]._position, arr[0]._rotation, arr[0].scale);
+        walk(arr[0], m0, ap, true);
+        if (!ap.length) continue;
+        let gap = 1e9;
+        for (let i = 0; i < ap.length; i += 3) {
+          const d = near(ap[i], ap[i+1], ap[i+2]);
+          if (d < gap) gap = d;
+        }
+        if (gap > 0.030) out.floating.push(g + '/' + name + ' ' + Math.round(gap * 1000) + ' mm');
+      }
+    }
+
     for (const g of GUNS) {
       const parts = allowed[g];
       const mags = parts.filter((k) => A.parts[k].slot === 'mag');
@@ -112,6 +188,8 @@ const R = path.join(__dirname, '..', '..') + '/';
   const kept = r.doubles.filter((d) => d.why === 'gun keeps its own magazine too');
   check('a magazine that replaces one takes the old one away', kept.length === 0,
     kept.map((d) => `${d.g}/${d.m}: ${d.ownStillVisible} of ${d.of} still visible`).join('\n       '));
+  check('no attachment hangs in the air beside its gun',
+    (r.floating || []).length === 0, (r.floating || []).slice(0, 6).join(', '));
   check('nothing threw', errs.length === 0, errs.slice(0, 4).join(' | '));
   console.log('');
   console.log(`${passed} passed, ${failed} failed`);
