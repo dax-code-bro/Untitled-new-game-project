@@ -981,7 +981,16 @@ function makePistol1911(opts = {}) {
    so metalness has to be 1 and roughness low. Painting a dielectric grey is
    the usual mistake and it reads as plastic every time. */
 const PISTOL_MATERIALS = {
-  steel: { color: 0xdadee2, texture: 'metal', roughness: 0.24, metalness: 1 },
+  /* Satin, not chrome.
+
+     0xdadee2 at roughness 0.24 is a mirror the colour of a mirror, and in
+     a room with ceiling lamps in it the slide came out a featureless white
+     shape with no edges, no flats and no slide serrations in it -- a 1911
+     that reads as a white blob is most of "the guns look wrong". It is a
+     bright pistol on purpose, so the reflectance only comes down a little;
+     what changes is the roughness, so the highlight spreads across the
+     form instead of taking the whole side of it at once. */
+  steel: { color: 0xc2c8ce, texture: 'metal', roughness: 0.34, metalness: 1 },
   grip: { color: 0x1d3f87, texture: 'smooth', roughness: 0.52, metalness: 0 },
   // Engraving on a polished flat only reads if it scatters where the steel
   // mirrors, so the mark is a rough near-black dielectric, not dark metal.

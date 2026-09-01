@@ -4884,24 +4884,29 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
       const u = 1 - P.reloading / spec.reload;
       const back = u < 0.22 ? u / 0.22 : (u < 0.80 ? 1 : 1 - (u - 0.80) / 0.20);
       v.bolt.setPosition([R[0] + T[0] * back, R[1] + T[1] * back, R[2] + T[2] * back]);
-      const inClip = u > 0.28 && u < 0.74;
-      v.clip.visible = inClip;
-      if (inClip) {
-        // The clip comes down into the open action and the rounds are
-        // stripped off it, so it travels and then leaves.
-        const t = Math.min(1, (u - 0.28) / 0.28);
-        v.clip.setPosition([v.clipRest[0], v.clipRest[1] - 0.040 * t, v.clipRest[2]]);
-      }
-      /* A stage counter, and the fourth place this was a boolean. Set at
-         30% and cleared at 76% means the opening test passes again on the
-         very next frame, so the clip seats once a frame for the last
-         quarter of the reload. The reload test in engine/test/map.test.js
-         is what found these two; the other two were found in play. */
-      if (P.clipStage < 1 && u > 0.30) { P.clipStage = 1; sfx.clipIn(); }
-      if (P.clipStage < 2 && u > 0.76) { P.clipStage = 2; sfx.boltHome(); }
+      /* Where the clip IS is not decided here any more.
+       *
+       * There were two stripper clips: this one, which appeared at the
+       * guide and was pressed down by nothing, and a second one built as
+       * a carried prop that the hand brought up and dropped at 30%. So
+       * the player saw a clip fly up, vanish, and a different clip push
+       * itself into the rifle with no hand near it -- the invisible
+       * reload again, in the half of it I had not looked at. The carried
+       * prop IS this actor now (see reloadProp), it travels the whole way
+       * on one path, and the support hand is placed from it every frame.
+       *
+       * A stage counter, and the fourth place this was a boolean. Set at
+       * 30% and cleared at 76% means the opening test passes again on the
+       * very next frame, so the clip seats once a frame for the last
+       * quarter of the reload. The reload test in engine/test/map.test.js
+       * is what found these two; the other two were found in play. */
+      if (P.clipStage < 1 && u > 0.42) { P.clipStage = 1; sfx.clipIn(); }
+      if (P.clipStage < 2 && u > 0.82) { P.clipStage = 2; sfx.boltHome(); }
     } else {
       v.bolt.setPosition(R);
       v.clip.visible = false;
+      if (v.clipRest) v.clip.setPosition(v.clipRest);
+      v.clip.setRotation([0, 0, 0]);
       P.clipStage = 0;
     }
   }
@@ -5147,12 +5152,30 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
           propT = sub;
           show = true;
         } else if (kind === 'clip') {
-          /* Into the stripper guide on top of the action, standing up,
-             and the empty strip is flicked clear at the end. */
-          to = [0.012, bore + 0.030, 0];
-          from = FETCH(to, -0.075);
-          rot = [0, 0, 0]; rot0 = [22, -30, 16];
-          show = u2 < 0.93;
+          /* The whole of it on one path: up out of the pouch, into the
+             stripper guide on top of the open action, PRESSED DOWN so the
+             rounds strip off it into the magazine, then flicked clear.
+             Three legs rather than one, because a clip that arrives and
+             stops is a clip nobody loaded. The hand is placed from
+             wherever this ends up, so it is on the clip for all three --
+             the press included, which is the leg that used to happen by
+             itself. */
+          const seat = v.clipRest || [0.012, bore + 0.030, 0];
+          const fetch = FETCH(seat, -0.075, -0.150);
+          const leg = (a2, b2) => Math.max(0, Math.min(1, (u2 - a2) / (b2 - a2)));
+          const eIn = leg(0, 0.42), ePress = leg(0.42, 0.76), eOut = leg(0.80, 1);
+          const sIn = eIn * eIn * (3 - 2 * eIn);
+          const sPr = ePress * ePress * (3 - 2 * ePress);
+          const cx = fetch[0] + (seat[0] - fetch[0]) * sIn;
+          const cy2 = fetch[1] + (seat[1] - fetch[1]) * sIn - 0.042 * sPr;
+          const cz = fetch[2] + (seat[2] - fetch[2]) * sIn;
+          // Thrown off to the support side as it leaves.
+          to = [cx - 0.010 * eOut, cy2 + 0.055 * eOut, cz - 0.090 * eOut];
+          from = to;
+          const tilt = 1 - sIn;
+          rot = [22 * tilt, -30 * tilt, 16 * tilt + 40 * eOut];
+          rot0 = rot;
+          show = eOut < 0.92;
         } else if (kind === 'belt') {
           /* Into the feed tray, from the left, laid flat.
 
@@ -5223,7 +5246,7 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
          * near its base, a clip by its spine, a pair of shells at their
          * heads, a cell by its body. */
         const hold = kind === 'break' ? [-0.030, -0.008, -0.010]
-          : kind === 'clip' ? [-0.006, -0.048, -0.004]
+          : kind === 'clip' ? [-0.004, 0.050, -0.008]
             : kind === 'revolver' ? [-0.010, -0.030, -0.012]
               : kind === 'belt' ? [-0.010, -0.014, -0.030]
                 : [0.000, -0.052, -0.006];
@@ -5721,7 +5744,7 @@ function FETCH(to, dy, dz) {
    over, and leaves nothing empty behind it. */
 const RELOAD_WINDOW = {
   mag: [0.14, 0.63],
-  clip: [0.08, 0.30],
+  clip: [0.10, 0.86],
   cell: [0.16, 0.63],
   belt: [0.34, 0.68],
   break: [0.22, 0.82],
@@ -5755,6 +5778,14 @@ function reloadProp(game, P, v, spec, kind) {
       w: 0.026, d: 0.021, len: 0.105, curve: 0, witness: 0, round: AMMO.para9,
     }, A.mag || {}), bodyMaterial: A.magMaterial });
   } else if (kind === 'clip') {
+    /* The weapon already has one. Building a second meant two clips on
+       screen a fifth of a second apart, and neither of them held for the
+       part of the reload that matters. */
+    if (v.clip) {
+      P.props[id] = { root: v.clip, parts: [v.clip] };
+      v.prop = P.props[id];
+      return P.props[id];
+    }
     made = game.stripperClip({ physics: false, clip: Object.assign({
       count: 10, pitch: 0.0098, round: AMMO.mau763,
     }, A.clip || {}) });

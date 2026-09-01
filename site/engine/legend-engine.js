@@ -14009,7 +14009,16 @@ function makePistol1911(opts = {}) {
    so metalness has to be 1 and roughness low. Painting a dielectric grey is
    the usual mistake and it reads as plastic every time. */
 const PISTOL_MATERIALS = {
-  steel: { color: 0xdadee2, texture: 'metal', roughness: 0.24, metalness: 1 },
+  /* Satin, not chrome.
+
+     0xdadee2 at roughness 0.24 is a mirror the colour of a mirror, and in
+     a room with ceiling lamps in it the slide came out a featureless white
+     shape with no edges, no flats and no slide serrations in it -- a 1911
+     that reads as a white blob is most of "the guns look wrong". It is a
+     bright pistol on purpose, so the reflectance only comes down a little;
+     what changes is the roughness, so the highlight spreads across the
+     form instead of taking the whole side of it at once. */
+  steel: { color: 0xc2c8ce, texture: 'metal', roughness: 0.34, metalness: 1 },
   grip: { color: 0x1d3f87, texture: 'smooth', roughness: 0.52, metalness: 0 },
   // Engraving on a polished flat only reads if it scatters where the steel
   // mirrors, so the mark is a rough near-black dielectric, not dark metal.
@@ -16603,7 +16612,13 @@ const ARM_MAT = {
      flat black indoors with the lamps behind the player: there was nothing
      for them to be dark *with*. Oxide-blued steel sits nearer half of bare
      steel, tinted cold. */
-  blued: { color: 0x596470, texture: 'metal', roughness: 0.36, metalness: 1 },
+  /* Rougher, twice now for opposite reasons. Too dark and it was a hole;
+     too smooth and the MG 42's shroud and the MP5's receiver came out as
+     white shapes with no form in them, because a mirror pointed at a
+     ceiling lamp is a lamp. The reflectance is right -- oxide-blued steel
+     really is about half of bare steel, tinted cold -- so what moves is
+     how tightly it reflects. Gun blue is satin. */
+  blued: { color: 0x596470, texture: 'metal', roughness: 0.45, metalness: 1 },
   // Machined bright — the Paralyzer and the Model 5 are instruments.
   /* Machined bright — the Paralyzer and the Model 5 are instruments.
 
@@ -16612,9 +16627,9 @@ const ARM_MAT = {
      reading as polished steel and started reading as a white blob with no
      shape in it. Rougher as well, so the highlight spreads over the form
      instead of blowing out one band of it. */
-  bright: { color: 0x848c95, texture: 'metal', roughness: 0.38, metalness: 1 },
+  bright: { color: 0x848c95, texture: 'metal', roughness: 0.45, metalness: 1 },
   // A greyer, rougher steel for things that get hit.
-  grey: { color: 0x6b7076, texture: 'metal', roughness: 0.48, metalness: 1 },
+  grey: { color: 0x6b7076, texture: 'metal', roughness: 0.53, metalness: 1 },
   poly: { color: 0x1e2226, texture: 'smooth', roughness: 0.72, metalness: 0 },
   rubber: { color: 0x141618, texture: 'smooth', roughness: 0.86, metalness: 0 },
   walnut: { color: 0x5c4028, texture: 'wood', roughness: 0.64, metalness: 0, uvScale: 18 },
