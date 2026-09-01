@@ -3217,7 +3217,14 @@ function buildMap(game, S) {
     const edge = [];
     for (let k = 0; k < 8; k++) {
       const a = (k / 8) * Math.PI * 2;
-      const w2 = game.box({ at: [H.x + Math.cos(a) * r * 0.86, SD.y1 + 0.15, H.z + Math.sin(a) * r * 0.86],
+      /* Standing proud of the deck, not flush with it. At SD.y1 + 0.15
+         a 300 mm block tops out at exactly SD.y1 + 0.30, which is the
+         roof's own top face -- so the two pieces of this ring that
+         happen to sit square to the axes shared a plane with the deck,
+         both facing up, on a surface the player walks on. They are torn
+         slab round a hole punched by a meteorite; proud is also what
+         they should look like. */
+      const w2 = game.box({ at: [H.x + Math.cos(a) * r * 0.86, SD.y1 + 0.19, H.z + Math.sin(a) * r * 0.86],
         size: [0.7, 0.3, 0.5], material: MAT.wallDark, physics: false });
       w2.setRotation([0, -a * 57.2958, 0]);
       w2.visible = false;
@@ -3474,10 +3481,23 @@ function buildMap(game, S) {
      * how it would actually be built, and its end cap is then inside
      * something rather than level with its face. */
     const IN = 0.06;
+    /* Front and back run the full width; the sides run BETWEEN them,
+       from one course's inner face to the other's. That is how a timber
+       course is actually framed, and it is also the only arrangement
+       where no two of them present a face on the same plane pointing the
+       same way: the side courses' outer faces land on M.x0 and M.x1
+       along with the front and back ones, but their z ranges only touch
+       there, they do not overlap, so there is no shared area to fight
+       over.
+       
+       My first attempt inset the sides by 60 mm instead, which left the
+       ends of the front and back courses sharing a plane with them and
+       showed up as two more pairs at x = plus and minus 7 -- ceiling,
+       and visible from underneath. */
     run(M.x0, SLOT.x0 - 0.1, M.z0, M.z0 + DP);        // back wall, west of the slot
     run(M.x0, M.x1, M.z1 - DP, M.z1);                 // front wall
-    run(M.x0, M.x0 + DP, M.z0 + IN, M.z1 - IN);       // west wall, into both courses
-    run(M.x1 - DP, M.x1, SLOT.z1, M.z1 - IN);         // east wall, south of the slot
+    run(M.x0, M.x0 + DP, M.z0 + DP, M.z1 - DP);       // west wall, between the two
+    run(M.x1 - DP, M.x1, SLOT.z1, M.z1 - DP);         // east wall, south of the slot
     // Joists across the short way, clear of the stair slot.
     for (let x = M.x0 + 2.2; x < SLOT.x0 - 0.4; x += 2.2) {
       slab(x - 0.10, x + 0.10, CY - 0.26, CY + 0.10, M.z0 + IN, M.z1 - IN, beam);
