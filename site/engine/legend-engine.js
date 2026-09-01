@@ -19678,8 +19678,18 @@ function buildViewHand(g, rawAt, side, opts = {}) {
        three joints -- the third degree of freedom the search never had
        -- costs about a dozen more evaluations against the three hundred
        the scan already spends, and it is a proper local search rather
-       than a sixth and seventh guess at what shapes hands make. */
+       than a sixth and seventh guess at what shapes hands make.
+
+       With a floor under the tip. `fit` is the whole finger's error, so
+       a candidate can win it by pulling both knuckles in and letting the
+       fingertip drift -- and it did: the polish took the MG 42's support
+       knuckles from 24 mm to 5 and, on one configuration of the Mauser,
+       pushed two tips out to 15 and 14. Whole-finger contact is the goal
+       and the tip is the constraint, not the other way round, so a step
+       that costs the tip more than 4 mm against the shape it started
+       from is refused however good its total looks. */
     if (best && best.bends) {
+      const tipFloor = best.err + 0.004;
       for (let pass = 0; pass < 2; pass++) {
         const step = pass === 0 ? 0.22 : 0.09;
         for (let j = 0; j < 3; j++) {
@@ -19688,7 +19698,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
             b[j] *= d;
             const sol = solveCurlOne(root, dir0, b, lens, r0, pt, cl, lim);
             if (sol.reach != null && sol.reach < reach) reach = sol.reach;
-            if (sol.fit < best.fit) { sol.bends = b; best = sol; }
+            if (sol.fit < best.fit && sol.err <= tipFloor) { sol.bends = b; best = sol; }
           }
         }
       }

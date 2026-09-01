@@ -3165,8 +3165,17 @@ function buildMap(game, S) {
 
   // The wing: three outside walls, its own window, and a shared partition.
   wallZ(SD.x0 - W, SD.x0, SD.z0, SD.z1, SD.y1, [[-1.6, 0.0]]);
-  wallX(SD.z0 - W, SD.z0, SD.x0 - W, SD.x1, SD.y1);
-  wallX(SD.z1, SD.z1 + W, SD.x0 - W, SD.x1, SD.y1);
+  /* The wing's two long walls run 40 mm past SD.x1, into the solid of the
+     connector wall that starts there. Otherwise they end on exactly the
+     plane the wing's roof ends on, both faces pointing the same way out
+     of the building -- which is a genuine fight, and it was five of the
+     pairs the sweep reports. The alternative, pushing the ROOF out
+     instead, was tried and is worse: it slides the wing's roof over the
+     main one and gives the two of them a shared ceiling underside, which
+     is the same fault somewhere less convenient. Move the thing that
+     ends up buried. */
+  wallX(SD.z0 - W, SD.z0, SD.x0 - W, SD.x1 + 0.04, SD.y1);
+  wallX(SD.z1, SD.z1 + W, SD.x0 - W, SD.x1 + 0.04, SD.y1);
   slab(SD.x1, M.x0 - W, 0, SD.y1, SD.z0 - W, D1.z0, MAT.wall);
   slab(SD.x1, M.x0 - W, 0, SD.y1, D1.z1, SD.z1 + W, MAT.wall);
 
@@ -3190,18 +3199,19 @@ function buildMap(game, S) {
        a roof ending flush with the outer face of its walls puts the roof's
        edge and the wall's face on one plane, both pointing outward, and
        that shimmers along the whole top of the wing as you walk past. */
-    /* The lip was applied on three sides and not on the fourth. SD.x1 is
-       where the wing meets the main room, and the connector wall starts
-       at exactly that x -- so the roof's edge and the wall's face shared
-       a plane along the whole join, which is the same shimmer this lip
-       exists to prevent, on the one edge it was left off. The wall is
-       solid from SD.x1 inward, so four centimetres of roof inside it is
-       buried rather than showing. */
+    /* The lip goes on the three OUTSIDE edges and deliberately not on
+       SD.x1, which is where the wing meets the main room. Pushing it out
+       there was tried: it slides the wing's roof over the main room's,
+       and since both are ceilings hung at the same height it hands them
+       a shared underside plane, both facing down, which is a worse fault
+       than the one it cures. The wing's long walls carry the offset at
+       that edge instead -- they end up buried in the connector wall,
+       which a roof does not. */
     const OH = 0.04;
-    slab(SD.x0 - W - OH, SD.x1 + OH, RY, SD.y1 + 0.3, SD.z0 - W - OH, H.z - r, MAT.wallDark);
-    slab(SD.x0 - W - OH, SD.x1 + OH, RY, SD.y1 + 0.3, H.z + r, SD.z1 + W + OH, MAT.wallDark);
+    slab(SD.x0 - W - OH, SD.x1, RY, SD.y1 + 0.3, SD.z0 - W - OH, H.z - r, MAT.wallDark);
+    slab(SD.x0 - W - OH, SD.x1, RY, SD.y1 + 0.3, H.z + r, SD.z1 + W + OH, MAT.wallDark);
     slab(SD.x0 - W - OH, H.x - r, RY, SD.y1 + 0.3, H.z - r, H.z + r, MAT.wallDark);
-    slab(H.x + r, SD.x1 + OH, RY, SD.y1 + 0.3, H.z - r, H.z + r, MAT.wallDark);
+    slab(H.x + r, SD.x1, RY, SD.y1 + 0.3, H.z - r, H.z + r, MAT.wallDark);
     // The bit that is still there until it is not.
     const patch = slab(H.x - r, H.x + r, RY, SD.y1 + 0.3, H.z - r, H.z + r, MAT.wallDark);
     const edge = [];
