@@ -1131,6 +1131,19 @@ class Geometry {
      this carries no colour buffer at all and costs nothing, and one that
      does gets a white shirt, blue jeans and brown boots out of a single
      mesh with a single material. Call with no arguments for white. */
+  /* A per-vertex tint, in the SAME hex the materials use — and, unlike a
+     material colour, NOT converted from sRGB to linear on the way in.
+     
+     That is an inconsistency and it is deliberate to leave alone. Material
+     colours go through parseColor, which applies the sRGB curve; these do
+     not, so a garment painted 0x3f4a53 arrives at the shader as 0.25
+     rather than as 0.05 — about four times brighter than the same hex on a
+     material. Every outfit palette in the zombie builder was authored by
+     eye against that, so "correcting" the conversion here without
+     re-tuning all five outfits would darken every dressed body in the game
+     by a factor of four in one commit, and it would look like a lighting
+     bug rather than a colour-space change. If it is ever fixed, the
+     palettes have to move with it. */
   setColor(r, g, b) {
     if (!this.colors) {
       this.colors = [];
