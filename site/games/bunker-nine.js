@@ -413,7 +413,7 @@ const WEAPONS = {
     name: 'MG 42', slotName: 'MG 42',
     dmg: 46, headMul: 1.9, mag: 50, reserve: 350, refire: 0.05,
     reload: 4.4, auto: true, pellets: 1, spread: 1.9,
-    kick: 1.5, sfx: 'shotMG42', reloadKind: 'cell',
+    kick: 1.5, sfx: 'shotMG42', reloadKind: 'belt',
     sightH: 0.1235, sightFov: 0.86, adsTime: 0.34, adsSpread: 0.30,
     recoil: { up: 0.55, side: 0.42, climb: 0.16, recover: 9, back: 0.010, roll: 0.004, impulse: 5 },
     moveMul: 0.76, muzzleVel: 755,
@@ -592,7 +592,7 @@ function writeText(game, text, at, right, up, opts = {}) {
    Every one is built from the perk's own colour, so the light it throws on
    the floor tells you which one you are walking toward before you can read
    it. */
-function buildPerkMachine(game, S, id, def, at) {
+function buildPerkMachine(game, S, id, def, at, yaw = 0) {
   const c = def.color;
   const steel = { color: 0x4a5058, texture: 'metal', roughness: 0.46, metalness: 0.7 };
   const shell = { color: 0x2c3138, texture: 'metal', roughness: 0.52, metalness: 0.55 };
@@ -602,94 +602,103 @@ function buildPerkMachine(game, S, id, def, at) {
   const glass = { color: 0x9fb4c4, texture: 'smooth', roughness: 0.06, metalness: 0,
     opacity: 0.24, transparent: true };
   const X = at[0], Y = at[1], Z = at[2];
+  /* Which way it faces.
+   *
+   * Every machine was built facing +Z whatever wall it stood against, so
+   * the one on the SOUTH wall had its front, its lettering, its window and
+   * its dispensing slot pressed into the concrete and its blank back to the
+   * room. Yaw is in quarter turns, and only quarter turns: a vending
+   * machine stands square to a wall or it is not against one.
+   *
+   * Everything below is written as an offset from the machine's own origin
+   * with +z out of its front, and put()/dim() turn that into the world. */
+  const q = ((Math.round(yaw / 90) % 4) + 4) % 4;
+  const cs = [1, 0, -1, 0][q], sn = [0, 1, 0, -1][q];
+  const put = (dx, dy, dz) => [X + dx * cs + dz * sn, Y + dy, Z - dx * sn + dz * cs];
+  const dim = (w, h, d) => (q % 2 ? [d, h, w] : [w, h, d]);
+  // The two axes a sign runs along, in world terms.
+  const RIGHT = [cs, 0, -sn], UP = [0, 1, 0];
   const parts = [];
-  const box = (pos, size, m, phys) => {
-    const a = game.box({ at: pos, size, material: m, static: !!phys, physics: phys !== false });
+  const box = (o, sz, m, phys) => {
+    const a = game.box({ at: put(o[0], o[1], o[2]), size: dim(sz[0], sz[1], sz[2]),
+      material: m, static: !!phys, physics: phys !== false });
     if (phys === false) parts.push(a);
     return a;
   };
   // Cabinet: the solid part, and the only part with collision on it.
-  const body = box([X, Y + 0.80, Z], [0.74, 1.60, 0.62], shell, true);
+  const body = box([0, 0.80, 0], [0.74, 1.60, 0.62], shell, true);
   // Shoulders and a sloped top, so it is not a fridge.
-  box([X, Y + 1.62, Z], [0.80, 0.06, 0.68], steel, false);
-  box([X, Y + 1.70, Z - 0.06], [0.80, 0.12, 0.50], steel, false);
+  box([0, 1.62, 0], [0.80, 0.06, 0.68], steel, false);
+  box([0, 1.70, -0.06], [0.80, 0.12, 0.50], steel, false);
   // Header sign, lit, with the name across it.
-  box([X, Y + 1.44, Z + 0.33], [0.70, 0.22, 0.034], lit, false);
-  for (const a of writeText(game, def.name.split(' ')[0], [X, Y + 1.44, Z + 0.355],
-    [1, 0, 0], [0, 1, 0], { px: 0.0135, material: { color: 0x07080a, texture: 'smooth', roughness: 0.8 } })) parts.push(a);
-  if (def.name.split(' ')[1]) {
-    box([X, Y + 1.22, Z + 0.33], [0.70, 0.18, 0.034], lit, false);
-    for (const a of writeText(game, def.name.split(' ')[1], [X, Y + 1.22, Z + 0.355],
-      [1, 0, 0], [0, 1, 0], { px: 0.0115, material: { color: 0x07080a, texture: 'smooth', roughness: 0.8 } })) parts.push(a);
+  const words = def.name.split(' ');
+  box([0, 1.44, 0.33], [0.70, 0.22, 0.034], lit, false);
+  for (const a of writeText(game, words[0], put(0, 1.44, 0.355), RIGHT, UP,
+    { px: 0.0135, material: { color: 0x07080a, texture: 'smooth', roughness: 0.8 } })) parts.push(a);
+  if (words[1]) {
+    box([0, 1.22, 0.33], [0.70, 0.18, 0.034], lit, false);
+    for (const a of writeText(game, words[1], put(0, 1.22, 0.355), RIGHT, UP,
+      { px: 0.0115, material: { color: 0x07080a, texture: 'smooth', roughness: 0.8 } })) parts.push(a);
   }
   /* The window, its frame, and what is behind it.
      Nothing here is under 26 mm in any axis. A pane of glass is 6 mm in
      life and reads as a flat card at that scale -- and the sweep's check
      for paper-thin geometry, which exists because a 2D card standing in the
      bunker is exactly the fault it was written for, is right to flag it. */
-  box([X, Y + 0.86, Z + 0.315], [0.56, 0.62, 0.032], glass, false);
-  for (const sx of [-1, 1]) box([X + sx * 0.30, Y + 0.86, Z + 0.315], [0.06, 0.68, 0.05], steel, false);
-  box([X, Y + 1.19, Z + 0.315], [0.66, 0.05, 0.05], steel, false);
-  box([X, Y + 0.53, Z + 0.315], [0.66, 0.05, 0.05], steel, false);
+  box([0, 0.86, 0.315], [0.56, 0.62, 0.032], glass, false);
+  for (const sx of [-1, 1]) box([sx * 0.30, 0.86, 0.315], [0.06, 0.68, 0.05], steel, false);
+  box([0, 1.19, 0.315], [0.66, 0.05, 0.05], steel, false);
+  box([0, 0.53, 0.315], [0.66, 0.05, 0.05], steel, false);
   /* Two shelves of bottles standing in the dark behind the glass.
-   *
-   * Stock, not hero models: three a shelf and three pieces each rather than
-   * the full seven-piece bottle. Ten detailed bottles per machine is
-   * seventy actors apiece and two hundred and eighty across the four, all
-   * of them behind a pane of glass in a dark cabinet where the difference
-   * between a crimped cap and a cylinder cannot be seen. The one that comes
-   * out of the slot and into your hand is the detailed one. */
+     Stock, not hero models: three a shelf and three pieces each rather than
+     the full seven-piece bottle. Ten detailed bottles per machine is
+     seventy actors apiece and two hundred and eighty across the four, all
+     of them behind a pane of glass in a dark cabinet where the difference
+     between a crimped cap and a cylinder cannot be seen. The one that comes
+     out of the slot and into your hand is the detailed one. */
   for (let r = 0; r < 2; r++) {
-    box([X, Y + 0.62 + r * 0.30, Z + 0.16], [0.54, 0.032, 0.26], dark, false);
+    box([0, 0.62 + r * 0.30, 0.16], [0.54, 0.032, 0.26], dark, false);
     for (let k = -1; k <= 1; k++) {
-      const bx2 = X + k * 0.155, by2 = Y + 0.70 + r * 0.30;
-      box([bx2, by2, Z + 0.16], [0.048, 0.075, 0.048],
+      const bx2 = k * 0.155, by2 = 0.70 + r * 0.30;
+      box([bx2, by2, 0.16], [0.048, 0.075, 0.048],
         { color: 0x2a3a30, texture: 'smooth', roughness: 0.1, opacity: 0.6, transparent: true }, false);
-      box([bx2, by2 + 0.004, Z + 0.16], [0.052, 0.030, 0.052],
+      box([bx2, by2 + 0.004, 0.16], [0.052, 0.030, 0.052],
         { color: def.color, texture: 'fabric', roughness: 0.8 }, false);
-      box([bx2, by2 + 0.052, Z + 0.16], [0.024, 0.030, 0.024],
+      box([bx2, by2 + 0.052, 0.16], [0.024, 0.030, 0.024],
         { color: 0xb9a15c, texture: 'metal', roughness: 0.35, metalness: 0.9 }, false);
     }
   }
   // Dispensing slot, with a flap that swings when one comes out.
-  box([X, Y + 0.26, Z + 0.315], [0.34, 0.035, 0.05], steel, false);
-  const flap = game.box({ at: [X, Y + 0.20, Z + 0.325], size: [0.32, 0.13, 0.026],
+  box([0, 0.26, 0.315], [0.34, 0.035, 0.05], steel, false);
+  const flap = game.box({ at: put(0, 0.20, 0.325), size: dim(0.32, 0.13, 0.026),
     material: dark, physics: false });
   parts.push(flap);
-  box([X, Y + 0.135, Z + 0.20], [0.30, 0.032, 0.24], dark, false);
+  box([0, 0.135, 0.20], [0.30, 0.032, 0.24], dark, false);
   // Coin plate, a slot in it, and a vent down the side.
-  box([X + 0.26, Y + 0.42, Z + 0.315], [0.16, 0.20, 0.032], steel, false);
-  box([X + 0.26, Y + 0.46, Z + 0.328], [0.015, 0.06, 0.01], dark, false);
-  /* The vent, as a louvre rather than six floating slivers.
-   *
-   * It was six boxes 14 mm thick and 300 mm long -- a stack of cards, and
-   * the sweep was right to flag them, because that is exactly the shape
-   * that reads as a 2D glitch when you walk past it. A recessed panel with
-   * ribs standing proud of it is what a vent in a steel cabinet looks like,
-   * and every piece of it has thickness. */
-  box([X - 0.305, Y + 0.40, Z + 0.20], [0.03, 0.26, 0.34], dark, false);
+  box([0.26, 0.42, 0.315], [0.16, 0.20, 0.032], steel, false);
+  box([0.26, 0.46, 0.328], [0.015, 0.06, 0.01], dark, false);
+  /* The vent, as a louvre rather than six floating slivers -- six boxes
+     14 mm thick and 300 mm long is a stack of cards, and that is exactly
+     the shape that reads as a 2D glitch when you walk past it. */
+  box([-0.305, 0.40, 0.20], [0.03, 0.26, 0.34], dark, false);
   for (let k = 0; k < 5; k++) {
-    box([X - 0.318, Y + 0.315 + k * 0.045, Z + 0.20], [0.026, 0.026, 0.30], steel, false);
+    box([-0.318, 0.315 + k * 0.045, 0.20], [0.026, 0.026, 0.30], steel, false);
   }
   // Feet, so it stands on the floor rather than growing out of it.
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
-    box([X + sx * 0.30, Y + 0.025, Z + sz * 0.24], [0.09, 0.05, 0.09], dark, false);
+    box([sx * 0.30, 0.025, sz * 0.24], [0.09, 0.05, 0.09], dark, false);
   }
-  /* A lit edge round the window rather than a lit panel across it.
-   *
-   * A full pane of emissive colour at the front covered the glass, the
-   * shelves and every bottle behind it -- the machine had a cabinet with a
-   * window and you could not see into it, which is the one thing a vending
-   * machine's window is for. Four thin strips frame it instead, so the
-   * colour is still the first thing you see from across a dark room and the
-   * stock is still visible when you get to it. */
+  /* A lit edge round the window rather than a lit panel across it: a full
+     pane of emissive colour covered the glass, the shelves and every bottle
+     behind it, and seeing into it is what a window is for. */
   const strip = { color: 0x0a0a0c, texture: 'smooth', roughness: 0.3, emissive: c, emissiveStrength: 2.2 };
-  const glow = box([X, Y + 1.175, Z + 0.325], [0.58, 0.026, 0.022], strip, false);
-  box([X, Y + 0.545, Z + 0.325], [0.58, 0.026, 0.022], strip, false);
-  for (const sx of [-1, 1]) box([X + sx * 0.29, Y + 0.86, Z + 0.325], [0.026, 0.65, 0.022], strip, false);
-  const light = game.light({ at: [X, Y + 1.0, Z + 0.7], color: c, intensity: 7, radius: 3.4 });
-  return { id, def, at: [X, Y + 1.0, Z + 0.55], glow, body, parts, flap, light,
-    face: [X, Y + 0.30, Z + 0.42] };
+  const glow = box([0, 1.175, 0.325], [0.58, 0.026, 0.022], strip, false);
+  box([0, 0.545, 0.325], [0.58, 0.026, 0.022], strip, false);
+  for (const sx of [-1, 1]) box([sx * 0.29, 0.86, 0.325], [0.026, 0.65, 0.022], strip, false);
+  const lightAt = put(0, 1.0, 0.7);
+  const light = game.light({ at: lightAt, color: c, intensity: 7, radius: 3.4 });
+  return { id, def, at: put(0, 1.0, 0.55), glow, body, parts, flap, light,
+    face: put(0, 0.30, 0.42), yaw: q * 90 };
 }
 
 /* Buying one, which takes as long as drinking one.
@@ -1840,6 +1849,17 @@ function makeSfx(game) {
     boltHome() { t(200, 0.09, 'sawtooth', 0.07); setTimeout(() => { A.impact(0.42); t(760, 0.03, 'square', 0.08); }, 90); },
     clipIn() { t(1900, 0.02, 'square', 0.05);
       for (let i = 0; i < 3; i++) setTimeout(() => t(520 - i * 40, 0.03, 'triangle', 0.05), 70 + i * 55); },
+    /* The MG 42's own noises. A stamped top cover is a big thin sheet: it
+       comes up with a ringing creak and goes down like a car bonnet, and
+       the belt going into the tray is fifty brass links landing on steel,
+       not one click. */
+    coverUp() { t(420, 0.05, 'sawtooth', 0.06);
+      setTimeout(() => { t(1150, 0.09, 'triangle', 0.05); A.impact(0.22); }, 70); },
+    coverDown() { A.impact(0.72); t(240, 0.07, 'square', 0.11);
+      setTimeout(() => { t(1600, 0.03, 'square', 0.07); t(900, 0.05, 'triangle', 0.05); }, 55); },
+    beltIn() { for (let i = 0; i < 6; i++) {
+      setTimeout(() => t(1500 + Math.random() * 900, 0.018, 'square', 0.045), i * 34);
+    } setTimeout(() => A.impact(0.30), 170); },
     cellOut() { t(880, 0.05, 'triangle', 0.06); t(160, 0.10, 'sawtooth', 0.05); },
     cellIn() { A.impact(0.35); t(300, 0.06, 'square', 0.07);
       setTimeout(() => t(1240, 0.09, 'sine', 0.06), 80); },
@@ -3675,13 +3695,17 @@ function buildMap(game, S) {
   }
 
   /* ---------------- perks ---------------- */
+  /* Each with the way it faces, because a machine against the south wall
+     built facing north has its front in the concrete. Deflect was exactly
+     that: window, lettering and dispensing slot pressed into the wall,
+     blank back to the room. */
   const PERK_SPOTS = [
-    ['supersoldier', [2.2, R.y1, -6.2]],      // roof, by the stair head
-    ['adrenaline', [-14.9, 0, 3.6]],           // wing, past the generator
-    ['deflect', [6.1, 0, 5.7]],                // ground floor, front-right
-    ['shieldup', [-6.0, 0, -6.1]],             // ground floor, back-left
+    ['supersoldier', [2.2, R.y1, -6.2], 0],     // roof by the stair head, facing in
+    ['adrenaline', [-14.9, 0, 3.6], 90],        // wing past the generator, facing east
+    ['deflect', [6.1, 0, 5.7], 180],            // south wall, facing back into the room
+    ['shieldup', [-6.0, 0, -6.1], 0],           // north wall, facing in
   ];
-  S.perkStations = PERK_SPOTS.map(([id, at]) => buildPerkMachine(game, S, id, PERKS[id], at));
+  S.perkStations = PERK_SPOTS.map(([id, at, yaw]) => buildPerkMachine(game, S, id, PERKS[id], at, yaw));
 
   /* The shield bubble, hidden until raised. */
   S.shieldMesh = game.sphere({
@@ -3941,8 +3965,14 @@ function makeKillStreak(game, opts = {}) { return boltRifleGroup(game.killStreak
 
 function makeMG42(game, opts = {}) {
   const b = game.mg42(rackOpts(opts));
-  // The belt is the magazine as far as the reload is concerned.
-  return rackGroup(b, { cell: b.belt, cellParts: [b.belt], cellRest: b.beltRest, cellDrop: b.beltDrop });
+  /* Four moving parts, because this gun is reloaded and not swapped: the
+     cocking handle, the top cover, the belt hanging out of the feed and
+     the cover's hinge pin the lid turns about. */
+  return rackGroup(b, {
+    belt: b.belt, beltRest: b.beltRest, beltDrop: b.beltDrop,
+    cover: b.cover, coverPin: b.coverPin, coverOpen: b.coverOpen,
+    bolt: b.bolt, boltRest: b.boltRest, boltThrow: b.boltThrow,
+  });
 }
 
 function makeKnife(game, opts = {}) { return rackGroup(game.trenchKnife(rackOpts(opts))); }
@@ -3980,7 +4010,7 @@ function makePlayer(game, S, hud, sfx, voice) {
     swingT: 0, blocking: false, blockT: 0,
     gold: 0, goldAmmo: false,
     upgraded: {}, camoOff: {}, fitted: {},
-    cooldown: 0, reloading: 0, reloadStage: 0, breakStage: 0, cylStage: 0,
+    cooldown: 0, reloading: 0, reloadStage: 0, breakStage: 0, cylStage: 0, beltStage: 0,
     clipStage: 0, cellStage: 0, swayT: 0,
     // Three springs: muzzle rise, drive back along the bore, and twist.
     kickPitch: 0, kickVel: 0, kickBack: 0, backVel: 0, kickRoll: 0, rollVel: 0,
@@ -4584,7 +4614,7 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
      see the gun. It lifts to where the hands are working and rolls
      inboard so the breech faces the camera, then settles back. */
   const rl = P.reloading > 0 ? Math.sin(Math.min(1, 1 - P.reloading / spec.reload) * Math.PI) : 0;
-  const dip = -rl * 0.078;
+  const dip = -rl * 0.098;
   const drawIn = rl * 0.052;
   const rollIn = rl * 18;
 
@@ -4818,6 +4848,82 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
     }
   }
 
+  /* The MG 42, reloaded the way an MG 42 is reloaded.
+
+     "He needs to do how you would reload the real thing... clip in the
+      magazine, and then put the actual belt feeding in, just like how you
+      would reload the real thing, do the exact animation and cycle."
+
+     There is no magazine on this gun and there never was; what was there
+     was a magazine-shaped animation borrowed from the Arc Breaker's
+     battery, which is why it read as wrong even when it looked good. The
+     real cycle, in order, and the whole of it is on screen:
+
+       0.00 - 0.16  cock. The handle is dragged the length of its slot and
+                    let go; the bolt is held open, which it must be before
+                    the cover can take a belt.
+       0.14 - 0.30  the top cover comes up on its hinge, 104 degrees, up
+                    and over towards the muzzle.
+       0.26 - 0.40  the spent belt is thrown clear off the right lip.
+       0.34 - 0.68  a new belt is carried up in the left hand and LAID IN
+                    the tray, leading round against the cartridge stop.
+       0.68 - 0.82  the cover is slammed shut on it.
+       0.82 - 1.00  the handle is worked once more and the gun settles.
+
+     Each beat has a sound on a stage counter rather than a boolean, for
+     the reason every other stage counter in this file exists. */
+  if (spec.reloadKind === 'belt' && v.cover) {
+    if (P.reloading > 0) {
+      const u = 1 - P.reloading / spec.reload;
+      const seg = (a, b) => Math.max(0, Math.min(1, (u - a) / (b - a)));
+      const ease = (t) => t * t * (3 - 2 * t);
+      // Cocking handle: back hard, forward under spring. Twice.
+      const cock1 = seg(0.00, 0.09) * (1 - seg(0.09, 0.15));
+      const cock2 = seg(0.82, 0.89) * (1 - seg(0.89, 0.95));
+      const ct = Math.max(cock1, cock2);
+      if (v.bolt && v.boltThrow) {
+        const R = v.boltRest || [0, 0, 0], T = v.boltThrow;
+        v.bolt.setPosition([R[0] + T[0] * ct, R[1] + T[1] * ct, R[2] + T[2] * ct]);
+      }
+      /* The lid. Open is a full swing; shut is faster than open, because a
+         top cover is lifted and then dropped. */
+      const open = ease(seg(0.14, 0.30)) * (1 - Math.pow(seg(0.68, 0.80), 0.7));
+      v.cover.setRotation([0, 0, (v.coverOpen || -104) * open]);
+      /* The old belt leaves. It swings off the lip and falls away rather
+         than blinking out -- you can watch it go. */
+      if (v.belt) {
+        const goneT = ease(seg(0.26, 0.42));
+        const backT = ease(seg(0.60, 0.72));
+        const D = v.beltDrop || [-0.03, -0.42, 0.10];
+        const k = goneT * (1 - backT);
+        v.belt.setPosition([
+          (v.beltRest || [0, 0, 0])[0] + D[0] * k,
+          (v.beltRest || [0, 0, 0])[1] + D[1] * k,
+          (v.beltRest || [0, 0, 0])[2] + D[2] * k,
+        ]);
+        v.belt.setRotation([0, 0, -46 * k]);
+        // Hidden only in the gap between the old one leaving and the new
+        // one being in the tray, so the feed is never simply empty-looking
+        // for half the reload.
+        v.belt.visible = !(u > 0.44 && u < 0.62);
+      }
+      if (P.beltStage < 1 && u > 0.04) { P.beltStage = 1; sfx.boltHome(); }
+      if (P.beltStage < 2 && u > 0.16) { P.beltStage = 2; sfx.coverUp(); }
+      if (P.beltStage < 3 && u > 0.62) { P.beltStage = 3; sfx.beltIn(); }
+      if (P.beltStage < 4 && u > 0.74) { P.beltStage = 4; sfx.coverDown(); }
+      if (P.beltStage < 5 && u > 0.86) { P.beltStage = 5; sfx.boltHome(); }
+    } else {
+      v.cover.setRotation([0, 0, 0]);
+      if (v.belt) {
+        v.belt.setPosition(v.beltRest || [0, 0, 0]);
+        v.belt.setRotation([0, 0, 0]);
+        v.belt.visible = true;
+      }
+      if (v.bolt) v.bolt.setPosition(v.boltRest || [0, 0, 0]);
+      P.beltStage = 0;
+    }
+  }
+
   /* Battery cell. Drops clear of the housing, a fresh one seats, and the
      coils come back up as it takes charge. */
   if (spec.reloadKind === 'cell' && v.cell) {
@@ -4857,7 +4963,7 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
        rounds appeared in it by themselves -- the one reload in the game
        still being done by an invisible hand. */
     const carries = kind === 'mag' || kind === 'clip' || kind === 'cell'
-      || kind === 'break' || kind === 'revolver';
+      || kind === 'break' || kind === 'revolver' || kind === 'belt';
     let ox = 0, oy = 0, oz = 0, propT = -1;
     if (P.reloading > 0 && carries) {
       const u = 1 - P.reloading / spec.reload;
@@ -4869,13 +4975,29 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
       const away = ease(seg(0.05, 0.30));
       const back = ease(seg(0.42, 0.74));
       const settle = ease(seg(0.74, 0.94));
-      // Reach: down and to the support side, then back up to the well.
+      /* Reach: down and to the SUPPORT SIDE, not down and out of the
+         picture.
+
+         It used to drop 150 mm. The weapon is carried 186 mm below the
+         camera axis and lifted 98 during a reload, and half the frame at
+         the weapon's distance is 185 mm -- so a hand 150 mm below the gun
+         was 88 mm below the bottom edge of the screen, and everything it
+         was carrying went with it. The player watched an empty room and
+         a gun that reloaded itself, which is exactly what he reported.
+
+         The room is sideways. There is 13 cm of frame to the right of the
+         gun and 45 to the left, so the fetch goes to the support side --
+         camera-left, the weapon's -Z -- and only dips far enough to read
+         as reaching. Every millimetre of that is on screen. */
       const reach = away * (1 - back);
-      ox = -0.055 * reach;
-      oy = -0.150 * reach - 0.030 * back * (1 - settle);
-      oz = -0.075 * reach;
-      // The load is in the hand between fetching it and seating it.
-      if (u > 0.34 && u < 0.80) propT = (u - 0.34) / 0.46;
+      ox = -0.030 * reach;
+      oy = -0.052 * reach - 0.026 * back * (1 - settle);
+      oz = -0.135 * reach;
+      // The load is in the hand between fetching it and seating it. The
+      // window is set per kind below, against the beat the gun's own part
+      // changes on -- see RELOAD_WINDOW.
+      const win = RELOAD_WINDOW[kind] || RELOAD_WINDOW.mag;
+      if (u > win[0] && u < win[1]) propT = (u - win[0]) / (win[1] - win[0]);
     }
     /* Where the support hand goes. If it is carrying something, it is put
        where that thing is a few lines below instead -- the hand and the
@@ -4910,7 +5032,7 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
         const bore = (v.root && v.root.boreAt) || 0.06;
         const muzzle = (v.root && v.root.muzzleAt) || 0.3;
         let to = v.magWell || (v.root && v.root.magWell) || [M_WELL_X(v), -0.055, 0];
-        let from = [to[0] - 0.050, to[1] - 0.175, to[2] - 0.070];
+        let from = FETCH(to);
         let rot = [0, 0, 0], rot0 = [0, 0, 0];
         let show = true;
 
@@ -4921,7 +5043,7 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
              carry them from there. */
           const bx = (v.root && v.root.breechAt) || 0.030;
           to = [bx + 0.004, bore - 0.0002, -0.0122];
-          from = [bx - 0.075, bore - 0.150, -0.075];
+          from = FETCH(to, -0.055);
           rot = [0, 0, 0]; rot0 = [0, -34, -22];
           show = u2 < 0.995;
         } else if (kind === 'revolver') {
@@ -4960,7 +5082,7 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
           }
           const sTo = seat(which);
           to = sTo;
-          from = [sTo[0] - 0.055, sTo[1] - 0.160, sTo[2] - 0.060];
+          from = FETCH(sTo);
           rot = [0, 0, 90]; rot0 = [0, -24, 52];
           // Only the one being loaded rides the path.
           propRoot = prop.rounds ? prop.rounds[Math.floor(which * (prop.rounds.length / N))] : prop.root;
@@ -4970,12 +5092,25 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
           /* Into the stripper guide on top of the action, standing up,
              and the empty strip is flicked clear at the end. */
           to = [0.012, bore + 0.030, 0];
-          from = [-0.030, bore - 0.150, -0.075];
+          from = FETCH(to, -0.075);
           rot = [0, 0, 0]; rot0 = [22, -30, 16];
           show = u2 < 0.93;
+        } else if (kind === 'belt') {
+          /* Into the feed tray, from the left, laid flat.
+
+             The belt is carried by its leading link and goes in across the
+             gun -- so it arrives level with the tray and slightly outboard
+             of it, and the last of the travel is sideways rather than up.
+             That is the difference between laying a belt in and posting a
+             magazine. */
+          const trayY = ((v.root && v.root.sightAt) || 0.09) - 0.030;
+          to = [0.096, trayY, -0.020];
+          from = [to[0] - 0.020, to[1] - 0.070, to[2] - 0.165];
+          rot = [0, 0, 0]; rot0 = [0, -34, -30];
+          show = u2 < 0.96;
         } else if (kind === 'cell') {
           to = [to[0], to[1] + 0.004, to[2]];
-          from = [to[0] - 0.045, to[1] - 0.170, to[2] - 0.080];
+          from = FETCH(to, -0.058);
           rot0 = [0, -24, -18];
         } else {
           /* A magazine goes up the well nose-first, tipped a little as
@@ -4990,14 +5125,14 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
              snapped in from a shorter reach, which is what it is for. */
           const fitted = (P.fitted[P.equipped()] || {}).mag;
           if (fitted === 'drummag') {
-            from = [to[0] - 0.105, to[1] - 0.150, to[2] - 0.130];
+            from = FETCH(to, -0.062, -0.185);
             rot0 = [0, -34, -40];
             rot = [0, 0, -6];
           } else if (fitted === 'extmag') {
-            from = [to[0] - 0.030, to[1] - 0.235, to[2] - 0.055];
+            from = FETCH(to, -0.078, -0.120);
             rot0 = [0, -8, -26];
           } else if (fitted === 'fastmag') {
-            from = [to[0] - 0.038, to[1] - 0.120, to[2] - 0.050];
+            from = FETCH(to, -0.040, -0.105);
             rot0 = [0, -14, -12];
           } else {
             rot0 = [0, -12, -16];
@@ -5032,7 +5167,8 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
         const hold = kind === 'break' ? [-0.030, -0.008, -0.010]
           : kind === 'clip' ? [-0.006, -0.048, -0.004]
             : kind === 'revolver' ? [-0.010, -0.030, -0.012]
-              : [0.000, -0.052, -0.006];
+              : kind === 'belt' ? [-0.010, -0.014, -0.030]
+                : [0.000, -0.052, -0.006];
         /* Where the support hand sits when it is on the weapon. Taken from
            the built hand rather than from the weapon table, because the
            builder drops it for a forend and then seats it against the
@@ -5484,6 +5620,56 @@ function arcBolt(game, a, b) {
   }
 }
 
+/* Where the load is fetched from, in the weapon's own space.
+
+   This is the fix for "I'm not holding a magazine. I'm not holding
+   anything. I'm still invisibly reloading." Nothing was wrong with the
+   animation: the magazine really was in the hand, on the right path, at
+   the right moment. It was simply below the bottom edge of the screen for
+   all but the last few frames of its travel, and by the time it arrived
+   the window that showed it had already closed.
+
+   The weapon sits about 186 mm below the camera axis at the hip and rises
+   98 during a reload; half the picture at that distance is 185 mm. So
+   there are roughly 90 mm of frame below the gun and 460 mm to its left.
+   A fetch that goes 175 mm DOWN is off screen by 85. A fetch that goes 55
+   down and 135 to the support side is the same reach, the same distance
+   travelled, and every frame of it is visible.
+
+   dy and dz are the drop and the outboard reach; the defaults are the
+   ones almost everything uses. */
+function FETCH(to, dy, dz) {
+  const y = dy == null ? -0.052 : dy;
+  const z = dz == null ? -0.140 : dz;
+  return [to[0] - 0.028, to[1] + y, to[2] + z];
+}
+
+/* When the carried load is visible, per reload kind.
+
+   These are not free numbers. Each one is pinned to the beat the WEAPON's
+   own part changes on, because for half a second there were two
+   magazines: the carried one was still flying at prog 0.62, which is
+   exactly when the gun's own magazine came back. And before prog 0.34
+   there was no magazine at all, in the hand or in the gun -- a fifth of a
+   second of a man reloading with an empty fist.
+
+     mag      gun's magazine hidden 0.16 -> 0.62   (reloadStage 1 -> 2)
+     clip     gun's own clip seats   0.28 -> 0.74
+     cell     cell is clear of the housing 0.26 -> 0.62
+     break    nothing gun-side; the shells stay in the chambers
+     revolver cylinder is out 0.20 -> 0.78
+
+   The carried thing therefore arrives exactly as the gun-side part takes
+   over, and leaves nothing empty behind it. */
+const RELOAD_WINDOW = {
+  mag: [0.14, 0.63],
+  clip: [0.08, 0.30],
+  cell: [0.16, 0.63],
+  belt: [0.34, 0.68],
+  break: [0.22, 0.82],
+  revolver: [0.22, 0.78],
+};
+
 /* Where the magazine goes in, when the model has not said. */
 function M_WELL_X(v) {
   const root = v.kind === 'single' ? v.actor : v.root;
@@ -5518,6 +5704,8 @@ function reloadProp(game, P, v, spec, kind) {
     made = game.powerCell({ physics: false, cell: Object.assign({
       w: 0.052, h: 0.070, d: 0.038,
     }, A.cell || {}) });
+  } else if (kind === 'belt') {
+    made = game.mgBelt({ physics: false, belt: { links: 12 } });
   } else if (kind === 'break') {
     /* Two shells held between the fingers, which is how you load a
        double: the pair goes in together. They are their own actors so
@@ -7921,14 +8109,62 @@ function nearestInteract(S, P) {
     return { kind: 'bench', cost: 0, label: `Work on the ${P.spec().name}` };
   }
   // Wall buys.
-  for (const b of S.buys) {
-    /* Against the buy's own height, not against a hard-coded 1.0. The
-       Paralyzer is on the roof: measured against the ground floor it could
-       never be reached from anywhere you can actually stand. */
-    if (dist2d(p, { x: b.at[0], z: b.at[2] }) < R && Math.abs(p.y - b.at[1]) < 2.0) {
-      const owned = P.slots.includes(b.weapon);
-      const cost = owned ? ECONOMY.wallAmmo : ECONOMY.wallGun;
-      return { kind: 'buy', buy: b, cost, label: `${b.label} — ${owned ? 'AMMO ' : ''}${cost}` };
+  /* Whichever one you are LOOKING at.
+   *
+   * This returned the first entry in the list that was in range, and along
+   * the north wall the Thompson, the grenade crate and the scattergun sit
+   * within a metre and a half of each other -- so standing anywhere near
+   * them put two or three in range at once and which one you got depended
+   * on the order they happen to be declared in. Take half a step and the
+   * answer changes for no reason you can see, which is exactly what buying
+   * the wrong thing feels like.
+   *
+   * Everything in range is scored on the angle between the way you are
+   * facing and the thing itself, with distance only breaking near-ties.
+   * Facing a wall gun is unambiguous even when three are within reach.
+   *
+   * The grenade crate goes through the same choice for the same reason --
+   * it is on the same wall, between the two guns. */
+  {
+    /* Without a camera there is nothing to face, so fall back to the old
+       first-in-range behaviour rather than returning nothing at all -- a
+       bare `return` here would also skip the doors, the shop and everything
+       else below. */
+    const cam = S.game && S.game.camera;
+    const fx = cam ? cam.target.x - cam.position.x : 0;
+    const fz = cam ? cam.target.z - cam.position.z : 0;
+    const fl = Math.hypot(fx, fz) || 1;
+    const cand = [];
+    const consider = (at, make) => {
+      const dx = at[0] - p.x, dz = at[2] - p.z;
+      const d = Math.hypot(dx, dz) || 1e-4;
+      // cos of the angle off the view direction; 1 is dead ahead.
+      const face = cam ? (dx / d) * (fx / fl) + (dz / d) * (fz / fl) : 1;
+      // Behind you is never what you meant.
+      if (face < 0.15) return;
+      cand.push({ score: face - d * 0.04, make });
+    };
+    for (const b of S.buys) {
+      /* Against the buy's own height, not against a hard-coded 1.0. The
+         Paralyzer is on the roof: measured against the ground floor it could
+         never be reached from anywhere you can actually stand. */
+      if (dist2d(p, { x: b.at[0], z: b.at[2] }) < R && Math.abs(p.y - b.at[1]) < 2.0) {
+        consider(b.at, () => {
+          const owned = P.slots.includes(b.weapon);
+          const cost = owned ? ECONOMY.wallAmmo : ECONOMY.wallGun;
+          return { kind: 'buy', buy: b, cost, label: `${b.label} — ${owned ? 'AMMO ' : ''}${cost}` };
+        });
+      }
+    }
+    if (S.nadeBuy && dist2d(p, { x: S.nadeBuy.at[0], z: S.nadeBuy.at[2] }) < R
+      && Math.abs(p.y - 1) < 2) {
+      consider(S.nadeBuy.at, () => (P.nades >= GRENADE.max
+        ? { kind: 'nadeFull', cost: 0, label: 'Grenades — full', inert: true }
+        : { kind: 'nades', cost: GRENADE.cost, label: `Grenades — ${GRENADE.cost}` }));
+    }
+    if (cand.length) {
+      cand.sort((a, b2) => b2.score - a.score);
+      return cand[0].make();
     }
   }
   /* Downstairs. Everything he offers is an interact point rather than a
@@ -7986,10 +8222,9 @@ function nearestInteract(S, P) {
      generator door. */
   if (p.y < -0.5) return null;
 
-  if (S.nadeBuy && dist2d(p, { x: S.nadeBuy.at[0], z: S.nadeBuy.at[2] }) < R && Math.abs(p.y - 1) < 2) {
-    if (P.nades >= GRENADE.max) return { kind: 'nadeFull', cost: 0, label: 'Grenades — full', inert: true };
-    return { kind: 'nades', cost: GRENADE.cost, label: `Grenades — ${GRENADE.cost}` };
-  }
+  // The grenade crate is chosen together with the wall guns below, because
+  // it stands between two of them and picking it by list order is the fault
+  // being fixed.
   for (const st of S.perkStations) {
     if (dist2d(p, { x: st.at[0], z: st.at[2] }) < R && Math.abs(p.y - st.at[1]) < 2.2) {
       if (P.perks[st.id]) return { kind: 'perkOwned', cost: 0, label: `${st.def.name} — held`, inert: true };
@@ -9199,6 +9434,11 @@ function start(opts = {}) {
 
   const hud = makeHud();
   S.hud = hud;
+  /* The engine, on the run state. nearestInteract needs the camera -- what
+     you are pointing at decides which of three wall guns a metre apart you
+     are asking for -- and it is called from three places that would all
+     have to grow a parameter otherwise. */
+  S.game = game;
   const sfx = makeSfx(game);
   // Exposed for the reload test, which counts how often each one fires:
   // twice now a stage held in a boolean has played its sound every frame.

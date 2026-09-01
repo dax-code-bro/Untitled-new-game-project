@@ -16328,7 +16328,7 @@ const MG42 = {
   shroudR: 0.0345, barrelR: 0.0125, bore: 0.00395,
   recRear: -0.1000, recR: 0.0330,
   gripTopX: -0.0740, gripTopY: -0.0260,
-  stockButt: -0.3600, feedY: 0.0345, beltZ: -0.0360,
+  stockButt: -0.3600, feedY: 0.0345, beltZ: 0.0360, coverPin: -0.0460,
 };
 
 function buildMgSteel(g) {
@@ -16371,15 +16371,28 @@ function buildMgSteel(g) {
   ], 24, 34);
   crown(g, K.muzzle, K.bore + 0.0022, K.bore, 0.055);
 
-  /* Top cover, hinged at the back, with the feed tray under it. */
-  sweepPath(g, [
-    ax(-0.0400, roundRect(0.0130, 0.0060, K.recR * 0.76, 3.0, 20), K.feedY),
-    ax(0.0100, roundRect(0.0150, 0.0060, K.recR * 0.80, 3.0, 20), K.feedY),
-    ax(0.1000, roundRect(0.0130, 0.0060, K.recR * 0.74, 3.0, 20), K.feedY),
-  ], true, true);
-  strut(g, [-0.0460, K.feedY, -0.0180], [-0.0460, K.feedY, 0.0180], ringOutline(0.0060, 12));
-  // Feed pawl housing on top of the cover.
-  hardBox(g, 0.0200, K.feedY + 0.0180, 0, 0.0280, 0.0055, 0.0110);
+  /* The feed tray, which is what is UNDER the cover -- a shallow pan
+     across the top of the receiver with a lip either side, and the
+     cartridge stop at the back of it. The cover is its own part now (see
+     buildMgCover) because it has to open, and you cannot open a lid that
+     has been welded to the box.
+
+     This is the part you have never seen: it was inside a closed cover
+     that was part of the receiver, so there was nothing to lay a belt
+     into and the reload could only ever be a magazine appearing. */
+  const trayY = K.feedY - 0.0092;
+  hardBox(g, 0.0250, trayY, 0, 0.0620, 0.0022, K.recR * 0.72);          // pan
+  for (const sz of [-1, 1]) {                                            // lips
+    hardBox(g, 0.0250, trayY + 0.0048, sz * K.recR * 0.72, 0.0620, 0.0030, 0.0028);
+  }
+  hardBox(g, -0.0330, trayY + 0.0060, 0, 0.0040, 0.0042, K.recR * 0.60); // stop
+  // Feed rollers the belt rides over, one each side of the tray mouth.
+  for (const sz of [-1, 1]) {
+    band(g, 0.0700, 0.0760, 0.0038, 0.0052, 12, trayY + 0.0040, sz * K.recR * 0.50);
+  }
+  /* The slot the cocking handle runs in, down the right flank. The handle
+     itself is its own part -- it travels. */
+  hardBox(g, -0.0100, -0.0040, K.recR * 0.88, 0.0480, 0.0055, 0.0022);
 
   /* Sights: a folding leaf at the back on a tall base, a hooded post at
      the front of the shroud. Both stand well clear of the cover. */
@@ -16409,6 +16422,66 @@ function buildMgSteel(g) {
   strut(g, [-0.0200, 0.0100, -K.recR * 0.80], [-0.0200, 0.0100, -K.recR - 0.030], ringOutline(0.0055, 10));
   strut(g, [-0.0200, 0.0100, -K.recR - 0.030], [0.0500, 0.0100, -K.recR - 0.030], ringOutline(0.0075, 12));
   strut(g, [0.0500, 0.0100, -K.recR - 0.030], [0.0500, 0.0100, -K.recR * 0.80], ringOutline(0.0055, 10));
+}
+
+/* The top cover. Hinged at the rear so it swings UP and forward, which is
+   the single motion this gun's reload is famous for.
+
+   Built about the hinge pin, so the actor can be turned about its own
+   origin and the lid opens instead of flying off. Everything here is in
+   cover space: the pin is at x = MG42.coverPin, and the model is offset so
+   that the part sits where the closed cover sits when the rotation is
+   zero. */
+function buildMgCover(g) {
+  const K = MG42;
+  const px = K.coverPin, py = K.feedY;
+  const rel = (x) => x - px;
+  sweepPath(g, [
+    ax(rel(-0.0400), roundRect(0.0130, 0.0060, K.recR * 0.76, 3.0, 20), 0),
+    ax(rel(0.0100), roundRect(0.0150, 0.0060, K.recR * 0.80, 3.0, 20), 0),
+    ax(rel(0.1000), roundRect(0.0130, 0.0060, K.recR * 0.74, 3.0, 20), 0),
+  ], true, true);
+  // Feed pawl housing on top, and the pawl arm under it that walks the belt.
+  hardBox(g, rel(0.0200), 0.0180, 0, 0.0280, 0.0055, 0.0110);
+  hardBox(g, rel(0.0250), -0.0072, 0.0090, 0.0180, 0.0026, 0.0060);
+  // Hinge pin and its two ears.
+  strut(g, [rel(-0.0460) + 0.0000, 0, -0.0180], [rel(-0.0460), 0, 0.0180], ringOutline(0.0060, 12));
+  // The latch at the front of the cover that holds it shut.
+  hardBox(g, rel(0.1010), -0.0020, 0, 0.0040, 0.0090, 0.0090);
+  void py;
+}
+
+/* The cocking handle. A stubby lever on the right of the receiver that is
+   dragged back the length of the slot and let go. */
+function buildMgBolt(g) {
+  const K = MG42;
+  const z = K.recR * 0.90;
+  strut(g, [0.0250, -0.0040, z], [0.0250, -0.0040, z + 0.0140], ringOutline(0.0055, 10));
+  spin(g, [[0.0250, 0.0000], [0.0250, 0.0105], [0.0330, 0.0125], [0.0410, 0.0105], [0.0410, 0]],
+    10, 26, -0.0040, z + 0.0200);
+  hardBox(g, 0.0330, -0.0040, z + 0.0210, 0.0090, 0.0110, 0.0040);
+}
+
+/* A length of belt in the hand: what the loader actually carries.
+
+   The gun's own belt hangs out of the feed and is fixed to it. This one is
+   a loose run of links with a droop in it, held by the leading end, that
+   goes into the tray. Without it the reload was a hand going to an open
+   cover and back, which is the invisible reload the player has been
+   describing all along. */
+function buildHandBelt(g, n) {
+  const N = n || 12, PITCH = 0.0158;
+  for (let i = 0; i < N; i++) {
+    const t = i / (N - 1);
+    // Held level at the leading end, sagging away under its own weight.
+    const x = -t * PITCH * N;
+    const y = -0.052 * t * t;
+    const roll = -t * 28;
+    game_hardBoxRot(g, x, y, 0, 0.0062, 0.0082, 0.0115, roll);
+    const a = roll * PI / 180;
+    spin(g, [[-0.0062, 0], [-0.0062, 0.0040], [0.0068, 0.0040], [0.0102, 0.0026], [0.0122, 0]]
+      .map(([u, w]) => [x + u * Math.cos(a), w]), 10, 34, y, 0);
+  }
 }
 
 /* Stock and grip: bakelite, so their own material. */
@@ -16459,33 +16532,55 @@ function game_hardBoxRot(g, cx, cy, cz, hx, hy, hz, degZ) {
    actor, because it is the part that moves and the part you notice. */
 function buildMgBelt(g) {
   const K = MG42;
-  /* Down out of the tray and then curling back — a belt that leaves in a
-     straight line reads as a ruler. */
-  /* Twenty-four links on a real hanging curve.
+  /* An MG 42 does not feed along itself. The belt comes in from the LEFT
+     across the feed tray, the rounds are stripped downward as it crosses,
+     and the free tail hangs off the RIGHT lip. It was modelled running
+     rearward down the left flank, pointing backwards -- which is the
+     "magazine is facing the wrong way on the MG 42".
 
-     A belt that leaves the tray in a straight line reads as a ruler and a
-     belt on a single arc reads as a rope. What it actually does is come
-     out level, turn over at the tray lip and then fall nearly vertically
-     under its own weight — so the curve is a quarter turn followed by a
-     drop, and the links tilt with it. Pitch is 16 mm, which is what an
-     8 mm belt link is; at the 10 mm it was, the rounds overlapped and the
-     whole thing read as one cord. */
-  const N = 24, PITCH = 0.0158;
-  let x = K.gripTopX + 0.150, y = K.feedY - 0.014, z = K.beltZ;
-  for (let i = 0; i < N; i++) {
-    const t = i / (N - 1);
-    // Level out of the tray, then over and down.
-    const ang = Math.min(1, t * 2.3) * (PI / 2) * 0.92;
-    const dx = -Math.cos(ang), dy = -Math.sin(ang);
-    const roll = ang * 57.2958;
-    // The link, and the round lying in it, both canted with the curve.
-    const link = game_hardBoxRot(g, x, y, z, 0.0062, 0.0082, 0.0115, roll);
-    void link;
-    spin(g, [
-      [-0.0062, 0], [-0.0062, 0.0040], [0.0068, 0.0040],
-      [0.0102, 0.0026, ], [0.0122, 0],
-    ].map(([a, b]) => [x + a * Math.cos(ang * 0.35) , b]), 10, 34, y, z);
-    x += dx * PITCH; y += dy * PITCH; z -= 0.0007;
+     Three runs, one belt: the loaded part lying IN the tray crossing the
+     receiver, the turn over the right lip, and the tail hanging down the
+     right side with a little rearward lean as it swings. A link is a box
+     and a round is a tube laid across it, so both can point along the run
+     whatever direction the run is going. */
+  const PITCH = 0.0158;
+  const trayY = K.feedY - 0.0048;
+  const lip = K.recR * 0.74;
+  const R = 0.0042, HEAD = 0.0050, CASE = 0.0570;
+  // One link: a box square to the run, and the cartridge lying in it
+  // nose-inboard, so every round points at the chamber.
+  const link = (at, run, nose) => {
+    const q = ringOutline(0.0072, 8);
+    strut(g, [at[0] - run[0] * 0.0058, at[1] - run[1] * 0.0058, at[2] - run[2] * 0.0058],
+             [at[0] + run[0] * 0.0058, at[1] + run[1] * 0.0058, at[2] + run[2] * 0.0058], q);
+    // Case, shoulder and bullet, as three short runs along the nose axis.
+    const P = (t) => [at[0] + nose[0] * t, at[1] + nose[1] * t, at[2] + nose[2] * t];
+    strut(g, P(-CASE * 0.45), P(CASE * 0.28), ringOutline(R, 10));
+    strut(g, P(CASE * 0.28), P(CASE * 0.40), ringOutline(R * 0.80, 10));
+    strut(g, P(CASE * 0.40), P(CASE * 0.40 + HEAD * 2.4), ringOutline(R * 0.74, 10), true, true);
+  };
+  // 1. Across the tray, left lip out to the right lip. Run is +Z, the
+  //    rounds lie along -X so they point at the barrel.
+  let z = -lip - 0.006;
+  const across = Math.max(3, Math.round((lip * 2 + 0.012) / PITCH));
+  for (let i = 0; i < across; i++) {
+    link([0.0230, trayY, z], [0, 0, 1], [1, 0, 0]);
+    z += PITCH;
+  }
+  // 2. Over the lip: a quarter turn from running outboard to running down.
+  let y = trayY, x = 0.0230;
+  for (let i = 1; i <= 4; i++) {
+    const a = (i / 4) * (PI / 2) * 0.94;
+    const run = [0, -Math.sin(a), Math.cos(a)];
+    link([x, y, z], run, [1, 0, 0]);
+    z += Math.cos(a) * PITCH; y -= Math.sin(a) * PITCH;
+  }
+  // 3. The tail, hanging and leaning back as it goes.
+  for (let i = 0; i < 15; i++) {
+    const lean = 0.10 + i * 0.008;
+    const run = [-Math.sin(lean), -Math.cos(lean), 0];
+    link([x, y, z], run, [0, 0, -1]);
+    x += run[0] * PITCH; y += run[1] * PITCH;
   }
 }
 
@@ -16991,9 +17086,18 @@ Engine.prototype.mg42 = function (opts = {}) {
     const steel = new Geometry(); buildMgSteel(steel);
     const wood = new Geometry(); buildMgStock(wood);
     const belt = new Geometry(); buildMgBelt(belt);
-    return fin({ steel, wood, belt }, MG42_ORIGIN);
+    const bolt = new Geometry(); buildMgBolt(bolt);
+    const out = fin({ steel, wood, belt, bolt }, MG42_ORIGIN);
+    /* The cover is built about its own hinge pin and is NOT moved into the
+       gun's space with the rest -- the actor is placed at the pin instead.
+       An actor rotates about its own origin, so a lid whose origin is in
+       the middle of the receiver does not open, it scythes. */
+    const cover = new Geometry(); buildMgCover(cover);
+    out.cover = cover.finalize();
+    return out;
   });
   const body = mountArm(this, 'mg42', parts, {
+    cover: ARM_MAT.blued, bolt: ARM_MAT.bright,
     steel: ARM_MAT.blued,
     // Bakelite: a dark red-brown that reads brown, not orange. At 0x4a2a18
     // under a bright sky it came out the colour of a traffic cone.
@@ -17004,10 +17108,37 @@ Engine.prototype.mg42 = function (opts = {}) {
   body.muzzleAt = MG42.muzzle - MG42_ORIGIN.x;
   body.sightAt = MG42.feedY + 0.0330 - MG42_ORIGIN.y;
   body.ejectPort = [0.010 - MG42_ORIGIN.x, -MG42.recR * 0.5 - MG42_ORIGIN.y, 0];
-  // The belt is what a machine gun reloads: it swings out and a new one in.
+  /* What the reload moves. A machine gun is not reloaded by swapping a
+     magazine-shaped object: the cover comes up, the old belt is thrown
+     clear, a new one is laid in the tray and the cover is slammed shut.
+     Each of those is a real part with a real place to be.
+
+     The cover turns about its hinge pin, which is where its geometry is
+     built about, so the actor rotates about its own origin -- the pin is
+     offset out of the model rather than the model being offset off the
+     pin, because a lid that rotates about the middle of the receiver
+     scythes through the gun. */
   body.beltRest = [0, 0, 0];
-  body.beltDrop = [0.02, -0.34, -0.06];
+  body.beltDrop = [-0.03, -0.42, 0.10];
+  body.coverPin = [MG42.coverPin - MG42_ORIGIN.x, MG42.feedY - MG42_ORIGIN.y, 0];
+  body.coverOpen = -104;                       // degrees about Z, up and over
+  body.boltRest = [0, 0, 0];
+  body.boltThrow = [-0.092, 0, 0];
+  if (body.cover) body.cover.setPosition(body.coverPin);
   return body;
+};
+
+/* A loose length of belt, for the hand that is loading one. */
+Engine.prototype.mgBelt = function (opts = {}) {
+  const n = (opts.belt && opts.belt.links) || 12;
+  const key = 'mgbelt:' + n;
+  const parts = armCache(this, key, () => {
+    const belt = new Geometry(); buildHandBelt(belt, n);
+    return fin({ belt }, new Vec3(0, 0, 0));
+  });
+  return mountArm(this, key, parts,
+    { belt: { color: 0x7a6a3c, texture: 'metal', roughness: 0.46, metalness: 1 } },
+    opts, 0.22, 1.4, 'belt');
 };
 
 
