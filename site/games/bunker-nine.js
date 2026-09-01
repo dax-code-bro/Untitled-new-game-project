@@ -3504,11 +3504,15 @@ function buildMap(game, S) {
     }
     // The wing gets the same treatment, and the same joinery.
     const WY = SD.y1 - 0.11;
-    // And these stop short of SD.x1 for the same reason: the connector
-    // wall's face is on that plane.
+    /* The wing gets the same framing as the main room: front and back run
+       the width, the side runs BETWEEN them. It was left inset by 60 mm
+       when the main room was corrected, so its side course still overlapped
+       the other two at the same height and the three of them shared an
+       underside -- ceiling, and lit by the wing's own lamps. I fixed one
+       room and not the other in the same edit. */
     slab(SD.x0, SD.x1 - IN, WY - TH, WY + 0.10, SD.z0, SD.z0 + DP, beam);
     slab(SD.x0, SD.x1 - IN, WY - TH, WY + 0.10, SD.z1 - DP, SD.z1, beam);
-    slab(SD.x0, SD.x0 + DP, WY - TH, WY + 0.10, SD.z0 + IN, SD.z1 - IN, beam);
+    slab(SD.x0, SD.x0 + DP, WY - TH, WY + 0.10, SD.z0 + DP, SD.z1 - DP, beam);
   }
 
   /* ---------------- doors ---------------- */

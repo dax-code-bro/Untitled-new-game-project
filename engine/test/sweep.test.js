@@ -1218,7 +1218,7 @@ function check(name, cond, detail = '') {
   check('the fingers that wrap a weapon are touching it',
     !ctErr.length && ct.length > 0 && floating.length === 0,
     ctErr.length ? ctErr[0].err
-      : list(floating, (q) => `${q.id}/${q.side}: tips ${q.wrap.map((d) => Math.round(d.gap * 1000)).join(', ')} mm off`));
+      : list(floating, (q) => `${q.id}/${q.side}: tips ${q.wrap.map((d) => Math.round(d.gap * 1000)).join(', ')} mm off (against ${q.pts} weapon points)`));
   const stickOut = ct.filter((q) => Math.max.apply(null, q.wrap.map((d) => d.gap)) > 0.030);
   check('no single finger is left sticking out on its own',
     stickOut.length === 0,
