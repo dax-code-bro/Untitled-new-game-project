@@ -19640,9 +19640,25 @@ function buildViewHand(g, rawAt, side, opts = {}) {
        like. Anything that far in is charged for it, so the solve backs
        the finger out rather than pushing it further through. */
     const bury = r0 * 0.45;
+    /* And an actual INSIDE test, when the caller can supply one.
+     *
+     * `surf` is a distance to the nearest vertex and has no sign, so
+     * everything above can only infer burial from being suspiciously
+     * close to a vertex. A finger lying in the middle of a broad flat
+     * panel -- the side of a receiver, the flat of a slide -- is far from
+     * every vertex while sitting deep inside the metal, and this term
+     * cannot see it at all. Measured by ray parity against the weapons'
+     * own triangles: 14% of the 1911's finger surface was inside the gun,
+     * and 63% of the MG 42's support hand. "Jumbled up with the gun" was
+     * exactly right and the solver had no way of knowing.
+     *
+     * Charged hard, because there is no depth to grade it by -- inside is
+     * inside -- and a finger has somewhere else it can be. */
+    const solid = surf.inside || null;
     const at1 = (x, y, z) => {
       const d = surf(x, y, z);
-      return d < bury ? Math.abs(d - want) + (bury - d) * 6 : Math.abs(d - want);
+      const e = d < bury ? Math.abs(d - want) + (bury - d) * 6 : Math.abs(d - want);
+      return solid && solid(x, y, z) ? e + 0.25 : e;
     };
     /* The best MID-FINGER standoff any curl in the search could have
        achieved, whether or not it was the curl that won on total error.

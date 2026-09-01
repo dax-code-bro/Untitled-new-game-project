@@ -4766,11 +4766,27 @@ function applyAttachmentLooks(game, P, id) {
 function weaponSurface(game, root) {
   if (!root || !game.geometryOf) return null;
   const pts = [];
+  /* Triangles as well as points. The point list keeps every third vertex,
+     which is plenty to answer "how far to the surface" and useless for
+     "which side of it" -- a flat panel has vertices only at its corners,
+     so a shell marked from vertices is a shell full of holes. */
+  const tris = [];
   const walk = (a, local) => {
     const geo = a.mesh && game.geometryOf(a.mesh);
     if (geo && geo.positions) {
       const q = geo.positions;
       const m = local ? local.e : null;
+      if (geo.indices) {
+        const I = geo.indices;
+        const tf = (i) => {
+          const x = q[i * 3], y = q[i * 3 + 1], z = q[i * 3 + 2];
+          if (!m) return [x, y, z];
+          return [m[0] * x + m[4] * y + m[8] * z + m[12],
+            m[1] * x + m[5] * y + m[9] * z + m[13],
+            m[2] * x + m[6] * y + m[10] * z + m[14]];
+        };
+        for (let i = 0; i < I.length; i += 3) tris.push(tf(I[i]), tf(I[i + 1]), tf(I[i + 2]));
+      }
       // Every third vertex: a fingertip is 10 mm across and these meshes are
       // far finer than that, so a third of them describes the same surface.
       for (let i = 0; i < q.length; i += 9) {
@@ -4804,7 +4820,7 @@ function weaponSurface(game, root) {
     if (!cell) { cell = []; grid.set(kk, cell); }
     cell.push(i);
   }
-  return (x, y, z) => {
+  const surf = (x, y, z) => {
     const gi = Math.floor(x / CELL), gj = Math.floor(y / CELL), gk = Math.floor(z / CELL);
     let best = 1e9;
     // Widen the ring until something is found, so a point out in mid-air
@@ -4830,6 +4846,85 @@ function weaponSurface(game, root) {
     }
     return best < 1e9 ? Math.sqrt(best) : 1;
   };
+
+  /* Is this point INSIDE the weapon?
+   *
+   * The distance above is to the nearest VERTEX and has no sign, so it
+   * cannot tell a finger resting on a surface from one buried in it -- and
+   * a finger lying in the middle of a large flat panel, the side of a
+   * receiver say, is far from every vertex while being deep inside the
+   * solid. That is not a hypothetical: measured by ray parity against the
+   * weapons' own triangles, 14% of the 1911's finger surface and 63% of
+   * the MG 42's support hand were inside the gun. The solver's own
+   * anti-clipping term was reading the one number that cannot see it.
+   *
+   * A coarse occupancy grid answers it in a lookup. Cells the geometry
+   * passes through are the shell; flooding inwards from the outside
+   * leaves the interior as whatever the flood never reached. Only the
+   * INTERIOR counts as solid, not the shell -- a finger touching the
+   * surface must stay legal, or every hand in the game gets pushed a
+   * cell off the weapon it is holding. */
+  const SOLID = 0.007;
+  let lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];
+  for (let i = 0; i < pts.length; i += 3) for (let k = 0; k < 3; k++) {
+    if (pts[i + k] < lo[k]) lo[k] = pts[i + k];
+    if (pts[i + k] > hi[k]) hi[k] = pts[i + k];
+  }
+  // One cell of margin all round, so the flood always starts outside.
+  for (let k = 0; k < 3; k++) { lo[k] -= SOLID * 2; hi[k] += SOLID * 2; }
+  const dim = [0, 1, 2].map((k) => Math.max(2, Math.min(96, Math.ceil((hi[k] - lo[k]) / SOLID))));
+  const N = dim[0] * dim[1] * dim[2];
+  const at = (i, j, k) => (k * dim[1] + j) * dim[0] + i;
+  const cellOf = (x, y, z) => [
+    Math.floor((x - lo[0]) / SOLID), Math.floor((y - lo[1]) / SOLID), Math.floor((z - lo[2]) / SOLID)];
+  // 0 unknown, 1 shell, 2 reached from outside.
+  const vox = new Uint8Array(N);
+  const mark = (x, y, z) => {
+    const c = cellOf(x, y, z);
+    if (c[0] < 0 || c[1] < 0 || c[2] < 0 || c[0] >= dim[0] || c[1] >= dim[1] || c[2] >= dim[2]) return;
+    vox[at(c[0], c[1], c[2])] = 1;
+  };
+  /* Rasterise every triangle across its own area, at a step finer than a
+     cell, so the shell has no gaps for the flood to leak through. Marking
+     corners alone leaves a sieve, and a sieve floods solid: the first
+     version of this changed not one of the twenty-six numbers it was
+     meant to fix, because nothing was ever left enclosed. */
+  for (let t = 0; t < tris.length; t += 3) {
+    const A = tris[t], B2 = tris[t + 1], C = tris[t + 2];
+    const e1 = Math.hypot(B2[0]-A[0], B2[1]-A[1], B2[2]-A[2]);
+    const e2 = Math.hypot(C[0]-A[0], C[1]-A[1], C[2]-A[2]);
+    const n = Math.max(1, Math.ceil(Math.max(e1, e2) / (SOLID * 0.5)));
+    for (let i = 0; i <= n; i++) {
+      for (let j = 0; j <= n - i; j++) {
+        const u = i / n, v2 = j / n, w2 = 1 - u - v2;
+        mark(A[0]*w2 + B2[0]*u + C[0]*v2,
+          A[1]*w2 + B2[1]*u + C[1]*v2,
+          A[2]*w2 + B2[2]*u + C[2]*v2);
+      }
+    }
+  }
+  if (!tris.length) { surf.inside = () => false; return surf; }
+  /* Flood from the corner. Anything left unknown afterwards is enclosed by
+     shell on every side, which is the inside of the gun. */
+  const stack = [at(0, 0, 0)];
+  vox[at(0, 0, 0)] = 2;
+  while (stack.length) {
+    const p2 = stack.pop();
+    const i = p2 % dim[0], j = ((p2 / dim[0]) | 0) % dim[1], k = (p2 / (dim[0] * dim[1])) | 0;
+    for (const [di, dj, dk] of [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]]) {
+      const a2 = i + di, b2 = j + dj, c2 = k + dk;
+      if (a2 < 0 || b2 < 0 || c2 < 0 || a2 >= dim[0] || b2 >= dim[1] || c2 >= dim[2]) continue;
+      const n = at(a2, b2, c2);
+      if (vox[n] !== 0) continue;
+      vox[n] = 2; stack.push(n);
+    }
+  }
+  surf.inside = (x, y, z) => {
+    const c = cellOf(x, y, z);
+    if (c[0] < 0 || c[1] < 0 || c[2] < 0 || c[0] >= dim[0] || c[1] >= dim[1] || c[2] >= dim[2]) return false;
+    return vox[at(c[0], c[1], c[2])] === 0;
+  };
+  return surf;
 }
 
 /* Where each slot hangs off a weapon, in that weapon's own space. Derived
