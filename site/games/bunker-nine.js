@@ -2972,13 +2972,36 @@ function buildMap(game, S) {
   /* Three rings of them, staggered, so there is depth in the wood rather
      than one row with sky behind it. The far ring is what the render
      distance ends on and it wants to be solid. */
+  /* Clustered, and at wildly different heights.
+   *
+   * These were laid out at an exactly even angle -- a hundred and twenty
+   * trees round a circle is one every 1.6 m at that radius -- with eight
+   * metres of height variation on trunks that all started at four. Seen
+   * from the mud, washed out by distance fog, that is a comb: a row of
+   * evenly spaced pale spikes with a level top line, which is a fence and
+   * not a wood.
+   *
+   * A shelled wood is patchy. Where the shells fell there is nothing
+   * standing and where they did not there is a thicket. So the angle is
+   * jittered hard enough to open real gaps and close real clumps, and the
+   * height range now runs from a knee-high stump to something twice the
+   * bunker, so the skyline has a shape instead of a level. */
   for (const [count, r0, spread, h0, hv, phase] of [
-    [120, 31, 4, 4.2, 8.0, 0], [96, 37, 4, 3.8, 7.2, 0.03], [80, 43, 5, 3.4, 6.4, 0.06],
+    [120, 30, 7, 1.6, 12.0, 0], [96, 38, 7, 1.4, 11.0, 0.41], [80, 46, 8, 1.2, 10.0, 0.83],
   ]) {
     for (let k = 0; k < count; k++) {
-      const a = (k / count) * Math.PI * 2 + phase;
+      // Deterministic jitter, ±0.7 of a slot: enough to clump and to gap.
+      const slot = Math.PI * 2 / count;
+      const j = (((k * 2654435761) % 1000) / 1000 - 0.5) * 1.4;
+      const a = (k / count) * Math.PI * 2 + phase + j * slot;
       const rr = r0 + ((k * 613) % 100) / 100 * spread;
-      deadTree(Math.cos(a) * rr, Math.sin(a) * rr, h0 + ((k * 311) % 100) / 100 * hv, ((k * 53) % 14) - 7);
+      /* Height off a different multiplier from the angle, or tall trees
+         land at regular intervals round the ring and the clumping is
+         undone by a rhythm in the skyline. Squared, so short stumps are
+         common and the tall ones are rare -- which is what a wood that has
+         been shelled for a year looks like. */
+      const u = ((k * 40503) % 1000) / 1000;
+      deadTree(Math.cos(a) * rr, Math.sin(a) * rr, h0 + u * u * hv, ((k * 53) % 14) - 7);
     }
   }
   stopCollecting();
@@ -9884,7 +9907,20 @@ function start(opts = {}) {
      doubles as the reflection probe for every metal in the map, so it stays
      neutral: warm it and the guns turn to brass. */
   game.setSky('day', {
-    fogDensity: 0.013, fog: 0x8c8578,
+    /* Thinner, and darker.
+     *
+     * At 0.013 with a fog the colour of dry chalk, everything past thirty
+     * metres was the same pale value -- so a burnt wood that is very nearly
+     * black in its own material came out as a row of sand-coloured spikes,
+     * and the treeline lost its shape as well as its colour. The fog is
+     * meant to say "you cannot see how far this goes", not to erase the
+     * only thing on the horizon. Half the density, and a colder, dirtier
+     * grey that a black trunk can still read against. */
+    /* Halfway back. At 0.0072 the far ground stopped being fogged at all
+       and a hard bright band appeared along the horizon where the fogged
+       part met the unfogged part -- worse than the problem. This keeps the
+       air and still leaves a black trunk darker than the sky behind it. */
+    fogDensity: 0.0104, fog: 0x7d7669,
     /* The zenith was a neutral grey and the sky was turned up to 2.2, and
        between them every up-facing surface in the map — the roof deck, the
        mud, the top of every crate — came out pale and slightly cool while
