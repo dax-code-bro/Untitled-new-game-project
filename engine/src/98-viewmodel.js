@@ -727,6 +727,18 @@ function buildViewHand(g, rawAt, side, opts = {}) {
         joints,
         tip: [p.x, p.y, p.z],
         r: r0,
+        /* The axis this digit actually bends about, so whatever drives it
+           at runtime turns it the way it was built rather than about a
+           world axis that happens to look right on a pistol. `turn` rotates
+           the pointing direction toward the closing direction, so the axis
+           is their cross product and a POSITIVE angle closes further. */
+        axis: (() => {
+          const ax = pt.y * cl.z - pt.z * cl.y;
+          const ay = pt.z * cl.x - pt.x * cl.z;
+          const az = pt.x * cl.y - pt.y * cl.x;
+          const L = Math.hypot(ax, ay, az) || 1;
+          return [ax / L, ay / L, az / L];
+        })(),
         // The closest any curl in the search could have brought the worst
         // knuckle. null for a digit that is not solved against a surface.
         reach: lastReach != null ? +lastReach.toFixed(4) : null,
@@ -884,7 +896,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
          trigger finger does not move is a photograph of a hand. The base
          knuckle comes back with it so the game can turn it about the joint
          it actually bends at. */
-      const ig = opts.indexGeo || g;
+      const ig = opts.indexGeo || (opts.digitGeos && opts.digitGeos[f]) || g;
       const before = ig === g ? null : (opts.out || {});
       /* Which plane won, and by how much, reported -- because "the trigger
          finger is in the wrong place" has three different causes and they
@@ -908,9 +920,31 @@ function buildViewHand(g, rawAt, side, opts = {}) {
       const sol = solveCurl(root, d0, bends, lens, FR, point, curl);
       const sb = sol.bends || bends;
       lastReach = sol.reach;
-      digit(root, d0, [sb[0] * sol.k, sb[1] * sol.k, sb[2] * sol.k], lens, FR);
+      /* Its own mesh, like the trigger finger's.
+       *
+       * The note above the index says it exactly -- "a finger welded into
+       * the hand is a finger that can never pull a trigger, and a
+       * first-person shooter in which the trigger finger does not move is
+       * a photograph of a hand" -- and that reasoning was applied to one
+       * finger on one hand. The other three here, and all five on the
+       * support hand, stayed welded into one rigid lump with the curl
+       * frozen in at build time. So the hand could never open to take a
+       * magazine, never close on one, and never do anything at all while
+       * the arm it belongs to slid around during a reload. Every test I
+       * had passed, because they all measure the BUILT pose, and the
+       * built pose is correct. It is just a photograph.
+       *
+       * Built in the solved grip pose, so a digit at zero rotation is
+       * exactly the hand those tests already check. Everything else is a
+       * turn away from it about the knuckle. */
+      const fg = (opts.digitGeos && opts.digitGeos[f]) || null;
+      if (fg) digitTo(fg, root, d0, [sb[0] * sol.k, sb[1] * sol.k, sb[2] * sol.k], lens, FR);
+      else digit(root, d0, [sb[0] * sol.k, sb[1] * sol.k, sb[2] * sol.k], lens, FR);
       lastReach = null;
     }
+    /* The knuckle this digit turns about, for every finger and not just
+       the one that pulls a trigger. */
+    if (opts.out) (opts.out.pivots || (opts.out.pivots = []))[f] = [root.x, root.y, root.z];
   }
 
   /* Thumb: off the near side of the palm, laid along the weapon and folded
@@ -1052,12 +1086,30 @@ function makeViewmodelArms(hands, opts = {}) {
      does not move is a photograph of a hand laid over a gun. One extra
      mesh and one extra draw per weapon. */
   const index = new Geometry();
+  /* And now every OTHER finger too, on both hands.
+   *
+   * The note on `index` above is the whole argument and it was applied to
+   * one finger. The remaining three on the firing hand and all five on the
+   * support hand stayed welded into `skin` and `lSkin`, so the support hand
+   * was a single rigid casting that could be slid about during a reload and
+   * could not open, close, or take hold of anything -- which is exactly
+   * what "the fingers don't do anything, they're just static figures, so
+   * it jumbles up animations" describes.
+   *
+   * Ten small meshes instead of two big ones. They are 12-segment lofts of
+   * three bones each, so the extra draws are cheap, and the alternative is
+   * a hand that can only ever be photographed. */
+  const rDigits = [new Geometry(), new Geometry(), new Geometry(), new Geometry()];
+  const lDigits = [new Geometry(), new Geometry(), new Geometry(), new Geometry()];
+  const lThumb = new Geometry();
   const out = {};
   const pairs = [
-    { hand: hands.right, side: 1, grip: hands.rightGrip || 'pistol', sl: sleeve, sk: skin, tg: thumb },
-    { hand: hands.left, side: -1, grip: hands.leftGrip || 'fore', sl: lSleeve, sk: lSkin, tg: null },
+    { hand: hands.right, side: 1, grip: hands.rightGrip || 'pistol', sl: sleeve, sk: skin,
+      tg: thumb, dg: rDigits },
+    { hand: hands.left, side: -1, grip: hands.leftGrip || 'fore', sl: lSleeve, sk: lSkin,
+      tg: lThumb, dg: lDigits },
   ];
-  for (const { hand, side, grip, sl, sk, tg } of pairs) {
+  for (const { hand, side, grip, sl, sk, tg, dg } of pairs) {
     if (!hand) continue;
     const h = new Vec3(hand[0], hand[1], hand[2]);
     /* MEASURED, and not acted on. Every FIRING hand's anchor sits 2 to
@@ -1094,22 +1146,31 @@ function makeViewmodelArms(hands, opts = {}) {
     // `surface` has to reach the hand or the fingers cannot be closed onto
     // anything -- it was being taken by makeViewmodelArms and dropped here.
     buildViewHand(sk, h, side, { grip, thumbGeo: tg, out: rec, boreY: opts.boreY,
-      // Only the FIRING hand's index is separated: the support hand's
-      // fingers are wrapped round a forend and have nothing to pull.
-      indexGeo: side > 0 ? index : null, surface: opts.surface });
-    if (tg && rec.thumbPivot) out.thumbPivot = rec.thumbPivot;
-    if (side > 0 && rec.indexPivot) out.indexPivot = rec.indexPivot;
+      // The firing hand's index keeps its own named mesh, because the game
+      // drives it off the trigger; the rest come back through digitGeos.
+      indexGeo: side > 0 ? index : null, digitGeos: dg, surface: opts.surface });
+    if (tg && rec.thumbPivot) out[side > 0 ? 'thumbPivot' : 'lThumbPivot'] = rec.thumbPivot;
+    if (side > 0 && rec.indexPivot) {
+      out.indexPivot = rec.indexPivot;
+      // Finger 3 on the firing hand IS the index; keep the pivot arrays whole.
+      if (rec.pivots) rec.pivots[3] = rec.indexPivot;
+    }
     out[side > 0 ? 'right' : 'left'] = rec;
+    out[side > 0 ? 'rPivots' : 'lPivots'] = rec.pivots || [];
   }
-  for (const g of [sleeve, skin, lSleeve, lSkin, thumb, index]) {
+  for (const g of [sleeve, skin, lSleeve, lSkin, thumb, index, lThumb,
+    ...rDigits, ...lDigits]) {
     if (!g) continue;
     g.finalize();
     g.computeWeldGroups();
     smoothNormals(g);
     weldNormals(g.normals, g.weldGroups);
   }
-  return { sleeve, skin, lSleeve, lSkin, thumb, index,
+  return { sleeve, skin, lSleeve, lSkin, thumb, index, lThumb,
     thumbPivot: out.thumbPivot, indexPivot: out.indexPivot,
+    lThumbPivot: out.lThumbPivot,
+    // Every finger, and the knuckle each one turns about.
+    rDigits, lDigits, rPivots: out.rPivots || [], lPivots: out.lPivots || [],
     // Where every finger and thumb ended up, in the weapon's own space.
     digits: { right: out.right || null, left: out.left || null },
     hasLeft: !!hands.left };
@@ -1173,10 +1234,39 @@ Engine.prototype.viewmodelArms = function (weapon, hands, opts = {}) {
   if (solid(parts.thumb)) { thumb = mk(parts.thumb, skinMat, 't'); all.push(thumb); }
   let index = null;
   if (solid(parts.index)) { index = mk(parts.index, skinMat, 'i'); all.push(index); }
+  let lThumb = null;
+  if (solid(parts.lThumb)) { lThumb = mk(parts.lThumb, skinMat, 'lt'); all.push(lThumb); }
+  /* An actor per finger, both hands. They are parented to the weapon like
+     every other piece of arm, so at zero rotation the hand is exactly the
+     one the grip and contact tests measure -- and now it can also open,
+     close, and take hold of something. */
+  const rFingers = [], lFingers = [];
+  for (let f = 0; f < 4; f++) {
+    if (solid(parts.rDigits && parts.rDigits[f])) {
+      const a = mk(parts.rDigits[f], skinMat, 'rf' + f);
+      rFingers[f] = a; all.push(a);
+    } else rFingers[f] = null;
+    if (solid(parts.lDigits && parts.lDigits[f])) {
+      const a = mk(parts.lDigits[f], skinMat, 'lf' + f);
+      lFingers[f] = a; all.push(a);
+    } else lFingers[f] = null;
+  }
   /* `support` is the pair that may be moved away from the weapon during a
      reload. Everything else about them is identical to the firing arm. */
+  /* `support` is what a reload slides away from the weapon, so it has to
+     include the support hand's fingers and thumb -- otherwise the palm
+     travels to the magazine well and leaves five fingers hanging at the
+     forend, which is its own kind of horror. */
+  /* The firing index keeps its own named mesh because the trigger code
+     drives it by name, but it is also finger 3 -- so it appears in both
+     places rather than leaving a hole in the array everything else
+     iterates. */
+  if (index && !rFingers[3]) rFingers[3] = index;
+  const lDigitActors = lFingers.filter(Boolean).concat(lThumb ? [lThumb] : []);
   return { sleeve, skin, lSleeve, lSkin, thumb, thumbPivot: parts.thumbPivot,
     index, indexPivot: parts.indexPivot,
+    lThumb, lThumbPivot: parts.lThumbPivot,
+    rFingers, lFingers, rPivots: parts.rPivots || [], lPivots: parts.lPivots || [],
     digits: parts.digits,
-    support: lSleeve ? [lSleeve, lSkin] : [], parts: all };
+    support: lSleeve ? [lSleeve, lSkin].concat(lDigitActors) : [], parts: all };
 };

@@ -5815,6 +5815,79 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
    * Held on an automatic weapon -- a finger that flutters at twelve
    * hundred rounds a minute is a vibration, not a trigger pull -- and one
    * clean cycle per shot on everything else. */
+  /* ---------------- the hands, which now have fingers that move ---------
+
+     Every digit is its own mesh with its own knuckle, so this can turn
+     them. Zero is the pose the grip solve built and every contact test
+     measures -- the hand closed on the weapon -- and a positive angle
+     closes further, because `turn` in the viewmodel rotates the pointing
+     direction toward the closing one. So opening is negative, and the
+     resting hand costs nothing: no rotation at all.
+
+     This is the fix for "the fingers don't do anything, they're just
+     static figures so it jumbles up animations". They were one welded
+     casting; the support hand could be slid to the magazine well but not
+     opened, so it arrived as a closed fist and the magazine appeared
+     inside it. */
+  const turnDigit = (act, piv, axis, ang) => {
+    if (!act || !piv) return;
+    const q = new LegendEngine.Quat().setAxisAngle(
+      new LegendEngine.Vec3(axis ? axis[0] : 0, axis ? axis[1] : 0, axis ? axis[2] : 1), ang);
+    act.setRotation(q);
+    /* Hold the knuckle still. An actor's transform is translate-then-
+       rotate, so to fix a point p it has to sit at p - R*p. */
+    const r = new LegendEngine.Vec3(piv[0], piv[1], piv[2]).applyQuat(q);
+    act.setPosition([piv[0] - r.x, piv[1] - r.y, piv[2] - r.z]);
+  };
+  const poseHand = (arms, which, amount) => {
+    if (!arms) return;
+    const fingers = which === 'left' ? arms.lFingers : arms.rFingers;
+    const pivots = which === 'left' ? arms.lPivots : arms.rPivots;
+    const rec = arms.digits && arms.digits[which];
+    if (!fingers || !pivots || !rec || !rec.digits) return;
+    for (let f = 0; f < 4; f++) {
+      const d = rec.digits[f];
+      if (!fingers[f] || !pivots[f] || !d) continue;
+      /* The little finger opens furthest and the index least, which is
+         what a hand actually does when it lets go of something. */
+      const lean = [1.15, 1.0, 0.92, 0.78][f];
+      /* A rigid turn about the base knuckle cannot UNCURL a finger -- it
+         swings the whole hook open, which is what letting go looks like
+         from outside and is as far as one joint can take it. 1.25 rad at
+         the knuckle carries the fingertip far enough to read as an open
+         hand; less and it looks like the hand twitched. Opening turns
+         away from the closing direction, so it can never drive a finger
+         into the weapon however far it goes. */
+      turnDigit(fingers[f], pivots[f], d.axis, -amount * 1.25 * lean);
+    }
+    const th = which === 'left' ? arms.lThumb : arms.thumb;
+    const tp = which === 'left' ? arms.lThumbPivot : arms.thumbPivot;
+    if (th && tp) turnDigit(th, tp, [0, 0, 1], -amount * 0.42);
+  };
+  /* The support hand through a reload: it lets go, travels open, closes on
+     what it is fetching, and opens again to release. RELOAD_WINDOW already
+     says when each weapon's load is in that hand -- the same numbers the
+     carried magazine is shown on -- so the grip and the object it grips
+     appear on exactly the same beat instead of near each other. */
+  if (v.arms && v.arms.lFingers) {
+    let open = 0;
+    if (P.reloading > 0 && spec.reload) {
+      const done = 1 - P.reloading / spec.reload;
+      const win = RELOAD_WINDOW[spec.reloadKind] || [0.15, 0.65];
+      /* Open early and hold it open until the load is in the hand, rather
+         than peaking for one frame at the window's edge and collapsing.
+         The smoothing below is 14 per second, so a spike that narrow
+         never reaches the hand at all. */
+      const o0 = Math.max(0.05, win[0] * 0.75);
+      if (done < o0) open = Math.min(1, done / o0);
+      else if (done < win[0]) open = 1;
+      else if (done < win[1]) open = 0.15;          // closed ON the load
+      else open = Math.max(0, 1 - (done - win[1]) / Math.max(0.08, 1 - win[1]));
+    }
+    P.handOpen = (P.handOpen || 0) + (open - (P.handOpen || 0)) * Math.min(1, dt * 14);
+    poseHand(v.arms, 'left', P.handOpen);
+  }
+
   if (v.arms && v.arms.index && v.arms.indexPivot) {
     const iv = v.arms.indexPivot;
     const auto = !!spec.auto;
