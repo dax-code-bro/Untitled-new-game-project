@@ -4704,9 +4704,15 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
 
      A rifle now sits 67% of the way down instead of 87, and its muzzle,
      seven degrees below the axis over half a metre of barrel, still comes
-     out well under the horizon. */
-  const hipX = (po ? po.x : 0.092 + bulk * 0.046) - drawIn + bobX * (bench ? 0 : 1),
-        hipY = (po ? po.y : -0.106 - bulk * 0.036) + (bench ? 0 : bobY - dip),
+     out well under the horizon.
+
+     The per-length terms are much smaller than they were, too. Pushing a
+     long gun further right and lower than a pistol is right in principle
+     -- a rifle carried at the hip does sit further outboard -- but at 46
+     and 36 mm on top of a 30% longer hold, a Thompson's receiver was
+     against the right edge of the frame with only the barrel in shot. */
+  const hipX = (po ? po.x : 0.092 + bulk * 0.020) - drawIn + bobX * (bench ? 0 : 1),
+        hipY = (po ? po.y : -0.106 - bulk * 0.022) + (bench ? 0 : bobY - dip),
         hipD = po ? po.d : 0.355 + bulk * 0.055;
   const adsX = 0, adsY = -spec.sightH, adsD = 0.30;
   const a = P.ads;
@@ -4980,7 +4986,7 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
       /* The lid. Open is a full swing; shut is faster than open, because a
          top cover is lifted and then dropped. */
       const open = ease(seg(0.14, 0.30)) * (1 - Math.pow(seg(0.68, 0.80), 0.7));
-      v.cover.setRotation([0, 0, (v.coverOpen || -104) * open]);
+      v.cover.setRotation([0, 0, (v.coverOpen || 96) * open]);
       /* The old belt leaves. It swings off the lip and falls away rather
          than blinking out -- you can watch it go. */
       if (v.belt) {

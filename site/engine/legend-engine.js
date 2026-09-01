@@ -17136,7 +17136,11 @@ Engine.prototype.mg42 = function (opts = {}) {
   body.beltRest = [0, 0, 0];
   body.beltDrop = [-0.03, -0.42, 0.10];
   body.coverPin = [MG42.coverPin - MG42_ORIGIN.x, MG42.feedY - MG42_ORIGIN.y, 0];
-  body.coverOpen = -104;                       // degrees about Z, up and over
+  /* Positive, about Z. The pin is at the REAR of the cover and the lid
+     extends forward from it, so opening lifts the front: +x goes to +y,
+     which is a positive turn. Negative would have swung the whole lid
+     down through the receiver -- the failure this part exists to avoid. */
+  body.coverOpen = 96;
   body.boltRest = [0, 0, 0];
   body.boltThrow = [-0.092, 0, 0];
   if (body.cover) body.cover.setPosition(body.coverPin);
