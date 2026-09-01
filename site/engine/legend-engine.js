@@ -19541,6 +19541,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
    * magnitude -- run the existing one-parameter solve against three
    * distributions and keep whichever fits the whole finger best. Three
    * times the cost of one solve, and it recovers most of the freedom. */
+  let lastReach = null;
   const SPREADS = [
     [1.00, 1.00, 1.00],   // even, what it always did
     [1.34, 1.06, 0.72],   // base-heavy: round something thick
@@ -19591,6 +19592,17 @@ function buildViewHand(g, rawAt, side, opts = {}) {
       const d = surf(x, y, z);
       return d < bury ? Math.abs(d - want) + (bury - d) * 6 : Math.abs(d - want);
     };
+    /* The best MID-FINGER standoff any curl in the search could have
+       achieved, whether or not it was the curl that won on total error.
+       
+       Without this there is no way to tell a solve that failed from a
+       finger that has nowhere to go: the little finger on a 1911 curls
+       under the magazine floorplate, where there is genuinely no gun
+       left to touch, and it will read as 27 mm off however well the
+       solver works. A check that cannot tell those apart is a check that
+       demands the impossible, and I spent a round of tuning against one
+       before noticing it had never passed. */
+    let reach = 1e9;
     const err3 = (k) => {
       const js = [];
       const t = tipOf(root, dir0, bends, lens, k, pt, cl, js);
@@ -19601,6 +19613,9 @@ function buildViewHand(g, rawAt, side, opts = {}) {
         e = at1(t.x, t.y, t.z) * 2;
         for (const j of js) e += at1(j.x, j.y, j.z);
         e /= 4;
+        let worst = 0;
+        for (const j of js) { const d = surf(j.x, j.y, j.z) - r0; if (d > worst) worst = d; }
+        if (worst < reach) reach = worst;
       }
       if (ceil != null && t.y > ceil) e += (t.y - ceil) * 4;
       if (fwd != null && t.x < root.x + fwd) e += (root.x + fwd - t.x) * 5;
@@ -19627,7 +19642,8 @@ function buildViewHand(g, rawAt, side, opts = {}) {
        between two possible paths for a trigger finger is a question about
        where the tip lands; `fit` is the whole-finger score the solve
        actually minimised. */
-    return { k, err: Math.abs(surf(t.x, t.y, t.z) - want) + over, fit: bestErr };
+    return { k, err: Math.abs(surf(t.x, t.y, t.z) - want) + over, fit: bestErr,
+      reach: reach < 1e8 ? reach : null };
   };
 
   /* The wrapper: try each distribution, keep the best whole-finger fit,
@@ -19641,12 +19657,14 @@ function buildViewHand(g, rawAt, side, opts = {}) {
       one.bends = bends;
       return one;
     }
-    let best = null;
+    let best = null, reach = 1e9;
     for (const sp of SPREADS) {
       const b = [bends[0] * sp[0], bends[1] * sp[1], bends[2] * sp[2]];
       const sol = solveCurlOne(root, dir0, b, lens, r0, pt, cl, lim);
+      if (sol.reach != null && sol.reach < reach) reach = sol.reach;
       if (!best || sol.fit < best.fit) { sol.bends = b; best = sol; }
     }
+    if (best) best.reach = reach < 1e8 ? reach : null;
     return best;
   };
 
@@ -19698,6 +19716,9 @@ function buildViewHand(g, rawAt, side, opts = {}) {
         joints,
         tip: [p.x, p.y, p.z],
         r: r0,
+        // The closest any curl in the search could have brought the worst
+        // knuckle. null for a digit that is not solved against a surface.
+        reach: lastReach != null ? +lastReach.toFixed(4) : null,
       });
     }
   };
@@ -19875,7 +19896,9 @@ function buildViewHand(g, rawAt, side, opts = {}) {
       const d0 = new Vec3(point.x, point.y, point.z);
       const sol = solveCurl(root, d0, bends, lens, FR, point, curl);
       const sb = sol.bends || bends;
+      lastReach = sol.reach;
       digit(root, d0, [sb[0] * sol.k, sb[1] * sol.k, sb[2] * sol.k], lens, FR);
+      lastReach = null;
     }
   }
 

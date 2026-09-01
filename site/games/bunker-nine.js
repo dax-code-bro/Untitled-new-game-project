@@ -392,7 +392,15 @@ const WEAPONS = {
      * A C96 is loaded with the off hand pushing a stripper clip down into
      * the guide, and it is held with the off hand under the magazine
      * housing in front of the trigger guard, which is where this one goes. */
-    hands: { right: [-0.010, -0.020, 0.014], rightGrip: { axis: [0.10, -0.99, 0], round: [0, 0, -1], girth: 0.062, spread: 0.0196, close: 0.98, index: 'trigger', thumb: 'over', drop: 0 },
+    /* girth 0.062 was a guess and the model disagrees with it. The C96's
+       grip part measures 54 mm fore-and-aft by 30 mm across, which is an
+       effective 42 -- a broomhandle is a slim grip, that is the whole
+       shape of the gun. Curl scales as 0.055/girth, so at 62 the fingers
+       closed 38% less than that grip needs and the Mauser became the one
+       hand in the game whose knuckles could not reach the weapon under
+       any curl the solver could try: 35 mm at best, where the next worst
+       gun manages 16. Measured off the part, not guessed at again. */
+    hands: { right: [-0.010, -0.020, 0.014], rightGrip: { axis: [0.10, -0.99, 0], round: [0, 0, -1], girth: 0.043, spread: 0.0196, close: 0.98, index: 'trigger', thumb: 'over', drop: 0 },
       /* Forward of the magazine housing, on the barrel extension.
        *
        * It was 62 mm in front of the firing hand, which on a life-size
