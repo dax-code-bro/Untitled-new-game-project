@@ -6428,8 +6428,12 @@ const RAG_COLORS = [0x6f6c5c, 0x7a6a52, 0x5e6355, 0x83795f,
 /* One rotten green, varied only slightly — the body under the clothes
    should read as the same dead thing the head is, not as a second colour
    scheme competing with it. */
-const SKIN_TONES = [0x76835f, 0x7c8664, 0x6f7d59, 0x79815e,
-                    0x738060, 0x707c5a, 0x7e8767, 0x74815c];
+/* Cooler and greyer than they look on a swatch. The skin texture warms
+   whatever tint it is given and the subsurface term adds more on top, so a
+   colour that reads dead in the hex comes out alive on the model -- the
+   same trap the viewmodel hands fell into twice. */
+const SKIN_TONES = [0x6a7560, 0x6f7864, 0x64705a, 0x6c745e,
+                    0x687260, 0x656e5a, 0x717a67, 0x67735c];
 
 /* Four builds, each with its own body model, and what being that build
    does to it. A heavy one is slower and much harder to put down; one in
@@ -6789,10 +6793,25 @@ function buildPooledZombie(game, S, i) {
     // than the flat one the procedural flesh uses.
     ...(model ? { material: {
       color: 0x84906a, texture: 'rust', roughness: 0.95, metalness: 0,
-      subsurface: 0.03, uvScale: 1,
+      subsurface: 0.03, uvScale: 4,
     } } : {}),
-    // The body material is now flesh only — the coat is its own mesh.
-    material: { color: tone, texture: 'rust', roughness: 0.92, metalness: 0, subsurface: 0.05, uvScale: 3 },
+    /* The body material is flesh only -- the coat is its own mesh.
+     *
+     * It was the CORROSION texture, on the argument that rotted flesh
+     * reads as mottled rather than as an even tint. The argument is right
+     * and the texture is wrong: it is pitted metal, and on a head 230 mm
+     * across at uvScale 3 it lands as three or four enormous blotches that
+     * erase the brow, the cheekbones and the jaw -- a green camouflage
+     * ball with two embers in it. Winding it up to 14 only turned the ball
+     * mustard and made it look crocheted.
+     *
+     * The mottling belongs in the GEOMETRY, and now it is there: the head
+     * sculpt has its own rot pass, with the eyes sunk, the temples caved,
+     * the cheeks fallen in and the skin dried onto the vault, seeded so no
+     * two are alike. So the surface can be skin -- the same texture the
+     * living heads and the viewmodel hands use, and those read correctly --
+     * in a colour that is already dead. */
+    material: { color: tone, texture: 'skin', roughness: 0.88, metalness: 0, subsurface: 0.07, uvScale: 3 },
     // A dressed variant carries its colours per vertex, so its material has
     // to be white or every tint would be multiplied down by a rag colour.
     clothMaterial: { color: outfit ? 0xffffff : rag, texture: 'fabric', roughness: 0.96, metalness: 0, uvScale: 2.2 },
@@ -6801,7 +6820,7 @@ function buildPooledZombie(game, S, i) {
     // warms whatever colour it is given into something living; a corroded
     // one blotches it instead, which is the difference between a pale head
     // and a dead one.
-    skin: { color: tone, texture: 'rust', roughness: 0.92, metalness: 0, subsurface: 0.05, uvScale: 3 },
+    skin: { color: tone, texture: 'skin', roughness: 0.88, metalness: 0, subsurface: 0.07, uvScale: 3 },
     seed: 20 + (i * 5) % 11,
     face: 'static', zombie: true,
     // Every pooled body carries plate; it is only made visible on the ones
@@ -9942,7 +9961,14 @@ function start(opts = {}) {
        mud, the top of every crate — came out pale and slightly cool while
        the walls stayed warm. On a smoke-lit day that reads as standing
        water. Warmer above, and less of it. */
-    zenith: 0x7d7469, horizon: 0x9d9385, ground: 0x4c463b,
+    /* `ground` is the downward half of the sky light -- the bounce off the
+       mud that fills everything the sun cannot reach. At 0x4c463b that is
+       about 0.08 linear, which is not a fill, it is a floor at black: out
+       on the field a zombie's HEAD was lit and its whole body below the
+       shoulders was a silhouette with pale rips in it. A shadowed thing
+       still has to be a thing. Up to about 0.16 linear, which lifts the
+       shadows without touching anything the sun is on. */
+    zenith: 0x7d7469, horizon: 0x9d9385, ground: 0x6b6456,
     sun: [0.35, 0.62, -0.70], sunColor: 0xffe0b4,
     sunIntensity: 1.6, exposure: 1.08, clouds: 0.55,
     /* The reflection environment inside the bunker.
