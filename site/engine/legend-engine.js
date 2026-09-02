@@ -20151,6 +20151,38 @@ function buildViewHand(g, rawAt, side, opts = {}) {
           const L = Math.hypot(ax, ay, az) || 1;
           return [ax / L, ay / L, az / L];
         })(),
+        /* WHICH WAY IS OPEN.
+         *
+         * A negative turn about the bend axis was taken to mean opening,
+         * on the grounds that closing is positive. That is true of the
+         * finger's own arc and says nothing about the weapon: under a
+         * forend the fingers come up the near side and over the top, and
+         * unrolling that arc backwards carries them further up -- into
+         * the handguard. Rendered mid-reload, the MP5's support hand
+         * opened by pushing four fingers through its own gun.
+         *
+         * So it is measured rather than assumed. Turn the fingertip a
+         * quarter radian each way about this digit's own axis and keep
+         * the sign that takes it further from the weapon's skin. */
+        open: (() => {
+          const sf = opts.surface;
+          if (!sf) return -1;
+          const ax = pt.y * cl.z - pt.z * cl.y;
+          const ay = pt.z * cl.x - pt.x * cl.z;
+          const az = pt.x * cl.y - pt.y * cl.x;
+          const L = Math.hypot(ax, ay, az) || 1;
+          const kx = ax / L, ky = ay / L, kz = az / L;
+          const spin = (sgn) => {
+            const a = sgn * 0.25, c = Math.cos(a), sn = Math.sin(a);
+            const vx = p.x - root.x, vy = p.y - root.y, vz = p.z - root.z;
+            const cx = ky * vz - kz * vy, cy = kz * vx - kx * vz, cz = kx * vy - ky * vx;
+            const kd = kx * vx + ky * vy + kz * vz;
+            return sf(root.x + vx * c + cx * sn + kx * kd * (1 - c),
+              root.y + vy * c + cy * sn + ky * kd * (1 - c),
+              root.z + vz * c + cz * sn + kz * kd * (1 - c));
+          };
+          return spin(-1) >= spin(1) ? -1 : 1;
+        })(),
         // The closest any curl in the search could have brought the worst
         // knuckle. null for a digit that is not solved against a surface.
         reach: lastReach != null ? +lastReach.toFixed(4) : null,

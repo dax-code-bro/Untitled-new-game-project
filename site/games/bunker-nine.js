@@ -332,7 +332,11 @@ const WEAPONS = {
     recoil: { up: 0.36, side: 0.26, climb: 0.11, recover: 12, back: 0.008, roll: 0.003, impulse: 4 },
     moveMul: 1.0, muzzleVel: 400,
     ammo: { mag: { w: 0.026, d: 0.021, len: 0.126, curve: 0.011, witness: 4, round: AMMO.para9 } },
-    hands: { right: [-0.012, -0.044, 0.016], rightGrip: 'pistol', left: [0.232, -0.014, -0.020], leftGrip: 'fore' },
+    hands: { right: [-0.012, -0.044, 0.016], rightGrip: 'pistol', /* Sliced at its own station, this MP5's handguard runs y 0 to +40 and
+       z -17 to +17; the hand was anchored at y -14, z -20 -- below it and
+       outside it, 21 mm from the nearest metal. On the underside, on the
+       centreline. */
+      left: [0.232, 0, 0], leftGrip: 'fore' },
   },
   sawnoff: {
     name: 'Sawn-Off', slotName: 'SAWN-OFF',
@@ -6133,7 +6137,13 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
       if (!fingers[f] || !pivots[f] || !d) continue;
       /* The little finger opens furthest and the index least, which is
          what a hand actually does when it lets go of something. */
-      const lean = [1.15, 1.0, 0.92, 0.78][f];
+      /* Nearly together. At 1.15 down to 0.78 the four fingers opened by
+         visibly different amounts, and since a rigid turn about the
+         knuckle cannot uncurl them, what came out was four posts of four
+         different heights standing off the handguard -- a staircase, not
+         a hand. A hand relaxing opens its fingers by almost the same
+         amount; the little finger leads by a hair and that is all. */
+      const lean = [1.06, 1.0, 0.96, 0.90][f];
       /* A rigid turn about the base knuckle cannot UNCURL a finger -- it
          swings the whole hook open, which is what letting go looks like
          from outside and is as far as one joint can take it. 1.25 rad at
@@ -6141,7 +6151,14 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
          hand; less and it looks like the hand twitched. Opening turns
          away from the closing direction, so it can never drive a finger
          into the weapon however far it goes. */
-      turnDigit(fingers[f], pivots[f], d.axis, -amount * 1.25 * lean);
+      /* And not so far. One joint swinging 72 degrees is a claw opening;
+         a hand letting go of something rotates its knuckles about half
+         that and does the rest by straightening, which one rigid turn
+         cannot do. Asking for the part it CAN do reads as a hand; asking
+         for the whole of it reads as a mistake. */
+      // `open` is the sign that takes this finger AWAY from the weapon,
+      // measured when it was built rather than assumed to be negative.
+      turnDigit(fingers[f], pivots[f], d.axis, (d.open || -1) * amount * 0.62 * lean);
     }
     const th = which === 'left' ? arms.lThumb : arms.thumb;
     const tp = which === 'left' ? arms.lThumbPivot : arms.thumbPivot;
