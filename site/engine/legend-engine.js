@@ -15419,7 +15419,20 @@ function strut(g, a, b, pts, capA = true, capB = true) {
  * up into the housing above it. Making the hole below it taller does
  * nothing about that, and on the Remington it gave the solve more room to
  * drive further in. The guards are still too small and worth fixing on
- * their own account; it just is not this bug. */
+ * their own account; it just is not this bug.
+ *
+ * AND IT WAS NOT THE HOUSING EITHER. The paragraph above is right that
+ * the finger is not in the bow and wrong about where it is instead. The
+ * measurement it reasoned from counted the hidden RELOAD PROP as part of
+ * the weapon -- a magazine built at start-up, parented to the same root,
+ * and not in existence when the hand was solved. Attributed per part,
+ * the Thompson's trigger finger was inside that magazine, and skipping
+ * it takes the digit from 33 per cent to 17 with nothing moved. The
+ * receiver was never holding it.
+ *
+ * The clearance argument above stands on its own: it was measured off
+ * the distance field at the point the solve aims at, and no reload prop
+ * comes into it. */
 function guardBow(g, pts, hf = 0.0022, hb = 0.0022, hw = 0.0046, z = 0) {
   const sts = pts.map(([x, y], i) => {
     const p = pts[Math.max(0, i - 1)], q = pts[Math.min(pts.length - 1, i + 1)];
