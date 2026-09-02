@@ -17676,6 +17676,25 @@ const RIFLE_KINDS = {
     gripTopX: -0.0700, gripTopY: -0.0200, gripLen: 0.1080, gripRake: 0.30,
     stockButt: -0.3900, comb: 0.0240, cheek: true,
     magX: 0.0400, magRows: 1, magLen: 0.1250,
+    /* MEASURED AND REVERTED: ending the scope short of the support hand.
+     *
+     * The tube ran to x 0.210 and the hand holds at 0.200, sitting at y
+     * 41 to 87 with the barrel's top at 24 -- 16.5 mm of gap for a 21.2
+     * mm finger, and 17 per cent of that hand measured inside `scope`.
+     * Ending it at 0.150 puts the hand's station in open air and leaves
+     * a 235 mm tube, which is still a large optic.
+     *
+     * It makes the hand WORSE. The support hand's little finger goes 33
+     * per cent buried to 58 and its ring 33 to 42, and the fleet goes 9.6
+     * to 10.0 buried with contact 10.3 down to 9.8.
+     *
+     * Which says the obstruction was also a constraint. With the scope
+     * overhead the hand had one place to be; with it gone the seating
+     * search is free to settle somewhere it likes better by its own cost
+     * and which is deeper in the barrel -- and x 0.200 is ten
+     * millimetres past the start of the fluting, so what it settles into
+     * is the grooves. Taking an obstacle away is not the same as making
+     * room. */
     scope: { x0: -0.0850, x1: 0.2100, r: 0.0230, bell: 0.0330, y: 0.0640 },
     bipod: true,
     origin: new Vec3(-0.0700, -0.0520, 0), mass: 12.4, bound: 0.74,
