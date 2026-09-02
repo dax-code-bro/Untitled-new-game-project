@@ -20940,21 +20940,25 @@ function buildViewHand(g, rawAt, side, opts = {}) {
      * this a correction to a hand rather than four fingers going their
      * own way. */
     if (fore && clearBone && !clearBone(root)) {
-      for (const dir of [1, -1]) {
-        let done = false;
-        for (let k = 1; k <= 4; k++) {
-          const t2 = k * 0.003;
-          const cand = new Vec3(root.x + across.x * dir * t2,
-            root.y + across.y * dir * t2, root.z + across.z * dir * t2);
-          if (clearBone(cand)) {
-            root.set(cand.x, cand.y, cand.z);
-            if (opts.out) {
-              (opts.out.fingerShift || (opts.out.fingerShift = []))[f] = +(t2 * dir).toFixed(4);
-            }
-            done = true; break;
-          }
+      /* The SMALLEST step that clears, either way, rather than one side
+         exhausted before the other is tried. Taking +across to twelve
+         millimetres in preference to -across at three moves a finger four
+         times as far as it needs to go, and the whole reason there is a
+         bound at all is to keep these four fingers a hand. */
+      let bestT = null;
+      for (let k = 1; k <= 4 && bestT === null; k++) {
+        for (const dir of [1, -1]) {
+          const t2 = k * 0.003 * dir;
+          const cand = new Vec3(root.x + across.x * t2,
+            root.y + across.y * t2, root.z + across.z * t2);
+          if (clearBone(cand)) { bestT = t2; break; }
         }
-        if (done) break;
+      }
+      if (bestT !== null) {
+        root.set(root.x + across.x * bestT, root.y + across.y * bestT, root.z + across.z * bestT);
+        if (opts.out) {
+          (opts.out.fingerShift || (opts.out.fingerShift = []))[f] = +bestT.toFixed(4);
+        }
       }
     }
     /* The knuckle row curves round what it is holding.
