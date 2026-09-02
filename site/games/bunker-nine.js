@@ -4839,7 +4839,9 @@ function applyAttachmentLooks(game, P, id) {
  * every distance out of it would be meaningless. */
 function weaponSurface(game, root) {
   if (!root || !game.geometryOf) return null;
-  const pts = [];
+  /* Only how MANY sampled vertices the walk found, not where they are:
+     the guard below wants a count and nothing else does. */
+  let nPts = 0;
   /* Triangles as well as points. The point list keeps every third vertex,
      which is plenty to answer "how far to the surface" and useless for
      "which side of it" -- a flat panel has vertices only at its corners,
@@ -4863,16 +4865,7 @@ function weaponSurface(game, root) {
       }
       // Every third vertex: a fingertip is 10 mm across and these meshes are
       // far finer than that, so a third of them describes the same surface.
-      for (let i = 0; i < q.length; i += 9) {
-        let x = q[i], y = q[i + 1], z = q[i + 2];
-        if (m) {
-          const wx = m[0] * x + m[4] * y + m[8] * z + m[12];
-          const wy = m[1] * x + m[5] * y + m[9] * z + m[13];
-          const wz = m[2] * x + m[6] * y + m[10] * z + m[14];
-          x = wx; y = wy; z = wz;
-        }
-        pts.push(x, y, z);
-      }
+      for (let i = 0; i < q.length; i += 9) nPts += 3;
     }
     for (const c of (a.children || [])) {
       const cm = new LegendEngine.Mat4();
@@ -4882,18 +4875,16 @@ function weaponSurface(game, root) {
     }
   };
   walk(root, null);
-  if (pts.length < 30) return null;
+  if (nPts < 30) return null;
 
-  // A grid, so a lookup touches a handful of points instead of thousands.
-  const CELL = 0.012;
-  const grid = new Map();
-  const key = (i, j, k) => i + ',' + j + ',' + k;
-  for (let i = 0; i < pts.length; i += 3) {
-    const kk = key(Math.floor(pts[i] / CELL), Math.floor(pts[i + 1] / CELL), Math.floor(pts[i + 2] / CELL));
-    let cell = grid.get(kk);
-    if (!cell) { cell = []; grid.set(kk, cell); }
-    cell.push(i);
-  }
+  /* There WAS a grid of points here, and nothing ever read it.
+     It is what the field used before the switch to point-to-triangle
+     below, and when that landed the query moved to the triangle grid and
+     this one was left standing: built for every weapon at start-up,
+     several thousand points bucketed into a Map with string keys, and
+     then never looked at again. Gone, along with the point list itself --
+     only the count survives, because the guard above wants to know
+     whether the walk found a mesh at all. */
   /* Distance to the nearest TRIANGLE, not the nearest vertex.
    *
    * The solve wants each joint one finger-radius plus a hair off the
@@ -4911,19 +4902,58 @@ function weaponSurface(game, root) {
    * a lookup still touches a handful of them. */
   const TCELL = 0.016;
   const tgrid = new Map();
-  const tkey = (i, j, k) => i + ',' + j + ',' + k;
+  /* A NUMBER for the cell, not a string.
+   *
+   * `i + ',' + j + ',' + k` was 1.2 seconds of start-up on its own,
+   * sampled -- not the lookup, just building the key to do it with. A
+   * query scans a shell of cells around the point and every one of them
+   * cost a fresh three-part string to concatenate, hash and throw away.
+   * Packed into one integer instead, three ten-bit fields with room for
+   * plus or minus 1024 cells, which at 16 mm is plus or minus 16 metres:
+   * far more than any weapon-local coordinate here can reach. */
+  const tkey = (i, j, k) => ((i + 1024) * 2048 + (j + 1024)) * 2048 + (k + 1024);
+  /* Each triangle's own box, kept alongside so a query can reject one
+     without running the region test on it. Indexed by the triangle's
+     start offset, the same number the grid cells hold. */
+  const tlo = new Float32Array(tris.length), thi = new Float32Array(tris.length);
   for (let t = 0; t < tris.length; t += 3) {
-    const lo2 = [0, 1, 2].map((k) => Math.min(tris[t][k], tris[t + 1][k], tris[t + 2][k]));
-    const hi2 = [0, 1, 2].map((k) => Math.max(tris[t][k], tris[t + 1][k], tris[t + 2][k]));
-    for (let i = Math.floor(lo2[0] / TCELL); i <= Math.floor(hi2[0] / TCELL); i++)
-      for (let j = Math.floor(lo2[1] / TCELL); j <= Math.floor(hi2[1] / TCELL); j++)
-        for (let k = Math.floor(lo2[2] / TCELL); k <= Math.floor(hi2[2] / TCELL); k++) {
+    const A = tris[t], B2 = tris[t + 1], C = tris[t + 2];
+    for (let c = 0; c < 3; c++) {
+      tlo[t + c] = Math.min(A[c], B2[c], C[c]);
+      thi[t + c] = Math.max(A[c], B2[c], C[c]);
+    }
+    for (let i = Math.floor(tlo[t] / TCELL); i <= Math.floor(thi[t] / TCELL); i++)
+      for (let j = Math.floor(tlo[t + 1] / TCELL); j <= Math.floor(thi[t + 1] / TCELL); j++)
+        for (let k = Math.floor(tlo[t + 2] / TCELL); k <= Math.floor(thi[t + 2] / TCELL); k++) {
           const kk = tkey(i, j, k);
           let cell = tgrid.get(kk);
           if (!cell) { cell = []; tgrid.set(kk, cell); }
           cell.push(t);
         }
   }
+  /* Which triangles this query has already measured.
+     A triangle wider than a cell is filed in every cell it crosses, and a
+     query reads twenty-seven of them at the first ring alone, so without
+     this the same triangle gets the full region test several times over
+     for the same answer. A stamp per query costs one comparison. */
+  const seen = new Int32Array(tris.length);
+  let visit = 0;
+  /* The whole weapon's box, for the queries that are nowhere near it.
+     The search below gives up after six rings, so anything further than
+     six cells outside this box cannot possibly find a triangle -- and
+     most queries are exactly that: a solver stepping a fingertip through
+     the air around the gun. Without this each of them walked out to the
+     sixth ring, four and a half thousand cells, to learn nothing. */
+  let wlo0 = 1e9, wlo1 = 1e9, wlo2 = 1e9, whi0 = -1e9, whi1 = -1e9, whi2 = -1e9;
+  for (let t = 0; t < tris.length; t += 3) {
+    if (tlo[t] < wlo0) wlo0 = tlo[t];
+    if (tlo[t + 1] < wlo1) wlo1 = tlo[t + 1];
+    if (tlo[t + 2] < wlo2) wlo2 = tlo[t + 2];
+    if (thi[t] > whi0) whi0 = thi[t];
+    if (thi[t + 1] > whi1) whi1 = thi[t + 1];
+    if (thi[t + 2] > whi2) whi2 = thi[t + 2];
+  }
+  const REACH = 7 * TCELL;
   /* Closest point on a triangle to a point: the standard region test --
      the three vertices, the three edges, or the face interior. */
   const triDist2 = (px, py, pz, A, B2, C) => {
@@ -4971,20 +5001,62 @@ function weaponSurface(game, root) {
   };
   const surf = (x, y, z) => {
     if (!tris.length) return 1;
+    if (x < wlo0 - REACH || x > whi0 + REACH || y < wlo1 - REACH || y > whi1 + REACH ||
+        z < wlo2 - REACH || z > whi2 + REACH) return 1;
     const gi = Math.floor(x / TCELL), gj = Math.floor(y / TCELL), gk = Math.floor(z / TCELL);
     let best = 1e9;
+    visit++;
     for (let r = 0; r <= 6; r++) {
-      for (let a2 = -r; a2 <= r; a2++)
-        for (let b2 = -r; b2 <= r; b2++)
-          for (let c2 = -r; c2 <= r; c2++) {
-            if (r > 0 && Math.max(Math.abs(a2), Math.abs(b2), Math.abs(c2)) < r) continue;
+      /* Walk the SHELL, not the cube with its middle skipped. At the
+         sixth ring that is 2197 iterations to visit 866 cells, and the
+         1331 skipped ones each cost an abs and a max to skip. */
+      for (let a2 = -r; a2 <= r; a2++) {
+        const ea = (a2 === -r || a2 === r);
+        for (let b2 = -r; b2 <= r; b2++) {
+          const eb = ea || b2 === -r || b2 === r;
+          // On a face of the shell every k belongs; otherwise only the two ends.
+          for (let c2 = -r; c2 <= r; c2 += (eb || r === 0) ? 1 : (2 * r)) {
+            /* The CELL's box before the cell's contents.
+             *
+             * Counted over a start-up: 269 million triangles stamped to
+             * measure 15 per query. Ninety-four per cent of the work was
+             * rejecting triangles one at a time out of cells that were
+             * wholly further away than the best answer so far.
+             *
+             * Rejecting the cell instead is exact, not an approximation.
+             * A triangle wider than a cell is filed in every cell its box
+             * overlaps, including the one holding its own nearest point,
+             * and that cell's box is no further from the query than the
+             * triangle is -- so a cell further away than `best` cannot be
+             * holding the winner, only copies of triangles that will be
+             * reached through nearer cells. And this runs before the key
+             * and the lookup, so a rejected cell costs no hashing either. */
+            const bi = (gi + a2) * TCELL, bj = (gj + b2) * TCELL, bk = (gk + c2) * TCELL;
+            const cdx = x < bi ? bi - x : (x > bi + TCELL ? x - bi - TCELL : 0);
+            const cdy = y < bj ? bj - y : (y > bj + TCELL ? y - bj - TCELL : 0);
+            const cdz = z < bk ? bk - z : (z > bk + TCELL ? z - bk - TCELL : 0);
+            if (cdx * cdx + cdy * cdy + cdz * cdz >= best) continue;
             const cell = tgrid.get(tkey(gi + a2, gj + b2, gk + c2));
             if (!cell) continue;
-            for (const t of cell) {
+            for (let ci = 0; ci < cell.length; ci++) {
+              const t = cell[ci];
+              // Measured already, this query, from another cell it crosses.
+              if (seen[t] === visit) continue;
+              seen[t] = visit;
+              /* Its box first. The distance to a box is a lower bound on
+                 the distance to what is inside it, so a box already
+                 further away than the best triangle so far cannot win and
+                 does not need the region test. */
+              const bx = x < tlo[t] ? tlo[t] - x : (x > thi[t] ? x - thi[t] : 0);
+              const by = y < tlo[t + 1] ? tlo[t + 1] - y : (y > thi[t + 1] ? y - thi[t + 1] : 0);
+              const bz = z < tlo[t + 2] ? tlo[t + 2] - z : (z > thi[t + 2] ? z - thi[t + 2] : 0);
+              if (bx * bx + by * by + bz * bz >= best) continue;
               const d = triDist2(x, y, z, tris[t], tris[t + 1], tris[t + 2]);
               if (d < best) best = d;
             }
           }
+        }
+      }
       // One ring past the first hit: a nearer triangle can sit diagonally.
       if (best < 1e9 && r >= 1) break;
     }
