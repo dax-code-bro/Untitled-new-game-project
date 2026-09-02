@@ -3434,7 +3434,14 @@ function buildMap(game, S) {
        room and both drawn -- 0.21 square metres of it, at the foot of
        the stairs where you walk past it. The same two millimetres of
        clearance the last tread was already given against the landing,
-       for the same reason. */
+       for the same reason. Measured: the 0.21 goes, and map.test is 14
+       of 14, so the four millimetres cost nothing.
+
+       It only became visible once the coplanar check learned to ignore a
+       face buried in a third solid. This pair was being reported on
+       their BOTTOM faces -- both resting on the floor, both buried in
+       it, neither ever drawn -- and because a pair is reported once, the
+       false positive was masking the real fight on their fronts. */
     deco(ST.x0 + 0.06, ST.x1 - 0.06, 0, 0.09, ST.zTop + 0.2, ST.zBot - 0.004, MAT.wood);   // sole plate
     for (let k = 0; k < 4; k++) {
       const z1 = ST.zBot - 0.55 - k * 0.95;
