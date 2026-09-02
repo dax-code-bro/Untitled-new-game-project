@@ -1755,6 +1755,26 @@ function buildViewHand(g, rawAt, side, opts = {}) {
     if (opts.surface) {
       const surf = opts.surface;
       const solidAt = surf.inside || null;
+      /* MEASURED AND REVERTED: standing the knuckles further off, 13 mm
+         instead of 10.
+       *
+       * The question it was asked was whether a wider standoff frees the
+       * joints -- 146 of the fleet's half-bones have no angle that
+       * misses the metal, and a knuckle further out has more room to
+       * curl in. It does, a little: walled falls to 134, eight per cent.
+       * And both fleet averages improve, burial 9.6 per cent to 9.2 and
+       * contact 10.3 to 11.4.
+       *
+       * It still goes back, because seven digits get materially worse --
+       * the Kill Streak's little finger 58 per cent to 67, the
+       * Remington's ring 8 to 25, the Kill Streak's middle 8 to 25, the
+       * Paralyzer's little 33 to 42 -- and that is what the regression
+       * guard is for. Three changes today have now improved both fleet
+       * averages while failing per digit: this, a 17 mm finger, and the
+       * shortest-move row slide. The averages and the worst hands are
+       * not the same objective, and a fleet number that improves while
+       * four fingers get buried deeper is not an improvement anyone
+       * looking at those four fingers would recognise. */
       const want = 0.010;
       /* Far enough to get OUT.
        *
