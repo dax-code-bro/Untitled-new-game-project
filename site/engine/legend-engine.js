@@ -21009,7 +21009,63 @@ function buildViewHand(g, rawAt, side, opts = {}) {
               /* Reaching the trigger THROUGH the guard is not reaching the
                  trigger. A finger goes in over the back of the guard, so
                  charge any path whose joints finish inside metal. */
-              if (inS2) for (const j of js) if (inS2(j.x, j.y, j.z)) e += 0.020;
+              /* Buried, measured along the BONES and charged properly.
+               *
+               * This sampled the two interior joints and charged 0.020 a
+               * piece, against errors that run 6 to 28 mm -- so a finger
+               * with a joint inside the receiver cost about as much as
+               * one sitting 20 mm wide of the trigger, and the solve
+               * happily took it. Worse, `tipOf` reports only those two
+               * joints, so a bone driving through forty millimetres of
+               * receiver with both ends in clear air was not sampled at
+               * all: the same both-ends-outside blindness that let the
+               * support fingers thread a barrel jacket.
+               *
+               * Measured per digit by ray parity against the weapon's own
+               * triangles, aiming the index at its guard put 29 per cent
+               * of the Thompson's trigger finger and 17 of the MG 42's
+               * inside the gun, against 10 and 1 before. The hand-level
+               * figure moved three points and hid it.
+               *
+               * Six samples now -- root, both joints, the tip, and the
+               * middle of each bone -- and one of them buried costs more
+               * than the whole reach gate is worth, because a finger
+               * inside the gun is not a pose to be traded off. */
+              if (inS2) {
+                /* MEASURED AND REVERTED: charging by how CLOSE the bone
+                   runs as well as by whether it is through.
+                 *
+                 * A centreline outside the metal is not a finger outside
+                 * the metal -- the samples are points on a bone and the
+                 * finger is a twenty-one millimetre tube around it, so a
+                 * centreline five millimetres clear still has half its
+                 * flesh in the receiver. That is exactly the Thompson:
+                 * not one sampled point inside, and 29 per cent of the
+                 * digit's skin buried when the mesh itself is measured by
+                 * parity. So charge (FR * 0.75 - distance) * 1.2 on every
+                 * sample, not just the buried ones.
+                 *
+                 * It moves the reported error and not the geometry. The
+                 * 1911, Thompson, MG 42 and Remington came back with
+                 * identical clipping -- 4, 29, 10 and 3 per cent, the same
+                 * to the sample -- because the winning pose was already
+                 * the least-buried one available and the charge falls on
+                 * all the candidates alike. What it did do is push the
+                 * Mauser to 38 mm of error and the Obliterator to 40, both
+                 * past the reach gate, so those two lost their aimed
+                 * finger for nothing. */
+                const chain = [root, js[0], js[1], tp];
+                const charge = (x2, y2, z2) => {
+                  if (inS2 && inS2(x2, y2, z2)) e += 0.030;
+                };
+                for (let c = 0; c + 1 < chain.length; c++) {
+                  const a2 = chain[c], b3 = chain[c + 1];
+                  if (!a2 || !b3) continue;
+                  charge(a2.x, a2.y, a2.z);
+                  charge((a2.x + b3.x) / 2, (a2.y + b3.y) / 2, (a2.z + b3.z) / 2);
+                }
+                charge(tp.x, tp.y, tp.z);
+              }
               /* MEASURED AND REVERTED: penalising a finger for going
                  PAST the hole.
                *
