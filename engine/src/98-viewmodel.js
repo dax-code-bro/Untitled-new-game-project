@@ -1869,9 +1869,20 @@ function buildViewHand(g, rawAt, side, opts = {}) {
                  whole finger 26 mm short with nothing on the blade. The
                  last joint counts as contact too. */
               const last = js.length ? js[js.length - 1] : tp;
+              /* Scored against the hole this pose is AIMED at.
+               *
+               * This measured to `trigAt` -- the best-scoring candidate --
+               * while the aim plane above was built from `cAt`, the
+               * candidate actually being tried. So every candidate after
+               * the first was aimed at its own hole and then marked
+               * against a different one, which is the whole point of
+               * carrying several forward and the one part of it that was
+               * not doing anything. It only bites when the first
+               * candidate fails, and a weapon whose first candidate fails
+               * is exactly the case the list exists for. */
               let e = Math.min(
-                Math.hypot(tp.x - trigAt.x, tp.y - trigAt.y, tp.z - trigAt.z),
-                Math.hypot(last.x - trigAt.x, last.y - trigAt.y, last.z - trigAt.z) + 0.004);
+                Math.hypot(tp.x - cAt.x, tp.y - cAt.y, tp.z - cAt.z),
+                Math.hypot(last.x - cAt.x, last.y - cAt.y, last.z - cAt.z) + 0.004);
               /* Reaching the trigger THROUGH the guard is not reaching the
                  trigger. A finger goes in over the back of the guard, so
                  charge any path whose joints finish inside metal. */
