@@ -273,20 +273,28 @@ const R = path.join(__dirname, '..', '..') + '/';
      are written down, the table is printed every run, and the test fails
      only when a digit gets materially worse than it was. Lower a number
      here when you improve it; that is what stops the ratchet slipping. */
+  /* Moved once, when the march's crossing test was made to agree with
+     what the march is aiming at. Sixteen digits improved, many of them to
+     nothing, and three got worse: the 1911's and the Blaze's ring finger
+     8 per cent to 17 -- they are the same model -- and the MP5's 17 to
+     25. The fleet went 13.6 per cent buried to 11.9 and 12.1 touching to
+     11.3. The ratchet is only worth having if it moves when the fleet
+     genuinely improves and records what it cost, so both are here: the
+     new numbers below, and the three that went the wrong way named. */
   const BASE = {
-    m1911: { r0: 17, l0: 8, r1: 17, l1: 17, r2: 17, l2: 8, index: 0, l3: 8 },
-    blaze: { r0: 17, l0: 8, r1: 17, l1: 17, r2: 17, l2: 8, index: 0, l3: 8 },
+    m1911: { r0: 0, l0: 0, r1: 8, l1: 17, r2: 8, l2: 17, index: 0, l3: 8 },
+    blaze: { r0: 0, l0: 0, r1: 8, l1: 17, r2: 8, l2: 17, index: 0, l3: 8 },
     thompson: { r0: 8, l0: 8, r1: 8, l1: 8, r2: 42, l2: 8, index: 33, l3: 8 },
-    scatter: { r0: 0, l0: 17, r1: 17, l1: 8, r2: 8, l2: 8, index: 17, l3: 8 },
-    arc: { r0: 0, l0: 0, r1: 0, l1: 0, r2: 17, l2: 0, index: 42, l3: 8 },
-    obliterator: { r0: 8, l0: 0, r1: 17, l1: 0, r2: 17, l2: 0, index: 25, l3: 0 },
+    scatter: { r0: 0, l0: 8, r1: 0, l1: 8, r2: 8, l2: 8, index: 17, l3: 8 },
+    arc: { r0: 0, l0: 0, r1: 0, l1: 0, r2: 0, l2: 0, index: 42, l3: 8 },
+    obliterator: { r0: 8, l0: 0, r1: 8, l1: 0, r2: 8, l2: 0, index: 25, l3: 0 },
     mauser: { r0: 17, l0: 25, r1: 8, l1: 17, r2: 0, l2: 0, index: 17, l3: 8 },
-    paralyzer: { r0: 0, l0: 42, r1: 17, l1: 42, r2: 8, l2: 25, index: 25, l3: 25 },
-    mp5: { r0: 0, l0: 25, r1: 8, l1: 17, r2: 25, l2: 17, index: 25, l3: 17 },
+    paralyzer: { r0: 0, l0: 33, r1: 0, l1: 42, r2: 8, l2: 25, index: 25, l3: 25 },
+    mp5: { r0: 0, l0: 25, r1: 8, l1: 17, r2: 25, l2: 25, index: 25, l3: 8 },
     sawnoff: { r0: 0, l0: 17, r1: 0, l1: 17, r2: 17, l2: 25, index: 17, l3: 8 },
-    remington: { r0: 0, l0: 25, r1: 0, l1: 8, r2: 8, l2: 8, index: 8, l3: 8 },
-    killstreak: { r0: 0, l0: 33, r1: 8, l1: 33, r2: 8, l2: 42, index: 33, l3: 58 },
-    mg42: { r0: 0, l0: 25, r1: 8, l1: 17, r2: 17, l2: 0, index: 25, l3: 8 },
+    remington: { r0: 0, l0: 17, r1: 0, l1: 8, r2: 8, l2: 8, index: 8, l3: 8 },
+    killstreak: { r0: 0, l0: 33, r1: 0, l1: 33, r2: 8, l2: 42, index: 33, l3: 58 },
+    mg42: { r0: 0, l0: 17, r1: 8, l1: 17, r2: 17, l2: 0, index: 25, l3: 8 },
   };
   // Eight points is about one sample in twelve: past the noise of which
   // vertices happen to land inside, and well under the 19 that aiming

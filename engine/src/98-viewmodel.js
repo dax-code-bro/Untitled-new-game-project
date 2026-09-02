@@ -1103,11 +1103,38 @@ function buildViewHand(g, rawAt, side, opts = {}) {
              * falls to something that is not about the weapon at all.
              * Measured depth breaks the tie the right way: if a finger
              * has to touch the wood, it touches it. */
+            /* Charged against the distance the march is AIMING at, not
+             * against half of it.
+             *
+             * The march wants each joint one radius plus 1.2 mm off the
+             * skin -- flesh resting on metal -- and then called a sample
+             * crossed only once it was inside 0.45 of a radius. Between
+             * those two numbers is a band where more than half a
+             * finger's flesh is in the receiver and nothing charges for
+             * it, which is most of what the parity measurement has been
+             * finding: the winning pose is picked from candidates that
+             * are all, by the solver's own test, perfectly clean.
+             *
+             * At 0.70 the two roughly agree. Sixteen digits improved,
+             * seven of them to nothing at all -- the 1911's little and
+             * ring fingers, the Scattergun's middle, the Arc's, the
+             * Paralyzer's, the Kill Streak's -- and three got worse: the
+             * 1911's ring finger 8 per cent to 17, the Blaze's the same
+             * because it is the same model, and the MP5's 17 to 25.
+             * Burial 13.6 per cent to 11.9, contact 12.1 to 11.3.
+             *
+             * That ratio is the point. Four earlier goes at this traded
+             * the two roughly one for one, which is what a rule about
+             * WHERE to put the row does; this one is about how DEEP, and
+             * it buys 1.7 points of burial for 0.8 of contact. Pushed
+             * further, to 0.85, burial stops at 11.9 and contact falls to
+             * 10.0 -- so 0.70 is where the depth argument runs out, not a
+             * fitted number. */
             let cross = 0;
             for (let q = 1; q <= 3; q++) {
               const u = q / 4;
               const sx = p.x + (nx - p.x) * u, sy = p.y + (ny - p.y) * u, sz = p.z + (nz - p.z) * u;
-              const g0 = r0 * 0.45 - surfM(sx, sy, sz);
+              const g0 = r0 * 0.70 - surfM(sx, sy, sz);
               if (g0 > cross) cross = g0;
               if (solidM && solidM(sx, sy, sz)) cross += 0.020;
             }
