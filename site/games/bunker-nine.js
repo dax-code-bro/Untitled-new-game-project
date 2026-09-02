@@ -590,7 +590,16 @@ const WEAPONS = {
        65, z 82. Both bars run along X, so both hands wrap X and `round`
        points from the hand down at the bar it holds -- straight down on
        the rear handle, down and inboard on the rolled one. Rear hand
-       first, front hand forward, which is how a ram is carried. */
+       first, front hand forward, which is how a ram is carried.
+
+       Measured: the left hand goes from 0 quadrants of 4 to 3 and the
+       right stays at 3. So the handles are where the arithmetic said and
+       the hands are on them, and neither has closed all the way round
+       one -- which puts this weapon in the same bracket as the Mauser's
+       and the Paralyzer's support hands rather than in a bracket of its
+       own. A 22 mm bar is thinner than anything else in this game gets
+       held by and the girth here is a guess at 52 mm, so that is the
+       next thing to measure rather than assume. */
     hands: {
       right: [0.100, 0.105, 0],
       rightGrip: { axis: [1, 0, 0], round: [0, -1, 0], girth: 0.052, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 },
