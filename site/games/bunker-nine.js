@@ -467,6 +467,25 @@ const WEAPONS = {
     ammo: { clip: { count: 5, pitch: 0.0130, round: AMMO.rifle30 } },
     // Punches armour: an anti-materiel round does not care about plate.
     punchesPlate: true,
+    /* There is nowhere clean on this rifle to put a support hand, and the
+       anchor is a choice between three bad places rather than a mistake.
+       Measured per weapon PART by ray parity, the hand here is 17 per
+       cent inside the SCOPE and 8 inside the bolt -- and the reason is
+       arithmetic: the scope tube sits at y 41 to 87 mm, the barrel's top
+       is at 24, and 16.5 mm of gap does not admit a 21.2 mm finger, so a
+       hand wrapping this barrel anywhere under the optic has its fingers
+       in the glass.
+       Forward of the scope is worse. Moved to x 0.460, past both the
+       scope's front at 0.210 and the bipod's mount at 0.414, the little
+       finger went 58 per cent buried to 17 and the ring 42 to 25 -- and
+       the middle finger went 33 to 58, because 0.460 is the middle of the
+       fluted section, six scallops cut 6.2 mm into the barrel, and a hand
+       laid on a fluted barrel sits in the grooves. The fleet average
+       improved, 11.9 per cent to 11.6, on a trade of two fingers for one.
+       What is actually clear is x 0.135 to 0.190, which is under the
+       scope, and x 0.590 to 0.630, which is 600 mm out at the muzzle
+       brake. This rifle needs its scope raised or its flutes shortened
+       before an anchor can be right. */
     hands: { right: [-0.012, -0.030, 0.016], rightGrip: 'wrist', left: [0.200, 0.001, 0], leftGrip: 'woodFore' },
   },
   /* Belt-fed, twelve hundred a minute, and it weighs as much as the door
