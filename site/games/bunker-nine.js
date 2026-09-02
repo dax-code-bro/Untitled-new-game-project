@@ -489,6 +489,14 @@ const WEAPONS = {
        27 mm BEHIND its own knuckle while the other twelve reached forward
        onto their triggers. `thumb: 'up'` belongs on a spade grip, which
        this is not. */
+      /* The support hand was under nothing at all. Sliced along its own
+         length, this MG 42's barrel jacket runs from x 300 to 520 at y
+         +67 to +100 -- and the hand was anchored at y -8, seventy-five
+         millimetres below the underside of the thing it is supposed to be
+         holding, and 22 mm off to one side of it. Measured 93 mm from the
+         nearest metal on the gun, the worst anchor in the game by a
+         factor of three, and its palm rested 0% of its skin on the
+         weapon. On the jacket's underside now. */
       /* And `round` was still the spade's too. It points from the hand
          at what the hand is holding, and at [1,0,0] that is "from behind,
          toward the muzzle" -- a hand pushing the grip rather than closed
@@ -496,7 +504,7 @@ const WEAPONS = {
          and curled forward into the air: measured, this hand touched 4%
          of the weapon where the other pistol grips touch 15 to 20. A
          pistol grip is held from the weapon's right. */
-      rightGrip: { axis: [-0.06, -0.998, 0], round: [0, 0, -1], girth: 0.056, spread: 0.0192, close: 1.0, index: 'trigger', thumb: 'over', drop: 0 }, left: [0.400, -0.008, -0.022], leftGrip: 'tube' },
+      rightGrip: { axis: [-0.06, -0.998, 0], round: [0, 0, -1], girth: 0.056, spread: 0.0192, close: 1.0, index: 'trigger', thumb: 'over', drop: 0 }, left: [0.400, 0.067, 0], leftGrip: 'tube' },
   },
   /* The two answers to plate. Both are melee, both are slow, and both are
      mystery-box only — you do not get to plan for an armoured runner, you

@@ -19453,9 +19453,53 @@ function buildViewHand(g, rawAt, side, opts = {}) {
      and the support hand was 132/68/15/13 across the four quadrants where
      the firing hand is 37/44/117/120. Drop it by a finger's width and the
      forend lands in the crook where it belongs. */
+  /* Put the anchor ON the weapon before anything is built from it.
+   *
+   * Measured against the models, every FIRING anchor sits 0.1 to 3.8 mm
+   * from its weapon's metal, and the support anchors sit at 1.9, 2.2,
+   * 9.7, 12, 15, 17, 21, 21, 24, 24, 29 -- and 93, on the MG 42. The two
+   * that are ON the gun are the two whose hands measure best: the
+   * Thompson's support palm rests 37% of its skin on the weapon and the
+   * Kill Streak's 31, where the two at 21 manage 9 and 6 and the one at
+   * 93 manages nothing at all.
+   *
+   * The seating search below was meant to fix this and cannot: it is
+   * sprung to the authored position, deliberately, so that a hand cannot
+   * wander off the part it is supposed to hold. A spring measured from a
+   * typed mistake defends the mistake. So the standoff is taken out
+   * FIRST, along the grasp line and nothing else -- the authored numbers
+   * still decide where along and across the weapon this hand goes, which
+   * is the part a person is good at, and the surface decides how far off
+   * it sits, which is the part a measurement is good at. The search then
+   * springs to a corrected anchor instead of a wrong one. */
+  let seatAt = rawAt;
+  /* Only when the anchor is BADLY off, which is a different thing from
+     being deliberately held clear.
+   *
+   * Run on everything, this took the two-handed pistol grip apart: the
+   * 1911's support hand is anchored 17 mm from the gun because it holds
+   * the FIRING HAND, not the frame, and dragging it onto the metal cost
+   * that hand half its finger contact. The measured spread separates the
+   * two cleanly -- deliberate standoffs run 1.9 to 17 mm, and the ones
+   * that are simply wrong run 21, 21, 24, 24, 29 and 93. */
+  if (opts.surface && opts.surface(rawAt.x, rawAt.y, rawAt.z) > 0.020) {
+    const surfA = opts.surface;
+    let bt = 0, be = 1e9;
+    for (let i = -70; i <= 70; i++) {
+      const t = i * 0.002;
+      const e = Math.abs(surfA(rawAt.x + grasp.x * t, rawAt.y + grasp.y * t, rawAt.z + grasp.z * t));
+      // Nearest approach along the line, preferring the smaller move.
+      const c = e + Math.abs(t) * 0.02;
+      if (c < be) { be = c; bt = t; }
+    }
+    if (Math.abs(bt) > 0.003) {
+      seatAt = new Vec3(rawAt.x + grasp.x * bt, rawAt.y + grasp.y * bt, rawAt.z + grasp.z * bt);
+      if (opts.out) opts.out.preSeat = +bt.toFixed(4);
+    }
+  }
   let at = G.drop
-    ? new Vec3(rawAt.x - grasp.x * G.drop, rawAt.y - grasp.y * G.drop, rawAt.z - grasp.z * G.drop)
-    : rawAt;
+    ? new Vec3(seatAt.x - grasp.x * G.drop, seatAt.y - grasp.y * G.drop, seatAt.z - grasp.z * G.drop)
+    : seatAt;
 
   /* Seat the hand on the weapon before building anything on it.
    *
@@ -20042,7 +20086,24 @@ function buildViewHand(g, rawAt, side, opts = {}) {
             const nd = turn(d, cand, pt, cl);
             const nx = p.x + nd.x * step, ny = p.y + nd.y * step, nz = p.z + nd.z * step;
             const dd = surfM(nx, ny, nz);
-            const e = Math.abs(dd - wantM) + (solidM && solidM(nx, ny, nz) ? 0.08 : 0);
+            /* And it must not pass THROUGH the wall on the way.
+             *
+             * Both ends of a step can be legally outside the weapon while
+             * the bone between them goes clean through it -- and a barrel
+             * jacket is a tube open at both ends, so the flood fill finds
+             * no interior in its bore and the solidity test cannot see it
+             * either. Rendered, the MG 42's support fingers came up
+             * through the jacket and stood on top of it with the palm
+             * underneath: a hand threaded through the gun. Three samples
+             * along each half bone, and any of them buried costs the
+             * candidate the choice. */
+            let cross = 0;
+            for (let q = 1; q <= 3; q++) {
+              const u = q / 4;
+              const sx = p.x + (nx - p.x) * u, sy = p.y + (ny - p.y) * u, sz = p.z + (nz - p.z) * u;
+              if ((solidM && solidM(sx, sy, sz)) || surfM(sx, sy, sz) < r0 * 0.45) { cross = 0.12; break; }
+            }
+            const e = Math.abs(dd - wantM) + (solidM && solidM(nx, ny, nz) ? 0.08 : 0) + cross;
             cands.push([cand, e]);
             if (e < bestE) bestE = e;
           }
@@ -20281,13 +20342,45 @@ function buildViewHand(g, rawAt, side, opts = {}) {
        * -31 to +21, four knuckles threaded through the middle of the
        * wood. Eleven millimetres could not reach daylight from there, so
        * the best it could do was pick the least-bad point inside. */
+      /* And the palm has to be able to REACH it.
+       *
+       * A barrel jacket is a tube with a barrel down the middle, and
+       * everywhere in the annulus between them is about ten millimetres
+       * from metal -- which is exactly what a seated knuckle looks like
+       * to this cost. So the MG 42's knuckle row sat inside the jacket
+       * and scored perfectly, and no amount of restricting which way it
+       * could travel helped, because it had no reason to travel at all.
+       * The flood fill cannot object either: that annulus is open at
+       * both ends, so it is not interior.
+       *
+       * What is true of a knuckle and false of that spot is that a hand
+       * can get to it. The line from the palm to the knuckle must not
+       * pass through the weapon. */
+      const reachable = (x, y, z) => {
+        for (let q = 1; q <= 5; q++) {
+          const u = q / 6;
+          const sx = at.x + (x - at.x) * u, sy = at.y + (y - at.y) * u, sz = at.z + (z - at.z) * u;
+          if ((solidAt && solidAt(sx, sy, sz)) || surf(sx, sy, sz) < FR * 0.45) return false;
+        }
+        return true;
+      };
       const cost = (t) => {
         const x = root.x + grasp.x * t, y = root.y + grasp.y * t, z = root.z + grasp.z * t;
         return Math.abs(surf(x, y, z) - want) + (solidAt && solidAt(x, y, z) ? 0.060 : 0)
+          + (reachable(x, y, z) ? 0 : 0.080)
           + Math.abs(t) * 0.05;
       };
+      /* NEAR SIDE ONLY. `grasp` runs from the hand at the thing it holds,
+         so a positive push moves the knuckle toward it -- and past it, if
+         the search likes what it finds there. On the MG 42 it did: the
+         row starts 44 mm along the palm axis, which is inside the barrel
+         jacket, and getting out was 27 mm up or 26 mm down. It went up,
+         and the hand came out with its palm under the jacket and its four
+         knuckles standing on top of it. A hand is on one side of what it
+         holds. Six millimetres of travel toward the weapon is a seating
+         correction; thirty-four is a way through to the other side. */
       let bt = 0, be = cost(0);
-      for (let i = -34; i <= 34; i++) {
+      for (let i = -34; i <= 6; i++) {
         const t = i * 0.001;
         const e2 = cost(t);
         if (e2 < be - 1e-7) { be = e2; bt = t; }
