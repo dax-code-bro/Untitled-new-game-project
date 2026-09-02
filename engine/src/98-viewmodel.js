@@ -335,6 +335,18 @@ function buildViewHand(g, rawAt, side, opts = {}) {
    * closing on a bar really does leave the knuckle at an angle to it
    * rather than lying flat along it. The straight fingers are the two
    * joints past the knuckle, not this one. */
+  /* AND STEEPENING IT DOES NOT HELP EITHER. If the row's side and the
+     bone's direction are coupled, the other end of the coupling is this
+     ratio -- so 0.62 across / 0.78 up became 0.34 / 0.94, a bone that
+     rises out of a forend's section instead of crossing it. Burial 13.6
+     per cent to 12.6, contact 12.1 to 10.9, and the burial guard caught
+     six digits going materially the wrong way: the Thompson's support
+     fingers 8 per cent to 25, 17 and 17, the Scattergun's 8 to 17, 17 and
+     17. A steeper bone leaves the knuckle nearer the object it is beside.
+     Four goes at this now -- near flank, far flank, shortest move, and
+     this -- and every one trades the two numbers against each other. What
+     is left is structural: a rigid four-finger row whose whole shape is
+     one direction cannot be both on one of these weapons and out of it. */
   const point = fore
     ? V(-across.x * 0.62 + grasp.x * 0.78, -across.y * 0.62 + grasp.y * 0.78,
       -across.z * 0.62 + grasp.z * 0.78)
@@ -1558,8 +1570,21 @@ function buildViewHand(g, rawAt, side, opts = {}) {
          *
          * Two measurements, and either one alone can be satisfied by
          * making the other worse. That is why grip.test now carries both.
-         * The near flank stays: a hand partly in the weapon it is holding
-         * beats a hand nowhere near it. */
+         *
+         * AND "WHICHEVER CLEARS WITH THE SHORTER MOVE" IS THE SAME RULE
+         * AGAIN. It sounds like the neutral version -- the hand belongs as
+         * near the thing it holds as it can get without being in it -- and
+         * measured it went 13.6 per cent buried to 9.9 with contact 12.1
+         * to 10.7, which is the same trade in miniature. The reason is
+         * that the shorter move is ALWAYS the far side: `clears` wants the
+         * first bone out as well as the row, the bone travels along
+         * -across, so stepping that way gets it out sooner by
+         * construction. Three rules, one choice.
+         *
+         * Which puts it back on `point`. The row's side and the first
+         * bone's direction are coupled, and while that bone leaves the
+         * knuckle 62 per cent ACROSS there is no side of a forend that is
+         * both near it and clear of it. */
         for (const dir of [1, -1]) {
           let done = false;
           for (let k = 1; k <= 24; k++) {
