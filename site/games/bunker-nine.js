@@ -3881,24 +3881,33 @@ function buildMap(game, S) {
 
     /* Benches: top, apron, legs at the front only — the back edge is
        carried on a ledger screwed to the wall, the way a fitted bench is. */
-    const benchRun = (cx, cz, sx, sz, alongX) => {
-      game.box({ at: [cx, 0.94, cz], size: [sx, 0.09, sz], material: MAT.wood, static: true });
+    /* `dy` drops a run a hair, and the second one uses it.
+     *
+     * The two benches meet in an L and both tops were at exactly y 0.985,
+     * so where they overlap in the corner the two top faces were one
+     * plane, both pointing up and both drawn -- 0.09 square metres on the
+     * surface you stand at to use the workbench. Two millimetres puts the
+     * second run's top inside the first's solid, and a buried face is not
+     * drawn. */
+    const benchRun = (cx, cz, sx, sz, alongX, dy = 0, tag = 'bench') => {
+      const top = game.box({ at: [cx, 0.94 + dy, cz], size: [sx, 0.09, sz], material: MAT.wood, static: true });
+      if (top) top.name = tag + ' top';
       if (alongX) {
-        game.box({ at: [cx, 0.83, cz - sz / 2 + 0.06], size: [sx, 0.16, 0.09], material: MAT.wood, static: true });
-        game.box({ at: [cx, 0.86, cz + sz / 2 - 0.03], size: [sx, 0.10, 0.06], material: MAT.board, static: true });
+        game.box({ at: [cx, 0.83 + dy, cz - sz / 2 + 0.06], size: [sx, 0.16, 0.09], material: MAT.wood, static: true });
+        game.box({ at: [cx, 0.86 + dy, cz + sz / 2 - 0.03], size: [sx, 0.10, 0.06], material: MAT.board, static: true });
         for (const dx of [-sx / 2 + 0.16, sx / 2 - 0.16]) {
           game.box({ at: [cx + dx, 0.45, cz - sz / 2 + 0.12], size: [0.11, 0.90, 0.11], material: MAT.wood, static: true });
         }
       } else {
-        game.box({ at: [cx + sx / 2 - 0.06, 0.83, cz], size: [0.09, 0.16, sz], material: MAT.wood, static: true });
-        game.box({ at: [cx - sx / 2 + 0.03, 0.86, cz], size: [0.06, 0.10, sz], material: MAT.board, static: true });
+        game.box({ at: [cx + sx / 2 - 0.06, 0.83 + dy, cz], size: [0.09, 0.16, sz], material: MAT.wood, static: true });
+        game.box({ at: [cx - sx / 2 + 0.03, 0.86 + dy, cz], size: [0.06, 0.10, sz], material: MAT.board, static: true });
         for (const dz of [-sz / 2 + 0.16, sz / 2 - 0.16]) {
           game.box({ at: [cx + sx / 2 - 0.12, 0.45, cz + dz], size: [0.11, 0.90, 0.11], material: MAT.wood, static: true });
         }
       }
     };
-    benchRun(BX, BZ, 3.10, 0.86, true);
-    benchRun(RX, RZ, 0.86, 2.40, false);
+    benchRun(BX, BZ, 3.10, 0.86, true, 0, 'long bench');
+    benchRun(RX, RZ, 0.86, 2.40, false, -0.002, 'return bench');
 
     /* Shelves, on brackets, against the pegboard on both walls. */
     const shelf = (cx, cz, sx, sz, y, alongX) => {
