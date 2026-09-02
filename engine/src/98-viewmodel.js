@@ -1320,6 +1320,53 @@ function buildViewHand(g, rawAt, side, opts = {}) {
              correctly -- so the refinement went back and the number that
              measured well stayed. */
           if (solidAt(x, y, z + 0.019) || solidAt(x, y, z - 0.019)) { scan.notThrough++; continue; }
+          /* Enclosed, tested WITHOUT guessing how big the hole is.
+           *
+           * The old test fired four probes at exactly 19 mm and wanted
+           * three of them in metal. That number is the 1911's guard and
+           * nothing else's: the Thompson's bow is bigger, so 19 mm lands
+           * in clear air inside it and the guard scores 2. Across twelve
+           * weapons the search examined 9331 candidates each and kept
+           * none but the 1911's -- 404 landed in the band on the Thompson
+           * and every one of them failed here.
+           *
+           * A hole's middle is where the distance field is at its
+           * LARGEST, and that is true of a hole of any size. So compare
+           * the candidate with its neighbours instead of with a guessed
+           * radius: if stepping 5 mm in any of the four directions across
+           * the weapon gets no further from metal, this is the middle of
+           * the opening. Nothing on the outside of a gun looks like that
+           * -- out there the field grows without limit in at least one
+           * direction, which is exactly the canyon the band test throws
+           * away. */
+          /* MEASURED AND REVERTED: finding the guard as the middle of a
+             hole rather than by a fixed probe range.
+           *
+           * Four probes at exactly 19 mm with three in metal is the 1911's
+           * guard and nothing else's -- a bigger bow puts 19 mm in clear
+           * air inside it, so across twelve weapons this finds one guard
+           * and 404 in-band candidates on the Thompson all fail here.
+           *
+           * The scale-free version of the same idea: the field is at its
+           * largest in the middle of an opening, so accept a candidate no
+           * further from metal than its neighbours 5 mm above and below,
+           * then require metal reachable within 32 mm in three of the
+           * four directions across the weapon. Height only -- a guard is
+           * about thirty millimetres long and twenty-four tall, so the
+           * field inside it runs as a ridge fore and aft, and asking for
+           * a summit in x as well threw away the 1911's, which the fixed
+           * range had been getting.
+           *
+           * Alone it found the Mauser's and the Obliterator's and lost
+           * the 1911's. OR'd with the fixed range it found all three --
+           * and then grip.test failed: the Mauser's trigger finger came
+           * out curled into a fist, tip only 1 mm forward of its knuckle
+           * against 26 to 87 on everything else, because the hole it
+           * picked is 48 mm below the web and is not the trigger guard.
+           * A finger balled up on the outside of a gun is worse than a
+           * finger laid along the frame, so this is not in. What it needs
+           * is a test for whether the finger can REACH the hole it has
+           * been sent to, which is a different piece of work. */
           let enc = 0;
           for (const [ox2, oy2] of [[0.019, 0], [-0.019, 0], [0, 0.019], [0, -0.019]]) {
             if (solidAt(x + ox2, y + oy2, z)) enc++;
