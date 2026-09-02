@@ -440,7 +440,13 @@ const SWEEP = () => {
         // The weapon's own vertices, arms excluded, for the centre below.
         const gunPts = [];
         {
-          const armSet = new Set(arms.parts || []);
+          /* The hidden reload prop is not the weapon either, and this
+             gather picks the point on "the weapon" nearest the hand to
+             centre the quadrant test on. A magazine parented to the same
+             root and hidden at start-up could be that point, which
+             centres "does the hand wrap what it holds" on something the
+             hand is not holding and nobody can see. */
+          const armSet = new Set((arms.parts || []).concat((live.prop && live.prop.parts) || []));
           const wroot = live.kind === 'single' ? live.actor : live.root;
           const wwalk = (a, local) => {
             if (!a) return;
