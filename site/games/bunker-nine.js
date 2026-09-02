@@ -3445,8 +3445,16 @@ function buildMap(game, S) {
        inside the landing's solid, and a buried face is not drawn -- the
        same relation the treads already have with the floor, and one the
        coplanar check now understands. The landing IS the top step, so a
-       lip that size is nothing to look at. */
-    slab(ST.x0 - 0.1, M.x1, R.y0, R.y1, M.z0 - W, ST.zBot - (ST.steps - 1) * RUN + 0.004, MAT.floor, 'stair landing');
+       lip that size is nothing to look at.
+
+       And at the other end it stops six millimetres SHORT of M.z0 - W,
+       which is the outer face of the wall it runs into. Ending exactly
+       there put the landing's back face on the same plane as the wall's
+       own outer face, both pointing the same way and both drawn: 0.29
+       square metres, and the landing was spanning the full thickness of
+       the wall to do it. Six millimetres leaves it buried in the wall
+       instead of flush with the far side of it. */
+    slab(ST.x0 - 0.1, M.x1, R.y0, R.y1, M.z0 - W + 0.006, ST.zBot - (ST.steps - 1) * RUN + 0.004, MAT.floor, 'stair landing');
 
     /* Under the stair. Props that stop at the stringer, not at the ceiling:
        a post that runs the full height of the room is not holding a
