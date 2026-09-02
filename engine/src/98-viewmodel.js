@@ -1198,6 +1198,19 @@ function buildViewHand(g, rawAt, side, opts = {}) {
      seventy — over 87 mm of bone that is an arc about 70 mm across, which
      is a hand round a 34 mm grip with flesh on it. */
   const LEN = [0.0464, 0.0290, 0.0210];
+  /* 44 mm along the palm axis, and searching for a better distance does
+     not help -- I tried it.
+   *
+   * Under a forend that axis points up at the thing being held, so on a
+   * weapon whose handguard is nearer than 44 mm the row begins inside the
+   * wood. Searching 15 to 60 mm for a distance that lands it OUTSIDE
+   * moves the Thompson's support fingers from 4% inside the gun to 2 and
+   * makes everything else worse: the Kill Streak 29 to 32, the Scatter's
+   * contact 32 per cent to 22, its own firing hand 8 to 2. The row's
+   * fault is not how far along the axis it sits, it is that the axis
+   * runs into the object at all -- and fixing that means building the
+   * row outward from the held part's own centreline rather than forward
+   * from the wrist. That is a different construction, not a constant. */
   const knuckle0 = at3(palm, 0.044);
   for (let f = 0; f < 4; f++) {
     // Which finger, if any, leaves the wrap to lie on a trigger.
