@@ -3888,7 +3888,7 @@ function buildMap(game, S) {
      * plane, both pointing up and both drawn -- 0.09 square metres on the
      * surface you stand at to use the workbench. Two millimetres puts the
      * second run's top inside the first's solid, and a buried face is not
-     * drawn. */
+     * drawn. Measured: the 0.09 goes and map.test is 14 of 14. */
     const benchRun = (cx, cz, sx, sz, alongX, dy = 0, tag = 'bench') => {
       const top = game.box({ at: [cx, 0.94 + dy, cz], size: [sx, 0.09, sz], material: MAT.wood, static: true });
       if (top) top.name = tag + ' top';
