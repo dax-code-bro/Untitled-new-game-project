@@ -5108,8 +5108,18 @@ function weaponSurface(game, root) {
    * the answer is not to be trusted -- so it says outside, which is the
    * safe way to be wrong. */
   if (!tris.length) { surf.inside = () => false; return surf; }
-  const PCELL = 0.010;
-  const pkey = (j, k) => j * 4096 + k;
+  /* Four millimetres, not ten.
+   *
+   * The parity test reads ONE column cell and runs an exact point-in-2D-
+   * triangle test on everything filed in it, so the cell size cannot
+   * change the answer: a triangle whose shadow covers the ray's (y, z) has
+   * a (y, z) box covering it too, and is filed in that cell whatever the
+   * cell measures. All the size decides is how many triangles get tested
+   * and thrown away -- and at ten millimetres a rifle's column held every
+   * triangle down the whole length of the barrel that shared those ten
+   * millimetres of section. Finer cells, same answer, less of it. */
+  const PCELL = 0.004;
+  const pkey = (j, k) => j * 8192 + k;
   const pgrid = new Map();
   for (let t = 0; t < tris.length; t += 3) {
     const A = tris[t], B2 = tris[t + 1], C = tris[t + 2];
