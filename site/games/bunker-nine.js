@@ -598,8 +598,21 @@ const WEAPONS = {
        one -- which puts this weapon in the same bracket as the Mauser's
        and the Paralyzer's support hands rather than in a bracket of its
        own. A 22 mm bar is thinner than anything else in this game gets
-       held by and the girth here is a guess at 52 mm, so that is the
-       next thing to measure rather than assume. */
+       held by, so the girth was set to 24 to match it -- and that is a
+       truthful declaration that changes NOTHING. Measured, both hands
+       stay at exactly 3 quadrants of 4 with the girth halved. The
+       Scattergun note records the same experiment on a forend, 92 mm
+       declared against 48 measured, corrected to 50, quadrant split
+       75/1/24/0 to 69/1/30/0. Twice now: how wide the hand is told to
+       open is not what decides whether it closes round.
+
+       Which points the same way as everything else about this row. Three
+       hands sit at 3 of 4 -- these two, the Mauser's left, the
+       Paralyzer's left -- and `close` is already 1.0 on all of them, so
+       the missing quadrant is the far side, where the fingertips would
+       come round to meet the thumb. Four fingers whose whole shape is
+       one direction do not wrap a 22 mm bar, and that is the same
+       structural finding as the buried-digit work: a rigid row. */
     hands: {
       right: [0.100, 0.105, 0],
       rightGrip: { axis: [1, 0, 0], round: [0, -1, 0], girth: 0.024, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 },
