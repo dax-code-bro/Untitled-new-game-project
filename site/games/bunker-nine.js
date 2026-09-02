@@ -602,9 +602,9 @@ const WEAPONS = {
        next thing to measure rather than assume. */
     hands: {
       right: [0.100, 0.105, 0],
-      rightGrip: { axis: [1, 0, 0], round: [0, -1, 0], girth: 0.052, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 },
+      rightGrip: { axis: [1, 0, 0], round: [0, -1, 0], girth: 0.024, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 },
       left: [0.280, 0.065, 0.082],
-      leftGrip: { axis: [1, 0, 0], round: [0, -0.62, -0.78], girth: 0.052, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 } },
+      leftGrip: { axis: [1, 0, 0], round: [0, -0.62, -0.78], girth: 0.024, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 } },
   },
   shieldWorn: {
     name: 'Cracked Riot Shield', slotName: 'CRACKED SHIELD',
