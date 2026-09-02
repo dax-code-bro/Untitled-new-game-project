@@ -3428,7 +3428,14 @@ function buildMap(game, S) {
     /* Under the stair. Props that stop at the stringer, not at the ceiling:
        a post that runs the full height of the room is not holding a
        staircase up, it is a fence across the corner. */
-    deco(ST.x0 + 0.06, ST.x1 - 0.06, 0, 0.09, ST.zTop + 0.2, ST.zBot, MAT.wood);   // sole plate
+    /* The sole plate stops four millimetres short of the bottom step's
+       front face. Both ran to ST.zBot, so the front of the plate and the
+       front of the tread were the same plane, both pointing into the
+       room and both drawn -- 0.21 square metres of it, at the foot of
+       the stairs where you walk past it. The same two millimetres of
+       clearance the last tread was already given against the landing,
+       for the same reason. */
+    deco(ST.x0 + 0.06, ST.x1 - 0.06, 0, 0.09, ST.zTop + 0.2, ST.zBot - 0.004, MAT.wood);   // sole plate
     for (let k = 0; k < 4; k++) {
       const z1 = ST.zBot - 0.55 - k * 0.95;
       const h = Math.max(0.35, ((ST.zBot - z1) / RUN) * RISE - 0.30);
