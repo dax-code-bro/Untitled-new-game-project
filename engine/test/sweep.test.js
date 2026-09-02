@@ -750,16 +750,9 @@ const SWEEP = () => {
        * the region the two overlap, and ask whether any other box
        * contains it. If one does, neither face is on the outside of the
        * model and there is nothing to choose between them. */
-      const boxes = [];
-      for (const list of planes.values()) for (const q of list) {
-        if (!boxes.includes(q.a)) boxes.push(q.a);
-      }
       const bounds = new Map();
-      for (const a of boxes) {
-        for (const list of planes.values()) {
-          const q = list.find((z) => z.a === a);
-          if (q) { bounds.set(a, [q.c, q.h]); break; }
-        }
+      for (const list of planes.values()) for (const q of list) {
+        if (!bounds.has(q.a)) bounds.set(q.a, [q.c, q.h]);
       }
       const buried = (A, B2, mid) => {
         for (const [a, cb] of bounds) {
