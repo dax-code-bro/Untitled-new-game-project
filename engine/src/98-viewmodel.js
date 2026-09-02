@@ -478,14 +478,22 @@ function buildViewHand(g, rawAt, side, opts = {}) {
    * the gun" exactly. Marched out from the anchor until the palm's own
    * half-thickness is what stands between its centre and the skin. */
   const halfT = pd0 + pd1;
-  if (!fore) {
-    off0 = halfT;
+  {
+    /* For a forend too. This ran only on vertical grips; under a forend
+       the standoff was left to the grip kind's `drop`, which is a
+       constant per kind and so has exactly the fault the constant here
+       had -- it cannot know where the anchor finished after seating.
+       The Thompson's support hand is the one that shows it. */
+    off0 = fore ? 0 : halfT;
     if (opts.surface) {
       const surfP = opts.surface;
       let be = 1e9;
+      const solidP = surfP.inside || null;
       for (let i = -18; i <= 30; i++) {
         const t = halfT + i * 0.001;
-        const e = Math.abs(surfP(at.x - grasp.x * t, at.y - grasp.y * t, at.z - grasp.z * t) - halfT);
+        const px = at.x - grasp.x * t, py = at.y - grasp.y * t, pz = at.z - grasp.z * t;
+        const e = Math.abs(surfP(px, py, pz) - halfT)
+          + (solidP && solidP(px, py, pz) ? 0.060 : 0);
         if (e < be - 1e-7) { be = e; off0 = t; }
       }
     }
@@ -499,7 +507,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
     /* Wrist to knuckles and no further. It ran to 56 mm along the palm
        axis while the knuckle row sits at 44, so the last 12 mm of palm
        was laid over the base of every finger. */
-    const d = -0.030 + t * 0.075;
+    const d = -0.030 + t * 0.075;   // wrist to knuckles
     rings.push({
       p: new Vec3(
         at.x + palm.x * d + grasp.x * t * 0.006 - grasp.x * off0,
@@ -995,7 +1003,23 @@ function buildViewHand(g, rawAt, side, opts = {}) {
        a guard is that it has metal on both sides of you in both axes, so
        that is what gets counted: four probes, and a point only qualifies
        if at least three of them end in solid. */
-    const solidAt = (x, y, z) => (inS && inS(x, y, z)) || sf(x, y, z) < 0.0035;
+    /* "Blocked" has to tolerate a near miss. A probe fired a fixed 19 mm
+       out only counts as hitting metal if it lands within 3.5 mm of a
+       surface, and a trigger guard's bar is thinner than that: whether
+       the probe registers is then a matter of how thick that particular
+       loop happens to be at that exact range, which has nothing to do
+       with being a guard. It worked on the 1911 and on nothing else.
+       Six millimetres is half a finger, and a probe that ends that close
+       to metal has been stopped by it. */
+    const solidAt = (x, y, z) => (inS && inS(x, y, z)) || sf(x, y, z) < 0.006;
+    /* The scan counts why it turned each candidate down.
+     *
+     * Twice I have diagnosed this from a probe that rebuilt the distance
+     * field from OUTSIDE the builder -- and by then the arms are parented
+     * to the weapon, so the field included the hands and the answer was
+     * fiction both times. The only field that can be trusted is the one
+     * the search actually used, so the search reports on itself. */
+    const scan = { n: 0, behind: 0, inside: 0, band: 0, notThrough: 0, notEnc: 0, kept: 0 };
     let best = -1;
     for (let ix = 2; ix <= 44; ix++) {
       const x = at.x + ix * 0.002;
@@ -1009,11 +1033,12 @@ function buildViewHand(g, rawAt, side, opts = {}) {
              the seated anchor, which can have moved backwards, letting
              holes behind the grip into it. On the long guns that is what
              it kept finding. */
-          if (x < 0.004) continue;
-          if (inS && inS(x, y, z)) continue;
+          scan.n++;
+          if (x < 0.004) { scan.behind++; continue; }
+          if (inS && inS(x, y, z)) { scan.inside++; continue; }
           const d = sf(x, y, z);
           // A hole a finger fits in, not a canyon beside the gun.
-          if (d < 0.004 || d > 0.017) continue;
+          if (d < 0.004 || d > 0.017) { scan.band++; continue; }
           /* And OPEN across the gun. Metal on four sides is not enough:
              the gap behind the frame and above the grip has that too, and
              it won -- the trigger finger was being sent to a cavity three
@@ -1035,12 +1060,13 @@ function buildViewHand(g, rawAt, side, opts = {}) {
              weapon at all including the one 19 mm had just been finding
              correctly -- so the refinement went back and the number that
              measured well stayed. */
-          if (solidAt(x, y, z + 0.019) || solidAt(x, y, z - 0.019)) continue;
+          if (solidAt(x, y, z + 0.019) || solidAt(x, y, z - 0.019)) { scan.notThrough++; continue; }
           let enc = 0;
           for (const [ox2, oy2] of [[0.019, 0], [-0.019, 0], [0, 0.019], [0, -0.019]]) {
             if (solidAt(x + ox2, y + oy2, z)) enc++;
           }
-          if (enc < 3) continue;
+          if (enc < 3) { scan.notEnc++; continue; }
+          scan.kept++;
           /* Nearest qualifying hole to the grip wins. A long gun has more
              than one enclosed gap forward of the web -- a magazine well,
              a sling loop, the space inside a bipod -- and the trigger is
@@ -1050,7 +1076,10 @@ function buildViewHand(g, rawAt, side, opts = {}) {
         }
       }
     }
-    if (opts.out && trigAt) opts.out.trigAt = [trigAt.x, trigAt.y, trigAt.z];
+    if (opts.out) {
+      opts.out.trigScan = scan;
+      if (trigAt) opts.out.trigAt = [trigAt.x, trigAt.y, trigAt.z];
+    }
   }
   /* Bone lengths, and the reason the hand was a ball.
 

@@ -5004,11 +5004,36 @@ function weaponSurface(game, root) {
   }
   // One cell of margin all round, so the flood always starts outside.
   for (let k = 0; k < 3; k++) { lo[k] -= SOLID * 2; hi[k] += SOLID * 2; }
-  const dim = [0, 1, 2].map((k) => Math.max(2, Math.min(96, Math.ceil((hi[k] - lo[k]) / SOLID))));
+  /* THE CELL SIZE FOLLOWS THE GUN. It used to clamp the COUNT to 96 and
+   * keep indexing at a fixed 7 mm -- and those two disagree the moment a
+   * weapon is longer than 96 cells, which is 672 mm. The Thompson is 817.
+   * Every cell past the cap failed the bounds check in `mark`, so the far
+   * third of the shell was never written, and the flood poured in through
+   * the hole and reached the whole interior. `inside` then answered false
+   * everywhere, on every weapon in the game longer than a pistol.
+   *
+   * That is not a small thing: the anti-clipping term in the curl solve,
+   * the burial penalty in the seating search, and the trigger guard's own
+   * "is this enclosed" test all ask this one question, and on eleven of
+   * the thirteen weapons it has always answered no. Measured on the five
+   * long guns just now: 0 candidates inside, 0 rejected as not-through,
+   * 0 guards found -- because nothing anywhere was ever solid.
+   *
+   * Cells stretch per axis instead. A non-cubic cell is fine for an
+   * occupancy test and a grid that covers the whole weapon is not
+   * optional. */
+  /* And the cap itself was far too mean. A Thompson at a true 7 mm needs
+     117 by 35 by 8 cells, which is thirty-two thousand -- the axes are
+     sized independently and only the long one is long. Capping each at 96
+     bought nothing and cost the whole mechanism. */
+  const CAP = 220;
+  const cell = [0, 1, 2].map((k) => Math.max(SOLID, (hi[k] - lo[k]) / CAP));
+  const dim = [0, 1, 2].map((k) => Math.max(2, Math.ceil((hi[k] - lo[k]) / cell[k]) + 1));
   const N = dim[0] * dim[1] * dim[2];
   const at = (i, j, k) => (k * dim[1] + j) * dim[0] + i;
   const cellOf = (x, y, z) => [
-    Math.floor((x - lo[0]) / SOLID), Math.floor((y - lo[1]) / SOLID), Math.floor((z - lo[2]) / SOLID)];
+    Math.floor((x - lo[0]) / cell[0]), Math.floor((y - lo[1]) / cell[1]),
+    Math.floor((z - lo[2]) / cell[2])];
   // 0 unknown, 1 shell, 2 reached from outside.
   const vox = new Uint8Array(N);
   const mark = (x, y, z) => {
