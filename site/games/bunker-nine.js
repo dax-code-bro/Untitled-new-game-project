@@ -303,7 +303,11 @@ const WEAPONS = {
        against 425 to 503 for every hand that passes. That is the thread
        to pull, and it is a question about where the hand mesh is built
        rather than about how wide it opens. */
-      left: [0.242, -0.006, -0.020], leftGrip: 'woodFore' },
+      /* The forend's own axis. It was at [0.242, -0.006, -0.020]: 12 mm
+         past the end of the wood, which runs x 0.056 to 0.230, and offset
+         into the left barrel. On the middle of the wood the little finger
+         goes 8 per cent buried to 0 and nothing else moves. */
+      left: [0.190, -0.009, 0], leftGrip: 'woodFore' },
   },
   /* The stun gun. A double gun with no wood on it: a capacitor bank where
      the rib should be, copper wound round both barrels, emitter rings at
@@ -347,7 +351,16 @@ const WEAPONS = {
     recoil: { up: 3.6, side: 1.6, climb: 1.05, recover: 6.5, back: 0.052, roll: 0.021, impulse: 27 },
     moveMul: 1.06, muzzleVel: 48,
     ammo: { shell: { r: 0.00925, len: 0.0700, head: 0.0220 } },
-    hands: { right: [-0.016, -0.048, 0.016], rightGrip: 'pistol', left: [0.170, -0.004, -0.020], leftGrip: 'woodFore' },
+    hands: { right: [-0.016, -0.048, 0.016], rightGrip: 'pistol', /* MEASURED AND REVERTED: putting this on the forend's own axis.
+         The anchor is 20 mm PAST the end of the wood -- the forend runs x
+         0.050 to 0.150 -- and offset to z -0.020, which is inside the left
+         barrel: the bore sits at z -0.01225 with an 11 mm wall, and the
+         anchor is 8.7 mm from that axis. Moving it to the middle of the
+         wood at [0.110, -0.009, 0] took the ring finger from 17 per cent
+         buried to 0 and the middle from 25 to 0, and put the little finger
+         8 to 25 and the index 17 to 25. A wash, and the regression guard
+         failed it. */
+      left: [0.170, -0.004, -0.020], leftGrip: 'woodFore' },
   },
   hammer: {
     name: 'Claw Hammer', slotName: 'HAMMER',
@@ -434,6 +447,13 @@ const WEAPONS = {
        * lump across the middle of the screen with the gun invisible
        * behind them. A C96 is held with the off hand well forward under
        * the barrel extension, which is both correct and 110 mm clear. */
+      /* MEASURED AND REVERTED, and the result is the useful part: this
+         anchor does not matter. Moved to the forend's own axis at [0.075,
+         -0.034, 0], from past the end of the wood and off into a barrel,
+         and every digit of this hand came back IDENTICAL -- 33, 42, 25, 25
+         per cent buried, to the sample. Whatever is putting the Paralyzer's
+         support hand in its copper coils is downstream of where it is
+         asked to go, so moving the ask achieves nothing. */
       left: [0.112, -0.026, -0.020], leftGrip: { axis: [0.96, -0.28, 0], round: [0, 1, 0], girth: 0.042, spread: 0.0186, close: 0.92, index: 'wrap', thumb: 'along', drop: 0 } },
   },
   /* A rifle for the long shots across the field. Bolt action, so it is
