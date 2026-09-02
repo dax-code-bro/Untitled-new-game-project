@@ -312,6 +312,29 @@ function buildViewHand(g, rawAt, side, opts = {}) {
    * closing downward, takes the finger up the near face, over the top and
    * down the far side, which is the path a hand under a bar actually
    * takes. */
+  /* MEASURED AND REVERTED: aiming this along the skin.
+   *
+   * The support fingers come out straighter than a hand's against a tall
+   * flat flank, and the obvious cause looked like that 0.62 -- a first
+   * bone aimed INTO the flank, so every curl the marcher can reach goes
+   * through it and zero is the only legal angle. So I took the surface's
+   * own gradient at the knuckle and dropped the part of `point` running
+   * into it, leaving the tangent.
+   *
+   * It is worse, and the reason is instructive. Under a bar the outward
+   * normal at the knuckle points straight DOWN, so removing the inward
+   * component removes all of the 0.78 and leaves pure `across`: a finger
+   * setting off sideways under the forend and never rising. Contact
+   * collapsed on every support hand -- Thompson 12% to 3, Kill Streak 33
+   * to 2, Remington 13 to 2. Confining the tangent to the plane across
+   * the weapon's axis, so it could not run off down the barrel, changed
+   * nothing.
+   *
+   * A first bone SHOULD press into what it holds. That is the whole
+   * mechanism by which contact means anything to the marcher, and a hand
+   * closing on a bar really does leave the knuckle at an angle to it
+   * rather than lying flat along it. The straight fingers are the two
+   * joints past the knuckle, not this one. */
   const point = fore
     ? V(-across.x * 0.62 + grasp.x * 0.78, -across.y * 0.62 + grasp.y * 0.78,
       -across.z * 0.62 + grasp.z * 0.78)
@@ -1086,7 +1109,12 @@ function buildViewHand(g, rawAt, side, opts = {}) {
             for (const [cand, e, xd] of cands) if (!xd && cand >= minA && e <= bE + 0.0015) bA = cand;
             return [bA, bE];
           };
-          const sel = pick(floorA) || pick(0);
+          const selF = pick(floorA);
+          const sel = selF || pick(0);
+          /* Held straighter than a curl by contact, as against nothing
+             reachable at all -- two different faults with opposite
+             repairs, and `walled` only counts the second. */
+          if (!selF && sel && opts.out) opts.out.stiff = (opts.out.stiff || 0) + 1;
           if (sel) {
             /* Nothing within reach of this joint in any direction: no
                surface said stop, so fall back to the anatomical curl rather
