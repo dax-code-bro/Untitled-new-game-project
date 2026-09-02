@@ -2851,21 +2851,35 @@ function buildMap(game, S) {
      from one side, invisible edge-on, and exactly the flat block the
      player kept walking into. Anything under a millimetre in any axis is
      a mistake in the arithmetic that made it, so it does not get built. */
-  const slab = (x0, x1, y0, y1, z0, z1, material = MAT.wall) => {
+  /* Both take an optional NAME, and it is not decoration.
+   *
+   * sweep.test finds pairs of faces fighting for the same plane and
+   * reports whatever the actor is called. With nothing set that is
+   * "actor5578", and the only way back to the line that built it is
+   * arithmetic on coordinates printed to two decimals against a map
+   * assembled from expressions -- which is how four of these came to be
+   * left alone as not confidently locatable. A name costs a string. */
+  const slab = (x0, x1, y0, y1, z0, z1, material = MAT.wall, name = null) => {
     if (x1 - x0 < 0.001 || y1 - y0 < 0.001 || z1 - z0 < 0.001) return null;
-    return game.box({
+    const a = game.box({
       at: [(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2],
       size: [x1 - x0, y1 - y0, z1 - z0],
       material, static: true,
     });
+    if (a && name) a.name = name;
+    return a;
   };
   // Decoration outside the fight: drawn, never collided with.
-  const deco = (x0, x1, y0, y1, z0, z1, material) => (
-    (x1 - x0 < 0.001 || y1 - y0 < 0.001 || z1 - z0 < 0.001) ? null : game.box({
+  const deco = (x0, x1, y0, y1, z0, z1, material, name = null) => {
+    if (x1 - x0 < 0.001 || y1 - y0 < 0.001 || z1 - z0 < 0.001) return null;
+    const a = game.box({
       at: [(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2],
       size: [x1 - x0, y1 - y0, z1 - z0],
       material, physics: false,
-    }));
+    });
+    if (a && name) a.name = name;
+    return a;
+  };
   // A wall run along X or Z with window holes cut into it.
   const wallX = (z0, z1, x0, x1, y1, holes = []) => {
     let cur = x0;
@@ -3399,9 +3413,9 @@ function buildMap(game, S) {
     for (let k = 0; k < ST.steps; k++) {
       const y = (k + 1) * RISE - (k === ST.steps - 1 ? 0.002 : 0);
       const z1 = ST.zBot - k * RUN;
-      slab(ST.x0, ST.x1, y - 0.24, y, z1 - RUN - 0.02, z1, MAT.floor);
+      slab(ST.x0, ST.x1, y - 0.24, y, z1 - RUN - 0.02, z1, MAT.floor, 'stair tread ' + k);
       // Riser board closing the front of each step.
-      deco(ST.x0 + 0.02, ST.x1 - 0.02, y - 0.24, y - 0.02, z1 - RUN - 0.04, z1 - RUN + 0.01, MAT.wood);
+      deco(ST.x0 + 0.02, ST.x1 - 0.02, y - 0.24, y - 0.02, z1 - RUN - 0.04, z1 - RUN + 0.01, MAT.wood, 'stair riser ' + k);
     }
     // Stringers down both sides, under the nosings.
     raked(ST.x0 - 0.02, ST.x0 + 0.13, -0.20, 0.34, MAT.wood);
@@ -3423,7 +3437,7 @@ function buildMap(game, S) {
     /* Landing at the head of the flight, spanning the whole slot: a landing
        the width of the stair alone leaves a slot of open sky down each side
        of it, which you fall through on the way to the parapet. */
-    slab(ST.x0 - 0.1, M.x1, R.y0, R.y1, M.z0 - W, ST.zBot - (ST.steps - 1) * RUN, MAT.floor);
+    slab(ST.x0 - 0.1, M.x1, R.y0, R.y1, M.z0 - W, ST.zBot - (ST.steps - 1) * RUN, MAT.floor, 'stair landing');
 
     /* Under the stair. Props that stop at the stringer, not at the ceiling:
        a post that runs the full height of the room is not holding a
@@ -3442,7 +3456,7 @@ function buildMap(game, S) {
        their BOTTOM faces -- both resting on the floor, both buried in
        it, neither ever drawn -- and because a pair is reported once, the
        false positive was masking the real fight on their fronts. */
-    deco(ST.x0 + 0.06, ST.x1 - 0.06, 0, 0.09, ST.zTop + 0.2, ST.zBot - 0.004, MAT.wood);   // sole plate
+    deco(ST.x0 + 0.06, ST.x1 - 0.06, 0, 0.09, ST.zTop + 0.2, ST.zBot - 0.004, MAT.wood, 'stair sole plate');
     for (let k = 0; k < 4; k++) {
       const z1 = ST.zBot - 0.55 - k * 0.95;
       const h = Math.max(0.35, ((ST.zBot - z1) / RUN) * RISE - 0.30);
