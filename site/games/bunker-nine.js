@@ -453,7 +453,19 @@ const WEAPONS = {
          and every digit of this hand came back IDENTICAL -- 33, 42, 25, 25
          per cent buried, to the sample. Whatever is putting the Paralyzer's
          support hand in its copper coils is downstream of where it is
-         asked to go, so moving the ask achieves nothing. */
+         asked to go, so moving the ask achieves nothing.
+
+         And `glow` is not the false positive it looked like. It sounded
+         like a halo -- emissive, strength 1.5 -- but buildParalyzerGlow
+         makes two SOLID charge tubes 14.4 mm across, sitting in the
+         waist either side of the stacked barrels from x 0.055 to 0.253.
+         They are as real as the copper and belong in the surface a hand
+         avoids; excluding them would put a hand through visible tubes.
+
+         Which leaves this gun the same shape of problem as the Kill
+         Streak: its forend is x 0.050 to 0.090, forty millimetres of it,
+         and everywhere a support hand can actually reach past that is
+         coil, charge tube or barrel. There is no wood to hold. */
       left: [0.112, -0.026, -0.020], leftGrip: { axis: [0.96, -0.28, 0], round: [0, 1, 0], girth: 0.042, spread: 0.0186, close: 0.92, index: 'wrap', thumb: 'along', drop: 0 } },
   },
   /* A rifle for the long shots across the field. Bolt action, so it is
