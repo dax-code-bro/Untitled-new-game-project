@@ -70,8 +70,30 @@ const R = path.join(__dirname, '..', '..') + '/';
        * I have diagnosed hands against a field that included the hands,
        * because by this point the arms are parented to the weapon, and
        * both answers were fiction. */
+      /* AND SKIPPING THE RELOAD PROP, which is a third fiction and the
+       * biggest of the three.
+       *
+       * Every weapon builds its magazine, clip, belt or pair of shells at
+       * start-up so a reload does not upload a mesh mid-fight, hangs it
+       * off the same root as the gun, and hides it. It is not in the
+       * scene, and it did not exist when the hand was solved -- the arms
+       * are built before the props -- so the solver has never had a
+       * chance to avoid it. This gather counted it anyway.
+       *
+       * Attributed per part, that is where most of the worst numbers in
+       * this table came from: the Thompson's ring finger at 42 per cent
+       * and its trigger finger at 17 are BOTH inside a magazine that is
+       * not there, and so are the MP5's middle and index, the 1911's ring
+       * and little, the Scattergun's index in a shell and the Arc's in a
+       * battery cell. Skipping the prop, every one of those goes to
+       * nothing.
+       *
+       * Which retires a bug: "the Thompson's trigger finger is a third
+       * inside its receiver" was this, not a finger in a receiver. */
+      const propSet = new Set((v.prop && v.prop.parts) || []);
       const armSet = new Set([a.sleeve, a.skin, a.lSleeve, a.lSkin, a.thumb,
-        a.lThumb, a.index].concat(a.rFingers || []).concat(a.lFingers || []).filter(Boolean));
+        a.lThumb, a.index].concat(a.rFingers || []).concat(a.lFingers || [])
+        .concat([...propSet]).filter(Boolean));
       const M4 = LegendEngine.Mat4;
       const tri = [];
       const gather = (act, m) => {
@@ -273,28 +295,43 @@ const R = path.join(__dirname, '..', '..') + '/';
      are written down, the table is printed every run, and the test fails
      only when a digit gets materially worse than it was. Lower a number
      here when you improve it; that is what stops the ratchet slipping. */
-  /* Moved once, when the march's crossing test was made to agree with
-     what the march is aiming at. Sixteen digits improved, many of them to
-     nothing, and three got worse: the 1911's and the Blaze's ring finger
-     8 per cent to 17 -- they are the same model -- and the MP5's 17 to
-     25. The fleet went 13.6 per cent buried to 11.9 and 12.1 touching to
-     11.3. The ratchet is only worth having if it moves when the fleet
-     genuinely improves and records what it cost, so both are here: the
-     new numbers below, and the three that went the wrong way named. */
+  /* Moved twice, and the second time was not an improvement in the hands
+     at all -- it was the measurement being wrong.
+     
+     First: when the march's crossing test was made to agree with what the
+     march aims at. Sixteen digits improved and three got worse, and the
+     fleet went 13.6 per cent buried to 11.9.
+     
+     Then: when this gather stopped counting the hidden RELOAD PROP as
+     part of the weapon. Nothing about any hand changed -- not one vertex
+     moved -- and the fleet read 11.8 per cent to 10.1 buried and 11.3 to
+     10.3 touching, because a third of the worst numbers in this table
+     were fingers inside magazines that are not in the scene. The
+     Thompson's ring finger 42 per cent to 8 and its trigger finger 33 to
+     17, the MP5's middle 25 to 8, the Arc's index 42 to 25.
+     
+     A few went UP, and that is real: parity counts crossings, so a prop's
+     triangles standing in the ray's path could make the two directions
+     disagree and report OUTSIDE. The Sawn-off's index 17 to 25 and the MG
+     42's 25 to 33 are burial the magazine was hiding.
+     
+     The ratchet is only worth having if it moves when the fleet genuinely
+     improves and records what it cost -- and if it moves when the
+     instrument is corrected and says so. */
   const BASE = {
-    m1911: { r0: 0, l0: 0, r1: 8, l1: 17, r2: 8, l2: 17, index: 0, l3: 8 },
-    blaze: { r0: 0, l0: 0, r1: 8, l1: 17, r2: 8, l2: 17, index: 0, l3: 8 },
-    thompson: { r0: 8, l0: 8, r1: 8, l1: 8, r2: 42, l2: 8, index: 33, l3: 8 },
-    scatter: { r0: 0, l0: 8, r1: 0, l1: 8, r2: 8, l2: 8, index: 17, l3: 8 },
-    arc: { r0: 0, l0: 0, r1: 0, l1: 0, r2: 0, l2: 0, index: 42, l3: 8 },
+    m1911: { r0: 0, l0: 0, r1: 8, l1: 8, r2: 8, l2: 8, index: 0, l3: 8 },
+    blaze: { r0: 0, l0: 0, r1: 8, l1: 8, r2: 8, l2: 8, index: 0, l3: 8 },
+    thompson: { r0: 0, l0: 8, r1: 0, l1: 8, r2: 8, l2: 8, index: 17, l3: 8 },
+    scatter: { r0: 0, l0: 0, r1: 0, l1: 8, r2: 8, l2: 8, index: 0, l3: 8 },
+    arc: { r0: 0, l0: 0, r1: 0, l1: 0, r2: 0, l2: 0, index: 25, l3: 8 },
     obliterator: { r0: 8, l0: 0, r1: 8, l1: 0, r2: 8, l2: 0, index: 25, l3: 0 },
     mauser: { r0: 17, l0: 25, r1: 8, l1: 17, r2: 0, l2: 0, index: 17, l3: 8 },
-    paralyzer: { r0: 0, l0: 33, r1: 0, l1: 42, r2: 8, l2: 25, index: 25, l3: 25 },
-    mp5: { r0: 0, l0: 25, r1: 8, l1: 17, r2: 25, l2: 25, index: 25, l3: 8 },
-    sawnoff: { r0: 0, l0: 17, r1: 0, l1: 17, r2: 17, l2: 25, index: 17, l3: 8 },
+    paralyzer: { r0: 0, l0: 33, r1: 0, l1: 42, r2: 8, l2: 25, index: 8, l3: 25 },
+    mp5: { r0: 0, l0: 25, r1: 0, l1: 17, r2: 8, l2: 25, index: 8, l3: 8 },
+    sawnoff: { r0: 0, l0: 17, r1: 0, l1: 17, r2: 17, l2: 25, index: 25, l3: 8 },
     remington: { r0: 0, l0: 17, r1: 0, l1: 8, r2: 8, l2: 8, index: 8, l3: 8 },
     killstreak: { r0: 0, l0: 33, r1: 0, l1: 33, r2: 8, l2: 42, index: 33, l3: 58 },
-    mg42: { r0: 0, l0: 17, r1: 8, l1: 17, r2: 17, l2: 0, index: 25, l3: 8 },
+    mg42: { r0: 0, l0: 17, r1: 8, l1: 17, r2: 17, l2: 0, index: 33, l3: 8 },
   };
   // Eight points is about one sample in twelve: past the noise of which
   // vertices happen to land inside, and well under the 19 that aiming

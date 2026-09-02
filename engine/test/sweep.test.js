@@ -468,10 +468,39 @@ const SWEEP = () => {
         for (const which of ['right', 'left']) {
           const h = hands[which];
           if (!h) continue;
-          const actor = which === 'right' ? arms.skin : arms.lSkin;
-          const geo = actor && G.geometryOf(actor.mesh);
-          const pos = geo && geo.positions;
-          if (!pos || !pos.length) { out.sys.grips.push({ id, which, err: 'no mesh' }); continue; }
+          /* The FINGERS too, and this is why both hand checks were red.
+           *
+           * They read `arms.skin` alone, which was the whole hand when
+           * they were written and is the palm now that every digit has
+           * its own mesh and pivot. So "does the hand wrap what it holds"
+           * was being asked of a palm with no fingers on it, and "does
+           * anything stick out of it" of a palm that by definition has
+           * nothing sticking out: the answer came back 2.9 per cent for
+           * almost every weapon and 1 for the rest, two numbers across
+           * twenty-six hands, which is the shape of a measurement that
+           * has stopped looking at its subject rather than of twenty-six
+           * broken hands.
+           *
+           * Every part of the hand, each brought into the weapon's frame
+           * by its own transform, the way grip.test does it. */
+          const bits = which === 'right'
+            ? [arms.skin, arms.thumb].concat(arms.rFingers || [])
+            : [arms.lSkin, arms.lThumb].concat(arms.lFingers || []);
+          const pos = [];
+          for (const act of bits) {
+            if (!act || !act.mesh) continue;
+            const g4 = G.geometryOf(act.mesh);
+            if (!g4 || !g4.positions) continue;
+            const m4 = new LE.Mat4(); m4.compose(act._position, act._rotation, act.scale);
+            const e4 = m4.e, q4 = g4.positions;
+            for (let i = 0; i < q4.length; i += 3) {
+              const x = q4[i], y = q4[i + 1], z = q4[i + 2];
+              pos.push(e4[0]*x + e4[4]*y + e4[8]*z + e4[12],
+                e4[1]*x + e4[5]*y + e4[9]*z + e4[13],
+                e4[2]*x + e4[6]*y + e4[10]*z + e4[14]);
+            }
+          }
+          if (!pos.length) { out.sys.grips.push({ id, which, err: 'no mesh' }); continue; }
           /* Quadrants in the GRIP's own frame, not in world Y and Z.
 
              The old split was `above/below the anchor` and `near/far side
@@ -1193,8 +1222,12 @@ function check(name, cond, detail = '') {
   check('no two surfaces are fighting for the same plane',
     !zfErr.length && zf.length === 0,
     zfErr.length ? zfErr[0].err
+      // Named. The report already knew which two actors these were and
+      // printed only their sizes, so locating one meant matching boxes by
+      // arithmetic against a map that builds them from expressions.
       : list(zf, (q) => `${q.area} m2 on ${q.ax} = ${q.at}: `
-        + `${q.sizeA.join('x')} at ${q.atA.join(',')} and ${q.sizeB.join('x')} at ${q.atB.join(',')}`));
+        + `${q.a} ${q.sizeA.join('x')} at ${q.atA.join(',')} `
+        + `and ${q.b} ${q.sizeB.join('x')} at ${q.atB.join(',')}`));
 
   check('nothing has left the world', (sy.lost || []).length === 0,
     list(sy.lost || [], (q) => `${q.name}: ${q.why} ${q.why === 'position' ? q.at.join(', ') : q.scale.join(', ')}`));
