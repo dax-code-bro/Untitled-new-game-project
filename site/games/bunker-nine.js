@@ -4901,51 +4901,17 @@ function weaponSurface(game, root) {
    * Point-to-triangle, over a grid of triangles rather than of points, so
    * a lookup still touches a handful of them. */
   const TCELL = 0.016;
-  const tgrid = new Map();
-  /* A NUMBER for the cell, not a string.
-   *
-   * `i + ',' + j + ',' + k` was 1.2 seconds of start-up on its own,
-   * sampled -- not the lookup, just building the key to do it with. A
-   * query scans a shell of cells around the point and every one of them
-   * cost a fresh three-part string to concatenate, hash and throw away.
-   * Packed into one integer instead, three ten-bit fields with room for
-   * plus or minus 1024 cells, which at 16 mm is plus or minus 16 metres:
-   * far more than any weapon-local coordinate here can reach. */
-  const tkey = (i, j, k) => ((i + 1024) * 2048 + (j + 1024)) * 2048 + (k + 1024);
   /* Each triangle's own box, kept alongside so a query can reject one
      without running the region test on it. Indexed by the triangle's
      start offset, the same number the grid cells hold. */
   const tlo = new Float32Array(tris.length), thi = new Float32Array(tris.length);
+  let wlo0 = 1e9, wlo1 = 1e9, wlo2 = 1e9, whi0 = -1e9, whi1 = -1e9, whi2 = -1e9;
   for (let t = 0; t < tris.length; t += 3) {
     const A = tris[t], B2 = tris[t + 1], C = tris[t + 2];
     for (let c = 0; c < 3; c++) {
       tlo[t + c] = Math.min(A[c], B2[c], C[c]);
       thi[t + c] = Math.max(A[c], B2[c], C[c]);
     }
-    for (let i = Math.floor(tlo[t] / TCELL); i <= Math.floor(thi[t] / TCELL); i++)
-      for (let j = Math.floor(tlo[t + 1] / TCELL); j <= Math.floor(thi[t + 1] / TCELL); j++)
-        for (let k = Math.floor(tlo[t + 2] / TCELL); k <= Math.floor(thi[t + 2] / TCELL); k++) {
-          const kk = tkey(i, j, k);
-          let cell = tgrid.get(kk);
-          if (!cell) { cell = []; tgrid.set(kk, cell); }
-          cell.push(t);
-        }
-  }
-  /* Which triangles this query has already measured.
-     A triangle wider than a cell is filed in every cell it crosses, and a
-     query reads twenty-seven of them at the first ring alone, so without
-     this the same triangle gets the full region test several times over
-     for the same answer. A stamp per query costs one comparison. */
-  const seen = new Int32Array(tris.length);
-  let visit = 0;
-  /* The whole weapon's box, for the queries that are nowhere near it.
-     The search below gives up after six rings, so anything further than
-     six cells outside this box cannot possibly find a triangle -- and
-     most queries are exactly that: a solver stepping a fingertip through
-     the air around the gun. Without this each of them walked out to the
-     sixth ring, four and a half thousand cells, to learn nothing. */
-  let wlo0 = 1e9, wlo1 = 1e9, wlo2 = 1e9, whi0 = -1e9, whi1 = -1e9, whi2 = -1e9;
-  for (let t = 0; t < tris.length; t += 3) {
     if (tlo[t] < wlo0) wlo0 = tlo[t];
     if (tlo[t + 1] < wlo1) wlo1 = tlo[t + 1];
     if (tlo[t + 2] < wlo2) wlo2 = tlo[t + 2];
@@ -4953,6 +4919,47 @@ function weaponSurface(game, root) {
     if (thi[t + 1] > whi1) whi1 = thi[t + 1];
     if (thi[t + 2] > whi2) whi2 = thi[t + 2];
   }
+  /* A DENSE grid over the weapon's own box, not a hash of cells.
+   *
+   * Counted over a start-up, four cells in five that a query looked up
+   * were empty -- and every one of those cost a key to build and a hash
+   * to miss on. A weapon is a metre of gun at most, which at 16 mm cells
+   * is a box of a few tens of thousands of them, so the whole grid fits
+   * in two flat arrays: where each cell's triangles start, and the
+   * triangles themselves end to end. An empty cell is then one integer
+   * read that comes back equal to the next one, and a cell outside the
+   * weapon's box is a bounds check. Same cells, same contents, same
+   * answers -- it is only the way they are reached that changes. */
+  const gx0 = Math.floor(wlo0 / TCELL), gy0 = Math.floor(wlo1 / TCELL), gz0 = Math.floor(wlo2 / TCELL);
+  const nx = Math.floor(whi0 / TCELL) - gx0 + 1;
+  const ny = Math.floor(whi1 / TCELL) - gy0 + 1;
+  const nz = Math.floor(whi2 / TCELL) - gz0 + 1;
+  const nCell = nx * ny * nz;
+  const gStart = new Int32Array(nCell + 1);
+  for (let t = 0; t < tris.length; t += 3)
+    for (let i = Math.floor(tlo[t] / TCELL); i <= Math.floor(thi[t] / TCELL); i++)
+      for (let j = Math.floor(tlo[t + 1] / TCELL); j <= Math.floor(thi[t + 1] / TCELL); j++)
+        for (let k = Math.floor(tlo[t + 2] / TCELL); k <= Math.floor(thi[t + 2] / TCELL); k++)
+          gStart[((i - gx0) * ny + (j - gy0)) * nz + (k - gz0) + 1]++;
+  for (let c = 0; c < nCell; c++) gStart[c + 1] += gStart[c];
+  const gItem = new Int32Array(gStart[nCell]);
+  const fill = gStart.slice(0, nCell);
+  for (let t = 0; t < tris.length; t += 3)
+    for (let i = Math.floor(tlo[t] / TCELL); i <= Math.floor(thi[t] / TCELL); i++)
+      for (let j = Math.floor(tlo[t + 1] / TCELL); j <= Math.floor(thi[t + 1] / TCELL); j++)
+        for (let k = Math.floor(tlo[t + 2] / TCELL); k <= Math.floor(thi[t + 2] / TCELL); k++)
+          gItem[fill[((i - gx0) * ny + (j - gy0)) * nz + (k - gz0)]++] = t;
+  /* Which triangles this query has already measured.
+     A triangle wider than a cell is filed in every cell it crosses, and a
+     query reads twenty-seven of them at the first ring alone, so without
+     this the same triangle gets the full region test several times over
+     for the same answer. A stamp per query costs one comparison. */
+  const seen = new Int32Array(tris.length);
+  let visit = 0;
+  /* And for the queries that are nowhere near the weapon at all, the box
+     again: the search gives up after six rings, so anything further than
+     six cells outside it cannot find a triangle. Most queries are exactly
+     that -- a solver stepping a fingertip through the air around the gun. */
   const REACH = 7 * TCELL;
   /* Closest point on a triangle to a point: the standard region test --
      the three vertices, the three edges, or the face interior. */
@@ -5036,10 +5043,11 @@ function weaponSurface(game, root) {
             const cdy = y < bj ? bj - y : (y > bj + TCELL ? y - bj - TCELL : 0);
             const cdz = z < bk ? bk - z : (z > bk + TCELL ? z - bk - TCELL : 0);
             if (cdx * cdx + cdy * cdy + cdz * cdz >= best) continue;
-            const cell = tgrid.get(tkey(gi + a2, gj + b2, gk + c2));
-            if (!cell) continue;
-            for (let ci = 0; ci < cell.length; ci++) {
-              const t = cell[ci];
+            const ii = gi + a2 - gx0, jj = gj + b2 - gy0, kk = gk + c2 - gz0;
+            if (ii < 0 || ii >= nx || jj < 0 || jj >= ny || kk < 0 || kk >= nz) continue;
+            const ci0 = (ii * ny + jj) * nz + kk;
+            for (let ci = gStart[ci0], ce = gStart[ci0 + 1]; ci < ce; ci++) {
+              const t = gItem[ci];
               // Measured already, this query, from another cell it crosses.
               if (seen[t] === visit) continue;
               seen[t] = visit;
