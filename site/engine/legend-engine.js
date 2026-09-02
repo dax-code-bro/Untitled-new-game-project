@@ -20938,7 +20938,15 @@ function buildViewHand(g, rawAt, side, opts = {}) {
      * that cannot get its first bone out of the metal steps along
      * `across` until it can, and stops at twelve millimetres, which keeps
      * this a correction to a hand rather than four fingers going their
-     * own way. */
+     * own way.
+     *
+     * Burial 10.1 per cent to 9.6 with contact unchanged at 10.3, which
+     * is the first time either number has moved without the other paying
+     * for it. And it shows up in a measurement that knows nothing about
+     * burial: sweep.test counts skin in the four quadrants round the
+     * point a hand holds, and the Paralyzer's support hand and the
+     * Mauser's both went from 3 of 4 to 4, leaving only the battering
+     * ram's two hands short. Two instruments, one change. */
     if (fore && clearBone && !clearBone(root)) {
       /* The SMALLEST step that clears, either way, rather than one side
          exhausted before the other is tried. Taking +across to twelve
