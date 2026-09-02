@@ -20789,6 +20789,9 @@ function buildViewHand(g, rawAt, side, opts = {}) {
    * near skin whether the bar is solid, a hollow handguard or a slotted
    * jacket, because parity does not care -- and stand the row off it. */
   let knuckle0 = at3(palm, 0.044);
+  /* Declared out here so each finger can ask the same question the row
+     asks, one at a time. See the per-finger slide further down. */
+  let clearBone = null;
   if (fore && opts.surface) {
     const sfF = opts.surface;
     let hit = null;
@@ -20821,7 +20824,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
        * "outside" and the row is left where it is. That is the Remington
        * threading its own woodwork with the row reporting no shift
        * needed at all. */
-      const clearBone = (r) => {
+      clearBone = (r) => {
         const q = turn(new Vec3(point.x, point.y, point.z), 0, point, curl);
         if (sfF(r.x, r.y, r.z) <= 0) return false;
         for (let q2 = 1; q2 <= 4; q2++) {
@@ -20919,6 +20922,41 @@ function buildViewHand(g, rawAt, side, opts = {}) {
       knuckle0.y + lane.y * off + grasp.y * 0.011 + point.y * 0.006,
       knuckle0.z + lane.z * off + grasp.z * 0.011 + point.z * 0.006,
     );
+    /* AND EACH FINGER CLEARS ON ITS OWN, which is the thing four goes at
+     * this never tried.
+     *
+     * The row slide above tests ONE point -- the row's base -- and applies
+     * whatever it finds to all four fingers. That is why near flank, far
+     * flank, shortest move and a steeper first bone all traded burial
+     * against contact roughly one for one: every one of them moved the
+     * ROW, and a row has one direction and one station, so whatever it
+     * buys at one end it pays for at the other.
+     *
+     * A finger is not the row. The knuckles are already seated
+     * independently along the grasp axis a few lines below, so per-finger
+     * freedom is not a new idea here, only a new axis for it. Each finger
+     * that cannot get its first bone out of the metal steps along
+     * `across` until it can, and stops at twelve millimetres, which keeps
+     * this a correction to a hand rather than four fingers going their
+     * own way. */
+    if (fore && clearBone && !clearBone(root)) {
+      for (const dir of [1, -1]) {
+        let done = false;
+        for (let k = 1; k <= 4; k++) {
+          const t2 = k * 0.003;
+          const cand = new Vec3(root.x + across.x * dir * t2,
+            root.y + across.y * dir * t2, root.z + across.z * dir * t2);
+          if (clearBone(cand)) {
+            root.set(cand.x, cand.y, cand.z);
+            if (opts.out) {
+              (opts.out.fingerShift || (opts.out.fingerShift = []))[f] = +(t2 * dir).toFixed(4);
+            }
+            done = true; break;
+          }
+        }
+        if (done) break;
+      }
+    }
     /* The knuckle row curves round what it is holding.
      *
      * Four knuckles at 19 mm apart span 57 mm, and laid in a STRAIGHT line
