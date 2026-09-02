@@ -198,6 +198,24 @@ function buildViewHand(g, rawAt, side, opts = {}) {
      it has to grow with the palm or a bigger hand comes out with the same
      small digits stuck on it. The knuckle spacing is derived from this
      further down, which is why it has to exist this early. */
+  /* MEASURED AND REVERTED: that the hands are simply too big for the guns.
+   *
+   * It is the one number that would move every open hand problem at once
+   * -- a 21.2 mm finger against trigger guards whose clear air is 4.5 to
+   * 10.8 mm, support rows that cannot be on a forend and out of it -- so
+   * it is worth knowing that it is not the answer. At 17 mm, which is
+   * what a real index finger measures, burial went 13.6 per cent to 12.8
+   * and contact 12.1 to 16.6: better on both counts on the average, and
+   * the regression guard still failed it on THIRTEEN digits, the 1911's
+   * ring finger 17 per cent to 33, the MP5's middle 8 to 33, the
+   * Scattergun's index 17 to 42.
+   *
+   * Because the standoff is measured in this radius. The seat is placed
+   * a radius and four millimetres off the skin and the marching closes
+   * to fractions of it, so a thinner finger is a finger seated CLOSER,
+   * and thirteen of them ended up with more of their own skin in the
+   * metal while the flesh around them got thinner. Making the hand
+   * smaller does not move it away from the gun. */
   const FR = 0.0106;
 
   /* The grip may be named, or given inline as an object so one weapon can
