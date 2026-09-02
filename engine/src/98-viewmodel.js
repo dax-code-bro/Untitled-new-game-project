@@ -1760,6 +1760,18 @@ function buildViewHand(g, rawAt, side, opts = {}) {
          * there is a curl that lands on it, and the search only has to be
          * given the direction. Closing happens in the plane that contains
          * that direction and the way the rest of the hand shuts. */
+        /* LOOKED AT, and it is not yet a finger on a trigger. Rendered,
+           the 1911, the Thompson, the MG 42 and the Remington all now
+           run the index up and forward with its tip beside or just above
+           the guard bow rather than inside the opening. That is 6 to 25
+           mm from the middle of the hole, against 34 to 82 before, and it
+           reads as a hand reaching for the trigger instead of a finger
+           hanging in the air under the gun -- but it is not on the blade.
+           The last of it is a curl amount: the pose that minimises
+           distance to the CENTRE of the opening is one that passes over
+           the front of the bow, because the score takes the nearer of the
+           tip and the last joint and an overshooting finger scores as
+           well as a stopping one. */
         const aim = new Vec3(cAt.x - root.x, cAt.y - root.y, cAt.z - root.z);
         const planes = [[d0, point, curl], [ipt, ipt, icl]];
         if (aim.length() > 1e-4) {
