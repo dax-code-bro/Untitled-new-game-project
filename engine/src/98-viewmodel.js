@@ -1198,20 +1198,40 @@ function buildViewHand(g, rawAt, side, opts = {}) {
      seventy — over 87 mm of bone that is an arc about 70 mm across, which
      is a hand round a 34 mm grip with flesh on it. */
   const LEN = [0.0464, 0.0290, 0.0210];
-  /* 44 mm along the palm axis, and searching for a better distance does
-     not help -- I tried it.
+  /* Under a forend the knuckle row is built from the BAR, not the wrist.
    *
-   * Under a forend that axis points up at the thing being held, so on a
-   * weapon whose handguard is nearer than 44 mm the row begins inside the
-   * wood. Searching 15 to 60 mm for a distance that lands it OUTSIDE
-   * moves the Thompson's support fingers from 4% inside the gun to 2 and
-   * makes everything else worse: the Kill Streak 29 to 32, the Scatter's
-   * contact 32 per cent to 22, its own firing hand 8 to 2. The row's
-   * fault is not how far along the axis it sits, it is that the axis
-   * runs into the object at all -- and fixing that means building the
-   * row outward from the held part's own centreline rather than forward
-   * from the wrist. That is a different construction, not a constant. */
-  const knuckle0 = at3(palm, 0.044);
+   * Everywhere else the row sits 44 mm along the palm axis from the
+   * anchor, which is a hand's span and is right for a grip held from the
+   * side. Under a forend that axis points UP at the thing being held, so
+   * on a weapon whose handguard is nearer than 44 mm the row begins
+   * inside the wood -- and every guard downstream is then a penalty
+   * trying to drag it back out. Measured by ray parity on the finished
+   * skin, that was 50 to 62 per cent of each of the Kill Streak's
+   * support fingers inside its own gun.
+   *
+   * Searching for a better distance along the same axis does not fix it
+   * (tried: the Thompson improves a little and everything else gets
+   * worse) because the fault is the axis, not the distance. What decides
+   * where a hand's knuckles go under a bar is the BAR: they sit on its
+   * near face, one finger's radius off it. So walk out from the anchor
+   * until the field changes sign -- that is the near skin, and it is the
+   * near skin whether the bar is solid, a hollow handguard or a slotted
+   * jacket, because parity does not care -- and stand the row off it. */
+  let knuckle0 = at3(palm, 0.044);
+  if (fore && opts.surface) {
+    const sfF = opts.surface;
+    let hit = null;
+    for (let i = 1; i <= 90; i++) {
+      const t = i * 0.0016;
+      const qx = at.x + grasp.x * t, qy = at.y + grasp.y * t, qz = at.z + grasp.z * t;
+      if (sfF(qx, qy, qz) <= 0) { hit = [qx, qy, qz]; break; }
+    }
+    if (hit) {
+      const off = FR + 0.0012;
+      knuckle0 = new Vec3(hit[0] - grasp.x * off, hit[1] - grasp.y * off, hit[2] - grasp.z * off);
+      if (opts.out) opts.out.foreSkin = hit.map((q) => +q.toFixed(4));
+    }
+  }
   for (let f = 0; f < 4; f++) {
     // Which finger, if any, leaves the wrap to lie on a trigger.
     const isIndex = trigger && f === 3;
