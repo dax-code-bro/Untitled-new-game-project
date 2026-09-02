@@ -20367,6 +20367,37 @@ function buildViewHand(g, rawAt, side, opts = {}) {
     if (hit) {
       const off = FR + 0.0012;
       knuckle0 = new Vec3(hit[0] - grasp.x * off, hit[1] - grasp.y * off, hit[2] - grasp.z * off);
+      /* And clear of it ACROSS, not only under it.
+       *
+       * Standing the row off the near skin is right for a bar a hand can
+       * wrap. The Kill Streak is not a bar: at its support station it is
+       * a 60 mm block with bipod legs, and a row placed under the middle
+       * of that has the whole block above it -- so the first bone, which
+       * leaves the knuckle upward and across, goes straight into it. The
+       * fingers came out through the barrel with only their tips clear.
+       *
+       * If a bone's length along the pointing direction lands inside,
+       * walk the row out along the across axis until it does not. That is
+       * the difference between a hand under a tube and a hand round the
+       * side of a slab, and it is a question the geometry can answer. */
+      const probe = (r) => {
+        const q = turn(new Vec3(point.x, point.y, point.z), 0, point, curl);
+        return [r.x + q.x * 0.046, r.y + q.y * 0.046, r.z + q.z * 0.046];
+      };
+      let pr = probe(knuckle0);
+      if (sfF(pr[0], pr[1], pr[2]) <= 0) {
+        for (let k = 1; k <= 24; k++) {
+          const t2 = k * 0.003;
+          const cand = new Vec3(knuckle0.x - across.x * t2,
+            knuckle0.y - across.y * t2, knuckle0.z - across.z * t2);
+          pr = probe(cand);
+          if (sfF(cand.x, cand.y, cand.z) > 0 && sfF(pr[0], pr[1], pr[2]) > 0) {
+            knuckle0 = cand;
+            if (opts.out) opts.out.foreShift = +t2.toFixed(4);
+            break;
+          }
+        }
+      }
       if (opts.out) opts.out.foreSkin = hit.map((q) => +q.toFixed(4));
     }
   }
