@@ -20378,7 +20378,25 @@ function buildViewHand(g, rawAt, side, opts = {}) {
              * it buys 1.7 points of burial for 0.8 of contact. Pushed
              * further, to 0.85, burial stops at 11.9 and contact falls to
              * 10.0 -- so 0.70 is where the depth argument runs out, not a
-             * fitted number. */
+             * fitted number.
+             *
+             * AND IT PUTS MORE HALF-BONES IN THE FALLBACK, which is the
+             * honest cost and is not a regression. Counted over the
+             * fleet, `walled` -- every angle this joint can reach goes
+             * through something -- rises from 107 to 146 and `stiff`
+             * from 8 to 22. Nothing got worse; 39 half-bones that were
+             * being called clean while half their flesh was in the metal
+             * are now counted as what they are. The proof is that burial
+             * fell at the same time.
+             *
+             * What the number then says is the scale of the real
+             * problem, and it is large: the Paralyzer's support hand has
+             * 18 of its 24 half-bones with no clean angle at all, the
+             * Sawn-off 17, the Remington and the Kill Streak 16 each. A
+             * 21.2 mm finger on these weapons mostly cannot curl without
+             * pressing into something, so the "contact says stop" search
+             * is not running on most of a support hand -- the shallowest
+             * crossing is. */
             let cross = 0;
             for (let q = 1; q <= 3; q++) {
               const u = q / 4;
