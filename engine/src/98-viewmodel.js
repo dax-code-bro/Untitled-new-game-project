@@ -1802,6 +1802,36 @@ function buildViewHand(g, rawAt, side, opts = {}) {
                  trigger. A finger goes in over the back of the guard, so
                  charge any path whose joints finish inside metal. */
               if (inS2) for (const j of js) if (inS2(j.x, j.y, j.z)) e += 0.020;
+              /* MEASURED AND REVERTED: penalising a finger for going
+                 PAST the hole.
+               *
+               * The score takes the nearer of the fingertip and the last
+               * joint, so a pose overshooting the guard bow scores as
+               * well as one stopping at it, and nothing pushes the curl
+               * to stop. That reads like the explanation for what the
+               * renders show -- every index with its tip beside or above
+               * the bow instead of inside the opening -- so: the hole is
+               * a known distance along the line from the knuckle, and
+               * whatever the pose touches with, going further along that
+               * line is going past it.
+               *
+               * It does nothing, and the reason is the interesting part.
+               * At full weight from the centre of the hole it cost the
+               * 1911 24 mm of reach against 34, the Mauser 39 and the
+               * Obliterator 41, all past the gate and back to pointing at
+               * nothing. Softened to a ten-millimetre free zone -- the
+               * half-depth of a real guard -- and a 0.6 weight, eight of
+               * the twelve did not move at all, the Mauser still went 25
+               * to 31 and off the gate, and the Thompson's render was
+               * pixel for pixel the same finger.
+               *
+               * Which says the tip is not sailing PAST the hole along the
+               * aim line. It is sitting BESIDE it: its projection onto
+               * that line is already short of the middle, and the miss is
+               * across. So the thing to fix is not how far the finger
+               * goes but where the hole it is aimed at is -- the blade a
+               * finger touches is at the BACK of the bow, and the middle
+               * of the opening is a centimetre in front of it. */
               if (!bt2 || e < bt2.e) {
                 bt2 = { e, k, b: bb, d0: dd0, pt: ppt, cl: ccl, tip: tp };
               }
