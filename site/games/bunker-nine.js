@@ -572,12 +572,30 @@ const WEAPONS = {
     knockback: 9.5, sweep: 1.15,
     sightH: 0.08, sightFov: 1.0, adsTime: 0.30,
     recoil: { up: 2.2, side: 0.8, climb: 0, recover: 8 },
-    /* Both hands on the haft, one behind the other, which is how a ram is
-       carried. The support hand was at z +0.12 -- four centimetres outside
-       the ram's own body -- so it held nothing and the arm stretched out to
-       meet it. Measured at 146 mm from the weapon; the seating solver could
-       not rescue it because there was no surface anywhere near to seat on. */
-    hands: { right: [-0.02, -0.055, -0.03], rightGrip: 'haft', left: [0.17, -0.055, -0.03], leftGrip: { axis: [-0.55, -0.83, 0], round: [0, 0, 1], girth: 0.052, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 } },
+    /* Both hands on the HANDLES, which this ram has two of and neither
+       hand was on.
+       
+       They were on the smooth underside of the body at y -55, z -30, and
+       the note that put them there was about getting the support hand
+       back from four centimetres outside the ram -- true, and it moved
+       the hand onto a barrel with nothing to hold. sweep.test measures
+       skin in the four quadrants round the point a hand holds and gave
+       this weapon 3 of 4 on the right and 0 of 4 on the left: 0 is not a
+       grip slightly off, it is a hand somewhere else.
+       
+       buildRamSteel welds two U-handles to the body, at x 80 and 260 in
+       its own space and 100 and 280 after the origin offset, each a 22 mm
+       bar 110 mm long standing 105 mm off the axis. The first points
+       straight up; the second is rolled 0.9 radians, which puts it at y
+       65, z 82. Both bars run along X, so both hands wrap X and `round`
+       points from the hand down at the bar it holds -- straight down on
+       the rear handle, down and inboard on the rolled one. Rear hand
+       first, front hand forward, which is how a ram is carried. */
+    hands: {
+      right: [0.100, 0.105, 0],
+      rightGrip: { axis: [1, 0, 0], round: [0, -1, 0], girth: 0.052, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 },
+      left: [0.280, 0.065, 0.082],
+      leftGrip: { axis: [1, 0, 0], round: [0, -0.62, -0.78], girth: 0.052, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 } },
   },
   shieldWorn: {
     name: 'Cracked Riot Shield', slotName: 'CRACKED SHIELD',
