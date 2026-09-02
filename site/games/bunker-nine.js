@@ -4888,6 +4888,25 @@ function applyAttachmentLooks(game, P, id) {
  * hands are authored in. Using actor.matrix here would mix in the world
  * transform of a gun that is at that moment somewhere in the bunker, and
  * every distance out of it would be meaningless. */
+/* CALLED BEFORE THE ARMS AND THE PROPS ATTACH, and that is not a detail.
+ *
+ * This walks `root` and everything under it. At the moment the builder
+ * calls it, a weapon's root holds the weapon; a few lines later the hands
+ * are parented to it, and a few lines after that the reload prop -- a
+ * magazine, a clip, a belt -- is parented to it too and hidden. So the
+ * field the solve is given is the gun alone, which is right, and any
+ * later caller building one from the same root gets the gun plus two
+ * things that are not the gun.
+ *
+ * Both have already cost a measurement. A probe that forgot the arms
+ * reported every trigger several millimetres INSIDE something, because it
+ * was measuring the range to the finger resting there. And grip.test
+ * counted the hidden magazine as weapon for long enough to open a bug
+ * about the Thompson's trigger finger being a third inside its receiver,
+ * which it never was. Blind both before calling this from anywhere
+ * downstream of start-up: with them in, the Scattergun's trigger point
+ * reads 2.3 mm inside solid against 5.5 mm of clear air, and the
+ * Paralyzer's 1.7 against 8.9. */
 function weaponSurface(game, root) {
   if (!root || !game.geometryOf) return null;
   /* Only how MANY sampled vertices the walk found, not where they are:
