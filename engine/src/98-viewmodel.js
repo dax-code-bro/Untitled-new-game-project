@@ -1255,8 +1255,22 @@ function buildViewHand(g, rawAt, side, opts = {}) {
        guard entirely -- it is 55 mm under the barrel there against 30 on
        a pistol. Still capped below the bore line, because a trigger is
        never above it. */
-    const yTop = Math.min(at.y - 0.004,
-      (opts.boreY != null ? opts.boreY : 0.03) - 0.012);
+    /* And the top of the box is the BORE, not the web.
+     *
+     * Capping it at the web as well says a trigger is never above the
+     * shooter's hand, and on a pistol that is true -- the web is at the
+     * top of the backstrap and the guard is just under it. On a rifle it
+     * is false and badly so: the hand holds the small of the stock, which
+     * is BELOW and behind the trigger. The Remington's guard opening sits
+     * at y +17 mm and its seated web at -28, so a box running downward
+     * from four millimetres under the web started 49 mm past the thing it
+     * was looking for and never came back. That is nine of the twelve
+     * weapons reporting no guard.
+     *
+     * A trigger is never above the BORE, which is the constraint that is
+     * actually true of both, and ninety millimetres below that reaches
+     * the Thompson's -- 55 mm under its barrel where a pistol's is 30. */
+    const yTop = (opts.boreY != null ? opts.boreY : 0.03) - 0.012;
     /* ENCLOSED, not merely clear. Scoring a candidate by how far it is
        from the metal picks the roomiest gap anywhere in the box -- the
        air under the barrel ahead of the guard beat the guard itself, and
@@ -1730,7 +1744,31 @@ function buildViewHand(g, rawAt, side, opts = {}) {
         const cands2 = trigAll.length ? trigAll : [[0, trigAt]];
         for (const [, cAt] of cands2) {
         let bt2 = null;
-        for (const [dd0, ppt, ccl] of [[d0, point, curl], [ipt, ipt, icl]]) {
+        /* A third plane: straight AT the hole.
+         *
+         * The other two are hand-picked -- the way the rest of the hand
+         * closes, and a forward-and-inward reach along the frame -- and
+         * measured against every weapon in the game neither of them gets
+         * a fingertip within 34 mm of a trigger guard, with the worst at
+         * 82. The gate is 30, so the aimed solve has never once been used
+         * and every trigger finger in the game is placed by the fallback
+         * below. Recognising the guard was never the last problem; aiming
+         * at it was.
+         *
+         * A finger reaching for a trigger points at the trigger. The
+         * knuckle is 64 mm from the 1911's guard with 96 mm of finger, so
+         * there is a curl that lands on it, and the search only has to be
+         * given the direction. Closing happens in the plane that contains
+         * that direction and the way the rest of the hand shuts. */
+        const aim = new Vec3(cAt.x - root.x, cAt.y - root.y, cAt.z - root.z);
+        const planes = [[d0, point, curl], [ipt, ipt, icl]];
+        if (aim.length() > 1e-4) {
+          aim.normalize();
+          const ad = curl.dot(aim);
+          const acl = new Vec3(curl.x - aim.x * ad, curl.y - aim.y * ad, curl.z - aim.z * ad);
+          if (acl.length() > 1e-4) planes.push([aim, aim, acl.normalize()]);
+        }
+        for (const [dd0, ppt, ccl] of planes) {
           for (const sp of SPREADS) {
             const bb = [bends[0] * sp[0], bends[1] * sp[1], bends[2] * sp[2]];
             const inS2 = opts.surface && opts.surface.inside;
@@ -1773,13 +1811,20 @@ function buildViewHand(g, rawAt, side, opts = {}) {
         if (bt.fwd >= 0.015 && bt.e < 0.030) break;
         }
         if (btAt) trigAt = btAt;
+        /* How close the aimed solve got, whether or not it was used --
+           otherwise a weapon that falls through to the plain solve is
+           indistinguishable from one that never had a guard. */
+        if (bt && opts.out) {
+          opts.out.trigBest = +bt.e.toFixed(4);
+          opts.out.trigFwd = +bt.fwd.toFixed(4);
+        }
         if (bt && bt.e < 0.030 && bt.fwd >= 0.015) {
           const ig2 = opts.indexGeo || (opts.digitGeos && opts.digitGeos[f]) || g;
           digitTo(ig2, root, bt.d0, [bt.b[0] * bt.k, bt.b[1] * bt.k, bt.b[2] * bt.k],
             lens, FR, bt.pt, bt.cl);
           if (opts.out) {
             opts.out.indexPivot = [root.x, root.y, root.z];
-            opts.out.indexPlane = bt.d0 === d0 ? 'wrap' : 'fwd';
+            opts.out.indexPlane = bt.d0 === d0 ? 'wrap' : (bt.d0 === ipt ? 'fwd' : 'aim');
             opts.out.indexErr = [+bt.e.toFixed(4), +bt.e.toFixed(4)];
             (opts.out.pivots || (opts.out.pivots = []))[f] = [root.x, root.y, root.z];
           }
