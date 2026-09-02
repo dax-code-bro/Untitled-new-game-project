@@ -3437,7 +3437,16 @@ function buildMap(game, S) {
     /* Landing at the head of the flight, spanning the whole slot: a landing
        the width of the stair alone leaves a slot of open sky down each side
        of it, which you fall through on the way to the parapet. */
-    slab(ST.x0 - 0.1, M.x1, R.y0, R.y1, M.z0 - W, ST.zBot - (ST.steps - 1) * RUN, MAT.floor, 'stair landing');
+    /* And it reaches four millimetres PAST the last tread rather than
+       stopping level with it. Both ended at the same z, so the landing's
+       front face and the tread's front face were one plane with 0.58
+       square metres of overlap, which is the largest of these in the
+       map. Overhanging by four millimetres buries the tread's face
+       inside the landing's solid, and a buried face is not drawn -- the
+       same relation the treads already have with the floor, and one the
+       coplanar check now understands. The landing IS the top step, so a
+       lip that size is nothing to look at. */
+    slab(ST.x0 - 0.1, M.x1, R.y0, R.y1, M.z0 - W, ST.zBot - (ST.steps - 1) * RUN + 0.004, MAT.floor, 'stair landing');
 
     /* Under the stair. Props that stop at the stringer, not at the ceiling:
        a post that runs the full height of the room is not holding a
