@@ -1364,9 +1364,27 @@ function buildViewHand(g, rawAt, side, opts = {}) {
            * against 26 to 87 on everything else, because the hole it
            * picked is 48 mm below the web and is not the trigger guard.
            * A finger balled up on the outside of a gun is worse than a
-           * finger laid along the frame, so this is not in. What it needs
-           * is a test for whether the finger can REACH the hole it has
-           * been sent to, which is a different piece of work. */
+           * finger laid along the frame, so this is not in.
+           *
+           * AND THE OBVIOUS REPAIR DOES NOT WORK EITHER. The next thing
+           * to try is a reach test: compute where the index knuckle will
+           * be -- 44 mm along the palm from the seated web, offset one
+           * and a half spacings toward the muzzle -- and reject any hole
+           * that is not between half and one finger's length from it, or
+           * that the straight line cannot get to. Measured, the surviving
+           * candidates sit 22 to 41 mm from that knuckle on the 1911, 25
+           * to 47 on the Mauser and 25 to 36 on the Obliterator, and not
+           * one of the 9331 was blocked on any weapon. The Mauser's WRONG
+           * hole is in the same range as the two right ones, so distance
+           * does not separate them and no threshold will.
+           *
+           * What would: try the hole and look at the finger. The index
+           * solve already runs against `trigAt` and already reports where
+           * the tip lands; run it for the best few candidates and keep
+           * the first whose tip finishes properly forward of its own
+           * knuckle, which is the thing grip.test measures and the thing
+           * a player sees. That means moving the choice after the solve
+           * rather than before it. */
           let enc = 0;
           for (const [ox2, oy2] of [[0.019, 0], [-0.019, 0], [0, 0.019], [0, -0.019]]) {
             if (solidAt(x + ox2, y + oy2, z)) enc++;
