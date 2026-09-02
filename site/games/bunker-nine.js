@@ -4402,8 +4402,50 @@ function makePlayer(game, S, hud, sfx, voice) {
   canvas.addEventListener('contextmenu', (e) => e.preventDefault());
   window.addEventListener('mousedown', (e) => { if (e.button === 2) game.input.pointer.rightDown = true; });
   window.addEventListener('mouseup', (e) => { if (e.button === 2) game.input.pointer.rightDown = false; });
+  /* A controller that walks the system cursor must not also aim.
+   *
+   * Under pointer lock the browser reports cursor motion as movementX and
+   * movementY and does not say what moved the cursor. Plenty of pads --
+   * through Steam Input, a vendor driver, or the operating system's own
+   * accessibility mapping -- drive the pointer with the LEFT stick, so
+   * pushing forward to walk arrives here as the mouse being pushed
+   * forward and the view pitches up; pulling back to reverse pitches it
+   * down. That is the report exactly, including why it only happens with
+   * the cursor hidden: hidden IS pointer lock, and this handler is the
+   * only thing listening then. It is also why the right stick was always
+   * fine -- nothing was emulating a mouse with that one.
+   *
+   * The game already reads both sticks straight from the Gamepad API, so
+   * while a stick is deflected there is nothing an emulated pointer can
+   * add except a second, unasked-for input on the same axis. Dropped.
+   *
+   * The cost is that a player walking on a stick while aiming with a real
+   * mouse loses the mouse for as long as they are walking. That is a rare
+   * way to hold a game and this is not: a pad on its own is broken
+   * without it, and the two cannot be told apart from inside the page,
+   * because the emulated events are indistinguishable from real ones. */
+  /* Any deflection at all, and for a moment after it stops. The driver's
+     pointer emulation is smoothed -- it keeps gliding for a tenth of a
+     second after the stick centres -- so a test on the stick's CURRENT
+     position lets the tail of every push through, which reads as the view
+     drifting up whenever you stop walking. And the threshold is as near
+     zero as the reading goes, because the stick's own dead zone has
+     already been taken out upstream: what arrives here as 0.03 is a real
+     push, and a real push is what moves the cursor. */
+  let padMoveAt = 0;
+  const padDriving = () => {
+    const pd = game.input.pad;
+    if (!pd || !pd.connected) return false;
+    if (Math.hypot(pd.lx || 0, pd.ly || 0) > 0.02
+      || Math.hypot(pd.rx || 0, pd.ry || 0) > 0.02) {
+      padMoveAt = performance.now();
+      return true;
+    }
+    return performance.now() - padMoveAt < 260;
+  };
   window.addEventListener('mousemove', (e) => {
     if (document.pointerLockElement !== canvas) return;
+    if (padDriving()) return;
     game._camYaw -= e.movementX * 0.0021;
     game._camPitch = Math.max(-1.45, Math.min(1.45, game._camPitch + e.movementY * 0.0021));
   });
