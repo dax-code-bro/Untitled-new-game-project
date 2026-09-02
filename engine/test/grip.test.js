@@ -119,7 +119,69 @@ const R = path.join(__dirname, '..', '..') + '/';
         }
         return (n & 1) === 1;
       };
-      const buried = [];
+      /* AND HOW MUCH OF IT IS ON THE GUN.
+       *
+       * Burial alone can always be satisfied by moving the hand off the
+       * weapon, and it was: sliding the forend row to the far flank took
+       * the Kill Streak's support fingers to zero per cent buried and its
+       * skin on the gun from 33 per cent to 4. Clean fingers in mid-air
+       * beside a forend is the fault this all started from, so the two
+       * numbers travel together and neither is allowed to move alone.
+       *
+       * Point-to-triangle distance, in the same pass as the parity ray --
+       * within four millimetres of the skin is touching it. */
+      const nearW = (ox, oy, oz) => {
+        let best = 1e9;
+        for (let t2 = 0; t2 < tri.length; t2 += 3) {
+          const A = tri[t2], B2 = tri[t2+1], C = tri[t2+2];
+          const abx = B2[0]-A[0], aby = B2[1]-A[1], abz = B2[2]-A[2];
+          const acx = C[0]-A[0], acy = C[1]-A[1], acz = C[2]-A[2];
+          const apx = ox-A[0], apy = oy-A[1], apz = oz-A[2];
+          const d1 = abx*apx + aby*apy + abz*apz;
+          const d2 = acx*apx + acy*apy + acz*apz;
+          let qx, qy, qz;
+          if (d1 <= 0 && d2 <= 0) { qx = A[0]; qy = A[1]; qz = A[2]; } else {
+            const bpx = ox-B2[0], bpy = oy-B2[1], bpz = oz-B2[2];
+            const d3 = abx*bpx + aby*bpy + abz*bpz;
+            const d4 = acx*bpx + acy*bpy + acz*bpz;
+            if (d3 >= 0 && d4 <= d3) { qx = B2[0]; qy = B2[1]; qz = B2[2]; } else {
+              const cpx = ox-C[0], cpy = oy-C[1], cpz = oz-C[2];
+              const d5 = abx*cpx + aby*cpy + abz*cpz;
+              const d6 = acx*cpx + acy*cpy + acz*cpz;
+              if (d6 >= 0 && d5 <= d6) { qx = C[0]; qy = C[1]; qz = C[2]; } else {
+                const vc = d1*d4 - d3*d2;
+                if (vc <= 0 && d1 >= 0 && d3 <= 0) {
+                  const w2 = d1 / (d1 - d3);
+                  qx = A[0] + abx*w2; qy = A[1] + aby*w2; qz = A[2] + abz*w2;
+                } else {
+                  const vb = d5*d2 - d1*d6;
+                  if (vb <= 0 && d2 >= 0 && d6 <= 0) {
+                    const w2 = d2 / (d2 - d6);
+                    qx = A[0] + acx*w2; qy = A[1] + acy*w2; qz = A[2] + acz*w2;
+                  } else {
+                    const va = d3*d6 - d5*d4;
+                    if (va <= 0 && (d4-d3) >= 0 && (d5-d6) >= 0) {
+                      const w2 = (d4-d3) / ((d4-d3) + (d5-d6));
+                      qx = B2[0] + (C[0]-B2[0])*w2; qy = B2[1] + (C[1]-B2[1])*w2;
+                      qz = B2[2] + (C[2]-B2[2])*w2;
+                    } else {
+                      const den = 1 / (va + vb + vc);
+                      const v2 = vb * den, w2 = vc * den;
+                      qx = A[0] + abx*v2 + acx*w2; qy = A[1] + aby*v2 + acy*w2;
+                      qz = A[2] + abz*v2 + acz*w2;
+                    }
+                  }
+                }
+              }
+            }
+          }
+          const dx = ox-qx, dy = oy-qy, dz = oz-qz;
+          const dd = dx*dx + dy*dy + dz*dz;
+          if (dd < best) { best = dd; if (best < 1e-8) break; }
+        }
+        return Math.sqrt(best);
+      };
+      const buried = [], onGun = [];
       const digitMeshes = [];
       for (let f = 0; f < 4; f++) {
         if (a.rFingers && a.rFingers[f]) digitMeshes.push([(f === 3 ? 'index' : 'r' + f), a.rFingers[f]]);
@@ -132,17 +194,22 @@ const R = path.join(__dirname, '..', '..') + '/';
         const e3 = m3.e, P3 = g3.positions, n3 = P3.length / 3;
         // Every ninth vertex: enough to see a quarter of a finger buried,
         // cheap enough to run on twelve weapons in a test.
-        let seen = 0, inN = 0;
+        let seen = 0, inN = 0, onN = 0;
         for (let i3 = 0; i3 < n3; i3 += 9) {
           const x = P3[i3*3], y = P3[i3*3+1], z = P3[i3*3+2];
           const wx = e3[0]*x+e3[4]*y+e3[8]*z+e3[12];
           const wy = e3[1]*x+e3[5]*y+e3[9]*z+e3[13];
           const wz = e3[2]*x+e3[6]*y+e3[10]*z+e3[14];
-          seen++; if (insideW(wx, wy, wz)) inN++;
+          seen++;
+          if (insideW(wx, wy, wz)) inN++;
+          else if (nearW(wx, wy, wz) < 0.004) onN++;
         }
-        if (seen) buried.push([dn, Math.round(inN * 100 / seen)]);
+        if (seen) {
+          buried.push([dn, Math.round(inN * 100 / seen)]);
+          onGun.push([dn, Math.round(onN * 100 / seen)]);
+        }
       }
-      out.push({ id, bore: +bore.toFixed(3), buried,
+      out.push({ id, bore: +bore.toFixed(3), buried, onGun,
         tight, gap: worstGap > 8 ? null : +worstGap.toFixed(4),
         thumbY: dg.thumbTip ? +(dg.thumbTip[1] - bore).toFixed(3) : null,
         trigY: trig ? +(trig.tip[1] - bore).toFixed(3) : null,
@@ -239,6 +306,17 @@ const R = path.join(__dirname, '..', '..') + '/';
     console.log('   ' + q.id.padEnd(13) + cells.join('  '));
   }
   console.log('   ' + (n ? (total / n).toFixed(1) : '-') + '% of the average digit is inside its weapon');
+  /* The other half of the pair. No threshold on this one yet -- the point
+     for now is that it is printed beside the burial figure, so a change
+     that empties one column by filling the other cannot look like a win. */
+  let onT = 0, onN2 = 0;
+  console.log('   weapon        digits touching the weapon');
+  for (const q of r) {
+    for (const [, pc] of (q.onGun || [])) { onT += pc; onN2++; }
+    console.log('   ' + q.id.padEnd(13)
+      + (q.onGun || []).map(([dn, pc]) => dn + ' ' + pc + '%').join('  '));
+  }
+  console.log('   ' + (onN2 ? (onT / onN2).toFixed(1) : '-') + '% of the average digit is touching it');
   console.log('');
   check('no finger got deeper into the weapon than it already was',
     worse.length === 0 && gone.length === 0,

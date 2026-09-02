@@ -1539,6 +1539,27 @@ function buildViewHand(g, rawAt, side, opts = {}) {
        * near flank cannot be cleared at all within a hand's width. */
       const clears = clearBone;
       if (!clears(knuckle0)) {
+        /* MEASURED AND REVERTED: sliding to the FAR flank instead.
+         *
+         * The fingers travel along -across, so shifting the row the other
+         * way puts the whole width of the thing between the knuckle and
+         * where the finger is going -- on the Kill Streak a 39 mm shift
+         * across a 46 mm column. Per-digit parity agreed loudly: sliding
+         * the other way took its support fingers from 33, 33, 42 and 58
+         * per cent inside the wood to 0, 0, 0 and 0, and the average
+         * digit across the whole game from 13.6 per cent to 8.9.
+         *
+         * It buys that by not holding the gun. The share of each support
+         * hand's skin actually ON its weapon collapsed at the same time:
+         * Kill Streak 33 per cent to 4, Remington 13 to 1, MP5 15 to 7,
+         * Thompson 12 to 5, MG 42 11 to 6, Mauser 20 to 8. The fingers
+         * are clean because they are in the air beside the forend, which
+         * is the fault this whole thread started from.
+         *
+         * Two measurements, and either one alone can be satisfied by
+         * making the other worse. That is why grip.test now carries both.
+         * The near flank stays: a hand partly in the weapon it is holding
+         * beats a hand nowhere near it. */
         for (const dir of [1, -1]) {
           let done = false;
           for (let k = 1; k <= 24; k++) {
