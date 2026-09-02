@@ -737,6 +737,40 @@ const SWEEP = () => {
           }
         }
       }
+      /* A face buried in a THIRD solid is not drawn and cannot fight.
+       *
+       * The same-direction rule already spares two boxes butted together,
+       * because one's face is inside the other's solid. It cannot spare
+       * two boxes RESTING on a floor: their bottom faces point the same
+       * way, lie on the same plane and overlap each other, and are both
+       * buried in the floor slab -- a third box the pair knows nothing
+       * about. Four of the six pairs this reported were that.
+       *
+       * So take a point just outside the shared face, in the middle of
+       * the region the two overlap, and ask whether any other box
+       * contains it. If one does, neither face is on the outside of the
+       * model and there is nothing to choose between them. */
+      const boxes = [];
+      for (const list of planes.values()) for (const q of list) {
+        if (!boxes.includes(q.a)) boxes.push(q.a);
+      }
+      const bounds = new Map();
+      for (const a of boxes) {
+        for (const list of planes.values()) {
+          const q = list.find((z) => z.a === a);
+          if (q) { bounds.set(a, [q.c, q.h]); break; }
+        }
+      }
+      const buried = (A, B2, mid) => {
+        for (const [a, cb] of bounds) {
+          if (a === A.a || a === B2.a) continue;
+          const [c, h] = cb;
+          if (Math.abs(mid[0] - c[0]) < h[0] - 0.001
+            && Math.abs(mid[1] - c[1]) < h[1] - 0.001
+            && Math.abs(mid[2] - c[2]) < h[2] - 0.001) return true;
+        }
+        return false;
+      };
       const seen = new Set();
       for (const list of planes.values()) {
         if (list.length < 2) continue;
@@ -754,6 +788,15 @@ const SWEEP = () => {
               area *= (hi - lo);
             }
             if (!over || area < 0.02) continue;
+            // Just outside the shared face, in the middle of the overlap.
+            const mid = [0, 0, 0];
+            for (let k = 0; k < 3; k++) {
+              if (k === A.ax) { mid[k] = A.at + A.sgn * 0.002; continue; }
+              const lo = Math.max(A.c[k] - A.h[k], B.c[k] - B.h[k]);
+              const hi = Math.min(A.c[k] + A.h[k], B.c[k] + B.h[k]);
+              mid[k] = (lo + hi) / 2;
+            }
+            if (buried(A, B, mid)) continue;
             const id = Math.min(A.a.id, B.a.id) + '-' + Math.max(A.a.id, B.a.id);
             if (seen.has(id)) continue;
             seen.add(id);
