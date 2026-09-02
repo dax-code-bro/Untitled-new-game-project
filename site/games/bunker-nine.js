@@ -233,7 +233,7 @@ const WEAPONS = {
        hand beside the grip lower down, which is where this was and which
        reads as two people holding the same gun. Up level with the firing
        hand and outboard by the thickness of its fingers. */
-    hands: { right: [-0.004, -0.020, 0.017], rightGrip: 'pistol', left: [0.006, -0.030, -0.034], leftGrip: { axis: [0.28, -0.94, 0], round: [0, 0, 1], girth: 0.078, spread: 0.0184, close: 0.90, index: 'wrap', thumb: 'stack', drop: 0 } },
+    hands: { right: [-0.004, -0.020, 0.017], rightGrip: 'pistol', left: [0.006, -0.030, -0.034], leftGrip: { axis: [-0.28, -0.94, 0], round: [0, 0, 1], girth: 0.078, spread: 0.0184, close: 0.90, index: 'wrap', thumb: 'stack', drop: 0 } },
   },
   /* River's twin. Same pistol, different loading: the rounds carry an
      incendiary compound, so what they leave behind burns for a while after
@@ -255,7 +255,7 @@ const WEAPONS = {
     /* The 1911's twin, and it had been left behind on the old two-handed
        numbers -- a second hand beside the grip lower down, with a thumb
        that mirrored across the top of the slide. Same gun, same hold. */
-    hands: { right: [-0.004, -0.020, 0.017], rightGrip: 'pistol', left: [0.006, -0.030, -0.034], leftGrip: { axis: [0.28, -0.94, 0], round: [0, 0, 1], girth: 0.078, spread: 0.0184, close: 0.90, index: 'wrap', thumb: 'stack', drop: 0 } },
+    hands: { right: [-0.004, -0.020, 0.017], rightGrip: 'pistol', left: [0.006, -0.030, -0.034], leftGrip: { axis: [-0.28, -0.94, 0], round: [0, 0, 1], girth: 0.078, spread: 0.0184, close: 0.90, index: 'wrap', thumb: 'stack', drop: 0 } },
   },
   thompson: {
     name: 'Thompson', slotName: 'THOMPSON',
@@ -271,7 +271,14 @@ const WEAPONS = {
        thumb pointing at the muzzle. So the support thumb came out lying
        flat down the receiver. `foregrip` wraps all four fingers round a
        vertical grip with the thumb over them, which is how you hold one. */
-    hands: { right: [-0.006, -0.024, 0.016], rightGrip: 'pistol', left: [0.356, -0.052, -0.008], leftGrip: 'foregrip' },
+    /* MEASURED against the model, which has no vertical foregrip on it.
+       Between x 300 and 430 this Thompson carries a horizontal handguard
+       spanning y +30 to +60 and nothing whatever below y +15 -- and the
+       support hand was anchored at y -52, a hundred millimetres under the
+       nearest geometry, wrapping four fingers round thin air. It touched
+       0% of the gun where the others touch 27 to 30. A hand under a
+       handguard is `fore`. */
+    hands: { right: [-0.006, -0.024, 0.016], rightGrip: 'pistol', left: [0.356, 0.030, 0], leftGrip: 'fore' },
   },
   scatter: {
     name: 'Scattergun', slotName: 'SCATTERGUN',
@@ -385,7 +392,7 @@ const WEAPONS = {
     ammo: { loader: { count: 4, pcd: 0.0148, round: AMMO.mag500 } },
     // Punches armour: half an inch of lead goes through riot plate.
     punchesPlate: true,
-    hands: { right: [-0.010, -0.013, 0.015], rightGrip: 'pistol', left: [0.030, -0.030, -0.028], leftGrip: { axis: [0.28, -0.94, 0], round: [0, 0, 1], girth: 0.074, spread: 0.0192, close: 0.90, index: 'wrap', thumb: 'along', drop: 0 } },
+    hands: { right: [-0.010, -0.013, 0.015], rightGrip: 'pistol', left: [0.030, -0.030, -0.028], leftGrip: { axis: [-0.28, -0.94, 0], round: [0, 0, 1], girth: 0.074, spread: 0.0192, close: 0.90, index: 'wrap', thumb: 'along', drop: 0 } },
   },
   mauser: {
     name: 'Mauser C96', slotName: 'MAUSER',
@@ -415,7 +422,7 @@ const WEAPONS = {
        hand on the strength of a measurement that did not respond. The
        reach is limited by the grip being narrower than a hand, which is
        what a broomhandle is. */
-    hands: { right: [-0.010, -0.020, 0.014], rightGrip: { axis: [0.10, -0.99, 0], round: [0, 0, -1], girth: 0.062, spread: 0.0196, close: 0.98, index: 'trigger', thumb: 'over', drop: 0 },
+    hands: { right: [-0.010, -0.020, 0.014], rightGrip: { axis: [-0.10, -0.99, 0], round: [0, 0, -1], girth: 0.062, spread: 0.0196, close: 0.98, index: 'trigger', thumb: 'over', drop: 0 },
       /* Forward of the magazine housing, on the barrel extension.
        *
        * It was 62 mm in front of the firing hand, which on a life-size
@@ -470,13 +477,26 @@ const WEAPONS = {
     recoil: { up: 0.55, side: 0.42, climb: 0.16, recover: 9, back: 0.010, roll: 0.004, impulse: 5 },
     moveMul: 0.76, muzzleVel: 755,
     ammo: { mag: { w: 0.062, d: 0.048, len: 0.086, curve: 0, witness: 0, round: AMMO.mauser8 } },
-    hands: { right: [-0.012, -0.032, 0.016], /* It has a pistol grip and a trigger in a guard, like everything else
+    /* And the anchor was in front of the grip. Sliced at the grip's own
+       height the metal here runs x -38 to -27; the web was declared at
+       -12, twenty millimetres forward of the nearest of it, which is the
+       same fault as the Thompson's support hand and has the same effect:
+       the hand closes on air and the seating search then drags it
+       somewhere else. */
+    hands: { right: [-0.032, -0.026, 0.016], /* It has a pistol grip and a trigger in a guard, like everything else
        on this list -- it was the one weapon whose index finger was told to
        wrap with the other three, so it closed into the grip and finished
        27 mm BEHIND its own knuckle while the other twelve reached forward
        onto their triggers. `thumb: 'up'` belongs on a spade grip, which
        this is not. */
-      rightGrip: { axis: [0.06, -0.998, 0], round: [1, 0, 0], girth: 0.056, spread: 0.0192, close: 1.0, index: 'trigger', thumb: 'over', drop: 0 }, left: [0.400, -0.008, -0.022], leftGrip: 'tube' },
+      /* And `round` was still the spade's too. It points from the hand
+         at what the hand is holding, and at [1,0,0] that is "from behind,
+         toward the muzzle" -- a hand pushing the grip rather than closed
+         round it. Every finger then left its knuckle sideways off the gun
+         and curled forward into the air: measured, this hand touched 4%
+         of the weapon where the other pistol grips touch 15 to 20. A
+         pistol grip is held from the weapon's right. */
+      rightGrip: { axis: [-0.06, -0.998, 0], round: [0, 0, -1], girth: 0.056, spread: 0.0192, close: 1.0, index: 'trigger', thumb: 'over', drop: 0 }, left: [0.400, -0.008, -0.022], leftGrip: 'tube' },
   },
   /* The two answers to plate. Both are melee, both are slow, and both are
      mystery-box only — you do not get to plan for an armoured runner, you
@@ -494,7 +514,7 @@ const WEAPONS = {
        the ram's own body -- so it held nothing and the arm stretched out to
        meet it. Measured at 146 mm from the weapon; the seating solver could
        not rescue it because there was no surface anywhere near to seat on. */
-    hands: { right: [-0.02, -0.055, -0.03], rightGrip: 'haft', left: [0.17, -0.055, -0.03], leftGrip: { axis: [0.55, -0.83, 0], round: [0, 0, 1], girth: 0.052, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 } },
+    hands: { right: [-0.02, -0.055, -0.03], rightGrip: 'haft', left: [0.17, -0.055, -0.03], leftGrip: { axis: [-0.55, -0.83, 0], round: [0, 0, 1], girth: 0.052, spread: 0.0190, close: 1.0, index: 'wrap', thumb: 'along', drop: 0 } },
   },
   shieldWorn: {
     name: 'Cracked Riot Shield', slotName: 'CRACKED SHIELD',
@@ -532,7 +552,7 @@ const WEAPONS = {
     sightH: 0.0580, sightFov: 0.82, adsTime: 0.26,
     recoil: { up: 0.9, side: 0.2, climb: 0.2, recover: 8, back: 0.018, roll: 0.006, impulse: 9 },
     ammo: { cell: { w: 0.052, h: 0.070, d: 0.038 } },
-    hands: { right: [-0.014, -0.046, 0.016], rightGrip: 'pistol', left: [0.188, -0.052, -0.020], leftGrip: { axis: [0.10, -0.99, 0], round: [0, 0, 1], girth: 0.058, spread: 0.0196, close: 1.0, index: 'wrap', thumb: 'over', drop: 0 } },
+    hands: { right: [-0.014, -0.046, 0.016], rightGrip: 'pistol', left: [0.188, -0.052, -0.020], leftGrip: { axis: [-0.10, -0.99, 0], round: [0, 0, 1], girth: 0.058, spread: 0.0196, close: 1.0, index: 'wrap', thumb: 'over', drop: 0 } },
     chain: { count: 3, radius: 4.0, dmg: 500 },
   },
 };
@@ -4820,29 +4840,99 @@ function weaponSurface(game, root) {
     if (!cell) { cell = []; grid.set(kk, cell); }
     cell.push(i);
   }
-  const surf = (x, y, z) => {
-    const gi = Math.floor(x / CELL), gj = Math.floor(y / CELL), gk = Math.floor(z / CELL);
-    let best = 1e9;
-    // Widen the ring until something is found, so a point out in mid-air
-    // still gets a real answer rather than infinity.
-    for (let r = 1; r <= 7; r++) {
-      for (let a = -r; a <= r; a++) {
-        for (let b = -r; b <= r; b++) {
-          for (let c = -r; c <= r; c++) {
-            if (r > 1 && Math.max(Math.abs(a), Math.abs(b), Math.abs(c)) < r) continue;
-            const cell = grid.get(key(gi + a, gj + b, gk + c));
-            if (!cell) continue;
-            for (const i of cell) {
-              const dx = pts[i] - x, dy = pts[i + 1] - y, dz = pts[i + 2] - z;
-              const d = dx * dx + dy * dy + dz * dz;
-              if (d < best) best = d;
+  /* Distance to the nearest TRIANGLE, not the nearest vertex.
+   *
+   * The solve wants each joint one finger-radius plus a hair off the
+   * weapon's skin, and it was being handed the range to the closest
+   * VERTEX instead. On a swept mesh the vertices sit on the section rings
+   * and a flat panel between two rings has none in the middle, so the
+   * field reads several millimetres further out than the surface actually
+   * is -- and the solve, believing it, drives the finger that much into
+   * the metal. That is not a small correction: measured by ray parity,
+   * between 14% and 63% of each hand's finger surface was inside its gun,
+   * and moving the hand closer only buried it deeper, because the error
+   * grows as you approach the middle of a panel.
+   *
+   * Point-to-triangle, over a grid of triangles rather than of points, so
+   * a lookup still touches a handful of them. */
+  const TCELL = 0.016;
+  const tgrid = new Map();
+  const tkey = (i, j, k) => i + ',' + j + ',' + k;
+  for (let t = 0; t < tris.length; t += 3) {
+    const lo2 = [0, 1, 2].map((k) => Math.min(tris[t][k], tris[t + 1][k], tris[t + 2][k]));
+    const hi2 = [0, 1, 2].map((k) => Math.max(tris[t][k], tris[t + 1][k], tris[t + 2][k]));
+    for (let i = Math.floor(lo2[0] / TCELL); i <= Math.floor(hi2[0] / TCELL); i++)
+      for (let j = Math.floor(lo2[1] / TCELL); j <= Math.floor(hi2[1] / TCELL); j++)
+        for (let k = Math.floor(lo2[2] / TCELL); k <= Math.floor(hi2[2] / TCELL); k++) {
+          const kk = tkey(i, j, k);
+          let cell = tgrid.get(kk);
+          if (!cell) { cell = []; tgrid.set(kk, cell); }
+          cell.push(t);
+        }
+  }
+  /* Closest point on a triangle to a point: the standard region test --
+     the three vertices, the three edges, or the face interior. */
+  const triDist2 = (px, py, pz, A, B2, C) => {
+    const abx = B2[0]-A[0], aby = B2[1]-A[1], abz = B2[2]-A[2];
+    const acx = C[0]-A[0], acy = C[1]-A[1], acz = C[2]-A[2];
+    const apx = px-A[0], apy = py-A[1], apz = pz-A[2];
+    const d1 = abx*apx + aby*apy + abz*apz, d2 = acx*apx + acy*apy + acz*apz;
+    let cx, cy, cz;
+    if (d1 <= 0 && d2 <= 0) { cx = A[0]; cy = A[1]; cz = A[2]; }
+    else {
+      const bpx = px-B2[0], bpy = py-B2[1], bpz = pz-B2[2];
+      const d3 = abx*bpx + aby*bpy + abz*bpz, d4 = acx*bpx + acy*bpy + acz*bpz;
+      if (d3 >= 0 && d4 <= d3) { cx = B2[0]; cy = B2[1]; cz = B2[2]; }
+      else {
+        const vc = d1*d4 - d3*d2;
+        if (vc <= 0 && d1 >= 0 && d3 <= 0) {
+          const v2 = d1 / (d1 - d3);
+          cx = A[0] + abx*v2; cy = A[1] + aby*v2; cz = A[2] + abz*v2;
+        } else {
+          const cpx = px-C[0], cpy = py-C[1], cpz = pz-C[2];
+          const d5 = abx*cpx + aby*cpy + abz*cpz, d6 = acx*cpx + acy*cpy + acz*cpz;
+          if (d6 >= 0 && d5 <= d6) { cx = C[0]; cy = C[1]; cz = C[2]; }
+          else {
+            const vb = d5*d2 - d1*d6;
+            if (vb <= 0 && d2 >= 0 && d6 <= 0) {
+              const w3 = d2 / (d2 - d6);
+              cx = A[0] + acx*w3; cy = A[1] + acy*w3; cz = A[2] + acz*w3;
+            } else {
+              const va = d3*d6 - d5*d4;
+              if (va <= 0 && (d4 - d3) >= 0 && (d5 - d6) >= 0) {
+                const w3 = (d4 - d3) / ((d4 - d3) + (d5 - d6));
+                cx = B2[0] + (C[0]-B2[0])*w3; cy = B2[1] + (C[1]-B2[1])*w3; cz = B2[2] + (C[2]-B2[2])*w3;
+              } else {
+                const den = 1 / (va + vb + vc);
+                const v2 = vb * den, w3 = vc * den;
+                cx = A[0] + abx*v2 + acx*w3; cy = A[1] + aby*v2 + acy*w3; cz = A[2] + abz*v2 + acz*w3;
+              }
             }
           }
         }
       }
-      // One more ring past the first hit, since a nearer point can live in
-      // a diagonal cell the first ring did not reach.
-      if (best < 1e9 && r >= 2) break;
+    }
+    const dx = cx-px, dy = cy-py, dz = cz-pz;
+    return dx*dx + dy*dy + dz*dz;
+  };
+  const surf = (x, y, z) => {
+    if (!tris.length) return 1;
+    const gi = Math.floor(x / TCELL), gj = Math.floor(y / TCELL), gk = Math.floor(z / TCELL);
+    let best = 1e9;
+    for (let r = 0; r <= 6; r++) {
+      for (let a2 = -r; a2 <= r; a2++)
+        for (let b2 = -r; b2 <= r; b2++)
+          for (let c2 = -r; c2 <= r; c2++) {
+            if (r > 0 && Math.max(Math.abs(a2), Math.abs(b2), Math.abs(c2)) < r) continue;
+            const cell = tgrid.get(tkey(gi + a2, gj + b2, gk + c2));
+            if (!cell) continue;
+            for (const t of cell) {
+              const d = triDist2(x, y, z, tris[t], tris[t + 1], tris[t + 2]);
+              if (d < best) best = d;
+            }
+          }
+      // One ring past the first hit: a nearer triangle can sit diagonally.
+      if (best < 1e9 && r >= 1) break;
     }
     return best < 1e9 ? Math.sqrt(best) : 1;
   };
@@ -4919,12 +5009,35 @@ function weaponSurface(game, root) {
       vox[n] = 2; stack.push(n);
     }
   }
-  surf.inside = (x, y, z) => {
+  const inside = (x, y, z) => {
     const c = cellOf(x, y, z);
     if (c[0] < 0 || c[1] < 0 || c[2] < 0 || c[0] >= dim[0] || c[1] >= dim[1] || c[2] >= dim[2]) return false;
     return vox[at(c[0], c[1], c[2])] === 0;
   };
-  return surf;
+  /* SIGNED, and this is the whole fault behind "the fingers are jumbled up
+   * with the gun".
+   *
+   * Everything that places a hand -- the anchor seating, the knuckle row,
+   * the curl -- scores a candidate by how near this field is to a
+   * finger's own radius. Unsigned, a knuckle ten millimetres INSIDE the
+   * slide reads ten millimetres and scores perfectly, so a search over
+   * that field does not merely tolerate burying the hand in the gun: it
+   * is indifferent between resting on the metal and being ten
+   * millimetres under it, and coordinate descent will take whichever it
+   * reaches first. Measured on the 1911, it took the inside: the four
+   * knuckles came out at y -11, +8, +27 and +45 -- climbing the frame
+   * and onto the top of the slide -- while a hundred millimetres of grip
+   * below them had no finger on it at all.
+   *
+   * Negative inside the solid turns that indifference into a cost, and
+   * every consumer of this field gets the fix at once without knowing
+   * anything about occupancy grids. The sign only appears past the shell
+   * band, so a finger genuinely touching the surface still reads zero and
+   * stays legal. */
+  const signed = (x, y, z) => (inside(x, y, z) ? -surf(x, y, z) : surf(x, y, z));
+  signed.inside = inside;
+  signed.unsigned = surf;
+  return signed;
 }
 
 /* Where each slot hangs off a weapon, in that weapon's own space. Derived
@@ -5957,7 +6070,10 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
     }
     const th = which === 'left' ? arms.lThumb : arms.thumb;
     const tp = which === 'left' ? arms.lThumbPivot : arms.thumbPivot;
-    if (th && tp) turnDigit(th, tp, [0, 0, 1], -amount * 0.42);
+    // About the thumb's own opening axis. World Z swung it up and down
+    // the frame instead of off the fingers.
+    const ta = which === 'left' ? arms.lThumbAxis : arms.thumbAxis;
+    if (th && tp) turnDigit(th, tp, ta || [0, 0, 1], -amount * 0.42);
   };
   /* The support hand through a reload: it lets go, travels open, closes on
      what it is fetching, and opens again to release. RELOAD_WINDOW already

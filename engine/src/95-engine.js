@@ -1087,9 +1087,23 @@ class Engine {
 
   _bindCameraInput() {
     let dragging = false;
-    const onDown = (e) => { dragging = true; this._dragX = e.clientX; this._dragY = e.clientY; };
+    /* Drag-to-orbit is for a scene you are LOOKING AT. A first-person game
+       already has a look input of its own -- pointer lock, a right stick --
+       and this one was still bound underneath it, so a click and a drag
+       moved the camera a second time. Off a pointer lock that reads as the
+       view lurching whenever you touch a button; on a touchscreen, where
+       there is no lock to be had, it reads as every control also aiming.
+       So: never in first person, never while the lock is held, and only
+       from the primary button. */
+    const onDown = (e) => {
+      if (e.button != null && e.button !== 0) return;
+      dragging = true; this._dragX = e.clientX; this._dragY = e.clientY;
+    };
+    const locked = () => typeof document !== 'undefined'
+      && document.pointerLockElement === this.canvas;
     const onMove = (e) => {
-      if (!dragging || this._camMode === 'manual' || this._camConfig.userControl === false) return;
+      if (!dragging || this._camMode === 'manual' || this._camMode === 'first'
+        || this._camConfig.userControl === false || locked()) return;
       const dx = e.clientX - this._dragX, dy = e.clientY - this._dragY;
       this._dragX = e.clientX; this._dragY = e.clientY;
       this._camYaw -= dx * 0.006;

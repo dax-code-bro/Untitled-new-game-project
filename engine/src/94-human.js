@@ -52,18 +52,64 @@ function ringVertex(out, centre, right, fwd, halfW, halfD, angle, e) {
 function loftRings(g, rings, segments = 16, capStart = true, capEnd = true, flip = false) {
   if (rings.length < 2) return;
 
-  // Build a stable frame per ring from the local path direction.
+  /* Carry the cross-section frame ALONG the path instead of rebuilding it
+     from a world axis at every ring.
+   *
+   * Each ring used to take its frame from whichever of two fixed
+   * references was less parallel to the local direction. On a straight
+   * loft that is fine. On a curving one -- a finger closing round a grip,
+   * a thumb folding over -- the direction sweeps through the changeover
+   * and the reference SWITCHES between two adjacent rings, rotating the
+   * section ninety degrees in one step. The quad strip between them then
+   * spirals through itself and comes out as a cone standing off the side
+   * of the tube: the spike on the end of every fingertip in the game.
+   *
+   * Parallel transport instead: the first ring takes its frame from the
+   * reference exactly as before, and every ring after it rotates the
+   * previous frame by the smallest rotation carrying the previous
+   * direction onto this one. Straight lofts are unchanged; curved ones
+   * stop tearing. */
   const axis = new Vec3(), ref = new Vec3(0, 0, 1), altRef = new Vec3(1, 0, 0);
+  const prevAxis = new Vec3(), kk = new Vec3(), tv = new Vec3();
+  let havePrev = false;
   for (let i = 0; i < rings.length; i++) {
     const r = rings[i];
-    if (r.right && r.fwd) continue;
+    if (r.right && r.fwd) { havePrev = false; continue; }
     const prev = rings[Math.max(0, i - 1)], next = rings[Math.min(rings.length - 1, i + 1)];
     axis.subVectors(next.p, prev.p);
     if (axis.lengthSq() < 1e-10) axis.set(0, 1, 0);
     axis.normalize();
-    const useRef = Math.abs(axis.dot(ref)) > 0.95 ? altRef : ref;
-    r.right = new Vec3().crossVectors(useRef, axis).normalize();
+    let right;
+    if (havePrev) {
+      const prevRight = rings[i - 1].right;
+      kk.crossVectors(prevAxis, axis);
+      const sn = kk.length(), cs = prevAxis.dot(axis);
+      if (sn < 1e-7) {
+        right = new Vec3(prevRight.x, prevRight.y, prevRight.z);
+      } else {
+        kk.scale(1 / sn);
+        // Rodrigues, about the axis that carries the last direction to this one.
+        tv.crossVectors(kk, prevRight);
+        const kd = kk.dot(prevRight);
+        right = new Vec3(
+          prevRight.x * cs + tv.x * sn + kk.x * kd * (1 - cs),
+          prevRight.y * cs + tv.y * sn + kk.y * kd * (1 - cs),
+          prevRight.z * cs + tv.z * sn + kk.z * kd * (1 - cs),
+        );
+      }
+      // Re-seat it exactly perpendicular; a chain of rotations drifts.
+      const dp = right.dot(axis);
+      right.set(right.x - axis.x * dp, right.y - axis.y * dp, right.z - axis.z * dp);
+      if (right.lengthSq() < 1e-12) right = new Vec3().crossVectors(ref, axis);
+      right.normalize();
+    } else {
+      const useRef = Math.abs(axis.dot(ref)) > 0.95 ? altRef : ref;
+      right = new Vec3().crossVectors(useRef, axis).normalize();
+    }
+    r.right = right;
     r.fwd = new Vec3().crossVectors(axis, r.right).normalize();
+    prevAxis.copy(axis);
+    havePrev = true;
   }
 
   const base = g.positions.length / 3;
