@@ -467,7 +467,7 @@ const WEAPONS = {
     ammo: { clip: { count: 5, pitch: 0.0130, round: AMMO.rifle30 } },
     // Punches armour: an anti-materiel round does not care about plate.
     punchesPlate: true,
-    hands: { right: [-0.012, -0.030, 0.016], rightGrip: 'wrist', left: [0.357, -0.007, -0.021], leftGrip: 'woodFore' },
+    hands: { right: [-0.012, -0.030, 0.016], rightGrip: 'wrist', left: [0.200, 0.001, 0], leftGrip: 'woodFore' },
   },
   /* Belt-fed, twelve hundred a minute, and it weighs as much as the door
      it is standing behind. Fifty rounds go in about two and a half

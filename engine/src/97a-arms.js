@@ -1708,21 +1708,39 @@ function buildRifleSteel(g, K) {
   /* Barrel. A taper, and on the heavy rifle six flutes milled down it —
      which is what a barrel that thick actually has, and what stops it
      reading as a length of pipe. */
-  tubeRun(g, [
-    [K.barrelRear - 0.004, K.barrelR0],
-    [K.barrelRear + 0.030, K.barrelR0],
-    [K.muzzle - (K.brake ? K.brake.len : 0.030) - 0.010, K.barrelR1],
-    [K.muzzle - (K.brake ? K.brake.len : 0.002), K.barrelR1],
-  ], 24, true, false);
+  const bEnd = K.muzzle - (K.brake ? K.brake.len : 0.002);
+  const bTaper = K.muzzle - (K.brake ? K.brake.len : 0.030) - 0.010;
   if (K.fluted) {
-    for (let i = 0; i < 6; i++) {
-      const th = (i / 6) * TAU + 0.3;
-      const rr = K.barrelR0 + 0.0040;
-      spin(g, [
-        [K.barrelRear + 0.055, 0], [K.barrelRear + 0.055, 0.0058],
-        [K.muzzle - K.brake.len - 0.040, 0.0058], [K.muzzle - K.brake.len - 0.040, 0],
-      ], 12, 34, Math.cos(th) * rr, Math.sin(th) * rr);
-    }
+    /* Fluted, and the flutes are cut into the section rather than laid on
+       top of it. Six rods added around the outside stood 11 mm proud of a
+       25 mm barrel, so the thing measured 69 mm across at the support
+       hand's station -- wider than a hand can close, with a wood forend
+       and two bipod legs inside the same envelope. What the support hand
+       found there was never the barrel. */
+    const rAt = (x) => {
+      const t = Math.max(0, Math.min(1, (x - (K.barrelRear + 0.030)) / (bTaper - K.barrelRear - 0.030)));
+      return K.barrelR0 + t * (K.barrelR1 - K.barrelR0);
+    };
+    const f0 = K.barrelRear + 0.055, f1 = bTaper - 0.040;
+    const st = [];
+    const plain = (x) => st.push(ax(x, ringOutline(rAt(x), 48)));
+    const cut = (x, d) => st.push(ax(x, flutedRing(rAt(x), 6, d, 48)));
+    plain(K.barrelRear - 0.004);
+    plain(f0 - 0.010);
+    // Run the groove out at both ends rather than starting it as a step.
+    cut(f0, 0.0010);
+    for (let i = 1; i <= 8; i++) cut(f0 + (f1 - f0) * (i / 9), 0.0062);
+    cut(f1, 0.0010);
+    plain(f1 + 0.010);
+    plain(bEnd);
+    sweepPath(g, st, true, false);
+  } else {
+    tubeRun(g, [
+      [K.barrelRear - 0.004, K.barrelR0],
+      [K.barrelRear + 0.030, K.barrelR0],
+      [bTaper, K.barrelR1],
+      [bEnd, K.barrelR1],
+    ], 24, true, false);
   }
 
   if (K.brake) {

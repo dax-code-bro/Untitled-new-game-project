@@ -390,6 +390,30 @@ function buildSlide(g) {
 
 /* ---------------- barrel ---------------- */
 
+/* A ring with flutes cut INTO it.
+
+   Fluting is a subtraction: six grooves milled down a heavy barrel to
+   shed weight and heat. Built as six added rods laid along the outside
+   it becomes the opposite thing -- six ribs standing proud, which took
+   the Kill Streak's 50 mm barrel out to 69 mm across and left nothing on
+   the gun a hand could close around. So the flute is part of the
+   barrel's own section: the radius dips by `depth` over a scallop
+   centred on each flute and returns to `r` between them. */
+function flutedRing(r, flutes, depth, n, cy = 0, cz = 0) {
+  const raw = [];
+  // Half the angular width of one groove, leaving a land between them.
+  const half = (TAU / flutes) * 0.36;
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * TAU;
+    // Distance to the nearest flute centre, wrapped.
+    let d = Math.abs(((a + 0.3) % (TAU / flutes)) - (TAU / flutes) / 2);
+    let rr = r;
+    if (d < half) rr = r - depth * (0.5 + 0.5 * Math.cos(PI * d / half));
+    raw.push([cy + rr * Math.cos(a), cz + rr * Math.sin(a)]);
+  }
+  return profileOutline(raw, 40);
+}
+
 function ringOutline(r, n, cy = 0, cz = 0) {
   const raw = [];
   for (let i = 0; i < n; i++) {

@@ -14238,6 +14238,30 @@ function buildSlide(g) {
 
 /* ---------------- barrel ---------------- */
 
+/* A ring with flutes cut INTO it.
+
+   Fluting is a subtraction: six grooves milled down a heavy barrel to
+   shed weight and heat. Built as six added rods laid along the outside
+   it becomes the opposite thing -- six ribs standing proud, which took
+   the Kill Streak's 50 mm barrel out to 69 mm across and left nothing on
+   the gun a hand could close around. So the flute is part of the
+   barrel's own section: the radius dips by `depth` over a scallop
+   centred on each flute and returns to `r` between them. */
+function flutedRing(r, flutes, depth, n, cy = 0, cz = 0) {
+  const raw = [];
+  // Half the angular width of one groove, leaving a land between them.
+  const half = (TAU / flutes) * 0.36;
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * TAU;
+    // Distance to the nearest flute centre, wrapped.
+    let d = Math.abs(((a + 0.3) % (TAU / flutes)) - (TAU / flutes) / 2);
+    let rr = r;
+    if (d < half) rr = r - depth * (0.5 + 0.5 * Math.cos(PI * d / half));
+    raw.push([cy + rr * Math.cos(a), cz + rr * Math.sin(a)]);
+  }
+  return profileOutline(raw, 40);
+}
+
 function ringOutline(r, n, cy = 0, cz = 0) {
   const raw = [];
   for (let i = 0; i < n; i++) {
@@ -16934,21 +16958,39 @@ function buildRifleSteel(g, K) {
   /* Barrel. A taper, and on the heavy rifle six flutes milled down it —
      which is what a barrel that thick actually has, and what stops it
      reading as a length of pipe. */
-  tubeRun(g, [
-    [K.barrelRear - 0.004, K.barrelR0],
-    [K.barrelRear + 0.030, K.barrelR0],
-    [K.muzzle - (K.brake ? K.brake.len : 0.030) - 0.010, K.barrelR1],
-    [K.muzzle - (K.brake ? K.brake.len : 0.002), K.barrelR1],
-  ], 24, true, false);
+  const bEnd = K.muzzle - (K.brake ? K.brake.len : 0.002);
+  const bTaper = K.muzzle - (K.brake ? K.brake.len : 0.030) - 0.010;
   if (K.fluted) {
-    for (let i = 0; i < 6; i++) {
-      const th = (i / 6) * TAU + 0.3;
-      const rr = K.barrelR0 + 0.0040;
-      spin(g, [
-        [K.barrelRear + 0.055, 0], [K.barrelRear + 0.055, 0.0058],
-        [K.muzzle - K.brake.len - 0.040, 0.0058], [K.muzzle - K.brake.len - 0.040, 0],
-      ], 12, 34, Math.cos(th) * rr, Math.sin(th) * rr);
-    }
+    /* Fluted, and the flutes are cut into the section rather than laid on
+       top of it. Six rods added around the outside stood 11 mm proud of a
+       25 mm barrel, so the thing measured 69 mm across at the support
+       hand's station -- wider than a hand can close, with a wood forend
+       and two bipod legs inside the same envelope. What the support hand
+       found there was never the barrel. */
+    const rAt = (x) => {
+      const t = Math.max(0, Math.min(1, (x - (K.barrelRear + 0.030)) / (bTaper - K.barrelRear - 0.030)));
+      return K.barrelR0 + t * (K.barrelR1 - K.barrelR0);
+    };
+    const f0 = K.barrelRear + 0.055, f1 = bTaper - 0.040;
+    const st = [];
+    const plain = (x) => st.push(ax(x, ringOutline(rAt(x), 48)));
+    const cut = (x, d) => st.push(ax(x, flutedRing(rAt(x), 6, d, 48)));
+    plain(K.barrelRear - 0.004);
+    plain(f0 - 0.010);
+    // Run the groove out at both ends rather than starting it as a step.
+    cut(f0, 0.0010);
+    for (let i = 1; i <= 8; i++) cut(f0 + (f1 - f0) * (i / 9), 0.0062);
+    cut(f1, 0.0010);
+    plain(f1 + 0.010);
+    plain(bEnd);
+    sweepPath(g, st, true, false);
+  } else {
+    tubeRun(g, [
+      [K.barrelRear - 0.004, K.barrelR0],
+      [K.barrelRear + 0.030, K.barrelR0],
+      [bTaper, K.barrelR1],
+      [bEnd, K.barrelR1],
+    ], 24, true, false);
   }
 
   if (K.brake) {
@@ -19485,6 +19527,75 @@ function buildViewHand(g, rawAt, side, opts = {}) {
    * it sits, which is the part a measurement is good at. The search then
    * springs to a corrected anchor instead of a wrong one. */
   let seatAt = rawAt;
+  /* First, though: a hand cannot be inside a pipe.
+   *
+   * Parity says a point in the bore of a tube is OUTSIDE the mesh, which
+   * is true and is the wrong answer here. The MG 42's support anchor sits
+   * on the axis of its barrel jacket, 13 mm clear of the inner wall --
+   * which reads exactly like a palm correctly stood off a surface, so
+   * neither the pre-seat below (it only catches anchors too far OUT) nor
+   * the seating search (13 mm against a wanted 10) had anything to
+   * complain about. The hand was sealed inside the shroud, and the only
+   * way out the per-knuckle push could find was upward, which is how four
+   * knuckles ended up standing on top of the jacket.
+   *
+   * The test that separates a bore from open air is whether the hand can
+   * get there at all: walk AWAY from the weapon, along -grasp, the way an
+   * arm would have to come in. Free air the whole way and the anchor is
+   * where a hand can be. Hit metal and it is in a pocket, and the seat
+   * belongs on the far side of that metal. */
+  let unpocketed = false;
+  if (opts.surface && opts.surface.inside) {
+    const solidP = opts.surface.inside;
+    /* Enclosed ALL THE WAY ROUND, which is what a bore is and what
+       nothing a hand legitimately holds is.
+     *
+     * Metal on one side proves nothing -- that is every grip. Metal on
+     * two proves little: the MG 42's spade grip has a handle behind the
+     * web and a receiver in front of it, and the Obliterator's is the
+     * same, so a both-sides test moved two firing hands that were
+     * already right. So sample eight rays around the held part's own
+     * axis. A grip, a forend, a shroud held from below -- all of them
+     * leave most of that circle open, because that is the side the arm
+     * comes in from. Only the inside of a pipe closes it. */
+    const reach = G.girth * 0.60;
+    // Two directions across the held part's axis, to sweep the circle in.
+    const dl = grasp.dot(lane);
+    const u = new Vec3(grasp.x - lane.x * dl, grasp.y - lane.y * dl, grasp.z - lane.z * dl);
+    if (u.length() > 1e-4) u.normalize(); else u.set(1, 0, 0);
+    const w = new Vec3().crossVectors(lane, u).normalize();
+    const wallAlong = (dx, dy, dz) => {
+      let wall = 0, clear = 0;
+      for (let i = 1; i * 0.002 <= reach; i++) {
+        const t = i * 0.002;
+        if (solidP(rawAt.x + dx * t, rawAt.y + dy * t, rawAt.z + dz * t)) { wall = t; clear = 0; }
+        else if (wall && ++clear >= 4) break;
+      }
+      return wall;
+    };
+    let closed = 0;
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * TAU;
+      const c = Math.cos(a), sn = Math.sin(a);
+      if (wallAlong(u.x * c + w.x * sn, u.y * c + w.y * sn, u.z * c + w.z * sn)) closed++;
+    }
+    const out = wallAlong(-grasp.x, -grasp.y, -grasp.z);
+    if (closed >= 7 && out) {
+      const t = out + FR + 0.004;
+      seatAt = new Vec3(rawAt.x - grasp.x * t, rawAt.y - grasp.y * t, rawAt.z - grasp.z * t);
+      /* And that measurement REPLACES the grip's `drop`.
+       *
+       * `drop` is a typed guess at the radius of the thing being held --
+       * it is what carries an anchor at the middle of a forend down to
+       * where the palm goes. Once the surface itself has been asked, the
+       * guess is not a second correction to apply on top: the MG 42's
+       * jacket is 38 mm in radius against a `tube` drop of 28, and doing
+       * both put the palm 42 mm below the shroud with the fingers
+       * reaching up at nothing. */
+      unpocketed = true;
+      if (opts.out) opts.out.unpocket = +t.toFixed(4);
+    }
+  }
   /* Only when the anchor is BADLY off, which is a different thing from
      being deliberately held clear.
    *
@@ -19494,23 +19605,25 @@ function buildViewHand(g, rawAt, side, opts = {}) {
    * that hand half its finger contact. The measured spread separates the
    * two cleanly -- deliberate standoffs run 1.9 to 17 mm, and the ones
    * that are simply wrong run 21, 21, 24, 24, 29 and 93. */
-  if (opts.surface && opts.surface(rawAt.x, rawAt.y, rawAt.z) > 0.020) {
+  if (opts.surface && opts.surface(seatAt.x, seatAt.y, seatAt.z) > 0.020) {
     const surfA = opts.surface;
+    const from = seatAt;
     let bt = 0, be = 1e9;
     for (let i = -70; i <= 70; i++) {
       const t = i * 0.002;
-      const e = Math.abs(surfA(rawAt.x + grasp.x * t, rawAt.y + grasp.y * t, rawAt.z + grasp.z * t));
+      const e = Math.abs(surfA(from.x + grasp.x * t, from.y + grasp.y * t, from.z + grasp.z * t));
       // Nearest approach along the line, preferring the smaller move.
       const c = e + Math.abs(t) * 0.02;
       if (c < be) { be = c; bt = t; }
     }
     if (Math.abs(bt) > 0.003) {
-      seatAt = new Vec3(rawAt.x + grasp.x * bt, rawAt.y + grasp.y * bt, rawAt.z + grasp.z * bt);
+      seatAt = new Vec3(from.x + grasp.x * bt, from.y + grasp.y * bt, from.z + grasp.z * bt);
       if (opts.out) opts.out.preSeat = +bt.toFixed(4);
     }
   }
-  let at = G.drop
-    ? new Vec3(seatAt.x - grasp.x * G.drop, seatAt.y - grasp.y * G.drop, seatAt.z - grasp.z * G.drop)
+  const drop = unpocketed ? 0 : G.drop;
+  let at = drop
+    ? new Vec3(seatAt.x - grasp.x * drop, seatAt.y - grasp.y * drop, seatAt.z - grasp.z * drop)
     : seatAt;
 
   /* Seat the hand on the weapon before building anything on it.
@@ -20092,7 +20205,6 @@ function buildViewHand(g, rawAt, side, opts = {}) {
            * there is nothing to gain by it because curling either way
            * loses contact. */
           const cands = [];
-          let bestE = 1e9;
           for (let t = 0; t <= 24; t++) {
             const cand = (t / 24) * lim;
             const nd = turn(d, cand, pt, cl);
@@ -20109,22 +20221,78 @@ function buildViewHand(g, rawAt, side, opts = {}) {
              * underneath: a hand threaded through the gun. Three samples
              * along each half bone, and any of them buried costs the
              * candidate the choice. */
+            /* How FAR through, not just whether.
+             *
+             * A flat charge for crossing is the same number on a bone
+             * grazing the skin and on one buried to the knuckle, so when
+             * every angle crosses -- which is two thirds of them on a
+             * bolt rifle's forend -- the whole row ties and the choice
+             * falls to something that is not about the weapon at all.
+             * Measured depth breaks the tie the right way: if a finger
+             * has to touch the wood, it touches it. */
             let cross = 0;
             for (let q = 1; q <= 3; q++) {
               const u = q / 4;
               const sx = p.x + (nx - p.x) * u, sy = p.y + (ny - p.y) * u, sz = p.z + (nz - p.z) * u;
-              if ((solidM && solidM(sx, sy, sz)) || surfM(sx, sy, sz) < r0 * 0.45) { cross = 0.12; break; }
+              const g0 = r0 * 0.45 - surfM(sx, sy, sz);
+              if (g0 > cross) cross = g0;
+              if (solidM && solidM(sx, sy, sz)) cross += 0.020;
             }
-            const e = Math.abs(dd - wantM) + (solidM && solidM(nx, ny, nz) ? 0.08 : 0) + cross;
-            cands.push([cand, e]);
-            if (e < bestE) bestE = e;
+            const e = Math.abs(dd - wantM) + (solidM && solidM(nx, ny, nz) ? 0.08 : 0);
+            cands.push([cand, e + cross * 2.5, cross > 0]);
           }
-          let bestA = null;
-          for (const [cand, e] of cands) if (e <= bestE + 0.0015) bestA = cand;
-          /* Nothing within reach of this joint in any direction: no
-             surface said stop, so fall back to the anatomical curl rather
-             than to whichever angle was least bad against thin air. */
-          if (bestA != null && bestE < 0.030) a = bestA;
+          /* A hand grips by CLOSING, and contact must not hold a joint
+             straighter than that.
+           *
+           * "Largest angle that keeps contact" is right up to the point
+           * where the thing being held has a tall flat side: against the
+           * Kill Streak's forend, or the MG 42's jacket, any curl at all
+           * swings the tip off the face and loses contact, so zero wins
+           * every joint and the finger comes out a straight post standing
+           * beside the gun. Four of those is the "fingers that do
+           * nothing" the player was looking at.
+           *
+           * So the surface gets to say when to STOP closing, not whether
+           * to start. Search the angles at or above a real curl first;
+           * only if none of those can be reached without going through
+           * the weapon does the flatter half of the range get a look. The
+           * knuckle is nearly free -- a proximal phalanx does lie flat
+           * along a forend -- and the two joints past it are not. */
+          const floorA = lim * (k === 0 ? 0.15 : 0.45);
+          const pick = (minA) => {
+            let bE = 1e9, bA = null;
+            for (const [cand, e, xd] of cands) if (!xd && cand >= minA && e < bE) bE = e;
+            if (bE > 1e8) return null;
+            for (const [cand, e, xd] of cands) if (!xd && cand >= minA && e <= bE + 0.0015) bA = cand;
+            return [bA, bE];
+          };
+          const sel = pick(floorA) || pick(0);
+          if (sel) {
+            /* Nothing within reach of this joint in any direction: no
+               surface said stop, so fall back to the anatomical curl rather
+               than to whichever angle was least bad against thin air. */
+            if (sel[1] < 0.030 || sel[0] >= floorA) a = sel[0];
+          } else {
+            /* Every angle this joint can reach goes through something.
+             *
+             * That is not rare -- on the Remington's forend two thirds of
+             * the half-bones are in this position, and on the MG 42's
+             * shroud most of them are. The old code charged each a flat
+             * 0.12, so they all tied, the row failed the contact gate,
+             * and the fallback was the anatomical curl: a straight-ish
+             * finger aimed at the wall, which is how four fingertips
+             * ended up standing on top of a barrel jacket with four
+             * stubs underneath it.
+             *
+             * Closing hard instead is no better -- it just buries the
+             * tip on the far side. With depth in the score the row no
+             * longer ties, so take the shallowest crossing there is: the
+             * finger presses into what it holds rather than through it. */
+            let bA = null, bE = 1e9;
+            for (const [cand, e] of cands) if (e < bE) { bE = e; bA = cand; }
+            if (bA != null) a = bA;
+            if (opts.out) opts.out.walled = (opts.out.walled || 0) + 1;
+          }
         }
         d = turn(d, a, pt, cl);
         p = new Vec3(p.x + d.x * step, p.y + d.y * step, p.z + d.z * step);
@@ -20380,22 +20548,51 @@ function buildViewHand(g, rawAt, side, opts = {}) {
        * walk the row out along the across axis until it does not. That is
        * the difference between a hand under a tube and a hand round the
        * side of a slab, and it is a question the geometry can answer. */
-      const probe = (r) => {
+      /* Sampled ALONG the first bone, not just at the end of it.
+       *
+       * One probe at the far end is blind to the case that matters: a
+       * bone leaving a knuckle under a forend goes up through 38 mm of
+       * walnut and comes out in clear air above it, so the endpoint reads
+       * "outside" and the row is left where it is. That is the Remington
+       * threading its own woodwork with the row reporting no shift
+       * needed at all. */
+      const clearBone = (r) => {
         const q = turn(new Vec3(point.x, point.y, point.z), 0, point, curl);
-        return [r.x + q.x * 0.046, r.y + q.y * 0.046, r.z + q.z * 0.046];
+        if (sfF(r.x, r.y, r.z) <= 0) return false;
+        for (let q2 = 1; q2 <= 4; q2++) {
+          const t3 = (q2 / 4) * 0.046;
+          if (sfF(r.x + q.x * t3, r.y + q.y * t3, r.z + q.z * t3) <= 0) return false;
+        }
+        return true;
       };
-      let pr = probe(knuckle0);
-      if (sfF(pr[0], pr[1], pr[2]) <= 0) {
-        for (let k = 1; k <= 24; k++) {
-          const t2 = k * 0.003;
-          const cand = new Vec3(knuckle0.x - across.x * t2,
-            knuckle0.y - across.y * t2, knuckle0.z - across.z * t2);
-          pr = probe(cand);
-          if (sfF(cand.x, cand.y, cand.z) > 0 && sfF(pr[0], pr[1], pr[2]) > 0) {
-            knuckle0 = cand;
-            if (opts.out) opts.out.foreShift = +t2.toFixed(4);
-            break;
+      /* And it slides to the NEAR flank, not the far one.
+       *
+       * The fingers leave the knuckle along `point`, which is up and
+       * along -across. Sliding the row the same way -- which is what this
+       * did -- walks it through the thing it is holding and out the other
+       * side, so the hand ends up with its palm under the forend and four
+       * fingers standing up on the far face of it. That is the Remington
+       * threading its own woodwork and the MG 42 threading its jacket.
+       *
+       * A hand comes at a forend from ONE side and the knuckles sit on
+       * that side, not underneath the middle of it. So try +across first
+       * -- back toward the wrist -- and only fall the other way if the
+       * near flank cannot be cleared at all within a hand's width. */
+      const clears = clearBone;
+      if (!clears(knuckle0)) {
+        for (const dir of [1, -1]) {
+          let done = false;
+          for (let k = 1; k <= 24; k++) {
+            const t2 = k * 0.003;
+            const cand = new Vec3(knuckle0.x + across.x * dir * t2,
+              knuckle0.y + across.y * dir * t2, knuckle0.z + across.z * dir * t2);
+            if (clears(cand)) {
+              knuckle0 = cand;
+              if (opts.out) opts.out.foreShift = +(t2 * dir).toFixed(4);
+              done = true; break;
+            }
           }
+          if (done) break;
         }
       }
       if (opts.out) opts.out.foreSkin = hit.map((q) => +q.toFixed(4));
