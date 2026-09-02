@@ -15364,6 +15364,32 @@ function strut(g, a, b, pts, capA = true, capB = true) {
 
 /* A trigger guard: a bow swept along a list of points, each station
    square to the local run so the bow keeps its section round the bend. */
+/* MEASURED, AND NOT THE ANSWER: every trigger guard in this game has a
+   clear opening 12 to 15 mm tall, and a finger is 21.2 mm across.
+ *
+ * Profiled off the models: the Thompson's bow runs y -30 to -48 with 2.4
+ * mm of bar at each end, so the hole is 13 mm; the double guns 14, the
+ * Mauser 12, the Model 5 13, the Arc 14.5, the bolt rifles 14.4. A real
+ * guard is nearer 25 mm and the fingers were widened to 21.2 when the
+ * hands were scaled up to match the arms, so nothing can ever be inside
+ * one of these. That reads like the explanation for a trigger finger
+ * measuring a quarter of itself inside the gun.
+ *
+ * It is not. Deepening every bow by 1.70 -- taking the openings to about
+ * 26 mm, which is what a finger needs -- left the Thompson at exactly 29
+ * per cent, took the Remington from 3 to 20, and drove the Mauser's
+ * finger to reach BACKWARD (its tip finished 10 mm behind its knuckle,
+ * against 63 forward), so that one failed the reach gate and fell back to
+ * no trigger at all. grip, map and pad all still passed, which is worth
+ * noting: the suites cannot see this.
+ *
+ * What the y spans say is that the finger is not buried in the BOW. The
+ * Thompson's index spans y -37 to +44 and its trigger housing is a solid
+ * lump from y 24 to 46: the finger goes in at the opening and carries on
+ * up into the housing above it. Making the hole below it taller does
+ * nothing about that, and on the Remington it gave the solve more room to
+ * drive further in. The guards are still too small and worth fixing on
+ * their own account; it just is not this bug. */
 function guardBow(g, pts, hf = 0.0022, hb = 0.0022, hw = 0.0046, z = 0) {
   const sts = pts.map(([x, y], i) => {
     const p = pts[Math.max(0, i - 1)], q = pts[Math.min(pts.length - 1, i + 1)];
