@@ -5008,90 +5008,77 @@ function weaponSurface(game, root) {
    * INTERIOR counts as solid, not the shell -- a finger touching the
    * surface must stay legal, or every hand in the game gets pushed a
    * cell off the weapon it is holding. */
-  const SOLID = 0.007;
-  let lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];
-  for (let i = 0; i < pts.length; i += 3) for (let k = 0; k < 3; k++) {
-    if (pts[i + k] < lo[k]) lo[k] = pts[i + k];
-    if (pts[i + k] > hi[k]) hi[k] = pts[i + k];
-  }
-  // One cell of margin all round, so the flood always starts outside.
-  for (let k = 0; k < 3; k++) { lo[k] -= SOLID * 2; hi[k] += SOLID * 2; }
-  /* THE CELL SIZE FOLLOWS THE GUN. It used to clamp the COUNT to 96 and
-   * keep indexing at a fixed 7 mm -- and those two disagree the moment a
-   * weapon is longer than 96 cells, which is 672 mm. The Thompson is 817.
-   * Every cell past the cap failed the bounds check in `mark`, so the far
-   * third of the shell was never written, and the flood poured in through
-   * the hole and reached the whole interior. `inside` then answered false
-   * everywhere, on every weapon in the game longer than a pistol.
+  /* RAY PARITY, which is exact and cannot be fooled by a hollow shell.
    *
-   * That is not a small thing: the anti-clipping term in the curl solve,
-   * the burial penalty in the seating search, and the trigger guard's own
-   * "is this enclosed" test all ask this one question, and on eleven of
-   * the thirteen weapons it has always answered no. Measured on the five
-   * long guns just now: 0 candidates inside, 0 rejected as not-through,
-   * 0 guards found -- because nothing anywhere was ever solid.
+   * This was an occupancy grid: rasterise the triangles into cells, flood
+   * inwards from a corner, and call whatever the flood never reached the
+   * inside. That works on a solid. These weapons are not solids. They are
+   * swept SHELLS -- a handguard is a tube, a barrel jacket is a tube with
+   * slots cut in it -- and a flood walks straight into an open end and
+   * fills the lot, so `inside` answered false everywhere and every
+   * anti-clipping term in the builder was reading a constant. I fixed the
+   * grid's cell size, raised its cap, and it made no difference at all,
+   * because the mechanism was wrong and not merely mis-sized.
    *
-   * Cells stretch per axis instead. A non-cubic cell is fine for an
-   * occupancy test and a grid that covers the whole weapon is not
-   * optional. */
-  /* And the cap itself was far too mean. A Thompson at a true 7 mm needs
-     117 by 35 by 8 cells, which is thirty-two thousand -- the axes are
-     sized independently and only the long one is long. Capping each at 96
-     bought nothing and cost the whole mechanism. */
-  const CAP = 220;
-  const cell = [0, 1, 2].map((k) => Math.max(SOLID, (hi[k] - lo[k]) / CAP));
-  const dim = [0, 1, 2].map((k) => Math.max(2, Math.ceil((hi[k] - lo[k]) / cell[k]) + 1));
-  const N = dim[0] * dim[1] * dim[2];
-  const at = (i, j, k) => (k * dim[1] + j) * dim[0] + i;
-  const cellOf = (x, y, z) => [
-    Math.floor((x - lo[0]) / cell[0]), Math.floor((y - lo[1]) / cell[1]),
-    Math.floor((z - lo[2]) / cell[2])];
-  // 0 unknown, 1 shell, 2 reached from outside.
-  const vox = new Uint8Array(N);
-  const mark = (x, y, z) => {
-    const c = cellOf(x, y, z);
-    if (c[0] < 0 || c[1] < 0 || c[2] < 0 || c[0] >= dim[0] || c[1] >= dim[1] || c[2] >= dim[2]) return;
-    vox[at(c[0], c[1], c[2])] = 1;
-  };
-  /* Rasterise every triangle across its own area, at a step finer than a
-     cell, so the shell has no gaps for the flood to leak through. Marking
-     corners alone leaves a sieve, and a sieve floods solid: the first
-     version of this changed not one of the twenty-six numbers it was
-     meant to fix, because nothing was ever left enclosed. */
+   * Parity needs no grid and no flood: a ray from a point crosses a
+   * surface an odd number of times exactly when the point is inside it.
+   * Measured this way against the weapons' own triangles, 10 to 25 per
+   * cent of each of the MP5's support fingers is inside the gun and 41
+   * per cent of its thumb -- which is what a hand standing through a
+   * handguard looks like as a number, and what nothing in the builder
+   * could see.
+   *
+   * Cast along +X, and bucket the triangles by the (y, z) cell they cover
+   * so a ray tests a handful rather than six thousand. Counting both
+   * directions from the same candidates costs one comparison more and
+   * buys the one guard parity needs: on a CLOSED surface the two parities
+   * agree, and where they disagree the mesh is open along that line and
+   * the answer is not to be trusted -- so it says outside, which is the
+   * safe way to be wrong. */
+  if (!tris.length) { surf.inside = () => false; return surf; }
+  const PCELL = 0.010;
+  const pkey = (j, k) => j * 4096 + k;
+  const pgrid = new Map();
   for (let t = 0; t < tris.length; t += 3) {
     const A = tris[t], B2 = tris[t + 1], C = tris[t + 2];
-    const e1 = Math.hypot(B2[0]-A[0], B2[1]-A[1], B2[2]-A[2]);
-    const e2 = Math.hypot(C[0]-A[0], C[1]-A[1], C[2]-A[2]);
-    const n = Math.max(1, Math.ceil(Math.max(e1, e2) / (SOLID * 0.5)));
-    for (let i = 0; i <= n; i++) {
-      for (let j = 0; j <= n - i; j++) {
-        const u = i / n, v2 = j / n, w2 = 1 - u - v2;
-        mark(A[0]*w2 + B2[0]*u + C[0]*v2,
-          A[1]*w2 + B2[1]*u + C[1]*v2,
-          A[2]*w2 + B2[2]*u + C[2]*v2);
+    const j0 = Math.floor(Math.min(A[1], B2[1], C[1]) / PCELL);
+    const j1 = Math.floor(Math.max(A[1], B2[1], C[1]) / PCELL);
+    const k0 = Math.floor(Math.min(A[2], B2[2], C[2]) / PCELL);
+    const k1 = Math.floor(Math.max(A[2], B2[2], C[2]) / PCELL);
+    for (let j = j0; j <= j1; j++) {
+      for (let k = k0; k <= k1; k++) {
+        const kk = pkey(j, k);
+        let cell = pgrid.get(kk);
+        if (!cell) { cell = []; pgrid.set(kk, cell); }
+        cell.push(t);
       }
     }
   }
-  if (!tris.length) { surf.inside = () => false; return surf; }
-  /* Flood from the corner. Anything left unknown afterwards is enclosed by
-     shell on every side, which is the inside of the gun. */
-  const stack = [at(0, 0, 0)];
-  vox[at(0, 0, 0)] = 2;
-  while (stack.length) {
-    const p2 = stack.pop();
-    const i = p2 % dim[0], j = ((p2 / dim[0]) | 0) % dim[1], k = (p2 / (dim[0] * dim[1])) | 0;
-    for (const [di, dj, dk] of [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]]) {
-      const a2 = i + di, b2 = j + dj, c2 = k + dk;
-      if (a2 < 0 || b2 < 0 || c2 < 0 || a2 >= dim[0] || b2 >= dim[1] || c2 >= dim[2]) continue;
-      const n = at(a2, b2, c2);
-      if (vox[n] !== 0) continue;
-      vox[n] = 2; stack.push(n);
-    }
-  }
   const inside = (x, y, z) => {
-    const c = cellOf(x, y, z);
-    if (c[0] < 0 || c[1] < 0 || c[2] < 0 || c[0] >= dim[0] || c[1] >= dim[1] || c[2] >= dim[2]) return false;
-    return vox[at(c[0], c[1], c[2])] === 0;
+    const cell = pgrid.get(pkey(Math.floor(y / PCELL), Math.floor(z / PCELL)));
+    if (!cell) return false;
+    let ahead = 0, behind = 0;
+    for (let c = 0; c < cell.length; c++) {
+      const t = cell[c];
+      const A = tris[t], B2 = tris[t + 1], C = tris[t + 2];
+      // Does the ray's (y, z) point land in this triangle's shadow?
+      const ay = A[1] - y, az = A[2] - z;
+      const by = B2[1] - y, bz = B2[2] - z;
+      const cy = C[1] - y, cz = C[2] - z;
+      const wc = ay * bz - by * az;
+      const wa = by * cz - cy * bz;
+      const wb = cy * az - ay * cz;
+      if (!((wa >= 0 && wb >= 0 && wc >= 0) || (wa <= 0 && wb <= 0 && wc <= 0))) continue;
+      const den = wa + wb + wc;
+      if (den === 0) continue;
+      // Where along x it crosses, by the same weights.
+      const hx = (A[0] * wa + B2[0] * wb + C[0] * wc) / den;
+      if (hx > x) ahead++; else behind++;
+    }
+    // Open along this line: the two counts disagree, and outside is the
+    // safe answer.
+    if (((ahead & 1) === 1) !== ((behind & 1) === 1)) return false;
+    return (ahead & 1) === 1;
   };
   /* SIGNED, and this is the whole fault behind "the fingers are jumbled up
    * with the gun".

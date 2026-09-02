@@ -270,6 +270,18 @@ function buildViewHand(g, rawAt, side, opts = {}) {
    * toward the front. Measured against the model: 44 mm along this lands
    * the row centre at (4, -63, 17) where the front of the grip is (11,
    * -63, 18). */
+  /* Under a forend the palm runs mostly UP at what it holds, and that is
+     now settled by measurement rather than by argument.
+   *
+   * Laying it along the weapon instead (0.58 toward it against 0.80 along
+   * it) is the anatomically tidier answer and it loses on every count
+   * that matters. Scored with clipping separated from contact -- buried
+   * vertices counted as intersection, never as touching, which is a fix
+   * the metric itself needed -- the flat palm takes the Thompson's
+   * support hand from 15% of its skin resting on the gun to 2, the
+   * Mauser's from 20 to 4, and the MP5's from 15 to 4, while the MG 42's
+   * fingers go from 15% inside the gun to 28 and its palm from 20 to 29.
+   * It trades most of the grip for no reliable reduction in clipping. */
   const palm = fore
     ? V(grasp.x * 0.95 + lane.x * 0.30, grasp.y * 0.95 + lane.y * 0.30, grasp.z * 0.95 + lane.z * 0.30)
     : V(lane.x * 0.93 + across.x * 0.32, lane.y * 0.93 + across.y * 0.32, lane.z * 0.93 + across.z * 0.32);
