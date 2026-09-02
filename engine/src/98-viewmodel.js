@@ -1743,6 +1743,34 @@ function buildViewHand(g, rawAt, side, opts = {}) {
         let bt = null, btAt = null;
         const cands2 = trigAll.length ? trigAll : [[0, trigAt]];
         for (const [, cAt] of cands2) {
+        /* MEASURED AND REVERTED: aiming at the BLADE rather than at the
+           middle of the bow.
+         *
+         * The search finds the middle of the opening, because the middle
+         * of a hole is what a distance field can see, and a trigger is
+         * not there -- it hangs at the REAR of its guard, about a
+         * centimetre back, with the rest of the bow being the room a
+         * finger needs to get in front of it. So walk back from the
+         * middle toward the web while there is still a fingertip's
+         * clearance, and aim at that instead.
+         *
+         * It is a wash. Best reach to the aimed point, centre against
+         * blade, in mm: 1911 24/24, Thompson 15/20, MP5 6/6, MG 42 13/11,
+         * Scattergun 6/15, Kill Streak 13/11, Mauser 25/28, Paralyzer
+         * 11/11, Obliterator 23/23, Remington 14/14, Sawn-off 22/22, Arc
+         * 8/5. Five better, three worse, four unmoved, all still inside
+         * the gate, grip.test 6 of 6 either way -- and the renders of the
+         * 1911, Thompson, MG 42 and Remington are not distinguishable.
+         *
+         * AND THE RENDERS CANNOT SETTLE IT, which is the thing worth
+         * keeping. The side view projects away the very axis the finger
+         * has to cross to get into the bow, so a tip at the centreline
+         * and one 20 mm out draw at the same place; the view down the
+         * barrel shows that axis but at this size cannot separate a tip
+         * inside a 20 mm opening from one just past it. The instrument
+         * that can answer it is the share of the finger's own skin inside
+         * the weapon, which for the 1911's firing hand is 8 per cent.
+         * Anything further here needs that measured per DIGIT. */
         let bt2 = null;
         /* A third plane: straight AT the hole.
          *
