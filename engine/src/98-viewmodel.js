@@ -1243,6 +1243,8 @@ function buildViewHand(g, rawAt, side, opts = {}) {
    * centreline: that box contains one such point on every weapon in the
    * game and nothing else. */
   let trigAt = null;
+  // The candidates the solve gets to try, best-scoring first.
+  const trigAll = [];
   if (trigger && opts.surface) {
     const sf = opts.surface;
     const inS = sf.inside || null;
@@ -1389,19 +1391,49 @@ function buildViewHand(g, rawAt, side, opts = {}) {
           for (const [ox2, oy2] of [[0.019, 0], [-0.019, 0], [0, 0.019], [0, -0.019]]) {
             if (solidAt(x + ox2, y + oy2, z)) enc++;
           }
-          if (enc < 3) { scan.notEnc++; continue; }
+          if (enc < 3) {
+            /* The shape test, back in now that the solve gets to veto
+               what it turns up. On its own it found the Mauser's guard
+               and the Obliterator's and lost the 1911's, so it runs as an
+               alternative to the fixed range rather than a replacement. */
+            const peak = sf(x, y + 0.005, z) <= d + 0.001 && sf(x, y - 0.005, z) <= d + 0.001;
+            let reach = 0;
+            if (peak) {
+              for (const [ux, uy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+                for (let q = 2; q <= 13; q++) {
+                  if (solidAt(x + ux * q * 0.0025, y + uy * q * 0.0025, z)) { reach++; break; }
+                }
+              }
+            }
+            if (reach < 3) { scan.notEnc++; continue; }
+            enc = reach;
+          }
           scan.kept++;
           /* Nearest qualifying hole to the grip wins. A long gun has more
              than one enclosed gap forward of the web -- a magazine well,
              a sling loop, the space inside a bipod -- and the trigger is
              always the first one. */
           const score = enc + d * 2 - (x - at.x) * 0.35;
+          /* Several, not one.
+           *
+           * Recognising a hole and choosing the right one are different
+           * jobs, and every attempt to do the second by looking harder at
+           * the hole has failed -- the shape test and the reach test are
+           * both written up above with their numbers. What tells them
+           * apart is not any property of the opening but what the finger
+           * DOES when it is sent there, and the solve below already works
+           * that out and already reports it. So carry the best few
+           * forward and let the solve pick. */
           if (score > best) { best = score; trigAt = new Vec3(x, y, z); }
+          trigAll.push([score, new Vec3(x, y, z)]);
         }
       }
     }
+    trigAll.sort((p1, p2) => p2[0] - p1[0]);
+    trigAll.length = Math.min(trigAll.length, 5);
     if (opts.out) {
       opts.out.trigScan = scan;
+      opts.out.trigTried = trigAll.length;
       if (trigAt) opts.out.trigAt = [trigAt.x, trigAt.y, trigAt.z];
     }
   }
@@ -1680,7 +1712,24 @@ function buildViewHand(g, rawAt, side, opts = {}) {
          curl range, but scored by how near the fingertip finishes to the
          one place on the gun a trigger finger belongs. */
       if (trigAt) {
-        let bt = null;
+        /* Try each candidate hole and KEEP THE FINGER, not the hole.
+         *
+         * The search up there can tell a hole from a slab but not a
+         * trigger guard from a magazine well, and two goes at teaching it
+         * to -- by the shape of the opening, and by how far away it is --
+         * are written up beside it, both measured and both failing for
+         * the same reason: the wrong holes look exactly like the right
+         * ones. What does not look alike is the finger afterwards. Sent
+         * to a guard it straightens along the frame and lays its pad on
+         * the blade; sent to a magazine well 48 mm below the web it balls
+         * into a fist with its tip level with its own knuckle.
+         *
+         * So solve against each of the best few and take the first that
+         * comes out looking like a trigger finger. */
+        let bt = null, btAt = null;
+        const cands2 = trigAll.length ? trigAll : [[0, trigAt]];
+        for (const [, cAt] of cands2) {
+        let bt2 = null;
         for (const [dd0, ppt, ccl] of [[d0, point, curl], [ipt, ipt, icl]]) {
           for (const sp of SPREADS) {
             const bb = [bends[0] * sp[0], bends[1] * sp[1], bends[2] * sp[2]];
@@ -1703,11 +1752,28 @@ function buildViewHand(g, rawAt, side, opts = {}) {
                  trigger. A finger goes in over the back of the guard, so
                  charge any path whose joints finish inside metal. */
               if (inS2) for (const j of js) if (inS2(j.x, j.y, j.z)) e += 0.020;
-              if (!bt || e < bt.e) bt = { e, k, b: bb, d0: dd0, pt: ppt, cl: ccl };
+              if (!bt2 || e < bt2.e) {
+                bt2 = { e, k, b: bb, d0: dd0, pt: ppt, cl: ccl, tip: tp };
+              }
             }
           }
         }
-        if (bt && bt.e < 0.030) {
+        if (!bt2) continue;
+        /* Reaching FORWARD, which is what a trigger finger does and what
+           a fist does not. Every weapon whose index lands properly puts
+           its tip 26 to 87 mm along the weapon from its own knuckle; the
+           Mauser sent to the wrong hole managed 1. */
+        const fwd = bt2.tip.x - root.x;
+        bt2.fwd = fwd;
+        if (!bt || (bt.fwd < 0.015 && fwd > bt.fwd)
+          || (fwd >= 0.015 && bt.fwd < 0.015)
+          || (fwd >= 0.015 && bt.fwd >= 0.015 && bt2.e < bt.e)) {
+          bt = bt2; btAt = cAt;
+        }
+        if (bt.fwd >= 0.015 && bt.e < 0.030) break;
+        }
+        if (btAt) trigAt = btAt;
+        if (bt && bt.e < 0.030 && bt.fwd >= 0.015) {
           const ig2 = opts.indexGeo || (opts.digitGeos && opts.digitGeos[f]) || g;
           digitTo(ig2, root, bt.d0, [bt.b[0] * bt.k, bt.b[1] * bt.k, bt.b[2] * bt.k],
             lens, FR, bt.pt, bt.cl);
