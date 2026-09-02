@@ -133,6 +133,36 @@ function strut(g, a, b, pts, capA = true, capB = true) {
  * no trigger at all. grip, map and pad all still passed, which is worth
  * noting: the suites cannot see this.
  *
+ * AND DEEPENING THEM DOES NOT OPEN THE HOLE. Measured a second time,
+ * with the instrument that did not exist before: the clear air at the
+ * point the solve actually aims at, read straight off its own distance
+ * field. Twelve of the thirteen weapons have 4.5 to 10.8 mm there
+ * against a fingertip of 10.6 -- the 1911 9.6, the Thompson 9.4, the
+ * Sawn-off 4.5, the Obliterator 4.7 -- and only the Arc, at 15, has room
+ * for a fingertip at all. That looked like the whole story.
+ *
+ * Then every bow was deepened by 1.70, taking the openings to about 26
+ * mm, and the clearances did not improve: the 1911 stayed at exactly
+ * 9.6, the Scattergun went 5.5 to 5.2, the Mauser 10.8 to 6.4. Only the
+ * Obliterator and the MG 42 gained anything.
+ *
+ * Because the bow is not what is in the way. A trigger BLADE hangs from
+ * the same line the bow starts at, nineteen to twenty-four millimetres
+ * of it, straight down the middle of the opening -- so the gap the solve
+ * finds is the gap beside the blade, and dropping the bar below it moves
+ * a surface that was never the nearest one. Burial went 13.6 per cent to
+ * 13.8 and contact 12.1 to 12.5, with the regression guard catching the
+ * Remington's index at 8 per cent to 25 and the Kill Streak's at 33 to
+ * 42.
+ *
+ * And it kills the idea it was paired with. Walking the aim point back
+ * toward the web "while a fingertip still clears" cannot move on a real
+ * trigger, because a finger ON a trigger is TOUCHING the blade: the
+ * clearance there is zero by construction, and any gate written in
+ * fingertip radii is unsatisfiable at the one place the finger is
+ * supposed to end up. It stepped on the Arc, whose blade the search
+ * misses, and nowhere else.
+ *
  * What the y spans say is that the finger is not buried in the BOW. The
  * Thompson's index spans y -37 to +44 and its trigger housing is a solid
  * lump from y 24 to 46: the finger goes in at the opening and carries on
