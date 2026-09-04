@@ -189,7 +189,12 @@ function fpsFor() {
 
 SHELL.fpsTarget = DEFAULTS.fpsMenu;
 
-function setPhase(p) { phase = p; SHELL.fpsTarget = fpsFor(); }
+/* Changing phase changes which of the three limits is in force, and the
+   limit lives on the renderer -- so this has to write it, not just work
+   it out. Without the applySettings() call the cap set for the menu
+   stayed on all the way into a round: sixty frames a second, in the
+   game, with the setting that says uncapped sitting right there. */
+function setPhase(p) { phase = p; SHELL.fpsTarget = fpsFor(); applySettings(); }
 SHELL.phase = function () { return phase; };
 
 /* The limiter is the engine's own. Its loop already reads
@@ -1498,6 +1503,23 @@ function paintTab() {
     el.setbody.appendChild(now);
 
   } else if (curTab === 'about') {
+    section('Services');
+    var svc = document.createElement('div');
+    svc.className = 'row';
+    svc.innerHTML = '<div class="lbl" style="flex:1"><small>'
+      + 'Checked once during loading. Online, the game asks the host it was '
+      + 'loaded from whether it is still there, with a two and a half second '
+      + 'timeout; offline it does not ask at all and nothing waits. It talks '
+      + 'to nobody you did not already load the page from. Takes effect on '
+      + 'the next load.</small></div>';
+    el.setbody.appendChild(svc);
+    add(toggle('Log in to services', 'Off plays entirely offline.', 'online', 'Online', 'Offline'));
+    var st2 = document.createElement('div');
+    st2.className = 'sec';
+    st2.style.borderBottom = 'none';
+    st2.textContent = 'last check: ' + ((SHELL.online && SHELL.online.why) || 'not checked');
+    el.setbody.appendChild(st2);
+
     section('Tell the maintainer');
     var box = document.createElement('div');
     box.className = 'row';
