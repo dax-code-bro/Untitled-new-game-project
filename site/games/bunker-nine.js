@@ -3712,7 +3712,20 @@ function buildMap(game, S) {
      wing, where you would be if you were shooting out of the west window,
      and the machine gun on the roof, where you would be if you were
      shooting at everything. */
+  /* Turned to lie ALONG the wall, like the MP5 four lines up.
+   *
+   * Every weapon is modelled with its muzzle down +X, which is correct
+   * for the chalk guns on the z-facing walls -- the Thompson, the
+   * Scattergun, and the two on the roof parapet -- because there the
+   * muzzle already runs along the wall. This wing's west wall faces
+   * along X, so a gun left unrotated points its muzzle straight out of
+   * it. The MP5 on this same wall has the 90 degree turn; the rifle
+   * beneath it never got one, so it hung nose-on and the only part of it
+   * you could see was the barrel, end on, standing up like a pipe. That
+   * is the report exactly: through the wall, and not recognisably the
+   * gun the prompt names. */
   const remChalk = makeRemington(game, { at: [SD.x0 + 0.16, 1.55, -3.4], chalk: true });
+  remChalk.root.setRotation([0, 90, 0]);
   const mgChalk = makeMG42(game, { at: [4.2, R.y1 + 0.46, M.z0 + 0.14], chalk: true });
   void remChalk; void mgChalk;
 
