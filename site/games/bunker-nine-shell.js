@@ -154,10 +154,17 @@ function applySettings() {
        being told a different number depending on where the player is. */
     qual.fpsCap = SHELL.fpsTarget || 0;
   }
-  if (g.renderer && typeof g.renderer.setRenderScale === 'function') {
-    try { g.renderer.setRenderScale(settings.gRenderScale); } catch (e) { /* older renderer */ }
+  /* A resize reallocates every framebuffer, so it happens when the
+     render scale has actually MOVED -- not on every tick of every
+     slider. Dragging the volume was rebuilding the render targets sixty
+     times a second. */
+  if (g.__b9scale !== settings.gRenderScale) {
+    g.__b9scale = settings.gRenderScale;
+    if (g.renderer && typeof g.renderer.setRenderScale === 'function') {
+      try { g.renderer.setRenderScale(settings.gRenderScale); } catch (e) { /* older renderer */ }
+    }
+    if (g._doResize) { try { g._doResize(); } catch (e) { /* not sized yet */ } }
   }
-  if (g._doResize) { try { g._doResize(); } catch (e) { /* not sized yet */ } }
   if (g.camera) { g.camera.far = settings.gViewDistance; }
 
   /* Sound. */
@@ -1380,6 +1387,8 @@ function bindRow(a, which) {
 
 function paintTab() {
   stopLive();
+  // The mic meter's nodes belong to the tab that drew them.
+  micMeter = null; micGateMark = null;
   el.setbody.innerHTML = '';
   var rows = [];
   var add = function (r) { if (r) { el.setbody.appendChild(r.el); rows.push(r); } return r; };

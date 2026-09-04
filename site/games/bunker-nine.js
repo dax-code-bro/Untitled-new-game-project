@@ -11950,8 +11950,16 @@ function start(opts = {}) {
       /* Settings. Escape opens it anywhere except at the bench, where
          escape already means "put the gun down". The game keeps running
          behind it — this is a shooter, and a pause menu that stops the
-         round is a pause menu you can hide in. */
-      if (!(S.bench && S.bench.open)) {
+         round is a pause menu you can hide in.
+
+         Unless the front end is present, in which case Escape and Start
+         are ITS pause screen and this one stands down. Two menus racing
+         for the same key is a menu that opens behind another menu, and
+         the front end's has everything this one has and a scoreboard. It
+         is still here, and still works, for a page that loads the game
+         without the shell -- which is what the test harness does. */
+      const shellOwnsPause = !!window.BUNKER_SHELL;
+      if (!(S.bench && S.bench.open) && !shellOwnsPause) {
         if (i.justPressed('escape') || i.justPressed('o') || pad.pressed.start) {
           S.settings.open = !S.settings.open;
           if (S.settings.open) S.settings.index = GRAPHICS_ORDER.indexOf(S.settings.current);
