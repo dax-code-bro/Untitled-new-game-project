@@ -1047,11 +1047,15 @@ Engine.prototype.pistol1911 = function (opts = {}) {
     this._mesh(key + ':steel', () => parts.steel), shape, 0.21);
   body.name = opts.name || 'pistol1911';
 
+  /* Named, like every other gun's parts. The mesh key already says what
+     it is; without it on the actor a question about this pistol from
+     outside the engine can only name it "actor6957". */
   const child = (suffix, geo, mat) => {
     const a = this._spawn(
       { material: mat, physics: false },
       this._mesh(key + ':' + suffix, () => geo), null, 0.21);
     a.parent = body;
+    a.name = key + ':' + suffix;
     return a;
   };
   body.grips = child('grip', parts.grip, opts.gripMaterial || PISTOL_MATERIALS.grip);

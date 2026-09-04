@@ -15294,11 +15294,15 @@ Engine.prototype.pistol1911 = function (opts = {}) {
     this._mesh(key + ':steel', () => parts.steel), shape, 0.21);
   body.name = opts.name || 'pistol1911';
 
+  /* Named, like every other gun's parts. The mesh key already says what
+     it is; without it on the actor a question about this pistol from
+     outside the engine can only name it "actor6957". */
   const child = (suffix, geo, mat) => {
     const a = this._spawn(
       { material: mat, physics: false },
       this._mesh(key + ':' + suffix, () => geo), null, 0.21);
     a.parent = body;
+    a.name = key + ':' + suffix;
     return a;
   };
   body.grips = child('grip', parts.grip, opts.gripMaterial || PISTOL_MATERIALS.grip);
@@ -17998,11 +18002,20 @@ function mountArm(E, key, parts, mats, opts, boundR, mass, main) {
     E._mesh(key + ':' + main, () => geo), shape, boundR);
   body.name = opts.name || key;
   body.partNames = [main];
+  /* Named, every one of them.
+   *
+   * These went in anonymous and came out as actor7022 -- which is what a
+   * question about a gun looked like from outside: "some part of the
+   * Kill Streak is 0.7 mm thick" and no way to say which, so the answer
+   * had to be found by measuring every part and matching numbers to the
+   * source by hand. The mesh key already says exactly what it is; it
+   * costs one assignment to put it on the actor. */
   for (const name of Object.keys(parts)) {
     if (name === main) continue;
     const a = E._spawn({ material: matFor(name), physics: false },
       E._mesh(key + ':' + name, () => parts[name]), null, boundR);
     a.parent = body;
+    a.name = key + ':' + name;
     body[name] = a;
     body.partNames.push(name);
   }
