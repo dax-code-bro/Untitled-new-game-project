@@ -217,6 +217,68 @@ const AMMO = {
 };
 
 const WEAPONS = {
+/* ---------------- RECOIL, AGAINST THE REAL CARTRIDGE ----------------
+ *
+ * Every weapon here already had its own recoil block, hand-tuned. This
+ * is the check on those numbers: free recoil energy, computed from the
+ * cartridge each weapon actually fires and the weight of the gun that
+ * fires it, so the ORDER of the kicks is something that can be argued
+ * about rather than a matter of taste.
+ *
+ *   v_gun = (Wb·Vb + 1.75·Wp·Vb) / (7000 · Wg)      ft/s
+ *   E     = Wg · v_gun² / 64.348                    ft·lb
+ *
+ * with bullet and powder in grains, velocity in ft/s, gun in pounds --
+ * the standard free-recoil formula, 1.75 being the usual figure for
+ * powder gas leaving faster than the bullet.
+ *
+ *   WEAPON        CARTRIDGE       BULLET   MV     GUN     E
+ *   MP5           9x19 Para        115 gr  1150   5.6 lb   1.15
+ *   Thompson      .45 ACP          230     920   10.6      1.45
+ *   Mauser C96    7.63x25           86    1425    2.5      2.36
+ *   M1911         .45 ACP          230     830    2.4      5.19
+ *   Blaze         .45 ACP          230     830    2.4      5.19
+ *   MG 42         8x57 IS          198    2500   25.5      6.11
+ *   Remington 700 .308 Win         150    2820    8.0     16.76
+ *   Scattergun    12 ga 1-1/8 oz   492    1200    7.5     17.50
+ *   Model 5       .50 AE           300    1475    4.4     19.53
+ *   Sawn-Off      12 ga 1-1/8 oz   492    1200    5.0     26.19
+ *   Kill Streak   .50 BMG          660    2900   30.0    103.7
+ *
+ * Muzzle rise is not proportional to that -- a hundred times the MP5's
+ * kick is not something a screen can show and a hand can hold. It is
+ * fitted as up = 0.323 · E^0.77, the curve through the MP5 and the
+ * 1911, and every trigger-limited weapon in the game was already within
+ * a few per cent of it. Two were not:
+ *
+ *   MAUSER. It kicked HARDER than the 1911 -- 1.50 against 1.15 -- and
+ *   a 7.63x25 has less than half a .45 ACP's recoil energy. The C96 is
+ *   a small fast bullet: flat, penetrating, and mild in the hand. It
+ *   comes down to 0.63, which is where the curve puts it, and it gains
+ *   the thing that calibre is actually famous for, which is going
+ *   straight through what it hits.
+ *
+ *   SHOTGUNS AND THE RIFLE. 12 gauge and .308 are within five per cent
+ *   of each other in recoil energy, and the game had the rifle kicking
+ *   thirty per cent harder than the shotgun. Levelled, with the
+ *   shotguns a shade above where the curve puts them because a shotgun's
+ *   recoil is a shove rather than a snap and `up` is all this has to say
+ *   it with.
+ *
+ * Two departures are deliberate and stay:
+ *
+ *   MG 42. The curve says 1.29 a shot. At twelve hundred rounds a minute
+ *   that is twenty-six degrees a second and the gun is unusable. It is a
+ *   twenty-five pound belt-fed gun on a bipod and the real answer to its
+ *   recoil is the mass and the mount, neither of which this models; the
+ *   game's climb-and-recover pair already carries what sustained fire
+ *   does to it. Left at 0.55.
+ *
+ *   KILL STREAK. The curve says 12.1. A .50 BMG fired standing would put
+ *   the muzzle at the ceiling and the shooter on the floor, which is
+ *   true and is not a game. Left at 7.5, which is still by a distance
+ *   the hardest thing to shoot twice.
+ */
   m1911: {
     name: 'M1911', slotName: 'SIDEARM',
     dmg: 55, headMul: 3.0, mag: 7, reserve: 42, refire: 0.16,
@@ -286,7 +348,7 @@ const WEAPONS = {
     reload: 2.6, auto: false, pellets: 8, spread: 5.5,
     kick: 3.2, sfx: 'shotScatter', reloadKind: 'break',
     sightH: 0.0275, sightFov: 0.86, adsTime: 0.24, adsSpread: 0.55,
-    recoil: { up: 2.6, side: 0.9, climb: 0.75, recover: 7, back: 0.038, roll: 0.013, impulse: 20 },
+    recoil: { up: 3.05, side: 0.9, climb: 0.75, recover: 7, back: 0.040, roll: 0.013, impulse: 20 },
     ammo: { shell: { r: 0.00925, len: 0.0700, head: 0.0220 } },
     hands: { right: [-0.014, -0.046, 0.016], rightGrip: 'wrist', /* NOTE, measured and left alone. `woodFore` declares 92 mm of girth
        and this gun's forend measures 48 across by 33 deep -- so the hand
@@ -348,7 +410,7 @@ const WEAPONS = {
     reload: 2.0, auto: false, pellets: 12, spread: 9.5,
     kick: 4.2, sfx: 'shotSawn', reloadKind: 'break',
     sightH: 0.026, sightFov: 0.94, adsTime: 0.18, adsSpread: 0.85,
-    recoil: { up: 3.6, side: 1.6, climb: 1.05, recover: 6.5, back: 0.052, roll: 0.021, impulse: 27 },
+    recoil: { up: 4.20, side: 1.6, climb: 1.05, recover: 6.5, back: 0.055, roll: 0.021, impulse: 27 },
     moveMul: 1.06, muzzleVel: 48,
     ammo: { shell: { r: 0.00925, len: 0.0700, head: 0.0220 } },
     hands: { right: [-0.016, -0.048, 0.016], rightGrip: 'pistol', /* MEASURED AND REVERTED: putting this on the forend's own axis.
@@ -415,9 +477,12 @@ const WEAPONS = {
     name: 'Mauser C96', slotName: 'MAUSER',
     dmg: 165, headMul: 2.4, mag: 10, reserve: 90, refire: 0.16,
     reload: 2.3, auto: false, pellets: 1, spread: 0.7,
-    kick: 1.5, sfx: 'shotMauser', reloadKind: 'clip',
+    kick: 0.7, sfx: 'shotMauser', reloadKind: 'clip',
     sightH: 0.036, sightFov: 0.90, adsTime: 0.20, adsSpread: 0.22,
-    recoil: { up: 1.5, side: 0.6, climb: 0.06, recover: 11, back: 0.013, roll: 0.005, impulse: 8 },
+    /* 7.63x25: two thirds of a .45's recoil energy, and it goes through
+       what it hits. See the recoil table above the weapon list. */
+    recoil: { up: 0.63, side: 0.28, climb: 0.05, recover: 12, back: 0.008, roll: 0.003, impulse: 5 },
+    pierce: 1, pierceFalloff: 0.70,
     ammo: { clip: { count: 10, pitch: 0.0096, round: AMMO.mau763 } },
     /* Two hands, and the second one is not decoration.
      *
@@ -478,7 +543,7 @@ const WEAPONS = {
     kick: 3.0, sfx: 'shotRifle', reloadKind: 'clip',
     pierce: 1, pierceFalloff: 0.78,
     sightH: 0.098, sightFov: 0.34, adsTime: 0.34, adsSpread: 0.03, scoped: true,
-    recoil: { up: 3.4, side: 0.8, climb: 0.20, recover: 7, back: 0.040, roll: 0.010, impulse: 21 },
+    recoil: { up: 2.90, side: 0.8, climb: 0.20, recover: 7, back: 0.038, roll: 0.010, impulse: 21 },
     moveMul: 0.90, muzzleVel: 800,
     ammo: { clip: { count: 5, pitch: 0.0126, round: AMMO.rifle30 } },
     hands: { right: [-0.012, -0.028, 0.016], rightGrip: 'wrist', left: [0.328, -0.006, -0.021], leftGrip: 'woodFore' },
@@ -656,7 +721,29 @@ const WEAPONS = {
     recoil: { up: 0.9, side: 0.2, climb: 0.2, recover: 8, back: 0.018, roll: 0.006, impulse: 9 },
     ammo: { cell: { w: 0.052, h: 0.070, d: 0.038 } },
     hands: { right: [-0.014, -0.046, 0.016], rightGrip: 'pistol', left: [0.188, -0.052, -0.020], leftGrip: { axis: [-0.10, -0.99, 0], round: [0, 0, 1], girth: 0.058, spread: 0.0196, close: 1.0, index: 'wrap', thumb: 'over', drop: 0 } },
-    chain: { count: 3, radius: 4.0, dmg: 500 },
+    /* THE HIVE.
+     *
+     * It does not kill the thing you shot. It gets into that one's head
+     * and from there into every head near it, and what dies is the
+     * network. Ten thousand damage per brain, which is not a number
+     * balanced against health -- it is a statement that a hijacked brain
+     * is finished, whatever body it is in.
+     *
+     * `fail` is the small chance a brain does not take. It exists so the
+     * weapon is not a switch: at one in eight, a crowd of twelve loses
+     * ten or eleven and the one still walking is the one you have to
+     * deal with, which is a better moment than twelve at once every
+     * time.
+     *
+     * `resist` is a judgement call and worth saying so. A flat ten
+     * thousand one-shots the Amalgamation and the boss as surely as it
+     * does a walker, and those two are the only fights in the game with
+     * a shape to them. Rather than exempt them -- which would need a
+     * rule saying they are not on the hive, and the Amalgamation is
+     * four of them fused, so it is more on the hive than anything else
+     * in the room -- they are simply harder to hold: their brains
+     * refuse three times in four. Hijacked, they still die. */
+    hive: { radius: 3.6, dmg: 10000, fail: 0.125, max: 24 },
   },
 };
 
@@ -6781,12 +6868,32 @@ function tryFire(game, S, P, hud, sfx, dt) {
       meteorShot(S, [cam.position.x, cam.position.y, cam.position.z],
         [dir[0] / dl, dir[1] / dl, dir[2] / dl], hud, sfx);
     }
-    const hit = game.raycast([cam.position.x, cam.position.y, cam.position.z], dir, 60,
+    const from = [cam.position.x, cam.position.y, cam.position.z];
+    const hit = game.raycast(from, dir, 60,
       (b) => b !== P.actor.body && !b.isTrigger && !(b.userData && b.userData.bulletPassthrough));
+
+    /* Bodies on the floor. They are trigger bodies so that nobody has to
+       climb over their own work, and the physics raycast skips triggers
+       by design -- so this pellet asks the corpses itself, and only
+       counts one that is NEARER than whatever solid thing the ray found.
+       Shoot a body enough and it comes apart and is gone. */
+    const cp = corpseAlong(S, from, dir, hit ? hit.distance : 60);
+    if (cp) {
+      shootCorpse(game, S, cp.z, spec.dmg * (P.goldAmmo ? GOLD.dmgMul : 1), cp.point);
+      continue;
+    }
     if (!hit) continue;
 
     const z = hit.actor && hit.actor.userData && hit.actor.userData.zombie;
     if (z && !z.dead) {
+      /* Which way it was facing when the round arrived, so the death can
+         be a fall forward rather than a fall back. Recorded on the body
+         because killZombie is several frames and two functions away. */
+      {
+        const zf = z.actor.controller.facing;
+        const dl2 = Math.hypot(dir[0], dir[2]) || 1;
+        z.__shotFromBehind = (dir[0] / dl2) * Math.sin(zf) + (dir[2] / dl2) * Math.cos(zf) > 0.35;
+      }
       const region = hitRegion(z, hit.point);
       const headshot = !!region.crit;
       const dmg = (spec.dmg * regionMul(region, spec) + (headshot ? (spec.headBonus || 0) : 0))
@@ -6833,20 +6940,48 @@ function tryFire(game, S, P, hud, sfx, dt) {
           from = nxt.point;
         }
       }
-      // Arc chain: jump to neighbours of the first thing it kills.
-      if (spec.chain) {
-        let jumps = 0;
+      /* THE HIVE.
+       *
+       * It went into the body it hit; from there it goes into every
+       * head near that body. Not a chain -- a chain jumps three times
+       * and stops, and this is meant to take a crowd. Every brain
+       * inside the radius is tried, each one on its own roll, and every
+       * one that takes is finished.
+       *
+       * Rolled from the body that was hit rather than from the muzzle,
+       * so it spreads from where the round landed. `max` is a ceiling
+       * on how many bolts and how much damage one trigger pull can
+       * cost the frame, not a rule about the hive. */
+      if (spec.hive) {
+        const H = spec.hive;
+        const src = [diedAt.x, diedAt.y + 1.0, diedAt.z];
+        let held = 0, refused = 0;
         for (const other of S.zombies) {
-          if (jumps >= spec.chain.count) break;
-          if (other === z || other.dead) continue;
-          const d = dist2d(other.actor.position, diedAt);
-          if (d < spec.chain.radius) {
-            arcBolt(game, diedAt, other.actor.position);
-            hurtZombie(game, S, other, spec.chain.dmg, other.actor.position, false, 'bullet');
-            if (other.dead) { S.addPoints(ECONOMY.kill); hud.pointsDelta(ECONOMY.kill); }
-            jumps++;
+          if (held >= H.max) break;
+          if (other === z || other.dead || other.parked) continue;
+          if (dist2d(other.actor.position, diedAt) >= H.radius) continue;
+          // Its own roll, and the two big ones are much harder to hold.
+          const resist = (other.V && other.V.hiveResist) || 0;
+          if (Math.random() < H.fail + resist * (1 - H.fail)) {
+            refused++;
+            // A refusal is visible: the bolt reaches it and dies there.
+            const op = other.actor.position;
+            arcBolt(game, src, [op.x, op.y + 1.5, op.z]);
+            continue;
           }
+          const op = other.actor.position;
+          arcBolt(game, src, [op.x, op.y + 1.4, op.z]);
+          // Straight at the head, which is what the weapon is doing.
+          hurtZombie(game, S, other, H.dmg, [op.x, op.y + 1.5, op.z], true, 'shock');
+          if (other.dead) {
+            const mult = other.V ? other.V.points : 1;
+            pointsThisShot += S.addPoints(ECONOMY.headshotKill * mult);
+            killsThisShot++;
+          }
+          held++;
         }
+        if (held > 2) sfx.hitmark();
+        if (held) S.lastHive = { held, refused, at: S.time };
       }
     } else {
       // Wall hit, remembered rather than puffed: one cloud for the shot.
@@ -7298,11 +7433,18 @@ const SKIN_TONES = [0x6a7560, 0x6f7864, 0x64705a, 0x6c745e,
    webbing is harder still; a light one is quicker and softer. Crossed with
    the four movement types that is sixteen distinct things coming at you,
    from four bodies and one head sculptor. */
+/* `walk` is what a body of this build does when its VARIANT asks for the
+   generic walk. The male and armoured frames are burdened -- stooped
+   right over with the arms hanging and trailing, feet scuffing, as if
+   something is on their back, which is what a walker is meant to read
+   as. The light and heavy frames keep their own gaits, because a small
+   fast body and a big slow one are already saying something and
+   flattening all three into one clip would say less, not more. */
 const BODY_TYPES = [
-  { id: 'male',    faceType: 'male',   hp: 1.00, speed: 1.00, walk: 'zwalk' },
+  { id: 'male',    faceType: 'male',   hp: 1.00, speed: 1.00, walk: 'zwalk_burden' },
   { id: 'female',  faceType: 'female', hp: 0.90, speed: 1.12, walk: 'zwalk_light' },
   { id: 'heavy',   faceType: 'heavy',  hp: 1.45, speed: 0.80, walk: 'zwalk_heavy' },
-  { id: 'armored', faceType: 'male',   hp: 1.80, speed: 0.92, walk: 'zwalk' },
+  { id: 'armored', faceType: 'male',   hp: 1.80, speed: 0.92, walk: 'zwalk_burden' },
 ];
 
 /* The four kinds. Health and damage multiply on top of the round curve,
@@ -7324,9 +7466,16 @@ const VARIANTS = {
      4.94, two thirds of a sprint, so you can break contact by running but
      not by walking, and it still closes about two and a half times faster
      than a walker. */
+  /* It moves like a person, and that is the frightening part: upright,
+     a real stride, weight over its feet. Everything wrong with it is
+     above the waist -- one arm clutched hard across the chest, held all
+     the way in, and that is the arm that comes off the body and swings
+     when it reaches you. A player who has watched it held for twenty
+     metres has already read the wind-up. */
   runner: {
     weight: 0.0, speed: [2.2, 3.0], hp: 0.8, dmg: 1.0, points: 1.15,
-    clip: 'zrun', clipSpeed: 1.0, eye: 0xff3a18, from: 4, attack: ['zattack_bite'],
+    clip: 'zrun_hold', clipSpeed: 1.0, eye: 0xff3a18, from: 4,
+    attack: ['zattack_swing', 'zattack_swing', 'zattack_bite'],
     run: true,
   },
   crawler: {
@@ -7346,6 +7495,26 @@ const VARIANTS = {
     clip: 'zrun', clipSpeed: 1.0, eye: 0x8fd0ff, from: 8, attack: ['zattack_slam', 'zattack_bite'],
     plated: true, run: true,
   },
+  /* THE FAT ONE.
+   *
+   * Slow, and it does not fall over when you would like it to. Fifty
+   * points of health ON TOP of the round's curve rather than a
+   * multiplier of it -- which matters more than it sounds: a multiplier
+   * would make it a nuisance at round three and irrelevant at round
+   * twenty, and a flat fifty is the other way round, a real wall early
+   * and a rounding error late. That is the right shape for a body whose
+   * whole job is to be in the doorway while the fast ones come past it.
+   *
+   * Second slowest, behind the thrower. Both cannot be the slowest, and
+   * the thrower keeps it: something that throws has a reason never to
+   * reach you, and something this size has to be able to corner you.
+   */
+  fat: {
+    weight: 0.0, speed: [0.80, 1.08], hp: 1.0, hpFlat: 50, dmg: 1.35, points: 1.5,
+    clip: 'zwalk_heavy', clipSpeed: 0.88, eye: 0xffa03a, from: 3,
+    attack: ['zattack_slam', 'zattack_grab'],
+    heavy: true,
+  },
   /* Not rolled into the mix like the others: the boss is scheduled by the
      round, one at a time. */
   boss: {
@@ -7356,7 +7525,7 @@ const VARIANTS = {
        things and conflating them cost him his kit: his defence is the shield
        and the thousand health, and making him bulletproof as well leaves
        nothing to do in the window where the shield is down. */
-    wearsPlate: true, boss: true,
+    wearsPlate: true, boss: true, hiveResist: 0.75,
   },
   /* The Amalgamation.
 
@@ -7372,13 +7541,20 @@ const VARIANTS = {
     weight: 0.0, speed: [0.85, 1.15], hp: 6.0, dmg: 2.4, points: 4.0,
     clip: 'zwalk_heavy', clipSpeed: 0.72, eye: 0xc86aff, from: 12,
     attack: ['zattack_hook', 'zattack_slam', 'zattack_grab'],
-    amalgam: true, heavy: true, solo: true,
+    amalgam: true, heavy: true, solo: true, hiveResist: 0.75,
   },
   spitter: {
-    // Keeps its distance and throws. The only ranged threat in the game,
-    // and the reason Deflect is worth buying.
-    weight: 0.0, speed: [1.0, 1.4], hp: 1.25, dmg: 1.0, points: 1.4,
-    clip: 'zwalk', clipSpeed: 0.85, eye: 0x7cff5a, from: 6,
+    /* Keeps its distance and throws. The only ranged threat in the game,
+       and the reason Deflect is worth buying.
+
+       It is also the slowest thing that walks. One of its legs does not
+       work: the knee is locked, the toe is down, and the foot is dragged
+       round rather than swung, so it lurches over the good leg and off
+       it again. That is what buys it the range -- it will never catch
+       you, so it does not try, and the whole shape of the fight against
+       one is that you can walk away from it and it will still hit you. */
+    weight: 0.0, speed: [0.72, 0.95], hp: 1.25, dmg: 1.0, points: 1.4,
+    clip: 'zlimp', clipSpeed: 1.0, eye: 0x7cff5a, from: 6,
     ranged: {
       // Far enough to pick you off across a room, slow enough that the
       // chunk is a thing you watch coming and step out of. Reduced gravity
@@ -7414,6 +7590,7 @@ function variantWeights(round) {
     runner: round < 4 ? 0 : Math.min(0.85, (round - 3) * 0.14),
     crawler: round < 3 ? 0 : Math.min(0.45, (round - 2) * 0.09),
     spitter: round < 6 ? 0 : Math.min(0.32, (round - 5) * 0.07),
+    fat: round < 3 ? 0 : Math.min(0.30, (round - 2) * 0.06),
     armored: round < 8 ? 0 : Math.min(0.26, (round - 7) * 0.05),
     /* Rare on purpose. One in twenty bodies from round twelve, and the
        spawner will not put a second one in the room while the first is up
@@ -7966,9 +8143,18 @@ function spawnZombie(game, S, win, forceVariant) {
      it is four of them. */
   const kind0 = forceVariant || pickVariant(S.round, Math.random, S);
   const wantsHeavy = kind0 === 'boss' || (VARIANTS[kind0] && VARIANTS[kind0].heavy);
-  const z = wantsHeavy
+  let z = wantsHeavy
     ? (S.pool.find((q) => q.parked && q.actor.bodyType === 'heavy') || S.pool.find((q) => q.parked))
     : S.pool.find((q) => q.parked);
+  /* Corpses hold pool slots. When every body is either walking or lying
+     on the floor, the floor gives one up -- the oldest, so what
+     disappears is the one furthest behind you and least likely to be
+     watched. A round is never skipped because the last one is still
+     cooling. */
+  if (!z) {
+    const old = oldestCorpse(S);
+    if (old) { retireCorpse(game, S, old); z = old; }
+  }
   if (!z) return null;
   const kind = kind0;
   const V = VARIANTS[kind];
@@ -7988,7 +8174,8 @@ function spawnZombie(game, S, win, forceVariant) {
   z.actor.controller.runSpeed = speed * 1.35;
   // A boss has a flat pool that does not scale with the round — the shield
   // is what makes him harder later, not the number.
-  const maxHp = V.boss ? BOSS.hp : ROUNDS.hpFor(S.round) * V.hp * B.hp;
+  const maxHp = V.boss ? BOSS.hp
+    : ROUNDS.hpFor(S.round) * V.hp * B.hp + (V.hpFlat || 0);
   Object.assign(z, {
     parked: false, dead: false,
     kind, V, build: B.id,
@@ -8150,11 +8337,174 @@ function hurtZombie(game, S, z, dmg, at, headshot, source, opts) {
         size: headshot ? 1.15 : 0.95,
       });
     }
-    killZombie(game, S, z, headshot);
+    killZombie(game, S, z, headshot, source);
   }
 }
 
-function killZombie(game, S, z, headshot) {
+/* ================= CORPSES =================
+ *
+ * There were none. A zombie that lost its last point of health was
+ * teleported to the far end of the world in the same frame, so every
+ * one of them vanished mid-step -- no death, no body, no evidence that
+ * the room had been fought in.
+ *
+ * A corpse is the same pooled body it always was, left where it fell
+ * with its last death frame held. Which means corpses SPEND POOL SLOTS,
+ * and the pool is what spawning draws from, so the two have to be
+ * budgeted against each other or a busy round starves: `budget` is the
+ * most that may lie about at once, and a spawn that finds no free body
+ * takes the oldest corpse before it gives up. That is the crash the
+ * request was worried about, and it is a bookkeeping problem rather
+ * than a memory one.
+ *
+ * They are trigger bodies while they lie there, so you walk through a
+ * pile of them rather than being fenced in by your own work. The
+ * physics raycast skips triggers by design, so shooting one is tested
+ * separately -- see corpseAlong().
+ */
+const CORPSE = {
+  life: 240,             // four minutes, as asked
+  fade: 6,               // sinks through the floor over the last six seconds
+  budget: 8,             // at once; the oldest goes first
+  breakUp: 260,          // damage into one body before it comes apart
+  hitRadius: 0.55,       // how near a shot has to pass to count as a hit
+};
+
+/* Which way it goes down, from what put it down. The look of a death is
+   most of what tells you what you hit it with, so this is not cosmetic:
+   a head shot folds where it stands, the current drops it like a post,
+   and a grenade throws it. */
+function deathClipFor(z, headshot, source) {
+  if (headshot) return 'zdie_head';
+  if (source === 'shock') return 'zdie_shock';
+  if (source === 'fire') return 'zdie_burn';
+  if (source === 'blast') return 'zdie_blast';
+  if (source === 'melee') return Math.random() < 0.5 ? 'zdie_knees' : 'zdie_face';
+  /* A shot from behind pitches it forward. The player is the only thing
+     shooting, so "behind" is the body facing away from them. */
+  if (z.__shotFromBehind) return 'zdie_face';
+  return Math.random() < 0.28 ? 'zdie_knees' : 'zdie_back';
+}
+
+/* Lay one down: stop it, take it out of the way of everything that
+   walks, and hold the last frame of its death. */
+function startCorpse(game, S, z, headshot, source) {
+  const b = z.actor.controller.body;
+  z.actor.controller.move(0, 0);
+  b.velocity.setScalar(0);
+  b.angularVelocity.setScalar(0);
+  b.gravityScale = 0;
+  b.isTrigger = true;
+  b.userData = b.userData || {};
+  b.userData.corpse = true;
+  z.corpseT = CORPSE.life;
+  z.corpseAt = S.time;
+  z.gore = 0;
+  z.isCorpse = true;
+  playZombieAnim(z, deathClipFor(z, headshot, source), 0.08);
+  if (z.actor.animator) z.actor.animator.speed = 1;
+}
+
+/* The oldest one lying about, or null. */
+function oldestCorpse(S) {
+  let best = null;
+  for (const z of S.zombies) {
+    if (!z.isCorpse || z.parked) continue;
+    if (!best || z.corpseAt < best.corpseAt) best = z;
+  }
+  return best;
+}
+
+function retireCorpse(game, S, z) {
+  z.isCorpse = false;
+  const b = z.actor.controller.body;
+  b.isTrigger = false;
+  if (b.userData) b.userData.corpse = false;
+  parkZombie(game, S, z);
+}
+
+/* Ages them out, and keeps the pile inside its budget. */
+function updateCorpses(game, S, dt) {
+  let n = 0;
+  for (const z of S.zombies) {
+    if (!z.isCorpse || z.parked) continue;
+    n++;
+    z.corpseT -= dt;
+    /* The last few seconds it sinks rather than blinking out. A body
+       that disappears between two frames is the thing that makes a
+       player doubt what they saw a moment ago. */
+    if (z.corpseT < CORPSE.fade) {
+      const u = Math.max(0, z.corpseT) / CORPSE.fade;
+      z.actor.visualOffset = z.actor.visualOffset || new window.LE.Vec3(0, 0, 0);
+      z.actor.visualOffset.set(0, -(1 - u) * 0.9, 0);
+    }
+    if (z.corpseT <= 0) {
+      if (z.actor.visualOffset) z.actor.visualOffset.set(0, 0, 0);
+      retireCorpse(game, S, z);
+      n--;
+    }
+  }
+  while (n > CORPSE.budget) {
+    const old = oldestCorpse(S);
+    if (!old) break;
+    if (old.actor.visualOffset) old.actor.visualOffset.set(0, 0, 0);
+    retireCorpse(game, S, old);
+    n--;
+  }
+}
+
+/* Is there a corpse along this shot, and how far? A segment-to-point
+   test against the body's middle, which is all the precision a thing
+   lying on the floor needs -- and it is why corpses can be triggers
+   and still be shootable. */
+function corpseAlong(S, from, dir, maxT) {
+  const dl = Math.hypot(dir[0], dir[1], dir[2]) || 1;
+  const dx = dir[0] / dl, dy = dir[1] / dl, dz = dir[2] / dl;
+  let hit = null, hitT = maxT;
+  for (const z of S.zombies) {
+    if (!z.isCorpse || z.parked) continue;
+    const p = z.actor.position;
+    // Centre of a body on the floor, not of a body standing up.
+    const cx = p.x - from[0], cy = p.y + 0.22 - from[1], cz = p.z - from[2];
+    const t = cx * dx + cy * dy + cz * dz;
+    if (t <= 0 || t >= hitT) continue;
+    const ex = cx - dx * t, ey = cy - dy * t, ez = cz - dz * t;
+    if (Math.hypot(ex, ey, ez) > CORPSE.hitRadius) continue;
+    hit = z; hitT = t;
+  }
+  return hit ? { z: hit, t: hitT, point: [from[0] + dx * hitT, from[1] + dy * hitT, from[2] + dz * hitT] } : null;
+}
+
+/* Shooting one. It takes the damage, and past a threshold it comes
+   apart and is gone -- which is the answer to emptying a drum into a
+   body that is already dead: the body leaves rather than the frame
+   rate. */
+function shootCorpse(game, S, z, dmg, at) {
+  z.gore = (z.gore || 0) + dmg;
+  if (S.toggles && S.toggles.gore !== false) {
+    game.particles.blood(at, { count: 5, speed: 2.2, size: 0.7 });
+  }
+  game.audio.impact(0.18);
+  if (z.gore < CORPSE.breakUp) return;
+  const p = z.actor.position;
+  if (S.toggles && S.toggles.gore !== false) {
+    game.particles.gore([p.x, p.y + 0.25, p.z], { count: 18, speed: 4.6, size: 1.0 });
+  }
+  for (let i = 0; i < 5; i++) {
+    const g = game.box({
+      at: [p.x + (Math.random() - 0.5) * 0.5, p.y + 0.3 + Math.random() * 0.2, p.z + (Math.random() - 0.5) * 0.5],
+      size: [0.12 + Math.random() * 0.1, 0.09, 0.09],
+      material: { color: 0x5a120c, texture: 'smooth', roughness: 0.7 },
+      lifetime: 2.0, velocity: [(Math.random() - 0.5) * 4, 2.2 + Math.random() * 2, (Math.random() - 0.5) * 4],
+    });
+    if (g.body) g.body.angularVelocity.set(Math.random() * 8, Math.random() * 8, Math.random() * 8);
+  }
+  game.audio.impact(0.7);
+  if (z.actor.visualOffset) z.actor.visualOffset.set(0, 0, 0);
+  retireCorpse(game, S, z);
+}
+
+function killZombie(game, S, z, headshot, source) {
   z.dead = true;
   S.killsTotal++;
   S.statKill(S.creditWeapon, headshot);
@@ -8190,7 +8540,12 @@ function killZombie(game, S, z, headshot) {
   }
   // Powerup roll.
   if (!S.powerupActive && Math.random() < 0.04) dropPowerup(game, S, p);
-  parkZombie(game, S, z);
+  /* And then it lies there. The one exception is a body that is not on
+     the floor to begin with -- something killed while it is still
+     climbing out of the mud has nowhere to fall to, and the pool wants
+     it back. */
+  if (z.state === 'rising') parkZombie(game, S, z);
+  else startCorpse(game, S, z, headshot, source);
   game.audio.impact(0.5);
 }
 
@@ -8693,12 +9048,18 @@ function updateZombie(game, S, P, z, dt, sfx) {
     if (z.lucidT <= 0) {
       if (z.lucid > 0) { z.lucid = 0; z.lucidT = 3.5 + Math.random() * 5; }
       else { z.lucid = 1; z.lucidT = 1.4 + Math.random() * 2.2; }
-      z.moveClip = z.lucid ? 'zrun_human' : 'zrun';
+      /* Lucid is the clean sprint with the arm released; the rest of the
+         time it is back on its own clip -- the runner's held arm, the
+         armoured one's laden run. Falling back to 'zrun' matters only
+         for a variant that names no clip of its own. */
+      z.moveClip = z.lucid ? 'zrun_human' : (V.clip || 'zrun');
       // The remembered sprint is a real one, and it closes ground faster.
       const boost = z.lucid ? 1.22 : 1;
       z.actor.controller.moveSpeed = z.speed * boost;
       z.actor.controller.runSpeed = z.speed * 1.35 * boost;
-      if (z.anim === 'zrun' || z.anim === 'zrun_human') playZombieAnim(z, z.moveClip, 0.22);
+      if (z.anim === 'zrun' || z.anim === 'zrun_human' || z.anim === 'zrun_hold') {
+        playZombieAnim(z, z.moveClip, 0.22);
+      }
     }
   }
 
@@ -10997,7 +11358,12 @@ function start(opts = {}) {
   }
   // Three zombies up front so round one is ready; the rest of the pool
   // fills in one at a time behind the title card and early rounds.
-  const POOL_SIZE = 13;
+  /* Thirteen was the number of bodies that can be UP at once. Corpses
+     lie in pool slots now, up to CORPSE.budget of them, so the pool has
+     to carry both or a round with eight dead on the floor spawns five
+     fewer than it should. They are still built one at a time behind the
+     menu, so this costs nothing at start-up. */
+  const POOL_SIZE = 13 + CORPSE.budget;
   for (let i = 0; i < 3; i++) buildPooledZombie(game, S, i);
   let poolNext = 3;
   const trickle = () => {
@@ -11673,6 +12039,7 @@ function start(opts = {}) {
     /* World systems. */
     updateRounds(game, S, P, hud, sfx, dt);
     for (const z of S.zombies) updateZombie(game, S, P, z, dt, sfx);
+    updateCorpses(game, S, dt);
 
     /* Thrown bile in flight. Gravity, a splash on impact, and Deflect
        gets its own sound so the perk is audibly doing something. */

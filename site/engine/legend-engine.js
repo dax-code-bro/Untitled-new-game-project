@@ -22369,6 +22369,414 @@ function makeZombieClips() {
     lowerLegR: { keys: [[0, 14, 0, 0], [0.45, 8, 0, 0], [1, 14, 0, 0]] },
   }, { loop: false }));
 
+  /* =========================================================
+     DYING
+     =========================================================
+     There were no death clips at all: a zombie that lost its
+     last point of health was teleported to the pool at the far
+     end of the world in the same frame, so every one of them
+     vanished mid-step. Seven ways to go down, chosen by what
+     actually killed it.
+
+     ---- HOW A BODY GETS TO THE FLOOR ----
+     The rig's hips sit 0.86 m above the sole (0.04 to the hip
+     socket, 0.42 thigh, 0.40 shin), so a body lying flat needs
+     its pelvis at about the thickness of a pelvis -- call it
+     0.18 -- and that is a hips position track of -0.66 or so.
+     Rotating without dropping leaves a corpse pivoting in the
+     air about its own waist, which is the single most common
+     way a death animation goes wrong.
+
+     Which way it goes over is hips.x, and the legs come with
+     it because they hang off the hips: at +85 the spine lies
+     down the way the body faces and the legs trail behind it,
+     which is face down; at -85 the legs go out in front and
+     the head goes back, which is flat on its back. Nothing
+     needs a separate track to say so.
+
+     None of these loop, and all of them hold their last frame
+     -- that frame is the corpse.
+     --------------------------------------------------------- */
+
+  /* ---- shot in the body: back, hard, over the heels ---- */
+  clips.push(buildClip('zdie_back', 1.42, {
+    hips: {
+      keys: [[0, 6, 0, 0], [0.12, -6, 3, 4], [0.34, -18, 5, 6], [0.62, -52, 6, 9],
+             [0.86, -80, 5, 8], [1, -86, 4, 7]],
+      pos: [[0, 0, 0, 0], [0.12, 0, 0.010, -0.02], [0.34, 0, -0.10, -0.10],
+            [0.62, 0, -0.34, -0.24], [0.86, 0, -0.60, -0.33], [1, 0, -0.66, -0.35]],
+    },
+    // The chest opens as it goes: it is falling round the hole.
+    spine: { keys: [[0, 16, 0, 0], [0.12, -14, -4, -3], [0.40, -18, -6, -5], [0.8, -6, -4, -4], [1, -2, -3, -4]] },
+    chest: { keys: [[0, 9, 0, 0], [0.12, -12, -3, -2], [0.5, -14, -5, -4], [1, -4, -3, -3]] },
+    head: { keys: [[0, -10, 0, 0], [0.12, 26, -6, 0], [0.45, 30, -8, 4], [0.8, 8, -12, 10], [1, 2, -16, 14]] },
+    // Arms thrown up and out on the hit, then dropped where they land.
+    upperArmL: { keys: [[0, -80, 0, -14], [0.14, -128, 0, -48], [0.45, -104, 0, -56],
+                        [0.8, -50, 0, -62], [1, -38, 0, -64]] },
+    upperArmR: { keys: [[0, -84, 0, 14], [0.14, -132, 0, 44], [0.45, -100, 0, 52],
+                        [0.8, -46, 0, 58], [1, -34, 0, 60]] },
+    lowerArmL: { keys: [[0, -20, 0, 0], [0.14, -54, 0, 0], [0.6, -24, 0, 0], [1, -12, 0, 0]] },
+    lowerArmR: { keys: [[0, -24, 0, 0], [0.14, -58, 0, 0], [0.6, -20, 0, 0], [1, -9, 0, 0]] },
+    // The knees fold as it goes over and open again once it is down.
+    upperLegL: { keys: [[0, -6, 0, 3], [0.34, 14, 0, 4], [0.62, 26, 0, 6], [1, 6, 0, 8]] },
+    upperLegR: { keys: [[0, 4, 0, -3], [0.34, 12, 0, -4], [0.62, 22, 0, -7], [1, 3, 0, -10]] },
+    lowerLegL: { keys: [[0, 10, 0, 0], [0.34, 40, 0, 0], [0.62, 54, 0, 0], [1, 18, 0, 0]] },
+    lowerLegR: { keys: [[0, 12, 0, 0], [0.34, 36, 0, 0], [0.62, 48, 0, 0], [1, 14, 0, 0]] },
+    footL: { keys: [[0, 6, 0, 0], [0.62, -14, 0, 0], [1, -22, 0, 0]] },
+    footR: { keys: [[0, 6, 0, 0], [0.62, -12, 0, 0], [1, -20, 0, 0]] },
+  }, { loop: false }));
+
+  /* ---- shot from behind, or simply run out of legs: it goes
+         down on its face and does not put a hand out ---- */
+  clips.push(buildClip('zdie_face', 1.28, {
+    hips: {
+      keys: [[0, 8, 0, 0], [0.16, 20, -3, -3], [0.40, 36, -5, -5], [0.68, 62, -6, -7],
+             [0.9, 82, -5, -6], [1, 86, -4, -6]],
+      pos: [[0, 0, 0, 0], [0.16, 0, -0.03, 0.02], [0.40, 0, -0.14, 0.08],
+            [0.68, 0, -0.40, 0.16], [0.9, 0, -0.61, 0.21], [1, 0, -0.66, 0.22]],
+    },
+    spine: { keys: [[0, 16, 0, 0], [0.40, 26, 4, 3], [0.75, 14, 6, 5], [1, 4, 6, 5]] },
+    chest: { keys: [[0, 9, 0, 0], [0.40, 16, 3, 2], [1, 2, 5, 4]] },
+    // The head goes first and never comes back up.
+    head: { keys: [[0, -10, 0, 0], [0.20, -36, 5, -4], [0.6, -30, 9, -8], [1, -14, 14, -12]] },
+    // Arms trail. Nothing catches it -- that is the difference between
+    // falling and being dropped.
+    upperArmL: { keys: [[0, -80, 0, -14], [0.35, -34, 0, -22], [0.7, -8, 0, -30], [1, 4, 0, -34]] },
+    upperArmR: { keys: [[0, -84, 0, 14], [0.35, -30, 0, 20], [0.7, -6, 0, 28], [1, 6, 0, 32]] },
+    lowerArmL: { keys: [[0, -20, 0, 0], [0.5, -46, 0, 0], [1, -30, 0, 0]] },
+    lowerArmR: { keys: [[0, -24, 0, 0], [0.5, -42, 0, 0], [1, -26, 0, 0]] },
+    upperLegL: { keys: [[0, -8, 0, 3], [0.30, -26, 0, 4], [0.68, -12, 0, 6], [1, -4, 0, 7]] },
+    upperLegR: { keys: [[0, 6, 0, -3], [0.30, -18, 0, -4], [0.68, -8, 0, -6], [1, -2, 0, -8]] },
+    lowerLegL: { keys: [[0, 10, 0, 0], [0.30, 46, 0, 0], [0.7, 26, 0, 0], [1, 12, 0, 0]] },
+    lowerLegR: { keys: [[0, 12, 0, 0], [0.30, 38, 0, 0], [0.7, 22, 0, 0], [1, 10, 0, 0]] },
+    footL: { keys: [[0, 6, 0, 0], [1, -26, 0, 0]] },
+    footR: { keys: [[0, 6, 0, 0], [1, -24, 0, 0]] },
+  }, { loop: false }));
+
+  /* ---- head shot: the strings are cut. No stagger, no reach,
+         no wind-up. It stops being held up and it folds. The
+         whole thing is over in a second because that is what
+         separates it from every other death here. ---- */
+  clips.push(buildClip('zdie_head', 1.00, {
+    hips: {
+      keys: [[0, 6, 0, 0], [0.10, 8, 0, 2], [0.34, 16, 4, 16], [0.62, 30, 8, 42],
+             [0.86, 40, 10, 68], [1, 42, 10, 74]],
+      // Straight down first, then over sideways: knees, then hip, then
+      // shoulder. It collapses rather than falls.
+      pos: [[0, 0, 0, 0], [0.10, 0, -0.04, 0], [0.34, 0.03, -0.30, 0.01],
+            [0.62, 0.09, -0.52, 0.02], [0.86, 0.15, -0.62, 0.02], [1, 0.17, -0.64, 0.02]],
+    },
+    spine: { keys: [[0, 16, 0, 0], [0.34, 12, -6, -8], [0.7, 6, -10, -14], [1, 2, -12, -16]] },
+    chest: { keys: [[0, 9, 0, 0], [0.34, 6, -4, -5], [1, 0, -8, -10]] },
+    // Snapped back by the round, then dead weight on the neck.
+    head: { keys: [[0, -10, 0, 0], [0.06, 34, -14, 0], [0.30, 12, -6, 8], [1, -18, 8, 24]] },
+    upperArmL: { keys: [[0, -80, 0, -14], [0.30, -46, 0, -20], [1, -6, 0, -26]] },
+    upperArmR: { keys: [[0, -84, 0, 14], [0.30, -44, 0, 18], [1, -8, 0, 24]] },
+    lowerArmL: { keys: [[0, -20, 0, 0], [1, -34, 0, 0]] },
+    lowerArmR: { keys: [[0, -24, 0, 0], [1, -30, 0, 0]] },
+    // Knees all the way shut -- it went down on them before it went over.
+    upperLegL: { keys: [[0, -6, 0, 3], [0.34, -22, 0, 5], [0.7, -34, 0, 9], [1, -36, 0, 11]] },
+    upperLegR: { keys: [[0, 4, 0, -3], [0.34, -16, 0, -5], [0.7, -28, 0, -9], [1, -30, 0, -11]] },
+    lowerLegL: { keys: [[0, 10, 0, 0], [0.34, 74, 0, 0], [0.7, 104, 0, 0], [1, 108, 0, 0]] },
+    lowerLegR: { keys: [[0, 12, 0, 0], [0.34, 70, 0, 0], [0.7, 98, 0, 0], [1, 102, 0, 0]] },
+    footL: { keys: [[0, 6, 0, 0], [1, -30, 0, 0]] },
+    footR: { keys: [[0, 6, 0, 0], [1, -28, 0, 0]] },
+  }, { loop: false }));
+
+  /* ---- legs shot out: it folds at the knees, kneels for a
+         moment, and only then goes over ---- */
+  clips.push(buildClip('zdie_knees', 1.36, {
+    hips: {
+      keys: [[0, 6, 0, 0], [0.22, 14, 0, 3], [0.44, 20, 2, 5], [0.60, 22, 3, 6],
+             [0.82, 58, 4, 8], [1, 80, 4, 9]],
+      // Down to kneeling and HELD there for a fifth of a second, which is
+      // the whole point of this one, then over onto the face.
+      pos: [[0, 0, 0, 0], [0.22, 0, -0.22, 0.02], [0.44, 0, -0.40, 0.03],
+            [0.60, 0, -0.41, 0.03], [0.82, 0, -0.58, 0.13], [1, 0, -0.66, 0.19]],
+    },
+    spine: { keys: [[0, 16, 0, 0], [0.44, 24, -3, -2], [0.60, 20, -3, -2], [1, 6, -5, -4]] },
+    chest: { keys: [[0, 9, 0, 0], [0.44, 14, -2, -1], [1, 3, -4, -3]] },
+    head: { keys: [[0, -10, 0, 0], [0.30, -28, 4, -3], [0.60, -22, 6, -5], [1, -12, 10, -9]] },
+    // Hands reach for the floor on the way down and take none of the weight.
+    upperArmL: { keys: [[0, -80, 0, -14], [0.44, -56, 0, -26], [0.75, -18, 0, -30], [1, 2, 0, -32]] },
+    upperArmR: { keys: [[0, -84, 0, 14], [0.44, -52, 0, 24], [0.75, -16, 0, 28], [1, 4, 0, 30]] },
+    lowerArmL: { keys: [[0, -20, 0, 0], [0.44, -62, 0, 0], [1, -26, 0, 0]] },
+    lowerArmR: { keys: [[0, -24, 0, 0], [0.44, -58, 0, 0], [1, -24, 0, 0]] },
+    upperLegL: { keys: [[0, -6, 0, 3], [0.44, -30, 0, 5], [0.60, -32, 0, 5], [1, -10, 0, 7]] },
+    upperLegR: { keys: [[0, 4, 0, -3], [0.44, -26, 0, -5], [0.60, -28, 0, -5], [1, -8, 0, -7]] },
+    lowerLegL: { keys: [[0, 10, 0, 0], [0.44, 96, 0, 0], [0.60, 98, 0, 0], [1, 62, 0, 0]] },
+    lowerLegR: { keys: [[0, 12, 0, 0], [0.44, 92, 0, 0], [0.60, 94, 0, 0], [1, 58, 0, 0]] },
+    footL: { keys: [[0, 6, 0, 0], [0.44, -34, 0, 0], [1, -30, 0, 0]] },
+    footR: { keys: [[0, 6, 0, 0], [0.44, -32, 0, 0], [1, -28, 0, 0]] },
+  }, { loop: false }));
+
+  /* ---- burning: the only one that takes its time. It beats at
+         itself, doubles over, and ends curled on its side with
+         the knees drawn up, which is what fire does to a body ---- */
+  clips.push(buildClip('zdie_burn', 2.10, {
+    hips: {
+      keys: [[0, 6, 0, 0], [0.14, 2, -12, -6], [0.28, 10, 14, 7], [0.44, 4, -16, -8],
+             [0.62, 26, 8, 22], [0.82, 52, 6, 54], [1, 62, 5, 68]],
+      pos: [[0, 0, 0, 0], [0.28, 0, 0.02, 0], [0.44, 0, -0.06, 0], [0.62, 0.04, -0.30, 0.04],
+            [0.82, 0.12, -0.55, 0.06], [1, 0.16, -0.62, 0.06]],
+    },
+    spine: { keys: [[0, 16, 0, 0], [0.14, 30, 10, 6], [0.30, 22, -12, -7], [0.5, 38, 8, 5],
+                    [0.75, 30, -6, -8], [1, 22, -8, -12]] },
+    chest: { keys: [[0, 9, 0, 0], [0.20, 20, 8, 4], [0.5, 24, -8, -5], [1, 16, -6, -8]] },
+    head: { keys: [[0, -10, 0, 0], [0.12, 22, -18, 0], [0.26, -30, 20, 6], [0.46, 18, -16, -5],
+                   [0.7, -24, 8, 10], [1, -34, 6, 16]] },
+    // Beating at itself, then folded in over the chest.
+    upperArmL: { keys: [[0, -80, 0, -14], [0.12, -134, 0, 26], [0.26, -96, 0, 40],
+                        [0.44, -128, 0, 20], [0.7, -92, 0, 44], [1, -84, 0, 50]] },
+    upperArmR: { keys: [[0, -84, 0, 14], [0.16, -130, 0, -22], [0.32, -92, 0, -38],
+                        [0.5, -126, 0, -18], [0.7, -88, 0, -42], [1, -80, 0, -48]] },
+    lowerArmL: { keys: [[0, -20, 0, 0], [0.12, -118, 0, 0], [0.44, -104, 0, 0], [1, -122, 0, 0]] },
+    lowerArmR: { keys: [[0, -24, 0, 0], [0.16, -114, 0, 0], [0.5, -100, 0, 0], [1, -118, 0, 0]] },
+    // Knees drawn right up at the end.
+    upperLegL: { keys: [[0, -6, 0, 3], [0.3, -18, 0, 4], [0.62, -44, 0, 8], [1, -68, 0, 12]] },
+    upperLegR: { keys: [[0, 4, 0, -3], [0.3, 10, 0, -4], [0.62, -38, 0, -8], [1, -60, 0, -12]] },
+    lowerLegL: { keys: [[0, 10, 0, 0], [0.3, 34, 0, 0], [0.62, 76, 0, 0], [1, 104, 0, 0]] },
+    lowerLegR: { keys: [[0, 12, 0, 0], [0.3, 28, 0, 0], [0.62, 70, 0, 0], [1, 98, 0, 0]] },
+    footL: { keys: [[0, 6, 0, 0], [1, -34, 0, 0]] },
+    footR: { keys: [[0, 6, 0, 0], [1, -32, 0, 0]] },
+  }, { loop: false }));
+
+  /* ---- the current: everything locks straight, it arches, and
+         it goes over in one piece like a felled post. The
+         opposite of every other death here, which is why it is
+         worth having ---- */
+  clips.push(buildClip('zdie_shock', 1.16, {
+    hips: {
+      keys: [[0, 6, 0, 0], [0.14, -16, 0, 0], [0.30, -22, 0, 0], [0.52, -44, 0, 3],
+             [0.80, -76, 0, 5], [1, -88, 0, 6]],
+      pos: [[0, 0, 0, 0], [0.14, 0, 0.03, -0.02], [0.30, 0, 0.02, -0.05],
+            [0.52, 0, -0.26, -0.20], [0.80, 0, -0.58, -0.32], [1, 0, -0.66, -0.36]],
+    },
+    // Arched hard backward and rigid the whole way down.
+    spine: { keys: [[0, 16, 0, 0], [0.14, -24, 0, 0], [0.40, -28, 0, 0], [1, -20, 0, 0]] },
+    chest: { keys: [[0, 9, 0, 0], [0.14, -18, 0, 0], [1, -14, 0, 0]] },
+    head: { keys: [[0, -10, 0, 0], [0.14, 40, 0, 0], [0.5, 44, 0, 0], [1, 30, 0, 0]] },
+    // Arms out straight and locked: the elbows never bend again.
+    upperArmL: { keys: [[0, -80, 0, -14], [0.16, -96, 0, -74], [0.5, -92, 0, -80], [1, -84, 0, -82]] },
+    upperArmR: { keys: [[0, -84, 0, 14], [0.16, -98, 0, 72], [0.5, -94, 0, 78], [1, -86, 0, 80]] },
+    lowerArmL: { keys: [[0, -20, 0, 0], [0.16, -2, 0, 0], [1, 0, 0, 0]] },
+    lowerArmR: { keys: [[0, -24, 0, 0], [0.16, -2, 0, 0], [1, 0, 0, 0]] },
+    upperLegL: { keys: [[0, -6, 0, 3], [0.16, -2, 0, 5], [1, 2, 0, 6]] },
+    upperLegR: { keys: [[0, 4, 0, -3], [0.16, 0, 0, -5], [1, 1, 0, -6]] },
+    lowerLegL: { keys: [[0, 10, 0, 0], [0.16, 0, 0, 0], [1, 0, 0, 0]] },
+    lowerLegR: { keys: [[0, 12, 0, 0], [0.16, 0, 0, 0], [1, 0, 0, 0]] },
+    footL: { keys: [[0, 6, 0, 0], [0.16, -14, 0, 0], [1, -18, 0, 0]] },
+    footR: { keys: [[0, 6, 0, 0], [0.16, -14, 0, 0], [1, -18, 0, 0]] },
+  }, { loop: false }));
+
+  /* ---- blown off its feet. Fast, and it lands wrong: nothing
+         about this one is symmetrical ---- */
+  clips.push(buildClip('zdie_blast', 0.92, {
+    hips: {
+      keys: [[0, 6, 0, 0], [0.16, -40, 26, -22], [0.44, -66, 40, -40], [0.74, -82, 34, -30],
+             [1, -84, 30, -26]],
+      pos: [[0, 0, 0, 0], [0.16, -0.06, 0.16, -0.16], [0.44, -0.13, -0.05, -0.42],
+            [0.74, -0.16, -0.56, -0.60], [1, -0.17, -0.66, -0.62]],
+    },
+    spine: { keys: [[0, 16, 0, 0], [0.16, -20, -18, 14], [0.5, -14, -24, 18], [1, -6, -20, 16]] },
+    chest: { keys: [[0, 9, 0, 0], [0.16, -16, -12, 10], [1, -4, -16, 12]] },
+    head: { keys: [[0, -10, 0, 0], [0.16, 34, -22, -12], [0.5, 26, -30, -16], [1, 6, -34, -22]] },
+    upperArmL: { keys: [[0, -80, 0, -14], [0.16, -142, 0, -66], [0.5, -110, 0, -80], [1, -44, 0, -86]] },
+    upperArmR: { keys: [[0, -84, 0, 14], [0.16, -120, 0, 30], [0.5, -86, 0, 22], [1, -20, 0, 18]] },
+    lowerArmL: { keys: [[0, -20, 0, 0], [0.16, -70, 0, 0], [1, -14, 0, 0]] },
+    lowerArmR: { keys: [[0, -24, 0, 0], [0.16, -34, 0, 0], [1, -52, 0, 0]] },
+    upperLegL: { keys: [[0, -6, 0, 3], [0.16, 34, 0, 14], [0.5, 30, 0, 20], [1, 12, 0, 24]] },
+    upperLegR: { keys: [[0, 4, 0, -3], [0.16, 18, 0, -6], [0.5, 8, 0, -3], [1, -6, 0, -2]] },
+    lowerLegL: { keys: [[0, 10, 0, 0], [0.16, 62, 0, 0], [1, 34, 0, 0]] },
+    lowerLegR: { keys: [[0, 12, 0, 0], [0.16, 30, 0, 0], [1, 8, 0, 0]] },
+    footL: { keys: [[0, 6, 0, 0], [1, -28, 0, 0]] },
+    footR: { keys: [[0, 6, 0, 0], [1, -16, 0, 0]] },
+  }, { loop: false }));
+
+  /* =========================================================
+     GAITS, ONE PER KIND
+     =========================================================
+     The four kinds moved on three clips between them, so a
+     thrower and a walker were the same silhouette at different
+     speeds -- and the thing a player reads at twenty metres in
+     a dark room is the silhouette, not the speed. Each kind now
+     has a walk that says what it is before it is close enough
+     to shoot.
+
+     Ground rule for all of them: the pelvis has to have a
+     position track. Rotations alone nail it to one height and
+     the figure glides, and every one of these is about weight.
+     --------------------------------------------------------- */
+
+  /* ---------------------------------------------------------
+     BURDENED — the walker, carrying something that is not
+     there. Deep stoop, head hung below the shoulder line,
+     arms swinging dead and slightly BEHIND the body the way
+     they do under a pack, and a short scuffing stride: the
+     feet barely clear the floor because lifting them is work.
+     The bob is heavy and lands hard.
+     --------------------------------------------------------- */
+  clips.push(buildClip('zwalk_burden', 1.92, {
+    hips: {
+      keys: [[0, 12, -6, 5], [0.25, 11, 0, -2], [0.5, 12, 6, -5], [0.75, 11, 0, 2], [1, 12, -6, 5]],
+      // Deeper than the plain shamble, and it drops faster than it rises:
+      // weight arriving, not weight being carried.
+      pos: [[0, 0.020, -0.028, 0], [0.18, 0.026, -0.006, 0], [0.32, 0.024, 0.012, 0],
+            [0.5, -0.020, -0.030, 0], [0.68, -0.026, -0.006, 0], [0.82, -0.024, 0.010, 0],
+            [1, 0.020, -0.028, 0]],
+    },
+    // The stoop is in the spine, not the hips, so the pelvis stays under
+    // the load and the back does the bending -- which is what a person
+    // under a pack actually looks like.
+    spine: { keys: [[0, 30, 5, -3], [0.25, 33, 0, 1], [0.5, 30, -5, 3], [0.75, 33, 0, -1], [1, 30, 5, -3]] },
+    chest: { keys: [[0, 20, 4, -2], [0.5, 23, -4, 2], [1, 20, 4, -2]] },
+    // Head hangs below the shoulders and swings loose on the neck.
+    head: { keys: [[0, -6, 7, -8], [0.3, -2, 1, -12], [0.6, -10, -6, -4], [1, -6, 7, -8]] },
+
+    // Arms hang and trail. Positive z on the shoulder pushes them out from
+    // the ribs so they do not saw through the coat.
+    upperArmL: { keys: [[0, -14, 4, -13], [0.5, -30, -3, -10], [1, -14, 4, -13]] },
+    upperArmR: { keys: [[0, -30, -4, 13], [0.5, -14, 3, 10], [1, -30, -4, 13]] },
+    lowerArmL: { keys: [[0, -22, 0, 0], [0.5, -12, 0, 0], [1, -22, 0, 0]] },
+    lowerArmR: { keys: [[0, -12, 0, 0], [0.5, -22, 0, 0], [1, -12, 0, 0]] },
+
+    // Short steps. The knee never straightens and the foot scuffs through.
+    upperLegL: { keys: [[0, -17, 0, 2], [0.22, -6, 0, 2], [0.42, 10, 0, 2], [0.58, 8, 0, 2],
+                        [0.78, -6, 0, 2], [1, -17, 0, 2]] },
+    lowerLegL: { keys: [[0, 10, 0, 0], [0.30, 12, 0, 0], [0.50, 26, 0, 0], [0.68, 34, 0, 0],
+                        [0.86, 14, 0, 0], [1, 10, 0, 0]] },
+    footL: { keys: [[0, 4, 0, 0], [0.30, -8, 0, 0], [0.62, 2, 0, 0], [1, 4, 0, 0]] },
+    upperLegR: { keys: [[0, 9, 0, -3], [0.22, -6, 0, -3], [0.5, -17, 0, -3], [0.72, -6, 0, -3],
+                        [0.92, 8, 0, -3], [1, 9, 0, -3]] },
+    lowerLegR: { keys: [[0, 26, 0, 0], [0.18, 34, 0, 0], [0.36, 14, 0, 0], [0.56, 10, 0, 0],
+                        [0.80, 12, 0, 0], [1, 26, 0, 0]] },
+    footR: { keys: [[0, 2, 0, 0], [0.20, 4, 0, 0], [0.80, -8, 0, 0], [1, 2, 0, 0]] },
+  }));
+
+  /* ---------------------------------------------------------
+     LIMP — the thrower. One leg does not work at all: the knee
+     is locked, the toe is down, and the foot is dragged round
+     rather than swung. Everything else is the body getting over
+     that leg and off it again as fast as it can, which is a
+     lurch. The slowest thing in the game and it should look it.
+     --------------------------------------------------------- */
+  clips.push(buildClip('zlimp', 2.35, {
+    hips: {
+      /* The list is the point. It hangs 13 degrees over the bad
+         side through the whole of that leg's stance and only
+         comes back while the good leg is carrying it. */
+      keys: [[0, 9, -4, 15], [0.20, 8, -2, 13], [0.45, 9, 3, 2], [0.70, 10, 5, -4],
+             [0.88, 9, 0, 8], [1, 9, -4, 15]],
+      /* Down hard onto the good leg, dragged along flat on the
+         bad one -- one deep dip a cycle instead of two, which is
+         what makes a limp read as a limp. */
+      pos: [[0, 0.034, -0.042, 0], [0.20, 0.030, -0.030, 0], [0.45, 0.004, 0.016, 0],
+            [0.70, -0.026, 0.006, 0], [0.88, 0.010, -0.020, 0], [1, 0.034, -0.042, 0]],
+    },
+    spine: { keys: [[0, 22, 6, -11], [0.45, 26, -4, -2], [0.70, 24, -6, 3], [1, 22, 6, -11]] },
+    chest: { keys: [[0, 13, 5, -8], [0.45, 16, -3, -1], [1, 13, 5, -8]] },
+    head: { keys: [[0, -12, 9, -14], [0.3, -8, 3, -16], [0.62, -15, -6, -6], [1, -12, 9, -14]] },
+    // The near arm is half out for balance; it grabs at nothing on the lurch.
+    upperArmL: { keys: [[0, -58, 6, -22], [0.22, -70, 2, -28], [0.60, -46, 8, -16], [1, -58, 6, -22]] },
+    upperArmR: { keys: [[0, -40, -5, 20], [0.45, -52, 2, 26], [1, -40, -5, 20]] },
+    lowerArmL: { keys: [[0, -30, 0, 0], [0.22, -46, 0, 0], [0.60, -18, 0, 0], [1, -30, 0, 0]] },
+    lowerArmR: { keys: [[0, -22, 0, 0], [0.45, -34, 0, 0], [1, -22, 0, 0]] },
+
+    /* Good leg: a real step, and it hurries -- most of the cycle
+       is spent getting the body forward before the bad leg has
+       to take any of it. */
+    upperLegL: { keys: [[0, -30, 0, 3], [0.14, -12, 0, 3], [0.30, 8, 0, 3], [0.42, 20, 0, 3],
+                        [0.60, -4, 0, 3], [0.80, -26, 0, 3], [1, -30, 0, 3]] },
+    lowerLegL: { keys: [[0, 5, 0, 0], [0.14, 3, 0, 0], [0.34, 14, 0, 0], [0.50, 62, 0, 0],
+                        [0.72, 26, 0, 0], [0.90, 6, 0, 0], [1, 5, 0, 0]] },
+    footL: { keys: [[0, 9, 0, 0], [0.22, -4, 0, 0], [0.44, -26, 0, 0], [0.62, 12, 0, 0], [1, 9, 0, 0]] },
+
+    /* Bad leg: it never leaves the floor and the knee never
+       moves. Eight degrees of hip swing, dragged round by the
+       pelvis, with the toe pointed down the whole way -- so it
+       scrapes rather than steps. */
+    upperLegR: { keys: [[0, 6, 0, -8], [0.30, 2, 0, -8], [0.55, -8, 0, -8], [0.80, -2, 0, -8], [1, 6, 0, -8]] },
+    lowerLegR: { keys: [[0, 15, 0, 0], [0.5, 17, 0, 0], [1, 15, 0, 0]] },
+    footR: { keys: [[0, -20, 0, 0], [0.5, -24, 0, 0], [1, -20, 0, 0]] },
+  }));
+
+  /* ---------------------------------------------------------
+     RUNNER — a person, until you look at the arm. It moves the
+     way somebody moves who is still using their legs properly:
+     upright, a real stride, weight over the feet. The wrong is
+     all above the waist -- one arm is clutched hard across the
+     chest and never swings, and every third or fourth step it
+     scuffs and has to catch itself.
+
+     That clutched arm is not decoration. It is the one that
+     comes off the body and swings when it reaches you, and a
+     player who has watched it held for twenty metres reads the
+     wind-up before the swing lands.
+     --------------------------------------------------------- */
+  clips.push(buildClip('zrun_hold', 0.74, {
+    hips: {
+      keys: [[0, 6, -13, 3], [0.25, 5, 0, -1], [0.5, 6, 13, -3], [0.75, 5, 0, 1], [1, 6, -13, 3]],
+      pos: [[0, 0.012, -0.030, 0], [0.25, 0.016, 0.026, 0], [0.5, -0.012, -0.032, 0],
+            [0.75, -0.016, 0.024, 0], [1, 0.012, -0.030, 0]],
+    },
+    spine: { keys: [[0, 15, 11, -4], [0.5, 15, -11, 4], [1, 15, 11, -4]] },
+    chest: { keys: [[0, 9, 9, -3], [0.5, 9, -9, 3], [1, 9, 9, -3]] },
+    // Head up and looking at you, which is the other thing that separates
+    // it from the rest of them.
+    head: { keys: [[0, -4, -8, 2], [0.3, -6, -3, -3], [0.6, -3, -10, 4], [1, -4, -8, 2]] },
+
+    // Left arm: clutched across the ribs, gripped, dead still bar the
+    // shudder the stride puts through it.
+    upperArmL: { keys: [[0, -62, 0, 42], [0.5, -66, 0, 45], [1, -62, 0, 42]] },
+    lowerArmL: { keys: [[0, -104, 0, 0], [0.5, -108, 0, 0], [1, -104, 0, 0]] },
+    handL: { keys: [[0, 14, 0, 0], [0.5, 10, 0, 0], [1, 14, 0, 0]] },
+    // Right arm: a runner's swing, elbow at ninety.
+    upperArmR: { keys: [[0, -46, 0, 12], [0.25, 14, 0, 10], [0.5, -52, 0, 12], [0.75, 18, 0, 10], [1, -46, 0, 12]] },
+    lowerArmR: { keys: [[0, -84, 0, 0], [0.25, -62, 0, 0], [0.5, -88, 0, 0], [0.75, -60, 0, 0], [1, -84, 0, 0]] },
+
+    // A real stride, both sides, with the knees driving through.
+    upperLegL: { keys: [[0, -40, 0, 2], [0.16, -16, 0, 2], [0.34, 14, 0, 2], [0.46, 30, 0, 2],
+                        [0.66, -8, 0, 2], [0.86, -36, 0, 2], [1, -40, 0, 2]] },
+    lowerLegL: { keys: [[0, 12, 0, 0], [0.16, 4, 0, 0], [0.36, 22, 0, 0], [0.52, 84, 0, 0],
+                        [0.72, 40, 0, 0], [0.90, 14, 0, 0], [1, 12, 0, 0]] },
+    footL: { keys: [[0, 12, 0, 0], [0.22, -6, 0, 0], [0.46, -28, 0, 0], [0.64, 14, 0, 0], [1, 12, 0, 0]] },
+    upperLegR: { keys: [[0, 14, 0, -2], [0.16, -8, 0, -2], [0.36, -36, 0, -2], [0.5, -40, 0, -2],
+                        [0.66, -16, 0, -2], [0.84, 30, 0, -2], [1, 14, 0, -2]] },
+    lowerLegR: { keys: [[0, 40, 0, 0], [0.10, 22, 0, 0], [0.30, 12, 0, 0], [0.52, 14, 0, 0],
+                        [0.70, 84, 0, 0], [0.88, 40, 0, 0], [1, 40, 0, 0]] },
+    footR: { keys: [[0, -28, 0, 0], [0.16, 14, 0, 0], [0.5, 12, 0, 0], [0.74, -6, 0, 0], [1, -28, 0, 0]] },
+  }));
+
+  /* ---------------------------------------------------------
+     THE SWING — the held arm comes off the chest and goes round
+     in one flat horizontal arc. Not a punch: a whole-body
+     rotation with an arm on the end of it, which is why the
+     hips lead and the arm arrives late.
+     --------------------------------------------------------- */
+  clips.push(buildClip('zattack_swing', 0.78, {
+    hips: {
+      keys: [[0, 5, -34, 0], [0.30, 4, -46, 0], [0.58, 6, 40, 0], [1, 5, -34, 0]],
+      pos: [[0, 0, 0, 0], [0.30, 0.02, 0.010, -0.020], [0.58, -0.02, -0.010, 0.030], [1, 0, 0, 0]],
+    },
+    spine: { keys: [[0, 14, -26, 0], [0.30, 12, -40, 0], [0.58, 16, 38, 0], [1, 14, -26, 0]] },
+    chest: { keys: [[0, 8, -20, 0], [0.30, 7, -34, 0], [0.58, 10, 32, 0], [1, 8, -20, 0]] },
+    head: { keys: [[0, -6, -14, 0], [0.30, -4, -26, 0], [0.62, -8, 26, 0], [1, -6, -14, 0]] },
+    /* Held, then thrown out straight. The elbow opening from
+       -105 to -14 across a fifth of a second is where the speed
+       comes from -- the shoulder barely moves. */
+    upperArmL: { keys: [[0, -62, 0, 42], [0.30, -54, 0, 70], [0.46, -70, 0, 88],
+                        [0.62, -74, 0, 62], [0.82, -64, 0, 46], [1, -62, 0, 42]] },
+    lowerArmL: { keys: [[0, -104, 0, 0], [0.30, -96, 0, 0], [0.48, -14, 0, 0],
+                        [0.66, -22, 0, 0], [1, -104, 0, 0]] },
+    handL: { keys: [[0, 14, 0, 0], [0.44, -16, 0, 0], [0.66, 8, 0, 0], [1, 14, 0, 0]] },
+    upperArmR: { keys: [[0, -46, 0, 12], [0.30, -20, 0, 26], [0.58, -66, 0, 8], [1, -46, 0, 12]] },
+    lowerArmR: { keys: [[0, -84, 0, 0], [0.30, -60, 0, 0], [0.58, -92, 0, 0], [1, -84, 0, 0]] },
+    upperLegL: { keys: [[0, -8, 0, 3], [0.30, -18, 0, 3], [0.58, 10, 0, 3], [1, -8, 0, 3]] },
+    upperLegR: { keys: [[0, 8, 0, -3], [0.30, 16, 0, -3], [0.58, -14, 0, -3], [1, 8, 0, -3]] },
+    lowerLegL: { keys: [[0, 12, 0, 0], [0.30, 26, 0, 0], [0.58, 8, 0, 0], [1, 12, 0, 0]] },
+    lowerLegR: { keys: [[0, 14, 0, 0], [0.30, 6, 0, 0], [0.58, 24, 0, 0], [1, 14, 0, 0]] },
+  }, { loop: false }));
+
   /* ---------------------------------------------------------
      IDLE — standing, but never still. It sways over its feet,
      breathes at the shoulders and the hands drift.
