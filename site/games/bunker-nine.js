@@ -5933,7 +5933,7 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
      watched an empty room. You cannot see the shells go in if you cannot
      see the gun. It lifts to where the hands are working and rolls
      inboard so the breech faces the camera, then settles back. */
-  const rl = P.reloading > 0 ? Math.sin(Math.min(1, 1 - P.reloading / spec.reload) * Math.PI) : 0;
+  const rl = P.reloading > 0 ? Math.sin(Math.min(1, 1 - P.reloading / (P.reloadMax || spec.reload)) * Math.PI) : 0;
   const dip = -rl * 0.098;
   const drawIn = rl * 0.052;
   const rollIn = rl * 18;
@@ -6145,7 +6145,7 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
   if (spec.reloadKind === 'break' && v.swing) {
     let open = 0;
     if (P.reloading > 0) {
-      const u = 1 - P.reloading / spec.reload;
+      const u = 1 - P.reloading / (P.reloadMax || spec.reload);
       open = u < 0.17 ? u / 0.17 : (u < 0.70 ? 1 : Math.max(0, 1 - (u - 0.70) / 0.20));
       /* A stage counter that only ever goes up.
 
@@ -6184,7 +6184,7 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
       // Cocking handle: thrown back and released on the last beat. The
       // throw is the model's own, along the axis its tube actually runs.
       const t = P.reloading > 0 && P.reloadStage >= 2
-        ? Math.sin(Math.min(1, Math.max(0, 1 - P.reloading / spec.reload - 0.70) / 0.18) * Math.PI) : 0;
+        ? Math.sin(Math.min(1, Math.max(0, 1 - P.reloading / (P.reloadMax || spec.reload) - 0.70) / 0.18) * Math.PI) : 0;
       const R = v.boltRest, T = v.boltThrow;
       v.bolt.setPosition([R[0] + T[0] * t, R[1] + T[1] * t, R[2] + T[2] * t]);
     }
@@ -6197,7 +6197,7 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
   if (spec.reloadKind === 'clip' && v.clip && v.bolt) {
     const R = v.boltRest, T = v.boltThrow || [-0.038, 0, 0];
     if (P.reloading > 0) {
-      const u = 1 - P.reloading / spec.reload;
+      const u = 1 - P.reloading / (P.reloadMax || spec.reload);
       const back = u < 0.22 ? u / 0.22 : (u < 0.80 ? 1 : 1 - (u - 0.80) / 0.20);
       v.bolt.setPosition([R[0] + T[0] * back, R[1] + T[1] * back, R[2] + T[2] * back]);
       /* Where the clip IS is not decided here any more.
@@ -6253,7 +6253,7 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
      the reason every other stage counter in this file exists. */
   if (spec.reloadKind === 'belt' && v.cover) {
     if (P.reloading > 0) {
-      const u = 1 - P.reloading / spec.reload;
+      const u = 1 - P.reloading / (P.reloadMax || spec.reload);
       const seg = (a, b) => Math.max(0, Math.min(1, (u - a) / (b - a)));
       const ease = (t) => t * t * (3 - 2 * t);
       // Cocking handle: back hard, forward under spring. Twice.
@@ -6311,7 +6311,7 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
   if (spec.reloadKind === 'cell' && v.cell) {
     const CP = v.cellParts || [v.cell], R = v.cellRest || [0, 0, 0], D = v.cellDrop || [0, -0.15, 0];
     if (P.reloading > 0) {
-      const u = 1 - P.reloading / spec.reload;
+      const u = 1 - P.reloading / (P.reloadMax || spec.reload);
       const outAmt = u < 0.26 ? u / 0.26 : (u < 0.62 ? 1 : Math.max(0, 1 - (u - 0.62) / 0.24));
       for (const c of CP) {
         c.setPosition([R[0] + D[0] * outAmt, R[1] + D[1] * outAmt, R[2] + D[2] * outAmt]);
@@ -6348,7 +6348,7 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
       || kind === 'break' || kind === 'revolver' || kind === 'belt';
     let ox = 0, oy = 0, oz = 0, propT = -1;
     if (P.reloading > 0 && carries) {
-      const u = 1 - P.reloading / spec.reload;
+      const u = 1 - P.reloading / (P.reloadMax || spec.reload);
       /* Four beats: away from the gun, out of shot, back with the load,
          and home. Smoothed, because a hand that moves linearly between
          poses reads as a lift rather than as an arm. */
@@ -6611,7 +6611,7 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
        sideways and calling that a swing is the usual shortcut, and it
        reads as the cylinder falling off the gun. */
     if (P.reloading > 0) {
-      const u = 1 - P.reloading / spec.reload;      // 0 at the start, 1 done
+      const u = 1 - P.reloading / (P.reloadMax || spec.reload);      // 0 at the start, 1 done
       const outAmt = u < 0.20 ? u / 0.20 : (u < 0.78 ? 1 : 1 - (u - 0.78) / 0.22);
       const ang = -1.08 * outAmt;                   // radians, out to the left
       const c = Math.cos(ang), sn = Math.sin(ang);
@@ -6766,7 +6766,7 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
   if (v.arms && v.arms.lFingers) {
     let open = 0;
     if (P.reloading > 0 && spec.reload) {
-      const done = 1 - P.reloading / spec.reload;
+      const done = 1 - P.reloading / (P.reloadMax || spec.reload);
       const win = RELOAD_WINDOW[spec.reloadKind] || [0.15, 0.65];
       /* Open early and hold it open until the load is in the hand, rather
          than peaking for one frame at the window's edge and collapsing.
@@ -7493,8 +7493,26 @@ function tryReload(P, sfx, S) {
   const spec = P.spec();
   const am = P.ammoFor(P.equipped());
   if (spec.melee || P.reloading > 0 || am.mag >= spec.mag || am.reserve <= 0) return;
-  // Adrenaline works the hands as well as the legs.
-  P.reloading = spec.reload / (P.perks.adrenaline ? 2 : 1);
+  /* Adrenaline works the hands as well as the legs.
+   *
+   * And the animation has to be told, or it plays the wrong half.
+   *
+   * Every reload animation in this game is driven off
+   *     u = 1 - P.reloading / (P.reloadMax || spec.reload)
+   * -- a clean 0 to 1 across the reload, which is exactly right and is
+   * why a drum magazine that makes the reload 45 per cent longer
+   * stretches the hands to match instead of finishing early and waiting.
+   * But this line halves the CLOCK without halving the divisor, so with
+   * Adrenaline u starts at 1 - 0.5 = 0.5: every reload in the game began
+   * at its own halfway point. The magazine never left the well, the hand
+   * appeared already returning, and the round that made it possible was
+   * never on screen. It is the one perk in the game you keep for the
+   * whole run, so most of a run was reloading like that.
+   *
+   * The duration is kept beside the clock and every one of the twenty
+   * sites normalises by that. */
+  P.reloadMax = spec.reload / (P.perks.adrenaline ? 2 : 1);
+  P.reloading = P.reloadMax;
   /* Staged, so the hands do the job in order rather than dipping for a
      second and coming up full: release the catch, the old magazine falls
      clear, the fresh one goes in, and the slide runs forward on it. */
@@ -7535,7 +7553,17 @@ const ZOMBIE_SKIN = { color: 0x8d9c78, texture: 'skin', roughness: 0.88, metalne
 /* The male looks, cycled through the pool so a horde is mixed rather than
    four copies of one man. 'walker' is the imported body; the rest dress the
    procedural one. */
-const MALE_LOOKS = ['walker', 'street', 'college', 'prison'];
+/* Seven now, not four. Four looks over thirteen bodies meant three or
+   four of every man in the room were dressed identically, and the shirt
+   is more of a silhouette than the face is. The colours are nudged per
+   body on top of this, so two conscripts are not the same conscript. */
+const MALE_LOOKS = ['walker', 'street', 'college', 'prison',
+  'mechanic', 'farmer', 'conscript'];
+
+/* And the light frame, which had none of its own at all -- every woman
+   in the horde wore the procedural garment because the outfit list was
+   written for the male build. */
+const LIGHT_LOOKS = ['medic', 'street', 'college'];
 
 /* The heavy build in uniform. A sheriff was carrying something; an officer
    was not, which is the whole difference between them for the player. */
@@ -8020,11 +8048,16 @@ function buildPooledZombie(game, S, i) {
      into one mesh, and three dressed variants of the procedural body.
      Anything with a model skips the procedural garment, blood and head
      layers entirely — it already has them. */
-  const look = body.id === 'male' ? MALE_LOOKS[(i / BODY_TYPES.length | 0) % MALE_LOOKS.length] : null;
+  const cyc = (i / BODY_TYPES.length | 0);
+  const look = body.id === 'male' ? MALE_LOOKS[cyc % MALE_LOOKS.length] : null;
   // The heavy build turns up in uniform: half sheriffs, half officers.
-  const heavyLook = body.id === 'heavy' ? HEAVY_LOOKS[(i / BODY_TYPES.length | 0) % HEAVY_LOOKS.length] : null;
+  const heavyLook = body.id === 'heavy' ? HEAVY_LOOKS[cyc % HEAVY_LOOKS.length] : null;
+  /* The light build had no outfit list of its own, so every woman in the
+     horde came out in the untailored procedural garment while the men
+     were dressed. */
+  const lightLook = body.id === 'female' ? LIGHT_LOOKS[cyc % LIGHT_LOOKS.length] : null;
   const model = look === 'walker' && WALKER ? WALKER : null;
-  const outfit = heavyLook || (look && look !== 'walker' ? look : null);
+  const outfit = heavyLook || lightLook || (look && look !== 'walker' ? look : null);
   const a = game.character({
     model, outfit,
     at: [200 + i * 4, -38, 0],
@@ -12168,7 +12201,7 @@ function start(opts = {}) {
 
       if (P.reloading > 0) {
         const spec = P.spec();
-        const prog = 1 - P.reloading / spec.reload;
+        const prog = 1 - P.reloading / (P.reloadMax || spec.reload);
         const v = P.view[P.equipped()];
         /* The stages every reload passes through — but only a box magazine
            actually drops a magazine and runs a slide. This block used to do

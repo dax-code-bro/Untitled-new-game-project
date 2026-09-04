@@ -11008,6 +11008,51 @@ const ZOMBIE_BUILDS = {
  * Cached on frame and girth, because the geometry builders ask for it
  * once per mesh and a character is four meshes.
  */
+
+/* No two of them in the same clothes.
+ *
+ * A crowd of ten in `street` was ten identical shirts, which is the
+ * single loudest thing that says "this is one model repeated" -- louder
+ * than the faces, because the shirt is most of the silhouette. Every
+ * colour in an outfit is nudged per body: value up or down by up to a
+ * fifth, and hue by a little, off the same seed that varies the face
+ * and the wounds. Clothes that came off different people and have been
+ * worn since.
+ *
+ * Keyed and cached on outfit and seed, because the cloth mesh is built
+ * once per body and asks for this once.
+ */
+const _jitterCache = new Map();
+function jitterOutfit(outfit, name, seed) {
+  if (!outfit) return outfit;
+  const key = name + ':' + seed;
+  let out = _jitterCache.get(key);
+  if (out) return out;
+  const rng = new Rng((seed || 3) * 977 + 41);
+  const tint = (c) => {
+    if (c == null) return c;
+    let r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255;
+    // One value shift for the whole garment, so a shirt does not turn
+    // into a tie-dye -- plus a small independent nudge per channel.
+    const v = rng.range(0.82, 1.18);
+    r = Math.max(0, Math.min(255, Math.round(r * v * rng.range(0.94, 1.06))));
+    g = Math.max(0, Math.min(255, Math.round(g * v * rng.range(0.94, 1.06))));
+    b = Math.max(0, Math.min(255, Math.round(b * v * rng.range(0.94, 1.06))));
+    return (r << 16) | (g << 8) | b;
+  };
+  const piece = (o) => (o ? Object.assign({}, o, { color: tint(o.color),
+    sole: o.sole != null ? tint(o.sole) : undefined,
+    brim: o.brim != null ? tint(o.brim) : undefined }) : o);
+  out = Object.assign({}, outfit, {
+    top: piece(outfit.top), under: piece(outfit.under), bottom: piece(outfit.bottom),
+    shoes: piece(outfit.shoes), hat: piece(outfit.hat),
+    belt: outfit.belt != null ? tint(outfit.belt) : undefined,
+    badge: outfit.badge,        // a badge is a badge; it is issued, not worn in
+  });
+  _jitterCache.set(key, out);
+  return out;
+}
+
 const _girthCache = new Map();
 function buildAtGirth(name, girth) {
   const base = ZOMBIE_BUILDS[name] || ZOMBIE_BUILDS.male;
@@ -11293,6 +11338,39 @@ const OUTFITS = {
     hat: { color: 0x4b4f3c, brim: 0x2b2e22 }, wire: false,
     badge: 0xb8b2a0, belt: 0x2a221c,
   },
+  /* Z=4. The depot mechanic, still in what he worked in. */
+  mechanic: {
+    top: { color: 0x2a3644, collar: 0.512, hem: -0.068, sleeve: 0.62, tears: 0.055 },
+    under: { color: 0x8e8a80, collar: 0.500, hem: -0.06 },
+    bottom: { color: 0x2a3644, hem: 0.99, tears: 0.06, knees: true },
+    shoes: { kind: 'boot', color: 0x241d18 },
+    hat: null, wire: false, belt: 0x1a1512,
+  },
+  /* Z=5. Whoever was on the ward when it came through. */
+  medic: {
+    top: { color: 0xa8a69f, collar: 0.518, hem: -0.100, sleeve: 0.90, tears: 0.07 },
+    under: { color: 0x3d5560, collar: 0.500, hem: -0.09 },
+    bottom: { color: 0x2f3238, hem: 0.99, tears: 0.05 },
+    shoes: { kind: 'sneaker', color: 0x6a6760, sole: 0x8e8b84 },
+    hat: null, wire: false,
+  },
+  /* Z=6. Off the land, and dressed for it. */
+  farmer: {
+    top: { color: 0x5c4a2a, collar: 0.508, hem: -0.052, sleeve: 0.40, tears: 0.06 },
+    under: { color: 0x9a9488, collar: 0.498, hem: -0.05 },
+    bottom: { color: 0x35424e, hem: 0.99, tears: 0.075, knees: true },
+    shoes: { kind: 'boot', color: 0x2e2118 },
+    hat: { color: 0x4a3c22, brim: 0x352b18 }, wire: false,
+  },
+  /* Z=7. A conscript. Neither army wants him back. */
+  conscript: {
+    top: { color: 0x38402c, collar: 0.516, hem: -0.072, sleeve: 0.92, tears: 0.05 },
+    under: { color: 0x6a6a58, collar: 0.502, hem: -0.09 },
+    bottom: { color: 0x2f3526, hem: 0.99, tears: 0.055, knees: true },
+    shoes: { kind: 'boot', color: 0x1e1913 },
+    hat: null, wire: false, belt: 0x241d16,
+  },
+
   /* ---- the living ----
      ...
      The palette below was authored twice. The first pass used hexes at
@@ -12140,7 +12218,7 @@ function buildZombieClothGeometry(skeleton, opts = {}) {
   const build = buildAtGirth(opts.build, opts.girth);
   const rng = new Rng((opts.seed || 7) * 3 + 11);
 
-  const outfit = OUTFITS[opts.outfit] || null;
+  const outfit = jitterOutfit(OUTFITS[opts.outfit] || null, opts.outfit, opts.seed);
   g.part = PART.BODY;
   buildZombieGarment(g, build, rng, segments, outfit);
   if (outfit) {
