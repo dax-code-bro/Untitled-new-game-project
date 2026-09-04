@@ -91,6 +91,12 @@ function regionMul(region, spec) {
    listed in `bans`. */
 const ATTACH = {
   slots: ['mag', 'muzzle', 'barrel', 'optic', 'stock'],
+  /* Five slots, three parts. A gun with one of everything is a gun with
+     no decision behind it: every build ends up the same, and the parts
+     stop being worth their price because you were always going to own
+     all of them. Three out of five is a choice you have to make twice --
+     what to take, and what to give up to take it. */
+  maxFitted: 3,
   slotName: { mag: 'MAGAZINE', muzzle: 'MUZZLE', barrel: 'BARREL', optic: 'OPTIC', stock: 'STOCK' },
   parts: {
     /* --- magazines --- */
@@ -10495,6 +10501,15 @@ function makeHud() {
   #b9hud .bench .opt.sel { border-color:#ffd27a; background:rgba(255,210,122,.10); }
   #b9hud .bench .opt.fitted { color:#8ce8a0; }
   #b9hud .bench .opt.banned { color:#6b6455; }
+  /* The X. Two gradients drawn corner to corner across the row, in the
+     red the HUD already uses for "no". A line of grey text saying it
+     will not fit is something you have to read; this you see. */
+  #b9hud .bench .opt.crossed { position:relative; overflow:hidden; }
+  #b9hud .bench .opt.crossed:before, #b9hud .bench .opt.crossed:after {
+    content:''; position:absolute; left:-6%; right:-6%; top:50%; height:2px;
+    background:rgba(200,86,46,.72); pointer-events:none; }
+  #b9hud .bench .opt.crossed:before { transform:rotate(9.5deg); }
+  #b9hud .bench .opt.crossed:after { transform:rotate(-9.5deg); }
   #b9hud .bench .opt .why { color:#8a8272; font-size:12.5px; }
   #b9hud .bench .bfoot { margin-top:13px; padding-top:9px; border-top:1px solid #4a4234; color:#8a8272; font-size:13px; }
   /* The bench screen. The weapon is the real viewmodel, turned on the spot
@@ -10846,8 +10861,18 @@ function makeHud() {
         els.bench.style.display = 'block';
         els.bhead.textContent = `${state.weapon}  —  ${ATTACH.slotName[state.slot]}`;
         els.brow.innerHTML = state.options.map((o, i) => {
-          const cls = ['opt', i === state.index ? 'sel' : '', o.fitted ? 'fitted' : '', o.banned ? 'banned' : ''].join(' ');
+          /* A part you cannot have gets a great X drawn across the whole
+             row -- two lines corner to corner, not a word in grey you
+             have to read to find out. There are two reasons a row is
+             crossed and they say different things: `banned` is "not on
+             this weapon, ever", `full` is "not until you take something
+             else off", and the second one is your own doing so it says
+             so. */
+          const blocked = o.banned || o.full;
+          const cls = ['opt', i === state.index ? 'sel' : '', o.fitted ? 'fitted' : '',
+            blocked ? 'banned' : '', blocked ? 'crossed' : ''].join(' ');
           const right = o.banned ? 'will not fit this weapon'
+            : o.full ? `${state.maxFitted} parts already on it`
             : o.fitted ? 'FITTED  ·  [F] strip it off'
             : `${o.cost}`;
           const pros = (o.pros || []).map((t) => `<span style="color:#8ce8a0">+ ${t}</span>`).join('&nbsp; ');
@@ -10856,9 +10881,12 @@ function makeHud() {
             + (pros || cons ? `<br><span class="why">${pros} ${cons}</span>` : '')
             + `</span><span>${right}</span></div>`;
         }).join('');
+        const full = state.fitted >= state.maxFitted;
         els.bfoot.innerHTML = '<span style="color:#ffd27a">W / S</span> part &nbsp;&nbsp;'
           + '<span style="color:#ffd27a">F</span> fit or strip &nbsp;&nbsp;'
           + '<span style="color:#ffd27a">TAB</span> back &nbsp;&nbsp;&nbsp;'
+          + `<span style="color:${full ? '#c8562e' : '#8a8272'}">`
+          + `${state.fitted} of ${state.maxFitted} parts</span> &nbsp;&nbsp;&nbsp;`
           + `points <span style="color:#e8ddc8">${state.points}</span>`;
       } else {
         els.bench.style.display = 'none';
@@ -11736,17 +11764,26 @@ function start(opts = {}) {
         if (i.justPressed('p')) bench.preview = !bench.preview;
         bench.damage = i.down('shift') || pad.lt > 0.4 || !!S.testHold.damage;
 
+        /* How many parts are already on this weapon. A part that is
+           already fitted, or that would replace one that is, does not
+           count against the limit -- swapping a red dot for a thermal is
+           not a fourth part. */
+        const fittedCount = ATTACH.slots.reduce((n2, k2) => n2 + (fit[k2] ? 1 : 0), 0);
+        const slotTaken = !!fit[slot];
         const options = Object.entries(ATTACH.parts)
           .filter(([, q]) => q.slot === slot)
           .map(([id2, q]) => {
             const eff = attachEffects(held, id2);
+            const isFitted = fit[slot] === id2;
             return {
               id: id2, name: q.name, blurb: q.blurb, cost: q.cost,
-              fitted: fit[slot] === id2,
+              fitted: isFitted,
               banned: !!(q.bans && q.bans.includes(held)),
+              full: !isFitted && !slotTaken && fittedCount >= ATTACH.maxFitted,
               pros: eff.pros, cons: eff.cons,
             };
           });
+        bench.fittedCount = fittedCount;
         bench.index = Math.max(0, Math.min(bench.index, options.length - 1));
 
         if (!bench.picking && !bench.preview) {
@@ -11759,7 +11796,10 @@ function start(opts = {}) {
           if (i.justPressed('s') || i.justPressed('arrowdown')) bench.index = (bench.index + 1) % options.length;
           if (i.justPressed('f')) {
             const o = options[bench.index];
-            if (o && !o.banned) {
+            if (o && o.full) {
+              hud.banner('THREE PARTS IS THE LIMIT', '#c8562e');
+              sfx.dryFire();
+            } else if (o && !o.banned) {
               if (o.fitted) {
                 delete fit[slot];
                 S.addPoints(Math.round(ATTACH.parts[o.id].cost * 0.4));
@@ -11840,6 +11880,7 @@ function start(opts = {}) {
         }
         hud.bench({
           weapon: spec2.name, slot, options, index: bench.index, points: S.points,
+          fitted: bench.fittedCount, maxFitted: ATTACH.maxFitted,
           marks, preview: bench.preview, picking: bench.picking,
           camo: !!(P.upgraded && P.upgraded[held]),
           damage: bench.damage ? damageTable(spec2) : null,

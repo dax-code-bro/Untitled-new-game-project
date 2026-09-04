@@ -22725,11 +22725,16 @@ function makeZombieClips() {
     // it from the rest of them.
     head: { keys: [[0, -4, -8, 2], [0.3, -6, -3, -3], [0.6, -3, -10, 4], [1, -4, -8, 2]] },
 
-    // Left arm: clutched across the ribs, gripped, dead still bar the
-    // shudder the stride puts through it.
-    upperArmL: { keys: [[0, -62, 0, 42], [0.5, -66, 0, 45], [1, -62, 0, 42]] },
-    lowerArmL: { keys: [[0, -104, 0, 0], [0.5, -108, 0, 0], [1, -104, 0, 0]] },
-    handL: { keys: [[0, 14, 0, 0], [0.5, 10, 0, 0], [1, 14, 0, 0]] },
+    /* Left arm: clutched ACROSS the ribs, gripped, dead still bar the
+       shudder the stride puts through it.
+       Shoulder z is signed per side and it is easy to get backwards: on
+       the LEFT arm, negative z brings it across the body and positive z
+       pushes it away from the ribs (the idle hangs at -18). Written +42
+       first time, which held the arm out to the side like a man hailing
+       a bus. */
+    upperArmL: { keys: [[0, -58, 0, -50], [0.5, -62, 0, -54], [1, -58, 0, -50]] },
+    lowerArmL: { keys: [[0, -110, 0, 0], [0.5, -114, 0, 0], [1, -110, 0, 0]] },
+    handL: { keys: [[0, 16, 0, 0], [0.5, 12, 0, 0], [1, 16, 0, 0]] },
     // Right arm: a runner's swing, elbow at ninety.
     upperArmR: { keys: [[0, -46, 0, 12], [0.25, 14, 0, 10], [0.5, -52, 0, 12], [0.75, 18, 0, 10], [1, -46, 0, 12]] },
     lowerArmR: { keys: [[0, -84, 0, 0], [0.25, -62, 0, 0], [0.5, -88, 0, 0], [0.75, -60, 0, 0], [1, -84, 0, 0]] },
@@ -22761,14 +22766,17 @@ function makeZombieClips() {
     spine: { keys: [[0, 14, -26, 0], [0.30, 12, -40, 0], [0.58, 16, 38, 0], [1, 14, -26, 0]] },
     chest: { keys: [[0, 8, -20, 0], [0.30, 7, -34, 0], [0.58, 10, 32, 0], [1, 8, -20, 0]] },
     head: { keys: [[0, -6, -14, 0], [0.30, -4, -26, 0], [0.62, -8, 26, 0], [1, -6, -14, 0]] },
-    /* Held, then thrown out straight. The elbow opening from
-       -105 to -14 across a fifth of a second is where the speed
-       comes from -- the shoulder barely moves. */
-    upperArmL: { keys: [[0, -62, 0, 42], [0.30, -54, 0, 70], [0.46, -70, 0, 88],
-                        [0.62, -74, 0, 62], [0.82, -64, 0, 46], [1, -62, 0, 42]] },
-    lowerArmL: { keys: [[0, -104, 0, 0], [0.30, -96, 0, 0], [0.48, -14, 0, 0],
-                        [0.66, -22, 0, 0], [1, -104, 0, 0]] },
-    handL: { keys: [[0, 14, 0, 0], [0.44, -16, 0, 0], [0.66, 8, 0, 0], [1, 14, 0, 0]] },
+    /* Held across the chest, wound a little further across, then thrown
+       all the way round and out. The shoulder sweeps 140 degrees of z
+       -- from -66 (hand at the far shoulder) to +74 (arm out past the
+       target) -- while the elbow opens from -114 to -12 in a fifth of a
+       second, and that is where the speed comes from. */
+    upperArmL: { keys: [[0, -58, 0, -50], [0.28, -62, 0, -66], [0.46, -80, 0, 8],
+                        [0.58, -84, 0, 62], [0.70, -78, 0, 74], [0.86, -66, 0, 6],
+                        [1, -58, 0, -50]] },
+    lowerArmL: { keys: [[0, -110, 0, 0], [0.28, -104, 0, 0], [0.48, -12, 0, 0],
+                        [0.66, -20, 0, 0], [0.86, -70, 0, 0], [1, -110, 0, 0]] },
+    handL: { keys: [[0, 16, 0, 0], [0.44, -18, 0, 0], [0.66, 10, 0, 0], [1, 16, 0, 0]] },
     upperArmR: { keys: [[0, -46, 0, 12], [0.30, -20, 0, 26], [0.58, -66, 0, 8], [1, -46, 0, 12]] },
     lowerArmR: { keys: [[0, -84, 0, 0], [0.30, -60, 0, 0], [0.58, -92, 0, 0], [1, -84, 0, 0]] },
     upperLegL: { keys: [[0, -8, 0, 3], [0.30, -18, 0, 3], [0.58, 10, 0, 3], [1, -8, 0, 3]] },
