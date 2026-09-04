@@ -3723,8 +3723,16 @@ function buildMap(game, S) {
    * beneath it never got one, so it hung nose-on and the only part of it
    * you could see was the barrel, end on, standing up like a pipe. That
    * is the report exactly: through the wall, and not recognisably the
-   * gun the prompt names. */
-  const remChalk = makeRemington(game, { at: [SD.x0 + 0.16, 1.55, -3.4], chalk: true });
+   * gun the prompt names.
+   *
+   * Turning it created a second problem, because a gun that used to be
+   * 90 mm of wall now needs a metre of it. At z -3.4 the butt ran 180 mm
+   * into the fuse panel that lives at z -3.30 to -2.70, so the stock
+   * came out of the front of the box. The clear run of this wall is from
+   * the corner at z -5.00 to the edge of that panel at -3.30, which is
+   * 1.68 m for a rifle 0.97 m long; centred in it the rifle spans -4.64
+   * to -3.68, a clear 380 mm from the panel and 360 mm from the corner. */
+  const remChalk = makeRemington(game, { at: [SD.x0 + 0.16, 1.55, -3.96], chalk: true });
   remChalk.root.setRotation([0, 90, 0]);
   const mgChalk = makeMG42(game, { at: [4.2, R.y1 + 0.46, M.z0 + 0.14], chalk: true });
   void remChalk; void mgChalk;
@@ -3741,7 +3749,7 @@ function buildMap(game, S) {
     { id: 'scatter', at: [-6.3, 1.4, M.z0 + 0.3], weapon: 'scatter', label: 'Scattergun' },
     { id: 'mp5', at: [SD.x0 + 0.5, 1.4, 0.6], weapon: 'mp5', label: 'MP5' },
     { id: 'paralyzer', at: [-4.4, R.y1 + 1.15, M.z0 + 0.5], weapon: 'paralyzer', label: 'Paralyzer' },
-    { id: 'remington', at: [SD.x0 + 0.5, 1.4, -3.4], weapon: 'remington', label: 'Remington 700' },
+    { id: 'remington', at: [SD.x0 + 0.5, 1.4, -3.96], weapon: 'remington', label: 'Remington 700' },
     { id: 'mg42', at: [4.2, R.y1 + 1.15, M.z0 + 0.5], weapon: 'mg42', label: 'MG 42' },
   ];
   void mp5Chalk; void paraChalk;
