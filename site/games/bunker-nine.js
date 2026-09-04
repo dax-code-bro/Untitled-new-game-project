@@ -811,15 +811,26 @@ function buildPerkMachine(game, S, id, def, at, yaw = 0) {
   // Shoulders and a sloped top, so it is not a fridge.
   box([0, 1.62, 0], [0.80, 0.06, 0.68], steel, false);
   box([0, 1.70, -0.06], [0.80, 0.12, 0.50], steel, false);
-  // Header sign, lit, with the name across it.
+  /* Header sign, lit, with the name across it.
+   *
+   * The pixel size is a ceiling, not a setting. Every glyph is 5 wide on
+   * a 6 pixel advance, so a word of n letters is 6n-1 pixels; at the old
+   * fixed 13.5 mm that is 797 mm for ADRENALINE across a sign 700 mm
+   * wide, and the first and last letters hung 48 mm off either end into
+   * the cabinet's dark shoulder. Fit to the sign instead and no name can
+   * ever overrun it: SUPER, SOLDIER, DEFLECT, SHIELD and UP all come in
+   * under the cap and are unchanged; only ADRENALINE steps down, to
+   * 11.2 mm, which still stands 78 mm tall in a 220 mm band. */
   const words = def.name.split(' ');
-  box([0, 1.44, 0.33], [0.70, 0.22, 0.034], lit, false);
+  const SIGN_W = 0.70, MARGIN = 0.02;
+  const fit = (word, cap) => Math.min(cap, (SIGN_W - 2 * MARGIN) / (word.length * 6 - 1));
+  box([0, 1.44, 0.33], [SIGN_W, 0.22, 0.034], lit, false);
   for (const a of writeText(game, words[0], put(0, 1.44, 0.355), RIGHT, UP,
-    { px: 0.0135, material: { color: 0x07080a, texture: 'smooth', roughness: 0.8 } })) parts.push(a);
+    { px: fit(words[0], 0.0135), material: { color: 0x07080a, texture: 'smooth', roughness: 0.8 } })) parts.push(a);
   if (words[1]) {
-    box([0, 1.22, 0.33], [0.70, 0.18, 0.034], lit, false);
+    box([0, 1.22, 0.33], [SIGN_W, 0.18, 0.034], lit, false);
     for (const a of writeText(game, words[1], put(0, 1.22, 0.355), RIGHT, UP,
-      { px: 0.0115, material: { color: 0x07080a, texture: 'smooth', roughness: 0.8 } })) parts.push(a);
+      { px: fit(words[1], 0.0115), material: { color: 0x07080a, texture: 'smooth', roughness: 0.8 } })) parts.push(a);
   }
   /* The window, its frame, and what is behind it.
      Nothing here is under 26 mm in any axis. A pane of glass is 6 mm in
@@ -4112,11 +4123,28 @@ function buildMap(game, S) {
      built facing north has its front in the concrete. Deflect was exactly
      that: window, lettering and dispensing slot pressed into the wall,
      blank back to the room. */
+  /* Standing OFF the wall reads as standing the wrong way round.
+   *
+   * All four faced correctly and all four floated: Deflect 0.94 m off the
+   * south wall, Adrenaline 0.79 off the west, Shield Up 0.59, Super
+   * Soldier 0.49 off the parapet. A vending machine with a metre of open
+   * floor behind it is not against anything, and the side you see walking
+   * up to it is its blank black flank -- which is exactly what a machine
+   * turned the wrong way looks like.
+   *
+   * Deflect was the worst of them because it was also 0.90 m off the EAST
+   * wall, closer to that one than to the wall it faced away from, so from
+   * most of the room it read as an east-wall machine standing sideways.
+   * It moves 0.50 m west as well, out of the corner, so there is no
+   * question which wall it belongs to.
+   *
+   * The deepest part of the cabinet is the shoulder at 0.68, so 0.34 back
+   * from the origin; each one is placed to leave 40 mm of shadow gap. */
   const PERK_SPOTS = [
-    ['supersoldier', [2.2, R.y1, -6.2], 0],     // roof by the stair head, facing in
-    ['adrenaline', [-14.9, 0, 3.6], 90],        // wing past the generator, facing east
-    ['deflect', [6.1, 0, 5.7], 180],            // south wall, facing back into the room
-    ['shieldup', [-6.0, 0, -6.1], 0],           // north wall, facing in
+    ['supersoldier', [2.2, R.y1, -6.62], 0],    // roof, back to the north parapet
+    ['adrenaline', [-15.62, 0, 3.6], 90],       // wing, back to the west wall
+    ['deflect', [5.6, 0, 6.62], 180],           // main room, back to the south wall
+    ['shieldup', [-6.0, 0, -6.62], 0],          // main room, back to the north wall
   ];
   S.perkStations = PERK_SPOTS.map(([id, at, yaw]) => buildPerkMachine(game, S, id, PERKS[id], at, yaw));
 
