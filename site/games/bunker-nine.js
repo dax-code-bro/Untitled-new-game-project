@@ -11126,9 +11126,13 @@ function makeHud() {
           + '</p><dl>'
           + rows.map(([k, t]) => `<dt>${k}</dt><dd>${t}</dd>`).join('')
           + '</dl>'
-          + '<div class="pad">Controller<br><b>' + (state.picking ? 'Stick ↑↓' : 'Stick ←→')
-          + '</b> move &nbsp; <b>X</b> ' + (state.picking ? 'fit' : 'open')
-          + '<br><b>R2</b> damage &nbsp; <b>◯</b> back</div>';
+          /* This panel claimed a stick that was not read and an X that
+             did nothing. Both are true now, and it names the buttons the
+             rest of the game uses rather than a second layout. */
+          + '<div class="pad">Controller<br><b>' + (state.picking ? 'Stick / D-pad ↑↓' : 'Stick / D-pad ←→')
+          + '</b> move &nbsp; <b>A</b> ' + (state.picking ? 'fit or strip' : 'open the slot')
+          + '<br><b>B</b> back &nbsp; <b>Y</b> preview &nbsp; <b>LB / RB</b> turn'
+          + '<br><b>LT</b> damage' + (state.camo ? ' &nbsp; <b>X</b> camo' : '') + '</div>';
       }
 
       // The damage diagram, on a hold.
@@ -11957,14 +11961,54 @@ function start(opts = {}) {
         const fit = P.fitted[held] || (P.fitted[held] = {});
         const slot = ATTACH.slots[bench.slot];
 
+        /* ---- and on a pad ----
+         *
+         * The engine folds a standard pad's d-pad onto the arrow keys and
+         * its face buttons onto space and x, which is enough to MOVE
+         * around this screen and not enough to do anything on it: fit,
+         * leave, preview, turn and camo were all keys with no button
+         * behind them. A menu you can walk around and cannot act in is
+         * the worst of the two, because it looks like it works.
+         *
+         * A for fit, B for back, Y for preview, X for camo, the bumpers
+         * to turn it, and the left trigger for the damage table -- which
+         * is the layout every other screen in the game already uses, so
+         * there is nothing new to learn at the bench. */
+        const padFit = pad.pressed.a;
+        const padBack = pad.pressed.b;
+        const padPrev = pad.pressed.y;
+        const padCamo = pad.pressed.x;
+        const padTurn = (pad.buttons.lb ? -1 : 0) + (pad.buttons.rb ? 1 : 0);
+
+        /* And the left stick, which the panel has been claiming works for
+           some time. The engine folds the D-PAD onto the arrow keys; the
+           stick it folds onto the movement axes, which is what you want
+           while walking and nothing at all while reading a list. Held
+           direction with a repeat -- a third of a second to the first,
+           then eight a second, the same as every list in the front end.
+           Edge-detected off `bench.stickWas`, so a held stick does not
+           run the cursor off the end of the list in one frame. */
+        const sVert = Math.abs(pad.ly) > 0.5 ? (pad.ly > 0 ? 1 : -1) : 0;
+        const sHoriz = Math.abs(pad.lx) > 0.5 ? (pad.lx > 0 ? 1 : -1) : 0;
+        const sDir = bench.picking ? sVert : sHoriz;
+        let stickStep = 0;
+        if (sDir !== (bench.stickWas || 0)) {
+          bench.stickWas = sDir;
+          bench.stickT = 0.34;
+          stickStep = sDir;
+        } else if (sDir) {
+          bench.stickT = (bench.stickT || 0) - dt;
+          if (bench.stickT <= 0) { bench.stickT = 0.125; stickStep = sDir; }
+        }
+
         /* Turning it. The weapon on the bench is the real viewmodel, pushed
            out to arm's length and spun on the spot, so what you are looking
            at is exactly what you will be holding — including every
            attachment, because they are the same actors. */
-        const turn = (i.down('q') || i.down('a') ? -1 : 0) + (i.down('e') || i.down('d') ? 1 : 0);
+        const turn = (i.down('q') || i.down('a') ? -1 : 0) + (i.down('e') || i.down('d') ? 1 : 0) + padTurn;
         if (bench.preview || bench.picking) bench.spin += turn * dt * 2.2;
         else if (!bench.picking) bench.spin += turn * dt * (bench.preview ? 2.2 : 0);
-        if (i.justPressed('p')) bench.preview = !bench.preview;
+        if (i.justPressed('p') || padPrev) bench.preview = !bench.preview;
         bench.damage = i.down('shift') || pad.lt > 0.4 || !!S.testHold.damage;
 
         /* How many parts are already on this weapon. A part that is
@@ -11991,13 +12035,13 @@ function start(opts = {}) {
 
         if (!bench.picking && !bench.preview) {
           // Choosing which slot to work on.
-          if (i.justPressed('a') || i.justPressed('arrowleft')) { bench.slot = (bench.slot + ATTACH.slots.length - 1) % ATTACH.slots.length; bench.index = 0; }
-          if (i.justPressed('d') || i.justPressed('arrowright')) { bench.slot = (bench.slot + 1) % ATTACH.slots.length; bench.index = 0; }
-          if (i.justPressed('f')) { bench.picking = true; sfx.buy(); }
+          if (i.justPressed('a') || i.justPressed('arrowleft') || stickStep < 0) { bench.slot = (bench.slot + ATTACH.slots.length - 1) % ATTACH.slots.length; bench.index = 0; }
+          if (i.justPressed('d') || i.justPressed('arrowright') || stickStep > 0) { bench.slot = (bench.slot + 1) % ATTACH.slots.length; bench.index = 0; }
+          if (i.justPressed('f') || padFit) { bench.picking = true; sfx.buy(); }
         } else if (bench.picking) {
-          if (i.justPressed('w') || i.justPressed('arrowup')) bench.index = (bench.index + options.length - 1) % options.length;
-          if (i.justPressed('s') || i.justPressed('arrowdown')) bench.index = (bench.index + 1) % options.length;
-          if (i.justPressed('f')) {
+          if (i.justPressed('w') || i.justPressed('arrowup') || stickStep < 0) bench.index = (bench.index + options.length - 1) % options.length;
+          if (i.justPressed('s') || i.justPressed('arrowdown') || stickStep > 0) bench.index = (bench.index + 1) % options.length;
+          if (i.justPressed('f') || padFit) {
             const o = options[bench.index];
             if (o && o.full) {
               hud.banner('THREE PARTS IS THE LIMIT', '#c8562e');
@@ -12024,14 +12068,14 @@ function start(opts = {}) {
 
         /* Camo, once the meteorite has been through the gun: you can put it
            back to how it left the factory and change your mind again. */
-        if (P.upgraded && P.upgraded[held] && i.justPressed('c')) {
+        if (P.upgraded && P.upgraded[held] && (i.justPressed('c') || padCamo)) {
           P.camoOff = P.camoOff || {};
           P.camoOff[held] = !P.camoOff[held];
           applyUpgradeLook(game, P, held);
           hud.banner(P.camoOff[held] ? 'ORIGINAL FINISH' : 'LAVA', '#ff7a2a');
         }
 
-        if (i.justPressed('tab') || i.justPressed('escape')) {
+        if (i.justPressed('tab') || i.justPressed('escape') || padBack) {
           if (bench.picking) bench.picking = false;
           else if (bench.preview) bench.preview = false;
           else closeBench(S, sfx);
