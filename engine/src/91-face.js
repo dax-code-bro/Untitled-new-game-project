@@ -735,3 +735,137 @@ function makeHeadGeometry(opts = {}) {
   bakeCavityAO(g, { radius: 0.052, strength: 0.95, floor: 0.22, samples: 900 });
   return g;
 }
+
+/* ============================================================
+   HAIR AND FACIAL HAIR
+
+   Built from the head's OWN surface, not from a second ellipsoid
+   dropped over it. The head is a sculpt -- squared cranium,
+   brow ridge, jaw planes -- and a smooth shell placed over it
+   floats off the temples and cuts through the occiput. Taking a
+   patch of the head's own triangles and pushing them out along
+   their normals gives a piece that hugs it exactly, at any size
+   and on any archetype, for nothing.
+
+   Regions are given in NORMALISED head coordinates -- u from
+   sole to crown of the head's own bounding box, w from back to
+   front -- so the same numbers are right for a fine female
+   skull and a heavy male one without a table per archetype.
+   ============================================================ */
+
+/* WHERE THINGS ARE ON A HEAD, in the head's own bounding box, chin at
+   0 and crown at 1. Got wrong the first time and worth writing down:
+   the face occupies the LOWER two thirds. A real hairline sits at about
+   0.70, the brow at 0.55, the eyes at 0.50, the nose tip at 0.42, the
+   mouth at 0.30 and the point of the chin at 0.05. The first pass cut
+   the hair at 0.43-0.55, which put the hairline across the eyebrows and
+   gave all ten of them a pale band over the brow where the edge of the
+   patch caught the light. */
+const HAIR_STYLES = {
+  bald:    null,
+  crop:    { cut: 0.760, back: 0.700, thick: 0.008 },   // shorn to the wood
+  short:   { cut: 0.735, back: 0.660, thick: 0.014 },
+  swept:   { cut: 0.715, back: 0.640, thick: 0.022, lean: 0.010 },
+  thick:   { cut: 0.700, back: 0.615, thick: 0.030 },
+  long:    { cut: 0.700, back: 0.420, thick: 0.030, fall: 0.055 },
+  tied:    { cut: 0.720, back: 0.580, thick: 0.020, knot: 0.075 },
+};
+
+/* Facial hair, as a region of the same surface.
+   `u` is height up the head, `w` is how far forward, and x is how far
+   off the centre line -- all normalised. `xMin` exists for chops: a
+   sideburn is a thing at the SIDE of a face, and a region with only an
+   upper x bound includes the middle of it, which is how the first pass
+   drew Hank a bar across the bridge of his nose. */
+const BEARD_STYLES = {
+  stubble:   { u: [0.04, 0.40], w: [0.40, 1.00], x: 0.62, thick: 0.004 },
+  moustache: { u: [0.295, 0.380], w: [0.72, 1.00], x: 0.22, thick: 0.011 },
+  goatee:    { u: [0.03, 0.345], w: [0.70, 1.00], x: 0.20, thick: 0.016 },
+  chops:     { u: [0.16, 0.52], w: [0.24, 0.68], xMin: 0.34, x: 0.82, thick: 0.014 },
+  full:      { u: [0.02, 0.40], w: [0.38, 1.00], x: 0.62, thick: 0.020 },
+  heavy:     { u: [0.00, 0.425], w: [0.32, 1.00], x: 0.66, thick: 0.032 },
+};
+
+/* One patch of a geometry, pushed out along its normals.
+   `keep(u, w, xn, i)` decides, per vertex, whether it is in. A
+   triangle is emitted when all three of its corners are. */
+function offsetPatch(src, keep, thick, warp) {
+  const P = src.positions, N = src.normals, I = src.indices;
+  let lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];
+  for (let i = 0; i < P.length; i += 3) {
+    for (let k = 0; k < 3; k++) {
+      if (P[i + k] < lo[k]) lo[k] = P[i + k];
+      if (P[i + k] > hi[k]) hi[k] = P[i + k];
+    }
+  }
+  const sy = Math.max(1e-6, hi[1] - lo[1]);
+  const sz = Math.max(1e-6, hi[2] - lo[2]);
+  const sx = Math.max(1e-6, hi[0] - lo[0]);
+  const n = P.length / 3;
+  const inside = new Uint8Array(n);
+  for (let v = 0; v < n; v++) {
+    const u = (P[v * 3 + 1] - lo[1]) / sy;
+    const w = (P[v * 3 + 2] - lo[2]) / sz;
+    const xn = Math.abs((P[v * 3] - lo[0]) / sx - 0.5) * 2;
+    inside[v] = keep(u, w, xn) ? 1 : 0;
+  }
+
+  const g = new Geometry();
+  const remap = new Int32Array(n).fill(-1);
+  for (let t = 0; t < I.length; t += 3) {
+    const a = I[t], b = I[t + 1], c = I[t + 2];
+    if (!inside[a] || !inside[b] || !inside[c]) continue;
+    for (const v of [a, b, c]) {
+      if (remap[v] < 0) {
+        remap[v] = g.positions.length / 3;
+        const px = P[v * 3], py = P[v * 3 + 1], pz = P[v * 3 + 2];
+        const nx = N[v * 3], ny = N[v * 3 + 1], nz = N[v * 3 + 2];
+        let ox = px + nx * thick, oy = py + ny * thick, oz = pz + nz * thick;
+        if (warp) {
+          const u = (py - lo[1]) / sy, w = (pz - lo[2]) / sz;
+          const d = warp(u, w);
+          ox += d[0]; oy += d[1]; oz += d[2];
+        }
+        g.positions.push(ox, oy, oz);
+        g.normals.push(nx, ny, nz);
+        g.uvs.push(src.uvs && src.uvs.length ? src.uvs[v * 2] : 0,
+          src.uvs && src.uvs.length ? src.uvs[v * 2 + 1] : 0);
+      }
+      g.indices.push(remap[v]);
+    }
+  }
+  if (!g.indices.length) return null;
+  g.finalize();
+  return g;
+}
+
+/* The hair on top. `style` is a key of HAIR_STYLES. */
+function makeHairGeometry(headGeo, style) {
+  const S = HAIR_STYLES[style];
+  if (!S) return null;
+  /* The cut line is not level. It sits lower at the back than at
+     the front, because a hairline does -- level all the way round
+     is a swimming cap. `back` is where it sits at the occiput and
+     `cut` where it sits at the brow, interpolated on w. */
+  const keep = (u, w) => u > (S.back + (S.cut - S.back) * w);
+  const warp = (S.fall || S.lean || S.knot) ? (u, w) => {
+    let dy = 0, dz = 0;
+    // Long hair hangs: the further down the back, the further it falls.
+    if (S.fall) { const b = Math.max(0, 0.55 - w) / 0.55; dy = -S.fall * b * b; dz = -S.fall * 0.35 * b; }
+    // A swept style has more of itself at the front.
+    if (S.lean) dz += S.lean * Math.max(0, w - 0.5) * 2;
+    // Tied back: a knot behind the crown.
+    if (S.knot && w < 0.28 && u > 0.62) dz -= S.knot;
+    return [0, dy, dz];
+  } : null;
+  return offsetPatch(headGeo, keep, S.thick, warp);
+}
+
+/* The beard, moustache, chops or stubble. */
+function makeBeardGeometry(headGeo, style) {
+  const S = BEARD_STYLES[style];
+  if (!S) return null;
+  const keep = (u, w, xn) => u > S.u[0] && u < S.u[1] && w > S.w[0] && w < S.w[1]
+    && xn < S.x && xn > (S.xMin || 0);
+  return offsetPatch(headGeo, keep, S.thick, null);
+}

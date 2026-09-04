@@ -1222,6 +1222,12 @@ const HEROES = {
        its own warmth and the subsurface term adds red on top, so these
        bases run cold -- a hex that looks grey here lands on skin. */
     look: { skin: 0xaba5a2, rough: 0.80, sleeve: 0x3a3c31, sleeveTex: 'fabric', sleeveRough: 0.97 }, // Soviet greatcoat wool, and eighty-five years of weather
+    /* Eighty-five, and still standing like a man at attention because he
+       has never been told to stand any other way. Heavy Soviet frame gone
+       thin at the shoulders, close grey crop, a moustache he has had
+       longer than most people here have been alive, and the greatcoat. */
+    body: { build: 1.02, height: 1.78, faceType: 'heavy', seed: 17, outfit: 'greatcoat', eyes: 0x5a6a72,
+      hair: 'crop', hairColor: 0x8f8b84, beard: 'moustache', beardColor: 0x9a958d },
     lines: {
       pick: ['I was told to hold this position. Nobody has told me otherwise.'],
       start: ['Another night. The night is not the problem.',
@@ -1266,6 +1272,11 @@ const HEROES = {
     voice: { base: 158, spread: 32, type: 'triangle', color: '#ffb066' },
     voiceBox: { pitch: 126, tract: 1.03, rasp: 0.16, breath: 0.08, rate: 5.4, swing: 0.17, say: { pitch: 0.92, rate: 1.02 } },
     look: { skin: 0x847c76, rough: 0.70, sleeve: 0x2f3a48, sleeveTex: 'fabric', sleeveRough: 0.90 }, // depot coveralls, oil into the weave
+    /* Built by twenty years of lifting things that were not designed to be
+       lifted. Depot coveralls with the oil worked into them, a full black
+       beard, hair tied back out of the way of the machinery. */
+    body: { build: 1.14, height: 1.76, faceType: 'heavy', seed: 23, outfit: 'coveralls', eyes: 0x3a2a1c,
+      hair: 'tied', hairColor: 0x1a1512, beard: 'full', beardColor: 0x171310 },
     lines: {
       pick: ['I fix things. Tonight I am fixing this.'],
       start: ['Okay. Okay. We can work with this.',
@@ -1308,6 +1319,11 @@ const HEROES = {
     voice: { base: 228, spread: 42, type: 'triangle', color: '#9fd8ff' },
     voiceBox: { pitch: 196, tract: 0.88, rasp: 0.08, breath: 0.12, rate: 5.6, swing: 0.20, say: { pitch: 1.24, rate: 1.05 } },
     look: { skin: 0x9d9691, rough: 0.72, sleeve: 0x54492f, sleeveTex: 'fabric', sleeveRough: 0.95 }, // canvas driving jacket
+    /* Long, rangy, and never in a hurry about anything. Canvas driving
+       jacket, hair swept back off a high forehead, three days of stubble
+       that has been three days of stubble for a month. */
+    body: { build: 0.94, height: 1.83, faceType: 'male', seed: 31, outfit: 'driver', eyes: 0x4a5a3c,
+      hair: 'swept', hairColor: 0x4a3a2a, beard: 'stubble', beardColor: 0x453629 },
     lines: {
       pick: ['I only came here for the fuel.'],
       start: ['Right. Let us be professional about this.',
@@ -1351,6 +1367,11 @@ const HEROES = {
     voice: { base: 272, spread: 50, type: 'sine', color: '#ffc0e0' },
     voiceBox: { pitch: 232, tract: 0.83, rasp: 0.05, breath: 0.30, rate: 6.4, swing: 0.30, say: { pitch: 1.42, rate: 1.16 } }, // nineteen, and frightened
     look: { skin: 0xb4aea9, rough: 0.62, sleeve: 0x6b3230, sleeveTex: 'fabric', sleeveRough: 0.98 }, // her father's flannel, far too big for her
+    /* Nineteen, small, and wearing a shirt cut for a man twice her size
+       because it was her father's. Long hair she has stopped tying back.
+       The only one here who does not look like she chose this. */
+    body: { build: 0.82, height: 1.63, faceType: 'female', seed: 5, outfit: 'flannel', eyes: 0x5a7a86,
+      hair: 'long', hairColor: 0x6a4426, beard: null },
     lines: {
       pick: ['I hid for two days. I am not hiding tonight.'],
       start: ['I have hunted before. This is not that. But it is closer than nothing.',
@@ -1393,6 +1414,11 @@ const HEROES = {
     voice: { base: 202, spread: 34, type: 'triangle', color: '#ff8a8a' },
     voiceBox: { pitch: 172, tract: 0.93, rasp: 0.14, breath: 0.07, rate: 4.9, swing: 0.12, say: { pitch: 1.10, rate: 0.96 } }, // forty, and steady
     look: { skin: 0x89827c, rough: 0.66, sleeve: 0x2b2b2e, sleeveTex: 'fabric', sleeveRough: 0.99 }, // hand wraps and nothing over them
+    /* Forty, and every kilogram of her is deliberate. Fighting kit and
+       nothing over it: wraps to the elbow, hair shorn to the wood so
+       there is nothing to grab. */
+    body: { build: 1.06, height: 1.72, faceType: 'female', seed: 41, outfit: 'fighter', eyes: 0x2e2018,
+      hair: 'crop', hairColor: 0x14100e, beard: null },
     lines: {
       pick: ['I have never lost a fight I understood. Let me understand this one.'],
       start: ['Footwork first. Everything else is footwork.',
@@ -1436,6 +1462,11 @@ const HEROES = {
     voice: { base: 116, spread: 24, type: 'square', color: '#c9a06a' },
     voiceBox: { pitch: 78, tract: 1.24, rasp: 0.34, breath: 0.05, rate: 4.2, swing: 0.10, say: { pitch: 0.52, rate: 0.88 } }, // the biggest chest in the room
     look: { skin: 0x9f9792, rough: 0.74, sleeve: 0x4a5560, sleeveTex: 'fabric', sleeveRough: 0.94 }, // work shirt, sleeves rolled past the elbow
+    /* The biggest thing in the bunker that is still on your side. Work
+       shirt with the sleeves rolled past the elbow, a neck that does not
+       narrow, and chops down both sides of a face that enjoys this. */
+    body: { build: 1.34, height: 1.91, faceType: 'heavy', seed: 11, outfit: 'workshirt', eyes: 0x4a5f6a,
+      hair: 'short', hairColor: 0x3a2b1e, beard: 'chops', beardColor: 0x33261a },
     lines: {
       pick: ['Point me at it.'],
       start: ['Good. A small room and a lot of them. That suits me.',
@@ -1479,6 +1510,11 @@ const HEROES = {
     voice: { base: 130, spread: 22, type: 'sawtooth', color: '#a8d8b8' },
     voiceBox: { pitch: 94, tract: 1.20, rasp: 0.52, breath: 0.22, rate: 3.6, swing: 0.13, say: { pitch: 0.66, rate: 0.76 } }, // eighty, warm, weathered
     look: { skin: 0x544e4b, rough: 0.82, sleeve: 0x35291f, sleeveTex: 'fabric', sleeveRough: 0.97 }, // the winter trenchcoat he walked in wearing
+    /* Eighty, and he walked out of 1855 in a winter trenchcoat that has
+       been through both. Long grey hair, a heavy grey beard, and a coat
+       that reaches his boots. */
+    body: { build: 1.00, height: 1.80, faceType: 'male', seed: 53, outfit: 'trenchcoat', eyes: 0x2a1f16,
+      hair: 'long', hairColor: 0x746f68, beard: 'full', beardColor: 0x7d786f },
     lines: {
       pick: ['I walked through a door in a field and it was a hundred years later. So be it.'],
       start: ['I do not know the year and I do not know the enemy. I know the work.',
@@ -1522,6 +1558,11 @@ const HEROES = {
     voice: { base: 188, spread: 28, type: 'sine', color: '#b6a8ff' },
     voiceBox: { pitch: 138, tract: 0.99, rasp: 0.06, breath: 0.04, rate: 7.1, swing: 0.07, say: { pitch: 1.00, rate: 1.22 } }, // fast and level: nothing is a surprise
     look: { skin: 0xa8a29d, rough: 0.68, sleeve: 0x585c60, sleeveTex: 'fabric', sleeveRough: 0.88 }, // whatever was hanging in the laboratory
+    /* Two hundred and forty points of intelligence quotient and no
+       exercise at all. Narrow, slightly stooped, whatever was hanging in
+       the laboratory, and a goatee he is quite pleased with. */
+    body: { build: 0.86, height: 1.75, faceType: 'male', seed: 67, outfit: 'labcoat', eyes: 0x3f5a4a,
+      hair: 'thick', hairColor: 0x2b241d, beard: 'goatee', beardColor: 0x261f1a },
     lines: {
       pick: ['I have modelled this. The model says run. I am overruling the model.'],
       start: ['Four ingress points, one chokepoint, one elevated position. This is survivable.',
@@ -1568,6 +1609,11 @@ const HEROES = {
     voice: { base: 198, spread: 56, type: 'triangle', color: '#ffe08a' },
     voiceBox: { pitch: 154, tract: 0.95, rasp: 0.12, breath: 0.09, rate: 5.8, swing: 0.42, say: { pitch: 1.12, rate: 1.08 } }, // the pitch does the joking
     look: { skin: 0x99918c, rough: 0.70, sleeve: 0x5c2a34, sleeveTex: 'fabric', sleeveRough: 0.86 }, // a colour nobody else would have picked
+    /* Dressed, on purpose, in a colour nobody else would have picked, and
+       carrying it. Hair set and holding, clean-shaven, and standing as
+       though somebody is about to take a photograph. */
+    body: { build: 0.96, height: 1.74, faceType: 'female', seed: 73, outfit: 'burgundy', eyes: 0x4a2f24,
+      hair: 'swept', hairColor: 0x2e1f18, beard: null },
     lines: {
       pick: ['Marvellous. A small room, poor lighting, and an audience.'],
       start: ['I want it on record that I asked to be posted somewhere warm.',
@@ -1611,6 +1657,11 @@ const HEROES = {
     voice: { base: 142, spread: 38, type: 'square', color: '#ff9a5a' },
     voiceBox: { pitch: 108, tract: 1.10, rasp: 0.24, breath: 0.06, rate: 5.0, swing: 0.19, say: { pitch: 0.74, rate: 1.00 } },
     look: { skin: 0x79716c, rough: 0.69, sleeve: 0x2a211c, sleeveTex: 'plastic', sleeveRough: 0.44 }, // leather, and he knows it
+    /* Walks into rooms like the room has been waiting for him. Leather,
+       and he knows it. Thick dark hair, a moustache, and the shoulders to
+       go with the entrance. */
+    body: { build: 1.10, height: 1.81, faceType: 'male', seed: 89, outfit: 'leather', eyes: 0x241a12,
+      hair: 'thick', hairColor: 0x120e0b, beard: 'moustache', beardColor: 0x100c09 },
     lines: {
       pick: ['You picked right.'],
       start: ['Small room, bad odds, no way out. My kind of night.',
@@ -4528,6 +4579,154 @@ function makeRiotShield(game, opts = {}) {
   // The cracked one you take off the mini boss is smoked and scarred.
   if (opts.smoked) o.panelMaterial = { color: 0x6a6f74, texture: 'smooth', roughness: 0.42, metalness: 0, opacity: 0.62 };
   return rackGroup(game.riotShield(o));
+}
+
+/* ---------------- the one you are ----------------
+ *
+ * A first-person game shows you two forearms, so that is where the ten
+ * of them differed: skin and sleeve. Which is not a character, it is a
+ * swatch -- and it meant the ten names on the title card were ten names.
+ *
+ * Each of them is now a whole body, standing in front of you while you
+ * choose, built out of what the game already knows how to make:
+ *
+ *   FRAME. One of the four the body sculptor has, plus a girth. The four
+ *   are four PEOPLE and ten characters cannot be four people, so a
+ *   character names the frame it is nearest and a number for how much of
+ *   it there is -- Chrissy is a light frame at 0.82, Hank a heavy one at
+ *   1.34. Widths and limb radii scale; heights do not, because a wider
+ *   person is not a taller one.
+ *
+ *   FACE. The head sculptor's own archetype and a seed, so no two share
+ *   a skull, and `rot: 0` -- the decay term the dead are built with,
+ *   turned all the way off. The same sculptor, alive.
+ *
+ *   HAIR AND FACIAL HAIR. Cut out of that head's own surface and pushed
+ *   out along its normals, so a crop hugs the skull it is on rather than
+ *   a general one. Seven styles and six beards between them.
+ *
+ *   CLOTHES. Their own garment in the outfit table -- greatcoat,
+ *   coveralls, flannel, trenchcoat, lab coat -- built as one mesh with
+ *   per-vertex tints, which is the same one draw call the dead cost.
+ *
+ * Built lazily and kept: the first look at a character costs a couple of
+ * hundred milliseconds and every look after that is free. Ten of them
+ * only exist if you look at all ten.
+ */
+const HERO_STAGE = [0.5, 1.1, 1.95];      // 2.45 m in front of where you start
+
+function heroModel(game, S, id) {
+  S.heroModels = S.heroModels || {};
+  if (S.heroModels[id]) return S.heroModels[id];
+  const H = HEROES[id];
+  const B = (H && H.body) || {};
+  const L = (H && H.look) || {};
+  /* `zombie: true` with `rot: 0` is not a contradiction: that flag
+     selects the CLOTHED builder -- body, garment, head with a decay
+     term -- and rot is the decay. At zero it is a living person in
+     clothes, which is the thing this needs and the thing the living
+     path (a bare body and no garment at all) cannot make. */
+  const a = game.character({
+    at: HERO_STAGE, name: 'hero:' + id,
+    zombie: true, rot: 0, blood: false, face: 'static',
+    zombieBuild: B.faceType === 'female' ? 'female' : B.faceType === 'heavy' ? 'heavy' : 'male',
+    /* Damped. The four frames already carry most of the difference
+       between a light body and a heavy one -- the heavy build's torso is
+       nearly 30 per cent wider than the male one before any of this --
+       so a character's own number is applied at just over half strength.
+       At full strength Hank's 1.34 on top of the heavy frame produced a
+       slab with the arms lost inside it. */
+    girth: 1 + ((B.build || 1) - 1) * 0.55,
+    outfit: B.outfit, faceType: B.faceType || 'male', seed: B.seed || 5,
+    hair: B.hair, hairColor: B.hairColor, beard: B.beard, beardColor: B.beardColor,
+    height: B.height || 1.78,
+    skin: { color: L.skin || 0x9d9691, texture: 'skin',
+      roughness: L.rough != null ? L.rough : 0.72, metalness: 0, subsurface: 0.12 },
+    material: { color: L.skin || 0x9d9691, texture: 'skin',
+      roughness: L.rough != null ? L.rough : 0.72, metalness: 0, subsurface: 0.12 },
+    clothMaterial: { color: 0xffffff, texture: 'fabric', roughness: 0.95, metalness: 0, uvScale: 2.4 },
+  });
+  /* Eyes. The head sculptor leaves sockets and the dead get lit ones
+     put into them by hand; a living face with empty sockets is the one
+     thing that stops a character reading as a person. Same sockets,
+     same measurements -- a white, a coloured iris and a black pupil,
+     and nothing emissive, because these are alive. */
+  if (a.head && a.skeleton) {
+    const hb = a.skeleton.index('head');
+    const hs = a.head.scale.y;
+    const ho = a.head.localOffset;
+    const EX = 0.091 * 0.82, EY = 0.032, EZ = 0.2335;
+    const irisCol = B.eyes != null ? B.eyes : 0x4a3a24;
+    a.eyeParts = [];
+    for (const side of [-1, 1]) {
+      const bx = ho.x + side * EX * hs, by = ho.y + EY * hs, bz = ho.z + EZ * hs;
+      const mk = (r, col, dz, flat) => {
+        const q = game.sphere({ radius: r * hs / 0.389, physics: false,
+          material: { color: col, texture: 'smooth', roughness: 0.14, metalness: 0 } });
+        q.parent = a; q.parentBone = hb;
+        q.localOffset = new window.LE.Vec3(bx, by, bz + dz);
+        q.scale.z *= flat;
+        a.eyeParts.push(q);
+        return q;
+      };
+      mk(0.0104, 0xcfc8ba, 0, 0.34);          // the white
+      mk(0.0074, irisCol, 0.0018, 0.34);      // iris
+      mk(0.0034, 0x0d0906, 0.0030, 0.40);     // pupil
+    }
+  }
+  const b = a.controller.body;
+  b.gravityScale = 0;
+  b.isTrigger = true;
+  b.setPosition({ x: HERO_STAGE[0], y: HERO_STAGE[1], z: HERO_STAGE[2] });
+  if (a.animator) a.animator.play('idle', 0);
+  S.heroModels[id] = a;
+  return a;
+}
+
+function heroModelVisible(a, on) {
+  if (!a) return;
+  a.visible = on;
+  for (const k of ['head', 'cloth', 'blood', 'armor', 'hair', 'beard']) {
+    if (a[k]) a[k].visible = on;
+  }
+  for (const q of a.eyeParts || []) q.visible = on;
+}
+
+/* Show one and hide the rest. Turned slowly on the spot, because a
+   figure standing dead still in front of you reads as a mannequin and
+   the whole point is that it does not. */
+function showHeroModel(game, S, id) {
+  S.heroModels = S.heroModels || {};
+  for (const k in S.heroModels) heroModelVisible(S.heroModels[k], false);
+  if (S.started) return null;                 // once you are playing, nobody is on the stage
+  const a = heroModel(game, S, id);
+  heroModelVisible(a, true);
+  /* facing is the yaw the actor is given, and facing 0 is +Z -- the
+     controller derives it as atan2(dx, dz) from where it is walking, so
+     walking toward +Z is zero. The camera stands at z 4.30 looking down
+     -Z at a stage at z 1.95, so a character facing the camera faces +Z
+     and that is zero, not pi. Pi turned all ten of them round to face
+     the wall. */
+  a.controller.facing = 0;
+  return a;
+}
+
+function turnHeroModel(game, S, dt) {
+  if (S.started) return;
+  /* The first one is staged on the first FRAME rather than during
+     start-up. Building a character is a couple of hundred milliseconds
+     and start-up is the one place in this game where that is worth
+     something -- by the time the title card is on screen there is a
+     whole frame's worth of room for it. */
+  if (!S.heroStaged) {
+    S.heroStaged = true;
+    try { showHeroModel(game, S, S.heroId); } catch (e) { console.warn('hero model:', e.message); }
+  }
+  if (!S.heroModels) return;
+  const a = S.heroModels[S.heroId];
+  if (!a || !a.visible) return;
+  S.heroSpin = (S.heroSpin || 0) + dt * 0.30;
+  a.controller.facing = Math.sin(S.heroSpin) * 0.62;
 }
 
 /* ---------------- player ---------------- */
@@ -11412,6 +11611,8 @@ function start(opts = {}) {
     if (!HEROES[id]) return;
     S.heroId = id;
     applyHeroLook(game, P, S.hero());
+    // And put them on the stage in front of you, if you are still choosing.
+    try { showHeroModel(game, S, id); } catch (e) { console.warn('hero model:', e.message); }
   };
   /* And one way to flip a setting, for the same reason. Flipping the value
      is the small half of it; saving it and telling whatever the setting
@@ -11431,6 +11632,8 @@ function start(opts = {}) {
     if (S.started) return;
     S.started = true;
     hud.hideTitle();
+    // Off the stage: the room is a bunker again.
+    if (S.heroModels) for (const k in S.heroModels) heroModelVisible(S.heroModels[k], false);
     setTimeout(() => voice(LINES.intro, true), 900);
     S.roundStartAt = S.time + 5.2;   // game time, so tests and pauses behave
   };
@@ -12081,6 +12284,7 @@ function start(opts = {}) {
     updateRounds(game, S, P, hud, sfx, dt);
     for (const z of S.zombies) updateZombie(game, S, P, z, dt, sfx);
     updateCorpses(game, S, dt);
+    turnHeroModel(game, S, dt);
 
     /* Thrown bile in flight. Gravity, a splash on impact, and Deflect
        gets its own sound so the perk is audibly doing something. */

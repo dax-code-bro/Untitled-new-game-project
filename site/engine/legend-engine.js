@@ -8683,6 +8683,140 @@ function makeHeadGeometry(opts = {}) {
   return g;
 }
 
+/* ============================================================
+   HAIR AND FACIAL HAIR
+
+   Built from the head's OWN surface, not from a second ellipsoid
+   dropped over it. The head is a sculpt -- squared cranium,
+   brow ridge, jaw planes -- and a smooth shell placed over it
+   floats off the temples and cuts through the occiput. Taking a
+   patch of the head's own triangles and pushing them out along
+   their normals gives a piece that hugs it exactly, at any size
+   and on any archetype, for nothing.
+
+   Regions are given in NORMALISED head coordinates -- u from
+   sole to crown of the head's own bounding box, w from back to
+   front -- so the same numbers are right for a fine female
+   skull and a heavy male one without a table per archetype.
+   ============================================================ */
+
+/* WHERE THINGS ARE ON A HEAD, in the head's own bounding box, chin at
+   0 and crown at 1. Got wrong the first time and worth writing down:
+   the face occupies the LOWER two thirds. A real hairline sits at about
+   0.70, the brow at 0.55, the eyes at 0.50, the nose tip at 0.42, the
+   mouth at 0.30 and the point of the chin at 0.05. The first pass cut
+   the hair at 0.43-0.55, which put the hairline across the eyebrows and
+   gave all ten of them a pale band over the brow where the edge of the
+   patch caught the light. */
+const HAIR_STYLES = {
+  bald:    null,
+  crop:    { cut: 0.760, back: 0.700, thick: 0.008 },   // shorn to the wood
+  short:   { cut: 0.735, back: 0.660, thick: 0.014 },
+  swept:   { cut: 0.715, back: 0.640, thick: 0.022, lean: 0.010 },
+  thick:   { cut: 0.700, back: 0.615, thick: 0.030 },
+  long:    { cut: 0.700, back: 0.420, thick: 0.030, fall: 0.055 },
+  tied:    { cut: 0.720, back: 0.580, thick: 0.020, knot: 0.075 },
+};
+
+/* Facial hair, as a region of the same surface.
+   `u` is height up the head, `w` is how far forward, and x is how far
+   off the centre line -- all normalised. `xMin` exists for chops: a
+   sideburn is a thing at the SIDE of a face, and a region with only an
+   upper x bound includes the middle of it, which is how the first pass
+   drew Hank a bar across the bridge of his nose. */
+const BEARD_STYLES = {
+  stubble:   { u: [0.04, 0.40], w: [0.40, 1.00], x: 0.62, thick: 0.004 },
+  moustache: { u: [0.295, 0.380], w: [0.72, 1.00], x: 0.22, thick: 0.011 },
+  goatee:    { u: [0.03, 0.345], w: [0.70, 1.00], x: 0.20, thick: 0.016 },
+  chops:     { u: [0.16, 0.52], w: [0.24, 0.68], xMin: 0.34, x: 0.82, thick: 0.014 },
+  full:      { u: [0.02, 0.40], w: [0.38, 1.00], x: 0.62, thick: 0.020 },
+  heavy:     { u: [0.00, 0.425], w: [0.32, 1.00], x: 0.66, thick: 0.032 },
+};
+
+/* One patch of a geometry, pushed out along its normals.
+   `keep(u, w, xn, i)` decides, per vertex, whether it is in. A
+   triangle is emitted when all three of its corners are. */
+function offsetPatch(src, keep, thick, warp) {
+  const P = src.positions, N = src.normals, I = src.indices;
+  let lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];
+  for (let i = 0; i < P.length; i += 3) {
+    for (let k = 0; k < 3; k++) {
+      if (P[i + k] < lo[k]) lo[k] = P[i + k];
+      if (P[i + k] > hi[k]) hi[k] = P[i + k];
+    }
+  }
+  const sy = Math.max(1e-6, hi[1] - lo[1]);
+  const sz = Math.max(1e-6, hi[2] - lo[2]);
+  const sx = Math.max(1e-6, hi[0] - lo[0]);
+  const n = P.length / 3;
+  const inside = new Uint8Array(n);
+  for (let v = 0; v < n; v++) {
+    const u = (P[v * 3 + 1] - lo[1]) / sy;
+    const w = (P[v * 3 + 2] - lo[2]) / sz;
+    const xn = Math.abs((P[v * 3] - lo[0]) / sx - 0.5) * 2;
+    inside[v] = keep(u, w, xn) ? 1 : 0;
+  }
+
+  const g = new Geometry();
+  const remap = new Int32Array(n).fill(-1);
+  for (let t = 0; t < I.length; t += 3) {
+    const a = I[t], b = I[t + 1], c = I[t + 2];
+    if (!inside[a] || !inside[b] || !inside[c]) continue;
+    for (const v of [a, b, c]) {
+      if (remap[v] < 0) {
+        remap[v] = g.positions.length / 3;
+        const px = P[v * 3], py = P[v * 3 + 1], pz = P[v * 3 + 2];
+        const nx = N[v * 3], ny = N[v * 3 + 1], nz = N[v * 3 + 2];
+        let ox = px + nx * thick, oy = py + ny * thick, oz = pz + nz * thick;
+        if (warp) {
+          const u = (py - lo[1]) / sy, w = (pz - lo[2]) / sz;
+          const d = warp(u, w);
+          ox += d[0]; oy += d[1]; oz += d[2];
+        }
+        g.positions.push(ox, oy, oz);
+        g.normals.push(nx, ny, nz);
+        g.uvs.push(src.uvs && src.uvs.length ? src.uvs[v * 2] : 0,
+          src.uvs && src.uvs.length ? src.uvs[v * 2 + 1] : 0);
+      }
+      g.indices.push(remap[v]);
+    }
+  }
+  if (!g.indices.length) return null;
+  g.finalize();
+  return g;
+}
+
+/* The hair on top. `style` is a key of HAIR_STYLES. */
+function makeHairGeometry(headGeo, style) {
+  const S = HAIR_STYLES[style];
+  if (!S) return null;
+  /* The cut line is not level. It sits lower at the back than at
+     the front, because a hairline does -- level all the way round
+     is a swimming cap. `back` is where it sits at the occiput and
+     `cut` where it sits at the brow, interpolated on w. */
+  const keep = (u, w) => u > (S.back + (S.cut - S.back) * w);
+  const warp = (S.fall || S.lean || S.knot) ? (u, w) => {
+    let dy = 0, dz = 0;
+    // Long hair hangs: the further down the back, the further it falls.
+    if (S.fall) { const b = Math.max(0, 0.55 - w) / 0.55; dy = -S.fall * b * b; dz = -S.fall * 0.35 * b; }
+    // A swept style has more of itself at the front.
+    if (S.lean) dz += S.lean * Math.max(0, w - 0.5) * 2;
+    // Tied back: a knot behind the crown.
+    if (S.knot && w < 0.28 && u > 0.62) dz -= S.knot;
+    return [0, dy, dz];
+  } : null;
+  return offsetPatch(headGeo, keep, S.thick, warp);
+}
+
+/* The beard, moustache, chops or stubble. */
+function makeBeardGeometry(headGeo, style) {
+  const S = BEARD_STYLES[style];
+  if (!S) return null;
+  const keep = (u, w, xn) => u > S.u[0] && u < S.u[1] && w > S.w[0] && w < S.w[1]
+    && xn < S.x && xn > (S.xMin || 0);
+  return offsetPatch(headGeo, keep, S.thick, null);
+}
+
 
 /* ─────────── 92-grass.js ─────────── */
 /* ============================================================
@@ -9745,13 +9879,13 @@ function makeHumanoidMesh(skeleton, opts = {}) {
   // A zombie build is a different body, not the same body scaled — its own
   // cross-section stack, its own neck, and its own clothes.
   const g = opts.armorOnly
-    ? buildZombieArmorGeometry(skeleton, { build: opts.zombieBuild, seed: opts.seed, segments: opts.segments })
+    ? buildZombieArmorGeometry(skeleton, { build: opts.zombieBuild, girth: opts.girth, seed: opts.seed, segments: opts.segments })
     : opts.bloodOnly
-    ? buildZombieBloodGeometry(skeleton, { build: opts.zombieBuild, seed: opts.seed })
+    ? buildZombieBloodGeometry(skeleton, { build: opts.zombieBuild, girth: opts.girth, seed: opts.seed })
     : opts.clothOnly
-    ? buildZombieClothGeometry(skeleton, { build: opts.zombieBuild, seed: opts.seed, segments: opts.segments, outfit: opts.outfit })
+    ? buildZombieClothGeometry(skeleton, { build: opts.zombieBuild, girth: opts.girth, seed: opts.seed, segments: opts.segments, outfit: opts.outfit })
     : opts.zombieBuild
-      ? buildZombieBodyGeometry(skeleton, { build: opts.zombieBuild, seed: opts.seed, segments: opts.segments, rot: opts.rot })
+      ? buildZombieBodyGeometry(skeleton, { build: opts.zombieBuild, girth: opts.girth, seed: opts.seed, segments: opts.segments, rot: opts.rot })
       : makeHumanBodyGeometry(skeleton, opts);
 
   return solveSkinWeights(g, skeleton);
@@ -10858,6 +10992,47 @@ const ZOMBIE_BUILDS = {
    heads look posted on a stick. This one flares into the trapezius at the
    bottom, carries the two sternocleidomastoid cords up the front, and
    ends wide enough and high enough to sit inside the skull base. */
+
+/* One frame, at a different girth.
+ *
+ * The four builds above are four PEOPLE, and ten characters cannot be
+ * four people. Rather than author six more torso stacks -- which would
+ * be six more tables to keep in step every time the shoulder yoke or the
+ * coat hem moves -- a character names the frame it is closest to and a
+ * number for how much of it there is. Every cross-section half-width and
+ * half-depth, every limb radius and the shoulder caps scale together;
+ * the HEIGHTS in the stack do not, because a wider person is not a
+ * taller one and scaling those would stretch the torso as well as
+ * thicken it.
+ *
+ * Cached on frame and girth, because the geometry builders ask for it
+ * once per mesh and a character is four meshes.
+ */
+const _girthCache = new Map();
+function buildAtGirth(name, girth) {
+  const base = ZOMBIE_BUILDS[name] || ZOMBIE_BUILDS.male;
+  if (!girth || Math.abs(girth - 1) < 1e-4) return base;
+  const key = name + ':' + girth.toFixed(3);
+  let out = _girthCache.get(key);
+  if (out) return out;
+  const g = Math.max(0.6, Math.min(1.8, girth));
+  out = Object.assign({}, base);
+  // [height, halfWidth, halfDepth, squareness, (belly)] -- widths only.
+  out.torso = base.torso.map((r) => {
+    const c = r.slice();
+    c[1] *= g; c[2] *= g;
+    if (c.length > 4) c[4] *= g;
+    return c;
+  });
+  out.arm = base.arm.map((v) => v * g);
+  out.leg = base.leg.map((v) => v * (1 + (g - 1) * 0.80));   // legs thicken less than a gut does
+  out.shoulderCaps = base.shoulderCaps * g;
+  if (base.bust) out.bust = Object.assign({}, base.bust);
+  if (base.coat) out.coat = Object.assign({}, base.coat, { flare: base.coat.flare * (1 + (g - 1) * 0.5) });
+  _girthCache.set(key, out);
+  return out;
+}
+
 function buildZombieNeck(g, segments, build) {
   const k = build.scale;
   const rings = [
@@ -11118,6 +11293,105 @@ const OUTFITS = {
     hat: { color: 0x4b4f3c, brim: 0x2b2e22 }, wire: false,
     badge: 0xb8b2a0, belt: 0x2a221c,
   },
+  /* ---- the living ----
+     ...
+     The palette below was authored twice. The first pass used hexes at
+     the values these colours have on a screen, and every one of the ten
+     came out washed pale -- a brown trenchcoat the same value as the
+     face above it, a deep red flannel that read as salmon. Vertex tints
+     do NOT go through the sRGB curve on the way in (see setColor), so a
+     hex here lands about twice as bright as the same hex on a material.
+     Every colour is halved from what it looks like it should be, and the
+     two deliberately pale things -- a lab coat and a dress shirt -- are
+     only taken off the peg rather than halved.
+     The ten you play as. Same builder, same one mesh and one draw call
+     as the dead wear -- what changes is the cut and the palette, which
+     is the whole reason this is a table of descriptions rather than a
+     switch in the geometry.
+
+     Colours here are per-vertex tints and are NOT put through the sRGB
+     curve on the way in (see setColor). They are authored by eye
+     against that, the same as the five outfits above. */
+
+  /* Adams: Soviet greatcoat, eighty-five years of weather in it. */
+  greatcoat: {
+    top: { color: 0x2d2e26, collar: 0.522, hem: -0.115, sleeve: 0.97, tears: 0.012 },
+    under: { color: 0x464539, collar: 0.502, hem: -0.10 },
+    bottom: { color: 0x25261f, hem: 0.99, tears: 0.01 },
+    shoes: { kind: 'boot', color: 0x120e0c },
+    hat: null, wire: false, belt: 0x15110e,
+  },
+  /* Carlos: depot coveralls, oil worked into the weave. */
+  coveralls: {
+    top: { color: 0x252d38, collar: 0.512, hem: -0.070, sleeve: 0.88, tears: 0.015 },
+    under: { color: 0x98958d, collar: 0.500, hem: -0.06 },
+    bottom: { color: 0x252d38, hem: 0.99, tears: 0.02 },
+    shoes: { kind: 'boot', color: 0x171310 },
+    hat: null, wire: false, belt: 0x120f0d,
+  },
+  /* Sam: canvas driving jacket over a shirt gone soft. */
+  driver: {
+    top: { color: 0x453b24, collar: 0.514, hem: -0.062, sleeve: 0.86, tears: 0.018 },
+    under: { color: 0x5c5950, collar: 0.500, hem: -0.08 },
+    bottom: { color: 0x1e2228, hem: 0.99, tears: 0.02 },
+    shoes: { kind: 'boot', color: 0x251c15 },
+    hat: null, wire: false,
+  },
+  /* Chrissy: her father's flannel, far too big for her. */
+  flannel: {
+    top: { color: 0x542a28, collar: 0.508, hem: -0.090, sleeve: 0.95, tears: 0.02 },
+    under: { color: 0xa8a59c, collar: 0.498, hem: -0.04 },
+    bottom: { color: 0x2d3541, hem: 0.99, tears: 0.03 },
+    shoes: { kind: 'boot', color: 0x2c221a },
+    hat: null, wire: false,
+  },
+  /* Rebecca: fighting kit and nothing over it. */
+  fighter: {
+    top: { color: 0x1d1d1f, collar: 0.502, hem: -0.030, sleeve: 0.10, tears: 0.01 },
+    bottom: { color: 0x121215, hem: 0.62, tears: 0.01 },
+    shoes: { kind: 'sneaker', color: 0x0e0e10, sole: 0x8f8c86 },
+    hat: null, wire: false,
+  },
+  /* Hank: work shirt, sleeves rolled past the elbow. */
+  workshirt: {
+    top: { color: 0x3f474e, collar: 0.512, hem: -0.058, sleeve: 0.44, tears: 0.02 },
+    bottom: { color: 0x1f251d, hem: 0.99, tears: 0.02 },
+    shoes: { kind: 'boot', color: 0x1a1510 },
+    hat: null, wire: false, belt: 0x120f0d,
+  },
+  /* Frank: the winter trenchcoat he walked in wearing. */
+  trenchcoat: {
+    top: { color: 0x352a21, collar: 0.524, hem: -0.135, sleeve: 0.98, tears: 0.02 },
+    under: { color: 0x3d3933, collar: 0.500, hem: -0.10 },
+    bottom: { color: 0x221d18, hem: 0.99, tears: 0.015 },
+    shoes: { kind: 'boot', color: 0x15110d },
+    hat: null, wire: false, belt: 0x19140f,
+  },
+  /* Chris: whatever was hanging in the laboratory. */
+  labcoat: {
+    top: { color: 0xa8a6a1, collar: 0.518, hem: -0.108, sleeve: 0.93, tears: 0.008 },
+    under: { color: 0x373e43, collar: 0.500, hem: -0.09 },
+    bottom: { color: 0x25272b, hem: 0.99, tears: 0.008 },
+    shoes: { kind: 'sneaker', color: 0x4d4b47, sole: 0xa8a59f },
+    hat: null, wire: false,
+  },
+  /* Remi: a colour nobody else would have picked. */
+  burgundy: {
+    top: { color: 0x4e2028, collar: 0.516, hem: -0.082, sleeve: 0.92, tears: 0.006 },
+    under: { color: 0x151114, collar: 0.500, hem: -0.09 },
+    bottom: { color: 0x171418, hem: 0.99, tears: 0.006 },
+    shoes: { kind: 'boot', color: 0x150f11 },
+    hat: null, wire: false,
+  },
+  /* Rodriguez: leather, and he knows it. */
+  leather: {
+    top: { color: 0x251c16, collar: 0.514, hem: -0.070, sleeve: 0.90, tears: 0.01 },
+    under: { color: 0x585652, collar: 0.498, hem: -0.06 },
+    bottom: { color: 0x17191e, hem: 0.99, tears: 0.012 },
+    shoes: { kind: 'boot', color: 0x15100d },
+    hat: null, wire: false, belt: 0x0f0d0a,
+  },
+
   /* Z=3. Prison issue, and the wire he went through to get out. */
   prison: {
     top: { color: 0xd07227, collar: 0.508, hem: -0.045, sleeve: 0.42, tears: 0.05 },
@@ -11617,7 +11891,7 @@ function buildBloodStains(g, build, rng) {
 function buildZombieArmorGeometry(skeleton, opts = {}) {
   const g = new Geometry();
   const segments = opts.segments || 14;
-  const build = ZOMBIE_BUILDS[opts.build] || ZOMBIE_BUILDS.male;
+  const build = buildAtGirth(opts.build, opts.girth);
   const T = build.torso;
   const a = new Vec3(), b = new Vec3(), c = new Vec3();
 
@@ -11683,8 +11957,12 @@ function buildZombieArmorGeometry(skeleton, opts = {}) {
    left flank working downward, then the face. Returned as data rather than
    geometry so the game can hang two actors on each — a wet cavity and the
    bone in it, which one mesh could only ever be one of. */
+/* Where the holes go. Girth is not threaded in here on purpose: a wound
+   spot is a place on the flank, and it is read back through the same
+   base frame the caller asked for, so widening a character does not
+   move a hole it does not have. */
 function zombieWoundSpots(buildName) {
-  const build = ZOMBIE_BUILDS[buildName] || ZOMBIE_BUILDS.male;
+  const build = buildAtGirth(buildName, 1);
   const T = build.torso;
   const spots = [];
   /* Staggered down the flank rather than stacked: five holes in a straight
@@ -11859,7 +12137,7 @@ function rotZombieBody(g, build, limbs, rot, seed) {
 function buildZombieClothGeometry(skeleton, opts = {}) {
   const g = new Geometry();
   const segments = opts.segments || 16;
-  const build = ZOMBIE_BUILDS[opts.build] || ZOMBIE_BUILDS.male;
+  const build = buildAtGirth(opts.build, opts.girth);
   const rng = new Rng((opts.seed || 7) * 3 + 11);
 
   const outfit = OUTFITS[opts.outfit] || null;
@@ -11868,7 +12146,14 @@ function buildZombieClothGeometry(skeleton, opts = {}) {
   if (outfit) {
     /* Every piece is its own closed shell, and together they leave no bare
        skin anywhere between the collar and the shoes. */
+    /* The yoke was emitted with no tint set, so it took whatever the
+       colour buffer was left on -- which after the garment is cleared,
+       meaning white. Every dressed body in the game, the five zombie
+       outfits included, has had two white pads on its shoulders. It is
+       part of the shirt and it is painted the shirt's colour. */
+    g.setColor(outfit.top.color);
     buildShoulderYoke(g, skeleton, build, 0.019, segments);
+    g.setColor(null);
     buildZombieLimbCloth(g, skeleton, build, rng, segments, outfit);
     buildTrousers(g, skeleton, build, rng, segments, outfit.bottom);
     buildShoes(g, skeleton, build, segments, outfit.shoes);
@@ -12039,7 +12324,7 @@ function buildGarmentDetail(g, skeleton, build, rng) {
 function buildZombieBodyGeometry(skeleton, opts = {}) {
   const g = new Geometry();
   const segments = opts.segments || 16;
-  const build = ZOMBIE_BUILDS[opts.build] || ZOMBIE_BUILDS.male;
+  const build = buildAtGirth(opts.build, opts.girth);
   const rng = new Rng(opts.seed || 7);
 
   // Flesh.
@@ -12165,7 +12450,7 @@ function buildZombieBodyGeometry(skeleton, opts = {}) {
    material and still move with the body. */
 function buildZombieBloodGeometry(skeleton, opts = {}) {
   const g = new Geometry();
-  const build = ZOMBIE_BUILDS[opts.build] || ZOMBIE_BUILDS.male;
+  const build = buildAtGirth(opts.build, opts.girth);
   buildBloodStains(g, build, new Rng((opts.seed || 7) * 13 + 5));
   g.finalize();
   g.computeWeldGroups();
@@ -12892,7 +13177,7 @@ class Engine {
       : 0;
     // `zombie: true` swaps in the starved silhouette and torn clothing.
     const geo = model ? model.geometry : makeHumanoidMesh(skeleton, opts.zombie
-      ? { zombieBuild: opts.zombieBuild || 'male', seed: opts.seed || 3, rot }
+      ? { zombieBuild: opts.zombieBuild || 'male', girth: opts.girth, seed: opts.seed || 3, rot }
       : { thickness: opts.build || 1 });
     // One model, many copies: the GPU buffers are built once and shared.
     if (model && !model._mesh) model._mesh = new GpuMesh(this.gl, geo);
@@ -12902,7 +13187,7 @@ class Engine {
        question about vertex positions, and it should never have to be
        settled by squinting at a screenshot. */
     if (!model && opts.zombie) {
-      mesh.__key = 'zbody:' + (opts.zombieBuild || 'male') + ':' + (opts.seed || 3) + ':' + rot.toFixed(3);
+      mesh.__key = 'zbody:' + (opts.zombieBuild || 'male') + ':' + (opts.girth || 1) + ':' + (opts.seed || 3) + ':' + rot.toFixed(3);
       (this._geoByKey || (this._geoByKey = new Map())).set(mesh.__key, geo);
     }
 
@@ -12944,8 +13229,8 @@ class Engine {
        not clothing — it is a paint job. */
     if (opts.zombie && !model) {
       const clothGeo = makeHumanoidMesh(skeleton, {
-        zombieBuild: opts.zombieBuild || 'male', seed: opts.seed || 3, clothOnly: true,
-        outfit: opts.outfit,
+        zombieBuild: opts.zombieBuild || 'male', girth: opts.girth,
+        seed: opts.seed || 3, clothOnly: true, outfit: opts.outfit,
       });
       if (clothGeo.indices.length) {
         /* Registered, like the head, so a question about the clothing can
@@ -12955,7 +13240,7 @@ class Engine {
            GpuMesh, and that is exactly the question the black torsos
            raised. */
         const clothMesh = new GpuMesh(this.gl, clothGeo);
-        clothMesh.__key = 'cloth:' + (opts.zombieBuild || 'male') + ':' + (opts.seed || 3) + ':' + (opts.outfit || '-');
+        clothMesh.__key = 'cloth:' + (opts.zombieBuild || 'male') + ':' + (opts.girth || 1) + ':' + (opts.seed || 3) + ':' + (opts.outfit || '-');
         (this._geoByKey || (this._geoByKey = new Map())).set(clothMesh.__key, clothGeo);
         const clothActor = new Actor(this, {
           name: 'cloth', mesh: clothMesh,
@@ -12976,7 +13261,7 @@ class Engine {
        coloured coat. */
     if (opts.zombie && opts.blood !== false && !model) {
       const bloodGeo = makeHumanoidMesh(skeleton, {
-        zombieBuild: opts.zombieBuild || 'male', seed: opts.seed || 3, bloodOnly: true,
+        zombieBuild: opts.zombieBuild || 'male', girth: opts.girth, seed: opts.seed || 3, bloodOnly: true,
       });
       if (bloodGeo.indices.length) {
         const bloodMesh = new GpuMesh(this.gl, bloodGeo);
@@ -12997,7 +13282,7 @@ class Engine {
        has a metal material while the cloth under it stays cloth. */
     if (opts.armor) {
       const armorGeo = makeHumanoidMesh(skeleton, {
-        zombieBuild: opts.zombieBuild || 'male', seed: opts.seed || 3, armorOnly: true,
+        zombieBuild: opts.zombieBuild || 'male', girth: opts.girth, seed: opts.seed || 3, armorOnly: true,
       });
       if (armorGeo.indices.length) {
         const armorActor = new Actor(this, {
@@ -13074,6 +13359,35 @@ class Engine {
       this.actors.push(headActor);
       actor.head = headActor;
       actor.face = face;
+
+      /* Hair and facial hair, cut out of the head's own surface and
+         pushed out along its normals -- so they hug this particular
+         skull rather than a general one. Parented to the same bone with
+         the same offset and scale as the head, so they ride with it and
+         need no rig of their own. */
+      const hairColor = opts.hairColor != null ? opts.hairColor : 0x2a2320;
+      const addPatch = (geo, name, matColor, rough) => {
+        if (!geo || !geo.indices.length) return null;
+        const m2 = new GpuMesh(this.gl, geo);
+        m2.__key = name + ':' + (opts.seed || 5) + ':' + (opts.faceType || 'male');
+        (this._geoByKey || (this._geoByKey = new Map())).set(m2.__key, geo);
+        m2.setupInstancing(20);
+        const a2 = new Actor(this, {
+          name, mesh: m2,
+          material: this.material({ color: matColor, texture: 'fabric',
+            roughness: rough, metalness: 0, uvScale: 6 }),
+          parent: actor, parentBone: skeleton.index('head'),
+          offset: [0, headHeight * 0.5 * scale, 0.006 * scale],
+          scale: headScale, boundRadius: 0.45 * scale,
+        });
+        this.actors.push(a2);
+        return a2;
+      };
+      if (opts.hair) actor.hair = addPatch(makeHairGeometry(headGeo, opts.hair), 'hair', hairColor, 0.86);
+      if (opts.beard) {
+        const bc = opts.beardColor != null ? opts.beardColor : hairColor;
+        actor.beard = addPatch(makeBeardGeometry(headGeo, opts.beard), 'beard', bc, 0.90);
+      }
     }
 
     controller.actor = actor;

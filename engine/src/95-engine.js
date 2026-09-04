@@ -636,7 +636,7 @@ class Engine {
       : 0;
     // `zombie: true` swaps in the starved silhouette and torn clothing.
     const geo = model ? model.geometry : makeHumanoidMesh(skeleton, opts.zombie
-      ? { zombieBuild: opts.zombieBuild || 'male', seed: opts.seed || 3, rot }
+      ? { zombieBuild: opts.zombieBuild || 'male', girth: opts.girth, seed: opts.seed || 3, rot }
       : { thickness: opts.build || 1 });
     // One model, many copies: the GPU buffers are built once and shared.
     if (model && !model._mesh) model._mesh = new GpuMesh(this.gl, geo);
@@ -646,7 +646,7 @@ class Engine {
        question about vertex positions, and it should never have to be
        settled by squinting at a screenshot. */
     if (!model && opts.zombie) {
-      mesh.__key = 'zbody:' + (opts.zombieBuild || 'male') + ':' + (opts.seed || 3) + ':' + rot.toFixed(3);
+      mesh.__key = 'zbody:' + (opts.zombieBuild || 'male') + ':' + (opts.girth || 1) + ':' + (opts.seed || 3) + ':' + rot.toFixed(3);
       (this._geoByKey || (this._geoByKey = new Map())).set(mesh.__key, geo);
     }
 
@@ -688,8 +688,8 @@ class Engine {
        not clothing — it is a paint job. */
     if (opts.zombie && !model) {
       const clothGeo = makeHumanoidMesh(skeleton, {
-        zombieBuild: opts.zombieBuild || 'male', seed: opts.seed || 3, clothOnly: true,
-        outfit: opts.outfit,
+        zombieBuild: opts.zombieBuild || 'male', girth: opts.girth,
+        seed: opts.seed || 3, clothOnly: true, outfit: opts.outfit,
       });
       if (clothGeo.indices.length) {
         /* Registered, like the head, so a question about the clothing can
@@ -699,7 +699,7 @@ class Engine {
            GpuMesh, and that is exactly the question the black torsos
            raised. */
         const clothMesh = new GpuMesh(this.gl, clothGeo);
-        clothMesh.__key = 'cloth:' + (opts.zombieBuild || 'male') + ':' + (opts.seed || 3) + ':' + (opts.outfit || '-');
+        clothMesh.__key = 'cloth:' + (opts.zombieBuild || 'male') + ':' + (opts.girth || 1) + ':' + (opts.seed || 3) + ':' + (opts.outfit || '-');
         (this._geoByKey || (this._geoByKey = new Map())).set(clothMesh.__key, clothGeo);
         const clothActor = new Actor(this, {
           name: 'cloth', mesh: clothMesh,
@@ -720,7 +720,7 @@ class Engine {
        coloured coat. */
     if (opts.zombie && opts.blood !== false && !model) {
       const bloodGeo = makeHumanoidMesh(skeleton, {
-        zombieBuild: opts.zombieBuild || 'male', seed: opts.seed || 3, bloodOnly: true,
+        zombieBuild: opts.zombieBuild || 'male', girth: opts.girth, seed: opts.seed || 3, bloodOnly: true,
       });
       if (bloodGeo.indices.length) {
         const bloodMesh = new GpuMesh(this.gl, bloodGeo);
@@ -741,7 +741,7 @@ class Engine {
        has a metal material while the cloth under it stays cloth. */
     if (opts.armor) {
       const armorGeo = makeHumanoidMesh(skeleton, {
-        zombieBuild: opts.zombieBuild || 'male', seed: opts.seed || 3, armorOnly: true,
+        zombieBuild: opts.zombieBuild || 'male', girth: opts.girth, seed: opts.seed || 3, armorOnly: true,
       });
       if (armorGeo.indices.length) {
         const armorActor = new Actor(this, {
@@ -818,6 +818,35 @@ class Engine {
       this.actors.push(headActor);
       actor.head = headActor;
       actor.face = face;
+
+      /* Hair and facial hair, cut out of the head's own surface and
+         pushed out along its normals -- so they hug this particular
+         skull rather than a general one. Parented to the same bone with
+         the same offset and scale as the head, so they ride with it and
+         need no rig of their own. */
+      const hairColor = opts.hairColor != null ? opts.hairColor : 0x2a2320;
+      const addPatch = (geo, name, matColor, rough) => {
+        if (!geo || !geo.indices.length) return null;
+        const m2 = new GpuMesh(this.gl, geo);
+        m2.__key = name + ':' + (opts.seed || 5) + ':' + (opts.faceType || 'male');
+        (this._geoByKey || (this._geoByKey = new Map())).set(m2.__key, geo);
+        m2.setupInstancing(20);
+        const a2 = new Actor(this, {
+          name, mesh: m2,
+          material: this.material({ color: matColor, texture: 'fabric',
+            roughness: rough, metalness: 0, uvScale: 6 }),
+          parent: actor, parentBone: skeleton.index('head'),
+          offset: [0, headHeight * 0.5 * scale, 0.006 * scale],
+          scale: headScale, boundRadius: 0.45 * scale,
+        });
+        this.actors.push(a2);
+        return a2;
+      };
+      if (opts.hair) actor.hair = addPatch(makeHairGeometry(headGeo, opts.hair), 'hair', hairColor, 0.86);
+      if (opts.beard) {
+        const bc = opts.beardColor != null ? opts.beardColor : hairColor;
+        actor.beard = addPatch(makeBeardGeometry(headGeo, opts.beard), 'beard', bc, 0.90);
+      }
     }
 
     controller.actor = actor;
