@@ -234,9 +234,16 @@ class Input {
          onto keyboard keys. A pad that only walks is a great deal better
          than one that aims when you try to walk. `pad.standard` says
          which you have, so the HUD can tell the player. */
+      /* Dead zones are settings, not constants. A worn stick that rests
+         at 0.22 needs a bigger one than a new pad does, and the person
+         holding it is the only one who can tell. Unset falls back to the
+         figures these were fixed at, so a game that never touches them
+         behaves exactly as it did. */
+      const dzL = this.deadzone == null ? 0.18 : clamp(this.deadzone, 0, 0.9);
+      const dzR = this.deadzoneRight == null ? 0.14 : clamp(this.deadzoneRight, 0, 0.9);
       pad.standard = gp.mapping === 'standard';
-      [pad.lx, pad.ly] = stick(0, 1, 0.18);
-      [pad.rx, pad.ry] = pad.standard ? stick(2, 3, 0.14) : [0, 0];
+      [pad.lx, pad.ly] = stick(0, 1, dzL);
+      [pad.rx, pad.ry] = pad.standard ? stick(2, 3, dzR) : [0, 0];
 
       const btn = (i) => (gp.buttons[i] ? gp.buttons[i].value || (gp.buttons[i].pressed ? 1 : 0) : 0);
       const held = (i) => !!(gp.buttons[i] && gp.buttons[i].pressed);

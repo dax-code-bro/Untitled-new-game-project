@@ -4649,11 +4649,20 @@ function makePlayer(game, S, hud, sfx, voice) {
     }
     return performance.now() - padMoveAt < 260;
   };
+  /* 0.0021 radians per reported pixel is the base this game was tuned at.
+     Everything the settings screen offers is a factor ON it, so the number
+     in the menu means the same thing whatever the base becomes later, and
+     1.00x is always what the game shipped feeling like. Aiming keeps
+     whatever fraction of it S.adsSensMul says -- the same figure the stick
+     uses, so the two devices agree about what aiming does. */
   window.addEventListener('mousemove', (e) => {
     if (document.pointerLockElement !== canvas) return;
     if (padDriving()) return;
-    game._camYaw -= e.movementX * 0.0021;
-    game._camPitch = Math.max(-1.45, Math.min(1.45, game._camPitch + e.movementY * 0.0021));
+    const k = 0.0021 * (S.mouseSens == null ? 1 : S.mouseSens)
+      * (1 - P.ads * (1 - (S.adsSensMul == null ? 0.55 : S.adsSensMul)));
+    game._camYaw -= e.movementX * k;
+    game._camPitch = Math.max(-1.45, Math.min(1.45,
+      game._camPitch + e.movementY * k * (S.invertY ? -1 : 1)));
   });
 
   P.equipped = () => P.slots[Math.max(0, Math.min(P.slot, P.slots.length - 1))] || P.slots[0] || 'm1911';
@@ -6589,6 +6598,11 @@ function tryFire(game, S, P, hud, sfx, dt) {
   if (P.reloading > 0) return;
   const wantFire = spec.auto ? S.input.fireHeld : S.input.firePressed;
   if (!wantFire || P.cooldown > 0) return;
+  /* Whatever kills next, this is what killed it. killZombie() is the one
+     funnel every death goes through and it does not know what fired --
+     bullets, the knife, a grenade and the meteor all arrive there the
+     same way -- so the credit is left here for it to pick up. */
+  S.creditWeapon = P.equipped();
 
   if (spec.melee) { /* no magazine to check */ } else if (am.mag <= 0) {
     sfx.dryFire();
@@ -6691,6 +6705,7 @@ function tryFire(game, S, P, hud, sfx, dt) {
     * (rcS.roll != null ? rcS.roll : 0.004 + spec.kick * 0.004) * 26;
   sfx[spec.sfx]();
   hud.ammo(P);
+  S.statShot(P.equipped());
   // The trigger breaks with the shot, so the finger's clock starts here.
   P.trigT = Math.max(0.06, Math.min(0.30, spec.refire || 0.16));
   P.slideCycle = spec.auto ? 0.055 : 0.085;
@@ -8142,6 +8157,7 @@ function hurtZombie(game, S, z, dmg, at, headshot, source, opts) {
 function killZombie(game, S, z, headshot) {
   z.dead = true;
   S.killsTotal++;
+  S.statKill(S.creditWeapon, headshot);
   if (z.state === 'rising' || z.state === 'toWindow' || z.state === 'tearing') z.win.zombiesAt--;
   const p = z.actor.position;
   // Gibs: a burst of dark red chunks with real physics, plus dust. The
@@ -8919,6 +8935,8 @@ function makeCrawler(game, S, z) {
 }
 
 function detonate(game, S, P, at, sfx) {
+  // A grenade kill belongs to the grenade, not to whatever is in your hands.
+  S.creditWeapon = 'grenade';
   game.particles.sparks(at, { count: 42, speed: 9, color: 0xffd27a, colorEnd: 0x5a1e08 });
   game.particles.smoke(at, { count: 14, color: 0x4a4640 });
   const fl = game.light({ at, color: 0xffca7a, intensity: 26, range: 11 });
@@ -10859,6 +10877,65 @@ function start(opts = {}) {
     grace: 0, toggles: loadToggles(),
   };
   S.addPoints = (n) => { const a = Math.round(n * S.mul); S.points += a; return a; };
+
+  /* ---------------- the tally ----------------
+   *
+   * What the pause screen shows, and what a save carries. Kept per
+   * weapon as well as in total, because "which gun is actually doing the
+   * work" is the question a player has after nine rounds and the total
+   * cannot answer it.
+   *
+   * Kills are credited to S.creditWeapon, which whatever dealt the damage
+   * sets before it deals it -- see tryFire and the grenade blast. A death
+   * with nothing set is credited to 'other' rather than to the last gun
+   * that happened to fire, which would be a lie about the knife and about
+   * everything the map kills for you. */
+  S.stats = { kills: 0, headshots: 0, shots: 0, revives: 0, byWeapon: {} };
+  S.creditWeapon = null;
+  const bucket = (id) => {
+    const k = id || 'other';
+    return S.stats.byWeapon[k] || (S.stats.byWeapon[k] = { shots: 0, kills: 0, headshots: 0 });
+  };
+  /* A shot is a trigger pull, not a pellet. A scattergun throwing eight
+     at once is one shot in every sense a player means by the word, and
+     counting pellets would make its kills-per-shot a fifth of the truth. */
+  S.statShot = (id) => { S.stats.shots++; bucket(id).shots++; };
+  S.statKill = (id, head) => {
+    S.stats.kills++;
+    const b = bucket(id);
+    b.kills++;
+    if (head) { S.stats.headshots++; b.headshots++; }
+  };
+
+  /* ---------------- settings from the shell ----------------
+   *
+   * The front end owns the settings screen and hands the whole object in
+   * here; every field it can act on is copied onto S under the name the
+   * game already uses, and BUNKER_SHELL.applySettings() writes the same
+   * fields again whenever one changes. Absent, every one of these stays
+   * undefined and each read site falls back to the number the game was
+   * tuned at -- so the game runs identically with no front end at all,
+   * which is what the test harness does. */
+  S.applyShellSettings = (cfg) => {
+    if (!cfg) return;
+    if (cfg.sensitivity != null) S.mouseSens = cfg.sensitivity;
+    if (cfg.padSensitivity != null) S.padSens = cfg.padSensitivity;
+    if (cfg.adsMultiplier != null) S.adsSensMul = cfg.adsMultiplier;
+    if (cfg.invertY != null) S.invertY = !!cfg.invertY;
+    if (cfg.triggerThreshold != null) S.trigThreshold = cfg.triggerThreshold;
+    if (cfg.vibration != null) S.vibration = !!cfg.vibration;
+    if (cfg.vibrationStrength != null) S.vibrationStrength = cfg.vibrationStrength;
+    if (cfg.gParticles != null) S.particleScale = cfg.gParticles;
+    if (cfg.volSfx != null) S.volSfx = cfg.volSfx;
+    if (cfg.volVoice != null) S.volVoice = cfg.volVoice;
+    if (cfg.subtitles != null && S.toggles) S.toggles.subtitles = !!cfg.subtitles;
+    if (game.input) {
+      if (cfg.deadzoneLeft != null) game.input.deadzone = cfg.deadzoneLeft;
+      if (cfg.deadzoneRight != null) game.input.deadzoneRight = cfg.deadzoneRight;
+    }
+  };
+  S.applyShellSettings(opts.settings);
+
   setSpokenWords(S.toggles.spokenWords);
   // Ask once whether there is a voice pack. Nothing waits on the answer.
   loadVoicePack();
@@ -11044,10 +11121,11 @@ function start(opts = {}) {
          far as it is concerned -- so if the request keeps being refused,
          the one thing that fixes it has to be on screen. */
       if (hud.els.cursorwarn) hud.els.cursorwarn.style.display = locked ? 'none' : 'block';
-      const look = 2.6 * dt;
+      const look = 2.6 * dt * (S.padSens == null ? 1 : S.padSens);
       // Squared response: fine control near centre, fast whip at the rim.
       const sx = pad.rx * Math.abs(pad.rx), sy = pad.ry * Math.abs(pad.ry);
-      const sens = 1 - P.ads * 0.45;            // aiming slows the turn rate
+      // Aiming slows the turn rate, by the same fraction the mouse uses.
+      const sens = 1 - P.ads * (1 - (S.adsSensMul == null ? 0.55 : S.adsSensMul));
       game._camYaw -= sx * look * sens;
       game._camPitch = Math.max(-1.45, Math.min(1.45,
         game._camPitch + sy * look * sens * (S.invertY ? -1 : 1)));
@@ -11064,12 +11142,13 @@ function start(opts = {}) {
        empties the magazine the instant you draw it and never stops. That is
        exactly the shape of the bug: only the full-autos ran away. */
     if (pad.rt <= 0.2) S.padTriggerArmed = true;
-    const rtHeld = S.padTriggerArmed && pad.rt > 0.45;
+    const rtHeld = S.padTriggerArmed && pad.rt > (S.trigThreshold == null ? 0.45 : S.trigThreshold);
     // Space is the jump now, so it is not also the trigger.
     S.input.fireHeld = i.pointer.down || rtHeld || !!th.fire;
     S.input.firePressed = i.pointer.justDown || (S.padTriggerArmed && pad.pressed.rt) || (!!th.fire && !th._firePrev);
     S.input.jumpPressed = i.justPressed(' ') || !!pad.pressed.a;
-    S.input.aimHeld = i.down('control') || i.pointer.rightDown || pad.lt > 0.4 || !!th.aim;
+    S.input.aimHeld = i.down('control') || i.pointer.rightDown
+      || pad.lt > (S.trigThreshold == null ? 0.40 : S.trigThreshold * 0.9) || !!th.aim;
     S.input.sprintHeld = i.down('shift') || !!pad.buttons.ls || !!th.sprint;
     // Held rather than pressed: the easter egg wants to know you are
     // standing at the generator with your hand on it, not that you tapped it.
@@ -12056,6 +12135,8 @@ async function preload(base) {
 
 window.BUNKER = {
   start, preload, WEAPONS, ECONOMY, LINES, CAST,
+  // The front end owns the settings screen; these are what it drives.
+  applyGraphics, GRAPHICS, GRAPHICS_ORDER,
   // Exposed so the models can be inspected on their own, outside the map.
   models: { makeRiotShield, makeBatteringRam, makeHammer, makeKnife, makeScattergun, makeArcProjector },
 };

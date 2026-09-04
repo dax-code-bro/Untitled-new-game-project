@@ -41,11 +41,15 @@
 <div id="build"><span>build &ldquo;cold kettle&rdquo; &middot; 2 sep</span></div>
 <script src="../engine/legend-engine.js"></script>
 <script src="bunker-nine.js"></script>
+<script src="bunker-nine-shell.js"></script>
 <script>
-// The imported zombie body is fetched before the first frame so the pool can
-// be built with it; if it is missing the game starts anyway on the
-// procedural body.
-BUNKER.preload().then(() => BUNKER.start({ canvas: '#game' }));
+/* The front end owns the boot now.
+   It puts the loading screen up first, then does each step of starting
+   the game in order -- fetching the body model, checking the network,
+   opening the audio device, building the bunker -- moving the bar for
+   each one, and only lets go when the game is genuinely up. The page's
+   whole job is to say go. */
+BUNKER_SHELL.boot({ canvas: '#game', base: '../' });
 /* The build stamp stays up until you start playing, and is dismissed by
    the click that starts the game rather than by a timer.
    
