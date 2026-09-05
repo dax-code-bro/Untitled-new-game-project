@@ -15643,8 +15643,35 @@ const TOMMY_MATERIALS = {
   // Blued steel is nearly black until light rakes it. Roughness sits above
   // the 1911's polish: wartime parkerised-blue, not a show finish.
   // Parkerised, but a metal all the same: see the note on ARM_MAT.blued.
-  steel: { color: 0x4d565f, texture: 'metal', roughness: 0.34, metalness: 1 },
-  wood: { color: 0x5c4028, texture: 'wood', roughness: 0.66, metalness: 0, uvScale: 18 },
+/* Metal colours here are REFLECTANCES, not paint.
+ *
+ * With metalness 1 the shader uses the colour as F0 and there is no
+ * diffuse term at all, and the ambient a metal gets indoors reduces to
+ * roughly `room * envBRDFApprox(F0, rough, NoV)` -- which face-on is
+ * about `room * F0`. So a colour chosen for how the finish looks in a
+ * paint chart, rather than for how much light steel actually reflects,
+ * comes out black on any face the lamps do not glint off.
+ *
+ * The Thompson's magazine was the proof: a large flat panel at 0x4d565f,
+ * which is 0.10 linear where iron is 0.5 to 0.6, rendering as a pure
+ * black rectangle with no gradient anywhere on it. Real blued and
+ * parkerised steel is dark because the oxide is a thin absorbing film
+ * over the metal, not because the metal stopped being a mirror.
+ *
+ * These are the five that were physically impossible for a conductor --
+ * all under 0.12 linear. Same hues, same order from darkest to lightest,
+ * moved up to where steel actually sits. The others in this game already
+ * run 0x848c95 to 0xc2c8ce and are left alone.
+ */
+  steel: { color: 0x6b7078, texture: 'metal', roughness: 0.44, metalness: 1 },
+  /* uvScale 5, not 18.
+   *
+   * On a swept section U runs AROUND the cross-section and V along the
+   * sweep, so at 18 repeats the grain wraps helically and a stock comes
+   * out banded diagonally in cream and tan -- a barber's pole, not wood.
+   * It is on every wooden part in the game. Five repeats over a forearm
+   * puts the figure along the piece, which is the way a stock is cut. */
+  wood: { color: 0x5c4028, texture: 'wood', roughness: 0.66, metalness: 0, uvScale: 5 },
 };
 
 function makeThompson() {
@@ -18017,7 +18044,7 @@ const ARM_MAT = {
      ceiling lamp is a lamp. The reflectance is right -- oxide-blued steel
      really is about half of bare steel, tinted cold -- so what moves is
      how tightly it reflects. Gun blue is satin. */
-  blued: { color: 0x596470, texture: 'metal', roughness: 0.45, metalness: 1 },
+  blued: { color: 0x737e8a, texture: 'metal', roughness: 0.45, metalness: 1 },
   // Machined bright — the Paralyzer and the Model 5 are instruments.
   /* Machined bright — the Paralyzer and the Model 5 are instruments.
 
@@ -18031,7 +18058,14 @@ const ARM_MAT = {
   grey: { color: 0x6b7076, texture: 'metal', roughness: 0.53, metalness: 1 },
   poly: { color: 0x1e2226, texture: 'smooth', roughness: 0.72, metalness: 0 },
   rubber: { color: 0x141618, texture: 'smooth', roughness: 0.86, metalness: 0 },
-  walnut: { color: 0x5c4028, texture: 'wood', roughness: 0.64, metalness: 0, uvScale: 18 },
+  /* uvScale 5, not 18.
+   *
+   * On a swept section U runs AROUND the cross-section and V along the
+   * sweep, so at 18 repeats the grain wraps helically and a stock comes
+   * out banded diagonally in cream and tan -- a barber's pole, not wood.
+   * It is on every wooden part in the game. Five repeats over a forearm
+   * puts the figure along the piece, which is the way a stock is cut. */
+  walnut: { color: 0x5c4028, texture: 'wood', roughness: 0.64, metalness: 0, uvScale: 5 },
   copper: { color: 0xb46a33, texture: 'metal', roughness: 0.34, metalness: 1 },
   brass: { color: 0xc9a227, texture: 'metal', roughness: 0.30, metalness: 1 },
   glow: { color: 0x9fe8ff, texture: 'smooth', roughness: 0.30, metalness: 0, emissive: 0x54c8ff, emissiveStrength: 1.5 },
@@ -18315,7 +18349,7 @@ const AMMO_MAT = {
   brass: { color: 0xb08b32, texture: 'metal', roughness: 0.28, metalness: 1 },
   lead: { color: 0x8e8b84, texture: 'metal', roughness: 0.44, metalness: 1 },
   hull: { color: 0x9c2f24, texture: 'smooth', roughness: 0.62, metalness: 0 },
-  steel: { color: 0x565f68, texture: 'metal', roughness: 0.44, metalness: 1 },
+  steel: { color: 0x707982, texture: 'metal', roughness: 0.44, metalness: 1 },
   glow: { color: 0x9fe8ff, texture: 'smooth', roughness: 0.30, metalness: 0,
     emissive: 0x54c8ff, emissiveStrength: 1.5 },
 };
@@ -18930,8 +18964,8 @@ function ammoCell(gSteel, gGlow, C) {
 const ATT_MAT = {
   // Reflectance, not albedo — see ARM_MAT.blued. A black metal that
   // reflects nothing is a hole in the gun, not a finish.
-  black: { color: 0x3c4147, texture: 'metal', roughness: 0.52, metalness: 1 },
-  steel: { color: 0x50555c, texture: 'metal', roughness: 0.40, metalness: 1 },
+  black: { color: 0x5c6167, texture: 'metal', roughness: 0.52, metalness: 1 },
+  steel: { color: 0x6d727a, texture: 'metal', roughness: 0.42, metalness: 1 },
   poly: { color: 0x1e2226, texture: 'smooth', roughness: 0.70, metalness: 0 },
   bright: { color: 0x9ba2aa, texture: 'metal', roughness: 0.30, metalness: 1 },
   glassR: { color: 0x2a1008, texture: 'smooth', roughness: 0.10, metalness: 0,

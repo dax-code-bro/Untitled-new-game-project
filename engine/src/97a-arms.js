@@ -2299,7 +2299,7 @@ const ARM_MAT = {
      ceiling lamp is a lamp. The reflectance is right -- oxide-blued steel
      really is about half of bare steel, tinted cold -- so what moves is
      how tightly it reflects. Gun blue is satin. */
-  blued: { color: 0x596470, texture: 'metal', roughness: 0.45, metalness: 1 },
+  blued: { color: 0x737e8a, texture: 'metal', roughness: 0.45, metalness: 1 },
   // Machined bright — the Paralyzer and the Model 5 are instruments.
   /* Machined bright — the Paralyzer and the Model 5 are instruments.
 
@@ -2313,7 +2313,14 @@ const ARM_MAT = {
   grey: { color: 0x6b7076, texture: 'metal', roughness: 0.53, metalness: 1 },
   poly: { color: 0x1e2226, texture: 'smooth', roughness: 0.72, metalness: 0 },
   rubber: { color: 0x141618, texture: 'smooth', roughness: 0.86, metalness: 0 },
-  walnut: { color: 0x5c4028, texture: 'wood', roughness: 0.64, metalness: 0, uvScale: 18 },
+  /* uvScale 5, not 18.
+   *
+   * On a swept section U runs AROUND the cross-section and V along the
+   * sweep, so at 18 repeats the grain wraps helically and a stock comes
+   * out banded diagonally in cream and tan -- a barber's pole, not wood.
+   * It is on every wooden part in the game. Five repeats over a forearm
+   * puts the figure along the piece, which is the way a stock is cut. */
+  walnut: { color: 0x5c4028, texture: 'wood', roughness: 0.64, metalness: 0, uvScale: 5 },
   copper: { color: 0xb46a33, texture: 'metal', roughness: 0.34, metalness: 1 },
   brass: { color: 0xc9a227, texture: 'metal', roughness: 0.30, metalness: 1 },
   glow: { color: 0x9fe8ff, texture: 'smooth', roughness: 0.30, metalness: 0, emissive: 0x54c8ff, emissiveStrength: 1.5 },
@@ -2597,7 +2604,7 @@ const AMMO_MAT = {
   brass: { color: 0xb08b32, texture: 'metal', roughness: 0.28, metalness: 1 },
   lead: { color: 0x8e8b84, texture: 'metal', roughness: 0.44, metalness: 1 },
   hull: { color: 0x9c2f24, texture: 'smooth', roughness: 0.62, metalness: 0 },
-  steel: { color: 0x565f68, texture: 'metal', roughness: 0.44, metalness: 1 },
+  steel: { color: 0x707982, texture: 'metal', roughness: 0.44, metalness: 1 },
   glow: { color: 0x9fe8ff, texture: 'smooth', roughness: 0.30, metalness: 0,
     emissive: 0x54c8ff, emissiveStrength: 1.5 },
 };

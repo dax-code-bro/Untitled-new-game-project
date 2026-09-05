@@ -252,8 +252,35 @@ const TOMMY_MATERIALS = {
   // Blued steel is nearly black until light rakes it. Roughness sits above
   // the 1911's polish: wartime parkerised-blue, not a show finish.
   // Parkerised, but a metal all the same: see the note on ARM_MAT.blued.
-  steel: { color: 0x4d565f, texture: 'metal', roughness: 0.34, metalness: 1 },
-  wood: { color: 0x5c4028, texture: 'wood', roughness: 0.66, metalness: 0, uvScale: 18 },
+/* Metal colours here are REFLECTANCES, not paint.
+ *
+ * With metalness 1 the shader uses the colour as F0 and there is no
+ * diffuse term at all, and the ambient a metal gets indoors reduces to
+ * roughly `room * envBRDFApprox(F0, rough, NoV)` -- which face-on is
+ * about `room * F0`. So a colour chosen for how the finish looks in a
+ * paint chart, rather than for how much light steel actually reflects,
+ * comes out black on any face the lamps do not glint off.
+ *
+ * The Thompson's magazine was the proof: a large flat panel at 0x4d565f,
+ * which is 0.10 linear where iron is 0.5 to 0.6, rendering as a pure
+ * black rectangle with no gradient anywhere on it. Real blued and
+ * parkerised steel is dark because the oxide is a thin absorbing film
+ * over the metal, not because the metal stopped being a mirror.
+ *
+ * These are the five that were physically impossible for a conductor --
+ * all under 0.12 linear. Same hues, same order from darkest to lightest,
+ * moved up to where steel actually sits. The others in this game already
+ * run 0x848c95 to 0xc2c8ce and are left alone.
+ */
+  steel: { color: 0x6b7078, texture: 'metal', roughness: 0.44, metalness: 1 },
+  /* uvScale 5, not 18.
+   *
+   * On a swept section U runs AROUND the cross-section and V along the
+   * sweep, so at 18 repeats the grain wraps helically and a stock comes
+   * out banded diagonally in cream and tan -- a barber's pole, not wood.
+   * It is on every wooden part in the game. Five repeats over a forearm
+   * puts the figure along the piece, which is the way a stock is cut. */
+  wood: { color: 0x5c4028, texture: 'wood', roughness: 0.66, metalness: 0, uvScale: 5 },
 };
 
 function makeThompson() {
