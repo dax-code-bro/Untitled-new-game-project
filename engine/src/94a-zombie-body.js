@@ -236,6 +236,13 @@ function buildZombieNeck(g, segments, build) {
    everything else. */
 function buildBust(g, build) {
   const B = build.bust;
+  /* `lift` is how far off the flesh this sits, so the same shape can be
+     emitted twice: once as the body and once, a few millimetres out, as
+     the garment over it. Without the second one the shirt is a smooth
+     tube lofted from the torso stack alone, and it flattens the chest it
+     is supposed to be covering -- which is why the women read as having
+     none at all under their clothes. */
+  const lift = arguments.length > 2 && arguments[2] ? arguments[2] : 0;
   for (const side of [-1, 1]) {
     const rings = [];
     const N = 5;
@@ -244,9 +251,9 @@ function buildBust(g, build) {
       // Out from the ribs, forward, and drooping as it goes.
       const proj = Math.sin(t * PI * 0.62);
       rings.push({
-        p: new Vec3(side * B.x * (1 - t * 0.18), B.y - t * B.drop, B.z + proj * B.out),
-        w: B.r * Math.sin((1 - t * 0.62) * PI * 0.5) + 0.004,
-        d: B.r * Math.sin((1 - t * 0.62) * PI * 0.5) + 0.004,
+        p: new Vec3(side * B.x * (1 - t * 0.18), B.y - t * B.drop, B.z + proj * B.out + lift * 0.55),
+        w: B.r * Math.sin((1 - t * 0.62) * PI * 0.5) + 0.004 + lift,
+        d: B.r * Math.sin((1 - t * 0.62) * PI * 0.5) + 0.004 + lift,
         e: 2.2, uv: t,
       });
     }
@@ -829,6 +836,8 @@ function buildZombieGarment(g, build, rng, segments, outfit) {
      different colour. Cloth hangs. */
   const lift = 0.028;
   const kind = build.garment || 'shirt';
+  // The chest, under whatever this is. Same reason as the outfit path.
+  if (build.bust) buildBust(g, build, lift + 0.006);
 
   if (kind === 'dress') {
     /* Bodice down to the waist, then a skirt that flares to the knee. The
@@ -925,6 +934,8 @@ function buildOutfitTop(g, build, rng, segments, outfit) {
   const rows = [t.collar, 0.487, 0.440, 0.390, 0.330, 0.270, 0.205, 0.140, 0.070, 0.000, -0.070, t.hem];
   loftGarment(g, rows.map((y, i) => garmentRing(T, y, lift, i > 8 ? 1.02 : 1)), segments, rng,
     { holes: t.tears, thick: 0.007, tearBand: [t.hem, 0.16] });
+  // Over the chest, not through it.
+  if (build.bust) buildBust(g, build, lift + 0.006);
   // A rolled collar, so the neck opening has an edge rather than a raw rim.
   const top = garmentRing(T, t.collar, lift);
   loftRings(g, [

@@ -5992,8 +5992,16 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
      -- a rifle carried at the hip does sit further outboard -- but at 46
      and 36 mm on top of a 30% longer hold, a Thompson's receiver was
      against the right edge of the frame with only the barrel in shot. */
+  /* A third argument with itself, and this one has a measurement behind
+     it rather than a feeling. At -186 the receiver sat 87 per cent of the
+     way to the bottom of the frame and a Thompson reload happened off
+     screen; at -106 it sits at 67 per cent, and 67 is the gun held at the
+     chest. A carried weapon reads right at about three quarters down.
+     Interpolating between the two points I actually measured -- 20
+     percentage points over 80 mm, so a quarter of a point per millimetre
+     -- 78 per cent is -150. */
   const hipX = (po ? po.x : 0.092 + bulk * 0.020) - drawIn + bobX * (bench ? 0 : 1),
-        hipY = (po ? po.y : -0.106 - bulk * 0.022) + (bench ? 0 : bobY - dip),
+        hipY = (po ? po.y : -0.150 - bulk * 0.026) + (bench ? 0 : bobY - dip),
         hipD = po ? po.d : 0.355 + bulk * 0.055;
   const adsX = 0, adsY = -spec.sightH, adsD = 0.30;
   const a = P.ads;
