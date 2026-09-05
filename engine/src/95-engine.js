@@ -690,6 +690,10 @@ class Engine {
       const clothGeo = makeHumanoidMesh(skeleton, {
         zombieBuild: opts.zombieBuild || 'male', girth: opts.girth,
         seed: opts.seed || 3, clothOnly: true, outfit: opts.outfit,
+        // Alive or dead. The cloth builder tears and frays a corpse's
+        // clothes and leaves a survivor's whole, and it can only know
+        // which from here -- this call dropped `blood` on the floor.
+        blood: opts.blood,
       });
       if (clothGeo.indices.length) {
         /* Registered, like the head, so a question about the clothing can
@@ -699,7 +703,7 @@ class Engine {
            GpuMesh, and that is exactly the question the black torsos
            raised. */
         const clothMesh = new GpuMesh(this.gl, clothGeo);
-        clothMesh.__key = 'cloth:' + (opts.zombieBuild || 'male') + ':' + (opts.girth || 1) + ':' + (opts.seed || 3) + ':' + (opts.outfit || '-');
+        clothMesh.__key = 'cloth:' + (opts.zombieBuild || 'male') + ':' + (opts.girth || 1) + ':' + (opts.seed || 3) + ':' + (opts.outfit || '-') + (opts.blood === false ? ':intact' : '');
         (this._geoByKey || (this._geoByKey = new Map())).set(clothMesh.__key, clothGeo);
         const clothActor = new Actor(this, {
           name: 'cloth', mesh: clothMesh,

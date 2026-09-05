@@ -4808,7 +4808,25 @@ function heroModel(game, S, id) {
   b.gravityScale = 0;
   b.isTrigger = true;
   b.setPosition({ x: HERO_STAGE[0], y: HERO_STAGE[1], z: HERO_STAGE[2] });
-  if (a.animator) a.animator.play('idle', 0);
+  /* Every character on this stage has been posed mid-JUMP.
+   *
+   * The controller picks its own clip from its own state, and the first
+   * branch is `if (!this.grounded) state = 'jump'`. A model on the stage
+   * has gravityScale 0 and is a trigger, so it never lands on anything and
+   * is never grounded -- so one frame after heroModel asked for 'idle' the
+   * controller took the animator back and played 'jump'. Measured on the
+   * stage: clip 'jump', frozen at t 0.667, both hands up at z +0.349 and
+   * the head at y 0.609. That is the pose the whole cast is standing in
+   * while you choose one, and it is why they read as the things they are
+   * about to fight rather than as survivors.
+   *
+   * `autoAnimate: false` is the flag the controller already has for
+   * exactly this -- "the owner drives the clip" -- and nobody had set it.
+   * And the clip is `zstand`, a survivor's idle: arms down, weight on one
+   * hip, breathing. `idle` is the plain humanoid one, which is fine but
+   * flat; these are the ten faces of the game and they can be alive. */
+  a.controller.autoAnimate = false;
+  if (a.animator) a.animator.play(a.animator.clips.has('zstand') ? 'zstand' : 'idle', 0);
   S.heroModels[id] = a;
   return a;
 }
@@ -11293,7 +11311,7 @@ function makeHud() {
       <p>THE DEAD COME THROUGH THE WINDOWS. POINTS BUY EVERYTHING.</p>
       <p>WASD MOVE &nbsp;·&nbsp; MOUSE LOOK &nbsp;·&nbsp; RIGHT-CLICK AIM &nbsp;·&nbsp; SHIFT SPRINT</p>
       <p>F USE &nbsp;·&nbsp; R RELOAD &nbsp;·&nbsp; Q SWAP &nbsp;·&nbsp; SPACE JUMP</p>
-      <p>V KNIFE &nbsp;·&nbsp; G SHIELD &nbsp;·&nbsp; CTRL SLIDE (ADRENALINE)</p>
+      <p>V KNIFE &nbsp;·&nbsp; T GRENADE &nbsp;·&nbsp; G SHIELD &nbsp;·&nbsp; CTRL SLIDE (ADRENALINE)</p>
       <p style="color:#ffd27a">AT THE WORKBENCH &nbsp; A/D SLOT &nbsp;·&nbsp; W/S PART &nbsp;·&nbsp; F FIT &nbsp;·&nbsp; TAB LEAVE</p>
       <p style="color:#7ad7ff">CONTROLLER &nbsp; STICKS MOVE/LOOK &nbsp;·&nbsp; RT FIRE &nbsp;·&nbsp; LT AIM &nbsp;·&nbsp; L3 SPRINT &nbsp;·&nbsp; RB KNIFE &nbsp;·&nbsp; B USE/SLIDE &nbsp;·&nbsp; X RELOAD &nbsp;·&nbsp; Y SWAP</p>
       <p style="color:#6b6455">PICK A NAME BELOW &nbsp;·&nbsp; ON A PAD, LB / RB CHANGE IT</p>

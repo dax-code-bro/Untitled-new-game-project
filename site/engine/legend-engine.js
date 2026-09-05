@@ -13356,6 +13356,10 @@ class Engine {
       const clothGeo = makeHumanoidMesh(skeleton, {
         zombieBuild: opts.zombieBuild || 'male', girth: opts.girth,
         seed: opts.seed || 3, clothOnly: true, outfit: opts.outfit,
+        // Alive or dead. The cloth builder tears and frays a corpse's
+        // clothes and leaves a survivor's whole, and it can only know
+        // which from here -- this call dropped `blood` on the floor.
+        blood: opts.blood,
       });
       if (clothGeo.indices.length) {
         /* Registered, like the head, so a question about the clothing can
@@ -13365,7 +13369,7 @@ class Engine {
            GpuMesh, and that is exactly the question the black torsos
            raised. */
         const clothMesh = new GpuMesh(this.gl, clothGeo);
-        clothMesh.__key = 'cloth:' + (opts.zombieBuild || 'male') + ':' + (opts.girth || 1) + ':' + (opts.seed || 3) + ':' + (opts.outfit || '-');
+        clothMesh.__key = 'cloth:' + (opts.zombieBuild || 'male') + ':' + (opts.girth || 1) + ':' + (opts.seed || 3) + ':' + (opts.outfit || '-') + (opts.blood === false ? ':intact' : '');
         (this._geoByKey || (this._geoByKey = new Map())).set(clothMesh.__key, clothGeo);
         const clothActor = new Actor(this, {
           name: 'cloth', mesh: clothMesh,
@@ -23345,6 +23349,45 @@ function makeZombieClips() {
     upperLegR: { keys: [[0, 4, 0, -4], [0.5, 2, 0, -4], [1, 4, 0, -4]] },
     lowerLegL: { keys: [[0, 8, 0, 0], [0.5, 12, 0, 0], [1, 8, 0, 0]] },
     lowerLegR: { keys: [[0, 11, 0, 0], [0.5, 7, 0, 0], [1, 11, 0, 0]] },
+  }));
+
+  /* ---------------------------------------------------------
+     STANDING — a person who is alive.
+
+     Every one of the ten playable characters is built by the zombie
+     builder, which is right for the geometry and wrong for the pose:
+     they were all posed on `zidle`, whose shoulders sit at -100 degrees.
+     That is the arms-out shamble, and it is what the whole cast has been
+     doing on the character-select stage -- ten survivors standing in
+     front of you with their hands up at their faces like the things they
+     are about to fight.
+
+     Arms down. Weight on one hip, shifting slowly; the chest rises and
+     falls; the head turns a few degrees and comes back. Alive, but not
+     doing anything.
+     --------------------------------------------------------- */
+  clips.push(buildClip('zstand', 6.4, {
+    hips: {
+      keys: [[0, 0, -2, 2], [0.35, 0, 2, -2], [0.7, 0, 1, -1], [1, 0, -2, 2]],
+      pos: [[0, 0.008, 0, 0], [0.35, -0.008, 0.002, 0], [0.7, 0.004, -0.001, 0], [1, 0.008, 0, 0]],
+    },
+    // Upright. The zombie spine carries a 15-degree stoop; a survivor does not.
+    spine: { keys: [[0, 1, -1, 1], [0.5, 3, 1, -1], [1, 1, -1, 1]] },
+    chest: { keys: [[0, -1, 1, 0], [0.5, 2, -1, 0], [1, -1, 1, 0]] },
+    head: { keys: [[0, 0, 5, -1], [0.3, -2, -4, 1], [0.62, 1, 8, -2], [1, 0, 5, -1]] },
+    /* Hanging, with the small outward carry a real arm has -- the elbows
+       stand a few degrees off the ribs rather than being welded to them. */
+    upperArmL: { keys: [[0, -4, 2, -7], [0.35, -1, -1, -9], [0.7, -6, 3, -6], [1, -4, 2, -7]] },
+    upperArmR: { keys: [[0, -6, -2, 7], [0.35, -2, 1, 9], [0.7, -3, -3, 6], [1, -6, -2, 7]] },
+    lowerArmL: { keys: [[0, -10, 0, 0], [0.5, -15, 0, 0], [1, -10, 0, 0]] },
+    lowerArmR: { keys: [[0, -13, 0, 0], [0.5, -8, 0, 0], [1, -13, 0, 0]] },
+    handL: { keys: [[0, 4, 0, -3], [0.5, -2, 0, 2], [1, 4, 0, -3]] },
+    handR: { keys: [[0, -3, 0, 2], [0.5, 5, 0, -3], [1, -3, 0, 2]] },
+    // Weight on the left, knees soft, one foot a little forward.
+    upperLegL: { keys: [[0, -2, 0, 2], [0.5, -4, 0, 2], [1, -2, 0, 2]] },
+    upperLegR: { keys: [[0, 3, 0, -3], [0.5, 1, 0, -3], [1, 3, 0, -3]] },
+    lowerLegL: { keys: [[0, 3, 0, 0], [0.5, 5, 0, 0], [1, 3, 0, 0]] },
+    lowerLegR: { keys: [[0, 5, 0, 0], [0.5, 3, 0, 0], [1, 5, 0, 0]] },
   }));
 
   return clips;
