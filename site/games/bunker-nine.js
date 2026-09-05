@@ -8353,12 +8353,31 @@ function setZombieVisible(z, on) {
   }
 }
 
-/* A body coming back out of the pool is whole again. */
+/* A body coming back out of the pool is whole again.
+ *
+ * Which now means its limbs as well. A severed limb is a bone scaled to
+ * nothing, and nothing else in the game ever sets a bone's scale, so
+ * putting them all back to one is both correct and cheap -- and without
+ * it the pool would start handing out one-armed zombies from round two,
+ * with no wound to explain them. The stumps go with them. */
 function healWounds(z) {
   for (const w of z.wounds || []) {
     w.shown = false; w.boneShown = false;
     w.rim.visible = false; w.cavity.visible = false; w.bone.visible = false;
   }
+  const sk = z.actor.skeleton;
+  if (sk) {
+    for (const n of ['upperArmL', 'upperArmR', 'upperLegL', 'upperLegR',
+      'lowerLegL', 'lowerLegR']) {
+      const b = sk.bone(n);
+      if (b) b.localScale.set(1, 1, 1);
+    }
+  }
+  for (const q of z.stumps || []) if (q.destroy) q.destroy();
+  z.stumps = [];
+  z.lost = {};
+  z.oneArmed = false;
+  z.legless = false;
 }
 
 function parkZombie(game, S, z) {
@@ -8563,6 +8582,22 @@ function hurtZombie(game, S, z, dmg, at, headshot, source, opts) {
     z.stunT = Math.max(z.stunT || 0, STUN.time);
     z.stunSeed = Math.random() * 6.28;
   }
+  /* A LIMB, if this one earned it.
+   *
+   * After the damage, so a round that takes a body under fifty can take
+   * the arm with it, and before the death check, so the last hit either
+   * kills it or dismembers it rather than both. Melee tears at a lower
+   * threshold than a bullet needs, because a hammer does not have to
+   * pass through to take something off. */
+  if (!z.dead && z.hp > 0 && z.hp <= LIMB.hpGate && !z.boss && !(z.V && z.V.amalgam)) {
+    const need = source === 'melee' ? LIMB.meleeDmg : LIMB.dmg;
+    if (dmg >= need && Math.random() < LIMB.chance) {
+      const reg = hitRegion(z, { x: at[0], y: at[1], z: at[2] });
+      const kind = limbHit(z, reg, at);
+      if (kind) severLimb(game, S, z, kind, at, S.sfx);
+    }
+  }
+
   if (z.hp <= 0) {
     /* The killing blow makes a mess. Everything above is the wound; this
        is the body coming apart, and it is worth being bigger than any
@@ -9499,6 +9534,142 @@ function throwGrenade(game, S, P, sfx) {
     vel: [f.x * GRENADE.throwSpeed, f.y * GRENADE.throwSpeed + 2.2, f.z * GRENADE.throwSpeed],
   });
   sfx.magRelease();
+}
+
+/* ================= COMING APART =================
+ *
+ * A limb can be taken off a body that is nearly finished. Not before:
+ * the gate is fifty points of health, checked AFTER the hit lands, so a
+ * heavy round that takes a body under fifty can also take the arm with
+ * it -- but a full-health zombie loses nothing however hard you hit it.
+ * That keeps it as the end of a fight rather than the start of one.
+ *
+ * It also has to be a hard enough hit. Gated on the damage of the round
+ * rather than on which gun fired it, so a shotgun at close range, a
+ * .50, the ram and the anti-materiel rifle all do it and a 9 mm never
+ * does -- and a weapon added later inherits the rule without being
+ * listed anywhere.
+ *
+ * ---- HOW A LIMB LEAVES ----
+ * The body is one skinned mesh, so an arm cannot be hidden: it is a set
+ * of vertices weighted to arm bones. But the Animator only ever writes
+ * localRotation and localPosition, and Skeleton.update() composes with
+ * localScale as well -- so a bone scaled to nothing collapses itself and
+ * everything below it to its own joint, permanently, and the animation
+ * playing over the top cannot undo it. The clothing and the blood are
+ * separate meshes on the SAME skeleton, so the sleeve goes with the arm
+ * for free.
+ *
+ * That is the same mechanism the grenade-made crawlers already used on
+ * the shins; this makes it per limb and gives it a reason.
+ */
+const LIMB = {
+  hpGate: 50,        // it has to be this weak first
+  dmg: 52,           // and the round has to be this hard
+  meleeDmg: 38,      // a hammer or a ram tears rather than punches through
+  chance: 0.80,      // and even then it does not always come off
+};
+
+/* Which limb a hit took, or null. Side comes off the RIG rather than a
+   guess: upperArmL sits at local +X and upperArmR at -X, and the actor
+   is turned by its facing about Y, so local +X points along
+   (cos f, 0, -sin f) in the world. Getting this backwards means shooting
+   one arm and watching the other fall off. */
+function limbHit(z, region, at) {
+  const id = region && region.id;
+  const arm = id === 'arm' || id === 'hand' || id === 'shoulder';
+  const leg = id === 'upperLeg' || id === 'lowerLeg' || id === 'foot';
+  if (!arm && !leg) return null;
+  const f = z.actor.controller.facing;
+  const dx = at[0] - z.actor.position.x, dz = at[2] - z.actor.position.z;
+  const side = (dx * Math.cos(f) - dz * Math.sin(f)) >= 0 ? 'L' : 'R';
+  return (arm ? 'arm' : 'leg') + side;
+}
+
+/* The piece that comes off, thrown. Two segments and an end -- an upper,
+   a lower and a hand or a foot -- because one cylinder tumbling through
+   the air reads as a log. */
+function throwLimb(game, S, z, kind, at) {
+  const upper = kind.indexOf('arm') === 0;
+  const flesh = { color: 0x7c8a6a, texture: 'skin', roughness: 0.9, metalness: 0, subsurface: 0.08 };
+  const raw = { color: 0x5a120c, texture: 'smooth', roughness: 0.62 };
+  const away = [(Math.random() - 0.5) * 2, 0.5 + Math.random(), (Math.random() - 0.5) * 2];
+  const L = Math.hypot(away[0], away[1], away[2]) || 1;
+  const sp = upper ? 3.4 : 2.6;
+  const parts = [];
+  const seg = (dy, r, h, mat) => {
+    const a = game.cylinder({
+      at: [at[0] + (Math.random() - 0.5) * 0.06, at[1] + dy, at[2] + (Math.random() - 0.5) * 0.06],
+      radius: r, height: h, material: mat, lifetime: 9,
+      velocity: [away[0] / L * sp, away[1] / L * sp + 1.2, away[2] / L * sp],
+    });
+    if (a && a.body) {
+      a.body.angularVelocity.set((Math.random() - 0.5) * 12, (Math.random() - 0.5) * 12, (Math.random() - 0.5) * 12);
+    }
+    parts.push(a);
+    return a;
+  };
+  seg(0, upper ? 0.052 : 0.078, upper ? 0.26 : 0.40, flesh);
+  seg(-0.20, upper ? 0.042 : 0.058, upper ? 0.24 : 0.36, flesh);
+  // The torn end: a short stub of the darker stuff, so it has a wrong end.
+  seg(0.13, upper ? 0.046 : 0.070, 0.05, raw);
+  return parts;
+}
+
+/* Take one off. */
+function severLimb(game, S, z, kind, at, sfx) {
+  z.lost = z.lost || {};
+  if (z.lost[kind]) return false;
+  const sk = z.actor.skeleton;
+  if (!sk) return false;
+  const side = kind.slice(-1);
+  const bone = sk.bone((kind.indexOf('arm') === 0 ? 'upperArm' : 'upperLeg') + side);
+  if (!bone) return false;
+  z.lost[kind] = true;
+
+  /* Collapsed, not hidden. Everything below the shoulder or the hip goes
+     with it, clothing included, because they share the skeleton. */
+  bone.localScale.set(0.02, 0.02, 0.02);
+
+  /* A stump where it went, parented to the joint above so it rides with
+     the body -- the same trick the eyes use on the head bone. */
+  const parentName = (kind.indexOf('arm') === 0 ? 'shoulder' : 'upperLeg') + side;
+  const pi = sk.index(kind.indexOf('arm') === 0 ? 'shoulder' + side : 'hips');
+  if (pi >= 0) {
+    const stump = game.sphere({ radius: kind.indexOf('arm') === 0 ? 0.055 : 0.082,
+      physics: false,
+      material: { color: 0x4a0f0a, texture: 'smooth', roughness: 0.42, metalness: 0 } });
+    stump.parent = z.actor;
+    stump.parentBone = pi;
+    stump.localOffset = kind.indexOf('arm') === 0
+      ? new window.LE.Vec3(0, -0.055, 0)
+      : new window.LE.Vec3((side === 'L' ? 1 : -1) * 0.09, -0.055, 0);
+    z.stumps = z.stumps || [];
+    z.stumps.push(stump);
+  }
+  void parentName;
+
+  if (S.toggles && S.toggles.gore !== false) {
+    game.particles.gore(at, { count: 16, speed: 5.0, size: 1.05 });
+    game.particles.blood(at, { count: 14, speed: 4.0, size: 1.0 });
+    throwLimb(game, S, z, kind, at);
+  }
+  game.audio.impact(0.8);
+  if (sfx && sfx.hitmark) sfx.hitmark();
+
+  /* An arm: it keeps coming, and it stops using the arm it no longer
+     has. The runner's whole attack is the arm it was holding, so it
+     falls back to its teeth. */
+  if (kind.indexOf('arm') === 0) {
+    z.oneArmed = true;
+    z.V = Object.assign({}, z.V, { attack: ['zattack_bite', 'zattack'] });
+  } else {
+    /* A leg: nothing shambles on one. It goes down and comes on at you
+       along the floor, which is a worse thing to have done than a
+       standing one at the same health. */
+    makeCrawler(game, S, z);
+  }
+  return true;
 }
 
 /* Take a zombie's legs off. It keeps its health and its points value; it
@@ -11573,6 +11744,8 @@ function start(opts = {}) {
      have to grow a parameter otherwise. */
   S.game = game;
   const sfx = makeSfx(game);
+  // Reachable from anything that only has S -- dismemberment, for one.
+  S.sfx = sfx;
   // Exposed for the reload test, which counts how often each one fires:
   // twice now a stage held in a boolean has played its sound every frame.
   S.__sfx = sfx;
@@ -11726,6 +11899,34 @@ function start(opts = {}) {
 
   game.onUpdate((dt) => {
     if (window.__FREEZE) return;   // test/profiling hatch: engine only
+
+    /* NOBODY IS PLAYING YET.
+     *
+     * The world was live from the moment it was built, so while you were
+     * reading ten bios and picking a character you were also standing in
+     * the bunker able to walk, look, aim and shoot -- the game playing
+     * itself behind its own menu. Until you have chosen and pressed to
+     * start, the only things that run are the ones the title screen
+     * needs: the character on the stage turning on the spot, and the
+     * clock that lets a pad wake up.
+     *
+     * `S.time` is deliberately held too. It is the clock the round
+     * schedule, the grace timer and every cooldown are measured against,
+     * and letting it run for the two minutes somebody spends reading
+     * would start the first round already late. */
+    if (!S.started) {
+      /* And put the gun away while they are choosing. The viewmodel is
+         driven from this same hook, so with the hook standing down it
+         would otherwise hang in the corner in whatever pose it was built
+         in, over the top of the character you are looking at. */
+      if (!S.viewStowed) {
+        S.viewStowed = true;
+        for (const v of Object.values(P.view)) setViewVisible(v, false);
+      }
+      turnHeroModel(game, S, dt);
+      return;
+    }
+
     S.time += dt;
     if (S.grace > 0) {
       S.grace = Math.max(0, S.grace - dt);
@@ -12369,7 +12570,6 @@ function start(opts = {}) {
     updateRounds(game, S, P, hud, sfx, dt);
     for (const z of S.zombies) updateZombie(game, S, P, z, dt, sfx);
     updateCorpses(game, S, dt);
-    turnHeroModel(game, S, dt);
 
     /* Thrown bile in flight. Gravity, a splash on impact, and Deflect
        gets its own sound so the perk is audibly doing something. */

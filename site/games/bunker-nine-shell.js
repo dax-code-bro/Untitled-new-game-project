@@ -798,18 +798,33 @@ function navSet(rows, onBack, keep) {
   while (nav.i < nav.rows.length && nav.rows[nav.i].disabled) nav.i++;
   if (nav.i >= nav.rows.length) nav.i = 0;
   nav.live = true;
-  navPaint();
+  navPaint(false);
 }
 
 function navClear() { nav.rows = []; nav.live = false; nav.onBack = null; }
 
-function navPaint() {
+/* `scroll` is opt-in, and that is the whole of a bug that made two
+   different things look broken.
+ *
+ * Hovering a row focuses it, so the pointer and the pad never disagree.
+ * Focusing used to scroll the row into view -- right for a keyboard,
+ * wrong for a mouse, because the list is in a scrolling panel and a row
+ * that is only half visible SHIFTS THE WHOLE LIST UNDER THE CURSOR the
+ * moment you hover it. By the time the click lands, a different row is
+ * under the pointer. That is "clicking a graphics preset picks the one
+ * next to it", and it is also why rebinding looked dead: you clicked
+ * "Move forward", the list moved, you armed "Move back" instead, and the
+ * row you were watching never changed.
+ *
+ * Only the keyboard and the pad scroll now. A pointer is already
+ * pointing at the thing it means. */
+function navPaint(scroll) {
   for (var k = 0; k < nav.rows.length; k++) {
     var r = nav.rows[k];
     if (r.el) r.el.classList.toggle('sel', k === nav.i);
   }
   var cur = nav.rows[nav.i];
-  if (cur && cur.el && cur.el.scrollIntoView) {
+  if (scroll && cur && cur.el && cur.el.scrollIntoView) {
     cur.el.scrollIntoView({ block: 'nearest' });
   }
 }
@@ -819,7 +834,7 @@ function navMove(d) {
   var n = nav.rows.length, k = nav.i, guard = 0;
   do { k = (k + d + n) % n; guard++; } while (nav.rows[k].disabled && guard <= n);
   nav.i = k;
-  navPaint();
+  navPaint(true);
   beep('move');
 }
 
@@ -863,6 +878,12 @@ function beep(kind) {
 /* ---- keyboard ---- */
 W.addEventListener('keydown', function (e) {
   if (!nav.live) return;
+  /* A rebind that is waiting for a key gets the key, and this handler
+     does not touch it. Otherwise the menu eats W, A, S, D, the arrows,
+     Enter, Space, Tab and Escape before the capture ever sees them --
+     which is most of what anybody wants to bind, and is why arming one
+     and pressing a key looked like it did nothing at all. */
+  if (capturing) return;
   if (e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) {
     if (e.key === 'Escape') { e.target.blur(); e.preventDefault(); }
     return;
@@ -890,6 +911,8 @@ function pollPad(now) {
   var dt = lastPoll ? Math.min(0.1, (now - lastPoll) / 1000) : 0;
   lastPoll = now;
   if (!nav.live || !W.navigator || !navigator.getGamepads) return;
+  // Same as the keyboard: a waiting capture gets the button.
+  if (capturing) { SHELL.pad = (navigator.getGamepads() || [])[0] || SHELL.pad; return; }
   var pads = navigator.getGamepads(), p = null, k;
   for (k = 0; k < pads.length; k++) if (pads[k] && pads[k].connected) { p = pads[k]; break; }
   SHELL.pad = p;
@@ -953,11 +976,11 @@ function wire(row) {
   var self = row;
   row.el.addEventListener('mouseenter', function () {
     var k = nav.rows.indexOf(self);
-    if (k >= 0 && !self.disabled) { nav.i = k; navPaint(); }
+    if (k >= 0 && !self.disabled) { nav.i = k; navPaint(false); }
   });
   row.el.addEventListener('click', function (e) {
     var k = nav.rows.indexOf(self);
-    if (k >= 0) { nav.i = k; navPaint(); }
+    if (k >= 0) { nav.i = k; navPaint(false); }
     if (self.onClick) self.onClick(e);
     else if (self.onEnter && !self.disabled) { beep('ok'); self.onEnter(); }
   });
@@ -1045,11 +1068,11 @@ function openSettings(from) {
   backTo = from || 'main';
   show('setscreen');
   paintTabs();
-  paintTab();
+  paintTab(false);
   tabHook = function (d) {
     var i = TABS.map(function (t) { return t.id; }).indexOf(curTab);
     curTab = TABS[(i + d + TABS.length) % TABS.length].id;
-    paintTabs(); paintTab();
+    paintTabs(); paintTab(false);
   };
   startHook = null;
 }
@@ -1066,7 +1089,7 @@ function paintTabs() {
     var d = document.createElement('div');
     d.className = 'tab' + (t.id === curTab ? ' sel' : '');
     d.textContent = t.name;
-    d.addEventListener('click', function () { curTab = t.id; paintTabs(); paintTab(); });
+    d.addEventListener('click', function () { curTab = t.id; paintTabs(); paintTab(false); });
     el.tabs.appendChild(d);
   });
   el.setfoot.innerHTML =
@@ -1385,10 +1408,15 @@ function bindRow(a, which) {
    THE TABS
    ================================================================ */
 
-function paintTab() {
+function paintTab(keepPlace) {
   stopLive();
   // The mic meter's nodes belong to the tab that drew them.
   micMeter = null; micGateMark = null;
+  /* Rebuilding the tab used to throw you back to the top of it. Rebind a
+     key and the whole list jumps, which reads as "nothing happened" even
+     when the bind took. Where you were is kept across a rebuild of the
+     same tab -- both the selected row and how far the panel is scrolled. */
+  var wasAt = nav.i, wasScroll = el.setbody.scrollTop;
   el.setbody.innerHTML = '';
   var rows = [];
   var add = function (r) { if (r) { el.setbody.appendChild(r.el); rows.push(r); } return r; };
@@ -1559,7 +1587,11 @@ function paintTab() {
     el.setbody.appendChild(info);
   }
 
-  navSet(rows, closeSettings);
+  navSet(rows, closeSettings, keepPlace !== false);
+  if (keepPlace !== false) {
+    if (wasAt < nav.rows.length) { nav.i = wasAt; navPaint(false); }
+    el.setbody.scrollTop = wasScroll;
+  }
 }
 
 function applyPreset(name) {
