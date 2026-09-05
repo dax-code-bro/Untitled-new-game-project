@@ -1130,6 +1130,118 @@ function buildPerkBottle(game, def, at, scale = 1) {
 const SHIELD = { duration: 5.0, cooldown: 22 };
 const SLIDE = { speed: 11.5, duration: 0.62, cooldown: 1.1, height: 0.9 };
 
+/* ---------------- what a control is bound to ----------------
+
+   The settings screen has had a Controls tab and a Gamepad tab since the
+   front end went in. Both of them work: they capture a press, they store
+   it, they save it, and they publish it on BUNKER.binds and on S.binds
+   "so the game can read it every frame".
+
+   The game never read it. Not once -- `binds` does not appear anywhere in
+   this file. Every control in here was a literal: i.down('shift'),
+   i.justPressed('r'), pad.pressed.x. So rebinding a key changed the label
+   on the row and nothing else, which is exactly "when I change my key bind
+   it completely doesn't work", and no amount of fixing the capture prompt
+   was ever going to help.
+
+   Two of them were not even telling the truth about the CURRENT key: the
+   menu advertised E for the grenade where the game reads T, and V for the
+   knife where the game took V or E.
+
+   So the table below is the one definition of what a control is, the menu
+   and the game both come off it, and a rebind takes effect on the next
+   frame with nothing to restart.
+
+   `alt` is the extra key an action has historically also answered to. It
+   applies only while the action is on its default -- rebind it and the
+   alternate goes too, because the point of moving a control off a key is
+   usually to get the key back. */
+const CONTROLS = {
+  fwd:    { key: 'w',       alt: 'arrowup',    pad: null },
+  back:   { key: 's',       alt: 'arrowdown',  pad: null },
+  left:   { key: 'a',       alt: 'arrowleft',  pad: null },
+  right:  { key: 'd',       alt: 'arrowright', pad: null },
+  jump:   { key: ' ',       pad: 0 },
+  sprint: { key: 'shift',   pad: 10 },
+  slide:  { key: 'control', alt: 'c',          pad: 1 },
+  use:    { key: 'f',       alt: 'x',          pad: 1 },
+  reload: { key: 'r',       pad: 2 },
+  swap:   { key: 'q',       pad: 3 },
+  knife:  { key: 'v',       pad: 5 },
+  shield: { key: 'g',       pad: 10 },
+  nade:   { key: 't',       pad: 4 },
+  pause:  { key: 'escape',  alt: 'o',          pad: 9 },
+};
+
+/* The menu stores a KeyboardEvent.code -- 'KeyW', 'ShiftLeft', 'Space' --
+   because that is what identifies a physical key regardless of layout. The
+   engine's input keeps event.key lowercased, with space as ' '. This is the
+   translation between them, and it is the reason a stored bind could not
+   have worked even if something had read it. */
+function keyFromCode(code) {
+  if (!code) return null;
+  if (code === 'Space') return ' ';
+  let m = /^Key(.)$/.exec(code);
+  if (m) return m[1].toLowerCase();
+  m = /^(?:Digit|Numpad)(\d)$/.exec(code);
+  if (m) return m[1];
+  m = /^(Shift|Control|Alt|Meta)(?:Left|Right)$/.exec(code);
+  if (m) return m[1].toLowerCase();
+  return code.toLowerCase();
+}
+
+const PAD_BUTTON_NAMES = ['a', 'b', 'x', 'y', 'lb', 'rb', 'lt', 'rt', 'back',
+  'start', 'ls', 'rs', 'up', 'down', 'left', 'right'];
+
+/* One reader for both devices. `S.binds` is what the shell publishes; with
+   no shell, or an action the shell does not know, the defaults above stand. */
+function makeControls(S, game) {
+  const codeCache = {};
+  const keyOf = (id) => {
+    const b = S.binds && S.binds.keys;
+    const code = b && b[id];
+    if (code) {
+      if (codeCache[id] !== code) { codeCache[id] = code; codeCache[id + ':k'] = keyFromCode(code); }
+      const k = codeCache[id + ':k'];
+      if (k) return { k, custom: k !== (CONTROLS[id] && CONTROLS[id].key) };
+    }
+    return { k: CONTROLS[id] ? CONTROLS[id].key : null, custom: false };
+  };
+  const padOf = (id) => {
+    const b = S.binds && S.binds.pad;
+    const v = b && Object.prototype.hasOwnProperty.call(b, id) ? b[id] : (CONTROLS[id] ? CONTROLS[id].pad : null);
+    return v == null ? null : PAD_BUTTON_NAMES[v] || null;
+  };
+  const probe = (id, how) => {
+    const i = game.input, pad = i.pad;
+    const { k, custom } = keyOf(id);
+    if (k && i[how](k)) return true;
+    const alt = !custom && CONTROLS[id] && CONTROLS[id].alt;
+    if (alt && i[how](alt)) return true;
+    const pn = padOf(id);
+    if (!pn) return false;
+    return how === 'down' ? !!pad.buttons[pn] : !!pad.pressed[pn];
+  };
+  return {
+    held: (id) => probe(id, 'down'),
+    hit: (id) => probe(id, 'justPressed'),
+    /* Movement, rebindable, and folded with the stick exactly the way the
+       engine's own beginFrame() folds WASD -- so with everything on its
+       default this is the number `input.axes` would have given. */
+    axes: () => {
+      const pad = game.input.pad;
+      let x = 0, y = 0;
+      if (probe('right', 'down')) x += 1;
+      if (probe('left', 'down')) x -= 1;
+      if (probe('back', 'down')) y += 1;
+      if (probe('fwd', 'down')) y -= 1;
+      if (Math.abs(pad.lx) > 0.01) x += pad.lx;
+      if (Math.abs(pad.ly) > 0.01) y += pad.ly;
+      return { x: Math.max(-1, Math.min(1, x)), y: Math.max(-1, Math.min(1, y)) };
+    },
+  };
+}
+
 const ROUNDS = {
   countFor: (r) => Math.min(4 + Math.ceil(r * 2.6), 33),
   hpFor: (r) => (r <= 9 ? 110 + (r - 1) * 55 : 550 * Math.pow(1.09, r - 9)),
@@ -2441,6 +2553,13 @@ function loadVoicePack() {
     .catch(() => { /* no pack; the synthesised voices carry it */ });
 }
 
+/* How loud a character is. The audio tab has had a Voice slider from the
+   start; S.volVoice was assigned from it and read by nothing, so the
+   slider moved and nobody got quieter. Both voice paths -- a recorded clip
+   and the system speech synthesiser -- take it here. */
+let _voiceVol = 1;
+function setVoiceVolume(v) { _voiceVol = Math.max(0, Math.min(1, v == null ? 1 : v)); }
+
 /* Play the recording if there is one. Returns its length in seconds, or 0
    if there is nothing to play -- which is the caller's signal to speak. */
 function playClip(game, who, text) {
@@ -2451,7 +2570,7 @@ function playClip(game, who, text) {
     let a = _clipCache.get(id);
     if (!a) { a = new Audio(VOICE_DIR + id + '.mp3'); a.preload = 'auto'; _clipCache.set(id, a); }
     a.currentTime = 0;
-    a.volume = 1;
+    a.volume = _voiceVol;
     const pr = a.play();
     if (pr && pr.catch) pr.catch(() => { /* autoplay refused; subtitle stands */ });
     // duration is NaN until the file has loaded at least its header.
@@ -2503,7 +2622,7 @@ function sayLine(game, text, V, opts = {}) {
          it is somebody rather than a setting. */
       u.pitch = Math.max(0.55, Math.min(1.6, 1 + ((say.pitch || 1) - 1) * 0.45));
       u.rate = Math.max(0.6, Math.min(1.5, 1 + ((say.rate || 1) - 1) * 0.7));
-      u.volume = opts.wordVolume != null ? opts.wordVolume : 1;
+      u.volume = (opts.wordVolume != null ? opts.wordVolume : 1) * _voiceVol;
       u.voice = real;
       speechSynthesis.cancel();
       speechSynthesis.speak(u);
@@ -6934,6 +7053,7 @@ function tryFire(game, S, P, hud, sfx, dt) {
   if (spec.melee) {
     P.cooldown = spec.refire;
     P.kickPitch = Math.min(3, P.kickPitch + spec.kick);
+    if (S.rumble) S.rumble(0.30, 0.22, 110);
     P.swingT = (MELEE_SWING[P.equipped()] || { time: 0.34 }).time;
     if (spec.sfx === 'ramHit') sfx.ramSwing(); else sfx.knife();
     const cam0 = game.camera;
@@ -6979,6 +7099,10 @@ function tryFire(game, S, P, hud, sfx, dt) {
   am.mag--;
   P.cooldown = spec.refire;
   P.kickPitch = Math.min(3, P.kickPitch + spec.kick);
+  /* Off the gun's own kick, so a .45 and a .50 do not feel the same in
+     the hands. Short, because the next shot may be 50 ms away. */
+  if (S.rumble) S.rumble(Math.min(0.9, 0.16 + spec.kick * 0.55),
+    Math.min(0.6, 0.10 + spec.kick * 0.30), 70);
 
   /* Muzzle rise. Negative pitch is up in this camera, so recoil subtracts.
      Aiming braces the weapon: about a third less climb, the way a shouldered
@@ -9463,6 +9587,43 @@ function closeBench(S, sfx) {
   if (S.bark) S.bark('grace', true);
 }
 
+/* The pad, actually shaking.
+
+   Settings has had a Vibration toggle and a Vibration strength slider
+   since the front end went in, and there was no vibration anywhere in the
+   game to switch on or off -- S.vibration and S.vibrationStrength were
+   both assigned from the menu and read by nothing. This is the thing they
+   name.
+
+   Two events earn it: firing, scaled by the weapon's own kick, and being
+   hit. The rate limit is not politeness, it is correctness -- playEffect
+   queues, so an MG 42 at 1200 rounds a minute would build a backlog of
+   rumbles seconds deep and the pad would still be shaking after the fight
+   ended. */
+function makeRumble(S) {
+  let last = 0;
+  return (strong, weak, ms) => {
+    if (!S.vibration) return;
+    const k = S.vibrationStrength == null ? 1 : S.vibrationStrength;
+    if (k <= 0) return;
+    const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    if (now - last < 45) return;
+    last = now;
+    try {
+      const pads = (navigator.getGamepads && navigator.getGamepads()) || [];
+      for (const g of pads) {
+        const act = g && (g.vibrationActuator
+          || (g.hapticActuators && g.hapticActuators[0]));
+        if (!act || !act.playEffect) continue;
+        act.playEffect('dual-rumble', { duration: ms,
+          strongMagnitude: Math.max(0, Math.min(1, strong * k)),
+          weakMagnitude: Math.max(0, Math.min(1, weak * k)) });
+        break;
+      }
+    } catch (e) { void e; }
+  };
+}
+
 function hurtPlayer(game, S, P, dmg, sfx, kind, from) {
   // Working at the bench means you are not there as far as the horde is
   // concerned. Anything already swinging when you opened it misses too.
@@ -9470,6 +9631,7 @@ function hurtPlayer(game, S, P, dmg, sfx, kind, from) {
   // And for ten seconds after, while you get clear of the corner.
   if (S.grace > 0) return;
   if (!P.alive || S.godMode) return;
+  if (S.rumble) S.rumble(0.85, 0.5, 240);
   if (P.shieldT > 0) return;                                   // nothing gets through
   if (kind === 'projectile' && P.perks.deflect) { sfx.deflect(); return; }
   /* A raised riot shield stops what comes at its face. Only from the front:
@@ -11741,8 +11903,15 @@ function start(opts = {}) {
     if (cfg.vibration != null) S.vibration = !!cfg.vibration;
     if (cfg.vibrationStrength != null) S.vibrationStrength = cfg.vibrationStrength;
     if (cfg.gParticles != null) S.particleScale = cfg.gParticles;
-    if (cfg.volSfx != null) S.volSfx = cfg.volSfx;
-    if (cfg.volVoice != null) S.volVoice = cfg.volVoice;
+    /* These three were assigned onto S and never read again -- the SFX
+       slider, the Voice slider and the vibration strength all moved a
+       number that nothing looked at. Each now reaches the thing it
+       names. */
+    if (cfg.volSfx != null) {
+      S.volSfx = cfg.volSfx;
+      if (game.audio && game.audio.setSfxVolume) game.audio.setSfxVolume(cfg.volSfx);
+    }
+    if (cfg.volVoice != null) { S.volVoice = cfg.volVoice; setVoiceVolume(cfg.volVoice); }
     if (cfg.subtitles != null && S.toggles) S.toggles.subtitles = !!cfg.subtitles;
     if (game.input) {
       if (cfg.deadzoneLeft != null) game.input.deadzone = cfg.deadzoneLeft;
@@ -11750,6 +11919,13 @@ function start(opts = {}) {
     }
   };
   S.applyShellSettings(opts.settings);
+  /* The one reader for every control, keyboard and pad alike. Built
+     here so it exists before the first frame; it looks S.binds up
+     afresh each time, so a rebind is live with nothing to restart. */
+  const CTL = makeControls(S, game);
+  S.controls = CTL;
+  const rumble = makeRumble(S);
+  S.rumble = rumble;
 
   setSpokenWords(S.toggles.spokenWords);
   // Ask once whether there is a voice pack. Nothing waits on the answer.
@@ -11914,7 +12090,10 @@ function start(opts = {}) {
     if (S.started) clearInterval(padWatch);
   }, 120);
   window.addEventListener('gamepadconnected', () => game.input._pollGamepad());
-  if (opts.test) startGame();
+  /* A harness normally wants to be past the title screen on the first
+     frame. `holdTitle` is for the one test that does not: the one that
+     checks nothing runs while a character is still being chosen. */
+  if (opts.test && !opts.holdTitle) startGame();
 
   game.onUpdate((dt) => {
     if (window.__FREEZE) return;   // test/profiling hatch: engine only
@@ -12000,13 +12179,13 @@ function start(opts = {}) {
     // Space is the jump now, so it is not also the trigger.
     S.input.fireHeld = i.pointer.down || rtHeld || !!th.fire;
     S.input.firePressed = i.pointer.justDown || (S.padTriggerArmed && pad.pressed.rt) || (!!th.fire && !th._firePrev);
-    S.input.jumpPressed = i.justPressed(' ') || !!pad.pressed.a;
+    S.input.jumpPressed = CTL.hit('jump');
     S.input.aimHeld = i.down('control') || i.pointer.rightDown
       || pad.lt > (S.trigThreshold == null ? 0.40 : S.trigThreshold * 0.9) || !!th.aim;
-    S.input.sprintHeld = i.down('shift') || !!pad.buttons.ls || !!th.sprint;
+    S.input.sprintHeld = CTL.held('sprint') || !!th.sprint;
     // Held rather than pressed: the easter egg wants to know you are
     // standing at the generator with your hand on it, not that you tapped it.
-    S.input.useDown = i.down('f') || i.down('x') || !!pad.buttons.b;
+    S.input.useDown = CTL.held('use');
     th._firePrev = !!th.fire;
 
     if (S.gameOver || !S.started) return;
@@ -12015,7 +12194,8 @@ function start(opts = {}) {
     /* Player movement: camera-relative WASD through the capsule controller. */
     if (P.alive) {
       const yaw = game.cameraYaw;
-      let mx = i.axes.x, mz = -i.axes.y;
+      const ax = CTL.axes();
+      let mx = ax.x, mz = -ax.y;
       // A harness can steer the player through the same path a key does.
       if (S.testHold.mx != null) mx = S.testHold.mx;
       if (S.testHold.mz != null) mz = S.testHold.mz;
@@ -12050,7 +12230,7 @@ function start(opts = {}) {
          speed you had, you cannot steer much, and you come out of it low. */
       P.slideCd = Math.max(0, P.slideCd - dt);
       if (P.perks.adrenaline && P.sliding <= 0 && P.slideCd <= 0 && P.sprinting
-          && (i.justPressed('control') || i.justPressed('c') || pad.pressed.b)) {
+          && CTL.hit('slide')) {
         P.sliding = SLIDE.duration;
         P.slideCd = SLIDE.cooldown;
         P.slideDir = { x: wx, z: wz };
@@ -12098,13 +12278,13 @@ function start(opts = {}) {
           Math.sin(t * 0.61) * 2.8 + Math.cos(t * 1.70) * 1.0);
       }
 
-      if (i.justPressed('r') || pad.pressed.x) tryReload(P, sfx, S);
+      if (CTL.hit('reload')) tryReload(P, sfx, S);
       P.swingT = Math.max(0, P.swingT - dt);
       /* Aim, on a shield, means put it between you and them. */
       P.blocking = !!(P.spec() && P.spec().blocks) && S.input.aimHeld && P.swingT <= 0;
       P.blockT += ((P.blocking ? 1 : 0) - P.blockT) * Math.min(1, dt * SHIELD_BLOCK.raise);
       P.nadeCd = Math.max(0, P.nadeCd - dt);
-      if ((i.justPressed('t') || pad.pressed.lb) && P.nadeCd <= 0 && P.nades > 0) {
+      if (CTL.hit('nade') && P.nadeCd <= 0 && P.nades > 0) {
         P.nadeCd = 0.55;
         sfx.pinPull();
         throwGrenade(game, S, P, sfx);
@@ -12133,7 +12313,7 @@ function start(opts = {}) {
       P.building = false;
 
       /* Knife on a hold-to-swap key, so it never costs you a weapon slot. */
-      const wantKnife = i.down('v') || i.down('e') || !!pad.buttons.rb;
+      const wantKnife = CTL.held('knife');
       if (wantKnife !== P.knifeOut) {
         P.knifeOut = wantKnife;
         if (wantKnife) { P.prevSlot = P.slot; P.slots.push('knife'); P.slot = P.slots.length - 1; }
@@ -12149,7 +12329,7 @@ function start(opts = {}) {
         P.shieldT -= dt;
         if (P.shieldT <= 0) { S.shieldActive = false; hud.shield(0, P.shieldCd); if (S.shieldMesh) S.shieldMesh.visible = false; }
       } else if (P.perks.shieldup && P.shieldCd <= 0
-                 && (i.justPressed('g') || pad.pressed.ls)) {
+                 && CTL.hit('shield')) {
         P.shieldT = SHIELD.duration;
         P.shieldCd = SHIELD.cooldown;
         S.shieldActive = true;
@@ -12420,7 +12600,7 @@ function start(opts = {}) {
         hud.ammo(P);
         hud.flashWeapon(P.spec().slotName);
       };
-      if (i.justPressed('q') || pad.pressed.y) {
+      if (CTL.hit('swap')) {
         const cur = P.knifeOut ? (P.prevSlot || 0) : P.slot;
         swapTo(cur === 0 ? 1 : 0);
       }
@@ -12546,8 +12726,7 @@ function start(opts = {}) {
         const auto = it.kind === 'repair' && S.toggles.autoRepair;
         hud.prompt(it.label + (auto ? '' : it.hold ? ' (hold)' : ''));
         if (auto
-            || (it.hold ? (i.down('f') || i.down('x') || pad.buttons.b)
-                        : (i.justPressed('f') || i.justPressed('x') || pad.pressed.b))) {
+            || (it.hold ? CTL.held('use') : CTL.hit('use'))) {
           doInteract(game, S, P, hud, sfx, it, dt);
         }
       } else hud.prompt(null);

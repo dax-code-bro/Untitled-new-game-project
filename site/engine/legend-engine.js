@@ -9174,8 +9174,15 @@ class Audio {
   constructor() {
     this.ctx = null;
     this.master = null;
+    /* Effects hang off their own gain, not straight off the master.
+       Without it there is one level in the whole engine and a game can
+       offer a master slider or nothing -- which is why "SFX volume" in
+       Bunker Nine's audio tab was a number that got stored and read by
+       nobody. */
+    this.bus = null;
     this.enabled = true;
     this.volume = 0.5;
+    this.sfxVolume = 1;
     this._lastPlay = 0;
   }
 
@@ -9193,6 +9200,9 @@ class Audio {
       this.master = this.ctx.createGain();
       this.master.gain.value = this.volume;
       this.master.connect(this.ctx.destination);
+      this.bus = this.ctx.createGain();
+      this.bus.gain.value = this.sfxVolume;
+      this.bus.connect(this.bus);
     } catch (e) {
       this.enabled = false;
     }
@@ -9272,8 +9282,8 @@ class Audio {
     oscGain.gain.setValueAtTime(vol * 0.8, now);
     oscGain.gain.exponentialRampToValueAtTime(0.0001, now + dur * 0.9);
 
-    src.connect(filter).connect(gain).connect(this.master);
-    osc.connect(oscGain).connect(this.master);
+    src.connect(filter).connect(gain).connect(this.bus);
+    osc.connect(oscGain).connect(this.bus);
     src.start(now); src.stop(now + dur);
     osc.start(now); osc.stop(now + dur);
   }
@@ -9336,7 +9346,7 @@ class Audio {
       const cg = ctx.createGain();
       cg.gain.setValueAtTime(vol * crackAmt, now);
       cg.gain.exponentialRampToValueAtTime(0.0001, now + (opts.crackLen || 0.045));
-      crack.connect(hp).connect(cg).connect(this.master);
+      crack.connect(hp).connect(cg).connect(this.bus);
       crack.start(now); crack.stop(now + 0.05);
     }
 
@@ -9352,7 +9362,7 @@ class Audio {
     const bg = ctx.createGain();
     bg.gain.setValueAtTime(vol * (opts.body != null ? opts.body : 1), now);
     bg.gain.exponentialRampToValueAtTime(0.0001, now + dur);
-    body.connect(lp).connect(bg).connect(this.master);
+    body.connect(lp).connect(bg).connect(this.bus);
     body.start(now); body.stop(now + dur);
 
     // Thump: the pressure wave.
@@ -9366,7 +9376,7 @@ class Audio {
       const og = ctx.createGain();
       og.gain.setValueAtTime(vol * thumpAmt, now);
       og.gain.exponentialRampToValueAtTime(0.0001, now + dur * 0.8);
-      osc.connect(og).connect(this.master);
+      osc.connect(og).connect(this.bus);
       osc.start(now); osc.stop(now + dur);
     }
 
@@ -9386,7 +9396,7 @@ class Audio {
       mg.gain.setValueAtTime(0.0001, at);
       mg.gain.exponentialRampToValueAtTime(vol * opts.mech, at + 0.004);
       mg.gain.exponentialRampToValueAtTime(0.0001, at + ml);
-      m.connect(bp).connect(mg).connect(this.master);
+      m.connect(bp).connect(mg).connect(this.bus);
       m.start(at); m.stop(at + ml + 0.02);
     }
 
@@ -9405,7 +9415,7 @@ class Audio {
       tg.gain.setValueAtTime(0.0001, now);
       tg.gain.exponentialRampToValueAtTime(vol * opts.tail, now + 0.03);
       tg.gain.exponentialRampToValueAtTime(0.0001, now + tl);
-      tn.connect(tf).connect(tg).connect(this.master);
+      tn.connect(tf).connect(tg).connect(this.bus);
       tn.start(now); tn.stop(now + tl);
     }
   }
@@ -9488,7 +9498,7 @@ class Audio {
 
     const out = ctx.createGain();
     out.gain.value = vol;
-    out.connect(this.master);
+    out.connect(this.bus);
 
     /* A telephone or a radio is a band, not a voice: everything outside
        300-3000 Hz is simply not there, and that missing bottom is most of
@@ -9669,7 +9679,7 @@ class Audio {
       const dur = 0.05 + Math.random() * 0.16;
       g.gain.setValueAtTime(0.10 * strength, t);
       g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-      osc.connect(g).connect(this.master);
+      osc.connect(g).connect(this.bus);
       osc.start(t); osc.stop(t + dur);
     }
   }
@@ -9691,7 +9701,7 @@ class Audio {
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0.16 * clamp(strength, 0, 1), now);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
-    src.connect(filter).connect(gain).connect(this.master);
+    src.connect(filter).connect(gain).connect(this.bus);
     src.start(now); src.stop(now + dur);
   }
 
@@ -9707,13 +9717,20 @@ class Audio {
     const g = ctx.createGain();
     g.gain.setValueAtTime(volume, now);
     g.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-    osc.connect(g).connect(this.master);
+    osc.connect(g).connect(this.bus);
     osc.start(now); osc.stop(now + duration);
   }
 
   setVolume(v) {
     this.volume = clamp(v, 0, 1);
     if (this.master) this.master.gain.value = this.volume;
+  }
+
+  /* Effects only. Kept on the object as well as on the node, so a level
+     chosen before the first sound survives the context being created. */
+  setSfxVolume(v) {
+    this.sfxVolume = clamp(v, 0, 1);
+    if (this.bus) this.bus.gain.value = this.sfxVolume;
   }
 }
 

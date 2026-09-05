@@ -144,9 +144,15 @@ function applySettings() {
     post.grain = settings.gGrain ? 0.022 : 0;
     post.vignette = settings.gVignette ? 0.28 : 0;
   }
+  /* Shadows are switched on `renderer.shadows.enabled`, which is what the
+     shadow pass and the uShadowStrength uniform both read. This wrote
+     `renderer.quality.shadows` -- a key that does not exist in any of the
+     five quality tiers and that nothing anywhere reads. Turning shadows
+     off did nothing at all, which is one of the settings the player
+     reported as not applying. */
+  if (g.renderer && g.renderer.shadows) g.renderer.shadows.enabled = !!settings.gShadows;
   var qual = g.renderer && g.renderer.quality;
   if (qual) {
-    qual.shadows = !!settings.gShadows;
     qual.renderScale = settings.gRenderScale;
     /* The engine's loop already honours quality.fpsCap -- it counts up
        and skips a step until the interval is met. So the three limits
@@ -168,12 +174,14 @@ function applySettings() {
   if (g.camera) { g.camera.far = settings.gViewDistance; }
 
   /* Sound. */
-  if (g.audio) {
-    var m = g.audio.master || g.audio.gain || null;
-    if (m && m.gain) { try { m.gain.value = settings.volMaster; } catch (e) { /* no context */ } }
-    if (typeof g.audio.setMasterVolume === 'function') {
-      try { g.audio.setMasterVolume(settings.volMaster); } catch (e) { /* older audio */ }
-    }
+  /* setVolume, which is the method that exists. This called
+     setMasterVolume -- there is no such method -- and otherwise poked
+     master.gain.value directly. The gain node is created lazily on the
+     first sound, so a volume set from the menu before anything had played
+     went nowhere, and even when it landed it left audio.volume at its old
+     value, so the next sound to touch it put the level back. */
+  if (g.audio && typeof g.audio.setVolume === 'function') {
+    try { g.audio.setVolume(settings.volMaster); } catch (e) { /* no context yet */ }
   }
 
   /* HUD size. */
@@ -183,9 +191,17 @@ function applySettings() {
 
 /* Which of the three frame limits is in force right now. The user asked
    for three because they are three different jobs: a menu should not run
-   a laptop fan at 300 fps, a round should have everything the display
-   will take, and a paused game is still drawing the room behind the
-   panel and has no reason to draw it fast. */
+   a laptop fan at 300 fps, and a round should have everything the display
+   will take.
+
+   The third one is honest about doing nothing. I wrote here that a paused
+   game "is still drawing the room behind the panel"; it is not. `paused`
+   short-circuits step(), and step() is both the simulation AND the render,
+   so while the game is paused nothing is drawn at all -- the last frame
+   simply stays on the canvas. The paused cap is kept because the setting
+   is saved and shown, and because it will mean something the day the
+   pause screen renders a live scene behind itself, but today it costs and
+   saves nothing. */
 var phase = 'menu';     // menu | game | paused
 
 function fpsFor() {
@@ -1317,8 +1333,10 @@ var ACTIONS = [
   { id: 'reload', name: 'Reload',       key: 'KeyR',        pad: 2 },
   { id: 'swap',   name: 'Swap weapon',  key: 'KeyQ',        pad: 3 },
   { id: 'knife',  name: 'Knife',        key: 'KeyV',        pad: 5 },
-  { id: 'shield', name: 'Shield',       key: 'KeyG',        pad: 4 },
-  { id: 'nade',   name: 'Grenade',      key: 'KeyE',        pad: 4 },
+  { id: 'shield', name: 'Shield',       key: 'KeyG',        pad: 10 },
+  /* T, and L1. The row said E and L2 and the game read neither -- the
+     menu was describing controls nothing implemented. */
+  { id: 'nade',   name: 'Grenade',      key: 'KeyT',        pad: 4 },
   { id: 'pause',  name: 'Pause',        key: 'Escape',      pad: 9 },
 ];
 
