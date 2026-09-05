@@ -19726,9 +19726,28 @@ function armPath(shoulder, hand, k) {
    about four hundred extra triangles a frame, which is nothing.
 
    One arm: a tapered loft from the sleeve opening to the wrist. */
-function buildViewArm(g, shoulder, hand, side) {
-  const path = armPath(shoulder, hand, side);
-  const rings = [];
+function buildViewArm(g, sk, shoulder, hand, side, wrist) {
+  /* The arm ends where the HAND is, not where the hand was asked to be.
+   *
+   * This lofted to `hands.right` / `hands.left` -- the authored anchor in
+   * the weapon's file. But nothing else uses that number raw: the hand is
+   * pushed off the surface it is in, dropped for a forend, walked up to
+   * 180 mm by the three-axis seating search, and then the palm itself is
+   * offset again by its own half-thickness so its near face lands ON the
+   * weapon. So the sleeve stopped at a point the hand had left, and on
+   * screen it is exactly what it is -- a cut tube ending in mid-air with
+   * a hand floating past it.
+   *
+   * `wrist` is where the palm's own first ring finished, with the frame
+   * loftRings gave it, so the arm can end in the same section the palm
+   * starts in and overlap into it. */
+  const end = wrist ? new Vec3(hand.x, hand.y, hand.z) : hand;
+  if (wrist) {
+    // A little way INSIDE the palm, so the two surfaces overlap rather
+    // than meeting -- nothing here guarantees two lofts touch exactly.
+    end.set(wrist.p[0] + wrist.into[0], wrist.p[1] + wrist.into[1], wrist.p[2] + wrist.into[2]);
+  }
+  const path = armPath(shoulder, end, side);
   /* Slim, because a viewmodel arm is only 20-25 cm from the eye and at
      that range an anatomically-correct forearm covers a third of the
      screen. Real engines dodge this by drawing the viewmodel at its own
@@ -19755,26 +19774,69 @@ function buildViewArm(g, shoulder, hand, side) {
    * of why the hands read as small on huge arms. A wrist is about 55 mm
    * and the knuckles are 85 -- the hand is the wide end. Same mass through
    * the forearm, taken in harder over the last hand's width. */
-  const spec = [
-    [0.052, 0.050],   // sleeve mouth at the frame edge
-    [0.050, 0.048],
-    [0.046, 0.044],
-    [0.037, 0.035],
-    [0.0275, 0.0260], // wrist
-  ];
-  for (let i = 0; i < spec.length; i++) {
-    const t = i / (spec.length - 1);
-    // Quadratic through the three control points.
-    const a = path[0], b = path[1], c = path[2];
-    const u = 1 - t;
-    const p = new Vec3(
+  /* A sleeve is a garment and it has an END.
+   *
+   * This ran the fabric the whole way to the wrist as one smooth cone and
+   * stopped, so the arm was a tapered pipe with a flat disc cut off it
+   * and the hand somewhere beyond. Two things fix that and neither is a
+   * radius: a CUFF, which is what a sleeve actually terminates in -- a
+   * band standing a couple of millimetres proud of the arm and rolled
+   * back under itself -- and BARE SKIN between the cuff and the hand.
+   * Wrist showing below a sleeve is most of what makes an arm read as an
+   * arm rather than as a tube in the colour of a jacket. */
+  const P = (t) => {
+    const a = path[0], b = path[1], c = path[2], u = 1 - t;
+    return new Vec3(
       u * u * a.x + 2 * u * t * b.x + t * t * c.x,
       u * u * a.y + 2 * u * t * b.y + t * t * c.y,
       u * u * a.z + 2 * u * t * b.z + t * t * c.z,
     );
-    rings.push({ p, w: spec[i][0], d: spec[i][1], e: 2.1, uv: t });
+  };
+  const SLEEVE = [
+    [0.000, 0.0520, 0.0500],  // sleeve mouth, at the frame edge
+    [0.260, 0.0497, 0.0477],
+    [0.520, 0.0452, 0.0432],
+    [0.700, 0.0390, 0.0372],
+    [0.755, 0.0416, 0.0398],  // the cuff, standing proud of the arm
+    [0.782, 0.0358, 0.0342],  // and rolled back under itself
+  ];
+  const arm = [];
+  for (const [t, w, d] of SLEEVE) arm.push({ p: P(t), w, d, e: 2.1, uv: t });
+  loftRings(g, arm, 14, true, true);
+
+  /* The forearm and wrist, in skin, starting inside the cuff so there is
+     no seam to find, and finishing in the palm's own opening section. */
+  if (!sk) return;
+  /* Round below the cuff and FLAT by the wrist -- a forearm turns from a
+     near-circle at the belly of the muscle into a flattened oval at the
+     joint, and the last two rings are what carry it there. Stepping
+     straight from a 56 mm round section into a 49 by 32 wrist pinched
+     visibly; four rings make it a taper. */
+  const bare = [
+    { t: 0.735, w: 0.0330, d: 0.0300 },  // buried in the cuff
+    { t: 0.840, w: 0.0300, d: 0.0258 },
+    { t: 0.910, w: 0.0276, d: 0.0212 },
+    { t: 0.960, w: 0.0258, d: 0.0180 },
+  ];
+  const skinRings = bare.map((r) => ({ p: P(r.t), w: r.w, d: r.d, e: 2.2, uv: r.t }));
+  if (wrist) {
+    /* A wrist is FLAT. The last ring here was 55 mm across and 52 mm
+       through -- round, which is a broom handle, and against a palm 22 mm
+       thick it was two and a half times the depth of the hand it fed.
+       Taking the palm's own opening section and giving it the extra depth
+       a wrist has over a palm's heel lands it on 48 by 30, and it lands
+       there in the palm's frame rather than in whatever frame parallel
+       transport happened to arrive in -- so the two sections line up
+       instead of merely being near each other. */
+    skinRings.push({
+      p: P(1), w: wrist.w * 1.02, d: wrist.d * 1.45, e: 2.5, uv: 1,
+      right: new Vec3(wrist.right[0], wrist.right[1], wrist.right[2]),
+      fwd: new Vec3(wrist.fwd[0], wrist.fwd[1], wrist.fwd[2]),
+    });
+  } else {
+    skinRings.push({ p: P(1), w: 0.0262, d: 0.0212, e: 2.5, uv: 1 });
   }
-  loftRings(g, rings, 14, true, true);
+  loftRings(sk, skinRings, 14, true, true);
 }
 
 /* A hand wrapped around something.
@@ -20418,6 +20480,21 @@ function buildViewHand(g, rawAt, side, opts = {}) {
     });
   }
   loftRings(g, rings, 16, true, true);
+
+  /* Where the palm actually opens, with the frame the loft gave it.
+   *
+   * The arm needs this and had no way to get it: it was lofting to the
+   * authored anchor while the hand sat wherever seating had put it. */
+  if (opts.out) {
+    const r0 = rings[0];
+    opts.out.wrist = {
+      p: [r0.p.x, r0.p.y, r0.p.z],
+      right: [r0.right.x, r0.right.y, r0.right.z],
+      fwd: [r0.fwd.x, r0.fwd.y, r0.fwd.z],
+      w: r0.w, d: r0.d,
+      into: [palm.x * 0.014, palm.y * 0.014, palm.z * 0.014],
+    };
+  }
 
   /* A finger, as ONE surface.
 
@@ -22114,17 +22191,25 @@ function makeViewmodelArms(hands, opts = {}) {
      * anchor where a hand that passes has 425 to 503, so its quadrant
      * split is computed over a sample too small to mean much. */
     const shoulder = new Vec3(back, drop, side * spread);
-    buildViewArm(sl, shoulder, h, side);
     /* `out` collects where every digit finished, for both hands. It used to
        be passed only when the caller wanted a separate thumb mesh, so the
        support hand reported nothing at all and could not be checked. */
     const rec = {};
     // `surface` has to reach the hand or the fingers cannot be closed onto
     // anything -- it was being taken by makeViewmodelArms and dropped here.
+    /* The HAND first, and the arm second. The order used to be the other
+       way round, and it could not have been right: the arm was built to
+       the anchor in the weapon's file, and the hand then moved off that
+       anchor -- pushed clear of the surface it sat in, dropped for a
+       forend, walked by the seating search, offset again by the palm's own
+       half-thickness. So the sleeve was drawn to a point the hand no
+       longer occupied. Build the hand, ask it where its wrist finished,
+       then run the arm to that. */
     buildViewHand(sk, h, side, { grip, thumbGeo: tg, out: rec, boreY: opts.boreY,
       // The firing hand's index keeps its own named mesh, because the game
       // drives it off the trigger; the rest come back through digitGeos.
       indexGeo: side > 0 ? index : null, digitGeos: dg, surface: opts.surface });
+    buildViewArm(sl, sk, shoulder, h, side, rec.wrist);
     if (tg && rec.thumbPivot) {
       out[side > 0 ? 'thumbPivot' : 'lThumbPivot'] = rec.thumbPivot;
       out[side > 0 ? 'thumbAxis' : 'lThumbAxis'] = rec.thumbAxis;

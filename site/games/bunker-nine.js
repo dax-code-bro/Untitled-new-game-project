@@ -1656,7 +1656,7 @@ const HEROES = {
     bio: 'Walks into rooms like the room has been waiting for him. Annoyingly, it usually has.',
     voice: { base: 142, spread: 38, type: 'square', color: '#ff9a5a' },
     voiceBox: { pitch: 108, tract: 1.10, rasp: 0.24, breath: 0.06, rate: 5.0, swing: 0.19, say: { pitch: 0.74, rate: 1.00 } },
-    look: { skin: 0x79716c, rough: 0.69, sleeve: 0x2a211c, sleeveTex: 'plastic', sleeveRough: 0.44 }, // leather, and he knows it
+    look: { skin: 0x79716c, rough: 0.69, sleeve: 0x2a211c, sleeveTex: 'plastic', sleeveRough: 0.63 }, // leather, and he knows it
     /* Walks into rooms like the room has been waiting for him. Leather,
        and he knows it. Thick dark hair, a moustache, and the shoulders to
        go with the entrance. */
@@ -2534,7 +2534,18 @@ function applyHeroLook(game, P, hero) {
   for (const v of Object.values(P.view)) {
     const a = v.arms;
     if (!a) continue;
-    for (const m of [a.skin, a.lSkin, a.thumb]) if (m) m.material = skinMat;
+    /* EVERY piece of skin, not three of them.
+     *
+     * This named the two palms and the firing thumb and stopped. The
+     * index, the left thumb and all eight finger meshes kept the module
+     * default -- 0xbc8f6d, a warm tan -- while the palm took the hero's
+     * own tone, and every one of the ten heroes is more desaturated than
+     * that default. So the hand came out as a grey palm with orange
+     * fingers stuck to it, which is a hand that reads as assembled from
+     * parts however good each part is. */
+    const flesh = [a.skin, a.lSkin, a.thumb, a.lThumb, a.index]
+      .concat(a.rFingers || [], a.lFingers || []);
+    for (const m of flesh) if (m) m.material = skinMat;
     for (const m of [a.sleeve, a.lSleeve]) if (m) m.material = sleeveMat;
   }
 }
