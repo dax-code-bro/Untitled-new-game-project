@@ -162,7 +162,12 @@ function makeHumanoidMesh(skeleton, opts = {}) {
     : opts.bloodOnly
     ? buildZombieBloodGeometry(skeleton, { build: opts.zombieBuild, girth: opts.girth, seed: opts.seed })
     : opts.clothOnly
-    ? buildZombieClothGeometry(skeleton, { build: opts.zombieBuild, girth: opts.girth, seed: opts.seed, segments: opts.segments, outfit: opts.outfit })
+    ? buildZombieClothGeometry(skeleton, { build: opts.zombieBuild, girth: opts.girth,
+      seed: opts.seed, segments: opts.segments, outfit: opts.outfit,
+      /* A survivor's clothes are not a corpse's. `blood: false` is
+         already how a caller says this body is alive, so the cloth
+         builder takes the same word. */
+      intact: opts.blood === false })
     : opts.zombieBuild
       ? buildZombieBodyGeometry(skeleton, { build: opts.zombieBuild, girth: opts.girth, seed: opts.seed, segments: opts.segments, rot: opts.rot })
       : makeHumanBodyGeometry(skeleton, opts);

@@ -631,7 +631,7 @@ function buildShoulderYoke(g, skeleton, build, lift, segments) {
 /* Trousers as one closed garment: seat over the hips, then a leg down each
    side to the ankle. The old version stopped at mid-thigh and left the rest
    to a separate tube that did not meet it. */
-function buildTrousers(g, skeleton, build, rng, segments, spec) {
+function buildTrousers(g, skeleton, build, rng, segments, spec, intact) {
   // Trousers hang close. Adding the garment standoff on top of a generous
   // limb radius is how a leg ends up wider than the torso above it.
   const T = build.torso, lift = 0.018;
@@ -639,7 +639,7 @@ function buildTrousers(g, skeleton, build, rng, segments, spec) {
   g.setColor(spec.color);
   const seat = [0.215, 0.150, 0.075, 0.000, -0.075, -0.140]
     .map((y) => garmentRing(T, y, lift, 1.012));
-  loftGarment(g, seat, segments, rng, { holes: 0.02, hemTeeth: false, thick: 0.007 });
+  loftGarment(g, seat, segments, rng, { holes: intact ? 0 : 0.02, hemTeeth: false, thick: 0.007 });
 
   const a = new Vec3(), b = new Vec3(), c = new Vec3();
   for (const sideName of ['L', 'R']) {
@@ -666,7 +666,7 @@ function buildTrousers(g, skeleton, build, rng, segments, spec) {
     // Ripped jeans go at the knee, which is the only place denim ever goes.
     const knee = b.y;
     loftGarment(g, thigh.concat(shin.slice(1)), segments, rng, {
-      holes: spec.tears, hemTeeth: false, thick: 0.007,
+      holes: intact ? 0 : spec.tears, hemTeeth: false, thick: 0.007,
       tearBand: spec.knees ? [knee - 0.10, knee + 0.13] : null,
     });
   }
@@ -826,10 +826,10 @@ function buildBarbwire(g, build, rng) {
   void rng;
 }
 
-function buildZombieGarment(g, build, rng, segments, outfit) {
+function buildZombieGarment(g, build, rng, segments, outfit, intact) {
   const T = build.torso;
   const c = build.coat;
-  if (outfit) { buildOutfitTop(g, build, rng, segments, outfit); return; }
+  if (outfit) { buildOutfitTop(g, build, rng, segments, outfit, intact); return; }
   /* How far the garment floats off the skin. At 12 mm on a trunk 150 mm
      across, a coat is 8 % bigger than the body inside it — which is not a
      coat, it is a paint job, and it reads on screen as bare skin in a
@@ -918,7 +918,19 @@ function buildZombieGarment(g, build, rng, segments, outfit) {
 /* The top half of an outfit: an undershirt if there is one, then the shirt
    or sweatshirt over it, closed from the collar to below the seat so there
    is no bare stomach anywhere in the middle. */
-function buildOutfitTop(g, build, rng, segments, outfit) {
+/* `intact` is a shirt on somebody who is still alive.
+
+   Everything here is the zombie cloth builder, because a survivor and a
+   walker are wearing the same kinds of clothes and it would be silly to
+   have two. But loftGarment tears holes in what it is given and finishes
+   the last row with saw teeth, and it does that by DEFAULT -- so all ten
+   playable characters have been walking round in shirts with holes punched
+   through them and a ragged sawn-off hem. On a corpse that is the point.
+   On the person you chose off the title screen it is the "clothing is a
+   bit janky" the player is looking at: nobody's coat ends in a row of
+   teeth. So a living body keeps the cut of the garment and loses the
+   damage. */
+function buildOutfitTop(g, build, rng, segments, outfit, intact) {
   const T = build.torso;
   const lift = 0.028;
   g.part = PART.BODY;
@@ -927,13 +939,14 @@ function buildOutfitTop(g, build, rng, segments, outfit) {
     g.setColor(u.color);
     const rows = [u.collar, 0.470, 0.400, 0.330, 0.250, 0.170, 0.090, 0.010, u.hem];
     loftGarment(g, rows.map((y) => garmentRing(T, y, lift - 0.012)), segments, rng,
-      { holes: 0.02, hemTeeth: false, thick: 0.005 });
+      { holes: intact ? 0 : 0.02, hemTeeth: false, thick: 0.005 });
   }
   const t = outfit.top;
   g.setColor(t.color);
   const rows = [t.collar, 0.487, 0.440, 0.390, 0.330, 0.270, 0.205, 0.140, 0.070, 0.000, -0.070, t.hem];
   loftGarment(g, rows.map((y, i) => garmentRing(T, y, lift, i > 8 ? 1.02 : 1)), segments, rng,
-    { holes: t.tears, thick: 0.007, tearBand: [t.hem, 0.16] });
+    { holes: intact ? 0 : t.tears, hemTeeth: !intact, thick: 0.007,
+      tearBand: [t.hem, 0.16] });
   // Over the chest, not through it.
   if (build.bust) buildBust(g, build, lift + 0.006);
   // A rolled collar, so the neck opening has an edge rather than a raw rim.
@@ -946,7 +959,7 @@ function buildOutfitTop(g, build, rng, segments, outfit) {
 }
 
 /* Sleeves and trouser legs, lofted along the actual bones. */
-function buildZombieLimbCloth(g, skeleton, build, rng, segments, outfit) {
+function buildZombieLimbCloth(g, skeleton, build, rng, segments, outfit, intact) {
   const lift = 0.019;
   const a = new Vec3(), b = new Vec3(), c = new Vec3();
   for (const side of ['L', 'R']) {
@@ -982,9 +995,10 @@ function buildZombieLimbCloth(g, skeleton, build, rng, segments, outfit) {
       [build.arm[3] + lift + 0.002, build.arm[3] + lift + 0.002, 2.1],
       [build.arm[3] + lift, build.arm[3] + lift, 2.1],
     ]);
+    /* A living person's sleeve ends in a cuff, not in a row of teeth. */
     loftGarment(g, shortSleeve ? upper : upper.concat(lower.slice(1)), segments, rng,
-      { holes: outfit ? outfit.top.tears : 0.05, thick: 0.006,
-        tearBand: outfit ? [b.y - 0.10, b.y + 0.10] : null });
+      { holes: intact ? 0 : (outfit ? outfit.top.tears : 0.05), hemTeeth: !intact,
+        thick: 0.006, tearBand: outfit ? [b.y - 0.10, b.y + 0.10] : null });
     if (outfit) { g.setColor(null); continue; }   // trousers are their own piece
 
     // Trouser leg, torn off below the knee on some.
@@ -1347,7 +1361,7 @@ function buildZombieClothGeometry(skeleton, opts = {}) {
 
   const outfit = jitterOutfit(OUTFITS[opts.outfit] || null, opts.outfit, opts.seed);
   g.part = PART.BODY;
-  buildZombieGarment(g, build, rng, segments, outfit);
+  buildZombieGarment(g, build, rng, segments, outfit, !!opts.intact);
   if (outfit) {
     /* Every piece is its own closed shell, and together they leave no bare
        skin anywhere between the collar and the shoes. */
@@ -1359,8 +1373,8 @@ function buildZombieClothGeometry(skeleton, opts = {}) {
     g.setColor(outfit.top.color);
     buildShoulderYoke(g, skeleton, build, 0.019, segments);
     g.setColor(null);
-    buildZombieLimbCloth(g, skeleton, build, rng, segments, outfit);
-    buildTrousers(g, skeleton, build, rng, segments, outfit.bottom);
+    buildZombieLimbCloth(g, skeleton, build, rng, segments, outfit, !!opts.intact);
+    buildTrousers(g, skeleton, build, rng, segments, outfit.bottom, !!opts.intact);
     buildShoes(g, skeleton, build, segments, outfit.shoes);
     if (outfit.belt) buildDutyBelt(g, build, outfit);
     if (outfit.hat) buildCap(g, skeleton, segments, outfit.hat);
