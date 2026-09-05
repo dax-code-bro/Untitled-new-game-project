@@ -11523,12 +11523,26 @@ function buildShoulderYoke(g, skeleton, build, lift, segments) {
     g.part = sideName === 'L' ? PART.ARM_L : PART.ARM_R;
     skeleton.bones[skeleton.index('upperArm' + sideName)].bindMatrix.getTranslation(a);
     const neck = torsoAt(build.torso, 0.487);
-    const r0 = build.shoulderCaps * 0.92, r1 = build.arm[0] + lift + 0.018;
+    /* The yoke has to end INSIDE the sleeve, not outside it.
+     *
+     * It finished at arm[0] + lift + 0.018 and stopped 12 mm above the
+     * shoulder joint; the sleeve starts just below that at arm[0] + lift
+     * + 0.005. So the shoulder piece was 13 mm wider than the sleeve it
+     * ran into and terminated in mid-air -- an angular flange standing
+     * off each shoulder like a pauldron. It is on every dressed body in
+     * the game; it is just easier to see on a survivor standing still
+     * with their arms down than on a corpse walking at you.
+     *
+     * Now it comes in to 1 mm under the sleeve's own radius and runs on
+     * past the joint, so the last ring is buried and the two garments
+     * read as one. */
+    const r0 = build.shoulderCaps * 0.92, r1 = build.arm[0] + lift + 0.004;
     loftRings(g, [
       { p: new Vec3(side * neck[1] * 0.42, 0.505, 0), w: r0 * 0.80, d: r0 * 0.94, e: 2.2 },
       { p: new Vec3(side * (neck[1] * 0.82), 0.496, 0), w: r0 * 0.96, d: r0 * 1.02, e: 2.2 },
-      { p: new Vec3(a.x + side * 0.012, a.y + 0.062, a.z), w: r0 * 1.10, d: r0 * 1.12, e: 2.2 },
-      { p: new Vec3(a.x + side * 0.004, a.y + 0.012, a.z), w: r1, d: r1, e: 2.1 },
+      { p: new Vec3(a.x + side * 0.012, a.y + 0.055, a.z), w: r0 * 1.06, d: r0 * 1.10, e: 2.2 },
+      { p: new Vec3(a.x + side * 0.004, a.y + 0.005, a.z), w: r1, d: r1, e: 2.1 },
+      { p: new Vec3(a.x, a.y - 0.030, a.z), w: r1 * 0.96, d: r1 * 0.96, e: 2.1 },
     ], segments, false, false);
   }
   g.part = PART.BODY;
