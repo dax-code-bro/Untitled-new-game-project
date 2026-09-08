@@ -399,7 +399,15 @@ class Physiology {
       * (1 - 0.5 * ramp(this.dehydration, 0.06, 0.12))
       * ramp(this.coreTempC, 29.5, 31.5);
 
-    const storedW = totalWatts - dryLossW - evapW;
+    /* Radiant heat from a fire, the sun on your back, or a stove. It is a
+       separate term from air temperature because it behaves completely
+       differently: it does not care how cold the air is, it only reaches
+       the side of you facing it, and it is why a fire is survivable shelter
+       on a night that would otherwise kill you. The fire model computes the
+       watts from its own output and the inverse square of the distance. */
+    const radiantW = env.radiantWatts || 0;
+
+    const storedW = totalWatts + radiantW - dryLossW - evapW;
     this.coreTempC += (storedW * dt) / (this.massKg * BODY_SPECIFIC_HEAT);
     // Skin sits between core and ambient. The resistance between them is not
     // a constant: vasoconstriction in the cold roughly triples it, which is
@@ -410,7 +418,15 @@ class Physiology {
     // kills in an hour where cold air of the same temperature takes a day.
     const internalR = inWater ? 0.075
       : lerpN(0.040, 0.115, clamp01((37.0 - this.coreTempC) / 1.2));
-    const skinTarget = ambient + (this.coreTempC - ambient) * clamp01(resistance / (resistance + internalR));
+    /* Radiant gain lands on the skin first, which is why one side of you
+       roasts by a fire while the other stays cold. It has to stay modest:
+       warmer skin loses more to cold air, and an over-large rise here
+       cancels most of the fire's benefit through the dry-loss term — the
+       arithmetic says a fire barely helps, which is not what a fire does.
+       Only the facing half of the body is exposed to it in the first place. */
+    const radiantSkinRise = radiantW > 0 ? Math.min(4, radiantW / 60) : 0;
+    const skinTarget = ambient + radiantSkinRise
+      + (this.coreTempC - ambient) * clamp01(resistance / (resistance + internalR));
     this.skinTempC += (skinTarget - this.skinTempC) * clamp01(dt / 300);
 
     /* -------- 5. water balance -------- */

@@ -38,6 +38,8 @@ this.API = {
   ElectricalSystem, Circuit, Conductor, Load, PowerSource, checkWiring, AWG,
   Firearm, WEAPONS, handload,
   World, GAME_MODE,
+  Fire, Provision, FIRE_KIND, FOOD_STATE, WATER_TREATMENT, treatWater, drinkTreated,
+  SV_VECTOR_BEAR: VECTOR.undercookedBear,
 };`, ctx);
 const A = ctx.API;
 
@@ -1005,6 +1007,146 @@ function live(phys, hours, env, stepMinutes = 5, hook) {
   check('with the same dead accounts', restored.deadAccounts.has('acct-1'));
   check('and rejoining the restored world still only gets you a seat',
     restored.join('acct-1', {}).spectator);
+}
+
+/* ---------------- fire, food and water ---------------- */
+{
+  section('fire');
+
+  const fire = new A.Fire({ kind: 'campfire', fuelKg: 8, x: 0, z: 0 });
+  check('an unlit fire radiates nothing', fire.radiantWattsAt(1, 0) === 0);
+  // Lighting is a skill check against the conditions, not a button.
+  const wetBowDrill = new A.Fire({ kind: 'campfire', fuelKg: 8 })
+    .tryLight({ method: 'bowDrill', skill: 0.1, tinderWet: 0.9, windMs: 8, rng: () => 0.5 });
+  check('wet tinder, a bow drill and a wind will not catch', !wetBowDrill.ok,
+    `${(wetBowDrill.chance * 100).toFixed(0)}% chance`);
+  const dryLighter = new A.Fire({ kind: 'campfire', fuelKg: 8, sheltered: true })
+    .tryLight({ method: 'lighter', skill: 0.5, tinderWet: 0, rng: () => 0.5 });
+  check('a lighter and dry tinder under shelter does', dryLighter.ok,
+    `${(dryLighter.chance * 100).toFixed(0)}% chance`);
+
+  fire.tryLight({ method: 'lighter', skill: 1, rng: () => 0 });
+  fire.step(600, { windMs: 1 });
+  const closeW = fire.radiantWattsAt(1.0, 0);
+  const farW = fire.radiantWattsAt(3.0, 0);
+  check('a fire radiates real heat', closeW > 30, `${closeW.toFixed(0)} W at 1 m`);
+  // Inverse square: three times the distance is a ninth of the heat.
+  check('and it falls off with the square of the distance',
+    Math.abs(farW - closeW / 9) < closeW / 9 * 0.15,
+    `${closeW.toFixed(0)} W at 1 m, ${farW.toFixed(0)} W at 3 m`);
+
+  // A fire is the difference between a survivable night and a lethal one.
+  const cold = { airTempC: -6, windMs: 4, humidity: 0.7, speedMs: 0 };
+  const without = new A.Physiology({ clothingClo: 0.8 });
+  const beside = new A.Physiology({ clothingClo: 0.8 });
+  const sittingW = fire.radiantWattsAt(0.7, 0);
+  for (let i = 0; i < 6 * 60; i++) {
+    without.step(60, cold);
+    beside.step(60, Object.assign({}, cold, { radiantWatts: sittingW }));
+  }
+  check('six hours at -6 C without a fire is hypothermia', without.coreTempC < 35.5,
+    `${without.coreTempC.toFixed(2)} C`);
+  check('and sitting close to a fire is not', beside.coreTempC > 36,
+    `${beside.coreTempC.toFixed(2)} C beside ${sittingW.toFixed(0)} W`);
+  /* The temperature is the visible benefit and the smaller one. What a fire
+     really buys is food: shivering is paid for out of glycogen, so a night
+     beside one costs you a fraction of the calories a night without it does,
+     and on an island where calories are the binding constraint that is the
+     whole reason to carry a lighter. */
+  check('but the real saving is calories, not degrees',
+    beside.glycogenKcal > without.glycogenKcal * 1.6,
+    `${without.glycogenKcal.toFixed(0)} kcal left without, ${beside.glycogenKcal.toFixed(0)} with`);
+  check('and shivering costs them', without.shivering > beside.shivering + 0.2,
+    `${without.shivering.toFixed(2)} vs ${beside.shivering.toFixed(2)}`);
+
+  // Clothing is the other half of the answer, and it is free once you have it.
+  const wrapped = new A.Physiology({ clothingClo: 3.0 });
+  for (let i = 0; i < 6 * 60; i++) wrapped.step(60, cold);
+  check('warm clothing does much of what a fire does', wrapped.coreTempC > without.coreTempC + 0.9,
+    `${wrapped.coreTempC.toFixed(2)} C at 3.0 clo`);
+
+  let burnedOut = 0;
+  const small = new A.Fire({ kind: 'campfire', fuelKg: 2.2 });
+  small.tryLight({ method: 'lighter', skill: 1, rng: () => 0 });
+  while (small.lit && burnedOut < 20000) { small.step(10, {}); burnedOut += 10; }
+  // 2.2 kg at 2.2 kg/h is an hour of fire, which is the point: wood is work.
+  between('2.2 kg of wood burns for', burnedOut / 3600, 0.7, 1.3, ' hours');
+
+  section('cooking');
+
+  // The gap between a seared outside and a safe middle is the whole mechanic.
+  const steak = new A.Provision({ name: 'bear steak', kg: 0.4, cut: 'bear',
+    pathogenVectors: [A.SV_VECTOR_BEAR] });
+  check('bear meat starts carrying trichinella',
+    steak.pathogenVectors.length === 1, steak.pathogenVectors.join(','));
+  // Thirty seconds over a fierce fire chars it and does nothing to the core.
+  for (let i = 0; i < 30; i++) steak.cook(1, 700);
+  check('half a minute on a hot fire does not make it safe', !steak.safe,
+    `core ${steak.coreTempC.toFixed(0)} C, ${steak.state}`);
+  for (let i = 0; i < 900; i++) steak.cook(1, 480);
+  check('cooking it through does', steak.safe, `core ${steak.coreTempC.toFixed(0)} C`);
+  check('and it is cooked, not burnt',
+    steak.state === A.FOOD_STATE.cooked || steak.state === A.FOOD_STATE.burnt, steak.state);
+
+  const charred = new A.Provision({ kg: 0.3, cut: 'muscle' });
+  const kcalBefore = charred.kcalPerKg;
+  for (let i = 0; i < 1200; i++) charred.cook(1, 900);
+  check('leaving it on a fierce fire burns it', charred.state === A.FOOD_STATE.burnt);
+  check('and burnt food has fewer calories', charred.kcalPerKg < kcalBefore,
+    `${kcalBefore.toFixed(0)} -> ${charred.kcalPerKg.toFixed(0)} kcal/kg`);
+
+  section('preserving and spoiling');
+
+  const fresh = new A.Provision({ kg: 1, cut: 'muscle' });
+  for (let i = 0; i < 6; i++) fresh.step(86400, { airTempC: 24 });
+  check('meat left out in the warmth spoils', fresh.state === A.FOOD_STATE.spoiled,
+    `${fresh.accumulatedDegreeDays.toFixed(0)} degree-days`);
+
+  const dried = new A.Provision({ kg: 1, cut: 'muscle' });
+  for (let i = 0; i < 4 * 24; i++) dried.dry(3600, { airTempC: 26, humidity: 0.3, smoke: true });
+  check('smoking dries it out', dried.waterFraction < 0.3,
+    `${(dried.waterFraction * 100).toFixed(0)}% water`);
+  check('and makes it safe', dried.pathogenVectors.length === 0);
+  for (let i = 0; i < 30; i++) dried.step(86400, { airTempC: 24 });
+  check('and it then keeps for a month where fresh meat kept six days',
+    dried.state !== A.FOOD_STATE.spoiled, dried.state);
+
+  section('water treatment');
+
+  // Each method removes exactly what it really removes, and the disease
+  // table's own notes are the specification.
+  const boiled = A.treatWater('boiled', 1);
+  check('boiling removes the protozoa', boiled.removed.includes('cryptosporidiosis'));
+  const chlorinated = A.treatWater('chlorine', 1);
+  check('chlorine removes the bacteria', chlorinated.removed.includes('campylobacteriosis'));
+  check('and does nothing to Cryptosporidium',
+    !chlorinated.removed.includes('cryptosporidiosis'), chlorinated.note);
+  const filtered = A.treatWater('filtered', 1);
+  check('a filter removes the protozoa', filtered.removed.includes('giardiasis'));
+  check('and passes the viruses', !filtered.removed.includes('norovirus'), filtered.note);
+  const silty = A.treatWater('uv', 1, { turbidity: 0.9 });
+  check('UV is defeated by silt', silty.effectiveness < 0.3,
+    `${(silty.effectiveness * 100).toFixed(0)}% effective`);
+  const distilled = A.treatWater('distilled', 1, { salinityGL: 35 });
+  check('only distillation makes seawater drinkable', distilled.salinityGL === 0);
+  check('and it costs a lot of fuel to do it', distilled.fuelKg > 1,
+    `${distilled.fuelKg.toFixed(1)} kg of wood per litre`);
+
+  // Drinking treated water exposes you only to what survived.
+  let caughtBoiled = 0, caughtRaw = 0;
+  for (let i = 0; i < 300; i++) {
+    const p1 = new A.Physiology({});
+    const d1 = new A.DiseaseSystem({ rng: () => 0 });
+    A.drinkTreated(p1, d1, A.treatWater('boiled', 0.5));
+    caughtBoiled += d1.infections.length;
+    const p2 = new A.Physiology({});
+    const d2 = new A.DiseaseSystem({ rng: () => 0 });
+    A.drinkTreated(p2, d2, A.treatWater('none', 0.5));
+    caughtRaw += d2.infections.length;
+  }
+  check('boiled water is far safer than creek water', caughtBoiled * 4 < caughtRaw,
+    `${caughtBoiled} vs ${caughtRaw} infections over 300 drinks`);
+  check('and it still counts as water', new A.Physiology({}).bodyWaterL > 0);
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

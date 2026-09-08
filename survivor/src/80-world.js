@@ -144,6 +144,12 @@ class World {
 
     this.generated = false;
     this.players = new Map();
+    /* Everything the players put on the island. The terrain comes back from
+       the seed and the POIs come back from the same deterministic siting, so
+       this is the only part of the world that cannot be derived and has to
+       be written down. */
+    this.built = [];
+    this.fires = [];
     this.deadAccounts = new Set();     // multiplayer: one life, then spectate
     this.log = [];
     this.realElapsed = 0;
@@ -560,7 +566,10 @@ class World {
         emptiedRooms: this._emptiedRooms || [],
         breachedWalls: this._breachedWalls || [],
         takenAnimals: this.ecology.stats.killed,
-        builtStructures: this._built || [],
+        builtStructures: this.built,
+        fires: this.fires.map((f) => ({
+          kindId: f.kindId, x: f.x, y: f.y, z: f.z, fuelKg: f.fuelKg, lit: f.lit,
+        })),
       },
       players: Array.from(this.players.entries()).map(([id, p]) => ({
         id, name: p.name, x: p.x, y: p.y, z: p.z,
@@ -588,6 +597,8 @@ class World {
     w.clock.restore(data.clock);
     w.deadAccounts = new Set(data.deadAccounts || []);
     w.corpses = data.corpses || [];
+    w.built = (data.changes && data.changes.builtStructures) || [];
+    w.fires = ((data.changes && data.changes.fires) || []).map((f) => Object.assign(new Fire(f), f));
     w.log = data.log || [];
     for (const rec of data.players || []) {
       const p = new Player({ id: rec.id, name: rec.name, rng: w.rng, x: rec.x, y: rec.y, z: rec.z });

@@ -59,6 +59,9 @@ const EXPORTS = [
   'Firearm', 'WEAPONS', 'ATTACHMENT', 'ACTION', 'PART', 'POWDER', 'handload',
   'salvageComponents',
 
+  'Fire', 'Provision', 'FIRE_KIND', 'FOOD_STATE', 'SAFE_CORE',
+  'WATER_TREATMENT', 'treatWater', 'drinkTreated',
+
   'World', 'Player', 'Inventory', 'GAME_MODE',
 ];
 

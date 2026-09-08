@@ -5,72 +5,80 @@
 <link rel="icon" href="data:,">
 <style>
   :root {
-    --ink: #e8e3d8;
-    --dim: #9a9384;
-    --panel: rgba(12, 14, 12, 0.62);
-    --edge: rgba(232, 227, 216, 0.14);
+    --ink: #e9e4d9;
+    --dim: #98917f;
+    --faint: #6a6558;
+    --panel: rgba(10, 12, 11, 0.60);
+    --panel-solid: rgba(10, 12, 11, 0.94);
+    --edge: rgba(233, 228, 217, 0.13);
+    --edge-hot: rgba(233, 228, 217, 0.34);
     --warn: #d9a441;
     --bad: #c4574a;
     --good: #7fa05a;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #05070a; }
-  body {
-    font: 13px/1.45 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-    color: var(--ink);
-    -webkit-font-smoothing: antialiased;
-  }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #04060a; }
+  body { font: 13px/1.45 var(--mono); color: var(--ink); -webkit-font-smoothing: antialiased; }
   canvas { display: block; }
+  button { font: inherit; color: inherit; }
 
-  /* ---------- loading ---------- */
+  /* ---------- boot ---------- */
   #boot {
-    position: fixed; inset: 0; z-index: 50;
+    position: fixed; inset: 0; z-index: 60;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 22px; background: radial-gradient(ellipse at 50% 45%, #12181c 0%, #05070a 70%);
-    transition: opacity .8s ease;
+    gap: 20px; background: radial-gradient(ellipse at 50% 42%, #131a1e 0%, #04060a 72%);
+    transition: opacity .7s ease;
   }
   #boot h1 {
-    margin: 0; font: 300 46px/1 ui-monospace, monospace; letter-spacing: .42em;
-    text-indent: .42em; color: #e8e3d8;
+    margin: 0; font: 200 48px/1 var(--mono); letter-spacing: .46em;
+    text-indent: .46em; color: var(--ink);
   }
-  #boot .sub { color: var(--dim); letter-spacing: .16em; font-size: 11px; text-transform: uppercase; }
-  #bar { width: min(460px, 78vw); height: 2px; background: rgba(232,227,216,.14); overflow: hidden; }
-  #bar i { display: block; height: 100%; width: 0; background: var(--ink); transition: width .3s ease; }
-  #bootMsg { color: var(--dim); font-size: 12px; height: 1.4em; }
-  #bootStats { color: var(--dim); font-size: 11px; text-align: center; max-width: 560px; line-height: 1.7; }
+  #boot .sub { color: var(--dim); letter-spacing: .2em; font-size: 10.5px; text-transform: uppercase; }
+  #bar { width: min(480px, 78vw); height: 2px; background: rgba(233,228,217,.13); overflow: hidden; }
+  #bar i { display: block; height: 100%; width: 0; background: var(--ink); transition: width .35s ease; }
+  #bootMsg { color: var(--dim); font-size: 12px; height: 1.4em; letter-spacing: .04em; }
+  #bootStats { color: var(--faint); font-size: 11px; text-align: center; max-width: 620px; line-height: 1.85; }
   #startBtn {
-    margin-top: 6px; padding: 11px 30px; background: none; color: var(--ink); cursor: pointer;
-    border: 1px solid var(--edge); font: inherit; letter-spacing: .22em; text-transform: uppercase;
-    font-size: 11px; transition: background .2s, border-color .2s;
+    margin-top: 4px; padding: 12px 34px; background: none; cursor: pointer;
+    border: 1px solid var(--edge); letter-spacing: .24em; text-transform: uppercase;
+    font-size: 11px; transition: background .18s, border-color .18s, letter-spacing .18s;
   }
-  #startBtn:hover { background: rgba(232,227,216,.07); border-color: rgba(232,227,216,.4); }
+  #startBtn:hover { background: rgba(233,228,217,.06); border-color: var(--edge-hot); letter-spacing: .3em; }
   #startBtn[hidden] { display: none; }
 
   /* ---------- hud ---------- */
   #hud { position: fixed; inset: 0; pointer-events: none; z-index: 20; }
+  #hud[hidden] { display: none; }
   .panel {
     position: absolute; background: var(--panel); border: 1px solid var(--edge);
-    padding: 9px 12px; backdrop-filter: blur(9px); -webkit-backdrop-filter: blur(9px);
+    padding: 9px 12px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
   }
-  #vitals { left: 16px; bottom: 16px; width: 246px; }
-  #env { right: 16px; top: 16px; width: 232px; text-align: right; }
-  #status { left: 16px; top: 16px; width: 300px; }
-  #log { right: 16px; bottom: 16px; width: 340px; max-height: 190px; overflow: hidden; }
+  #status { left: 16px; top: 16px; width: 312px; }
+  #env { right: 16px; top: 16px; width: 238px; text-align: right; }
+  #vitals { left: 16px; bottom: 16px; width: 250px; }
+  #log { right: 16px; bottom: 16px; width: 350px; max-height: 190px; overflow: hidden; }
   #prompt {
-    left: 50%; bottom: 96px; transform: translateX(-50%); text-align: center;
-    padding: 7px 16px; letter-spacing: .05em;
+    left: 50%; bottom: 108px; transform: translateX(-50%); text-align: center;
+    padding: 7px 18px; letter-spacing: .04em; white-space: nowrap;
   }
   #prompt[hidden] { display: none; }
+  #toast {
+    position: fixed; left: 50%; top: 22%; transform: translateX(-50%); z-index: 24;
+    padding: 9px 20px; background: var(--panel-solid); border: 1px solid var(--edge);
+    letter-spacing: .06em; pointer-events: none;
+  }
+  #toast[hidden] { display: none; }
 
   .row { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
   .k { color: var(--dim); font-size: 11px; }
   .v { font-variant-numeric: tabular-nums; }
-  .meter { height: 3px; background: rgba(232,227,216,.12); margin: 3px 0 8px; overflow: hidden; }
+  .meter { height: 3px; background: rgba(233,228,217,.11); margin: 3px 0 8px; overflow: hidden; }
   .meter i { display: block; height: 100%; background: var(--good); transition: width .4s linear, background .4s; }
   .meter.warn i { background: var(--warn); }
   .meter.bad i { background: var(--bad); }
   h2 {
-    margin: 0 0 8px; font: 400 10px/1 inherit; letter-spacing: .24em;
+    margin: 0 0 8px; font: 400 10px/1 inherit; letter-spacing: .26em;
     text-transform: uppercase; color: var(--dim);
   }
   #log div { font-size: 11.5px; color: var(--dim); margin-bottom: 3px; }
@@ -79,11 +87,10 @@
 
   #crosshair {
     position: fixed; left: 50%; top: 50%; width: 15px; height: 15px;
-    transform: translate(-50%, -50%); z-index: 21; pointer-events: none; opacity: .55;
+    transform: translate(-50%, -50%); z-index: 21; pointer-events: none; opacity: .5;
   }
-  #crosshair::before, #crosshair::after {
-    content: ''; position: absolute; background: var(--ink);
-  }
+  #crosshair[hidden] { display: none; }
+  #crosshair::before, #crosshair::after { content: ''; position: absolute; background: var(--ink); }
   #crosshair::before { left: 50%; top: 0; width: 1px; height: 100%; margin-left: -.5px; }
   #crosshair::after { top: 50%; left: 0; height: 1px; width: 100%; margin-top: -.5px; }
 
@@ -91,23 +98,74 @@
     position: fixed; left: 50%; top: 14px; transform: translateX(-50%);
     z-index: 21; pointer-events: none; letter-spacing: .3em; font-size: 11px; color: var(--dim);
   }
+  #compass[hidden] { display: none; }
   #compass b { color: var(--ink); font-weight: 400; }
 
   #help {
-    position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%);
-    z-index: 21; font-size: 11px; color: var(--dim); letter-spacing: .06em; pointer-events: none;
+    position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 21;
+    font-size: 11px; color: var(--faint); letter-spacing: .05em; pointer-events: none;
+    max-width: 92vw; text-align: center; line-height: 1.7;
   }
+  #help[hidden] { display: none; }
+  #help b { color: var(--dim); font-weight: 400; }
+
   #vignette {
     position: fixed; inset: 0; z-index: 19; pointer-events: none;
     box-shadow: inset 0 0 220px 40px rgba(0,0,0,.62); transition: box-shadow .6s;
   }
+
+  /* ---------- overlays modules open ---------- */
+  .screen {
+    position: fixed; inset: 0; z-index: 40; display: flex; align-items: center;
+    justify-content: center; background: rgba(4, 6, 10, .82);
+    backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+  }
+  .screen[hidden] { display: none; }
+  .screen > .sheet {
+    background: var(--panel-solid); border: 1px solid var(--edge);
+    padding: 22px 26px; max-width: min(1080px, 94vw); max-height: 88vh; overflow: auto;
+    pointer-events: auto;
+  }
+  .sheet h1 {
+    margin: 0 0 4px; font: 300 20px/1.2 inherit; letter-spacing: .18em; text-transform: uppercase;
+  }
+  .sheet .lede { color: var(--dim); margin: 0 0 18px; font-size: 12px; }
+  .sheet button, .btn {
+    background: none; border: 1px solid var(--edge); padding: 7px 16px; cursor: pointer;
+    letter-spacing: .12em; font-size: 11px; text-transform: uppercase; margin: 2px;
+  }
+  .sheet button:hover, .btn:hover { background: rgba(233,228,217,.07); border-color: var(--edge-hot); }
+  .sheet button.on { border-color: var(--edge-hot); background: rgba(233,228,217,.1); }
+  .sheet table { border-collapse: collapse; width: 100%; font-size: 11.5px; }
+  .sheet th, .sheet td { text-align: left; padding: 4px 10px 4px 0; vertical-align: top; }
+  .sheet th { color: var(--dim); font-weight: 400; font-size: 10px; letter-spacing: .16em; text-transform: uppercase; }
+  .sheet tr + tr td { border-top: 1px solid rgba(233,228,217,.06); }
+  .muted { color: var(--dim); }
+  .faint { color: var(--faint); }
+  .warnText { color: var(--warn); }
+  .badText { color: var(--bad); }
+  .goodText { color: var(--good); }
+
+  /* ---------- death ---------- */
+  #gameover {
+    position: fixed; inset: 0; z-index: 55; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 14px;
+    background: rgba(4, 6, 10, .9);
+  }
+  #gameover[hidden] { display: none; }
+  #gameover h1 {
+    margin: 0; font: 200 34px/1 var(--mono); letter-spacing: .4em; text-indent: .4em;
+    color: var(--bad);
+  }
+  #gameoverCause { color: var(--ink); }
+  #gameoverDetail { color: var(--dim); font-size: 12px; }
 </style>
 
 <div id="boot">
   <h1>SURVIVOR</h1>
   <div class="sub">one island &middot; one life</div>
   <div id="bar"><i></i></div>
-  <div id="bootMsg">raising the island…</div>
+  <div id="bootMsg">shaping the island&hellip;</div>
   <div id="bootStats"></div>
   <button id="startBtn" hidden>Enter the island</button>
 </div>
@@ -123,11 +181,41 @@
   <div class="panel" id="log"><h2>log</h2><div id="logBody"></div></div>
   <div class="panel" id="prompt" hidden></div>
 </div>
+
+<div id="toast" hidden></div>
 <div id="crosshair" hidden></div>
 <div id="compass" hidden></div>
-<div id="help" hidden>WASD move &middot; shift run &middot; C crouch &middot; space jump &middot; E interact &middot; F drink &middot; R rest &middot; T time&times;</div>
+<div id="help" hidden>
+  <b>WASD</b> move &middot; <b>shift</b> run &middot; <b>C</b> crouch &middot; <b>space</b> jump &middot;
+  <b>E</b> interact &middot; <b>Tab</b> inventory &middot; <b>M</b> map &middot; <b>J</b> medical &middot;
+  <b>B</b> build &middot; <b>F</b> fire &middot; <b>G</b> fish &middot; <b>P</b> pause &middot;
+  <b>T</b> time&times; &middot; <b>H</b> hide this
+</div>
 <div id="vignette"></div>
+
+<div id="gameover" hidden>
+  <h1>DIED</h1>
+  <div id="gameoverCause"></div>
+  <div id="gameoverDetail"></div>
+  <button class="btn" onclick="location.reload()">Try again</button>
+</div>
 
 <script src="../engine/legend-engine.js"></script>
 <script src="./survivor.js"></script>
-<script src="./game.js"></script>
+<script src="./core.js"></script>
+<script src="./modules/05-menu.js"></script>
+<script src="./modules/10-buildings.js"></script>
+<script src="./modules/12-vegetation.js"></script>
+<script src="./modules/14-props.js"></script>
+<script src="./modules/20-weapons.js"></script>
+<script src="./modules/30-interaction.js"></script>
+<script src="./modules/32-inventory.js"></script>
+<script src="./modules/34-survival.js"></script>
+<script src="./modules/40-fishing.js"></script>
+<script src="./modules/50-medical.js"></script>
+<script src="./modules/60-construction.js"></script>
+<script src="./modules/70-vehicles.js"></script>
+<script src="./modules/80-audio.js"></script>
+<script src="./modules/90-map.js"></script>
+<script src="./modules/92-ecology-feedback.js"></script>
+<script>SurvivorGame.boot();</script>

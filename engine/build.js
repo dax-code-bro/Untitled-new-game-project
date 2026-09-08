@@ -53,7 +53,7 @@ const LegendEngine = {
   Vec3, Quat, Mat3, Mat4, Aabb, Rng, Noise,
   Geometry, Shapes, convexHull, hullToGeometry,
   heightfieldSurface, heightfieldSampleWorld,
-  Engine, Actor, Material, Body, PhysicsWorld,
+  Engine, Actor, Material, Body, PhysicsWorld, Shape, SHAPE,
   Fluid, WaterVolume, WATER_PRESETS, Animal, ANIMAL_SPECIES, Fracture, ParticleSystem, Skeleton, AnimationClip, Face,
   Grass, Input, Audio, GltfAsset, GltfInstance,
   clamp, lerp, smoothstep,

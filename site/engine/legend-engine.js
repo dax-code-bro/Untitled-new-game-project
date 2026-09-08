@@ -11128,6 +11128,56 @@ class Engine {
 
   /* Arbitrary convex from a point cloud — useful for level geometry that is
      not a primitive. */
+  /* Spawn an actor from geometry the caller built.
+
+     Every other factory here makes one of the engine's own shapes. A game
+     that generates its own meshes — buildings, trees, a carved-up terrain
+     patch — had no way in short of reaching for the internals. This is that
+     way in, and it keeps the mesh cache in the loop: pass the same `key`
+     twice and the second call reuses the upload and joins the first one's
+     instanced draw, which is the difference between two thousand trees
+     costing one draw call and costing two thousand.
+
+     `collider` is optional and separate from the visual mesh, because the
+     mesh you draw and the shape you collide are almost never the same thing
+     at this level of detail: 'box' fits an axis-aligned box to the geometry,
+     'convex' hulls it, a Shape instance is used as given, and the default of
+     none makes it visual-only. */
+  mesh(opts = {}) {
+    const geo = opts.geometry;
+    if (!geo) throw new Error('mesh() needs a geometry');
+    const key = opts.key || `mesh:${++_customMeshUid}`;
+    const gpu = this._mesh(key, () => (geo.positions instanceof Float32Array ? geo : geo.finalize()));
+
+    let shape = null;
+    let boundRadius = opts.boundRadius;
+    const bounds = geo.bounds || (typeof geo.computeBounds === 'function' ? geo.computeBounds() : null);
+    if (bounds && boundRadius == null) {
+      const e = bounds.extents();
+      boundRadius = Math.hypot(e.x, e.y, e.z);
+    }
+
+    if (opts.collider && opts.physics !== false) {
+      if (opts.collider instanceof Shape) {
+        shape = opts.collider;
+      } else if (opts.collider === 'box' && bounds) {
+        const e = bounds.extents();
+        shape = Shape.box(Math.max(e.x, 1e-3), Math.max(e.y, 1e-3), Math.max(e.z, 1e-3));
+      } else if (opts.collider === 'convex') {
+        const pts = [];
+        const P = geo.positions;
+        // Hulling every vertex of a detailed mesh is wasted work — the hull
+        // of a sample is the same hull for anything the player will lean on.
+        const stride = Math.max(3, Math.floor(P.length / 3 / 64) * 3);
+        for (let i = 0; i < P.length; i += stride) pts.push([P[i], P[i + 1], P[i + 2]]);
+        shape = Shape.convex(pts);
+      } else if (opts.collider === 'sphere' && boundRadius) {
+        shape = Shape.sphere(boundRadius);
+      }
+    }
+    return this._spawn(opts, gpu, shape, boundRadius || 1);
+  }
+
   convex(points, opts = {}) {
     const pts = points.map((p) => Vec3.from(p));
     const shape = Shape.convex(pts);
@@ -11809,6 +11859,7 @@ class Engine {
 const _eTmp = new Vec3();
 const _eTmp2 = new Vec3();
 let _meshUid = 0;
+let _customMeshUid = 0;
 
 /* Convert merged polygon faces back to a triangle list. */
 function facesToTriangles(faces) {
@@ -13447,7 +13498,7 @@ const LegendEngine = {
   Vec3, Quat, Mat3, Mat4, Aabb, Rng, Noise,
   Geometry, Shapes, convexHull, hullToGeometry,
   heightfieldSurface, heightfieldSampleWorld,
-  Engine, Actor, Material, Body, PhysicsWorld,
+  Engine, Actor, Material, Body, PhysicsWorld, Shape, SHAPE,
   Fluid, WaterVolume, WATER_PRESETS, Animal, ANIMAL_SPECIES, Fracture, ParticleSystem, Skeleton, AnimationClip, Face,
   Grass, Input, Audio, GltfAsset, GltfInstance,
   clamp, lerp, smoothstep,
