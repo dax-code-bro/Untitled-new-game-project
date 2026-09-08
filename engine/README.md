@@ -27,7 +27,7 @@ That is a complete scene: lit, shadowed, physically simulated, breakable.
 
 | System | Implementation |
 |---|---|
-| **Physics** | Sequential-impulse solver, SAT narrowphase over convex hulls, 4-point manifolds, warm starting, split-impulse penetration recovery, island-based sleeping, joints, raycasts |
+| **Physics** | Sequential-impulse solver, SAT narrowphase over convex hulls, heightfield terrain collision, 4-point manifolds, warm starting, split-impulse penetration recovery, island-based sleeping, joints, raycasts |
 | **Destruction** | 3D Voronoi pre-fracture by half-space intersection, stress accumulation from contact impulses, multi-generation breakage, chunk budgeting |
 | **Fluids** | Position Based Fluids — density constraint projection, artificial pressure, vorticity confinement, XSPH viscosity, two-way rigid coupling |
 | **Water rendering** | Screen-space: sphere-splatted depth, bilateral smoothing, normal reconstruction, refraction, Beer-Lambert absorption, Fresnel, foam |
@@ -101,8 +101,19 @@ game.ground({
 });
 ```
 
-Note: a displaced terrain collides as a flat plane at `groundLevel`. Place
-`static` boxes for anything the player must actually stand on.
+A displaced terrain collides as a **heightfield**, sampled from the same
+function and at the same resolution as the mesh — so the surface you see is
+the surface you stand on, slopes included. Pass `collide: 'plane'` to fall back
+to the old flat approximation for purely decorative relief.
+
+`game.terrain` then exposes the queries a world needs constantly, answered by
+the collider rather than by a second copy of the generator:
+
+```js
+game.terrain.heightAt(x, z);   // world-space ground height
+game.terrain.normalAt(x, z);   // surface normal
+game.terrain.slopeAt(x, z);    // degrees from horizontal
+```
 
 ## Materials
 
@@ -314,8 +325,10 @@ Worth knowing before you hit them:
 - **Not Unreal or Unity.** Those are decades of work by large teams. This is a
   browser engine with a real feature set, built to make one-file games look and
   feel good — not a general-purpose production toolchain.
-- **Convex collision only.** Concave shapes must be built from multiple convex
-  pieces. There is no triangle-mesh collider.
+- **Convex collision only, plus heightfields.** Concave shapes must be built
+  from multiple convex pieces. Terrain is the exception: `ground({ heightFn })`
+  builds a real heightfield collider. There is still no general triangle-mesh
+  collider.
 - **Terrain collides as a plane.** Displaced ground is visual; use static
   boxes for surfaces the player stands on.
 - **Water is a particle sim** of a few thousand particles — a bathtub, not an

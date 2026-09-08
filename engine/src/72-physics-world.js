@@ -5,6 +5,12 @@
 
 let _bodyId = 0;
 
+/* Colliders whose extent is the whole world. They skip the broadphase grid
+   and are paired against every movable body instead. */
+function isUnbounded(shape) {
+  return shape.type === SHAPE.PLANE || shape.type === SHAPE.HEIGHTFIELD;
+}
+
 class Body {
   constructor(shape, opts = {}) {
     this.id = _bodyId++;
@@ -187,7 +193,9 @@ class PhysicsWorld {
     this._movable = [];
     this._cellPool = [];
     this._dead = [];
-    this._staticPlanes = [];
+    // Planes and heightfields have no meaningful AABB — one collider covers
+    // the whole world — so they bypass the grid and pair directly.
+    this._unbounded = [];
     this._islandIndex = new Map();
     this._islandParent = [];
     this._islandCanSleep = new Map();
@@ -197,15 +205,15 @@ class PhysicsWorld {
 
   add(body) {
     this.bodies.push(body);
-    if (body.shape.type === SHAPE.PLANE) this._staticPlanes.push(body);
+    if (isUnbounded(body.shape)) this._unbounded.push(body);
     return body;
   }
 
   remove(body) {
     const i = this.bodies.indexOf(body);
     if (i >= 0) this.bodies.splice(i, 1);
-    const j = this._staticPlanes.indexOf(body);
-    if (j >= 0) this._staticPlanes.splice(j, 1);
+    const j = this._unbounded.indexOf(body);
+    if (j >= 0) this._unbounded.splice(j, 1);
     // Drop cached manifolds by identity — matching on the string key would
     // mis-handle ids that are prefixes of one another (1 vs 10).
     for (const [key, m] of Array.from(this.manifolds.entries())) {
@@ -238,7 +246,7 @@ class PhysicsWorld {
     const movable = this._movable;
     movable.length = 0;
     for (const b of this.bodies) {
-      if (b.shape.type === SHAPE.PLANE) continue;
+      if (isUnbounded(b.shape)) continue;
       b.updateAabb();
       movable.push(b);
       const x0 = Math.floor(b.aabb.min.x * inv), x1 = Math.floor(b.aabb.max.x * inv);
@@ -276,9 +284,9 @@ class PhysicsWorld {
       }
     }
 
-    // Planes are unbounded, so they are paired against everything directly
-    // rather than being inserted into the grid.
-    for (const plane of this._staticPlanes) {
+    // Unbounded colliders are paired against everything directly rather than
+    // being inserted into the grid.
+    for (const plane of this._unbounded) {
       for (const b of movable) {
         if (!this._shouldCollide(plane, b)) continue;
         const key = this._pairKey(plane, b);
@@ -846,6 +854,16 @@ class PhysicsWorld {
             normal: denom < 0 ? pn : pn.clone().negate(),
           };
         }
+      } else if (b.shape.type === SHAPE.HEIGHTFIELD) {
+        const t = rayHeightfield(o, d, b, Math.min(maxDist, bestT), n);
+        if (t >= 0 && t < bestT) {
+          bestT = t;
+          best = {
+            body: b, distance: t,
+            point: new Vec3().copy(o).addScaled(d, t),
+            normal: n.clone(),
+          };
+        }
       } else {
         // Cheap reject against the bounding sphere before the face walk.
         if (raySphere(o, d, b.position, b.shape.boundRadius) < 0) continue;
@@ -871,7 +889,7 @@ class PhysicsWorld {
     const found = [];
     for (const b of this.bodies) {
       if (filter && !filter(b)) continue;
-      if (b.shape.type === SHAPE.PLANE) continue;
+      if (isUnbounded(b.shape)) continue;
       const r = radius + b.shape.boundRadius;
       if (b.position.distanceToSq(c) <= r * r) found.push(b);
     }

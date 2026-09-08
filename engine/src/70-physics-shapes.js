@@ -5,7 +5,7 @@
    right instead of one per shape pair.
    ============================================================ */
 
-const SHAPE = { SPHERE: 0, CONVEX: 1, PLANE: 2 };
+const SHAPE = { SPHERE: 0, CONVEX: 1, PLANE: 2, HEIGHTFIELD: 3 };
 
 class Shape {
   constructor(type) {
@@ -16,6 +16,7 @@ class Shape {
     this.edges = null;      // [{ a, b, dir }] unique directions only
     this.normal = null;     // planes
     this.offset = 0;        // planes
+    this.field = null;      // heightfields
     this.boundRadius = 0;   // local bounding sphere, for broadphase
     this.volume = 1;
     this.localInertia = new Vec3(1, 1, 1); // diagonal, per unit mass
@@ -35,6 +36,48 @@ class Shape {
     const s = new Shape(SHAPE.PLANE);
     s.normal = Vec3.from(normal).normalize();
     s.offset = offset;
+    s.boundRadius = Infinity;
+    s.volume = Infinity;
+    return s;
+  }
+
+  /* A heightfield: the terrain mesh as an actual collider instead of the
+     flat plane displaced ground used to fall back to. Slopes, ridges,
+     riverbeds and cliff faces all become surfaces you can stand, slide and
+     trip on, which is the difference between walking an island and walking
+     a painted floor.
+
+     `heights` is row-major over z: sample (c, r) lives at index r * cols + c
+     and sits at local x = (c / (cols - 1) - 0.5) * sizeX. That is exactly the
+     layout Shapes.terrain() emits, so the collider and the rendered mesh are
+     the same surface rather than two approximations of one. */
+  static heightfield(heights, opts = {}) {
+    const s = new Shape(SHAPE.HEIGHTFIELD);
+    const cols = opts.cols | 0, rows = opts.rows | 0;
+    if (cols < 2 || rows < 2) throw new Error('heightfield needs at least 2x2 samples');
+    if (heights.length < cols * rows) throw new Error('heightfield sample count does not match cols x rows');
+    const sizeX = opts.sizeX != null ? opts.sizeX : (opts.size != null ? opts.size : 100);
+    const sizeZ = opts.sizeZ != null ? opts.sizeZ : (opts.size != null ? opts.size : sizeX);
+
+    let minY = Infinity, maxY = -Infinity;
+    for (let i = 0; i < cols * rows; i++) {
+      const h = heights[i];
+      if (h < minY) minY = h;
+      if (h > maxY) maxY = h;
+    }
+
+    s.field = {
+      heights, cols, rows, sizeX, sizeZ,
+      stepX: sizeX / (cols - 1),
+      stepZ: sizeZ / (rows - 1),
+      minY, maxY,
+      // Below this the field stops answering. Without a floor, a body that
+      // tunnels under the terrain gets shoved back up through it from
+      // arbitrarily far away, which looks like the world spitting you out.
+      depth: opts.depth != null ? opts.depth : 24,
+    };
+    // Unbounded like a plane: paired against every body directly rather than
+    // being binned, because one collider covers the whole map.
     s.boundRadius = Infinity;
     s.volume = Infinity;
     return s;

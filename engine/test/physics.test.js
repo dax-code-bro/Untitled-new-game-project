@@ -14,8 +14,8 @@ const MODULES = ['10-math.js', '20-gl.js', '30-geometry.js', '70-physics-shapes.
 
 const code = MODULES.map((f) => fs.readFileSync(path.join(SRC, f), 'utf8')).join('\n');
 const ctx = vm.createContext({ console, Math, Number, Array, Float32Array, Uint8Array, Uint16Array, Uint32Array, Map, Set, JSON, Infinity, NaN });
-vm.runInContext(`${code}\nthis.API = { Vec3, Quat, Shape, Body, PhysicsWorld, convexHull, Shapes, SHAPE, collide, ManifoldPool, Fracture, Fluid };`, ctx);
-const { Vec3, Quat, Shape, Body, PhysicsWorld, convexHull, SHAPE, collide, ManifoldPool, Fracture, Fluid } = ctx.API;
+vm.runInContext(`${code}\nthis.API = { Vec3, Quat, Shape, Body, PhysicsWorld, convexHull, Shapes, SHAPE, collide, ManifoldPool, Fracture, Fluid, heightfieldSampleWorld };`, ctx);
+const { Vec3, Quat, Shape, Body, PhysicsWorld, convexHull, SHAPE, collide, ManifoldPool, Fracture, Fluid, heightfieldSampleWorld } = ctx.API;
 
 /* The fluid sim itself is pure maths; only its buffer setup touches WebGL.
    A stub context lets the simulation be tested without a GPU. */
@@ -413,6 +413,83 @@ section('fluid simulation');
   for (let i = 0; i < f.count; i++) if (f.py[i] > surface) above++;
   check('settled fluid has a flat surface', above > f.count * 0.02,
     `${above} of ${f.count} particles near the top`);
+}
+
+/* ---------------- heightfield terrain ---------------- */
+{
+  section('heightfield');
+
+  // A 40 m field: a constant 1-in-2 ramp along x, with a rolling swell along
+  // z so the test covers slopes, crests and troughs rather than one plane.
+  const N = 41, SIZE = 40;
+  const surfaceFn = (x, z) => 0.5 * x + 3 * Math.sin(z * 0.3);
+  const heights = new Float32Array(N * N);
+  for (let r = 0; r < N; r++) {
+    for (let c = 0; c < N; c++) {
+      heights[r * N + c] = surfaceFn((c / (N - 1) - 0.5) * SIZE, (r / (N - 1) - 0.5) * SIZE);
+    }
+  }
+  const field = new Body(Shape.heightfield(heights, { cols: N, rows: N, size: SIZE }),
+    { static: true, friction: 0.9 });
+
+  let maxErr = 0;
+  const rng = new (function LCG(){ let s = 12345; this.next = () => (s = (s * 1103515245 + 12345) % 2147483648) / 2147483648; })();
+  for (let i = 0; i < 500; i++) {
+    const x = (rng.next() - 0.5) * SIZE * 0.98, z = (rng.next() - 0.5) * SIZE * 0.98;
+    maxErr = Math.max(maxErr, Math.abs(heightfieldSampleWorld(field, x, z, null) - surfaceFn(x, z)));
+  }
+  // The collider is piecewise-planar over 1 m cells, so it cannot match a
+  // sine exactly; it must stay within the sampling error, not drift.
+  check('heightfield tracks its generating surface', maxErr < 0.12, `max error ${maxErr.toFixed(4)} m`);
+
+  // Where the swell is momentarily flat, the only slope left is the ramp's,
+  // and atan(0.5) is 26.57 degrees.
+  const nrm = new Vec3();
+  heightfieldSampleWorld(field, 0, Math.PI / 0.6, nrm);
+  const slopeDeg = Math.acos(nrm.y) * 180 / Math.PI;
+  check('heightfield normal reports the true slope', Math.abs(slopeDeg - 26.565) < 1.5,
+    `${slopeDeg.toFixed(2)} deg, expected 26.57`);
+
+  const world = new PhysicsWorld({ gravity: new Vec3(0, -9.81, 0) });
+  world.add(field);
+
+  // Dropped into a trough, a box must come to rest on the terrain — the whole
+  // point of the collider, since a plane would have caught it at y = 0.
+  const zTrough = -Math.PI / 0.6;   // sin(0.3 z) = -1
+  const crate = new Body(Shape.box(0.5, 0.5, 0.5), { mass: 40, friction: 0.9, restitution: 0 });
+  crate.setPosition(new Vec3(-8, surfaceFn(-8, zTrough) + 5, zTrough));
+  world.add(crate);
+  simulate(world, 8);
+
+  const under = heightfieldSampleWorld(field, crate.position.x, crate.position.z, null);
+  check('box settles on the terrain surface', crate.position.y - under > 0.35 && crate.position.y - under < 1.0,
+    `${(crate.position.y - under).toFixed(3)} m above a surface at ${under.toFixed(2)}`);
+  check('box rests well below a flat-plane ground', crate.position.y < -3,
+    `y ${crate.position.y.toFixed(2)}`);
+  check('box on terrain comes to rest', crate.velocity.length() < 0.5,
+    `speed ${crate.velocity.length().toFixed(3)}`);
+
+  // A sphere on a slope sits one radius along the surface normal, which is
+  // r / cos(slope) measured vertically — 0.559 m here, not 0.5.
+  const ball = new Body(Shape.sphere(0.5), { mass: 10, friction: 0.9, restitution: 0 });
+  ball.setPosition(new Vec3(6, surfaceFn(6, Math.PI / 0.6) + 4, Math.PI / 0.6));
+  world.add(ball);
+  simulate(world, 1.5);
+  const ballSurf = heightfieldSampleWorld(field, ball.position.x, ball.position.z, null);
+  check('sphere rests one radius along the slope normal',
+    Math.abs((ball.position.y - ballSurf) - 0.5 / Math.cos(26.565 * Math.PI / 180)) < 0.08,
+    `vertical gap ${(ball.position.y - ballSurf).toFixed(3)}, expected 0.559`);
+
+  const hit = world.raycast(new Vec3(4, 60, -3), new Vec3(0, -1, 0), 200);
+  check('raycast hits the heightfield', !!hit && hit.body === field);
+  check('raycast lands on the surface', hit && Math.abs(hit.point.y - surfaceFn(4, -3)) < 0.05,
+    hit ? `${hit.point.y.toFixed(3)} vs ${surfaceFn(4, -3).toFixed(3)}` : 'no hit');
+
+  // A ray fired flat into rising ground must be stopped by it. Stepping the
+  // ray coarser than a cell would let it pass straight through the ridge.
+  const graze = world.raycast(new Vec3(-18, surfaceFn(-18, 0) + 2, 0), new Vec3(1, 0, 0), 40);
+  check('grazing ray is stopped by rising ground', !!graze && graze.body === field && graze.distance < 40,
+    graze ? `${graze.distance.toFixed(2)} m` : 'passed through the hill');
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

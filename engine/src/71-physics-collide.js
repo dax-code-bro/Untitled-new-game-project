@@ -510,7 +510,15 @@ function collide(bodyA, bodyB, out, pool, stamp = 0) {
 
   if (ta === SHAPE.CONVEX && tb === SHAPE.CONVEX) return collideConvexConvex(bodyA, bodyB, out, pool, stamp);
 
-  return 0; // plane-plane: two static half-spaces never need contacts
+  if (ta === SHAPE.HEIGHTFIELD && tb === SHAPE.SPHERE) return collideSphereHeightfield(bodyB, bodyA, out, pool, false);
+  if (ta === SHAPE.SPHERE && tb === SHAPE.HEIGHTFIELD) return collideSphereHeightfield(bodyA, bodyB, out, pool, true);
+
+  if (ta === SHAPE.HEIGHTFIELD && tb === SHAPE.CONVEX) return collideConvexHeightfield(bodyB, bodyA, out, pool, true, stamp);
+  if (ta === SHAPE.CONVEX && tb === SHAPE.HEIGHTFIELD) return collideConvexHeightfield(bodyA, bodyB, out, pool, false, stamp);
+
+  // Static-vs-static: two half-spaces, two terrains, or one of each. None of
+  // them can move, so a contact between them would never be solved.
+  return 0;
 }
 
 /* ---------------- raycasting ---------------- */
@@ -548,4 +556,223 @@ function rayConvex(originLocal, dirLocal, shape, outNormal) {
   }
   if (enterFace && outNormal) outNormal.copy(enterFace.normal);
   return enterFace ? tEnter : -1;
+}
+
+/* ---------------- heightfields ----------------
+
+   Terrain used to collide as an infinite flat plane, so a hillside was a
+   picture you walked through at a constant altitude. These routines make the
+   rendered surface the collided surface: the sampling below reproduces
+   Shapes.terrain()'s triangulation exactly — quad(a, a+row, a+row+1, a+1)
+   splits each cell across the (c,r)→(c+1,r+1) diagonal — so contacts land on
+   the same triangles the player can see.                                    */
+
+/* Local-space surface height under (lx, lz), with the triangle's normal.
+   Returns null outside the field. The height is the plane of the actual
+   triangle rather than a bilinear blend of four corners, because a bilinear
+   surface is not the surface being drawn and the mismatch shows up as feet
+   sinking into ridgelines. */
+function heightfieldSurface(field, lx, lz, outNormal) {
+  const { heights, cols, rows, sizeX, sizeZ, stepX, stepZ } = field;
+  const fx = (lx / sizeX + 0.5) * (cols - 1);
+  const fz = (lz / sizeZ + 0.5) * (rows - 1);
+  if (!(fx >= 0) || !(fz >= 0) || fx > cols - 1 || fz > rows - 1) return null;
+
+  let c = Math.floor(fx), r = Math.floor(fz);
+  if (c > cols - 2) c = cols - 2;
+  if (r > rows - 2) r = rows - 2;
+  const u = fx - c, v = fz - r;
+
+  const i00 = r * cols + c;
+  const h00 = heights[i00], h10 = heights[i00 + 1];
+  const h01 = heights[i00 + cols], h11 = heights[i00 + cols + 1];
+
+  let y, dhdu, dhdv;
+  if (u <= v) {                       // triangle (0,0) (0,1) (1,1)
+    dhdu = h11 - h01; dhdv = h01 - h00;
+  } else {                            // triangle (0,0) (1,1) (1,0)
+    dhdu = h10 - h00; dhdv = h11 - h10;
+  }
+  y = h00 + dhdu * u + dhdv * v;
+
+  if (outNormal) {
+    // Gradient in world units, not cell units — a 1 m cell and a 10 cm cell
+    // with the same corner heights are very different slopes.
+    outNormal.set(-dhdu / stepX, 1, -dhdv / stepZ).normalize();
+  }
+  return y;
+}
+
+/* Public helper: world-space ground height under a point, plus its normal.
+   Games need this constantly — placing a tree, spawning an animal, deciding
+   whether a slope is walkable — and every one of them doing its own raycast
+   is both slower and subtly different from what physics believes. */
+function heightfieldSampleWorld(body, wx, wz, outNormal) {
+  const lx = wx - body.position.x, lz = wz - body.position.z;
+  const y = heightfieldSurface(body.shape.field, lx, lz, outNormal);
+  return y === null ? null : y + body.position.y;
+}
+
+function collideSphereHeightfield(sphere, field, out, pool, flip) {
+  const f = field.shape.field;
+  const n = _cp.v[16];
+  const lx = sphere.position.x - field.position.x;
+  const lz = sphere.position.z - field.position.z;
+  const y = heightfieldSurface(f, lx, lz, n);
+  if (y === null) return 0;
+
+  const r = sphere.shape.radius;
+  // The sample shares (x, z) with the centre, so the perpendicular distance
+  // to the triangle's plane is exactly the vertical gap times cos(slope).
+  const d = (sphere.position.y - field.position.y - y) * n.y;
+  if (d >= r || d < -f.depth) return 0;
+
+  const c = pool.get();
+  c.normal.copy(n);
+  if (flip) c.normal.negate();
+  c.depth = r - d;
+  c.point.copy(sphere.position).addScaled(n, -r);
+  c.id = 0;
+  out.push(c);
+  return 1;
+}
+
+/* Two-sided test. Convex vertices below the terrain catch the common case
+   (a crate resting on a slope); terrain vertices inside the convex catch the
+   one vertex-only sampling misses — a ridge or boulder peak poking up between
+   a box's corners, which otherwise swallows the box whole. */
+function collideConvexHeightfield(convex, field, out, pool, flip, stamp) {
+  const f = field.shape.field;
+  const V = ensureWorldVerts(convex, stamp);
+  if (!V) return 0;
+  const n = _cp.v[16];
+  const fx = field.position.x, fy = field.position.y, fz = field.position.z;
+
+  const found = [];
+
+  for (let i = 0; i < V.length; i++) {
+    const wp = V[i];
+    const y = heightfieldSurface(f, wp.x - fx, wp.z - fz, n);
+    if (y === null) continue;
+    const d = (wp.y - fy - y) * n.y;
+    if (d >= 0 || d < -f.depth) continue;
+    found.push({ d, x: wp.x, y: wp.y, z: wp.z, nx: n.x, ny: n.y, nz: n.z, id: i });
+  }
+
+  // Reverse pass: terrain samples that fall inside the convex.
+  const shape = convex.shape;
+  if (shape.faces) {
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    let minY = Infinity, maxY = -Infinity;
+    for (let i = 0; i < V.length; i++) {
+      const p = V[i];
+      if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
+      if (p.z < minZ) minZ = p.z; if (p.z > maxZ) maxZ = p.z;
+    }
+    let c0 = Math.ceil(((minX - fx) / f.sizeX + 0.5) * (f.cols - 1));
+    let c1 = Math.floor(((maxX - fx) / f.sizeX + 0.5) * (f.cols - 1));
+    let r0 = Math.ceil(((minZ - fz) / f.sizeZ + 0.5) * (f.rows - 1));
+    let r1 = Math.floor(((maxZ - fz) / f.sizeZ + 0.5) * (f.rows - 1));
+    if (c0 < 0) c0 = 0; if (r0 < 0) r0 = 0;
+    if (c1 > f.cols - 1) c1 = f.cols - 1;
+    if (r1 > f.rows - 1) r1 = f.rows - 1;
+    // A huge body over a fine field would scan thousands of samples for at
+    // most four usable contacts, so cap the span rather than the work done
+    // per contact.
+    if ((c1 - c0) <= 12 && (r1 - r0) <= 12) {
+      const p = _cp.v[17], lp = _cp.v[18];
+      for (let r = r0; r <= r1; r++) {
+        for (let c = c0; c <= c1; c++) {
+          const hy = f.heights[r * f.cols + c] + fy;
+          if (hy < minY || hy > maxY) continue;
+          const wx = (c / (f.cols - 1) - 0.5) * f.sizeX + fx;
+          const wz = (r / (f.rows - 1) - 0.5) * f.sizeZ + fz;
+          p.set(wx, hy, wz);
+          worldToLocal(convex, p, lp);
+          // Inside every face plane, and how far from the nearest one — that
+          // distance is the shallowest way out, which is the penetration
+          // depth the solver wants.
+          let deepest = -Infinity, inside = true;
+          for (const face of shape.faces) {
+            const sep = face.normal.dot(lp) - face.offset;
+            if (sep > 0) { inside = false; break; }
+            if (sep > deepest) deepest = sep;
+          }
+          if (!inside) continue;
+          heightfieldSurface(f, wx - fx, wz - fz, n);
+          found.push({ d: deepest, x: wx, y: hy, z: wz, nx: n.x, ny: n.y, nz: n.z, id: 1024 + r * f.cols + c });
+        }
+      }
+    }
+  }
+
+  if (!found.length) return 0;
+  found.sort((a, b) => a.d - b.d);
+  const count = Math.min(4, found.length);
+  for (let k = 0; k < count; k++) {
+    const g = found[k];
+    const c = pool.get();
+    c.normal.set(g.nx, g.ny, g.nz);
+    // Normal must run A→B. When the convex is A it points at the terrain,
+    // which is the opposite of the terrain's own outward normal.
+    if (!flip) c.normal.negate();
+    c.depth = -g.d;
+    c.point.set(g.x, g.y, g.z);
+    c.id = g.id;
+    out.push(c);
+  }
+  return count;
+}
+
+/* Ray vs heightfield. Walks the ray in steps no larger than a cell so it
+   cannot skip a ridge, then bisects the crossing. Marching beats a closed
+   form here because the surface is piecewise and the ray is usually short
+   (a bullet, a placement probe) rather than map-spanning. */
+function rayHeightfield(origin, dir, body, maxDist, outNormal) {
+  const f = body.shape.field;
+  const step = Math.min(f.stepX, f.stepZ) * 0.5;
+  const horiz = Math.hypot(dir.x, dir.z);
+  // A near-vertical ray crosses at most one cell, so one sample plus the
+  // refinement below is already exact for it.
+  const advance = horiz > 1e-6 ? step / horiz : maxDist;
+
+  const px = origin.x - body.position.x, pz = origin.z - body.position.z;
+  const py = origin.y - body.position.y;
+
+  let tPrev = 0;
+  let hPrev = heightfieldSurface(f, px, pz, null);
+  let dPrev = hPrev === null ? null : py - hPrev;
+  if (dPrev !== null && dPrev <= 0) {
+    // Started underground: report the surface immediately above rather than
+    // pretending the ray missed the world.
+    if (outNormal) heightfieldSurface(f, px, pz, outNormal);
+    return 0;
+  }
+
+  for (let t = advance; t <= maxDist + advance; t = Math.min(t + advance, maxDist + 1e-6)) {
+    const x = px + dir.x * t, z = pz + dir.z * t, y = py + dir.y * t;
+    const h = heightfieldSurface(f, x, z, null);
+    if (h !== null) {
+      const d = y - h;
+      if (d <= 0 && dPrev !== null) {
+        // Bisect between the last sample above the surface and this one below.
+        let lo = tPrev, hi = t;
+        for (let i = 0; i < 24; i++) {
+          const mid = (lo + hi) * 0.5;
+          const hm = heightfieldSurface(f, px + dir.x * mid, pz + dir.z * mid, null);
+          if (hm === null) { lo = mid; continue; }
+          if (py + dir.y * mid - hm > 0) lo = mid; else hi = mid;
+        }
+        if (outNormal) heightfieldSurface(f, px + dir.x * hi, pz + dir.z * hi, outNormal);
+        return hi;
+      }
+      dPrev = d;
+    } else {
+      dPrev = null;
+    }
+    tPrev = t;
+    if (t >= maxDist) break;
+  }
+  return -1;
 }

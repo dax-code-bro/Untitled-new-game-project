@@ -461,15 +461,60 @@ class Engine {
 
     if (opts.physics !== false) {
       if (heightFn) {
-        // A displaced terrain cannot be a plane; approximate with a plane at
-        // the minimum height plus static boxes is overkill, so the plane sits
-        // at the average and the mesh is decorative above it.
+        // Sample the same function the mesh was built from, at the same
+        // resolution, so the collider and the visible surface are one
+        // surface. `collide: 'plane'` restores the old flat approximation
+        // for scenes that only want decorative relief and would rather not
+        // pay for the samples.
         actor.body = null;
-        const plane = new Body(Shape.plane([0, 1, 0], opts.groundLevel != null ? opts.groundLevel : 0), {
-          static: true, friction: opts.friction != null ? opts.friction : 0.7,
-        });
-        this.physics.add(plane);
-        this.groundBody = plane;
+        const at = Vec3.from(opts.at || [0, 0, 0]);
+        if (opts.collide === 'plane') {
+          const plane = new Body(Shape.plane([0, 1, 0], opts.groundLevel != null ? opts.groundLevel : at.y), {
+            static: true, friction: opts.friction != null ? opts.friction : 0.7,
+          });
+          this.physics.add(plane);
+          this.groundBody = plane;
+        } else {
+          const n = segments + 1;
+          const heights = new Float32Array(n * n);
+          for (let r = 0; r < n; r++) {
+            const wz = (r / segments - 0.5) * size;
+            for (let c = 0; c < n; c++) {
+              heights[r * n + c] = heightFn((c / segments - 0.5) * size, wz);
+            }
+          }
+          const field = new Body(Shape.heightfield(heights, { cols: n, rows: n, size }), {
+            static: true,
+            friction: opts.friction != null ? opts.friction : 0.7,
+            restitution: opts.bounce != null ? opts.bounce : 0,
+          });
+          field.setPosition(at);
+          field.actor = actor;
+          this.physics.add(field);
+          this.groundBody = field;
+          this.terrain = {
+            body: field, size, segments, heightFn,
+            /* World-space ground height under (x, z), from the collider
+               rather than the generator — they agree, and going through the
+               collider keeps them agreeing if one is ever displaced. */
+            heightAt: (x, z) => {
+              const h = heightfieldSampleWorld(field, x, z, null);
+              return h === null ? at.y : h;
+            },
+            normalAt: (x, z) => {
+              const nrm = new Vec3();
+              const h = heightfieldSampleWorld(field, x, z, nrm);
+              return h === null ? new Vec3(0, 1, 0) : nrm;
+            },
+            /* Slope in degrees — the number that decides whether something is
+               walkable, whether a tree can root there, whether scree slides. */
+            slopeAt: (x, z) => {
+              const nrm = new Vec3();
+              if (heightfieldSampleWorld(field, x, z, nrm) === null) return 0;
+              return Math.acos(clamp(nrm.y, -1, 1)) * 180 / PI;
+            },
+          };
+        }
       } else {
         const plane = new Body(Shape.plane([0, 1, 0], (opts.at ? Vec3.from(opts.at).y : 0)), {
           static: true,

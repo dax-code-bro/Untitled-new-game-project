@@ -52,6 +52,7 @@ const LegendEngine = {
   // building blocks, for games that want the lower level
   Vec3, Quat, Mat3, Mat4, Aabb, Rng, Noise,
   Geometry, Shapes, convexHull, hullToGeometry,
+  heightfieldSurface, heightfieldSampleWorld,
   Engine, Actor, Material, Body, PhysicsWorld,
   Fluid, WaterVolume, WATER_PRESETS, Animal, ANIMAL_SPECIES, Fracture, ParticleSystem, Skeleton, AnimationClip, Face,
   Grass, Input, Audio, GltfAsset, GltfInstance,
