@@ -301,6 +301,17 @@ class Ecology {
     // Round-robin cursor for the distant tier, so every animal is visited
     // on a fixed budget rather than the whole population every step.
     this._cursor = 0;
+
+    /* A spatial hash over the animals. Predation and scavenging both ask
+       "what is near this point", and doing that by scanning five hundred
+       animals for each of twenty predators every step is most of the cost
+       of the whole simulation. The grid is rebuilt on the same slow cadence
+       those systems run on, because animals do not move far in a game-hour
+       and a stale bucket costs nothing but a distance check. */
+    this._gridCellM = 200;
+    this._grid = new Map();
+    this._predateAccum = 0;
+    this._scavengeAccum = 0;
     this.stats = { active: 0, nearby: 0, distant: 0, born: 0, died: 0, killed: 0 };
   }
 
@@ -399,7 +410,17 @@ class Ecology {
     const days = dt / 86400;
     const px = ctx.playerX || 0, pz = ctx.playerZ || 0;
 
-    for (const z of this.zones) z.step(days, ctx.seasonGrowth != null ? ctx.seasonGrowth : 1);
+    /* Forage regrows on a timescale of days. Advancing seven hundred zones
+       sixty times a second computes the same curve at absurd resolution, so
+       it runs on an accumulator and is handed the whole elapsed interval —
+       logistic growth over one hour-long step and over a hundred tiny ones
+       agree to well inside a blade of grass. */
+    this._growthAccum = (this._growthAccum || 0) + days;
+    if (this._growthAccum >= 1 / 24) {
+      const g = ctx.seasonGrowth != null ? ctx.seasonGrowth : 1;
+      for (const z of this.zones) z.step(this._growthAccum, g);
+      this._growthAccum = 0;
+    }
 
     // Carcasses first: scavengers need to know what is out there.
     for (const c of this.carcasses) c.step(days, ctx);
@@ -435,8 +456,24 @@ class Ecology {
       this._stepDistant(a, Math.min(since, 3600), ctx);
     }
 
-    this._scavenge(days);
-    this._predate(days);
+    /* Predation and scavenging are hourly problems, not per-frame ones. A
+       wolf does not decide to hunt sixty times a second, and running them
+       on an accumulator rather than every step takes the ecology from the
+       most expensive thing in the loop to one of the cheapest — with
+       identical behaviour, because each catch-up call is handed the whole
+       elapsed interval. */
+    this._scavengeAccum += days;
+    this._predateAccum += days;
+    const hour = 1 / 24;
+    if (this._scavengeAccum >= hour * 0.5) {
+      this._rebuildGrid();
+      this._scavenge(this._scavengeAccum);
+      this._scavengeAccum = 0;
+    }
+    if (this._predateAccum >= hour) {
+      this._predate(this._predateAccum);
+      this._predateAccum = 0;
+    }
     this._cull();
     return this;
   }
@@ -470,8 +507,31 @@ class Ecology {
     return got;
   }
 
+  /* Zones are static once the world is built, so they go into a fixed grid
+     built on first use. With seven hundred of them, a linear scan per animal
+     per step was the single hottest line in the simulation. */
   _zoneAt(x, z) {
-    for (const zn of this.zones) if (zn.contains(x, z)) return zn;
+    if (!this._zoneGrid) {
+      this._zoneCellM = 200;
+      this._zoneGrid = new Map();
+      const inv = 1 / this._zoneCellM;
+      for (const zn of this.zones) {
+        const c0 = Math.floor((zn.x - zn.radiusM) * inv), c1 = Math.floor((zn.x + zn.radiusM) * inv);
+        const r0 = Math.floor((zn.z - zn.radiusM) * inv), r1 = Math.floor((zn.z + zn.radiusM) * inv);
+        for (let r = r0; r <= r1; r++) {
+          for (let c = c0; c <= c1; c++) {
+            const key = (c * 73856093) ^ (r * 19349663);
+            let cell = this._zoneGrid.get(key);
+            if (!cell) { cell = []; this._zoneGrid.set(key, cell); }
+            cell.push(zn);
+          }
+        }
+      }
+    }
+    const inv = 1 / this._zoneCellM;
+    const cell = this._zoneGrid.get((Math.floor(x * inv) * 73856093) ^ (Math.floor(z * inv) * 19349663));
+    if (!cell) return null;
+    for (const zn of cell) if (zn.contains(x, z)) return zn;
     return null;
   }
 
@@ -553,7 +613,16 @@ class Ecology {
   _bestZoneFor(a) {
     const types = DIET_FORAGE[a.species.diet] || [];
     let best = null, bestScore = -Infinity;
-    for (const z of this.zones) {
+    // An animal picks from the zones inside its home range, not from every
+    // zone on the island — which is both correct and a great deal cheaper.
+    // An animal's home range does not move, so the set of zones it can
+    // reach is fixed for its life. Working it out once is the difference
+    // between this being the hottest function in the simulation and it not
+    // showing up at all.
+    if (!a._zonePool) {
+      a._zonePool = this._zonesWithin(a.homeX, a.homeZ, Math.max(a.homeRadiusM * 1.6, 400));
+    }
+    for (const z of a._zonePool) {
       let food = 0;
       for (const t of types) food += z.stock[t] || 0;
       const d = Math.hypot(z.x - a.homeX, z.z - a.homeZ);
@@ -566,11 +635,31 @@ class Ecology {
     return best;
   }
 
+  _zonesWithin(x, z, radiusM) {
+    if (!this._zoneGrid) this._zoneAt(x, z);       // builds the grid
+    const inv = 1 / this._zoneCellM;
+    const span = Math.min(9, Math.ceil(radiusM * inv));
+    const cx = Math.floor(x * inv), cz = Math.floor(z * inv);
+    const seen = new Set();
+    const out = [];
+    for (let gz = cz - span; gz <= cz + span; gz++) {
+      for (let gx = cx - span; gx <= cx + span; gx++) {
+        const cell = this._zoneGrid.get((gx * 73856093) ^ (gz * 19349663));
+        if (!cell) continue;
+        for (const zn of cell) { if (!seen.has(zn)) { seen.add(zn); out.push(zn); } }
+      }
+    }
+    return out.length ? out : this.zones;
+  }
+
   _chooseIdleBehaviour(a, ctx) {
     const hour = ctx.hourOfDay != null ? ctx.hourOfDay : 12;
     const active = this._isActiveHour(a.species.activity, hour);
     if (a.thirst > 0.7) {
-      const water = this.zones.find((z) => z.water);
+      if (!a._zonePool) {
+        a._zonePool = this._zonesWithin(a.homeX, a.homeZ, Math.max(a.homeRadiusM * 1.6, 400));
+      }
+      const water = a._zonePool.find((z) => z.water) || this.zones.find((z) => z.water);
       if (water) {
         a.behaviour = BEHAVIOUR.drinking;
         a.targetX = water.x; a.targetZ = water.z;
@@ -657,22 +746,25 @@ class Ecology {
      unattended into nothing at all. */
   _scavenge(days) {
     if (!this.carcasses.length) return;
-    for (const a of this.animals) {
-      if (!a.alive) continue;
-      const s = a.species;
-      if (!s.scavenges && s.diet !== DIET.carnivore && s.diet !== DIET.omnivore
-        && s.diet !== DIET.scavenger) continue;
-      for (const c of this.carcasses) {
-        if (c.skeletal) continue;
+    // Driven from the carcasses rather than from the population: there are
+    // a handful of carcasses and five hundred animals, and only the ones
+    // close enough to smell it are candidates.
+    for (const c of this.carcasses) {
+      if (c.skeletal) continue;
+      const candidates = this.near(c.x, c.z, c.scentRadiusM, (a) => {
+        const s = a.species;
+        return s.scavenges || s.diet === DIET.carnivore || s.diet === DIET.omnivore
+          || s.diet === DIET.scavenger;
+      });
+      for (const a of candidates) {
         const d = Math.hypot(a.x - c.x, a.z - c.z);
-        if (d > c.scentRadiusM) continue;
         c.scavengersOnIt++;
         if (d < 40) {
           a.behaviour = BEHAVIOUR.scavenging;
           const ate = Math.min(c.meatRemainingKg, a.dailyForageKg * days * 2);
           c.meatRemainingKg -= ate;
           a.energyKcal = Math.min(a.maxEnergyKcal, a.energyKcal + ate * 2200);
-        } else if (d < c.scentRadiusM) {
+        } else {
           a.behaviour = BEHAVIOUR.travelling;
           a.targetX = c.x; a.targetZ = c.z;
         }
@@ -826,14 +918,47 @@ class Ecology {
 
   /* ---------------- queries ---------------- */
 
+  _rebuildGrid() {
+    this._grid.clear();
+    const inv = 1 / this._gridCellM;
+    for (const a of this.animals) {
+      if (!a.alive) continue;
+      const key = (Math.floor(a.x * inv) * 73856093) ^ (Math.floor(a.z * inv) * 19349663);
+      let cell = this._grid.get(key);
+      if (!cell) { cell = []; this._grid.set(key, cell); }
+      cell.push(a);
+    }
+  }
+
   near(x, z, radiusM, filter = null) {
     const r2 = radiusM * radiusM;
-    return this.animals.filter((a) => {
-      if (!a.alive) return false;
-      if (filter && !filter(a)) return false;
-      const dx = a.x - x, dz = a.z - z;
-      return dx * dx + dz * dz <= r2;
-    });
+    const inv = 1 / this._gridCellM;
+    const span = Math.ceil(radiusM * inv);
+    const cx = Math.floor(x * inv), cz = Math.floor(z * inv);
+    // A very wide query is cheaper as a linear scan than as a few hundred
+    // bucket lookups, so fall back for those.
+    if (this._grid.size === 0 || span > 8) {
+      return this.animals.filter((a) => {
+        if (!a.alive) return false;
+        if (filter && !filter(a)) return false;
+        const dx = a.x - x, dz = a.z - z;
+        return dx * dx + dz * dz <= r2;
+      });
+    }
+    const out = [];
+    for (let gz = cz - span; gz <= cz + span; gz++) {
+      for (let gx = cx - span; gx <= cx + span; gx++) {
+        const cell = this._grid.get((gx * 73856093) ^ (gz * 19349663));
+        if (!cell) continue;
+        for (const a of cell) {
+          if (!a.alive) continue;
+          if (filter && !filter(a)) continue;
+          const dx = a.x - x, dz = a.z - z;
+          if (dx * dx + dz * dz <= r2) out.push(a);
+        }
+      }
+    }
+    return out;
   }
 
   carcassesNear(x, z, radiusM) {

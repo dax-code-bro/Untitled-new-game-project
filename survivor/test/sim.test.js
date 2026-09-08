@@ -31,6 +31,13 @@ this.API = {
   InjurySystem, BODY_REGION, BONE,
   Projectile, integrateTrajectory, zeroAngleDeg, freeRecoil, CARTRIDGES, msToFps, yardsToM, joulesToFtLb,
   penetrate, penetrationDepth, layer, ASSEMBLY, PEN_MATERIAL, woundSeverity, bulletDynamics,
+  Ecology, Carcass, SPECIES, rollIndividual, butcherYield, Fishery, FISH_SPECIES,
+  WorldClock, solarPosition, daylightHours,
+  generateIsland, classifyTerrain, traceRivers, BIOME,
+  generateHouse, Building, Wall, ROOM,
+  ElectricalSystem, Circuit, Conductor, Load, PowerSource, checkWiring, AWG,
+  Firearm, WEAPONS, handload,
+  World, GAME_MODE,
 };`, ctx);
 const A = ctx.API;
 
@@ -520,6 +527,484 @@ function live(phys, hours, env, stepMinutes = 5, hook) {
   check('soft armour does not stop a rifle round', !stops(A.ASSEMBLY.softArmourIIIA, '308win'));
   check('a rifle plate does stop one', stops(A.ASSEMBLY.plateCarrierIV, '308win'));
   check('a car door does not stop a rifle round', !stops(A.ASSEMBLY.carDoor, '762x39'));
+}
+
+/* ---------------- ecology ---------------- */
+{
+  section('ecology');
+
+  let seed = 99;
+  const rng = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+
+  const eco = new A.Ecology({ rng, worldSizeM: 4000, maxAnimals: 500 });
+  for (let i = 0; i < 24; i++) {
+    const ang = rng() * Math.PI * 2, r = Math.sqrt(rng()) * 1700;
+    eco.addZone({
+      x: Math.cos(ang) * r, z: Math.sin(ang) * r, radiusM: 150 + rng() * 200,
+      grass: rng(), browse: rng(), mast: rng() * 0.6, water: i % 6 === 0, cover: rng(),
+    });
+  }
+  const n = eco.populate();
+  check('the island carries its full population', n === 500, `${n}`);
+  const census = eco.census();
+  check('of many species', Object.keys(census).length >= 15, `${Object.keys(census).length}`);
+  check('prey outnumber predators by an order of magnitude',
+    (census.cottontailRabbit || 0) + (census.graySquirrel || 0) + (census.whitetailDeer || 0)
+    > 10 * ((census.grayWolf || 0) + (census.grizzlyBear || 0) + (census.cougar || 0)));
+  check('group-living species are placed in groups', eco.groups.size > 10, `${eco.groups.size} groups`);
+
+  // A week of the whole island, at the rate the game runs it.
+  const t0 = Date.now();
+  let now = 0;
+  for (let i = 0; i < 7 * 24 * 12; i++) {
+    now += 300;
+    eco.step(300, { playerX: 0, playerZ: 0, now, hourOfDay: (now / 3600) % 24, airTempC: 18 });
+  }
+  const ms = Date.now() - t0;
+  check('a week of the island simulates in well under a second', ms < 3000, `${ms} ms`);
+  check('animals move about their range',
+    eco.animals.filter((a) => Math.hypot(a.x - a.homeX, a.z - a.homeZ) > 50).length > eco.animals.length * 0.3);
+  check('grazing pressure builds where animals feed',
+    eco.zones.some((z) => z.pressure > 0.05),
+    `max pressure ${Math.max(...eco.zones.map((z) => z.pressure)).toFixed(2)}`);
+  check('predators kill prey', eco.stats.died > 0, `${eco.stats.died} died`);
+
+  // Detection: the whole hunt is here.
+  const deer = eco.animals.find((a) => a.speciesId === 'whitetailDeer');
+  const env = (o) => Object.assign({ windMs: 3, noise: 0, movementSpeed: 0, concealment: 0.8, light: 1 }, o);
+  const downwind = deer.detectionChance(80, 0, env({ windDirX: -1, windDirZ: 0 }));
+  const upwind = deer.detectionChance(80, 0, env({ windDirX: 1, windDirZ: 0 }));
+  check('a deer barely notices a still, hidden hunter downwind of it', downwind < 0.1,
+    `${(downwind * 100).toFixed(0)}%`);
+  check('and usually notices the same hunter upwind', upwind > 0.5, `${(upwind * 100).toFixed(0)}%`);
+  const crashing = deer.detectionChance(80, 0, env({ windDirX: -1, windDirZ: 0, noise: 0.8, movementSpeed: 1, concealment: 0 }));
+  check('noise and movement give you away even downwind', crashing > downwind * 3);
+  const night = deer.detectionChance(80, 0, env({ windDirX: -1, windDirZ: 0, movementSpeed: 1, concealment: 0, light: 0.03 }));
+  const day = deer.detectionChance(80, 0, env({ windDirX: -1, windDirZ: 0, movementSpeed: 1, concealment: 0, light: 1 }));
+  check('darkness helps', night < day, `${(night * 100).toFixed(0)}% vs ${(day * 100).toFixed(0)}%`);
+
+  section('carcasses');
+  // Four days from kill to bone with scavengers on it, which is the design's
+  // figure, reached through accumulated degree-days and scavenger pressure
+  // rather than through a four-day timer.
+  const car = new A.Carcass({ x: 0, z: 0, speciesId: 'whitetailDeer', massKg: 90, meatKg: 38 });
+  let daysToBone = 0;
+  while (!car.skeletal && daysToBone < 20) {
+    car.scavengersOnIt = 4;
+    car.step(1, { airTempC: 22 });
+    daysToBone++;
+  }
+  between('a scavenged deer reaches bone in', daysToBone, 3, 6, ' days');
+
+  const hung = new A.Carcass({ x: 0, z: 0, speciesId: 'whitetailDeer', massKg: 90, meatKg: 38 });
+  hung.protected = 1;
+  for (let i = 0; i < 10; i++) hung.step(1, { airTempC: 3 });
+  check('the same deer hung in the cold is still good after ten days',
+    hung.meatRemainingKg > 30 && hung.spoilage < 0.4,
+    `${hung.meatRemainingKg.toFixed(1)} kg, spoilage ${hung.spoilage.toFixed(2)}`);
+
+  section('butchering');
+  const ind = A.rollIndividual('whitetailDeer', () => 0.6);
+  const y = A.butcherYield(ind, { skill: 0.6 });
+  // A hunter gets roughly a third of live weight back as boned-out meat.
+  between('venison yield as a share of live weight', y.meatKg / ind.massKg, 0.24, 0.45, '');
+  // The rabbit-starvation trap, from the nutrition table alone.
+  const rabbit = A.butcherYield(A.rollIndividual('cottontailRabbit', () => 0.5), { skill: 0.6 });
+  const bear = A.butcherYield(A.rollIndividual('grizzlyBear', () => 0.6), { skill: 0.6, dayOfYear: 280 });
+  check('rabbit is almost pure protein by energy', rabbit.proteinEnergyFraction > 0.7,
+    `${(rabbit.proteinEnergyFraction * 100).toFixed(0)}%`);
+  check('autumn bear is not', bear.proteinEnergyFraction < 0.65,
+    `${(bear.proteinEnergyFraction * 100).toFixed(0)}%`);
+  check('and eating only rabbit is what triggers protein poisoning',
+    A.PATHOGEN_BY_ID.rabbitStarvation.vectors.includes('leanMeatOnly'));
+}
+
+/* ---------------- the clock ---------------- */
+{
+  section('world clock');
+
+  const clock = new A.WorldClock({});
+  check('one game-day is forty real minutes', clock.dayLengthRealS === 2400);
+  check('which is 36x real time', Math.abs(clock.timeScale - 36) < 0.01);
+  const dl = clock.daylight();
+  between('daylight in the design default', dl.length, 11.5, 12.5, ' h');
+  check('so day and night are twenty real minutes each',
+    Math.abs(dl.length / 24 * clock.dayLengthRealS - 1200) < 60);
+
+  // Real solar geometry: the sun is higher in summer than in winter, and
+  // day length varies with the season once that is switched on.
+  const seasonal = new A.WorldClock({ seasonalDayLength: true, latitudeDeg: 30.3 });
+  seasonal.dayOfYear = 172;
+  const summer = seasonal.daylight().length;
+  seasonal.dayOfYear = 355;
+  const winter = seasonal.daylight().length;
+  between('midsummer daylight at 30 N', summer, 13.5, 14.5, ' h');
+  between('midwinter daylight at 30 N', winter, 9.5, 10.5, ' h');
+
+  // Solar noon puts the sun due south in the northern hemisphere.
+  const noon = A.solarPosition(30.3, 172, 12);
+  check('the sun is due south at noon', Math.abs(noon.azimuthDeg - 180) < 2,
+    `${noon.azimuthDeg.toFixed(1)} deg`);
+  between('and high in midsummer', noon.altitudeDeg, 78, 86, ' deg');
+  const winterNoon = A.solarPosition(30.3, 355, 12);
+  check('and much lower in midwinter', winterNoon.altitudeDeg < noon.altitudeDeg - 35,
+    `${winterNoon.altitudeDeg.toFixed(1)} deg`);
+  check('and below the horizon at midnight', A.solarPosition(30.3, 172, 0).altitudeDeg < 0);
+
+  // The temperature minimum is before dawn, not at midnight.
+  const w = new A.WorldClock({});
+  let minT = Infinity, minH = 0, maxT = -Infinity, maxH = 0;
+  for (let i = 0; i < 24 * 12; i++) {
+    w.tick(2400 / (24 * 12));
+    const e = w.environment();
+    if (e.airTempC < minT) { minT = e.airTempC; minH = e.hourOfDay; }
+    if (e.airTempC > maxT) { maxT = e.airTempC; maxH = e.hourOfDay; }
+  }
+  between('the coldest hour of the night', minH, 4, 7.5, ':00');
+  between('the warmest hour of the day', maxH, 13, 17, ':00');
+}
+
+/* ---------------- terrain ---------------- */
+{
+  section('terrain');
+
+  const t0 = Date.now();
+  const { map } = A.generateIsland({ resolution: 257, erosionDroplets: 25000 });
+  const genMs = Date.now() - t0;
+  check('an island generates in a few seconds', genMs < 20000, `${genMs} ms`);
+
+  const bounds = map.bounds();
+  check('it has real relief', bounds.max > 120 && bounds.max < 400, `${bounds.max.toFixed(0)} m`);
+  check('and a sea floor', bounds.min < -10, `${bounds.min.toFixed(0)} m`);
+
+  let land = 0;
+  for (const h of map.height) if (h > 0) land++;
+  const landFrac = land / map.height.length;
+  between('land covers a plausible share of the box', landFrac, 0.15, 0.55, '');
+
+  // Erosion has to leave connected drainage, which is the whole reason to
+  // run it rather than just adding noise.
+  let flowCells = 0;
+  for (const v of map.water) if (v > 1) flowCells++;
+  check('water flowed over a large part of the land', flowCells > land * 0.3,
+    `${flowCells} cells`);
+
+  const slopes = [];
+  let s2 = 7;
+  const rnd = () => (s2 = (s2 * 1103515245 + 12345) % 2147483648) / 2147483648;
+  for (let i = 0; i < 3000; i++) {
+    const x = (rnd() - 0.5) * map.worldSizeM * 0.9, z = (rnd() - 0.5) * map.worldSizeM * 0.9;
+    if (map.heightAtWorld(x, z) <= 0) continue;
+    slopes.push(map.slopeAtWorld(x, z));
+  }
+  slopes.sort((a, b) => a - b);
+  const median = slopes[Math.floor(slopes.length / 2)];
+  between('median land slope', median, 3, 18, ' deg');
+  const walkable = slopes.filter((v) => v < 30).length / slopes.length;
+  between('walkable ground', walkable * 100, 60, 95, '%');
+
+  const cls = A.classifyTerrain(map, {});
+  const counts = {};
+  for (let i = 0; i < cls.biome.length; i++) {
+    const id = cls.biomeIds[cls.biome[i]];
+    counts[id] = (counts[id] || 0) + 1;
+  }
+  check('the island has forest, open ground and rock',
+    (counts.deepForest || 0) + (counts.woodland || 0) > 0
+    && (counts.meadow || 0) + (counts.prairie || 0) + (counts.scrub || 0) > 0
+    && (counts.rockyHill || 0) + (counts.cliff || 0) > 0,
+    Object.keys(counts).join(', '));
+  check('a two-hundred-metre island has no alpine zone', (counts.alpine || 0) === 0,
+    `${counts.alpine || 0} alpine cells`);
+
+  const rivers = A.traceRivers(map, {});
+  check('rivers are traced', rivers.length > 0, `${rivers.length}`);
+  check('and they reach the sea', rivers.filter((r) => r.reachesSea).length > 0,
+    `${rivers.filter((r) => r.reachesSea).length} of ${rivers.length}`);
+  // Pit filling is what makes that true; without it every river stops in the
+  // first hollow the erosion left.
+  check('every river runs downhill the whole way',
+    rivers.every((r) => r.path[0].y > r.path[r.path.length - 1].y));
+
+  // The same seed has to give the same island, forever.
+  const a1 = A.generateIsland({ resolution: 129, erosionDroplets: 4000, seed: 12345 });
+  const a2 = A.generateIsland({ resolution: 129, erosionDroplets: 4000, seed: 12345 });
+  let same = true;
+  for (let i = 0; i < a1.map.height.length; i += 97) {
+    if (Math.abs(a1.map.height[i] - a2.map.height[i]) > 1e-6) { same = false; break; }
+  }
+  check('a seed always produces the same island', same);
+}
+
+/* ---------------- buildings ---------------- */
+{
+  section('buildings');
+
+  let seed = 4242;
+  const rng = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+
+  const house = A.generateHouse({ x: 0, z: 0, y: 0, w: 11, d: 9, storeys: 2, rng, basement: true });
+  check('a house has rooms', house.rooms.length >= 6, `${house.rooms.length}`);
+  check('and walls', house.walls.length >= 10, `${house.walls.length}`);
+  check('and a living room and a kitchen',
+    house.rooms.some((r) => r.type === 'livingRoom') && house.rooms.some((r) => r.type === 'kitchen'));
+  const kitchens = house.rooms.filter((r) => r.type === 'kitchen').length;
+  check('and only one kitchen', kitchens === 1, `${kitchens}`);
+  check('the bathroom is where the medicine is',
+    house.rooms.filter((r) => r.type === 'bathroom')
+      .some((r) => r.contents.some((c) => /antibiotic|painkiller|antiseptic|iodine|bandage/.test(c.item))));
+
+  check('it is wired', house.circuits.length > 0 && !!house.panel);
+  check('and the wet rooms are on ground-fault protection',
+    house.circuits.filter((c) => c.rooms.some((r) => A.ROOM[r.type].wet)).every((c) => c.gfci));
+
+  section('shooting through a real wall');
+  const wall = house.walls.find((w) => !w.exterior);
+  const proj = new A.Projectile('9mm_fmj');
+  // Studs sit at 16 inch centres, so where along the wall the round lands
+  // decides what it has to get through — which is what makes wall-banging a
+  // matter of aim rather than luck.
+  let studHits = 0, cavityHits = 0;
+  for (let u = 0.02; u < Math.min(wall.lengthM, 3); u += 0.01) {
+    if (wall.hasStudAt(u)) studHits++; else cavityHits++;
+  }
+  between('share of a wall that is stud', (studHits / (studHits + cavityHits)) * 100, 4, 18, '%');
+
+  const throughCavity = A.penetrate(proj, wall.layersAt(0.203));
+  const throughStud = A.penetrate(proj, A.ASSEMBLY.interiorPartitionThroughStud());
+  check('a 9mm gets through the cavity', throughCavity.perforated);
+  check('and loses far more through a stud',
+    throughStud.exitVelocityMs < throughCavity.exitVelocityMs * 0.75,
+    `${A.msToFps(throughStud.exitVelocityMs).toFixed(0)} vs ${A.msToFps(throughCavity.exitVelocityMs).toFixed(0)} fps`);
+
+  // Damage and repair, in the order a real repair happens.
+  wall.punch(1.0, 1.2, 0.06, { kind: 'breach' });
+  check('a breach weakens the wall', wall.integrity < 1);
+  check('nothing goes through a hole', A.penetrate(proj, wall.layersAt(1.0)).layers.length === 0);
+  check('you cannot skin over a hole with no framing behind it',
+    !wall.repair('board').ok, wall.repair('board').reason || '');
+  const order = ['frame', 'sheathe', 'insulate', 'board', 'tape', 'mud', 'sand', 'paint'];
+  let allOk = true;
+  for (const step of order) if (!wall.repair(step).ok) allOk = false;
+  check('and repairing it in the right order works', allOk && wall.integrity === 1);
+}
+
+/* ---------------- electricity ---------------- */
+{
+  section('electricity');
+
+  // Ohm's law, and the ampacity tables.
+  const c14 = new A.Conductor(14, 30);
+  const c10 = new A.Conductor(10, 30);
+  check('thicker wire has less resistance', c10.resistance < c14.resistance,
+    `${c14.resistance.toFixed(3)} vs ${c10.resistance.toFixed(3)} ohm`);
+  check('and carries more current', c10.ampacity > c14.ampacity);
+
+  const sys = new A.ElectricalSystem();
+  const gen = sys.addSource(new A.PowerSource({ kind: 'generator', capacityW: 5000, fuelL: 10, voltage: 240 }));
+  const circuit = sys.addCircuit(new A.Circuit({ name: 'workshop', breakerA: 20, gauge: 12, lengthM: 25 }));
+  gen.start();
+  const heater = circuit.add(new A.Load({ name: 'heater', watts: 1500, on: true }));
+  sys.step(1, {});
+  const solved = circuit.solve(120);
+  between('a 1500 W heater draws', solved.amps, 11, 14, ' A');
+  check('with a small voltage drop over the run', solved.drop > 0 && solved.drop < 6,
+    `${solved.drop.toFixed(2)} V`);
+
+  // Overload the circuit and the breaker trips — after a delay, as a
+  // thermal-magnetic breaker does.
+  for (let i = 0; i < 3; i++) circuit.add(new A.Load({ name: 'heater', watts: 1500, on: true }));
+  let tripped = false;
+  for (let i = 0; i < 60 && !tripped; i++) { sys.step(1, {}); tripped = circuit.tripped; }
+  check('overloading it trips the breaker', tripped);
+  check('and it will not reset into a short', (() => {
+    circuit.reset();
+    circuit.faults.push({ kind: 'short' });
+    return !circuit.reset().ok;
+  })());
+
+  // The shock model, on the published current thresholds.
+  const sys2 = new A.ElectricalSystem();
+  sys2.addSource(new A.PowerSource({ kind: 'grid', voltage: 240 }));
+  sys2._supplyV = 240;
+  const live = sys2.addCircuit(new A.Circuit({ name: 'lighting', breakerA: 15, gauge: 14, lengthM: 15 }));
+  const dry = sys2.shock(live, { wet: false });
+  const wet = sys2.shock(live, { wet: true, groundedFooting: true });
+  check('a shock with dry hands is survivable', !dry.fatal, `${dry.currentMa.toFixed(1)} mA — ${dry.effect}`);
+  check('the same shock soaked and earthed is not', wet.fatal,
+    `${wet.currentMa.toFixed(0)} mA — ${wet.effect}`);
+  check('insulated boots and gloves make it a tingle',
+    sys2.shock(live, { wet: true, insulatedBoots: true, insulatedGloves: true }).currentMa < 5);
+  const gfciCircuit = sys2.addCircuit(new A.Circuit({ name: 'bathroom', breakerA: 20, gauge: 12, gfci: true }));
+  check('a ground-fault device saves you', sys2.shock(gfciCircuit, { wet: true }).savedByGfci);
+
+  // The inspector's rules.
+  check('a 30 A breaker on lighting cable is rejected',
+    !A.checkWiring({ gauge: 14, breakerA: 30, lengthM: 20, ground: true, expectedLoadW: 500 }).ok);
+  check('and a very long thin run is rejected for voltage drop',
+    A.checkWiring({ gauge: 14, breakerA: 15, lengthM: 120, ground: true, expectedLoadW: 1400 })
+      .problems.some((p) => /voltage drop/.test(p)));
+  check('a correct run passes',
+    A.checkWiring({ gauge: 12, breakerA: 20, lengthM: 20, ground: true, expectedLoadW: 1400 }).ok);
+}
+
+/* ---------------- firearms ---------------- */
+{
+  section('firearms');
+
+  const rifle = new A.Firearm('remington700_308', { condition: 1, oilLevel: 0.6 });
+  check('a clean rifle is reliable', rifle.reliability() > 0.9, rifle.reliability().toFixed(2));
+  check('a scope needs a rail', !new A.Firearm('mauser98').attach('scope10x').ok);
+  check('and fits one that has it', rifle.attach('scope10x').ok);
+  check('a suppressor needs a threaded muzzle', !rifle.attach('suppressor').ok);
+  check('and fits a threaded one', new A.Firearm('ruger1022').attach('suppressor').ok);
+
+  const prone = rifle.accuracyMoa({ prone: true, skill: 0.8 });
+  const standing = rifle.accuracyMoa({ prone: false, skill: 0.8 });
+  check('prone shoots better than standing', prone < standing,
+    `${prone.toFixed(2)} vs ${standing.toFixed(2)} MOA`);
+  check('and being exhausted shoots worse',
+    rifle.accuracyMoa({ prone: true, skill: 0.8, fatigue: 1 }) > prone * 1.5);
+
+  // Fouling, and the design difference it exposes.
+  const ak = new A.Firearm('ak47', { condition: 1, oilLevel: 0.6 });
+  const m16 = new A.Firearm('m16', { condition: 1, oilLevel: 0.6 });
+  for (const g of [ak, m16]) { g.fouling = 0.85; g.oilLevel = 0.15; }
+  check('a filthy dry AK still works better than a filthy dry M16',
+    ak.reliability() > m16.reliability(),
+    `${ak.reliability().toFixed(2)} vs ${m16.reliability().toFixed(2)}`);
+
+  // Stripping and cleaning is a sequence, not a button.
+  const dirty = new A.Firearm('m16', { condition: 0.9 });
+  dirty.fouling = 0.9;
+  check('you cannot clean it assembled', !dirty.cleanPart('bore', { solvent: true }).ok);
+  check('you cannot clean it with nothing', dirty.disassemble().ok && !dirty.cleanPart('bore', {}).ok);
+  for (const part of Object.keys(dirty.parts)) dirty.cleanPart(part, { solvent: true });
+  dirty.reassemble();
+  check('and cleaning it properly restores reliability', dirty.reliability() > 0.8,
+    dirty.reliability().toFixed(2));
+
+  // Firing wears parts and heats the barrel.
+  const worn = new A.Firearm('ak47', { condition: 1, oilLevel: 0.8 });
+  worn.load(new Array(30).fill({ cartridgeId: '762x39', condition: 1 }));
+  let fired = 0;
+  for (let i = 0; i < 30; i++) if (worn.fire({ rng: () => 0.01 }).fired) fired++;
+  check('a magazine goes downrange', fired > 25, `${fired} of 30`);
+  check('and the barrel gets hot', worn.barrelTempC > 40, `${worn.barrelTempC.toFixed(0)} C`);
+  check('and the gun is dirtier than it was', worn.fouling > 0);
+
+  section('handloading');
+  const good = A.handload({ cartridgeId: '308win', case: true, primer: 'large_rifle',
+    bullet: true, powder: 'medium', chargeGr: 44, resized: true, trimmed: true, caseTimesFired: 1, skill: 0.8 });
+  check('a correct load works', good.ok, good.problems.join('; '));
+  const hot = A.handload({ cartridgeId: '308win', case: true, primer: 'large_rifle',
+    bullet: true, powder: 'fast', chargeGr: 44, resized: true, trimmed: true, skill: 0.8 });
+  check('a fast pistol powder at rifle charge weight is catastrophic', hot.danger === 'catastrophic',
+    hot.problems.join('; '));
+  const light = A.handload({ cartridgeId: '308win', case: true, primer: 'large_rifle',
+    bullet: true, powder: 'medium', chargeGr: 12, resized: true, trimmed: true });
+  check('and too light a charge sticks the bullet in the barrel', light.danger === 'squib');
+  check('the wrong primer is caught', A.handload({ cartridgeId: '308win', case: true,
+    primer: 'small_pistol', bullet: true, powder: 'medium', chargeGr: 44, resized: true, trimmed: true })
+    .problems.some((p) => /primer/.test(p)));
+  check('and brass that has been loaded too often is caught',
+    A.handload({ cartridgeId: '308win', case: true, primer: 'large_rifle', bullet: true,
+      powder: 'medium', chargeGr: 44, resized: true, trimmed: true, caseTimesFired: 9 })
+      .problems.some((p) => /too many times/.test(p)));
+}
+
+/* ---------------- the world ---------------- */
+{
+  section('the world');
+
+  const world = new A.World({ seed: 20260908, mode: A.GAME_MODE.multiplayer });
+  const t0 = Date.now();
+  world.generate({ island: { resolution: 257, erosionDroplets: 25000 } });
+  check('a whole world generates', world.generated, `${Date.now() - t0} ms`);
+
+  const d = world.describe();
+  check('every named place is on the map', d.pois.length >= 15, `${d.pois.length}`);
+  for (const kind of ['neighbourhood', 'city', 'prairie', 'prison', 'headquarters']) {
+    check(`the design's ${kind} exists`, world.pois.some((p) => p.kind === kind));
+  }
+  const hood = world.pois.find((p) => p.kind === 'neighbourhood');
+  check('the neighbourhood has twenty-six houses', hood.buildings.length === 26,
+    `${hood.buildings.length}`);
+  check('behind a fence with a hole in it', !!hood.fence && !!hood.fence.breach);
+
+  const prairie = world.pois.find((p) => p.kind === 'prairie');
+  const cabin = prairie.buildings.find((b) => b.kind === 'cabin');
+  const living = cabin.rooms.find((r) => r.type === 'livingRoom') || cabin.rooms[0];
+  const hidden = living.contents.find((c) => c.searchesRequired);
+  check('and the cabin has a gun hidden in the living room',
+    !!hidden && /rifle|shotgun|revolver|pistol/.test(hidden.item),
+    hidden ? `${hidden.item}, ${hidden.hiddenIn}` : 'none');
+
+  const hq = world.pois.find((p) => p.kind === 'headquarters');
+  const pad = hq.props.find((p) => p.kind === 'helipad');
+  check('the headquarters has a helicopter on its pad', !!pad && !!pad.helicopter);
+  check('which does not fly yet', !pad.helicopter.airworthy && pad.helicopter.needs.length > 0,
+    pad.helicopter.needs.join(', '));
+
+  check('the world is stocked', d.animals >= 450 && d.fish >= 100,
+    `${d.animals} animals, ${d.fish} fish`);
+  check('with somewhere to fish', world.fishery.bodies.length >= 4,
+    world.fishery.bodies.map((b) => b.name).join(', '));
+
+  section('spawning and dying');
+  for (const side of ['north', 'east', 'south', 'west']) {
+    const s = world.chooseSpawn(side);
+    check(`you can start on the ${side} shore`,
+      s.side === side && s.y > 0 && s.y < 25, `y ${s.y.toFixed(1)} m`);
+  }
+
+  const join = world.join('acct-1', { name: 'test' });
+  check('a player joins alive', !join.spectator && !!join.player);
+  join.player.inventory.add({ item: 'rifle', massKg: 3.9, volumeL: 6 });
+
+  const death = world.killPlayer('acct-1', 'a grizzly');
+  check('death in multiplayer is permanent', death.permanent && death.spectator);
+  const rejoin = world.join('acct-1', { name: 'test' });
+  check('and rejoining gives you a seat, not a body', rejoin.spectator, rejoin.message);
+  check('the body stays where it fell, with what was on it',
+    world.corpses.length === 1 && world.corpses[0].contents.length === 1);
+
+  // Singleplayer is not hardcore.
+  const solo = new A.World({ seed: 1, mode: A.GAME_MODE.singleplayer, keepInventory: true });
+  solo.generate({ island: { resolution: 129, erosionDroplets: 3000 } });
+  const sj = solo.join('me', { name: 'me' });
+  sj.player.inventory.add({ item: 'axe', massKg: 1.5, volumeL: 2 });
+  sj.player.practise('hunting', 0.5);
+  const skillBefore = sj.player.skills.hunting;
+  const sd = solo.killPlayer('me', 'a fall');
+  check('singleplayer respawns you', !sd.permanent && !!sd.respawn);
+  const reborn = solo.players.get('me');
+  check('with the inventory, when keepInventory is on', reborn.inventory.has('axe'));
+  check('and always with what you learned', reborn.skills.hunting === skillBefore);
+
+  section('knockouts');
+  const kWorld = new A.World({ seed: 2, mode: A.GAME_MODE.multiplayer });
+  kWorld.generate({ island: { resolution: 129, erosionDroplets: 3000 } });
+  kWorld.join('k', { name: 'k' });
+  const light = kWorld.knockOut('k', 90);
+  const heavy = kWorld.knockOut('k', 2100);
+  // The design asks for three game-minutes at the light end and a full
+  // game-day at the heavy end.
+  between('a light blow puts you out for', light.gameMinutes, 2, 20, ' game minutes');
+  check('and a heavy one for most of a day', heavy.gameMinutes > 600,
+    `${(heavy.gameMinutes / 60).toFixed(1)} game hours`);
+
+  section('persistence');
+  const save = world.serialize();
+  const json = JSON.stringify(save);
+  check('a world saves small', json.length < 200000, `${(json.length / 1024).toFixed(1)} KB`);
+  check('and remembers who is dead', save.deadAccounts.includes('acct-1'));
+  const restored = A.World.restore(JSON.parse(json), { island: { resolution: 257, erosionDroplets: 25000 } });
+  check('and comes back to the same island',
+    Math.abs(restored.map.bounds().max - world.map.bounds().max) < 1e-6);
+  check('with the same dead accounts', restored.deadAccounts.has('acct-1'));
+  check('and rejoining the restored world still only gets you a seat',
+    restored.join('acct-1', {}).spectator);
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

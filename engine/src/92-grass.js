@@ -126,7 +126,8 @@ class Grass {
     this.colorHigh = parseColor(opts.colorHigh != null ? opts.colorHigh : this.P.colorHigh);
     this.weedLow = parseColor(this.P.weedLow != null ? this.P.weedLow : 0x24371c);
     this.weedHigh = parseColor(this.P.weedHigh != null ? this.P.weedHigh : 0x44603a);
-    this.rng = new Rng(opts.seed || 31337);
+    this._baseSeed = opts.seed || 31337;
+    this.rng = new Rng(this._baseSeed);
     this.noise = new Noise(opts.seed || 31337);
 
     const geo = Shapes.grassBlade(this.bladeHeight, this.bladeWidth, opts.segments || 4);
@@ -142,6 +143,34 @@ class Grass {
       castShadow: opts.castShadow !== false,
     });
     this.scatter(opts);
+  }
+
+  /* Move the field to a new centre and re-scatter it.
+
+     A grass field is a fixed patch of instances, which is right for a demo
+     scene and wrong for anything the player can walk across: at four
+     kilometres a side you cannot cover the map, and a field that stays put
+     is a rug the player walks off. Re-scattering around them costs one
+     buffer upload and is imperceptible if it is done before they reach the
+     edge — so an open world keeps grass underfoot everywhere without
+     carrying instances for ground nobody is standing on.
+
+     Deterministic in the same way the original scatter is: the blade
+     positions come from the same noise field, so walking away and coming
+     back gives the same meadow rather than a reshuffled one. */
+  recenter(center, opts = {}) {
+    const c = Vec3.from(center);
+    if (opts.minMoveM != null && this.center.distanceTo(c) < opts.minMoveM) return false;
+    this.center.copy(c);
+    // Reseed from the quantised position rather than continuing the stream,
+    // so the same ground grows the same meadow every time you cross it.
+    // Without this, walking away and coming back reshuffles every blade,
+    // which reads as the world quietly rebuilding itself behind you.
+    const cell = 8;
+    const gx = Math.round(c.x / cell), gz = Math.round(c.z / cell);
+    this.rng = new Rng(((gx * 73856093) ^ (gz * 19349663) ^ this._baseSeed) >>> 0);
+    this.scatter(Object.assign({}, opts, { center: c }));
+    return true;
   }
 
   /* Place blades. A meadow doesn't grow as an even carpet — it grows in

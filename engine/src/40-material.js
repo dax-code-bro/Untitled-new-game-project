@@ -228,6 +228,29 @@ const TextureLib = {
       c.h = blade * 0.7 + patch * 0.3;
     },
 
+    /* Greyscale ground detail whose albedo averages to 1.
+
+       Every other generator here bakes its own colour, which is right for a
+       brick wall and wrong for terrain: terrain has to be sand at the water
+       line and meadow on the flat and bare rock on the ridge, and a mesh
+       cannot swap materials per vertex. This one supplies only the surface —
+       clods, grain, grit, and the normal and occlusion that go with them —
+       and leaves the hue to the per-vertex colour, which is how terrain is
+       shaded in practice. Averaging to 1 is the whole trick: multiply by it
+       and the vertex colour comes through unchanged in brightness. */
+    terrainDetail(u, v, n, c) {
+      const coarse = n.fbm(u * 9, v * 9, 5, 3) * 0.5 + 0.5;
+      const fine = n.fbm(u * 64, v * 64, 11, 2) * 0.5 + 0.5;
+      const grit = n.fbm(u * 190, v * 190, 23, 2) * 0.5 + 0.5;
+      // Kept close to 1: this map exists to add grain, not contrast. Wide
+      // swings here fight the vertex colour it is multiplying.
+      const l = 0.90 + coarse * 0.11 + fine * 0.07 + grit * 0.03;
+      c.r = l; c.g = l; c.b = l;
+      c.rough = 0.86 + fine * 0.12;
+      c.ao = 0.70 + coarse * 0.30;
+      c.h = coarse * 0.55 + fine * 0.35 + grit * 0.10;
+    },
+
     dirt(u, v, n, c) {
       const clod = n.fbm(u * 12, v * 12, 3, 4) * 0.5 + 0.5;
       const grit = n.fbm(u * 80, v * 80, 9, 2) * 0.5 + 0.5;
@@ -525,6 +548,11 @@ const MaterialPresets = {
   stone: { color: 0xa8a49c, texture: 'rock', roughness: 0.92, metalness: 0 },
   grass: { color: 0xffffff, texture: 'grass', roughness: 0.95, metalness: 0, subsurface: 0.35 },
   dirt: { color: 0xffffff, texture: 'dirt', roughness: 0.96, metalness: 0 },
+  // Neutral ground for vertex-coloured terrain: detail from the texture,
+  // colour from the mesh.
+  // Low normal strength on purpose: ground detail is centimetres of grain
+  // over metres of tile, and at full bump it reads as corrugated iron.
+  terrain: { color: 0xffffff, texture: 'terrainDetail', roughness: 0.95, metalness: 0, subsurface: 0.12, normalStrength: 0.3 },
   savanna: { color: 0xffffff, texture: 'savanna', roughness: 0.96, metalness: 0 },
   mud: { color: 0xffffff, texture: 'mud', roughness: 0.8, metalness: 0 },
   sand: { color: 0xffffff, texture: 'sand', roughness: 0.9, metalness: 0 },

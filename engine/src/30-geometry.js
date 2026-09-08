@@ -24,6 +24,20 @@ class Geometry {
     return this.positions.length / 3 - 1;
   }
 
+  /* Per-vertex colour, for surfaces whose appearance varies faster than a
+     material can — terrain, above all: one material cannot be beach and
+     meadow and scree, and swapping materials per patch means splitting the
+     mesh. Colour rides along with the vertex instead. */
+  vertColor(r, g, b) {
+    if (!this.colors) this.colors = [];
+    // Back-fill any vertices written before the first colour, so the array
+    // stays in step with positions rather than silently shifting every
+    // colour by however many uncoloured vertices came first.
+    while (this.colors.length < (this.positions.length / 3 - 1) * 3) this.colors.push(1, 1, 1);
+    this.colors.push(r, g, b);
+    return this;
+  }
+
   tri(a, b, c) { this.indices.push(a, b, c); return this; }
   quad(a, b, c, d) { this.indices.push(a, b, c, a, c, d); return this; }
 
@@ -177,6 +191,13 @@ class Geometry {
     this.positions = new Float32Array(this.positions);
     this.normals = new Float32Array(this.normals);
     this.uvs = new Float32Array(this.uvs);
+    if (this.colors) {
+      // Pad any vertices added after the last colour, so the attribute is
+      // never short of the position count — a truncated colour buffer reads
+      // as garbage on the vertices past the end rather than failing loudly.
+      while (this.colors.length < this.positions.length) this.colors.push(1, 1, 1);
+      this.colors = new Float32Array(this.colors);
+    }
     if (!this.tangents) this.computeTangents();
     if (!this.bounds) this.computeBounds();
     return this;
@@ -396,7 +417,11 @@ const Shapes = {
 
   /* Terrain from a height function. Normals are taken from finite
      differences of the same function, so slopes light correctly. */
-  terrain(size = 100, segments = 64, heightFn = () => 0, uvScale = 0.25) {
+  /* `colorFn(x, z, y, slopeDeg)` returns [r, g, b] in 0..1 and is optional.
+     With it, terrain can carry its own ground cover — sand at the water
+     line, meadow on the deep soil, bare rock where it is too steep to hold
+     any — without splitting into one mesh per surface type. */
+  terrain(size = 100, segments = 64, heightFn = () => 0, uvScale = 0.25, colorFn = null) {
     const g = new Geometry();
     const step = size / segments;
     const h = step * 0.5;
@@ -410,6 +435,13 @@ const Shapes = {
         const nx = -dx, ny = 2 * h, nz = -dz;
         const l = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
         g.vert(wx, y, wz, nx / l, ny / l, nz / l, wx * uvScale, wz * uvScale);
+        if (colorFn) {
+          // Slope comes free from the finite differences already taken for
+          // the normal, and it is what most ground-cover rules turn on.
+          const slopeDeg = Math.acos(Math.min(1, Math.max(-1, ny / l))) * 180 / PI;
+          const c = colorFn(wx, wz, y, slopeDeg);
+          g.vertColor(c[0], c[1], c[2]);
+        }
       }
     }
     const row = segments + 1;

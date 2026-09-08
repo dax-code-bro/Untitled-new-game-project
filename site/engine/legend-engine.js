@@ -1124,6 +1124,20 @@ class Geometry {
     return this.positions.length / 3 - 1;
   }
 
+  /* Per-vertex colour, for surfaces whose appearance varies faster than a
+     material can — terrain, above all: one material cannot be beach and
+     meadow and scree, and swapping materials per patch means splitting the
+     mesh. Colour rides along with the vertex instead. */
+  vertColor(r, g, b) {
+    if (!this.colors) this.colors = [];
+    // Back-fill any vertices written before the first colour, so the array
+    // stays in step with positions rather than silently shifting every
+    // colour by however many uncoloured vertices came first.
+    while (this.colors.length < (this.positions.length / 3 - 1) * 3) this.colors.push(1, 1, 1);
+    this.colors.push(r, g, b);
+    return this;
+  }
+
   tri(a, b, c) { this.indices.push(a, b, c); return this; }
   quad(a, b, c, d) { this.indices.push(a, b, c, a, c, d); return this; }
 
@@ -1277,6 +1291,13 @@ class Geometry {
     this.positions = new Float32Array(this.positions);
     this.normals = new Float32Array(this.normals);
     this.uvs = new Float32Array(this.uvs);
+    if (this.colors) {
+      // Pad any vertices added after the last colour, so the attribute is
+      // never short of the position count — a truncated colour buffer reads
+      // as garbage on the vertices past the end rather than failing loudly.
+      while (this.colors.length < this.positions.length) this.colors.push(1, 1, 1);
+      this.colors = new Float32Array(this.colors);
+    }
     if (!this.tangents) this.computeTangents();
     if (!this.bounds) this.computeBounds();
     return this;
@@ -1496,7 +1517,11 @@ const Shapes = {
 
   /* Terrain from a height function. Normals are taken from finite
      differences of the same function, so slopes light correctly. */
-  terrain(size = 100, segments = 64, heightFn = () => 0, uvScale = 0.25) {
+  /* `colorFn(x, z, y, slopeDeg)` returns [r, g, b] in 0..1 and is optional.
+     With it, terrain can carry its own ground cover — sand at the water
+     line, meadow on the deep soil, bare rock where it is too steep to hold
+     any — without splitting into one mesh per surface type. */
+  terrain(size = 100, segments = 64, heightFn = () => 0, uvScale = 0.25, colorFn = null) {
     const g = new Geometry();
     const step = size / segments;
     const h = step * 0.5;
@@ -1510,6 +1535,13 @@ const Shapes = {
         const nx = -dx, ny = 2 * h, nz = -dz;
         const l = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
         g.vert(wx, y, wz, nx / l, ny / l, nz / l, wx * uvScale, wz * uvScale);
+        if (colorFn) {
+          // Slope comes free from the finite differences already taken for
+          // the normal, and it is what most ground-cover rules turn on.
+          const slopeDeg = Math.acos(Math.min(1, Math.max(-1, ny / l))) * 180 / PI;
+          const c = colorFn(wx, wz, y, slopeDeg);
+          g.vertColor(c[0], c[1], c[2]);
+        }
       }
     }
     const row = segments + 1;
@@ -1978,6 +2010,29 @@ const TextureLib = {
       c.h = blade * 0.7 + patch * 0.3;
     },
 
+    /* Greyscale ground detail whose albedo averages to 1.
+
+       Every other generator here bakes its own colour, which is right for a
+       brick wall and wrong for terrain: terrain has to be sand at the water
+       line and meadow on the flat and bare rock on the ridge, and a mesh
+       cannot swap materials per vertex. This one supplies only the surface —
+       clods, grain, grit, and the normal and occlusion that go with them —
+       and leaves the hue to the per-vertex colour, which is how terrain is
+       shaded in practice. Averaging to 1 is the whole trick: multiply by it
+       and the vertex colour comes through unchanged in brightness. */
+    terrainDetail(u, v, n, c) {
+      const coarse = n.fbm(u * 9, v * 9, 5, 3) * 0.5 + 0.5;
+      const fine = n.fbm(u * 64, v * 64, 11, 2) * 0.5 + 0.5;
+      const grit = n.fbm(u * 190, v * 190, 23, 2) * 0.5 + 0.5;
+      // Kept close to 1: this map exists to add grain, not contrast. Wide
+      // swings here fight the vertex colour it is multiplying.
+      const l = 0.90 + coarse * 0.11 + fine * 0.07 + grit * 0.03;
+      c.r = l; c.g = l; c.b = l;
+      c.rough = 0.86 + fine * 0.12;
+      c.ao = 0.70 + coarse * 0.30;
+      c.h = coarse * 0.55 + fine * 0.35 + grit * 0.10;
+    },
+
     dirt(u, v, n, c) {
       const clod = n.fbm(u * 12, v * 12, 3, 4) * 0.5 + 0.5;
       const grit = n.fbm(u * 80, v * 80, 9, 2) * 0.5 + 0.5;
@@ -2275,6 +2330,11 @@ const MaterialPresets = {
   stone: { color: 0xa8a49c, texture: 'rock', roughness: 0.92, metalness: 0 },
   grass: { color: 0xffffff, texture: 'grass', roughness: 0.95, metalness: 0, subsurface: 0.35 },
   dirt: { color: 0xffffff, texture: 'dirt', roughness: 0.96, metalness: 0 },
+  // Neutral ground for vertex-coloured terrain: detail from the texture,
+  // colour from the mesh.
+  // Low normal strength on purpose: ground detail is centimetres of grain
+  // over metres of tile, and at full bump it reads as corrugated iron.
+  terrain: { color: 0xffffff, texture: 'terrainDetail', roughness: 0.95, metalness: 0, subsurface: 0.12, normalStrength: 0.3 },
   savanna: { color: 0xffffff, texture: 'savanna', roughness: 0.96, metalness: 0 },
   mud: { color: 0xffffff, texture: 'mud', roughness: 0.8, metalness: 0 },
   sand: { color: 0xffffff, texture: 'sand', roughness: 0.9, metalness: 0 },
@@ -8933,7 +8993,8 @@ class Grass {
     this.colorHigh = parseColor(opts.colorHigh != null ? opts.colorHigh : this.P.colorHigh);
     this.weedLow = parseColor(this.P.weedLow != null ? this.P.weedLow : 0x24371c);
     this.weedHigh = parseColor(this.P.weedHigh != null ? this.P.weedHigh : 0x44603a);
-    this.rng = new Rng(opts.seed || 31337);
+    this._baseSeed = opts.seed || 31337;
+    this.rng = new Rng(this._baseSeed);
     this.noise = new Noise(opts.seed || 31337);
 
     const geo = Shapes.grassBlade(this.bladeHeight, this.bladeWidth, opts.segments || 4);
@@ -8949,6 +9010,34 @@ class Grass {
       castShadow: opts.castShadow !== false,
     });
     this.scatter(opts);
+  }
+
+  /* Move the field to a new centre and re-scatter it.
+
+     A grass field is a fixed patch of instances, which is right for a demo
+     scene and wrong for anything the player can walk across: at four
+     kilometres a side you cannot cover the map, and a field that stays put
+     is a rug the player walks off. Re-scattering around them costs one
+     buffer upload and is imperceptible if it is done before they reach the
+     edge — so an open world keeps grass underfoot everywhere without
+     carrying instances for ground nobody is standing on.
+
+     Deterministic in the same way the original scatter is: the blade
+     positions come from the same noise field, so walking away and coming
+     back gives the same meadow rather than a reshuffled one. */
+  recenter(center, opts = {}) {
+    const c = Vec3.from(center);
+    if (opts.minMoveM != null && this.center.distanceTo(c) < opts.minMoveM) return false;
+    this.center.copy(c);
+    // Reseed from the quantised position rather than continuing the stream,
+    // so the same ground grows the same meadow every time you cross it.
+    // Without this, walking away and coming back reshuffles every blade,
+    // which reads as the world quietly rebuilding itself behind you.
+    const cell = 8;
+    const gx = Math.round(c.x / cell), gz = Math.round(c.z / cell);
+    this.rng = new Rng(((gx * 73856093) ^ (gz * 19349663) ^ this._baseSeed) >>> 0);
+    this.scatter(Object.assign({}, opts, { center: c }));
+    return true;
   }
 
   /* Place blades. A meadow doesn't grow as an even carpet — it grows in
@@ -10693,18 +10782,29 @@ class Engine {
     const size = opts.size != null ? opts.size : 200;
     const segments = opts.segments || (opts.heightFn ? 96 : 1);
     const heightFn = opts.heightFn || null;
-    const key = `ground:${size}:${segments}:${heightFn ? 'h' + (opts.seed || 0) : 'flat'}`;
-    const mesh = this._mesh(key, () => Shapes.terrain(size, segments, heightFn || (() => 0), opts.uvScale || 0.35));
+    const key = `ground:${size}:${segments}:${heightFn ? 'h' + (opts.seed || 0) : 'flat'}`
+      + (opts.colorFn ? ':c' + (opts.colorSeed || 0) : '');
+    const mesh = this._mesh(key, () => Shapes.terrain(
+      size, segments, heightFn || (() => 0), opts.uvScale || 0.35, opts.colorFn || null));
 
     // Grass presets choose a matching ground unless one was named:
     // dead grass sits on savanna hardpan, mud grass on wet mud.
     const grassSpec = opts.grass ? resolveGrassSpec(opts.grass) : null;
     const groundMat = opts.material != null ? opts.material
       : (grassSpec ? grassSpec.ground : 'grass');
+    /* A colour function tints the surface texture rather than replacing it,
+       so the terrain still has the material's grain and normal detail — it
+       is the same ground, wearing the right colour for where it is. */
+    const resolvedMat = opts.colorFn
+      ? this.material(Object.assign(
+        typeof groundMat === 'object' ? groundMat : { preset: groundMat },
+        { vertexColor: true, color: 0xffffff },
+      ))
+      : this.material(groundMat);
     const actor = new Actor(this, {
       name: 'ground',
       mesh,
-      material: this.material(groundMat),
+      material: resolvedMat,
       at: opts.at || [0, 0, 0],
       boundRadius: size,
     });
@@ -11237,7 +11337,16 @@ class Engine {
 
   /* ---------------- camera ---------------- */
 
+  /* Coming out of first person restores whatever it hid. */
+  _releaseFirstPerson() {
+    if (this._camMode === 'first' && this._camTarget && this._camConfig
+      && !this._camConfig.showBody) {
+      this._camTarget.visible = true;
+    }
+  }
+
   follow(actor, opts = {}) {
+    this._releaseFirstPerson();
     this._camMode = 'follow';
     this._camTarget = actor;
     this._camConfig = Object.assign({ distance: 7, height: 2.6, lag: 7, lookHeight: 1.2 }, opts);
@@ -11251,10 +11360,21 @@ class Engine {
     this._camDist = this._camConfig.distance;
     return this;
   }
+  /* The camera sits inside the actor's skull, so by default the actor stops
+     being drawn. Without this the player spends the game looking at the
+     inside of their own face, which is exactly what it sounds like.
+
+     Pass `showBody: true` to keep the mesh — worth it only for a rig whose
+     head is a separate hideable node, so the player can look down and see
+     their own hands and boots. */
   firstPerson(actor, opts = {}) {
+    if (this._camMode === 'first' && this._camTarget && this._camTarget !== actor) {
+      this._camTarget.visible = true;
+    }
     this._camMode = 'first';
     this._camTarget = actor;
-    this._camConfig = Object.assign({ eyeHeight: 1.6 }, opts);
+    this._camConfig = Object.assign({ eyeHeight: 1.6, showBody: false }, opts);
+    if (actor && !this._camConfig.showBody) actor.visible = false;
     return this;
   }
   lookAt(position, target) {

@@ -282,7 +282,16 @@ class Physiology {
     // paid for out of glycogen, so a cold night burns the food you have not
     // eaten. When the glycogen runs out the shivering fails, and that is
     // usually the moment hypothermia stops being survivable.
-    const shiverFuel = clamp01(this.glycogenKcal / (this.glycogenMaxKcal * 0.25));
+    /* Shivering runs on two fuels. Hard shivering is glycogen-driven and
+       stops when the glycogen does — which is why the last hours of
+       hypothermia are the ones where the shivering has stopped. But
+       low-level thermogenesis burns fat, and anyone with fat on them can
+       hold that indefinitely. Gating the whole response on glycogen made a
+       hungry character hypothermic on a mild afternoon, which is not what
+       bodies do. */
+    const fromFat = this.fatMassKg > 0.5 ? 0.4 : 0;
+    const fromGlycogen = clamp01(this.glycogenKcal / (this.glycogenMaxKcal * 0.25));
+    const shiverFuel = Math.max(fromFat, fromGlycogen);
     const shiverWatts = this.shivering * 2.5 * bmrWatts * shiverFuel;
     const totalWatts = Math.max(bmrWatts, workWatts) + shiverWatts;
     const kcalBurned = (totalWatts * dt) / UNIT.KCAL_J;

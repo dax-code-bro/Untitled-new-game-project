@@ -441,18 +441,29 @@ class Engine {
     const size = opts.size != null ? opts.size : 200;
     const segments = opts.segments || (opts.heightFn ? 96 : 1);
     const heightFn = opts.heightFn || null;
-    const key = `ground:${size}:${segments}:${heightFn ? 'h' + (opts.seed || 0) : 'flat'}`;
-    const mesh = this._mesh(key, () => Shapes.terrain(size, segments, heightFn || (() => 0), opts.uvScale || 0.35));
+    const key = `ground:${size}:${segments}:${heightFn ? 'h' + (opts.seed || 0) : 'flat'}`
+      + (opts.colorFn ? ':c' + (opts.colorSeed || 0) : '');
+    const mesh = this._mesh(key, () => Shapes.terrain(
+      size, segments, heightFn || (() => 0), opts.uvScale || 0.35, opts.colorFn || null));
 
     // Grass presets choose a matching ground unless one was named:
     // dead grass sits on savanna hardpan, mud grass on wet mud.
     const grassSpec = opts.grass ? resolveGrassSpec(opts.grass) : null;
     const groundMat = opts.material != null ? opts.material
       : (grassSpec ? grassSpec.ground : 'grass');
+    /* A colour function tints the surface texture rather than replacing it,
+       so the terrain still has the material's grain and normal detail — it
+       is the same ground, wearing the right colour for where it is. */
+    const resolvedMat = opts.colorFn
+      ? this.material(Object.assign(
+        typeof groundMat === 'object' ? groundMat : { preset: groundMat },
+        { vertexColor: true, color: 0xffffff },
+      ))
+      : this.material(groundMat);
     const actor = new Actor(this, {
       name: 'ground',
       mesh,
-      material: this.material(groundMat),
+      material: resolvedMat,
       at: opts.at || [0, 0, 0],
       boundRadius: size,
     });
@@ -985,7 +996,16 @@ class Engine {
 
   /* ---------------- camera ---------------- */
 
+  /* Coming out of first person restores whatever it hid. */
+  _releaseFirstPerson() {
+    if (this._camMode === 'first' && this._camTarget && this._camConfig
+      && !this._camConfig.showBody) {
+      this._camTarget.visible = true;
+    }
+  }
+
   follow(actor, opts = {}) {
+    this._releaseFirstPerson();
     this._camMode = 'follow';
     this._camTarget = actor;
     this._camConfig = Object.assign({ distance: 7, height: 2.6, lag: 7, lookHeight: 1.2 }, opts);
@@ -999,10 +1019,21 @@ class Engine {
     this._camDist = this._camConfig.distance;
     return this;
   }
+  /* The camera sits inside the actor's skull, so by default the actor stops
+     being drawn. Without this the player spends the game looking at the
+     inside of their own face, which is exactly what it sounds like.
+
+     Pass `showBody: true` to keep the mesh — worth it only for a rig whose
+     head is a separate hideable node, so the player can look down and see
+     their own hands and boots. */
   firstPerson(actor, opts = {}) {
+    if (this._camMode === 'first' && this._camTarget && this._camTarget !== actor) {
+      this._camTarget.visible = true;
+    }
     this._camMode = 'first';
     this._camTarget = actor;
-    this._camConfig = Object.assign({ eyeHeight: 1.6 }, opts);
+    this._camConfig = Object.assign({ eyeHeight: 1.6, showBody: false }, opts);
+    if (actor && !this._camConfig.showBody) actor.visible = false;
     return this;
   }
   lookAt(position, target) {
