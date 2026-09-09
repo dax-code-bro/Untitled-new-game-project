@@ -4296,12 +4296,8 @@ class Fishery {
     for (let bi = 0; bi < this.bodies.length; bi++) {
       const body = this.bodies[bi];
       const n = Math.max(floor, Math.round((weights[bi] / total) * (this.maxFish - floor * this.bodies.length)));
-      const suitable = FISH_SPECIES_LIST.filter((id) => {
-        const s = FISH_SPECIES[id];
-        if (s.water !== body.kind && !(s.water === WATER.brackish && body.kind !== WATER.fresh)) return false;
-        // The species has to tolerate this water at all.
-        return body.surfaceTempC >= s.tempToleranceC[0] && body.surfaceTempC <= s.tempToleranceC[1] + 6;
-      });
+      // The species has to tolerate this water at all.
+      const suitable = this._suitableFor(body);
       if (!suitable.length) continue;
       for (let i = 0; i < n && this.fish.length < this.maxFish; i++) {
         const sid = suitable[(this.rng() * suitable.length) | 0];
@@ -4324,7 +4320,44 @@ class Fishery {
         this.fish.push(f);
       }
     }
+
+    /* Rounding, and water bodies too cold or too salt for anything on the
+       list, leave the island short of the population it is meant to carry.
+       Top it up from the water that can actually hold fish rather than
+       accepting whatever fell out of the division. */
+    let guard = this.maxFish * 4;
+    const stockable = this.bodies.filter((b) => this._suitableFor(b).length);
+    while (this.fish.length < this.maxFish && stockable.length && guard-- > 0) {
+      const body = stockable[(this.rng() * stockable.length) | 0];
+      const suitable = this._suitableFor(body);
+      const sid = suitable[(this.rng() * suitable.length) | 0];
+      const sp = FISH_SPECIES[sid];
+      const matching = body.holds.filter((h) => sp.structure.includes(h.kind));
+      const pool = matching.length ? matching : body.holds;
+      const hold = pool[(this.rng() * pool.length) | 0];
+      const ang = this.rng() * Math.PI * 2;
+      const r = Math.sqrt(this.rng()) * (hold ? hold.radiusM : body.radiusM);
+      const f = new Fish(sid, {
+        id: this.nextId++, bodyId: body.id, rng: this.rng,
+        x: (hold ? hold.x : body.x) + Math.cos(ang) * r,
+        z: (hold ? hold.z : body.z) + Math.sin(ang) * r,
+      });
+      f.holdX = hold ? hold.x : body.x;
+      f.holdZ = hold ? hold.z : body.z;
+      f.holdRadiusM = hold ? hold.radiusM : body.radiusM;
+      this.fish.push(f);
+    }
     return this.fish.length;
+  }
+
+  /* Which species can live in this water at all — the same test the initial
+     stocking uses, kept in one place so the top-up cannot disagree with it. */
+  _suitableFor(body) {
+    return FISH_SPECIES_LIST.filter((id) => {
+      const s = FISH_SPECIES[id];
+      if (s.water !== body.kind && !(s.water === WATER.brackish && body.kind !== WATER.fresh)) return false;
+      return body.surfaceTempC >= s.tempToleranceC[0] && body.surfaceTempC <= s.tempToleranceC[1] + 6;
+    });
   }
 
   step(dt, ctx = {}) {
@@ -4533,7 +4566,13 @@ class Fire {
     const wind = opts.windMs || 0;
     const rain = opts.precipitation || 0;
 
-    let p = base * (0.45 + 0.75 * skill);
+    /* How much your skill matters depends entirely on the method. Anyone
+       can work a lighter; nobody gets a bow drill going without practice.
+       Weighting them the same made a lighter a coin flip, which is wrong in
+       a way the player would notice immediately. */
+    const skillWeight = { lighter: 0.08, matches: 0.15, ferroRod: 0.45, flintSteel: 0.7, bowDrill: 1 }[method];
+    const w = skillWeight != null ? skillWeight : 0.8;
+    let p = base * (1 - w + w * (0.45 + 0.75 * skill));
     p *= 1 - 0.85 * wet;                       // wet tinder is most of the battle
     p *= this.sheltered ? 1 : (1 - clamp01(wind / 14) * 0.5 - clamp01(rain / 8) * 0.6);
     p = clamp01(p);

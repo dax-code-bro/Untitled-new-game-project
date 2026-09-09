@@ -774,14 +774,28 @@
     const b = here.building, room = here.room;
     const y = b.y + room.storey * b.storeyHeightM + Math.min(2.3, b.storeyHeightM - 0.35);
     const radius = Math.max(room.w, room.d) * 0.9 + 3;
+
+    /* What lights a room the player is standing in. By day it is daylight
+       through the windows, bounced off the walls — cool, and only as strong
+       as the day outside. At night it is nothing at all unless the circuit
+       feeding this room is live, and nothing on this island is live until
+       somebody makes it so. A warm bulb burning in every abandoned house
+       would be the most obvious lie in the game. */
+    const outside = ctx.world.clock.lightLevel();
+    const windows = room.type === 'basement' || room.type === 'closet' ? 0.12 : 1;
+    const powered = !!(room.powered || (here.building.panel && here.building.panel.live));
+    const day = outside * windows;
+    const colour = powered && outside < 0.3 ? 0xffd7a4 : 0xbfd2e0;
+    const intensity = powered && outside < 0.3 ? 9 : 1.2 + day * 7.5;
     if (!interiorLight) {
-      interiorLight = game.light({
-        at: [room.centreX, y, room.centreZ], color: 0xffd7a4, intensity: 11, radius,
-      });
+      interiorLight = game.light({ at: [room.centreX, y, room.centreZ], color: colour, intensity, radius });
     } else {
       interiorLight.position.set(room.centreX, y, room.centreZ);
       interiorLight.radius = radius;
-      interiorLight.intensity = 11;
+      interiorLight.intensity = intensity;
+      if (interiorLight.color && interiorLight.color.set) {
+        interiorLight.color.set(((colour >> 16) & 255) / 255, ((colour >> 8) & 255) / 255, (colour & 255) / 255);
+      }
     }
   }
 

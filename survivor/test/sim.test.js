@@ -1073,6 +1073,20 @@ function live(phys, hours, env, stepMinutes = 5, hook) {
   // 2.2 kg at 2.2 kg/h is an hour of fire, which is the point: wood is work.
   between('2.2 kg of wood burns for', burnedOut / 3600, 0.7, 1.3, ' hours');
 
+  // Method matters more than skill for a lighter and less than nothing for
+  // a bow drill, which is the whole reason to carry one.
+  {
+    const dry = { skill: 0.2, tinderWet: 0, windMs: 2, precipitation: 0, rng: () => 0.5 };
+    const lighterP = new A.Fire({ fuelKg: 6 }).tryLight(Object.assign({ method: 'lighter' }, dry, { rng: () => 1 })).chance;
+    const drillP = new A.Fire({ fuelKg: 6 }).tryLight(Object.assign({ method: 'bowDrill' }, dry, { rng: () => 1 })).chance;
+    check('a lighter and dry tinder is nearly a certainty', lighterP > 0.8, `${(lighterP * 100).toFixed(0)}%`);
+    check('a bow drill in untrained hands is not', drillP < 0.25, `${(drillP * 100).toFixed(0)}%`);
+    const skilled = new A.Fire({ fuelKg: 6 }).tryLight(Object.assign({}, dry, { method: 'bowDrill', skill: 0.9, rng: () => 1 })).chance;
+    check('and practice is what fixes that', skilled > drillP * 1.8, `${(skilled * 100).toFixed(0)}% at skill 0.9`);
+    const wet = new A.Fire({ fuelKg: 6 }).tryLight(Object.assign({}, dry, { method: 'lighter', tinderWet: 1, rng: () => 1 })).chance;
+    check('wet tinder beats a lighter', wet < 0.2, `${(wet * 100).toFixed(0)}%`);
+  }
+
   section('cooking');
 
   // The gap between a seared outside and a safe middle is the whole mechanic.

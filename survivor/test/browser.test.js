@@ -105,7 +105,9 @@ const shot = (page, name) => page.screenshot({ path: path.join(SHOTS, `survivor-
   check('the HUD is up and reading the simulation',
     first.hud && /water/.test(first.vitals) && /season/.test(first.env));
   check('every named place is on the map', first.pois >= 15, `${first.pois}`);
-  check('the island is populated', first.animals >= 450 && first.fish >= 100,
+  // The brief asked for five hundred animals and two hundred fish, and the
+  // world is meant to carry exactly that whatever the seed does.
+  check('the island is populated', first.animals === 500 && first.fish === 200,
     `${first.animals} animals, ${first.fish} fish`);
   /* The whole point of the module work: before it there were about twenty
      actors in the scene — terrain, sea, the player. Buildings, trees, props

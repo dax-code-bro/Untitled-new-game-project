@@ -24,7 +24,17 @@ SurvivorGame.module({
     let driving = null;           // { vehicle, actor }
     let autoGearTimer = 0;
 
-    const HORSE_COLOURS = [0x4a3527, 0x2a201a, 0x6b5240, 0x8a7059, 0xd9d4cc, 0x3a2c22];
+    /* Real coat colours, at the albedo a coat actually has — a bay is
+       darker than most people picture it, and a grey is the only one that
+       reads as light. */
+    const HORSE_COLOURS = [
+      0x6b4a2e,   // bay
+      0x332c26,   // black
+      0x8a5730,   // chestnut
+      0xc2bdb4,   // grey
+      0xa88a5c,   // dun
+      0xc9a45e,   // palomino
+    ];
 
     /* ---- geometry --------------------------------------------------- */
 
@@ -49,7 +59,11 @@ SurvivorGame.module({
           g.quad(idx[0], idx[1], idx[2], idx[3]);
         });
       };
-      const hide = [0.42, 0.32, 0.24], dark = [0.15, 0.12, 0.10];
+      /* Near-white in the geometry: every horse shares one instanced mesh,
+         so the coat has to come from the per-actor tint, and a tint
+         multiplies. Baking a brown in here and then tinting it brown again
+         gives you fourteen black horses. */
+      const hide = [0.96, 0.94, 0.90], dark = [0.40, 0.38, 0.36];
       box(-0.32, 0.86, -0.75, 0.32, 1.55, 0.95, hide);        // barrel
       box(-0.26, 1.15, 0.95, 0.26, 1.62, 1.30, hide);         // shoulder
       box(-0.16, 1.35, 1.30, 0.16, 1.70, 1.72, hide);         // neck

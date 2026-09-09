@@ -379,9 +379,14 @@ SurvivorGame.module({
          right where a rifle actually hangs. Further out than it feels like
          it should be, because at thirty centimetres a real rifle fills half
          your field of view and reads as a prop held to your face. */
-      const outX = aiming ? 0.0 : 0.17;
-      const outY = aiming ? -0.030 : -0.14;
-      const outZ = aiming ? 0.42 : 0.46;
+      /* The near plane is a quarter of a metre and there is no separate
+         viewmodel pass, so the gun cannot come as close to the eye as a
+         real one does. Aiming therefore brings it onto the centre line and
+         a little low and left of it, which reads as looking through the
+         sight without putting the back of the receiver in your eye. */
+      const outX = aiming ? 0.012 : 0.17;
+      const outY = aiming ? -0.052 : -0.14;
+      const outZ = aiming ? 0.52 : 0.46;
 
       const pos = new LE.Vec3().copy(cam.position)
         .addScaled(fwd, outZ)

@@ -79,7 +79,13 @@ class Fire {
     const wind = opts.windMs || 0;
     const rain = opts.precipitation || 0;
 
-    let p = base * (0.45 + 0.75 * skill);
+    /* How much your skill matters depends entirely on the method. Anyone
+       can work a lighter; nobody gets a bow drill going without practice.
+       Weighting them the same made a lighter a coin flip, which is wrong in
+       a way the player would notice immediately. */
+    const skillWeight = { lighter: 0.08, matches: 0.15, ferroRod: 0.45, flintSteel: 0.7, bowDrill: 1 }[method];
+    const w = skillWeight != null ? skillWeight : 0.8;
+    let p = base * (1 - w + w * (0.45 + 0.75 * skill));
     p *= 1 - 0.85 * wet;                       // wet tinder is most of the battle
     p *= this.sheltered ? 1 : (1 - clamp01(wind / 14) * 0.5 - clamp01(rain / 8) * 0.6);
     p = clamp01(p);

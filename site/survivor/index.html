@@ -129,6 +129,20 @@
   .sheet h1 {
     margin: 0 0 4px; font: 300 20px/1.2 inherit; letter-spacing: .18em; text-transform: uppercase;
   }
+  .sheet h2 {
+    margin: 0 0 14px; font: 300 18px/1.2 inherit; letter-spacing: .18em; text-transform: uppercase;
+  }
+  .sheet h3 {
+    margin: 16px 0 6px; font: 400 12px/1.2 inherit; letter-spacing: .1em;
+    color: var(--dim); text-transform: none;
+  }
+  .sheet p { margin: 6px 0; font-size: 12px; }
+  .sheet ul { margin: 4px 0 0; padding-left: 18px; font-size: 12px; }
+  .sheet li { margin: 2px 0; }
+  /* Two columns where a screen has two independent halves — vitals beside
+     the differential — collapsing to one on a narrow window. */
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; align-items: start; }
+  @media (max-width: 900px) { .cols { grid-template-columns: 1fr; } }
   .sheet .lede { color: var(--dim); margin: 0 0 18px; font-size: 12px; }
   .sheet button, .btn {
     background: none; border: 1px solid var(--edge); padding: 7px 16px; cursor: pointer;
