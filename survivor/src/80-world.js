@@ -423,8 +423,29 @@ class World {
 
   /* ---------------- the tick ---------------- */
 
+  /* One step of the world. Anything longer than a couple of seconds of real
+     time is broken into slices before it reaches the physiology, because
+     the body model integrates heat and water with forward differences and a
+     single enormous step diverges rather than converging — a tab left in the
+     background for ten minutes should not come back with a core temperature
+     of seven hundred degrees. */
   step(realSeconds) {
     if (!this.generated) return this;
+    const MAX_SLICE = 2;
+    if (realSeconds > MAX_SLICE) {
+      let left = realSeconds;
+      while (left > 1e-6) {
+        const slice = Math.min(MAX_SLICE, left);
+        this._step(slice);
+        left -= slice;
+        if (!this.players.size) break;
+      }
+      return this;
+    }
+    return this._step(realSeconds);
+  }
+
+  _step(realSeconds) {
     this.realElapsed += realSeconds;
     const simSeconds = this.clock.tick(realSeconds);
     const env = this.clock.environment();
@@ -490,7 +511,11 @@ class World {
       : 0.03;                                    // short grass
     const windAtHead = env.windMs
       * (Math.log(1.6 / roughness) / Math.log(10 / roughness));
-    const sheltered = p.sheltered ? 0.15 : 1;
+    /* Shelter is a fraction of the wind stopped, not a flag: a lean-to
+       thrown up in the dark is worth rather less than four walls, and the
+       physiology should feel the difference. */
+    const shelterQ = typeof p.sheltered === 'number' ? clamp01(p.sheltered) : (p.sheltered ? 0.85 : 0);
+    const sheltered = 1 - shelterQ * 0.85;
 
     const playerEnv = Object.assign({}, env, {
       altitudeM,
@@ -503,6 +528,9 @@ class World {
       inWater: p.stance === 'swimming',
       waterTempC: 18,
       extraWatts: p.extraWatts || 0,
+      // A fire's radiant output, which competes with the wind on the same
+      // heat ledger rather than setting a "warm" flag.
+      radiantWatts: p.radiantWatts || 0,
     });
 
     p.body.step(simSeconds, playerEnv);
@@ -510,7 +538,7 @@ class World {
     const killedBy = p.disease.step(days, p.body);
 
     // Rain and rivers get you wet, which costs you heat and rusts the rifle.
-    if (env.precipitation > 0.5 && !p.sheltered) p.body.wet = clamp01(p.body.wet + days * 6);
+    if (env.precipitation > 0.5 && shelterQ < 0.6) p.body.wet = clamp01(p.body.wet + days * 6);
     else p.body.wet = clamp01(p.body.wet - days * 3);
     if (p.stance === 'swimming') p.body.wet = 1;
 

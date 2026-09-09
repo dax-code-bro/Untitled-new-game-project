@@ -33,6 +33,9 @@
   let ctx = null;
   let running = false, paused = false;
   let lastWallMs = 0, wallDebt = 0, timeScaleMul = 1;
+  let FAR_SEGMENTS = 512;
+  let groundColourFn = null;
+  let detailPatch = null, detailCentre = null;
   const updateHooks = [];
   const keyBindings = [];
   const listeners = new Map();
@@ -56,11 +59,21 @@
         ? q.get('mode') : 'singleplayer',
       spawn: ['north', 'east', 'south', 'west'].includes(q.get('spawn')) ? q.get('spawn') : null,
       quality: ['low', 'medium', 'high', 'ultra'].includes(q.get('quality')) ? q.get('quality') : undefined,
-      keepInventory: q.get('keep') === '1',
+      /* Singleplayer keeps what you were carrying, because dying to a
+         mechanic you are still learning and losing four days of work is a
+         punishment for the wrong thing. Multiplayer never does: one life to
+         a world, and the body stays where it fell with everything on it.
+         ?keep=0 turns it off for anyone who wants it off. */
+      keepInventory: q.get('keep') != null ? q.get('keep') === '1'
+        : q.get('mode') !== 'multiplayer',
       // A smaller island generates in a fraction of the time, which matters
       // when someone is trying the game rather than playing it.
-      resolution: num('res', 513),
-      droplets: num('erosion', 75000),
+      // 1025 samples over four kilometres is 3.9 m a cell, and generates in
+      // a couple of seconds. It is what the collider and the near-field mesh
+      // both read, so it sets how much of the island is real rather than
+      // interpolated.
+      resolution: num('res', 1025),
+      droplets: num('erosion', 130000),
     };
   }
 
@@ -136,15 +149,24 @@
       ];
     };
 
+    /* The far mesh covers the whole island at 7.8 m a vertex, which is the
+       most a million-vertex budget will stretch to over sixteen square
+       kilometres. The collider runs at twice that resolution because a
+       collider sample costs four bytes and a vertex costs sixty, so the
+       player walks the real ground rather than the version of it that was
+       cheap to draw. The detail patch below then puts the missing resolution
+       back where the player can actually see it. */
+    FAR_SEGMENTS = 512;
     game.ground({
       material: 'terrain', colorFn: groundColour, colorSeed: world.seed,
-      size: map.worldSizeM, segments: 512,
+      size: map.worldSizeM, segments: FAR_SEGMENTS, colliderSegments: 1024,
       heightFn: (x, z) => map.heightAtWorld(x, z),
       friction: 0.85, at: [0, 0, 0],
       // One texture tile every twelve metres. Higher and the detail map
       // aliases into a uniform speckle that washes the ground cover white.
       uvScale: 0.08,
     });
+    groundColourFn = groundColour;
 
     game.box({
       // Wider than the far plane, so the slab's own edge is clipped away
@@ -157,8 +179,17 @@
       static: true, physics: false, name: 'sea',
     });
 
+    /* A tighter field with the same blade budget: 70 m square at 60,000
+       blades is about twelve to the square metre, which reads as ground
+       cover rather than as a scatter of sprigs. Beyond the field the
+       terrain's own colour carries it, and the field moves with the
+       player. */
     game.addGrass({
-      area: 110, max: 46000, center: [spawn.x, spawn.y, spawn.z],
+      area: 58, max: 90000, center: [spawn.x, spawn.y, spawn.z],
+      // A blade of grass is three to eight millimetres across and a third
+      // of a metre tall. At the default five centimetres each one reads as
+      // a leek, and thirty of them read as a field of them.
+      width: 0.014, height: 0.34,
       heightFn: (x, z) => map.heightAtWorld(x, z),
     });
 
@@ -194,8 +225,7 @@
          raycast, so the interaction target is the same for all of them. */
       aim() {
         const cam = game.camera;
-        const dir = new LE.Vec3().subVectors(cam.target, cam.position).normalize();
-        return { origin: cam.position, direction: dir };
+        return { origin: cam.position, direction: cam.forward, right: cam.right, up: cam.trueUp };
       },
       lookedAt(maxDist) {
         const a = this.aim();
@@ -310,6 +340,7 @@
         try { fn(dt, ctx); } catch (err) { console.error('update hook:', err); }
       }
       applySky();
+      updateDetailPatch();
       moveGrass();
       updateHud();
     });
@@ -319,7 +350,7 @@
   function stepPlayer(dt) {
     const i = game.input;
     const sprint = i.down('shift');
-    const crouch = i.down('c');
+    const crouch = i.down('control') || i.down('ctrl');
     const moving = Math.abs(i.axes.x) > 0.05 || Math.abs(i.axes.y) > 0.05;
     const capacity = player.capacity();
 
@@ -349,6 +380,10 @@
       : (sprint ? 0.85 : crouch ? 0.06 : moving ? 0.3 : 0.02);
     player.concealment = ctx.state.concealment != null ? ctx.state.concealment
       : (crouch ? 0.55 : 0.15);
+    // Shelter is a fraction of the wind stopped; modules that build one say
+    // how good it is, and four walls beat a lean-to.
+    player.sheltered = ctx.state.shelterQuality || 0;
+    player.radiantWatts = player.radiantWatts || 0;
   }
 
   function stepWorld() {
@@ -391,14 +426,60 @@
     else if (w.cloudCover > 0.7) game.setSky('overcast');
     else game.setSky('day');
 
-    r.sun.direction.set(sun.direction.x, sun.direction.y, sun.direction.z).normalize();
     const elev = Math.sin((sun.altitudeDeg * Math.PI) / 180);
     const day = clamp01(elev * 2 + 0.15);
     const overcast = 1 - 0.72 * w.cloudCover;
-    r.sun.intensity = (0.06 + 3.7 * day) * overcast;
-    r.sky.intensity = (0.10 + 0.95 * clamp01(elev * 3 + 0.2)) * (0.45 + 0.55 * overcast);
-    const warm = 1 - Math.min(1, Math.abs(elev) * 2.2);
-    r.sun.color.set(1, 0.94 - 0.32 * warm, 0.86 - 0.52 * warm);
+
+    /* Night. The moon really is five orders of magnitude dimmer than the
+       sun, and a renderer that reproduces that faithfully gives you a black
+       screen — because the thing it cannot reproduce is the eye, which
+       after twenty minutes in the dark is a hundred times more sensitive
+       than it was at noon. So the moon is modelled as a real light with a
+       real phase and a real direction, at the level a dark-adapted eye
+       would see it at: a full moon is enough to walk by and to shoot by at
+       close range, and a new moon is not.
+
+       The phase comes from the world clock, so a week of dark nights is a
+       week you plan around. */
+    const moonLit = clock.moonIllumination() * (1 - w.cloudCover * 0.85);
+    const moonUp = elev < 0.08;
+    if (moonUp && moonLit > 0.02) {
+      // Opposite the sun, roughly, which is where a full moon actually is.
+      r.sun.direction.set(-sun.direction.x, Math.max(0.35, -sun.direction.y), -sun.direction.z).normalize();
+      r.sun.intensity = 0.10 + 0.42 * moonLit;
+      r.sun.color.set(0.62, 0.72, 1.0);
+    } else {
+      r.sun.direction.set(sun.direction.x, sun.direction.y, sun.direction.z).normalize();
+      r.sun.intensity = (0.06 + 3.7 * day) * overcast;
+    }
+    // Even on a new moon the sky is not black: there is airglow, starlight
+    // and whatever the sea is bouncing back.
+    r.sky.intensity = Math.max(0.055 + 0.10 * moonLit,
+      (0.10 + 0.95 * clamp01(elev * 3 + 0.2)) * (0.45 + 0.55 * overcast));
+    if (!(moonUp && moonLit > 0.02)) {
+      const warm = 1 - Math.min(1, Math.abs(elev) * 2.2);
+      r.sun.color.set(1, 0.94 - 0.32 * warm, 0.86 - 0.52 * warm);
+    }
+
+    /* The lower half of the ambient hemisphere is light bounced off the
+       ground you are standing on, so it should be the colour of that ground
+       rather than a fixed near-black. This is what stops a wall in shade
+       from reading as a silhouette: on a clear day a north face is lit
+       almost entirely by sky and by bounce off the field in front of it,
+       and the field is not black. The biome colours are already published
+       albedos, so they are the right number to use. */
+    const hereBiome = ctx && ctx.biomeAt ? ctx.biomeAt(player.x, player.z) : null;
+    const groundAlbedo = hereBiome && hereBiome.colour != null ? hereBiome.colour : 0x6e8b45;
+    /* Bounce is a fraction of the light falling on the ground, not the
+       ground itself acting as a lamp — roughly a third of the hemisphere's
+       contribution on a clear day. Any more and a wood tints the whole
+       frame green. */
+    const bounce = (0.10 + 0.42 * day) * overcast;
+    r.sky.ground.set(
+      (((groundAlbedo >> 16) & 255) / 255) * bounce,
+      (((groundAlbedo >> 8) & 255) / 255) * bounce,
+      ((groundAlbedo & 255) / 255) * bounce,
+    );
 
     // Fog carries the weather: haze on a clear day, a wall in a fog bank,
     // and rain that closes the island down to a few hundred metres.
@@ -411,13 +492,166 @@
       Math.min(1.4, w.windMs / 9));
   }
 
+  /* ---------------- near-field terrain detail ----------------
+
+     The island's heightmap holds a sample every 3.9 m; the far mesh draws
+     one vertex every 7.8 m. Everything between those two numbers is real
+     terrain the player is standing on and cannot see — which is why a
+     hillside up close reads as a few big facets.
+
+     So a patch of the same ground is drawn again at the data's own
+     resolution, centred on the player and rebuilt when they walk out of it.
+     The hard part is the join: a finer mesh of the same surface does not
+     agree with a coarser one between their shared vertices, so a naive patch
+     shows a seam of overlapping triangles all the way round. The fix is to
+     blend the patch's height toward what the far mesh is actually drawing
+     over its outer margin, so the two meet exactly at the boundary and the
+     extra detail fades in behind it.                                       */
+
+  const DETAIL_HALF = 300;      // metres from the player to the patch edge
+  const DETAIL_SEGMENTS = 150;  // 4 m a vertex, matching the data
+  const DETAIL_MOVE = 90;       // rebuild once they have walked this far
+
+  /* The height the far mesh is drawing at this point: planar interpolation
+     over the triangle of the coarse grid, matching Shapes.terrain's own
+     split across the (c,r)-(c+1,r+1) diagonal. */
+  function coarseSurface(x, z) {
+    const map = world.map;
+    const size = map.worldSizeM, seg = FAR_SEGMENTS;
+    const fx = (x / size + 0.5) * seg;
+    const fz = (z / size + 0.5) * seg;
+    let c = Math.floor(fx), r = Math.floor(fz);
+    if (c < 0) c = 0; if (r < 0) r = 0;
+    if (c > seg - 1) c = seg - 1;
+    if (r > seg - 1) r = seg - 1;
+    const u = fx - c, v = fz - r;
+    const gx = (i) => (i / seg - 0.5) * size;
+    const h00 = map.heightAtWorld(gx(c), gx(r));
+    const h10 = map.heightAtWorld(gx(c + 1), gx(r));
+    const h01 = map.heightAtWorld(gx(c), gx(r + 1));
+    const h11 = map.heightAtWorld(gx(c + 1), gx(r + 1));
+    return u <= v
+      ? h00 + (h11 - h01) * u + (h01 - h00) * v
+      : h00 + (h10 - h00) * u + (h11 - h10) * v;
+  }
+
+  function rebuildDetailPatch() {
+    const map = world.map;
+    const cx = player.x, cz = player.z;
+    // Snap the centre to the coarse grid so the patch lands on the same
+    // vertices the far mesh uses and the two cannot drift apart.
+    const cell = map.worldSizeM / FAR_SEGMENTS;
+    const sx = Math.round(cx / cell) * cell;
+    const sz = Math.round(cz / cell) * cell;
+
+    const g = new LE.Geometry();
+    const n = DETAIL_SEGMENTS;
+    const step = (DETAIL_HALF * 2) / n;
+    const h = step * 0.5;
+    const margin = 0.16;        // fraction of the half-width used for the blend
+
+    const height = (x, z) => {
+      const dx = Math.abs(x - sx) / DETAIL_HALF;
+      const dz = Math.abs(z - sz) / DETAIL_HALF;
+      const edge = Math.max(dx, dz);
+      // 1 in the middle, falling to 0 at the boundary.
+      const t = Math.max(0, Math.min(1, (1 - edge) / margin));
+      const blend = t * t * (3 - 2 * t);
+      const fine = map.heightAtWorld(x, z);
+      return blend >= 1 ? fine : coarseSurface(x, z) + (fine - coarseSurface(x, z)) * blend;
+    };
+
+    for (let r = 0; r <= n; r++) {
+      const wz = sz - DETAIL_HALF + r * step;
+      for (let c = 0; c <= n; c++) {
+        const wx = sx - DETAIL_HALF + c * step;
+        const y = height(wx, wz);
+        const ddx = height(wx + h, wz) - height(wx - h, wz);
+        const ddz = height(wx, wz + h) - height(wx, wz - h);
+        const nx = -ddx, ny = 2 * h, nz = -ddz;
+        const l = Math.hypot(nx, ny, nz) || 1;
+        g.vert(wx, y, wz, nx / l, ny / l, nz / l, wx * 0.08, wz * 0.08);
+        if (groundColourFn) {
+          const slope = Math.acos(Math.min(1, Math.max(-1, ny / l))) * 180 / Math.PI;
+          const col = groundColourFn(wx, wz, y, slope);
+          g.vertColor(col[0], col[1], col[2]);
+        }
+      }
+    }
+    const row = n + 1;
+    for (let r = 0; r < n; r++) {
+      for (let c = 0; c < n; c++) {
+        const a = r * row + c;
+        g.quad(a, a + row, a + row + 1, a + 1);
+      }
+    }
+    g.finalize();
+
+    if (detailPatch) detailPatch.destroy();
+    detailPatch = game.mesh({
+      geometry: g,
+      // A fresh key each time: the geometry is different every rebuild, so
+      // caching it would hand back the previous patch.
+      key: `detail:${sx.toFixed(0)}:${sz.toFixed(0)}`,
+      material: { preset: 'terrain', vertexColor: true, color: 0xffffff },
+      // Purely visual. The heightfield collider is already finer than this.
+      physics: false,
+      name: 'terrainDetail',
+      boundRadius: DETAIL_HALF * 1.5,
+    });
+    detailPatch.noCull = true;
+    detailCentre = [sx, sz];
+  }
+
+  function updateDetailPatch() {
+    if (!detailCentre) { rebuildDetailPatch(); return; }
+    if (Math.hypot(player.x - detailCentre[0], player.z - detailCentre[1]) < DETAIL_MOVE) return;
+    rebuildDetailPatch();
+  }
+
   // Grass is a fixed-size field; rather than covering sixteen square
   // kilometres, it is picked up and put down around the player.
+  /* How much grass a biome carries, and what colour it is. A dune has
+     marram in tufts over open sand; a meadow is a closed sward; a forest
+     floor is mostly needle litter. Using the biome's own cover figure means
+     these do not have to be kept in step with anything by hand. */
+  const GRASS_BY_BIOME = {
+    beach:      { count: 1395,   low: 0x9a8f6a, high: 0xc0b183 },
+    dune:       { count: 7750,  low: 0x8a8a58, high: 0xb9b478 },
+    saltMarsh:  { count: 52700, low: 0x53603a, high: 0x8a9a54 },
+    freshMarsh: { count: 62000, low: 0x3d5a2a, high: 0x74933e },
+    riverbank:  { count: 58900, low: 0x3a5a26, high: 0x7ea03c },
+    meadow:     { count: 90000, low: 0x2f5d24, high: 0x86a83c },
+    prairie:    { count: 80600, low: 0x5a6a2e, high: 0xa8ab54 },
+    woodland:   { count: 40300, low: 0x2c4a20, high: 0x5f7c30 },
+    deepForest: { count: 18600, low: 0x25401d, high: 0x4c6628 },
+    pineForest: { count: 13950,  low: 0x2a4024, high: 0x506030 },
+    scrub:      { count: 24800, low: 0x5c5f30, high: 0x969247 },
+    rockyHill:  { count: 10850,  low: 0x555a34, high: 0x8a8a4e },
+    scree:      { count: 1860,  low: 0x60624a, high: 0x8a8a6c },
+    alpine:     { count: 21700, low: 0x4e6440, high: 0x87975c },
+    cliff:      { count: 620,   low: 0x555a34, high: 0x8a8a4e },
+    ocean:      { count: 0,     low: 0x2f5d24, high: 0x86a83c },
+  };
+
+  // Grass is a fixed-size field; rather than covering sixteen square
+  // kilometres, it is picked up and put down around the player.
+  let grassBiome = null;
   function moveGrass() {
     if (!game.grass || typeof game.grass.recenter !== 'function') return;
+    const b = ctx && ctx.biomeAt ? ctx.biomeAt(player.x, player.z) : null;
+    const spec = (b && GRASS_BY_BIOME[b.id]) || GRASS_BY_BIOME.meadow;
+    // Walking from a meadow into a pine wood should change what is under
+    // your feet immediately, not thirty-four metres later.
+    const changed = b && b.id !== grassBiome;
+    if (changed) {
+      grassBiome = b.id;
+      game.grass.colorLow = LE.Vec3.from([((spec.low >> 16) & 255) / 255, ((spec.low >> 8) & 255) / 255, (spec.low & 255) / 255]);
+      game.grass.colorHigh = LE.Vec3.from([((spec.high >> 16) & 255) / 255, ((spec.high >> 8) & 255) / 255, (spec.high & 255) / 255]);
+    }
     game.grass.recenter(
       [player.x, world.map.heightAtWorld(player.x, player.z), player.z],
-      { minMoveM: 34 },
+      { minMoveM: changed ? 0 : 34, count: spec.count },
     );
   }
 
@@ -459,21 +693,54 @@
 
   /* ---------------- death ---------------- */
 
+  /* Death. In multiplayer it is the end of that world for you and the body
+     stays where it fell; in singleplayer the world carries on and you wake
+     up on a shore again with what you learned and, by default, what you
+     were carrying. The world has already made the replacement player by the
+     time this runs, so the job here is to pick it up and put the camera
+     back on it. */
   function onDeath() {
     running = false;
     paused = true;
     const cause = player.body.causeOfDeath || 'unknown causes';
+    const day = world.clock.totalDays + 1;
     log(`You died of ${cause}.`, true);
     const over = el('gameover');
+    const multiplayer = world.mode === 'multiplayer';
     if (over) {
       over.hidden = false;
-      el('gameoverCause').textContent = `You died of ${cause} on day ${world.clock.totalDays + 1}.`;
-      el('gameoverDetail').textContent = world.mode === 'multiplayer'
-        ? 'On a server this would be permanent — you would rejoin as a spectator.'
-        : 'Reload to try again.';
+      el('gameoverCause').textContent = `You died of ${cause} on day ${day}.`;
+      el('gameoverDetail').textContent = multiplayer
+        ? 'One life to a world. You would rejoin this server as a spectator.'
+        : `The island does not reset. Your camp, your fires and everything you built are still there,`
+          + ` and so is your body${world.keepInventory ? '' : ' with everything you were carrying on it'}.`;
+      const btn = over.querySelector('.btn');
+      if (btn) btn.textContent = multiplayer ? 'Start a new world' : 'Wake up on the shore';
     }
-    ctx.emit('death', { cause });
+    ctx.emit('death', { cause, day, permanent: multiplayer });
   }
+
+  /* Come back. Everything about the world is untouched; only the body is new. */
+  function respawn() {
+    const fresh = world.players.get('local');
+    if (!fresh) { location.reload(); return; }
+    player = fresh;
+    const y = world.map.heightAtWorld(player.x, player.z);
+    avatar.setPosition([player.x, y + 1.4, player.z]);
+    avatar.setVelocity([0, 0, 0]);
+    const over = el('gameover');
+    if (over) over.hidden = true;
+    for (const k of Object.keys(ctx.state)) {
+      // Anything a module latched while dying — a locked camera, an open
+      // sheet, a held interaction — has to let go.
+      if (/^(movementLocked|uiOpen|stance|noiseOverride|concealment)$/.test(k)) delete ctx.state[k];
+    }
+    paused = false;
+    running = true;
+    log(`Day ${world.clock.totalDays + 1}. You wake on the shore again.`, true);
+    ctx.emit('respawn', { player });
+  }
+  global.SURVIVOR_RESPAWN = respawn;
 
   /* ---------------- readouts ---------------- */
 
@@ -575,6 +842,9 @@
             const n = el(id);
             if (n) n.hidden = false;
           }
+          // The key list is worth reading once and then in the way; H brings
+          // it back whenever it is wanted.
+          setTimeout(() => { const h = el('help'); if (h) h.hidden = true; }, 25000);
           const spawn = buildScene(opts);
           start(opts, spawn);
         }, { once: true });

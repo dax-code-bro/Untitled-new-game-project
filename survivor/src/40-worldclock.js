@@ -137,7 +137,11 @@ class WorldClock {
 
   /* Synodic month is 29.53 days. Phase drives night light and, through it,
      what is moving around out there. */
-  moonPhase() { return ((this.totalDays + this.dayOfYear * 0.0) % 29.53) / 29.53; }
+  /* The moon starts near full, so the first night of a new world is one you
+     can walk in, and darkens over the fortnight after — which is long
+     enough for the player to have learned what a dark night costs before
+     they get one. */
+  moonPhase() { return ((this.totalDays + 12) % 29.53) / 29.53; }
   moonIllumination() { return (1 - Math.cos(2 * Math.PI * this.moonPhase())) / 2; }
 
   /* The named periods the animals key off. */

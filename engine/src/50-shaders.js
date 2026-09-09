@@ -419,6 +419,7 @@ uniform float uMetalness;
 uniform vec3 uEmissive;
 uniform float uOpacity;
 uniform float uUvScale;
+uniform float uDetailScale;   // 0 = off
 uniform float uNormalStrength;
 uniform float uSubsurface;
 uniform int uHasMaps;
@@ -438,6 +439,24 @@ layout(location=0) out vec4 outColor;
 
 void main(){
   vec2 uv = vUv * uUvScale;
+
+  /* Detail sampling.
+
+     A texture sized for a whole surface has nothing left to say up close:
+     terrain tiled once every twelve metres is a smooth wash under the
+     player's feet, and no amount of tuning the base scale fixes it without
+     aliasing the same texture into noise at distance. So the maps are
+     sampled a second time at a much higher frequency and mixed in only
+     where the camera is near enough to resolve it — the surface gains grain
+     underfoot and loses nothing on the horizon.
+
+     Only the normal and occlusion are detailed, not the albedo: colour
+     variation at this frequency reads as dirt on the lens, whereas the tilt
+     of the surface is exactly what the eye uses to judge that ground is
+     ground. */
+  vec2 uvDetail = uv * uDetailScale;
+  float detailFade = uDetailScale > 0.001
+    ? clamp(1.0 - vViewDepth / 55.0, 0.0, 1.0) : 0.0;
 
   vec3 albedo = uBaseColor * vParams.rgb;
 #ifdef VERTCOLOR
@@ -472,6 +491,7 @@ void main(){
 #endif
     vec3 orm = texture(uOrmMap, uv).rgb;
     ao = orm.r;
+    if (detailFade > 0.0) ao *= mix(1.0, texture(uOrmMap, uvDetail).r, detailFade * 0.65);
     rough *= orm.g * 1.25;
     // The map only modulates metalness, never introduces it: a dielectric
     // stays dielectric no matter what the ORM texture says, while a metal
@@ -486,6 +506,12 @@ void main(){
     vec3 B = cross(N, T) * vTangent.w;
     vec3 tn = texture(uNormalMap, uv).xyz * 2.0 - 1.0;
     tn.xy *= uNormalStrength;
+    if (detailFade > 0.0) {
+      // Tangent-space whiteout: the fine tilt rides on top of the coarse one
+      // rather than replacing it, so both scales of relief survive.
+      vec3 dn = texture(uNormalMap, uvDetail).xyz * 2.0 - 1.0;
+      tn.xy += dn.xy * uNormalStrength * detailFade * 1.5;
+    }
     N = normalize(mat3(T, B, N) * normalize(tn));
   }
   // Back-facing geometry (double-sided leaves, glass) must not light black.

@@ -28,7 +28,14 @@ class Rng {
     return x / 4294967296;
   }
   range(a, b) { return a + (b - a) * this.next(); }
-  int(n) { return Math.floor(this.next() * n) % n; }
+  /* int(n) is 0..n-1; int(lo, hi) is lo..hi inclusive, which is what
+     callers reach for when they are picking an index range. */
+  int(a, b) {
+    if (b === undefined) return a > 0 ? Math.floor(this.next() * a) % a : 0;
+    const lo = Math.min(a, b), hi = Math.max(a, b);
+    return lo + Math.floor(this.next() * (hi - lo + 1));
+  }
+  pick(arr) { return arr && arr.length ? arr[this.int(arr.length)] : undefined; }
   sign() { return this.next() < 0.5 ? -1 : 1; }
   unitVec3(out = new Vec3()) {
     // Marsaglia: uniform on the sphere, no pole clustering.

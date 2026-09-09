@@ -38,6 +38,7 @@ this.API = {
   ElectricalSystem, Circuit, Conductor, Load, PowerSource, checkWiring, AWG,
   Firearm, WEAPONS, handload,
   World, GAME_MODE,
+  Horse, Vehicle, GAIT, HORSE_BREED, VEHICLE_SPEC, fuelViability,
   Fire, Provision, FIRE_KIND, FOOD_STATE, WATER_TREATMENT, treatWater, drinkTreated,
   SV_VECTOR_BEAR: VECTOR.undercookedBear,
 };`, ctx);
@@ -1147,6 +1148,130 @@ function live(phys, hours, env, stepMinutes = 5, hook) {
   check('boiled water is far safer than creek water', caughtBoiled * 4 < caughtRaw,
     `${caughtBoiled} vs ${caughtRaw} infections over 300 drinks`);
   check('and it still counts as water', new A.Physiology({}).bodyWaterL > 0);
+}
+
+/* ============================================================
+   HORSES AND CARS
+   ============================================================ */
+{
+  section('horses');
+  const h = new A.Horse({ breed: 'quarter' });
+  h.wild = false; h.trust = 1;
+  check('a riding horse weighs half a tonne', h.massKg === 500);
+  check('and carries about a fifth of that', Math.abs(h.carryCapacityKg - 100) < 1,
+    `${h.carryCapacityKg.toFixed(0)} kg`);
+
+  // A walk is nearly free; a gallop is not survivable for long.
+  const walker = new A.Horse({ breed: 'quarter' });
+  walker.wild = false; walker.ask('walk', { skill: 1 });
+  for (let i = 0; i < 3600; i++) walker.step(1, { riderMassKg: 85, airTempC: 15 });
+  check('an hour at a walk under a rider barely tires it', walker.fatigue < 0.2,
+    `${(walker.fatigue * 100).toFixed(0)}% spent`);
+
+  const galloper = new A.Horse({ breed: 'quarter' });
+  galloper.wild = false; galloper.trust = 1; galloper.ask('gallop', { skill: 1 });
+  let gallopedM = 0, t = 0;
+  while (galloper.gait === 'gallop' && t < 900) { galloper.step(1, { riderMassKg: 85, airTempC: 15 }); gallopedM += galloper.speedMs; t++; }
+  // A ridden horse can hold a gallop for something on the order of two to
+  // three kilometres before it has to come back to a trot.
+  check('a gallop under a rider lasts a couple of kilometres',
+    gallopedM > 900 && gallopedM < 4000, `${(gallopedM / 1000).toFixed(2)} km in ${t} s`);
+  check('and then it will not give you the gait', galloper.gait !== 'gallop');
+
+  // Working hard in the heat costs it water at rates a person never sees.
+  const hot = new A.Horse({ breed: 'thoroughbred' });
+  hot.wild = false; hot.ask('canter', { skill: 1 });
+  const water0 = hot.hydrationL;
+  for (let i = 0; i < 1800; i++) hot.step(1, { riderMassKg: 80, airTempC: 32 });
+  const lostLh = (water0 - hot.hydrationL) * 2;
+  check('a horse working in the heat sweats litres an hour', lostLh > 3 && lostLh < 25,
+    `${lostLh.toFixed(1)} L/h`);
+
+  // A wild horse refuses, and gentling it takes real time.
+  const wild = new A.Horse({ breed: 'mustang', wild: true });
+  check('a wild horse will not take a rider', wild.ask('walk', { skill: 0.5 }).ok === false);
+  let minutes = 0;
+  while (wild.trust < 0.55 && minutes < 600) { wild.handle(60, { gentle: true }); minutes++; }
+  check('and gentling one takes the better part of an hour',
+    minutes > 20 && minutes < 300, `${minutes} minutes of quiet handling`);
+  check('after which it will', wild.ask('walk', { skill: 0.5 }).ok === true);
+
+  section('motor vehicles');
+  const dead = new A.Vehicle({ type: 'sedan', fuelL: 40, hasBattery: false });
+  check('no battery, no start', dead.start().ok === false);
+  check('and it says so', /battery/.test(dead.start().reason));
+
+  const stale = new A.Vehicle({ type: 'sedan', fuelL: 40, hasBattery: true, batteryCharge: 1,
+    engineCondition: 0.8, oilLevel: 0.8, fuelAgeDays: 1500 });
+  let started = 0;
+  for (let i = 0; i < 200; i++) {
+    const v = new A.Vehicle({ type: 'sedan', fuelL: 40, hasBattery: true, batteryCharge: 1,
+      engineCondition: 0.8, oilLevel: 0.8, fuelAgeDays: 1500 });
+    if (v.start().ok) started++;
+  }
+  check('four-year-old petrol mostly will not fire', started < 120, `${started}/200 caught`);
+  check('and the fuel is nearly worthless', A.fuelViability('petrol', 1500) < 0.01);
+  check('while diesel of the same age is not', A.fuelViability('diesel', 1500) > 0.13,
+    `${(A.fuelViability('diesel', 1500) * 100).toFixed(0)}% good`);
+
+  // Acceleration and top speed come out of the drivetrain, not a constant.
+  const car = new A.Vehicle({ type: 'sedan', fuelL: 50, hasBattery: true, batteryCharge: 1,
+    engineCondition: 0.95, oilLevel: 0.9, coolantLevel: 0.9, fuelAgeDays: 10,
+    tyres: [1, 1, 1, 1] });
+  car.start({ rng: () => 0 });
+  let to100 = null;
+  for (let i = 0; i < 3000; i++) {
+    if (car.rpm > car.spec.redlineRpm * 0.95 && car.gear < car.spec.gears.length - 1) car.gear++;
+    car.step(0.05, { throttle: 1, surfaceGrip: 1 });
+    if (to100 === null && car.speedMs * 3.6 > 100) to100 = i * 0.05;
+  }
+  check('a saloon reaches 100 km/h in a plausible time', to100 > 6 && to100 < 22, `${to100} s`);
+  const topKph = car.speedMs * 3.6;
+  check('and tops out where its gearing says it should', topKph > 150 && topKph < 260,
+    `${topKph.toFixed(0)} km/h`);
+
+  // Fuel consumption at a steady cruise, against the published figure.
+  const cruise = new A.Vehicle({ type: 'sedan', fuelL: 50, hasBattery: true, batteryCharge: 1,
+    engineCondition: 0.95, oilLevel: 0.9, coolantLevel: 0.9, fuelAgeDays: 10, tyres: [1, 1, 1, 1] });
+  cruise.start({ rng: () => 0 });
+  cruise.gear = 5; cruise.speedMs = 25;
+  const f0 = cruise.fuelL;
+  let distM = 0;
+  for (let i = 0; i < 7200; i++) {
+    const throttle = cruise.speedMs < 25 ? 0.45 : 0.2;
+    cruise.step(0.5, { throttle, surfaceGrip: 1 });
+    distM += cruise.speedMs * 0.5;
+  }
+  const per100 = ((f0 - cruise.fuelL) / (distM / 100000));
+  check('and drinks a believable amount at a cruise', per100 > 3 && per100 < 16,
+    `${per100.toFixed(1)} L/100 km over ${(distM / 1000).toFixed(0)} km`);
+
+  // Flat tyres and a wet field both cost grip, and grip is what stops you.
+  const flat = new A.Vehicle({ type: 'pickup', tyres: [0, 1, 1, 1] });
+  check('a flat tyre is counted', flat.flatTyres === 1);
+  check('and it is on the list of what is wrong', flat.missing.length === 0 || !flat.missing.includes('a tyre'));
+  const twoFlat = new A.Vehicle({ type: 'pickup', tyres: [0, 0, 1, 1], hasBattery: true, fuelL: 40, oilLevel: 0.5, coolantLevel: 0.5 });
+  check('two flats and it is not going anywhere', twoFlat.missing.includes('a tyre'));
+
+  // A crash is energy, and a seatbelt is a factor of five in what reaches you.
+  const crasher = new A.Vehicle({ type: 'pickup' });
+  const belted = crasher.collide(20, { belted: true, occupantMassKg: 80 });
+  const loose = new A.Vehicle({ type: 'pickup' }).collide(20, { belted: false, occupantMassKg: 80 });
+  check('a crash at 72 km/h is a serious deceleration', belted.decelG > 25, `${belted.decelG.toFixed(0)} g`);
+  check('and being unbelted multiplies it', loose.decelG > belted.decelG * 4,
+    `${loose.decelG.toFixed(0)} g vs ${belted.decelG.toFixed(0)} g`);
+  check('the energy is the energy', Math.abs(belted.energyJ - 0.5 * 2100 * 400) < 1);
+
+  // Shooting one is not shooting a wall.
+  const shot = new A.Vehicle({ type: 'sedan', hasBattery: true, batteryCharge: 1, fuelL: 40,
+    engineCondition: 0.9, oilLevel: 0.8, coolantLevel: 0.8, fuelAgeDays: 5, tyres: [1, 1, 1, 1] });
+  shot.start({ rng: () => 0 });
+  shot.hitBy('radiator');
+  check('a holed radiator loses its coolant', shot.coolantLevel === 0);
+  shot.gear = 3; shot.speedMs = 20;
+  for (let i = 0; i < 2000; i++) shot.step(0.5, { throttle: 0.6, surfaceGrip: 1 });
+  check('and driving on with no coolant destroys the engine', shot.engineCondition < 0.3,
+    `${(shot.engineCondition * 100).toFixed(0)}% left`);
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

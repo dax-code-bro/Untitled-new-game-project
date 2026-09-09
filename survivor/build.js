@@ -62,6 +62,8 @@ const EXPORTS = [
   'Fire', 'Provision', 'FIRE_KIND', 'FOOD_STATE', 'SAFE_CORE',
   'WATER_TREATMENT', 'treatWater', 'drinkTreated',
 
+  'Horse', 'Vehicle', 'GAIT', 'HORSE_BREED', 'VEHICLE_SPEC', 'fuelViability',
+
   'World', 'Player', 'Inventory', 'GAME_MODE',
 ];
 

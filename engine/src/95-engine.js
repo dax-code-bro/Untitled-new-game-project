@@ -486,12 +486,19 @@ class Engine {
           this.physics.add(plane);
           this.groundBody = plane;
         } else {
-          const n = segments + 1;
+          /* The collider does not have to be the same resolution as the mesh,
+             and usually should not be. A vertex costs sixty bytes of GPU
+             buffer and a collider sample costs four bytes of memory, so on a
+             large map it is worth colliding finer than you draw: the player
+             then walks the real ground rather than the version of it that
+             was cheap to render. */
+          const cSeg = opts.colliderSegments || segments;
+          const n = cSeg + 1;
           const heights = new Float32Array(n * n);
           for (let r = 0; r < n; r++) {
-            const wz = (r / segments - 0.5) * size;
+            const wz = (r / cSeg - 0.5) * size;
             for (let c = 0; c < n; c++) {
-              heights[r * n + c] = heightFn((c / segments - 0.5) * size, wz);
+              heights[r * n + c] = heightFn((c / cSeg - 0.5) * size, wz);
             }
           }
           const field = new Body(Shape.heightfield(heights, { cols: n, rows: n, size }), {
@@ -504,7 +511,7 @@ class Engine {
           this.physics.add(field);
           this.groundBody = field;
           this.terrain = {
-            body: field, size, segments, heightFn,
+            body: field, size, segments, colliderSegments: cSeg, heightFn,
             /* World-space ground height under (x, z), from the collider
                rather than the generator — they agree, and going through the
                collider keeps them agreeing if one is ever displaced. */

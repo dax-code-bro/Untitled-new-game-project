@@ -379,31 +379,56 @@ function buildCity(poi, map, rng) {
       const storeys = distFromCentre < 0.25 ? 14 + ((rng() * 22) | 0)
         : distFromCentre < 0.5 ? 6 + ((rng() * 8) | 0)
         : 3 + ((rng() * 3) | 0);
-      const w = blockM - streetM, d = blockM - streetM;
-      const b = new Building({
-        id: _buildingId++, name: `${poi.name} block ${bx}-${bz}`,
-        kind: storeys > 10 ? 'tower' : storeys > 4 ? 'apartment' : 'storefront',
-        x: cx - w / 2, z: cz - d / 2, y: map.flatten(cx, cz, Math.max(w, d) * 0.8),
-        w, d, storeys, storeyHeightM: storeys > 10 ? 3.6 : 3.0,
-        exteriorAssembly: storeys > 10 ? 'concreteWall' : 'exteriorBrickVeneer',
-        basement: true,
-      });
-      // Only the floors a player will realistically reach are laid out in
-      // full; the rest are shells until entered, which is what keeps a
-      // thirty-storey tower from costing thirty storeys of memory.
-      const detailed = Math.min(storeys, 4);
-      for (let s = 0; s < detailed; s++) {
-        const palette = s === 0
-          ? ['lobby', 'storeroom', 'bathroom', 'hallway', 'office']
-          : ['officeFloor', 'hallway', 'bathroom', 'office', 'storeroom'];
-        const rooms = generateFloorPlan(b, s, { rng, targetRooms: Math.max(4, Math.round(w * d / 40)), palette });
-        b.rooms.push(...rooms);
-        b.walls.push(...buildWalls(b, rooms, s, { rng }));
+      /* A city block is not one building. It is a row of lots along each
+         street with a service alley up the middle, and every lot was built
+         in a different decade to a different height. Generating the block
+         as a single box is what makes a downtown read as a warehouse
+         estate, so the block is subdivided into lots and each lot gets its
+         own building. */
+      const blockW = blockM - streetM, blockD = blockM - streetM;
+      const alleyM = 4;
+      const lotsX = blockW > 46 ? 2 : 1;
+      const lotsZ = blockD > 46 ? 2 : 1;
+      const lotW = (blockW - alleyM * (lotsX - 1)) / lotsX;
+      const lotD = (blockD - alleyM * (lotsZ - 1)) / lotsZ;
+
+      for (let lx = 0; lx < lotsX; lx++) {
+        for (let lz = 0; lz < lotsZ; lz++) {
+          // Every lot on a block differs by a few storeys; a uniform block
+          // reads as one building with lines drawn on it.
+          const lotStoreys = Math.max(1, storeys + ((rng() * 5) | 0) - 2);
+          const w = lotW * (0.86 + rng() * 0.14);
+          const d = lotD * (0.86 + rng() * 0.14);
+          const lotCx = cx - blockW / 2 + lx * (lotW + alleyM) + lotW / 2;
+          const lotCz = cz - blockD / 2 + lz * (lotD + alleyM) + lotD / 2;
+          const b = new Building({
+            id: _buildingId++, name: `${poi.name} ${bx * blocks + bz + 1}${'ABCD'[lx * lotsZ + lz]}`,
+            kind: lotStoreys > 10 ? 'tower' : lotStoreys > 4 ? 'apartment' : 'storefront',
+            x: lotCx - w / 2, z: lotCz - d / 2,
+            y: map.flatten(lotCx, lotCz, Math.max(w, d) * 0.8),
+            w, d, storeys: lotStoreys, storeyHeightM: lotStoreys > 10 ? 3.6 : 3.0,
+            exteriorAssembly: lotStoreys > 10 ? 'concreteWall'
+              : rng() < 0.35 ? 'concreteWall' : 'exteriorBrickVeneer',
+            basement: rng() < 0.7,
+          });
+          // Only the floors a player will realistically reach are laid out in
+          // full; the rest are shells until entered, which is what keeps a
+          // thirty-storey tower from costing thirty storeys of memory.
+          const detailed = Math.min(lotStoreys, 4);
+          for (let s = 0; s < detailed; s++) {
+            const palette = s === 0
+              ? ['lobby', 'storeroom', 'bathroom', 'hallway', 'office']
+              : ['officeFloor', 'hallway', 'bathroom', 'office', 'storeroom'];
+            const rooms = generateFloorPlan(b, s, { rng, targetRooms: Math.max(4, Math.round(w * d / 40)), palette });
+            b.rooms.push(...rooms);
+            b.walls.push(...buildWalls(b, rooms, s, { rng }));
+          }
+          b.undetailedStoreys = lotStoreys - detailed;
+          stockRooms(b, rng, 0.8);
+          wireBuilding(b, rng);
+          poi.buildings.push(b);
+        }
       }
-      b.undetailedStoreys = storeys - detailed;
-      stockRooms(b, rng, 0.8);
-      wireBuilding(b, rng);
-      poi.buildings.push(b);
 
       poi.roads.push({ kind: 'street', x1: cx - blockM / 2, z1: cz, x2: cx + blockM / 2, z2: cz, widthM: streetM });
       poi.roads.push({ kind: 'street', x1: cx, z1: cz - blockM / 2, x2: cx, z2: cz + blockM / 2, widthM: streetM });

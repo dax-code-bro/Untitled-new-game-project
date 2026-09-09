@@ -374,6 +374,7 @@ class Renderer {
       mat.emissive.z * mat.emissiveStrength);
     sh.f('uOpacity', mat.opacity);
     sh.f('uUvScale', mat.uvScale);
+    sh.f('uDetailScale', mat.detailScale || 0);
     sh.f('uNormalStrength', mat.normalStrength);
     sh.f('uSubsurface', mat.subsurface);
     sh.i('uReceiveShadow', mat.receiveShadow ? 1 : 0);

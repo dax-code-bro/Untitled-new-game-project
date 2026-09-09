@@ -238,6 +238,27 @@ const TextureLib = {
        and leaves the hue to the per-vertex colour, which is how terrain is
        shaded in practice. Averaging to 1 is the whole trick: multiply by it
        and the vertex colour comes through unchanged in brightness. */
+    /* Leaf detail, on the same principle as terrainDetail: the albedo
+       averages to 1 so the vertex colour decides the hue and this map only
+       supplies the grain. It exists because the obvious choice — pointing a
+       canopy at the `grass` texture — multiplies two green albedos together
+       and turns a wood black at noon.
+
+       The pattern is two scales: clumps of leaves, and the leaves in them.
+       The occlusion is deliberately strong, because the inside of a crown
+       genuinely is dark and that is most of what makes a tree read as a
+       volume rather than a painted ball. */
+    foliageDetail(u, v, n, c) {
+      const clump = n.fbm(u * 9, v * 9, 31, 3) * 0.5 + 0.5;
+      const leaf = n.fbm(u * 44, v * 44, 47, 3) * 0.5 + 0.5;
+      const vein = n.fbm(u * 150, v * 150, 53, 2) * 0.5 + 0.5;
+      const l = 0.74 + clump * 0.24 + leaf * 0.20 + vein * 0.06;
+      c.r = l * 0.98; c.g = l * 1.02; c.b = l * 0.92;
+      c.rough = 0.80 + leaf * 0.16;
+      c.ao = 0.42 + clump * 0.38 + leaf * 0.20;
+      c.h = clump * 0.6 + leaf * 0.4;
+    },
+
     terrainDetail(u, v, n, c) {
       const coarse = n.fbm(u * 9, v * 9, 5, 3) * 0.5 + 0.5;
       const fine = n.fbm(u * 64, v * 64, 11, 2) * 0.5 + 0.5;
@@ -491,6 +512,11 @@ class Material {
     this.transparent = this.opacity < 1 || !!opts.transparent;
     this.doubleSided = !!opts.doubleSided;
     this.uvScale = opts.uvScale != null ? opts.uvScale : 1;
+    /* How many times finer the close-up detail sample is than the base one.
+       Zero disables it and costs nothing. Worth setting on any surface the
+       player gets within a few metres of — ground above all, where the base
+       tile has to be large enough to cover a landscape. */
+    this.detailScale = opts.detailScale != null ? opts.detailScale : 0;
     this.normalStrength = opts.normalStrength != null ? opts.normalStrength : 1;
     this.texture = opts.texture || null;   // name of a TextureLib kind
     this.castShadow = opts.castShadow !== false;
@@ -547,12 +573,24 @@ const MaterialPresets = {
   rock: { color: 0xa8a49c, texture: 'rock', roughness: 0.92, metalness: 0 },
   stone: { color: 0xa8a49c, texture: 'rock', roughness: 0.92, metalness: 0 },
   grass: { color: 0xffffff, texture: 'grass', roughness: 0.95, metalness: 0, subsurface: 0.35 },
+  /* Neutral grain for anything shaded by vertex colours — a hand-built
+     mesh, a painted panel, a gun. Every other preset bakes a colour into
+     its texture, which multiplies with the vertex colour and darkens it;
+     this one averages to 1 and leaves the colour alone. */
+  painted: { color: 0xffffff, texture: 'terrainDetail', roughness: 0.55, metalness: 0,
+    uvScale: 3.0, normalStrength: 0.35 },
+
+  /* For anything whose colour comes from vertex colours: canopies, shrubs,
+     hedges. The `grass` preset bakes a green albedo of its own and is the
+     wrong thing to point a leaf at. */
+  foliage: { color: 0xffffff, texture: 'foliageDetail', roughness: 0.88, metalness: 0,
+    subsurface: 0.5, doubleSided: true, uvScale: 9, normalStrength: 0.55 },
   dirt: { color: 0xffffff, texture: 'dirt', roughness: 0.96, metalness: 0 },
   // Neutral ground for vertex-coloured terrain: detail from the texture,
   // colour from the mesh.
   // Low normal strength on purpose: ground detail is centimetres of grain
   // over metres of tile, and at full bump it reads as corrugated iron.
-  terrain: { color: 0xffffff, texture: 'terrainDetail', roughness: 0.95, metalness: 0, subsurface: 0.12, normalStrength: 0.3 },
+  terrain: { color: 0xffffff, texture: 'terrainDetail', roughness: 0.95, metalness: 0, subsurface: 0.12, normalStrength: 0.42, detailScale: 22 },
   savanna: { color: 0xffffff, texture: 'savanna', roughness: 0.96, metalness: 0 },
   mud: { color: 0xffffff, texture: 'mud', roughness: 0.8, metalness: 0 },
   sand: { color: 0xffffff, texture: 'sand', roughness: 0.9, metalness: 0 },

@@ -186,10 +186,15 @@
 <div id="crosshair" hidden></div>
 <div id="compass" hidden></div>
 <div id="help" hidden>
-  <b>WASD</b> move &middot; <b>shift</b> run &middot; <b>C</b> crouch &middot; <b>space</b> jump &middot;
-  <b>E</b> interact &middot; <b>Tab</b> inventory &middot; <b>M</b> map &middot; <b>J</b> medical &middot;
-  <b>B</b> build &middot; <b>F</b> fire &middot; <b>G</b> fish &middot; <b>P</b> pause &middot;
-  <b>T</b> time&times; &middot; <b>H</b> hide this
+  <b>WASD</b> move &middot; <b>shift</b> run &middot; <b>ctrl</b> crouch &middot; <b>space</b> jump &middot;
+  <b>E</b> interact (hold for work) &middot; <b>Tab</b> inventory &middot; <b>M</b> map &middot;
+  <b>C</b> condition &amp; medicine &middot; <b>N</b> build (then <b>1-7</b>) &middot; <b>X</b> wiring<br>
+  <b>F</b> fire &middot; <b>G</b> lean-to (<b>shift</b> drying rack) &middot; <b>K</b> treat water &middot;
+  <b>R</b> cast / reel &middot; <b>B</b> bait &middot; <b>[ ]</b> depth &middot; <b>J</b> drink &middot;
+  <b>Q</b> relieve yourself &middot; <b>V</b> sleep<br>
+  <b>1-5</b> weapons &middot; <b>L</b> load &middot; <b>I</b> inspect &middot; <b>U</b> clear a stoppage &middot;
+  <b>Y</b> engine &middot; <b>shift+Q</b> dismount &middot; <b>P</b> pause &middot; <b>T</b> time&times; &middot;
+  <b>Esc</b> menu &middot; <b>H</b> hide this
 </div>
 <div id="vignette"></div>
 
@@ -197,7 +202,7 @@
   <h1>DIED</h1>
   <div id="gameoverCause"></div>
   <div id="gameoverDetail"></div>
-  <button class="btn" onclick="location.reload()">Try again</button>
+  <button class="btn" onclick="(window.SURVIVOR_RESPAWN||function(){location.reload();})()">Wake up on the shore</button>
 </div>
 
 <script src="../engine/legend-engine.js"></script>
