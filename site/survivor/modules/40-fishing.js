@@ -151,6 +151,11 @@ SurvivorGame.module({
 
     /* ---- per-frame ------------------------------------------------- */
     ctx.onUpdate((dt) => {
+      /* Two flags for whoever is listening: a controller needs to know the
+         rod is out to change what its buttons do, and needs the line tension
+         to put it through the pad's heavy motor. */
+      ctx.state.fishing = rodOut;
+      ctx.state.fishTension = fight ? Math.min(1.4, fight.tension || 0) : 0;
       if (!rodOut) return;
       const env = ctx.world.clock.environment();
 
@@ -165,7 +170,12 @@ SurvivorGame.module({
       if (fight) {
         /* The fight. Drag is the mouse: hold to lean on it, let go to give
            line. Everything else is the fish. */
-        const holding = game.input.down('mouse0') || game.input.down(' ');
+        /* Leaning on the drag: the left mouse button, the space bar, or the
+           right trigger. `input.down('mouse0')` was never a thing the engine
+           reports — the mouse lives on `input.pointer` — so this was quietly
+           space-only until a pad went looking for it. */
+        const holding = game.input.pointer.down || game.input.down(' ')
+          || !!ctx.state.triggerHeld;
         fight.drag += ((holding ? 0.95 : 0.12) - fight.drag) * Math.min(1, dt * 3.5);
         fight.time += dt;
         const r = fight.fish.fight(dt, {
@@ -192,7 +202,7 @@ SurvivorGame.module({
           + `<div style="margin-top:6px;height:10px;background:#1a1c1e;border:1px solid #3a3f44">`
           + `<div style="height:100%;width:${Math.min(100, pct)}%;background:${pct > 88 ? '#d8442c' : pct > 60 ? '#d8a22c' : '#4c9a4c'}"></div></div>`
           + `<div style="font-size:11px;opacity:.75;margin-top:4px">line ${lineStrengthKg().toFixed(1)} kg`
-          + ` · fish ${Math.round(fight.fish.stamina * 100)}% · hold to lean on it</div>`;
+          + ` · fish ${Math.round(fight.fish.stamina * 100)}% · hold ${ctx.hint('space', 'rt')} to lean on it</div>`;
 
         if (r.lost) {
           ctx.log(`Lost it: ${r.reason}.`, true);
@@ -211,7 +221,8 @@ SurvivorGame.module({
       cast.lastTry += dt;
       panel.style.display = 'block';
       panel.innerHTML = `<div style="font-size:12px;opacity:.8">${cast.bait} at ${cast.depthM.toFixed(1)} m`
-        + ` · soaking ${cast.soak.toFixed(0)} s · <b>R</b> reel in · <b>[ ]</b> depth · <b>B</b> bait</div>`;
+        + ` · soaking ${cast.soak.toFixed(0)} s · <b>${ctx.hint('r', 'x')}</b> reel in`
+        + ` · <b>${ctx.hint('[ ]', 'dpad')}</b> depth · <b>${ctx.hint('b', 'y')}</b> bait</div>`;
 
       if (cast.lastTry >= 1) {
         cast.lastTry = 0;

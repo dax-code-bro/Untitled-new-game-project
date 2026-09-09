@@ -7928,6 +7928,322 @@ class WaterVolume {
 }
 
 
+/* ─────────── 88-gamepad.js ─────────── */
+/* ============================================================
+   GAMEPAD
+
+   The browser hands you a flat array of button objects and a
+   flat array of axes, polled rather than evented, with no edge
+   detection, no deadzone, no rumble helper and a "standard
+   mapping" that most pads honour and some do not. This turns
+   that into something a game can actually be built on.
+
+   Three things here are worth stating because getting them
+   wrong is what makes a pad feel bad rather than look broken:
+
+   The deadzone is radial, not per-axis. A deadzone applied to
+   each axis separately cuts a square hole out of the middle of
+   a round stick, so pushing diagonally at low deflection gives
+   you movement on one axis and nothing on the other, and the
+   character snaps to the compass points. Taking the magnitude
+   of the vector, subtracting the deadzone from that and
+   rescaling what is left back to 0..1 keeps the direction the
+   player is actually pointing and keeps the full range of
+   speeds available.
+
+   Look is exponential, not linear. A stick pushed halfway
+   should turn you slowly enough to track a deer at two hundred
+   metres, and pushed fully should turn you fast enough to
+   check behind you. One linear mapping cannot do both, so the
+   normalised deflection is raised to a power before it becomes
+   a turn rate.
+
+   Look is a rate, movement is a position. Holding the right
+   stick over turns you continuously — the value is degrees per
+   second and has to be multiplied by the frame time. Holding
+   the left stick over does not walk you continuously faster;
+   the value is how far the stick is pushed. Treating either
+   like the other is the single most common gamepad bug.
+   ============================================================ */
+
+/* Indices into the standard mapping. These are positions on the pad, not
+   printed labels: button 0 is always the bottom face button, whatever a
+   given manufacturer has written on it. The labels live in PAD_LAYOUT. */
+const PAD_BUTTON = {
+  a: 0, b: 1, x: 2, y: 3,
+  lb: 4, rb: 5, lt: 6, rt: 7,
+  back: 8, start: 9, ls: 10, rs: 11,
+  up: 12, down: 13, left: 14, right: 15,
+  guide: 16,
+};
+
+/* Aliases, so a game can say `rt` or `r2` and mean the same trigger. */
+const PAD_ALIAS = {
+  cross: 'a', circle: 'b', square: 'x', triangle: 'y',
+  l1: 'lb', r1: 'rb', l2: 'lt', r2: 'rt',
+  l3: 'ls', r3: 'rs', share: 'back', options: 'start', select: 'back',
+  create: 'back', menu: 'start', view: 'back', ps: 'guide', home: 'guide',
+  dpadup: 'up', dpaddown: 'down', dpadleft: 'left', dpadright: 'right',
+};
+
+/* What to print on screen for each position, by pad family. Nintendo's
+   physical A and B sit where an Xbox pad's B and A sit, which is why the
+   labels have to be a per-family table rather than one set of names: the
+   index is the position, the glyph is what is written there. */
+const PAD_LAYOUT = {
+  xbox: {
+    name: 'Xbox',
+    a: 'A', b: 'B', x: 'X', y: 'Y',
+    lb: 'LB', rb: 'RB', lt: 'LT', rt: 'RT',
+    back: 'View', start: 'Menu', ls: 'LS', rs: 'RS',
+    up: '↑', down: '↓', left: '←', right: '→', guide: 'Xbox',
+  },
+  playstation: {
+    name: 'PlayStation',
+    a: '✕', b: '○', x: '□', y: '△',
+    lb: 'L1', rb: 'R1', lt: 'L2', rt: 'R2',
+    back: 'Create', start: 'Options', ls: 'L3', rs: 'R3',
+    up: '↑', down: '↓', left: '←', right: '→', guide: 'PS',
+  },
+  nintendo: {
+    name: 'Nintendo',
+    // Physically swapped relative to Xbox: the bottom button is B.
+    a: 'B', b: 'A', x: 'Y', y: 'X',
+    lb: 'L', rb: 'R', lt: 'ZL', rt: 'ZR',
+    back: '−', start: '+', ls: 'L3', rs: 'R3',
+    up: '↑', down: '↓', left: '←', right: '→', guide: 'Home',
+  },
+  generic: {
+    name: 'Gamepad',
+    a: 'A', b: 'B', x: 'X', y: 'Y',
+    lb: 'L1', rb: 'R1', lt: 'L2', rt: 'R2',
+    back: 'Select', start: 'Start', ls: 'L3', rs: 'R3',
+    up: '↑', down: '↓', left: '←', right: '→', guide: 'Home',
+  },
+};
+
+function padFamily(id) {
+  const s = String(id || '').toLowerCase();
+  if (/dualsense|dualshock|playstation|\bps[345]\b|054c/.test(s)) return 'playstation';
+  if (/switch|joy-con|joycon|nintendo|057e|pro controller/.test(s)) return 'nintendo';
+  if (/xbox|xinput|045e|microsoft/.test(s)) return 'xbox';
+  return 'generic';
+}
+
+/* Radial deadzone and response curve, returning the corrected vector and
+   its magnitude. Below the deadzone it is exactly zero — a stick that does
+   not centre perfectly must not creep — and at the edge it is exactly one,
+   so full deflection is reachable on a worn stick. */
+function padStick(x, y, deadzone, curve, outerZone) {
+  const mag = Math.hypot(x, y);
+  if (!(mag > deadzone)) return { x: 0, y: 0, mag: 0 };
+  const outer = outerZone != null ? outerZone : 0.96;
+  const n = Math.min(1, (mag - deadzone) / Math.max(1e-4, outer - deadzone));
+  const shaped = curve === 1 ? n : Math.pow(n, curve);
+  const k = shaped / mag;
+  return { x: x * k, y: y * k, mag: shaped };
+}
+
+
+class Pad {
+  constructor(opts = {}) {
+    this.index = null;               // which slot the live pad is in
+    this.id = '';
+    this.family = 'generic';
+    this.connected = false;
+    /* True only after the player has actually touched the pad. A pad can be
+       plugged in and idle while someone plays on the keyboard, and the HUD
+       should not switch to button glyphs until it is being used. */
+    this.active = false;
+    this.lastInputAt = 0;
+
+    this.deadzone = opts.deadzone != null ? opts.deadzone : 0.16;
+    this.triggerThreshold = opts.triggerThreshold != null ? opts.triggerThreshold : 0.35;
+    this.moveCurve = opts.moveCurve != null ? opts.moveCurve : 1.5;
+    this.lookCurve = opts.lookCurve != null ? opts.lookCurve : 2.2;
+    this.vibration = opts.vibration !== false;
+
+    this.left = { x: 0, y: 0, mag: 0 };
+    this.right = { x: 0, y: 0, mag: 0 };
+    this.triggers = { lt: 0, rt: 0 };
+
+    this._down = new Set();
+    this._pressed = new Set();
+    this._released = new Set();
+    this._values = new Float32Array(20);
+    this._rumbleUntil = 0;
+    this._rumbleStrength = 0;
+    this._listeners = [];
+
+    if (typeof window !== 'undefined' && window.addEventListener) {
+      const onConnect = (e) => { this._adopt(e.gamepad); };
+      const onDisconnect = (e) => {
+        if (e.gamepad && e.gamepad.index === this.index) {
+          this.index = null; this.connected = false; this.active = false;
+          this._down.clear(); this.left = { x: 0, y: 0, mag: 0 }; this.right = { x: 0, y: 0, mag: 0 };
+        }
+      };
+      window.addEventListener('gamepadconnected', onConnect);
+      window.addEventListener('gamepaddisconnected', onDisconnect);
+      this._listeners.push([window, 'gamepadconnected', onConnect],
+        [window, 'gamepaddisconnected', onDisconnect]);
+    }
+  }
+
+  _adopt(raw) {
+    if (!raw) return;
+    this.index = raw.index;
+    this.id = raw.id || '';
+    this.family = padFamily(this.id);
+    this.connected = true;
+  }
+
+  /* The live pad object. It has to be re-read from the browser every frame:
+     the objects handed back by getGamepads() are snapshots in Chrome and
+     live in Firefox, and holding on to one gives you stale buttons in one
+     browser and not the other. */
+  _raw() {
+    if (typeof navigator === 'undefined' || !navigator.getGamepads) return null;
+    let pads;
+    try { pads = navigator.getGamepads(); } catch (e) { return null; }
+    if (!pads) return null;
+    if (this.index != null && pads[this.index]) return pads[this.index];
+    // No adopted pad, or it went away: take the first one that is connected.
+    for (const p of pads) {
+      if (p && p.connected !== false) { this._adopt(p); return p; }
+    }
+    this.connected = false;
+    return null;
+  }
+
+  /* Poll once per frame, before the game reads anything. */
+  poll(now) {
+    this._pressed.clear();
+    this._released.clear();
+    const raw = this._raw();
+    if (!raw) {
+      if (this._down.size) { for (const b of this._down) this._released.add(b); this._down.clear(); }
+      this.left = { x: 0, y: 0, mag: 0 };
+      this.right = { x: 0, y: 0, mag: 0 };
+      this.triggers.lt = 0; this.triggers.rt = 0;
+      return this;
+    }
+    this.connected = true;
+
+    const ax = raw.axes || [];
+    this.left = padStick(ax[0] || 0, ax[1] || 0, this.deadzone, this.moveCurve);
+    this.right = padStick(ax[2] || 0, ax[3] || 0, this.deadzone, this.lookCurve);
+
+    const buttons = raw.buttons || [];
+    let touched = this.left.mag > 0 || this.right.mag > 0;
+
+    for (const name of Object.keys(PAD_BUTTON)) {
+      const i = PAD_BUTTON[name];
+      const b = buttons[i];
+      /* An analogue trigger reports a value even when `pressed` is false, and
+         some pads never set `pressed` on the triggers at all — so a trigger
+         is down when it is pushed past the threshold, whatever the flag says. */
+      const value = b ? (typeof b.value === 'number' ? b.value : (b.pressed ? 1 : 0)) : 0;
+      const isTrigger = name === 'lt' || name === 'rt';
+      const held = isTrigger
+        ? value >= this.triggerThreshold
+        : !!(b && (b.pressed || value > 0.5));
+      this._values[i] = value;
+      if (isTrigger) this.triggers[name] = value;
+
+      if (held) {
+        if (!this._down.has(name)) this._pressed.add(name);
+        this._down.add(name);
+        touched = true;
+      } else if (this._down.has(name)) {
+        this._down.delete(name);
+        this._released.add(name);
+      }
+    }
+
+    if (touched) {
+      this.active = true;
+      this.lastInputAt = now || 0;
+    }
+    return this;
+  }
+
+  _key(name) {
+    const n = String(name || '').toLowerCase();
+    return PAD_ALIAS[n] || n;
+  }
+
+  down(name) { return this._down.has(this._key(name)); }
+  justPressed(name) { return this._pressed.has(this._key(name)); }
+  justReleased(name) { return this._released.has(this._key(name)); }
+  /* 0..1 for a trigger, 0 or 1 for a digital button. */
+  value(name) {
+    const k = this._key(name);
+    const i = PAD_BUTTON[k];
+    return i == null ? 0 : this._values[i];
+  }
+  get anyPressed() { return this._pressed.size > 0; }
+
+  /* What to print for a button, in this pad's own language. */
+  glyph(name) {
+    const layout = PAD_LAYOUT[this.family] || PAD_LAYOUT.generic;
+    return layout[this._key(name)] || String(name).toUpperCase();
+  }
+  get layoutName() { return (PAD_LAYOUT[this.family] || PAD_LAYOUT.generic).name; }
+
+  /* Turn rate in radians for this frame: deflection shaped by the curve,
+     times a sensitivity in radians per second, times the frame time. */
+  lookDelta(dt, sensitivity = 3.2, invertY = false) {
+    if (!this.right.mag) return { yaw: 0, pitch: 0 };
+    return {
+      yaw: -this.right.x * sensitivity * dt,
+      pitch: (invertY ? -1 : 1) * this.right.y * sensitivity * dt,
+    };
+  }
+
+  /* Rumble. Louder or longer wins: a heartbeat must not cut off the
+     recoil of a rifle, and a rifle should override a heartbeat. */
+  rumble(strength = 0.5, seconds = 0.2, opts = {}) {
+    if (!this.vibration) return false;
+    const now = (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
+    if (now < this._rumbleUntil && strength < this._rumbleStrength) return false;
+    const raw = this._raw();
+    const act = raw && (raw.vibrationActuator
+      || (raw.hapticActuators && raw.hapticActuators[0]));
+    if (!act || !act.playEffect) return false;
+    const s = Math.max(0, Math.min(1, strength));
+    this._rumbleUntil = now + seconds;
+    this._rumbleStrength = s;
+    try {
+      act.playEffect('dual-rumble', {
+        startDelay: 0,
+        duration: Math.round(seconds * 1000),
+        // The heavy motor carries impact, the light one carries texture.
+        strongMagnitude: opts.strong != null ? opts.strong : s,
+        weakMagnitude: opts.weak != null ? opts.weak : s * 0.6,
+      });
+    } catch (e) {
+      return false;
+    }
+    return true;
+  }
+
+  stopRumble() {
+    const raw = this._raw();
+    const act = raw && raw.vibrationActuator;
+    if (act && act.reset) { try { act.reset(); } catch (e) { /* not supported */ } }
+    this._rumbleUntil = 0;
+    this._rumbleStrength = 0;
+  }
+
+  dispose() {
+    this.stopRumble();
+    for (const [t, type, fn] of this._listeners) t.removeEventListener(type, fn);
+    this._listeners.length = 0;
+  }
+}
+
+
 /* ─────────── 90-animation.js ─────────── */
 /* ============================================================
    ANIMATION — skeletons, clips, blending, IK, and a facial rig.
@@ -9278,9 +9594,27 @@ class Input {
     this.pointer = { x: 0, y: 0, dx: 0, dy: 0, down: false, justDown: false, justUp: false };
     this.axes = { x: 0, y: 0 };
     this.anyPressed = false;
+    /* The pad is a first-class input, not keys in a costume. Games that want
+       real controller support read `input.pad` and bind their own verbs;
+       `padKeys` exists only so a demo written against WASD keeps working
+       when someone plugs a pad in, and is off by default because a game that
+       maps its own buttons does not want them arriving twice. */
+    this.pad = new Pad();
+    this.padKeys = false;
+    /* Look is a rate rather than a delta, so it has to be scaled by the
+       frame time by whoever consumes it. Filled by beginFrame from the
+       right stick; the mouse writes into pointer.dx/dy instead. */
+    this.look = { x: 0, y: 0 };
+    this.lookSensitivity = 3.4;      // radians per second at full deflection
+    this.invertLookY = false;
     this._listeners = [];
     this._bind(target);
   }
+
+  /* Which device the player is actually using, so the HUD can show the right
+     prompts. The pad wins as soon as it is touched and gives the lead back
+     the moment a key or the mouse is used. */
+  get scheme() { return this.pad.active ? 'gamepad' : 'keyboard'; }
 
   _on(target, type, fn, opts) {
     target.addEventListener(type, fn, opts);
@@ -9290,6 +9624,7 @@ class Input {
   _bind(target) {
     this._on(target, 'keydown', (e) => {
       const k = normalizeKey(e.key, e.code);
+      this.pad.active = false;      // the keyboard takes the prompts back
       if (!this.keys.has(k)) this.pressed.add(k);
       this.keys.add(k);
       this.anyPressed = true;
@@ -9316,6 +9651,7 @@ class Input {
     this._on(target, 'pointermove', pointerPos);
     this._on(target, 'pointerdown', (e) => {
       pointerPos(e);
+      this.pad.active = false;
       this.pointer.down = true;
       this.pointer.justDown = true;
       this.anyPressed = true;
@@ -9327,36 +9663,45 @@ class Input {
     this._on(target, 'touchstart', () => { this.anyPressed = true; }, { passive: true });
   }
 
-  /* Gamepad state is polled, not evented, so it is sampled once per frame
-     and folded into the same key set the keyboard fills. */
-  _pollGamepad() {
-    if (!navigator.getGamepads) return;
-    const pads = navigator.getGamepads();
-    for (const pad of pads) {
-      if (!pad) continue;
-      const dz = 0.22;
-      const lx = pad.axes[0] || 0, ly = pad.axes[1] || 0;
-      if (Math.abs(lx) > dz) this.axes.x += lx;
-      if (Math.abs(ly) > dz) this.axes.y += ly;
-      const press = (i, key) => { if (pad.buttons[i] && pad.buttons[i].pressed) { if (!this.keys.has(key)) this.pressed.add(key); this.keys.add(key); this.anyPressed = true; } };
-      press(0, ' '); press(1, 'x'); press(2, 'x'); press(3, ' ');
-      press(12, 'arrowup'); press(13, 'arrowdown'); press(14, 'arrowleft'); press(15, 'arrowright');
-      break;
-    }
+  /* Optional legacy folding: a pad's face buttons and d-pad arriving as the
+     keys a keyboard-only demo already listens for. */
+  _foldPadKeys() {
+    const p = this.pad;
+    const press = (padName, key) => {
+      if (!p.down(padName)) return;
+      if (!this.keys.has(key)) this.pressed.add(key);
+      this.keys.add(key);
+      this.anyPressed = true;
+    };
+    press('a', ' '); press('y', ' '); press('b', 'x'); press('x', 'x');
+    press('up', 'arrowup'); press('down', 'arrowdown');
+    press('left', 'arrowleft'); press('right', 'arrowright');
   }
 
   /* Call once per frame, before game logic. */
   beginFrame() {
     this.axes.x = 0;
     this.axes.y = 0;
-    this._pollGamepad();
-    // Keyboard contribution, so WASD and a stick feed the same axes.
+    this.pad.poll(typeof performance !== 'undefined' ? performance.now() : 0);
+    if (this.padKeys) this._foldPadKeys();
+
+    /* Keyboard first, so WASD is exactly ±1 and unaffected by the curve the
+       stick is shaped with. The stick then contributes on top, which is what
+       lets someone steer with a stick and sprint with a key. */
     if (this.down('a') || this.down('arrowleft')) this.axes.x -= 1;
     if (this.down('d') || this.down('arrowright')) this.axes.x += 1;
     if (this.down('w') || this.down('arrowup')) this.axes.y -= 1;
     if (this.down('s') || this.down('arrowdown')) this.axes.y += 1;
-    this.axes.x = clamp(this.axes.x, -1, 1);
-    this.axes.y = clamp(this.axes.y, -1, 1);
+    this.axes.x += this.pad.left.x;
+    this.axes.y += this.pad.left.y;
+    // Clamping the components would let a diagonal run 41% faster than a
+    // straight line, so the vector is clamped by its length instead.
+    const mag = Math.hypot(this.axes.x, this.axes.y);
+    if (mag > 1) { this.axes.x /= mag; this.axes.y /= mag; }
+
+    this.look.x = this.pad.right.x;
+    this.look.y = this.pad.right.y;
+    if (this.pad.anyPressed || this.pad.left.mag || this.pad.right.mag) this.anyPressed = true;
   }
 
   /* Call once per frame, after game logic, to clear edge-triggered state. */
@@ -9377,7 +9722,11 @@ class Input {
   get actionPressed() { return this.justPressed(' '); }
   get secondaryPressed() { return this.justPressed('x'); }
 
+  /* Rumble, forwarded so a game never has to reach past `input` for it. */
+  rumble(strength, seconds, opts) { return this.pad.rumble(strength, seconds, opts); }
+
   dispose() {
+    this.pad.dispose();
     for (const [t, type, fn, opts] of this._listeners) t.removeEventListener(type, fn, opts);
     this._listeners.length = 0;
   }
@@ -11546,6 +11895,20 @@ class Engine {
     const cam = this.camera;
     const cfg = this._camConfig;
 
+    /* Look from the right stick. It lives here rather than in the pointer
+       handler because it is a rate: the mouse gives you a distance moved and
+       is done, while a stick held over has to keep turning you for as long
+       as it is held, which only the frame loop knows about. */
+    if (this._camMode !== 'manual' && cfg.userControl !== false && this.input) {
+      const look = this.input.look;
+      if (look && (look.x || look.y)) {
+        const sens = this.input.lookSensitivity;
+        this._camYaw -= look.x * sens * dt;
+        const dy = (this.input.invertLookY ? -1 : 1) * look.y * sens * dt;
+        this._camPitch = clamp(this._camPitch + dy, -1.35, 1.4);
+      }
+    }
+
     if (this._camMode === 'follow' && this._camTarget) {
       const t = this._camTarget.position;
       const yaw = this._camYaw;
@@ -13579,7 +13942,8 @@ const LegendEngine = {
   heightfieldSurface, heightfieldSampleWorld,
   Engine, Actor, Material, Body, PhysicsWorld, Shape, SHAPE,
   Fluid, WaterVolume, WATER_PRESETS, Animal, ANIMAL_SPECIES, Fracture, ParticleSystem, Skeleton, AnimationClip, Face,
-  Grass, Input, Audio, GltfAsset, GltfInstance,
+  Grass, Input, Audio, Pad, PAD_BUTTON, PAD_LAYOUT, padStick, padFamily,
+  GltfAsset, GltfInstance,
   clamp, lerp, smoothstep,
 };
 

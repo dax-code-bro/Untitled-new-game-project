@@ -319,6 +319,17 @@
     #menuScreen .note { font-size: 11px; line-height: 1.7; margin: 6px 0 0; }
     #menuScreen code { word-break: break-all; font-size: 11px; }
     #menuScreen .foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 4px; }
+    #menuScreen .padH3 { margin: 16px 0 6px; font: 400 12px/1.2 inherit; letter-spacing: .1em; color: var(--dim); }
+    #menuScreen .padMap { border-collapse: collapse; width: 100%; font-size: 11.5px; }
+    #menuScreen .padMap td { padding: 4px 12px 4px 0; vertical-align: top; }
+    /* The glyph column is fixed and centred so a row of ✕ ○ □ △ lines up
+       with a row of A B X Y, whatever the pad calls its buttons. */
+    #menuScreen .padMap td:first-child {
+      width: 118px; color: var(--ink); text-align: center; white-space: nowrap;
+      border: 1px solid var(--edge); border-radius: 3px; padding: 3px 8px;
+    }
+    #menuScreen .padMap tr + tr td { margin-top: 4px; }
+    #menuScreen .padMap tr td:last-child { color: var(--dim); padding-left: 12px; }
   `;
 
   function esc(s) {
@@ -335,6 +346,7 @@
     overlay = document.createElement('div');
     overlay.id = 'menuScreen';
     overlay.className = 'screen';
+    overlay.dataset.menu = '1';
     overlay.hidden = true;
     sheet = document.createElement('div');
     sheet.className = 'sheet';
@@ -474,6 +486,8 @@
         a 4K buffer if the display has one.</p>
       </section>
 
+      ${controllerSection()}
+
       <section>
         <h2>audio</h2>
         <div>
@@ -503,6 +517,68 @@
     wireSliders();
   }
 
+  /* Controller settings. The section only appears once a pad has been seen,
+     because a page of stick options is noise to somebody playing on a
+     keyboard, and it names the pad it found so there is no doubt which
+     device the settings are about. */
+  function controllerSection() {
+    const pad = C.game && C.game.input && C.game.input.pad;
+    const o = C.state.gamepadOptions;
+    if (!pad || !o || !pad.connected) {
+      return `<section>
+        <h2>controller</h2>
+        <p class="note faint">No controller found. Plug one in, or wake a wireless one with a
+        button press, and this page fills in with its own buttons and settings.</p>
+      </section>`;
+    }
+    const g = (n) => esc(pad.glyph(n));
+    const toggle = (act, on, label) =>
+      `<button class="btn${on ? ' on' : ''}" data-act="${act}">${esc(label)}</button>`;
+    return `<section>
+      <h2>controller</h2>
+      <p class="note faint">${esc(pad.layoutName)} layout &middot; <span class="faint">${esc(pad.id || 'gamepad')}</span></p>
+      <div class="ctl">
+        <span class="k">look speed</span>
+        <input type="range" id="padSens" min="1.2" max="8" step="0.1" value="${esc(o.sensitivity)}">
+        <span class="val" id="padSensVal">${esc(o.sensitivity.toFixed(1))}</span>
+      </div>
+      <div class="ctl">
+        <span class="k">dead zone</span>
+        <input type="range" id="padDz" min="0.02" max="0.4" step="0.01" value="${esc(o.deadzone)}">
+        <span class="val" id="padDzVal">${esc(Math.round(o.deadzone * 100))}%</span>
+      </div>
+      <div class="ctl">
+        <span class="k">look curve</span>
+        <input type="range" id="padCurve" min="1" max="4" step="0.1" value="${esc(o.lookCurve)}">
+        <span class="val" id="padCurveVal">${esc(o.lookCurve.toFixed(1))}</span>
+      </div>
+      <div>
+        ${toggle('padInvert', o.invertY, `Invert Y ${o.invertY ? 'on' : 'off'}`)}
+        ${toggle('padSouthpaw', o.southpaw, `Southpaw ${o.southpaw ? 'on' : 'off'}`)}
+        ${toggle('padVibe', o.vibration, `Vibration ${o.vibration ? 'on' : 'off'}`)}
+        ${toggle('padAim', o.aimSlowdown, `Aim slowdown ${o.aimSlowdown ? 'on' : 'off'}`)}
+        ${toggle('padHoldAim', o.holdToAim, o.holdToAim ? 'Hold to aim' : 'Toggle aim')}
+        ${toggle('padHoldSprint', o.holdToSprint, o.holdToSprint ? 'Hold to sprint' : 'Toggle sprint')}
+      </div>
+      <p class="note faint">Aim slowdown makes the stick less sensitive near an animal. It never
+      moves your aim for you and never bends a shot &mdash; the ballistics are the same
+      whichever device is holding the gun.</p>
+      <h3 class="padH3">what the buttons do</h3>
+      <table class="padMap">
+        <tr><td>${g('lb')} hold</td><td>the wheel &mdash; fire, shelter, water, drink, sleep and the rest</td></tr>
+        <tr><td>${g('rt')} / ${g('lt')}</td><td>fire / aim &mdash; and throttle / brake in a vehicle</td></tr>
+        <tr><td>${g('a')}</td><td>jump &mdash; start the engine in a vehicle</td></tr>
+        <tr><td>${g('b')}</td><td>stand, crouch, prone &mdash; get out, or back out of a screen</td></tr>
+        <tr><td>${g('x')}</td><td>interact, held for work</td></tr>
+        <tr><td>${g('y')}</td><td>inspect the weapon &mdash; change bait while fishing</td></tr>
+        <tr><td>${g('rb')} / ${g('rs')}</td><td>load / next weapon</td></tr>
+        <tr><td>${g('ls')}</td><td>sprint</td></tr>
+        <tr><td>${g('up')} ${g('down')} ${g('left')} ${g('right')}</td><td>build &middot; condition &middot; map &middot; inventory</td></tr>
+        <tr><td>${g('start')} / ${g('back')}</td><td>this menu / the key list</td></tr>
+      </table>
+    </section>`;
+  }
+
   function wireSliders() {
     const fov = sheet.querySelector('#menuFov');
     if (fov) {
@@ -524,6 +600,21 @@
       });
       sens.addEventListener('change', persistSettings);
     }
+
+    const padOpts = C.state.gamepadOptions;
+    const padSlider = (id, key, lo, hi, fmt) => {
+      const el = sheet.querySelector(`#${id}`);
+      if (!el || !padOpts) return;
+      el.addEventListener('input', () => {
+        padOpts[key] = num(el.value, padOpts[key], lo, hi);
+        const out = sheet.querySelector(`#${id}Val`);
+        if (out) out.textContent = fmt(padOpts[key]);
+        if (C.state.gamepadApply) C.state.gamepadApply();
+      });
+    };
+    padSlider('padSens', 'sensitivity', 1.2, 8, (v) => v.toFixed(1));
+    padSlider('padDz', 'deadzone', 0.02, 0.4, (v) => `${Math.round(v * 100)}%`);
+    padSlider('padCurve', 'lookCurve', 1, 4, (v) => v.toFixed(1));
 
     const vol = sheet.querySelector('#menuVol');
     if (vol) {
@@ -557,6 +648,16 @@
         settings.autosave = !settings.autosave;
         autosaveClock = 0;
         persistSettings();
+      } else if (act.startsWith('pad')) {
+        const o = C.state.gamepadOptions;
+        const field = { padInvert: 'invertY', padSouthpaw: 'southpaw', padVibe: 'vibration',
+          padAim: 'aimSlowdown', padHoldAim: 'holdToAim', padHoldSprint: 'holdToSprint' }[act];
+        if (o && field) {
+          o[field] = !o[field];
+          if (C.state.gamepadApply) C.state.gamepadApply();
+          // A short buzz on the way in confirms vibration is really on.
+          if (field === 'vibration' && o.vibration) C.game.input.pad.rumble(0.5, 0.15);
+        }
       } else if (act === 'fly') {
         setCreative('creativeFly', !C.state.creativeFly);
       } else if (act === 'build') {
@@ -703,6 +804,8 @@
       ensureScreen();
 
       window.addEventListener('keydown', onKeyCapture, true);
+      // Core keeps Escape from reaching here while another sheet is up, so
+      // this only ever has to toggle the menu itself.
       ctx.key('escape', () => { if (open) closeMenu(); else openMenu(); }, 'Menu, settings and save');
 
       if (ctx.world.mode === 'creative') {

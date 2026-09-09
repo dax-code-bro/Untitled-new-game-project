@@ -55,7 +55,8 @@ const LegendEngine = {
   heightfieldSurface, heightfieldSampleWorld,
   Engine, Actor, Material, Body, PhysicsWorld, Shape, SHAPE,
   Fluid, WaterVolume, WATER_PRESETS, Animal, ANIMAL_SPECIES, Fracture, ParticleSystem, Skeleton, AnimationClip, Face,
-  Grass, Input, Audio, GltfAsset, GltfInstance,
+  Grass, Input, Audio, Pad, PAD_BUTTON, PAD_LAYOUT, padStick, padFamily,
+  GltfAsset, GltfInstance,
   clamp, lerp, smoothstep,
 };
 

@@ -339,9 +339,27 @@ class Input {
     this.pointer = { x: 0, y: 0, dx: 0, dy: 0, down: false, justDown: false, justUp: false };
     this.axes = { x: 0, y: 0 };
     this.anyPressed = false;
+    /* The pad is a first-class input, not keys in a costume. Games that want
+       real controller support read `input.pad` and bind their own verbs;
+       `padKeys` exists only so a demo written against WASD keeps working
+       when someone plugs a pad in, and is off by default because a game that
+       maps its own buttons does not want them arriving twice. */
+    this.pad = new Pad();
+    this.padKeys = false;
+    /* Look is a rate rather than a delta, so it has to be scaled by the
+       frame time by whoever consumes it. Filled by beginFrame from the
+       right stick; the mouse writes into pointer.dx/dy instead. */
+    this.look = { x: 0, y: 0 };
+    this.lookSensitivity = 3.4;      // radians per second at full deflection
+    this.invertLookY = false;
     this._listeners = [];
     this._bind(target);
   }
+
+  /* Which device the player is actually using, so the HUD can show the right
+     prompts. The pad wins as soon as it is touched and gives the lead back
+     the moment a key or the mouse is used. */
+  get scheme() { return this.pad.active ? 'gamepad' : 'keyboard'; }
 
   _on(target, type, fn, opts) {
     target.addEventListener(type, fn, opts);
@@ -351,6 +369,7 @@ class Input {
   _bind(target) {
     this._on(target, 'keydown', (e) => {
       const k = normalizeKey(e.key, e.code);
+      this.pad.active = false;      // the keyboard takes the prompts back
       if (!this.keys.has(k)) this.pressed.add(k);
       this.keys.add(k);
       this.anyPressed = true;
@@ -377,6 +396,7 @@ class Input {
     this._on(target, 'pointermove', pointerPos);
     this._on(target, 'pointerdown', (e) => {
       pointerPos(e);
+      this.pad.active = false;
       this.pointer.down = true;
       this.pointer.justDown = true;
       this.anyPressed = true;
@@ -388,36 +408,45 @@ class Input {
     this._on(target, 'touchstart', () => { this.anyPressed = true; }, { passive: true });
   }
 
-  /* Gamepad state is polled, not evented, so it is sampled once per frame
-     and folded into the same key set the keyboard fills. */
-  _pollGamepad() {
-    if (!navigator.getGamepads) return;
-    const pads = navigator.getGamepads();
-    for (const pad of pads) {
-      if (!pad) continue;
-      const dz = 0.22;
-      const lx = pad.axes[0] || 0, ly = pad.axes[1] || 0;
-      if (Math.abs(lx) > dz) this.axes.x += lx;
-      if (Math.abs(ly) > dz) this.axes.y += ly;
-      const press = (i, key) => { if (pad.buttons[i] && pad.buttons[i].pressed) { if (!this.keys.has(key)) this.pressed.add(key); this.keys.add(key); this.anyPressed = true; } };
-      press(0, ' '); press(1, 'x'); press(2, 'x'); press(3, ' ');
-      press(12, 'arrowup'); press(13, 'arrowdown'); press(14, 'arrowleft'); press(15, 'arrowright');
-      break;
-    }
+  /* Optional legacy folding: a pad's face buttons and d-pad arriving as the
+     keys a keyboard-only demo already listens for. */
+  _foldPadKeys() {
+    const p = this.pad;
+    const press = (padName, key) => {
+      if (!p.down(padName)) return;
+      if (!this.keys.has(key)) this.pressed.add(key);
+      this.keys.add(key);
+      this.anyPressed = true;
+    };
+    press('a', ' '); press('y', ' '); press('b', 'x'); press('x', 'x');
+    press('up', 'arrowup'); press('down', 'arrowdown');
+    press('left', 'arrowleft'); press('right', 'arrowright');
   }
 
   /* Call once per frame, before game logic. */
   beginFrame() {
     this.axes.x = 0;
     this.axes.y = 0;
-    this._pollGamepad();
-    // Keyboard contribution, so WASD and a stick feed the same axes.
+    this.pad.poll(typeof performance !== 'undefined' ? performance.now() : 0);
+    if (this.padKeys) this._foldPadKeys();
+
+    /* Keyboard first, so WASD is exactly ±1 and unaffected by the curve the
+       stick is shaped with. The stick then contributes on top, which is what
+       lets someone steer with a stick and sprint with a key. */
     if (this.down('a') || this.down('arrowleft')) this.axes.x -= 1;
     if (this.down('d') || this.down('arrowright')) this.axes.x += 1;
     if (this.down('w') || this.down('arrowup')) this.axes.y -= 1;
     if (this.down('s') || this.down('arrowdown')) this.axes.y += 1;
-    this.axes.x = clamp(this.axes.x, -1, 1);
-    this.axes.y = clamp(this.axes.y, -1, 1);
+    this.axes.x += this.pad.left.x;
+    this.axes.y += this.pad.left.y;
+    // Clamping the components would let a diagonal run 41% faster than a
+    // straight line, so the vector is clamped by its length instead.
+    const mag = Math.hypot(this.axes.x, this.axes.y);
+    if (mag > 1) { this.axes.x /= mag; this.axes.y /= mag; }
+
+    this.look.x = this.pad.right.x;
+    this.look.y = this.pad.right.y;
+    if (this.pad.anyPressed || this.pad.left.mag || this.pad.right.mag) this.anyPressed = true;
   }
 
   /* Call once per frame, after game logic, to clear edge-triggered state. */
@@ -438,7 +467,11 @@ class Input {
   get actionPressed() { return this.justPressed(' '); }
   get secondaryPressed() { return this.justPressed('x'); }
 
+  /* Rumble, forwarded so a game never has to reach past `input` for it. */
+  rumble(strength, seconds, opts) { return this.pad.rumble(strength, seconds, opts); }
+
   dispose() {
+    this.pad.dispose();
     for (const [t, type, fn, opts] of this._listeners) t.removeEventListener(type, fn, opts);
     this._listeners.length = 0;
   }

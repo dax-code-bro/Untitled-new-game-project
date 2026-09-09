@@ -243,6 +243,26 @@
       },
 
       key(binding, handler, help) { keyBindings.push({ binding, handler, help }); },
+      /* Run a binding as though it had been typed. This is what lets a
+         controller, a touch button or a menu item reach the same verb the
+         keyboard does, without every module having to know those exist. */
+      press(binding, ev) {
+        const k = String(binding || '').toLowerCase();
+        for (const b of keyBindings) {
+          if (b.binding !== k) continue;
+          try { b.handler(ctx, ev || { key: k, synthetic: true }); }
+          catch (err) { console.error(`press ${k}:`, err); }
+        }
+      },
+      get bindings() { return keyBindings; },
+      /* What to print for a verb, in the language of whatever the player is
+         holding. Modules write prompts through this rather than hard-coding
+         a letter, so plugging a pad in relabels the whole HUD. */
+      hint(keyName, padName) {
+        const p = game && game.input && game.input.pad;
+        if (p && p.active && padName) return p.glyph(padName);
+        return String(keyName || '').toUpperCase();
+      },
       onUpdate(fn) { updateHooks.push(fn); },
       on(evt, fn) {
         if (!listeners.has(evt)) listeners.set(evt, []);
@@ -313,6 +333,14 @@
     global.SURVIVOR = { get world() { return world; }, get game() { return game; },
       get player() { return player; }, ctx, log, toast, modules: MODULES };
 
+    /* Key handling is installed before any module, because listener order is
+       what decides who gets Escape. A module's own Escape handler closes its
+       sheet; if core ran after that it would see an empty screen and open
+       the menu underneath, so one press would close the inventory and open
+       the menu. Registering first means core sees the world as it was when
+       the key went down. */
+    bindKeys();
+
     for (const m of MODULES.slice().sort((a, b) => (a.order || 50) - (b.order || 50))) {
       try {
         if (m.init) m.init(ctx);
@@ -322,7 +350,6 @@
       }
     }
 
-    bindKeys();
     log(`You wash up on the ${spawn.side} shore.`, true);
     const near = nearestPoi(spawn.x, spawn.z);
     if (near) log(`${near.name} is ${fmt(near.dist / 1000, 1)} km ${bearingWord(spawn.x, spawn.z, near.x, near.z)}.`);
@@ -349,14 +376,18 @@
 
   function stepPlayer(dt) {
     const i = game.input;
-    const sprint = i.down('shift');
-    const crouch = i.down('control') || i.down('ctrl');
+    /* Sprint and crouch are read as flags rather than as keys so that a
+       controller, which has neither a shift key nor a control key, can set
+       the same two things without pretending to be a keyboard. */
+    const sprint = i.down('shift') || !!ctx.state.sprintHeld;
+    const crouch = i.down('control') || i.down('ctrl') || !!ctx.state.crouchHeld;
     const moving = Math.abs(i.axes.x) > 0.05 || Math.abs(i.axes.y) > 0.05;
     const capacity = player.capacity();
 
     if (!ctx.state.movementLocked) {
       avatar.controller.move(i.axes.x, -i.axes.y, sprint && capacity > 0.35);
-      if (i.justPressed(' ') && capacity > 0.3) avatar.controller.jump();
+      if ((i.justPressed(' ') || ctx.state.jumpRequested) && capacity > 0.3) avatar.controller.jump();
+      ctx.state.jumpRequested = false;
     }
 
     const px = avatar.position.x, pz = avatar.position.z;
@@ -683,6 +714,17 @@
         return;
       }
       if (k === 'h') { const h = el('help'); if (h) h.hidden = !h.hidden; return; }
+
+      /* Escape belongs to whatever is on top. A sheet listens for it itself
+         and closes; the menu must not then open underneath, which is what
+         made one press do two things. The menu marks its own overlay so it
+         can still be closed by the same key that opened it. */
+      if (k === 'escape') {
+        for (const sc of document.querySelectorAll('.screen')) {
+          if (!sc.hidden && !sc.dataset.menu) return;
+        }
+      }
+
       for (const b of keyBindings) {
         if (b.binding === k) {
           try { b.handler(ctx, e); } catch (err) { console.error(`key ${k}:`, err); }

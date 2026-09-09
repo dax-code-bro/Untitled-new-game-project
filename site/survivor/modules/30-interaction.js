@@ -19,7 +19,7 @@ SurvivorGame.module({
     const { SV, game } = ctx;
 
     let target = null;
-    let holdKey = null, holdTime = 0;
+    let holdTime = 0, holdDone = false;
 
     /* Modules that own their own objects register a hook here rather than
        having their verbs written into this file. */
@@ -335,15 +335,19 @@ SurvivorGame.module({
 
     /* ---- targeting ---- */
 
+    /* Holding to work is polled rather than tracked from keydown/keyup,
+       because there is more than one thing the player might be holding: E on
+       a keyboard, a face button on a pad, a finger on a touch button. Each
+       of those sets the same flag and the hold reads it. */
+    function interactHeld() {
+      return !!(ctx.game.input.down('e') || ctx.state.interactHeld);
+    }
+
     ctx.key('e', () => {
       if (!target || !target.act) return;
-      if (target.hold) { holdKey = 'e'; holdTime = 0; return; }
+      if (target.hold) { holdTime = 0; return; }
       target.act();
     }, 'Interact');
-
-    window.addEventListener('keyup', (e) => {
-      if (e.key.toLowerCase() === 'e') { holdKey = null; holdTime = 0; }
-    });
 
     ctx.onUpdate((dt) => {
       if (ctx.state.uiOpen) { ctx.hud.setPrompt(null); target = null; return; }
@@ -356,23 +360,39 @@ SurvivorGame.module({
         // Nothing under the crosshair, but there may still be water at your
         // feet, which is worth saying when you are dying of thirst.
         const w = waterHere();
-        ctx.hud.setPrompt(w ? `J  drink from ${w.name}` : null);
+        /* On a pad, drinking lives on the wheel rather than on a button of its
+           own, so the prompt says how to get there instead of naming a
+           button that does something else. */
+        const padded = ctx.game.input.pad.active;
+        ctx.hud.setPrompt(w
+          ? (padded
+            ? `hold ${ctx.game.input.pad.glyph('lb')} → Drink  ·  ${w.name}`
+            : `J  drink from ${w.name}`)
+          : null);
         return;
       }
 
       if (!target.act) { ctx.hud.setPrompt(target.verb); return; }
 
-      if (holdKey === 'e' && target.hold) {
+      if (target.hold && interactHeld()) {
+        if (holdDone) {
+          // The work is done and the button is still down. Repeating jobs —
+          // swinging an axe — start again; one-off jobs wait for a release.
+          ctx.hud.setPrompt(`${target.verb}  done`);
+          return;
+        }
         holdTime += dt;
         const pct = Math.min(1, holdTime / target.hold);
         ctx.hud.setPrompt(`${target.verb}  ${'█'.repeat(Math.round(pct * 14)).padEnd(14, '░')}`);
         if (pct >= 1) {
           target.act();
           holdTime = 0;
-          if (!target.repeat) holdKey = null;
+          holdDone = !target.repeat;
         }
       } else {
-        ctx.hud.setPrompt(`E  ${target.verb}${target.hold ? ' (hold)' : ''}`);
+        holdTime = 0;
+        holdDone = false;
+        ctx.hud.setPrompt(`${ctx.hint('e', 'x')}  ${target.verb}${target.hold ? ' (hold)' : ''}`);
       }
     });
   },

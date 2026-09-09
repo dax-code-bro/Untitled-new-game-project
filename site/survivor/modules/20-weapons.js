@@ -119,7 +119,8 @@ SurvivorGame.module({
 
     let firearm = null;
     let viewActor = null;
-    let aiming = false;
+    let aiming = false;      // the mouse's own right button
+    let aimed = false;       // mouse or trigger — what the game reacts to
     let baseFov = null;
     let recoilPitch = 0, recoilRecover = 0;
     let bobPhase = 0;
@@ -219,6 +220,11 @@ SurvivorGame.module({
         x: ctx.player.x, z: ctx.player.z,
         audibleM: shot.audibleM, db: shot.noiseDb,
         weapon: firearm.id,
+        // Free recoil energy in joules, for anything that wants to react in
+        // proportion to it rather than to a flat "a gun went off".
+        recoilJ: shot.recoil && shot.recoil.energyJ != null ? shot.recoil.energyJ : null,
+        suppressed: !!(firearm.attachments && firearm.attachments.muzzle
+          && firearm.attachments.muzzle.suppressor),
       });
 
       try {
@@ -370,7 +376,7 @@ SurvivorGame.module({
       bobPhase += dt * (1.4 + ctx.player.speedMs * 1.9);
       const unsteady = 0.4 + 1.6 * Math.max(st.sleepPressure * 0.6, 1 - st.capacity)
         + st.shivering * 1.2;
-      const amp = (aiming ? 0.0016 : 0.006) * unsteady;
+      const amp = (aimed ? 0.0016 : 0.006) * unsteady;
       const swayX = Math.sin(bobPhase * 0.9) * amp + Math.sin(bobPhase * 2.3) * amp * 0.4;
       const swayY = Math.sin(bobPhase * 1.7) * amp * 0.8;
 
@@ -384,9 +390,9 @@ SurvivorGame.module({
          real one does. Aiming therefore brings it onto the centre line and
          a little low and left of it, which reads as looking through the
          sight without putting the back of the receiver in your eye. */
-      const outX = aiming ? 0.012 : 0.17;
-      const outY = aiming ? -0.052 : -0.14;
-      const outZ = aiming ? 0.52 : 0.46;
+      const outX = aimed ? 0.012 : 0.17;
+      const outY = aimed ? -0.052 : -0.14;
+      const outZ = aimed ? 0.52 : 0.46;
 
       const pos = new LE.Vec3().copy(cam.position)
         .addScaled(fwd, outZ)
@@ -396,7 +402,7 @@ SurvivorGame.module({
 
       const yaw = Math.atan2(fwd.x, fwd.z) * 180 / Math.PI;
       const pitch = Math.asin(Math.max(-1, Math.min(1, fwd.y))) * 180 / Math.PI;
-      viewActor.setRotation([-pitch, yaw, aiming ? 0 : 3]);
+      viewActor.setRotation([-pitch, yaw, aimed ? 0 : 3]);
       viewActor.visible = !ctx.paused;
     }
 
@@ -415,14 +421,41 @@ SurvivorGame.module({
       ctx.toast(`${(info.reliability * 100).toFixed(0)}% reliable, ${info.accuracyMoa.toFixed(1)} MOA`);
     }, 'Inspect weapon');
 
-    // Firing and aiming go on the mouse, which is where they belong.
+    /* Firing and aiming are held rather than clicked, because a trigger is
+       something you hold: a mouse button, or the right trigger on a pad.
+       What holding it does is the weapon's business — a bolt gun fires once
+       and waits for you to work the bolt, an AK empties itself at six
+       hundred rounds a minute — so the action decides, not the input. */
+    let triggerHeld = false, sinceShot = 0, firedThisPull = 0;
     window.addEventListener('mousedown', (e) => {
       if (ctx.paused || ctx.state.uiOpen) return;
-      if (e.button === 0) shoot();
-      if (e.button === 2) { aiming = true; }
+      if (e.button === 0) triggerHeld = true;
+      if (e.button === 2) aiming = true;
     });
-    window.addEventListener('mouseup', (e) => { if (e.button === 2) aiming = false; });
+    window.addEventListener('mouseup', (e) => {
+      if (e.button === 0) triggerHeld = false;
+      if (e.button === 2) aiming = false;
+    });
+    window.addEventListener('blur', () => { triggerHeld = false; aiming = false; });
     window.addEventListener('contextmenu', (e) => { if (!ctx.state.uiOpen) e.preventDefault(); });
+
+    /* A controller sets these instead; keeping them on ctx.state means the
+       weapon does not have to know which device is pulling the trigger. */
+    function trigger() { return triggerHeld || !!ctx.state.triggerHeld; }
+    function ads() { return aiming || !!ctx.state.adsHeld; }
+
+    /* How fast the weapon will let you shoot, from its own action. A
+       semi-automatic is limited by how fast a finger moves, which is about
+       five a second; anything manually operated needs the action worked and
+       that is the cycle time the weapon already carries. */
+    function repeatInterval() {
+      if (!firearm) return Infinity;
+      const spec = SV.WEAPONS[firearm.id] || {};
+      if (spec.action === SV.ACTION.fullAuto) return 60 / (spec.rpm || 600);
+      if (spec.action === SV.ACTION.semiAuto) return Math.max(0.11, spec.cycleTimeS || 0.11);
+      // Bolt, pump, lever, revolver, break: one per pull of the trigger.
+      return Infinity;
+    }
 
     // A stoppage is cleared by holding, not by tapping — and some of them
     // need a rod, which the model already decides.
@@ -432,7 +465,21 @@ SurvivorGame.module({
     }, 'Clear a stoppage');
 
     ctx.onUpdate((dt) => {
+      aimed = ads();
       placeViewmodel(dt);
+
+      // The trigger.
+      sinceShot += dt;
+      if (!ctx.paused && !ctx.state.uiOpen && trigger()) {
+        const interval = repeatInterval();
+        if (firedThisPull === 0 || (interval !== Infinity && sinceShot >= interval)) {
+          sinceShot = 0;
+          firedThisPull++;
+          shoot();
+        }
+      } else if (!trigger()) {
+        firedThisPull = 0;
+      }
 
       if (clearing > 0) {
         clearing -= dt;
@@ -452,18 +499,18 @@ SurvivorGame.module({
       if (baseFov != null && game.camera) {
         const scope = firearm && firearm.attachments.rail && firearm.attachments.rail.magnification
           ? firearm.attachments.rail.magnification : 1;
-        const target = aiming ? baseFov / Math.max(1.35, scope) : baseFov;
+        const target = aimed ? baseFov / Math.max(1.35, scope) : baseFov;
         game.camera.fov += (target - game.camera.fov) * Math.min(1, dt * 9);
       }
-      ctx.state.aiming = aiming;
+      ctx.state.aiming = aimed = ads();
 
       // The status panel says what the weapon is doing, in the words a
       // shooter would use rather than as a number.
       const lines = ctx.state.statusLines = ctx.state.statusLines || [];
       lines.length = 0;
       if (firearm) {
-        if (firearm.jammed) lines.push(`${firearm.name}: ${firearm.jammed.kind} — hold R`);
-        else if (!firearm.chambered && !firearm.magazine.length) lines.push(`${firearm.name}: empty — L to load`);
+        if (firearm.jammed) lines.push(`${firearm.name}: ${firearm.jammed.kind} — hold ${ctx.hint('u', 'y')}`);
+        else if (!firearm.chambered && !firearm.magazine.length) lines.push(`${firearm.name}: empty — ${ctx.hint('l', 'rb')} to load`);
         else if (firearm.barrelTempC > 120) lines.push('The barrel is too hot to hold.');
         if (firearm.fouling > 0.6) lines.push('The action is thick with carbon.');
         if (firearm.oilLevel < 0.2) lines.push('The rifle is bone dry.');

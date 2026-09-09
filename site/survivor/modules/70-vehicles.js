@@ -244,7 +244,7 @@ SurvivorGame.module({
       ctx.state.movementLocked = true;
       const d = v.describe();
       ctx.log(`${v.name}. ${d.missing.length ? `Missing: ${d.missing.join(', ')}.` : 'It looks complete.'} `
-        + `Fuel ${d.fuelL.toFixed(0)} L, ${Math.round(d.fuelViability * 100)}% still good. Y to start.`, true);
+        + `Fuel ${d.fuelL.toFixed(0)} L, ${Math.round(d.fuelViability * 100)}% still good. ${ctx.hint('y', 'a')} to start.`, true);
       ctx.emit('vehicle-entered', { vehicle: v });
     }
 
@@ -266,6 +266,24 @@ SurvivorGame.module({
       const env = ctx.world.clock.environment();
       const scaled = dt * (ctx.world.clock.timeScale || 1);
 
+      /* What the driver is asking for, whatever they are holding. A keyboard
+         gives you three positions on each axis; a pad gives you every
+         position in between, and a car that can only be driven flat out or
+         not at all is a car nobody enjoys. A controller writes its analogue
+         values into ctx.state.driveInput and they are used as they are. */
+      const pad = ctx.state.driveInput;
+      const controls = pad || {
+        throttle: game.input.down('w') ? 1 : 0,
+        brake: game.input.down('s') ? 1 : 0,
+        steer: (game.input.down('d') ? 1 : 0) - (game.input.down('a') ? 1 : 0),
+        forward: game.input.down('w'),
+        back: game.input.down('s'),
+        fast: game.input.down('shift'),
+      };
+
+      ctx.state.riding = !!riding;
+      ctx.state.driving = !!driving;
+
       stream(horses, 260, makeHorseActor);
       stream(cars, 220, makeCarActor);
 
@@ -274,11 +292,11 @@ SurvivorGame.module({
       if (riding) {
         const h = riding.horse;
         if (!h.alive) { ctx.log('It is dead.', true); dismount(); return; }
-        const want = game.input.down('w')
-          ? (game.input.down('shift') ? 'gallop' : 'canter')
-          : game.input.down('s') ? 'walk' : (h.gait === 'halt' ? 'halt' : 'walk');
+        const want = controls.forward
+          ? (controls.fast ? 'gallop' : 'canter')
+          : controls.back ? 'walk' : (h.gait === 'halt' ? 'halt' : 'walk');
         if (want !== h.gait) h.ask(want, { skill: ctx.player.skills.hunting || 0.2 });
-        const steer = (game.input.down('d') ? 1 : 0) - (game.input.down('a') ? 1 : 0);
+        const steer = controls.steer;
 
         const ahead = 3;
         const y0 = ctx.groundY(h.x, h.z);
@@ -324,9 +342,9 @@ SurvivorGame.module({
          anybody wants. */
       if (driving) {
         const v = driving.vehicle;
-        const throttle = game.input.down('w') ? 1 : 0;
-        const brake = game.input.down('s') ? 1 : 0;
-        const steer = (game.input.down('d') ? 1 : 0) - (game.input.down('a') ? 1 : 0);
+        const throttle = controls.throttle;
+        const brake = controls.brake;
+        const steer = controls.steer;
 
         // Automatic shifting on engine speed, with a lockout so it does not
         // hunt between two gears.
@@ -376,7 +394,8 @@ SurvivorGame.module({
         ctx.state.statusLines = (ctx.state.statusLines || []).concat([
           v.running
             ? `${v.name}: ${d.speedKph.toFixed(0)} km/h, gear ${v.gear + 1}, ${v.rpm | 0} rpm, ${d.fuelL.toFixed(1)} L`
-            : `${v.name}: not running${d.missing.length ? ` (${d.missing.join(', ')})` : ''} — Y to try it`,
+            : `${v.name}: not running${d.missing.length ? ` (${d.missing.join(', ')})` : ''}`
+              + ` — ${ctx.hint('y', 'a')} to try it`,
         ]);
         return;
       }

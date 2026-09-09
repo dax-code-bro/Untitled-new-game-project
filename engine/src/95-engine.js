@@ -1133,6 +1133,20 @@ class Engine {
     const cam = this.camera;
     const cfg = this._camConfig;
 
+    /* Look from the right stick. It lives here rather than in the pointer
+       handler because it is a rate: the mouse gives you a distance moved and
+       is done, while a stick held over has to keep turning you for as long
+       as it is held, which only the frame loop knows about. */
+    if (this._camMode !== 'manual' && cfg.userControl !== false && this.input) {
+      const look = this.input.look;
+      if (look && (look.x || look.y)) {
+        const sens = this.input.lookSensitivity;
+        this._camYaw -= look.x * sens * dt;
+        const dy = (this.input.invertLookY ? -1 : 1) * look.y * sens * dt;
+        this._camPitch = clamp(this._camPitch + dy, -1.35, 1.4);
+      }
+    }
+
     if (this._camMode === 'follow' && this._camTarget) {
       const t = this._camTarget.position;
       const yaw = this._camYaw;

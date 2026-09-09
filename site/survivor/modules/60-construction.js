@@ -304,7 +304,7 @@ SurvivorGame.module({
       menuOpen = !menuOpen;
       ctx.state.buildMenuOpen = menuOpen;
       menu.style.display = menuOpen ? 'block' : 'none';
-      if (!menuOpen) { placing = null; if (ghost) ghost.visible = false; }
+      if (!menuOpen) { placing = null; ctx.state.buildPlacing = null; if (ghost) ghost.visible = false; }
       else renderMenu();
     }, 'Build menu');
 
@@ -312,6 +312,7 @@ SurvivorGame.module({
       ctx.key(String(i), () => {
         if (!menuOpen) return;
         placing = Object.keys(PIECES)[i - 1];
+        ctx.state.buildPlacing = placing;
         ghostFor(placing);
         renderMenu();
         ctx.toast(`${PIECES[placing].name} — click to place.`);
@@ -322,6 +323,23 @@ SurvivorGame.module({
       if (e.button !== 0 || !placing || ctx.state.uiOpen) return;
       place();
     });
+
+    // Escape backs out of the build menu before it reaches anything else.
+    window.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || !menuOpen) return;
+      e.stopImmediatePropagation();
+      menuOpen = false;
+      ctx.state.buildMenuOpen = false;
+      menu.style.display = 'none';
+      placing = null;
+      ctx.state.buildPlacing = null;
+      if (ghost) ghost.visible = false;
+    }, true);
+
+    /* Placing needs a verb of its own, not just a mouse click, so that a
+       controller — or anything else that is not a mouse — can put a piece
+       down. The mouse handler above and this call the same function. */
+    ctx.key('enter', () => { if (placing && !ctx.state.uiOpen) place(); }, 'Place the selected piece');
 
     ctx.key('x', toggleWiring, 'Wiring');
     window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !wiringSheet.hidden) toggleWiring(); });

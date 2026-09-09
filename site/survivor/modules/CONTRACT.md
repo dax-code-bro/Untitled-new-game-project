@@ -271,3 +271,56 @@ Terrain          SV.BIOME  SV.classifyBiome  SV.generateIsland
 7. **Guard everything.** A module that throws every frame is worse than a
    module that does nothing. Wrap risky work and fail quietly with a log.
 8. **Plain scripts only.** No `import`, no `export`, no top-level `await`.
+
+## Controllers
+
+A pad is a first-class input, not keys in a costume. `ctx.game.input.pad` is
+an `LE.Pad`: polled once a frame by the engine, with a radial deadzone, a
+response curve, edge-detected buttons, analogue triggers, per-family glyphs
+and rumble.
+
+```js
+const pad = ctx.game.input.pad;
+pad.connected            // something is plugged in
+pad.active               // and the player has actually touched it
+pad.family               // 'xbox' | 'playstation' | 'nintendo' | 'generic'
+pad.down('rt')           // by position: a b x y lb rb lt rt back start ls rs
+pad.justPressed('a')     //   up down left right guide — plus aliases
+pad.justReleased('b')    //   (cross, circle, l1, r2, options, …)
+pad.value('rt')          // 0..1 for a trigger
+pad.left / pad.right     // { x, y, mag } — deadzone and curve already applied
+pad.glyph('a')           // 'A' on an Xbox pad, '✕' on a DualSense, 'B' on a Switch
+pad.rumble(0.5, 0.2)     // strength 0..1, seconds
+```
+
+**Do not bind pad buttons in your module.** The gamepad module owns the map,
+because the same eight buttons have to mean different things on foot, in a
+saddle, behind a windscreen and in a menu, and that only works if one place
+decides. Register your verb as a key with `ctx.key(...)` and the pad will be
+able to reach it through `ctx.press(...)`.
+
+Two things every module should do:
+
+**Print prompts through `ctx.hint(key, padButton)`.** It returns the key when
+the player is on a keyboard and that pad's own glyph when they are not, so a
+prompt written once reads correctly on every device.
+
+```js
+ctx.hud.setPrompt(`${ctx.hint('e', 'x')}  ${verb}`);
+```
+
+**Read intent off `ctx.state`, not off keys**, for anything held rather than
+pressed. The flags below are set by whichever device is in the player's hands:
+
+| key | meaning |
+|---|---|
+| `interactHeld` | the interact button is down (E, or the pad's) |
+| `triggerHeld` | the trigger is down — firing, or leaning on a reel |
+| `adsHeld` | the sights are up |
+| `sprintHeld` / `crouchHeld` | held rather than tapped |
+| `jumpRequested` | one frame's worth of "jump", cleared by core |
+| `driveInput` | `{ throttle, brake, steer, forward, back, fast }`, analogue |
+| `lookSlowdown` | 0..1, how much the aim is being steadied near a target |
+
+And say what you are doing, so the pad can change what its buttons mean:
+set `ctx.state.fishing`, `.driving`, `.riding` while those are true.
