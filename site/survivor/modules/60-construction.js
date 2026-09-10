@@ -252,7 +252,7 @@ SurvivorGame.module({
               check.problems.map((p) => `<li>${p}</li>`).join('')}</ul>`}
         </div>
         <p><button data-install ${check.ok ? '' : 'disabled'}>Install it (${Math.round(design.lengthM * 1.5)} minutes, ${Math.ceil(design.lengthM / 8)} wire)</button>
-        <span class="faint"> — X to close.</span></p>`;
+        <span class="faint"> — ${ctx.hint('x', 'b')} to close.</span></p>`;
     }
 
     wbody.addEventListener('click', (e) => {
@@ -290,7 +290,11 @@ SurvivorGame.module({
     menu.style.cssText += ';position:absolute;right:12px;top:270px;display:none;min-width:220px';
 
     function renderMenu() {
-      menu.innerHTML = '<div style="font-size:12px;opacity:.7;margin-bottom:4px">Build (1-7, N to close)</div>'
+      const pad = ctx.game.input.pad;
+      const how = pad.active
+        ? `${pad.glyph('up')}${pad.glyph('down')} choose · ${pad.glyph('a')} place · ${pad.glyph('b')} close`
+        : '1-7 choose · click to place · N to close';
+      menu.innerHTML = `<div style="font-size:12px;opacity:.7;margin-bottom:4px">Build &mdash; ${how}</div>`
         + Object.entries(PIECES).map(([k, s], i) => {
           const ok = canAfford(s);
           const cost = Object.entries(s.cost).map(([it, n]) => `${n} ${it}`).join(', ');

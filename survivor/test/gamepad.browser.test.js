@@ -102,31 +102,53 @@ const B = { a: 0, b: 1, x: 2, y: 3, lb: 4, rb: 5, lt: 6, rt: 7, back: 8, start: 
   section('plugging one in');
   await page.goto(`http://localhost:${PORT}/survivor/index.html`, { waitUntil: 'load' });
   await page.waitForSelector('#startBtn:not([hidden])', { timeout: 300000 });
-  await page.click('#startBtn');
+
+  /* The first thing a controller has to be able to do is start the game.
+     Nothing is running at this point — no engine, no modules — so this is
+     the one place core polls the pad itself. */
+  await page.evaluate((b) => window.__pad.set({ buttons: { [b.a]: 1 } }), B);
+  await page.waitForTimeout(1200);
+  await page.evaluate(() => window.__pad.clear());
+  const started = await page.evaluate(() => !!document.querySelector('canvas')
+    || document.getElementById('boot').style.opacity === '0');
+  check('a controller can start the game', started);
   await page.waitForTimeout(8000);
 
-  // A pad sitting idle must not take the prompts away from the keyboard.
-  const idle = await page.evaluate(() => {
+  const found = await page.evaluate(() => {
     const p = window.SURVIVOR.game.input.pad;
-    return { connected: p.connected, active: p.active, family: p.family, scheme: window.SURVIVOR.game.input.scheme };
+    return { connected: p.connected, active: p.active, family: p.family,
+      scheme: window.SURVIVOR.game.input.scheme,
+      log: document.getElementById('logBody').innerText };
   });
-  check('the pad is found', idle.connected);
-  check('and identified as an Xbox pad', idle.family === 'xbox', idle.family);
-  check('but an untouched pad leaves the keyboard in charge',
-    idle.active === false && idle.scheme === 'keyboard');
+  check('the pad is found', found.connected);
+  check('and identified as an Xbox pad', found.family === 'xbox', found.family);
+  check('starting with it hands the prompts over',
+    found.active && found.scheme === 'gamepad');
+  check('and the game says so', /controller connected/i.test(found.log));
 
-  // Touch it, and it takes over.
+  /* And the keyboard takes them straight back. Whichever device was touched
+     last owns the prompts, because a pad plugged in and sitting on the desk
+     should not relabel a screen someone is playing on with a mouse. */
+  await page.keyboard.press('KeyH');
+  await page.waitForTimeout(600);
+  await page.keyboard.press('KeyH');
+  await page.waitForTimeout(600);
+  const backToKeys = await page.evaluate(() => ({
+    scheme: window.SURVIVOR.game.input.scheme,
+    hint: window.SURVIVOR.ctx.hint('e', 'x'),
+    legend: getComputedStyle(document.getElementById('padLegend')).display,
+  }));
+  check('a key press hands them back to the keyboard', backToKeys.scheme === 'keyboard');
+  check('the prompts go back to letters', backToKeys.hint === 'E', backToKeys.hint);
+  check('and the button legend goes away', backToKeys.legend === 'none', backToKeys.legend);
+
+  // Then back to the pad, which is where the rest of this runs.
   await page.evaluate((b) => window.__pad.set({ buttons: { [b.y]: 1 } }), B);
   await page.waitForTimeout(500);
   await page.evaluate((b) => window.__pad.set({ buttons: { [b.y]: 0 } }), B);
-  await page.waitForTimeout(500);
-  const woken = await page.evaluate(() => ({
-    active: window.SURVIVOR.game.input.pad.active,
-    scheme: window.SURVIVOR.game.input.scheme,
-    log: document.getElementById('logBody').innerText,
-  }));
-  check('touching it hands the prompts over', woken.active && woken.scheme === 'gamepad');
-  check('and the game says so', /controller connected/i.test(woken.log));
+  await page.waitForTimeout(600);
+  check('and touching the pad takes them again',
+    await page.evaluate(() => window.SURVIVOR.game.input.scheme === 'gamepad'));
 
   section('the sticks');
   const before = await page.evaluate(() => {
@@ -315,6 +337,163 @@ const B = { a: 0, b: 1, x: 2, y: 3, lb: 4, rb: 5, lt: 6, rt: 7, back: 8, start: 
   });
   check('a prompt asks for the pad button, not the key', prompts.interact === 'X', prompts.interact);
   check('and a verb with no pad button keeps its key', prompts.keyboardStill === 'E');
+
+  section('every verb is reachable');
+  const parity = await page.evaluate(() => {
+    const S = window.SURVIVOR;
+    const bound = S.ctx.bindings.map((b) => b.binding);
+    return { bound: Array.from(new Set(bound)).sort() };
+  });
+  /* The pad reaches a verb either through a button, through the wheel, or
+     through a screen it can open and navigate. Anything not in one of those
+     three sets is unreachable with a controller in your hands. */
+  const ON_BUTTONS = ['e', 'tab', 'm', 'c', 'n', 'enter', 'l', 'i', 'y', 'escape', 'h',
+    // 1-5 are the weapons, walked by the right stick click; 1-7 are the build
+    // pieces, walked by the d-pad while the build menu is up.
+    '1', '2', '3', '4', '5', '6', '7', 'q', 'r', 'b', '[', ']'];
+  const ON_WHEEL = await page.evaluate(() => {
+    const S = window.SURVIVOR;
+    const seen = new Set();
+    // Every context's wheel, read from the game rather than guessed at.
+    for (const ctxName of ['foot', 'fishing', 'driving', 'riding']) {
+      S.ctx.state.fishing = ctxName === 'fishing';
+      S.ctx.state.driving = ctxName === 'driving';
+      S.ctx.state.riding = ctxName === 'riding';
+      for (const page of [0, 1]) {
+        S.ctx.state.__wheelPageProbe = page;
+        for (const slot of (S.ctx.state.wheelProbe ? S.ctx.state.wheelProbe(page) : [])) {
+          if (slot.key) seen.add(slot.key);
+        }
+      }
+    }
+    S.ctx.state.fishing = false; S.ctx.state.driving = false; S.ctx.state.riding = false;
+    return Array.from(seen);
+  });
+  const reachable = new Set([...ON_BUTTONS, ...ON_WHEEL]);
+  // 'o' is creative-mode flight: it is bound only in creative worlds, and in
+  // one it takes the last wedge of the wheel's second page.
+  const unreachable = parity.bound.filter((k) => !reachable.has(k) && k !== 'o');
+  check('every bound verb has a way in from the pad', unreachable.length === 0,
+    unreachable.length ? `no pad route to: ${unreachable.join(', ')}` : `${parity.bound.length} verbs`);
+  console.log(`       verbs: ${parity.bound.join(' ')}`);
+  console.log(`       wheel: ${ON_WHEEL.join(' ')}`);
+
+  section('the legend');
+  const legend = await page.evaluate(() => {
+    const el = document.getElementById('padLegend');
+    return { shown: el && getComputedStyle(el).display !== 'none', text: el ? el.innerText : '' };
+  });
+  check('a button legend is on screen', legend.shown, legend.text.slice(0, 80));
+  check('and it names buttons in the pad’s own glyphs', /\bA\b|\bB\b|\bX\b|\bLB\b|\bRT\b/.test(legend.text),
+    legend.text.replace(/\n/g, ' ').slice(0, 120));
+
+  section('the map takes a mark');
+  await page.evaluate((b) => window.__pad.set({ buttons: { [b.left]: 1 } }), B);
+  await page.waitForTimeout(350);
+  await page.evaluate((b) => window.__pad.set({ buttons: { [b.left]: 0 } }), B);
+  await page.waitForTimeout(1400);
+  await page.evaluate(() => window.__pad.set({ axes: [0.8, 0.6, 0, 0] }));
+  await page.waitForTimeout(1400);
+  await page.evaluate(() => window.__pad.clear());
+  await page.waitForTimeout(500);
+  const marks = await page.evaluate(async (b) => {
+    const S = window.SURVIVOR;
+    let got = null;
+    S.ctx.on('waypoint', (w) => { got = w; });
+    window.__pad.set({ buttons: { [b.a]: 1 } });
+    await new Promise((r) => setTimeout(r, 700));
+    window.__pad.set({ buttons: { [b.a]: 0 } });
+    await new Promise((r) => setTimeout(r, 700));
+    return got;
+  }, B);
+  check('the stick drives a cursor and A drops a mark on it', !!marks,
+    marks ? `${marks.x.toFixed(0)}, ${marks.z.toFixed(0)}` : 'no waypoint');
+  await page.screenshot({ path: path.join(SHOTS, 'pad-map-cursor.png') });
+  await page.evaluate((b) => window.__pad.set({ buttons: { [b.b]: 1 } }), B);
+  await page.waitForTimeout(350);
+  await page.evaluate((b) => window.__pad.set({ buttons: { [b.b]: 0 } }), B);
+  await page.waitForTimeout(900);
+
+  section('the pad still works while the game is paused');
+  await page.evaluate((b) => window.__pad.set({ buttons: { [b.start]: 1 } }), B);
+  await page.waitForTimeout(400);
+  await page.evaluate((b) => window.__pad.set({ buttons: { [b.start]: 0 } }), B);
+  await page.waitForTimeout(1400);
+  const paused = await page.evaluate(async () => {
+    const S = window.SURVIVOR;
+    const el = document.getElementById('menuScreen');
+    // Walk focus with the stick while the world is stopped.
+    window.__pad.set({ axes: [0, 1, 0, 0] });
+    await new Promise((r) => setTimeout(r, 1400));
+    window.__pad.clear();
+    await new Promise((r) => setTimeout(r, 500));
+    return {
+      open: !!(el && !el.hidden),
+      focused: !!(document.activeElement && document.activeElement.closest
+        && document.activeElement.closest('#menuScreen')),
+      what: (document.activeElement && document.activeElement.textContent || '').trim().slice(0, 40),
+    };
+  });
+  check('the menu is up', paused.open);
+  check('and the stick still moves focus inside it', paused.focused, paused.what);
+  await page.screenshot({ path: path.join(SHOTS, 'pad-menu-focus.png') });
+
+  // A slider has to be changeable, not just focusable.
+  const slider = await page.evaluate(async () => {
+    const el = document.getElementById('padSens');
+    if (!el) return { missing: true };
+    el.focus();
+    const before = parseFloat(el.value);
+    window.__pad.set({ axes: [1, 0, 0, 0] });
+    await new Promise((r) => setTimeout(r, 1400));
+    window.__pad.clear();
+    await new Promise((r) => setTimeout(r, 400));
+    return { before, after: parseFloat(el.value), opt: window.SURVIVOR.ctx.state.gamepadOptions.sensitivity };
+  });
+  check('a slider moves with the stick rather than losing focus',
+    !slider.missing && slider.after > slider.before,
+    slider.missing ? 'no controller slider' : `${slider.before} -> ${slider.after}`);
+  check('and the setting behind it followed', !slider.missing
+    && Math.abs(slider.opt - slider.after) < 1e-6, `${slider.opt}`);
+  await page.evaluate((b) => window.__pad.set({ buttons: { [b.b]: 1 } }), B);
+  await page.waitForTimeout(400);
+  await page.evaluate((b) => window.__pad.set({ buttons: { [b.b]: 0 } }), B);
+  await page.waitForTimeout(900);
+
+  section('dying and coming back');
+  /* The death screen is the one place a player has no choice but to press a
+     button, and it is shown with the game paused — which is exactly the
+     state that used to freeze the pad. */
+  await page.evaluate(() => {
+    const S = window.SURVIVOR;
+    S.player.body.bodyWaterL = 1;      // dehydration, quickly
+    S.world.step(300);
+  });
+  await page.waitForTimeout(2500);
+  const dead = await page.evaluate(() => {
+    const el = document.getElementById('gameover');
+    return { shown: !!(el && !el.hidden), text: el ? el.innerText.replace(/\n/g, ' ') : '' };
+  });
+  if (dead.shown) {
+    check('the death screen is up', true, dead.text.slice(0, 60));
+    await page.evaluate((b) => window.__pad.set({ buttons: { [b.a]: 1 } }), B);
+    await page.waitForTimeout(600);
+    await page.evaluate((b) => window.__pad.set({ buttons: { [b.a]: 0 } }), B);
+    await page.waitForTimeout(400);
+    await page.evaluate((b) => window.__pad.set({ buttons: { [b.a]: 1 } }), B);
+    await page.waitForTimeout(600);
+    await page.evaluate((b) => window.__pad.set({ buttons: { [b.a]: 0 } }), B);
+    await page.waitForTimeout(2500);
+    await page.screenshot({ path: path.join(SHOTS, 'pad-death.png') });
+    const back = await page.evaluate(() => ({
+      gone: document.getElementById('gameover').hidden,
+      alive: window.SURVIVOR.player.body.alive,
+    }));
+    check('and A brings you back with the pad alone', back.gone && back.alive,
+      `screen ${back.gone ? 'closed' : 'still up'}, ${back.alive ? 'alive' : 'dead'}`);
+  } else {
+    check('the death screen is up', false, 'the player did not die');
+  }
 
   section('settings');
   await page.evaluate((b) => window.__pad.set({ buttons: { [b.start]: 1 } }), B);

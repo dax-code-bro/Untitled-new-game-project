@@ -146,19 +146,21 @@ SurvivorGame.module({
           { label: 'Inventory', key: 'tab' },
           { label: 'Drink', key: 'j' },
           { label: 'Time ×', key: 't' },
-          { label: 'Menu', key: 'escape' },
+          { label: 'Pause', key: 'p' },
         ];
       }
       if (wheelPage === 1) {
         return [
           { label: 'Drying rack', key: 'g', shift: true },
           { label: 'Wiring', key: 'x' },
-          { label: 'Inspect gun', key: 'i' },
           { label: 'Clear stoppage', key: 'u' },
           { label: 'Load', key: 'l' },
           { label: 'Time ×', key: 't' },
+          { label: 'Pause', key: 'p' },
           { label: 'Menu', key: 'escape' },
-          { label: '◂ Back', page: 0 },
+          ctx.world.mode === 'creative'
+            ? { label: ctx.state.creativeFly ? 'Land' : 'Fly', key: 'o' }
+            : { label: 'Key list', key: 'h' },
         ];
       }
       return [
@@ -169,9 +171,23 @@ SurvivorGame.module({
         { label: 'Cast a line', key: 'r' },
         { label: 'Sleep', key: 'v' },
         { label: 'Relieve yourself', key: 'q' },
-        { label: 'More ▸', page: 1 },
+        { label: 'Inspect gun', key: 'i' },
       ];
     }
+
+    // Two pages on foot, one everywhere else.
+    function wheelPages() { return (ctx.state.fishing || ctx.state.driving || ctx.state.riding) ? 1 : 2; }
+
+    /* Published so that the check for "is every verb reachable with a pad in
+       your hands" can read the real wheel rather than a copy of it that
+       would rot the first time a slot changed. */
+    ctx.state.wheelProbe = (page) => {
+      const was = wheelPage;
+      wheelPage = page;
+      const out = wheelSlots();
+      wheelPage = was;
+      return out;
+    };
 
     /* Which wedge the stick is pointing at. Twelve o'clock is slot zero and
        it runs clockwise, which is how every wheel in every game works and
@@ -238,8 +254,13 @@ SurvivorGame.module({
       g.textAlign = 'center'; g.textBaseline = 'middle';
       g.fillStyle = 'rgba(233,228,217,0.55)';
       g.font = '12px ui-monospace, monospace';
-      g.fillText(wheelPick >= 0 ? 'release' : 'aim', c, c - 9);
-      g.fillText(wheelPick >= 0 ? 'to do it' : 'the stick', c, c + 9);
+      g.fillText(wheelPick >= 0 ? 'release' : 'aim', c, c - 18);
+      g.fillText(wheelPick >= 0 ? 'to do it' : 'the stick', c, c);
+      if (wheelPages() > 1) {
+        g.font = '11px ui-monospace, monospace';
+        g.fillStyle = 'rgba(233,228,217,0.42)';
+        g.fillText(`${pad.glyph('rb')}  ${wheelPage + 1}/${wheelPages()}`, c, c + 20);
+      }
       if (rawLeft.mag > 0.15) {
         g.beginPath();
         g.moveTo(c, c);
@@ -267,15 +288,6 @@ SurvivorGame.module({
       if (!activate || wheelPick < 0) return;
       const slot = slots[wheelPick];
       if (!slot || slot.disabled) return;
-      if (slot.page != null) {
-        // A page turn is not a choice; the wheel stays up on the new page.
-        wheelPage = slot.page;
-        wheelPick = -1;
-        wheelOpen = true;
-        showWheel(true);
-        ctx.state.wheelOpen = true;
-        return;
-      }
       pad.rumble(0.25, 0.06);
       ctx.state.lastWheelVerb = { label: slot.label, key: slot.key };
       ctx.press(slot.key, { key: slot.key, shiftKey: !!slot.shift, synthetic: true });
@@ -289,6 +301,10 @@ SurvivorGame.module({
        by direction rather than by document order is what makes a grid of
        buttons behave the way it looks. */
     function openSheet() {
+      // The death screen first: it sits above everything and is the only
+      // thing that matters when it is up.
+      const over = document.getElementById('gameover');
+      if (over && !over.hidden) return over;
       const screens = document.querySelectorAll('.screen');
       for (const s of screens) if (!s.hidden) return s;
       return null;
@@ -330,6 +346,22 @@ SurvivorGame.module({
       else if (r.bottom > s.bottom - 8) sheet.scrollTop += (r.bottom - (s.bottom - 8));
     }
 
+    /* A slider is not a thing to walk past. With focus on one, left and
+       right move the value — which is what the same two keys do on a
+       keyboard — and only up and down leave it. */
+    function isSlider(el) {
+      return !!(el && el.tagName === 'INPUT' && (el.type === 'range' || el.type === 'number'));
+    }
+    function nudgeSlider(el, dir) {
+      const step = parseFloat(el.step) || ((parseFloat(el.max) - parseFloat(el.min)) / 40) || 1;
+      const lo = parseFloat(el.min), hi = parseFloat(el.max);
+      const next = Math.min(hi, Math.max(lo, (parseFloat(el.value) || 0) + dir * step));
+      if (next === parseFloat(el.value)) return;
+      el.value = String(next);
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
     /* A stick held over should repeat, like a held arrow key, but not at the
        frame rate. Slow first step, faster after. */
     let navHeld = 0, navAxis = 0;
@@ -341,10 +373,125 @@ SurvivorGame.module({
       const dir = Math.abs(x) > Math.abs(y)
         ? [Math.sign(x), 0] : [0, Math.sign(y)];
       const axis = dir[0] * 2 + dir[1];
-      if (axis !== navAxis) { navAxis = axis; navHeld = 0; moveFocus(root, dir[0], dir[1]); return; }
+      const act = () => {
+        const el = document.activeElement;
+        if (dir[0] && isSlider(el) && root.contains(el)) { nudgeSlider(el, dir[0]); return; }
+        moveFocus(root, dir[0], dir[1]);
+      };
+      if (axis !== navAxis) { navAxis = axis; navHeld = 0; act(); return; }
       navHeld += dt;
-      const interval = navHeld > 0.55 ? 0.09 : 0.32;
-      if (navHeld >= interval) { navHeld = navHeld > 0.55 ? 0.55 : 0; moveFocus(root, dir[0], dir[1]); }
+      // A slider repeats faster than focus does, because it takes many
+      // steps to cross and only one to change what is focused.
+      const slider = isSlider(document.activeElement) && dir[0];
+      const interval = navHeld > 0.4 ? (slider ? 0.04 : 0.09) : (slider ? 0.16 : 0.32);
+      if (navHeld >= interval) { navHeld = navHeld > 0.4 ? 0.4 : 0; act(); }
+    }
+
+    /* The right stick scrolls a sheet that is taller than the window. Focus
+       walking already scrolls what it lands on, but a page of prose with no
+       controls in it cannot be reached any other way. */
+    function stickScroll(dt, root) {
+      if (Math.abs(rawRight.y) < 0.2) return;
+      const box = root.querySelector('.sheet') || root;
+      box.scrollTop += rawRight.y * 900 * dt;
+    }
+
+    /* Jump to the first control under the next heading. Every sheet in this
+       game is headed prose with controls under it, so a heading is the
+       natural unit to page by. */
+    function jumpSection(root, dir) {
+      const items = focusables(root);
+      if (!items.length) return;
+      const heads = Array.from(root.querySelectorAll('h2, h3, section'));
+      const active = document.activeElement;
+      const from = items.includes(active) ? active.getBoundingClientRect().top : -1e9;
+      const tops = heads.map((h) => h.getBoundingClientRect().top)
+        .filter((t) => (dir > 0 ? t > from + 4 : t < from - 4));
+      const target = dir > 0 ? Math.min(...tops) : Math.max(...tops);
+      if (!isFinite(target)) { items[dir > 0 ? items.length - 1 : 0].focus(); scrollIntoView(document.activeElement); return; }
+      let best = null, bestD = Infinity;
+      for (const el of items) {
+        const t = el.getBoundingClientRect().top;
+        const d = dir > 0 ? t - target : target - t;
+        if (d < -4) continue;
+        if (d < bestD) { bestD = d; best = el; }
+      }
+      if (best) { best.focus(); scrollIntoView(best); }
+    }
+
+    /* ---- the button legend --------------------------------------------
+
+       A strip along the bottom naming the buttons that do something right
+       here, right now. Console games have had one for thirty years because
+       it solves the problem a pad has and a keyboard does not: there is
+       nowhere to write the verb on the button. It is built from the same
+       context the bindings are, so it cannot drift out of step with them. */
+    const legend = document.createElement('div');
+    legend.id = 'padLegend';
+    legend.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:44;pointer-events:none;'
+      + 'display:none;justify-content:center;gap:20px;padding:9px 16px;'
+      + 'background:linear-gradient(to top, rgba(6,8,10,.86), rgba(6,8,10,0));'
+      + 'font:11.5px/1 ui-monospace,SF Mono,Menlo,Consolas,monospace;letter-spacing:.04em;'
+      + 'color:rgba(233,228,217,.72);flex-wrap:wrap';
+    document.body.appendChild(legend);
+
+    function legendFor(where) {
+      const g = (n) => pad.glyph(n);
+      if (where === 'ui') {
+        if (ctx.state.padSheetCustom) {
+          return [[`${g('ls')}`, 'move the cursor'], [g('a'), 'mark'], [g('x'), 'nearest place'],
+            [g('y'), 'clear'], [g('b'), 'close']];
+        }
+        return [[`${g('ls')}`, 'choose'], [g('a'), 'select'],
+          [`${g('lb')}/${g('rb')}`, 'section'], [`${g('rs')}`, 'scroll'], [g('b'), 'close']];
+      }
+      if (where === 'build') {
+        return [[`${g('up')}/${g('down')}`, 'piece'], [g('a'), 'place'],
+          [`${g('rs')}`, 'aim it'], [g('b'), 'close']];
+      }
+      if (where === 'vehicle' || where === 'mount') {
+        const drive = where === 'vehicle';
+        return [[g('rt'), drive ? 'throttle' : 'faster'], [g('lt'), drive ? 'brake' : 'slower'],
+          [`${g('ls')}`, 'steer'], [g('a'), drive ? 'engine' : ''],
+          [g('b'), drive ? 'get out' : 'dismount'], [`${g('lb')} hold`, 'wheel']].filter((r) => r[1]);
+      }
+      if (where === 'fishing') {
+        return [[g('rt'), 'lean on it'], [g('x'), 'reel in'], [g('y'), 'bait'],
+          [`${g('up')}/${g('down')}`, 'depth'], [`${g('lb')} hold`, 'wheel']];
+      }
+      const t = ctx.state.interactTarget;
+      const rows = [];
+      if (t && t.act) rows.push([g('x'), t.hold ? `${t.verb} (hold)` : t.verb]);
+      // A legend says what the button will do, not what you are already
+      // doing: B goes to the next stance round.
+      const nextStance = ['crouch', 'go prone', 'stand up'][crouchState];
+      rows.push([g('rt'), 'fire'], [g('lt'), 'aim'],
+        [`${g('lb')} hold`, 'wheel'], [g('b'), nextStance],
+        [g('start'), 'menu']);
+      return rows;
+    }
+
+    let legendKey = '';
+    function drawLegend(where) {
+      if (!pad.active || wheelOpen) {
+        legend.style.display = 'none';
+        document.body.classList.remove('padLegendUp');
+        return;
+      }
+      // Sheets get bottom room so their own last line is not buried by it.
+      document.body.classList.add('padLegendUp');
+      const rows = legendFor(where);
+      const key = `${where}|${rows.map((r) => r.join(':')).join('|')}`;
+      // Rebuilding this every frame would be sixty DOM writes a second for
+      // something that changes when the player walks up to a tree.
+      if (key !== legendKey) {
+        legendKey = key;
+        legend.innerHTML = rows.map(([btn, label]) =>
+          `<span><b style="display:inline-block;min-width:2.1em;text-align:center;`
+          + `border:1px solid rgba(233,228,217,.28);border-radius:3px;padding:1px 5px;`
+          + `color:#e9e4d9;font-weight:400">${btn}</b> ${label}</span>`).join('');
+      }
+      legend.style.display = 'flex';
     }
 
     /* ---- context ------------------------------------------------------ */
@@ -368,7 +515,7 @@ SurvivorGame.module({
        forty metres without helping you find one at four hundred. */
     function aimSlowdown() {
       if (!opt.aimSlowdown) return 1;
-      const near = ctx.world.ecology.near(ctx.player.x, ctx.player.z, 220);
+      const near = ctx.world.ecology.near(ctx.player.x, ctx.player.z, 160);
       if (!near.length) return 1;
       const a = ctx.aim();
       let best = 1;
@@ -376,7 +523,7 @@ SurvivorGame.module({
         if (!an.alive) continue;
         const dx = an.x - a.origin.x, dy = (an.y + an.shoulderHeightM * 0.6) - a.origin.y, dz = an.z - a.origin.z;
         const dist = Math.hypot(dx, dy, dz);
-        if (dist < 2 || dist > 220) continue;
+        if (dist < 2 || dist > 160) continue;
         const dot = (dx * a.direction.x + dy * a.direction.y + dz * a.direction.z) / dist;
         if (dot < 0.9) continue;
         const offAxisRad = Math.acos(Math.min(1, dot));
@@ -393,6 +540,8 @@ SurvivorGame.module({
 
     let announced = false;
     let sprintToggle = false, crouchState = 0, aimToggle = false, buildPick = 0;
+    let lastContext = null;
+    let slowdownAge = 0, slowdownTarget = 1, slowdownNow = 1;
 
     ctx.onUpdate((dt) => {
       readSticks();
@@ -405,6 +554,13 @@ SurvivorGame.module({
         ctx.state.triggerHeld = false;
         ctx.state.adsHeld = false;
         ctx.state.driveInput = null;
+        legend.style.display = 'none';
+        document.body.classList.remove('padLegendUp');
+        // The frame loop below scales look sensitivity for aiming and for
+        // the slowdown; with no pad here to do that, the mouse gets its own
+        // setting back rather than inheriting the last aimed frame's.
+        game.input.lookSensitivity = opt.sensitivity;
+        ctx.state.lookSlowdown = 1;
         if (wheelOpen) closeWheel(false);
         return;
       }
@@ -418,6 +574,7 @@ SurvivorGame.module({
       }
 
       const where = context();
+      drawLegend(where);
 
       /* The wheel sits above every other context except a sheet, because it
          is the way to reach a verb from anywhere. */
@@ -432,6 +589,8 @@ SurvivorGame.module({
              else changes it. */
           const aimedAt = wheelSelection(slots);
           if (aimedAt >= 0) wheelPick = aimedAt;
+          // The other bumper turns the page without spending a wedge on it.
+          if (pad.justPressed('rb') && wheelPages() > 1) { wheelPage = (wheelPage + 1) % wheelPages(); wheelPick = -1; }
           drawWheel(slots);
           if (pad.justPressed('b')) { closeWheel(false); return; }
           if (!pad.down('lb')) { closeWheel(true); return; }
@@ -467,7 +626,22 @@ SurvivorGame.module({
 
       if (where === 'ui') {
         const sheet = openSheet();
+        /* A sheet that drives its own sticks — the map moves a cursor with
+           them — says so, and this keeps its hands off. B still closes it,
+           because backing out has to work the same way everywhere. */
+        if (ctx.state.padSheetCustom) {
+          if (pad.justPressed('b') || pad.justPressed('start')) {
+            window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+          }
+          ctx.state.triggerHeld = false;
+          ctx.state.adsHeld = false;
+          ctx.state.interactHeld = false;
+          ctx.state.sprintHeld = false;
+          ctx.state.driveInput = null;
+          return;
+        }
         stickNav(dt, sheet);
+        stickScroll(dt, sheet);
         if (pad.justPressed('a')) {
           const el = document.activeElement;
           if (el && sheet.contains(el) && typeof el.click === 'function') { el.click(); pad.rumble(0.2, 0.05); }
@@ -477,7 +651,10 @@ SurvivorGame.module({
           // Close whatever is open, through the key that opened it.
           window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
         }
-        if (pad.justPressed('rb')) { const f = focusables(sheet); if (f.length) f[0].focus(); }
+        // The bumpers jump a section at a time, which is how you cross a
+        // long sheet without walking every control on the way.
+        if (pad.justPressed('rb')) jumpSection(sheet, 1);
+        if (pad.justPressed('lb')) jumpSection(sheet, -1);
         // Nothing on the pad drives the world while a sheet is up.
         ctx.state.triggerHeld = false;
         ctx.state.adsHeld = false;
@@ -489,6 +666,7 @@ SurvivorGame.module({
 
       // Shoulder buttons and triggers, shared by every in-world context.
       const rt = pad.value('rt'), lt = pad.value('lt');
+      if (where !== lastContext) { aimToggle = false; lastContext = where; }
       if (opt.holdToAim) {
         ctx.state.adsHeld = lt >= 0.4;
       } else {
@@ -496,10 +674,15 @@ SurvivorGame.module({
         ctx.state.adsHeld = aimToggle;
       }
       ctx.state.triggerHeld = rt >= 0.45;
-      ctx.state.lookSlowdown = aimSlowdown();
+      slowdownAge += dt;
+      if (slowdownAge > 0.06) { slowdownAge = 0; slowdownTarget = aimSlowdown(); }
+      // Eased rather than stepped, so crossing an animal feels like weight
+      // on the stick instead of the sensitivity changing gear.
+      slowdownNow += (slowdownTarget - slowdownNow) * Math.min(1, dt * 12);
+      ctx.state.lookSlowdown = slowdownNow;
       game.input.lookSensitivity = opt.sensitivity
         * (ctx.state.adsHeld ? 0.55 : 1)          // slower with the sight up
-        * ctx.state.lookSlowdown;
+        * slowdownNow;
 
       if (where === 'vehicle' || where === 'mount') {
         /* Analogue everything: the triggers are the pedals and the left
@@ -513,6 +696,14 @@ SurvivorGame.module({
           fast: pad.down('ls') || rt > 0.85,
         };
         ctx.state.movementLocked = true;
+        // A flag set while walking must not still be set while driving: a
+        // held interact button, a crouch, a stance you cannot be in behind
+        // a wheel.
+        ctx.state.interactHeld = false;
+        ctx.state.sprintHeld = false;
+        ctx.state.crouchHeld = false;
+        if (ctx.state.stance === 'prone') ctx.state.stance = null;
+        crouchState = 0;
         if (pad.justPressed('a') && where === 'vehicle') ctx.press('y');
         if (pad.justPressed('b')) ctx.press('q', { key: 'q', shiftKey: true, synthetic: true });
         if (pad.justPressed('start')) ctx.press('escape');
@@ -525,6 +716,7 @@ SurvivorGame.module({
       ctx.state.driveInput = null;
 
       if (where === 'fishing') {
+        ctx.state.interactHeld = false;
         if (pad.justPressed('x') || pad.justPressed('b')) ctx.press('r');
         if (pad.justPressed('y')) ctx.press('b');
         if (pad.justPressed('up')) ctx.press(']');
@@ -544,7 +736,7 @@ SurvivorGame.module({
         crouchState = (crouchState + 1) % 3;
         ctx.state.crouchHeld = crouchState === 1;
         ctx.state.stance = crouchState === 2 ? 'prone' : null;
-        ctx.toast(['standing', 'crouched', 'prone'][crouchState]);
+        ctx.toast(['Standing.', 'Crouched.', 'Prone.'][crouchState]);
       }
 
       if (opt.holdToSprint) {
@@ -556,6 +748,9 @@ SurvivorGame.module({
         if (rawLeft.mag < 0.2) sprintToggle = false;
         ctx.state.sprintHeld = sprintToggle;
       }
+      // Nobody sprints with the sights up, and a stance you cannot run in
+      // is a stance you cannot run in.
+      if (ctx.state.adsHeld || crouchState === 2) ctx.state.sprintHeld = false;
 
       if (pad.justPressed('y')) ctx.press('i');           // inspect the weapon
       if (pad.justPressed('rb')) ctx.press('l');          // load
@@ -565,11 +760,8 @@ SurvivorGame.module({
       if (pad.justPressed('left')) ctx.press('m');        // map
       if (pad.justPressed('right')) ctx.press('tab');     // inventory
       if (pad.justPressed('start')) ctx.press('escape');
-      if (pad.justPressed('back')) {
-        const h = document.getElementById('help');
-        if (h) h.hidden = !h.hidden;
-      }
-    });
+      if (pad.justPressed('back')) ctx.press('h');
+    }, { whilePaused: true });
 
     /* The key list at the bottom of the screen becomes a button list, in
        this pad's own glyphs. It is rewritten rather than duplicated so that
@@ -580,6 +772,9 @@ SurvivorGame.module({
       const el = document.getElementById('help');
       if (!el) return;
       if (keyboardHelp == null) keyboardHelp = el.innerHTML;
+      // The legend strip lives along the very bottom, so the full list sits
+      // above it rather than through it.
+      el.style.bottom = '46px';
       const g = (n) => `<b>${pad.glyph(n)}</b>`;
       el.innerHTML = [
         `${g('ls')} move &middot; ${g('rs')} look &middot; ${g('ls')} click sprint &middot; `
@@ -593,7 +788,9 @@ SurvivorGame.module({
     }
     function restoreHelp() {
       const el = document.getElementById('help');
-      if (el && keyboardHelp != null) el.innerHTML = keyboardHelp;
+      if (!el) return;
+      if (keyboardHelp != null) el.innerHTML = keyboardHelp;
+      el.style.bottom = '';
     }
     // Going back to the keyboard puts the key list back.
     let wasActive = false;
@@ -601,7 +798,7 @@ SurvivorGame.module({
       if (pad.active === wasActive) return;
       wasActive = pad.active;
       if (pad.active) writeHelp(); else restoreHelp();
-    });
+    }, { whilePaused: true });
 
     /* The weapons module binds one gun per number key; a pad has no number
        keys, so the stick click walks the same list. */

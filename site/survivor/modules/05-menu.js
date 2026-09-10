@@ -451,7 +451,7 @@
 
     sheet.innerHTML = `
       <h1>Paused</h1>
-      <p class="lede">Escape closes this and starts the clock again.</p>
+      <p class="lede">${C.game.input.pad.active ? `${C.game.input.pad.glyph('b')} closes this` : 'Escape closes this'} and starts the clock again.</p>
 
       <section>
         <h2>this island</h2>

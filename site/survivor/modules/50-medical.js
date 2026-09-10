@@ -132,7 +132,7 @@ SurvivorGame.module({
         <table>${woundRows}</table>
         <h3>Bones</h3>
         <table>${boneRows}</table>
-        <p class="faint">${busy ? `Working: ${busy.label} — ${busy.remaining.toFixed(0)} s left.` : 'C to close.'}</p>`;
+        <p class="faint">${busy ? `Working: ${busy.label} — ${busy.remaining.toFixed(0)} s left.` : `${ctx.hint('c', 'b')} to close.`}</p>`;
     }
 
     /* Which care makes sense for this wound. Offering a tourniquet for a
@@ -245,7 +245,8 @@ SurvivorGame.module({
       if (bleed > 0.002 && performance.now() - lastWarn > 12000) {
         lastWarn = performance.now();
         const minutes = (ctx.player.body.bloodVolumeL * 0.3) / (bleed * 60);
-        ctx.toast(`Bleeding — about ${minutes.toFixed(0)} minutes before it matters. C to treat it.`);
+        ctx.toast(`Bleeding — about ${minutes.toFixed(0)} minutes before it matters.`
+          + ` ${ctx.hint('c', 'down')} to treat it.`);
       }
     });
   },

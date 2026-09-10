@@ -171,7 +171,7 @@ SurvivorGame.module({
 
     function shoot() {
       if (!firearm) { ctx.toast('Nothing in your hands.'); return; }
-      if (firearm.jammed) { ctx.toast(`${firearm.jammed.kind} — hold R to clear`); return; }
+      if (firearm.jammed) { ctx.toast(`${firearm.jammed.kind} — hold ${ctx.hint('u', 'y')} to clear`); return; }
       if (!firearm.chambered && !firearm.chamber()) { ctx.toast('Empty.'); return; }
 
       const body = ctx.player.body;
@@ -517,6 +517,9 @@ SurvivorGame.module({
       }
     });
 
-    ctx.log('Number keys pick up a weapon. L loads it, left mouse fires.');
+    ctx.log(ctx.game.input.pad.active
+      ? `${ctx.hint('l', 'rs')} picks up a weapon, ${ctx.hint('l', 'rb')} loads it, `
+        + `${ctx.hint('mouse', 'rt')} fires.`
+      : 'Number keys pick up a weapon. L loads it, left mouse fires.');
   },
 });

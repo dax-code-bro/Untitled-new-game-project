@@ -263,7 +263,11 @@
         if (p && p.active && padName) return p.glyph(padName);
         return String(keyName || '').toUpperCase();
       },
-      onUpdate(fn) { updateHooks.push(fn); },
+      /* A hook is normally frozen with the rest of the world when the game
+         pauses. Input is the exception: a menu that pauses the game must
+         still be navigable, and a controller that stops responding the
+         moment the menu opens is the most obvious jank there is. */
+      onUpdate(fn, opts) { updateHooks.push({ fn, whilePaused: !!(opts && opts.whilePaused) }); },
       on(evt, fn) {
         if (!listeners.has(evt)) listeners.set(evt, []);
         listeners.get(evt).push(fn);
@@ -341,6 +345,17 @@
        the key went down. */
     bindKeys();
 
+    /* Pause, time and the key list are core's own verbs, but they are
+       registered rather than special-cased so that a controller, a touch
+       button or a menu item can reach them through ctx.press like anything
+       else. */
+    ctx.key('p', () => { paused = !paused; toast(paused ? 'Paused' : 'Running'); }, 'Pause');
+    ctx.key('t', () => {
+      timeScaleMul = timeScaleMul === 1 ? 8 : timeScaleMul === 8 ? 40 : 1;
+      toast(`Time ×${timeScaleMul}`);
+    }, 'Run time faster');
+    ctx.key('h', () => { const h = el('help'); if (h) h.hidden = !h.hidden; }, 'Hide the control list');
+
     for (const m of MODULES.slice().sort((a, b) => (a.order || 50) - (b.order || 50))) {
       try {
         if (m.init) m.init(ctx);
@@ -360,11 +375,19 @@
     running = true;
 
     game.onUpdate((dt) => {
-      if (paused) { lastWallMs = performance.now(); return; }
+      if (paused) {
+        lastWallMs = performance.now();
+        // Only the hooks that asked to keep running: input, and nothing else.
+        for (const h of updateHooks) {
+          if (!h.whilePaused) continue;
+          try { h.fn(dt, ctx); } catch (err) { console.error('update hook:', err); }
+        }
+        return;
+      }
       stepPlayer(dt);
       stepWorld();
-      for (const fn of updateHooks) {
-        try { fn(dt, ctx); } catch (err) { console.error('update hook:', err); }
+      for (const h of updateHooks) {
+        try { h.fn(dt, ctx); } catch (err) { console.error('update hook:', err); }
       }
       applySky();
       updateDetailPatch();
@@ -391,8 +414,14 @@
     }
 
     const px = avatar.position.x, pz = avatar.position.z;
+    /* Prone is slower than a crouch and a crouch is slower than a walk: a
+       stance you cannot move in is the price you pay for the concealment it
+       buys, and the ecology's detection model is already reading that
+       stance. */
+    const prone = ctx.state.stance === 'prone';
+    const paceMs = prone ? 0.45 : crouch ? 1.0 : sprint ? 4.2 : 1.45;
     const speed = moving && !ctx.state.movementLocked
-      ? (crouch ? 1.0 : sprint ? 4.2 : 1.45) * (0.35 + 0.65 * capacity) : 0;
+      ? paceMs * (0.35 + 0.65 * capacity) : 0;
 
     // Grade along the direction of travel, which is what the metabolic cost
     // depends on — walking across a slope is cheap and walking up it is not.
@@ -408,9 +437,9 @@
     // Sprinting through brush is loud, and every animal within earshot is
     // told so by the detection model.
     player.noise = ctx.state.noiseOverride != null ? ctx.state.noiseOverride
-      : (sprint ? 0.85 : crouch ? 0.06 : moving ? 0.3 : 0.02);
+      : (sprint ? 0.85 : prone ? 0.02 : crouch ? 0.06 : moving ? 0.3 : 0.02);
     player.concealment = ctx.state.concealment != null ? ctx.state.concealment
-      : (crouch ? 0.55 : 0.15);
+      : (prone ? 0.8 : crouch ? 0.55 : 0.15);
     // Shelter is a fraction of the wind stopped; modules that build one say
     // how good it is, and four walls beat a lean-to.
     player.sheltered = ctx.state.shelterQuality || 0;
@@ -707,13 +736,7 @@
     window.addEventListener('keydown', (e) => {
       if (e.repeat) return;
       const k = e.key.toLowerCase();
-      if (k === 'p') { paused = !paused; toast(paused ? 'Paused' : 'Running'); return; }
-      if (k === 't') {
-        timeScaleMul = timeScaleMul === 1 ? 8 : timeScaleMul === 8 ? 40 : 1;
-        toast(`Time ×${timeScaleMul}`);
-        return;
-      }
-      if (k === 'h') { const h = el('help'); if (h) h.hidden = !h.hidden; return; }
+      if (k === 'p' || k === 't' || k === 'h') { /* handled as bindings below */ }
 
       /* Escape belongs to whatever is on top. A sheet listens for it itself
          and closes; the menu must not then open underneath, which is what
@@ -876,7 +899,37 @@
       }
       if (startBtn) {
         startBtn.hidden = false;
+
+        /* A controller has to be able to start the game. Nothing else is
+           running yet — the engine and every module are built by the click
+           below — so this polls the pad directly for one button, and stops
+           the moment it has been used. */
+        let padWatch = 0;
+        const padStart = () => {
+          if (startBtn.hidden) return;
+          let pressed = false;
+          try {
+            for (const g of (navigator.getGamepads ? navigator.getGamepads() : [])) {
+              if (!g) continue;
+              for (const b of g.buttons) if (b && (b.pressed || b.value > 0.6)) { pressed = true; break; }
+              if (pressed) break;
+            }
+          } catch (err) { /* no gamepad support here */ }
+          if (pressed) { cancelAnimationFrame(padWatch); startBtn.click(); return; }
+          padWatch = requestAnimationFrame(padStart);
+        };
+        padWatch = requestAnimationFrame(padStart);
+        const padHint = el('bootMsg');
+        if (padHint && navigator.getGamepads) {
+          const seen = () => {
+            for (const g of (navigator.getGamepads() || [])) if (g) return true;
+            return false;
+          };
+          if (seen()) padHint.textContent = 'Press any button on your controller, or click below.';
+        }
+
         startBtn.addEventListener('click', () => {
+          cancelAnimationFrame(padWatch);
           const boot = el('boot');
           boot.style.opacity = '0';
           setTimeout(() => { boot.style.display = 'none'; }, 700);

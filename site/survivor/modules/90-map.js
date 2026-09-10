@@ -125,6 +125,10 @@ SurvivorGame.module({
     legend.style.cssText = 'margin-top:8px;font-size:12px;opacity:.8;text-align:center';
 
     const waypoints = [];
+    /* The map is a picture, not a form: there is nothing on it to give focus
+       to, so a pad drives a cursor across it instead. Kept in world metres
+       so it survives the canvas being resized. */
+    const cursor = { x: 0, z: 0, live: false };
 
     function drawMap() {
       const g = view.getContext('2d');
@@ -182,6 +186,30 @@ SurvivorGame.module({
         g.moveTo(x + 5, y - 5); g.lineTo(x - 5, y + 5); g.stroke();
       }
 
+      // The pad's cursor, when one is being driven.
+      if (cursor.live) {
+        const [cx, cy] = toPx(cursor.x, cursor.z);
+        g.strokeStyle = 'rgba(233,228,217,0.9)';
+        g.lineWidth = 1.5;
+        g.beginPath(); g.arc(cx, cy, 9, 0, Math.PI * 2); g.stroke();
+        g.beginPath();
+        g.moveTo(cx - 15, cy); g.lineTo(cx - 5, cy);
+        g.moveTo(cx + 5, cy); g.lineTo(cx + 15, cy);
+        g.moveTo(cx, cy - 15); g.lineTo(cx, cy - 5);
+        g.moveTo(cx, cy + 5); g.lineTo(cx, cy + 15);
+        g.stroke();
+        // What is under it, which is the whole reason to move it there.
+        const b = ctx.biomeAt(cursor.x, cursor.z);
+        const d = Math.hypot(cursor.x - ctx.player.x, cursor.z - ctx.player.z);
+        g.font = '11px ui-monospace, monospace';
+        g.textAlign = 'left';
+        const label = `${b ? b.name : 'open water'} · ${d < 1000 ? `${d.toFixed(0)} m` : `${(d / 1000).toFixed(1)} km`}`;
+        g.fillStyle = 'rgba(0,0,0,0.65)';
+        g.fillRect(cx + 14, cy - 22, g.measureText(label).width + 10, 16);
+        g.fillStyle = '#e8e4d8';
+        g.fillText(label, cx + 19, cy - 10);
+      }
+
       // The player, pointing the way they are facing.
       const [px, py] = toPx(ctx.player.x, ctx.player.z);
       const yaw = game._camYaw;
@@ -200,17 +228,20 @@ SurvivorGame.module({
       g.fillText(`${barM} m`, 18 + barPx + 6, 627);
     }
 
-    view.addEventListener('click', (e) => {
-      const r = view.getBoundingClientRect();
-      const x = ((e.clientX - r.left) / r.width - 0.5) * WORLD;
-      const z = ((e.clientY - r.top) / r.height - 0.5) * WORLD;
-      // A second click near an existing mark removes it.
+    function setWaypoint(x, z) {
+      // Marking the same spot twice removes the mark, whichever device did it.
       const near = waypoints.findIndex((w) => Math.hypot(w.x - x, w.z - z) < WORLD * 0.02);
       if (near >= 0) waypoints.splice(near, 1);
       else waypoints.push({ x, z });
       ctx.emit('waypoint', { x, z });
       drawMap();
       updateLegend();
+    }
+
+    view.addEventListener('click', (e) => {
+      const r = view.getBoundingClientRect();
+      setWaypoint(((e.clientX - r.left) / r.width - 0.5) * WORLD,
+        ((e.clientY - r.top) / r.height - 0.5) * WORLD);
     });
 
     function updateLegend() {
@@ -222,9 +253,14 @@ SurvivorGame.module({
           const brg = ((Math.atan2(p.x - ctx.player.x, p.z - ctx.player.z) * 180) / Math.PI + 360) % 360;
           return `mark: ${d < 1000 ? `${d.toFixed(0)} m` : `${(d / 1000).toFixed(2)} km`} on ${brg.toFixed(0)}°`;
         }).join(' · ')
-        : 'click to set a mark';
+        : '';
+      const pad = ctx.game.input.pad;
+      const how = pad && pad.active
+        ? `stick moves the cursor · ${pad.glyph('a')} mark · ${pad.glyph('x')} nearest place`
+          + ` · ${pad.glyph('y')} clear · ${pad.glyph('b')} close`
+        : 'click to set a mark · M to close';
       legend.textContent = `${b ? b.name : 'open water'} · ${ctx.groundY(ctx.player.x, ctx.player.z).toFixed(0)} m ASL`
-        + ` · facing ${bearing.toFixed(0)}° · ${w} · M to close`;
+        + ` · facing ${bearing.toFixed(0)}° · ${w} · ${how}`;
     }
 
     body.innerHTML = '<h2>The island</h2>';
@@ -235,8 +271,56 @@ SurvivorGame.module({
       sheet.hidden = !sheet.hidden;
       ctx.state.uiOpen = !sheet.hidden;
       ctx.state.movementLocked = !sheet.hidden;
-      if (!sheet.hidden) { drawMap(); updateLegend(); }
+      // The gamepad module leaves the sticks alone while this is true, so
+      // the map can drive its own cursor with them.
+      ctx.state.padSheetCustom = !sheet.hidden;
+      if (!sheet.hidden) {
+        cursor.x = ctx.player.x; cursor.z = ctx.player.z;
+        drawMap(); updateLegend();
+      } else cursor.live = false;
     }
+
+    /* Driving the map with a pad. Runs while paused because the map does not
+       pause the game but the menu on top of it might. */
+    ctx.onUpdate((dt) => {
+      if (sheet.hidden) return;
+      const pad = ctx.game.input.pad;
+      if (!pad || !pad.connected) return;
+
+      const sx = pad.left.x + (pad.down('right') ? 1 : 0) - (pad.down('left') ? 1 : 0);
+      const sz = pad.left.y + (pad.down('down') ? 1 : 0) - (pad.down('up') ? 1 : 0);
+      if (Math.abs(sx) > 0.02 || Math.abs(sz) > 0.02) {
+        cursor.live = true;
+        /* Holding a shoulder button slows the cursor to a crawl, which is
+           what you want when placing a mark on a specific creek rather than
+           somewhere on that side of the island. */
+        const fine = pad.down('lb') || pad.down('rb') ? 0.18 : 1;
+        const speed = WORLD * 0.34 * fine;
+        cursor.x = Math.max(-WORLD / 2, Math.min(WORLD / 2, cursor.x + sx * speed * dt));
+        cursor.z = Math.max(-WORLD / 2, Math.min(WORLD / 2, cursor.z + sz * speed * dt));
+      }
+      if (pad.justPressed('a') && cursor.live) {
+        setWaypoint(cursor.x, cursor.z);
+        pad.rumble(0.25, 0.06);
+      }
+      if (pad.justPressed('x')) {
+        // Snap to the nearest found place, which is what you actually want
+        // to navigate to nine times out of ten.
+        let best = null, bestD = Infinity;
+        for (const p of ctx.world.pois) {
+          if (!p.found && !revealed) continue;
+          const d = Math.hypot(p.x - cursor.x, p.z - cursor.z);
+          if (d < bestD) { bestD = d; best = p; }
+        }
+        if (best) { cursor.x = best.x; cursor.z = best.z; cursor.live = true; ctx.toast(best.name); }
+      }
+      if (pad.justPressed('y') && waypoints.length) {
+        waypoints.length = 0;
+        ctx.toast('Marks cleared.');
+      }
+      drawMap();
+      updateLegend();
+    }, { whilePaused: true });
     ctx.key('m', toggle, 'Map');
     window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !sheet.hidden) toggle(); });
 
