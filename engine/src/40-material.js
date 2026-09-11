@@ -365,26 +365,34 @@ const TextureLib = {
       TextureLib.kinds.fur(u, v, n, c);
       const top = Math.cos(u * TAU) * 0.5 + 0.5;      // 1 = spine, 0 = belly
       if (v < 0.79) {
-        const t = Math.pow(top, 0.75);
-        const m = lerp(1.32, 0.86, t);                 // countershading
-        c.r *= m; c.g *= m * 0.97; c.b *= m * 0.9;
-        if (top < 0.22) {                              // white underside
-          const w = smoothstep(0.22, 0.06, top) * 0.85;
+        /* Countershading: strong down the body, easing off over the head.
+           A skull is small enough that the light needs no cancelling
+           across it, and running the body gradient over a muzzle paints a
+           maroon war-stripe down the bridge of the nose. It also has to
+           stay near-neutral in hue — pulling blue down harder than red
+           turns a grey-brown deer face red. */
+        const headFade = 1 - smoothstep(0.6, 0.72, v) * 0.66;
+        const t = Math.pow(top, 0.6);
+        const m = 1 + (lerp(1.42, 0.82, t) - 1) * headFade;
+        c.r *= m; c.g *= m * 0.99; c.b *= m * 0.97;
+        if (top < 0.36) {                              // white underside
+          const w = smoothstep(0.36, 0.05, top) * 0.88 * headFade;
           c.r = lerp(c.r, 0.93, w); c.g = lerp(c.g, 0.91, w); c.b = lerp(c.b, 0.86, w);
         }
         if (v > 0.55 && v < 0.68 && top < 0.42) {      // throat patch
           const w = smoothstep(0.42, 0.16, top) * smoothstep(0.55, 0.58, v) * smoothstep(0.68, 0.65, v);
           c.r = lerp(c.r, 0.96, w); c.g = lerp(c.g, 0.95, w); c.b = lerp(c.b, 0.91, w);
         }
-        if (v > 0.62 && v < 0.74 && top > 0.55) {      // darker forehead/crown
-          c.r *= 0.86; c.g *= 0.85; c.b *= 0.82;
+        if (v > 0.63 && v < 0.73) {                    // darker forehead cap
+          const w = smoothstep(0.63, 0.67, v) * smoothstep(0.73, 0.70, v) * smoothstep(0.45, 0.85, top);
+          c.r = lerp(c.r, c.r * 0.76, w); c.g = lerp(c.g, c.g * 0.74, w); c.b = lerp(c.b, c.b * 0.72, w);
         }
-        if (v > 0.735 && v < 0.768 && top < 0.6) {     // white muzzle band
-          const w = smoothstep(0.6, 0.3, top);
-          c.r = lerp(c.r, 0.94, w); c.g = lerp(c.g, 0.93, w); c.b = lerp(c.b, 0.9, w);
+        if (v > 0.742) {                               // white ring round the muzzle
+          const w = smoothstep(0.742, 0.757, v) * smoothstep(0.777, 0.766, v);
+          c.r = lerp(c.r, 0.95, w); c.g = lerp(c.g, 0.94, w); c.b = lerp(c.b, 0.91, w);
         }
         if (v > 0.772) {                               // dark nose tip
-          c.r *= 0.3; c.g *= 0.27; c.b *= 0.26; c.rough = 0.55;
+          c.r *= 0.3; c.g *= 0.29; c.b *= 0.29; c.rough = 0.5;
         }
       } else if (v < 0.955) {                          // legs darken downward
         const m = lerp(1.0, 0.78, (v - 0.8) / 0.155);
@@ -393,7 +401,71 @@ const TextureLib = {
         c.r *= 0.16; c.g *= 0.14; c.b *= 0.13; c.rough = 0.45; c.a = 0;
       } else {
         // Ears keep the coat colour but opt out of the shells: 3cm of
-        // shell fur would swallow a 1cm-thick ear whole.
+        // shell fur would swallow a 1cm-thick ear whole. The inside of a
+        // deer's ear is near-white and thinly haired; the back carries
+        // the body colour with a dark rim.
+        const face = Math.sin(u * TAU);
+        const inside = smoothstep(-0.2, 0.6, face);
+        c.r = lerp(c.r * 0.82, 0.9, inside * 0.75);
+        c.g = lerp(c.g * 0.8, 0.87, inside * 0.75);
+        c.b = lerp(c.b * 0.78, 0.81, inside * 0.75);
+        c.a = 0;
+      }
+      if (v > 0.772 && v < 0.79) c.a = 0;              // bare nose
+    },
+
+    /* The general mammal coat, on the same UV atlas as furDeer: u wraps
+       the body with u=0 at the spine, v runs rump(0.02) -> nose(0.78),
+       legs 0.80-0.955, paws 0.955-0.97, ears above 0.97.
+
+       Almost every land mammal is countershaded — dark along the back,
+       pale underneath — because it cancels the shading from overhead sun
+       and flattens the animal's silhouette. A uniformly tinted coat is
+       the single loudest "this is a toy" signal on a model, so the
+       gradient, the pale throat, the dark muzzle and the dark ear backs
+       all live here and every species gets them for free from its own
+       base colour. */
+    furCoat(u, v, n, c) {
+      TextureLib.kinds.fur(u, v, n, c);
+      const top = Math.cos(u * TAU) * 0.5 + 0.5;      // 1 = spine, 0 = belly
+      if (v < 0.79) {
+        // Saddle to belly. The exponent puts the transition low on the
+        // flank, where it sits on a real animal, rather than halfway up.
+        // Eased off over the head for the same reason as furDeer.
+        const headFade = 1 - smoothstep(0.6, 0.72, v) * 0.62;
+        const t = Math.pow(top, 0.62);
+        const m = 1 + (lerp(1.45, 0.8, t) - 1) * headFade;
+        c.r *= m; c.g *= m * 0.995; c.b *= m * 0.98;
+        if (top < 0.4) {                               // pale underside
+          const w = smoothstep(0.4, 0.04, top) * 0.8 * headFade;
+          c.r = lerp(c.r, 0.88, w); c.g = lerp(c.g, 0.85, w); c.b = lerp(c.b, 0.77, w);
+        }
+        if (v > 0.54 && v < 0.70 && top < 0.4) {       // pale throat
+          const w = smoothstep(0.4, 0.12, top) * smoothstep(0.54, 0.58, v) * smoothstep(0.70, 0.66, v) * 0.8;
+          c.r = lerp(c.r, 0.88, w); c.g = lerp(c.g, 0.85, w); c.b = lerp(c.b, 0.78, w);
+        }
+        if (v > 0.70 && v < 0.775) {                   // muzzle, paler on the sides
+          const w = smoothstep(0.7, 0.35, top) * 0.55;
+          c.r = lerp(c.r, 0.8, w); c.g = lerp(c.g, 0.77, w); c.b = lerp(c.b, 0.7, w);
+        }
+        if (v > 0.772) {                               // wet nose leather
+          c.r *= 0.26; c.g *= 0.24; c.b *= 0.24; c.rough = 0.42;
+        }
+      } else if (v < 0.955) {                          // legs: shorter, darker hair
+        const m = lerp(1.0, 0.84, (v - 0.8) / 0.155);
+        c.r *= m; c.g *= m; c.b *= m;
+      } else if (v < 0.97) {                           // paw / hoof: bare horn
+        c.r *= 0.2; c.g *= 0.18; c.b *= 0.17; c.rough = 0.5; c.a = 0;
+      } else {
+        /* Ear. The plate's two faces are what matter, not its width: the
+           lofted ring is flat in its `fwd` axis, so sin(u*TAU) is +1 on
+           the front of the ear and -1 on the back. Dark back, pale
+           thinly-furred inside — the marking that makes a canid or a
+           felid read as itself from behind. No shells: the plate is
+           thinner than the coat is deep. */
+        const face = Math.sin(u * TAU);
+        const m = lerp(1.18, 0.42, smoothstep(-0.25, 0.55, -face));
+        c.r *= m; c.g *= m; c.b *= m;
         c.a = 0;
       }
       if (v > 0.772 && v < 0.79) c.a = 0;              // bare nose

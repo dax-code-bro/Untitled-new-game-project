@@ -62,15 +62,28 @@ SurvivorGame.module({
       for (const a of want) {
         keep.add(a.id);
         if (rendered.has(a.id)) continue;
-        const archetype = ARCHETYPE[a.species.class] || 'deer';
-        const spec = LE.ANIMAL_SPECIES[archetype];
-        const scaleMul = spec && spec.shoulder ? a.shoulderHeightM / spec.shoulder : 1;
+        /* Each species is now built to its own measurements rather than
+           being one of four archetypes scaled up and down, and sex and life
+           stage change the shape rather than only the size — so a fawn is
+           leggy and short-bodied rather than a small deer, and a rutting
+           buck carries the neck of one. */
+        const modelId = LE.ANIMAL_SPECIES[a.speciesId] ? a.speciesId
+          : (ARCHETYPE[a.species.class] || 'deer');
+        const base = LE.ANIMAL_SPECIES[modelId];
+        /* The simulation rolled this individual's own withers height, so
+           the model is scaled to that animal rather than to the species
+           average — which is what makes a big buck look like a big buck. */
+        const form = LE.resolveForm(modelId, {
+          sex: a.male ? 'male' : 'female', stage: a.stage,
+        });
+        const scaleMul = form.shoulder > 0 ? a.currentShoulderM / form.shoulder : 1;
         try {
           const beast = new LE.Animal(game, {
-            species: archetype,
+            species: modelId,
             sex: a.male ? 'male' : 'female',
+            stage: a.stage,
             at: [a.x, a.y, a.z],
-            scaleMul: Math.max(0.2, Math.min(3.4, scaleMul)),
+            scaleMul: Math.max(0.25, Math.min(2.2, scaleMul)),
             groundY: (x, z) => ctx.groundY(x, z),
             seed: a.id * 977,
           });

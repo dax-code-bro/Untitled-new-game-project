@@ -1,0 +1,109 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Animal contact sheet</title>
+<style>
+  html,body{margin:0;height:100%;background:#12161a;overflow:hidden}
+  canvas{display:block}
+  #label{position:fixed;left:0;right:0;bottom:0;padding:10px 16px;
+    font:13px/1.5 ui-monospace,Menlo,monospace;color:#e9e4d9;
+    background:linear-gradient(to top,rgba(6,8,10,.9),transparent);text-align:center}
+</style>
+<div id="label"></div>
+<script src="../engine/legend-engine.js"></script>
+<script>
+/* A turntable for one animal at a time, so every species, sex and life
+   stage can be looked at against a metre rule. Driven from the query
+   string so a screenshot script can walk the whole list. */
+const q = new URLSearchParams(location.search);
+const species = q.get('species') || 'whitetailDeer';
+const sex = q.get('sex') || 'male';
+const stage = q.get('stage') || 'adult';
+
+const game = LE.create({ antialias: true, shadows: true, quality: 'high' });
+game.setSky('day');
+const r = game.renderer;
+r.sun.direction.set(0.42, 0.66, 0.62).normalize();
+r.sun.intensity = 3.4;
+r.sky.intensity = 1.15;
+r.sky.ground.set(0.28, 0.27, 0.24);
+r.fog.density = 0.0;
+/* Contact shadow is what stops an animal reading as a sticker on a
+   backdrop, so the cascade is pulled in tight around the subject. */
+r.shadows.enabled = true;
+r.shadows.distance = 12;
+r.shadows.split = 4;
+r.shadows.strength = 0.8;
+
+// A pale neutral floor, so the coat is judged against nothing and the
+// silhouette has something to read against.
+game.box({ at: [0, -0.05, 0], size: [60, 0.1, 60],
+  material: { color: 0xcac7bd, roughness: 0.97 }, static: true });
+
+const form = LE.resolveForm(species, { sex, stage });
+
+const form0 = LE.resolveForm(species, { sex, stage });
+/* A rule in ten-centimetre bands, as tall as it needs to be for this
+   animal. Nothing tells you whether the proportions are right like a stick
+   of known length standing next to it. */
+const ruleH = Math.max(1, Math.ceil(form0.shoulder * 1.35 * 10) / 10);
+const ruleX = -(form0.bodyLen * 0.9 + 0.35);
+for (let i = 0; i < Math.round(ruleH * 10); i++) {
+  game.box({ at: [ruleX, 0.05 + i * 0.1, 0], size: [0.035, 0.1, 0.035],
+    material: { color: i % 2 ? 0xf0ece0 : 0x2a2a28, roughness: 0.9 }, static: true });
+}
+// A red band at the withers height, so "is it the right height" is a
+// question you answer by looking rather than by measuring.
+game.box({ at: [ruleX, form0.shoulder, 0], size: [0.09, 0.014, 0.09],
+  material: { color: 0xd8442c, roughness: 0.85 }, static: true });
+
+const beast = new LE.Animal(game, {
+  species, sex, stage, at: [0, 0, 0], groundY: 0, seed: 11,
+});
+/* Broadside, which is the angle every field guide draws an animal at and
+   the only one you can judge proportions from. A few degrees off square so
+   it does not read as a diagram. */
+beast.yaw = Math.PI * 0.5 + 0.22;
+beast.state = 'idle';
+beast.headDown = 0;
+
+const height = form.shoulder;
+const len = form.bodyLen + form.neckLen * 0.8 + form.headLen;
+// Frame on the whole animal plus the rule, from a little above half its
+// height — eye level for something looking at it.
+/* Frame the whole animal including whatever is on its head, from square on
+   and from about its own eye height. The floor line is kept below the belly
+   so the legs read against it and the body reads against the sky. */
+const topY = height * 1.45 + (form.antlerFrac > 0 ? height * 0.45 : 0);
+const span = Math.max(len + 1.4, topY * 1.25);
+const dist = span * 1.45;
+game.camera.fov = 32 * Math.PI / 180;
+game.lookAt([dist * 0.22, height * 1.05, dist * 0.97], [-0.1, topY * 0.42, 0]);
+
+/* ?view=head frames the skull three-quarters on. Faces are where a model
+   is judged and where the texture atlas is most crowded, so they need a
+   look of their own rather than 40 pixels in a broadside plate. */
+if (q.get('view') === 'head') {
+  const hb = beast.skeleton.bones[beast.skeleton.index('head')];
+  const lp = new LE.Vec3(); hb.bindMatrix.getTranslation(lp);
+  // The bind pose is in the animal's own space and the animal is turned
+  // broadside, so the head has to be rotated into the world before the
+  // camera can be aimed at it.
+  const cy = Math.cos(beast.yaw), sy = Math.sin(beast.yaw);
+  const fwd = lp.z + form.headLen * 0.45;
+  const target = [fwd * sy, lp.y, fwd * cy];
+  const r = form.headLen * 3.2;
+  /* Stand on the SAME side as the broadside camera. The other side is
+     where the sun isn't, and a face rendered in its own shadow tells you
+     nothing about the model. */
+  game.camera.fov = 26 * Math.PI / 180;
+  game.lookAt([target[0] + r * 0.34, target[1] + form.headLen * 0.3, target[2] + r * 0.94], target);
+}
+
+document.getElementById('label').textContent =
+  `${species}  ·  ${sex}  ·  ${stage}  ·  withers ${form.shoulder.toFixed(2)} m  ·  `
+  + `body ${form.bodyLen.toFixed(2)} m  ·  head ${form.headLen.toFixed(2)} m`
+  + (form.antlerFrac > 0 ? `  ·  antler ${(form.antlerFrac * 100).toFixed(0)}%` : '');
+
+game.start();
+window.__ready = true;
+</script>

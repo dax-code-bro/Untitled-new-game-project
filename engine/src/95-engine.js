@@ -1414,6 +1414,7 @@ class Engine {
             shellT: 0.1 + Math.pow(t, 0.8) * 0.52,
             shellOffset: (actor.furLength || 0.02) * t,
             shellComb: actor.furComb || null,
+            shellMask: !!actor.furMask,
             sortKey: batch.sortKey + layer * 0.001,
           }));
         }

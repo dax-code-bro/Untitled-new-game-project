@@ -69,6 +69,25 @@ class FeedingZone {
     return dx * dx + dz * dz <= this.radiusM * this.radiusM;
   }
 
+  /* Which of an animal's needs this place can answer. A zone is not one
+     thing: a marsh edge feeds and waters, a thicket feeds nobody but is the
+     only place to lie up in daylight. An animal picks the nearest zone that
+     serves what it wants right now, which is the whole of the daily
+     movement pattern. */
+  serves(need) {
+    if (need === NEED.drink) return this.water;
+    if (need === NEED.rest) return this.cover > 0.5;
+    if (need === NEED.feed) {
+      return this.stock.grass + this.stock.browse + this.stock.mast > 1;
+    }
+    if (need === NEED.mate) {
+      // Rutting ground is where the food and the cover meet, because that
+      // is where the females are.
+      return this.cover > 0.35 && this.capacity.grass + this.capacity.browse > 1;
+    }
+    return false;
+  }
+
   /* Take up to `wantKg` of the forage types this animal eats. Returns what
      was actually available, which is the whole point — a stripped zone feeds
      nobody and the herd has to move. */
@@ -236,7 +255,47 @@ class Animal {
     this.woundSeverity = 0;
     this.bleedRate = 0;
     this.lastSeenPlayerT = -1e9;
+
+    /* Who this animal is, beyond its numbers. Stage and coat are rolled
+       once and then drive how it looks, how it behaves and what it is worth
+       to shoot. */
+    this.stage = stageFor(this.species, this.ageDays);
+    this.coat = this.coat || COAT.common;
+    this.alert = ALERT.unaware;
+    this.lastSensedBy = null;        // 'sight' | 'hearing' | 'smell'
+    this.lastKnownPlayerX = 0;
+    this.lastKnownPlayerZ = 0;
+
+    /* Sign. An animal lays a footprint every stride, so the distance it has
+       walked since the last one is what decides when the next one drops. */
+    this.sinceTrackM = 0;
+    this.sinceDroppingS = 0;
+    this.gait = 'walk';
+    this.motherId = opts.motherId != null ? opts.motherId : -1;
   }
+
+  /* What to call it: 'mature whitetail buck', 'whitetail fawn'. */
+  get label() {
+    const s = this.species;
+    const stage = stageName(s, this.stage);
+    if (this.stage === LIFE_STAGE.young || this.stage === LIFE_STAGE.juvenile) {
+      return `${s.name.toLowerCase()} ${stage}`;
+    }
+    if (s.antlers) return `${s.name.toLowerCase()} ${this.male ? 'buck' : 'doe'}`;
+    return `${this.male ? 'male' : 'female'} ${s.name.toLowerCase()}`;
+  }
+
+  /* How big it is right now, which for anything not yet grown is not how
+     big its species gets. Everything that draws it or butchers it asks
+     here rather than reading massKg directly. */
+  get growth() { return growthFraction(this.species, this.ageDays); }
+  get currentMassKg() { return this.massKg * this.growth; }
+  get currentShoulderM() {
+    // Legs are nearly full length long before the body fills out, which is
+    // exactly why a fawn looks like a deer drawn by someone in a hurry.
+    return this.shoulderHeightM * (0.55 + 0.45 * Math.pow(this.growth, 0.55));
+  }
+  get currentLengthM() { return this.lengthM * (0.45 + 0.55 * this.growth); }
 
   get bmrWatts() {
     // Kleiber's law: metabolic rate scales with the three-quarter power of
@@ -313,6 +372,201 @@ class Ecology {
     this._predateAccum = 0;
     this._scavengeAccum = 0;
     this.stats = { active: 0, nearby: 0, distant: 0, born: 0, died: 0, killed: 0 };
+
+    /* Sign the animals have left. Only what is near enough for the player
+       to find is kept: an island's worth of footprints is millions of them
+       and nobody is ever going to look at the ones four kilometres away. */
+    this.signs = [];
+    this.maxSigns = opts.maxSigns != null ? opts.maxSigns : 2400;
+    this.signRadiusM = opts.signRadiusM != null ? opts.signRadiusM : 420;
+
+    /* Where it has been noisy. This is what stops the island being hunted
+       out: the animals do not die, they leave. */
+    this.pressure = new PressureMap({ worldSizeM: this.worldSizeM });
+    this.nowDays = 0;
+  }
+
+  /* ---------------- sign ----------------
+
+     Everything an animal leaves behind, generated from the animal that
+     left it. The store is bounded and centred on the player, because sign
+     nobody can reach is sign nobody will ever read. */
+
+  addSign(opts) {
+    const sign = new Sign(Object.assign({ createdAtDays: this.nowDays }, opts));
+    this.signs.push(sign);
+    if (this.signs.length > this.maxSigns) {
+      // Drop the oldest, which is also the faintest.
+      this.signs.splice(0, this.signs.length - this.maxSigns);
+    }
+    return sign;
+  }
+
+  _expireSign(ctx) {
+    if (!this.signs.length) return;
+    this._signSweep = (this._signSweep || 0) + 1;
+    if (this._signSweep < 30) return;          // a couple of times a second is plenty
+    this._signSweep = 0;
+    const px = ctx.playerX || 0, pz = ctx.playerZ || 0;
+    const weather = ctx.weather || {};
+    const keepR = this.signRadiusM * 2.4;
+    let w = 0;
+    for (let i = 0; i < this.signs.length; i++) {
+      const sg = this.signs[i];
+      if (sg.freshness(this.nowDays, weather) <= 0.02) continue;
+      if (Math.hypot(sg.x - px, sg.z - pz) > keepR) continue;
+      this.signs[w++] = sg;
+    }
+    this.signs.length = w;
+  }
+
+  /* Sign within reach, freshest first, already read. This is what the
+     player's eyes get handed when they look at the ground. */
+  signsNear(x, z, radiusM, opts = {}) {
+    const out = [];
+    const weather = opts.weather || {};
+    const skill = opts.skill != null ? opts.skill : 0.3;
+    for (const sg of this.signs) {
+      if (Math.hypot(sg.x - x, sg.z - z) > radiusM) continue;
+      const read = sg.read(this.nowDays, skill, weather);
+      if (!read) continue;
+      out.push({ sign: sg, read });
+    }
+    out.sort((a, b) => b.read.freshness - a.read.freshness);
+    return out;
+  }
+
+  /* An animal walking lays tracks at its own stride length, and only near
+     enough to matter. Called from the movement step. */
+  _layTracks(a, movedM, ctx) {
+    const px = ctx.playerX || 0, pz = ctx.playerZ || 0;
+    if (Math.hypot(a.x - px, a.z - pz) > this.signRadiusM) { a.sinceTrackM = 0; return; }
+    const g = GAIT_SIGN[a.gait] || GAIT_SIGN.walk;
+    const stride = Math.max(0.25, g.strideBodyLengths * a.currentLengthM);
+    a.sinceTrackM += movedM;
+    if (a.sinceTrackM < stride) return;
+    a.sinceTrackM = 0;
+
+    /* How deep a track presses in is the animal's weight over the area of
+       its foot against how soft the ground is. A heavy animal on wet ground
+       leaves something you can read for days. */
+    const soft = ctx.groundSoftness ? ctx.groundSoftness(a.x, a.z) : 0.5;
+    const depth = clamp01((a.currentMassKg / 400) * (0.35 + soft) * g.depth);
+    this.addSign({
+      kind: SIGN.track, x: a.x, z: a.z, speciesId: a.speciesId, male: a.male,
+      ageClass: a.stage, massKg: a.currentMassKg, heading: a.heading,
+      gait: a.gait, depth, animalId: a.id,
+      substrate: soft > 0.7 ? 'mud' : soft > 0.4 ? 'soil' : 'hard ground',
+    });
+  }
+
+  /* Droppings, beds and rut sign, on their own slow clocks. */
+  _laySign(a, dt, ctx) {
+    const px = ctx.playerX || 0, pz = ctx.playerZ || 0;
+    if (Math.hypot(a.x - px, a.z - pz) > this.signRadiusM) return;
+
+    // An ungulate passes droppings roughly a dozen times a day.
+    a.sinceDroppingS += dt;
+    const every = 86400 / (a.species.class === 'ungulate' ? 13 : 6);
+    if (a.sinceDroppingS > every) {
+      a.sinceDroppingS = 0;
+      this.addSign({
+        kind: SIGN.dropping, x: a.x, z: a.z, speciesId: a.speciesId, male: a.male,
+        ageClass: a.stage, massKg: a.currentMassKg, depth: 0.6, animalId: a.id,
+      });
+    }
+
+    // A bedded animal leaves a bed the length of its body.
+    if (a.behaviour === BEHAVIOUR.bedded && !a._bedLaid) {
+      a._bedLaid = true;
+      this.addSign({
+        kind: SIGN.bed, x: a.x, z: a.z, speciesId: a.speciesId, male: a.male,
+        ageClass: a.stage, massKg: a.currentMassKg, heading: a.heading,
+        amount: a.currentLengthM, depth: 0.7, animalId: a.id,
+      });
+    } else if (a.behaviour !== BEHAVIOUR.bedded) a._bedLaid = false;
+
+    /* Rut sign. A buck in the rut rubs trees and paws scrapes, and those
+       are the signs that tell you a good one is working this ground —
+       which is the whole reason to hunt a rub line. */
+    const rut = ctx.dayOfYear != null ? rutIntensity(a.speciesId, ctx.dayOfYear) : 0;
+    if (rut > 0.3 && a.male && (a.stage === LIFE_STAGE.adult || a.stage === LIFE_STAGE.prime)) {
+      a._rutSignAccum = (a._rutSignAccum || 0) + dt;
+      if (a._rutSignAccum > 3600 / rut) {
+        a._rutSignAccum = 0;
+        const kind = this.rng() < 0.5 ? SIGN.rub : SIGN.scrape;
+        this.addSign({
+          kind, x: a.x, z: a.z, speciesId: a.speciesId, male: true,
+          ageClass: a.stage, massKg: a.currentMassKg, depth: 0.8, animalId: a.id,
+        });
+      }
+    }
+  }
+
+  /* ---------------- calling ----------------
+
+     Blow a call and see what answers. Everything within earshot of the
+     right species gets a roll; what responds starts walking to you, and
+     what does not like it leaves. */
+  respondToCall(callId, x, z, opts = {}) {
+    const call = CALL[callId];
+    if (!call) return { ok: false, reason: 'no such call' };
+    this._callHistory = this._callHistory || new Map();
+    const heard = this._callHistory.get(callId) || 0;
+
+    const results = { ok: true, call, responded: [], spooked: [], heardBy: 0 };
+    for (const a of this.animals) {
+      if (!a.alive) continue;
+      const dist = Math.hypot(a.x - x, a.z - z);
+      if (dist > call.rangeM) continue;
+      results.heardBy++;
+      const r = callResponse(call, Object.assign({ awareness: a.awareOfPlayer }, a), {
+        distanceM: dist, season: opts.season, windMs: opts.windMs,
+        heardRecently: heard, rng: this.rng,
+      });
+      if (r.responds) {
+        a.behaviour = BEHAVIOUR.travelling;
+        a.targetX = x; a.targetZ = z;
+        a._answeringCall = callId;
+        results.responded.push(a);
+      } else if (r.spooks) {
+        a.awareOfPlayer = Math.max(a.awareOfPlayer, 0.8);
+        a.alert = ALERT.spooked;
+        results.spooked.push(a);
+      }
+    }
+    // Call shyness decays; for now each blow counts and the count fades in
+    // the same step the pressure does.
+    this._callHistory.set(callId, heard + 1);
+    this._callDecay = 0;
+    return results;
+  }
+
+  /* A shot, or anything else loud. Raises pressure over the area it
+     carried, and everything that heard it reacts. */
+  disturb(x, z, opts = {}) {
+    const radius = opts.radiusM || 800;
+    this.pressure.add(x, z, opts.amount != null ? opts.amount : 1, radius);
+    let startled = 0;
+    for (const a of this.animals) {
+      if (!a.alive) continue;
+      const d = Math.hypot(a.x - x, a.z - z);
+      if (d > radius) continue;
+      const heard = clamp01(1 - (d / radius) ** 1.5);
+      if (heard < 0.05) continue;
+      a.awareOfPlayer = clamp01(a.awareOfPlayer + heard * 0.85);
+      a.lastKnownPlayerX = x; a.lastKnownPlayerZ = z;
+      a.lastSensedBy = 'hearing';
+      a.alert = alertStateFor(a.awareOfPlayer);
+      if (a.awareOfPlayer > 0.7) {
+        a.behaviour = BEHAVIOUR.fleeing;
+        const dx = a.x - x, dz = a.z - z, m = Math.max(1e-6, Math.hypot(dx, dz));
+        a.targetX = a.x + (dx / m) * 400;
+        a.targetZ = a.z + (dz / m) * 400;
+        startled++;
+      }
+    }
+    return { startled };
   }
 
   /* ---------------- world setup ---------------- */
@@ -359,6 +613,9 @@ class Ecology {
       z = (this.rng() - 0.5) * this.worldSizeM * 0.9;
     }
     const ind = rollIndividual(speciesId, this.rng);
+    // A coat is rolled once and kept: the piebald doe is the same piebald
+    // doe every time you see her, which is what makes her worth talking about.
+    ind.coat = rollCoat(this.rng);
     const a = new Animal(ind, {
       id: this.nextId++, x, z,
       y: this.terrain ? this.terrain.heightAt(x, z) : 0,
@@ -409,6 +666,9 @@ class Ecology {
   step(dt, ctx = {}) {
     const days = dt / 86400;
     const px = ctx.playerX || 0, pz = ctx.playerZ || 0;
+    this.nowDays += days;
+    this.pressure.step(days);
+    this._expireSign(ctx);
 
     /* Forage regrows on a timescale of days. Advancing seven hundred zones
        sixty times a second computes the same curve at absurd resolution, so
@@ -544,14 +804,28 @@ class Ecology {
     const dx = a.x - px, dz = a.z - pz;
     const dist = Math.hypot(dx, dz);
 
-    const chance = a.detectionChance(dx, dz, ctx);
-    // Awareness builds and decays rather than flipping, so an animal gets
-    // nervous, looks up, and gives you a moment to freeze — which is the
-    // moment the whole hunt turns on.
-    a.awareOfPlayer = clamp01(a.awareOfPlayer + (chance - 0.25) * dt * 0.9);
+    /* Three senses, separately, so the animal knows what caught it and the
+       player can be told. Being winded is different from being seen, and a
+       hunter who cannot tell which happened learns nothing. */
+    const sensed = senseAll(a, dx, dz, ctx);
+    if (sensed.total > 0.02) {
+      a.lastSensedBy = sensed.by;
+      a.lastKnownPlayerX = px; a.lastKnownPlayerZ = pz;
+    }
+    /* Awareness builds and decays rather than flipping, so an animal gets
+       nervous, looks up, and gives you a moment to freeze — which is the
+       moment the whole hunt turns on. It fades at the rate a bumped animal
+       really settles at, which is minutes rather than seconds. */
+    const decay = AWARENESS_DECAY_PER_MIN * (dt / 60);
+    a.awareOfPlayer = clamp01(a.awareOfPlayer + sensed.total * dt * 0.9 - decay);
+    // Pressure makes everything jumpier: a valley that has been shot in is
+    // a valley where nothing lets you close.
+    const pressed = this.pressure.at(a.x, a.z);
+    if (pressed > 0.05) a.awareOfPlayer = clamp01(a.awareOfPlayer + pressed * dt * 0.04);
+    a.alert = alertStateFor(a.awareOfPlayer);
 
     const s = a.species;
-    if (a.awareOfPlayer > 0.75 && dist < s.flightDistanceM) {
+    if (a.awareOfPlayer > 0.75 && dist < s.flightDistanceM * (1 + pressed * 0.8)) {
       if (s.dangerous && (s.aggression || 0) > 0.35 && dist < (s.chargeDistanceM || 20)) {
         a.behaviour = BEHAVIOUR.attacking;
       } else if (s.dangerous && (s.aggression || 0) > 0.35 && this.rng() < 0.02) {
@@ -573,6 +847,7 @@ class Ecology {
     }
 
     this._move(a, dt, ctx);
+    this._laySign(a, dt, ctx);
     if (a.behaviour === BEHAVIOUR.grazing || a.behaviour === BEHAVIOUR.browsing) this._forage(a, dt);
   }
 
@@ -652,33 +927,95 @@ class Ecology {
     return out.length ? out : this.zones;
   }
 
+  /* What an animal is doing when nothing is frightening it.
+
+     This is the daily round, and it is the heart of hunting the island:
+     an animal is at a feeding zone because it is dawn and it is hungry,
+     at water because it has just fed, bedded in a thicket because it is
+     one in the afternoon. Learn a species' clock and you know where to
+     be. Needs override the clock once they get bad enough, which is what
+     makes a waterhole worth sitting on in a dry spell. */
   _chooseIdleBehaviour(a, ctx) {
     const hour = ctx.hourOfDay != null ? ctx.hourOfDay : 12;
-    const active = this._isActiveHour(a.species.activity, hour);
-    if (a.thirst > 0.7) {
-      if (!a._zonePool) {
-        a._zonePool = this._zonesWithin(a.homeX, a.homeZ, Math.max(a.homeRadiusM * 1.6, 400));
+    const rut = ctx.dayOfYear != null ? rutIntensity(a.speciesId, ctx.dayOfYear) : 0;
+    const need = currentNeed(a.species.activity, hour, {
+      thirst: a.thirst, hunger: a.hunger, fatigue: a.fatigue,
+      inRut: rut > 0.35, male: a.male, rutIntensity: rut,
+    });
+    a.need = need;
+
+    if (!a._zonePool || a._zonePoolAt !== (this._zoneEpoch || 0)) {
+      a._zonePool = this._zonesWithin(a.homeX, a.homeZ, Math.max(a.homeRadiusM * 1.6, 400));
+      a._zonePoolAt = this._zoneEpoch || 0;
+    }
+
+    /* Where it goes for that need. Nearest first, but a zone under
+       pressure is worth walking past — which is how a shot-at herd ends up
+       two valleys over without anything having to teleport them. */
+    const pick = () => {
+      let best = null, bestCost = Infinity;
+      const pool = a._zonePool.length ? a._zonePool : this.zones;
+      for (const z of pool) {
+        if (!z.serves(need)) continue;
+        const d = Math.hypot(z.x - a.x, z.z - a.z);
+        const press = this.pressure.at(z.x, z.z);
+        // Cover is worth walking for when you want to lie up, and worth
+        // something even when you are feeding.
+        const shelter = need === NEED.rest ? (1 - z.cover) * 900 : (1 - z.cover) * 120;
+        const cost = d + press * 700 + shelter;
+        if (cost < bestCost) { bestCost = cost; best = z; }
       }
-      const water = a._zonePool.find((z) => z.water) || this.zones.find((z) => z.water);
-      if (water) {
+      return best;
+    };
+
+    const here = this._zoneAt(a.x, a.z);
+    const atRightPlace = here && here.serves(need);
+
+    if (need === NEED.drink) {
+      if (atRightPlace) {
         a.behaviour = BEHAVIOUR.drinking;
-        a.targetX = water.x; a.targetZ = water.z;
-        if (Math.hypot(a.x - water.x, a.z - water.z) < water.radiusM) a.thirst = Math.max(0, a.thirst - 0.02);
+        a.thirst = Math.max(0, a.thirst - 0.02);
         return;
       }
+      const z = pick();
+      if (z) { a.behaviour = BEHAVIOUR.travelling; a.targetX = z.x; a.targetZ = z.z; return; }
     }
-    if (!active) { a.behaviour = BEHAVIOUR.bedded; return; }
-    if (a.hunger > 0.3) {
-      const zone = this._zoneAt(a.x, a.z);
+
+    if (need === NEED.feed) {
       const types = DIET_FORAGE[a.species.diet] || [];
-      const hasFood = zone && types.some((t) => (zone.stock[t] || 0) > 1);
-      if (hasFood) {
+      if (here && types.some((t) => (here.stock[t] || 0) > 1)) {
         a.behaviour = a.species.diet === DIET.grazer ? BEHAVIOUR.grazing : BEHAVIOUR.browsing;
         return;
       }
-      const target = this._bestZoneFor(a);
-      if (target) { a.behaviour = BEHAVIOUR.travelling; a.targetX = target.x; a.targetZ = target.z; return; }
+      const z = pick() || this._bestZoneFor(a);
+      if (z) { a.behaviour = BEHAVIOUR.travelling; a.targetX = z.x; a.targetZ = z.z; return; }
     }
+
+    if (need === NEED.mate) {
+      /* A rutting male walks. That is the whole reason the rut is the
+         season to hunt: an animal that spent all summer in a thicket is
+         suddenly crossing open ground in daylight looking for females. */
+      if (!a._mateTarget || Math.hypot(a.x - a._mateTarget.x, a.z - a._mateTarget.z) < 40) {
+        const z = pick();
+        if (z) a._mateTarget = { x: z.x, z: z.z };
+      }
+      if (a._mateTarget) {
+        a.behaviour = BEHAVIOUR.travelling;
+        a.targetX = a._mateTarget.x; a.targetZ = a._mateTarget.z;
+        return;
+      }
+    }
+
+    if (need === NEED.rest) {
+      if (atRightPlace || !a._zonePool.length) { a.behaviour = BEHAVIOUR.bedded; return; }
+      const z = pick();
+      if (z && Math.hypot(z.x - a.x, z.z - a.z) > 30) {
+        a.behaviour = BEHAVIOUR.travelling; a.targetX = z.x; a.targetZ = z.z; return;
+      }
+      a.behaviour = BEHAVIOUR.bedded;
+      return;
+    }
+
     a.behaviour = BEHAVIOUR.bedded;
   }
 
@@ -724,6 +1061,16 @@ class Ecology {
     a.z += (dz / d) * step;
     a.heading = Math.atan2(dx, dz);
     if (this.terrain) a.y = this.terrain.heightAt(a.x, a.z);
+
+    /* Which gait it is in, from how fast it is going relative to what it
+       can do. This decides the animation and it decides the tracks, which
+       is the point: a running animal leaves a running animal's stride and
+       you can read that off the ground an hour later. */
+    const frac = speed / Math.max(1e-6, s.topSpeedMs);
+    a.gait = frac > 0.72 ? (s.id === 'muleDeer' ? 'stot' : 'gallop')
+      : frac > 0.42 ? 'canter'
+      : frac > 0.16 ? 'trot' : 'walk';
+    this._layTracks(a, step, ctx);
   }
 
   /* One animal spooking takes the herd with it — which is the difference
@@ -850,15 +1197,51 @@ class Ecology {
     animal.bleedRate = Math.max(animal.bleedRate, severity * 0.5);
     animal.awareOfPlayer = 1;
     animal.fear = 1;
+    animal.alert = ALERT.fleeing;
     animal.behaviour = animal.species.dangerous && (animal.species.aggression || 0) > 0.3
       ? BEHAVIOUR.chasing : BEHAVIOUR.fleeing;
     const away = opts.fromX != null
       ? Math.atan2(animal.x - opts.fromX, animal.z - opts.fromZ) : this.rng() * Math.PI * 2;
-    // A mortally hit deer typically covers 50-200 m before it drops. That
-    // distance, and the blood on the way, is the trail.
-    const runM = lerpN(400, 40, clamp01(severity)) * (0.6 + this.rng() * 0.8);
+
+    /* Where you hit decides everything that happens next: how far it goes,
+       how long you should wait, and what the blood on the ground looks
+       like. The blood is generated from the hit rather than from the
+       severity, so reading it correctly tells you the truth and reading it
+       wrong is your mistake. */
+    const blood = bloodFor(opts.region || 'chest', severity);
+    animal.hitBlood = blood;
+    animal.hitRegion = opts.region || 'chest';
+
+    // A lung-hit deer goes a hundred metres; a gut-hit one goes a mile.
+    const runM = blood.trailMetres * (0.6 + this.rng() * 0.8);
     animal.targetX = animal.x + Math.sin(away) * runM;
     animal.targetZ = animal.z + Math.cos(away) * runM;
+
+    /* Lay the trail as real sign, so it is found the same way tracks are
+       and fades the same way in the rain. */
+    const steps = Math.min(90, Math.max(4, Math.round(runM / 6)));
+    for (let i = 0; i < steps; i++) {
+      const t = i / steps;
+      // Blood thins out as the animal clots, and the first fifty metres is
+      // where nearly all of it is.
+      const amount = blood.volume * Math.pow(1 - t, 1.7);
+      if (amount < 0.03) break;
+      this.addSign({
+        kind: SIGN.blood, x: animal.x + Math.sin(away) * runM * t,
+        z: animal.z + Math.cos(away) * runM * t,
+        speciesId: animal.speciesId, male: animal.male, ageClass: animal.stage,
+        massKg: animal.currentMassKg, heading: away, blood, amount,
+        depth: 0.5 + blood.spread * 0.4, animalId: animal.id,
+      });
+    }
+    // And a tuft of hair at the hit, which is what tells you the shot
+    // connected at all when there is no blood for the first twenty metres.
+    this.addSign({
+      kind: SIGN.hair, x: animal.x, z: animal.z, speciesId: animal.speciesId,
+      male: animal.male, ageClass: animal.stage, massKg: animal.currentMassKg,
+      depth: 0.4, animalId: animal.id,
+    });
+
     if (severity >= 1) return this.kill(animal, 'hunted');
     return null;
   }

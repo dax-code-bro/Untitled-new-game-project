@@ -15,14 +15,24 @@ class Geometry {
     this.joints = null;
     this.weights = null;
     this.bounds = null;
+    this.thick = null;
+    this._thick = 1;
   }
 
   vert(px, py, pz, nx, ny, nz, u, v) {
     this.positions.push(px, py, pz);
     this.normals.push(nx, ny, nz);
     this.uvs.push(u, v);
+    if (this.thick) this.thick.push(this._thick);
     return this.positions.length / 3 - 1;
   }
+
+  /* Record how thick the surface is here, in metres, for every vertex
+     written from now on. Shell fur needs it: a coat is a layer grown off a
+     limb, and how deep it can be before the shells cross through each
+     other is set by the limb, not by the species. Call trackThickness()
+     once to start recording; a builder that never calls it pays nothing. */
+  trackThickness(t = 1) { if (!this.thick) this.thick = []; this._thick = t; return this; }
 
   /* Per-vertex colour, for surfaces whose appearance varies faster than a
      material can — terrain, above all: one material cannot be beach and
@@ -197,6 +207,10 @@ class Geometry {
       // as garbage on the vertices past the end rather than failing loudly.
       while (this.colors.length < this.positions.length) this.colors.push(1, 1, 1);
       this.colors = new Float32Array(this.colors);
+    }
+    if (this.thick) {
+      while (this.thick.length < this.positions.length / 3) this.thick.push(this._thick);
+      this.thick = new Float32Array(this.thick);
     }
     if (!this.tangents) this.computeTangents();
     if (!this.bounds) this.computeBounds();

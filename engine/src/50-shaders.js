@@ -229,7 +229,7 @@ layout(location=0) in vec3 aPosition;
 layout(location=1) in vec3 aNormal;
 layout(location=2) in vec2 aUv;
 layout(location=3) in vec4 aTangent;
-#if defined(VERTCOLOR) || defined(WATER_FX)
+#if defined(VERTCOLOR) || defined(WATER_FX) || defined(FUR_SHELL)
 layout(location=4) in vec3 aColor;
 #endif
 #ifdef SKINNED
@@ -268,6 +268,12 @@ uniform float uWindStrength;
 #ifdef FUR_SHELL
 uniform float uShellOffset;
 uniform vec3 uShellComb;
+// 1 when the mesh carries a per-vertex coat-depth mask in aColor.r. Fur
+// is a surface layer, not a uniform inflation: a shell pushed 7cm off a
+// 1.4cm-thick cannon bone turns the leg inside out, and the same offset
+// on a 2cm-thick ear turns the ear into a black ball of crossed shells.
+// The mask says how deep the coat may be at each vertex.
+uniform float uShellMask;
 #endif
 
 struct Surface {
@@ -314,7 +320,8 @@ Surface computeSurface(){
   // fragment stage clips each layer against the strand mask so hair tips
   // break the silhouette. The comb vector lays the hair backward along the
   // body the way a real coat lies, instead of puffing straight out.
-  localPos += localNrm * uShellOffset + uShellComb * uShellOffset;
+  float furDepth = uShellOffset * mix(1.0, aColor.r, uShellMask);
+  localPos += localNrm * furDepth + uShellComb * furDepth;
 #endif
 #ifdef GRASS
   // aParams.w carries a per-blade random seed; .xyz is the tint.

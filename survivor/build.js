@@ -38,6 +38,13 @@ const EXPORTS = [
   'woundSeverity', 'bulletDynamics', 'CORE_STRENGTH',
 
   'SPECIES', 'SPECIES_LIST', 'DIET', 'ACTIVITY', 'rollIndividual', 'butcherYield',
+
+  'NEED', 'DAY_PLAN', 'currentNeed', 'hoursUntilNeedChange', 'ALERT', 'alertStateFor',
+  'senseAll', 'senseSight', 'senseHearing', 'senseSmell', 'fieldOfViewDeg',
+  'SIGN', 'Sign', 'BLOOD', 'bloodFor', 'GAIT_SIGN',
+  'CALL', 'callResponse', 'PressureMap',
+  'LIFE_STAGE', 'stageFor', 'stageName', 'growthFraction', 'YOUNG_NAME',
+  'trophyScore', 'trophyRating', 'COAT', 'rollCoat', 'RUT', 'rutIntensity',
   'Ecology', 'Animal', 'Carcass', 'FeedingZone', 'BEHAVIOUR',
 
   'Fishery', 'Fish', 'WaterBody', 'FISH_SPECIES', 'FISH_SPECIES_LIST',

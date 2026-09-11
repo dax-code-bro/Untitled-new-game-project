@@ -70,16 +70,23 @@ function loftRings(g, rings, segments = 16, capStart = true, capEnd = true, flip
   const tmp = new Vec3();
   const nrm = new Vec3();
   const row = segments + 1;
+  /* UV tiling. Two wraps per tube is right for clothing and skin, where
+     the texture is a repeating material; it is wrong for an atlas, where
+     every v the caller passes names a specific band of the sheet and
+     doubling it lands on some other band entirely. A builder that has
+     laid out an atlas sets g.uvScale = 1. */
+  const us = g.uvScale != null ? g.uvScale : 2;
 
   for (let i = 0; i < rings.length; i++) {
     const r = rings[i];
     const v = r.uv != null ? r.uv : i / (rings.length - 1);
+    if (g.thick) g.trackThickness(Math.min(r.w, r.d));
     for (let s = 0; s <= segments; s++) {
       const a = (s / segments) * TAU;
       ringVertex(tmp, r.p, r.right, r.fwd, r.w, r.d, a, r.e || 2);
       // Outward normal of a superellipse, before the smoothing pass.
       nrm.set(tmp.x - r.p.x, tmp.y - r.p.y, tmp.z - r.p.z).normalize();
-      g.vert(tmp.x, tmp.y, tmp.z, nrm.x, nrm.y, nrm.z, (s / segments) * 2, v * 2);
+      g.vert(tmp.x, tmp.y, tmp.z, nrm.x, nrm.y, nrm.z, (s / segments) * us, v * us);
     }
   }
 
@@ -100,7 +107,11 @@ function loftRings(g, rings, segments = 16, capStart = true, capEnd = true, flip
   const capOf = (ringIdx, dir) => {
     const r = rings[ringIdx];
     const n = new Vec3().crossVectors(r.right, r.fwd).normalize().scale(dir);
-    const centre = g.vert(r.p.x, r.p.y, r.p.z, n.x, n.y, n.z, 0.5, 0.5);
+    // The cap belongs to the same texture band as the ring it closes — a
+    // hoof capped with mid-body coat is a hoof with hair growing out of it.
+    const cv = (r.uv != null ? r.uv : ringIdx / (rings.length - 1)) * us;
+    if (g.thick) g.trackThickness(Math.min(r.w, r.d));
+    const centre = g.vert(r.p.x, r.p.y, r.p.z, n.x, n.y, n.z, 0.5 * us, cv);
     const start = base + ringIdx * row;
     for (let s = 0; s < segments; s++) {
       const front = (dir > 0) !== flip;

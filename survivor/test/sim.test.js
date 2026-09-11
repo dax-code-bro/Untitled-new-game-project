@@ -39,6 +39,10 @@ this.API = {
   Firearm, WEAPONS, handload,
   World, GAME_MODE,
   Horse, Vehicle, GAIT, HORSE_BREED, VEHICLE_SPEC, fuelViability,
+  NEED, currentNeed, hoursUntilNeedChange, ALERT, alertStateFor, senseAll,
+  senseSight, senseHearing, senseSmell, SIGN, Sign, BLOOD, bloodFor,
+  CALL, callResponse, PressureMap, LIFE_STAGE, stageFor, stageName,
+  growthFraction, trophyScore, trophyRating, COAT, rollCoat, rutIntensity, Ecology,
   Fire, Provision, FIRE_KIND, FOOD_STATE, WATER_TREATMENT, treatWater, drinkTreated,
   SV_VECTOR_BEAR: VECTOR.undercookedBear,
 };`, ctx);
@@ -1286,6 +1290,200 @@ function live(phys, hours, env, stepMinutes = 5, hook) {
   for (let i = 0; i < 2000; i++) shot.step(0.5, { throttle: 0.6, surfaceGrip: 1 });
   check('and driving on with no coolant destroys the engine', shot.engineCondition < 0.3,
     `${(shot.engineCondition * 100).toFixed(0)}% left`);
+}
+
+/* ============================================================
+   WILDLIFE — the daily round, the three senses, sign and calls
+   ============================================================ */
+{
+  section('the daily round');
+  // A crepuscular animal feeds at first and last light and lies up through
+  // the middle of the day, which is the whole reason dawn and dusk are when
+  // you hunt.
+  check('a deer feeds at first light', A.currentNeed('crepuscular', 6, {}) === A.NEED.feed);
+  check('waters after feeding', A.currentNeed('crepuscular', 8.5, {}) === A.NEED.drink);
+  check('beds through the middle of the day', A.currentNeed('crepuscular', 13, {}) === A.NEED.rest);
+  check('and feeds again in the evening', A.currentNeed('crepuscular', 18, {}) === A.NEED.feed);
+  check('a nocturnal animal does the opposite',
+    A.currentNeed('nocturnal', 13, {}) === A.NEED.rest
+    && A.currentNeed('nocturnal', 22, {}) === A.NEED.feed);
+
+  // Need beats the clock once it gets bad enough. This is what makes a
+  // waterhole worth sitting on in a dry spell.
+  check('thirst overrides the clock',
+    A.currentNeed('crepuscular', 13, { thirst: 0.95 }) === A.NEED.drink);
+  check('and so does the rut, for a male',
+    A.currentNeed('crepuscular', 13, { inRut: true, male: true, rutIntensity: 0.9 }) === A.NEED.mate);
+  check('but not for a female',
+    A.currentNeed('crepuscular', 13, { inRut: true, male: false, rutIntensity: 0.9 }) === A.NEED.rest);
+  const until = A.hoursUntilNeedChange('crepuscular', 6);
+  check('and the next change is schedulable', until > 0 && until <= 24, `${until.toFixed(1)} h`);
+
+  section('three senses');
+  const deer = { speciesId: 'whitetailDeer', species: A.SPECIES.whitetailDeer, heading: 0, male: true };
+
+  /* Wind is the one you cannot beat. Downwind at two hundred metres beats
+     being in plain sight at fifty, and that is the whole of hunting. */
+  const downwind = A.senseSmell(deer, 0, 200, { windDirX: 0, windDirZ: 1, windMs: 4 });
+  const upwind = A.senseSmell(deer, 0, 200, { windDirX: 0, windDirZ: -1, windMs: 4 });
+  check('scent carries downwind', downwind > 0.2, downwind.toFixed(3));
+  check('and not at all upwind', upwind === 0, upwind.toFixed(3));
+  const crosswind = A.senseSmell(deer, 0, 200, { windDirX: 1, windDirZ: 0, windMs: 4 });
+  check('crosswind is close to safe', crosswind < downwind * 0.3, crosswind.toFixed(3));
+
+  // Sight is mostly about movement, and a deer sees very nearly all the way
+  // round — but not quite.
+  const still = A.senseSight(deer, 0, 60, { movementSpeed: 0, concealment: 0, light: 1 });
+  const walking = A.senseSight(deer, 0, 60, { movementSpeed: 1.4, concealment: 0, light: 1 });
+  check('a still hunter is far harder to see than a walking one',
+    walking > still * 4, `${still.toFixed(3)} vs ${walking.toFixed(3)}`);
+  const behind = A.senseSight(deer, 0, -60, { movementSpeed: 1.4, light: 1 });
+  check('and there is a blind spot directly behind', behind === 0);
+  const hidden = A.senseSight(deer, 0, 60, { movementSpeed: 1.4, concealment: 0.9, light: 1 });
+  check('cover works', hidden < walking * 0.2, hidden.toFixed(3));
+  const atNight = A.senseSight(deer, 0, 60, { movementSpeed: 1.4, light: 0.05 });
+  check('and so does the dark', atNight < walking * 0.4, atNight.toFixed(3));
+
+  // Hearing cares what you are doing, and rain covers you.
+  const loud = A.senseHearing(deer, 0, 100, { noise: 0.9 });
+  const quiet = A.senseHearing(deer, 0, 100, { noise: 0.05 });
+  check('sneaking is quieter than crashing about', quiet < loud * 0.1, `${quiet.toFixed(3)} vs ${loud.toFixed(3)}`);
+  const inRain = A.senseHearing(deer, 0, 100, { noise: 0.9, precipitation: 8, windMs: 10 });
+  check('and weather masks it', inRain < loud * 0.8, inRain.toFixed(3));
+
+  // The three combine independently, and the game knows which caught you.
+  const caught = A.senseAll(deer, 0, 120, {
+    windDirX: 0, windDirZ: 1, windMs: 5, noise: 0.1, movementSpeed: 0, light: 1,
+  });
+  check('being winded is reported as smell', caught.by === 'smell', String(caught.by));
+  check('and it is enough on its own', caught.total > 0.25, caught.total.toFixed(3));
+
+  section('alert states');
+  check('an unaware animal is unaware', A.alertStateFor(0.05) === A.ALERT.unaware);
+  check('a little is curious', A.alertStateFor(0.2) === A.ALERT.curious);
+  check('more is alerted', A.alertStateFor(0.5) === A.ALERT.alerted);
+  check('and enough is gone', A.alertStateFor(0.99) === A.ALERT.fleeing);
+
+  section('reading sign');
+  // Blood tells you where you hit, and what to do about it. Getting this
+  // wrong is how a deer is lost, so the model has to be blunt about it.
+  check('a lung hit is pink and frothy', A.bloodFor('chest', 0.8) === A.BLOOD.lung);
+  check('and you follow it soon', A.BLOOD.lung.waitMinutes < 30);
+  check('a gut shot is green-brown', A.bloodFor('abdomen', 0.6) === A.BLOOD.gut);
+  check('and you wait hours for it', A.BLOOD.gut.waitMinutes >= 120);
+  check('and it runs ten times as far as a lung hit',
+    A.BLOOD.gut.trailMetres > A.BLOOD.lung.trailMetres * 8);
+  check('a graze is a graze', A.bloodFor('chest', 0.05) === A.BLOOD.graze && !A.BLOOD.graze.lethal);
+
+  // A track carries the species, the size, the direction and the age.
+  const track = new A.Sign({
+    kind: A.SIGN.track, speciesId: 'whitetailDeer', male: true, ageClass: 'prime',
+    massKg: 120, heading: 1.2, gait: 'walk', depth: 0.8, createdAtDays: 10,
+  });
+  const fresh = track.read(10.02, 0.8, {});
+  check('a fresh track names the animal', /whitetail/i.test(fresh.species), fresh.species);
+  check('and says how long ago', /minutes|hour/.test(fresh.when), fresh.when);
+  check('and which way it went', fresh.heading === 1.2);
+  check('and how it was moving', fresh.gait === 'walking', String(fresh.gait));
+  check('a heavy animal reads as heavy', fresh.sizeClass === 'heavy', String(fresh.sizeClass));
+
+  // Rain is the difference between a good tracking morning and a lost animal.
+  const dryBlood = new A.Sign({ kind: A.SIGN.blood, speciesId: 'whitetailDeer', createdAtDays: 10, depth: 0.6 });
+  check('blood lasts a while in the dry', dryBlood.freshness(10.3, {}) > 0.4,
+    dryBlood.freshness(10.3, {}).toFixed(2));
+  check('and is gone in the rain', dryBlood.freshness(10.3, { precipitation: 8 }) < 0.05,
+    dryBlood.freshness(10.3, { precipitation: 8 }).toFixed(3));
+  // A track survives what blood does not, which is why you switch to tracks.
+  const wetTrack = new A.Sign({ kind: A.SIGN.track, speciesId: 'whitetailDeer', createdAtDays: 10, depth: 0.8 });
+  check('a track outlasts blood in the wet',
+    wetTrack.freshness(10.3, { precipitation: 8 }) > dryBlood.freshness(10.3, { precipitation: 8 }));
+
+  section('calling');
+  const buck = { speciesId: 'whitetailDeer', male: true, awareness: 0 };
+  let inRut = 0, outOfRut = 0;
+  for (let i = 0; i < 400; i++) {
+    if (A.callResponse(A.CALL.grunt, buck, { distanceM: 80, season: 'autumn', rng: () => 0.3 }).responds) inRut++;
+    if (A.callResponse(A.CALL.grunt, buck, { distanceM: 80, season: 'summer', rng: () => 0.3 }).responds) outOfRut++;
+  }
+  check('a grunt call works in the rut', inRut > 300, `${inRut}/400`);
+  check('and not in the summer', outOfRut === 0, `${outOfRut}/400`);
+  const doe = { speciesId: 'whitetailDeer', male: false, awareness: 0 };
+  const onDoe = A.callResponse(A.CALL.grunt, doe, { distanceM: 80, season: 'autumn', rng: () => 0.3 });
+  check('a challenge call does much less to a doe', !onDoe.responds || onDoe.chance < 0.2);
+  const wrongSpecies = A.callResponse(A.CALL.bugle, buck, { distanceM: 80, season: 'autumn' });
+  check('and a bugle means nothing to a deer', !wrongSpecies.responds);
+  const tooFar = A.callResponse(A.CALL.grunt, buck, { distanceM: 5000, season: 'autumn' });
+  check('nothing hears it from a mile away', !tooFar.responds);
+
+  // Overuse is the mistake every caller makes.
+  const once = A.callResponse(A.CALL.grunt, buck, { distanceM: 80, season: 'autumn', heardRecently: 0, rng: () => 0.99 }).chance;
+  const fifth = A.callResponse(A.CALL.grunt, buck, { distanceM: 80, season: 'autumn', heardRecently: 4, rng: () => 0.99 }).chance;
+  check('calling too often stops working', fifth < once * 0.15, `${once.toFixed(2)} -> ${fifth.toFixed(2)}`);
+  const spooky = A.callResponse(A.CALL.grunt, { speciesId: 'whitetailDeer', male: true, awareness: 0.7 },
+    { distanceM: 80, season: 'autumn' });
+  check('and an animal already on edge will not come', !spooky.responds);
+
+  section('hunting pressure');
+  const press = new A.PressureMap({ worldSizeM: 4000 });
+  press.add(0, 0, 1, 800);
+  check('a shot raises pressure where it was fired', press.at(0, 0) > 0.8, press.at(0, 0).toFixed(2));
+  check('and less further out', press.at(600, 0) < press.at(0, 0) && press.at(600, 0) > 0);
+  check('and not at all across the island', press.at(1800, 1800) === 0);
+  const before = press.at(0, 0);
+  press.step(3);
+  check('it halves in about three days', Math.abs(press.at(0, 0) / before - 0.5) < 0.02,
+    `${before.toFixed(2)} -> ${press.at(0, 0).toFixed(2)}`);
+  const refuge = press.quietestNear(0, 0, 1500);
+  check('and somewhere quiet is findable', refuge && refuge.pressure < before * 0.5,
+    refuge ? `${refuge.pressure.toFixed(2)} at ${refuge.x.toFixed(0)},${refuge.z.toFixed(0)}` : 'nowhere');
+
+  section('life stages');
+  const wt = A.SPECIES.whitetailDeer;
+  check('a newborn is young', A.stageFor(wt, 30) === A.LIFE_STAGE.young);
+  check('a yearling is a juvenile', A.stageFor(wt, wt.maturityDays * 0.8) === A.LIFE_STAGE.juvenile);
+  check('and at maturity it is adult', A.stageFor(wt, wt.maturityDays * 1.4) === A.LIFE_STAGE.adult);
+  check('a fawn is called a fawn', A.stageName(wt, A.LIFE_STAGE.young) === 'fawn');
+  check('a bear cub is called a cub', A.stageName(A.SPECIES.grizzlyBear, A.LIFE_STAGE.young) === 'cub');
+
+  // Growth is fast and then flattens, and a newborn is a fraction of adult.
+  check('a newborn is a twelfth of adult mass', A.growthFraction(wt, 1) < 0.12,
+    A.growthFraction(wt, 1).toFixed(3));
+  check('half grown well before maturity', A.growthFraction(wt, wt.maturityDays * 0.35) > 0.5,
+    A.growthFraction(wt, wt.maturityDays * 0.35).toFixed(2));
+  check('and full size at maturity', A.growthFraction(wt, wt.maturityDays) === 1);
+
+  section('trophies');
+  const young = A.trophyScore({ speciesId: 'whitetailDeer', male: true, ageDays: wt.maturityDays * 1.2, condition: 0.8 });
+  const primeBuck = A.trophyScore({ speciesId: 'whitetailDeer', male: true, ageDays: wt.maturityDays * 5, condition: 0.95 });
+  const ancient = A.trophyScore({ speciesId: 'whitetailDeer', male: true, ageDays: wt.maturityDays * 12, condition: 0.7 });
+  check('antlers grow with age', primeBuck > young * 2, `${young} -> ${primeBuck}`);
+  check('and go back once an animal is past it', ancient < primeBuck, `${primeBuck} -> ${ancient}`);
+  check('a doe scores nothing',
+    A.trophyScore({ speciesId: 'whitetailDeer', male: false, ageDays: 3000, condition: 1 }) === 0);
+  check('and a good head is rated as one', A.trophyRating(primeBuck, 'whitetailDeer').stars >= 4,
+    `${A.trophyRating(primeBuck, 'whitetailDeer').tier}`);
+
+  section('the rut');
+  check('whitetails rut in November', A.rutIntensity('whitetailDeer', 318) > 0.9);
+  check('and not in June', A.rutIntensity('whitetailDeer', 170) === 0);
+  check('elk rut a month and a half earlier', A.rutIntensity('elk', 268) > 0.9);
+  check('a squirrel has no rut in this model', A.rutIntensity('graySquirrel', 200) === 0);
+
+  section('rare coats');
+  // Real populations throw the odd piebald. The rates are low enough that
+  // seeing one should be an event rather than a Tuesday.
+  let albino = 0, piebald = 0, common = 0;
+  let seed = 12345;
+  const rng = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  for (let i = 0; i < 200000; i++) {
+    const c = A.rollCoat(rng);
+    if (c === A.COAT.albino) albino++;
+    else if (c === A.COAT.piebald) piebald++;
+    else if (c === A.COAT.common) common++;
+  }
+  check('most animals are ordinary', common / 200000 > 0.85, (common / 200000).toFixed(3));
+  check('piebalds are rare', piebald / 200000 < 0.01 && piebald > 0, `${piebald} in 200k`);
+  check('and an albino is an event', albino / 200000 < 0.002, `${albino} in 200k`);
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

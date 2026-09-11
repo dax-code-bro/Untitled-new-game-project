@@ -56,6 +56,7 @@ const LegendEngine = {
   Engine, Actor, Material, Body, PhysicsWorld, Shape, SHAPE,
   Fluid, WaterVolume, WATER_PRESETS, Animal, ANIMAL_SPECIES, Fracture, ParticleSystem, Skeleton, AnimationClip, Face,
   Grass, Input, Audio, Pad, PAD_BUTTON, PAD_LAYOUT, padStick, padFamily,
+  hornMesh, resolveForm, SEX_FORM, STAGE_FORM, FORM_CLASS,
   GltfAsset, GltfInstance,
   clamp, lerp, smoothstep,
 };
