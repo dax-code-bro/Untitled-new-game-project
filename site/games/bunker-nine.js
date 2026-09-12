@@ -393,14 +393,14 @@ const WEAPONS = {
     recoil: { up: 2.4, side: 0.85, climb: 0.60, recover: 7.5, back: 0.034, roll: 0.012, impulse: 18 },
     moveMul: 0.94, muzzleVel: 62,
     ammo: { shell: { r: 0.00925, len: 0.0640, head: 0.0260 }, hullMaterial: { color: 0x2b5c74, texture: 'smooth', roughness: 0.5, metalness: 0, emissive: 0x1d6c92, emissiveStrength: 0.55 } },
-    hands: { /* Half the drop the Scattergun's hand took, not all of it.
-         Both guns share the full stock, so both wrists came down 13 mm --
-         but this one's trigger sits where it sat, and following the wood
-         all the way pushed the index finger from 8 per cent buried in the
-         weapon to 17. The hand rides a little high on the comb instead,
-         which nothing can see; a trigger finger inside the guard is
-         visible every time you fire. */
-      right: [-0.014, -0.046, 0.016], rightGrip: 'wrist', left: [0.268, -0.010, -0.020], leftGrip: 'tube' },
+    /* Untouched by the Scattergun's comb drop, and deliberately.
+       This gun shares that stock's SHAPE but has its trigger somewhere
+       else and never had its problem: dropping the comb here moved the
+       wood out from under the trigger finger and nothing at the anchor
+       brought it back -- 17 per cent buried at a 13 mm drop, 17 at 6.5,
+       25 at none, against a baseline of 8. The drop is a property of the
+       Scattergun now (combDrop on DOUBLE_KINDS) and this keeps its own. */
+    hands: { right: [-0.014, -0.046, 0.016], rightGrip: 'wrist', left: [0.268, -0.010, -0.020], leftGrip: 'tube' },
   },
   mp5: {
     name: 'MP5', slotName: 'MP5',
@@ -757,6 +757,35 @@ const WEAPONS = {
      * in the room -- they are simply harder to hold: their brains
      * refuse three times in four. Hijacked, they still die. */
     hive: { radius: 3.6, dmg: 10000, fail: 0.125, max: 24 },
+  },
+
+  /* ---------------- Arc Breaker Mark II ----------------
+
+     The same machine with the governor taken off: it holds the trigger
+     down. Less out of each shot and a much smaller hive, because the
+     Mark I's whole character is that one press finishes a crowd, and a
+     full-auto weapon that did that would finish the round.
+
+     So the trade is honest and the player can feel it. The Mark I is a
+     decision -- six shots, and each one is worth thinking about. This is
+     a hose: a third of the damage, a fifth of the hive, four times the
+     rate, and a magazine that empties in under two seconds if you let it.
+
+     It shares the Mark I's chassis and its reload. A weapon that is
+     explicitly "the same gun, unlocked" should look like the same gun. */
+  arc2: {
+    name: 'Arc Breaker Mk II', slotName: 'ARC BREAKER II',
+    dmg: 300, headMul: 1.0, mag: 24, reserve: 96, refire: 0.13,
+    reload: 3.1, auto: true, pellets: 1, spread: 1.1,
+    kick: 0.7, sfx: 'shotArc', reloadKind: 'cell',
+    sightH: 0.0580, sightFov: 0.82, adsTime: 0.26,
+    recoil: { up: 0.55, side: 0.26, climb: 0.16, recover: 11, back: 0.010, roll: 0.004, impulse: 5 },
+    ammo: { cell: { w: 0.052, h: 0.070, d: 0.038 } },
+    hands: { right: [-0.014, -0.046, 0.016], rightGrip: 'pistol', left: [0.188, -0.052, -0.020], leftGrip: { axis: [-0.10, -0.99, 0], round: [0, 0, 1], girth: 0.058, spread: 0.0196, close: 1.0, index: 'wrap', thumb: 'over', drop: 0 } },
+    /* A fifth of the Mark I's reach and a third of its hold. It still
+       jumps between heads -- that is what an Arc Breaker IS -- but it
+       takes a burst to clear what one shot used to. */
+    hive: { radius: 2.2, dmg: 2400, fail: 0.34, max: 6 },
   },
 };
 
@@ -5298,6 +5327,7 @@ function makePlayer(game, S, hud, sfx, voice) {
   };
   rack('scatter', makeScattergun(game));
   rack('arc', makeArcProjector(game));
+  rack('arc2', makeArcProjector(game));
   rack('knife', makeKnife(game));
   rack('hammer', makeHammer(game));
   rack('ram', makeBatteringRam(game));
@@ -6297,6 +6327,7 @@ const UPGRADE_NAMES = {
   remington: 'Seven Hundred Yards', killstreak: 'The Long Goodbye', mg42: 'Forty-Three',
   scatter: 'Both Barrels', sawnoff: 'Last Word', paralyzer: 'Grand Mal',
   mauser: 'Kaiser', obliterator: 'Total Obliteration', arc: 'Arc Angel',
+  arc2: 'Chain Sermon',
   knife: 'Wound Man', hammer: 'Hard Labour', ram: 'Door Policy',
   shield: 'Wall Order', shieldWorn: 'Wall Order',
 };
@@ -9597,6 +9628,7 @@ function buildWorldWeapon(game, id) {
     obliterator: makeObliterator, mauser: makeMauser, ram: makeBatteringRam,
     shield: makeRiotShield, shieldWorn: makeRiotShield, scatter: makeScattergun,
     sawnoff: makeSawedOff, paralyzer: makeParalyzer, arc: makeArcProjector,
+    arc2: makeArcProjector,
     mp5: makeMP5, remington: makeRemington, killstreak: makeKillStreak,
     mg42: makeMG42, knife: makeKnife, hammer: makeHammer,
   };
@@ -11312,7 +11344,7 @@ function doInteract(game, S, P, hud, sfx, it, dt) {
       : it.id === 'ram' ? makeBatteringRam(game)
       : (it.id === 'shield' || it.id === 'shieldWorn') ? makeRiotShield(game)
       : it.id === 'scatter' ? makeScattergun(game)
-      : it.id === 'arc' ? makeArcProjector(game)
+      : (it.id === 'arc' || it.id === 'arc2') ? makeArcProjector(game)
       : { root: game.thompson({ physics: false }), parts: [] };
     built.root.setPosition([sh.crateAt[0] + ((k % 3) - 1) * 0.28, sh.crateAt[1] + 0.42 + (k / 3 | 0) * 0.12, sh.crateAt[2] + (((k / 3 | 0) % 2) - 0.5) * 0.26]);
     built.root.setRotation([0, k * 37, 74]);
@@ -11475,7 +11507,7 @@ function doInteract(game, S, P, hud, sfx, it, dt) {
     P.give(c.offerId);
     sfx.buy();
     S.bark('boxGood');
-    if (c.offerId === 'arc') S.voice(LINES.crateArc);
+    if (c.offerId === 'arc' || c.offerId === 'arc2') S.voice(LINES.crateArc);
     closeCrate(S);
     hud.ammo(P);
   } else if (it.kind === 'takeDrop') {
@@ -11523,7 +11555,12 @@ function doInteract(game, S, P, hud, sfx, it, dt) {
    weapons on each open would allocate eight sets of actors every time and
    destroy them again; the meshes are cached by the engine anyway, so the
    only thing that costs is the actors, and they are worth keeping. */
-const CRATE_POOL = ['thompson', 'scatter', 'arc', 'obliterator', 'mauser', 'blaze', 'ram', 'shield', 'killstreak'];
+/* What the box can give you.
+ *
+ * The Arc Breaker Mk II is in here rather than on a wall, deliberately:
+ * it is the Mark I with the governor taken off, and a weapon that reads
+ * as "the same gun, unlocked" is a better find than a purchase. */
+const CRATE_POOL = ['thompson', 'scatter', 'arc', 'arc2', 'obliterator', 'mauser', 'blaze', 'ram', 'shield', 'killstreak'];
 
 function crateDisplay(game, id) {
   if (id === 'thompson') { const t = game.thompson({ physics: false }); return { root: t, parts: [t, t.wood, t.slide, t.mag].filter(Boolean) }; }
