@@ -511,8 +511,33 @@ function build(game, S) {
      Moving the plane is better than nudging the water up: there is no
      grass out there to draw, and a fight you have removed cannot come
      back at a different camera height. */
+  /* The grass is DRAWN here and collided with below, separately.
+   *
+   * game.ground() with no height function gives its actor an infinite
+   * collision PLANE -- not a slab the size of the mesh. So although the
+   * lawn was moved back to stop at the seawall, its collision carried on
+   * under the entire lake at y = 0, which is below the water surface at
+   * 0.35. Everything built on top of that was decoration: the shelving
+   * lake bed never came into play because the infinite plane was always
+   * above it, the "the lake has a bottom" check was passing on the wrong
+   * floor, and a player could simply walk out across the whole lake at
+   * ankle depth to the far shore. Measured straight down the middle of
+   * the ramp: solid ground at y = 0.00 at every metre from z = 7 to the
+   * horizon.
+   *
+   * So the mesh draws and does not collide, and a slab the size of the
+   * lawn -- invisible, because the grass is already drawn over it --
+   * carries the player. */
   game.ground({ at: [0, 0, -128], material: { ...MAT.grass, uvScale: 1 },
-    size: 260, uvScale: 0.62, segments: 40 });
+    size: 260, uvScale: 0.62, segments: 40, physics: false });
+  {
+    /* Stops at the outer face of the seawall. Run on to z = 2 it was the
+       highest surface in the ramp cut for a metre or so, putting a small
+       step in the middle of the slope for no reason -- the apron, the
+       wall and the ramp all carry the player themselves out there. */
+    const floor = slab(-70, 70, -1.2, 0, -72, 0.6, mats.bed, 'lawn-floor');
+    if (floor) floor.visible = false;
+  }
 
   /* Water.
 
@@ -583,7 +608,16 @@ function build(game, S) {
      Stepped, because a box cannot be a wedge -- and the steps are small
      enough that a capsule walks them rather than catching. */
   {
-    const steps = 14, top = SW.capY, bot = C.water.y - 1.05;
+    /* From the APRON down, not from the cap down.
+    
+       Starting at the cap it put a 0.30 m thick slab across the gap at y
+       0.85 to 1.15, with the apron behind it at 0.12: a metre and three
+       centimetres of step, against a controller that climbs 0.42. The
+       ramp was not a way down to the water, it was a plinth you walked up
+       to and stopped at -- which is also why it read as "invisible" from
+       the lawn, because what you could see of it was a pale block rather
+       than a slope. A boat ramp is a cut DOWN through the wall. */
+    const steps = 14, top = 0.12, bot = C.water.y - 1.10;
     for (let i = 0; i < steps; i++) {
       const t = i / steps;
       const y = top + (bot - top) * t;
