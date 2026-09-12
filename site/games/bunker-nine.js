@@ -2880,6 +2880,7 @@ function registerLoadedMaps() {
     windows: C.WINDOWS,
     spawn: C.spawn,
     play: C.PLAY,
+    lines: C.LINES,
     build: (game, S) => { C.applySky(game); C.build(game, S); },
     sky: (game) => C.applySky(game),
     /* One level, and it covers the lawn AND the water: a zombie coming up
@@ -2908,6 +2909,16 @@ function useMap(id) {
   MAPDEF = def;
   MAP = def.map;
   WINDOWS = def.windows;
+  /* The lines that name the place. The radio operator greets you by
+     where you are standing, and on the bunker's script that place is
+     Bunker Nine -- which, read out on a lawn beside a lake, is somebody
+     reading from the wrong page. A map overlays only the lines that name
+     it or describe its ground; the rest is the same two people.
+
+     Assigned over the shared table rather than kept beside it, which is
+     safe precisely because changing map reloads the page: there is one
+     map per load and no second script to contaminate. */
+  if (def.lines) Object.assign(LINES, def.lines);
   /* `main` is the one rectangle the game asks about without caring which
      map it is on -- "the far corner of the room" when the player is at
      the workbench, for one. A map that does not name a room `main` gets

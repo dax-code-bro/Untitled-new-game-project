@@ -129,11 +129,30 @@ const MAT = {
      the same hole the gun metals were in. */
   galv: { color: 0xd4dade, texture: 'metal', roughness: 0.52, metalness: 1 },
   steelDark: { color: 0xa8b0b6, texture: 'metal', roughness: 0.58, metalness: 1 },
-  /* Faintly COOL, which looks wrong in the source and is right on the
-     wall: the brick recipe averages #80493b, so a warm tint on top of it
-     gave a fire engine. This lands near a muted brick brown. */
-  brick: { color: 0xb4b4ae, texture: 'brick', roughness: 0.93, metalness: 0, uvScale: 2.6 },
-  brickPale: { color: 0xcfcdc4, texture: 'brick', roughness: 0.93, metalness: 0, uvScale: 2.6 },
+  /* PAINTED iron -- the benches, the outboard, the trailer. metalness 0,
+     because paint is a dielectric: at 1 these have no diffuse at all and
+     read as dark grey-blue cut-outs lit by nothing but the reflection
+     probe, which is what made a park bench look like a hole. */
+  ironPaint: { color: 0x5f6a63, texture: 'metal', roughness: 0.72, metalness: 0 },
+  /* A PALE CYAN, to make a red wall. This looks like a mistake and is
+     not, and it is worth the arithmetic because guessing at it produced a
+     fire engine twice.
+
+     The brick recipe decodes to about (0.216, 0.065, 0.045) linear: its
+     green is 30 per cent of its red and its blue 21 per cent. Real brick
+     is nearer 50 and 39. So the recipe is not merely red, it is about
+     1.7x too red in green and 1.9x in blue, and no warm tint can fix
+     that -- a tint can only take light away. The correction has to hold
+     red DOWN relative to the other two, which is a cyan. 0xc2f5ff lands
+     the wall at (0.117, 0.059, 0.045): a brick red with brick's own
+     ratios rather than a traffic light.
+
+     uvScale 22, not 2.6. It is tiles per FACE, the recipe lays 8 courses
+     to a tile, and the ranch's front is nineteen metres: at 2.6 that is a
+     course nearly a metre tall, which is what made the walls read as
+     painted blocks. At 22 a course is about eleven centimetres. */
+  brick: { color: 0xc2f5ff, texture: 'brick', roughness: 0.93, metalness: 0, uvScale: 22 },
+  brickPale: { color: 0xa6f9ff, texture: 'brick', roughness: 0.93, metalness: 0, uvScale: 22 },
   shingle: { color: 0x6f6158, texture: 'concrete', roughness: 0.95, metalness: 0, uvScale: 6 },
   /* The pavilion roof is the one strong colour on the whole map. */
   roofOrange: { color: 0xd07a42, texture: 'concrete', roughness: 0.9, metalness: 0, uvScale: 5 },
@@ -142,8 +161,16 @@ const MAT = {
      high tile count wraps the grain into diagonal banding, which is the
      barber's pole the gun stocks had. */
   deck: { color: 0xa08464, texture: 'wood', roughness: 0.9, metalness: 0, uvScale: 1.3 },
-  white: { color: 0xdcd8cc, texture: 'smooth', roughness: 0.8, metalness: 0 },
-  canvas: { color: 0xd8d2c0, texture: 'fabric', roughness: 0.96, metalness: 0, uvScale: 3 },
+  /* Weathered white paint, not fresh white. On the smooth recipe, which
+     is neutral, 0xdcd8cc is 72 per cent reflectance -- brighter than
+     anything outdoors at dusk -- and it is on every post, rail, door and
+     roof out here, so the slip and the pier came out as one pale mass
+     with the sky. */
+  white: { color: 0xb4b0a4, texture: 'smooth', roughness: 0.8, metalness: 0 },
+  /* Painted metal roofing: pale, but a coat of paint rather than a
+     mirror, so it takes a colour instead of the sky. */
+  roofMetal: { color: 0x9fa39c, texture: 'metal', roughness: 0.62, metalness: 0 },
+  canvas: { color: 0xbcb49e, texture: 'fabric', roughness: 0.96, metalness: 0, uvScale: 3 },
   glass: { color: 0x2e3a42, texture: 'smooth', roughness: 0.18, metalness: 0 },
   trunk: { color: 0x9c8570, texture: 'wood', roughness: 0.96, metalness: 0, uvScale: 3 },
   /* Foliage, on the grass recipe, so the same white-tint rule applies.
@@ -215,6 +242,39 @@ const WINDOWS = [
   // And the one on the east.
   { id: 'CE', room: 'green', inside: [36.0, 0, -20.0], sillAt: [39.0, 1.15, -20.0], pad: [43.0, 0, -32.0], face: 'E', wz: [-21.4, -18.6] },
 ];
+
+/* ---------------- what the radio says here ----------------
+
+   The operator calls you by the place you are standing in, and on the
+   bunker's lines that place is Bunker Nine. Played on a lawn beside a
+   lake, "lights out on the whole coast except you" and "more of them
+   coming down the hill" are somebody reading the wrong script -- and the
+   first thing the radio said on this map was a greeting to a building
+   forty miles away.
+
+   Only the lines that name the bunker or describe its ground are
+   replaced. Everything else -- the weapon patter, the low-ammo nagging,
+   the round-over jokes -- is the same two people and carries over. */
+const LINES = {
+  intro: [
+    ['radio', 'Coastline, this is control. Every light between here and the point is out except yours.'],
+    ['patch', 'Then somebody should tell whatever is coming up the ramp to knock first.'],
+    ['radio', 'Board the gaps, corporal. They came out of the water once already.'],
+  ],
+  roundStart: [
+    [['radio', 'More of them out past the pilings. I count... plenty.']],
+    [['patch', 'Reload, breathe. Same song, louder verse.']],
+    [['radio', 'They used to live here, you know. They just do not remember moving out.']],
+    [['patch', 'Boards will not hold forever. Good thing neither will they.']],
+    [['radio', 'They are coming up the ramp again. Do keep the noise up.']],
+  ],
+  /* The power lines are the other pair that describe ground this map does
+     not have: there is no generator out here and nothing to crank. The
+     lamps along the seawall are simply lit. */
+  powerStart: [['patch', 'Nothing out here to switch on. The lamps are already burning.']],
+  power: [['radio', 'You have light, Coastline. Whether that is a comfort is your business.']],
+  gameOver: [['radio', 'Rest now, Coastline. I will keep a light on for the next one.']],
+};
 
 /* ---------------- what you can buy, and where ----------------
 
@@ -319,6 +379,56 @@ function build(game, S) {
       material, physics: false });
     if (a) { a.name = name || 'post'; decos.push(a); }
     return a;
+  };
+
+  /* A boat.
+
+     Two of these on the map and both were a single box. A box on water
+     is a crate on water: what makes a small runabout read as one, at the
+     distance you see these from, is the taper to the bow and the fact
+     that the top of it is open. So: slices along its length, narrowing
+     to a point at one end and squared off at the other, a gunwale strip
+     around the rim so the hull has a lip, a raked windscreen, and an
+     outboard hanging off the transom.
+
+     `yaw` is only ever 0 or 90 here -- the slip runs along Z and the
+     trailer under the carport along it too -- so the axis is a flag
+     rather than a rotation, which keeps every piece axis-aligned and
+     out of the depth buffer's way. */
+  const boat = (cx, cy, cz, len, beam, hullMat, alongZ) => {
+    const n = 9, half = len / 2;
+    for (let i = 0; i < n; i++) {
+      const t0 = i / n, t1 = (i + 1) / n;
+      /* Width along the hull: full amidships, a point at the bow, and
+         about three quarters at the transom. sin gives the sheer without
+         a table of numbers. */
+      const wOf = (t) => beam * (0.14 + 0.86 * Math.pow(Math.sin(Math.PI * (0.12 + t * 0.80)), 0.75));
+      const w = Math.max(wOf(t0), wOf(t1)) / 2;
+      const a = -half + t0 * len, b = -half + t1 * len;
+      // The hull is deeper amidships than at either end.
+      const drop = 0.30 + 0.26 * Math.sin(Math.PI * t0);
+      if (alongZ) deco(cx - w, cx + w, cy - drop, cy + 0.22, cz + a, cz + b, hullMat, 'boat-hull');
+      else deco(cx + a, cx + b, cy - drop, cy + 0.22, cz - w, cz + w, hullMat, 'boat-hull');
+    }
+    // The gunwale: a lip round the rim, so the hull is not a solid lump.
+    const gw = beam / 2 + 0.04;
+    for (const side of [-1, 1]) {
+      if (alongZ) deco(cx + side * gw - 0.05, cx + side * gw + 0.05, cy + 0.20, cy + 0.30, cz - half * 0.82, cz + half * 0.72, mats.white, 'boat-gunwale');
+      else deco(cx - half * 0.82, cx + half * 0.72, cy + 0.20, cy + 0.30, cz + side * gw - 0.05, cz + side * gw + 0.05, mats.white, 'boat-gunwale');
+    }
+    // Windscreen, a third of the way back from the bow.
+    const wz = half * 0.16;
+    if (alongZ) deco(cx - beam * 0.34, cx + beam * 0.34, cy + 0.26, cy + 0.56, cz + wz, cz + wz + 0.06, mats.glass, 'boat-screen');
+    else deco(cx + wz, cx + wz + 0.06, cy + 0.26, cy + 0.56, cz - beam * 0.34, cz + beam * 0.34, mats.glass, 'boat-screen');
+    // And the outboard off the transom.
+    const ez = -half - 0.18;
+    if (alongZ) {
+      deco(cx - 0.16, cx + 0.16, cy - 0.10, cy + 0.34, cz + ez, cz + ez + 0.30, mats.ironPaint, 'outboard');
+      deco(cx - 0.09, cx + 0.09, cy - 0.52, cy - 0.08, cz + ez + 0.04, cz + ez + 0.22, mats.ironPaint, 'outboard-leg');
+    } else {
+      deco(cx + ez, cx + ez + 0.30, cy - 0.10, cy + 0.34, cz - 0.16, cz + 0.16, mats.ironPaint, 'outboard');
+      deco(cx + ez + 0.04, cx + ez + 0.22, cy - 0.52, cy - 0.08, cz - 0.09, cz + 0.09, mats.ironPaint, 'outboard-leg');
+    }
   };
 
   /* A hipped roof, which is the shape on every structure here: four
@@ -528,13 +638,21 @@ function build(game, S) {
     for (const dx of [-L.halfX + 0.3, L.halfX - 0.3]) for (const dz of [-L.halfZ + 0.3, 0, L.halfZ - 0.3]) {
       post(L.x + dx, L.z + dz, C.water.y - 1.7, L.eaves, 0.10, mats.galv, 'slip-post');
     }
-    hipRoof(L.x, L.z, L.halfX + 0.5, L.halfZ + 0.5, L.eaves, L.peak, mats.white, 'slip-roof', 5);
+    hipRoof(L.x, L.z, L.halfX + 0.5, L.halfZ + 0.5, L.eaves, L.peak, mats.roofMetal, 'slip-roof', 5);
     // Catwalks down each side, and the lift frame between them.
     slab(L.x - L.halfX, L.x - L.halfX + 0.9, C.water.y + 0.75, C.water.y + 0.90, L.z - L.halfZ, L.z + L.halfZ, mats.deck, 'slip-walk-w');
     slab(L.x + L.halfX - 0.9, L.x + L.halfX, C.water.y + 0.75, C.water.y + 0.90, L.z - L.halfZ, L.z + L.halfZ, mats.deck, 'slip-walk-e');
-    // The boat, under its cover. Hull, then the canvas over it.
-    deco(L.x - 1.5, L.x + 1.5, C.water.y + 0.55, C.water.y + 1.35, L.z - 3.1, L.z + 3.1, mats.white, 'slip-boat');
-    deco(L.x - 1.7, L.x + 1.7, C.water.y + 1.30, C.water.y + 1.95, L.z - 3.3, L.z + 3.3, mats.canvas, 'slip-cover');
+    // The boat on its lift, and the canvas pitched over it.
+    boat(L.x, C.water.y + 0.95, L.z, 6.2, 2.4, mats.white, true);
+    for (let i = 0; i < 4; i++) {
+      const t = i / 4, w = 1.75 * (1 - t * 0.74);
+      deco(L.x - w, L.x + w, C.water.y + 1.28 + t * 0.17, C.water.y + 1.45 + t * 0.17,
+        L.z - 3.4 + t * 0.25, L.z + 3.4 - t * 0.25, mats.canvas, 'slip-cover');
+    }
+    // The lift frame the boat is sitting on: two bunks under the hull.
+    for (const dx of [-1.15, 1.15]) {
+      deco(L.x + dx - 0.09, L.x + dx + 0.09, C.water.y + 0.30, C.water.y + 0.46, L.z - 2.6, L.z + 2.6, mats.steelDark, 'lift-bunk');
+    }
   }
 
   /* ---------------- the buildings ----------------
@@ -640,8 +758,7 @@ function build(game, S) {
       post(K.x + dx, K.z + dz, 0, K.h, 0.09, mats.galv, 'carport-post');
     }
     deco(K.x - K.w / 2, K.x + K.w / 2, K.h, K.h + 0.22, K.z - K.d / 2, K.z + K.d / 2, mats.white, 'carport-roof');
-    slab(K.x - 1.6, K.x + 1.6, 0.55, 1.45, K.z - 2.9, K.z + 2.9, mats.white, 'carport-boat');
-    deco(K.x - 1.3, K.x + 1.3, 1.42, 1.62, K.z - 2.2, K.z + 1.4, mats.glass, 'carport-boat-screen');
+    boat(K.x, 1.15, K.z, 5.6, 2.2, mats.white, true);
     for (const dz of [-1.6, 0.4]) post(K.x - 1.0, K.z + dz, 0, 0.5, 0.16, mats.steelDark, 'trailer-wheel');
   }
 
@@ -654,12 +771,12 @@ function build(game, S) {
   const bench = (x, z, rot) => {
     const w = 1.5, d = 0.55;
     const ax = rot ? d : w, az = rot ? w : d;
-    deco(x - ax / 2, x + ax / 2, 0.42, 0.50, z - az / 2, z + az / 2, mats.steelDark, 'bench-seat');
-    deco(x - ax / 2, x + ax / 2, 0.50, 0.95, z + (rot ? 0 : az / 2 - 0.06), z + (rot ? 0.08 : az / 2), mats.steelDark, 'bench-back');
+    deco(x - ax / 2, x + ax / 2, 0.42, 0.50, z - az / 2, z + az / 2, mats.ironPaint, 'bench-seat');
+    deco(x - ax / 2, x + ax / 2, 0.50, 0.95, z + (rot ? 0 : az / 2 - 0.06), z + (rot ? 0.08 : az / 2), mats.ironPaint, 'bench-back');
     for (const s of [-1, 1]) {
       const bx = rot ? x : x + s * (w / 2 - 0.18), bz = rot ? z + s * (w / 2 - 0.18) : z;
       deco(bx - 0.16, bx + 0.16, 0.10, 0.24, bz - 0.16, bz + 0.16, mats.concrete, 'bench-block');
-      deco(bx - 0.05, bx + 0.05, 0.24, 0.44, bz - 0.05, bz + 0.05, mats.steelDark, 'bench-leg');
+      deco(bx - 0.05, bx + 0.05, 0.24, 0.44, bz - 0.05, bz + 0.05, mats.ironPaint, 'bench-leg');
     }
   };
   bench(-6.4, -2.2, false);
@@ -673,8 +790,12 @@ function build(game, S) {
       material: mats.barrel, physics: false });
     a.name = 'barrel'; decos.push(a);
   }
-  // And the plank lying across the concrete.
-  deco(-1.2, -0.9, 0.12, 0.20, -6.5, -1.0, mats.deck, 'plank');
+  /* The plank propped against the seawall, off the fourth photograph.
+     Two and a half metres, not five and a half: at the first length it
+     ran from the wall most of the way to the treeline and read as a
+     kerb somebody had painted brown. */
+  deco(-1.35, -1.05, 0.12, 0.22, -2.9, -0.5, mats.deck, 'plank');
+  deco(-0.75, -0.45, 0.12, 0.22, -2.7, -0.4, mats.deck, 'plank');
 
   /* Young ornamental trees, each in its mulch ring, in the row the
      second photograph has them in. */
@@ -804,7 +925,7 @@ function applySky(game) {
 
 window.COASTLINE = {
   id: 'coastline', name: 'Coastline',
-  C, MAP, WINDOWS, MAT, SKY, PLAY, build, applySky,
+  C, MAP, WINDOWS, MAT, SKY, PLAY, LINES, build, applySky,
   /* Where you start: on the walk, a little up the lawn from the water,
      looking down it -- the view the fourth photograph is taken from. */
   spawn: { at: [0, 1.2, -16.0], yaw: 0 },
