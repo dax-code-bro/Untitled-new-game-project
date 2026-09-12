@@ -324,7 +324,7 @@ const WEAPONS = {
 
        Three and a half metres, and that is the point: it clears a
        doorway and it cannot touch anything across a lawn. */
-    flame: { range: 3.6, cone: 26, dps: 340, burnDps: 60, burnTime: 6 },
+    flame: { range: 3.6, cone: 26, dps: 340, burnDps: 60, burnTime: 6, tick: 0.055 },
     sightH: 0.0455, sightFov: 0.74, adsTime: 0.16,
     recoil: { up: 1.10, side: 0.5, climb: 0.26, recover: 9, back: 0.017, roll: 0.007, impulse: 9 },
     ammo: { mag: { w: 0.024, d: 0.020, len: 0.086, curve: 0, witness: 0, round: AMMO.acp45 } },
@@ -7570,7 +7570,20 @@ function tryFire(game, S, P, hud, sfx, dt) {
   const am = P.ammoFor(P.equipped());
   P.cooldown -= dt;
   if (P.reloading > 0) return;
-  const wantFire = spec.auto ? S.input.fireHeld : S.input.firePressed;
+  /* A weapon that becomes a FLAMETHROWER holds its trigger.
+   *
+   * Derived here rather than written onto the spec when the upgrade
+   * happens. Mutating it at upgrade time worked through the one path
+   * that grants upgrades and silently did nothing through any other --
+   * which a test caught by setting P.upgraded directly and finding a
+   * semi-automatic flamethrower. Two sources of truth for one fact, and
+   * the fact is simply "is this an upgraded flame weapon", which is
+   * cheap to ask wherever it is needed.
+   *
+   * A semi-automatic flamethrower asks for a trigger pull per puff of
+   * flame, which is a pistol wearing a flame. */
+  const flaming = !!(spec.flame && P.upgraded && P.upgraded[P.equipped()]);
+  const wantFire = (spec.auto || flaming) ? S.input.fireHeld : S.input.firePressed;
   if (!wantFire || P.cooldown > 0) return;
   /* Whatever kills next, this is what killed it. killZombie() is the one
      funnel every death goes through and it does not know what fired --
@@ -7742,7 +7755,7 @@ function tryFire(game, S, P, hud, sfx, dt) {
    * which is the whole character of the weapon -- devastating in a
    * doorway, useless across the green on Coastline, and a decision every
    * time you pick it up. */
-  if (spec.flame && P.upgraded && P.upgraded[P.equipped()]) {
+  if (flaming) {
     const F = spec.flame;
     const from = [cam.position.x, cam.position.y, cam.position.z];
     const cos = Math.cos(F.cone * Math.PI / 180);
@@ -7774,7 +7787,9 @@ function tryFire(game, S, P, hud, sfx, dt) {
           { count: 2, size: 0.5 + t * 1.3, life: 0.45 + t * 0.35 });
       }
     }
-    P.cooldown = spec.refire;
+    /* Its own tick rate, fast enough to be a stream rather than a
+       stutter, and not the pistol's 0.16. */
+    P.cooldown = F.tick || 0.055;
     return;
   }
 
@@ -11551,14 +11566,7 @@ function doInteract(game, S, P, hud, sfx, it, dt) {
     P.upgraded[id] = true;
     applyUpgradeLook(game, P, id);
     const w = WEAPONS[id];
-    if (!w.__preUpgrade) w.__preUpgrade = { dmg: w.dmg, mag: w.mag, name: w.name, slotName: w.slotName,
-      auto: w.auto, refire: w.refire };
-    /* A weapon that becomes a FLAMETHROWER stops being semi-automatic.
-       Left as it was, the upgraded Blaze would have asked for a separate
-       trigger pull per puff of flame, which is a pistol wearing a
-       flame, not a flamethrower. It holds now, and ticks fast enough to
-       be a stream rather than a stutter. */
-    if (w.flame) { w.auto = true; w.refire = 0.055; }
+    if (!w.__preUpgrade) w.__preUpgrade = { dmg: w.dmg, mag: w.mag, name: w.name, slotName: w.slotName };
     w.dmg = w.__preUpgrade.dmg * 2;
     w.mag = w.__preUpgrade.mag * 2;
     w.reserve = Math.round(w.reserve * 1.5);
