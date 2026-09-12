@@ -53,7 +53,7 @@ asm.parts.forEach((part, i) => {
   const m = Object.assign({}, LE.GUN_MATERIAL[part.mat] || LE.GUN_MATERIAL.blued);
   // Exploded view pushes each part out along its own strip axis, scaled
   // so the whole gun opens up without the pieces overlapping.
-  const s = view === 'exploded' ? 1.0 : 0;
+  const s = view === 'exploded' ? 0.52 : 0;
   const at = [
     part.at[0] + (part.strip ? part.strip[0] * s : 0),
     part.at[1] + (part.strip ? part.strip[1] * s : 0),
@@ -68,11 +68,27 @@ asm.parts.forEach((part, i) => {
    can be judged from. The gun lies along +Z, so the camera goes out on
    +X and looks back at the middle of it. */
 const p = asm.profile;
-const span = only ? 0.20 : (p.barrelM + (p.lop || 0.2) + (view === 'exploded' ? 0.85 : 0.12));
+/* A single part is framed on its own bounds. Framed on the whole gun's
+   span with the target at the breech face, a 112 mm bolt sat half out
+   of the corner of the picture. */
+let span, midZ, midY = -0.005;
+if (only && actors.length) {
+  const b = new LE.Aabb();
+  for (const { actor } of actors) {
+    const g = actor.mesh && actor.mesh.bounds ? actor.mesh.bounds : null;
+    if (g) { b.expandPoint(g.min); b.expandPoint(g.max); }
+  }
+  const ok = Number.isFinite(b.min.x) && Number.isFinite(b.max.z);
+  span = ok ? Math.max(0.05, Math.max(b.max.z - b.min.z, (b.max.y - b.min.y) * 1.6) * 1.35) : 0.2;
+  midZ = ok ? (b.min.z + b.max.z) * 0.5 : 0;
+  midY = ok ? (b.min.y + b.max.y) * 0.5 : -0.005;
+} else {
+  span = p.barrelM + (p.lop || 0.2) + (view === 'exploded' ? 0.55 : 0.12);
+  midZ = (p.barrelM - (p.lop || 0.2)) * 0.35;
+}
 const dist = span * 1.20;
-const midZ = only ? 0 : (p.barrelM - (p.lop || 0.2)) * 0.35;
 game.camera.fov = 28 * Math.PI / 180;
-game.lookAt([dist, span * 0.14, midZ + dist * 0.13], [0, -0.005, midZ]);
+game.lookAt([dist, midY + span * 0.14, midZ + dist * 0.13], [0, midY, midZ]);
 
 document.getElementById('label').textContent =
   `${gunId} — ${p.note} · ${n} parts drawn · barrel ${(p.barrelM * 1000).toFixed(0)} mm`

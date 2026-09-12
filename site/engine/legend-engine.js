@@ -14354,8 +14354,8 @@ Engine.prototype.loadAIMaterial = async function (prompt, opts = {}) {
 const GUN_MATERIAL = {
   blued: { color: 0x1b1d20, roughness: 0.34, metalness: 0.9 },
   parked: { color: 0x33342f, roughness: 0.66, metalness: 0.75 },
-  stainless: { color: 0x8b9095, roughness: 0.44, metalness: 0.82 },
-  hardChrome: { color: 0xaab0b4, roughness: 0.24, metalness: 0.9 },
+  stainless: { color: 0x878c91, roughness: 0.5, metalness: 0.78 },
+  hardChrome: { color: 0x9fa4a8, roughness: 0.36, metalness: 0.86 },
   walnut: { color: 0x5a3a1e, roughness: 0.42, metalness: 0.02 },
   beech: { color: 0x8a6134, roughness: 0.48, metalness: 0.02 },
   polymer: { color: 0x2b2d2c, roughness: 0.62, metalness: 0.03 },
@@ -15014,7 +15014,11 @@ const GUN_PARTS = {
 
   magSpring(p) {
     const g = new Geometry();
-    const h = p.rounds > 12 ? 0.16 : 0.065;
+    /* An internal magazine's spring lives in the stock, between the
+       floorplate and the bolt — about thirty millimetres of travel. Drawn
+       at box-magazine length it hung out through the belly of the rifle. */
+    const h = p.magType === 'internal' || p.magType === 'rotary' ? 0.030
+      : (p.rounds > 12 ? 0.16 : 0.065);
     // A magazine spring is a flat zigzag, not a coil.
     let y = 0;
     const w = 0.0085;
@@ -15633,7 +15637,7 @@ function assembleGun(profileId, opts = {}) {
     });
     add({
       id: 'magazineSpring', name: 'magazine spring', build: () => GUN_PARTS.magSpring(p),
-      mat: 'spring', at: [0, magY + 0.016, trigZ + 0.060], order: 3, rides: 'floorplate',
+      mat: 'spring', at: [0, magY + 0.008, trigZ + 0.060], order: 3, rides: 'floorplate',
       strip: [0, -0.24, 0.10], simPart: 'magazineSpring',
       note: 'a flat W, and it is the only thing feeding the rifle',
     });
