@@ -1159,8 +1159,13 @@ var MAPS = [
   {
     id: 'coastline', name: 'Coastline', status: 'building',
     where: 'the dock', year: '—',
-    blurb: 'Built from the real place: the pilings, the boathouse, the water. Not finished yet.',
-    shots: [],
+    blurb: 'A mown green running down to a seawall, a pier out over the water with a '
+      + 'pavilion on the end of it, and a boathouse. Built from the real place. '
+      + 'You can look at it; you cannot fight on it yet.',
+    /* Engine screenshots of the map, the same as Bunker Nine's -- NOT the
+       photographs it was built from. Those have people in them and belong
+       to whoever took them, not to a public repository. */
+    shots: ['shots/coastline-1.jpg', 'shots/coastline-2.jpg', 'shots/coastline-3.jpg'],
   },
 ];
 

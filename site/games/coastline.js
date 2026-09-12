@@ -55,7 +55,7 @@ const C = {
    band is narrow and orange, and the ground bounce is grass rather than
    mud. */
 const SKY = {
-  zenith: 0x6d7a88, horizon: 0xd99a63, ground: 0x6e7360,
+  zenith: 0x6d7a88, horizon: 0xd99a63, ground: 0x7e8372,
   /* The sun is NOT straight out over the water, even though that is where
      the first photograph has it.
 
@@ -88,18 +88,28 @@ const SKY = {
 /* ---------------- surfaces ----------------
 
    A colour here MULTIPLIES the procedural recipe for its texture, and
-   the recipes are not neutral. `grass` averages about (0.14, 0.35, 0.09)
-   on its own -- it already IS green -- which is why the engine's own
-   grass preset is authored at pure white. The first pass of this table
-   asked for grass at 0x6f8248, a perfectly reasonable lawn green, and
-   got 0x6f8248 TIMES a dark green: about two per cent reflectance. The
-   entire lawn, every tree and all the mulch rendered as one black field
-   with the buildings standing on it.
+   the recipes are not neutral. Three separate colour faults in this file
+   came out of guessing at that -- a lawn at two per cent reflectance, a
+   fire-engine brick wall, a pine with a black underside -- so the bank
+   was baked and averaged instead. What a WHITE material becomes on each
+   recipe, measured off TextureLib.generate():
 
-   So: anything on a recipe that carries its own colour -- grass, wood,
-   brick, dirt, fabric -- is tinted from white and only nudged. Only
-   concrete, metal and smooth, whose recipes are near-neutral, get a
-   colour that is close to the colour you actually want to see. */
+       concrete #bebbb3      brick    #80493b      wood   #d0c0ac
+       metal    #a3a5aa      rust     #a99388      rock   #7d7a73
+       grass    #265718      dirt     #d0cbc3      sand   #bab3a6
+       fabric   #e0e2e7      smooth   #ffffff      tile   #a8acaf
+
+   So `grass` already IS a dark green -- which is why the engine's own
+   grass preset is authored at pure white -- and `brick` already IS a
+   strong red. Asking for a reasonable lawn green on top of the first
+   gave a black field; asking for a brick red on top of the second gave a
+   fire engine. Anything on a recipe that carries its own colour is
+   tinted from white here and only nudged, and where the recipe pulls a
+   surface off its mark the tint corrects in the opposite direction --
+   the brick tint is faintly cool because the recipe is so warm.
+
+   Only `smooth`, and to a lesser degree `concrete` and `dirt`, are near
+   enough to neutral that the hex is roughly the colour you will see. */
 const MAT = {
   /* Dialled back from 0xe9efcc, which over-corrected: the lawn came out
      a lit golf course under a sunset sky, brighter than the concrete it
@@ -117,13 +127,13 @@ const MAT = {
   /* Thin galvanised pilings and handrail. Pale, rough, and a real
      reflectance -- these are conductors and a dark hex would put them in
      the same hole the gun metals were in. */
-  galv: { color: 0xb8bec4, texture: 'metal', roughness: 0.52, metalness: 1 },
-  steelDark: { color: 0x8d949a, texture: 'metal', roughness: 0.58, metalness: 1 },
-  /* Desaturated hard from 0xbe8a6c. The brick recipe is already a red,
-     and a red tint on top of it gave a fire-engine wall with nothing of
-     the muted brown these houses actually are. */
-  brick: { color: 0xa89184, texture: 'brick', roughness: 0.93, metalness: 0, uvScale: 2.6 },
-  brickPale: { color: 0xcbc3b4, texture: 'brick', roughness: 0.93, metalness: 0, uvScale: 2.6 },
+  galv: { color: 0xd4dade, texture: 'metal', roughness: 0.52, metalness: 1 },
+  steelDark: { color: 0xa8b0b6, texture: 'metal', roughness: 0.58, metalness: 1 },
+  /* Faintly COOL, which looks wrong in the source and is right on the
+     wall: the brick recipe averages #80493b, so a warm tint on top of it
+     gave a fire engine. This lands near a muted brick brown. */
+  brick: { color: 0xb4b4ae, texture: 'brick', roughness: 0.93, metalness: 0, uvScale: 2.6 },
+  brickPale: { color: 0xcfcdc4, texture: 'brick', roughness: 0.93, metalness: 0, uvScale: 2.6 },
   shingle: { color: 0x6f6158, texture: 'concrete', roughness: 0.95, metalness: 0, uvScale: 6 },
   /* The pavilion roof is the one strong colour on the whole map. */
   roofOrange: { color: 0xd07a42, texture: 'concrete', roughness: 0.9, metalness: 0, uvScale: 5 },
@@ -135,12 +145,12 @@ const MAT = {
   white: { color: 0xdcd8cc, texture: 'smooth', roughness: 0.8, metalness: 0 },
   canvas: { color: 0xd8d2c0, texture: 'fabric', roughness: 0.96, metalness: 0, uvScale: 3 },
   glass: { color: 0x2e3a42, texture: 'smooth', roughness: 0.18, metalness: 0 },
-  trunk: { color: 0x8a7360, texture: 'wood', roughness: 0.96, metalness: 0, uvScale: 3 },
+  trunk: { color: 0x9c8570, texture: 'wood', roughness: 0.96, metalness: 0, uvScale: 3 },
   /* Foliage, on the grass recipe, so the same white-tint rule applies.
      Kept a step under the lawn rather than a quarter of it: a canopy in
      shadow is darker than a mown green, it is not a hole in the sky. */
-  leaf: { color: 0xa9bd88, texture: 'grass', roughness: 0.95, metalness: 0, uvScale: 2, subsurface: 0.35 },
-  leafPine: { color: 0xa4bc94, texture: 'grass', roughness: 0.95, metalness: 0, uvScale: 2, subsurface: 0.3 },
+  leaf: { color: 0xc6d8a4, texture: 'grass', roughness: 0.95, metalness: 0, uvScale: 2, subsurface: 0.35 },
+  leafPine: { color: 0xb8cfa8, texture: 'grass', roughness: 0.95, metalness: 0, uvScale: 2, subsurface: 0.3 },
   mulch: { color: 0x8a6b4c, texture: 'dirt', roughness: 0.97, metalness: 0, uvScale: 2 },
   barrel: { color: 0x9a6f44, texture: 'wood', roughness: 0.88, metalness: 0, uvScale: 3 },
   /* The water. It is not blue and it is not transparent: in every one of
