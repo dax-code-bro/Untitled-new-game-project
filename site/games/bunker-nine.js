@@ -9733,6 +9733,11 @@ function updateZombie(game, S, P, z, dt, sfx) {
       const want = water.surface - 0.62;
       a.setPosition([pos.x, want, pos.z]);
       if (a.body) a.body.velocity.y = 0;
+      if (a.controller && a.controller.body) a.controller.body.gravityScale = 0;
+    } else if (a.controller && a.controller.body && a.controller.body.gravityScale === 0) {
+      /* Back on its feet. Without this a body that surfaced offshore keeps
+         its swimming weightlessness all the way up the lawn. */
+      a.controller.body.gravityScale = 1;
     }
     const wantClip = swimming ? 'zswim' : wading ? 'zwade' : null;
     if (wantClip) {
@@ -9771,26 +9776,49 @@ function updateZombie(game, S, P, z, dt, sfx) {
     : P.actor.position;
 
   if (z.state === 'rising') {
-    /* Clawing up out of the ground. Gravity is off for the climb — a capsule
-       started below the floor and left to the solver either shoots out or
-       jams under it, and neither looks like a body pulling itself free. */
+    /* Coming up. Gravity is off for the climb — a capsule started below
+       the floor and left to the solver either shoots out or jams under
+       it, and neither looks like a body pulling itself free.
+
+       OUT OF THE GROUND on the bunker, and out of the WATER on Coastline,
+       which is not a reskin: the spawn pads out there are twenty to
+       thirty metres offshore, so a body clawing its way up played the
+       crawl and threw dust while standing on a lake bed two metres under
+       open water. Measured: a third of every frame a zombie spent over
+       water was the crawl clip. Over water it surfaces instead -- rising
+       to the surface rather than to the ground, already swimming, with
+       the water breaking round it rather than spoil round its
+       shoulders. */
     a.controller.move(0, 0);
-    playZombieAnim(z, 'zcrawl', 0.2);
+    const riseWater = MAPDEF && MAPDEF.waterAt ? MAPDEF.waterAt(z.riseAt[0], z.riseAt[1]) : null;
+    const deep = riseWater && (riseWater.surface - riseWater.bed) > 1.15;
+    playZombieAnim(z, deep ? 'zswim' : 'zcrawl', 0.2);
     z.riseT -= dt;
     const k = 1 - Math.max(0, z.riseT) / (RISE_TIME * 1.3);
     const body = a.controller.body;
     body.velocity.setScalar(0);
-    body.setPosition({ x: z.riseAt[0], y: 1.1 - RISE_DEPTH * (1 - Math.min(1, k * 1.15)), z: z.riseAt[1] });
-    // Spoil thrown up round the shoulders while it works its way out.
+    // Where it ends up: floating at the surface, or standing on the floor.
+    const restY = deep ? riseWater.surface - 0.62 : 1.1;
+    body.setPosition({ x: z.riseAt[0], y: restY - RISE_DEPTH * (1 - Math.min(1, k * 1.15)), z: z.riseAt[1] });
     if (Math.random() < 0.35) {
-      game.particles.dust([z.riseAt[0] + (Math.random() - 0.5) * 0.7, 0.15,
-        z.riseAt[1] + (Math.random() - 0.5) * 0.7], { count: 3, color: 0x4e4436 });
+      if (deep) {
+        // Water breaking over it, not spoil.
+        game.particles.splash
+          ? game.particles.splash([z.riseAt[0] + (Math.random() - 0.5) * 0.7, riseWater.surface,
+            z.riseAt[1] + (Math.random() - 0.5) * 0.7], { count: 4 })
+          : game.particles.dust([z.riseAt[0] + (Math.random() - 0.5) * 0.7, riseWater.surface,
+            z.riseAt[1] + (Math.random() - 0.5) * 0.7], { count: 3, color: 0xc8d4cc });
+      } else {
+        // Spoil thrown up round the shoulders while it works its way out.
+        game.particles.dust([z.riseAt[0] + (Math.random() - 0.5) * 0.7, 0.15,
+          z.riseAt[1] + (Math.random() - 0.5) * 0.7], { count: 3, color: 0x4e4436 });
+      }
     }
     if (z.riseT <= 0) {
-      body.gravityScale = 1;
-      body.setPosition({ x: z.riseAt[0], y: 1.1, z: z.riseAt[1] });
+      body.gravityScale = deep ? 0 : 1;
+      body.setPosition({ x: z.riseAt[0], y: restY, z: z.riseAt[1] });
       z.state = 'toWindow';
-      playZombieAnim(z, z.moveClip, 0.3);
+      playZombieAnim(z, deep ? 'zswim' : z.moveClip, 0.3);
     }
   } else if (z.state === 'toWindow') {
     playZombieAnim(z, z.moveClip);
