@@ -285,10 +285,21 @@ const B = { a: 0, b: 1, x: 2, y: 3, lb: 4, rb: 5, lt: 6, rt: 7, back: 8, start: 
     inv.add({ item: 'ammo:308win', massKg: 0.024, volumeL: 0.006, stackable: true, quantity: 20 });
   });
   await page.waitForTimeout(900);
+  /* Every gun in the game comes up on safe, so the first thing a shooter
+     does with one is take it off. The pad reaches the selector through
+     the gun page of the wheel; here we drive the same verb the wheel
+     drives, because this test is about the trigger and not about
+     whether a stick can be pushed north-west. */
+  await page.evaluate(() => {
+    const S = window.SURVIVOR;
+    if (S.ctx.state.cycleFireSelector) S.ctx.state.cycleFireSelector();
+  });
+  await page.waitForFunction(() => !window.SURVIVOR.ctx.state.weaponBusy, { timeout: 8000 }).catch(() => {});
   await page.evaluate((b) => window.__pad.set({ buttons: { [b.rb]: 1 } }), B);   // load
   await page.waitForTimeout(400);
   await page.evaluate((b) => window.__pad.set({ buttons: { [b.rb]: 0 } }), B);
-  await page.waitForTimeout(1200);
+  await page.waitForFunction(() => !window.SURVIVOR.ctx.state.weaponBusy, { timeout: 8000 }).catch(() => {});
+  await page.waitForTimeout(600);
 
   const shots = await page.evaluate(async (b) => {
     const S = window.SURVIVOR;
@@ -359,7 +370,9 @@ const B = { a: 0, b: 1, x: 2, y: 3, lb: 4, rb: 5, lt: 6, rt: 7, back: 8, start: 
       S.ctx.state.fishing = ctxName === 'fishing';
       S.ctx.state.driving = ctxName === 'driving';
       S.ctx.state.riding = ctxName === 'riding';
-      for (const page of [0, 1]) {
+      // Three pages on foot with a gun in your hands, two without: the gun
+      // page is an addition, so the walk has to cover it.
+      for (const page of [0, 1, 2]) {
         S.ctx.state.__wheelPageProbe = page;
         for (const slot of (S.ctx.state.wheelProbe ? S.ctx.state.wheelProbe(page) : [])) {
           if (slot.key) seen.add(slot.key);

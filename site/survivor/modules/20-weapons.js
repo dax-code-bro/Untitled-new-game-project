@@ -26,99 +26,39 @@ SurvivorGame.module({
   init(ctx) {
     const { LE, SV, game } = ctx;
 
-    /* Which viewmodel shape a weapon gets. The engine has no separate
-       viewmodel pass, so the gun is an ordinary actor parked in front of the
-       camera every frame — which means it is lit by the same sun as
-       everything else, and looks it. */
-    const CLASS = {
+    /* Which gun profile a weapon gets. The profile carries the real
+       dimensions — a Remington 700 is 1080 mm long with a 610 mm barrel —
+       and the assembler turns it into a parts list. Every part is its own
+       actor, which is the whole point: a bolt that reciprocates, a
+       selector that rotates, a magazine that drops out and a case that
+       leaves the port are four different things moving, and one welded
+       mesh can do none of them. */
+    const PROFILE = {
       remington700_308: 'boltRifle', remington700_300wm: 'boltRifle',
       remington700_7mm: 'boltRifle', mauser98: 'boltRifle',
-      ruger1022: 'carbine', ak47: 'carbine', m16: 'carbine',
-      colt1911: 'pistol', revolver357: 'revolver', revolver500: 'revolver',
+      ruger1022: 'rimfire', ak47: 'carbine', m16: 'modernCarbine',
+      colt1911: 'pistol', revolver357: 'revolver', revolver500: 'bigRevolver',
       barrett50: 'heavyRifle', shotgun12: 'shotgun',
     };
 
-    function gunGeometry(kind) {
-      const g = new LE.Geometry();
-      /* Six faces with their own normals. Sharing eight vertices across all
-         six would light every face as though it pointed at the sky, which is
-         what makes a shaded box read as a flat grey slab. */
-      const box = (x0, y0, z0, x1, y1, z1, col) => {
-        const c = [
-          [x0, y0, z0], [x1, y0, z0], [x1, y1, z0], [x0, y1, z0],
-          [x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1],
-        ];
-        const faces = [
-          [[4, 5, 6, 7], [0, 0, 1]], [[1, 0, 3, 2], [0, 0, -1]],
-          [[5, 1, 2, 6], [1, 0, 0]], [[0, 4, 7, 3], [-1, 0, 0]],
-          [[7, 6, 2, 3], [0, 1, 0]], [[0, 1, 5, 4], [0, -1, 0]],
-        ];
-        for (const [f, n] of faces) {
-          const idx = [];
-          f.forEach((ci, k) => {
-            const p = c[ci];
-            idx.push(g.vert(p[0], p[1], p[2], n[0], n[1], n[2], k === 1 || k === 2 ? 1 : 0, k > 1 ? 1 : 0));
-            g.vertColor(col[0], col[1], col[2]);
-          });
-          g.quad(idx[0], idx[1], idx[2], idx[3]);
-        }
-      };
-      const steel = [0.13, 0.13, 0.145];
-      const wood = [0.24, 0.15, 0.08];
-      const black = [0.06, 0.06, 0.07];
-
-      switch (kind) {
-        case 'boltRifle':
-          box(-0.011, -0.008, 0.10, 0.011, 0.010, 0.34, steel);       // barrel
-          box(-0.016, -0.014, -0.06, 0.016, 0.016, 0.12, steel);      // action
-          box(-0.024, -0.052, -0.30, 0.024, -0.008, 0.06, wood);      // stock
-          box(-0.026, -0.058, -0.30, 0.026, -0.040, -0.20, black);    // recoil pad
-          box(-0.020, -0.050, 0.06, 0.020, -0.008, 0.22, wood);       // forend
-          box(-0.010, -0.086, -0.04, 0.010, -0.050, 0.02, wood);      // grip
-          box(0.016, 0.000, -0.04, 0.044, 0.010, -0.01, steel);       // bolt handle
-          box(-0.024, 0.016, 0.00, 0.024, 0.032, 0.02, black);        // scope ring
-          box(-0.024, 0.016, 0.14, 0.024, 0.032, 0.16, black);        // scope ring
-          box(-0.021, 0.019, -0.02, 0.021, 0.045, 0.19, black);       // scope body
-          break;
-        case 'heavyRifle':
-          box(-0.026, -0.018, -0.40, 0.026, 0.022, 0.52, steel);
-          box(-0.034, -0.070, -0.40, 0.034, -0.012, 0.10, black);
-          box(-0.030, 0.020, -0.10, 0.030, 0.038, 0.18, black);       // rail
-          box(-0.040, -0.020, 0.44, 0.040, 0.024, 0.52, steel);       // brake
-          break;
-        case 'carbine':
-          box(-0.014, -0.010, -0.26, 0.014, 0.016, 0.30, black);
-          box(-0.026, -0.048, -0.26, 0.026, -0.006, 0.02, black);
-          box(-0.022, -0.044, 0.04, 0.022, -0.006, 0.18, wood);
-          box(-0.028, -0.120, 0.00, 0.028, -0.044, 0.08, black);      // magazine
-          box(-0.010, -0.082, -0.06, 0.010, -0.046, 0.00, black);
-          break;
-        case 'shotgun':
-          box(-0.019, -0.014, -0.28, 0.019, 0.016, 0.38, steel);
-          box(-0.026, -0.052, -0.28, 0.026, -0.008, 0.04, wood);
-          box(-0.030, -0.062, 0.10, 0.030, -0.016, 0.24, wood);       // pump
-          break;
-        case 'revolver':
-          box(-0.011, -0.010, -0.02, 0.011, 0.012, 0.19, steel);
-          box(-0.023, -0.020, 0.01, 0.023, 0.020, 0.06, steel);       // cylinder
-          box(-0.011, -0.090, -0.05, 0.011, -0.008, 0.01, wood);      // grip
-          break;
-        default:                                                      // pistol
-          box(-0.012, -0.004, -0.02, 0.012, 0.020, 0.15, steel);
-          box(-0.011, -0.088, -0.04, 0.011, -0.002, 0.02, black);
-          box(-0.009, -0.082, -0.02, 0.009, -0.010, 0.02, black);
-          break;
-      }
-      return g.finalize();
+    /* Which simulated cartridge each gun's brass is, for the case that
+       comes out of the port and stays on the ground. */
+    const BRASS_GEO = {};
+    function brassMesh(cartridgeId) {
+      const key = `brass:${cartridgeId}`;
+      if (!BRASS_GEO[key]) BRASS_GEO[key] = LE.cartridgeGeometry(cartridgeId, { spent: true });
+      return BRASS_GEO[key];
     }
-
-    const GUN_GEO = {};
-    const GUN_MAT = { preset: 'painted', vertexColor: true, color: 0xffffff, roughness: 0.42, metalness: 0.55, uvScale: 6 };
+    function liveMesh(cartridgeId) {
+      const key = `round:${cartridgeId}`;
+      if (!BRASS_GEO[key]) BRASS_GEO[key] = LE.cartridgeGeometry(cartridgeId, { spent: false });
+      return BRASS_GEO[key];
+    }
 
     /* ---- the weapon in hand ---- */
 
     let firearm = null;
-    let viewActor = null;
+    let rig = null;          // { parts: Map<id, {actor, part, rest}>, asm }
     let aiming = false;      // the mouse's own right button
     let aimed = false;       // mouse or trigger — what the game reacts to
     let baseFov = null;
@@ -126,43 +66,202 @@ SurvivorGame.module({
     let bobPhase = 0;
     let clearing = 0;
     const rng = new LE.Rng(0xf17e);
+    const brass = [];        // spent cases lying where they fell
+    let pendingCase = null;  // a fired case still in a manual action's chamber
+
+    /* The animation state. Every moving part reads these, and nothing
+       else does: one number per mechanism, driven by clips, so the bolt,
+       the hammer, the trigger, the selector and the magazine can all be
+       somewhere between their two positions at the same time without any
+       of them knowing about each other. */
+    const anim = {
+      bolt: 0,        // 0 closed, 1 fully back
+      hammer: 0,      // 0 down, 1 cocked
+      trigger: 0,     // 0 forward, 1 pressed
+      selector: 0,    // whatever fraction the lever is at
+      magazine: 0,    // 0 seated, 1 dropped clear
+      cylinder: 0,    // 0 closed, 1 swung out
+      rodOut: 0,      // the cleaning rod, 0 out, 1 all the way down the bore
+      hand: 0,        // the whole gun dipping while the hands are busy
+    };
+    let clip = null;  // the clip currently playing: { t, dur, steps, onEnd }
+
+    function play(name, dur, steps, onEnd) {
+      clip = { name, t: 0, dur, steps, onEnd: onEnd || null };
+      publishBusy();
+    }
+    function busy() { return !!clip; }
+    // Anything driving the gun from outside — a controller, a test — needs
+    // to know when the hands are free, because every action is gated on it.
+    function publishBusy() { ctx.state.weaponBusy = !!clip; }
+
+    function stepClip(dt) {
+      if (!clip) return;
+      clip.t += dt;
+      const u = Math.min(1, clip.t / clip.dur);
+      for (const [key, fn] of Object.entries(clip.steps)) anim[key] = fn(u);
+      if (u >= 1) { const end = clip.onEnd; clip = null; publishBusy(); if (end) end(); }
+    }
+
+    /* Ease curves. A bolt does not move linearly: it is snatched back
+       hard, held, and shoved forward into battery. */
+    const ease = (t) => t * t * (3 - 2 * t);
+    const outIn = (t, hold) => (t < hold ? ease(t / hold) : 1 - ease((t - hold) / (1 - hold)));
+
+    /* ---- building the rig ---- */
+
+    function destroyRig() {
+      if (!rig) return;
+      for (const p of rig.parts.values()) { try { p.actor.destroy(); } catch (e) { /* gone */ } }
+      // The rounds visible in the magazine are actors too. Left behind on
+      // a weapon swap they stayed floating where the last gun's magazine
+      // had been, which is how six 7.62 rounds ended up hanging in the air
+      // beside a bolt rifle on the bench.
+      for (const a of rig.rounds || []) { try { a.destroy(); } catch (e) { /* gone */ } }
+      rig = null;
+    }
+
+    function buildRig(weaponId, fa) {
+      destroyRig();
+      const profileId = PROFILE[weaponId] || 'carbine';
+      const asm = LE.assembleGun(profileId, { attachments: fa.attachments });
+      const parts = new Map();
+      for (const part of asm.parts) {
+        if (part.virtual || !part.build) continue;
+        const geo = part.build();
+        if (!geo.positions || !geo.positions.length) continue;
+        const mat = Object.assign({}, LE.GUN_MATERIAL[part.mat] || LE.GUN_MATERIAL.blued);
+        const actor = game.mesh({
+          geometry: geo, key: `gunpart:${profileId}:${part.id}`, material: mat,
+          at: [0, -1000, 0], physics: false, name: `gun:${part.id}`,
+        });
+        actor.noCull = true;
+        parts.set(part.id, { actor, part, rest: part.at.slice() });
+      }
+      /* Rounds visible in the magazine. A player who can see how many are
+         left does not have to read a counter, and a magazine you can see
+         into is the reason a see-through mag exists at all. */
+      const magPart = asm.parts.find((x) => x.id === 'magazine' || x.id === 'cylinder');
+      rig = { asm, parts, profileId, magPart, rounds: [] };
+      return rig;
+    }
 
     function equip(weaponId) {
       const spec = SV.WEAPONS[weaponId];
       if (!spec) { ctx.toast('No such weapon.'); return null; }
       firearm = new SV.Firearm(weaponId, { condition: 0.62 + rng.next() * 0.3, oilLevel: 0.55 });
-      // Iron sights unless the player fits something else.
       firearm.attach('ironSights');
-      const kind = CLASS[weaponId] || 'carbine';
-      if (!GUN_GEO[kind]) GUN_GEO[kind] = gunGeometry(kind);
-      if (viewActor) { try { viewActor.destroy(); } catch (e) { /* gone */ } }
-      viewActor = game.mesh({
-        geometry: GUN_GEO[kind], key: `gun:${kind}`, material: GUN_MAT,
-        at: [0, -1000, 0], physics: false, name: 'viewmodel',
-      });
-      viewActor.noCull = true;
+      buildRig(weaponId, firearm);
+      anim.selector = firearm.selectorFraction;
+      anim.hammer = firearm.spec.action === SV.ACTION.boltAction ? 1 : 0;
       ctx.state.currentWeapon = firearm;
+      ctx.state.currentRig = rig;
       ctx.log(`${spec.name}. ${spec.note}`, true);
+      ctx.toast('On safe — shift+Z to take it off');
       return firearm;
     }
 
     ctx.state.giveWeapon = equip;
     ctx.state.equipWeapon = equip;
+    /* The bench needs to rebuild the rig after a strip changes what is on
+       the gun, and after an optic is mounted or comes off. */
+    ctx.state.rebuildWeaponRig = () => { if (firearm) { buildRig(firearm.id, firearm); } };
 
-    /* Ammunition. A round is a cartridge id plus a condition, which is what
-       the firearm's fire() wants and what handloading produces. */
-    function loadMagazine() {
-      if (!firearm) return;
-      const cid = firearm.cartridgeId;
-      const have = ctx.player.inventory.slots.find((s) => s.item === `ammo:${cid}`);
+    /* ---- loading, a round at a time ---- */
+
+    let magazine = null;
+
+    function ammoInPack() {
+      if (!firearm) return 0;
+      const have = ctx.player.inventory.slots.find((s) => s.item === `ammo:${firearm.cartridgeId}`);
+      return have ? have.quantity : 0;
+    }
+
+    /* Thumb one round in. This is deliberately not a single "reload"
+       action: a magazine is filled one round at a time and each one is
+       about a second and a half of not watching the treeline. Holding the
+       key keeps going. */
+    function loadOne() {
+      if (!firearm || busy()) return false;
+      if (!magazine || magazine.capacity !== firearm.capacity) {
+        magazine = new SV.Magazine({
+          capacity: firearm.capacity,
+          springCondition: firearm.parts.magazineSpring ? firearm.parts.magazineSpring.condition : 1,
+        });
+        for (const r of firearm.magazine) magazine.push(r);
+      }
+      if (magazine.full) { ctx.toast('Full.'); return false; }
+      if (ammoInPack() <= 0) { ctx.toast('No ammunition for it.'); return false; }
+      const round = { cartridgeId: firearm.cartridgeId, condition: 0.9 + rng.next() * 0.1 };
+      const out = magazine.push(round);
+      if (!out.ok) return false;
+      ctx.player.inventory.remove(`ammo:${firearm.cartridgeId}`, 1);
+      firearm.magazine = magazine.rounds.slice();
+      // The hands drop the gun a little while they work.
+      play('feed', Math.min(1.1, out.seconds * 0.55), {
+        hand: (t) => Math.sin(t * Math.PI) * 0.6,
+        magazine: () => anim.magazine,
+      });
+      ctx.state.busySeconds = (ctx.state.busySeconds || 0) + out.seconds;
+      return true;
+    }
+
+    /* A whole magazine change, for the guns that take one: the old one
+       drops clear, the new one goes up, and the bolt is released. */
+    function swapMagazine() {
+      if (!firearm || busy()) return;
+      const detachable = rig && rig.parts.has('magazine');
+      if (!detachable) { loadOne(); return; }
       const want = firearm.capacity - firearm.magazine.length;
-      const n = Math.min(want, have ? have.quantity : want);
+      if (want <= 0 && firearm.chambered) { ctx.toast('Full.'); return; }
+      const n = Math.min(want, ammoInPack());
       if (n <= 0) { ctx.toast('No ammunition for it.'); return; }
-      const rounds = [];
-      for (let i = 0; i < n; i++) rounds.push({ cartridgeId: cid, condition: 0.9 + rng.next() * 0.1 });
-      firearm.load(rounds);
-      if (have) ctx.player.inventory.remove(`ammo:${cid}`, n);
-      ctx.toast(`Loaded ${n}.`);
+      play('magout', 0.55, {
+        magazine: (t) => ease(t),
+        hand: (t) => Math.sin(t * Math.PI) * 0.7,
+      }, () => {
+        const rounds = [];
+        for (let i = 0; i < n; i++) rounds.push({ cartridgeId: firearm.cartridgeId, condition: 0.9 + rng.next() * 0.1 });
+        firearm.load(rounds);
+        ctx.player.inventory.remove(`ammo:${firearm.cartridgeId}`, n);
+        magazine = null;
+        play('magin', 0.65, {
+          magazine: (t) => 1 - ease(t),
+          hand: (t) => Math.sin(t * Math.PI) * 0.5,
+          bolt: (t) => (t < 0.7 ? 0 : 1 - ease((t - 0.7) / 0.3)),
+        }, () => { firearm.chamber(); ctx.toast(`${n} up.`); });
+      });
+    }
+
+    /* ---- the case ---- */
+
+    /* A spent case, thrown out of the port and left where it lands.
+       Nothing in this game despawns, and brass is a component: a
+       handloader walks back and picks it up. */
+    function throwCase(spent) {
+      if (!spent || !rig) return;
+      const cam = game.camera;
+      const port = rig.parts.get('receiver');
+      const at = new LE.Vec3().copy(cam.position)
+        .addScaled(cam.forward, 0.42).addScaled(cam.right, 0.10).addScaled(cam.trueUp, -0.04);
+      void port;
+      const a = game.mesh({
+        geometry: brassMesh(spent.cartridgeId), key: `brass:${spent.cartridgeId}`,
+        material: LE.GUN_MATERIAL.brass, at: [at.x, at.y, at.z],
+        collider: 'box', physics: true, mass: Math.max(0.004, spent.massG / 1000),
+        name: 'brass',
+      });
+      if (!a) return;
+      // Out of the port along the pattern the action actually throws.
+      const d = new LE.Vec3()
+        .addScaled(cam.right, spent.dir[0])
+        .addScaled(cam.trueUp, spent.dir[1])
+        .addScaled(cam.forward, spent.dir[2]).normalize();
+      try { a.push(d, spent.speedMs); } catch (e) { /* static fallback */ }
+      a.userData = { kind: 'brass', cartridgeId: spent.cartridgeId, tempC: spent.tempC, t: 0 };
+      brass.push(a);
+      // A hundred cases on the ground is plenty; past that the oldest go.
+      if (brass.length > 160) { const old = brass.shift(); try { old.destroy(); } catch (e) { /* gone */ } }
     }
 
     /* ---- the shot ---- */
@@ -195,6 +294,36 @@ SurvivorGame.module({
 
       ctx.player.practise('shooting', 0.004);
 
+      /* The mechanism, shown. The hammer falls, the trigger comes back,
+         and then the action does whatever its action does: a self-loader
+         cycles itself and throws the case; a bolt gun sits there with a
+         fired case in the chamber until the shooter works it, which is
+         the entire difference in how the two guns feel. */
+      const act = firearm.spec.action;
+      const selfLoading = act === SV.ACTION.semiAuto || act === SV.ACTION.fullAuto;
+      anim.hammer = 0;
+      anim.trigger = 1;
+      if (selfLoading) {
+        const cycle = Math.max(0.06, (firearm.spec.cycleTimeS || 0.12) * 0.9);
+        play('cycle', cycle, {
+          bolt: (t) => outIn(t, 0.42),
+          trigger: (t) => 1 - ease(t),
+          hammer: (t) => (t < 0.5 ? 0 : ease((t - 0.5) / 0.5)),
+        }, () => { firearm.chamber(); });
+        // The case leaves as the bolt reaches the back of its travel.
+        setTimeout(() => throwCase(shot.ejected), cycle * 420);
+      } else if (act === SV.ACTION.revolver) {
+        play('dacycle', 0.22, {
+          trigger: (t) => 1 - ease(t),
+          hammer: (t) => (t < 0.5 ? 0 : ease((t - 0.5) / 0.5)),
+        }, () => { firearm.chamber(); });
+      } else {
+        // Manual: the trigger resets and the action stays shut. The player
+        // has to work it, and the case comes out when they do.
+        play('reset', 0.18, { trigger: (t) => 1 - ease(t) });
+        pendingCase = shot.ejected;
+      }
+
       // Recoil goes into the camera and recovers over the model's own time.
       recoilPitch += (shot.muzzleRise.riseDeg * Math.PI) / 180;
       recoilRecover = shot.muzzleRise.recoveryS;
@@ -213,7 +342,18 @@ SurvivorGame.module({
         .addScaled(game.camera.trueUp, Math.sin(a1) * r1).normalize();
 
       const origin = new LE.Vec3().copy(aim.origin).addScaled(dir, 0.35);
-      game.particles.smoke([origin.x, origin.y, origin.z], { count: 5, size: 0.25, life: 0.5 });
+      /* Muzzle blast at the muzzle, not at the eye. A suppressed gun
+         still smokes — it just does it quietly and out of a can, which
+         is the visible half of why a suppressor fouls a gun faster. */
+      const can = firearm.attachments.thread;
+      const suppressed = !!(can && can.noiseDb < 0);
+      const muzzle = new LE.Vec3().copy(aim.origin).addScaled(dir, (rig && rig.asm.profile.barrelM) || 0.5);
+      game.particles.smoke([muzzle.x, muzzle.y, muzzle.z],
+        { count: suppressed ? 8 : 5, size: suppressed ? 0.18 : 0.25, life: suppressed ? 0.9 : 0.5 });
+      if (!suppressed) {
+        game.particles.sparks([muzzle.x, muzzle.y, muzzle.z],
+          { count: 10, speed: 7, size: 0.05 });
+      }
       game.audio.impact(Math.min(1, shot.noiseDb / 165));
 
       ctx.emit('gunshot', {
@@ -364,8 +504,35 @@ SurvivorGame.module({
 
     /* ---- the viewmodel ---- */
 
+    /* The gun is an ordinary actor parked in front of the camera every
+       frame — there is no separate viewmodel pass, which means it is lit
+       by the same sun as everything else and looks it. What is new is
+       that it is not ONE actor: every part is placed individually, each
+       offset along its own travel axis by however far the animation says
+       it has moved. That is the difference between a gun that fires and
+       a gun you can watch fire. */
+
+    const _p = new LE.Vec3(), _q = new LE.Quat();
+
+    function partOffset(id, part) {
+      // How far this part has moved from its rest position, in gun space.
+      const tv = part.travel;
+      if (!tv) return null;
+      let amount = 0;
+      if (id === 'bolt' || id === 'pumpHandle') amount = anim.bolt;
+      else if (id === 'magazine' || id === 'floorplate') amount = anim.magazine;
+      else if (id === 'trigger') amount = anim.trigger;
+      else if (id === 'hammer') amount = anim.hammer;
+      else if (id === 'selector') amount = anim.selector;
+      else if (id === 'cylinder' || id === 'ejectorRod') amount = anim.cylinder;
+      else if (id === 'firingPin') amount = anim.trigger > 0.8 ? 1 : 0;
+      else return null;
+      if (amount === 0) return null;
+      return { tv, amount };
+    }
+
     function placeViewmodel(dt) {
-      if (!viewActor || !firearm) return;
+      if (!rig || !firearm) return;
       const cam = game.camera;
       const fwd = cam.forward, right = cam.right, up = cam.trueUp;
 
@@ -382,28 +549,114 @@ SurvivorGame.module({
 
       /* Where the gun sits. Aiming brings it onto the centre line and
          forward so the sights are near the eye; at rest it drops to the
-         right where a rifle actually hangs. Further out than it feels like
-         it should be, because at thirty centimetres a real rifle fills half
-         your field of view and reads as a prop held to your face. */
-      /* The near plane is a quarter of a metre and there is no separate
-         viewmodel pass, so the gun cannot come as close to the eye as a
-         real one does. Aiming therefore brings it onto the centre line and
-         a little low and left of it, which reads as looking through the
-         sight without putting the back of the receiver in your eye. */
-      const outX = aimed ? 0.012 : 0.17;
-      const outY = aimed ? -0.052 : -0.14;
-      const outZ = aimed ? 0.52 : 0.46;
+         right where a rifle actually hangs. The near plane is a quarter of
+         a metre, so it cannot come as close to the eye as a real one does. */
+      /* At rest the gun hangs down and to the right, but not as far as a
+         single welded box needed to: the parts now span a metre of real
+         gun, so the old offset put two thirds of a Mauser off the edge of
+         the screen. */
+      const hand = anim.hand;
+      const outX = (aimed ? 0.012 : 0.105) + hand * 0.03;
+      const outY = (aimed ? -0.052 : -0.105) - hand * 0.06;
+      const outZ = (aimed ? 0.50 : 0.44) - hand * 0.04;
 
-      const pos = new LE.Vec3().copy(cam.position)
+      // The gun's own frame: forward is the bore, up is the top strap.
+      const base = new LE.Vec3().copy(cam.position)
         .addScaled(fwd, outZ)
         .addScaled(right, outX + swayX)
         .addScaled(up, outY + swayY);
-      viewActor.setPosition([pos.x, pos.y, pos.z]);
 
       const yaw = Math.atan2(fwd.x, fwd.z) * 180 / Math.PI;
       const pitch = Math.asin(Math.max(-1, Math.min(1, fwd.y))) * 180 / Math.PI;
-      viewActor.setRotation([-pitch, yaw, aimed ? 0 : 3]);
-      viewActor.visible = !ctx.paused;
+      const roll = (aimed ? 0 : 3) + hand * 8;
+      _q.setEuler(-pitch * Math.PI / 180, yaw * Math.PI / 180, roll * Math.PI / 180);
+
+      for (const [id, entry] of rig.parts) {
+        const { actor, part, rest } = entry;
+        let lx = rest[0], ly = rest[1], lz = rest[2];
+        let extraPitch = 0, extraYaw = 0, extraRoll = 0;
+
+        const mv = partOffset(id, part);
+        if (mv) {
+          const { tv, amount } = mv;
+          // Linear travel along one axis, or rotation about one.
+          if (tv.axis === 'z') lz += tv.amount * amount;
+          else if (tv.axis === 'y') ly += tv.amount * amount;
+          else if (tv.axis === 'x') lx += tv.amount * amount;
+          else if (tv.axis === 'rx') extraPitch = tv.amount * amount;
+          else if (tv.axis === 'ry') extraYaw = tv.amount * amount;
+          else if (tv.axis === 'rz') extraRoll = tv.amount * amount;
+          else if (tv.axis === 'swing') { lx += -0.055 * amount; extraYaw = -tv.amount * amount; }
+        }
+        // A part that rides on another moves with it.
+        if (part.rides) {
+          const host = rig.parts.get(part.rides);
+          if (host) {
+            const hm = partOffset(part.rides, host.part);
+            if (hm) {
+              const { tv, amount } = hm;
+              if (tv.axis === 'z') lz += tv.amount * amount;
+              else if (tv.axis === 'y') ly += tv.amount * amount;
+              else if (tv.axis === 'x') lx += tv.amount * amount;
+            }
+          }
+        }
+
+        // Gun space -> world.
+        _p.set(lx, ly, lz).applyQuat(_q);
+        actor.setPosition([base.x + _p.x, base.y + _p.y, base.z + _p.z]);
+        actor.setRotation([
+          -pitch + extraPitch * 180 / Math.PI,
+          yaw + extraYaw * 180 / Math.PI,
+          roll + extraRoll * 180 / Math.PI,
+        ]);
+        actor.visible = !ctx.paused && !ctx.state.benchOpen;
+      }
+
+      /* Rounds in the magazine, so a glance tells you what is left. The
+         top round sits under the feed lips and the stack goes down. */
+      const magEntry = rig.parts.get('magazine');
+      const want = magEntry && !ctx.state.benchOpen ? Math.min(6, firearm.magazine.length) : 0;
+      while (rig.rounds.length < want) {
+        const a = game.mesh({
+          geometry: liveMesh(firearm.cartridgeId), key: `round:${firearm.cartridgeId}`,
+          material: LE.GUN_MATERIAL.brass, at: [0, -1000, 0], physics: false, name: 'round',
+        });
+        if (!a) break;
+        a.noCull = true;
+        rig.rounds.push(a);
+      }
+      while (rig.rounds.length > want) {
+        const a = rig.rounds.pop();
+        try { a.destroy(); } catch (e) { /* gone */ }
+      }
+      if (want && magEntry) {
+        const mv = partOffset('magazine', magEntry.part);
+        const drop = mv ? magEntry.part.travel.amount * mv.amount : 0;
+        for (let i = 0; i < rig.rounds.length; i++) {
+          _p.set(magEntry.rest[0] - 0.004,
+            magEntry.rest[1] + drop - 0.004 - i * 0.0105,
+            magEntry.rest[2] + (i % 2 ? 0.0018 : -0.0018)).applyQuat(_q);
+          rig.rounds[i].setPosition([base.x + _p.x, base.y + _p.y, base.z + _p.z]);
+          rig.rounds[i].setRotation([-pitch, yaw + 90, roll]);
+          rig.rounds[i].visible = !ctx.paused && !ctx.state.benchOpen;
+        }
+      }
+    }
+
+    /* Cases cool on the ground. A case out of a rifle will raise a
+       blister for the first few seconds and then it is just brass. */
+    function coolBrass(dt) {
+      for (const a of brass) {
+        const ud = a.userData;
+        if (!ud || ud.tempC <= 25) continue;
+        ud.t += dt;
+        ud.tempC = 20 + (ud.tempC - 20) * Math.exp(-dt / 9);
+        if (ud.tempC > 90 && ud.t < 4 && Math.random() < dt * 1.6) {
+          game.particles.smoke([a.position.x, a.position.y + 0.01, a.position.z],
+            { count: 1, size: 0.03, life: 0.5 });
+        }
+      }
     }
 
     /* ---- input ---- */
@@ -413,12 +666,106 @@ SurvivorGame.module({
     ctx.key('3', () => { if (!ctx.state.buildMenuOpen) equip('shotgun12'); }, 'Shotgun');
     ctx.key('4', () => { if (!ctx.state.buildMenuOpen) equip('revolver357'); }, 'Revolver');
     ctx.key('5', () => { if (!ctx.state.buildMenuOpen) equip('ak47'); }, 'AK');
-    ctx.key('l', () => loadMagazine(), 'Load');
+    /* Working the action by hand. On a bolt gun, a pump or a lever this
+       is the shot cycle: the case you fired is still in the chamber and
+       the next round is still in the magazine until you do this. Holding
+       it does nothing — it is one deliberate motion. */
+    function workAction() {
+      if (!firearm || busy()) return;
+      const act = firearm.spec.action;
+      if (act === SV.ACTION.semiAuto || act === SV.ACTION.fullAuto) {
+        // Charging a self-loader: haul it back and let it go.
+        play('charge', 0.42, {
+          bolt: (t) => outIn(t, 0.55),
+          hand: (t) => Math.sin(t * Math.PI) * 0.5,
+        }, () => {
+          if (pendingCase) { throwCase(pendingCase); pendingCase = null; }
+          else if (firearm.chambered) { firearm.chambered = null; }
+          firearm.chamber();
+        });
+        return;
+      }
+      if (act === SV.ACTION.revolver) { openCylinder(); return; }
+      const cycleT = Math.max(0.35, (firearm.spec.cycleTimeS || 1) * 0.8);
+      play('cycle', cycleT, {
+        bolt: (t) => outIn(t, 0.5),
+        hammer: (t) => ease(Math.min(1, t * 1.6)),
+        hand: (t) => Math.sin(t * Math.PI) * 0.45,
+      }, () => {
+        if (pendingCase) { throwCase(pendingCase); pendingCase = null; }
+        firearm.chambered = null;
+        if (!firearm.chamber()) ctx.toast('Empty.');
+      });
+    }
+
+    /* A revolver: the cylinder swings out, the rod dumps all six cases
+       at once, and you load it a chamber at a time. */
+    function openCylinder() {
+      if (!firearm || busy()) return;
+      if (anim.cylinder > 0.5) {
+        play('close', 0.35, { cylinder: (t) => 1 - ease(t), hand: (t) => Math.sin(t * Math.PI) * 0.4 });
+        return;
+      }
+      play('open', 0.4, { cylinder: (t) => ease(t), hand: (t) => Math.sin(t * Math.PI) * 0.5 }, () => {
+        const n = firearm.magazine.length + (firearm.chambered ? 1 : 0);
+        if (n > 0) {
+          for (let i = 0; i < n; i++) {
+            throwCase({
+              cartridgeId: firearm.cartridgeId, massG: 10, tempC: 90,
+              dir: [0.2 + rng.next() * 0.3, -0.4, 0.1], speedMs: 0.9 + rng.next() * 0.6,
+            });
+          }
+          firearm.magazine.length = 0;
+          firearm.chambered = null;
+          ctx.toast(`${n} out.`);
+        }
+      });
+    }
+
+    /* Gun handling lives on two keys and their shifted forms, because
+       every other letter on the board is already spoken for by fire,
+       shelter, fishing, wiring or the vehicles. Shift is the deliberate
+       version of the same action: load a magazine or thumb in one round,
+       work the action or change what the action will do. */
+    ctx.key('l', (c, ev) => {
+      if (ev && ev.shiftKey) loadOne();
+      else swapMagazine();
+    }, 'Load (shift: one round at a time)');
+
+    ctx.key('z', (c, ev) => {
+      if (ev && ev.shiftKey) cycleSelector();
+      else workAction();
+    }, 'Work the action (shift: fire selector)');
+
+    /* The selector. It is a real lever on the model and it rotates to
+       the position it is in — on an AK the first position under the
+       thumb is full automatic, which is a thing you find out. */
+    function cycleSelector() {
+      if (!firearm || busy()) return;
+      const mode = firearm.cycleFireMode();
+      const target = firearm.selectorFraction;
+      const from = anim.selector;
+      play('select', 0.22, { selector: (t) => from + (target - from) * ease(t) });
+      game.audio.tone(1800, 0.03);
+      ctx.toast(mode === 'safe' ? 'Safe.' : mode === 'auto' ? 'Full automatic.'
+        : mode === 'burst' ? 'Burst.' : 'Semi-automatic.');
+    }
+    // The controller and anything else that wants it can drive the
+    // selector without knowing which key it is on.
+    ctx.state.cycleFireSelector = cycleSelector;
+    ctx.state.workWeaponAction = workAction;
+    ctx.state.thumbRoundIn = loadOne;
+
     ctx.key('i', () => {
       if (!firearm) return;
       const info = firearm.inspect();
       ctx.log(`${firearm.name}: ${info.notes.length ? info.notes.join('; ') : 'in good order'}`, true);
-      ctx.toast(`${(info.reliability * 100).toFixed(0)}% reliable, ${info.accuracyMoa.toFixed(1)} MOA`);
+      ctx.toast(`${(info.reliability * 100).toFixed(0)}% reliable, ${info.accuracyMoa.toFixed(1)} MOA, ${firearm.fireMode}`);
+      // Tip it over and look at it, the way you do.
+      play('inspect', 1.4, {
+        hand: (t) => Math.sin(t * Math.PI) * 0.9,
+        bolt: (t) => (t > 0.25 && t < 0.75 ? Math.sin((t - 0.25) * 2 * Math.PI) * 0.5 : 0),
+      });
     }, 'Inspect weapon');
 
     /* Firing and aiming are held rather than clicked, because a trigger is
@@ -451,8 +798,17 @@ SurvivorGame.module({
     function repeatInterval() {
       if (!firearm) return Infinity;
       const spec = SV.WEAPONS[firearm.id] || {};
-      if (spec.action === SV.ACTION.fullAuto) return 60 / (spec.rpm || 600);
-      if (spec.action === SV.ACTION.semiAuto) return Math.max(0.11, spec.cycleTimeS || 0.11);
+      // On safe, nothing repeats.
+      if (firearm.fireMode === SV.FIRE_MODE.safe) return Infinity;
+      if (spec.action === SV.ACTION.fullAuto && firearm.fireMode === SV.FIRE_MODE.auto) {
+        return 60 / (spec.rpm || 600);
+      }
+      // Semi-automatic is limited by how fast a finger moves, which is
+      // about five a second — and a selector on semi holds a machine gun
+      // to exactly the same rate.
+      if (spec.action === SV.ACTION.semiAuto || spec.action === SV.ACTION.fullAuto) {
+        return Math.max(0.13, spec.cycleTimeS || 0.13);
+      }
       // Bolt, pump, lever, revolver, break: one per pull of the trigger.
       return Infinity;
     }
@@ -464,13 +820,22 @@ SurvivorGame.module({
       clearing = 0.35;
     }, 'Clear a stoppage');
 
+    /* A way to pull the trigger that is not a mouse button, so the
+       browser tests can fire the real weapon through the real code path
+       rather than reaching past it into the simulation. */
+    ctx.on('debug:fire', () => { if (!busy()) shoot(); });
+
     ctx.onUpdate((dt) => {
       aimed = ads();
+      stepClip(dt);
       placeViewmodel(dt);
+      coolBrass(dt);
 
-      // The trigger.
+      // The trigger. Nothing fires while the hands are doing something
+      // else — working the action, changing a magazine, thumbing rounds
+      // in — which is what makes those actions cost anything.
       sinceShot += dt;
-      if (!ctx.paused && !ctx.state.uiOpen && trigger()) {
+      if (!ctx.paused && !ctx.state.uiOpen && !ctx.state.benchOpen && !busy() && trigger()) {
         const interval = repeatInterval();
         if (firedThisPull === 0 || (interval !== Infinity && sinceShot >= interval)) {
           sinceShot = 0;
@@ -479,6 +844,8 @@ SurvivorGame.module({
         }
       } else if (!trigger()) {
         firedThisPull = 0;
+        // The finger comes off and the trigger goes forward with it.
+        if (!busy() && anim.trigger > 0) anim.trigger = Math.max(0, anim.trigger - dt * 8);
       }
 
       if (clearing > 0) {
@@ -509,6 +876,11 @@ SurvivorGame.module({
       const lines = ctx.state.statusLines = ctx.state.statusLines || [];
       lines.length = 0;
       if (firearm) {
+        const act = firearm.spec.action;
+        const manual = act === SV.ACTION.boltAction || act === SV.ACTION.pump || act === SV.ACTION.leverAction;
+        lines.push(`${firearm.name} · ${firearm.fireMode} · ${firearm.magazine.length + (firearm.chambered ? 1 : 0)}/${firearm.capacity}`);
+        if (firearm.fireMode === SV.FIRE_MODE.safe) lines.push('Safety on — shift+Z');
+        if (pendingCase && manual) lines.push(`Fired case in the chamber — ${ctx.hint('z', 'rb')} to work the action`);
         if (firearm.jammed) lines.push(`${firearm.name}: ${firearm.jammed.kind} — hold ${ctx.hint('u', 'y')}`);
         else if (!firearm.chambered && !firearm.magazine.length) lines.push(`${firearm.name}: empty — ${ctx.hint('l', 'rb')} to load`);
         else if (firearm.barrelTempC > 120) lines.push('The barrel is too hot to hold.');
@@ -517,9 +889,8 @@ SurvivorGame.module({
       }
     });
 
-    ctx.log(ctx.game.input.pad.active
-      ? `${ctx.hint('l', 'rs')} picks up a weapon, ${ctx.hint('l', 'rb')} loads it, `
-        + `${ctx.hint('mouse', 'rt')} fires.`
-      : 'Number keys pick up a weapon. L loads it, left mouse fires.');
+    ctx.log('Number keys pick up a weapon. L loads it (shift+L for one round '
+      + 'at a time), Z works the action, shift+Z is the selector, I looks it '
+      + 'over and shift+I puts it on the bench.');
   },
 });

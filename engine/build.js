@@ -57,6 +57,9 @@ const LegendEngine = {
   Fluid, WaterVolume, WATER_PRESETS, Animal, ANIMAL_SPECIES, Fracture, ParticleSystem, Skeleton, AnimationClip, Face,
   Grass, Input, Audio, Pad, PAD_BUTTON, PAD_LAYOUT, padStick, padFamily,
   hornMesh, resolveForm, SEX_FORM, STAGE_FORM, FORM_CLASS,
+  GUN_PROFILE, GUN_PARTS, GUN_MATERIAL, CARTRIDGE_FORM,
+  assembleGun, stripSequence, cartridgeGeometry, mergeGeometry,
+  gunTube, gunBlock, gunProfile, gunSpring,
   GltfAsset, GltfInstance,
   clamp, lerp, smoothstep,
 };

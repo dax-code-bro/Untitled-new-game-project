@@ -64,6 +64,10 @@ const EXPORTS = [
   'AWG', 'BODY_RESISTANCE', 'SHOCK_THRESHOLDS',
 
   'Firearm', 'WEAPONS', 'ATTACHMENT', 'ACTION', 'PART', 'POWDER', 'handload',
+  'FIRE_MODE', 'MODES_FOR_ACTION', 'modesFor', 'selectorFraction',
+  'Magazine', 'StripState', 'STRIP_BLOCKERS', 'STRIP_SECONDS',
+  'CleaningJob', 'BORE_PASS', 'EJECT_PATTERN', 'ejectCase',
+  'PART_FAMILY', 'partFits', 'swapPart', 'benchReport',
   'salvageComponents',
 
   'Fire', 'Provision', 'FIRE_KIND', 'FOOD_STATE', 'SAFE_CORE',

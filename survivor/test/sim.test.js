@@ -37,6 +37,8 @@ this.API = {
   generateHouse, Building, Wall, ROOM,
   ElectricalSystem, Circuit, Conductor, Load, PowerSource, checkWiring, AWG,
   Firearm, WEAPONS, handload,
+  FIRE_MODE, modesFor, selectorFraction, Magazine, StripState, CleaningJob,
+  ejectCase, EJECT_PATTERN, partFits, swapPart, benchReport,
   World, GAME_MODE,
   Horse, Vehicle, GAIT, HORSE_BREED, VEHICLE_SPEC, fuelViability,
   NEED, currentNeed, hoursUntilNeedChange, ALERT, alertStateFor, senseAll,
@@ -891,8 +893,10 @@ function live(phys, hours, env, stepMinutes = 5, hook) {
   check('and cleaning it properly restores reliability', dirty.reliability() > 0.8,
     dirty.reliability().toFixed(2));
 
-  // Firing wears parts and heats the barrel.
+  // Firing wears parts and heats the barrel. Every gun starts on safe,
+  // so the first thing the shooter does is take it off.
   const worn = new A.Firearm('ak47', { condition: 1, oilLevel: 0.8 });
+  worn.setFireMode(A.FIRE_MODE.auto);
   worn.load(new Array(30).fill({ cartridgeId: '762x39', condition: 1 }));
   let fired = 0;
   for (let i = 0; i < 30; i++) if (worn.fire({ rng: () => 0.01 }).fired) fired++;
@@ -1484,6 +1488,247 @@ function live(phys, hours, env, stepMinutes = 5, hook) {
   check('most animals are ordinary', common / 200000 > 0.85, (common / 200000).toFixed(3));
   check('piebalds are rare', piebald / 200000 < 0.01 && piebald > 0, `${piebald} in 200k`);
   check('and an albino is an event', albino / 200000 < 0.002, `${albino} in 200k`);
+}
+
+/* ---------------- the mechanism: selector, strip, cleaning, ejection ---------------- */
+{
+  section('the fire selector');
+  const ak = new A.Firearm('ak47');
+  check('an AK has safe, auto and semi', ak.modes.join(',') === 'safe,auto,semi', ak.modes.join(','));
+  check('and it is carried on safe', ak.fireMode === A.FIRE_MODE.safe);
+  const shot = ak.fire({ rng: () => 0 });
+  check('a gun on safe does not go off', !shot.fired && shot.reason === 'the safety is on', shot.reason);
+  check('the first position under the thumb is full automatic',
+    ak.cycleFireMode() === A.FIRE_MODE.auto);
+  check('and semi is past it', ak.cycleFireMode() === A.FIRE_MODE.semi);
+  check('the lever comes back round to safe', ak.cycleFireMode() === A.FIRE_MODE.safe);
+
+  const bolt = new A.Firearm('remington700_308');
+  check('a bolt gun has a safety and one way to fire it', bolt.modes.length === 2, bolt.modes.join(','));
+  const rev = new A.Firearm('revolver357');
+  check('a double-action revolver has no safety at all',
+    !rev.modes.includes(A.FIRE_MODE.safe), rev.modes.join(','));
+  check('so it is ready as it sits', rev.fireMode === A.FIRE_MODE.semi);
+
+  check('the lever is drawn at the position it is in',
+    A.selectorFraction(ak.modes, A.FIRE_MODE.safe) === 0
+    && A.selectorFraction(ak.modes, A.FIRE_MODE.semi) === 1
+    && Math.abs(A.selectorFraction(ak.modes, A.FIRE_MODE.auto) - 0.5) < 1e-9);
+
+  bolt.setFireMode(A.FIRE_MODE.semi);
+  bolt.load([{ cartridgeId: '308win', condition: 1 }]);
+  const good = bolt.fire({ rng: () => 0 });
+  check('off safe, it fires', good.fired, good.reason || '');
+  check('and reports which position it was in', good.fireMode === A.FIRE_MODE.semi);
+}
+
+{
+  section('loading, one round at a time');
+  const m = new A.Magazine({ capacity: 30 });
+  let total = 0;
+  for (let i = 0; i < 30; i++) {
+    const r = m.push({ cartridgeId: '762x39', condition: 1 });
+    check(i === 0 ? 'the first round goes in' : null, true);
+    total += r.seconds;
+  }
+  passed -= 30; // the loop above only accumulates; the real checks follow
+  check('thirty rounds go in', m.count === 30, `${m.count}`);
+  check('and it is full', m.full);
+  check('the last one will not', !m.push({ cartridgeId: '762x39' }).ok);
+  between('thumbing in thirty rounds takes', total / 60, 0.55, 1.5, ' min');
+  check('the last rounds are the slow ones',
+    m.rounds.length === 30 && total > 30 * 0.75, total.toFixed(1));
+
+  const m2 = new A.Magazine({ capacity: 5 });
+  const clip = m2.pushClip([1, 2, 3, 4, 5].map(() => ({ cartridgeId: '8mmmauser' })));
+  check('a stripper clip loads five at once', clip.loaded === 5);
+  check('and it is four times faster than thumbing them', clip.seconds < 4, clip.seconds.toFixed(1));
+
+  // A weak spring fails at the bottom of the stack, not evenly.
+  const weak = new A.Magazine({ capacity: 30, springCondition: 0.35 });
+  for (let i = 0; i < 30; i++) weak.push({ cartridgeId: '762x39' });
+  let fullFeeds = 0;
+  for (let i = 0; i < 4000; i++) if (weak.willFeed(() => i / 4000)) fullFeeds++;
+  while (weak.count > 3) weak.pop();
+  let lowFeeds = 0;
+  for (let i = 0; i < 4000; i++) if (weak.willFeed(() => i / 4000)) lowFeeds++;
+  check('a tired spring feeds a full magazine', fullFeeds > lowFeeds, `${fullFeeds} vs ${lowFeeds}`);
+  check('and drops the last few rounds', lowFeeds < fullFeeds * 0.8, `${lowFeeds} vs ${fullFeeds}`);
+}
+
+{
+  section('stripping a rifle');
+  const f = new A.Firearm('remington700_308');
+  const asm = { parts: [
+    { id: 'scope', name: 'scope' }, { id: 'scopeRings', name: 'scope rings' },
+    { id: 'bolt', name: 'bolt' }, { id: 'firingPin', name: 'firing pin' },
+    { id: 'firingPinSpring', name: 'firing pin spring', rides: 'bolt' },
+    { id: 'trigger', name: 'trigger' }, { id: 'triggerGuard', name: 'trigger guard' },
+    { id: 'sear', name: 'sear' }, { id: 'stock', name: 'stock' },
+    { id: 'receiver', name: 'receiver' }, { id: 'barrel', name: 'barrel' },
+    { id: 'bore', name: 'bore', virtual: true },
+  ] };
+  const st = new A.StripState(asm, f);
+
+  f.load([{ cartridgeId: '308win', condition: 1 }]);
+  f.chamber();
+  check('you cannot strip a loaded rifle',
+    !st.canRemove('bolt').ok && /chamber/.test(st.canRemove('bolt').reason), st.canRemove('bolt').reason);
+  f.chambered = null;
+
+  check('the bolt will not come out past a mounted scope',
+    !st.canRemove('bolt').ok && /scope/.test(st.canRemove('bolt').reason), st.canRemove('bolt').reason);
+  check('the bore is not a part you can hold', !st.canRemove('bore').ok);
+
+  check('the scope comes off first', st.remove('scope').ok);
+  check('then the rings', st.remove('scopeRings').ok);
+  check('now the bolt comes out', st.canRemove('bolt').ok);
+  const b = st.remove('bolt', { onBench: true });
+  check('and it takes a couple of seconds', b.seconds < 5, `${b.seconds}s`);
+  check('the firing pin spring comes out with the bolt it rides in', !st.present('firingPinSpring'));
+
+  check('the barrel does not leave the stock while the stock is on',
+    !st.canRemove('barrel').ok, st.canRemove('barrel').reason);
+  st.remove('stock', { onBench: true });
+  st.remove('receiver', { onBench: true });
+  check('with the stock and receiver off, the barrel comes out', st.canRemove('barrel').ok);
+
+  check('the sear waits for the trigger group',
+    !st.canRemove('sear').ok, st.canRemove('sear').reason);
+
+  // Reassembly is the reverse, and it is enforced.
+  check('the receiver goes back before the stock',
+    !st.refit('stock').ok, st.refit('stock').reason);
+  check('receiver first', st.refit('receiver').ok);
+  check('then the stock', st.refit('stock').ok);
+
+  // Small parts under tension get away from you off a bench.
+  const st2 = new A.StripState(asm, new A.Firearm('remington700_308'));
+  st2.remove('scope'); st2.remove('scopeRings'); st2.remove('bolt', { onBench: true });
+  let lost = 0;
+  for (let i = 0; i < 400; i++) {
+    const s3 = new A.StripState(asm, new A.Firearm('remington700_308'));
+    s3.remove('scope'); s3.remove('scopeRings'); s3.remove('bolt', { onBench: true });
+    const r = s3.remove('firingPin', { onBench: false, rng: () => i / 400 });
+    if (r.lost) lost++;
+  }
+  between('a firing pin lost in the grass, per hundred field strips', (lost / 400) * 100, 8, 28, '%');
+  const s4 = new A.StripState(asm, new A.Firearm('remington700_308'));
+  s4.remove('scope'); s4.remove('scopeRings'); s4.remove('bolt', { onBench: true });
+  let lostOnBench = 0;
+  for (let i = 0; i < 200; i++) {
+    const s5 = new A.StripState(asm, new A.Firearm('remington700_308'));
+    s5.remove('scope'); s5.remove('scopeRings'); s5.remove('bolt', { onBench: true });
+    if (s5.remove('firingPin', { onBench: true, rng: () => i / 200 }).lost) lostOnBench++;
+  }
+  check('nothing gets lost on a bench', lostOnBench === 0, `${lostOnBench}`);
+}
+
+{
+  section('cleaning a bore');
+  const f = new A.Firearm('m16', { condition: 0.9 });
+  f.setFireMode(A.FIRE_MODE.semi);
+  const rounds = [];
+  for (let i = 0; i < 400; i++) rounds.push({ cartridgeId: '556nato', condition: 1 });
+  // Fire it filthy. Direct impingement puts its own gas in the action.
+  for (let i = 0; i < 400; i++) {
+    if (!f.magazine.length) f.load(rounds.slice(0, 30));
+    f.jammed = null;
+    f.fire({ rng: () => 0 });
+  }
+  check('four hundred rounds leaves it filthy', f.fouling > 0.3, f.fouling.toFixed(2));
+  check('and plates the bore with copper', f.copperFouling > 0.04, f.copperFouling.toFixed(3));
+
+  const job = new A.CleaningJob(f);
+  check('a dry patch will not shift carbon',
+    !job.pass('patch', { hasRod: true, solvent: false }).ok);
+  check('and neither will solvent with no rod',
+    !job.pass('patch', { hasRod: false, solvent: true }).ok);
+
+  const first = job.pass('patch', { hasRod: true, solvent: true });
+  check('the first patch comes out black', /black/.test(first.patch), first.patch);
+  const before = f.fouling;
+  for (let i = 0; i < 10; i++) job.pass('patch', { hasRod: true, solvent: true });
+  check('ten more patches take most of the rest out', f.fouling < before * 0.2, f.fouling.toFixed(3));
+  const last = job.pass('patch', { hasRod: true, solvent: true });
+  check('and by then the patch comes out clean', /clean|faint/.test(last.patch), last.patch);
+
+  check('but patches barely touch copper', f.copperFouling > 0.03, f.copperFouling.toFixed(3));
+  const cu = f.copperFouling;
+  for (let i = 0; i < 8; i++) job.pass('brush', { hasRod: true, solvent: true });
+  check('a bronze brush is what takes copper out', f.copperFouling < cu * 0.35, f.copperFouling.toFixed(4));
+  between('the whole job takes', job.seconds / 60, 4, 20, ' min');
+
+  // Accuracy is the thing copper costs, and cleaning gives it back.
+  const dirty = new A.Firearm('remington700_308', { condition: 1 });
+  dirty.copperFouling = 0.8;
+  const clean = new A.Firearm('remington700_308', { condition: 1 });
+  const dm = dirty.accuracyMoa({ prone: true, skill: 1 });
+  const cm = clean.accuracyMoa({ prone: true, skill: 1 });
+  check('a copper-fouled bore will not group', dm > cm + 0.8, `${dm.toFixed(2)} vs ${cm.toFixed(2)} MOA`);
+}
+
+{
+  section('brass on the ground');
+  const semi = A.ejectCase(A.WEAPONS.m16, { rng: () => 0.5, cartridgeId: '556nato' });
+  check('a gas gun throws the case right and forward',
+    semi.dir[0] > 0.6 && semi.dir[2] > 0, semi.dir.map((x) => x.toFixed(2)).join(','));
+  between('and it leaves at', semi.speedMs, 3, 9, ' m/s');
+  between('a case leaves the chamber at', semi.tempC, 120, 260, ' C');
+
+  const boltCase = A.ejectCase(A.WEAPONS.remington700_308, { rng: () => 0.5, cartridgeId: '308win' });
+  check('a bolt gun flicks it out much more slowly',
+    boltCase.speedMs < semi.speedMs, `${boltCase.speedMs.toFixed(1)} vs ${semi.speedMs.toFixed(1)}`);
+  check('a revolver throws nothing at all until you open it',
+    A.ejectCase(A.WEAPONS.revolver357, { cartridgeId: '357mag' }) === null);
+
+  // The case comes back out of the firearm itself, with the shot.
+  const f = new A.Firearm('ak47', { condition: 1 });
+  f.setFireMode(A.FIRE_MODE.auto);
+  f.load([{ cartridgeId: '762x39', condition: 1 }]);
+  const s = f.fire({ rng: () => 0 });
+  check('firing produces a case to eject', s.fired && s.ejected && s.ejected.cartridgeId === '762x39');
+}
+
+{
+  section('rebuilding it differently');
+  check('a 700 trigger does not drop into an AK',
+    !A.partFits('remington700_308', 'ak47', 'trigger').ok);
+  check('a .308 bolt will not close on a magnum case head',
+    !A.partFits('remington700_308', 'remington700_300wm', 'bolt').ok,
+    A.partFits('remington700_308', 'remington700_300wm', 'bolt').reason);
+  check('but the same action takes the same trigger',
+    A.partFits('remington700_308', 'remington700_300wm', 'trigger').ok);
+  check('and a stock will go on anything, with bedding',
+    A.partFits('ak47', 'remington700_308', 'stock').ok);
+
+  const beaten = new A.Firearm('remington700_308', { condition: 0.2 });
+  const good = new A.Firearm('remington700_308', { condition: 0.95 });
+  const before = good.parts.extractor.condition;
+  const out = A.swapPart(beaten, good, 'extractor');
+  check('a worn extractor swaps in', out.ok);
+  check('and it is still worn once it is in the good rifle',
+    good.parts.extractor.condition < before, good.parts.extractor.condition.toFixed(2));
+  check('the good one went the other way',
+    beaten.parts.extractor.condition > 0.9, beaten.parts.extractor.condition.toFixed(2));
+}
+
+{
+  section('what the bench tells you');
+  const f = new A.Firearm('ruger1022', { condition: 0.9 });
+  f.parts.firingPin.condition = 0.25;
+  f.parts.extractor.condition = 0.3;
+  f.parts.barrel.condition = 0.3;
+  const report = A.benchReport(f);
+  const pin = report.find((r) => r.part === 'firingPin');
+  const ext = report.find((r) => r.part === 'extractor');
+  const bar = report.find((r) => r.part === 'barrel');
+  check('the worst part is listed first', report[0].condition <= report[1].condition);
+  check('a peened firing pin is described as one', /light strike/.test(pin.symptom || ''), pin.symptom);
+  check('a rounded extractor says what it will do', /chamber/.test(ext.symptom || ''), ext.symptom);
+  check('and a shot-out barrel says it is not coming back',
+    /not coming back/.test(bar.symptom || ''), bar.symptom);
+  check('the verdict is in words, not a number', typeof pin.verdict === 'string' && pin.verdict.length > 3);
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

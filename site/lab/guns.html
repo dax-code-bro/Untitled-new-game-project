@@ -1,0 +1,84 @@
+<meta charset="utf8">
+<title>Legend — gun bench</title>
+<style>
+  html,body{margin:0;height:100%;background:#0b0d10;overflow:hidden}
+  canvas{display:block}
+  #label{position:fixed;left:0;right:0;bottom:0;padding:10px 16px;
+    font:12px ui-monospace,Menlo,monospace;color:#cfcabb;background:rgba(0,0,0,.45)}
+</style>
+<div id="label"></div>
+<script src="../engine/legend-engine.js"></script>
+<script>
+/* A bench for one gun at a time, so every part can be looked at on its
+   own. Driven from the query string: ?gun=boltRifle&view=whole|exploded
+   &part=bolt. This is how the parts get checked — a firearm is a thing
+   people know the look of, and any of it being wrong is obvious in a
+   photograph and invisible in code. */
+const q = new URLSearchParams(location.search);
+const gunId = q.get('gun') || 'boltRifle';
+const view = q.get('view') || 'whole';
+const only = q.get('part') || '';
+
+const game = LE.create({ antialias: true, shadows: true, quality: 'high' });
+game.setSky('day');
+const r = game.renderer;
+r.sun.direction.set(0.40, 0.62, 0.68).normalize();
+r.sun.intensity = 3.2;
+r.sky.intensity = 1.25;
+r.sky.ground.set(0.30, 0.29, 0.27);
+r.fog.density = 0;
+r.shadows.enabled = true;
+r.shadows.distance = 3;
+r.shadows.split = 4;
+r.shadows.strength = 0.75;
+
+/* A neutral bench top. Blued steel is nearly black and shows its shape
+   only in what it reflects, so it needs something above and below it to
+   reflect — against an empty sky a rifle is a silhouette. */
+game.box({ at: [0, -0.10, 0], size: [4.0, 0.06, 2.0],
+  material: { color: 0x8d897e, roughness: 0.7 }, static: true });
+
+const asm = LE.assembleGun(gunId, {
+  attachments: q.get('scope') ? { rail: { magnification: +q.get('scope') } } : {},
+});
+const seq = LE.stripSequence(asm);
+const actors = [];
+let n = 0;
+asm.parts.forEach((part, i) => {
+  if (part.virtual || !part.build) return;
+  if (only && part.id !== only) return;
+  const geo = part.build();
+  if (!geo.positions.length) return;
+  n++;
+  const m = Object.assign({}, LE.GUN_MATERIAL[part.mat] || LE.GUN_MATERIAL.blued);
+  // Exploded view pushes each part out along its own strip axis, scaled
+  // so the whole gun opens up without the pieces overlapping.
+  const s = view === 'exploded' ? 1.0 : 0;
+  const at = [
+    part.at[0] + (part.strip ? part.strip[0] * s : 0),
+    part.at[1] + (part.strip ? part.strip[1] * s : 0),
+    part.at[2] + (part.strip ? part.strip[2] * s : 0),
+  ];
+  const a = game.mesh({ geometry: geo, key: `gun:${gunId}:${part.id}:${i}`, material: m, at, physics: false });
+  actors.push({ part, actor: a });
+});
+
+/* Broadside, from the shooter's right, which is the angle every gun in
+   every catalogue is photographed at and the only one the proportions
+   can be judged from. The gun lies along +Z, so the camera goes out on
+   +X and looks back at the middle of it. */
+const p = asm.profile;
+const span = only ? 0.20 : (p.barrelM + (p.lop || 0.2) + (view === 'exploded' ? 0.85 : 0.12));
+const dist = span * 1.20;
+const midZ = only ? 0 : (p.barrelM - (p.lop || 0.2)) * 0.35;
+game.camera.fov = 28 * Math.PI / 180;
+game.lookAt([dist, span * 0.14, midZ + dist * 0.13], [0, -0.005, midZ]);
+
+document.getElementById('label').textContent =
+  `${gunId} — ${p.note} · ${n} parts drawn · barrel ${(p.barrelM * 1000).toFixed(0)} mm`
+  + (only ? ` · showing only: ${only}` : '')
+  + ` · strip order: ${seq.map((x) => x.id).join(' → ')}`;
+
+game.start();
+window.__ready = true;
+</script>

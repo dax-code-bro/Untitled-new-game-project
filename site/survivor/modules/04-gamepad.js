@@ -149,6 +149,23 @@ SurvivorGame.module({
           { label: 'Pause', key: 'p' },
         ];
       }
+      /* A page for the gun in your hands. Working an action, taking the
+         safety off, thumbing in one round and stripping it on the bench
+         are things a shooter does constantly, so they get their own page
+         rather than being buried among the shelter verbs. */
+      if (wheelPage === 2 && ctx.state.currentWeapon) {
+        const w = ctx.state.currentWeapon;
+        return [
+          { label: 'Work the action', key: 'z' },
+          { label: w.fireMode === 'safe' ? 'Off safe' : `Selector (${w.fireMode})`, key: 'z', shift: true },
+          { label: 'Load', key: 'l' },
+          { label: 'One round', key: 'l', shift: true },
+          { label: 'Clear stoppage', key: 'u', disabled: !w.jammed },
+          { label: 'Look it over', key: 'i' },
+          { label: 'Strip it', key: 'i', shift: true },
+          { label: 'Menu', key: 'escape' },
+        ];
+      }
       if (wheelPage === 1) {
         return [
           { label: 'Drying rack', key: 'g', shift: true },
@@ -176,7 +193,13 @@ SurvivorGame.module({
     }
 
     // Two pages on foot, one everywhere else.
-    function wheelPages() { return (ctx.state.fishing || ctx.state.driving || ctx.state.riding) ? 1 : 2; }
+    /* Two pages on foot, three with a gun in your hands, one everywhere
+       else. The gun page is an addition: folding it over the utility page
+       took wiring off the pad entirely the moment you picked up a rifle. */
+    function wheelPages() {
+      if (ctx.state.fishing || ctx.state.driving || ctx.state.riding) return 1;
+      return ctx.state.currentWeapon ? 3 : 2;
+    }
 
     /* Published so that the check for "is every verb reachable with a pad in
        your hands" can read the real wheel rather than a copy of it that
@@ -753,7 +776,19 @@ SurvivorGame.module({
       if (ctx.state.adsHeld || crouchState === 2) ctx.state.sprintHeld = false;
 
       if (pad.justPressed('y')) ctx.press('i');           // inspect the weapon
-      if (pad.justPressed('rb')) ctx.press('l');          // load
+      /* The right bumper is whatever the gun in your hands needs next.
+         On a bolt gun, a pump or a lever that is working the action —
+         it happens between every single shot, and a wheel spin between
+         shots is not a control scheme. With nothing to cycle it loads.
+         The left bumper already opens the wheel and cannot be shared. */
+      if (pad.justPressed('rb')) {
+        const w = ctx.state.currentWeapon;
+        const act = w && w.spec ? w.spec.action : null;
+        const manual = act === 'boltAction' || act === 'pump' || act === 'leverAction'
+          || act === 'revolver';
+        if (manual && (w.chambered || w.magazine.length || w.roundsFired)) ctx.press('z');
+        else ctx.press('l');
+      }
       if (pad.justPressed('rs')) cycleWeapon();
       if (pad.justPressed('up')) ctx.press('n');          // build
       if (pad.justPressed('down')) ctx.press('c');        // condition

@@ -19,8 +19,9 @@
     "test:survivor": "node survivor/test/sim.test.js",
     "test:survivor:browser": "node survivor/test/browser.test.js",
     "test:survivor:gamepad": "node survivor/test/gamepad.browser.test.js",
+    "test:weapons": "node survivor/test/weapons.browser.test.js",
     "test:integration": "node engine/test/integration.test.js",
-    "test:all": "npm run test && npm run test:engine && npm run test:survivor:browser && npm run test:survivor:gamepad",
+    "test:all": "npm run test && npm run test:engine && npm run test:survivor:browser && npm run test:survivor:gamepad && npm run test:weapons",
     "serve": "node -e \"const h=require('http'),f=require('fs'),p=require('path'),u=require('url');const M={'.html':'text/html','.js':'text/javascript','.json':'application/json','.png':'image/png','.glb':'model/gltf-binary'};h.createServer((q,r)=>{let x=p.join('site',decodeURIComponent(u.parse(q.url).pathname));if(x.endsWith('/'))x+='index.html';f.readFile(x,(e,b)=>{if(e){r.writeHead(404);return r.end();}r.writeHead(200,{'Content-Type':M[p.extname(x)]||'application/octet-stream'});r.end(b);});}).listen(8080,()=>console.log('http://localhost:8080/survivor/'))\""
   }
 }

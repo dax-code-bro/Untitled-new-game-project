@@ -71,7 +71,7 @@ const WEAPONS = {
     baseAccuracyMoa: 3.5, cycleTimeS: 0.1, rpm: 600, railed: false, threaded: true,
     // Loose tolerances buy reliability at the cost of accuracy, which is the
     // entire design of the thing.
-    foulingTolerance: 2.6,
+    foulingTolerance: 2.6, foulingRate: 0.7,
     note: 'Filthy, wet, sandy — it does not care. It also does not shoot groups.',
   },
   m16: {
@@ -80,7 +80,7 @@ const WEAPONS = {
     baseAccuracyMoa: 1.6, cycleTimeS: 0.075, rpm: 800, railed: true, threaded: true,
     // Direct impingement puts the combustion gas into the receiver, so it
     // fouls its own action and cares a great deal about being cleaned.
-    foulingTolerance: 0.65,
+    foulingTolerance: 0.65, foulingRate: 1.9,
     note: 'Shoots beautifully and demands to be looked after.',
   },
   mauser98: {
@@ -168,6 +168,17 @@ class Firearm {
     this.jammed = null;
     this.disassembled = false;
     this.zeroRangeM = opts.zeroRangeM || 100;
+    /* Fire control. The selector is a real position on a real lever,
+       which the viewmodel rotates and which decides what a held trigger
+       does. A gun carried on safe is a gun that does not go off when it
+       falls off a quad bike, and a gun carried on safe is also a gun
+       that does not go off when the deer stands up. */
+    this.modes = modesFor(spec);
+    this.fireMode = this.modes.includes(FIRE_MODE.safe) ? FIRE_MODE.safe : FIRE_MODE.semi;
+    this.burstLeft = 0;
+    // Copper is tracked apart from carbon: it comes out of a bore with a
+    // different solvent and it is what opens a group up at distance.
+    this.copperFouling = 0;
 
     this.parts = {};
     for (const p of spec.parts) {
@@ -233,6 +244,9 @@ class Firearm {
     // A shot-out bore is the biggest single term, and it never comes back.
     moa /= Math.max(0.25, this.parts.barrel ? this.parts.barrel.condition : 1);
     moa += this.fouling * 0.9;
+    // Copper fouling costs accuracy and nothing else — it does not jam a
+    // gun, it just quietly stops it grouping.
+    moa += (this.copperFouling || 0) * 1.4;
     // A hot barrel walks its point of impact.
     moa += clamp01((this.barrelTempC - 60) / 200) * 1.6;
     for (const a of Object.values(this.attachments)) {
@@ -271,12 +285,25 @@ class Firearm {
        curve below is nearly flat while everything is merely used and falls
        off a cliff once a part is genuinely worn out, so reliability tracks
        the worst component rather than the average of all of them. */
+    /* The worst part decides, with a small extra penalty for how many
+       others are also tired.
+
+       Multiplying a per-part factor across every component was still
+       compounding: a rifle whose parts are ALL at sixty per cent of
+       their life came out under forty per cent reliable, which is not
+       what a used gun does — it works. One badly worn part is what
+       stops a gun, and a dozen moderately worn ones make it a little
+       worse than one of them alone, not a dozen times worse. */
+    let worst = 1, load = 0, n = 0;
     for (const part of Object.values(this.parts)) {
       if (part.broken) return 0;
       const wear = 1 - part.condition;
       const bite = part.spec.critical ? 0.55 : 0.14;
-      p *= 1 - Math.pow(wear, 1.8) * bite;
+      const hit = Math.pow(wear, 1.8) * bite;
+      worst = Math.min(worst, 1 - hit);
+      load += hit; n++;
     }
+    p *= worst * (1 - clamp01(load / Math.max(1, n)) * 0.35);
     // A revolver has almost nothing to go wrong; a gas gun has plenty.
     if (this.spec.action === ACTION.revolver || this.spec.action === ACTION.boltAction) p += 0.12;
     return clamp01(p);
@@ -301,8 +328,26 @@ class Firearm {
      click. Stoppages are typed, because clearing them is different work:
      a failure to feed is a tap and a rack, a case head separation is a rod
      down the barrel and a long time on your knees. */
+  /* The selector, one position at a time, in the order the lever
+     actually sweeps. */
+  cycleFireMode() {
+    const i = this.modes.indexOf(this.fireMode);
+    this.fireMode = this.modes[(i + 1) % this.modes.length];
+    return this.fireMode;
+  }
+
+  setFireMode(mode) {
+    if (!this.modes.includes(mode)) return { ok: false, reason: `this one has no ${mode} position` };
+    this.fireMode = mode;
+    return { ok: true, mode };
+  }
+
+  /* How far round the lever has swung, for the part that draws it. */
+  get selectorFraction() { return selectorFraction(this.modes, this.fireMode); }
+
   fire(opts = {}) {
     if (this.disassembled) return { fired: false, reason: 'it is in pieces' };
+    if (this.fireMode === FIRE_MODE.safe) return { fired: false, reason: 'the safety is on' };
     if (this.jammed) return { fired: false, reason: 'jammed', jam: this.jammed };
     if (!this.chambered && !this.chamber()) return { fired: false, reason: 'empty' };
 
@@ -338,9 +383,20 @@ class Firearm {
     // Fouling and heat, both scaled by the cartridge's powder charge.
     const cart = CARTRIDGES[round && round.cartridgeId ? round.cartridgeId : this.cartridgeId];
     const charge = (cart && cart.powderGr) ? cart.powderGr : 20;
-    const canMul = this.attachments.thread && this.attachments.thread.foulingRate
-      ? this.attachments.thread.foulingRate : 1;
+    const canMul = (this.attachments.thread && this.attachments.thread.foulingRate
+      ? this.attachments.thread.foulingRate : 1)
+      /* Where the gas goes decides how fast the gun dirties itself. A
+         direct-impingement rifle vents combustion gas straight into its
+         own bolt carrier; a piston gun vents it out of the front and the
+         action stays comparatively clean. `foulingTolerance` already says
+         how much filth a design will put up with — this says how fast it
+         makes it. */
+      * (this.spec.foulingRate != null ? this.spec.foulingRate : 1);
     this.fouling = clamp01(this.fouling + (charge / 46000) * canMul);
+    /* Copper comes off the jacket and plates the throat and the lands.
+       It builds slower than carbon and it is the reason a rifle that
+       looks clean stops shooting groups after four hundred rounds. */
+    this.copperFouling = clamp01(this.copperFouling + (charge / 160000) * (cart && cart.jacketed === false ? 0.2 : 1));
     this.oilLevel = Math.max(0, this.oilLevel - 0.0016);
     this.barrelTempC += charge * 0.055 * (this.attachments.thread && this.attachments.thread.heatBuild
       ? this.attachments.thread.heatBuild : 1);
@@ -366,8 +422,15 @@ class Firearm {
     // Sound falls 6 dB per doubling of distance; audible at roughly 45 dB.
     const audibleM = Math.pow(10, (db - 45) / 20);
 
+    /* The case. Where it lands matters: brass is a component, and
+       picking it up is how a handloader stays in ammunition. */
+    const spent = ejectCase(this.spec, {
+      rng, cartridgeId: round && round.cartridgeId ? round.cartridgeId : this.cartridgeId,
+    });
+
     return {
       fired: true, projectile: proj, recoil, muzzleRise: rise,
+      ejected: spent, fireMode: this.fireMode,
       accuracyMoa: this.accuracyMoa(opts),
       noiseDb: db, audibleM,
       barrelTempC: this.barrelTempC,
@@ -461,6 +524,8 @@ class Firearm {
     const notes = [];
     if (this.fouling > 0.6) notes.push('the action is thick with carbon');
     else if (this.fouling > 0.3) notes.push('it is getting dirty');
+    if ((this.copperFouling || 0) > 0.4) notes.push('the lands are plated with copper — it will not group until that comes out');
+    if (this.fireMode === FIRE_MODE.safe) notes.push('the safety is on');
     if (this.oilLevel < 0.2) notes.push('bone dry — it needs oil');
     if (this.oilLevel > 0.9) notes.push('running with oil, and picking up dust');
     if (this.sandy > 0.3) notes.push('grit in the action');
