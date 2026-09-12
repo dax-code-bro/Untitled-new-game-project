@@ -547,8 +547,11 @@ function build(game, S) {
       slab(rampGap[0], rampGap[1], y - 0.30, y, z0, z1, mats.concreteWet, 'ramp-' + i);
     }
     // The low kerb down each side of the ramp.
-    deco(rampGap[0] - 0.30, rampGap[0], 0, SW.capY, -1.2, 5.0, mats.concrete, 'ramp-kerb-w');
-    deco(rampGap[1], rampGap[1] + 0.30, 0, SW.capY, -1.2, 5.0, mats.concrete, 'ramp-kerb-e');
+    /* Solid, not decoration: they are the only thing between the ramp and
+       a two-metre drop into the lake on either side of it, and a kerb you
+       walk through is not a kerb. */
+    slab(rampGap[0] - 0.30, rampGap[0], 0, SW.capY, -1.2, 5.0, mats.concrete, 'ramp-kerb-w');
+    slab(rampGap[1], rampGap[1] + 0.30, 0, SW.capY, -1.2, 5.0, mats.concrete, 'ramp-kerb-e');
   }
 
   /* The walk. It comes down the lawn, widens at the water and turns to
@@ -557,7 +560,17 @@ function build(game, S) {
      a fighting platform instead of a kerb. */
   slab(-9.5, 9.5, 0, 0.12, -9.0, -SW.thick, mats.concrete, 'apron');
   slab(-2.4, 2.4, 0, 0.12, -30.0, -9.0, mats.concrete, 'walk');
-  slab(SW.x0 + 2, SW.x1 - 2, 0, 0.12, -3.4, -SW.thick, mats.concrete, 'wall-walk');
+  /* The walk behind the wall runs in TWO pieces, one either side of the
+     apron, rather than straight through it.
+
+     Straight through, its top face and the apron's are the same plane
+     over about fifty-four square metres -- the same fault that hid the
+     entire lake behind the ground plane earlier in this file, at a
+     smaller scale and in a place the player stands on. Two runs that
+     butt against the apron's edges cannot fight, and the joint is
+     invisible because it is the same pour. */
+  slab(SW.x0 + 2, -9.5, 0, 0.12, -3.4, -SW.thick, mats.concrete, 'wall-walk-w');
+  slab(9.5, SW.x1 - 2, 0, 0.12, -3.4, -SW.thick, mats.concrete, 'wall-walk-e');
 
   /* A steel ladder down the face of the wall into the water. In the
      photograph it is the only way back up if you are in the lake, and

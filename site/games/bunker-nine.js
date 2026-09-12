@@ -3286,6 +3286,16 @@ function finishGenericMap(game, S, def) {
      never be bought is a map with no perks. */
   S.powered = true;
 
+  /* Every way in is open from the first round.
+
+     The bunker keeps its fifth window shut until you buy the door to the
+     wing -- that is what the door is FOR. Coastline has no doors: it is a
+     lawn between a lake and a fence, and there is nothing to unlock. Left
+     at the bunker's rule its fifth way in would never open at all, and
+     one of the five barricades would stand boarded and untouched for the
+     whole game. */
+  S.activeWindows = WINDOWS.map((w) => w.id);
+
   S.nav = { ...(def.navLevels ? def.navLevels(game) : {}) };
 
   /* Where the player starts is recorded rather than applied. buildMap
