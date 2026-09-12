@@ -2787,7 +2787,7 @@ function makeVoice(game, hud, isOver, floor) {
    off the west wall, and a battlefield around it that you can see and never
    reach. Back wall is -Z, front is +Z, and the stairs are in the back-right
    corner, which from the door means +X and -Z. */
-const MAP = {
+const BUNKER9_MAP = {
   main:  { x0: -7.0, x1: 7.0, z0: -7.0, z1: 7.0, y0: 0, y1: 3.4 },
   // The wing behind the door on the left, where the power is.
   side:  { x0: -16.0, x1: -7.4, z0: -5.0, z1: 5.0, y0: 0, y1: 3.4 },
@@ -2811,7 +2811,7 @@ const MAP = {
 /* Zombies do not appear in the room. They come up out of the ground far out
    in the battlefield and walk in, so the pads are thirty metres out and the
    window is only where they finally get through. */
-const WINDOWS = [
+const BUNKER9_WINDOWS = [
   /* Sixteen metres out, not thirty. Far enough that you watch them come and
      have time to decide which window to stand at; near enough that the walk
      is under fifteen seconds, which at thirty was a twenty-five second
@@ -2822,6 +2822,116 @@ const WINDOWS = [
   { id: 'W4', room: 'main', inside: [-1.2, 0,  6.0], sillAt: [-1.2, 1.5,  7.2], pad: [-2.5, 0,  18.0], face: 'S', wx: [-2.0, -0.4] },
   { id: 'W5', room: 'side', inside: [-14.8, 0, -0.8], sillAt: [-16.2, 1.5, -0.8], pad: [-25.0, 0, -3.0], face: 'W', wz: [-1.6, 0.0] },
 ];
+
+/* ---------------- which map ----------------
+
+   There are two now, and everything below this line was written when
+   there was one. `MAP` and `WINDOWS` were module constants that the room
+   classifier, the navmesh, the pathing graph and a dozen other places
+   read directly, so a second map could not exist without either copying
+   the game or making those two names mean "the map that is loaded".
+
+   They are bindings now, and useMap() moves them. Nothing else had to
+   change for that -- checked before starting: there is no use of either
+   at module scope, so no reader captures the old object at load time.
+
+   A map supplies its geometry and the handful of things the game cannot
+   work out for itself: where you start, where the dead come from, what
+   counts as being in which room, and which rectangles the navmesh should
+   be baked over. Everything else -- the roof, the meteorite hole, the
+   generator wing, the stair between them -- is a BUNKER NINE feature and
+   is guarded on being present, rather than assumed. */
+let MAP = BUNKER9_MAP;
+let WINDOWS = BUNKER9_WINDOWS;
+let MAPDEF = null;
+
+const MAP_REGISTRY = {
+  bunker9: {
+    id: 'bunker9',
+    map: BUNKER9_MAP,
+    windows: BUNKER9_WINDOWS,
+    spawn: null,                 // the bunker starts the player where it always did
+    build: (game, S) => buildBunker9(game, S),
+    sky: null,                   // the bunker sets its own, inline, on the way in
+    navLevels: (game) => ({
+      ground: buildNavLevel(game, { x0: BUNKER9_MAP.side.x0, x1: BUNKER9_MAP.main.x1,
+        z0: BUNKER9_MAP.main.z0, z1: BUNKER9_MAP.main.z1 }, 1.05),
+      roof: buildNavLevel(game, { x0: BUNKER9_MAP.roof.x0, x1: BUNKER9_MAP.roof.x1,
+        z0: BUNKER9_MAP.roof.z0, z1: BUNKER9_MAP.roof.z1 }, BUNKER9_MAP.roof.y1 + 1.05),
+    }),
+    roomAt: (p) => {
+      if (p.y > BUNKER9_MAP.roof.y0 - 0.6) return 'roof';
+      if (p.x < BUNKER9_MAP.side.x1 + 0.2) return 'side';
+      return 'main';
+    },
+  },
+};
+
+/* Coastline lives in its own file and registers itself if the page loaded
+   it. Written this way round so the game does not have to know the map
+   exists -- a page that ships without coastline.js simply has one map,
+   and nothing here has to be edited to make that true. */
+function registerLoadedMaps() {
+  const C = typeof window !== 'undefined' && window.COASTLINE;
+  if (!C || MAP_REGISTRY.coastline) return;
+  MAP_REGISTRY.coastline = {
+    id: 'coastline',
+    map: C.MAP,
+    windows: C.WINDOWS,
+    spawn: C.spawn,
+    play: C.PLAY,
+    build: (game, S) => { C.applySky(game); C.build(game, S); },
+    sky: (game) => C.applySky(game),
+    /* One level, and it covers the lawn AND the water: a zombie coming up
+       the boat ramp is walking over the lake for the first few metres of
+       its path, and a navmesh that stops at the seawall makes the ramp --
+       the map's most obvious way in -- unwalkable. */
+    navLevels: (game) => ({
+      ground: buildNavLevel(game, { x0: C.C.green.x0, x1: C.C.green.x1,
+        z0: C.C.green.z0, z1: C.C.pier.z1 + 4 }, 1.05),
+    }),
+    roomAt: (p) => {
+      if (p.z > 0.4) return (Math.abs(p.x - C.C.pier.x) < 6) ? 'pier' : 'slip';
+      return 'green';
+    },
+  };
+}
+
+function MAP_REGISTRY_HAS(id) {
+  registerLoadedMaps();
+  return !!MAP_REGISTRY[id];
+}
+
+function useMap(id) {
+  registerLoadedMaps();
+  const def = MAP_REGISTRY[id] || MAP_REGISTRY.bunker9;
+  MAPDEF = def;
+  MAP = def.map;
+  WINDOWS = def.windows;
+  /* `main` is the one rectangle the game asks about without caring which
+     map it is on -- "the far corner of the room" when the player is at
+     the workbench, for one. A map that does not name a room `main` gets
+     its largest room called that, rather than every such reader needing
+     to learn about two maps. */
+  if (!MAP.main) {
+    let best = null, bestArea = -1;
+    for (const k in MAP) {
+      const r = MAP[k];
+      if (!r || r.x0 == null) continue;
+      const a = (r.x1 - r.x0) * (r.z1 - r.z0);
+      if (a > bestArea) { bestArea = a; best = r; }
+    }
+    if (best) MAP.main = best;
+  }
+  return def;
+}
+
+/* Is the loaded map Bunker Nine? Everything in the late game -- the
+   meteorite, the vortex under it, the hole it tears in the roof, Exit
+   Four Two and the plane -- is that map's STORY, not a mechanic the
+   engine provides. On any other map those systems do not fail, they
+   simply do not happen. */
+function isBunker9() { return !MAPDEF || MAPDEF.id === 'bunker9'; }
 
 // Boards span X on the two walls that run along X, and Z on the other two.
 const WIN_SPANS_X = (face) => face === 'N' || face === 'S';
@@ -2938,7 +3048,7 @@ if (E.step === 2) {
    and looking the way he has to fly. */
 if (E.step === 3) {
   const p = P.actor.position;
-  if (p.y > MAP.roof.y0) {
+  if (MAP.roof && p.y > MAP.roof.y0) {
     let d = ((game._camYaw - EXIT42.bearing) % (Math.PI * 2) + Math.PI * 3) % (Math.PI * 2) - Math.PI;
     if (Math.abs(d) < EXIT42.bearingTol) {
       E.listen += dt;
@@ -3071,7 +3181,111 @@ hud.banner('EXIT FOUR TWO', '#ff9a6a');
 }
 
 
+/* Build whichever map was chosen. The bunker's own builder is below,
+   under its own name -- this is only the switch. */
 function buildMap(game, S) {
+  const def = useMap((S && S.mapId) || 'bunker9');
+  def.build(game, S);
+  if (def.id !== 'bunker9') finishGenericMap(game, S, def);
+  return def;
+}
+
+/* Everything the round loop needs that is NOT geometry.
+
+   buildBunker9 publishes fourteen things onto S on its way past -- the
+   windows and their boards, the navmesh, the wall-buys, the perk
+   machines, the mystery box, the lamps, the power state -- and the rest
+   of the game reads every one of them without checking. That was fine
+   while there was one map. A second map that builds only its own scenery
+   leaves all fourteen undefined and the first frame throws.
+
+   So this is the contract, in one place: what a map has to have on S
+   before the game will run on it. A map supplies the POSITIONS through
+   its own PLAY block, because it is the only thing that knows where its
+   walls are; the machines themselves are built here with the same
+   builders the bunker uses, so the two maps cannot drift apart. */
+function finishGenericMap(game, S, def) {
+  const P = def.play || {};
+  const boardMat = S.boardMat || game.material(
+    { color: 0x7d5c36, texture: 'wood', roughness: 0.85, metalness: 0, uvScale: 3 });
+  S.boardMat = boardMat;
+
+  // The windows, and five boards across each of them.
+  S.windows = WINDOWS.map((w) => {
+    const win = { def: w, boards: [], zombiesAt: 0 };
+    for (let i = 0; i < 5; i++) win.boards.push(spawnBoard(game, w, i, boardMat));
+    return win;
+  });
+
+  /* Wall-buys. A plate behind each one, because a buy you cannot see is a
+     buy nobody finds -- in the bunker the chalk and the rack are drawn by
+     hand next to every one of them, and an invisible point in the air is
+     not a substitute. */
+  S.buys = (P.buys || []).map((b) => {
+    const face = b.face || 'S';
+    const alongX = face === 'N' || face === 'S';
+    const nz = face === 'N' ? 1 : face === 'S' ? -1 : 0;
+    const nx = face === 'E' ? -1 : face === 'W' ? 1 : 0;
+    const at = b.at;
+    game.box({
+      at: [at[0] + nx * 0.03, at[1], at[2] + nz * 0.03],
+      size: alongX ? [1.30, 0.72, 0.05] : [0.05, 0.72, 1.30],
+      material: { color: 0x6a5a45, texture: 'wood', roughness: 0.9, metalness: 0, uvScale: 2 },
+      physics: false,
+    });
+    return { id: b.id, at, weapon: b.weapon, label: b.label };
+  });
+
+  // Perk machines, built by the same builder the bunker uses.
+  S.perkStations = (P.perks || [])
+    .filter(([id]) => PERKS[id])
+    .map(([id, at, yaw]) => buildPerkMachine(game, S, id, PERKS[id], at, yaw));
+
+  // The mystery box.
+  if (P.box) {
+    const BX = P.box;
+    S.crate = {
+      at: BX, busy: false, cost: ECONOMY.crate,
+      base: game.box({ at: BX, size: [1.15, 0.8, 0.8], static: true,
+        material: { color: 0x9a7a52, texture: 'wood', roughness: 0.9, metalness: 0, uvScale: 2 } }),
+      lid: game.box({ at: [BX[0], BX[1] + 0.44, BX[2]], size: [1.15, 0.1, 0.8], physics: false,
+        material: { color: 0xa8b0ba, texture: 'metal', roughness: 0.5, metalness: 1 } }),
+      offer: null, offerId: null, timer: 0, flash: null, flashT: 0,
+    };
+  }
+
+  // The shield bubble, hidden until raised. Nothing map-specific about it.
+  S.shieldMesh = game.sphere({
+    at: [0, -50, 0], radius: 1.15, physics: false,
+    material: { color: 0x6a4aa8, texture: 'smooth', roughness: 0.1, metalness: 0,
+      opacity: 0.30, emissive: 0xb08cff, emissiveStrength: 1.1 },
+  });
+
+  /* The things this map simply does not have. Set rather than left
+     undefined: a reader that finds an empty list carries on, and a reader
+     that finds `undefined` throws on the first frame. */
+  S.lamps = S.lamps || [];
+  S.doors = S.doors || {};
+  S.detail = S.detail || { far: [], smoke: [] };
+  S.nadeBuy = P.nade ? { at: P.nade } : null;
+  S.powerSwitch = null;
+  S.shop = null;
+  /* No generator out here, so there is nothing to switch on and the power
+     is simply on. The perk machines check this, and a map where they can
+     never be bought is a map with no perks. */
+  S.powered = true;
+
+  S.nav = { ...(def.navLevels ? def.navLevels(game) : {}) };
+
+  /* Where the player starts is recorded rather than applied. buildMap
+     runs BEFORE makePlayer -- there is no player to move yet, and the
+     first attempt at this silently did nothing and left you standing in
+     the lake at the bunker's origin. */
+  S.spawnAt = def.spawn ? def.spawn.at.slice() : null;
+  S.spawnYaw = def.spawn ? (def.spawn.yaw || 0) : 0;
+}
+
+function buildBunker9(game, S) {
   const MAT = {
     /* uvScale is tiles-per-face, not tiles-per-metre, and every wall and
        floor in here is a single slab twelve to fifteen metres long. At 1.3
@@ -4593,9 +4807,12 @@ function buildMap(game, S) {
   buildExit42(game, S);
 
   S.nav = {
-    ground: buildNavLevel(game, { x0: MAP.side.x0, x1: MAP.main.x1, z0: MAP.main.z0, z1: MAP.main.z1 }, 1.05),
-    roof: buildNavLevel(game, { x0: MAP.roof.x0, x1: MAP.roof.x1, z0: MAP.roof.z0, z1: MAP.roof.z1 },
-      MAP.roof.y1 + 1.05),
+    /* Which levels, and over what, is the loaded map's business. The
+       bunker has a ground floor and a roof deck; Coastline has a lawn and
+       no upstairs at all, so it returns one level and the 'roof' key is
+       simply absent -- which every reader below already had to tolerate,
+       since a navmesh lookup that misses falls back to a straight line. */
+    ...(MAPDEF ? MAPDEF.navLevels(game) : {}),
   };
 }
 
@@ -8115,6 +8332,10 @@ function roomOf(p) {
   /* Three places to be: the blockhouse floor, the wing through the door, and
      the roof. Height decides the roof because the stair is the only way onto
      it and the whole deck is above the ceiling slab. */
+  /* The loaded map decides. The bunker's answer is roof / side / main,
+     which is three tests against three of its own rectangles and means
+     nothing anywhere else. */
+  if (MAPDEF && MAPDEF.roomAt) return MAPDEF.roomAt(p);
   if (p.y > MAP.roof.y0 - 0.6) return 'roof';
   if (p.x < MAP.side.x1 + 0.2) return 'side';
   return 'main';
@@ -8280,6 +8501,11 @@ function navClear(nav, a, b) {
 
 /* Waypoint chains between rooms. Small map, hand-authored graph. */
 function routeTo(fromRoom, toRoom, S) {
+  /* Hand-authored for the bunker: its one internal door and its one
+     staircase. A map without either has no rooms to route between in the
+     first place -- everything on Coastline is one continuous outdoors --
+     so the graph is empty and the walkers fall through to the navmesh. */
+  if (!MAP.door1 || !MAP.stair || !MAP.roof) return [];
   const D = MAP.door1, st = MAP.stair;
   const door = [MAP.main.x0 - 0.3, 0, (D.z0 + D.z1) / 2];
   // Foot of the flight, then the head of it. Two points is enough: the run is
@@ -10721,7 +10947,8 @@ function nearestInteract(S, P) {
       return { kind: 'door', id, door: d, cost: d.cost, label: `${d.label} — ${d.cost}` };
     }
   }
-  if (!S.powered && dist2d(p, { x: S.powerSwitch.at[0], z: S.powerSwitch.at[2] }) < R) {
+  if (!S.powered && S.powerSwitch
+      && dist2d(p, { x: S.powerSwitch.at[0], z: S.powerSwitch.at[2] }) < R) {
     return { kind: 'power', cost: 0, label: 'Start the generator' };
   }
   /* The minigun. Buying it starts a clock, not a weapon: you cannot carry
@@ -10912,7 +11139,7 @@ function doInteract(game, S, P, hud, sfx, it, dt) {
        it for five seconds, and the whole time the horde is still coming —
        which is the point of making it take five seconds. */
     const ps = S.powerSwitch;
-    if (!ps.cranking) { ps.cranking = GEN.crank; sfx.doorOpen(); S.voice(LINES.powerStart || LINES.power); }
+    if (ps && !ps.cranking) { ps.cranking = GEN.crank; sfx.doorOpen(); S.voice(LINES.powerStart || LINES.power); }
   } else if (it.kind === 'exitPhone') {
     exitStep(S, hud, sfx, 1, 'SOMEBODY IS ON THE LINE');
   } else if (it.kind === 'bench') {
@@ -11956,12 +12183,22 @@ function start(opts = {}) {
   game.camera.near = 0.09;
   game.camera.far = 220;
 
+  /* Which map, before anything is built. It arrives from the front end,
+     which is where the choice is made; falling back to the bunker means a
+     page that never shows a map screen still works. */
+  const mapId = (opts.map && MAP_REGISTRY_HAS(opts.map)) ? opts.map : 'bunker9';
+  const mapDef = useMap(mapId);
   const S = {
+    mapId,
     time: 0, points: ECONOMY.start, mul: 1, mulT: 0,
     round: 0, toSpawn: 0, spawnT: 0, betweenRounds: false, lullT: 0,
     zombies: [], pool: [], debris: [], brass: [], windows: [], buys: [], doors: {},
     projectiles: [], perkStations: [], shieldActive: false, lastKnown: null,
-    activeWindows: ['W1', 'W2', 'W3', 'W4'], powered: false,
+    /* Which windows round one opens with. The bunker's four, or the first
+       four this map has -- a map whose windows are called something else
+       would otherwise start with none of them live and nothing would ever
+       arrive. */
+    activeWindows: mapDef.windows.slice(0, 4).map((w) => w.id), powered: false,
     killsTotal: 0, gameOver: false, started: false,
     firstBloodDone: false, powerupActive: null,
     testMode: !!opts.test, godMode: false,
@@ -12124,6 +12361,14 @@ function start(opts = {}) {
   setTimeout(trickle, 1200);
   const P = makePlayer(game, S, hud, sfx, voice);
   S.player = P;
+  /* On the map's own start mark, now that there is a body to put there.
+     The bunker's start is the origin and says nothing; an outdoor map's
+     is forty metres away from it. */
+  if (S.spawnAt) {
+    P.actor.setPosition(S.spawnAt.slice());
+    if (P.actor.body) P.actor.body.velocity.set(0, 0, 0);
+    game._camYaw = S.spawnYaw || 0;
+  }
   /* The chosen character, on the arms. Applied here rather than at the
      picker, because the saved choice from last night never goes through the
      picker -- and the arms do not exist until makePlayer has built them. */
@@ -12959,8 +13204,10 @@ function start(opts = {}) {
        spins down and you start again. The handle actually goes round — a
        progress bar with no moving part in the world reads as a menu. */
     {
+      /* A map with no generator has no switch to read. Coastline's power
+         is simply on -- there is nothing out there to crank. */
       const ps = S.powerSwitch;
-      if (ps.cranking > 0 && !ps.on) {
+      if (ps && ps.cranking > 0 && !ps.on) {
         const away = dist2d(P.actor.position, { x: ps.at[0], z: ps.at[2] }) > GEN.reach;
         if (away) {
           ps.cranking = 0;

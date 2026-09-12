@@ -186,17 +186,81 @@ const MAP = {
     z0: C.twoStorey.z - C.twoStorey.d / 2, z1: C.twoStorey.z + C.twoStorey.d / 2, y0: 0, y1: 7 },
 };
 
-/* Where the dead come from. Out of the lake, and in off the treeline
-   behind the houses -- the two directions the place is open from. The
-   ramp is the obvious one and the seawall ladder is the one people
-   forget about. */
+/* Where the dead come from.
+
+   Out of the lake, and in off the ends of the green -- the directions the
+   place is actually open from. Two things these have to respect that the
+   bunker's did not:
+
+     - The PAD is where a body appears and starts walking, and it has to
+       be somewhere the navmesh covers. The first set had the two flank
+       pads at x -62 and +60, which is fifteen metres outside the mesh,
+       and a body that starts off the mesh has no path and stands where
+       it spawned for the whole round.
+     - The SILL is where the boards go, so it wants to be across
+       something: the mouth of the boat ramp, the head of a ladder, a gap
+       in the fence. Five planks hanging in the middle of a lawn is not a
+       barricade, it is litter.
+
+   `inside` is the side you defend from, on the walk behind the seawall. */
 const WINDOWS = [
-  { id: 'CR', room: 'green', inside: [0.1, 0, -3.4], sillAt: [0.1, 0.7, 1.2], pad: [0.4, 0, 26.0], face: 'S', wx: [-3.2, 3.4] },
-  { id: 'CL', room: 'green', inside: [-14.0, 0, -2.6], sillAt: [-14.0, 1.0, 0.2], pad: [-15.0, 0, 22.0], face: 'S', wx: [-15.4, -12.6] },
-  { id: 'CP', room: 'green', inside: [C.pier.x, 0, -2.6], sillAt: [C.pier.x, 1.0, 0.2], pad: [C.pier.x + 1, 0, 30.0], face: 'S', wx: [C.pier.x - 1.4, C.pier.x + 1.4] },
-  { id: 'CW', room: 'green', inside: [-34.0, 0, -18.0], sillAt: [-38.0, 1.0, -18.0], pad: [-62.0, 0, -20.0], face: 'W', wz: [-19.4, -16.6] },
-  { id: 'CE', room: 'green', inside: [32.0, 0, -20.0], sillAt: [36.0, 1.0, -20.0], pad: [60.0, 0, -24.0], face: 'E', wz: [-21.4, -18.6] },
+  // The boat ramp. The obvious way up out of the water, and the widest.
+  { id: 'CR', room: 'green', inside: [0.1, 0, -3.4], sillAt: [0.1, 0.95, -0.2], pad: [0.5, 0, 24.0], face: 'S', wx: [-3.2, 3.4] },
+  // The west ladder, up the face of the seawall.
+  { id: 'CL', room: 'green', inside: [-14.0, 0, -2.6], sillAt: [-14.0, 1.15, -0.1], pad: [-16.0, 0, 20.0], face: 'S', wx: [-15.4, -12.6] },
+  // The foot of the pier, where it crosses the wall.
+  { id: 'CP', room: 'green', inside: [C.pier.x, 0, -2.6], sillAt: [C.pier.x, 1.15, -0.1], pad: [C.pier.x + 1, 0, 30.0], face: 'S', wx: [C.pier.x - 1.4, C.pier.x + 1.4] },
+  // The gap in the chain-link on the west boundary.
+  { id: 'CW', room: 'green', inside: [-38.0, 0, -18.0], sillAt: [-41.0, 1.15, -18.0], pad: [-44.0, 0, -30.0], face: 'W', wz: [-19.4, -16.6] },
+  // And the one on the east.
+  { id: 'CE', room: 'green', inside: [36.0, 0, -20.0], sillAt: [39.0, 1.15, -20.0], pad: [43.0, 0, -32.0], face: 'E', wz: [-21.4, -18.6] },
 ];
+
+/* ---------------- what you can buy, and where ----------------
+
+   Positions only. The machines themselves are built by the game, with the
+   same builders Bunker Nine uses, so the two maps cannot drift apart in
+   what a perk machine or a mystery box actually is.
+
+   Spread on purpose: the two guns worth having are at the two ends of the
+   map -- one at the end of the pier, which is a dead end you have to walk
+   back out of, and one across the lawn at the far house. The point of an
+   outdoor map this size is that the walk costs you something. */
+const PLAY = {
+  buys: [
+    // The near wall of the ranch house, facing the water.
+    { id: 'thompson', at: [C.ranch.x + 5.2, 1.42, C.ranch.z + C.ranch.d / 2 + 0.06],
+      weapon: 'thompson', label: 'Thompson', face: 'N' },
+    // The two-storey, across the green.
+    { id: 'scatter', at: [C.twoStorey.x - 4.6, 1.42, C.twoStorey.z + C.twoStorey.d / 2 + 0.06],
+      weapon: 'scatter', label: 'Scattergun', face: 'N' },
+    // The carport, out on the west edge.
+    { id: 'mp5', at: [C.carport.x + C.carport.w / 2 - 0.2, 1.42, C.carport.z],
+      weapon: 'mp5', label: 'MP5', face: 'E' },
+    // Under the pavilion, halfway out the pier.
+    { id: 'remington', at: [C.pier.x - C.pavilion.half + 0.1, C.pier.deckY + 1.35, C.pavilion.z],
+      weapon: 'remington', label: 'Remington 700', face: 'W' },
+    // The boathouse at the very end of it.
+    { id: 'mg42', at: [C.pier.x + C.boathouse.half - 0.1, C.pier.deckY + 1.35, C.boathouse.z],
+      weapon: 'mg42', label: 'MG 42', face: 'E' },
+    // The covered slip, the other way along the seawall.
+    { id: 'paralyzer', at: [C.slip.x, 1.42, C.slip.z - C.slip.halfZ + 0.06],
+      weapon: 'paralyzer', label: 'Paralyzer', face: 'S' },
+  ],
+  /* The four perks, each with its back to something, none of them within
+     sight of another -- a corner you can hold is a corner with one perk
+     in it, not three. */
+  perks: [
+    ['supersoldier', [C.pier.x - 2.6, C.pier.deckY, C.pavilion.z + 1.6], 0],
+    ['adrenaline', [C.carport.x + 2.4, 0, C.carport.z - 4.2], 180],
+    ['deflect', [C.ranch.x - 7.0, 0, C.ranch.z + C.ranch.d / 2 + 1.4], 0],
+    ['shieldup', [C.twoStorey.x + 6.2, 0, C.twoStorey.z + C.twoStorey.d / 2 + 1.4], 0],
+  ],
+  // The box on the pier deck, just short of the boathouse.
+  box: [C.pier.x + 0.0, C.pier.deckY + 0.42, C.boathouse.z - 4.2],
+  // Grenades on the seawall walk, by the top of the ramp.
+  nade: [5.2, 1.08, -1.6],
+};
 
 /* ---------------- the builder ----------------
 
@@ -740,7 +804,7 @@ function applySky(game) {
 
 window.COASTLINE = {
   id: 'coastline', name: 'Coastline',
-  C, MAP, WINDOWS, MAT, SKY, build, applySky,
+  C, MAP, WINDOWS, MAT, SKY, PLAY, build, applySky,
   /* Where you start: on the walk, a little up the lawn from the water,
      looking down it -- the view the fourth photograph is taken from. */
   spawn: { at: [0, 1.2, -16.0], yaw: 0 },

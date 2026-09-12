@@ -123,6 +123,22 @@ SHELL.defaults = function () { return clone(DEFAULTS); };
 
 var handle = null;      // { game, S, P } once the game is built
 
+/* Which map this page was BUILT with, as opposed to which one is
+   selected in the menu. They are the same until you pick the other one,
+   and then the page reloads and they are the same again. Read once, here,
+   before anything else looks at it -- the boot sequence needs it and so
+   does the map screen, and neither should be reading storage itself. */
+var MAP_KEY = 'b9.map', MAP_RESUME = 'b9.map.resume';
+var bootMap = 'bunker9', resumeMaps = false;
+try {
+  var savedMap = W.localStorage.getItem(MAP_KEY);
+  if (savedMap) bootMap = savedMap;
+  resumeMaps = W.localStorage.getItem(MAP_RESUME) === '1';
+  if (resumeMaps) W.localStorage.removeItem(MAP_RESUME);
+} catch (e) { /* storage off; the bunker it is */ }
+SHELL.bootMap = bootMap;
+SHELL.map = bootMap;
+
 function applySettings() {
   SHELL.fpsTarget = fpsFor();
   var g = handle && handle.game;
@@ -795,7 +811,7 @@ SHELL.boot = function (opts) {
     setBar(weightAfter(4), STEPS[4].label, est / 1000);
     return twoFrames().then(function () {
       var t0 = (W.performance && performance.now) ? performance.now() : Date.now();
-      handle = B.start({ canvas: opts.canvas || '#game', settings: SHELL.all() });
+      handle = B.start({ canvas: opts.canvas || '#game', settings: SHELL.all(), map: SHELL.bootMap });
       var ms = ((W.performance && performance.now) ? performance.now() : Date.now()) - t0;
       try { W.localStorage.setItem(BUILD_MS_KEY, Math.round(ms)); } catch (e) { /* storage off */ }
       SHELL.buildMs = Math.round(ms);
@@ -867,7 +883,10 @@ function fadeToMenu() {
   setTimeout(function () {
     el.load.style.opacity = '';
     setPhase('menu');
-    openMain();
+    /* Straight back to where you were. Changing map reloads the page to
+       build the other one, and dropping the player on the main menu after
+       that reads as the game having forgotten what they clicked. */
+    if (resumeMaps) { resumeMaps = false; openMaps(); } else openMain();
   }, 900);
 }
 
@@ -1157,11 +1176,11 @@ var MAPS = [
     shots: ['shots/bunker9-1.jpg', 'shots/bunker9-2.jpg', 'shots/bunker9-3.jpg'],
   },
   {
-    id: 'coastline', name: 'Coastline', status: 'building',
+    id: 'coastline', name: 'Coastline', status: 'ready',
     where: 'the dock', year: '—',
     blurb: 'A mown green running down to a seawall, a pier out over the water with a '
       + 'pavilion on the end of it, and a boathouse. Built from the real place. '
-      + 'You can look at it; you cannot fight on it yet.',
+      + 'Nothing indoors to hold: the walk between the two ends of it is the map.',
     /* Engine screenshots of the map, the same as Bunker Nine's -- NOT the
        photographs it was built from. Those have people in them and belong
        to whoever took them, not to a public repository. */
@@ -1173,6 +1192,7 @@ var mapIdx = 0;
 var fadeTimer = null, shotIdx = 0;
 
 function mapById(id) { for (var i = 0; i < MAPS.length; i++) if (MAPS[i].id === id) return MAPS[i]; return null; }
+function indexOfMap(id) { for (var i = 0; i < MAPS.length; i++) if (MAPS[i].id === id) return i; return 0; }
 
 /* The picture stack for one map, built once per selection. Every shot is
    an <img> that is already in the DOM; showing one is a class. */
@@ -1269,7 +1289,13 @@ function openMaps() {
   el.mapfoot.innerHTML =
     '<div><b>&uarr;&darr;</b> choose a map &nbsp; <b>Enter / A</b> drop in &nbsp; <b>Esc / B</b> back</div>';
   navSet(rows, openMain);
-  mapIdx = 0;
+  /* Open on the map the page is actually BUILT with, not always on the
+     first row. Coming back from the reload that a map change causes, the
+     cursor has to land on the map you chose -- landing on Bunker Nine
+     again would read as the choice not having taken. */
+  mapIdx = Math.max(0, indexOfMap(SHELL.bootMap));
+  nav.i = Math.min(mapIdx, Math.max(0, nav.rows.length - 1));
+  navPaint(false);
   paintMap();
   tabHook = null; startHook = null;
 }
@@ -1289,7 +1315,29 @@ function intoGame(map) {
      map that can be played today, so this changes nothing yet -- but the
      choice is made in the menu, and the menu is the only place that knows
      it, so it has to be handed over rather than assumed. */
-  SHELL.map = (map && map.id) || 'bunker9';
+  var want = (map && map.id) || 'bunker9';
+
+  /* The game builds its map during the boot sequence, which is long
+     before you reach this screen -- so choosing a map that is not the one
+     already standing means building a different one.
+
+     That is a page reload, deliberately. Tearing one map down and putting
+     another up inside a live session means unpicking fourteen things the
+     round loop holds pointers into, and getting any one of them wrong is
+     a bug that only shows up ten rounds in. Nothing is lost by reloading
+     HERE: you are in the menu, you have not started playing, and the
+     loading screen that comes back is the one you already sat through
+     once. The choice is remembered across the reload and the shell comes
+     straight back to this screen with it selected. */
+  if (want !== SHELL.bootMap) {
+    try {
+      W.localStorage.setItem(MAP_KEY, want);
+      W.localStorage.setItem(MAP_RESUME, '1');
+    } catch (e) { /* storage off: fall through and play what is built */ }
+    try { W.location.reload(); return; } catch (e) { /* cannot reload; play what is built */ }
+  }
+  SHELL.map = want;
+  try { W.localStorage.setItem(MAP_KEY, want); } catch (e) { /* storage off */ }
   if (handle && handle.S) handle.S.mapId = SHELL.map;
   hideAll();
   navClear();
