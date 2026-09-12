@@ -317,6 +317,14 @@ const WEAPONS = {
     reload: 1.5, auto: false, pellets: 1, spread: 0.5,
     kick: 1.5, sfx: 'shotBlaze', reloadKind: 'mag',
     burn: { dps: 26, time: 5 },
+    /* What it becomes on the other side of the Pack-a-Punch. Read only
+       when the weapon is actually upgraded, so the base gun stays a
+       pistol that happens to set people on fire and the upgrade is a
+       different weapon rather than a bigger number.
+
+       Three and a half metres, and that is the point: it clears a
+       doorway and it cannot touch anything across a lawn. */
+    flame: { range: 3.6, cone: 26, dps: 340, burnDps: 60, burnTime: 6 },
     sightH: 0.0455, sightFov: 0.74, adsTime: 0.16,
     recoil: { up: 1.10, side: 0.5, climb: 0.26, recover: 9, back: 0.017, roll: 0.007, impulse: 9 },
     ammo: { mag: { w: 0.024, d: 0.020, len: 0.086, curve: 0, witness: 0, round: AMMO.acp45 } },
@@ -7721,6 +7729,55 @@ function tryFire(game, S, P, hud, sfx, dt) {
   const fwd = _vTmp1.copy(cam.target).sub(cam.position).normalize();
   let killsThisShot = 0;
 
+  /* THE FLAMETHROWER.
+   *
+   * Pack-a-Punched, the Blaze stops being a pistol that sets things
+   * alight and becomes the thing that sets everything alight. It is not
+   * a ballistic weapon any more, so it takes none of the ray path below:
+   * no pellets, no penetration, no spread cone, no wall hit. A cone of
+   * burning air, everything in it catching, and nothing past its reach
+   * touched at all.
+   *
+   * The trade is range. It reaches FLAME.range metres and stops dead,
+   * which is the whole character of the weapon -- devastating in a
+   * doorway, useless across the green on Coastline, and a decision every
+   * time you pick it up. */
+  if (spec.flame && P.upgraded && P.upgraded[P.equipped()]) {
+    const F = spec.flame;
+    const from = [cam.position.x, cam.position.y, cam.position.z];
+    const cos = Math.cos(F.cone * Math.PI / 180);
+    let lit = 0;
+    for (const z of S.zombies) {
+      if (z.dead || z.parked || !z.actor) continue;
+      const zp = z.actor.position;
+      const dx = zp.x - from[0], dy = (zp.y + 1.0) - from[1], dz = zp.z - from[2];
+      const d = Math.hypot(dx, dy, dz);
+      if (d > F.range || d < 0.01) continue;
+      // Inside the cone, measured off the way you are looking.
+      if ((dx * fwd.x + dy * fwd.y + dz * fwd.z) / d < cos) continue;
+      /* Falls off with distance: the tip of a flame does not hit like
+         its root. Squared, so the near half of the cone is where the
+         weapon actually lives. */
+      const fall = 1 - Math.pow(d / F.range, 2) * 0.75;
+      hurtZombie(game, S, z, F.dps * dt * fall, [zp.x, zp.y + 1.0, zp.z], false, 'fire',
+        { burn: { dps: F.burnDps, time: F.burnTime } });
+      lit++;
+      if (lit >= 16) break;
+    }
+    // The flame itself, thrown down the cone rather than puffed at the muzzle.
+    if (S.toggles && S.toggles.gore !== false) {
+      const mz = P.muzzleWorld || from;
+      for (let i = 0; i < 3; i++) {
+        const t = 0.25 + Math.random() * 0.75;
+        game.particles.fire(
+          [mz[0] + fwd.x * F.range * t, mz[1] + fwd.y * F.range * t, mz[2] + fwd.z * F.range * t],
+          { count: 2, size: 0.5 + t * 1.3, life: 0.45 + t * 0.35 });
+      }
+    }
+    P.cooldown = spec.refire;
+    return;
+  }
+
   // Aimed fire tightens the cone; a shotgun tightens less than a rifle,
   // which is what its own adsSpread is for.
   const aimTighten = 1 - P.ads * (1 - (spec.adsSpread != null ? spec.adsSpread : PLAYER.adsSpread));
@@ -7789,6 +7846,15 @@ function tryFire(game, S, P, hud, sfx, dt) {
         spec.stun ? 'shock' : spec.burn ? 'fire'
           : (P.goldAmmo ? 'gold' : spec.punchesPlate ? 'heavy' : 'bullet'),
         spec.burn ? { burn: spec.burn } : null);
+      /* A burning round has to LOOK like one. The Blaze has done fire
+         damage since it was written -- the body catches, it takes damage
+         over five seconds, it plays the burning death -- and none of that
+         was visible at the moment of the hit, so it read as an ordinary
+         pistol that happened to kill things slowly. */
+      if (spec.burn && S.toggles && S.toggles.gore !== false) {
+        game.particles.fire([hit.point[0], hit.point[1], hit.point[2]],
+          { count: 5, size: 0.45, life: 0.7 });
+      }
       let awarded = S.addPoints(ECONOMY.hit);
       if (z.dead) {
         killsThisShot++;
@@ -11485,7 +11551,14 @@ function doInteract(game, S, P, hud, sfx, it, dt) {
     P.upgraded[id] = true;
     applyUpgradeLook(game, P, id);
     const w = WEAPONS[id];
-    if (!w.__preUpgrade) w.__preUpgrade = { dmg: w.dmg, mag: w.mag, name: w.name, slotName: w.slotName };
+    if (!w.__preUpgrade) w.__preUpgrade = { dmg: w.dmg, mag: w.mag, name: w.name, slotName: w.slotName,
+      auto: w.auto, refire: w.refire };
+    /* A weapon that becomes a FLAMETHROWER stops being semi-automatic.
+       Left as it was, the upgraded Blaze would have asked for a separate
+       trigger pull per puff of flame, which is a pistol wearing a
+       flame, not a flamethrower. It holds now, and ticks fast enough to
+       be a stream rather than a stutter. */
+    if (w.flame) { w.auto = true; w.refire = 0.055; }
     w.dmg = w.__preUpgrade.dmg * 2;
     w.mag = w.__preUpgrade.mag * 2;
     w.reserve = Math.round(w.reserve * 1.5);
