@@ -9098,12 +9098,23 @@ class Input {
       // buttons press the same keys the keyboard-only path listens for.
       if (Math.abs(pad.lx) > 0.01) this.axes.x += pad.lx;
       if (Math.abs(pad.ly) > 0.01) this.axes.y += pad.ly;
-      /* Only on a pad whose layout the browser vouches for. The fold is
-         what turns a button index into a keyboard key, so on an unknown
-         layout it is a machine for pressing the wrong key -- and the key
-         it presses most is space, because two of the four face buttons
-         are folded onto it. */
-      if (pad.standard) {
+      /* Only on a pad whose layout the browser vouches for, and only for
+         a game that has not said it reads the pad itself.
+
+         The fold turns a button index into a keyboard key so that a game
+         written for a keyboard gets pad support for nothing. It is also
+         LOSSY -- four face buttons onto two keys, A and Y both onto
+         space, B and X both onto 'x' -- which is fine when the keys are
+         all anybody reads and a disaster when they are not. A game that
+         binds the pad properly gets both: its own binding AND whatever
+         the key that button was folded onto happens to do. That is the
+         "X jumps and also shoots" report: one button, two actions, and
+         nothing in the game's own table wrong.
+
+         So a game with a real pad map sets padKeyFold = false and the
+         fold stops. On an unknown layout it is off anyway, where it was
+         already a machine for pressing the wrong key. */
+      if (pad.standard && this.padKeyFold !== false) {
         const press = (on, key) => { if (on) { if (!this.keys.has(key)) this.pressed.add(key); this.keys.add(key); } };
         press(B.a, ' '); press(B.b, 'x'); press(B.x, 'x'); press(B.y, ' ');
         press(B.up, 'arrowup'); press(B.down, 'arrowdown');
@@ -23436,6 +23447,92 @@ function makeZombieClips() {
     upperLegR: { keys: [[0, 3, 0, -3], [0.5, 1, 0, -3], [1, 3, 0, -3]] },
     lowerLegL: { keys: [[0, 3, 0, 0], [0.5, 5, 0, 0], [1, 3, 0, 0]] },
     lowerLegR: { keys: [[0, 5, 0, 0], [0.5, 3, 0, 0], [1, 5, 0, 0]] },
+  }));
+
+  /* ---------------------------------------------------------
+     zswim -- coming ashore.
+
+     Coastline's dead come out of the lake, which no map had asked for
+     before: they spawned twenty metres out over water and walked to the
+     bank. Given a lake bed to walk on they walk along the BOTTOM, a metre
+     and a half under, which is not a horror image, it is a bug.
+
+     So: a drowned crawl. Face down and nearly flat -- the spine and chest
+     pitched hard forward so the body lies along the surface rather than
+     standing in it -- with the arms doing a broken overarm, one reaching
+     while the other pulls through, and the legs trailing with a slow
+     scissor rather than a kick. It is not a swimmer. It is something that
+     used to know how and is mostly being carried by the water.
+
+     Slower than the walk (2.6 s against 1.70) because everything in water
+     is, and because the approach across open lake is the part of this map
+     you are meant to watch coming.
+     --------------------------------------------------------- */
+  clips.push(buildClip('zswim', 2.60, {
+    /* Pitched forward almost to horizontal and rolling with each pull.
+       The roll is what makes the stroke read as a stroke and not as arms
+       waving on a log. */
+    hips: {
+      keys: [[0, 74, 0, -12], [0.25, 76, 6, 0], [0.5, 74, 0, 12], [0.75, 76, -6, 0], [1, 74, 0, -12]],
+      pos: [[0, 0, 0.010, 0], [0.25, 0, -0.008, 0], [0.5, 0, 0.010, 0], [0.75, 0, -0.008, 0], [1, 0, 0.010, 0]],
+    },
+    spine: { keys: [[0, 8, 0, -6], [0.5, 8, 0, 6], [1, 8, 0, -6]] },
+    chest: { keys: [[0, 6, 0, -8], [0.5, 6, 0, 8], [1, 6, 0, -8]] },
+    /* The head lifts to breathe on each roll and drops back under between.
+       Turned to the side rather than raised, which is how a face clears
+       water when the body will not. */
+    head: { keys: [[0, -38, -26, 6], [0.25, -30, 0, 0], [0.5, -38, 26, -6], [0.75, -30, 0, 0], [1, -38, -26, 6]] },
+
+    /* Left arm reaches at 0 and pulls through to 0.5; the right is half a
+       cycle behind it. The recovery is low and sloppy -- the elbow never
+       clears the water properly. */
+    upperArmL: { keys: [[0, -128, 14, -18], [0.25, -54, 8, -10], [0.5, 24, -6, -6],
+                        [0.75, -46, 22, -22], [1, -128, 14, -18]] },
+    lowerArmL: { keys: [[0, -16, 0, 0], [0.25, -34, 0, 0], [0.5, -58, 0, 0],
+                        [0.75, -40, 0, 0], [1, -16, 0, 0]] },
+    handL: { keys: [[0, -18, 0, 8], [0.5, 14, 0, -6], [1, -18, 0, 8]] },
+    upperArmR: { keys: [[0, 24, 6, 6], [0.25, -46, -22, 22], [0.5, -128, -14, 18],
+                        [0.75, -54, -8, 10], [1, 24, 6, 6]] },
+    lowerArmR: { keys: [[0, -58, 0, 0], [0.25, -40, 0, 0], [0.5, -16, 0, 0],
+                        [0.75, -34, 0, 0], [1, -58, 0, 0]] },
+    handR: { keys: [[0, 14, 0, -6], [0.5, -18, 0, 8], [1, 14, 0, -6]] },
+
+    /* Trailing legs. A slow scissor with the knees soft, out of phase with
+       the arms, and never much: the legs are along for the ride. */
+    upperLegL: { keys: [[0, 10, 0, 3], [0.5, -12, 0, 3], [1, 10, 0, 3]] },
+    lowerLegL: { keys: [[0, 18, 0, 0], [0.5, 34, 0, 0], [1, 18, 0, 0]] },
+    upperLegR: { keys: [[0, -12, 0, -3], [0.5, 10, 0, -3], [1, -12, 0, -3]] },
+    lowerLegR: { keys: [[0, 34, 0, 0], [0.5, 18, 0, 0], [1, 34, 0, 0]] },
+  }));
+
+  /* ---------------------------------------------------------
+     zwade -- the last few metres, where it can touch bottom.
+
+     Between swimming and walking. Upright again but leaning into the
+     water, arms held high and clear of it, and a long slow stride
+     against the drag. This is the one that sells the transition: a body
+     that goes straight from horizontal to a normal walk reads as a model
+     changing state, and a body that stands up out of the shallows and
+     wades reads as something arriving.
+     --------------------------------------------------------- */
+  clips.push(buildClip('zwade', 2.20, {
+    hips: {
+      keys: [[0, 14, -5, 4], [0.5, 14, 5, -4], [1, 14, -5, 4]],
+      pos: [[0, 0.010, -0.006, 0], [0.5, -0.010, -0.006, 0], [1, 0.010, -0.006, 0]],
+    },
+    spine: { keys: [[0, 20, 4, -3], [0.5, 20, -4, 3], [1, 20, 4, -3]] },
+    chest: { keys: [[0, 10, 3, -2], [0.5, 10, -3, 2], [1, 10, 3, -2]] },
+    head: { keys: [[0, -22, 6, -6], [0.5, -22, -6, 6], [1, -22, 6, -6]] },
+    // Arms up out of the water, which is the whole silhouette of wading.
+    upperArmL: { keys: [[0, -74, 26, -30], [0.5, -86, 20, -24], [1, -74, 26, -30]] },
+    lowerArmL: { keys: [[0, -52, 0, 0], [0.5, -64, 0, 0], [1, -52, 0, 0]] },
+    upperArmR: { keys: [[0, -86, -20, 24], [0.5, -74, -26, 30], [1, -86, -20, 24]] },
+    lowerArmR: { keys: [[0, -64, 0, 0], [0.5, -52, 0, 0], [1, -64, 0, 0]] },
+    // A long, heavy stride: the knee comes up high and goes down slowly.
+    upperLegL: { keys: [[0, -30, 0, 2], [0.25, -4, 0, 2], [0.5, 22, 0, 2], [0.75, -10, 0, 2], [1, -30, 0, 2]] },
+    lowerLegL: { keys: [[0, 8, 0, 0], [0.25, 22, 0, 0], [0.5, 40, 0, 0], [0.75, 24, 0, 0], [1, 8, 0, 0]] },
+    upperLegR: { keys: [[0, 22, 0, -2], [0.25, -10, 0, -2], [0.5, -30, 0, -2], [0.75, -4, 0, -2], [1, 22, 0, -2]] },
+    lowerLegR: { keys: [[0, 40, 0, 0], [0.25, 24, 0, 0], [0.5, 8, 0, 0], [0.75, 22, 0, 0], [1, 40, 0, 0]] },
   }));
 
   return clips;

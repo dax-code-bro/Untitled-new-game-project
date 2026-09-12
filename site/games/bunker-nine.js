@@ -2942,6 +2942,10 @@ function registerLoadedMaps() {
     spawn: C.spawn,
     play: C.PLAY,
     lines: C.LINES,
+    /* Where the water is and how deep, so a body over it swims instead of
+       walking along the bottom. The bunker has no water and no entry, so
+       nothing there ever asks. */
+    waterAt: C.waterAt,
     build: (game, S) => { C.applySky(game); C.build(game, S); },
     sky: (game) => C.applySky(game),
     /* One level, and it covers the lawn AND the water: a zombie coming up
@@ -9702,6 +9706,46 @@ function updateZombie(game, S, P, z, dt, sfx) {
     const d = Math.hypot(dx, dz) || 1e-5;
     a.controller.move(dx / d, dz / d, urgency > 1.2);
   };
+
+  /* IN THE WATER.
+   *
+   * Coastline's dead come out of the lake -- they spawn twenty to thirty
+   * metres out and walk in. Given a lake bed to walk on they walk along
+   * the BOTTOM, a metre and a half under, which is not a horror image, it
+   * is a bug. And without the bed they fell out of the world.
+   *
+   * So a body over water is floated to the surface and swims. Three
+   * states, chosen by how deep the water under it is: out of its depth it
+   * swims, chest-deep it wades with its arms held clear, and once it can
+   * walk it walks. The wade matters more than it sounds -- going straight
+   * from horizontal to a normal walk reads as a model changing state,
+   * and standing up out of the shallows reads as something arriving. */
+  const water = MAPDEF && MAPDEF.waterAt ? MAPDEF.waterAt(pos.x, pos.z) : null;
+  if (water != null && !z.dead && z.state !== 'down') {
+    const bed = water.bed != null ? water.bed : (water.surface - 3);
+    const depth = water.surface - bed;
+    const swimming = depth > 1.15;
+    const wading = !swimming && depth > 0.45;
+    if (swimming) {
+      /* Held at the surface rather than left to the bed. The body rides
+         with its back out, which is where the roll and the head-turn in
+         the clip are authored to be seen from. */
+      const want = water.surface - 0.62;
+      a.setPosition([pos.x, want, pos.z]);
+      if (a.body) a.body.velocity.y = 0;
+    }
+    const wantClip = swimming ? 'zswim' : wading ? 'zwade' : null;
+    if (wantClip) {
+      if (!z.landClip) z.landClip = z.moveClip;
+      z.moveClip = wantClip;
+    } else if (z.landClip) {
+      z.moveClip = z.landClip;
+      z.landClip = null;
+    }
+  } else if (z.landClip) {
+    z.moveClip = z.landClip;
+    z.landClip = null;
+  }
 
   /* Where the zombie thinks the player is. A raised shield does not make
      the player invisible so much as forgettable: the horde keeps walking

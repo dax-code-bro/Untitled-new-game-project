@@ -1173,9 +1173,25 @@ function applySky(game) {
   game.renderer.post.grain = 0.018;
 }
 
+/* How deep the water is at a point, or null if there is none.
+
+   The game asks this of whichever map is loaded so that a body over water
+   can swim rather than trudge along the bottom. It has to agree with the
+   bed that build() lays down -- the bed shelves in five-metre steps from
+   the seawall out, so this is the same arithmetic read the other way. */
+function waterAt(x, z) {
+  if (z < 0.2 || z > 260) return null;
+  if (Math.abs(x) > 260) return null;
+  const bedTop = C.water.y - 0.55;
+  // Which shelf step this is on; step 0 runs from the wall out to z = 1.
+  const i = z <= 1.0 ? 0 : Math.min(8, Math.floor((z - 1.0) / 5.0) + 1);
+  const bed = bedTop - i * 0.22;
+  return { surface: C.water.y, bed };
+}
+
 window.COASTLINE = {
   id: 'coastline', name: 'Coastline',
-  C, MAP, WINDOWS, MAT, SKY, PLAY, LINES, build, applySky,
+  C, MAP, WINDOWS, MAT, SKY, PLAY, LINES, build, applySky, waterAt,
   /* Where you start: on the walk, a little up the lawn from the water,
      looking down it -- the view the fourth photograph is taken from. */
   spawn: { at: [0, 1.2, -16.0], yaw: 0 },
