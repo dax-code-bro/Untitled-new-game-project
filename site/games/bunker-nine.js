@@ -400,7 +400,7 @@ const WEAPONS = {
          weapon to 17. The hand rides a little high on the comb instead,
          which nothing can see; a trigger finger inside the guard is
          visible every time you fire. */
-      right: [-0.014, -0.0525, 0.016], rightGrip: 'wrist', left: [0.268, -0.010, -0.020], leftGrip: 'tube' },
+      right: [-0.014, -0.046, 0.016], rightGrip: 'wrist', left: [0.268, -0.010, -0.020], leftGrip: 'tube' },
   },
   mp5: {
     name: 'MP5', slotName: 'MP5',
