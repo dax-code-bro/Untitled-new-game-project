@@ -1146,7 +1146,7 @@ var MAPS = [
     where: 'North Atlantic coast', year: '1943',
     blurb: 'A gun emplacement dug into the headland and abandoned in a hurry. '
       + 'Four windows, one generator, and a hole in the roof that was not there yesterday.',
-    shots: ['shots/bunker9-1.jpg', 'shots/bunker9-2.jpg', 'shots/bunker9-3.jpg', 'shots/bunker9-4.jpg'],
+    shots: ['shots/bunker9-1.jpg', 'shots/bunker9-2.jpg', 'shots/bunker9-3.jpg'],
   },
   {
     id: 'coastline', name: 'Coastline', status: 'building',
