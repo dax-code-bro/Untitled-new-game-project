@@ -378,10 +378,18 @@ var CSS2 = `
    a column beside it.
 
    The preview is a stack of images, all loaded, all absolutely on top of
-   each other, and only one carrying `.on`. Cross-fading is then a class
-   toggle and a CSS transition rather than anything that has to run every
-   frame -- which matters, because this screen sits in front of a WebGL
-   context that is still holding a whole bunker in memory. */
+   each other, and only one carrying the 'on' class. Cross-fading is
+   then a class toggle and a CSS transition rather than anything that
+   has to run every frame -- which matters, because this screen sits in
+   front of a WebGL context still holding a whole bunker in memory.
+
+   And no backtick may appear anywhere in this string. It is a template
+   literal, so one ends it -- which is how a comment about a CSS class
+   took the entire shell off the air: a quoted class name in prose
+   closed CSS2, the
+   rest of the stylesheet parsed as JavaScript, and BUNKER_SHELL never
+   got defined. It still passed a syntax check, because a tagged
+   template is valid JavaScript. Only loading the page found it. */
 #b9shell .maps { background:linear-gradient(180deg,#07080c 0%,#0b0a08 55%,#05060a 100%); }
 #b9shell .mapwrap { width:min(1120px,92vw); display:flex; gap:34px; align-items:stretch; }
 #b9shell .maphead { width:min(1120px,92vw); margin-bottom:20px; display:flex; align-items:baseline; gap:18px; }
