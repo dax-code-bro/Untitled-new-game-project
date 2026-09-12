@@ -348,8 +348,12 @@ const PLAY = {
     ['deflect', [C.ranch.x - 7.0, 0, C.ranch.z + C.ranch.d / 2 + 1.4], 0],
     ['shieldup', [C.twoStorey.x + 6.2, 0, C.twoStorey.z + C.twoStorey.d / 2 + 1.4], 0],
   ],
-  // The box on the pier deck, just short of the boathouse.
-  box: [C.pier.x + 0.0, C.pier.deckY + 0.42, C.boathouse.z - 4.2],
+  /* The box under the pavilion, on the east widening rather than on the
+     pier itself. Dead centre on the deck it was a 1.15 m crate in a 2.7 m
+     walkway -- a road block on the only route to the two weapons past it,
+     which the route check duly failed on. The pavilion is six metres wide;
+     there is room to stand a crate there and still walk by. */
+  box: [C.pier.x + 1.9, C.pier.deckY + 0.42, C.pavilion.z],
   // Grenades on the seawall walk, by the top of the ramp.
   nade: [5.2, 1.08, -1.6],
 };
@@ -805,8 +809,12 @@ function build(game, S) {
     slab(x0, x1, -0.05, 0.10, z0, z1, mats.concrete, 'house-floor');
     if (tall) {
       // A first floor, and the hole in it that the stair comes up.
-      slab(x0, h.x + 1.2, 3.05, 3.25, z0, z1, mats.deck, 'house-upper-w');
-      slab(h.x + 1.2, x1, 3.05, 3.25, z0 + 3.2, z1, mats.deck, 'house-upper-e');
+      /* Inside the walls, not out to their outer faces -- the east half
+         reached x1 and shared that plane with the east wall's own
+         outside, which is nearly two square metres of seam up the corner
+         of the house. */
+      slab(x0 + T, h.x + 1.2, 3.05, 3.25, z0 + T, z1 - T, mats.deck, 'house-upper-w');
+      slab(h.x + 1.2, x1 - T, 3.05, 3.25, z0 + 3.2, z1 - T, mats.deck, 'house-upper-e');
       const steps = 13;
       for (let i = 0; i < steps; i++) {
         const y = (i / steps) * 3.05;
