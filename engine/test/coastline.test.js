@@ -217,8 +217,21 @@ function check(name, cond, detail = '') {
      *
      * Only reported for real area -- a millimetre of shared edge between
      * two boxes is not a fight, it is carpentry. */
+    /* BOXES ONLY.
+     *
+     * The check treats an actor as its axis-aligned extent, which is true
+     * of a box and false of everything else. Run over spheres it reported
+     * the boundary treeline against itself -- thirty pairs of overlapping
+     * crowns, each pair "sharing" the flat face of a bounding box neither
+     * of them has. A sphere touching a sphere is not a coplanar fight.
+     *
+     * Mesh identity is the reliable filter: the engine caches one box mesh
+     * and hands the same object to every box, so a throwaway box names it. */
+    const probeBox = G.box({ at: [0, -900, 0], size: [1, 1, 1], physics: false });
+    const BOXMESH = probeBox.mesh;
+    probeBox.visible = false;
     const boxes = G.actors
-      .filter((a) => a.mesh && a.scale && a.scale.x > 0.02 && !a.skeleton)
+      .filter((a) => a.mesh === BOXMESH && a.position.y > -500 && a.scale && a.scale.x > 0.02 && !a.skeleton)
       .map((a) => ({
         n: a.name || '?',
         x0: a.position.x - a.scale.x / 2, x1: a.position.x + a.scale.x / 2,

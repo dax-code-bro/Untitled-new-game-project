@@ -1119,14 +1119,20 @@ function build(game, S) {
      state -- and this is the floor it will be built on. */
   {
     const bedTop = C.water.y - 0.55;
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 9; i++) {
       const z0 = i === 0 ? -1.0 : 1.0 + (i - 1) * 5.0;
       const z1 = 1.0 + i * 5.0;
       const y = bedTop - i * 0.22;
       slab(-260, 260, y - 1.2, y, z0, z1, mats.bed, 'lake-bed-' + i);
     }
-    // The shelf: past it the bottom drops away and you cannot wade on.
-    slab(-260, 260, C.water.y - 2.1, C.water.y + 1.6, 31.0, 33.0, mats.bed, 'lake-shelf');
+    /* The bank: past it the bottom drops away and you cannot wade on.
+    
+       At z 31 it went straight THROUGH the pier and the boathouse -- a
+       bank that spans every x at nearly two metres above the waterline
+       does not care what is standing there, and the route check caught it
+       as a 0.70 m step in the middle of the walk to the MG 42. Out past
+       the end of the pier (34) it can be as tall as it likes. */
+    slab(-260, 260, C.water.y - 2.4, C.water.y + 1.6, 40.0, 42.5, mats.bed, 'lake-bank');
   }
 
   /* The lamps along the seawall. Warm, low and few -- at dusk they are
