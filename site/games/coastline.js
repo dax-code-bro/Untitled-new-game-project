@@ -1132,7 +1132,16 @@ function build(game, S) {
        does not care what is standing there, and the route check caught it
        as a 0.70 m step in the middle of the walk to the MG 42. Out past
        the end of the pier (34) it can be as tall as it likes. */
-    slab(-260, 260, C.water.y - 2.4, C.water.y + 1.6, 40.0, 42.5, mats.bed, 'lake-bank');
+    /* Under the surface, not standing out of it.
+    
+       Built 1.6 m proud of the water it read as a wall across the lake --
+       a grey bar between you and the far shore, in the one direction this
+       map is meant to open out in. Its job is only to be taller than a
+       body can step, measured from the bed it stands on, and the bed out
+       there is a metre and a half down: a wall whose top is just under
+       the surface is already two metres of rise. You cannot wade past it
+       and you cannot see it. */
+    slab(-260, 260, C.water.y - 3.0, C.water.y - 0.05, 40.0, 42.5, mats.bed, 'lake-bank');
   }
 
   /* The lamps along the seawall. Warm, low and few -- at dusk they are
