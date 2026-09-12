@@ -344,7 +344,11 @@ const PLAY = {
        along it. Mounted on the SIDE of the slip it faced the open water,
        and the catwalk is only ninety centimetres wide -- there was
        nowhere to stand. Along it, there is. */
-    { id: 'paralyzer', at: [C.slip.x + C.slip.halfX - 2.35, C.water.y + 2.30, C.slip.z - C.slip.halfZ + 0.05],
+    /* On the catwalk, which is 0.9 m wide and runs from x -22.5 to -21.6.
+       The first position was 2.35 m in from the slip's edge, which is not
+       on it -- it is out over the open slip where the boat sits, and the
+       nearest floor was the lake bed four and a half metres down. */
+    { id: 'paralyzer', at: [C.slip.x + C.slip.halfX - 0.45, C.water.y + 2.30, C.slip.z - C.slip.halfZ + 0.05],
       weapon: 'paralyzer', label: 'Paralyzer', face: 'N' },
   ],
   /* The four perks, each with its back to something, none of them within
@@ -535,7 +539,12 @@ function build(game, S) {
        highest surface in the ramp cut for a metre or so, putting a small
        step in the middle of the slope for no reason -- the apron, the
        wall and the ramp all carry the player themselves out there. */
-    const floor = slab(-70, 70, -1.2, 0, -72, 0.6, mats.bed, 'lawn-floor');
+    /* Stops short of the seawall's outer face rather than reaching it.
+       At 0.6 its top plane met the timber face's top and the front of the
+       first ramp step -- two more coplanar pairs, from the slab that was
+       meant to fix the floor. The apron, the wall and the ramp all carry
+       the player out there themselves. */
+    const floor = slab(-70, 70, -1.2, 0, -72, 0.42, mats.bed, 'lawn-floor');
     if (floor) floor.visible = false;
   }
 
@@ -621,7 +630,11 @@ function build(game, S) {
     for (let i = 0; i < steps; i++) {
       const t = i / steps;
       const y = top + (bot - top) * t;
-      const z0 = -1.2 + i * 0.85, z1 = z0 + 0.95;
+      /* Starting at -1.2 the first step lay UNDER the apron with its top
+         at the same 0.12 -- four square metres of two surfaces on one
+         plane, at the top of the ramp where you walk onto it. It butts
+         the apron's edge instead. */
+      const z0 = -0.5 + i * 0.85, z1 = z0 + 0.95;
       slab(rampGap[0], rampGap[1], y - 0.30, y, z0, z1, mats.concreteWet, 'ramp-' + i);
     }
     // The low kerb down each side of the ramp.
