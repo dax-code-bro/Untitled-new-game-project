@@ -670,7 +670,19 @@ function build(game, S) {
      the orange pyramid roof that is the only strong colour out here. */
   {
     const V = C.pavilion, h = V.half;
-    slab(P.x - h, P.x + h, P.deckY - 0.16, P.deckY, V.z - h, V.z + h, mats.deck, 'pavilion-deck');
+    /* Only the widening, not the whole floor.
+    
+       This laid a six-by-six deck at 1.25 on top of the pier's own deck,
+       which is also at 1.25 -- sixteen square metres of two surfaces on
+       one plane, right where you walk out to the weapon on it. The pier
+       already provides the middle; the pavilion only has to provide what
+       stands proud of it either side. */
+    for (const side of [-1, 1]) {
+      const a = side < 0 ? P.x - h : P.x + P.halfW;
+      const b2 = side < 0 ? P.x - P.halfW : P.x + h;
+      slab(a, b2, P.deckY - 0.16, P.deckY, V.z - h, V.z + h, mats.deck, 'pavilion-deck');
+    }
+
     for (const dx of [-h + 0.25, h - 0.25]) for (const dz of [-h + 0.25, h - 0.25]) {
       post(P.x + dx, V.z + dz, C.water.y - 1.6, V.eaves, 0.10, mats.galv, 'pavilion-post');
     }
@@ -691,8 +703,10 @@ function build(game, S) {
       post(P.x + dx, B.z + dz, C.water.y - 1.6, B.eaves, 0.11, mats.galv, 'boathouse-post');
     }
     // Deck all round a slip down the middle.
-    slab(P.x - h, P.x - 1.0, P.deckY - 0.16, P.deckY, B.z - h, B.z + h, mats.deck, 'boathouse-deck-w');
-    slab(P.x + 1.0, P.x + h, P.deckY - 0.16, P.deckY, B.z - h, B.z + h, mats.deck, 'boathouse-deck-e');
+    /* Same again: the pier runs through the boathouse at 1.25, so these
+       two only cover from its edge out to the wall. */
+    slab(P.x - h, P.x - P.halfW, P.deckY - 0.16, P.deckY, B.z - h, B.z + h, mats.deck, 'boathouse-deck-w');
+    slab(P.x + P.halfW, P.x + h, P.deckY - 0.16, P.deckY, B.z - h, B.z + h, mats.deck, 'boathouse-deck-e');
     slab(P.x - 1.0, P.x + 1.0, P.deckY - 0.16, P.deckY, B.z + h - 1.2, B.z + h, mats.deck, 'boathouse-deck-n');
     // Walls, with a wide opening on the pier side.
     slab(P.x - h, P.x - h + 0.12, P.deckY, B.eaves, B.z - h, B.z + h, mats.roofBrown, 'boathouse-wall-w');
@@ -776,11 +790,17 @@ function build(game, S) {
     const T = 0.30;
     const F = z1;                       // the front: the face toward the water
     // Four walls, with the doorway in the lake-facing side.
-    slab(x0, x1, 0, h.wall, z0, z0 + T, wallMat, 'house-back');
+    /* The side walls own the corners; the back and front run BETWEEN
+       them rather than out to their outer faces. Out to them, the end of
+       the back wall and the outside of the side wall are one plane, and
+       on the two-storey that is six metres by a third of one -- enough
+       to see a seam flicker along the corner of the house as you walk
+       past it. */
+    slab(x0 + T, x1 - T, 0, h.wall, z0, z0 + T, wallMat, 'house-back');
     slab(x0, x0 + T, 0, h.wall, z0, z1, wallMat, 'house-w');
     slab(x1 - T, x1, 0, h.wall, z0, z1, wallMat, 'house-e');
-    slab(x0, h.x - 1.3, 0, h.wall, F - T, F, wallMat, 'house-front-1');
-    slab(h.x + 1.3, x1, 0, h.wall, F - T, F, wallMat, 'house-front-2');
+    slab(x0 + T, h.x - 1.3, 0, h.wall, F - T, F, wallMat, 'house-front-1');
+    slab(h.x + 1.3, x1 - T, 0, h.wall, F - T, F, wallMat, 'house-front-2');
     slab(h.x - 1.3, h.x + 1.3, 2.25, h.wall, F - T, F, wallMat, 'house-front-head');
     slab(x0, x1, -0.05, 0.10, z0, z1, mats.concrete, 'house-floor');
     if (tall) {

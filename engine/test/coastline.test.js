@@ -119,34 +119,60 @@ function check(name, cond, detail = '') {
      * against a controller that steps 0.42. There was a weapon on the end
      * of the pier.
      *
-     * Walking the floor height along a straight line from the spawn to
-     * each buy catches that, and catches nothing else: it does not prove
-     * a route exists (the line may cross a wall that a real path would go
-     * round), so a rise is only reported when it persists -- a wall you
-     * can walk round shows up as one or two bad samples, a shelf you
-     * cannot climb anywhere shows up as a rise at the same height on
-     * every approach. Reported as the worst rise on the line, for a
-     * human to judge. */
+     * Walked along the ROUTE each one is meant to be approached by, not
+     * along a straight line to it. The straight line was tried first and
+     * it is no good here: the line from the spawn to the end of the pier
+     * crosses two hundred metres of open lake, so it reported a
+     * two-metre rise where a player would have walked round on the deck,
+     * and it would have reported nothing at all if the deck were missing.
+     * A route says what the map intends; the test's job is to check that
+     * the intention is walkable.
+     *
+     * The routes are test data and live here, which means they are also a
+     * statement of how the map is supposed to be got round -- if one of
+     * them stops being true, that is worth failing over. */
     const STEP = 0.42;
     const floorAt = (x, z) => {
       const hit = G.raycast([x, 9, z], down, 20);
       return hit ? 9 - (hit.distance || hit.t || 0) : null;
     };
+    const S0 = C.spawn.at;
+    const P0 = C.C.pier, L0 = C.C.slip;
+    const gx = L0.x + L0.halfX - 0.45;
+    const ROUTES = {
+      // The three on the lawn: straight there.
+      thompson: [[S0[0], S0[2]], [C.C.ranch.x + 5.2, C.C.ranch.z + C.C.ranch.d / 2 + 1.6]],
+      scatter: [[S0[0], S0[2]], [C.C.twoStorey.x - 4.6, C.C.twoStorey.z + C.C.twoStorey.d / 2 + 1.6]],
+      mp5: [[S0[0], S0[2]], [C.C.carport.x + C.C.carport.w / 2 + 1.4, C.C.carport.z]],
+      // Out along the wall, up the steps, and down the pier.
+      remington: [[S0[0], S0[2]], [P0.x, -2.4], [P0.x, -0.2], [P0.x, C.C.pavilion.z], [P0.x - 1.2, C.C.pavilion.z]],
+      mg42: [[S0[0], S0[2]], [P0.x, -2.4], [P0.x, -0.2], [P0.x, C.C.boathouse.z], [P0.x + 1.6, C.C.boathouse.z]],
+      // And along the wall the other way, up, and out the gangway.
+      paralyzer: [[S0[0], S0[2]], [gx, -2.4], [gx, -0.2], [gx, L0.z - L0.halfZ + 1.2]],
+    };
     out.stepWalls = [];
     for (const b of (C.PLAY.buys || [])) {
-      const from = C.spawn.at;
-      const dx = b.at[0] - from[0], dz = b.at[2] - from[2];
-      const n = Math.max(8, Math.ceil(Math.hypot(dx, dz) / 0.5));
-      let prev = floorAt(from[0], from[2]), worst = 0, worstAt = null;
-      for (let i = 1; i <= n; i++) {
-        const t = i / n;
-        const y = floorAt(from[0] + dx * t, from[2] + dz * t);
-        if (y == null || prev == null) { prev = y; continue; }
-        const rise = y - prev;
-        if (rise > worst) { worst = rise; worstAt = [+(from[0] + dx * t).toFixed(1), +(from[2] + dz * t).toFixed(1)]; }
-        prev = y;
+      const route = ROUTES[b.id];
+      if (!route) { out.stepWalls.push(b.id + ': no route declared'); continue; }
+      let prev = null, worst = 0, worstAt = null, gap = null;
+      for (let k = 1; k < route.length; k++) {
+        const [x0, z0] = route[k - 1], [x1, z1] = route[k];
+        const dx = x1 - x0, dz = z1 - z0;
+        const n = Math.max(4, Math.ceil(Math.hypot(dx, dz) / 0.4));
+        for (let i = 0; i <= n; i++) {
+          const t = i / n, x = x0 + dx * t, z = z0 + dz * t;
+          const y = floorAt(x, z);
+          if (y == null) { if (!gap) gap = [+x.toFixed(1), +z.toFixed(1)]; prev = null; continue; }
+          if (prev != null) {
+            const rise = y - prev;
+            if (rise > worst) { worst = rise; worstAt = [+x.toFixed(1), +z.toFixed(1)]; }
+          }
+          prev = y;
+        }
       }
       if (worst > STEP) out.stepWalls.push(`${b.id}: ${worst.toFixed(2)}m rise at ${JSON.stringify(worstAt)}`);
+      // A hole in the route is worse than a step in it: there is no floor.
+      else if (gap) out.stepWalls.push(`${b.id}: nothing underfoot at ${JSON.stringify(gap)}`);
     }
 
     /* COPLANAR FACES.
@@ -213,7 +239,7 @@ function check(name, cond, detail = '') {
     `${r.lawnHoles} holes, first at ${JSON.stringify(r.lawnHoleAt)}`);
   check('every spawn pad is inside the navmesh', r.padsOffMesh.length === 0, r.padsOffMesh.join(', '));
   check('every wall-buy has a floor to stand on', r.buysUnreachable.length === 0, r.buysUnreachable.join(' | '));
-  check('nothing on the way to a wall-buy is too tall to step up',
+  check('the route to every wall-buy is walkable end to end',
     r.stepWalls.length === 0, r.stepWalls.join(' | '));
   check('no two solids fight over the same plane', r.coplanar.length === 0,
     `${r.coplanar.length}: ${r.coplanar.slice(0, 4).join(' | ')}`);
