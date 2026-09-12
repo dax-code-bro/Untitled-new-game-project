@@ -175,6 +175,36 @@ function check(name, cond, detail = '') {
       else if (gap) out.stepWalls.push(`${b.id}: nothing underfoot at ${JSON.stringify(gap)}`);
     }
 
+    /* CAN YOU WALK OFF THE MAP?
+     *
+     * You could. It is a lawn with a fence across part of the back of it
+     * and nothing down the sides: the map stopped being built and the
+     * player kept going. Cast outward from the middle in every direction
+     * at chest height and check something solid stops you before you are
+     * clear of the green -- if a ray gets out, so can a player. */
+    out.openEdges = [];
+    for (let deg = 0; deg < 360; deg += 10) {
+      const t = (deg * Math.PI) / 180;
+      const dir = [Math.sin(t), 0, Math.cos(t)];
+      // Skip the water half; the lake's edge is the shelf, checked below.
+      if (dir[2] > 0.3) continue;
+      const hit = G.raycast([0, 1.0, -18], dir, 130);
+      if (!hit) out.openEdges.push(deg + ' deg');
+    }
+
+    /* And the fence between the properties, which was decoration: every
+       post and rail of it was physics:false, so you walked through the
+       whole thing. One ray at it is enough to tell. */
+    out.fenceSolid = !!G.raycast([-20, 0.9, -30], [0, 0, -1], 8);
+
+    /* The bottom of the lake. Walking down the boat ramp used to drop you
+       out of the world -- the ground plane stops at the seawall and the
+       water is decoration. */
+    out.lakeBed = [];
+    for (const z of [4, 10, 18, 26]) {
+      if (!G.raycast([0, 3, z], down, 12)) out.lakeBed.push('z=' + z);
+    }
+
     /* COPLANAR FACES.
      *
      * The one that cost the most. Two axis-aligned solids whose faces lie
@@ -241,6 +271,11 @@ function check(name, cond, detail = '') {
   check('every wall-buy has a floor to stand on', r.buysUnreachable.length === 0, r.buysUnreachable.join(' | '));
   check('the route to every wall-buy is walkable end to end',
     r.stepWalls.length === 0, r.stepWalls.join(' | '));
+  check('you cannot walk off the edge of the map', r.openEdges.length === 0,
+    r.openEdges.length + ' open directions: ' + r.openEdges.slice(0, 6).join(', '));
+  check('the chain-link fence is something you cannot walk through', r.fenceSolid, 'the fence is decoration');
+  check('the lake has a bottom to stand on', r.lakeBed.length === 0,
+    'no bed at ' + r.lakeBed.join(', '));
   check('no two solids fight over the same plane', r.coplanar.length === 0,
     `${r.coplanar.length}: ${r.coplanar.slice(0, 4).join(' | ')}`);
   check('you start on the map rather than under it', r.spawn[1] > 0.2 && r.spawn[1] < 4, JSON.stringify(r.spawn));

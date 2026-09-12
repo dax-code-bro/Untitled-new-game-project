@@ -6492,7 +6492,13 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
      is the line through those two. Re-deriving them by eye is how the
      complaint came back the first time. */
   const tipLevel = (S.hipTip != null ? S.hipTip : Math.min(0.56, 0.45 + bulk * 0.12));
-  const tipLow = 0.30 * (P.lowReady || 0);
+  /* More rotation on a short gun than a long one. The muzzle drop is what
+     actually reads as "the gun is down", and it is an arc: the same angle
+     swings a Thompson's muzzle four times as far across the screen as a
+     1911's. Measured at a flat 0.30 the long guns' muzzles fell 16 to 21
+     points and the pistols' only 8, so the carry was obvious on a rifle
+     and nearly invisible on a sidearm. */
+  const tipLow = (0.30 + 0.24 * (1 - Math.min(1, len / 0.60))) * (P.lowReady || 0);
   const tipWant = tipLevel + tipLow;
   /* Capped, because the rear of a gun is not a fixed fraction of its
      length. On a pistol the mass behind the root is a couple of
@@ -6609,9 +6615,26 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
      just added back. Every weapon then drops by about the same amount of
      SCREEN, which is the only place it is judged. */
   const sp = (P.lowReady || 0) * (1 - a);
-  const lowLift = Math.min(len, 0.48) * 0.35
-    * (Math.sin(Math.max(0, tipLevel + tipLow - tipBase)) - Math.sin(Math.max(0, tipLevel - tipBase)));
-  const sprintDrop = sp * 0.045 + lowLift, sprintIn = sp * 0.05;
+  /* How far the weapon TRANSLATES down, by length.
+   *
+   * Measured twice, and both attempts failed in opposite directions at
+   * the two ends of the rack, because a flat number means something
+   * completely different to a pistol and to a Thompson:
+   *
+   *   flat 0.100  ->  Thompson moved 0 points down the screen (its own
+   *                   rotation lifted the receiver by what the drop
+   *                   lowered it); the 1911 fell to 100% -- off frame.
+   *   0.045+lift  ->  Thompson and MG42 actually rose 2 to 5 points;
+   *                   the 1911 was still at 95%.
+   *
+   * The reason is headroom. Walking, the 1911's slide already sits at 87
+   * per cent of the way down the frame and the Thompson's receiver at 68:
+   * the pistol has four points of room before it is gone and the rifle
+   * has twenty. So the drop is proportional to length, from about 25 mm
+   * on a pistol to 135 mm on a Thompson -- which lands both in the same
+   * place on SCREEN, which is the only place either is judged. */
+  const lowDrop = 0.025 + Math.max(0, Math.min(0.60, len - 0.22)) * 0.186;
+  const sprintDrop = sp * lowDrop, sprintIn = sp * 0.05;
 
   const px = cam.position.x + f.x * dist + right.x * (offR - sprintIn) + up.x * (offU - sprintDrop);
   const py = cam.position.y + f.y * dist + right.y * (offR - sprintIn) + up.y * (offU - sprintDrop);

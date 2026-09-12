@@ -219,6 +219,14 @@ const MAT = {
   // The dead pilings out in the water: the same weathered wood as a trunk,
   // but far enough out to be scenery rather than a shadow caster.
   pilingDead: { color: 0x9c8570, texture: 'wood', roughness: 0.96, metalness: 0, uvScale: 3, castShadow: false },
+  /* Chain-link mesh: mostly holes, so it is drawn as a dim grey rather
+     than as a wall, but it is SOLID. The fence was decoration and you
+     walked through all of it. */
+  fenceMesh: { color: 0x6f7377, texture: 'metal', roughness: 0.8, metalness: 0, opacity: 0.55 },
+  // The lake bed: silt and weed, seen through water and never close up.
+  bed: { color: 0x53563f, texture: 'dirt', roughness: 0.99, metalness: 0, uvScale: 8, castShadow: false },
+  // The wood behind the boundary fence: darker than the lawn trees.
+  leafWood: { color: 0x93ab7c, texture: 'grass', roughness: 0.97, metalness: 0, uvScale: 3 },
   shore: { color: 0x8e9086, texture: 'concrete', roughness: 0.98, metalness: 0, uvScale: 20, castShadow: false },
 };
 
@@ -1001,18 +1009,125 @@ function build(game, S) {
 
   /* Chain-link between the properties: posts and a top rail, which at
      any distance is all a chain-link fence actually reads as. */
-  const fenceRun = (x0, z0, x1, z1) => {
+  /* Chain-link. SOLID -- every post and rail here was decoration, so the
+     whole fence was something you walked through, which is half of "you
+     can walk through some things".
+
+     A chain-link fence is drawn as posts, a top rail and a mesh panel;
+     the mesh is what stops you, so it gets a thin slab of its own rather
+     than being implied by the posts. */
+  const fenceRun = (x0, z0, x1, z1, name) => {
     const dx = x1 - x0, dz = z1 - z0;
     const len = Math.hypot(dx, dz), n = Math.max(2, Math.round(len / 2.5));
     for (let i = 0; i <= n; i++) {
-      post(x0 + (dx * i) / n, z0 + (dz * i) / n, 0, 1.35, 0.035, mats.galv, 'fence-post');
+      const px = x0 + (dx * i) / n, pz = z0 + (dz * i) / n;
+      const a2 = game.cylinder({ at: [px, 0.68, pz], radius: 0.042, height: 1.36,
+        material: mats.galv, static: true });
+      a2.name = name || 'fence-post'; solids.push(a2);
     }
-    if (Math.abs(dz) < 0.01) deco(Math.min(x0, x1), Math.max(x0, x1), 1.28, 1.34, z0 - 0.03, z0 + 0.03, mats.galv, 'fence-rail');
-    else if (Math.abs(dx) < 0.01) deco(x0 - 0.03, x0 + 0.03, 1.28, 1.34, Math.min(z0, z1), Math.max(z0, z1), mats.galv, 'fence-rail');
+    const alongX = Math.abs(dz) < 0.01;
+    if (alongX) {
+      slab(Math.min(x0, x1), Math.max(x0, x1), 0, 1.30, z0 - 0.04, z0 + 0.04, mats.fenceMesh, 'fence-mesh');
+      deco(Math.min(x0, x1), Math.max(x0, x1), 1.30, 1.37, z0 - 0.05, z0 + 0.05, mats.galv, 'fence-rail');
+    } else if (Math.abs(dx) < 0.01) {
+      slab(x0 - 0.04, x0 + 0.04, 0, 1.30, Math.min(z0, z1), Math.max(z0, z1), mats.fenceMesh, 'fence-mesh');
+      deco(x0 - 0.05, x0 + 0.05, 1.30, 1.37, Math.min(z0, z1), Math.max(z0, z1), mats.galv, 'fence-rail');
+    }
   };
+  // The fences between the properties, inside the map.
   fenceRun(-46, -34.0, -8, -34.0);
   fenceRun(-8, -34.0, -8, -18.0);
   fenceRun(34.0, -34.0, 46, -34.0);
+
+  /* ---------------- THE EDGE OF THE WORLD ----------------
+
+     You could walk off this map for ever. It is a lawn with a fence
+     across part of the back of it and nothing at all down the sides, so
+     the map simply stopped being built and you kept going.
+
+     An invisible wall would do the job and would be a lie: you would walk
+     into nothing and stand there pushing at air. The place already has a
+     vocabulary for its own edges -- chain-link between the properties,
+     and a treeline behind them -- so the boundary is more of that: a
+     taller fence right round the three landward sides, with trees packed
+     behind it so there is visibly nothing on the other side worth
+     reaching. You can see out. You cannot go out. That is a boundary a
+     player accepts, because it is the reason a real garden ends. */
+  const G = C.green;
+  const EDGE = { x0: G.x0 - 1.5, x1: G.x1 + 1.5, z0: G.z0 - 1.5 };
+  const boundary = (x0, z0, x1, z1) => {
+    const dx = x1 - x0, dz = z1 - z0;
+    const len = Math.hypot(dx, dz), n = Math.max(2, Math.round(len / 3.0));
+    for (let i = 0; i <= n; i++) {
+      const px = x0 + (dx * i) / n, pz = z0 + (dz * i) / n;
+      const a2 = game.cylinder({ at: [px, 1.05, pz], radius: 0.055, height: 2.10,
+        material: mats.galv, static: true });
+      a2.name = 'edge-post'; solids.push(a2);
+    }
+    const alongX = Math.abs(dz) < 0.01;
+    /* Two metres, and taller than the step height by a wide margin: a
+       boundary you can vault is not one. */
+    if (alongX) {
+      slab(Math.min(x0, x1), Math.max(x0, x1), 0, 2.05, z0 - 0.05, z0 + 0.05, mats.fenceMesh, 'edge-mesh');
+      deco(Math.min(x0, x1), Math.max(x0, x1), 2.05, 2.14, z0 - 0.06, z0 + 0.06, mats.galv, 'edge-rail');
+    } else {
+      slab(x0 - 0.05, x0 + 0.05, 0, 2.05, Math.min(z0, z1), Math.max(z0, z1), mats.fenceMesh, 'edge-mesh');
+      deco(x0 - 0.06, x0 + 0.06, 2.05, 2.14, Math.min(z0, z1), Math.max(z0, z1), mats.galv, 'edge-rail');
+    }
+  };
+  boundary(EDGE.x0, EDGE.z0, EDGE.x1, EDGE.z0);          // the back
+  boundary(EDGE.x0, EDGE.z0, EDGE.x0, 0.4);              // the west side
+  boundary(EDGE.x1, EDGE.z0, EDGE.x1, 0.4);              // the east side
+
+  /* And the trees behind it. Packed close, so the fence is the edge of a
+     wood rather than the edge of a model. */
+  {
+    const wood = [];
+    for (let x = EDGE.x0 - 1; x <= EDGE.x1 + 1; x += 4.2) {
+      for (let r = 0; r < 3; r++) wood.push([x + ((r * 7 + x) % 5) * 0.6, EDGE.z0 - 2.5 - r * 4.0]);
+    }
+    for (let z = EDGE.z0; z <= -2; z += 4.4) {
+      for (let r = 0; r < 3; r++) {
+        wood.push([EDGE.x0 - 2.5 - r * 4.0, z + ((r * 5 + z) % 5) * 0.6]);
+        wood.push([EDGE.x1 + 2.5 + r * 4.0, z + ((r * 3 + z) % 5) * 0.6]);
+      }
+    }
+    wood.forEach(([x, z], i) => {
+      const h = 7.5 + ((i * 29) % 9) * 0.8;
+      post(x, z, 0, h * 0.42, 0.20, mats.trunk, 'wood-trunk');
+      for (let k = 0; k < 3; k++) {
+        const ang = (k / 3) * Math.PI * 2 + i;
+        const c = game.sphere({
+          at: [x + Math.cos(ang) * h * 0.14, h * (0.58 + (k % 2) * 0.13), z + Math.sin(ang) * h * 0.14],
+          radius: h * 0.27, material: mats.leafWood, physics: false });
+        c.name = 'wood-crown'; c.scale.y *= 0.86; decos.push(c);
+      }
+    });
+  }
+
+  /* ---------------- the bottom of the lake ----------------
+
+     The ramp runs down into the water and then the world ran out: the
+     ground plane stops at the seawall, the lake is decoration with no
+     collision, and a player who walked down the ramp fell through
+     everything. A lake needs a bed.
+
+     It shelves, the way a lake does, and then there is a wall of it: at
+     about chest depth the bed turns up into a bank you cannot climb,
+     which is what stops you wading to the far shore. Swimming is a
+     different job -- Coastline's Pack-a-Punch needs a real underwater
+     state -- and this is the floor it will be built on. */
+  {
+    const bedTop = C.water.y - 0.55;
+    for (let i = 0; i < 7; i++) {
+      const z0 = i === 0 ? -1.0 : 1.0 + (i - 1) * 5.0;
+      const z1 = 1.0 + i * 5.0;
+      const y = bedTop - i * 0.22;
+      slab(-260, 260, y - 1.2, y, z0, z1, mats.bed, 'lake-bed-' + i);
+    }
+    // The shelf: past it the bottom drops away and you cannot wade on.
+    slab(-260, 260, C.water.y - 2.1, C.water.y + 1.6, 31.0, 33.0, mats.bed, 'lake-shelf');
+  }
 
   /* The lamps along the seawall. Warm, low and few -- at dusk they are
      the only made light on the map, and they are what the water picks
