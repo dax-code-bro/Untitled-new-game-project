@@ -47,7 +47,11 @@ function section(t) { console.log(`\n${t}`); }
    clamped dt, so a quarter-second animation takes well over a second of
    wall clock here. Polling the state the game already publishes is both
    faster and immune to how slow the renderer happens to be. */
-const idle = (page, ms = 8000) => page.waitForFunction(
+/* Generous, because the wait is in wall clock and the animation is in
+   frames: the engine hands update hooks a clamped dt, so a one-second
+   bolt cycle takes six seconds of wall time on a ten-frame software
+   rasteriser — and longer again now the world has sign on the ground. */
+const idle = (page, ms = 30000) => page.waitForFunction(
   () => !window.SURVIVOR.ctx.state.weaponBusy, { timeout: ms },
 ).catch(() => {});
 

@@ -344,12 +344,18 @@
        the menu. Registering first means core sees the world as it was when
        the key went down. */
     bindKeys();
+    bindMouse();
 
     /* Pause, time and the key list are core's own verbs, but they are
        registered rather than special-cased so that a controller, a touch
        button or a menu item can reach them through ctx.press like anything
        else. */
-    ctx.key('p', () => { paused = !paused; toast(paused ? 'Paused' : 'Running'); }, 'Pause');
+    ctx.key('p', () => {
+      paused = !paused;
+      // Coming back from a pause takes the mouse again.
+      if (!paused) mouseWanted = true;
+      toast(paused ? 'Paused' : 'Running');
+    }, 'Pause');
     ctx.key('t', () => {
       timeScaleMul = timeScaleMul === 1 ? 8 : timeScaleMul === 8 ? 40 : 1;
       toast(`Time ×${timeScaleMul}`);
@@ -376,6 +382,7 @@
 
     game.onUpdate((dt) => {
       if (paused) {
+        syncMouseCapture();
         lastWallMs = performance.now();
         // Only the hooks that asked to keep running: input, and nothing else.
         for (const h of updateHooks) {
@@ -384,6 +391,7 @@
         }
         return;
       }
+      syncMouseCapture();
       stepPlayer(dt);
       stepWorld();
       for (const h of updateHooks) {
@@ -730,6 +738,42 @@
     return ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west'][i];
   }
 
+  /* ---------------- the mouse ---------------- */
+
+  /* Pointer lock is the difference between a first-person game and a
+     diagram you can drag. It has to be released whenever a screen is up
+     — you cannot click a button you cannot see a cursor for — and taken
+     back the moment play resumes. Browsers only grant it from a user
+     gesture, so a click anywhere in the world re-takes it. */
+  function syncMouseCapture() {
+    if (!game || !game.captureMouse) return;
+    const wantFree = paused || ctx.state.uiOpen || ctx.state.benchOpen
+      || document.querySelector('.screen:not([hidden])');
+    if (wantFree) {
+      if (game.mouseCaptured) game.captureMouse(false);
+    } else if (!game.mouseCaptured && mouseWanted) {
+      game.captureMouse(true);
+    }
+  }
+  let mouseWanted = true;
+
+  function bindMouse() {
+    window.addEventListener('mousedown', () => {
+      // Clicking back into the world takes the mouse again.
+      if (!game || !game.captureMouse) return;
+      if (paused || ctx.state.uiOpen || ctx.state.benchOpen) return;
+      if (document.querySelector('.screen:not([hidden])')) return;
+      mouseWanted = true;
+      if (!game.mouseCaptured) game.captureMouse(true);
+    });
+    document.addEventListener('pointerlockchange', () => {
+      /* Escape releases the lock at the browser level without telling
+         anyone. Treat that as "the player wants out" so the game does
+         not immediately grab it back and trap them. */
+      if (game && !game.mouseCaptured && !paused && !ctx.state.uiOpen) mouseWanted = false;
+    });
+  }
+
   /* ---------------- input ---------------- */
 
   function bindKeys() {
@@ -877,8 +921,16 @@
     const deg = ((-yaw * 180 / Math.PI) % 360 + 360) % 360;
     el('compass').innerHTML = `<b>${COMPASS[Math.round(deg / 45) % 8]}</b> &nbsp; ${fmt(deg, 0)}°`;
 
+    /* The vignette carries two things at once: how far gone the body is,
+       and how long the breath has been held. Tunnel vision from oxygen
+       debt is the real reason a held breath has a clock on it, and it
+       belongs on the same element rather than a second one stacked over
+       it. */
+    const gone = 1 - player.capacity();
+    const breath = Math.max(0, Math.min(1, ctx.state.breathStrain || 0));
+    const closeIn = Math.max(gone, Math.pow(breath, 2.2) * 0.85);
     el('vignette').style.boxShadow =
-      `inset 0 0 ${180 + 260 * (1 - player.capacity())}px ${30 + 70 * (1 - player.capacity())}px rgba(0,0,0,.7)`;
+      `inset 0 0 ${180 + 260 * closeIn}px ${30 + 110 * closeIn}px rgba(0,0,0,.7)`;
   }
 
   /* ---------------- entry ---------------- */
@@ -942,6 +994,11 @@
           setTimeout(() => { const h = el('help'); if (h) h.hidden = true; }, 25000);
           const spawn = buildScene(opts);
           start(opts, spawn);
+          /* Take the mouse. A first-person game where you have to hold a
+             button to turn your head is not playable, and the button in
+             question is the trigger. This has to happen inside a real
+             click, which is exactly what this is. */
+          try { game.captureMouse(true); } catch (e) { /* the click below will retry */ }
         }, { once: true });
       }
     });

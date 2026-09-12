@@ -1014,6 +1014,25 @@ class Animal {
     this.tailT = this.rng.range(2, 6); this.tailFlick = 0;
     this.herd = opts.herd || null;
     this.dead = false;
+    /* Being hit, and dying of it.
+
+       An animal that is shot does not blink out and it does not simply
+       run: it flinches — a mule kick, a hunch, a stumble — and then it
+       either goes down or it leaves. What it does in the first second is
+       most of what a hunter reads to decide where the bullet went, so it
+       is animated rather than skipped.
+
+       `hitReaction` counts down through the flinch. `dying` is the
+       collapse: the legs fold, the body goes over, the head comes down
+       last. Nothing here decides whether the animal lives — the ecology
+       does that — this only shows it. */
+    this.hitReaction = 0;
+    this.hitKind = null;
+    this.hitFrom = 0;
+    this.dying = 0;
+    this.deathT = 0;
+    this.deathRoll = 0;
+    this.downed = false;
 
     this._build();
   }
@@ -1176,6 +1195,45 @@ class Animal {
     return { dx, dz, d: Math.sqrt(dx * dx + dz * dz) };
   }
 
+  /* Struck. `where` is the hit region the terminal model reported, and
+     it decides the flinch, because the flinch is the tell:
+
+       lungs   — a hard hunch and a run, tail clamped down
+       heart   — the mule kick: both back legs out behind it
+       gut     — humped up, walking, low and slow
+       muscle  — a stumble and then it runs on three
+       graze   — a jump and a stop, and it may not even leave
+
+     These are the reactions people learn to read, and reading them is
+     how you decide whether to follow now or wait an hour. */
+  react(where, fromX, fromZ) {
+    const kind = /lung/i.test(where || '') ? 'lung'
+      : /heart/i.test(where || '') ? 'heart'
+        : /gut|liver|abdom/i.test(where || '') ? 'gut'
+          : /leg|muscle|shoulder|ham/i.test(where || '') ? 'muscle'
+            : 'graze';
+    this.hitKind = kind;
+    this.hitReaction = kind === 'heart' ? 0.85 : kind === 'lung' ? 0.6
+      : kind === 'gut' ? 1.1 : kind === 'muscle' ? 0.7 : 0.35;
+    this.hitFrom = Math.atan2(this.x - (fromX || 0), this.z - (fromZ || 0));
+    if (kind !== 'graze') { this.state = 'flee'; this.stateT = this.rng.range(4, 9); this.yaw = this.hitFrom; }
+    else { this.state = 'alert'; this.stateT = 2.2; }
+    return kind;
+  }
+
+  /* Going down. The legs fold first, then the body rolls onto the side
+     it was hit from, then the head. A deer that is shot through both
+     lungs is dead before it stops moving and it still runs eighty
+     metres, so this is the END of that — the ecology decides when. */
+  die(opts = {}) {
+    if (this.dying > 0 || this.downed) return;
+    this.dying = 0.001;
+    this.deathT = opts.seconds || 1.6;
+    this.deathRoll = (opts.rollTo != null ? opts.rollTo : (this.rng.next() < 0.5 ? -1 : 1));
+    this.state = 'dying';
+    this.speed = 0;
+  }
+
   spook(from) {
     if (from) { const p = Vec3.from(from); this.yaw = Math.atan2(this.x - p.x, this.z - p.z); }
     this.state = 'flee';
@@ -1197,6 +1255,9 @@ class Animal {
         else if (this.state === 'follow') { this.state = 'graze'; this.stateT = this.rng.range(1, 3); }
       }
     }
+
+    // A dying animal has no opinions left; the animator finishes it.
+    if (this.dying > 0 || this.downed) { this.speed = 0; return; }
 
     switch (this.state) {
       case 'graze':
@@ -1260,22 +1321,91 @@ class Animal {
 
   /* ---------------- bone driver (runs as the actor's animator) ---------------- */
 
-  _drive() {
+  _drive(dt = 0) {
     const sp = this.spec, k = this.k, sk = this.skeleton;
     const running = this.speed > sp.walkSpeed * k * 2.2;
     const ph = this.phase * TAU;
+    const bone = (name) => sk.bones[sk.index(name)];
+
+    /* The flinch and the collapse are timed HERE rather than in the
+       brain, because the brain is optional: a game that owns its own
+       ecology drives position and intent itself and never calls
+       update() at all. The animator is the one thing that always runs,
+       so an animal that is dying finishes dying whoever is driving it. */
+    if (dt > 0) {
+      if (this.hitReaction > 0) this.hitReaction = Math.max(0, this.hitReaction - dt);
+      if (this.dying > 0 && !this.downed) {
+        this.dying += dt;
+        if (this.dying >= this.deathT) { this.dying = this.deathT; this.downed = true; }
+      }
+    }
+
+    /* Going down.
+
+       Not a ragdoll — a ragdoll of a shot deer looks like a dropped bag,
+       because a dead animal's legs are still stiff and its neck is still
+       long. It folds: the legs go first and it drops on its brisket, then
+       the body rolls onto its side, then the head comes over last and
+       lies out flat. The whole thing takes about a second and a half. */
+    if (this.dying > 0) {
+      const t = Math.min(1, this.dying / Math.max(0.01, this.deathT));
+      const fold = Math.min(1, t / 0.35);                    // legs
+      const roll = Math.max(0, Math.min(1, (t - 0.25) / 0.5)); // body over
+      const neck = Math.max(0, Math.min(1, (t - 0.55) / 0.45)); // head last
+      const ease = (u) => u * u * (3 - 2 * u);
+      const shoulder = sp.shoulder * k;
+      const drop = ease(fold) * shoulder * 0.42 + ease(roll) * shoulder * 0.24;
+      this.actor.setPosition([this.x, this._groundAt(this.x, this.z) - drop + shoulder * 0.5 * ease(roll) * 0.0, this.z]);
+      this.actor.setRotation(new Quat().setEuler(
+        ease(fold) * 0.22,
+        this.yaw,
+        ease(roll) * this.deathRoll * (Math.PI * 0.46),
+      ));
+      for (const s2 of ['L', 'R']) {
+        bone(`fUp${s2}`).localRotation.setEuler(ease(fold) * 1.15, 0, 0);
+        bone(`fLo${s2}`).localRotation.setEuler(ease(fold) * -1.5, 0, 0);
+        bone(`rUp${s2}`).localRotation.setEuler(ease(fold) * -0.95, 0, 0);
+        bone(`rLo${s2}`).localRotation.setEuler(ease(fold) * 1.35, 0, 0);
+      }
+      bone('spine').localRotation.setEuler(ease(fold) * 0.18, 0, 0);
+      bone('chest').localRotation.setEuler(ease(fold) * 0.12, 0, 0);
+      bone('neck1').localRotation.setEuler(0.35 + ease(neck) * 0.9, 0, 0);
+      bone('neck2').localRotation.setEuler(0.2 + ease(neck) * 0.7, 0, 0);
+      bone('head').localRotation.setEuler(ease(neck) * -0.5, 0, ease(neck) * this.deathRoll * 0.5);
+      // Ears and tail go slack, which is most of what says "dead".
+      bone('earL').localRotation.setEuler(ease(fold) * 0.5, 0, 0.25);
+      bone('earR').localRotation.setEuler(ease(fold) * 0.5, 0, -0.25);
+      bone('tail1').localRotation.setEuler(ease(fold) * 0.4, 0, 0);
+      sk.update();
+      return;
+    }
+
+    /* The flinch. What an animal does in the first second after it is
+       hit is the tell a hunter reads to place the shot, so each one is
+       its own shape rather than a generic stagger. */
+    let flinchPitch = 0, flinchRoll = 0, hunch = 0, kick = 0, limp = 0;
+    if (this.hitReaction > 0) {
+      const u = 1 - this.hitReaction / (this.hitKind === 'gut' ? 1.1 : 0.85);
+      const pulse = Math.sin(Math.min(1, u) * PI);
+      if (this.hitKind === 'heart') { kick = pulse; flinchPitch = -pulse * 0.30; }
+      else if (this.hitKind === 'lung') { hunch = pulse * 0.9; flinchPitch = pulse * 0.16; }
+      else if (this.hitKind === 'gut') { hunch = 1.0; flinchPitch = 0.10; }
+      else if (this.hitKind === 'muscle') { limp = pulse; flinchRoll = pulse * 0.22; }
+      else { flinchPitch = -pulse * 0.14; }
+    } else if (this.hitKind === 'gut') {
+      // A gut-shot animal stays humped up and walks. It does not recover.
+      hunch = 0.75;
+    }
 
     const hop = sp.gait === 'hop'
       ? (this.speed > 0.1 ? Math.abs(Math.sin(ph)) * 0.14 * k * (1 + this.speed * 0.5) : 0)
       : (running ? Math.abs(Math.sin(ph)) * 0.28 * k : 0);
     this.actor.setPosition([this.x, this._groundAt(this.x, this.z) + hop, this.z]);
-    this.actor.setRotation(new Quat().setEuler(0, this.yaw, 0));
+    this.actor.setRotation(new Quat().setEuler(flinchPitch, this.yaw, flinchRoll));
 
-    const bone = (name) => sk.bones[sk.index(name)];
-
-    // Torso: a touch of pitch with the bound.
-    bone('spine').localRotation.setEuler(running ? Math.sin(ph) * 0.08 : 0, 0, 0);
-    bone('chest').localRotation.setEuler(running ? Math.sin(ph) * 0.06 : 0, 0, 0);
+    // Torso: a touch of pitch with the bound, plus the hump of a hit.
+    bone('spine').localRotation.setEuler((running ? Math.sin(ph) * 0.08 : 0) - hunch * 0.26, 0, 0);
+    bone('chest').localRotation.setEuler((running ? Math.sin(ph) * 0.06 : 0) - hunch * 0.14, 0, 0);
 
     // Neck chain: bind pose is the natural half-raised carry; positive pitch
     // lowers the nose into the grass, negative lifts to full alarm.
@@ -1302,15 +1432,27 @@ class Animal {
       const a2 = wing ? amp * 0.08 : amp;
       const swing = Math.sin((this.phase + phases[i]) * TAU) * a2;
       const fold = Math.max(0, Math.sin((this.phase + phases[i]) * TAU + 1.9)) * a2 * (running ? 1.2 : 0.8);
-      bone(legNames[i][0]).localRotation.setEuler(swing, 0, 0);
-      bone(legNames[i][1]).localRotation.setEuler(wing ? 0 : (i < 2 ? fold * 0.7 : -fold * 0.7), 0, 0);
+      /* A heart shot throws both back legs out behind — the mule kick,
+         and the single most reliable tell there is. A leg hit drops one
+         of them for a stride or two. */
+      const rear = i >= 2;
+      const kicked = rear ? -kick * 1.25 : kick * 0.25;
+      const dropped = (!rear && i === 0) ? limp * 0.9 : 0;
+      bone(legNames[i][0]).localRotation.setEuler(swing + kicked + dropped, 0, 0);
+      bone(legNames[i][1]).localRotation.setEuler(
+        (wing ? 0 : (i < 2 ? fold * 0.7 : -fold * 0.7)) + (rear ? kick * 0.5 : 0) - dropped * 1.4, 0, 0);
     }
 
     // Ears and tail.
     const flick = this.earFlick > 0 ? Math.sin(this.earFlick * 24) * 0.6 : 0;
     bone('earL').localRotation.setEuler(0, 0, 0.25 + flick);
     bone('earR').localRotation.setEuler(0, 0, -0.25 - flick * 0.4);
-    const flag = this.state === 'flee' ? 1 : (this.tailFlick > 0 ? Math.abs(Math.sin(this.tailFlick * 14)) * 0.5 : 0);
+    /* A whitetail runs with its tail up unless it is hit, and a clamped
+       tail on a running deer means you connected. That single detail is
+       worth more to a hunter than any hit marker. */
+    const clamped = this.hitKind && this.hitKind !== 'graze' ? 1 : 0;
+    const flag = clamped ? -0.35
+      : (this.state === 'flee' ? 1 : (this.tailFlick > 0 ? Math.abs(Math.sin(this.tailFlick * 14)) * 0.5 : 0));
     bone('tail1').localRotation.setEuler(-flag * 1.9, this.tailFlick > 0 ? Math.sin(this.tailFlick * 18) * 0.3 : 0, 0);
 
     sk.update();

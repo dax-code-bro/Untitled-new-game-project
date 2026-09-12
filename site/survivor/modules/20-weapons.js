@@ -68,6 +68,11 @@ SurvivorGame.module({
     const rng = new LE.Rng(0xf17e);
     const brass = [];        // spent cases lying where they fell
     let pendingCase = null;  // a fired case still in a manual action's chamber
+    /* Breath. Holding it is the difference between a rifle that is worth
+       its accuracy and one that is not, and it is on a clock: the shot
+       lives in the respiratory pause and the pause does not last. */
+    let holdSeconds = 0;
+    let breathLock = 0;      // forced to breathe: cannot hold again yet
 
     /* The animation state. Every moving part reads these, and nothing
        else does: one number per mechanism, driven by clips, so the bolt,
@@ -284,6 +289,7 @@ SurvivorGame.module({
         fatigue: Math.max(status.sleepPressure, 1 - status.capacity),
         shivering: status.shivering,
         breathless: Math.min(1, ctx.player.speedMs / 4),
+        holdSeconds,
       });
 
       if (!shot.fired) {
@@ -543,7 +549,14 @@ SurvivorGame.module({
       bobPhase += dt * (1.4 + ctx.player.speedMs * 1.9);
       const unsteady = 0.4 + 1.6 * Math.max(st.sleepPressure * 0.6, 1 - st.capacity)
         + st.shivering * 1.2;
-      const amp = (aimed ? 0.0016 : 0.006) * unsteady;
+      /* The gun visibly settles when the breath goes, and visibly comes
+         apart when it runs out — the sight picture is the feedback, not
+         a number on the HUD. */
+      const strain = ctx.state.breathStrain || 0;
+      const breath = holdSeconds > 0
+        ? (1 - 0.7 * Math.min(1, holdSeconds / 0.6)) * (1 + Math.pow(Math.max(0, strain - 0.72) / 0.28, 2) * 4)
+        : 1;
+      const amp = (aimed ? 0.0016 : 0.006) * unsteady * breath;
       const swayX = Math.sin(bobPhase * 0.9) * amp + Math.sin(bobPhase * 2.3) * amp * 0.4;
       const swayY = Math.sin(bobPhase * 1.7) * amp * 0.8;
 
@@ -825,9 +838,53 @@ SurvivorGame.module({
        rather than reaching past it into the simulation. */
     ctx.on('debug:fire', () => { if (!busy()) shoot(); });
 
+    /* Holding a breath, and what it costs.
+
+       You can only hold it with the sights up, you cannot hold it while
+       sprinting, and how long you get depends on how much air you have —
+       a shooter who has just run up a hill gets three seconds, a rested
+       one gets ten. Past that the hands go and the screen closes in, and
+       when it breaks you get a hard exhale and a jolt you cannot shoot
+       through. That is not a penalty bolted on; it is why the discipline
+       exists. */
+    function stepBreath(dt) {
+      const st = ctx.player.body.status(ctx.world.clock.hourOfDay);
+      const winded = Math.max(Math.min(1, ctx.player.speedMs / 3.2), 1 - st.capacity);
+      const ceiling = 3 + (1 - winded) * 8;
+      /* Shift with the sights up. Shift is sprint on foot and nobody
+         sprints with the sights up, so the key is free exactly when the
+         verb makes sense — and the pad's sprint stick is free for the
+         same reason. */
+      const asked = game.input.down('shift') || !!ctx.state.holdBreath
+        || (game.input.pad.active && game.input.pad.down('ls'));
+      const wants = aimed && asked && !ctx.state.uiOpen
+        && ctx.player.speedMs < 1.2 && breathLock <= 0;
+      if (wants) {
+        holdSeconds += dt;
+        if (holdSeconds > ceiling) {
+          // Out of air. It breaks whether you like it or not.
+          breathLock = 2.6;
+          holdSeconds = 0;
+          recoilPitch += 0.02;
+          ctx.toast('You have to breathe.');
+          game.audio.tone(180, 0.25);
+        }
+      } else {
+        holdSeconds = Math.max(0, holdSeconds - dt * 3);
+      }
+      if (breathLock > 0) breathLock -= dt;
+      /* The vignette closes in as the air runs out. The HUD already owns
+         a vignette for blood loss and cold; this rides the same element
+         so there is only ever one. */
+      ctx.state.breathHold = holdSeconds;
+      ctx.state.breathCeiling = ceiling;
+      ctx.state.breathStrain = holdSeconds > 0 ? Math.min(1, holdSeconds / ceiling) : 0;
+    }
+
     ctx.onUpdate((dt) => {
       aimed = ads();
       stepClip(dt);
+      stepBreath(dt);
       placeViewmodel(dt);
       coolBrass(dt);
 
@@ -880,6 +937,10 @@ SurvivorGame.module({
         const manual = act === SV.ACTION.boltAction || act === SV.ACTION.pump || act === SV.ACTION.leverAction;
         lines.push(`${firearm.name} · ${firearm.fireMode} · ${firearm.magazine.length + (firearm.chambered ? 1 : 0)}/${firearm.capacity}`);
         if (firearm.fireMode === SV.FIRE_MODE.safe) lines.push('Safety on — shift+Z');
+        if (holdSeconds > 0) {
+          const left = Math.max(0, (ctx.state.breathCeiling || 8) - holdSeconds);
+          lines.push(`Holding — ${left.toFixed(1)}s`);
+        } else if (breathLock > 0) lines.push('Getting your breath back.');
         if (pendingCase && manual) lines.push(`Fired case in the chamber — ${ctx.hint('z', 'rb')} to work the action`);
         if (firearm.jammed) lines.push(`${firearm.name}: ${firearm.jammed.kind} — hold ${ctx.hint('u', 'y')}`);
         else if (!firearm.chambered && !firearm.magazine.length) lines.push(`${firearm.name}: empty — ${ctx.hint('l', 'rb')} to load`);

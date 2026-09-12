@@ -64,6 +64,8 @@ const EXPORTS = [
   'AWG', 'BODY_RESISTANCE', 'SHOCK_THRESHOLDS',
 
   'Firearm', 'WEAPONS', 'ATTACHMENT', 'ACTION', 'PART', 'POWDER', 'handload',
+  'RECIPES', 'GATHER', 'TOOL_CLASS', 'MATERIAL_BULK', 'bulkOf', 'toolSatisfied', 'canCraft',
+  'craftSeconds', 'craftAttempt', 'craftable',
   'FIRE_MODE', 'MODES_FOR_ACTION', 'modesFor', 'selectorFraction',
   'Magazine', 'StripState', 'STRIP_BLOCKERS', 'STRIP_SECONDS',
   'CleaningJob', 'BORE_PASS', 'EJECT_PATTERN', 'ejectCase',

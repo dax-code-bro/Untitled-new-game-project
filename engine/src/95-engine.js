@@ -1100,15 +1100,56 @@ class Engine {
     return this;
   }
 
+  /* Ask the browser to hide the cursor and hand us raw motion. Without
+     this, looking around means holding a mouse button and dragging —
+     which is fine for orbiting a model and unusable in a first-person
+     game, where the left button is the trigger. Calling it must happen
+     inside a real click, so games call `game.captureMouse()` from their
+     own start button. */
+  captureMouse(on = true) {
+    if (!this.canvas) return this;
+    if (on) {
+      this._wantPointerLock = true;
+      const req = this.canvas.requestPointerLock;
+      if (req) { try { req.call(this.canvas); } catch (e) { /* the user can retry */ } }
+    } else {
+      this._wantPointerLock = false;
+      if (document.pointerLockElement === this.canvas && document.exitPointerLock) {
+        document.exitPointerLock();
+      }
+    }
+    return this;
+  }
+
+  get mouseCaptured() { return typeof document !== 'undefined' && document.pointerLockElement === this.canvas; }
+
   _bindCameraInput() {
     let dragging = false;
+    /* Radians per pixel. About a quarter of a turn across a 1000-pixel
+       drag, which is where most shooters sit. */
+    if (this.lookSensitivity == null) this.lookSensitivity = 0.0022;
+    if (this.invertLookY == null) this.invertLookY = false;
+
+    const applyLook = (dx, dy) => {
+      const s = this.lookSensitivity;
+      this._camYaw -= dx * s;
+      /* Moving the mouse AWAY from you looks up. `sin(-pitch)` is what
+         builds the forward vector in first person, so pitch has to go
+         down as the mouse goes up — and the sign lives here, once,
+         rather than being re-derived at every call site. */
+      const inv = this.invertLookY ? -1 : 1;
+      this._camPitch = clamp(this._camPitch + dy * s * inv, -1.45, 1.45);
+    };
+
     const onDown = (e) => { dragging = true; this._dragX = e.clientX; this._dragY = e.clientY; };
     const onMove = (e) => {
-      if (!dragging || this._camMode === 'manual' || this._camConfig.userControl === false) return;
+      if (this._camMode === 'manual' || this._camConfig.userControl === false) return;
+      // Captured: raw movement, no button needed. That is the whole point.
+      if (this.mouseCaptured) { applyLook(e.movementX || 0, e.movementY || 0); return; }
+      if (!dragging) return;
       const dx = e.clientX - this._dragX, dy = e.clientY - this._dragY;
       this._dragX = e.clientX; this._dragY = e.clientY;
-      this._camYaw -= dx * 0.006;
-      this._camPitch = clamp(this._camPitch + dy * 0.005, -1.35, 1.4);
+      applyLook(dx * 2.7, dy * 2.3);
     };
     const onUp = () => { dragging = false; };
     const onWheel = (e) => {
@@ -1142,8 +1183,13 @@ class Engine {
       if (look && (look.x || look.y)) {
         const sens = this.input.lookSensitivity;
         this._camYaw -= look.x * sens * dt;
-        const dy = (this.input.invertLookY ? -1 : 1) * look.y * sens * dt;
-        this._camPitch = clamp(this._camPitch + dy, -1.35, 1.4);
+        /* Stick forward looks UP. The stick reports forward as negative
+           y, and pitch has to DECREASE to look up, so the two negatives
+           cancel and the raw value goes straight in — inverting it here
+           as well as in the forward vector is what had the pad looking
+           the wrong way up. */
+        const inv = (this.input.invertLookY || this.invertLookY) ? -1 : 1;
+        this._camPitch = clamp(this._camPitch + look.y * sens * dt * inv, -1.45, 1.45);
       }
     }
 

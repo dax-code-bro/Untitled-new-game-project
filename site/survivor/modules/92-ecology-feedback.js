@@ -95,9 +95,25 @@ SurvivorGame.module({
         }
       }
 
+      const now = ctx.world.clock.simSeconds || 0;
       for (const [id, rec] of rendered) {
         if (keep.has(id) && rec.sim.alive) continue;
-        if (rec.beast && rec.beast.actor) {
+        /* An animal that has just been killed does not blink out: it
+           goes down, and the collapse is given its second and a half
+           before the carcass renderer takes over. Only an animal that
+           has simply walked out of range goes immediately. */
+        if (!rec.sim.alive && rec.beast && rec.beast.die && !rec.dyingUntil) {
+          rec.beast.die({ seconds: 1.4 });
+          rec.dyingUntil = now + 3.0;
+          continue;
+        }
+        if (rec.dyingUntil && now < rec.dyingUntil) continue;
+        /* destroy() takes the eyes, antlers and horns with it. Destroying
+           only the body actor left those parented to nothing, floating
+           where the animal had been. */
+        if (rec.beast && rec.beast.destroy) {
+          try { rec.beast.destroy(); } catch (e) { /* already gone */ }
+        } else if (rec.beast && rec.beast.actor) {
           try { rec.beast.actor.destroy(); } catch (e) { /* already gone */ }
         }
         rendered.delete(id);
@@ -107,7 +123,10 @@ SurvivorGame.module({
     function drive() {
       for (const rec of rendered.values()) {
         const { beast, sim } = rec;
-        if (!beast || !sim.alive) continue;
+        if (!beast) continue;
+        // A dying animal is still being animated — it is going down, and
+        // the simulation no longer has an opinion about where it is.
+        if (!sim.alive) continue;
         // The simulation is the authority on position and intent; the engine
         // animal only decides how that reads.
         beast.x = sim.x;
@@ -199,7 +218,34 @@ SurvivorGame.module({
     ctx.on('animal-wounded', (d) => {
       if (!d || !d.animal) return;
       try { layTrail(d.animal); } catch (err) { console.error('blood trail:', err); }
+      /* Show what the terminal model decided. The flinch is the tell —
+         a mule kick is a heart, a hunch is lungs, humped up and walking
+         is gut — and reading it is how you decide whether to follow now
+         or back out and come back in the morning. Skipping the animation
+         throws that information away and leaves the player guessing. */
+      const entry = rendered.get(d.animal.id);
+      if (entry && entry.beast && entry.beast.react) {
+        try {
+          entry.beast.react(d.region || d.where || (d.severity > 0.7 ? 'lung' : 'muscle'),
+            d.fromX, d.fromZ);
+        } catch (err) { console.error('hit reaction:', err); }
+      }
     });
+
+    /* Going down. The ecology decides when an animal dies — from where it
+       was hit, how much blood it has lost and how far it has run — and
+       this is only the collapse. An animal that vanishes the instant it
+       is killed is the single most immersion-breaking thing a hunting
+       game can do. */
+    function collapse(animal) {
+      const entry = rendered.get(animal.id);
+      if (!entry || !entry.beast || !entry.beast.die) return false;
+      entry.beast.die({ seconds: 1.4 + Math.random() * 0.5 });
+      entry.dyingUntil = (ctx.world.clock.simSeconds || 0) + 3.2;
+      return true;
+    }
+    ctx.state.collapseAnimal = collapse;
+    ctx.on('animal-down', (d) => { if (d && d.animal) collapse(d.animal); });
 
     /* ---- reacting to gunfire ---- */
 

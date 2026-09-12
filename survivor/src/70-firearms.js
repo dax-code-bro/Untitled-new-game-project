@@ -261,6 +261,19 @@ class Firearm {
       if (a.swayReduction && (!a.requiresProne || opts.prone)) sway *= 1 - a.swayReduction;
     }
     sway *= 1 - 0.45 * clamp01(opts.skill != null ? opts.skill : 0.5);
+    /* Held breath. A shooter at the bottom of an exhale is very nearly
+       still — the respiratory pause is where the shot goes, and it is
+       worth about two thirds of the remaining wobble. It does not last:
+       past eight seconds or so the carbon dioxide builds, the hands
+       start to shake and it gets worse than it was, which is exactly why
+       the discipline is to break the shot early or breathe and start
+       again. `holdSeconds` is how long they have been holding. */
+    const held = Math.max(0, opts.holdSeconds || 0);
+    if (held > 0) {
+      const steady = clamp01(held / 0.6);              // it takes a moment to settle
+      const strain = Math.max(0, held - 7) / 6;        // and then it comes apart
+      sway *= (1 - 0.66 * steady) * (1 + strain * strain * 5);
+    }
     // Cold, shaking hands cost more than most people expect.
     sway *= 1 + 1.2 * clamp01(opts.shivering || 0);
     return Math.max(0.2, moa + sway * 2.2);
