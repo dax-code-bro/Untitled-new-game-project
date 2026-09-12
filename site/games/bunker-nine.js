@@ -1156,22 +1156,78 @@ const SLIDE = { speed: 11.5, duration: 0.62, cooldown: 1.1, height: 0.9 };
    applies only while the action is on its default -- rebind it and the
    alternate goes too, because the point of moving a control off a key is
    usually to get the key back. */
+/* ---------------- what each input does ----------------
+
+   ONE ACTION PER BUTTON. Nothing here may share a pad button or a key
+   with anything else, and assertNoDuplicateBindings() below refuses to
+   let that stand -- because it did not, and the report was "X jumps and
+   also shoots".
+
+   Two separate faults made that. The engine folds pad buttons onto
+   keyboard keys for games that only read a keyboard, and the fold is
+   lossy: A and Y both press space, B and X both press 'x'. This game
+   reads the pad properly, so every face button was doing its own job AND
+   whatever the key it was folded onto did. That fold is switched off now
+   (input.padKeyFold = false). On top of it this table double-booked two
+   buttons of its own: B was slide and use, and the left stick click was
+   sprint and shield.
+
+   The map below is twelve actions on twelve distinct inputs, in the
+   places a shooter usually puts them. */
 const CONTROLS = {
   fwd:    { key: 'w',       alt: 'arrowup',    pad: null },
   back:   { key: 's',       alt: 'arrowdown',  pad: null },
   left:   { key: 'a',       alt: 'arrowleft',  pad: null },
   right:  { key: 'd',       alt: 'arrowright', pad: null },
-  jump:   { key: ' ',       pad: 0 },
-  sprint: { key: 'shift',   pad: 10 },
-  slide:  { key: 'control', alt: 'c',          pad: 1 },
-  use:    { key: 'f',       alt: 'x',          pad: 1 },
-  reload: { key: 'r',       pad: 2 },
-  swap:   { key: 'q',       pad: 3 },
-  knife:  { key: 'v',       pad: 5 },
-  shield: { key: 'g',       pad: 10 },
-  nade:   { key: 't',       pad: 4 },
-  pause:  { key: 'escape',  alt: 'o',          pad: 9 },
+  jump:   { key: ' ',       pad: 0 },   // A / cross
+  slide:  { key: 'control', pad: 1 },   // B / circle
+  use:    { key: 'f',       pad: 2 },   // X / square   -- the frequent one
+  reload: { key: 'r',       pad: 3 },   // Y / triangle
+  swap:   { key: 'q',       pad: 4 },   // LB
+  nade:   { key: 't',       pad: 5 },   // RB
+  shield: { key: 'g',       pad: 8 },   // Back / Share
+  pause:  { key: 'escape',  alt: 'o',   pad: 9 },   // Start / Options
+  sprint: { key: 'shift',   pad: 10 },  // left stick click
+  knife:  { key: 'v',       pad: 11 },  // right stick click
+  /* Aim is LT and fire is RT, read as analogue axes rather than as
+     buttons -- see the note on arming the trigger where the input is
+     composed. They are not in this table and cannot collide with it. */
 };
+
+/* Refuse to ship a duplicate.
+
+   Cheap, runs once, and it is the only thing standing between this table
+   and the bug coming back the next time an action is added. It reports
+   every clash rather than the first, because a table that has drifted
+   usually has more than one. */
+function assertNoDuplicateBindings() {
+  const clashes = [];
+  const seen = (what, get) => {
+    const by = {};
+    for (const id in CONTROLS) {
+      const v = get(CONTROLS[id]);
+      if (v == null) continue;
+      (by[v] = by[v] || []).push(id);
+    }
+    for (const v in by) {
+      if (by[v].length > 1) clashes.push(`${what} ${v}: ${by[v].join(' and ')}`);
+    }
+  };
+  seen('pad button', (c) => c.pad);
+  /* Keys and their alternates share one namespace: an alt that is another
+     action's main key is exactly as broken as two main keys matching. */
+  const byKey = {};
+  for (const id in CONTROLS) {
+    for (const k of [CONTROLS[id].key, CONTROLS[id].alt]) {
+      if (!k) continue;
+      (byKey[k] = byKey[k] || []).push(id);
+    }
+  }
+  for (const k in byKey) {
+    if (byKey[k].length > 1) clashes.push(`key "${k}": ${byKey[k].join(' and ')}`);
+  }
+  return clashes;
+}
 
 /* The menu stores a KeyboardEvent.code -- 'KeyW', 'ShiftLeft', 'Space' --
    because that is what identifies a physical key regardless of layout. The
@@ -1269,6 +1325,11 @@ const PLAYER = {
   fov: 1.0, sprintFov: 1.06,
   attackRange: 1.45, attackCooldown: 0.9,
   interactRange: 2.0,
+  /* How long the weapon stays UP after you ask it to shoot. Long enough
+     that firing out of a sprint is one continuous movement rather than
+     the gun bobbing back down between rounds, short enough that letting
+     go of the trigger and running again drops it straight away. */
+  gunUpHold: 0.45,
 };
 
 /* ---------------- the script ----------------
@@ -6407,7 +6468,32 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
      the breech: the 1911 at 26 degrees, the Thompson at 32. This is the
      line through those two. */
   const tipBase = 0.122;
-  const tipWant = (S.hipTip != null ? S.hipTip : Math.min(0.62, 0.45 + bulk * 0.29));
+  /* TWO different angles, which were one and should never have been.
+   *
+   * `tipLevel` is not a stylistic droop, it is a CORRECTION. The weapon
+   * is held to the right of the eye and in front of it, so its far end
+   * converges on the vanishing point in the middle of the screen -- up
+   * and inboard of where the breech sits -- and a gun that is level in
+   * the world reads as pointed at the sky on the only screen anybody
+   * looks at it on. Measured at this hold: about 29 degrees of muzzle
+   * drop for the bore to read level. That has to apply whenever you are
+   * not aiming, walking or standing or backing away, or the original
+   * complaint comes straight back.
+   *
+   * `tipLow` is the stylistic one: the extra droop of a weapon carried
+   * out of the sight line. That is what a sprint carry is, and the
+   * feedback was exactly that it should mean sprinting and nothing else
+   * -- it was applied at all times, so the gun was down while walking and
+   * you could shoot from there, which reads as broken rather than as a
+   * carry. It rides on P.lowReady, which only sprint raises. */
+  /* The numbers are the ones that were MEASURED last time, not new ones:
+     the point at which the muzzle stops sitting higher than the breech on
+     screen is 26 degrees for the 1911 and 32 for the Thompson, and this
+     is the line through those two. Re-deriving them by eye is how the
+     complaint came back the first time. */
+  const tipLevel = (S.hipTip != null ? S.hipTip : Math.min(0.56, 0.45 + bulk * 0.12));
+  const tipLow = 0.30 * (P.lowReady || 0);
+  const tipWant = tipLevel + tipLow;
   /* Capped, because the rear of a gun is not a fixed fraction of its
      length. On a pistol the mass behind the root is a couple of
      centimetres of grip; on a 680 mm Remington it is still only the
@@ -6419,7 +6505,12 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
      to the part that actually swings. 400 was tried first and was too
      tight the other way: it let the Thompson's stock back up to 62 per
      cent, five points higher than where it started. */
-  const tipDrop = Math.min(len, 0.48) * 0.35 * Math.sin(Math.max(0, tipWant - tipBase));
+  /* Compensating the LEVEL angle only, not the sprint droop on top of
+     it. The sprint has its own drop below (sprintDrop); paying for that
+     rotation here as well drops the weapon twice and walks it off the
+     bottom of the frame, which is the failure mode an uncapped version of
+     this term already produced once. */
+  const tipDrop = Math.min(len, 0.48) * 0.35 * Math.sin(Math.max(0, tipLevel - tipBase));
   /* Hip carry.
 
      This has been argued with itself twice. At -100 mm the sight line of
@@ -6499,9 +6590,28 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
   const offU = hipY * OUT * (1 - a) + adsY * a;
   const dist = (hipD * (1 - a) + adsD * a) * OUT;
 
-  // Sprinting: gun canted down and inboard, out of the sight line.
-  const sp = P.sprint * (1 - a);
-  const sprintDrop = sp * 0.10, sprintIn = sp * 0.05;
+  /* Sprinting: gun canted down and inboard, out of the sight line.
+     Driven by lowReady rather than by raw sprint, so that asking to
+     shoot brings the cant up with the muzzle instead of leaving the
+     weapon rolled inboard while it fires.
+
+     The drop is not a flat number, for the same reason the level angle's
+     compensation is not: rotating the weapon further down LIFTS
+     everything behind its root, and how much depends on the length.
+     Measured with a flat 0.10 the two ends of the rack did opposite
+     things -- the Thompson's rotation lifted it by exactly what the drop
+     lowered it, so it did not move down the screen at all, while the
+     1911, which has almost nothing behind its root to lift, fell until
+     the top of the slide was at 100 per cent of the way down the frame.
+     A gun you cannot see is not a low carry.
+
+     So: a smaller uniform drop, plus exactly the lift the extra rotation
+     just added back. Every weapon then drops by about the same amount of
+     SCREEN, which is the only place it is judged. */
+  const sp = (P.lowReady || 0) * (1 - a);
+  const lowLift = Math.min(len, 0.48) * 0.35
+    * (Math.sin(Math.max(0, tipLevel + tipLow - tipBase)) - Math.sin(Math.max(0, tipLevel - tipBase)));
+  const sprintDrop = sp * 0.045 + lowLift, sprintIn = sp * 0.05;
 
   const px = cam.position.x + f.x * dist + right.x * (offR - sprintIn) + up.x * (offU - sprintDrop);
   const py = cam.position.y + f.y * dist + right.y * (offR - sprintIn) + up.y * (offU - sprintDrop);
@@ -12305,6 +12415,17 @@ function start(opts = {}) {
      afresh each time, so a rebind is live with nothing to restart. */
   const CTL = makeControls(S, game);
   S.controls = CTL;
+  /* This game binds the pad itself, so the engine's fold of face buttons
+     onto keyboard keys must not also run. Left on, every face button did
+     its own job AND whatever key it was folded onto -- A and Y both onto
+     space, B and X both onto 'x' -- which is one button doing two things
+     with nothing in the table above wrong. */
+  game.input.padKeyFold = false;
+  {
+    const clashes = assertNoDuplicateBindings();
+    if (clashes.length) console.error('DUPLICATE BINDINGS: ' + clashes.join(' | '));
+    S.bindClashes = clashes;
+  }
   const rumble = makeRumble(S);
   S.rumble = rumble;
 
@@ -12613,7 +12734,16 @@ function start(opts = {}) {
       P.sprinting = wantSprint && (Math.abs(mx) + Math.abs(mz)) > 0.1 && P.sliding <= 0;
       P.stamina = Math.max(0, Math.min(maxStam,
         P.stamina + (P.sprinting ? -dt / (P.perks.adrenaline ? 3.0 : 1.0) : dt * (P.perks.adrenaline ? 0.55 : 0.32))));
+      // Asking to shoot ends the sprint, rather than being ignored by it.
+      if (P.gunUp > 0) P.sprinting = false;
       P.sprint += ((P.sprinting ? 1 : 0) - P.sprint) * Math.min(1, dt * 11);
+      /* The low carry. Sprinting drops the weapon out of the sight line;
+         anything else -- walking, standing, backing away -- holds it
+         ready. It comes down slower than it goes up, because dropping a
+         gun to run is a relaxation and raising one to shoot is not. */
+      const wantLow = (P.sprinting && P.gunUp <= 0) ? 1 : 0;
+      P.lowReady = (P.lowReady || 0)
+        + (wantLow - (P.lowReady || 0)) * Math.min(1, dt * (wantLow ? 7 : 16));
 
       /* Slide, for Athlete. A sprint committed to a direction: you keep the
          speed you had, you cannot steer much, and you come out of it low. */
@@ -13041,7 +13171,24 @@ function start(opts = {}) {
         if (P.reloading <= 0) { P.reloading = 0; P.reloadStage = 0; P.breakStage = 0; finishReload(P, hud); }
       }
 
-      if (!P.sprinting && !(S.bench && S.bench.open)) tryFire(game, S, P, hud, sfx, dt);
+      /* Pressing fire while sprinting BRINGS THE GUN UP, and then fires.
+       *
+       * It used to do nothing at all: sprinting simply gated tryFire out,
+       * so the trigger was dead until you let go of the stick. And the
+       * carry made that worse rather than better -- the gun sat in a low
+       * hold while WALKING too, so most of the time you were looking at a
+       * gun that was down and shooting anyway, which is what "it's super
+       * weird" is.
+       *
+       * Now the low carry means sprinting and nothing else, and asking to
+       * shoot out of it breaks the sprint: P.gunUp is held up for a
+       * moment, which suppresses the low hold, and the shot waits the few
+       * frames the weapon needs to come up. So the sequence a player sees
+       * is the one they asked for -- gun comes up, then it fires. */
+      if (S.input.fireHeld || S.input.firePressed) P.gunUp = PLAYER.gunUpHold;
+      P.gunUp = Math.max(0, (P.gunUp || 0) - dt);
+      const lowNow = P.lowReady || 0;
+      if (!(S.bench && S.bench.open) && lowNow < 0.45) tryFire(game, S, P, hud, sfx, dt);
       updateRecoil(game, P, dt, S);
 
       /* The flinch roll, spun into the camera's up vector.

@@ -277,12 +277,23 @@ class Input {
       // buttons press the same keys the keyboard-only path listens for.
       if (Math.abs(pad.lx) > 0.01) this.axes.x += pad.lx;
       if (Math.abs(pad.ly) > 0.01) this.axes.y += pad.ly;
-      /* Only on a pad whose layout the browser vouches for. The fold is
-         what turns a button index into a keyboard key, so on an unknown
-         layout it is a machine for pressing the wrong key -- and the key
-         it presses most is space, because two of the four face buttons
-         are folded onto it. */
-      if (pad.standard) {
+      /* Only on a pad whose layout the browser vouches for, and only for
+         a game that has not said it reads the pad itself.
+
+         The fold turns a button index into a keyboard key so that a game
+         written for a keyboard gets pad support for nothing. It is also
+         LOSSY -- four face buttons onto two keys, A and Y both onto
+         space, B and X both onto 'x' -- which is fine when the keys are
+         all anybody reads and a disaster when they are not. A game that
+         binds the pad properly gets both: its own binding AND whatever
+         the key that button was folded onto happens to do. That is the
+         "X jumps and also shoots" report: one button, two actions, and
+         nothing in the game's own table wrong.
+
+         So a game with a real pad map sets padKeyFold = false and the
+         fold stops. On an unknown layout it is off anyway, where it was
+         already a machine for pressing the wrong key. */
+      if (pad.standard && this.padKeyFold !== false) {
         const press = (on, key) => { if (on) { if (!this.keys.has(key)) this.pressed.add(key); this.keys.add(key); } };
         press(B.a, ' '); press(B.b, 'x'); press(B.x, 'x'); press(B.y, ' ');
         press(B.up, 'arrowup'); press(B.down, 'arrowdown');
