@@ -157,10 +157,22 @@ const MAT = {
   /* The pavilion roof is the one strong colour on the whole map. */
   roofOrange: { color: 0xd07a42, texture: 'concrete', roughness: 0.9, metalness: 0, uvScale: 5 },
   roofBrown: { color: 0x8a6b4e, texture: 'wood', roughness: 0.9, metalness: 0, uvScale: 4 },
-  /* Deck boards. uvScale 5 and not 18: on a swept or stretched face a
-     high tile count wraps the grain into diagonal banding, which is the
-     barber's pole the gun stocks had. */
-  deck: { color: 0xa08464, texture: 'wood', roughness: 0.9, metalness: 0, uvScale: 1.3 },
+  /* Deck boards.
+  
+     uvScale is tiles per FACE, so it has to be chosen against the SIZE of
+     the thing wearing it, and one number cannot serve a two-metre plank
+     and a sixty-eight-metre pier. It was set to 5, then lowered to 1.3 on
+     a bad reading of the pier -- exactly the mistake the brick made, in
+     the same direction: what looked like crowded grain was one tile
+     stretched the length of the walkway.
+  
+     8 suits the short runs: walkways, floors, stairs, the balcony. The
+     pier has its own below, because it is an order of magnitude longer
+     than any of them. */
+  deck: { color: 0xa08464, texture: 'wood', roughness: 0.9, metalness: 0, uvScale: 8 },
+  /* The pier itself: sixty-eight metres of it in one slab, so it needs a
+     tile count to match or the boards are a metre wide. */
+  deckLong: { color: 0xa08464, texture: 'wood', roughness: 0.9, metalness: 0, uvScale: 46 },
   /* Weathered white paint, not fresh white. On the smooth recipe, which
      is neutral, 0xdcd8cc is 72 per cent reflectance -- brighter than
      anything outdoors at dusk -- and it is on every post, rail, door and
@@ -189,15 +201,25 @@ const MAT = {
      Deliberately the darkest thing on the map. It has to be: the horizon
      band behind it is the brightest, and if the water comes anywhere near
      it there is no waterline at all and the lake reads as more sky. */
-  water: { color: 0x223028, texture: 'smooth', roughness: 0.34, metalness: 0 },
+  water: { color: 0x223028, texture: 'smooth', roughness: 0.34, metalness: 0, castShadow: false },
   /* The far half of the lake, flatter still, so the sheet does not read
      as one uniform value all the way to the bank. */
-  waterFar: { color: 0x293430, texture: 'smooth', roughness: 0.44, metalness: 0 },
+  waterFar: { color: 0x293430, texture: 'smooth', roughness: 0.44, metalness: 0, castShadow: false },
   /* The treeline on the far bank. Pale and low-contrast on purpose: at a
      hundred and fifty metres through haze, a saturated green reads as a
      hedge thirty metres away, which collapses the whole distance. */
-  farTree: { color: 0x8e9c86, texture: 'grass', roughness: 0.98, metalness: 0, uvScale: 4 },
-  shore: { color: 0x8e9086, texture: 'concrete', roughness: 0.98, metalness: 0, uvScale: 20 },
+  /* castShadow is a MATERIAL flag in this engine, not a per-actor one,
+     which is convenient here: everything past the far bank is scenery at
+     a hundred and fifty metres and can never cast a shadow anybody sees,
+     but each of the hundred and twenty far trees and forty-six dead
+     pilings was being drawn a second time into the shadow map every
+     frame. So is the lake, which is flat and lit from above and casts
+     nothing on anything. */
+  farTree: { color: 0x8e9c86, texture: 'grass', roughness: 0.98, metalness: 0, uvScale: 4, castShadow: false },
+  // The dead pilings out in the water: the same weathered wood as a trunk,
+  // but far enough out to be scenery rather than a shadow caster.
+  pilingDead: { color: 0x9c8570, texture: 'wood', roughness: 0.96, metalness: 0, uvScale: 3, castShadow: false },
+  shore: { color: 0x8e9086, texture: 'concrete', roughness: 0.98, metalness: 0, uvScale: 20, castShadow: false },
 };
 
 /* Rooms, for whatever wants to ask which part of the map something is
@@ -288,6 +310,11 @@ const LINES = {
    outdoor map this size is that the walk costs you something. */
 const PLAY = {
   buys: [
+    /* `face` is the side you walk up to it from. Three of these were on
+       the wrong side of their own wall to begin with -- the pier pair
+       faced out over open water and the slip's faced the lake -- which
+       is a plate you can see and can never reach. Checked now by
+       coastline.test.js: every buy has to have a floor in front of it. */
     // The near wall of the ranch house, facing the water.
     { id: 'thompson', at: [C.ranch.x + 5.2, 1.42, C.ranch.z + C.ranch.d / 2 + 0.06],
       weapon: 'thompson', label: 'Thompson', face: 'N' },
@@ -297,15 +324,20 @@ const PLAY = {
     // The carport, out on the west edge.
     { id: 'mp5', at: [C.carport.x + C.carport.w / 2 - 0.2, 1.42, C.carport.z],
       weapon: 'mp5', label: 'MP5', face: 'E' },
-    // Under the pavilion, halfway out the pier.
+    /* Under the pavilion, on its west post, facing IN across the deck --
+       the other way round it faced the lake and you would have had to
+       stand on the water to buy it. */
     { id: 'remington', at: [C.pier.x - C.pavilion.half + 0.1, C.pier.deckY + 1.35, C.pavilion.z],
-      weapon: 'remington', label: 'Remington 700', face: 'W' },
-    // The boathouse at the very end of it.
+      weapon: 'remington', label: 'Remington 700', face: 'E' },
+    // The boathouse at the end of the pier, likewise facing in.
     { id: 'mg42', at: [C.pier.x + C.boathouse.half - 0.1, C.pier.deckY + 1.35, C.boathouse.z],
-      weapon: 'mg42', label: 'MG 42', face: 'E' },
-    // The covered slip, the other way along the seawall.
-    { id: 'paralyzer', at: [C.slip.x, 1.42, C.slip.z - C.slip.halfZ + 0.06],
-      weapon: 'paralyzer', label: 'Paralyzer', face: 'S' },
+      weapon: 'mg42', label: 'MG 42', face: 'W' },
+    /* The covered slip, on the shore end of its east catwalk and facing
+       along it. Mounted on the SIDE of the slip it faced the open water,
+       and the catwalk is only ninety centimetres wide -- there was
+       nowhere to stand. Along it, there is. */
+    { id: 'paralyzer', at: [C.slip.x + C.slip.halfX - 2.35, C.water.y + 2.30, C.slip.z - C.slip.halfZ + 0.05],
+      weapon: 'paralyzer', label: 'Paralyzer', face: 'N' },
   ],
   /* The four perks, each with its back to something, none of them within
      sight of another -- a corner you can hold is a corner with one perk
@@ -515,7 +547,7 @@ function build(game, S) {
   for (let i = 0; i < 46; i++) {
     const x = -220 + ((i * 97) % 440);
     const z = 60 + ((i * 53) % 120);
-    post(x, z, C.water.y - 0.2, C.water.y + 0.45 + ((i * 31) % 7) * 0.09, 0.075, mats.trunk, 'dead-piling');
+    post(x, z, C.water.y - 0.2, C.water.y + 0.45 + ((i * 31) % 7) * 0.09, 0.075, mats.pilingDead, 'dead-piling');
   }
 
   /* ---------------- the seawall and the ramp ----------------
@@ -594,7 +626,7 @@ function build(game, S) {
     post(P.x - P.halfW + 0.2, z, C.water.y - 1.6, P.deckY, 0.09, mats.galv, 'pier-piling');
     post(P.x + P.halfW - 0.2, z, C.water.y - 1.6, P.deckY, 0.09, mats.galv, 'pier-piling');
   }
-  slab(P.x - P.halfW, P.x + P.halfW, P.deckY - 0.14, P.deckY, -0.4, P.z1, mats.deck, 'pier-deck');
+  slab(P.x - P.halfW, P.x + P.halfW, P.deckY - 0.14, P.deckY, -0.4, P.z1, mats.deckLong, 'pier-deck');
   // Handrail both sides, the whole length.
   for (const s of [-1, 1]) {
     const x = P.x + s * (P.halfW - 0.08);
@@ -665,6 +697,31 @@ function build(game, S) {
     // The lift frame the boat is sitting on: two bunks under the hull.
     for (const dx of [-1.15, 1.15]) {
       deco(L.x + dx - 0.09, L.x + dx + 0.09, C.water.y + 0.30, C.water.y + 0.46, L.z - 2.6, L.z + 2.6, mats.steelDark, 'lift-bunk');
+    }
+
+    /* THE WALKWAY OUT TO IT.
+
+       There was none. The slip sits thirteen metres out over the lake and
+       nothing joined it to the shore -- so the most recognisable thing on
+       the map, the one the sunset photograph is taken from under, was
+       scenery you could look at and never reach, and a weapon was mounted
+       on it. It is a dock; you walk out to it.
+
+       Built along the slip's east catwalk line so it lands on something,
+       with a rail on the open side and pilings under it like everything
+       else out here. */
+    const gx = L.x + L.halfX - 0.45, deck = C.water.y + 0.90;
+    slab(gx - 0.85, gx + 0.85, deck - 0.14, deck, -0.4, L.z - L.halfZ + 0.2, mats.deck, 'slip-gangway');
+    for (let z = 1.4; z < L.z - L.halfZ; z += 3.2) {
+      post(gx - 0.72, z, C.water.y - 1.6, deck, 0.075, mats.galv, 'gangway-piling');
+      post(gx + 0.72, z, C.water.y - 1.6, deck, 0.075, mats.galv, 'gangway-piling');
+    }
+    for (const side of [-1, 1]) {
+      const rx = gx + side * 0.80;
+      for (let z = 1.0; z < L.z - L.halfZ; z += 2.4) {
+        post(rx, z, deck, deck + 1.0, 0.045, mats.white, 'gangway-post');
+      }
+      deco(rx - 0.05, rx + 0.05, deck + 0.92, deck + 1.02, -0.2, L.z - L.halfZ, mats.white, 'gangway-rail');
     }
   }
 

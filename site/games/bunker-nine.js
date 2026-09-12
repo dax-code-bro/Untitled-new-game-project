@@ -3233,10 +3233,15 @@ function finishGenericMap(game, S, def) {
      hand next to every one of them, and an invisible point in the air is
      not a substitute. */
   S.buys = (P.buys || []).map((b) => {
+    /* `face` is the direction the plate FACES, which is also the side you
+       walk up to it from -- the outward normal of the wall it is bolted
+       to. So the plate stands a few centimetres proud TOWARD the player,
+       not into the wall. The X half of this was inverted, which put every
+       east- and west-facing plate inside the masonry. */
     const face = b.face || 'S';
     const alongX = face === 'N' || face === 'S';
     const nz = face === 'N' ? 1 : face === 'S' ? -1 : 0;
-    const nx = face === 'E' ? -1 : face === 'W' ? 1 : 0;
+    const nx = face === 'E' ? 1 : face === 'W' ? -1 : 0;
     const at = b.at;
     game.box({
       at: [at[0] + nx * 0.03, at[1], at[2] + nz * 0.03],
