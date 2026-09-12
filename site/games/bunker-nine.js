@@ -3094,7 +3094,31 @@ function buildMap(game, S) {
     floor: { color: 0x8d8981, texture: 'concrete', roughness: 0.9, metalness: 0, uvScale: 7, normalStrength: 0.45 },
     wood: { color: 0x584023, texture: 'wood', roughness: 0.8, metalness: 0, uvScale: 2 },
     board: { color: 0x7d5c36, texture: 'wood', roughness: 0.85, metalness: 0, uvScale: 3 },
-    steel: { color: 0x4a4e54, texture: 'metal', roughness: 0.5, metalness: 1 },
+    /* THE BLACK MASS UNDER THE STAIRCASE.
+     *
+     * This was 0x4a4e54, and that is not a colour on a conductor -- it is
+     * an F0. With metalness 1 the shader has no diffuse term at all: the
+     * colour IS the Fresnel reflectance, and everything the surface shows
+     * is the environment multiplied by it. 0x4a4e54 through the metal
+     * recipe, which averages (0.640, 0.646, 0.665), lands at about 0.05
+     * linear -- LOWER THAN GLASS. Indoors, where the only environment is
+     * the dim room probe, five per cent of not much is black, and the
+     * ninety-four actors wearing this made one unlit mass in the corner
+     * of the room that read as a hole in the map rather than as a
+     * staircase.
+     *
+     * Real steel sits near 0.5. This is 0.25 -- dark, weathered,
+     * unpolished, and still four or five times what it was. The same
+     * mistake, and the same correction, as the five gun metals.
+     *
+     * Two wrong answers were spent on this first: SSAO (ruled out -- the
+     * mass is identical with it off) and the material readout (worthless
+     * -- material.color is not a plain integer). It was found by hiding
+     * one material at a time and photographing what was left. Swapping
+     * actor.material at runtime does NOT work as a probe: the renderer
+     * buckets actors into instanced batches by material and a late
+     * reassignment never re-buckets. `visible` is tested every frame. */
+    steel: { color: 0xa8b0ba, texture: 'metal', roughness: 0.5, metalness: 1 },
     sand: { color: 0x8a7f5e, texture: 'fabric', roughness: 0.98, metalness: 0, uvScale: 2 },
     chalk: { color: 0xf5f2e6, texture: 'smooth', roughness: 0.9, metalness: 0, emissive: 0xcfe8ff, emissiveStrength: 0.35 },
     // Outside. Churned mud, scorched steel, and wire.
