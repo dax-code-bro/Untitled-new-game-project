@@ -694,27 +694,37 @@ function buildDoubleStock(g, C) {
      * Aim is untouched by this. WEAPONS[id].sightH is overwritten at
      * build time from the model's own sightAt, so the sight goes on the
      * camera axis wherever the wood happens to be. */
+    /* The drop belongs to the KIND, not to every full stock.
+    
+       It was applied to both guns that use this shape and the Paralyzer
+       does not want it: measured, its trigger finger went from 8 per cent
+       buried in the weapon to 17, and it was 25 at no drop at all, so
+       nothing available here returns it to where it was. It is a
+       different shape with its trigger somewhere else and it never had
+       the Scattergun's problem in the first place. One gun asked for
+       this; one gun gets it. */
+    const D0 = C.combDrop ? 1 : 0;
     const st = (x, cy, up, down, hw) => ax(x, roundRect(up, down, hw, 2.4, 22), cy);
     sweepPath(g, [
       st(-0.0620, (top + bot) / 2, (top - bot) / 2 - 0.001, (top - bot) / 2 - 0.001, 0.0180),
-      st(-0.0900, -0.0290, 0.0230, 0.0210, 0.0175),
-      st(-0.1400, -0.0450, 0.0250, 0.0230, 0.0190),
-      st(-0.2100, -0.0570, 0.0330, 0.0300, 0.0215),
-      st(-0.2900, -0.0670, 0.0420, 0.0400, 0.0230),
-      st(-0.3200, -0.0690, 0.0450, 0.0430, 0.0225),
+      st(-0.0900, -0.0170 - 0.0120 * D0, 0.0230, 0.0210, 0.0175),
+      st(-0.1400, -0.0250 - 0.0200 * D0, 0.0250, 0.0230, 0.0190),
+      st(-0.2100, -0.0330 - 0.0240 * D0, 0.0330, 0.0300, 0.0215),
+      st(-0.2900, -0.0410 - 0.0260 * D0, 0.0420, 0.0400, 0.0230),
+      st(-0.3200, -0.0430 - 0.0260 * D0, 0.0450, 0.0430, 0.0225),
     ], true, true);
     // Recoil pad: a soft black block, checkered, standing proud.
-    hardBox(g, -0.3235, -0.0690, 0, 0.0035, 0.0470, 0.0230);
+    hardBox(g, -0.3235, -0.0430 - 0.0260 * D0, 0, 0.0035, 0.0470, 0.0230);
     /* Pistol grip swelling under the wrist. It rides DOWN with the comb:
        left where it was, the wrist above it grew by the whole of the drop
        and the hand that grips it floated off the top. */
-    gripStack(g, -0.0980, bot - 0.0150, 0.0740, 0.36, [
+    gripStack(g, -0.0980, bot - 0.0020 - 0.0130 * D0, 0.0740, 0.36, [
       [0.00, 0.0180, 0.0230, 0.0175, 2.6],
       [0.35, 0.0165, 0.0215, 0.0170, 2.5],
       [0.75, 0.0160, 0.0215, 0.0172, 2.5],
       [1.00, 0.0150, 0.0200, 0.0165, 2.8],
     ]);
-    for (const s of [-1, 1]) checker(g, -0.115, bot - 0.053, s * 0.0172, 0.36, -0.93, s, 4, 6, 0.0060, 0.0010);
+    for (const s of [-1, 1]) checker(g, -0.115, bot - 0.040 - 0.0130 * D0, s * 0.0172, 0.36, -0.93, s, 4, 6, 0.0060, 0.0010);
   } else {
     /* Bobbed grip: cut off behind the wrist, which is the whole point of
        a sawn-off and the reason it kicks the way it does. */
@@ -2493,7 +2503,7 @@ const RIFLE_KINDS = {
 const DOUBLE_KINDS = {
   scatter: {
     barrelLen: 0.4800, spacing: 0.0245, bands: [0.190, 0.360],
-    forend: [0.0560, 0.2300], stock: 'full', twinTriggers: true,
+    forend: [0.0560, 0.2300], stock: 'full', twinTriggers: true, combDrop: 1,
     origin: new Vec3(-0.0980, -0.0420, 0), mass: 3.4, bound: 0.42,
     mats: { steel: ARM_MAT.blued, wood: ARM_MAT.walnut, swing: ARM_MAT.blued, forend: ARM_MAT.walnut },
   },
