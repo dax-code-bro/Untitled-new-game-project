@@ -6148,9 +6148,11 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
      BARREL, in front. Scaling the compensation off total length
      therefore over-corrects the long ones -- measured, it put the top of
      the Scattergun at 95 per cent, which is a gun you cannot see.
-     Treating anything longer than 400 mm as 400 mm keeps the drop tied
-     to the part that actually swings. */
-  const tipDrop = Math.min(len, 0.40) * 0.35 * Math.sin(Math.max(0, tipWant - tipBase));
+     Treating anything longer than 480 mm as 480 mm keeps the drop tied
+     to the part that actually swings. 400 was tried first and was too
+     tight the other way: it let the Thompson's stock back up to 62 per
+     cent, five points higher than where it started. */
+  const tipDrop = Math.min(len, 0.48) * 0.35 * Math.sin(Math.max(0, tipWant - tipBase));
   /* Hip carry.
 
      This has been argued with itself twice. At -100 mm the sight line of
