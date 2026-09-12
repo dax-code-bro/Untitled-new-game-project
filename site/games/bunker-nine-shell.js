@@ -369,6 +369,60 @@ var CSS2 = `
   text-transform:uppercase; text-align:center; line-height:1.9; }
 #b9shell .foot b { color:#8a8272; font-weight:normal; }
 
+/* ---- map select ----
+
+   The shape the console zombies map screens use, and for the reason they
+   use it: a list of maps you move down, and one big panel that changes as
+   you move. Reading a name tells you nothing about a map; a picture of it
+   does, so the picture is the biggest thing on the screen and the list is
+   a column beside it.
+
+   The preview is a stack of images, all loaded, all absolutely on top of
+   each other, and only one carrying `.on`. Cross-fading is then a class
+   toggle and a CSS transition rather than anything that has to run every
+   frame -- which matters, because this screen sits in front of a WebGL
+   context that is still holding a whole bunker in memory. */
+#b9shell .maps { background:linear-gradient(180deg,#07080c 0%,#0b0a08 55%,#05060a 100%); }
+#b9shell .mapwrap { width:min(1120px,92vw); display:flex; gap:34px; align-items:stretch; }
+#b9shell .maphead { width:min(1120px,92vw); margin-bottom:20px; display:flex; align-items:baseline; gap:18px; }
+#b9shell .maphead h2 { margin:0; font-size:26px; font-weight:normal; letter-spacing:.30em; color:#e8ddc8; }
+#b9shell .maphead .sub { font-size:11.5px; letter-spacing:.28em; color:#6b6455; text-transform:uppercase; }
+#b9shell .maplist { flex:0 0 300px; display:flex; flex-direction:column; gap:3px; }
+#b9shell .mapitem { padding:15px 18px; border:1px solid transparent; background:rgba(232,221,200,.03);
+  cursor:pointer; }
+#b9shell .mapitem .nm { font-size:19px; letter-spacing:.20em; text-transform:uppercase; }
+#b9shell .mapitem .st { font-size:10.5px; letter-spacing:.22em; text-transform:uppercase; color:#6b6455;
+  margin-top:5px; }
+#b9shell .mapitem.sel { border-color:#ffd27a; background:rgba(255,210,122,.10); }
+#b9shell .mapitem.sel .nm { color:#ffd27a; }
+#b9shell .mapitem.off .nm { color:#5d5749; }
+#b9shell .mapitem.off .st { color:#7a3d38; }
+
+#b9shell .mappanel { flex:1; display:flex; flex-direction:column; min-width:0; }
+/* 16:9, because every picture in it is a screenshot of the game. */
+#b9shell .mapshot { position:relative; width:100%; aspect-ratio:16/9; background:#0a0b0e;
+  border:1px solid #4a4234; overflow:hidden; }
+#b9shell .mapshot img, #b9shell .mapshot .ph { position:absolute; inset:0; width:100%; height:100%;
+  object-fit:cover; opacity:0; transition:opacity 1.1s ease; }
+#b9shell .mapshot img.on, #b9shell .mapshot .ph.on { opacity:1; }
+/* Nothing to show yet: a plate rather than a broken image. */
+#b9shell .mapshot .ph { display:flex; align-items:center; justify-content:center; text-align:center;
+  color:#4a4438; font-size:12px; letter-spacing:.30em; text-transform:uppercase;
+  background:repeating-linear-gradient(135deg,#0c0d10 0 14px,#0a0b0e 14px 28px); }
+/* A row of ticks under the picture: which of the shots you are looking at. */
+#b9shell .mapdots { display:flex; gap:5px; margin-top:9px; height:2px; }
+#b9shell .mapdots i { flex:1; background:rgba(232,221,200,.14); transition:background .4s ease; }
+#b9shell .mapdots i.on { background:#ffd27a; }
+#b9shell .mapdesc { margin-top:13px; font-size:13.5px; line-height:1.65; color:#8a8272;
+  font-style:italic; letter-spacing:.02em; min-height:44px; }
+#b9shell .mapmeta { margin-top:10px; display:flex; gap:26px; font-size:11px; letter-spacing:.22em;
+  text-transform:uppercase; color:#6b6455; }
+#b9shell .mapmeta b { color:#a89b80; font-weight:normal; }
+@media (max-width: 780px) {
+  #b9shell .mapwrap { flex-direction:column; gap:18px; }
+  #b9shell .maplist { flex:none; }
+}
+
 /* ---- settings ---- */
 #b9shell .setwrap { width:min(980px,94vw); height:min(760px,90vh); display:flex; flex-direction:column;
   background:rgba(9,8,6,.97); border:1px solid #4a4234; }
@@ -540,6 +594,20 @@ function buildDom() {
     <div class="foot"></div>
   </div>
 
+  <div class="screen maps">
+    <div class="maphead"><h2>ZOMBIES</h2><span class="sub">choose your ground</span></div>
+    <div class="mapwrap">
+      <div class="maplist"></div>
+      <div class="mappanel">
+        <div class="mapshot"></div>
+        <div class="mapdots"></div>
+        <div class="mapdesc"></div>
+        <div class="mapmeta"></div>
+      </div>
+    </div>
+    <div class="foot mapfoot"></div>
+  </div>
+
   <div class="screen setscreen">
     <div class="setwrap">
       <div class="sethead"><h2>SETTINGS</h2><div class="tabs"></div></div>
@@ -563,13 +631,16 @@ function buildDom() {
     load: q('.load'), menu: q('.menu'), setscreen: q('.setscreen'), pause: q('.pause'),
     fill: q('.fill'), pct: q('.pct'), step: q('.step'), tip: q('.tip'),
     mainlist: q('.mainlist'), mfoot: q('.menu .foot'),
+    maps: q('.maps'), maplist: q('.maplist'), mapshot: q('.mapshot'),
+    mapdots: q('.mapdots'), mapdesc: q('.mapdesc'), mapmeta: q('.mapmeta'),
+    mapfoot: q('.mapfoot'),
     tabs: q('.tabs'), setbody: q('.setbody'), setfoot: q('.setfoot'),
     pbody: q('.pbody'), pauseacts: q('.pauseacts'), prd: q('.pausehead .rd'),
   };
 }
 
 function show(which) {
-  ['load', 'menu', 'setscreen', 'pause'].forEach(function (k) {
+  ['load', 'menu', 'maps', 'setscreen', 'pause'].forEach(function (k) {
     el[k].classList.toggle('on', k === which);
   });
   root.classList.remove('gone');
@@ -805,9 +876,10 @@ function fadeToMenu() {
    it is not selectable. Everything else -- wrapping, scrolling the
    focused row into view, repeat rate on a held stick -- is here once. */
 
-var nav = { rows: [], i: 0, onBack: null, live: false };
+var nav = { rows: [], i: 0, onBack: null, live: false, focused: null };
 
 function navSet(rows, onBack, keep) {
+  nav.focused = null;
   nav.rows = rows.filter(function (r) { return r && !r.skip; });
   nav.onBack = onBack || null;
   if (!keep || nav.i >= nav.rows.length) nav.i = 0;
@@ -817,7 +889,7 @@ function navSet(rows, onBack, keep) {
   navPaint(false);
 }
 
-function navClear() { nav.rows = []; nav.live = false; nav.onBack = null; }
+function navClear() { nav.rows = []; nav.live = false; nav.onBack = null; nav.focused = null; }
 
 /* `scroll` is opt-in, and that is the whole of a bug that made two
    different things look broken.
@@ -843,6 +915,13 @@ function navPaint(scroll) {
   if (scroll && cur && cur.el && cur.el.scrollIntoView) {
     cur.el.scrollIntoView({ block: 'nearest' });
   }
+  /* A row may own something outside itself -- the map screen's whole
+     preview panel belongs to whichever map is selected. `onFocus` fires
+     when the selection LANDS on a row, from any of the three ways it can
+     get there, and only when it changes, so a repaint of the list does
+     not restart a cross-fade that is already running. */
+  if (cur && cur.onFocus && nav.focused !== cur) { nav.focused = cur; cur.onFocus(); }
+  else if (!cur) nav.focused = null;
 }
 
 function navMove(d) {
@@ -1019,14 +1098,15 @@ function mkItem(text, hint, cls) {
 }
 
 function openMain() {
+  closeMaps();
   show('menu');
   setPhase('menu');
   el.mainlist.innerHTML = '';
   var rows = [];
 
-  var zombies = mkItem('Zombies', 'one bunker, no way out');
+  var zombies = mkItem('Play Zombies', 'choose your ground');
   el.mainlist.appendChild(zombies);
-  rows.push(wire({ el: zombies, onEnter: intoGame }));
+  rows.push(wire({ el: zombies, onEnter: openMaps }));
 
   var sets = mkItem('Settings', 'controls, picture, sound, and the rest');
   el.mainlist.appendChild(sets);
@@ -1044,11 +1124,160 @@ function openMain() {
   tabHook = null; startHook = null;
 }
 
+/* ================================================================
+   MAP SELECT
+   ================================================================
+   PLAY ZOMBIES does not drop you into a bunker any more, because there
+   is going to be more than one place to be dropped into.
+
+   Each map is a row; the row you are on fills the panel beside it with
+   that map's photographs, which cross-fade through one another on a slow
+   cycle, and a line about what the place is. Keyboard, mouse and pad all
+   move the same selection -- hovering a row with the pointer moves the
+   pad's cursor onto it too, so the two never disagree about what is
+   selected and what the panel is showing.
+
+   `shots` are real screenshots of the map taken out of the engine, so a
+   card cannot drift away from what the map actually looks like. A map
+   with no shots yet gets a plate rather than a broken image. */
+var MAPS = [
+  {
+    id: 'bunker9', name: 'Bunker Nine', status: 'ready',
+    where: 'North Atlantic coast', year: '1943',
+    blurb: 'A gun emplacement dug into the headland and abandoned in a hurry. '
+      + 'Four windows, one generator, and a hole in the roof that was not there yesterday.',
+    shots: ['shots/bunker9-1.jpg', 'shots/bunker9-2.jpg', 'shots/bunker9-3.jpg', 'shots/bunker9-4.jpg'],
+  },
+  {
+    id: 'coastline', name: 'Coastline', status: 'building',
+    where: 'the dock', year: '—',
+    blurb: 'Built from the real place: the pilings, the boathouse, the water. Not finished yet.',
+    shots: [],
+  },
+];
+
+var mapIdx = 0;
+var fadeTimer = null, shotIdx = 0;
+
+function mapById(id) { for (var i = 0; i < MAPS.length; i++) if (MAPS[i].id === id) return MAPS[i]; return null; }
+
+/* The picture stack for one map, built once per selection. Every shot is
+   an <img> that is already in the DOM; showing one is a class. */
+function paintShots(m) {
+  el.mapshot.innerHTML = '';
+  el.mapdots.innerHTML = '';
+  shotIdx = 0;
+  if (fadeTimer) { clearInterval(fadeTimer); fadeTimer = null; }
+
+  if (!m.shots.length) {
+    var ph = document.createElement('div');
+    ph.className = 'ph on';
+    ph.textContent = m.status === 'building' ? 'in development' : 'no images';
+    el.mapshot.appendChild(ph);
+    return;
+  }
+  m.shots.forEach(function (src, i) {
+    var im = document.createElement('img');
+    im.src = src;
+    im.alt = m.name;
+    if (i === 0) im.className = 'on';
+    /* A shot that will not load must not leave a black rectangle sitting
+       where a photograph should be. */
+    /* A shot that will not load must not leave a black rectangle sitting
+       where a photograph should be, and if NONE of them load the panel
+       falls back to the plate rather than to an empty box. */
+    im.addEventListener('error', function () {
+      im.dataset.dead = '1';
+      im.classList.remove('on');
+      var live = el.mapshot.querySelectorAll('img:not([data-dead])');
+      if (live.length) { if (!el.mapshot.querySelector('img.on')) live[0].classList.add('on'); return; }
+      if (el.mapshot.querySelector('.ph')) return;
+      var ph = document.createElement('div');
+      ph.className = 'ph on';
+      ph.textContent = 'no images';
+      el.mapshot.appendChild(ph);
+    });
+    el.mapshot.appendChild(im);
+    var d = document.createElement('i');
+    if (i === 0) d.className = 'on';
+    el.mapdots.appendChild(d);
+  });
+  if (m.shots.length < 2) return;
+  fadeTimer = setInterval(function () {
+    var imgs = el.mapshot.querySelectorAll('img');
+    var dots = el.mapdots.querySelectorAll('i');
+    if (!imgs.length) return;
+    var guard = 0, next = shotIdx;
+    do { next = (next + 1) % imgs.length; guard++; }
+    while (imgs[next].dataset.dead && guard <= imgs.length);
+    if (next === shotIdx) return;
+    imgs[shotIdx].classList.remove('on');
+    if (dots[shotIdx]) dots[shotIdx].classList.remove('on');
+    shotIdx = next;
+    imgs[shotIdx].classList.add('on');
+    if (dots[shotIdx]) dots[shotIdx].classList.add('on');
+  }, 3200);
+}
+
+function paintMap() {
+  var m = MAPS[mapIdx];
+  if (!m) return;
+  var kids = el.maplist.children;
+  for (var i = 0; i < kids.length; i++) kids[i].classList.toggle('sel', i === mapIdx);
+  paintShots(m);
+  el.mapdesc.textContent = m.blurb;
+  el.mapmeta.innerHTML =
+    '<span>WHERE <b>' + m.where + '</b></span>'
+    + '<span>YEAR <b>' + m.year + '</b></span>'
+    + '<span>STATUS <b>' + (m.status === 'ready' ? 'playable' : 'in development') + '</b></span>';
+}
+
+function openMaps() {
+  show('maps');
+  setPhase('menu');
+  el.maplist.innerHTML = '';
+  var rows = [];
+  MAPS.forEach(function (m, i) {
+    var d = document.createElement('div');
+    d.className = 'mapitem' + (m.status === 'ready' ? '' : ' off');
+    d.innerHTML = '<div class="nm"></div><div class="st"></div>';
+    d.querySelector('.nm').textContent = m.name;
+    d.querySelector('.st').textContent = m.status === 'ready' ? 'playable' : 'in development';
+    el.maplist.appendChild(d);
+    /* Everything is selectable so you can look at a map you cannot play
+       yet; only launching is blocked. A row you cannot enter that you
+       also cannot move onto is just a name you can never read. */
+    rows.push(wire({
+      el: d,
+      onEnter: function () { if (m.status === 'ready') intoGame(m); else beep('back'); },
+      onFocus: function () { mapIdx = i; paintMap(); },
+    }));
+  });
+  el.mapfoot.innerHTML =
+    '<div><b>&uarr;&darr;</b> choose a map &nbsp; <b>Enter / A</b> drop in &nbsp; <b>Esc / B</b> back</div>';
+  navSet(rows, openMain);
+  mapIdx = 0;
+  paintMap();
+  tabHook = null; startHook = null;
+}
+
+/* Leaving the screen stops the cross-fade. An interval left running
+   behind a hidden screen is a timer that swaps images nobody can see for
+   as long as the tab is open. */
+function closeMaps() { if (fadeTimer) { clearInterval(fadeTimer); fadeTimer = null; } }
+
 /* Into the game. The character picker the game already owns IS the last
    step of the main menu, so this hands over to it rather than building a
    second one: the shell steps out of the way and the title screen, which
    knows every hero and their bio, takes the click. */
-function intoGame() {
+function intoGame(map) {
+  closeMaps();
+  /* Which map, told to the game as well as remembered here. There is one
+     map that can be played today, so this changes nothing yet -- but the
+     choice is made in the menu, and the menu is the only place that knows
+     it, so it has to be handed over rather than assumed. */
+  SHELL.map = (map && map.id) || 'bunker9';
+  if (handle && handle.S) handle.S.mapId = SHELL.map;
   hideAll();
   navClear();
   setPhase('game');

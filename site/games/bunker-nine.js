@@ -6113,6 +6113,44 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
      hip actually does. */
   const len = Math.max(0.2, v.muzzle || 0.3);
   const bulk = Math.min(1, Math.max(0, (len - 0.24) / 0.34));
+  /* Tipping the muzzle down swings the BUTT up.
+   *
+   * The extra droop below is what stops the gun reading as pointed at
+   * the sky, but the model rotates about the weapon root, and everything
+   * behind the root -- receiver, stock, the shooter's hands -- rises by
+   * the same rotation. Measured: at the old height, going from 7 to 19
+   * degrees lifted the top of the Thompson from 67 per cent of the way
+   * down the frame to 57. Fixing the angle by making the gun bigger and
+   * higher in the corner is not fixing it.
+   *
+   * So the hold drops by exactly what the rotation lifted. The rear mass
+   * sits roughly a third of the weapon's length behind the root, so the
+   * lift is len * 0.35 * sin(extra angle) -- which scales itself: a
+   * Thompson drops 55 mm and a 1911, whose rear is barely behind its
+   * root, only 36. That is the term that made a flat 82 mm drop put the
+   * whole pistol under the bottom edge of the screen. */
+  /* The angle at which the bore reads level is atan(hold drop / hold
+     distance) -- which is nearly identical for every weapon, about 23
+     degrees. It comes out higher than that here because the drop below
+     is itself part of the hold, so lowering the gun asks for a little
+     more angle, and it asks for more of it on a longer gun because a
+     longer gun is held further out and further down to begin with.
+
+     Measured, at the point where the muzzle stops sitting higher than
+     the breech: the 1911 at 26 degrees, the Thompson at 32. This is the
+     line through those two. */
+  const tipBase = 0.122;
+  const tipWant = (S.hipTip != null ? S.hipTip : Math.min(0.62, 0.45 + bulk * 0.29));
+  /* Capped, because the rear of a gun is not a fixed fraction of its
+     length. On a pistol the mass behind the root is a couple of
+     centimetres of grip; on a 680 mm Remington it is still only the
+     receiver and stock, because everything the extra length bought is
+     BARREL, in front. Scaling the compensation off total length
+     therefore over-corrects the long ones -- measured, it put the top of
+     the Scattergun at 95 per cent, which is a gun you cannot see.
+     Treating anything longer than 400 mm as 400 mm keeps the drop tied
+     to the part that actually swings. */
+  const tipDrop = Math.min(len, 0.40) * 0.35 * Math.sin(Math.max(0, tipWant - tipBase));
   /* Hip carry.
 
      This has been argued with itself twice. At -100 mm the sight line of
@@ -6148,8 +6186,22 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
      Interpolating between the two points I actually measured -- 20
      percentage points over 80 mm, so a quarter of a point per millimetre
      -- 78 per cent is -150. */
+  /* A fourth argument, and the first one with the gun actually projected
+     through the camera instead of being reasoned about.
+   *
+     Every previous note here quotes a percentage that was never measured.
+     Projected through the live viewProj at 16:9, -150 puts the TOP of a
+     Thompson at 67 per cent of the way down the frame and its bottom at
+     167 -- two thirds of the gun is already off the bottom -- and the top
+     of the 1911 at 75. That is a carried weapon, and the height was never
+     the problem: see the hip tip below, where the fault turned out to be.
+
+     Taking it a further 82 mm down was tried, on the strength of the
+     player saying it was still too high, and reverted: it put the whole
+     of the 1911 below the bottom edge, top of the slide at 102 per cent.
+     There is nothing left to give here. */
   const hipX = (po ? po.x : 0.092 + bulk * 0.020) - drawIn + bobX * (bench ? 0 : 1),
-        hipY = (po ? po.y : -0.150 - bulk * 0.026) + (bench ? 0 : bobY - dip),
+        hipY = (po ? po.y : -0.150 - bulk * 0.026 - tipDrop) + (bench ? 0 : bobY - dip),
         hipD = po ? po.d : 0.355 + bulk * 0.055;
   const adsX = 0, adsY = -spec.sightH, adsD = 0.30;
   const a = P.ads;
@@ -6206,7 +6258,29 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
      comes up to where the hands are working precisely so the breech, the
      well and the port face the camera; leaving seven degrees of muzzle
      droop in tips all three of them away again. */
-  const hipTip = bench ? 0 : (1 - a) * (0.122 + sp * 0.10) * (1 - rl * 0.85);
+  /* Seven degrees was not enough, and the reason is perspective.
+   *
+   * The weapon is held to the RIGHT of the eye and in FRONT of it, so
+   * its far end converges on the vanishing point at the middle of the
+   * screen -- which is up and inboard from where the breech sits. Project
+   * it and the numbers are stark: with 7 degrees of droop the Thompson's
+   * breech lands at 91 per cent down the frame and its muzzle at 76. The
+   * gun is pointing very slightly down in the world and unmistakably UP
+   * on screen, which is the only place anybody looks at it. That is what
+   * "he's holding his gun way too high" is: not the height -- the resting
+   * gun already sits in the bottom third -- but the angle.
+   *
+   * For the bore to read level on screen the muzzle has to fall as fast
+   * as perspective lifts it, which at this hold is about 29 degrees. A
+   * hip carry is not level, it is pointed at the ground a few metres
+   * ahead, so this goes a little past that.
+   *
+   * Both protections are unchanged and both matter: (1 - a) blends the
+   * whole thing out with the aim, so the sight picture is untouched and
+   * every measured sightH still lands on the camera axis; and the reload
+   * term levels it again so the breech, the well and the port face the
+   * camera while the hands work. */
+  const hipTip = bench ? 0 : (1 - a) * (tipWant + sp * 0.10) * (1 - rl * 0.85);
   const pitch = Math.asin(Math.max(-1, Math.min(1, f.y))) + P.kickPitch * 0.06 - hipTip;
   /* Roll the weapon inboard while sprinting, and again while reloading so
      the breech, the magazine well or the open cylinder turns to face the
@@ -13146,6 +13220,11 @@ function start(opts = {}) {
     /* Override the hip carry so a screenshot can frame the weapon instead
        of catching the corner of it. Null clears the override. */
     viewPose(x, y, d) { P.poseOverride = (x == null) ? null : { x, y, d }; },
+    /* Muzzle droop at the hip, in radians. Null restores the default.
+       Here for the same reason viewPose is: this is a number that can
+       only be judged by projecting the gun through the camera, and a
+       harness has to be able to sweep it. */
+    hipTip(v) { S.hipTip = v; },
     killAll() { for (const z of S.zombies) if (!z.dead) killZombie(game, S, z, false); },
     forceRound(n) { S.round = n - 1; S.toSpawn = 0; for (const z of S.zombies) if (!z.dead) killZombie(game, S, z, false); startRound(game, S, hud, sfx); },
     god(on) { S.godMode = on !== false; },
