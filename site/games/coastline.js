@@ -604,6 +604,37 @@ function build(game, S) {
   slab(SW.x0 + 2, -9.5, 0, 0.12, -3.4, -SW.thick, mats.concrete, 'wall-walk-w');
   slab(9.5, SW.x1 - 2, 0, 0.12, -3.4, -SW.thick, mats.concrete, 'wall-walk-e');
 
+  /* STEPS UP ONTO THE SEAWALL.
+
+     Without these the whole waterfront is closed. The cap stands at 1.15
+     and the walk behind it at 0.12 -- a metre of rise against a character
+     controller that steps 0.42 -- so the cap, the pier, the gangway and
+     the covered slip were all visible, all built, and none of them
+     reachable on foot. The pier had a weapon on the end of it.
+
+     Three risers each, at 0.34, which is under the step height with room
+     to spare. Placed where there is something to walk to: the foot of the
+     pier, the foot of the slip gangway, and one at each end of the wall
+     so the cap is a route along the water rather than four islands. */
+  const capSteps = (cx, w = 2.2) => {
+    for (let i = 0; i < 3; i++) {
+      /* The top riser arrives two millimetres UNDER the cap and runs into
+         it rather than stopping short. Level with it, the two top faces
+         are one plane and fight over the strip where they meet; stopping
+         short leaves a seventeen-centimetre slot down to the walk. Two
+         millimetres settles it in the cap's favour and loses nothing --
+         the cap is the top step. */
+      const last = i === 2;
+      const y = 0.12 + (i + 1) * ((SW.capY - 0.12) / 3) - (last ? 0.002 : 0);
+      const z1 = last ? -SW.thick + 0.04 : -2.6 + (i + 1) * 0.62 + 0.02;
+      slab(cx - w / 2, cx + w / 2, 0, y, -2.6 + i * 0.62, z1, mats.concrete, 'cap-step-' + i);
+    }
+  };
+  capSteps(C.pier.x);
+  capSteps(C.slip.x + C.slip.halfX - 0.45);
+  capSteps(-34.0);
+  capSteps(30.0);
+
   /* A steel ladder down the face of the wall into the water. In the
      photograph it is the only way back up if you are in the lake, and
      here it is the second way the dead get out. */

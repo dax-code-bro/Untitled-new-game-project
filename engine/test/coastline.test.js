@@ -111,6 +111,44 @@ function check(name, cond, detail = '') {
       }
     }
 
+    /* CAN YOU GET THERE ON FOOT?
+     *
+     * The pier, the seawall cap, the gangway and the covered slip were
+     * all built, all visible, and none of them reachable: the cap stands
+     * at 1.15 and the walk behind it at 0.12, which is a metre of rise
+     * against a controller that steps 0.42. There was a weapon on the end
+     * of the pier.
+     *
+     * Walking the floor height along a straight line from the spawn to
+     * each buy catches that, and catches nothing else: it does not prove
+     * a route exists (the line may cross a wall that a real path would go
+     * round), so a rise is only reported when it persists -- a wall you
+     * can walk round shows up as one or two bad samples, a shelf you
+     * cannot climb anywhere shows up as a rise at the same height on
+     * every approach. Reported as the worst rise on the line, for a
+     * human to judge. */
+    const STEP = 0.42;
+    const floorAt = (x, z) => {
+      const hit = G.raycast([x, 9, z], down, 20);
+      return hit ? 9 - (hit.distance || hit.t || 0) : null;
+    };
+    out.stepWalls = [];
+    for (const b of (C.PLAY.buys || [])) {
+      const from = C.spawn.at;
+      const dx = b.at[0] - from[0], dz = b.at[2] - from[2];
+      const n = Math.max(8, Math.ceil(Math.hypot(dx, dz) / 0.5));
+      let prev = floorAt(from[0], from[2]), worst = 0, worstAt = null;
+      for (let i = 1; i <= n; i++) {
+        const t = i / n;
+        const y = floorAt(from[0] + dx * t, from[2] + dz * t);
+        if (y == null || prev == null) { prev = y; continue; }
+        const rise = y - prev;
+        if (rise > worst) { worst = rise; worstAt = [+(from[0] + dx * t).toFixed(1), +(from[2] + dz * t).toFixed(1)]; }
+        prev = y;
+      }
+      if (worst > STEP) out.stepWalls.push(`${b.id}: ${worst.toFixed(2)}m rise at ${JSON.stringify(worstAt)}`);
+    }
+
     /* COPLANAR FACES.
      *
      * The one that cost the most. Two axis-aligned solids whose faces lie
@@ -175,6 +213,8 @@ function check(name, cond, detail = '') {
     `${r.lawnHoles} holes, first at ${JSON.stringify(r.lawnHoleAt)}`);
   check('every spawn pad is inside the navmesh', r.padsOffMesh.length === 0, r.padsOffMesh.join(', '));
   check('every wall-buy has a floor to stand on', r.buysUnreachable.length === 0, r.buysUnreachable.join(' | '));
+  check('nothing on the way to a wall-buy is too tall to step up',
+    r.stepWalls.length === 0, r.stepWalls.join(' | '));
   check('no two solids fight over the same plane', r.coplanar.length === 0,
     `${r.coplanar.length}: ${r.coplanar.slice(0, 4).join(' | ')}`);
   check('you start on the map rather than under it', r.spawn[1] > 0.2 && r.spawn[1] < 4, JSON.stringify(r.spawn));
