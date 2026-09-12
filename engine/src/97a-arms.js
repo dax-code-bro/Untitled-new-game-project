@@ -671,28 +671,50 @@ function buildDoubleStock(g, C) {
   const bot = C.overUnder ? -(C.spacing || 0.0245) - D.breechR - 0.004 : -D.breechR - 0.014;
 
   if (C.stock === 'full') {
-    /* Wrist into a comb that falls away from the rib — a stock with no
-       drop puts the eye a centimetre over the barrels and looks wrong at
-       a glance even to someone who could not say why. */
+    /* DROP AT COMB.
+     *
+     * The comment below this was already right and the numbers under it
+     * were not: "a stock with no drop puts the eye a centimetre over the
+     * barrels and looks wrong at a glance even to someone who could not
+     * say why."
+     *
+     * Measured, aiming the Scattergun: the bead sits at y 0.0128 and the
+     * comb topped out between 0.000 and +0.006 -- seven to thirteen
+     * millimetres of drop, where a real shotgun has thirty-five to forty.
+     * So the comb was level with the rib, and since the butt is only 167
+     * mm from the eye while every other part of the gun is 430 to 550, it
+     * filled four fifths of the screen. You were not looking along the
+     * rib, you were looking at the top of the stock from a hand's width
+     * away, which is what "some models are glitching" was on this gun.
+     *
+     * The drop ramps from the breech ring, which cannot move because it
+     * has to stay joined to the action, back to the butt: 19 mm at the
+     * wrist and 37 at the heel, measured below the bead.
+     *
+     * Aim is untouched by this. WEAPONS[id].sightH is overwritten at
+     * build time from the model's own sightAt, so the sight goes on the
+     * camera axis wherever the wood happens to be. */
     const st = (x, cy, up, down, hw) => ax(x, roundRect(up, down, hw, 2.4, 22), cy);
     sweepPath(g, [
       st(-0.0620, (top + bot) / 2, (top - bot) / 2 - 0.001, (top - bot) / 2 - 0.001, 0.0180),
-      st(-0.0900, -0.0170, 0.0230, 0.0210, 0.0175),
-      st(-0.1400, -0.0250, 0.0250, 0.0230, 0.0190),
-      st(-0.2100, -0.0330, 0.0330, 0.0300, 0.0215),
-      st(-0.2900, -0.0410, 0.0420, 0.0400, 0.0230),
-      st(-0.3200, -0.0430, 0.0450, 0.0430, 0.0225),
+      st(-0.0900, -0.0290, 0.0230, 0.0210, 0.0175),
+      st(-0.1400, -0.0450, 0.0250, 0.0230, 0.0190),
+      st(-0.2100, -0.0570, 0.0330, 0.0300, 0.0215),
+      st(-0.2900, -0.0670, 0.0420, 0.0400, 0.0230),
+      st(-0.3200, -0.0690, 0.0450, 0.0430, 0.0225),
     ], true, true);
     // Recoil pad: a soft black block, checkered, standing proud.
-    hardBox(g, -0.3235, -0.0430, 0, 0.0035, 0.0470, 0.0230);
-    // Pistol grip swelling under the wrist.
-    gripStack(g, -0.0980, bot - 0.0020, 0.0740, 0.36, [
+    hardBox(g, -0.3235, -0.0690, 0, 0.0035, 0.0470, 0.0230);
+    /* Pistol grip swelling under the wrist. It rides DOWN with the comb:
+       left where it was, the wrist above it grew by the whole of the drop
+       and the hand that grips it floated off the top. */
+    gripStack(g, -0.0980, bot - 0.0150, 0.0740, 0.36, [
       [0.00, 0.0180, 0.0230, 0.0175, 2.6],
       [0.35, 0.0165, 0.0215, 0.0170, 2.5],
       [0.75, 0.0160, 0.0215, 0.0172, 2.5],
       [1.00, 0.0150, 0.0200, 0.0165, 2.8],
     ]);
-    for (const s of [-1, 1]) checker(g, -0.115, bot - 0.040, s * 0.0172, 0.36, -0.93, s, 4, 6, 0.0060, 0.0010);
+    for (const s of [-1, 1]) checker(g, -0.115, bot - 0.053, s * 0.0172, 0.36, -0.93, s, 4, 6, 0.0060, 0.0010);
   } else {
     /* Bobbed grip: cut off behind the wrist, which is the whole point of
        a sawn-off and the reason it kicks the way it does. */

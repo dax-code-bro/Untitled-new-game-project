@@ -356,7 +356,7 @@ const WEAPONS = {
     sightH: 0.0275, sightFov: 0.86, adsTime: 0.24, adsSpread: 0.55,
     recoil: { up: 3.05, side: 0.9, climb: 0.75, recover: 7, back: 0.040, roll: 0.013, impulse: 20 },
     ammo: { shell: { r: 0.00925, len: 0.0700, head: 0.0220 } },
-    hands: { right: [-0.014, -0.046, 0.016], rightGrip: 'wrist', /* NOTE, measured and left alone. `woodFore` declares 92 mm of girth
+    hands: { right: [-0.014, -0.059, 0.016], rightGrip: 'wrist', /* NOTE, measured and left alone. `woodFore` declares 92 mm of girth
        and this gun's forend measures 48 across by 33 deep -- so the hand
        opens for something twice the thickness of what is there. Setting
        it to the measured 50 moved the quadrant split from 75/1/24/0 to
@@ -393,7 +393,14 @@ const WEAPONS = {
     recoil: { up: 2.4, side: 0.85, climb: 0.60, recover: 7.5, back: 0.034, roll: 0.012, impulse: 18 },
     moveMul: 0.94, muzzleVel: 62,
     ammo: { shell: { r: 0.00925, len: 0.0640, head: 0.0260 }, hullMaterial: { color: 0x2b5c74, texture: 'smooth', roughness: 0.5, metalness: 0, emissive: 0x1d6c92, emissiveStrength: 0.55 } },
-    hands: { right: [-0.014, -0.046, 0.016], rightGrip: 'wrist', left: [0.268, -0.010, -0.020], leftGrip: 'tube' },
+    hands: { /* Half the drop the Scattergun's hand took, not all of it.
+         Both guns share the full stock, so both wrists came down 13 mm --
+         but this one's trigger sits where it sat, and following the wood
+         all the way pushed the index finger from 8 per cent buried in the
+         weapon to 17. The hand rides a little high on the comb instead,
+         which nothing can see; a trigger finger inside the guard is
+         visible every time you fire. */
+      right: [-0.014, -0.0525, 0.016], rightGrip: 'wrist', left: [0.268, -0.010, -0.020], leftGrip: 'tube' },
   },
   mp5: {
     name: 'MP5', slotName: 'MP5',
