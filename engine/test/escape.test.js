@@ -56,6 +56,14 @@ function check(name, cond, detail = '') {
   const r = await page.evaluate(() => {
     const B = BUNKER.start({ canvas: '#game', test: true, quality: 'low', map: 'coastline' });
     const S = B.S, P = B.P, G = B.game, C = window.COASTLINE;
+    /* Run the cutscene at four times speed. Nine seconds of boat and
+       nine of beach is 1100 frames of full-screen water under
+       SwiftShader, which is minutes of wall clock for a thing whose
+       shape -- stage 0, fade, stage 2, title -- is identical at any
+       duration. The timings themselves are checked against the map's
+       own numbers below, not against these. */
+    if (S.escape) { S.escape.def = Object.assign({}, S.escape.def,
+      { run: C.ESCAPE.run / 4, fade: C.ESCAPE.fade / 4, sit: C.ESCAPE.sit / 4 }); }
     const T = window.__T, SYS = window.__T_SYS;
     const step = (n) => { for (let i = 0; i < n; i++) { S.toSpawn = 0; S.spawnT = 1e9; G.step(1 / 60); } };
     step(12);
@@ -128,7 +136,7 @@ function check(name, cond, detail = '') {
 
     // The boat moves, and the camera is no longer in the player's head.
     const z0 = S.escape.boatParts.length ? S.escape.boatParts[0].position.z : null;
-    step(180);
+    step(60);
     const z1 = S.escape.boatParts.length ? S.escape.boatParts[0].position.z : null;
     out.boatMoved = (z0 != null && z1 != null) ? +(z1 - z0).toFixed(2) : null;
     const camNow = [G.camera.position.x, G.camera.position.y, G.camera.position.z];
@@ -138,7 +146,7 @@ function check(name, cond, detail = '') {
     out.stage = S.escape.stage;
 
     // --- all the way to the beach ---------------------------------------
-    const D = C.ESCAPE;
+    const D = S.escape.def;
     step(Math.ceil((D.run + D.fade + D.sit + 3) * 60));
     out.endStage = S.escape.stage;
     out.done = !!S.escape.done;

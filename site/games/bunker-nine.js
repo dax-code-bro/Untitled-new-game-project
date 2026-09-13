@@ -3808,8 +3808,13 @@ function placeOnBeach(game, S, P) {
     at: [(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2],
     size: [x1 - x0, y1 - y0, z1 - z0], material: m, physics: false });
 
-  box(B[0] - 60, B[0] + 60, B[1] - 0.4, B[1], B[2] - 40, B[2] + 14, sand);
-  box(B[0] - 200, B[0] + 200, B[1] - 0.35, B[1] - 0.06, B[2] + 13, B[2] + 200, sea);
+  /* Both of these are as small as the shot allows. The first version
+     laid 120 by 54 metres of sand and a 400 by 190 sea, which is a lot
+     of fragment for two surfaces that fill the frame anyway -- and the
+     camera never moves more than seven metres, so nothing past about
+     thirty is ever in it except as horizon. */
+  box(B[0] - 30, B[0] + 30, B[1] - 0.4, B[1], B[2] - 22, B[2] + 14, sand);
+  box(B[0] - 120, B[0] + 120, B[1] - 0.35, B[1] - 0.06, B[2] + 13, B[2] + 120, sea);
   // Three palms behind, leaning the way palms do.
   for (const [px, pz, h2, lean] of [[-7.5, -7.0, 6.2, 0.5], [5.4, -8.5, 5.4, -0.4], [10.5, -4.0, 6.8, 0.3]]) {
     for (let i = 0; i < 7; i++) {
