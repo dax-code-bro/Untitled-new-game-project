@@ -429,7 +429,14 @@ const WEAPONS = {
        z -17 to +17; the hand was anchored at y -14, z -20 -- below it and
        outside it, 21 mm from the nearest metal. On the underside, on the
        centreline. */
-      left: [0.232, 0, 0], leftGrip: 'fore' },
+      /* EXPERIMENT, one weapon only: does the ANCHOR move the numbers
+         when the curl cannot? Six changes to solveCurl left this gun's
+         support fingers at +28, +30 and +30 mm above the sight line,
+         byte-identical every time. If dropping the knuckle row 35 mm
+         moves them and nothing else on the map changes, the lever is
+         here and the rest is per-weapon measurement. If it does not,
+         the fault is further up still. */
+      left: [0.232, -0.035, 0], leftGrip: 'fore' },
   },
   sawnoff: {
     name: 'Sawn-Off', slotName: 'SAWN-OFF',
