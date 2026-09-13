@@ -1536,7 +1536,16 @@ function build(game, S) {
        in a street is that you break line of sight behind it and the
        dead have to come round. Collision is one box, not eleven: the
        cabin is a step you can get up on and the sills are not. */
-    slab(x - hx, x + hx, 0, 1.04, z - hz, z + hz, body, 'car-hull');
+    /* 1.40, not 1.04 -- and the extra 36 cm is not cosmetic.
+    
+       The navmesh is baked by sweeping rays across the map at a height of
+       1.05 m and marking what they hit. A car whose collision stops at
+       1.04 is exactly one centimetre too short to be seen by that sweep:
+       solid to a body, invisible to the thing that plans routes round
+       bodies. Every one of these would have been a car the dead walk into
+       and stand against for the rest of the round. Up to the roofline,
+       where it should have been anyway. */
+    slab(x - hx, x + hx, 0, 1.40, z - hz, z + hz, body, 'car-hull');
   };
   {
     const R = C.street;

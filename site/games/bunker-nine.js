@@ -9539,6 +9539,39 @@ function navClear(nav, a, b) {
 }
 
 /* Waypoint chains between rooms. Small map, hand-authored graph. */
+/* Walk round what is in the way.
+ *
+ * Straight at the player is right until something is between you and
+ * them; then it is a body pressing into a wall for the rest of the
+ * round. This was written once inside the same-room branch and the
+ * cross-room branch never got it -- see the note there -- so it is a
+ * function now and both use it.
+ *
+ * The path is recomputed only when the player has moved a metre and a
+ * half or the old one has gone stale, so a room full of them is not a
+ * room full of searches. Returns null when the direct line is clear,
+ * which is the common case and costs one raycast. */
+function navSteer(S, z, nav, pos, target, d) {
+  if (!nav || d <= 1.6) { z.navPath = null; return null; }
+  if (navClear(nav, pos, target)) { z.navPath = null; return null; }
+  const stale = !z.navPath || (z.navAt == null) || (S.time - z.navAt > 0.7)
+    || dist2d(z.navFor || { x: 1e9, z: 0 }, target) > 1.5;
+  if (stale) {
+    z.navPath = navPath(nav, pos, target);
+    z.navAt = S.time;
+    z.navFor = { x: target.x, z: target.z };
+    z.navIdx = 0;
+  }
+  const path = z.navPath;
+  if (!path || !path.length) return null;
+  let wp = path[Math.min(z.navIdx, path.length - 1)];
+  if (dist2d(pos, { x: wp[0], z: wp[2] }) < 0.55) {
+    z.navIdx = Math.min(z.navIdx + 1, path.length - 1);
+    wp = path[z.navIdx];
+  }
+  return [wp[0], wp[2]];
+}
+
 function routeTo(fromRoom, toRoom, S) {
   /* Hand-authored for the bunker: its one internal door and its one
      staircase. A map without either has no rooms to route between in the
@@ -10820,29 +10853,8 @@ function updateZombie(game, S, P, z, dt, sfx) {
          gone stale, so a room full of them is not a room full of searches. */
       const nav = S.nav && (zr === 'roof' ? S.nav.roof : S.nav.ground);
       let tx = target.x, tz = target.z;
-      if (nav && d > 1.6) {
-        const straight = navClear(nav, pos, target);
-        if (straight) { z.navPath = null; }
-        else {
-          const stale = !z.navPath || (z.navAt == null) || (S.time - z.navAt > 0.7)
-            || dist2d(z.navFor || { x: 1e9, z: 0 }, target) > 1.5;
-          if (stale) {
-            z.navPath = navPath(nav, pos, target);
-            z.navAt = S.time;
-            z.navFor = { x: target.x, z: target.z };
-            z.navIdx = 0;
-          }
-          const path = z.navPath;
-          if (path && path.length) {
-            let wp = path[Math.min(z.navIdx, path.length - 1)];
-            if (dist2d(pos, { x: wp[0], z: wp[2] }) < 0.55) {
-              z.navIdx = Math.min(z.navIdx + 1, path.length - 1);
-              wp = path[z.navIdx];
-            }
-            tx = wp[0]; tz = wp[2];
-          }
-        }
-      } else z.navPath = null;
+      const steered = navSteer(S, z, nav, pos, target, d);
+      if (steered) { tx = steered[0]; tz = steered[1]; }
       /* Runs because it is a runner, not because its speed happens to be
          over a number. The threshold was 2.4, which slowing the runners
          down would have quietly dropped half of them back to a walk. */
@@ -10879,7 +10891,30 @@ function updateZombie(game, S, P, z, dt, sfx) {
         z.wpIdx = Math.min(z.wpIdx + 1, route.length - 1);
         wp = route[z.wpIdx];
       }
-      if (wp) move(wp[0], wp[2]); else move(target.x, target.z);
+      if (wp) move(wp[0], wp[2]);
+      else {
+        /* NO HAND-AUTHORED ROUTE, SO USE THE NAVMESH -- which is what the
+           comment on routeTo always claimed happened and what never
+           actually did.
+           
+           routeTo is a table of waypoints through the bunker's one door
+           and its one staircase. A map without either returns an empty
+           list, and this branch then walked STRAIGHT AT the player. On
+           Coastline that is every zombie that comes out of the lake,
+           because roomAt calls the water 'pier' or 'slip' and the lawn
+           'green' -- so they are cross-room from the moment they spawn,
+           they never touch the navmesh, and they walk into the seawall
+           and stand there. Measured: none of the five ways in got a body
+           within thirty metres of a player standing on the lawn, and two
+           of the five were stuck on dry land, which is what ruled out
+           swimming as the cause.
+           
+           The navmesh is the fallback now, the same one the same-room
+           case uses. */
+        const nav2 = S.nav && (zr === 'roof' || pr === 'roof' ? S.nav.roof : S.nav.ground);
+        const st2 = navSteer(S, z, nav2, pos, target, d);
+        if (st2) move(st2[0], st2[1]); else move(target.x, target.z);
+      }
       playZombieAnim(z, z.moveClip);
     }
 
