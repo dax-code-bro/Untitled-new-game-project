@@ -11566,6 +11566,39 @@ function nearestInteract(S, P) {
     }
   }
 
+  /* THE FLAMINGO, on the bottom of the lake.
+   *
+   * The same bargain the rock offers, asked in a place that costs
+   * something to reach: you have to be IN the water and under it, which
+   * means you arrived without being able to shoot on the way and you
+   * have to get back out again. No power requirement and nothing to wake
+   * up first -- the trip is the gate.
+   *
+   * It has to be asked BEFORE the surface guard below. That guard exists
+   * for the bunker, where everything under y -0.5 is the basement and the
+   * only interacts down there belong to the shop; on Coastline y -0.5 is
+   * two feet of lake. The flamingo sits at -1.27 and the player kneeling
+   * on the bed sits at -0.92, so with the block in its natural place --
+   * next to the meteorite, which is the other upgrade machine -- the
+   * function returned null before it ever got there. Everything built,
+   * nothing happened, and the render showed a flamingo you could swim
+   * into and not use. */
+  const pap = S.pap;
+  if (pap && dist2d(p, { x: pap.at[0], z: pap.at[2] }) < 2.2 && Math.abs(p.y - pap.at[1]) < 2.2) {
+    if (pap.holding) return { kind: 'papTake', cost: 0, label: `Take the ${WEAPONS[pap.holding].name}` };
+    if (pap.busy) return { kind: 'papCold', cost: 0, label: 'It is working on it', inert: true };
+    if (!P.underwater) {
+      return { kind: 'papCold', cost: 0, label: 'It is under the water', inert: true };
+    }
+    const heldP = P.equipped();
+    if (ATTACH.noWork.includes(heldP) || P.upgraded[heldP]) {
+      return { kind: 'papCold', cost: 0,
+        label: P.upgraded[heldP] ? `The ${P.spec().name} has been through already`
+          : `It does not want the ${P.spec().name}`, inert: true };
+    }
+    return { kind: 'pap', cost: ECONOMY.upgrade, label: `Feed it the ${WEAPONS[heldP].name} — ${ECONOMY.upgrade}` };
+  }
+
   /* Everything past here is on the surface. Most of these checks are
      distance in the horizontal plane only, so from the basement — directly
      under the mess — you could reach up through the floor and buy the
@@ -11623,28 +11656,6 @@ function nearestInteract(S, P) {
     return { kind: 'meteor', cost: ECONOMY.upgrade, label: `Upgrade the ${WEAPONS[held].name} — ${ECONOMY.upgrade}` };
   }
 
-  /* THE FLAMINGO, on the bottom of the lake.
-   *
-   * The same bargain the rock offers, asked in a place that costs
-   * something to reach: you have to be IN the water and under it, which
-   * means you arrived without being able to shoot on the way and you
-   * have to get back out again. No power requirement and nothing to wake
-   * up first -- the trip is the gate. */
-  const pap = S.pap;
-  if (pap && dist2d(p, { x: pap.at[0], z: pap.at[2] }) < 2.2 && Math.abs(p.y - pap.at[1]) < 2.2) {
-    if (pap.holding) return { kind: 'papTake', cost: 0, label: `Take the ${WEAPONS[pap.holding].name}` };
-    if (pap.busy) return { kind: 'papCold', cost: 0, label: 'It is working on it', inert: true };
-    if (!P.underwater) {
-      return { kind: 'papCold', cost: 0, label: 'It is under the water', inert: true };
-    }
-    const heldP = P.equipped();
-    if (ATTACH.noWork.includes(heldP) || P.upgraded[heldP]) {
-      return { kind: 'papCold', cost: 0,
-        label: P.upgraded[heldP] ? `The ${P.spec().name} has been through already`
-          : `It does not want the ${P.spec().name}`, inert: true };
-    }
-    return { kind: 'pap', cost: ECONOMY.upgrade, label: `Feed it the ${WEAPONS[heldP].name} — ${ECONOMY.upgrade}` };
-  }
 
   /* A gun an enemy left behind: it spins and it expires, but it still
      has to be asked for. */
@@ -13500,19 +13511,46 @@ function start(opts = {}) {
           P.underwater = eyeY < pw.surface - 0.02;
           /* Out of your depth: the floor is further below you than you
              are tall, so there is nothing to push off. */
-          P.swimming = (pw.surface - pw.bed) > 1.15 && depth > 0.55;
+          P.swimming = (pw.surface - pw.bed) > 1.15 && depth > 0.45;
+          const body = P.actor.controller.body;
+          /* WATER IS DRAG, and it is drag from the moment you are in it.
+           *
+           * This was missing and the map was unplayable because of it.
+           * Swimming only engaged at 0.55 m of depth, so a body that
+           * walked off the end of the pier fell that far under gravity
+           * first, and the code that took over then eased its velocity
+           * toward zero at seven per cent a frame -- half a second of
+           * easing while it was already doing four metres a second. The
+           * measured result was a player who stepped into the lake at the
+           * surface and was on the bed, a metre and a half down, four
+           * tenths of a second later. You could not float. There was no
+           * swimming on this map at all; there was falling through water.
+           *
+           * A body entering water loses its vertical speed in a fraction
+           * of a second, so that is what this does, and it does it before
+           * anything else decides what you are doing down there. */
+          if (body && depth > 0.15) {
+            body.velocity.y -= body.velocity.y * Math.min(1, dt * (P.swimming ? 11 : 6));
+          }
           if (P.swimming) {
-            const body = P.actor.controller.body;
             if (body) {
               body.gravityScale = 0;
-              /* Look where you are going. Down and forward takes you
-                 under; level holds you at the surface; up brings you back.
+              /* Look where you are going. Moving takes you where you are
+                 pointed; standing still under the water holds you where
+                 you are, so you can sit on the bed and work the machine.
+                 What you cannot do is drown by accident: idle and looking
+                 level or up, you come back to the surface.
                  The vertical rate is deliberately slow -- a body in water
                  does not dart. */
               const pitch = game._camPitch || 0;   // POSITIVE looks DOWN
-              const want = (Math.hypot(wx, wz) > 0.05) ? -pitch * 1.7 : 0;
-              const rise = P.underwater ? 0 : Math.min(0, want);
-              body.velocity.y += ((P.underwater ? want : rise) - body.velocity.y) * Math.min(1, dt * 4.5);
+              const moving = Math.hypot(wx, wz) > 0.05;
+              // Floating height: eyes and mouth clear of the surface.
+              const floatY = pw.surface - 0.595;
+              let want = moving ? -pitch * 1.7 : 0;
+              if (!moving && pitch < 0.05) {
+                want = Math.max(-0.8, Math.min(1.2, (floatY - P.actor.position.y) * 1.3));
+              }
+              body.velocity.y += (want - body.velocity.y) * Math.min(1, dt * 9);
               /* And a floor: you cannot swim through the bed. */
               if (P.actor.position.y < pw.bed + 0.55) {
                 P.actor.setPosition([P.actor.position.x, pw.bed + 0.55, P.actor.position.z]);
