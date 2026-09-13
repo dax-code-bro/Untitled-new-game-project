@@ -45,7 +45,12 @@ function check(name, cond, detail = '') {
     args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader',
       '--disable-dev-shm-usage'],
   });
-  const page = await browser.newPage({ viewport: { width: 760, height: 430 } });
+  /* Small on purpose. Every one of the thousand-odd steps this test
+     takes is a rendered frame under SwiftShader on a map that now has a
+     street, four furnished houses and seven cars in it, and the cost is
+     linear in pixels. The checks are all about state; only the last
+     screenshot wants the pixels, and 512 is plenty to see a beach. */
+  const page = await browser.newPage({ viewport: { width: 512, height: 288 } });
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message.split('\n')[0]));
   await page.setContent('<body style="margin:0"><canvas id="game" style="position:fixed;inset:0;width:100%;height:100%"></canvas></body>');
