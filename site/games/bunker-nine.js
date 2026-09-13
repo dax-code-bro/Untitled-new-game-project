@@ -3685,6 +3685,10 @@ function updateEscape(game, S, P, hud, sfx, dt) {
 
   E.t += dt;
   const D = E.def;
+  /* Every frame, not once. Hiding the viewmodel at cast-off is not
+     enough on its own: several things turn parts of it back on, and the
+     first cut of this had a 1911 hanging in the corner of the beach. */
+  for (const v of Object.values(P.view)) { if (v && v.parts) setViewVisible(v, false); }
 
   /* Stage one: out across the lake. The camera is no longer the
      player's -- it sits off the boat's quarter and watches it go. */
@@ -3745,7 +3749,11 @@ function beginEscape(game, S, P, hud, sfx) {
   E.running = true; E.stage = 0; E.t = 0;
   sfx.roundSting();
   hud.banner('', '#e8c86a');
-  hud.els.prompt.style.opacity = 0;
+  hud.cinema(true);
+  // And nobody talks over it. Control is still on the radio about the
+  // lights being out; you are forty metres offshore and not listening.
+  hud.els.subs.style.opacity = 0;
+  S.voiceMuted = true;
   /* The dead stop mattering, and they do it by the whole round loop
      stopping rather than by anything being despawned: you are watching
      from forty metres out on the water and they are still standing on
@@ -3797,7 +3805,10 @@ function placeOnBeach(game, S, P) {
   const B = E.beachAt;
   const M = (spec) => game.material(spec);
   const sand = M({ color: 0xe8dcbe, texture: 'sand', roughness: 0.98, metalness: 0, uvScale: 24 });
-  const sea = M({ color: 0x6fd0d8, texture: 'smooth', roughness: 0.14, metalness: 0, castShadow: false });
+  /* Turquoise, and properly saturated -- the first one was so pale that
+     against washed-out sand it read as more sand. */
+  const sea = M({ color: 0x2f9ec8, texture: 'smooth', roughness: 0.12, metalness: 0, castShadow: false });
+  const surf = M({ color: 0xe8f6f8, texture: 'smooth', roughness: 0.5, metalness: 0, castShadow: false });
   const bark = M({ color: 0x9c8570, texture: 'wood', roughness: 0.95, metalness: 0, uvScale: 4 });
   const frond = M({ color: 0xbfe08a, texture: 'grass', roughness: 0.9, metalness: 0, uvScale: 2, subsurface: 0.4 });
   const canvasM = M({ color: 0xe4e0d2, texture: 'fabric', roughness: 0.96, metalness: 0, uvScale: 3 });
@@ -3814,9 +3825,17 @@ function placeOnBeach(game, S, P) {
      camera never moves more than seven metres, so nothing past about
      thirty is ever in it except as horizon. */
   box(B[0] - 30, B[0] + 30, B[1] - 0.4, B[1], B[2] - 22, B[2] + 14, sand);
-  box(B[0] - 120, B[0] + 120, B[1] - 0.35, B[1] - 0.06, B[2] + 13, B[2] + 120, sea);
+  box(B[0] - 120, B[0] + 120, B[1] - 0.35, B[1] - 0.05, B[2] + 13, B[2] + 120, sea);
+  // A line of surf where it meets the sand, because a flat edge between
+  // two colours is a join and not a shore.
+  box(B[0] - 40, B[0] + 40, B[1] - 0.30, B[1] - 0.02, B[2] + 12.4, B[2] + 14.2, surf);
   // Three palms behind, leaning the way palms do.
-  for (const [px, pz, h2, lean] of [[-7.5, -7.0, 6.2, 0.5], [5.4, -8.5, 5.4, -0.4], [10.5, -4.0, 6.8, 0.3]]) {
+  /* Where the camera can see them. The first three were at pz -7 to
+     -8.5, which is BEHIND the camera -- it sits at about B[2] minus five
+     and looks down +Z -- so two of the three palms were out of shot
+     entirely and the third was a green smudge in the top corner. Out to
+     the sides and slightly ahead, where they frame the figure. */
+  for (const [px, pz, h2, lean] of [[-10.0, -1.5, 6.2, 0.5], [11.0, 1.0, 5.4, -0.4], [-13.0, 4.0, 6.8, 0.3]]) {
     for (let i = 0; i < 7; i++) {
       const t = i / 7, t2 = (i + 1) / 7;
       box(B[0] + px + lean * t * t * 2 - 0.16, B[0] + px + lean * t2 * t2 * 2 + 0.16,
@@ -3831,9 +3850,22 @@ function placeOnBeach(game, S, P) {
         B[2] + pz + Math.min(0, dz), B[2] + pz + Math.max(0, dz), frond);
     }
   }
-  // The lounger, the little table, and the drink on it.
-  box(B[0] + 0.6, B[0] + 1.5, B[1] + 0.30, B[1] + 0.38, B[2] - 1.1, B[2] + 0.9, canvasM);
-  box(B[0] + 0.6, B[0] + 1.5, B[1] + 0.38, B[1] + 0.95, B[2] - 1.6, B[2] - 1.1, canvasM);
+  /* The lounger. Striped, and the back RAKED rather than upright -- a
+     white slab with a white slab standing on the end of it is a bench,
+     and the first cut of this read as exactly that. The stripes are
+     alternating slats, which is what a deck chair actually is. */
+  const stripe = M({ color: 0xd8604c, texture: 'fabric', roughness: 0.96, metalness: 0, uvScale: 2 });
+  for (let i = 0; i < 7; i++) {
+    const z0 = B[2] - 1.10 + i * 0.28;
+    box(B[0] + 0.6, B[0] + 1.5, B[1] + 0.30, B[1] + 0.37, z0, z0 + 0.24,
+      i % 2 ? stripe : canvasM);
+  }
+  // The back, leaning away in four steps.
+  for (let i = 0; i < 4; i++) {
+    const t = i / 4, t2 = (i + 1) / 4;
+    box(B[0] + 0.6, B[0] + 1.5, B[1] + 0.33 + t * 0.52, B[1] + 0.35 + t2 * 0.52,
+      B[2] - 1.16 - t2 * 0.44, B[2] - 1.06 - t * 0.44, i % 2 ? stripe : canvasM);
+  }
   for (const sx of [0.7, 1.4]) for (const sz of [-1.0, 0.8]) {
     box(B[0] + sx - 0.03, B[0] + sx + 0.03, B[1], B[1] + 0.30, B[2] + sz - 0.03, B[2] + sz + 0.03, timber);
   }
@@ -3841,9 +3873,15 @@ function placeOnBeach(game, S, P) {
   box(B[0] + 2.35, B[0] + 2.45, B[1], B[1] + 0.42, B[2] - 0.25, B[2] - 0.15, timber);
   box(B[0] + 2.32, B[0] + 2.48, B[1] + 0.48, B[1] + 0.66, B[2] - 0.28, B[2] - 0.12, glassM);
   box(B[0] + 2.33, B[0] + 2.47, B[1] + 0.50, B[1] + 0.62, B[2] - 0.27, B[2] - 0.13, drink);
-  // Warm light, from the other side, because it is morning there.
-  game.light({ at: [B[0] - 8, B[1] + 7, B[2] - 6], color: 0xffe2b0, intensity: 90, radius: 40 });
-  game.light({ at: [B[0] + 6, B[1] + 5, B[2] + 8], color: 0xbfe8ff, intensity: 50, radius: 34 });
+  /* Light, and not much of it.
+   *
+   * The first version put a 90 and a 50 down here on top of a 2.3 sun
+   * and a 1.16 exposure, and the beach came out as a sheet of white with
+   * a figure standing on it -- no sand, no horizon, no water. Sand is a
+   * bright surface already; what it needs is a sky, not lamps. These two
+   * are fill, and they are a fifth of what they were. */
+  game.light({ at: [B[0] - 8, B[1] + 7, B[2] - 6], color: 0xffe2b0, intensity: 18, radius: 26 });
+  game.light({ at: [B[0] + 6, B[1] + 5, B[2] + 8], color: 0xbfe8ff, intensity: 10, radius: 22 });
 
   /* And the character. The same dressed model the select screen builds,
      so whoever you picked is who is standing on the sand -- all ten of
@@ -3866,10 +3904,11 @@ function placeOnBeach(game, S, P) {
   /* A different sky. The map is a grey dusk over cold water and this is
      the opposite of it, which is the whole point of the shot. */
   game.setSky('day', {
-    zenith: 0x5fa8d8, horizon: 0xffd9a0, ground: 0xe8dcbe,
-    sun: [-0.5, 0.62, 0.6], sunColor: 0xfff0d0, sunIntensity: 2.3, intensity: 2.0,
-    exposure: 1.16, clouds: 0.2, room: 0xbfd8e8, fog: 0xd8e8f0, fogDensity: 0.0016,
+    zenith: 0x3f8fd0, horizon: 0xffcf90, ground: 0xd8c8a4,
+    sun: [-0.5, 0.52, 0.6], sunColor: 0xfff0d0, sunIntensity: 1.35, intensity: 1.15,
+    exposure: 0.92, clouds: 0.24, room: 0x8fb8d8, fog: 0xbcd8e8, fogDensity: 0.0022,
   });
+  if (game.renderer && game.renderer.post) { game.renderer.post.vignette = 0.16; game.renderer.post.grain = 0.01; }
 }
 
 /* Build whichever map was chosen. The bunker's own builder is below,
@@ -13046,6 +13085,22 @@ function makeHud() {
       els.fadeout.style.transition = `opacity ${seconds == null ? 1.4 : seconds}s linear`;
       els.fadeout.style.opacity = v;
     },
+    /* Everything off but the picture.
+     *
+     * The first cut of Coastline's ending played with the whole HUD
+     * still up -- round counter, points, ammo, a pistol in the corner
+     * and control talking over it about the lights being out. All of
+     * that is the round, and the round is the thing you have just left.
+     * An ending with a stamina bar on it is a screenshot of a game, not
+     * an ending. */
+    cinema(on) {
+      for (const k of ['round', 'points', 'ammo', 'wname', 'prompt', 'subs', 'cross',
+        'stam', 'shield', 'perks', 'grace', 'vig', 'scope', 'dmg', 'hitm', 'pdelta',
+        'cursorwarn', 'build']) {
+        const e2 = els[k];
+        if (e2) { e2.style.transition = 'opacity .5s'; e2.style.opacity = on ? 0 : 1; }
+      }
+    },
     /* The other ending. Bunker Nine has YOU FELL; this is what Coastline
        has instead, and it is the only screen in the game that is not
        about how far you got. */
@@ -13513,7 +13568,12 @@ function start(opts = {}) {
   // Shared between the radio and the character, so only one of them is
   // ever writing to the single subtitle slot.
   const speech = { until: 0 };
-  const voice = makeVoice(game, hud, () => S.gameOver, speech);
+  /* "Is anybody still talking?" -- and the answer is no once the boat
+     has gone. Control is a radio in a bunker; forty metres offshore you
+     are not listening, and a line about the lights being out over the
+     top of the ending is the wrong note on the one screen that only ever
+     plays once. */
+  const voice = makeVoice(game, hud, () => S.gameOver || S.voiceMuted, speech);
   S.voice = voice;
 
   /* Who you are.
@@ -13527,7 +13587,7 @@ function start(opts = {}) {
     if (saved && HEROES[saved]) S.heroId = saved;
   } catch (e) { /* storage off; the default stands */ }
   S.hero = () => Object.assign({ id: S.heroId }, HEROES[S.heroId]);
-  const bark = makeHeroVoice(game, hud, S.hero, () => S.gameOver, speech);
+  const bark = makeHeroVoice(game, hud, S.hero, () => S.gameOver || S.voiceMuted, speech);
   S.bark = bark;
   hud.picker(() => S.heroId, (id) => {
     S.setHero(id);
