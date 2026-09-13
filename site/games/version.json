@@ -1,8 +1,8 @@
 {
-  "version": "0.7.0",
-  "name": "the way out",
+  "version": "0.7.1",
+  "name": "steady hands",
   "date": "2026-09-13",
   "mode": "zombies",
-  "did": "Coastline has a street now, with two more houses on it, seven abandoned cars and insides for all four -- partitions, doorways and furniture, so a house is rooms and not a cave. Four doors to buy, and each one opens a barricade inside that house. And there is a way off the map: a jerry can in the last house on the street, a boat moored past the hole in the pier, and a lake with nothing on the other side of it.",
+  "did": "A pad button that nobody is pressing is no longer treated as a press. A worn shoulder or a resting trigger used to board barricades by walking up to them and start the round before you had chosen a character; the engine now refuses any button until it has seen it released once. Auto repair is gone entirely -- boarding a window is holding the use key and nothing else.",
   "onAccept": "Your round is saved and the map is rebuilt. You keep your points, your guns and your perks, and the dead hold off for three minutes while you get set."
 }
