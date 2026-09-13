@@ -14326,7 +14326,11 @@ function start(opts = {}) {
 
   rollShop(S);
   if (!opts.test) game.start();
-  return { game, S, P };
+  /* `hud` goes out with the rest so a test can drive the pieces of the
+     front end that only ever appear in response to something external --
+     the update notice, which otherwise needs a real new build published
+     to the real server before it can be looked at once. */
+  return { game, S, P, hud };
 }
 
 /* The imported body for the male zombie. Loaded once before the game
