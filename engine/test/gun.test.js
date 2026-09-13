@@ -25,6 +25,9 @@ const fs = require('fs'), R = '/home/user/Untitled-new-game-project/';
 const REAL_MM = {
   m1911: 216, blaze: 216, thompson: 857, mp5: 680, scatter: 890,
   sawnoff: 400, mauser: 288, remington: 1092, mg42: 1220, obliterator: 300,
+  // A box-fed gas 12-gauge: 375 mm barrel on a 190 mm receiver and a
+  // fixed stock. Saiga-12 class, and that is a 980 mm gun.
+  breakwater: 870,
 };
 
 /* Parts that are MEANT to be paper-thin, by name. The thinness rule

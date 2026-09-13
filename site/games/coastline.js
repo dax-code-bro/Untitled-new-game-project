@@ -459,6 +459,14 @@ const PLAY = {
        nearest floor was the lake bed four and a half metres down. */
     { id: 'paralyzer', at: [C.slip.x + C.slip.halfX - 0.45, C.water.y + 2.30, C.slip.z - C.slip.halfZ + 0.05],
       weapon: 'paralyzer', label: 'Paralyzer', face: 'N' },
+    /* The Breakwater, on the two-storey's water side at the far end from
+       the Scattergun. Two shotguns on one wall would be a shop; at
+       opposite ends of the same house they are a choice you make on the
+       way past -- eight in the box and a long reload, or two barrels and
+       a short one. This is the map's own gun, so it is on the map's
+       biggest building and not hidden at the end of a pier. */
+    { id: 'breakwater', at: [C.twoStorey.x + 5.0, 1.42, C.twoStorey.z + C.twoStorey.d / 2 + 0.06],
+      weapon: 'breakwater', label: 'Breakwater', face: 'N' },
   ],
   /* The four perks, each with its back to something, none of them within
      sight of another -- a corner you can hold is a corner with one perk
@@ -1414,14 +1422,27 @@ function waterAt(x, z) {
    pool-toy finish rather than as a camouflage pattern, which is the
    point of it.
 
-   Worth being plain about the limit: the individual floaties are not
-   drawn, because a texture bank that generates its patterns
-   procedurally cannot be handed a picture of a rubber duck. If the
-   pattern matters more than the colour, that is a new recipe in
-   engine/src/40-material.js rather than a tint here. */
+   This said, for a while, that the individual floaties could not be
+   drawn -- that a texture bank generating its patterns procedurally
+   cannot be handed a picture of a rubber duck. That was true of the
+   recipes that existed and false of the bank: a recipe is a function of
+   one texel, and nothing stops it being a function that evaluates seven
+   placed shapes and asks whether this texel is inside one. Ducks are two
+   circles and a wedge; flamingos are a circle, an arc and a beak; rings
+   are one circle minus another. So they are drawn, in
+   engine/src/40-material.js under `floaties`, and they are on the gun.
+
+   The tint stays near white on purpose. The recipe carries its own
+   colour -- the blue of the water and the colours of the toys -- and a
+   material tint MULTIPLIES it, so a baby-blue tint over a baby-blue
+   recipe is navy with the pattern lost in it. That mistake cost two
+   passes on this map's ground already. */
 const CAMO = {
-  color: 0x7fd4e8, texture: 'smooth', roughness: 0.22, metalness: 0.35,
-  emissive: 0x2fa8d8, emissiveStrength: 0.85, subsurface: 0.3,
+  color: 0xf2fbff, texture: 'floaties', roughness: 0.24, metalness: 0.08,
+  emissive: 0x2fa8d8, emissiveStrength: 0.30, subsurface: 0.25,
+  // Small enough that a whole toy fits on a receiver flat rather than
+  // one duck being stretched the length of a barrel.
+  uvScale: 3.2,
 };
 
 window.COASTLINE = {

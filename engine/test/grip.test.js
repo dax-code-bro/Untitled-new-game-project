@@ -324,6 +324,10 @@ const R = path.join(__dirname, '..', '..') + '/';
     thompson: { r0: 0, l0: 8, r1: 0, l1: 8, r2: 8, l2: 8, index: 17, l3: 8 },
     scatter: { r0: 0, l0: 0, r1: 0, l1: 8, r2: 8, l2: 8, index: 0, l3: 8 },
     arc: { r0: 0, l0: 0, r1: 0, l1: 0, r2: 0, l2: 0, index: 25, l3: 8 },
+    // The Mark II shares the Arc Breaker's frame and so its hands.
+    arc2: { r0: 0, l0: 0, r1: 0, l1: 0, r2: 0, l2: 0, index: 25, l3: 8 },
+    // Coastline's shotgun, measured on the day it was built.
+    breakwater: { r0: 0, l0: 8, r1: 0, l1: 8, r2: 17, l2: 0, index: 17, l3: 0 },
     obliterator: { r0: 8, l0: 0, r1: 8, l1: 0, r2: 8, l2: 0, index: 25, l3: 0 },
     mauser: { r0: 17, l0: 25, r1: 8, l1: 17, r2: 0, l2: 0, index: 17, l3: 8 },
     paralyzer: { r0: 0, l0: 33, r1: 0, l1: 42, r2: 8, l2: 25, index: 8, l3: 25 },

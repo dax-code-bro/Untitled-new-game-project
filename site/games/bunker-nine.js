@@ -220,6 +220,12 @@ const AMMO = {
   mag500: { headR: 0.00740, caseR: 0.00700, neckR: 0.00680, caseLen: 0.0410, overall: 0.0530 },
   // 7.92x57 for the MG.
   mauser8: { headR: 0.00595, caseR: 0.00570, neckR: 0.00420, caseLen: 0.0570, overall: 0.0805 },
+  /* 12 gauge, as a cartridge rather than as the break-action `shell`
+     prop. The three double guns describe their shells with {r, len,
+     head} because they are laid into open chambers; this one has to go
+     in a magazine, and the magazine builder speaks cartridges. Brass
+     head, straight hull, no neck -- a shotgun shell has no shoulder. */
+  gauge12: { headR: 0.01020, caseR: 0.00925, neckR: 0.00925, caseLen: 0.0620, overall: 0.0700 },
 };
 
 const WEAPONS = {
@@ -444,6 +450,40 @@ const WEAPONS = {
          8 to 25 and the index 17 to 25. A wash, and the regression guard
          failed it. */
       left: [0.170, -0.004, -0.020], leftGrip: 'woodFore' },
+  },
+  /* THE BREAKWATER. Coastline's own gun, and the fourth shotgun -- which
+     is the problem it exists to solve rather than add to.
+     
+     The Scattergun, the Sawn-Off and the Paralyzer are all break-actions:
+     two barrels, a hinge, and a gun that is empty every second shot. A
+     fourth of those would have been another column of numbers on the same
+     weapon. So this one is built round the thing none of them can do,
+     which is keep firing. Eight in the box, a trigger pull a shot, and a
+     pattern tight enough to be worth taking past the front rank -- and in
+     exchange it kicks, it is slow to bring back down, and it is a long
+     two and a half seconds to change a magazine in a corridor.
+     
+     Semi-automatic, not automatic, and that is deliberate: `auto: false`
+     means one shell per pull, which at a 0.22 s refire is as fast as a
+     finger can work and still leaves the decision of when to stop with
+     the player rather than with the trigger. */
+  breakwater: {
+    name: 'Breakwater', slotName: 'BREAKWATER',
+    dmg: 26, headMul: 1.55, mag: 8, reserve: 64, refire: 0.22,
+    reload: 2.5, auto: false, pellets: 9, spread: 4.2,
+    kick: 2.8, sfx: 'shotScatter', reloadKind: 'mag',
+    sightH: 0.0505, sightFov: 0.88, adsTime: 0.26, adsSpread: 0.52,
+    recoil: { up: 2.55, side: 0.80, climb: 0.62, recover: 6.2, back: 0.036, roll: 0.011, impulse: 17 },
+    moveMul: 0.93, muzzleVel: 58,
+    ammo: { mag: { w: 0.0300, d: 0.0560, len: 0.1560, curve: 0.008, witness: 4, round: AMMO.gauge12 },
+      bodyMaterial: { color: 0x1e2226, texture: 'smooth', roughness: 0.72, metalness: 0 } },
+    /* Right hand on the pistol grip, left under the handguard. The
+       handguard is a shell centred on y +0.006 running 30 mm up and 21
+       down, so its underside is at about y -0.015 -- which is where the
+       hand goes, on the centreline, not below the barrel where there is
+       nothing to hold. */
+    hands: { right: [-0.026, -0.055, 0.016], rightGrip: 'pistol',
+      left: [0.205, -0.012, 0], leftGrip: 'fore' },
   },
   hammer: {
     name: 'Claw Hammer', slotName: 'HAMMER',
@@ -1371,7 +1411,7 @@ const ROUNDS = {
 
    Keep this in step with version.json -- site/games/bump-version.js does
    both at once, and there is a test that fails if they drift. */
-const B9_BUILD = { version: '0.5.0', name: 'two shores' };
+const B9_BUILD = { version: '0.6.0', name: 'the flamingo' };
 
 /* ---------------- live updates ----------------
 
@@ -5293,6 +5333,11 @@ function makeMP5(game, opts = {}) {
   return rackGroup(b, { mag: [b.mag], bolt: b.bolt, boltRest: b.boltRest, boltThrow: b.boltThrow });
 }
 
+function makeBreakwater(game, opts = {}) {
+  const b = game.breakwater(rackOpts(opts));
+  return rackGroup(b, { mag: [b.mag], bolt: b.bolt, boltRest: b.boltRest, boltThrow: b.boltThrow });
+}
+
 function makeMauser(game, opts = {}) {
   const b = game.mauserC96(rackOpts(opts));
   return rackGroup(b, {
@@ -5606,6 +5651,7 @@ function makePlayer(game, S, hud, sfx, voice) {
   rack('mauser', makeMauser(game));
   rack('paralyzer', makeParalyzer(game));
   rack('mp5', makeMP5(game));
+  rack('breakwater', makeBreakwater(game));
   rack('sawnoff', makeSawedOff(game));
   rack('remington', makeRemington(game));
   rack('killstreak', makeKillStreak(game));
@@ -6597,7 +6643,7 @@ const UPGRADE_NAMES = {
   remington: 'Seven Hundred Yards', killstreak: 'The Long Goodbye', mg42: 'Forty-Three',
   scatter: 'Both Barrels', sawnoff: 'Last Word', paralyzer: 'Grand Mal',
   mauser: 'Kaiser', obliterator: 'Total Obliteration', arc: 'Arc Angel',
-  arc2: 'Chain Sermon',
+  arc2: 'Chain Sermon', breakwater: 'Spring Tide',
   knife: 'Wound Man', hammer: 'Hard Labour', ram: 'Door Policy',
   shield: 'Wall Order', shieldWorn: 'Wall Order',
 };
@@ -11989,7 +12035,7 @@ function doInteract(game, S, P, hud, sfx, it, dt) {
  * The Arc Breaker Mk II is in here rather than on a wall, deliberately:
  * it is the Mark I with the governor taken off, and a weapon that reads
  * as "the same gun, unlocked" is a better find than a purchase. */
-const CRATE_POOL = ['thompson', 'scatter', 'arc', 'arc2', 'obliterator', 'mauser', 'blaze', 'ram', 'shield', 'killstreak'];
+const CRATE_POOL = ['thompson', 'scatter', 'breakwater', 'arc', 'arc2', 'obliterator', 'mauser', 'blaze', 'ram', 'shield', 'killstreak'];
 
 function crateDisplay(game, id) {
   if (id === 'thompson') { const t = game.thompson({ physics: false }); return { root: t, parts: [t, t.wood, t.slide, t.mag].filter(Boolean) }; }
@@ -14499,6 +14545,7 @@ function start(opts = {}) {
     CAST, sayLine, setSpokenWords, applyHeroLook, assignVoices, systemVoiceFor, voicePool,
     lineId, loadVoicePack, weaponSurface };
   window.__T_MAKE = { makeParalyzer, makeMP5, makeSawedOff, makeScattergun, makeObliterator,
+    makeBreakwater,
     makeMauser, makeArcProjector, makeKnife, makeHammer, makeRiotShield, makeBatteringRam };
   const __THooks = window.__T = {
     game, S, P, WEAPONS, ECONOMY, LINES,

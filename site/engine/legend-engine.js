@@ -2033,6 +2033,9 @@ const TextureLib = {
        surface as large as the battlefield the ground fizzed. Same
        reasoning as the note on metal above. */
     dirt: 1.4, sand: 1.2, grass: 1.2,
+    /* Enough relief to give each toy an edge and not so much that the
+       ripple under them turns into facets. */
+    floaties: 1.0,
   },
 
   /* Surface recipes. Each writes into `c` for one texel.
@@ -2353,6 +2356,110 @@ const TextureLib = {
     smooth(u, v, n, c) {
       c.r = c.g = c.b = 1;
       c.rough = 0.8; c.ao = 1; c.h = 0.5;
+    },
+
+    /* FLOATIES. Coastline's upgrade finish: pool toys drifting across a
+       baby-blue field.
+       
+       This is here because the honest answer to "a camo with little duck
+       floaties on it" used to be "the texture bank generates patterns
+       procedurally and cannot be handed a picture of a rubber duck",
+       which was true of the recipes that existed and not true of the
+       bank. A recipe is a function of one texel; nothing stops it being
+       a function that evaluates a handful of placed SHAPES and asks
+       whether this texel is inside one. Ducks are two circles and a
+       wedge. Flamingos are a circle, an arc and a beak. Rings are two
+       circles subtracted. All of that is arithmetic.
+       
+       Seven toys per tile, laid out on a hash rather than a grid so they
+       do not read as wallpaper, each with its own colour and rotation,
+       and each sitting slightly proud of the surface so the normal map
+       gives it an edge -- a pattern with no relief in it reads as paint,
+       and these are supposed to look like things floating ON something. */
+    floaties(u, v, n, c) {
+      // The water underneath: pale blue with a slow ripple in it.
+      const rip = n.fbm(u * 5, v * 5, 2.1, 3) * 0.5 + 0.5;
+      const rip2 = n.fbm(u * 17, v * 17, 6.4, 2) * 0.5 + 0.5;
+      c.r = 0.62 + rip * 0.10;
+      c.g = 0.84 + rip * 0.08;
+      c.b = 0.94 + rip * 0.05;
+      c.rough = 0.30 + rip2 * 0.12;
+      c.ao = 1;
+      c.h = 0.42 + rip * 0.10 + rip2 * 0.04;
+
+      /* The toys. Positions and kinds come from a fixed hash so the tile
+         is identical every time it is generated -- a camo that changes
+         between two guns is not a camo. */
+      const TOYS = [
+        [0.17, 0.21, 0.115, 0.7, 0], [0.62, 0.13, 0.098, 2.4, 1],
+        [0.86, 0.44, 0.104, 4.1, 2], [0.38, 0.52, 0.120, 1.2, 0],
+        [0.09, 0.74, 0.092, 5.0, 2], [0.68, 0.79, 0.112, 3.3, 1],
+        [0.45, 0.92, 0.086, 0.2, 0],
+      ];
+      for (let i = 0; i < TOYS.length; i++) {
+        const t = TOYS[i];
+        // Wrap the difference, so a toy near an edge continues on the other.
+        let dx = u - t[0], dy = v - t[1];
+        if (dx > 0.5) dx -= 1; if (dx < -0.5) dx += 1;
+        if (dy > 0.5) dy -= 1; if (dy < -0.5) dy += 1;
+        const R = t[2];
+        if (dx * dx + dy * dy > R * R * 2.6) continue;   // cheap reject
+        const ca = Math.cos(t[3]), sa = Math.sin(t[3]);
+        const x = (dx * ca - dy * sa) / R, y = (dx * sa + dy * ca) / R;
+        const kind = t[4];
+
+        let inside = false, ink = 0;
+        if (kind === 0) {
+          /* A ring. Two circles: in the annulus, not in the hole. */
+          const d = Math.hypot(x, y);
+          inside = d < 1 && d > 0.52;
+          ink = 1 - Math.abs(d - 0.76) / 0.24;
+        } else if (kind === 1) {
+          /* A duck. Body, head, beak -- a circle at the origin, a smaller
+             circle up and forward of it, and a wedge off the front of
+             that. Squashed on Y, because a duck floaty is wider than
+             it is tall. */
+          const body = (x * x) / 1.0 + (y * y) / 0.62 < 0.62;
+          const hx = x - 0.42, hy = y + 0.52;
+          const head = hx * hx + hy * hy < 0.10;
+          const beak = x > 0.60 && x < 0.92 && Math.abs(y + 0.56) < 0.10 - (x - 0.60) * 0.22;
+          inside = body || head || beak;
+          ink = beak ? 2 : 1;
+        } else {
+          /* A flamingo. Body, then a neck that is an arc rather than a
+             line -- the curve is the whole silhouette of one -- and a
+             short down-turned beak on the end of it. */
+          const body = (x * x) / 0.95 + (y * y) / 0.50 < 0.50;
+          // The neck: distance to a circle centred up and forward.
+          const nx = x - 0.18, ny = y + 0.56;
+          const nd = Math.hypot(nx, ny);
+          const neck = Math.abs(nd - 0.50) < 0.10 && ny < 0.05 && nx > -0.45;
+          const bx = x - 0.58, by = y + 0.92;
+          const beak = bx * bx + by * by < 0.028;
+          inside = body || neck || beak;
+          ink = beak ? 2 : 1;
+        }
+        if (!inside) continue;
+
+        /* Toy colour. Two of the three kinds are pink; the rings are the
+           loud ones, because a field of one colour is a pattern and a
+           field of several is a lake at the end of summer. */
+        const HUE = [
+          [0.98, 0.42, 0.26], [0.99, 0.86, 0.24], [0.32, 0.78, 0.46],
+          [0.98, 0.44, 0.62], [0.96, 0.40, 0.58],
+        ];
+        const h = kind === 0 ? HUE[i % 3] : HUE[3 + (i % 2)];
+        const sheen = 0.86 + (n.fbm(u * 30, v * 30, i * 4.4, 2) * 0.5 + 0.5) * 0.26;
+        if (ink === 2) {           // the beak, on both the duck and the bird
+          c.r = 0.98 * sheen; c.g = 0.62 * sheen; c.b = 0.12 * sheen;
+        } else {
+          c.r = h[0] * sheen; c.g = h[1] * sheen; c.b = h[2] * sheen;
+        }
+        // Vinyl: smoother than water, and standing proud of it.
+        c.rough = 0.18;
+        c.ao = 1;
+        c.h = 0.74;
+      }
     },
   },
 };
@@ -18317,6 +18424,284 @@ function doubleGun(E, kind, opts) {
 Engine.prototype.scattergun = function (opts = {}) { return doubleGun(this, 'scatter', opts); };
 Engine.prototype.sawnOff = function (opts = {}) { return doubleGun(this, 'sawnoff', opts); };
 Engine.prototype.paralyzer = function (opts = {}) { return doubleGun(this, 'paralyzer', opts); };
+
+/* ============================================================
+   BREAKWATER — box-fed semi-automatic 12-gauge
+
+     overall        0.980      barrel      0.375
+     receiver       0.190      magazine    8 rounds
+     weight         3.9 kg     calibre     12 gauge
+
+   Coastline's own gun, and the third shotgun in the game -- which is
+   the whole problem it had to solve. The Scattergun, the Sawn-Off and
+   the Paralyzer are all break-actions: two barrels, a hinge, and a gun
+   that is empty every second shot. Another of those would have been a
+   fourth set of numbers on the same weapon. So this one is built round
+   the thing the others cannot do -- keep firing -- and the model says
+   so before the first shot does: a magazine hanging under it, a bolt
+   you can see, and a gas tube over the barrel.
+
+   Three axes again, the same as the MP5: barrel, gas tube, receiver.
+   The sights sit on a rib above all three, which is what makes a
+   gas gun look like a gas gun rather than a rifle that lost its way.
+   ============================================================ */
+
+const BW = {
+  muzzle: 0.4650,
+  barrelRear: 0.0900,
+  recFront: 0.0950, recRear: -0.0950,
+  recUp: 0.0215, recDown: 0.0200, recHalfW: 0.0212,
+  gasY: 0.0290,                  // gas tube axis, above the bore
+  gasR: 0.0074,
+  sightY: 0.0505,                // the one line both sights stand on
+  boreOD: 0.0185,                // 12 gauge
+  gripTopX: -0.0260, gripTopY: -0.0190,
+  magX: 0.0480, magY: -0.0210,
+  magRake: 0.14,                 // forward lean, metres per metre of drop
+  combY: 0.0180,
+  /* Measured and moved. At -0.325 the whole gun came out 790 mm, which
+     is a folded-stock length on a gun that has a fixed stock -- the butt
+     was 230 mm behind the receiver where a real length of pull puts it
+     at about 305. 870 mm overall: 375 of barrel, 190 of receiver and 305
+     of stock, which is a short-barrelled 12-gauge and not a carbine that
+     lost its buttplate. */
+  stockButt: -0.4050,
+};
+
+/* The receiver, the barrel, the gas system and everything screwed to
+   them. One part, because none of it moves. */
+function buildBWSteel(g) {
+  const K = BW;
+
+  /* Receiver: a milled box with the corners broken, stepped down at the
+     rear where the stock tube threads in. Flat-topped, because the rib
+     lands on it. */
+  const rec = (x, s = 1) => ax(x, roundRect(K.recUp * s, K.recDown * s, K.recHalfW * s, 3.4, 24));
+  sweepPath(g, [
+    rec(K.recRear, 0.86), rec(K.recRear + 0.010, 0.86), rec(K.recRear + 0.015, 1),
+    rec(-0.020), rec(0.050), rec(K.recFront - 0.008), rec(K.recFront, 0.95),
+  ], true, true);
+
+  /* The ejection port: a rectangular bite out of the right flank, sunk
+     rather than drawn. An open gun has a hole in it. */
+  hardBox(g, 0.0340, 0.0090, K.recHalfW - 0.0020, 0.0330, 0.0105, 0.0022);
+
+  /* The sight rib, running the length of the receiver and on over the
+     barrel on two stanchions. Ventilated, the way a shotgun rib is --
+     the gaps are what stop a hot barrel boiling the sight picture, and
+     they are also what makes the silhouette read as a shotgun. */
+  sweepPath(g, [
+    ax(K.recRear + 0.006, roundRect(0.0032, 0.0052, 0.0076, 3.2, 14), K.sightY - 0.0060),
+    ax(K.recFront, roundRect(0.0032, 0.0052, 0.0076, 3.2, 14), K.sightY - 0.0060),
+    ax(K.muzzle - 0.004, roundRect(0.0030, 0.0048, 0.0068, 3.2, 14), K.sightY - 0.0060),
+  ], true, true);
+  for (let i = 0; i < 7; i++) {
+    const x = 0.150 + i * 0.0430;
+    hardBox(g, x, K.sightY - 0.0125, 0, 0.0060, 0.0075, 0.0028);   // stanchion
+  }
+
+  /* Barrel: heavy at the chamber, stepped down past the gas port,
+     choked and crowned at the muzzle. */
+  tubeRun(g, [
+    [K.barrelRear - 0.006, 0.0142], [K.barrelRear + 0.048, 0.0142],
+    [K.barrelRear + 0.054, 0.0122], [0.3600, 0.0118],
+    [0.3640, 0.0130], [K.muzzle - 0.002, 0.0130],
+  ], 22, true, false);
+  crown(g, K.muzzle, 0.0130, K.boreOD / 2, 0.042);
+
+  /* Gas block and tube. The block clamps the tube to the barrel at the
+     port; the tube runs back into the front of the receiver, which is
+     where the bolt carrier's op rod lives. */
+  hardBox(g, 0.2050, (K.gasY + 0.0000) / 2 + 0.0040, 0, 0.0180, 0.0195, 0.0130);
+  tubeRun(g, [[K.recFront - 0.004, K.gasR], [0.2300, K.gasR], [0.2320, K.gasR * 0.82]],
+    18, true, true, K.gasY);
+  // Two bleed holes in the block, because a gas gun vents.
+  for (const s of [-1, 1]) {
+    strut(g, [0.1960, K.gasY - 0.0020, s * 0.0090], [0.1960, K.gasY - 0.0020, s * 0.0130],
+      ringOutline(0.0024, 10));
+  }
+
+  /* Front sight: a hooded post whose tip finishes ON the sight line.
+     Same rule as the MP5 -- a post proud of the line is a gun that
+     shoots low by exactly however proud it is. */
+  band(g, K.muzzle - 0.0460, K.muzzle - 0.0180, 0.0105, 0.0136, 20, K.sightY);
+  hardBox(g, K.muzzle - 0.0320, K.sightY - 0.0092, 0, 0.0022, 0.0058, 0.0013);   // post
+  hardBox(g, K.muzzle - 0.0320, K.sightY - 0.0026, 0, 0.0016, 0.0026, 0.0011);   // bead
+
+  /* Rear sight: a ghost ring on a low tower. A big aperture, because a
+     shotgun is pointed and not aimed, and an aperture you look THROUGH
+     rather than a blade you look OVER keeps the middle of the picture
+     empty. */
+  const dx = K.recRear + 0.0340;
+  hardBox(g, dx, K.sightY - 0.0190, 0, 0.0130, 0.0090, 0.0090);                  // tower
+  band(g, dx - 0.0060, dx + 0.0060, 0.0082, 0.0118, 22, K.sightY);
+  // Protective ears either side of the ring, short of the sight line.
+  for (const s of [-1, 1]) {
+    hardBox(g, dx, K.sightY - 0.0020, s * 0.0158, 0.0055, 0.0105, 0.0022);
+  }
+
+  /* Magazine well: a collar hung under the receiver, raked forward with
+     the magazine, with the paddle catch at the back of it where the
+     trigger hand's finger finds it. */
+  const magAxis = new Vec3(BW.magRake, -1, 0).normalize();
+  const magU = new Vec3().crossVectors(AV, magAxis).normalize();
+  const wellAt = (d, s) => ({
+    o: new Vec3(K.magX + magAxis.x * d, K.magY + magAxis.y * d, 0),
+    u: magU, v: AV, pts: roundRect(0.0290 * s, 0.0290 * s, 0.0162 * s, 3.0, 22),
+  });
+  sweepPath(g, [wellAt(-0.005, 1.10), wellAt(0.003, 1.10), wellAt(0.005, 1.0), wellAt(0.034, 1.0)],
+    true, true);
+  hardBox(g, K.magX - 0.0330, K.magY - 0.0290, 0, 0.0080, 0.0075, 0.0110);       // paddle catch
+
+  /* Trigger group, guard and trigger. One trigger -- which is the point
+     of the gun. */
+  sweepPath(g, [
+    ax(-0.0480, roundRect(0.0060, 0.0130, 0.0170, 3.0, 18), -0.0195),
+    ax(-0.0060, roundRect(0.0060, 0.0140, 0.0176, 3.0, 18), -0.0195),
+    ax(0.0180, roundRect(0.0060, 0.0110, 0.0170, 3.0, 18), -0.0195),
+  ], true, true);
+  guardBow(g, [
+    [-0.0220, -0.0330], [-0.0200, -0.0455], [-0.0090, -0.0530],
+    [0.0040, -0.0520], [0.0120, -0.0440], [0.0145, -0.0330],
+  ], 0.0026, 0.0026, 0.0058);
+  triggerBlade(g, -0.0060, -0.0330);
+  // Cross-bolt safety through the guard's web, and the bolt release above it.
+  strut(g, [-0.0290, -0.0290, -0.0186], [-0.0290, -0.0290, 0.0186], ringOutline(0.0042, 12));
+  hardBox(g, 0.0320, -0.0250, 0.0176, 0.0090, 0.0060, 0.0026);
+
+  /* Sling loop under the stock tube, and the receiver's rear end cap. */
+  strut(g, [K.recRear + 0.008, -0.0245, -0.0045], [K.recRear + 0.008, -0.0245, 0.0045],
+    ringOutline(0.0036, 10));
+}
+
+/* The furniture: handguard, pistol grip and butt stock. Its own part so
+   it can take a different material from the steel -- this gun is glass
+   and polymer, not walnut, and a shotgun that came off a boat has no
+   business looking like a heirloom. */
+function buildBWPoly(g) {
+  const K = BW;
+
+  /* Handguard: a shell over the barrel and gas tube, open underneath so
+     the barrel shows through, with vent slots up both flanks. */
+  const hgAt = (x, s) => ax(x, roundRect(0.0300 * s, 0.0210 * s, 0.0250 * s, 3.4, 22), 0.0060);
+  sweepPath(g, [
+    hgAt(0.1080, 0.96), hgAt(0.1160, 1.0), hgAt(0.2600, 1.0), hgAt(0.2960, 0.92),
+    hgAt(0.3040, 0.86),
+  ], true, true);
+  for (const s of [-1, 1]) {
+    for (let i = 0; i < 5; i++) {
+      hardBox(g, 0.1400 + i * 0.0340, 0.0110, s * 0.0246, 0.0110, 0.0042, 0.0022);
+    }
+  }
+
+  /* Pistol grip, raked and checkered on both flanks. */
+  const gax = gripStack(g, K.gripTopX, K.gripTopY, 0.1080, 0.34, [
+    [0.00, 0.0180, 0.0200, 0.0165, 3.0],
+    [0.22, 0.0165, 0.0195, 0.0158, 2.9],
+    [0.55, 0.0150, 0.0180, 0.0150, 2.8],
+    [0.86, 0.0155, 0.0180, 0.0155, 2.8],
+    [1.00, 0.0165, 0.0185, 0.0162, 3.0],
+  ]);
+  for (const s of [-1, 1]) {
+    checker(g, K.gripTopX + gax.x * 0.055, K.gripTopY + gax.y * 0.055, s * 0.0152,
+      gax.x, gax.y, s, 4, 7, 0.0074, 0.0011);
+  }
+
+  /* Butt stock: a straight tube back from the receiver with a comb on
+     top at sight height and a rubber pad on the end. Straight, because
+     a gun that kicks like this wants the recoil going into the shoulder
+     in a line and not up over it. */
+  sweepPath(g, [
+    ax(K.recRear + 0.004, roundRect(0.0230, 0.0210, 0.0190, 3.2, 22), -0.0030),
+    ax(K.recRear - 0.030, roundRect(0.0240, 0.0225, 0.0195, 3.2, 22), -0.0045),
+    ax(K.stockButt + 0.055, roundRect(0.0260, 0.0270, 0.0200, 3.2, 22), -0.0090),
+    ax(K.stockButt + 0.018, roundRect(0.0285, 0.0320, 0.0205, 3.2, 22), -0.0110),
+  ], true, true);
+  // The comb, standing the cheek up level with the rib.
+  sweepPath(g, [
+    ax(K.recRear - 0.025, roundRect(0.0060, 0.0120, 0.0150, 3.0, 18), K.combY),
+    ax(K.stockButt + 0.075, roundRect(0.0060, 0.0130, 0.0158, 3.0, 18), K.combY - 0.0030),
+  ], true, true);
+  // Recoil pad, canted, with the ribs a pad has.
+  sweepPath(g, [
+    ax(K.stockButt + 0.016, roundRect(0.0300, 0.0330, 0.0206, 3.0, 22), -0.0112),
+    ax(K.stockButt + 0.002, roundRect(0.0310, 0.0345, 0.0212, 3.0, 22), -0.0125),
+  ], true, true);
+  for (let i = 0; i < 3; i++) {
+    hardBox(g, K.stockButt + 0.008, -0.0125 + (i - 1) * 0.0145, 0, 0.0060, 0.0022, 0.0206);
+  }
+  // Sling loop on the toe.
+  strut(g, [K.stockButt + 0.048, -0.0360, -0.0050], [K.stockButt + 0.048, -0.0360, 0.0050],
+    ringOutline(0.0034, 10));
+}
+
+/* The magazine. Eight rounds of 12 gauge is a deep box, and it is
+   supposed to look like a lot of gun to carry -- that heft is the
+   trade for never having to break the action open. */
+function buildBWMag(g) {
+  const K = BW;
+  const axis = new Vec3(K.magRake, -1, 0).normalize();
+  const u = new Vec3().crossVectors(AV, axis).normalize();
+  const at = (d, hf, hb, hw) => ({
+    o: new Vec3(K.magX + axis.x * d, K.magY + axis.y * d, 0),
+    u, v: AV, pts: roundRect(hf, hb, hw, 3.0, 22),
+  });
+  sweepPath(g, [
+    at(0.004, 0.0272, 0.0272, 0.0148), at(0.030, 0.0276, 0.0276, 0.0150),
+    at(0.140, 0.0282, 0.0282, 0.0152), at(0.156, 0.0290, 0.0300, 0.0158),
+  ], true, true);
+  // Witness holes down the spine, so you can see what is left in it.
+  for (let i = 0; i < 4; i++) {
+    const d = 0.048 + i * 0.0270;
+    const o = new Vec3(K.magX + axis.x * d, K.magY + axis.y * d, 0);
+    strut(g, [o.x - u.x * 0.0250, o.y - u.y * 0.0250, 0.0142],
+      [o.x - u.x * 0.0250, o.y - u.y * 0.0250, 0.0168], ringOutline(0.0030, 10));
+  }
+  // Floor plate lip.
+  const f = 0.162;
+  hardBox(g, K.magX + axis.x * f, K.magY + axis.y * f, 0, 0.0300, 0.0040, 0.0164);
+}
+
+/* The bolt carrier and its handle. Its own part because it runs back
+   under the ejection port every time the gun fires, and a semi-auto
+   whose bolt does not move is a pump gun that forgot to be pumped. */
+function buildBWBolt(g) {
+  const K = BW;
+  // Carrier body, inside the receiver, showing through the port.
+  hardBox(g, 0.0340, 0.0075, 0, 0.0300, 0.0090, 0.0185);
+  // The handle, out the right side on a short stem.
+  strut(g, [0.0560, 0.0090, K.recHalfW - 0.0030], [0.0560, 0.0090, K.recHalfW + 0.0130],
+    ringOutline(0.0044, 12));
+  sweepPath(g, [
+    ax(0.0480, roundRect(0.0058, 0.0058, 0.0048, 3.0, 14), 0.0090, K.recHalfW + 0.0130),
+    ax(0.0640, roundRect(0.0058, 0.0058, 0.0048, 3.0, 14), 0.0090, K.recHalfW + 0.0130),
+  ], true, true);
+  // Op rod forward into the gas tube, so the two are visibly one system.
+  tubeRun(g, [[0.0620, 0.0050], [0.1900, 0.0050]], 12, true, true, K.gasY - 0.0010);
+}
+
+const BW_ORIGIN = new Vec3(-0.0300, -0.0330, 0);
+
+Engine.prototype.breakwater = function (opts = {}) {
+  const parts = armCache(this, 'breakwater', () => {
+    const steel = new Geometry(); buildBWSteel(steel);
+    const poly = new Geometry(); buildBWPoly(poly);
+    const mag = new Geometry(); buildBWMag(mag);
+    const bolt = new Geometry(); buildBWBolt(bolt);
+    return fin({ steel, poly, mag, bolt }, BW_ORIGIN);
+  });
+  const body = mountArm(this, 'breakwater', parts,
+    { steel: ARM_MAT.blued, poly: ARM_MAT.poly, mag: ARM_MAT.poly, bolt: ARM_MAT.bright },
+    opts, 0.48, 3.9, 'steel');
+  body.ejectPort = [0.0340 - BW_ORIGIN.x, 0.0090 - BW_ORIGIN.y, BW.recHalfW];
+  body.magWell = [BW.magX - BW_ORIGIN.x, BW.magY - BW_ORIGIN.y, 0];
+  body.boltRest = [0, 0, 0];
+  body.boltThrow = [-0.038, 0, 0];
+  body.boreAt = -BW_ORIGIN.y;
+  body.muzzleAt = BW.muzzle - BW_ORIGIN.x;
+  body.sightAt = BW.sightY - BW_ORIGIN.y;
+  return body;
+};
 
 /* ---------------- Mauser C96 ---------------- */
 

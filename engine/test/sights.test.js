@@ -51,6 +51,7 @@ const GUNS = {
   obliterator: ['model5', 'mod5'],
   arc: ['arcBreaker', 'arc'],
   mg42: ['mg42', 'mg42'],
+  breakwater: ['breakwater', 'breakwater'],
 };
 
 const SCAN = (GUNS) => {

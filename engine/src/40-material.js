@@ -129,6 +129,9 @@ const TextureLib = {
        surface as large as the battlefield the ground fizzed. Same
        reasoning as the note on metal above. */
     dirt: 1.4, sand: 1.2, grass: 1.2,
+    /* Enough relief to give each toy an edge and not so much that the
+       ripple under them turns into facets. */
+    floaties: 1.0,
   },
 
   /* Surface recipes. Each writes into `c` for one texel.
@@ -449,6 +452,110 @@ const TextureLib = {
     smooth(u, v, n, c) {
       c.r = c.g = c.b = 1;
       c.rough = 0.8; c.ao = 1; c.h = 0.5;
+    },
+
+    /* FLOATIES. Coastline's upgrade finish: pool toys drifting across a
+       baby-blue field.
+       
+       This is here because the honest answer to "a camo with little duck
+       floaties on it" used to be "the texture bank generates patterns
+       procedurally and cannot be handed a picture of a rubber duck",
+       which was true of the recipes that existed and not true of the
+       bank. A recipe is a function of one texel; nothing stops it being
+       a function that evaluates a handful of placed SHAPES and asks
+       whether this texel is inside one. Ducks are two circles and a
+       wedge. Flamingos are a circle, an arc and a beak. Rings are two
+       circles subtracted. All of that is arithmetic.
+       
+       Seven toys per tile, laid out on a hash rather than a grid so they
+       do not read as wallpaper, each with its own colour and rotation,
+       and each sitting slightly proud of the surface so the normal map
+       gives it an edge -- a pattern with no relief in it reads as paint,
+       and these are supposed to look like things floating ON something. */
+    floaties(u, v, n, c) {
+      // The water underneath: pale blue with a slow ripple in it.
+      const rip = n.fbm(u * 5, v * 5, 2.1, 3) * 0.5 + 0.5;
+      const rip2 = n.fbm(u * 17, v * 17, 6.4, 2) * 0.5 + 0.5;
+      c.r = 0.62 + rip * 0.10;
+      c.g = 0.84 + rip * 0.08;
+      c.b = 0.94 + rip * 0.05;
+      c.rough = 0.30 + rip2 * 0.12;
+      c.ao = 1;
+      c.h = 0.42 + rip * 0.10 + rip2 * 0.04;
+
+      /* The toys. Positions and kinds come from a fixed hash so the tile
+         is identical every time it is generated -- a camo that changes
+         between two guns is not a camo. */
+      const TOYS = [
+        [0.17, 0.21, 0.115, 0.7, 0], [0.62, 0.13, 0.098, 2.4, 1],
+        [0.86, 0.44, 0.104, 4.1, 2], [0.38, 0.52, 0.120, 1.2, 0],
+        [0.09, 0.74, 0.092, 5.0, 2], [0.68, 0.79, 0.112, 3.3, 1],
+        [0.45, 0.92, 0.086, 0.2, 0],
+      ];
+      for (let i = 0; i < TOYS.length; i++) {
+        const t = TOYS[i];
+        // Wrap the difference, so a toy near an edge continues on the other.
+        let dx = u - t[0], dy = v - t[1];
+        if (dx > 0.5) dx -= 1; if (dx < -0.5) dx += 1;
+        if (dy > 0.5) dy -= 1; if (dy < -0.5) dy += 1;
+        const R = t[2];
+        if (dx * dx + dy * dy > R * R * 2.6) continue;   // cheap reject
+        const ca = Math.cos(t[3]), sa = Math.sin(t[3]);
+        const x = (dx * ca - dy * sa) / R, y = (dx * sa + dy * ca) / R;
+        const kind = t[4];
+
+        let inside = false, ink = 0;
+        if (kind === 0) {
+          /* A ring. Two circles: in the annulus, not in the hole. */
+          const d = Math.hypot(x, y);
+          inside = d < 1 && d > 0.52;
+          ink = 1 - Math.abs(d - 0.76) / 0.24;
+        } else if (kind === 1) {
+          /* A duck. Body, head, beak -- a circle at the origin, a smaller
+             circle up and forward of it, and a wedge off the front of
+             that. Squashed on Y, because a duck floaty is wider than
+             it is tall. */
+          const body = (x * x) / 1.0 + (y * y) / 0.62 < 0.62;
+          const hx = x - 0.42, hy = y + 0.52;
+          const head = hx * hx + hy * hy < 0.10;
+          const beak = x > 0.60 && x < 0.92 && Math.abs(y + 0.56) < 0.10 - (x - 0.60) * 0.22;
+          inside = body || head || beak;
+          ink = beak ? 2 : 1;
+        } else {
+          /* A flamingo. Body, then a neck that is an arc rather than a
+             line -- the curve is the whole silhouette of one -- and a
+             short down-turned beak on the end of it. */
+          const body = (x * x) / 0.95 + (y * y) / 0.50 < 0.50;
+          // The neck: distance to a circle centred up and forward.
+          const nx = x - 0.18, ny = y + 0.56;
+          const nd = Math.hypot(nx, ny);
+          const neck = Math.abs(nd - 0.50) < 0.10 && ny < 0.05 && nx > -0.45;
+          const bx = x - 0.58, by = y + 0.92;
+          const beak = bx * bx + by * by < 0.028;
+          inside = body || neck || beak;
+          ink = beak ? 2 : 1;
+        }
+        if (!inside) continue;
+
+        /* Toy colour. Two of the three kinds are pink; the rings are the
+           loud ones, because a field of one colour is a pattern and a
+           field of several is a lake at the end of summer. */
+        const HUE = [
+          [0.98, 0.42, 0.26], [0.99, 0.86, 0.24], [0.32, 0.78, 0.46],
+          [0.98, 0.44, 0.62], [0.96, 0.40, 0.58],
+        ];
+        const h = kind === 0 ? HUE[i % 3] : HUE[3 + (i % 2)];
+        const sheen = 0.86 + (n.fbm(u * 30, v * 30, i * 4.4, 2) * 0.5 + 0.5) * 0.26;
+        if (ink === 2) {           // the beak, on both the duck and the bird
+          c.r = 0.98 * sheen; c.g = 0.62 * sheen; c.b = 0.12 * sheen;
+        } else {
+          c.r = h[0] * sheen; c.g = h[1] * sheen; c.b = h[2] * sheen;
+        }
+        // Vinyl: smoother than water, and standing proud of it.
+        c.rough = 0.18;
+        c.ao = 1;
+        c.h = 0.74;
+      }
     },
   },
 };
