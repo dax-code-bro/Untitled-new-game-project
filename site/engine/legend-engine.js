@@ -21122,6 +21122,13 @@ function buildViewHand(g, rawAt, side, opts = {}) {
    * above it -- which is the same rule the trigger finger has had all
    * along, pointed at a different line. */
   const wrapLimit = { ceil: opts.sightY != null ? opts.sightY - 0.004 : null };
+  /* Instrumentation, kept. Two attempts at this produced sweeps identical
+     to the millimetre, which is what a code path that never runs looks
+     like -- and telling that apart from a fix that did not work took
+     asking the engine directly. */
+  if (typeof Engine !== 'undefined') {
+    Engine.__sawSightY = (Engine.__sawSightY || 0) + (opts.sightY != null ? 1 : 0);
+  }
   /* `lim` is how a finger is allowed to finish.
    *
    *   ceil  the tip must end below this height -- the bore, for a trigger
