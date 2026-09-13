@@ -1,0 +1,8 @@
+{
+  "version": "0.5.0",
+  "name": "two shores",
+  "date": "2026-09-12",
+  "mode": "zombies",
+  "did": "Coastline is playable: the dead swim ashore, the boat ramp goes down to the water, and the map has an edge. The Blaze shoots fire and becomes a flamethrower when the rock has had it. The Arc Breaker Mark II is in the box.",
+  "onAccept": "Your round is saved and the map is rebuilt. You keep your points, your guns and your perks, and the dead hold off for three minutes while you get set."
+}

@@ -1359,6 +1359,210 @@ const ROUNDS = {
   },
 };
 
+/* ---------------- which build is this ----------------
+
+   Baked into the SCRIPT, and compared against site/games/version.json,
+   which is fetched fresh. That pairing is the whole mechanism: a browser
+   will happily serve you a cached copy of this file for a long time, so
+   "what is published" has to be asked of something that is not cached,
+   and "what am I running" has to come from inside the thing that is.
+
+   If they disagree, the copy in your hands is old.
+
+   Keep this in step with version.json -- site/games/bump-version.js does
+   both at once, and there is a test that fails if they drift. */
+const B9_BUILD = { version: '0.5.0', name: 'two shores' };
+
+/* ---------------- live updates ----------------
+
+   The game is a static page. Nothing can push anything to it, so an
+   update arrives the only way it can: the page asks. Every so often it
+   fetches version.json -- uncached, with a cache-buster, because the
+   whole point is to read something the browser has not kept a copy of --
+   and compares the version there against the one baked into this script.
+   Disagreement means the copy in your hands is old.
+
+   "Downloading" is then a reload onto the new files, which is why the
+   round has to survive it: what you had is written to storage before the
+   page goes away and read back after, and the three minutes of grace are
+   stored with it so they cannot be lost in the gap.
+
+   Declining is remembered PER VERSION, so saying not yet to 0.5.1 does
+   not make you deaf to 0.5.2. */
+const UPDATE = {
+  pollSeconds: 60,
+  firstCheckSeconds: 8,
+  /* Three minutes to regroup once you are back, as asked. Long enough to
+     walk the length of Coastline and pick a corner. */
+  graceSeconds: 180,
+  resumeKey: 'b9.resume',
+  declinedKey: 'b9.declined',
+  manifest: 'version.json',
+};
+
+/* What a mode lock means: you took the "not yet", so the part of the
+   game the update was FOR is closed to you until you take it. The rest
+   is untouched -- declining a multiplayer update while playing zombies
+   costs you nothing until you go looking for a match. */
+function updateLocks() {
+  let d = null;
+  try { d = JSON.parse(localStorage.getItem(UPDATE.declinedKey) || 'null'); } catch (e) { d = null; }
+  if (!d || !d.version || d.version === B9_BUILD.version) return { multiplayer: false, zombiesMulti: false };
+  const mode = String(d.mode || 'both').toLowerCase();
+  return {
+    // A multiplayer update you refused: no playing with anyone.
+    multiplayer: mode === 'multiplayer' || mode === 'both',
+    /* A zombies update you refused: zombies still works, but only on your
+       own. You cannot share a round with someone running different code. */
+    zombiesMulti: mode === 'zombies' || mode === 'both',
+    version: d.version, name: d.name, mode,
+  };
+}
+
+/* WHAT YOU KEEP.
+ *
+ * Everything the round gave you, written out before the page goes away
+ * and read back after. Not a save system -- it is only ever valid across
+ * one reload, and it names the version it is FOR so a stale blob from a
+ * crash three builds ago cannot resurrect itself into a different game.
+ *
+ * The mode, hero and map go with it because coming back into a different
+ * map with your Coastline points would be worse than losing them. */
+function captureRound(S, P, forVersion) {
+  return {
+    for: forVersion,
+    at: Date.now(),
+    map: S.mapId || 'bunker9',
+    hero: S.heroId,
+    round: S.round,
+    points: S.points,
+    kills: S.killsTotal,
+    slots: (P.slots || []).slice(),
+    slot: P.slot,
+    perks: Object.assign({}, P.perks || {}),
+    upgraded: Object.assign({}, P.upgraded || {}),
+    ammo: JSON.parse(JSON.stringify(P.ammo || {})),
+    hp: P.hp, maxHp: P.maxHp,
+    nades: P.nades,
+    /* The three minutes start when you come BACK, not when you left --
+       stored as a duration rather than a deadline so a slow download
+       does not eat the grace it was supposed to give you. */
+    grace: UPDATE.graceSeconds,
+  };
+}
+
+function restoreRound(game, S, P, hud, saved) {
+  if (!saved || saved.for !== B9_BUILD.version) return false;
+  /* Only across one reload. Anything older than a few minutes is a blob
+     somebody left behind, not a round waiting to resume. */
+  if (!saved.at || Date.now() - saved.at > 10 * 60 * 1000) return false;
+  if ((saved.map || 'bunker9') !== (S.mapId || 'bunker9')) return false;
+  S.round = saved.round || 0;
+  S.points = saved.points || 0;
+  S.killsTotal = saved.kills || 0;
+  if (saved.slots && saved.slots.length) {
+    for (const id of saved.slots) if (!P.slots.includes(id)) P.give(id);
+    P.slot = Math.max(0, Math.min(saved.slot || 0, P.slots.length - 1));
+  }
+  if (saved.ammo) for (const k in saved.ammo) if (P.ammo[k]) P.ammo[k] = saved.ammo[k];
+  if (saved.perks) for (const k in saved.perks) if (saved.perks[k]) P.perks[k] = true;
+  if (saved.upgraded) for (const k in saved.upgraded) if (saved.upgraded[k]) P.upgraded[k] = true;
+  if (saved.maxHp) P.maxHp = saved.maxHp;
+  P.hp = saved.hp != null ? saved.hp : P.maxHp;
+  if (saved.nades != null) P.nades = saved.nades;
+  /* And the grace: the dead hold off while you find your feet again. */
+  S.updateGrace = saved.grace || UPDATE.graceSeconds;
+  hud.points(S.points);
+  hud.ammo(P);
+  if (hud.perks) hud.perks(P.perks);
+  return true;
+}
+
+/* TAKING THE UPDATE, from inside a round.
+ *
+ * The sequence the player was promised, in order: the map lets go of
+ * you, everyone freezes, the dead go away, the round stops, you are PAID
+ * for the bodies that were on the field, and a bar runs while the new
+ * build comes down.
+ *
+ * Paying for the despawned is the part that is easy to leave out and
+ * would be felt: a dozen bodies walking at you are a dozen kills you
+ * were about to be owed, and taking an update should never cost points.
+ */
+function beginUpdate(game, S, P, hud, sfx, info) {
+  if (S.updating) return;
+  S.updating = true;
+
+  // Everything stops. The loop reads this and holds.
+  S.paused = true;
+  if (P.actor && P.actor.controller) P.actor.controller.move(0, 0);
+
+  /* The field clears, and it pays. Every body still up is worth what it
+     would have been worth if you had shot it. */
+  let owed = 0;
+  for (const z of S.zombies.slice()) {
+    if (z.dead || z.parked) continue;
+    owed += ECONOMY.kill * ((z.V && z.V.points) || 1);
+    parkZombie(game, S, z);
+    z.dead = true;
+  }
+  S.toSpawn = 0;
+  S.spawnT = 1e9;
+  if (owed > 0) {
+    S.addPoints(owed);
+    hud.points(S.points);
+    if (hud.pointsDelta) hud.pointsDelta(owed);
+  }
+
+  // What you had, so that what you get back is the same.
+  try {
+    localStorage.setItem(UPDATE.resumeKey, JSON.stringify(captureRound(S, P, info.version)));
+  } catch (e) { /* storage off: the round is lost, the update is not */ }
+  // Taking it clears any refusal, including of older builds.
+  try { localStorage.removeItem(UPDATE.declinedKey); } catch (e) { /* off */ }
+
+  /* The bar measures the real thing: the new files being fetched. It is
+     not a timer dressed up as progress -- each asset that lands moves it,
+     and when they have all landed the page turns over. */
+  const assets = ['bunker-nine.js', 'bunker-nine-shell.js', 'coastline.js', '../engine/legend-engine.js'];
+  let done = 0;
+  hud.updateProgress(0.02, 'downloading \u2026');
+  const bump = () => {
+    done++;
+    hud.updateProgress(done / (assets.length + 1), 'downloading \u2026 ' + Math.round((done / (assets.length + 1)) * 100) + '%');
+  };
+  Promise.all(assets.map((a) => fetch(a + '?t=' + Date.now(), { cache: 'reload' })
+    .then(bump).catch(bump)))
+    .then(() => {
+      hud.updateProgress(1, 'restarting \u2026');
+      setTimeout(() => { try { location.reload(); } catch (e) { /* nothing else to try */ } }, 450);
+    });
+}
+
+/* Saying not yet. The round carries on exactly as it was; what changes
+   is that the part of the game the update was for is now shut until you
+   take it. */
+function declineUpdate(S, hud, info) {
+  try {
+    localStorage.setItem(UPDATE.declinedKey, JSON.stringify({
+      version: info.version, name: info.name, mode: info.mode || 'both', at: Date.now(),
+    }));
+  } catch (e) { /* storage off; the refusal simply will not stick */ }
+  S.modeLocks = updateLocks();
+  hud.updateHide();
+  const m = String(info.mode || 'both').toLowerCase();
+  hud.banner(m === 'multiplayer' ? 'MULTIPLAYER LOCKED UNTIL YOU UPDATE'
+    : m === 'zombies' ? 'ZOMBIES IS SINGLE PLAYER UNTIL YOU UPDATE'
+      : 'ONLINE PLAY LOCKED UNTIL YOU UPDATE', '#ff7a2a');
+}
+
+function fetchManifest() {
+  const url = UPDATE.manifest + '?t=' + Date.now();
+  return fetch(url, { cache: 'no-store' })
+    .then((r) => (r.ok ? r.json() : null))
+    .catch(() => null);
+}
+
 const PLAYER = {
   /* Two seconds after the last hit, and quick once it starts: the fight is
      meant to be about position, not about nursing a health bar. */
@@ -11762,6 +11966,37 @@ function makeHud() {
   #b9hud .roundlbl { position:absolute; left:28px; bottom:86px; font-size:13px; letter-spacing:.35em; color:#8c7f68; }
   #b9hud .points { position:absolute; right:26px; bottom:64px; font-size:30px; text-align:right; text-shadow:0 2px 3px #000; }
   #b9hud .ammo { position:absolute; right:26px; bottom:18px; font-size:22px; text-align:right; color:#cfc3ab; text-shadow:0 2px 3px #000; }
+  /* THE UPDATE NOTICE.
+     Over the game rather than instead of it: you are told what landed
+     while still looking at the room you are standing in, because the
+     decision is about that room. Bottom centre, clear of the round
+     counter on the left and the ammo on the right. */
+  #b9hud .upd { position:absolute; left:50%; bottom:11%; transform:translateX(-50%);
+    width:min(640px,86vw); background:rgba(8,10,14,.93); border:1px solid #4a4234;
+    border-left:3px solid #ff7a2a; padding:16px 20px; opacity:0; pointer-events:none;
+    transition:opacity .25s; z-index:40; }
+  #b9hud .upd.on { opacity:1; pointer-events:auto; }
+  #b9hud .upd .uh { font-size:12px; letter-spacing:.28em; color:#ff9d5c; margin-bottom:7px; }
+  #b9hud .upd .un { font-size:20px; color:#e8ddc8; margin-bottom:3px; }
+  #b9hud .upd .uv { font-size:11px; letter-spacing:.16em; color:#8a8272; margin-bottom:11px; }
+  #b9hud .upd .ud { font-size:13.5px; color:#cfc3ab; line-height:1.5; margin-bottom:9px; }
+  #b9hud .upd .uw { font-size:12.5px; color:#9d9484; line-height:1.5; margin-bottom:15px; font-style:italic; }
+  #b9hud .upd .ub { display:flex; gap:10px; }
+  #b9hud .upd button { flex:0 0 auto; background:#1a1712; color:#e8ddc8; border:1px solid #4a4234;
+    padding:9px 18px; font:inherit; font-size:13px; letter-spacing:.12em; cursor:pointer; }
+  #b9hud .upd button.go { border-color:#ff7a2a; color:#ffb583; }
+  #b9hud .upd button:hover { background:#2a2318; }
+  /* The bar while it downloads, in place of the buttons. */
+  #b9hud .upd .up { height:6px; background:#241f18; margin-top:4px; }
+  #b9hud .upd .up i { display:block; height:100%; width:0%; background:#ff7a2a; transition:width .2s; }
+  #b9hud .upd .us { font-size:12px; color:#9d9484; margin-top:8px; letter-spacing:.1em; }
+  /* WHICH BUILD AM I PLAYING.
+     Bottom right, under the ammo counter, which owns the corner from
+     18px up. At 9px and 38 per cent opacity this is legible if you look
+     for it and invisible if you are not -- the point is to be able to
+     say "I am on 0.5.0" without it ever being part of the game. */
+  #b9hud .build { position:absolute; right:9px; bottom:2px; font-size:9px; letter-spacing:.12em;
+    color:#cfc3ab; opacity:.38; text-shadow:0 1px 2px #000; pointer-events:none; user-select:none; }
   #b9hud .ammo .wname { font-size:12px; letter-spacing:.3em; color:#8c7f68; display:block; }
   #b9hud .cross { position:absolute; left:50%; top:50%; width:4px; height:4px; margin:-2px; border-radius:50%;
     background:rgba(232,221,200,.85); box-shadow:0 0 4px #000; }
@@ -11969,6 +12204,17 @@ function makeHud() {
     <div class="roundlbl">ROUND</div><div class="round">1</div>
     <div class="points">500</div><div class="pdelta"></div>
     <div class="ammo"><span class="wname">SIDEARM</span><span class="nums">7 / 42</span></div>
+    <div class="build"></div>
+    <div class="upd">
+      <div class="uh">THE GAME YOU ARE PLAYING HAS BEEN UPDATED</div>
+      <div class="un"></div>
+      <div class="uv"></div>
+      <div class="ud"></div>
+      <div class="uw"></div>
+      <div class="ub"><button class="go">TAKE IT NOW</button><button class="no">NOT YET</button></div>
+      <div class="up" hidden><i></i></div>
+      <div class="us" hidden></div>
+    </div>
     <div class="prompt"></div>
     <div class="cursorwarn">CLICK ONCE TO LOCK THE CURSOR — the pad is moving it</div>
     <div class="subs"><span class="who"></span><span class="text"></span></div>
@@ -12008,6 +12254,10 @@ function makeHud() {
     round: $('.round'), points: $('.points'), ammo: $('.ammo .nums'), wname: $('.ammo .wname'),
     prompt: $('.prompt'), cursorwarn: $('.cursorwarn'), subs: $('.subs'), subWho: $('.subs .who'), subText: $('.subs .text'), vig: $('.advig'), scope: $('.scope'), glass: $('.scope .glass'),
     grace: $('.grace'), graceFill: $('.grace .fill'), graceNum: $('.grace .num'),
+    build: $('.build'),
+    upd: $('.upd'), updName: $('.upd .un'), updVer: $('.upd .uv'), updDid: $('.upd .ud'),
+    updWhat: $('.upd .uw'), updBtns: $('.upd .ub'), updGo: $('.upd .go'), updNo: $('.upd .no'),
+    updBar: $('.upd .up'), updFill: $('.upd .up i'), updStat: $('.upd .us'),
     flash: $('.hitflash'),
     banner: $('.banner'), dmg: $('.dmg'), title: $('.title'), hitm: $('.hitm'), pdelta: $('.pdelta'),
     cross: $('.cross'), stam: $('.stam'), stamFill: $('.stamfill'), shield: $('.shield'), perks: $('.perks'),
@@ -12308,6 +12558,35 @@ function makeHud() {
     scopeOffset(x, y) {
       els.glass.style.transform = `translate(${x.toFixed(2)}px, ${y.toFixed(2)}px)`;
     },
+    /* The build stamp, bottom right under the ammo. Set once. */
+    build(text) { els.build.textContent = text; },
+    /* The update notice. `info` is whatever version.json said; the two
+       callbacks are the two answers. */
+    update(info, onYes, onNo) {
+      if (!info) { els.upd.classList.remove('on'); return; }
+      els.updName.textContent = info.name ? String(info.name) : 'A new build';
+      els.updVer.textContent = 'VERSION ' + String(info.version || '?')
+        + (info.mode ? '  \u00b7  ' + String(info.mode).toUpperCase() : '');
+      els.updDid.textContent = info.did || '';
+      els.updWhat.textContent = info.onAccept || '';
+      els.updBtns.hidden = false;
+      els.updBar.hidden = true;
+      els.updStat.hidden = true;
+      els.updFill.style.width = '0%';
+      els.updGo.onclick = () => onYes && onYes();
+      els.updNo.onclick = () => onNo && onNo();
+      els.upd.classList.add('on');
+    },
+    /* Swap the buttons for the bar, once the answer is yes. */
+    updateProgress(frac, label) {
+      els.updBtns.hidden = true;
+      els.updBar.hidden = false;
+      els.updStat.hidden = false;
+      els.updFill.style.width = (Math.max(0, Math.min(1, frac)) * 100).toFixed(0) + '%';
+      els.updStat.textContent = label || '';
+      els.upd.classList.add('on');
+    },
+    updateHide() { els.upd.classList.remove('on'); },
     /* Left of the ten seconds. Zero hides it. */
     grace(t, total) {
       els.grace.style.opacity = t > 0 ? 1 : 0;
@@ -12403,6 +12682,9 @@ function updateRounds(game, S, P, hud, sfx, dt) {
       // Prefer windows in or beside the player's room, like a director
       // keeping the pressure where the player is looking.
       const pr = roomOf(P.actor.position);
+      /* Nothing arrives during the regroup. The three minutes are only
+         worth having if they are actually quiet. */
+      if (S.updateGrace > 0) return;
       const options = S.windows.filter((w) => S.activeWindows.includes(w.def.id));
       const near = options.filter((w) => w.def.room === pr);
       const pickFrom = near.length && Math.random() < 0.65 ? near : options;
@@ -12546,6 +12828,11 @@ function start(opts = {}) {
   const mapDef = useMap(mapId);
   const S = {
     mapId,
+    /* Live update state. `updating` holds the whole loop while the new
+       build comes down; `updateGrace` is the three minutes the dead hold
+       off for afterwards; `modeLocks` is what refusing an update shut. */
+    updating: false, updateInfo: null, updateGrace: 0, pendingResume: null,
+    modeLocks: { multiplayer: false, zombiesMulti: false },
     time: 0, points: ECONOMY.start, mul: 1, mulT: 0,
     round: 0, toSpawn: 0, spawnT: 0, betweenRounds: false, lullT: 0,
     zombies: [], pool: [], debris: [], brass: [], windows: [], buys: [], doors: {},
@@ -12699,6 +12986,45 @@ function start(opts = {}) {
      renderer worked out for itself on the way in — so a first run on a
      laptop does not open on Ultra and a returning player does not have to
      set it again. */
+  /* ---------------- the build, and whether it is current ---------------- */
+  hud.build('v' + B9_BUILD.version + '  \u00b7  ' + B9_BUILD.name);
+  S.modeLocks = updateLocks();
+
+  /* Coming back from an update. The round that was interrupted is read
+     back here, before the first frame, so the player never sees the
+     default state flash past on the way to their own. */
+  {
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(UPDATE.resumeKey) || 'null'); } catch (e) { saved = null; }
+    if (saved) {
+      try { localStorage.removeItem(UPDATE.resumeKey); } catch (e) { /* off */ }
+      S.pendingResume = saved;
+    }
+  }
+
+  /* Asking, because nothing can tell us. The first check is soon enough
+     to catch an update you started the session behind, and after that it
+     is once a minute -- often enough to matter, rare enough that a page
+     left open overnight is not hammering anything. */
+  if (!opts.test) {
+    const ask = () => {
+      if (S.updating || S.updateInfo) return;
+      fetchManifest().then((info) => {
+        if (!info || !info.version || info.version === B9_BUILD.version) return;
+        let declined = null;
+        try { declined = JSON.parse(localStorage.getItem(UPDATE.declinedKey) || 'null'); } catch (e) { declined = null; }
+        // Refusing 0.5.1 does not make you deaf to 0.5.2.
+        if (declined && declined.version === info.version) return;
+        S.updateInfo = info;
+        hud.update(info,
+          () => beginUpdate(game, S, P, hud, sfx, info),
+          () => { S.updateInfo = null; declineUpdate(S, hud, info); });
+      });
+    };
+    setTimeout(ask, UPDATE.firstCheckSeconds * 1000);
+    setInterval(ask, UPDATE.pollSeconds * 1000);
+  }
+
   S.baseBloom = game.renderer.post.bloom;
   {
     let want = null;
@@ -12769,6 +13095,20 @@ function start(opts = {}) {
     hud.hideTitle();
     // Off the stage: the room is a bunker again.
     if (S.heroModels) for (const k in S.heroModels) heroModelVisible(S.heroModels[k], false);
+    /* Coming back from an update, the round picks up where it stopped:
+       the points, the guns, the perks and the round number are put back,
+       and the dead hold off for three minutes while you find a corner.
+       No opening radio chatter -- you have heard it, you were mid-round. */
+    if (S.pendingResume && restoreRound(game, S, P, hud, S.pendingResume)) {
+      const back = S.pendingResume;
+      S.pendingResume = null;
+      hud.banner('ROUND ' + S.round + ' RESUMED  \u00b7  v' + B9_BUILD.version, '#ff7a2a');
+      /* The next round starts when the grace runs out, not on the usual
+         five-second opener. */
+      S.roundStartAt = S.time + (back.grace || UPDATE.graceSeconds);
+      return;
+    }
+    S.pendingResume = null;
     setTimeout(() => voice(LINES.intro, true), 900);
     S.roundStartAt = S.time + 5.2;   // game time, so tests and pauses behave
   };
@@ -12918,6 +13258,12 @@ function start(opts = {}) {
     S.input.useDown = CTL.held('use');
     th._firePrev = !!th.fire;
 
+    /* Taking an update stops the world. Everything below this is the
+       round -- movement, firing, spawning, the dead -- and none of it
+       should run while the new build is coming down: the promise was
+       that everyone freezes and the field clears, not that you keep
+       fighting behind a progress bar. */
+    if (S.updating) return;
     if (S.gameOver || !S.started) return;
     if (S.roundStartAt != null && S.time >= S.roundStartAt) { S.roundStartAt = null; startRound(game, S, hud, sfx); }
 
@@ -13085,6 +13431,14 @@ function start(opts = {}) {
       hud.shield(P.shieldT / SHIELD.duration, P.shieldCd);
       hud.stamina(P.stamina / maxStam, !!P.perks.adrenaline);
       hud.grace(S.grace, BENCH_GRACE);
+      /* The regroup after an update, shown on the same bar the bench's
+         ten seconds use: it means the same thing -- the dead are holding
+         off, and this is how much of it is left. */
+      if (S.updateGrace > 0) {
+        S.updateGrace = Math.max(0, S.updateGrace - dt);
+        hud.grace(S.updateGrace, UPDATE.graceSeconds);
+        if (S.updateGrace <= 0) hud.banner('THEY ARE COMING BACK', '#b3221c');
+      }
 
       /* Settings. Escape opens it anywhere except at the bench, where
          escape already means "put the gun down". The game keeps running
@@ -13859,6 +14213,12 @@ function start(opts = {}) {
   window.__T_WINDOWS = WINDOWS;
   window.__T_roomOf = roomOf;
   window.__T_WEAPONS = WEAPONS;
+  /* The two halves of an update reload, reachable from a test. The
+     reload itself cannot be tested -- the harness loses the page -- so
+     what is checked is that the round is written out correctly and that
+     writing it back produces the round that was left. */
+  window.__T_CAPTURE = () => captureRound(S, P, B9_BUILD.version);
+  window.__T_RESTORE = (blob) => restoreRound(game, S, P, hud, blob);
   // Model builders, so a test can stand one on a bench and photograph it
   // without having to equip it and fight the viewmodel for the frame.
   // Things a test needs to reach that the game keeps to itself.
