@@ -1797,6 +1797,25 @@ function build(game, S) {
        through the water". There is a bed out there now, deep enough to
        be a lake and shallow enough to be a floor. */
     slab(-BW, BW, C.water.y - 9.0, C.water.y - 6.0, 42.5, 150, mats.bed, 'lake-deep');
+    /* AND THE LAKE HAS TO END SOMEWHERE.
+    
+       Extending the floor is not enough on its own: waterAt claimed water
+       for 260 metres in every direction, which is far more lake than
+       there is bed, so a swimmer who kept going simply ran out of map and
+       fell. The two have to agree, and the honest way to make them agree
+       is not a bigger floor -- it is a shore.
+    
+       So the far bank and the two side banks, rising out of the water the
+       way the near bank does not: eight metres of bed to climb from the
+       water side, which nothing can. From the middle of the lake they
+       read as the opposite shore, which is what they are. waterAt is
+       brought in to match them, so there is no water anywhere without a
+       bed under it. */
+    slab(-BW, BW, C.water.y - 9.0, C.water.y + 1.6, 144, 150, mats.bed, 'lake-far-bank');
+    for (const sx of [-1, 1]) {
+      slab(sx * BW - 4 * sx, sx * BW, C.water.y - 9.0, C.water.y + 1.6, 0, 150,
+        mats.bed, 'lake-side-bank');
+    }
     /* The bank: past it the bottom drops away and you cannot wade on.
     
        At z 31 it went straight THROUGH the pier and the boathouse -- a
@@ -1926,8 +1945,21 @@ function applySky(game) {
    bed that build() lays down -- the bed shelves in five-metre steps from
    the seawall out, so this is the same arithmetic read the other way. */
 function waterAt(x, z) {
-  if (z < 0.2 || z > 260) return null;
-  if (Math.abs(x) > 260) return null;
+  /* The water stops where the bed does.
+  
+     This said 260 metres in every direction, and the bed reached about
+     forty. Everywhere in between the game believed you were swimming and
+     the swim code held you up -- so it looked fine -- right up to the
+     moment you passed 260, where the water stopped, gravity came back and
+     there was nothing at all underneath: "your character falls through an
+     endless void once when they try to go through the water". Measured at
+     z 300: forty-two metres in two seconds and still going.
+  
+     These numbers are the banks in build(), one metre inside them. There
+     is no water anywhere without a bed under it now, and the banks stop
+     you before you reach the edge of either. */
+  if (z < 0.2 || z > 143) return null;
+  if (Math.abs(x) > 85) return null;
   const bedTop = C.water.y - 0.55;
   // Which shelf step this is on; step 0 runs from the wall out to z = 1.
   const i = z <= 1.0 ? 0 : Math.min(8, Math.floor((z - 1.0) / 5.0) + 1);
