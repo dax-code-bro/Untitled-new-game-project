@@ -1089,7 +1089,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
       if (ceil != null) {
         let hi = t.y;
         if (!tipOnly) for (const j of js) if (j.y > hi) hi = j.y;
-        if (hi > ceil) e += (hi - ceil) * 4;
+        if (hi > ceil) e += (hi - ceil) * (tipOnly ? 4 : 400);
         if (typeof window !== 'undefined' && !tipOnly) {
           const W = window.__JOINT_HI || (window.__JOINT_HI = {});
           if (W.max == null || hi > W.max) { W.max = hi; W.ceil = ceil; }
