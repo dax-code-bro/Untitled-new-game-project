@@ -10634,7 +10634,24 @@ function updateZombie(game, S, P, z, dt, sfx) {
   if (water != null && !z.dead && z.state !== 'down') {
     const bed = water.bed != null ? water.bed : (water.surface - 3);
     const depth = water.surface - bed;
-    const swimming = depth > 1.15;
+    /* WHEN DOES A BODY SWIM RATHER THAN WADE? When the water is deeper
+       than the body is tall -- not when it is deeper than 1.15 m.
+       
+       This threshold was 1.15, and raising the hold height to keep the
+       capsule off the bed did not fix the jam on its own, because the
+       real trouble is that a swimming body is WEIGHTLESS: gravityScale
+       goes to zero, and with it the controller's ability to step up. So
+       a body still classed as swimming in 1.2 m of water cannot climb
+       the 22 cm shelf in front of it, and every one of them stacked up
+       against the same step.
+       
+       A body 1.8 m tall standing in 1.2 m of water is not swimming, it
+       is wading -- chest deep, on its feet, with gravity and a step
+       height. Measured against the shelves this map has: it swims out
+       past about twenty-six metres where the bed is 1.9 m down, and
+       wades the rest of the way in, which is both correct and the
+       picture that was wanted. */
+    const swimming = depth > 1.75;
     const wading = !swimming && depth > 0.45;
     if (swimming) {
       /* Held at the surface rather than left to the bed. The body rides
