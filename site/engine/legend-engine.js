@@ -9190,10 +9190,34 @@ class Input {
 
       const B = pad.buttons;
       const prev = pad._prev;
+      /* EVERY BUTTON HAS TO BE SEEN RELEASED BEFORE IT IS BELIEVED.
+       *
+       * A pad that rests with something held -- a trigger sitting above
+       * its threshold, a worn shoulder, a d-pad that reads pressed on a
+       * knock-off, a button held down at the moment the page loads --
+       * reports that button as down from the first poll onward, and
+       * every consumer treats it as the player leaning on it forever.
+       *
+       * The right trigger has had this guard for a while, because a
+       * full-auto weapon emptying its magazine the instant you drew it
+       * was impossible to miss. The same fault on any OTHER button is
+       * quieter and worse: it is "I walk up to a barricade and it builds
+       * itself", because the repair is a HELD key and something is
+       * holding it; and it is "the game starts playing behind the
+       * character screen", because the title watches for any button at
+       * all and one of them was already down.
+       *
+       * So the rule generalises. Until a button has been observed UP at
+       * least once, it reads as up however hard the hardware insists
+       * otherwise. A real press has to release first, which every real
+       * press does; a stuck one never will, and stays silent. */
+      const armed = pad._armed || (pad._armed = {});
       const names = ['a', 'b', 'x', 'y', 'lb', 'rb', 'lt', 'rt', 'back', 'start', 'ls', 'rs', 'up', 'down', 'left', 'right'];
       for (let i = 0; i < names.length; i++) {
         const n = names[i];
-        const on = i === 6 ? pad.lt > 0.5 : i === 7 ? pad.rt > 0.5 : held(i);
+        const raw = i === 6 ? pad.lt > 0.5 : i === 7 ? pad.rt > 0.5 : held(i);
+        if (!raw) armed[n] = true;
+        const on = raw && armed[n] === true;
         B[n] = on;
         pad.pressed[n] = on && !prev[n];
         pad.released[n] = !on && prev[n];

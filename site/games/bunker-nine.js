@@ -2308,11 +2308,22 @@ const GRAPHICS_ORDER = ['retro', 'low', 'normal', 'high', 'ultra'];
 
    They live in the same menu below the tiers and the cursor walks straight
    from one section into the other, so there is one list and one index. */
+/* AUTO REPAIR IS GONE, not defaulted off.
+ *
+ * It boarded a window by standing at one, it was off by default, and the
+ * saved value was versioned once already to throw away old copies that
+ * said otherwise -- and it STILL came back: "whenever I go up to a
+ * barrier I automatically start building it, I hate it, remove it".
+ *
+ * The reason it came back is the pad. The repair is a HELD key, and a
+ * controller resting with the use button down holds it forever, so the
+ * proximity path was never needed to reproduce the fault -- walking up
+ * to a window with a stuck button IS the auto path. That is fixed in the
+ * engine now (a button must be seen released before it is believed), but
+ * a setting that can only ever do the thing somebody asked to have
+ * removed is not worth keeping for the day it misreads again. Boarding
+ * a window is holding the use key. There is no other way to do it. */
 const TOGGLES = {
-  autoRepair: {
-    name: 'AUTO REPAIR', def: false,
-    blurb: 'Off: hold the use key to board a window. On: standing at one boards it.',
-  },
   flinch: {
     name: 'HIT FLINCH', def: true,
     blurb: 'The view rolls away from a blow. Turn it off if it makes you ill.',
@@ -2330,7 +2341,7 @@ const TOGGLES = {
     blurb: 'Lines are read aloud by the browser under the character\'s own voice. Off leaves the voice and the subtitle.',
   },
 };
-const TOGGLE_ORDER = ['autoRepair', 'flinch', 'gore', 'shellCasings', 'spokenWords'];
+const TOGGLE_ORDER = ['flinch', 'gore', 'shellCasings', 'spokenWords'];
 
 function loadToggles() {
   const out = {};
@@ -13840,7 +13851,25 @@ function start(opts = {}) {
       }
     } else {
       padPick = false;
-      if (pd.connected && Object.values(pd.buttons).some(Boolean)) { startGame(); }
+      /* ONE button starts the game, and only on a fresh press.
+       *
+       * This was `any button, at all, still held` -- a level test over
+       * every button on the pad, polled eight times a second. So a pad
+       * resting with anything down started the game the instant the page
+       * loaded, which is exactly the report: the round playing itself
+       * behind the character screen with no chance to choose anybody.
+       * A trigger sitting above its threshold is enough, and plenty of
+       * pads do that.
+       *
+       * The engine now refuses to believe a button until it has seen it
+       * released once, which stops the stuck ones on its own. This is
+       * the other half: confirm is A or START, it is an EDGE and not a
+       * level, and the bumpers still walk the cast rather than starting
+       * anything. Nothing else on the pad starts the game at all. */
+      /* The EDGE is caught in the frame loop, not here -- see the note
+         in the update hook. An interval running eight times a second
+         samples a one-frame press about a quarter of the time, which is
+         a start button that works when it feels like it. */
     }
     if (S.started) clearInterval(padWatch);
   }, 120);
@@ -13875,6 +13904,22 @@ function start(opts = {}) {
       if (!S.viewStowed) {
         S.viewStowed = true;
         for (const v of Object.values(P.view)) setViewVisible(v, false);
+      }
+      /* A pad starts the game from HERE, where the press is fresh.
+       *
+       * It used to be done on a 120 ms interval, and tested as a level
+       * over every button on the pad: `any button still down`. A pad
+       * resting with anything held -- a trigger above its threshold is
+       * the common one -- started the game on the first tick, before
+       * anybody had chosen a character. That is the round playing itself
+       * behind the menu.
+       *
+       * Confirm is A or START, it is an edge, and it is read every frame
+       * because an edge lasts one. The bumpers still walk the cast on
+       * the interval, where a level test with its own latch is right. */
+      {
+        const pd = game.input.pad;
+        if (pd.connected && (pd.pressed.a || pd.pressed.start)) startGame();
       }
       turnHeroModel(game, S, dt);
       return;
@@ -14652,12 +14697,11 @@ function start(opts = {}) {
       const it = (S.bench && S.bench.open) ? null : nearestInteract(S, P);
       if (it) {
         /* Boarding a window is work, and work is a key you are holding
-           rather than a place you are standing. With AUTO REPAIR on it goes
-           back to happening by proximity, for anyone who liked it that way. */
-        const auto = it.kind === 'repair' && S.toggles.autoRepair;
-        hud.prompt(it.label + (auto ? '' : it.hold ? ' (hold)' : ''));
-        if (auto
-            || (it.hold ? CTL.held('use') : CTL.hit('use'))) {
+           rather than a place you are standing. There is no longer a
+           setting that makes it happen by proximity -- see the note on
+           TOGGLES. Standing at a window does nothing at all. */
+        hud.prompt(it.label + (it.hold ? ' (hold)' : ''));
+        if (it.hold ? CTL.held('use') : CTL.hit('use')) {
           doInteract(game, S, P, hud, sfx, it, dt);
         }
       } else hud.prompt(null);
