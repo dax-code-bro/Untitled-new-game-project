@@ -222,8 +222,24 @@ const GRIP_KINDS = {
     spread: 0.0194, close: 1.0, index: 'trigger', thumb: 'over', drop: 0 },
   /* Under a horizontal forend: wrist low and behind, knuckles up the near
      side, fingers over the top and down the far side. */
+  /* MEASURED: the fingertips were finishing 35 mm PROUD of the thing
+     they were holding.
+     
+     Every two-handed weapon in the game had its support-hand fingers
+     across the sight picture, and it was always the same four. Fired a
+     bundle of rays down each gun's own sight line and asked how far
+     above it each digit sits: the MP5's three outer fingers came out at
+     +28, +30 and +30 mm ABOVE the line, which is 75 mm above the bore on
+     a handguard whose top is at 40. That is not a hand round a
+     handguard, it is a hand closing over thin air above one -- and it
+     sits exactly where the front sight is.
+     
+     The wrap is 0.055/girth * close, so `close` is the lever: the
+     fingers have to stop at the top of the forend rather than curling on
+     past it. Dropped with the anchor a few millimetres lower to keep the
+     palm in contact. */
   fore: { axis: [1, 0, 0], round: [0, 1, 0], girth: 0.078,
-    spread: 0.0202, close: 0.96, index: 'wrap', thumb: 'along', drop: 0.019 },
+    spread: 0.0202, close: 0.70, index: 'wrap', thumb: 'along', drop: 0.024 },
   /* A vertical foregrip, gripped like a pistol grip but with nothing to
      put a trigger finger on, so all four fingers wrap. It is a SUPPORT
      grip by definition -- no gun has one for the firing hand -- and it
@@ -235,11 +251,11 @@ const GRIP_KINDS = {
   /* A fat wooden shotgun forend: more to go round, so the fingers do not
      close as far and sit further apart. */
   woodFore: { axis: [1, 0, 0], round: [0, 1, 0], girth: 0.092,
-    spread: 0.0238, close: 0.86, index: 'wrap', thumb: 'along', drop: 0.023 },
+    spread: 0.0238, close: 0.64, index: 'wrap', thumb: 'along', drop: 0.028 },
   /* A big tube -- the Arc Breaker's accelerator, the MG42's shroud. The
      hand lies along it and barely closes. */
   tube: { axis: [1, 0, 0], round: [0, 1, 0], girth: 0.108,
-    spread: 0.0246, close: 0.74, index: 'wrap', thumb: 'along', drop: 0.028 },
+    spread: 0.0246, close: 0.62, index: 'wrap', thumb: 'along', drop: 0.032 },
   /* Spade grips: gripped from behind with the thumb up on a butterfly
      trigger, so the thumb goes UP rather than over the fingers. */
   spade: { axis: [-0.06, -0.998, 0], round: [-1, 0, 0], girth: 0.056,
