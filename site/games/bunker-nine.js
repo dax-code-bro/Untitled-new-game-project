@@ -3686,9 +3686,8 @@ function updateEscape(game, S, P, hud, sfx, dt) {
   E.t += dt;
   const D = E.def;
   /* Every frame, not once. Hiding the viewmodel at cast-off is not
-     enough on its own: several things turn parts of it back on, and the
-     first cut of this had a 1911 hanging in the corner of the beach. */
-  for (const v of Object.values(P.view)) { if (v && v.parts) setViewVisible(v, false); }
+     enough on its own: several things turn parts of it back on. */
+  hideEveryViewmodel(P);
 
   /* Stage one: out across the lake. The camera is no longer the
      player's -- it sits off the boat's quarter and watches it go. */
@@ -3761,12 +3760,7 @@ function beginEscape(game, S, P, hud, sfx) {
   S.toSpawn = 0;
   S.spawnT = 1e9;
   P.actor.visible = false;
-  /* Every viewmodel, not just the one in your hands. setViewVisible
-     walks v.parts and v.arms and an empty object has neither, so the
-     guarded loop is the whole of the safety here -- the first version
-     passed `P.view[P.equipped()] || {}` and would have thrown on the
-     fallback rather than hiding anything. */
-  for (const v of Object.values(P.view)) { if (v && v.parts) setViewVisible(v, false); }
+  hideEveryViewmodel(P);
   /* The boat's own boxes, so they can be moved. They went in as
      decoration with no handle on them, so they are found by name -- the
      builder names every part it makes and this is what those names are
@@ -3790,6 +3784,25 @@ function beginEscape(game, S, P, hud, sfx) {
   // The line goes when you cast off, which is what casting off is.
   for (const a of E.mooring) { try { a.destroy(); } catch (e) { void e; } }
   E.mooring = [];
+}
+
+/* Every viewmodel down, whatever shape it is.
+ *
+ * setViewVisible walks v.parts, and a `single` viewmodel -- the 1911 and
+ * the Blaze -- has v.actor instead. Guarding on v.parts and skipping
+ * everything else therefore left exactly those two on screen, which is
+ * why the first beach had an upgraded pistol hanging in the corner of
+ * it. Neither shape is hidden by the other's rule. */
+function hideEveryViewmodel(P) {
+  for (const v of Object.values(P.view)) {
+    if (!v) continue;
+    if (v.parts) { setViewVisible(v, false); continue; }
+    if (v.actor) v.actor.visible = false;
+    if (v.arms && v.arms.parts) for (const a of v.arms.parts) a.visible = false;
+    for (const k of ['slide', 'mag', 'bolt', 'hammer', 'grip', 'mark']) {
+      if (v[k] && v[k].visible !== undefined) v[k].visible = false;
+    }
+  }
 }
 
 /* The beach at the end of it.
@@ -12726,6 +12739,20 @@ function makeHud() {
      to get from a boat on a lake to a beach without showing the four
      hundred metres between them. */
   #b9hud .fadeout { position:absolute; inset:0; opacity:0; background:#000; pointer-events:none; }
+  /* Cinema. Everything in the HUD goes except the picture, the title
+     card and the version watermark.
+     
+     Named the elements one by one first, and it left the word ROUND on
+     screen: the round class is the NUMBER, and the label beside it is
+     its own node. A list of names is a list somebody has to keep
+     complete, and this one was wrong within the hour. A rule over the
+     children is not.
+     
+     (No backticks in here. This whole stylesheet is a template literal,
+     and the first version of this comment quoted a class name in them --
+     which ended the literal mid-sentence and took the HUD builder with
+     it: "makeHud: .round is not a function".) */
+  #b9hud.cine > *:not(.title):not(.build):not(.fadeout) { opacity:0 !important; transition:opacity .5s; }
   #b9hud .dmg { position:absolute; inset:0; opacity:0;
     background:radial-gradient(ellipse at center, transparent 42%, rgba(140,10,6,.75) 100%); transition:opacity .25s; }
   #b9hud .title { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center;
@@ -13094,11 +13121,22 @@ function makeHud() {
      * An ending with a stamina bar on it is a screenshot of a game, not
      * an ending. */
     cinema(on) {
+      if (!on) return;
+      root.classList.add('cine');
+      /* The version watermark STAYS. It is nine pixels in the bottom
+         corner and it is there so that a screenshot of a fault always
+         says which build it came from -- an ending is exactly the sort
+         of screenshot somebody sends back. Everything else goes.
+         
+         This is one-way on purpose: several of these own their own
+         opacity (the scope, the damage vignette, the hitmarker) and
+         turning them all to 1 would put a scope on the screen. Nothing
+         comes back from the ending except a page reload. */
       for (const k of ['round', 'points', 'ammo', 'wname', 'prompt', 'subs', 'cross',
         'stam', 'shield', 'perks', 'grace', 'vig', 'scope', 'dmg', 'hitm', 'pdelta',
-        'cursorwarn', 'build']) {
+        'cursorwarn']) {
         const e2 = els[k];
-        if (e2) { e2.style.transition = 'opacity .5s'; e2.style.opacity = on ? 0 : 1; }
+        if (e2 && on) { e2.style.transition = 'opacity .5s'; e2.style.opacity = 0; }
       }
     },
     /* The other ending. Bunker Nine has YOU FELL; this is what Coastline
