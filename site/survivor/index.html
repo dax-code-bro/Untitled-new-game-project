@@ -113,6 +113,14 @@
     position: fixed; inset: 0; z-index: 19; pointer-events: none;
     box-shadow: inset 0 0 220px 40px rgba(0,0,0,.62); transition: box-shadow .6s;
   }
+  /* The damage halo is a ring, not a wash: the middle of the screen stays
+     clear so you can still see what is about to hit you again. It sits
+     under the HUD (z 20) so panel text never goes pink. */
+  #damage {
+    position: fixed; inset: 0; z-index: 19; pointer-events: none;
+    background: none; opacity: 0; transition: opacity .16s ease-out;
+    mix-blend-mode: normal;
+  }
 
   /* ---------- overlays modules open ---------- */
   .screen {
@@ -225,6 +233,7 @@
   <b>Y</b> engine &middot; <b>shift+Q</b> dismount &middot; <b>P</b> pause &middot; <b>T</b> time&times; &middot;
   <b>Esc</b> menu &middot; <b>H</b> hide this
 </div>
+<div id="damage"></div>
 <div id="vignette"></div>
 
 <div id="gameover" hidden>
@@ -242,9 +251,12 @@
 <script src="./modules/10-buildings.js"></script>
 <script src="./modules/12-vegetation.js"></script>
 <script src="./modules/14-props.js"></script>
+<script src="./modules/18-body.js"></script>
 <script src="./modules/20-weapons.js"></script>
 <script src="./modules/22-gunbench.js"></script>
 <script src="./modules/24-crafting.js"></script>
+<script src="./modules/26-tutorial.js"></script>
+<script src="./modules/28-veterancy.js"></script>
 <script src="./modules/30-interaction.js"></script>
 <script src="./modules/32-inventory.js"></script>
 <script src="./modules/34-survival.js"></script>

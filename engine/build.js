@@ -60,6 +60,8 @@ const LegendEngine = {
   GUN_PROFILE, GUN_PARTS, GUN_MATERIAL, CARTRIDGE_FORM,
   assembleGun, stripSequence, cartridgeGeometry, mergeGeometry,
   gunTube, gunBlock, gunProfile, gunSpring,
+  FP_SEG, FP_DIGIT, FP_FINGERS, FP_MATERIAL, FP_POSE, FP_DIGIT_BIAS,
+  handBones, armBones, legBones, fpPose, fpJointAngles, fpSolve, fpGripPoint, fpGeometry,
   GltfAsset, GltfInstance,
   clamp, lerp, smoothstep,
 };

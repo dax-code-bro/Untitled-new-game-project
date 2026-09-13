@@ -290,6 +290,10 @@ SurvivorGame.module({
         shivering: status.shivering,
         breathless: Math.min(1, ctx.player.speedMs / 4),
         holdSeconds,
+        // What the hours have bought: a steadier hold and a shoulder
+        // that meets the gun instead of absorbing it.
+        steadiness: ctx.state.steadiness,
+        recoilControl: ctx.state.recoilControl,
       });
 
       if (!shot.fired) {
@@ -538,7 +542,7 @@ SurvivorGame.module({
     }
 
     function placeViewmodel(dt) {
-      if (!rig || !firearm) return;
+      if (!rig || !firearm) { ctx.state.gunFrame = null; return; }
       const cam = game.camera;
       const fwd = cam.forward, right = cam.right, up = cam.trueUp;
 
@@ -654,6 +658,29 @@ SurvivorGame.module({
           rig.rounds[i].setRotation([-pitch, yaw + 90, roll]);
           rig.rounds[i].visible = !ctx.paused && !ctx.state.benchOpen;
         }
+      }
+    
+
+      /* Publish where the gun is and where a hand would close on it, so
+         the body module can put real hands on it rather than guessing.
+         Gun space: origin at the breech face on the bore line, +Z
+         downrange. The firing hand closes just behind the trigger and
+         below the bore; the support hand sits under the fore-end, about
+         forty per cent of the way up the barrel, which is where people
+         actually hold a rifle. */
+      const pro = rig.asm && rig.asm.profile;
+      if (pro) {
+        const tail = -(pro.oalM - pro.barrelM);
+        const tz = tail + (pro.lop || 0.34);
+        const pistol = pro.family === 'handgun';
+        ctx.state.gunFrame = {
+          p: [base.x, base.y, base.z],
+          q: [_q.x, _q.y, _q.z, _q.w],
+          grip: [0, pistol ? -0.055 : -0.062, tz - 0.030],
+          fore: pistol ? null : [0, -0.048, pro.barrelM * 0.52],
+          family: pro.family,
+          hidden: ctx.paused || ctx.state.benchOpen,
+        };
       }
     }
 

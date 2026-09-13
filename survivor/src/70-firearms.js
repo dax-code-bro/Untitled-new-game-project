@@ -261,6 +261,11 @@ class Firearm {
       if (a.swayReduction && (!a.requiresProne || opts.prone)) sway *= 1 - a.swayReduction;
     }
     sway *= 1 - 0.45 * clamp01(opts.skill != null ? opts.skill : 0.5);
+    /* Hands that have done this for a long time. Separate from the
+       shooting skill, which is technique: this is conditioning, and it
+       is why a veteran's hold is steadier on a gun they have never
+       fired before. */
+    if (opts.steadiness != null) sway *= clamp01(opts.steadiness);
     /* Held breath. A shooter at the bottom of an exhale is very nearly
        still — the respiratory pause is where the shot goes, and it is
        worth about two thirds of the remaining wobble. It does not last:
@@ -425,6 +430,14 @@ class Firearm {
         || this.spec.brakeEfficiency || 0,
     });
     const rise = muzzleRise(recoil, { gunMassKg: this.massKg, boreAxisM: 0.045 });
+    /* Almost all of what a new shooter suffers from recoil is flinch and
+       a shoulder that is not meeting the gun. It never goes to zero —
+       a .50 is a .50 — but it more than halves. */
+    if (opts.recoilControl != null) {
+      const rc = clamp01(opts.recoilControl);
+      rise.riseDeg *= rc;
+      rise.recoveryS *= 0.5 + rc * 0.5;
+    }
 
     // How loud, and how far that carries. A suppressed subsonic .22 is a
     // different animal from a braked magnum and the animals know it.

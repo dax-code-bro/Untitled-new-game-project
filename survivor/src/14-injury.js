@@ -157,14 +157,21 @@ class InjurySystem {
     const region = BODY_REGION[regionId];
     if (!region || !region.bone) return null;
     const bone = BONE[region.bone];
-    if (energyJ < bone.breakEnergyJ * 0.6) return null;
+    /* Loaded bone remodels denser. Someone who has spent three hundred
+       hours carrying weight over broken ground has a tibia that takes
+       noticeably more to break than someone who washed up yesterday —
+       forty per cent at the top of the curve, which is real and is not
+       a lot. Set by whoever owns the veterancy record. */
+    const tough = this.boneToughness || 1;
+    const threshold = bone.breakEnergyJ * tough;
+    if (energyJ < threshold * 0.6) return null;
     // Between 60% and 100% of the threshold it is a coin weighted by how
     // close you got; above it, the bone goes.
-    const p = clamp01((energyJ - bone.breakEnergyJ * 0.6) / (bone.breakEnergyJ * 0.4));
+    const p = clamp01((energyJ - threshold * 0.6) / (threshold * 0.4));
     if (this.rng() > p) return null;
     const fx = {
       bone: region.bone, name: bone.name, region: regionId,
-      compound: energyJ > bone.breakEnergyJ * 2.2,   // bone through skin
+      compound: energyJ > threshold * 2.2,           // bone through skin
       splinted: false, healDays: bone.healDays, ageDays: 0, healed: false,
       immobilises: bone.immobilises,
     };

@@ -37,6 +37,8 @@ this.API = {
   generateHouse, Building, Wall, ROOM,
   ElectricalSystem, Circuit, Conductor, Load, PowerSource, checkWiring, AWG,
   Firearm, WEAPONS, handload,
+  RECIPES, GATHER, canCraft, craftSeconds, craftAttempt, craftable, toolSatisfied, bulkOf,
+  Veterancy, veterancy, vitality, hardening,
   FIRE_MODE, modesFor, selectorFraction, Magazine, StripState, CleaningJob,
   ejectCase, EJECT_PATTERN, partFits, swapPart, benchReport,
   World, GAME_MODE,
@@ -1729,6 +1731,117 @@ function live(phys, hours, env, stepMinutes = 5, hook) {
   check('and a shot-out barrel says it is not coming back',
     /not coming back/.test(bar.symptom || ''), bar.symptom);
   check('the verdict is in words, not a number', typeof pin.verdict === 'string' && pin.verdict.length > 3);
+}
+
+/* ---------------- crafting: can a new player actually start ---------------- */
+{
+  section('from nothing');
+  // What you can hold on the first morning, having searched the ground.
+  const bare = { plantFibre: 6, stick: 4, stone: 3, flint: 1 };
+  const first = A.craftable(bare, [], 0.1).filter((e) => e.ok).map((e) => e.id);
+  check('with bare hands you can make cordage', first.includes('cordage'), first.join(','));
+  check('and a hand axe out of two stones', first.includes('handAxe'));
+  check('but not a bow', !first.includes('bow'));
+
+  const c1 = A.canCraft('stoneKnife', bare, []);
+  check('a stone knife needs cordage you have not twisted yet',
+    !c1.ok && c1.missing.some((m) => m.item === 'cordage'), JSON.stringify(c1.missing || []));
+  const c2 = A.canCraft('stoneKnife', Object.assign({}, bare, { cordage: 1 }), []);
+  check('with cordage in hand it can be made', c2.ok);
+
+  const c3 = A.canCraft('stoneAxe', { stone: 1, stick: 2, cordage: 2 }, []);
+  check('a stone axe needs a knife to shape it', !c3.ok && c3.missingTools.includes('stoneKnife'));
+  const c4 = A.canCraft('stoneAxe', { stone: 1, stick: 2, cordage: 2 }, ['stoneKnife']);
+  check('and with the knife it goes', c4.ok);
+
+  check('a found hatchet satisfies "axe" as well as a made one',
+    A.toolSatisfied('axe', ['hatchet']) && A.toolSatisfied('axe', ['stoneAxe']));
+  check('a stone knife cuts, and so does a hand axe',
+    A.toolSatisfied('cutting', ['stoneKnife']) && A.toolSatisfied('cutting', ['handAxe']));
+  check('but a hammer does not cut', !A.toolSatisfied('cutting', ['hammer']));
+
+  // The chain has to close: bare hands to felling trees.
+  check('the whole chain from bare hands reaches an axe',
+    A.canCraft('cordage', bare, []).ok
+    && A.canCraft('stoneKnife', { flint: 1, stick: 1, cordage: 1 }, []).ok
+    && A.canCraft('stoneAxe', { stone: 1, stick: 2, cordage: 2 }, ['stoneKnife']).ok);
+
+  section('and it costs time');
+  between('cordage takes', A.craftSeconds('cordage', 0.1) / 60, 20, 60, ' min');
+  between('a stone axe takes', A.craftSeconds('stoneAxe', 0.1) / 3600, 1.5, 4, ' h');
+  between('a bow takes', A.craftSeconds('bow', 0.1) / 3600, 4, 12, ' h');
+  check('and skill makes you faster',
+    A.craftSeconds('stoneAxe', 0.9) < A.craftSeconds('stoneAxe', 0.1) * 0.65);
+
+  section('failure is about difficulty, not about being new');
+  const rate = (id, skill) => {
+    let ok = 0;
+    for (let i = 0; i < 4000; i++) if (A.craftAttempt(id, skill, () => i / 4000).ok) ok++;
+    return ok / 4000;
+  };
+  between('a beginner twisting cordage succeeds', rate('cordage', 0.1) * 100, 60, 85, '%');
+  between('a beginner making a bow succeeds', rate('bow', 0.1) * 100, 12, 40, '%');
+  between('an expert making a bow succeeds', rate('bow', 0.9) * 100, 50, 85, '%');
+  check('and a failure eats the materials', A.craftAttempt('bow', 0, () => 0.99).yield === 0);
+
+  section('bulk');
+  check('a plank takes far more room than a fibre',
+    A.bulkOf('plank').volumeL > A.bulkOf('plantFibre').volumeL * 10);
+  check('and a stone weighs more than cordage',
+    A.bulkOf('stone').massKg > A.bulkOf('cordage').massKg * 5);
+}
+
+/* ---------------- veterancy ---------------- */
+{
+  section('the character hardens');
+  check('you start at a hundred', A.vitality(0) === 100, `${A.vitality(0)}`);
+  check('and top out at two hundred', A.vitality(100000) === 200, `${A.vitality(100000)}`);
+  check('three hundred hours is nearly all of it', A.vitality(300) >= 195, `${A.vitality(300)}`);
+  between('eighty hours is about half way', A.vitality(80), 140, 165);
+  check('the curve keeps climbing but flattens',
+    A.hardening(600) > A.hardening(300) && A.hardening(600) - A.hardening(300) < 0.06,
+    `${(A.hardening(300)).toFixed(3)} -> ${(A.hardening(600)).toFixed(3)}`);
+
+  const day1 = A.veterancy(0.5);
+  const vet = A.veterancy(400);
+  check('a new character is "washed up"', /washed/.test(day1.title), day1.title);
+  check('a veteran is not', !/washed/.test(vet.title), vet.title);
+  check('bone gets tougher, but only by half again',
+    vet.boneToughness > day1.boneToughness && vet.boneToughness < 1.5,
+    vet.boneToughness.toFixed(2));
+  check('recoil more than halves but never goes away',
+    vet.recoilControl < 0.5 && vet.recoilControl > 0.3, vet.recoilControl.toFixed(2));
+  check('and the hands get steadier', vet.steadiness < day1.steadiness);
+
+  section('and it is remembered');
+  const v = new A.Veterancy();
+  v.live(3600 * 10);
+  v.livesLost = 2;
+  const back = A.Veterancy.load(JSON.stringify(v.serialize()));
+  between('ten hours lived come back', back.hoursLived, 9.9, 10.1, ' h');
+  check('and so do the deaths', back.livesLost === 2);
+  check('dying does not reset the hardening', back.stats.vitality > 100);
+}
+
+/* A veteran is harder to break, and it is applied where the bone is. */
+{
+  section('a veteran breaks less easily');
+  const soft = new A.InjurySystem({ rng: () => 0.5 });
+  const hard = new A.InjurySystem({ rng: () => 0.5 });
+  hard.boneToughness = A.veterancy(400).boneToughness;
+  // An energy that snaps a new arrival's tibia.
+  let softBroke = 0, hardBroke = 0;
+  for (let i = 0; i < 200; i++) {
+    const a = new A.InjurySystem({ rng: () => i / 200 });
+    const b = new A.InjurySystem({ rng: () => i / 200 });
+    b.boneToughness = A.veterancy(400).boneToughness;
+    if (a.tryFracture('lowerLeg', 2000)) softBroke++;
+    if (b.tryFracture('lowerLeg', 2000)) hardBroke++;
+  }
+  check('the same fall breaks fewer veteran legs', hardBroke < softBroke && softBroke > 0,
+    `${softBroke} vs ${hardBroke} of 200`);
+  check('but it still breaks some', hardBroke > 0 || softBroke === 0, `${hardBroke}`);
+  void soft; void hard;
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

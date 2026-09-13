@@ -125,7 +125,12 @@
       sky: 'dawn', gravity: -9.80665, quality: opts.quality,
       // The engine's default far plane is 500 m, which is right for a scene
       // you can see all of at once and hopeless for a four-kilometre island.
-      camera: { near: 0.25, far: 5200, fov: 62 },
+      /* The near plane has to clear the player's own body. A shoulder
+         sits 0.22 m from the eye and a chest is closer still, so at
+         0.25 m you look straight through your own arms — they come
+         apart into wedges where the plane cuts them. 0.09 m is inside
+         everything a body can put in front of its own eyes. */
+      camera: { near: 0.09, far: 5200, fov: 62 },
     });
     game.renderer.post.bloom = 0.32;
     game.renderer.shadows.distance = 160;
@@ -865,6 +870,9 @@
     return `<div class="row"><span class="k">${k}</span><span class="v">${v}</span></div>`;
   }
 
+  let lastHealth = null;
+  let hurtFlash = 0;
+
   function updateHud() {
     if (hudTick++ % 6) return;
     const clock = world.clock;
@@ -872,12 +880,60 @@
     const env = clock.environment();
     const w = clock.weather.describe();
 
+    /* Health first, because it is the one you look at when something has
+       just happened to you. It is not a hit-point pool — this game does
+       not have one — it is what the body actually has left: blood volume,
+       core temperature, pain and the fractures you are carrying, which
+       are the four things that kill you here. */
+    const inj = player.injury ? player.injury.summary() : { wounds: [], fractures: [], pain: 0, bleedLps: 0 };
+    const bleed = Math.min(1, (inj.bleedLps || 0) / 0.004);
+    const cold = Math.min(1, Math.abs(s.coreTempC - 37) / 4);
+    const broken = Math.min(1, (inj.fractures ? inj.fractures.length : 0) / 3);
+    const health = clamp01(1 - Math.max(
+      (s.bloodLoss || 0), bleed * 0.5, cold, broken * 0.6, (inj.pain || 0) * 0.5,
+    ) * 0.85 - (1 - player.capacity()) * 0.15);
+    lastHealth = lastHealth == null ? health : lastHealth;
+
     el('vitals').innerHTML = '<h2>body</h2>'
+      + meter('health', health)
       + meter('water', s.thirst, true)
       + meter('energy', s.energy)
       + meter('rest', s.sleepPressure, true)
-      + meter('warmth', 1 - Math.min(1, Math.abs(s.coreTempC - 37) / 4))
-      + meter('capacity', player.capacity());
+      + meter('warmth', 1 - cold)
+      + meter('capacity', player.capacity())
+      + (inj.wounds && inj.wounds.length
+        ? `<div class="k" style="margin-top:6px">${inj.wounds.length} wound${inj.wounds.length > 1 ? 's' : ''}`
+          + `${inj.fractures && inj.fractures.length ? `, ${inj.fractures.length} broken` : ''}</div>`
+        : '');
+
+    /* A hit registers on the screen, not just in a panel. The flash is
+       brief and its depth is how badly you were hurt: a graze is a
+       breath of pink at the edge, a femoral bleed is the screen going
+       dark red. Underneath it a steady halo says how injured you are
+       right now, so it is information rather than only a jolt. */
+    if (health < lastHealth - 0.004) hurtFlash = Math.min(1, hurtFlash + (lastHealth - health) * 9 + 0.25);
+    lastHealth = lastHealth + (health - lastHealth) * 0.35;
+    hurtFlash = Math.max(0, hurtFlash - 0.09);
+    const halo = Math.max(hurtFlash, (1 - health) * 0.55);
+    const dmg = el('damage');
+    if (dmg) {
+      if (halo < 0.012) { dmg.style.opacity = '0'; } else {
+        /* A ring, drawn as a radial gradient so the centre of the screen
+           stays clear. The ring thickens and reddens with the damage:
+           a graze is a thin breath of pink at the corners, a femoral
+           bleed closes a dark band right in around your sight. */
+        const inner = Math.round(62 - halo * 34);          // 62% clear -> 28%
+        const r = Math.round(232 - halo * 108);            // pale pink -> dark blood
+        const g = Math.round(96 - halo * 84);
+        const bl = Math.round(96 - halo * 80);
+        const a = Math.min(0.92, 0.18 + halo * 0.82);
+        dmg.style.background =
+          `radial-gradient(ellipse 78% 88% at 50% 50%, rgba(${r},${g},${bl},0) ${inner}%,`
+          + ` rgba(${r},${g},${bl},${(a * 0.45).toFixed(3)}) ${Math.round(inner + (100 - inner) * 0.55)}%,`
+          + ` rgba(${r},${g},${bl},${a.toFixed(3)}) 100%)`;
+        dmg.style.opacity = '1';
+      }
+    }
 
     const hh = Math.floor(clock.hourOfDay);
     const mm = Math.floor((clock.hourOfDay - hh) * 60);

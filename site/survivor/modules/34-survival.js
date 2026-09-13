@@ -84,6 +84,7 @@ SurvivorGame.module({
 
       const rec = { fire, actors, flame, embers, light: null, cooking: [], boiling: null };
       fires.push(rec);
+      ctx.emit('fire-built', { fire: rec.fire, x: rec.fire.x, z: rec.fire.z });
       ctx.log('A fire laid. It still has to catch.');
       return rec;
     }
@@ -210,6 +211,13 @@ SurvivorGame.module({
        buys you is a smaller wind speed and a dry sleeping bag. Both of those
        are inputs the physiology already reads. */
     const shelters = [];
+    /* Published so anything that came up after these were built can still
+       see them. An event only reaches whoever was listening at the time,
+       which is no use to a panel that opens later. */
+    ctx.state.firesBuilt = () => fires.length;
+    ctx.state.sheltersBuilt = () => shelters.length;
+    ctx.state.shelterHere = () => shelters.some((sh) =>
+      Math.hypot(sh.x - ctx.player.x, sh.z - ctx.player.z) < sh.radiusM + 1);
     function buildShelter() {
       const inv = ctx.player.inventory;
       if (!inv.has('timber', 2)) { ctx.toast('Two logs, minimum.'); return; }
@@ -236,6 +244,7 @@ SurvivorGame.module({
       const quality = 0.45 + (cordage ? 0.25 : 0) + Math.min(0.25, ctx.player.skills.survival || 0);
       shelters.push({ x, z, radiusM: 2.4, quality, actors });
       ctx.player.practise('survival', 0.05);
+      ctx.emit('shelter-built', { x, z, quality });
       ctx.log(`A lean-to. It stops about ${Math.round(quality * 100)}% of the wind and most of the rain.`, true);
     }
 
