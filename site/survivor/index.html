@@ -59,7 +59,7 @@
   #vitals { left: 16px; bottom: 16px; width: 250px; }
   #log { right: 16px; bottom: 16px; width: 350px; max-height: 190px; overflow: hidden; }
   #prompt {
-    left: 50%; bottom: 108px; transform: translateX(-50%); text-align: center;
+    left: 50%; bottom: 158px; transform: translateX(-50%); text-align: center;
     padding: 7px 18px; letter-spacing: .04em; white-space: nowrap;
   }
   #prompt[hidden] { display: none; }
@@ -102,7 +102,7 @@
   #compass b { color: var(--ink); font-weight: 400; }
 
   #help {
-    position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 21;
+    position: fixed; left: 50%; bottom: 64px; transform: translateX(-50%); z-index: 21;
     font-size: 11px; color: var(--faint); letter-spacing: .05em; pointer-events: none;
     max-width: 92vw; text-align: center; line-height: 1.7;
   }
@@ -121,6 +121,34 @@
     background: none; opacity: 0; transition: opacity .16s ease-out;
     mix-blend-mode: normal;
   }
+
+  /* ---------- the hotbar ---------- */
+  .hotSlot {
+    width: 58px; height: 42px; border: 1px solid var(--edge); background: var(--panel);
+    display: flex; flex-direction: column; justify-content: space-between;
+    padding: 2px 4px; font-size: 9.5px; color: var(--dim); overflow: hidden;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  }
+  .hotSlot.on { border-color: var(--edge-hot); background: rgba(233,228,217,.12); color: var(--ink); }
+  .hotSlot.empty { opacity: .45; }
+  .hotSlot i { font-style: normal; font-size: 9px; color: var(--faint); }
+  .hotSlot span { line-height: 1.15; word-break: break-word; }
+
+  /* ---------- the paper doll ---------- */
+  .dollWrap { display: grid; grid-template-columns: 300px 1fr; gap: 26px; align-items: start; }
+  @media (max-width: 880px) { .dollWrap { grid-template-columns: 1fr; } }
+  .doll { position: relative; width: 300px; height: 300px; }
+  .dollFig { position: absolute; left: 106px; top: 0; opacity: .8; }
+  .dollSlot {
+    position: absolute; border: 1px solid var(--edge); background: rgba(10,12,11,.55);
+    padding: 3px 5px; cursor: pointer; display: flex; flex-direction: column;
+    justify-content: center; font-size: 10px; line-height: 1.2;
+  }
+  .dollSlot:hover { border-color: var(--edge-hot); background: rgba(233,228,217,.08); }
+  .dollSlot b { font-weight: 400; color: var(--faint); font-size: 9px; letter-spacing: .12em;
+    text-transform: uppercase; }
+  .dollSlot span { color: var(--dim); }
+  .dollSlot.on span { color: var(--ink); }
 
   /* ---------- overlays modules open ---------- */
   .screen {
@@ -251,12 +279,14 @@
 <script src="./modules/10-buildings.js"></script>
 <script src="./modules/12-vegetation.js"></script>
 <script src="./modules/14-props.js"></script>
+<script src="./modules/16-outfit.js"></script>
 <script src="./modules/18-body.js"></script>
 <script src="./modules/20-weapons.js"></script>
 <script src="./modules/22-gunbench.js"></script>
 <script src="./modules/24-crafting.js"></script>
 <script src="./modules/26-tutorial.js"></script>
 <script src="./modules/28-veterancy.js"></script>
+<script src="./modules/29-death.js"></script>
 <script src="./modules/30-interaction.js"></script>
 <script src="./modules/32-inventory.js"></script>
 <script src="./modules/34-survival.js"></script>

@@ -819,8 +819,30 @@
     const cause = player.body.causeOfDeath || 'unknown causes';
     const day = world.clock.totalDays + 1;
     log(`You died of ${cause}.`, true);
-    const over = el('gameover');
     const multiplayer = world.mode === 'multiplayer';
+    /* Dying takes a few seconds and it looks different depending on what
+       killed you. The death module owns that; this only holds the
+       screen back until it has finished, and shows it straight away if
+       nothing claimed the death. */
+    ctx.state.dying = { cause, day, permanent: multiplayer, t: 0, claimed: false };
+    ctx.emit('death', { cause, day, permanent: multiplayer });
+    if (ctx.state.dying.claimed) {
+      pendingGameOver = { cause, day, multiplayer };
+      return;
+    }
+    showGameOver(cause, day, multiplayer);
+  }
+
+  let pendingGameOver = null;
+  global.SURVIVOR_DEATH_DONE = () => {
+    if (!pendingGameOver) return;
+    const { cause, day, multiplayer } = pendingGameOver;
+    pendingGameOver = null;
+    showGameOver(cause, day, multiplayer);
+  };
+
+  function showGameOver(cause, day, multiplayer) {
+    const over = el('gameover');
     if (over) {
       over.hidden = false;
       el('gameoverCause').textContent = `You died of ${cause} on day ${day}.`;
@@ -831,7 +853,6 @@
       const btn = over.querySelector('.btn');
       if (btn) btn.textContent = multiplayer ? 'Start a new world' : 'Wake up on the shore';
     }
-    ctx.emit('death', { cause, day, permanent: multiplayer });
   }
 
   /* Come back. Everything about the world is untouched; only the body is new. */
@@ -847,7 +868,7 @@
     for (const k of Object.keys(ctx.state)) {
       // Anything a module latched while dying — a locked camera, an open
       // sheet, a held interaction — has to let go.
-      if (/^(movementLocked|uiOpen|stance|noiseOverride|concealment)$/.test(k)) delete ctx.state[k];
+      if (/^(movementLocked|uiOpen|stance|noiseOverride|concealment|dying|dead)$/.test(k)) delete ctx.state[k];
     }
     paused = false;
     running = true;

@@ -151,8 +151,9 @@ SurvivorGame.module({
         + `<div class="row"><span>${s.title}</span></div>`
         + `<p style="font-size:11.5px;margin:6px 0 4px">${s.hint}</p>`
         + (detail ? `<p class="faint" style="font-size:11px;margin:0 0 6px">${detail}</p>` : '')
-        + '<div><button data-skip="1" style="font-size:10px;padding:4px 10px">skip the lot</button>'
-        + '<button data-next="1" style="font-size:10px;padding:4px 10px">skip this step</button></div>';
+        + '<div style="margin-top:8px;pointer-events:auto">'
+        + '<button class="btn" data-skip="1" style="font-size:10px;padding:4px 10px">skip the lot</button>'
+        + '<button class="btn" data-next="1" style="font-size:10px;padding:4px 10px">skip this step</button></div>';
       for (const b of panel.querySelectorAll('[data-skip]')) b.onclick = () => finish(true);
       for (const b of panel.querySelectorAll('[data-next]')) b.onclick = () => advance(true);
     }

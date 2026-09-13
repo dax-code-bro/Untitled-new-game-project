@@ -168,7 +168,7 @@ SurvivorGame.module({
       thigh: ['thigh'], lowerLeg: ['shank'], foot: ['boot'], pelvis: ['chest'],
     };
 
-    let damage = { bones: new Map(), stamp: -1 };
+    let damage = { bones: new Map(), stamp: -1, wounds: 0, broken: 0 };
     function refreshDamage() {
       const inj = ctx.player.injury;
       if (!inj) return;
@@ -177,6 +177,23 @@ SurvivorGame.module({
         + (sum.fractures ? sum.fractures.length : 0) * 31
         + Math.round((sum.pain || 0) * 50);
       if (stamp === damage.stamp) return;
+      const wasWounds = damage.wounds || 0;
+      const nowWounds = sum.wounds ? sum.wounds.length : 0;
+      const wasBroken = damage.broken || 0;
+      const nowBroken = sum.fractures ? sum.fractures.length : 0;
+      if (damage.stamp >= 0 && (nowWounds > wasWounds || nowBroken > wasBroken)) {
+        /* Something new happened to the body. Say so once, so the sound
+           and anything else that cares fires on the event rather than
+           polling for it. */
+        const fresh = (sum.wounds || [])[nowWounds - 1];
+        ctx.emit('player-hurt', {
+          severity: nowBroken > wasBroken ? 1 : Math.min(1, (fresh && fresh.severity) || 0.5),
+          region: fresh && fresh.region,
+          broken: nowBroken > wasBroken,
+        });
+      }
+      damage.wounds = nowWounds;
+      damage.broken = nowBroken;
       damage.stamp = stamp;
       const m = new Map();
       const put = (id, kind, weight) => {
@@ -197,49 +214,60 @@ SurvivorGame.module({
       applyTints();
     }
 
-    function tintOf(baseMat, bone) {
-      const d = damage.bones.get(bone);
-      if (!d) return null;
-      return d.kind === 'bandage' ? 'bandage' : d.kind === 'bruise' ? 'bruise' : 'blood';
+    /* Damage does not replace a limb's colour, it stains it. A grazed
+       forearm is skin with blood on it; a forearm painted uniformly the
+       colour of blood is a prop. Mixing in linear-ish sRGB is close
+       enough at these values and much cheaper than being exact. */
+    function mix(a, b, t) {
+      const k = Math.max(0, Math.min(1, t));
+      const ar = (a >> 16) & 255, ag = (a >> 8) & 255, ab = a & 255;
+      const br = (b >> 16) & 255, bg = (b >> 8) & 255, bb = b & 255;
+      return (Math.round(ar + (br - ar) * k) << 16)
+        | (Math.round(ag + (bg - ag) * k) << 8)
+        | Math.round(ab + (bb - ab) * k);
     }
 
     function applyTints() {
       const o = outfit();
       const set = (actor, bone, defMat) => {
         if (!actor) return;
-        const t = tintOf(defMat, bone);
-        const mat = LE.FP_MATERIAL[t || defMat] || LE.FP_MATERIAL.skin;
-        actor.setTint(mat.color);
+        const base = (LE.FP_MATERIAL[defMat] || LE.FP_MATERIAL.skin).color;
+        const d = damage.bones.get(bone);
+        if (!d) { actor.setTint(base); return; }
+        const stainMat = d.kind === 'bandage' ? 'bandage' : d.kind === 'bruise' ? 'bruise' : 'blood';
+        const stain = LE.FP_MATERIAL[stainMat].color;
+        // A dressing covers the limb; blood and bruising only mark it.
+        const amount = d.kind === 'bandage' ? 0.92 : Math.min(0.80, 0.25 + d.weight * 0.6);
+        actor.setTint(mix(base, stain, amount));
       };
       for (const side of [rig.right, rig.left]) {
         if (!side) continue;
         set(side.actors.get('upperArm'), 'upperArm', 'skin');
         set(side.actors.get('forearm'), 'forearm', 'skin');
         set(side.actors.get('shoulder'), 'upperArm', 'skin');
-        set(side.actors.get('palm'), 'palm', 'skin');
+        /* Gloves are the hand's material, not a layer over it — the
+           hand is already sixteen actors and doubling that to draw
+           cloth over each phalanx would buy nothing anyone can see. */
+        const handMat = CLOTH_MAT[o.hands] || 'skin';
+        set(side.actors.get('palm'), 'palm', handMat);
         for (const name of LE.FP_FINGERS) {
-          for (let i = 1; i <= 3; i++) set(side.actors.get(`${name}${i}`), 'palm', 'skin');
+          for (let i = 1; i <= 3; i++) set(side.actors.get(`${name}${i}`), 'palm', handMat);
         }
-        for (let i = 0; i <= 2; i++) set(side.actors.get(`thumb${i}`), 'palm', 'skin');
-        const sm = LE.FP_MATERIAL[CLOTH_MAT[o.arms] || 'linen'];
-        if (side.sleeve.upperArm) side.sleeve.upperArm.setTint(sm.color);
-        if (side.sleeve.forearm) side.sleeve.forearm.setTint(sm.color);
+        for (let i = 0; i <= 2; i++) set(side.actors.get(`thumb${i}`), 'palm', handMat);
+        const armCloth = CLOTH_MAT[o.arms] || 'linen';
+        set(side.sleeve.upperArm, 'upperArm', armCloth);
+        set(side.sleeve.forearm, 'forearm', armCloth);
       }
       for (const leg of (rig.legs || [])) {
         set(leg.actors.get('thigh'), 'thigh', 'skin');
         set(leg.actors.get('knee'), 'thigh', 'skin');
         set(leg.actors.get('shank'), 'shank', 'skin');
-        const bm = LE.FP_MATERIAL[CLOTH_MAT[o.feet] || 'boot'];
-        if (leg.actors.get('boot')) leg.actors.get('boot').setTint(bm.color);
-        const tm = LE.FP_MATERIAL[CLOTH_MAT[o.legs] || 'canvas'];
-        if (leg.trouser.thigh) leg.trouser.thigh.setTint(tm.color);
-        if (leg.trouser.shank) leg.trouser.shank.setTint(tm.color);
+        set(leg.actors.get('boot'), 'boot', CLOTH_MAT[o.feet] || 'boot');
+        const legCloth = CLOTH_MAT[o.legs] || 'canvas';
+        set(leg.trouser.thigh, 'thigh', legCloth);
+        set(leg.trouser.shank, 'shank', legCloth);
       }
-      if (rig.chest) {
-        const cm = LE.FP_MATERIAL[CLOTH_MAT[o.torso] || 'linen'];
-        const d = damage.bones.get('chest');
-        rig.chest.setTint(d ? LE.FP_MATERIAL[d.kind === 'bandage' ? 'bandage' : 'blood'].color : cm.color);
-      }
+      if (rig.chest) set(rig.chest, 'chest', CLOTH_MAT[o.torso] || 'linen');
     }
     ctx.on('outfit-changed', () => { damage.stamp = -1; applyTints(); });
 
@@ -383,6 +411,26 @@ SurvivorGame.module({
         out.poseR = tool === 'bow' ? 'gripString' : 'gripHaft';
         out.backR = WRIST_BACK;
       }
+      /* Hands do not hold a pose while a body walks. The fingers open a
+         little on the forward swing and close on the back one, out of
+         phase with each other and lagging the arm — which is the small
+         motion that separates a hand from a glove on a stick. It is
+         also load-bearing at a run, where the hands close up. */
+      if (strideAmp > 0.02) {
+        const run = Math.min(1, Math.max(0, (ctx.player.speedMs || 0) - 1.9) / 2.4);
+        const openR = Math.sin(stride - 0.6) * strideAmp * 0.55;
+        const openL = Math.sin(stride + Math.PI - 0.6) * strideAmp * 0.55;
+        const swingPose = (open) => ({
+          mcp: 0.42 + run * 0.42 - open * 0.30,
+          pip: 0.62 + run * 0.46 - open * 0.42,
+          dip: 0.28 + run * 0.30 - open * 0.20,
+          spread: 0.055 + open * 0.05,
+          thumb: [0.16 + run * 0.12, 0.30 + run * 0.20, 0.24 + run * 0.16, 0.10 + run * 0.25],
+        });
+        if (out.poseR === 'relaxed') out.poseR = swingPose(openR);
+        if (out.poseL === 'relaxed') out.poseL = swingPose(openL);
+      }
+
       // Cold hands curl whatever else they are doing.
       if (st && st.shivering > 0.2) {
         out.poseR = out.poseR === 'relaxed' ? 'cold' : out.poseR;

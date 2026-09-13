@@ -443,13 +443,26 @@ class Physiology {
        A two-node balance: metabolic heat in, dry loss through clothing and
        the boundary air layer out, evaporative loss out. */
     const A = this.surfaceArea;
-    // Wet clothing loses most of its insulation, and immersion removes the
-    // still-air layer entirely. Cold water takes heat ~25x faster than air,
-    // which is why the sea kills so much faster than the night.
+    /* Wet clothing loses most of its insulation, and immersion removes
+       the still-air layer entirely. Cold water takes heat ~25x faster
+       than air, which is why the sea kills so much faster than the
+       night.
+
+       How much a soaking costs depends on what the clothing is made of,
+       and the spread is enormous: wet cotton keeps almost nothing, wet
+       wool keeps about two thirds, because wool's crimped fibres hold
+       air even when the fibre itself is saturated. Whoever dressed the
+       body sets clothingWetLoss; three quarters is the cotton default. */
+    const wetLoss = this.clothingWetLoss == null ? 0.75 : this.clothingWetLoss;
     const effClo = inWater
       ? this.clothingClo * 0.12                       // submerged: near enough to nothing
-      : this.clothingClo * (1 - 0.75 * this.wet);
-    const hc = inWater ? 200 : Math.max(3.1, 8.3 * Math.pow(Math.max(windMs, 0.1), 0.6));
+      : this.clothingClo * (1 - wetLoss * this.wet);
+    /* A windproof shell works by putting the still-air layer back, so it
+       belongs in the convection coefficient rather than in the clothing
+       insulation. This is why an oilskin worth 0.16 clo is worth more in
+       a gale than a sweater worth 0.42. */
+    const wEff = Math.max(windMs, 0.1) * (1 - 0.75 * (this.windproofing || 0));
+    const hc = inWater ? 200 : Math.max(3.1, 8.3 * Math.pow(Math.max(wEff, 0.1), 0.6));
     const resistance = effClo * CLO + 1 / hc;
     const ambient = inWater ? (env.waterTempC != null ? env.waterTempC : airC) : airC;
     const dryLossW = (A * (this.skinTempC - ambient)) / resistance;

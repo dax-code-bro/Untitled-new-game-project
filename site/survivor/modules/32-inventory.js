@@ -166,6 +166,13 @@ SurvivorGame.module({
     ITEMS.spear = { massKg: 1.8, volumeL: 8, stackable: false, use: 'Reach.' };
     ITEMS.snare = { massKg: 0.15, volumeL: 0.3, stackable: true, use: 'Set it and go away.' };
 
+    /* Other modules add items to the same table — garments, crafted
+       tools — so anything registered there is folded in here. Without
+       this a hide coat shows in the pack as "hideCoat" with no mass and
+       no description. */
+    Object.assign(ITEMS, ctx.state.itemTable || {});
+    ctx.state.itemTable = ITEMS;
+
     /* ---- the sheet ---- */
 
     const sheet = document.createElement('div');
@@ -187,6 +194,15 @@ SurvivorGame.module({
       return true;
     }
 
+    /* Anything you carry can go on a hotbar slot. Only the four free
+       slots are offered — the first five are the weapons. */
+    function hotButtons(item) {
+      if (!ctx.state.assignHot) return '';
+      let out = '';
+      for (let i = 5; i < 9; i++) out += `<button data-hot="${i}|${item}">${i + 1}</button>`;
+      return out;
+    }
+
     function render() {
       const inv = ctx.player.inventory;
       const mass = inv.massKg, vol = inv.volumeL;
@@ -200,7 +216,7 @@ SurvivorGame.module({
             <td class="faint">${((s.massKg || 0) * (s.quantity || 1)).toFixed(2)} kg</td>
             <td class="faint">${((s.volumeL || 0) * (s.quantity || 1)).toFixed(1)} L</td>
             <td class="muted">${t.use || ''}</td>
-            <td>${t.clo ? `<button data-wear="${i}">wear</button>` : ''}${
+            <td>${hotButtons(s.item)}${t.clo ? `<button data-wear="${i}">wear</button>` : ''}${
               s.item.startsWith('meat:') || s.item.startsWith('fillet:') || t.use === 'A litre, boiled.' || s.item === 'cannedFood'
                 ? `<button data-eat="${i}">use</button>` : ''}<button data-drop="${i}">drop</button></td>
           </tr>`;
@@ -219,8 +235,13 @@ SurvivorGame.module({
         </tr>`;
       }).join('');
 
+      /* The paper doll belongs at the top of this screen: what you are
+         wearing is the first thing you want to know when you open your
+         pack, and the outfit module owns it. */
+      const doll = ctx.state.dollHtml ? ctx.state.dollHtml() : '';
+
       body.innerHTML = `
-        <h1>Carried</h1>
+        ${doll ? `<h1>Worn</h1>${doll}<h1 style="margin-top:22px">Carried</h1>` : '<h1>Carried</h1>'}
         <p class="lede">
           ${mass.toFixed(1)} of ${inv.capacityKg} kg &nbsp;·&nbsp; ${vol.toFixed(1)} of ${inv.capacityL} L
           ${over > 0 ? `<span class="badText">— ${over.toFixed(1)} kg over. Every step costs more.</span>` : ''}
@@ -239,9 +260,22 @@ SurvivorGame.module({
     }
 
     body.addEventListener('click', (e) => {
-      const t = e.target;
+      let t = e.target;
       if (!(t instanceof HTMLElement)) return;
+      // A click on the label inside a doll slot is a click on the slot.
+      while (t && t !== body && !t.dataset.slot && !t.dataset.wearg
+        && !t.dataset.drop && !t.dataset.wear && !t.dataset.eat && !t.dataset.make
+        && !t.dataset.hot) t = t.parentElement;
+      if (!t || t === body) return;
       const inv = ctx.player.inventory;
+
+      if (ctx.state.dollClick && ctx.state.dollClick(t)) { render(); return; }
+      if (t.dataset.hot != null) {
+        const [slot, item] = t.dataset.hot.split('|');
+        if (ctx.state.assignHot) ctx.state.assignHot(+slot, item);
+        ctx.toast(`${item} on slot ${+slot + 1}.`);
+        render(); return;
+      }
 
       if (t.dataset.drop != null) {
         const s = inv.slots[+t.dataset.drop];
@@ -361,8 +395,8 @@ SurvivorGame.module({
     /* A survivor washes up with nothing, but a knife and the clothes they
        stand up in is the difference between a game and a cruelty. */
     ctx.player.inventory.add({ item: 'knife', massKg: 0.2, volumeL: 0.3, stackable: false });
-    ctx.player.inventory.add({ item: 'clothing', massKg: 1.2, volumeL: 6, stackable: false });
-    ctx.player.inventory.equipped.clothing = ['clothing'];
-    ctx.player.body.clothingClo = 1.2;
+    /* What you are dressed in is the outfit module's business — it has
+       slots, per-garment clo and a wet penalty that depends on the
+       fibre. Setting a single number here as well only overwrote it. */
   },
 });

@@ -254,6 +254,19 @@
     return true;
   }
 
+  /* The island's real save lives here — it is the only thing that can
+     serialise the world. Anything else that wants to save (a hotkey, a
+     quit) goes through this rather than writing its own half of it. */
+  function exposeSave() {
+    C.state.saveIsland = doSave;
+    C.state.quitToTitle = () => {
+      if (!doSave()) return false;
+      C.toast('Saved. Leaving the island.');
+      setTimeout(() => { location.href = bootUrl(currentQuery(), false); }, 450);
+      return true;
+    };
+  }
+
   function deleteSave(key) {
     const ls = storage();
     if (!ls) return;
@@ -408,6 +421,7 @@
 
     let body = `<div>
         <button class="btn" data-act="save">Save this island</button>
+        <button class="btn" data-act="saveQuit">Save and quit</button>
         ${mine ? '<button class="btn" data-act="load">Reload and restore</button>' : ''}
         ${mine ? '<button class="btn" data-act="delete">Delete save</button>' : ''}
       </div>`;
@@ -664,6 +678,16 @@
         setCreative('creativeBuild', !C.state.creativeBuild);
       } else if (act === 'copy') {
         copyLink(bootUrl({ seed: String(C.world.seed), mode: C.world.mode }, false));
+      } else if (act === 'saveQuit') {
+        /* Save, then leave. Reloading without ?save=1 lands on the boot
+           screen with the island still on disk, which is what quitting
+           to the title means here — the save is picked up next time the
+           player asks for it. */
+        if (doSave()) {
+          C.toast('Saved. Leaving the island.');
+          setTimeout(() => { location.href = bootUrl(currentQuery(), false); }, 450);
+        }
+        return;
       } else if (act === 'save') {
         doSave();
       } else if (act === 'delete') {
@@ -797,6 +821,7 @@
     init(ctx) {
       C = ctx;
       loadSettings();
+      exposeSave();
       applyQuality(settings.quality);
       applyFov();
       applyAudio();

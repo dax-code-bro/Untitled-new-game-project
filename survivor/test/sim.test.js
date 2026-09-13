@@ -1844,6 +1844,51 @@ function live(phys, hours, env, stepMinutes = 5, hook) {
   void soft; void hard;
 }
 
+/* ---------------- clothing ---------------- */
+{
+  section('what you are wearing');
+  const cold = { airTempC: 2, windMs: 1, humidity: 0.7, speedMs: 0 };
+  const survive = (setup) => {
+    const b = new A.Physiology({});
+    setup(b);
+    for (let t = 0; t < 3600 * 24; t += 120) {
+      b.step(120, cold);
+      if (b.coreTempC < 32) return t / 60;
+    }
+    return 1440;
+  };
+  const naked = survive((b) => { b.clothingClo = 0.1; });
+  const dressed = survive((b) => { b.clothingClo = 0.75; });
+  check('clothes buy you hours', dressed > naked * 1.5, `${naked} vs ${dressed} min`);
+
+  const wetCotton = survive((b) => { b.clothingClo = 0.75; b.wet = 1; b.clothingWetLoss = 0.85; });
+  const wetWool = survive((b) => { b.clothingClo = 0.75; b.wet = 1; b.clothingWetLoss = 0.35; });
+  check('wet wool beats wet cotton', wetWool > wetCotton, `${wetCotton} vs ${wetWool} min`);
+  check('and wet cotton is barely better than nothing',
+    wetCotton < dressed * 0.75, `${wetCotton} vs ${dressed} min`);
+
+  const gale = { airTempC: 2, windMs: 14, humidity: 0.7, speedMs: 0 };
+  const inGale = (wp, clo) => {
+    const b = new A.Physiology({});
+    b.clothingClo = clo; b.windproofing = wp;
+    for (let t = 0; t < 3600 * 24; t += 120) {
+      b.step(120, gale);
+      if (b.coreTempC < 32) return t / 60;
+    }
+    return 1440;
+  };
+  /* An oilskin is worth 0.16 clo, which is nothing. Over a sweater in a
+     gale it is worth far more than that, because what it is really
+     doing is putting the still-air layer back. That gap is the whole
+     reason a shell is the first thing anyone packs. */
+  const sweater = inGale(0, 0.52);
+  const plusWool = inGale(0, 0.68);        // another 0.16 clo of open weave
+  const plusShell = inGale(1, 0.68);       // the same 0.16 clo, windproof
+  check('in a gale a shell is worth twice its own warmth and more',
+    plusShell - sweater > (plusWool - sweater) * 2,
+    `bare ${sweater}, +wool ${plusWool}, +shell ${plusShell} min`);
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed) {
   console.log('\nFailures:');

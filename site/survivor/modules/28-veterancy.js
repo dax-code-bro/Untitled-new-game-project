@@ -79,6 +79,12 @@ SurvivorGame.module({
       let ok = true;
       try { localStorage.setItem(SAVE, JSON.stringify(snap)); }
       catch (e) { ok = false; }
+      /* The island itself is saved by the menu, which owns the only
+         thing that can serialise a world. This record is the player's
+         side of it — hours lived, lives lost, what they have become —
+         and both have to be written or coming back is only half a
+         return. */
+      if (ctx.state.saveIsland) { if (!ctx.state.saveIsland()) ok = false; }
       persist();
       if (!quiet) {
         ctx.toast(ok ? 'Saved.' : 'Could not save — no room, or a private window.');
@@ -88,10 +94,17 @@ SurvivorGame.module({
     }
     ctx.state.saveGame = saveGame;
 
+    /* Quitting belongs to the menu, which knows how to get back to the
+       boot screen; this only makes sure the player record goes with it. */
+    const menuQuit = ctx.state.quitToTitle;
     ctx.state.quitToTitle = () => {
-      saveGame(true);
+      const snap = snapshot();
+      try { localStorage.setItem(SAVE, JSON.stringify(snap)); } catch (e) { /* private window */ }
+      persist();
+      if (menuQuit) return menuQuit();
       ctx.log('Saved. Reload the page to come back to it.', true);
       ctx.toast('Saved — you can close the tab.');
+      return true;
     };
 
     ctx.state.hasSave = () => {
@@ -130,7 +143,7 @@ SurvivorGame.module({
       // Plain K treats water; shift+K saves.
       if (!ev || !ev.shiftKey) return;
       saveGame(false);
-    }, 'Save (shift+K)');
+    }, 'Save the island and your record (shift+K)');
 
     ctx.on('death', () => {
       vet.livesLost++;

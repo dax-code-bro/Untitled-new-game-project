@@ -254,6 +254,217 @@ SurvivorGame.module({
       }
     }
 
+    /* ---- the body ----------------------------------------------------
+       You hear yourself before you read a panel. Shivering is teeth and
+       a broken breath; a chest infection is a cough with fluid in it; a
+       gut infection is retching. All of it is driven by the same
+       numbers the simulation already has, so the sound arrives when the
+       condition does and stops when it is treated. */
+
+    let shiverPhase = 0, breathPhase = 0, symptomClock = 0, painClock = 0;
+
+    /* Teeth. Two short clicks a tenth of a second apart, at the 10-12 Hz
+       of real shivering, filtered hard so they read as bone rather than
+       as a tap on a table. */
+    function chatter(intensity) {
+      const g = ensureGraph();
+      if (!g) return;
+      const ac = g.ac, now = ac.currentTime;
+      const n = 2 + Math.floor(intensity * 3);
+      for (let i = 0; i < n; i++) {
+        const t = now + i * (0.085 + Math.random() * 0.03);
+        const osc = ac.createOscillator();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(1400 + Math.random() * 900, t);
+        const f = ac.createBiquadFilter();
+        f.type = 'bandpass'; f.frequency.value = 2400; f.Q.value = 6;
+        const gg = ac.createGain();
+        gg.gain.setValueAtTime(0.035 * intensity, t);
+        gg.gain.exponentialRampToValueAtTime(0.0001, t + 0.022);
+        osc.connect(f).connect(gg).connect(A.master);
+        osc.start(t); osc.stop(t + 0.03);
+      }
+    }
+
+    /* A breath. `wet` puts fluid in it, `strain` makes it fast and
+       shallow — which is what a fever and what exhaustion respectively
+       do to breathing, and they sound different. */
+    function breath(out, amp, wet, strain) {
+      const g = ensureGraph();
+      if (!g) return;
+      const ac = g.ac, now = ac.currentTime;
+      const dur = (out ? 0.55 : 0.40) * (1 - strain * 0.45);
+      const src = ac.createBufferSource();
+      const len = Math.ceil(ac.sampleRate * dur);
+      const buf = ac.createBuffer(1, len, ac.sampleRate);
+      const d = buf.getChannelData(0);
+      let last = 0;
+      for (let i = 0; i < len; i++) {
+        last = last * 0.86 + (Math.random() * 2 - 1) * 0.14;
+        d[i] = last;
+      }
+      src.buffer = buf;
+      const f = ac.createBiquadFilter();
+      f.type = 'bandpass';
+      f.frequency.setValueAtTime(out ? 620 : 900, now);
+      f.frequency.linearRampToValueAtTime(out ? 380 : 1200, now + dur);
+      f.Q.value = wet > 0.3 ? 1.4 : 0.7;
+      const gg = ac.createGain();
+      gg.gain.setValueAtTime(0.0001, now);
+      gg.gain.linearRampToValueAtTime(amp, now + dur * 0.3);
+      gg.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+      src.connect(f).connect(gg).connect(A.master);
+      src.start(now); src.stop(now + dur);
+      // Fluid in the chest is a low rattle riding the breath.
+      if (wet > 0.25) {
+        const osc = ac.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(70 + Math.random() * 20, now);
+        const lf = ac.createBiquadFilter();
+        lf.type = 'lowpass'; lf.frequency.value = 320;
+        const og = ac.createGain();
+        og.gain.setValueAtTime(0.02 * wet, now);
+        og.gain.exponentialRampToValueAtTime(0.0001, now + dur * 0.8);
+        osc.connect(lf).connect(og).connect(A.master);
+        osc.start(now); osc.stop(now + dur);
+      }
+    }
+
+    /* A cough: a hard glottal burst and a trailing rasp. A productive
+       one has the rasp doubled and lower, because there is something in
+       there being moved. */
+    function cough(productive) {
+      const g = ensureGraph();
+      if (!g) return;
+      const ac = g.ac, now = ac.currentTime;
+      const bursts = productive ? 3 : 2;
+      for (let i = 0; i < bursts; i++) {
+        const t = now + i * (0.19 + Math.random() * 0.06);
+        const src = ac.createBufferSource();
+        const len = Math.ceil(ac.sampleRate * 0.22);
+        const buf = ac.createBuffer(1, len, ac.sampleRate);
+        const d = buf.getChannelData(0);
+        let last = 0;
+        for (let k = 0; k < len; k++) {
+          last = last * (productive ? 0.93 : 0.8) + (Math.random() * 2 - 1) * 0.2;
+          d[k] = last * Math.exp(-k / (ac.sampleRate * 0.055));
+        }
+        src.buffer = buf;
+        const f = ac.createBiquadFilter();
+        f.type = 'bandpass';
+        f.frequency.value = productive ? 320 : 640;
+        f.Q.value = 1.1;
+        const gg = ac.createGain();
+        gg.gain.value = 0.10;
+        src.connect(f).connect(gg).connect(A.master);
+        src.start(t); src.stop(t + 0.24);
+      }
+    }
+
+    /* Retching. Low, long, and unpleasant, which is the point. */
+    function retch() {
+      const g = ensureGraph();
+      if (!g) return;
+      const ac = g.ac, now = ac.currentTime;
+      const osc = ac.createOscillator();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(105, now);
+      osc.frequency.linearRampToValueAtTime(62, now + 0.7);
+      const f = ac.createBiquadFilter();
+      f.type = 'lowpass'; f.frequency.value = 500; f.Q.value = 3;
+      const gg = ac.createGain();
+      gg.gain.setValueAtTime(0.0001, now);
+      gg.gain.linearRampToValueAtTime(0.11, now + 0.18);
+      gg.gain.exponentialRampToValueAtTime(0.0001, now + 0.8);
+      osc.connect(f).connect(gg).connect(A.master);
+      osc.start(now); osc.stop(now + 0.82);
+    }
+
+    /* Pain. A short voiced grunt, pitched by how bad it is. */
+    function grunt(severity) {
+      const g = ensureGraph();
+      if (!g) return;
+      const ac = g.ac, now = ac.currentTime;
+      const osc = ac.createOscillator();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(150 - severity * 28, now);
+      osc.frequency.linearRampToValueAtTime(112 - severity * 24, now + 0.28);
+      const f = ac.createBiquadFilter();
+      f.type = 'bandpass'; f.frequency.value = 520; f.Q.value = 2.2;
+      const gg = ac.createGain();
+      gg.gain.setValueAtTime(0.0001, now);
+      gg.gain.linearRampToValueAtTime(0.09 * (0.5 + severity * 0.5), now + 0.05);
+      gg.gain.exponentialRampToValueAtTime(0.0001, now + 0.32);
+      osc.connect(f).connect(gg).connect(A.master);
+      osc.start(now); osc.stop(now + 0.34);
+    }
+    ctx.on('player-hurt', (e) => grunt(Math.min(1, (e && e.severity) || 0.5)));
+
+    let lastPain = 0;
+    function bodySounds(dt, status) {
+      /* Shivering. It starts at about 36.5 C core and is violent by 34,
+         and it is involuntary — there is no state in which you are cold
+         enough to shiver and quiet. */
+      const sh = status.shivering || 0;
+      if (sh > 0.12) {
+        shiverPhase += dt * (0.9 + sh * 1.8);
+        if (shiverPhase >= 1) { shiverPhase = 0; chatter(Math.min(1, sh)); }
+      }
+
+      /* Breathing. Rate follows the real drivers: exertion, fever,
+         blood loss and pain all push it up, and a body at rest in good
+         order breathes about 14 times a minute. */
+      const inj = ctx.player.injury ? ctx.player.injury.summary() : { pain: 0 };
+      const fever = Math.max(0, (status.coreTempC - 37.6) / 2.4);
+      const strain = Math.min(1, Math.max(
+        (ctx.player.speedMs || 0) / 5,
+        (status.bloodLoss || 0) * 2,
+        fever, (inj.pain || 0) * 0.8, sh * 0.5,
+      ));
+      const rate = 14 + strain * 22;
+      breathPhase += dt * (rate / 60) * 2;      // in and out
+      if (breathPhase >= 1) {
+        breathPhase -= 1;
+        const out = (breathCount++ & 1) === 1;
+        const amp = 0.008 + strain * 0.045;
+        if (amp > 0.012 || sh > 0.2) breath(out, amp, wetChest, strain);
+      }
+
+      /* Symptoms, on their own clock. A cough is not every frame — it is
+         a handful of times an hour when it is mild and constantly when
+         it is not. */
+      symptomClock -= dt;
+      if (symptomClock <= 0) {
+        const sym = ctx.player.disease ? ctx.player.disease.observedSymptoms() : [];
+        wetChest = 0;
+        let did = false;
+        for (const sm of sym) {
+          if (sm.id === 'productiveCough' || sm.id === 'cough') {
+            wetChest = sm.id === 'productiveCough' ? Math.min(1, sm.severity + 0.3) : sm.severity * 0.3;
+            if (Math.random() < 0.5 + sm.severity * 0.4) { cough(sm.id === 'productiveCough'); did = true; }
+          } else if (sm.id === 'vomiting' && Math.random() < 0.35 + sm.severity * 0.4) {
+            retch(); did = true;
+          } else if ((sm.id === 'nausea' || sm.id === 'cramps') && Math.random() < 0.12) {
+            grunt(0.3 + sm.severity * 0.3); did = true;
+          }
+          if (did) break;
+        }
+        // Worse illness, less time between.
+        const worst = sym.length ? sym[0].severity : 0;
+        symptomClock = did ? (6 + Math.random() * 16) * (1 - worst * 0.6)
+          : 4 + Math.random() * 8;
+      }
+
+      /* Pain that has just got worse gets a noise. Pain that is merely
+         constant does not, because a body stops announcing it. */
+      painClock -= dt;
+      const pain = inj.pain || 0;
+      if (pain > lastPain + 0.08 && painClock <= 0) { grunt(Math.min(1, pain)); painClock = 2.5; }
+      lastPain = lastPain + (pain - lastPain) * Math.min(1, dt * 0.5);
+    }
+    let breathCount = 0;
+    let wetChest = 0;
+
     /* ---- per-frame ------------------------------------------------------ */
     ctx.onUpdate((dt) => {
       const g = ensureGraph();
@@ -286,6 +497,8 @@ SurvivorGame.module({
       }
       g.fireGain.gain.value = fireHeat * 0.14;
       g.fireFilter.frequency.value = 500 + Math.sin(performance.now() * 0.002) * 200;
+
+      bodySounds(dt, ctx.player.body.status(ctx.world.clock.hourOfDay));
 
       // Footsteps.
       const speed = ctx.player.speedMs || 0;
