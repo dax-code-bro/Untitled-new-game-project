@@ -965,12 +965,31 @@ function buildViewHand(g, rawAt, side, opts = {}) {
    * so it can barely move it. The curl has no degree of freedom that
    * lowers that joint.
    *
-   * So the next attempt is not in this function. It is the support
-   * hand's ANCHOR -- hands.left in the weapon table, and `drop` and
-   * `round` in GRIP_KINDS, which decide where the knuckle row sits and
-   * which way the fingers leave it. The ceiling below is kept because it
-   * is correct and costs nothing; it simply is not sufficient on its
-   * own. */
+   *   7. Move the ANCHOR. One weapon, one number: dropped the MP5's
+   *      support hand 35 mm. The fingers came down by one to two
+   *      millimetres and the knuckle did not move AT ALL -- -97 mm
+   *      below the sight line before, -97 after. Ninety-five per cent
+   *      of the change, absorbed.
+   *
+   * And (7) is the whole story in one number. The hand is SOLVED onto
+   * the weapon twice over: the seating search walks it up to 34 mm along
+   * its grasp axis until it sits on the surface, and then solveCurl
+   * scales the curl until the fingers touch. The anchor is a starting
+   * guess for the first of those and the search throws most of it away;
+   * `close` is a starting guess for the second and it divides it out.
+   * Every knob in this file is re-absorbed by an objective whose only
+   * goal is "touch the gun" -- and on a forend, touching the gun means
+   * being where the sights are.
+   *
+   * So the fix is in the SEATING. The hand has to be seated on the part
+   * of the forend BELOW the sight line rather than on the nearest part
+   * of it: a constraint on where the search may come to rest, not
+   * another term added to a score it can pay off elsewhere. That is a
+   * real change to a load-bearing function and it wants its own pass
+   * with the grip test's burial numbers watched the whole way.
+   *
+   * The ceiling below is kept because it is correct and costs nothing.
+   * It simply is not sufficient on its own. */
   /* `lim` is how a finger is allowed to finish.
    *
    *   ceil  the tip must end below this height -- the bore, for a trigger

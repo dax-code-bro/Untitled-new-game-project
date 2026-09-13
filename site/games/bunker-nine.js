@@ -429,14 +429,29 @@ const WEAPONS = {
        z -17 to +17; the hand was anchored at y -14, z -20 -- below it and
        outside it, 21 mm from the nearest metal. On the underside, on the
        centreline. */
-      /* EXPERIMENT, one weapon only: does the ANCHOR move the numbers
-         when the curl cannot? Six changes to solveCurl left this gun's
-         support fingers at +28, +30 and +30 mm above the sight line,
-         byte-identical every time. If dropping the knuckle row 35 mm
-         moves them and nothing else on the map changes, the lever is
-         here and the rest is per-weapon measurement. If it does not,
-         the fault is further up still. */
-      left: [0.232, -0.035, 0], leftGrip: 'fore' },
+      /* AND THE ANCHOR IS NOT THE LEVER EITHER -- measured, one weapon,
+         one number.
+         
+         Dropped this hand 35 mm and swept: the fingers came down by one
+         to two millimetres (+30 to +28, +28 to +25) and the KNUCKLE did
+         not move at all -- -97 mm below the sight line before, -97
+         after. Ninety-five per cent of a 35 mm change, absorbed.
+         
+         That is the whole story of this fault in one number. The hand is
+         SOLVED onto the weapon: there is a seating search that walks it
+         up to 34 mm along its grasp axis until it sits on the surface,
+         and then solveCurl scales the curl until the fingers touch. The
+         anchor is a starting guess for that search and the search throws
+         most of it away. Every knob -- close, drop, the anchor, the
+         ceiling -- is re-absorbed by an objective whose only goal is
+         "touch the gun", and going lower means leaving the surface,
+         which that objective punishes.
+         
+         So the fix is in the SEATING, not the curl and not the table: the
+         hand has to be seated on the part of the forend BELOW the sight
+         line rather than on the nearest part of it. That is a real change
+         to a load-bearing function and it wants its own pass. */
+      left: [0.232, 0, 0], leftGrip: 'fore' },
   },
   sawnoff: {
     name: 'Sawn-Off', slotName: 'SAWN-OFF',
