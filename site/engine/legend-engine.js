@@ -20458,7 +20458,7 @@ const GRIP_KINDS = {
      per-weapon `hands.left` anchor rather than at the wrap. Do not spend
      another pass on `close`. */
   fore: { axis: [1, 0, 0], round: [0, 1, 0], girth: 0.078,
-    spread: 0.0202, close: 0.96, index: 'wrap', thumb: 'along', drop: 0.019 },
+    spread: 0.0202, close: 1.34, index: 'wrap', thumb: 'along', drop: 0.019 },
   /* A vertical foregrip, gripped like a pistol grip but with nothing to
      put a trigger finger on, so all four fingers wrap. It is a SUPPORT
      grip by definition -- no gun has one for the firing hand -- and it
@@ -20470,11 +20470,11 @@ const GRIP_KINDS = {
   /* A fat wooden shotgun forend: more to go round, so the fingers do not
      close as far and sit further apart. */
   woodFore: { axis: [1, 0, 0], round: [0, 1, 0], girth: 0.092,
-    spread: 0.0238, close: 0.86, index: 'wrap', thumb: 'along', drop: 0.023 },
+    spread: 0.0238, close: 1.20, index: 'wrap', thumb: 'along', drop: 0.023 },
   /* A big tube -- the Arc Breaker's accelerator, the MG42's shroud. The
      hand lies along it and barely closes. */
   tube: { axis: [1, 0, 0], round: [0, 1, 0], girth: 0.108,
-    spread: 0.0246, close: 0.74, index: 'wrap', thumb: 'along', drop: 0.028 },
+    spread: 0.0246, close: 1.04, index: 'wrap', thumb: 'along', drop: 0.028 },
   /* Spade grips: gripped from behind with the thumb up on a butterfly
      trigger, so the thumb goes UP rather than over the fingers. */
   spade: { axis: [-0.06, -0.998, 0], round: [-1, 0, 0], girth: 0.056,
