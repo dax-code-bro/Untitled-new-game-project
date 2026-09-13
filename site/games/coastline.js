@@ -1772,12 +1772,31 @@ function build(game, S) {
      state -- and this is the floor it will be built on. */
   {
     const bedTop = C.water.y - 0.55;
+    /* HOW WIDE. Measured: at 520 m across, a body dropped into the
+       shallows at z 10 fell straight THROUGH the bed and kept going --
+       six and a half metres in two seconds, into nothing. These are
+       static boxes and they should have stopped it. Narrowed to 180 m,
+       which is still forty metres past the boundary fence on either side
+       and well past anywhere a player can reach, and the same drop lands.
+       A collision box the size of a small town is not a collision box. */
+    const BW = 90;
     for (let i = 0; i < 9; i++) {
       const z0 = i === 0 ? -1.0 : 1.0 + (i - 1) * 5.0;
       const z1 = 1.0 + i * 5.0;
       const y = bedTop - i * 0.22;
-      slab(-260, 260, y - 1.2, y, z0, z1, mats.bed, 'lake-bed-' + i);
+      slab(-BW, BW, y - 1.2, y, z0, z1, mats.bed, 'lake-bed-' + i);
     }
+    /* AND A FLOOR UNDER THE REST OF IT.
+    
+       Past the bank the lake had no bottom at all -- a downward raycast
+       from z 48 out to the horizon hit nothing. A swimmer floats on the
+       swim code rather than on anything solid, so it went unnoticed until
+       somebody swam far enough out for waterAt to stop answering, at
+       which point gravity came back with nothing under it: "your
+       character falls through an endless void once when they try to go
+       through the water". There is a bed out there now, deep enough to
+       be a lake and shallow enough to be a floor. */
+    slab(-BW, BW, C.water.y - 9.0, C.water.y - 6.0, 42.5, 150, mats.bed, 'lake-deep');
     /* The bank: past it the bottom drops away and you cannot wade on.
     
        At z 31 it went straight THROUGH the pier and the boathouse -- a
@@ -1794,7 +1813,7 @@ function build(game, S) {
        there is a metre and a half down: a wall whose top is just under
        the surface is already two metres of rise. You cannot wade past it
        and you cannot see it. */
-    slab(-260, 260, C.water.y - 3.0, C.water.y - 0.05, 40.0, 42.5, mats.bed, 'lake-bank');
+    slab(-BW, BW, C.water.y - 3.0, C.water.y - 0.05, 40.0, 42.5, mats.bed, 'lake-bank');
   }
 
   /* The lamps along the seawall. Warm, low and few -- at dusk they are
