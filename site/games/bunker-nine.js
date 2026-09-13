@@ -14993,6 +14993,17 @@ function start(opts = {}) {
   /* Weapon placement, after the camera is final for this frame. */
   game.onLateUpdate((dt) => {
     if (!S.started || S.gameOver || !P.alive) return;
+    /* Not once you have left on the boat.
+     *
+     * This is a SEPARATE hook from the round loop, and the ending's
+     * early return out of that loop does not touch it -- so
+     * updateViewmodel kept running, and the line inside it that decides
+     * which weapon is drawn kept turning the equipped one back on. Every
+     * frame, after the ending had hidden it. Measured rather than
+     * squinted at in the end: the escape test asks what is within a
+     * metre and a half of the camera, and the answer was
+     * "pistol1911@0.53" with all nineteen of its parts showing. */
+    if (S.escape && S.escape.running) { hideEveryViewmodel(P); return; }
     updateViewmodel(game, P, dt, !!P._moving, S, sfx);
   });
 
