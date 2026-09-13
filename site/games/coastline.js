@@ -301,9 +301,18 @@ const PAP = {
      the hole in the pier showed you empty water and the machine was
      something you found by swimming around looking -- the break is
      supposed to BE the signpost. */
-  at: [C.pier.x + 0.55, C.water.y - 1.62, C.boathouse.z - 0.4],
-  // The span of decking that falls in when it lands.
-  breaks: { x0: C.pier.x - 1.35, x1: C.pier.x + 1.35, z0: C.boathouse.z - 3.4, z1: C.boathouse.z + 3.6 },
+  at: [C.pier.x + 0.55, C.water.y - 1.62, 26.1],
+  /* The span of decking that went in with it: a three-and-a-half metre
+     hole in the run SHORT of the boathouse, so you walk out, the boards
+     stop, and the boathouse is still ahead of you on the other side.
+  
+     Measured from the boathouse first, which was wrong twice over: it
+     spanned the whole building, and its far edge landed past the end of
+     the pier -- so the far deck section had a NEGATIVE length and was
+     silently never built at all. A slab with its ends the wrong way round
+     does not complain, it just does not exist, and the render looked
+     plausible enough that it took reading the numbers to notice. */
+  breaks: { x0: C.pier.x - 1.35, x1: C.pier.x + 1.35, z0: 24.4, z1: 27.9 },
 };
 
 /* The flamingo. Pink, bloated, and wrong in the specific way a pool toy
@@ -1395,9 +1404,29 @@ function waterAt(x, z) {
   return { surface: C.water.y, bed };
 }
 
+/* The finish a gun comes out of the flamingo wearing.
+
+   Baby blue, with floaties drifting across it -- ducks, flamingos,
+   rings, whatever else is in a lake at the end of summer. The engine has
+   no decal system and no scrolling UV, so "reactive" here is what can
+   honestly be built: an emissive that breathes, over a pale blue that
+   shifts toward the water's own colour as the light moves. It reads as a
+   pool-toy finish rather than as a camouflage pattern, which is the
+   point of it.
+
+   Worth being plain about the limit: the individual floaties are not
+   drawn, because a texture bank that generates its patterns
+   procedurally cannot be handed a picture of a rubber duck. If the
+   pattern matters more than the colour, that is a new recipe in
+   engine/src/40-material.js rather than a tint here. */
+const CAMO = {
+  color: 0x7fd4e8, texture: 'smooth', roughness: 0.22, metalness: 0.35,
+  emissive: 0x2fa8d8, emissiveStrength: 0.85, subsurface: 0.3,
+};
+
 window.COASTLINE = {
   id: 'coastline', name: 'Coastline',
-  C, MAP, WINDOWS, MAT, SKY, PLAY, LINES, PAP, build, applySky, waterAt,
+  C, MAP, WINDOWS, MAT, SKY, PLAY, LINES, PAP, CAMO, build, applySky, waterAt,
   /* Where you start: on the walk, a little up the lawn from the water,
      looking down it -- the view the fourth photograph is taken from. */
   spawn: { at: [0, 1.2, -16.0], yaw: 0 },

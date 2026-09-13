@@ -3241,6 +3241,9 @@ function registerLoadedMaps() {
        walking along the bottom. The bunker has no water and no entry, so
        nothing there ever asks. */
     waterAt: C.waterAt,
+    // What a gun looks like after the flamingo has had it.
+    camo: C.CAMO,
+    pap: C.PAP,
     build: (game, S) => { C.applySky(game); C.build(game, S); },
     sky: (game) => C.applySky(game),
     /* One level, and it covers the lawn AND the water: a zombie coming up
@@ -3659,6 +3662,14 @@ function finishGenericMap(game, S, def) {
      at the bunker's rule its fifth way in would never open at all, and
      one of the five barricades would stand boarded and untouched for the
      whole game. */
+  /* The Pack-a-Punch, if this map has one of its own. Coastline's is a
+     flamingo on the bed of the lake; the bunker's is the meteorite and
+     lives in its own builder. */
+  if (def.pap) {
+    S.pap = { at: def.pap.at.slice(), busy: false, timer: 0,
+      pending: null, holding: null, tookFrom: null, bite: 0 };
+  }
+
   S.activeWindows = WINDOWS.map((w) => w.id);
 
   S.nav = { ...(def.navLevels ? def.navLevels(game) : {}) };
@@ -6593,6 +6604,28 @@ const UPGRADE_NAMES = {
 
 /* The upgraded finish. The meteorite writes P.upgraded[id]; the bench can
    turn the camo off and on again without giving up the upgrade itself. */
+/* WHAT AN UPGRADE IS, in one place.
+ *
+ * There are two machines that do this now -- the rock in the bunker and
+ * the flamingo at the bottom of Coastline's lake -- and they must not be
+ * able to disagree about what coming out the other side means. Twice the
+ * damage, twice the magazine, half again the reserve, and a name nobody
+ * sanctioned. */
+function applyUpgrade(game, P, id) {
+  P.upgraded[id] = true;
+  applyUpgradeLook(game, P, id);
+  const w = WEAPONS[id];
+  if (!w.__preUpgrade) w.__preUpgrade = { dmg: w.dmg, mag: w.mag, name: w.name, slotName: w.slotName };
+  w.dmg = w.__preUpgrade.dmg * 2;
+  w.mag = w.__preUpgrade.mag * 2;
+  w.reserve = Math.round(w.reserve * 1.5);
+  w.name = UPGRADE_NAMES[id] || w.__preUpgrade.name;
+  w.slotName = w.name.toUpperCase();
+  w.__cacheKey = null;
+  if (P.ammo[id]) { P.ammo[id].mag = w.mag; P.ammo[id].reserve = w.reserve; }
+  return w;
+}
+
 function applyUpgradeLook(game, P, id) {
   const v = P.view[id];
   if (!v) return;
@@ -6601,10 +6634,14 @@ function applyUpgradeLook(game, P, id) {
   const parts = v.parts || [v.actor];
   for (const a of parts) {
     if (!a.__baseMat) a.__baseMat = a.material;
-    a.material = on
-      ? game.material({ color: 0x2a0f06, texture: 'metal', roughness: 0.34, metalness: 1,
-        emissive: 0xff5a12, emissiveStrength: 1.5 })
-      : a.__baseMat;
+    /* The finish is the MAP's, not the game's. Bunker Nine's upgrade is
+       a meteorite, and its camo is the metal remembering being molten.
+       Coastline's is a pool toy on the bottom of a lake, and a gun that
+       came out of it should not look like it came out of a rock. */
+    const camo = (MAPDEF && MAPDEF.camo)
+      || { color: 0x2a0f06, texture: 'metal', roughness: 0.34, metalness: 1,
+        emissive: 0xff5a12, emissiveStrength: 1.5 };
+    a.material = on ? game.material(camo) : a.__baseMat;
   }
 }
 
@@ -11586,6 +11623,29 @@ function nearestInteract(S, P) {
     return { kind: 'meteor', cost: ECONOMY.upgrade, label: `Upgrade the ${WEAPONS[held].name} — ${ECONOMY.upgrade}` };
   }
 
+  /* THE FLAMINGO, on the bottom of the lake.
+   *
+   * The same bargain the rock offers, asked in a place that costs
+   * something to reach: you have to be IN the water and under it, which
+   * means you arrived without being able to shoot on the way and you
+   * have to get back out again. No power requirement and nothing to wake
+   * up first -- the trip is the gate. */
+  const pap = S.pap;
+  if (pap && dist2d(p, { x: pap.at[0], z: pap.at[2] }) < 2.2 && Math.abs(p.y - pap.at[1]) < 2.2) {
+    if (pap.holding) return { kind: 'papTake', cost: 0, label: `Take the ${WEAPONS[pap.holding].name}` };
+    if (pap.busy) return { kind: 'papCold', cost: 0, label: 'It is working on it', inert: true };
+    if (!P.underwater) {
+      return { kind: 'papCold', cost: 0, label: 'It is under the water', inert: true };
+    }
+    const heldP = P.equipped();
+    if (ATTACH.noWork.includes(heldP) || P.upgraded[heldP]) {
+      return { kind: 'papCold', cost: 0,
+        label: P.upgraded[heldP] ? `The ${P.spec().name} has been through already`
+          : `It does not want the ${P.spec().name}`, inert: true };
+    }
+    return { kind: 'pap', cost: ECONOMY.upgrade, label: `Feed it the ${WEAPONS[heldP].name} — ${ECONOMY.upgrade}` };
+  }
+
   /* A gun an enemy left behind: it spins and it expires, but it still
      has to be asked for. */
   if (S.drops && S.drops.length) {
@@ -11797,6 +11857,42 @@ function doInteract(game, S, P, hud, sfx, it, dt) {
     } catch (e) { void e; }
     hud.points(S.points);
     hud.banner('IT HAS TAKEN IT', '#9a6aff');
+  } else if (it.kind === 'pap') {
+    /* It eats it. The gun goes out of your hands into the beak, the head
+       comes down, and for three seconds you are at the bottom of a lake
+       holding nothing -- which is a worse three seconds than the rock's,
+       and deliberately so. */
+    S.points -= it.cost; sfx.buy();
+    const id = P.equipped();
+    S.pap.busy = true;
+    S.pap.timer = 3.2;
+    S.pap.pending = id;
+    /* Actually out of your hands, the same way the rock takes it: out of
+       the slot list, so you are at the bottom of a lake holding nothing
+       while the round carries on above you. There is no P.drop -- the
+       slot list IS what you are holding. */
+    S.pap.tookFrom = P.slots.indexOf(id);
+    if (S.pap.tookFrom >= 0) {
+      P.slots = P.slots.filter((w) => w !== id);
+      P.slot = Math.max(0, Math.min(P.slot, P.slots.length - 1));
+      P.reloading = 0;
+    }
+    hud.ammo(P);
+    S.bark('upgrade');
+  } else if (it.kind === 'papTake') {
+    const id = S.pap.holding;
+    S.pap.holding = null;
+    // Back into the slot it came out of, not appended to the end.
+    if (S.pap.tookFrom != null && S.pap.tookFrom >= 0 && !P.slots.includes(id)) {
+      P.slots.splice(Math.min(S.pap.tookFrom, P.slots.length), 0, id);
+      P.slot = P.slots.indexOf(id);
+    }
+    S.pap.tookFrom = null;
+    P.give(id);
+    applyUpgradeLook(game, P, id);
+    sfx.buy();
+    hud.ammo(P);
+    hud.banner(WEAPONS[id].slotName, '#69d7ff');
   } else if (it.kind === 'meteorTake') {
     const id = S.meteor.holding;
     S.meteor.holding = null;
@@ -11814,17 +11910,7 @@ function doInteract(game, S, P, hud, sfx, it, dt) {
       hud.ammo(P);
     }
     S.meteor.tookFrom = null;
-    P.upgraded[id] = true;
-    applyUpgradeLook(game, P, id);
-    const w = WEAPONS[id];
-    if (!w.__preUpgrade) w.__preUpgrade = { dmg: w.dmg, mag: w.mag, name: w.name, slotName: w.slotName };
-    w.dmg = w.__preUpgrade.dmg * 2;
-    w.mag = w.__preUpgrade.mag * 2;
-    w.reserve = Math.round(w.reserve * 1.5);
-    w.name = UPGRADE_NAMES[id] || w.__preUpgrade.name;
-    w.slotName = w.name.toUpperCase();
-    w.__cacheKey = null;
-    if (P.ammo[id]) { P.ammo[id].mag = w.mag; P.ammo[id].reserve = w.reserve; }
+    applyUpgrade(game, P, id);
     P.give(id);
     sfx.buy();
     S.bark('buyGun');
@@ -13543,6 +13629,37 @@ function start(opts = {}) {
       hud.shield(P.shieldT / SHIELD.duration, P.shieldCd);
       hud.stamina(P.stamina / maxStam, !!P.perks.adrenaline);
       hud.grace(S.grace, BENCH_GRACE);
+      /* THE FLAMINGO EATING. The head comes down, the beak opens, the gun
+         goes in, and three seconds later it comes back out with a name
+         nobody sanctioned. Driven here rather than by an animation clip
+         because it is four boxes and a timer, and a clip would be a
+         rigged skeleton for a pool toy. */
+      if (S.pap && S.pap.busy) {
+        S.pap.timer -= dt;
+        const fl = S.papFlamingo;
+        const u = 1 - Math.max(0, S.pap.timer) / 3.2;
+        if (fl && fl.beakUpper && fl.beakLower) {
+          /* Open on the way in, shut while it works, open again to give
+             it back -- so the shape of the animation tells you which
+             part of the three seconds you are in. */
+          const gape = u < 0.22 ? (u / 0.22) : u > 0.82 ? ((1 - u) / 0.18) : 0.06;
+          fl.beakUpper.setPosition([fl.headAt[0], fl.beakRest.upper + gape * 0.16, fl.beakUpper.position.z]);
+          fl.beakLower.setPosition([fl.headAt[0], fl.beakRest.lower - gape * 0.14, fl.beakLower.position.z]);
+          // And it leans down into the work.
+          if (fl.head) fl.head.setPosition([fl.headAt[0], fl.headAt[1] - Math.sin(u * Math.PI) * 0.34, fl.headAt[2]]);
+        }
+        if (S.pap.timer <= 0) {
+          const id = S.pap.pending;
+          S.pap.pending = null;
+          S.pap.busy = false;
+          if (id) {
+            applyUpgrade(game, P, id);
+            S.pap.holding = id;
+            sfx.buy();
+            hud.banner('IT WANTS YOU TO TAKE IT BACK', '#69d7ff');
+          }
+        }
+      }
       /* The regroup after an update, shown on the same bar the bench's
          ten seconds use: it means the same thing -- the dead are holding
          off, and this is how much of it is left. */
