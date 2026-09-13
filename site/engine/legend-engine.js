@@ -21121,7 +21121,17 @@ function buildViewHand(g, rawAt, side, opts = {}) {
    * below the gun's own sight line, and is charged for every millimetre
    * above it -- which is the same rule the trigger finger has had all
    * along, pointed at a different line. */
-  const wrapLimit = { ceil: opts.sightY != null ? opts.sightY - 0.004 : null };
+  /* MEASURED AGAIN, and lowered by a finger's thickness.
+   *
+   * At sightY - 0.004 this still changed nothing, and the reason is that
+   * the joints the solve scores are the finger's CENTRELINE. The mesh is
+   * lofted round that line at a 10.6 mm radius, so a centreline sitting
+   * comfortably under the ceiling still puts eleven millimetres of skin
+   * above it -- and skin is what is in the sight picture. The ceiling has
+   * to be where the OUTSIDE of the finger must stop, which is a radius
+   * lower, plus a couple of millimetres of daylight so the sights are
+   * not merely grazed. */
+  const wrapLimit = { ceil: opts.sightY != null ? opts.sightY - 0.0106 - 0.002 : null };
   /* Instrumentation, kept. Two attempts at this produced sweeps identical
      to the millimetre, which is what a code path that never runs looks
      like -- and telling that apart from a fix that did not work took
@@ -21130,6 +21140,10 @@ function buildViewHand(g, rawAt, side, opts = {}) {
     window.__SAW_SIGHTY = (window.__SAW_SIGHTY || 0) + (opts.sightY != null ? 1 : 0);
     window.__NO_SIGHTY = (window.__NO_SIGHTY || 0) + (opts.sightY == null ? 1 : 0);
     if (opts.sightY != null) window.__LAST_CEIL = wrapLimit.ceil;
+    /* And how high the finger's centreline actually got, so "the ceiling
+       does not bind" can be told from "the ceiling is in the wrong
+       place" without another five-minute sweep. */
+    window.__JOINT_HI = window.__JOINT_HI || {};
   }
   /* `lim` is how a finger is allowed to finish.
    *
@@ -21283,6 +21297,10 @@ function buildViewHand(g, rawAt, side, opts = {}) {
         let hi = t.y;
         if (!tipOnly) for (const j of js) if (j.y > hi) hi = j.y;
         if (hi > ceil) e += (hi - ceil) * 4;
+        if (typeof window !== 'undefined' && !tipOnly) {
+          const W = window.__JOINT_HI || (window.__JOINT_HI = {});
+          if (W.max == null || hi > W.max) { W.max = hi; W.ceil = ceil; }
+        }
       }
       if (fwd != null && t.x < root.x + fwd) e += (root.x + fwd - t.x) * 5;
       return e;
