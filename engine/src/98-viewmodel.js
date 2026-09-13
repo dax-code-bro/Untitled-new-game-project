@@ -251,7 +251,7 @@ const GRIP_KINDS = {
      per-weapon `hands.left` anchor rather than at the wrap. Do not spend
      another pass on `close`. */
   fore: { axis: [1, 0, 0], round: [0, 1, 0], girth: 0.078,
-    spread: 0.0202, close: 1.34, index: 'wrap', thumb: 'along', drop: 0.019 },
+    spread: 0.0202, close: 0.96, index: 'wrap', thumb: 'along', drop: 0.019 },
   /* A vertical foregrip, gripped like a pistol grip but with nothing to
      put a trigger finger on, so all four fingers wrap. It is a SUPPORT
      grip by definition -- no gun has one for the firing hand -- and it
@@ -263,11 +263,11 @@ const GRIP_KINDS = {
   /* A fat wooden shotgun forend: more to go round, so the fingers do not
      close as far and sit further apart. */
   woodFore: { axis: [1, 0, 0], round: [0, 1, 0], girth: 0.092,
-    spread: 0.0238, close: 1.20, index: 'wrap', thumb: 'along', drop: 0.023 },
+    spread: 0.0238, close: 0.86, index: 'wrap', thumb: 'along', drop: 0.023 },
   /* A big tube -- the Arc Breaker's accelerator, the MG42's shroud. The
      hand lies along it and barely closes. */
   tube: { axis: [1, 0, 0], round: [0, 1, 0], girth: 0.108,
-    spread: 0.0246, close: 1.04, index: 'wrap', thumb: 'along', drop: 0.028 },
+    spread: 0.0246, close: 0.74, index: 'wrap', thumb: 'along', drop: 0.028 },
   /* Spade grips: gripped from behind with the thumb up on a butterfly
      trigger, so the thumb goes UP rather than over the fingers. */
   spade: { axis: [-0.06, -0.998, 0], round: [-1, 0, 0], girth: 0.056,
@@ -892,6 +892,29 @@ function buildViewHand(g, rawAt, side, opts = {}) {
      a hand's own geometry then decides where in the guard it lands. */
   const trigLimit = { tipOnly: true, fwd: 0.020,
     ceil: opts.boreY != null ? opts.boreY - 0.010 : null };
+  /* WHERE A SUPPORT FINGER CANNOT BE: in the sights.
+   *
+   * The trigger finger has had a ceiling since the day it was written.
+   * The three wrapping fingers never had one -- solveCurl is called for
+   * them with no `lim` at all -- and it showed: every two-handed weapon
+   * in the game had its support hand across its own sight picture. The
+   * MP5's outer three finished 30 mm ABOVE the sight line, the
+   * Scattergun's six parts at +57, the Mauser's at +52.
+   *
+   * Two wrong theories went before this one, and both were measured and
+   * discarded. Closing the fingers LESS did nothing (they were not
+   * curling past the top; they were reaching up to it). Closing them
+   * MORE did nothing either, and the reason is worth writing down: the
+   * solve has one free parameter `k` that scales all three bend angles,
+   * so `close` is multiplied in before the solve and divided straight
+   * back out by it. The whole `close` column is inert for any hand that
+   * is solved onto a surface. It is the SOLVE that has to be told.
+   *
+   * So it is told. A finger on a forend may finish anywhere it likes
+   * below the gun's own sight line, and is charged for every millimetre
+   * above it -- which is the same rule the trigger finger has had all
+   * along, pointed at a different line. */
+  const wrapLimit = { ceil: opts.sightY != null ? opts.sightY - 0.004 : null };
   /* `lim` is how a finger is allowed to finish.
    *
    *   ceil  the tip must end below this height -- the bore, for a trigger
@@ -2285,7 +2308,11 @@ function buildViewHand(g, rawAt, side, opts = {}) {
       /* 19 mm through the proximal phalanx, which is a finger. It was 14,
          and 14 mm of flesh on 87 mm of bone is a worm. */
       const d0 = new Vec3(point.x, point.y, point.z);
-      const sol = solveCurl(root, d0, bends, lens, FR, point, curl);
+      /* The support hand gets the sight ceiling; the firing hand does
+         not, because its fingers are round a grip well below the line
+         and a ceiling there would only fight the grip. */
+      const sol = solveCurl(root, d0, bends, lens, FR, point, curl,
+        (side < 0 && wrapLimit.ceil != null) ? wrapLimit : null);
       const sb = sol.bends || bends;
       lastReach = sol.reach;
       /* Its own mesh, like the trigger finger's.
@@ -2543,6 +2570,8 @@ function makeViewmodelArms(hands, opts = {}) {
        longer occupied. Build the hand, ask it where its wrist finished,
        then run the arm to that. */
     buildViewHand(sk, h, side, { grip, thumbGeo: tg, out: rec, boreY: opts.boreY,
+      // The gun's own sight line, so a support finger can be kept out of it.
+      sightY: opts.sightY,
       // The firing hand's index keeps its own named mesh, because the game
       // drives it off the trigger; the rest come back through digitGeos.
       indexGeo: side > 0 ? index : null, digitGeos: dg, surface: opts.surface });

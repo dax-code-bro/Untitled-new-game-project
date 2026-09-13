@@ -6035,6 +6035,14 @@ function makePlayer(game, S, hud, sfx, voice) {
     v.arms = game.viewmodelArms(root, WEAPONS[id].hands,
       { key: id, thumb: !!WEAPONS[id].thumbCock,
         boreY: (root && root.boreAt != null) ? root.boreAt : null,
+        /* The gun's own sight line. The support hand is solved onto the
+           weapon's surface, and on a forend the top of that surface is
+           where the sights are -- so without this the hand closes into
+           the sight picture on every two-handed weapon in the game.
+           Taken from the model rather than from the spec: sightAt is
+           measured off the geometry, and WEAPONS[id].sightH is
+           overwritten from it a few lines below anyway. */
+        sightY: (root && root.sightAt != null) ? root.sightAt : null,
         surface: weaponSurface(game, root) });
   }
   /* Every reload prop, built now.
