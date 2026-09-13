@@ -10639,8 +10639,29 @@ function updateZombie(game, S, P, z, dt, sfx) {
     if (swimming) {
       /* Held at the surface rather than left to the bed. The body rides
          with its back out, which is where the roll and the head-turn in
-         the clip are authored to be seen from. */
-      const want = water.surface - 0.62;
+         the clip are authored to be seen from.
+         
+         BUT NOT INTO THE BED. This was a flat surface - 0.62 and nothing
+         else, and a swimming body's collision capsule reaches about 0.82 m
+         below its origin -- so on a lake that shelves UP toward the shore
+         there comes a point where the capsule is inside the bed and the
+         body jams against the next step of it.
+         
+         Measured, and it missed by a centimetre. Every zombie that
+         crossed the lake stopped at exactly z 16.3 whatever its x: at
+         that shelf the bed is at -1.08, a capsule bottom needs the origin
+         at -0.26 to clear it, and the hold height is -0.27. One
+         centimetre of overlap, and the telemetry shows it precisely --
+         the y pops from -0.27 to 0.03, an upward velocity of 0.44 appears
+         as the solver pushes the body out of the geometry, and forward
+         motion goes to zero while the drive is still at a full -1.07.
+         That is the whole of "the zombies cannot swim to the island":
+         they swim beautifully until the bottom comes up to meet them.
+         
+         So the hold height is the higher of the two -- ride the surface
+         where the water is deep, ride above the bed where it is not --
+         and the wade state takes over from there. */
+      const want = Math.max(water.surface - 0.62, bed + 0.85);
       a.setPosition([pos.x, want, pos.z]);
       if (a.body) a.body.velocity.y = 0;
       if (a.controller && a.controller.body) a.controller.body.gravityScale = 0;
