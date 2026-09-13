@@ -168,6 +168,28 @@ function check(name, cond, detail = '') {
     out.beachParts = sandy;
     out.heroOnBeach = hero;
     out.heroId = S.heroId;
+    /* Is ANYTHING still drawn at viewmodel distance? The beach came out
+       with a pale object along the bottom edge twice running, and
+       "which actor is that" is not a question a screenshot answers. So
+       ask the projection: every actor within a metre and a half of the
+       camera, by name. */
+    const camp = G.camera.position;
+    out.nearCamera = [];
+    for (const a of G.actors) {
+      if (!a || !a.position || a.visible === false) continue;
+      const d = Math.hypot(a.position.x - camp.x, a.position.y - camp.y, a.position.z - camp.z);
+      if (d < 1.6) out.nearCamera.push((a.name || 'unnamed') + '@' + d.toFixed(2));
+    }
+    out.nearCamera = out.nearCamera.slice(0, 12);
+    // And the viewmodels themselves, whatever the distance.
+    out.viewShowing = [];
+    for (const [id, v] of Object.entries(P.view)) {
+      if (!v) continue;
+      const list = (v.parts || (v.actor ? [v.actor] : []))
+        .concat((v.arms && v.arms.parts) || []);
+      const on = list.filter((a) => a && a.visible);
+      if (on.length) out.viewShowing.push(id + ':' + on.length + '/' + list.length);
+    }
     out.titleUp = B.hud.els.title.style.display === 'flex';
     out.titleText = (B.hud.els.title.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 60);
     return out;
@@ -212,6 +234,10 @@ function check(name, cond, detail = '') {
     r.heroOnBeach === 'hero:' + r.heroId, `${r.heroOnBeach} vs hero:${r.heroId}`);
   check('and it says you got out', r.done && r.titleUp && /GOT OUT/.test(r.titleText),
     r.titleText);
+  check('nothing of the round is left on screen',
+    (r.viewShowing || []).length === 0, (r.viewShowing || []).join(' '));
+  check('and nothing is parked on the lens',
+    (r.nearCamera || []).length === 0, (r.nearCamera || []).join(' '));
   check('no page errors', errors.length === 0, errors.join(' | '));
 
   if (OUT) {
