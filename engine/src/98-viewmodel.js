@@ -929,15 +929,48 @@ function buildViewHand(g, rawAt, side, opts = {}) {
      to the millimetre, which is what a code path that never runs looks
      like -- and telling that apart from a fix that did not work took
      asking the engine directly. */
-  if (typeof window !== 'undefined') {
-    window.__SAW_SIGHTY = (window.__SAW_SIGHTY || 0) + (opts.sightY != null ? 1 : 0);
-    window.__NO_SIGHTY = (window.__NO_SIGHTY || 0) + (opts.sightY == null ? 1 : 0);
-    if (opts.sightY != null) window.__LAST_CEIL = wrapLimit.ceil;
-    /* And how high the finger's centreline actually got, so "the ceiling
-       does not bind" can be told from "the ceiling is in the wrong
-       place" without another five-minute sweep. */
-    window.__JOINT_HI = window.__JOINT_HI || {};
-  }
+  /* WHAT THIS CEILING DOES NOT FIX, and it is worth the space.
+   *
+   * Every two-handed weapon in the game has its support hand across its
+   * own sight picture -- MP5 +30 mm above the line, Scattergun +57,
+   * Mauser +52, measured by firing a bundle of rays down each gun's own
+   * sight line. Six passes went at it and NONE of them moved the numbers
+   * by more than a millimetre. What each one ruled out:
+   *
+   *   1. Close the support fingers LESS (0.96 -> 0.70). Inert.
+   *   2. Close them MORE (0.96 -> 1.34). Inert, and byte-identical to
+   *      (1), which is the clue: solveCurl has one free parameter k that
+   *      rescales all three bends to fit the surface, so `close` is
+   *      multiplied in before the solve and divided straight back out
+   *      by it. The whole `close` column is inert for any hand solved
+   *      onto a surface. Do not tune it.
+   *   3. Give the wrapping fingers a ceiling at the sight line. It
+   *      ARRIVES -- instrumented: thirty hands built with a sight line,
+   *      eight without -- and does nothing, because the ceiling was
+   *      charged against the fingertip only and the tip curls back down
+   *      below it. What is in the sights is the arch of the middle
+   *      joint.
+   *   4. Score every joint against it, not just the tip. Inert.
+   *   5. Lower the ceiling by a finger's radius, since the joints are a
+   *      centreline and the mesh is 10.6 mm of skin around it. Inert,
+   *      though the instrumentation confirmed the term now FIRES: a
+   *      candidate reaching 0.1267 against a ceiling of 0.1109.
+   *   6. Multiply the penalty by a hundred. Still byte-identical.
+   *
+   * (6) is the one that settles it. A constraint that fires, is carried
+   * into the score the search selects on, and cannot change the outcome
+   * at any weight, is a constraint every candidate violates by the same
+   * amount -- the height of the middle joint is set by the anchor and
+   * the first bone's direction, and `k` scales all three bends together
+   * so it can barely move it. The curl has no degree of freedom that
+   * lowers that joint.
+   *
+   * So the next attempt is not in this function. It is the support
+   * hand's ANCHOR -- hands.left in the weapon table, and `drop` and
+   * `round` in GRIP_KINDS, which decide where the knuckle row sits and
+   * which way the fingers leave it. The ceiling below is kept because it
+   * is correct and costs nothing; it simply is not sufficient on its
+   * own. */
   /* `lim` is how a finger is allowed to finish.
    *
    *   ceil  the tip must end below this height -- the bore, for a trigger
@@ -1089,11 +1122,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
       if (ceil != null) {
         let hi = t.y;
         if (!tipOnly) for (const j of js) if (j.y > hi) hi = j.y;
-        if (hi > ceil) e += (hi - ceil) * (tipOnly ? 4 : 400);
-        if (typeof window !== 'undefined' && !tipOnly) {
-          const W = window.__JOINT_HI || (window.__JOINT_HI = {});
-          if (W.max == null || hi > W.max) { W.max = hi; W.ceil = ceil; }
-        }
+        if (hi > ceil) e += (hi - ceil) * 4;
       }
       if (fwd != null && t.x < root.x + fwd) e += (root.x + fwd - t.x) * 5;
       return e;
