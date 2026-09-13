@@ -1411,7 +1411,7 @@ const ROUNDS = {
 
    Keep this in step with version.json -- site/games/bump-version.js does
    both at once, and there is a test that fails if they drift. */
-const B9_BUILD = { version: '0.6.0', name: 'the flamingo' };
+const B9_BUILD = { version: '0.7.0', name: 'the way out' };
 
 /* ---------------- live updates ----------------
 
@@ -1771,6 +1771,7 @@ const HEROES = {
       spitter: ['It spits. Do not let it land on you.'],
       death: ['So. Here.'],
       planeCrash: ['He nearly made it. They usually nearly make it.'],
+      escaped: ['It runs. After everything, it runs. Sit down and do not speak to me.'],
     },
   },
 
@@ -1818,6 +1819,7 @@ const HEROES = {
       spitter: ['Acid — do not let it touch you!'],
       death: ['I am sorry. I am so sorry.'],
       planeCrash: ['He was almost here. He was almost here.'],
+      escaped: ['That is the last of them behind us. I am not turning round.'],
     },
   },
 
@@ -1866,6 +1868,7 @@ const HEROES = {
       spitter: ['It spits. Move sideways, not backwards.'],
       death: ['Well. That is that, then.'],
       planeCrash: ['He got so close. That is the part I hate.'],
+      escaped: ['Water under me and nothing in it. I could get used to quiet.'],
     },
   },
 
@@ -1913,6 +1916,7 @@ const HEROES = {
       spitter: ['It spat at me! What is that, what is that?'],
       death: ['Dad. I tried.'],
       planeCrash: ['He was coming for us. Somebody was actually coming for us.'],
+      escaped: ['We are going. We are actually going. Do not jinx it.'],
     },
   },
 
@@ -1961,6 +1965,7 @@ const HEROES = {
       spitter: ['Ranged. Break the line of sight.'],
       death: ['Beaten. Fairly, even.'],
       planeCrash: ['He was in the air. He was in the air and they still got him.'],
+      escaped: ['Somebody left the keys in a boat. Somebody, somewhere, did one thing right.'],
     },
   },
 
@@ -2009,6 +2014,7 @@ const HEROES = {
       spitter: ['It is spitting! Do not stand there!'],
       death: ['Ah. Should have ducked.'],
       planeCrash: ['He came for us. Nobody comes for us. And look.'],
+      escaped: ['Out. Out on the water, out of it, out. Say it again.'],
     },
   },
 
@@ -2057,6 +2063,7 @@ const HEROES = {
       spitter: ['It throws poison! Stand aside!'],
       death: ['A hundred years for this. Well.'],
       planeCrash: ['A machine that flies, and they pulled it down. Even here.'],
+      escaped: ['The engine caught and the shore went small. That is all I wanted.'],
     },
   },
 
@@ -2108,6 +2115,7 @@ const HEROES = {
       spitter: ['Ranged acid. Break line of sight, it cannot lead a target.'],
       death: ['I did the sums. The sums were right. I was still here.'],
       planeCrash: ['He had the altitude. He had everything. And a biological threw acid at an aircraft.'],
+      escaped: ['A boat, a full tank and an empty lake. I will take those odds.'],
     },
   },
 
@@ -2156,6 +2164,7 @@ const HEROES = {
       spitter: ['It spits! Rude, and also corrosive!'],
       death: ['Ah. Well. It was going so well.'],
       planeCrash: ['He was in the air. Actually airborne. And they spat him out of the sky.'],
+      escaped: ['No more dock. No more houses. Just the open and me.'],
     },
   },
 
@@ -2203,6 +2212,7 @@ const HEROES = {
       spitter: ['It spits acid! Do not eat it!'],
       death: ['No. Not like this.'],
       planeCrash: ['He was up there. He was actually up there.'],
+      escaped: ['We made it off. I did not think that was a thing that happened.'],
     },
   },
 };
@@ -3286,6 +3296,8 @@ function registerLoadedMaps() {
     // What a gun looks like after the flamingo has had it.
     camo: C.CAMO,
     pap: C.PAP,
+    // The can, the boat and the beach.
+    escape: C.ESCAPE,
     build: (game, S) => { C.applySky(game); C.build(game, S); },
     sky: (game) => C.applySky(game),
     /* One level, and it covers the lawn AND the water: a zombie coming up
@@ -3597,6 +3609,264 @@ hud.banner('EXIT FOUR TWO', '#ff9a6a');
 }
 
 
+/* ---------------- THE WAY OUT OF COASTLINE ----------------
+
+   Bunker Nine's ending is Exit 42, and Exit 42 is a lie: you do
+   everything the man on the radio asks, the aircraft comes, and it goes
+   into the field on fire. That is the right ending for a bunker in a
+   wood in 1944 and it is the wrong one for somebody's own dock.
+
+   So Coastline lets you actually leave. A jerry can in the last house
+   on the street, a boat moored past the hole in the pier, and a lake
+   with nothing on the other side of it.
+
+   Nothing about it is announced -- there is no radio and no marker. The
+   can is the only object in any of those kitchens that is not furniture,
+   and the boat is the only thing moored anywhere on the map. */
+function escapeAt(S, P, p) {
+  const E = S.escape;
+  if (!E || E.done || E.running) return null;
+  const can = S.escapeCan;
+  if (can && !E.hasCan && !E.tookCan
+      && dist2d(p, { x: can.at[0], z: can.at[2] }) < 1.5 && Math.abs(p.y - can.at[1]) < 1.8) {
+    return { kind: 'takeCan', cost: 0, label: 'Take the jerry can' };
+  }
+  const bt = S.escapeBoat;
+  if (!bt) return null;
+  if (dist2d(p, { x: bt.at[0], z: bt.at[2] }) > 2.6) return null;
+  if (Math.abs(p.y - bt.at[1]) > 2.4) return null;
+  if (E.fuelling > 0 || E.cranking > 0) {
+    return { kind: 'escapeCold', cost: 0, inert: true,
+      label: E.fuelling > 0 ? 'Pouring it in' : 'Turning it over' };
+  }
+  if (!E.fuelled) {
+    if (!E.hasCan) {
+      return { kind: 'escapeCold', cost: 0, inert: true, label: 'The tank is dry', hint: true };
+    }
+    return { kind: 'fuelBoat', cost: 0, label: 'Fill the tank' };
+  }
+  if (!E.started) return { kind: 'crankBoat', cost: 0, label: 'Turn it over' };
+  return { kind: 'castOff', cost: 0, label: 'Cast off' };
+}
+
+/* The boat going, and then the beach.
+
+   Written as one timeline rather than as a set of callbacks, because a
+   cutscene with a `setTimeout` in it is a cutscene that carries on
+   after the player has reloaded the page. Everything here is driven off
+   the same dt the rest of the frame is. */
+function updateEscape(game, S, P, hud, sfx, dt) {
+  const E = S.escape;
+  if (!E) return;
+
+  if (E.fuelling > 0) {
+    E.fuelling -= dt;
+    if (E.fuelling <= 0) {
+      E.fuelled = true; E.hasCan = false;
+      sfx.buy();
+      hud.banner('SHE HAS FUEL IN HER', '#e8c86a');
+    }
+    return;
+  }
+  if (E.cranking > 0) {
+    E.cranking -= dt;
+    /* It does not catch first time. Three coughs and then it runs --
+       which is three seconds standing in the water next to a boat with
+       whatever is behind you still coming. */
+    if (Math.random() < dt * 6) sfx.doorOpen();
+    if (E.cranking <= 0) {
+      E.started = true;
+      sfx.roundSting();
+      hud.banner('SHE IS RUNNING', '#e8c86a');
+    }
+    return;
+  }
+  if (!E.running) return;
+
+  E.t += dt;
+  const D = E.def;
+
+  /* Stage one: out across the lake. The camera is no longer the
+     player's -- it sits off the boat's quarter and watches it go. */
+  if (E.stage === 0) {
+    const u = Math.min(1, E.t / D.run);
+    const b = E.boatAt;
+    // Slow at first, because a boat gets up on the plane.
+    const travel = Math.pow(u, 1.55) * 150;
+    const bz = b[2] + travel;
+    if (E.boatParts) for (const a of E.boatParts) {
+      if (a.__escBase) a.setPosition([a.__escBase[0], a.__escBase[1] + Math.sin(E.t * 3.1) * 0.05, a.__escBase[2] + travel]);
+    }
+    /* game.lookAt() is the engine's own cutscene camera: it sets the
+       mode to manual and stops the first-person rig writing the position
+       back every frame. Driving camera.position and _camYaw by hand does
+       not work -- the rig owns both and overwrites them on the next
+       update, so the shot would play out from inside the player's head
+       on the dock. */
+    game.lookAt([b[0] - 5.5 - u * 5, b[1] + 2.4 + u * 1.6, bz - 9 - u * 12],
+      [b[0], b[1] + 0.6, bz]);
+    if (Math.random() < dt * 26) {
+      game.particles.smoke([b[0], b[1] + 0.2, bz - 2.4], { count: 1, color: 0x6f6a62 });
+    }
+    if (u >= 1) { E.stage = 1; E.t = 0; hud.fade(1, D.fade); }
+    return;
+  }
+
+  // Stage two: black.
+  if (E.stage === 1) {
+    if (E.t >= D.fade + 0.3) {
+      E.stage = 2; E.t = 0;
+      placeOnBeach(game, S, P);
+      hud.fade(0, 2.4);
+    }
+    return;
+  }
+
+  /* Stage three: the beach. The camera drifts in, because a still frame
+     reads as a screenshot and a moving one reads as an ending. */
+  if (E.stage === 2) {
+    const B = E.beachAt;
+    const u = Math.min(1, E.t / D.sit);
+    game.lookAt([B[0] - 5.4 + u * 1.3, B[1] + 1.9 - u * 0.28, B[2] - 6.2 + u * 1.5],
+      [B[0] + 0.9, B[1] + 1.1, B[2] + 0.4]);
+    if (E.t >= D.sit && !E.done) {
+      E.done = true;
+      hud.escaped(S.round, S.killsTotal);
+      S.bark('escaped', true);
+    }
+  }
+}
+
+/* Freeze the round, cut the player loose from their body, and start the
+   boat moving. Everything that was chasing you is left where it stood --
+   it is not that they stop, it is that you are not there any more. */
+function beginEscape(game, S, P, hud, sfx) {
+  const E = S.escape;
+  E.running = true; E.stage = 0; E.t = 0;
+  sfx.roundSting();
+  hud.banner('', '#e8c86a');
+  hud.els.prompt.style.opacity = 0;
+  /* The dead stop mattering, and they do it by the whole round loop
+     stopping rather than by anything being despawned: you are watching
+     from forty metres out on the water and they are still standing on
+     the dock, which is the shot. */
+  S.toSpawn = 0;
+  S.spawnT = 1e9;
+  P.actor.visible = false;
+  /* Every viewmodel, not just the one in your hands. setViewVisible
+     walks v.parts and v.arms and an empty object has neither, so the
+     guarded loop is the whole of the safety here -- the first version
+     passed `P.view[P.equipped()] || {}` and would have thrown on the
+     fallback rather than hiding anything. */
+  for (const v of Object.values(P.view)) { if (v && v.parts) setViewVisible(v, false); }
+  /* The boat's own boxes, so they can be moved. They went in as
+     decoration with no handle on them, so they are found by name -- the
+     builder names every part it makes and this is what those names are
+     for. */
+  E.boatParts = [];
+  E.mooring = [];
+  const b = E.boatAt;
+  for (const a of game.actors) {
+    if (!a || !a.position) continue;
+    if (Math.abs(a.position.x - b[0]) > 3.2) continue;
+    if (Math.abs(a.position.z - b[2]) > 3.6) continue;
+    if (Math.abs(a.position.y - b[1]) > 1.6) continue;
+    /* The hull and what is bolted to it. NOT the cleat and the line --
+       those belong to the dock, and a mooring that sails away with the
+       boat is the sort of thing nobody notices until they do. */
+    if (/^boat-cleat|^boat-line/.test(a.name || '')) { E.mooring.push(a); continue; }
+    if (!/^boat-|^outboard/.test(a.name || '')) continue;
+    a.__escBase = [a.position.x, a.position.y, a.position.z];
+    E.boatParts.push(a);
+  }
+  // The line goes when you cast off, which is what casting off is.
+  for (const a of E.mooring) { try { a.destroy(); } catch (e) { void e; } }
+  E.mooring = [];
+}
+
+/* The beach at the end of it.
+
+   Four hundred metres east of the map, which is far enough that nothing
+   here can touch the lake, the fence or the navmesh -- and the only
+   thing that ever goes there is a camera that has stopped being the
+   player's. Sand, flat water, three palms, a lounger, a table with a
+   glass on it, and the character you played standing in front of all of
+   it with nothing to do. */
+function placeOnBeach(game, S, P) {
+  const E = S.escape;
+  const B = E.beachAt;
+  const M = (spec) => game.material(spec);
+  const sand = M({ color: 0xe8dcbe, texture: 'sand', roughness: 0.98, metalness: 0, uvScale: 24 });
+  const sea = M({ color: 0x6fd0d8, texture: 'smooth', roughness: 0.14, metalness: 0, castShadow: false });
+  const bark = M({ color: 0x9c8570, texture: 'wood', roughness: 0.95, metalness: 0, uvScale: 4 });
+  const frond = M({ color: 0xbfe08a, texture: 'grass', roughness: 0.9, metalness: 0, uvScale: 2, subsurface: 0.4 });
+  const canvasM = M({ color: 0xe4e0d2, texture: 'fabric', roughness: 0.96, metalness: 0, uvScale: 3 });
+  const timber = M({ color: 0xd0b48c, texture: 'wood', roughness: 0.85, metalness: 0, uvScale: 3 });
+  const glassM = M({ color: 0xd8f0f4, texture: 'smooth', roughness: 0.1, metalness: 0, opacity: 0.6 });
+  const drink = M({ color: 0xf0a24c, texture: 'smooth', roughness: 0.3, metalness: 0 });
+  const box = (x0, x1, y0, y1, z0, z1, m) => game.box({
+    at: [(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2],
+    size: [x1 - x0, y1 - y0, z1 - z0], material: m, physics: false });
+
+  box(B[0] - 60, B[0] + 60, B[1] - 0.4, B[1], B[2] - 40, B[2] + 14, sand);
+  box(B[0] - 200, B[0] + 200, B[1] - 0.35, B[1] - 0.06, B[2] + 13, B[2] + 200, sea);
+  // Three palms behind, leaning the way palms do.
+  for (const [px, pz, h2, lean] of [[-7.5, -7.0, 6.2, 0.5], [5.4, -8.5, 5.4, -0.4], [10.5, -4.0, 6.8, 0.3]]) {
+    for (let i = 0; i < 7; i++) {
+      const t = i / 7, t2 = (i + 1) / 7;
+      box(B[0] + px + lean * t * t * 2 - 0.16, B[0] + px + lean * t2 * t2 * 2 + 0.16,
+        B[1] + h2 * t, B[1] + h2 * t2,
+        B[2] + pz - 0.16, B[2] + pz + 0.16, bark);
+    }
+    const tx = B[0] + px + lean * 2, ty = B[1] + h2;
+    for (let k = 0; k < 7; k++) {
+      const a2 = (k / 7) * Math.PI * 2;
+      const dx = Math.cos(a2) * 2.0, dz = Math.sin(a2) * 2.0;
+      box(tx + Math.min(0, dx), tx + Math.max(0, dx), ty - 0.55, ty + 0.10,
+        B[2] + pz + Math.min(0, dz), B[2] + pz + Math.max(0, dz), frond);
+    }
+  }
+  // The lounger, the little table, and the drink on it.
+  box(B[0] + 0.6, B[0] + 1.5, B[1] + 0.30, B[1] + 0.38, B[2] - 1.1, B[2] + 0.9, canvasM);
+  box(B[0] + 0.6, B[0] + 1.5, B[1] + 0.38, B[1] + 0.95, B[2] - 1.6, B[2] - 1.1, canvasM);
+  for (const sx of [0.7, 1.4]) for (const sz of [-1.0, 0.8]) {
+    box(B[0] + sx - 0.03, B[0] + sx + 0.03, B[1], B[1] + 0.30, B[2] + sz - 0.03, B[2] + sz + 0.03, timber);
+  }
+  box(B[0] + 2.1, B[0] + 2.7, B[1] + 0.42, B[1] + 0.48, B[2] - 0.5, B[2] + 0.1, timber);
+  box(B[0] + 2.35, B[0] + 2.45, B[1], B[1] + 0.42, B[2] - 0.25, B[2] - 0.15, timber);
+  box(B[0] + 2.32, B[0] + 2.48, B[1] + 0.48, B[1] + 0.66, B[2] - 0.28, B[2] - 0.12, glassM);
+  box(B[0] + 2.33, B[0] + 2.47, B[1] + 0.50, B[1] + 0.62, B[2] - 0.27, B[2] - 0.13, drink);
+  // Warm light, from the other side, because it is morning there.
+  game.light({ at: [B[0] - 8, B[1] + 7, B[2] - 6], color: 0xffe2b0, intensity: 90, radius: 40 });
+  game.light({ at: [B[0] + 6, B[1] + 5, B[2] + 8], color: 0xbfe8ff, intensity: 50, radius: 34 });
+
+  /* And the character. The same dressed model the select screen builds,
+     so whoever you picked is who is standing on the sand -- all ten of
+     them work because none of this knows which one it is. */
+  try {
+    /* S.hero is a FUNCTION -- it builds a fresh object from S.heroId --
+       so reaching for S.hero.id gives undefined and every ending would
+       have put the first character in the list on the sand regardless of
+       who was played. The id is S.heroId. */
+    const hero = heroModel(game, S, S.heroId);
+    heroModelVisible(hero, true);
+    if (hero.controller) {
+      hero.controller.teleport(new window.LE.Vec3(B[0], B[1] + 1.05, B[2] - 0.4));
+      // Facing 0 is +Z, and the camera stands off to the -Z side.
+      hero.controller.facing = -0.5;
+    }
+    if (hero.animator && hero.animator.play) hero.animator.play('idle', 0.4);
+  } catch (e) { console.warn('beach hero:', e.message); }
+
+  /* A different sky. The map is a grey dusk over cold water and this is
+     the opposite of it, which is the whole point of the shot. */
+  game.setSky('day', {
+    zenith: 0x5fa8d8, horizon: 0xffd9a0, ground: 0xe8dcbe,
+    sun: [-0.5, 0.62, 0.6], sunColor: 0xfff0d0, sunIntensity: 2.3, intensity: 2.0,
+    exposure: 1.16, clouds: 0.2, room: 0xbfd8e8, fog: 0xd8e8f0, fogDensity: 0.0016,
+  });
+}
+
 /* Build whichever map was chosen. The bunker's own builder is below,
    under its own name -- this is only the switch. */
 function buildMap(game, S) {
@@ -3733,6 +4003,17 @@ function finishGenericMap(game, S, def) {
   if (def.pap) {
     S.pap = { at: def.pap.at.slice(), busy: false, timer: 0,
       pending: null, holding: null, tookFrom: null, bite: 0 };
+  }
+
+  /* The way out, if this map has one. Coastline does; the bunker has
+     Exit 42 instead, which is a different thing and lives elsewhere. */
+  if (def.escape) {
+    S.escape = {
+      def: def.escape, hasCan: false, tookCan: false, fuelled: false, started: false,
+      fuelling: 0, cranking: 0, running: false, stage: 0, t: 0, done: false,
+      boatAt: def.escape.boat.at.slice(), beachAt: def.escape.beach.at.slice(),
+      boatParts: null,
+    };
   }
 
   const behindADoor = new Set();
@@ -11656,6 +11937,12 @@ function nearestInteract(S, P) {
    * function returned null before it ever got there. Everything built,
    * nothing happened, and the render showed a flamingo you could swim
    * into and not use. */
+  /* The way out. Asked before the surface guard for the same reason the
+     flamingo is: the boat is moored at water level, past a hole in a
+     pier, and you arrive at it swimming. */
+  const esc = escapeAt(S, P, p);
+  if (esc) return esc;
+
   const pap = S.pap;
   if (pap && dist2d(p, { x: pap.at[0], z: pap.at[2] }) < 2.2 && Math.abs(p.y - pap.at[1]) < 2.2) {
     if (pap.holding) return { kind: 'papTake', cost: 0, label: `Take the ${WEAPONS[pap.holding].name}` };
@@ -11968,6 +12255,25 @@ function doInteract(game, S, P, hud, sfx, it, dt) {
     }
     hud.ammo(P);
     S.bark('upgrade');
+  } else if (it.kind === 'takeCan') {
+    /* You carry it. Not a flag on a list somewhere -- it is heavy, and
+       it slows you down the whole way back, which is what makes the walk
+       from the last house on the street to the end of a broken pier a
+       thing you have to decide to do. */
+    S.escape.hasCan = true;
+    S.escape.tookCan = true;
+    for (const a of (S.escapeCan.parts || [])) { try { a.destroy(); } catch (e) { void e; } }
+    S.escapeCan.parts = [];
+    sfx.buy();
+    hud.banner('A FULL JERRY CAN', '#e8c86a');
+  } else if (it.kind === 'fuelBoat') {
+    S.escape.fuelling = S.escape.def.pour;
+    sfx.doorOpen();
+  } else if (it.kind === 'crankBoat') {
+    S.escape.cranking = S.escape.def.crank;
+    sfx.doorOpen();
+  } else if (it.kind === 'castOff') {
+    beginEscape(game, S, P, hud, sfx);
   } else if (it.kind === 'papTake') {
     const id = S.pap.holding;
     S.pap.holding = null;
@@ -12372,6 +12678,10 @@ function makeHud() {
   #b9hud .scope .dot { left:50%; top:50%; width:2.6px; height:2.6px; margin:-1.3px 0 0 -1.3px;
     border-radius:50%; background:#c8352a; box-shadow:0 0 6px #ff5a3c; }
   #b9hud .hitflash { position:absolute; inset:0; opacity:0; background:#8c0a06; mix-blend-mode:screen; }
+  /* The one full-screen black the game owns. Used by Coastline's ending
+     to get from a boat on a lake to a beach without showing the four
+     hundred metres between them. */
+  #b9hud .fadeout { position:absolute; inset:0; opacity:0; background:#000; pointer-events:none; }
   #b9hud .dmg { position:absolute; inset:0; opacity:0;
     background:radial-gradient(ellipse at center, transparent 42%, rgba(140,10,6,.75) 100%); transition:opacity .25s; }
   #b9hud .title { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center;
@@ -12413,7 +12723,7 @@ function makeHud() {
   const root = document.createElement('div');
   root.id = 'b9hud';
   root.innerHTML = `
-    <div class="dmg"></div><div class="hitflash"></div><div class="advig"></div><div class="scope">
+    <div class="dmg"></div><div class="hitflash"></div><div class="fadeout"></div><div class="advig"></div><div class="scope">
       <div class="glass"></div>
       <div class="ret">
         <i class="vh" style="top:0;height:34%"></i><i class="vh" style="top:66%;height:34%"></i>
@@ -12480,7 +12790,7 @@ function makeHud() {
     upd: $('.upd'), updName: $('.upd .un'), updVer: $('.upd .uv'), updDid: $('.upd .ud'),
     updWhat: $('.upd .uw'), updBtns: $('.upd .ub'), updGo: $('.upd .go'), updNo: $('.upd .no'),
     updBar: $('.upd .up'), updFill: $('.upd .up i'), updStat: $('.upd .us'),
-    flash: $('.hitflash'),
+    flash: $('.hitflash'), fadeout: $('.fadeout'),
     banner: $('.banner'), dmg: $('.dmg'), title: $('.title'), hitm: $('.hitm'), pdelta: $('.pdelta'),
     cross: $('.cross'), stam: $('.stam'), stamFill: $('.stamfill'), shield: $('.shield'), perks: $('.perks'),
     bench: $('.bench'), bhead: $('.bhead'), brow: $('.brow'), bfoot: $('.bfoot'),
@@ -12722,6 +13032,26 @@ function makeHud() {
       els.banner.style.opacity = 1;
       clearTimeout(bnTimer);
       bnTimer = setTimeout(() => { els.banner.style.opacity = 0; }, 2200);
+    },
+    /* Fade to and from black. The transition time is set with the value
+       rather than in the stylesheet, because the ending fades out over a
+       second and a half and back in over three, and one rule cannot be
+       both. */
+    fade(v, seconds) {
+      els.fadeout.style.transition = `opacity ${seconds == null ? 1.4 : seconds}s linear`;
+      els.fadeout.style.opacity = v;
+    },
+    /* The other ending. Bunker Nine has YOU FELL; this is what Coastline
+       has instead, and it is the only screen in the game that is not
+       about how far you got. */
+    escaped(round, kills) {
+      els.scope.style.opacity = 0;
+      els.title.innerHTML = `<h1 style="color:#e8c86a">YOU GOT OUT</h1>
+        <p>ROUND ${round} &nbsp;·&nbsp; ${kills} OF THE DEAD PUT DOWN &nbsp;·&nbsp; ONE BOAT</p>
+        <p class="go" style="color:#e8ddc8;margin-top:22px;cursor:pointer">CLICK TO GO BACK</p>`;
+      els.title.style.display = 'flex';
+      els.title.style.opacity = 1;
+      els.title.querySelector('.go').addEventListener('click', () => location.reload());
     },
     hitmark(head) {
       els.hitm.classList.toggle('head', !!head);
@@ -13487,6 +13817,13 @@ function start(opts = {}) {
        fighting behind a progress bar. */
     if (S.updating) return;
     if (S.gameOver || !S.started) return;
+
+    /* THE WAY OUT, once it is under way. Everything past this point is
+       the round -- moving, shooting, spawning, the dead -- and none of
+       it applies to a player who is on a boat forty metres offshore. The
+       cutscene drives itself off the same dt and nothing else runs. */
+    if (S.escape && S.escape.running) { updateEscape(game, S, P, hud, sfx, dt); return; }
+    if (S.escape) updateEscape(game, S, P, hud, sfx, dt);
     if (S.roundStartAt != null && S.time >= S.roundStartAt) { S.roundStartAt = null; startRound(game, S, hud, sfx); }
 
     /* Player movement: camera-relative WASD through the capsule controller. */
@@ -13497,6 +13834,10 @@ function start(opts = {}) {
       // A harness can steer the player through the same path a key does.
       if (S.testHold.mx != null) mx = S.testHold.mx;
       if (S.testHold.mz != null) mz = S.testHold.mz;
+      /* A full jerry can is twenty kilos held out to one side. It slows
+         you, and it has to: the walk from the last house on the street
+         to the end of a broken pier is the whole of Coastline's ending,
+         and a free walk is not a decision. */
       /* With the bench panel open the movement keys drive the list, so they
          must not also drive the player — otherwise picking a scope walks you
          out of range of the bench that is showing it to you. */
@@ -13548,8 +13889,10 @@ function start(opts = {}) {
         * (1 - SHIELD_BLOCK.slow * P.blockT);
       const knifeSpeed = P.equipped() === 'knife' ? 1.30 : 1;
       let base = P.adsWant ? PLAYER.adsSpeed : PLAYER.walkSpeed;
-      P.actor.controller.runSpeed = PLAYER.sprintSpeed * perkSpeed * knifeSpeed;
-      P.actor.controller.moveSpeed = base * perkSpeed * knifeSpeed * (P.spec().moveMul || 1);
+      // A full jerry can is twenty kilos held out to one side.
+      const canSlow = (S.escape && S.escape.hasCan) ? 0.84 : 1;
+      P.actor.controller.runSpeed = PLAYER.sprintSpeed * perkSpeed * knifeSpeed * canSlow;
+      P.actor.controller.moveSpeed = base * perkSpeed * knifeSpeed * canSlow * (P.spec().moveMul || 1);
 
       if (P.sliding > 0) {
         P.sliding -= dt;

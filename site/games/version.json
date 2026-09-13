@@ -1,8 +1,8 @@
 {
-  "version": "0.6.0",
-  "name": "the flamingo",
+  "version": "0.7.0",
+  "name": "the way out",
   "date": "2026-09-13",
   "mode": "zombies",
-  "did": "Coastline's Pack-a-Punch works: the mutated flamingo on the lake bed eats your gun and gives it back wearing a beach camo with floaties on it. You can swim properly now instead of sinking straight to the bottom. The Breakwater -- a box-fed semi-automatic 12-gauge -- is on the two-storey's wall and in the box.",
+  "did": "Coastline has a street now, with two more houses on it, seven abandoned cars and insides for all four -- partitions, doorways and furniture, so a house is rooms and not a cave. Four doors to buy, and each one opens a barricade inside that house. And there is a way off the map: a jerry can in the last house on the street, a boat moored past the hole in the pier, and a lake with nothing on the other side of it.",
   "onAccept": "Your round is saved and the map is rebuilt. You keep your points, your guns and your perks, and the dead hold off for three minutes while you get set."
 }

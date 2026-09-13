@@ -1842,8 +1842,6 @@ function build(game, S) {
     }
   }
 
-  if (S) { S.coastSolids = solids; S.coastDecor = decos; }
-  return { solids, decos };
   /* ---------------- the way out ----------------
 
      A jerry can on a worktop and a boat at the end of a broken pier.
@@ -1879,6 +1877,9 @@ function build(game, S) {
       B[2] + 1.4, B[2] + 2.0, mats.steelDark, 'boat-line');
     S.escapeBoat = { at: B.slice() };
   }
+
+  if (S) { S.coastSolids = solids; S.coastDecor = decos; }
+  return { solids, decos };
 
 }
 
