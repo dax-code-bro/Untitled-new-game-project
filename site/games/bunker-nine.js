@@ -1669,6 +1669,23 @@ function fetchManifest() {
     .catch(() => null);
 }
 
+/* How far you can fall.
+ *
+ * Measured from where the fall started rather than from your speed,
+ * because the two disagree in water and in a slide. Stepping off the end
+ * of the pier is 1.4 m and free; the bunker roof is 4.6 m and free; the
+ * two-storey's balcony is 3.4 m and free. Nothing on either map that a
+ * player is MEANT to jump off is anywhere near seven metres. */
+const FALL = {
+  hurts: 7.0,
+  fatal: 12.0,
+  /* Below every floor on either map by a wide margin. Coastline's deepest
+     bed is at -8.65 and the bunker's basement is at -2.4, so this is
+     nowhere anything can stand -- it only catches a body that has gone
+     through the world. */
+  killY: -30,
+};
+
 const PLAYER = {
   /* Two seconds after the last hit, and quick once it starts: the fight is
      meant to be about position, not about nursing a health bar. */
@@ -14080,6 +14097,50 @@ function start(opts = {}) {
         P.actor.controller.move(d.x, d.z, false);
       } else {
         P.actor.controller.move(wx, wz, P.sprinting);
+      }
+
+      /* ---------------- THE FLOOR OF THE WORLD ----------------
+       *
+       * Two things, and the first is a safety net rather than a feature.
+       *
+       * Coastline had a hole in it -- water claimed for two hundred and
+       * sixty metres over a bed that reached forty -- and what that felt
+       * like was falling for ever with nothing to do about it. Both holes
+       * are closed, but a map is a big thing and the next one will have
+       * its own; a player who finds it should die and start again, not
+       * fall out of the game. Below the kill line is below every floor on
+       * either map by a wide margin, so nothing reachable is near it.
+       *
+       * The second is the drop itself. A fall of more than about seven
+       * metres onto something solid hurts, and past twelve it is fatal --
+       * measured from where the fall STARTED, so stepping off the pier
+       * into the lake is nothing and coming off the bunker roof is not.
+       * Water does not count: it is the whole reason you can jump in. */
+      {
+        const y = P.actor.position.y;
+        const grounded = P.actor.controller.grounded;
+        const inWater = !!(MAPDEF && MAPDEF.waterAt
+          && MAPDEF.waterAt(P.actor.position.x, P.actor.position.z));
+        if (grounded || inWater || P.swimming) {
+          if (P.fellFrom != null && grounded && !inWater) {
+            const drop = P.fellFrom - y;
+            if (drop > FALL.fatal) {
+              hurtPlayer(game, S, P, P.hp + 50, sfx, 'fall', null);
+            } else if (drop > FALL.hurts) {
+              const over = (drop - FALL.hurts) / (FALL.fatal - FALL.hurts);
+              hurtPlayer(game, S, P, Math.round(20 + over * 65), sfx, 'fall', null);
+              addShake(S, 0.35, 0.5);
+            }
+          }
+          P.fellFrom = null;
+        } else if (P.fellFrom == null || y > P.fellFrom) {
+          P.fellFrom = y;
+        }
+        if (y < FALL.killY && P.alive) {
+          /* Out of the world. Not fall damage -- there is nothing to land
+             on -- so it is simply over. */
+          hurtPlayer(game, S, P, P.hp + 50, sfx, 'void', null);
+        }
       }
 
       /* ---------------- IN THE WATER ----------------
