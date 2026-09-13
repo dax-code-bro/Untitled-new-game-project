@@ -1556,6 +1556,50 @@ function declineUpdate(S, hud, info) {
       : 'ONLINE PLAY LOCKED UNTIL YOU UPDATE', '#ff7a2a');
 }
 
+/* Under the surface, and back out of it.
+ *
+ * The moment the EYES pass the waterline, not the feet: everything about
+ * being underwater is about what you can see, so it has to change when
+ * your view changes and not when your boots get wet.
+ *
+ * Fog does most of the work. Water is not dark, it is SHORT -- you can
+ * see three metres and then you cannot -- and a dense green fog says
+ * that better than dimming the lights does. The sky goes with it, because
+ * looking up from under a lake should not show you a sunset. */
+function setUnderwaterLook(game, S, on) {
+  const r = game.renderer;
+  if (on) {
+    if (!S.__dryLook) {
+      S.__dryLook = {
+        fogDensity: r.fog.density,
+        fog: { x: r.fog.color.x, y: r.fog.color.y, z: r.fog.color.z },
+        zenith: { x: r.sky.zenith.x, y: r.sky.zenith.y, z: r.sky.zenith.z },
+        horizon: { x: r.sky.horizon.x, y: r.sky.horizon.y, z: r.sky.horizon.z },
+        ground: { x: r.sky.ground.x, y: r.sky.ground.y, z: r.sky.ground.z },
+        exposure: r.post.exposure,
+        intensity: r.sky.intensity,
+      };
+    }
+    r.fog.density = 0.34;
+    r.fog.color.set(0.055, 0.135, 0.125);
+    r.sky.zenith.set(0.05, 0.14, 0.14);
+    r.sky.horizon.set(0.03, 0.09, 0.10);
+    r.sky.ground.set(0.012, 0.035, 0.038);
+    r.sky.intensity = 0.85;
+    r.post.exposure = 0.92;
+  } else if (S.__dryLook) {
+    const d = S.__dryLook;
+    r.fog.density = d.fogDensity;
+    r.fog.color.set(d.fog.x, d.fog.y, d.fog.z);
+    r.sky.zenith.set(d.zenith.x, d.zenith.y, d.zenith.z);
+    r.sky.horizon.set(d.horizon.x, d.horizon.y, d.horizon.z);
+    r.sky.ground.set(d.ground.x, d.ground.y, d.ground.z);
+    r.sky.intensity = d.intensity;
+    r.post.exposure = d.exposure;
+    S.__dryLook = null;
+  }
+}
+
 function fetchManifest() {
   const url = UPDATE.manifest + '?t=' + Date.now();
   return fetch(url, { cache: 'no-store' })
@@ -1570,6 +1614,9 @@ const PLAYER = {
   adsSpread: 0.28,        // aimed shots tighten to this fraction of hip spread
   plankTime: 1.0,         // one second a plank, five for a window
   sprintSpeed: 7.4, walkSpeed: 4.2, adsSpeed: 2.3,
+  /* Slower than a walk by a good margin. Water that you move through at
+     walking pace is not water. */
+  swimSpeed: 2.1,
   fov: 1.0, sprintFov: 1.06,
   attackRange: 1.45, attackCooldown: 0.9,
   interactRange: 2.0,
@@ -13337,6 +13384,71 @@ function start(opts = {}) {
         P.actor.controller.move(d.x, d.z, false);
       } else {
         P.actor.controller.move(wx, wz, P.sprinting);
+      }
+
+      /* ---------------- IN THE WATER ----------------
+       *
+       * Coastline's Pack-a-Punch is under the lake, so the player has to
+       * be able to go under it. The dead got this first -- they cross the
+       * open water to reach you -- and this is the same question asked
+       * from the other side: the map says how deep the water is at a
+       * point, and the body responds to it.
+       *
+       * Three states, and the middle one matters most. WADING is
+       * knee-to-chest deep: you walk, but slowly, because a shallows you
+       * can sprint through is not water, it is a blue floor. SWIMMING is
+       * out of your depth at the surface: you float, and looking down and
+       * holding forward takes you under. SUBMERGED is under it, where you
+       * can go anywhere, including down to whatever is on the bottom.
+       *
+       * The camera going under is what sells it, so the sky, the fog and
+       * the colour all change the moment your eyes pass the surface --
+       * not when your feet do. */
+      {
+        const pw = MAPDEF && MAPDEF.waterAt ? MAPDEF.waterAt(P.actor.position.x, P.actor.position.z) : null;
+        const eyeY = P.actor.position.y + 0.745;
+        const wasUnder = !!P.underwater;
+        if (pw) {
+          const depth = pw.surface - P.actor.position.y;
+          P.waterDepth = depth;
+          P.underwater = eyeY < pw.surface - 0.02;
+          /* Out of your depth: the floor is further below you than you
+             are tall, so there is nothing to push off. */
+          P.swimming = (pw.surface - pw.bed) > 1.15 && depth > 0.55;
+          if (P.swimming) {
+            const body = P.actor.controller.body;
+            if (body) {
+              body.gravityScale = 0;
+              /* Look where you are going. Down and forward takes you
+                 under; level holds you at the surface; up brings you back.
+                 The vertical rate is deliberately slow -- a body in water
+                 does not dart. */
+              const pitch = game._camPitch || 0;   // POSITIVE looks DOWN
+              const want = (Math.hypot(wx, wz) > 0.05) ? -pitch * 1.7 : 0;
+              const rise = P.underwater ? 0 : Math.min(0, want);
+              body.velocity.y += ((P.underwater ? want : rise) - body.velocity.y) * Math.min(1, dt * 4.5);
+              /* And a floor: you cannot swim through the bed. */
+              if (P.actor.position.y < pw.bed + 0.55) {
+                P.actor.setPosition([P.actor.position.x, pw.bed + 0.55, P.actor.position.z]);
+                if (body.velocity.y < 0) body.velocity.y = 0;
+              }
+            }
+            P.actor.controller.moveSpeed = PLAYER.swimSpeed;
+          } else if (depth > 0.35) {
+            // Wading. Slow, because water is not a floor.
+            P.actor.controller.moveSpeed = Math.max(PLAYER.swimSpeed,
+              P.actor.controller.moveSpeed * (1 - Math.min(0.55, (depth - 0.35) * 0.9)));
+          }
+        } else {
+          P.waterDepth = 0;
+          P.underwater = false;
+          if (P.swimming) {
+            P.swimming = false;
+            const body = P.actor.controller.body;
+            if (body) body.gravityScale = 1;
+          }
+        }
+        if (P.underwater !== wasUnder) setUnderwaterLook(game, S, P.underwater);
       }
 
       /* Aim down sights. */

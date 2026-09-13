@@ -227,6 +227,13 @@ const MAT = {
   bed: { color: 0x53563f, texture: 'dirt', roughness: 0.99, metalness: 0, uvScale: 8, castShadow: false },
   // The wood behind the boundary fence: darker than the lawn trees.
   leafWood: { color: 0x93ab7c, texture: 'grass', roughness: 0.97, metalness: 0, uvScale: 3 },
+  /* The flamingo. A pool toy that has been in the water too long: the
+     pink has gone slightly wrong, and it is glossy the way vinyl is
+     rather than the way anything alive is. */
+  flamingo: { color: 0xff9ec4, texture: 'smooth', roughness: 0.28, metalness: 0, subsurface: 0.4 },
+  papBeak: { color: 0x2a2226, texture: 'smooth', roughness: 0.35, metalness: 0 },
+  papEye: { color: 0xfff4d8, texture: 'smooth', roughness: 0.2, metalness: 0,
+    emissive: 0xffd070, emissiveStrength: 1.6 },
   shore: { color: 0x8e9086, texture: 'concrete', roughness: 0.98, metalness: 0, uvScale: 20, castShadow: false },
 };
 
@@ -272,6 +279,99 @@ const WINDOWS = [
   // And the one on the east.
   { id: 'CE', room: 'green', inside: [36.0, 0, -20.0], sillAt: [39.0, 1.15, -20.0], pad: [43.0, 0, -32.0], face: 'E', wz: [-21.4, -18.6] },
 ];
+
+/* ---------------- the Pack-a-Punch ----------------
+
+   A mutated flamingo floaty, on the bottom of the lake, under a dock it
+   brought down with it.
+
+   Everything about where it is, is the point. Bunker Nine's upgrade is a
+   rock in a room you already fight in; you walk to it. This one is at
+   the bottom of a lake, which means the trip itself is the cost -- you
+   leave the ground you were holding, you go somewhere you cannot shoot
+   from, and you come back to whatever arrived while you were under. A
+   weapon upgrade should be a decision and not a shop.
+
+   It is built where the boathouse dock was. When the machine comes down
+   it takes the dock with it, and the wreckage is how you find it: you
+   look for the broken end of the pier and you go over the side. */
+const PAP = {
+  // On the bed, out past the boathouse, in about two metres of water.
+  /* Directly under the gap, not off to one side of it. Set beside it,
+     the hole in the pier showed you empty water and the machine was
+     something you found by swimming around looking -- the break is
+     supposed to BE the signpost. */
+  at: [C.pier.x + 0.55, C.water.y - 1.62, C.boathouse.z - 0.4],
+  // The span of decking that falls in when it lands.
+  breaks: { x0: C.pier.x - 1.35, x1: C.pier.x + 1.35, z0: C.boathouse.z - 3.4, z1: C.boathouse.z + 3.6 },
+};
+
+/* The flamingo. Pink, bloated, and wrong in the specific way a pool toy
+   is wrong when it has been in the water too long and has started to
+   take an interest in you.
+
+   Built from the same primitives as everything else here. The head is
+   the part that does the work -- it comes down, the beak opens, the gun
+   goes in -- so it is a group the game can move, and the rest is a
+   floating body it is attached to. */
+function buildFlamingo(game, mats, decos, at) {
+  const P0 = at;
+  const parts = [];
+  const add = (a, nm) => { if (a) { a.name = nm; parts.push(a); decos.push(a); } return a; };
+
+  // The body: a fat ring, the way an inflatable is a fat ring.
+  const body = game.torus
+    ? add(game.torus({ at: P0, radius: 0.95, tube: 0.42, material: mats.flamingo, physics: false }), 'pap-body')
+    : add(game.sphere({ at: P0, radius: 0.95, material: mats.flamingo, physics: false }), 'pap-body');
+  if (body && body.setRotation) body.setRotation([90, 0, 0]);
+  // The swell where the neck leaves it.
+  add(game.sphere({ at: [P0[0], P0[1] + 0.30, P0[2] - 0.55], radius: 0.46,
+    material: mats.flamingo, physics: false }), 'pap-chest');
+
+  /* The neck, in segments, so it can bend rather than hinge. An
+     inflatable flamingo's neck is one smooth S and that is most of what
+     makes the silhouette read at a glance. */
+  const neck = [];
+  for (let i = 0; i < 7; i++) {
+    const t = i / 6;
+    const y = P0[1] + 0.35 + t * 1.55;
+    const z = P0[2] - 0.55 - Math.sin(t * Math.PI * 0.85) * 0.62;
+    const seg = game.sphere({ at: [P0[0], y, z], radius: 0.20 - t * 0.055,
+      material: mats.flamingo, physics: false });
+    add(seg, 'pap-neck-' + i);
+    neck.push(seg);
+  }
+
+  // The head, and the beak that opens.
+  const headAt = [P0[0], P0[1] + 1.98, P0[2] - 1.02];
+  const head = add(game.sphere({ at: headAt, radius: 0.30, material: mats.flamingo, physics: false }), 'pap-head');
+  const eyeL = add(game.sphere({ at: [headAt[0] - 0.17, headAt[1] + 0.10, headAt[2] - 0.13], radius: 0.062,
+    material: mats.papEye, physics: false }), 'pap-eye');
+  const eyeR = add(game.sphere({ at: [headAt[0] + 0.17, headAt[1] + 0.10, headAt[2] - 0.13], radius: 0.062,
+    material: mats.papEye, physics: false }), 'pap-eye');
+  /* The beak is two halves that part. A pool toy's beak is a painted
+     black tip; this one opens, which is the moment the whole machine
+     exists for. */
+  const upper = add(game.cone({ at: [headAt[0], headAt[1] + 0.02, headAt[2] - 0.44], radius: 0.17, height: 0.62,
+    material: mats.papBeak, physics: false }), 'pap-beak-upper');
+  const lower = add(game.cone({ at: [headAt[0], headAt[1] - 0.10, headAt[2] - 0.44], radius: 0.16, height: 0.58,
+    material: mats.papBeak, physics: false }), 'pap-beak-lower');
+  if (upper && upper.setRotation) upper.setRotation([-90, 0, 0]);
+  if (lower && lower.setRotation) lower.setRotation([-90, 0, 0]);
+
+  /* The mooring. It is on the bottom, so it is held down rather than
+     floating free -- a chain to a block, which also says "this did not
+     drift here, it was put here". */
+  add(game.cylinder({ at: [P0[0] + 0.1, P0[1] - 0.62, P0[2] + 0.3], radius: 0.30, height: 0.42,
+    material: mats.concreteWet, physics: false }), 'pap-block');
+  for (let i = 0; i < 5; i++) {
+    add(game.sphere({ at: [P0[0] + 0.1 - i * 0.02, P0[1] - 0.50 + i * 0.11, P0[2] + 0.30 - i * 0.03],
+      radius: 0.052, material: mats.steelDark, physics: false }), 'pap-chain');
+  }
+
+  return { parts, head, beakUpper: upper, beakLower: lower, neck, eyes: [eyeL, eyeR], at: P0,
+    headAt, beakRest: { upper: upper && upper.position.y, lower: lower && lower.position.y } };
+}
 
 /* ---------------- what the radio says here ----------------
 
@@ -716,12 +816,34 @@ function build(game, S) {
     post(P.x - P.halfW + 0.2, z, C.water.y - 1.6, P.deckY, 0.09, mats.galv, 'pier-piling');
     post(P.x + P.halfW - 0.2, z, C.water.y - 1.6, P.deckY, 0.09, mats.galv, 'pier-piling');
   }
-  slab(P.x - P.halfW, P.x + P.halfW, P.deckY - 0.14, P.deckY, -0.4, P.z1, mats.deckLong, 'pier-deck');
+  /* The pier runs out to the boathouse and STOPS, because the span over
+     the Pack-a-Punch went into the lake with it. Built as two runs with
+     the gap between them rather than as one deck with a decal on it: the
+     hole has to be something you can fall through, or it is a picture of
+     a hole. */
+  slab(P.x - P.halfW, P.x + P.halfW, P.deckY - 0.14, P.deckY, -0.4, PAP.breaks.z0, mats.deckLong, 'pier-deck');
+  slab(P.x - P.halfW, P.x + P.halfW, P.deckY - 0.14, P.deckY, PAP.breaks.z1, P.z1, mats.deckLong, 'pier-deck-far');
   // Handrail both sides, the whole length.
   for (const s of [-1, 1]) {
     const x = P.x + s * (P.halfW - 0.08);
-    deco(x - 0.05, x + 0.05, P.deckY + 0.92, P.deckY + 1.00, -0.4, P.z1, mats.galv, 'pier-rail');
-    deco(x - 0.04, x + 0.04, P.deckY + 0.46, P.deckY + 0.52, -0.4, P.z1, mats.galv, 'pier-rail-mid');
+    /* Broken where the deck is. Run straight across the gap they read as
+       a handrail over a hole, which is a rail nobody bolted to anything --
+       and it hides the one thing the gap exists to show you. Two runs,
+       stopping where the boards stop. */
+    for (const [a, b2] of [[-0.4, PAP.breaks.z0], [PAP.breaks.z1, P.z1]]) {
+      deco(x - 0.05, x + 0.05, P.deckY + 0.92, P.deckY + 1.00, a, b2, mats.galv, 'pier-rail');
+      deco(x - 0.04, x + 0.04, P.deckY + 0.46, P.deckY + 0.52, a, b2, mats.galv, 'pier-rail-mid');
+    }
+    /* And the torn ends: a rail that has been snapped bends down toward
+       the water rather than stopping square. */
+    for (const z of [PAP.breaks.z0, PAP.breaks.z1]) {
+      const into = z === PAP.breaks.z0 ? 1 : -1;
+      const bent = game.cylinder({ at: [x, P.deckY + 0.72, z + into * 0.34], radius: 0.045, height: 0.62,
+        material: mats.galv, physics: false });
+      bent.name = 'pier-rail-torn';
+      bent.setRotation([into * 58, 0, 0]);
+      decos.push(bent);
+    }
     for (let z = 0.2; z <= P.z1; z += 2.2) post(x, z, P.deckY, P.deckY + 1.0, 0.045, mats.galv, 'pier-stanchion');
   }
 
@@ -1208,6 +1330,34 @@ function build(game, S) {
   game.light({ at: [C.twoStorey.x, 5.4, C.twoStorey.z], color: 0xffd2a0, intensity: 8, radius: 12 });
   game.light({ at: [C.pier.x, C.pier.deckY + 2.6, C.pavilion.z], color: 0xffc484, intensity: 8, radius: 12 });
 
+  /* ---------------- the Pack-a-Punch, and the dock it took down ----------
+  
+     The flamingo is on the bottom and the decking above it is GONE --
+     not decoration showing damage, actually absent, with its broken ends
+     left either side and a couple of planks in the water. That gap is how
+     the machine is found: you walk out along the pier, the boards stop,
+     and there is something pink moving about two metres under you. */
+  {
+    const fl = buildFlamingo(game, mats, decos, PAP.at);
+    if (S) S.papFlamingo = fl;
+    // The wreckage: the torn ends of the run that fell in.
+    for (const side of [-1, 1]) {
+      const z = side < 0 ? PAP.breaks.z0 : PAP.breaks.z1;
+      deco(PAP.breaks.x0 - 0.1, PAP.breaks.x1 + 0.1, C.pier.deckY - 0.16, C.pier.deckY - 0.02,
+        z - 0.12, z + 0.12, mats.deckLong, 'pier-broken-end');
+    }
+    // And boards in the water under it, at the angles boards end up at.
+    for (let i = 0; i < 5; i++) {
+      const a = (i * 37) % 60 - 30;
+      const bx = PAP.at[0] - 1.6 + (i % 3) * 1.3, bz = PAP.at[2] - 1.2 + ((i * 5) % 4) * 1.1;
+      const pl = game.box({ at: [bx, C.water.y - 1.42 - (i % 2) * 0.1, bz],
+        size: [0.22, 0.06, 2.1 + (i % 2) * 0.7], material: mats.deckLong, physics: false });
+      pl.name = 'sunk-plank';
+      pl.setRotation([(i % 2) ? 8 : -6, a, (i % 3) * 4 - 4]);
+      decos.push(pl);
+    }
+  }
+
   if (S) { S.coastSolids = solids; S.coastDecor = decos; }
   return { solids, decos };
 }
@@ -1247,7 +1397,7 @@ function waterAt(x, z) {
 
 window.COASTLINE = {
   id: 'coastline', name: 'Coastline',
-  C, MAP, WINDOWS, MAT, SKY, PLAY, LINES, build, applySky, waterAt,
+  C, MAP, WINDOWS, MAT, SKY, PLAY, LINES, PAP, build, applySky, waterAt,
   /* Where you start: on the walk, a little up the lawn from the water,
      looking down it -- the view the fourth photograph is taken from. */
   spawn: { at: [0, 1.2, -16.0], yaw: 0 },
