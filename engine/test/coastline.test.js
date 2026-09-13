@@ -62,6 +62,8 @@ function check(name, cond, detail = '') {
       mapId: S.mapId,
       windows: S.windows.length,
       boarded: S.windows.every((w) => w.boards.length === 5),
+      doors: Object.keys(S.doors || {}).length,
+      doorsShut: Object.values(S.doors || {}).filter((d) => !d.open).length,
       active: S.activeWindows.length,
       buys: S.buys.length,
       perks: S.perkStations.length,
@@ -146,7 +148,24 @@ function check(name, cond, detail = '') {
       mp5: [[S0[0], S0[2]], [C.C.carport.x + C.C.carport.w / 2 + 1.4, C.C.carport.z]],
       // Out along the wall, up the steps, and down the pier.
       remington: [[S0[0], S0[2]], [P0.x, -2.4], [P0.x, -0.2], [P0.x, C.C.pavilion.z], [P0.x - 1.2, C.C.pavilion.z]],
-      mg42: [[S0[0], S0[2]], [P0.x, -2.4], [P0.x, -0.2], [P0.x, C.C.boathouse.z], [P0.x + 1.6, C.C.boathouse.z]],
+      /* On the pavilion now, not the boathouse: the pier is broken
+         between them and there is no walking to the far end of it. */
+      mg42: [[S0[0], S0[2]], [P0.x, -2.4], [P0.x, -0.2], [P0.x, C.C.pavilion.z - 1.4], [P0.x + 1.6, C.C.pavilion.z - 1.4]],
+      // Out along the seawall walk to the west of the ramp.
+      sawnoff: [[S0[0], S0[2]], [-9.4, -2.4], [-9.4, -1.1]],
+      /* Up the drive, across the street, and in at the cottage's front
+         door. The door is shut on round one and this walks through where
+         it stands -- the check is about the FLOOR, and a door is not a
+         step. */
+      /* Down the gap BETWEEN the two houses, not through one of them.
+         The first version of this route ran from the spawn straight at
+         the cottage and clipped the two-storey's west wall, and the
+         check read its roof as a 6.20 m step -- which it is. */
+      breakwater: [[S0[0], S0[2]], [6.0, -30.0], [6.0, C.C.street.z], [C.C.cottage.x + 4.0, C.C.street.z],
+        // Up the drive, ACROSS the frontage to the door, and in.
+        [C.C.cottage.x + 4.0, C.C.cottage.z + C.C.cottage.d / 2 + 1.2],
+        [C.C.cottage.x, C.C.cottage.z + C.C.cottage.d / 2 + 1.2],
+        [C.C.cottage.x, C.C.cottage.z + 1.6], [C.C.cottage.x + 1.4, C.C.cottage.z + 1.6]],
       // And along the wall the other way, up, and out the gangway.
       paralyzer: [[S0[0], S0[2]], [gx, -2.4], [gx, -0.2], [gx, L0.z - L0.halfZ + 1.2]],
     };
@@ -273,9 +292,15 @@ function check(name, cond, detail = '') {
 
   console.log('');
   check('the map that was asked for is the map that was built', r.mapId === 'coastline', r.mapId);
-  check('every way in has its five boards', r.boarded && r.windows === 5, `${r.windows} windows`);
-  check('every way in is open from round one', r.active === r.windows, `${r.active} of ${r.windows}`);
-  check('there is something to buy', r.buys === 6, `${r.buys} wall-buys`);
+  check('every way in has its five boards', r.boarded && r.windows === 9, `${r.windows} windows`);
+  /* Five open, four shut. The four behind doors are the point of the
+     doors: paying to get into a house is also paying for a way in FOR
+     THEM, and a barricade that is live before you have bought its house
+     is a hole in a building you cannot get to. */
+  check('five ways in are open from round one and four wait for their doors',
+    r.active === 5 && r.windows === 9, `${r.active} of ${r.windows}`);
+  check('the doors that open them exist', r.doors === 4, `${r.doors} doors`);
+  check('there is something to buy', r.buys === 8, `${r.buys} wall-buys`);
   check('there are four perk machines and a box', r.perks === 4 && r.crate, `${r.perks} perks, crate=${r.crate}`);
   check('the navmesh was baked', r.navLevels.length > 0, r.navLevels.join(',') || 'none');
   check('the lawn has no holes in it', r.lawnHoles === 0,

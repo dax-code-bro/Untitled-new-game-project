@@ -3274,6 +3274,8 @@ function registerLoadedMaps() {
     id: 'coastline',
     map: C.MAP,
     windows: C.WINDOWS,
+    // One per house, and each one shut until that house is paid for.
+    doors: C.DOORS,
     spawn: C.spawn,
     play: C.PLAY,
     lines: C.LINES,
@@ -3291,8 +3293,8 @@ function registerLoadedMaps() {
        its path, and a navmesh that stops at the seawall makes the ramp --
        the map's most obvious way in -- unwalkable. */
     navLevels: (game) => ({
-      ground: buildNavLevel(game, { x0: C.C.green.x0, x1: C.C.green.x1,
-        z0: C.C.green.z0, z1: C.C.pier.z1 + 4 }, 1.05),
+      ground: buildNavLevel(game, { x0: C.C.green.x0 - 2, x1: C.C.green.x1 + 2,
+        z0: C.C.green.z0 - 1, z1: C.C.pier.z1 + 4 }, 1.05),
     }),
     roomAt: (p) => {
       if (p.z > 0.4) return (Math.abs(p.x - C.C.pier.x) < 6) ? 'pier' : 'slip';
@@ -3694,14 +3696,37 @@ function finishGenericMap(game, S, def) {
      never be bought is a map with no perks. */
   S.powered = true;
 
-  /* Every way in is open from the first round.
+  /* DOORS a map declares for itself.
+   *
+   * The bunker builds its one door by hand. A map that has several --
+   * Coastline has one per house -- should not have to reach into the
+   * game to make them, so `def.doors` is a list and this turns it into
+   * the same S.doors the interact picker already walks.
+   *
+   * `opens` is what makes a door worth the points: the windows it brings
+   * into the round. A house you have not paid to get into does not feed
+   * the dead, so its barricade stays out of the rotation until you do. */
+  S.doors = S.doors || {};
+  for (const d of (def.doors || [])) {
+    const mat = d.material || { color: 0x6f5636, texture: 'wood', roughness: 0.9, metalness: 0, uvScale: 2 };
+    const actors = (d.panels || []).map((p2) => game.box({
+      at: [(p2[0] + p2[1]) / 2, (p2[2] + p2[3]) / 2, (p2[4] + p2[5]) / 2],
+      size: [p2[1] - p2[0], p2[3] - p2[2], p2[5] - p2[4]],
+      material: mat, static: true,
+    }));
+    for (const a of actors) if (a) a.name = 'door:' + d.id;
+    S.doors[d.id] = { cost: d.cost == null ? ECONOMY.doorGenerator : d.cost,
+      open: false, label: d.label, at: d.at.slice(), opens: (d.opens || []).slice(),
+      actors: actors.filter(Boolean) };
+  }
+
+  /* Every way in that is not behind a door is open from the first round.
 
      The bunker keeps its fifth window shut until you buy the door to the
-     wing -- that is what the door is FOR. Coastline has no doors: it is a
-     lawn between a lake and a fence, and there is nothing to unlock. Left
-     at the bunker's rule its fifth way in would never open at all, and
-     one of the five barricades would stand boarded and untouched for the
-     whole game. */
+     wing -- that is what the door is FOR. Coastline had nothing to
+     unlock and so opened all five; now that its houses have doors, the
+     windows inside them wait for the door that leads to them, and
+     everything else is live from round one. */
   /* The Pack-a-Punch, if this map has one of its own. Coastline's is a
      flamingo on the bed of the lake; the bunker's is the meteorite and
      lives in its own builder. */
@@ -3710,7 +3735,9 @@ function finishGenericMap(game, S, def) {
       pending: null, holding: null, tookFrom: null, bite: 0 };
   }
 
-  S.activeWindows = WINDOWS.map((w) => w.id);
+  const behindADoor = new Set();
+  for (const d of Object.values(S.doors)) for (const w of (d.opens || [])) behindADoor.add(w);
+  S.activeWindows = WINDOWS.map((w) => w.id).filter((id) => !behindADoor.has(id));
 
   S.nav = { ...(def.navLevels ? def.navLevels(game) : {}) };
 
@@ -11850,8 +11877,13 @@ function doInteract(game, S, P, hud, sfx, it, dt) {
     S.points -= it.cost; sfx.doorOpen();
     it.door.open = true;
     for (const a of it.door.actors) a.destroy();
-    // The wing has its own window, and it only matters once you are in there.
-    if (it.id === 'side') S.activeWindows.push('W5');
+    /* The ways in that this door leads to come into the round with it.
+       The bunker's wing window was named here by hand; a map declares
+       its own now, and the bunker's is expressed the same way so there
+       is one rule rather than a rule and an exception. */
+    const opens = it.door.opens && it.door.opens.length ? it.door.opens
+      : (it.id === 'side' ? ['W5'] : []);
+    for (const w of opens) if (!S.activeWindows.includes(w)) S.activeWindows.push(w);
     hud.points(S.points);
   } else if (it.kind === 'power') {
     /* Nothing happens on the press. You take hold of the crank and you turn
