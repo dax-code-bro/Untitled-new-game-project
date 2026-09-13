@@ -919,8 +919,10 @@ function buildViewHand(g, rawAt, side, opts = {}) {
      to the millimetre, which is what a code path that never runs looks
      like -- and telling that apart from a fix that did not work took
      asking the engine directly. */
-  if (typeof Engine !== 'undefined') {
-    Engine.__sawSightY = (Engine.__sawSightY || 0) + (opts.sightY != null ? 1 : 0);
+  if (typeof window !== 'undefined') {
+    window.__SAW_SIGHTY = (window.__SAW_SIGHTY || 0) + (opts.sightY != null ? 1 : 0);
+    window.__NO_SIGHTY = (window.__NO_SIGHTY || 0) + (opts.sightY == null ? 1 : 0);
+    if (opts.sightY != null) window.__LAST_CEIL = wrapLimit.ceil;
   }
   /* `lim` is how a finger is allowed to finish.
    *
