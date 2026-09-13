@@ -49,10 +49,23 @@ function check(name, cond, detail = '') {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message.split('\n')[0]));
 
+  await page.setContent('<body style="margin:0"><canvas id="game" style="position:fixed;inset:0;width:100%;height:100%"></canvas></body>');
+
   /* A gamepad with EVERY button held, from the very first poll, and both
      triggers resting at full. This is the worn pad, the knock-off, and
-     the one somebody was holding as the page loaded, all at once. */
-  await page.addInitScript(() => {
+     the one somebody was holding as the page loaded, all at once.
+     
+     Installed here rather than through addInitScript, because an init
+     script runs on NAVIGATION and setContent on about:blank is not one:
+     the first version of this test never installed the pad at all, and
+     three of its checks passed against a machine with no controller
+     plugged in. A test that passes because the thing it is testing is
+     absent is worse than no test. It asserts the pad is seen now, first,
+     before it asserts anything about what the pad does.
+     
+     The engine reads navigator.getGamepads at poll time rather than at
+     load, so installing it before the game's scripts go in is enough. */
+  await page.evaluate(() => {
     const mk = (pressed) => ({ pressed, touched: pressed, value: pressed ? 1 : 0 });
     window.__STUCK = true;
     navigator.getGamepads = () => [{
@@ -62,8 +75,6 @@ function check(name, cond, detail = '') {
       timestamp: performance.now(),
     }];
   });
-
-  await page.setContent('<body style="margin:0"><canvas id="game" style="position:fixed;inset:0;width:100%;height:100%"></canvas></body>');
   await page.addScriptTag({ content: fs.readFileSync(path.join(ROOT, 'site/engine/legend-engine.js'), 'utf8') });
   await page.addScriptTag({ content: fs.readFileSync(path.join(ROOT, 'site/games/bunker-nine.js'), 'utf8') });
 
