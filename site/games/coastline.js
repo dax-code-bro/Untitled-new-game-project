@@ -1811,9 +1811,15 @@ function build(game, S) {
        read as the opposite shore, which is what they are. waterAt is
        brought in to match them, so there is no water anywhere without a
        bed under it. */
-    slab(-BW, BW, C.water.y - 9.0, C.water.y + 1.6, 144, 150, mats.bed, 'lake-far-bank');
+    /* The banks sit INSIDE the bed rather than flush with its edge.
+    
+       Flush, each bank's outer face and the bed's outer face are the same
+       plane -- twelve pairs of them, six square metres each -- and two
+       coplanar faces z-fight. The check caught it; from the water it
+       would have been a band of flicker along the far edge of the lake. */
+    slab(-BW + 4, BW - 4, C.water.y - 9.0, C.water.y + 1.6, 140, 146, mats.bed, 'lake-far-bank');
     for (const sx of [-1, 1]) {
-      slab(sx * BW - 4 * sx, sx * BW, C.water.y - 9.0, C.water.y + 1.6, 0, 150,
+      slab(sx * (BW - 6), sx * (BW - 2), C.water.y - 9.0, C.water.y + 1.6, 0, 146,
         mats.bed, 'lake-side-bank');
     }
     /* The bank: past it the bottom drops away and you cannot wade on.
@@ -1958,8 +1964,8 @@ function waterAt(x, z) {
      These numbers are the banks in build(), one metre inside them. There
      is no water anywhere without a bed under it now, and the banks stop
      you before you reach the edge of either. */
-  if (z < 0.2 || z > 143) return null;
-  if (Math.abs(x) > 85) return null;
+  if (z < 0.2 || z > 139) return null;
+  if (Math.abs(x) > 83) return null;
   const bedTop = C.water.y - 0.55;
   // Which shelf step this is on; step 0 runs from the wall out to z = 1.
   const i = z <= 1.0 ? 0 : Math.min(8, Math.floor((z - 1.0) / 5.0) + 1);
