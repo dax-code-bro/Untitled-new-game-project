@@ -21266,7 +21266,24 @@ function buildViewHand(g, rawAt, side, opts = {}) {
         for (const j of js) { const d = surf(j.x, j.y, j.z) - r0; if (d > worst) worst = d; }
         if (worst < reach) reach = worst;
       }
-      if (ceil != null && t.y > ceil) e += (t.y - ceil) * 4;
+      /* The ceiling applies to the WHOLE finger, not just its end.
+       *
+       * It was charged against the tip alone, and for a trigger finger
+       * that is right -- the thing that must not end up above the bore
+       * is the fingertip. For a support hand it is not, and the
+       * measurement says so plainly: the MP5's finger runs from a
+       * knuckle 97 mm BELOW the sight line up to +30 and back down, so
+       * the tip is comfortably under the ceiling while the arch of the
+       * middle joint is sitting in the notch. A ceiling that only looks
+       * at the tip cannot see the part of the finger that is in the way,
+       * which is why setting one changed nothing at all.
+       *
+       * Trigger fingers are `tipOnly` and keep the old behaviour. */
+      if (ceil != null) {
+        let hi = t.y;
+        if (!tipOnly) for (const j of js) if (j.y > hi) hi = j.y;
+        if (hi > ceil) e += (hi - ceil) * 4;
+      }
       if (fwd != null && t.x < root.x + fwd) e += (root.x + fwd - t.x) * 5;
       return e;
     };
