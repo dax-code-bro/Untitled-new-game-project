@@ -1676,6 +1676,12 @@ function fetchManifest() {
  * of the pier is 1.4 m and free; the bunker roof is 4.6 m and free; the
  * two-storey's balcony is 3.4 m and free. Nothing on either map that a
  * player is MEANT to jump off is anywhere near seven metres. */
+/* How long a dropped weapon stays on the floor. Ten minutes: long enough
+   that a gun you put down to try something else is still there when you
+   change your mind, short enough that round fifteen is not played across
+   a carpet of them. */
+const DROP_LIFE = 600;
+
 const FALL = {
   hurts: 7.0,
   fatal: 12.0,
@@ -10458,8 +10464,22 @@ function dropWeapon(game, S, P, id) {
    the first time it hit the floor. */
 function updateDrops(game, S, dt) {
   if (!S.floorGuns || !S.floorGuns.length) return;
-  for (const d of S.floorGuns) {
+  for (let k = S.floorGuns.length - 1; k >= 0; k--) {
+    const d = S.floorGuns[k];
     d.t += dt;
+    /* AND THEY DO NOT LIE THERE FOR EVER.
+    
+       Nothing ever removed one. Ten rounds in, every weapon anybody had
+       swapped out was still on the floor where it landed, each with its
+       own actors and its own draw. Ten minutes, then it goes -- long
+       enough that a gun you put down to try something else is still
+       there when you change your mind, short enough that the floor is
+       not a museum. */
+    if (d.t > DROP_LIFE) {
+      for (const a of (d.parts || [d.actor])) { try { a.destroy(); } catch (e) { void e; } }
+      S.floorGuns.splice(k, 1);
+      continue;
+    }
     if (!d.rest) {
       d.vy -= 17 * dt;
       d.at[0] += d.vx * dt;
@@ -10467,10 +10487,18 @@ function updateDrops(game, S, dt) {
       d.at[2] += d.vz * dt;
       d.vx *= 0.90; d.vz *= 0.90;
       d.rot[2] += d.spin * dt * 57.2958;
-      // The floor it fell onto, whatever height that is.
+      /* The floor it fell onto, whatever height that is.
+      
+         hit.point is a Vec3, not an array. This read it as hit.point[1],
+         which is undefined -- so floorY was undefined, the landing test
+         compared against NaN and was never true, and a dropped weapon
+         fell through the floor and kept going for the rest of the round.
+         That is "whenever you drop a gun it phases through the ground",
+         exactly, and it is one character. Every other raycast in this
+         file uses .point.y. */
       const hit = game.raycast([d.at[0], d.at[1] + 0.4, d.at[2]], [0, -1, 0], 3.0,
         (b) => !b.isTrigger && b !== P_BODY(S));
-      const floorY = hit ? hit.point[1] : 0;
+      const floorY = hit ? hit.point.y : 0;
       if (d.at[1] <= floorY + 0.055) {
         d.at[1] = floorY + 0.055;
         if (Math.abs(d.vy) < 1.1) {
