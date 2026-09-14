@@ -1,8 +1,8 @@
 {
-  "version": "0.7.1",
-  "name": "steady hands",
-  "date": "2026-09-13",
+  "version": "0.8.0",
+  "name": "the dead arrive",
+  "date": "2026-09-14",
   "mode": "zombies",
-  "did": "A pad button that nobody is pressing is no longer treated as a press. A worn shoulder or a resting trigger used to board barricades by walking up to them and start the round before you had chosen a character; the engine now refuses any button until it has seen it released once. Auto repair is gone entirely -- boarding a window is holding the use key and nothing else.",
+  "did": "Coastline is playable again. You no longer fall through the water into an endless void -- the lake bed was a 520-metre-wide box that did not collide, and past it there was no bed at all. The dead now actually reach you from every way in: they were walking straight at you with no pathfinding, and then jamming on the lake bed one centimetre at a time. Falling off a height or out of the world kills you. Dropped guns rest on the floor instead of falling through it, and clear after ten minutes.",
   "onAccept": "Your round is saved and the map is rebuilt. You keep your points, your guns and your perks, and the dead hold off for three minutes while you get set."
 }
