@@ -72,28 +72,31 @@ function check(name, cond, detail = '') {
          only number that cannot be argued with. */
       let lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9], verts = 0, nan = 0;
       const per = {};
+      /* EVERY part, which is not what this did at first.
+       *
+         mountArm hangs the receiver on the body and the other parts off
+         body[name], listing them in partNames. The first version of
+         this walked `g.parts` -- which does not exist -- fell through
+         to [g], and measured the receiver alone. So it was reporting a
+         gun's length, its muzzle and its vertex count from one part of
+         it, and a missing magazine or a missing stock would have sailed
+         through every check below with perfectly sensible numbers. */
       for (const name of g.partNames) {
         const part = name === g.partNames[0] ? g : g[name];
-        const geo = G.geometryOf(part && part.mesh ? part.mesh : null);
-        void geo;
-      }
-      /* The engine keeps the finalized geometry per part; read the
-         bounds the mesh was built with. */
-      const parts = g.parts || [g];
-      for (const p of parts) {
-        const m = p.mesh;
-        if (!m || !m.bounds) continue;
+        const m = part && part.mesh;
+        if (!m || !m.bounds || !(m.vertexCount > 0)) { per[name] = null; continue; }
         const b = m.bounds;
-        per[p.name || '?'] = [b.min.x, b.max.x, b.min.y, b.max.y];
+        per[name] = { v: m.vertexCount, x: [b.min.x, b.max.x], y: [b.min.y, b.max.y] };
         lo = [Math.min(lo[0], b.min.x), Math.min(lo[1], b.min.y), Math.min(lo[2], b.min.z)];
         hi = [Math.max(hi[0], b.max.x), Math.max(hi[1], b.max.y), Math.max(hi[2], b.max.z)];
-        verts += m.vertexCount || 0;
+        verts += m.vertexCount;
         for (const v of [b.min.x, b.min.y, b.min.z, b.max.x, b.max.y, b.max.z]) {
           if (!isFinite(v)) nan++;
         }
       }
       return {
         lo, hi, verts, nan, per,
+        names: g.partNames.slice(),
         muzzleAt: g.muzzleAt, sightAt: g.sightAt, boreAt: g.boreAt,
         magWell: g.magWell,
         spec: { muzzle: spec.muzzle, hgX1: spec.hg ? spec.hg.x1 : null,
@@ -119,6 +122,22 @@ function check(name, cond, detail = '') {
     /* Sights above the bore, and not floating above the gun. */
     if (!(r.sightAt > r.boreAt + 0.010)) problems.push('the sight is not above the bore');
     if (r.sightAt > r.hi[1] + 0.004) problems.push('the sight is above the whole gun');
+    /* Every part the builder was asked for has to have come out with
+       geometry in it. A part that silently built nothing is exactly
+       what a table-driven model does when one row is wrong, and it is
+       invisible to a length or a bounding box. */
+    for (const name of r.names) {
+      const want = name === 'mag' ? r.spec.magKind !== 'none' : true;
+      if (want && !r.per[name]) problems.push(`the ${name} is empty`);
+      if (!want && r.per[name]) problems.push(`the ${name} should not exist`);
+    }
+    /* And a magazine belongs below the bore, not inside the receiver. */
+    if (r.per.mag && !(r.per.mag.y[0] < -0.045)) {
+      problems.push(`the magazine only reaches ${r.per.mag.y[0].toFixed(3)} below the bore`);
+    }
+    if (r.per.wood && !(r.per.wood.y[0] < -0.060)) {
+      problems.push('there is no grip under the receiver');
+    }
     if (problems.length) bad.push(`${kind}: ${problems.join('; ')}`);
 
     check(`${kind}`, problems.length === 0,

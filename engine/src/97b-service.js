@@ -353,6 +353,24 @@ function svcMag(g, K) {
   sweepPath(g, sts, true, true);
 }
 
+/* A bipod, folded down. Two legs off a yoke under the barrel, which is
+   the difference between a machine gun and a very heavy rifle. */
+function svcBipod(g, K) {
+  const P = K.bipod;
+  if (!P) return;
+  const yokeY = -K.barrel.r1 - 0.004;
+  band(g, P.x - 0.010, P.x + 0.010, K.barrel.r1, K.barrel.r1 + 0.007, 16);
+  for (const sz of [-1, 1]) {
+    strut(g, [P.x, yokeY, sz * 0.006], [P.x - P.rake, yokeY - P.len, sz * P.spread],
+      roundRect(0.0040, 0.0040, 0.0040, 3, 10));
+    /* The foot, which is what stops it sinking into the floor and is
+       also the only part of it anybody ever looks at. */
+    strut(g, [P.x - P.rake, yokeY - P.len, sz * P.spread],
+      [P.x - P.rake - 0.016, yokeY - P.len - 0.002, sz * P.spread],
+      roundRect(0.0035, 0.0035, 0.0055, 4, 10));
+  }
+}
+
 function svcBolt(g, K) {
   const R = K.rec, C = K.charge;
   const x = C ? C.x : R.front - 0.060;
@@ -381,7 +399,7 @@ const SVC_BASE = {
     w: 0.0125, d: 0.0135, r: 0.055 },
   stock: { kind: 'wood', butt: -0.330, comb: 0.0245, drop: 0.0300, w: 0.0195 },
   sight: { y: 0.0335, frontX: 0.355, rearX: 0.020, front: 'ears', rear: 'notch' },
-  handle: null, rail: null,
+  handle: null, rail: null, bipod: null, rotary: 0,
   mass: 4.3, bound: 0.50,
   origin: new Vec3(-0.082, -0.0180, 0),
   mats: { steel: ARM_MAT.blued, wood: ARM_MAT.poly, mag: ARM_MAT.blued, bolt: ARM_MAT.bright },
@@ -588,6 +606,8 @@ function makeServiceArm(kind) {
   svcBarrel(geos.steel, K);
   svcReceiver(geos.steel, K);
   svcSights(geos.steel, K);
+  svcBipod(geos.steel, K);
+  svcRotary(geos.steel, K);
   geos.wood = new Geometry(); svcFurniture(geos.wood, K);
   /* A grip is furniture on a wooden gun and part of the frame on a
      polymer one, but it is always its own material -- it is the only
@@ -623,3 +643,317 @@ function serviceArm(E, kind, opts) {
 Engine.prototype.serviceArm = function (kind, opts = {}) { return serviceArm(this, kind, opts); };
 Engine.prototype.serviceArmKinds = function () { return Object.keys(SERVICE_KINDS); };
 Engine.prototype.serviceArmSpec = function (kind) { return SERVICE_KINDS[kind] || null; };
+
+/* ---------------- submachine guns ----------------
+   Short, pistol-calibre, and mostly built round a tube rather than a
+   forged receiver. The MP5 is not in this table: it has a hand-built
+   model of its own in 97a-arms.js, and a second one here would be two
+   MP5s that could disagree. */
+
+Object.assign(SERVICE_KINDS, {
+
+  mp7: svcSpec({
+    muzzle: 0.245, barrel: { rear: 0.035, r0: 0.0090, r1: 0.0068, bore: 0.0023,
+      step: 0.085, gas: false },
+    rec: { rear: -0.115, front: 0.075, up: 0.0195, down: 0.0180, w: 0.0150, e: 4 },
+    port: { x0: 0.006, x1: 0.036, up: 0.0120, down: 0.0020 },
+    hg: { kind: 'tube', x0: 0.080, x1: 0.150, r: 0.0165 },
+    grip: { x: -0.062, y: -0.0160, len: 0.098, rake: 0.30 },
+    trigger: { x: -0.036 },
+    mag: { curve: 0.10, len: 0.120, w: 0.0100, d: 0.0105, x: -0.058, y: -0.0180 },
+    stock: { kind: 'tube', butt: -0.215, comb: 0.0160, drop: 0.0170, w: 0.0140 },
+    rail: { x0: -0.010, x1: 0.062 },
+    sight: { y: 0.0330, frontX: 0.180, rearX: 0.030, front: 'ears', rear: 'aperture' },
+    charge: { x: 0.040, y: 0.0120, z: 0.0200 },
+    mass: 1.9, bound: 0.30,
+  }),
+  ump: svcSpec({
+    muzzle: 0.300, barrel: { rear: 0.040, r0: 0.0110, r1: 0.0088, bore: 0.0058,
+      step: 0.100, gas: false },
+    rec: { rear: -0.125, front: 0.082, up: 0.0215, down: 0.0195, w: 0.0165, e: 5 },
+    hg: { kind: 'tube', x0: 0.086, x1: 0.185, r: 0.0190 },
+    grip: { x: -0.068, y: -0.0175, len: 0.102, rake: 0.32 },
+    trigger: { x: -0.040 },
+    mag: { curve: 0.14, len: 0.145, w: 0.0115, d: 0.0130, x: -0.014, y: -0.0195 },
+    stock: { kind: 'folder', butt: -0.240, comb: 0.0180, drop: 0.0200, w: 0.0160 },
+    rail: { x0: -0.014, x1: 0.070 },
+    sight: { y: 0.0335, frontX: 0.230, rearX: 0.035, front: 'ears', rear: 'aperture' },
+    mass: 2.5, bound: 0.34,
+  }),
+  thompson: svcSpec({
+    muzzle: 0.330, barrel: { rear: 0.045, r0: 0.0120, r1: 0.0098, bore: 0.0058,
+      step: 0.110, gas: false, brake: 'slots' },
+    rec: { rear: -0.130, front: 0.088, up: 0.0230, down: 0.0210, w: 0.0175, e: 4 },
+    hg: { kind: 'wood', x0: 0.092, x1: 0.180, drop: 0.0250, w: 0.0195, upper: null },
+    grip: { x: -0.072, y: -0.0190, len: 0.106, rake: 0.20 },
+    trigger: { x: -0.044 },
+    mag: { curve: 0.04, len: 0.135, w: 0.0135, d: 0.0130, x: -0.008, y: -0.0210 },
+    stock: { kind: 'wood', butt: -0.290, comb: 0.0215, drop: 0.0290, w: 0.0195 },
+    sight: { y: 0.0350, frontX: 0.300, rearX: 0.040, front: 'ears', rear: 'aperture' },
+    charge: { x: 0.050, y: 0.0235, z: 0.0000 },
+    mass: 4.8, bound: 0.36,
+  }),
+  grease: svcSpec({
+    muzzle: 0.290, barrel: { rear: 0.040, r0: 0.0105, r1: 0.0090, bore: 0.0058,
+      gas: false, step: 0.095 },
+    rec: { rear: -0.145, front: 0.075, up: 0.0215, down: 0.0205, w: 0.0210, e: 2.2 },
+    hg: { kind: 'none' },
+    grip: { x: -0.070, y: -0.0190, len: 0.098, rake: 0.16 },
+    trigger: { x: -0.044 },
+    mag: { curve: 0.02, len: 0.175, w: 0.0128, d: 0.0115, x: -0.012, y: -0.0205 },
+    stock: { kind: 'wire', butt: -0.255, comb: 0.0140, drop: 0.0180, w: 0.0150 },
+    sight: { y: 0.0320, frontX: 0.255, rearX: 0.030, front: 'ears', rear: 'aperture' },
+    charge: { x: 0.030, y: 0.0120, z: 0.0230 },
+    mass: 3.7, bound: 0.32,
+  }),
+  sten: svcSpec({
+    muzzle: 0.310, barrel: { rear: 0.042, r0: 0.0098, r1: 0.0082, bore: 0.0045,
+      gas: false, shroud: true, shroudX0: 0.060, shroudX1: 0.190, shroudR: 0.0165 },
+    rec: { rear: -0.150, front: 0.058, up: 0.0190, down: 0.0180, w: 0.0185, e: 2.2 },
+    hg: { kind: 'none' },
+    grip: { x: -0.074, y: -0.0170, len: 0.092, rake: 0.10 },
+    trigger: { x: -0.046 },
+    /* Side-fed, so from the front this one is a pipe and nothing else. */
+    mag: { kind: 'none' },
+    stock: { kind: 'wire', butt: -0.290, comb: 0.0120, drop: 0.0150, w: 0.0140 },
+    sight: { y: 0.0295, frontX: 0.265, rearX: 0.020, front: 'ears', rear: 'aperture' },
+    charge: { x: 0.026, y: 0.0110, z: 0.0225 },
+    mass: 3.2, bound: 0.34,
+  }),
+  mp40: svcSpec({
+    muzzle: 0.300, barrel: { rear: 0.038, r0: 0.0100, r1: 0.0085, bore: 0.0045,
+      gas: false, step: 0.095 },
+    rec: { rear: -0.132, front: 0.070, up: 0.0195, down: 0.0185, w: 0.0165, e: 3 },
+    hg: { kind: 'none' },
+    grip: { x: -0.070, y: -0.0175, len: 0.096, rake: 0.14 },
+    trigger: { x: -0.042 },
+    mag: { curve: 0.02, len: 0.185, w: 0.0110, d: 0.0120, x: -0.004, y: -0.0190 },
+    stock: { kind: 'folder', butt: -0.245, comb: 0.0130, drop: 0.0165, w: 0.0135 },
+    sight: { y: 0.0300, frontX: 0.255, rearX: 0.026, front: 'hood', rear: 'notch' },
+    charge: { x: 0.028, y: 0.0115, z: 0.0215 },
+    mass: 4.0, bound: 0.32,
+  }),
+  ppsh: svcSpec({
+    muzzle: 0.320, barrel: { rear: 0.040, r0: 0.0100, r1: 0.0085, bore: 0.0038,
+      gas: false, shroud: true, shroudX0: 0.075, shroudX1: 0.230, shroudR: 0.0180,
+      brake: 'cone' },
+    rec: { rear: -0.140, front: 0.072, up: 0.0205, down: 0.0195, w: 0.0175, e: 3 },
+    hg: { kind: 'wood', x0: 0.020, x1: 0.070, drop: 0.0230, w: 0.0185, upper: null },
+    grip: { x: -0.068, y: -0.0190, len: 0.090, rake: 0.08 },
+    trigger: { x: -0.042 },
+    mag: { kind: 'drum', x: -0.002, y: -0.0205, r: 0.0430, w: 0.0140 },
+    stock: { kind: 'wood', butt: -0.300, comb: 0.0180, drop: 0.0290, w: 0.0195 },
+    sight: { y: 0.0330, frontX: 0.270, rearX: 0.030, front: 'hood', rear: 'notch' },
+    charge: { x: 0.030, y: 0.0130, z: 0.0225 },
+    mass: 4.3, bound: 0.36,
+  }),
+  vector: svcSpec({
+    muzzle: 0.250, barrel: { rear: 0.035, r0: 0.0105, r1: 0.0086, bore: 0.0058,
+      gas: false, step: 0.085 },
+    rec: { rear: -0.128, front: 0.080, up: 0.0230, down: 0.0250, w: 0.0160, e: 5 },
+    hg: { kind: 'tube', x0: 0.085, x1: 0.160, r: 0.0175 },
+    grip: { x: -0.058, y: -0.0210, len: 0.100, rake: 0.36 },
+    trigger: { x: -0.032 },
+    mag: { curve: 0.06, len: 0.150, w: 0.0110, d: 0.0122, x: -0.052, y: -0.0240 },
+    stock: { kind: 'folder', butt: -0.220, comb: 0.0180, drop: 0.0190, w: 0.0150 },
+    rail: { x0: -0.010, x1: 0.070 },
+    sight: { y: 0.0355, frontX: 0.180, rearX: 0.030, front: 'ears', rear: 'aperture' },
+    mass: 2.6, bound: 0.30,
+  }),
+  /* The magazine lies flat along the top, which is the whole silhouette
+     of this gun and the reason it is in the table rather than out of it. */
+  p90: svcSpec({
+    muzzle: 0.255, barrel: { rear: 0.040, r0: 0.0100, r1: 0.0078, bore: 0.0029,
+      gas: false, step: 0.090 },
+    rec: { rear: -0.190, front: 0.070, up: 0.0230, down: 0.0260, w: 0.0210, e: 3.4 },
+    port: { x0: -0.120, x1: -0.090, up: 0.0100, down: 0.0080 },
+    hg: { kind: 'none' },
+    grip: { x: 0.012, y: -0.0250, len: 0.100, rake: 0.16 },
+    trigger: { x: 0.040 },
+    mag: { kind: 'stick', x: -0.020, y: 0.0300, len: 0.170, curve: 0.0,
+      w: 0.0170, d: 0.0090 },
+    stock: { kind: 'none' },
+    handle: { x0: -0.080, x1: 0.010, y: 0.0430 },
+    sight: { y: 0.0480, frontX: 0.030, rearX: -0.060, front: 'ears', rear: 'aperture' },
+    charge: { x: 0.020, y: 0.0210, z: 0.0240 },
+    mass: 2.8, bound: 0.30,
+  }),
+  skorpion: svcSpec({
+    muzzle: 0.155, barrel: { rear: 0.028, r0: 0.0078, r1: 0.0062, bore: 0.0032,
+      gas: false, step: 0.060 },
+    rec: { rear: -0.090, front: 0.055, up: 0.0165, down: 0.0150, w: 0.0125, e: 4 },
+    port: { x0: 0.004, x1: 0.030, up: 0.0100, down: 0.0020 },
+    hg: { kind: 'none' },
+    grip: { x: -0.052, y: -0.0145, len: 0.086, rake: 0.22 },
+    trigger: { x: -0.030 },
+    mag: { curve: 0.06, len: 0.095, w: 0.0092, d: 0.0100, x: -0.044, y: -0.0160 },
+    stock: { kind: 'wire', butt: -0.175, comb: 0.0110, drop: 0.0120, w: 0.0110 },
+    sight: { y: 0.0270, frontX: 0.120, rearX: 0.018, front: 'ears', rear: 'notch' },
+    charge: { x: 0.026, y: 0.0110, z: 0.0180 },
+    mass: 1.4, bound: 0.24,
+  }),
+  microuzi: svcSpec({
+    muzzle: 0.145, barrel: { rear: 0.025, r0: 0.0092, r1: 0.0078, bore: 0.0045,
+      gas: false, step: 0.055 },
+    rec: { rear: -0.105, front: 0.048, up: 0.0185, down: 0.0175, w: 0.0165, e: 3 },
+    port: { x0: 0.000, x1: 0.026, up: 0.0110, down: 0.0020 },
+    hg: { kind: 'none' },
+    /* The magazine goes up through the grip, which is what makes this
+       one a brick with a barrel. */
+    grip: { x: -0.022, y: -0.0180, len: 0.098, rake: 0.06 },
+    trigger: { x: -0.002 },
+    mag: { curve: 0.0, len: 0.130, w: 0.0110, d: 0.0120, x: -0.028, y: -0.0300 },
+    stock: { kind: 'wire', butt: -0.185, comb: 0.0120, drop: 0.0130, w: 0.0120 },
+    sight: { y: 0.0290, frontX: 0.110, rearX: 0.012, front: 'ears', rear: 'aperture' },
+    charge: { x: 0.010, y: 0.0195, z: 0.0000 },
+    mass: 2.0, bound: 0.24,
+  }),
+});
+
+/* ---------------- light machine guns ----------------
+   Long, heavy, fed from something enormous, and on a bipod. The MG 42
+   is not here for the same reason the MP5 is not: it already has a
+   hand-built model, with a barrel change animation this table has no
+   way to express. */
+
+Object.assign(SERVICE_KINDS, {
+
+  mg34: svcSpec({
+    muzzle: 0.640, barrel: { rear: 0.060, r0: 0.0135, r1: 0.0105, bore: 0.0040,
+      step: 0.200, gas: false, shroud: true, shroudX0: 0.075, shroudX1: 0.400,
+      shroudR: 0.0235, brake: 'cone' },
+    rec: { rear: -0.170, front: 0.090, up: 0.0265, down: 0.0235, w: 0.0195, e: 3.6 },
+    port: { x0: -0.020, x1: 0.020, up: 0.0150, down: 0.0040 },
+    hg: { kind: 'none' },
+    grip: { x: -0.098, y: -0.0200, len: 0.108, rake: 0.36 },
+    trigger: { x: -0.070 },
+    mag: { kind: 'belt', x: -0.030, y: -0.0240 },
+    stock: { kind: 'wood', butt: -0.400, comb: 0.0240, drop: 0.0300, w: 0.0195 },
+    bipod: { x: 0.330, len: 0.155, rake: 0.030, spread: 0.075 },
+    sight: { y: 0.0405, frontX: 0.430, rearX: 0.000, front: 'ears', rear: 'aperture' },
+    charge: { x: 0.040, y: 0.0170, z: 0.0250 },
+    mass: 12.1, bound: 0.70,
+  }),
+  m60: svcSpec({
+    muzzle: 0.640, barrel: { rear: 0.065, r0: 0.0145, r1: 0.0112, bore: 0.0050,
+      step: 0.210, gas: true, gasAt: 0.420, gasR: 0.0085, gasY: -0.0215, brake: 'slots' },
+    rec: { rear: -0.175, front: 0.095, up: 0.0280, down: 0.0250, w: 0.0205, e: 4 },
+    port: { x0: -0.010, x1: 0.030, up: 0.0160, down: 0.0040 },
+    hg: { kind: 'tube', x0: 0.110, x1: 0.240, r: 0.0250 },
+    grip: { x: -0.100, y: -0.0215, len: 0.112, rake: 0.38 },
+    trigger: { x: -0.072 },
+    mag: { kind: 'belt', x: -0.030, y: -0.0255 },
+    stock: { kind: 'poly', butt: -0.395, comb: 0.0255, drop: 0.0310, w: 0.0200 },
+    bipod: { x: 0.470, len: 0.170, rake: 0.035, spread: 0.082 },
+    handle: { x0: 0.150, x1: 0.250, y: 0.0430 },
+    sight: { y: 0.0440, frontX: 0.500, rearX: 0.010, front: 'ears', rear: 'aperture' },
+    mass: 10.5, bound: 0.72,
+  }),
+  pkm: svcSpec({
+    muzzle: 0.620, barrel: { rear: 0.060, r0: 0.0138, r1: 0.0106, bore: 0.0039,
+      step: 0.200, gas: true, gasAt: 0.400, gasR: 0.0082, gasY: -0.0205, brake: 'cone' },
+    rec: { rear: -0.168, front: 0.092, up: 0.0270, down: 0.0240, w: 0.0200, e: 4.5 },
+    port: { x0: -0.014, x1: 0.026, up: 0.0155, down: 0.0040 },
+    hg: { kind: 'none' },
+    grip: { x: -0.096, y: -0.0205, len: 0.110, rake: 0.34 },
+    trigger: { x: -0.068 },
+    mag: { kind: 'belt', x: -0.028, y: -0.0250 },
+    stock: { kind: 'wood', butt: -0.385, comb: 0.0245, drop: 0.0300, w: 0.0190 },
+    bipod: { x: 0.455, len: 0.160, rake: 0.032, spread: 0.078 },
+    sight: { y: 0.0420, frontX: 0.480, rearX: 0.005, front: 'hood', rear: 'notch' },
+    mass: 9.0, bound: 0.70,
+  }),
+  rpd: svcSpec({
+    muzzle: 0.560, barrel: { rear: 0.055, r0: 0.0128, r1: 0.0098, bore: 0.0039,
+      step: 0.180, gas: true, gasAt: 0.360, gasR: 0.0078, gasY: -0.0195 },
+    rec: { rear: -0.160, front: 0.088, up: 0.0255, down: 0.0230, w: 0.0190, e: 4 },
+    hg: { kind: 'wood', x0: 0.105, x1: 0.215, drop: 0.0250, w: 0.0195, upper: null },
+    grip: { x: -0.092, y: -0.0200, len: 0.106, rake: 0.32 },
+    trigger: { x: -0.064 },
+    mag: { kind: 'drum', x: -0.010, y: -0.0240, r: 0.0510, w: 0.0195 },
+    stock: { kind: 'wood', butt: -0.370, comb: 0.0235, drop: 0.0295, w: 0.0190 },
+    bipod: { x: 0.430, len: 0.150, rake: 0.030, spread: 0.074 },
+    sight: { y: 0.0400, frontX: 0.440, rearX: 0.004, front: 'hood', rear: 'notch' },
+    mass: 7.4, bound: 0.66,
+  }),
+  bren: svcSpec({
+    muzzle: 0.590, barrel: { rear: 0.058, r0: 0.0132, r1: 0.0100, bore: 0.0039,
+      step: 0.190, gas: true, gasAt: 0.390, gasR: 0.0080, gasY: -0.0200, brake: 'cone' },
+    rec: { rear: -0.162, front: 0.090, up: 0.0260, down: 0.0230, w: 0.0185, e: 4 },
+    port: { x0: -0.010, x1: 0.026, up: 0.0100, down: 0.0130 },
+    hg: { kind: 'wood', x0: 0.108, x1: 0.205, drop: 0.0245, w: 0.0190, upper: null },
+    grip: { x: -0.094, y: -0.0195, len: 0.106, rake: 0.34 },
+    trigger: { x: -0.066 },
+    /* Top-fed: the magazine stands up out of the receiver, which is why
+       the sights are offset to the left on the real thing. */
+    mag: { kind: 'stick', x: -0.010, y: 0.0450, len: 0.155, curve: 0.22,
+      w: 0.0130, d: 0.0135 },
+    stock: { kind: 'wood', butt: -0.375, comb: 0.0240, drop: 0.0300, w: 0.0190 },
+    bipod: { x: 0.450, len: 0.158, rake: 0.030, spread: 0.076 },
+    handle: { x0: 0.120, x1: 0.215, y: 0.0420 },
+    sight: { y: 0.0410, frontX: 0.455, rearX: 0.000, front: 'ears', rear: 'aperture' },
+    mass: 10.2, bound: 0.68,
+  }),
+  bar: svcSpec({
+    muzzle: 0.580, barrel: { rear: 0.058, r0: 0.0130, r1: 0.0100, bore: 0.0040,
+      step: 0.185, gas: true, gasAt: 0.380, gasR: 0.0078, gasY: -0.0195 },
+    rec: { rear: -0.158, front: 0.090, up: 0.0250, down: 0.0225, w: 0.0180, e: 3.6 },
+    hg: { kind: 'wood', x0: 0.105, x1: 0.200, drop: 0.0250, w: 0.0195, upper: 0.0230 },
+    grip: { x: -0.090, y: -0.0195, len: 0.104, rake: 0.30 },
+    trigger: { x: -0.062 },
+    mag: { curve: 0.12, len: 0.160, w: 0.0130, d: 0.0145, x: -0.016, y: -0.0225 },
+    stock: { kind: 'wood', butt: -0.380, comb: 0.0235, drop: 0.0310, w: 0.0200 },
+    bipod: { x: 0.470, len: 0.155, rake: 0.030, spread: 0.076 },
+    sight: { y: 0.0395, frontX: 0.450, rearX: 0.004, front: 'ears', rear: 'aperture' },
+    mass: 8.8, bound: 0.66,
+  }),
+  /* The record player: a flat pan lying on top of the receiver. */
+  dp28: svcSpec({
+    muzzle: 0.620, barrel: { rear: 0.060, r0: 0.0130, r1: 0.0100, bore: 0.0039,
+      step: 0.195, gas: true, gasAt: 0.400, gasR: 0.0078, gasY: -0.0200, brake: 'cone' },
+    rec: { rear: -0.155, front: 0.088, up: 0.0245, down: 0.0225, w: 0.0180, e: 3.4 },
+    hg: { kind: 'wood', x0: 0.106, x1: 0.195, drop: 0.0240, w: 0.0185, upper: null },
+    grip: { x: -0.088, y: -0.0195, len: 0.104, rake: 0.32 },
+    trigger: { x: -0.060 },
+    mag: { kind: 'pan', x: -0.005, y: 0.0320, r: 0.0700 },
+    stock: { kind: 'wood', butt: -0.375, comb: 0.0230, drop: 0.0300, w: 0.0190 },
+    bipod: { x: 0.475, len: 0.160, rake: 0.030, spread: 0.078 },
+    sight: { y: 0.0395, frontX: 0.470, rearX: 0.002, front: 'hood', rear: 'notch' },
+    mass: 9.1, bound: 0.68,
+  }),
+  /* Six barrels on a spindle. The one gun in the table that is not the
+     nine standard objects, and it is here anyway because seven of the
+     nine are still the same -- only the barrel and the feed differ. */
+  hydra: svcSpec({
+    muzzle: 0.560, barrel: { rear: 0.060, r0: 0.0320, r1: 0.0300, bore: 0.0250,
+      step: 0.180, gas: false },
+    rec: { rear: -0.150, front: 0.105, up: 0.0330, down: 0.0300, w: 0.0270, e: 3 },
+    port: { x0: -0.040, x1: 0.020, up: 0.0180, down: 0.0060 },
+    hg: { kind: 'none' },
+    grip: { x: -0.098, y: -0.0290, len: 0.112, rake: 0.30 },
+    trigger: { x: -0.070 },
+    mag: { kind: 'belt', x: -0.040, y: -0.0310 },
+    stock: { kind: 'none' },
+    handle: { x0: -0.060, x1: 0.060, y: 0.0500 },
+    sight: { y: 0.0560, frontX: 0.200, rearX: -0.040, front: 'ears', rear: 'aperture' },
+    mass: 18.0, bound: 0.72,
+    rotary: 6,
+  }),
+});
+
+/* The rotary barrels, which only the minigun has. Six tubes on a circle
+   about the bore, a muzzle plate holding their fronts together, and a
+   housing over the back where the spindle is. */
+function svcRotary(g, K) {
+  const n = K.rotary;
+  if (!n) return;
+  const R = K.barrel.r0 * 0.62, br = 0.0062;
+  for (let i = 0; i < n; i++) {
+    const th = (i / n) * TAU;
+    const cy = Math.cos(th) * R, cz = Math.sin(th) * R;
+    tubeRun(g, [[K.barrel.rear + 0.030, br], [K.muzzle - 0.004, br]], 12, true, false, cy, cz);
+    crown(g, K.muzzle, br, br * 0.55, 0.014);
+  }
+  band(g, K.muzzle - 0.030, K.muzzle - 0.018, R - br - 0.002, R + br + 0.002, 22);
+  band(g, K.barrel.rear + 0.020, K.barrel.rear + 0.050, 0.004, R + br + 0.004, 22);
+}
