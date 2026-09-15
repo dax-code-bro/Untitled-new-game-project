@@ -56,37 +56,70 @@
      Every recipe carries its own colour, so these tints run near white
      wherever the recipe is already the right colour and only pull it
      where it is not. */
+  /* A TEXTURE RECIPE CARRIES ITS OWN COLOUR, AND uvScale IS PER FACE.
+   *
+     Both of those bit, and both showed in a render rather than in an
+     assertion.
+
+     The brick recipe bakes to about #80493b -- a dark red-brown. So
+     "brickPale", tinted 0xe6ded2 to make a cream hotel, came out at
+     about #74413a: a nearly black wall with red static on it. A pale
+     surface cannot be made out of a dark recipe by tinting, because a
+     tint only ever multiplies DOWN. Anything meant to read pale is
+     built on smooth (#ffffff) or concrete (#bebbb3) instead, and the
+     brick recipe is used for the one thing it actually is.
+
+     Measured, so nobody has to guess again:
+       concrete #bebbb3   brick #80493b   wood #d0c0ac   metal #a3a5aa
+       rust     #a99388   rock  #7d7a73   grass #265718  dirt #d0cbc3
+       sand     #bab3a6   fabric #e0e2e7  smooth #ffffff tile #a8acaf
+
+     And uvScale is tiles across a FACE, not tiles per metre. At 5, a
+     116-metre terrace slab is tiled in twenty-three metre squares,
+     which is what made Resort's floor a white waffle. Every surface
+     that covers the whole map gets its own material with the uvScale it
+     needs -- the `wide` set below -- rather than sharing one with a
+     two-metre crate. */
   var MAT = {
-    asphalt: { color: 0x6e6b66, texture: 'concrete', roughness: 0.96, metalness: 0, uvScale: 6 },
-    concrete: { color: 0xbdb9b0, texture: 'concrete', roughness: 0.93, metalness: 0, uvScale: 4, normalStrength: 0.4 },
-    concretePale: { color: 0xd6d2c8, texture: 'concrete', roughness: 0.90, metalness: 0, uvScale: 3 },
-    kerb: { color: 0xcfcbc2, texture: 'concrete', roughness: 0.88, metalness: 0, uvScale: 2 },
-    brick: { color: 0xc8b9ae, texture: 'brick', roughness: 0.95, metalness: 0, uvScale: 3 },
-    brickPale: { color: 0xe6ded2, texture: 'brick', roughness: 0.94, metalness: 0, uvScale: 3 },
-    plaster: { color: 0xe8e2d4, texture: 'smooth', roughness: 0.94, metalness: 0, uvScale: 2 },
+    asphalt: { color: 0x7a7772, texture: 'concrete', roughness: 0.96, metalness: 0, uvScale: 8 },
+    concrete: { color: 0xbdb9b0, texture: 'concrete', roughness: 0.93, metalness: 0, uvScale: 5, normalStrength: 0.4 },
+    concretePale: { color: 0xd2cec4, texture: 'concrete', roughness: 0.90, metalness: 0, uvScale: 6 },
+    kerb: { color: 0xcfcbc2, texture: 'concrete', roughness: 0.88, metalness: 0, uvScale: 4 },
+    /* Red brick, and the recipe is already red: the tint runs near
+       white so the wall is not pulled darker still. */
+    brick: { color: 0xf2ece4, texture: 'brick', roughness: 0.95, metalness: 0, uvScale: 9 },
+    /* Cream render over brick. Built on smooth, because the brick
+       recipe cannot be made pale by any tint that exists. */
+    brickPale: { color: 0xd6ccba, texture: 'smooth', roughness: 0.93, metalness: 0, uvScale: 5 },
+    plaster: { color: 0xe4ddcc, texture: 'smooth', roughness: 0.94, metalness: 0, uvScale: 4 },
     wood: { color: 0xb49a7c, texture: 'wood', roughness: 0.94, metalness: 0, uvScale: 4 },
-    woodDark: { color: 0x7a6650, texture: 'wood', roughness: 0.95, metalness: 0, uvScale: 5 },
-    steel: { color: 0xd0d6da, texture: 'metal', roughness: 0.54, metalness: 1 },
-    steelDark: { color: 0x9aa2a8, texture: 'metal', roughness: 0.62, metalness: 1 },
-    paintGreen: { color: 0x59654f, texture: 'metal', roughness: 0.74, metalness: 0 },
-    paintRed: { color: 0xa8493c, texture: 'metal', roughness: 0.76, metalness: 0 },
-    paintBlue: { color: 0x45596b, texture: 'metal', roughness: 0.76, metalness: 0 },
-    rust: { color: 0xd8a878, texture: 'rust', roughness: 0.88, metalness: 0.28 },
+    woodDark: { color: 0x7a6650, texture: 'wood', roughness: 0.95, metalness: 0, uvScale: 6 },
+    steel: { color: 0xd0d6da, texture: 'metal', roughness: 0.54, metalness: 1, uvScale: 6 },
+    steelDark: { color: 0x9aa2a8, texture: 'metal', roughness: 0.62, metalness: 1, uvScale: 4 },
+    paintGreen: { color: 0x59654f, texture: 'metal', roughness: 0.74, metalness: 0, uvScale: 4 },
+    paintRed: { color: 0xa8493c, texture: 'metal', roughness: 0.76, metalness: 0, uvScale: 4 },
+    paintBlue: { color: 0x45596b, texture: 'metal', roughness: 0.76, metalness: 0, uvScale: 4 },
+    rust: { color: 0xe4c8a8, texture: 'rust', roughness: 0.88, metalness: 0.28, uvScale: 5 },
     glass: { color: 0xa8c4cc, texture: 'smooth', roughness: 0.12, metalness: 0.1, opacity: 0.32 },
-    grass: { color: 0xc4d4b0, texture: 'grass', roughness: 0.97, metalness: 0, uvScale: 2, subsurface: 0.3 },
-    dirt: { color: 0xc6bfb2, texture: 'dirt', roughness: 0.98, metalness: 0, uvScale: 3 },
+    grass: { color: 0xc4d4b0, texture: 'grass', roughness: 0.97, metalness: 0, uvScale: 6, subsurface: 0.3 },
+    dirt: { color: 0xa89f92, texture: 'dirt', roughness: 0.98, metalness: 0, uvScale: 6 },
     sand: { color: 0xd8cfbc, texture: 'sand', roughness: 0.98, metalness: 0, uvScale: 3 },
-    tile: { color: 0xdce2e6, texture: 'tile', roughness: 0.42, metalness: 0, uvScale: 5 },
-    tilePool: { color: 0xbcd8e2, texture: 'tile', roughness: 0.38, metalness: 0, uvScale: 6 },
-    roof: { color: 0x8a6a5a, texture: 'brick', roughness: 0.94, metalness: 0, uvScale: 5 },
+    tile: { color: 0xc4cad0, texture: 'tile', roughness: 0.42, metalness: 0, uvScale: 6 },
+    tilePool: { color: 0xbcd8e2, texture: 'tile', roughness: 0.38, metalness: 0, uvScale: 8 },
+    /* Roof tile is the brick recipe too, so the same rule applies. */
+    roof: { color: 0xd8cfc8, texture: 'brick', roughness: 0.94, metalness: 0, uvScale: 12 },
     canvas: { color: 0xe4e0d4, texture: 'fabric', roughness: 0.97, metalness: 0, uvScale: 3 },
-    rock: { color: 0xa39d92, texture: 'rock', roughness: 0.96, metalness: 0, uvScale: 2 },
+    rock: { color: 0xe8e4dc, texture: 'rock', roughness: 0.96, metalness: 0, uvScale: 7 },
+
+    /* ---- the wide set: surfaces that cover the whole map ---- */
+    wideAsphalt: { color: 0x7a7772, texture: 'concrete', roughness: 0.96, metalness: 0, uvScale: 34 },
+    wideConcrete: { color: 0xa6a29a, texture: 'concrete', roughness: 0.93, metalness: 0, uvScale: 40 },
+    wideDirt: { color: 0x9c9486, texture: 'dirt', roughness: 0.98, metalness: 0, uvScale: 48 },
+    wideTile: { color: 0xb6bcc2, texture: 'tile', roughness: 0.42, metalness: 0, uvScale: 44 },
+    wideGrass: { color: 0xb0c09c, texture: 'grass', roughness: 0.97, metalness: 0, uvScale: 40, subsurface: 0.3 },
+    wideRock: { color: 0xc8c4bc, texture: 'rock', roughness: 0.96, metalness: 0, uvScale: 30 },
   };
 
-  /* ---------------- the kit ----------------
-     Everything all four maps are made of. Handed a game, it gives back
-     the builders and collects what it built, so a map body is a list of
-     placements and nothing else. */
   /* WHY THE DECORATIVE GROUND SITS AT -0.08 AND NOT AT 0.
    *
      Every map lays a big collision slab whose top is exactly y = 0 and
@@ -369,9 +402,9 @@
     var m = K.mats, C = K.COVER;
     var EDGE = 56;
 
-    K.game.ground({ at: [0, -0.08, 0], material: MAT.asphalt, size: 150, uvScale: 0.5,
+    K.game.ground({ at: [0, -0.08, 0], material: MAT.wideAsphalt, size: 150, uvScale: 0.5,
       segments: 1, physics: false });
-    K.slab(-EDGE - 2, EDGE + 2, -0.6, 0, -EDGE - 2, EDGE + 2, m.asphalt, 'ground');
+    K.slab(-EDGE - 2, EDGE + 2, -0.6, 0, -EDGE - 2, EDGE + 2, m.wideAsphalt, 'ground');
 
     /* ---- the pad itself ---- */
     K.slab(-15, 15, 0, 0.12, -15, 15, m.concrete, 'apron');
@@ -411,7 +444,7 @@
     K.crate(4.0, -14.0, 1.8, 1.8, C.vault, m.wood);
 
     /* ---- left lane: the fuel farm ---- */
-    K.slab(-52, -26, 0, 0.10, -30, 30, m.concrete, 'farm-pad');
+    K.slab(-52, -26, 0, 0.10, -30, 30, m.wideConcrete, 'farm-pad');
     [-14, 0, 14].forEach(function (tz, i) {
       var a = K.game.cylinder({ at: [-40, 3.6, tz], radius: 4.2, height: 7.2,
         material: m.steel, static: true });
@@ -440,7 +473,7 @@
     K.slab(-50.6, -41.4, C.storey, C.storey + 0.25, 21.8, 30.2, m.concrete, 'pump-roof');
 
     /* ---- the cliff, and the walk along the top of it ---- */
-    K.slab(-EDGE - 6, -52, 0, 9.0, -EDGE, EDGE, m.rock, 'cliff');
+    K.slab(-EDGE - 6, -52, 0, 9.0, -EDGE, EDGE, m.wideRock, 'cliff');
     K.deck(-52, -47.5, 4.30, -28, 28, m.concrete, [1]);
     K.stair(-49.8, -28, 4.2, 0.24, 0.30, 18, 'z-', m.concrete);
     K.stair(-49.8, 28, 4.2, 0.24, 0.30, 18, 'z+', m.concrete);
@@ -490,7 +523,7 @@
     /* ---- the boundary ---- */
     [[-EDGE - 2, EDGE + 2, -EDGE - 2, -EDGE], [-EDGE - 2, EDGE + 2, EDGE, EDGE + 2],
       [EDGE, EDGE + 2, -EDGE, EDGE]].forEach(function (b) {
-      K.slab(b[0], b[1], 0, 9.0, b[2], b[3], m.rock, 'edge');
+      K.slab(b[0], b[1], 0, 9.0, b[2], b[3], m.wideRock, 'edge');
     });
 
     return {
@@ -524,15 +557,15 @@
     var EDGE = 58;
     var PX0 = -11, PX1 = 13, PZ0 = -13, PZ1 = 15, PY = -2.45;
 
-    K.game.ground({ at: [0, -0.08, 0], material: MAT.tile, size: 150, uvScale: 0.7,
+    K.game.ground({ at: [0, -0.08, 0], material: MAT.wideTile, size: 150, uvScale: 0.7,
       segments: 1, physics: false });
     /* The terrace, built as four slabs around the pool rather than as
        one, because the hole is the point and a ground plane has no
        hole in it. */
-    K.slab(-EDGE - 2, PX0, -0.6, 0, -EDGE - 2, EDGE + 2, m.tile, 'terrace');
-    K.slab(PX1, EDGE + 2, -0.6, 0, -EDGE - 2, EDGE + 2, m.tile, 'terrace');
-    K.slab(PX0, PX1, -0.6, 0, -EDGE - 2, PZ0, m.tile, 'terrace');
-    K.slab(PX0, PX1, -0.6, 0, PZ1, EDGE + 2, m.tile, 'terrace');
+    K.slab(-EDGE - 2, PX0, -0.6, 0, -EDGE - 2, EDGE + 2, m.wideTile, 'terrace');
+    K.slab(PX1, EDGE + 2, -0.6, 0, -EDGE - 2, EDGE + 2, m.wideTile, 'terrace');
+    K.slab(PX0, PX1, -0.6, 0, -EDGE - 2, PZ0, m.wideTile, 'terrace');
+    K.slab(PX0, PX1, -0.6, 0, PZ1, EDGE + 2, m.wideTile, 'terrace');
 
     /* ---- the pool ---- */
     K.slab(PX0, PX1, PY - 0.4, PY, PZ0, PZ1, m.tilePool, 'pool-floor');
@@ -603,7 +636,7 @@
       K.slab(25.2, 38.8, 3.0, 3.25, cz - 5.4, cz + 5.4, m.roof, 'cabana-roof');
       K.deco(31, 33, 0, 0.9, cz - 1, cz + 1, m.canvas, 'lounger');
     }
-    K.slab(44, EDGE, -0.58, 0.06, -EDGE, EDGE, m.grass, 'lake-path');
+    K.slab(44, EDGE, -0.58, 0.06, -EDGE, EDGE, m.wideGrass, 'lake-path');
     for (var pz2 = -40; pz2 <= 40; pz2 += 10) K.post(46, pz2, 0, 3.4, 0.16, m.woodDark, 'lamp-post');
     K.car(42, -34, true, m.paintRed);
     K.car(42, 30, true, m.paintBlue);
@@ -667,19 +700,19 @@
     var m = K.mats, C = K.COVER;
     var EDGE = 62;
 
-    K.game.ground({ at: [0, -0.08, 0], material: MAT.dirt, size: 160, uvScale: 0.55,
+    K.game.ground({ at: [0, -0.08, 0], material: MAT.wideDirt, size: 160, uvScale: 0.55,
       segments: 1, physics: false });
-    K.slab(-EDGE - 2, EDGE + 2, -0.6, 0, -EDGE - 2, EDGE + 2, m.dirt, 'ground');
+    K.slab(-EDGE - 2, EDGE + 2, -0.6, 0, -EDGE - 2, EDGE + 2, m.wideDirt, 'ground');
 
     /* ---- the high street ---- */
-    K.slab(-7, 7, -0.58, 0.06, -EDGE, EDGE, m.asphalt, 'road');
+    K.slab(-7, 7, -0.58, 0.06, -EDGE, EDGE, m.wideAsphalt, 'road');
     K.slab(-7.3, -7, 0, 0.14, -EDGE, EDGE, m.kerb, 'kerb');
     K.slab(7, 7.3, 0, 0.14, -EDGE, EDGE, m.kerb, 'kerb');
     for (var mz = -EDGE + 4; mz < EDGE; mz += 7) {
       K.deco(-0.16, 0.16, 0.06, 0.09, mz, mz + 3, m.concretePale, 'road-line');
     }
-    K.slab(-15, -7.3, 0, 0.14, -EDGE, EDGE, m.concrete, 'pavement');
-    K.slab(7.3, 15, 0, 0.14, -EDGE, EDGE, m.concrete, 'pavement');
+    K.slab(-15, -7.3, 0, 0.14, -EDGE, EDGE, m.wideConcrete, 'pavement');
+    K.slab(7.3, 15, 0, 0.14, -EDGE, EDGE, m.wideConcrete, 'pavement');
     /* The only cover on the street is what was left on it. */
     K.car(-11, -22, true, m.paintRed);
     K.car(11, 4, true, m.paintGreen);
@@ -711,7 +744,7 @@
     K.slab(BX0 + 5, BX0 + 8, 0, C.low, 9, 12, m.wood, 'flour-sacks');
 
     /* The alley, and the garden walls that make it. */
-    K.slab(-40, -33, -0.58, 0.06, -EDGE + 6, EDGE - 6, m.concrete, 'alley');
+    K.slab(-40, -33, -0.58, 0.06, -EDGE + 6, EDGE - 6, m.wideConcrete, 'alley');
     for (var gz = -46; gz <= 46; gz += 15) {
       K.wall(-56, -40.4, gz - 0.25, gz + 0.25, C.wall, m.brick, [[-50, -47]], 'garden-wall');
       K.slab(-56, -40.4, C.wall, C.wall + 0.12, gz - 0.32, gz + 0.32, m.kerb, 'wall-cap');
@@ -846,9 +879,9 @@
     var F1 = 3.70, F2 = 7.40;
     var BX0 = -42, BX1 = 42, BZ0 = -22, BZ1 = 22;
 
-    K.game.ground({ at: [0, -0.08, 0], material: MAT.dirt, size: 140, uvScale: 0.6,
+    K.game.ground({ at: [0, -0.08, 0], material: MAT.wideDirt, size: 140, uvScale: 0.6,
       segments: 1, physics: false });
-    K.slab(-EDGE - 2, EDGE + 2, -0.6, 0, -EDGE - 2, EDGE + 2, m.dirt, 'ground');
+    K.slab(-EDGE - 2, EDGE + 2, -0.6, 0, -EDGE - 2, EDGE + 2, m.wideDirt, 'ground');
 
     /* Columns: the grid the building was, and the only part of it that
        is still all there. Every floor hangs off these. */
@@ -866,7 +899,7 @@
          part of the same fight as the middle rather than a fort. */
       K.deco(-24, -19, y - 0.24, y - 0.20, -6, -1, m.rust, 'rebar');
     }
-    K.slab(BX0, -14, -0.02, 0.12, BZ0, BZ1, m.concrete, 'wing-ground');
+    K.slab(BX0, -14, -0.02, 0.12, BZ0, BZ1, m.wideConcrete, 'wing-ground');
     wingFloor(F1); wingFloor(F2);
     [0, F1, F2].forEach(function (y, i) {
       K.wall(BX0, BX0 + 0.4, BZ0, BZ1, 3.4, m.brick, [[-14, -9, 1.0, 2.4], [6, 11, 1.0, 2.4]], 'wing-wall');
@@ -912,7 +945,7 @@
     K.crate(6, -8, 1.7, 1.7, C.low, m.wood);
 
     /* ---- the right: the crane and the skips ---- */
-    K.slab(14, BX1, -0.02, 0.12, BZ0, BZ1, m.concrete, 'yard-slab');
+    K.slab(14, BX1, -0.02, 0.12, BZ0, BZ1, m.wideConcrete, 'yard-slab');
     K.slab(20, 30, F1 - 0.22, F1, -18, -6, m.concrete, 'slab-island');
     K.stair(25, -6, 2.4, 0.26, 0.31, 14, 'z+', m.steelDark);
     K.container(34, -14, true, m.paintBlue);
@@ -1003,7 +1036,7 @@
   var SKY = {
     helipad: { sky: 'dawn', hours: 7.0, exposure: 1.10 },        // elev 0.26
     resort: { sky: 'day', hours: 15.0, exposure: 1.0 },          // elev 0.71
-    town: { sky: 'overcast', hours: 12.5, exposure: 1.02 },      // elev 1.00
+    town: { sky: 'overcast', hours: 9.5, exposure: 0.98 },       // elev 0.79
     demolition: { sky: 'sunset', hours: 17.4, exposure: 1.18 },  // elev 0.26
   };
 
