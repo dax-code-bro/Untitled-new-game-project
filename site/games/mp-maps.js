@@ -87,6 +87,19 @@
      Everything all four maps are made of. Handed a game, it gives back
      the builders and collects what it built, so a map body is a list of
      placements and nothing else. */
+  /* WHY THE DECORATIVE GROUND SITS AT -0.08 AND NOT AT 0.
+   *
+     Every map lays a big collision slab whose top is exactly y = 0 and
+     then puts its road, its pavement and its paths on top of that. The
+     engine's ground() mesh was also at 0, and the road was two
+     centimetres above it -- which is plenty on paper and nothing at all
+     to a depth buffer looking at it from twenty-six metres up. Town's
+     high street rendered as pale dirt with a dashed line floating on
+     it: the road was there, and the ground was winning.
+
+     Eight centimetres down for the mesh and six up for the surfaces is
+     fourteen centimetres of separation, which holds at any range this
+     map is ever seen from. */
   function kit(game) {
     var solids = [], decos = [], mats = {};
     for (var k in MAT) if (Object.prototype.hasOwnProperty.call(MAT, k)) mats[k] = game.material(MAT[k]);
@@ -356,7 +369,7 @@
     var m = K.mats, C = K.COVER;
     var EDGE = 56;
 
-    K.game.ground({ at: [0, 0, 0], material: MAT.asphalt, size: 150, uvScale: 0.5,
+    K.game.ground({ at: [0, -0.08, 0], material: MAT.asphalt, size: 150, uvScale: 0.5,
       segments: 1, physics: false });
     K.slab(-EDGE - 2, EDGE + 2, -0.6, 0, -EDGE - 2, EDGE + 2, m.asphalt, 'ground');
 
@@ -511,7 +524,7 @@
     var EDGE = 58;
     var PX0 = -11, PX1 = 13, PZ0 = -13, PZ1 = 15, PY = -2.45;
 
-    K.game.ground({ at: [0, 0, 0], material: MAT.tile, size: 150, uvScale: 0.7,
+    K.game.ground({ at: [0, -0.08, 0], material: MAT.tile, size: 150, uvScale: 0.7,
       segments: 1, physics: false });
     /* The terrace, built as four slabs around the pool rather than as
        one, because the hole is the point and a ground plane has no
@@ -590,7 +603,7 @@
       K.slab(25.2, 38.8, 3.0, 3.25, cz - 5.4, cz + 5.4, m.roof, 'cabana-roof');
       K.deco(31, 33, 0, 0.9, cz - 1, cz + 1, m.canvas, 'lounger');
     }
-    K.slab(44, EDGE, -0.58, 0.02, -EDGE, EDGE, m.grass, 'lake-path');
+    K.slab(44, EDGE, -0.58, 0.06, -EDGE, EDGE, m.grass, 'lake-path');
     for (var pz2 = -40; pz2 <= 40; pz2 += 10) K.post(46, pz2, 0, 3.4, 0.16, m.woodDark, 'lamp-post');
     K.car(42, -34, true, m.paintRed);
     K.car(42, 30, true, m.paintBlue);
@@ -614,8 +627,8 @@
     /* ---- the approach from each spawn ----
        The low walls a hotel puts between its terrace and its car park,
        in two staggered rows with the planting long dead. */
-    K.screenPair(-34, -54, 54, m.brickPale, -1, 3);
-    K.screenPair(34, -54, 54, m.brickPale, 1, 3);
+    K.screenPair(-31, -54, 54, m.brickPale, -1, 3);
+    K.screenPair(31, -54, 54, m.brickPale, 1, 3);
     K.crate(-20, 30, 1.6, 1.6, C.vault, m.wood);
     K.crate(20, -30, 1.6, 1.6, C.vault, m.wood);
 
@@ -654,16 +667,16 @@
     var m = K.mats, C = K.COVER;
     var EDGE = 62;
 
-    K.game.ground({ at: [0, 0, 0], material: MAT.dirt, size: 160, uvScale: 0.55,
+    K.game.ground({ at: [0, -0.08, 0], material: MAT.dirt, size: 160, uvScale: 0.55,
       segments: 1, physics: false });
     K.slab(-EDGE - 2, EDGE + 2, -0.6, 0, -EDGE - 2, EDGE + 2, m.dirt, 'ground');
 
     /* ---- the high street ---- */
-    K.slab(-7, 7, -0.58, 0.02, -EDGE, EDGE, m.asphalt, 'road');
+    K.slab(-7, 7, -0.58, 0.06, -EDGE, EDGE, m.asphalt, 'road');
     K.slab(-7.3, -7, 0, 0.14, -EDGE, EDGE, m.kerb, 'kerb');
     K.slab(7, 7.3, 0, 0.14, -EDGE, EDGE, m.kerb, 'kerb');
     for (var mz = -EDGE + 4; mz < EDGE; mz += 7) {
-      K.deco(-0.16, 0.16, -0.02, 0.03, mz, mz + 3, m.concretePale, 'road-line');
+      K.deco(-0.16, 0.16, 0.06, 0.09, mz, mz + 3, m.concretePale, 'road-line');
     }
     K.slab(-15, -7.3, 0, 0.14, -EDGE, EDGE, m.concrete, 'pavement');
     K.slab(7.3, 15, 0, 0.14, -EDGE, EDGE, m.concrete, 'pavement');
@@ -698,15 +711,15 @@
     K.slab(BX0 + 5, BX0 + 8, 0, C.low, 9, 12, m.wood, 'flour-sacks');
 
     /* The alley, and the garden walls that make it. */
-    K.slab(-40, -33, -0.58, 0.02, -EDGE + 6, EDGE - 6, m.concrete, 'alley');
+    K.slab(-40, -33, -0.58, 0.06, -EDGE + 6, EDGE - 6, m.concrete, 'alley');
     for (var gz = -46; gz <= 46; gz += 15) {
       K.wall(-56, -40.4, gz - 0.25, gz + 0.25, C.wall, m.brick, [[-50, -47]], 'garden-wall');
       K.slab(-56, -40.4, C.wall, C.wall + 0.12, gz - 0.32, gz + 0.32, m.kerb, 'wall-cap');
     }
     K.wall(-33.2, -32.8, -EDGE + 6, EDGE - 6, C.wall, m.brick,
       [[-38, -34], [-10, -6], [18, 22], [40, 44]], 'alley-wall');
-    K.slab(-52, -42, -0.58, 0.02, -20, -6, m.grass, 'garden');
-    K.slab(-52, -42, -0.58, 0.02, 14, 28, m.grass, 'garden');
+    K.slab(-52, -42, -0.58, 0.06, -20, -6, m.grass, 'garden');
+    K.slab(-52, -42, -0.58, 0.06, 14, 28, m.grass, 'garden');
     K.crate(-36.5, -30, 1.4, 1.4, C.vault, m.wood);
     K.crate(-36.5, 20, 1.4, 1.4, C.low, m.wood);
     K.barrel(-38.5, 8); K.barrel(-37.6, 9.0);
@@ -779,10 +792,12 @@
     /* ---- the approach from each spawn ----
        Garden walls and outbuildings, seen end on. The +Z rows stop
        short of the church, which is doing that job itself, and pick up
-       again past the tower. */
-    K.screenPair(-46, -60, 60, m.brick, -1, 3);
-    K.screenPair(46, -60, 26, m.brick, 1, 3);
-    K.screenPair(46, 52, 60, m.brick, 1, 3);
+       again past the tower. Three rows reach 9.6 m back, so the base
+       sits well inside the spawn line -- at 46 the last row landed on
+       top of four of the twelve spawns and they stood on a wall. */
+    K.screenPair(-38, -60, 60, m.brick, -1, 3);
+    K.screenPair(38, -60, 26, m.brick, 1, 3);
+    K.screenPair(38, 52, 60, m.brick, 1, 3);
     K.car(-20, -44, false, m.rust);
     K.car(20, 44, false, m.paintRed);
 
@@ -831,7 +846,7 @@
     var F1 = 3.70, F2 = 7.40;
     var BX0 = -42, BX1 = 42, BZ0 = -22, BZ1 = 22;
 
-    K.game.ground({ at: [0, 0, 0], material: MAT.dirt, size: 140, uvScale: 0.6,
+    K.game.ground({ at: [0, -0.08, 0], material: MAT.dirt, size: 140, uvScale: 0.6,
       segments: 1, physics: false });
     K.slab(-EDGE - 2, EDGE + 2, -0.6, 0, -EDGE - 2, EDGE + 2, m.dirt, 'ground');
 
@@ -974,17 +989,31 @@
     helipad: buildHelipad, resort: buildResort, town: buildTown, demolition: buildDemolition,
   };
 
+  /* THE SUN HAS TO BE ABOVE THE HORIZON.
+   *
+     setTimeOfDay overrides whatever sun direction the preset came with,
+     and it is an angle, not a mood: at 19.4 the elevation is minus a
+     third and Demolition rendered as a black rectangle with a few red
+     lines in it. A map you cannot see is not a dusk map.
+
+     Elevation is sin((h/24 - 0.25) * 2pi), so the usable band is 6 to
+     18 and the interesting light is at the ends of it. These are all
+     chosen for an elevation between about 0.25 and 1.0 -- low enough
+     for long shadows at each end of the day, high enough to fight in. */
   var SKY = {
-    helipad: { sky: 'dawn', hours: 6.2, exposure: 1.05 },
-    resort: { sky: 'day', hours: 15.0, exposure: 1.0 },
-    town: { sky: 'overcast', hours: 12.0, exposure: 0.95 },
-    demolition: { sky: 'sunset', hours: 19.4, exposure: 1.1 },
+    helipad: { sky: 'dawn', hours: 7.0, exposure: 1.10 },        // elev 0.26
+    resort: { sky: 'day', hours: 15.0, exposure: 1.0 },          // elev 0.71
+    town: { sky: 'overcast', hours: 12.5, exposure: 1.02 },      // elev 1.00
+    demolition: { sky: 'sunset', hours: 17.4, exposure: 1.18 },  // elev 0.26
   };
 
   function applySky(game, id) {
     var s = SKY[id] || SKY.town;
+    /* The exposure is applied after the preset, because setSky writes
+       the preset's own and would put it back. */
     try { game.setSky(s.sky); } catch (e) { /* a sky name the build does not have */ }
     try { game.setTimeOfDay(s.hours); } catch (e) { /* older engine */ }
+    try { if (s.exposure != null) game.renderer.post.exposure = s.exposure; } catch (e) { /* no post stage */ }
     return s;
   }
 
