@@ -340,9 +340,17 @@
       return { a: a, off: d };
     });
     var Q = new W.LE.Quat();
+    /* What the last placement was handed and what it did with it.
+       Reading the gun's position out of the world and trying to work
+       backwards from it is guesswork -- the same offset lands at a
+       different world x depending on which way you are facing -- and
+       guesswork is what made a check on this fail for three different
+       reasons in a row. */
+    var state = { aim: 0, sprint: 0, ox: 0, oy: 0, oz: 0, placed: 0, hidden: 0 };
     return {
-      parts: parts,
+      parts: parts, state: state,
       hide: function () {
+        state.hidden++;
         parts.forEach(function (p) { if (p.a) p.a.visible = false; });
       },
       place: function (eye, yaw, pitch, aim, sprint, kick, bob) {
@@ -355,6 +363,10 @@
            running, and a rifle held level while running is a rifle
            being carried by somebody who has never run with one. */
         var low = sprint ? 1 : 0;
+        state.aim = aim; state.sprint = low; state.placed++;
+        state.ox = PARTS[0][0] + aim * ADS[0] + low * 0.03;
+        state.oy = PARTS[0][1] + aim * ADS[1] + bob * 0.6 - low * 0.085;
+        state.oz = PARTS[0][2] + aim * ADS[2] - kick * 0.045 - low * 0.05;
         Q.setEuler(pitch + low * 0.30, yaw, low * 0.42);
         for (var i = 0; i < parts.length; i++) {
           var p = parts[i], o = p.off;
@@ -594,7 +606,7 @@
 
     var yaw = M.you.yaw, pitch = 0;
     var sens = (opts.sensitivity || 1) * 0.0022;
-    var kick = 0, bob = 0, bobT = 0, lastHp = M.you.hp;
+    var kick = 0, bob = 0, bobT = 0, lastHp = M.you.hp, wasAlive = true;
     var over = false;
 
     /* Being shot has to point at whoever did it, and the match reports
@@ -634,6 +646,14 @@
         reload: input.once(KEYS.reload), swap: input.once(KEYS.swap),
         fire: input.buttons.fire, aim: input.buttons.aim,
       };
+      /* Coming back from the dead, look the way you were put down
+         facing. Without this the camera kept whatever angle you died
+         with -- respawn while looking at your own boots and you spend
+         the next life looking at the floor, because the match sets the
+         spawn yaw on the combatant and this file owns the view. */
+      if (!wasAlive && p.alive) { yaw = p.yaw; pitch = 0; }
+      wasAlive = p.alive;
+
       var before = p.ammo[p.held];
       M.control(cmd, dt);
       if (p.ammo[p.held] < before) kick = Math.min(1.4, kick + 0.55);

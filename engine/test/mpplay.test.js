@@ -131,33 +131,48 @@ function check(name, cond, detail = '') {
 
   const aim = await page.evaluate(async () => {
     const G = window.MP, M = G.match;
-    /* Alive first. Standing still on Helipad for four seconds while a
-       magazine reloads is a good way to be shot, and a dead player has
-       no viewmodel to move -- which made this check fail for a reason
+    /* Alive, and kept alive. The check runs after a step that holds the
+       trigger down in the open for four seconds, so the player is
+       routinely dead or dying by the time it looks -- and a dead player
+       has no viewmodel to move, which made this fail twice for reasons
        that had nothing to do with aiming. */
     for (let i = 0; i < 60 * 12 && !M.you.alive; i++) {
       await new Promise((r) => requestAnimationFrame(r));
     }
+    const realHurt = M.damage;
+    M.damage = (from, to, amt, head) => (to === M.you ? 0 : realHurt(from, to, amt, head));
     M.you.hp = 100;
-    for (let i = 0; i < 4; i++) await new Promise((r) => requestAnimationFrame(r));
+    for (let i = 0; i < 6; i++) await new Promise((r) => requestAnimationFrame(r));
+
     const hip = document.querySelector('#mpui .cross .up').style.top;
-    const vmHip = G.viewmodel.parts[0].a.position.x;
-    const eyeHip = G.game.camera.position.x;
+    /* Asked of the viewmodel itself rather than reverse-engineered from
+       where the gun ended up in the world: the same offset lands at a
+       different world x depending which way you are facing. */
+    const sHip = Object.assign({}, G.viewmodel.state);
     G.input.buttons.aim = true;
-    for (let i = 0; i < 12; i++) await new Promise((r) => requestAnimationFrame(r));
+    for (let i = 0; i < 14; i++) await new Promise((r) => requestAnimationFrame(r));
     const ads = document.querySelector('#mpui .cross .up').style.top;
-    const vmAds = G.viewmodel.parts[0].a.position.x;
-    const eyeAds = G.game.camera.position.x;
+    const sAds = Object.assign({}, G.viewmodel.state);
     G.input.buttons.aim = false;
     for (let i = 0; i < 8; i++) await new Promise((r) => requestAnimationFrame(r));
-    /* Measured against the eye, so walking a few centimetres between
-       the two samples cannot be mistaken for the gun coming across. */
-    return { hip, ads, alive: M.you.alive,
-      moved: Math.abs((vmAds - eyeAds) - (vmHip - eyeHip)) > 0.01 };
+    M.damage = realHurt;
+    return {
+      hip, ads, alive: M.you.alive, placed: sAds.placed > sHip.placed,
+      aimFlag: sHip.aim === 0 && sAds.aim === 1,
+      moved: Math.abs(sAds.ox - sHip.ox) > 0.05,
+      lifted: sAds.oy > sHip.oy,
+      sHip, sAds,
+    };
   });
+
   check('aiming tightens the crosshair', aim.hip !== aim.ads, `${aim.hip} -> ${aim.ads}`);
-  check('and brings the gun to the middle', aim.moved && aim.alive,
-    aim.alive ? 'the gun did not move' : 'you were dead');
+  check('the viewmodel is being placed every frame', aim.placed);
+  check('and the aim flag reaches it', aim.aimFlag,
+    `${aim.sHip.aim} -> ${aim.sAds.aim}`);
+  check('and brings the gun onto the centre line', aim.moved,
+    `x ${aim.sHip.ox.toFixed(3)} -> ${aim.sAds.ox.toFixed(3)}`);
+  check('and lifts the sights to the crosshair', aim.lifted,
+    `y ${aim.sHip.oy.toFixed(3)} -> ${aim.sAds.oy.toFixed(3)}`);
   await page.screenshot({ path: path.join(OUT, 'play-hipfire.jpg'), type: 'jpeg', quality: 82 });
 
   await page.evaluate(async () => {
