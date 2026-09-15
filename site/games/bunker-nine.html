@@ -44,6 +44,10 @@
 <!-- The second map. It registers itself with the game if it is present,
      so the page can ship without it and simply have one map. -->
 <script src="coastline.js"></script>
+<!-- Multiplayer is tables before it is a match: sixty guns, their
+     attachments, the equipment and the maps. The shell reads it to draw
+     the loadout screens, so it has to be here before the shell is. -->
+<script src="mp-data.js"></script>
 <script src="bunker-nine-shell.js"></script>
 <script>
 /* The front end owns the boot now.

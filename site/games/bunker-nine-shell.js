@@ -533,6 +533,294 @@ var CSS2 = `
 #b9shell .pauseacts .item { flex:1; justify-content:center; font-size:15px; }
 `;
 
+var CSS3 = `
+/* ================================================================
+   MULTIPLAYER -- THE LOOK
+   ================================================================
+   Two screens behind two tabs, and a third thing that is neither: the
+   operator, training, behind both of them.
+
+   THE TRAINING ANIMATION
+
+   The lobby background is the character you picked, on a range, running
+   a drill. It is an SVG built the same way the loading zombie is --
+   one group per bone, each rotating about its own joint, every bone
+   drawn straight down from its own origin so a child group translated
+   to the end of it is the next joint for free.
+
+   It is a drill and not a pose because a pose tells you nothing about
+   a menu you are going to sit in for two minutes. Twelve seconds, and
+   in that time the operator brings the rifle up, fires three, drops the
+   magazine, puts a fresh one in, works the bolt and goes back to the
+   ready. Everything on that clock is a real step -- the bolt goes back
+   BEFORE the magazine is out, the hand comes off the grip to do it, and
+   the gun stays pointed down range the whole time, because that is how
+   it is actually done and getting it wrong is the kind of thing this
+   game is being built not to get wrong.
+
+   The same compositor rule as the loading screen: transforms and
+   opacity only. The lobby sits in front of a live WebGL context with a
+   whole map in it and this must not cost a frame.
+   ================================================================ */
+
+#b9shell .mp { background:linear-gradient(180deg,#07080c 0%,#0b0a08 55%,#05060a 100%);
+  align-items:stretch; justify-content:flex-start; }
+
+/* ---- the range, behind everything ---- */
+#b9shell .train { position:absolute; inset:0; overflow:hidden; pointer-events:none; }
+#b9shell .train svg { position:absolute; right:2vw; bottom:0; height:min(72vh,660px); width:auto;
+  opacity:.5; transition:opacity .5s ease; }
+/* The loadout is a screen of small italic text and the operator is
+   standing behind it. On that tab he drops back to where he reads as
+   light on a wall rather than as something between you and a word. */
+#b9shell .mp.deep .train svg { opacity:.16; }
+#b9shell .train .vig { position:absolute; inset:0;
+  background:radial-gradient(120% 90% at 74% 72%, rgba(0,0,0,0) 0%, rgba(5,6,10,.55) 46%, rgba(5,6,10,.93) 100%); }
+#b9shell .train .bone { stroke:#cdc4b0; stroke-linecap:round; fill:none; }
+#b9shell .train .far { opacity:.36; }
+#b9shell .train .skin { fill:#cdc4b0; }
+#b9shell .train .cloth { stroke:#6f6a58; stroke-linecap:round; fill:none; }
+#b9shell .train .steel { stroke:#8d9198; stroke-linecap:square; fill:none; }
+#b9shell .train .wood { stroke:#7a5c3c; stroke-linecap:round; fill:none; }
+#b9shell .train .board { stroke:#3a3428; fill:#12130f; }
+#b9shell .train .ring { stroke:#4a4234; fill:none; }
+
+/* The clock. Every group below is on the same twelve seconds, so the
+   phases line up without a single number having to be computed. */
+#b9shell .train .rig      { animation:b9tRig 12s cubic-bezier(.4,0,.3,1) infinite; }
+#b9shell .train .armFront { animation:b9tFront 12s cubic-bezier(.4,0,.3,1) infinite; }
+#b9shell .train .armBack  { animation:b9tBack 12s cubic-bezier(.4,0,.3,1) infinite; }
+#b9shell .train .torso    { animation:b9tTorso 12s ease-in-out infinite; }
+#b9shell .train .head     { animation:b9tHead 12s ease-in-out infinite; }
+#b9shell .train .flash    { animation:b9tFlash 12s linear infinite; opacity:0; }
+#b9shell .train .brass    { animation:b9tBrass 12s linear infinite; opacity:0; }
+#b9shell .train .magOut   { animation:b9tMag 12s linear infinite; opacity:0; }
+#b9shell .train .breathe  { animation:b9tBreathe 4.2s ease-in-out infinite; }
+
+/* 0-14%   at the ready, gun across the chest
+   14-22%  up into the shoulder
+   22-36%  three shots, eight frames apart, the gun rocking back each time
+   36-44%  down off the shoulder, muzzle still down range
+   44-56%  bolt back, hand off the grip
+   56-68%  magazine out and away
+   68-80%  fresh magazine in
+   80-88%  bolt forward
+   88-100% back up to the ready */
+@keyframes b9tRig {
+  0%,13%   { transform:translate(-8px,16px) rotate(27deg); }
+  22%      { transform:translate(-4px,-10px) rotate(-1deg); }
+  23%      { transform:translate(5px,-8px) rotate(-6deg); }
+  25.5%    { transform:translate(-4px,-10px) rotate(-1deg); }
+  27%      { transform:translate(5px,-8px) rotate(-6.5deg); }
+  29.5%    { transform:translate(-4px,-10px) rotate(-1deg); }
+  31%      { transform:translate(5px,-8px) rotate(-6deg); }
+  33.5%,35%{ transform:translate(-4px,-10px) rotate(-1deg); }
+  44%,79%  { transform:translate(-10px,8px) rotate(19deg); }
+  88%,100% { transform:translate(-8px,16px) rotate(27deg); }
+}
+@keyframes b9tFront {
+  0%,13%   { transform:rotate(-54deg); }
+  22%,43%  { transform:rotate(-78deg); }
+  50%,55%  { transform:rotate(-30deg); }
+  62%,67%  { transform:rotate(-14deg); }
+  74%,79%  { transform:rotate(-40deg); }
+  86%,100% { transform:rotate(-54deg); }
+}
+@keyframes b9tBack {
+  0%,13%   { transform:rotate(-62deg); }
+  22%,43%  { transform:rotate(-70deg); }
+  56%,79%  { transform:rotate(-66deg); }
+  88%,100% { transform:rotate(-62deg); }
+}
+@keyframes b9tTorso {
+  0%,12%   { transform:rotate(0deg); }
+  22%,42%  { transform:rotate(-4deg); }
+  56%,78%  { transform:rotate(3deg); }
+  90%,100% { transform:rotate(0deg); }
+}
+@keyframes b9tHead {
+  0%,12%   { transform:rotate(3deg); }
+  22%,42%  { transform:rotate(-6deg); }
+  58%,76%  { transform:rotate(10deg); }
+  90%,100% { transform:rotate(3deg); }
+}
+/* Three flashes, one frame each, on the three shot beats. */
+@keyframes b9tFlash {
+  0%,22.6%   { opacity:0; }
+  23%        { opacity:1; }
+  23.6%,26.6%{ opacity:0; }
+  27%        { opacity:1; }
+  27.6%,30.6%{ opacity:0; }
+  31%        { opacity:1; }
+  31.6%,100% { opacity:0; }
+}
+/* Brass, thrown up and to the right and falling out of frame. Three
+   cases on one element, because it is the same arc three times. */
+@keyframes b9tBrass {
+  0%,22.9%  { opacity:0; transform:translate(0,0) rotate(0deg); }
+  23%       { opacity:1; transform:translate(0,0) rotate(0deg); }
+  25.5%     { opacity:0; transform:translate(46px,58px) rotate(320deg); }
+  26.9%     { opacity:0; transform:translate(0,0) rotate(0deg); }
+  27%       { opacity:1; transform:translate(0,0) rotate(0deg); }
+  29.5%     { opacity:0; transform:translate(44px,60px) rotate(300deg); }
+  30.9%     { opacity:0; transform:translate(0,0) rotate(0deg); }
+  31%       { opacity:1; transform:translate(0,0) rotate(0deg); }
+  33.5%     { opacity:0; transform:translate(48px,56px) rotate(340deg); }
+  34%,100%  { opacity:0; transform:translate(0,0) rotate(0deg); }
+}
+/* The empty magazine, dropped at 60% and gone by 66%. */
+@keyframes b9tMag {
+  0%,59.9% { opacity:0; transform:translate(0,0) rotate(0deg); }
+  60%      { opacity:1; transform:translate(0,0) rotate(0deg); }
+  67%      { opacity:0; transform:translate(6px,90px) rotate(38deg); }
+  68%,100% { opacity:0; transform:translate(0,0) rotate(0deg); }
+}
+@keyframes b9tBreathe { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-2px); } }
+@media (prefers-reduced-motion: reduce) {
+  #b9shell .train svg * { animation:none !important; }
+}
+
+/* ---- tabs across the top ---- */
+#b9shell .mphead { position:relative; z-index:2; width:min(1240px,94vw); margin:0 auto;
+  padding-top:min(5vh,44px); display:flex; align-items:baseline; gap:26px; }
+#b9shell .mptabs { display:flex; gap:26px; }
+#b9shell .mptab { font-size:19px; letter-spacing:.30em; text-transform:uppercase; color:#5d5749;
+  cursor:pointer; padding-bottom:7px; border-bottom:2px solid transparent; }
+#b9shell .mptab.sel { color:#ffd27a; border-bottom-color:#ffd27a; }
+#b9shell .mphead .sp { flex:1; }
+#b9shell .mphead .who { font-size:11.5px; letter-spacing:.24em; text-transform:uppercase;
+  color:#6b6455; text-align:right; line-height:1.7; }
+#b9shell .mphead .who b { color:#a89b80; font-weight:normal; display:block; font-size:14px;
+  letter-spacing:.20em; }
+
+#b9shell .mpbody { position:relative; z-index:2; width:min(1240px,94vw); margin:18px auto 0;
+  flex:1; min-height:0; display:flex; }
+#b9shell .mppane { display:none; flex:1; min-height:0; gap:30px; }
+#b9shell .mppane.on { display:flex; }
+#b9shell .mpfoot { position:relative; z-index:2; width:min(1240px,94vw); margin:0 auto;
+  padding:14px 0 min(4vh,30px); font-size:11.5px; letter-spacing:.20em; color:#5d5749;
+  text-transform:uppercase; }
+#b9shell .mpfoot b { color:#8a8272; font-weight:normal; }
+
+/* ---- lobby ---- */
+#b9shell .lobcol { flex:0 0 330px; display:flex; flex-direction:column; gap:16px; min-height:0; }
+#b9shell .lobside { flex:1; display:flex; flex-direction:column; gap:16px; min-width:0;
+  max-width:420px; }
+#b9shell .card { border:1px solid #37312790; background:rgba(9,8,6,.72); padding:13px 15px; }
+#b9shell .card h3 { margin:0 0 9px; font-size:10.5px; letter-spacing:.30em; color:#6b6455;
+  text-transform:uppercase; font-weight:normal; }
+#b9shell .pick { padding:11px 14px; border:1px solid transparent; background:rgba(232,221,200,.03);
+  cursor:pointer; margin-bottom:2px; }
+#b9shell .pick .nm { font-size:16px; letter-spacing:.18em; text-transform:uppercase; }
+#b9shell .pick .sub { font-size:11px; letter-spacing:.14em; color:#6b6455; margin-top:4px;
+  font-style:italic; text-transform:none; }
+#b9shell .pick.sel { border-color:#ffd27a; background:rgba(255,210,122,.10); }
+#b9shell .pick.sel .nm { color:#ffd27a; }
+#b9shell .pick.on .nm:after { content:" \\2713"; color:#8ce8a0; }
+
+/* The two sides of the lobby. Bots are marked, because a lobby that
+   hides which of the twelve are people is a lobby that lies to you. */
+#b9shell .roster { display:flex; gap:14px; }
+#b9shell .team { flex:1; min-width:0; }
+#b9shell .team .tn { font-size:10.5px; letter-spacing:.26em; text-transform:uppercase;
+  color:#6b6455; margin-bottom:7px; }
+#b9shell .team.us .tn { color:#8ce8a0; }
+#b9shell .team.them .tn { color:#d2705f; }
+#b9shell .slotline { display:flex; justify-content:space-between; gap:8px; font-size:12.5px;
+  padding:4px 0; border-bottom:1px solid #1b1813; }
+#b9shell .slotline .bot { font-size:9.5px; letter-spacing:.20em; color:#5d5749; }
+#b9shell .slotline.me { color:#ffd27a; }
+#b9shell .go { display:block; width:100%; text-align:center; padding:15px 0; font-size:19px;
+  letter-spacing:.28em; text-transform:uppercase; border:1px solid #4a4234;
+  background:rgba(232,221,200,.03); cursor:pointer; }
+#b9shell .go.sel { border-color:#ffd27a; color:#ffd27a; background:rgba(255,210,122,.12); }
+
+/* ---- loadout ---- */
+#b9shell .slots { flex:0 0 330px; display:flex; flex-direction:column; gap:2px;
+  overflow-y:auto; padding-right:4px; }
+#b9shell .slots::-webkit-scrollbar { width:8px; }
+#b9shell .slots::-webkit-scrollbar-thumb { background:#3a3428; }
+#b9shell .lslot { display:flex; align-items:center; gap:12px; padding:10px 14px;
+  border:1px solid transparent; background:rgba(232,221,200,.03); cursor:pointer; }
+#b9shell .lslot .k { flex:0 0 96px; font-size:9.5px; letter-spacing:.22em; color:#6b6455;
+  text-transform:uppercase; }
+#b9shell .lslot .v { flex:1; font-size:15px; letter-spacing:.10em; min-width:0;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#b9shell .lslot .lv { font-size:10.5px; letter-spacing:.14em; color:#6b6455; }
+#b9shell .lslot.sel { border-color:#ffd27a; background:rgba(255,210,122,.10); }
+#b9shell .lslot.sel .v { color:#ffd27a; }
+#b9shell .lslot.head { background:none; cursor:default; padding:14px 14px 5px 0; }
+#b9shell .lslot.head .k { flex:1; letter-spacing:.30em; border-bottom:1px solid #2a251d;
+  padding-bottom:5px; }
+
+#b9shell .detail { flex:1; min-width:0; display:flex; flex-direction:column; min-height:0; }
+#b9shell .dhead { display:flex; align-items:baseline; gap:14px; padding-bottom:9px;
+  border-bottom:1px solid #37312790; }
+#b9shell .dhead h3 { margin:0; font-size:21px; font-weight:normal; letter-spacing:.20em;
+  text-transform:uppercase; }
+#b9shell .dhead .tagline { font-size:11px; letter-spacing:.20em; color:#6b6455;
+  text-transform:uppercase; }
+#b9shell .dhead .pg { margin-left:auto; font-size:11px; letter-spacing:.24em;
+  text-transform:uppercase; }
+#b9shell .dlist { flex:1; overflow-y:auto; margin-top:10px; padding-right:6px; }
+#b9shell .dlist::-webkit-scrollbar { width:9px; }
+#b9shell .dlist::-webkit-scrollbar-thumb { background:#3a3428; }
+#b9shell .opt { display:flex; align-items:center; gap:13px; padding:9px 12px;
+  border:1px solid transparent; background:rgba(232,221,200,.025); cursor:pointer;
+  margin-bottom:2px; }
+#b9shell .opt .on1 { flex:1; min-width:0; }
+#b9shell .opt .n { font-size:15px; letter-spacing:.10em; }
+#b9shell .opt .b { font-size:11.5px; color:#6b6455; font-style:italic; margin-top:3px;
+  line-height:1.5; }
+#b9shell .opt .r { flex:0 0 auto; text-align:right; font-size:10.5px; letter-spacing:.18em;
+  color:#6b6455; text-transform:uppercase; }
+#b9shell .opt.sel { border-color:#ffd27a; background:rgba(255,210,122,.10); }
+#b9shell .opt.sel .n { color:#ffd27a; }
+#b9shell .opt.locked .n { color:#5d5749; }
+#b9shell .opt.locked .r { color:#7a3d38; }
+#b9shell .opt.fitted { background:rgba(140,232,160,.07); }
+#b9shell .opt.fitted .n:after { content:" \\2713"; color:#8ce8a0; }
+
+/* The level bar under a gun, and the three prestiges past the end of it. */
+#b9shell .lvbar { position:relative; height:3px; background:rgba(232,221,200,.12); margin-top:10px; }
+#b9shell .lvbar .f { position:absolute; left:0; top:0; bottom:0; background:#ffd27a; }
+#b9shell .lvnote { display:flex; justify-content:space-between; font-size:10.5px;
+  letter-spacing:.18em; color:#6b6455; text-transform:uppercase; margin-top:6px; }
+#b9shell .pgold { color:#ffd27a; } #b9shell .pplatinum { color:#d8e6f2; }
+#b9shell .pdiamond { color:#8fe3ff; }
+
+/* The preview: what the gun is, with the part you are hovering already
+   on it. The numbers move as you move down the list -- an arrow beside
+   each one saying which way it went and by how much. */
+#b9shell .preview { border-top:1px solid #37312790; margin-top:10px; padding-top:11px;
+  display:flex; gap:18px; align-items:flex-start; }
+#b9shell .gunart { flex:0 0 260px; height:104px; }
+#b9shell .gunart svg { width:100%; height:100%; overflow:visible; }
+#b9shell .gunart .body { fill:#4c4338; stroke:#2b2620; stroke-width:1; }
+#b9shell .gunart .metal { fill:#6f747b; stroke:#2b2620; stroke-width:1; }
+#b9shell .gunart .part { fill:#8a7a4a; stroke:#ffd27a; stroke-width:1.2; }
+#b9shell .stats { flex:1; min-width:0; display:grid; grid-template-columns:repeat(2,1fr);
+  gap:3px 20px; }
+#b9shell .stat { display:flex; align-items:center; gap:9px; font-size:11px; letter-spacing:.14em;
+  text-transform:uppercase; color:#6b6455; }
+#b9shell .stat .sn { flex:0 0 96px; }
+#b9shell .stat .sb { position:relative; flex:1; height:3px; background:rgba(232,221,200,.12); }
+#b9shell .stat .sb i { position:absolute; left:0; top:0; bottom:0; background:#8a8272; }
+#b9shell .stat .sb u { position:absolute; top:-2px; bottom:-2px; width:2px; background:#ffd27a; }
+#b9shell .stat .sv { flex:0 0 58px; text-align:right; color:#a89b80;
+  font-variant-numeric:tabular-nums; }
+#b9shell .stat.up .sv { color:#8ce8a0; } #b9shell .stat.down .sv { color:#d2705f; }
+#b9shell .confirm { display:flex; gap:2px; margin-top:11px; }
+#b9shell .confirm .item { flex:1; justify-content:center; font-size:14px; padding:10px 0; }
+
+@media (max-width: 900px) {
+  #b9shell .mppane { flex-direction:column; gap:14px; }
+  #b9shell .lobcol, #b9shell .slots { flex:none; }
+  #b9shell .lobside { max-width:none; }
+  #b9shell .train svg { opacity:.22; }
+}
+`;
+
 /* ================================================================
    MARKUP
    ================================================================ */
@@ -543,7 +831,7 @@ function q(sel) { return root.querySelector(sel); }
 
 function buildDom() {
   var st = document.createElement('style');
-  st.textContent = CSS + CSS2;
+  st.textContent = CSS + CSS2 + CSS3;
   document.head.appendChild(st);
 
   root = document.createElement('div');
@@ -632,6 +920,45 @@ function buildDom() {
     <div class="foot mapfoot"></div>
   </div>
 
+  <div class="screen mp">
+    <div class="train"><div class="fig"></div><div class="vig"></div></div>
+    <div class="mphead">
+      <div class="mptabs">
+        <div class="mptab lobtab">Lobby</div>
+        <div class="mptab loadtab">Loadout</div>
+      </div>
+      <span class="sp"></span>
+      <div class="who"></div>
+    </div>
+    <div class="mpbody">
+      <div class="mppane lobby">
+        <div class="lobcol">
+          <div class="card modecard"><h3>Game mode</h3><div class="modelist"></div></div>
+          <div class="card mapcard"><h3>Map</h3><div class="mplist"></div></div>
+        </div>
+        <div class="lobside">
+          <div class="card lobinfo"></div>
+          <div class="card"><h3>Lobby &mdash; six a side</h3><div class="roster"></div></div>
+          <div class="gowrap"></div>
+        </div>
+      </div>
+      <div class="mppane loadout">
+        <div class="slots"></div>
+        <div class="detail">
+          <div class="dhead"><h3 class="dname">&mdash;</h3><span class="tagline"></span>
+            <span class="pg"></span></div>
+          <div class="dlist"></div>
+          <div class="preview">
+            <div class="gunart"></div>
+            <div class="stats"></div>
+          </div>
+          <div class="confirm"></div>
+        </div>
+      </div>
+    </div>
+    <div class="mpfoot"></div>
+  </div>
+
   <div class="screen setscreen">
     <div class="setwrap">
       <div class="sethead"><h2>SETTINGS</h2><div class="tabs"></div></div>
@@ -651,6 +978,9 @@ function buildDom() {
   </div>`;
   document.body.appendChild(root);
 
+  /* The two tabs answer a pointer as well as the shoulder buttons.
+     Wired here rather than in openMP, because openMP runs every time
+     you change tab and a listener added there would stack up. */
   el = {
     load: q('.load'), menu: q('.menu'), setscreen: q('.setscreen'), pause: q('.pause'),
     fill: q('.fill'), pct: q('.pct'), step: q('.step'), tip: q('.tip'),
@@ -659,12 +989,23 @@ function buildDom() {
     mapdots: q('.mapdots'), mapdesc: q('.mapdesc'), mapmeta: q('.mapmeta'),
     mapfoot: q('.mapfoot'),
     tabs: q('.tabs'), setbody: q('.setbody'), setfoot: q('.setfoot'),
+    mp: q('.mp'), train: q('.train .fig'), mptabs: q('.mptabs'),
+    lobtab: q('.lobtab'), loadtab: q('.loadtab'), mpwho: q('.mphead .who'),
+    lobby: q('.lobby'), loadoutp: q('.loadout'),
+    modelist: q('.modelist'), mplist: q('.mplist'), lobinfo: q('.lobinfo'),
+    roster: q('.roster'), gowrap: q('.gowrap'),
+    slots: q('.slots'), dname: q('.dname'), tagline: q('.tagline'), dpg: q('.dhead .pg'),
+    dlist: q('.dlist'), gunart: q('.gunart'), dstats: q('.stats'),
+    confirm: q('.confirm'), mpfoot: q('.mpfoot'),
     pbody: q('.pbody'), pauseacts: q('.pauseacts'), prd: q('.pausehead .rd'),
   };
+
+  el.lobtab.addEventListener('click', function () { if (mpTab !== 'lobby') { beep('move'); openMP('lobby'); } });
+  el.loadtab.addEventListener('click', function () { if (mpTab !== 'loadout') { beep('move'); openMP('loadout'); } });
 }
 
 function show(which) {
-  ['load', 'menu', 'maps', 'setscreen', 'pause'].forEach(function (k) {
+  ['load', 'menu', 'maps', 'mp', 'setscreen', 'pause'].forEach(function (k) {
     el[k].classList.toggle('on', k === which);
   });
   root.classList.remove('gone');
@@ -1126,6 +1467,7 @@ function mkItem(text, hint, cls) {
 
 function openMain() {
   closeMaps();
+  closeMP();
   show('menu');
   setPhase('menu');
   el.mainlist.innerHTML = '';
@@ -1134,6 +1476,14 @@ function openMain() {
   var zombies = mkItem('Play Zombies', 'choose your ground');
   el.mainlist.appendChild(zombies);
   rows.push(wire({ el: zombies, onEnter: openMaps }));
+
+  /* Multiplayer only appears if its tables loaded. A row that opens a
+     screen with nothing in it is worse than a row that is not there. */
+  if (W.MP_DATA) {
+    var mpr = mkItem('Multiplayer', 'six a side, and a loadout to bring');
+    el.mainlist.appendChild(mpr);
+    rows.push(wire({ el: mpr, onEnter: function () { openMP('lobby'); } }));
+  }
 
   var sets = mkItem('Settings', 'controls, picture, sound, and the rest');
   el.mainlist.appendChild(sets);
@@ -1349,6 +1699,922 @@ function intoGame(map) {
     if (t) { t.style.display = 'flex'; t.style.opacity = 1; }
   }
   installPause();
+}
+
+/* ================================================================
+   MULTIPLAYER
+   ================================================================
+   Two tabs and one background.
+
+   LOBBY is the mode, the map, who is in the game, and the button. The
+   background of it is the operator you picked, on a range, running a
+   drill -- see the training animation at the top of CSS3 for why it is
+   an SVG skeleton and not a video.
+
+   LOADOUT is a primary, a secondary, a tactical, a lethal, an ability
+   and five killstreaks, plus the attachments on the two guns.
+
+   WHAT THE LOADOUT SCREEN IS FOR, WHICH IS NOT WHAT ZOMBIES' IS FOR
+
+   Zombies sells attachments for points: the decision is what you can
+   afford. Multiplayer gives them away and charges the gun instead --
+   you level a gun by using it and the parts arrive one at a time. So
+   the screen has a different job. It is not a shop. It is a place to
+   find out what a part DOES before you take it onto a map, which is
+   why focusing a row is enough to put the part on the gun in the
+   picture and move every stat bar underneath it. You look at it, then
+   you press the button. Nobody should have to go and lose a match to
+   discover that the long barrel cost them a tenth of a second of aim.
+
+   Everything is kept in one blob in local storage, and every read of it
+   goes through mpLoad() so a blob written by an older version cannot
+   put a missing gun in a slot.
+   ================================================================ */
+
+var MP_KEY = 'b9.mp.v1';
+var MP = null;               // window.MP_DATA, or null if it did not load
+var mp = null;               // the saved state
+
+function mpReady() {
+  if (!MP) MP = W.MP_DATA || null;
+  return !!MP;
+}
+
+/* Everything the player has done in multiplayer, with every field
+   checked on the way in. A gun id that no longer exists, a killstreak
+   that was renamed, a loadout saved before a slot existed -- all of
+   them arrive here as a menu with a blank row in it and no way to fix
+   it, so they are repaired on load instead. */
+function mpLoad() {
+  if (mp) return mp;
+  var raw = null;
+  try { raw = W.localStorage.getItem(MP_KEY); } catch (e) { /* storage off */ }
+  var got = null;
+  try { got = raw ? JSON.parse(raw) : null; } catch (e) { got = null; }
+  mp = got && typeof got === 'object' ? got : {};
+  if (!MP) return mp;
+
+  var L = MP.defaultLoadout();
+  var saved = mp.loadout && typeof mp.loadout === 'object' ? mp.loadout : {};
+  function keep(key, ok) { if (ok(saved[key])) L[key] = saved[key]; }
+  keep('primary', function (v) { var g = MP.gun(v); return g && g.cls !== 'launcher' && !g.shield; });
+  keep('secondary', function (v) { var g = MP.gun(v); return g && (g.cls === 'pistol' || g.cls === 'launcher' || g.shield); });
+  keep('tactical', function (v) { return MP.TACTICALS.some(function (t) { return t.id === v; }); });
+  keep('lethal', function (v) { return MP.LETHALS.some(function (t) { return t.id === v; }); });
+  keep('ability', function (v) { return MP.ABILITIES.some(function (t) { return t.id === v; }); });
+  keep('camo', function (v) { return MP.CAMOS.some(function (c) { return c.id === v; }); });
+  if (saved.keychain && saved.keychain.shape) L.keychain = saved.keychain;
+  ['primaryAtt', 'secondaryAtt'].forEach(function (k) {
+    var g = MP.gun(L[k === 'primaryAtt' ? 'primary' : 'secondary']);
+    var list = Array.isArray(saved[k]) ? saved[k] : [];
+    var seen = {}, out = [];
+    list.forEach(function (id) {
+      var a = MP.att(id);
+      if (!a || !g || !MP.fits(a, g) || seen[a.slot] || out.length >= MP.MAX_FITTED) return;
+      seen[a.slot] = 1; out.push(id);
+    });
+    L[k] = out;
+  });
+  if (Array.isArray(saved.streaks)) {
+    var ks = [], sseen = {};
+    saved.streaks.forEach(function (id) {
+      if (!MP.KILLSTREAKS.some(function (k2) { return k2.id === id; }) || sseen[id] || ks.length >= 5) return;
+      sseen[id] = 1; ks.push(id);
+    });
+    while (ks.length < 5) {
+      var fill = MP.KILLSTREAKS.filter(function (k2) { return !sseen[k2.id]; })[0];
+      if (!fill) break;
+      sseen[fill.id] = 1; ks.push(fill.id);
+    }
+    L.streaks = ks;
+  }
+  mp.loadout = L;
+
+  var pg = mp.progress && typeof mp.progress === 'object' ? mp.progress : {};
+  mp.progress = {};
+  MP.GUNS.forEach(function (g) {
+    var p = pg[g.id];
+    mp.progress[g.id] = (p && typeof p.xp === 'number' && isFinite(p.xp))
+      ? { xp: Math.max(0, p.xp), kills: Math.max(0, p.kills | 0), heads: Math.max(0, p.heads | 0),
+        metres: Math.max(0, p.metres | 0) }
+      : MP.newProgress();
+  });
+  if (!MP.MODES.some(function (m) { return m.id === mp.mode; })) mp.mode = MP.MODES[0].id;
+  if (!MP.MAPS.some(function (m) { return m.id === mp.map; })) mp.map = MP.MAPS[0].id;
+  return mp;
+}
+
+function mpSave() {
+  try { W.localStorage.setItem(MP_KEY, JSON.stringify(mp)); } catch (e) { /* storage off */ }
+}
+
+function prog(gunId) { return (mp && mp.progress && mp.progress[gunId]) || MP.newProgress(); }
+
+/* ---------------- the operator, on a range ----------------
+   Bones, the same as the loading zombie: every limb is a stroke drawn
+   straight DOWN from its own origin inside a group already translated
+   to the joint, so rotating the inner group swings the limb about the
+   joint and a child translated to the end of the bone is the next joint
+   for nothing.
+
+   Two colours come out of the character you actually picked -- the skin
+   and the sleeve -- because those are the two things you see of
+   yourself in this game, and the man in the lobby should be the man in
+   your hands. */
+
+function hex(n) { return '#' + ('000000' + (n >>> 0).toString(16)).slice(-6); }
+
+function heroNow() {
+  var sys = W.__T_SYS, S = handle && handle.S;
+  var id = (S && S.heroId) || null;
+  var H = sys && sys.HEROES && id ? sys.HEROES[id] : null;
+  if (!H) return { id: id, name: 'OPERATOR', skin: '#cdc4b0', sleeve: '#6f6a58' };
+  return {
+    id: id, name: H.name || 'OPERATOR',
+    skin: hex(H.look && H.look.skin != null ? H.look.skin : 0xcdc4b0),
+    sleeve: hex(H.look && H.look.sleeve != null ? H.look.sleeve : 0x6f6a58),
+  };
+}
+
+function trainerSvg(h) {
+  /* One limb. `x,y` is the joint, `len` the bone, `w` the thickness,
+     `cls` the group that carries the animation, and `inner` whatever
+     hangs off the far end. */
+  function limb(x, y, cls, w, len, tone, inner) {
+    return '<g transform="translate(' + x + ',' + y + ')"><g class="' + cls + '">'
+      + '<path class="bone" stroke="' + tone + '" stroke-width="' + w + '" d="M0,0 L0,' + len + '"/>'
+      + (inner ? '<g transform="translate(0,' + len + ')">' + inner + '</g>' : '')
+      + '</g></g>';
+  }
+  var sk = h.skin, sl = h.sleeve;
+
+  /* The rifle, and everything that happens at it. Drawn once, inside
+     the group that carries it, so the flash is at the muzzle and the
+     brass comes out of the ejection port without either of them having
+     to know where the gun is this frame. */
+  var rifle =
+    '<g class="rig"><g transform="translate(0,0)">'
+    + '<path class="wood" stroke-width="10" d="M-34,20 L-8,13"/>'
+    + '<path class="body" stroke="#4c4338" stroke-width="11" stroke-linecap="square" fill="none" d="M-8,11 L36,11"/>'
+    + '<path class="steel" stroke-width="7" d="M14,16 L10,42"/>'
+    + '<path class="cloth" stroke-width="7" d="M2,16 L-3,34"/>'
+    + '<path class="wood" stroke-width="9" d="M36,10 L72,10"/>'
+    + '<path class="steel" stroke-width="4" d="M72,10 L108,10"/>'
+    + '<path class="steel" stroke-width="3" d="M100,10 L100,1"/>'
+    + '<path class="steel" stroke-width="3" d="M-2,4 L-2,-2"/>'
+    + '<path class="steel" stroke-width="5" d="M6,2 L26,2"/>'
+    /* muzzle flash */
+    + '<g class="flash"><path fill="#ffd27a" opacity=".92" d="M108,10 L130,2 L122,10 L130,18 Z"/>'
+    + '<circle cx="110" cy="10" r="6" fill="#fff3d0" opacity=".8"/></g>'
+    /* one fired case, thrown three times */
+    + '<g class="brass"><rect x="30" y="0" width="7" height="3.4" rx="1.4" fill="#b08d4a"/></g>'
+    /* the magazine that leaves */
+    + '<g class="magOut"><path class="steel" stroke-width="7" d="M14,16 L10,42"/></g>'
+    + '</g></g>';
+
+  /* Arms. The forearm of the front arm is where the rifle is held, so
+     it is keyed against the rig rather than solved to it -- the same
+     bargain the loading zombie makes, and at this size nobody can tell
+     the difference between a solve and a good key. */
+  var armBack = limb(1, 3, 'armBack', 9, 30, sl,
+    '<path class="bone" stroke="' + sl + '" stroke-width="7.5" d="M0,0 L0,24"/>'
+    + '<circle cx="1" cy="27" r="4.6" fill="' + sk + '"/>');
+  var armFront = limb(9, 7, 'armFront', 10, 32, sl,
+    '<path class="bone" stroke="' + sl + '" stroke-width="8.5" d="M0,0 L0,26"/>'
+    + '<circle cx="2" cy="29" r="5" fill="' + sk + '"/>');
+
+  /* The figure faces right and the target is on the right, at the far
+     end of a 300-wide box. The muzzle reaches x=210 at full extension
+     and the board starts at 236, which is the only reason those two
+     numbers are what they are: a rifle whose muzzle is inside the
+     target reads as a man leaning on it. */
+  return '<svg viewBox="0 0 300 440" aria-hidden="true">'
+    + '<line x1="0" y1="420" x2="300" y2="420" stroke="#2a251d" stroke-width="2"/>'
+    + '<g opacity=".8"><rect class="board" x="236" y="150" width="58" height="84"/>'
+    + '<circle class="ring" cx="265" cy="192" r="24" stroke-width="2"/>'
+    + '<circle class="ring" cx="265" cy="192" r="14" stroke-width="2"/>'
+    + '<circle cx="265" cy="192" r="5" fill="#4a4234"/>'
+    + '<path class="board" d="M242,234 L246,420 M288,234 L284,420" stroke-width="3" fill="none"/></g>'
+    /* an ammunition crate behind him, open, because the drill has been
+       run more than once today */
+    + '<g opacity=".55"><rect x="14" y="382" width="58" height="38" fill="#241f18" stroke="#3a3428" stroke-width="2"/>'
+    + '<path d="M14,382 L44,368 L102,368 L72,382 Z" fill="none" stroke="#3a3428" stroke-width="2"/>'
+    + '<rect x="24" y="392" width="6" height="16" rx="2" fill="#5c4a2a"/>'
+    + '<rect x="34" y="392" width="6" height="16" rx="2" fill="#5c4a2a"/>'
+    + '<rect x="44" y="392" width="6" height="16" rx="2" fill="#5c4a2a"/></g>'
+
+    + '<g class="breathe">'
+    /* far leg first, so the near one draws over it */
+    + '<g transform="translate(96,268)"><g>'
+    + '<path class="bone far" stroke="' + sl + '" stroke-width="18" d="M0,0 L-20,62"/>'
+    + '<path class="bone far" stroke="' + sl + '" stroke-width="15" d="M-20,62 L-28,138"/>'
+    + '<path class="bone far" stroke="#3a3428" stroke-width="10" d="M-28,138 L-46,146"/>'
+    + '</g></g>'
+    /* torso, and the head on the end of it */
+    + '<g transform="translate(96,268)"><g class="torso">'
+    + '<path class="bone" stroke="' + sl + '" stroke-width="24" d="M0,-4 L6,-80"/>'
+    + '<path class="bone" stroke="' + sl + '" stroke-width="27" d="M-1,2 L1,-14"/>'
+    + '<path class="cloth" stroke-width="4" d="M-7,-28 L13,-48"/>'
+    + '<path class="cloth" stroke-width="4" d="M-8,-44 L12,-30"/>'
+    + '<rect x="-13" y="-26" width="13" height="17" rx="3" fill="#3a3428" opacity=".95"/>'
+    + '<rect x="2" y="-24" width="11" height="15" rx="3" fill="#3a3428" opacity=".95"/>'
+    + '<g transform="translate(8,-92)"><g class="head">'
+    + '<path class="bone" stroke="' + sk + '" stroke-width="9" d="M0,0 L2,-8"/>'
+    + '<ellipse cx="5" cy="-18" rx="10.5" ry="12" fill="' + sk + '"/>'
+    + '<path d="M-6,-20 A12,12 0 0 1 16,-20 L17,-16 L14,-17 L-5,-16 Z" fill="#3f4238"/>'
+    + '<path d="M-6,-16 L-9,-13 L-4,-13 Z" fill="#3f4238"/>'
+    + '<circle cx="12" cy="-18" r="1.6" fill="#23201a"/>'
+    + '<path stroke="#23201a" stroke-width="1.2" fill="none" d="M13,-11 L9,-10"/>'
+    + '</g></g>'
+    /* shoulder: the rifle and both arms hang here, so the whole rig
+       leans with the body instead of floating in front of it */
+    + '<g transform="translate(6,-84)">' + rifle + armBack + armFront + '</g>'
+    + '</g></g>'
+    /* near leg */
+    + '<g transform="translate(100,270)"><g>'
+    + '<path class="bone" stroke="' + sl + '" stroke-width="19" d="M0,0 L18,62"/>'
+    + '<path class="bone" stroke="' + sl + '" stroke-width="16" d="M18,62 L26,138"/>'
+    + '<path class="bone" stroke="#3a3428" stroke-width="11" d="M26,138 L48,146"/>'
+    + '</g></g>'
+    + '</g></svg>';
+}
+
+var trainerFor = null;
+function paintTrainer() {
+  var h = heroNow();
+  if (trainerFor === h.id + '|' + h.skin) return;   // do not restart the drill
+  trainerFor = h.id + '|' + h.skin;
+  el.train.innerHTML = trainerSvg(h);
+  el.mpwho.innerHTML = '<span>Operator</span><b>' + esc(h.name) + '</b>';
+}
+
+/* ---------------- the screen ---------------- */
+
+var mpTab = 'lobby';
+
+function openMP(tab) {
+  if (!mpReady()) { beep('back'); return; }
+  mpLoad();
+  closeMaps();
+  show('mp');
+  setPhase('menu');
+  mpTab = tab || mpTab || 'lobby';
+  paintTrainer();
+  el.lobtab.classList.toggle('sel', mpTab === 'lobby');
+  el.loadtab.classList.toggle('sel', mpTab === 'loadout');
+  el.mp.classList.toggle('deep', mpTab === 'loadout');
+  el.lobby.classList.toggle('on', mpTab === 'lobby');
+  el.loadoutp.classList.toggle('on', mpTab === 'loadout');
+  /* The shoulder buttons move between the two tabs wherever you are in
+     either of them, which is the one thing a pad expects a tabbed
+     screen to do. */
+  tabHook = function (d) { openMP(d > 0 ? 'loadout' : 'lobby'); };
+  startHook = null;
+  if (mpTab === 'lobby') paintLobby(); else openLoadout();
+}
+
+function closeMP() { tabHook = null; startHook = null; }
+
+/* ---------------- lobby ---------------- */
+
+/* Twelve names on the board and one of them is yours. The bots are
+   drawn from a fixed list and dealt alternately so neither side gets
+   all the good ones, and they are labelled, because a lobby that hides
+   which of the twelve are people is a lobby that lies to you. */
+function lobbyRoster() {
+  var names = MP.BOT_NAMES.slice();
+  var me = heroNow().name.replace(/^(CPL|SGT|PFC|PVT|LT)\.\s*/i, '');
+  var us = [{ name: me, bot: false }], them = [];
+  for (var i = 0; us.length < MP.TEAM_SIZE || them.length < MP.TEAM_SIZE; i++) {
+    var nm = names[i % names.length];
+    var sk = MP.BOT_SKILL[(i * 3 + 1) % MP.BOT_SKILL.length];
+    if (us.length <= them.length) us.push({ name: nm, bot: true, skill: sk });
+    else them.push({ name: nm, bot: true, skill: sk });
+    if (i > 40) break;
+  }
+  return { us: us.slice(0, MP.TEAM_SIZE), them: them.slice(0, MP.TEAM_SIZE) };
+}
+
+function modeNow() { return MP.MODES.filter(function (m) { return m.id === mp.mode; })[0] || MP.MODES[0]; }
+function mapNow() { return MP.MAPS.filter(function (m) { return m.id === mp.map; })[0] || MP.MAPS[0]; }
+
+function paintLobby() {
+  var rows = [];
+  el.modelist.innerHTML = '';
+  MP.MODES.forEach(function (m) {
+    var d = document.createElement('div');
+    d.className = 'pick' + (m.id === mp.mode ? ' on' : '');
+    d.innerHTML = '<div class="nm"></div><div class="sub"></div>';
+    d.querySelector('.nm').textContent = m.name;
+    d.querySelector('.sub').textContent = m.rule;
+    el.modelist.appendChild(d);
+    rows.push(wire({ el: d, onEnter: function () { mp.mode = m.id; mpSave(); paintLobby(); } }));
+  });
+
+  el.mplist.innerHTML = '';
+  MP.MAPS.forEach(function (m) {
+    var d = document.createElement('div');
+    d.className = 'pick' + (m.id === mp.map ? ' on' : '');
+    d.innerHTML = '<div class="nm"></div><div class="sub"></div>';
+    d.querySelector('.nm').textContent = m.name;
+    d.querySelector('.sub').textContent = m.where;
+    el.mplist.appendChild(d);
+    rows.push(wire({ el: d, onEnter: function () { mp.map = m.id; mpSave(); paintLobby(); } }));
+  });
+
+  var md = modeNow(), mapd = mapNow();
+  el.lobinfo.innerHTML =
+    '<h3>' + esc(mapd.name) + ' &middot; ' + esc(md.name) + '</h3>'
+    + '<div class="mapdesc" style="margin-top:0">' + esc(mapd.blurb) + '</div>'
+    + '<div class="mapmeta"><span>LANES <b>' + mapd.lanes.length + '</b></span>'
+    + '<span>SIZE <b>' + mapd.size + ' m</b></span>'
+    + '<span>LIGHT <b>' + esc(mapd.time) + '</b></span></div>'
+    + '<div class="mapmeta" style="margin-top:6px"><span>UP <b>' + esc(mapd.verticality) + '</b></span></div>'
+    + (md.bomb ? '<div class="mapmeta" style="margin-top:6px"><span>SITES <b>'
+      + mapd.bombs.map(esc).join('</b> &middot; <b>') + '</b></span></div>' : '');
+
+  var r = lobbyRoster();
+  function side(list, cls, label) {
+    return '<div class="team ' + cls + '"><div class="tn">' + label + '</div>'
+      + list.map(function (p) {
+        return '<div class="slotline' + (p.bot ? '' : ' me') + '"><span>' + esc(p.name) + '</span>'
+          + '<span class="bot">' + (p.bot ? esc(p.skill.name) : 'YOU') + '</span></div>';
+      }).join('') + '</div>';
+  }
+  el.roster.innerHTML = side(r.us, 'us', 'Your side') + side(r.them, 'them', 'Theirs');
+
+  /* The button is here and it is honest about what it does. The lobby,
+     the loadout, the guns and the maps are built; the match that runs
+     on them is not, and a PLAY button that drops you into nothing is
+     worse than one that says so. */
+  el.gowrap.innerHTML = '';
+  var go = document.createElement('div');
+  go.className = 'go';
+  go.textContent = 'Find a match';
+  el.gowrap.appendChild(go);
+  rows.push(wire({
+    el: go,
+    onEnter: function () {
+      beep('back');
+      el.mpfoot.innerHTML = '<div><b>' + esc(mapd.name.toUpperCase()) + ' &middot; '
+        + esc(md.short) + '</b> &mdash; the lobby, the loadout and the maps are laid out. '
+        + 'The match that runs on them is the next thing being built, so there is '
+        + 'nothing to drop into yet.</div>';
+    },
+  }));
+
+  el.mpfoot.innerHTML = '<div><b>&uarr;&darr;</b> move &nbsp; <b>Enter / A</b> choose &nbsp; '
+    + '<b>LB / RB</b> lobby and loadout &nbsp; <b>Esc / B</b> back</div>';
+  navSet(rows, openMain);
+}
+
+/* ---------------- loadout ---------------- */
+
+/* Which slot the left column is on, and which column has the cursor.
+   Kept out here so coming back from the lobby tab puts you where you
+   were rather than at the top. */
+var ld = { slot: 'primary', side: 'slots', hover: null };
+
+function ldGun(which) { return MP.gun(mp.loadout[which]); }
+function ldAtt(which) { return mp.loadout[which + 'Att']; }
+
+var SLOT_ROWS = [
+  { head: 'Weapons' },
+  { id: 'primary', k: 'Primary' },
+  { id: 'primaryAtt', k: 'Attachments' },
+  { id: 'secondary', k: 'Secondary' },
+  { id: 'secondaryAtt', k: 'Attachments' },
+  { head: 'Equipment' },
+  { id: 'tactical', k: 'Tactical' },
+  { id: 'lethal', k: 'Lethal' },
+  { id: 'ability', k: 'Ability' },
+  { head: 'Killstreaks' },
+  { id: 'streak0', k: 'One' }, { id: 'streak1', k: 'Two' }, { id: 'streak2', k: 'Three' },
+  { id: 'streak3', k: 'Four' }, { id: 'streak4', k: 'Five' },
+  { head: 'Finish' },
+  { id: 'camo', k: 'Camo' },
+  { id: 'keychain', k: 'Keychain' },
+];
+
+function nameOf(list, id) {
+  for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i].name;
+  return '—';
+}
+
+function slotValue(id) {
+  var L = mp.loadout;
+  if (id === 'primary' || id === 'secondary') {
+    var g = MP.gun(L[id]);
+    return g ? g.name : '—';
+  }
+  if (id === 'primaryAtt' || id === 'secondaryAtt') {
+    return L[id].length + ' of ' + MP.MAX_FITTED;
+  }
+  if (id === 'tactical') return nameOf(MP.TACTICALS, L.tactical);
+  if (id === 'lethal') return nameOf(MP.LETHALS, L.lethal);
+  if (id === 'ability') return nameOf(MP.ABILITIES, L.ability);
+  if (id.indexOf('streak') === 0) return nameOf(MP.KILLSTREAKS, L.streaks[+id.slice(6)]);
+  if (id === 'camo') return nameOf(MP.CAMOS, L.camo);
+  if (id === 'keychain') return L.keychain ? (nameOf(MP.KEYCHAIN_SHAPES, L.keychain.shape)) : 'none';
+  return '—';
+}
+
+function slotNote(id) {
+  var L = mp.loadout;
+  if (id === 'primary' || id === 'secondary') {
+    var g = MP.gun(L[id]);
+    if (!g) return '';
+    var pr = prog(g.id), pg = MP.prestigeOf(g, pr);
+    return pg ? pg.toUpperCase() : ('LV ' + MP.levelOf(pr));
+  }
+  if (id.indexOf('streak') === 0) {
+    var k = MP.KILLSTREAKS.filter(function (x) { return x.id === L.streaks[+id.slice(6)]; })[0];
+    return k ? (k.cost + ' kills') : '';
+  }
+  return '';
+}
+
+function openLoadout() {
+  paintSlots();
+  paintDetail();
+  ldNav();
+}
+
+function paintSlots() {
+  el.slots.innerHTML = '';
+  SLOT_ROWS.forEach(function (r) {
+    var d = document.createElement('div');
+    if (r.head) {
+      d.className = 'lslot head';
+      d.innerHTML = '<div class="k"></div>';
+      d.querySelector('.k').textContent = r.head;
+      el.slots.appendChild(d);
+      r._el = null;
+      return;
+    }
+    d.className = 'lslot' + (r.id === ld.slot ? ' sel' : '');
+    d.innerHTML = '<div class="k"></div><div class="v"></div><div class="lv"></div>';
+    d.querySelector('.k').textContent = r.k;
+    d.querySelector('.v').textContent = slotValue(r.id);
+    d.querySelector('.lv').textContent = slotNote(r.id);
+    el.slots.appendChild(d);
+    r._el = d;
+  });
+}
+
+/* ---- the picture of the gun ----
+   Not a photograph and not trying to be: a side elevation in six
+   strokes, with a slot for each thing that can be bolted to it. The
+   point of it is not that it is a good likeness of an STG 44. The point
+   is that when you move onto LONG BARREL the barrel gets longer in
+   front of you, so the word on the row and the thing on the gun are
+   never two separate pieces of knowledge. */
+
+var ART = {
+  assault: { butt: -40, rec: 44, hand: 34, barrel: 34, mag: 26, drop: 20, w: 13 },
+  smg:     { butt: -30, rec: 36, hand: 22, barrel: 20, mag: 30, drop: 18, w: 12 },
+  lmg:     { butt: -44, rec: 52, hand: 30, barrel: 40, mag: 22, drop: 24, w: 16 },
+  special: { butt: -46, rec: 48, hand: 40, barrel: 46, mag: 14, drop: 12, w: 12 },
+  pistol:  { butt: 0,   rec: 30, hand: 0,  barrel: 14, mag: 0,  drop: 26, w: 11 },
+  launcher:{ butt: -50, rec: 70, hand: 24, barrel: 30, mag: 0,  drop: 14, w: 20 },
+};
+
+function gunArt(g, fitted, hover) {
+  if (!g) return '';
+  var A = ART[g.cls] || ART.assault;
+  var has = {}, hoverSlot = null;
+  (fitted || []).forEach(function (id) { var a = MP.att(id); if (a) has[a.slot] = a; });
+  if (hover) { var ha = MP.att(hover); if (ha) { has[ha.slot] = ha; hoverSlot = ha.slot; } }
+  function cls(slot) { return slot === hoverSlot ? 'part' : 'metal'; }
+  function st(slot, w) {
+    return 'class="' + cls(slot) + '" stroke="' + (slot === hoverSlot ? '#ffd27a' : '#6f747b')
+      + '" stroke-width="' + w + '" fill="none" stroke-linecap="round"';
+  }
+
+  var y = 52, x0 = 74;                 // the receiver starts here
+  var bl = A.barrel;
+  if (has.barrel && /long|marksman/.test(has.barrel.id)) bl += 26;
+  if (has.barrel && /short|cqb/.test(has.barrel.id)) bl -= 12;
+  var xRecEnd = x0 + A.rec, xBarEnd = xRecEnd + A.hand + bl;
+
+  var s = '<svg viewBox="0 0 300 104">';
+  /* stock and receiver */
+  if (A.butt < 0) {
+    var bx = x0 + A.butt;
+    s += has.stock
+      ? '<path ' + st('stock', /none/.test(has.stock.id) ? 5 : 13) + ' d="M' + bx + ',' + (y + 7)
+        + ' L' + (x0 - 2) + ',' + (y + 2) + '"/>'
+      : '<path class="body" stroke="#4c4338" stroke-width="12" fill="none" stroke-linecap="round" d="M'
+        + bx + ',' + (y + 7) + ' L' + (x0 - 2) + ',' + (y + 2) + '"/>';
+  }
+  s += '<path class="body" stroke="#4c4338" stroke-width="' + A.w + '" fill="none" d="M'
+    + x0 + ',' + y + ' L' + xRecEnd + ',' + y + '"/>';
+  /* handguard and barrel */
+  if (A.hand) {
+    s += '<path class="body" stroke="#5a5044" stroke-width="' + (A.w - 2) + '" fill="none" d="M'
+      + xRecEnd + ',' + y + ' L' + (xRecEnd + A.hand) + ',' + y + '"/>';
+  }
+  s += '<path ' + st('barrel', g.cls === 'launcher' ? 16 : 6) + ' d="M'
+    + (xRecEnd + A.hand) + ',' + y + ' L' + xBarEnd + ',' + y + '"/>';
+  /* grip and trigger guard */
+  s += '<path ' + (has.grip ? st('grip', 9) : 'class="body" stroke="#4c4338" stroke-width="9" fill="none" stroke-linecap="round"')
+    + ' d="M' + (x0 + 12) + ',' + (y + 6) + ' L' + (x0 + 6) + ',' + (y + A.drop) + '"/>';
+  /* magazine */
+  if (A.mag) {
+    var ml = A.mag;
+    if (has.mag && /drum/.test(has.mag.id)) ml = 8;
+    if (has.mag && /ext/.test(has.mag.id)) ml += 12;
+    if (has.mag && /fast/.test(has.mag.id)) ml -= 8;
+    s += '<path ' + (has.mag ? st('mag', 10) : 'class="metal" stroke="#6f747b" stroke-width="10" fill="none" stroke-linecap="round"')
+      + ' d="M' + (x0 + 26) + ',' + (y + 6) + ' L' + (x0 + 21) + ',' + (y + 6 + ml) + '"/>';
+    if (has.mag && /drum/.test(has.mag.id)) {
+      s += '<circle cx="' + (x0 + 22) + '" cy="' + (y + 28) + '" r="15" fill="none" stroke="'
+        + (hoverSlot === 'mag' ? '#ffd27a' : '#6f747b') + '" stroke-width="5"/>';
+    }
+  }
+  /* optic on top */
+  if (has.optic) {
+    var ow = /7x|12x|4x|34x/.test(has.optic.id) ? 34 : 18;
+    s += '<path ' + st('optic', 9) + ' d="M' + (x0 + 10) + ',' + (y - 12) + ' L'
+      + (x0 + 10 + ow) + ',' + (y - 12) + '"/>'
+      + '<path ' + st('optic', 4) + ' d="M' + (x0 + 14) + ',' + (y - 8) + ' L' + (x0 + 14) + ',' + (y - 5) + '"/>';
+  } else {
+    s += '<path class="metal" stroke="#6f747b" stroke-width="3" fill="none" d="M'
+      + (xBarEnd - 8) + ',' + y + ' L' + (xBarEnd - 8) + ',' + (y - 8) + '"/>';
+  }
+  /* muzzle device */
+  if (has.muzzle) {
+    var mw = /suppress|mono/.test(has.muzzle.id) ? 30 : 12;
+    s += '<path ' + st('muzzle', 13) + ' d="M' + xBarEnd + ',' + y + ' L' + (xBarEnd + mw) + ',' + y + '"/>';
+  }
+  /* underbarrel */
+  if (has.under) {
+    var ux = xRecEnd + Math.max(10, A.hand - 8);
+    s += /bipod/.test(has.under.id)
+      ? '<path ' + st('under', 4) + ' d="M' + ux + ',' + (y + 6) + ' L' + (ux - 12) + ',' + (y + 30)
+        + ' M' + ux + ',' + (y + 6) + ' L' + (ux + 12) + ',' + (y + 30) + '"/>'
+      : '<path ' + st('under', 9) + ' d="M' + ux + ',' + (y + 6) + ' L' + (ux - 2) + ',' + (y + 22) + '"/>';
+  }
+  /* laser, and its beam */
+  if (has.laser) {
+    var lx = xRecEnd + 6;
+    s += '<rect x="' + lx + '" y="' + (y + 6) + '" width="14" height="8" rx="2" fill="none" stroke="'
+      + (hoverSlot === 'laser' ? '#ffd27a' : '#6f747b') + '" stroke-width="2"/>';
+    if (!/ir/.test(has.laser.id)) {
+      s += '<path stroke="#d2705f" stroke-width="1.5" opacity=".75" fill="none" d="M'
+        + (lx + 14) + ',' + (y + 10) + ' L300,' + (y + 6) + '"/>';
+    }
+  }
+  return s + '</svg>';
+}
+
+/* ---- the bars ----
+   Eight numbers, each normalised against a fixed range rather than
+   against the other guns in the list, so a bar means the same thing on
+   every screen you ever see it on. Half of them are better when they
+   are smaller, which is what `inv` is for. */
+var STAT_DEFS = [
+  { k: 'Damage', get: function (w) { return w.dmg * w.pellets; }, lo: 0, hi: 60, fmt: function (v) { return Math.round(v); } },
+  { k: 'Fire rate', get: function (w) { return w.rpm; }, lo: 0, hi: 1300, fmt: function (v) { return Math.round(v) + ' rpm'; } },
+  { k: 'Range', get: function (w) { return w.far; }, lo: 0, hi: 200, fmt: function (v) { return Math.round(v) + ' m'; } },
+  /* Two different accuracies, because different parts move them and a
+     player who fits an optic and sees nothing change reasonably
+     concludes the optic does nothing. AIM is the cone with the gun in
+     your shoulder, which is what glass and a match barrel buy. HIPFIRE
+     is the cone without it, which is what a laser buys. */
+  { k: 'Aim', get: function (w) { return w.adsSpread; }, lo: 0.03, hi: 1.6, inv: true, fmt: function (v) { return v.toFixed(2) + '°'; } },
+  { k: 'Hipfire', get: function (w) { return w.spread; }, lo: 0, hi: 11, inv: true, fmt: function (v) { return v.toFixed(1) + '°'; } },
+  { k: 'Control', get: function (w) { return w.rec[0] + w.rec[1]; }, lo: 0, hi: 5, inv: true, fmt: function (v) { return v.toFixed(2); } },
+  { k: 'Handling', get: function (w) { return w.ads; }, lo: 0.10, hi: 0.78, inv: true, fmt: function (v) { return v.toFixed(2) + ' s'; } },
+  { k: 'Mobility', get: function (w) { return w.move; }, lo: 0.58, hi: 1.12, fmt: function (v) { return Math.round(v * 100) + '%'; } },
+  { k: 'Magazine', get: function (w) { return w.mag; }, lo: 0, hi: 80, fmt: function (v) { return Math.round(v); } },
+];
+
+function statFrac(d, v) {
+  var f = (v - d.lo) / (d.hi - d.lo);
+  if (d.inv) f = 1 - f;
+  return Math.max(0, Math.min(1, f));
+}
+
+function paintStats(before, after) {
+  if (!after) { el.dstats.innerHTML = ''; return; }
+  el.dstats.innerHTML = STAT_DEFS.map(function (d) {
+    var vb = before ? d.get(before) : null, va = d.get(after);
+    var fb = vb == null ? null : statFrac(d, vb), fa = statFrac(d, va);
+    var dir = (vb == null || Math.abs(va - vb) < 1e-9) ? '' : (fa > fb ? ' up' : ' down');
+    return '<div class="stat' + dir + '"><span class="sn">' + d.k + '</span>'
+      + '<span class="sb"><i style="width:' + (fa * 100).toFixed(1) + '%"></i>'
+      + (fb == null || dir === '' ? '' : '<u style="left:' + (fb * 100).toFixed(1) + '%"></u>')
+      + '</span><span class="sv">' + d.fmt(va) + '</span></div>';
+  }).join('');
+}
+
+/* ---- the right-hand column ----
+   One list, built fresh for whichever slot the left column is on. Every
+   row carries what it needs to do when it is focused and what it does
+   when it is pressed, so ldNav() below does not have to know what kind
+   of slot it is looking at. */
+
+var ldRows = [];        // [{ el, focus, enter, disabled }]
+
+function detailHead(text) {
+  var d = document.createElement('div');
+  d.className = 'sec';
+  d.textContent = text;
+  el.dlist.appendChild(d);
+}
+
+function detailRow(name, blurb, right, mods) {
+  var d = document.createElement('div');
+  d.className = 'opt' + (mods && mods.locked ? ' locked' : '') + (mods && mods.fitted ? ' fitted' : '');
+  d.innerHTML = '<div class="on1"><div class="n"></div><div class="b"></div></div><div class="r"></div>';
+  d.querySelector('.n').textContent = name;
+  d.querySelector('.b').textContent = blurb || '';
+  d.querySelector('.r').innerHTML = right || '';
+  el.dlist.appendChild(d);
+  return d;
+}
+
+function pushRow(d, focus, enter, disabled) {
+  var row = wire({ el: d, onFocus: focus, onEnter: disabled ? null : enter, disabled: !!disabled });
+  ldRows.push(row);
+  /* wire() moves the cursor onto a row you hover -- but only if the row
+     is in the CURRENT nav list, and while the cursor is in the left-hand
+     column these are not. Hovering an attachment with a mouse then did
+     nothing at all: no preview, no stats, no picture. Hovering one of
+     these hands the column over first, and then lands on the row. */
+  d.addEventListener('mouseenter', function () {
+    if (ld.side === 'list') return;          // wire() already handles it
+    var k = ldRows.indexOf(row);
+    if (k < 0) return;
+    ld.side = 'list';
+    nav.i = k;
+    ldNav(true);
+  });
+  return row;
+}
+
+function gunBadge(g) {
+  var pr = prog(g.id), pg = MP.prestigeOf(g, pr);
+  if (pg) return '<span class="p' + pg + '">' + pg + '</span>';
+  return 'lv ' + MP.levelOf(pr);
+}
+
+function levelStrip(g) {
+  var pr = prog(g.id), lv = MP.levelOf(pr), pg = MP.prestigeOf(g, pr);
+  var unl = MP.unlockedParts(g, pr).length, all = MP.partCount(g);
+  var next = null;
+  if (pg !== 'diamond') {
+    if (!pg) next = 'Gold at level ' + MP.MAX_LEVEL + ' with all ' + all + ' parts';
+    else if (pg === 'gold') next = 'Platinum at 600 kills (' + pr.kills + ')';
+    else next = 'Diamond at 1100 kills and 50 heads (' + pr.kills + ' / ' + pr.heads + ')';
+  } else next = 'Diamond. The keychain slot is open.';
+  return '<div class="lvbar"><div class="f" style="width:'
+    + (MP.levelFrac(pr) * 100).toFixed(1) + '%"></div></div>'
+    + '<div class="lvnote"><span>' + (pg ? '<b class="p' + pg + '">' + pg.toUpperCase() + '</b>' : 'Level ' + lv)
+    + ' &middot; ' + unl + ' of ' + all + ' parts</span><span>' + esc(next) + '</span></div>';
+}
+
+function paintDetail() {
+  ldRows = [];
+  el.dlist.innerHTML = '';
+  el.confirm.innerHTML = '';
+  el.gunart.innerHTML = '';
+  el.dstats.innerHTML = '';
+  el.dpg.innerHTML = '';
+  var L = mp.loadout, slot = ld.slot;
+
+  /* ---- a gun ---- */
+  if (slot === 'primary' || slot === 'secondary') {
+    var prim = slot === 'primary';
+    el.dname.textContent = prim ? 'Primary' : 'Secondary';
+    el.tagline.textContent = prim ? 'anything but a launcher' : 'a pistol, a launcher or the shield';
+    MP.CLASSES.forEach(function (c) {
+      var list = MP.gunsOf(c.id).filter(function (g) {
+        return prim ? (g.cls !== 'launcher' && !g.shield) : (g.cls === 'pistol' || g.cls === 'launcher' || g.shield);
+      });
+      if (!list.length) return;
+      detailHead(c.name);
+      list.forEach(function (g) {
+        var d = detailRow(g.name, g.blurb, gunBadge(g), { fitted: L[slot] === g.id });
+        pushRow(d, function () {
+          ld.hover = g.id;
+          el.gunart.innerHTML = gunArt(g, L[slot] === g.id ? L[slot + 'Att'] : [], null);
+          paintStats(null, MP.build(g.id, []));
+          el.dpg.innerHTML = levelStrip(g);
+        }, function () {
+          if (L[slot] !== g.id) { L[slot] = g.id; L[slot + 'Att'] = []; mpSave(); }
+          paintSlots(); paintDetail(); ldNav(true);
+        });
+      });
+    });
+    return;
+  }
+
+  /* ---- the attachments on one of them ---- */
+  if (slot === 'primaryAtt' || slot === 'secondaryAtt') {
+    var which = slot === 'primaryAtt' ? 'primary' : 'secondary';
+    var g = MP.gun(L[which]);
+    el.dname.textContent = g ? g.name : '—';
+    el.tagline.textContent = 'free. the gun is the price';
+    if (!g) return;
+    var pr = prog(g.id), fitted = L[which + 'Att'];
+    el.dpg.innerHTML = levelStrip(g);
+    el.gunart.innerHTML = gunArt(g, fitted, null);
+    paintStats(null, MP.build(g.id, fitted));
+
+    MP.SLOTS.forEach(function (S2) {
+      var parts = MP.partsFor(g, S2.id);
+      if (!parts.length) return;
+      detailHead(S2.name);
+      parts.forEach(function (a) {
+        var on = fitted.indexOf(a.id) >= 0;
+        var locked = !MP.isUnlocked(a, pr);
+        var full = !on && fitted.length >= MP.MAX_FITTED
+          && !fitted.some(function (id) { return MP.att(id).slot === a.slot; });
+        var right = locked ? ('level ' + a.lvl) : (full ? 'no room' : (on ? 'fitted' : ''));
+        var d = detailRow(a.name, a.blurb, right, { locked: locked, fitted: on });
+        pushRow(d, function () {
+          ld.hover = a.id;
+          /* Focus is the preview. The gun in the picture puts the part
+             on, every bar underneath moves to what it would be, and the
+             mark left behind on each bar is where it is now -- so the
+             confirm is a decision and not a guess. */
+          var next = on ? fitted.filter(function (id) { return id !== a.id; })
+            : fitted.filter(function (id) { return MP.att(id).slot !== a.slot; }).concat([a.id]);
+          el.gunart.innerHTML = gunArt(g, next, on ? null : a.id);
+          paintStats(MP.build(g.id, fitted), MP.build(g.id, locked || full ? fitted : next));
+          el.confirm.innerHTML = '';
+          var act = document.createElement('div');
+          act.className = 'item';
+          act.innerHTML = '<span class="t"></span><span class="hint"></span>';
+          act.querySelector('.t').textContent = locked
+            ? 'Locked until level ' + a.lvl
+            : (full ? 'Five is the limit' : (on ? 'Take it off' : 'Fit it'));
+          act.querySelector('.hint').textContent = locked
+            ? 'kills, or just carrying it, get you there'
+            : 'Enter / A';
+          el.confirm.appendChild(act);
+        }, function () {
+          if (locked || full) { beep('back'); return; }
+          L[which + 'Att'] = on ? fitted.filter(function (id) { return id !== a.id; })
+            : fitted.filter(function (id) { return MP.att(id).slot !== a.slot; }).concat([a.id]);
+          mpSave(); paintSlots(); paintDetail(); ldNav(true);
+        }, locked || full);
+      });
+    });
+    if (fitted.length) {
+      detailHead('All of it');
+      var dc = detailRow('Strip the gun', 'Every part off, back to how it came.', 'clear');
+      pushRow(dc, function () {
+        el.gunart.innerHTML = gunArt(g, [], null);
+        paintStats(MP.build(g.id, fitted), MP.build(g.id, []));
+        el.confirm.innerHTML = '';
+      }, function () {
+        L[which + 'Att'] = []; mpSave(); paintSlots(); paintDetail(); ldNav(true);
+      });
+    }
+    return;
+  }
+
+  /* ---- the flat lists ---- */
+  var flat = null, cur = null, set = null, title = '', tag = '';
+  if (slot === 'tactical') { flat = MP.TACTICALS; cur = L.tactical; title = 'Tactical'; tag = 'one, and it is not a weapon'; set = function (id) { L.tactical = id; }; }
+  if (slot === 'lethal') { flat = MP.LETHALS; cur = L.lethal; title = 'Lethal'; tag = 'one, and it is'; set = function (id) { L.lethal = id; }; }
+  if (slot === 'ability') { flat = MP.ABILITIES; cur = L.ability; title = 'Special ability'; tag = 'charged by playing, not by a clock'; set = function (id) { L.ability = id; }; }
+  if (flat) {
+    el.dname.textContent = title;
+    el.tagline.textContent = tag;
+    flat.forEach(function (t) {
+      var right = t.charge ? (t.charge + ' charge') : (t.lvl ? ('rank ' + t.lvl) : '');
+      var d = detailRow(t.name, t.blurb, right, { fitted: cur === t.id });
+      pushRow(d, null, function () { set(t.id); mpSave(); paintSlots(); paintDetail(); ldNav(true); });
+    });
+    return;
+  }
+
+  /* ---- one of the five killstreak slots ---- */
+  if (slot.indexOf('streak') === 0) {
+    var n = +slot.slice(6);
+    el.dname.textContent = 'Killstreak ' + (n + 1);
+    el.tagline.textContent = 'five of them, and the kills do not carry over a death';
+    MP.KILLSTREAKS.forEach(function (k) {
+      var here = L.streaks[n] === k.id;
+      var elsewhere = !here && L.streaks.indexOf(k.id) >= 0;
+      var d = detailRow(k.name, k.blurb, k.cost + ' kills', { fitted: here, locked: elsewhere });
+      pushRow(d, null, function () {
+        if (elsewhere) { beep('back'); return; }
+        L.streaks[n] = k.id; mpSave(); paintSlots(); paintDetail(); ldNav(true);
+      }, elsewhere);
+    });
+    return;
+  }
+
+  /* ---- camo, against the primary's own progress ---- */
+  if (slot === 'camo') {
+    var pg2 = MP.gun(L.primary), pr2 = prog(L.primary);
+    var lv2 = MP.levelOf(pr2), pres = MP.prestigeOf(pg2, pr2);
+    var order = ['gold', 'platinum', 'diamond'];
+    el.dname.textContent = 'Camo';
+    el.tagline.textContent = 'earned on the ' + (pg2 ? pg2.name : 'primary');
+    MP.CAMOS.forEach(function (c) {
+      var locked = c.prestige
+        ? (!pres || order.indexOf(pres) < order.indexOf(c.prestige))
+        : (c.lvl || 0) > lv2;
+      var right = c.prestige ? c.prestige : (c.lvl ? ('level ' + c.lvl) : '');
+      var d = detailRow(c.name, c.prestige
+        ? (MP.PRESTIGE.filter(function (p) { return p.id === c.prestige; })[0] || {}).need
+        : '', right, { fitted: L.camo === c.id, locked: locked });
+      pushRow(d, null, function () { L.camo = c.id; mpSave(); paintSlots(); paintDetail(); ldNav(true); }, locked);
+    });
+    return;
+  }
+
+  /* ---- the keychain, which only exists at diamond ---- */
+  if (slot === 'keychain') {
+    var gk = MP.gun(L.primary), prk = prog(L.primary);
+    el.dname.textContent = 'Keychain';
+    var dia = MP.prestigeOf(gk, prk) === 'diamond';
+    el.tagline.textContent = dia ? 'hangs off the sling loop' : 'diamond on your primary opens this';
+    if (!dia) {
+      var dn = detailRow('Not yet', 'Take the ' + (gk ? gk.name : 'primary')
+        + ' to diamond and it hangs a keychain off the sling loop, engraved how you like.', 'locked', { locked: true });
+      pushRow(dn, null, null, true);
+      return;
+    }
+    detailHead('Shape');
+    MP.KEYCHAIN_SHAPES.forEach(function (k) {
+      var on = L.keychain && L.keychain.shape === k.id;
+      var d = detailRow(k.name, '', '', { fitted: on });
+      pushRow(d, null, function () {
+        L.keychain = { shape: k.id, metal: (L.keychain && L.keychain.metal) || 'brass' };
+        mpSave(); paintSlots(); paintDetail(); ldNav(true);
+      });
+    });
+    detailHead('Metal');
+    MP.KEYCHAIN_METALS.forEach(function (m) {
+      var on2 = L.keychain && L.keychain.metal === m.id;
+      var d = detailRow(m.name, '', '', { fitted: on2 });
+      pushRow(d, null, function () {
+        L.keychain = { shape: (L.keychain && L.keychain.shape) || 'tag', metal: m.id };
+        mpSave(); paintSlots(); paintDetail(); ldNav(true);
+      });
+    });
+    detailHead('None');
+    var dnone = detailRow('Take it off', '', '', { fitted: !L.keychain });
+    pushRow(dnone, null, function () { L.keychain = null; mpSave(); paintSlots(); paintDetail(); ldNav(true); });
+  }
+}
+
+/* ---- moving about ----
+   Two columns and one cursor. Up and down walk whichever column has it;
+   right and Enter hand it to the list, left and Escape give it back.
+   `keep` holds the place in the list through a repaint, so fitting an
+   attachment does not throw you back to the top of the optics. */
+function ldNav(keep) {
+  if (ld.side === 'list' && ldRows.length) {
+    var out = function () { ld.side = 'slots'; ldNav(); };
+    /* Assigned, not wrapped. Wrapping it built a new closure around the
+       old one on every repaint, and fitting six attachments in a row
+       left six of them stacked up waiting to fire. */
+    ldRows.forEach(function (r) { r.onLeft = out; });
+    navSet(ldRows, out, keep);
+    return;
+  }
+  ld.side = 'slots';
+  var rows = [];
+  SLOT_ROWS.forEach(function (r) {
+    if (!r._el) return;
+    var srow = wire({
+      el: r._el,
+      onFocus: function () { if (ld.slot !== r.id) { ld.slot = r.id; paintDetail(); } },
+      onEnter: function () { if (ldRows.length) { ld.side = 'list'; ldNav(); } else beep('back'); },
+      onRight: function () { if (ldRows.length) { ld.side = 'list'; ldNav(); } },
+    });
+    srow._slotId = r.id;
+    /* Hovering a slot takes the cursor back out of the list. It cannot
+       do that by finding itself in nav.rows afterwards, because ldNav()
+       builds new row objects and this one is not among them -- so it
+       says which slot it wants and lets ldNav() land on it. */
+    r._el.addEventListener('mouseenter', function () {
+      if (ld.slot === r.id && ld.side === 'slots') return;
+      ld.slot = r.id; ld.side = 'slots';
+      paintDetail(); ldNav();
+    });
+    rows.push(srow);
+  });
+  /* Land on the slot that is actually selected rather than on the top
+     of the list, so coming back from the lobby tab does not lose it --
+     and set the index BEFORE navSet rather than after. Setting it after
+     meant navSet painted row zero first, row zero's onFocus repainted
+     the whole right-hand column for the primary, and the slot you were
+     actually pointing at never got a look in. */
+  var want = 0;
+  for (var i = 0; i < rows.length; i++) if (rows[i]._slotId === ld.slot) { want = i; break; }
+  nav.i = want;
+  navSet(rows, openMain, true);
+  el.mpfoot.innerHTML = '<div><b>&uarr;&darr;</b> move &nbsp; <b>&rarr; / Enter</b> into the list '
+    + '&nbsp; <b>&larr; / Esc</b> back out &nbsp; <b>LB / RB</b> lobby and loadout</div>';
 }
 
 /* ================================================================
@@ -2322,6 +3588,10 @@ SHELL.openSettings = function () { if (root) openSettings(paused ? 'pause' : 'ma
 SHELL.openPause = openPause;
 SHELL.resume = resume;
 SHELL.handle = function () { return handle; };
+/* The multiplayer state as it stands in memory. Local storage is not
+   readable at all on a page with no origin, so this is the only way a
+   headless check can see what the loadout screen actually did. */
+SHELL.mpState = function () { return mp; };
 SHELL.beep = beep;
 
 W.BUNKER_SHELL = SHELL;
