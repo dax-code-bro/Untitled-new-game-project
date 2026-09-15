@@ -288,32 +288,48 @@
       }
     }
 
-    /* A staggered line of solid cover across part of the map.
+    /* Two staggered rows of scattered cover, in front of a spawn line.
      *
-       Every one of the four maps failed the same check the first time
-       they were built: a rifle at one spawn could see a man at the
-       other. Three of them could do it eleven or fourteen ways out of
-       thirty-six. A spawn you can be shot in is not a spawn, it is a
-       place the game puts you to be killed, and no amount of cover in
-       the middle of a map makes up for it.
+       This was a solid wall across the map with gaps in it, and it was
+       wrong twice over. It read as spawning in a box -- the first thing
+       a Town player saw was brick, four metres away, the full width of
+       the screen -- and it closed the maps: the longest sightline on
+       Town came out at SIX METRES, on a map whose middle lane is a
+       hundred and twenty metres of high street. A map with no long line
+       on it is a map no rifle has a reason to exist on.
 
-       So each map has two of these, one in front of each spawn line,
-       and the phases are offset by half a period so the gaps in the
-       near one never line up with the gaps in the far one. You can
-       always get through -- there are six or seven ways -- and you can
-       never see through from where you started. */
-    function screen(z, x0, x1, h, material, phase, name) {
-      var period = 13.5, seg = 9.2;
-      for (var x = x0 + (phase || 0) - period; x < x1; x += period) {
-        var a = Math.max(x0, x), b = Math.min(x1, x + seg);
-        if (b - a < 1.6) continue;
-        slab(a, b, 0, h, z - 0.45, z + 0.45, material, name || 'screen');
-        deco(a - 0.12, b + 0.12, h, h + 0.16, z - 0.58, z + 0.58, mats.steelDark, 'screen-cap');
+       Two short rows do the same job with a tenth of the mass. Any
+       straight line crossing both must find a gap in each, and the rows
+       are offset by half a slot so a gap in the near one lines up with
+       a block in the far one. You walk through in three seconds. You
+       cannot see through from where you started. And between the blocks
+       there is sky, which is the difference between cover and a wall.
+
+       Blocks start below the ground rather than on it, because a box
+       whose bottom face is exactly coplanar with the floor shows a
+       hairline of floor through it at grazing angles. */
+    function screenPair(z, x0, x1, material, dir, rows) {
+      var slot = 9.4, w = 4.6, gap = 4.8, n = rows || 2;
+      for (var ri = 0; ri < n; ri++) {
+        var rz = z + (dir || 1) * ri * gap;
+        /* Each row shifted by a fraction of a slot, so no gap ever
+           lines up with a gap. Two rows close the straight lines; a
+           third closes the long oblique one from a corner spawn to the
+           opposite corner, which threaded both gaps on two of the four
+           maps and is exactly the shot that should not exist. */
+        var off = (ri * slot) / n;
+        for (var x = x0 + off - slot; x < x1; x += slot) {
+          var a = Math.max(x0, x), b = Math.min(x1, x + w);
+          if (b - a < 1.4) continue;
+          var h = 2.75 - ri * 0.15;
+          slab(a, b, -0.3, h, rz - 0.42, rz + 0.42, material, 'screen');
+          deco(a - 0.1, b + 0.1, h, h + 0.14, rz - 0.55, rz + 0.55, mats.steelDark, 'screen-cap');
+        }
       }
     }
 
     return {
-      game: game, mats: mats, solids: solids, decos: decos, COVER: COVER, screen: screen,
+      game: game, mats: mats, solids: solids, decos: decos, COVER: COVER, screenPair: screenPair,
       slab: slab, deco: deco, post: post, crate: crate, jersey: jersey,
       sandbags: sandbags, barrel: barrel, container: container, wall: wall,
       stair: stair, fence: fence, car: car, deck: deck,
@@ -448,15 +464,11 @@
     K.stair(43.5, HZ1 + 0.4, 2.2, 0.26, 0.32, 33, 'z+', m.steelDark);
 
     /* ---- the approach from each spawn ----
-       Revetments: the concrete walls a coastal battery is built behind.
-       Two lines a side, and the middle lane is left out of the inner
-       pair on purpose -- the pad stays open, which is the map. */
-    K.screen(-34, -52, 52, 2.9, m.concretePale, 0, 'revetment');
-    K.screen(34, -52, 52, 2.9, m.concretePale, 6.75, 'revetment');
-    K.screen(-22, -52, -13, C.wall, m.concretePale, 2.0, 'revetment');
-    K.screen(-22, 13, 52, C.wall, m.concretePale, 4.5, 'revetment');
-    K.screen(22, -52, -13, C.wall, m.concretePale, 5.0, 'revetment');
-    K.screen(22, 13, 52, C.wall, m.concretePale, 1.5, 'revetment');
+       Revetments: the short concrete walls a coastal battery keeps its
+       vehicles behind, in two staggered rows. Not a line across the
+       map -- the pad stays open, which is the map. */
+    K.screenPair(-32, -52, 52, m.concretePale, -1);
+    K.screenPair(32, -52, 52, m.concretePale, 1);
     K.container(-30, 28, false, m.paintGreen);
     K.container(30, -28, false, m.paintGreen);
     K.crate(-18, -30, 1.8, 1.8, C.vault, m.wood);
@@ -600,14 +612,10 @@
     K.jersey(-19, 32, true); K.jersey(20, -32, true);
 
     /* ---- the approach from each spawn ----
-       Clipped hedges and the low walls between them, which is what a
-       hotel puts between its terrace and its car park. */
-    K.screen(-34, -54, 54, 2.7, m.brickPale, 0, 'hedge-wall');
-    K.screen(34, -54, 54, 2.7, m.brickPale, 6.75, 'hedge-wall');
-    K.screen(-24, -54, -14, C.wall, m.brickPale, 3.0, 'hedge-wall');
-    K.screen(-24, 16, 54, C.wall, m.brickPale, 5.5, 'hedge-wall');
-    K.screen(26, -54, -14, C.wall, m.brickPale, 4.0, 'hedge-wall');
-    K.screen(34.5, 14, 54, C.wall, m.brickPale, 2.5, 'hedge-wall');
+       The low walls a hotel puts between its terrace and its car park,
+       in two staggered rows with the planting long dead. */
+    K.screenPair(-34, -54, 54, m.brickPale, -1, 3);
+    K.screenPair(34, -54, 54, m.brickPale, 1, 3);
     K.crate(-20, 30, 1.6, 1.6, C.vault, m.wood);
     K.crate(20, -30, 1.6, 1.6, C.vault, m.wood);
 
@@ -769,16 +777,12 @@
     K.deco(TX - 3.8, TX + 3.8, 15.0, 15.4, TZ - 3.8, TZ + 3.8, m.roof, 'tower-cap');
 
     /* ---- the approach from each spawn ----
-       More of the same terraces, seen end on. The +Z side stops short
-       of the church, which is doing that job itself, and picks up again
-       past the tower. */
-    K.screen(-48, -60, 60, 2.9, m.brick, 0, 'terrace-end');
-    K.screen(48, -60, 25, 2.9, m.brick, 6.75, 'terrace-end');
-    K.screen(48, 56, 60, 2.9, m.brick, 0, 'terrace-end');
-    K.screen(-36, -60, -16, C.wall, m.brick, 3.0, 'terrace-end');
-    K.screen(-36, 16, 60, C.wall, m.brick, 5.5, 'terrace-end');
-    K.screen(36, -60, -16, C.wall, m.brick, 4.5, 'terrace-end');
-    K.screen(24, 52, 60, C.wall, m.brick, 1.0, 'terrace-end');
+       Garden walls and outbuildings, seen end on. The +Z rows stop
+       short of the church, which is doing that job itself, and pick up
+       again past the tower. */
+    K.screenPair(-46, -60, 60, m.brick, -1, 3);
+    K.screenPair(46, -60, 26, m.brick, 1, 3);
+    K.screenPair(46, 52, 60, m.brick, 1, 3);
     K.car(-20, -44, false, m.rust);
     K.car(20, 44, false, m.paintRed);
 
@@ -929,9 +933,9 @@
     K.barrel(28, 18); K.barrel(29, 19);
 
     /* ---- the approach from each spawn ----
-       Site hoarding, in runs, with a gap where a gate was. */
-    K.screen(-30, -46, 46, 2.8, m.woodDark, 0, 'hoarding-run');
-    K.screen(30, -46, 46, 2.8, m.woodDark, 6.75, 'hoarding-run');
+       Site hoarding, in two staggered runs, with gates between. */
+    K.screenPair(-28, -46, 46, m.woodDark, -1);
+    K.screenPair(28, -46, 46, m.woodDark, 1);
     K.container(-24, -34, false, m.rust);
     K.container(24, 34, false, m.paintBlue);
     K.crate(4, -32, 1.8, 1.8, C.vault, m.wood);
@@ -972,9 +976,9 @@
 
   var SKY = {
     helipad: { sky: 'dawn', hours: 6.2, exposure: 1.05 },
-    resort: { sky: 'clear', hours: 15.0, exposure: 1.0 },
+    resort: { sky: 'day', hours: 15.0, exposure: 1.0 },
     town: { sky: 'overcast', hours: 12.0, exposure: 0.95 },
-    demolition: { sky: 'dusk', hours: 19.4, exposure: 1.1 },
+    demolition: { sky: 'sunset', hours: 19.4, exposure: 1.1 },
   };
 
   function applySky(game, id) {

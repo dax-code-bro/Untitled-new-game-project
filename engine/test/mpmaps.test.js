@@ -151,7 +151,13 @@ function check(name, cond, detail = '') {
          anywhere and see the entire width of the map, which is the same
          question asked of the thing that is really wrong. */
       out.crossOpen = 0; out.crossTried = 0;
-      for (let z = -R + 8; z <= R - 8; z += 3) {
+      /* Sampled between the two spawn screens rather than over the
+         whole map. Behind your own screen is your own spawn, and a
+         spawn IS meant to be open -- it is where six people appear at
+         once and have to get out of each other's way. The question is
+         about the ground the fight happens on. */
+      const IN = R - 18;
+      for (let z = -IN; z <= IN; z += 3) {
         out.crossTried++;
         if (!hit([-R + 2, 1.45, z], [1, 0, 0], 2 * R - 4)) out.crossOpen++;
       }
@@ -166,9 +172,15 @@ function check(name, cond, detail = '') {
          on Helipad is where the helicopter is parked, so the map failed
          for having its bomb site in the middle of its middle. */
       out.longest = 0;
+      /* Cast from inside the near spawn screen, not from behind it.
+         Started at the map edge, every ray's first hit was the screen
+         fifteen metres away and every map reported a longest sightline
+         of about sixteen metres -- which says nothing about the map and
+         everything about where the tape measure was standing. */
+      const Z0 = -(R - 26), LEN = 2 * (R - 26);
       for (let x = -R + 6; x <= R - 6; x += 2) {
-        const h = hit([x, 1.45, -R + 4], [0, 0, 1], 2 * R - 8);
-        const d = h ? Math.max(0, h.point.z - (-R + 4)) : 2 * R - 8;
+        const h = hit([x, 1.45, Z0], [0, 0, 1], LEN);
+        const d = h ? Math.max(0, h.point.z - Z0) : LEN;
         if (d > out.longest) out.longest = Math.round(d);
       }
 
