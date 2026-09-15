@@ -96,6 +96,86 @@
     return nav.g[j * nav.w + i] === 1;
   }
 
+  /* WHAT IS ACTUALLY REACHABLE, worked out once.
+   *
+     A goal inside a wall, or on the far side of one with no way round,
+     makes A* explore every cell it can get to before admitting defeat.
+     On Demolition -- a hundred and eighty-two cells square -- that is
+     thirty-three thousand cells a go, and four hundred and twenty-nine
+     failed searches in two simulated minutes came to eighteen MILLION
+     cells examined. It was the difference between a match that
+     simulates in one second and one that takes seventy-two.
+
+     One flood fill at the start of the match says which cells are
+     connected to the ground the players are standing on. After that a
+     goal is snapped onto that set before anybody paths to it, and the
+     failure case stops existing rather than being made cheaper. */
+  function navFlood(nav, from) {
+    var w = nav.w, h = nav.h, c = nav.c, b = nav.box;
+    var reach = new Uint8Array(w * h);
+    var si = Math.max(0, Math.min(w - 1, Math.floor((from.x - b.x0) / c)));
+    var sj = Math.max(0, Math.min(h - 1, Math.floor((from.z - b.z0) / c)));
+    if (navBlocked(nav, si, sj)) {
+      /* The seed may be standing on a marked cell -- a doorway, a step.
+         Walk out to the first free one. */
+      var found = false;
+      for (var r = 1; r < 12 && !found; r++) {
+        for (var j = sj - r; j <= sj + r && !found; j++) {
+          for (var i = si - r; i <= si + r && !found; i++) {
+            if (!navBlocked(nav, i, j)) { si = i; sj = j; found = true; }
+          }
+        }
+      }
+      if (!found) return reach;
+    }
+    var q = [sj * w + si];
+    reach[sj * w + si] = 1;
+    for (var k = 0; k < q.length; k++) {
+      var cur = q[k], ci2 = cur % w, cj2 = (cur / w) | 0;
+      for (var dj = -1; dj <= 1; dj++) {
+        for (var di = -1; di <= 1; di++) {
+          if (!di && !dj) continue;
+          var ni = ci2 + di, nj = cj2 + dj;
+          if (navBlocked(nav, ni, nj)) continue;
+          var kk = nj * w + ni;
+          if (reach[kk]) continue;
+          reach[kk] = 1; q.push(kk);
+        }
+      }
+    }
+    nav.reach = reach;
+    return reach;
+  }
+
+  function navReachable(nav, x, z) {
+    if (!nav.reach) return true;
+    var i = Math.floor((x - nav.box.x0) / nav.c), j = Math.floor((z - nav.box.z0) / nav.c);
+    if (i < 0 || j < 0 || i >= nav.w || j >= nav.h) return false;
+    return nav.reach[j * nav.w + i] === 1;
+  }
+
+  /* The nearest cell anybody can actually stand in. Spirals out, so the
+     answer is the closest one rather than the first one found. */
+  function navSnap(nav, x, z) {
+    if (navReachable(nav, x, z)) return { x: x, z: z };
+    var w = nav.w, h = nav.h, c = nav.c, b = nav.box;
+    var ci2 = Math.floor((x - b.x0) / c), cj2 = Math.floor((z - b.z0) / c);
+    for (var r = 1; r < 26; r++) {
+      var best = null, bd = 1e9;
+      for (var j = cj2 - r; j <= cj2 + r; j++) {
+        for (var i = ci2 - r; i <= ci2 + r; i++) {
+          if (Math.max(Math.abs(i - ci2), Math.abs(j - cj2)) !== r) continue;
+          if (i < 0 || j < 0 || i >= w || j >= h) continue;
+          if (!nav.reach || nav.reach[j * w + i] !== 1) continue;
+          var d = (i - ci2) * (i - ci2) + (j - cj2) * (j - cj2);
+          if (d < bd) { bd = d; best = [i, j]; }
+        }
+      }
+      if (best) return { x: b.x0 + (best[0] + 0.5) * c, z: b.z0 + (best[1] + 0.5) * c };
+    }
+    return null;
+  }
+
   function navClear(nav, a, b) {
     var c = nav.c;
     var d = Math.hypot(b.x - a.x, b.z - a.z);
@@ -116,6 +196,8 @@
     var si = ci(from.x), sj = cj(from.z);
     var ti = ci(to.x), tj = cj(to.z);
     if (si === ti && sj === tj) return [];
+    /* Not connected to anything: refuse before searching, not after. */
+    if (nav.reach && nav.reach[tj * w + ti] !== 1) return null;
     if (navBlocked(nav, ti, tj)) {
       var best = null, bd = 1e9;
       for (var j2 = Math.max(0, tj - 5); j2 <= Math.min(h - 1, tj + 5); j2++) {
@@ -134,21 +216,60 @@
     var closed = new Uint8Array(n);
     var start = sj * w + si, goal = tj * w + ti;
     gScore[start] = 0;
-    var open = [start];
     function hEst(k) {
       var i = k % w, j = (k / w) | 0;
       var dx = Math.abs(i - ti), dz = Math.abs(j - tj);
       return (dx + dz) + (Math.SQRT2 - 2) * Math.min(dx, dz);
     }
-    var found = false, guard = 0;
-    while (open.length && guard++ < 60000) {
-      var bi = 0, bf = Infinity;
-      for (var k2 = 0; k2 < open.length; k2++) {
-        var f = gScore[open[k2]] + hEst(open[k2]);
-        if (f < bf) { bf = f; bi = k2; }
+    /* A BINARY HEAP, AND NOT A LINEAR SCAN.
+     *
+       The zombies version scans the open set to find the cheapest cell,
+       with a comment saying the grid is under two thousand cells and a
+       scan costs less than the code to avoid it. That is true of the
+       bunker. It is not true here: Demolition's grid is a hundred and
+       eighty-two squared, so a search that has to look at most of it
+       does thirty-three thousand scans of an open set that is itself
+       thousands long. One twelve-minute match on that map took SEVENTY
+       TWO SECONDS to simulate, against four for the others.
+
+       The heap is twenty lines and makes it linear-ish in the number of
+       cells examined. */
+    var heap = [], hf = [];
+    function push(k, f) {
+      heap.push(k); hf.push(f);
+      var c = heap.length - 1;
+      while (c > 0) {
+        var par = (c - 1) >> 1;
+        if (hf[par] <= hf[c]) break;
+        var tk = heap[par]; heap[par] = heap[c]; heap[c] = tk;
+        var tf = hf[par]; hf[par] = hf[c]; hf[c] = tf;
+        c = par;
       }
+    }
+    function pop() {
+      var top = heap[0];
+      var lastK = heap.pop(), lastF = hf.pop();
+      if (heap.length) {
+        heap[0] = lastK; hf[0] = lastF;
+        var c2 = 0;
+        for (;;) {
+          var l = c2 * 2 + 1, r2 = l + 1, m2 = c2;
+          if (l < heap.length && hf[l] < hf[m2]) m2 = l;
+          if (r2 < heap.length && hf[r2] < hf[m2]) m2 = r2;
+          if (m2 === c2) break;
+          var tk2 = heap[m2]; heap[m2] = heap[c2]; heap[c2] = tk2;
+          var tf2 = hf[m2]; hf[m2] = hf[c2]; hf[c2] = tf2;
+          c2 = m2;
+        }
+      }
+      return top;
+    }
+    push(start, hEst(start));
+    var found = false, guard = 0;
+    while (heap.length && guard++ < 40000) {
       if (stats) stats.pathCells++;
-      var cur = open.splice(bi, 1)[0];
+      var cur = pop();
+      if (closed[cur]) continue;
       if (cur === goal) { found = true; break; }
       closed[cur] = 1;
       var i3 = cur % w, j3 = (cur / w) | 0;
@@ -164,7 +285,10 @@
           var g2 = gScore[cur] + step;
           if (g2 < gScore[kk]) {
             gScore[kk] = g2; came[kk] = cur;
-            if (open.indexOf(kk) < 0) open.push(kk);
+            /* Pushed again rather than decreased in place; the stale
+               copy is skipped when it comes out, because by then the
+               cell is closed. */
+            push(kk, g2 + hEst(kk));
           }
         }
       }
@@ -223,7 +347,7 @@
       actor: null,
       guns: [primary, secondary], held: 0,
       ammo: [primary.mag, secondary.mag],
-      reserve: [primary.mag * 6, secondary.mag * 6],
+      reserve: [primary.mag * 10, secondary.mag * 10],
       reloadUntil: 0, nextShot: 0,
       loadout: lo,
       kills: 0, deaths: 0, assists: 0, damage: 0, streak: 0, bestStreak: 0,
@@ -266,6 +390,9 @@
 
     var R = mapId === 'demolition' ? 50 : (mapId === 'town' ? 62 : 58);
     var nav = navBuild(game, { x0: -R, x1: R, z0: -R, z1: R }, NAV_Y);
+    /* Seeded from a spawn point, because that is by definition ground
+       somebody is standing on. */
+    navFlood(nav, { x: map.spawns.a[2].at[0], z: map.spawns.a[2].at[2] });
 
     /* ---- who is playing ---- */
     var people = [];
@@ -380,6 +507,7 @@
     p.hp = HEALTH; p.alive = true; p.streak = 0;
     p.held = 0;
     p.ammo = [p.guns[0].mag, p.guns[1].mag];
+    p.reserve = [p.guns[0].mag * 10, p.guns[1].mag * 10];
     p.reloadUntil = 0; p.nextShot = 0;
     p.ai.state = 'advance'; p.ai.target = null; p.ai.path = null;
     p.ai.goal = null; p.ai.goalAt = -99;
@@ -416,20 +544,47 @@
     return !h;
   }
 
-  /* Where along the ray the body is, and how far off the line. Returns
-     null for a miss, otherwise the distance and whether it was a head. */
+  /* WHERE A BODY IS, AS FAR AS A BULLET IS CONCERNED.
+   *
+     A vertical capsule from the shins to the shoulders with a sphere on
+     top of it, tested as a ray against a segment. And the aim point --
+     AIM_Y -- is on that segment, which it was not.
+
+     That mismatch is the whole of why the first simulated match fired
+     two thousand seven hundred shots and landed thirty-three. The bots
+     aimed at chest height, 1.45 above the feet, and the hit test
+     measured the perpendicular distance to a point at 0.90. A shot
+     placed perfectly at the aim point was therefore fifty-five
+     centimetres off a body whose tolerance was forty, so a bot could
+     only hit by MISSING its own aim, and the better it aimed the worse
+     it shot. Everybody stood in the open emptying magazines at each
+     other for ten minutes and nobody fell over.
+
+     One constant, used by the aim and by the test. */
+  var BODY_LO = 0.35, BODY_HI = 1.48, BODY_R = 0.36;
+  var HEAD_Y = 1.66, HEAD_R = 0.15;
+  var AIM_Y = 1.25;
+
   function rayBody(from, dir, p) {
-    var ox = p.pos.x - from.x, oy = (p.pos.y + 0.9) - from.y, oz = p.pos.z - from.z;
-    var along = ox * dir.x + oy * dir.y + oz * dir.z;
-    if (along <= 0.2) return null;
-    var cx = ox - dir.x * along, cy = oy - dir.y * along, cz = oz - dir.z * along;
-    var off = Math.hypot(cx, cy, cz);
-    /* A body is a 0.34 m capsule from the ankles to the shoulders with
-       a 0.13 m head on top of it. Off-axis distance decides which. */
-    if (off > 0.40) return null;
-    var hy = (from.y + dir.y * along) - (p.pos.y + 1.60);
-    var head = Math.abs(hy) < 0.16 && off < 0.20;
-    return { d: along, head: head };
+    /* Closest approach between the shot and the body's own axis. */
+    var px = p.pos.x, pz = p.pos.z;
+    var ax = px - from.x, az = pz - from.z;
+    var lo = p.pos.y + BODY_LO - from.y, hi = p.pos.y + BODY_HI - from.y;
+    /* The axis is vertical, so the geometry collapses: the horizontal
+       part is a ray-versus-line problem and the vertical part is just
+       an interval to be inside. */
+    var dh = Math.hypot(dir.x, dir.z);
+    if (dh < 1e-6) return null;
+    var along = (ax * dir.x + az * dir.z) / (dh * dh);
+    if (along <= 0.3) return null;
+    var offx = ax - dir.x * along, offz = az - dir.z * along;
+    var offH = Math.hypot(offx, offz);
+    if (offH > BODY_R + HEAD_R) return null;
+    var y = dir.y * along;
+    var head = Math.abs(y - (p.pos.y + HEAD_Y - from.y)) < HEAD_R + 0.04 && offH < HEAD_R + 0.10;
+    if (!head && (y < lo - BODY_R || y > hi + BODY_R)) return null;
+    if (!head && offH > BODY_R) return null;
+    return { d: Math.hypot(ax, az, y) , head: head };
   }
 
   function fire(M, p, rand, emit) {
@@ -574,13 +729,17 @@
   /* Turn towards a heading, at a rate. Snapping to face a target is
      what makes a bot feel like a turret; a rate makes it feel like
      somebody who has just noticed you. */
+  /* Returns the error REMAINING after the turn, not the error before
+     it. Before-the-turn was what gated firing, and it let a bot shoot
+     while still eight degrees off -- four metres wide at thirty. */
   function turnTo(p, wantYaw, rate, dt) {
     var d = wantYaw - p.yaw;
     while (d > Math.PI) d -= Math.PI * 2;
     while (d < -Math.PI) d += Math.PI * 2;
     var step = rate * dt;
-    p.yaw += Math.max(-step, Math.min(step, d));
-    return Math.abs(d);
+    var applied = Math.max(-step, Math.min(step, d));
+    p.yaw += applied;
+    return Math.abs(d - applied);
   }
 
   function yawTo(from, to) { return Math.atan2(to.x - from.x, to.z - from.z); }
@@ -604,7 +763,13 @@
         var q = M.people[i];
         if (q.team === p.team || !q.alive) continue;
         var d = Math.hypot(q.pos.x - p.pos.x, q.pos.z - p.pos.z);
-        if (d > w.far * 1.8 + 12) continue;
+        /* How far away a bot notices you. Capped, and capped hard.
+           Uncapped at far * 1.8 + 12 an assault rifle noticed a man a
+           hundred metres off, so on every map everybody could see
+           everybody and the whole twelve stood still shooting across it
+           -- eighty-four per cent of all ticks were spent engaging and
+           the fight never moved. */
+        if (d > Math.min(w.far * 1.5 + 8, 56)) continue;
         if (!losClear(M, eyeOf(p), { x: q.pos.x, y: q.pos.y + 1.0, z: q.pos.z })) continue;
         if (d < bd) { bd = d; best = q; }
       }
@@ -621,7 +786,9 @@
 
     var t = ai.target;
     var hurtBadly = p.hp < 38;
-    ai.state = (t && M.time >= (ai.reactAt || 0)) ? (hurtBadly ? 'break' : 'engage') : 'advance';
+    var inRange = t && Math.hypot(t.pos.x - p.pos.x, t.pos.z - p.pos.z) < w.far * 1.25 + 6;
+    ai.state = (t && inRange && M.time >= (ai.reactAt || 0))
+      ? (hurtBadly ? 'break' : 'engage') : 'advance';
 
     if (M.stats) M.stats[ai.state === 'engage' ? 'engageTicks'
       : ai.state === 'break' ? 'breakTicks' : 'advanceTicks']++;
@@ -629,7 +796,7 @@
     if (ai.state === 'engage') {
       var d2 = Math.hypot(t.pos.x - p.pos.x, t.pos.z - p.pos.z);
       var off = turnTo(p, yawTo(p.pos, t.pos), 5.0 + sk.aim * 5.0, dt);
-      p.pitch = Math.atan2((p.pos.y + EYE) - (t.pos.y + 1.45), Math.max(0.5, d2));
+      p.pitch = Math.atan2((p.pos.y + EYE) - (t.pos.y + AIM_Y), Math.max(0.5, d2));
       /* Strafe rather than stand. Changed at intervals, not per frame,
          or the body vibrates on the spot. */
       ai.jitter -= dt;
@@ -640,7 +807,7 @@
       moveBy(M, p,
         Math.sin(p.yaw) * want * sp * 0.75 + side.x * ai.strafe * sp * 0.6,
         Math.cos(p.yaw) * want * sp * 0.75 + side.z * ai.strafe * sp * 0.6, dt);
-      if (off < 0.14 && M.time >= p.nextShot) fire(M, p, rand, emit);
+      if (off < 0.035 && M.time >= p.nextShot) fire(M, p, rand, emit);
       return;
     }
 
@@ -677,6 +844,11 @@
      the middle of a lane in the other half, which is the honest answer
      to "where is the fight" on a three-lane map. */
   function pickGoal(M, p, rand) {
+    var g = rawGoal(M, p, rand);
+    return navSnap(M.nav, g.x, g.z) || g;
+  }
+
+  function rawGoal(M, p, rand) {
     if (M.mode.bomb && M.bomb) {
       var att = M.bomb.attackers === p.team;
       if (M.bomb.planted) {
@@ -707,7 +879,13 @@
       if (M.stats) M.stats.paths++;
       ai.path = navPath(M.nav, p.pos, goal, M.stats);
       ai.pathAt = M.time; ai.pathIdx = 0;
-      if (M.stats && !ai.path) M.stats.pathFail++;
+      if (!ai.path) {
+        if (M.stats) M.stats.pathFail++;
+        /* Somewhere it cannot get to. Choose again next tick rather
+           than asking the same impossible question every second for the
+           rest of the match. */
+        ai.goal = null; ai.goalAt = -99;
+      }
     }
     var path = ai.path;
     if (!path || !path.length) return goal;
@@ -870,6 +1048,7 @@
     start: start,
     HEALTH: HEALTH, EYE: EYE, RESPAWN: RESPAWN,
     damageAt: damageAt, botLoadout: botLoadout,
-    nav: { build: navBuild, path: navPath, clear: navClear, blocked: navBlocked, CELL: NAV_CELL },
+    nav: { build: navBuild, path: navPath, clear: navClear, blocked: navBlocked,
+      flood: navFlood, snap: navSnap, reachable: navReachable, CELL: NAV_CELL },
   };
 })();
