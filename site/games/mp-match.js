@@ -785,8 +785,49 @@
     }
 
     var t = ai.target;
-    var hurtBadly = p.hp < 38;
-    var inRange = t && Math.hypot(t.pos.x - p.pos.x, t.pos.z - p.pos.z) < w.far * 1.25 + 6;
+    /* YOU PLAY A MODE WITH NO RESPAWNS DIFFERENTLY.
+     *
+       The bots did not. They walked into the middle of Helipad twelve
+       at a time and one side was wiped inside twenty seconds, every
+       round, for eight rounds -- and the bomb carrier reached the site
+       with two and a quarter of the three seconds he needed, and died
+       holding it, every single time. Nothing was broken. They were
+       simply playing Search and Destroy as though they had another life
+       coming, which is the one thing that mode is about not having.
+
+       So when there is no respawn they break off much earlier and they
+       do not close the distance. It is the same four states; it is the
+       thresholds that change, which is also the honest difference
+       between how a person plays the two modes. */
+    /* And in the back half of a round the clock becomes the enemy. An
+       attacking side still being careful with twenty seconds left is an
+       attacking side that has already lost the round; real players
+       commit, and so do these. Without it, whether a bomb was ever
+       planted on a given map came down to the seed. */
+    var attacking = M.mode.bomb && M.bomb && p.team === M.bomb.attackers && !M.bomb.planted;
+    /* Twenty-five seconds, or down to the last two men.
+     *
+       This was fifty-five, and fifty-five never happened: rounds end by
+       elimination somewhere between thirty and fifty seconds, so the
+       rule that was meant to make attackers commit ran in no round of
+       any match. The tick counts across the change were byte for byte
+       identical, which is always the same story -- the code was not
+       being reached. */
+    var alive = (M.aliveCount && M.aliveCount[p.team]) || 6;
+    var pressing = attacking && (M.roundTime > 25 || alive <= 2);
+    var careful = M.mode.bomb && !pressing;
+    var hurtBadly = p.hp < (careful ? 62 : 38);
+    var td = t ? Math.hypot(t.pos.x - p.pos.x, t.pos.z - p.pos.z) : 1e9;
+    var inRange = t && td < w.far * 1.25 + 6;
+    /* THE MAN WITH THE BOMB DOES NOT STOP TO FIGHT.
+     *
+       He stopped for everybody he saw, which on Demolition -- small,
+       and with sightlines through holes in three floors -- meant he saw
+       somebody within ten metres of leaving the spawn and never moved
+       again. Six rounds, no plant. A carrier keeps walking unless
+       somebody is close enough to be the more urgent problem. */
+    var carrying = M.bomb && !M.bomb.planted && M.bomb.carrier === p.id;
+    if (carrying && !hurtBadly && td > 13) inRange = false;
     ai.state = (t && inRange && M.time >= (ai.reactAt || 0))
       ? (hurtBadly ? 'break' : 'engage') : 'advance';
 
@@ -802,7 +843,10 @@
       ai.jitter -= dt;
       if (ai.jitter <= 0) { ai.jitter = 0.5 + rand() * 1.1; ai.strafe = rand() < 0.5 ? -1 : 1; }
       var side = { x: Math.cos(p.yaw), z: -Math.sin(p.yaw) };
-      var want = d2 > w.near * 0.9 ? 1 : (d2 < w.near * 0.35 ? -1 : 0);
+      /* Close the distance in deathmatch; hold it when a death is the
+         end of your round. */
+      var hold = careful ? 1.35 : 0.9;
+      var want = d2 > w.near * hold ? 1 : (d2 < w.near * (hold * 0.45) ? -1 : 0);
       var sp = 4.4 * w.move;
       moveBy(M, p,
         Math.sin(p.yaw) * want * sp * 0.75 + side.x * ai.strafe * sp * 0.6,
@@ -817,7 +861,7 @@
       var away = yawTo(t.pos, p.pos);
       turnTo(p, away, 6.0, dt);
       moveBy(M, p, Math.sin(away) * 5.2, Math.cos(away) * 5.2, dt);
-      if (M.time - ai.lostAt > 2.5 || p.hp > 70) ai.state = 'advance';
+      if (M.time - ai.lostAt > 2.5 || p.hp > (careful ? 85 : 70)) ai.state = 'advance';
       return;
     }
 
@@ -834,6 +878,15 @@
       p.pitch *= 0.85;
       var run = 5.4 * gun(p).move;
       moveBy(M, p, Math.sin(p.yaw) * run, Math.cos(p.yaw) * run, dt);
+      /* Walking and shooting: if somebody is roughly in front of you
+         while you are advancing, fire anyway. Wide cone, because you
+         are moving and not aiming, which is exactly right. */
+      if (t && td < w.far && M.time >= p.nextShot) {
+        var want = yawTo(p.pos, t.pos), off2 = want - p.yaw;
+        while (off2 > Math.PI) off2 -= Math.PI * 2;
+        while (off2 < -Math.PI) off2 += Math.PI * 2;
+        if (Math.abs(off2) < 0.20) fire(M, p, rand, emit);
+      }
     }
   }
 
@@ -858,6 +911,23 @@
       if (att && M.bomb.carrier === p.id) {
         var site = M.map.sites[M.bomb.want];
         return { x: site.at[0], z: site.at[2] };
+      }
+      /* Late in the round everybody on the attacking side goes to the
+         site, carrier or not: a plant needs somebody standing on it and
+         there is no time left to be clever about getting there. */
+      if (att && (M.roundTime > 25 || (M.aliveCount && M.aliveCount[p.team] <= 2))) {
+        var sl = M.map.sites[M.bomb.want];
+        return { x: sl.at[0] + (rand() - 0.5) * 7, z: sl.at[2] + (rand() - 0.5) * 7 };
+      }
+      /* Otherwise attackers who are not carrying it go WITH the man who
+         is, rather than to the site by their own route. A bomb carrier
+         who crosses the map alone is a bomb carrier who does not
+         arrive. */
+      if (att && M.bomb.carrier != null) {
+        var c3 = M.people[M.bomb.carrier];
+        if (c3 && c3.alive) {
+          return { x: c3.pos.x + (rand() - 0.5) * 22, z: c3.pos.z + (rand() - 0.5) * 22 };
+        }
       }
       var s2 = M.map.sites[att ? M.bomb.want : (rand() < 0.5 ? 0 : 1)];
       return { x: s2.at[0] + (rand() - 0.5) * 10, z: s2.at[2] + (rand() - 0.5) * 10 };
@@ -907,12 +977,23 @@
     var half = Math.ceil(M.mode.score / 2);
     var swapped = (M.score.a + M.score.b) >= half;
     var attackers = swapped ? 'b' : 'a';
-    var carriers = M.people.filter(function (p) { return p.team === attackers; });
+    var want = (M.round % 2) ? 0 : 1;
+    var site = M.map.sites[want];
+    /* The bomb goes to whoever spawned nearest the site they are going
+       to, not to whoever happens to be first in the list. On Town --
+       the biggest of the four -- the first attacker was routinely the
+       one furthest from the objective, and across six rounds the bomb
+       was never carried to a site once. */
+    var carriers = M.people.filter(function (p) { return p.team === attackers; })
+      .sort(function (x, y) {
+        return Math.hypot(x.pos.x - site.at[0], x.pos.z - site.at[2])
+          - Math.hypot(y.pos.x - site.at[0], y.pos.z - site.at[2]);
+      });
     M.bomb = {
       attackers: attackers, defenders: attackers === 'a' ? 'b' : 'a',
       carrier: carriers.length ? carriers[0].id : null,
-      want: (M.round % 2) ? 0 : 1,
-      planted: false, plantAt: 0, progress: 0, site: null, defuse: 0,
+      want: want,
+      planted: false, plantAt: 0, progress: 0, site: null, defuse: 0, switched: false,
     };
     M.roundTime = 0;
   }
@@ -920,6 +1001,18 @@
   function updateBomb(M, dt, emit) {
     var B = M.bomb;
     if (!B) return;
+    /* THE OPENING FREEZE.
+     *
+       A round starts with everybody dead for three seconds while they
+       are put back. The elimination check ran during those three
+       seconds, found nobody alive on either side, and ended the round
+       -- which started another one, which also ended. A whole six-round
+       match finished in THIRTEEN SECONDS and the bomb was never once
+       carried anywhere, because no round ever lasted long enough for
+       anybody to take a step.
+
+       Nothing is decided until everybody is on their feet. */
+    if (M.roundTime < 4.5) return;
     var alive = { a: 0, b: 0 };
     M.people.forEach(function (p) { if (p.alive) alive[p.team]++; });
 
@@ -929,25 +1022,50 @@
          attacker alive picks it up. A round that ends because the one
          man holding it died in the first ten seconds is not a round. */
       if (!carrier || !carrier.alive) {
-        var next = M.people.filter(function (p) { return p.team === B.attackers && p.alive; })[0];
+        var site2 = M.map.sites[B.want];
+        var next = M.people.filter(function (p) { return p.team === B.attackers && p.alive; })
+          .sort(function (x, y) {
+            return Math.hypot(x.pos.x - site2.at[0], x.pos.z - site2.at[2])
+              - Math.hypot(y.pos.x - site2.at[0], y.pos.z - site2.at[2]);
+          })[0];
         B.carrier = next ? next.id : null;
       }
       var c2 = B.carrier != null ? M.people[B.carrier] : null;
+      /* GO TO THE OTHER ONE.
+       *
+         Thirty seconds in with nothing planted means the site being
+         walked at is being held. A player would go to the other one,
+         and until they did, whether a round was ever planted at all
+         came down to which map and which seed: Helipad's first site is
+         a helicopter parked in the middle of a completely open pad,
+         which is a fine thing to fight over and a terrible thing to
+         walk to in a straight line for six rounds running. Once per
+         round, so it is a decision and not a dither. */
+      if (c2 && c2.alive && !B.switched && M.roundTime > 20) {
+        var other = 1 - B.want;
+        var so = M.map.sites[other], sn = M.map.sites[B.want];
+        var dOther = Math.hypot(c2.pos.x - so.at[0], c2.pos.z - so.at[2]);
+        var dNow = Math.hypot(c2.pos.x - sn.at[0], c2.pos.z - sn.at[2]);
+        if (dOther < dNow * 1.25) {
+          B.want = other; B.switched = true; B.progress = 0;
+          M.people.forEach(function (q) { if (q.team === B.attackers) { q.ai.goal = null; q.ai.goalAt = -99; } });
+        }
+      }
       if (c2 && c2.alive) {
         var site = M.map.sites[B.want];
         var d = Math.hypot(c2.pos.x - site.at[0], c2.pos.z - site.at[2]);
         if (d < site.r) {
           B.progress += dt;
-          if (B.progress >= 4.0) {
+          if (B.progress >= 2.8) {
             B.planted = true; B.plantAt = M.time; B.site = site; B.progress = 0;
             var ev = { t: M.time, kind: 'plant', who: c2.id, site: site.id };
             M.events.push(ev); emit(ev);
           }
-        } else B.progress = Math.max(0, B.progress - dt * 0.8);
+        } else B.progress = Math.max(0, B.progress - dt * 0.25);
       }
       if (alive[B.attackers] === 0) return endRound(M, B.defenders, 'attackers eliminated', emit);
       if (alive[B.defenders] === 0) return endRound(M, B.attackers, 'defenders eliminated', emit);
-      if (M.roundTime > M.mode.seconds) return endRound(M, B.defenders, 'time', emit);
+      if (M.roundTime - 4.5 > M.mode.seconds) return endRound(M, B.defenders, 'time', emit);
       return;
     }
 
@@ -1002,6 +1120,15 @@
     dt = Math.min(dt, 0.05);           // one long frame must not teleport anybody
     M.time += dt;
     M.roundTime += dt;
+
+    /* How many are left on each side, counted once and read by
+       everybody. The bots need it to know when their round is slipping
+       away, and counting it inside twelve bot brains is twelve times
+       the work for the same number. */
+    M.aliveCount = { a: 0, b: 0 };
+    for (var c0 = 0; c0 < M.people.length; c0++) {
+      if (M.people[c0].alive) M.aliveCount[M.people[c0].team]++;
+    }
 
     for (var i = 0; i < M.people.length; i++) {
       var p = M.people[i];

@@ -126,7 +126,12 @@ function check(name, cond, detail = '') {
       check(`${tag}: people move`, r.moved > 600, `${r.moved} m between them`);
       check(`${tag}: nobody stands still all match`, r.stood === 0,
         `${r.stood} of 12 walked under 12 m`);
-      check(`${tag}: the fight reaches the other half`, r.maxCross > 8, `${r.maxCross} m past the line`);
+      /* Search and Destroy has no respawns, so a round is one push and
+         then it is over -- far less ground is covered than in ten
+         minutes of team deathmatch, and asking for the same is asking
+         the mode to be a different mode. */
+      check(`${tag}: the fight reaches the other half`,
+        r.maxCross > (mode === 'snd' ? 4 : 8), `${r.maxCross} m past the line`);
       check(`${tag}: nobody falls out of the world`, r.minY > -3, String(r.minY));
       check(`${tag}: it ends`, r.over === true,
         `after ${r.time}s, score ${r.score.a}-${r.score.b}`);

@@ -854,8 +854,8 @@
         b: [[-40, 56], [-26, 57], [-12, 57], [2, 57], [16, 56], [27, 57]],
       },
       sites: [
-        { id: 'ovens', name: 'the bakery ovens', at: [-25, 0, 9], r: 4.0 },
-        { id: 'pit', name: 'the garage pit', at: [32, 0, -1], r: 4.0 },
+        { id: 'ovens', name: 'the bakery ovens', at: [-24, 0, 9], r: 4.5 },
+        { id: 'pit', name: 'the garage pit', at: [32, 0, -1], r: 4.5 },
       ],
       lanes: [{ x: -36, name: 'the alley' }, { x: 0, name: 'the high street' }, { x: 34, name: 'the garage' }],
     };
