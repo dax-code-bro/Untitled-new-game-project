@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Bunker Nine &mdash; Multiplayer</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #05060a; overflow: hidden; }
+  #game { position: fixed; inset: 0; width: 100%; height: 100%; }
+  /* The loading plate. Building a map and a navigation grid is one long
+     synchronous call, so this has to be on the screen BEFORE it starts
+     and taken off after -- there is no frame in between to put it up in. */
+  #boot {
+    position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; background: #05060a;
+    font-family: Georgia, 'Times New Roman', serif; color: #e8ddc8;
+    letter-spacing: .30em; text-transform: uppercase;
+  }
+  #boot .t { font-size: 13px; color: #6b6455; }
+  #boot .m { font-size: 27px; letter-spacing: .20em; margin-top: 14px; color: #e8ddc8; }
+  #boot .s { font-size: 11px; color: #6b6455; margin-top: 10px; }
+  #boot.gone { display: none; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="boot"><div class="t">Multiplayer</div><div class="m">&mdash;</div><div class="s">building the map</div></div>
+<script src="../engine/legend-engine.js"></script>
+<script src="mp-data.js"></script>
+<script src="mp-maps.js"></script>
+<script src="mp-match.js"></script>
+<script src="mp-game.js"></script>
+<script>
+/* What the lobby chose, read back out of local storage. The menu is on
+   the other page and this one has to stand up on its own if somebody
+   opens it directly, so every field has a default. */
+(function () {
+  var want = { map: 'town', mode: 'tdm', loadout: null, name: 'YOU' };
+  try {
+    var raw = localStorage.getItem('b9.mp.v1');
+    var mp = raw ? JSON.parse(raw) : null;
+    if (mp) {
+      if (mp.map) want.map = mp.map;
+      if (mp.mode) want.mode = mp.mode;
+      if (mp.loadout) want.loadout = mp.loadout;
+    }
+    var q = new URLSearchParams(location.search);
+    if (q.get('map')) want.map = q.get('map');
+    if (q.get('mode')) want.mode = q.get('mode');
+  } catch (e) { /* storage off, or an older blob: play the defaults */ }
+  if (!MP_MAPS.has(want.map)) want.map = 'town';
+
+  var boot = document.getElementById('boot');
+  var named = (MP_DATA.MAPS.filter(function (m) { return m.id === want.map; })[0] || {}).name;
+  boot.querySelector('.m').textContent = named || want.map;
+
+  /* Two frames before the build, so the plate is actually painted
+     rather than queued behind the thing it is meant to cover. */
+  requestAnimationFrame(function () { requestAnimationFrame(function () {
+    try {
+      window.MP = MP_GAME.start({
+        canvas: '#game', mapId: want.map, mode: want.mode,
+        loadout: want.loadout, name: want.name,
+        onQuit: function () { location.href = 'bunker-nine.html'; },
+      });
+      boot.classList.add('gone');
+    } catch (err) {
+      boot.querySelector('.s').textContent = 'failed: ' + (err && err.message ? err.message : err);
+      boot.querySelector('.s').style.color = '#ff6a5a';
+      throw err;
+    }
+  }); });
+}());
+</script>
+</body>
+</html>

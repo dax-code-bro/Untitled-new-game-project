@@ -451,6 +451,8 @@
     M.spawnOf = function (p) { return pickSpawn(M, p); };
     M.damage = function (from, to, amount, head) { return hurt(M, from, to, amount, head, emit); };
     M.fire = function (p) { return fire(M, p, rand, emit); };
+    M.control = function (cmd, dt) { control(M, cmd, dt); };
+    M._emit = emit;
     M.nav = nav;
     return M;
   }
@@ -708,16 +710,34 @@
     return h ? h.point.y : null;
   }
 
-  function moveBy(M, p, vx, vz, dt) {
+  var GRAVITY = 19.6, JUMP = 6.0, STEP_UP = 0.62;
+
+  function moveBy(M, p, vx, vz, dt, jump) {
     var nx = p.pos.x + vx * dt, nz = p.pos.z + vz * dt;
     if (!cellBlocked(M.nav, nx, nz)) { p.pos.x = nx; p.pos.z = nz; }
     else {
       if (!cellBlocked(M.nav, nx, p.pos.z)) p.pos.x = nx;
       if (!cellBlocked(M.nav, p.pos.x, nz)) p.pos.z = nz;
     }
-    var g = groundAt(M, p.pos.x, p.pos.z, p.pos.y + 2.2);
-    if (g != null && Math.abs(g - p.pos.y) < 2.0) p.pos.y = g;
-    else if (g != null && g < p.pos.y) p.pos.y = Math.max(g, p.pos.y - 9 * dt);
+    /* Vertical properly, rather than snapping to whatever is underneath.
+     *
+       Snapping meant a body could step up a wall as easily as a kerb and
+       could not fall off anything at all. Now there is a step height --
+       stairs are a 0.26 rise, so 0.62 takes a step and refuses a wall --
+       and everything else is gravity. Which also gives the player a jump
+       without a second movement path to keep in step with this one. */
+    var g = groundAt(M, p.pos.x, p.pos.z, p.pos.y + 2.4);
+    p.vy = p.vy || 0;
+    var onFloor = g != null && p.pos.y - g <= STEP_UP && p.vy <= 0.001;
+    if (onFloor) {
+      p.pos.y = g; p.vy = 0; p.grounded = true;
+      if (jump) { p.vy = JUMP; p.grounded = false; }
+    } else {
+      p.grounded = false;
+      p.vy -= GRAVITY * dt;
+      p.pos.y += p.vy * dt;
+      if (g != null && p.pos.y <= g) { p.pos.y = g; p.vy = 0; p.grounded = true; }
+    }
     if (p.actor && p.actor.controller) {
       p.actor.controller.teleport([p.pos.x, p.pos.y + 0.9, p.pos.z]);
       if (p.actor.rotation && p.actor.rotation.setFromAxisAngle) {
@@ -1160,6 +1180,47 @@
     return undefined;
   }
 
+  /* ================================================================
+     THE PLAYER
+     ================================================================
+     You are combatant zero and you move, shoot and reload through the
+     same functions the bots do. The only thing this adds is reading a
+     set of intentions instead of deciding them, which is the whole of
+     the difference between a person and a bot and should be the whole
+     of the difference in the code as well. */
+  function control(M, cmd, dt) {
+    var p = M.you;
+    if (!p || !p.alive || M.over) return;
+    var w = gun(p);
+    p.yaw = cmd.yaw; p.pitch = cmd.pitch;
+    p.aiming = !!cmd.aim;
+
+    var fwd = cmd.forward || 0, str = cmd.right || 0;
+    var len = Math.hypot(fwd, str);
+    if (len > 1) { fwd /= len; str /= len; }
+    /* Sprinting is forward only, and you cannot sprint down your sights.
+       Crouching is slower and steadier. */
+    var sprint = cmd.run && fwd > 0.5 && !p.aiming;
+    var speed = 5.2 * w.move * (sprint ? 1.34 : 1) * (cmd.crouch ? 0.52 : 1)
+      * (p.aiming ? 0.62 : 1);
+    var sy = Math.sin(p.yaw), cy = Math.cos(p.yaw);
+    moveBy(M, p, (sy * fwd + cy * str) * speed, (cy * fwd - sy * str) * speed, dt,
+      !!cmd.jump && p.grounded);
+
+    if (cmd.swap && M.time > (p._swapAt || 0)) {
+      p.held = 1 - p.held; p._swapAt = M.time + 0.6; p.nextShot = M.time + 0.5;
+      p.reloadUntil = 0;
+    }
+    if (cmd.reload && !p.reloadUntil && p.ammo[p.held] < w.mag) beginReload(M, p);
+    if (cmd.fire && (w.auto || !p._heldTrigger)) fireHuman(M, p);
+    p._heldTrigger = !!cmd.fire;
+    p.sprinting = sprint;
+    p.crouching = !!cmd.crouch;
+  }
+
+  var humanRand = rng(0x5eed);
+  function fireHuman(M, p) { return fire(M, p, humanRand, M._emit || function () {}); }
+
   function scoreboard(M) {
     return M.people.slice().sort(function (x, y) {
       return (y.kills - y.deaths) - (x.kills - x.deaths) || y.kills - x.kills;
@@ -1174,7 +1235,8 @@
   W.MP_MATCH = {
     start: start,
     HEALTH: HEALTH, EYE: EYE, RESPAWN: RESPAWN,
-    damageAt: damageAt, botLoadout: botLoadout,
+    damageAt: damageAt, botLoadout: botLoadout, control: control,
+    AIM_Y: 1.25, GRAVITY: GRAVITY, JUMP: JUMP,
     nav: { build: navBuild, path: navPath, clear: navClear, blocked: navBlocked,
       flood: navFlood, snap: navSnap, reachable: navReachable, CELL: NAV_CELL },
   };

@@ -2051,23 +2051,27 @@ function paintLobby() {
   }
   el.roster.innerHTML = side(r.us, 'us', 'Your side') + side(r.them, 'them', 'Theirs');
 
-  /* The button is here and it is honest about what it does. The lobby,
-     the loadout, the guns and the maps are built; the match that runs
-     on them is not, and a PLAY button that drops you into nothing is
-     worse than one that says so. */
+  /* The button. It writes the loadout down and hands over to the match
+     page, which stands up its own engine on the map you chose. */
   el.gowrap.innerHTML = '';
   var go = document.createElement('div');
   go.className = 'go';
-  go.textContent = 'Find a match';
+  go.textContent = 'Drop in';
   el.gowrap.appendChild(go);
   rows.push(wire({
     el: go,
     onEnter: function () {
-      beep('back');
+      /* The match is its own page. Zombies and multiplayer are meant to
+         be separate things on separate servers, and a match that stands
+         up its own engine on its own page cannot take the bunker down
+         with it when something in it goes wrong. */
+      mpSave();
       el.mpfoot.innerHTML = '<div><b>' + esc(mapd.name.toUpperCase()) + ' &middot; '
-        + esc(md.short) + '</b> &mdash; the lobby, the loadout and the maps are laid out. '
-        + 'The match that runs on them is the next thing being built, so there is '
-        + 'nothing to drop into yet.</div>';
+        + esc(md.short) + '</b> &mdash; dropping in&hellip;</div>';
+      try {
+        W.location.href = 'multiplayer.html?map=' + encodeURIComponent(mp.map)
+          + '&mode=' + encodeURIComponent(mp.mode);
+      } catch (e) { beep('back'); }
     },
   }));
 

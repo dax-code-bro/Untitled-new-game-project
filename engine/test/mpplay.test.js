@@ -1,0 +1,218 @@
+#!/usr/bin/env node
+/* Multiplayer, played rather than simulated.
+ *
+ * mpmatch.test.js proves the rules work with nobody watching. This
+ * proves the other half: that a person's keyboard and mouse reach those
+ * same rules, that the camera is where the player is, that the HUD says
+ * what the match says, and that the thing renders.
+ *
+ * It drives the REAL input object -- the same one a keyboard feeds --
+ * rather than calling the match directly, because a test that bypasses
+ * the input layer is a test that would pass with the input layer
+ * disconnected, which is exactly the bug worth catching.
+ *
+ * Usage: node engine/test/mpplay.test.js
+ */
+const fs = require('fs');
+const path = require('path');
+
+let chromium;
+try { ({ chromium } = require('playwright')); }
+catch (e) { console.error('needs playwright: npm i --no-save playwright'); process.exit(2); }
+
+const ROOT = path.join(__dirname, '..', '..');
+const CHROME = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const OUT = process.env.SHOT_DIR || '/tmp';
+
+let passed = 0, failed = 0;
+function check(name, cond, detail = '') {
+  if (cond) { passed++; console.log(`  ok   ${name}`); }
+  else { failed++; console.log(`  FAIL ${name} ${detail}`); }
+}
+
+(async () => {
+  const browser = await chromium.launch({
+    executablePath: CHROME,
+    args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader',
+      '--disable-dev-shm-usage'],
+  });
+  const page = await browser.newPage({ viewport: { width: 1000, height: 620 } });
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message.split('\n')[0]));
+
+  await page.goto('file://' + path.join(ROOT, 'site/games/multiplayer.html') + '?map=helipad&mode=tdm');
+  await page.waitForFunction(() => window.MP && window.MP.match, null, { timeout: 120000 });
+  await page.waitForTimeout(400);
+
+  const up = await page.evaluate(() => {
+    const M = window.MP.match;
+    return {
+      boot: document.getElementById('boot').classList.contains('gone'),
+      ui: !!document.getElementById('mpui'),
+      people: M.people.length,
+      you: M.you.name,
+      alive: M.you.alive,
+      map: M.mapId, mode: M.mode.id,
+      bodies: M.people.filter((p) => !!p.actor).length,
+      lock: !document.querySelector('#mpui .lock.hide'),
+      gun: document.querySelector('#mpui .gun .nm').textContent,
+      hp: document.querySelector('#mpui .hp .n').textContent,
+    };
+  });
+  check('the page builds and hands over', up.boot && up.ui);
+  check('twelve people are in the match', up.people === 12, String(up.people));
+  check('and every one of them has a body', up.bodies === 12, String(up.bodies));
+  check('you are alive on the map you chose',
+    up.alive && up.map === 'helipad' && up.mode === 'tdm', `${up.map}/${up.mode}`);
+  check('the HUD is showing your gun and your health',
+    up.gun.length > 1 && up.hp === '100', `${up.gun} / ${up.hp}`);
+  check('it asks for the mouse before it takes it', up.lock === true);
+  await page.screenshot({ path: path.join(OUT, 'play-locked.jpg'), type: 'jpeg', quality: 82 });
+
+  /* Take the lock the way a click does, then play. */
+  await page.evaluate(() => window.MP.input._lock(true));
+
+  const walked = await page.evaluate(async () => {
+    const G = window.MP, M = G.match, p = M.you;
+    const from = { x: p.pos.x, y: p.pos.y, z: p.pos.z };
+    G.input._press('w');
+    for (let i = 0; i < 90; i++) await new Promise((r) => requestAnimationFrame(r));
+    G.input._release('w');
+    const to = { x: p.pos.x, y: p.pos.y, z: p.pos.z };
+    const cam = G.game.camera.position;
+    return {
+      moved: Math.hypot(to.x - from.x, to.z - from.z),
+      camNear: Math.hypot(cam.x - to.x, cam.z - to.z),
+      camEye: cam.y - to.y,
+      y: to.y,
+    };
+  });
+  check('W walks you forward', walked.moved > 3, `${walked.moved.toFixed(1)} m`);
+  check('the camera is on your head', walked.camNear < 0.4 && Math.abs(walked.camEye - 1.62) < 0.5,
+    `${walked.camNear.toFixed(2)} m away, ${walked.camEye.toFixed(2)} up`);
+  check('and you did not sink or fly', Math.abs(walked.y) < 6, String(walked.y.toFixed(2)));
+
+  const looked = await page.evaluate(async () => {
+    const G = window.MP;
+    const y0 = G.yaw;
+    G.input._look(400, 0);
+    for (let i = 0; i < 4; i++) await new Promise((r) => requestAnimationFrame(r));
+    const y1 = G.yaw;
+    /* And the clamp: you cannot look through your own feet. */
+    G.input._look(0, 99999);
+    for (let i = 0; i < 4; i++) await new Promise((r) => requestAnimationFrame(r));
+    return { turned: y1 - y0, pitch: G.pitch };
+  });
+  check('the mouse turns you', Math.abs(looked.turned) > 0.3, String(looked.turned.toFixed(2)));
+  check('and the pitch is clamped', looked.pitch <= 1.46, String(looked.pitch.toFixed(2)));
+
+  const shot = await page.evaluate(async () => {
+    const G = window.MP, M = G.match, p = M.you;
+    const before = p.ammo[p.held];
+    G.input.buttons.fire = true;
+    for (let i = 0; i < 30; i++) await new Promise((r) => requestAnimationFrame(r));
+    G.input.buttons.fire = false;
+    const after = p.ammo[p.held];
+    /* And reloading gives it back. */
+    G.input._press('r');
+    for (let i = 0; i < 4; i++) await new Promise((r) => requestAnimationFrame(r));
+    G.input._release('r');
+    const reloading = p.reloadUntil > M.time;
+    for (let i = 0; i < 180; i++) await new Promise((r) => requestAnimationFrame(r));
+    return { before, after, reloading, full: p.ammo[p.held], mag: p.guns[p.held].mag,
+      hudMag: document.querySelector('#mpui .gun .m').textContent };
+  });
+  check('the trigger empties the magazine', shot.after < shot.before,
+    `${shot.before} to ${shot.after}`);
+  check('R reloads it', shot.reloading && shot.full > shot.after,
+    `${shot.full} of ${shot.mag}`);
+  check('and the HUD is reading the same magazine',
+    shot.hudMag === String(shot.full), `${shot.hudMag} vs ${shot.full}`);
+
+  const aim = await page.evaluate(async () => {
+    const G = window.MP;
+    const hip = document.querySelector('#mpui .cross .up').style.top;
+    const vmHip = G.viewmodel.parts[0].a.position.x;
+    G.input.buttons.aim = true;
+    for (let i = 0; i < 12; i++) await new Promise((r) => requestAnimationFrame(r));
+    const ads = document.querySelector('#mpui .cross .up').style.top;
+    const vmAds = G.viewmodel.parts[0].a.position.x;
+    G.input.buttons.aim = false;
+    for (let i = 0; i < 8; i++) await new Promise((r) => requestAnimationFrame(r));
+    return { hip, ads, moved: Math.abs(vmAds - vmHip) > 0.01 };
+  });
+  check('aiming tightens the crosshair', aim.hip !== aim.ads, `${aim.hip} -> ${aim.ads}`);
+  check('and brings the gun to the middle', aim.moved);
+  await page.screenshot({ path: path.join(OUT, 'play-hipfire.jpg'), type: 'jpeg', quality: 82 });
+
+  await page.evaluate(async () => {
+    window.MP.input.buttons.aim = true;
+    for (let i = 0; i < 14; i++) await new Promise((r) => requestAnimationFrame(r));
+  });
+  await page.screenshot({ path: path.join(OUT, 'play-ads.jpg'), type: 'jpeg', quality: 82 });
+  await page.evaluate(() => { window.MP.input.buttons.aim = false; });
+
+  /* Let the match run so the feed and the score have something in them. */
+  const ran = await page.evaluate(async () => {
+    const M = window.MP.match;
+    const t0 = M.time;
+    for (let i = 0; i < 60 * 25; i++) {
+      await new Promise((r) => requestAnimationFrame(r));
+      if (M.score.a + M.score.b > 6) break;
+    }
+    return { dt: M.time - t0, score: M.score, kills: M.events.filter((e) => e.kind === 'kill').length,
+      feed: document.querySelectorAll('#mpui .feed div').length,
+      top: document.querySelector('#mpui .top .us').textContent };
+  });
+  check('the match runs while you play it', ran.kills > 0,
+    `${ran.kills} kills in ${ran.dt.toFixed(0)}s`);
+  check('the killfeed fills', ran.feed > 0, String(ran.feed));
+  check('the score on the HUD is the score in the match',
+    ran.top === String(ran.score.a), `${ran.top} vs ${ran.score.a}`);
+  await page.screenshot({ path: path.join(OUT, 'play-running.jpg'), type: 'jpeg', quality: 82 });
+
+  const board = await page.evaluate(async () => {
+    window.MP.input._press('tab');
+    for (let i = 0; i < 4; i++) await new Promise((r) => requestAnimationFrame(r));
+    const rows = document.querySelectorAll('#mpui .board table tr').length;
+    return { shown: !document.querySelector('#mpui .board').classList.contains('hide'), rows };
+  });
+  check('Tab shows a scoreboard with everybody on it', board.shown && board.rows === 13,
+    `${board.rows} rows`);
+  await page.screenshot({ path: path.join(OUT, 'play-scores.jpg'), type: 'jpeg', quality: 82 });
+  await page.evaluate(() => window.MP.input._release('tab'));
+
+  /* Being killed has to produce the death screen and then put you back. */
+  const died = await page.evaluate(async () => {
+    const M = window.MP.match, p = M.you;
+    const killer = M.people.filter((q) => q.team !== p.team)[0];
+    M.damage(killer, p, 500, false);
+    for (let i = 0; i < 6; i++) await new Promise((r) => requestAnimationFrame(r));
+    const shown = !document.querySelector('#mpui .dead').classList.contains('hide');
+    const by = document.querySelector('#mpui .dead .by').textContent;
+    const deaths = p.deaths;
+    for (let i = 0; i < 60 * 8; i++) {
+      await new Promise((r) => requestAnimationFrame(r));
+      if (p.alive) break;
+    }
+    return { shown, by, deaths, backUp: p.alive, hp: p.hp };
+  });
+  check('dying shows who did it', died.shown && /killed by/i.test(died.by), died.by);
+  check('and you come back with full health', died.backUp && died.hp > 95,
+    `${died.backUp} at ${Math.round(died.hp)}`);
+  await page.screenshot({ path: path.join(OUT, 'play-dead.jpg'), type: 'jpeg', quality: 82 });
+
+  /* And the picture is actually a picture. */
+  const lit = await page.evaluate(() => {
+    const c = document.querySelector('#game');
+    const g = c.getContext('webgl2') || c.getContext('webgl');
+    return !!g;
+  });
+  check('there is a live GL context', lit);
+
+  check('no page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
+  console.log(`\n  shots in ${OUT}`);
+  console.log(`  ${passed} passed, ${failed} failed`);
+  await browser.close();
+  process.exit(failed ? 1 : 0);
+})();
