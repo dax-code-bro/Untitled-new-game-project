@@ -130,19 +130,34 @@ function check(name, cond, detail = '') {
     shot.hudMag === String(shot.full), `${shot.hudMag} vs ${shot.full}`);
 
   const aim = await page.evaluate(async () => {
-    const G = window.MP;
+    const G = window.MP, M = G.match;
+    /* Alive first. Standing still on Helipad for four seconds while a
+       magazine reloads is a good way to be shot, and a dead player has
+       no viewmodel to move -- which made this check fail for a reason
+       that had nothing to do with aiming. */
+    for (let i = 0; i < 60 * 12 && !M.you.alive; i++) {
+      await new Promise((r) => requestAnimationFrame(r));
+    }
+    M.you.hp = 100;
+    for (let i = 0; i < 4; i++) await new Promise((r) => requestAnimationFrame(r));
     const hip = document.querySelector('#mpui .cross .up').style.top;
     const vmHip = G.viewmodel.parts[0].a.position.x;
+    const eyeHip = G.game.camera.position.x;
     G.input.buttons.aim = true;
     for (let i = 0; i < 12; i++) await new Promise((r) => requestAnimationFrame(r));
     const ads = document.querySelector('#mpui .cross .up').style.top;
     const vmAds = G.viewmodel.parts[0].a.position.x;
+    const eyeAds = G.game.camera.position.x;
     G.input.buttons.aim = false;
     for (let i = 0; i < 8; i++) await new Promise((r) => requestAnimationFrame(r));
-    return { hip, ads, moved: Math.abs(vmAds - vmHip) > 0.01 };
+    /* Measured against the eye, so walking a few centimetres between
+       the two samples cannot be mistaken for the gun coming across. */
+    return { hip, ads, alive: M.you.alive,
+      moved: Math.abs((vmAds - eyeAds) - (vmHip - eyeHip)) > 0.01 };
   });
   check('aiming tightens the crosshair', aim.hip !== aim.ads, `${aim.hip} -> ${aim.ads}`);
-  check('and brings the gun to the middle', aim.moved);
+  check('and brings the gun to the middle', aim.moved && aim.alive,
+    aim.alive ? 'the gun did not move' : 'you were dead');
   await page.screenshot({ path: path.join(OUT, 'play-hipfire.jpg'), type: 'jpeg', quality: 82 });
 
   await page.evaluate(async () => {
