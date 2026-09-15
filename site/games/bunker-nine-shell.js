@@ -693,6 +693,29 @@ var CSS3 = `
 #b9shell .mphead .who b { color:#a89b80; font-weight:normal; display:block; font-size:14px;
   letter-spacing:.20em; }
 
+/* ---- operators ---- */
+#b9shell .opspane { gap:30px; }
+#b9shell .oplist { width:320px; flex:none; overflow:auto; display:flex; flex-direction:column; gap:7px; }
+#b9shell .opdetail { flex:1; min-width:0; display:flex; flex-direction:column; gap:14px;
+  background:rgba(12,11,9,.52); border:1px solid #2b2721; padding:20px 24px; }
+#b9shell .oprow { display:flex; align-items:center; gap:14px; padding:11px 14px;
+  border:1px solid #272420; background:rgba(10,9,8,.48); cursor:pointer; }
+#b9shell .oprow.on { border-color:#6d5a33; background:rgba(40,32,16,.5); }
+#b9shell .oprow.sel .nm { color:#ffd27a; }
+#b9shell .oprow .sil { width:22px; flex:none; align-self:stretch;
+  background:linear-gradient(180deg,#4c4740 0,#2a2722 100%); }
+#b9shell .oprow .nm { font-size:15px; letter-spacing:.20em; color:#bcae92; }
+#b9shell .oprow .bd { margin-left:auto; font-size:10.5px; letter-spacing:.16em; color:#6b6455; }
+#b9shell .opfig { flex:1; min-height:120px; display:flex; align-items:center; justify-content:center; }
+#b9shell .opfig svg { height:100%; max-height:300px; }
+#b9shell .ophead h3 { margin:0; font-size:26px; letter-spacing:.22em; color:#ffd27a; font-weight:normal; }
+#b9shell .ophead .opblurb { display:block; margin-top:5px; font-size:12.5px; color:#8b8271;
+  letter-spacing:.06em; }
+#b9shell .opstats { display:flex; flex-wrap:wrap; gap:8px 22px; font-size:11px;
+  letter-spacing:.18em; color:#6b6455; text-transform:uppercase; }
+#b9shell .opstats b { color:#c7b892; font-weight:normal; }
+#b9shell .opconfirm .go { display:inline-block; }
+
 #b9shell .mpbody { position:relative; z-index:2; width:min(1240px,94vw); margin:18px auto 0;
   flex:1; min-height:0; display:flex; }
 #b9shell .mppane { display:none; flex:1; min-height:0; gap:30px; }
@@ -934,6 +957,7 @@ function buildDom() {
       <div class="mptabs">
         <div class="mptab lobtab">Lobby</div>
         <div class="mptab loadtab">Loadout</div>
+        <div class="mptab optab">Operators</div>
       </div>
       <span class="sp"></span>
       <div class="who"></div>
@@ -961,6 +985,15 @@ function buildDom() {
             <div class="stats"></div>
           </div>
           <div class="confirm"></div>
+        </div>
+      </div>
+      <div class="mppane opspane">
+        <div class="oplist"></div>
+        <div class="opdetail">
+          <div class="ophead"><h3 class="opname">&mdash;</h3><span class="opblurb"></span></div>
+          <div class="opfig"></div>
+          <div class="opstats"></div>
+          <div class="opconfirm"></div>
         </div>
       </div>
     </div>
@@ -998,7 +1031,11 @@ function buildDom() {
     mapfoot: q('.mapfoot'),
     tabs: q('.tabs'), setbody: q('.setbody'), setfoot: q('.setfoot'),
     mp: q('.mp'), train: q('.train .fig'), mptabs: q('.mptabs'),
-    lobtab: q('.lobtab'), loadtab: q('.loadtab'), mpwho: q('.mphead .who'),
+    lobtab: q('.lobtab'), loadtab: q('.loadtab'), optab: q('.optab'),
+    mpwho: q('.mphead .who'),
+    opspane: q('.opspane'), oplist: q('.oplist'), opname: q('.opname'),
+    opblurb: q('.opblurb'), opfig: q('.opfig'), opstats: q('.opstats'),
+    opconfirm: q('.opconfirm'),
     lobby: q('.lobby'), loadoutp: q('.loadout'),
     modelist: q('.modelist'), mplist: q('.mplist'), lobinfo: q('.lobinfo'),
     roster: q('.roster'), gowrap: q('.gowrap'),
@@ -1010,6 +1047,7 @@ function buildDom() {
 
   el.lobtab.addEventListener('click', function () { if (mpTab !== 'lobby') { beep('move'); openMP('lobby'); } });
   el.loadtab.addEventListener('click', function () { if (mpTab !== 'loadout') { beep('move'); openMP('loadout'); } });
+  el.optab.addEventListener('click', function () { if (mpTab !== 'operators') { beep('move'); openMP('operators'); } });
 }
 
 function show(which) {
@@ -1760,6 +1798,10 @@ function mpLoad() {
   var got = null;
   try { got = raw ? JSON.parse(raw) : null; } catch (e) { got = null; }
   mp = got && typeof got === 'object' ? got : {};
+  /* Who you are. Checked the same way everything else here is, because
+     a saved id that no longer exists is a screen with nobody selected
+     on it and no way to fix that from inside the screen. */
+  if (!OPS.some(function (o) { return o.id === mp.operator; })) mp.operator = 'delta';
   if (!MP) return mp;
 
   var L = MP.defaultLoadout();
@@ -1950,6 +1992,22 @@ function trainerSvg(h) {
 var trainerFor = null;
 function paintTrainer() {
   var h = heroNow();
+  /* The man on the range is the OPERATOR you picked, not the zombies
+     hero. Multiplayer has its own seven and its own chooser, and a
+     lobby that shows somebody else behind the tabs is a lobby lying
+     about who is about to drop in. His frame comes from the same
+     numbers the engine builds him with, so the figure on the range and
+     the body that spawns are the same man.
+
+     He is keyed on the operator as well as the colours, so switching
+     between two men with the same sleeve still restarts the drill --
+     which it has to, because the drill IS the difference. */
+  var o = opNow();
+  h = {
+    id: o.id, name: o.name,
+    skin: h.skin, sleeve: h.sleeve,
+    tall: o.h / 1.79, build: o.build,
+  };
   if (trainerFor === h.id + '|' + h.skin) return;   // do not restart the drill
   trainerFor = h.id + '|' + h.skin;
   el.train.innerHTML = trainerSvg(h);
@@ -1970,15 +2028,23 @@ function openMP(tab) {
   paintTrainer();
   el.lobtab.classList.toggle('sel', mpTab === 'lobby');
   el.loadtab.classList.toggle('sel', mpTab === 'loadout');
+  el.optab.classList.toggle('sel', mpTab === 'operators');
   el.mp.classList.toggle('deep', mpTab === 'loadout');
   el.lobby.classList.toggle('on', mpTab === 'lobby');
   el.loadoutp.classList.toggle('on', mpTab === 'loadout');
-  /* The shoulder buttons move between the two tabs wherever you are in
-     either of them, which is the one thing a pad expects a tabbed
-     screen to do. */
-  tabHook = function (d) { openMP(d > 0 ? 'loadout' : 'lobby'); };
+  el.opspane.classList.toggle('on', mpTab === 'operators');
+  /* The shoulder buttons walk the three tabs in order wherever you are
+     in any of them, which is the one thing a pad expects a tabbed
+     screen to do. It was a two-way toggle while there were two. */
+  tabHook = function (d) {
+    var order = ['lobby', 'loadout', 'operators'];
+    var i = order.indexOf(mpTab);
+    openMP(order[(i + (d > 0 ? 1 : order.length - 1)) % order.length]);
+  };
   startHook = null;
-  if (mpTab === 'lobby') paintLobby(); else openLoadout();
+  if (mpTab === 'lobby') paintLobby();
+  else if (mpTab === 'operators') paintOperators();
+  else openLoadout();
 }
 
 function closeMP() { tabHook = null; startHook = null; }
@@ -2070,13 +2136,131 @@ function paintLobby() {
         + esc(md.short) + '</b> &mdash; dropping in&hellip;</div>';
       try {
         W.location.href = 'multiplayer.html?map=' + encodeURIComponent(mp.map)
-          + '&mode=' + encodeURIComponent(mp.mode);
+          + '&mode=' + encodeURIComponent(mp.mode)
+          + '&op=' + encodeURIComponent(mp.operator || 'delta');
       } catch (e) { beep('back'); }
     },
   }));
 
   el.mpfoot.innerHTML = '<div><b>&uarr;&darr;</b> move &nbsp; <b>Enter / A</b> choose &nbsp; '
     + '<b>LB / RB</b> lobby and loadout &nbsp; <b>Esc / B</b> back</div>';
+  navSet(rows, openMain);
+}
+
+/* ---------------- operators ----------------
+
+   "There is another thing right beside where it says loadout in lobby.
+   Another thing says operators where you can choose who you wanna play
+   as."
+
+   Seven of them, and the point of the screen is that they are seven
+   different people rather than seven names over one figure -- so what
+   it shows is each man's own silhouette at his own height, and the
+   numbers underneath are the real ones the engine builds him from. A
+   chooser that showed the same body seven times would be worse than no
+   chooser at all, because it would be a promise the game then breaks
+   the moment you spawn. */
+
+var OPS = [
+  { id: 'destroyer', name: 'DESTROYER', role: 'Breacher',
+    blurb: 'Carries the door with him. Slowest of the seven and the only one nothing moves.',
+    h: 1.92, build: 1.24, reach: 'Long', frame: 'Heavy' },
+  { id: 'charlie', name: 'CHARLIE', role: 'Marksman',
+    blurb: 'Was somewhere else before this, and has not said where.',
+    h: 1.83, build: 0.86, reach: 'Long', frame: 'Lean' },
+  { id: 'delta', name: 'DELTA', role: 'Assault',
+    blurb: 'Third tour, second nose. Thickset, and takes the first door.',
+    h: 1.79, build: 1.04, reach: 'Even', frame: 'Solid' },
+  { id: 'alpha', name: 'ALPHA', role: 'Team lead',
+    blurb: 'Talks least, moves first. Tall, and quick with it.',
+    h: 1.87, build: 0.96, reach: 'Long', frame: 'Rangy' },
+  { id: 'abscess', name: 'ABSCESS', role: 'Recon',
+    blurb: 'Whatever was in the tanks under Nine, he was under it too.',
+    h: 1.81, build: 0.78, reach: 'Even', frame: 'Gaunt' },
+  { id: 'biohazard', name: 'BIOHAZARD', role: 'Decon',
+    blurb: 'Sealed, and happier that way. Broad, low and hard to move.',
+    h: 1.76, build: 1.30, reach: 'Short', frame: 'Heavy' },
+  { id: 'swat', name: 'SWAT', role: 'Entry',
+    blurb: 'Came from a job that had rules. Smallest target on the team.',
+    h: 1.72, build: 1.10, reach: 'Short', frame: 'Compact' },
+];
+
+function opNow() {
+  var want = mp && mp.operator;
+  for (var i = 0; i < OPS.length; i++) if (OPS[i].id === want) return OPS[i];
+  return OPS[2];                     // Delta, who is nobody's average any more
+}
+
+/* A silhouette drawn to the man's OWN proportions. Height sets the
+   frame, build sets how wide the trunk and limbs are, and the two are
+   the same two numbers the engine builds the body from -- so the
+   picture cannot drift away from the character it is advertising. */
+function opSil(o, sel) {
+  var H = 300, foot = 292;
+  var px = (H - 40) * (o.h / 1.92);            // the tallest fills the box
+  var top = foot - px;
+  var k = o.build;
+  var headR = px * 0.052;
+  var neck = top + headR * 2.1;
+  var hip = top + px * 0.52;
+  var shoulderW = px * 0.115 * (0.72 + 0.28 * k);
+  var hipW = px * 0.082 * (0.74 + 0.26 * k);
+  var armW = px * 0.030 * (0.70 + 0.30 * k);
+  var legW = px * 0.042 * (0.74 + 0.26 * k);
+  var col = sel ? '#ffd27a' : '#6e6656';
+  var body = 'M' + (-shoulderW) + ',' + neck
+    + ' L' + shoulderW + ',' + neck
+    + ' L' + (hipW * 1.06) + ',' + hip
+    + ' L' + (-hipW * 1.06) + ',' + hip + ' Z';
+  return '<svg viewBox="-70 0 140 ' + H + '" preserveAspectRatio="xMidYMid meet" aria-hidden="true">'
+    + '<g fill="' + col + '" stroke="' + col + '" stroke-linecap="round">'
+    + '<circle cx="0" cy="' + (top + headR) + '" r="' + headR + '"/>'
+    + '<path d="' + body + '"/>'
+    + '<line x1="' + (-shoulderW * 0.92) + '" y1="' + (neck + px * 0.02) + '" x2="'
+      + (-hipW * 1.20) + '" y2="' + (hip + px * 0.12) + '" stroke-width="' + armW + '"/>'
+    + '<line x1="' + (shoulderW * 0.92) + '" y1="' + (neck + px * 0.02) + '" x2="'
+      + (hipW * 1.20) + '" y2="' + (hip + px * 0.12) + '" stroke-width="' + armW + '"/>'
+    + '<line x1="' + (-hipW * 0.55) + '" y1="' + hip + '" x2="' + (-hipW * 0.62)
+      + '" y2="' + foot + '" stroke-width="' + legW + '"/>'
+    + '<line x1="' + (hipW * 0.55) + '" y1="' + hip + '" x2="' + (hipW * 0.62)
+      + '" y2="' + foot + '" stroke-width="' + legW + '"/>'
+    + '</g></svg>';
+}
+
+function paintOperators() {
+  var rows = [];
+  var cur = opNow();
+  el.oplist.innerHTML = '';
+  OPS.forEach(function (o) {
+    var d = document.createElement('div');
+    d.className = 'oprow' + (o.id === cur.id ? ' on' : '');
+    d.innerHTML = '<div class="sil"></div><div class="nm"></div><div class="bd"></div>';
+    d.querySelector('.nm').textContent = o.name;
+    d.querySelector('.bd').textContent = o.role;
+    el.oplist.appendChild(d);
+    rows.push(wire({
+      el: d,
+      onEnter: function () {
+        mp.operator = o.id; mpSave();
+        paintOperators(); paintTrainer();
+      },
+    }));
+  });
+
+  el.opname.textContent = cur.name;
+  el.opblurb.textContent = cur.blurb;
+  el.opfig.innerHTML = opSil(cur, true);
+  el.opstats.innerHTML =
+    '<span>HEIGHT <b>' + cur.h.toFixed(2) + ' m</b></span>'
+    + '<span>FRAME <b>' + esc(cur.frame) + '</b></span>'
+    + '<span>REACH <b>' + esc(cur.reach) + '</b></span>'
+    + '<span>ROLE <b>' + esc(cur.role) + '</b></span>';
+  el.opconfirm.innerHTML = '<div style="font-size:11.5px;letter-spacing:.14em;color:#6b6455">'
+    + 'Every one of them has his own face, his own frame and his own reach, and the rifle is '
+    + 'fitted to the man &mdash; a taller operator holds it further out.</div>';
+
+  el.mpfoot.innerHTML = '<div><b>&uarr;&darr;</b> move &nbsp; <b>Enter / A</b> choose &nbsp; '
+    + '<b>LB / RB</b> lobby, loadout and operators &nbsp; <b>Esc / B</b> back</div>';
   navSet(rows, openMain);
 }
 

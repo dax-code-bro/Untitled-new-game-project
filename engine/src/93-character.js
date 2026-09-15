@@ -172,6 +172,73 @@ function makeHumanoidMesh(skeleton, opts = {}) {
       ? buildZombieBodyGeometry(skeleton, { build: opts.zombieBuild, girth: opts.girth, seed: opts.seed, segments: opts.segments, rot: opts.rot })
       : makeHumanBodyGeometry(skeleton, opts);
 
+  /* STATURE.
+   *
+     makeHumanoidSkeleton(scale) scales every bone offset, and every one
+     of these builders lays its rings out at fixed coordinates -- so a
+     character asked for at scale 1.075 got a skeleton seven and a half
+     per cent taller than the body hanging off it, and the two only
+     agreed at scale exactly 1. Measured on the operators: the body mesh
+     topped out at y = 0.620 for all of them while the head bone sat at
+     0.656, 0.610 and 0.583, so the tall one's head floated two and a
+     half centimetres clear of his shoulders and the short one's was
+     buried five centimetres into them.
+
+     It also quietly wrecked the skin solve, which measures vertex-to-
+     bone distance in the bind pose: with the skeleton stretched and the
+     mesh not, every weight in the body was solved against a rig the
+     surface did not sit on.
+
+     Scaled here, once, after the build and before the solve -- so the
+     bind pose the solver sees is the one the renderer will use. */
+  const st = opts.stature != null ? opts.stature : 1;
+  if (Math.abs(st - 1) > 1e-6) {
+    for (let i = 0; i < g.positions.length; i++) g.positions[i] *= st;
+    if (g.bounds) g.computeBounds && g.computeBounds();
+  }
+
+  /* SPLIT THE NECK OFF, so it can be skin.
+   *
+     It is emitted into the body mesh, the body mesh carries one
+     material, and that material is whatever the character is wearing --
+     so every head in this game has met a neck of a completely different
+     colour at the jaw. A hard seam right under the chin, on every
+     character, for as long as there have been characters.
+
+     The triangles whose corners are all tagged NECK come out into their
+     own geometry; the body keeps everything else. Both are skinned
+     against the same skeleton afterwards, so they move as one piece. */
+  if (!opts.clothOnly && !opts.armorOnly && !opts.bloodOnly && g.parts && g.indices) {
+    const isNeck = (v) => g.parts[v] === PART.NECK;
+    const keepT = [], neckT = [];
+    for (let t = 0; t < g.indices.length; t += 3) {
+      const a = g.indices[t], b = g.indices[t + 1], c = g.indices[t + 2];
+      (isNeck(a) && isNeck(b) && isNeck(c) ? neckT : keepT).push(a, b, c);
+    }
+    if (neckT.length) {
+      const ng = new Geometry();
+      const remap = new Map();
+      for (const v of neckT) {
+        if (!remap.has(v)) {
+          remap.set(v, ng.positions.length / 3);
+          ng.part = PART.NECK;
+          ng.vert(
+            g.positions[v * 3], g.positions[v * 3 + 1], g.positions[v * 3 + 2],
+            g.normals ? g.normals[v * 3] : 0, g.normals ? g.normals[v * 3 + 1] : 1,
+            g.normals ? g.normals[v * 3 + 2] : 0,
+            g.uvs ? g.uvs[v * 2] : 0, g.uvs ? g.uvs[v * 2 + 1] : 0,
+          );
+        }
+      }
+      for (let t = 0; t < neckT.length; t += 3) {
+        ng.tri(remap.get(neckT[t]), remap.get(neckT[t + 1]), remap.get(neckT[t + 2]));
+      }
+      ng.finalize();
+      g.indices = keepT.length ? new (g.indices.constructor)(keepT) : g.indices;
+      g.neck = solveSkinWeights(ng, skeleton);
+    }
+  }
+
   return solveSkinWeights(g, skeleton);
 }
 

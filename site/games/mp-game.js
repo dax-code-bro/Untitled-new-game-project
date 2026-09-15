@@ -712,7 +712,8 @@
       mapId: opts.mapId || 'town',
       mode: opts.mode || 'tdm',
       seed: opts.seed || (Date.now() & 0x7fffffff),
-      you: { name: opts.name || 'YOU', loadout: opts.loadout },
+      you: { name: opts.name || 'YOU', loadout: opts.loadout,
+        operator: opts.operator || 'delta' },
       onEvent: function (ev) { hud.onEvent(ev); },
     });
 

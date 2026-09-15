@@ -43,10 +43,12 @@
       if (mp.map) want.map = mp.map;
       if (mp.mode) want.mode = mp.mode;
       if (mp.loadout) want.loadout = mp.loadout;
+      if (mp.operator) want.operator = mp.operator;
     }
     var q = new URLSearchParams(location.search);
     if (q.get('map')) want.map = q.get('map');
     if (q.get('mode')) want.mode = q.get('mode');
+    if (q.get('op')) want.operator = q.get('op');
   } catch (e) { /* storage off, or an older blob: play the defaults */ }
   if (!MP_MAPS.has(want.map)) want.map = 'town';
 
@@ -60,7 +62,7 @@
     try {
       window.MP = MP_GAME.start({
         canvas: '#game', mapId: want.map, mode: want.mode,
-        loadout: want.loadout, name: want.name,
+        loadout: want.loadout, name: want.name, operator: want.operator,
         onQuit: function () { location.href = 'bunker-nine.html'; },
       });
       boot.classList.add('gone');

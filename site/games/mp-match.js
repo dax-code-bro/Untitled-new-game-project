@@ -341,6 +341,7 @@
     var secondary = MP_DATA.build(lo.secondary, lo.secondaryAtt);
     return {
       id: i, name: def.name, team: team, bot: !!def.bot, skill: def.skill || null,
+      operator: def.operator || null,
       hp: HEALTH, alive: false, respawnAt: 0,
       pos: { x: 0, y: 0, z: 0 }, yaw: 0, pitch: 0,
       sliding: false, slideEnd: 0, slideRecover: 0,
@@ -403,6 +404,7 @@
       name: you.name || 'YOU', bot: !!opts.youBot,
       skill: opts.youBot ? MP_DATA.BOT_SKILL[2] : null,
       loadout: you.loadout || MP_DATA.defaultLoadout(),
+      operator: you.operator || 'delta',
     }));
     for (var i = 1; i < teamSize * 2; i++) {
       var team = (i % 2) ? 'b' : 'a';
@@ -431,15 +433,34 @@
       you: people[0],
     };
 
-    /* ---- bodies ---- */
+    /* ---- bodies ----
+
+       Everybody in the match is an operator, not just you. Twelve
+       identical figures in two colours is what the lobby has been so
+       far, and the seven are the answer to that: bots are dealt round
+       the roster so a six-a-side has six different silhouettes on it,
+       and a silhouette is genuinely worth something in a firefight --
+       telling Destroyer from SWAT across a street is telling a
+       breacher from an entry man, at a glance, before either of them
+       has shot at you. */
+    var OPS = game.operators ? game.operators().map(function (o) { return o.id; }) : [];
     people.forEach(function (p) {
       if (headless) return;
       var c = p.team === 'a' ? 0x4c6a8a : 0x8a5a4c;
-      p.actor = game.character({
-        at: [0, -50, 0], name: 'mp-' + p.id,
-        material: { preset: 'fabric', color: c },
-        height: 1.75, radius: 0.32, speed: 4.6, runSpeed: 6.4,
-      });
+      if (!p.operator) p.operator = OPS.length ? OPS[(p.id * 3 + 1) % OPS.length] : null;
+      if (p.operator && game.operator) {
+        p.actor = game.operator(p.operator, {
+          at: [0, -50, 0], name: 'mp-' + p.id, face: 'static',
+          material: { preset: 'fabric', color: c },
+          speed: 4.6, runSpeed: 6.4,
+        });
+      } else {
+        p.actor = game.character({
+          at: [0, -50, 0], name: 'mp-' + p.id,
+          material: { preset: 'fabric', color: c },
+          height: 1.75, radius: 0.32, speed: 4.6, runSpeed: 6.4,
+        });
+      }
       if (p.actor && p.actor.body) p.actor.body.userData = { actor: true, mp: p.id };
     });
 

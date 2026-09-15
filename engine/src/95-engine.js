@@ -636,8 +636,9 @@ class Engine {
       : 0;
     // `zombie: true` swaps in the starved silhouette and torn clothing.
     const geo = model ? model.geometry : makeHumanoidMesh(skeleton, opts.zombie
-      ? { zombieBuild: opts.zombieBuild || 'male', girth: opts.girth, seed: opts.seed || 3, rot }
-      : { thickness: opts.build || 1 });
+      ? { zombieBuild: opts.zombieBuild || 'male', girth: opts.girth, seed: opts.seed || 3, rot,
+        stature: scale }
+      : { thickness: opts.build || 1, stature: scale });
     // One model, many copies: the GPU buffers are built once and shared.
     if (model && !model._mesh) model._mesh = new GpuMesh(this.gl, geo);
     const mesh = model ? model._mesh : new GpuMesh(this.gl, geo);
@@ -691,12 +692,31 @@ class Engine {
     actor.visualOffset = new Vec3(0, 0, 0);
     this.actors.push(actor);
 
+    /* The neck, in skin rather than in whatever the body is wearing.
+       Same skeleton, same animator, so it moves as one piece with the
+       rest of him -- it is only a second material, not a second body. */
+    if (geo.neck) {
+      const nm = new GpuMesh(this.gl, geo.neck);
+      nm.__key = 'neck:' + (opts.build || 1) + ':' + scale.toFixed(3);
+      (this._geoByKey || (this._geoByKey = new Map())).set(nm.__key, geo.neck);
+      const na = new Actor(this, {
+        name: 'neck', mesh: nm,
+        material: this.material(opts.skin != null ? opts.skin : 'skin'),
+        skeleton, animator, controller, body: controller.body,
+        boundRadius: 1.4 * scale,
+      });
+      na.visualOffset = new Vec3(0, 0, 0);
+      this.actors.push(na);
+      actor.neck = na;
+    }
+
     /* Clothes: their own skinned mesh, so cloth can be canvas while the
        skin under it is flesh. Sharing one mesh means sharing one material,
        and a coat that has to be the same colour as the body it covers is
        not clothing — it is a paint job. */
     if (opts.zombie && !model) {
       const clothGeo = makeHumanoidMesh(skeleton, {
+        stature: scale,
         zombieBuild: opts.zombieBuild || 'male', girth: opts.girth,
         seed: opts.seed || 3, clothOnly: true, outfit: opts.outfit,
         // Alive or dead. The cloth builder tears and frays a corpse's
@@ -733,6 +753,7 @@ class Engine {
        coloured coat. */
     if (opts.zombie && opts.blood !== false && !model) {
       const bloodGeo = makeHumanoidMesh(skeleton, {
+        stature: scale,
         zombieBuild: opts.zombieBuild || 'male', girth: opts.girth, seed: opts.seed || 3, bloodOnly: true,
       });
       if (bloodGeo.indices.length) {
@@ -754,6 +775,7 @@ class Engine {
        has a metal material while the cloth under it stays cloth. */
     if (opts.armor) {
       const armorGeo = makeHumanoidMesh(skeleton, {
+        stature: scale,
         zombieBuild: opts.zombieBuild || 'male', girth: opts.girth, seed: opts.seed || 3, armorOnly: true,
       });
       if (armorGeo.indices.length) {
@@ -775,13 +797,18 @@ class Engine {
          varies body to body off the same seed that varies everything
          else, so a crowd is a crowd of corpses at different stages rather
          than one corpse repeated. */
-      const headGeo = makeHeadGeometry({ seed: opts.seed || 5, type: opts.faceType, rot });
+      /* faceShape is the full sculpt control set -- the thing that makes
+         two heads DIFFERENT rather than one head at two sizes. See the
+         block in 91-face.js. Absent, nothing changes. */
+      const headGeo = makeHeadGeometry({ seed: opts.seed || 5, type: opts.faceType, rot,
+        face: opts.faceShape || null, hair: opts.hair, eyeColor: opts.eyeColor });
       const headMesh = new GpuMesh(this.gl, headGeo);
       /* Registered so it can be MEASURED. A head built straight into a
          GpuMesh is invisible to geometryOf, so nothing outside the engine
          could ever ask a question about a face -- which is why "the
          zombies look middling" had to stay an opinion. */
-      headMesh.__key = 'head:' + (opts.seed || 5) + ':' + (opts.faceType || 'male') + ':' + rot.toFixed(3);
+      headMesh.__key = 'head:' + (opts.seed || 5) + ':' + (opts.faceType || 'male') + ':' + rot.toFixed(3)
+        + (opts.faceKey ? ':' + opts.faceKey : '');
       (this._geoByKey || (this._geoByKey = new Map())).set(headMesh.__key, headGeo);
       // A head with no expression rig has neither skeleton nor face, so the
       // renderer batches it through the instanced path — which needs an
@@ -804,7 +831,14 @@ class Engine {
       // bind pose the head bone sits 1.47 above the feet on a 1.75-tall rig,
       // leaving 0.28 for the head — about a seventh of total height, which is
       // what a human actually is.
-      const HEAD_MESH_HEIGHT = 0.72;
+      /* MEASURED, not assumed. The constant below was 0.72 and the
+         sculpt was 0.606 to 0.690 depending on whose head it was, so
+         every head rendered between eighty-four and ninety-six per cent
+         of its intended size and the error tracked the face parameters
+         -- the rounder a man's skull, the smaller his head came out,
+         which is precisely backwards. */
+      const HB = headGeo.headBounds;
+      const HEAD_MESH_HEIGHT = HB ? HB.height : 0.72;
       /* 0.28 was derived from where the head bone sits on the rig, which
          is a fine way to place a head and a poor way to size one -- the
          bone is at the atlas, not at the chin. Measured, the head came out
@@ -822,9 +856,13 @@ class Engine {
         face,
         parent: actor,
         parentBone: skeleton.index('head'),
-        // Lift by half a head so the jaw meets the neck instead of the
-        // skull's centre sitting on it.
-        offset: [0, headHeight * 0.5 * scale, 0.006 * scale],
+        /* Put the CHIN on the head bone. Lifting by half a head is only
+           the same thing when the sculpt happens to be centred on its
+           own origin, and a heavy brow, a deep occiput or a flattened
+           crown all move that centre -- so the lift was off by a
+           different amount for every face. Measured chin, measured
+           scale, and the jaw lands on the neck for all of them. */
+        offset: [0, -(HB ? HB.chinY : -0.36) * headScale, 0.006 * scale],
         scale: headScale,
         boundRadius: 0.4 * scale,
       });
@@ -841,7 +879,8 @@ class Engine {
       const addPatch = (geo, name, matColor, rough) => {
         if (!geo || !geo.indices.length) return null;
         const m2 = new GpuMesh(this.gl, geo);
-        m2.__key = name + ':' + (opts.seed || 5) + ':' + (opts.faceType || 'male');
+        m2.__key = name + ':' + (opts.seed || 5) + ':' + (opts.faceType || 'male')
+          + (opts.faceKey ? ':' + opts.faceKey : '');
         (this._geoByKey || (this._geoByKey = new Map())).set(m2.__key, geo);
         m2.setupInstancing(20);
         const a2 = new Actor(this, {
@@ -849,16 +888,52 @@ class Engine {
           material: this.material({ color: matColor, texture: 'fabric',
             roughness: rough, metalness: 0, uvScale: 6 }),
           parent: actor, parentBone: skeleton.index('head'),
-          offset: [0, headHeight * 0.5 * scale, 0.006 * scale],
+          offset: [0, -(HB ? HB.chinY : -0.36) * headScale, 0.006 * scale],
           scale: headScale, boundRadius: 0.45 * scale,
         });
         this.actors.push(a2);
         return a2;
       };
-      if (opts.hair) actor.hair = addPatch(makeHairGeometry(headGeo, opts.hair), 'hair', hairColor, 0.86);
+      /* `hair` does two jobs and they were colliding. makeHeadGeometry
+         reads it as "does this head have a scalp shell at all" and
+         makeHairGeometry reads it as a STYLE NAME, so passing `true`
+         got a scalp but no cut, and every character in the game came
+         out with the same undifferentiated thatch. hairStyle is the
+         style; hair stays the on/off. */
+      const hs = opts.hairStyle || (typeof opts.hair === 'string' ? opts.hair : null);
+      if (hs) actor.hair = addPatch(makeHairGeometry(headGeo, hs), 'hair', hairColor, 0.86);
       if (opts.beard) {
         const bc = opts.beardColor != null ? opts.beardColor : hairColor;
         actor.beard = addPatch(makeBeardGeometry(headGeo, opts.beard), 'beard', bc, 0.90);
+      }
+      /* Eyebrows, which nothing in this engine had until now. They are
+         the highest-contrast feature on a face and the first thing the
+         eye finds after the eyes themselves -- seven differentiated
+         skulls with no brows on them read as one bald man seven times,
+         and that is precisely what they did. */
+      /* The eyes, as their own actor. They cannot share the head's
+         material: a sclera has to be LIGHTER than the face around it
+         and a tint only multiplies down. White material, no texture
+         tint, and the three shells carry their own vertex colours. */
+      if (headGeo.eyes) {
+        const em = new GpuMesh(this.gl, headGeo.eyes);
+        em.__key = 'eyes:' + (opts.faceKey || opts.seed || 5);
+        (this._geoByKey || (this._geoByKey = new Map())).set(em.__key, headGeo.eyes);
+        em.setupInstancing(20);
+        const ea = new Actor(this, {
+          name: 'eyes', mesh: em,
+          material: this.material({ color: 0xffffff, texture: 'smooth',
+            roughness: 0.18, metalness: 0 }),
+          parent: actor, parentBone: skeleton.index('head'),
+          offset: [0, -(HB ? HB.chinY : -0.36) * headScale, 0.006 * scale],
+          scale: headScale, boundRadius: 0.45 * scale,
+        });
+        this.actors.push(ea);
+        actor.eyes = ea;
+      }
+      if (opts.brows) {
+        const brc = opts.browColor != null ? opts.browColor : hairColor;
+        actor.brows = addPatch(makeBrowGeometry(headGeo, opts.brows), 'brows', brc, 0.88);
       }
     }
 

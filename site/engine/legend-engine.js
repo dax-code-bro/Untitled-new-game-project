@@ -8608,8 +8608,10 @@ function makeHeadGeometry(opts = {}) {
     gonialAt: 0.135, gonialLow: -0.212,
     chin: A.chin, chinY: -0.282, chinWide: 0.072, mental: 0.022,
     chinCleft: 0,
+    // the nose, which is its own form and not a bump on the skull
+    noseLen: 1, noseBridge: 1, noseHump: 0, noseWide: 1, noseBend: 0,
     // things a default head simply does not have
-    browShelf: 0, malarHollow: 0, deviate: 0, jawSquare: 0,
+    browShelf: 0, malarHollow: 0, jawSquare: 0,
   };
   const F = D;
   if (opts.face) for (const k in opts.face) F[k] = opts.face[k];
@@ -8860,7 +8862,8 @@ function makeHeadGeometry(opts = {}) {
 
   // The features that a displaced sphere physically cannot produce, built
   // as their own geometry and dropped in.
-  buildNose(g);
+  buildNose(g, { noseLen: F.noseLen, noseBridge: F.noseBridge,
+    noseHump: F.noseHump, noseWide: F.noseWide, noseBend: F.noseBend });
   buildLips(g);
   buildEyelids(g);
 
@@ -8868,6 +8871,7 @@ function makeHeadGeometry(opts = {}) {
   // the eye reads as an eye, because it catches a highlight where a face
   // is supposed to have one. Cheap, and it does more for "this is a head"
   // than any amount of extra sculpting on the surrounding skull.
+  const eg = new Geometry();
   for (const sx of [1, -1]) {
     // The globe, sat back so its front pole falls just behind the lid
     // aperture, and the cornea — a tighter cap bulging through the opening.
@@ -8875,25 +8879,49 @@ function makeHeadGeometry(opts = {}) {
     // there is no iris colour to read, so the eye has to be legible from a
     // specular highlight and the hard circular limbus where the cap meets
     // the globe. Both come free from intersecting two spheres.
+    /* THE EYES GO IN THEIR OWN GEOMETRY, and this is the difference
+       between a face and a mannequin.
+
+       They were merged into the head, which means they took the head's
+       one material -- so every character in this game has had
+       SKIN-COLOURED eyeballs sitting in skin-coloured sockets, which is
+       to say no visible eyes at all. That is most of why seven
+       carefully differentiated faces still read as one person: the eyes
+       are where you look first, and there were none. It is not
+       something a tint can fix, because a tint multiplies DOWN and a
+       sclera has to be lighter than the face around it.
+
+       Three shells, each flat-shaded in its own vertex colour, so one
+       extra draw buys a white, an iris and a pupil:
+         globe   the sclera, white
+         iris    a ring cap, whatever colour this person's eyes are
+         pupil   a smaller, darker cap inside it
+       The material that renders this carries no tint of its own; the
+       vertex colours are the whole of it. */
     const parts = [
-      { r: EYE.globeR, z: EYE.globeZ, flat: EYE.globeFlatten, seg: [14, 18] },
-      { r: EYE.corneaR, z: EYE.globeZ + EYE.corneaOffset, flat: 1, seg: [10, 14] },
+      { r: EYE.globeR, z: EYE.globeZ, flat: EYE.globeFlatten, seg: [14, 18], col: 0xf2efe9 },
+      { r: EYE.corneaR, z: EYE.globeZ + EYE.corneaOffset, flat: 1, seg: [10, 14],
+        col: opts.eyeColor != null ? opts.eyeColor : 0x5b4530 },
+      { r: EYE.corneaR * 0.48, z: EYE.globeZ + EYE.corneaOffset + EYE.corneaR * 0.30,
+        flat: 1, seg: [8, 10], col: 0x0b0a09 },
     ];
     for (const part of parts) {
       const eye = Shapes.sphere(part.r, part.seg[0], part.seg[1]);
       const src = eye.positions;
-      const base = g.positions.length / 3;
+      const base = eg.positions.length / 3;
+      eg.setColor(part.col);
       for (let i = 0; i < src.length; i += 3) {
-        g.vert(
+        eg.vert(
           src[i] + sx * EYE.sx, src[i + 1] + EYE.cy, src[i + 2] * part.flat + part.z,
           eye.normals[i], eye.normals[i + 1], eye.normals[i + 2],
           eye.uvs[(i / 3) * 2], eye.uvs[(i / 3) * 2 + 1],
         );
       }
       for (let i = 0; i < eye.indices.length; i += 3) {
-        g.tri(base + eye.indices[i], base + eye.indices[i + 1], base + eye.indices[i + 2]);
+        eg.tri(base + eye.indices[i], base + eye.indices[i + 1], base + eye.indices[i + 2]);
       }
     }
+    eg.setColor(null);
   }
 
   /* ---------------- hair ----------------
@@ -8982,6 +9010,33 @@ function makeHeadGeometry(opts = {}) {
     void base;
   }
 
+  /* THE SKULL'S OWN EXTENT, taken before the ears and while the hair is
+     the only thing already on it -- recorded so a caller can place and
+     size this head from what it MEASURES rather than from a constant.
+     95-engine.js assumed every head was 0.72 tall and lifted it by half
+     of a fixed 0.252; the moment the sculpt controls started changing
+     the vault, heads came out between 0.606 and 0.690 and the rendered
+     head height drifted from 209 mm to 252 -- a fifth, between two men
+     who are supposed to differ by a tenth. A head is measured now. */
+  {
+    let lo = 1e9, hi = -1e9, loY = 1e9;
+    for (let i = 1; i < g.positions.length; i += 3) {
+      if (g.positions[i] < lo) lo = g.positions[i];
+      if (g.positions[i] > hi) hi = g.positions[i];
+    }
+    loY = lo;
+    // The chin, which is the front-bottom of the sculpt rather than the
+    // lowest vertex anywhere on it -- the jaw sweeps back under the ear
+    // and the nape hollow can dip lower than the chin does.
+    let chin = 1e9;
+    for (let i = 0; i < g.positions.length; i += 3) {
+      if (g.positions[i + 2] < 0.10) continue;          // front of the head only
+      if (Math.abs(g.positions[i]) > 0.06) continue;    // and near the midline
+      if (g.positions[i + 1] < chin) chin = g.positions[i + 1];
+    }
+    g.headBounds = { loY, hiY: hi, height: hi - loY, chinY: chin < 1e8 ? chin : loY };
+  }
+
   // Ears sit on the skull surface, which the parietal widening above pushes
   // out past RX at this height — not at some fraction of it. Placing them
   // inboard buries them inside the head.
@@ -9009,6 +9064,11 @@ function makeHeadGeometry(opts = {}) {
      directional light happening to rake across it. On a head this small
      the radius is a couple of centimetres. */
   bakeCavityAO(g, { radius: 0.052, strength: 0.95, floor: 0.22, samples: 900 });
+  /* The eyes get the same horizontal squeeze the head just took, or
+     they sit wider apart than the sockets they belong in. */
+  for (let i = 0; i < eg.positions.length; i += 3) eg.positions[i] *= HEAD_SQUEEZE_X;
+  eg.finalize();
+  g.eyes = eg.indices.length ? eg : null;
   return g;
 }
 
@@ -9053,13 +9113,20 @@ const HAIR_STYLES = {
    sideburn is a thing at the SIDE of a face, and a region with only an
    upper x bound includes the middle of it, which is how the first pass
    drew Hank a bar across the bridge of his nose. */
+/* Measured against the same landmarks: the lip centre is u 0.233 and
+   the chin u 0.104, so a full beard runs from below the chin to just
+   above the lip, and a moustache is a narrow band right at 0.26-0.30.
+
+   The thicknesses are cut hard. 0.020 for a full beard was six
+   millimetres of relief at render scale -- a helmet of hair with a
+   hard edge, which is what made every bearded face read as a mask. */
 const BEARD_STYLES = {
-  stubble:   { u: [0.04, 0.40], w: [0.40, 1.00], x: 0.62, thick: 0.004 },
-  moustache: { u: [0.295, 0.380], w: [0.72, 1.00], x: 0.22, thick: 0.011 },
-  goatee:    { u: [0.03, 0.345], w: [0.70, 1.00], x: 0.20, thick: 0.016 },
-  chops:     { u: [0.16, 0.52], w: [0.24, 0.68], xMin: 0.34, x: 0.82, thick: 0.014 },
-  full:      { u: [0.02, 0.40], w: [0.38, 1.00], x: 0.62, thick: 0.020 },
-  heavy:     { u: [0.00, 0.425], w: [0.32, 1.00], x: 0.66, thick: 0.032 },
+  stubble:   { u: [0.06, 0.30], w: [0.44, 1.00], x: 0.62, thick: 0.0022 },
+  moustache: { u: [0.252, 0.302], w: [0.74, 1.00], x: 0.22, thick: 0.0042 },
+  goatee:    { u: [0.05, 0.285], w: [0.72, 1.00], x: 0.19, thick: 0.0060 },
+  chops:     { u: [0.20, 0.50], w: [0.26, 0.66], xMin: 0.36, x: 0.80, thick: 0.0050 },
+  full:      { u: [0.04, 0.305], w: [0.42, 1.00], x: 0.60, thick: 0.0072 },
+  heavy:     { u: [0.02, 0.325], w: [0.36, 1.00], x: 0.64, thick: 0.0110 },
 };
 
 /* One patch of a geometry, pushed out along its normals.
@@ -9135,6 +9202,82 @@ function makeHairGeometry(headGeo, style) {
     return [0, dy, dz];
   } : null;
   return offsetPatch(headGeo, keep, S.thick, warp);
+}
+
+/* EYEBROWS.
+ *
+   Not one of the seven operators had any, and neither had any character
+   in the game before them. A face without eyebrows is a mannequin --
+   they are the highest-contrast feature on a head, the first thing the
+   eye goes to after the eyes themselves, and the single biggest carrier
+   of who somebody is after the silhouette. Seven carefully differentiated
+   skulls with no brows on them read as one bald man seven times, which
+   is exactly what happened.
+
+   Built the same way the hair and the beard are: a region of the head's
+   OWN surface pushed out along its normals, so a brow follows the ridge
+   it sits on rather than floating over a general one. Five shapes, and
+   they are shapes rather than sizes -- a straight bar and a high arch
+   are not scales of each other.
+
+     u     how high up the head, normalised
+     x     how far off the midline, as a band [inner, outer]
+     arch  how much the outer end rises (negative drops it)
+     tilt  the whole brow rotated -- an angry brow drops at the inner end
+     thick how far it stands off the skull */
+/* The bands are in offsetPatch's normalised space, which is neither the
+   sculpt's nor anything you can reason out -- so they are MEASURED off
+   this rig's own landmarks:
+
+     eye centre   u 0.578   xn 0.331
+     brow ridge   u 0.695   xn 0     (outer end of the ridge xn 0.546)
+     nose tip     u 0.434
+     lip centre   u 0.233
+     chin         u 0.104
+
+   A brow sits between the eye and the top of the ridge, so u 0.615 to
+   0.665, and spans from just off the midline out past the eye's outer
+   corner: xn 0.13 to 0.56. Both earlier guesses were wrong in a way a
+   picture would have shown instantly and a 40-pixel thumbnail did not:
+   the first used sculpt coordinates and would have drawn two bars
+   beside the nose, the second put the band at u 0.672-0.726, which is
+   the LOWER FOREHEAD -- a black bar above the eyes, like a stripe of
+   paint.
+
+   `thick` is a standoff in sculpt units on a head 0.667 tall that
+   renders 232 mm, so 0.005 is about 1.7 mm of relief. A real eyebrow
+   is one to two. The previous 0.010-0.019 was a five-millimetre shelf
+   of hair, which is not an eyebrow, it is a ledge. */
+const BROW_STYLES = {
+  none:     null,
+  straight: { u: [0.617, 0.662], x: [0.13, 0.56], arch: 0.000, tilt: 0.000, thick: 0.0040 },
+  arched:   { u: [0.620, 0.660], x: [0.14, 0.54], arch: 0.022, tilt: 0.003, thick: 0.0034 },
+  heavy:    { u: [0.610, 0.667], x: [0.12, 0.58], arch: 0.005, tilt: -0.004, thick: 0.0058 },
+  angled:   { u: [0.615, 0.661], x: [0.13, 0.57], arch: -0.014, tilt: -0.013, thick: 0.0046 },
+  thin:     { u: [0.626, 0.655], x: [0.16, 0.50], arch: 0.012, tilt: 0.002, thick: 0.0024 },
+  bushy:    { u: [0.604, 0.672], x: [0.11, 0.60], arch: 0.008, tilt: -0.002, thick: 0.0072 },
+};
+
+function makeBrowGeometry(headGeo, style) {
+  const S = BROW_STYLES[style];
+  if (!S) return null;
+  /* offsetPatch hands the test a normalised height, a normalised
+     forwardness and a normalised |x|. The brow is a band in all three:
+     it has to be on the FRONT of the head (w), at brow height (u), and
+     off the midline but not round at the temple (xn). */
+  const keep = (u, w, xn) => {
+    if (w < 0.70) return false;                      // front of the face only
+    if (xn < S.x[0] || xn > S.x[1]) return false;    // the band, left and right
+    // How far out along the brow this vertex is, 0 at the nose.
+    const t = (xn - S.x[0]) / Math.max(1e-6, S.x[1] - S.x[0]);
+    // The arch peaks about two thirds out, which is where a real one does.
+    const rise = S.arch * Math.sin(Math.min(1, t / 0.68) * Math.PI * 0.5)
+      * (1 - Math.max(0, t - 0.68) / 0.32 * 0.5);
+    const lo = S.u[0] + rise + S.tilt * (1 - t);
+    const hi = S.u[1] + rise + S.tilt * (1 - t);
+    return u > lo && u < hi;
+  };
+  return offsetPatch(headGeo, keep, S.thick, null);
 }
 
 /* The beard, moustache, chops or stubble. */
@@ -10274,6 +10417,73 @@ function makeHumanoidMesh(skeleton, opts = {}) {
       ? buildZombieBodyGeometry(skeleton, { build: opts.zombieBuild, girth: opts.girth, seed: opts.seed, segments: opts.segments, rot: opts.rot })
       : makeHumanBodyGeometry(skeleton, opts);
 
+  /* STATURE.
+   *
+     makeHumanoidSkeleton(scale) scales every bone offset, and every one
+     of these builders lays its rings out at fixed coordinates -- so a
+     character asked for at scale 1.075 got a skeleton seven and a half
+     per cent taller than the body hanging off it, and the two only
+     agreed at scale exactly 1. Measured on the operators: the body mesh
+     topped out at y = 0.620 for all of them while the head bone sat at
+     0.656, 0.610 and 0.583, so the tall one's head floated two and a
+     half centimetres clear of his shoulders and the short one's was
+     buried five centimetres into them.
+
+     It also quietly wrecked the skin solve, which measures vertex-to-
+     bone distance in the bind pose: with the skeleton stretched and the
+     mesh not, every weight in the body was solved against a rig the
+     surface did not sit on.
+
+     Scaled here, once, after the build and before the solve -- so the
+     bind pose the solver sees is the one the renderer will use. */
+  const st = opts.stature != null ? opts.stature : 1;
+  if (Math.abs(st - 1) > 1e-6) {
+    for (let i = 0; i < g.positions.length; i++) g.positions[i] *= st;
+    if (g.bounds) g.computeBounds && g.computeBounds();
+  }
+
+  /* SPLIT THE NECK OFF, so it can be skin.
+   *
+     It is emitted into the body mesh, the body mesh carries one
+     material, and that material is whatever the character is wearing --
+     so every head in this game has met a neck of a completely different
+     colour at the jaw. A hard seam right under the chin, on every
+     character, for as long as there have been characters.
+
+     The triangles whose corners are all tagged NECK come out into their
+     own geometry; the body keeps everything else. Both are skinned
+     against the same skeleton afterwards, so they move as one piece. */
+  if (!opts.clothOnly && !opts.armorOnly && !opts.bloodOnly && g.parts && g.indices) {
+    const isNeck = (v) => g.parts[v] === PART.NECK;
+    const keepT = [], neckT = [];
+    for (let t = 0; t < g.indices.length; t += 3) {
+      const a = g.indices[t], b = g.indices[t + 1], c = g.indices[t + 2];
+      (isNeck(a) && isNeck(b) && isNeck(c) ? neckT : keepT).push(a, b, c);
+    }
+    if (neckT.length) {
+      const ng = new Geometry();
+      const remap = new Map();
+      for (const v of neckT) {
+        if (!remap.has(v)) {
+          remap.set(v, ng.positions.length / 3);
+          ng.part = PART.NECK;
+          ng.vert(
+            g.positions[v * 3], g.positions[v * 3 + 1], g.positions[v * 3 + 2],
+            g.normals ? g.normals[v * 3] : 0, g.normals ? g.normals[v * 3 + 1] : 1,
+            g.normals ? g.normals[v * 3 + 2] : 0,
+            g.uvs ? g.uvs[v * 2] : 0, g.uvs ? g.uvs[v * 2 + 1] : 0,
+          );
+        }
+      }
+      for (let t = 0; t < neckT.length; t += 3) {
+        ng.tri(remap.get(neckT[t]), remap.get(neckT[t + 1]), remap.get(neckT[t + 2]));
+      }
+      ng.finalize();
+      g.indices = keepT.length ? new (g.indices.constructor)(keepT) : g.indices;
+      g.neck = solveSkinWeights(ng, skeleton);
+    }
+  }
+
   return solveSkinWeights(g, skeleton);
 }
 
@@ -11004,8 +11214,17 @@ function makeHumanBodyGeometry(skeleton, opts = {}) {
      along by a hand two feet away. */
   g.part = PART.BODY;
   buildTorso(g, segments, k);
+  /* The neck is SKIN, and it has been wearing the shirt.
+     It is emitted into the body mesh, the body mesh has one material,
+     and that material is whatever the character is dressed in -- so
+     every head in the game meets a neck of a completely different
+     colour at the jawline, a hard seam right under the chin. Marked
+     here; character() splits it onto its own actor with the skin
+     material and the same skeleton. */
+  const neckStart = g.positions.length / 3;
   g.part = PART.NECK;
   buildNeck(g, segments);
+  g.neckRange = [neckStart, g.positions.length / 3];
   for (const side of [1, -1]) {
     g.part = side > 0 ? PART.ARM_L : PART.ARM_R;
     buildArm(g, side, skeleton, segments, k);
@@ -11199,26 +11418,61 @@ function buildNose(g, o = {}) {
     [-0.105, 0.243, 0.062, 0.030],
     [-0.119, 0.233, 0.055, 0.022],   // base — this plane is the undercut
   ];
-  const rings = spec.map(([y, z, w, d], i) => ({
-    p: new Vec3(0, y, z), w, d, e: 2.0,
-    right: X, fwd: Z, uv: i / (spec.length - 1),
-  }));
+  /* THE NOSE IS THE FACE, more than any other single form, and until
+     now every head in the game had exactly the same one. Four controls,
+     and they are four different noses rather than one at four sizes:
+
+       len    how far the base drops below the bridge
+       bridge how high the dorsum stands off the face
+       hump   a dorsal hump, bulging the upper third forward and
+              letting the tip drop -- the profile break that makes a
+              nose read as somebody's rather than as a default
+       wide   the wings
+       bend   a deviation off the midline. A broken nose. This one is
+              not symmetric and cannot be, which is exactly why it does
+              so much: every other feature on a face mirrors.
+   */
+  const len = o.noseLen != null ? o.noseLen : 1;
+  const bri = o.noseBridge != null ? o.noseBridge : 1;
+  const hump = o.noseHump || 0;
+  const wide = o.noseWide != null ? o.noseWide : 1;
+  const bend = o.noseBend || 0;
+  const rings = spec.map(([y, z, w, d], i) => {
+    const t = i / (spec.length - 1);          // 0 at the brow, 1 at the base
+    // The hump sits in the upper third and eases out by the ball.
+    const humpAt = Math.exp(-Math.pow((t - 0.32) / 0.20, 2));
+    // A deviation is greatest at the bridge and settles at the base,
+    // because the break is in the bone and the cartilage follows it.
+    const bendAt = Math.exp(-Math.pow((t - 0.40) / 0.34, 2));
+    return {
+      p: new Vec3(bend * bendAt * 0.016, y * len, 0.190 + (z - 0.190) * bri + humpAt * hump * 0.013),
+      w: w * (0.55 + 0.45 * wide) * (t > 0.6 ? wide : 1),
+      d: d * bri, e: 2.0,
+      right: X, fwd: Z, uv: t,
+    };
+  });
   loftRings(g, rings, 24, true, true);
 
   // Nostrils: inward-facing pockets set into the underside. Built flipped,
   // so what you see through the opening is the inside of a closed form.
+  /* The nostrils and the columella have to move with the tip, or a
+     long nose ends up with its openings halfway up it. bx is the
+     deviation at the base, which is a third of the deviation at the
+     bridge -- a broken nose is crooked at the bone and only leans at
+     the tip. */
+  const bx = bend * 0.006, nz = (v) => 0.190 + (v - 0.190) * bri;
   for (const sx of [1, -1]) {
     loftRings(g, [
-      { p: new Vec3(sx * 0.028, -0.121, 0.234), w: 0.015, d: 0.010, e: 2.0, right: X, fwd: Z },
-      { p: new Vec3(sx * 0.027, -0.103, 0.237), w: 0.013, d: 0.009, e: 2.0, right: X, fwd: Z },
-      { p: new Vec3(sx * 0.022, -0.089, 0.243), w: 0.005, d: 0.004, e: 2.0, right: X, fwd: Z },
+      { p: new Vec3(sx * 0.028 * wide + bx, -0.121 * len, nz(0.234)), w: 0.015 * wide, d: 0.010, e: 2.0, right: X, fwd: Z },
+      { p: new Vec3(sx * 0.027 * wide + bx, -0.103 * len, nz(0.237)), w: 0.013 * wide, d: 0.009, e: 2.0, right: X, fwd: Z },
+      { p: new Vec3(sx * 0.022 * wide + bx, -0.089 * len, nz(0.243)), w: 0.005 * wide, d: 0.004, e: 2.0, right: X, fwd: Z },
     ], 12, false, true, true);
   }
 
   // Columella: the strip of flesh between the nostrils.
   loftRings(g, [
-    { p: new Vec3(0, -0.125, 0.239), w: 0.009, d: 0.011, e: 2.2, right: X, fwd: Z },
-    { p: new Vec3(0, -0.103, 0.245), w: 0.010, d: 0.013, e: 2.2, right: X, fwd: Z },
+    { p: new Vec3(bx, -0.125 * len, nz(0.239)), w: 0.009, d: 0.011, e: 2.2, right: X, fwd: Z },
+    { p: new Vec3(bx, -0.103 * len, nz(0.245)), w: 0.010, d: 0.013, e: 2.2, right: X, fwd: Z },
   ], 10, true, true);
 }
 
@@ -13729,8 +13983,9 @@ class Engine {
       : 0;
     // `zombie: true` swaps in the starved silhouette and torn clothing.
     const geo = model ? model.geometry : makeHumanoidMesh(skeleton, opts.zombie
-      ? { zombieBuild: opts.zombieBuild || 'male', girth: opts.girth, seed: opts.seed || 3, rot }
-      : { thickness: opts.build || 1 });
+      ? { zombieBuild: opts.zombieBuild || 'male', girth: opts.girth, seed: opts.seed || 3, rot,
+        stature: scale }
+      : { thickness: opts.build || 1, stature: scale });
     // One model, many copies: the GPU buffers are built once and shared.
     if (model && !model._mesh) model._mesh = new GpuMesh(this.gl, geo);
     const mesh = model ? model._mesh : new GpuMesh(this.gl, geo);
@@ -13784,12 +14039,31 @@ class Engine {
     actor.visualOffset = new Vec3(0, 0, 0);
     this.actors.push(actor);
 
+    /* The neck, in skin rather than in whatever the body is wearing.
+       Same skeleton, same animator, so it moves as one piece with the
+       rest of him -- it is only a second material, not a second body. */
+    if (geo.neck) {
+      const nm = new GpuMesh(this.gl, geo.neck);
+      nm.__key = 'neck:' + (opts.build || 1) + ':' + scale.toFixed(3);
+      (this._geoByKey || (this._geoByKey = new Map())).set(nm.__key, geo.neck);
+      const na = new Actor(this, {
+        name: 'neck', mesh: nm,
+        material: this.material(opts.skin != null ? opts.skin : 'skin'),
+        skeleton, animator, controller, body: controller.body,
+        boundRadius: 1.4 * scale,
+      });
+      na.visualOffset = new Vec3(0, 0, 0);
+      this.actors.push(na);
+      actor.neck = na;
+    }
+
     /* Clothes: their own skinned mesh, so cloth can be canvas while the
        skin under it is flesh. Sharing one mesh means sharing one material,
        and a coat that has to be the same colour as the body it covers is
        not clothing — it is a paint job. */
     if (opts.zombie && !model) {
       const clothGeo = makeHumanoidMesh(skeleton, {
+        stature: scale,
         zombieBuild: opts.zombieBuild || 'male', girth: opts.girth,
         seed: opts.seed || 3, clothOnly: true, outfit: opts.outfit,
         // Alive or dead. The cloth builder tears and frays a corpse's
@@ -13826,6 +14100,7 @@ class Engine {
        coloured coat. */
     if (opts.zombie && opts.blood !== false && !model) {
       const bloodGeo = makeHumanoidMesh(skeleton, {
+        stature: scale,
         zombieBuild: opts.zombieBuild || 'male', girth: opts.girth, seed: opts.seed || 3, bloodOnly: true,
       });
       if (bloodGeo.indices.length) {
@@ -13847,6 +14122,7 @@ class Engine {
        has a metal material while the cloth under it stays cloth. */
     if (opts.armor) {
       const armorGeo = makeHumanoidMesh(skeleton, {
+        stature: scale,
         zombieBuild: opts.zombieBuild || 'male', girth: opts.girth, seed: opts.seed || 3, armorOnly: true,
       });
       if (armorGeo.indices.length) {
@@ -13868,13 +14144,18 @@ class Engine {
          varies body to body off the same seed that varies everything
          else, so a crowd is a crowd of corpses at different stages rather
          than one corpse repeated. */
-      const headGeo = makeHeadGeometry({ seed: opts.seed || 5, type: opts.faceType, rot });
+      /* faceShape is the full sculpt control set -- the thing that makes
+         two heads DIFFERENT rather than one head at two sizes. See the
+         block in 91-face.js. Absent, nothing changes. */
+      const headGeo = makeHeadGeometry({ seed: opts.seed || 5, type: opts.faceType, rot,
+        face: opts.faceShape || null, hair: opts.hair, eyeColor: opts.eyeColor });
       const headMesh = new GpuMesh(this.gl, headGeo);
       /* Registered so it can be MEASURED. A head built straight into a
          GpuMesh is invisible to geometryOf, so nothing outside the engine
          could ever ask a question about a face -- which is why "the
          zombies look middling" had to stay an opinion. */
-      headMesh.__key = 'head:' + (opts.seed || 5) + ':' + (opts.faceType || 'male') + ':' + rot.toFixed(3);
+      headMesh.__key = 'head:' + (opts.seed || 5) + ':' + (opts.faceType || 'male') + ':' + rot.toFixed(3)
+        + (opts.faceKey ? ':' + opts.faceKey : '');
       (this._geoByKey || (this._geoByKey = new Map())).set(headMesh.__key, headGeo);
       // A head with no expression rig has neither skeleton nor face, so the
       // renderer batches it through the instanced path — which needs an
@@ -13897,7 +14178,14 @@ class Engine {
       // bind pose the head bone sits 1.47 above the feet on a 1.75-tall rig,
       // leaving 0.28 for the head — about a seventh of total height, which is
       // what a human actually is.
-      const HEAD_MESH_HEIGHT = 0.72;
+      /* MEASURED, not assumed. The constant below was 0.72 and the
+         sculpt was 0.606 to 0.690 depending on whose head it was, so
+         every head rendered between eighty-four and ninety-six per cent
+         of its intended size and the error tracked the face parameters
+         -- the rounder a man's skull, the smaller his head came out,
+         which is precisely backwards. */
+      const HB = headGeo.headBounds;
+      const HEAD_MESH_HEIGHT = HB ? HB.height : 0.72;
       /* 0.28 was derived from where the head bone sits on the rig, which
          is a fine way to place a head and a poor way to size one -- the
          bone is at the atlas, not at the chin. Measured, the head came out
@@ -13915,9 +14203,13 @@ class Engine {
         face,
         parent: actor,
         parentBone: skeleton.index('head'),
-        // Lift by half a head so the jaw meets the neck instead of the
-        // skull's centre sitting on it.
-        offset: [0, headHeight * 0.5 * scale, 0.006 * scale],
+        /* Put the CHIN on the head bone. Lifting by half a head is only
+           the same thing when the sculpt happens to be centred on its
+           own origin, and a heavy brow, a deep occiput or a flattened
+           crown all move that centre -- so the lift was off by a
+           different amount for every face. Measured chin, measured
+           scale, and the jaw lands on the neck for all of them. */
+        offset: [0, -(HB ? HB.chinY : -0.36) * headScale, 0.006 * scale],
         scale: headScale,
         boundRadius: 0.4 * scale,
       });
@@ -13934,7 +14226,8 @@ class Engine {
       const addPatch = (geo, name, matColor, rough) => {
         if (!geo || !geo.indices.length) return null;
         const m2 = new GpuMesh(this.gl, geo);
-        m2.__key = name + ':' + (opts.seed || 5) + ':' + (opts.faceType || 'male');
+        m2.__key = name + ':' + (opts.seed || 5) + ':' + (opts.faceType || 'male')
+          + (opts.faceKey ? ':' + opts.faceKey : '');
         (this._geoByKey || (this._geoByKey = new Map())).set(m2.__key, geo);
         m2.setupInstancing(20);
         const a2 = new Actor(this, {
@@ -13942,16 +14235,52 @@ class Engine {
           material: this.material({ color: matColor, texture: 'fabric',
             roughness: rough, metalness: 0, uvScale: 6 }),
           parent: actor, parentBone: skeleton.index('head'),
-          offset: [0, headHeight * 0.5 * scale, 0.006 * scale],
+          offset: [0, -(HB ? HB.chinY : -0.36) * headScale, 0.006 * scale],
           scale: headScale, boundRadius: 0.45 * scale,
         });
         this.actors.push(a2);
         return a2;
       };
-      if (opts.hair) actor.hair = addPatch(makeHairGeometry(headGeo, opts.hair), 'hair', hairColor, 0.86);
+      /* `hair` does two jobs and they were colliding. makeHeadGeometry
+         reads it as "does this head have a scalp shell at all" and
+         makeHairGeometry reads it as a STYLE NAME, so passing `true`
+         got a scalp but no cut, and every character in the game came
+         out with the same undifferentiated thatch. hairStyle is the
+         style; hair stays the on/off. */
+      const hs = opts.hairStyle || (typeof opts.hair === 'string' ? opts.hair : null);
+      if (hs) actor.hair = addPatch(makeHairGeometry(headGeo, hs), 'hair', hairColor, 0.86);
       if (opts.beard) {
         const bc = opts.beardColor != null ? opts.beardColor : hairColor;
         actor.beard = addPatch(makeBeardGeometry(headGeo, opts.beard), 'beard', bc, 0.90);
+      }
+      /* Eyebrows, which nothing in this engine had until now. They are
+         the highest-contrast feature on a face and the first thing the
+         eye finds after the eyes themselves -- seven differentiated
+         skulls with no brows on them read as one bald man seven times,
+         and that is precisely what they did. */
+      /* The eyes, as their own actor. They cannot share the head's
+         material: a sclera has to be LIGHTER than the face around it
+         and a tint only multiplies down. White material, no texture
+         tint, and the three shells carry their own vertex colours. */
+      if (headGeo.eyes) {
+        const em = new GpuMesh(this.gl, headGeo.eyes);
+        em.__key = 'eyes:' + (opts.faceKey || opts.seed || 5);
+        (this._geoByKey || (this._geoByKey = new Map())).set(em.__key, headGeo.eyes);
+        em.setupInstancing(20);
+        const ea = new Actor(this, {
+          name: 'eyes', mesh: em,
+          material: this.material({ color: 0xffffff, texture: 'smooth',
+            roughness: 0.18, metalness: 0 }),
+          parent: actor, parentBone: skeleton.index('head'),
+          offset: [0, -(HB ? HB.chinY : -0.36) * headScale, 0.006 * scale],
+          scale: headScale, boundRadius: 0.45 * scale,
+        });
+        this.actors.push(ea);
+        actor.eyes = ea;
+      }
+      if (opts.brows) {
+        const brc = opts.browColor != null ? opts.browColor : hairColor;
+        actor.brows = addPatch(makeBrowGeometry(headGeo, opts.brows), 'brows', brc, 0.88);
       }
     }
 
@@ -14729,6 +15058,468 @@ function quickStart(opts = {}) {
   game.start();
   return game;
 }
+
+
+/* ─────────── 95a-operator.js ─────────── */
+/* ============================================================
+   THE OPERATORS
+   ============================================================
+
+   Seven people you can play as, and the whole point of the file is
+   that they are seven PEOPLE and not one person at seven sizes.
+
+   The complaint that produced it was precise and it was right: the
+   zombie heads were "just resizing different parts of the original
+   sculpt". That is what an archetype table does -- three sets of radii
+   over one set of equations -- and no amount of extra archetypes fixes
+   it, because the thing that tells two faces apart is not how big the
+   skull is.
+
+   It is which PLANES the skull has. A supraorbital shelf running temple
+   to temple with a hard lower edge, versus two soft arcs over the eyes.
+   An orbit you could put a thumb into, versus a shallow one. A nose
+   whose profile is broken by a dorsal hump, versus a straight one. A
+   mandible that carries its width forward to the chin so the lower face
+   is a box, versus one that tapers to a wedge. A hollow under the
+   cheekbone. A cleft. None of those are scales of each other and none
+   of them is reachable by multiplying a radius.
+
+   So 91-face.js has a control for every one of them now -- forty-odd
+   numbers where it used to have forty literals -- and an operator is a
+   table of overrides. Same code, different person.
+
+   Bodies differ too, which the request was explicit about: "some
+   characters will have different bodies and sizes". Height, mass and
+   reach all vary, and because they do, where the rifle sits in the
+   hands varies with them. GRIP holds that per operator, so the gun is
+   fitted to the man rather than the man being resized around the gun.
+   ============================================================ */
+
+/* Skin. Sampled across a range rather than "one colour lightened", for
+   the same reason as everything else in this file. */
+/* Skin. These are TINTS and a tint only multiplies down, over a recipe
+   that bakes near-cream -- so the number here is very close to the
+   colour that comes out, and the first set was chosen as if it were a
+   paint. 0x97673f is not a skin tone, it is orange, and rendered as
+   exactly that: a man the colour of a traffic cone. Real skin is far
+   less saturated than it looks on a palette. */
+const OP_SKIN = {
+  fair: 0xf0cdb4, ruddy: 0xdda88c, olive: 0xc49a72,
+  tan: 0xa87c56, brown: 0x7d5636, deep: 0x53381f, ash: 0xcabdae,
+};
+
+/* ------------------------------------------------------------------
+   THE FACES
+   ------------------------------------------------------------------
+   Each is a departure from the default sculpt in the ways listed, and
+   the comment on each says what kind of head it is rather than what the
+   numbers do -- the numbers are legible from the control names. */
+const OP_FACE = {
+
+  /* DESTROYER. The heavy. A brachycephalic skull -- short front to back
+     and wide across -- carrying a genuine supraorbital shelf, small
+     deep-set orbits under it, and a mandible that keeps its width all
+     the way to the chin. Broad short nose, thick everything. He is the
+     only one of the seven with a real brow bar, and it is most of why
+     you can tell him at a hundred metres. */
+  destroyer: {
+    // Short, broad and flat-bridged. A boxer's nose that never broke.
+    noseLen: 0.88, noseBridge: 0.82, noseHump: 0, noseWide: 1.34, noseBend: 0,
+    boxy: 1.35, backFull: 0.055, backWide: 0.052, parietal: 0.125,
+    vaultTaperX: 0.070, vaultTaperZ: 0.045, crownFlat: 0.040,
+    occiputLow: 0.014, occiputHigh: 0.012, nape: 0.070,
+    brow: 0.062, browShelf: 1.0, browWide: 0.185, browTall: 0.070,
+    glabella: 0.006, orbit: 0.105, orbitWide: 0.062, orbitTall: 0.052,
+    orbitX: 0.096, orbitY: 0.028, lidFold: 0.020, temple: 0.008,
+    cheek: 0.030, cheekX: 0.162, cheekZ: 0.016, malarHollow: 0,
+    jaw: 0.055, jawDepth: 0.030, jawSquare: 1.0,
+    gonialX: 0.044, gonialY: 0.008, gonialAt: 0.150, gonialLow: -0.200,
+    chin: 0.070, chinWide: 0.092, chinY: -0.286, mental: 0.030,
+    nasolabial: 0.024, philtrum: 0.011,
+  },
+
+  /* CHARLIE. Long and narrow -- dolichocephalic, the opposite skull to
+     Destroyer's. High bridged nose with a dorsal hump that breaks the
+     profile, hollow under the cheekbones, a jaw that tapers to a
+     forward-projecting chin, and almost no brow at all. Where Destroyer
+     is planes, Charlie is edges. */
+  charlie: {
+    // Long, high-bridged, and the hump is the whole profile.
+    noseLen: 1.16, noseBridge: 1.26, noseHump: 1.0, noseWide: 0.74, noseBend: 0,
+    /* The hollow cheek belonged to two faces at once and it should only
+       ever have belonged to one. Measured, Charlie and Abscess came out
+       the closest pair of the seven -- 0.89 against a spread that runs
+       to 4.3 -- because "lean, long and hollow" was the design of both
+       of them, and two people cannot be told apart by a number when
+       they were conceived as the same person.
+
+       So the hollow is Abscess's, entirely. Charlie is long and
+       angular, but his face is FULL: temples packed out, cheeks with
+       flesh on them, a heavy projecting chin. Long is not the same
+       thing as starved, and the difference between those two ideas is
+       what these two men now are. */
+    boxy: 0.75, backFull: 0.062, backWide: 0.010, parietal: 0.070,
+    vaultTaperX: 0.108, vaultTaperZ: 0.050, crownFlat: 0.030,
+    occiputLow: 0.030, occiputHigh: 0.018, nape: 0.048,
+    brow: 0.020, browShelf: 0, browWide: 0.125, browTall: 0.046,
+    glabella: 0.020, orbit: 0.070, orbitWide: 0.074, orbitTall: 0.064,
+    orbitX: 0.086, orbitY: 0.038, lidFold: 0.010, temple: 0.006,
+    cheek: 0.034, cheekX: 0.142, cheekY: -0.014, cheekZ: 0.018,
+    malarHollow: 0,
+    jaw: 0.150, jawDepth: 0.072, jawSquare: 0.25,
+    gonialX: 0.024, gonialY: 0.020, gonialAt: 0.124, gonialLow: -0.222,
+    chin: 0.090, chinWide: 0.066, chinY: -0.292, mental: 0.028,
+    nasolabial: 0.020, philtrum: 0.018,
+  },
+
+  /* DELTA. The one who has been hit in the face. Middling proportions
+     -- deliberately, because a cast of seven needs somewhere for the eye
+     to rest -- and then a nose deviated off the midline and a cleft
+     chin, which between them do more work than any proportion would. */
+  delta: {
+    // Broken, and set. It leans, which is the one asymmetry on any
+    // of these seven faces and does more than any proportion could.
+    noseLen: 1.06, noseBridge: 1.08, noseHump: 0.60, noseWide: 0.96, noseBend: 1.0,
+    /* "Middling, deliberately, because a cast of seven needs somewhere
+       for the eye to rest" was a nice sentence and a bad idea. Middling
+       is the CENTROID, and the centroid is by definition near everybody
+       -- measured, this face was the closest neighbour of whichever of
+       the other six happened to be least extreme that week. A cast has
+       somewhere to rest because the men in it are different sizes, not
+       because one of them is an average of the rest.
+
+       So he is thickset: a skull that is long front to back rather than
+       tall, a low sloping forehead, a heavy occiput, and a square jaw.
+       Plus the broken nose and the cleft, which were always his. */
+    boxy: 1.15, backFull: 0.070, backWide: 0.030, parietal: 0.078,
+    vaultTaperX: 0.126, vaultTaperZ: 0.090, crownFlat: 0.048,
+    forehead: 0.008, occiputLow: 0.010, occiputHigh: 0.044, nape: 0.068,
+    /* Delta and SWAT both ended up square-jawed and heavy-browed, which
+       over the FACE region -- where the occiput that really separates
+       their skulls does not count -- left them the closest pair at 1.35.
+
+       Rather than push one pair apart and collide with a third, which
+       is what the last four passes did, the seven are placed on axes:
+       close-set deep orbits under a narrow brow bar, narrow cheekbones,
+       a broken humped nose. SWAT is the opposite on every one of those
+       -- wide-set shallow eyes under a broad flat brow, wide cheekbones
+       carried low, a short wide nose -- and they share only the square
+       jaw, which is one trait out of six rather than four. */
+    brow: 0.064, browShelf: 0.55, browWide: 0.144, browTall: 0.072,
+    glabella: 0.016, orbit: 0.122, orbitWide: 0.060, orbitTall: 0.050,
+    orbitX: 0.084, orbitY: 0.034, lidFold: 0.018, temple: 0.018,
+    cheek: 0.030, cheekX: 0.142, cheekY: -0.016, cheekZ: 0.013,
+    malarHollow: 0.20,
+    /* The square jaw was the last trait he still shared with SWAT, so
+       it goes: his mandible is heavy but it TAPERS, to a chin that
+       projects and is narrow. SWAT's is a box carried forward to a
+       chin that is broad and flat. Same weight of jaw, opposite shape. */
+    jaw: 0.108, jawDepth: 0.046, jawSquare: 0.35,
+    gonialX: 0.030, gonialY: 0.016, gonialAt: 0.126, gonialLow: -0.210,
+    chin: 0.088, chinWide: 0.060, chinY: -0.290, mental: 0.030,
+    chinCleft: 1.0,
+    nasolabial: 0.026, philtrum: 0.010,
+  },
+
+  /* ALPHA. Tall vault, long midface, cheekbones set high and wide, a
+     straight narrow nose and a jaw that tapers cleanly. The brow is
+     smooth -- no shelf and barely a ridge -- so the orbit rim reads off
+     the cheekbone rather than off bone above it. */
+  alpha: {
+    // Straight, narrow and long. No hump at all -- the dorsum runs
+    // in one line from the brow to the tip.
+    noseLen: 1.16, noseBridge: 1.10, noseHump: 0, noseWide: 0.92, noseBend: 0,
+    /* Measured against the other six, the first version of this face sat
+       in the MIDDLE of the cluster -- closest neighbour to Charlie, to
+       Delta and to Abscess all three, because "balanced and refined" is
+       an average and an average is near everybody. So he gets the one
+       skull nobody else has: a tall domed cranium, narrow through the
+       sides, with a high rounded occiput and a steep forehead. */
+    boxy: 0.20, backFull: 0.010, backWide: 0.016, parietal: 0.030,
+    vaultTaperX: 0.055, vaultTaperZ: 0.050, crownFlat: 0.004,
+    forehead: 0.044, occiputLow: 0.014, occiputHigh: 0.048, nape: 0.072,
+    /* Over the FACE region alone -- which is the metric that matters,
+       since the back of a skull is much the same on everybody -- Alpha
+       and Abscess came out at 1.08 against a spread that runs to 4.5.
+       They are opposite ideas and were not yet opposite geometry. So
+       the midface goes all the way: no brow ridge to speak of, eyes set
+       wide in shallow orbits, cheekbones carried high and FORWARD with
+       no hollow beneath them at all. Abscess gets the reverse of every
+       one of those. */
+    brow: 0.012, browShelf: 0, browWide: 0.116, browTall: 0.042,
+    glabella: 0.020, orbit: 0.062, orbitWide: 0.086, orbitTall: 0.076,
+    orbitX: 0.104, orbitY: 0.042, lidFold: 0.030, temple: 0.002,
+    cheek: 0.046, cheekX: 0.166, cheekY: 0.014, cheekZ: 0.032,
+    malarHollow: 0,
+    jaw: 0.145, jawDepth: 0.084, jawSquare: 0.10,
+    gonialX: 0.016, gonialY: 0.018, gonialAt: 0.118, gonialLow: -0.226,
+    chin: 0.052, chinWide: 0.058, chinY: -0.298, mental: 0.008,
+    nasolabial: 0.005, philtrum: 0.030,
+  },
+
+  /* ABSCESS. Not a corpse -- a living man who looks ill, which is a
+     harder thing to build than a corpse and a different one. The rot
+     pass in 91-face.js sinks the eyes and dries the skin; this does
+     none of that. It is the SKULL that is wrong: a tall narrow vault,
+     orbits cut deeper than anyone else's, temples caved, the malar
+     hollow at full strength so the cheekbone and the jaw angle stand
+     out with nothing between them, and a mandible that is sharp rather
+     than heavy. */
+  abscess: {
+    // Thin to the point of looking skeletal, and the bridge stands
+    // well off a face with nothing else on it.
+    noseLen: 1.04, noseBridge: 1.34, noseHump: 0.55, noseWide: 0.58, noseBend: -0.4,
+    boxy: 0.42, backFull: 0.058, backWide: 0.004, parietal: 0.024,
+    vaultTaperX: 0.168, vaultTaperZ: 0.036, crownFlat: 0.006,
+    occiputLow: 0.038, occiputHigh: 0.042, nape: 0.034,
+    brow: 0.066, browShelf: 0.80, browWide: 0.132, browTall: 0.038,
+    glabella: 0.026, orbit: 0.152, orbitWide: 0.060, orbitTall: 0.080,
+    orbitX: 0.079, orbitY: 0.028, lidFold: 0.030, temple: 0.052,
+    cheek: 0.040, cheekX: 0.144, cheekY: -0.016, cheekZ: 0.026,
+    malarHollow: 2.0,
+    jaw: 0.220, jawDepth: 0.086, jawSquare: 0,
+    gonialX: 0.042, gonialY: 0.026, gonialAt: 0.130, gonialLow: -0.216,
+    chin: 0.062, chinWide: 0.044, chinY: -0.298, mental: 0.046,
+    nasolabial: 0.042, philtrum: 0.026,
+  },
+
+  /* BIOHAZARD. Round, heavy-set and low. A broad flat vault, full
+     cheeks with no hollow at all, wide-set shallow orbits, a small
+     round nose and a fleshy jaw with a weak angle. He is the only one
+     whose face has more soft tissue than bone showing, and next to
+     Abscess -- who is the reverse -- that reads immediately. */
+  biohazard: {
+    // Small, round and snubbed, sitting in a lot of cheek.
+    noseLen: 0.78, noseBridge: 0.70, noseHump: 0, noseWide: 1.10, noseBend: 0,
+    /* Round and SOFT, which is a different thing from broad. Measured
+       against SWAT -- who is also broad and low -- the two came out the
+       closest faces of the seven, because "wide" was doing all the work
+       in both of them and wide is a proportion, not a shape. The
+       difference is planes: this one has none. A genuinely rounded
+       cranium, a jaw with no angle in it, a chin that recedes rather
+       than projects. SWAT is the same width made entirely of corners. */
+    boxy: 0.28, backFull: 0.030, backWide: 0.052, parietal: 0.140,
+    vaultTaperX: 0.058, vaultTaperZ: 0.090, crownFlat: 0.044,
+    occiputLow: 0.008, occiputHigh: 0.014, nape: 0.082,
+    brow: 0.020, browShelf: 0, browWide: 0.176, browTall: 0.070,
+    glabella: 0.004, orbit: 0.054, orbitWide: 0.082, orbitTall: 0.052,
+    orbitX: 0.097, orbitY: 0.028, lidFold: 0.006, temple: 0.002,
+    cheek: 0.010, cheekX: 0.152, cheekY: -0.030, cheekZ: 0.004,
+    malarHollow: 0,
+    jaw: 0.048, jawDepth: 0.022, jawSquare: 0,
+    gonialX: 0.004, gonialY: 0.004, gonialAt: 0.150, gonialLow: -0.192,
+    chin: 0.028, chinWide: 0.072, chinY: -0.266, mental: 0.004,
+    nasolabial: 0.030, philtrum: 0.008,
+  },
+
+  /* SWAT. Compact and blocky: a short broad vault with a genuinely flat
+     occiput, a square mandible carried forward, a wide mouth and a
+     moderate shelf. Where Destroyer is big and square, this one is
+     SMALL and square, and the difference between those two is the whole
+     reason the jaw controls are separate from the skull controls. */
+  swat: {
+    // Wide at the base, low at the bridge, short overall.
+    noseLen: 0.90, noseBridge: 0.80, noseHump: 0, noseWide: 1.40, noseBend: 0,
+    boxy: 1.60, backFull: 0.004, backWide: 0.040, parietal: 0.118,
+    vaultTaperX: 0.058, vaultTaperZ: 0.038, crownFlat: 0.052,
+    occiputLow: 0.004, occiputHigh: 0.002, nape: 0.040,
+    /* The brow is DELIBERATELY light. First pass gave him a shelf at
+       0.70 and deep orbits, and measured against Destroyer -- with a
+       shelf at 1.0 and deeper ones -- the two came out the closest pair
+       of the seven once size was normalised away, because "big square"
+       and "small square" is a scale difference and nothing else. The
+       shelf belongs to Destroyer. This one is wide, low and flat: eyes
+       set far apart in shallow orbits, a broad low vault, full cheeks
+       carried LOW, and a chin that is wide rather than projecting. */
+    brow: 0.040, browShelf: 0.50, browWide: 0.178, browTall: 0.046,
+    glabella: 0.010, orbit: 0.080, orbitWide: 0.074, orbitTall: 0.046,
+    orbitX: 0.106, orbitY: 0.032, lidFold: 0.014, temple: 0.008,
+    cheek: 0.030, cheekX: 0.164, cheekY: -0.044, cheekZ: 0.014,
+    malarHollow: 0.10,
+    jaw: 0.078, jawDepth: 0.032, jawSquare: 1.0,
+    gonialX: 0.048, gonialY: 0.004, gonialAt: 0.152, gonialLow: -0.202,
+    chin: 0.056, chinWide: 0.102, chinY: -0.274, mental: 0.042,
+    nasolabial: 0.010, philtrum: 0.024,
+  },
+};
+
+/* ------------------------------------------------------------------
+   THE SEVEN
+   ------------------------------------------------------------------
+   build   thickness of the anatomical loft; 1 is the default figure
+   height  metres, and it is the real one -- the camera sits on it
+   scale   the skeleton, which changes reach as well as stature
+   grip    where this man's hands meet a rifle. See below.
+   ------------------------------------------------------------------ */
+const OPERATORS = [
+  {
+    id: 'destroyer', name: 'DESTROYER',
+    blurb: 'Breacher. Carries the door with him.',
+    eyeColor: 0x4a3626,
+    face: 'destroyer', faceType: 'heavy', skin: 'tan', seed: 11,
+    build: 1.24, height: 1.92, scale: 1.075, radius: 0.36,
+    // Shorn to the wood, heavy brows, a week of stubble.
+    hairStyle: 'crop', hairColor: 0x1d1a17, brows: 'heavy', browColor: 0x201c18,
+    beard: 'stubble', beardColor: 0x5a4c40,
+    grip: { fwd: 0.055, down: -0.010, side: 0.012, cant: -2 },
+  },
+  {
+    id: 'charlie', name: 'CHARLIE',
+    blurb: 'Marksman. Was somewhere else before this.',
+    eyeColor: 0x6f8a92,
+    face: 'charlie', faceType: 'male', skin: 'fair', seed: 23,
+    build: 0.86, height: 1.83, scale: 1.020, radius: 0.29,
+    // Fair, swept back, thin brows, clean-shaven.
+    hairStyle: 'swept', hairColor: 0x9a8258, brows: 'thin', browColor: 0xa08a60,
+    beard: null,
+    grip: { fwd: 0.022, down: 0.004, side: -0.004, cant: 3 },
+  },
+  {
+    id: 'delta', name: 'DELTA',
+    blurb: 'Assault. Third tour, second nose.',
+    eyeColor: 0x3a2a1c,
+    face: 'delta', faceType: 'male', skin: 'olive', seed: 7,
+    build: 1.04, height: 1.79, scale: 1.000, radius: 0.32,
+    // Dark and short, angled brows, a full beard.
+    hairStyle: 'short', hairColor: 0x2b2118, brows: 'angled', browColor: 0x241c14,
+    beard: 'full', beardColor: 0x2b2118,
+    grip: { fwd: 0, down: 0, side: 0, cant: 0 },
+  },
+  {
+    id: 'alpha', name: 'ALPHA',
+    blurb: 'Team lead. Talks least, moves first.',
+    eyeColor: 0x241a12,
+    face: 'alpha', faceType: 'male', skin: 'brown', seed: 31,
+    build: 0.96, height: 1.87, scale: 1.045, radius: 0.31,
+    // Close-cropped, arched brows, a goatee.
+    hairStyle: 'crop', hairColor: 0x171512, brows: 'arched', browColor: 0x14120f,
+    beard: 'goatee', beardColor: 0x171512,
+    grip: { fwd: 0.034, down: -0.002, side: 0.002, cant: 1 },
+  },
+  {
+    id: 'abscess', name: 'ABSCESS',
+    blurb: 'Whatever was in the tanks, he was under it.',
+    eyeColor: 0x8e9a8c,
+    face: 'abscess', faceType: 'male', skin: 'ash', seed: 47,
+    build: 0.78, height: 1.81, scale: 1.010, radius: 0.28,
+    /* Nothing left on his head and almost nothing over his eyes. The
+       near-absent brow is deliberate and it is the loudest thing about
+       him -- a face with no brows reads as ill in a way no amount of
+       sculpting does, and this is the one place that effect is wanted. */
+    hairStyle: null, hairColor: 0x5a5148, brows: 'thin', browColor: 0x6b6258,
+    beard: 'stubble', beardColor: 0x8a8076,
+    grip: { fwd: 0.016, down: 0.008, side: -0.006, cant: 5 },
+  },
+  {
+    id: 'biohazard', name: 'BIOHAZARD',
+    blurb: 'Decon. Sealed, and happier that way.',
+    eyeColor: 0x5f7a4e,
+    face: 'biohazard', faceType: 'heavy', skin: 'ruddy', seed: 19,
+    build: 1.30, height: 1.76, scale: 0.985, radius: 0.37,
+    // Ginger and thick on top, bushy brows, heavy chops.
+    hairStyle: 'thick', hairColor: 0x7a4a26, brows: 'bushy', browColor: 0x6d4322,
+    beard: 'chops', beardColor: 0x7a4a26,
+    grip: { fwd: -0.014, down: -0.006, side: 0.014, cant: -3 },
+  },
+  {
+    id: 'swat', name: 'SWAT',
+    blurb: 'Entry. Came from a job that had rules.',
+    eyeColor: 0x2b1f16,
+    face: 'swat', faceType: 'male', skin: 'deep', seed: 53,
+    build: 1.10, height: 1.72, scale: 0.955, radius: 0.33,
+    // Shorn, straight heavy brows, a moustache and nothing else.
+    hairStyle: 'crop', hairColor: 0x120f0d, brows: 'straight', browColor: 0x100e0c,
+    beard: 'moustache', beardColor: 0x120f0d,
+    grip: { fwd: -0.008, down: 0.002, side: 0.006, cant: -1 },
+  },
+];
+
+const OPERATOR_BY_ID = {};
+for (const o of OPERATORS) OPERATOR_BY_ID[o.id] = o;
+
+/* WHERE THE GUN GOES.
+ *
+   "They hold their gun correctly and it's fitted to that character
+   cause some characters will have different bodies and sizes."
+
+   The viewmodel places a rifle at a fixed offset from the eye, which is
+   right for exactly one body. Destroyer is nineteen centimetres taller
+   than SWAT and his arms are longer in proportion; hand him SWAT's
+   offset and the rifle is held out at arm's length with the stock
+   nowhere near a shoulder. Hand SWAT Destroyer's and it is in his
+   chest.
+
+   So the offset is derived from the man. `scale` moves the whole rig,
+   which takes care of reach; `grip` is the per-person correction on top
+   of it -- how high he carries, how far out, and how much he cants the
+   weapon -- because two men of the same height do not hold a rifle the
+   same way either. */
+function operatorGrip(id, base) {
+  const op = OPERATOR_BY_ID[id];
+  if (!op) return base;
+  const g = op.grip, k = op.scale;
+  return {
+    x: base.x * k + g.side,
+    y: base.y * k + g.down,
+    z: base.z * k + g.fwd,
+    roll: (base.roll || 0) + g.cant * Math.PI / 180,
+    scale: k,
+  };
+}
+
+Engine.prototype.operators = function () {
+  return OPERATORS.map((o) => ({ id: o.id, name: o.name, blurb: o.blurb,
+    height: o.height, build: o.build }));
+};
+
+Engine.prototype.operatorSpec = function (id) { return OPERATOR_BY_ID[id] || null; };
+
+Engine.prototype.operatorGrip = function (id, base) { return operatorGrip(id, base); };
+
+/* Build one, as a character. Everything that differs between the seven
+   is passed through here and nothing is hardcoded downstream, so adding
+   an eighth is a table entry and not a code change. */
+Engine.prototype.operator = function (id, opts = {}) {
+  const op = OPERATOR_BY_ID[id];
+  if (!op) throw new Error('no such operator: ' + id);
+  const c = this.character(Object.assign({}, opts, {
+    name: opts.name || ('op-' + id),
+    height: op.height, radius: op.radius, scale: op.scale, build: op.build,
+    faceType: op.faceType,
+    faceShape: OP_FACE[op.face],
+    faceKey: op.id,
+    /* The caller wins. Object.assign put the operator's own flag AFTER
+       the caller's opts, so a bench asking for hair: false to compare
+       two heads vertex-to-vertex got hair anyway on whoever has it --
+       and two heads with different vertex counts cannot be compared at
+       all, so fourteen of twenty-one pairs came back NaN and the check
+       passed on the seven that happened to match.
+
+       `hair` is whether the head carries a scalp shell at all, which
+       has to be on for anybody with a haircut; hairStyle is the cut. */
+    hair: opts.hair !== undefined ? opts.hair : !!op.hairStyle,
+    hairStyle: opts.hair === false ? null : op.hairStyle,
+    hairColor: op.hairColor,
+    beard: opts.hair === false ? null : op.beard,
+    beardColor: op.beardColor,
+    brows: opts.hair === false ? null : op.brows,
+    browColor: op.browColor,
+    eyeColor: op.eyeColor,
+    seed: op.seed,
+    material: opts.material || { preset: 'fabric', color: 0x8b8f94 },
+    /* THE SKIN, and it was being dropped on the floor. character()
+       reads the head's material from `opts.skin`; this passed
+       `headMaterial`, which nothing looks at -- so all seven operators
+       rendered in the one default flesh tone. Seven men the same
+       colour, four of them bald and none of them with eyebrows, is one
+       man seven times, and no amount of differentiating their SKULLS
+       was ever going to survive that. */
+    skin: opts.skin || { preset: 'skin', color: OP_SKIN[op.skin] || OP_SKIN.tan,
+      roughness: 0.62, metalness: 0 },
+  }));
+  if (c) { c.operator = op.id; c.operatorSpec = op; }
+  return c;
+};
 
 
 /* ─────────── 96-pistol.js ─────────── */

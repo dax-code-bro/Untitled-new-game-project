@@ -408,8 +408,10 @@ function makeHeadGeometry(opts = {}) {
     gonialAt: 0.135, gonialLow: -0.212,
     chin: A.chin, chinY: -0.282, chinWide: 0.072, mental: 0.022,
     chinCleft: 0,
+    // the nose, which is its own form and not a bump on the skull
+    noseLen: 1, noseBridge: 1, noseHump: 0, noseWide: 1, noseBend: 0,
     // things a default head simply does not have
-    browShelf: 0, malarHollow: 0, deviate: 0, jawSquare: 0,
+    browShelf: 0, malarHollow: 0, jawSquare: 0,
   };
   const F = D;
   if (opts.face) for (const k in opts.face) F[k] = opts.face[k];
@@ -660,7 +662,8 @@ function makeHeadGeometry(opts = {}) {
 
   // The features that a displaced sphere physically cannot produce, built
   // as their own geometry and dropped in.
-  buildNose(g);
+  buildNose(g, { noseLen: F.noseLen, noseBridge: F.noseBridge,
+    noseHump: F.noseHump, noseWide: F.noseWide, noseBend: F.noseBend });
   buildLips(g);
   buildEyelids(g);
 
@@ -668,6 +671,7 @@ function makeHeadGeometry(opts = {}) {
   // the eye reads as an eye, because it catches a highlight where a face
   // is supposed to have one. Cheap, and it does more for "this is a head"
   // than any amount of extra sculpting on the surrounding skull.
+  const eg = new Geometry();
   for (const sx of [1, -1]) {
     // The globe, sat back so its front pole falls just behind the lid
     // aperture, and the cornea — a tighter cap bulging through the opening.
@@ -675,25 +679,49 @@ function makeHeadGeometry(opts = {}) {
     // there is no iris colour to read, so the eye has to be legible from a
     // specular highlight and the hard circular limbus where the cap meets
     // the globe. Both come free from intersecting two spheres.
+    /* THE EYES GO IN THEIR OWN GEOMETRY, and this is the difference
+       between a face and a mannequin.
+
+       They were merged into the head, which means they took the head's
+       one material -- so every character in this game has had
+       SKIN-COLOURED eyeballs sitting in skin-coloured sockets, which is
+       to say no visible eyes at all. That is most of why seven
+       carefully differentiated faces still read as one person: the eyes
+       are where you look first, and there were none. It is not
+       something a tint can fix, because a tint multiplies DOWN and a
+       sclera has to be lighter than the face around it.
+
+       Three shells, each flat-shaded in its own vertex colour, so one
+       extra draw buys a white, an iris and a pupil:
+         globe   the sclera, white
+         iris    a ring cap, whatever colour this person's eyes are
+         pupil   a smaller, darker cap inside it
+       The material that renders this carries no tint of its own; the
+       vertex colours are the whole of it. */
     const parts = [
-      { r: EYE.globeR, z: EYE.globeZ, flat: EYE.globeFlatten, seg: [14, 18] },
-      { r: EYE.corneaR, z: EYE.globeZ + EYE.corneaOffset, flat: 1, seg: [10, 14] },
+      { r: EYE.globeR, z: EYE.globeZ, flat: EYE.globeFlatten, seg: [14, 18], col: 0xf2efe9 },
+      { r: EYE.corneaR, z: EYE.globeZ + EYE.corneaOffset, flat: 1, seg: [10, 14],
+        col: opts.eyeColor != null ? opts.eyeColor : 0x5b4530 },
+      { r: EYE.corneaR * 0.48, z: EYE.globeZ + EYE.corneaOffset + EYE.corneaR * 0.30,
+        flat: 1, seg: [8, 10], col: 0x0b0a09 },
     ];
     for (const part of parts) {
       const eye = Shapes.sphere(part.r, part.seg[0], part.seg[1]);
       const src = eye.positions;
-      const base = g.positions.length / 3;
+      const base = eg.positions.length / 3;
+      eg.setColor(part.col);
       for (let i = 0; i < src.length; i += 3) {
-        g.vert(
+        eg.vert(
           src[i] + sx * EYE.sx, src[i + 1] + EYE.cy, src[i + 2] * part.flat + part.z,
           eye.normals[i], eye.normals[i + 1], eye.normals[i + 2],
           eye.uvs[(i / 3) * 2], eye.uvs[(i / 3) * 2 + 1],
         );
       }
       for (let i = 0; i < eye.indices.length; i += 3) {
-        g.tri(base + eye.indices[i], base + eye.indices[i + 1], base + eye.indices[i + 2]);
+        eg.tri(base + eye.indices[i], base + eye.indices[i + 1], base + eye.indices[i + 2]);
       }
     }
+    eg.setColor(null);
   }
 
   /* ---------------- hair ----------------
@@ -782,6 +810,33 @@ function makeHeadGeometry(opts = {}) {
     void base;
   }
 
+  /* THE SKULL'S OWN EXTENT, taken before the ears and while the hair is
+     the only thing already on it -- recorded so a caller can place and
+     size this head from what it MEASURES rather than from a constant.
+     95-engine.js assumed every head was 0.72 tall and lifted it by half
+     of a fixed 0.252; the moment the sculpt controls started changing
+     the vault, heads came out between 0.606 and 0.690 and the rendered
+     head height drifted from 209 mm to 252 -- a fifth, between two men
+     who are supposed to differ by a tenth. A head is measured now. */
+  {
+    let lo = 1e9, hi = -1e9, loY = 1e9;
+    for (let i = 1; i < g.positions.length; i += 3) {
+      if (g.positions[i] < lo) lo = g.positions[i];
+      if (g.positions[i] > hi) hi = g.positions[i];
+    }
+    loY = lo;
+    // The chin, which is the front-bottom of the sculpt rather than the
+    // lowest vertex anywhere on it -- the jaw sweeps back under the ear
+    // and the nape hollow can dip lower than the chin does.
+    let chin = 1e9;
+    for (let i = 0; i < g.positions.length; i += 3) {
+      if (g.positions[i + 2] < 0.10) continue;          // front of the head only
+      if (Math.abs(g.positions[i]) > 0.06) continue;    // and near the midline
+      if (g.positions[i + 1] < chin) chin = g.positions[i + 1];
+    }
+    g.headBounds = { loY, hiY: hi, height: hi - loY, chinY: chin < 1e8 ? chin : loY };
+  }
+
   // Ears sit on the skull surface, which the parietal widening above pushes
   // out past RX at this height — not at some fraction of it. Placing them
   // inboard buries them inside the head.
@@ -809,6 +864,11 @@ function makeHeadGeometry(opts = {}) {
      directional light happening to rake across it. On a head this small
      the radius is a couple of centimetres. */
   bakeCavityAO(g, { radius: 0.052, strength: 0.95, floor: 0.22, samples: 900 });
+  /* The eyes get the same horizontal squeeze the head just took, or
+     they sit wider apart than the sockets they belong in. */
+  for (let i = 0; i < eg.positions.length; i += 3) eg.positions[i] *= HEAD_SQUEEZE_X;
+  eg.finalize();
+  g.eyes = eg.indices.length ? eg : null;
   return g;
 }
 
@@ -853,13 +913,20 @@ const HAIR_STYLES = {
    sideburn is a thing at the SIDE of a face, and a region with only an
    upper x bound includes the middle of it, which is how the first pass
    drew Hank a bar across the bridge of his nose. */
+/* Measured against the same landmarks: the lip centre is u 0.233 and
+   the chin u 0.104, so a full beard runs from below the chin to just
+   above the lip, and a moustache is a narrow band right at 0.26-0.30.
+
+   The thicknesses are cut hard. 0.020 for a full beard was six
+   millimetres of relief at render scale -- a helmet of hair with a
+   hard edge, which is what made every bearded face read as a mask. */
 const BEARD_STYLES = {
-  stubble:   { u: [0.04, 0.40], w: [0.40, 1.00], x: 0.62, thick: 0.004 },
-  moustache: { u: [0.295, 0.380], w: [0.72, 1.00], x: 0.22, thick: 0.011 },
-  goatee:    { u: [0.03, 0.345], w: [0.70, 1.00], x: 0.20, thick: 0.016 },
-  chops:     { u: [0.16, 0.52], w: [0.24, 0.68], xMin: 0.34, x: 0.82, thick: 0.014 },
-  full:      { u: [0.02, 0.40], w: [0.38, 1.00], x: 0.62, thick: 0.020 },
-  heavy:     { u: [0.00, 0.425], w: [0.32, 1.00], x: 0.66, thick: 0.032 },
+  stubble:   { u: [0.06, 0.30], w: [0.44, 1.00], x: 0.62, thick: 0.0022 },
+  moustache: { u: [0.252, 0.302], w: [0.74, 1.00], x: 0.22, thick: 0.0042 },
+  goatee:    { u: [0.05, 0.285], w: [0.72, 1.00], x: 0.19, thick: 0.0060 },
+  chops:     { u: [0.20, 0.50], w: [0.26, 0.66], xMin: 0.36, x: 0.80, thick: 0.0050 },
+  full:      { u: [0.04, 0.305], w: [0.42, 1.00], x: 0.60, thick: 0.0072 },
+  heavy:     { u: [0.02, 0.325], w: [0.36, 1.00], x: 0.64, thick: 0.0110 },
 };
 
 /* One patch of a geometry, pushed out along its normals.
@@ -935,6 +1002,82 @@ function makeHairGeometry(headGeo, style) {
     return [0, dy, dz];
   } : null;
   return offsetPatch(headGeo, keep, S.thick, warp);
+}
+
+/* EYEBROWS.
+ *
+   Not one of the seven operators had any, and neither had any character
+   in the game before them. A face without eyebrows is a mannequin --
+   they are the highest-contrast feature on a head, the first thing the
+   eye goes to after the eyes themselves, and the single biggest carrier
+   of who somebody is after the silhouette. Seven carefully differentiated
+   skulls with no brows on them read as one bald man seven times, which
+   is exactly what happened.
+
+   Built the same way the hair and the beard are: a region of the head's
+   OWN surface pushed out along its normals, so a brow follows the ridge
+   it sits on rather than floating over a general one. Five shapes, and
+   they are shapes rather than sizes -- a straight bar and a high arch
+   are not scales of each other.
+
+     u     how high up the head, normalised
+     x     how far off the midline, as a band [inner, outer]
+     arch  how much the outer end rises (negative drops it)
+     tilt  the whole brow rotated -- an angry brow drops at the inner end
+     thick how far it stands off the skull */
+/* The bands are in offsetPatch's normalised space, which is neither the
+   sculpt's nor anything you can reason out -- so they are MEASURED off
+   this rig's own landmarks:
+
+     eye centre   u 0.578   xn 0.331
+     brow ridge   u 0.695   xn 0     (outer end of the ridge xn 0.546)
+     nose tip     u 0.434
+     lip centre   u 0.233
+     chin         u 0.104
+
+   A brow sits between the eye and the top of the ridge, so u 0.615 to
+   0.665, and spans from just off the midline out past the eye's outer
+   corner: xn 0.13 to 0.56. Both earlier guesses were wrong in a way a
+   picture would have shown instantly and a 40-pixel thumbnail did not:
+   the first used sculpt coordinates and would have drawn two bars
+   beside the nose, the second put the band at u 0.672-0.726, which is
+   the LOWER FOREHEAD -- a black bar above the eyes, like a stripe of
+   paint.
+
+   `thick` is a standoff in sculpt units on a head 0.667 tall that
+   renders 232 mm, so 0.005 is about 1.7 mm of relief. A real eyebrow
+   is one to two. The previous 0.010-0.019 was a five-millimetre shelf
+   of hair, which is not an eyebrow, it is a ledge. */
+const BROW_STYLES = {
+  none:     null,
+  straight: { u: [0.617, 0.662], x: [0.13, 0.56], arch: 0.000, tilt: 0.000, thick: 0.0040 },
+  arched:   { u: [0.620, 0.660], x: [0.14, 0.54], arch: 0.022, tilt: 0.003, thick: 0.0034 },
+  heavy:    { u: [0.610, 0.667], x: [0.12, 0.58], arch: 0.005, tilt: -0.004, thick: 0.0058 },
+  angled:   { u: [0.615, 0.661], x: [0.13, 0.57], arch: -0.014, tilt: -0.013, thick: 0.0046 },
+  thin:     { u: [0.626, 0.655], x: [0.16, 0.50], arch: 0.012, tilt: 0.002, thick: 0.0024 },
+  bushy:    { u: [0.604, 0.672], x: [0.11, 0.60], arch: 0.008, tilt: -0.002, thick: 0.0072 },
+};
+
+function makeBrowGeometry(headGeo, style) {
+  const S = BROW_STYLES[style];
+  if (!S) return null;
+  /* offsetPatch hands the test a normalised height, a normalised
+     forwardness and a normalised |x|. The brow is a band in all three:
+     it has to be on the FRONT of the head (w), at brow height (u), and
+     off the midline but not round at the temple (xn). */
+  const keep = (u, w, xn) => {
+    if (w < 0.70) return false;                      // front of the face only
+    if (xn < S.x[0] || xn > S.x[1]) return false;    // the band, left and right
+    // How far out along the brow this vertex is, 0 at the nose.
+    const t = (xn - S.x[0]) / Math.max(1e-6, S.x[1] - S.x[0]);
+    // The arch peaks about two thirds out, which is where a real one does.
+    const rise = S.arch * Math.sin(Math.min(1, t / 0.68) * Math.PI * 0.5)
+      * (1 - Math.max(0, t - 0.68) / 0.32 * 0.5);
+    const lo = S.u[0] + rise + S.tilt * (1 - t);
+    const hi = S.u[1] + rise + S.tilt * (1 - t);
+    return u > lo && u < hi;
+  };
+  return offsetPatch(headGeo, keep, S.thick, null);
 }
 
 /* The beard, moustache, chops or stubble. */

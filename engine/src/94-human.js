@@ -503,8 +503,17 @@ function makeHumanBodyGeometry(skeleton, opts = {}) {
      along by a hand two feet away. */
   g.part = PART.BODY;
   buildTorso(g, segments, k);
+  /* The neck is SKIN, and it has been wearing the shirt.
+     It is emitted into the body mesh, the body mesh has one material,
+     and that material is whatever the character is dressed in -- so
+     every head in the game meets a neck of a completely different
+     colour at the jawline, a hard seam right under the chin. Marked
+     here; character() splits it onto its own actor with the skin
+     material and the same skeleton. */
+  const neckStart = g.positions.length / 3;
   g.part = PART.NECK;
   buildNeck(g, segments);
+  g.neckRange = [neckStart, g.positions.length / 3];
   for (const side of [1, -1]) {
     g.part = side > 0 ? PART.ARM_L : PART.ARM_R;
     buildArm(g, side, skeleton, segments, k);
@@ -698,26 +707,61 @@ function buildNose(g, o = {}) {
     [-0.105, 0.243, 0.062, 0.030],
     [-0.119, 0.233, 0.055, 0.022],   // base — this plane is the undercut
   ];
-  const rings = spec.map(([y, z, w, d], i) => ({
-    p: new Vec3(0, y, z), w, d, e: 2.0,
-    right: X, fwd: Z, uv: i / (spec.length - 1),
-  }));
+  /* THE NOSE IS THE FACE, more than any other single form, and until
+     now every head in the game had exactly the same one. Four controls,
+     and they are four different noses rather than one at four sizes:
+
+       len    how far the base drops below the bridge
+       bridge how high the dorsum stands off the face
+       hump   a dorsal hump, bulging the upper third forward and
+              letting the tip drop -- the profile break that makes a
+              nose read as somebody's rather than as a default
+       wide   the wings
+       bend   a deviation off the midline. A broken nose. This one is
+              not symmetric and cannot be, which is exactly why it does
+              so much: every other feature on a face mirrors.
+   */
+  const len = o.noseLen != null ? o.noseLen : 1;
+  const bri = o.noseBridge != null ? o.noseBridge : 1;
+  const hump = o.noseHump || 0;
+  const wide = o.noseWide != null ? o.noseWide : 1;
+  const bend = o.noseBend || 0;
+  const rings = spec.map(([y, z, w, d], i) => {
+    const t = i / (spec.length - 1);          // 0 at the brow, 1 at the base
+    // The hump sits in the upper third and eases out by the ball.
+    const humpAt = Math.exp(-Math.pow((t - 0.32) / 0.20, 2));
+    // A deviation is greatest at the bridge and settles at the base,
+    // because the break is in the bone and the cartilage follows it.
+    const bendAt = Math.exp(-Math.pow((t - 0.40) / 0.34, 2));
+    return {
+      p: new Vec3(bend * bendAt * 0.016, y * len, 0.190 + (z - 0.190) * bri + humpAt * hump * 0.013),
+      w: w * (0.55 + 0.45 * wide) * (t > 0.6 ? wide : 1),
+      d: d * bri, e: 2.0,
+      right: X, fwd: Z, uv: t,
+    };
+  });
   loftRings(g, rings, 24, true, true);
 
   // Nostrils: inward-facing pockets set into the underside. Built flipped,
   // so what you see through the opening is the inside of a closed form.
+  /* The nostrils and the columella have to move with the tip, or a
+     long nose ends up with its openings halfway up it. bx is the
+     deviation at the base, which is a third of the deviation at the
+     bridge -- a broken nose is crooked at the bone and only leans at
+     the tip. */
+  const bx = bend * 0.006, nz = (v) => 0.190 + (v - 0.190) * bri;
   for (const sx of [1, -1]) {
     loftRings(g, [
-      { p: new Vec3(sx * 0.028, -0.121, 0.234), w: 0.015, d: 0.010, e: 2.0, right: X, fwd: Z },
-      { p: new Vec3(sx * 0.027, -0.103, 0.237), w: 0.013, d: 0.009, e: 2.0, right: X, fwd: Z },
-      { p: new Vec3(sx * 0.022, -0.089, 0.243), w: 0.005, d: 0.004, e: 2.0, right: X, fwd: Z },
+      { p: new Vec3(sx * 0.028 * wide + bx, -0.121 * len, nz(0.234)), w: 0.015 * wide, d: 0.010, e: 2.0, right: X, fwd: Z },
+      { p: new Vec3(sx * 0.027 * wide + bx, -0.103 * len, nz(0.237)), w: 0.013 * wide, d: 0.009, e: 2.0, right: X, fwd: Z },
+      { p: new Vec3(sx * 0.022 * wide + bx, -0.089 * len, nz(0.243)), w: 0.005 * wide, d: 0.004, e: 2.0, right: X, fwd: Z },
     ], 12, false, true, true);
   }
 
   // Columella: the strip of flesh between the nostrils.
   loftRings(g, [
-    { p: new Vec3(0, -0.125, 0.239), w: 0.009, d: 0.011, e: 2.2, right: X, fwd: Z },
-    { p: new Vec3(0, -0.103, 0.245), w: 0.010, d: 0.013, e: 2.2, right: X, fwd: Z },
+    { p: new Vec3(bx, -0.125 * len, nz(0.239)), w: 0.009, d: 0.011, e: 2.2, right: X, fwd: Z },
+    { p: new Vec3(bx, -0.103 * len, nz(0.245)), w: 0.010, d: 0.013, e: 2.2, right: X, fwd: Z },
   ], 10, true, true);
 }
 
