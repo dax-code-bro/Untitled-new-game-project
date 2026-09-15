@@ -285,31 +285,63 @@ function svcGrip(g, K) {
 
 /* ---------------- magazines ---------------- */
 
+/* A DISC, ABOUT ANY AXIS.
+ *
+   `spin` revolves about X and only about X, which is right for
+   everything shaped like a barrel and wrong for both of the magazines
+   that are shaped like a plate. The DP-28's pan lies flat on top of the
+   receiver -- its axis is vertical -- and a PPSh drum faces left and
+   right, so its axis runs across the gun. Built with spin, the pan came
+   out as a cylinder lying along the barrel and the drum as a wheel set
+   up to roll forwards, and neither was anywhere near where it should
+   have been. */
+function svcDisc(g, axis, c, r, half, seg) {
+  const n = seg || 28;
+  const A = axis === 'y' ? new Vec3(0, 1, 0) : axis === 'z' ? new Vec3(0, 0, 1) : new Vec3(1, 0, 0);
+  const U = axis === 'x' ? new Vec3(0, 1, 0) : new Vec3(1, 0, 0);
+  const V = axis === 'z' ? new Vec3(0, 1, 0) : new Vec3(0, 0, 1);
+  const st = (t, rr) => ({
+    o: new Vec3(c[0] + A.x * t, c[1] + A.y * t, c[2] + A.z * t),
+    u: U, v: V, pts: ringOutline(rr, n),
+  });
+  /* A rim that rolls over at each face rather than a cut-off tube: a
+     magazine with a sharp edge reads as a coin. */
+  sweepPath(g, [
+    st(-half, r * 0.80), st(-half * 0.72, r), st(half * 0.72, r), st(half, r * 0.80),
+  ], true, true);
+}
+
 function svcMag(g, K) {
   const M = K.mag;
   if (!M || M.kind === 'none') return;
   if (M.kind === 'drum') {
-    spin(g, [[M.x - M.w, 0.004], [M.x - M.w, M.r], [M.x + M.w, M.r], [M.x + M.w, 0.004]],
-      26, 34, M.y - M.r, 0);
-    band(g, M.x - M.w - 0.004, M.x + M.w + 0.004, M.r * 0.30, M.r * 0.38, 20, M.y - M.r, 0);
-    svcSlab(g, [[M.x - 0.011, M.y + 0.006, -M.y * 0.0, 0.0105, 4],
-      [M.x + 0.011, M.y + 0.006, 0.0, 0.0105, 4]]);
+    /* Faces left and right, hanging under the receiver, with the neck
+       that goes up into the magazine well. */
+    svcDisc(g, 'z', [M.x, M.y - M.r * 0.86, 0], M.r, M.w);
+    svcDisc(g, 'z', [M.x, M.y - M.r * 0.86, 0], M.r * 0.34, M.w + 0.0035, 20);
+    svcSlab(g, [[M.x - 0.011, M.y + 0.004, M.r * 0.30, 0.0105, 4],
+      [M.x + 0.011, M.y + 0.004, M.r * 0.30, 0.0105, 4]]);
     return;
   }
   if (M.kind === 'pan') {
-    /* The DP-28's record player, lying flat on top of the receiver. */
-    spin(g, [[M.y - 0.010, 0.006], [M.y - 0.010, M.r], [M.y + 0.006, M.r],
-      [M.y + 0.006, 0.006]], 26, 34, 0, 0);
+    /* The record player: flat on top of the receiver, axis straight up. */
+    svcDisc(g, 'y', [M.x, M.y, 0], M.r, 0.011);
+    svcDisc(g, 'y', [M.x, M.y + 0.012, 0], M.r * 0.30, 0.006, 18);
     return;
   }
   if (M.kind === 'belt') {
-    /* A short tab of belt hanging out of the feed tray; the rest of it
-       is the box, and the box is a separate prop. */
+    /* A short tab of belt out of the feed tray, curving away and down;
+       the rest of it is in a box, and the box is a separate prop.
+       Each link is a plate and a round, and the plate needs TWO
+       stations -- swept from one it is nothing at all. */
     for (let i = 0; i < 7; i++) {
       const t = i / 6;
-      const x = M.x - t * 0.030, y = M.y - t * t * 0.055;
-      svcSlab(g, [[x - 0.0045, 0.0052, 0.0052, 0.024, 3]], 0, true, true);
-      tubeRun(g, [[x - 0.0040, 0.0038], [x + 0.0040, 0.0038]], 10, true, true, y, 0.006);
+      const x = M.x - t * 0.034;
+      const y = M.y - t * t * 0.060;
+      svcSlab(g, [[x - 0.0042, y + 0.0060, -y + 0.0000, 0.0230, 3],
+        [x + 0.0042, y + 0.0060, -y + 0.0000, 0.0230, 3]], 0, true, true);
+      tubeRun(g, [[x - 0.0038, 0.0038], [x + 0.0038, 0.0038]], 10, true, true,
+        y + 0.0010, 0.0150);
     }
     return;
   }
@@ -351,6 +383,95 @@ function svcMag(g, K) {
     pts: roundRect(M.d + 0.0022, M.d + 0.0022, M.w + 0.0022, 4, 18),
   });
   sweepPath(g, sts, true, true);
+}
+
+/* ==================================================================
+   THE AMMUNITION
+   ==================================================================
+   A cartridge is a brass case with a shoulder, a neck, and a bullet
+   standing out of the neck -- and the bullet is a different metal from
+   the case, which is the whole reason you can tell at a glance whether
+   a magazine is full.
+
+   Built as two geometries, `shell` and `tip`, so the case and the
+   projectile take their own materials. A single-material round is a
+   brass-coloured stick and reads as nothing.
+   ================================================================== */
+
+function svcCartridge(shell, tip, A, o, u, v) {
+  const R = A.caseR, L = A.len;
+  /* Along the round: the head with its rim, the body, the shoulder
+     pinching in, the neck, and then the bullet out of the front. */
+  const prof = [
+    [0.000, 0.0000], [0.000, R * 1.06], [0.0035, R * 1.06], [0.0045, R],
+    [L * 0.56, R], [L * 0.64, R * 0.80], [L * 0.68, R * 0.78],
+  ];
+  const sts = prof.map(function (q) {
+    return { o: new Vec3(o.x + u.x * q[0], o.y + u.y * q[0], o.z + u.z * q[0]),
+      u: v, v: new Vec3().crossVectors(u, v).normalize(),
+      pts: ringOutline(Math.max(0.00012, q[1]), 14) };
+  });
+  sweepPath(shell, sts, true, false);
+  /* The bullet: an ogive, not a cone. A cone reads as a pencil. */
+  const bp = [
+    [L * 0.66, R * 0.78], [L * 0.80, R * 0.76], [L * 0.90, R * 0.66],
+    [L * 0.97, R * 0.42], [L * 1.00, 0.0001],
+  ];
+  const bs = bp.map(function (q) {
+    return { o: new Vec3(o.x + u.x * q[0], o.y + u.y * q[0], o.z + u.z * q[0]),
+      u: v, v: new Vec3().crossVectors(u, v).normalize(),
+      pts: ringOutline(Math.max(0.00012, q[1]), 14) };
+  });
+  sweepPath(tip, bs, true, true);
+}
+
+/* The column inside a magazine. Double-stacked and staggered, which is
+   why a thirty-round box is two rounds wide and not thirty tall -- and
+   staggering them is what makes the stack read as separate rounds
+   rather than as a striped block. */
+function svcRounds(shell, tip, K) {
+  const M = K.mag, A = K.ammo;
+  if (!M || M.kind === 'none' || !A) return;
+  const across = new Vec3(0, 0, 1);
+
+  if (M.kind === 'drum' || M.kind === 'pan') {
+    /* Round the rim, nose inward, which is how both of them hold it. */
+    const n = M.kind === 'pan' ? 24 : 20;
+    const cy = M.kind === 'pan' ? M.y : M.y - M.r * 0.86;
+    const rr = M.r * 0.66;
+    for (let i = 0; i < n; i++) {
+      const th = (i / n) * TAU;
+      const c = Math.cos(th), si = Math.sin(th);
+      if (M.kind === 'pan') {
+        svcCartridge(shell, tip, A, new Vec3(M.x + c * rr, cy + 0.002, si * rr),
+          new Vec3(-c, 0, -si), new Vec3(0, 1, 0));
+      } else {
+        svcCartridge(shell, tip, A, new Vec3(M.x + c * rr, cy + si * rr, 0),
+          new Vec3(-c, -si, 0), across);
+      }
+    }
+    return;
+  }
+  if (M.kind === 'belt') return;      // the belt builds its own rounds
+
+  /* A box: walk down the magazine's own curve, one round every pitch,
+     alternating left and right of centre. Only as far as the magazine
+     actually goes. */
+  const n = Math.min(A.rounds, Math.floor(M.len / A.pitch) * 2);
+  const half = M.d * 0.96;
+  for (let i = 0; i < n; i++) {
+    const t = (i >> 1) * A.pitch / M.len;
+    if (t > 0.98) break;
+    const a = M.curve * t;
+    const x = M.x + Math.sin(a) * M.len * t * 0.62;
+    const y = M.y - Math.cos(a) * M.len * t;
+    const z = ((i & 1) ? 1 : -1) * A.stagger;
+    /* Nose forward, along the magazine's own local 'up' -- which is
+       the direction the feed lips point. */
+    const u = new Vec3(Math.cos(a), Math.sin(a), 0);
+    svcCartridge(shell, tip, A,
+      new Vec3(x - u.x * half, y - u.y * half, z), u, across);
+  }
 }
 
 /* A bipod, folded down. Two legs off a yoke under the barrel, which is
@@ -395,15 +516,45 @@ const SVC_BASE = {
   charge: { x: 0.030, y: 0.0130, z: 0.0225 },
   hg: { kind: 'wood', x0: 0.120, x1: 0.250, r: 0.0200, w: 0.0195, drop: 0.0250, upper: 0.0230 },
   grip: { x: -0.082, y: -0.0180, len: 0.108, rake: 0.40 },
+  /* `clear` makes the magazine body smoked polymer so the column of
+     rounds inside it reads. Every magazine in the game is built this
+     way: real modern magazines are translucent for exactly this reason
+     -- so the man holding it can count what is left -- and it is worth
+     more than the strict period accuracy of an opaque steel box. */
   mag: { kind: 'box', x: -0.012, y: -0.0215, len: 0.150, curve: 0.30,
-    w: 0.0125, d: 0.0135, r: 0.055 },
+    w: 0.0125, d: 0.0135, r: 0.055, clear: true },
   stock: { kind: 'wood', butt: -0.330, comb: 0.0245, drop: 0.0300, w: 0.0195 },
   sight: { y: 0.0335, frontX: 0.355, rearX: 0.020, front: 'ears', rear: 'notch' },
   handle: null, rail: null, bipod: null, rotary: 0,
   mass: 4.3, bound: 0.50,
   origin: new Vec3(-0.082, -0.0180, 0),
-  mats: { steel: ARM_MAT.blued, wood: ARM_MAT.poly, mag: ARM_MAT.blued, bolt: ARM_MAT.bright },
+  /* Set per gun by svcSpec below from what the furniture actually is.
+     The base said poly for everything, so every wooden stock in the
+     table -- the STG, the AK, the Thompson, the Garand, both machine
+     guns with wood on them -- was rendering as black plastic. That is
+     most of why they all photographed so dark. */
+  mats: null,
+  /* What is in the magazine. The case is brass unless the round is a
+     steel-cased Soviet one, and the bullet is copper unless it is cast
+     lead. Per calibre, because that is what decides it. */
+  ammo: { caseR: 0.0048, len: 0.047, pitch: 0.0105, stagger: 0.0040,
+    tip: 'copper', shell: 'brass', rounds: 30 },
 };
+
+/* Walnut where there is wood on the gun, polymer where there is not.
+   One rule, applied from what the handguard and the stock say they are
+   made of, so a row cannot say 'wood' and then render in plastic. */
+function svcMats(K) {
+  const wooden = (K.hg && K.hg.kind === 'wood') || (K.stock && K.stock.kind === 'wood');
+  return {
+    steel: ARM_MAT.blued,
+    wood: wooden ? ARM_MAT.walnut : ARM_MAT.poly,
+    mag: K.mag && K.mag.clear ? ARM_MAT.smoke : ARM_MAT.blued,
+    bolt: ARM_MAT.bright,
+    shell: ARM_MAT.brass,
+    tip: ARM_MAT.copper,
+  };
+}
 
 /* A shallow merge, one level into the sub-objects, which is as deep as
    this table ever goes. */
@@ -420,6 +571,7 @@ function svcSpec(over) {
   /* The grip is the pivot. Every gun is held in the same place, which
      is why one hand solve serves all of them. */
   if (!over.origin) out.origin = new Vec3(out.grip.x, out.grip.y, 0);
+  if (!out.mats) out.mats = svcMats(out);
   return out;
 }
 
@@ -615,6 +767,11 @@ function makeServiceArm(kind) {
   svcGrip(geos.wood, K);
   geos.mag = new Geometry(); svcMag(geos.mag, K);
   geos.bolt = new Geometry(); svcBolt(geos.bolt, K);
+  geos.shell = new Geometry(); geos.tip = new Geometry();
+  svcRounds(geos.shell, geos.tip, K);
+  /* A gun with no magazine has no rounds to show, and an empty
+     geometry through mountArm is an actor with nothing in it. */
+  if (!geos.shell.positions.length) { delete geos.shell; delete geos.tip; }
   return fin(geos, K.origin);
 }
 

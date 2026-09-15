@@ -131,9 +131,14 @@ function check(name, cond, detail = '') {
       if (want && !r.per[name]) problems.push(`the ${name} is empty`);
       if (!want && r.per[name]) problems.push(`the ${name} should not exist`);
     }
-    /* And a magazine belongs below the bore, not inside the receiver. */
-    if (r.per.mag && !(r.per.mag.y[0] < -0.045)) {
-      problems.push(`the magazine only reaches ${r.per.mag.y[0].toFixed(3)} below the bore`);
+    /* A magazine belongs clear of the bore -- but not always BELOW it.
+       The DP-28's pan lies on top of the receiver, the Bren is top-fed
+       and the P90's lies flat along the spine, so "below" failed three
+       guns that were right. What is actually wrong is a magazine buried
+       inside the receiver, which is either direction far enough. */
+    if (r.per.mag && !(r.per.mag.y[0] < -0.045 || r.per.mag.y[1] > 0.028)) {
+      problems.push(`the magazine is inside the receiver (${r.per.mag.y[0].toFixed(3)}`
+        + ` to ${r.per.mag.y[1].toFixed(3)})`);
     }
     if (r.per.wood && !(r.per.wood.y[0] < -0.060)) {
       problems.push('there is no grip under the receiver');

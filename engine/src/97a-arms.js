@@ -2357,6 +2357,16 @@ const ARM_MAT = {
   brass: { color: 0xc9a227, texture: 'metal', roughness: 0.30, metalness: 1 },
   glow: { color: 0x9fe8ff, texture: 'smooth', roughness: 0.30, metalness: 0, emissive: 0x54c8ff, emissiveStrength: 1.5 },
   glass: { color: 0xb6c6cc, texture: 'smooth', roughness: 0.12, metalness: 0, opacity: 0.42 },
+  /* Smoked polymer, for a magazine you are meant to see the rounds
+     through. Real modern magazines are translucent for exactly this
+     reason -- so the man holding it can count what is left -- so this
+     is not a liberty taken to show off the ammunition. */
+  smoke: { color: 0x2a2f33, texture: 'smooth', roughness: 0.42, metalness: 0, opacity: 0.55 },
+  /* Lead, for the exposed part of a cast bullet, and the grey lacquer
+     on a steel case. Both are dielectric: a metalness of 1 here turns a
+     bullet into a mirror and loses its shape entirely. */
+  lead: { color: 0x9a9690, texture: 'metal', roughness: 0.58, metalness: 0.2 },
+  lacquer: { color: 0x5d6b52, texture: 'smooth', roughness: 0.52, metalness: 0.1 },
   // The reticle has to be visible against mud and against a bright sky,
   // so it is emissive rather than merely dark.
   reticle: { color: 0x1a0603, texture: 'smooth', roughness: 0.9, metalness: 0, emissive: 0xff2a1e, emissiveStrength: 2.0 },
