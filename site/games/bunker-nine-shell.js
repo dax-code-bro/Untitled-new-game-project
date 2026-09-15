@@ -1003,7 +1003,7 @@ function buildDom() {
     modelist: q('.modelist'), mplist: q('.mplist'), lobinfo: q('.lobinfo'),
     roster: q('.roster'), gowrap: q('.gowrap'),
     slots: q('.slots'), dname: q('.dname'), tagline: q('.tagline'), dpg: q('.detail > .pg'),
-    dlist: q('.dlist'), gunart: q('.gunart'), dstats: q('.stats'),
+    dlist: q('.dlist'), preview: q('.preview'), gunart: q('.gunart'), dstats: q('.stats'),
     confirm: q('.confirm'), mpfoot: q('.mpfoot'),
     pbody: q('.pbody'), pauseacts: q('.pauseacts'), prd: q('.pausehead .rd'),
   };
@@ -2337,7 +2337,11 @@ function statFrac(d, v) {
    the rule stayed behind on every slot that has no gun to draw. */
 function setArt(html) {
   el.gunart.innerHTML = html || '';
-  el.preview.classList.toggle('off', !html);
+  /* Guarded, because this runs at the top of paintDetail and an
+     exception here does not just lose the picture -- it aborts the
+     whole function and leaves the right-hand column completely empty,
+     which is exactly what an unresolved element reference did. */
+  if (el.preview) el.preview.classList.toggle('off', !html);
 }
 
 function paintStats(before, after) {
