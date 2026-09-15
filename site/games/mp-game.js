@@ -30,7 +30,7 @@
     forward: ['w', 'arrowup'], back: ['s', 'arrowdown'],
     left: ['a', 'arrowleft'], right: ['d', 'arrowright'],
     jump: [' '], crouch: ['control', 'c'], sprint: ['shift'],
-    reload: ['r'], swap: ['q', '1', '2'], scores: ['tab'],
+    slide: ['z'], reload: ['r'], swap: ['q', '1', '2'], scores: ['tab'],
     quit: ['escape'],
   };
 
@@ -274,6 +274,122 @@
         W.removeEventListener('mousemove', move); W.removeEventListener('mousedown', mdown);
         W.removeEventListener('mouseup', mup);
         document.removeEventListener('pointerlockchange', lockChange);
+      },
+    };
+  }
+
+  /* ================================================================
+     THE PAD
+     ================================================================
+     A controller is not a keyboard with different key names. Two
+     things make the difference between a pad that works and one that
+     is merely connected:
+
+     A DEADZONE THAT IS RADIAL, not per axis. Per-axis deadzones are why
+     a stick pushed diagonally feels like it snaps to the diagonals --
+     each axis crosses its threshold separately. One radial test on the
+     magnitude, and then the remaining travel is rescaled so the very
+     first movement past the deadzone is the slowest and not a jump.
+
+     A RESPONSE CURVE on the look stick. Linear look is unusable: you
+     get either a stick too slow to turn round or one too fast to aim.
+     Cubed, with a linear part mixed back in, gives fine control in the
+     middle of the travel and a real turn at the edge -- and it is one
+     line rather than a sensitivity slider people have to find.
+
+     The button numbers are the standard mapping. On a pad the browser
+     does not recognise, the axes still work and the face buttons fall
+     back to "any of the first four", which is worth more than nothing.
+     ================================================================ */
+
+  var PAD = {
+    fire: 7, aim: 6,            // right and left trigger
+    jump: 0, crouch: 1, reload: 2, swap: 3,
+    sprint: 10, slide: 11,      // stick clicks
+    scores: 8, quit: 9,
+    lb: 4, rb: 5,
+  };
+
+  function stick(x, y, dz) {
+    var m = Math.hypot(x, y);
+    if (m < dz) return [0, 0, 0];
+    /* Rescaled from the edge of the deadzone, so the first movement
+       past it is slow rather than a jump to `dz` worth of speed. */
+    var t = Math.min(1, (m - dz) / (1 - dz));
+    return [(x / m) * t, (y / m) * t, t];
+  }
+
+  function curve(v) {
+    var a = Math.abs(v);
+    return Math.sign(v) * (a * a * a * 0.78 + a * 0.22);
+  }
+
+  function makePad(opts) {
+    var prev = {}, live = null;
+    var dzL = opts.deadzoneLeft != null ? opts.deadzoneLeft : 0.18;
+    var dzR = opts.deadzoneRight != null ? opts.deadzoneRight : 0.16;
+    var look = (opts.padSensitivity || 1) * 3.4;
+
+    function read() {
+      if (!W.navigator || !navigator.getGamepads) return null;
+      var pads = navigator.getGamepads() || [];
+      for (var i = 0; i < pads.length; i++) {
+        if (pads[i] && pads[i].connected) return pads[i];
+      }
+      return null;
+    }
+    function down(p, i) {
+      var b = p.buttons || [];
+      return !!(b[i] && (b[i].pressed || b[i].value > 0.45));
+    }
+    return {
+      get pad() { return live; },
+      /* Rumble, when the pad has it. A hit you can feel is worth more
+         than a hit marker you have to notice. */
+      rumble: function (strong, seconds) {
+        var a = live && live.vibrationActuator;
+        if (!a || !a.playEffect) return;
+        try {
+          a.playEffect('dual-rumble', { duration: Math.round(seconds * 1000),
+            strongMagnitude: strong, weakMagnitude: strong * 0.6 });
+        } catch (e) { /* a pad that will not buzz still plays */ }
+      },
+      poll: function (dt, cmd) {
+        var p = live = read();
+        if (!p) return false;
+        var ax = p.axes || [];
+        var L = stick(ax[0] || 0, ax[1] || 0, dzL);
+        var R = stick(ax[2] || 0, ax[3] || 0, dzR);
+        /* Move: the stick adds to whatever the keyboard already said,
+           so both work at once and neither cancels the other. */
+        cmd.right += L[0];
+        cmd.forward += -L[1];
+        var m = Math.hypot(cmd.forward, cmd.right);
+        if (m > 1) { cmd.forward /= m; cmd.right /= m; }
+        cmd.lookX = curve(R[0]) * look * dt;
+        cmd.lookY = curve(R[1]) * look * dt;
+
+        var std = p.mapping === 'standard';
+        var b = p.buttons || [];
+        function edge(name, on) { var was = !!prev[name]; prev[name] = on; return on && !was; }
+        var trig = function (i) { return b[i] ? b[i].value : 0; };
+
+        if (std) {
+          cmd.fire = cmd.fire || trig(PAD.fire) > 0.35;
+          cmd.aim = cmd.aim || trig(PAD.aim) > 0.35;
+          cmd.jump = cmd.jump || edge('jump', down(p, PAD.jump));
+          cmd.crouch = cmd.crouch || down(p, PAD.crouch);
+          cmd.reload = cmd.reload || edge('reload', down(p, PAD.reload));
+          cmd.swap = cmd.swap || edge('swap', down(p, PAD.swap));
+          cmd.run = cmd.run || down(p, PAD.sprint);
+          cmd.slide = cmd.slide || edge('slide', down(p, PAD.slide));
+          cmd.scores = cmd.scores || down(p, PAD.scores);
+        } else {
+          /* Unknown pad: the axes are still the axes, and any of the
+             first four buttons fires. */
+          cmd.fire = cmd.fire || down(p, 0) || down(p, 1) || down(p, 2) || down(p, 3);
+        }
+        return true;
       },
     };
   }
@@ -602,6 +718,7 @@
 
     var hud = makeHud(root, M);
     var input = makeInput(root, canvas);
+    var pad = makePad(opts);
     var vm = makeViewmodel(game);
 
     var yaw = M.you.yaw, pitch = 0;
@@ -624,6 +741,7 @@
           if (d < bd) { bd = d; best = q; }
         }
         hud.tookFrom(best);
+        pad.rumble(0.55, 0.16);
       }
       lastHp = p.hp;
     }
@@ -644,8 +762,18 @@
         run: input.any(KEYS.sprint), jump: input.once(KEYS.jump),
         crouch: input.any(KEYS.crouch),
         reload: input.once(KEYS.reload), swap: input.once(KEYS.swap),
+        slide: input.once(KEYS.slide), scores: input.any(KEYS.scores),
         fire: input.buttons.fire, aim: input.buttons.aim,
+        lookX: 0, lookY: 0,
       };
+      /* The pad adds to what the keyboard said rather than replacing
+         it, so both are live at once and neither cancels the other --
+         which matters more than it sounds, because a player with a pad
+         in their hands still hits Escape with the other one. */
+      var padOn = pad.poll(dt, cmd);
+      if (padOn) { yaw += cmd.lookX; pitch += cmd.lookY; }
+      pitch = Math.max(-1.45, Math.min(1.45, pitch));
+      cmd.yaw = yaw; cmd.pitch = pitch;
       /* Coming back from the dead, look the way you were put down
          facing. Without this the camera kept whatever angle you died
          with -- respawn while looking at your own boots and you spend
@@ -655,9 +783,26 @@
       wasAlive = p.alive;
 
       var before = p.ammo[p.held];
+      /* The view recoil the match just applied has to come back into
+         the angle YOU are holding, or the gun kicks and the camera does
+         not and the whole thing is a lie. It is added to your own yaw
+         and pitch rather than replacing them: you keep aiming where you
+         were aiming, and the gun has moved you off it. Pulling back
+         down is then a thing you do with the mouse, which is what
+         controlling recoil is. */
+      var kUp0 = p.kickUp || 0, kSide0 = p.kickSide || 0;
+      var kills0 = p.kills;
       M.control(cmd, dt);
       if (p.ammo[p.held] < before) kick = Math.min(1.4, kick + 0.55);
       M.update(dt);
+      var dUp = (p.kickUp || 0) - kUp0, dSide = (p.kickSide || 0) - kSide0;
+      /* Only the climb is handed to the player. The settle is the gun
+         coming back down under its own weight and must NOT drag the
+         view with it, or every burst ends where it started and recoil
+         costs nothing. */
+      if (dUp > 0) { pitch -= dUp; yaw += dSide; pad.rumble(0.22, 0.05); }
+      if (p.kills > kills0) { hud.hitMark(true); pad.rumble(0.8, 0.22); }
+      pitch = Math.max(-1.45, Math.min(1.45, pitch));
       watchDamage();
 
       kick *= Math.pow(0.02, dt);
@@ -677,12 +822,12 @@
         var w = p.guns[p.held];
         var cone = (p.aiming ? w.adsSpread : w.spread) * (moving ? 1.5 : 1) * (p.sprinting ? 2.2 : 1);
         vm.place(eye, yaw, pitch, input.buttons.aim ? 1 : 0, p.sprinting, kick, bob);
-        hud.paint(cone * Math.PI / 180, input.any(KEYS.scores));
+        hud.paint(cone * Math.PI / 180, cmd.scores);
       } else {
         vm.hide();
         eye = { x: p.pos.x, y: p.pos.y + 1.1, z: p.pos.z };
         game.lookAt([eye.x, eye.y + 1.4, eye.z], [p.pos.x, p.pos.y + 1.0, p.pos.z + 0.01]);
-        hud.paint(0.02, input.any(KEYS.scores));
+        hud.paint(0.02, cmd.scores);
       }
 
       if (M.over && !over) {
@@ -703,7 +848,7 @@
     game.start();
 
     var api = {
-      game: game, match: M, hud: hud, input: input, viewmodel: vm,
+      game: game, match: M, hud: hud, input: input, pad: pad, viewmodel: vm,
       get yaw() { return yaw; }, get pitch() { return pitch; },
       look: function (x, y) { yaw = x; pitch = y; },
       stop: function () { over = true; input.dispose(); game.stop(); },

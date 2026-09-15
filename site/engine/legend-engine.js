@@ -18248,7 +18248,7 @@ const ARM_MAT = {
      through. Real modern magazines are translucent for exactly this
      reason -- so the man holding it can count what is left -- so this
      is not a liberty taken to show off the ammunition. */
-  smoke: { color: 0x2a2f33, texture: 'smooth', roughness: 0.42, metalness: 0, opacity: 0.55 },
+  smoke: { color: 0x555d64, texture: 'smooth', roughness: 0.38, metalness: 0, opacity: 0.34 },
   /* Lead, for the exposed part of a cast bullet, and the grey lacquer
      on a steel case. Both are dielectric: a metalness of 1 here turns a
      bullet into a mirror and loses its shape entirely. */

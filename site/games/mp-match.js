@@ -343,6 +343,7 @@
       id: i, name: def.name, team: team, bot: !!def.bot, skill: def.skill || null,
       hp: HEALTH, alive: false, respawnAt: 0,
       pos: { x: 0, y: 0, z: 0 }, yaw: 0, pitch: 0,
+      sliding: false, slideEnd: 0, slideRecover: 0,
       vel: { x: 0, z: 0 },
       actor: null,
       guns: [primary, secondary], held: 0,
@@ -511,6 +512,9 @@
     p.ammo = [p.guns[0].mag, p.guns[1].mag];
     p.reserve = [p.guns[0].mag * 10, p.guns[1].mag * 10];
     p.reloadUntil = 0; p.nextShot = 0;
+    p.lastGood = { x: p.pos.x, y: p.pos.y, z: p.pos.z };
+    p.sliding = false; p.slideEnd = 0; p.slideRecover = 0;
+    p.vy = 0; p.kickUp = 0; p.kickSide = 0; p.kickHold = 0;
     p.ai.state = 'advance'; p.ai.target = null; p.ai.path = null;
     p.ai.goal = null; p.ai.goalAt = -99;
     if (p.actor && p.actor.controller) {
@@ -589,6 +593,33 @@
     return { d: Math.hypot(ax, az, y) , head: head };
   }
 
+  /* WHERE THE ROUND ACTUALLY LEAVES FROM.
+   *
+     Out of the muzzle, not out of the eye. A gun is held below and to
+     the side of your head with about sixty centimetres of barrel in
+     front of it, so a shot fired from the eye is a shot fired from a
+     place the gun is not -- which sounds like a detail until you lean
+     round a corner, see a man, and kill him through the wall your
+     barrel is still behind. That is the bug this removes, and the fact
+     that the barrel being covered now blocks the shot is the point of
+     it rather than a side effect. */
+  var MUZZLE_FWD = 0.62, MUZZLE_DOWN = 0.14, MUZZLE_SIDE = 0.10;
+
+  function muzzleOf(p) {
+    var e = eyeOf(p);
+    var cp = Math.cos(p.pitch), sp = Math.sin(p.pitch);
+    var sy = Math.sin(p.yaw), cy = Math.cos(p.yaw);
+    var f = { x: sy * cp, y: -sp, z: cy * cp };
+    /* Aiming brings the gun onto the centre line, which is the whole
+       point of aiming, so the offset goes away as the sights come up. */
+    var side = p.aiming ? 0 : MUZZLE_SIDE, down = p.aiming ? 0.02 : MUZZLE_DOWN;
+    return {
+      x: e.x + f.x * MUZZLE_FWD + cy * side,
+      y: e.y + f.y * MUZZLE_FWD - down,
+      z: e.z + f.z * MUZZLE_FWD - sy * side,
+    };
+  }
+
   function fire(M, p, rand, emit) {
     var w = gun(p);
     if (!p.alive || M.time < p.nextShot || M.time < p.reloadUntil) return null;
@@ -596,8 +627,13 @@
     p.ammo[p.held]--;
     p.nextShot = M.time + 60 / w.rpm;
     if (M.stats) M.stats.shots++;
+    kickFrom(M, p, w, rand);
 
-    var from = eyeOf(p);
+    /* If the muzzle itself is inside something, the round goes into
+       that and no further. */
+    var eye = eyeOf(p);
+    var from = muzzleOf(p);
+    if (!losClear(M, eye, from)) from = eye;
     /* Aimed or from the hip. A bot is aiming whenever it is engaging;
        you are aiming when you are holding the button. */
     var cone = ((p.aiming || p.ai.state === 'engage') ? w.adsSpread : w.spread) * Math.PI / 180;
@@ -625,6 +661,40 @@
     }
     if (p.ammo[p.held] <= 0) beginReload(M, p);
     return out;
+  }
+
+  /* RECOIL THAT MOVES THE MAN, NOT THE GUN.
+   *
+     Every shot puts a real impulse into the view: the pitch climbs and
+     the yaw wanders, per gun, off the same recoil figures the loadout
+     screen shows. It decays back most of the way but not all of it, so
+     holding the trigger walks your aim up the wall and you have to pull
+     it down -- which is what recoil IS, and what a muzzle that rises
+     while the camera stays level completely fails to be.
+
+     `recoil` is where it has climbed to and `settle` is where it will
+     fall back to, so the recovery returns the shot-to-shot jump and
+     keeps the drift. A bot fights it the same way a player does. */
+  function kickFrom(M, p, w, rand) {
+    var up = w.rec[0] * Math.PI / 180, side = w.rec[1] * Math.PI / 180;
+    var aim = p.aiming ? 0.72 : 1;          // braced against the shoulder
+    var crouch = p.crouching ? 0.85 : 1;
+    p.kickUp = (p.kickUp || 0) + up * aim * crouch;
+    p.kickSide = (p.kickSide || 0) + (rand() - 0.5) * 2 * side * aim * crouch;
+    /* A quarter of each shot's climb stays until you put it back. */
+    p.kickHold = (p.kickHold || 0) + up * aim * crouch * 0.26;
+    p.kickAt = M.time;
+  }
+
+  function settleKick(M, p, dt) {
+    if (!p.kickUp && !p.kickSide) return;
+    var k = Math.pow(0.0009, dt);           // most of it back in a fifth of a second
+    p.kickUp = (p.kickUp - p.kickHold) * k + p.kickHold;
+    p.kickSide *= k;
+    /* And the part that stayed drains away slowly once you stop. */
+    if (M.time - (p.kickAt || 0) > 0.22) p.kickHold *= Math.pow(0.30, dt);
+    if (Math.abs(p.kickUp) < 1e-5) { p.kickUp = 0; p.kickHold = 0; }
+    if (Math.abs(p.kickSide) < 1e-5) p.kickSide = 0;
   }
 
   function beginReload(M, p) {
@@ -704,10 +774,26 @@
     return navBlocked(nav, i, j);
   }
 
+  var notActor = function (b) { return b && !b.isTrigger && !(b.userData && b.userData.actor); };
+
+  /* THE FLOOR UNDER A POINT, and it tries three times.
+   *
+     A ray that starts INSIDE a solid does not report that solid, so a
+     body whose feet are in the side wall of Resort's drained pool cast
+     down from within it, found nothing at all, and fell. Casting again
+     from well above clears whatever it was standing in and finds the
+     real floor. Three heights, because one of them being wrong is how
+     a man ends up at minus five metres. */
   function groundAt(M, x, z, from) {
-    var h = M.game.raycast([x, from == null ? 8 : from, z], [0, -1, 0], 40,
-      function (b) { return b && !b.isTrigger && !(b.userData && b.userData.actor); });
-    return h ? h.point.y : null;
+    var y0 = from == null ? 8 : from;
+    for (var i = 0; i < 3; i++) {
+      var start = i === 0 ? y0 : (i === 1 ? y0 + 3.0 : y0 + 14.0);
+      var h = M.game.raycast([x, start, z], [0, -1, 0], 60, notActor);
+      /* A floor above the feet is not the floor you are on -- that is
+         a ceiling, and taking it is how a body teleports upstairs. */
+      if (h && h.point.y <= y0 + 0.02) return h.point.y;
+    }
+    return null;
   }
 
   var GRAVITY = 19.6, JUMP = 6.0, STEP_UP = 0.62;
@@ -726,17 +812,51 @@
        stairs are a 0.26 rise, so 0.62 takes a step and refuses a wall --
        and everything else is gravity. Which also gives the player a jump
        without a second movement path to keep in step with this one. */
-    var g = groundAt(M, p.pos.x, p.pos.z, p.pos.y + 2.4);
+    /* THE GROUND RAY STARTS AT THE FEET, plus a step.
+     *
+       It started 2.4 metres above them, and the test for standing was
+       "the floor is no more than a step BELOW me" -- which is satisfied
+       by a floor any distance ABOVE me. So anything the ray found on
+       the way down, up to two and a half metres up, counted as ground
+       and the body was snapped on top of it. A man could walk into the
+       side of a spawn screen and be standing on it, walk off the far
+       side, and end up somewhere with nothing underneath at all.
+
+       Starting the ray a step above the feet means the only floors it
+       can find are ones you could actually step onto. */
+    var g = groundAt(M, p.pos.x, p.pos.z, p.pos.y + STEP_UP + 0.05);
     p.vy = p.vy || 0;
     var onFloor = g != null && p.pos.y - g <= STEP_UP && p.vy <= 0.001;
     if (onFloor) {
       p.pos.y = g; p.vy = 0; p.grounded = true;
+      p.lastGood = { x: p.pos.x, y: g, z: p.pos.z };
       if (jump) { p.vy = JUMP; p.grounded = false; }
     } else {
       p.grounded = false;
       p.vy -= GRAVITY * dt;
       p.pos.y += p.vy * dt;
-      if (g != null && p.pos.y <= g) { p.pos.y = g; p.vy = 0; p.grounded = true; }
+      if (g != null && p.pos.y <= g) {
+        p.pos.y = g; p.vy = 0; p.grounded = true;
+        p.lastGood = { x: p.pos.x, y: g, z: p.pos.z };
+      } else if (g == null && p.lastGood && p.pos.y < p.lastGood.y - 0.5) {
+        /* NOTHING UNDERNEATH, and half a metre gone.
+         *
+           Not a fall -- a fall finds a floor the whole way down and is
+           handled above. This is the case where three separate casts
+           found nothing at all, which on Resort means a body has walked
+           sideways out of the drained pool THROUGH its wall into the
+           void under the terrace. It can do that because the navigation
+           grid is swept at chest height and a pit two and a half metres
+           down is invisible to it.
+
+           Half a metre is the threshold because half a metre of
+           unexplained fall is already enough to know something is
+           wrong, and putting a body back where it last stood is better
+           than letting it drop out of the match. Unlike killing it,
+           this leaves no hole in the scoreboard for a bug of ours. */
+        p.pos.x = p.lastGood.x; p.pos.y = p.lastGood.y; p.pos.z = p.lastGood.z;
+        p.vy = 0; p.grounded = true;
+      }
     }
     if (p.actor && p.actor.controller) {
       p.actor.controller.teleport([p.pos.x, p.pos.y + 0.9, p.pos.z]);
@@ -857,7 +977,10 @@
     if (ai.state === 'engage') {
       var d2 = Math.hypot(t.pos.x - p.pos.x, t.pos.z - p.pos.z);
       var off = turnTo(p, yawTo(p.pos, t.pos), 5.0 + sk.aim * 5.0, dt);
-      p.pitch = Math.atan2((p.pos.y + EYE) - (t.pos.y + AIM_Y), Math.max(0.5, d2));
+      /* Pulled back down against its own recoil, as well as it can --
+         which is what its skill actually buys it. */
+      var want = Math.atan2((p.pos.y + EYE) - (t.pos.y + AIM_Y), Math.max(0.5, d2));
+      p.pitch = want - (p.kickUp || 0) * (1 - sk.aim * 0.85);
       /* Strafe rather than stand. Changed at intervals, not per frame,
          or the body vibrates on the spot. */
       ai.jitter -= dt;
@@ -1158,6 +1281,7 @@
         if (M.time >= p.respawnAt && (!M.mode.bomb || M.roundTime < 4.0)) spawn(M, p, false);
         continue;
       }
+      settleKick(M, p, dt);
       if (M.time >= p.reloadUntil && p.reloadUntil > 0) { finishReload(M, p); p.reloadUntil = 0; }
       /* Health comes back after five seconds untouched. Without it every
          fight after the first is decided by the one before it. */
@@ -1201,6 +1325,44 @@
     /* Sprinting is forward only, and you cannot sprint down your sights.
        Crouching is slower and steadier. */
     var sprint = cmd.run && fwd > 0.5 && !p.aiming;
+
+    /* THE SLIDE.
+     *
+       Entered from a sprint and from nothing else, because a slide from
+       standing is a crouch with extra steps. It keeps the speed you
+       came in with plus a shove, bleeds it off over about three
+       quarters of a second, and drops you to crouch height for the
+       whole of it -- so it is genuinely a way under a sightline and not
+       only a way to look busy.
+
+       The recovery is the cost. For a fifth of a second after it ends
+       you are standing up and cannot fire, which is what stops it being
+       a free dodge you spam round every corner. */
+    if (cmd.slide && sprint && p.grounded && M.time > (p.slideEnd || 0) + 0.45) {
+      p.sliding = true;
+      p.slideEnd = M.time + 0.72;
+      p.slideDir = { x: Math.sin(p.yaw), z: Math.cos(p.yaw) };
+      p.slideSpeed = 5.2 * w.move * 1.62;
+    }
+    if (p.sliding && (M.time >= p.slideEnd || !p.grounded)) {
+      p.sliding = false;
+      p.slideRecover = M.time + 0.20;
+    }
+    if (p.sliding) {
+      /* Only the last of the speed is steerable, so a slide commits you
+         to roughly where you pointed it. */
+      var left = Math.max(0, (p.slideEnd - M.time) / 0.72);
+      var sp2 = p.slideSpeed * (0.35 + 0.65 * left);
+      var steer2 = 1 - left * 0.85;
+      var dx = p.slideDir.x + Math.cos(p.yaw) * str * steer2;
+      var dz = p.slideDir.z - Math.sin(p.yaw) * str * steer2;
+      var dl = Math.hypot(dx, dz) || 1;
+      moveBy(M, p, (dx / dl) * sp2, (dz / dl) * sp2, dt, false);
+      p.crouching = true;
+      p.sprinting = false;
+      return;
+    }
+
     var speed = 5.2 * w.move * (sprint ? 1.34 : 1) * (cmd.crouch ? 0.52 : 1)
       * (p.aiming ? 0.62 : 1);
     var sy = Math.sin(p.yaw), cy = Math.cos(p.yaw);
@@ -1212,7 +1374,10 @@
       p.reloadUntil = 0;
     }
     if (cmd.reload && !p.reloadUntil && p.ammo[p.held] < w.mag) beginReload(M, p);
-    if (cmd.fire && (w.auto || !p._heldTrigger)) fireHuman(M, p);
+    /* Not while you are getting up out of a slide. */
+    if (cmd.fire && M.time >= (p.slideRecover || 0) && (w.auto || !p._heldTrigger)) {
+      fireHuman(M, p);
+    }
     p._heldTrigger = !!cmd.fire;
     p.sprinting = sprint;
     p.crouching = !!cmd.crouch;
@@ -1236,6 +1401,7 @@
     start: start,
     HEALTH: HEALTH, EYE: EYE, RESPAWN: RESPAWN,
     damageAt: damageAt, botLoadout: botLoadout, control: control,
+    muzzleOf: muzzleOf, kickFrom: kickFrom, settleKick: settleKick,
     AIM_Y: 1.25, GRAVITY: GRAVITY, JUMP: JUMP,
     nav: { build: navBuild, path: navPath, clear: navClear, blocked: navBlocked,
       flood: navFlood, snap: navSnap, reachable: navReachable, CELL: NAV_CELL },
