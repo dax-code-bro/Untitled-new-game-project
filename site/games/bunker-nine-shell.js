@@ -2157,9 +2157,34 @@ function paintSlots() {
     d.querySelector('.k').textContent = r.k;
     d.querySelector('.v').textContent = slotValue(r.id);
     d.querySelector('.lv').textContent = slotNote(r.id);
+    /* The pointer handlers belong HERE, on the element, and not in
+       ldNav() where they used to be.
+     *
+       ldNav() only rebuilds the left column's nav rows when the cursor
+       is in the left column. Fitting an attachment repaints the slots
+       -- new elements -- while the cursor is over in the list, so
+       ldNav() took the other branch and the fresh rows came out of it
+       with no listeners on them at all. After that, hovering TACTICAL
+       or LETHAL or any of the five killstreaks did nothing whatsoever:
+       the right-hand column stayed on the attachment list it happened
+       to be showing. Attached at the point the element is made, there
+       is no path that can miss them. */
+    d.addEventListener('mouseenter', function () { selectSlot(r.id, false); });
+    d.addEventListener('click', function () { selectSlot(r.id, true); });
     el.slots.appendChild(d);
     r._el = d;
   });
+}
+
+/* Put the right-hand column on one slot, and optionally hand it the
+   cursor. One path in, so a click and a hover and the pad's right stick
+   cannot disagree about what selecting a slot means. */
+function selectSlot(id, enter) {
+  if (ld.slot !== id) { ld.slot = id; paintDetail(); }
+  ld.side = (enter && ldRows.length) ? 'list' : 'slots';
+  if (enter && !ldRows.length) beep('back');
+  else if (enter) beep('ok');
+  ldNav();
 }
 
 /* ---- the picture of the gun ----
@@ -2592,15 +2617,6 @@ function ldNav(keep) {
       onRight: function () { if (ldRows.length) { ld.side = 'list'; ldNav(); } },
     });
     srow._slotId = r.id;
-    /* Hovering a slot takes the cursor back out of the list. It cannot
-       do that by finding itself in nav.rows afterwards, because ldNav()
-       builds new row objects and this one is not among them -- so it
-       says which slot it wants and lets ldNav() land on it. */
-    r._el.addEventListener('mouseenter', function () {
-      if (ld.slot === r.id && ld.side === 'slots') return;
-      ld.slot = r.id; ld.side = 'slots';
-      paintDetail(); ldNav();
-    });
     rows.push(srow);
   });
   /* Land on the slot that is actually selected rather than on the top
