@@ -422,6 +422,133 @@ function makeHumanoidClips() {
     lowerArmR: { keys: [[0, 78, 0, 0], [0.5, 62, 0, 0], [1, 78, 0, 0]] },
   }));
 
+  /* A sprint is not a fast run, and speeding the run clip up does not
+     make one. Three things separate them and all three are geometry,
+     not tempo:
+
+       - The heel snaps to the backside. A sprinter's recovering shin
+         folds to a hundred and forty degrees so the leg swings through
+         as a SHORT pendulum; a jogger's stays at forty and swings
+         through as a long one. This is the single strongest read, and
+         it is why a sped-up run looks like a cartoon: the legs go
+         round faster but they never fold.
+       - There is a flight phase. Both feet leave the ground once per
+         step, so the hips rise and fall twice a cycle. A rotation-only
+         cycle keeps the pelvis nailed at one height and the whole
+         thing reads as a man on rails.
+       - The trunk leans and the head does not. Twenty-six degrees of
+         forward lean through hips, spine and chest, and then the neck
+         takes sixteen of it back so the eyes stay on the horizon.
+
+     Arms drive from the shoulder with the elbow locked near a right
+     angle, hand travelling hip to cheek. The pelvis counter-rotates
+     against the shoulders -- eight degrees each way, opposed -- which
+     is what stops the torso reading as a plank bolted to the legs.
+
+     Phase convention matches walk and run: t=0 is left leg forward. */
+  clips.push(buildClip('sprint', 0.46, {
+    hips: {
+      keys: [
+        [0.00, 6, 8, 4], [0.25, 6, 0, 0], [0.50, 6, -8, -4],
+        [0.75, 6, 0, 0], [1.00, 6, 8, 4],
+      ],
+      // Two rises per cycle -- one per step. Lowest at mid-stance when
+      // the supporting knee is loaded, highest in the flight phase.
+      pos: [
+        [0.00, 0, -0.010, 0], [0.12, 0, -0.050, 0], [0.30, 0, 0.026, 0],
+        [0.50, 0, -0.010, 0], [0.62, 0, -0.050, 0], [0.80, 0, 0.026, 0],
+        [1.00, 0, -0.010, 0],
+      ],
+    },
+    spine: { keys: [[0.00, 14, -6, 0], [0.50, 14, 6, 0], [1.00, 14, -6, 0]] },
+    chest: { keys: [[0.00, 6, -10, 0], [0.50, 6, 10, 0], [1.00, 6, -10, 0]] },
+    head: { keys: [[0.00, -16, 4, 0], [0.50, -16, -4, 0], [1.00, -16, 4, 0]] },
+
+    upperLegL: {
+      keys: [[0.00, 80, 0, 0], [0.12, 62, 0, 0], [0.22, 40, 0, 0],
+        [0.35, 0, 0, 0], [0.48, -42, 0, 0], [0.58, -30, 0, 0],
+        [0.72, 10, 0, 0], [0.86, 55, 0, 0], [1.00, 80, 0, 0]],
+    },
+    lowerLegL: {
+      keys: [[0.00, 85, 0, 0], [0.12, 35, 0, 0], [0.22, 5, 0, 0],
+        [0.35, 8, 0, 0], [0.48, 12, 0, 0], [0.58, 95, 0, 0],
+        [0.72, 140, 0, 0], [0.86, 118, 0, 0], [1.00, 85, 0, 0]],
+    },
+    footL: {
+      keys: [[0.00, -20, 0, 0], [0.22, 2, 0, 0], [0.48, 30, 0, 0],
+        [0.62, 12, 0, 0], [1.00, -20, 0, 0]],
+    },
+
+    upperLegR: {
+      keys: [[0.00, -42, 0, 0], [0.08, -30, 0, 0], [0.22, 10, 0, 0],
+        [0.36, 55, 0, 0], [0.50, 80, 0, 0], [0.62, 62, 0, 0],
+        [0.72, 40, 0, 0], [0.85, 0, 0, 0], [1.00, -42, 0, 0]],
+    },
+    lowerLegR: {
+      keys: [[0.00, 12, 0, 0], [0.08, 95, 0, 0], [0.22, 140, 0, 0],
+        [0.36, 118, 0, 0], [0.50, 85, 0, 0], [0.62, 35, 0, 0],
+        [0.72, 5, 0, 0], [0.85, 8, 0, 0], [1.00, 12, 0, 0]],
+    },
+    footR: {
+      keys: [[0.00, 30, 0, 0], [0.12, 12, 0, 0], [0.50, -20, 0, 0],
+        [0.72, 2, 0, 0], [1.00, 30, 0, 0]],
+    },
+
+    // Elbows locked near a right angle and tightening as the hand comes
+    // forward. The arm that swings back belongs to the leg that is
+    // forward, which is why L is at +52 while upperLegL is at +80.
+    upperArmL: { keys: [[0.00, 52, 0, -9], [0.50, -72, 0, -14], [1.00, 52, 0, -9]] },
+    upperArmR: { keys: [[0.00, -72, 0, 14], [0.50, 52, 0, 9], [1.00, -72, 0, 14]] },
+    lowerArmL: { keys: [[0.00, 92, 0, 0], [0.50, 112, 0, 0], [1.00, 92, 0, 0]] },
+    lowerArmR: { keys: [[0.00, 112, 0, 0], [0.50, 92, 0, 0], [1.00, 112, 0, 0]] },
+    shoulderL: { keys: [[0.00, 0, 0, -4], [0.50, 0, 0, 6], [1.00, 0, 0, -4]] },
+    shoulderR: { keys: [[0.00, 0, 0, -6], [0.50, 0, 0, 4], [1.00, 0, 0, -6]] },
+  }));
+
+  /* The slide. A slide is a controlled fall onto the outside of the
+     trailing thigh, and the thing that makes a bad one look bad is
+     that the pelvis stays at standing height and the legs merely
+     splay -- a man doing the splits while gliding. So the hips drop
+     fifty-five centimetres in the first fifth of a second, which is
+     the entry, and everything else hangs off that.
+
+     Lead leg extends forward and slightly across; trail leg folds
+     underneath at a hundred and fifteen degrees and its foot points
+     so the toe drags rather than digs. The trunk leans BACK against
+     the hips' forward pitch so the net torso reads close to upright,
+     which is what keeps the sights anywhere near usable. The off arm
+     comes back and out for balance; the gun arm stays in.
+
+     Non-looping, and 0.72s long to match the slide the match rules
+     run -- the animation ends exactly when the movement does. */
+  clips.push(buildClip('slide', 0.72, {
+    hips: {
+      keys: [[0.00, -4, 6, 2], [0.22, -20, 24, 11], [0.72, -20, 26, 12],
+        [1.00, -12, 18, 7]],
+      pos: [[0.00, 0, 0, 0], [0.20, 0, -0.55, 0], [0.80, 0, -0.55, 0],
+        [1.00, 0, -0.34, 0]],
+    },
+    spine: { keys: [[0.00, 0, -4, 0], [0.25, -6, -14, -5], [1.00, -2, -10, -3]] },
+    chest: { keys: [[0.00, 0, -2, 0], [0.25, 8, -8, -3], [1.00, 4, -6, -2]] },
+    head:  { keys: [[0.00, 0, 0, 0], [0.25, 12, -6, 0], [1.00, 6, -4, 0]] },
+
+    // Lead leg out front, knee just off straight.
+    upperLegL: { keys: [[0.00, 24, 0, 0], [0.20, 82, 0, 8], [0.80, 78, 0, 8], [1.00, 44, 0, 3]] },
+    lowerLegL: { keys: [[0.00, 20, 0, 0], [0.20, 14, 0, 0], [1.00, 26, 0, 0]] },
+    footL:     { keys: [[0.00, 0, 0, 0], [0.20, -14, 0, 0], [1.00, -4, 0, 0]] },
+
+    // Trail leg folded under the body, toe pointed so it drags.
+    upperLegR: { keys: [[0.00, -10, 0, 0], [0.20, 30, 0, -14], [0.80, 28, 0, -14], [1.00, 6, 0, -5]] },
+    lowerLegR: { keys: [[0.00, 24, 0, 0], [0.20, 115, 0, 0], [0.80, 112, 0, 0], [1.00, 50, 0, 0]] },
+    footR:     { keys: [[0.00, 0, 0, 0], [0.20, 35, 0, 0], [1.00, 14, 0, 0]] },
+
+    // Off arm back and out; gun arm holds its carry.
+    upperArmL: { keys: [[0.00, 0, 0, -8], [0.22, 38, 0, -26], [1.00, 14, 0, -14]] },
+    lowerArmL: { keys: [[0.00, 14, 0, 0], [0.22, 34, 0, 0], [1.00, 22, 0, 0]] },
+    upperArmR: { keys: [[0.00, -30, 0, 10], [0.22, -46, 0, 16], [1.00, -36, 0, 12]] },
+    lowerArmR: { keys: [[0.00, 60, 0, 0], [0.22, 74, 0, 0], [1.00, 66, 0, 0]] },
+  }, { loop: false }));
+
   clips.push(buildClip('jump', 0.9, {
     hips: { keys: [[0, 0, 0, 0], [0.2, -14, 0, 0], [0.5, 6, 0, 0], [1, 0, 0, 0]] },
     upperLegL: { keys: [[0, 0, 0, 0], [0.2, 42, 0, 0], [0.5, -14, 0, 0], [1, 0, 0, 0]] },

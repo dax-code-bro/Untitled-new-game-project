@@ -866,6 +866,58 @@
     }
   }
 
+  /* Every body in this match is TELEPORTED into place each frame -- the
+     match owns movement and the engine's controller is only a thing to
+     hang a mesh and a skeleton on. Teleport zeroes the controller's
+     velocity, so the controller's own animation state machine saw
+     twelve men standing perfectly still while they sprinted across
+     Town, and played 'idle' at all of them for the entire match. The
+     bodies slid around the map in the T-adjacent bind pose and nobody
+     noticed because nobody had looked at a bot from the outside.
+
+     So the state is chosen HERE, from what the match knows, and the
+     speed is measured from the position actually travelled rather than
+     from any velocity field -- the match has three or four paths that
+     move a body and only some of them bother to record why. */
+  function animate(p, dt) {
+    var a = p.actor.animator;
+    if (!a) return;
+    p.actor.controller.autoAnimate = false;
+
+    var last = p._animPos;
+    var sp = 0;
+    if (last && dt > 1e-4) {
+      sp = Math.hypot(p.pos.x - last.x, p.pos.z - last.z) / dt;
+      // A respawn is a jump across the map, not a hundred-metre-per-
+      // second dash. Anything past a plausible sprint is teleportation.
+      if (sp > 14) sp = 0;
+    }
+    p._animPos = { x: p.pos.x, z: p.pos.z };
+    // Smoothed, because a per-frame position delta on a grid-collided
+    // body is spiky enough to flicker between two states on a wall.
+    p._animSpeed = p._animSpeed == null ? sp
+      : p._animSpeed + (sp - p._animSpeed) * Math.min(1, dt * 12);
+    var v = p._animSpeed;
+
+    var want;
+    if (!p.alive) want = 'idle';
+    else if (p.sliding) want = 'slide';
+    else if (!p.grounded) want = 'jump';
+    else if (p.sprinting && v > 4.6) want = 'sprint';
+    else if (v > 4.3) want = 'run';
+    else if (v > 0.35) want = 'walk';
+    else want = 'idle';
+
+    if (want !== p._animState) {
+      p._animState = want;
+      a.play(want, want === 'jump' || want === 'slide' ? 0.07 : 0.16);
+    }
+    if (want === 'walk') a.speed = Math.max(0.5, Math.min(1.7, v / 4.6));
+    else if (want === 'run') a.speed = Math.max(0.7, Math.min(1.4, v / 6.0));
+    else if (want === 'sprint') a.speed = Math.max(0.85, Math.min(1.2, v / 7.0));
+    else a.speed = 1;
+  }
+
   /* Turn towards a heading, at a rate. Snapping to face a target is
      what makes a bot feel like a turret; a rate makes it feel like
      somebody who has just noticed you. */
@@ -954,7 +1006,10 @@
        identical, which is always the same story -- the code was not
        being reached. */
     var alive = (M.aliveCount && M.aliveCount[p.team]) || 6;
-    var pressing = attacking && (M.roundTime > 25 || alive <= 2);
+    /* Fifteen seconds, not twenty-five: measured, rounds on these maps
+       are decided between nineteen and thirty, so twenty-five was most
+       of the way to being another rule that never ran. */
+    var pressing = attacking && (M.roundTime > 15 || alive <= 2);
     var careful = M.mode.bomb && !pressing;
     var hurtBadly = p.hp < (careful ? 62 : 38);
     var td = t ? Math.hypot(t.pos.x - p.pos.x, t.pos.z - p.pos.z) : 1e9;
@@ -1058,19 +1113,25 @@
       /* Late in the round everybody on the attacking side goes to the
          site, carrier or not: a plant needs somebody standing on it and
          there is no time left to be clever about getting there. */
-      if (att && (M.roundTime > 25 || (M.aliveCount && M.aliveCount[p.team] <= 2))) {
+      if (att && (M.roundTime > 15 || (M.aliveCount && M.aliveCount[p.team] <= 2))) {
         var sl = M.map.sites[M.bomb.want];
         return { x: sl.at[0] + (rand() - 0.5) * 7, z: sl.at[2] + (rand() - 0.5) * 7 };
       }
-      /* Otherwise attackers who are not carrying it go WITH the man who
-         is, rather than to the site by their own route. A bomb carrier
-         who crosses the map alone is a bomb carrier who does not
-         arrive. */
-      if (att && M.bomb.carrier != null) {
-        var c3 = M.people[M.bomb.carrier];
-        if (c3 && c3.alive) {
-          return { x: c3.pos.x + (rand() - 0.5) * 22, z: c3.pos.z + (rand() - 0.5) * 22 };
-        }
+      /* THE REST OF THE ATTACK GOES TO THE SITE, spread around it.
+       *
+         They used to escort the carrier at plus or minus twenty-two
+         metres, which was meant to keep him company and instead put the
+         whole side in a loose cloud that was nowhere in particular.
+         Measured on Town: never more than ONE attacker within reach of
+         a site in a whole nine-round match, and the plant stalling at
+         1.47 seconds of the 2.8 it needs.
+
+         Going to the site is also going with the carrier -- that is
+         where he is headed -- and it means that when he dies somebody
+         else is already standing on it. */
+      if (att) {
+        var sd = M.map.sites[M.bomb.want];
+        return { x: sd.at[0] + (rand() - 0.5) * 13, z: sd.at[2] + (rand() - 0.5) * 13 };
       }
       var s2 = M.map.sites[att ? M.bomb.want : (rand() < 0.5 ? 0 : 1)];
       return { x: s2.at[0] + (rand() - 0.5) * 10, z: s2.at[2] + (rand() - 0.5) * 10 };
@@ -1137,6 +1198,7 @@
       carrier: carriers.length ? carriers[0].id : null,
       want: want,
       planted: false, plantAt: 0, progress: 0, site: null, defuse: 0, switched: false,
+      lastAt: 0,
     };
     M.roundTime = 0;
   }
@@ -1194,17 +1256,37 @@
           M.people.forEach(function (q) { if (q.team === B.attackers) { q.ai.goal = null; q.ai.goalAt = -99; } });
         }
       }
-      if (c2 && c2.alive) {
-        var site = M.map.sites[B.want];
-        var d = Math.hypot(c2.pos.x - site.at[0], c2.pos.z - site.at[2]);
-        if (d < site.r) {
-          B.progress += dt;
-          if (B.progress >= 2.8) {
-            B.planted = true; B.plantAt = M.time; B.site = site; B.progress = 0;
-            var ev = { t: M.time, kind: 'plant', who: c2.id, site: site.id };
-            M.events.push(ev); emit(ev);
-          }
-        } else B.progress = Math.max(0, B.progress - dt * 0.25);
+      /* WHOEVER IS STANDING ON IT PLANTS IT, not only the man the round
+         started with.
+       *
+         The bomb was a relay baton: only its current carrier could
+         advance the plant, and when he died the next nearest attacker
+         inherited it wherever he happened to be -- usually forty metres
+         away, with the progress bleeding off the whole way back. On
+         Town, the biggest of the four, that meant six rounds could go
+         by without a plant depending on nothing but the seed.
+
+         A bomb is a thing on the ground at the site. Anybody on the
+         attacking side who is standing there is planting it, and two of
+         them there is faster than one. */
+      var site = M.map.sites[B.want];
+      var onSite = M.people.filter(function (q) {
+        return q.team === B.attackers && q.alive
+          && Math.hypot(q.pos.x - site.at[0], q.pos.z - site.at[2]) < site.r;
+      });
+      if (onSite.length) {
+        B.lastAt = M.time;
+        B.progress += dt * (1 + (onSite.length - 1) * 0.40);
+        if (B.progress >= 2.8) {
+          B.planted = true; B.plantAt = M.time; B.site = site; B.progress = 0;
+          var ev = { t: M.time, kind: 'plant', who: onSite[0].id, site: site.id };
+          M.events.push(ev); emit(ev);
+        }
+      } else if (M.time - (B.lastAt || 0) > 5) {
+        /* Only once the site has been properly given up. A plant that
+           unwinds the moment its man is killed is a plant that only
+           ever happens uncontested. */
+        B.progress = Math.max(0, B.progress - dt * 0.35);
       }
       if (alive[B.attackers] === 0) return endRound(M, B.defenders, 'attackers eliminated', emit);
       if (alive[B.defenders] === 0) return endRound(M, B.attackers, 'defenders eliminated', emit);
@@ -1275,6 +1357,11 @@
 
     for (var i = 0; i < M.people.length; i++) {
       var p = M.people[i];
+      /* Posed every tick, alive or not, and BEFORE the early return --
+         a body that stops moving stops calling moveBy, so animating
+         from inside the mover left anyone who came to a halt frozen
+         mid-stride until they set off again. */
+      if (p.actor) animate(p, dt);
       if (!p.alive) {
         /* Search and Destroy has no respawns inside a round. The round
            itself puts everybody back, in the first few seconds of it. */

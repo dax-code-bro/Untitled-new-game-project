@@ -186,6 +186,11 @@ class CharacterController {
     this.radius = opts.radius || 0.3;
     this.moveSpeed = opts.speed || 4.2;
     this.runSpeed = opts.runSpeed || 8;
+    /* Set by the owner for the duration of a slide. The controller does
+       not decide when a slide happens -- the game's movement rules do --
+       it only needs to know, so the pose matches what the body is
+       actually doing. */
+    this.sliding = false;
     this.jumpSpeed = opts.jumpSpeed || 7.6;
     this.acceleration = opts.acceleration || 34;
     this.airControl = opts.airControl != null ? opts.airControl : 0.28;
@@ -345,7 +350,14 @@ class CharacterController {
     /* Animation state. */
     const planar = Math.sqrt(body.velocity.x ** 2 + body.velocity.z ** 2);
     let state;
-    if (!this.grounded) state = 'jump';
+    if (this.sliding) state = 'slide';
+    else if (!this.grounded) state = 'jump';
+    /* Sprint is its own clip, not the run played faster. The threshold
+       sits just under runSpeed because a controller rarely reaches its
+       own stated top speed exactly -- drag, a slope, a wall graze -- and
+       a sprint that only triggers at the theoretical maximum is a sprint
+       that almost never triggers. */
+    else if (planar > this.runSpeed * 0.90) state = 'sprint';
     else if (planar > this.moveSpeed * 1.12) state = 'run';
     else if (planar > 0.35) state = 'walk';
     else state = 'idle';
@@ -361,8 +373,15 @@ class CharacterController {
     }
     // Match stride to actual speed so the feet do not skate.
     if (this.animator && this.autoAnimate === false) { /* owner drives speed */ }
-    else if (this.animator && (state === 'walk' || state === 'run')) {
-      this.animator.speed = clamp(planar / (state === 'run' ? this.runSpeed : this.moveSpeed), 0.45, 1.9);
+    else if (this.animator && (state === 'walk' || state === 'run' || state === 'sprint')) {
+      const ref = state === 'walk' ? this.moveSpeed : this.runSpeed;
+      /* The sprint clip is authored AT runSpeed, so its own tempo is
+         already right and the scale only trims the last few per cent.
+         Letting it stretch to 1.9 like the walk does is what turns a
+         sprint back into the cartoon it was built to replace. */
+      const lo = state === 'sprint' ? 0.85 : 0.45;
+      const hi = state === 'sprint' ? 1.20 : 1.9;
+      this.animator.speed = clamp(planar / ref, lo, hi);
     } else if (this.animator) {
       this.animator.speed = 1;
     }
