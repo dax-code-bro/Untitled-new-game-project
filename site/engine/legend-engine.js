@@ -20627,6 +20627,104 @@ function svcMag(g, K) {
 }
 
 /* ==================================================================
+   THE HUNDRED SMALL THINGS
+   ==================================================================
+   What separates a blockout from a gun.
+
+   A swept receiver, a tube barrel and a plain grip get the silhouette
+   right, and at ten metres a silhouette is most of what you see. Up
+   close it is a toy: there is nothing on it. A real gun is covered in
+   things that had to be there for a reason -- a lever to select fire, a
+   catch to drop the magazine, pins holding the two halves together,
+   loops for a sling, screws into the gas block, a lip round the
+   ejection port so the brass clears.
+
+   All of it is here, once, on the shared builder. Adding a selector
+   lever adds one to thirty-three guns, and getting the trigger pin
+   wrong gets it wrong on thirty-three -- which is the bargain the whole
+   table makes and the reason it is worth making.
+   ================================================================== */
+
+function svcDetails(g, K) {
+  const R = K.rec, W = R.w;
+
+  /* The ejection port. A recess is not a port: a real one has a lip
+     standing proud of the receiver wall to throw the case clear, and a
+     shelf below it. */
+  const p = K.port;
+  svcSlab(g, [[p.x0 - 0.004, p.up + 0.0035, -p.down + 0.0005, 0.0035, 5],
+    [p.x0, p.up + 0.0035, -p.down + 0.0005, 0.0035, 5]], W + 0.0005);
+  svcSlab(g, [[p.x1, p.up + 0.0035, -p.down + 0.0005, 0.0035, 5],
+    [p.x1 + 0.004, p.up + 0.0035, -p.down + 0.0005, 0.0035, 5]], W + 0.0005);
+  svcSlab(g, [[p.x0 - 0.004, p.up + 0.0045, -p.up - 0.0010, 0.0030, 5],
+    [p.x1 + 0.004, p.up + 0.0045, -p.up - 0.0010, 0.0030, 5]], W + 0.0010);
+  svcSlab(g, [[p.x0 - 0.002, -p.down + 0.0010, p.down + 0.0030, 0.0032, 5],
+    [p.x1 + 0.002, -p.down + 0.0010, p.down + 0.0030, 0.0032, 5]], W + 0.0010);
+
+  /* The selector, on the left, where a thumb reaches it. A paddle on a
+     round boss -- and the boss matters, because a lever growing
+     straight out of a flat wall is a sticker. */
+  const sel = K.selector || { x: R.rear + 0.052, y: -R.down * 0.10 };
+  band(g, -W - 0.0075, -W + 0.0010, 0.0, 0.0078, 14, sel.y, 0);
+  strut(g, [sel.x, sel.y, -W - 0.0050], [sel.x - 0.020, sel.y - 0.011, -W - 0.0062],
+    roundRect(0.0038, 0.0038, 0.0024, 4, 10));
+
+  /* The magazine catch, at the back of the well. */
+  if (K.mag && K.mag.kind !== 'none' && K.mag.kind !== 'pan') {
+    const mx = K.mag.x - K.mag.d - 0.006, my = K.mag.y + 0.006;
+    svcSlab(g, [[mx - 0.008, my + 0.004, 0.009, 0.0060, 4],
+      [mx + 0.004, my + 0.004, 0.009, 0.0060, 4]]);
+  }
+
+  /* Two takedown pins through the receiver, which is how every one of
+     these comes apart. */
+  for (const px of [R.rear + 0.030, R.front - 0.026]) {
+    band(g, -W - 0.0018, W + 0.0018, 0.0, 0.0044, 12, -R.down * 0.35, 0);
+  }
+  /* And the pin the trigger hangs on. */
+  band(g, -W - 0.0015, W + 0.0015, 0.0, 0.0032, 10, -R.down - 0.0015, 0);
+
+  /* Sling swivels: one forward, one on the butt. A gun with nowhere to
+     put a sling is a prop. */
+  const fx = K.hg && K.hg.kind !== 'none' ? K.hg.x1 - 0.014 : K.barrel.rear + 0.060;
+  const fy = -(K.hg && K.hg.kind === 'wood' ? K.hg.drop : K.barrel.r1 + 0.010);
+  band(g, fx - 0.0022, fx + 0.0022, 0.0060, 0.0100, 14, fy - 0.006, 0);
+  if (K.stock && K.stock.kind !== 'none') {
+    const bx = K.stock.butt + 0.055;
+    band(g, bx - 0.0022, bx + 0.0022, 0.0060, 0.0100, 14, -K.stock.drop * 0.92, 0);
+  }
+
+  /* The front sight base: a block with a pin through it, rather than a
+     post growing out of the barrel. */
+  const S = K.sight;
+  spin(g, [[S.frontX - 0.013, K.barrel.r1], [S.frontX - 0.010, K.barrel.r1 + 0.0075],
+    [S.frontX + 0.010, K.barrel.r1 + 0.0075], [S.frontX + 0.013, K.barrel.r1]], 18, 30);
+  band(g, S.frontX - 0.0016, S.frontX + 0.0016, K.barrel.r1 + 0.006, K.barrel.r1 + 0.0105,
+    10, 0, 0);
+
+  /* A screw in the gas block, and one in the barrel band. */
+  if (K.barrel.gas) {
+    band(g, K.barrel.gasAt + 0.012, K.barrel.gasAt + 0.017, 0.0, 0.0034, 10,
+      K.barrel.r1 + 0.009, 0);
+  }
+
+  /* Rivets, on the ones that are pressed out of sheet rather than
+     milled from a billet. Six a side, which is what a stamped receiver
+     looks like and what makes it read as stamped. */
+  if (R.e >= 4.4) {
+    for (let i = 0; i < 6; i++) {
+      const rx = R.rear + 0.024 + i * (R.front - R.rear - 0.050) / 5;
+      for (const sz of [-1, 1]) {
+        band(g, 0.0, 0.0022, 0.0, 0.0030, 8, 0, 0);
+        spin(g, [[sz * (W + 0.0005), 0.0030], [sz * (W + 0.0022), 0.0026],
+          [sz * (W + 0.0022), 0.0]], 10, 30, -R.down * 0.42, 0);
+        void rx;
+      }
+    }
+  }
+}
+
+/* ==================================================================
    THE AMMUNITION
    ==================================================================
    A cartridge is a brass case with a shoulder, a neck, and a bullet
@@ -20699,7 +20797,7 @@ function svcRounds(shell, tip, K) {
      alternating left and right of centre. Only as far as the magazine
      actually goes. */
   const n = Math.min(A.rounds, Math.floor(M.len / A.pitch) * 2);
-  const half = M.d * 0.96;
+  const half = A.len * 0.50;
   for (let i = 0; i < n; i++) {
     const t = (i >> 1) * A.pitch / M.len;
     if (t > 0.98) break;
@@ -20710,6 +20808,10 @@ function svcRounds(shell, tip, K) {
     /* Nose forward, along the magazine's own local 'up' -- which is
        the direction the feed lips point. */
     const u = new Vec3(Math.cos(a), Math.sin(a), 0);
+    /* Started half a cartridge behind the centre line, so the round is
+       centred in the magazine instead of hanging out of the front of
+       it. `half` is the magazine's own depth, which is now derived from
+       this same length. */
     svcCartridge(shell, tip, A,
       new Vec3(x - u.x * half, y - u.y * half, z), u, across);
   }
@@ -20775,11 +20877,33 @@ const SVC_BASE = {
      guns with wood on them -- was rendering as black plastic. That is
      most of why they all photographed so dark. */
   mats: null,
-  /* What is in the magazine. The case is brass unless the round is a
-     steel-cased Soviet one, and the bullet is copper unless it is cast
-     lead. Per calibre, because that is what decides it. */
-  ammo: { caseR: 0.0048, len: 0.047, pitch: 0.0105, stagger: 0.0040,
-    tip: 'copper', shell: 'brass', rounds: 30 },
+  ammoKind: 'inter',
+};
+
+/* THE CARTRIDGE DECIDES HOW DEEP THE MAGAZINE IS.
+ *
+   Rounds lie ACROSS a box magazine, nose forward, so the magazine's
+   front-to-back depth is the length of the round and nothing else. The
+   first version set the depth per gun by eye and gave every gun the
+   same 47 mm cartridge, so an AK's rounds -- which are 57 mm -- stood
+   two centimetres out of the front of a magazine 28 mm deep, in a neat
+   brass row hanging in the air. It looked like a belt feed.
+
+   So the depth is derived from the calibre now and a row cannot get it
+   wrong. `pitch` is the rise per round in a staggered column and
+   `stagger` is how far each one sits off the centre line. */
+const AMMO_KINDS = {
+  /* 7.92 Kurz and the like: a rifle case cut down. */
+  kurz: { caseR: 0.0050, len: 0.048, pitch: 0.0108, stagger: 0.0042, rounds: 30 },
+  /* 7.62x39 and 7.63 -- the intermediate rounds. */
+  inter: { caseR: 0.0048, len: 0.056, pitch: 0.0112, stagger: 0.0044, rounds: 30 },
+  /* 5.56 and 5.45: small, fast and light. */
+  small: { caseR: 0.0042, len: 0.052, pitch: 0.0098, stagger: 0.0038, rounds: 30 },
+  /* Full power -- .30-06, 7.62x51, 8x57. Long, and it is why a battle
+     rifle's magazine is a slab. */
+  full: { caseR: 0.0060, len: 0.071, pitch: 0.0128, stagger: 0.0052, rounds: 20 },
+  /* Pistol calibre, for everything in the SMG list. */
+  pistol: { caseR: 0.0050, len: 0.030, pitch: 0.0106, stagger: 0.0042, rounds: 32 },
 };
 
 /* Walnut where there is wood on the gun, polymer where there is not.
@@ -20812,6 +20936,9 @@ function svcSpec(over) {
   /* The grip is the pivot. Every gun is held in the same place, which
      is why one hand solve serves all of them. */
   if (!over.origin) out.origin = new Vec3(out.grip.x, out.grip.y, 0);
+  out.ammo = AMMO_KINDS[out.ammoKind] || AMMO_KINDS.inter;
+  /* Derived, never taken from the row: see the note on AMMO_KINDS. */
+  if (out.mag && out.mag.kind !== 'none') out.mag.d = out.ammo.len * 0.52;
   if (!out.mats) out.mats = svcMats(out);
   return out;
 }
@@ -20823,6 +20950,7 @@ const SERVICE_KINDS = {
   /* The first one anybody made: a stamped receiver, a long wooden
      handguard and a magazine that hangs almost straight down. */
   stg44: svcSpec({
+    ammoKind: 'kurz',
     muzzle: 0.455, rec: { rear: -0.150, front: 0.095, up: 0.0245, w: 0.0170, e: 5 },
     barrel: { gasAt: 0.310, r1: 0.0090 },
     hg: { kind: 'wood', x0: 0.115, x1: 0.240, drop: 0.0245 },
@@ -20834,6 +20962,7 @@ const SERVICE_KINDS = {
   /* Side-fed, so the magazine goes out to the left and the gun is
      narrow from the front. */
   fg42: svcSpec({
+    ammoKind: 'kurz',
     muzzle: 0.470, barrel: { brake: 'cone', gasAt: 0.330 },
     rec: { rear: -0.140, front: 0.100, up: 0.0215, w: 0.0155 },
     hg: { kind: 'tube', x0: 0.110, x1: 0.215, r: 0.0180 },
@@ -20844,6 +20973,7 @@ const SERVICE_KINDS = {
     mass: 4.9,
   }),
   volkhammer: svcSpec({
+    ammoKind: 'kurz',
     muzzle: 0.440, barrel: { brake: 'slots', r0: 0.0130, r1: 0.0098 },
     rec: { rear: -0.155, front: 0.100, up: 0.0260, down: 0.0230, w: 0.0180, e: 5.5 },
     hg: { kind: 'wood', x0: 0.118, x1: 0.235, drop: 0.0270, w: 0.0210 },
@@ -20856,6 +20986,7 @@ const SERVICE_KINDS = {
   /* The self-loaders: long barrels, wood to the muzzle, and the
      magazine is inside the stock or barely below it. */
   garand: svcSpec({
+    ammoKind: 'full',
     muzzle: 0.545, barrel: { rear: 0.060, r0: 0.0125, r1: 0.0092, step: 0.170, gasAt: 0.430 },
     rec: { rear: -0.135, front: 0.105, up: 0.0230, down: 0.0195, w: 0.0165, e: 3.6 },
     hg: { kind: 'wood', x0: 0.105, x1: 0.420, drop: 0.0265, w: 0.0205, upper: 0.0215 },
@@ -20866,6 +20997,7 @@ const SERVICE_KINDS = {
     mass: 4.8,
   }),
   svt40: svcSpec({
+    ammoKind: 'full',
     muzzle: 0.520, barrel: { brake: 'slots', gasAt: 0.400, r1: 0.0088 },
     rec: { rear: -0.132, front: 0.100, up: 0.0215, w: 0.0158 },
     hg: { kind: 'wood', x0: 0.108, x1: 0.300, drop: 0.0240 },
@@ -20875,6 +21007,7 @@ const SERVICE_KINDS = {
     mass: 4.6,
   }),
   bm59: svcSpec({
+    ammoKind: 'full',
     muzzle: 0.500, barrel: { brake: 'cage', gasAt: 0.380, r0: 0.0130, r1: 0.0096 },
     rec: { rear: -0.145, front: 0.105, up: 0.0245, down: 0.0220, w: 0.0175 },
     hg: { kind: 'wood', x0: 0.112, x1: 0.290, drop: 0.0265, w: 0.0205 },
@@ -20886,6 +21019,7 @@ const SERVICE_KINDS = {
 
   /* Battle rifles: full-power, heavy, and built round a big receiver. */
   falke: svcSpec({
+    ammoKind: 'full',
     muzzle: 0.495, barrel: { brake: 'slots', r0: 0.0135, r1: 0.0100, gasAt: 0.360 },
     rec: { rear: -0.155, front: 0.115, up: 0.0265, down: 0.0235, w: 0.0185, e: 5 },
     hg: { kind: 'tube', x0: 0.122, x1: 0.265, r: 0.0230 },
@@ -20896,6 +21030,7 @@ const SERVICE_KINDS = {
     mass: 5.6,
   }),
   g3a: svcSpec({
+    ammoKind: 'full',
     muzzle: 0.485, barrel: { brake: 'cage', r0: 0.0130, r1: 0.0098, gas: false },
     rec: { rear: -0.158, front: 0.118, up: 0.0255, down: 0.0230, w: 0.0180, e: 5.5 },
     hg: { kind: 'tube', x0: 0.120, x1: 0.255, r: 0.0235 },
@@ -20920,6 +21055,7 @@ const SERVICE_KINDS = {
     mass: 4.8,
   }),
   ak74: svcSpec({
+    ammoKind: 'small',
     muzzle: 0.448, barrel: { brake: 'slots', r0: 0.0120, r1: 0.0088,
       gasAt: 0.285, gasR: 0.0075, gasY: 0.0195 },
     rec: { rear: -0.148, front: 0.098, up: 0.0250, down: 0.0220, w: 0.0172, e: 4.5 },
@@ -20950,6 +21086,7 @@ const SERVICE_KINDS = {
   /* Stoner pattern: the carry handle, the triangular front sight and
      the round handguard. */
   m16: svcSpec({
+    ammoKind: 'small',
     muzzle: 0.505, barrel: { brake: 'cage', r0: 0.0112, r1: 0.0082, gasAt: 0.330, gasR: 0.0038 },
     rec: { rear: -0.140, front: 0.100, up: 0.0220, down: 0.0205, w: 0.0160, e: 4 },
     hg: { kind: 'tube', x0: 0.108, x1: 0.240, r: 0.0215 },
@@ -20962,6 +21099,7 @@ const SERVICE_KINDS = {
     mass: 3.9,
   }),
   m4: svcSpec({
+    ammoKind: 'small',
     muzzle: 0.400, barrel: { brake: 'cage', r0: 0.0108, r1: 0.0080, gasAt: 0.245, gasR: 0.0038 },
     rec: { rear: -0.140, front: 0.100, up: 0.0220, down: 0.0205, w: 0.0160, e: 4 },
     hg: { kind: 'tube', x0: 0.105, x1: 0.200, r: 0.0210 },
@@ -20974,6 +21112,7 @@ const SERVICE_KINDS = {
     mass: 3.4,
   }),
   aug: svcSpec({
+    ammoKind: 'small',
     muzzle: 0.345, barrel: { rear: 0.045, r0: 0.0128, r1: 0.0094, step: 0.120, gasAt: 0.230 },
     rec: { rear: -0.220, front: 0.065, up: 0.0255, down: 0.0235, w: 0.0180, e: 4.5 },
     port: { x0: -0.140, x1: -0.100, up: 0.0140, down: 0.0020 },
@@ -20999,6 +21138,7 @@ function makeServiceArm(kind) {
   svcBarrel(geos.steel, K);
   svcReceiver(geos.steel, K);
   svcSights(geos.steel, K);
+  svcDetails(geos.steel, K);
   svcBipod(geos.steel, K);
   svcRotary(geos.steel, K);
   geos.wood = new Geometry(); svcFurniture(geos.wood, K);
@@ -21051,6 +21191,7 @@ Engine.prototype.serviceArmSpec = function (kind) { return SERVICE_KINDS[kind] |
 Object.assign(SERVICE_KINDS, {
 
   mp7: svcSpec({
+    ammoKind: 'pistol',
     muzzle: 0.245, barrel: { rear: 0.035, r0: 0.0090, r1: 0.0068, bore: 0.0023,
       step: 0.085, gas: false },
     rec: { rear: -0.115, front: 0.075, up: 0.0195, down: 0.0180, w: 0.0150, e: 4 },
@@ -21066,6 +21207,7 @@ Object.assign(SERVICE_KINDS, {
     mass: 1.9, bound: 0.30,
   }),
   ump: svcSpec({
+    ammoKind: 'pistol',
     muzzle: 0.300, barrel: { rear: 0.040, r0: 0.0110, r1: 0.0088, bore: 0.0058,
       step: 0.100, gas: false },
     rec: { rear: -0.125, front: 0.082, up: 0.0215, down: 0.0195, w: 0.0165, e: 5 },
@@ -21079,6 +21221,7 @@ Object.assign(SERVICE_KINDS, {
     mass: 2.5, bound: 0.34,
   }),
   thompson: svcSpec({
+    ammoKind: 'pistol',
     muzzle: 0.330, barrel: { rear: 0.045, r0: 0.0120, r1: 0.0098, bore: 0.0058,
       step: 0.110, gas: false, brake: 'slots' },
     rec: { rear: -0.130, front: 0.088, up: 0.0230, down: 0.0210, w: 0.0175, e: 4 },
@@ -21092,6 +21235,7 @@ Object.assign(SERVICE_KINDS, {
     mass: 4.8, bound: 0.36,
   }),
   grease: svcSpec({
+    ammoKind: 'pistol',
     muzzle: 0.290, barrel: { rear: 0.040, r0: 0.0105, r1: 0.0090, bore: 0.0058,
       gas: false, step: 0.095 },
     rec: { rear: -0.145, front: 0.075, up: 0.0215, down: 0.0205, w: 0.0210, e: 2.2 },
@@ -21105,6 +21249,7 @@ Object.assign(SERVICE_KINDS, {
     mass: 3.7, bound: 0.32,
   }),
   sten: svcSpec({
+    ammoKind: 'pistol',
     muzzle: 0.310, barrel: { rear: 0.042, r0: 0.0098, r1: 0.0082, bore: 0.0045,
       gas: false, shroud: true, shroudX0: 0.060, shroudX1: 0.190, shroudR: 0.0165 },
     rec: { rear: -0.150, front: 0.058, up: 0.0190, down: 0.0180, w: 0.0185, e: 2.2 },
@@ -21119,6 +21264,7 @@ Object.assign(SERVICE_KINDS, {
     mass: 3.2, bound: 0.34,
   }),
   mp40: svcSpec({
+    ammoKind: 'pistol',
     muzzle: 0.300, barrel: { rear: 0.038, r0: 0.0100, r1: 0.0085, bore: 0.0045,
       gas: false, step: 0.095 },
     rec: { rear: -0.132, front: 0.070, up: 0.0195, down: 0.0185, w: 0.0165, e: 3 },
@@ -21132,6 +21278,7 @@ Object.assign(SERVICE_KINDS, {
     mass: 4.0, bound: 0.32,
   }),
   ppsh: svcSpec({
+    ammoKind: 'pistol',
     muzzle: 0.320, barrel: { rear: 0.040, r0: 0.0100, r1: 0.0085, bore: 0.0038,
       gas: false, shroud: true, shroudX0: 0.075, shroudX1: 0.230, shroudR: 0.0180,
       brake: 'cone' },
@@ -21146,6 +21293,7 @@ Object.assign(SERVICE_KINDS, {
     mass: 4.3, bound: 0.36,
   }),
   vector: svcSpec({
+    ammoKind: 'pistol',
     muzzle: 0.250, barrel: { rear: 0.035, r0: 0.0105, r1: 0.0086, bore: 0.0058,
       gas: false, step: 0.085 },
     rec: { rear: -0.128, front: 0.080, up: 0.0230, down: 0.0250, w: 0.0160, e: 5 },
@@ -21161,6 +21309,7 @@ Object.assign(SERVICE_KINDS, {
   /* The magazine lies flat along the top, which is the whole silhouette
      of this gun and the reason it is in the table rather than out of it. */
   p90: svcSpec({
+    ammoKind: 'pistol',
     muzzle: 0.255, barrel: { rear: 0.040, r0: 0.0100, r1: 0.0078, bore: 0.0029,
       gas: false, step: 0.090 },
     rec: { rear: -0.190, front: 0.070, up: 0.0230, down: 0.0260, w: 0.0210, e: 3.4 },
@@ -21177,6 +21326,7 @@ Object.assign(SERVICE_KINDS, {
     mass: 2.8, bound: 0.30,
   }),
   skorpion: svcSpec({
+    ammoKind: 'pistol',
     muzzle: 0.155, barrel: { rear: 0.028, r0: 0.0078, r1: 0.0062, bore: 0.0032,
       gas: false, step: 0.060 },
     rec: { rear: -0.090, front: 0.055, up: 0.0165, down: 0.0150, w: 0.0125, e: 4 },
@@ -21191,6 +21341,7 @@ Object.assign(SERVICE_KINDS, {
     mass: 1.4, bound: 0.24,
   }),
   microuzi: svcSpec({
+    ammoKind: 'pistol',
     muzzle: 0.145, barrel: { rear: 0.025, r0: 0.0092, r1: 0.0078, bore: 0.0045,
       gas: false, step: 0.055 },
     rec: { rear: -0.105, front: 0.048, up: 0.0185, down: 0.0175, w: 0.0165, e: 3 },
@@ -21217,6 +21368,7 @@ Object.assign(SERVICE_KINDS, {
 Object.assign(SERVICE_KINDS, {
 
   mg34: svcSpec({
+    ammoKind: 'full',
     muzzle: 0.640, barrel: { rear: 0.060, r0: 0.0135, r1: 0.0105, bore: 0.0040,
       step: 0.200, gas: false, shroud: true, shroudX0: 0.075, shroudX1: 0.400,
       shroudR: 0.0235, brake: 'cone' },
@@ -21233,6 +21385,7 @@ Object.assign(SERVICE_KINDS, {
     mass: 12.1, bound: 0.70,
   }),
   m60: svcSpec({
+    ammoKind: 'full',
     muzzle: 0.640, barrel: { rear: 0.065, r0: 0.0145, r1: 0.0112, bore: 0.0050,
       step: 0.210, gas: true, gasAt: 0.420, gasR: 0.0085, gasY: -0.0215, brake: 'slots' },
     rec: { rear: -0.175, front: 0.095, up: 0.0280, down: 0.0250, w: 0.0205, e: 4 },
@@ -21248,6 +21401,7 @@ Object.assign(SERVICE_KINDS, {
     mass: 10.5, bound: 0.72,
   }),
   pkm: svcSpec({
+    ammoKind: 'full',
     muzzle: 0.620, barrel: { rear: 0.060, r0: 0.0138, r1: 0.0106, bore: 0.0039,
       step: 0.200, gas: true, gasAt: 0.400, gasR: 0.0082, gasY: -0.0205, brake: 'cone' },
     rec: { rear: -0.168, front: 0.092, up: 0.0270, down: 0.0240, w: 0.0200, e: 4.5 },
@@ -21262,6 +21416,7 @@ Object.assign(SERVICE_KINDS, {
     mass: 9.0, bound: 0.70,
   }),
   rpd: svcSpec({
+    ammoKind: 'full',
     muzzle: 0.560, barrel: { rear: 0.055, r0: 0.0128, r1: 0.0098, bore: 0.0039,
       step: 0.180, gas: true, gasAt: 0.360, gasR: 0.0078, gasY: -0.0195 },
     rec: { rear: -0.160, front: 0.088, up: 0.0255, down: 0.0230, w: 0.0190, e: 4 },
@@ -21275,6 +21430,7 @@ Object.assign(SERVICE_KINDS, {
     mass: 7.4, bound: 0.66,
   }),
   bren: svcSpec({
+    ammoKind: 'full',
     muzzle: 0.590, barrel: { rear: 0.058, r0: 0.0132, r1: 0.0100, bore: 0.0039,
       step: 0.190, gas: true, gasAt: 0.390, gasR: 0.0080, gasY: -0.0200, brake: 'cone' },
     rec: { rear: -0.162, front: 0.090, up: 0.0260, down: 0.0230, w: 0.0185, e: 4 },
@@ -21293,6 +21449,7 @@ Object.assign(SERVICE_KINDS, {
     mass: 10.2, bound: 0.68,
   }),
   bar: svcSpec({
+    ammoKind: 'full',
     muzzle: 0.580, barrel: { rear: 0.058, r0: 0.0130, r1: 0.0100, bore: 0.0040,
       step: 0.185, gas: true, gasAt: 0.380, gasR: 0.0078, gasY: -0.0195 },
     rec: { rear: -0.158, front: 0.090, up: 0.0250, down: 0.0225, w: 0.0180, e: 3.6 },
@@ -21307,6 +21464,7 @@ Object.assign(SERVICE_KINDS, {
   }),
   /* The record player: a flat pan lying on top of the receiver. */
   dp28: svcSpec({
+    ammoKind: 'full',
     muzzle: 0.620, barrel: { rear: 0.060, r0: 0.0130, r1: 0.0100, bore: 0.0039,
       step: 0.195, gas: true, gasAt: 0.400, gasR: 0.0078, gasY: -0.0200, brake: 'cone' },
     rec: { rear: -0.155, front: 0.088, up: 0.0245, down: 0.0225, w: 0.0180, e: 3.4 },

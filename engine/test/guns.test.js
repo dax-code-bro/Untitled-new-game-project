@@ -41,7 +41,7 @@ function check(name, cond, detail = '') {
     args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader',
       '--disable-dev-shm-usage'],
   });
-  const page = await browser.newPage({ viewport: { width: 560, height: 300 } });
+  const page = await browser.newPage({ viewport: { width: 900, height: 480 } });
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message.split('\n')[0]));
 
@@ -148,17 +148,27 @@ function check(name, cond, detail = '') {
     check(`${kind}`, problems.length === 0,
       problems.join('; ') + `  [${len.toFixed(2)} m, ${r.verts} verts]`);
 
-    /* Three-quarter view from the left, which is how a gun is looked at. */
-    await page.evaluate(([k, l, h]) => {
-      const G = window.G;
-      const cx = (l[0] + h[0]) / 2, cy = (l[1] + h[1]) / 2;
-      const span = Math.max(h[0] - l[0], 0.3);
-      G.lookAt([cx - span * 0.30, cy + span * 0.34, -span * 0.86], [cx, cy, 0]);
-      for (let i = 0; i < 3; i++) G.step(1 / 60);
-      void k;
-    }, [kind, r.lo, r.hi]);
-    await page.waitForTimeout(90);
-    await page.screenshot({ path: path.join(OUT, `gun-${kind}.jpg`), type: 'jpeg', quality: 86 });
+    /* Two photographs. The whole gun in three-quarter view, which is
+       how a gun is looked at -- and a close-up on the receiver and the
+       magazine, because that is where all the detail is and a side view
+       of a whole rifle at nine hundred pixels cannot show any of it.
+       Every judgement about whether these read as real is made on the
+       second one. */
+    for (const [tag, zoom] of [['', 1], ['-detail', 0.30]]) {
+      await page.evaluate(([l, h, z]) => {
+        const G = window.G;
+        const span = Math.max(h[0] - l[0], 0.3) * z;
+        /* The close-up frames the magazine well, which on every gun in
+           the table is a little behind the middle of the receiver. */
+        const cx = z < 1 ? (l[0] + h[0]) / 2 - span * 0.35 : (l[0] + h[0]) / 2;
+        const cy = z < 1 ? (l[1] + h[1]) / 2 - span * 0.10 : (l[1] + h[1]) / 2;
+        G.lookAt([cx - span * 0.32, cy + span * 0.36, -span * 0.90], [cx, cy, 0]);
+        for (let i = 0; i < 3; i++) G.step(1 / 60);
+      }, [r.lo, r.hi, zoom]);
+      await page.waitForTimeout(100);
+      await page.screenshot({ path: path.join(OUT, `gun-${kind}${tag}.jpg`),
+        type: 'jpeg', quality: 90 });
+    }
   }
 
   check('every gun in the table is a gun', bad.length === 0, bad.slice(0, 4).join(' | '));
