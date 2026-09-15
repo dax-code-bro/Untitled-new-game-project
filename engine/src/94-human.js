@@ -476,13 +476,43 @@ function makeHumanBodyGeometry(skeleton, opts = {}) {
   // shambling body apart from a living one at fighting distance.
   const k = opts.gaunt != null ? opts.gaunt : (opts.thickness || 1);
 
+  /* PART TAGS, and the reason they have to be here.
+   *
+     The skin solver binds each vertex to whichever bone segment is
+     nearest it in the bind pose, and in the bind pose the arms hang
+     against the flanks with the hands beside the thighs. A vertex on
+     the upper thigh is then about six centimetres from the hand bone
+     and about the same from the thigh bone, and under an inverse-
+     fourth-power falloff that near-tie goes whichever way the
+     arithmetic falls.
+
+     The solver has a fix for this -- each builder tags what it is
+     emitting and a part may only bind to bones that actually move it --
+     and the zombie body uses it in thirty places. THIS body, the one
+     every living character in the game is built from, never set a
+     single tag. And the guard is silent: `parts.some(v => v !== 0)`
+     treats an all-BODY array as "nobody tagged anything" and drops the
+     restriction entirely, which is right for an imported model and was
+     catastrophic here.
+
+     Measured, at a mid-run pose: five hundred and ninety-eight edges
+     stretched past three times their bind length, and the worst of them
+     were thigh vertices bound seventy-nine per cent to the HAND. That
+     is what the shredded ribbons hanging off every multiplayer bot's
+     shoulders were -- not a broken arm mesh, the thigh being dragged
+     along by a hand two feet away. */
+  g.part = PART.BODY;
   buildTorso(g, segments, k);
+  g.part = PART.NECK;
   buildNeck(g, segments);
   for (const side of [1, -1]) {
+    g.part = side > 0 ? PART.ARM_L : PART.ARM_R;
     buildArm(g, side, skeleton, segments, k);
+    g.part = side > 0 ? PART.LEG_L : PART.LEG_R;
     buildLeg(g, side, skeleton, segments, k);
     buildShoe(g, side, skeleton, segments);
   }
+  g.part = PART.BODY;
   if (opts.rags) buildRags(g, opts.ragSeed || 3);
 
   g.finalize();

@@ -448,21 +448,40 @@ function makeHumanoidClips() {
      Phase convention matches walk and run: t=0 is left leg forward. */
   clips.push(buildClip('sprint', 0.46, {
     hips: {
+      /* The rotation keys are at the POSITION keys' times, not at the
+         quarters they would otherwise sit at. A track carries ONE time
+         array for both channels and the builder resamples position onto
+         the rotation times -- so a seven-centimetre rise sampled at
+         0, 1/4, 1/2, 3/4 came out as fifteen millimetres of nothing,
+         because both extremes fall between those samples. Measured, or
+         it would have shipped looking like a glide. */
       keys: [
-        [0.00, 6, 8, 4], [0.25, 6, 0, 0], [0.50, 6, -8, -4],
-        [0.75, 6, 0, 0], [1.00, 6, 8, 4],
+        [0.00, 10, 8, 4], [0.12, 10, 6, 3], [0.30, 10, 3, 1],
+        [0.50, 10, -8, -4], [0.62, 10, -6, -3], [0.80, 10, -3, -1],
+        [1.00, 10, 8, 4],
       ],
       // Two rises per cycle -- one per step. Lowest at mid-stance when
       // the supporting knee is loaded, highest in the flight phase.
       pos: [
-        [0.00, 0, -0.010, 0], [0.12, 0, -0.050, 0], [0.30, 0, 0.026, 0],
-        [0.50, 0, -0.010, 0], [0.62, 0, -0.050, 0], [0.80, 0, 0.026, 0],
+        [0.00, 0, -0.010, 0], [0.12, 0, -0.050, 0], [0.30, 0, 0.032, 0],
+        [0.50, 0, -0.010, 0], [0.62, 0, -0.050, 0], [0.80, 0, 0.032, 0],
         [1.00, 0, -0.010, 0],
       ],
     },
-    spine: { keys: [[0.00, 14, -6, 0], [0.50, 14, 6, 0], [1.00, 14, -6, 0]] },
-    chest: { keys: [[0.00, 6, -10, 0], [0.50, 6, 10, 0], [1.00, 6, -10, 0]] },
-    head: { keys: [[0.00, -16, 4, 0], [0.50, -16, -4, 0], [1.00, -16, 4, 0]] },
+    /* Twenty-eight degrees of lean by the chest and thirty-five by the
+       neck, against the run's eighteen. The first pass used twenty and
+       measured within a millimetre of the run at the chest, which is
+       the whole difference being invisible. */
+    spine: { keys: [[0.00, 18, -6, 0], [0.50, 18, 6, 0], [1.00, 18, -6, 0]] },
+    chest: { keys: [[0.00, 7, -10, 0], [0.50, 7, 10, 0], [1.00, 7, -10, 0]] },
+    /* And the neck and the head between them give nearly all of it
+       back, so the eyes stay on the horizon. It has to be split across
+       BOTH: the head bone's own rotation turns the face but does not
+       move the head, so putting all of it on the head left the skull
+       sitting thirty-five degrees out over the chest with the face
+       pointing back at the sky. The neck is what stands the head up. */
+    neck: { keys: [[0.00, -18, 2, 0], [0.50, -18, -2, 0], [1.00, -18, 2, 0]] },
+    head: { keys: [[0.00, -10, 4, 0], [0.50, -10, -4, 0], [1.00, -10, 4, 0]] },
 
     upperLegL: {
       keys: [[0.00, 80, 0, 0], [0.12, 62, 0, 0], [0.22, 40, 0, 0],

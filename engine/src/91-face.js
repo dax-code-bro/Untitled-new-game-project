@@ -369,6 +369,50 @@ function makeHeadGeometry(opts = {}) {
     : T === 'heavy'
       ? { rx: 0.268, ry: 0.322, rz: 0.286, brow: 0.040, jaw: 0.085, chin: 0.048, cheek: 0.030 }
       : { rx: 0.246, ry: 0.336, rz: 0.276, brow: 0.040, jaw: 0.135, chin: 0.062, cheek: 0.019 };
+
+  /* THE SCULPT CONTROLS.
+   *
+     Three archetypes with different RADII is one head at three sizes,
+     and a cast built out of it is a cast of one person -- which was the
+     complaint, in exactly those words, about the zombies: the heads
+     were "just resizing different parts of the original sculpt".
+
+     Radii cannot fix that, because the thing that tells two faces apart
+     is not how big the skull is. It is which planes the skull has. A
+     heavy supraorbital shelf versus a smooth brow. An orbit you can put
+     a thumb into versus a shallow one. A nose with a dorsal hump that
+     breaks the profile versus a straight one. A gonial angle that flares
+     out past the cheekbone versus a jaw that tapers inside it. A chin
+     with a cleft in it. None of those are scales of each other and none
+     of them can be reached by multiplying.
+
+     So every number the sculpt used to hardcode is a control now, and a
+     face is a set of them. Defaults reproduce the old head exactly --
+     `face` absent means nothing below changes -- and an operator is a
+     table of overrides that turns the same code into a different
+     person. */
+  const D = {
+    // cranial vault
+    boxy: 0.75, backFull: 0.035, backWide: 0.030, parietal: 0.085,
+    vaultTaperX: 0.115, vaultTaperZ: 0.070, crownFlat: 0.028,
+    forehead: 0.022, occiputLow: 0.024, occiputHigh: 0.022, nape: 0.055,
+    // brow and orbits
+    brow: A.brow, browWide: 0.150, browTall: 0.058, browLift: 0.004,
+    glabella: 0.014, orbit: 0.085, orbitWide: 0.072, orbitTall: 0.062,
+    orbitX: 0.091, orbitY: 0.034, lidFold: 0.014, temple: 0.014,
+    // midface
+    cheek: A.cheek, cheekZ: 0.012, cheekX: 0.150, cheekY: -0.020,
+    nasolabial: 0.017, philtrum: 0.015,
+    // jaw and chin
+    jaw: A.jaw, jawDepth: 0.055, gonialX: 0.026, gonialY: 0.014,
+    gonialAt: 0.135, gonialLow: -0.212,
+    chin: A.chin, chinY: -0.282, chinWide: 0.072, mental: 0.022,
+    chinCleft: 0,
+    // things a default head simply does not have
+    browShelf: 0, malarHollow: 0, deviate: 0, jawSquare: 0,
+  };
+  const F = D;
+  if (opts.face) for (const k in opts.face) F[k] = opts.face[k];
   // A per-head nudge so no two of the same archetype are identical.
   const vary = ((opts.seed || 5) % 7) / 7 - 0.5;
   // Base skull. Half-extents: narrow across, tall, deep.
@@ -400,7 +444,7 @@ function makeHeadGeometry(opts = {}) {
         // shifts the eye region out from under its own socket.
         const boxy = smoothstep(-0.12, 0.10, y) * (1 - smoothstep(0.22, 0.33, y))
                    * smoothstep(0.45, 0.0, cz0);
-        const k = 2 / (2 + boxy * 0.75);
+        const k = 2 / (2 + boxy * F.boxy);
         x += (Math.sign(cx0) * Math.pow(Math.abs(cx0), k) - cx0) * sp * RX;
         z += (Math.sign(cz0) * Math.pow(Math.abs(cz0), k) - cz0) * sp * RZ;
       }
@@ -413,19 +457,19 @@ function makeHeadGeometry(opts = {}) {
       // exactly at z = 0, which shows up as a crease running down the side
       // of the head that no amount of normal-smoothing will remove.
       const back = smoothstep(0.06, -0.12, z);
-      z *= 1 + back * 0.035;
-      x *= 1 + back * 0.030;
+      z *= 1 + back * F.backFull;
+      x *= 1 + back * F.backWide;
 
       // Breadth peaks at the parietal eminences — above and a little behind
       // the ears — and tucks back in toward the crown. An ellipsoid is widest
       // at its equator instead, which is why one reads as pinched up top and
       // bulbous through the middle.
-      x *= 1 + Math.exp(-Math.pow((y - 0.130) / 0.180, 2)) * 0.085;
+      x *= 1 + Math.exp(-Math.pow((y - 0.130) / 0.180, 2)) * F.parietal;
       const vault = smoothstep(0.19, 0.34, y);
-      x *= 1 - vault * 0.115;
-      z *= 1 - vault * 0.070;
+      x *= 1 - vault * F.vaultTaperX;
+      z *= 1 - vault * F.vaultTaperZ;
       // The crown is a flattened dome rather than the pole of a sphere.
-      y -= smoothstep(0.60, 1.0, ny) * 0.028;
+      y -= smoothstep(0.60, 1.0, ny) * F.crownFlat;
 
       // The forehead rises close to vertical out of the brow before it turns
       // back. A sphere starts curving away immediately above the eyes, which
@@ -434,36 +478,47 @@ function makeHeadGeometry(opts = {}) {
       // derivative discontinuity down the side of the skull, which lights up
       // as a crease arcing from the brow to the temple.
       z += smoothstep(0.06, 0.19, y) * (1 - smoothstep(0.22, 0.33, y))
-         * smoothstep(0, 0.55, nz) * 0.022;
+         * smoothstep(0, 0.55, nz) * F.forehead;
 
       // Occiput: the skull projects furthest back at about ear height, and
       // the vault above it slopes forward to the crown. Putting the bulge at
       // the top instead — the usual guess — gives a conehead in profile.
-      z -= featureFalloff({ x, y, z }, 0, 0.06, -0.27, 0.22, 0.19, 0.12, 1) * 0.024;
-      z += featureFalloff({ x, y, z }, 0, 0.27, -0.22, 0.22, 0.16, 0.14, 1) * 0.022;
+      z -= featureFalloff({ x, y, z }, 0, 0.06, -0.27, 0.22, 0.19, 0.12, 1) * F.occiputLow;
+      z += featureFalloff({ x, y, z }, 0, 0.27, -0.22, 0.22, 0.16, 0.14, 1) * F.occiputHigh;
       // Below the occiput the skull tucks hard in toward the neck. Leaving
       // that hollow out is what makes a profile read as a ball on a stick:
       // every real head has a concave step between cranium and nape.
-      z += featureFalloff({ x, y, z }, 0, -0.235, -0.205, 0.20, 0.135, 0.135, 1) * 0.055;
+      z += featureFalloff({ x, y, z }, 0, -0.235, -0.205, 0.20, 0.135, 0.135, 1) * F.nape;
 
       // Jaw: the lower head narrows and comes forward into a chin.
       // Eased, and it keeps more width than it takes: too much taper here
       // and the head reads as a skull rather than a face.
       const jaw = smoothstep(0.02, -0.32, y);
-      x *= 1 - jaw * A.jaw;
-      z *= 1 - jaw * 0.055;
+      x *= 1 - jaw * F.jaw;
+      z *= 1 - jaw * F.jawDepth;
       y -= jaw * 0.008;
 
       const P = { x, y, z };
 
       /* --- face --- */
       // Brow ridge, strongest over the eyes and fading at the temples.
-      const brow = featureFalloff(P, 0, 0.112, 0.205, 0.150, 0.058, 0.15, 1);
-      z += brow * A.brow;
-      y += brow * 0.004;
+      const brow = featureFalloff(P, 0, 0.112, 0.205, F.browWide, F.browTall, 0.15, 1);
+      z += brow * F.brow;
+      y += brow * F.browLift;
+      /* A supraorbital SHELF, which is a different thing from a deep
+         brow: one continuous bar of bone running temple to temple with
+         a hard lower edge over the orbits, rather than two arcs that
+         fade at the sides. No amount of `brow` produces it, which is
+         exactly why it is its own control -- a heavy brow and a shelf
+         are not the same face scaled. */
+      if (F.browShelf) {
+        const bar = featureFalloff(P, 0, 0.104, 0.195, 0.205, 0.030, 0.17, 1);
+        z += bar * F.browShelf * 0.030;
+        y -= featureFalloff(P, 0, 0.074, 0.212, 0.190, 0.016, 0.09, 1) * F.browShelf * 0.010;
+      }
       // Glabella: the flat between the brows, which stops them merging into
       // one shelf across the face.
-      z -= featureFalloff(P, 0, 0.098, 0.230, 0.026, 0.045, 0.06, 1) * 0.014;
+      z -= featureFalloff(P, 0, 0.098, 0.230, 0.026, 0.045, 0.06, 1) * F.glabella;
 
       // Eye sockets, cut deeper now that a real eyeball and lids fill them.
       // Eye sockets. These have to be genuinely deep — the orbit floor needs
@@ -471,28 +526,37 @@ function makeHeadGeometry(opts = {}) {
       // swallowed by the surrounding face and the head comes out blank-eyed.
       // Narrow enough across not to flatten the bridge of the nose.
       for (const sx of [1, -1]) {
-        const socket = featureFalloff(P, sx * 0.091, 0.034, 0.205, 0.072, 0.062, 0.12, 1);
-        z -= socket * 0.085;
+        const socket = featureFalloff(P, sx * F.orbitX, F.orbitY, 0.205, F.orbitWide, F.orbitTall, 0.12, 1);
+        z -= socket * F.orbit;
       }
 
       // The upper-lid fold — the crease between lid and brow. It is a small
       // feature and it does more for the eye than the socket does, because
       // it gives the lid an edge to end on instead of blending into the brow.
       for (const sx of [1, -1]) {
-        z -= featureFalloff(P, sx * 0.091, 0.072, 0.208, 0.062, 0.016, 0.07, 1) * 0.014;
+        z -= featureFalloff(P, sx * F.orbitX, 0.072, 0.208, 0.062, 0.016, 0.07, 1) * F.lidFold;
       }
 
       // Temples, gently hollowed.
       for (const sx of [1, -1]) {
-        x -= sx * featureFalloff(P, sx * 0.185, 0.120, 0.070, 0.075, 0.100, 0.12, 1) * 0.014;
+        x -= sx * featureFalloff(P, sx * 0.185, 0.120, 0.070, 0.075, 0.100, 0.12, 1) * F.temple;
       }
 
 
       // Cheekbones.
       for (const sx of [1, -1]) {
-        const cheek = featureFalloff(P, sx * 0.150, -0.020, 0.130, 0.090, 0.080, 0.13, 1);
-        x += sx * cheek * A.cheek;
-        z += cheek * 0.012;
+        const cheek = featureFalloff(P, sx * F.cheekX, F.cheekY, 0.130, 0.090, 0.080, 0.13, 1);
+        x += sx * cheek * F.cheek;
+        z += cheek * F.cheekZ;
+        /* The hollow UNDER the cheekbone. A gaunt face and a full one
+           differ here and nowhere else -- same bone, different flesh
+           over it -- and it is not reachable by making the cheekbone
+           bigger, which just gives a fat face with knobs on. */
+        if (F.malarHollow) {
+          const h = featureFalloff(P, sx * 0.118, -0.108, 0.168, 0.062, 0.070, 0.11, 1);
+          x -= sx * h * F.malarHollow * 0.024;
+          z -= h * F.malarHollow * 0.020;
+        }
       }
 
 
@@ -500,24 +564,36 @@ function makeHeadGeometry(opts = {}) {
       // that gives the lower face two planes instead of one.
       // The chin has to clear the lips in profile. Under-projecting it is
       // what makes a face read as weak-jawed and slightly simian.
-      const chin = featureFalloff(P, 0, -0.282, 0.196, 0.072, 0.070, 0.12, 1);
-      z += chin * A.chin;
+      const chin = featureFalloff(P, 0, F.chinY, 0.196, F.chinWide, 0.070, 0.12, 1);
+      z += chin * F.chin;
+      // A cleft. Present or absent; there is no small version of one.
+      if (F.chinCleft) {
+        z -= featureFalloff(P, 0, F.chinY - 0.004, 0.214, 0.012, 0.030, 0.05, 1) * F.chinCleft * 0.012;
+      }
       x += (P.x > 0 ? 1 : -1) * chin * 0.006;
-      z -= featureFalloff(P, 0, -0.238, 0.212, 0.055, 0.020, 0.06, 1) * 0.022;
+      z -= featureFalloff(P, 0, -0.238, 0.212, 0.055, 0.020, 0.06, 1) * F.mental;
 
       // Nasolabial folds, running from the nose wings past the mouth corners.
       for (const sx of [1, -1]) {
-        z -= featureFalloff(P, sx * 0.062, -0.150, 0.212, 0.030, 0.062, 0.07, 1) * 0.017;
+        z -= featureFalloff(P, sx * 0.062, -0.150, 0.212, 0.030, 0.062, 0.07, 1) * F.nasolabial;
       }
       // Philtrum, the groove beneath the nose.
-      z -= featureFalloff(P, 0, -0.148, 0.232, 0.014, 0.026, 0.05, 1) * 0.015;
+      z -= featureFalloff(P, 0, -0.148, 0.232, 0.014, 0.026, 0.05, 1) * F.philtrum;
 
       // Jawline: a defined corner where the jaw turns up toward the ear.
       for (const sx of [1, -1]) {
-        const angle = featureFalloff(P, sx * 0.135, -0.212, 0.000, 0.070, 0.078, 0.13, 1);
-        x += sx * angle * 0.026;
-        y -= angle * 0.014;
+        const angle = featureFalloff(P, sx * F.gonialAt, F.gonialLow, 0.000, 0.070, 0.078, 0.13, 1);
+        x += sx * angle * F.gonialX;
+        y -= angle * F.gonialY;
         z -= angle * 0.008;
+        /* A SQUARE jaw: the mandible carries its width forward to the
+           chin instead of tapering to it, so the lower face is a box
+           rather than a wedge. Two men with identical jaw widths at the
+           ear read as completely different people depending on this. */
+        if (F.jawSquare) {
+          const fwd = featureFalloff(P, sx * 0.112, -0.250, 0.110, 0.075, 0.070, 0.13, 1);
+          x += sx * fwd * F.jawSquare * 0.026;
+        }
       }
 
       /* --- and then it died ---

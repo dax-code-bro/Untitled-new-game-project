@@ -648,6 +648,15 @@ class Engine {
     if (!model && opts.zombie) {
       mesh.__key = 'zbody:' + (opts.zombieBuild || 'male') + ':' + (opts.girth || 1) + ':' + (opts.seed || 3) + ':' + rot.toFixed(3);
       (this._geoByKey || (this._geoByKey = new Map())).set(mesh.__key, geo);
+    } else if (!model) {
+      /* The LIVING body too, and for the same reason. It was only the
+         dead one that could be measured, so "do the arms deform
+         correctly when this runs" was a question that could only be
+         answered by looking at a picture -- and the picture showed the
+         arms of every multiplayer bot shredding into ribbons for
+         months without anybody being able to say which vertices. */
+      mesh.__key = 'body:' + (opts.build || 1) + ':' + scale.toFixed(3);
+      (this._geoByKey || (this._geoByKey = new Map())).set(mesh.__key, geo);
     }
 
     const animator = new Animator(skeleton);
