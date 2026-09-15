@@ -760,8 +760,12 @@ var CSS3 = `
   text-transform:uppercase; }
 #b9shell .dhead .tagline { font-size:11px; letter-spacing:.20em; color:#6b6455;
   text-transform:uppercase; }
-#b9shell .dhead .pg { margin-left:auto; font-size:11px; letter-spacing:.24em;
-  text-transform:uppercase; }
+/* The level bar and what it is counting towards. It was inside the
+   header with margin-left:auto, which put a progress bar and two
+   sentences on the same line as the gun's name -- and at any width
+   narrower than enormous the two sentences ran into each other with no
+   space between them. It gets its own line. */
+#b9shell .detail > .pg:not(:empty) { margin-top:9px; }
 #b9shell .dlist { flex:1; overflow-y:auto; margin-top:10px; padding-right:6px; }
 #b9shell .dlist::-webkit-scrollbar { width:9px; }
 #b9shell .dlist::-webkit-scrollbar-thumb { background:#3a3428; }
@@ -794,11 +798,15 @@ var CSS3 = `
    each one saying which way it went and by how much. */
 #b9shell .preview { border-top:1px solid #37312790; margin-top:10px; padding-top:11px;
   display:flex; gap:18px; align-items:flex-start; }
-#b9shell .gunart { flex:0 0 260px; height:104px; }
+/* A slot with nothing to draw -- the keychain before diamond, a plain
+   equipment list -- left a rule across the panel with empty space under
+   it, which reads as something that failed to load. */
+#b9shell .preview.off { display:none; }
+#b9shell .gunart { flex:0 0 300px; height:118px; }
 #b9shell .gunart svg { width:100%; height:100%; overflow:visible; }
-#b9shell .gunart .body { fill:#4c4338; stroke:#2b2620; stroke-width:1; }
-#b9shell .gunart .metal { fill:#6f747b; stroke:#2b2620; stroke-width:1; }
-#b9shell .gunart .part { fill:#8a7a4a; stroke:#ffd27a; stroke-width:1.2; }
+#b9shell .gunart .body { stroke:#7d6f5c; }
+#b9shell .gunart .metal { stroke:#9aa0a8; }
+#b9shell .gunart .part { stroke:#ffd27a; }
 #b9shell .stats { flex:1; min-width:0; display:grid; grid-template-columns:repeat(2,1fr);
   gap:3px 20px; }
 #b9shell .stat { display:flex; align-items:center; gap:9px; font-size:11px; letter-spacing:.14em;
@@ -945,8 +953,8 @@ function buildDom() {
       <div class="mppane loadout">
         <div class="slots"></div>
         <div class="detail">
-          <div class="dhead"><h3 class="dname">&mdash;</h3><span class="tagline"></span>
-            <span class="pg"></span></div>
+          <div class="dhead"><h3 class="dname">&mdash;</h3><span class="tagline"></span></div>
+          <div class="pg"></div>
           <div class="dlist"></div>
           <div class="preview">
             <div class="gunart"></div>
@@ -994,7 +1002,7 @@ function buildDom() {
     lobby: q('.lobby'), loadoutp: q('.loadout'),
     modelist: q('.modelist'), mplist: q('.mplist'), lobinfo: q('.lobinfo'),
     roster: q('.roster'), gowrap: q('.gowrap'),
-    slots: q('.slots'), dname: q('.dname'), tagline: q('.tagline'), dpg: q('.dhead .pg'),
+    slots: q('.slots'), dname: q('.dname'), tagline: q('.tagline'), dpg: q('.detail > .pg'),
     dlist: q('.dlist'), gunart: q('.gunart'), dstats: q('.stats'),
     confirm: q('.confirm'), mpfoot: q('.mpfoot'),
     pbody: q('.pbody'), pauseacts: q('.pauseacts'), prd: q('.pausehead .rd'),
@@ -1855,7 +1863,7 @@ function trainerSvg(h) {
   var rifle =
     '<g class="rig"><g transform="translate(0,0)">'
     + '<path class="wood" stroke-width="10" d="M-34,20 L-8,13"/>'
-    + '<path class="body" stroke="#4c4338" stroke-width="11" stroke-linecap="square" fill="none" d="M-8,11 L36,11"/>'
+    + '<path class="body" stroke="#7d6f5c" stroke-width="11" stroke-linecap="square" fill="none" d="M-8,11 L36,11"/>'
     + '<path class="steel" stroke-width="7" d="M14,16 L10,42"/>'
     + '<path class="cloth" stroke-width="7" d="M2,16 L-3,34"/>'
     + '<path class="wood" stroke-width="9" d="M36,10 L72,10"/>'
@@ -2212,7 +2220,7 @@ function gunArt(g, fitted, hover) {
   if (hover) { var ha = MP.att(hover); if (ha) { has[ha.slot] = ha; hoverSlot = ha.slot; } }
   function cls(slot) { return slot === hoverSlot ? 'part' : 'metal'; }
   function st(slot, w) {
-    return 'class="' + cls(slot) + '" stroke="' + (slot === hoverSlot ? '#ffd27a' : '#6f747b')
+    return 'class="' + cls(slot) + '" stroke="' + (slot === hoverSlot ? '#ffd27a' : '#9aa0a8')
       + '" stroke-width="' + w + '" fill="none" stroke-linecap="round"';
   }
 
@@ -2222,27 +2230,31 @@ function gunArt(g, fitted, hover) {
   if (has.barrel && /short|cqb/.test(has.barrel.id)) bl -= 12;
   var xRecEnd = x0 + A.rec, xBarEnd = xRecEnd + A.hand + bl;
 
-  var s = '<svg viewBox="0 0 300 104">';
+  /* Framed on the gun rather than on the box it is drawn in. At
+     0 0 300 104 the whole thing was a hairline in the corner of an
+     empty rectangle: you could see that something had changed and
+     not what. */
+  var s = '<svg viewBox="24 16 214 84" preserveAspectRatio="xMidYMid meet">';
   /* stock and receiver */
   if (A.butt < 0) {
     var bx = x0 + A.butt;
     s += has.stock
       ? '<path ' + st('stock', /none/.test(has.stock.id) ? 5 : 13) + ' d="M' + bx + ',' + (y + 7)
         + ' L' + (x0 - 2) + ',' + (y + 2) + '"/>'
-      : '<path class="body" stroke="#4c4338" stroke-width="12" fill="none" stroke-linecap="round" d="M'
+      : '<path class="body" stroke="#7d6f5c" stroke-width="12" fill="none" stroke-linecap="round" d="M'
         + bx + ',' + (y + 7) + ' L' + (x0 - 2) + ',' + (y + 2) + '"/>';
   }
-  s += '<path class="body" stroke="#4c4338" stroke-width="' + A.w + '" fill="none" d="M'
+  s += '<path class="body" stroke="#7d6f5c" stroke-width="' + A.w + '" fill="none" d="M'
     + x0 + ',' + y + ' L' + xRecEnd + ',' + y + '"/>';
   /* handguard and barrel */
   if (A.hand) {
-    s += '<path class="body" stroke="#5a5044" stroke-width="' + (A.w - 2) + '" fill="none" d="M'
+    s += '<path class="body" stroke="#8a7a62" stroke-width="' + (A.w - 2) + '" fill="none" d="M'
       + xRecEnd + ',' + y + ' L' + (xRecEnd + A.hand) + ',' + y + '"/>';
   }
   s += '<path ' + st('barrel', g.cls === 'launcher' ? 16 : 6) + ' d="M'
     + (xRecEnd + A.hand) + ',' + y + ' L' + xBarEnd + ',' + y + '"/>';
   /* grip and trigger guard */
-  s += '<path ' + (has.grip ? st('grip', 9) : 'class="body" stroke="#4c4338" stroke-width="9" fill="none" stroke-linecap="round"')
+  s += '<path ' + (has.grip ? st('grip', 9) : 'class="body" stroke="#7d6f5c" stroke-width="9" fill="none" stroke-linecap="round"')
     + ' d="M' + (x0 + 12) + ',' + (y + 6) + ' L' + (x0 + 6) + ',' + (y + A.drop) + '"/>';
   /* magazine */
   if (A.mag) {
@@ -2250,11 +2262,11 @@ function gunArt(g, fitted, hover) {
     if (has.mag && /drum/.test(has.mag.id)) ml = 8;
     if (has.mag && /ext/.test(has.mag.id)) ml += 12;
     if (has.mag && /fast/.test(has.mag.id)) ml -= 8;
-    s += '<path ' + (has.mag ? st('mag', 10) : 'class="metal" stroke="#6f747b" stroke-width="10" fill="none" stroke-linecap="round"')
+    s += '<path ' + (has.mag ? st('mag', 10) : 'class="metal" stroke="#9aa0a8" stroke-width="10" fill="none" stroke-linecap="round"')
       + ' d="M' + (x0 + 26) + ',' + (y + 6) + ' L' + (x0 + 21) + ',' + (y + 6 + ml) + '"/>';
     if (has.mag && /drum/.test(has.mag.id)) {
       s += '<circle cx="' + (x0 + 22) + '" cy="' + (y + 28) + '" r="15" fill="none" stroke="'
-        + (hoverSlot === 'mag' ? '#ffd27a' : '#6f747b') + '" stroke-width="5"/>';
+        + (hoverSlot === 'mag' ? '#ffd27a' : '#9aa0a8') + '" stroke-width="5"/>';
     }
   }
   /* optic on top */
@@ -2264,7 +2276,7 @@ function gunArt(g, fitted, hover) {
       + (x0 + 10 + ow) + ',' + (y - 12) + '"/>'
       + '<path ' + st('optic', 4) + ' d="M' + (x0 + 14) + ',' + (y - 8) + ' L' + (x0 + 14) + ',' + (y - 5) + '"/>';
   } else {
-    s += '<path class="metal" stroke="#6f747b" stroke-width="3" fill="none" d="M'
+    s += '<path class="metal" stroke="#9aa0a8" stroke-width="3" fill="none" d="M'
       + (xBarEnd - 8) + ',' + y + ' L' + (xBarEnd - 8) + ',' + (y - 8) + '"/>';
   }
   /* muzzle device */
@@ -2284,10 +2296,10 @@ function gunArt(g, fitted, hover) {
   if (has.laser) {
     var lx = xRecEnd + 6;
     s += '<rect x="' + lx + '" y="' + (y + 6) + '" width="14" height="8" rx="2" fill="none" stroke="'
-      + (hoverSlot === 'laser' ? '#ffd27a' : '#6f747b') + '" stroke-width="2"/>';
+      + (hoverSlot === 'laser' ? '#ffd27a' : '#9aa0a8') + '" stroke-width="2"/>';
     if (!/ir/.test(has.laser.id)) {
       s += '<path stroke="#d2705f" stroke-width="1.5" opacity=".75" fill="none" d="M'
-        + (lx + 14) + ',' + (y + 10) + ' L300,' + (y + 6) + '"/>';
+        + (lx + 14) + ',' + (y + 10) + ' L236,' + (y + 6) + '"/>';
     }
   }
   return s + '</svg>';
@@ -2319,6 +2331,13 @@ function statFrac(d, v) {
   var f = (v - d.lo) / (d.hi - d.lo);
   if (d.inv) f = 1 - f;
   return Math.max(0, Math.min(1, f));
+}
+
+/* The picture, and the rule above it, together. They were separate and
+   the rule stayed behind on every slot that has no gun to draw. */
+function setArt(html) {
+  el.gunart.innerHTML = html || '';
+  el.preview.classList.toggle('off', !html);
 }
 
 function paintStats(before, after) {
@@ -2404,7 +2423,7 @@ function paintDetail() {
   ldRows = [];
   el.dlist.innerHTML = '';
   el.confirm.innerHTML = '';
-  el.gunart.innerHTML = '';
+  setArt('');
   el.dstats.innerHTML = '';
   el.dpg.innerHTML = '';
   var L = mp.loadout, slot = ld.slot;
@@ -2424,7 +2443,7 @@ function paintDetail() {
         var d = detailRow(g.name, g.blurb, gunBadge(g), { fitted: L[slot] === g.id });
         pushRow(d, function () {
           ld.hover = g.id;
-          el.gunart.innerHTML = gunArt(g, L[slot] === g.id ? L[slot + 'Att'] : [], null);
+          setArt(gunArt(g, L[slot] === g.id ? L[slot + 'Att'] : [], null));
           paintStats(null, MP.build(g.id, []));
           el.dpg.innerHTML = levelStrip(g);
         }, function () {
@@ -2445,7 +2464,7 @@ function paintDetail() {
     if (!g) return;
     var pr = prog(g.id), fitted = L[which + 'Att'];
     el.dpg.innerHTML = levelStrip(g);
-    el.gunart.innerHTML = gunArt(g, fitted, null);
+    setArt(gunArt(g, fitted, null));
     paintStats(null, MP.build(g.id, fitted));
 
     MP.SLOTS.forEach(function (S2) {
@@ -2467,7 +2486,7 @@ function paintDetail() {
              confirm is a decision and not a guess. */
           var next = on ? fitted.filter(function (id) { return id !== a.id; })
             : fitted.filter(function (id) { return MP.att(id).slot !== a.slot; }).concat([a.id]);
-          el.gunart.innerHTML = gunArt(g, next, on ? null : a.id);
+          setArt(gunArt(g, next, on ? null : a.id));
           paintStats(MP.build(g.id, fitted), MP.build(g.id, locked || full ? fitted : next));
           el.confirm.innerHTML = '';
           var act = document.createElement('div');
@@ -2492,7 +2511,7 @@ function paintDetail() {
       detailHead('All of it');
       var dc = detailRow('Strip the gun', 'Every part off, back to how it came.', 'clear');
       pushRow(dc, function () {
-        el.gunart.innerHTML = gunArt(g, [], null);
+        setArt(gunArt(g, [], null));
         paintStats(MP.build(g.id, fitted), MP.build(g.id, []));
         el.confirm.innerHTML = '';
       }, function () {
