@@ -103,6 +103,7 @@ function check(name, cond, detail = '') {
           sightY: spec.sight.y, recUp: spec.rec.up,
           magKind: spec.mag ? spec.mag.kind : 'none' },
         len: hi[0] - lo[0],
+        cls: (spec && spec.cls) || '',
       };
     }, kind);
 
@@ -110,7 +111,23 @@ function check(name, cond, detail = '') {
     const problems = [];
     if (r.verts < 500) problems.push(`only ${r.verts} vertices`);
     if (r.nan) problems.push(`${r.nan} nonsense coordinates`);
-    if (len < 0.30 || len > 1.30) problems.push(`${len.toFixed(2)} m long`);
+    /* GUN-SIZED DEPENDS ON WHAT KIND OF GUN.
+       30 cm to 1.3 m was written when the table held nothing but rifles
+       and SMGs, and it is wrong in both directions now: a Tokarev is
+       19 cm and a Bazooka is 1.37 m, and both are exactly right. The
+       band is per class, and each bound is a real weapon -- the
+       shortest pistol here against the longest launcher. */
+    const CLS = {
+      pistol:   [0.16, 0.30],   // Tokarev 194 mm to a machine pistol with a stick mag
+      launcher: [0.40, 1.45],   // M79 at 0.73 to the Bazooka at 1.37
+      bolt:     [0.55, 1.30],
+      gauge:    [0.28, 0.90],   // a sawn-off is 30 cm and that is the point
+      shield:   [0.30, 0.70],
+    };
+    const band = CLS[r.cls] || [0.30, 1.30];
+    if (len < band[0] || len > band[1]) {
+      problems.push(`${len.toFixed(2)} m long (${r.cls || 'service'} wants ${band[0]}-${band[1]})`);
+    }
     /* The muzzle must be the front of the gun. Anything in front of it
        is a part that has escaped. */
     if (r.hi[0] > r.muzzleAt + 0.060) {

@@ -23258,7 +23258,9 @@ function sideSpec(over) {
     else merged[k] = (o === undefined ? b : o);
   }
   for (const k of Object.keys(over)) if (!(k in merged)) merged[k] = over[k];
-  return svcSpec(merged);
+  const out = svcSpec(merged);
+  out.cls = 'pistol';
+  return out;
 }
 
 Object.assign(SERVICE_KINDS, {
@@ -23415,7 +23417,9 @@ function tubeSpec(over) {
     else merged[k] = (o === undefined ? b : o);
   }
   for (const k of Object.keys(over)) if (!(k in merged)) merged[k] = over[k];
-  return svcSpec(merged);
+  const out = svcSpec(merged);
+  out.cls = 'launcher';
+  return out;
 }
 
 Object.assign(SERVICE_KINDS, {
@@ -23424,26 +23428,32 @@ Object.assign(SERVICE_KINDS, {
      wider than the tube on the front of it -- which is the only
      launcher silhouette anybody recognises instantly. */
   panzer: tubeSpec({
-    muzzle: 0.780,
+    /* OVERALL LENGTH IS `muzzle` MINUS `barrel.rear`, and rear is
+       negative on every launcher because the tube runs back past the
+       grip. Setting muzzle to the length I wanted made each of these a
+       quarter to a third longer than the real weapon -- the bazooka
+       came out 1.55 m against a real 1.37. The numbers below are
+       muzzle positions now, chosen so the total is right. */
+    muzzle: 0.560,
     barrel: { rear: -0.240, r0: 0.0225, r1: 0.0225, bore: 0.0200, step: 0.300 },
     // The warhead, out front and much fatter than the tube.
-    hg: { kind: 'tube', x0: 0.640, x1: 0.780, r: 0.0720 },
+    hg: { kind: 'tube', x0: 0.430, x1: 0.560, r: 0.0720 },
     rec: { rear: -0.100, front: 0.020, up: 0.0130, down: 0.0230, w: 0.0120 },
     grip: { x: -0.056, y: -0.0250, len: 0.100, rake: 0.30 },
-    sight: { y: 0.0420, frontX: 0.260, rearX: 0.040 },
+    sight: { y: 0.0420, frontX: 0.230, rearX: 0.040 },
     mass: 6.2, bound: 0.60,
   }),
 
   /* Flatter than the Panzerfaust and takes four seconds to reload. A
      long steel pipe with a shoulder rest and two grips. */
   bazooka: tubeSpec({
-    muzzle: 1.370,
+    muzzle: 1.190,
     barrel: { rear: -0.180, r0: 0.0320, r1: 0.0320, bore: 0.0300, step: 0.600 },
-    hg: { kind: 'tube', x0: 0.320, x1: 0.480, r: 0.0370 },
+    hg: { kind: 'tube', x0: 0.300, x1: 0.460, r: 0.0370 },
     rec: { rear: -0.060, front: 0.060, up: 0.0160, down: 0.0300, w: 0.0150 },
     grip: { x: -0.020, y: -0.0320, len: 0.112, rake: 0.32 },
     trigger: { x: 0.006 },
-    sight: { y: 0.0560, frontX: 0.500, rearX: 0.120 },
+    sight: { y: 0.0560, frontX: 0.440, rearX: 0.120 },
     mass: 6.0, bound: 0.90,
   }),
 
@@ -23451,14 +23461,14 @@ Object.assign(SERVICE_KINDS, {
      blast chamber behind the grip, and the grenade standing off the
      muzzle on a thinner stalk. */
   rpg7: tubeSpec({
-    muzzle: 1.000,
+    muzzle: 0.650,
     barrel: { rear: -0.300, r0: 0.0210, r1: 0.0210, bore: 0.0200, step: 0.450 },
     // The mid-body flare where the tube widens round the chamber.
     hg: { kind: 'tube', x0: 0.180, x1: 0.360, r: 0.0420 },
     rec: { rear: -0.140, front: 0.030, up: 0.0150, down: 0.0280, w: 0.0140 },
     grip: { x: -0.090, y: -0.0290, len: 0.108, rake: 0.36 },
     trigger: { x: -0.062 },
-    sight: { y: 0.0540, frontX: 0.330, rearX: -0.020 },
+    sight: { y: 0.0540, frontX: 0.300, rearX: -0.020 },
     mass: 7.0, bound: 0.75,
   }),
 
@@ -23466,7 +23476,7 @@ Object.assign(SERVICE_KINDS, {
      launch tube, a boxy gripstock slung underneath, and the big square
      sight assembly folded up on the side. */
   stinger: tubeSpec({
-    muzzle: 0.860,
+    muzzle: 0.680,
     barrel: { rear: -0.300, r0: 0.0350, r1: 0.0350, bore: 0.0320, step: 0.380 },
     hg: { kind: 'tube', x0: 0.200, x1: 0.420, r: 0.0395 },
     rec: { rear: -0.170, front: 0.010, up: 0.0130, down: 0.0420, w: 0.0230, e: 4.0 },
@@ -23552,7 +23562,9 @@ function boltSpec(over) {
     else merged[k] = (o === undefined ? b : o);
   }
   for (const k of Object.keys(over)) if (!(k in merged)) merged[k] = over[k];
-  return svcSpec(merged);
+  const out = svcSpec(merged);
+  out.cls = 'bolt';
+  return out;
 }
 
 /* A shotgun's magazine is a TUBE under the barrel, running most of the
@@ -23587,7 +23599,9 @@ function gaugeSpec(over) {
     else merged[k] = (o === undefined ? b : o);
   }
   for (const k of Object.keys(over)) if (!(k in merged)) merged[k] = over[k];
-  return svcSpec(merged);
+  const out = svcSpec(merged);
+  out.cls = 'gauge';
+  return out;
 }
 
 Object.assign(SERVICE_KINDS, {
@@ -23642,7 +23656,12 @@ Object.assign(SERVICE_KINDS, {
     stock: { kind: 'poly', butt: -0.400, comb: 0.0290, drop: 0.0250, w: 0.0230 },
     grip: { x: -0.100, y: -0.0190, len: 0.110, rake: 0.28 },
     mag: { len: 0.070, w: 0.0150, d: 0.0180, r: 0.024 },
-    bipod: { x: 0.300, drop: 0.140, spread: 0.110 },
+    /* rake, len, spread -- NOT drop. svcBipod reads P.rake and P.len,
+       and passing `drop` left both undefined, so every strut endpoint
+       came out NaN and the whole model with it. Three guns, 6 nonsense
+       coordinates each, and nothing else in the checks noticed because
+       a NaN vertex still counts as a vertex. */
+    bipod: { x: 0.300, rake: 0.030, len: 0.140, spread: 0.110 },
     rail: { x0: -0.090, x1: 0.070 },
     sight: { y: 0.0520, frontX: 0.140, rearX: -0.060, front: 'none', rear: 'scope' },
     mass: 12.4, bound: 0.84,
@@ -23662,7 +23681,7 @@ Object.assign(SERVICE_KINDS, {
     grip: { x: -0.110, y: -0.0200, len: 0.112, rake: 0.26 },
     mag: { kind: 'box', x: -0.046, y: -0.0230, len: 0.150, curve: 0,
       w: 0.0150, d: 0.0190, r: 0.050, clear: true },
-    bipod: { x: 0.340, drop: 0.150, spread: 0.120 },
+    bipod: { x: 0.340, rake: 0.034, len: 0.150, spread: 0.120 },
     rail: { x0: -0.110, x1: 0.090 },
     sight: { y: 0.0560, frontX: 0.150, rearX: -0.080, front: 'none', rear: 'scope' },
     mass: 13.5, bound: 0.96,
@@ -23725,7 +23744,8 @@ Object.assign(SERVICE_KINDS, {
     grip: { x: -0.084, y: -0.0170, len: 0.102, rake: 0.32 },
     mag: null,
     // The limbs, swept hard forward and out from the front of the rail.
-    bipod: { x: 0.380, drop: 0.020, spread: 0.300 },
+    // The crossbow's limbs: swept hard out and barely down at all.
+    bipod: { x: 0.380, rake: -0.040, len: 0.026, spread: 0.300 },
     rail: { x0: -0.080, x1: 0.060 },
     sight: { y: 0.0380, frontX: 0.150, rearX: -0.060, front: 'none', rear: 'scope' },
     mass: 3.1, bound: 0.60,
@@ -23746,10 +23766,15 @@ Object.assign(SERVICE_KINDS, {
     grip: { x: -0.150, y: -0.0200, len: 0.108, rake: 0.10 },
     trigger: null,
     mag: null,
-    sight: { y: 0, frontX: 0, rearX: 0, front: 'none', rear: 'none' },
+    /* A shield HAS a sight, and it is the only reason the viewport is
+       there: the rim of the vision slit is what you line up over. It
+       sits at the top of the slit, which is above the bore -- the bore
+       here being the notional line through the middle of the slab. */
+    sight: { y: 0.2150, frontX: -0.010, rearX: -0.250, front: 'blade', rear: 'notch' },
     handle: { x0: -0.230, x1: -0.090, y: 0.0000, r: 0.0130 },
     rail: null, bipod: null, rotary: 0,
     mass: 7.5, bound: 0.44,
+    cls: 'shield',
   }),
 });
 
