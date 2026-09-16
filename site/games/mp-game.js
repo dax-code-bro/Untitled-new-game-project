@@ -328,7 +328,18 @@
     var prev = {}, live = null;
     var dzL = opts.deadzoneLeft != null ? opts.deadzoneLeft : 0.18;
     var dzR = opts.deadzoneRight != null ? opts.deadzoneRight : 0.16;
-    var look = (opts.padSensitivity || 1) * 3.4;
+    /* Read live rather than captured, so changing any of these applies
+       on the next frame instead of on the next match. There was no
+       invert at all, which is not a preference a shooter can decline to
+       have -- a good half of people play inverted and for them the game
+       is unplayable without it. */
+    function cfg() {
+      var c = null;
+      try { c = JSON.parse(W.localStorage.getItem('b9.pad.v1') || 'null'); } catch (e) { c = null; }
+      return c || {};
+    }
+    var conf = cfg();
+    var reread = 0;
 
     function read() {
       if (!W.navigator || !navigator.getGamepads) return null;
@@ -354,9 +365,20 @@
             strongMagnitude: strong, weakMagnitude: strong * 0.6 });
         } catch (e) { /* a pad that will not buzz still plays */ }
       },
+      config: function () { return conf; },
+      setConfig: function (c) {
+        conf = Object.assign({}, conf, c || {});
+        try { W.localStorage.setItem('b9.pad.v1', JSON.stringify(conf)); } catch (e) { /* off */ }
+        return conf;
+      },
       poll: function (dt, cmd) {
         var p = live = read();
         if (!p) return false;
+        reread += dt;
+        if (reread > 0.5) { reread = 0; conf = cfg(); }
+        var look = (conf.sensitivity || opts.padSensitivity || 1) * 3.4;
+        var invY = conf.invertY ? -1 : 1;
+        var invX = conf.invertX ? -1 : 1;
         var ax = p.axes || [];
         var L = stick(ax[0] || 0, ax[1] || 0, dzL);
         var R = stick(ax[2] || 0, ax[3] || 0, dzR);
@@ -366,11 +388,32 @@
         cmd.forward += -L[1];
         var m = Math.hypot(cmd.forward, cmd.right);
         if (m > 1) { cmd.forward /= m; cmd.right /= m; }
-        cmd.lookX = curve(R[0]) * look * dt;
-        cmd.lookY = curve(R[1]) * look * dt;
+        /* Positive pitch looks DOWN in this camera, and the stick
+           reports negative when pushed up -- so the default is already
+           right way round and `invertY` flips it for the people who
+           want it flipped. Written down because it is the single
+           easiest sign in the codebase to get backwards. */
+        cmd.lookX = curve(R[0]) * look * dt * invX;
+        cmd.lookY = curve(R[1]) * look * dt * invY;
 
-        var std = p.mapping === 'standard';
+        /* TREAT IT AS STANDARD UNLESS IT CANNOT BE.
+         *
+           This trusted `p.mapping === 'standard'`, and a great many
+           real controllers report an EMPTY mapping string in a browser
+           that has not seen their vendor id before -- an Xbox pad over
+           Bluetooth, most third-party pads, anything through an
+           adapter. Every one of those fell into the else branch below,
+           where the only thing wired up is "any of the first four
+           buttons fires". No aim, no jump, no reload, no sprint, no
+           sliding. That is "the controls are completely not right",
+           and it was one string comparison.
+
+           A device with sixteen buttons and four axes IS the standard
+           layout whatever it calls itself -- that is what the layout
+           is. The else branch is now only for genuinely strange
+           hardware, and it does as much as it safely can. */
         var b = p.buttons || [];
+        var std = p.mapping === 'standard' || (b.length >= 15 && ax.length >= 4);
         function edge(name, on) { var was = !!prev[name]; prev[name] = on; return on && !was; }
         var trig = function (i) { return b[i] ? b[i].value : 0; };
 
@@ -385,9 +428,16 @@
           cmd.slide = cmd.slide || edge('slide', down(p, PAD.slide));
           cmd.scores = cmd.scores || down(p, PAD.scores);
         } else {
-          /* Unknown pad: the axes are still the axes, and any of the
-             first four buttons fires. */
-          cmd.fire = cmd.fire || down(p, 0) || down(p, 1) || down(p, 2) || down(p, 3);
+          /* Genuinely strange hardware: fewer than fifteen buttons, so
+             the standard indices cannot be assumed. Bind what is nearly
+             always in the same place anyway rather than leaving the
+             player with one button. */
+          cmd.fire = cmd.fire || trig(7) > 0.35 || down(p, 7) || down(p, 5);
+          cmd.aim = cmd.aim || trig(6) > 0.35 || down(p, 6) || down(p, 4);
+          cmd.jump = cmd.jump || edge('jump', down(p, 0));
+          cmd.crouch = cmd.crouch || down(p, 1);
+          cmd.reload = cmd.reload || edge('reload', down(p, 2));
+          cmd.swap = cmd.swap || edge('swap', down(p, 3));
         }
         return true;
       },
@@ -395,109 +445,185 @@
   }
 
   /* ================================================================
-     THE GUN IN YOUR HANDS
+     THE VIEWMODEL
      ================================================================
-     A blocked-out weapon held in view space: eight boxes placed
-     relative to the camera every frame rather than parented to it,
-     because the engine's camera is a position and a target rather than
-     a transform you can hang things off.
+     THE REAL GUN, and until now it was ten boxes.
 
-     It is deliberately plain. The real models -- sixty of them, built
-     as families so a receiver is shared and the barrel, magazine and
-     furniture differ -- are the next piece of work, and putting a
-     placeholder here that pretends otherwise would make it harder to
-     tell when the real one arrives. What this does have to get right is
-     WHERE it sits: the sights come up to the middle of the screen when
-     you aim, and it drops to a low ready when you sprint, because those
-     two are about the feel of holding it rather than about the model.
-     ================================================================ */
+     This built a rifle out of a receiver-shaped box, a butt-shaped box,
+     a grip, a magazine, a handguard, a barrel, two sights and two hands
+     -- while the engine was carrying fifty-seven fully modelled weapons
+     with rifled muzzles, checkered grips, working sights and individual
+     brass rounds visible through smoked magazines. Multiplayer used
+     none of them. "The gun models are a bunch of see-through shapes"
+     is exactly right, and they were not even see-through by accident:
+     ten separate boxes floating a few centimetres apart is what that
+     looks like from the inside.
+
+     So: the actual model, by id, cached per gun, placed in the camera's
+     frame with the same geometry the zombies viewmodel uses -- which is
+     worth reusing rather than re-deriving, because the hip cant in it
+     is a measured number and getting it wrong is what "he holds his gun
+     way too high" was. */
+
+  /* Three guns have hand-built models instead of table entries, so the
+     table cannot be the only place this looks. Anything with no model
+     at all falls back to the nearest thing that does, because a missing
+     gun should be the wrong gun and not an empty hand. */
+  var VM_BESPOKE = { mp5: 'mp5', m1911: 'pistol1911', model5: 'model5',
+    mauser: 'mauserC96', breakwater: 'breakwater', scatter: 'scattergun',
+    sawnoff: 'sawnOff' };
+  var VM_FALLBACK = { mg42: 'mg34', riotshield: 'ump' };
+
+  function buildGun(game, id) {
+    var made = null;
+    var fn = VM_BESPOKE[id];
+    if (fn && typeof game[fn] === 'function') {
+      try { made = game[fn]({ at: [0, -90, 0], physics: false }); } catch (e) { made = null; }
+    }
+    if (!made) {
+      try { made = game.serviceArm(id, { at: [0, -90, 0], physics: false }); } catch (e) { made = null; }
+    }
+    if (!made && VM_FALLBACK[id]) {
+      try { made = game.serviceArm(VM_FALLBACK[id], { at: [0, -90, 0], physics: false }); } catch (e) { made = null; }
+    }
+    if (!made) {
+      try { made = game.serviceArm('m4', { at: [0, -90, 0], physics: false }); } catch (e) { made = null; }
+    }
+    return made;
+  }
 
   function makeViewmodel(game) {
-    var mats = {
-      body: game.material({ color: 0xb4a894, texture: 'metal', roughness: 0.58, metalness: 0.45 }),
-      wood: game.material({ color: 0xc0a684, texture: 'wood', roughness: 0.90, uvScale: 2 }),
-      dark: game.material({ color: 0x9aa0a8, texture: 'metal', roughness: 0.50, metalness: 0.85 }),
-      hand: game.material({ color: 0xcaa992, texture: 'skin', roughness: 0.80 }),
-    };
-    /* [x, y, z, sx, sy, sz, material] in the camera's own frame: x
-       right, y up, z forward, and sizes are the whole box rather than
-       half of it.
-     *
-       The first attempt put the receiver nine centimetres wide at
-       forty-two centimetres from the eye and left it on the centre
-       line. At that range it subtended a fifth of the screen and the
-       gun was a dark slab across the middle of the picture with the map
-       behind it. A held rifle sits low and to the RIGHT and most of its
-       length is further away than that -- the muzzle of this one is a
-       metre and ten out, which is about where a real one is. */
-    var HIP_X = 0.135;
-    var PARTS = [
-      [HIP_X, -0.170, 0.62, 0.070, 0.090, 0.34, 'body'],   // receiver
-      [HIP_X, -0.200, 0.36, 0.060, 0.085, 0.22, 'wood'],   // butt
-      [HIP_X, -0.245, 0.55, 0.050, 0.110, 0.06, 'dark'],   // grip
-      [HIP_X, -0.272, 0.66, 0.045, 0.160, 0.055, 'dark'],  // magazine
-      [HIP_X, -0.165, 0.86, 0.055, 0.060, 0.22, 'wood'],   // handguard
-      [HIP_X, -0.160, 1.03, 0.018, 0.018, 0.20, 'dark'],   // barrel
-      [HIP_X, -0.118, 1.10, 0.008, 0.045, 0.012, 'dark'],  // front sight
-      [HIP_X, -0.118, 0.50, 0.008, 0.038, 0.012, 'dark'],  // rear sight
-      [HIP_X - 0.045, -0.225, 0.85, 0.055, 0.060, 0.085, 'hand'],  // front hand
-      [HIP_X + 0.045, -0.250, 0.56, 0.055, 0.065, 0.085, 'hand'],  // firing hand
-    ];
-    /* Aiming is one translation, and these three numbers are it: slide
-       the gun onto the centre line, lift it until the SIGHTS -- which
-       sit at y = -0.118 -- are on zero, and pull it back a little. The
-       sight then lands on the crosshair rather than near it, because
-       the same number does both jobs. */
-    var ADS = [-HIP_X, 0.118, -0.06];
-    var parts = PARTS.map(function (d) {
-      var a = game.box({ at: [0, -80, 0], size: [d[3], d[4], d[5]],
-        material: mats[d[6]], physics: false });
-      if (a) { a.name = 'vm'; a.noCull = true; }
-      return { a: a, off: d };
-    });
-    var Q = new W.LE.Quat();
-    /* What the last placement was handed and what it did with it.
-       Reading the gun's position out of the world and trying to work
-       backwards from it is guesswork -- the same offset lands at a
-       different world x depending on which way you are facing -- and
-       guesswork is what made a check on this fail for three different
-       reasons in a row. */
-    var state = { aim: 0, sprint: 0, ox: 0, oy: 0, oz: 0, placed: 0, hidden: 0 };
+    var cache = {};
+    var cur = null, curId = null;
+    var Q = new W.LE.Quat(), Q2 = new W.LE.Quat();
+    var AX = [1, 0, 0], AY = [0, 1, 0], AZ = [0, 0, 1];
+    /* The muzzle flash: a short bright cone that lives at the end of
+       the bore and is off almost all the time. There was none at all --
+       "no muzzle flash, nothing" -- and a gun that fires without one
+       does not read as firing, whatever the sound does. */
+    var flash = null, flashT = 0;
+    try {
+      flash = game.cone
+        ? game.cone({ at: [0, -90, 0], radius: 0.085, height: 0.24, physics: false,
+          material: { color: 0xffd9a0, emissive: 0xffb347, emissiveIntensity: 4.0,
+            texture: 'smooth', roughness: 1 } })
+        : game.box({ at: [0, -90, 0], size: [0.11, 0.11, 0.26], physics: false,
+          material: { color: 0xffd9a0, emissive: 0xffb347, emissiveIntensity: 4.0,
+            texture: 'smooth', roughness: 1 } });
+      if (flash) { flash.noCull = true; flash.visible = false; }
+    } catch (e) { flash = null; }
+
+    var state = { aim: 0, sprint: 0, ox: 0, oy: 0, oz: 0, placed: 0, hidden: 0,
+      gun: null, reload: 0 };
+
+    function show(g, on) {
+      if (!g) return;
+      g.visible = on;
+      if (g.partNames) {
+        for (var i = 0; i < g.partNames.length; i++) {
+          var a = g[g.partNames[i]];
+          if (a && a !== g) { a.visible = on; a.noCull = true; }
+        }
+      }
+      g.noCull = true;
+    }
+
+    function select(id) {
+      if (id === curId) return cur;
+      if (cur) show(cur, false);
+      if (!cache[id]) cache[id] = buildGun(game, id);
+      cur = cache[id]; curId = id;
+      state.gun = id;
+      if (cur) show(cur, true);
+      return cur;
+    }
+
     return {
-      parts: parts, state: state,
+      state: state,
+      get gun() { return cur; },
+      select: select,
+      /* One shot: the flash comes on for forty milliseconds, which is
+         about two frames and is all a real one lasts. */
+      fired: function () { flashT = 0.04; },
       hide: function () {
         state.hidden++;
-        parts.forEach(function (p) { if (p.a) p.a.visible = false; });
+        if (cur) show(cur, false);
+        if (flash) flash.visible = false;
       },
-      place: function (eye, yaw, pitch, aim, sprint, kick, bob) {
+      place: function (eye, yaw, pitch, aim, sprint, kick, bob, id, reload, dt) {
+        var g = select(id || curId || 'm4');
+        state.placed++;
+        state.aim = aim;
+        var low = sprint ? 1 : 0;
+        state.sprint = low;
+        state.reload = reload || 0;
+
+        /* The camera frame. f forward, r right, u up -- the same basis
+           the match uses for everything else, so the gun and the shot
+           cannot disagree about which way is forward. */
         var cy = Math.cos(yaw), sy = Math.sin(yaw);
         var cp = Math.cos(pitch), sp = Math.sin(pitch);
         var fx = sy * cp, fy = -sp, fz = cy * cp;
         var rx = cy, rz = -sy;
         var ux = sy * sp, uy = cp, uz = cy * sp;
-        /* Sprinting drops the muzzle and rolls the gun over: you are
-           running, and a rifle held level while running is a rifle
-           being carried by somebody who has never run with one. */
-        var low = sprint ? 1 : 0;
-        state.aim = aim; state.sprint = low; state.placed++;
-        state.ox = PARTS[0][0] + aim * ADS[0] + low * 0.03;
-        state.oy = PARTS[0][1] + aim * ADS[1] + bob * 0.6 - low * 0.085;
-        state.oz = PARTS[0][2] + aim * ADS[2] - kick * 0.045 - low * 0.05;
-        Q.setEuler(pitch + low * 0.30, yaw, low * 0.42);
-        for (var i = 0; i < parts.length; i++) {
-          var p = parts[i], o = p.off;
-          if (!p.a) continue;
-          p.a.visible = true;
-          var ox = o[0] + aim * ADS[0] + low * 0.03;
-          var oy = o[1] + aim * ADS[1] + bob * 0.6 - low * 0.085;
-          var oz = o[2] + aim * ADS[2] - kick * 0.045 - low * 0.05;
-          p.a.position.set(
-            eye.x + rx * ox + ux * oy + fx * oz,
-            eye.y + uy * oy + fy * oz,
-            eye.z + rz * ox + uz * oy + fz * oz
+
+        /* Where it sits. Right of the eye and below it at the hip,
+           swinging onto the centre line and up to the sight as you aim.
+           The reload drops it further and the sprint drops it further
+           still. */
+        var rl = reload || 0;
+        var offR = 0.135 * (1 - aim) + 0.004;
+        var offU = -0.145 - low * 0.085 - rl * 0.075 + bob * 0.6 + aim * 0.083;
+        var dist = 0.30 + aim * 0.055 - kick * 0.03 - low * 0.03;
+
+        if (flash) {
+          flashT = Math.max(0, flashT - (dt || 0.016));
+          flash.visible = flashT > 0;
+        }
+        if (!g) return;
+
+        g.position.set(
+          eye.x + rx * offR + ux * offU + fx * dist,
+          eye.y + uy * offU + fy * dist,
+          eye.z + rz * offR + uz * offU + fz * dist
+        );
+
+        /* THE ORIENTATION, and the hip cant is the whole of it.
+         *
+           A gun held to the right of the eye and in front of it
+           converges on the vanishing point in the middle of the screen,
+           so a bore that is level in the WORLD reads as pointing up on
+           SCREEN -- which is the only place anybody looks at it. The
+           muzzle has to fall as fast as perspective lifts it. Zombies
+           measured that at about 29 degrees for this hold and the
+           number is reused rather than guessed at again.
+
+           Blended out entirely with the aim, because aiming is geometry:
+           at full ADS the bore must be exactly on the camera axis or the
+           sights do not line up with the crosshair. */
+        var fh = Math.hypot(fx, fz) || 1e-6;
+        var gy = Math.atan2(-fz / fh, fx / fh);
+        var tip = (1 - aim) * (0.50 + low * 0.10) * (1 - rl * 0.85);
+        var gp = Math.asin(Math.max(-1, Math.min(1, fy))) - tip;
+        var roll = low * 0.42 + (1 - aim) * 0.03 + rl * 0.30;
+        Q.setAxisAngle(AY, gy);
+        Q2.setAxisAngle(AZ, gp);
+        Q.mulQuats(Q, Q2);
+        if (roll > 1e-4) { Q2.setAxisAngle(AX, roll); Q.mulQuats(Q, Q2); }
+        g.rotation.copy(Q);
+        g._still = false;
+
+        state.ox = offR; state.oy = offU; state.oz = dist;
+
+        /* The flash goes on the end of the BORE, which is a property of
+           the model -- not a guess at where the front of the gun is. */
+        if (flash && flash.visible) {
+          var mz = (g.muzzleAt != null ? g.muzzleAt : 0.42) + 0.10;
+          flash.position.set(
+            g.position.x + fx * mz, g.position.y + fy * mz, g.position.z + fz * mz
           );
-          p.a.rotation.copy(Q);
-          p.a._still = false;
+          flash.rotation.copy(Q);
+          flash._still = false;
         }
       },
     };
@@ -717,6 +843,37 @@
       onEvent: function (ev) { hud.onEvent(ev); },
     });
 
+    /* YOU ARE INSIDE YOUR OWN HEAD, so it must not be drawn.
+     *
+       Every combatant gets a full operator body, and the camera sits at
+       eye height inside yours -- so the back of your own face, your own
+       eyes and the inside of your own helmet were between the camera
+       and the world. "I can see through my character's face in first
+       person" is exactly that, and it is one line: hide every actor
+       that belongs to you.
+
+       The body still EXISTS -- it is what everybody else sees, and what
+       the hit tests use -- it is only not rendered for the one person
+       standing inside it. */
+    function hideOwnBody() {
+      var me = M.you && M.you.actor;
+      if (!me) return;
+      var seen = [];
+      var walk = function (a) {
+        if (!a || seen.indexOf(a) >= 0) return;
+        seen.push(a);
+        a.visible = false;
+        if (a.children) for (var i = 0; i < a.children.length; i++) walk(a.children[i]);
+      };
+      walk(me);
+      if (me.rigged) for (var i = 0; i < me.rigged.length; i++) walk(me.rigged[i]);
+      ['head', 'neck', 'eyes', 'hair', 'beard', 'brows', 'balaclava'].forEach(function (k) {
+        if (me[k]) walk(me[k]);
+      });
+      if (me.gear) for (var j = 0; j < me.gear.length; j++) walk(me.gear[j]);
+    }
+    hideOwnBody();
+
     var hud = makeHud(root, M);
     var input = makeInput(root, canvas);
     var pad = makePad(opts);
@@ -725,6 +882,7 @@
     var yaw = M.you.yaw, pitch = 0;
     var sens = (opts.sensitivity || 1) * 0.0022;
     var kick = 0, bob = 0, bobT = 0, lastHp = M.you.hp, wasAlive = true;
+    var adsT = 0;
     var over = false;
 
     /* Being shot has to point at whoever did it, and the match reports
@@ -794,7 +952,7 @@
       var kUp0 = p.kickUp || 0, kSide0 = p.kickSide || 0;
       var kills0 = p.kills;
       M.control(cmd, dt);
-      if (p.ammo[p.held] < before) kick = Math.min(1.4, kick + 0.55);
+      if (p.ammo[p.held] < before) { kick = Math.min(1.4, kick + 0.55); vm.fired(); }
       M.update(dt);
       var dUp = (p.kickUp || 0) - kUp0, dSide = (p.kickSide || 0) - kSide0;
       /* Only the climb is handed to the player. The settle is the gun
@@ -822,7 +980,26 @@
           [eye.x + Math.sin(yaw) * cp, eye.y - Math.sin(pitch), eye.z + Math.cos(yaw) * cp]);
         var w = p.guns[p.held];
         var cone = (p.aiming ? w.adsSpread : w.spread) * (moving ? 1.5 : 1) * (p.sprinting ? 2.2 : 1);
-        vm.place(eye, yaw, pitch, input.buttons.aim ? 1 : 0, p.sprinting, kick, bob);
+        /* AIMING IS A MOVEMENT, not a switch. This passed `aim ? 1 : 0`,
+           so the gun teleported between the hip and the sight with
+           nothing in between -- which is what "I can't aim down sights,
+           there's no animation" is. It eases now, and faster to the
+           sight than back off it, the way a real one does. */
+        var wantAim = (input.buttons.aim || p.aiming) ? 1 : 0;
+        var rate = wantAim ? 13 : 9;
+        adsT += (wantAim - adsT) * Math.min(1, dt * rate);
+        /* The reload, as a visible thing: the gun drops and rolls while
+           the hands work, and comes back up. There was no reload
+           animation at all. */
+        var rl = 0;
+        if (p.reloadUntil > M.time) {
+          var total = Math.max(0.2, w.reload || 2.0);
+          var left = p.reloadUntil - M.time;
+          var t = Math.max(0, Math.min(1, 1 - left / total));
+          rl = Math.sin(Math.min(1, t) * Math.PI);
+        }
+        vm.place(eye, yaw, pitch, adsT, p.sprinting, kick, bob,
+          w.id || w.base || 'm4', rl, dt);
         hud.paint(cone * Math.PI / 180, cmd.scores);
       } else {
         vm.hide();

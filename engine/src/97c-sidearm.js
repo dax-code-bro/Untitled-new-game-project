@@ -77,13 +77,13 @@ Object.assign(SERVICE_KINDS, {
      compensator cut into the top of the barrel. */
   model5: sideSpec({
     ammoKind: 'full',
-    muzzle: 0.268,
+    muzzle: 0.242,
     barrel: { rear: 0.026, r0: 0.0112, r1: 0.0098, bore: 0.0064, step: 0.090 },
     rec: { rear: -0.060, front: 0.132, up: 0.0186, down: 0.0150, w: 0.0150, e: 4.4 },
     port: { x0: 0.040, x1: 0.084, up: 0.0130, down: 0.0020 },
     grip: { x: -0.044, y: -0.0190, len: 0.108, rake: 0.26 },
     mag: { x: -0.044, y: -0.0210, len: 0.100, w: 0.0110, d: 0.0130, r: 0.028 },
-    sight: { y: 0.0230, frontX: 0.124, rearX: -0.046 },
+    sight: { y: 0.0230, frontX: 0.112, rearX: -0.046 },
     mass: 1.9, bound: 0.20,
   }),
 
@@ -111,14 +111,14 @@ Object.assign(SERVICE_KINDS, {
      handle -- round in section and almost vertical. */
   mauser: sideSpec({
     ammoKind: 'inter',
-    muzzle: 0.288,
+    muzzle: 0.254,
     barrel: { rear: 0.074, r0: 0.0082, r1: 0.0068, bore: 0.0039, step: 0.110 },
     rec: { rear: -0.066, front: 0.070, up: 0.0158, down: 0.0134, w: 0.0122, e: 3.4 },
     port: { x0: 0.006, x1: 0.040, up: 0.0110, down: 0.0015 },
     grip: { x: -0.048, y: -0.0170, len: 0.086, rake: 0.16 },
     // Forward of the trigger, which is the whole silhouette of this gun.
     mag: { x: 0.016, y: -0.0190, len: 0.074, w: 0.0098, d: 0.0120, r: 0.020, curve: 0 },
-    sight: { y: 0.0210, frontX: 0.256, rearX: 0.030, rear: 'notch' },
+    sight: { y: 0.0210, frontX: 0.226, rearX: 0.030, rear: 'notch' },
     mass: 1.25, bound: 0.20,
   }),
 

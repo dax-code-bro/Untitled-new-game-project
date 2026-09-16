@@ -117,11 +117,19 @@ function check(name, cond, detail = '') {
        19 cm and a Bazooka is 1.37 m, and both are exactly right. The
        band is per class, and each bound is a real weapon -- the
        shortest pistol here against the longest launcher. */
+    /* Every bound is a real weapon, looked up rather than guessed --
+       the first version of this table was guessed and failed eight guns
+       that were the right size. An anti-materiel rifle is 1.45 m. A
+       pump shotgun is 1.19. A broomhandle Mauser is 288 mm, which is
+       longer than some carbines' barrels. The upper figures carry a
+       couple of centimetres for sights and crowns standing past the
+       muzzle, because the measurement is the model's bounding box and
+       not the catalogue length. */
     const CLS = {
-      pistol:   [0.16, 0.30],   // Tokarev 194 mm to a machine pistol with a stick mag
+      pistol:   [0.16, 0.34],   // Tokarev 194 mm to a C96 at 288
       launcher: [0.40, 1.45],   // M79 at 0.73 to the Bazooka at 1.37
-      bolt:     [0.55, 1.30],
-      gauge:    [0.28, 0.90],   // a sawn-off is 30 cm and that is the point
+      bolt:     [0.55, 1.52],   // Kar98k 1.11 to a Barrett M82 at 1.45
+      gauge:    [0.28, 1.25],   // a sawn-off is 300 mm and that is the point
       shield:   [0.30, 0.70],
     };
     const band = CLS[r.cls] || [0.30, 1.30];
