@@ -68,7 +68,23 @@ function check(name, cond, detail = '') {
      testing a path no player uses, which is how the Escape handler came
      to be installed on exactly one of them. */
   await page.evaluate(() => { BUNKER_SHELL.intoGame(); });
+  await page.waitForTimeout(400);
+
+  /* AND ACTUALLY START THE ROUND. Until you have chosen a character and
+     pressed something, the whole update returns at `if (S.gameOver ||
+     !S.started) return` -- deliberately, so the world is not live behind
+     the character screen. Any keydown starts it.
+
+     This test pressed only Escape, which the pause handler swallows with
+     stopPropagation, so the round never began -- and every input check
+     after that was driving a game that was still on its title card. It
+     took four passes to find, because "the game is running" was checked
+     as `game.paused === false`, which was perfectly true of a game that
+     had not started. */
+  await page.keyboard.press('Space');
   await page.waitForTimeout(500);
+  const begun = await page.evaluate(() => !!BUNKER_SHELL.handle().S.started);
+  check('the round actually begins', begun);
 
   /* Is the loop even turning? Under SwiftShader at a capped frame rate a
      real second of wall clock can be a handful of frames, so every
@@ -169,14 +185,24 @@ function check(name, cond, detail = '') {
        contain the swap is long enough to be flaky, and a short one
        contains no frames at all. */
     const i = g.input;
+    const CTL = h.S && h.S.controls;
+    const diag = {
+      slots: P.slots.slice(), knifeOut: !!P.knifeOut, alive: P.alive !== false,
+      down: !!P.down, gamePaused: !!g.paused,
+      bound: h.S.binds && h.S.binds.keys ? h.S.binds.keys.swap : '(none)',
+    };
     i.keys.add('q'); i.pressed.add('q');
+    diag.justPressed = i.justPressed('q');
+    diag.ctlHit = CTL ? CTL.hit('swap') : null;
     g.step(1 / 60);
     const mid2 = { t: P.swapT, slot: P.slot };
+    diag.afterStepT = P.swapT;
     i.keys.delete('q'); i.pressed.delete('q');
     for (let n = 0; n < 200 && P.swapT > 0; n++) g.step(1 / 60);
-    return { slot0, midT: mid2.t, midSlot: mid2.slot, endSlot: P.slot, endT: P.swapT };
+    return { slot0, midT: mid2.t, midSlot: mid2.slot, endSlot: P.slot, endT: P.swapT, diag };
   });
   console.log(`  .. swap: slot ${swap.slot0} -> ${swap.endSlot}, timer mid ${(+swap.midT).toFixed(2)} end ${(+swap.endT).toFixed(2)}`);
+  console.log(`  .. swap diag: ${JSON.stringify(swap.diag)}`);
   check('asking to swap starts a timed animation rather than teleporting the gun',
     swap.midT > 0, `timer ${swap.midT}`);
   check('the swap is still mid-flight a frame later, not already finished',
