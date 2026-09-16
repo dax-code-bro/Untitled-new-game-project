@@ -256,6 +256,60 @@ function check(name, cond, detail = '') {
   check('the keychain says it is behind diamond', others.Keychain >= 1, String(others.Keychain));
   await page.screenshot({ path: path.join(OUT, 'mp-streaks.jpg'), type: 'jpeg', quality: 82 });
 
+  /* ---- OPERATORS ----
+     This tab shipped with no test at all, which is why "operators
+     aren't showing up" reached the player rather than the bench. */
+  const ops = await page.evaluate(() => {
+    const tab = document.querySelector('#b9shell .optab');
+    if (!tab) return { err: 'no OPERATORS tab in the header' };
+    tab.click();
+    const pane = document.querySelector('#b9shell .opspane');
+    const rows = Array.from(document.querySelectorAll('#b9shell .oprow .nm'))
+      .map((e) => e.textContent);
+    return {
+      tab: !!tab,
+      on: !!(pane && pane.classList.contains('on')),
+      rows: rows,
+      name: (document.querySelector('#b9shell .opname') || {}).textContent || '',
+      blurb: (document.querySelector('#b9shell .opblurb') || {}).textContent || '',
+      fig: (document.querySelector('#b9shell .opfig') || {}).innerHTML.length || 0,
+      stats: (document.querySelector('#b9shell .opstats') || {}).textContent || '',
+    };
+  });
+  if (ops.err) check('the OPERATORS tab exists', false, ops.err);
+  else {
+    check('the OPERATORS tab opens its pane', ops.on);
+    check('all seven operators are listed', ops.rows.length === 7,
+      `${ops.rows.length}: ${ops.rows.join(',')}`);
+    check('and they are the seven that were asked for',
+      ['DESTROYER', 'CHARLIE', 'DELTA', 'ALPHA', 'ABSCESS', 'BIOHAZARD', 'SWAT']
+        .every((n) => ops.rows.indexOf(n) >= 0), ops.rows.join(','));
+    check('one of them is selected and described', ops.name.length > 2 && ops.blurb.length > 10,
+      `${ops.name} / ${ops.blurb.slice(0, 40)}`);
+    check('the selected one has a figure drawn', ops.fig > 200, `${ops.fig} chars of svg`);
+    check('and his real numbers are shown', /HEIGHT|FRAME|REACH/.test(ops.stats),
+      ops.stats.slice(0, 60));
+  }
+
+  /* Picking one has to stick, or the tab is a picture of a chooser. */
+  const pick = await page.evaluate(() => {
+    const rows = document.querySelectorAll('#b9shell .oprow');
+    if (rows.length < 3) return { err: 'nothing to pick' };
+    rows[4].click();
+    return {
+      saved: BUNKER_SHELL.mpState().operator,
+      name: (document.querySelector('#b9shell .opname') || {}).textContent || '',
+      onRow: !!document.querySelectorAll('#b9shell .oprow')[4].classList.contains('on'),
+    };
+  });
+  if (pick.err) check('an operator can be picked', false, pick.err);
+  else {
+    check('picking one writes it down', pick.saved === 'abscess', String(pick.saved));
+    check('and the panel follows the pick', /ABSCESS/i.test(pick.name), pick.name);
+    check('and the row shows as chosen', pick.onRow);
+  }
+  await page.screenshot({ path: path.join(OUT, 'mp-operators.jpg'), type: 'jpeg', quality: 82 });
+
   /* ---- and back out ---- */
   const back = await page.evaluate(() => {
     document.querySelector('#b9shell .lobtab').click();

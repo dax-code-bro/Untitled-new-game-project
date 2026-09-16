@@ -21931,6 +21931,401 @@ Engine.prototype.gunPart = function (id, opts = {}) {
     Object.assign({ physics: false }, opts), D.bound, 0.2, 'body');
 };
 
+/* ============================================================
+   THE OTHER FIFTY-FOUR
+   ============================================================
+
+   The attachment table had fifteen models in it and the loadout screen
+   offers sixty-nine, keyed differently -- `m-suppressor` in the data
+   against `suppressor` here -- so in a multiplayer match no attachment
+   had a model at all. Not a bad model: none.
+
+   These are built the same way the first fifteen were, out of the same
+   primitives, and the ones that are genuinely the same object at a
+   different size say so rather than being copied. A 2x, a 4x and a 12x
+   scope are one tube at three lengths with three objective diameters;
+   pretending otherwise would be three times the code for a difference
+   nobody can name.
+   ============================================================ */
+
+/* A telescopic sight, by magnification. Objective grows with power,
+   which is the whole visual difference between a 2x and a 12x -- that
+   and the length. The bell, the tube, the eyepiece, two turrets and a
+   pair of rings, because a scope floating over a receiver is the tell. */
+function scopeTube(g, mag) {
+  const L = 0.090 + mag * 0.0115;
+  const R = 0.0130 + mag * 0.00095;          // objective half-width
+  const T = 0.0118;                          // tube
+  const drop = 0.0215 + mag * 0.0006;
+  spin(g, [
+    [0, T * 0.80], [0.0130, T * 0.86], [0.0150, T],          // eyepiece
+    [0.0230, T], [0.0250, T * 0.86],
+    [L * 0.62, T * 0.86], [L * 0.66, R],                      // the bell
+    [L - 0.0090, R], [L - 0.0060, R * 0.96], [L, R * 0.96], [L, 0],
+  ], 26, 30, drop);
+  // Elevation and windage, and a magnification collar on anything over 4x.
+  hardBox(g, L * 0.44, drop + T + 0.0070, 0, 0.0092, 0.0074, 0.0092);
+  hardBox(g, L * 0.44, drop, T + 0.0070, 0.0088, 0.0088, 0.0072);
+  if (mag > 4) knurl(g, 0.0270, 0.0400, T + 0.0008, 14);
+  railClamp(g, L * 0.26, drop - T * 0.60);
+  railClamp(g, L * 0.60, drop - T * 0.60);
+}
+function scopeGlass(g, mag) {
+  const L = 0.090 + mag * 0.0115;
+  const R = 0.0130 + mag * 0.00095;
+  const drop = 0.0215 + mag * 0.0006;
+  spin(g, [[L - 0.0075, 0], [L - 0.0075, R * 0.90], [L - 0.0062, R * 0.90], [L - 0.0062, 0]],
+    18, 34, drop);
+  spin(g, [[0.0040, 0], [0.0040, 0.0100], [0.0052, 0.0100], [0.0052, 0]], 16, 30, drop);
+}
+/* The reticle, as thin crossed bars inside the tube. It is two boxes and
+   it is the difference between a scope and a pipe. */
+function scopeReticle(g, mag) {
+  const L = 0.090 + mag * 0.0115;
+  const R = (0.0130 + mag * 0.00095) * 0.72;
+  const drop = 0.0215 + mag * 0.0006;
+  hardBox(g, L - 0.0090, drop, 0, 0.0004, 0.00035, R);
+  hardBox(g, L - 0.0090, drop, 0, 0.0004, R, 0.00035);
+}
+
+/* A holographic sight: a square housing with a big upright window, which
+   is what tells it apart from a tube dot at a glance. */
+function buildHolo(g) {
+  const L = 0.0960, W = 0.0175, H = 0.0180, drop = 0.0205;
+  hardBox(g, L * 0.30, drop, 0, L * 0.30, H * 0.62, W);
+  hardBox(g, L * 0.74, drop + 0.0010, 0, L * 0.20, H, W * 0.92);   // hood
+  hardBox(g, L * 0.30, drop + H * 0.62 + 0.0035, 0, 0.0130, 0.0038, 0.0090);
+  knurl(g, L * 0.16, L * 0.30, W * 0.55, 10);
+  railClamp(g, L * 0.34, drop - H * 0.55);
+}
+function buildHoloGlass(g) {
+  const L = 0.0960, W = 0.0175, H = 0.0180, drop = 0.0205;
+  hardBox(g, L * 0.60, drop + 0.0010, 0, 0.0008, H * 0.82, W * 0.80);
+  hardBox(g, L * 0.60, drop + 0.0010, 0, 0.0016, 0.0011, 0.0011);   // the ring
+}
+
+/* A canted iron, off at forty-five degrees on its own mount -- the only
+   attachment in the set that is deliberately not square to the gun. */
+function buildCanted(g) {
+  const drop = 0.0150, tilt = 0.55;
+  const cz = Math.sin(tilt), cy = Math.cos(tilt);
+  hardBox(g, 0.0100, drop, 0, 0.0120, 0.0075, 0.0125);
+  // Post and notch, out on the cant.
+  hardBox(g, 0.0300, drop + cy * 0.0200, cz * 0.0200, 0.0022, 0.0090, 0.0022);
+  hardBox(g, -0.0180, drop + cy * 0.0190, cz * 0.0190, 0.0030, 0.0075, 0.0055);
+  railClamp(g, 0.0060, drop - 0.0070);
+}
+
+/* ---- muzzle devices ---- */
+
+/* A three-port brake: a block with slots cut out of the sides, which is
+   a different object from a birdcage and should not be the same model
+   at a different length. */
+function buildBrake(g, bore, ports) {
+  const L = 0.0640, R = 0.0140;
+  spin(g, [[0, R * 0.80], [0.0080, R], [L - 0.0060, R], [L, R * 0.92], [L, bore], [0, bore]], 20, 24, 0);
+  for (let i = 0; i < (ports || 3); i++) {
+    const x = 0.0165 + i * 0.0135;
+    for (const sz of [1, -1]) hardBox(g, x, 0, sz * R * 0.72, 0.0038, R * 0.80, R * 0.40);
+  }
+  knurl(g, 0.0010, 0.0080, R * 0.92, 12);
+}
+/* A birdcage: a closed cage with slots cut in it, closed at the front. */
+function buildBirdcage(g, bore) {
+  const L = 0.0520, R = 0.0120;
+  spin(g, [[0, R * 0.78], [0.0060, R], [L - 0.0045, R], [L, R], [L, bore], [0, bore]], 18, 22, 0);
+  for (let i = 0; i < 5; i++) {
+    const th = (i / 5) * TAU + 0.3;
+    hardBox(g, L * 0.52, Math.cos(th) * R * 0.9, Math.sin(th) * R * 0.9, L * 0.30, 0.0016, 0.0016);
+  }
+}
+/* A breacher: a toothed standoff crown for putting against a door. */
+function buildBreacher(g, bore) {
+  const L = 0.0460, R = 0.0150;
+  spin(g, [[0, R * 0.76], [0.0080, R * 0.88], [L - 0.0100, R * 0.88], [L - 0.0100, R], [L, R], [L, bore], [0, bore]], 18, 22, 0);
+  for (let i = 0; i < 6; i++) {
+    const th = (i / 6) * TAU;
+    hardBox(g, L + 0.0050, Math.cos(th) * R * 0.80, Math.sin(th) * R * 0.80, 0.0055, 0.0030, 0.0030);
+  }
+}
+/* A monolithic can: longer and plainer than the standard suppressor,
+   with a full-length shroud rather than a mount collar. */
+function buildMono(g, bore) {
+  const L = 0.2300, R = 0.0180;
+  spin(g, [[0, R * 0.86], [0.0120, R], [L - 0.0140, R], [L - 0.0060, R * 0.94],
+    [L, R * 0.94], [L, bore * 1.6], [0, bore * 1.6]], 22, 26, 0);
+  for (let i = 0; i < 7; i++) band(g, 0.0260 + i * 0.0250, 0.0290 + i * 0.0250, R, R + 0.0009, 22);
+}
+/* Chokes: a short stepped cone on the end of a shotgun. Full is tight
+   and the duckbill is a flattened slot that spreads the shot sideways. */
+function buildChoke(g, bore) {
+  const L = 0.0340, R = 0.0180;
+  spin(g, [[0, R], [L * 0.6, R], [L, R * 0.88], [L, bore * 1.5], [0, bore * 1.9]], 18, 22, 0);
+  knurl(g, 0.0040, 0.0140, R + 0.0004, 14);
+}
+function buildDuckbill(g, bore) {
+  const L = 0.0420, R = 0.0180;
+  spin(g, [[0, R], [L * 0.45, R], [L * 0.45, R * 0.92], [L, R * 0.92], [L, bore * 1.5], [0, bore * 1.9]], 16, 20, 0);
+  // The bill: two flats squeezing the pattern into a horizontal band.
+  for (const sy of [1, -1]) hardBox(g, L * 0.80, sy * R * 0.62, 0, L * 0.26, 0.0022, R * 0.94);
+}
+
+/* ---- barrels ---- */
+
+/* The barrel variants are one profile with different surface work on
+   it, and that is honest rather than lazy: a fluted barrel and a heavy
+   barrel really are the same tube with metal taken off or left on. */
+function barrelProfile(g, bore, len, r, kind) {
+  spin(g, [[0, r * 1.18], [0.0140, r], [len - 0.0120, r], [len - 0.0060, r * 0.94],
+    [len, r * 0.94], [len, bore], [0, bore]], 20, 24, 0);
+  if (kind === 'fluted') {
+    for (let i = 0; i < 8; i++) {
+      const th = (i / 8) * TAU;
+      for (let k = 0; k < 9; k++) {
+        const x = 0.030 + k * (len - 0.060) / 9;
+        hardBox(g, x, Math.cos(th) * r, Math.sin(th) * r, (len - 0.060) / 22, 0.0010, 0.0010);
+      }
+    }
+  }
+  if (kind === 'ported') {
+    for (let i = 0; i < 6; i++) {
+      for (const sz of [1, -1]) {
+        hardBox(g, len - 0.070 + i * 0.0120, r * 0.55, sz * r * 0.70, 0.0026, 0.0026, 0.0018);
+      }
+    }
+  }
+  if (kind === 'shrouded') {
+    spin(g, [[0.030, r * 1.5], [len - 0.020, r * 1.5], [len - 0.020, r * 1.34], [0.030, r * 1.34]], 18, 22, 0);
+    for (let i = 0; i < 10; i++) {
+      const th = (i / 10) * TAU;
+      for (let k = 0; k < 5; k++) {
+        hardBox(g, 0.050 + k * (len - 0.100) / 5, Math.cos(th) * r * 1.42,
+          Math.sin(th) * r * 1.42, 0.0060, 0.0018, 0.0018);
+      }
+    }
+  }
+  if (kind === 'match') band(g, len * 0.5, len * 0.5 + 0.010, r, r + 0.0012, 20);
+}
+
+/* ---- under-barrel ---- */
+
+function buildVertGrip(g) {
+  spin(g, [[0, 0.0130], [0.0090, 0.0145], [0.0620, 0.0135], [0.0680, 0.0115], [0.0680, 0]], 16, 20, 0);
+  knurl(g, 0.0180, 0.0520, 0.0142, 16);
+  railClamp(g, 0.0040, -0.0060, 0.020);
+}
+function buildAngleGrip(g) {
+  // Raked forward about thirty degrees, which is the whole point of it.
+  const n = 8;
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1);
+    hardBox(g, 0.0080 + t * 0.0330, -0.0110 - t * 0.0420, 0, 0.0075, 0.0060, 0.0130);
+  }
+  railClamp(g, 0.0060, -0.0055, 0.020);
+}
+function buildHandstop(g) {
+  hardBox(g, 0, -0.0090, 0, 0.0090, 0.0060, 0.0135);
+  hardBox(g, 0.0060, -0.0200, 0, 0.0055, 0.0075, 0.0120);
+  railClamp(g, 0, -0.0040, 0.018);
+}
+function buildUnderBipod(g) {
+  hardBox(g, 0, -0.0080, 0, 0.0140, 0.0055, 0.0120);
+  for (const sz of [1, -1]) {
+    strut(g, [0, -0.0120, sz * 0.0040], [-0.0180, -0.0900, sz * 0.0420],
+      roundRect(0.0035, 0.0035, 0.0035, 3, 8));
+    hardBox(g, -0.0210, -0.0920, sz * 0.0430, 0.0060, 0.0030, 0.0038);
+  }
+}
+function buildSling(g) {
+  // A loop of webbing on a swivel, hanging under the handguard.
+  strut(g, [0, -0.0060, 0], [0, -0.0170, 0], ringOutline(0.0035, 10));
+  for (let i = 0; i < 14; i++) {
+    const th = (i / 14) * TAU;
+    hardBox(g, Math.cos(th) * 0.0180, -0.0330 + Math.sin(th) * 0.0155, 0, 0.0035, 0.0035, 0.0028);
+  }
+}
+function buildM203(g, bore) {
+  const L = 0.2300, R = 0.0230;
+  spin(g, [[0, R * 0.90], [0.0140, R], [L - 0.0180, R], [L, R * 0.92], [L, bore * 4], [0, bore * 4]], 20, 22, -0.0340);
+  hardBox(g, 0.0420, -0.0340 - R - 0.0060, 0, 0.0180, 0.0062, 0.0120);   // trigger housing
+  hardBox(g, 0.0980, -0.0340 + R + 0.0060, 0, 0.0140, 0.0050, 0.0090);   // leaf sight
+  railClamp(g, 0.0300, -0.0110, 0.022);
+}
+function buildMasterkey(g, bore) {
+  const L = 0.2600, R = 0.0175;
+  spin(g, [[0, R * 0.92], [L, R * 0.92], [L, bore * 3], [0, bore * 3]], 18, 20, -0.0330);
+  // The tube magazine under it, which is what makes it a shotgun.
+  spin(g, [[0.0180, 0.0130], [L - 0.0300, 0.0130]], 14, 16, -0.0330 - R - 0.0130);
+  hardBox(g, 0.0300, -0.0330 - R - 0.0230, 0, 0.0220, 0.0070, 0.0130);
+  railClamp(g, 0.0260, -0.0100, 0.022);
+}
+
+/* ---- stocks ---- */
+
+function stockShape(g, kind) {
+  const W = 0.0210;
+  if (kind === 'none') { hardBox(g, -0.0180, 0.0040, 0, 0.0180, 0.0130, 0.0130); return; }
+  if (kind === 'wire') {
+    for (const sz of [1, -1]) {
+      strut(g, [-0.0100, 0.0060, sz * 0.0130], [-0.1900, -0.0130, sz * 0.0150],
+        roundRect(0.0035, 0.0035, 0.0035, 3, 8));
+    }
+    hardBox(g, -0.2000, -0.0130, 0, 0.0090, 0.0210, 0.0175);
+    return;
+  }
+  if (kind === 'skeleton') {
+    hardBox(g, -0.0600, 0.0090, 0, 0.0520, 0.0060, W * 0.55);
+    hardBox(g, -0.0600, -0.0230, 0, 0.0520, 0.0055, W * 0.55);
+    hardBox(g, -0.1180, -0.0070, 0, 0.0090, 0.0230, W * 0.70);
+    hardBox(g, -0.1280, -0.0070, 0, 0.0075, 0.0290, W * 0.80);
+    return;
+  }
+  const len = kind === 'collapsible' ? 0.140 : kind === 'marksman' ? 0.230 : 0.200;
+  const comb = kind === 'marksman' ? 0.0300 : 0.0250;
+  spin(g, [[0, 0.0150], [-0.020, 0.0190], [-len * 0.55, comb], [-len * 0.88, comb * 0.98],
+    [-len, comb * 0.90], [-len, 0]], 4, 14, 0.0040);
+  if (kind === 'collapsible') {
+    for (let i = 0; i < 4; i++) band(g, -0.030 - i * 0.022, -0.026 - i * 0.022, 0.0150, 0.0165, 14);
+  }
+  if (kind === 'padded' || kind === 'heavy') {
+    hardBox(g, -len - 0.0090, 0.0040, 0, 0.0095, comb * 0.96, W * 0.92);
+  }
+  if (kind === 'marksman') {
+    hardBox(g, -len * 0.62, comb + 0.0110, 0, 0.0320, 0.0075, W * 0.62);   // cheek riser
+  }
+}
+
+/* ---- grips and lasers ---- */
+
+function gripWrap(g, kind) {
+  const n = kind === 'granulated' ? 26 : 18;
+  for (let i = 0; i < n; i++) {
+    const t = i / n;
+    const y = -0.0120 - t * 0.0820;
+    const x = -0.0060 - t * 0.0320;
+    if (kind === 'tape') { hardBox(g, x, y, 0, 0.0130, 0.0022, 0.0150); continue; }
+    for (let k = 0; k < 5; k++) {
+      const th = (k / 5) * PI - PI * 0.5;
+      hardBox(g, x + Math.sin(th) * 0.0120, y, Math.cos(th) * 0.0150,
+        0.0020, 0.0018, 0.0020);
+    }
+  }
+}
+function buildLaser(g, len, r) {
+  const L = 0.0460;
+  spin(g, [[0, 0.0075], [L, 0.0075], [L, 0.0030], [0, 0.0030]], 14, 16, -0.0060);
+  hardBox(g, 0.0080, -0.0060, 0.0090, 0.0060, 0.0035, 0.0028);      // the switch
+  railClamp(g, 0.0180, 0.0020, 0.014);
+  // The beam, as a long thin rod -- short on a 1mW, long on a 5mW.
+  if (len > 0) spin(g, [[L, r], [L + len, r * 0.6]], 8, 10, -0.0060);
+}
+
+/* THE MULTIPLAYER IDS, all sixty-nine of them.
+ *
+   The loadout screen speaks in `m-suppressor` and this table spoke in
+   `suppressor`, so even the fifteen parts that HAD models were
+   unreachable from a match. Every id the data offers is here, and
+   anything that is genuinely the same object at another size says so
+   by calling the same builder with a different number. */
+Object.assign(ATT_BUILD, {
+  /* ---- optics ---- */
+  'o-reflex': { body: buildRedDot, glass: buildRedDotGlass, glassMat: 'glassR', mat: 'black', bound: 0.09 },
+  'o-reddot': { body: buildRedDot, glass: buildRedDotGlass, glassMat: 'glassR', mat: 'black', bound: 0.09 },
+  'o-holo': { body: buildHolo, glass: buildHoloGlass, glassMat: 'glassR', mat: 'poly', bound: 0.11 },
+  'o-combat': { body: (g) => scopeTube(g, 1.5), glass: (g) => scopeGlass(g, 1.5),
+    reticle: (g) => scopeReticle(g, 1.5), glassMat: 'lens', mat: 'black', bound: 0.14 },
+  'o-2x': { body: (g) => scopeTube(g, 2), glass: (g) => scopeGlass(g, 2),
+    reticle: (g) => scopeReticle(g, 2), glassMat: 'lens', mat: 'black', bound: 0.15 },
+  'o-34x': { body: (g) => scopeTube(g, 3.5), glass: (g) => scopeGlass(g, 3.5),
+    reticle: (g) => scopeReticle(g, 3.5), glassMat: 'lens', mat: 'black', bound: 0.18 },
+  'o-4x': { body: (g) => scopeTube(g, 4), glass: (g) => scopeGlass(g, 4),
+    reticle: (g) => scopeReticle(g, 4), glassMat: 'lens', mat: 'black', bound: 0.19 },
+  'o-7x': { body: buildScope7x, glass: buildScope7xGlass, reticle: buildScope7xReticle,
+    glassMat: 'lens', mat: 'black', bound: 0.27 },
+  'o-12x': { body: (g) => scopeTube(g, 12), glass: (g) => scopeGlass(g, 12),
+    reticle: (g) => scopeReticle(g, 12), glassMat: 'lens', mat: 'black', bound: 0.30 },
+  'o-thermal': { body: buildThermal, glass: buildThermalGlass, glassMat: 'glassG', mat: 'poly', bound: 0.14 },
+  'o-nvg': { body: buildNightVision, glass: buildNightVisionGlass, glassMat: 'glassG', mat: 'black', bound: 0.15 },
+  'o-canted': { body: buildCanted, mat: 'steel', bound: 0.07 },
+
+  /* ---- muzzle ---- */
+  'm-suppressor': { body: (g) => buildSuppressor(g, 0.0046), mat: 'black', bound: 0.20 },
+  'm-mono': { body: (g) => buildMono(g, 0.0046), mat: 'black', bound: 0.26 },
+  'm-comp': { body: (g) => buildCompensator(g, 0.0046), mat: 'steel', bound: 0.08 },
+  'm-brake': { body: (g) => buildBrake(g, 0.0046, 3), mat: 'steel', bound: 0.09 },
+  'm-flash': { body: (g) => buildBirdcage(g, 0.0046), mat: 'black', bound: 0.08 },
+  'm-birdcage': { body: (g) => buildBirdcage(g, 0.0046), mat: 'steel', bound: 0.08 },
+  'm-breacher': { body: (g) => buildBreacher(g, 0.0046), mat: 'steel', bound: 0.08 },
+  'm-annihilator': { body: (g) => buildAnnihilator(g, 0.0046), mat: 'black', bound: 0.12 },
+  'm-chokefull': { body: (g) => buildChoke(g, 0.0092), mat: 'black', bound: 0.06 },
+  'm-duckbill': { body: (g) => buildDuckbill(g, 0.0092), mat: 'steel', bound: 0.07 },
+
+  /* ---- barrels. Length and surface, off one profile. ---- */
+  'b-long': { perHost: true, body: (g, o) => buildLongBarrel(g, o.bore, o.host), mat: 'steel', bound: 0.32 },
+  'b-short': { perHost: true, body: (g, o) => buildShortBarrel(g, o.bore, o.host), mat: 'steel', bound: 0.09 },
+  'b-heavy': { perHost: true, body: (g, o) => barrelProfile(g, o.bore, 0.300, 0.0135, 'heavy'), mat: 'steel', bound: 0.32 },
+  'b-chrome': { perHost: true, body: (g, o) => barrelProfile(g, o.bore, 0.270, 0.0110, 'chrome'), mat: 'bright', bound: 0.29 },
+  'b-fluted': { perHost: true, body: (g, o) => barrelProfile(g, o.bore, 0.280, 0.0118, 'fluted'), mat: 'steel', bound: 0.30 },
+  'b-match': { perHost: true, body: (g, o) => barrelProfile(g, o.bore, 0.300, 0.0122, 'match'), mat: 'bright', bound: 0.32 },
+  'b-recon': { perHost: true, body: (g, o) => barrelProfile(g, o.bore, 0.320, 0.0112, 'match'), mat: 'steel', bound: 0.34 },
+  'b-cqb': { perHost: true, body: (g, o) => barrelProfile(g, o.bore, 0.170, 0.0120, 'heavy'), mat: 'steel', bound: 0.20 },
+  'b-marksman': { perHost: true, body: (g, o) => barrelProfile(g, o.bore, 0.360, 0.0125, 'fluted'), mat: 'steel', bound: 0.38 },
+  'b-shrouded': { perHost: true, body: (g, o) => barrelProfile(g, o.bore, 0.280, 0.0110, 'shrouded'), mat: 'black', bound: 0.32 },
+  'b-ported': { perHost: true, body: (g, o) => barrelProfile(g, o.bore, 0.250, 0.0118, 'ported'), mat: 'steel', bound: 0.28 },
+  'b-tactical': { perHost: true, body: (g, o) => barrelProfile(g, o.bore, 0.230, 0.0115, 'match'), mat: 'black', bound: 0.26 },
+
+  /* ---- under-barrel ---- */
+  'u-vert': { body: buildVertGrip, mat: 'poly', bound: 0.09 },
+  'u-angle': { body: buildAngleGrip, mat: 'poly', bound: 0.08 },
+  'u-bipod': { body: buildUnderBipod, mat: 'black', bound: 0.13 },
+  'u-ranger': { body: buildRangefinder, glass: buildRangefinderGlass, glassMat: 'glassR', mat: 'poly', bound: 0.13 },
+  'u-handstop': { body: buildHandstop, mat: 'poly', bound: 0.05 },
+  'u-sling': { body: buildSling, mat: 'poly', bound: 0.07 },
+  'u-m203': { perHost: true, body: (g, o) => buildM203(g, o.bore), mat: 'black', bound: 0.26 },
+  'u-masterkey': { perHost: true, body: (g, o) => buildMasterkey(g, o.bore), mat: 'black', bound: 0.28 },
+
+  /* ---- magazines. The feed decides the shape, as before. ---- */
+  'g-ext': ATT_BUILD.extmag,
+  'g-fast': ATT_BUILD.fastmag,
+  'g-drum': ATT_BUILD.drummag,
+  'g-speed': ATT_BUILD.fastmag,
+  /* Ammunition types are the same magazine with a different follower
+     colour, and pretending each is its own model would be four copies
+     of one box. The tint is what says which round is in it. */
+  'g-ap': Object.assign({}, ATT_BUILD.extmag, { mat: 'steel' }),
+  'g-hollow': Object.assign({}, ATT_BUILD.extmag, { mat: 'bright' }),
+  'g-incendiary': Object.assign({}, ATT_BUILD.extmag, { mat: 'black' }),
+  'g-subsonic': Object.assign({}, ATT_BUILD.extmag, { mat: 'poly' }),
+  'g-tracer': Object.assign({}, ATT_BUILD.extmag, { mat: 'bright' }),
+
+  /* ---- stocks ---- */
+  's-collapsible': { body: (g) => stockShape(g, 'collapsible'), mat: 'poly', bound: 0.18 },
+  's-heavy': { body: (g) => stockShape(g, 'heavy'), mat: 'poly', bound: 0.24 },
+  's-none': { body: (g) => stockShape(g, 'none'), mat: 'poly', bound: 0.05 },
+  's-padded': { body: (g) => stockShape(g, 'padded'), mat: 'poly', bound: 0.24 },
+  's-skeleton': { body: (g) => stockShape(g, 'skeleton'), mat: 'steel', bound: 0.18 },
+  's-wire': { body: (g) => stockShape(g, 'wire'), mat: 'steel', bound: 0.22 },
+  's-marksman': { body: (g) => stockShape(g, 'marksman'), mat: 'poly', bound: 0.27 },
+
+  /* ---- grips ---- */
+  'r-rubber': { body: (g) => gripWrap(g, 'rubber'), mat: 'poly', bound: 0.10 },
+  'r-stippled': { body: (g) => gripWrap(g, 'granulated'), mat: 'poly', bound: 0.10 },
+  'r-quickdraw': { body: (g) => gripWrap(g, 'rubber'), mat: 'black', bound: 0.10 },
+  'r-tape': { body: (g) => gripWrap(g, 'tape'), mat: 'poly', bound: 0.10 },
+  'r-ergo': { body: (g) => gripWrap(g, 'rubber'), mat: 'steel', bound: 0.10 },
+  'r-granulated': { body: (g) => gripWrap(g, 'granulated'), mat: 'black', bound: 0.10 },
+
+  /* ---- lasers. The beam length is the only difference anybody sees,
+     and on the infrared one there is deliberately no beam at all. ---- */
+  'l-1mw': { body: (g) => buildLaser(g, 0.60, 0.0013), mat: 'black', bound: 0.10 },
+  'l-5mw': { body: (g) => buildLaser(g, 1.40, 0.0018), mat: 'black', bound: 0.10 },
+  'l-tac': { body: (g) => buildLaser(g, 0.90, 0.0016), mat: 'steel', bound: 0.10 },
+  'l-ir': { body: (g) => buildLaser(g, 0, 0), mat: 'poly', bound: 0.06 },
+  'l-steady': { body: (g) => buildLaser(g, 0.40, 0.0012), mat: 'poly', bound: 0.10 },
+});
+
+Engine.prototype.gunPartKinds = function () { return Object.keys(ATT_BUILD); };
+
 
 /* ─────────── 97b-service.js ─────────── */
 /* ==================================================================
