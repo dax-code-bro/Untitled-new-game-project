@@ -560,13 +560,29 @@
       g.noCull = true;
     }
 
+    /* SHOWN, not merely selected.
+     *
+       This returned early when the id had not changed -- and hide()
+       turns the model off without changing the id. So the first time
+       anything hid the gun (dying, which happens every life) place()
+       took the early exit for the rest of the match and never turned
+       it back on. The only way to get your weapon back was to switch
+       to the other one.
+
+       "My gun doesn't even come up any more, I can't bring it up, it's
+       invisible" is this early return. */
+    var shown = false;
     function select(id) {
-      if (id === curId) return cur;
+      if (id === curId) {
+        if (cur && !shown) { show(cur, true); shown = true; }
+        return cur;
+      }
       if (cur) show(cur, false);
       if (!cache[id]) cache[id] = buildGun(game, id);
       cur = cache[id]; curId = id;
       state.gun = id;
       if (cur) show(cur, true);
+      shown = true;
       return cur;
     }
 
@@ -590,6 +606,7 @@
           if (!id || cache[id]) continue;
           cache[id] = buildGun(game, id);
           show(cache[id], false);
+          if (id === curId) shown = false;
         }
       },
       /* One shot: the flash comes on for forty milliseconds, which is
@@ -598,6 +615,7 @@
       hide: function () {
         state.hidden++;
         if (cur) show(cur, false);
+        shown = false;
         if (flash) flash.visible = false;
       },
       place: function (eye, yaw, pitch, aim, sprint, kick, bob, id, reload, dt) {

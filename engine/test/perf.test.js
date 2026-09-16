@@ -69,10 +69,19 @@ const note = (s) => console.log(`  ..   ${s}`);
     let last = now();
     for (let i = 0; i < N; i++) {
       sim = hud = vm = 0;
+      const ev0 = M.events.length;
       await new Promise((rf) => requestAnimationFrame(rf));
       const f = now();
       t.total.push(f - last); last = f;
       t.sim.push(sim); t.hud.push(hud); t.vm.push(vm);
+      /* What HAPPENED on the expensive frames. A spike with a spawn in
+         it and a spike with nothing in it are two different bugs, and
+         the number alone cannot tell them apart. */
+      if (sim > 3) {
+        t.why = t.why || [];
+        t.why.push({ ms: +sim.toFixed(1),
+          did: M.events.slice(ev0).map((e) => e.kind).join(',') || 'nothing' });
+      }
     }
     G.input._release('w');
     G.input.buttons.fire = false;
@@ -85,7 +94,8 @@ const note = (s) => console.log(`  ..   ${s}`);
         max: s[s.length - 1] };
     };
     return { sim: stat(t.sim), hud: stat(t.hud), vm: stat(t.vm), total: stat(t.total),
-      people: M.people.length, actors: G.game.actors.length };
+      why: t.why || [], people: M.people.length, actors: G.game.actors.length,
+      pathN: M._pathN, pathMs: M._pathMs };
   }, 90);
 
   note(`${r.people} people, ${r.actors} actors in the scene`);
@@ -95,6 +105,14 @@ const note = (s) => console.log(`  ..   ${s}`);
   note(`HUD paint    ${ms(r.hud)}`);
   note(`viewmodel    ${ms(r.vm)}`);
   note(`whole frame  ${ms(r.total)}   (SwiftShader -- the GPU part is not real)`);
+
+  note(`${r.pathN} path searches so far, ${(r.pathMs / Math.max(1, r.pathN)).toFixed(2)} ms each`);
+  check('one path search is not itself a dropped frame',
+    r.pathN === 0 || r.pathMs / r.pathN < 5, `${(r.pathMs / Math.max(1, r.pathN)).toFixed(2)} ms`);
+  if (r.why.length) {
+    note(`${r.why.length} frames over 3 ms: `
+      + r.why.slice(0, 8).map((w) => `${w.ms}ms [${w.did}]`).join('  '));
+  } else note('no frame spent over 3 ms in the match tick');
 
   /* Budgets are against a 16.6ms frame on real hardware. The
      simulation, the HUD and the viewmodel together are what this file

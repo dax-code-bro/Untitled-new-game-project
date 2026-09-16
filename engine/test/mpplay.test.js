@@ -286,9 +286,25 @@ function check(name, cond, detail = '') {
     const vm = window.MP.viewmodel, G = window.MP.game, M = window.MP.match;
     /* Alive first. The viewmodel is hidden on death, correctly, and a
        check that runs on a dead player reports the gun invisible and
-       means nothing by it. */
+       means nothing by it.
+
+       DYING AND COMING BACK IS THE POINT OF THIS ONE, though. The
+       viewmodel's select() used to return early when the weapon id had
+       not changed, and hide() does not change the id -- so the first
+       death of the match turned the gun off for good. Killing the
+       player here and reviving them is what catches that. */
+    /* Killed through the match's own damage, not by setting a flag:
+       respawnAt is what holds a man down, and a hand-set alive=false
+       left it in the past, so the match put him back on his feet
+       before the dead branch ever ran and the check reported a
+       viewmodel that hides on death as one that does not. */
+    const foe = M.people.find((q) => q.team !== M.you.team && q.alive);
+    M.damage(foe, M.you, 500, false);
+    M.you.respawnAt = M.time + 99;
+    for (let i = 0; i < 4; i++) G.step(1 / 60);
+    const hiddenWhileDead = !(vm.gun && vm.gun.visible);
     M.you.alive = true; M.you.hp = 100;
-    for (let i = 0; i < 3; i++) G.step(1 / 60);
+    for (let i = 0; i < 8; i++) G.step(1 / 60);
     const g = vm && vm.gun;
     if (!g) return { err: 'no gun model at all' };
     const cam = G.camera, vp = cam.viewProjection || cam.viewProj;
@@ -300,13 +316,15 @@ function check(name, cond, detail = '') {
       ndcX: (e[0] * x + e[4] * y + e[8] * z + e[12]) / (w || 1),
       ndcY: (e[1] * x + e[5] * y + e[9] * z + e[13]) / (w || 1),
       depth: w, visible: g.visible !== false, verts: g.mesh ? g.mesh.vertexCount : 0,
+      hiddenWhileDead,
     };
   });
   if (held.err) check('the gun is a real model in the hand', false, held.err);
   else {
     console.log(`  .. gun at ndc ${held.ndcX.toFixed(2)},${held.ndcY.toFixed(2)} depth ${held.depth.toFixed(2)}, ${held.verts} verts`);
     check('the gun is a real model, not a handful of boxes', held.verts > 400, `${held.verts} verts`);
-    check('it is visible', held.visible);
+    check('it goes away when you die', held.hiddenWhileDead);
+    check('and comes back when you do', held.visible);
     check('it is IN FRONT of the camera', held.depth > 0, `depth ${held.depth.toFixed(2)}`);
     check('it is on the right-hand side of the screen', held.ndcX > 0, `ndc x ${held.ndcX.toFixed(3)}`);
     check('and it is actually on screen', Math.abs(held.ndcX) < 1 && Math.abs(held.ndcY) < 1,

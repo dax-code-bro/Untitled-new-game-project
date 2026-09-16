@@ -523,6 +523,8 @@
 
     recInit(M);
     hlInit(M);
+    M._pathBudget = 1; M._pathMs = 0; M._pathN = 0;
+    warmArms(M);
 
     /* ---- the first spawn ---- */
     people.forEach(function (p) { spawn(M, p, true); });
@@ -1283,6 +1285,28 @@
      is the right place for it. That is a bigger job than this one and
      is not pretended at here.) */
 
+  /* BUILT BEFORE THE MATCH, NEVER DURING IT.
+     A weapon is several thousand vertices of receiver, rifling and
+     individual brass rounds, assembled in JavaScript the frame it is
+     first asked for. Measured, the match tick runs at 0.30ms and spikes
+     to 22.6 -- seventy-five times the median, in the middle of a
+     gunfight, every time somebody respawns holding something new. That
+     spike is invisible in an average frame rate and is exactly what
+     "it feels glitchy" describes. Twenty-four weapons on the loading
+     screen instead, where the geometry cache means four distinct
+     rifles cost four builds however many people are carrying them. */
+  function warmArms(M) {
+    for (var i = 0; i < M.people.length; i++) {
+      var p = M.people[i], was = p.held;
+      for (var k = 0; k < p.guns.length; k++) {
+        p.held = k;
+        // Built and put away; carry() brings out whichever is in hand.
+        showArm(armOf(M, p), false);
+      }
+      p.held = was;
+    }
+  }
+
   function armOf(M, p) {
     if (!p.actor || !M.game) return null;
     var g = gun(p);
@@ -1725,9 +1749,25 @@
     var ai = p.ai;
     if (navClear(M.nav, p.pos, goal)) { ai.path = null; return goal; }
     var stale = !ai.path || M.time - ai.pathAt > 1.1;
+    /* ONE SEARCH A TICK, BETWEEN ALL OF THEM.
+       Each bot repaths on its own 1.1 second timer, so about ten
+       searches a second across eleven of them -- which is nothing
+       spread out and a stall when three of them land on the same
+       frame. Measured, the match tick sits at 0.30ms and jumps to
+       33.7 with no kill, no spawn and nothing else happening in it,
+       four times in ninety frames.
+
+       A bot whose search is deferred keeps walking the path it already
+       has for another sixteen milliseconds, which is not a thing
+       anybody can see. At sixty frames a second the budget offers
+       sixty searches where ten are wanted, so nobody waits long. */
+    if (stale && M._pathBudget <= 0 && ai.path && ai.path.length) stale = false;
     if (stale) {
       if (M.stats) M.stats.paths++;
+      M._pathBudget--;
+      var _t0 = W.performance ? W.performance.now() : 0;
       ai.path = navPath(M.nav, p.pos, goal, M.stats);
+      if (W.performance) { M._pathMs += W.performance.now() - _t0; M._pathN++; }
       ai.pathAt = M.time; ai.pathIdx = 0;
       if (!ai.path) {
         if (M.stats) M.stats.pathFail++;
@@ -1928,6 +1968,7 @@
        the work for the same number. */
     recSample(M, dt);
     hlTick(M);
+    M._pathBudget = 1;
     M.aliveCount = { a: 0, b: 0 };
     for (var c0 = 0; c0 < M.people.length; c0++) {
       if (M.people[c0].alive) M.aliveCount[M.people[c0].team]++;
