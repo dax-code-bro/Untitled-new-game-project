@@ -433,6 +433,30 @@
       you: people[0],
     };
 
+    /* A team band: a cuff round each upper arm in the side's colour,
+       bright enough to read across a street and small enough not to
+       repaint the man wearing it. Parented to the arm bones, so it
+       moves with him and needs no rig of its own. */
+    function teamBand(g, actor, colour) {
+      if (!actor || !actor.skeleton || !g.cylinder) return;
+      var mat = { color: colour, texture: 'fabric', roughness: 0.86,
+        metalness: 0, emissive: colour, emissiveStrength: 0.30 };
+      ['upperArmL', 'upperArmR'].forEach(function (bone) {
+        var bi = actor.skeleton.index(bone);
+        if (bi < 0) return;
+        var band = g.cylinder({ at: [0, -60, 0], radius: 0.062, height: 0.052,
+          physics: false, material: mat });
+        if (!band) return;
+        band.parent = actor;
+        band.parentBone = bi;
+        band.offset = [0, -0.120, 0];
+        band.rotation.setFromAxisAngle([0, 0, 1], Math.PI * 0.5);
+        band.name = 'teamband';
+        actor.children = actor.children || [];
+        if (actor.children.indexOf(band) < 0) actor.children.push(band);
+      });
+    }
+
     /* ---- bodies ----
 
        Everybody in the match is an operator, not just you. Twelve
@@ -449,11 +473,24 @@
       var c = p.team === 'a' ? 0x4c6a8a : 0x8a5a4c;
       if (!p.operator) p.operator = OPS.length ? OPS[(p.id * 3 + 1) % OPS.length] : null;
       if (p.operator && game.operator) {
+        /* NO TEAM TINT ON THE MAN HIMSELF.
+         *
+           This passed a flat team colour as the body material, which
+           overrides the operator's own fatigues -- so Destroyer's
+           coyote, Biohazard's hazmat yellow and SWAT's navy all became
+           one of two colours, and one of those two (0x8a5a4c) is very
+           close to skin. Twelve naked men, which is what they looked
+           like, and it also threw away the single most useful thing
+           about having seven distinguishable operators.
+
+           The side is shown on the KIT instead -- see teamBand below.
+           You can tell a friendly by the band on his arm, which is how
+           it is done in life and for the same reason. */
         p.actor = game.operator(p.operator, {
           at: [0, -50, 0], name: 'mp-' + p.id, face: 'static',
-          material: { preset: 'fabric', color: c },
           speed: 4.6, runSpeed: 6.4,
         });
+        if (p.actor) teamBand(game, p.actor, c);
       } else {
         p.actor = game.character({
           at: [0, -50, 0], name: 'mp-' + p.id,
