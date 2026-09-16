@@ -111,14 +111,23 @@ function svcReceiver(g, K) {
   /* The ejection port: a shallow recess in the right-hand wall rather
      than a hole, because a hole needs the inside of a receiver behind
      it and there is nothing in there. */
+  /* NOT EVERY GUN HAS AN EJECTION PORT. A revolver throws its cases out
+     of the cylinder and a riot shield does not throw anything, so both
+     say `port: null` -- and this read straight through it and took the
+     whole model down with a TypeError. Every optional part in the spec
+     can be null and each one has to be treated as meaning what it says
+     rather than as an oversight. */
   const p = K.port;
-  svcSlab(g, [
-    [p.x0, p.up, -p.down, 0.0024, 4],
-    [p.x1, p.up, -p.down, 0.0024, 4],
-  ], R.w - 0.0012);
+  if (p) {
+    svcSlab(g, [
+      [p.x0, p.up, -p.down, 0.0024, 4],
+      [p.x1, p.up, -p.down, 0.0024, 4],
+    ], R.w - 0.0012);
+  }
   /* Trigger housing, guard and blade -- one set, shared by everything
-     in the table. */
+     in the table. A shield has no trigger either. */
   const T = K.trigger;
+  if (T) {
   svcSlab(g, [
     [T.x - 0.030, -R.down + 0.002, 0.020, R.w * 0.76, 3],
     [T.x + 0.024, -R.down + 0.002, 0.020, R.w * 0.76, 3],
@@ -129,6 +138,7 @@ function svcReceiver(g, K) {
     [T.x - 0.030, -R.down - 0.020], [T.x - 0.032, -R.down - 0.002],
   ], 0.0026, 0.0026, 0.0050);
   triggerBlade(g, T.x, -R.down - 0.004, 0, 0.022, 0.0040);
+  }
   /* The charging handle, wherever this one keeps it. */
   const C = K.charge;
   if (C) {
@@ -411,6 +421,7 @@ function svcDetails(g, K) {
      standing proud of the receiver wall to throw the case clear, and a
      shelf below it. */
   const p = K.port;
+  if (p) {
   svcSlab(g, [[p.x0 - 0.004, p.up + 0.0035, -p.down + 0.0005, 0.0035, 5],
     [p.x0, p.up + 0.0035, -p.down + 0.0005, 0.0035, 5]], W + 0.0005);
   svcSlab(g, [[p.x1, p.up + 0.0035, -p.down + 0.0005, 0.0035, 5],
@@ -419,6 +430,7 @@ function svcDetails(g, K) {
     [p.x1 + 0.004, p.up + 0.0045, -p.up - 0.0010, 0.0030, 5]], W + 0.0010);
   svcSlab(g, [[p.x0 - 0.002, -p.down + 0.0010, p.down + 0.0030, 0.0032, 5],
     [p.x1 + 0.002, -p.down + 0.0010, p.down + 0.0030, 0.0032, 5]], W + 0.0010);
+  }
 
   /* The selector, on the left, where a thumb reaches it. A paddle on a
      round boss -- and the boss matters, because a lever growing
@@ -924,7 +936,9 @@ function serviceArm(E, kind, opts) {
   body.boreAt = -o.y;
   body.muzzleAt = K.muzzle - o.x;
   body.sightAt = K.sight.y - o.y;
-  body.ejectPort = [K.port.x0 + 0.020 - o.x, K.port.up * 0.5 - o.y, K.rec.w + 0.004];
+  body.ejectPort = K.port
+    ? [K.port.x0 + 0.020 - o.x, K.port.up * 0.5 - o.y, K.rec.w + 0.004]
+    : null;
   body.magWell = [K.mag && K.mag.kind !== 'none' ? K.mag.x - o.x : 0,
     K.mag ? K.mag.y - o.y : 0, 0];
   body.boltRest = [0, 0, 0];
