@@ -44,7 +44,12 @@
    seven came from different places and the request was a custom look
    for all of them, so the fatigues differ as much as the faces do. */
 const OP_CLOTH = {
-  coyote: { color: 0x9a8360, texture: 'fabric', roughness: 0.93, metalness: 0, uvScale: 10 },
+  /* 0x9a8360 was a hair's breadth from OP_SKIN.tan -- same luminance to
+     within one part in a hundred and thirty -- and destroyer wears
+     coyote over tan skin. Under a warm sky he read as a naked man
+     wearing a plate carrier, which is what a Best Play screenshot
+     caught him doing. Real coyote brown is two stops below skin. */
+  coyote: { color: 0x77603f, texture: 'fabric', roughness: 0.93, metalness: 0, uvScale: 10 },
   olive:  { color: 0x5c6046, texture: 'fabric', roughness: 0.93, metalness: 0, uvScale: 10 },
   black:  { color: 0x2e302e, texture: 'fabric', roughness: 0.90, metalness: 0, uvScale: 10 },
   navy:   { color: 0x323a49, texture: 'fabric', roughness: 0.91, metalness: 0, uvScale: 10 },
@@ -452,6 +457,16 @@ function operatorGrip(id, base) {
 Engine.prototype.operators = function () {
   return OPERATORS.map((o) => ({ id: o.id, name: o.name, blurb: o.blurb,
     height: o.height, build: o.build }));
+};
+
+/* The two palettes, readable from outside, so a test can ask whether a
+   man's fatigues are the same shade as his own skin -- which is how
+   destroyer came to look naked. */
+Engine.prototype.clothOf = function (name) {
+  return (OP_CLOTH[name] || OP_CLOTH.olive).color;
+};
+Engine.prototype.skinOf = function (name) {
+  return OP_SKIN[name] != null ? OP_SKIN[name] : OP_SKIN.tan;
 };
 
 Engine.prototype.operatorSpec = function (id) { return OPERATOR_BY_ID[id] || null; };

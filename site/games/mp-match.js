@@ -603,7 +603,9 @@
     p.ai.state = 'advance'; p.ai.target = null; p.ai.path = null;
     p.ai.goal = null; p.ai.goalAt = -99;
     if (p.actor && p.actor.controller) {
-      p.actor.controller.teleport([p.pos.x, p.pos.y + 0.9, p.pos.z]);
+      p.actor.controller.teleport([p.pos.x, p.pos.y + lift(p), p.pos.z]);
+      // Facing too, or a man spawns looking the way the LAST one did.
+      face(p.actor, p.yaw);
     }
     if (!first) M.events.push({ t: M.time, kind: 'spawn', who: p.id });
   }
@@ -1231,10 +1233,8 @@
        kill cam would show twelve men standing where they are NOW while
        the camera flew to where one of them WAS. */
     if (p.actor && p.actor.controller && !M.replaying) {
-      p.actor.controller.teleport([p.pos.x, p.pos.y + 0.9, p.pos.z]);
-      if (p.actor.rotation && p.actor.rotation.setFromAxisAngle) {
-        p.actor.rotation.setFromAxisAngle([0, 1, 0], p.yaw);
-      }
+      p.actor.controller.teleport([p.pos.x, p.pos.y + lift(p), p.pos.z]);
+      face(p.actor, p.yaw);
     }
   }
 
@@ -1251,6 +1251,40 @@
      speed is measured from the position actually travelled rather than
      from any velocity field -- the match has three or four paths that
      move a body and only some of them bother to record why. */
+  /* WHICH WAY A BODY IS POINTING.
+     ================================================================
+     Setting actor.rotation does NOTHING to a character. The engine
+     composes a controller-driven actor's transform from
+     controller.facing, because a capsule has its rotation locked so it
+     cannot topple and therefore carries no facing information at all
+     (see Actor.updateMatrix). So the two lines here that carefully set
+     a quaternion every tick were writing to a field nothing reads.
+
+     And controller.facing is only ever advanced by the controller's
+     OWN steering, which a teleported body never runs. Which means
+     every man in this match has been pointing due north since the
+     first frame, whatever direction he was running or shooting in --
+     twelve people strafing sideways and firing over their shoulders,
+     for the whole of every match. */
+  function face(actor, yaw) {
+    if (!actor) return;
+    if (actor.controller) actor.controller.facing = yaw;
+    else if (actor.rotation && actor.rotation.setFromAxisAngle) {
+      actor.rotation.setFromAxisAngle([0, 1, 0], yaw);
+    }
+  }
+
+  /* WHERE THE BODY GOES. The capsule's origin is its CENTRE, so a body
+     standing on the floor sits half its own height above it -- and this
+     was a flat 0.9 for everybody, on operators who run from 1.72m to
+     1.92m. The tall ones stood six centimetres into the concrete and
+     the short ones floated four above it, which is most of why the men
+     in this game do not look like they are standing on anything. */
+  function lift(p) {
+    var c = p.actor && p.actor.controller;
+    return c && c.height ? c.height * 0.5 : 0.9;
+  }
+
   function animate(p, dt) {
     var a = p.actor.animator;
     if (!a) return;
@@ -1303,10 +1337,8 @@
       var p = M.people[i], e = list[i];
       if (!p.actor || !p.actor.controller) continue;
       if (!e.alive) { p.actor.controller.teleport([e.x, -60, e.z]); continue; }
-      p.actor.controller.teleport([e.x, e.y + 0.9, e.z]);
-      if (p.actor.rotation && p.actor.rotation.setFromAxisAngle) {
-        p.actor.rotation.setFromAxisAngle([0, 1, 0], e.yaw);
-      }
+      p.actor.controller.teleport([e.x, e.y + lift(p), e.z]);
+      face(p.actor, e.yaw);
       var a = p.actor.animator;
       if (!a) continue;
       p.actor.controller.autoAnimate = false;

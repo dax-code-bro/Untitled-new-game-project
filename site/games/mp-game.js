@@ -574,6 +574,24 @@
       state: state,
       get gun() { return cur; },
       select: select,
+      /* BUILD THE GUNS BEFORE THE MATCH STARTS.
+         A weapon is a few thousand vertices of receiver, rifling,
+         checkering and individual brass rounds, assembled in
+         JavaScript on the frame it is first needed. That is a hitch of
+         several frames the first time you press Q, and another the
+         first time you pick one up -- a long frame in the middle of a
+         gunfight, which is exactly what "glitchy" describes and is
+         invisible in any average frame rate. Both loadout guns are
+         built during the loading screen instead, where a hitch costs
+         nothing. */
+      warm: function (ids) {
+        for (var i = 0; i < ids.length; i++) {
+          var id = ids[i];
+          if (!id || cache[id]) continue;
+          cache[id] = buildGun(game, id);
+          show(cache[id], false);
+        }
+      },
       /* One shot: the flash comes on for forty milliseconds, which is
          about two frames and is all a real one lasts. */
       fired: function () { flashT = 0.04; },
@@ -693,7 +711,32 @@
       gname: q('.gun .nm'), mag: q('.gun .m'), res: q('.gun .r'), re: q('.gun .re'),
       dead: q('.dead'), deadBy: q('.dead .by'), deadN: q('.dead .n'),
       board: q('.board'), over: q('.over'),
+      xUp: q('.cross .up'), xDn: q('.cross .dn'),
+      xLf: q('.cross .lf'), xRt: q('.cross .rt'),
     };
+    /* WRITE ONLY WHAT CHANGED.
+       Every line in paint() ran sixty times a second against the DOM,
+       and setting textContent to the value it already holds still
+       dirties the node and still costs a style recalculation. Ten
+       nodes, four crosshair arms and a width in per cent, every frame,
+       over a full-screen overlay -- for a clock that changes once a
+       second and a magazine that changes when you fire. The game is
+       accused of feeling glitchy rather than slow, and needless layout
+       is what that feels like.
+
+       So: a memo per node, and nothing is touched unless the value
+       actually moved. */
+    var memo = new Map();
+    function put(node, key, val) {
+      if (!node) return;
+      var k = node, m = memo.get(k);
+      if (!m) { m = {}; memo.set(k, m); }
+      if (m[key] === val) return;
+      m[key] = val;
+      if (key === 'text') node.textContent = val;
+      else if (key === 'html') node.innerHTML = val;
+      else node.style[key] = val;
+    }
     /* The hit marker's four diagonals, rotated once. */
     var hb = el.hit.querySelectorAll('b');
     [[-9, -9, 45], [9, -9, -45], [-9, 9, -45], [9, 9, 45]].forEach(function (d, i) {
@@ -748,11 +791,14 @@
         var w = M.people[p.id].guns[p.held];
 
         /* crosshair: the gap IS the cone */
-        var gap = Math.max(3, Math.min(60, spread * 640));
-        el.cross.querySelector('.up').style.top = (-gap - 9) + 'px';
-        el.cross.querySelector('.dn').style.top = gap + 'px';
-        el.cross.querySelector('.lf').style.left = (-gap - 9) + 'px';
-        el.cross.querySelector('.rt').style.left = gap + 'px';
+        /* Rounded to the pixel before it is compared, because a cone
+           that drifts by a thousandth of a degree is a new string every
+           frame and a new layout with it. */
+        var gap = Math.round(Math.max(3, Math.min(60, spread * 640)));
+        put(el.xUp, 'top', (-gap - 9) + 'px');
+        put(el.xDn, 'top', gap + 'px');
+        put(el.xLf, 'left', (-gap - 9) + 'px');
+        put(el.xRt, 'left', gap + 'px');
 
         var since = M.time - hitAt;
         el.hit.classList.toggle('kill', hitKill);
@@ -774,33 +820,33 @@
           kids[i].style.opacity = String(Math.max(0, 1 - (M.time - m.t) / 1.1));
         }
 
-        el.us.textContent = M.score[p.team];
-        el.them.textContent = M.score[p.team === 'a' ? 'b' : 'a'];
-        el.mode.textContent = M.mode.name;
+        put(el.us, 'text', String(M.score[p.team]));
+        put(el.them, 'text', String(M.score[p.team === 'a' ? 'b' : 'a']));
+        put(el.mode, 'text', M.mode.name);
         if (M.mode.bomb) {
-          el.clock.textContent = 'ROUND ' + M.round + '  '
-            + clock(Math.max(0, M.mode.seconds + 4.5 - M.roundTime));
+          put(el.clock, 'text', 'ROUND ' + M.round + '  '
+            + clock(Math.max(0, M.mode.seconds + 4.5 - M.roundTime)));
           var B = M.bomb;
           el.bomb.classList.toggle('armed', !!(B && B.planted));
-          el.bomb.textContent = !B ? ''
+          put(el.bomb, 'text', !B ? ''
             : B.planted ? ('the bomb is down — ' + clock(45 - (M.time - B.plantAt)))
               : (B.carrier === p.id ? 'you have the bomb'
-                : (B.attackers === p.team ? 'your side is attacking' : 'defend both sites'));
+                : (B.attackers === p.team ? 'your side is attacking' : 'defend both sites')));
         } else {
-          el.clock.textContent = clock(M.mode.minutes * 60 - M.time);
+          put(el.clock, 'text', clock(M.mode.minutes * 60 - M.time));
           el.bomb.textContent = '';
         }
 
-        el.hpn.textContent = Math.max(0, Math.round(p.hp));
-        el.hpbar.style.width = Math.max(0, Math.min(100, p.hp)) + '%';
+        put(el.hpn, 'text', String(Math.max(0, Math.round(p.hp))));
+        put(el.hpbar, 'width', Math.round(Math.max(0, Math.min(100, p.hp))) + '%');
         el.hp.classList.toggle('low', p.hp < 35);
-        el.who.textContent = p.name + '  ·  ' + (p.team === 'a' ? 'your side' : 'your side');
+        put(el.who, 'text', p.name + '  ·  your side');
 
-        el.gname.textContent = w.name;
-        el.mag.textContent = p.ammo[p.held];
-        el.res.textContent = p.reserve[p.held];
-        el.re.textContent = p.reloadUntil > M.time ? 'reloading'
-          : (p.ammo[p.held] === 0 ? 'press R' : '');
+        put(el.gname, 'text', w.name);
+        put(el.mag, 'text', String(p.ammo[p.held]));
+        put(el.res, 'text', String(p.reserve[p.held]));
+        put(el.re, 'text', p.reloadUntil > M.time ? 'reloading'
+          : (p.ammo[p.held] === 0 ? 'press R' : ''));
 
         /* dead */
         var dead = !p.alive && !M.over;
@@ -810,18 +856,18 @@
           for (var k = M.events.length - 1; k >= 0; k--) {
             if (M.events[k].kind === 'kill' && M.events[k].who === p.id) { last = M.events[k]; break; }
           }
-          el.deadBy.innerHTML = last && last.by != null
+          put(el.deadBy, 'html', last && last.by != null
             ? ('killed by <b>' + esc(nameOf(last.by)) + '</b>'
               + (last.weapon ? ' <span class="wp">with the ' + esc(last.weapon) + '</span>' : '')
               + (last.head ? ' <span class="wp">&mdash; head shot</span>' : ''))
-            : 'you are out of the round';
-          el.deadN.textContent = M.mode.bomb ? '—'
-            : String(Math.max(0, Math.ceil(p.respawnAt - M.time)));
+            : 'you are out of the round');
+          put(el.deadN, 'text', M.mode.bomb ? '—'
+            : String(Math.max(0, Math.ceil(p.respawnAt - M.time))));
         }
 
         /* scoreboard */
         el.board.classList.toggle('hide', !showBoard || M.over);
-        if (showBoard && !M.over) el.board.innerHTML = boardHtml(M);
+        if (showBoard && !M.over) put(el.board, 'html', boardHtml(M));
 
         /* the end */
         el.over.classList.toggle('hide', !M.over);
@@ -1060,6 +1106,8 @@
     var pad = makePad(opts);
     var vm = makeViewmodel(game);
     var replay = makeReplay(root, game, M, vm);
+    /* Every gun this player can end the match holding, built now. */
+    vm.warm((M.you.guns || []).map(function (w) { return w.id || w.base; }));
 
     var yaw = M.you.yaw, pitch = 0;
     var sens = (opts.sensitivity || 1) * 0.0022;

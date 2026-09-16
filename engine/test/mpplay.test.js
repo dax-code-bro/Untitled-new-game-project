@@ -313,6 +313,41 @@ function check(name, cond, detail = '') {
       `${held.ndcX.toFixed(2)},${held.ndcY.toFixed(2)}`);
   }
 
+  /* ----------------------------------------------------------------
+     WHICH WAY IS EVERYBODY POINTING?
+     ----------------------------------------------------------------
+     The engine takes a character's facing from controller.facing and
+     nothing else -- a capsule has its rotation locked so it cannot
+     topple, so the rigid body's quaternion is always identity and
+     carries no facing at all. The match was setting actor.rotation,
+     which nothing reads, and controller.facing is only advanced by the
+     controller's own steering, which a teleported body never runs.
+
+     Every man in the match therefore pointed due north for the whole
+     of it, however he was moving or shooting. Nothing in the old tests
+     could catch that, because everything else about him was right.
+     -------------------------------------------------------------- */
+  const facing = await page.evaluate(async () => {
+    const M = window.MP.match;
+    for (let i = 0; i < 90; i++) await new Promise((r) => requestAnimationFrame(r));
+    const rows = M.people.filter((p) => p.alive && p.actor && p.actor.controller)
+      .map((p) => ({ id: p.id, yaw: p.yaw, facing: p.actor.controller.facing }));
+    const err = (r) => {
+      let d = r.facing - r.yaw;
+      while (d > Math.PI) d -= Math.PI * 2;
+      while (d < -Math.PI) d += Math.PI * 2;
+      return Math.abs(d);
+    };
+    return { n: rows.length, worst: Math.max(...rows.map(err)),
+      spread: Math.max(...rows.map((r) => r.facing)) - Math.min(...rows.map((r) => r.facing)) };
+  });
+  console.log(`  .. ${facing.n} bodies, worst facing error ${(facing.worst * 57.3).toFixed(1)}deg,`
+    + ` ${(facing.spread * 57.3).toFixed(0)}deg apart from each other`);
+  check('every body points where its man is looking', facing.worst < 0.02,
+    `${(facing.worst * 57.3).toFixed(1)}deg out`);
+  check('and they are not all facing the same way', facing.spread > 0.5,
+    `${(facing.spread * 57.3).toFixed(0)}deg apart`);
+
   check('no page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
   console.log(`\n  shots in ${OUT}`);
   console.log(`  ${passed} passed, ${failed} failed`);

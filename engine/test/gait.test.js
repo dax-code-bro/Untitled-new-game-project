@@ -141,6 +141,9 @@ function check(name, cond, detail = '') {
           kneeR: ang('upperLegR', 'lowerLegR', 'footR'),
           handLY: by.handL ? by.handL[1] : null,
           handRY: by.handR ? by.handR[1] : null,
+          handLZ: by.handL ? by.handL[2] : null,
+          handRZ: by.handR ? by.handR[2] : null,
+          hipX: by.hips ? by.hips[0] : null,
         });
       }
       return out;
@@ -149,6 +152,61 @@ function check(name, cond, detail = '') {
 
   const run = await sample('run', 24);
   const spr = await sample('sprint', 24);
+  const wlk = await sample('walk', 24);
+
+  /* ----------------------------------------------------------------
+     WHICH ARM GOES WITH WHICH LEG.
+     ----------------------------------------------------------------
+     A walking human swings the arm OPPOSITE the leg. Swing them
+     together and you have a toy soldier, and that is what both the
+     walk and the run were doing: a positive upper arm is BACK on this
+     rig while a positive upper leg is FORWARD, and both clips had the
+     left arm and the left leg at the same sign.
+
+     Measured as a correlation over the whole cycle between how far
+     ahead the left FOOT is of the right and how far ahead the left
+     HAND is of the right. Contralateral is negative. Reading it off
+     the key numbers is what got it wrong in the first place. */
+  function swingR(s) {
+    const a = [], b = [];
+    for (const f of s) {
+      if (f.footLZ == null || f.handLZ == null) continue;
+      a.push(f.footLZ - f.footRZ); b.push(f.handLZ - f.handRZ);
+    }
+    if (a.length < 6) return null;
+    const m = (v) => v.reduce((x, y) => x + y, 0) / v.length;
+    const ma = m(a), mb = m(b);
+    let num = 0, da = 0, db = 0;
+    for (let i = 0; i < a.length; i++) {
+      num += (a[i] - ma) * (b[i] - mb);
+      da += (a[i] - ma) ** 2; db += (b[i] - mb) ** 2;
+    }
+    return da > 1e-9 && db > 1e-9 ? num / Math.sqrt(da * db) : null;
+  }
+  for (const [nm, s] of [['walk', wlk], ['run', run], ['sprint', spr]]) {
+    const r = swingR(s);
+    console.log(`  .. ${nm}: foot-lead vs hand-lead correlation ${r == null ? 'n/a' : r.toFixed(2)}`);
+    check(`the ${nm} swings each arm with the OPPOSITE leg`, r != null && r < -0.5,
+      r == null ? 'could not measure' : `r=${r.toFixed(2)}`);
+  }
+
+  /* The pelvis has to rise and fall. A walk at one height is a glide. */
+  const wHip = wlk.map((f) => f.hipY).filter((v) => v != null);
+  const wRise = Math.max(...wHip) - Math.min(...wHip);
+  console.log(`  .. walk: pelvis rises ${(wRise * 100).toFixed(1)} cm, sways`
+    + ` ${((Math.max(...wlk.map((f) => f.hipX)) - Math.min(...wlk.map((f) => f.hipX))) * 100).toFixed(1)} cm`);
+  check('the walk lifts the body at each mid-stance', wRise > 0.025 && wRise < 0.075,
+    `${(wRise * 100).toFixed(1)} cm`);
+
+  /* And the knees have to bend. 180 is a straight leg. */
+  const wKnee = Math.min(...wlk.map((f) => f.kneeL).filter((v) => v != null));
+  const rKnee = Math.min(...run.map((f) => f.kneeL).filter((v) => v != null));
+  console.log(`  .. peak knee flexion: walk ${(180 - wKnee).toFixed(0)}deg,`
+    + ` run ${(180 - rKnee).toFixed(0)}deg`);
+  check('the walking knee reaches a real swing flexion', 180 - wKnee > 52,
+    `${(180 - wKnee).toFixed(0)}deg`);
+  check('and the running knee folds further still', 180 - rKnee > 90,
+    `${(180 - rKnee).toFixed(0)}deg`);
 
   const minK = (s) => Math.min(...s.map((k) => Math.min(k.kneeL, k.kneeR)));
   const runFold = minK(run), sprFold = minK(spr);
@@ -173,8 +231,15 @@ function check(name, cond, detail = '') {
   check('the pelvis rises and falls twice a cycle -- a flight phase',
     peaks(spr) === 2, `${peaks(spr)} peaks`);
   check('and it is a real rise, not a wobble', hipSwing > 0.05, `${(hipSwing * 100).toFixed(1)}cm`);
-  check('the run has no such rise, which is why it is a run',
-    Math.max(...run.map((k) => k.hipY)) - Math.min(...run.map((k) => k.hipY)) < 0.02);
+  /* The run has a flight phase too -- it used to have NO pelvic
+     movement at all, which is what made it glide. What separates the
+     sprint is how far the body travels vertically, not whether it
+     travels at all. */
+  const runSwing = Math.max(...run.map((k) => k.hipY)) - Math.min(...run.map((k) => k.hipY));
+  console.log(`  .. run pelvis rise ${(runSwing * 100).toFixed(1)}cm, ${peaks(run)} peaks/cycle`);
+  check('the run rises twice a cycle as well', peaks(run) === 2, `${peaks(run)} peaks`);
+  check('but not as far as the sprint', runSwing < hipSwing - 0.005,
+    `run ${(runSwing * 100).toFixed(1)}cm vs sprint ${(hipSwing * 100).toFixed(1)}cm`);
 
   // The trunk leans; the head does not go with it.
   const mean = (s, f) => s.reduce((a, k) => a + f(k), 0) / s.length;

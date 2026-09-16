@@ -506,11 +506,16 @@ function makeHumanoidClips() {
         [1.00, -6, 0, 0]],
     },
 
-    /* CONTRALATERAL. A positive upper arm is BACK on this rig, so the
-       left arm is at +16 while the left leg is at +28 forward. This is
-       the line that was inverted. */
-    upperArmL: { keys: [[0, 16, 0, -7], [0.25, 4, 0, -7], [0.5, -10, 0, -7], [0.75, 4, 0, -7], [1, 16, 0, -7]] },
-    upperArmR: { keys: [[0, -10, 0, 7], [0.25, 4, 0, 7], [0.5, 16, 0, 7], [0.75, 4, 0, 7], [1, -10, 0, 7]] },
+    /* CONTRALATERAL, and the sign was settled by measuring rather than
+       by reading the numbers -- twice. A positive upper arm is FORWARD
+       on this rig, so the left arm is at -16 (back) while the left leg
+       is at +28 (forward). The check in gait.test.js correlates how far
+       ahead the left FOOT is against how far ahead the left HAND is,
+       over the whole cycle, and contralateral is a negative
+       correlation. Reading it off the keys got it backwards; the
+       correlation does not care what I think the sign means. */
+    upperArmL: { keys: [[0, -16, 0, -7], [0.25, -4, 0, -7], [0.5, 11, 0, -7], [0.75, -4, 0, -7], [1, -16, 0, -7]] },
+    upperArmR: { keys: [[0, 11, 0, 7], [0.25, -4, 0, 7], [0.5, -16, 0, 7], [0.75, -4, 0, 7], [1, 11, 0, 7]] },
     lowerArmL: { keys: [[0, 14, 0, 0], [0.5, 26, 0, 0], [1, 14, 0, 0]] },
     lowerArmR: { keys: [[0, 26, 0, 0], [0.5, 14, 0, 0], [1, 26, 0, 0]] },
   }));
@@ -565,8 +570,8 @@ function makeHumanoidClips() {
         [1.00, 4, 0, 0]],
     },
 
-    upperArmL: { keys: [[0, 44, 0, -10], [0.25, 5, 0, -12], [0.5, -40, 0, -12], [0.75, 5, 0, -12], [1, 44, 0, -10]] },
-    upperArmR: { keys: [[0, -40, 0, 12], [0.25, 5, 0, 12], [0.5, 44, 0, 10], [0.75, 5, 0, 12], [1, -40, 0, 12]] },
+    upperArmL: { keys: [[0, -44, 0, -10], [0.25, -5, 0, -12], [0.5, 42, 0, -12], [0.75, -5, 0, -12], [1, -44, 0, -10]] },
+    upperArmR: { keys: [[0, 42, 0, 12], [0.25, -5, 0, 12], [0.5, -44, 0, 10], [0.75, -5, 0, 12], [1, 42, 0, 12]] },
     lowerArmL: { keys: [[0, 68, 0, 0], [0.5, 92, 0, 0], [1, 68, 0, 0]] },
     lowerArmR: { keys: [[0, 92, 0, 0], [0.5, 68, 0, 0], [1, 92, 0, 0]] },
     shoulderL: { keys: [[0, 0, 0, -3], [0.5, 0, 0, 4], [1, 0, 0, -3]] },
@@ -664,11 +669,17 @@ function makeHumanoidClips() {
         [0.72, 2, 0, 0], [1.00, 30, 0, 0]],
     },
 
-    // Elbows locked near a right angle and tightening as the hand comes
-    // forward. The arm that swings back belongs to the leg that is
-    // forward, which is why L is at +52 while upperLegL is at +80.
-    upperArmL: { keys: [[0.00, 52, 0, -9], [0.50, -72, 0, -14], [1.00, 52, 0, -9]] },
-    upperArmR: { keys: [[0.00, -72, 0, 14], [0.50, 52, 0, 9], [1.00, -72, 0, 14]] },
+    /* Elbows locked near a right angle and tightening as the hand comes
+       forward. The arm that swings back belongs to the leg that is
+       forward -- and this clip had them the wrong way round, with a
+       comment underneath explaining why it was right. A positive upper
+       arm is FORWARD, so the left arm is at -72 (hand back by the hip)
+       while upperLegL is at +80 (leg forward). Measured, this time:
+       gait.test.js correlates foot lead against hand lead and wants a
+       negative number. */
+    upperArmL: { keys: [[0.00, -72, 0, -14], [0.50, 52, 0, -9], [1.00, -72, 0, -14]] },
+    upperArmR: { keys: [[0.00, 52, 0, 9], [0.50, -72, 0, 14], [1.00, 52, 0, 9]] },
+    // Tighter when the hand is up at the cheek, which for L is at 0.5.
     lowerArmL: { keys: [[0.00, 92, 0, 0], [0.50, 112, 0, 0], [1.00, 92, 0, 0]] },
     lowerArmR: { keys: [[0.00, 112, 0, 0], [0.50, 92, 0, 0], [1.00, 112, 0, 0]] },
     shoulderL: { keys: [[0.00, 0, 0, -4], [0.50, 0, 0, 6], [1.00, 0, 0, -4]] },
