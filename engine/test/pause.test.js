@@ -93,11 +93,15 @@ function check(name, cond, detail = '') {
   const rate = await page.evaluate(async () => {
     const g = BUNKER_SHELL.handle().game;
     const a = g.time;
-    await new Promise((r) => setTimeout(r, 800));
+    /* Three seconds. With the round live this renderer manages barely
+       more than a frame a second, so a 0.8s window caught exactly one
+       step -- 0.017s of game time -- and called a healthy loop stopped.
+       Third time this file has been caught by its own frame budget. */
+    await new Promise((r) => setTimeout(r, 3000));
     return { a, b: g.time, running: !!g.running, paused: !!g.paused };
   });
-  console.log(`  .. loop: ${(rate.b - rate.a).toFixed(3)}s of game time in 0.8s wall, running=${rate.running}`);
-  check('the game loop is turning', rate.running && rate.b - rate.a > 0.05,
+  console.log(`  .. loop: ${(rate.b - rate.a).toFixed(3)}s of game time in 3s wall, running=${rate.running}`);
+  check('the game loop is turning', rate.running && rate.b - rate.a > 0.03,
     `advanced ${(rate.b - rate.a).toFixed(3)}s, running=${rate.running}`);
 
   /* ---- pause ---- */
