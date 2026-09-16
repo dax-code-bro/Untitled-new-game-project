@@ -289,6 +289,7 @@ class Engine {
     this._fractureCache = new Map();
     this._batchList = [];
     this._individual = [];
+    this._frameNo = 0;
     this._planes = new Float32Array(24);
 
     this.time = 0;
@@ -1411,6 +1412,10 @@ class Engine {
     const groups = this._batchGroups;
     for (const g of groups.values()) g.count = 0;
     this._individual.length = 0;
+    /* Ticked once per batch build. Skeletons use it to upload their
+       bone palette at most once a frame however many actors share
+       them -- see Skeleton.uploadTexture. */
+    this._frameNo = (this._frameNo || 0) + 1;
 
     if (this.frustumCulling) this.camera.extractPlanes(this._planes);
     const planes = this._planes;
@@ -1518,7 +1523,7 @@ class Engine {
         sortKey: camPos.distanceToSq(actor.position),
       };
       if (actor.skeleton) {
-        batch.boneTexture = actor.skeleton.uploadTexture(this.gl);
+        batch.boneTexture = actor.skeleton.uploadTexture(this.gl, this._frameNo);
         batch.boneCount = actor.skeleton.bones.length;
       }
       list.push(batch);

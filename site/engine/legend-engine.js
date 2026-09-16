@@ -7676,13 +7676,32 @@ class Skeleton {
 
   /* Upload the palette as an RGBA32F texture. A uniform array would cap the
      bone count at whatever the device allows; a texture has no such limit. */
-  uploadTexture(gl) {
+  /* ONCE PER SKELETON PER FRAME, not once per actor.
+   *
+     A character is not one skinned mesh. It is a body, a neck, and a
+     piece of kit for every material it wears -- five or six actors, all
+     hanging off the SAME skeleton -- and the renderer called this for
+     each of them. Measured in a twelve-player match: sixty-two skinned
+     draws uploading an RGBA32F texture apiece, when there are only
+     twelve skeletons in the scene. Fifty of those uploads were the same
+     bytes going to the same texture in the same frame.
+
+     A texture upload is a pipeline stall on most drivers, which is why
+     this costs so much more than the triangle count suggests it should
+     -- the map is 311k triangles in 64 instanced groups and is not the
+     expensive part. `_texFrame` is set by the renderer at the top of
+     each frame; the first actor to ask uploads, the rest get the
+     texture that is already on the card. */
+  uploadTexture(gl, frame) {
     if (!this.texture) {
       this.texture = new Texture(gl, {
         internalFormat: gl.RGBA32F, format: gl.RGBA, type: gl.FLOAT,
         wrap: gl.CLAMP_TO_EDGE, minFilter: gl.NEAREST, magFilter: gl.NEAREST, mips: false,
       });
+      this._texFrame = -1;
     }
+    if (frame !== undefined && this._texFrame === frame) return this.texture;
+    this._texFrame = frame;
     const width = Math.max(1, this.bones.length * 4);
     this.texture.upload(this.matrices, width, 1);
     return this.texture;
@@ -13676,6 +13695,7 @@ class Engine {
     this._fractureCache = new Map();
     this._batchList = [];
     this._individual = [];
+    this._frameNo = 0;
     this._planes = new Float32Array(24);
 
     this.time = 0;
@@ -14798,6 +14818,10 @@ class Engine {
     const groups = this._batchGroups;
     for (const g of groups.values()) g.count = 0;
     this._individual.length = 0;
+    /* Ticked once per batch build. Skeletons use it to upload their
+       bone palette at most once a frame however many actors share
+       them -- see Skeleton.uploadTexture. */
+    this._frameNo = (this._frameNo || 0) + 1;
 
     if (this.frustumCulling) this.camera.extractPlanes(this._planes);
     const planes = this._planes;
@@ -14905,7 +14929,7 @@ class Engine {
         sortKey: camPos.distanceToSq(actor.position),
       };
       if (actor.skeleton) {
-        batch.boneTexture = actor.skeleton.uploadTexture(this.gl);
+        batch.boneTexture = actor.skeleton.uploadTexture(this.gl, this._frameNo);
         batch.boneCount = actor.skeleton.bones.length;
       }
       list.push(batch);
