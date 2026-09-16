@@ -361,6 +361,23 @@
     };
   }
 
+  /* WHICH WAY IS RIGHT.
+   *
+     The engine is a standard right-handed system -- X right, Y up, Z out
+     of the screen -- and this game points the camera along +Z, which
+     means it is looking BACKWARD along the standard axis and the
+     player's right hand is at -X. Rendered proof: a box at x = +3, four
+     metres ahead, draws on the LEFT of the screen.
+
+     Every yaw formula in here assumed right was +X. So looking right
+     turned you left, strafing right walked you left, and the gun was
+     held out over the player's left shoulder -- far enough out of frame
+     that it read as "my gun doesn't come up, it's invisible". One sign,
+     three symptoms that look like three bugs.
+
+     Defined once, here, so it cannot be got wrong in a fourth place. */
+  function RIGHT(yaw) { return { x: -Math.cos(yaw), z: Math.sin(yaw) }; }
+
   function gun(p) { return p.guns[p.held]; }
 
   /* Damage over distance. Full damage inside `near`, the far figure past
@@ -444,16 +461,16 @@
       ['upperArmL', 'upperArmR'].forEach(function (bone) {
         var bi = actor.skeleton.index(bone);
         if (bi < 0) return;
+        /* Built with its parent and bone in the OPTIONS, not assigned
+           afterwards. Setting them on the finished actor left the
+           engine's own bookkeeping out of it, and `rotation` on a child
+           is not a Quat you can call setFromAxisAngle on -- which threw
+           during world build and took the whole match down with it.
+           The boot plate said so plainly and I had not looked. */
         var band = g.cylinder({ at: [0, -60, 0], radius: 0.062, height: 0.052,
-          physics: false, material: mat });
+          physics: false, material: mat, name: 'teamband',
+          parent: actor, parentBone: bi, offset: [0, -0.120, 0] });
         if (!band) return;
-        band.parent = actor;
-        band.parentBone = bi;
-        band.offset = [0, -0.120, 0];
-        band.rotation.setFromAxisAngle([0, 0, 1], Math.PI * 0.5);
-        band.name = 'teamband';
-        actor.children = actor.children || [];
-        if (actor.children.indexOf(band) < 0) actor.children.push(band);
       });
     }
 
@@ -672,9 +689,9 @@
        point of aiming, so the offset goes away as the sights come up. */
     var side = p.aiming ? 0 : MUZZLE_SIDE, down = p.aiming ? 0.02 : MUZZLE_DOWN;
     return {
-      x: e.x + f.x * MUZZLE_FWD + cy * side,
+      x: e.x + f.x * MUZZLE_FWD - cy * side,
       y: e.y + f.y * MUZZLE_FWD - down,
-      z: e.z + f.z * MUZZLE_FWD - sy * side,
+      z: e.z + f.z * MUZZLE_FWD + sy * side,
     };
   }
 
@@ -1098,7 +1115,7 @@
          or the body vibrates on the spot. */
       ai.jitter -= dt;
       if (ai.jitter <= 0) { ai.jitter = 0.5 + rand() * 1.1; ai.strafe = rand() < 0.5 ? -1 : 1; }
-      var side = { x: Math.cos(p.yaw), z: -Math.sin(p.yaw) };
+      var side = RIGHT(p.yaw);
       /* Close the distance in deathmatch; hold it when a death is the
          end of your round. */
       var hold = careful ? 1.35 : 0.9;
@@ -1499,8 +1516,9 @@
       var left = Math.max(0, (p.slideEnd - M.time) / 0.72);
       var sp2 = p.slideSpeed * (0.35 + 0.65 * left);
       var steer2 = 1 - left * 0.85;
-      var dx = p.slideDir.x + Math.cos(p.yaw) * str * steer2;
-      var dz = p.slideDir.z - Math.sin(p.yaw) * str * steer2;
+      var rr = RIGHT(p.yaw);
+      var dx = p.slideDir.x + rr.x * str * steer2;
+      var dz = p.slideDir.z + rr.z * str * steer2;
       var dl = Math.hypot(dx, dz) || 1;
       moveBy(M, p, (dx / dl) * sp2, (dz / dl) * sp2, dt, false);
       p.crouching = true;
@@ -1511,7 +1529,8 @@
     var speed = 5.2 * w.move * (sprint ? 1.34 : 1) * (cmd.crouch ? 0.52 : 1)
       * (p.aiming ? 0.62 : 1);
     var sy = Math.sin(p.yaw), cy = Math.cos(p.yaw);
-    moveBy(M, p, (sy * fwd + cy * str) * speed, (cy * fwd - sy * str) * speed, dt,
+    var rt = RIGHT(p.yaw);
+    moveBy(M, p, (sy * fwd + rt.x * str) * speed, (cy * fwd + rt.z * str) * speed, dt,
       !!cmd.jump && p.grounded);
 
     if (cmd.swap && M.time > (p._swapAt || 0)) {

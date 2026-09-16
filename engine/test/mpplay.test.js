@@ -240,6 +240,74 @@ function check(name, cond, detail = '') {
   });
   check('there is a live GL context', lit);
 
+  /* ================================================================
+     WHICH WAY IS RIGHT
+     ================================================================
+     Three separate bug reports -- "left is right and right is left",
+     "my gun doesn't come up, it's invisible", and strafing that went
+     the wrong way -- were one sign. The engine is a standard
+     right-handed system and this game points the camera along +Z, so
+     the player's right hand is at MINUS X; every yaw formula assumed
+     plus. Rendered proof at the time: a box at x = +3, four metres
+     ahead, drew on the left of the screen.
+
+     None of it is arguable and none of it should ever be argued again,
+     so it is measured by projecting a known point through the real
+     camera rather than by reasoning about cross products. */
+  const hand = await page.evaluate(() => {
+    const G = window.MP.game, M = window.MP.match, me = M.you;
+    me.pos.x = 0; me.pos.z = 0; me.yaw = 0;
+    window.MP.look(0, 0);
+    for (let i = 0; i < 3; i++) G.step(1 / 60);
+    /* Project a point three metres to the player's RIGHT. With yaw 0
+       and forward +Z, that is x = -3. It must land on the right half
+       of the screen. */
+    const cam = G.camera;
+    const vp = cam.viewProjection || cam.viewProj || null;
+    const project = (x, y, z) => {
+      if (!vp) return null;
+      const e = vp.e || vp;
+      const w = e[3] * x + e[7] * y + e[11] * z + e[15];
+      return (e[0] * x + e[4] * y + e[8] * z + e[12]) / (w || 1);
+    };
+    return { rightNdc: project(-3, 1.6, 8), leftNdc: project(3, 1.6, 8), has: !!vp };
+  });
+  if (!hand.has) check('the camera exposes a view-projection to test with', false);
+  else {
+    console.log(`  .. ndc x: the player's right lands at ${hand.rightNdc.toFixed(2)}, their left at ${hand.leftNdc.toFixed(2)}`);
+    check("a point on the player's right renders on the right of the screen",
+      hand.rightNdc > 0.05, `ndc x ${hand.rightNdc.toFixed(3)}`);
+    check("and a point on their left renders on the left",
+      hand.leftNdc < -0.05, `ndc x ${hand.leftNdc.toFixed(3)}`);
+  }
+
+  /* The gun is held on the right hand side and ON SCREEN. */
+  const held = await page.evaluate(() => {
+    const vm = window.MP.viewmodel, G = window.MP.game;
+    const g = vm && vm.gun;
+    if (!g) return { err: 'no gun model at all' };
+    const cam = G.camera, vp = cam.viewProjection || cam.viewProj;
+    const e = (vp && (vp.e || vp)) || null;
+    if (!e) return { err: 'no view projection' };
+    const x = g.position.x, y = g.position.y, z = g.position.z;
+    const w = e[3] * x + e[7] * y + e[11] * z + e[15];
+    return {
+      ndcX: (e[0] * x + e[4] * y + e[8] * z + e[12]) / (w || 1),
+      ndcY: (e[1] * x + e[5] * y + e[9] * z + e[13]) / (w || 1),
+      depth: w, visible: g.visible !== false, verts: g.mesh ? g.mesh.vertexCount : 0,
+    };
+  });
+  if (held.err) check('the gun is a real model in the hand', false, held.err);
+  else {
+    console.log(`  .. gun at ndc ${held.ndcX.toFixed(2)},${held.ndcY.toFixed(2)} depth ${held.depth.toFixed(2)}, ${held.verts} verts`);
+    check('the gun is a real model, not a handful of boxes', held.verts > 400, `${held.verts} verts`);
+    check('it is visible', held.visible);
+    check('it is IN FRONT of the camera', held.depth > 0, `depth ${held.depth.toFixed(2)}`);
+    check('it is on the right-hand side of the screen', held.ndcX > 0, `ndc x ${held.ndcX.toFixed(3)}`);
+    check('and it is actually on screen', Math.abs(held.ndcX) < 1 && Math.abs(held.ndcY) < 1,
+      `${held.ndcX.toFixed(2)},${held.ndcY.toFixed(2)}`);
+  }
+
   check('no page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
   console.log(`\n  shots in ${OUT}`);
   console.log(`  ${passed} passed, ${failed} failed`);

@@ -393,7 +393,7 @@
            right way round and `invertY` flips it for the people who
            want it flipped. Written down because it is the single
            easiest sign in the codebase to get backwards. */
-        cmd.lookX = curve(R[0]) * look * dt * invX;
+        cmd.lookX = -curve(R[0]) * look * dt * invX;
         cmd.lookY = curve(R[1]) * look * dt * invY;
 
         /* TREAT IT AS STANDARD UNLESS IT CANNOT BE.
@@ -564,7 +564,11 @@
         var cy = Math.cos(yaw), sy = Math.sin(yaw);
         var cp = Math.cos(pitch), sp = Math.sin(pitch);
         var fx = sy * cp, fy = -sp, fz = cy * cp;
-        var rx = cy, rz = -sy;
+        /* The player's right is -X at yaw 0, not +X. With the sign
+           the wrong way round the gun was held out over the LEFT
+           shoulder and far enough off axis to be out of frame -- which
+           reads exactly like "my gun doesn't come up, it's invisible". */
+        var rx = -cy, rz = sy;
         var ux = sy * sp, uy = cp, uz = cy * sp;
 
         /* Where it sits. Right of the eye and below it at the hip,
@@ -910,7 +914,11 @@
       var p = M.you;
 
       var d = input.take();
-      yaw += d[0] * sens;
+      /* MINUS. The camera's right hand is at -X (see RIGHT in
+         mp-match), so increasing yaw swings the view to the LEFT --
+         which is why "left is right and right is left on the looking
+         controls". */
+      yaw -= d[0] * sens;
       pitch += d[1] * sens;
       pitch = Math.max(-1.45, Math.min(1.45, pitch));
 
@@ -959,7 +967,7 @@
          coming back down under its own weight and must NOT drag the
          view with it, or every burst ends where it started and recoil
          costs nothing. */
-      if (dUp > 0) { pitch -= dUp; yaw += dSide; pad.rumble(0.22, 0.05); }
+      if (dUp > 0) { pitch -= dUp; yaw -= dSide; pad.rumble(0.22, 0.05); }
       if (p.kills > kills0) { hud.hitMark(true); pad.rumble(0.8, 0.22); }
       pitch = Math.max(-1.45, Math.min(1.45, pitch));
       watchDamage();
