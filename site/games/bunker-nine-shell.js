@@ -1403,7 +1403,23 @@ W.addEventListener('keydown', function (e) {
   else if (k === 'ArrowLeft' || k === 'a' || k === 'A') { navSide(-1); e.preventDefault(); }
   else if (k === 'ArrowRight' || k === 'd' || k === 'D') { navSide(1); e.preventDefault(); }
   else if (k === 'Enter' || k === ' ') { navEnter(); e.preventDefault(); }
-  else if (k === 'Escape' || k === 'Backspace') { navBack(); e.preventDefault(); }
+  else if (k === 'Escape' || k === 'Backspace') {
+    /* ONE OWNER FOR THE PAUSE KEY.
+     *
+       Both this and the pause handler are capture-phase listeners on
+       window, and this one is registered at script load while that one
+       waits for a game -- so this fires first. On Escape it ran
+       navBack(), which on the pause screen IS resume(); the pause
+       handler then ran, saw `paused` was now false, and opened the
+       panel straight back up. Two correct handlers cancelling each
+       other out, and from the outside the pause menu simply would not
+       close.
+
+       Backspace still backs out of the pause screen, because it is not
+       the pause key and nothing else is listening for it. */
+    if (k === 'Escape' && el.pause && el.pause.classList.contains('on')) return;
+    navBack(); e.preventDefault();
+  }
   else if (k === 'Tab') { navMove(e.shiftKey ? -1 : 1); e.preventDefault(); }
 }, true);
 

@@ -125,26 +125,55 @@ function check(name, cond, detail = '') {
     shown: !document.querySelector('#b9shell').classList.contains('gone'),
   }));
   check('Escape again resumes', !after.paused && !after.shown);
-  const t2 = await page.evaluate(() => BUNKER_SHELL.handle().game.time || 0);
-  await page.waitForTimeout(600);
-  const t3 = await page.evaluate(() => BUNKER_SHELL.handle().game.time || 0);
-  check('and time runs again', t3 - t2 > 0.2, `advanced ${(t3 - t2).toFixed(3)}s`);
+  const back = await page.evaluate(async () => {
+    const g = BUNKER_SHELL.handle().game;
+    const a = g.time;
+    const snap = {
+      paused: !!g.paused, running: !!g.running,
+      cap: g.renderer && g.renderer.quality ? g.renderer.quality.fpsCap : null,
+      phase: BUNKER_SHELL.phase ? BUNKER_SHELL.phase() : '?',
+      scale: g.timeScale,
+    };
+    /* Three seconds, not one. SwiftShader renders this scene at about
+       two and a third frames a second -- measured, from the loop check
+       above: 0.233s of game time per 0.8s of wall clock with dt clamped
+       at 0.1. A nine-hundred-millisecond window can therefore contain
+       ZERO frames and report that a perfectly healthy game has stopped,
+       which is what it did. */
+    await new Promise((r) => setTimeout(r, 3000));
+    return Object.assign(snap, { a, b: g.time, running2: !!g.running, paused2: !!g.paused });
+  });
+  console.log(`  .. after resume: paused=${back.paused}/${back.paused2} running=${back.running}/${back.running2} cap=${back.cap} phase=${back.phase} scale=${back.scale} -> ${(back.b - back.a).toFixed(3)}s`);
+  check('and time runs again', back.b - back.a > 0.05, `advanced ${(back.b - back.a).toFixed(3)}s`);
 
   /* ---- the swap animation ---- */
-  const swap = await page.evaluate(async () => {
+  const swap = await page.evaluate(() => {
     const h = BUNKER_SHELL.handle();
     const P = h.P, g = h.game;
+    /* YOU START WITH ONE GUN. slots is ['m1911'] at spawn, and
+       beginSwap returns immediately when the slot asked for does not
+       exist -- correctly. The first three runs of this reported the
+       swap animation broken when what it had actually proved is that a
+       man holding one pistol cannot swap to a second one. */
+    if (P.slots.length < 2) { P.slots.push('thompson'); P.slot = 0; }
     const slot0 = P.slot;
-    /* Through the engine's own input, which is what the game reads --
-       a synthetic KeyboardEvent on window reaches the shell's listeners
-       and nothing else, so the first version of this pressed a key the
-       game could not hear and then reported that swapping was broken. */
+    /* STEPPED BY HAND, and both halves of that matter.
+
+       Through the engine's own input, because a synthetic KeyboardEvent
+       on window reaches the shell's listeners and nothing the GAME
+       reads -- the first version pressed a key the game could not hear
+       and then reported swapping broken.
+
+       And stepped rather than waited, because this renderer manages
+       about two frames a second: a wall-clock wait long enough to
+       contain the swap is long enough to be flaky, and a short one
+       contains no frames at all. */
     const i = g.input;
     i.keys.add('q'); i.pressed.add('q');
-    await new Promise((r) => setTimeout(r, 140));
-    i.keys.delete('q');
+    g.step(1 / 60);
     const mid2 = { t: P.swapT, slot: P.slot };
-    await new Promise((r) => setTimeout(r, 1400));
+    i.keys.delete('q'); i.pressed.delete('q');
+    for (let n = 0; n < 200 && P.swapT > 0; n++) g.step(1 / 60);
     return { slot0, midT: mid2.t, midSlot: mid2.slot, endSlot: P.slot, endT: P.swapT };
   });
   console.log(`  .. swap: slot ${swap.slot0} -> ${swap.endSlot}, timer mid ${(+swap.midT).toFixed(2)} end ${(+swap.endT).toFixed(2)}`);
