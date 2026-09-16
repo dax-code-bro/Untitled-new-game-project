@@ -922,7 +922,7 @@ const HAIR_STYLES = {
    hard edge, which is what made every bearded face read as a mask. */
 const BEARD_STYLES = {
   stubble:   { u: [0.06, 0.30], w: [0.44, 1.00], x: 0.62, thick: 0.0022 },
-  moustache: { u: [0.252, 0.302], w: [0.74, 1.00], x: 0.22, thick: 0.0042 },
+  moustache: { u: [0.252, 0.302], w: [0.74, 1.00], x: 0.24, thick: 0.0042, overLip: true },
   goatee:    { u: [0.05, 0.285], w: [0.72, 1.00], x: 0.19, thick: 0.0060 },
   chops:     { u: [0.20, 0.50], w: [0.26, 0.66], xMin: 0.36, x: 0.80, thick: 0.0050 },
   full:      { u: [0.04, 0.305], w: [0.42, 1.00], x: 0.60, thick: 0.0072 },
@@ -1084,7 +1084,28 @@ function makeBrowGeometry(headGeo, style) {
 function makeBeardGeometry(headGeo, style) {
   const S = BEARD_STYLES[style];
   if (!S) return null;
-  const keep = (u, w, xn) => u > S.u[0] && u < S.u[1] && w > S.w[0] && w < S.w[1]
-    && xn < S.x && xn > (S.xMin || 0);
+  /* THE MOUTH IS NOT PART OF THE BEARD.
+   *
+     A beard covers the chin, the jaw and the upper lip, and it stops at
+     the lip line -- that is what makes it a beard rather than a muzzle.
+     The band alone does not know that: the lip centre sits at u 0.233
+     on this rig and a full beard runs u 0.04 to 0.305, so it ran
+     straight over the mouth and the only thing visible of Delta's was
+     the tip of his lower lip poking through the shell. A pale peg under
+     the nose, which is what I was looking at and could not name.
+
+     So a hole, at the front of the face only, over the lip aperture --
+     the sides of the band are untouched, because a beard genuinely does
+     grow to the corners of the mouth. Styles that are ONLY a moustache
+     sit above the hole and never meet it. */
+  const LIP = S.lips || [0.198, 0.272];
+  const keep = (u, w, xn) => {
+    if (!(u > S.u[0] && u < S.u[1] && w > S.w[0] && w < S.w[1]
+      && xn < S.x && xn > (S.xMin || 0))) return false;
+    if (S.overLip) return true;
+    // The aperture: lip height, the front of the face, inside the corners.
+    if (u > LIP[0] && u < LIP[1] && w > 0.86 && xn < 0.40) return false;
+    return true;
+  };
   return offsetPatch(headGeo, keep, S.thick, null);
 }

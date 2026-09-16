@@ -815,12 +815,26 @@ function buildLips(g, o = {}) {
 const EYE = {
   sx: 0.091,          // half the pupil separation
   cy: 0.032,
-  apertureX: 0.046, apertureY: 0.017, apertureZ: 0.234,
-  // The globe sits ~28 mm behind the lid margin. That gap is the whole
-  // trick: it puts the opening in shadow, so the eye reads as a hole with
-  // something wet in it rather than as a bead resting on the cheek.
-  globeR: 0.034, globeZ: 0.186, globeFlatten: 0.85,
-  corneaR: 0.022, corneaOffset: 0.015,
+  /* THE APERTURE, and it was far too small.
+   *
+     A palpebral fissure is about 30 mm across and 10 tall on a head
+     232 mm high -- thirteen per cent of the head's width, and four of
+     its height. This opened 0.046 half-width on a head 0.45 across,
+     which is twenty per cent of the width... except the head takes a
+     0.82 horizontal squeeze afterwards and the eye is read through
+     lids that overlap it, and what actually came out on screen was a
+     circle about four per cent across. Two ball bearings pressed into a
+     face.
+
+     Widened to a real fissure and flattened to a real one: an eye is an
+     ALMOND, three times as wide as it is tall, and the single thing
+     that most separates a face from a doll is that ratio. The globe
+     comes forward 6 mm with it, because an opening that wide over a
+     globe set 28 mm back shows the socket behind it rather than the
+     eye. */
+  apertureX: 0.062, apertureY: 0.021, apertureZ: 0.232,
+  globeR: 0.034, globeZ: 0.192, globeFlatten: 0.85,
+  corneaR: 0.024, corneaOffset: 0.016,
 };
 
 function buildEyelids(g, o = {}) {

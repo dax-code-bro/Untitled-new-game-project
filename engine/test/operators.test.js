@@ -237,12 +237,18 @@ function check(name, cond, detail = '') {
         const y = j === k ? 1.0 : -80;
         if (o.controller) o.controller.teleport([(j - 3) * 0.62, y, 0]);
       });
-      const hb = c.head ? c.head : null;
-      void hb;
       const x = (k - 3) * 0.62;
-      // Eye height on THIS man, not a constant: they are not the same
-      // height and a fixed camera frames the tall ones at the chin.
-      const eye = 1.0 - 0.875 * c.operatorSpec.scale + c.operatorSpec.height * 0.935;
+      /* Eye height READ OFF THE SKELETON, not computed from height and
+         scale. The arithmetic version was nineteen centimetres high on
+         the shortest of them and framed the top of his head -- and the
+         whole point of these portraits is that a bench which cannot see
+         what it is judging is worse than none. */
+      /* The head BONE is at the atlas -- the base of the skull -- so
+         aiming at it frames the jaw and cuts the crown off. The eyes
+         sit about a quarter of a head above it. */
+      const hbone = c.skeleton.bone('head');
+      const k = c.operatorSpec.scale;
+      const eye = c.body.position.y + (hbone ? hbone.bindMatrix.e[13] : 0.61) + 0.058 * k;
       // Tight. A head at fifteen per cent of frame height told me
       // nothing twice; this fills it.
       G.lookAt([x + 0.085, eye + 0.010, 0.345], [x, eye - 0.008, 0]);

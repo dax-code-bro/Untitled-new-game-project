@@ -42,7 +42,7 @@
    less saturated than it looks on a palette. */
 const OP_SKIN = {
   fair: 0xf0cdb4, ruddy: 0xdda88c, olive: 0xc49a72,
-  tan: 0xa87c56, brown: 0x7d5636, deep: 0x53381f, ash: 0xcabdae,
+  tan: 0xa87c56, brown: 0x8d6440, deep: 0x70502f, ash: 0xcabdae,
 };
 
 /* ------------------------------------------------------------------
@@ -451,8 +451,15 @@ Engine.prototype.operator = function (id, opts = {}) {
        colour, four of them bald and none of them with eyebrows, is one
        man seven times, and no amount of differentiating their SKULLS
        was ever going to survive that. */
+    /* uvScale 12, and this one is worth spelling out. The head's UVs
+       run 0..1 across the whole sculpt, so the default uvScale of 1
+       stretches ONE tile of the skin recipe over an entire face --
+       pores the size of an eye socket. Close up it read as orange peel,
+       or on the darker tones as scorched leather, and it was doing more
+       damage to "is this a person" than any amount of sculpting could
+       undo. Twelve tiles puts the grain at roughly skin scale. */
     skin: opts.skin || { preset: 'skin', color: OP_SKIN[op.skin] || OP_SKIN.tan,
-      roughness: 0.62, metalness: 0 },
+      roughness: 0.62, metalness: 0, uvScale: 12 },
   }));
   if (c) { c.operator = op.id; c.operatorSpec = op; }
   return c;

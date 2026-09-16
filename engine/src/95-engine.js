@@ -922,8 +922,11 @@ class Engine {
         em.setupInstancing(20);
         const ea = new Actor(this, {
           name: 'eyes', mesh: em,
+          /* Roughness 0.42, not 0.18. A sclera is wet but it is not
+             chrome, and at 0.18 over a flat white the two of them came
+             back as ball bearings -- the specular was the whole read. */
           material: this.material({ color: 0xffffff, texture: 'smooth',
-            roughness: 0.18, metalness: 0 }),
+            roughness: 0.42, metalness: 0 }),
           parent: actor, parentBone: skeleton.index('head'),
           offset: [0, -(HB ? HB.chinY : -0.36) * headScale, 0.006 * scale],
           scale: headScale, boundRadius: 0.45 * scale,

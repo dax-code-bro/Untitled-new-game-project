@@ -234,7 +234,12 @@ function makeHumanoidMesh(skeleton, opts = {}) {
         ng.tri(remap.get(neckT[t]), remap.get(neckT[t + 1]), remap.get(neckT[t + 2]));
       }
       ng.finalize();
-      g.indices = keepT.length ? new (g.indices.constructor)(keepT) : g.indices;
+      /* A PLAIN ARRAY, not `new (g.indices.constructor)(keepT)`.
+         g.indices is a plain Array at this point, and `new Array(arr)`
+         does not copy it -- it makes a one-element array CONTAINING it.
+         The body came back with an index count of exactly 1 and every
+         character in the game rendered as a floating neck. */
+      g.indices = keepT.length ? keepT : g.indices;
       g.neck = solveSkinWeights(ng, skeleton);
     }
   }

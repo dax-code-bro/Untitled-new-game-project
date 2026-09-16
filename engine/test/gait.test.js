@@ -310,6 +310,27 @@ function check(name, cond, detail = '') {
     }
     return out;
   });
+  /* THE BODY IS STILL A BODY.
+     Splitting the neck off onto its own material rebuilt the body's
+     index list, and the rebuild silently produced an array of length
+     ONE -- so every character in the game rendered as a floating neck
+     and nothing else. Nothing above would have caught it: the weights
+     were fine, the skeleton was fine, the poses were fine. Count the
+     triangles. */
+  const solid = await page.evaluate(() => {
+    const c = window.row[0];
+    return {
+      body: c.mesh ? c.mesh.indexCount : 0,
+      verts: c.mesh ? c.mesh.vertexCount : 0,
+      neck: c.neck && c.neck.mesh ? c.neck.mesh.indexCount : 0,
+    };
+  });
+  console.log(`  .. body ${solid.verts} verts / ${solid.body} indices, neck ${solid.neck} indices`);
+  check('the body still has most of its triangles after the neck is split off',
+    solid.body > solid.verts * 3, `${solid.body} indices on ${solid.verts} vertices`);
+  check('and the neck came out as a real piece of geometry',
+    solid.neck > 60, `${solid.neck} indices`);
+
   if (skin.err) check('the body can be measured at all', false, skin.err);
   else {
     console.log(`  .. skin: ${skin.tagged} part tags, worst edge stretch ${skin.worst.toFixed(1)}x (${skin.note}), ${skin.bad} edges past 3x`);

@@ -9122,7 +9122,7 @@ const HAIR_STYLES = {
    hard edge, which is what made every bearded face read as a mask. */
 const BEARD_STYLES = {
   stubble:   { u: [0.06, 0.30], w: [0.44, 1.00], x: 0.62, thick: 0.0022 },
-  moustache: { u: [0.252, 0.302], w: [0.74, 1.00], x: 0.22, thick: 0.0042 },
+  moustache: { u: [0.252, 0.302], w: [0.74, 1.00], x: 0.24, thick: 0.0042, overLip: true },
   goatee:    { u: [0.05, 0.285], w: [0.72, 1.00], x: 0.19, thick: 0.0060 },
   chops:     { u: [0.20, 0.50], w: [0.26, 0.66], xMin: 0.36, x: 0.80, thick: 0.0050 },
   full:      { u: [0.04, 0.305], w: [0.42, 1.00], x: 0.60, thick: 0.0072 },
@@ -9284,8 +9284,29 @@ function makeBrowGeometry(headGeo, style) {
 function makeBeardGeometry(headGeo, style) {
   const S = BEARD_STYLES[style];
   if (!S) return null;
-  const keep = (u, w, xn) => u > S.u[0] && u < S.u[1] && w > S.w[0] && w < S.w[1]
-    && xn < S.x && xn > (S.xMin || 0);
+  /* THE MOUTH IS NOT PART OF THE BEARD.
+   *
+     A beard covers the chin, the jaw and the upper lip, and it stops at
+     the lip line -- that is what makes it a beard rather than a muzzle.
+     The band alone does not know that: the lip centre sits at u 0.233
+     on this rig and a full beard runs u 0.04 to 0.305, so it ran
+     straight over the mouth and the only thing visible of Delta's was
+     the tip of his lower lip poking through the shell. A pale peg under
+     the nose, which is what I was looking at and could not name.
+
+     So a hole, at the front of the face only, over the lip aperture --
+     the sides of the band are untouched, because a beard genuinely does
+     grow to the corners of the mouth. Styles that are ONLY a moustache
+     sit above the hole and never meet it. */
+  const LIP = S.lips || [0.198, 0.272];
+  const keep = (u, w, xn) => {
+    if (!(u > S.u[0] && u < S.u[1] && w > S.w[0] && w < S.w[1]
+      && xn < S.x && xn > (S.xMin || 0))) return false;
+    if (S.overLip) return true;
+    // The aperture: lip height, the front of the face, inside the corners.
+    if (u > LIP[0] && u < LIP[1] && w > 0.86 && xn < 0.40) return false;
+    return true;
+  };
   return offsetPatch(headGeo, keep, S.thick, null);
 }
 
@@ -10479,7 +10500,12 @@ function makeHumanoidMesh(skeleton, opts = {}) {
         ng.tri(remap.get(neckT[t]), remap.get(neckT[t + 1]), remap.get(neckT[t + 2]));
       }
       ng.finalize();
-      g.indices = keepT.length ? new (g.indices.constructor)(keepT) : g.indices;
+      /* A PLAIN ARRAY, not `new (g.indices.constructor)(keepT)`.
+         g.indices is a plain Array at this point, and `new Array(arr)`
+         does not copy it -- it makes a one-element array CONTAINING it.
+         The body came back with an index count of exactly 1 and every
+         character in the game rendered as a floating neck. */
+      g.indices = keepT.length ? keepT : g.indices;
       g.neck = solveSkinWeights(ng, skeleton);
     }
   }
@@ -11526,12 +11552,26 @@ function buildLips(g, o = {}) {
 const EYE = {
   sx: 0.091,          // half the pupil separation
   cy: 0.032,
-  apertureX: 0.046, apertureY: 0.017, apertureZ: 0.234,
-  // The globe sits ~28 mm behind the lid margin. That gap is the whole
-  // trick: it puts the opening in shadow, so the eye reads as a hole with
-  // something wet in it rather than as a bead resting on the cheek.
-  globeR: 0.034, globeZ: 0.186, globeFlatten: 0.85,
-  corneaR: 0.022, corneaOffset: 0.015,
+  /* THE APERTURE, and it was far too small.
+   *
+     A palpebral fissure is about 30 mm across and 10 tall on a head
+     232 mm high -- thirteen per cent of the head's width, and four of
+     its height. This opened 0.046 half-width on a head 0.45 across,
+     which is twenty per cent of the width... except the head takes a
+     0.82 horizontal squeeze afterwards and the eye is read through
+     lids that overlap it, and what actually came out on screen was a
+     circle about four per cent across. Two ball bearings pressed into a
+     face.
+
+     Widened to a real fissure and flattened to a real one: an eye is an
+     ALMOND, three times as wide as it is tall, and the single thing
+     that most separates a face from a doll is that ratio. The globe
+     comes forward 6 mm with it, because an opening that wide over a
+     globe set 28 mm back shows the socket behind it rather than the
+     eye. */
+  apertureX: 0.062, apertureY: 0.021, apertureZ: 0.232,
+  globeR: 0.034, globeZ: 0.192, globeFlatten: 0.85,
+  corneaR: 0.024, corneaOffset: 0.016,
 };
 
 function buildEyelids(g, o = {}) {
@@ -14269,8 +14309,11 @@ class Engine {
         em.setupInstancing(20);
         const ea = new Actor(this, {
           name: 'eyes', mesh: em,
+          /* Roughness 0.42, not 0.18. A sclera is wet but it is not
+             chrome, and at 0.18 over a flat white the two of them came
+             back as ball bearings -- the specular was the whole read. */
           material: this.material({ color: 0xffffff, texture: 'smooth',
-            roughness: 0.18, metalness: 0 }),
+            roughness: 0.42, metalness: 0 }),
           parent: actor, parentBone: skeleton.index('head'),
           offset: [0, -(HB ? HB.chinY : -0.36) * headScale, 0.006 * scale],
           scale: headScale, boundRadius: 0.45 * scale,
@@ -15105,7 +15148,7 @@ function quickStart(opts = {}) {
    less saturated than it looks on a palette. */
 const OP_SKIN = {
   fair: 0xf0cdb4, ruddy: 0xdda88c, olive: 0xc49a72,
-  tan: 0xa87c56, brown: 0x7d5636, deep: 0x53381f, ash: 0xcabdae,
+  tan: 0xa87c56, brown: 0x8d6440, deep: 0x70502f, ash: 0xcabdae,
 };
 
 /* ------------------------------------------------------------------
@@ -15514,8 +15557,15 @@ Engine.prototype.operator = function (id, opts = {}) {
        colour, four of them bald and none of them with eyebrows, is one
        man seven times, and no amount of differentiating their SKULLS
        was ever going to survive that. */
+    /* uvScale 12, and this one is worth spelling out. The head's UVs
+       run 0..1 across the whole sculpt, so the default uvScale of 1
+       stretches ONE tile of the skin recipe over an entire face --
+       pores the size of an eye socket. Close up it read as orange peel,
+       or on the darker tones as scorched leather, and it was doing more
+       damage to "is this a person" than any amount of sculpting could
+       undo. Twelve tiles puts the grain at roughly skin scale. */
     skin: opts.skin || { preset: 'skin', color: OP_SKIN[op.skin] || OP_SKIN.tan,
-      roughness: 0.62, metalness: 0 },
+      roughness: 0.62, metalness: 0, uvScale: 12 },
   }));
   if (c) { c.operator = op.id; c.operatorSpec = op; }
   return c;
