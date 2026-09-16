@@ -172,6 +172,78 @@ const note = (s) => console.log(`  ..   ${s}`);
     skipped.youVisible === false);
   check('with everybody else visible again', skipped.killerVisible === true);
 
+  /* Measured DURING the match. The first version of this ran after the
+     end screen, and a finished match returns from its own tick before
+     it places anybody -- so every gun still sat where the Best Play
+     replay had left it, up to seventy-seven metres from the man
+     holding it, and the check reported a broken feature that works. */
+  /* ----------------------------------------------------------------
+     AND EVERYBODY IS CARRYING SOMETHING.
+     ----------------------------------------------------------------
+     Twelve people in a firefight with empty hands is what this match
+     was until now. The weapon has to be the one the kill feed names,
+     it has to be a real model rather than a placeholder box, and it
+     has to be near the man holding it.
+     -------------------------------------------------------------- */
+  const armed = await page.evaluate(async () => {
+    const M = window.MP.match;
+    for (let i = 0; i < 20; i++) await new Promise((r) => requestAnimationFrame(r));
+    const rows = [];
+    for (const p of M.people) {
+      if (p.id === M.you.id || !p.alive) continue;
+      const held = p.guns[p.held];
+      const a = p._arms && p._arms[held.id || held.base];
+      rows.push({
+        id: p.id, want: held.id || held.base, has: !!a,
+        shown: !!(a && a.visible),
+        verts: a && a.mesh ? a.mesh.vertexCount : 0,
+        parts: a && a.partNames ? a.partNames.length : 0,
+        d: a ? Math.hypot(a.position.x - p.pos.x, a.position.z - p.pos.z) : -1,
+        up: a ? a.position.y - p.pos.y : -1,
+      });
+    }
+    return rows;
+  });
+  note(`${armed.length} others alive; ${armed.filter((r) => r.shown).length} visibly armed`);
+  note(`e.g. ${armed.slice(0, 3).map((r) => `${r.want} ${r.parts} parts ${r.verts} verts`
+    + ` ${r.d.toFixed(2)}m out, ${r.up.toFixed(2)}m up`).join(' | ')}`);
+  check('every man alive is holding a weapon', armed.length > 0 && armed.every((r) => r.shown),
+    armed.filter((r) => !r.shown).map((r) => `${r.id}:${r.want}`).join(' '));
+  check('and it is a real model, not a box',
+    armed.every((r) => r.parts > 3 && r.verts > 200),
+    armed.map((r) => `${r.parts}/${r.verts}`).slice(0, 3).join(' '));
+  check('carried at the chest, in his own hands',
+    armed.every((r) => r.d < 0.6 && r.up > 0.9 && r.up < 1.7),
+    armed.map((r) => `${r.d.toFixed(2)}/${r.up.toFixed(2)}`).slice(0, 3).join(' '));
+
+
+  /* A deliberate look at one of them, from behind and to the side, so
+     there is a picture of an armed man rather than an inference from
+     three numbers. */
+  /* MOVE THE PLAYER, NOT THE CAMERA. The game loop points the camera
+     from the player's eye every single frame, so calling lookAt from
+     outside it is overwritten before the shutter opens -- the first
+     attempt photographed the player's own view of an empty street and
+     I nearly filed it as the picture of an armed man. */
+  await page.evaluate(async () => {
+    const G = window.MP, M = G.match;
+    const t = M.people.find((p) => p.id !== M.you.id && p.alive);
+    const f = { x: Math.sin(t.yaw), z: Math.cos(t.yaw) };
+    const r = { x: -Math.cos(t.yaw), z: Math.sin(t.yaw) };
+    for (let i = 0; i < 14; i++) {
+      /* Held there: he is a bot and he will walk off, and the match
+         puts the player back on the navmesh every tick. */
+      M.you.pos.x = t.pos.x - f.x * 2.6 + r.x * 1.5;
+      M.you.pos.z = t.pos.z - f.z * 2.6 + r.z * 1.5;
+      M.you.pos.y = t.pos.y;
+      G.look(Math.atan2(t.pos.x - M.you.pos.x, t.pos.z - M.you.pos.z), 0.06);
+      await new Promise((rf) => requestAnimationFrame(rf));
+    }
+  });
+  await page.screenshot({ path: path.join(OUT, 'armed.jpg'), type: 'jpeg', quality: 88 });
+  note(`armed -> ${path.join(OUT, 'armed.jpg')}`);
+
+
   /* --------------------------------------------------------------
      BEST PLAY. A double kill by one man, then long enough for the run
      to close and be cut out of the tape.

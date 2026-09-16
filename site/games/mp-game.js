@@ -1013,9 +1013,33 @@
         var fw = { x: Math.sin(a.yaw), z: Math.cos(a.yaw) };
         var rt = { x: -Math.cos(a.yaw), z: Math.sin(a.yaw) };     // see RIGHT, mp-match
         var sw = Math.sin(f * Math.PI) * 1.15;
-        var cx = a.x - fw.x * 3.5 + rt.x * sw;
-        var cz = a.z - fw.z * 3.5 + rt.z * sw;
-        game.lookAt([cx, a.y + EYE + 1.05, cz], [a.x + fw.x * 1.2, a.y + EYE - 0.15, a.z + fw.z * 1.2]);
+        var back = 3.5, lift = 1.05;
+        var hx = a.x, hy = a.y + EYE, hz = a.z;
+        var cx = hx - fw.x * back + rt.x * sw;
+        var cy = hy + lift;
+        var cz = hz - fw.z * back + rt.z * sw;
+        /* PULL IN IF THERE IS A WALL BEHIND HIM. A chase camera that
+           reverses into the building he is standing against shows the
+           inside of a wall with a man's name over it, which is what
+           the first Best Play screenshot came back as. Cast from his
+           head out to where the camera wants to be, and stop short of
+           whatever it hits. */
+        var dx = cx - hx, dy = cy - hy, dz = cz - hz;
+        var len = Math.hypot(dx, dy, dz) || 1e-6;
+        try {
+          var hit = game.raycast([hx, hy, hz], [dx / len, dy / len, dz / len], len,
+            function (b) { return b && !b.isTrigger && !(b.userData && b.userData.actor); });
+          /* The hit reports a POINT, not a distance -- mp-match's own
+             nav sweep measures it off hit.point for the same reason. */
+          var hd = hit && hit.point
+            ? Math.hypot(hit.point.x - hx, hit.point.y - hy, hit.point.z - hz)
+            : (hit && hit.distance != null ? hit.distance : Infinity);
+          if (hd < len) {
+            var k = Math.max(0.35, (hd - 0.28) / len);
+            cx = hx + dx * k; cy = hy + dy * k; cz = hz + dz * k;
+          }
+        } catch (e) { /* no physics on this map: keep the wide shot */ }
+        game.lookAt([cx, cy, cz], [a.x + fw.x * 1.2, hy - 0.15, a.z + fw.z * 1.2]);
       } else {
         var e = list[S.eye] || list[0];
         var cp = Math.cos(e.pitch);

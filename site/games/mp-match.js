@@ -47,6 +47,9 @@
   var W = window;
   var HEALTH = 100;
   var EYE = 1.62;
+  /* Scratch quaternions for the carried weapon, made on first use --
+     this file is parsed before the engine has necessarily run. */
+  var _q1 = null, _q2 = null;
   var RESPAWN = 5.0;            // seconds, team deathmatch
   var NAV_CELL = 0.55;
   var NAV_Y = 1.05;
@@ -833,6 +836,7 @@
       if (M.mode.id === 'tdm') M.score[from.team]++;
     }
     if (to.actor && to.actor.controller) to.actor.controller.teleport([to.pos.x, -60, to.pos.z]);
+    if (to._armShown) showArm(to._armShown, false);
     var ev = { t: M.time, kind: 'kill', by: from ? from.id : null, who: to.id, head: !!head,
       weapon: from ? gun(from).id : null,
       /* Everything Best Play needs to weigh this later, taken NOW --
@@ -1235,6 +1239,7 @@
     if (p.actor && p.actor.controller && !M.replaying) {
       p.actor.controller.teleport([p.pos.x, p.pos.y + lift(p), p.pos.z]);
       face(p.actor, p.yaw);
+      carry(M, p, p.yaw, p.pitch, p.sprinting, p.alive);
     }
   }
 
@@ -1251,6 +1256,115 @@
      speed is measured from the position actually travelled rather than
      from any velocity field -- the match has three or four paths that
      move a body and only some of them bother to record why. */
+  /* ================================================================
+     THE GUN IN HIS HANDS
+     ================================================================
+     Nobody in this match was carrying anything. Twelve people in a
+     firefight with empty hands, shooting each other with weapons that
+     existed only as numbers -- and the engine has fifty-seven fully
+     modelled ones sitting in a cache. It is the single largest thing
+     missing from a shot of this game.
+
+     THE MODEL IS THE REAL ONE. The same serviceArm build the
+     viewmodel uses, so the man across the street is holding the gun
+     the kill feed is about to name. Geometry is cached per weapon id
+     inside the engine (armCache), so twelve men carrying four
+     different rifles between them build four models, not twelve.
+
+     IT IS PLACED IN THE MAN'S FRAME, NOT ON HIS HAND. Attaching it to
+     the hand bone tracks the arm, which sounds better and is worse:
+     these bodies swing their arms like a man walking to the shops,
+     because the walk cycle does not know he is armed. A rifle riding
+     that swing is a rifle being waved about. Carried at the chest and
+     pointed where he is pointed, it reads as a weapon at the ready
+     from any distance anybody will ever see it from.
+
+     (The upper body should have its own carry pose, and then the hand
+     is the right place for it. That is a bigger job than this one and
+     is not pretended at here.) */
+
+  function armOf(M, p) {
+    if (!p.actor || !M.game) return null;
+    var g = gun(p);
+    var id = g && (g.id || g.base);
+    if (!id) return null;
+    p._arms = p._arms || {};
+    if (p._arms[id] !== undefined) return p._arms[id];
+    var made = null;
+    try {
+      made = M.game.serviceArm(id, { at: [0, -90, 0], physics: false });
+    } catch (e) { made = null; }
+    if (!made) {
+      /* A gun with no model is the wrong gun, never an empty hand. */
+      try { made = M.game.serviceArm('m4', { at: [0, -90, 0], physics: false }); }
+      catch (e2) { made = null; }
+    }
+    p._arms[id] = made;
+    return made;
+  }
+
+  function showArm(a, on) {
+    if (!a) return;
+    if (a.visible === on) return;
+    a.visible = on;
+    if (a.partNames) {
+      for (var i = 0; i < a.partNames.length; i++) {
+        var c = a[a.partNames[i]];
+        if (c && c !== a) c.visible = on;
+      }
+    }
+  }
+
+  /* Carried at the chest, muzzle where he is looking. Dropped to a low
+     ready at a sprint, because a man running flat out does not hold a
+     rifle level -- and the same drop is what the player's own
+     viewmodel does, so the two views agree about what sprinting looks
+     like. */
+  function carry(M, p, yaw, pitch, sprinting, aliveNow) {
+    if (!p.actor) return;
+    /* Not your own. You are inside your own head and the viewmodel is
+       already there; a third-person rifle in the same place is a rifle
+       across the middle of your screen. A replay is the exception --
+       there the camera is somewhere else and you are a man like any
+       other, so you get your gun back. */
+    if (p.id === M.you.id && !M.replaying) {
+      if (p._armShown) showArm(p._armShown, false);
+      return;
+    }
+    var a = armOf(M, p);
+    if (!a) return;
+    if (p._armShown && p._armShown !== a) showArm(p._armShown, false);
+    p._armShown = a;
+    if (!aliveNow) { showArm(a, false); return; }
+    showArm(a, true);
+
+    var cy = Math.cos(yaw), sy = Math.sin(yaw);
+    var cp = Math.cos(pitch), sp = Math.sin(pitch);
+    var fx = sy * cp, fy = -sp, fz = cy * cp;
+    var rx = -cy, rz = sy;                       // see face()/RIGHT: right is -X
+    var low = sprinting ? 1 : 0;
+    var h = p.pos.y + (EYE - 0.30) - (p.crouching ? 0.42 : 0) - low * 0.10;
+    var side = 0.11, ahead = 0.17;
+    a.position.set(
+      p.pos.x + rx * side + fx * ahead,
+      h + fy * ahead,
+      p.pos.z + rz * side + fz * ahead
+    );
+    /* Same convention the viewmodel uses: yaw about Y, then the pitch
+       as a roll about Z, because that is the axis the gun models are
+       built along. */
+    var fh = Math.hypot(fx, fz) || 1e-6;
+    var gy = Math.atan2(-fz / fh, fx / fh);
+    var gp = Math.asin(Math.max(-1, Math.min(1, fy))) - low * 0.55;
+    if (!_q1) { _q1 = new W.LE.Quat(); _q2 = new W.LE.Quat(); }
+    _q1.setEuler(0, gy, 0);
+    _q2.setEuler(0, 0, gp);
+    _q1.mulQuats(_q1, _q2);
+    if (low) { _q2.setEuler(0.40, 0, 0); _q1.mulQuats(_q1, _q2); }
+    a.rotation.copy(_q1);
+    a._still = false;
+  }
+
   /* WHICH WAY A BODY IS POINTING.
      ================================================================
      Setting actor.rotation does NOTHING to a character. The engine
@@ -1336,9 +1450,19 @@
     for (var i = 0; i < M.people.length && i < list.length; i++) {
       var p = M.people[i], e = list[i];
       if (!p.actor || !p.actor.controller) continue;
-      if (!e.alive) { p.actor.controller.teleport([e.x, -60, e.z]); continue; }
+      if (!e.alive) {
+        p.actor.controller.teleport([e.x, -60, e.z]);
+        if (p._armShown) showArm(p._armShown, false);
+        continue;
+      }
       p.actor.controller.teleport([e.x, e.y + lift(p), e.z]);
       face(p.actor, e.yaw);
+      /* The replay's weapons come off the tape too, or a kill cam shows
+         everybody holding their guns where they are standing NOW. */
+      var keep = { x: p.pos.x, y: p.pos.y, z: p.pos.z }, keepC = p.crouching;
+      p.pos.x = e.x; p.pos.y = e.y; p.pos.z = e.z; p.crouching = e.crouching;
+      carry(M, p, e.yaw, e.pitch, e.sprinting, e.alive);
+      p.pos.x = keep.x; p.pos.y = keep.y; p.pos.z = keep.z; p.crouching = keepC;
       var a = p.actor.animator;
       if (!a) continue;
       p.actor.controller.autoAnimate = false;
