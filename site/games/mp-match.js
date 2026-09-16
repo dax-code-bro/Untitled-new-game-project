@@ -518,6 +518,9 @@
       if (p.actor && p.actor.body) p.actor.body.userData = { actor: true, mp: p.id };
     });
 
+    recInit(M);
+    hlInit(M);
+
     /* ---- the first spawn ---- */
     people.forEach(function (p) { spawn(M, p, true); });
     if (mode.bomb) armRound(M);
@@ -530,6 +533,13 @@
     M.control = function (cmd, dt) { control(M, cmd, dt); };
     M._emit = emit;
     M.nav = nav;
+    M.recAt = function (t, out) { return recAt(M, t, out); };
+    M.recSpan = function () { return recSpan(M); };
+    M.bestPlay = function () { return bestPlay(M); };
+    M.tapeAt = function (tape, t, out) { return tapeAt(tape, t, out); };
+    M.clip = function (t0, t1) { return clipOut(M.rec, t0, t1); };
+    M.pose = function (list, dt) { pose(M, list, dt); };
+    M.unpose = function () { unpose(M); };
     return M;
   }
 
@@ -701,6 +711,9 @@
     if (p.ammo[p.held] <= 0) { beginReload(M, p); return null; }
     p.ammo[p.held]--;
     p.nextShot = M.time + 60 / w.rpm;
+    // Stamped so the recorder can flag this tick as a shot -- a replay
+    // with no muzzle flashes is a replay of people jogging.
+    p.lastShotAt = M.time;
     if (M.stats) M.stats.shots++;
     kickFrom(M, p, w, rand);
 
@@ -819,10 +832,289 @@
     }
     if (to.actor && to.actor.controller) to.actor.controller.teleport([to.pos.x, -60, to.pos.z]);
     var ev = { t: M.time, kind: 'kill', by: from ? from.id : null, who: to.id, head: !!head,
-      weapon: from ? gun(from).id : null };
+      weapon: from ? gun(from).id : null,
+      /* Everything Best Play needs to weigh this later, taken NOW --
+         the range and the score are gone a second after the fact and
+         cannot be recovered from a scoreboard. */
+      at: [to.pos.x, to.pos.y, to.pos.z],
+      range: from ? Math.hypot(from.pos.x - to.pos.x, from.pos.z - to.pos.z) : 0,
+      score: [M.score.a, M.score.b] };
     M.events.push(ev);
     emit(ev);
     return dealt;
+  }
+
+  /* ================================================================
+     THE RECORDER
+     ================================================================
+     A kill cam and a Best Play are the same machine twice: both need to
+     know where everybody WAS, not where they are, and neither can be
+     reconstructed after the fact from a scoreboard.
+
+     So the match keeps a rolling tape. Twenty samples a second -- not
+     sixty, because a replay is watched at a distance and the difference
+     between 20 Hz and 60 Hz of a running man is invisible while the
+     memory is three times the size. Each sample is a flat array rather
+     than an object per player: twelve objects a tick, twenty ticks a
+     second, for a ten-minute match is fourteen million allocations and
+     a garbage collector pause every few seconds, which would show up as
+     exactly the stutter this game has been accused of.
+
+     REC_SECONDS is what the kill cam needs. Best Play keeps its own
+     sparser highlight list instead of a ten-minute tape, because the
+     interesting parts of a match are seconds long and minutes apart. */
+  var REC_HZ = 20;
+  var REC_SECONDS = 8;
+  var REC_STRIDE = 6;              // x, y, z, yaw, pitch, flags per person
+
+  function recInit(M) {
+    var n = M.people.length;
+    M.rec = {
+      hz: REC_HZ, stride: REC_STRIDE, people: n,
+      frames: Math.ceil(REC_HZ * REC_SECONDS),
+      data: new Float32Array(Math.ceil(REC_HZ * REC_SECONDS) * n * REC_STRIDE),
+      time: new Float32Array(Math.ceil(REC_HZ * REC_SECONDS)),
+      head: 0, filled: 0, acc: 0,
+    };
+  }
+
+  function recSample(M, dt) {
+    var R = M.rec;
+    if (!R) return;
+    R.acc += dt;
+    if (R.acc < 1 / R.hz) return;
+    R.acc = 0;
+    var base = R.head * R.people * R.stride;
+    for (var i = 0; i < R.people; i++) {
+      var p = M.people[i], o = base + i * R.stride;
+      R.data[o] = p.pos.x; R.data[o + 1] = p.pos.y; R.data[o + 2] = p.pos.z;
+      R.data[o + 3] = p.yaw; R.data[o + 4] = p.pitch;
+      /* One float of state, packed: alive, firing, sprinting, crouching.
+         A replay that shows everybody standing upright and still is a
+         replay of a diagram. */
+      R.data[o + 5] = (p.alive ? 1 : 0) + (M.time - (p.lastShotAt || -9) < 0.12 ? 2 : 0)
+        + (p.sprinting ? 4 : 0) + (p.crouching ? 8 : 0);
+    }
+    R.time[R.head] = M.time;
+    R.head = (R.head + 1) % R.frames;
+    if (R.filled < R.frames) R.filled++;
+  }
+
+  /* Read the tape at a time, interpolating between the two samples
+     either side of it -- twenty a second is smooth enough to watch only
+     if it is not also played back at twenty. */
+  function recAt(M, t, out) { return tapeAt(M.rec, t, out); }
+
+  function tapeAt(R, t, out) {
+    if (!R || !R.filled) return null;
+    var oldest = (R.head - R.filled + R.frames) % R.frames;
+    var a = -1, b = -1, f = 0;
+    for (var k = 0; k < R.filled - 1; k++) {
+      var i0 = (oldest + k) % R.frames, i1 = (oldest + k + 1) % R.frames;
+      if (R.time[i0] <= t && R.time[i1] >= t) {
+        a = i0; b = i1;
+        var span = R.time[i1] - R.time[i0];
+        f = span > 1e-6 ? (t - R.time[i0]) / span : 0;
+        break;
+      }
+    }
+    if (a < 0) {
+      /* Off either end of the tape: hold the nearest frame rather than
+         returning nothing, so a playback that overshoots by a frame
+         freezes for a frame instead of snapping back to live state. */
+      a = b = R.time[oldest] > t ? oldest : (R.head - 1 + R.frames) % R.frames;
+      f = 0;
+    }
+    out = out || [];
+    for (var i = 0; i < R.people; i++) {
+      var oa = a * R.people * R.stride + i * R.stride;
+      var ob = b * R.people * R.stride + i * R.stride;
+      var e = out[i] || (out[i] = {});
+      e.x = R.data[oa] + (R.data[ob] - R.data[oa]) * f;
+      e.y = R.data[oa + 1] + (R.data[ob + 1] - R.data[oa + 1]) * f;
+      e.z = R.data[oa + 2] + (R.data[ob + 2] - R.data[oa + 2]) * f;
+      /* Yaw wraps, and lerping across the wrap spins a man round twice
+         in a tenth of a second. Take the short way. */
+      var dy = R.data[ob + 3] - R.data[oa + 3];
+      while (dy > Math.PI) dy -= Math.PI * 2;
+      while (dy < -Math.PI) dy += Math.PI * 2;
+      e.yaw = R.data[oa + 3] + dy * f;
+      e.pitch = R.data[oa + 4] + (R.data[ob + 4] - R.data[oa + 4]) * f;
+      /* Flags are not interpolated -- half a muzzle flash is not a
+         thing. Take the frame we are nearest to. */
+      var fl = R.data[(f < 0.5 ? oa : ob) + 5];
+      e.alive = !!(fl & 1); e.firing = !!(fl & 2);
+      e.sprinting = !!(fl & 4); e.crouching = !!(fl & 8);
+    }
+    out.length = R.people;
+    return out;
+  }
+
+  /* How far back the tape goes, so a caller can ask for a window it
+     actually has rather than one it would like. */
+  function recSpan(M) {
+    var R = M.rec;
+    if (!R || R.filled < 2) return null;
+    var oldest = (R.head - R.filled + R.frames) % R.frames;
+    var newest = (R.head - 1 + R.frames) % R.frames;
+    return { from: R.time[oldest], to: R.time[newest] };
+  }
+
+  /* Cut a standalone tape out of the rolling one. A clip is the same
+     shape as the ring buffer with its head parked at zero and the
+     buffer exactly full, so tapeAt reads it without knowing which it
+     has been handed. */
+  function clipOut(R, t0, t1) {
+    if (!R || R.filled < 2) return null;
+    var oldest = (R.head - R.filled + R.frames) % R.frames;
+    var from = -1, to = -1;
+    for (var k = 0; k < R.filled; k++) {
+      var i = (oldest + k) % R.frames;
+      if (R.time[i] >= t0 && from < 0) from = k > 0 ? k - 1 : k;   // one frame of lead-in
+      if (R.time[i] <= t1) to = k;
+    }
+    if (from < 0) from = 0;
+    if (to < from) to = Math.min(R.filled - 1, from + 1);
+    if (to < R.filled - 1) to++;                                    // and one of lead-out
+    var n = to - from + 1;
+    if (n < 2) return null;
+    var w = R.people * R.stride;
+    var clip = {
+      hz: R.hz, stride: R.stride, people: R.people,
+      frames: n, head: 0, filled: n,
+      data: new Float32Array(n * w), time: new Float32Array(n),
+    };
+    for (var f2 = 0; f2 < n; f2++) {
+      var src = ((oldest + from + f2) % R.frames) * w;
+      clip.data.set(R.data.subarray(src, src + w), f2 * w);
+      clip.time[f2] = R.time[(oldest + from + f2) % R.frames];
+    }
+    return clip;
+  }
+
+  /* ================================================================
+     BEST PLAY
+     ================================================================
+     "Replay the best moment of the match." Which means deciding what
+     best IS, and that decision is the whole feature -- a highlight reel
+     that picks the wrong five seconds is worse than none, because it
+     tells the player the game was not watching.
+
+     What it weighs, in the order the weights say:
+
+       a multi-kill      most. Two men inside four seconds is the thing
+                         anybody would clip, and three is the match.
+       a long shot       a kill at sixty metres is a different act from
+                         one at six, and the range is recorded per kill
+                         because it cannot be recovered afterwards.
+       a headshot        a choice rather than an accident, mostly.
+       being behind      the same double kill means more when your side
+                         was losing, which is why the score at the
+                         moment of the kill is on the event.
+       surviving it      a trade where you died a second later is not a
+                         best play, it is a mutual accident.
+
+     Ties go to the LATER moment, because a match builds.
+
+     The rolling tape is eight seconds long and a match is ten minutes,
+     so a best play found at the end cannot be replayed from it. Runs
+     are therefore scored as they close and the good ones are CUT OUT
+     of the tape at the time, keeping the best four. Four clips of four
+     seconds is about ninety kilobytes; a ten-minute tape of everybody
+     would be eleven megabytes and would be thrown away unwatched. */
+  var HL_WINDOW = 4.0;      // kills this close together are one play
+  var HL_LEAD = 2.2;        // seconds of run-up shown before the first
+  var HL_TAIL = 1.4;        // and of aftermath after the last
+  var HL_KEEP = 4;
+
+  function hlInit(M) {
+    M.highlights = [];
+    M._hlPend = [];
+    M._hlSeen = 0;
+  }
+
+  /* Score one run of kills. Returns null for a run that should not be
+     considered at all (a suicide, a killer who has left). */
+  function hlScore(M, run) {
+    var k = run[0], who = M.people[k.by];
+    if (!who) return null;
+    var n = run.length;
+    var score = n * n * 100;                            // a double is 4x a single
+    var far = 0, heads = 0;
+    for (var r = 0; r < run.length; r++) {
+      far = Math.max(far, run[r].range || 0);
+      if (run[r].head) heads++;
+    }
+    score += Math.min(60, far) * 1.6;
+    score += heads * 45;
+    /* Behind at the time. The kill carries the score as it stood, so
+       this is what the board said then and not what it says now. */
+    var mine = k.score ? k.score[who.team === 'a' ? 0 : 1] : 0;
+    var theirs = k.score ? k.score[who.team === 'a' ? 1 : 0] : 0;
+    if (theirs > mine) score += Math.min(40, (theirs - mine) * 8);
+    // Died right after: a trade, not a play.
+    var last = run[run.length - 1];
+    var diedAfter = M.events.some(function (e) {
+      return e.kind === 'kill' && e.who === k.by && e.t > k.t && e.t < last.t + HL_TAIL + 1.5;
+    });
+    if (diedAfter) score *= 0.55;
+    return {
+      score: score, by: k.by, name: who.name, team: who.team,
+      kills: n, heads: heads, range: far,
+      from: k.t - HL_LEAD, to: last.t + HL_TAIL, at: k.at, t: k.t,
+    };
+  }
+
+  /* Called every tick. Groups new kills into runs, then cuts out the
+     ones worth keeping once their window has closed. */
+  function hlTick(M) {
+    var P = M._hlPend;
+    for (; M._hlSeen < M.events.length; M._hlSeen++) {
+      var e = M.events[M._hlSeen];
+      if (e.kind !== 'kill' || e.by == null || e.by === e.who) continue;
+      var open = null;
+      for (var i = 0; i < P.length; i++) {
+        if (P[i].by === e.by && e.t - P[i].run[0].t <= HL_WINDOW) { open = P[i]; break; }
+      }
+      if (open) open.run.push(e);
+      else P.push({ by: e.by, run: [e] });
+    }
+    for (var j = P.length - 1; j >= 0; j--) {
+      var p = P[j], last = p.run[p.run.length - 1];
+      /* Closed once no further kill can join the run AND the tail we
+         mean to show has actually been recorded. */
+      if (M.time < Math.max(p.run[0].t + HL_WINDOW, last.t + HL_TAIL) + 0.25) continue;
+      P.splice(j, 1);
+      var h = hlScore(M, p.run);
+      if (!h) continue;
+      var worst = M.highlights.length >= HL_KEEP
+        ? M.highlights.reduce(function (a, b) { return b.score < a.score ? b : a; })
+        : null;
+      if (worst && h.score <= worst.score) continue;
+      var span = recSpan(M);
+      if (span) h.from = Math.max(h.from, span.from);
+      h.clip = clipOut(M.rec, h.from, h.to);
+      if (!h.clip) continue;
+      if (worst) M.highlights.splice(M.highlights.indexOf(worst), 1);
+      M.highlights.push(h);
+    }
+  }
+
+  /* End of match: close anything still open, then hand back the best
+     one. Ties go to the later moment. */
+  function bestPlay(M) {
+    if (M._hlPend && M._hlPend.length) {
+      var save = M.time;
+      M.time = 1e9;                 // force every pending run closed
+      hlTick(M);
+      M.time = save;
+    }
+    var best = null;
+    for (var i = 0; i < M.highlights.length; i++) {
+      var h = M.highlights[i];
+      if (!best || h.score > best.score || (h.score === best.score && h.t > best.t)) best = h;
+    }
+    return best;
   }
 
   /* ================================================================
@@ -933,7 +1225,12 @@
         p.vy = 0; p.grounded = true;
       }
     }
-    if (p.actor && p.actor.controller) {
+    /* A replay owns every body on the screen while it runs. The match
+       keeps simulating underneath it -- respawn timers, the round
+       clock, the bots -- but if it also kept placing the actors the
+       kill cam would show twelve men standing where they are NOW while
+       the camera flew to where one of them WAS. */
+    if (p.actor && p.actor.controller && !M.replaying) {
       p.actor.controller.teleport([p.pos.x, p.pos.y + 0.9, p.pos.z]);
       if (p.actor.rotation && p.actor.rotation.setFromAxisAngle) {
         p.actor.rotation.setFromAxisAngle([0, 1, 0], p.yaw);
@@ -991,6 +1288,54 @@
     else if (want === 'run') a.speed = Math.max(0.7, Math.min(1.4, v / 6.0));
     else if (want === 'sprint') a.speed = Math.max(0.85, Math.min(1.2, v / 7.0));
     else a.speed = 1;
+  }
+
+  /* Pose every body from a tape frame instead of from the simulation.
+     This is the whole of what a replay does to the world: the same
+     actors, the same animator, driven by what was recorded rather than
+     by what is happening. Speed is measured from the tape the same way
+     animate measures it from the simulation, because a replay of men
+     sliding about in the bind pose is what the live game looked like
+     before animate existed and it looked like a bug. */
+  function pose(M, list, dt) {
+    if (!list) return;
+    for (var i = 0; i < M.people.length && i < list.length; i++) {
+      var p = M.people[i], e = list[i];
+      if (!p.actor || !p.actor.controller) continue;
+      if (!e.alive) { p.actor.controller.teleport([e.x, -60, e.z]); continue; }
+      p.actor.controller.teleport([e.x, e.y + 0.9, e.z]);
+      if (p.actor.rotation && p.actor.rotation.setFromAxisAngle) {
+        p.actor.rotation.setFromAxisAngle([0, 1, 0], e.yaw);
+      }
+      var a = p.actor.animator;
+      if (!a) continue;
+      p.actor.controller.autoAnimate = false;
+      var last = p._rpPos, sp = 0;
+      if (last && dt > 1e-4) {
+        sp = Math.hypot(e.x - last.x, e.z - last.z) / dt;
+        if (sp > 14) sp = 0;
+      }
+      p._rpPos = { x: e.x, z: e.z };
+      p._rpSpeed = p._rpSpeed == null ? sp : p._rpSpeed + (sp - p._rpSpeed) * Math.min(1, dt * 12);
+      var v = p._rpSpeed;
+      var want = e.sprinting && v > 4.6 ? 'sprint' : v > 4.3 ? 'run' : v > 0.35 ? 'walk' : 'idle';
+      if (want !== p._rpState) { p._rpState = want; a.play(want, 0.16); }
+      if (want === 'walk') a.speed = Math.max(0.5, Math.min(1.7, v / 4.6));
+      else if (want === 'run') a.speed = Math.max(0.7, Math.min(1.4, v / 6.0));
+      else if (want === 'sprint') a.speed = Math.max(0.85, Math.min(1.2, v / 7.0));
+      else a.speed = 1;
+    }
+  }
+
+  /* Handing the world back. The live animator remembers what it last
+     played, so without this everybody keeps whatever the replay left
+     them doing until their speed happens to cross a threshold. */
+  function unpose(M) {
+    for (var i = 0; i < M.people.length; i++) {
+      var p = M.people[i];
+      p._rpPos = null; p._rpSpeed = null; p._rpState = null;
+      p._animState = null; p._animPos = null; p._animSpeed = null;
+    }
   }
 
   /* Turn towards a heading, at a rate. Snapping to face a target is
@@ -1425,6 +1770,8 @@
        everybody. The bots need it to know when their round is slipping
        away, and counting it inside twelve bot brains is twelve times
        the work for the same number. */
+    recSample(M, dt);
+    hlTick(M);
     M.aliveCount = { a: 0, b: 0 };
     for (var c0 = 0; c0 < M.people.length; c0++) {
       if (M.people[c0].alive) M.aliveCount[M.people[c0].team]++;
@@ -1436,7 +1783,7 @@
          a body that stops moving stops calling moveBy, so animating
          from inside the mover left anyone who came to a halt frozen
          mid-stride until they set off again. */
-      if (p.actor) animate(p, dt);
+      if (p.actor && !M.replaying) animate(p, dt);
       if (!p.alive) {
         /* Search and Destroy has no respawns inside a round. The round
            itself puts everybody back, in the first few seconds of it. */

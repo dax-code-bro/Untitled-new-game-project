@@ -896,6 +896,11 @@ class Engine {
         boundRadius: 0.4 * scale,
       });
       this.actors.push(headActor);
+      /* Kept so a test can measure where this skull actually ENDS --
+         which is how the helmet was found to be sitting half a head
+         too low. Geometry you cannot measure is geometry you are
+         guessing about. */
+      headActor.__geo = headGeo;
       actor.head = headActor;
       actor.face = face;
 

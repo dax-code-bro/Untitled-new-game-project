@@ -283,7 +283,12 @@ function check(name, cond, detail = '') {
 
   /* The gun is held on the right hand side and ON SCREEN. */
   const held = await page.evaluate(() => {
-    const vm = window.MP.viewmodel, G = window.MP.game;
+    const vm = window.MP.viewmodel, G = window.MP.game, M = window.MP.match;
+    /* Alive first. The viewmodel is hidden on death, correctly, and a
+       check that runs on a dead player reports the gun invisible and
+       means nothing by it. */
+    M.you.alive = true; M.you.hp = 100;
+    for (let i = 0; i < 3; i++) G.step(1 / 60);
     const g = vm && vm.gun;
     if (!g) return { err: 'no gun model at all' };
     const cam = G.camera, vp = cam.viewProjection || cam.viewProj;

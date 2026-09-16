@@ -538,6 +538,7 @@ Engine.prototype.operator = function (id, opts = {}) {
         boundRadius: 1.4 * op.scale,
       });
       ga.visualOffset = new Vec3(0, 0, 0);
+      ga.__geo = part.geometry;
       this.actors.push(ga);
       c.gear.push(ga);
       // Shares the skeleton rather than hanging off a bone, so it has no

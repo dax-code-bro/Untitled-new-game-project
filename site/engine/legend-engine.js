@@ -8020,34 +8020,166 @@ function makeHumanoidClips() {
     lowerArmR: { keys: [[0, 8, 0, 0], [0.5, 12, 0, 0], [1, 8, 0, 0]] },
   }));
 
-  clips.push(buildClip('walk', 1.0, {
-    hips: { keys: [[0, 0, 0, 2], [0.25, 0, 0, 0], [0.5, 0, 0, -2], [0.75, 0, 0, 0], [1, 0, 0, 2]] },
-    spine: { keys: [[0, 3, 0, 0], [0.5, 3, 0, 0], [1, 3, 0, 0]] },
-    upperLegL: { keys: [[0, 26, 0, 0], [0.5, -22, 0, 0], [1, 26, 0, 0]] },
-    lowerLegL: { keys: [[0, -6, 0, 0], [0.3, -4, 0, 0], [0.6, 42, 0, 0], [1, -6, 0, 0]] },
-    footL: { keys: [[0, -12, 0, 0], [0.5, 8, 0, 0], [1, -12, 0, 0]] },
-    upperLegR: { keys: [[0, -22, 0, 0], [0.5, 26, 0, 0], [1, -22, 0, 0]] },
-    lowerLegR: { keys: [[0, 42, 0, 0], [0.1, 4, 0, 0], [0.5, -6, 0, 0], [1, 42, 0, 0]] },
-    footR: { keys: [[0, 8, 0, 0], [0.5, -12, 0, 0], [1, 8, 0, 0]] },
-    upperArmL: { keys: [[0, -24, 0, -8], [0.5, 24, 0, -8], [1, -24, 0, -8]] },
-    upperArmR: { keys: [[0, 24, 0, 8], [0.5, -24, 0, 8], [1, 24, 0, 8]] },
-    lowerArmL: { keys: [[0, 14, 0, 0], [0.5, 22, 0, 0], [1, 14, 0, 0]] },
-    lowerArmR: { keys: [[0, 22, 0, 0], [0.5, 14, 0, 0], [1, 22, 0, 0]] },
+  /* WALK AND RUN.
+     ================================================================
+     "Every animation is cartoonish." Four reasons, and they are all in
+     the numbers rather than in the taste:
+
+       THE ARMS SWING WITH THE WRONG LEG. upperArmL was -24 at the same
+       instant upperLegL was +26 -- and on this rig a positive upper arm
+       is BACK while a positive upper leg is FORWARD, so the left arm
+       went forward with the left leg. Same side, same time, for the
+       walk and the run both. That is a toy soldier, and it is the
+       single loudest wrong thing a walk cycle can do.
+
+       THE PELVIS WAS NAILED TO ONE HEIGHT. No position track at all, so
+       the hips never rose or fell and the whole man glided. A real walk
+       lifts the body about 46mm twice a cycle, at each mid-stance, and
+       a run about 70mm.
+
+       THE KNEES BARELY BENT. Peak swing flexion was 42 degrees walking
+       and 78 running, against a measured 60-65 and 100-120. Stiff legs
+       swinging from long hips is a march.
+
+       THE TORSO WAS A PLANK. No transverse rotation anywhere: the
+       pelvis and the shoulder girdle counter-rotate against each other
+       through the whole of gait, and without it the arms look bolted
+       to a post.
+
+     Everything below is the Winter gait tables rounded to the degree:
+     hip +28/-12 walking and +55/-20 running, knee 5/62 and 22/112,
+     ankle -9/+14 and -18/+26, pelvic list 4 degrees and rotation 4,
+     stance 62 per cent of the cycle. Phase convention is the sprint's:
+     t=0 is left foot strike. */
+
+  clips.push(buildClip('walk', 1.06, {
+    hips: {
+      /* Rotation keys sit at the position keys' times, because the
+         builder resamples position ONTO the rotation times and a bob
+         sampled at the quarters comes out as a third of itself. */
+      keys: [
+        [0.00, 4, -4.0, 0.0], [0.10, 4, -3.2, 3.0], [0.25, 4, 0.0, 4.0],
+        [0.38, 4, 2.6, 2.6], [0.50, 4, 4.0, 0.0], [0.60, 4, 3.2, -3.0],
+        [0.72, 4, 0.0, -4.0], [0.86, 4, -2.6, -2.6], [1.00, 4, -4.0, 0.0],
+      ],
+      /* Up at each mid-stance over a straight supporting leg, down at
+         each double support. Twice a cycle, 46mm, and about 19mm of
+         sway toward whichever foot is carrying the weight -- +X is the
+         left side of this skeleton (upperLegL sits at x +0.09). */
+      pos: [
+        [0.00, 0.000, -0.031, 0], [0.10, 0.012, -0.016, 0], [0.25, 0.019, 0.015, 0],
+        [0.38, 0.012, 0.002, 0], [0.50, 0.000, -0.031, 0], [0.60, -0.012, -0.016, 0],
+        [0.72, -0.019, 0.015, 0], [0.86, -0.012, 0.002, 0], [1.00, 0.000, -0.031, 0],
+      ],
+    },
+    spine: { keys: [[0, 3, 2.5, 0], [0.25, 3, 0, 0], [0.5, 3, -2.5, 0], [0.75, 3, 0, 0], [1, 3, 2.5, 0]] },
+    chest: { keys: [[0, 2, 5, -1], [0.25, 2, 0, 0], [0.5, 2, -5, 1], [0.75, 2, 0, 0], [1, 2, 5, -1]] },
+    /* The head does not rotate with the shoulders. It stays pointed
+       where the man is going, which is what the neck is for. */
+    neck: { keys: [[0, -2, -3, 0], [0.5, -2, 3, 0], [1, -2, -3, 0]] },
+    head: { keys: [[0, -1, -2, 0], [0.5, -1, 2, 0], [1, -1, -2, 0]] },
+
+    // Left: strike at 0, toe-off at 0.62, swing through to strike again.
+    upperLegL: {
+      keys: [[0.00, 28, 0, 0], [0.10, 22, 0, 0], [0.25, 12, 0, 0], [0.38, 0, 0, 0],
+        [0.50, -10, 0, 0], [0.60, -12, 0, 0], [0.72, 8, 0, 0], [0.86, 30, 0, 0],
+        [1.00, 28, 0, 0]],
+    },
+    /* Two flexion waves, not one. The small one early in stance is the
+       knee taking the landing, and leaving it out is most of what makes
+       a walk look like a pair of scissors. */
+    lowerLegL: {
+      keys: [[0.00, 5, 0, 0], [0.10, 17, 0, 0], [0.25, 8, 0, 0], [0.38, 5, 0, 0],
+        [0.50, 14, 0, 0], [0.60, 40, 0, 0], [0.72, 62, 0, 0], [0.86, 28, 0, 0],
+        [1.00, 5, 0, 0]],
+    },
+    footL: {
+      keys: [[0.00, -4, 0, 0], [0.10, 4, 0, 0], [0.25, -2, 0, 0], [0.38, -9, 0, 0],
+        [0.50, -6, 0, 0], [0.60, 14, 0, 0], [0.72, -6, 0, 0], [0.86, -8, 0, 0],
+        [1.00, -4, 0, 0]],
+    },
+    // Right: the same curve, half a cycle along.
+    upperLegR: {
+      keys: [[0.00, -10, 0, 0], [0.10, -12, 0, 0], [0.22, 8, 0, 0], [0.36, 30, 0, 0],
+        [0.50, 28, 0, 0], [0.60, 22, 0, 0], [0.75, 12, 0, 0], [0.88, 0, 0, 0],
+        [1.00, -10, 0, 0]],
+    },
+    lowerLegR: {
+      keys: [[0.00, 14, 0, 0], [0.10, 40, 0, 0], [0.22, 62, 0, 0], [0.36, 28, 0, 0],
+        [0.50, 5, 0, 0], [0.60, 17, 0, 0], [0.75, 8, 0, 0], [0.88, 5, 0, 0],
+        [1.00, 14, 0, 0]],
+    },
+    footR: {
+      keys: [[0.00, -6, 0, 0], [0.10, 14, 0, 0], [0.22, -6, 0, 0], [0.36, -8, 0, 0],
+        [0.50, -4, 0, 0], [0.60, 4, 0, 0], [0.75, -2, 0, 0], [0.88, -9, 0, 0],
+        [1.00, -6, 0, 0]],
+    },
+
+    /* CONTRALATERAL. A positive upper arm is BACK on this rig, so the
+       left arm is at +16 while the left leg is at +28 forward. This is
+       the line that was inverted. */
+    upperArmL: { keys: [[0, 16, 0, -7], [0.25, 4, 0, -7], [0.5, -10, 0, -7], [0.75, 4, 0, -7], [1, 16, 0, -7]] },
+    upperArmR: { keys: [[0, -10, 0, 7], [0.25, 4, 0, 7], [0.5, 16, 0, 7], [0.75, 4, 0, 7], [1, -10, 0, 7]] },
+    lowerArmL: { keys: [[0, 14, 0, 0], [0.5, 26, 0, 0], [1, 14, 0, 0]] },
+    lowerArmR: { keys: [[0, 26, 0, 0], [0.5, 14, 0, 0], [1, 26, 0, 0]] },
   }));
 
-  clips.push(buildClip('run', 0.62, {
-    hips: { keys: [[0, 8, 0, 3], [0.25, 8, 0, 0], [0.5, 8, 0, -3], [0.75, 8, 0, 0], [1, 8, 0, 3]] },
-    spine: { keys: [[0, 10, 0, 0], [0.5, 10, 0, 0], [1, 10, 0, 0]] },
-    upperLegL: { keys: [[0, 52, 0, 0], [0.5, -38, 0, 0], [1, 52, 0, 0]] },
-    lowerLegL: { keys: [[0, -18, 0, 0], [0.28, -10, 0, 0], [0.62, 78, 0, 0], [1, -18, 0, 0]] },
-    footL: { keys: [[0, -18, 0, 0], [0.5, 14, 0, 0], [1, -18, 0, 0]] },
-    upperLegR: { keys: [[0, -38, 0, 0], [0.5, 52, 0, 0], [1, -38, 0, 0]] },
-    lowerLegR: { keys: [[0, 78, 0, 0], [0.12, 10, 0, 0], [0.5, -18, 0, 0], [1, 78, 0, 0]] },
-    footR: { keys: [[0, 14, 0, 0], [0.5, -18, 0, 0], [1, 14, 0, 0]] },
-    upperArmL: { keys: [[0, -58, 0, -12], [0.5, 48, 0, -12], [1, -58, 0, -12]] },
-    upperArmR: { keys: [[0, 48, 0, 12], [0.5, -58, 0, 12], [1, 48, 0, 12]] },
-    lowerArmL: { keys: [[0, 62, 0, 0], [0.5, 78, 0, 0], [1, 62, 0, 0]] },
-    lowerArmR: { keys: [[0, 78, 0, 0], [0.5, 62, 0, 0], [1, 78, 0, 0]] },
+  clips.push(buildClip('run', 0.70, {
+    hips: {
+      keys: [
+        [0.00, 9, -6, 2], [0.12, 9, -5, 3], [0.22, 9, -3, 2], [0.35, 9, 1, 0],
+        [0.50, 9, 6, -2], [0.62, 9, 5, -3], [0.72, 9, 3, -2], [0.85, 9, -1, 0],
+        [1.00, 9, -6, 2],
+      ],
+      // Lowest over the loaded knee at mid-stance, highest in flight.
+      pos: [
+        [0.00, 0, -0.010, 0], [0.12, 0, -0.042, 0], [0.22, 0, -0.014, 0],
+        [0.35, 0, 0.026, 0], [0.50, 0, -0.010, 0], [0.62, 0, -0.042, 0],
+        [0.72, 0, -0.014, 0], [0.85, 0, 0.026, 0], [1.00, 0, -0.010, 0],
+      ],
+    },
+    spine: { keys: [[0, 10, 4, 0], [0.5, 10, -4, 0], [1, 10, 4, 0]] },
+    chest: { keys: [[0, 5, 7, -1], [0.5, 5, -7, 1], [1, 5, 7, -1]] },
+    neck: { keys: [[0, -8, -6, 0], [0.5, -8, 6, 0], [1, -8, -6, 0]] },
+    head: { keys: [[0, -4, -5, 0], [0.5, -4, 5, 0], [1, -4, -5, 0]] },
+
+    upperLegL: {
+      keys: [[0.00, 55, 0, 0], [0.12, 38, 0, 0], [0.22, 18, 0, 0], [0.35, -12, 0, 0],
+        [0.50, -20, 0, 0], [0.62, -6, 0, 0], [0.72, 20, 0, 0], [0.85, 46, 0, 0],
+        [1.00, 55, 0, 0]],
+    },
+    lowerLegL: {
+      keys: [[0.00, 22, 0, 0], [0.12, 40, 0, 0], [0.22, 26, 0, 0], [0.35, 22, 0, 0],
+        [0.50, 78, 0, 0], [0.62, 112, 0, 0], [0.72, 96, 0, 0], [0.85, 48, 0, 0],
+        [1.00, 22, 0, 0]],
+    },
+    footL: {
+      keys: [[0.00, -14, 0, 0], [0.12, 6, 0, 0], [0.22, 12, 0, 0], [0.35, 26, 0, 0],
+        [0.50, 4, 0, 0], [0.62, -14, 0, 0], [0.72, -18, 0, 0], [0.85, -16, 0, 0],
+        [1.00, -14, 0, 0]],
+    },
+    upperLegR: {
+      keys: [[0.00, -20, 0, 0], [0.12, -6, 0, 0], [0.22, 20, 0, 0], [0.35, 46, 0, 0],
+        [0.50, 55, 0, 0], [0.62, 38, 0, 0], [0.72, 18, 0, 0], [0.85, -12, 0, 0],
+        [1.00, -20, 0, 0]],
+    },
+    lowerLegR: {
+      keys: [[0.00, 78, 0, 0], [0.12, 112, 0, 0], [0.22, 96, 0, 0], [0.35, 48, 0, 0],
+        [0.50, 22, 0, 0], [0.62, 40, 0, 0], [0.72, 26, 0, 0], [0.85, 22, 0, 0],
+        [1.00, 78, 0, 0]],
+    },
+    footR: {
+      keys: [[0.00, 4, 0, 0], [0.12, -14, 0, 0], [0.22, -18, 0, 0], [0.35, -16, 0, 0],
+        [0.50, -14, 0, 0], [0.62, 6, 0, 0], [0.72, 12, 0, 0], [0.85, 26, 0, 0],
+        [1.00, 4, 0, 0]],
+    },
+
+    upperArmL: { keys: [[0, 44, 0, -10], [0.25, 5, 0, -12], [0.5, -40, 0, -12], [0.75, 5, 0, -12], [1, 44, 0, -10]] },
+    upperArmR: { keys: [[0, -40, 0, 12], [0.25, 5, 0, 12], [0.5, 44, 0, 10], [0.75, 5, 0, 12], [1, -40, 0, 12]] },
+    lowerArmL: { keys: [[0, 68, 0, 0], [0.5, 92, 0, 0], [1, 68, 0, 0]] },
+    lowerArmR: { keys: [[0, 92, 0, 0], [0.5, 68, 0, 0], [1, 92, 0, 0]] },
+    shoulderL: { keys: [[0, 0, 0, -3], [0.5, 0, 0, 4], [1, 0, 0, -3]] },
+    shoulderR: { keys: [[0, 0, 0, -4], [0.5, 0, 0, 3], [1, 0, 0, -4]] },
   }));
 
   /* A sprint is not a fast run, and speeding the run clip up does not
@@ -14302,6 +14434,11 @@ class Engine {
         boundRadius: 0.4 * scale,
       });
       this.actors.push(headActor);
+      /* Kept so a test can measure where this skull actually ENDS --
+         which is how the helmet was found to be sitting half a head
+         too low. Geometry you cannot measure is geometry you are
+         guessing about. */
+      headActor.__geo = headGeo;
       actor.head = headActor;
       actor.face = face;
 
@@ -15696,6 +15833,7 @@ Engine.prototype.operator = function (id, opts = {}) {
         boundRadius: 1.4 * op.scale,
       });
       ga.visualOffset = new Vec3(0, 0, 0);
+      ga.__geo = part.geometry;
       this.actors.push(ga);
       c.gear.push(ga);
       // Shares the skeleton rather than hanging off a bone, so it has no
@@ -16108,10 +16246,25 @@ function buildGear(skeleton, list, opts) {
   const s = opts.stature != null ? opts.stature : 1;
   /* The head's own height on THIS skeleton -- the helmet and the mask
      have to sit on the man's actual skull, and the seven of them differ
-     by nineteen centimetres of stature. Read, never assumed. */
+     by nineteen centimetres of stature. Read, never assumed.
+
+     AND THE BONE IS AT THE CHIN. Every head piece below is authored
+     around the CENTRE of the skull -- the helmet shell runs from 7cm
+     below it to 13cm above, the visor from the brow to the jaw, the
+     hood past the crown -- and all of them were being handed the head
+     BONE, which is where the character builder puts the chin. So the
+     whole lot sat half a head too low: the shell's crown landed at
+     eyebrow height and the skull came straight out of the top of it.
+     "Their heads are poking out of their helmets" is this line.
+
+     The head is 0.252m tall on a scale-1 rig (see makeHeadGeometry in
+     95-engine) and its chin is on the bone, so its middle is half that
+     above it. */
   const hi = skeleton.index('head');
-  const headY = hi >= 0 ? skeleton.bones[hi].bindMatrix.e[13] : 0.61 * s;
-  const ctx = { k, s, headY, skeleton, o: opts };
+  const chinY = hi >= 0 ? skeleton.bones[hi].bindMatrix.e[13] : 0.61 * s;
+  const HEAD_H = 0.252 * s;
+  const headY = chinY + HEAD_H * 0.5;
+  const ctx = { k, s, headY, chinY, headH: HEAD_H, skeleton, o: opts };
 
   const byMat = new Map();
   for (const name of list) {

@@ -375,10 +375,25 @@ function buildGear(skeleton, list, opts) {
   const s = opts.stature != null ? opts.stature : 1;
   /* The head's own height on THIS skeleton -- the helmet and the mask
      have to sit on the man's actual skull, and the seven of them differ
-     by nineteen centimetres of stature. Read, never assumed. */
+     by nineteen centimetres of stature. Read, never assumed.
+
+     AND THE BONE IS AT THE CHIN. Every head piece below is authored
+     around the CENTRE of the skull -- the helmet shell runs from 7cm
+     below it to 13cm above, the visor from the brow to the jaw, the
+     hood past the crown -- and all of them were being handed the head
+     BONE, which is where the character builder puts the chin. So the
+     whole lot sat half a head too low: the shell's crown landed at
+     eyebrow height and the skull came straight out of the top of it.
+     "Their heads are poking out of their helmets" is this line.
+
+     The head is 0.252m tall on a scale-1 rig (see makeHeadGeometry in
+     95-engine) and its chin is on the bone, so its middle is half that
+     above it. */
   const hi = skeleton.index('head');
-  const headY = hi >= 0 ? skeleton.bones[hi].bindMatrix.e[13] : 0.61 * s;
-  const ctx = { k, s, headY, skeleton, o: opts };
+  const chinY = hi >= 0 ? skeleton.bones[hi].bindMatrix.e[13] : 0.61 * s;
+  const HEAD_H = 0.252 * s;
+  const headY = chinY + HEAD_H * 0.5;
+  const ctx = { k, s, headY, chinY, headH: HEAD_H, skeleton, o: opts };
 
   const byMat = new Map();
   for (const name of list) {

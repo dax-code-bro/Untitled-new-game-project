@@ -1,0 +1,196 @@
+#!/usr/bin/env node
+/* Does the helmet fit?
+ *
+ * "Their heads are poking out of their helmets." Every head-worn piece
+ * of kit -- the helmet shell, the hazmat hood, the visor, the goggles,
+ * the respirator -- is authored around the CENTRE of the skull, and all
+ * of them were being handed the head BONE, which is where the character
+ * builder puts the chin. Half a head of error, on everybody wearing
+ * anything.
+ *
+ * So this measures rather than looks: the head geometry's own top and
+ * width, in the same space the kit is built in, against the kit's. The
+ * questions are the ones a fitting asks:
+ *
+ *   - Is the crown of the skull INSIDE the shell?
+ *   - Is the shell wider than the head, and not by a comic margin?
+ *   - Does the hood clear the helmet it goes over?
+ *   - Is the visor in front of the face rather than through it?
+ *
+ * And it renders the four helmeted operators' heads, because a number
+ * that passes and a picture that is wrong have both happened here.
+ *
+ * Usage: node engine/test/helmet.test.js
+ */
+const fs = require('fs');
+const path = require('path');
+
+let chromium;
+try { ({ chromium } = require('playwright')); }
+catch (e) { console.error('needs playwright: npm i --no-save playwright'); process.exit(2); }
+
+const ROOT = path.join(__dirname, '..', '..');
+const CHROME = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const OUT = process.env.OUT_DIR || path.join(ROOT, '.testshots');
+fs.mkdirSync(OUT, { recursive: true });
+
+let passed = 0, failed = 0;
+function check(name, cond, detail = '') {
+  if (cond) { passed++; console.log(`  ok   ${name}`); }
+  else { failed++; console.log(`  FAIL ${name} ${detail}`); }
+}
+const note = (s) => console.log(`  ..   ${s}`);
+
+(async () => {
+  const browser = await chromium.launch({
+    executablePath: CHROME,
+    args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader',
+      '--disable-dev-shm-usage'],
+  });
+  const page = await browser.newPage({ viewport: { width: 1280, height: 440 } });
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message.split('\n')[0]));
+  await page.setContent('<body style="margin:0"><canvas id="game" style="position:fixed;inset:0;width:100%;height:100%"></canvas></body>');
+  await page.addScriptTag({ content: fs.readFileSync(path.join(ROOT, 'site/engine/legend-engine.js'), 'utf8') });
+  await page.evaluate(() => {
+    const G = window.G = LE.create({ canvas: '#game', quality: 'high', gravity: 0 });
+    G.setSky('overcast');
+    G.setTimeOfDay(12);
+    G.ground({ at: [0, 0, 0], size: 40, material: { color: 0x6e6b66, texture: 'concrete',
+      roughness: 0.95, uvScale: 12 }, physics: false });
+  });
+
+  /* Everybody who wears something on their head. */
+  const fits = await page.evaluate(() => {
+    const g = window.G;
+    const out = [];
+    const bounds = (pos, stride) => {
+      const b = { x0: 1e9, x1: -1e9, y0: 1e9, y1: -1e9, z0: 1e9, z1: -1e9 };
+      for (let i = 0; i < pos.length; i += (stride || 3)) {
+        b.x0 = Math.min(b.x0, pos[i]); b.x1 = Math.max(b.x1, pos[i]);
+        b.y0 = Math.min(b.y0, pos[i + 1]); b.y1 = Math.max(b.y1, pos[i + 1]);
+        b.z0 = Math.min(b.z0, pos[i + 2]); b.z1 = Math.max(b.z1, pos[i + 2]);
+      }
+      return b;
+    };
+    for (const op of g.operators()) {
+      const id = op.id;
+      const spec = g.operatorSpec(id);
+      if (!spec.gear || !spec.gear.length) continue;
+      const wears = spec.gear.filter((n) =>
+        ['helmet', 'hood', 'visor', 'goggles', 'respirator'].indexOf(n) >= 0);
+      if (!wears.length) continue;
+      const a = g.operator(id, { at: [0, 0, 0], name: 'fit-' + id, face: 'static' });
+      /* The skull, in the skeleton's own space: the head actor is
+         parented to the head bone with a measured offset and scale, so
+         its geometry has to be put through both to be comparable with
+         the kit, which is skinned into that space already. */
+      const hg = a.head && a.head.__geo;
+      const hs = a.head ? a.head.scale.x : 1;
+      const hoff = a.head ? a.head.localOffset : null;
+      const bone = a.skeleton.bones[a.skeleton.index('head')];
+      const boneY = bone.bindMatrix.e[13];
+      const hb = bounds(hg.positions, hg.stride || 3);
+      const head = {
+        bottom: boneY + (hoff ? hoff.y : 0) + hb.y0 * hs,
+        top: boneY + (hoff ? hoff.y : 0) + hb.y1 * hs,
+        halfW: Math.max(-hb.x0, hb.x1) * hs,
+        front: hb.z1 * hs,
+      };
+      const kit = {};
+      for (const ga of (a.gear || [])) {
+        const kb = bounds(ga.__geo.positions, ga.__geo.stride || 3);
+        kit[ga.name.replace('gear-', '')] = {
+          top: kb.y1, bottom: kb.y0, halfW: Math.max(-kb.x0, kb.x1), front: kb.z1,
+        };
+      }
+      out.push({ id, wears, boneY, head, kit, mats: Object.keys(kit) });
+      a.destroy();
+    }
+    return out;
+  });
+
+  for (const f of fits) {
+    note(`${f.id.padEnd(10)} skull ${(f.head.bottom).toFixed(3)}..${(f.head.top).toFixed(3)} m`
+      + `  (${((f.head.top - f.head.bottom) * 100).toFixed(1)} cm tall,`
+      + ` ${(f.head.halfW * 200).toFixed(1)} cm wide)  wears ${f.wears.join('+')}`);
+    for (const m of f.mats) {
+      const k = f.kit[m];
+      note(`   ${m.padEnd(8)} ${k.bottom.toFixed(3)}..${k.top.toFixed(3)}`
+        + `  half-width ${(k.halfW * 100).toFixed(1)} cm`);
+    }
+  }
+
+  check('somebody is wearing something on their head', fits.length >= 3, String(fits.length));
+  check('the chin is on the head bone, not the middle of the face',
+    fits.every((f) => Math.abs(f.head.bottom - f.boneY) < 0.02),
+    fits.map((f) => (f.head.bottom - f.boneY).toFixed(3)).join(' '));
+
+  const lids = fits.filter((f) => f.wears.indexOf('helmet') >= 0);
+  note(`${lids.length} of them in a helmet: ${lids.map((f) => f.id).join(', ')}`);
+  check('the crown of the skull is inside the shell',
+    lids.every((f) => f.kit.kevlar && f.kit.kevlar.top > f.head.top),
+    lids.map((f) => `${f.id} ${((f.kit.kevlar.top - f.head.top) * 100).toFixed(1)}`).join(' '));
+  check('and not swimming in it',
+    lids.every((f) => f.kit.kevlar.top - f.head.top < 0.07),
+    lids.map((f) => `${f.id} ${((f.kit.kevlar.top - f.head.top) * 100).toFixed(1)} cm`).join(' '));
+  check('the shell is wider than the head it is on',
+    lids.every((f) => f.kit.kevlar.halfW > f.head.halfW),
+    lids.map((f) => `${f.id} ${((f.kit.kevlar.halfW - f.head.halfW) * 100).toFixed(1)}`).join(' '));
+  check('the shell comes down past the brow',
+    lids.every((f) => f.kit.kevlar.bottom < f.head.bottom + (f.head.top - f.head.bottom) * 0.72),
+    lids.map((f) => `${f.id} ${(((f.kit.kevlar.bottom - f.head.bottom) / (f.head.top - f.head.bottom)) * 100).toFixed(0)}%`).join(' '));
+
+  const hooded = fits.filter((f) => f.wears.indexOf('hood') >= 0);
+  if (hooded.length) {
+    check('the hood clears the skull', hooded.every((f) => f.kit.hazmat.top > f.head.top + 0.01),
+      hooded.map((f) => ((f.kit.hazmat.top - f.head.top) * 100).toFixed(1)).join(' '));
+    check('and comes down onto the shoulders',
+      hooded.every((f) => f.kit.hazmat.bottom < f.head.bottom),
+      hooded.map((f) => ((f.kit.hazmat.bottom - f.head.bottom) * 100).toFixed(1)).join(' '));
+  }
+  const visored = fits.filter((f) => f.wears.indexOf('visor') >= 0);
+  if (visored.length) {
+    check('the visor is in front of the face, not through it',
+      visored.every((f) => f.kit.glass.front > f.head.front),
+      visored.map((f) => ((f.kit.glass.front - f.head.front) * 100).toFixed(1)).join(' '));
+  }
+
+  /* And look at it. */
+  await page.evaluate((ids) => {
+    const g = window.G;
+    let x = -((ids.length - 1) * 0.42) / 2;
+    window.HEADS = [];
+    for (const id of ids) {
+      window.HEADS.push(g.operator(id, { at: [x, 0, 0], name: 'shot-' + id, face: 'static' }));
+      x += 0.42;
+    }
+    g.step(1 / 60);
+  }, fits.map((f) => f.id));
+
+  await page.evaluate((n) => {
+    const g = window.G;
+    const w = ((n - 1) * 0.42) / 2;
+    /* Framed on the heads, which sit about 1.6 up. The last time these
+       were photographed they came out forty pixels tall and I reported
+       on sculpts I could not see. */
+    g.lookAt([0, 1.66, 1.35 + w * 1.5], [0, 1.62, 0]);
+    for (let i = 0; i < 4; i++) g.step(1 / 60);
+  }, fits.length);
+  await page.screenshot({ path: path.join(OUT, 'helmets-front.png') });
+  note(`front -> ${path.join(OUT, 'helmets-front.png')}`);
+
+  await page.evaluate((n) => {
+    const g = window.G;
+    const w = ((n - 1) * 0.42) / 2;
+    g.lookAt([1.30 + w * 1.5, 1.68, 0.30], [0, 1.62, 0]);
+    for (let i = 0; i < 4; i++) g.step(1 / 60);
+  }, fits.length);
+  await page.screenshot({ path: path.join(OUT, 'helmets-side.png') });
+  note(`side  -> ${path.join(OUT, 'helmets-side.png')}`);
+
+  check('no page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
+  console.log(`\n${passed} passed, ${failed} failed`);
+  await browser.close();
+  process.exit(failed ? 1 : 0);
+})();

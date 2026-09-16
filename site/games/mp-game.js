@@ -157,6 +157,34 @@
   text-transform:uppercase; background:rgba(232,221,200,.04); }
 #mpui .over .go:hover { border-color:#ffd27a; color:#ffd27a; }
 
+/* ---- the replay: kill cam and best play ----
+   Everything else on the HUD goes away while one of these runs. A kill
+   cam with your own ammo count and crosshair over it is not a kill cam,
+   it is your HUD with somebody else's camera behind it. */
+#mpui.cam .cross, #mpui.cam .hit, #mpui.cam .dmg, #mpui.cam .top, #mpui.cam .feed,
+#mpui.cam .hp, #mpui.cam .gun, #mpui.cam .dead, #mpui.cam .board, #mpui.cam .over,
+#mpui.cam .lock { display:none !important; }
+
+#mpui .cam { position:absolute; inset:0; }
+/* Letterbox. It is the cheapest possible way of saying "this is not
+   you playing" and it is instantly understood. */
+#mpui .cam .lb { position:absolute; left:0; right:0; height:9%; background:#05060a;
+  transition:height .25s ease; }
+#mpui .cam .lb.t { top:0; } #mpui .cam .lb.b { bottom:0; }
+#mpui .cam .lab { position:absolute; left:0; right:0; top:12%; text-align:center; }
+#mpui .cam .kind { font-size:11px; letter-spacing:.42em; text-transform:uppercase;
+  color:#8a806c; }
+#mpui .cam .nm { margin-top:8px; font-size:31px; letter-spacing:.14em; color:#ffd27a;
+  text-shadow:0 2px 14px rgba(0,0,0,.85); }
+#mpui .cam .det { margin-top:7px; font-size:12px; letter-spacing:.2em; color:#c8bfa8;
+  text-transform:lowercase; }
+#mpui .cam .skip { position:absolute; right:26px; bottom:calc(9% + 18px); font-size:11px;
+  letter-spacing:.24em; text-transform:uppercase; color:#6b6455; }
+#mpui .cam .skip b { color:#c8bfa8; font-weight:normal; }
+#mpui .cam .prog { position:absolute; left:26px; right:26px; bottom:calc(9% + 12px);
+  height:1px; background:rgba(232,221,200,.16); }
+#mpui .cam .prog i { display:block; height:100%; width:0; background:#ffd27a; }
+
 /* ---- the click-to-play plate ---- */
 #mpui .lock { position:absolute; inset:0; display:flex; align-items:center;
   justify-content:center; background:rgba(5,6,10,.55); pointer-events:auto;
@@ -186,6 +214,10 @@
     <div class="by"></div><div class="in">Back in</div><div class="n">5</div></div>
   <div class="board hide"></div>
   <div class="over hide"></div>
+  <div class="cam hide"><div class="lb t"></div><div class="lb b"></div>
+    <div class="lab"><div class="kind"></div><div class="nm"></div><div class="det"></div></div>
+    <div class="prog"><i></i></div>
+    <div class="skip">press <b>Space</b> to skip</div></div>
   <div class="lock"><div>Click to play<br><b>WASD</b> move &nbsp; <b>Mouse</b> look &nbsp;
     <b>Left</b> fire &nbsp; <b>Right</b> aim<br><b>Shift</b> sprint &nbsp; <b>Space</b> jump &nbsp;
     <b>Ctrl</b> crouch &nbsp; <b>R</b> reload &nbsp; <b>Q</b> swap<br>
@@ -577,7 +609,11 @@
            still. */
         var rl = reload || 0;
         var offR = 0.135 * (1 - aim) + 0.004;
-        var offU = -0.145 - low * 0.085 - rl * 0.075 + bob * 0.6 + aim * 0.083;
+        /* -0.118, not -0.145. Measured through the real projection the
+           grip sat at ndc y -0.93 -- the very bottom edge of the frame
+           -- so most of what the player saw of their own weapon was the
+           muzzle and nothing behind it. */
+        var offU = -0.118 - low * 0.085 - rl * 0.075 + bob * 0.6 + aim * 0.056;
         var dist = 0.30 + aim * 0.055 - kick * 0.03 - low * 0.03;
 
         if (flash) {
@@ -818,6 +854,163 @@
   }
 
   /* ================================================================
+     THE REPLAY: KILL CAM AND BEST PLAY
+     ================================================================
+     Both are the same machine pointed at two different moments.
+
+     The match records a rolling tape of where everybody was and what
+     they were doing (see mp-match). A replay hands that tape back to
+     the same actors -- the real bodies, the real animator -- and takes
+     the camera off the player for a few seconds. Nothing is duplicated:
+     there is no second set of ghosts to keep in step with the first,
+     because two sets of bodies is how a replay ends up showing a man
+     shooting at where you are NOW.
+
+     The difference between the two is only the camera and the label:
+
+       kill cam    sits inside the killer's head and looks where he was
+                   looking, which is the point of it -- you get to see
+                   what he saw, including yourself walking into it.
+       best play   sits behind the man who made it, because a highlight
+                   is watched, not inhabited, and a first-person clip of
+                   somebody else's double kill is just a shaky corridor.
+
+     Both are skippable. A replay you cannot skip is a punishment. */
+
+  /* Every actor a body is made of: the rigged meshes, the head and the
+     bits screwed to it, the gear. Hiding "the actor" hides a capsule
+     and leaves a floating head. */
+  function bodyParts(actor, fn) {
+    if (!actor) return;
+    var seen = [];
+    var walk = function (a) {
+      if (!a || seen.indexOf(a) >= 0) return;
+      seen.push(a);
+      fn(a);
+      if (a.children) for (var i = 0; i < a.children.length; i++) walk(a.children[i]);
+    };
+    walk(actor);
+    if (actor.rigged) for (var i = 0; i < actor.rigged.length; i++) walk(actor.rigged[i]);
+    ['head', 'neck', 'eyes', 'hair', 'beard', 'brows', 'balaclava'].forEach(function (k) {
+      if (actor[k]) walk(actor[k]);
+    });
+    if (actor.gear) for (var j = 0; j < actor.gear.length; j++) walk(actor.gear[j]);
+  }
+
+  /* Remember what a part looked like the first time we touched it, so
+     putting the world back does not turn on a scalp the operator was
+     never given. */
+  function setBody(actor, visible) {
+    bodyParts(actor, function (a) {
+      if (a.__vis0 === undefined) a.__vis0 = a.visible !== false;
+      a.visible = visible === null ? a.__vis0 : (visible && a.__vis0);
+    });
+  }
+
+  function makeReplay(root, game, M, vm) {
+    var q = function (sel) { return root.querySelector(sel); };
+    var el = { wrap: q('.cam'), kind: q('.cam .kind'), nm: q('.cam .nm'),
+      det: q('.cam .det'), prog: q('.cam .prog i') };
+    var S = null, buf = [];
+
+    function begin(spec) {
+      if (S) return false;
+      if (!spec || !spec.clip || spec.to <= spec.from) return false;
+      S = spec;
+      S.t = spec.from;
+      M.replaying = true;
+      vm.hide();
+      /* Your own body is hidden for the whole match because the camera
+         lives inside it. For the next few seconds the camera is
+         somewhere else, so it has to come back -- being shot in the
+         back by a man you then watch shoot nobody is not a kill cam. */
+      for (var i = 0; i < M.people.length; i++) setBody(M.people[i].actor, true);
+      if (spec.inside != null && M.people[spec.inside]) setBody(M.people[spec.inside].actor, false);
+      root.classList.add('cam');
+      el.wrap.classList.remove('hide');
+      el.kind.textContent = spec.kind;
+      el.nm.textContent = spec.name || '';
+      el.det.innerHTML = spec.detail || '';
+      el.prog.style.width = '0%';
+      return true;
+    }
+
+    function end() {
+      if (!S) return;
+      S = null;
+      M.replaying = false;
+      M.unpose();
+      for (var i = 0; i < M.people.length; i++) setBody(M.people[i].actor, null);
+      setBody(M.you.actor, false);      // back inside your own head
+      root.classList.remove('cam');
+      el.wrap.classList.add('hide');
+    }
+
+    /* Advance the clip and drive the camera. Returns false the frame it
+       runs out, so the caller knows the world is theirs again. */
+    function update(dt) {
+      if (!S) return false;
+      S.t += dt * (S.rate || 1);
+      if (S.t >= S.to) { end(); return false; }
+      var list = M.tapeAt(S.clip, S.t, buf);
+      if (!list) { end(); return false; }
+      M.pose(list, dt);
+
+      var f = (S.t - S.from) / Math.max(0.001, S.to - S.from);
+      el.prog.style.width = (f * 100).toFixed(1) + '%';
+
+      var EYE = W.MP_MATCH.EYE;
+      if (S.chase) {
+        /* Behind and above, with a slow drift across the shot so the
+           frame is moving even when the man in it is not. */
+        var a = list[S.star] || list[0];
+        var fw = { x: Math.sin(a.yaw), z: Math.cos(a.yaw) };
+        var rt = { x: -Math.cos(a.yaw), z: Math.sin(a.yaw) };     // see RIGHT, mp-match
+        var sw = Math.sin(f * Math.PI) * 1.15;
+        var cx = a.x - fw.x * 3.5 + rt.x * sw;
+        var cz = a.z - fw.z * 3.5 + rt.z * sw;
+        game.lookAt([cx, a.y + EYE + 1.05, cz], [a.x + fw.x * 1.2, a.y + EYE - 0.15, a.z + fw.z * 1.2]);
+      } else {
+        var e = list[S.eye] || list[0];
+        var cp = Math.cos(e.pitch);
+        game.lookAt([e.x, e.y + EYE, e.z],
+          [e.x + Math.sin(e.yaw) * cp, e.y + EYE - Math.sin(e.pitch), e.z + Math.cos(e.yaw) * cp]);
+      }
+      return true;
+    }
+
+    return {
+      begin: begin, update: update, stop: end,
+      get active() { return !!S; },
+      /* What the replay currently believes, for a test to check the
+         camera against. Twice now a check has compared the camera to
+         where somebody is NOW and called a working kill cam broken:
+         the whole point of the thing is that the man on the screen is
+         not where he is any more. */
+      debug: function () {
+        if (!S) return null;
+        var e = buf[S.chase ? S.star : S.eye] || buf[0] || {};
+        return { t: S.t, from: S.from, to: S.to, chase: !!S.chase,
+          who: S.chase ? S.star : S.eye,
+          x: e.x, y: e.y, z: e.z, yaw: e.yaw, pitch: e.pitch };
+      },
+    };
+  }
+
+  /* The kill cam's clip, cut from the rolling tape. It cannot be cut at
+     the instant of death, because the second AFTER the shot has not
+     been recorded yet -- so the caller waits, and this is what it waits
+     for. Lead-in is long enough to see him line you up. */
+  function killCamClip(M, killT) {
+    var span = M.recSpan();
+    if (!span) return null;
+    var from = Math.max(span.from, killT - 2.6);
+    var to = Math.min(span.to, killT + 0.9);
+    if (to - from < 0.5) return null;
+    return { clip: M.clip(from, to), from: from, to: to };
+  }
+
+  /* ================================================================
      THE LOOP
      ================================================================ */
 
@@ -859,35 +1052,25 @@
        The body still EXISTS -- it is what everybody else sees, and what
        the hit tests use -- it is only not rendered for the one person
        standing inside it. */
-    function hideOwnBody() {
-      var me = M.you && M.you.actor;
-      if (!me) return;
-      var seen = [];
-      var walk = function (a) {
-        if (!a || seen.indexOf(a) >= 0) return;
-        seen.push(a);
-        a.visible = false;
-        if (a.children) for (var i = 0; i < a.children.length; i++) walk(a.children[i]);
-      };
-      walk(me);
-      if (me.rigged) for (var i = 0; i < me.rigged.length; i++) walk(me.rigged[i]);
-      ['head', 'neck', 'eyes', 'hair', 'beard', 'brows', 'balaclava'].forEach(function (k) {
-        if (me[k]) walk(me[k]);
-      });
-      if (me.gear) for (var j = 0; j < me.gear.length; j++) walk(me.gear[j]);
-    }
+    function hideOwnBody() { setBody(M.you && M.you.actor, false); }
     hideOwnBody();
 
     var hud = makeHud(root, M);
     var input = makeInput(root, canvas);
     var pad = makePad(opts);
     var vm = makeViewmodel(game);
+    var replay = makeReplay(root, game, M, vm);
 
     var yaw = M.you.yaw, pitch = 0;
     var sens = (opts.sensitivity || 1) * 0.0022;
     var kick = 0, bob = 0, bobT = 0, lastHp = M.you.hp, wasAlive = true;
     var adsT = 0;
     var over = false;
+    /* The kill cam cannot start the instant you die: the second after
+       the shot has not been recorded yet, and a kill cam that stops on
+       the frame of the kill is a still photograph. So the death is
+       noted, and the clip is cut a beat later. */
+    var camPend = null, aliveWas = true, bestTried = false;
 
     /* Being shot has to point at whoever did it, and the match reports
        a kill but not a graze. The player's own health falling is the
@@ -909,9 +1092,92 @@
       lastHp = p.hp;
     }
 
+    /* The shot that killed you, from the match's own record rather than
+       from anything this file guessed. */
+    function myLastDeath() {
+      for (var k = M.events.length - 1; k >= 0; k--) {
+        var e = M.events[k];
+        if (e.kind === 'kill' && e.who === M.you.id) return e;
+      }
+      return null;
+    }
+
+    function killCamDetail(e) {
+      var d = [];
+      if (e.weapon) d.push('with the ' + esc(e.weapon));
+      if (e.head) d.push('head shot');
+      if (e.range > 1) d.push(Math.round(e.range) + ' m');
+      return d.join(' &nbsp;&middot;&nbsp; ');
+    }
+
+    function bestPlayDetail(b) {
+      var d = [];
+      d.push(b.kills > 1 ? b.kills + ' kills in four seconds' : 'one kill');
+      if (b.heads) d.push(b.heads > 1 ? b.heads + ' head shots' : 'head shot');
+      if (b.range > 1) d.push('at ' + Math.round(b.range) + ' m');
+      return d.join(' &nbsp;&middot;&nbsp; ');
+    }
+
     function frame(dt) {
       if (over) return;
       var p = M.you;
+
+      /* ---- a replay owns the screen while it runs ----
+         The match keeps simulating underneath it: respawn timers, the
+         round clock, eleven other people. Pausing a twelve-man match
+         so that one of them can watch himself die would stop
+         everybody else's game. */
+      if (replay.active) {
+        M.update(dt);
+        /* THE SAME CLOCK THE TAPE IS ON. The engine clamps a long frame
+           at 0.1 s and the match clamps its tick at 0.05, so on a slow
+           machine match time runs slower than wall time -- and a replay
+           advanced by wall time would rip through a three-second clip
+           in eight frames and show a slideshow. */
+        var rdt = Math.min(dt, 0.05);
+        var sk = { forward: 0, right: 0, lookX: 0, lookY: 0, fire: false, jump: false };
+        pad.poll(rdt, sk);
+        var skip = input.once(KEYS.jump) || input.once(KEYS.quit)
+          || input.buttons.fire || sk.fire || sk.jump;
+        var running = replay.update(rdt);
+        /* A respawn ends it whatever the clip says -- being alive and
+           moving while the screen shows somebody else is worse than a
+           kill cam cut short. */
+        if (skip || !running || (camPend == null && p.alive && !M.over)) replay.stop();
+        input.endFrame();
+        return;
+      }
+
+      /* ---- the kill cam, a beat after the death ---- */
+      if (camPend && !M.over) {
+        if (M.time >= camPend.at) {
+          var cut = killCamClip(M, camPend.ev.t);
+          var by = M.people[camPend.ev.by];
+          if (cut && cut.clip && by) {
+            replay.begin({
+              kind: 'Kill cam', name: by.name, detail: killCamDetail(camPend.ev),
+              clip: cut.clip, from: cut.from, to: cut.to,
+              eye: camPend.ev.by, inside: camPend.ev.by,
+            });
+          }
+          camPend = null;
+          if (replay.active) { input.endFrame(); return; }
+        }
+      }
+
+      /* ---- best play, before the scoreboard ---- */
+      if (M.over && !bestTried) {
+        bestTried = true;
+        var b = M.bestPlay();
+        if (b && b.clip) {
+          replay.begin({
+            kind: 'Best play', name: b.name, detail: bestPlayDetail(b),
+            clip: b.clip, from: b.from, to: b.to,
+            star: b.by, chase: true, inside: null, rate: 0.85,
+          });
+          if (replay.active) { input.endFrame(); return; }
+        }
+      }
 
       var d = input.take();
       /* MINUS. The camera's right hand is at -X (see RIGHT in
@@ -1016,7 +1282,17 @@
         hud.paint(0.02, cmd.scores);
       }
 
-      if (M.over && !over) {
+      /* Noted here rather than off the event, because the event fires
+         while the match is mid-tick and the tape has not yet recorded
+         the frame you fell over in. */
+      if (aliveWas && !p.alive && !M.over) {
+        var ev = myLastDeath();
+        if (ev && ev.by != null && ev.by !== p.id) camPend = { ev: ev, at: M.time + 0.75 };
+      }
+      aliveWas = p.alive;
+      if (p.alive) camPend = null;
+
+      if (M.over && !over && !replay.active) {
         over = true;
         if (document.exitPointerLock) document.exitPointerLock();
         var go = root.querySelector('.over .go');
@@ -1035,6 +1311,7 @@
 
     var api = {
       game: game, match: M, hud: hud, input: input, pad: pad, viewmodel: vm,
+      replay: replay,
       get yaw() { return yaw; }, get pitch() { return pitch; },
       look: function (x, y) { yaw = x; pitch = y; },
       stop: function () { over = true; input.dispose(); game.stop(); },
