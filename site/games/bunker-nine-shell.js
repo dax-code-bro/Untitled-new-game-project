@@ -3616,11 +3616,33 @@ var fpsNow = 0, fpsAcc = 0, fpsN = 0, fpsT = 0;
 var paused = false;
 var pauseGuard = false;
 
+/* THE PAUSE KEY IS REBINDABLE LIKE EVERY OTHER KEY.
+ *
+   It was hardcoded to Escape while sitting in the ACTIONS table as a
+   rebindable row, so the settings screen offered a binding it then
+   ignored -- which is the specific complaint about rebinding not
+   applying, in the one place the player is most likely to try it.
+
+   Escape stays live whatever else is bound, because a menu you cannot
+   leave with Escape is a trap and because the binding itself is set
+   from inside a menu: rebind pause to P, fumble it, and Escape is the
+   only way out. */
+function pauseKeyMatches(e) {
+  if (e.key === 'Escape') return true;
+  var want = null;
+  for (var i = 0; i < ACTIONS.length; i++) {
+    if (ACTIONS[i].id === 'pause') { want = bindOf(ACTIONS[i], 'key'); break; }
+  }
+  if (!want || want === 'Escape') return false;
+  return e.code === want;
+}
+
 function installPause() {
   if (pauseGuard) return;
   pauseGuard = true;
   W.addEventListener('keydown', function (e) {
-    if (e.key !== 'Escape') return;
+    if (!pauseKeyMatches(e)) return;
+    if (capturing) return;             // rebinding: that press belongs to the chip
     if (root && !root.classList.contains('gone') && !el.pause.classList.contains('on')) return;
     if (!handle) return;
     e.preventDefault();
@@ -3646,6 +3668,12 @@ function openPause() {
 }
 
 function resume() {
+  /* Installed here as well as on the play path. It was ONLY on the play
+     path -- the one route out of the map selector -- so any other way
+     into a game left Escape dead, and "the pause menu does not work" is
+     what that looks like from the outside. It is guarded, so calling it
+     twice costs nothing. */
+  installPause();
   paused = false;
   setPhase('game');
   hideAll();
@@ -3813,6 +3841,11 @@ SHELL.binds = SHELL.binds || null;
 SHELL.applySettings = applySettings;
 SHELL.openSettings = function () { if (root) openSettings(paused ? 'pause' : 'main'); };
 SHELL.openPause = openPause;
+/* The real way into a game, exposed so a check can take it. A test that
+   reaches the game by any other route is testing a route no player uses
+   -- which is exactly how the pause menu came to be broken: the Escape
+   handler was installed on this path and nowhere else. */
+SHELL.intoGame = function (map) { return intoGame(map || SHELL.bootMap || 'bunker'); };
 SHELL.resume = resume;
 SHELL.handle = function () { return handle; };
 /* The multiplayer state as it stands in memory. Local storage is not
