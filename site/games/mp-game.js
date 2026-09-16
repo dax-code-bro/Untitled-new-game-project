@@ -801,6 +801,14 @@
           el.feed.innerHTML = feed.slice(0, 5).join('');
         }
       },
+      /* A line in the kill feed that is not a kill. Used when the
+         watchdog gives something up, because a game that quietly
+         changes how it looks is a game that looks broken. */
+      say: function (text) {
+        feed.unshift('<div><span class="wp">' + esc(text) + '</span></div>');
+        feed = feed.slice(0, 5);
+        el.feed.innerHTML = feed.join('');
+      },
       hitMark: function (kill) { hitAt = M.time; hitKill = !!kill; },
       tookFrom: function (from) { marks.push({ t: M.time, from: from }); },
 
@@ -1115,8 +1123,30 @@
     root.innerHTML = MARKUP;
     document.body.appendChild(root);
 
+    /* THE GRAPHICS TIER YOU ALREADY CHOSE.
+       Zombies has a graphics menu and saves the choice; multiplayer
+       had none and always booted at whatever detectQuality() guessed
+       from the RAM and the core count -- which say nothing about the
+       graphics card. Somebody who had set zombies to Low was still
+       handed two 2560px shadow cascades and bloom in here. */
+    var saved = null;
+    try { saved = W.localStorage.getItem('b9.graphics'); } catch (e) { saved = null; }
+    var TIER = { retro: 'retro', low: 'low', normal: 'normal', high: 'high', ultra: 'ultra' };
     var game = W.LE.create({ canvas: canvas, gravity: -19.6,
-      quality: opts.quality || undefined });
+      quality: opts.quality || TIER[saved] || undefined });
+
+    /* AND A WATCHDOG, because a guess about the hardware that is never
+       checked against the result is how a machine ends up rendering
+       two frames a second with nobody noticing. It only steps down,
+       and it says so when it does. */
+    game.autoQuality({
+      target: opts.fpsTarget || 40,
+      onChange: function (tier, fps, step) {
+        if (hud && hud.say) hud.say('graphics set to ' + tier + ' — ' + fps + ' fps');
+        try { W.console.log('[mp] quality -> ' + tier + ' at ' + fps + ' fps (step ' + step + ')'); }
+        catch (e) { /* no console */ }
+      },
+    });
 
     var M = W.MP_MATCH.start({
       game: game,

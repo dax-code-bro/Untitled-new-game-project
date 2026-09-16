@@ -13857,6 +13857,7 @@ class Engine {
     this.frustumCulling = opts.frustumCulling !== false;
     this.stats = { fps: 0, actors: 0, draws: 0, bodies: 0, particles: 0 };
     this._fpsAccum = 0;
+    this._watch = null;          // see autoQuality()
     this._fpsFrames = 0;
 
     // Camera control state.
@@ -15179,6 +15180,71 @@ class Engine {
       this._fpsAccum = 0;
       this._fpsFrames = 0;
     }
+    this._watchFrames(dt);
+  }
+
+  /* ================================================================
+     THE QUALITY WATCHDOG
+     ================================================================
+     The tier is chosen by detectQuality() from navigator.deviceMemory
+     and navigator.hardwareConcurrency -- how much RAM the machine has
+     and how many CPU cores. Neither of those is the graphics card. A
+     laptop with sixteen cores and integrated graphics is handed
+     'high': two shadow cascades at 2560 pixels, four bloom iterations,
+     ambient occlusion and supersampling. Then nothing ever checks
+     whether the machine is keeping up, so it renders two frames a
+     second for as long as you are willing to sit there.
+
+     A guess about the hardware is fine. Not looking at the result is
+     not. This watches the frames it is actually delivering and steps
+     the tier down until they arrive, which is the one thing that
+     turns an unplayable machine into a playable one without anybody
+     having to find a menu.
+
+     It only ever steps DOWN. Stepping back up when a quiet moment
+     raises the average is how a game ends up changing its own
+     appearance every few seconds for the rest of the session. */
+  _watchFrames(dt) {
+    const W = this._watch;
+    if (!W || !W.on) return;
+    W.settle -= dt;
+    if (W.settle > 0) return;            // loading spikes are not the game
+    W.times.push(dt);
+    if (W.times.length < W.window) return;
+    /* The MEDIAN, not the mean. One 400ms hitch while a map streams in
+       drags a mean below any threshold and would demote a machine that
+       is otherwise fine. */
+    const sorted = W.times.slice().sort((a, b) => a - b);
+    const med = sorted[sorted.length >> 1];
+    W.times.length = 0;
+    const fps = 1 / Math.max(1e-6, med);
+    if (fps >= W.target || W.steps >= W.maxSteps) return;
+    const order = ['ultra', 'high', 'normal', 'low', 'retro'];
+    const at = order.indexOf(this.renderer.qualityName);
+    if (at < 0 || at >= order.length - 1) { W.steps = W.maxSteps; return; }
+    const to = order[at + 1];
+    this.renderer.setQuality(to);
+    this.renderer.resize(this.canvas.clientWidth, this.canvas.clientHeight);
+    W.steps++;
+    W.settle = 1.5;                      // let the new tier settle before judging it
+    if (W.onChange) W.onChange(to, Math.round(fps), W.steps);
+  }
+
+  /* Turn the watchdog on. `target` is the frame rate below which it
+     starts giving things up; `onChange(tier, fps, step)` is told each
+     time it does, so the game can say so rather than silently looking
+     different. */
+  autoQuality(opts = {}) {
+    this._watch = {
+      on: opts.on !== false,
+      target: opts.target || 40,
+      window: opts.window || 45,
+      maxSteps: opts.maxSteps != null ? opts.maxSteps : 3,
+      settle: opts.settle != null ? opts.settle : 2.5,
+      onChange: opts.onChange || null,
+      times: [], steps: 0,
+    };
+    return this;
   }
 
   start() {

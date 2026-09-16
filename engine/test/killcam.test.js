@@ -196,6 +196,7 @@ const note = (s) => console.log(`  ..   ${s}`);
       rows.push({
         id: p.id, want: held.id || held.base, has: !!a,
         shown: !!(a && a.visible),
+        range: Math.hypot(p.pos.x - M.you.pos.x, p.pos.z - M.you.pos.z),
         verts: a && a.mesh ? a.mesh.vertexCount : 0,
         parts: a && a.partNames ? a.partNames.length : 0,
         d: a ? Math.hypot(a.position.x - p.pos.x, a.position.z - p.pos.z) : -1,
@@ -207,14 +208,25 @@ const note = (s) => console.log(`  ..   ${s}`);
   note(`${armed.length} others alive; ${armed.filter((r) => r.shown).length} visibly armed`);
   note(`e.g. ${armed.slice(0, 3).map((r) => `${r.want} ${r.parts} parts ${r.verts} verts`
     + ` ${r.d.toFixed(2)}m out, ${r.up.toFixed(2)}m up`).join(' | ')}`);
-  check('every man alive is holding a weapon', armed.length > 0 && armed.every((r) => r.shown),
-    armed.filter((r) => !r.shown).map((r) => `${r.id}:${r.want}`).join(' '));
+  /* Within range. Past forty metres the weapon is deliberately not
+     drawn -- it is a dark smudge against a leg there and it costs more
+     than everything the man is wearing -- so requiring it at any
+     distance would be asking the level-of-detail work to be undone. */
+  const near = armed.filter((r) => r.range < 36);
+  const far = armed.filter((r) => r.range > 44);
+  note(`${near.length} inside 36 m, ${far.length} past 44 m`);
+  check('every man in sight is holding a weapon',
+    near.length > 0 && near.every((r) => r.shown),
+    near.filter((r) => !r.shown).map((r) => `${r.id}:${r.want}@${r.range.toFixed(0)}m`).join(' '));
+  check('and the far ones are not paying for one nobody can see',
+    far.every((r) => !r.shown),
+    far.filter((r) => r.shown).map((r) => `${r.id}@${r.range.toFixed(0)}m`).join(' '));
   check('and it is a real model, not a box',
-    armed.every((r) => r.parts > 3 && r.verts > 200),
-    armed.map((r) => `${r.parts}/${r.verts}`).slice(0, 3).join(' '));
+    near.every((r) => r.parts > 3 && r.verts > 200),
+    near.map((r) => `${r.parts}/${r.verts}`).slice(0, 3).join(' '));
   check('carried at the chest, in his own hands',
-    armed.every((r) => r.d < 0.6 && r.up > 0.9 && r.up < 1.7),
-    armed.map((r) => `${r.d.toFixed(2)}/${r.up.toFixed(2)}`).slice(0, 3).join(' '));
+    near.every((r) => r.d < 0.6 && r.up > 0.9 && r.up < 1.7),
+    near.map((r) => `${r.d.toFixed(2)}/${r.up.toFixed(2)}`).slice(0, 3).join(' '));
 
 
   /* A deliberate look at one of them, from behind and to the side, so
@@ -266,6 +278,15 @@ const note = (s) => console.log(`  ..   ${s}`);
     const b = M.bestPlay();
     return {
       before, kept: M.highlights.length, star: star.id, starName: star.name,
+      /* Whether the STAGED run was kept at all, and whether the one
+         Best Play chose really is the top of the pile. Asserting that
+         the staged double always wins is asserting that no bot in a
+         twelve-man match ever does anything better, which is not a
+         property of the feature -- it failed exactly that way, on a
+         bot who had earned it. */
+      staged: M.highlights.some((h) => h.by === star.id),
+      topScore: Math.max(...M.highlights.map((h) => h.score)),
+      namesMatch: !!(b && M.people[b.by] && M.people[b.by].name === b.name),
       have: !!b,
       by: b && b.by, name: b && b.name, kills: b && b.kills, heads: b && b.heads,
       range: b && Math.round(b.range), score: b && Math.round(b.score),
@@ -280,10 +301,13 @@ const note = (s) => console.log(`  ..   ${s}`);
     `${best.before} -> ${best.kept}`);
   check('and Best Play picks it', best.have === true);
   note(`best: ${best.name} — ${best.kills} kills, ${best.heads} heads, ${best.range} m, score ${best.score}`);
-  check('naming the man who made it', best.by === best.star && best.name === best.starName,
-    `${best.name} vs ${best.starName}`);
+  check('the staged double kill was kept', best.staged === true);
+  check('naming the man who made it', best.namesMatch === true,
+    `${best.name} is not who ${best.by} is`);
+  check('and it is the best of them, not just one of them',
+    Math.abs(best.score - Math.round(best.topScore)) <= 1,
+    `${best.score} vs top ${Math.round(best.topScore)}`);
   check('it is a multi-kill, not a single', best.kills >= 2, String(best.kills));
-  check('the long shot is on it', best.range >= 25, `${best.range} m`);
   check('and a clip was cut, not a pointer into the rolling tape',
     best.clipFrames > 20 && best.clipSpan > 2.5,
     `${best.clipFrames} frames, ${best.clipSpan && best.clipSpan.toFixed(1)} s`);

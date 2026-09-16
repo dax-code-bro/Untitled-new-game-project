@@ -1241,7 +1241,12 @@
     if (p.actor && p.actor.controller && !M.replaying) {
       p.actor.controller.teleport([p.pos.x, p.pos.y + lift(p), p.pos.z]);
       face(p.actor, p.yaw);
-      carry(M, p, p.yaw, p.pitch, p.sprinting, p.alive);
+      var _d2 = M.you
+        ? (p.pos.x - M.you.pos.x) * (p.pos.x - M.you.pos.x)
+          + (p.pos.z - M.you.pos.z) * (p.pos.z - M.you.pos.z)
+        : 0;
+      var _near = lod(M, p, _d2);
+      carry(M, p, p.yaw, p.pitch, p.sprinting, p.alive && _near);
     }
   }
 
@@ -1307,6 +1312,86 @@
     }
   }
 
+  /* ================================================================
+     LEVEL OF DETAIL
+     ================================================================
+     Measured, on Town, with twelve people in it:
+
+       weapons  214,200 vertices
+       heads    126,700
+       bodies    21,000
+       the map   16,500
+       gear      13,900
+
+     The guns are THIRTEEN TIMES THE WHOLE MAP. Each one is about
+     seventeen thousand vertices of receiver, rifling, checkering and
+     individual brass rounds visible through a smoked magazine -- built
+     to be looked at from thirty centimetres in a viewmodel, and drawn
+     here at thirty metres where the whole weapon is forty pixels wide.
+     The heads are ten thousand apiece including a separate eyeball
+     mesh with an iris in it, at a range where the entire face is six
+     pixels across.
+
+     None of that detail survives the distance, and all of it is drawn
+     three times a frame -- once per shadow cascade and once for real.
+
+     So it comes off with range. The numbers are where the feature
+     stops being visible rather than where it stops being expensive:
+
+       a face      past about fourteen metres the eyes, brows, beard
+                   and hair are under a pixel each.
+       a weapon    past forty it is a dark smudge against a leg, and
+                   the silhouette it contributes is the man's arm.
+       kit         past fifty-five a pouch is not a thing you can see.
+
+     Nothing that changes the SHAPE of a man comes off at any range --
+     his helmet, his body and his stance are how you identify him
+     across a street, and that is worth more than the frame. */
+  /* Two thresholds each, not one. A man standing exactly on the line
+     flips every frame, and each flip walks his whole actor tree
+     turning meshes on and off -- which showed up immediately as the
+     match tick's p95 going from 1.9ms to 4.4 the moment this landed.
+     Hide it late, bring it back early. */
+  var LOD_FACE_OFF = 14 * 14, LOD_FACE_ON = 12 * 12;
+  var LOD_GUN_OFF = 40 * 40, LOD_GUN_ON = 36 * 36;
+  var LOD_GEAR_OFF = 55 * 55, LOD_GEAR_ON = 50 * 50;
+  var FACE_PARTS = ['eyes', 'brows', 'beard', 'hair'];
+
+  function lodShow(a, on) {
+    if (!a || a.visible === on) return;
+    a.visible = on;
+    if (a.children) for (var i = 0; i < a.children.length; i++) lodShow(a.children[i], on);
+  }
+
+  function lod(M, p, d2) {
+    var a = p.actor;
+    if (!a) return;
+    var face = p._lodFace == null ? d2 < LOD_FACE_ON
+      : (p._lodFace ? d2 < LOD_FACE_OFF : d2 < LOD_FACE_ON);
+    if (p._lodFace !== face) {
+      p._lodFace = face;
+      for (var i = 0; i < FACE_PARTS.length; i++) lodShow(a[FACE_PARTS[i]], face);
+    }
+    var kit = p._lodGear == null ? d2 < LOD_GEAR_ON
+      : (p._lodGear ? d2 < LOD_GEAR_OFF : d2 < LOD_GEAR_ON);
+    if (p._lodGear !== kit) {
+      p._lodGear = kit;
+      if (a.gear) for (var j = 0; j < a.gear.length; j++) lodShow(a.gear[j], kit);
+    }
+    p._lodGun = p._lodGun == null ? d2 < LOD_GUN_ON
+      : (p._lodGun ? d2 < LOD_GUN_OFF : d2 < LOD_GUN_ON);
+    return p._lodGun;
+  }
+
+  /* After a replay the flags are stale -- the replay showed and hid
+     bodies for its own reasons -- so the next live frame re-decides. */
+  function lodReset(M) {
+    for (var i = 0; i < M.people.length; i++) {
+      M.people[i]._lodFace = null; M.people[i]._lodGear = null;
+      M.people[i]._lodGun = null;
+    }
+  }
+
   function armOf(M, p) {
     if (!p.actor || !M.game) return null;
     var g = gun(p);
@@ -1323,6 +1408,21 @@
       try { made = M.game.serviceArm('m4', { at: [0, -90, 0], physics: false }); }
       catch (e2) { made = null; }
     }
+    /* THE ROUNDS COME OUT.
+       Measured, the two heaviest parts of every weapon in the scene
+       are `shell` and `tip` -- the brass cases and copper bullet tips
+       of the individual cartridges, fourteen thousand vertices of them
+       on one MP40. They are modelled so you can see them through a
+       smoked magazine from thirty centimetres in a viewmodel. On a man
+       across the street they are inside a magazine WELL, behind opaque
+       steel, and they cost more than everything else he is wearing put
+       together. */
+    if (made) {
+      ['shell', 'tip'].forEach(function (n) {
+        var part = made[n];
+        if (part && part !== made) { part.visible = false; part.__lodDropped = true; }
+      });
+    }
     p._arms[id] = made;
     return made;
   }
@@ -1334,7 +1434,8 @@
     if (a.partNames) {
       for (var i = 0; i < a.partNames.length; i++) {
         var c = a[a.partNames[i]];
-        if (c && c !== a) c.visible = on;
+        // Parts dropped for good stay dropped; see armOf.
+        if (c && c !== a && !c.__lodDropped) c.visible = on;
       }
     }
   }
@@ -1511,6 +1612,7 @@
      played, so without this everybody keeps whatever the replay left
      them doing until their speed happens to cross a threshold. */
   function unpose(M) {
+    lodReset(M);
     for (var i = 0; i < M.people.length; i++) {
       var p = M.people[i];
       p._rpPos = null; p._rpSpeed = null; p._rpState = null;

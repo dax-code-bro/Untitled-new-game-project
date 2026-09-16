@@ -13592,6 +13592,23 @@ function start(opts = {}) {
     gravity: -19.6,
     preserveDrawingBuffer: !!opts.preserveDrawingBuffer,
   });
+  /* The graphics menu lets you choose, and applyGraphics() writes the
+     tier. This is the floor under it: whatever is chosen, including
+     whatever detectQuality() guessed before anybody chose anything, if
+     the machine is not delivering frames the tier comes down until it
+     does. A guess about the hardware is fine; not checking the result
+     is not. */
+  game.autoQuality({
+    target: 40,
+    onChange: (tier, fps) => {
+      try {
+        localStorage.setItem('b9.graphics', tier);
+        if (window.SHELL && window.SHELL.toast) {
+          window.SHELL.toast('Graphics set to ' + tier.toUpperCase() + ' — ' + fps + ' fps');
+        }
+      } catch (e) { void e; }
+    },
+  });
   /* Night that you can still fight in. The ground colour matters more than
      it looks: metal and wet concrete take their downward light from it, and
      a black floor drains every surface in the room from below. */
