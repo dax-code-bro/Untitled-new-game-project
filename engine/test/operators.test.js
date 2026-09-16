@@ -76,7 +76,7 @@ function check(name, cond, detail = '') {
          The first version left it on for four of the seven and quietly
          returned NaN for nineteen of the twenty-one pairs, which is to
          say it measured almost nothing and reported a pass. */
-      const c = G.operator(id, { at: [(i - 3) * 0.95, 1.0, 0], face: 'static', hair: false });
+      const c = G.operator(id, { at: [(i - 3) * 0.95, 1.0, 0], face: 'static', hair: false, gear: false });
       window.ops.push(c);
       const hm = c.head && c.head.mesh ? c.head.mesh : (c.headMesh || null);
       const geo = hm ? G.geometryOf(hm) : null;
@@ -227,6 +227,45 @@ function check(name, cond, detail = '') {
   check('and a neck that is skin rather than shirt',
     eyes.every((e) => e.neck), eyes.filter((e) => !e.neck).map((e) => e.id).join(','));
 
+  /* THE KIT. Seven men in the same webbing is six men and a spare, so
+     what is checked is that they are wearing DIFFERENT things -- and
+     that every piece named in a loadout actually produced geometry,
+     because a missing builder fails silently as "no pouches today". */
+  const kit = await page.evaluate(() => window.ops.map((c) => ({
+    id: c.operator,
+    want: (c.operatorSpec.gear || []).length,
+    got: (c.gear || []).length,
+    tris: (c.gear || []).reduce((n, a) => n + (a.mesh ? a.mesh.indexCount : 0), 0),
+    mask: !!c.balaclava,
+    mats: (c.gear || []).map((a) => a.name).sort().join('+'),
+  })));
+  kit.forEach((e) => console.log(`  .. ${e.id.padEnd(10)} ${e.want} pieces -> ${e.tris} indices [${e.mats}]${e.mask ? ' +balaclava' : ''}`));
+  check('every operator with a kit list actually got geometry for it',
+    kit.every((e) => e.want === 0 || e.tris > 300),
+    kit.filter((e) => e.want && e.tris <= 300).map((e) => e.id + ':' + e.tris).join(','));
+  const sil = new Set(kit.map((e) => e.mats + '|' + e.tris));
+  check('and no two of them are wearing the same thing', sil.size === kit.length,
+    `${sil.size} distinct of ${kit.length}`);
+
+  /* NOTHING IS LEFT BEHIND when a character is destroyed. A character
+     is a body, a head, a neck, eyes, hair, a beard, brows and its kit,
+     and destroy() used to take only the body -- so every one of those
+     stayed in the scene, parented to a corpse, drawn forever. It showed
+     up right here: two disembodied necks hanging over the ground at the
+     spacing of a batch this bench had already thrown away. */
+  const leak = await page.evaluate(() => {
+    const G = window.G;
+    const before = G.actors.length;
+    const tmp = G.operator('delta', { at: [40, 1, 0] });
+    const mid = G.actors.length;
+    tmp.destroy();
+    return { before, added: mid - before, after: G.actors.length };
+  });
+  console.log(`  .. one operator is ${leak.added} actors; scene ${leak.before} -> ${leak.after} after destroy`);
+  check('an operator is more than one actor', leak.added >= 5, `${leak.added}`);
+  check('and destroying one leaves nothing behind',
+    leak.after === leak.before, `${leak.after - leak.before} orphaned`);
+
   const shots = [];
   for (let i = 0; i < want.length; i++) {
     await page.evaluate((k) => {
@@ -247,8 +286,8 @@ function check(name, cond, detail = '') {
          aiming at it frames the jaw and cuts the crown off. The eyes
          sit about a quarter of a head above it. */
       const hbone = c.skeleton.bone('head');
-      const k = c.operatorSpec.scale;
-      const eye = c.body.position.y + (hbone ? hbone.bindMatrix.e[13] : 0.61) + 0.058 * k;
+      const sc = c.operatorSpec.scale;
+      const eye = c.body.position.y + (hbone ? hbone.bindMatrix.e[13] : 0.61) + 0.058 * sc;
       // Tight. A head at fifteen per cent of frame height told me
       // nothing twice; this fills it.
       G.lookAt([x + 0.085, eye + 0.010, 0.345], [x, eye - 0.008, 0]);

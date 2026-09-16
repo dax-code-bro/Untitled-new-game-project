@@ -168,6 +168,33 @@ class Actor {
   destroy() {
     if (this.dead) return;
     this.dead = true;
+    /* AND EVERYTHING HANGING OFF IT.
+     *
+       This took itself out of its parent's list and stopped. A
+       character is not one actor -- it is a body, a head, a neck, a set
+       of eyes, hair, a beard, eyebrows and however many pieces of kit,
+       and destroying the body left every one of those in the scene,
+       parented to a corpse, drawn for the rest of the session.
+
+       It shows up as heads and necks floating where somebody used to
+       be, which is exactly what the operator bench produced the first
+       time it rebuilt its seven: two disembodied necks hanging over the
+       ground at the old spacing. Anything that spawns and despawns
+       characters -- which is to say the zombie horde, every round --
+       has been leaking them.
+
+       The list is copied first, because each child splices itself out
+       of it on the way past. */
+    if (this.children && this.children.length) {
+      for (const c of this.children.slice()) c.destroy();
+    }
+    /* Siblings that share this actor's skeleton rather than hanging off
+       its bones: the neck, and each piece of kit. They have no parent to
+       be detached from, so they are tracked here instead. */
+    if (this.rigged && this.rigged.length) {
+      for (const r of this.rigged.slice()) r.destroy();
+      this.rigged.length = 0;
+    }
     // Off the parent's list as well, or a destroyed part keeps being walked.
     if (this._parent) {
       const k = this._parent.children.indexOf(this);
@@ -708,6 +735,7 @@ class Engine {
       na.visualOffset = new Vec3(0, 0, 0);
       this.actors.push(na);
       actor.neck = na;
+      (actor.rigged || (actor.rigged = [])).push(na);
     }
 
     /* Clothes: their own skinned mesh, so cloth can be canvas while the

@@ -6006,6 +6006,11 @@ function makePlayer(game, S, hud, sfx, voice) {
     gold: 0, goldAmmo: false,
     upgraded: {}, camoOff: {}, fitted: {},
     cooldown: 0, reloading: 0, reloadStage: 0, breakStage: 0, cylStage: 0, beltStage: 0,
+    /* The swap, as two halves. `swapT` counts down through the whole of
+       it and `swapTo` is the slot it lands on; the exchange itself
+       happens at the midpoint, when the old gun is off the bottom of
+       the screen and the new one has not come up yet. */
+    swapT: 0, swapFor: 0, swapTo: -1,
     trigT: 0, trigHold: 0,
     clipStage: 0, cellStage: 0, swayT: 0,
     // Three springs: muzzle rise, drive back along the bore, and twist.
@@ -7447,7 +7452,31 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
    * on a pistol to 135 mm on a Thompson -- which lands both in the same
    * place on SCREEN, which is the only place either is judged. */
   const lowDrop = 0.025 + Math.max(0, Math.min(0.60, len - 0.22)) * 0.186;
-  const sprintDrop = sp * lowDrop, sprintIn = sp * 0.05;
+  /* THE SWAP, on screen. The gun travels one and three quarter times
+     the sprint's low-ready drop, which is far enough to clear the
+     bottom of the frame on everything from a pistol to an MG42 -- and
+     clearing the frame is the entire requirement, because the slot
+     changes while it is down there and the exchange must not be
+     visible.
+
+     Down is fast and up is slower, which is how it works with a real
+     weapon and is also what makes the two halves read as two different
+     motions rather than as one thing bouncing. The muzzle dips as it
+     goes and comes back level on the way up, so it pivots out of the
+     shoulder rather than sliding down a rail. */
+  let swapDrop = 0, swapTip = 0, swapRoll = 0;
+  if (P.swapT > 0 && P.swapFor > 0) {
+    const t = 1 - P.swapT / P.swapFor;              // 0 at the start, 1 at the end
+    const down = t < 0.5;
+    // Eased: fast out of the shoulder, slow back into it.
+    const u = down
+      ? Math.pow(t / 0.5, 0.72)                     // 0 -> 1 in the first half
+      : Math.pow(1 - (t - 0.5) / 0.5, 1.45);        // 1 -> 0 in the second
+    swapDrop = u * lowDrop * 1.75;
+    swapTip = u * 0.52;
+    swapRoll = u * 0.30;
+  }
+  const sprintDrop = sp * lowDrop + swapDrop, sprintIn = sp * 0.05;
 
   const px = cam.position.x + f.x * dist + right.x * (offR - sprintIn) + up.x * (offU - sprintDrop);
   const py = cam.position.y + f.y * dist + right.y * (offR - sprintIn) + up.y * (offU - sprintDrop);
@@ -14706,6 +14735,31 @@ function start(opts = {}) {
          and 1 and the swap has to be expressed in those terms — never as
          `1 - P.slot`, which with a third slot out resolves to -1 and takes
          the whole frame down with it. */
+      /* A SWAP TAKES TIME AND YOU CAN SEE IT.
+       *
+         This used to be instantaneous: the slot changed, a sound
+         played, and one gun became another between two frames. Nothing
+         in the game reads as more obviously unfinished, because the one
+         thing a weapon swap is, is a pair of animations -- the old gun
+         goes down out of the frame, and the new one comes up into it.
+         Neither exists if the exchange happens in the same tick.
+
+         So the request only STARTS it. The gun drops for the first
+         part, the slot changes at the bottom where nothing is on
+         screen to see it change, and the new one rises for the rest.
+         Length decides how long: a Thompson is slower out of the
+         shoulder than a 1911 and should feel it. */
+      const beginSwap = (n) => {
+        if (P.slots.length <= n || n < 0) return;
+        if (P.swapT > 0) return;                       // already mid-swap
+        if (!P.knifeOut && n === P.slot) return;       // already holding it
+        const len = (P.spec().length || 0.5);
+        P.swapFor = 0.30 + Math.max(0, Math.min(0.42, len - 0.22)) * 0.62;
+        P.swapT = P.swapFor;
+        P.swapTo = n;
+        P.reloading = 0; P.reloadStage = 0; P.breakStage = 0;
+        sfx.swap();
+      };
       const swapTo = (n) => {
         if (P.slots.length <= n || n < 0) return;
         if (P.knifeOut) { P.knifeOut = false; P.slots = P.slots.filter((w) => w !== 'knife'); }
@@ -14717,16 +14771,25 @@ function start(opts = {}) {
            which is the ritual that had to be performed to get it shooting
            again. */
         P.cooldown = Math.min(P.cooldown, P.spec().refire);
-        sfx.swap();
         hud.ammo(P);
         hud.flashWeapon(P.spec().slotName);
       };
+      /* Run the swap. The exchange lands at the halfway mark, which is
+         where the gun is furthest down and the change cannot be seen. */
+      if (P.swapT > 0) {
+        const was = P.swapT;
+        P.swapT = Math.max(0, P.swapT - dt);
+        const half = P.swapFor * 0.5;
+        if (was > half && P.swapT <= half && P.swapTo >= 0) {
+          swapTo(P.swapTo); P.swapTo = -1;
+        }
+      }
       if (CTL.hit('swap')) {
         const cur = P.knifeOut ? (P.prevSlot || 0) : P.slot;
-        swapTo(cur === 0 ? 1 : 0);
+        beginSwap(cur === 0 ? 1 : 0);
       }
-      if (i.justPressed('1')) swapTo(0);
-      if (i.justPressed('2')) swapTo(1);
+      if (i.justPressed('1')) beginSwap(0);
+      if (i.justPressed('2')) beginSwap(1);
 
       if (P.reloading > 0) {
         const spec = P.spec();

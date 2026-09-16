@@ -40,6 +40,18 @@
    paint. 0x97673f is not a skin tone, it is orange, and rendered as
    exactly that: a man the colour of a traffic cone. Real skin is far
    less saturated than it looks on a palette. */
+/* What each of them is dressed in under the kit. Not a uniform: these
+   seven came from different places and the request was a custom look
+   for all of them, so the fatigues differ as much as the faces do. */
+const OP_CLOTH = {
+  coyote: { color: 0x9a8360, texture: 'fabric', roughness: 0.93, metalness: 0, uvScale: 10 },
+  olive:  { color: 0x5c6046, texture: 'fabric', roughness: 0.93, metalness: 0, uvScale: 10 },
+  black:  { color: 0x2e302e, texture: 'fabric', roughness: 0.90, metalness: 0, uvScale: 10 },
+  navy:   { color: 0x323a49, texture: 'fabric', roughness: 0.91, metalness: 0, uvScale: 10 },
+  hazmat: { color: 0xd8cf55, texture: 'fabric', roughness: 0.66, metalness: 0, uvScale: 8 },
+  grey:   { color: 0x6e7175, texture: 'fabric', roughness: 0.92, metalness: 0, uvScale: 10 },
+};
+
 const OP_SKIN = {
   fair: 0xf0cdb4, ruddy: 0xdda88c, olive: 0xc49a72,
   tan: 0xa87c56, brown: 0x8d6440, deep: 0x70502f, ash: 0xcabdae,
@@ -292,6 +304,11 @@ const OPERATORS = [
   {
     id: 'destroyer', name: 'DESTROYER',
     blurb: 'Breacher. Carries the door with him.',
+    /* Breacher: heaviest rig on the team, four mags, no helmet --
+       he does not wear one and that is the whole of his silhouette. */
+    gear: ['carrier', 'pouches', 'admin', 'belt', 'knees', 'goggles'],
+    gearOpts: { pouches: 4, holster: true },
+    outfit: 'coyote',
     eyeColor: 0x4a3626,
     face: 'destroyer', faceType: 'heavy', skin: 'tan', seed: 11,
     build: 1.24, height: 1.92, scale: 1.075, radius: 0.36,
@@ -303,6 +320,10 @@ const OPERATORS = [
   {
     id: 'charlie', name: 'CHARLIE',
     blurb: 'Marksman. Was somewhere else before this.',
+    // Marksman: light. A belt, a holster, and nothing on his head.
+    gear: ['belt'],
+    gearOpts: { holster: true },
+    outfit: 'olive',
     eyeColor: 0x6f8a92,
     face: 'charlie', faceType: 'male', skin: 'fair', seed: 23,
     build: 0.86, height: 1.83, scale: 1.020, radius: 0.29,
@@ -314,6 +335,10 @@ const OPERATORS = [
   {
     id: 'delta', name: 'DELTA',
     blurb: 'Assault. Third tour, second nose.',
+    // Assault: the standard rig, helmet with the tubes flipped up.
+    gear: ['carrier', 'pouches', 'admin', 'belt', 'knees', 'helmet'],
+    gearOpts: { pouches: 3, holster: true, nvg: true },
+    outfit: 'olive',
     eyeColor: 0x3a2a1c,
     face: 'delta', faceType: 'male', skin: 'olive', seed: 7,
     build: 1.04, height: 1.79, scale: 1.000, radius: 0.32,
@@ -325,6 +350,10 @@ const OPERATORS = [
   {
     id: 'alpha', name: 'ALPHA',
     blurb: 'Team lead. Talks least, moves first.',
+    // Team lead: carrier and radio, helmet, no kneepads.
+    gear: ['carrier', 'pouches', 'admin', 'belt', 'helmet'],
+    gearOpts: { pouches: 3, holster: true, nvg: false },
+    outfit: 'black',
     eyeColor: 0x241a12,
     face: 'alpha', faceType: 'male', skin: 'brown', seed: 31,
     build: 0.96, height: 1.87, scale: 1.045, radius: 0.31,
@@ -336,6 +365,12 @@ const OPERATORS = [
   {
     id: 'abscess', name: 'ABSCESS',
     blurb: 'Whatever was in the tanks, he was under it.',
+    /* Recon, and whatever he was under. A respirator he does not
+       take off, a light belt, and nothing else -- the least kit on the
+       team, which reads at distance as much as the most does. */
+    gear: ['belt', 'respirator'],
+    gearOpts: { holster: false },
+    outfit: 'olive',
     eyeColor: 0x8e9a8c,
     face: 'abscess', faceType: 'male', skin: 'ash', seed: 47,
     build: 0.78, height: 1.81, scale: 1.010, radius: 0.28,
@@ -350,6 +385,11 @@ const OPERATORS = [
   {
     id: 'biohazard', name: 'BIOHAZARD',
     blurb: 'Decon. Sealed, and happier that way.',
+    /* Decon: sealed. Hood and visor over everything, a carrier under
+       it, and he is the only one of the seven whose face you never see. */
+    gear: ['carrier', 'pouches', 'belt', 'knees', 'hood', 'visor'],
+    gearOpts: { pouches: 2, holster: true },
+    outfit: 'hazmat',
     eyeColor: 0x5f7a4e,
     face: 'biohazard', faceType: 'heavy', skin: 'ruddy', seed: 19,
     build: 1.30, height: 1.76, scale: 0.985, radius: 0.37,
@@ -361,6 +401,11 @@ const OPERATORS = [
   {
     id: 'swat', name: 'SWAT',
     blurb: 'Entry. Came from a job that had rules.',
+    // Entry: helmet, balaclava, plate carrier, two mags and a holster.
+    gear: ['carrier', 'pouches', 'admin', 'belt', 'knees', 'helmet', 'goggles'],
+    gearOpts: { pouches: 2, holster: true, nvg: false },
+    balaclava: true,
+    outfit: 'navy',
     eyeColor: 0x2b1f16,
     face: 'swat', faceType: 'male', skin: 'deep', seed: 53,
     build: 1.10, height: 1.72, scale: 0.955, radius: 0.33,
@@ -443,7 +488,7 @@ Engine.prototype.operator = function (id, opts = {}) {
     browColor: op.browColor,
     eyeColor: op.eyeColor,
     seed: op.seed,
-    material: opts.material || { preset: 'fabric', color: 0x8b8f94 },
+    material: opts.material || OP_CLOTH[op.outfit] || OP_CLOTH.olive,
     /* THE SKIN, and it was being dropped on the floor. character()
        reads the head's material from `opts.skin`; this passed
        `headMaterial`, which nothing looks at -- so all seven operators
@@ -461,6 +506,67 @@ Engine.prototype.operator = function (id, opts = {}) {
     skin: opts.skin || { preset: 'skin', color: OP_SKIN[op.skin] || OP_SKIN.tan,
       roughness: 0.62, metalness: 0, uvScale: 12 },
   }));
-  if (c) { c.operator = op.id; c.operatorSpec = op; }
+  if (!c) return c;
+  c.operator = op.id;
+  c.operatorSpec = op;
+
+  /* THE KIT.
+   *
+     Built after the body, against the same skeleton, and hung off the
+     same controller and animator -- so a plate carrier rides a sprint
+     and a holster swings with the thigh it is strapped to, without any
+     rig of its own. One actor per MATERIAL rather than one per piece,
+     because a man in webbing, rubber, steel and glass is four draws
+     however many pouches he is wearing.
+
+     Skipped entirely when the caller asks for a bare head, which is
+     what the comparison bench does -- a helmet would hide the sculpt it
+     is trying to measure. */
+  if (op.gear && op.gear.length && opts.gear !== false) {
+    const kit = buildGear(c.skeleton, op.gear,
+      Object.assign({ build: op.build, stature: op.scale }, op.gearOpts || {}));
+    c.gear = [];
+    for (const part of kit) {
+      const gm = new GpuMesh(this.gl, part.geometry);
+      gm.__key = 'gear:' + op.id + ':' + part.name;
+      (this._geoByKey || (this._geoByKey = new Map())).set(gm.__key, part.geometry);
+      const ga = new Actor(this, {
+        name: 'gear-' + part.name, mesh: gm,
+        material: this.material(part.material),
+        skeleton: c.skeleton, animator: c.animator,
+        controller: c.controller, body: c.controller.body,
+        boundRadius: 1.4 * op.scale,
+      });
+      ga.visualOffset = new Vec3(0, 0, 0);
+      this.actors.push(ga);
+      c.gear.push(ga);
+      // Shares the skeleton rather than hanging off a bone, so it has no
+      // parent to cascade from -- tracked for destroy() explicitly.
+      (c.rigged || (c.rigged = [])).push(ga);
+    }
+  }
+
+  /* A balaclava is cut from the head's OWN surface, like the hair, so
+     it hugs this particular skull -- which is why it is here and not in
+     the gear list with the hard kit. */
+  if (op.balaclava && opts.gear !== false && c.head) {
+    const hg = this.geometryOf(c.head.mesh);
+    const bg = hg ? gearBalaclava(hg, op.scale) : null;
+    if (bg && bg.indices.length) {
+      const bm = new GpuMesh(this.gl, bg);
+      bm.__key = 'mask:' + op.id;
+      (this._geoByKey || (this._geoByKey = new Map())).set(bm.__key, bg);
+      bm.setupInstancing(20);
+      const ba = new Actor(this, {
+        name: 'balaclava', mesh: bm,
+        material: this.material(GEAR_MAT.black),
+        parent: c, parentBone: c.skeleton.index('head'),
+        offset: c.head.offset, scale: c.head.scale,
+        boundRadius: 0.45 * op.scale,
+      });
+      this.actors.push(ba);
+      c.balaclava = ba;
+    }
+  }
   return c;
 };
