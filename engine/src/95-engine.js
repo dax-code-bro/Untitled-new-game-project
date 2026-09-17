@@ -1654,14 +1654,24 @@ class Engine {
 
      It only ever steps DOWN. Stepping back up when a quiet moment
      raises the average is how a game ends up changing its own
-     appearance every few seconds for the rest of the session. */
+     appearance every few seconds for the rest of the session.
+
+     And it stops at 'low'. The tier below that is a deliberate 1996
+     look -- quarter resolution, nine colours, 24 frames a second --
+     and arriving there by accident is indistinguishable from the
+     renderer being broken, which is what it was reported as. */
   _watchFrames(dt) {
     const W = this._watch;
     if (!W || !W.on) return;
     W.settle -= dt;
     if (W.settle > 0) return;            // loading spikes are not the game
     W.times.push(dt);
-    if (W.times.length < W.window) return;
+    /* A machine in real trouble should not have to wait. At two frames
+       a second the normal window of forty-five is twenty-two seconds of
+       sitting there before anything happens, so anything under ten
+       frames a second is judged on twelve. */
+    const dire = dt > 0.1;
+    if (W.times.length < (dire ? 12 : W.window)) return;
     /* The MEDIAN, not the mean. One 400ms hitch while a map streams in
        drags a mean below any threshold and would demote a machine that
        is otherwise fine. */
@@ -1670,12 +1680,38 @@ class Engine {
     W.times.length = 0;
     const fps = 1 / Math.max(1e-6, med);
     if (fps >= W.target || W.steps >= W.maxSteps) return;
+    /* RETRO IS NOT A FALLBACK. It renders at 0.26 of the display with a
+       nine-colour palette and the frame rate pinned at 24 -- it is a
+       1996 machine on purpose, chosen from a menu by somebody who wants
+       it. Walking a struggling laptop down into it turns the game into
+       a quarter-resolution smear and the player, quite reasonably,
+       reports that their screen is broken. The floor is 'low'. */
     const order = ['ultra', 'high', 'normal', 'low', 'retro'];
-    const at = order.indexOf(this.renderer.qualityName);
-    if (at < 0 || at >= order.length - 1) { W.steps = W.maxSteps; return; }
+    const floor = order.indexOf(W.floor);
+    /* Where it BELIEVES it is, not only what the renderer says. With an
+       apply hook the game owns setQuality, and an implementation that
+       does not call it (or has not yet) leaves the renderer's name
+       unchanged -- so this asked for 'normal' three times in a row
+       instead of walking down. Tracked here, and pulled forward if the
+       game has moved further down on its own. */
+    const seen = order.indexOf(this.renderer.qualityName);
+    const at = Math.max(seen < 0 ? 0 : seen, W.at == null ? -1 : W.at);
+    if (at + 1 > (floor < 0 ? 3 : floor)) { W.steps = W.maxSteps; return; }
     const to = order[at + 1];
-    this.renderer.setQuality(to);
-    this.renderer.resize(this.canvas.clientWidth, this.canvas.clientHeight);
+    W.at = at + 1;
+    /* The GAME applies it when it knows how. A tier is more than the
+       renderer's settings -- zombies also turns off the far battlefield
+       and the smoke, sets the canvas filtering, writes the saved
+       preference and caps the frame rate -- and calling setQuality
+       behind its back leaves all of that disagreeing with what is on
+       the screen. */
+    if (W.apply) {
+      W.apply(to, Math.round(fps), W.steps + 1);
+    } else {
+      this.renderer.setQuality(to);
+      this.renderer.resize(this.canvas.clientWidth || window.innerWidth,
+        this.canvas.clientHeight || window.innerHeight);
+    }
     W.steps++;
     W.settle = 1.5;                      // let the new tier settle before judging it
     if (W.onChange) W.onChange(to, Math.round(fps), W.steps);
@@ -1692,8 +1728,11 @@ class Engine {
       window: opts.window || 45,
       maxSteps: opts.maxSteps != null ? opts.maxSteps : 3,
       settle: opts.settle != null ? opts.settle : 2.5,
+      // The lowest tier it may choose. Never 'retro' unless asked for.
+      floor: opts.floor || 'low',
+      apply: opts.apply || null,
       onChange: opts.onChange || null,
-      times: [], steps: 0,
+      times: [], steps: 0, at: null,
     };
     return this;
   }

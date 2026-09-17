@@ -13600,9 +13600,23 @@ function start(opts = {}) {
      is not. */
   game.autoQuality({
     target: 40,
+    /* Never below LOW from here. The tier under it renders at a quarter
+       of the display with a nine-colour palette and the frame rate
+       pinned at 24 -- it is a 1996 machine on purpose, and a player
+       dropped into it without asking reports, correctly, that their
+       screen looks broken. */
+    floor: 'low',
+    /* Applied through the game's own preset, not behind its back. A
+       tier here is more than renderer settings: it also turns off the
+       far battlefield and the smoke, sets the canvas filtering, caps
+       the frame rate and writes the saved preference. setQuality alone
+       leaves every one of those disagreeing with the picture. */
+    apply: (tier) => {
+      const key = GRAPHICS[tier] ? tier : 'low';
+      applyGraphics(game, S, key);
+    },
     onChange: (tier, fps) => {
       try {
-        localStorage.setItem('b9.graphics', tier);
         if (window.SHELL && window.SHELL.toast) {
           window.SHELL.toast('Graphics set to ' + tier.toUpperCase() + ' — ' + fps + ' fps');
         }

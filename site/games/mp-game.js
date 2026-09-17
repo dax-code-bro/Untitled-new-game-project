@@ -185,6 +185,31 @@
   height:1px; background:rgba(232,221,200,.16); }
 #mpui .cam .prog i { display:block; height:100%; width:0; background:#ffd27a; }
 
+/* ---- settings ----
+   Multiplayer read invertX and invertY out of storage and had no way
+   on earth to SET them. Somebody whose stick is the wrong way round
+   could do nothing about it but tell me, repeatedly, while I guessed
+   at the sign and got it wrong. A switch ends that argument. */
+#mpui .opt { position:absolute; inset:0; background:rgba(5,6,10,.78);
+  display:flex; align-items:center; justify-content:center; pointer-events:auto; }
+#mpui .opt .pane { width:min(560px,92vw); border:1px solid #3a3428;
+  background:rgba(12,13,17,.97); padding:26px 30px 22px; }
+#mpui .opt h3 { margin:0 0 18px; font-size:13px; letter-spacing:.34em;
+  text-transform:uppercase; color:#8a806c; font-weight:normal; }
+#mpui .opt .row { display:flex; align-items:center; justify-content:space-between;
+  padding:11px 0; border-top:1px solid #23201a; }
+#mpui .opt .row:first-of-type { border-top:0; }
+#mpui .opt .row .t { font-size:14px; letter-spacing:.06em; color:#e8ddc8; }
+#mpui .opt .row .t small { display:block; margin-top:3px; font-size:11px;
+  letter-spacing:.10em; color:#6b6455; text-transform:none; }
+#mpui .opt button { pointer-events:auto; cursor:pointer; font:inherit;
+  border:1px solid #4a4234; background:rgba(232,221,200,.04); color:#c8bfa8;
+  padding:7px 16px; font-size:12px; letter-spacing:.20em; text-transform:uppercase; }
+#mpui .opt button:hover { border-color:#ffd27a; color:#ffd27a; }
+#mpui .opt button.on { border-color:#8ce8a0; color:#8ce8a0; }
+#mpui .opt .keys { display:flex; gap:8px; }
+#mpui .opt .go { margin-top:20px; display:flex; gap:10px; justify-content:flex-end; }
+
 /* ---- the click-to-play plate ---- */
 #mpui .lock { position:absolute; inset:0; display:flex; align-items:center;
   justify-content:center; background:rgba(5,6,10,.55); pointer-events:auto;
@@ -218,6 +243,32 @@
     <div class="lab"><div class="kind"></div><div class="nm"></div><div class="det"></div></div>
     <div class="prog"><i></i></div>
     <div class="skip">press <b>Space</b> to skip</div></div>
+  <div class="opt hide"><div class="pane">
+    <h3>Settings</h3>
+    <div class="row"><div class="t">Invert look &mdash; vertical
+      <small>Push the stick up and the view goes down.</small></div>
+      <button data-t="invertY">Off</button></div>
+    <div class="row"><div class="t">Invert look &mdash; horizontal
+      <small>Push the stick right and the view goes left.</small></div>
+      <button data-t="invertX">Off</button></div>
+    <div class="row"><div class="t">Stick sensitivity
+      <small>How fast the right stick turns you.</small></div>
+      <div class="keys"><button data-s="-">&minus;</button>
+        <button class="val" disabled>1.0</button>
+        <button data-s="+">+</button></div></div>
+    <div class="row"><div class="t">Mouse sensitivity
+      <small>Keyboard and mouse only.</small></div>
+      <div class="keys"><button data-m="-">&minus;</button>
+        <button class="mval" disabled>1.0</button>
+        <button data-m="+">+</button></div></div>
+    <div class="row"><div class="t">Graphics
+      <small>Drops on its own if the frame rate cannot keep up.</small></div>
+      <div class="keys"><button data-g="low">Low</button>
+        <button data-g="normal">Normal</button>
+        <button data-g="high">High</button></div></div>
+    <div class="go"><button class="quit">Leave match</button>
+      <button class="resume">Back to the game</button></div>
+  </div></div>
   <div class="lock"><div>Click to play<br><b>WASD</b> move &nbsp; <b>Mouse</b> look &nbsp;
     <b>Left</b> fire &nbsp; <b>Right</b> aim<br><b>Shift</b> sprint &nbsp; <b>Space</b> jump &nbsp;
     <b>Ctrl</b> crouch &nbsp; <b>R</b> reload &nbsp; <b>Q</b> swap<br>
@@ -233,7 +284,7 @@
      thing that makes a browser shooter feel broken. */
 
   function makeInput(root, canvas) {
-    var down = {}, mdx = 0, mdy = 0, locked = false;
+    var down = {}, mdx = 0, mdy = 0, locked = false, unlockHook = null;
     var buttons = { fire: false, aim: false };
     var pressed = {};
 
@@ -265,9 +316,14 @@
       if (e.button === 2) buttons.aim = false;
     }
     function lockChange() {
+      var was = locked;
       locked = document.pointerLockElement === canvas;
       root.querySelector('.lock').classList.toggle('hide', locked);
       if (!locked) { buttons.fire = false; buttons.aim = false; }
+      /* The browser takes the pointer lock away on Escape whether the
+         page likes it or not, so that IS the pause: whoever wants to
+         know gets told. */
+      if (was && !locked && unlockHook) unlockHook();
     }
 
     W.addEventListener('keydown', keyDown);
@@ -292,6 +348,7 @@
     return {
       any: any, once: once, buttons: buttons,
       get locked() { return locked; },
+      onUnlock: function (fn) { unlockHook = fn; },
       take: function () { var d = [mdx, mdy]; mdx = 0; mdy = 0; return d; },
       endFrame: function () { pressed = {}; },
       /* A test has no mouse and no pointer lock. This is how it drives
@@ -528,7 +585,25 @@
     var cache = {};
     var cur = null, curId = null;
     var Q = new W.LE.Quat(), Q2 = new W.LE.Quat();
-    var AX = [1, 0, 0], AY = [0, 1, 0], AZ = [0, 0, 1];
+    /* VEC3, NOT ARRAYS. setAxisAngle reads axis.x / axis.y / axis.z, and
+       an array has none of them -- so `[0,1,0].x * sin(h)` is undefined
+       times a number, which is NaN, and the quaternion came out
+       NaN,NaN,NaN,NaN every single frame.
+     *
+       A composed matrix writes its translation column straight from the
+       position, so the actor's world POSITION stayed perfectly correct
+       and every check I wrote -- is it visible, is it in front of the
+       camera, is it on the right of the screen, does it reach a draw
+       call -- passed. Only the rotation part of the matrix was NaN,
+       which is enough for the GPU to throw away every triangle of the
+       weapon AND of the muzzle flash that copies the same quaternion.
+
+       The multiplayer viewmodel has therefore never once been drawn.
+       "I can't see my gun, it's invisible", "there's no muzzle flash",
+       "the gun models are 0% developed" -- one line, and I read past it
+       for a week because the numbers either side of it were right. */
+    var AX = new W.LE.Vec3(1, 0, 0), AY = new W.LE.Vec3(0, 1, 0),
+        AZ = new W.LE.Vec3(0, 0, 1);
     /* The muzzle flash: a short bright cone that lives at the end of
        the bore and is off almost all the time. There was none at all --
        "no muzzle flash, nothing" -- and a gun that fires without one
@@ -644,13 +719,51 @@
            The reload drops it further and the sprint drops it further
            still. */
         var rl = reload || 0;
-        var offR = 0.135 * (1 - aim) + 0.004;
-        /* -0.118, not -0.145. Measured through the real projection the
-           grip sat at ndc y -0.93 -- the very bottom edge of the frame
-           -- so most of what the player saw of their own weapon was the
-           muzzle and nothing behind it. */
-        var offU = -0.118 - low * 0.085 - rl * 0.075 + bob * 0.6 + aim * 0.056;
-        var dist = 0.30 + aim * 0.055 - kick * 0.03 - low * 0.03;
+
+        /* WHERE THE WEAPON IS HELD, and this was invented here instead
+           of taken from the game next door that already had it right.
+         *
+           A screenshot of multiplayer is a featureless black mass
+           hanging in the middle of the frame. That is not a broken
+           model: it is a CORRECT model with the camera inside it. The
+           weapon's origin sits about 42cm behind its own muzzle (see
+           body.muzzleAt), this held that origin 0.30m from the eye, and
+           so the receiver and the whole stock were BEHIND the camera
+           and what filled the screen was the inside of the gun.
+
+           Zombies solved this properly and the numbers are measured:
+           hip 0.355m out plus a bulk term, 0.150 down, 0.092 right --
+           and then the whole thing pushed out by 1.30, laterals and
+           all, because at 30cm a correct model subtends half the
+           screen and real engines dodge it with a separate narrow
+           field of view for the viewmodel. Holding it further away is
+           the same trick with one camera: same framing, smaller, and
+           no longer pressed against the eye.
+
+           Taken from updateViewmodel() in bunker-nine rather than
+           re-derived, because re-deriving it is what produced the
+           black mass. */
+        var len = (g && g.muzzleAt != null) ? g.muzzleAt : 0.42;
+        var bulk = Math.max(0, Math.min(1, (len - 0.24) / 0.34));
+        var sightH = (g && g.sightH != null) ? g.sightH : 0.0455;
+        var OUT = 1.30;
+        /* No invented drop term here. Zombies subtracts a `tipDrop`
+           that belongs to ITS rotation scheme, and adding my own guess
+           at one put the whole weapon eight centimetres below the
+           bottom of the frame -- a gun you cannot see, which is where
+           this started. The measured hip height is the measured hip
+           height. */
+        var hipX = 0.092 + bulk * 0.020;
+        var hipY = -0.150 - bulk * 0.026;
+        var hipD = 0.355 + bulk * 0.055;
+        /* The aimed vertical is NOT scaled by OUT. It is -sightH
+           exactly, because that is what puts the front blade and the
+           rear notch on the camera axis, and it is -sightH at any
+           distance. */
+        var offR = hipX * OUT * (1 - aim);
+        var offU = hipY * OUT * (1 - aim) + (-sightH) * aim
+          - low * 0.085 - rl * 0.075 + bob * 0.6;
+        var dist = (hipD * (1 - aim) + 0.30 * aim) * OUT - kick * 0.03 - low * 0.03;
 
         if (flash) {
           flashT = Math.max(0, flashT - (dt || 0.016));
@@ -926,6 +1039,107 @@
   }
 
   /* ================================================================
+     SETTINGS
+     ================================================================
+     The pad reads invertX and invertY out of b9.pad.v1 and nothing in
+     multiplayer could ever write them. So a player whose stick is the
+     wrong way round had exactly one remedy available -- telling me,
+     and waiting for me to guess the sign correctly, which I did not.
+
+     Every control in here applies the moment it is pressed: the pad
+     re-reads its config twice a second by design, and the graphics
+     tier is applied straight to the renderer. Nothing needs a restart
+     and nothing is lost on one -- it all goes to localStorage under
+     the same keys zombies uses, so a choice made in one is a choice
+     made in both. */
+  function makeSettings(root, game, pad, ctl) {
+    var el = root.querySelector('.opt');
+    var open = false;
+
+    function mouseSens() {
+      var v = 1;
+      try { v = parseFloat(W.localStorage.getItem('b9.mouse') || '1') || 1; } catch (e) { v = 1; }
+      return Math.max(0.2, Math.min(4, v));
+    }
+    function setMouse(v) {
+      v = Math.max(0.2, Math.min(4, Math.round(v * 10) / 10));
+      try { W.localStorage.setItem('b9.mouse', String(v)); } catch (e) { /* off */ }
+      if (ctl.onMouse) ctl.onMouse(v);
+      return v;
+    }
+    function tier() {
+      return game.renderer ? game.renderer.qualityName : 'normal';
+    }
+
+    function paint() {
+      var c = pad.config();
+      el.querySelectorAll('[data-t]').forEach(function (b) {
+        var on = !!c[b.getAttribute('data-t')];
+        b.textContent = on ? 'On' : 'Off';
+        b.classList.toggle('on', on);
+      });
+      var sv = el.querySelector('.val');
+      if (sv) sv.textContent = (c.sensitivity || 1).toFixed(1);
+      var mv = el.querySelector('.mval');
+      if (mv) mv.textContent = mouseSens().toFixed(1);
+      var t = tier();
+      el.querySelectorAll('[data-g]').forEach(function (b) {
+        b.classList.toggle('on', b.getAttribute('data-g') === t);
+      });
+    }
+
+    el.addEventListener('click', function (ev) {
+      var b = ev.target.closest ? ev.target.closest('button') : null;
+      if (!b) return;
+      var c = pad.config();
+      if (b.hasAttribute('data-t')) {
+        var k = b.getAttribute('data-t');
+        var next = {}; next[k] = !c[k];
+        pad.setConfig(next);
+      } else if (b.hasAttribute('data-s')) {
+        var step = b.getAttribute('data-s') === '+' ? 0.1 : -0.1;
+        pad.setConfig({ sensitivity: Math.max(0.2,
+          Math.min(4, Math.round(((c.sensitivity || 1) + step) * 10) / 10)) });
+      } else if (b.hasAttribute('data-m')) {
+        setMouse(mouseSens() + (b.getAttribute('data-m') === '+' ? 0.1 : -0.1));
+      } else if (b.hasAttribute('data-g')) {
+        var want = b.getAttribute('data-g');
+        game.renderer.setQuality(want);
+        game.renderer.resize(game.canvas.clientWidth || W.innerWidth,
+          game.canvas.clientHeight || W.innerHeight);
+        try { W.localStorage.setItem('b9.graphics', want); } catch (e) { /* off */ }
+      } else if (b.classList.contains('resume')) {
+        api.close(true);
+        return;
+      } else if (b.classList.contains('quit')) {
+        if (ctl.onQuit) ctl.onQuit();
+        return;
+      }
+      paint();
+    });
+
+    var api = {
+      get open() { return open; },
+      show: function () {
+        if (open) return;
+        open = true;
+        paint();
+        el.classList.remove('hide');
+        if (document.exitPointerLock) document.exitPointerLock();
+      },
+      close: function (relock) {
+        if (!open) return;
+        open = false;
+        el.classList.add('hide');
+        if (relock && ctl.onResume) ctl.onResume();
+      },
+      toggle: function () { if (open) api.close(true); else api.show(); },
+      mouseSens: mouseSens,
+    };
+    return api;
+  }
+
+  /* ================================================================
      THE REPLAY: KILL CAM AND BEST PLAY
      ================================================================
      Both are the same machine pointed at two different moments.
@@ -1183,6 +1397,20 @@
 
     var yaw = M.you.yaw, pitch = 0;
     var sens = (opts.sensitivity || 1) * 0.0022;
+    /* Escape opens the settings, which is also where the pointer lock
+       goes when the browser takes it away -- it does that on Escape
+       whatever the page wants, so the pane may as well be the thing
+       that appears. */
+    var settings = makeSettings(root, game, pad, {
+      onResume: function () { if (canvas.requestPointerLock) canvas.requestPointerLock(); },
+      onQuit: function () {
+        if (opts.onQuit) opts.onQuit(M);
+        else W.location.href = 'bunker-nine.html';
+      },
+      onMouse: function (v) { sens = v * 0.0022; },
+    });
+    sens = settings.mouseSens() * 0.0022;
+    input.onUnlock(function () { if (!over && !M.over) settings.show(); });
     var kick = 0, bob = 0, bobT = 0, lastHp = M.you.hp, wasAlive = true;
     var adsT = 0;
     var over = false;
@@ -1241,6 +1469,16 @@
     function frame(dt) {
       if (over) return;
       var p = M.you;
+
+      /* Settings open: the world keeps turning but you do not steer it.
+         Reading the stick while a menu is up is how a player comes back
+         to find they have walked into a wall for thirty seconds. */
+      if (input.once(KEYS.quit)) settings.toggle();
+      if (settings.open) {
+        M.update(dt);
+        input.endFrame();
+        return;
+      }
 
       /* ---- a replay owns the screen while it runs ----
          The match keeps simulating underneath it: respawn timers, the

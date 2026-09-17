@@ -1365,7 +1365,19 @@
 
   function lod(M, p, d2) {
     var a = p.actor;
-    if (!a) return;
+    if (!a) return false;
+    /* NEVER YOUR OWN BODY.
+     *
+       You are hidden from yourself for the whole match because the
+       camera lives inside your head. Your distance to yourself is
+       zero, which is the nearest possible range, so this cheerfully
+       turned your eyes, your hair, your beard and your skull back ON
+       -- and a first-person camera inside a head that is being drawn
+       sees a featureless dark mass filling the middle of the screen.
+
+       I spent a long time certain that mass was the weapon, moved the
+       weapon twice, and photographed a picture that had not changed. */
+    if (M.you && p.id === M.you.id) return false;
     var face = p._lodFace == null ? d2 < LOD_FACE_ON
       : (p._lodFace ? d2 < LOD_FACE_OFF : d2 < LOD_FACE_ON);
     if (p._lodFace !== face) {
