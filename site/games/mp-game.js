@@ -1682,5 +1682,10 @@
     return api;
   }
 
-  W.MP_GAME = { start: start, KEYS: KEYS };
+  /* Exposed so a sweep over all sixty weapons can tell an intentional
+     alias from a silent fallback. Three of them are hand-built models
+     under a different name, and one -- the MG42 -- genuinely has no
+     model of its own and borrows the MG34's. A test that cannot tell
+     those apart reports four failures and means one. */
+  W.MP_GAME = { start: start, KEYS: KEYS, VM_BESPOKE: VM_BESPOKE, VM_FALLBACK: VM_FALLBACK };
 })();
