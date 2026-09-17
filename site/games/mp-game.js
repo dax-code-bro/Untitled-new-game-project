@@ -1275,7 +1275,11 @@
             ? Math.hypot(hit.point.x - hx, hit.point.y - hy, hit.point.z - hz)
             : (hit && hit.distance != null ? hit.distance : Infinity);
           if (hd < len) {
-            var k = Math.max(0.35, (hd - 0.28) / len);
+            /* Not closer than a bit over half. Pulled right in, the
+               camera sits on the back of his head and the shot stops
+               being a chase and becomes a hat. Clipping a corner of
+               wall is the lesser evil. */
+            var k = Math.max(0.55, (hd - 0.28) / len);
             cx = hx + dx * k; cy = hy + dy * k; cz = hz + dz * k;
           }
         } catch (e) { /* no physics on this map: keep the wide shot */ }

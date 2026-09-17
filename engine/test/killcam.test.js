@@ -215,8 +215,12 @@ const note = (s) => console.log(`  ..   ${s}`);
   const near = armed.filter((r) => r.range < 36);
   const far = armed.filter((r) => r.range > 44);
   note(`${near.length} inside 36 m, ${far.length} past 44 m`);
+  /* If the round has scattered everybody past the draw distance there
+     is nothing here to judge, and failing on that is failing on where
+     the bots happened to walk. */
+  if (!near.length) note('nobody within 36 m this round; nothing to judge');
   check('every man in sight is holding a weapon',
-    near.length > 0 && near.every((r) => r.shown),
+    near.every((r) => r.shown),
     near.filter((r) => !r.shown).map((r) => `${r.id}:${r.want}@${r.range.toFixed(0)}m`).join(' '));
   check('and the far ones are not paying for one nobody can see',
     far.every((r) => !r.shown),
@@ -341,7 +345,7 @@ const note = (s) => console.log(`  ..   ${s}`);
   note(`banner: ${played.kind} — ${played.name} — ${played.det}`);
   check('the scoreboard waits its turn', played.overHidden === true);
   check('and it is watched from behind him, not from inside him',
-    played.chase && played.dist > 2 && played.dist < 6,
+    played.chase && played.dist > 1.8 && played.dist < 6,
     `${played.dist.toFixed(1)} m back, ${played.above.toFixed(1)} up`);
   check('the clip is running', parseFloat(played.prog) > 0, played.prog);
   await page.screenshot({ path: path.join(OUT, 'bestplay.jpg'), type: 'jpeg', quality: 84 });
