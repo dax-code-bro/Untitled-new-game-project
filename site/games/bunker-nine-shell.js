@@ -3857,6 +3857,16 @@ SHELL.binds = SHELL.binds || null;
 SHELL.applySettings = applySettings;
 SHELL.openSettings = function () { if (root) openSettings(paused ? 'pause' : 'main'); };
 SHELL.openPause = openPause;
+/* Every screen, reachable by name. They were internal, so a check that
+   wanted to open the main menu or the loadout and photograph it could
+   not -- and "where did all the menus go" went unanswered for a week
+   while the answer was that the link being handed over was
+   multiplayer.html, which has no shell in it at all. A screen you
+   cannot open from outside is a screen nobody can prove exists. */
+SHELL.openMain = function () { if (root) openMain(); };
+SHELL.openMaps = function () { if (root) openMaps(); };
+SHELL.openMP = function (tab) { if (root) openMP(tab || 'lobby'); };
+SHELL.openLoadout = function () { if (root) openMP('loadout'); };
 /* The real way into a game, exposed so a check can take it. A test that
    reaches the game by any other route is testing a route no player uses
    -- which is exactly how the pause menu came to be broken: the Escape

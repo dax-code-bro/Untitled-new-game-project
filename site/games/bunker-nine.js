@@ -13265,9 +13265,16 @@ function start(opts = {}) {
     },
     onChange: (tier, fps) => {
       try {
-        if (window.SHELL && window.SHELL.toast) {
-          window.SHELL.toast('Graphics set to ' + tier.toUpperCase() + ' — ' + fps + ' fps');
-        }
+        /* The shell's global is BUNKER_SHELL. `window.SHELL` is
+           nothing at all, so this notice has never once appeared --
+           the tier came down silently, which is exactly what made a
+           quarter-resolution picture look like a broken screen rather
+           than a setting that had changed. */
+        var sh = window.BUNKER_SHELL;
+        var msg = 'Graphics set to ' + tier.toUpperCase() + ' — ' + fps + ' fps';
+        if (sh && sh.toast) sh.toast(msg);
+        else if (S && S.hud && S.hud.banner) S.hud.banner(msg, '#ffd27a');
+        else if (window.console) window.console.log('[b9] ' + msg);
       } catch (e) { void e; }
     },
   });
