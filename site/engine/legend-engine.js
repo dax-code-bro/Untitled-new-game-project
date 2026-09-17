@@ -8428,6 +8428,58 @@ function makeHumanoidClips() {
     lowerArmR: { keys: [[0, 14, 0, 0], [0.46, 56, 0, 0], [1, 36, 0, 0]] },
   }, { loop: false }));
 
+  /* STANDING STILL IS NOT STANDING STILL.
+     ================================================================
+     A man waiting does not hold one pose. He shifts his weight off the
+     leg that is tired, he glances at what is behind him, he checks the
+     kit on his chest without thinking about it. None of it is large --
+     a few degrees, once every several seconds -- and all of it is the
+     difference between a character and a mannequin.
+
+     Three of them, short and non-looping, played over idle at
+     intervals. Deliberately unequal lengths (2.4s, 1.9s, 2.8s) so that
+     two operators standing side by side never fall into step, which is
+     what makes a row of them read as a shop window. */
+
+  /* The weight goes onto the other leg. The pelvis slides across and
+     drops on the loaded side, the spine counters so the head stays
+     where it was, and it comes back. */
+  clips.push(buildClip('idleShift', 2.4, {
+    hips: {
+      keys: [[0, 2, 0, 0], [0.22, 2, 0, -3.5], [0.55, 2, 0, -4], [0.82, 2, 0, -1.5], [1, 2, 0, 0]],
+      pos: [[0, 0, 0, 0], [0.22, -0.021, -0.008, 0], [0.55, -0.026, -0.010, 0],
+        [0.82, -0.012, -0.004, 0], [1, 0, 0, 0]],
+    },
+    spine: { keys: [[0, 0, 0, 0], [0.3, 0, 0, 2.2], [0.6, 0, 0, 2.6], [1, 0, 0, 0]] },
+    chest: { keys: [[0, 0, 0, 1], [0.35, 0, 0, 2.4], [0.65, 0, 0, 2.2], [1, 0, 0, 1]] },
+    neck: { keys: [[0, 0, 0, 0], [0.4, 0, 0, -1.6], [1, 0, 0, 0]] },
+    upperLegL: { keys: [[0, 0, 0, 0], [0.5, -2, 0, 1.5], [1, 0, 0, 0]] },
+    upperLegR: { keys: [[0, 0, 0, 0], [0.5, 3, 0, -1], [1, 0, 0, 0]] },
+    lowerLegR: { keys: [[0, 4, 0, 0], [0.5, 11, 0, 0], [1, 4, 0, 0]] },
+  }, { loop: false }));
+
+  /* Something moved. The eyes go first and the head follows, which is
+     why the head turn starts after the neck one and lags it all the
+     way back. */
+  clips.push(buildClip('idleGlance', 1.9, {
+    neck: { keys: [[0, 0, 0, 0], [0.18, 0, -12, 0], [0.42, 0, -17, 1], [0.72, 0, -6, 0], [1, 0, 0, 0]] },
+    head: { keys: [[0, 0, 0, 0], [0.26, 0, -13, -1], [0.5, 0, -19, -2], [0.8, 0, -5, 0], [1, 0, 0, 0]] },
+    chest: { keys: [[0, 0, 0, 1], [0.5, 0, -4, 1], [1, 0, 0, 1]] },
+    upperArmL: { keys: [[0, 0, 0, -6], [0.5, 0, 0, -8], [1, 0, 0, -6]] },
+  }, { loop: false }));
+
+  /* A hand goes to the chest rig and comes back. The elbow does the
+     work; the shoulder barely moves, which is what stops it reading as
+     a salute. */
+  clips.push(buildClip('idleCheck', 2.8, {
+    upperArmR: { keys: [[0, 0, 0, 6], [0.24, -18, 0, 16], [0.55, -22, 0, 19], [0.82, -8, 0, 10], [1, 0, 0, 6]] },
+    lowerArmR: { keys: [[0, 8, 0, 0], [0.24, 58, 0, 0], [0.58, 66, 0, 0], [0.85, 26, 0, 0], [1, 8, 0, 0]] },
+    handR: { keys: [[0, 0, 0, 0], [0.4, 0, 0, -14], [0.6, 0, 0, -10], [1, 0, 0, 0]] },
+    neck: { keys: [[0, 0, 0, 0], [0.45, 5, 0, 0], [0.7, 4, 0, 0], [1, 0, 0, 0]] },
+    head: { keys: [[0, 0, 0, 0], [0.45, 7, 0, 0], [0.7, 5, 0, 0], [1, 0, 0, 0]] },
+    chest: { keys: [[0, 0, 0, 1], [0.5, 3, 0, 1], [1, 0, 0, 1]] },
+  }, { loop: false }));
+
   return clips;
 }
 

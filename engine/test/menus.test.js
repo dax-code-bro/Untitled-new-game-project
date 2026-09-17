@@ -87,6 +87,77 @@ const note = (s) => console.log(`  ..   ${s}`);
     check(`${label} opens and draws something`, ok && vis.len > 40, `${vis.len} chars`);
   }
 
+  /* THE OPERATOR IS A REAL MAN NOW, not an SVG stick figure. */
+  const st = await page.evaluate(async () => {
+    window.BUNKER_SHELL.openMP('operators');
+    await new Promise((r) => setTimeout(r, 2500));
+    const s = window.MENU_STAGE;
+    if (!s) return { err: 'no stage' };
+    const sub = s.subject;
+    return {
+      kind: s.kind, id: s.id, has: !!sub,
+      parts: sub ? (sub.rigged ? sub.rigged.length : 0) : 0,
+      verts: sub && sub.mesh ? sub.mesh.vertexCount : 0,
+      entering: s.entering, facing: +s.facing.toFixed(3),
+      staged: document.querySelector('#b9shell').classList.contains('staged'),
+      /* IS THE CAMERA ACTUALLY ON HIM? The stage sits four hundred
+         metres under the map, so this is unambiguous: a camera still
+         up at the bunker is looking at the wrong thing entirely, and
+         the first screenshot of this feature showed the zombies game
+         with its own ammo counter rather than the operator. */
+      camY: +window.BUNKER_SHELL.handle().game.camera.position.y.toFixed(1),
+      subY: sub && sub.controller ? +sub.controller.body.position.y.toFixed(1) : null,
+      hudHidden: !document.getElementById('b9hud')
+        || getComputedStyle(document.getElementById('b9hud')).display === 'none',
+    };
+  });
+  note(`stage: ${JSON.stringify(st)}`);
+  check('the operator selector stages a real body', !st.err && st.has && st.kind === 'op',
+    JSON.stringify(st));
+  check('and the menu is cut open so he can be seen', st.staged === true);
+  check('the camera is down on the stage, not up at the map',
+    st.camY < -300, `camera y ${st.camY}, subject y ${st.subY}`);
+  /* And the MAN is on the stage too. The stage floor has no physics, so
+     there is nothing holding him up: the first version let the
+     controller's out-of-world recovery carry him forty metres above
+     the camera while every other check passed. */
+  check('and the man is standing on it, not floating above it',
+    st.subY != null && Math.abs(st.subY - st.camY) < 3,
+    `camera ${st.camY}, man ${st.subY}`);
+  check("and the game's own HUD is not floating over him", st.hudHidden === true);
+
+  /* And turning him TAKES TIME. */
+  /* STEPPED AT A FIXED 1/60. The engine clamps a long frame at 0.1s and
+     SwiftShader delivers about two frames a second, so a turn that
+     takes two thirds of a second of GAME time takes many seconds of
+     wall time here -- and a check written against the wall clock
+     reports a working turn as an unfinished one. It reported exactly
+     that: 0.735 of the 1.571 asked for, which is three frames of
+     correct turning. */
+  const turn = await page.evaluate(async (steps) => {
+    const s = window.MENU_STAGE, g = window.BUNKER_SHELL.handle().game;
+    const before = s.facing;
+    s.turn(Math.PI * 0.5);
+    g.stop();
+    let mid = before;
+    for (let i = 0; i < steps; i++) {
+      g.step(1 / 60);
+      if (i === 5) mid = s.facing;
+    }
+    const end = s.facing;
+    g.start();
+    return { before: +before.toFixed(3), mid: +mid.toFixed(3), end: +end.toFixed(3),
+      want: +s.target.toFixed(3), steps };
+  }, 60);
+  note(`turn: ${turn.before} -> ${turn.mid} -> ${turn.end} (asked ${turn.want})`);
+  check('he turns rather than snapping -- part way after six frames',
+    Math.abs(turn.mid - turn.want) > 0.15 && turn.mid > turn.before + 0.05,
+    JSON.stringify(turn));
+  check('and he gets all the way there',
+    Math.abs(turn.end - turn.want) < 0.12, JSON.stringify(turn));
+  await page.screenshot({ path: path.join(OUT, 'menu-operator3d.jpg'), type: 'jpeg', quality: 86 });
+  note(`shot -> ${path.join(OUT, 'menu-operator3d.jpg')}`);
+
   check('the shell exposes every screen', has.fns.length === 6, has.fns.join(','));
   check('no page errors', errors.length === 0, errors.slice(0, 4).join(' | '));
   for (const [id] of screens) note(`shot -> ${path.join(OUT, `menu-${id}.jpg`)}`);

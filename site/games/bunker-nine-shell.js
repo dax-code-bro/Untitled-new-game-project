@@ -706,8 +706,37 @@ var CSS3 = `
   background:linear-gradient(180deg,#4c4740 0,#2a2722 100%); }
 #b9shell .oprow .nm { font-size:15px; letter-spacing:.20em; color:#bcae92; }
 #b9shell .oprow .bd { margin-left:auto; font-size:10.5px; letter-spacing:.16em; color:#6b6455; }
-#b9shell .opfig { flex:1; min-height:120px; display:flex; align-items:center; justify-content:center; }
+/* A WINDOW, not a picture. The operator is drawn by the engine behind
+   this pane, so the box's job is to be transparent in the right place
+   and to say so at the edges. The SVG is kept as the fallback for a
+   machine that could not give us a context at all. */
+#b9shell .opfig { flex:1; min-height:120px; display:flex; align-items:center;
+  justify-content:center; position:relative; }
 #b9shell .opfig svg { height:100%; max-height:300px; }
+/* THE HOLE. The shell paints a solid #05060a over the whole screen and
+   the multiplayer pane paints a gradient over that, so a man drawn by
+   the engine behind them is behind two opaque layers. While an operator
+   is staged, the shell and the pane go transparent and the figure box
+   is cut out of them -- everything else on the screen stays exactly
+   where it is, floating over him. */
+/* AND THE GAME'S OWN HUD GOES WITH IT. Making the shell transparent
+   reveals whatever is behind it, which is the zombies game -- round
+   counter, points, ammo and all, floating over the operator selector.
+   Seen in the first screenshot of this working: a man, and somebody
+   else's ammo count over his shoulder. */
+body.b9staged #b9hud { display:none !important; }
+#b9shell.staged, #b9shell.staged .mp { background:transparent; }
+#b9shell.staged .mp::before { content:''; position:absolute; inset:0;
+  background:linear-gradient(90deg,rgba(7,8,12,.96) 0%,rgba(7,8,12,.92) 38%,
+    rgba(7,8,12,.30) 58%,rgba(5,6,10,.10) 100%); pointer-events:none; }
+#b9shell .opfig.live { background:none; }
+#b9shell .opfig.live svg { display:none; }
+#b9shell .opfig .turnrow { position:absolute; left:0; right:0; bottom:6px;
+  display:flex; gap:10px; justify-content:center; pointer-events:auto; }
+#b9shell .opfig .turnrow button { font:inherit; cursor:pointer; color:#c8bfa8;
+  background:rgba(232,221,200,.05); border:1px solid #4a4234; padding:5px 14px;
+  font-size:12px; letter-spacing:.20em; }
+#b9shell .opfig .turnrow button:hover { border-color:#ffd27a; color:#ffd27a; }
 #b9shell .ophead h3 { margin:0; font-size:26px; letter-spacing:.22em; color:#ffd27a; font-weight:normal; }
 #b9shell .ophead .opblurb { display:block; margin-top:5px; font-size:12.5px; color:#8b8271;
   letter-spacing:.06em; }
@@ -2046,6 +2075,11 @@ function openMP(tab) {
   el.loadtab.classList.toggle('sel', mpTab === 'loadout');
   el.optab.classList.toggle('sel', mpTab === 'operators');
   el.mp.classList.toggle('deep', mpTab === 'loadout');
+  if (mpTab !== 'operators' && W.MENU_STAGE) {
+    W.MENU_STAGE.release();
+    if (root) root.classList.remove('staged');
+    document.body.classList.remove('b9staged');
+  }
   el.lobby.classList.toggle('on', mpTab === 'lobby');
   el.loadoutp.classList.toggle('on', mpTab === 'loadout');
   el.opspane.classList.toggle('on', mpTab === 'operators');
@@ -2063,7 +2097,14 @@ function openMP(tab) {
   else openLoadout();
 }
 
-function closeMP() { tabHook = null; startHook = null; }
+function closeMP() {
+  tabHook = null; startHook = null;
+  /* The man goes away with the screen he was standing on, and the
+     game's camera goes back exactly where it was. */
+  if (W.MENU_STAGE) W.MENU_STAGE.release();
+  if (root) root.classList.remove('staged');
+  document.body.classList.remove('b9staged');
+}
 
 /* ---------------- lobby ---------------- */
 
@@ -2265,7 +2306,31 @@ function paintOperators() {
 
   el.opname.textContent = cur.name;
   el.opblurb.textContent = cur.blurb;
-  el.opfig.innerHTML = opSil(cur, true);
+  /* THE ACTUAL MAN. Seven sculpted heads, seven builds and seven sets
+     of kit, and what this drew was a circle on a trapezoid. The stage
+     borrows the engine already running behind the menu. */
+  var stage = W.MENU_STAGE, h = SHELL.handle && SHELL.handle();
+  var live = false;
+  if (stage && h && h.game) {
+    stage.attach(h.game);
+    live = !!stage.showOperator(cur.id);
+    if (live) stage.look({ side: -0.52, dist: 2.60 });
+  }
+  el.opfig.classList.toggle('live', live);
+  root.classList.toggle('staged', live);
+  document.body.classList.toggle('b9staged', live);
+  el.opfig.innerHTML = opSil(cur, true)
+    + (live ? '<div class="turnrow"><button data-turn="-1">&#8634; turn</button>'
+      + '<button data-turn="1">turn &#8635;</button></div>' : '');
+  if (live) {
+    el.opfig.querySelectorAll('[data-turn]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        /* A quarter turn asked for; he takes about two thirds of a
+           second to do it, because that is how long it takes. */
+        stage.turn(Number(b.getAttribute('data-turn')) * Math.PI * 0.5);
+      });
+    });
+  }
   el.opstats.innerHTML =
     '<span>HEIGHT <b>' + cur.h.toFixed(2) + ' m</b></span>'
     + '<span>FRAME <b>' + esc(cur.frame) + '</b></span>'
