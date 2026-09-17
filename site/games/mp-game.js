@@ -563,6 +563,44 @@
     sawnoff: 'sawnOff' };
   var VM_FALLBACK = { mg42: 'mg34', riotshield: 'ump' };
 
+  /* WHERE THE HANDS GO ON A WEAPON THAT HAS NEVER BEEN POSED.
+   *
+     Zombies authors a `hands` block per weapon -- the exact anchor for
+     each palm and how the fingers close. Multiplayer has sixty guns and
+     no such table, and waiting for sixty authored grips is waiting
+     forever, so these are DERIVED from what the model measures about
+     itself: muzzleAt is how far the muzzle is from the origin and
+     boreAt is how high the bore sits above it.
+
+     The firing hand is at the grip, which on every one of these models
+     is within a couple of centimetres of the origin. The support hand
+     goes two thirds of the way out the forend at about half bore
+     height -- far enough forward to read as a hold, short of the muzzle
+     so nobody is gripping a hot barrel. A pistol gets the wrapped
+     support hand instead, thumb stacked behind the other, which is how
+     a pistol is actually held with two hands.
+
+     Authored anchors would be better and these are not a substitute for
+     them. They are the difference between hands and no hands. */
+  var PISTOL_WRAP = { axis: [-0.28, -0.94, 0], round: [0, 0, 1], girth: 0.078,
+    spread: 0.0184, close: 0.90, index: 'wrap', thumb: 'stack', drop: 0 };
+
+  function handsFor(g, cls) {
+    var muzzle = (g && g.muzzleAt != null) ? g.muzzleAt : 0.42;
+    var bore = (g && g.boreAt != null) ? g.boreAt : 0.05;
+    var oneHanded = cls === 'pistol' || muzzle < 0.24;
+    if (oneHanded) {
+      return { right: [-0.004, -0.020, 0.017], rightGrip: 'pistol',
+        left: [0.006, -0.030, -0.034], leftGrip: PISTOL_WRAP };
+    }
+    /* Short of the muzzle by a hand's width, whatever the weapon is --
+       a two-thirds rule alone puts the support hand off the end of a
+       submachine gun and halfway down the barrel of a rifle. */
+    var fore = Math.max(0.12, Math.min(muzzle * 0.66, muzzle - 0.10));
+    return { right: [-0.006, -0.024, 0.016], rightGrip: 'pistol',
+      left: [fore, bore * 0.42, 0], leftGrip: 'fore' };
+  }
+
   function buildGun(game, id) {
     var made = null;
     var fn = VM_BESPOKE[id];
@@ -577,6 +615,22 @@
     }
     if (!made) {
       try { made = game.serviceArm('m4', { at: [0, -90, 0], physics: false }); } catch (e) { made = null; }
+    }
+    /* AND THE HANDS. The engine has had a fully solved pair of them all
+       along -- fingers that close onto the weapon's own surface until
+       they touch it -- and multiplayer never called it once. A floating
+       gun with no hands is the oldest tell there is that a game is a
+       prototype, and it has been on the screen this whole time. */
+    if (made && game.viewmodelArms) {
+      try {
+        var spec = W.MP_DATA && W.MP_DATA.gun ? W.MP_DATA.gun(id) : null;
+        made.__arms = game.viewmodelArms(made, handsFor(made, spec && (spec.cls || spec.class)), {
+          key: 'mp:' + id,
+          boreY: made.boreAt != null ? made.boreAt : null,
+          sightY: made.sightAt != null ? made.sightAt : null,
+          surface: game.weaponSurface ? game.weaponSurface(made) : null,
+        });
+      } catch (e) { made.__arms = null; }
     }
     return made;
   }
@@ -626,6 +680,11 @@
     function show(g, on) {
       if (!g) return;
       g.visible = on;
+      // The hands go with it, or a pair of them floats where the last
+      // weapon was.
+      if (g.__arms && g.__arms.parts) {
+        for (var h = 0; h < g.__arms.parts.length; h++) g.__arms.parts[h].visible = on;
+      }
       if (g.partNames) {
         for (var i = 0; i < g.partNames.length; i++) {
           var a = g[g.partNames[i]];
@@ -745,7 +804,14 @@
            black mass. */
         var len = (g && g.muzzleAt != null) ? g.muzzleAt : 0.42;
         var bulk = Math.max(0, Math.min(1, (len - 0.24) / 0.34));
-        var sightH = (g && g.sightH != null) ? g.sightH : 0.0455;
+        /* MEASURED OFF THIS WEAPON, not one constant for all sixty.
+           sightAt is the height of the sight line above the model's own
+           origin and every serviceArm build sets it. Using 0.0455 for
+           everything is why the irons sit high on most of the rack: put
+           the sight line anywhere but on the camera axis and you are
+           looking at the gun rather than through it. */
+        var sightH = (g && g.sightAt != null) ? g.sightAt
+          : ((g && g.sightH != null) ? g.sightH : 0.0455);
         var OUT = 1.30;
         /* No invented drop term here. Zombies subtracts a `tipDrop`
            that belongs to ITS rotation scheme, and adding my own guess
@@ -753,8 +819,12 @@
            bottom of the frame -- a gun you cannot see, which is where
            this started. The measured hip height is the measured hip
            height. */
+        /* A little higher than zombies carries it, because zombies is
+           not also drawing a pair of hands wrapped round the forend --
+           the hands hang below the weapon and took the bottom third of
+           the assembly off the bottom of the frame. */
         var hipX = 0.092 + bulk * 0.020;
-        var hipY = -0.150 - bulk * 0.026;
+        var hipY = -0.128 - bulk * 0.026;
         var hipD = 0.355 + bulk * 0.055;
         /* The aimed vertical is NOT scaled by OUT. It is -sightH
            exactly, because that is what puts the front blade and the
@@ -792,7 +862,11 @@
            sights do not line up with the crosshair. */
         var fh = Math.hypot(fx, fz) || 1e-6;
         var gy = Math.atan2(-fz / fh, fx / fh);
-        var tip = (1 - aim) * (0.50 + low * 0.10) * (1 - rl * 0.85);
+        /* The hip cant, and it was 0.50 -- twenty-nine degrees of muzzle
+           down, which points the whole barrel out of the bottom of the
+           picture on a long weapon. Enough to read as a hip carry, not
+           enough to throw the gun off screen. */
+        var tip = (1 - aim) * (0.30 + low * 0.14) * (1 - rl * 0.85);
         var gp = Math.asin(Math.max(-1, Math.min(1, fy))) - tip;
         var roll = low * 0.42 + (1 - aim) * 0.03 + rl * 0.30;
         Q.setAxisAngle(AY, gy);
@@ -925,7 +999,7 @@
       hitMark: function (kill) { hitAt = M.time; hitKill = !!kill; },
       tookFrom: function (from) { marks.push({ t: M.time, from: from }); },
 
-      paint: function (spread, showBoard) {
+      paint: function (spread, showBoard, aim) {
         var p = you();
         var w = M.people[p.id].guns[p.held];
 
@@ -933,6 +1007,7 @@
         /* Rounded to the pixel before it is compared, because a cone
            that drifts by a thousandth of a degree is a new string every
            frame and a new layout with it. */
+        el.cross.classList.toggle('hide', (aim || 0) > 0.55);
         var gap = Math.round(Math.max(3, Math.min(60, spread * 640)));
         put(el.xUp, 'top', (-gap - 9) + 'px');
         put(el.xDn, 'top', gap + 'px');
@@ -1615,7 +1690,10 @@
         game.lookAt([eye.x, eye.y, eye.z],
           [eye.x + Math.sin(yaw) * cp, eye.y - Math.sin(pitch), eye.z + Math.cos(yaw) * cp]);
         var w = p.guns[p.held];
-        var cone = (p.aiming ? w.adsSpread : w.spread) * (moving ? 1.5 : 1) * (p.sprinting ? 2.2 : 1);
+        /* Asked of the match, not recomputed here. Two copies of this
+           sum is how the crosshair came to draw a cone the weapon did
+           not have. */
+        var cone = M.coneOf ? M.coneOf(p) : (p.aiming ? w.adsSpread : w.spread);
         /* AIMING IS A MOVEMENT, not a switch. This passed `aim ? 1 : 0`,
            so the gun teleported between the hip and the sight with
            nothing in between -- which is what "I can't aim down sights,
@@ -1636,7 +1714,11 @@
         }
         vm.place(eye, yaw, pitch, adsT, p.sprinting, kick, bob,
           w.id || w.base || 'm4', rl, dt);
-        hud.paint(cone * Math.PI / 180, cmd.scores);
+        /* THE CROSSHAIR GOES AWAY AT THE SIGHTS. Leaving it up while
+           you are looking through the irons puts two aiming marks on
+           the screen that do not agree, and the one that is right is
+           the one on the gun. */
+        hud.paint(cone * Math.PI / 180, cmd.scores, adsT);
       } else {
         vm.hide();
         eye = { x: p.pos.x, y: p.pos.y + 1.1, z: p.pos.z };

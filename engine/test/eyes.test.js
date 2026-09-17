@@ -186,6 +186,25 @@ const note = (s) => console.log(`  ..   ${s}`);
     Math.abs(ads.ndcX) < 0.12 && ads.visible, `ndc x ${ads.ndcX.toFixed(3)}`);
   await page.evaluate(() => { window.MP.input.buttons.aim = false; });
 
+  /* HANDS. Checked HERE, while the multiplayer page is still loaded --
+     the first version asked for window.MP after the run had navigated
+     on to zombies, and reported that multiplayer has no hands because
+     multiplayer was no longer open. */
+  const arms = await page.evaluate(() => {
+    const g = window.MP.viewmodel.gun;
+    const a = g && g.__arms;
+    if (!a) return { has: false };
+    return { has: true, parts: a.parts.length,
+      shown: a.parts.filter((x) => x.visible !== false).length,
+      finite: a.parts.every((x) => x.matrix.e.every((v) => Number.isFinite(v))),
+      verts: a.parts.reduce((n, x) => n + ((x.mesh && x.mesh.vertexCount) || 0), 0) };
+  });
+  note(`hands: ${JSON.stringify(arms)}`);
+  check('the weapon is held in a pair of hands', arms.has && arms.shown > 4,
+    JSON.stringify(arms));
+  check('and every piece of them has a finite transform', arms.has && arms.finite);
+
+
   /* A man up close, and the actual colour of his chest. */
   const body = await page.evaluate(async () => {
     const G = window.MP, M = G.match;

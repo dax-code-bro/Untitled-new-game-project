@@ -523,6 +523,7 @@
 
     recInit(M);
     hlInit(M);
+    markInit(M);
     M._pathBudget = 1; M._pathMs = 0; M._pathN = 0;
     warmArms(M);
 
@@ -543,6 +544,7 @@
     M.bestPlay = function () { return bestPlay(M); };
     M.tapeAt = function (tape, t, out) { return tapeAt(tape, t, out); };
     M.clip = function (t0, t1) { return clipOut(M.rec, t0, t1); };
+    M.coneOf = function (q) { return coneOf(M, q || M.you); };
     M.pose = function (list, dt) { pose(M, list, dt); };
     M.unpose = function () { unpose(M); };
     return M;
@@ -605,6 +607,12 @@
     p.lastGood = { x: p.pos.x, y: p.pos.y, z: p.pos.z };
     p.sliding = false; p.slideEnd = 0; p.slideRecover = 0;
     p.vy = 0; p.kickUp = 0; p.kickSide = 0; p.kickHold = 0;
+    /* Back on his feet, so the body he left is his own again. One
+       actor per player means the corpse cannot outlive the respawn --
+       the full version wants a second body to leave behind, and that
+       is a pool of its own rather than a line here. */
+    p.corpse = null; p.dyingAt = 0;
+    p._animState = null;
     p.ai.state = 'advance'; p.ai.target = null; p.ai.path = null;
     p.ai.goal = null; p.ai.goalAt = -99;
     if (p.actor && p.actor.controller) {
@@ -697,6 +705,134 @@
      it rather than a side effect. */
   var MUZZLE_FWD = 0.62, MUZZLE_DOWN = 0.14, MUZZLE_SIDE = 0.10;
 
+  /* Twice the angle a torso subtends at the range bots fight at:
+     2 * atan(0.28 / 18) in degrees. Divided by the hit rate, it is the
+     cone that lands that fraction of the rounds. */
+  var BOT_CONE_DEG = 2 * Math.atan(0.28 / 18) * 180 / Math.PI;
+
+  /* ================================================================
+     BULLET HOLES
+     ================================================================
+     Where a round lands, it leaves a mark. Not decoration: after a
+     fight you can read the wall behind you and see that six went past
+     your left shoulder and one did not, and after you die the holes
+     around where you were standing are the story of how.
+
+     A POOL, not an allocation. A fight puts hundreds of rounds into
+     scenery, and building a mesh per round is an allocation per round
+     and a draw call per round for the rest of the match. Sixty-four
+     marks, reused oldest-first, is a fixed cost that never grows.
+
+     Laid flat on whatever they hit, using the surface normal the
+     raycast already returns, and lifted a couple of millimetres off it
+     so they do not fight the wall for the same depth. */
+  var MARK_MAX = 64;
+
+  function markInit(M) {
+    M._marks = { ring: [], at: 0 };
+  }
+
+  function markAt(M, point, normal) {
+    var K = M._marks;
+    if (!K || !M.game || !M.game.box) return;
+    var n = normal && Number.isFinite(normal.x)
+      ? normal : { x: 0, y: 1, z: 0 };
+    var a = K.ring[K.at];
+    if (!a) {
+      try {
+        a = M.game.box({ at: [0, -90, 0], size: [0.062, 0.062, 0.006], physics: false,
+          material: { color: 0x14100c, texture: 'smooth', roughness: 0.95, metalness: 0 } });
+      } catch (e) { a = null; }
+      if (!a) return;
+      a.noCull = true;
+      K.ring[K.at] = a;
+    }
+    K.at = (K.at + 1) % MARK_MAX;
+    a.visible = true;
+    a.position.set(point.x + n.x * 0.004, point.y + n.y * 0.004, point.z + n.z * 0.004);
+    /* Turned to lie ON the surface: the mark's own +Z is its face, so
+       the rotation is the one that takes +Z onto the normal. */
+    if (a.rotation && a.rotation.setAxisAngle) {
+      var dot = Math.max(-1, Math.min(1, n.z));
+      var ax = -n.y, ay = n.x, az = 0;
+      var al = Math.hypot(ax, ay, az);
+      if (al < 1e-6) { ax = 1; ay = 0; az = 0; al = 1; }
+      a.rotation.setAxisAngle({ x: ax / al, y: ay / al, z: az / al }, Math.acos(dot));
+    }
+    a._still = false;
+  }
+
+  /* ONE CONE, for the shot and for the crosshair both.
+   *
+     The HUD widened the crosshair by 1.5 for moving and 2.2 for
+     sprinting; fire() applied neither. So the four ticks on the screen
+     spread out when you ran and the rounds kept going exactly where
+     they had been going -- the drawn cone and the real cone were
+     different numbers, and the crosshair was telling the player
+     something that was not true about their own weapon.
+
+     Returned in degrees, which is what the weapon table is in. */
+  function coneOf(M, p) {
+    var w = gun(p);
+    if (!w) return 1;
+    var aiming = p.aiming || (p.bot && p.ai && p.ai.state === 'engage');
+    var c = aiming ? w.adsSpread : w.spread;
+    if ((p._animSpeed || 0) > 0.35) c *= 1.5;
+    if (p.sprinting) c *= 2.2;
+    if (p.crouching) c *= 0.75;
+    /* A BOT'S SPREAD COMES FROM ITS HIT RATE, not the other way round.
+     *
+       This used to be `c *= 1.9 - aim`, which is a shrug: it makes a
+       bot worse by some amount and nobody can say what fraction of its
+       rounds land. The difficulties were asked for as accuracies --
+       twenty per cent, fifty, sixty, eighty-three -- so the cone is
+       solved for them.
+
+       The shot jitters yaw and pitch each by plus or minus half the
+       cone, so the chance of landing on a target subtending 2t of
+       angle is about 2t/cone per axis. A torso is 0.56m across, and
+       bots engage at about eighteen metres on these maps, which puts
+       t at 0.0156 rad. Solve 2t/cone = hit and the cone falls out.
+
+       A bot can never be more accurate than its weapon: the gun's own
+       cone is the floor. A Veteran with a shotgun is still holding a
+       shotgun. */
+    if (p.bot && p.skill) {
+      var hit = p.skill.hit != null ? p.skill.hit : 0.5;
+      var want = BOT_CONE_DEG / Math.max(0.05, hit);
+      c = Math.max(c, want);
+    }
+    return c;
+  }
+
+  /* WHERE THE CROSSHAIR IS POINTING, in the world.
+   *
+     A round leaves the muzzle, and the muzzle is not the eye -- it is
+     ten centimetres forward, right and down of it. Fired along the
+     camera's own angle it travels PARALLEL to where you are looking
+     and a hand's width to the side of it, which at across-the-room
+     range is a clean miss of whatever the crosshair is sitting on.
+
+     So: find the point the crosshair is actually over, by tracing the
+     camera ray, and aim the round from the muzzle AT THAT POINT. The
+     round still leaves the barrel -- which is what was asked for -- and
+     it still goes where the crosshair says. Converging on the first
+     thing in the way rather than on a fixed distance means it is right
+     at every range instead of at one. */
+  function aimPointOf(M, p, eye, reach) {
+    var cp = Math.cos(p.pitch);
+    var d = { x: Math.sin(p.yaw) * cp, y: -Math.sin(p.pitch), z: Math.cos(p.yaw) * cp };
+    var far = Math.max(12, reach || 90);
+    var hit = null;
+    try {
+      hit = M.game && M.game.raycast
+        ? M.game.raycast([eye.x, eye.y, eye.z], [d.x, d.y, d.z], far, notActor)
+        : null;
+    } catch (e) { hit = null; }
+    if (hit && hit.point) return { x: hit.point.x, y: hit.point.y, z: hit.point.z };
+    return { x: eye.x + d.x * far, y: eye.y + d.y * far, z: eye.z + d.z * far };
+  }
+
   function muzzleOf(p) {
     var e = eyeOf(p);
     var cp = Math.cos(p.pitch), sp = Math.sin(p.pitch);
@@ -731,12 +867,17 @@
     if (!losClear(M, eye, from)) from = eye;
     /* Aimed or from the hip. A bot is aiming whenever it is engaging;
        you are aiming when you are holding the button. */
-    var cone = ((p.aiming || p.ai.state === 'engage') ? w.adsSpread : w.spread) * Math.PI / 180;
-    if (p.bot && p.skill) cone *= (1.9 - p.skill.aim);
+    var cone = coneOf(M, p) * Math.PI / 180;
+    /* Aimed at what the crosshair is over, from where the barrel is. */
+    var at = aimPointOf(M, p, eye, w.far * 2.2);
+    var ax = at.x - from.x, ay = at.y - from.y, az = at.z - from.z;
+    var alen = Math.hypot(ax, ay, az) || 1;
+    var baseYaw = Math.atan2(ax / alen, az / alen);
+    var basePitch = -Math.asin(Math.max(-1, Math.min(1, ay / alen)));
     var out = [];
     for (var s = 0; s < (w.pellets || 1); s++) {
-      var yaw = p.yaw + (rand() - 0.5) * cone;
-      var pitch = p.pitch + (rand() - 0.5) * cone;
+      var yaw = baseYaw + (rand() - 0.5) * cone;
+      var pitch = basePitch + (rand() - 0.5) * cone;
       var dir = { x: Math.sin(yaw) * Math.cos(pitch), y: -Math.sin(pitch), z: Math.cos(yaw) * Math.cos(pitch) };
       var best = null;
       for (var i = 0; i < M.people.length; i++) {
@@ -747,6 +888,14 @@
         if (best && r.d >= best.r.d) continue;
         if (!losClear(M, from, { x: q.pos.x, y: q.pos.y + 1.0, z: q.pos.z })) continue;
         best = { q: q, r: r };
+      }
+      /* Into the scenery, if it did not find a man first. */
+      if (!best && M.game && M.game.raycast) {
+        try {
+          var wh = M.game.raycast([from.x, from.y, from.z], [dir.x, dir.y, dir.z],
+            w.far * 2.2, notActor);
+          if (wh && wh.point) markAt(M, wh.point, wh.normal);
+        } catch (e) { /* no physics on this map */ }
       }
       if (best) {
         if (M.stats) M.stats.hits++;
@@ -837,7 +986,27 @@
       if (from.streak > from.bestStreak) from.bestStreak = from.streak;
       if (M.mode.id === 'tdm') M.score[from.team]++;
     }
-    if (to.actor && to.actor.controller) to.actor.controller.teleport([to.pos.x, -60, to.pos.z]);
+    /* HE FALLS WHERE HE WAS STANDING.
+     *
+       This teleported the body sixty metres underground on the frame
+       it died, so every death in the game was a man vanishing. He drops
+       now, and which way he drops depends on where the round came from
+       -- forwards onto his face if he was shot in the back, backwards
+       if he was shot in the chest -- because playing one collapse for
+       every death is how they all start to look the same.
+
+       He stays down. The body is left where it fell and is only taken
+       away when that same man dies again, so there is one corpse per
+       player and twelve people cannot carpet the map. */
+    to.dyingAt = M.time;
+    // The previous one goes as this one arrives: one body per player.
+    to.corpse = { x: to.pos.x, y: to.pos.y, z: to.pos.z, yaw: to.yaw };
+    if (from) {
+      var bx = to.pos.x - from.pos.x, bz = to.pos.z - from.pos.z;
+      var fx = Math.sin(to.yaw), fz = Math.cos(to.yaw);
+      // Positive means it came from behind him.
+      to.corpse.face = (bx * fx + bz * fz) > 0;
+    } else to.corpse.face = false;
     if (to._armShown) showArm(to._armShown, false);
     var ev = { t: M.time, kind: 'kill', by: from ? from.id : null, who: to.id, head: !!head,
       weapon: from ? gun(from).id : null,
@@ -1239,8 +1408,12 @@
        kill cam would show twelve men standing where they are NOW while
        the camera flew to where one of them WAS. */
     if (p.actor && p.actor.controller && !M.replaying) {
-      p.actor.controller.teleport([p.pos.x, p.pos.y + lift(p), p.pos.z]);
-      face(p.actor, p.yaw);
+      /* A corpse stays at the spot it fell on, not at the live
+         position -- the man it belonged to is about to respawn across
+         the map and his body must not go with him. */
+      var at = (!p.alive && p.corpse) ? p.corpse : p.pos;
+      p.actor.controller.teleport([at.x, at.y + lift(p), at.z]);
+      face(p.actor, (!p.alive && p.corpse) ? p.corpse.yaw : p.yaw);
       var _d2 = M.you
         ? (p.pos.x - M.you.pos.x) * (p.pos.x - M.you.pos.x)
           + (p.pos.z - M.you.pos.z) * (p.pos.z - M.you.pos.z)
@@ -1543,13 +1716,14 @@
 
     var last = p._animPos;
     var sp = 0;
-    if (last && dt > 1e-4) {
+    if (!p.alive && p.corpse) { p._animPos = { x: p.corpse.x, z: p.corpse.z }; p._animSpeed = 0; }
+    else if (last && dt > 1e-4) {
       sp = Math.hypot(p.pos.x - last.x, p.pos.z - last.z) / dt;
       // A respawn is a jump across the map, not a hundred-metre-per-
       // second dash. Anything past a plausible sprint is teleportation.
       if (sp > 14) sp = 0;
-    }
-    p._animPos = { x: p.pos.x, z: p.pos.z };
+      p._animPos = { x: p.pos.x, z: p.pos.z };
+    } else p._animPos = { x: p.pos.x, z: p.pos.z };
     // Smoothed, because a per-frame position delta on a grid-collided
     // body is spiky enough to flicker between two states on a wall.
     p._animSpeed = p._animSpeed == null ? sp
@@ -1557,7 +1731,8 @@
     var v = p._animSpeed;
 
     var want;
-    if (!p.alive) want = 'idle';
+    if (!p.alive && p.corpse) want = p.corpse.face ? 'deathFace' : 'deathBack';
+    else if (!p.alive) want = 'idle';
     else if (p.sliding) want = 'slide';
     else if (!p.grounded) want = 'jump';
     else if (p.sprinting && v > 4.6) want = 'sprint';
@@ -1745,6 +1920,13 @@
 
     if (ai.state === 'engage') {
       var d2 = Math.hypot(t.pos.x - p.pos.x, t.pos.z - p.pos.z);
+      /* IT BRINGS THE GUN UP. How readily depends on the difficulty --
+         a Veteran is on the sights for anything past a room's width, a
+         Recruit mostly is not -- and past twelve metres everybody who
+         is going to aim, does. It is not free: the ads flag is what
+         narrows its cone through coneOf, so a bot that aims is a bot
+         that hits, which is what the difficulty is buying. */
+      p.aiming = (sk.ads || 0) > 0.2 && (d2 > 12 * (1.2 - (sk.ads || 0)) || (sk.ads || 0) > 0.9);
       var off = turnTo(p, yawTo(p.pos, t.pos), 5.0 + sk.aim * 5.0, dt);
       /* Pulled back down against its own recoil, as well as it can --
          which is what its skill actually buys it. */
@@ -1767,6 +1949,8 @@
       return;
     }
 
+    p.aiming = false;
+
     if (ai.state === 'break') {
       /* Hurt: back off the way you came and let it regenerate. Bots
          that fight to the death make every trade a coin flip. */
@@ -1788,7 +1972,14 @@
       var yaw = yawTo(p.pos, step);
       turnTo(p, yaw, 4.5, dt);
       p.pitch *= 0.85;
-      var run = 5.4 * gun(p).move;
+      /* THE MOVEMENT SYSTEM, by difficulty. A Recruit walks everywhere,
+         which is most of what makes an easy bot read as easy before a
+         shot is fired; a Veteran sprints between cover. Sprinting costs
+         it accuracy through coneOf exactly as it costs a player, so a
+         bot that runs in is a bot that misses on the way. */
+      var far = ai.goal ? dist2(p.pos, ai.goal) : 0;
+      p.sprinting = (sk.move || 0) > 0.3 && far > 9 && !t;
+      var run = (p.sprinting ? 6.6 : 5.4) * gun(p).move;
       moveBy(M, p, Math.sin(p.yaw) * run, Math.cos(p.yaw) * run, dt);
       /* Walking and shooting: if somebody is roughly in front of you
          while you are advancing, fire anyway. Wide cone, because you

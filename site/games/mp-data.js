@@ -1096,11 +1096,26 @@
   var BOT_NAMES = ['HOLLAND', 'MARCHETTI', 'PIKE', 'ODUYA', 'STRAND', 'KOVAC',
     'BELL', 'ARRIETA', 'NIEMI', 'FAULK', 'RASHID', 'VOSS'];
 
+  /* THE FOUR DIFFICULTIES, and `aim` is a HIT RATE rather than a
+     shrug. Asked for twenty per cent on Easy, fifty on Normal, sixty on
+     Hardened and eighty-three on Veteran, so that is what the number
+     means and the cone is derived from it instead of the other way
+     round: a bot's spread is scaled until it lands that fraction of its
+     rounds on a man-sized target at the range it usually engages from.
+
+     `move` is how much of the movement system the bot has. A Veteran
+     sprints between cover, slides into it and crouches behind it; a
+     Recruit walks everywhere, which is most of what makes an easy bot
+     read as easy before a shot is fired. */
   var BOT_SKILL = [
-    { id: 'recruit', name: 'Recruit', aim: 0.30, react: 0.62, wander: 0.55 },
-    { id: 'regular', name: 'Regular', aim: 0.52, react: 0.42, wander: 0.35 },
-    { id: 'veteran', name: 'Veteran', aim: 0.72, react: 0.26, wander: 0.20 },
-    { id: 'elite', name: 'Elite', aim: 0.88, react: 0.16, wander: 0.10 },
+    { id: 'recruit', name: 'Easy', hit: 0.20, aim: 0.30, react: 0.62, wander: 0.55,
+      move: 0.10, ads: 0.25 },
+    { id: 'regular', name: 'Normal', hit: 0.50, aim: 0.52, react: 0.42, wander: 0.35,
+      move: 0.45, ads: 0.60 },
+    { id: 'veteran', name: 'Hardened', hit: 0.60, aim: 0.72, react: 0.26, wander: 0.20,
+      move: 0.75, ads: 0.85 },
+    { id: 'elite', name: 'Veteran', hit: 0.83, aim: 0.88, react: 0.16, wander: 0.10,
+      move: 1.00, ads: 1.00 },
   ];
 
   /* ---- defaults ----

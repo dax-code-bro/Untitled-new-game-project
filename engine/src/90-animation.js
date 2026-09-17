@@ -746,5 +746,78 @@ function makeHumanoidClips() {
     head: { keys: [[0, 0, 0, 0], [0.5, 0, -12, 0], [1, 0, 0, 0]] },
   }, { loop: false }));
 
+  /* DYING.
+     ================================================================
+     A man who is shot does not lie down. His legs stop carrying him
+     first, so he drops -- the pelvis falls most of a metre in under
+     half a second, which is nearly free-fall -- and everything above
+     the hips arrives afterwards, because it is still travelling when
+     the hips stop.
+
+     That lag is the whole read. A body that rotates to flat while it
+     descends is a plank being lowered; a body whose hips land and
+     whose chest and head keep going for another fifth of a second is
+     somebody falling over.
+
+     Ends flat and STAYS there: non-looping, and the last key is held.
+     Two of them, because being shot from the front and from behind are
+     different events and playing the same collapse for both is how
+     every death in a game starts to look identical. */
+  clips.push(buildClip('deathBack', 1.05, {
+    hips: {
+      keys: [
+        [0.00, 0, 0, 0], [0.12, -14, 0, 4], [0.30, -46, 0, 7],
+        [0.52, -74, 0, 6], [0.72, -86, 0, 3], [1.00, -88, 0, 2],
+      ],
+      /* Down, and not in a straight line: the knees buckle first and
+         the drop accelerates into the floor. */
+      pos: [
+        [0.00, 0, 0.000, 0], [0.12, 0, -0.085, -0.02], [0.30, 0, -0.340, -0.09],
+        [0.52, 0, -0.660, -0.17], [0.72, 0, -0.790, -0.22], [1.00, 0, -0.805, -0.24],
+      ],
+    },
+    // The trunk is still going when the hips stop.
+    spine: { keys: [[0, 0, 0, 0], [0.3, 10, 0, -3], [0.62, 22, 0, -5], [1, 16, 0, -4]] },
+    chest: { keys: [[0, 0, 0, 0], [0.3, 8, 0, -4], [0.68, 20, 0, -7], [1, 14, 0, -5]] },
+    neck: { keys: [[0, 0, 0, 0], [0.35, -6, 0, 3], [0.8, 26, 0, 6], [1, 20, 0, 5]] },
+    head: { keys: [[0, 0, 0, 0], [0.4, -8, 0, 4], [0.85, 18, 0, 8], [1, 14, 0, 6]] },
+    upperLegL: { keys: [[0, 0, 0, 0], [0.22, 34, 0, 4], [0.6, 62, 0, 9], [1, 58, 0, 8]] },
+    upperLegR: { keys: [[0, 0, 0, 0], [0.26, 28, 0, -5], [0.62, 54, 0, -11], [1, 50, 0, -10]] },
+    lowerLegL: { keys: [[0, 5, 0, 0], [0.3, 48, 0, 0], [0.7, 26, 0, 0], [1, 22, 0, 0]] },
+    lowerLegR: { keys: [[0, 5, 0, 0], [0.34, 40, 0, 0], [0.72, 20, 0, 0], [1, 18, 0, 0]] },
+    // Arms go where they are thrown, not where they are placed.
+    upperArmL: { keys: [[0, -8, 0, -7], [0.28, -54, 0, -26], [0.7, -22, 0, -44], [1, -18, 0, -42]] },
+    upperArmR: { keys: [[0, -8, 0, 7], [0.32, -48, 0, 24], [0.74, -16, 0, 46], [1, -12, 0, 44]] },
+    lowerArmL: { keys: [[0, 14, 0, 0], [0.4, 46, 0, 0], [1, 28, 0, 0]] },
+    lowerArmR: { keys: [[0, 14, 0, 0], [0.44, 40, 0, 0], [1, 24, 0, 0]] },
+  }, { loop: false }));
+
+  /* Shot from behind: he goes down onto his face, and the arms do not
+     come up in time. */
+  clips.push(buildClip('deathFace', 1.00, {
+    hips: {
+      keys: [
+        [0.00, 0, 0, 0], [0.14, 16, 0, -3], [0.34, 44, 0, -6],
+        [0.58, 72, 0, -5], [0.78, 84, 0, -3], [1.00, 86, 0, -2],
+      ],
+      pos: [
+        [0.00, 0, 0.000, 0], [0.14, 0, -0.095, 0.03], [0.34, 0, -0.370, 0.12],
+        [0.58, 0, -0.690, 0.22], [0.78, 0, -0.800, 0.28], [1.00, 0, -0.815, 0.30],
+      ],
+    },
+    spine: { keys: [[0, 0, 0, 0], [0.32, -12, 0, 3], [0.66, -24, 0, 5], [1, -18, 0, 4]] },
+    chest: { keys: [[0, 0, 0, 0], [0.34, -10, 0, 4], [0.7, -22, 0, 6], [1, -16, 0, 5]] },
+    neck: { keys: [[0, 0, 0, 0], [0.4, 8, 0, -3], [0.85, -20, 0, -5], [1, -16, 0, -4]] },
+    head: { keys: [[0, 0, 0, 0], [0.45, 10, 0, -4], [0.9, -14, 0, -6], [1, -10, 0, -5]] },
+    upperLegL: { keys: [[0, 0, 0, 0], [0.24, -26, 0, -4], [0.64, -44, 0, -7], [1, -40, 0, -6]] },
+    upperLegR: { keys: [[0, 0, 0, 0], [0.28, -22, 0, 5], [0.66, -38, 0, 9], [1, -34, 0, 8]] },
+    lowerLegL: { keys: [[0, 5, 0, 0], [0.32, 54, 0, 0], [0.74, 34, 0, 0], [1, 30, 0, 0]] },
+    lowerLegR: { keys: [[0, 5, 0, 0], [0.36, 46, 0, 0], [0.76, 28, 0, 0], [1, 26, 0, 0]] },
+    upperArmL: { keys: [[0, -8, 0, -7], [0.3, 26, 0, -18], [0.72, 54, 0, -14], [1, 50, 0, -13]] },
+    upperArmR: { keys: [[0, -8, 0, 7], [0.34, 22, 0, 16], [0.76, 50, 0, 13], [1, 46, 0, 12]] },
+    lowerArmL: { keys: [[0, 14, 0, 0], [0.42, 62, 0, 0], [1, 40, 0, 0]] },
+    lowerArmR: { keys: [[0, 14, 0, 0], [0.46, 56, 0, 0], [1, 36, 0, 0]] },
+  }, { loop: false }));
+
   return clips;
 }
