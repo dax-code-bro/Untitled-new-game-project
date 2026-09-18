@@ -291,6 +291,33 @@ class CharacterController {
     this.body.userData = { character: this };
     engine.physics.add(this.body);
     this._desired = new Vec3();
+    /* A SHOVE THE CONTROLLER KNOWS ABOUT.
+     *
+       Recoil, a blast, a charging body: something pushes the man and he
+       has to go, and then he has to get his feet back. Adding straight
+       to body.velocity does not do it -- the accelerate-toward-target
+       line below pulls a 2 m/s shove back to zero in about three
+       frames, which at sixty frames a second is five hundredths of a
+       second and is not felt at all.
+
+       So the push is held here, decayed on its own clock, and carried
+       ALONGSIDE the walking velocity rather than inside it: the
+       controller's own accel and friction act on the walk, and the
+       shove is added on top afterwards. Grounded you plant a foot and
+       kill it in about a third of a second; airborne there is nothing
+       to plant, so it holds for most of a second and you genuinely
+       drift. */
+    this.external = new Vec3();
+    this.externalDamp = opts.externalDamp != null ? opts.externalDamp : 0.004;
+    this.externalDampAir = opts.externalDampAir != null ? opts.externalDampAir : 0.35;
+    this._extApplied = new Vec3();
+  }
+
+  /* Shove the body in world XZ. Metres per second, added to whatever
+     shove is already on it, so a burst stacks. */
+  impulse(x, z) {
+    this.external.x += x;
+    this.external.z += z;
   }
 
   /* Feed a movement intent in world XZ, magnitude 0..1. */
@@ -349,6 +376,21 @@ class CharacterController {
     const targetVz = this._desired.z * speed;
     const control = this.grounded ? 1 : this.airControl;
     const accel = this.acceleration * control * dt;
+
+    /* Take last frame's shove back out before the walk is worked out,
+       so the accel clamp and the friction below see the WALKING
+       velocity and not the walk plus the push -- otherwise the push is
+       read as speed the man is carrying and scrubbed off as such.
+
+       Only as much of it as is still there, though. A shove into a wall
+       is stopped by the collision solver, and subtracting a push that
+       the wall has already taken out would leave the body travelling
+       backwards away from a surface it merely touched. */
+    const ea = this._extApplied;
+    const undo = (v, e) => (e === 0 ? 0 : (e > 0 ? Math.min(e, Math.max(0, v)) : Math.max(e, Math.min(0, v))));
+    body.velocity.x -= undo(body.velocity.x, ea.x);
+    body.velocity.z -= undo(body.velocity.z, ea.z);
+
     body.velocity.x += clamp(targetVx - body.velocity.x, -accel, accel);
     body.velocity.z += clamp(targetVz - body.velocity.z, -accel, accel);
 
@@ -359,6 +401,16 @@ class CharacterController {
       body.velocity.x *= damp;
       body.velocity.z *= damp;
     }
+
+    /* And put the shove back on top, one frame older. */
+    const ek = Math.pow(this.grounded ? this.externalDamp : this.externalDampAir, dt);
+    this.external.x *= ek;
+    this.external.z *= ek;
+    if (Math.abs(this.external.x) < 1e-4) this.external.x = 0;
+    if (Math.abs(this.external.z) < 1e-4) this.external.z = 0;
+    body.velocity.x += this.external.x;
+    body.velocity.z += this.external.z;
+    ea.set(this.external.x, 0, this.external.z);
 
     /* Jump, with coyote time and input buffering — both are what separate a
        platformer that feels responsive from one that feels broken. */
@@ -462,7 +514,13 @@ class CharacterController {
   }
 
   get position() { return this.body.position; }
-  teleport(p) { this.body.setPosition(p); this.body.velocity.setScalar(0); }
+  teleport(p) {
+    this.body.setPosition(p);
+    this.body.velocity.setScalar(0);
+    // A shove does not survive being put somewhere else.
+    this.external.setScalar(0);
+    this._extApplied.setScalar(0);
+  }
 }
 
 const _cc = [new Vec3(), new Vec3(), new Vec3(), new Vec3(), new Vec3(), new Vec3()];

@@ -621,7 +621,11 @@
     p.reloadUntil = 0; p.nextShot = 0;
     p.lastGood = { x: p.pos.x, y: p.pos.y, z: p.pos.z };
     p.sliding = false; p.slideEnd = 0; p.slideRecover = 0;
+    // And no shove survives a respawn -- the push decays inside moveBy,
+    // which does not run for a dead man, so the last shot he fired
+    // before he was killed would otherwise be waiting for him.
     p.vy = 0; p.kickUp = 0; p.kickSide = 0; p.kickHold = 0;
+    p.push = { x: 0, z: 0 };
     /* Back on his feet, so the body he left is his own again. One
        actor per player means the corpse cannot outlive the respawn --
        the full version wants a second body to leave behind, and that
@@ -1321,6 +1325,28 @@
     /* A quarter of each shot's climb stays until you put it back. */
     p.kickHold = (p.kickHold || 0) + up * aim * crouch * 0.26;
     p.kickAt = M.time;
+
+    /* AND THE MAN GOES BACKWARDS.
+     *
+       Everything above moves where he is LOOKING. That is recoil in the
+       view and it is most of what recoil feels like, but it is not all
+       of it: you can empty a .50 on one spot and finish on that spot,
+       and a body that never moves is a body with no mass.
+
+       Off the gun's own climb figure, so nothing has to be added to
+       sixty weapon entries -- 0.24 degrees is a suppressed .22 and is
+       four centimetres, 6.6 is the anti-materiel rifle and is a stumble
+       -- and through the same braced and crouched terms as the view,
+       because a planted stance takes recoil the same way whichever end
+       of it you are measuring. Prone takes nearly all of it: there is
+       no standing up to be pushed out of. */
+    var prone = p.prone ? 0.25 : 1;
+    var sh = w.rec[0] * 0.16 * aim * crouch * prone;
+    if (sh > 0.002) {
+      p.push = p.push || { x: 0, z: 0 };
+      p.push.x -= Math.sin(p.yaw) * sh;
+      p.push.z -= Math.cos(p.yaw) * sh;
+    }
   }
 
   function settleKick(M, p, dt) {
@@ -1750,6 +1776,29 @@
   var GRAVITY = 19.6, JUMP = 6.0, STEP_UP = 0.62;
 
   function moveBy(M, p, vx, vz, dt, jump) {
+    /* THE SHOVE RIDES ALONG WITH THE WALK.
+     *
+       A round leaving the barrel takes momentum with it and the man
+       keeps the rest, so kickFrom puts a push on him and this is where
+       he wears it. Added to whatever he is walking at rather than
+       replacing it, and decayed on its own clock, so he can fight it
+       and still be moved by it.
+
+       Put here and not at the call sites because there are five of
+       those -- a bot advancing, a bot backing off, a bot running a
+       lane, a slide, and a player -- and a shove that only some of
+       them felt would be a shove only some of them felt.
+
+       Grounded you plant a foot and it is gone in about a third of a
+       second. In the air there is no foot to plant, which is why the
+       two rates are not the same number. */
+    if (p.push && (p.push.x || p.push.z)) {
+      vx += p.push.x; vz += p.push.z;
+      var pk = Math.pow(p.grounded ? 0.004 : 0.35, dt);
+      p.push.x *= pk; p.push.z *= pk;
+      if (Math.abs(p.push.x) < 1e-3) p.push.x = 0;
+      if (Math.abs(p.push.z) < 1e-3) p.push.z = 0;
+    }
     var nx = p.pos.x + vx * dt, nz = p.pos.z + vz * dt;
     if (!cellBlocked(M.nav, nx, nz)) { p.pos.x = nx; p.pos.z = nz; }
     else {

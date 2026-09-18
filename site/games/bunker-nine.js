@@ -8205,6 +8205,53 @@ function tryFire(game, S, P, hud, sfx, dt) {
   P.backVel = (P.backVel || 0) - (rcS.back != null ? rcS.back : 0.010 + spec.kick * 0.011) * 34;
   P.rollVel = (P.rollVel || 0) + (Math.random() < 0.5 ? -1 : 1)
     * (rcS.roll != null ? rcS.roll : 0.004 + spec.kick * 0.004) * 26;
+
+  /* AND IT MOVES THE MAN, NOT ONLY THE GUN.
+   *
+     Everything above this line moves the CAMERA and the viewmodel: the
+     muzzle climbs, the gun is shoved along its own bore, the view rolls.
+     All of it is a picture of recoil rather than recoil, and the tell is
+     that you can empty a 14.5 mm anti-tank rifle standing on one spot and
+     end up on exactly the spot you started on.
+
+     A round leaving the barrel takes momentum with it and the man keeps
+     the rest. So the body is shoved backwards along the bore -- the real
+     body, through the character controller, so it is stopped by walls and
+     carried by the floor like any other motion.
+
+     Two things scale it, and both are what a shooter actually does:
+
+       BRACED    shouldered. Aiming down the sights puts the stock into
+                 you and the weight behind it, so it takes about a third
+                 off. Hip-firing takes all of it, which is the correct
+                 answer. (There is no crouch in this game -- that is
+                 multiplayer's -- so the stance term is the sights.)
+
+       FOOTING   the controller's own doing, not a number here. On the
+                 ground you plant a foot and it is gone in a third of a
+                 second and a few centimetres. In the air there is no
+                 foot to plant, so the same shot drifts you nearly a
+                 metre -- fire a .50 off a rooftop and you will feel it
+                 in where you land.
+
+     Off the gun's own kick, so this needs nothing added to sixty weapon
+     entries: 0.7 for a pistol is two centimetres and is felt as weight,
+     7.0 for the heaviest thing on the rack is a stumble. A weapon that
+     wants to argue with the derivation says so with recoil.shove. */
+  {
+    const ctl = P.actor && P.actor.controller;
+    if (ctl && ctl.impulse) {
+      const brace = 1 - P.ads * 0.38;
+      const sh = (rcS.shove != null ? rcS.shove : spec.kick * 0.16) * brace
+        * (P.goldAmmo ? GOLD.recoilMul : 1);
+      if (sh > 0.001) {
+        const c = game.camera;
+        const dx = c.target.x - c.position.x, dz = c.target.z - c.position.z;
+        const dl = Math.hypot(dx, dz) || 1;
+        ctl.impulse(-(dx / dl) * sh, -(dz / dl) * sh);
+      }
+    }
+  }
   sfx[spec.sfx]();
   hud.ammo(P);
   S.statShot(P.equipped());
