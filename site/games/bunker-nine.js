@@ -912,6 +912,11 @@ const PERKS = {
   },
 };
 
+/* THE AIR IN YOUR LUNGS, in seconds. Thirty is a dive with a job in
+   it; two minutes is what ADRENALINE buys, and it is the difference
+   between visiting the lake bed and working on it. */
+const BREATH = { max: 30, athlete: 120, recover: 4, damage: 12 };
+
 /* One badge: the symbol, in the perk's colour, on a dark disc. */
 function perkBadge(key, px) {
   const P = PERKS[key];
@@ -6091,6 +6096,10 @@ function makePlayer(game, S, hud, sfx, voice) {
        there, which is why it starts at its finished value. */
     cockT: 1, cockMax: 0.30, cockStage: 1,
     view: {}, muzzleT: 0, alive: true,
+    // Lungs full. BREATH.max, or four times it with ADRENALINE, which
+    // the water block re-reads every frame so a perk bought mid-round
+    // counts immediately.
+    breath: BREATH.max, breathMax: BREATH.max, drownT: 0,
     // Aim, sprint and recoil state.
     ads: 0, adsWant: false, sprint: 0, sprinting: false,
     recoil: { pitch: 0, yaw: 0 }, recoilApplied: { pitch: 0, yaw: 0 },
@@ -12783,6 +12792,13 @@ function makeHud() {
   #b9hud .stam { position:absolute; left:50%; bottom:19%; transform:translateX(-50%); width:150px; height:3px;
     background:rgba(0,0,0,.55); opacity:0; transition:opacity .25s; }
   #b9hud .stamfill { height:100%; background:#e8ddc8; width:100%; }
+  /* THE BREATH. Above the stamina bar and wider, because running out of
+     it kills you and running out of stamina does not. */
+  #b9hud .breath { position:absolute; left:50%; bottom:23%; transform:translateX(-50%); width:190px;
+    height:4px; background:rgba(0,0,0,.6); opacity:0; transition:opacity .25s; }
+  #b9hud .breathfill { height:100%; background:#7ad0ff; width:100%; transition:background .2s; }
+  #b9hud .breathlbl { position:absolute; left:50%; bottom:calc(23% + 10px); transform:translateX(-50%);
+    font-size:11px; letter-spacing:.22em; color:#7ad0ff; opacity:0; transition:opacity .25s; }
   #b9hud .shield { position:absolute; right:26px; bottom:118px; font-size:12px; letter-spacing:.22em; color:#8c7f68; }
   /* The ten seconds after the bench. A ring rather than a number, because
      what you need to know while running is how much of it is left, not what
@@ -12836,6 +12852,8 @@ function makeHud() {
     <div class="grace"><span class="lbl">CLEAR &nbsp;·&nbsp; THEY CANNOT TOUCH YOU</span>
       <div class="bar"><div class="fill"></div></div><span class="num">10</span></div>
     <div class="stam"><div class="stamfill"></div></div>
+    <div class="breathlbl">BREATH</div>
+    <div class="breath"><div class="breathfill"></div></div>
     <div class="shield"></div><div class="perks"></div>
     <div class="benchwrap">
       <svg class="bsvg"></svg>
@@ -12875,6 +12893,7 @@ function makeHud() {
     flash: $('.hitflash'), fadeout: $('.fadeout'),
     banner: $('.banner'), dmg: $('.dmg'), title: $('.title'), hitm: $('.hitm'), pdelta: $('.pdelta'),
     cross: $('.cross'), stam: $('.stam'), stamFill: $('.stamfill'), shield: $('.shield'), perks: $('.perks'),
+    breath: $('.breath'), breathFill: $('.breathfill'), breathLbl: $('.breathlbl'),
     bench: $('.bench'), bhead: $('.bhead'), brow: $('.brow'), bfoot: $('.bfoot'),
     benchwrap: $('.benchwrap'), bsvg: $('.bsvg'), bmarks: $('.bmarks'),
     bhint: $('.bhint'), bdmg: $('.bdmg'), bkeys: $('.bkeys'),
@@ -13184,6 +13203,21 @@ function makeHud() {
       els.stam.style.opacity = frac < 0.999 ? 1 : 0;
       els.stamFill.style.width = (frac * 100).toFixed(1) + '%';
       els.stamFill.style.background = athlete ? '#59ff7a' : '#e8ddc8';
+    },
+    /* The air in your lungs. Shown only while it is going or coming
+       back, so it is not a fourth permanent bar on a screen that has
+       enough of them. It goes red at a quarter and it is already
+       flashing before the first point of damage, which is the whole
+       point of a warning. */
+    breath(frac, drowning) {
+      const show = frac < 0.999;
+      els.breath.style.opacity = show ? 1 : 0;
+      els.breathLbl.style.opacity = show ? 1 : 0;
+      els.breathFill.style.width = (Math.max(0, frac) * 100).toFixed(1) + '%';
+      const low = frac < 0.25;
+      els.breathFill.style.background = low ? '#ff5a4a' : '#7ad0ff';
+      els.breathLbl.style.color = low ? '#ff5a4a' : '#7ad0ff';
+      els.breathLbl.textContent = drowning ? 'DROWNING' : 'BREATH';
     },
     shield(active, cd) {
       if (active > 0) { els.shield.textContent = 'SHIELD ' + Math.ceil(active * SHIELD.duration) + 's'; els.shield.style.color = '#b08cff'; els.shield.style.opacity = 1; }
@@ -14227,6 +14261,59 @@ function start(opts = {}) {
           }
         }
         if (P.underwater !== wasUnder) setUnderwaterLook(game, S, P.underwater);
+
+        /* HOW LONG YOU CAN HOLD IT.
+         *
+           Coastline has a machine on the lake bed and a cave to find,
+           and until now you could sit on the bottom of it forever. Water
+           that cannot kill you is scenery, and a dive with no clock on
+           it is a walk.
+
+           Thirty seconds, which is enough to swim out to the floaty,
+           work it and come back up but not enough to do it casually.
+           ADRENALINE -- the perk that is already the athletic one, three
+           minutes of sprint and double-speed reloads -- makes it two
+           minutes, which turns the lake bed from somewhere you visit
+           into somewhere you can work.
+
+           It comes back four times as fast as it goes, because the
+           punishing part is meant to be the dive, not the wait on the
+           surface afterwards. And then it drowns you: twelve a second
+           once it is gone, so about eight seconds of being out of air
+           before a full-health man dies, and every one of those seconds
+           he can still swim for the surface. */
+        {
+          const max = P.perks.adrenaline ? BREATH.athlete : BREATH.max;
+          P.breathMax = max;
+          if (P.breath == null) P.breath = max;
+          // A perk bought mid-round gives you the bigger lungs at once.
+          if (P.breath > max) P.breath = max;
+          if (P.underwater && P.alive) {
+            P.breath -= dt;
+            if (P.breath <= 0) {
+              P.breath = 0;
+              P.drownT = (P.drownT || 0) + dt;
+              /* Once a second, not once a frame -- hurtPlayer flinches
+                 the camera and grunts, and sixty of those a second is a
+                 seizure rather than a drowning. */
+              if (P.drownT >= 1) {
+                P.drownT -= 1;
+                hurtPlayer(game, S, P, BREATH.damage, sfx, 'drown', null);
+              }
+            }
+          } else {
+            P.drownT = 0;
+            if (P.breath < max) {
+              const before = P.breath;
+              P.breath = Math.min(max, P.breath + dt * BREATH.recover);
+              /* Surfacing with nothing left is a gasp, and it is the
+                 sound that tells you that you got away with it. */
+              if (before < max * 0.5 && !P._gasped) { P._gasped = true; sfx.breath(); }
+              if (P.breath >= max * 0.98) P._gasped = false;
+            }
+          }
+          hud.breath(P.breath / max, P.breath <= 0);
+        }
       }
 
       /* Aim down sights. */
