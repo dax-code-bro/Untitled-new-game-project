@@ -158,6 +158,7 @@ function note(s) { console.log(`..   ${s}`); }
   });
   check('the throw indicator draws an arc, not a straight line', arc.pts >= 8,
     `${arc.pts} points`);
+  note(`arc drawn with ${arc.pts} points`);
   check('with a landing ring on the ground', arc.rx > 2, `rx ${arc.rx}`);
 
   const ride = await page.evaluate(async () => {
@@ -229,10 +230,18 @@ function note(s) { console.log(`..   ${s}`); }
   /* ---------------- three stances ---------------- */
   const stance = await page.evaluate(async () => {
     const M = window.MP.match, G = window.MP;
-    function pump(n) {
-      const p = [];
-      for (let i = 0; i < n; i++) p.push(new Promise((r) => requestAnimationFrame(r)));
-      return Promise.all(p);
+    /* SEQUENTIALLY. The first version built an array of n
+       requestAnimationFrame promises and awaited Promise.all of them
+       -- but all n callbacks are registered on the SAME frame, so they
+       all fire on that frame and the whole thing resolves after ONE.
+       "Hold the crouch key for twenty-six frames" held it for one,
+       which is under the two-hundred-and-twenty-millisecond fence
+       between a tap and a hold, so the drop never fired and the game
+       took the blame for it. */
+    async function pump(n) {
+      for (let i = 0; i < n; i++) {
+        await new Promise((r) => requestAnimationFrame(r));
+      }
     }
     const out = {};
     /* A TAP toggles the crouch. */

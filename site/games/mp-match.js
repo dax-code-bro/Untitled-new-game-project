@@ -613,6 +613,8 @@
     p.hp = HEALTH; p.alive = true; p.streak = 0;
     p.prone = false; p.crouching = false; p.sliding = false;
     p._crouchWas = false; p._crouchUsed = false; p._wantSlide = false;
+    /* Far enough in the past that neither cooldown is running. */
+    p.proneAt = -99; p.slideEnd = -99;
     p.held = 0;
     p.ammo = [p.guns[0].mag, p.guns[1].mag];
     p.reserve = [p.guns[0].mag * 10, p.guns[1].mag * 10];
@@ -1458,11 +1460,15 @@
       var p = M.people[i], o = base + i * R.stride;
       R.data[o] = p.pos.x; R.data[o + 1] = p.pos.y; R.data[o + 2] = p.pos.z;
       R.data[o + 3] = p.yaw; R.data[o + 4] = p.pitch;
-      /* One float of state, packed: alive, firing, sprinting, crouching.
-         A replay that shows everybody standing upright and still is a
-         replay of a diagram. */
+      /* One float of state, packed: alive, firing, sprinting,
+         crouching, prone, aiming. A replay that shows everybody
+         standing upright and still is a replay of a diagram -- and
+         one that shows a man who died flat on his face standing up to
+         be shot is worse, because it is a replay of something that
+         did not happen. Prone and aiming were both missing. */
       R.data[o + 5] = (p.alive ? 1 : 0) + (M.time - (p.lastShotAt || -9) < 0.12 ? 2 : 0)
-        + (p.sprinting ? 4 : 0) + (p.crouching ? 8 : 0);
+        + (p.sprinting ? 4 : 0) + (p.crouching ? 8 : 0)
+        + (p.prone ? 16 : 0) + (p.aiming ? 32 : 0);
     }
     R.time[R.head] = M.time;
     R.head = (R.head + 1) % R.frames;
@@ -1514,6 +1520,7 @@
       var fl = R.data[(f < 0.5 ? oa : ob) + 5];
       e.alive = !!(fl & 1); e.firing = !!(fl & 2);
       e.sprinting = !!(fl & 4); e.crouching = !!(fl & 8);
+      e.prone = !!(fl & 16); e.aiming = !!(fl & 32);
     }
     out.length = R.people;
     return out;
@@ -2250,10 +2257,13 @@
       face(p.actor, e.yaw);
       /* The replay's weapons come off the tape too, or a kill cam shows
          everybody holding their guns where they are standing NOW. */
-      var keep = { x: p.pos.x, y: p.pos.y, z: p.pos.z }, keepC = p.crouching;
-      p.pos.x = e.x; p.pos.y = e.y; p.pos.z = e.z; p.crouching = e.crouching;
+      var keep = { x: p.pos.x, y: p.pos.y, z: p.pos.z };
+      var keepC = p.crouching, keepP = p.prone, keepA = p.aiming;
+      p.pos.x = e.x; p.pos.y = e.y; p.pos.z = e.z;
+      p.crouching = e.crouching; p.prone = e.prone; p.aiming = e.aiming;
       carry(M, p, e.yaw, e.pitch, e.sprinting, e.alive);
-      p.pos.x = keep.x; p.pos.y = keep.y; p.pos.z = keep.z; p.crouching = keepC;
+      p.pos.x = keep.x; p.pos.y = keep.y; p.pos.z = keep.z;
+      p.crouching = keepC; p.prone = keepP; p.aiming = keepA;
       var a = p.actor.animator;
       if (!a) continue;
       p.actor.controller.autoAnimate = false;
@@ -2878,7 +2888,15 @@
       p._crouchUsed = true;                 // this press is a hold, not a tap
       if (sprint && p.grounded && M.time > (p.slideEnd || 0) + 0.45) {
         p._wantSlide = true;
-      } else if (!p.prone && p.grounded && M.time > (p.proneAt || 0) + 0.9) {
+      /* `p.proneAt == null`, NOT `p.proneAt || 0`. A cooldown measured
+         from a default of zero is a cooldown that has not expired for
+         the first nine tenths of a second of the match, and a player
+         who tries to drop in that window silently does nothing. It
+         cost one probe to find and it would have cost a bug report
+         that read "sometimes the drop just doesn't work". Never
+         default a TIME to zero when zero is a real time. */
+      } else if (!p.prone && p.grounded
+          && M.time > (p.proneAt == null ? -99 : p.proneAt) + 0.9) {
         /* THE DROP. */
         p.prone = true;
         p.proneAt = M.time;
@@ -2914,7 +2932,7 @@
        you are standing up and cannot fire, which is what stops it being
        a free dodge you spam round every corner. */
     if ((cmd.slide || p._wantSlide) && sprint && p.grounded
-        && M.time > (p.slideEnd || 0) + 0.45) {
+        && M.time > (p.slideEnd == null ? -99 : p.slideEnd) + 0.45) {
       p._wantSlide = false;
       p.sliding = true;
       p.slideEnd = M.time + 0.72;

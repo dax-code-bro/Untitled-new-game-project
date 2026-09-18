@@ -401,7 +401,12 @@
       line.setAttribute('width', w); line.setAttribute('height', h);
       line.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
       var d = '', seen = 0;
-      for (var i = 0; i < pts.length; i += 2) {
+      /* Every point, not every other one. A flat throw lands in about
+         two thirds of a second, which at the solver's thirtieth is
+         twenty samples -- halved and then thinned by the ones behind
+         the camera, that came out as six line segments, which is a
+         polyline pretending to be a parabola. */
+      for (var i = 0; i < pts.length; i++) {
         var s = game.project ? game.project([pts[i].x, pts[i].y, pts[i].z]) : null;
         if (!s || s.behind) continue;
         d += (seen++ ? 'L' : 'M') + s.x.toFixed(1) + ' ' + s.y.toFixed(1) + ' ';

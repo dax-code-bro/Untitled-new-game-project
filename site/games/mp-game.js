@@ -1109,7 +1109,13 @@
         /* Rounded to the pixel before it is compared, because a cone
            that drifts by a thousandth of a degree is a new string every
            frame and a new layout with it. */
-        el.cross.classList.toggle('hide', (aim || 0) > 0.55);
+        /* NOT WHILE YOU ARE IN THE SUIT. This ran every frame and put
+           the crosshair straight back after the suit had hidden it --
+           two owners of one class, and the one that runs last wins.
+           The suit marks the root and this defers to it, which is the
+           only arrangement of the two that cannot flicker. */
+        el.cross.classList.toggle('hide',
+          (aim || 0) > 0.55 || root.classList.contains('nogun'));
         var gap = Math.round(Math.max(3, Math.min(60, spread * 640)));
         put(el.xUp, 'top', (-gap - 9) + 'px');
         put(el.xDn, 'top', gap + 'px');
@@ -1731,8 +1737,8 @@
     /* The crosshair and the ammunition counter belong to a gun you are
        holding, and in the suit you are not holding one. */
     function el0Hide(on) {
-      var c = root.querySelector('.cross'), g = root.querySelector('.gun');
-      if (c) c.classList.toggle('hide', !!on);
+      root.classList.toggle('nogun', !!on);
+      var g = root.querySelector('.gun');
       if (g) g.classList.toggle('hide', !!on);
     }
     /* The suit stands between a round and the man in it. */
