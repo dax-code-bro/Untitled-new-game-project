@@ -755,7 +755,98 @@
       blurb: 'Armour, a minigun and a walk. You are slow and everyone knows where you are.' },
     { id: 'k-blackout', name: 'Blackout', cost: 25,
       blurb: 'Twenty-five without dying ends the match. It has been done four times.' },
+    /* THE BERSERKER SUIT.
+       Not a strike and not a vehicle: a second body. A flare goes on
+       the ground, a jet drops a capsule on it, and what walks out is
+       twelve feet of welded plate with a minigun for one arm and a
+       flamethrower for the other. Ten thousand points of armour, and
+       you are in third person and cannot hold your own weapons for as
+       long as you are in it. */
+    { id: 'k-berserker', name: 'Berserker Suit', cost: 18,
+      blurb: 'A flare, a jet, a capsule, and twelve feet of welded plate with a minigun for an arm.' },
   ];
+
+  /* ================================================================
+     KILLSTREAK LEVELS
+     ================================================================
+     Every streak levels three times, and the second and third are not
+     "more damage" -- each is one named ability you turn on or off in
+     the loadout. A level you cannot switch off is a level that just
+     rewrites the streak; a level you can is a choice.
+
+     `unlock` is how many times the streak has been CALLED IN, over a
+     career, not kills. You level a streak by using it. */
+  var STREAK_LEVELS = {
+    'k-recon':    [null,
+      { id: 'sl-recon-2',    unlock: 8,  name: 'Continuous',   desc: 'Sweeps every two seconds instead of four.' },
+      { id: 'sl-recon-3',    unlock: 25, name: 'Hardened',     desc: 'A jammer no longer blinds it.' }],
+    'k-jammer':   [null,
+      { id: 'sl-jammer-2',   unlock: 8,  name: 'Wide',         desc: 'Forty-five metres instead of thirty.' },
+      { id: 'sl-jammer-3',   unlock: 25, name: 'Silent',       desc: 'No warning tone on their side.' }],
+    'k-crate':    [null,
+      { id: 'sl-crate-2',    unlock: 8,  name: 'Locked',       desc: 'Only your side can open it.' },
+      { id: 'sl-crate-3',    unlock: 25, name: 'Double',       desc: 'Two streaks inside, not one.' }],
+    'k-mortar':   [null,
+      { id: 'sl-mortar-2',   unlock: 8,  name: 'Five rounds',  desc: 'Five points on the map, not three.' },
+      { id: 'sl-mortar-3',   unlock: 25, name: 'Airburst',     desc: 'Detonates overhead. Roofs stop nothing.' }],
+    'k-sentry':   [null,
+      { id: 'sl-sentry-2',   unlock: 8,  name: 'Wide arc',     desc: 'A hundred and eighty degrees, not ninety.' },
+      { id: 'sl-sentry-3',   unlock: 25, name: 'Plated',       desc: 'Twice the armour and it survives one rocket.' }],
+    'k-cluster':  [null,
+      { id: 'sl-cluster-2',  unlock: 8,  name: 'Wide pattern', desc: 'Twenty bomblets over a wider circle.' },
+      { id: 'sl-cluster-3',  unlock: 25, name: 'Incendiary',   desc: 'Each bomblet leaves fire for eight seconds.' }],
+    'k-airstrike':[null,
+      { id: 'sl-air-2',      unlock: 8,  name: 'Second pass',  desc: 'The pair comes back down the line once.' },
+      { id: 'sl-air-3',      unlock: 25, name: 'Low level',    desc: 'Under the roofline. No warning shadow.' }],
+    'k-heli':     [null,
+      { id: 'sl-heli-2',     unlock: 8,  name: 'Flares',       desc: 'Survives the first launcher hit.' },
+      { id: 'sl-heli-3',     unlock: 25, name: 'Door gunner',  desc: 'You can take the gun yourself.' }],
+    'k-vest':     [null,
+      { id: 'sl-vest-2',     unlock: 8,  name: 'Deep pack',    desc: 'Four plates each instead of two.' },
+      { id: 'sl-vest-3',     unlock: 25, name: 'Fast swap',    desc: 'Plating up takes a second, not three.' }],
+    'k-napalm':   [null,
+      { id: 'sl-napalm-2',   unlock: 8,  name: 'Long burn',    desc: 'Thirty-five seconds of fire, not twenty.' },
+      { id: 'sl-napalm-3',   unlock: 25, name: 'Twin run',     desc: 'Two walls, crossing.' }],
+    'k-wheeled':  [null,
+      { id: 'sl-wheel-2',    unlock: 8,  name: 'Quiet drive',  desc: 'Off their minimap until it fires.' },
+      { id: 'sl-wheel-3',    unlock: 25, name: 'Scuttle',      desc: 'Detonate it where it stands.' }],
+    'k-gunship':  [null,
+      { id: 'sl-gun-2',      unlock: 8,  name: 'Sixty seconds',desc: 'Twenty more in the chair.' },
+      { id: 'sl-gun-3',      unlock: 25, name: 'Body guarded', desc: 'Your body on the map takes half damage.' }],
+    'k-strafe':   [null,
+      { id: 'sl-strafe-2',   unlock: 8,  name: 'Eight ships',  desc: 'Five became eight.' },
+      { id: 'sl-strafe-3',   unlock: 25, name: 'Rockets',      desc: 'The last pair carries rockets.' }],
+    'k-airdrop':  [null,
+      { id: 'sl-drop-2',     unlock: 8,  name: 'Four crates',  desc: 'One more, and it lands closer.' },
+      { id: 'sl-drop-3',     unlock: 25, name: 'Booby trapped',desc: 'Kills the first enemy to open one.' }],
+    'k-jugg':     [null,
+      { id: 'sl-jugg-2',     unlock: 8,  name: 'Lighter',      desc: 'You move at three quarters, not half.' },
+      { id: 'sl-jugg-3',     unlock: 25, name: 'Riot plate',   desc: 'Half damage from the front.' }],
+    'k-blackout': [null,
+      { id: 'sl-black-2',    unlock: 4,  name: 'Longer',       desc: 'Ten seconds of it, not six.' },
+      { id: 'sl-black-3',    unlock: 12, name: 'Total',        desc: 'Their sights go too.' }],
+    /* The one the whole thing was asked for. */
+    'k-berserker':[null,
+      { id: 'sl-bers-2', unlock: 5,  name: 'Health Cannon',
+        desc: 'The flamethrower arm becomes a cannon: heals you or a teammate, '
+            + 'or does ten damage to an enemy. 54 rounds a minute, twenty seconds to recharge.' },
+      { id: 'sl-bers-3', unlock: 14, name: 'Overdrive',
+        desc: 'The minigun spins up instantly and cools in two seconds instead of five.' }],
+  };
+
+  /* The suit's own numbers, in one place, because four files need them
+     and a mech whose health is written down twice is a mech with two
+     different healths. */
+  var BERSERKER = {
+    hp: 10000,
+    height: 3.66,            // twelve feet
+    walk: 2.6, turn: 1.5,    // slow, and it turns like a tank
+    minigun: { rpm: 3000, damage: 10, rounds: 500, cool: 5.0, spin: 0.9, spread: 0.022 },
+    flame:   { rpm: 600, damage: 7, reach: 9.5, cone: 0.30 },
+    health:  { rpm: 54, heal: 25, damage: 10, cool: 20.0, speed: 34 },
+    fov: { hip: 1, ads: 0.62 },
+    flare:   { fuse: 1.2, smoke: 3.2, jet: 2.6, capsule: 2.2, open: 2.4 },
+  };
 
   /* ================================================================
      LEVELS, PRESTIGE, CAMO
@@ -1014,6 +1105,192 @@
     return w;
   }
 
+  /* ================================================================
+     WHAT A PART ACTUALLY DOES TO A GUN
+     ================================================================
+     Every attachment is already a `fold` -- a function from the gun's
+     stats to the stats it changes. So the pros and cons are not
+     written down anywhere: they are MEASURED, by folding the part onto
+     the gun you are actually holding and diffing the result.
+
+     That is the whole reason to do it this way. A hand-written list
+     says what somebody believed the part did when they typed it, and
+     goes out of date the first time a number is tuned. This cannot be
+     wrong about its own weapon, and it is right for every one of the
+     sixty separately -- a compensator on a gun with no recoil honestly
+     shows no pro at all.
+
+     THE SIGNS, exactly as asked for:
+
+       under 25 per cent        one sign
+       25 to 55 per cent        two
+       over 55 per cent         three
+
+     and the SIGN ITSELF says which way the number went -- plus for up,
+     minus for down -- while the COLOUR says whether that is good for
+     you. So a scope that takes seventy per cent off your aimed cone is
+     three GREEN MINUSES, and the weight it adds to your aim-down-sights
+     time is a RED PLUS. Both are true at once and neither is buried.
+
+     `higher` is per stat: true where more is better (damage, range),
+     false where less is (spread, recoil, the time to bring it up). */
+  var STAT_META = {
+    dmg: { name: 'Damage', higher: true },
+    dmgFar: { name: 'Damage at range', higher: true },
+    near: { name: 'Close range', higher: true },
+    far: { name: 'Effective range', higher: true },
+    hs: { name: 'Headshot multiplier', higher: true },
+    rpm: { name: 'Rate of fire', higher: true },
+    mag: { name: 'Magazine', higher: true },
+    pellets: { name: 'Pellets', higher: true },
+    mv: { name: 'Muzzle velocity', higher: true },
+    pierce: { name: 'Penetration', higher: true },
+    splash: { name: 'Blast radius', higher: true },
+    melee: { name: 'Melee damage', higher: true },
+    move: { name: 'Movement speed', higher: true },
+    adsMove: { name: 'Speed while aiming', higher: true },
+    turn: { name: 'Turn rate', higher: true },
+    recover: { name: 'Recoil recovery', higher: true },
+    limbMul: { name: 'Limb damage', higher: true },
+    ads: { name: 'Aim-down-sights time', higher: false },
+    reload: { name: 'Reload time', higher: false },
+    swap: { name: 'Weapon swap time', higher: false },
+    sprintOut: { name: 'Sprint-to-fire time', higher: false },
+    spread: { name: 'Hip-fire spread', higher: false },
+    adsSpread: { name: 'Aimed spread', higher: false },
+    heatSpread: { name: 'Spread under sustained fire', higher: false },
+    sway: { name: 'Idle sway', higher: false },
+    flinch: { name: 'Flinch when hit', higher: false },
+    firstShot: { name: 'First-shot kick', higher: false },
+    /* Reported as MAGNIFICATION rather than as the field of view it is
+       stored as, because "field of view down 78 per cent" is a true
+       sentence nobody reads as "four times magnification". Inverted
+       below, in num(). */
+    sightFov: { name: 'Magnification', higher: true, invert: true },
+    recUp: { name: 'Vertical recoil', higher: false },
+    recSide: { name: 'Horizontal recoil', higher: false },
+    sightH: { name: 'Sight height', higher: false, quiet: true },
+  };
+
+  /* Flags are not percentages. They are a sentence, and whether the
+     sentence is a pro or a con. */
+  var FLAG_META = {
+    quiet: [true, 'Off the minimap when you fire'],
+    loud: [false, 'Marks you on their minimap when you fire'],
+    noFlash: [true, 'No muzzle bloom in your own sight picture'],
+    tracer: [false, 'Visible tracers lead them back to you'],
+    thermal: [true, 'Heat signatures through smoke'],
+    nightvision: [true, 'The dark corners stop being dark'],
+    scoped: [false, 'Scoped: no use at all inside a room'],
+    holdBreath: [true, 'You can hold your breath to steady it'],
+    canted: [true, 'A second set of sights at forty-five degrees'],
+    breach: [true, 'Takes door frames off their hinges'],
+    akimbo: [false, 'No sights at all'],
+    bipod: [true, 'Deployed, the recoil very nearly stops'],
+  };
+
+  function signsFor(pct) {
+    var a = Math.abs(pct);
+    if (a < 0.025) return 0;             // under two and a half per cent is noise
+    if (a < 0.25) return 1;
+    if (a < 0.55) return 2;
+    return 3;
+  }
+
+  /* effectsOf(attachmentId, gunId, alreadyFitted)
+       -> { pros: [...], cons: [...], flags: [...], all: [...] }
+     Each entry: { stat, name, pct, signs, sign:'+'|'-', good, text }
+     `alreadyFitted` matters: a part is measured on top of what is
+     already on the gun, because that is the gun it is going onto. */
+  function effectsOf(attId, gunId, alreadyFitted) {
+    var a = att(attId), g = gun(gunId);
+    if (!a || !g) return { pros: [], cons: [], flags: [], all: [], fits: false };
+    if (!fits(a, g)) return { pros: [], cons: [], flags: [], all: [], fits: false };
+    var before = build(gunId, (alreadyFitted || []).filter(function (id) {
+      var b = att(id); return b && b.slot !== a.slot;
+    }));
+    var after = build(gunId, (alreadyFitted || []).filter(function (id) {
+      var b = att(id); return b && b.slot !== a.slot;
+    }).concat([attId]));
+    var out = [], flags = [];
+
+    function num(key, b, f) {
+      var meta = STAT_META[key];
+      if (!meta || meta.quiet) return;
+      if (typeof b !== 'number' || typeof f !== 'number') return;
+      if (!isFinite(b) || !isFinite(f) || b === 0) return;
+      var pct = meta.invert ? (Math.abs(b) / Math.abs(f) - 1) : (f - b) / Math.abs(b);
+      if (meta.invert && f === 0) return;
+      var n = signsFor(pct);
+      if (!n) return;
+      var up = pct > 0;
+      var good = meta.higher ? up : !up;
+      out.push({
+        stat: key, name: meta.name, pct: pct, signs: n,
+        sign: up ? '+' : '\u2212', good: good,
+        text: (up ? '+' : '\u2212') + Math.round(Math.abs(pct) * 100) + '% ' + meta.name,
+      });
+    }
+
+    for (var k in STAT_META) {
+      if (!Object.prototype.hasOwnProperty.call(STAT_META, k)) continue;
+      if (k === 'recUp' || k === 'recSide') continue;
+      num(k, before[k], after[k]);
+    }
+    /* Recoil is a pair, and both halves are their own line -- a brake
+       that kills the shove and keeps the climb has to read as one pro
+       and no con, not as an average of the two. */
+    num('recUp', before.rec[0], after.rec[0]);
+    num('recSide', before.rec[1], after.rec[1]);
+
+    for (var f in FLAG_META) {
+      if (!Object.prototype.hasOwnProperty.call(FLAG_META, f)) continue;
+      if (!after[f] || before[f]) continue;
+      flags.push({ flag: f, good: FLAG_META[f][0], text: FLAG_META[f][1] });
+    }
+
+    /* Biggest first, so the reason to fit it is the first line. */
+    out.sort(function (x, y) { return Math.abs(y.pct) - Math.abs(x.pct); });
+    return {
+      fits: true,
+      all: out, flags: flags,
+      pros: out.filter(function (e) { return e.good; })
+        .concat(flags.filter(function (e) { return e.good; })),
+      cons: out.filter(function (e) { return !e.good; })
+        .concat(flags.filter(function (e) { return !e.good; })),
+    };
+  }
+
+  /* WHAT A PART LOCKS OUT.
+     Some parts cannot live together even though they are in different
+     slots -- an underbarrel launcher and a bipod are both bolted to
+     the same rail, and a scope with its own magnifier has nowhere to
+     put a canted iron. One table, read from both directions. */
+  var EXCLUDES = {
+    'o-7x': ['o-canted'], 'o-12x': ['o-canted', 'u-bipod'],
+    'o-thermal': ['o-canted'], 'o-nvg': ['o-canted'],
+    'u-launcher': ['u-bipod', 'u-grip', 'u-angled', 'u-laser', 'm-duckbill'],
+    'u-bipod': ['u-launcher', 'u-grip', 'u-angled'],
+    'u-grip': ['u-bipod', 'u-launcher', 'u-angled'],
+    'u-angled': ['u-bipod', 'u-launcher', 'u-grip'],
+    'm-duckbill': ['m-chokefull', 'u-launcher'],
+    'm-chokefull': ['m-duckbill'],
+    'm-annihilator': ['u-launcher'],
+    's-none': ['s-heavy', 's-light'],
+  };
+
+  function excludedBy(attId) { return EXCLUDES[attId] || []; }
+  /* Everything currently fitted that would have to come off. */
+  function conflicts(attId, fittedIds) {
+    var out = [];
+    (fittedIds || []).forEach(function (id) {
+      if (id === attId) return;
+      if ((EXCLUDES[attId] || []).indexOf(id) >= 0
+        || (EXCLUDES[id] || []).indexOf(attId) >= 0) out.push(id);
+    });
+    return out;
+  }
+
   /* A loadout is legal if it names things that exist, fits no more than
      five parts on a gun, fits at most one per slot, and puts a launcher
      or a shield in the secondary only if it is allowed there. */
@@ -1034,10 +1311,16 @@
         if (!fits(a, g)) { bad.push(a.name + ' does not fit the ' + g.name); return; }
         if (seen[a.slot]) bad.push('two parts in the ' + a.slot + ' slot of the ' + which);
         seen[a.slot] = 1;
+        var cl = conflicts(id, ids);
+        if (cl.length) {
+          bad.push(a.name + ' cannot be fitted with ' + cl.map(function (c) {
+            var o = att(c); return o ? o.name : c;
+          }).join(' or '));
+        }
       });
     });
     var ks = L.streaks || [];
-    if (ks.length > 5) bad.push('more than five killstreaks');
+    if (ks.length > 3) bad.push('more than three killstreaks');
     var ksSeen = {};
     ks.forEach(function (id) { if (ksSeen[id]) bad.push('the same killstreak twice'); ksSeen[id] = 1; });
     return bad;
@@ -1122,6 +1405,25 @@
      What a player who has never opened the loadout screen takes onto
      the map. It has to be a complete, legal, unremarkable class: the
      first match should not be lost to an empty secondary slot. */
+  /* ---- killstreaks, looked up ---- */
+
+  function streak(id) {
+    for (var i = 0; i < KILLSTREAKS.length; i++) {
+      if (KILLSTREAKS[i].id === id) return KILLSTREAKS[i];
+    }
+    return null;
+  }
+  function streakLevels(id) { return STREAK_LEVELS[id] || [null, null, null]; }
+  /* A streak levels by being CALLED IN, so the count is uses. Level is
+     one-based: everybody starts at 1 and nothing is ever level 0. */
+  function streakLevelOf(id, uses) {
+    var L = streakLevels(id), lv = 1;
+    for (var i = 1; i < L.length; i++) {
+      if (L[i] && (uses || 0) >= L[i].unlock) lv = i + 1;
+    }
+    return lv;
+  }
+
   function defaultLoadout() {
     return {
       name: 'Default',
@@ -1129,7 +1431,7 @@
       secondary: 'm1911', secondaryAtt: [],
       tactical: 't-flash', lethal: 'x-frag',
       ability: 'a-overclock',
-      streaks: ['k-recon', 'k-crate', 'k-mortar', 'k-airstrike', 'k-heli'],
+      streaks: ['k-recon', 'k-airstrike', 'k-berserker'],
       camo: 'none',
       keychain: null,
     };
@@ -1139,7 +1441,8 @@
     CLASSES: CLASSES, FAMILIES: FAMILIES, GUNS: GUNS,
     SLOTS: SLOTS, ATTACHMENTS: ATTACHMENTS, MAX_FITTED: MAX_FITTED,
     TACTICALS: TACTICALS, LETHALS: LETHALS, ABILITIES: ABILITIES,
-    KILLSTREAKS: KILLSTREAKS, MAPS: MAPS, MODES: MODES, TEAM_SIZE: TEAM_SIZE,
+    KILLSTREAKS: KILLSTREAKS, STREAK_LEVELS: STREAK_LEVELS, BERSERKER: BERSERKER,
+    MAPS: MAPS, MODES: MODES, TEAM_SIZE: TEAM_SIZE, STREAK_SLOTS: 3,
     PRESTIGE: PRESTIGE, CAMOS: CAMOS,
     KEYCHAIN_SHAPES: KEYCHAIN_SHAPES, KEYCHAIN_METALS: KEYCHAIN_METALS,
     MAX_LEVEL: MAX_LEVEL, XP_KILL: XP_KILL, XP_HEADSHOT: XP_HEADSHOT,
@@ -1153,5 +1456,9 @@
     levelOf: levelOf, levelFrac: levelFrac, prestigeOf: prestigeOf,
     unlockedParts: unlockedParts, isUnlocked: isUnlocked,
     defaultLoadout: defaultLoadout,
+    streak: streak, streakLevels: streakLevels, streakLevelOf: streakLevelOf,
+    STAT_META: STAT_META, FLAG_META: FLAG_META, EXCLUDES: EXCLUDES,
+    effectsOf: effectsOf, excludedBy: excludedBy, conflicts: conflicts,
+    signsFor: signsFor,
   };
 })();

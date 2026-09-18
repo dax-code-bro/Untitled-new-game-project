@@ -322,7 +322,25 @@ const note = (s) => console.log(`  ..   ${s}`);
   const played = await page.evaluate(async () => {
     const G = window.MP, M = G.match;
     M.over = true; M.winner = M.you.team;
-    for (let i = 0; i < 8; i++) await new Promise((r) => requestAnimationFrame(r));
+    /* WAIT FOR THE THING, NOT FOR A NUMBER OF FRAMES.
+       The end of a match now runs a slow-motion ramp on WALL time
+       before Best Play starts, and this renderer manages two frames a
+       second, so "eight frames" was sometimes the whole ramp and
+       sometimes the ramp plus nothing -- and the read landed on the
+       frame the replay began, before it had advanced once. The camera
+       had not been placed yet and the progress bar was still at the
+       zero begin() sets, so both came back wrong for a replay that
+       was working perfectly.
+
+       So: pump frames until the replay has actually run a frame, with
+       a ceiling that is long enough to be real and short enough to
+       fail rather than hang. If the clip genuinely never advances this
+       still fails, which is the point. */
+    for (let i = 0; i < 240; i++) {
+      await new Promise((r) => requestAnimationFrame(r));
+      const w = document.querySelector('#mpui .cam .prog i');
+      if (M.replaying && w && parseFloat(w.style.width) > 0) break;
+    }
     const d = G.replay.debug();
     const cam = G.game.camera.position;
     return {

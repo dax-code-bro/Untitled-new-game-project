@@ -897,8 +897,31 @@ body.b9staged #b9hud { display:none !important; }
 #b9shell .stat .sv { flex:0 0 58px; text-align:right; color:#a89b80;
   font-variant-numeric:tabular-nums; }
 #b9shell .stat.up .sv { color:#8ce8a0; } #b9shell .stat.down .sv { color:#d2705f; }
-#b9shell .confirm { display:flex; gap:2px; margin-top:11px; }
+#b9shell .confirm { display:flex; flex-wrap:wrap; gap:2px; margin-top:11px; }
 #b9shell .confirm .item { flex:1; justify-content:center; font-size:14px; padding:10px 0; }
+
+/* ---- the pros and the cons ---- */
+#b9shell .procon { flex:0 0 100%; display:flex; gap:18px; margin:0 0 10px;
+  padding:10px 12px; border:1px solid #2c2820; background:rgba(8,8,10,.42); }
+#b9shell .procon .pc { flex:1; min-width:0; }
+#b9shell .procon .pch { font-size:10px; letter-spacing:.26em; text-transform:uppercase;
+  color:#6b6455; margin-bottom:6px; }
+#b9shell .procon .pc.good .pch { color:#8ce8a0; }
+#b9shell .procon .pc.bad .pch { color:#e2705f; }
+#b9shell .sgn { display:flex; align-items:baseline; gap:7px; font-size:12px;
+  line-height:1.65; color:#c8bfa8; }
+#b9shell .sgn .m { font-family:monospace; font-size:14px; letter-spacing:-.04em;
+  min-width:26px; font-weight:bold; }
+#b9shell .sgn.good .m { color:#8ce8a0; }
+#b9shell .sgn.bad .m { color:#e2705f; }
+#b9shell .sgn .t { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis;
+  white-space:nowrap; }
+#b9shell .sgn .p { font-style:normal; font-size:11px; color:#8a8272;
+  font-variant-numeric:tabular-nums; }
+#b9shell .pcnone { flex:1; font-size:12px; color:#8a8272; }
+#b9shell .pcx { flex:0 0 100%; margin-top:8px; padding-top:8px;
+  border-top:1px solid #2c2820; font-size:11px; letter-spacing:.10em;
+  color:#e2705f; }
 
 @media (max-width: 900px) {
   #b9shell .mppane { flex-direction:column; gap:14px; }
@@ -2715,6 +2738,66 @@ function detailRow(name, blurb, right, mods) {
   return d;
 }
 
+/* ================================================================
+   THE PROS AND THE CONS, AS SIGNS
+   ================================================================
+   mp-data measures what a part does to the gun you are holding. This
+   draws it. One plus for under a quarter, two to fifty-five per cent,
+   three past that -- green if it helps you, red if it costs you --
+   and the SIGN says which way the number went while the COLOUR says
+   whether that is good. A scope's aimed spread is three green
+   minuses; the weight it puts on your aim-down-sights is a red plus.
+
+   It is rendered above the confirm, before you fit it, which is the
+   whole point: the decision is made with the numbers on the screen. */
+function signRow(e) {
+  var d = document.createElement('div');
+  d.className = 'sgn ' + (e.good ? 'good' : 'bad');
+  var marks = e.signs ? new Array(e.signs + 1).join(e.sign) : '';
+  d.innerHTML = '<b class="m"></b><span class="t"></span><i class="p"></i>';
+  d.querySelector('.m').textContent = marks;
+  d.querySelector('.t').textContent = e.name || e.text;
+  d.querySelector('.p').textContent = e.pct == null ? ''
+    : (e.pct > 0 ? '+' : '\u2212') + Math.round(Math.abs(e.pct) * 100) + '%';
+  return d;
+}
+
+function prosAndCons(into, attId, gunId, fitted) {
+  var fx = MP.effectsOf(attId, gunId, fitted);
+  if (!fx.fits) return;
+  var wrap = document.createElement('div');
+  wrap.className = 'procon';
+  function col(title, list, cls) {
+    if (!list.length) return;
+    var c = document.createElement('div');
+    c.className = 'pc ' + cls;
+    var h = document.createElement('div');
+    h.className = 'pch'; h.textContent = title;
+    c.appendChild(h);
+    list.slice(0, 5).forEach(function (e) { c.appendChild(signRow(e)); });
+    wrap.appendChild(c);
+  }
+  col('Pros', fx.pros, 'good');
+  col('Cons', fx.cons, 'bad');
+  if (!fx.pros.length && !fx.cons.length) {
+    var n = document.createElement('div');
+    n.className = 'pcnone';
+    n.textContent = 'Changes nothing measurable on this weapon.';
+    wrap.appendChild(n);
+  }
+  /* And what it would knock off. */
+  var cl = MP.conflicts(attId, fitted);
+  if (cl.length) {
+    var x = document.createElement('div');
+    x.className = 'pcx';
+    x.textContent = 'Cannot be fitted with ' + cl.map(function (c) {
+      var o = MP.att(c); return o ? o.name : c;
+    }).join(' or ');
+    wrap.appendChild(x);
+  }
+  into.appendChild(wrap);
+}
+
 function pushRow(d, focus, enter, disabled) {
   var row = wire({ el: d, onFocus: focus, onEnter: disabled ? null : enter, disabled: !!disabled });
   ldRows.push(row);
@@ -2825,6 +2908,7 @@ function paintDetail() {
           setArt(gunArt(g, next, on ? null : a.id));
           paintStats(MP.build(g.id, fitted), MP.build(g.id, locked || full ? fitted : next));
           el.confirm.innerHTML = '';
+          prosAndCons(el.confirm, a.id, g.id, fitted);
           var act = document.createElement('div');
           act.className = 'item';
           act.innerHTML = '<span class="t"></span><span class="hint"></span>';
@@ -2837,8 +2921,14 @@ function paintDetail() {
           el.confirm.appendChild(act);
         }, function () {
           if (locked || full) { beep('back'); return; }
+          /* Fitting one part takes off anything it cannot live with,
+             rather than refusing -- a refusal with no way to see why is
+             worse than a swap you were told about on the row above. */
+          var drop = on ? [] : MP.conflicts(a.id, fitted);
           L[which + 'Att'] = on ? fitted.filter(function (id) { return id !== a.id; })
-            : fitted.filter(function (id) { return MP.att(id).slot !== a.slot; }).concat([a.id]);
+            : fitted.filter(function (id) {
+              return MP.att(id).slot !== a.slot && drop.indexOf(id) < 0;
+            }).concat([a.id]);
           mpSave(); paintSlots(); paintDetail(); ldNav(true);
         }, locked || full);
       });

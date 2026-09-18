@@ -28,7 +28,16 @@
 <script src="../engine/legend-engine.js"></script>
 <script src="mp-data.js"></script>
 <script src="mp-maps.js"></script>
+<!-- What a fight leaves behind: holes, blood and scorch, each with
+     its own lifetime. The match asks for it by name and works without
+     it. -->
+<script src="mp-decals.js"></script>
 <script src="mp-match.js"></script>
+<!-- The killstreak rail and the Berserker Suit, before the thing that
+     builds them: mp-game reads their CSS at boot and asks for them by
+     name, and both degrade to nothing if they are missing. -->
+<script src="mp-streaks.js"></script>
+<script src="mp-berserker.js"></script>
 <script src="mp-game.js"></script>
 <script>
 /* What the lobby chose, read back out of local storage. The menu is on

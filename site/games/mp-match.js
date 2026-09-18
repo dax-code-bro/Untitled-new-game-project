@@ -545,7 +545,18 @@
     M.tapeAt = function (tape, t, out) { return tapeAt(tape, t, out); };
     M.clip = function (t0, t1) { return clipOut(M.rec, t0, t1); };
     M.coneOf = function (q) { return coneOf(M, q || M.you); };
+    /* The floor under a point, for anything outside the match that has
+       to stand on the map: a thrown flare, a dropped capsule, a mech. */
+    M.groundAt = function (x, z, from) { return groundAt(M, x, z, from == null ? 40 : from); };
     M.pose = function (list, dt) { pose(M, list, dt); };
+    /* Called in from the rail. Most streaks are not simulated yet and
+       the hook says so honestly rather than pretending; the Berserker
+       Suit is handled in its own module and never reaches here. */
+    M.callStreak = function (def, level) {
+      M._streaks = M._streaks || [];
+      M._streaks.push({ id: def.id, level: level, at: M.time, by: M.you.id });
+      return true;
+    };
     M.unpose = function () { unpose(M); };
     return M;
   }
@@ -600,6 +611,8 @@
     p.pos = { x: s.at[0], y: s.at[1], z: s.at[2] };
     p.yaw = s.yaw; p.pitch = 0;
     p.hp = HEALTH; p.alive = true; p.streak = 0;
+    p.prone = false; p.crouching = false; p.sliding = false;
+    p._crouchWas = false; p._crouchUsed = false; p._wantSlide = false;
     p.held = 0;
     p.ammo = [p.guns[0].mag, p.guns[1].mag];
     p.reserve = [p.guns[0].mag * 10, p.guns[1].mag * 10];
@@ -730,6 +743,13 @@
 
   function markInit(M) {
     M._marks = { ring: [], at: 0 };
+    /* AND THE PROPER ONE. mp-decals owns holes, spall, blood, pools
+       and scorch, each with its own lifetime -- a minute for an
+       impact, three for blood, exactly as asked. The ring above is
+       kept only as the fallback for a build where that file is not
+       loaded, so a page with one script missing still marks its
+       walls. */
+    M.decals = W.MP_DECALS ? W.MP_DECALS.make(M.game) : null;
   }
 
   function markAt(M, point, normal) {
@@ -780,6 +800,9 @@
     if ((p._animSpeed || 0) > 0.35) c *= 1.5;
     if (p.sprinting) c *= 2.2;
     if (p.crouching) c *= 0.75;
+    /* Flat, with the weapon on the ground, is the steadiest a man
+       gets. */
+    if (p.prone) c *= 0.48;
     /* A BOT'S SPREAD COMES FROM ITS HIT RATE, not the other way round.
      *
        This used to be `c *= 1.9 - aim`, which is a shrug: it makes a
@@ -894,12 +917,24 @@
         try {
           var wh = M.game.raycast([from.x, from.y, from.z], [dir.x, dir.y, dir.z],
             w.far * 2.2, notActor);
-          if (wh && wh.point) markAt(M, wh.point, wh.normal);
+          if (wh && wh.point) {
+            if (M.decals) M.decals.bullet(wh.point, wh.normal, w);
+            else markAt(M, wh.point, wh.normal);
+          }
         } catch (e) { /* no physics on this map */ }
       }
       if (best) {
         if (M.stats) M.stats.hits++;
         var amount = damageAt(w, best.r.d) * (best.r.head ? w.hs : 1);
+        /* BLOOD. Off the man, and onto whatever is behind him if
+           anything is within a couple of metres -- which on these maps
+           usually is. A head shot throws more of it. */
+        if (M.decals) {
+          var hp = { x: best.q.pos.x, y: best.q.pos.y + (best.r.head ? 1.55 : 1.15),
+            z: best.q.pos.z };
+          M.decals.hit(hp, dir, !!best.r.head);
+          M.decals.spray(hp, dir, w);
+        }
         out.push(hurt(M, p, best.q, amount, best.r.head, emit));
       }
     }
@@ -962,6 +997,12 @@
   }
 
   function hurt(M, from, to, amount, head, emit) {
+    /* THE SUIT TAKES IT FIRST. Ten thousand points of plate between a
+       round and the man inside, and while it holds he cannot be hurt
+       at all -- which is the whole of what an eighteen-kill streak is
+       buying. `absorbHit` is installed by the Berserker module for as
+       long as somebody is riding one. */
+    if (to && to.inSuit && M.absorbHit && M.absorbHit(to, amount)) return 0;
     if (!to.alive) return 0;
     var dealt = Math.min(to.hp, amount);
     to.hp -= amount;
@@ -1007,6 +1048,9 @@
       // Positive means it came from behind him.
       to.corpse.face = (bx * fx + bz * fz) > 0;
     } else to.corpse.face = false;
+    /* A pool spreads under him over the next few seconds and is gone
+       in three minutes. */
+    if (M.decals) M.decals.pool(to.corpse);
     if (to._armShown) showArm(to._armShown, false);
     var ev = { t: M.time, kind: 'kill', by: from ? from.id : null, who: to.id, head: !!head,
       weapon: from ? gun(from).id : null,
@@ -1402,25 +1446,39 @@
         p.vy = 0; p.grounded = true;
       }
     }
-    /* A replay owns every body on the screen while it runs. The match
-       keeps simulating underneath it -- respawn timers, the round
-       clock, the bots -- but if it also kept placing the actors the
-       kill cam would show twelve men standing where they are NOW while
-       the camera flew to where one of them WAS. */
-    if (p.actor && p.actor.controller && !M.replaying) {
-      /* A corpse stays at the spot it fell on, not at the live
-         position -- the man it belonged to is about to respawn across
-         the map and his body must not go with him. */
-      var at = (!p.alive && p.corpse) ? p.corpse : p.pos;
-      p.actor.controller.teleport([at.x, at.y + lift(p), at.z]);
-      face(p.actor, (!p.alive && p.corpse) ? p.corpse.yaw : p.yaw);
-      var _d2 = M.you
-        ? (p.pos.x - M.you.pos.x) * (p.pos.x - M.you.pos.x)
-          + (p.pos.z - M.you.pos.z) * (p.pos.z - M.you.pos.z)
-        : 0;
-      var _near = lod(M, p, _d2);
-      carry(M, p, p.yaw, p.pitch, p.sprinting, p.alive && _near);
-    }
+  }
+
+  /* WHERE THE BODY IS PUT, AND WHAT IT IS HOLDING.
+     ================================================================
+     This used to live at the bottom of moveBy, which meant a body was
+     only placed on the frames it MOVED on. Everything downstream of it
+     inherited that: the level of detail was decided from a distance
+     last measured while walking, and carry() -- which is what puts a
+     rifle in a man's hands -- was never reached at all by anybody
+     standing still.
+
+     So: a bot that reached cover and held it had no weapon. A corpse
+     was never moved to the spot it fell on, because the dead do not
+     call the mover. And on the very first frames of a match, before
+     anyone had taken a step, twelve men stood at the spawns holding
+     nothing, which is exactly what was reported -- "the bots' guns are
+     invisible" -- and exactly what a photograph of a standing bot
+     showed: an actor still sitting at the origin it was built at.
+
+     Placement is not a consequence of moving. It is what is true every
+     frame, so it runs every frame, for everybody, alive or dead. */
+  function place(M, p) {
+    if (!p.actor || !p.actor.controller || M.replaying) return;
+    /* A corpse stays at the spot it fell on, not at the live position
+       -- the man it belonged to is about to respawn across the map and
+       his body must not go with him. */
+    var at = (!p.alive && p.corpse) ? p.corpse : p.pos;
+    p.actor.controller.teleport([at.x, at.y + lift(p), at.z]);
+    face(p.actor, (!p.alive && p.corpse) ? p.corpse.yaw : p.yaw);
+    var dx = M.you ? at.x - M.you.pos.x : 0;
+    var dz = M.you ? at.z - M.you.pos.z : 0;
+    var near = lod(M, p, dx * dx + dz * dz);
+    carry(M, p, p.yaw, p.pitch, p.sprinting, p.alive && near);
   }
 
   /* Every body in this match is TELEPORTED into place each frame -- the
@@ -1653,8 +1711,33 @@
     var fx = sy * cp, fy = -sp, fz = cy * cp;
     var rx = -cy, rz = sy;                       // see face()/RIGHT: right is -X
     var low = sprinting ? 1 : 0;
-    var h = p.pos.y + (EYE - 0.30) - (p.crouching ? 0.42 : 0) - low * 0.10;
-    var side = 0.11, ahead = 0.17;
+    /* AIMED, FROM THE OUTSIDE.
+     *
+       Bots aim -- coneOf has narrowed their cone for aiming since the
+       difficulties were written -- and from across the street it made
+       no difference at all to what they looked like, because this
+       function only knew about sprinting. A man on his sights holds the
+       weapon UP, at his eye, and IN, on his own centre line: the stock
+       is in his shoulder pocket and his head is behind the rear sight.
+       That is three numbers, and without them every bot in the game
+       shoots from the hip forever however well it is actually
+       shooting.
+
+       `aim` eases rather than switching, the same way the player's own
+       viewmodel does, so the two views agree about how long it takes
+       to bring a rifle up. */
+    var wantAim = (p.aiming && !sprinting) ? 1 : 0;
+    p._adsT = p._adsT == null ? wantAim
+      : p._adsT + (wantAim - p._adsT) * Math.min(1, DT_LAST * (wantAim ? 13 : 9));
+    var aim = p._adsT;
+    var h = p.pos.y + (EYE - 0.30) - (p.prone ? 1.02 : (p.crouching ? 0.42 : 0))
+      - low * 0.10
+      /* Up to the eye: the carry sits 0.30 below it, so that is what
+         has to come back. */
+      + aim * 0.26;
+    /* In to the centre line, and a touch further forward, because the
+       support hand comes back under the handguard. */
+    var side = 0.11 * (1 - aim * 0.86), ahead = 0.17 + aim * 0.055;
     a.position.set(
       p.pos.x + rx * side + fx * ahead,
       h + fy * ahead,
@@ -1666,6 +1749,9 @@
     var fh = Math.hypot(fx, fz) || 1e-6;
     var gy = Math.atan2(-fz / fh, fx / fh);
     var gp = Math.asin(Math.max(-1, Math.min(1, fy))) - low * 0.55;
+    /* The muzzle comes level as the sights come up: the carry has the
+       weapon nosed down a few degrees and an aimed weapon has not. */
+    gp += aim * 0.06;
     if (!_q1) { _q1 = new W.LE.Quat(); _q2 = new W.LE.Quat(); }
     _q1.setEuler(0, gy, 0);
     _q2.setEuler(0, 0, gp);
@@ -1709,6 +1795,15 @@
     return c && c.height ? c.height * 0.5 : 0.9;
   }
 
+  /* animate() is handed a person and a delta and has no match in
+     scope, and the stance transitions need the clock. Set once per
+     tick by update(), which is the only caller. */
+  var M_TIME = 0;
+  /* And the tick length, for anything outside update() that has to
+     ease a value -- carry() is handed a person and an angle and no
+     clock at all. */
+  var DT_LAST = 1 / 60;
+
   function animate(p, dt) {
     var a = p.actor.animator;
     if (!a) return;
@@ -1730,23 +1825,49 @@
       : p._animSpeed + (sp - p._animSpeed) * Math.min(1, dt * 12);
     var v = p._animSpeed;
 
+    /* THREE STANCES, AND A CYCLE FOR EACH OF THEM.
+     *
+       This used to be four clips for every state a body could be in,
+       so a crouched man ran the standing walk with the camera lowered
+       and a man flat on the floor ran it as well. There is now a
+       locomotion set per stance -- stand, crouch, prone -- and the
+       transitions between the stances are their own non-looping clips
+       that have to finish before the cycle underneath them takes over.
+
+       DROP and STANDUP are timed rather than flagged: the match knows
+       when the stance changed (proneAt), so the clip runs for its own
+       length from that moment and nothing has to remember to clear
+       a flag. */
     var want;
+    var sinceProne = M_TIME - (p.proneAt || -99);
     if (!p.alive && p.corpse) want = p.corpse.face ? 'deathFace' : 'deathBack';
     else if (!p.alive) want = 'idle';
     else if (p.sliding) want = 'slide';
-    else if (!p.grounded) want = 'jump';
-    else if (p.sprinting && v > 4.6) want = 'sprint';
+    else if (!p.grounded && !p.prone) want = 'jump';
+    else if (p.prone) {
+      if (sinceProne < 0.42) want = 'drop';
+      else want = v > 0.18 ? 'crawl' : 'proneIdle';
+    } else if (sinceProne < 0.80 && p._wasProne) want = 'standUp';
+    else if (p.crouching) {
+      want = v > 2.4 ? 'crouchRun' : (v > 0.30 ? 'crouchWalk' : 'crouchIdle');
+    } else if (p.sprinting && v > 4.6) want = 'sprint';
     else if (v > 4.3) want = 'run';
     else if (v > 0.35) want = 'walk';
     else want = 'idle';
+    p._wasProne = !!p.prone || want === 'standUp';
 
     if (want !== p._animState) {
       p._animState = want;
-      a.play(want, want === 'jump' || want === 'slide' ? 0.07 : 0.16);
+      /* A transition snaps in; a cycle eases. */
+      var quick = want === 'jump' || want === 'slide' || want === 'drop';
+      a.play(want, quick ? 0.06 : (want === 'standUp' ? 0.10 : 0.16));
     }
     if (want === 'walk') a.speed = Math.max(0.5, Math.min(1.7, v / 4.6));
     else if (want === 'run') a.speed = Math.max(0.7, Math.min(1.4, v / 6.0));
     else if (want === 'sprint') a.speed = Math.max(0.85, Math.min(1.2, v / 7.0));
+    else if (want === 'crouchWalk') a.speed = Math.max(0.5, Math.min(1.6, v / 2.2));
+    else if (want === 'crouchRun') a.speed = Math.max(0.7, Math.min(1.5, v / 3.4));
+    else if (want === 'crawl') a.speed = Math.max(0.5, Math.min(1.8, v / 1.1));
     else a.speed = 1;
   }
 
@@ -2271,6 +2392,9 @@
        everybody. The bots need it to know when their round is slipping
        away, and counting it inside twelve bot brains is twelve times
        the work for the same number. */
+    M_TIME = M.time;
+    DT_LAST = dt;
+    if (M.decals) M.decals.tick(dt);
     recSample(M, dt);
     hlTick(M);
     M._pathBudget = 1;
@@ -2304,6 +2428,10 @@
       if (p.pos.y < -25) { p.alive = false; p.deaths++; p.respawnAt = M.time + 2; }
     }
 
+    /* PLACEMENT IS A SECOND PASS, after everybody has moved, so a body
+       is drawn where it is now rather than where it was last frame. */
+    for (var j = 0; j < M.people.length; j++) place(M, M.people[j]);
+
     if (M.mode.bomb) updateBomb(M, dt, emit);
     else {
       if (M.score.a >= M.mode.score) return finish(M, 'a', emit);
@@ -2335,7 +2463,55 @@
     if (len > 1) { fwd /= len; str /= len; }
     /* Sprinting is forward only, and you cannot sprint down your sights.
        Crouching is slower and steadier. */
-    var sprint = cmd.run && fwd > 0.5 && !p.aiming;
+    var sprint = cmd.run && fwd > 0.5 && !p.aiming && !p.prone;
+
+    /* ================================================================
+       ONE KEY, THREE THINGS
+       ================================================================
+       The crouch key was a hold: let go and you stood up, which means
+       playing a whole firefight from cover with a finger down. It is
+       three separate actions now and which one you get depends only on
+       how long you hold it and what you were doing:
+
+         TAP                     crouch toggles. Press again to stand.
+         HOLD while sprinting    a slide.
+         HOLD while not          a DROP: you go flat, fast, and it
+                                 costs one point of health, because a
+                                 man throwing himself on concrete does
+                                 not do it for free.
+
+       HOLD_T is the fence between a tap and a hold. Two hundred and
+       twenty milliseconds: long enough that a deliberate crouch never
+       becomes a dive, short enough that a dive never feels queued. */
+    var HOLD_T = 0.22;
+    var held = !!cmd.crouch;
+    if (held && !p._crouchWas) { p._crouchDown = M.time; p._crouchUsed = false; }
+    if (held && !p._crouchUsed && M.time - (p._crouchDown || 0) >= HOLD_T) {
+      p._crouchUsed = true;                 // this press is a hold, not a tap
+      if (sprint && p.grounded && M.time > (p.slideEnd || 0) + 0.45) {
+        p._wantSlide = true;
+      } else if (!p.prone && p.grounded && M.time > (p.proneAt || 0) + 0.9) {
+        /* THE DROP. */
+        p.prone = true;
+        p.proneAt = M.time;
+        p.crouching = false;
+        p.hp = Math.max(1, p.hp - 1);
+        p.hurtAt = M.time;                  // and it stops your regeneration
+        p.sprinting = false;
+      }
+    }
+    if (!held && p._crouchWas) {
+      if (!p._crouchUsed) {
+        /* A TAP. */
+        if (p.prone) { p.prone = false; p.proneAt = M.time; p.crouching = true; }
+        else p.crouching = !p.crouching;
+      }
+      p._crouchUsed = false;
+    }
+    p._crouchWas = held;
+    /* Standing up out of prone takes a moment during which you are
+       neither flat nor upright, and jumping does it too. */
+    if (p.prone && cmd.jump) { p.prone = false; p.proneAt = M.time; p.crouching = true; }
 
     /* THE SLIDE.
      *
@@ -2349,12 +2525,15 @@
        The recovery is the cost. For a fifth of a second after it ends
        you are standing up and cannot fire, which is what stops it being
        a free dodge you spam round every corner. */
-    if (cmd.slide && sprint && p.grounded && M.time > (p.slideEnd || 0) + 0.45) {
+    if ((cmd.slide || p._wantSlide) && sprint && p.grounded
+        && M.time > (p.slideEnd || 0) + 0.45) {
+      p._wantSlide = false;
       p.sliding = true;
       p.slideEnd = M.time + 0.72;
       p.slideDir = { x: Math.sin(p.yaw), z: Math.cos(p.yaw) };
       p.slideSpeed = 5.2 * w.move * 1.62;
     }
+    p._wantSlide = false;
     if (p.sliding && (M.time >= p.slideEnd || !p.grounded)) {
       p.sliding = false;
       p.slideRecover = M.time + 0.20;
@@ -2375,7 +2554,11 @@
       return;
     }
 
-    var speed = 5.2 * w.move * (sprint ? 1.34 : 1) * (cmd.crouch ? 0.52 : 1)
+    /* Flat on your face you crawl, and for the first third of a second
+       of a drop you are not moving at all -- you are landing. */
+    var settling = p.prone && M.time - (p.proneAt || 0) < 0.34;
+    var speed = 5.2 * w.move * (sprint ? 1.34 : 1)
+      * (p.prone ? (settling ? 0 : 0.21) : (p.crouching ? 0.52 : 1))
       * (p.aiming ? 0.62 : 1);
     var sy = Math.sin(p.yaw), cy = Math.cos(p.yaw);
     var rt = RIGHT(p.yaw);
@@ -2388,12 +2571,12 @@
     }
     if (cmd.reload && !p.reloadUntil && p.ammo[p.held] < w.mag) beginReload(M, p);
     /* Not while you are getting up out of a slide. */
-    if (cmd.fire && M.time >= (p.slideRecover || 0) && (w.auto || !p._heldTrigger)) {
+    if (cmd.fire && M.time >= (p.slideRecover || 0) && !settling
+        && (w.auto || !p._heldTrigger)) {
       fireHuman(M, p);
     }
     p._heldTrigger = !!cmd.fire;
     p.sprinting = sprint;
-    p.crouching = !!cmd.crouch;
   }
 
   var humanRand = rng(0x5eed);

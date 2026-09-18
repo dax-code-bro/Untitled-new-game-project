@@ -236,12 +236,16 @@
   border:1px solid #3a3428; padding:5px 10px; background:rgba(5,6,10,.6); }
 #mpui .padbadge b { color:#ffd27a; font-weight:normal; }
 
-/* ---- the click-to-play plate ---- */
-#mpui .lock { position:absolute; inset:0; display:flex; align-items:center;
-  justify-content:center; background:rgba(5,6,10,.55); pointer-events:auto;
-  cursor:pointer; text-align:center; }
-#mpui .lock div { font-size:13px; letter-spacing:.30em; text-transform:uppercase;
-  color:#c8bfa8; line-height:2.4; }
+/* ---- the mouse-look hint ----
+   Not a gate. The match is already running behind it: this only says
+   the mouse is not captured yet, and it never eats a click. */
+#mpui .lock { position:absolute; left:0; right:0; bottom:74px; display:flex;
+  justify-content:center; pointer-events:none; text-align:center; z-index:58;
+  transition:opacity .45s linear; }
+#mpui .lock.fade { opacity:0; }
+#mpui .lock div { max-width:640px; font-size:10.5px; letter-spacing:.20em;
+  text-transform:uppercase; color:#9a927f; line-height:1.9;
+  background:rgba(5,6,10,.62); border:1px solid #2c2820; padding:6px 14px; }
 #mpui .lock b { color:#ffd27a; font-weight:normal; }
 `;
 
@@ -299,10 +303,7 @@
     <path d="M2,2 L2,19 L7,14.6 L10.4,22.4 L13.6,21 L10.2,13.4 L16.6,13.2 Z"
       fill="#ffd27a" stroke="#1a1408" stroke-width="1.4" stroke-linejoin="round"/></svg></div>
   <div class="padbadge hide">pointer <b>on</b></div>
-  <div class="lock"><div>Click to play<br><b>WASD</b> move &nbsp; <b>Mouse</b> look &nbsp;
-    <b>Left</b> fire &nbsp; <b>Right</b> aim<br><b>Shift</b> sprint &nbsp; <b>Space</b> jump &nbsp;
-    <b>Ctrl</b> crouch &nbsp; <b>R</b> reload &nbsp; <b>Q</b> swap<br>
-    <b>Tab</b> scores &nbsp; <b>Esc</b> release the mouse</div></div>
+  <div class="lock"><div>Click anywhere for mouse look</div></div>
 `;
 
   /* ================================================================
@@ -317,6 +318,30 @@
     var down = {}, mdx = 0, mdy = 0, locked = false, unlockHook = null;
     var buttons = { fire: false, aim: false };
     var pressed = {};
+    /* The match runs whether or not the browser has given us the mouse.
+       There is no plate to click through -- the hint fades on its own,
+       and the first click anywhere that is not a menu grabs the mouse.
+       A pad never needs it at all. */
+    var hintT = null, wantLock = true;
+    function hint() { return root.querySelector('.lock'); }
+    function showHint() {
+      var h = hint(); if (!h) return;
+      h.classList.remove('hide'); h.classList.remove('fade');
+      if (hintT) clearTimeout(hintT);
+      hintT = setTimeout(function () { var e = hint(); if (e) e.classList.add('fade'); }, 6000);
+    }
+    function hideHint() {
+      var h = hint(); if (h) h.classList.add('hide');
+      if (hintT) { clearTimeout(hintT); hintT = null; }
+    }
+    function grab() {
+      if (locked || !wantLock) return;
+      /* A menu is open, or the match is over and the buttons want the
+         cursor: taking the mouse away would be the bug, not the fix. */
+      if (root.querySelector('.opt') && !root.querySelector('.opt').classList.contains('hide')) return;
+      if (root.classList.contains('done')) return;
+      if (canvas.requestPointerLock) { try { canvas.requestPointerLock(); } catch (e) { /* refused */ } }
+    }
 
     function name(e) {
       var k = e.key.toLowerCase();
@@ -336,7 +361,7 @@
       mdy += e.movementY || 0;
     }
     function mdown(e) {
-      if (!locked) return;
+      if (!locked) { if (e.button === 0) grab(); return; }
       if (e.button === 0) buttons.fire = true;
       if (e.button === 2) buttons.aim = true;
       e.preventDefault();
@@ -348,7 +373,7 @@
     function lockChange() {
       var was = locked;
       locked = document.pointerLockElement === canvas;
-      root.querySelector('.lock').classList.toggle('hide', locked);
+      if (locked) hideHint(); else showHint();
       if (!locked) { buttons.fire = false; buttons.aim = false; }
       /* The browser takes the pointer lock away on Escape whether the
          page likes it or not, so that IS the pause: whoever wants to
@@ -363,9 +388,7 @@
     W.addEventListener('mouseup', mup);
     W.addEventListener('contextmenu', function (e) { if (locked) e.preventDefault(); });
     document.addEventListener('pointerlockchange', lockChange);
-    root.querySelector('.lock').addEventListener('click', function () {
-      if (canvas.requestPointerLock) canvas.requestPointerLock();
-    });
+    showHint();
 
     function any(list) {
       for (var i = 0; i < list.length; i++) if (down[list[i]]) return true;
@@ -387,12 +410,16 @@
       _press: function (k) { down[k] = true; pressed[k] = true; },
       _release: function (k) { down[k] = false; },
       _look: function (dx, dy) { mdx += dx; mdy += dy; },
-      _lock: function (v) { locked = v; root.querySelector('.lock').classList.toggle('hide', v); },
+      _lock: function (v) { locked = v; if (v) hideHint(); else showHint(); },
+      /* The end screen wants the cursor. Nothing may steal it back. */
+      wantLock: function (v) { wantLock = v; if (!v) hideHint(); },
+      grab: grab,
       dispose: function () {
         W.removeEventListener('keydown', keyDown); W.removeEventListener('keyup', keyUp);
         W.removeEventListener('mousemove', move); W.removeEventListener('mousedown', mdown);
         W.removeEventListener('mouseup', mup);
         document.removeEventListener('pointerlockchange', lockChange);
+        if (hintT) clearTimeout(hintT);
       },
     };
   }
@@ -1573,7 +1600,8 @@
       ? document.querySelector(opts.canvas) : (opts.canvas || document.querySelector('#game'));
 
     var st = document.createElement('style');
-    st.textContent = CSS;
+    st.textContent = CSS + (W.MP_STREAKS ? W.MP_STREAKS.CSS : '')
+      + (W.MP_BERSERKER ? W.MP_BERSERKER.CSS : '');
     document.head.appendChild(st);
     var root = document.createElement('div');
     root.id = 'mpui';
@@ -1663,6 +1691,54 @@
     });
     sens = settings.mouseSens() * 0.0022;
     input.onUnlock(function () { if (!over && !M.over) settings.show(); });
+    /* ---- the killstreak rail ---- */
+    var STREAK_USES = 'b9.mp.streakUses.v1';
+    function usesOf(id) {
+      try {
+        var o = JSON.parse(W.localStorage.getItem(STREAK_USES) || '{}');
+        return o[id] || 0;
+      } catch (e) { return 0; }
+    }
+    function bumpUse(id) {
+      try {
+        var o = JSON.parse(W.localStorage.getItem(STREAK_USES) || '{}');
+        o[id] = (o[id] || 0) + 1;
+        W.localStorage.setItem(STREAK_USES, JSON.stringify(o));
+      } catch (e) { /* storage off: it simply never levels */ }
+    }
+    var berserk = null;
+    var rail = W.MP_STREAKS ? W.MP_STREAKS.make(root, M, {
+      pad: pad, input: input, uses: usesOf,
+      callIn: function (def, level) {
+        bumpUse(def.id);
+        hud.say(def.name.toLowerCase() + ' — called in');
+        if (def.id === 'k-berserker' && W.MP_BERSERKER) {
+          if (!berserk) berserk = W.MP_BERSERKER.make(root, M, game, {
+            pad: pad, input: input,
+            onEnd: function () { hud.say('the suit is gone'); },
+          });
+          berserk.callIn(level);
+          return;
+        }
+        if (M.callStreak) M.callStreak(def, level);
+      },
+    }) : null;
+
+    var wasSuited = false;
+    /* The crosshair and the ammunition counter belong to a gun you are
+       holding, and in the suit you are not holding one. */
+    function el0Hide(on) {
+      var c = root.querySelector('.cross'), g = root.querySelector('.gun');
+      if (c) c.classList.toggle('hide', !!on);
+      if (g) g.classList.toggle('hide', !!on);
+    }
+    /* The suit stands between a round and the man in it. */
+    M.absorbHit = function (who, amount) {
+      if (!berserk || who !== M.you) return false;
+      return berserk.absorb(amount);
+    };
+
+    var stanceY = W.MP_MATCH.EYE;
     var kick = 0, bob = 0, bobT = 0, lastHp = M.you.hp, wasAlive = true;
     var adsT = 0;
     var over = false;
@@ -1875,8 +1951,15 @@
          controlling recoil is. */
       var kUp0 = p.kickUp || 0, kSide0 = p.kickSide || 0;
       var kills0 = p.kills;
-      M.control(cmd, dt);
-      if (p.ammo[p.held] < before) { kick = Math.min(1.4, kick + 0.55); vm.fired(); }
+      /* IN THE SUIT YOU ARE NOT A MAN WITH A RIFLE. The match's own
+         control -- walking, sprinting, firing, reloading, sliding --
+         is skipped entirely, because the suit moves you itself and
+         "you are limited to what the mech gives you" is a rule, not a
+         suggestion. Without this you would be walking at your own
+         pace, firing your own weapon, from inside a mech. */
+      var suited = !!(berserk && berserk.riding);
+      if (!suited) M.control(cmd, dt);
+      if (!suited && p.ammo[p.held] < before) { kick = Math.min(1.4, kick + 0.55); vm.fired(); }
       M.update(dt);
       var dUp = (p.kickUp || 0) - kUp0, dSide = (p.kickSide || 0) - kSide0;
       /* Only the climb is handed to the player. The settle is the gun
@@ -1893,12 +1976,48 @@
       bobT += dt * (p.sprinting ? 12 : 7.5) * (moving ? 1 : 0);
       bob = moving ? Math.sin(bobT) * (p.sprinting ? 0.016 : 0.009) : bob * 0.9;
 
+      /* ---- the killstreak rail, and whatever it called in ----
+         Polled before the camera, because the Berserker Suit takes the
+         camera over completely for as long as it is up. */
+      if (rail) rail.poll(dt);
+      if (berserk && berserk.active) {
+        var shot = berserk.poll(dt, cmd, null);
+        if (shot) {
+          game.lookAt(shot.eye, shot.at);
+          if (shot.fov && game.fieldOfView) game.fieldOfView(shot.fov);
+          /* No viewmodel: you are not holding anything in the suit. */
+          vm.hide();
+          el0Hide(true);
+          hud.paint(dt, false, 0);
+          input.endFrame();
+          return;
+        }
+        if (berserk.riding === false && berserk.state === 'throw') {
+          /* Still you, still your gun, but the arc is on the ground. */
+        }
+      } else if (wasSuited) {
+        wasSuited = false;
+        if (game.fieldOfView) game.fieldOfView(55);
+        el0Hide(false);
+        vm.select(p.guns[p.held]);
+      }
+      if (berserk && berserk.riding) wasSuited = true;
+
       /* The camera. Dead, it stays where you fell and looks at the man
          who did it, which is the cheapest kill camera there is and is
          better than a black screen. */
       var eye;
       if (p.alive) {
-        eye = { x: p.pos.x, y: p.pos.y + W.MP_MATCH.EYE - (p.crouching ? 0.42 : 0) + bob, z: p.pos.z };
+        /* THE STANCE IS EASED, NOT SWITCHED. Standing, crouched and
+           flat are 1.62, 1.20 and 0.38 metres of eye height, and
+           jumping between them is what makes a crouch feel like a
+           teleport rather than a movement. Prone eases slower than
+           crouch because going flat is a fall and getting up is a
+           push. */
+        var wantEye = p.prone ? 0.38 : (p.crouching ? 1.20 : W.MP_MATCH.EYE);
+        var eRate = p.prone ? 12 : 9;
+        stanceY += (wantEye - stanceY) * Math.min(1, dt * eRate);
+        eye = { x: p.pos.x, y: p.pos.y + stanceY + bob, z: p.pos.z };
         var cp = Math.cos(pitch);
         game.lookAt([eye.x, eye.y, eye.z],
           [eye.x + Math.sin(yaw) * cp, eye.y - Math.sin(pitch), eye.z + Math.cos(yaw) * cp]);
@@ -1952,6 +2071,11 @@
       if (M.over && !over && !replay.active) {
         over = true;
         game.timeScale = 1;
+        /* The cursor belongs to the end screen from here on. Nothing
+           may grab the pointer lock back -- that was the whole reason
+           Play Again could not be pressed. */
+        root.classList.add('done');
+        if (input.wantLock) input.wantLock(false);
         if (document.exitPointerLock) document.exitPointerLock();
         /* TWO WAYS OUT, and there was one.
          *

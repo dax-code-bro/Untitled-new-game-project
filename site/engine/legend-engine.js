@@ -8339,6 +8339,216 @@ function makeHumanoidClips() {
     lowerArmR: { keys: [[0.00, 60, 0, 0], [0.22, 74, 0, 0], [1.00, 66, 0, 0]] },
   }, { loop: false }));
 
+  /* ================================================================
+     CROUCHED, AND FLAT
+     ================================================================
+     Five clips the game had none of, and without them a crouched man
+     was a standing man with the camera lowered and a prone man was a
+     standing man half inside the floor.
+
+     THE NUMBERS. A deep tactical crouch puts the hips about 0.42m
+     below standing, hip flexion around 62 degrees, knee around 88, and
+     the trunk pitched 14 forward over them so the weapon stays up. A
+     combat crawl takes the hips down 1.02m -- chest on the ground --
+     with the lead leg drawn up to about 70 degrees of hip and the
+     trailing leg straight, and the whole body rolls 6 degrees onto the
+     firing side so the shoulder can take the stock.
+
+     All three crouch clips share the hip and knee base so that walking
+     out of a crouched idle does not pop the legs: only the cycle is
+     added on top. */
+
+  const CR_HIP = -0.42;              // how far the hips drop, in metres
+  clips.push(buildClip('crouchIdle', 3.4, {
+    hips: {
+      keys: [[0.00, 14, 0, 0], [0.50, 15, 1, 0], [1.00, 14, 0, 0]],
+      pos: [[0.00, 0, CR_HIP, 0], [0.50, 0, CR_HIP + 0.012, 0], [1.00, 0, CR_HIP, 0]],
+    },
+    spine: { keys: [[0.00, -6, 0, 0], [0.50, -7, 1, 0], [1.00, -6, 0, 0]] },
+    chest: { keys: [[0.00, -4, 0, 1], [0.50, -3, -1, -1], [1.00, -4, 0, 1]] },
+    head:  { keys: [[0.00, -2, 0, 0], [0.35, -2, 4, 0], [0.70, -2, -3, 0], [1.00, -2, 0, 0]] },
+    upperLegL: { keys: [[0.00, 62, 0, 5], [0.50, 63, 0, 5], [1.00, 62, 0, 5]] },
+    upperLegR: { keys: [[0.00, 58, 0, -5], [0.50, 59, 0, -5], [1.00, 58, 0, -5]] },
+    lowerLegL: { keys: [[0.00, -88, 0, 0], [0.50, -89, 0, 0], [1.00, -88, 0, 0]] },
+    lowerLegR: { keys: [[0.00, -82, 0, 0], [0.50, -83, 0, 0], [1.00, -82, 0, 0]] },
+    footL: { keys: [[0.00, 26, 0, 0], [1.00, 26, 0, 0]] },
+    footR: { keys: [[0.00, 24, 0, 0], [1.00, 24, 0, 0]] },
+    upperArmL: { keys: [[0.00, 0, 0, -10], [0.50, 0, 0, -12], [1.00, 0, 0, -10]] },
+    upperArmR: { keys: [[0.00, 0, 0, 10], [0.50, 0, 0, 12], [1.00, 0, 0, 10]] },
+    lowerArmL: { keys: [[0.00, 14, 0, 0], [0.50, 17, 0, 0], [1.00, 14, 0, 0]] },
+    lowerArmR: { keys: [[0.00, 14, 0, 0], [0.50, 17, 0, 0], [1.00, 14, 0, 0]] },
+  }));
+
+  /* A duck walk: short steps, the hips barely rise, and the trunk
+     stays where it is so the sights do not wander. 1.20s because the
+     stride is short and the cadence is slow. */
+  clips.push(buildClip('crouchWalk', 1.20, {
+    hips: {
+      keys: [[0.00, 14, -3, 0], [0.25, 14, 0, 3], [0.50, 14, 3, 0],
+        [0.75, 14, 0, -3], [1.00, 14, -3, 0]],
+      pos: [[0.00, 0, CR_HIP, 0.008], [0.25, 0.012, CR_HIP + 0.018, 0],
+        [0.50, 0, CR_HIP, -0.008], [0.75, -0.012, CR_HIP + 0.018, 0],
+        [1.00, 0, CR_HIP, 0.008]],
+    },
+    spine: { keys: [[0.00, -6, 2, 0], [0.50, -6, -2, 0], [1.00, -6, 2, 0]] },
+    chest: { keys: [[0.00, -4, -2, 0], [0.50, -4, 2, 0], [1.00, -4, -2, 0]] },
+    head:  { keys: [[0.00, -2, 0, 0], [0.50, -2, 0, 0], [1.00, -2, 0, 0]] },
+    upperLegL: { keys: [[0.00, 78, 0, 5], [0.25, 62, 0, 5], [0.50, 44, 0, 5],
+      [0.75, 60, 0, 5], [1.00, 78, 0, 5]] },
+    upperLegR: { keys: [[0.00, 44, 0, -5], [0.25, 60, 0, -5], [0.50, 78, 0, -5],
+      [0.75, 62, 0, -5], [1.00, 44, 0, -5]] },
+    lowerLegL: { keys: [[0.00, -74, 0, 0], [0.25, -88, 0, 0], [0.50, -96, 0, 0],
+      [0.75, -92, 0, 0], [1.00, -74, 0, 0]] },
+    lowerLegR: { keys: [[0.00, -96, 0, 0], [0.25, -92, 0, 0], [0.50, -74, 0, 0],
+      [0.75, -88, 0, 0], [1.00, -96, 0, 0]] },
+    footL: { keys: [[0.00, 18, 0, 0], [0.50, 32, 0, 0], [1.00, 18, 0, 0]] },
+    footR: { keys: [[0.00, 32, 0, 0], [0.50, 18, 0, 0], [1.00, 32, 0, 0]] },
+    /* Contralateral, and small -- a crouched man's arms hardly move,
+       because both hands are on the weapon. */
+    upperArmL: { keys: [[0.00, -7, 0, -10], [0.50, 7, 0, -10], [1.00, -7, 0, -10]] },
+    upperArmR: { keys: [[0.00, 7, 0, 10], [0.50, -7, 0, 10], [1.00, 7, 0, 10]] },
+    lowerArmL: { keys: [[0.00, 16, 0, 0], [0.50, 12, 0, 0], [1.00, 16, 0, 0]] },
+    lowerArmR: { keys: [[0.00, 12, 0, 0], [0.50, 16, 0, 0], [1.00, 12, 0, 0]] },
+  }));
+
+  /* Crouch-running: longer steps, the trunk pitched further forward,
+     and the hips come up a little because you cannot run as low as you
+     can walk. */
+  clips.push(buildClip('crouchRun', 0.86, {
+    hips: {
+      keys: [[0.00, 20, -5, 0], [0.25, 20, 0, 5], [0.50, 20, 5, 0],
+        [0.75, 20, 0, -5], [1.00, 20, -5, 0]],
+      pos: [[0.00, 0, CR_HIP + 0.07, 0.018], [0.25, 0.020, CR_HIP + 0.10, 0],
+        [0.50, 0, CR_HIP + 0.07, -0.018], [0.75, -0.020, CR_HIP + 0.10, 0],
+        [1.00, 0, CR_HIP + 0.07, 0.018]],
+    },
+    spine: { keys: [[0.00, -10, 4, 0], [0.50, -10, -4, 0], [1.00, -10, 4, 0]] },
+    chest: { keys: [[0.00, -6, -4, 0], [0.50, -6, 4, 0], [1.00, -6, -4, 0]] },
+    head:  { keys: [[0.00, 4, 0, 0], [0.50, 4, 0, 0], [1.00, 4, 0, 0]] },
+    upperLegL: { keys: [[0.00, 92, 0, 4], [0.25, 60, 0, 4], [0.50, 26, 0, 4],
+      [0.75, 58, 0, 4], [1.00, 92, 0, 4]] },
+    upperLegR: { keys: [[0.00, 26, 0, -4], [0.25, 58, 0, -4], [0.50, 92, 0, -4],
+      [0.75, 60, 0, -4], [1.00, 26, 0, -4]] },
+    lowerLegL: { keys: [[0.00, -60, 0, 0], [0.25, -104, 0, 0], [0.50, -96, 0, 0],
+      [0.75, -84, 0, 0], [1.00, -60, 0, 0]] },
+    lowerLegR: { keys: [[0.00, -96, 0, 0], [0.25, -84, 0, 0], [0.50, -60, 0, 0],
+      [0.75, -104, 0, 0], [1.00, -96, 0, 0]] },
+    footL: { keys: [[0.00, 12, 0, 0], [0.50, 34, 0, 0], [1.00, 12, 0, 0]] },
+    footR: { keys: [[0.00, 34, 0, 0], [0.50, 12, 0, 0], [1.00, 34, 0, 0]] },
+    upperArmL: { keys: [[0.00, -16, 0, -12], [0.50, 16, 0, -12], [1.00, -16, 0, -12]] },
+    upperArmR: { keys: [[0.00, 16, 0, 12], [0.50, -16, 0, 12], [1.00, 16, 0, 12]] },
+    lowerArmL: { keys: [[0.00, 24, 0, 0], [0.50, 16, 0, 0], [1.00, 24, 0, 0]] },
+    lowerArmR: { keys: [[0.00, 16, 0, 0], [0.50, 24, 0, 0], [1.00, 16, 0, 0]] },
+  }));
+
+  /* THE DROP. Non-looping and short: 0.42s from upright to flat, which
+     is the same third-of-a-second the match refuses to let you fire
+     through, plus the landing. The trunk goes first and the legs
+     follow, because a man diving leads with his chest. */
+  const PR_HIP = -1.02;
+  clips.push(buildClip('drop', 0.42, {
+    hips: {
+      keys: [[0.00, 6, 0, 0], [0.35, 58, 0, 2], [0.70, 84, 0, 5], [1.00, 82, 0, 6]],
+      pos: [[0.00, 0, 0, 0], [0.35, 0, -0.42, 0.22], [0.70, 0, -0.92, 0.38],
+        [1.00, 0, PR_HIP, 0.40]],
+    },
+    spine: { keys: [[0.00, 0, 0, 0], [0.40, -22, 0, -2], [1.00, -34, 0, -4]] },
+    chest: { keys: [[0.00, 0, 0, 0], [0.40, -14, 0, -1], [1.00, -20, 0, -2]] },
+    head:  { keys: [[0.00, 0, 0, 0], [0.40, -24, 0, 0], [1.00, -38, 0, 0]] },
+    upperLegL: { keys: [[0.00, 0, 0, 5], [0.40, -32, 0, 10], [1.00, -74, 0, 12]] },
+    upperLegR: { keys: [[0.00, 0, 0, -5], [0.40, -28, 0, -8], [1.00, -78, 0, -6]] },
+    lowerLegL: { keys: [[0.00, 0, 0, 0], [0.40, -46, 0, 0], [1.00, -18, 0, 0]] },
+    lowerLegR: { keys: [[0.00, 0, 0, 0], [0.40, -40, 0, 0], [1.00, -10, 0, 0]] },
+    footL: { keys: [[0.00, 0, 0, 0], [1.00, -22, 0, 0]] },
+    footR: { keys: [[0.00, 0, 0, 0], [1.00, -22, 0, 0]] },
+    /* Hands stay on the weapon the whole way down -- a man who drops
+       and lets go of his rifle has not dropped, he has fallen. */
+    upperArmL: { keys: [[0.00, 0, 0, -10], [0.40, -26, 0, -16], [1.00, -48, 0, -20]] },
+    upperArmR: { keys: [[0.00, 0, 0, 10], [0.40, -22, 0, 14], [1.00, -44, 0, 18]] },
+    lowerArmL: { keys: [[0.00, 14, 0, 0], [1.00, 46, 0, 0]] },
+    lowerArmR: { keys: [[0.00, 14, 0, 0], [1.00, 52, 0, 0]] },
+  }, { loop: false }));
+
+  /* Flat and still, breathing. The whole body is 6 degrees onto the
+     firing side. */
+  clips.push(buildClip('proneIdle', 4.0, {
+    hips: {
+      keys: [[0.00, 82, 0, 6], [0.50, 82, 0, 6.6], [1.00, 82, 0, 6]],
+      pos: [[0.00, 0, PR_HIP, 0.40], [0.50, 0, PR_HIP + 0.010, 0.40],
+        [1.00, 0, PR_HIP, 0.40]],
+    },
+    spine: { keys: [[0.00, -34, 0, -4], [0.50, -33, 0, -4], [1.00, -34, 0, -4]] },
+    chest: { keys: [[0.00, -20, 0, -2], [0.50, -18, 0, -2], [1.00, -20, 0, -2]] },
+    head:  { keys: [[0.00, -38, 0, 0], [0.50, -37, 2, 0], [1.00, -38, 0, 0]] },
+    upperLegL: { keys: [[0.00, -74, 0, 12], [1.00, -74, 0, 12]] },
+    upperLegR: { keys: [[0.00, -78, 0, -6], [1.00, -78, 0, -6]] },
+    lowerLegL: { keys: [[0.00, -18, 0, 0], [1.00, -18, 0, 0]] },
+    lowerLegR: { keys: [[0.00, -10, 0, 0], [1.00, -10, 0, 0]] },
+    footL: { keys: [[0.00, -22, 0, 0], [1.00, -22, 0, 0]] },
+    footR: { keys: [[0.00, -22, 0, 0], [1.00, -22, 0, 0]] },
+    upperArmL: { keys: [[0.00, -48, 0, -20], [1.00, -48, 0, -20]] },
+    upperArmR: { keys: [[0.00, -44, 0, 18], [1.00, -44, 0, 18]] },
+    lowerArmL: { keys: [[0.00, 46, 0, 0], [1.00, 46, 0, 0]] },
+    lowerArmR: { keys: [[0.00, 52, 0, 0], [1.00, 52, 0, 0]] },
+  }));
+
+  /* The combat crawl: elbow and opposite knee, then the other pair.
+     Slow -- 1.9 seconds a cycle -- because it is, and the body rocks
+     side to side as each elbow takes the weight. */
+  clips.push(buildClip('crawl', 1.90, {
+    hips: {
+      keys: [[0.00, 82, -4, 6], [0.25, 82, 0, 9], [0.50, 82, 4, 6],
+        [0.75, 82, 0, 3], [1.00, 82, -4, 6]],
+      pos: [[0.00, 0, PR_HIP, 0.40], [0.25, 0.020, PR_HIP + 0.020, 0.40],
+        [0.50, 0, PR_HIP, 0.40], [0.75, -0.020, PR_HIP + 0.020, 0.40],
+        [1.00, 0, PR_HIP, 0.40]],
+    },
+    spine: { keys: [[0.00, -34, 5, -4], [0.50, -34, -5, -4], [1.00, -34, 5, -4]] },
+    chest: { keys: [[0.00, -20, -6, -2], [0.50, -20, 6, -2], [1.00, -20, -6, -2]] },
+    head:  { keys: [[0.00, -36, -3, 0], [0.50, -36, 3, 0], [1.00, -36, -3, 0]] },
+    /* Lead knee comes up, pushes, straightens; then the other. */
+    upperLegL: { keys: [[0.00, -74, 0, 26], [0.25, -52, 0, 34], [0.50, -74, 0, 12],
+      [1.00, -74, 0, 26]] },
+    upperLegR: { keys: [[0.00, -78, 0, -6], [0.50, -78, 0, -22], [0.75, -56, 0, -30],
+      [1.00, -78, 0, -6]] },
+    lowerLegL: { keys: [[0.00, -18, 0, 0], [0.25, -62, 0, 0], [0.50, -18, 0, 0],
+      [1.00, -18, 0, 0]] },
+    lowerLegR: { keys: [[0.00, -10, 0, 0], [0.50, -14, 0, 0], [0.75, -58, 0, 0],
+      [1.00, -10, 0, 0]] },
+    footL: { keys: [[0.00, -22, 0, 0], [0.25, -6, 0, 0], [1.00, -22, 0, 0]] },
+    footR: { keys: [[0.00, -22, 0, 0], [0.75, -6, 0, 0], [1.00, -22, 0, 0]] },
+    /* The elbows do the work. The gun hand keeps its grip; the support
+       hand reaches and pulls. */
+    upperArmL: { keys: [[0.00, -48, 0, -20], [0.25, -66, 0, -30], [0.50, -40, 0, -16],
+      [1.00, -48, 0, -20]] },
+    lowerArmL: { keys: [[0.00, 46, 0, 0], [0.25, 72, 0, 0], [0.50, 34, 0, 0],
+      [1.00, 46, 0, 0]] },
+    upperArmR: { keys: [[0.00, -44, 0, 18], [0.50, -52, 0, 22], [1.00, -44, 0, 18]] },
+    lowerArmR: { keys: [[0.00, 52, 0, 0], [0.50, 60, 0, 0], [1.00, 52, 0, 0]] },
+  }));
+
+  /* Getting up. The reverse of the drop, and slower, because standing
+     up from flat takes about twice as long as going down. */
+  clips.push(buildClip('standUp', 0.80, {
+    hips: {
+      keys: [[0.00, 82, 0, 6], [0.45, 52, 0, 3], [1.00, 14, 0, 0]],
+      pos: [[0.00, 0, PR_HIP, 0.40], [0.45, 0, -0.66, 0.20], [1.00, 0, CR_HIP, 0]],
+    },
+    spine: { keys: [[0.00, -34, 0, -4], [1.00, -6, 0, 0]] },
+    chest: { keys: [[0.00, -20, 0, -2], [1.00, -4, 0, 1]] },
+    head:  { keys: [[0.00, -38, 0, 0], [1.00, -2, 0, 0]] },
+    upperLegL: { keys: [[0.00, -74, 0, 12], [0.50, 10, 0, 8], [1.00, 62, 0, 5]] },
+    upperLegR: { keys: [[0.00, -78, 0, -6], [0.50, 4, 0, -6], [1.00, 58, 0, -5]] },
+    lowerLegL: { keys: [[0.00, -18, 0, 0], [0.50, -70, 0, 0], [1.00, -88, 0, 0]] },
+    lowerLegR: { keys: [[0.00, -10, 0, 0], [0.50, -64, 0, 0], [1.00, -82, 0, 0]] },
+    footL: { keys: [[0.00, -22, 0, 0], [1.00, 26, 0, 0]] },
+    footR: { keys: [[0.00, -22, 0, 0], [1.00, 24, 0, 0]] },
+    upperArmL: { keys: [[0.00, -48, 0, -20], [1.00, 0, 0, -10]] },
+    upperArmR: { keys: [[0.00, -44, 0, 18], [1.00, 0, 0, 10]] },
+    lowerArmL: { keys: [[0.00, 46, 0, 0], [1.00, 14, 0, 0]] },
+    lowerArmR: { keys: [[0.00, 52, 0, 0], [1.00, 14, 0, 0]] },
+  }, { loop: false }));
+
   clips.push(buildClip('jump', 0.9, {
     hips: { keys: [[0, 0, 0, 0], [0.2, -14, 0, 0], [0.5, 6, 0, 0], [1, 0, 0, 0]] },
     upperLegL: { keys: [[0, 0, 0, 0], [0.2, 42, 0, 0], [0.5, -14, 0, 0], [1, 0, 0, 0]] },
@@ -27933,6 +28143,71 @@ Engine.prototype.weaponSurface = function (root) {
   signed.inside = inside;
   signed.unsigned = surf;
   return signed;
+};
+
+
+/* ─────────── 98b-project.js ─────────── */
+/* ============================================================
+   PROJECT — a world point, in screen pixels.
+   ============================================================
+   The engine could turn a pixel into a ray and had no way back. Every
+   HUD marker in the game -- a name over a head, the arrow that says
+   YOU in a kill cam, the arc showing where a grenade lands -- needs
+   the other direction, and each of them had been faking it with a
+   dot in the middle of the screen.
+
+   `behind` matters as much as the coordinates. A point behind the
+   camera still divides to a perfectly plausible pair of numbers, on
+   the WRONG side of the screen, so a caller that does not check it
+   draws a marker for a thing that is behind the player's head. It is
+   checked once here rather than eleven times badly.
+
+   This file sorts after 95-engine.js, which is the whole reason it is
+   its own file: everything in engine/src shares one scope and one
+   IIFE, and `class Engine` is in the temporal dead zone until its own
+   file has run.
+   ============================================================ */
+
+Engine.prototype.project = function (point) {
+  const p = Vec3.from(point);
+  const cam = this.camera;
+  const m = cam.viewProj.e;
+  const x = p.x, y = p.y, z = p.z;
+  const cx = m[0] * x + m[4] * y + m[8] * z + m[12];
+  const cy = m[1] * x + m[5] * y + m[9] * z + m[13];
+  const cw = m[3] * x + m[7] * y + m[11] * z + m[15];
+  /* w is the view-space depth. At or behind the eye it is zero or
+     negative and the divide is meaningless -- which is exactly the
+     case a caller has to be told about rather than handed numbers
+     for. */
+  const behind = cw <= 1e-6;
+  const iw = behind ? 1 : 1 / cw;
+  const ndcX = cx * iw, ndcY = cy * iw;
+  /* Against the CSS size of the canvas, not its backing-store size:
+     the render scale makes those differ by up to four times, and a
+     marker positioned in device pixels over a page laid out in CSS
+     pixels is a marker in the wrong quarter of the screen. */
+  const w = this.canvas.clientWidth || this.canvas.width;
+  const h = this.canvas.clientHeight || this.canvas.height;
+  return {
+    x: (ndcX * 0.5 + 0.5) * w,
+    y: (0.5 - ndcY * 0.5) * h,
+    depth: cw,
+    behind,
+    /* Off the sides as well as behind, for the common "should I draw
+       this at all" test. */
+    offscreen: behind || ndcX < -1.15 || ndcX > 1.15 || ndcY < -1.15 || ndcY > 1.15,
+  };
+};
+
+/* The field of view, in degrees, read and written.
+   A mech that narrows its view to aim, a sniper scope and a sprint
+   punch all want this, and all three had been reaching into
+   `game.camera.fov` and remembering to convert radians themselves. */
+Engine.prototype.fieldOfView = function (deg) {
+  if (deg == null) return this.camera.fov * 180 / Math.PI;
+  this.camera.fov = deg * Math.PI / 180;
+  return deg;
 };
 
 
