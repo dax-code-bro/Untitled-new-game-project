@@ -624,6 +624,10 @@ const WEAPONS = {
     dmg: 320, headMul: 3.0, mag: 5, reserve: 50, refire: 1.05,
     reload: 3.0, auto: false, pellets: 1, spread: 0.16,
     kick: 3.0, sfx: 'shotRifle', reloadKind: 'clip',
+    /* Stated, not inferred: `clip` is also what the Mauser C96 says,
+       and that is a self-loader fed by a stripper. Nothing about the
+       reload distinguishes a bolt rifle from it. */
+    action: 'manual',
     pierce: 1, pierceFalloff: 0.78,
     sightH: 0.098, sightFov: 0.34, adsTime: 0.34, adsSpread: 0.03, scoped: true,
     recoil: { up: 2.90, side: 0.8, climb: 0.20, recover: 7, back: 0.038, roll: 0.010, impulse: 21 },
@@ -640,6 +644,7 @@ const WEAPONS = {
     dmg: 1000, headMul: 2.0, mag: 3, reserve: 21, refire: 1.55,
     reload: 3.7, auto: false, pellets: 1, spread: 0.06,
     kick: 7.0, sfx: 'shotKillStreak', reloadKind: 'clip',
+    action: 'manual',
     pierce: 5, pierceFalloff: 0.94,
     sightH: 0.116, sightFov: 0.20, adsTime: 0.46, adsSpread: 0.015, scoped: true,
     recoil: { up: 7.5, side: 1.6, climb: 1.30, recover: 5, back: 0.055, roll: 0.014, impulse: 29 },
@@ -6262,6 +6267,9 @@ function makePlayer(game, S, hud, sfx, voice) {
     // Three springs: muzzle rise, drive back along the bore, and twist.
     kickPitch: 0, kickVel: 0, kickBack: 0, backVel: 0, kickRoll: 0, rollVel: 0,
     slideCycle: 0, slideCycleMax: 0.085,
+    /* The manual cycle: a bolt worked by hand between shots, and
+       whether its case has come out yet on this stroke. */
+    handCycle: 0, handCycleMax: 0.6, handEjected: true,
     /* Single-action cocking. cockT runs from the shot to the moment the
        hammer is back; before the first shot of a magazine it is already
        there, which is why it starts at its finished value. */
@@ -7997,8 +8005,23 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
          again on the very next frame, and plays the cylinder swinging out
          once per frame for the rest of the reload. */
       if (P.cylStage < 1 && u > 0.05) { P.cylStage = 1; sfx.cylinderOut(); }
-      if (P.cylStage < 2 && u > 0.50) { P.cylStage = 2; sfx.shellIn(); }
-      if (P.cylStage < 3 && u > 0.86) { P.cylStage = 3; sfx.cylinderIn(); }
+      /* AND HERE IS WHERE A REVOLVER'S BRASS ACTUALLY COMES OUT: all of
+         it, at once, on the ejector rod, a moment after the cylinder is
+         clear of the frame. Not one case per shot out of a port the gun
+         does not have -- which is what it was doing.
+
+         `spec.mag` of them, because that is how many chambers it has
+         and every one of them is loaded when you open it. They fall
+         nearly straight down, which is why this is its own call and
+         not the port ejector: brass off an ejector rod drops at your
+         feet, it does not fly. */
+      if (P.cylStage < 2 && u > 0.30) {
+        P.cylStage = 2;
+        const n2 = Math.max(1, Math.min(8, spec.mag || 6));
+        for (let i = 0; i < n2; i++) ejectShell(game, S, P, v, { drop: true });
+      }
+      if (P.cylStage < 3 && u > 0.50) { P.cylStage = 3; sfx.shellIn(); }
+      if (P.cylStage < 4 && u > 0.86) { P.cylStage = 4; sfx.cylinderIn(); }
     } else {
       v.cylinder.setPosition([0, 0, 0]);
       v.cylinder.setRotation([0, 0, 0]);
@@ -8180,17 +8203,73 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
   }
 
   /* Reciprocating slide. A half-sine over the cycle time: back hard, forward
-     on the return, which is the shape the real thing traces. */
+     on the return, which is the shape the real thing traces.
+
+     THE TIMER TICKS WHETHER OR NOT THE GUN HAS A SLIDE, which it did
+     not before. `P.slideCycle` is set by every shot from every weapon,
+     and it was only decremented inside this branch -- so on a rifle,
+     which has a bolt rather than a slide, it was set on the first shot
+     and then sat at its starting value for the rest of the match.
+     Nothing read it, so nothing broke; the moment anything does read
+     it, it would have read "mid-cycle, forever". */
   const gunActor = v.kind === 'single' ? v.actor : v.root;
+  if (P.slideCycle > 0) P.slideCycle = Math.max(0, P.slideCycle - dt);
+  const cycU = P.slideCycle > 0
+    ? 1 - P.slideCycle / (P.slideCycleMax || 0.085) : -1;
+  const cycBack = cycU >= 0 ? Math.sin(Math.min(1, Math.max(0, cycU)) * Math.PI) : 0;
+
   if (gunActor.slide) {
-    if (P.slideCycle > 0) {
-      P.slideCycle = Math.max(0, P.slideCycle - dt);
-      const cyc = P.slideCycleMax || 0.085;
-      const u = 1 - P.slideCycle / cyc;
-      const back = Math.sin(Math.min(1, Math.max(0, u)) * Math.PI);
-      gunActor.slide.setPosition([-(gunActor.slideTravel || 0.02) * back, 0, 0]);
-    } else {
-      gunActor.slide.setPosition([0, 0, 0]);
+    gunActor.slide.setPosition([-(gunActor.slideTravel || 0.02) * cycBack, 0, 0]);
+  }
+
+  /* AND THE BOLT, WHICH HAS NEVER MOVED WHEN THE GUN WAS FIRED.
+   *
+     The block above drives `slide`, which only the pistols have. Every
+     rifle, every SMG and the machine gun carry their breech as `bolt`
+     on the group rig, and the only code that ever touched it was the
+     reload. So the entire automatic half of the armoury fired with a
+     dead action: muzzle flash, brass out of the port, and a receiver
+     with nothing moving in it.
+
+     It is the same half-sine on the same timer, along the throw the
+     model itself declares, so a side-charging SMG and an inline rifle
+     both move along the axis their own tube actually runs.
+
+     Gated on the action. A revolver's cylinder does not reciprocate
+     and a bolt rifle's bolt does not move until your hand moves it --
+     that one is handled on its own timer below, because it happens
+     most of a second after the shot rather than during it.
+
+     Skipped while reloading: the reload has its own, slower bolt
+     animation earlier in this same function, and this runs after it.
+     Without the guard this would quietly overwrite it every frame. */
+  const act = actionOf(spec);
+  if (v.bolt && v.boltThrow && P.reloading <= 0) {
+    const R = v.boltRest || [0, 0, 0], T = v.boltThrow;
+    let b = 0;
+    if (act.cycleOn === 'shot') b = cycBack;
+    else if (act.cycleOn === 'cycle' && P.handCycle > 0) {
+      /* A MANUAL ACTION, WORKED BY HAND. Slower, and it goes back and
+         comes forward over a real fraction of the refire rather than
+         in eighty milliseconds -- which is the whole reason to carry a
+         bolt rifle and the whole reason the game should show it. */
+      const hu = 1 - P.handCycle / (P.handCycleMax || 1);
+      b = Math.sin(Math.min(1, Math.max(0, hu)) * Math.PI);
+    }
+    v.bolt.setPosition([R[0] + T[0] * b, R[1] + T[1] * b, R[2] + T[2] * b]);
+  }
+
+  /* The manual cycle's own clock, and the case that comes out on it.
+     A bolt rifle holds its case in the chamber until the bolt is
+     lifted and drawn, so the brass leaves near the top of the stroke
+     -- not at the moment of firing, which is what made every manual
+     action in the game look self-loading. */
+  if (P.handCycle > 0) {
+    P.handCycle = Math.max(0, P.handCycle - dt);
+    const hu = 1 - P.handCycle / (P.handCycleMax || 1);
+    if (!P.handEjected && hu > 0.45) {
+      P.handEjected = true;
+      if (act.ejectOn === 'cycle') ejectShell(game, S, P, v);
     }
   }
 }
@@ -8448,7 +8527,19 @@ function tryFire(game, S, P, hud, sfx, dt) {
     P.cockStage = 0;
     P.cockMax = Math.min(0.34, spec.refire * 0.72);
   }
-  ejectShell(game, S, P, P.view[P.equipped()]);
+  /* ONLY IF THE ACTION THROWS BRASS AT THE MOMENT OF FIRING. A
+     revolver holds on to it; a bolt rifle holds on to it until your
+     hand works the bolt; a break gun until it opens. See ACTIONS. */
+  const fireAct = actionOf(spec);
+  if (fireAct.ejectOn === 'shot') ejectShell(game, S, P, P.view[P.equipped()]);
+  if (fireAct.cycleOn === 'cycle') {
+    /* Start the hand cycle. It runs over the middle of the refire --
+       you do not work a bolt the instant the rifle stops moving, and
+       you are ready again before the timer is up. */
+    P.handCycleMax = Math.min(0.75, (spec.refire || 1) * 0.62);
+    P.handCycle = P.handCycleMax;
+    P.handEjected = false;
+  }
 
   /* Muzzle flash: light plus sparks, one frame of each.
    *
@@ -8959,31 +9050,114 @@ function reloadProp(game, P, v, spec, kind, forId) {
   return P.props[id];
 }
 
+/* ==================================================================
+   WHAT A GUN'S ACTION ACTUALLY DOES
+   ==================================================================
+   Every weapon in this game threw a case out of its side on every
+   shot, because `ejectShell` was called from the firing path with
+   nothing asking what kind of gun it was. For most of them that is
+   right. For three kinds it is wrong, and one of those is wrong in a
+   way that anybody who has handled the weapon will notice
+   immediately.
+
+     A REVOLVER DOES NOT EJECT. The whole point of the design is that
+     the case stays in the chamber: the cylinder indexes round, the
+     fired case goes with it, and all six come out together on the
+     ejector rod when you open it. A revolver spitting brass out of a
+     port it does not have is the single most visible thing this
+     function was doing wrong -- the Model 5 has been doing it since
+     it was built.
+
+     A BOLT RIFLE EJECTS WHEN YOU WORK THE BOLT, not when the striker
+     falls. The case sits in the chamber until your hand lifts and
+     pulls, which on these rifles is most of a second after the shot.
+     Throwing it at the moment of firing makes a manual action look
+     self-loading, which removes the entire reason to carry one.
+
+     A BREAK GUN EJECTS WHEN IT OPENS, both at once, on the extractor.
+
+   So the action is named, and the firing path asks. `ejectOn` says
+   when brass leaves and `cycleOn` says when the breech moves; `all`
+   marks the actions that throw everything they are holding at once
+   rather than one case at a time.
+
+   Inferred from what the spec already says wherever that is
+   unambiguous, and stated outright on the specs where it is not --
+   `reloadKind: 'clip'` covers both a bolt rifle and the Mauser C96,
+   which is a self-loader that happens to be fed by a stripper clip,
+   and no amount of looking at the reload can tell those apart. */
+const ACTIONS = {
+  // Gas or recoil works the breech: a case a shot, and the bolt moves.
+  selfLoading: { ejectOn: 'shot', cycleOn: 'shot', all: false },
+  // The cylinder turns. Nothing leaves until the rod is pushed.
+  revolver: { ejectOn: 'reload', cycleOn: 'none', all: true },
+  // Your hand works it, between shots.
+  manual: { ejectOn: 'cycle', cycleOn: 'cycle', all: false },
+  // Hinged: both barrels empty together when it breaks.
+  break: { ejectOn: 'open', cycleOn: 'none', all: true },
+  // A link and a case per shot, and the bolt runs the whole time.
+  belt: { ejectOn: 'shot', cycleOn: 'shot', all: false },
+  // Nothing in it is a cartridge.
+  energy: { ejectOn: 'never', cycleOn: 'none', all: false },
+};
+
+function actionOf(spec) {
+  if (!spec) return ACTIONS.selfLoading;
+  if (spec.action && ACTIONS[spec.action]) return ACTIONS[spec.action];
+  if (spec.revolver) return ACTIONS.revolver;
+  const k = spec.reloadKind;
+  if (k === 'break') return ACTIONS.break;
+  if (k === 'belt') return ACTIONS.belt;
+  if (k === 'cell') return ACTIONS.energy;
+  if (k === 'revolver') return ACTIONS.revolver;
+  /* Everything else -- a box magazine, a stripper clip into a
+     self-loader -- runs its own breech. The two bolt rifles say
+     `action: 'manual'` on their specs, because their reloadKind
+     cannot be told from the Mauser's. */
+  return ACTIONS.selfLoading;
+}
+
 /* Eject a case. A real little brass cylinder with velocity and spin,
    thrown up and to the right out of the port, that lands and stays for a
    moment. Nothing sells a gun firing like brass leaving it. */
-function ejectShell(game, S, P, v) {
+function ejectShell(game, S, P, v, opts) {
   if (S.toggles && !S.toggles.shellCasings) return;
   const gun = v.kind === 'single' ? v.actor : v.root;
-  if (!gun.ejectPort) return;
+  /* A REVOLVER HAS NO PORT, which is the point of it, so the old
+     early-return here meant the Model 5 could never show its brass at
+     all -- and the unconditional call from the firing path meant the
+     other fourteen showed theirs at the wrong moment. Both halves of
+     the same missing question.
+
+     `drop` is the ejector rod: six cases pushed out of the back of the
+     cylinder by hand and falling more or less straight down at your
+     feet. They come from the magazine well, which on a revolver is
+     where the cylinder is, and they leave with almost no speed --
+     brass off a rod drops, it does not fly. */
+  const drop = !!(opts && opts.drop);
+  const lp = drop ? (gun.magWell || [0, 0, 0]) : gun.ejectPort;
+  if (!lp) return;
   const m = gun.matrix.e;
-  const lp = gun.ejectPort;
   // Transform the port and the ejection direction by the gun's own matrix,
   // so brass leaves the port in the direction the gun is actually pointing.
   const wx = m[0] * lp[0] + m[4] * lp[1] + m[8] * lp[2] + m[12];
   const wy = m[1] * lp[0] + m[5] * lp[1] + m[9] * lp[2] + m[13];
   const wz = m[2] * lp[0] + m[6] * lp[1] + m[10] * lp[2] + m[14];
-  const dir = [0.35, 0.75, 1.0];                       // up, right and back
+  // Out of a port: up, right and back. Off a rod: down and barely at all.
+  const dir = drop ? [-0.25, -0.9, 0.15] : [0.35, 0.75, 1.0];
   const ex = m[0] * dir[0] + m[4] * dir[1] + m[8] * dir[2];
   const ey = m[1] * dir[0] + m[5] * dir[1] + m[9] * dir[2];
   const ez = m[2] * dir[0] + m[6] * dir[1] + m[10] * dir[2];
-  const sp = 2.4 + Math.random() * 1.2;
+  const sp = drop ? 0.5 + Math.random() * 0.4 : 2.4 + Math.random() * 1.2;
   const shell = game.cylinder({
     at: [wx, wy, wz], radius: 0.0058, height: 0.023, lifetime: 3.4,
     material: P.goldAmmo
       ? { color: 0xf5c93f, texture: 'metal', roughness: 0.10, metalness: 1, emissive: 0x5a3f06, emissiveStrength: 0.55 }
       : { color: 0xc79a43, texture: 'metal', roughness: 0.3, metalness: 1 },
-    velocity: [ex * sp + (Math.random() - 0.5), ey * sp + 1.2, ez * sp + (Math.random() - 0.5)],
+    velocity: drop
+      ? [ex * sp + (Math.random() - 0.5) * 0.35, ey * sp - 0.2,
+        ez * sp + (Math.random() - 0.5) * 0.35]
+      : [ex * sp + (Math.random() - 0.5), ey * sp + 1.2, ez * sp + (Math.random() - 0.5)],
     bounce: 0.35, friction: 0.6, mass: 0.012,
   });
   if (shell.body) {
