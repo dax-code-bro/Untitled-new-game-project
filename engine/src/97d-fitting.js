@@ -136,12 +136,27 @@ Engine.prototype.fitAttachments = function (root, opts = {}) {
   const want = (opts.parts || []).map((p) =>
     (typeof p === 'string' ? { id: p, slot: null } : p));
   const made = {};
-  for (const p of want) {
-    const at = p.slot === 'mag'
-      ? magAt(p.id, [-0.010, -0.092, 0])
-      : (BY_SLOT[p.slot] || opt);
-    const list = mount(p.id, at);
-    if (list) made[p.id] = list;
+  /* AND BY DEFAULT IT BUILDS NONE OF THEM YET.
+   *
+     Building every part up front was the fix for the slot filter, and
+     it is forty hidden meshes per weapon where the old broken code
+     made eight. A man can only wear one part per slot, so at most
+     eight of the forty are ever shown, and showAttachments mounts
+     anything it is asked for that does not exist. So the right number
+     to build here is zero and the right time is when a part is first
+     worn -- which costs one build on the frame a loadout changes,
+     against forty on every weapon spawn.
+
+     `eager` keeps the old behaviour for a caller that would rather
+     pay it up front, such as a preview that flicks between parts. */
+  if (opts.eager) {
+    for (const p of want) {
+      const at = p.slot === 'mag'
+        ? magAt(p.id, [-0.010, -0.092, 0])
+        : (BY_SLOT[p.slot] || opt);
+      const list = mount(p.id, at);
+      if (list) made[p.id] = list;
+    }
   }
   root.__att = made;
   /* Kept so a part asked for later can still be mounted -- see
