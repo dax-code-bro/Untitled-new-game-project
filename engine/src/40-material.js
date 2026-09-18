@@ -618,6 +618,12 @@ class Material {
     this.doubleSided = !!opts.doubleSided;
     this.uvScale = opts.uvScale != null ? opts.uvScale : 1;
     this.normalStrength = opts.normalStrength != null ? opts.normalStrength : 1;
+    /* How much fine grain this surface shows close up. 1 for anything
+       with a real texture to it; 0 for the ones whose whole point is
+       being featureless -- glass, a painted panel, a pool toy -- where
+       tiling grain across them would invent a material they are not. */
+    this.detail = opts.detail != null ? opts.detail
+      : (this.texture === 'smooth' || this.texture === 'ice' ? 0 : 1);
     this.texture = opts.texture || null;   // name of a TextureLib kind
     this.castShadow = opts.castShadow !== false;
     this.receiveShadow = opts.receiveShadow !== false;

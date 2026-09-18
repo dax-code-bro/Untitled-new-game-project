@@ -431,6 +431,11 @@ uniform vec3 uEmissive;
 uniform float uOpacity;
 uniform float uUvScale;
 uniform float uNormalStrength;
+/* ---- the detail layer ----
+   Texel density, not more texture. See the block in main(). */
+uniform float uDetailScale;
+uniform float uDetailFade;
+uniform float uDetail;
 uniform float uSubsurface;
 uniform int uHasMaps;
 uniform int uReceiveShadow;
@@ -450,6 +455,34 @@ layout(location=0) out vec4 outColor;
 void main(){
   vec2 uv = vUv * uUvScale;
 
+  /* THE DETAIL LAYER.
+   *
+     Even at 1024 a texture stretched over a nine-metre wall is about a
+     texel every centimetre, and with your face against it you are
+     looking at one magnified tile. That is the difference between these
+     surfaces and the reference ones up close, and it is a question of
+     TEXEL DENSITY rather than of texture size -- going to 2048 would
+     cost four times the memory and half the loading time to buy one
+     more doubling.
+
+     So the same texture is sampled a second time, tiled far tighter,
+     and mixed in only where the camera is close enough to see it. It
+     costs one extra fetch of a texture already resident and not one
+     byte of memory. Faded out by distance because fine tiling at range
+     is aliasing, which is worse than being soft, and because at ten
+     metres nobody can see a millimetre anyway.
+
+     The albedo is mixed around 1.0 rather than replaced -- this is a
+     contrast modulation on the macro colour, not a second colour. Blend
+     it in flat and every surface goes to the average of itself. */
+  float detW = 0.0;
+  vec2 dUv = uv;
+  if (uHasMaps == 1 && uDetail > 0.001) {
+    float dDist = length(vWorldPos - uCameraPos);
+    detW = uDetail * (1.0 - smoothstep(uDetailFade * 0.30, uDetailFade, dDist));
+    dUv = uv * uDetailScale;
+  }
+
   vec3 albedo = uBaseColor * vParams.rgb * vTint;
   float rough = uRoughness;
   float metal = uMetalness;
@@ -458,6 +491,24 @@ void main(){
   if (uHasMaps == 1) {
     vec4 tex = texture(uAlbedoMap, uv);
     albedo *= tex.rgb;
+    if (detW > 0.001) {
+      vec3 dA = texture(uAlbedoMap, dUv).rgb;
+      /* DIVIDED BY ITS OWN MEAN, so this is contrast and not gain.
+       *
+         The first cut multiplied by `dA * 1.85`, where 1.85 was a guess
+         at twice the average texel. Compare the two frames and the
+         detail version is plainly BRIGHTER, not just grainier -- timber
+         averages nearer 0.65 than 0.54, so every wall using it got a
+         twenty per cent lift it did not ask for, and the same constant
+         would have darkened anything darker.
+
+         The 1x1 mip IS the average of the texture. Dividing by it makes
+         the layer exactly neutral by construction, for every recipe,
+         with no constant to be wrong: light grain brightens, dark grain
+         darkens, and the mean of the surface does not move. */
+      vec3 dAvg = max(textureLod(uAlbedoMap, dUv, 20.0).rgb, vec3(0.004));
+      albedo *= mix(vec3(1.0), dA / dAvg, detW * 0.55);
+    }
     vec3 orm = texture(uOrmMap, uv).rgb;
     ao = orm.r;
     rough *= orm.g * 1.25;
@@ -474,6 +525,14 @@ void main(){
     vec3 B = cross(N, T) * vTangent.w;
     vec3 tn = texture(uNormalMap, uv).xyz * 2.0 - 1.0;
     tn.xy *= uNormalStrength;
+    /* And the fine grain's own slope, added to the macro slope. Summing
+       the XY of two tangent-space normals is the cheap standard blend
+       and it is the right one here: the detail is a perturbation of the
+       big shape, not a replacement for it. */
+    if (detW > 0.001) {
+      vec3 dn = texture(uNormalMap, dUv).xyz * 2.0 - 1.0;
+      tn.xy += dn.xy * uNormalStrength * detW * 0.8;
+    }
     N = normalize(mat3(T, B, N) * normalize(tn));
   }
   // Back-facing geometry (double-sided leaves, glass) must not light black.

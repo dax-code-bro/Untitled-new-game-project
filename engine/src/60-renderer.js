@@ -189,6 +189,15 @@ class Renderer {
          daylight -- most of it, and the last of the silhouette goes. */
       skyBlend: 0.85,
     };
+    /* THE DETAIL LAYER's two numbers. The scale is how many times the
+       fine sample tiles inside one macro tile -- 9 is fine enough to
+       read as grain and coarse enough not to moire -- and the fade is
+       the range past which it is mixed out, because tight tiling at
+       distance aliases and nobody resolves a millimetre at ten metres
+       anyway. Renderer-level rather than per material: it is a property
+       of how far away the eye is, which no material knows. */
+    this.detailScale = 9.0;
+    this.detailFade = 11.0;
     this.shadows = { enabled: true, distance: 60, strength: 0.86, split: 14 };
     this.post = {
       exposure: 1.0,
@@ -444,6 +453,9 @@ class Renderer {
     sh.f('uOpacity', mat.opacity);
     sh.f('uUvScale', mat.uvScale);
     sh.f('uNormalStrength', mat.normalStrength);
+    sh.f('uDetail', mat.detail != null ? mat.detail : 1);
+    sh.f('uDetailScale', this.detailScale);
+    sh.f('uDetailFade', this.detailFade);
     sh.f('uSubsurface', mat.subsurface);
     sh.i('uReceiveShadow', mat.receiveShadow ? 1 : 0);
     sh.i('uHasMaps', mat.maps ? 1 : 0);

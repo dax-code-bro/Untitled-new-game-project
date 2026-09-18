@@ -2522,6 +2522,12 @@ class Material {
     this.doubleSided = !!opts.doubleSided;
     this.uvScale = opts.uvScale != null ? opts.uvScale : 1;
     this.normalStrength = opts.normalStrength != null ? opts.normalStrength : 1;
+    /* How much fine grain this surface shows close up. 1 for anything
+       with a real texture to it; 0 for the ones whose whole point is
+       being featureless -- glass, a painted panel, a pool toy -- where
+       tiling grain across them would invent a material they are not. */
+    this.detail = opts.detail != null ? opts.detail
+      : (this.texture === 'smooth' || this.texture === 'ice' ? 0 : 1);
     this.texture = opts.texture || null;   // name of a TextureLib kind
     this.castShadow = opts.castShadow !== false;
     this.receiveShadow = opts.receiveShadow !== false;
@@ -3090,6 +3096,11 @@ uniform vec3 uEmissive;
 uniform float uOpacity;
 uniform float uUvScale;
 uniform float uNormalStrength;
+/* ---- the detail layer ----
+   Texel density, not more texture. See the block in main(). */
+uniform float uDetailScale;
+uniform float uDetailFade;
+uniform float uDetail;
 uniform float uSubsurface;
 uniform int uHasMaps;
 uniform int uReceiveShadow;
@@ -3109,6 +3120,34 @@ layout(location=0) out vec4 outColor;
 void main(){
   vec2 uv = vUv * uUvScale;
 
+  /* THE DETAIL LAYER.
+   *
+     Even at 1024 a texture stretched over a nine-metre wall is about a
+     texel every centimetre, and with your face against it you are
+     looking at one magnified tile. That is the difference between these
+     surfaces and the reference ones up close, and it is a question of
+     TEXEL DENSITY rather than of texture size -- going to 2048 would
+     cost four times the memory and half the loading time to buy one
+     more doubling.
+
+     So the same texture is sampled a second time, tiled far tighter,
+     and mixed in only where the camera is close enough to see it. It
+     costs one extra fetch of a texture already resident and not one
+     byte of memory. Faded out by distance because fine tiling at range
+     is aliasing, which is worse than being soft, and because at ten
+     metres nobody can see a millimetre anyway.
+
+     The albedo is mixed around 1.0 rather than replaced -- this is a
+     contrast modulation on the macro colour, not a second colour. Blend
+     it in flat and every surface goes to the average of itself. */
+  float detW = 0.0;
+  vec2 dUv = uv;
+  if (uHasMaps == 1 && uDetail > 0.001) {
+    float dDist = length(vWorldPos - uCameraPos);
+    detW = uDetail * (1.0 - smoothstep(uDetailFade * 0.30, uDetailFade, dDist));
+    dUv = uv * uDetailScale;
+  }
+
   vec3 albedo = uBaseColor * vParams.rgb * vTint;
   float rough = uRoughness;
   float metal = uMetalness;
@@ -3117,6 +3156,12 @@ void main(){
   if (uHasMaps == 1) {
     vec4 tex = texture(uAlbedoMap, uv);
     albedo *= tex.rgb;
+    if (detW > 0.001) {
+      vec3 dA = texture(uAlbedoMap, dUv).rgb;
+      // Around unity: brighter where the fine grain is light, darker
+      // where it is dark, and unchanged on average.
+      albedo *= mix(vec3(1.0), dA * 1.85, detW * 0.55);
+    }
     vec3 orm = texture(uOrmMap, uv).rgb;
     ao = orm.r;
     rough *= orm.g * 1.25;
@@ -3133,6 +3178,14 @@ void main(){
     vec3 B = cross(N, T) * vTangent.w;
     vec3 tn = texture(uNormalMap, uv).xyz * 2.0 - 1.0;
     tn.xy *= uNormalStrength;
+    /* And the fine grain's own slope, added to the macro slope. Summing
+       the XY of two tangent-space normals is the cheap standard blend
+       and it is the right one here: the detail is a perturbation of the
+       big shape, not a replacement for it. */
+    if (detW > 0.001) {
+      vec3 dn = texture(uNormalMap, dUv).xyz * 2.0 - 1.0;
+      tn.xy += dn.xy * uNormalStrength * detW * 0.8;
+    }
     N = normalize(mat3(T, B, N) * normalize(tn));
   }
   // Back-facing geometry (double-sided leaves, glass) must not light black.
@@ -4080,6 +4133,15 @@ class Renderer {
          daylight -- most of it, and the last of the silhouette goes. */
       skyBlend: 0.85,
     };
+    /* THE DETAIL LAYER's two numbers. The scale is how many times the
+       fine sample tiles inside one macro tile -- 9 is fine enough to
+       read as grain and coarse enough not to moire -- and the fade is
+       the range past which it is mixed out, because tight tiling at
+       distance aliases and nobody resolves a millimetre at ten metres
+       anyway. Renderer-level rather than per material: it is a property
+       of how far away the eye is, which no material knows. */
+    this.detailScale = 9.0;
+    this.detailFade = 11.0;
     this.shadows = { enabled: true, distance: 60, strength: 0.86, split: 14 };
     this.post = {
       exposure: 1.0,
@@ -4335,6 +4397,9 @@ class Renderer {
     sh.f('uOpacity', mat.opacity);
     sh.f('uUvScale', mat.uvScale);
     sh.f('uNormalStrength', mat.normalStrength);
+    sh.f('uDetail', mat.detail != null ? mat.detail : 1);
+    sh.f('uDetailScale', this.detailScale);
+    sh.f('uDetailFade', this.detailFade);
     sh.f('uSubsurface', mat.subsurface);
     sh.i('uReceiveShadow', mat.receiveShadow ? 1 : 0);
     sh.i('uHasMaps', mat.maps ? 1 : 0);
