@@ -214,6 +214,28 @@
 #mpui .opt .keys { display:flex; gap:8px; }
 #mpui .opt .go { margin-top:20px; display:flex; gap:10px; justify-content:flex-end; }
 
+/* ---- the pad's own pointer ----
+   A controller cannot press a button that only answers to a mouse, and
+   the end-of-match screen is exactly that: Play Again and Return to
+   Lobby were click handlers and nothing else, so a pad player reaching
+   the end of a match was stuck there.
+
+   Rather than bolt focus navigation onto one screen, the pad gets a
+   pointer of its own. It can press anything the mouse can press,
+   anywhere in the game, including every pane written before it
+   existed. Toggled with all four directions of the D-pad at once --
+   a deliberate chord, because it must never happen by accident in a
+   firefight -- and it says which state it is in, in the corner. */
+#mpui .curs { position:absolute; left:0; top:0; width:26px; height:26px;
+  margin:-2px 0 0 -2px; pointer-events:none; z-index:60;
+  transition:opacity .12s linear; }
+#mpui .curs svg { display:block; filter:drop-shadow(0 1px 3px rgba(0,0,0,.9)); }
+#mpui .curs.press svg { transform:scale(.82); transform-origin:2px 2px; }
+#mpui .padbadge { position:absolute; right:18px; top:16px; font-size:10px;
+  letter-spacing:.26em; text-transform:uppercase; color:#6b6455;
+  border:1px solid #3a3428; padding:5px 10px; background:rgba(5,6,10,.6); }
+#mpui .padbadge b { color:#ffd27a; font-weight:normal; }
+
 /* ---- the click-to-play plate ---- */
 #mpui .lock { position:absolute; inset:0; display:flex; align-items:center;
   justify-content:center; background:rgba(5,6,10,.55); pointer-events:auto;
@@ -273,6 +295,10 @@
     <div class="go"><button class="quit">Leave match</button>
       <button class="resume">Back to the game</button></div>
   </div></div>
+  <div class="curs hide"><svg width="26" height="26" viewBox="0 0 26 26">
+    <path d="M2,2 L2,19 L7,14.6 L10.4,22.4 L13.6,21 L10.2,13.4 L16.6,13.2 Z"
+      fill="#ffd27a" stroke="#1a1408" stroke-width="1.4" stroke-linejoin="round"/></svg></div>
+  <div class="padbadge hide">pointer <b>on</b></div>
   <div class="lock"><div>Click to play<br><b>WASD</b> move &nbsp; <b>Mouse</b> look &nbsp;
     <b>Left</b> fire &nbsp; <b>Right</b> aim<br><b>Shift</b> sprint &nbsp; <b>Space</b> jump &nbsp;
     <b>Ctrl</b> crouch &nbsp; <b>R</b> reload &nbsp; <b>Q</b> swap<br>
@@ -458,6 +484,10 @@
             strongMagnitude: strong, weakMagnitude: strong * 0.6 });
         } catch (e) { /* a pad that will not buzz still plays */ }
       },
+      /* The raw device, for the pointer -- which has to work on screens
+         where nothing is reading commands at all, which is every screen
+         after the match has ended. */
+      raw: function () { return read(); },
       config: function () { return conf; },
       setConfig: function (c) {
         conf = Object.assign({}, conf, c || {});
@@ -1158,6 +1188,96 @@
   }
 
   /* ================================================================
+     THE PAD'S POINTER
+     ================================================================
+     A controller cannot press a button that only answers to a mouse.
+     The end-of-match screen was exactly that -- Play Again and Return
+     to Lobby were click handlers and nothing else -- so a pad player
+     who finished a match could not start another one or leave.
+
+     The fix could have been focus navigation on that one screen. This
+     is a pointer instead, because there is more than one screen and
+     more will be written: it can press anything the mouse can press,
+     including every pane that existed before it did.
+
+     THE CHORD IS ALL FOUR DIRECTIONS AT ONCE. Not a button, because
+     every button on a pad is already doing something in a firefight,
+     and not a menu setting, because the moment you need it is the
+     moment you cannot reach the menu. All four at once is a thing your
+     thumb cannot do by accident.
+     ================================================================ */
+  var DPAD = { up: 12, down: 13, left: 14, right: 15 };
+
+  function makePointer(root, canvas) {
+    var el = root.querySelector('.curs');
+    var badge = root.querySelector('.padbadge');
+    var on = false, x = 0, y = 0, chord = false, pressed = false, wasA = false;
+    try { on = W.localStorage.getItem('b9.padcursor') === '1'; } catch (e) { on = false; }
+
+    function paint() {
+      el.classList.toggle('hide', !on);
+      badge.classList.toggle('hide', !on);
+      if (on) el.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px)';
+    }
+
+    function setOn(v) {
+      on = !!v;
+      try { W.localStorage.setItem('b9.padcursor', on ? '1' : '0'); } catch (e) { /* off */ }
+      if (on) {
+        x = W.innerWidth * 0.5; y = W.innerHeight * 0.5;
+        /* The mouse look has to let go, or moving the stick aims the
+           gun and the pointer at the same time. */
+        if (document.exitPointerLock) document.exitPointerLock();
+      }
+      paint();
+    }
+
+    /* Driven straight off the raw pad rather than through the command
+       the game reads, so the pointer works on screens where nothing is
+       reading commands at all -- which is every screen after the match
+       has ended. */
+    function poll(dt, gp) {
+      if (!gp) return false;
+      var b = gp.buttons || [];
+      var down = function (i) { return !!(b[i] && (b[i].pressed || b[i].value > 0.5)); };
+      var all = down(DPAD.up) && down(DPAD.down) && down(DPAD.left) && down(DPAD.right);
+      if (all && !chord) setOn(!on);
+      chord = all;
+      if (!on) return false;
+
+      var ax = gp.axes || [];
+      var sx = Math.abs(ax[0] || 0) > 0.16 ? ax[0] : 0;
+      var sy = Math.abs(ax[1] || 0) > 0.16 ? ax[1] : 0;
+      /* The right stick as well, because which one a player reaches
+         for is a matter of taste and both are free while a pointer is
+         up. */
+      if (!sx && Math.abs(ax[2] || 0) > 0.16) sx = ax[2];
+      if (!sy && Math.abs(ax[3] || 0) > 0.16) sy = ax[3];
+      var sp = 980 * dt;
+      x = Math.max(0, Math.min(W.innerWidth, x + sx * sp));
+      y = Math.max(0, Math.min(W.innerHeight, y + sy * sp));
+
+      /* A is the click. elementFromPoint means it presses whatever is
+         under it, which is the whole point -- no screen has to know
+         the pointer exists. */
+      var a = down(0);
+      if (a && !wasA) {
+        pressed = true;
+        var t = document.elementFromPoint(x, y);
+        if (t && t.click) t.click();
+      } else if (!a && wasA) pressed = false;
+      wasA = a;
+      el.classList.toggle('press', pressed);
+      paint();
+      return true;
+    }
+
+    paint();
+    return { poll: poll, get on() { return on; }, set: setOn,
+      get at() { return { x: x, y: y }; } };
+  }
+
+  /* ================================================================
      SETTINGS
      ================================================================
      The pad reads invertX and invertY out of b9.pad.v1 and nothing in
@@ -1515,6 +1635,7 @@
     var pad = makePad(opts);
     var vm = makeViewmodel(game);
     var replay = makeReplay(root, game, M, vm);
+    var pointer = makePointer(root, canvas);
     /* Every gun this player can end the match holding, built now. */
     vm.warm((M.you.guns || []).map(function (w) { return w.id || w.base; }));
     /* And what is bolted to them. */
@@ -1866,11 +1987,24 @@
     }
 
     game.onUpdate(function (dt) { frame(dt); });
+    /* THE POINTER RUNS EVEN WHEN NOTHING ELSE DOES.
+     *
+       frame() returns immediately once `over` is set, and the engine's
+       own clock is at timeScale zero by then, so anything driven from
+       the update hook is dead exactly when the player needs to press
+       Play Again. This is its own loop on the browser's clock,
+       answering to nothing the match owns. */
+    (function pointerLoop(last) {
+      var now = (W.performance ? W.performance.now() : Date.now());
+      var dt = last ? Math.min(0.1, (now - last) / 1000) : 1 / 60;
+      try { pointer.poll(dt, pad.raw()); } catch (e) { /* no pad */ }
+      W.requestAnimationFrame(function () { pointerLoop(now); });
+    })(0);
     game.start();
 
     var api = {
       game: game, match: M, hud: hud, input: input, pad: pad, viewmodel: vm,
-      replay: replay,
+      replay: replay, pointer: pointer,
       get yaw() { return yaw; }, get pitch() { return pitch; },
       look: function (x, y) { yaw = x; pitch = y; },
       stop: function () { over = true; input.dispose(); game.stop(); },
