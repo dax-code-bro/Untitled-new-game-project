@@ -344,6 +344,13 @@ class Engine {
     r.sun.intensity = cfg.sunIntensity != null ? cfg.sunIntensity : r.sun.intensity;
     parseColor(cfg.fog, r.fog.color);
     if (cfg.fogDensity != null) r.fog.density = cfg.fogDensity;
+    /* How much of the far fog is the sky behind it. A map with a strong
+       authored dusk may want less of its mood dissolved away than one
+       whose whole point is depth, so it is reachable from a preset and
+       from an override rather than being a constant in the shader. */
+    if (cfg.fogSkyBlend != null) r.fog.skyBlend = cfg.fogSkyBlend;
+    if (cfg.fogHeight != null) r.fog.height = cfg.fogHeight;
+    if (cfg.fogFalloff != null) r.fog.falloff = cfg.fogFalloff;
     if (cfg.exposure != null) r.post.exposure = cfg.exposure;
     // The reflection environment for anything under a roof. Left alone by
     // the presets, since only a game with interiors knows it needs one.

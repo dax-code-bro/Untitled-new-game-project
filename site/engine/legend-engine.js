@@ -2793,18 +2793,46 @@ uniform vec3 uFogColor;
 uniform float uFogDensity;
 uniform float uFogHeight;
 uniform float uFogHeightFalloff;
+uniform float uFogSkyBlend;
 
 /* Exponential height fog: dense low down, thinning with altitude, which is
-   what sells scale on big outdoor maps. */
+   what sells scale on big outdoor maps.
+
+   AND AT DISTANCE IT BECOMES THE SKY ITSELF.
+
+   This faded everything to uFogColor -- one flat colour for the whole
+   frame. But the thing BEHIND a distant building is not one flat
+   colour, it is skyRadiance(dir): a gradient from the horizon band up
+   to the zenith, with the sun's halo in it. So a far silhouette faded
+   to grey in front of a sky that was not grey, and instead of
+   dissolving it turned into a flat cutout of itself. You could see
+   exactly where the world ended.
+
+   Now the fog colour is carried toward the sky along the direction you
+   are looking, and by the fog amount itself -- so near and mid distance
+   keep the authored mood colour that every map's palette is tuned to,
+   and by the time something is far enough away to be fully fogged it is
+   being painted the same value as the sky it is standing in front of.
+   At which point the silhouette is genuinely gone rather than merely
+   faint.
+
+   THE HEIGHT TERM READS BOTH ENDS OF THE RAY, not just the camera. It
+   took cameraPos.y alone, which makes the fog thinner when YOU climb
+   and does nothing at all about how low the thing you are looking at
+   is -- so the lake and the hillside above it fogged by exactly the
+   same amount and the fog never sat on the water. Sampling the midpoint
+   of the ray is one extra add and gives the layer a bottom. */
 vec3 applyFog(vec3 color, vec3 worldPos, vec3 cameraPos, vec3 viewDir){
   if (uFogDensity <= 0.0) return color;
   float dist = length(worldPos - cameraPos);
-  float heightFactor = exp(-max(0.0, cameraPos.y - uFogHeight) * uFogHeightFalloff);
+  float midY = (cameraPos.y + worldPos.y) * 0.5;
+  float heightFactor = exp(-max(0.0, midY - uFogHeight) * uFogHeightFalloff);
   float fogAmount = 1.0 - exp(-dist * uFogDensity * heightFactor);
   fogAmount = saturate1(fogAmount);
   // Fog picks up sun colour when looking toward the sun.
   float sunAmount = pow(saturate1(dot(viewDir, uSunDir)), 8.0);
   vec3 fogCol = mix(uFogColor, uSunColor * 1.1, sunAmount * 0.6);
+  fogCol = mix(fogCol, skyRadiance(viewDir), saturate1(uFogSkyBlend * fogAmount));
   return mix(color, fogCol, fogAmount);
 }
 `;
@@ -3863,12 +3891,31 @@ const QUALITY = {
   retro: { shadowRes: 512, cascades: 1, bloom: false, bloomIters: 0, fluidScale: 0.35,
     fxaa: false, msaa: 0, maxGrass: 500, renderScale: 0.26,
     ssao: 0, ssaoSamples: 0, sharpen: 0, posterize: 9, pixelated: true, fpsCap: 24 },
+  /* CONTACT SHADOWS ON THE TIERS PEOPLE ACTUALLY RUN.
+   *
+     These two said `ssao: 0`, and so the pass below them -- a real
+     hemisphere-sampled occlusion pass with a depth-aware separated blur,
+     written and wired and folded into the ambient term -- had never run
+     on a phone. Not "looked wrong on a phone": never executed. Only
+     `high` and `ultra` switched it on, and detectQuality() returns
+     `normal` at best for anything mobile, so the one class of hardware
+     that most needs cheap fake occlusion was the one class that never
+     got any.
+
+     It is three fullscreen draws at half resolution, which is affordable
+     here at a smaller sample count. The samples are what costs, so they
+     are what is cut: six on low and ten on normal against high's twelve
+     and ultra's twenty-six, with a tighter radius so the fewer taps land
+     where the contact actually is -- in the crease where a wall meets a
+     roof, around a door frame, where the terrain runs into a building. A
+     wide radius with six taps is not soft occlusion, it is noise the
+     blur then smears. */
   low: { shadowRes: 768, cascades: 1, bloom: false, bloomIters: 0, fluidScale: 0.5,
     fxaa: false, msaa: 0, maxGrass: 2500, renderScale: 0.66,
-    ssao: 0, ssaoSamples: 0, sharpen: 0, posterize: 0 },
+    ssao: 0.50, ssaoSamples: 6, ssaoRadius: 0.42, sharpen: 0, posterize: 0 },
   normal: { shadowRes: 1536, cascades: 2, bloom: true, bloomIters: 3, fluidScale: 0.75,
     fxaa: true, msaa: 0, maxGrass: 20000, renderScale: 1,
-    ssao: 0, ssaoSamples: 0, sharpen: 0.12, posterize: 0 },
+    ssao: 0.62, ssaoSamples: 10, ssaoRadius: 0.50, sharpen: 0.12, posterize: 0 },
   high: { shadowRes: 2560, cascades: 2, bloom: true, bloomIters: 4, fluidScale: 1,
     fxaa: true, msaa: 0, maxGrass: 60000, renderScale: 1.25,
     ssao: 0.70, ssaoSamples: 12, ssaoRadius: 0.55, sharpen: 0.34, posterize: 0 },
@@ -3942,6 +3989,13 @@ class Renderer {
       density: 0.008,
       height: 0,
       falloff: 0.08,
+      /* How much of the far fog is the sky behind it rather than the
+         authored fog colour. At 1 a fully fogged object is painted
+         exactly what is behind it and vanishes; at 0 this is the old
+         flat fade. Not 1, because a map's fog colour is a mood as well
+         as a distance cue and taking all of it away flattens dusk into
+         daylight -- most of it, and the last of the silhouette goes. */
+      skyBlend: 0.85,
     };
     this.shadows = { enabled: true, distance: 60, strength: 0.86, split: 14 };
     this.post = {
@@ -4113,6 +4167,7 @@ class Renderer {
     sh.f('uFogDensity', this.fog.density);
     sh.f('uFogHeight', this.fog.height);
     sh.f('uFogHeightFalloff', this.fog.falloff);
+    sh.f('uFogSkyBlend', this.fog.skyBlend);
     sh.f('uTime', this.time);
   }
 
@@ -14443,6 +14498,13 @@ class Engine {
     r.sun.intensity = cfg.sunIntensity != null ? cfg.sunIntensity : r.sun.intensity;
     parseColor(cfg.fog, r.fog.color);
     if (cfg.fogDensity != null) r.fog.density = cfg.fogDensity;
+    /* How much of the far fog is the sky behind it. A map with a strong
+       authored dusk may want less of its mood dissolved away than one
+       whose whole point is depth, so it is reachable from a preset and
+       from an override rather than being a constant in the shader. */
+    if (cfg.fogSkyBlend != null) r.fog.skyBlend = cfg.fogSkyBlend;
+    if (cfg.fogHeight != null) r.fog.height = cfg.fogHeight;
+    if (cfg.fogFalloff != null) r.fog.falloff = cfg.fogFalloff;
     if (cfg.exposure != null) r.post.exposure = cfg.exposure;
     // The reflection environment for anything under a roof. Left alone by
     // the presets, since only a game with interiors knows it needs one.

@@ -83,12 +83,31 @@ const QUALITY = {
   retro: { shadowRes: 512, cascades: 1, bloom: false, bloomIters: 0, fluidScale: 0.35,
     fxaa: false, msaa: 0, maxGrass: 500, renderScale: 0.26,
     ssao: 0, ssaoSamples: 0, sharpen: 0, posterize: 9, pixelated: true, fpsCap: 24 },
+  /* CONTACT SHADOWS ON THE TIERS PEOPLE ACTUALLY RUN.
+   *
+     These two said `ssao: 0`, and so the pass below them -- a real
+     hemisphere-sampled occlusion pass with a depth-aware separated blur,
+     written and wired and folded into the ambient term -- had never run
+     on a phone. Not "looked wrong on a phone": never executed. Only
+     `high` and `ultra` switched it on, and detectQuality() returns
+     `normal` at best for anything mobile, so the one class of hardware
+     that most needs cheap fake occlusion was the one class that never
+     got any.
+
+     It is three fullscreen draws at half resolution, which is affordable
+     here at a smaller sample count. The samples are what costs, so they
+     are what is cut: six on low and ten on normal against high's twelve
+     and ultra's twenty-six, with a tighter radius so the fewer taps land
+     where the contact actually is -- in the crease where a wall meets a
+     roof, around a door frame, where the terrain runs into a building. A
+     wide radius with six taps is not soft occlusion, it is noise the
+     blur then smears. */
   low: { shadowRes: 768, cascades: 1, bloom: false, bloomIters: 0, fluidScale: 0.5,
     fxaa: false, msaa: 0, maxGrass: 2500, renderScale: 0.66,
-    ssao: 0, ssaoSamples: 0, sharpen: 0, posterize: 0 },
+    ssao: 0.50, ssaoSamples: 6, ssaoRadius: 0.42, sharpen: 0, posterize: 0 },
   normal: { shadowRes: 1536, cascades: 2, bloom: true, bloomIters: 3, fluidScale: 0.75,
     fxaa: true, msaa: 0, maxGrass: 20000, renderScale: 1,
-    ssao: 0, ssaoSamples: 0, sharpen: 0.12, posterize: 0 },
+    ssao: 0.62, ssaoSamples: 10, ssaoRadius: 0.50, sharpen: 0.12, posterize: 0 },
   high: { shadowRes: 2560, cascades: 2, bloom: true, bloomIters: 4, fluidScale: 1,
     fxaa: true, msaa: 0, maxGrass: 60000, renderScale: 1.25,
     ssao: 0.70, ssaoSamples: 12, ssaoRadius: 0.55, sharpen: 0.34, posterize: 0 },
@@ -162,6 +181,13 @@ class Renderer {
       density: 0.008,
       height: 0,
       falloff: 0.08,
+      /* How much of the far fog is the sky behind it rather than the
+         authored fog colour. At 1 a fully fogged object is painted
+         exactly what is behind it and vanishes; at 0 this is the old
+         flat fade. Not 1, because a map's fog colour is a mood as well
+         as a distance cue and taking all of it away flattens dusk into
+         daylight -- most of it, and the last of the silhouette goes. */
+      skyBlend: 0.85,
     };
     this.shadows = { enabled: true, distance: 60, strength: 0.86, split: 14 };
     this.post = {
@@ -333,6 +359,7 @@ class Renderer {
     sh.f('uFogDensity', this.fog.density);
     sh.f('uFogHeight', this.fog.height);
     sh.f('uFogHeightFalloff', this.fog.falloff);
+    sh.f('uFogSkyBlend', this.fog.skyBlend);
     sh.f('uTime', this.time);
   }
 

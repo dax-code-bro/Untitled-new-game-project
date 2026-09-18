@@ -139,20 +139,48 @@ const note = (s) => console.log(`  ..   ${s}`);
        forward on the same path a key drives. Looking slightly down,
        because the swim code takes its vertical rate from the pitch and a
        body looking level floats. */
-    /* Level, not pitched down. The tunnel is horizontal, and the swim
-       code takes its vertical rate straight off the pitch -- so looking
-       down while driving forward flies you into the floor, which is one
-       of the two reasons the first run of this never got in. */
-    put((TU.x0 + TU.x1) / 2, (TU.floorY + TU.roofY) / 2, K.z0 - 2.2);
-    T.look(0, 0.0);
+    /* HOLD A DEPTH, the way a diver does, instead of picking one pitch
+       and hoping.
+
+       Two runs failed here and each failed for the opposite reason.
+       Pitched down the whole way, he flies into the floor. Level the
+       whole way, he FLOATS: the swim code settles an idle body at
+       surface - 0.595, which is -0.245, and the mouth's roof is -0.55 --
+       so the natural resting depth of a swimmer is above the door, and
+       he arrives at the rock face a metre too high and parks there. The
+       second run reported exactly that, at [8, -0.92, 35.71].
+
+       Which is not a fault in the cave. A hidden underwater mouth SHOULD
+       have to be dived for. It is a fault in driving the test with a
+       constant when a player is running a feedback loop: look down when
+       you are too high, level off when you are not. So that is what this
+       does -- pitch is set from the depth error every frame, which is
+       both honest and the only thing that works in a passage with a
+       floor and a ceiling.
+
+       POSITIVE PITCH LOOKS DOWN, and the swim code takes its vertical
+       rate as -pitch * 1.7, so a positive error wants a positive pitch. */
+    const holdDepth = (TU.floorY + TU.roofY) / 2;
+    put((TU.x0 + TU.x1) / 2, holdDepth, K.z0 - 2.4);
+    const steer = () => {
+      const err = P.actor.position.y - holdDepth;      // + is too high
+      T.look(0, Math.max(-0.5, Math.min(0.5, err * 0.9)));
+    };
+    // Down to depth first, treading water rather than driving at a wall.
+    T.hold({ mx: 0, mz: 0 });
+    for (let i = 0; i < 90; i++) { steer(); G.step(1 / 60); }
+    out.depthBefore = +P.actor.position.y.toFixed(2);
     T.hold({ mx: 0, mz: 1 });
-    let got = null, stuckAt = null;
-    for (let i = 0; i < 620 && !got; i++) {
+    let got = null, stuckAt = null, hiY = -99, loY = 99;
+    for (let i = 0; i < 700 && !got; i++) {
+      steer();
       G.step(1 / 60);
       const p = pos();
       stuckAt = [+p[0].toFixed(2), +p[1].toFixed(2), +p[2].toFixed(2)];
+      hiY = Math.max(hiY, p[1]); loY = Math.min(loY, p[1]);
       if (p[2] > RM.z0 + 0.6) got = p;
     }
+    out.swamBand = [+loY.toFixed(2), +hiY.toFixed(2)];
     T.release();
     out.swamIn = !!got;
     out.swamTo = got;
@@ -237,7 +265,8 @@ const note = (s) => console.log(`  ..   ${s}`);
     `${r.cragCount} crags, highest reaches ${r.cragTop}, roof at ${r.topY}`);
   /* THE WAY IN. */
   check('you can actually swim in through the mouth', r.swamIn,
-    `drove forward for ten seconds of game time and stopped at ${JSON.stringify(r.swamEnd)}`);
+    `held ${r.depthBefore} m and drove forward for eleven seconds of game time; `
+    + `stopped at ${JSON.stringify(r.swamEnd)}, depth band ${JSON.stringify(r.swamBand)}`);
   /* THE AIR. */
   const dry = (r.tunnelWet || []).filter((q) => !q[1]);
   check('the tunnel is flooded the whole way', dry.length === 0,
