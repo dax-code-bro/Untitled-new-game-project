@@ -8316,14 +8316,69 @@ function tryFire(game, S, P, hud, sfx, dt) {
      damage; it is the noise about them that is collected. */
   let anyHit = false, anyHead = false, pointsThisShot = 0;
   let wallHit = null, wallCount = 0;
+
+  /* THE ROUND LEAVES THE BARREL.
+   *
+     It left the camera. `from` was the eye position for every pellet
+     of every weapon, which is the oldest shortcut in a first-person
+     game and shows in three places: a muzzle flash at the end of the
+     barrel with the tracer starting thirty centimetres behind it, a
+     shot that clears a low wall the barrel is resting on because the
+     eye is above it, and a round that goes THROUGH the corner you are
+     peeking past because the camera is round it and the gun is not.
+
+     Multiplayer already does this properly and this is the same shape
+     as mp-match's fire(): find what the crosshair is over by casting
+     from the EYE, then send the round from the MUZZLE toward that
+     point. Origin and aim have to be separated like that or the round
+     leaves the barrel on a parallel line and misses everything close
+     -- which is the trap that makes people give up and put it back on
+     the camera.
+
+     And if the muzzle is inside something -- against a wall, through a
+     window frame -- the shot comes from the eye again, because a round
+     that starts inside geometry hits nothing at all. */
+  const eyeP = [cam.position.x, cam.position.y, cam.position.z];
+  let origin = eyeP;
+  if (P.muzzleWorld) {
+    const mw = P.muzzleWorld;
+    const ex = mw[0] - eyeP[0], ey = mw[1] - eyeP[1], ez = mw[2] - eyeP[2];
+    const eL = Math.hypot(ex, ey, ez);
+    let blocked = false;
+    if (eL > 0.02) {
+      try {
+        blocked = !!game.raycast(eyeP, [ex / eL, ey / eL, ez / eL], eL,
+          (b) => b !== P.actor.body && !b.isTrigger
+            && !(b.userData && b.userData.bulletPassthrough));
+      } catch (e) { blocked = false; }
+    }
+    if (!blocked) origin = [mw[0], mw[1], mw[2]];
+  }
+  /* What the crosshair is over, cast from the eye so it is exactly
+     what the player is looking at. */
+  let aimAt;
+  try {
+    const ah = game.raycast(eyeP, [fwd.x, fwd.y, fwd.z], 60,
+      (b) => b !== P.actor.body && !b.isTrigger
+        && !(b.userData && b.userData.bulletPassthrough));
+    aimAt = ah && ah.point
+      ? [ah.point.x, ah.point.y, ah.point.z]
+      : [eyeP[0] + fwd.x * 60, eyeP[1] + fwd.y * 60, eyeP[2] + fwd.z * 60];
+  } catch (e) {
+    aimAt = [eyeP[0] + fwd.x * 60, eyeP[1] + fwd.y * 60, eyeP[2] + fwd.z * 60];
+  }
+  const bx = aimAt[0] - origin[0], by = aimAt[1] - origin[1], bz = aimAt[2] - origin[2];
+  const bL = Math.hypot(bx, by, bz) || 1;
+  const aimDir = { x: bx / bL, y: by / bL, z: bz / bL };
+
   for (let p = 0; p < spec.pellets; p++) {
     const spread = spec.spread * aimTighten * Math.PI / 180;
     // Perturb along camera right and up so the cone is a cone from any
     // facing; one shared scalar collapses the pattern into a stripe.
     const rx = (Math.random() - 0.5) * spread, ry = (Math.random() - 0.5) * spread;
-    const rl = Math.hypot(fwd.x, fwd.z) || 1e-6;
-    const rgt = { x: fwd.z / rl, z: -fwd.x / rl };
-    const dir = [fwd.x + rgt.x * rx, fwd.y + ry, fwd.z + rgt.z * rx];
+    const rl = Math.hypot(aimDir.x, aimDir.z) || 1e-6;
+    const rgt = { x: aimDir.z / rl, z: -aimDir.x / rl };
+    const dir = [aimDir.x + rgt.x * rx, aimDir.y + ry, aimDir.z + rgt.z * rx];
     // Bodies this pellet has already gone through, for penetrating rounds.
     const pierced = [];
     // A round into the rock wakes it up. Checked on the pellet's own ray,
@@ -8334,7 +8389,7 @@ function tryFire(game, S, P, hud, sfx, dt) {
       meteorShot(S, [cam.position.x, cam.position.y, cam.position.z],
         [dir[0] / dl, dir[1] / dl, dir[2] / dl], hud, sfx);
     }
-    const from = [cam.position.x, cam.position.y, cam.position.z];
+    const from = origin;
     const hit = game.raycast(from, dir, 60,
       (b) => b !== P.actor.body && !b.isTrigger && !(b.userData && b.userData.bulletPassthrough));
 
