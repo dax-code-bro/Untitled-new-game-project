@@ -914,7 +914,7 @@ body.b9staged #b9hud { display:none !important; }
   min-width:26px; font-weight:bold; }
 #b9shell .sgn.good .m { color:#8ce8a0; }
 #b9shell .sgn.bad .m { color:#e2705f; }
-#b9shell .sgn .t { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis;
+#b9shell .sgn .sn { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis;
   white-space:nowrap; }
 #b9shell .sgn .p { font-style:normal; font-size:11px; color:#8a8272;
   font-variant-numeric:tabular-nums; }
@@ -2815,9 +2815,15 @@ function signRow(e) {
   var d = document.createElement('div');
   d.className = 'sgn ' + (e.good ? 'good' : 'bad');
   var marks = e.signs ? new Array(e.signs + 1).join(e.sign) : '';
-  d.innerHTML = '<b class="m"></b><span class="t"></span><i class="p"></i>';
+  /* `sn`, not `t`. The confirm pane already has a `.t` -- the action
+     label -- and anything reading `.confirm .t` gets whichever comes
+     first in document order. Putting a second `.t` inside the same
+     pane quietly changed what that selector means, which is how a
+     check that had been reading "Fit it" started reading "Aimed
+     spread" instead. */
+  d.innerHTML = '<b class="m"></b><span class="sn"></span><i class="p"></i>';
   d.querySelector('.m').textContent = marks;
-  d.querySelector('.t').textContent = e.name || e.text;
+  d.querySelector('.sn').textContent = e.name || e.text;
   d.querySelector('.p').textContent = e.pct == null ? ''
     : (e.pct > 0 ? '+' : '\u2212') + Math.round(Math.abs(e.pct) * 100) + '%';
   return d;
@@ -2849,9 +2855,9 @@ function levelStack(into, k, uses, lv, L) {
     var off = !!(L.streakOff && L.streakOff[S.id]);
     var row = document.createElement('div');
     row.className = 'sgn ' + (got && !off ? 'good' : 'bad');
-    row.innerHTML = '<b class="m"></b><span class="t"></span><i class="p"></i>';
+    row.innerHTML = '<b class="m"></b><span class="sn"></span><i class="p"></i>';
     row.querySelector('.m').textContent = got ? (off ? '\u00b7' : '\u2713') : '\u00b7';
-    row.querySelector('.t').textContent = 'L' + (i + 1) + ' ' + S.name;
+    row.querySelector('.sn').textContent = 'L' + (i + 1) + ' ' + S.name;
     row.querySelector('.p').textContent = got ? (off ? 'off' : 'on')
       : (S.unlock + ' uses');
     c.appendChild(row);

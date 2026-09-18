@@ -127,9 +127,13 @@ function check(name, cond, detail = '') {
     };
   });
   check('the loadout tab paints', lo.tab && lo.pane);
+  /* THREE killstreak slots, not five -- see mp-data's STREAK_SLOTS.
+     The rail in the match shows three and the loadout has to agree
+     with it, or the fourth and fifth are picked and never appear. */
   check('every slot the spec asks for is there',
     ['Primary', 'Secondary', 'Tactical', 'Lethal', 'Ability'].every((k) => lo.keys.includes(k))
-    && lo.keys.filter((k) => ['One', 'Two', 'Three', 'Four', 'Five'].includes(k)).length === 5,
+    && lo.keys.filter((k) => ['One', 'Two', 'Three'].includes(k)).length === 3
+    && !lo.keys.includes('Four') && !lo.keys.includes('Five'),
     lo.keys.join(','));
   check('nothing in the loadout is empty', lo.vals.every((v) => v && v !== '—'), lo.vals.join(' | '));
   check('the primary list opens on the gun list', lo.opts >= 40 && lo.heads >= 5,
@@ -168,13 +172,16 @@ function check(name, cond, detail = '') {
     const statsHover = Array.from(document.querySelectorAll('#b9shell .stat .sv')).map((e) => e.textContent);
     const moved = document.querySelectorAll('#b9shell .stat.up, #b9shell .stat.down').length;
     const confirm = (document.querySelector('#b9shell .confirm .t') || {}).textContent || '';
+    /* The whole pane, for the pros and cons, which are above the
+       action rather than in it. */
+    const pane = (document.querySelector('#b9shell .confirm') || {}).textContent || '';
     return {
       slots: document.querySelectorAll('#b9shell .dlist .sec').length,
       opts: opts.length, locked: opts.length - free.length,
       stats: statsBefore.length,
       artChanged: artBefore !== artHover,
       statsChanged: JSON.stringify(statsBefore) !== JSON.stringify(statsHover),
-      moved, confirm,
+      moved, confirm, pane,
       name: free[0].querySelector('.n').textContent,
     };
   });
@@ -188,6 +195,13 @@ function check(name, cond, detail = '') {
   check('and moves the numbers', att.statsChanged && att.moved > 0,
     `${att.moved} bars moved`);
   check('and offers the confirm', /fit it/i.test(att.confirm), att.confirm);
+  /* And the pros and cons, above it, measured off the fold rather than
+     written down -- see effectsOf in mp-data. The confirm pane now
+     leads with them, which is why the check above reads the whole
+     pane's text rather than its first line. */
+  check('with what the part does to this gun, in signs',
+    /[+\u2212]\s*\d+%/.test(att.pane) || /changes nothing measurable/i.test(att.pane),
+    (att.pane || '').slice(0, 140));
   await page.screenshot({ path: path.join(OUT, 'mp-attach.jpg'), type: 'jpeg', quality: 82 });
 
   const fitted = await page.evaluate(() => {

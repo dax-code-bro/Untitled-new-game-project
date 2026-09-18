@@ -862,24 +862,69 @@ const WEAPONS = {
 /* Perks. Bought once from a wall station, kept until you die. Each one
    changes a rule rather than a number where it can — a perk you can feel
    without reading the HUD is worth three that adjust a multiplier. */
+/* THE SYMBOL IS THE PERK.
+ *
+   A perk in the corner of the screen was its NAME, in its colour. Four
+   words in four colours, which you read; and reading is the one thing
+   a player mid-round will not do. A perk badge has to be recognisable
+   the way a road sign is -- shape first, colour second, words never --
+   and the shapes have to be different enough that peripheral vision
+   can tell them apart, which four words in a row are not.
+
+   Each is a line drawing on a 24-square, in the perk's own colour:
+   a torso with a heavy plate on it, a round shield turning a shot
+   aside, a riot shield with its viewport, and a heart with a trace
+   running out of it. */
+const PERK_ICONS = {
+  supersoldier:
+    '<path d="M12 2.6 l6.4 2.6 v6.2 c0 5.2 -3.4 8.6 -6.4 10 c-3 -1.4 -6.4 -4.8 -6.4 -10 v-6.2 z"/>'
+    + '<path d="M12 8.2 v7.2 M8.6 11.8 h6.8"/>',
+  deflect:
+    '<path d="M12 2.8 a9 9 0 1 1 -0.1 0"/>'
+    + '<path d="M3.6 9.2 l6.4 3.6 M3.6 13.8 l4.6 2.6"/>'
+    + '<path d="M13.2 5.4 l6.6 3.8 l-9.2 9.4"/>',
+  shieldup:
+    '<path d="M12 2.4 l7.6 2.8 v7 c0 5.4 -4 8.6 -7.6 9.8 c-3.6 -1.2 -7.6 -4.4 -7.6 -9.8 v-7 z"/>'
+    + '<rect x="8.6" y="6.4" width="6.8" height="4.2" rx="1"/>'
+    + '<path d="M12 12.4 v6.4"/>',
+  adrenaline:
+    '<path d="M12 20.4 C5.6 15.6 2.8 12.4 2.8 8.9 A4.4 4.4 0 0 1 12 6.6'
+    + ' A4.4 4.4 0 0 1 21.2 8.9 C21.2 12.4 18.4 15.6 12 20.4 z"/>'
+    + '<path d="M3.4 12.6 h4.2 l1.6 -3.2 l2.2 6 l1.8 -3.6 l1.2 0.8 h5.2"/>',
+};
+
 const PERKS = {
   supersoldier: {
-    name: 'SUPER SOLDIER', cost: 2500, color: 0xff6a3a,
+    name: 'SUPER SOLDIER', cost: 2500, color: 0xff6a3a, icon: 'supersoldier',
     blurb: 'Maximum health 100 to 300. Slightly quicker on your feet.',
   },
   deflect: {
-    name: 'DEFLECT', cost: 2000, color: 0x66d4ff,
+    name: 'DEFLECT', cost: 2000, color: 0x66d4ff, icon: 'deflect',
     blurb: 'Immune to all projectile damage.',
   },
   shieldup: {
-    name: 'SHIELD UP', cost: 3000, color: 0xb08cff,
+    name: 'SHIELD UP', cost: 3000, color: 0xb08cff, icon: 'shieldup',
     blurb: 'Hold a shield. Nothing touches you, and they forget where you are.',
   },
   adrenaline: {
-    name: 'ADRENALINE', cost: 2000, color: 0xffd23a,
+    name: 'ADRENALINE', cost: 2000, color: 0xffd23a, icon: 'adrenaline',
     blurb: 'Faster on your feet, three minutes of sprint, slide and slide-cancel, and you reload at double speed.',
   },
 };
+
+/* One badge: the symbol, in the perk's colour, on a dark disc. */
+function perkBadge(key, px) {
+  const P = PERKS[key];
+  if (!P) return '';
+  const col = '#' + P.color.toString(16).padStart(6, '0');
+  const n = px || 30;
+  return '<svg class="perkbadge" width="' + n + '" height="' + n + '" viewBox="0 0 24 24"'
+    + ' fill="none" stroke="' + col + '" stroke-width="1.5" stroke-linejoin="round"'
+    + ' stroke-linecap="round" aria-label="' + P.name + '">'
+    + '<circle cx="12" cy="12" r="11.2" fill="rgba(6,8,12,.72)" stroke="' + col
+    + '" stroke-opacity=".45" stroke-width="1"/>'
+    + (PERK_ICONS[P.icon || key] || '') + '</svg>';
+}
 
 /* ---------------- writing ----------------
 
@@ -12621,7 +12666,10 @@ function makeHud() {
   #b9hud .grace .bar { width:190px; height:3px; background:rgba(0,0,0,.5); }
   #b9hud .grace .fill { height:100%; background:#7ad7ff; width:100%; box-shadow:0 0 8px #7ad7ff; }
   #b9hud .grace .num { display:block; margin-top:5px; font-size:22px; color:#e8ddc8; }
-  #b9hud .perks { position:absolute; left:26px; bottom:112px; font-size:11px; letter-spacing:.18em; }
+  #b9hud .perks { position:absolute; left:26px; bottom:112px; display:flex; gap:7px;
+    align-items:center; }
+  #b9hud .perkchip { display:block; line-height:0; filter:drop-shadow(0 1px 4px rgba(0,0,0,.8)); }
+  #b9hud .perkbadge { display:block; }
   #b9hud .pdelta { position:absolute; right:30px; bottom:100px; font-size:18px; color:#ffd27a; opacity:0; }
   #b9hud .flick { animation:b9flick 1.4s ease-out; }
   @keyframes b9flick { 0%{opacity:0} 12%{opacity:1} 22%{opacity:.2} 34%{opacity:1} 44%{opacity:.35} 60%{opacity:1} 100%{opacity:1} }
@@ -13016,8 +13064,11 @@ function makeHud() {
       else { els.shield.textContent = 'SHIELD READY [G]'; els.shield.style.color = '#8c7f68'; els.shield.style.opacity = 1; }
     },
     perks(held) {
-      els.perks.innerHTML = Object.keys(held).map((k) =>
-        `<span style="color:#${PERKS[k].color.toString(16).padStart(6, '0')}">${PERKS[k].name}</span>`).join(' &nbsp;·&nbsp; ');
+      /* Badges, not a list of words. The name stays as the tooltip so
+         anybody who wants it can hover, and so a screen reader still
+         has something to say. */
+      els.perks.innerHTML = Object.keys(held).filter((k) => PERKS[k]).map((k) =>
+        `<span class="perkchip" title="${PERKS[k].name}">${perkBadge(k, 30)}</span>`).join('');
     },
     /* Aiming hides the crosshair — the sights are the crosshair now, and
        leaving a dot floating over the front blade is the tell that a game's
