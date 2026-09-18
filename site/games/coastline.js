@@ -374,10 +374,14 @@ const WINDOWS = [
      south wall that the dead use for the rest of the game. A barricade
      you can rebuild, unlike the others, because otherwise the price of
      a free door is losing the house. */
-  { id: 'CH3B', room: 'green', inside: [C.cottage.x, 0, C.cottage.z - C.cottage.d / 2 + 1.1],
-    sillAt: [C.cottage.x, 1.05, C.cottage.z - C.cottage.d / 2],
-    pad: [C.cottage.x, 0, C.cottage.z - C.cottage.d / 2 - 5.5], face: 'S',
-    wz: [C.cottage.x - 1.4, C.cottage.x + 1.4] },
+  /* ON THE EAST WALL, not the south. South put its spawn pad at
+     z -62.75, which is four metres past the bottom of the green -- off
+     the navmesh entirely, so nothing could ever have walked out of it.
+     The east face has the whole lawn in front of it. */
+  { id: 'CH3B', room: 'green', inside: [C.cottage.x + C.cottage.w / 2 - 1.1, 0, C.cottage.z],
+    sillAt: [C.cottage.x + C.cottage.w / 2, 1.05, C.cottage.z],
+    pad: [C.cottage.x + C.cottage.w / 2 + 5.5, 0, C.cottage.z], face: 'E',
+    wz: [C.cottage.z - 1.4, C.cottage.z + 1.4] },
   { id: 'CH4', room: 'green', inside: [C.gable.x + C.gable.w / 2 - 1.1, 0, C.gable.z],
     sillAt: [C.gable.x + C.gable.w / 2, 1.05, C.gable.z],
     pad: [C.gable.x + C.gable.w / 2 + 5.5, 0, C.gable.z], face: 'E',

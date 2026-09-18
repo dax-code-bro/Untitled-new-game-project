@@ -4295,7 +4295,20 @@ function finishGenericMap(game, S, def) {
   }
 
   const behindADoor = new Set();
-  for (const d of Object.values(S.doors)) for (const w of (d.opens || [])) behindADoor.add(w);
+  for (const d of Object.values(S.doors)) {
+    for (const w of (d.opens || [])) behindADoor.add(w);
+    /* AND A WAY IN THAT DOES NOT EXIST YET.
+     *
+       `opens` is a way in you PAY for. `breach` is a way in you MAKE --
+       the hole a slider leaves when you drag it back, which no door
+       opens and no money does. Both have to be held out of the round
+       one rotation, and only opens was: the cottage's breach counted as
+       an ordinary open window, so the hole the slider makes was letting
+       the dead through from the first round, before anyone had touched
+       the slider. Found by the window count being one over and the
+       active count being one over with it. */
+    for (const w of (d.breach || [])) behindADoor.add(w);
+  }
   S.activeWindows = WINDOWS.map((w) => w.id).filter((id) => !behindADoor.has(id));
 
   S.nav = { ...(def.navLevels ? def.navLevels(game) : {}) };

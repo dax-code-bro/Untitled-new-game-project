@@ -292,13 +292,21 @@ function check(name, cond, detail = '') {
 
   console.log('');
   check('the map that was asked for is the map that was built', r.mapId === 'coastline', r.mapId);
-  check('every way in has its five boards', r.boarded && r.windows === 9, `${r.windows} windows`);
-  /* Five open, four shut. The four behind doors are the point of the
-     doors: paying to get into a house is also paying for a way in FOR
-     THEM, and a barricade that is live before you have bought its house
-     is a hole in a building you cannot get to. */
-  check('five ways in are open from round one and four wait for their doors',
-    r.active === 5 && r.windows === 9, `${r.active} of ${r.windows}`);
+  /* Ten now, not nine: the cottage's slider leaves a door-wide hole in
+     the east wall when you open it, and that hole is a way in with a
+     barricade of its own. See CH3B and the `breach` toll. */
+  check('every way in has its five boards', r.boarded && r.windows === 10, `${r.windows} windows`);
+  /* Five open, five shut. Four of the shut ones are behind doors, which
+     is the point of the doors: paying to get into a house is also paying
+     for a way in FOR THEM, and a barricade that is live before you have
+     bought its house is a hole in a building you cannot reach.
+
+     The fifth is CH3B, and it is behind nothing -- no door opens it and
+     no money does. It is what the cottage's slider COSTS: slide it back
+     for free and you have made yourself a door-wide hole that the dead
+     use for the rest of the game. */
+  check('five ways in are open from round one and five wait',
+    r.active === 5 && r.windows === 10, `${r.active} of ${r.windows}`);
   check('the doors that open them exist', r.doors === 4, `${r.doors} doors`);
   check('there is something to buy', r.buys === 8, `${r.buys} wall-buys`);
   check('there are four perk machines and a box', r.perks === 4 && r.crate, `${r.perks} perks, crate=${r.crate}`);
