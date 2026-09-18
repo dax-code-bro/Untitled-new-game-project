@@ -621,6 +621,26 @@
        they touch it -- and multiplayer never called it once. A floating
        gun with no hands is the oldest tell there is that a game is a
        prototype, and it has been on the screen this whole time. */
+    /* THE ATTACHMENTS YOU FITTED. Multiplayer mounted none, ever --
+       not because the parts are missing, there are sixty-nine of them
+       and every one is a real model, but because nothing in this file
+       ever called for one. Placement comes off the weapon's own
+       measurements per slot, so the same optic sits correctly on a
+       pistol and on a light machine gun. */
+    if (made && game.fitAttachments) {
+      try {
+        var D = W.MP_DATA;
+        var sp2 = D && D.gun ? D.gun(id) : null;
+        var list = (D && D.ATTACHMENTS ? D.ATTACHMENTS : [])
+          .filter(function (a) { return !sp2 || !a.classes || a.classes.indexOf(sp2.cls) >= 0; })
+          .map(function (a) { return { id: a.id, slot: a.slot }; });
+        game.fitAttachments(made, {
+          parts: list,
+          bore: sp2 && sp2.bore ? sp2.bore : 0.0046,
+          feed: sp2 && sp2.feed ? sp2.feed : 'box',
+        });
+      } catch (e) { /* a weapon with no parts is still a weapon */ }
+    }
     if (made && game.viewmodelArms) {
       try {
         var spec = W.MP_DATA && W.MP_DATA.gun ? W.MP_DATA.gun(id) : null;
@@ -706,6 +726,20 @@
        "My gun doesn't even come up any more, I can't bring it up, it's
        invisible" is this early return. */
     var shown = false;
+    var fitted = [];
+
+    /* Every part is built and hidden; this is what decides which of
+       them you can see. One per slot, because two optics on one rail
+       is two optics on one rail. */
+    function applyAtts() {
+      if (!cur || !game.showAttachments) return;
+      var D = W.MP_DATA;
+      game.showAttachments(cur, fitted.map(function (a) {
+        var m = D && D.att ? D.att(a) : null;
+        return { id: a, slot: m ? m.slot : null };
+      }));
+    }
+
     function select(id) {
       if (id === curId) {
         if (cur && !shown) { show(cur, true); shown = true; }
@@ -717,6 +751,7 @@
       state.gun = id;
       if (cur) show(cur, true);
       shown = true;
+      applyAtts();
       return cur;
     }
 
@@ -724,6 +759,9 @@
       state: state,
       get gun() { return cur; },
       select: select,
+      /* What the loadout says is bolted to this weapon. */
+      fit: function (ids) { fitted = ids || []; applyAtts(); },
+      get fitted() { return fitted.slice(); },
       /* BUILD THE GUNS BEFORE THE MATCH STARTS.
          A weapon is a few thousand vertices of receiver, rifling,
          checkering and individual brass rounds, assembled in
@@ -1473,6 +1511,14 @@
     var replay = makeReplay(root, game, M, vm);
     /* Every gun this player can end the match holding, built now. */
     vm.warm((M.you.guns || []).map(function (w) { return w.id || w.base; }));
+    /* And what is bolted to them. */
+    (function () {
+      var lo = M.you.loadout || {};
+      var held = M.you.guns[M.you.held];
+      var which = (held && (held.id || held.base)) === lo.secondary
+        ? lo.secondaryAtt : lo.primaryAtt;
+      vm.fit(which || []);
+    })();
 
     var yaw = M.you.yaw, pitch = 0;
     var sens = (opts.sensitivity || 1) * 0.0022;

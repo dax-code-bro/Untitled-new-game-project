@@ -726,9 +726,22 @@ var CSS3 = `
    else's ammo count over his shoulder. */
 body.b9staged #b9hud { display:none !important; }
 #b9shell.staged, #b9shell.staged .mp { background:transparent; }
+/* NOTHING BEHIND HIM.
+   A mask on the figure box cannot punch a hole through an opaque layer
+   sitting above the canvas -- it only masks that box's own painting.
+   So the emptiness is made in the SCENE instead: the stage carries its
+   own flat backdrop wall and the shell simply gets out of the way. The
+   training range, which is a DOM element and not part of the stage,
+   goes with it. */
 #b9shell.staged .mp::before { content:''; position:absolute; inset:0;
-  background:linear-gradient(90deg,rgba(7,8,12,.96) 0%,rgba(7,8,12,.92) 38%,
-    rgba(7,8,12,.30) 58%,rgba(5,6,10,.10) 100%); pointer-events:none; }
+  background:linear-gradient(90deg,rgba(7,8,12,.97) 0%,rgba(7,8,12,.94) 34%,
+    rgba(7,8,12,.55) 52%,rgba(7,8,12,.18) 70%,rgba(7,8,12,.06) 100%);
+  pointer-events:none; }
+#b9shell.staged .train { display:none; }
+#b9shell .opfig.live { z-index:2; }
+/* The window. The pane above is opaque; this punches through it with a
+   composite so the engine's picture -- and only the engine's picture,
+   against the flat stage -- shows in this box and nowhere else. */
 #b9shell .opfig.live { background:none; }
 #b9shell .opfig.live svg { display:none; }
 #b9shell .opfig .turnrow { position:absolute; left:0; right:0; bottom:6px;

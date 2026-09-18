@@ -42,12 +42,30 @@
     var TURN_RATE = 2.45;
     var _AY = { x: 0, y: 1, z: 0 };
 
+    /* A FLOOR AND A WALL, and nothing else.
+     *
+       Asked for plainly: no scene behind the character. The camera is
+       four hundred metres under the map so there is no level geometry
+       down here, but there is still a sky, and a man against a bright
+       horizon is a silhouette. A plain dark wall a few metres behind
+       him is the whole backdrop -- he reads against it, and there is
+       nothing to look at but him. */
     function stageFloor() {
       if (lit || !game || !game.ground) return;
       lit = true;
       try {
         game.ground({ at: [0, FLOOR, 0], size: 26, physics: false,
-          material: { color: 0x14161c, texture: 'concrete', roughness: 0.96, uvScale: 8 } });
+          material: { color: 0x101218, texture: 'concrete', roughness: 0.96, uvScale: 8 } });
+        if (game.box) {
+          game.box({ at: [0, FLOOR + 3.4, -4.2], size: [22, 8, 0.4], physics: false,
+            material: { color: 0x0a0c11, texture: 'smooth', roughness: 1, metalness: 0 } });
+          /* Wrapped round the sides too, so turning the camera even a
+             little does not find the horizon. */
+          game.box({ at: [-6.4, FLOOR + 3.4, 0], size: [0.4, 8, 12], physics: false,
+            material: { color: 0x0a0c11, texture: 'smooth', roughness: 1, metalness: 0 } });
+          game.box({ at: [6.4, FLOOR + 3.4, 0], size: [0.4, 8, 12], physics: false,
+            material: { color: 0x0a0c11, texture: 'smooth', roughness: 1, metalness: 0 } });
+        }
       } catch (e) { /* a stage without a floor still shows the man */ }
     }
 

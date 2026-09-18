@@ -296,7 +296,7 @@
       ads: 0.15, move: 1.07, reload: 1.4, rec: [0.85, 0.3], spread: 2.9, mv: 253,
       blurb: 'The 1911 with the sharp edges taken off and one more in the magazine.' },
     { id: 'model5', name: 'Model 5', cls: 'pistol', fam: 'handcannon',
-      mag: 7, rpm: 230, dmg: 55, dmgFar: 38, near: 24, far: 44, hs: 1.9, auto: false,
+      mag: 4, rpm: 230, dmg: 55, dmgFar: 38, near: 24, far: 44, hs: 1.9, auto: false,
       ads: 0.22, move: 1.00, reload: 2.0, rec: [2.1, 0.7], spread: 4.0, mv: 450,
       blurb: 'Fifty calibre out of a pistol. Two shots and your wrist has an opinion.' },
     { id: 'webley', name: 'Webley Mk VI', cls: 'pistol', fam: 'handcannon',
