@@ -88,14 +88,19 @@ try {
   /* Crouch is a state rather than a distance, so it is read off the
      man rather than off how far he went.
 
-     CROUCHING **OR** PRONE. Holding the crouch key past HOLD_T drops
-     you flat, which is the point of the drop mechanic -- and a frame
-     under SwiftShader is about half a second, so six of them is three
-     seconds and the man is long since on his face. The first version
-     of this asked only for `crouching` and reported that a working
-     rebind did nothing. What the key has to do is change his stance;
-     which of the two low stances he ends in is the hold timer's
-     business, not the binding's. */
+     AND A TAP IS UNREACHABLE HERE, so the test uses the mechanic that
+     is. mp-match makes crouch a TAP toggle and a HOLD past HOLD_T
+     (220ms) the drop: hold it and you go prone, and releasing does not
+     stand you up again -- only another tap or a jump does. A frame
+     under SwiftShader is about half a second, so the shortest press
+     this harness can make is four hundred percent of HOLD_T. Every
+     press it makes is a hold, every hold is a dive, and asking a man
+     who is correctly still flat on his face whether he stood up when
+     the key came up was asking the game to be wrong.
+
+     So: hold the bound key and he goes down, jump to get him up --
+     which is what the game offers -- and then give the OLD key the
+     whole budget and require it to spend all of it doing nothing. */
   const crouch = await page.evaluate(async () => {
     const ev = (type, code, key) => window.dispatchEvent(new KeyboardEvent(type,
       { key, code, bubbles: true }));
@@ -103,16 +108,6 @@ try {
       const y = window.MP.match.you;
       return !!(y.crouching || y.prone || y.sliding);
     };
-    const settle = async (n) => {
-      for (let i = 0; i < n; i++) await new Promise((r) => requestAnimationFrame(r));
-    };
-    /* WAIT FOR IT TO HAPPEN, rather than guessing how long it takes.
-       A fixed four-frame settle reported `on N false, released true` --
-       the stance did change, one sample too late, and the check read
-       the lag as a dead binding and then read the leftover crouch as
-       the old key still working. Three failures, one cause, and the
-       cause was the clock. Polling until it flips says both what
-       happened and how long it took. */
     const until = async (want, n) => {
       for (let i = 0; i < n; i++) {
         if (low() === want) return i;
@@ -121,23 +116,29 @@ try {
       return low() === want ? n : -1;
     };
     const was = low();
+
     ev('keydown', 'KeyN', 'n');
     const onN = await until(true, 16);
     ev('keyup', 'KeyN', 'n');
-    const offN = await until(false, 16);
-    /* And the old key: it must NEVER take him low, so this one wants
-       the whole budget to elapse without it happening. */
+
+    /* Up again: `p.prone && cmd.jump` is the game's own way out of a
+       drop, and it is read with `once`, so it needs a fresh press. */
+    ev('keydown', 'Space', ' ');
+    await new Promise((r) => requestAnimationFrame(r));
+    ev('keyup', 'Space', ' ');
+    const upAgain = await until(false, 20);
+
     ev('keydown', 'KeyC', 'c');
     const onC = await until(true, 16);
     ev('keyup', 'KeyC', 'c');
-    await until(false, 16);
-    return { was, onN, offN, onC };
+    return { was, onN, upAgain, onC, stillLow: low() };
   });
-  note(`low stance: start ${crouch.was}, went low ${crouch.onN} frames after N, `
-    + `stood up ${crouch.offN} frames after release, old key C ${crouch.onC}`);
+  note(`low stance: start ${crouch.was}, down ${crouch.onN} frames after N, `
+    + `up ${crouch.upAgain} frames after a jump, old key C ${crouch.onC}`);
   check('crouch answers to the key it was bound to',
     crouch.was === false && crouch.onN >= 0, `${crouch.onN} frames`);
-  check('and stands back up when it is released', crouch.offN >= 0, `${crouch.offN} frames`);
+  check('and the drop is one a jump gets him out of',
+    crouch.upAgain >= 0, `still low after 20 frames`);
   check('and the old crouch key is no longer a crouch key', crouch.onC === -1,
     crouch.onC === -1 ? '' : `went low ${crouch.onC} frames after C`);
 
