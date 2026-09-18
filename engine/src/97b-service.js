@@ -627,6 +627,15 @@ function svcCartridge(shell, tip, A, o, u, v) {
 function svcRounds(shell, tip, K) {
   const M = K.mag, A = K.ammo;
   if (!M || M.kind === 'none' || !A) return;
+  /* A SIDE MAGAZINE IS STEEL AND YOU CANNOT SEE INTO IT.
+     Every other magazine in the table is smoked polymer with the
+     column showing through, so the rounds are drawn and they hang
+     downward out of the well. Give the FG42 one of those and the
+     photograph is a rifle with a stack of brass dangling under the
+     receiver and the magazine itself edge-on behind it. The FG42's is
+     an opaque box lying flat on the left, so there is nothing to
+     draw. */
+  if (M.kind === 'side') return;
   const across = new Vec3(0, 0, 1);
 
   if (M.kind === 'drum' || M.kind === 'pan') {
@@ -825,8 +834,14 @@ const SERVICE_KINDS = {
     /* 7.92x57, not the Kurz: the FG42 is a full-power rifle, which is
        most of why it needed the raked grip and the muzzle cone it has
        -- and it feeds from the left. */
-    mag: { kind: 'side', x: 0.006, y: 0.004, out: 0.135, z0: 0.019,
-      d: 0.0255, w: 0.0130 },
+    /* `clear: false` because the base row sets it true and svcSpec
+       merges one level in: every other magazine in the table is
+       smoked polymer so the column of rounds reads through it, and
+       inheriting that turned this one into a translucent white slab
+       hanging off the side of a steel rifle. The FG42's is an opaque
+       box and there are no rounds drawn behind it. */
+    mag: { kind: 'side', x: 0.006, y: 0.002, out: 0.135, z0: 0.019,
+      d: 0.0255, w: 0.0130, clear: false },
     grip: { rake: 0.58, len: 0.112 },
     stock: { kind: 'wood', butt: -0.320, comb: 0.0180, drop: 0.0260, w: 0.0165 },
     sight: { y: 0.0345, frontX: 0.395, front: 'ears', rear: 'aperture' },
