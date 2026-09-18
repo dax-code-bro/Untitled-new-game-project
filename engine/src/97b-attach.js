@@ -794,6 +794,9 @@ const ATT_BUILD = {
 Engine.prototype.gunPart = function (id, opts = {}) {
   const D = ATT_BUILD[id];
   if (!D) return null;
+  /* A part that is deliberately not a part: ammunition. Returns null
+     like an unknown id does, but it is a null nobody should chase. */
+  if (D.invisible) return null;
   /* Which weapon it is going on, and how big that weapon's bore is.
    *
    * Every attachment used to be built once and hung on everything, so a
@@ -1227,6 +1230,35 @@ Object.assign(ATT_BUILD, {
   'l-tac': { body: (g) => buildLaser(g, 0.90, 0.0016), mat: 'steel', bound: 0.10 },
   'l-ir': { body: (g) => buildLaser(g, 0, 0), mat: 'poly', bound: 0.06 },
   'l-steady': { body: (g) => buildLaser(g, 0.40, 0.0012), mat: 'poly', bound: 0.10 },
+
+  /* ---- magazines ----
+     THESE NINE HAD NO ENTRY AT ALL, so gunPart returned null for every
+     one of them and the whole magazine slot was silently a no-op: you
+     could fit a drum and nothing appeared, on any weapon in the game.
+     The models existed under their older names -- extmag, fastmag,
+     drummag -- and nothing pointed the loadout's ids at them.
+
+     They are `perHost` because a drum for a belt-fed gun is a belt
+     drum and a drum for a revolver is a canister, which the builders
+     below already know; what was missing was only the name. */
+  'g-ext': ATT_BUILD.extmag,
+  'g-fast': ATT_BUILD.fastmag,
+  'g-drum': ATT_BUILD.drummag,
+  'g-speed': ATT_BUILD.fastmag,
+
+  /* ---- ammunition ----
+     Armour-piercing, hollow point, incendiary, subsonic and tracer are
+     what is IN the magazine, not a thing bolted to the outside of the
+     gun, so they correctly have no model. They are listed here so that
+     `gunPart` returns a deliberate empty rather than a null that reads
+     the same as "this part is missing" -- the distinction matters
+     because one of those is a bug and the other is not, and for
+     months there was no way to tell them apart. */
+  'g-ap': { invisible: true },
+  'g-hollow': { invisible: true },
+  'g-incendiary': { invisible: true },
+  'g-subsonic': { invisible: true },
+  'g-tracer': { invisible: true },
 });
 
 Engine.prototype.gunPartKinds = function () { return Object.keys(ATT_BUILD); };

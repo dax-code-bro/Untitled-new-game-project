@@ -115,7 +115,26 @@ Engine.prototype.fitAttachments = function (root, opts = {}) {
     laser: [0.030, B - 0.026, 0.020],
   };
 
-  const want = this.legalAttachments(opts.parts || [], opts.max);
+  /* EVERY PART IT IS GIVEN, NOT ONE PER SLOT.
+   *
+     This ran its list through legalAttachments first, which keeps the
+     FIRST part in each slot and drops the rest. The caller -- mp-game
+     -- hands it every attachment that fits the weapon's class, about
+     forty of them, so eight got built and thirty-two did not: the
+     first optic, the first muzzle, the first barrel, and so on.
+
+     Which means the optic the player actually chose was almost never
+     one of the eight, showAttachments could not show a part that had
+     never been mounted, and the whole slot appeared to do nothing.
+     That is the "attachments don't show up on any gun" report, still
+     true after the mounting code was written, because the mounting
+     code was throwing the parts away before it mounted them.
+
+     One per slot is a rule about what can be WORN AT ONCE, and
+     showAttachments already applies it. Building is not wearing:
+     everything built here is hidden. */
+  const want = (opts.parts || []).map((p) =>
+    (typeof p === 'string' ? { id: p, slot: null } : p));
   const made = {};
   for (const p of want) {
     const at = p.slot === 'mag'
@@ -125,15 +144,34 @@ Engine.prototype.fitAttachments = function (root, opts = {}) {
     if (list) made[p.id] = list;
   }
   root.__att = made;
+  /* Kept so a part asked for later can still be mounted -- see
+     showAttachments. */
+  root.__attOpts = { host, feed, dims, bore, BY_SLOT, magAt, mount };
   return made;
 };
 
-/* Show exactly the parts in `list` and hide the rest. */
+/* Show exactly the parts in `list` and hide the rest.
+
+   AND MOUNT ONE THAT WAS NEVER BUILT. A loadout is edited between
+   matches and a part can be asked for that fitAttachments never saw --
+   a weapon picked up off the floor, a class switched in the pause
+   screen. Failing silently there is the same bug as above wearing a
+   different hat, so anything missing is built on the spot. */
 Engine.prototype.showAttachments = function (root, list) {
-  const made = root && root.__att;
-  if (!made) return;
+  if (!root) return;
+  const made = root.__att || (root.__att = {});
+  const O = root.__attOpts;
+  const want = this.legalAttachments(list || []);
+  for (const p of want) {
+    if (made[p.id] || !O) continue;
+    const at = p.slot === 'mag'
+      ? O.magAt(p.id, [-0.010, -0.092, 0])
+      : (O.BY_SLOT[p.slot] || O.BY_SLOT.optic);
+    const built = O.mount(p.id, at);
+    if (built) made[p.id] = built;
+  }
   const on = {};
-  for (const p of this.legalAttachments(list || [])) on[p.id] = true;
+  for (const p of want) on[p.id] = true;
   for (const id of Object.keys(made)) {
     for (const a of made[id]) a.visible = !!on[id];
   }

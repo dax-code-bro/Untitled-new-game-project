@@ -22594,6 +22594,9 @@ const ATT_BUILD = {
 Engine.prototype.gunPart = function (id, opts = {}) {
   const D = ATT_BUILD[id];
   if (!D) return null;
+  /* A part that is deliberately not a part: ammunition. Returns null
+     like an unknown id does, but it is a null nobody should chase. */
+  if (D.invisible) return null;
   /* Which weapon it is going on, and how big that weapon's bore is.
    *
    * Every attachment used to be built once and hung on everything, so a
@@ -23027,6 +23030,35 @@ Object.assign(ATT_BUILD, {
   'l-tac': { body: (g) => buildLaser(g, 0.90, 0.0016), mat: 'steel', bound: 0.10 },
   'l-ir': { body: (g) => buildLaser(g, 0, 0), mat: 'poly', bound: 0.06 },
   'l-steady': { body: (g) => buildLaser(g, 0.40, 0.0012), mat: 'poly', bound: 0.10 },
+
+  /* ---- magazines ----
+     THESE NINE HAD NO ENTRY AT ALL, so gunPart returned null for every
+     one of them and the whole magazine slot was silently a no-op: you
+     could fit a drum and nothing appeared, on any weapon in the game.
+     The models existed under their older names -- extmag, fastmag,
+     drummag -- and nothing pointed the loadout's ids at them.
+
+     They are `perHost` because a drum for a belt-fed gun is a belt
+     drum and a drum for a revolver is a canister, which the builders
+     below already know; what was missing was only the name. */
+  'g-ext': ATT_BUILD.extmag,
+  'g-fast': ATT_BUILD.fastmag,
+  'g-drum': ATT_BUILD.drummag,
+  'g-speed': ATT_BUILD.fastmag,
+
+  /* ---- ammunition ----
+     Armour-piercing, hollow point, incendiary, subsonic and tracer are
+     what is IN the magazine, not a thing bolted to the outside of the
+     gun, so they correctly have no model. They are listed here so that
+     `gunPart` returns a deliberate empty rather than a null that reads
+     the same as "this part is missing" -- the distinction matters
+     because one of those is a bug and the other is not, and for
+     months there was no way to tell them apart. */
+  'g-ap': { invisible: true },
+  'g-hollow': { invisible: true },
+  'g-incendiary': { invisible: true },
+  'g-subsonic': { invisible: true },
+  'g-tracer': { invisible: true },
 });
 
 Engine.prototype.gunPartKinds = function () { return Object.keys(ATT_BUILD); };
@@ -25112,7 +25144,26 @@ Engine.prototype.fitAttachments = function (root, opts = {}) {
     laser: [0.030, B - 0.026, 0.020],
   };
 
-  const want = this.legalAttachments(opts.parts || [], opts.max);
+  /* EVERY PART IT IS GIVEN, NOT ONE PER SLOT.
+   *
+     This ran its list through legalAttachments first, which keeps the
+     FIRST part in each slot and drops the rest. The caller -- mp-game
+     -- hands it every attachment that fits the weapon's class, about
+     forty of them, so eight got built and thirty-two did not: the
+     first optic, the first muzzle, the first barrel, and so on.
+
+     Which means the optic the player actually chose was almost never
+     one of the eight, showAttachments could not show a part that had
+     never been mounted, and the whole slot appeared to do nothing.
+     That is the "attachments don't show up on any gun" report, still
+     true after the mounting code was written, because the mounting
+     code was throwing the parts away before it mounted them.
+
+     One per slot is a rule about what can be WORN AT ONCE, and
+     showAttachments already applies it. Building is not wearing:
+     everything built here is hidden. */
+  const want = (opts.parts || []).map((p) =>
+    (typeof p === 'string' ? { id: p, slot: null } : p));
   const made = {};
   for (const p of want) {
     const at = p.slot === 'mag'
@@ -25122,15 +25173,34 @@ Engine.prototype.fitAttachments = function (root, opts = {}) {
     if (list) made[p.id] = list;
   }
   root.__att = made;
+  /* Kept so a part asked for later can still be mounted -- see
+     showAttachments. */
+  root.__attOpts = { host, feed, dims, bore, BY_SLOT, magAt, mount };
   return made;
 };
 
-/* Show exactly the parts in `list` and hide the rest. */
+/* Show exactly the parts in `list` and hide the rest.
+
+   AND MOUNT ONE THAT WAS NEVER BUILT. A loadout is edited between
+   matches and a part can be asked for that fitAttachments never saw --
+   a weapon picked up off the floor, a class switched in the pause
+   screen. Failing silently there is the same bug as above wearing a
+   different hat, so anything missing is built on the spot. */
 Engine.prototype.showAttachments = function (root, list) {
-  const made = root && root.__att;
-  if (!made) return;
+  if (!root) return;
+  const made = root.__att || (root.__att = {});
+  const O = root.__attOpts;
+  const want = this.legalAttachments(list || []);
+  for (const p of want) {
+    if (made[p.id] || !O) continue;
+    const at = p.slot === 'mag'
+      ? O.magAt(p.id, [-0.010, -0.092, 0])
+      : (O.BY_SLOT[p.slot] || O.BY_SLOT.optic);
+    const built = O.mount(p.id, at);
+    if (built) made[p.id] = built;
+  }
   const on = {};
-  for (const p of this.legalAttachments(list || [])) on[p.id] = true;
+  for (const p of want) on[p.id] = true;
   for (const id of Object.keys(made)) {
     for (const a of made[id]) a.visible = !!on[id];
   }
