@@ -117,9 +117,15 @@ window.__stick = function (a, b) { window.__pad.axes[0] = a; window.__pad.axes[1
      loop has returned early and the clock is stopped. */
   const ended = await page.evaluate(async () => {
     const M = window.MP.match;
+    /* OFF FIRST, deliberately. The chord check above left it on, which
+       would make the next assertion pass without the end screen having
+       done anything at all. */
+    window.MP.pointer.set(false);
+    const beforeEnd = window.MP.pointer.on;
     M.over = true; M.winner = M.you.team;
     /* Past the slow-motion ramp and the Best Play replay. */
     for (let i = 0; i < 40; i++) await new Promise((r) => requestAnimationFrame(r));
+    const auto = window.MP.pointer.on;
     const btn = document.querySelector('#mpui .over .again');
     if (!btn) return { err: 'no Play Again button on the end screen' };
     const r = btn.getBoundingClientRect();
@@ -141,11 +147,19 @@ window.__stick = function (a, b) { window.__pad.axes[0] = a; window.__pad.axes[1
     window.__press(0, true);
     for (let f = 0; f < 5; f++) await new Promise((rf) => requestAnimationFrame(rf));
     window.__press(0, false);
-    return { near: +near.toFixed(1), clicked,
+    return { near: +near.toFixed(1), clicked, beforeEnd, auto,
       timeScale: window.MP.game.timeScale };
   });
   note(`after the match: ${JSON.stringify(ended)}`);
   check('the end screen has a Play Again button', !ended.err, ended.err || '');
+  /* THE CHORD IS NOT DISCOVERABLE ON THE SCREEN THAT NEEDS IT.
+     Holding all four directions is a good way to summon the pointer
+     mid-match, where every button is already busy, and no way at all
+     to learn it exists on a finished match you cannot leave. So the
+     end screen brings it up itself. */
+  check('a finished match raises the pointer without being asked',
+    !ended.err && ended.beforeEnd === false && ended.auto === true,
+    `before ${ended.beforeEnd}, after ${ended.auto}`);
   check('the pointer still moves once the match is over and the clock stopped',
     !ended.err && ended.near < 12, `${ended.near}px from the button`);
   check('and pressing A presses the button', ended.clicked === true);

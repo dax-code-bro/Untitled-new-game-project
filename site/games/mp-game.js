@@ -2183,6 +2183,24 @@
            The world rebuild costs a few seconds and is certainly
            right; that is the correct trade for the thing that has
            been stopping play entirely. */
+        /* AND THE POINTER COMES UP BY ITSELF.
+         *
+           The pad pointer exists precisely because these two buttons
+           answer only to a mouse, and it is off until the player holds
+           all four d-pad directions at once. That chord is a fine way
+           to summon it mid-match, where every button is busy, and a
+           useless one here: the screen where you need it is the screen
+           where you have no way to learn it exists, and a player who
+           does not know the chord is still stuck on a finished match
+           with a controller in his hands.
+
+           Nothing is competing for the stick once the match is over --
+           the pointer lock has just been dropped two lines above -- so
+           it simply comes up, and the badge that comes with it says so.
+           A player who would rather not have it can dismiss it with
+           the same chord. */
+        try { if (pad.raw() && pointer && !pointer.on) pointer.set(true); } catch (e) { /* no pad */ }
+
         var again = root.querySelector('.over .again');
         var lobby = root.querySelector('.over .lobby');
         if (again) {
