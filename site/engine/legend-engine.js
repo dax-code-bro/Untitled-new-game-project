@@ -11457,12 +11457,28 @@ function buildTorso(g, segments, k = 1) {
   loftRings(g, rings, segments, true, true);
 }
 
+/* THE NECK STOPPED ABOVE THE JAW.
+ *
+   HUMAN.chin is 0.595 and the top ring of this was at 0.618 -- two and
+   a half centimetres of neck standing PROUD of the chin, in bare skin,
+   on a man whose lower face is usually behind a respirator. What that
+   renders as, and what every photograph of an operator in this game
+   showed, is a small head on a long pale column: the eye reads the
+   column as the neck, puts the chin at the top of it, and concludes
+   the man is looking at the sky.
+
+   A neck runs from the collarbones to the jaw line and no further --
+   0.508 to 0.578 here, seventy millimetres -- and it is thicker than
+   this was, because a 55mm half-width neck on a 176mm half-width chest
+   is a stalk. Real cervical girth is about 0.38 circumference, which
+   is a 60mm half-width, and the sternocleidomastoid flares it wider
+   than that where it meets the trapezius. */
 function buildNeck(g, segments) {
   const rings = [
-    { p: new Vec3(0, 0.505, 0.002), w: 0.078, d: 0.070, e: 2.3 },
-    { p: new Vec3(0, 0.535, 0.005), w: 0.060, d: 0.056, e: 2.1 },
-    { p: new Vec3(0, 0.575, 0.008), w: 0.055, d: 0.052, e: 2.0 },
-    { p: new Vec3(0, 0.618, 0.010), w: 0.056, d: 0.053, e: 2.0 },
+    { p: new Vec3(0, 0.500, 0.000), w: 0.086, d: 0.078, e: 2.4 },
+    { p: new Vec3(0, 0.524, 0.004), w: 0.069, d: 0.064, e: 2.2 },
+    { p: new Vec3(0, 0.552, 0.008), w: 0.062, d: 0.059, e: 2.1 },
+    { p: new Vec3(0, 0.578, 0.011), w: 0.060, d: 0.058, e: 2.0 },
   ];
   loftRings(g, rings, segments, false, false);
 }
@@ -14805,7 +14821,11 @@ class Engine {
            crown all move that centre -- so the lift was off by a
            different amount for every face. Measured chin, measured
            scale, and the jaw lands on the neck for all of them. */
-        offset: [0, -(HB ? HB.chinY : -0.36) * headScale, 0.006 * scale],
+        /* The chin ON the bone, and then a centimetre DOWN, so the jaw
+           overlaps the top of the neck instead of balancing on it.
+           Exactly level, the two surfaces meet in a seam and the head
+           reads as a separate object sitting on a post. */
+        offset: [0, -(HB ? HB.chinY : -0.36) * headScale - 0.011 * scale, 0.006 * scale],
         scale: headScale,
         boundRadius: 0.4 * scale,
       });
@@ -14836,7 +14856,11 @@ class Engine {
           material: this.material({ color: matColor, texture: 'fabric',
             roughness: rough, metalness: 0, uvScale: 6 }),
           parent: actor, parentBone: skeleton.index('head'),
-          offset: [0, -(HB ? HB.chinY : -0.36) * headScale, 0.006 * scale],
+          /* The chin ON the bone, and then a centimetre DOWN, so the jaw
+           overlaps the top of the neck instead of balancing on it.
+           Exactly level, the two surfaces meet in a seam and the head
+           reads as a separate object sitting on a post. */
+        offset: [0, -(HB ? HB.chinY : -0.36) * headScale - 0.011 * scale, 0.006 * scale],
           scale: headScale, boundRadius: 0.45 * scale,
         });
         this.actors.push(a2);
@@ -14876,7 +14900,11 @@ class Engine {
           material: this.material({ color: 0xffffff, texture: 'smooth',
             roughness: 0.42, metalness: 0 }),
           parent: actor, parentBone: skeleton.index('head'),
-          offset: [0, -(HB ? HB.chinY : -0.36) * headScale, 0.006 * scale],
+          /* The chin ON the bone, and then a centimetre DOWN, so the jaw
+           overlaps the top of the neck instead of balancing on it.
+           Exactly level, the two surfaces meet in a seam and the head
+           reads as a separate object sitting on a post. */
+        offset: [0, -(HB ? HB.chinY : -0.36) * headScale - 0.011 * scale, 0.006 * scale],
           scale: headScale, boundRadius: 0.45 * scale,
         });
         this.actors.push(ea);
@@ -16777,7 +16805,15 @@ function buildGear(skeleton, list, opts) {
      95-engine) and its chin is on the bone, so its middle is half that
      above it. */
   const hi = skeleton.index('head');
-  const chinY = hi >= 0 ? skeleton.bones[hi].bindMatrix.e[13] : 0.61 * s;
+  /* THE SAME ELEVEN MILLIMETRES THE HEAD ITSELF MOVED. The head actor
+     is seated a centimetre below the head bone so the jaw overlaps the
+     neck rather than balancing on it (see Engine.character). The kit
+     rides the HEAD, not the bone, so it has to move with it -- and
+     this is exactly the class of mistake that put every helmet in the
+     game half a head too low the first time. One constant, both
+     places, and a note at each end. */
+  const HEAD_SEAT = 0.011 * s;
+  const chinY = (hi >= 0 ? skeleton.bones[hi].bindMatrix.e[13] : 0.61 * s) - HEAD_SEAT;
   const HEAD_H = 0.252 * s;
   const headY = chinY + HEAD_H * 0.5;
   const ctx = { k, s, headY, chinY, headH: HEAD_H, skeleton, o: opts };

@@ -892,7 +892,11 @@ class Engine {
            crown all move that centre -- so the lift was off by a
            different amount for every face. Measured chin, measured
            scale, and the jaw lands on the neck for all of them. */
-        offset: [0, -(HB ? HB.chinY : -0.36) * headScale, 0.006 * scale],
+        /* The chin ON the bone, and then a centimetre DOWN, so the jaw
+           overlaps the top of the neck instead of balancing on it.
+           Exactly level, the two surfaces meet in a seam and the head
+           reads as a separate object sitting on a post. */
+        offset: [0, -(HB ? HB.chinY : -0.36) * headScale - 0.011 * scale, 0.006 * scale],
         scale: headScale,
         boundRadius: 0.4 * scale,
       });
@@ -923,7 +927,11 @@ class Engine {
           material: this.material({ color: matColor, texture: 'fabric',
             roughness: rough, metalness: 0, uvScale: 6 }),
           parent: actor, parentBone: skeleton.index('head'),
-          offset: [0, -(HB ? HB.chinY : -0.36) * headScale, 0.006 * scale],
+          /* The chin ON the bone, and then a centimetre DOWN, so the jaw
+           overlaps the top of the neck instead of balancing on it.
+           Exactly level, the two surfaces meet in a seam and the head
+           reads as a separate object sitting on a post. */
+        offset: [0, -(HB ? HB.chinY : -0.36) * headScale - 0.011 * scale, 0.006 * scale],
           scale: headScale, boundRadius: 0.45 * scale,
         });
         this.actors.push(a2);
@@ -963,7 +971,11 @@ class Engine {
           material: this.material({ color: 0xffffff, texture: 'smooth',
             roughness: 0.42, metalness: 0 }),
           parent: actor, parentBone: skeleton.index('head'),
-          offset: [0, -(HB ? HB.chinY : -0.36) * headScale, 0.006 * scale],
+          /* The chin ON the bone, and then a centimetre DOWN, so the jaw
+           overlaps the top of the neck instead of balancing on it.
+           Exactly level, the two surfaces meet in a seam and the head
+           reads as a separate object sitting on a post. */
+        offset: [0, -(HB ? HB.chinY : -0.36) * headScale - 0.011 * scale, 0.006 * scale],
           scale: headScale, boundRadius: 0.45 * scale,
         });
         this.actors.push(ea);

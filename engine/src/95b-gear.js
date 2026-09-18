@@ -390,7 +390,15 @@ function buildGear(skeleton, list, opts) {
      95-engine) and its chin is on the bone, so its middle is half that
      above it. */
   const hi = skeleton.index('head');
-  const chinY = hi >= 0 ? skeleton.bones[hi].bindMatrix.e[13] : 0.61 * s;
+  /* THE SAME ELEVEN MILLIMETRES THE HEAD ITSELF MOVED. The head actor
+     is seated a centimetre below the head bone so the jaw overlaps the
+     neck rather than balancing on it (see Engine.character). The kit
+     rides the HEAD, not the bone, so it has to move with it -- and
+     this is exactly the class of mistake that put every helmet in the
+     game half a head too low the first time. One constant, both
+     places, and a note at each end. */
+  const HEAD_SEAT = 0.011 * s;
+  const chinY = (hi >= 0 ? skeleton.bones[hi].bindMatrix.e[13] : 0.61 * s) - HEAD_SEAT;
   const HEAD_H = 0.252 * s;
   const headY = chinY + HEAD_H * 0.5;
   const ctx = { k, s, headY, chinY, headH: HEAD_H, skeleton, o: opts };
