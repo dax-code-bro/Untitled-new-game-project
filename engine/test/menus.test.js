@@ -158,6 +158,52 @@ const note = (s) => console.log(`  ..   ${s}`);
   await page.screenshot({ path: path.join(OUT, 'menu-operator3d.jpg'), type: 'jpeg', quality: 86 });
   note(`shot -> ${path.join(OUT, 'menu-operator3d.jpg')}`);
 
+  /* THE MENUS ARE VISIBLE, not merely present.
+     `staged` makes the whole shell transparent so the operator can be
+     seen through it, and it was removed only by closeMP and by
+     switching tabs -- so leaving the operators tab any other way left
+     every menu in the game there and completely invisible. That is
+     what "the menus are gone again" was. */
+  const vis = await page.evaluate(async () => {
+    const S = window.BUNKER_SHELL, sh = document.querySelector('#b9shell');
+    S.openMP('operators');
+    await new Promise((r) => setTimeout(r, 1800));
+    const staged = sh.classList.contains('staged');
+    S.openMain();
+    await new Promise((r) => setTimeout(r, 900));
+    const after = sh.classList.contains('staged');
+    const bg = getComputedStyle(sh).backgroundColor;
+    S.openSettings('main');
+    await new Promise((r) => setTimeout(r, 700));
+    const inSettings = sh.classList.contains('staged');
+    return { staged, after, inSettings, bg,
+      back: !document.querySelector('#b9shell .backbtn').classList.contains('hide') };
+  });
+  note(`staged on operators ${vis.staged}, on main ${vis.after}, in settings ${vis.inSettings}`);
+  check('leaving the operators tab makes the shell solid again',
+    vis.staged === true && vis.after === false && vis.inSettings === false,
+    JSON.stringify(vis));
+  check('and the main menu is actually opaque', /rgba?\((\d+), *(\d+), *(\d+)/.test(vis.bg)
+    && !/, *0\)$/.test(vis.bg), vis.bg);
+
+  /* A back button you can see, on every screen but the bottom one. */
+  const backs = await page.evaluate(async () => {
+    const S = window.BUNKER_SHELL;
+    const q = () => !document.querySelector('#b9shell .backbtn').classList.contains('hide');
+    S.openMain(); await new Promise((r) => setTimeout(r, 500));
+    const onMain = q();
+    S.openMaps(); await new Promise((r) => setTimeout(r, 500));
+    const onMaps = q();
+    S.openSettings('main'); await new Promise((r) => setTimeout(r, 500));
+    const onSet = q();
+    return { onMain, onMaps, onSet };
+  });
+  note(`back button — main ${backs.onMain}, maps ${backs.onMaps}, settings ${backs.onSet}`);
+  check('there is a visible back button where there is somewhere to go',
+    backs.onMaps && backs.onSet, JSON.stringify(backs));
+  check('and not on the main menu, which is the bottom of the stack',
+    backs.onMain === false);
+
   check('the shell exposes every screen', has.fns.length === 6, has.fns.join(','));
   check('no page errors', errors.length === 0, errors.slice(0, 4).join(' | '));
   for (const [id] of screens) note(`shot -> ${path.join(OUT, `menu-${id}.jpg`)}`);

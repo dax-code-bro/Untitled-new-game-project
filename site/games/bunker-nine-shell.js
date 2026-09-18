@@ -269,6 +269,20 @@ var CSS = `
   background:#05060a; display:flex; align-items:center; justify-content:center;
   -webkit-font-smoothing:antialiased; }
 #b9shell.gone { display:none; }
+/* ---- a back button, on every screen that has somewhere to go ----
+   Escape and B have always worked and neither is visible. A player on
+   a screen they did not mean to open should be able to SEE the way
+   out, and one that is always in the same corner is one the hand
+   learns. Hidden on the main menu, which is the bottom of the stack. */
+#b9shell .backbtn { position:absolute; left:26px; top:22px; z-index:40;
+  pointer-events:auto; cursor:pointer; font:inherit; color:#c8bfa8;
+  background:rgba(232,221,200,.05); border:1px solid #4a4234;
+  padding:8px 16px 8px 13px; font-size:12px; letter-spacing:.22em;
+  text-transform:uppercase; display:flex; align-items:center; gap:9px; }
+#b9shell .backbtn:hover, #b9shell .backbtn.on { border-color:#ffd27a; color:#ffd27a; }
+#b9shell .backbtn i { font-style:normal; font-size:15px; line-height:1; }
+#b9shell .backbtn small { font-size:9.5px; letter-spacing:.18em; color:#6b6455; }
+#b9shell .backbtn.hide { display:none; }
 /* The game builds its character picker as part of its HUD and shows it
    the moment it exists. Until the player has chosen Zombies there is
    nothing to pick a character for, so it is held back here rather than
@@ -1059,6 +1073,8 @@ function buildDom() {
       <div class="pauseacts"></div>
     </div>
   </div>`;
+  root.insertAdjacentHTML('afterbegin',
+    '<div class="backbtn hide"><i>&#8592;</i>Back<small>ESC / B</small></div>');
   document.body.appendChild(root);
 
   /* The two tabs answer a pointer as well as the shoulder buttons.
@@ -1098,9 +1114,42 @@ function show(which) {
   });
   root.classList.remove('gone');
   root.classList.toggle('thin', which === 'pause');
+  /* THE STAGE GOES AWAY WITH THE SCREEN IT BELONGS TO.
+   *
+     `staged` makes the whole shell transparent so the operator can be
+     seen through it. It was set when the operator tab painted and
+     removed only by closeMP and by switching tabs -- so walking out of
+     the operators tab any other way (back to the main menu, into
+     settings, into a match) left it set, and every menu in the game
+     was still there and completely invisible.
+
+     "The menus are gone again" is that class, and this is the one
+     place every screen change passes through. */
+  /* The back button knows where it is. It goes wherever B and Escape
+     already go -- navBack, which every screen sets up when it opens --
+     so there is exactly one answer to "what does back do here" rather
+     than one per screen. */
+  var back = root.querySelector('.backbtn');
+  if (back) back.classList.toggle('hide', which === 'menu' || which === 'load');
+
+  if (which !== 'mp') {
+    root.classList.remove('staged');
+    document.body.classList.remove('b9staged');
+    if (W.MENU_STAGE) W.MENU_STAGE.release();
+  }
 }
 
 function hideAll() { root.classList.add('gone'); }
+
+/* Wired once. It calls navBack, which is what B and Escape call, so a
+   screen that already knows how to go back needs to know nothing about
+   this button existing. */
+function wireBack() {
+  var b = root && root.querySelector('.backbtn');
+  if (!b || b.__wired) return;
+  b.__wired = true;
+  b.addEventListener('click', function () { navBack(); });
+}
 
 /* ================================================================
    LOADING
@@ -1179,6 +1228,7 @@ SHELL.boot = function (opts) {
   opts = opts || {};
   loadSettings();
   buildDom();
+  wireBack();
   show('load');
   el.tip.textContent = TIPS[(Math.random() * TIPS.length) | 0];
   setBar(0, STEPS[0].label);
