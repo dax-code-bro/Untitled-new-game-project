@@ -11255,12 +11255,128 @@ function hurtPlayer(game, S, P, dmg, sfx, kind, from) {
   if (P.hp <= lowAt && P.hp + dmg > lowAt) { S.voice(LINES.nearDeath); S.bark('lastStand', true); }
   if (P.hp <= 0) {
     P.alive = false;
-    S.gameOver = true;
     closeCrate(S);
     document.exitPointerLock && document.exitPointerLock();
     S.bark('death', true);
     S.voice(LINES.gameOver, true);
-    S.hud.gameOver(S.round, S.killsTotal);
+    /* The card waits. gameOver is what stops the round loop AND what
+       puts the card up, and setting it here did both at the same
+       instant -- so there was never anywhere for a death to happen.
+       P.alive going false already stops the round; the sequence runs on
+       its own hook and raises gameOver when it is finished. */
+    beginDeath(game, S, P, kind, from);
+    if (!S.dying) { S.gameOver = true; S.hud.gameOver(S.round, S.killsTotal); }
+  }
+}
+
+/* ================= HOW YOU DIED =================
+ *
+ * Dying was one frame: alive goes false, the round ends, the card comes
+ * up. Seven different things can kill you in this game and every one of
+ * them ended the same way, which throws away the only moment the player
+ * is guaranteed to be paying attention.
+
+   So the camera comes off the rig and plays a short shot, and WHICH shot
+   is the thing that killed you. None of this is a new system -- lookAt
+   is the same cutscene camera the boat ending uses, and every number
+   below is a curve over one clock.
+
+     MAULED      you go down and the thing that did it is the last thing
+                 you see: the camera falls to the floor and turns toward
+                 the attacker on the way. `from` is already passed to
+                 hurtPlayer for the flinch direction; it is what aims
+                 this too.
+     DROWNED     no fall, because water does not let you. The view tilts
+                 back and sinks, and the surface goes on getting further
+                 away after you have stopped moving.
+     FALL        the ground arrives. One hard stop, and then you are
+                 looking straight up at the sky with nothing else in the
+                 frame, which is the whole of what that death is.
+     BLAST       thrown, and still turning when you land. The only one
+                 that rolls.
+     SHOT        knocked back off your feet -- shorter than the others,
+                 because a bullet is not a struggle.
+
+   The gate at the top of the round loop is already `!P.alive`, so the
+   round stops of its own accord. The card waits on S.dying instead of
+   going up with the last point of health. */
+const DEATHS = {
+  melee:      { dur: 3.1, fall: 1.55, turn: 1, roll: 0.22, label: 'MAULED' },
+  drown:      { dur: 3.4, fall: 0.55, turn: 0, roll: 0.05, sink: 1.1, label: 'DROWNED' },
+  fall:       { dur: 2.3, fall: 1.70, turn: 0, roll: 0.05, up: 1, label: 'THE GROUND' },
+  void:       { dur: 2.3, fall: 1.70, turn: 0, roll: 0.05, up: 1, label: 'THE DROP' },
+  blast:      { dur: 2.9, fall: 1.60, turn: 0, roll: 1.35, label: 'THE BLAST' },
+  projectile: { dur: 2.5, fall: 1.50, turn: 0.4, roll: 0.30, label: 'SHOT' },
+  turret:     { dur: 2.5, fall: 1.50, turn: 0.4, roll: 0.30, label: 'SHOT' },
+};
+
+function beginDeath(game, S, P, kind, from) {
+  if (S.dying) return;
+  const cam = game.camera;
+  const def = DEATHS[kind] || DEATHS.projectile;
+  const f = { x: cam.target.x - cam.position.x, y: cam.target.y - cam.position.y,
+    z: cam.target.z - cam.position.z };
+  S.dying = {
+    kind, def, t: 0,
+    eye: [cam.position.x, cam.position.y, cam.position.z],
+    fwd: [f.x, f.y, f.z],
+    /* Where it came from, if anything did. A fall has no attacker and
+       must not try to look at one. */
+    from: from ? [from.x, from.y, from.z] : null,
+    /* Which way the body twists as it goes. Fixed at the moment of
+       death rather than rolled per frame, so the shot is one fall and
+       not a shudder. */
+    spin: Math.random() < 0.5 ? -1 : 1,
+  };
+}
+
+function updateDeath(game, S, P, hud, dt) {
+  const D = S.dying;
+  D.t += dt;
+  const u = Math.min(1, D.t / D.def.dur);
+  /* Ease out: most of the movement in the first third, the way a body
+     that has stopped holding itself up actually falls. */
+  const e = 1 - Math.pow(1 - u, 2.4);
+
+  const eye = D.eye, fwd = D.fwd;
+  const drop = D.def.fall * e + (D.def.sink ? D.def.sink * u : 0);
+  const px = eye[0], py = eye[1] - drop, pz = eye[2];
+
+  /* Where it is looking. Straight up for a fall, at the killer for a
+     mauling, and otherwise along the way you were already facing with
+     the nose coming down as you go. */
+  let tx, ty, tz;
+  if (D.def.up) {
+    tx = px + fwd[0] * 0.2; ty = py + 3.0; tz = pz + fwd[2] * 0.2;
+  } else if (D.from && D.def.turn > 0) {
+    const k = D.def.turn * e;
+    tx = px + (fwd[0] * (1 - k) + (D.from[0] - px) * k);
+    ty = py + (fwd[1] * (1 - k) + (D.from[1] - py) * k) - 0.35 * e;
+    tz = pz + (fwd[2] * (1 - k) + (D.from[2] - pz) * k);
+  } else {
+    tx = px + fwd[0]; ty = py + fwd[1] - 0.9 * e; tz = pz + fwd[2];
+  }
+
+  /* The roll, about the look axis. Rodrigues on the world up, which is
+     the same trick the flinch uses. */
+  const ang = D.def.roll * D.spin * e;
+  const ca = Math.cos(ang), sa = Math.sin(ang);
+  const dx = tx - px, dy = ty - py, dz = tz - pz;
+  const dl = Math.hypot(dx, dy, dz) || 1;
+  const ax = dx / dl, ay = dy / dl, az = dz / dl;
+  const ux = 0, uy = 1, uz = 0;
+  const dot = ax * ux + ay * uy + az * uz;
+  const up = [
+    ux * ca + (ay * uz - az * uy) * sa + ax * dot * (1 - ca),
+    uy * ca + (az * ux - ax * uz) * sa + ay * dot * (1 - ca),
+    uz * ca + (ax * uy - ay * ux) * sa + az * dot * (1 - ca),
+  ];
+  game.lookAt([px, py, pz], [tx, ty, tz], up);
+
+  if (u >= 1 && !D.done) {
+    D.done = true;
+    S.gameOver = true;
+    hud.gameOver(S.round, S.killsTotal, D.def.label);
   }
 }
 
@@ -13532,11 +13648,18 @@ function makeHud() {
       paint(current());
     },
     hideTitle() { els.title.style.opacity = 0; setTimeout(() => { els.title.style.display = 'none'; }, 1500); },
-    gameOver(round, kills) {
+    gameOver(round, kills, cause) {
       // The update loop stops calling aim() once you are down, so the glass
       // would otherwise stay up over the death screen.
       els.scope.style.opacity = 0;
-      els.title.innerHTML = `<h1 style="color:#b3221c">YOU FELL</h1>
+      /* WHAT KILLED YOU, on the card. The sequence you just watched
+         already told you -- but a line naming it is what turns a death
+         into something you can compare with the last one, and it costs
+         one word that the caller already knows. */
+      const by = cause
+        ? `<p style="color:#8c7f68;letter-spacing:.3em;font-size:12px;margin-top:-6px">${cause}</p>`
+        : '';
+      els.title.innerHTML = `<h1 style="color:#b3221c">YOU FELL</h1>${by}
         <p>SURVIVED TO ROUND ${round} &nbsp;·&nbsp; ${kills} OF THE DEAD PUT DOWN</p>
         <p class="go" style="color:#e8ddc8;margin-top:22px;cursor:pointer">CLICK TO STAND POST AGAIN</p>`;
       els.title.style.display = 'flex';
@@ -14247,6 +14370,16 @@ function start(opts = {}) {
        fighting behind a progress bar. */
     if (S.updating) return;
     if (S.gameOver || !S.started) return;
+
+    /* DYING, which is not the same as dead.
+     *
+       This sits above everything else in the round for the same reason
+       the boat does: once you are going down, movement, firing and
+       spawning are not your business any more, and the shot drives
+       itself off the same dt. It sits BELOW the gameOver gate because
+       the sequence is what raises gameOver -- putting it above would be
+       a loop that runs after the card is up. */
+    if (S.dying && !S.dying.done) { updateDeath(game, S, P, hud, dt); return; }
 
     /* THE WAY OUT, once it is under way. Everything past this point is
        the round -- moving, shooting, spawning, the dead -- and none of
@@ -15516,6 +15649,24 @@ function start(opts = {}) {
     god(on) { S.godMode = on !== false; },
     /* Hurt a body directly, so a harness can look at what a hit throws
        off it without having to line up a shot first. */
+    /* Hurt the PLAYER, by a named cause, from a place. There was a hook
+       for hurting a zombie and none for hurting the man, so a death
+       could only be tested by arranging to actually be killed -- which
+       is a spawn, a path and a swing, none of which is the thing under
+       test. */
+    hurtMe(kind, from, dmg) {
+      hurtPlayer(game, S, P, dmg == null ? 9999 : dmg, sfx, kind || 'projectile',
+        from ? { x: from[0], y: from[1], z: from[2] } : null);
+    },
+    dying() {
+      const d = S.dying;
+      if (!d) return null;
+      const c = game.camera;
+      return { kind: d.kind, t: +d.t.toFixed(3), done: !!d.done,
+        label: d.def.label, dur: d.def.dur,
+        eye: [+c.position.x.toFixed(3), +c.position.y.toFixed(3), +c.position.z.toFixed(3)],
+        at: [+c.target.x.toFixed(3), +c.target.y.toFixed(3), +c.target.z.toFixed(3)] };
+    },
     hurt(z, dmg, at, headshot, source) {
       const p = z.actor.position;
       hurtZombie(game, S, z, dmg, at || [p.x, p.y + 0.9, p.z], !!headshot, source || 'bullet');
