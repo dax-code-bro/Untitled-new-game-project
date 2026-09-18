@@ -86,27 +86,43 @@ try {
   check('and the key it was moved off does nothing', onOld < 0.15, `${onOld}m`);
 
   /* Crouch is a state rather than a distance, so it is read off the
-     man rather than off how far he went. */
+     man rather than off how far he went.
+
+     CROUCHING **OR** PRONE. Holding the crouch key past HOLD_T drops
+     you flat, which is the point of the drop mechanic -- and a frame
+     under SwiftShader is about half a second, so six of them is three
+     seconds and the man is long since on his face. The first version
+     of this asked only for `crouching` and reported that a working
+     rebind did nothing. What the key has to do is change his stance;
+     which of the two low stances he ends in is the hold timer's
+     business, not the binding's. */
   const crouch = await page.evaluate(async () => {
     const ev = (type, code, key) => window.dispatchEvent(new KeyboardEvent(type,
       { key, code, bubbles: true }));
-    const was = !!window.MP.match.you.crouching;
+    const low = () => {
+      const y = window.MP.match.you;
+      return !!(y.crouching || y.prone || y.sliding);
+    };
+    const settle = async (n) => {
+      for (let i = 0; i < n; i++) await new Promise((r) => requestAnimationFrame(r));
+    };
+    const was = low();
     ev('keydown', 'KeyN', 'n');
-    for (let i = 0; i < 6; i++) await new Promise((r) => requestAnimationFrame(r));
-    const onN = !!window.MP.match.you.crouching;
+    await settle(4);
+    const onN = low();
     ev('keyup', 'KeyN', 'n');
-    for (let i = 0; i < 6; i++) await new Promise((r) => requestAnimationFrame(r));
-    const offN = !!window.MP.match.you.crouching;
+    await settle(10);
+    const offN = low();
     ev('keydown', 'KeyC', 'c');
-    for (let i = 0; i < 6; i++) await new Promise((r) => requestAnimationFrame(r));
-    const onC = !!window.MP.match.you.crouching;
+    await settle(4);
+    const onC = low();
     ev('keyup', 'KeyC', 'c');
-    for (let i = 0; i < 6; i++) await new Promise((r) => requestAnimationFrame(r));
+    await settle(10);
     return { was, onN, offN, onC };
   });
-  note(`crouch: start ${crouch.was}, on N ${crouch.onN}, released ${crouch.offN}, on C ${crouch.onC}`);
+  note(`low stance: start ${crouch.was}, on N ${crouch.onN}, released ${crouch.offN}, on C ${crouch.onC}`);
   check('crouch answers to the key it was bound to', crouch.was === false && crouch.onN === true);
-  check('and lets go when it is released', crouch.offN === false);
+  check('and stands back up when it is released', crouch.offN === false);
   check('and the old crouch key is no longer a crouch key', crouch.onC === false);
 
   check('no page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
