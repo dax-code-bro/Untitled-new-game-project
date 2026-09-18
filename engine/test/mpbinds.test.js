@@ -106,24 +106,40 @@ try {
     const settle = async (n) => {
       for (let i = 0; i < n; i++) await new Promise((r) => requestAnimationFrame(r));
     };
+    /* WAIT FOR IT TO HAPPEN, rather than guessing how long it takes.
+       A fixed four-frame settle reported `on N false, released true` --
+       the stance did change, one sample too late, and the check read
+       the lag as a dead binding and then read the leftover crouch as
+       the old key still working. Three failures, one cause, and the
+       cause was the clock. Polling until it flips says both what
+       happened and how long it took. */
+    const until = async (want, n) => {
+      for (let i = 0; i < n; i++) {
+        if (low() === want) return i;
+        await new Promise((r) => requestAnimationFrame(r));
+      }
+      return low() === want ? n : -1;
+    };
     const was = low();
     ev('keydown', 'KeyN', 'n');
-    await settle(4);
-    const onN = low();
+    const onN = await until(true, 16);
     ev('keyup', 'KeyN', 'n');
-    await settle(10);
-    const offN = low();
+    const offN = await until(false, 16);
+    /* And the old key: it must NEVER take him low, so this one wants
+       the whole budget to elapse without it happening. */
     ev('keydown', 'KeyC', 'c');
-    await settle(4);
-    const onC = low();
+    const onC = await until(true, 16);
     ev('keyup', 'KeyC', 'c');
-    await settle(10);
+    await until(false, 16);
     return { was, onN, offN, onC };
   });
-  note(`low stance: start ${crouch.was}, on N ${crouch.onN}, released ${crouch.offN}, on C ${crouch.onC}`);
-  check('crouch answers to the key it was bound to', crouch.was === false && crouch.onN === true);
-  check('and stands back up when it is released', crouch.offN === false);
-  check('and the old crouch key is no longer a crouch key', crouch.onC === false);
+  note(`low stance: start ${crouch.was}, went low ${crouch.onN} frames after N, `
+    + `stood up ${crouch.offN} frames after release, old key C ${crouch.onC}`);
+  check('crouch answers to the key it was bound to',
+    crouch.was === false && crouch.onN >= 0, `${crouch.onN} frames`);
+  check('and stands back up when it is released', crouch.offN >= 0, `${crouch.offN} frames`);
+  check('and the old crouch key is no longer a crouch key', crouch.onC === -1,
+    crouch.onC === -1 ? '' : `went low ${crouch.onC} frames after C`);
 
   check('no page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
   console.log(`\n  ${passed} passed, ${failed} failed`);

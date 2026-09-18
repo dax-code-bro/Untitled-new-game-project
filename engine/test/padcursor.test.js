@@ -134,12 +134,29 @@ window.__stick = function (a, b) { window.__pad.axes[0] = a; window.__pad.axes[1
     /* Walk the pointer onto the button, then press A. */
     window.MP.pointer.set(true);
     const target = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    /* THE WALK COULD NOT CONVERGE, and this is the harness's control
+       loop rather than anything the game does.
+
+       The pointer moves 980*dt px a poll with dt capped at 0.1, and
+       SwiftShader delivers about two frames a second, so every step is
+       up to 98px. The gain only began easing inside 40px -- which
+       still yields a ~49px step -- and the loop broke only within 6px.
+       A 98px step and a 6px window oscillate across the target
+       forever, and it stopped 75.2px away, about one button's height,
+       which puts it on Return to Lobby instead of Play Again. The same
+       failure to the tenth of a pixel on the commit before this one,
+       so it was never flakiness and never the game.
+
+       Easing from 160px shrinks the step to 12px at 20px out and 6px
+       at 10px out, so it settles. The window is 14px, which is well
+       inside a button. */
     for (let i = 0; i < 260; i++) {
       const p = window.MP.pointer.at;
-      window.__stick(Math.max(-1, Math.min(1, (target.x - p.x) / 40)),
-        Math.max(-1, Math.min(1, (target.y - p.y) / 40)));
+      window.__stick(Math.max(-1, Math.min(1, (target.x - p.x) / 160)),
+        Math.max(-1, Math.min(1, (target.y - p.y) / 160)));
       await new Promise((rf) => requestAnimationFrame(rf));
-      if (Math.hypot(p.x - target.x, p.y - target.y) < 6) break;
+      const q = window.MP.pointer.at;
+      if (Math.hypot(q.x - target.x, q.y - target.y) < 14) break;
     }
     window.__stick(0, 0);
     const at = window.MP.pointer.at;
@@ -161,7 +178,7 @@ window.__stick = function (a, b) { window.__pad.axes[0] = a; window.__pad.axes[1
     !ended.err && ended.beforeEnd === false && ended.auto === true,
     `before ${ended.beforeEnd}, after ${ended.auto}`);
   check('the pointer still moves once the match is over and the clock stopped',
-    !ended.err && ended.near < 12, `${ended.near}px from the button`);
+    !ended.err && ended.near < 16, `${ended.near}px from the button`);
   check('and pressing A presses the button', ended.clicked === true);
 
   await page.screenshot({ path: path.join(OUT, 'padcursor.jpg'), type: 'jpeg', quality: 86 });
