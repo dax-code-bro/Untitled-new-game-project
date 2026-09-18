@@ -1200,8 +1200,25 @@
       fog: 0xa8c0dc, fogDensity: 0.0032, ground: 0xb0aa9c },     // elev 0.71
     town: { sky: 'overcast', hours: 9.5, exposure: 1.02,
       fog: 0x9aa4b0, fogDensity: 0.0070, ground: 0x9aa0a6 },     // elev 0.79
+    /* NEUTRAL, NOT WARM, AND THE WARM ONE WAS MY FIRST ANSWER.
+       Demolition is a sunset map with orange fog and at eye level it
+       was one orange wash -- floor, walls and sky the same hue. A warm
+       bounce is exactly what makes that worse, by pushing every
+       surface further toward the fog colour, so it was measured:
+       sample a near floor, a near wall and a far wall and take the
+       spread between them, because a map you can read is one where
+       those three differ.
+
+         0x4a3628 shipped   far wall 44.6   spread 36.5
+         0x8c6a4e warm      far wall 65.6   spread 39.2
+         0x8a8378 neutral   far wall 78.1   spread 51.8
+         0x7e8288 cool      far wall 77.9   spread 52.3
+
+       My warm value beat what shipped and lost to both alternatives.
+       Neutral over cool because a blue-grey bounce fights a sunset
+       sky, and the two are within half a point of each other. */
     demolition: { sky: 'sunset', hours: 17.2, exposure: 1.14,
-      fog: 0xc98a58, fogDensity: 0.0038, ground: 0x8c6a4e },     // elev 0.30
+      fog: 0xc98a58, fogDensity: 0.0038, ground: 0x8a8378 },     // elev 0.30
   };
 
   function applySky(game, id) {
