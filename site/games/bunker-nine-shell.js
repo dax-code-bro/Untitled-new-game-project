@@ -2569,9 +2569,66 @@ var ART = {
   launcher:{ butt: -50, rec: 70, hand: 24, barrel: 30, mag: 0,  drop: 14, w: 20 },
 };
 
+/* ================================================================
+   THE OUTLINE IS THE GUN, NOT THE CLASS
+   ================================================================
+   ART above is one drawing per CLASS, so all fourteen assault rifles
+   drew the same picture and all twelve submachine guns drew a second
+   one. "Gun silhouettes in the list" is a fair complaint about a list
+   in which the silhouette tells you nothing about the gun.
+
+   And the proportions are already written down: SERVICE_KINDS in the
+   engine holds, per weapon, where the muzzle is, where the receiver
+   starts and ends, how long the handguard is, where the grip and the
+   magazine hang and how far back the butt goes -- in metres, because
+   that is what the 3D model is built from. Reading it and scaling it
+   to the panel gives a silhouette that IS that gun and that cannot
+   drift away from the model, because it is the model's own table.
+
+   The class drawing stays as the fallback, for the seven weapons that
+   are hand-built and not in the table at all. */
+function gunProfile(g) {
+  var A = ART[g.cls] || ART.assault;
+  var h = SHELL.handle && SHELL.handle();
+  var K = null;
+  try { K = h && h.game && h.game.serviceArmSpec ? h.game.serviceArmSpec(g.id) : null; }
+  catch (e) { K = null; }
+  if (!K || !K.rec || !K.barrel) return A;
+  /* Metres to panel units. A rifle is about 0.9 m from butt to muzzle
+     and the panel gives it about 150 units, so 150 per metre lands
+     every weapon in the box with the long ones filling it. */
+  var U = 150;
+  var recLen = (K.rec.front - K.rec.rear) * U;
+  var hgLen = (K.hg && K.hg.kind !== 'none')
+    ? Math.max(0, (K.hg.x1 - K.hg.x0)) * U : 0;
+  var barrel = Math.max(6, (K.muzzle - (K.hg && K.hg.kind !== 'none' ? K.hg.x1 : K.rec.front)) * U);
+  var butt = (K.stock && K.stock.kind !== 'none')
+    ? (K.stock.butt - K.rec.rear) * U : 0;
+  var magLen = 0;
+  if (K.mag && K.mag.kind !== 'none') {
+    magLen = K.mag.kind === 'drum' || K.mag.kind === 'pan' ? 10
+      : K.mag.kind === 'belt' ? 14
+        : Math.max(12, Math.min(46, (K.mag.len != null ? K.mag.len : 0.20) * U));
+  }
+  return {
+    butt: Math.min(0, butt),
+    rec: Math.max(18, recLen),
+    hand: hgLen,
+    barrel: barrel,
+    mag: magLen,
+    drop: Math.max(12, (K.grip ? K.grip.len : 0.11) * U * 1.6),
+    w: Math.max(8, (K.rec.up + K.rec.down) * U * 0.9),
+    /* Where the grip and the magazine actually are, along the
+       receiver, rather than a fixed twelve and twenty-six units in. */
+    gripAt: K.grip ? (K.grip.x - K.rec.rear) * U : 12,
+    magAt: K.mag && K.mag.x != null ? (K.mag.x - K.rec.rear) * U : 26,
+    real: true,
+  };
+}
+
 function gunArt(g, fitted, hover) {
   if (!g) return '';
-  var A = ART[g.cls] || ART.assault;
+  var A = gunProfile(g);
   var has = {}, hoverSlot = null;
   (fitted || []).forEach(function (id) { var a = MP.att(id); if (a) has[a.slot] = a; });
   if (hover) { var ha = MP.att(hover); if (ha) { has[ha.slot] = ha; hoverSlot = ha.slot; } }
@@ -2612,7 +2669,8 @@ function gunArt(g, fitted, hover) {
     + (xRecEnd + A.hand) + ',' + y + ' L' + xBarEnd + ',' + y + '"/>';
   /* grip and trigger guard */
   s += '<path ' + (has.grip ? st('grip', 9) : 'class="body" stroke="#7d6f5c" stroke-width="9" fill="none" stroke-linecap="round"')
-    + ' d="M' + (x0 + 12) + ',' + (y + 6) + ' L' + (x0 + 6) + ',' + (y + A.drop) + '"/>';
+    + ' d="M' + (x0 + (A.gripAt != null ? A.gripAt : 12)) + ',' + (y + 6)
+    + ' L' + (x0 + (A.gripAt != null ? A.gripAt : 12) - 6) + ',' + (y + A.drop) + '"/>';
   /* magazine */
   if (A.mag) {
     var ml = A.mag;
@@ -2620,9 +2678,10 @@ function gunArt(g, fitted, hover) {
     if (has.mag && /ext/.test(has.mag.id)) ml += 12;
     if (has.mag && /fast/.test(has.mag.id)) ml -= 8;
     s += '<path ' + (has.mag ? st('mag', 10) : 'class="metal" stroke="#9aa0a8" stroke-width="10" fill="none" stroke-linecap="round"')
-      + ' d="M' + (x0 + 26) + ',' + (y + 6) + ' L' + (x0 + 21) + ',' + (y + 6 + ml) + '"/>';
+      + ' d="M' + (x0 + (A.magAt != null ? A.magAt : 26)) + ',' + (y + 6)
+      + ' L' + (x0 + (A.magAt != null ? A.magAt : 26) - 5) + ',' + (y + 6 + ml) + '"/>';
     if (has.mag && /drum/.test(has.mag.id)) {
-      s += '<circle cx="' + (x0 + 22) + '" cy="' + (y + 28) + '" r="15" fill="none" stroke="'
+      s += '<circle cx="' + (x0 + (A.magAt != null ? A.magAt : 26) - 4) + '" cy="' + (y + 28) + '" r="15" fill="none" stroke="'
         + (hoverSlot === 'mag' ? '#ffd27a' : '#9aa0a8') + '" stroke-width="5"/>';
     }
   }
@@ -4178,6 +4237,12 @@ SHELL.handle = function () { return handle; };
    readable at all on a page with no origin, so this is the only way a
    headless check can see what the loadout screen actually did. */
 SHELL.mpState = function () { return mp; };
+/* The weapon outline, so a check can ask whether sixty guns actually
+   draw sixty pictures -- which is the whole point of deriving the
+   outline from each weapon's own measurements, and is not a question
+   a screenshot answers well. */
+SHELL.gunArt = function (g, fitted, hover) { return gunArt(g, fitted, hover); };
+SHELL.gunProfile = gunProfile;
 SHELL.beep = beep;
 
 W.BUNKER_SHELL = SHELL;
