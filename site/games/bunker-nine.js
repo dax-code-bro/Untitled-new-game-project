@@ -4022,7 +4022,12 @@ function placeOnBeach(game, S, P) {
 
   /* A different sky. The map is a grey dusk over cold water and this is
      the opposite of it, which is the whole point of the shot. */
-  game.setSky('day', {
+  /* NOON, NOT 'day'. The bunker's field wants a hard sun for the same
+     reason every other map does: relief that the renderer computes and
+     a soft sky refuses to show. The fog stays heavy here -- this map's
+     horizon is meant to be lost -- but the light on everything inside
+     that horizon is now directional enough to have a shadow side. */
+  game.setSky('noon', {
     zenith: 0x3f8fd0, horizon: 0xffcf90, ground: 0xd8c8a4,
     sun: [-0.5, 0.52, 0.6], sunColor: 0xfff0d0, sunIntensity: 1.35, intensity: 1.15,
     exposure: 0.92, clouds: 0.24, room: 0x8fb8d8, fog: 0xbcd8e8, fogDensity: 0.0022,
@@ -13695,7 +13700,12 @@ function start(opts = {}) {
      and the fog is the colour of the field rather than of air. The horizon
      doubles as the reflection probe for every metal in the map, so it stays
      neutral: warm it and the guns turn to brass. */
-  game.setSky('day', {
+  /* NOON, NOT 'day'. The bunker's field wants a hard sun for the same
+     reason every other map does: relief that the renderer computes and
+     a soft sky refuses to show. The fog stays heavy here -- this map's
+     horizon is meant to be lost -- but the light on everything inside
+     that horizon is now directional enough to have a shadow side. */
+  game.setSky('noon', {
     /* Thinner, and darker.
      *
      * At 0.013 with a fog the colour of dry chalk, everything past thirty

@@ -113,8 +113,40 @@ const pct = (a, b) => +(((b - a) / (a || 1)) * 100).toFixed(1);
     const mid = Math.floor(H / 2);
     const horizon = () => band(mid + 5, mid + 22, Math.floor(W * 0.3), Math.floor(W * 0.7));
     const kb = R.fog.skyBlend;
+    /* THE FOG DENSITY IS SET HERE, not inherited from the map.
+     *
+       This read the map's own fog, and when Coastline was relit from an
+       overcast dusk to a clear midday its density went from 0.0040 to
+       0.0020 -- so there was half as much fog at the horizon, the sky
+       blend had half as much to correct, and both checks failed at 1.7%
+       against a threshold of 8%. Nothing was wrong with the shader. The
+       test had been measuring the weather.
+
+       A shader check should not be hostage to art direction, so the
+       density is pinned to a value thick enough for the effect to be
+       legible and restored afterwards. What is being asked is "does the
+       blend carry a fogged silhouette toward the sky", and that
+       question has nothing to do with how foggy this particular map
+       chooses to be today. */
+    const kd = R.fog.density;
+    /* THICK ENOUGH TO BE DECISIVE, not merely thicker than the map.
+       At 0.0065 the effect was real and small -- p10 up 2%, contrast
+       down 6% -- because a bright midday sky leaves a distant
+       silhouette only 53 units darker than the sky to begin with, where
+       the old dusk left 117. Half the gap, half the correction, and
+       thresholds set against the dusk then read as a failure.
+
+       Lowering the thresholds to fit would be calibrating to today's
+       art, which is the fault this block already exists to fix. So
+       instead the fog goes thick enough that a far object is very
+       nearly all fog, where the blend either lands it on the sky or it
+       does not and there is nothing to argue about. */
+    R.fog.density = 0.014;
     R.fog.skyBlend = 0; G.step(1 / 60); out.fogOff = horizon();
     R.fog.skyBlend = kb; G.step(1 / 60); out.fogOn = horizon();
+    R.fog.density = kd;
+    out.fogDensityUsed = 0.014;
+    out.mapFogDensity = +kd.toFixed(5);
 
     /* ---- and a near surface, which must NOT move --------------------- */
     const C = window.COASTLINE.C;

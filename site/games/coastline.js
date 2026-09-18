@@ -70,7 +70,43 @@ const C = {
    photograph rather than off a palette: the sky is not blue, the horizon
    band is narrow and orange, and the ground bounce is grass rather than
    mud. */
+/* MIDDAY, NOT DUSK.
+   ============================================================
+   This map was lit from the dock photographs: overcast, late, warm, a
+   sun at 0.34 elevation and 1.70 intensity. It was right for the source
+   and it was quietly costing the whole map its surface detail.
+
+   Measured: the normal maps move the shading normal by +151% on the
+   ground and +124% on a wall at range -- they work. But under a diffuse
+   sky skyIrradiance(n) barely changes with the normal, so none of that
+   relief reaches the picture. Sweeping normal strength to TWELVE TIMES
+   its authored value under this sky moved the rendered detail by under
+   two per cent. A soft sky does not show a surface, no matter what the
+   surface is made of.
+
+   So the sun goes up to 58 degrees and up to 6.0, the haze thins, and
+   the sky goes blue. Everything vertical now takes a hard raking light
+   down one side and throws a shadow with an edge on it, which is what
+   the reference screenshots are actually made of.
+
+   The old dusk is kept below as SKY_DUSK. It is the map's origin and it
+   should not be deleted to make room for a brighter one. */
 const SKY = {
+  zenith: 0x1d4fa6, horizon: 0xb6d0ec, ground: 0x6f6a5c,
+  sun: [-0.46, 0.80, 0.39],
+  sunColor: 0xfff6e8, sunIntensity: 6.0, intensity: 1.05,
+  exposure: 0.95, clouds: 0.22,
+  /* Still needed. A bright sky is a good reflection environment
+     outdoors and no help at all under the pier or inside a house, and
+     there is a lot of thin steel out here. */
+  room: 0x8a9096,
+  fog: 0xb0c6de, fogDensity: 0.0020,
+};
+
+/* The dock at dusk, as it was built from the photographs. Kept whole:
+   it is where this map came from, and a lighting choice is not
+   improved by throwing away the one it replaced. */
+const SKY_DUSK = {
   zenith: 0x6d7a88, horizon: 0xd99a63, ground: 0x7e8372,
   /* The sun is NOT straight out over the water, even though that is where
      the first photograph has it.

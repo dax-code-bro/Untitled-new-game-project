@@ -14469,9 +14469,30 @@ const _aQuat = new Quat();
 
 const SKY_PRESETS = {
   day: {
-    zenith: 0x2a5aa8, horizon: 0xa8c4e0, ground: 0x4a453c,
-    sun: [0.42, 0.78, 0.46], sunColor: 0xfff2dd, sunIntensity: 3.6,
-    fog: 0xa8c0dc, fogDensity: 0.0045, clouds: 0.4, exposure: 1.0,
+    /* Lifted toward `noon`. 3.6 against a sky this bright is a sun you
+       can only find by looking for the shadows, and a scene whose light
+       is mostly ambient cannot show a normal map. */
+    zenith: 0x2454a4, horizon: 0xafcae6, ground: 0x615b50,
+    sun: [0.42, 0.78, 0.46], sunColor: 0xfff4e2, sunIntensity: 5.2,
+    fog: 0xa8c0dc, fogDensity: 0.0032, clouds: 0.35, exposure: 0.97,
+  },
+  /* HARD MIDDAY. The one the reference screenshots are lit by, and the
+     only preset in this table that makes the surface detail visible.
+     Everything the renderer computes for a normal map -- and it does
+     compute it, measured at +151% on the ground -- is invisible under a
+     diffuse sky, because skyIrradiance varies slowly with the normal.
+     Relief needs a hard light raking across it, and that means one
+     bright source high enough to throw a shadow and a sky dim enough
+     beside it that the shadow reads.
+
+     The sun is at about 55 degrees rather than straight up. Overhead
+     light puts every shadow directly under the thing casting it, which
+     removes the shadows from the frame just as surely as having no sun
+     at all -- noon in a game is never actually noon. */
+  noon: {
+    zenith: 0x1d4fa6, horizon: 0xb8d2ee, ground: 0x6a6357,
+    sun: [0.34, 0.82, 0.46], sunColor: 0xfff6e8, sunIntensity: 6.2,
+    fog: 0xb4cce4, fogDensity: 0.0022, clouds: 0.22, exposure: 0.94,
   },
   sunset: {
     // Golden hour, not dusk. At 8 degrees of elevation the sun contributes

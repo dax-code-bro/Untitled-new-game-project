@@ -1194,12 +1194,25 @@
      what a bounce term should do and the reason to reach for this one
      rather than for exposure, which would lift both. */
   var SKY = {
-    helipad: { sky: 'dawn', hours: 7.4, exposure: 1.06,
-      fog: 0xb9bcc4, fogDensity: 0.0026, ground: 0x8a8272 },     // elev 0.36
-    resort: { sky: 'day', hours: 15.0, exposure: 1.0,
-      fog: 0xa8c0dc, fogDensity: 0.0032, ground: 0xb0aa9c },     // elev 0.71
-    town: { sky: 'overcast', hours: 9.5, exposure: 1.02,
-      fog: 0x9aa4b0, fogDensity: 0.0070, ground: 0x9aa0a6 },     // elev 0.79
+    /* ALL FOUR IN HARD DAYLIGHT.
+     *
+       These were a dawn, an afternoon, an overcast morning and a
+       sunset -- four moods, and three of them soft. Soft light cannot
+       show a surface: the normal maps move the shading normal by half
+       again on a floor and none of it reaches the picture under a
+       diffuse sky. Every map is midday now.
+
+       The hour still differs per map, and that is the whole of the
+       variety left. It is enough: an hour moves the sun across the sky,
+       so Helipad's shadows fall the opposite way to Demolition's and
+       the four still read as four places rather than one. What they no
+       longer do is trade away their detail for a colour cast. */
+    helipad: { sky: 'noon', hours: 10.6, exposure: 0.95,
+      fog: 0xb6cfea, fogDensity: 0.0018, ground: 0x7c7668 },
+    resort: { sky: 'noon', hours: 13.2, exposure: 0.93,
+      fog: 0xb2cde8, fogDensity: 0.0022, ground: 0x8e8778 },
+    town: { sky: 'noon', hours: 11.4, exposure: 0.96,
+      fog: 0xb8d0ea, fogDensity: 0.0030, ground: 0x84807a },
     /* NEUTRAL, NOT WARM, AND THE WARM ONE WAS MY FIRST ANSWER.
        Demolition is a sunset map with orange fog and at eye level it
        was one orange wash -- floor, walls and sky the same hue. A warm
@@ -1217,8 +1230,12 @@
        My warm value beat what shipped and lost to both alternatives.
        Neutral over cool because a blue-grey bounce fights a sunset
        sky, and the two are within half a point of each other. */
-    demolition: { sky: 'sunset', hours: 17.2, exposure: 1.14,
-      fog: 0xc98a58, fogDensity: 0.0038, ground: 0x8a8378 },     // elev 0.30
+    /* The latest hour of the four, so its sun is lowest and its shadows
+       are longest -- a demolition site raked across by hard light is the
+       most it can be without going back to the orange wash the note
+       above is about. */
+    demolition: { sky: 'noon', hours: 15.4, exposure: 0.97,
+      fog: 0xb4cbe4, fogDensity: 0.0026, ground: 0x807a70 },
   };
 
   function applySky(game, id) {
