@@ -175,14 +175,20 @@ window.__stick = function (a, b) { window.__pad.axes[0] = a; window.__pad.axes[1
       const q = window.MP.pointer.at;
       if (Math.hypot(q.x - target.x, q.y - target.y) < 14) break;
     }
-    /* LET IT SETTLE BEFORE MEASURING IT. The loop breaks on a reading
-       taken inside the frame, but the stick it set is still live for
-       the poll that follows, so the pointer travels one more step
-       after the break -- which is how a 14px window reported 22.8px
-       away. Zero the stick, give it two frames to stop, then look. The
-       press landed at 22.8 so the bar could simply have been moved to
-       fit the number; measuring it once it has stopped is the thing
-       that is actually true. */
+    /* IT STOPS 25px SHORT BY DESIGN, AND THAT IS FINE.
+       22.8px away, to the tenth of a pixel, on three runs in a row. It
+       is not drift and it is not the frame rate -- poll() applies a
+       0.16 deadzone to the stick, and this walk asks for d/160, so the
+       stick falls under the deadzone the moment d drops below 25.6px
+       and the cursor stops exactly where it is. (I guessed drift first
+       and added a settle for it. The settle changed the number by
+       nothing at all, which is how I know the guess was wrong.)
+
+       Nor can the gain be tuned out of it: to avoid overshooting, the
+       gain has to exceed 980*dt, which is 98 at this frame rate, and
+       any gain above 98 stops more than 15px out. A cursor with a
+       deadzone cannot converge on a point. It does not need to -- it
+       needs to land ON THE BUTTON, so that is what is asked below. */
     window.__stick(0, 0);
     for (let f = 0; f < 2; f++) await new Promise((rf) => requestAnimationFrame(rf));
     const at = window.MP.pointer.at;
@@ -190,7 +196,10 @@ window.__stick = function (a, b) { window.__pad.axes[0] = a; window.__pad.axes[1
     window.__press(0, true);
     for (let f = 0; f < 5; f++) await new Promise((rf) => requestAnimationFrame(rf));
     window.__press(0, false);
-    return { near: +near.toFixed(1), clicked, beforeEnd, auto,
+    const onBtn = at.x >= r.left && at.x <= r.right
+      && at.y >= r.top && at.y <= r.bottom;
+    return { near: +near.toFixed(1), onBtn, clicked, beforeEnd, auto,
+      box: [Math.round(r.width), Math.round(r.height)],
       timeScale: window.MP.game.timeScale };
   });
   note(`after the match: ${JSON.stringify(ended)}`);
@@ -204,7 +213,8 @@ window.__stick = function (a, b) { window.__pad.axes[0] = a; window.__pad.axes[1
     !ended.err && ended.beforeEnd === false && ended.auto === true,
     `before ${ended.beforeEnd}, after ${ended.auto}`);
   check('the pointer still moves once the match is over and the clock stopped',
-    !ended.err && ended.near < 16, `${ended.near}px from the button`);
+    !ended.err && ended.onBtn,
+    `${ended.near}px from the middle of a ${ended.box}px button, on it: ${ended.onBtn}`);
   check('and pressing A presses the button', ended.clicked === true);
 
   await page.screenshot({ path: path.join(OUT, 'padcursor.jpg'), type: 'jpeg', quality: 86 });
