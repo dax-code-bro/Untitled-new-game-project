@@ -72,7 +72,13 @@ const note = (s) => console.log(`  ..   ${s}`);
       ['mp5', 'selfLoading'],
       ['obliterator', 'revolver'],
       ['remington', 'manual'],
-      ['scattergun', 'break'],
+      /* `scatter`, not `scattergun` -- the first run of this named the
+         builder rather than the weapon id and the existence check
+         caught it. That check earning its place on its first outing is
+         the argument for having it: without it the break gun would
+         have been silently skipped and the suite would have reported
+         all green while testing four of the five actions. */
+      ['scatter', 'break'],
     ];
     const out = { guns: [], missing: [] };
 
@@ -146,6 +152,15 @@ const note = (s) => console.log(`  ..   ${s}`);
       by.remington.atShot === 0, `${by.remington.atShot} cases at the shot`);
     check('and lets go of it when the bolt is worked',
       by.remington.afterCycle > 0, 'it never ejected at all');
+  } else failed++;
+
+  /* A break gun holds both cases until it is opened, which happens on
+     the reload rather than on the shot or the refire. So within the
+     window this test watches it should throw nothing at all. */
+  if (by.scatter) {
+    check('a break gun holds its cases until it is opened',
+      by.scatter.atShot === 0 && by.scatter.afterCycle === 0,
+      `${by.scatter.atShot} at the shot, ${by.scatter.afterCycle} by the end of the refire`);
   } else failed++;
 
   // And the self-loaders, which were always right and must stay so.

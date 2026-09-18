@@ -2331,7 +2331,13 @@ const ARM_MAT = {
      ceiling lamp is a lamp. The reflectance is right -- oxide-blued steel
      really is about half of bare steel, tinted cold -- so what moves is
      how tightly it reflects. Gun blue is satin. */
-  blued: { color: 0x737e8a, texture: 'metal', roughness: 0.45, metalness: 1 },
+  /* And blued steel is now the `bluing` recipe rather than a cold tint
+     on brushed metal. Everything the two notes above worked out the
+     hard way -- that the reflectance is about half of bare steel, that
+     it is satin rather than a mirror -- is in the recipe, along with
+     the polishing swirl and the wear back to bright steel on the edges
+     that a tint could never have supplied. */
+  blued: { color: 0xffffff, texture: 'bluing', roughness: 1, metalness: 1, uvScale: 2.6 },
   // Machined bright — the Paralyzer and the Model 5 are instruments.
   /* Machined bright — the Paralyzer and the Model 5 are instruments.
 
@@ -2343,7 +2349,9 @@ const ARM_MAT = {
   bright: { color: 0x848c95, texture: 'metal', roughness: 0.45, metalness: 1 },
   // A greyer, rougher steel for things that get hit.
   grey: { color: 0x6b7076, texture: 'metal', roughness: 0.53, metalness: 1 },
-  poly: { color: 0x1e2226, texture: 'smooth', roughness: 0.72, metalness: 0 },
+  /* Moulded polymer furniture, on the recipe with the mould's pebble
+     grain in it rather than on a flat fill. */
+  poly: { color: 0xc8ccd2, texture: 'polymer', roughness: 1, metalness: 0, uvScale: 4 },
   rubber: { color: 0x141618, texture: 'smooth', roughness: 0.86, metalness: 0 },
   /* uvScale 5, not 18.
    *
@@ -2352,9 +2360,30 @@ const ARM_MAT = {
    * out banded diagonally in cream and tan -- a barber's pole, not wood.
    * It is on every wooden part in the game. Five repeats over a forearm
    * puts the figure along the piece, which is the way a stock is cut. */
-  walnut: { color: 0x5c4028, texture: 'wood', roughness: 0.64, metalness: 0, uvScale: 5 },
-  copper: { color: 0xb46a33, texture: 'metal', roughness: 0.34, metalness: 1 },
-  brass: { color: 0xc9a227, texture: 'metal', roughness: 0.30, metalness: 1 },
+  /* ON THE REAL RECIPES NOW, AND NOT ON `wood` AND `metal`.
+   *
+     Everything below used to be a tint on one of two recipes. `metal`
+     is a BRUSHED PANEL -- ninety cycles of anisotropic grain, authored
+     for a receiver flat seen from across a room -- and a brushed panel
+     on a twelve-millimetre cartridge case is a bullet made out of a
+     filing cabinet. `wood` is six sawn boards to a tile with seams and
+     knots between them, which is right for a crate and absurd on a
+     rifle stock: a stock is one piece of one tree.
+
+     The bank has cartridge brass, gilding metal, lead, magnetite over
+     polished steel, and walnut with an oil finish, all authored at the
+     size they are actually looked at. This is where they get used.
+
+     NO worldUv ON ANY OF THEM, deliberately, and the note in the
+     material file says why: a world projection swims across anything
+     that moves, and a gun in your hands is the most moving thing in
+     the game. Face UVs are the right choice here for the one reason
+     they are ever the right choice -- every part of every gun is
+     within a factor of about three of the same size, which is the
+     condition under which tiles-per-face means something. */
+  walnut: { color: 0xd8c9b4, texture: 'walnut', roughness: 1, metalness: 0, uvScale: 2.2 },
+  copper: { color: 0xffffff, texture: 'copper', roughness: 1, metalness: 1, uvScale: 3 },
+  brass: { color: 0xffffff, texture: 'brass', roughness: 1, metalness: 1, uvScale: 3 },
   glow: { color: 0x9fe8ff, texture: 'smooth', roughness: 0.30, metalness: 0, emissive: 0x54c8ff, emissiveStrength: 1.5 },
   glass: { color: 0xb6c6cc, texture: 'smooth', roughness: 0.12, metalness: 0, opacity: 0.42 },
   /* Smoked polymer, for a magazine you are meant to see the rounds
@@ -2365,7 +2394,15 @@ const ARM_MAT = {
   /* Lead, for the exposed part of a cast bullet, and the grey lacquer
      on a steel case. Both are dielectric: a metalness of 1 here turns a
      bullet into a mirror and loses its shape entirely. */
-  lead: { color: 0x9a9690, texture: 'metal', roughness: 0.58, metalness: 0.2 },
+  /* METALNESS 1, AND THE OLD NOTE HERE SAID 0.2 FOR A GOOD REASON THAT
+     NO LONGER HOLDS. It said a metalness of 1 turns a bullet into a
+     mirror and loses its shape -- true, on the `metal` recipe, whose
+     roughness sits around 0.4. Lead is a conductor; what stops it
+     being a mirror is not pretending it is a dielectric, it is that
+     lead oxidises to a grey film in minutes and the film is what you
+     see. The recipe runs 0.58 to 0.92 rough, which is closer to
+     unglazed clay than to pewter, so it keeps its shape at 1. */
+  lead: { color: 0xffffff, texture: 'lead', roughness: 1, metalness: 1, uvScale: 3 },
   lacquer: { color: 0x5d6b52, texture: 'smooth', roughness: 0.52, metalness: 0.1 },
   // The reticle has to be visible against mud and against a bright sky,
   // so it is emissive rather than merely dark.

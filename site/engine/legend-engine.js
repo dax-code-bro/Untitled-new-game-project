@@ -3490,19 +3490,103 @@ const TextureLib = {
          The base is also lifted. 0.115 is darker than magnetite really
          is; the reason a blued gun looks black is the low ROUGHNESS
          throwing all its light into one highlight, not the albedo. */
-      const swirl = n.fbm(u * 26, v * 9, 6.3, 3) * 0.5 + 0.5;
+      /* Two octaves, not three: the third lands near two texels a
+         cycle at the 256 the world builds at, and on a dark metal that
+         reads as sensor noise rather than as polishing. */
+      const swirl = n.fbm(u * 26, v * 9, 6.3, 2) * 0.5 + 0.5;
       const cloud = n.fbm(u * 3.5, v * 3.5, 17.7, 3) * 0.5 + 0.5;
       const wearF = n.fbm(u * 4, v * 4, 55.3, 2) * 0.5 + 0.5;
-      const wear = Math.max(0, wearF - 0.72) / 0.28;
-      const base = 0.155 + cloud * 0.045 + (swirl - 0.5) * 0.020;
+      /* SMOOTHSTEP, NOT A DIVIDED THRESHOLD. `(x - 0.72) / 0.28` is a
+         linear ramp that reaches 1 only at the very peak of the field,
+         so what it selects is not a patch, it is the handful of texels
+         at the top of each blob -- and with the albedo term below
+         ADDING rather than blending, those texels overshot to white.
+         The render was a dark ball with a dozen hard sparkles on it,
+         which is the same salt-and-pepper failure this recipe already
+         had once, arrived at by a different route. */
+      /* AND IT IS RARE. At smoothstep(0.60, 0.90) roughly a quarter of
+         a field whose mean is 0.5 counts as worn, so a quarter of the
+         receiver came back as bare steel and the render read as
+         camouflage.
+
+         The deeper point is that a TILING TEXTURE CANNOT KNOW WHERE
+         THE EDGES ARE, and wear on a gun is almost entirely an edge
+         phenomenon -- the corners of the ejection port, the muzzle
+         crown, the high points a holster rubs. Anything a recipe does
+         here is wear in the wrong places by construction. So it does
+         very little of it: a few per cent, at the extreme peaks, as a
+         hint that the finish is not new. Edge wear belongs to
+         curvature, which is geometry, and this is not the file for
+         it. */
+      const wear = smoothstep(0.88, 1.0, wearF) * 0.55;
+      /* 0.46, AND THE NUMBER CAME FROM THE COMMENT I DELETED.
+       *
+         This recipe has been too dark three times: 0.115, then 0.155,
+         then 0.215, each lift a guess at how much would be enough. The
+         value that works was already written down in ARM_MAT, where
+         blued steel was a tint of 0x737e8a on brushed metal -- 0.45 in
+         sRGB -- under a note explaining that the previous 0x33383e was
+         about a fifth of steel's real reflectance and that a metal has
+         no diffuse term at all, so a dark colour does not make a dark
+         object, it makes a mirror with nothing to reflect.
+
+         At metalness 1 the albedo IS the reflectance. 0.19 sRGB is
+         0.03 linear, which is LOWER THAN A DIELECTRIC'S 0.04 -- a
+         physically impossible metal, and on screen a black hole with
+         two sparkles in it. Oxide-blued steel really does sit near
+         half of bare steel. What makes a blued gun look black is the
+         finish being satin and the light being indoors, not the
+         reflectance being near zero.
+
+         Three lifts by guesswork to arrive at a number that was in the
+         file the whole time. */
+      const base = 0.46 + cloud * 0.07 + (swirl - 0.5) * 0.04;
       /* The blue is in the RATIO, not in a tint on top: magnetite runs
          a few per cent cooler in red than in blue, and at this
          brightness a few per cent is the whole of the colour. */
-      c.r = base * 0.88 + wear * 0.34;
-      c.g = base * 0.94 + wear * 0.35;
-      c.b = base * 1.12 + wear * 0.36;
+      /* AND IT BLENDS TOWARD BARE STEEL RATHER THAN ADDING TO THE
+         OXIDE. Worn bluing is not blued steel plus light -- it is
+         blued steel REPLACED by the metal underneath, which is a mid
+         grey around 0.52 and faintly warm. Adding cannot represent
+         that: it can only ever overshoot, and past the top of the
+         range it clips to white. */
+      // Bare steel is brighter than the oxide over it, but not by much.
+      const bare = 0.66;
+      /* THE BLUE IS A NAME, NOT A HUE, and this is the fifth pass on
+         this material. 0.88 : 0.94 : 1.12 is a strong cast, and at the
+         near-black albedo the recipe started with it was invisible --
+         a few per cent of almost nothing. Lifted to a real steel
+         reflectance the same ratio came back as painted denim.
+
+         A blued receiver in daylight is a very slightly cool grey. The
+         colour is in the last few per cent, and it only ever shows in
+         the highlight. */
+      c.r = (base * 0.97) * (1 - wear) + bare * 1.00 * wear;
+      c.g = (base * 0.99) * (1 - wear) + bare * 1.01 * wear;
+      c.b = (base * 1.04) * (1 - wear) + bare * 1.02 * wear;
       c.metal = 1;
-      c.rough = clamp(0.115 + (swirl - 0.5) * 0.05 + cloud * 0.05 + wear * 0.26, 0.07, 0.62);
+      /* GUN BLUE IS SATIN, AND I HAD TO BE TOLD THAT BY A COMMENT I
+         DELETED. ARM_MAT carried this material as a tint on brushed
+         metal at roughness 0.45, under a note saying it had been
+         corrected twice in opposite directions -- too dark and the
+         receiver was a hole, too smooth and it was a white shape with
+         no form in it -- and ending "Gun blue is satin."
+
+         I replaced that with 0.115, from the physics: magnetite is a
+         thin film over a polished surface and the steel underneath
+         really is near-mirror. The physics is right and the render was
+         a black ball with three sparkles on it, because this engine's
+         environment is a sky gradient and a room term -- a dark mirror
+         in it has almost nothing to reflect, so all a low roughness
+         buys is pinpoint highlights.
+
+         A real gun photographs as dark satin because it is reflecting
+         a whole room. Until there is a room to reflect, the number
+         that produces the look of blued steel is the one that was
+         already there, and two people's worth of photographs had
+         already established it. 0.38, with the range kept wide enough
+         that the polished crown and the worn edges still separate. */
+      c.rough = clamp(0.38 + (swirl - 0.5) * 0.10 + cloud * 0.08 + wear * 0.30, 0.26, 0.72);
       c.ao = 1;
       // Polished steel has no relief at all. This is barely a ripple.
       c.h = (swirl - 0.5) * 0.03 - wear * 0.04;
@@ -22540,7 +22624,13 @@ const ARM_MAT = {
      ceiling lamp is a lamp. The reflectance is right -- oxide-blued steel
      really is about half of bare steel, tinted cold -- so what moves is
      how tightly it reflects. Gun blue is satin. */
-  blued: { color: 0x737e8a, texture: 'metal', roughness: 0.45, metalness: 1 },
+  /* And blued steel is now the `bluing` recipe rather than a cold tint
+     on brushed metal. Everything the two notes above worked out the
+     hard way -- that the reflectance is about half of bare steel, that
+     it is satin rather than a mirror -- is in the recipe, along with
+     the polishing swirl and the wear back to bright steel on the edges
+     that a tint could never have supplied. */
+  blued: { color: 0xffffff, texture: 'bluing', roughness: 1, metalness: 1, uvScale: 2.6 },
   // Machined bright — the Paralyzer and the Model 5 are instruments.
   /* Machined bright — the Paralyzer and the Model 5 are instruments.
 
@@ -22552,7 +22642,9 @@ const ARM_MAT = {
   bright: { color: 0x848c95, texture: 'metal', roughness: 0.45, metalness: 1 },
   // A greyer, rougher steel for things that get hit.
   grey: { color: 0x6b7076, texture: 'metal', roughness: 0.53, metalness: 1 },
-  poly: { color: 0x1e2226, texture: 'smooth', roughness: 0.72, metalness: 0 },
+  /* Moulded polymer furniture, on the recipe with the mould's pebble
+     grain in it rather than on a flat fill. */
+  poly: { color: 0xc8ccd2, texture: 'polymer', roughness: 1, metalness: 0, uvScale: 4 },
   rubber: { color: 0x141618, texture: 'smooth', roughness: 0.86, metalness: 0 },
   /* uvScale 5, not 18.
    *
@@ -22561,9 +22653,30 @@ const ARM_MAT = {
    * out banded diagonally in cream and tan -- a barber's pole, not wood.
    * It is on every wooden part in the game. Five repeats over a forearm
    * puts the figure along the piece, which is the way a stock is cut. */
-  walnut: { color: 0x5c4028, texture: 'wood', roughness: 0.64, metalness: 0, uvScale: 5 },
-  copper: { color: 0xb46a33, texture: 'metal', roughness: 0.34, metalness: 1 },
-  brass: { color: 0xc9a227, texture: 'metal', roughness: 0.30, metalness: 1 },
+  /* ON THE REAL RECIPES NOW, AND NOT ON `wood` AND `metal`.
+   *
+     Everything below used to be a tint on one of two recipes. `metal`
+     is a BRUSHED PANEL -- ninety cycles of anisotropic grain, authored
+     for a receiver flat seen from across a room -- and a brushed panel
+     on a twelve-millimetre cartridge case is a bullet made out of a
+     filing cabinet. `wood` is six sawn boards to a tile with seams and
+     knots between them, which is right for a crate and absurd on a
+     rifle stock: a stock is one piece of one tree.
+
+     The bank has cartridge brass, gilding metal, lead, magnetite over
+     polished steel, and walnut with an oil finish, all authored at the
+     size they are actually looked at. This is where they get used.
+
+     NO worldUv ON ANY OF THEM, deliberately, and the note in the
+     material file says why: a world projection swims across anything
+     that moves, and a gun in your hands is the most moving thing in
+     the game. Face UVs are the right choice here for the one reason
+     they are ever the right choice -- every part of every gun is
+     within a factor of about three of the same size, which is the
+     condition under which tiles-per-face means something. */
+  walnut: { color: 0xd8c9b4, texture: 'walnut', roughness: 1, metalness: 0, uvScale: 2.2 },
+  copper: { color: 0xffffff, texture: 'copper', roughness: 1, metalness: 1, uvScale: 3 },
+  brass: { color: 0xffffff, texture: 'brass', roughness: 1, metalness: 1, uvScale: 3 },
   glow: { color: 0x9fe8ff, texture: 'smooth', roughness: 0.30, metalness: 0, emissive: 0x54c8ff, emissiveStrength: 1.5 },
   glass: { color: 0xb6c6cc, texture: 'smooth', roughness: 0.12, metalness: 0, opacity: 0.42 },
   /* Smoked polymer, for a magazine you are meant to see the rounds
@@ -22574,7 +22687,15 @@ const ARM_MAT = {
   /* Lead, for the exposed part of a cast bullet, and the grey lacquer
      on a steel case. Both are dielectric: a metalness of 1 here turns a
      bullet into a mirror and loses its shape entirely. */
-  lead: { color: 0x9a9690, texture: 'metal', roughness: 0.58, metalness: 0.2 },
+  /* METALNESS 1, AND THE OLD NOTE HERE SAID 0.2 FOR A GOOD REASON THAT
+     NO LONGER HOLDS. It said a metalness of 1 turns a bullet into a
+     mirror and loses its shape -- true, on the `metal` recipe, whose
+     roughness sits around 0.4. Lead is a conductor; what stops it
+     being a mirror is not pretending it is a dielectric, it is that
+     lead oxidises to a grey film in minutes and the film is what you
+     see. The recipe runs 0.58 to 0.92 rough, which is closer to
+     unglazed clay than to pewter, so it keeps its shape at 1. */
+  lead: { color: 0xffffff, texture: 'lead', roughness: 1, metalness: 1, uvScale: 3 },
   lacquer: { color: 0x5d6b52, texture: 'smooth', roughness: 0.52, metalness: 0.1 },
   // The reticle has to be visible against mud and against a bright sky,
   // so it is emissive rather than merely dark.

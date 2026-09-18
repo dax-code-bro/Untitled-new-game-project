@@ -1586,19 +1586,103 @@ const TextureLib = {
          The base is also lifted. 0.115 is darker than magnetite really
          is; the reason a blued gun looks black is the low ROUGHNESS
          throwing all its light into one highlight, not the albedo. */
-      const swirl = n.fbm(u * 26, v * 9, 6.3, 3) * 0.5 + 0.5;
+      /* Two octaves, not three: the third lands near two texels a
+         cycle at the 256 the world builds at, and on a dark metal that
+         reads as sensor noise rather than as polishing. */
+      const swirl = n.fbm(u * 26, v * 9, 6.3, 2) * 0.5 + 0.5;
       const cloud = n.fbm(u * 3.5, v * 3.5, 17.7, 3) * 0.5 + 0.5;
       const wearF = n.fbm(u * 4, v * 4, 55.3, 2) * 0.5 + 0.5;
-      const wear = Math.max(0, wearF - 0.72) / 0.28;
-      const base = 0.155 + cloud * 0.045 + (swirl - 0.5) * 0.020;
+      /* SMOOTHSTEP, NOT A DIVIDED THRESHOLD. `(x - 0.72) / 0.28` is a
+         linear ramp that reaches 1 only at the very peak of the field,
+         so what it selects is not a patch, it is the handful of texels
+         at the top of each blob -- and with the albedo term below
+         ADDING rather than blending, those texels overshot to white.
+         The render was a dark ball with a dozen hard sparkles on it,
+         which is the same salt-and-pepper failure this recipe already
+         had once, arrived at by a different route. */
+      /* AND IT IS RARE. At smoothstep(0.60, 0.90) roughly a quarter of
+         a field whose mean is 0.5 counts as worn, so a quarter of the
+         receiver came back as bare steel and the render read as
+         camouflage.
+
+         The deeper point is that a TILING TEXTURE CANNOT KNOW WHERE
+         THE EDGES ARE, and wear on a gun is almost entirely an edge
+         phenomenon -- the corners of the ejection port, the muzzle
+         crown, the high points a holster rubs. Anything a recipe does
+         here is wear in the wrong places by construction. So it does
+         very little of it: a few per cent, at the extreme peaks, as a
+         hint that the finish is not new. Edge wear belongs to
+         curvature, which is geometry, and this is not the file for
+         it. */
+      const wear = smoothstep(0.88, 1.0, wearF) * 0.55;
+      /* 0.46, AND THE NUMBER CAME FROM THE COMMENT I DELETED.
+       *
+         This recipe has been too dark three times: 0.115, then 0.155,
+         then 0.215, each lift a guess at how much would be enough. The
+         value that works was already written down in ARM_MAT, where
+         blued steel was a tint of 0x737e8a on brushed metal -- 0.45 in
+         sRGB -- under a note explaining that the previous 0x33383e was
+         about a fifth of steel's real reflectance and that a metal has
+         no diffuse term at all, so a dark colour does not make a dark
+         object, it makes a mirror with nothing to reflect.
+
+         At metalness 1 the albedo IS the reflectance. 0.19 sRGB is
+         0.03 linear, which is LOWER THAN A DIELECTRIC'S 0.04 -- a
+         physically impossible metal, and on screen a black hole with
+         two sparkles in it. Oxide-blued steel really does sit near
+         half of bare steel. What makes a blued gun look black is the
+         finish being satin and the light being indoors, not the
+         reflectance being near zero.
+
+         Three lifts by guesswork to arrive at a number that was in the
+         file the whole time. */
+      const base = 0.46 + cloud * 0.07 + (swirl - 0.5) * 0.04;
       /* The blue is in the RATIO, not in a tint on top: magnetite runs
          a few per cent cooler in red than in blue, and at this
          brightness a few per cent is the whole of the colour. */
-      c.r = base * 0.88 + wear * 0.34;
-      c.g = base * 0.94 + wear * 0.35;
-      c.b = base * 1.12 + wear * 0.36;
+      /* AND IT BLENDS TOWARD BARE STEEL RATHER THAN ADDING TO THE
+         OXIDE. Worn bluing is not blued steel plus light -- it is
+         blued steel REPLACED by the metal underneath, which is a mid
+         grey around 0.52 and faintly warm. Adding cannot represent
+         that: it can only ever overshoot, and past the top of the
+         range it clips to white. */
+      // Bare steel is brighter than the oxide over it, but not by much.
+      const bare = 0.66;
+      /* THE BLUE IS A NAME, NOT A HUE, and this is the fifth pass on
+         this material. 0.88 : 0.94 : 1.12 is a strong cast, and at the
+         near-black albedo the recipe started with it was invisible --
+         a few per cent of almost nothing. Lifted to a real steel
+         reflectance the same ratio came back as painted denim.
+
+         A blued receiver in daylight is a very slightly cool grey. The
+         colour is in the last few per cent, and it only ever shows in
+         the highlight. */
+      c.r = (base * 0.97) * (1 - wear) + bare * 1.00 * wear;
+      c.g = (base * 0.99) * (1 - wear) + bare * 1.01 * wear;
+      c.b = (base * 1.04) * (1 - wear) + bare * 1.02 * wear;
       c.metal = 1;
-      c.rough = clamp(0.115 + (swirl - 0.5) * 0.05 + cloud * 0.05 + wear * 0.26, 0.07, 0.62);
+      /* GUN BLUE IS SATIN, AND I HAD TO BE TOLD THAT BY A COMMENT I
+         DELETED. ARM_MAT carried this material as a tint on brushed
+         metal at roughness 0.45, under a note saying it had been
+         corrected twice in opposite directions -- too dark and the
+         receiver was a hole, too smooth and it was a white shape with
+         no form in it -- and ending "Gun blue is satin."
+
+         I replaced that with 0.115, from the physics: magnetite is a
+         thin film over a polished surface and the steel underneath
+         really is near-mirror. The physics is right and the render was
+         a black ball with three sparkles on it, because this engine's
+         environment is a sky gradient and a room term -- a dark mirror
+         in it has almost nothing to reflect, so all a low roughness
+         buys is pinpoint highlights.
+
+         A real gun photographs as dark satin because it is reflecting
+         a whole room. Until there is a room to reflect, the number
+         that produces the look of blued steel is the one that was
+         already there, and two people's worth of photographs had
+         already established it. 0.38, with the range kept wide enough
+         that the polished crown and the worn edges still separate. */
+      c.rough = clamp(0.38 + (swirl - 0.5) * 0.10 + cloud * 0.08 + wear * 0.30, 0.26, 0.72);
       c.ao = 1;
       // Polished steel has no relief at all. This is barely a ripple.
       c.h = (swirl - 0.5) * 0.03 - wear * 0.04;
