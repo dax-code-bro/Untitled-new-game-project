@@ -281,10 +281,25 @@ const TextureLib = {
 
       let base = 0.84 - dark * 0.20 + fibre * 0.09 - seamK * 0.30 - knot * 0.34;
       base += (h1 - 0.5) * 0.10;                     // board-to-board tone
-      const warm = 1 - grey * 0.55;
-      c.r = base * (1.02 * warm + 0.06);
-      c.g = base * (0.95 * warm + 0.08);
-      c.b = base * (0.84 * warm + 0.14);
+      /* WEATHERING DESATURATES; IT DOES NOT DARKEN.
+       *
+         The first cut multiplied every channel by (1 - grey * 0.55),
+         which at full weathering is a 45 per cent cut in brightness --
+         so the patches came out as black blotches and the wall read as
+         SCORCHED rather than sun-bleached. Plainly wrong in the
+         screenshot and not visible at all in the code, which described
+         itself as greying.
+
+         Timber left in the sun goes silver: it loses its colour and
+         gains a little brightness. So the tint factors move toward
+         neutral instead of toward zero, and the value lifts slightly
+         with them. */
+      const g2 = grey * 0.62;
+      const tint = (t) => t + (1 - t) * g2;
+      base *= 1 + grey * 0.05;
+      c.r = base * tint(1.02);
+      c.g = base * tint(0.95);
+      c.b = base * tint(0.84);
       c.rough = clamp(0.60 + dark * 0.16 + seamK * 0.22 + grey * 0.10 - knot * 0.10, 0.42, 1);
       c.ao = 1 - dark * 0.12 - seamK * 0.45 - knot * 0.25;
       c.h = 0.5 + (1 - dark) * 0.28 + fibre * 0.10 - seamK * 0.55 - knot * 0.30;
