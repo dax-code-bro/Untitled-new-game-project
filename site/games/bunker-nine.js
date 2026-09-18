@@ -4032,6 +4032,103 @@ function placeOnBeach(game, S, P) {
 
 /* Build whichever map was chosen. The bunker's own builder is below,
    under its own name -- this is only the switch. */
+/* MODULE SCOPE, not inside a map builder.
+ *
+   These first went in beside the generic door loop that uses them,
+   which put a const and a function declaration inside
+   finishGenericMap -- so the BUNKER's own builder, which is a
+   different function entirely, could not see either of them and
+   threw the moment it tried to hang a blast door. Three suites went
+   red at once. A door look is a fact about the game and not about
+   one map's builder, so it lives where every builder can reach it. */
+  /* WHAT EACH KIND OF DOOR IS MADE OF, and what it is made of is what
+   tells you what is behind it before you have paid to find out. */
+const DOOR_LOOKS = {
+  plank:  { mat: { color: 0x6f5636, texture: 'wood', roughness: 0.92, metalness: 0, uvScale: 2 } },
+  screen: { mat: { color: 0x8a6a44, texture: 'wood', roughness: 0.94, metalness: 0, uvScale: 3 } },
+  glazed: { mat: { color: 0x7c6248, texture: 'wood', roughness: 0.80, metalness: 0, uvScale: 2 } },
+  slider: { mat: { color: 0x5e5240, texture: 'wood', roughness: 0.95, metalness: 0, uvScale: 4 } },
+  blast:  { mat: { color: 0x6a6f74, texture: 'metal', roughness: 0.55, metalness: 1, uvScale: 2 } },
+};
+const DOOR_TRIM = {
+  frame: { color: 0x4a3a28, texture: 'wood', roughness: 0.9, metalness: 0, uvScale: 2 },
+  mesh:  { color: 0x6f7377, texture: 'metal', roughness: 0.85, metalness: 0.6, opacity: 0.55 },
+  glass: { color: 0xa8c4d4, texture: 'smooth', roughness: 0.10, metalness: 0, opacity: 0.42 },
+  iron:  { color: 0x7f868c, texture: 'metal', roughness: 0.5, metalness: 1, uvScale: 1 },
+  rust:  { color: 0x8a6a52, texture: 'rust', roughness: 0.9, metalness: 0.3, uvScale: 2 },
+};
+
+/* The furniture on a door, built from the bounds of the panel it hangs
+   on so the same four numbers describe any of them. Decoration only --
+   none of it collides, because the panel behind it already does and two
+   colliders in one doorway is two surfaces arguing over one plane. */
+function doorTrim(game, kind, p2) {
+  const [x0, x1, y0, y1, z0, z1] = p2;
+  const w = x1 - x0, h = y1 - y0;
+  const cz = (z0 + z1) / 2, d = Math.max(0.03, (z1 - z0) * 0.9);
+  const out = [];
+  const add = (ax0, ax1, ay0, ay1, m, nm) => {
+    if (ax1 - ax0 < 0.004 || ay1 - ay0 < 0.004) return;
+    const a = game.box({ at: [(ax0 + ax1) / 2, (ay0 + ay1) / 2, cz],
+      size: [ax1 - ax0, ay1 - ay0, d * 1.04], material: m, physics: false });
+    if (a) { a.name = nm || 'door-trim'; out.push(a); }
+  };
+  const st = Math.min(0.11, w * 0.10);          // stile and rail thickness
+  if (kind === 'screen') {
+    /* A porch screen: a light timber frame with mesh in it and a kick
+       panel at the bottom, which is the part a boot goes through. */
+    add(x0, x0 + st, y0, y1, DOOR_TRIM.frame);
+    add(x1 - st, x1, y0, y1, DOOR_TRIM.frame);
+    add(x0, x1, y1 - st, y1, DOOR_TRIM.frame);
+    add(x0, x1, y0 + h * 0.26 - st * 0.5, y0 + h * 0.26 + st * 0.5, DOOR_TRIM.frame);
+    add(x0 + st, x1 - st, y0 + h * 0.26 + st * 0.5, y1 - st, DOOR_TRIM.mesh, 'door-mesh');
+    add(x0 + st, x1 - st, y0, y0 + h * 0.26 - st * 0.5, DOOR_TRIM.frame);
+  } else if (kind === 'glazed') {
+    /* A front door with two panes over a solid lower half. */
+    add(x0, x0 + st, y0, y1, DOOR_TRIM.frame);
+    add(x1 - st, x1, y0, y1, DOOR_TRIM.frame);
+    add(x0, x1, y1 - st, y1, DOOR_TRIM.frame);
+    add(x0, x1, y0 + h * 0.46 - st * 0.5, y0 + h * 0.46 + st * 0.5, DOOR_TRIM.frame);
+    const midx = (x0 + x1) / 2;
+    add(midx - st * 0.4, midx + st * 0.4, y0 + h * 0.46, y1 - st, DOOR_TRIM.frame);
+    add(x0 + st, midx - st * 0.4, y0 + h * 0.5, y1 - st * 1.4, DOOR_TRIM.glass, 'door-glass');
+    add(midx + st * 0.4, x1 - st, y0 + h * 0.5, y1 - st * 1.4, DOOR_TRIM.glass, 'door-glass');
+  } else if (kind === 'slider') {
+    /* A boathouse slider: wide boards, a top rail it hangs from, and a
+       long pull. */
+    add(x0, x1, y1 - st * 0.7, y1 + st * 0.5, DOOR_TRIM.iron, 'door-rail');
+    for (let i = 1; i < 5; i++) {
+      const bx = x0 + (w * i) / 5;
+      add(bx - st * 0.22, bx + st * 0.22, y0, y1 - st * 0.7, DOOR_TRIM.frame);
+    }
+    add(x1 - w * 0.30, x1 - w * 0.16, y0 + h * 0.46, y0 + h * 0.52, DOOR_TRIM.iron, 'door-pull');
+  } else if (kind === 'blast') {
+    /* Steel, with a wheel on it and rivets round the edge. */
+    add(x0 + st * 0.4, x1 - st * 0.4, y0 + st * 0.4, y1 - st * 0.4, DOOR_TRIM.iron);
+    const cx = (x0 + x1) / 2, cy = y0 + h * 0.52, r = Math.min(w, h) * 0.17;
+    for (let i = 0; i < 6; i++) {
+      const th = (i / 6) * Math.PI;
+      const sx = Math.cos(th) * r, sy = Math.sin(th) * r;
+      const a = game.box({ at: [cx, cy, cz], size: [r * 2, 0.035, d * 1.3],
+        material: DOOR_TRIM.iron, physics: false });
+      if (a) { a.name = 'door-wheel'; a.setRotation([0, 0, (th * 180) / Math.PI]); out.push(a); }
+      void sx; void sy;
+    }
+    for (const ex of [x0 + st * 0.5, x1 - st * 0.5]) {
+      for (let i = 0; i < 5; i++) {
+        const ry = y0 + h * (0.12 + i * 0.19);
+        add(ex - 0.026, ex + 0.026, ry - 0.026, ry + 0.026, DOOR_TRIM.rust, 'door-rivet');
+      }
+    }
+  } else {
+    // Plain planks: boards, two ledges and a latch.
+    add(x0, x1, y0 + h * 0.22 - st * 0.4, y0 + h * 0.22 + st * 0.4, DOOR_TRIM.frame);
+    add(x0, x1, y0 + h * 0.74 - st * 0.4, y0 + h * 0.74 + st * 0.4, DOOR_TRIM.frame);
+    add(x1 - w * 0.20, x1 - w * 0.12, y0 + h * 0.46, y0 + h * 0.52, DOOR_TRIM.iron, 'door-latch');
+  }
+  return out;
+}
+
 function buildMap(game, S) {
   const def = useMap((S && S.mapId) || 'bunker9');
   def.build(game, S);
@@ -4129,93 +4226,6 @@ function finishGenericMap(game, S, def) {
      never be bought is a map with no perks. */
   S.powered = true;
 
-  /* WHAT EACH KIND OF DOOR IS MADE OF, and what it is made of is what
-   tells you what is behind it before you have paid to find out. */
-const DOOR_LOOKS = {
-  plank:  { mat: { color: 0x6f5636, texture: 'wood', roughness: 0.92, metalness: 0, uvScale: 2 } },
-  screen: { mat: { color: 0x8a6a44, texture: 'wood', roughness: 0.94, metalness: 0, uvScale: 3 } },
-  glazed: { mat: { color: 0x7c6248, texture: 'wood', roughness: 0.80, metalness: 0, uvScale: 2 } },
-  slider: { mat: { color: 0x5e5240, texture: 'wood', roughness: 0.95, metalness: 0, uvScale: 4 } },
-  blast:  { mat: { color: 0x6a6f74, texture: 'metal', roughness: 0.55, metalness: 1, uvScale: 2 } },
-};
-const DOOR_TRIM = {
-  frame: { color: 0x4a3a28, texture: 'wood', roughness: 0.9, metalness: 0, uvScale: 2 },
-  mesh:  { color: 0x6f7377, texture: 'metal', roughness: 0.85, metalness: 0.6, opacity: 0.55 },
-  glass: { color: 0xa8c4d4, texture: 'smooth', roughness: 0.10, metalness: 0, opacity: 0.42 },
-  iron:  { color: 0x7f868c, texture: 'metal', roughness: 0.5, metalness: 1, uvScale: 1 },
-  rust:  { color: 0x8a6a52, texture: 'rust', roughness: 0.9, metalness: 0.3, uvScale: 2 },
-};
-
-/* The furniture on a door, built from the bounds of the panel it hangs
-   on so the same four numbers describe any of them. Decoration only --
-   none of it collides, because the panel behind it already does and two
-   colliders in one doorway is two surfaces arguing over one plane. */
-function doorTrim(game, kind, p2) {
-  const [x0, x1, y0, y1, z0, z1] = p2;
-  const w = x1 - x0, h = y1 - y0;
-  const cz = (z0 + z1) / 2, d = Math.max(0.03, (z1 - z0) * 0.9);
-  const out = [];
-  const add = (ax0, ax1, ay0, ay1, m, nm) => {
-    if (ax1 - ax0 < 0.004 || ay1 - ay0 < 0.004) return;
-    const a = game.box({ at: [(ax0 + ax1) / 2, (ay0 + ay1) / 2, cz],
-      size: [ax1 - ax0, ay1 - ay0, d * 1.04], material: m, physics: false });
-    if (a) { a.name = nm || 'door-trim'; out.push(a); }
-  };
-  const st = Math.min(0.11, w * 0.10);          // stile and rail thickness
-  if (kind === 'screen') {
-    /* A porch screen: a light timber frame with mesh in it and a kick
-       panel at the bottom, which is the part a boot goes through. */
-    add(x0, x0 + st, y0, y1, DOOR_TRIM.frame);
-    add(x1 - st, x1, y0, y1, DOOR_TRIM.frame);
-    add(x0, x1, y1 - st, y1, DOOR_TRIM.frame);
-    add(x0, x1, y0 + h * 0.26 - st * 0.5, y0 + h * 0.26 + st * 0.5, DOOR_TRIM.frame);
-    add(x0 + st, x1 - st, y0 + h * 0.26 + st * 0.5, y1 - st, DOOR_TRIM.mesh, 'door-mesh');
-    add(x0 + st, x1 - st, y0, y0 + h * 0.26 - st * 0.5, DOOR_TRIM.frame);
-  } else if (kind === 'glazed') {
-    /* A front door with two panes over a solid lower half. */
-    add(x0, x0 + st, y0, y1, DOOR_TRIM.frame);
-    add(x1 - st, x1, y0, y1, DOOR_TRIM.frame);
-    add(x0, x1, y1 - st, y1, DOOR_TRIM.frame);
-    add(x0, x1, y0 + h * 0.46 - st * 0.5, y0 + h * 0.46 + st * 0.5, DOOR_TRIM.frame);
-    const midx = (x0 + x1) / 2;
-    add(midx - st * 0.4, midx + st * 0.4, y0 + h * 0.46, y1 - st, DOOR_TRIM.frame);
-    add(x0 + st, midx - st * 0.4, y0 + h * 0.5, y1 - st * 1.4, DOOR_TRIM.glass, 'door-glass');
-    add(midx + st * 0.4, x1 - st, y0 + h * 0.5, y1 - st * 1.4, DOOR_TRIM.glass, 'door-glass');
-  } else if (kind === 'slider') {
-    /* A boathouse slider: wide boards, a top rail it hangs from, and a
-       long pull. */
-    add(x0, x1, y1 - st * 0.7, y1 + st * 0.5, DOOR_TRIM.iron, 'door-rail');
-    for (let i = 1; i < 5; i++) {
-      const bx = x0 + (w * i) / 5;
-      add(bx - st * 0.22, bx + st * 0.22, y0, y1 - st * 0.7, DOOR_TRIM.frame);
-    }
-    add(x1 - w * 0.30, x1 - w * 0.16, y0 + h * 0.46, y0 + h * 0.52, DOOR_TRIM.iron, 'door-pull');
-  } else if (kind === 'blast') {
-    /* Steel, with a wheel on it and rivets round the edge. */
-    add(x0 + st * 0.4, x1 - st * 0.4, y0 + st * 0.4, y1 - st * 0.4, DOOR_TRIM.iron);
-    const cx = (x0 + x1) / 2, cy = y0 + h * 0.52, r = Math.min(w, h) * 0.17;
-    for (let i = 0; i < 6; i++) {
-      const th = (i / 6) * Math.PI;
-      const sx = Math.cos(th) * r, sy = Math.sin(th) * r;
-      const a = game.box({ at: [cx, cy, cz], size: [r * 2, 0.035, d * 1.3],
-        material: DOOR_TRIM.iron, physics: false });
-      if (a) { a.name = 'door-wheel'; a.setRotation([0, 0, (th * 180) / Math.PI]); out.push(a); }
-      void sx; void sy;
-    }
-    for (const ex of [x0 + st * 0.5, x1 - st * 0.5]) {
-      for (let i = 0; i < 5; i++) {
-        const ry = y0 + h * (0.12 + i * 0.19);
-        add(ex - 0.026, ex + 0.026, ry - 0.026, ry + 0.026, DOOR_TRIM.rust, 'door-rivet');
-      }
-    }
-  } else {
-    // Plain planks: boards, two ledges and a latch.
-    add(x0, x1, y0 + h * 0.22 - st * 0.4, y0 + h * 0.22 + st * 0.4, DOOR_TRIM.frame);
-    add(x0, x1, y0 + h * 0.74 - st * 0.4, y0 + h * 0.74 + st * 0.4, DOOR_TRIM.frame);
-    add(x1 - w * 0.20, x1 - w * 0.12, y0 + h * 0.46, y0 + h * 0.52, DOOR_TRIM.iron, 'door-latch');
-  }
-  return out;
-}
 
 /* DOORS a map declares for itself.
    *

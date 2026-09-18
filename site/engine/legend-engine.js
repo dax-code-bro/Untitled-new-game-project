@@ -22101,7 +22101,51 @@ const ATT_MAT = {
   glassG: { color: 0x08180e, texture: 'smooth', roughness: 0.10, metalness: 0,
     emissive: 0x4affa0, emissiveStrength: 1.2 },
   lens: { color: 0x0d1a22, texture: 'smooth', roughness: 0.08, metalness: 0 },
+  /* ---- ammunition ----
+     Brass for the case, and a tip colour per type, because that is how
+     ammunition is actually marked: you can tell armour-piercing from
+     tracer across a room by the paint on the nose, and a magazine you
+     can see into should say which is in it the same way. */
+  brass: { color: 0xb08a3c, texture: 'metal', roughness: 0.34, metalness: 1 },
+  tipBall: { color: 0xa9733f, texture: 'metal', roughness: 0.40, metalness: 1 },
+  tipAP: { color: 0x2b2d30, texture: 'metal', roughness: 0.45, metalness: 1 },
+  tipHollow: { color: 0xb9bcc0, texture: 'metal', roughness: 0.30, metalness: 1 },
+  tipIncend: { color: 0x3f7fd4, texture: 'metal', roughness: 0.38, metalness: 1 },
+  /* Tracer glows a little even in the magazine, because the composition
+     in the base is exposed and it is the one round that looks lit. */
+  tipTracer: { color: 0xd8382c, texture: 'metal', roughness: 0.38, metalness: 1,
+    emissive: 0x902018, emissiveStrength: 0.7 },
+  tipSub: { color: 0x6d6f6b, texture: 'metal', roughness: 0.55, metalness: 1 },
 };
+
+/* THE ROUNDS YOU CAN SEE IN THE MAGAZINE.
+ *
+   A magazine with an ammunition type fitted was the same box in a
+   different colour, which says "something is different" and not what.
+   These are the top few cartridges, sitting at the feed lips where they
+   are actually visible, drawn with the same cartridge profile the
+   service rifles use -- head, case, shoulder, neck and an ogive, not a
+   pencil. The case is brass on all of them and the TIP is what carries
+   the type, which is how the real marking works.
+
+   Only the top four. The rest of the column is inside an opaque box and
+   modelling what cannot be seen is triangles spent on nothing. */
+function magRounds(shell, tip, o) {
+  const host = (o && o.host) || 'pistol';
+  const rake = host === 'smg' ? 0.10 : host === 'rifle' ? 0.06 : 0.20;
+  const axis = new Vec3(rake, -1, 0).normalize();
+  const A = AMMO_KINDS[host === 'rifle' ? 'kurz' : 'pistol'];
+  const W = host === 'pistol' ? 0.0112 : 0.0165;
+  // Nose up and out of the lips, which is the way a magazine feeds.
+  const u = new Vec3(-axis.x, -axis.y, 0).normalize();
+  const across = new Vec3(0, 0, 1);
+  for (let i = 0; i < 4; i++) {
+    const d = 0.001 + i * A.pitch * 0.52;
+    const z = ((i & 1) ? 1 : -1) * W * 0.30;
+    svcCartridge(shell, tip,
+      A, new Vec3(axis.x * d, axis.y * d, z), u, across);
+  }
+}
 
 /* Knurling: a band of fine diamonds cut round a cylinder. Two crossed
    helices of shallow grooves, which is what knurling is, and it is the
@@ -22887,6 +22931,15 @@ Engine.prototype.gunPart = function (id, opts = {}) {
     D.body(out.body, build);
     if (D.glass) { out.glass = new Geometry(); D.glass(out.glass, build); }
     if (D.reticle) { out.reticle = new Geometry(); D.reticle(out.reticle, build); }
+    /* Case and tip are two channels because they are two colours: the
+       brass is the same on every round and the nose is what says which
+       type it is. mountArm turns any channel that is not the main one
+       into its own actor with its own material, so this needs nothing
+       else to carry it. */
+    if (D.rounds) {
+      out.shell = new Geometry(); out.tip = new Geometry();
+      D.rounds(out.shell, out.tip, build);
+    }
     for (const k of Object.keys(out)) out[k].finalize();
     return out;
   });
@@ -22894,6 +22947,12 @@ Engine.prototype.gunPart = function (id, opts = {}) {
     body: opts.tint || ATT_MAT[D.mat],
     glass: opts.tint || ATT_MAT[D.glassMat || 'lens'],
     reticle: opts.tint || ATT_MAT.glassR,
+    /* NOT tinted with the rest. A gold camo turns the whole gun gold and
+       should; it must not turn the ammunition gold too, or every type
+       reads the same the moment a weapon is levelled -- which would undo
+       the one thing the tip colour is for. */
+    shell: ATT_MAT.brass,
+    tip: ATT_MAT[D.tipMat || 'tipBall'],
   };
   /* physics off by default, because an attachment is normally bolted to a
      gun and inherits its motion -- but the caller can ask for a body, which
@@ -23257,18 +23316,21 @@ Object.assign(ATT_BUILD, {
   'u-masterkey': { perHost: true, body: (g, o) => buildMasterkey(g, o.bore), mat: 'black', bound: 0.28 },
 
   /* ---- magazines. The feed decides the shape, as before. ---- */
-  'g-ext': ATT_BUILD.extmag,
+  'g-ext': Object.assign({}, ATT_BUILD.extmag, { rounds: magRounds, tipMat: 'tipBall' }),
   'g-fast': ATT_BUILD.fastmag,
   'g-drum': ATT_BUILD.drummag,
   'g-speed': ATT_BUILD.fastmag,
   /* Ammunition types are the same magazine with a different follower
      colour, and pretending each is its own model would be four copies
      of one box. The tint is what says which round is in it. */
-  'g-ap': Object.assign({}, ATT_BUILD.extmag, { mat: 'steel' }),
-  'g-hollow': Object.assign({}, ATT_BUILD.extmag, { mat: 'bright' }),
-  'g-incendiary': Object.assign({}, ATT_BUILD.extmag, { mat: 'black' }),
-  'g-subsonic': Object.assign({}, ATT_BUILD.extmag, { mat: 'poly' }),
-  'g-tracer': Object.assign({}, ATT_BUILD.extmag, { mat: 'bright' }),
+  'g-ap': Object.assign({}, ATT_BUILD.extmag, { mat: 'steel', rounds: magRounds, tipMat: 'tipAP' }),
+  'g-hollow': Object.assign({}, ATT_BUILD.extmag, { mat: 'bright', rounds: magRounds, tipMat: 'tipHollow' }),
+  'g-incendiary': Object.assign({}, ATT_BUILD.extmag, { mat: 'black', rounds: magRounds, tipMat: 'tipIncend' }),
+  'g-subsonic': Object.assign({}, ATT_BUILD.extmag, { mat: 'poly', rounds: magRounds, tipMat: 'tipSub' }),
+  'g-tracer': Object.assign({}, ATT_BUILD.extmag, { mat: 'bright', rounds: magRounds, tipMat: 'tipTracer' }),
+  /* The plain extended box shows ball, up at 'g-ext' where it is
+     declared -- so rounds in a magazine is the rule and not something
+     only the five special types get. */
 
   /* ---- stocks ---- */
   's-collapsible': { body: (g) => stockShape(g, 'collapsible'), mat: 'poly', bound: 0.18 },
