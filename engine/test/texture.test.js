@@ -20,18 +20,34 @@
  * every recipe and assert its mean luminance sits high enough that the
  * material's colour survives it.
  *
- * Two recipes are exempt by intent and named here rather than by a
- * threshold that quietly grandfathers whatever is broken next:
- *   brick -- fired clay is a colour, the material is white, unused in
- *            Bunker Nine anyway.
- *   grass -- the grass system supplies its own per-blade colour and does
- *            not multiply a material hex through this.
+ * WHICH RECIPES ARE EXEMPT, AND WHY THE LIST MOVED OUT OF THIS FILE.
+ *
+ * It was two names written here -- brick and grass -- with a note
+ * saying they were named rather than covered by a threshold, so that
+ * nothing broken later got grandfathered in quietly. That was right,
+ * and it stopped being enough at sixteen.
+ *
+ * There are two kinds of recipe. A VARIATION LAYER supplies pattern and
+ * leaves colour to the material, and must average near white or the
+ * material's hex does not survive being multiplied by it -- that is the
+ * fault this suite exists for. A WHOLE MATERIAL is the finished thing
+ * and expects a white tint: brass has to be brass, and blued steel is
+ * near black because magnetite is near black. Holding a floor over
+ * blued steel would be demanding that it be grey.
+ *
+ * So the bank declares which each of its recipes is, in
+ * TextureLib.wholeMaterial, and this reads it. The list is a statement
+ * about the recipe and belongs with the recipe: keeping it here meant
+ * the intent and the code could drift apart in two files, and adding a
+ * recipe without deciding which kind it is now fails below rather than
+ * silently getting the floor applied to it.
  */
 const { chromium } = require('playwright');
 const fs = require('fs'), path = require('path');
 const R = path.join(__dirname, '..', '..') + '/';
 
-const EXEMPT = new Set(['brick', 'grass']);
+/* Filled from the bank once the page is up -- see the note above. */
+let EXEMPT = new Set();
 /* `smooth` is the deliberate no-op: a flat white albedo, so a material
    asking for it gets exactly the colour it wrote down and nothing else.
    Sixty-eight materials rely on that. It is the one recipe that is
@@ -69,7 +85,12 @@ const FLOOR = 0.45;
       out.push({ kind, lum: +(0.2126 * r + 0.7152 * gg + 0.0722 * bb).toFixed(3),
         r: +r.toFixed(3), g: +gg.toFixed(3), b: +bb.toFixed(3), ao: +ao.toFixed(3) });
     }
-    return { out };
+    /* The bank's own statement of which recipes are whole materials,
+       carried back so the assertions can use it. Also carried back:
+       whether the field exists at all, because a bank that has lost it
+       must fail loudly rather than silently exempt nothing. */
+    const whole = src.wholeMaterial;
+    return { out, whole: whole ? Array.from(whole) : null };
   });
 
   let passed = 0, failed = 0;
@@ -83,6 +104,16 @@ const FLOOR = 0.45;
     await b.close(); process.exit(1);
   }
   const list = rows.out;
+  check('the bank says which of its recipes are whole materials',
+    Array.isArray(rows.whole) && rows.whole.length > 0,
+    'TextureLib.wholeMaterial is missing; nothing can be exempted safely');
+  EXEMPT = new Set(rows.whole || []);
+  /* A name in that set that is not a recipe is a typo, and a typo there
+     silently removes a real recipe's floor. */
+  const kinds = new Set(list.map((t) => t.kind));
+  const ghosts = (rows.whole || []).filter((k) => !kinds.has(k));
+  check('and every name in it is a recipe that exists', ghosts.length === 0,
+    ghosts.join(', '));
   console.log('   texture       mean albedo   R     G     B     AO');
   for (const t of list) {
     if (t.err) { console.log('   ' + t.kind.padEnd(13) + t.err); continue; }

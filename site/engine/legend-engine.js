@@ -1986,6 +1986,11 @@ const TextureLib = {
     if (this._cache.has(key)) return this._cache.get(key);
 
     const n = new Noise(seed * 7919 + 13);
+    /* Cellular noise hangs off the same object the recipes already
+       take their noise from, because that is what it is. A recipe is
+       called as a plain function -- `fn(u, v, n, c, size)` -- so it has
+       no `this` and cannot reach the bank any other way. */
+    n.cells = (x, y, sd, period) => TextureLib.worley(x, y, sd, period);
     const albedo = new Uint8Array(size * size * 4);
     const orm = new Uint8Array(size * size * 4);
     const height = new Float32Array(size * size);
@@ -2023,6 +2028,93 @@ const TextureLib = {
     this._cache.set(key, maps);
     return maps;
   },
+
+  /* CELLULAR NOISE, AND THE RECIPE THAT NEEDED IT.
+   *
+     Several recipes here want CELLS rather than clouds: the crystals
+     in parkerizing, the pebble grain on a polymer frame, the aggregate
+     in asphalt, the stones in gravel. All of them fake it the same
+     cheap way -- take two high-frequency fbm fields and find where
+     either crosses zero, and the crossings make a net of boundaries.
+     That is fine when all you want is the BOUNDARIES.
+
+     It falls apart the moment a cell needs an identity. Gravel wants
+     each stone to be a different rock, so it needs to ask "which cell
+     am I in" and get the same answer everywhere inside one stone. The
+     zero-crossing trick cannot answer that -- the first cut of gravel
+     hashed the grid square instead, which is a different partition of
+     the plane entirely, so a single visible stone was crossed by
+     several colour boundaries and the whole thing rendered as
+     terrazzo: correctly sized stones with no stones in them.
+
+     This is the real thing. Feature points jittered inside a grid, the
+     nearest one found over the 3x3 neighbourhood; d1 is the distance
+     to it, `edge` is F2 minus F1 which goes to zero exactly on a cell
+     boundary and is the cleanest joint function there is, and `id` is
+     stable across the whole cell because it hashes the FEATURE POINT.
+
+     It wraps. `period` folds the cell coordinates, so the texture
+     still tiles -- without that every surface using it would show a
+     seam, which on a ground plane is a line across the whole map. */
+  worley(x, y, seed, period) {
+    const ix = Math.floor(x), iy = Math.floor(y);
+    let d1 = 1e9, d2 = 1e9, best = 0;
+    for (let j = -1; j <= 1; j++) {
+      for (let i = -1; i <= 1; i++) {
+        const cx = ix + i, cy = iy + j;
+        // Fold into the period so opposite edges agree.
+        const wx = ((cx % period) + period) % period;
+        const wy = ((cy % period) + period) % period;
+        const h = (((wx * 73856093) ^ (wy * 19349663) ^ (seed * 83492791)) >>> 0);
+        const jx = cx + 0.08 + ((h % 1024) / 1024) * 0.84;
+        const jy = cy + 0.08 + (((h >>> 10) % 1024) / 1024) * 0.84;
+        const dx = jx - x, dy = jy - y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < d1) { d2 = d1; d1 = d; best = h; }
+        else if (d < d2) { d2 = d; }
+      }
+    }
+    return { d1, edge: d2 - d1, id: (best % 100003) / 100003,
+      id2: ((best >>> 7) % 100003) / 100003 };
+  },
+
+  /* WHICH RECIPES ARE A WHOLE MATERIAL, AND WHICH ARE A LAYER.
+   *
+     Two kinds of recipe live in this bank and the difference has never
+     been written down, which is why a test keeps having to carry a
+     list of exceptions.
+
+     A VARIATION LAYER supplies pattern and leaves the colour to the
+     material. `concrete`, `skin`, `hair`, `fabric`, `wool`. Its job is
+     to average near white so that whatever hex a material writes down
+     survives being multiplied by it -- one recipe then serves every
+     skin tone, every uniform colour, every shade of render. For these
+     a dark bake is a BUG: it is how a nominal 0x76736c wall came out
+     near 0x2a2a28, and three separate "the lighting is wrong"
+     investigations were really this.
+
+     A WHOLE MATERIAL is the finished thing and expects a white tint.
+     Brass has to be brass; blued steel is near black because magnetite
+     is near black; parkerizing is dark grey-green because phosphate
+     is. Asking these to average above a floor would mean asking blued
+     steel to be grey, which is not a bug to fix, it is the material.
+
+     The set lives here rather than in the test because it is a
+     statement about the recipe, and a recipe and its intent should not
+     be able to drift apart in two files. Adding a recipe without
+     deciding which kind it is now means failing the suite. */
+  wholeMaterial: new Set([
+    'brick', 'grass', 'brass', 'copper', 'lead', 'primer', 'bluing',
+    'parkerize', 'walnut', 'bakelite', 'polymer', 'leather', 'webbing',
+    'denim', 'floaties', 'eye',
+    /* The world set. Asphalt is not "concrete but darker" -- it is a
+       few per cent of light on a black binder, and a floor over it
+       would be demanding a grey road. Setts, pantiles, gravel and mud
+       are the colour of the stone and the clay and the earth they are
+       made of. Snow, paint and glass are the three that stay pale and
+       DO take a tint, so they are not in here. */
+    'asphalt', 'setts', 'corrugated', 'pantile', 'gravel', 'mud',
+  ]),
 
   normalStrength: {
     metal: 0.7, smooth: 0.35, glass: 0.2, wood: 1.3, fabric: 1.6,
@@ -2090,6 +2182,15 @@ const TextureLib = {
        loops are millimetres proud and it is the only cloth here whose
        silhouette you would notice. */
     wool: 1.8, denim: 2.0, ripstop: 1.5, knit: 2.6,
+    /* ---- the world ----
+       Setts, gravel and pantiles are the only three in the bank whose
+       relief is bigger than the texel grid by a wide margin -- a sett
+       crown is centimetres -- so they can take a lot. Snow takes very
+       little, because its structure is broad and shallow and a hard
+       normal turns a drift into crumpled paper. Glass takes almost
+       nothing: what it needs is roughness variation, not slope. */
+    asphalt: 1.4, setts: 2.4, corrugated: 1.0, pantile: 2.0,
+    gravel: 2.6, snow: 0.7, mud: 1.3, paint: 0.6, glass: 0.25,
   },
 
   /* Surface recipes. Each writes into `c` for one texel.
@@ -2701,6 +2802,414 @@ const TextureLib = {
         c.ao = 1 - smoothstep(0.4, 0.12, gap) * 0.3;
         c.h = 0.8;
       }
+    },
+
+    /* ==================================================================
+       THE WORLD
+       ==================================================================
+       Nine surfaces the maps were faking with a tinted `concrete`.
+       Every one of them is a DIFFERENT KIND OF THING and not a shade:
+       asphalt is stones in tar, a cobbled street is separate objects,
+       corrugated iron is a manufactured sheet that rusts in streaks
+       down its own profile. Tinting one grey recipe into all of them is
+       why a street, a roof and a runway read as the same slab in three
+       colours.
+
+       All of these are WHOLE MATERIALS -- the recipe is the finished
+       look and the tint runs near white. Asphalt is not "concrete but
+       darker".
+       ================================================================== */
+
+    /* ASPHALT. Not grey: it is a few per cent of light on a black
+       binder with pale AGGREGATE in it, and the aggregate is the whole
+       of the look -- chips of stone, most of them below the surface,
+       some of them polished proud of it by tyres. A road with no
+       visible stone in it is a car park in a cartoon.
+
+       The wheel paths matter too. Traffic polishes two strips smooth
+       and leaves the middle and the edges coarse, and that is the
+       thing that tells you at a glance which way a road runs. It is
+       not in here -- it belongs to the road's own geometry, not to a
+       tiling material -- but the roughness range is left wide enough
+       that a map can drive it from outside. */
+    asphalt(u, v, n, c) {
+      /* Aggregate: cells again, as parkerizing and polymer are, but
+         coarse and irregular. A chip is fifteen millimetres. */
+      const a = n.fbm(u * 26, v * 26, 3.4, 2);
+      const b = n.fbm(u * 26, v * 26, 47.8, 2);
+      const cell = Math.min(Math.abs(a), Math.abs(b));
+      const stone = smoothstep(0.02, 0.20, cell);
+      // Which chips sit proud and got polished by traffic.
+      const proudF = n.fbm(u * 13, v * 13, 71.2, 2) * 0.5 + 0.5;
+      const proud = Math.max(0, proudF - 0.55) / 0.45;
+      const binder = n.fbm(u * 5, v * 5, 19.9, 3) * 0.5 + 0.5;
+      const grit = n.fbm(u * 110, v * 110, 88.1, 2) * 0.5 + 0.5;
+
+      // Tar is near black; the stone is what lifts it.
+      const base = 0.17 + stone * 0.22 + proud * stone * 0.14
+        + binder * 0.04 + (grit - 0.5) * 0.03;
+      c.r = base * 1.00; c.g = base * 0.99; c.b = base * 0.97;
+      c.metal = 0;
+      /* A polished chip is the only shiny thing on a dry road, and it
+         is why wet-looking tarmac still reads as tarmac. */
+      c.rough = clamp(0.92 - proud * stone * 0.34 - binder * 0.05, 0.30, 1);
+      c.ao = 0.82 + stone * 0.18;
+      c.h = stone * 0.45 + proud * 0.2 + (grit - 0.5) * 0.06;
+    },
+
+    /* SETTS -- a cobbled street, and the word cobble is wrong for what
+       is almost always there: dressed granite SETTS, roughly cubical,
+       laid in courses. Three things have to be right. The joints are
+       WIDE and full of grit, not thin lines. Each sett is a different
+       stone, so they vary in colour independently. And the tops are
+       DOMED and polished by a century of traffic, which is what makes
+       a wet cobbled street look the way it does.
+
+       The courses are offset a little per row, because setts are laid
+       by hand against a string and a perfectly square grid of them
+       reads as tiling immediately. */
+    setts(u, v, n, c) {
+      /* IT RENDERED AS A BATHROOM FLOOR. Three faults, and the first
+         is the one that mattered: a regular grid with a half-course
+         offset is a TILED FLOOR, and no amount of per-row drift hides
+         that, because the eye finds the repeating unit anyway. Setts
+         are dressed by hand and laid against a string; they are
+         roughly in courses and not one of them is square.
+
+         Cells give that for nothing -- the feature points are
+         jittered, so every sett is a different shape -- and the grid
+         is squashed in v so the cells come out as courses rather than
+         as a random scatter, which is what laying to a string does.
+
+         The other two: the stone-to-stone colour spread was 0.26 on a
+         0.42 base, which is granite in ten unrelated greys rather than
+         one quarry; and the dome was steep enough that each sett was a
+         pillow. Both are about a third of what they were. */
+      const P = 11;
+      const st = n.cells(u * P, v * P * 1.35, 7, P);
+      const joint = smoothstep(0.030, 0.085, st.edge);
+      const grain = n.fbm(u * 70, v * 70, 5.5, 3) * 0.5 + 0.5;
+      const wear = n.fbm(u * 3, v * 3, 61.8, 2) * 0.5 + 0.5;
+
+      if (joint < 0.35) {
+        // Grit, moss and a century of dirt down in the joint.
+        const g = 0.17 + grain * 0.10 + joint * 0.20;
+        c.r = g * 1.00; c.g = g * 1.02; c.b = g * 0.92;
+        c.rough = clamp(0.97 - grain * 0.05, 0.70, 1);
+        c.ao = 0.26 + joint * 1.1;
+        c.h = 0.06 + grain * 0.06; c.metal = 0;
+      } else {
+        // The dome: 1 at the crown, 0 at the joint.
+        const dome = smoothstep(0.0, 0.34, st.d1);
+        const base = 0.40 + st.id * 0.10 + grain * 0.08 - dome * 0.05;
+        // Granite: cool, and each sett only slightly its own colour.
+        const cool = 0.985 + st.id2 * 0.03;
+        c.r = base * (2 - cool) * 0.99; c.g = base * 1.00; c.b = base * cool;
+        /* Polished on the crown where a century of iron tyres has been,
+           coarse down at the joint. That gradient across every single
+           sett is the whole reason a cobbled street looks like one. */
+        c.rough = clamp(0.44 + dome * 0.40 + grain * 0.10 - wear * 0.10, 0.26, 1);
+        c.ao = 1 - dome * 0.30;
+        c.h = 0.95 - dome * 0.42; c.metal = 0;
+      }
+    },
+
+    /* CORRUGATED IRON. The profile is real geometry and belongs in the
+       mesh -- a normal map cannot give a sheet a silhouette. What is
+       here is everything else: galvanising that has gone patchy and
+       dull, RUST IN STREAKS running down the valleys because that is
+       where the water sits, and the line of fixings along each purlin
+       with a bloom of rust around every one.
+
+       The streaks are the thing. Rust on a steel sheet is never even:
+       it starts at a fixing or a cut edge and runs downhill, so it is
+       directional, and a uniform rust mottle on a roof reads as paint. */
+    corrugated(u, v, n, c) {
+      // v runs down the slope. Streaks are long in v, narrow in u.
+      const streakF = n.fbm(u * 22, v * 2.5, 6.7, 3) * 0.5 + 0.5;
+      const runF = n.fbm(u * 9, v * 1.4, 33.1, 2) * 0.5 + 0.5;
+      const rust = clamp(Math.max(0, streakF * 0.55 + runF * 0.75 - 0.62) / 0.38, 0, 1);
+      // Spangle: the crystal pattern galvanising leaves.
+      const spangle = n.fbm(u * 60, v * 60, 12.4, 2) * 0.5 + 0.5;
+      // Fixings: a row every so often down the sheet.
+      const ROWS = 5;
+      const fy = Math.abs(((v * ROWS) % 1) - 0.5) * 2;
+      const fx = Math.abs(((u * 8) % 1) - 0.5) * 2;
+      const fix = smoothstep(0.86, 1.0, fy) * smoothstep(0.80, 1.0, fx);
+      const bloom = smoothstep(0.55, 1.0, fy) * smoothstep(0.45, 1.0, fx) * 0.6;
+      const r2 = clamp(rust + bloom, 0, 1);
+
+      const zinc = 0.62 + spangle * 0.14;
+      // Rust is a dielectric; zinc is not. Blend both.
+      c.r = zinc * (1 - r2) + r2 * 0.44;
+      c.g = zinc * 0.99 * (1 - r2) + r2 * 0.23;
+      c.b = zinc * 1.01 * (1 - r2) + r2 * 0.13;
+      c.metal = 1 - r2 * 0.85;
+      c.rough = clamp(0.44 + spangle * 0.10 + r2 * 0.46, 0.28, 1);
+      c.ao = 1 - r2 * 0.14 - fix * 0.35;
+      c.h = 0.55 - fix * 0.45 + r2 * 0.10 + (spangle - 0.5) * 0.05;
+    },
+
+    /* CLAY PANTILES. A roof, and the S-curve of the tile is geometry
+       again -- but the LAP is not, and the lap is what makes a roof
+       read as a roof from across a map: every tile overlaps the one
+       below, so there is a shadow line across the slope every 330
+       millimetres and a butt joint down it every 250.
+
+       Fired clay varies tile to tile far more than brick does, because
+       a roof is laid from several batches over decades of repairs. So
+       each tile gets its own value AND its own warmth, and a few are
+       plainly replacements. */
+    pantile(u, v, n, c) {
+      /* A PANTILE IS NOT SQUARE. 4 across by 3 down over a tile made
+         them square, and with a side joint as strong as the head lap
+         the render was a chocolate bar. A pantile is about 330 by 250
+         with a big overlap, so across the slope you see roughly one
+         tile for every one and a half courses down -- and the LAP, the
+         shadow across the head of each tile, is several times deeper
+         than the joint down its side. */
+      const ACROSS = 3, DOWN = 5;
+      const gu = u * ACROSS, gv = v * DOWN;
+      const iu = Math.floor(gu), iv = Math.floor(gv);
+      const fu = gu - iu, fv = gv - iv;
+      const h = (((iu * 374761393) ^ (iv * 668265263)) >>> 0) % 1000 / 1000;
+      const h2 = (((iu * 2246822519) ^ (iv * 3266489917)) >>> 0) % 1000 / 1000;
+      // The lap shadow along the head of each tile, and the side joint.
+      const lap = smoothstep(0.17, 0.0, fv);
+      const side = smoothstep(0.045, 0.0, Math.min(fu, 1 - fu)) * 0.45;
+      const grain = n.fbm(u * 60, v * 60, 8.8, 3) * 0.5 + 0.5;
+      const moss = Math.max(0, n.fbm(u * 14, v * 14, 52.6, 3)) * 1.6;
+      /* THE ROLL, which is the whole of why a pantile roof looks like
+         one and why the last render still read as brickwork. A pantile
+         is an S in section: a barrel down one side and a flat pan down
+         the other, so ACROSS each tile there is a bright crown, a
+         shaded flank and a dark trough where it laps its neighbour.
+         That banding, repeated across the slope, is the thing you
+         actually recognise from a hundred metres -- far more than the
+         colour of the clay.
+
+         It is real geometry on a real roof, and it is not here: the
+         mesh is a flat slab. Which is exactly what a normal map is for
+         at this scale, and there is no range in this game at which a
+         roof is close enough for the silhouette to give it away. */
+      const rollPhase = fu * Math.PI * 2 - 0.55;
+      const roll = Math.cos(rollPhase);
+      const trough = smoothstep(0.55, 1.0, -roll);
+
+      // And the tile-to-tile spread was 0.20, which is a roof relaid
+      // from five batches. 0.10 is a roof with repairs in it.
+      const base = 0.42 + h * 0.10 + grain * 0.07 - lap * 0.24 - side * 0.14
+        + roll * 0.11 - trough * 0.16;
+      const warm = 0.90 + h2 * 0.14;
+      c.r = base * 1.00; c.g = base * (0.56 * warm); c.b = base * (0.40 * warm);
+      // Moss in the laps, where the water lies: green, matte, and dark.
+      const m = clamp(moss * (0.35 + lap * 0.9), 0, 0.8);
+      c.r = c.r * (1 - m) + m * 0.16;
+      c.g = c.g * (1 - m) + m * 0.21;
+      c.b = c.b * (1 - m) + m * 0.11;
+      c.metal = 0;
+      c.rough = clamp(0.78 + grain * 0.12 + m * 0.15 - h * 0.08, 0.45, 1);
+      c.ao = 1 - lap * 0.45 - side * 0.30 - trough * 0.35;
+      c.h = 0.55 + roll * 0.34 - lap * 0.45 - side * 0.25 - trough * 0.20
+        + (grain - 0.5) * 0.06;
+    },
+
+    /* GRAVEL, and the thing that makes it gravel rather than a noisy
+       ground texture is that the stones OVERLAP. A field of separate
+       pebbles on a flat bed reads as a mosaic; loose gravel is a heap,
+       so a stone's edge disappears under the one in front of it.
+
+       Built as several offset cell layers, the nearer ones winning, so
+       there are stones on stones. Each one is a different rock and the
+       fines between them are pale dust. */
+    gravel(u, v, n, c) {
+      /* REBUILT ON REAL CELLS. The first version found its stone edges
+         with the zero-crossing trick and then took each stone's colour
+         from the GRID SQUARE it happened to be in -- a different
+         partition of the plane -- so one visible stone was crossed by
+         several colour boundaries and the render was terrazzo: stones
+         of the right size with no stones in them.
+
+         `n.cells` gives a distance, an edge function and an id that is
+         stable over the whole cell, which is exactly the three things
+         a heap of stones needs.
+
+         Two layers, the second offset and finer, and the nearer one
+         wins where it is well inside a stone. That is what makes them
+         OVERLAP: a single layer of cells is a mosaic, because cells
+         tile the plane by definition and gravel does not. */
+      const P1 = 26, P2 = 37;
+      const a = n.cells(u * P1, v * P1, 3, P1);
+      const b = n.cells((u + 0.31) * P2, (v + 0.57) * P2, 11, P2);
+      // Whichever stone is more solidly "inside" is the one on top.
+      const useA = (0.5 - a.d1) > (0.5 - b.d1) * 0.92;
+      const st = useA ? a : b;
+      // The gaps: where no stone is near its own centre.
+      const fines = smoothstep(0.42, 0.62, st.d1);
+      const dust = n.fbm(u * 90, v * 90, 26.2, 2) * 0.5 + 0.5;
+      const rough2 = n.fbm(u * 150, v * 150, 71.4, 2) * 0.5 + 0.5;
+      // A stone's own shading: bright on the crown, dark at its edge.
+      const crown = 1 - smoothstep(0.0, 0.45, st.d1);
+      const rim = smoothstep(0.045, 0.0, st.edge);
+
+      if (fines > 0.7) {
+        const g = 0.46 + dust * 0.12;
+        c.r = g * 1.00; c.g = g * 0.98; c.b = g * 0.92;
+        c.rough = 0.98; c.ao = 0.44; c.h = 0.10 + dust * 0.06; c.metal = 0;
+      } else {
+        /* Each stone is a different rock, and rock is not neutral --
+           limestone runs warm, granite cool, flint nearly blue. The
+           second hash picks which, independently of the value, so a
+           heap is mixed rather than a single stone at ten
+           brightnesses. */
+        const val = 0.34 + st.id * 0.30;
+        const warm = 0.94 + st.id2 * 0.14;
+        const base = val + crown * 0.14 + (rough2 - 0.5) * 0.07 - rim * 0.10
+          - fines * 0.10;
+        c.r = base * warm; c.g = base * 1.00; c.b = base * (2 - warm) * 0.99;
+        c.metal = 0;
+        c.rough = clamp(0.70 + (1 - st.id) * 0.22 + (rough2 - 0.5) * 0.08, 0.40, 1);
+        c.ao = 1 - rim * 0.45 - fines * 0.30;
+        c.h = 0.25 + (1 - st.d1) * 0.65 - rim * 0.25;
+      }
+    },
+
+    /* SNOW, and it is the hardest thing in this bank to make convincing
+       because almost everything about it is a LIGHTING problem rather
+       than a texture one: snow is bright, it scatters inside itself, and
+       it has almost no colour. What a texture can do is the structure,
+       and there is more of it than people expect -- wind ripples and
+       sastrugi, the crust that forms and cracks, and the coarse
+       sparkling grain of old snow.
+
+       Near white, so it is one of the few recipes here that can carry a
+       tint: a map wanting blue shadow snow or dirty roadside snow says
+       so in the material. */
+    snow(u, v, n, c) {
+      // Wind ripples: long, low, and all in one direction.
+      const ripple = n.fbm(u * 4, v * 20, 7.9, 3) * 0.5 + 0.5;
+      // Sastrugi: the bigger carved ridges, same direction, sharper.
+      const sas = Math.pow(n.fbm(u * 2.5, v * 8, 44.3, 2) * 0.5 + 0.5, 2.2);
+      // Crust: a cracked skin over the top, where it has thawed once.
+      const cf = n.fbm(u * 16, v * 16, 66.1, 2);
+      const crack = Math.pow(Math.max(0, 1 - Math.abs(cf) * 11), 2.5);
+      // Grain: old snow is coarse and it sparkles.
+      const grain = n.fbm(u * 100, v * 100, 91.7, 2) * 0.5 + 0.5;
+      const sparkF = n.fbm(u * 75, v * 75, 13.3, 2) * 0.5 + 0.5;
+      const spark = Math.max(0, sparkF - 0.88) / 0.12;
+
+      const base = 0.93 + ripple * 0.030 + sas * 0.025 - crack * 0.070
+        + (grain - 0.5) * 0.020;
+      // Faintly cool, because snow in daylight takes the sky.
+      c.r = base * 0.995; c.g = base * 0.998; c.b = base * 1.00;
+      c.metal = 0;
+      /* Snow is mostly matte with pinpoint specular from individual ice
+         facets, which is the sparkle. A broad low roughness turns it
+         into polystyrene. */
+      c.rough = clamp(0.72 + (1 - grain) * 0.16 - spark * 0.60
+        - sas * 0.08, 0.10, 1);
+      c.ao = 1 - crack * 0.20;
+      c.h = 0.5 + (ripple - 0.5) * 0.30 + sas * 0.35 - crack * 0.30
+        + (grain - 0.5) * 0.10;
+    },
+
+    /* WET MUD -- churned, standing water in the ruts, and the one thing
+       that separates it from `dirt` is the SHEEN. Dry earth is uniformly
+       matte; wet earth is matte on the high ground and a mirror in the
+       hollows, because the hollows have water in them. That contrast is
+       the whole material, and it lives almost entirely in the roughness
+       channel rather than in the colour. */
+    mud(u, v, n, c) {
+      const churn = n.fbm(u * 7, v * 7, 3.3, 4) * 0.5 + 0.5;
+      const lump = n.fbm(u * 22, v * 22, 28.8, 3) * 0.5 + 0.5;
+      const grit = n.fbm(u * 95, v * 95, 55.1, 2) * 0.5 + 0.5;
+      // Water collects where the height field is low.
+      const h = churn * 0.6 + lump * 0.4;
+      const water = smoothstep(0.46, 0.24, h);
+      const base = 0.30 + h * 0.16 + (grit - 0.5) * 0.04 - water * 0.12;
+      // Wet earth is darker AND less saturated than the dry version.
+      c.r = base * 1.00; c.g = base * (0.88 + water * 0.06);
+      c.b = base * (0.74 + water * 0.14);
+      c.metal = 0;
+      c.rough = clamp(0.96 - water * 0.78 + (grit - 0.5) * 0.05, 0.08, 1);
+      c.ao = 1 - water * 0.22 - (1 - lump) * 0.10;
+      c.h = h * 0.9 + (grit - 0.5) * 0.06;
+    },
+
+    /* CHIPPED PAINT over steel -- a vehicle, a door, a fuel drum, a
+       railing. The point of it is the LAYERS: gloss paint on top,
+       primer under that, and bare metal where the chip has gone all the
+       way through. A chip that just darkens the paint reads as dirt;
+       what makes it read as a chip is that it exposes a DIFFERENT
+       MATERIAL, with its own colour and its own metalness.
+
+       Near white on the paint layer so the material picks the colour --
+       this one recipe is every painted thing in the game. */
+    paint(u, v, n, c) {
+      const orange = n.fbm(u * 30, v * 30, 4.6, 2) * 0.5 + 0.5;
+      // Where the paint has gone. Two thresholds on one field, so the
+      // primer always shows as a halo around the bare metal rather
+      // than as an unrelated patch.
+      const wearF = n.fbm(u * 11, v * 11, 37.4, 3) * 0.5 + 0.5;
+      const gone = Math.max(0, wearF - 0.70) / 0.30;
+      const bare = Math.max(0, wearF - 0.83) / 0.17;
+      const scratchF = n.fbm(u * 60, v * 6, 71.8, 2);
+      const scratch = Math.pow(Math.max(0, 1 - Math.abs(scratchF) * 15), 3);
+
+      // Layer 1: the paint. Slight orange peel in the roughness.
+      let r = 0.92, g = 0.92, b = 0.92;
+      let rough = 0.30 + orange * 0.14;
+      let metal = 0;
+      // Layer 2: red oxide primer.
+      const p = clamp(gone - bare, 0, 1) + scratch * 0.4;
+      r = r * (1 - p) + p * 0.46; g = g * (1 - p) + p * 0.22; b = b * (1 - p) + p * 0.16;
+      rough = rough * (1 - p) + p * 0.88;
+      // Layer 3: bare steel, and it is the only conductor here.
+      const m = clamp(bare, 0, 1);
+      r = r * (1 - m) + m * 0.55; g = g * (1 - m) + m * 0.56; b = b * (1 - m) + m * 0.58;
+      rough = rough * (1 - m) + m * 0.38;
+      metal = m;
+
+      c.r = r; c.g = g; c.b = b;
+      c.metal = metal;
+      c.rough = clamp(rough, 0.12, 1);
+      c.ao = 1 - gone * 0.14;
+      /* A chip has a real lip -- the paint film is a tenth of a
+         millimetre and you can see its edge. */
+      c.h = 0.7 - gone * 0.35 - scratch * 0.25;
+    },
+
+    /* WINDOW GLASS, and the reason it is not `smooth`. Clean glass IS
+       featureless, and that is exactly why a rendered window looks
+       fake: real glass carries a film of dust, the dried edges of old
+       rain, and the smears where somebody wiped it. None of that is
+       very visible head on, but all of it lights up the moment the
+       glass is at a glancing angle to a light -- which is most of the
+       time, and it is what makes a window read as a pane rather than as
+       a hole.
+
+       The albedo stays near white because a material using this sets
+       its own opacity and tint; what this recipe really supplies is
+       ROUGHNESS variation, which is where a smear lives. */
+    glass(u, v, n, c) {
+      const dust = n.fbm(u * 55, v * 55, 9.2, 2) * 0.5 + 0.5;
+      // Rain runs: narrow, vertical, with a tide mark at the bottom.
+      const runF = n.fbm(u * 45, v * 3, 41.7, 2);
+      const run = Math.pow(Math.max(0, 1 - Math.abs(runF) * 9), 2.0);
+      // Wipe smears: broad arcs.
+      const warp = n.fbm(u * 2, v * 2, 63.5, 2);
+      const smear = n.fbm(u * 5 + warp * 2, v * 3 - warp * 2, 77.3, 2) * 0.5 + 0.5;
+      const grime = clamp(dust * 0.35 + run * 0.5 + smear * 0.3, 0, 1);
+
+      const base = 0.97 - grime * 0.10;
+      c.r = base * 1.00; c.g = base * 1.00; c.b = base * 0.995;
+      c.metal = 0;
+      /* Nearly a mirror, and then not, in patches. The range is what
+         does the work: 0.04 is glass, 0.30 is a smear, and the edge
+         between them is what you actually see. */
+      c.rough = clamp(0.045 + grime * 0.26 + run * 0.10, 0.02, 0.45);
+      c.ao = 1;
+      c.h = 0.5 + run * 0.10 + (dust - 0.5) * 0.04;
     },
 
     /* ==================================================================
