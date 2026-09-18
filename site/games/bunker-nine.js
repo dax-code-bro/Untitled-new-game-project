@@ -6297,7 +6297,7 @@ function makePlayer(game, S, hud, sfx, voice) {
      a second model would be two of everything for a colour change. */
   P.view.blaze = { kind: 'single', muzzle: 0.24, actor: game.pistol1911({
     physics: false, engrave: 'Blaze',
-    gripMaterial: { color: 0x8f1c10, texture: 'smooth', roughness: 0.50, metalness: 0 },
+    gripMaterial: { color: 0xb4b2ad, texture: 'walnut', roughness: 1, metalness: 0, uvScale: 3 },
     material: { color: 0xd8ccc4, texture: 'metal', roughness: 0.26, metalness: 1 },
   }) };
   P.view.thompson = { kind: 'single', actor: game.thompson({ physics: false }), muzzle: 0.55 };
@@ -13051,7 +13051,7 @@ function crateDisplay(game, id) {
   if (id === 'thompson') { const t = game.thompson({ physics: false }); return { root: t, parts: [t, t.wood, t.slide, t.mag].filter(Boolean) }; }
   if (id === 'blaze') {
     const t = game.pistol1911({ physics: false, engrave: 'Blaze',
-      gripMaterial: { color: 0x8f1c10, texture: 'smooth', roughness: 0.50, metalness: 0 } });
+      gripMaterial: { color: 0xb4b2ad, texture: 'walnut', roughness: 1, metalness: 0, uvScale: 3 } });
     return { root: t, parts: [t, t.grips, t.slide, t.mag, t.mark].filter(Boolean) };
   }
   if (id === 'killstreak') return makeKillStreak(game);

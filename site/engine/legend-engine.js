@@ -19875,7 +19875,36 @@ const PISTOL_MATERIALS = {
      what changes is the roughness, so the highlight spreads across the
      form instead of taking the whole side of it at once. */
   steel: { color: 0xc2c8ce, texture: 'metal', roughness: 0.34, metalness: 1 },
-  grip: { color: 0x1d3f87, texture: 'smooth', roughness: 0.52, metalness: 0 },
+  /* THE GRIP PANELS WERE ROYAL BLUE. 0x1d3f87 is a saturated navy, on
+     the `smooth` recipe, which writes a flat fill -- so the one part
+     of this pistol you are always looking at, the part your hand is
+     wrapped around and the part nearest the camera in every frame the
+     weapon is held, was a plain blue plastic slab. A 1911 that reads
+     as wrong at a glance and cannot be argued with.
+
+     Nothing in the file says why. It has the look of a placeholder
+     that nobody came back to, and it survived because "the sidearm
+     looks off" is easy to blame on the model rather than on one hex.
+
+     A Government Model wears checkered WALNUT, or brown plastic on a
+     wartime gun. Walnut, on the recipe that now exists for it, with a
+     tint a shade darker than a rifle stock: grip panels are cut thin
+     from dense stock and finished dark, and they are handled
+     constantly, which keeps them oily rather than matte. */
+  /* AND THE TINT IS COOL, WHICH LOOKS WRONG AND IS NOT. The walnut
+     recipe carries its own colour at 1.00 : 0.70 : 0.52 -- it is
+     already a warm brown, because that is what walnut is. Multiplying
+     it by a warm hex warms it twice, and the first attempt at this
+     came out terracotta: the same mistake Coastline's brick made, and
+     the fix is the same one written up there. A tint can only ever
+     take light AWAY, so to stop something being too red you hold red
+     down relative to the other two, and the hex that does that reads
+     as a cold grey on its own.
+
+     uvScale 3, not 5. A grip panel is 110 mm tall and the figure has
+     to run along it; at 5 the grain was tighter than the checkering
+     and the panel read as cork. */
+  grip: { color: 0xb4b2ad, texture: 'walnut', roughness: 1, metalness: 0, uvScale: 3 },
   // Engraving on a polished flat only reads if it scatters where the steel
   // mirrors, so the mark is a rough near-black dielectric, not dark metal.
   mark: { color: 0x101316, texture: 'smooth', roughness: 0.85, metalness: 0 },
@@ -22674,7 +22703,22 @@ const ARM_MAT = {
      they are ever the right choice -- every part of every gun is
      within a factor of about three of the same size, which is the
      condition under which tiles-per-face means something. */
-  walnut: { color: 0xd8c9b4, texture: 'walnut', roughness: 1, metalness: 0, uvScale: 2.2 },
+  /* A WARM TINT ON A WARM RECIPE IS WARM TWICE, and this was 0xd8c9b4
+     -- a warm cream -- on a recipe that already bakes 1.00 : 0.70 :
+     0.52. Every wooden stock and forend on every service arm came out
+     terracotta. It is the third time this exact mistake has been made
+     in this project: Coastline's brick tint, the battlefield mud, and
+     now here, and the correction is the same one written up in both
+     of those places. A tint can only ever take light AWAY, so the way
+     to stop something being too red is to hold red DOWN relative to
+     the other two -- which means the hex that produces a warm brown
+     reads as a cold grey on its own.
+
+     Found by photographing a pistol and noticing that the grip was
+     orange after I had just fixed the pistol's own grip to be walnut;
+     the harness builds through the service arm, so what I was looking
+     at was this line and not the one I had changed. */
+  walnut: { color: 0xc2c2c0, texture: 'walnut', roughness: 1, metalness: 0, uvScale: 2.2 },
   copper: { color: 0xffffff, texture: 'copper', roughness: 1, metalness: 1, uvScale: 3 },
   brass: { color: 0xffffff, texture: 'brass', roughness: 1, metalness: 1, uvScale: 3 },
   glow: { color: 0x9fe8ff, texture: 'smooth', roughness: 0.30, metalness: 0, emissive: 0x54c8ff, emissiveStrength: 1.5 },
