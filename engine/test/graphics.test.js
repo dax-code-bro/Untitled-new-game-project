@@ -231,9 +231,28 @@ const pct = (a, b) => +(((b - a) / (a || 1)) * 100).toFixed(1);
   const s90 = Math.abs(pct(r.fogOff.p90, r.fogOn.p90));
   check('the sky itself is untouched by the blend', s90 < 2,
     `band p90 moved ${s90}% (${r.fogOff.p90} to ${r.fogOn.p90})`);
-  check('and the distant silhouette rises toward it',
-    pct(r.fogOff.p10, r.fogOn.p10) > 8,
-    `band p10 ${pct(r.fogOff.p10, r.fogOn.p10)}% (${r.fogOff.p10} to ${r.fogOn.p10})`);
+  /* HOW MUCH OF THE GAP IT CLOSED, not how much brighter the dark
+     pixels got.
+   *
+     This asked for p10 to rise by 8% of its own value, and that is a
+     measurement of the scene rather than of the blend. Under the old
+     overcast dusk the silhouette sat 117 units below the sky and p10
+     rose 19%. Under hard midday it sits 28 units below and rises 2.5% --
+     and the blend is doing the SAME WORK in both:
+
+         dusk     19.8 of 117 units closed   16.9%
+         midday    4.7 of  28 units closed   16.7%
+
+     Two lightings that could hardly be less alike, agreeing to a
+     fifth of a per cent, against a raw figure that swung by eight
+     times. The fraction of the available gap is what the blend
+     controls; the size of the gap is what the weather controls, and
+     only one of those is this file's business. */
+  const closed = (r.fogOn.p10 - r.fogOff.p10) / ((r.fogOff.p90 - r.fogOff.p10) || 1);
+  check('and it closes the gap between the silhouette and the sky',
+    closed > 0.08,
+    `closed ${(closed * 100).toFixed(1)}% of a ${(r.fogOff.p90 - r.fogOff.p10).toFixed(1)}-unit gap `
+    + `(p10 ${r.fogOff.p10} to ${r.fogOn.p10}, sky ${r.fogOff.p90})`);
   const cOff = r.fogOff.p90 - r.fogOff.p10, cOn = r.fogOn.p90 - r.fogOn.p10;
   check('so the silhouette dissolves instead of standing out',
     pct(cOff, cOn) < -8, `contrast ${pct(cOff, cOn)}% (${cOff.toFixed(1)} to ${cOn.toFixed(1)})`);
