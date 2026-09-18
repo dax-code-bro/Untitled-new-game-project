@@ -339,6 +339,35 @@ function svcMag(g, K) {
     svcDisc(g, 'y', [M.x, M.y + 0.012, 0], M.r * 0.30, 0.006, 18);
     return;
   }
+  if (M.kind === 'side') {
+    /* OUT TO THE LEFT, HORIZONTALLY.
+     *
+       The FG42 is the one rifle in the table anybody can name from its
+       silhouette alone, and the reason is the magazine: it feeds from
+       a twenty-round box lying flat out of the left side of the
+       receiver, which is why the gun is so narrow head-on and why the
+       sights sit offset. It was carried here as `kind: none` -- no
+       magazine at all -- so the model was an FG42 with the one feature
+       that makes it an FG42 left off.
+
+       The sweep runs along -Z because the ejection port is at +Z, so
+       +Z is the firing side and the magazine is opposite it. The
+       cross-section is therefore in X and Y: fore-and-aft is the
+       length of the round, up-and-down is its diameter, and the stack
+       is what the sweep walks along. */
+    const n = 6, sts = [], out = M.out || 0.135, z0 = M.z0 || 0.020;
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      const taper = 1 - t * 0.07;
+      sts.push({
+        o: new Vec3(M.x, M.y - t * out * 0.05, -(z0 + t * out)),
+        u: new Vec3(1, 0, 0), v: AU,
+        pts: roundRect(M.d * taper, M.d * taper, M.w * taper, 3.2, 16),
+      });
+    }
+    sweepPath(g, sts, true, true);
+    return;
+  }
   if (M.kind === 'belt') {
     /* A short tab of belt out of the feed tray, curving away and down;
        the rest of it is in a box, and the box is a separate prop.
@@ -789,11 +818,15 @@ const SERVICE_KINDS = {
   /* Side-fed, so the magazine goes out to the left and the gun is
      narrow from the front. */
   fg42: svcSpec({
-    ammoKind: 'kurz',
+    ammoKind: 'full',
     muzzle: 0.470, barrel: { brake: 'cone', gasAt: 0.330 },
     rec: { rear: -0.140, front: 0.100, up: 0.0215, w: 0.0155 },
     hg: { kind: 'tube', x0: 0.110, x1: 0.215, r: 0.0180 },
-    mag: { kind: 'none' },
+    /* 7.92x57, not the Kurz: the FG42 is a full-power rifle, which is
+       most of why it needed the raked grip and the muzzle cone it has
+       -- and it feeds from the left. */
+    mag: { kind: 'side', x: 0.006, y: 0.004, out: 0.135, z0: 0.019,
+      d: 0.0255, w: 0.0130 },
     grip: { rake: 0.58, len: 0.112 },
     stock: { kind: 'wood', butt: -0.320, comb: 0.0180, drop: 0.0260, w: 0.0165 },
     sight: { y: 0.0345, frontX: 0.395, front: 'ears', rear: 'aperture' },

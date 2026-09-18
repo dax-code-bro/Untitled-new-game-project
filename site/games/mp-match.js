@@ -774,10 +774,18 @@
     [0.20, 0.98, 0.02, 0.24, 0.72, 0.06, 0.068, 'armR', 0.72],
     [-0.24, 0.72, 0.06, -0.22, 0.54, 0.14, 0.056, 'foreL', 0.72],
     [0.24, 0.72, 0.06, 0.22, 0.54, 0.14, 0.056, 'foreR', 0.72],
-    [-0.11, 0.50, 0, -0.13, 0.40, 0.34, 0.098, 'thighL', 0.80],
-    [0.11, 0.50, 0, 0.13, 0.40, 0.34, 0.098, 'thighR', 0.80],
-    [-0.13, 0.40, 0.34, -0.12, 0.07, 0.24, 0.072, 'shinL', 0.70],
-    [0.13, 0.40, 0.34, 0.12, 0.07, 0.24, 0.072, 'shinR', 0.70],
+    /* THE LEGS FOLLOW THE BODY THAT IS DRAWN.
+       These were authored for the crouch somebody meant to make, and
+       the clip was making a different one -- with the knees pointing
+       BACKWARDS and the feet 122mm underground, so neither the
+       hitbox nor the model was where the other was. The clip is fixed
+       now and these are measured off it: hip joint at 0.485, knee at
+       0.262 and 0.356 forward, ankle at 0.087 and back under the
+       hips. Skin tight means tight to what is on the screen. */
+    [-0.11, 0.49, 0, -0.13, 0.26, 0.34, 0.098, 'thighL', 0.80],
+    [0.11, 0.49, 0, 0.13, 0.26, 0.34, 0.098, 'thighR', 0.80],
+    [-0.13, 0.26, 0.34, -0.12, 0.09, 0.00, 0.072, 'shinL', 0.70],
+    [0.13, 0.26, 0.34, 0.12, 0.09, 0.00, 0.072, 'shinR', 0.70],
   ];
   /* Flat: everything is between 0.10 and 0.36 off the ground and runs
      backwards along -Z from the head, which is at the front. */
