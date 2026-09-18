@@ -1165,15 +1165,43 @@
      lane is a wash. Town keeps most of its overcast, because a grey
      day genuinely is hazy and that map reads well; Helipad loses two
      thirds of its. */
+  /* WHAT LIGHTS THE SIDE OF A WALL THE SUN IS NOT ON.
+   *
+     Everything that reads as broken on these maps turns out to be the
+     same thing: shade falls off a cliff. Brick photographs bright
+     orange-red with the sun on it and near-black three metres away in
+     shadow. Pavement is #d5d1c9 lit and was #000000 unlit. It is not
+     the sun angle, the fog, the shadow cascades, the tiling or the
+     tints -- each of those was tested and ruled out. It is that the
+     only thing reaching a surface the sun misses is the sky, and the
+     sky's LOWER half -- the bounce up off the ground -- is set dark in
+     every preset: 0x494c50 under overcast, 0x4a453c under a clear
+     day, 0x4a3628 at sunset.
+
+     A real ground bounce is the map's own floor lit by its own sky, and
+     these floors are pale concrete, white pool tile, asphalt and dust.
+     None of them is a 30 per cent grey.
+
+     Swept on Town and measured at two points at once -- a wall in
+     shadow and a floor in sun:
+
+       0x494c50 (shipped)   wall #280404   floor #d2d2d3
+       0x62676b             wall #340707   floor #d3d4d4
+       0x8e9498             wall #430600   floor #d3d4d4
+       0xb4babe             wall #52170c   floor #d3d4d4
+
+     The shade doubles and the light does not move, which is exactly
+     what a bounce term should do and the reason to reach for this one
+     rather than for exposure, which would lift both. */
   var SKY = {
     helipad: { sky: 'dawn', hours: 7.4, exposure: 1.06,
-      fog: 0xb9bcc4, fogDensity: 0.0026 },                       // elev 0.36
+      fog: 0xb9bcc4, fogDensity: 0.0026, ground: 0x8a8272 },     // elev 0.36
     resort: { sky: 'day', hours: 15.0, exposure: 1.0,
-      fog: 0xa8c0dc, fogDensity: 0.0032 },                       // elev 0.71
+      fog: 0xa8c0dc, fogDensity: 0.0032, ground: 0xb0aa9c },     // elev 0.71
     town: { sky: 'overcast', hours: 9.5, exposure: 1.02,
-      fog: 0x9aa4b0, fogDensity: 0.0070 },                       // elev 0.79
+      fog: 0x9aa4b0, fogDensity: 0.0070, ground: 0x9aa0a6 },     // elev 0.79
     demolition: { sky: 'sunset', hours: 17.2, exposure: 1.14,
-      fog: 0xc98a58, fogDensity: 0.0038 },                       // elev 0.30
+      fog: 0xc98a58, fogDensity: 0.0038, ground: 0x8c6a4e },     // elev 0.30
   };
 
   function applySky(game, id) {
@@ -1182,7 +1210,7 @@
        the preset's own and would put it back. The fog goes in as an
        override so setSky cannot put that back either. */
     try {
-      game.setSky(s.sky, { fog: s.fog, fogDensity: s.fogDensity });
+      game.setSky(s.sky, { fog: s.fog, fogDensity: s.fogDensity, ground: s.ground });
     } catch (e) { /* a sky name the build does not have */ }
     try { game.setTimeOfDay(s.hours); } catch (e) { /* older engine */ }
     try { if (s.exposure != null) game.renderer.post.exposure = s.exposure; } catch (e) { /* no post stage */ }
