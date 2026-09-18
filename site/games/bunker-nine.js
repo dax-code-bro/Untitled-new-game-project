@@ -4363,6 +4363,31 @@ function buildBunker9(game, S) {
      three quarters, with the material at 1 so it does not multiply. */
   game.ground({ material: { ...MAT.mud, uvScale: 1 }, size: 160, uvScale: 0.57, segments: 48 });
 
+  /* AND A HORIZON BEHIND IT, because the field ends at 80 metres and
+     you can see where.
+   *
+     From the bunker roof -- the highest thing a player can stand on --
+     there is a hard line on the left where the brown stops and the sky
+     starts. The smoke does most of the work but not all of it: at 80m
+     with the fog at 0.0072 the field is only 44 per cent faded, and 56
+     per cent of a hard edge is still a hard edge.
+
+     Not fixed by more fog, which would erase the treeline the map is
+     built around, and not by making the field itself bigger, because
+     its UV density is deliberate -- the comment above this line is
+     about exactly that, and stretching it 4x would undo the fix it
+     describes. A second, much larger plane underneath costs one quad,
+     never comes near the player, and only has to read as more field
+     through smoke. At 900 across, the far side is 450m out and 96 per
+     cent fogged, which is gone.
+
+     Six centimetres down so it can never z-fight with the real ground
+     it sits under, and no physics: nothing should ever stand on it. */
+  game.ground({ at: [0, -0.06, 0], size: 900, uvScale: 0.05, segments: 1,
+    physics: false,
+    material: { color: 0x6a6052, texture: 'dirt', roughness: 0.99, metalness: 0,
+      uvScale: 1 } });
+
   /* Everything the battlefield builds gets registered as it is made, so the
      graphics setting can take the whole of it away in one go rather than
      hunting for handles afterwards. Done by wrapping the three spawners for
