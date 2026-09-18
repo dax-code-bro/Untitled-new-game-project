@@ -228,23 +228,66 @@ const TextureLib = {
        since it has room to swing -- but it varies around mid-grey and only
        leans warm. The colour comes from the material, where it was always
        written down. */
+    /* TIMBER, AS BOARDS RATHER THAN AS ONE SHEET OF GRAIN.
+     *
+       This was rings plus fibre: a single continuous wood pattern, no
+       plank edges, no knots, no weathering. Photographed from a metre
+       away it reads as wallpaper -- which is exactly what a close-up of
+       the ranch wall showed, and no amount of detail sampling or
+       sharper light fixes a pattern that has only one thing in it. A
+       surface reads as real when it has features at several scales AND
+       a reason for each of them.
+
+       Five things a real weatherboard wall has that this did not:
+
+         BOARDS      it is made of separate pieces, and the eye finds
+                     the seams before it finds the grain.
+         SEAMS       which are dark, because dirt collects in them, and
+                     recessed, because boards do not meet flush.
+         TONE        no two boards came off the same tree. A per-plank
+                     hash shifts colour and grain so the wall stops
+                     being one texture stretched over a building.
+         KNOTS       the one feature that is unmistakably wood.
+         WEATHERING  sun greys timber in patches, not evenly, and the
+                     patches are much larger than the boards.
+
+       The mean stays where it was -- about 0.78 -- because every colour
+       here MULTIPLIES what the material asked for, and this file has
+       three separate notes about recipes that quietly ate the colour
+       they were handed. */
     wood(u, v, n, c) {
-      // Rings: distance from a slightly wobbled axis, wrapped.
-      const wob = n.fbm(u * 3, v * 1.2, 5, 3) * 0.35;
-      const rings = Math.abs(((v * 9 + wob) % 1) * 2 - 1);
-      const fibre = n.fbm(u * 4, v * 90, 2, 2) * 0.5 + 0.5;
+      const NP = 6;                                  // boards per tile
+      const vp = v * NP;
+      const pi = Math.floor(vp);
+      const pf = vp - pi;
+      // Each board's own character, off a cheap hash of its index.
+      const h1 = ((pi * 2654435761) % 1000) / 1000;
+      const h2 = ((pi * 40503 + 17) % 1000) / 1000;
+      // The seam, and the dirt in it.
+      const seam = Math.min(pf, 1 - pf);
+      const seamK = 1 - smoothstep(0.0, 0.055, seam);
+      /* Grain runs along the board, and each board's rings are offset
+         and wobbled by its own hash, so two stacked boards never line
+         up into one continuous figure. */
+      const wob = n.fbm(u * 3 + h1 * 8, pf * 1.2 + h2 * 5, 5, 3) * 0.35;
+      const rings = Math.abs(((pf * 7 + wob + h1 * 3) % 1) * 2 - 1);
+      const fibre = n.fbm(u * 4, pf * 80 + pi * 13, 2, 2) * 0.5 + 0.5;
       const dark = smoothstep(0.35, 0.85, rings);
-      // The ring contrast was 1.7 to 1, which at the scale the boards and
-      // beams are tiled at reads as painted corduroy rather than as grain.
-      // The height field still carries the full swing, so the normal map
-      // keeps the texture of it.
-      const base = 0.82 - dark * 0.21 + fibre * 0.10;
-      c.r = base * 1.04;
-      c.g = base * 0.96;
-      c.b = base * 0.86;
-      c.rough = 0.62 + dark * 0.2;
-      c.ao = 1 - dark * 0.15;
-      c.h = 0.5 + (1 - dark) * 0.3 + fibre * 0.12;
+      // A knot on some boards and not others, placed by the board's hash.
+      const kd = Math.hypot((u - h2) * 3.2, (pf - (0.5 + (h1 - 0.5) * 0.5)) * 1.0);
+      const knot = h1 > 0.62 ? (1 - smoothstep(0.02, 0.10, kd)) : 0;
+      // Sun-greying, at a scale much larger than a board.
+      const grey = smoothstep(0.45, 0.85, n.fbm(u * 1.7, v * 1.4, 21, 4) * 0.5 + 0.5);
+
+      let base = 0.84 - dark * 0.20 + fibre * 0.09 - seamK * 0.30 - knot * 0.34;
+      base += (h1 - 0.5) * 0.10;                     // board-to-board tone
+      const warm = 1 - grey * 0.55;
+      c.r = base * (1.02 * warm + 0.06);
+      c.g = base * (0.95 * warm + 0.08);
+      c.b = base * (0.84 * warm + 0.14);
+      c.rough = clamp(0.60 + dark * 0.16 + seamK * 0.22 + grey * 0.10 - knot * 0.10, 0.42, 1);
+      c.ao = 1 - dark * 0.12 - seamK * 0.45 - knot * 0.25;
+      c.h = 0.5 + (1 - dark) * 0.28 + fibre * 0.10 - seamK * 0.55 - knot * 0.30;
     },
 
     metal(u, v, n, c) {
