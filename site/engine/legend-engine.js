@@ -7932,18 +7932,34 @@ const HUMANOID_BONES = [
   ['chest', 1, [0, 0.18, 0]],
   ['neck', 2, [0, 0.16, 0]],
   ['head', 3, [0, 0.11, 0]],
-  // Arms hang at the sides in bind pose rather than straight out. A T-pose
-  // rig would need every clip to rotate the arms down 80 degrees before doing
-  // anything else, and any bone a clip does not touch would snap back to the
-  // T — which is exactly what "unfinished character" looks like.
-  ['shoulderL', 2, [0.08, 0.12, 0]],
-  ['upperArmL', 5, [0.075, -0.045, 0]],
-  ['lowerArmL', 6, [0.035, -0.255, 0]],
-  ['handL', 7, [0.015, -0.235, 0]],
-  ['shoulderR', 2, [-0.08, 0.12, 0]],
-  ['upperArmR', 9, [-0.075, -0.045, 0]],
-  ['lowerArmR', 10, [-0.035, -0.255, 0]],
-  ['handR', 11, [-0.015, -0.235, 0]],
+  /* Arms hang at the sides in bind pose rather than straight out. A
+     T-pose rig would need every clip to rotate the arms down 80
+     degrees before doing anything else, and any bone a clip does not
+     touch would snap back to the T -- which is exactly what
+     "unfinished character" looks like.
+
+     THE SHOULDER JOINTS WERE TEN CENTIMETRES TOO FAR IN, and that one
+     number is most of why every man in this game reads as a tube with
+     legs. Measured off a photograph of a standing operator: the
+     shoulder joint sat 0.155 from the midline (0.13 at this body's
+     scale) with an upper arm 0.060 thick, so the arm's outer surface
+     was at 0.163 -- inside the trunk, whose deltoid shelf was 0.204
+     wide. The arms were geometrically BURIED. You could see a hand at
+     the hip and nothing else, which is the complaint: "no arms".
+
+     Biacromial breadth on a 1.75 m adult is about 0.40, so the joint
+     belongs at 0.175 and the arm's outer surface at about 0.235 --
+     outside a trunk that has been narrowed to 0.176 at the clavicles
+     (see buildTorso). The arm is then the silhouette, which on a real
+     person it is. */
+  ['shoulderL', 2, [0.072, 0.128, 0.006]],
+  ['upperArmL', 5, [0.103, -0.052, 0.002]],
+  ['lowerArmL', 6, [0.016, -0.262, 0.004]],
+  ['handL', 7, [0.006, -0.240, 0.010]],
+  ['shoulderR', 2, [-0.072, 0.128, 0.006]],
+  ['upperArmR', 9, [-0.103, -0.052, 0.002]],
+  ['lowerArmR', 10, [-0.016, -0.262, 0.004]],
+  ['handR', 11, [-0.006, -0.240, 0.010]],
   ['upperLegL', 0, [0.09, -0.04, 0]],
   ['lowerLegL', 13, [0, -0.42, 0]],
   ['footL', 14, [0, -0.40, 0]],
@@ -11420,11 +11436,18 @@ function buildTorso(g, segments, k = 1) {
     [0.090, 0.161, 0.107, 2.4],
     [0.175, 0.150, 0.100, 2.5],    // waist, the narrowest point
     [0.250, 0.161, 0.109, 2.5],
-    [0.320, 0.176, 0.118, 2.6],    // lower ribs flaring out
-    [0.380, 0.187, 0.123, 2.6],
-    [0.425, 0.195, 0.121, 2.6],    // chest
-    [0.460, 0.204, 0.113, 2.7],    // deltoid shelf
-    [0.487, 0.189, 0.103, 2.6],
+    [0.320, 0.170, 0.120, 2.6],    // lower ribs flaring out
+    [0.380, 0.176, 0.128, 2.6],
+    [0.425, 0.172, 0.126, 2.6],    // chest
+    /* THE TRUNK STOPS AT THE CLAVICLES. This ring was 0.204 across and
+       called a "deltoid shelf" -- it was modelling the shoulders as
+       part of the torso, and the arms were then buried inside it (see
+       HUMANOID_BONES). A trunk that is as wide as the shoulders and
+       arms that do not stick out of it is one smooth tube, which is
+       what a photograph of a standing operator showed. The trunk ends
+       where the collarbone ends; the DELTOID is the arm's job. */
+    [0.460, 0.176, 0.118, 2.7],    // clavicles
+    [0.487, 0.162, 0.106, 2.6],
     [0.508, 0.132, 0.087, 2.4],    // trapezius sloping in
     [0.528, 0.079, 0.067, 2.2],
   ];
@@ -11453,11 +11476,14 @@ function buildArm(g, side, skeleton, segments, k = 1) {
   skeleton.bones[skeleton.index('lowerArm' + S)].bindMatrix.getTranslation(elbow);
   skeleton.bones[skeleton.index('hand' + S)].bindMatrix.getTranslation(wrist);
 
-  // Start the arm inboard and above the joint so the deltoid buries itself
-  // in the torso instead of butting against it and leaving a visible seam.
+  /* Start the arm slightly inboard and above the joint so the deltoid
+     tucks into the torso instead of butting against it and leaving a
+     visible seam. SLIGHTLY: this was 0.052 in and 0.055 up, which with
+     the old narrow shoulder joint put the whole arm inside the trunk.
+     Enough to close the seam, not enough to hide the limb. */
   const armRoot = new Vec3().copy(shoulder);
-  armRoot.x -= side * 0.052;
-  armRoot.y += 0.055;
+  armRoot.x -= side * 0.026;
+  armRoot.y += 0.042;
 
   // One continuous loft from shoulder to wrist. Lofting the upper arm and
   // forearm separately looks fine on paper — the two rings at the elbow
@@ -11465,11 +11491,14 @@ function buildArm(g, side, skeleton, segments, k = 1) {
   // path direction, so the two rings are rotated relative to each other and
   // the surfaces do not line up vertex-for-vertex. The result is a hairline
   // crack you can see straight through at every joint.
+  /* A deltoid that is a deltoid: the top ring is the widest thing on
+     the upper body and it tapers hard to the elbow, which is the shape
+     that reads as a shoulder from thirty metres. */
   const upper = limbRings(armRoot, elbow, [
-    [0.060, 0.060, 2.0],
-    [0.055, 0.056, 2.0],
-    [0.049, 0.051, 2.0],
-    [0.043, 0.045, 2.0],
+    [0.069, 0.065, 2.1],
+    [0.062, 0.060, 2.0],
+    [0.052, 0.053, 2.0],
+    [0.044, 0.046, 2.0],
     [0.038, 0.041, 2.0],
   ]);
   const lower = limbRings(elbow, wrist, [

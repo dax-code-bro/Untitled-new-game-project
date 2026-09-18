@@ -186,11 +186,18 @@ function buildTorso(g, segments, k = 1) {
     [0.090, 0.161, 0.107, 2.4],
     [0.175, 0.150, 0.100, 2.5],    // waist, the narrowest point
     [0.250, 0.161, 0.109, 2.5],
-    [0.320, 0.176, 0.118, 2.6],    // lower ribs flaring out
-    [0.380, 0.187, 0.123, 2.6],
-    [0.425, 0.195, 0.121, 2.6],    // chest
-    [0.460, 0.204, 0.113, 2.7],    // deltoid shelf
-    [0.487, 0.189, 0.103, 2.6],
+    [0.320, 0.170, 0.120, 2.6],    // lower ribs flaring out
+    [0.380, 0.176, 0.128, 2.6],
+    [0.425, 0.172, 0.126, 2.6],    // chest
+    /* THE TRUNK STOPS AT THE CLAVICLES. This ring was 0.204 across and
+       called a "deltoid shelf" -- it was modelling the shoulders as
+       part of the torso, and the arms were then buried inside it (see
+       HUMANOID_BONES). A trunk that is as wide as the shoulders and
+       arms that do not stick out of it is one smooth tube, which is
+       what a photograph of a standing operator showed. The trunk ends
+       where the collarbone ends; the DELTOID is the arm's job. */
+    [0.460, 0.176, 0.118, 2.7],    // clavicles
+    [0.487, 0.162, 0.106, 2.6],
     [0.508, 0.132, 0.087, 2.4],    // trapezius sloping in
     [0.528, 0.079, 0.067, 2.2],
   ];
@@ -219,11 +226,14 @@ function buildArm(g, side, skeleton, segments, k = 1) {
   skeleton.bones[skeleton.index('lowerArm' + S)].bindMatrix.getTranslation(elbow);
   skeleton.bones[skeleton.index('hand' + S)].bindMatrix.getTranslation(wrist);
 
-  // Start the arm inboard and above the joint so the deltoid buries itself
-  // in the torso instead of butting against it and leaving a visible seam.
+  /* Start the arm slightly inboard and above the joint so the deltoid
+     tucks into the torso instead of butting against it and leaving a
+     visible seam. SLIGHTLY: this was 0.052 in and 0.055 up, which with
+     the old narrow shoulder joint put the whole arm inside the trunk.
+     Enough to close the seam, not enough to hide the limb. */
   const armRoot = new Vec3().copy(shoulder);
-  armRoot.x -= side * 0.052;
-  armRoot.y += 0.055;
+  armRoot.x -= side * 0.026;
+  armRoot.y += 0.042;
 
   // One continuous loft from shoulder to wrist. Lofting the upper arm and
   // forearm separately looks fine on paper — the two rings at the elbow
@@ -231,11 +241,14 @@ function buildArm(g, side, skeleton, segments, k = 1) {
   // path direction, so the two rings are rotated relative to each other and
   // the surfaces do not line up vertex-for-vertex. The result is a hairline
   // crack you can see straight through at every joint.
+  /* A deltoid that is a deltoid: the top ring is the widest thing on
+     the upper body and it tapers hard to the elbow, which is the shape
+     that reads as a shoulder from thirty metres. */
   const upper = limbRings(armRoot, elbow, [
-    [0.060, 0.060, 2.0],
-    [0.055, 0.056, 2.0],
-    [0.049, 0.051, 2.0],
-    [0.043, 0.045, 2.0],
+    [0.069, 0.065, 2.1],
+    [0.062, 0.060, 2.0],
+    [0.052, 0.053, 2.0],
+    [0.044, 0.046, 2.0],
     [0.038, 0.041, 2.0],
   ]);
   const lower = limbRings(elbow, wrist, [

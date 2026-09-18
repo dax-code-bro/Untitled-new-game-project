@@ -323,18 +323,34 @@ const HUMANOID_BONES = [
   ['chest', 1, [0, 0.18, 0]],
   ['neck', 2, [0, 0.16, 0]],
   ['head', 3, [0, 0.11, 0]],
-  // Arms hang at the sides in bind pose rather than straight out. A T-pose
-  // rig would need every clip to rotate the arms down 80 degrees before doing
-  // anything else, and any bone a clip does not touch would snap back to the
-  // T — which is exactly what "unfinished character" looks like.
-  ['shoulderL', 2, [0.08, 0.12, 0]],
-  ['upperArmL', 5, [0.075, -0.045, 0]],
-  ['lowerArmL', 6, [0.035, -0.255, 0]],
-  ['handL', 7, [0.015, -0.235, 0]],
-  ['shoulderR', 2, [-0.08, 0.12, 0]],
-  ['upperArmR', 9, [-0.075, -0.045, 0]],
-  ['lowerArmR', 10, [-0.035, -0.255, 0]],
-  ['handR', 11, [-0.015, -0.235, 0]],
+  /* Arms hang at the sides in bind pose rather than straight out. A
+     T-pose rig would need every clip to rotate the arms down 80
+     degrees before doing anything else, and any bone a clip does not
+     touch would snap back to the T -- which is exactly what
+     "unfinished character" looks like.
+
+     THE SHOULDER JOINTS WERE TEN CENTIMETRES TOO FAR IN, and that one
+     number is most of why every man in this game reads as a tube with
+     legs. Measured off a photograph of a standing operator: the
+     shoulder joint sat 0.155 from the midline (0.13 at this body's
+     scale) with an upper arm 0.060 thick, so the arm's outer surface
+     was at 0.163 -- inside the trunk, whose deltoid shelf was 0.204
+     wide. The arms were geometrically BURIED. You could see a hand at
+     the hip and nothing else, which is the complaint: "no arms".
+
+     Biacromial breadth on a 1.75 m adult is about 0.40, so the joint
+     belongs at 0.175 and the arm's outer surface at about 0.235 --
+     outside a trunk that has been narrowed to 0.176 at the clavicles
+     (see buildTorso). The arm is then the silhouette, which on a real
+     person it is. */
+  ['shoulderL', 2, [0.072, 0.128, 0.006]],
+  ['upperArmL', 5, [0.103, -0.052, 0.002]],
+  ['lowerArmL', 6, [0.016, -0.262, 0.004]],
+  ['handL', 7, [0.006, -0.240, 0.010]],
+  ['shoulderR', 2, [-0.072, 0.128, 0.006]],
+  ['upperArmR', 9, [-0.103, -0.052, 0.002]],
+  ['lowerArmR', 10, [-0.016, -0.262, 0.004]],
+  ['handR', 11, [-0.006, -0.240, 0.010]],
   ['upperLegL', 0, [0.09, -0.04, 0]],
   ['lowerLegL', 13, [0, -0.42, 0]],
   ['footL', 14, [0, -0.40, 0]],

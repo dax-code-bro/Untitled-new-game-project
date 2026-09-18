@@ -189,6 +189,26 @@
   height:1px; background:rgba(232,221,200,.16); }
 #mpui .cam .prog i { display:block; height:100%; width:0; background:#ffd27a; }
 
+/* ---- THE ARROW THAT SAYS YOU ----
+   A kill cam is somebody else's screen, and the single hardest thing
+   about watching one is working out which of the twelve men on it is
+   the one who just died. This marks you: a label and a downward arrow
+   standing over your own head, wherever it is, for the whole clip.
+
+   Positioned from Engine.project, which is why it can exist at all --
+   until that landed there was no way to turn a world point into a
+   screen point and every marker in the game was a dot in the middle. */
+#mpui .cam .you { position:absolute; left:0; top:0; z-index:12;
+  transform:translate(-50%, -100%); text-align:center; pointer-events:none;
+  transition:opacity .18s linear; }
+#mpui .cam .you b { display:block; font-size:11px; letter-spacing:.34em;
+  font-weight:normal; color:#ffd27a; text-shadow:0 1px 5px rgba(0,0,0,.95),
+  0 0 12px rgba(255,210,122,.45); }
+#mpui .cam .you i { display:block; width:0; height:0; margin:3px auto 0;
+  border-left:6px solid transparent; border-right:6px solid transparent;
+  border-top:9px solid #ffd27a;
+  filter:drop-shadow(0 1px 4px rgba(0,0,0,.9)); }
+
 /* ---- settings ----
    Multiplayer read invertX and invertY out of storage and had no way
    on earth to SET them. Somebody whose stick is the wrong way round
@@ -272,6 +292,7 @@
   <div class="cam hide"><div class="lb t"></div><div class="lb b"></div>
     <div class="lab"><div class="kind"></div><div class="nm"></div><div class="det"></div></div>
     <div class="prog"><i></i></div>
+    <div class="you hide"><b>YOU</b><i></i></div>
     <div class="skip">press <b>Space</b> to skip</div></div>
   <div class="opt hide"><div class="pane">
     <h3>Settings</h3>
@@ -1471,7 +1492,7 @@
   function makeReplay(root, game, M, vm) {
     var q = function (sel) { return root.querySelector(sel); };
     var el = { wrap: q('.cam'), kind: q('.cam .kind'), nm: q('.cam .nm'),
-      det: q('.cam .det'), prog: q('.cam .prog i') };
+      det: q('.cam .det'), prog: q('.cam .prog i'), you: q('.cam .you') };
     var S = null, buf = [];
 
     function begin(spec) {
@@ -1505,6 +1526,7 @@
       setBody(M.you.actor, false);      // back inside your own head
       root.classList.remove('cam');
       el.wrap.classList.add('hide');
+      if (el.you) el.you.classList.add('hide');
     }
 
     /* Advance the clip and drive the camera. Returns false the frame it
@@ -1519,6 +1541,28 @@
 
       var f = (S.t - S.from) / Math.max(0.001, S.to - S.from);
       el.prog.style.width = (f * 100).toFixed(1) + '%';
+
+      /* ---- and where you are in it ----
+         Your own body on the tape, a little over your head, in the
+         same amber everything you can act on uses. Hidden when you are
+         behind the camera or off the sides, because a marker pinned to
+         the edge of the screen pointing at nothing is worse than no
+         marker at all. */
+      if (el.you) {
+        var mineIdx = M.you ? M.you.id : -1;
+        var mine = mineIdx >= 0 ? list[mineIdx] : null;
+        var sp = (mine && mine.alive && game.project)
+          ? game.project([mine.x, mine.y + EYE + 0.34, mine.z]) : null;
+        if (sp && !sp.offscreen) {
+          el.you.classList.remove('hide');
+          el.you.style.left = sp.x.toFixed(0) + 'px';
+          el.you.style.top = sp.y.toFixed(0) + 'px';
+          /* Fainter far away, so it does not shout over a man who is a
+             hundred metres off and not the point of the shot. */
+          el.you.style.opacity = Math.max(0.35,
+            Math.min(1, 1.25 - sp.depth / 90)).toFixed(2);
+        } else el.you.classList.add('hide');
+      }
 
       var EYE = W.MP_MATCH.EYE;
       if (S.chase) {
