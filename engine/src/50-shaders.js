@@ -495,7 +495,7 @@ void main(){
       vec3 dA = texture(uAlbedoMap, dUv).rgb;
       /* DIVIDED BY ITS OWN MEAN, so this is contrast and not gain.
        *
-         The first cut multiplied by `dA * 1.85`, where 1.85 was a guess
+         The first cut multiplied the detail sample by 1.85, a guess
          at twice the average texel. Compare the two frames and the
          detail version is plainly BRIGHTER, not just grainier -- timber
          averages nearer 0.65 than 0.54, so every wall using it got a

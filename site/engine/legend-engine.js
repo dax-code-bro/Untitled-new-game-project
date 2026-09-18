@@ -3158,9 +3158,21 @@ void main(){
     albedo *= tex.rgb;
     if (detW > 0.001) {
       vec3 dA = texture(uAlbedoMap, dUv).rgb;
-      // Around unity: brighter where the fine grain is light, darker
-      // where it is dark, and unchanged on average.
-      albedo *= mix(vec3(1.0), dA * 1.85, detW * 0.55);
+      /* DIVIDED BY ITS OWN MEAN, so this is contrast and not gain.
+       *
+         The first cut multiplied the detail sample by 1.85, a guess
+         at twice the average texel. Compare the two frames and the
+         detail version is plainly BRIGHTER, not just grainier -- timber
+         averages nearer 0.65 than 0.54, so every wall using it got a
+         twenty per cent lift it did not ask for, and the same constant
+         would have darkened anything darker.
+
+         The 1x1 mip IS the average of the texture. Dividing by it makes
+         the layer exactly neutral by construction, for every recipe,
+         with no constant to be wrong: light grain brightens, dark grain
+         darkens, and the mean of the surface does not move. */
+      vec3 dAvg = max(textureLod(uAlbedoMap, dUv, 20.0).rgb, vec3(0.004));
+      albedo *= mix(vec3(1.0), dA / dAvg, detW * 0.55);
     }
     vec3 orm = texture(uOrmMap, uv).rgb;
     ao = orm.r;
