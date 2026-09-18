@@ -154,7 +154,26 @@ const TextureLib = {
       c.r = base * (0.98 + stain * 0.06);
       c.g = base * (0.97 + stain * 0.05);
       c.b = base * 0.95;
-      c.rough = 0.82 + g * 0.12;
+      /* ROUGHNESS CONTRAST, and the reason it is here rather than in
+         the normal map. Under a big diffuse sky -- which is what an
+         overcast map IS -- a tilted normal returns nearly the same
+         shade as an untilted one, so relief cannot read. Varied SHEEN
+         can: it is why overcast is good light for showing material.
+         This was 0.82..0.94, a spread of 0.12, which is a single
+         roughness with a wobble on it. Now the trowelled face is
+         polished and the pitted, stained areas are matte, which is how
+         a concrete slab that has been rained on actually looks. Tied to
+         the pits and the staining that are already in the albedo, so
+         the sheen and the colour agree with each other rather than
+         being two unrelated noises on one surface.
+
+         THE MEAN IS HELD, only the spread widens. The first cut of this
+         moved dirt from 242 to 219 and grass from 234 to 211 -- which
+         is not a contrast pass, it is a gloss pass, and it would have
+         made every ground surface in the game wetter than it was
+         authored. Each constant below is set so the recipe's average
+         roughness lands within a few 255ths of where it already was. */
+      c.rough = clamp(0.855 + (g - 0.5) * 0.26 + pits * 0.22 - (stain - 0.5) * 0.16, 0.42, 1);
       c.ao = 1 - pits * 0.28;
       c.h = g * 0.42 - pits * 0.46;
     },
@@ -175,7 +194,8 @@ const TextureLib = {
       if (isMortar) {
         const g = 0.5 + grain * 0.15;
         c.r = g; c.g = g * 0.98; c.b = g * 0.93;
-        c.rough = 0.95;
+        // Mortar is matte and never quite even.
+        c.rough = clamp(0.96 + (grain - 0.5) * 0.12, 0.42, 1);
         c.ao = 0.45 + mortar * 1.4;
         c.h = 0.1 + grain * 0.1;
       } else {
@@ -186,7 +206,11 @@ const TextureLib = {
         c.r = shade * 0.62;
         c.g = shade * 0.30;
         c.b = shade * 0.23;
-        c.rough = 0.86 - tint * 0.1;
+        /* Brick to brick already varied; now the face of each one does
+           too. A fired brick is not uniform -- the skin is closer and
+           harder than the body, and a weathered face is matte where a
+           sheltered one keeps its sheen. */
+        c.rough = clamp(0.90 - tint * 0.16 + (grain - 0.5) * 0.18, 0.42, 1);
         c.ao = 1 - smoothstep(0.5, 0.22, mortar) * 0.35;
         c.h = 0.75 + grain * 0.2;
       }
@@ -271,7 +295,9 @@ const TextureLib = {
       const grain = n.fbm(u * 45, v * 45, 7, 3) * 0.5 + 0.5;
       const base = 0.30 + r * 0.30 + grain * 0.08;
       c.r = base * 1.02; c.g = base * 0.99; c.b = base * 0.94;
-      c.rough = 0.88 - r * 0.08;
+      /* Ridges take the weather and come up smoother; the crevices
+         between them stay rough. 0.80..0.88 was almost one value. */
+      c.rough = clamp(0.84 - (r - 0.5) * 0.30 + (grain - 0.5) * 0.12, 0.42, 1);
       c.ao = 0.55 + r * 0.45;
       c.h = r * 0.9 + grain * 0.15;
     },
@@ -284,7 +310,9 @@ const TextureLib = {
       c.r = lerp(lush * 0.42, lush * 0.95, dry);
       c.g = lerp(lush * 1.05, lush * 0.85, dry);
       c.b = lerp(lush * 0.28, lush * 0.42, dry);
-      c.rough = 0.92;
+      /* Dead-flat at 0.92 before, which is a lawn made of felt. Living
+         blades are waxy and catch the sky; dry ones do not. */
+      c.rough = clamp(0.955 - blade * 0.13 + dry * 0.10, 0.42, 1);
       c.ao = 0.7 + blade * 0.3;
       c.h = blade * 0.7 + patch * 0.3;
     },
@@ -307,7 +335,11 @@ const TextureLib = {
          a warm sun once its albedo was correct. Every other recipe in
          here had this taken out; this one kept a third of it. */
       c.r = base * 1.02; c.g = base; c.b = base * 0.96;
-      c.rough = 0.95;
+      /* Flat 0.95 before. Churned earth is not one material: the packed
+         clods hold a damp sheen and the loose grit between them does
+         not, and that difference is most of what tells you ground is
+         ground rather than a brown plane. */
+      c.rough = clamp(0.965 - clod * 0.16 + grit * 0.07, 0.42, 1);
       c.ao = 0.72 + clod * 0.28;
       c.h = clod * 0.7 + grit * 0.3;
     },
@@ -320,7 +352,10 @@ const TextureLib = {
       // of the khaki its materials already ask for. Sandbags came out
       // mustard. The material has the colour; this just varies it.
       c.r = base * 1.03; c.g = base * 0.99; c.b = base * 0.92;
-      c.rough = 0.9;
+      /* The windward face of a ripple is packed and the lee is loose.
+         Keyed to the dune so the sheen runs with the ripples instead of
+         crossing them. */
+      c.rough = clamp(0.945 - dune * 0.13 + grain * 0.05, 0.42, 1);
       c.ao = 0.85 + dune * 0.15;
       c.h = dune * 0.6 + grain * 0.4;
     },

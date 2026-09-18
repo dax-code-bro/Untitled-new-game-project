@@ -934,6 +934,225 @@ body.b9staged #b9hud { display:none !important; }
 }
 `;
 
+var CSS4 = `
+/* ================================================================
+   MULTIPLAYER -- THE HOLOGRAPHIC SHELL
+   ================================================================
+   Built to the reference photographs: a near-black navy ground, a
+   holographic floor running away from you with the light falling down
+   it, and everything on top of it drawn in thin, wide-tracked, cold
+   type. Panels are chamfered rather than square, accents are electric
+   cyan rather than gold, and the readouts are segmented ticks rather
+   than solid bars.
+
+   SCOPED TO .mp AND NOTHING ELSE. Bunker Nine's own menus stay in
+   parchment and gold, because they belong to a 1940s bunker and a
+   cyan hologram in front of a coal stove is a different game. The
+   reference is entirely multiplayer screens -- weapons, loadouts,
+   operators, play -- so that is exactly how far this reaches.
+
+   The look is the reference's LANGUAGE, not its contents: none of the
+   names, marks or art are carried over, only the layout and the
+   treatment. Same line this project already drew for the bunker. */
+
+#b9shell .mp {
+  --ho: #58c8ff;            /* the accent: electric cyan */
+  --hoDim: #2a7fa8;
+  --hoWarm: #ffb347;        /* the one warm note, for MAX and locked */
+  --ink: #dbeaf5;
+  --inkDim: #6f8496;
+  --panel: rgba(8,14,22,.82);
+  --edge: rgba(88,200,255,.22);
+  font-family:'Bahnschrift','DIN Alternate','Segoe UI',system-ui,sans-serif;
+  color:var(--ink);
+  background:
+    radial-gradient(120% 90% at 50% 8%, #0d1a28 0%, #070d16 45%, #03060b 100%);
+  letter-spacing:.06em;
+}
+
+/* ---- the floor ------------------------------------------------------
+   A perspective grid, its lines converging on the horizon, with a
+   sheen laid over the near half so it reads as a polished deck rather
+   than as graph paper. Pure CSS: two repeating gradients on a rotated
+   plane. */
+#b9shell .mp .holofloor {
+  position:absolute; left:-30%; right:-30%; bottom:-6%; height:58%;
+  pointer-events:none; z-index:0; overflow:hidden;
+  opacity:.85;
+  -webkit-mask-image:linear-gradient(180deg, transparent 0%, #000 18%, #000 72%, transparent 100%);
+  mask-image:linear-gradient(180deg, transparent 0%, #000 18%, #000 72%, transparent 100%);
+}
+#b9shell .mp .holofloor::before {
+  content:''; position:absolute; inset:-60% -10% -10%;
+  background:
+    repeating-linear-gradient(90deg, rgba(88,200,255,.30) 0 1px, transparent 1px 84px),
+    repeating-linear-gradient(0deg,  rgba(88,200,255,.20) 0 1px, transparent 1px 56px);
+  transform:perspective(520px) rotateX(74deg);
+  transform-origin:50% 100%;
+}
+#b9shell .mp .holofloor::after {
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(180deg, rgba(20,90,140,.34) 0%, rgba(8,26,44,.10) 60%, transparent 100%);
+}
+
+/* ---- the rain -------------------------------------------------------
+   Thin streaks falling down the back of the frame. Twelve of them,
+   each on its own delay, which is enough to read as weather and few
+   enough to cost nothing. */
+#b9shell .mp .holorain { position:absolute; inset:0; overflow:hidden; pointer-events:none; z-index:0;
+  opacity:.5; }
+#b9shell .mp .holorain i {
+  position:absolute; top:-22%; width:1px; height:22%;
+  background:linear-gradient(180deg, transparent, var(--ho), transparent);
+  animation:hofall linear infinite;
+}
+@keyframes hofall { from { transform:translateY(0); } to { transform:translateY(560%); } }
+
+/* ---- chrome ---------------------------------------------------------- */
+#b9shell .mp .mphead { border-bottom:1px solid rgba(88,200,255,.16);
+  background:linear-gradient(180deg, rgba(6,14,24,.92), rgba(6,14,24,0)); }
+/* Clear of the back button, which is pinned at left:26px and was
+   sitting on top of the first tab. */
+#b9shell .mp .mptabs { gap:30px; margin-left:132px; }
+@media (max-width: 900px) { #b9shell .mp .mptabs { margin-left:0; } }
+#b9shell .mp .mptab { font-size:13.5px; letter-spacing:.26em; color:var(--inkDim);
+  border-bottom:2px solid transparent; padding-bottom:7px; font-weight:600; }
+#b9shell .mp .mptab:hover { color:var(--ink); }
+#b9shell .mp .mptab.sel { color:#fff; border-bottom-color:var(--ho);
+  text-shadow:0 0 14px rgba(88,200,255,.65); }
+
+/* Panels: chamfered top-left and bottom-right, which is the corner
+   treatment the reference uses everywhere. */
+#b9shell .mp .card,
+#b9shell .mp .detail,
+#b9shell .mp .opdetail,
+#b9shell .mp .lobinfo {
+  background:var(--panel); border:1px solid var(--edge);
+  clip-path:polygon(11px 0, 100% 0, 100% calc(100% - 11px), calc(100% - 11px) 100%, 0 100%, 0 11px);
+  backdrop-filter:blur(2px);
+}
+#b9shell .mp .card h3 { color:var(--ho); letter-spacing:.28em; font-size:10px; font-weight:600; }
+
+/* ---- a row in a list: weapon, operator, mode ------------------------- */
+#b9shell .mp .slots > *, #b9shell .mp .oplist > *,
+#b9shell .mp .modelist > *, #b9shell .mp .mplist > * {
+  background:linear-gradient(90deg, rgba(14,26,40,.86), rgba(10,18,30,.5));
+  border:1px solid transparent; border-left:2px solid rgba(88,200,255,.18);
+  color:var(--ink);
+}
+#b9shell .mp .slots > *:hover, #b9shell .mp .oplist > *:hover,
+#b9shell .mp .modelist > *:hover, #b9shell .mp .mplist > *:hover {
+  background:linear-gradient(90deg, rgba(22,46,70,.92), rgba(12,24,38,.55));
+  border-left-color:var(--ho);
+}
+#b9shell .mp .slots > .sel, #b9shell .mp .oplist > .sel,
+#b9shell .mp .modelist > .sel, #b9shell .mp .mplist > .sel {
+  background:linear-gradient(90deg, rgba(30,74,110,.95), rgba(14,30,48,.6));
+  border-left-color:var(--ho); color:#fff;
+  box-shadow:inset 0 0 26px rgba(88,200,255,.12);
+}
+
+/* ---- segmented readouts ---------------------------------------------
+   FIREPOWER / ACCURACY / MOBILITY / HANDLING, drawn as a row of ticks
+   rather than a filled bar: a tick count is a number you can read at a
+   glance and a bar is a length you have to judge. */
+#b9shell .mp .hostat { display:grid; grid-template-columns:78px 1fr; gap:10px;
+  align-items:center; margin:3px 0; }
+#b9shell .mp .hostat b { font-weight:600; font-size:9px; letter-spacing:.2em;
+  color:var(--inkDim); text-transform:uppercase; }
+#b9shell .mp .hoticks { display:flex; gap:2px; height:9px; }
+#b9shell .mp .hoticks u { display:block; width:5px; height:100%;
+  background:rgba(88,200,255,.14); }
+#b9shell .mp .hoticks u.on { background:var(--ho); box-shadow:0 0 6px rgba(88,200,255,.7); }
+
+/* ---- five dots of rarity, and a level ring --------------------------- */
+#b9shell .mp .hodots { display:flex; gap:4px; }
+#b9shell .mp .hodots i { width:6px; height:6px; border-radius:50%;
+  border:1px solid var(--ho); }
+#b9shell .mp .hodots i.on { background:var(--ho); box-shadow:0 0 7px rgba(88,200,255,.8); }
+#b9shell .mp .horing { width:46px; height:46px; border-radius:50%;
+  border:2px solid var(--ho); display:flex; align-items:center; justify-content:center;
+  font-size:12px; font-weight:700; letter-spacing:.04em; color:#fff;
+  box-shadow:0 0 18px rgba(88,200,255,.35), inset 0 0 14px rgba(88,200,255,.18); }
+#b9shell .mp .horing.max { border-color:var(--hoWarm); color:var(--hoWarm);
+  box-shadow:0 0 18px rgba(255,179,71,.35), inset 0 0 14px rgba(255,179,71,.18); }
+
+/* ---- the plinth the weapon stands on --------------------------------- */
+#b9shell .mp .preview, #b9shell .mp .opfig { position:relative; z-index:1; }
+#b9shell .mp .gunart { filter:drop-shadow(0 0 22px rgba(88,200,255,.30)); }
+#b9shell .mp .gunart .body { stroke:#b9cad8; }
+#b9shell .mp .gunart .metal { stroke:#dff0ff; }
+#b9shell .mp .gunart .part { stroke:var(--ho); }
+
+/* ---- the prompts along the bottom ------------------------------------ */
+/* ---- the prompt strip -----------------------------------------------
+   THE ONE THAT WAS ALREADY THERE. The first cut of this added a second
+   row of controller prompts along the bottom to match the reference,
+   and the screenshot showed it landing straight on top of the legend
+   the shell has always drawn -- two overlapping sets of instructions,
+   which is worse than the plain one it replaced. The footer says the
+   same things; it only wanted the reference's treatment. */
+#b9shell .mp .mpfoot { color:var(--inkDim); letter-spacing:.2em; font-size:10.5px;
+  border-top:1px solid rgba(88,200,255,.12); padding-top:10px;
+  text-shadow:0 0 12px rgba(0,0,0,.8); }
+#b9shell .mp .mpfoot b, #b9shell .mp .mpfoot strong { color:var(--ho); font-weight:600; }
+
+/* Everything the player interacts with sits above the floor. */
+#b9shell .mp .mphead, #b9shell .mp .mpbody, #b9shell .mp .mpfoot { position:relative; z-index:2; }
+/* The drilling operator stays, but cooled to match and pushed back. */
+#b9shell .mp .train svg { opacity:.13; filter:hue-rotate(178deg) saturate(.7); }
+
+/* ---- the existing stat bars, cut into ticks -------------------------
+   The loadout screen already measures and paints these, and already
+   shows where a stat WAS when an attachment moves it. None of that
+   wants rewriting -- it only wants to look like the reference. So the
+   bar keeps its geometry and a repeating gradient laid over the top
+   chops it into segments: no JS touched, and the up/down marker still
+   lands in the right place because the underlying width is unchanged. */
+#b9shell .mp .stat .sb { position:relative; background:rgba(88,200,255,.10); }
+#b9shell .mp .stat .sb i { background:var(--ho); box-shadow:0 0 8px rgba(88,200,255,.55); }
+#b9shell .mp .stat .sb::after {
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background:repeating-linear-gradient(90deg, transparent 0 5px, rgba(4,10,18,.95) 5px 7px);
+}
+#b9shell .mp .stat.up .sb i { background:#6ef0a8; box-shadow:0 0 8px rgba(110,240,168,.6); }
+#b9shell .mp .stat.down .sb i { background:#ff7a6a; box-shadow:0 0 8px rgba(255,122,106,.6); }
+#b9shell .mp .stat .sn { color:var(--inkDim); letter-spacing:.2em; }
+#b9shell .mp .stat .sv { color:var(--ink); }
+
+/* ---- the last of the gold ------------------------------------------
+   The warm theme reaches these through selectors the cyan one does not
+   override by accident: a chosen weapon's name, the focus ring on a
+   row, the confirm button. Left alone they are three amber things in a
+   blue screen, which reads as a bug rather than as an accent. */
+#b9shell .mp .lslot.sel .v, #b9shell .mp .lrow.sel .n,
+#b9shell .mp .dname, #b9shell .mp .opname { color:#fff; }
+#b9shell .mp .lslot .v { color:var(--ink); }
+#b9shell .mp .lslot.sel .k, #b9shell .mp .lslot.sel .lv { color:var(--ho); }
+#b9shell .mp .tagline, #b9shell .mp .opblurb { color:var(--inkDim); }
+#b9shell .mp .sec { color:var(--ho); letter-spacing:.26em; }
+#b9shell .mp .confirm .go, #b9shell .mp .opconfirm .go {
+  border-color:var(--ho); color:#eaf7ff;
+  background:linear-gradient(180deg, rgba(40,110,160,.5), rgba(12,30,48,.5)); }
+#b9shell .mp .confirm .go:hover, #b9shell .mp .opconfirm .go:hover {
+  background:linear-gradient(180deg, rgba(60,150,210,.7), rgba(16,40,64,.6)); }
+
+#b9shell .mp .horow { display:flex; align-items:center; gap:14px; margin:2px 0 10px; }
+#b9shell .mp .hometa { display:flex; flex-direction:column; gap:6px; }
+#b9shell .mp .hotier { font-size:10px; letter-spacing:.24em; color:var(--inkDim); }
+#b9shell .mp .lvbar { background:rgba(88,200,255,.10); }
+#b9shell .mp .lvbar .f { background:var(--ho); box-shadow:0 0 10px rgba(88,200,255,.5); }
+#b9shell .mp .lvnote { color:var(--inkDim); }
+
+@media (prefers-reduced-motion: reduce) {
+  #b9shell .mp .holorain { display:none; }
+}
+@media (max-width: 900px) {
+  #b9shell .mp .holofloor { height:44%; }
+  #b9shell .mp .hoprompts { display:none; }
+}
+`;
+
 /* ================================================================
    MARKUP
    ================================================================ */
@@ -944,7 +1163,7 @@ function q(sel) { return root.querySelector(sel); }
 
 function buildDom() {
   var st = document.createElement('style');
-  st.textContent = CSS + CSS2 + CSS3;
+  st.textContent = CSS + CSS2 + CSS3 + CSS4;
   document.head.appendChild(st);
 
   root = document.createElement('div');
@@ -1035,6 +1254,11 @@ function buildDom() {
 
   <div class="screen mp">
     <div class="train"><div class="fig"></div><div class="vig"></div></div>
+    <!-- The holographic stage: a floor running away to a horizon and
+         the light falling down the back of it. Both are decoration and
+         neither takes a pointer, so they sit under everything. -->
+    <div class="holofloor"></div>
+    <div class="holorain"></div>
     <div class="mphead">
       <div class="mptabs">
         <div class="mptab lobtab">Lobby</div>
@@ -1106,6 +1330,27 @@ function buildDom() {
   /* The two tabs answer a pointer as well as the shoulder buttons.
      Wired here rather than in openMP, because openMP runs every time
      you change tab and a listener added there would stack up. */
+  /* THE RAIN, seeded once. Twelve streaks, each with its own column,
+     speed and delay, so the pattern never lines up into a visible
+     repeat. Written here rather than in the stylesheet because twelve
+     hand-authored nth-child rules is twelve chances to fat-finger one,
+     and this is the same twelve numbers a loop can produce. */
+  {
+    var rain = root.querySelector('.mp .holorain');
+    if (rain) {
+      var streaks = '';
+      for (var ri = 0; ri < 12; ri++) {
+        var left = (ri * 8.7 + (ri % 3) * 3.1) % 100;
+        var dur = 3.4 + (ri % 5) * 0.85;
+        var delay = (ri * 0.63) % 4.2;
+        streaks += '<i style="left:' + left.toFixed(1) + '%;animation-duration:'
+          + dur.toFixed(2) + 's;animation-delay:-' + delay.toFixed(2) + 's;opacity:'
+          + (0.25 + (ri % 4) * 0.19).toFixed(2) + '"></i>';
+      }
+      rain.innerHTML = streaks;
+    }
+  }
+
   el = {
     load: q('.load'), menu: q('.menu'), setscreen: q('.setscreen'), pause: q('.pause'),
     fill: q('.fill'), pct: q('.pct'), step: q('.step'), tip: q('.tip'),
@@ -2940,7 +3185,26 @@ function levelStrip(g) {
     else if (pg === 'gold') next = 'Platinum at 600 kills (' + pr.kills + ')';
     else next = 'Diamond at 1100 kills and 50 heads (' + pr.kills + ' / ' + pr.heads + ')';
   } else next = 'Diamond. The keychain slot is open.';
-  return '<div class="lvbar"><div class="f" style="width:'
+  /* THE RING AND THE DOTS, off the reference.
+   *
+     Everything below this was already here and already correct -- the
+     bar, the part count, what the next tier costs. What the reference
+     adds is a way to read the headline without reading a sentence: a
+     level in a ring, which goes warm and says MAX when there is nowhere
+     left to go, and five dots that fill as the gun climbs. The dots are
+     the same number the bar is showing, quantised; they are there to be
+     recognised across the room, not to add information. */
+  var full = lv >= MP.MAX_LEVEL;
+  var dots = Math.round((lv / MP.MAX_LEVEL) * 5);
+  var ring = '<div class="horow">'
+    + '<div class="horing' + (full ? ' max' : '') + '">' + (full ? 'MAX' : lv) + '</div>'
+    + '<div class="hometa"><div class="hodots">'
+    + [0, 1, 2, 3, 4].map(function (i) { return '<i class="' + (i < dots ? 'on' : '') + '"></i>'; }).join('')
+    + '</div><span class="hotier">'
+    + (pg ? pg.toUpperCase() : (full ? 'MAX LEVEL' : 'LEVEL ' + lv + ' / ' + MP.MAX_LEVEL))
+    + '</span></div></div>';
+  return ring
+    + '<div class="lvbar"><div class="f" style="width:'
     + (MP.levelFrac(pr) * 100).toFixed(1) + '%"></div></div>'
     + '<div class="lvnote"><span>' + (pg ? '<b class="p' + pg + '">' + pg.toUpperCase() + '</b>' : 'Level ' + lv)
     + ' &middot; ' + unl + ' of ' + all + ' parts</span><span>' + esc(next) + '</span></div>';

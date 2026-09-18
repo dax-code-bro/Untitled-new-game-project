@@ -4129,7 +4129,95 @@ function finishGenericMap(game, S, def) {
      never be bought is a map with no perks. */
   S.powered = true;
 
-  /* DOORS a map declares for itself.
+  /* WHAT EACH KIND OF DOOR IS MADE OF, and what it is made of is what
+   tells you what is behind it before you have paid to find out. */
+const DOOR_LOOKS = {
+  plank:  { mat: { color: 0x6f5636, texture: 'wood', roughness: 0.92, metalness: 0, uvScale: 2 } },
+  screen: { mat: { color: 0x8a6a44, texture: 'wood', roughness: 0.94, metalness: 0, uvScale: 3 } },
+  glazed: { mat: { color: 0x7c6248, texture: 'wood', roughness: 0.80, metalness: 0, uvScale: 2 } },
+  slider: { mat: { color: 0x5e5240, texture: 'wood', roughness: 0.95, metalness: 0, uvScale: 4 } },
+  blast:  { mat: { color: 0x6a6f74, texture: 'metal', roughness: 0.55, metalness: 1, uvScale: 2 } },
+};
+const DOOR_TRIM = {
+  frame: { color: 0x4a3a28, texture: 'wood', roughness: 0.9, metalness: 0, uvScale: 2 },
+  mesh:  { color: 0x6f7377, texture: 'metal', roughness: 0.85, metalness: 0.6, opacity: 0.55 },
+  glass: { color: 0xa8c4d4, texture: 'smooth', roughness: 0.10, metalness: 0, opacity: 0.42 },
+  iron:  { color: 0x7f868c, texture: 'metal', roughness: 0.5, metalness: 1, uvScale: 1 },
+  rust:  { color: 0x8a6a52, texture: 'rust', roughness: 0.9, metalness: 0.3, uvScale: 2 },
+};
+
+/* The furniture on a door, built from the bounds of the panel it hangs
+   on so the same four numbers describe any of them. Decoration only --
+   none of it collides, because the panel behind it already does and two
+   colliders in one doorway is two surfaces arguing over one plane. */
+function doorTrim(game, kind, p2) {
+  const [x0, x1, y0, y1, z0, z1] = p2;
+  const w = x1 - x0, h = y1 - y0;
+  const cz = (z0 + z1) / 2, d = Math.max(0.03, (z1 - z0) * 0.9);
+  const out = [];
+  const add = (ax0, ax1, ay0, ay1, m, nm) => {
+    if (ax1 - ax0 < 0.004 || ay1 - ay0 < 0.004) return;
+    const a = game.box({ at: [(ax0 + ax1) / 2, (ay0 + ay1) / 2, cz],
+      size: [ax1 - ax0, ay1 - ay0, d * 1.04], material: m, physics: false });
+    if (a) { a.name = nm || 'door-trim'; out.push(a); }
+  };
+  const st = Math.min(0.11, w * 0.10);          // stile and rail thickness
+  if (kind === 'screen') {
+    /* A porch screen: a light timber frame with mesh in it and a kick
+       panel at the bottom, which is the part a boot goes through. */
+    add(x0, x0 + st, y0, y1, DOOR_TRIM.frame);
+    add(x1 - st, x1, y0, y1, DOOR_TRIM.frame);
+    add(x0, x1, y1 - st, y1, DOOR_TRIM.frame);
+    add(x0, x1, y0 + h * 0.26 - st * 0.5, y0 + h * 0.26 + st * 0.5, DOOR_TRIM.frame);
+    add(x0 + st, x1 - st, y0 + h * 0.26 + st * 0.5, y1 - st, DOOR_TRIM.mesh, 'door-mesh');
+    add(x0 + st, x1 - st, y0, y0 + h * 0.26 - st * 0.5, DOOR_TRIM.frame);
+  } else if (kind === 'glazed') {
+    /* A front door with two panes over a solid lower half. */
+    add(x0, x0 + st, y0, y1, DOOR_TRIM.frame);
+    add(x1 - st, x1, y0, y1, DOOR_TRIM.frame);
+    add(x0, x1, y1 - st, y1, DOOR_TRIM.frame);
+    add(x0, x1, y0 + h * 0.46 - st * 0.5, y0 + h * 0.46 + st * 0.5, DOOR_TRIM.frame);
+    const midx = (x0 + x1) / 2;
+    add(midx - st * 0.4, midx + st * 0.4, y0 + h * 0.46, y1 - st, DOOR_TRIM.frame);
+    add(x0 + st, midx - st * 0.4, y0 + h * 0.5, y1 - st * 1.4, DOOR_TRIM.glass, 'door-glass');
+    add(midx + st * 0.4, x1 - st, y0 + h * 0.5, y1 - st * 1.4, DOOR_TRIM.glass, 'door-glass');
+  } else if (kind === 'slider') {
+    /* A boathouse slider: wide boards, a top rail it hangs from, and a
+       long pull. */
+    add(x0, x1, y1 - st * 0.7, y1 + st * 0.5, DOOR_TRIM.iron, 'door-rail');
+    for (let i = 1; i < 5; i++) {
+      const bx = x0 + (w * i) / 5;
+      add(bx - st * 0.22, bx + st * 0.22, y0, y1 - st * 0.7, DOOR_TRIM.frame);
+    }
+    add(x1 - w * 0.30, x1 - w * 0.16, y0 + h * 0.46, y0 + h * 0.52, DOOR_TRIM.iron, 'door-pull');
+  } else if (kind === 'blast') {
+    /* Steel, with a wheel on it and rivets round the edge. */
+    add(x0 + st * 0.4, x1 - st * 0.4, y0 + st * 0.4, y1 - st * 0.4, DOOR_TRIM.iron);
+    const cx = (x0 + x1) / 2, cy = y0 + h * 0.52, r = Math.min(w, h) * 0.17;
+    for (let i = 0; i < 6; i++) {
+      const th = (i / 6) * Math.PI;
+      const sx = Math.cos(th) * r, sy = Math.sin(th) * r;
+      const a = game.box({ at: [cx, cy, cz], size: [r * 2, 0.035, d * 1.3],
+        material: DOOR_TRIM.iron, physics: false });
+      if (a) { a.name = 'door-wheel'; a.setRotation([0, 0, (th * 180) / Math.PI]); out.push(a); }
+      void sx; void sy;
+    }
+    for (const ex of [x0 + st * 0.5, x1 - st * 0.5]) {
+      for (let i = 0; i < 5; i++) {
+        const ry = y0 + h * (0.12 + i * 0.19);
+        add(ex - 0.026, ex + 0.026, ry - 0.026, ry + 0.026, DOOR_TRIM.rust, 'door-rivet');
+      }
+    }
+  } else {
+    // Plain planks: boards, two ledges and a latch.
+    add(x0, x1, y0 + h * 0.22 - st * 0.4, y0 + h * 0.22 + st * 0.4, DOOR_TRIM.frame);
+    add(x0, x1, y0 + h * 0.74 - st * 0.4, y0 + h * 0.74 + st * 0.4, DOOR_TRIM.frame);
+    add(x1 - w * 0.20, x1 - w * 0.12, y0 + h * 0.46, y0 + h * 0.52, DOOR_TRIM.iron, 'door-latch');
+  }
+  return out;
+}
+
+/* DOORS a map declares for itself.
    *
    * The bunker builds its one door by hand. A map that has several --
    * Coastline has one per house -- should not have to reach into the
@@ -4141,15 +4229,32 @@ function finishGenericMap(game, S, def) {
    * the dead, so its barricade stays out of the rotation until you do. */
   S.doors = S.doors || {};
   for (const d of (def.doors || [])) {
-    const mat = d.material || { color: 0x6f5636, texture: 'wood', roughness: 0.9, metalness: 0, uvScale: 2 };
+    const mat = d.material || DOOR_LOOKS[d.kind || 'plank'].mat;
     const actors = (d.panels || []).map((p2) => game.box({
       at: [(p2[0] + p2[1]) / 2, (p2[2] + p2[3]) / 2, (p2[4] + p2[5]) / 2],
       size: [p2[1] - p2[0], p2[3] - p2[2], p2[5] - p2[4]],
       material: mat, static: true,
     }));
+    /* A DOOR THAT SUITS WHAT IT OPENS.
+     *
+       Every one of these was the same slab: one box, one timber
+       material, four houses. A screen door on a ranch porch, the glazed
+       front door of a two-storey, a boathouse slider and a steel blast
+       door are four different objects, and a map where they are all the
+       same brown rectangle is a map where the doors are a price tag
+       with a hitbox rather than part of the building.
+
+       The trim is decoration hung on the collision panels the map
+       already declares, so a map adds a look by naming one and nothing
+       about the physics or the buying changes. It is destroyed with the
+       door, which is why it goes into the same actor list. */
+    for (const p2 of (d.panels || [])) {
+      for (const t of doorTrim(game, d.kind || 'plank', p2)) actors.push(t);
+    }
     for (const a of actors) if (a) a.name = 'door:' + d.id;
     S.doors[d.id] = { cost: d.cost == null ? ECONOMY.doorGenerator : d.cost,
       open: false, label: d.label, at: d.at.slice(), opens: (d.opens || []).slice(),
+      kind: d.kind || 'plank', toll: d.toll || null, breach: (d.breach || []).slice(),
       actors: actors.filter(Boolean) };
   }
 
@@ -5139,16 +5244,38 @@ function buildBunker9(game, S) {
     slab(SD.x0, SD.x0 + DP, WY - TH, WY + 0.10, SD.z0 + DP, SD.z1 - DP, beam);
   }
 
-  /* ---------------- doors ---------------- */
-  S.doors = {
-    side: {
-      cost: ECONOMY.doorGenerator, open: false, label: 'Force the wing door',
-      at: [M.x0 - 0.2, 1.2, (D1.z0 + D1.z1) / 2],
-      actors: [
-        game.box({ at: [M.x0 - 0.2, 1.2, (D1.z0 + D1.z1) / 2], size: [0.3, 2.4, D1.z1 - D1.z0], material: MAT.board, static: true }),
-      ],
-    },
-  };
+  /* ---------------- doors ----------------
+     A BUNKER'S DOOR IS STEEL, and this one was a board. The wing is
+     behind blast plate with a wheel on it, which is both what a 1940s
+     bunker actually has between two rooms and the thing that tells you
+     the wing is a different kind of place before you have paid to see
+     it. The trim is decoration over the same collision panel, so the
+     buy and the physics are unchanged.
+
+     It keeps its price. The wing is the bunker's one money door and the
+     economy needs a sink; the map that got the varied tolls is
+     Coastline, which has four of them to vary. */
+  {
+    const dz0 = D1.z0, dz1 = D1.z1, dx = M.x0 - 0.2;
+    const panel = [dx - 0.15, dx + 0.15, 0, 2.4, dz0, dz1];
+    const acts = [game.box({ at: [dx, 1.2, (dz0 + dz1) / 2],
+      size: [0.3, 2.4, dz1 - dz0], material: DOOR_LOOKS.blast.mat, static: true })];
+    /* doorTrim works in the XY plane of a doorway that faces along Z.
+       This one faces along X, so it is built from the same helper with
+       the axes handed to it the way it expects and then turned. */
+    for (const t of doorTrim(game, 'blast', panel)) {
+      t.setRotation([0, 90, 0]);
+      t.setPosition([dx, t.position.y, (dz0 + dz1) / 2]);
+      acts.push(t);
+    }
+    S.doors = {
+      side: {
+        cost: ECONOMY.doorGenerator, open: false, label: 'Crank the wing door',
+        at: [dx, 1.2, (dz0 + dz1) / 2], kind: 'blast', toll: null, breach: [],
+        actors: acts.filter(Boolean),
+      },
+    };
+  }
 
   /* ---------------- chalk guns ---------------- */
   const chalkMat = MAT.chalk;
@@ -12050,6 +12177,37 @@ function nearestInteract(S, P) {
   }
   for (const [id, d] of Object.entries(S.doors)) {
     if (!d.open && dist2d(p, { x: d.at[0], z: d.at[2] }) < R + 0.6) {
+      /* WHAT THIS ONE COSTS, which is not always points.
+       *
+         Four doors that all say "— 1250" are four withdrawals from the
+         same account, and an account is not a decision. A toll is a
+         door that asks for something you cannot simply have more of by
+         killing another zombie: your health, the power being on, or a
+         way in for the dead that stays open for the rest of the game.
+         Points remain for the doors that should be a money sink, which
+         is most of them -- the economy still has to work. */
+      const t = d.toll;
+      if (!t) return { kind: 'door', id, door: d, cost: d.cost, label: `${d.label} — ${d.cost}` };
+      if (t.kind === 'shoulder') {
+        const hurt = Math.round(P.maxHp * (t.frac || 0.35));
+        if (P.hp <= hurt + 10) {
+          return { kind: 'doorCold', cost: 0, inert: true,
+            label: `${d.label} — you are in no state to put a shoulder through it` };
+        }
+        return { kind: 'door', id, door: d, cost: 0,
+          label: `${d.label} — costs ${hurt} health, not points` };
+      }
+      if (t.kind === 'power') {
+        if (!S.powered) {
+          return { kind: 'doorCold', cost: 0, inert: true,
+            label: `${d.label} — dead without the generator` };
+        }
+        return { kind: 'door', id, door: d, cost: d.cost, label: `${d.label} — ${d.cost}` };
+      }
+      if (t.kind === 'breach') {
+        return { kind: 'door', id, door: d, cost: 0,
+          label: `${d.label} — free, and it lets them in behind you` };
+      }
       return { kind: 'door', id, door: d, cost: d.cost, label: `${d.label} — ${d.cost}` };
     }
   }
@@ -12236,6 +12394,22 @@ function doInteract(game, S, P, hud, sfx, it, dt) {
     hud.ammo(P); hud.points(S.points);
   } else if (it.kind === 'door') {
     S.points -= it.cost; sfx.doorOpen();
+    /* And the toll, which is paid in whatever that door asks for. */
+    const t = it.door.toll;
+    if (t && t.kind === 'shoulder') {
+      const hurt = Math.round(P.maxHp * (t.frac || 0.35));
+      P.hp = Math.max(1, P.hp - hurt);
+      P.lastHit = S.time; P.regenning = false;
+      hud.damage(P.hp / P.maxHp);
+      sfx.hurt();
+    }
+    if (t && t.kind === 'breach') {
+      /* The cost is permanent and it is not a number: the way you made
+         for yourself is a way in for them, for the rest of the game. */
+      for (const w of (it.door.breach || [])) {
+        if (!S.activeWindows.includes(w)) S.activeWindows.push(w);
+      }
+    }
     it.door.open = true;
     for (const a of it.door.actors) a.destroy();
     /* The ways in that this door leads to come into the round with it.

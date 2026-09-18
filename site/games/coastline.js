@@ -366,6 +366,18 @@ const WINDOWS = [
     sillAt: [C.cottage.x - C.cottage.w / 2, 1.05, C.cottage.z],
     pad: [C.cottage.x - C.cottage.w / 2 - 5.5, 0, C.cottage.z], face: 'W',
     wz: [C.cottage.z - 1.4, C.cottage.z + 1.4] },
+  /* THE HOLE THE SLIDER LEAVES.
+   *
+     Not active at the start and not opened by buying anything: this is
+     what the cottage's slider COSTS. Sliding it back is free and takes
+     a second, and from then on there is a door-wide opening in the
+     south wall that the dead use for the rest of the game. A barricade
+     you can rebuild, unlike the others, because otherwise the price of
+     a free door is losing the house. */
+  { id: 'CH3B', room: 'green', inside: [C.cottage.x, 0, C.cottage.z - C.cottage.d / 2 + 1.1],
+    sillAt: [C.cottage.x, 1.05, C.cottage.z - C.cottage.d / 2],
+    pad: [C.cottage.x, 0, C.cottage.z - C.cottage.d / 2 - 5.5], face: 'S',
+    wz: [C.cottage.x - 1.4, C.cottage.x + 1.4] },
   { id: 'CH4', room: 'green', inside: [C.gable.x + C.gable.w / 2 - 1.1, 0, C.gable.z],
     sillAt: [C.gable.x + C.gable.w / 2, 1.05, C.gable.z],
     pad: [C.gable.x + C.gable.w / 2 + 5.5, 0, C.gable.z], face: 'E',
@@ -417,20 +429,51 @@ const ESCAPE = {
    twenty metres from the seawall and is what you buy on round five when
    the green gets tight; the gable house is at the far end of the street
    and is a decision about the rest of the game. */
+/* FOUR DOORS THAT ARE FOUR DIFFERENT DOORS.
+   ============================================================
+   They were one slab, four times, at four prices -- "Force the X door"
+   with a number after it. Four withdrawals from the same account, and
+   an account is not a decision: you open them in price order and the
+   only question is which one you can afford yet.
+
+   Now each one is the door that building would actually have, and each
+   asks for something different:
+
+     THE RANCH      a porch screen. Light, and you can see the kitchen
+                    through the mesh. You do not buy it -- you put your
+                    shoulder through it, and it costs a third of your
+                    health. Free at full health, and a very bad idea at
+                    a quarter of it, which is the decision.
+
+     THE TWO-STOREY a glazed front door on the good house, and the most
+                    expensive way in. Money, because the economy still
+                    needs a sink and this is it.
+
+     THE COTTAGE    the back slider. Free -- and the moment it is open
+                    the dead come through it too, for the rest of the
+                    game. The cost is not a number and you cannot earn
+                    it back.
+
+     THE FAR HOUSE  a steel storm door on the gable end. Dead until the
+                    generator is running, and then cheap, because
+                    getting the power on was the price. */
 const DOORS = [
-  { id: 'ranch', cost: 1000, label: 'Force the ranch door', opens: ['CH1'],
+  { id: 'ranch', cost: 0, kind: 'screen', label: 'Shoulder the screen door', opens: ['CH1'],
+    toll: { kind: 'shoulder', frac: 0.34 },
     at: [C.ranch.x, 1.2, C.ranch.z + C.ranch.d / 2 - 0.15],
     panels: [[C.ranch.x - 1.30, C.ranch.x + 1.30, 0, 2.25,
       C.ranch.z + C.ranch.d / 2 - 0.30, C.ranch.z + C.ranch.d / 2]] },
-  { id: 'twoStorey', cost: 1250, label: 'Force the front door', opens: ['CH2'],
+  { id: 'twoStorey', cost: 1750, kind: 'glazed', label: 'Force the front door', opens: ['CH2'],
     at: [C.twoStorey.x, 1.2, C.twoStorey.z + C.twoStorey.d / 2 - 0.15],
     panels: [[C.twoStorey.x - 1.30, C.twoStorey.x + 1.30, 0, 2.25,
       C.twoStorey.z + C.twoStorey.d / 2 - 0.30, C.twoStorey.z + C.twoStorey.d / 2]] },
-  { id: 'cottage', cost: 1500, label: 'Force the cottage door', opens: ['CH3'],
+  { id: 'cottage', cost: 0, kind: 'slider', label: 'Slide the cottage door', opens: ['CH3'],
+    toll: { kind: 'breach' }, breach: ['CH3B'],
     at: [C.cottage.x, 1.2, C.cottage.z + C.cottage.d / 2 - 0.15],
     panels: [[C.cottage.x - 1.30, C.cottage.x + 1.30, 0, 2.25,
       C.cottage.z + C.cottage.d / 2 - 0.30, C.cottage.z + C.cottage.d / 2]] },
-  { id: 'gable', cost: 2000, label: 'Force the far door', opens: ['CH4'],
+  { id: 'gable', cost: 750, kind: 'blast', label: 'Crank the storm door', opens: ['CH4'],
+    toll: { kind: 'power' },
     at: [C.gable.x, 1.2, C.gable.z + C.gable.d / 2 - 0.15],
     panels: [[C.gable.x - 1.30, C.gable.x + 1.30, 0, 2.25,
       C.gable.z + C.gable.d / 2 - 0.30, C.gable.z + C.gable.d / 2]] },
