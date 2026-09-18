@@ -2058,6 +2058,38 @@ const TextureLib = {
     brass: 0.30, copper: 0.28, lead: 0.55, primer: 0.25,
     bluing: 0.18, parkerize: 0.85, walnut: 0.35, bakelite: 0.30,
     polymer: 0.80, leather: 0.60, webbing: 1.10,
+    /* ---- the body ----
+       Hair is the one that wants a lot, because the strand highlight
+       is coming out of the normal map -- there is no anisotropic lobe
+       in this BRDF to give it any other way. Skin wants very little:
+       the crease net is a fraction of a millimetre deep and pushing it
+       turns a face into a lizard. An eye and a tooth are wet, smooth
+       and have essentially no relief at all. */
+    /* SKIN HAS NEVER HAD AN ENTRY HERE, and that is not a small thing.
+       The lookup is `this.normalStrength[kind] || 3`, so for as long as
+       this bank has existed every face, every hand and every zombie in
+       the game has had its skin normal map amplified THREE TIMES --
+       the setting used for cast concrete and for rock. It was survivable
+       while the recipe's only relief was a pore field so fine it baked
+       to noise. The moment skin got a real crease net it rendered as
+       orange peel, which is how it was found.
+
+       BRACKETED, because both ends were rendered and both were wrong.
+       At 3 (with the crease field cut to 0.18 of the height range) it
+       is orange peel. At 0.35 the net vanishes entirely and skin goes
+       back to being a matte clay ball -- which is the failure it
+       started from, arrived at from the other side. 1.2 is the
+       geometric middle, and it is about a fifth of the slope the old
+       accident was producing: the net breaks the highlight without
+       being a surface you could feel. */
+    skin: 1.2,
+    hair: 1.6, eye: 0.15, enamel: 0.20, nail: 0.25,
+    /* ---- cloth ----
+       A weave is real relief, not an optical pattern, so these run
+       higher than anything else in the bank. Knit highest: a jumper's
+       loops are millimetres proud and it is the only cloth here whose
+       silhouette you would notice. */
+    wool: 1.8, denim: 2.0, ripstop: 1.5, knit: 2.6,
   },
 
   /* Surface recipes. Each writes into `c` for one texel.
@@ -2422,24 +2454,224 @@ const TextureLib = {
       c.h = weave * 0.5 + fuzz * 0.2 + slub * 0.3;
     },
 
+    /* SKIN, and the three things it was missing.
+     *
+       THE PORES WERE AT 180 CYCLES on a 256-pixel bake, which is 1.4
+       texels a cycle. A feature that small does not survive being
+       baked -- what comes out is not pores, it is white noise, and it
+       is the same fault the first cut of `bluing` had with its wear.
+       70 cycles is three and a half texels at 256 and fourteen at
+       1024, so it is actually there.
+
+       THERE WAS NO MICRORELIEF. Close up, the single most identifying
+       thing about skin is not pores at all: it is the net of fine
+       creases dividing the surface into tiny irregular polygons
+       (Langer's lines). Without them skin reads as painted rubber
+       however good the colour is, and the bank had no way to make
+       them. They are built here the way parkerizing's crystals are --
+       two high-frequency fields whose zero crossings are the
+       boundaries -- but soft, shallow, and STRETCHED, because the net
+       is elongated along the lines of tension in real skin.
+
+       THERE WAS NO BLOOD IN IT. One blotch field drove everything, so
+       the variation was a single grey mottle. Skin varies in HUE as
+       much as in value: capillary beds put red where the flesh is
+       thin and the vessels are near the surface. A second, independent
+       field does that, and it only touches red and blue.
+
+       Still near-neutral overall, and the note that used to be here
+       still governs: the ratio must not be baked in, because the
+       MATERIAL decides the skin tone. A texture supplies variation, a
+       colour supplies colour -- which is how one recipe serves every
+       tone rather than there being a recipe per person. */
     skin(u, v, n, c) {
-      // Pores at high frequency, subtle blotching underneath.
-      const pore = Math.pow(n.fbm(u * 180, v * 180, 3, 2) * 0.5 + 0.5, 3);
+      const pore = Math.pow(n.fbm(u * 70, v * 70, 3, 2) * 0.5 + 0.5, 3);
       const blotch = n.fbm(u * 9, v * 9, 12, 4) * 0.5 + 0.5;
-      /* Nearly neutral, so the MATERIAL decides the skin tone.
-         
-         This baked a 0.92 / 0.68 / 0.58 ratio into the texture itself --
-         a saturated orange that every material using it was multiplied
-         by, which is why the viewmodel hands stayed a traffic cone
-         through two attempts at desaturating the material colour. A
-         texture supplies variation; a colour supplies colour. */
-      const base = 0.86 + blotch * 0.1;
-      c.r = base * 0.96;
+      // The crease net: stretched 2.4:1, so it has a grain direction.
+      const ca = n.fbm(u * 115, v * 48, 29.3, 2);
+      const cb = n.fbm(u * 115, v * 48, 88.7, 2);
+      const cell = Math.min(Math.abs(ca), Math.abs(cb));
+      const crease = 1 - smoothstep(0.0, 0.09, cell);
+      // Capillary bed, independent of the value mottle.
+      const blood = n.fbm(u * 5, v * 6, 53.1, 3) * 0.5 + 0.5;
+      // Sebum: broad, and the only thing that makes skin shine.
+      const oil = n.fbm(u * 3.5, v * 4, 66.2, 2) * 0.5 + 0.5;
+
+      const base = 0.86 + blotch * 0.09 - crease * 0.05;
+      c.r = base * 0.96 + blood * 0.030;
       c.g = base * 0.90 + blotch * 0.02;
-      c.b = base * 0.86;
-      c.rough = 0.55 + pore * 0.2 - blotch * 0.06;
-      c.ao = 1 - pore * 0.2;
-      c.h = pore * 0.5 + blotch * 0.1;
+      c.b = base * 0.86 - blood * 0.022;
+      /* Dry where it creases, glossy where the sebum is. That contrast
+         is most of what separates living skin from a painted mannequin
+         under a hard light. */
+      c.rough = clamp(0.58 + pore * 0.16 + crease * 0.10 - oil * 0.20
+        - blotch * 0.04, 0.28, 0.86);
+      c.ao = 1 - pore * 0.10 - crease * 0.08;
+      c.h = 0.55 + pore * 0.10 - crease * 0.18 + blotch * 0.04;
+    },
+
+    /* HAIR. The engine has no anisotropic specular -- the one lobe in
+       the BRDF is symmetric -- so the strand highlight has to come out
+       of the normal map instead, which means the strands have to be in
+       the HEIGHT field and not only in the colour. That works: a row
+       of parallel half-cylinders lit from the side gives the banded
+       sheen hair actually has, and it costs nothing the bank was not
+       already paying.
+
+       Three scales, and all three matter. STRANDS, very fine and
+       parallel. CLUMPS, because hair separates into locks and a head
+       of perfectly even strands reads as nylon. And STRAY hairs, a few
+       crossing the lie of the rest, which is the detail that stops it
+       being a wig.
+
+       Near-neutral again, for the same reason skin is: the material
+       carries the colour, so black, brown, blond and grey are four
+       materials on one recipe rather than four recipes. */
+    hair(u, v, n, c) {
+      // Strands run along v. Very high in u, almost nothing in v.
+      /* 140, not 190. The world builds every texture at 256 and
+         upgrades afterwards, and 190 cycles is 1.3 texels a cycle at
+         256 -- so for the first few seconds of every match the hair
+         would be noise rather than strands. Same arithmetic that the
+         first cut of `bluing` got wrong. */
+      const strand = n.fbm(u * 140, v * 2.5, 7.3, 2) * 0.5 + 0.5;
+      const clump = n.fbm(u * 17, v * 3, 44.8, 3) * 0.5 + 0.5;
+      const stray = Math.pow(Math.max(0, n.fbm(u * 60, v * 26, 91.4, 2)), 5) * 3.0;
+      /* The sheen band: hair is brightest where the strand turns
+         through the light, which on a parallel lay is a narrow line
+         along the lock rather than a point. */
+      const band = Math.pow(clump, 3.0);
+      const base = 0.55 + strand * 0.22 + band * 0.20 - (1 - clump) * 0.12
+        + stray * 0.25;
+      c.r = base * 1.00; c.g = base * 0.97; c.b = base * 0.93;
+      c.metal = 0;
+      c.rough = clamp(0.42 - band * 0.16 + (1 - strand) * 0.14, 0.18, 0.80);
+      c.ao = 0.78 + clump * 0.22;
+      c.h = strand * 0.55 + clump * 0.35 + stray * 0.4;
+    },
+
+    /* AN EYE, authored as a disc in UV space rather than as a tiling
+       pattern -- it is the one thing in this bank that is a PICTURE of
+       a specific object instead of a material that repeats. So it
+       assumes the mesh puts the front of the eye around (0.5, 0.5),
+       which is what a quad or the front cap of a sphere does, and it
+       does not tile: uvScale on this should be 1.
+
+       Out from the middle: the pupil, black and matte, because it is a
+       hole; the iris, whose radial fibres are the whole of its
+       character; the collarette, the slightly raised ring a third of
+       the way out where the fibres change direction; the limbal ring,
+       dark and surprisingly wide, which is the feature that makes eyes
+       read as young; and the sclera, which is never white -- it is a
+       warm grey with vessels in it, and painting it white is the
+       single most common way a rendered face goes uncanny.
+
+       The iris colour is left near-neutral so the material tints it,
+       as skin and hair are. Blue, green, brown and hazel are one
+       recipe and four hexes. */
+    eye(u, v, n, c) {
+      const dx = u - 0.5, dy = v - 0.5;
+      const r = Math.sqrt(dx * dx + dy * dy);
+      const th = Math.atan2(dy, dx);
+      /* RADIAL FIBRES, AND HOW THE FIRST CUT GOT CONCENTRIC RINGS
+         INSTEAD. Sampling noise at `th * 46` is sampling a coordinate
+         that jumps by 2*pi*46 when theta wraps at the negative x axis,
+         so there is a seam -- and pairing it with `r * 30` made the
+         other axis radius, which produces variation ALONG the radius:
+         rings. Exactly backwards from fibres.
+
+         A fibre is constant in r and varies in theta. Sampling the
+         noise on the unit circle, at (cos th, sin th) scaled up, gives
+         exactly that and wraps seamlessly by construction, because
+         theta and theta + 2*pi land on the same point. 46 is about
+         seventy fibres round the iris, which is right. */
+      const fib = n.fbm(Math.cos(th) * 46, Math.sin(th) * 46, 13.9, 2) * 0.5 + 0.5;
+      const fine = n.fbm(Math.cos(th) * 115, Math.sin(th) * 115, 71.5, 2) * 0.5 + 0.5;
+      /* The crypts -- the darker pits between fibre bundles -- do vary
+         with radius, and they are the only thing in the iris that
+         should. */
+      const crypt = n.fbm(Math.cos(th) * 14, Math.sin(th) * 14, 34.2, 2) * 0.5 + 0.5;
+      /* VESSELS ARE LINES, NOT BLOBS. Cubing a positive noise field
+         picks out its PEAKS, which are round, so the first cut put
+         polka dots across the sclera. A vessel is where a field
+         crosses zero -- a thin ridge -- and it branches because the
+         field does. */
+      const vf = n.fbm(u * 9, v * 9, 5.2, 2);
+      const vessel = Math.pow(Math.max(0, 1 - Math.abs(vf) * 14), 2.5);
+
+      if (r < 0.115) {
+        // Pupil. Not quite black, and matte, so it reads as an opening.
+        c.r = c.g = c.b = 0.025;
+        c.rough = 0.55; c.ao = 0.55; c.h = 0.30; c.metal = 0;
+      } else if (r < 0.315) {
+        const t = (r - 0.115) / 0.20;
+        // Collarette at a third out, then the fibres open up.
+        const coll = Math.exp(-Math.pow((t - 0.33) * 6.0, 2));
+        /* The fibres fan OUT: tight and dark at the pupil, opening and
+           brightening toward the limbus. Without that the iris is a
+           flat disc of streaks. */
+        const f = (fib * 0.55 + fine * 0.45) * (0.45 + t * 0.55)
+          - (1 - crypt) * 0.18 * (1 - t);
+        const base = 0.42 + f * 0.40 - (1 - t) * 0.14 + coll * 0.10;
+        c.r = base * 0.98; c.g = base; c.b = base * 1.02;
+        c.rough = 0.16; c.ao = 1 - coll * 0.10; c.metal = 0;
+        c.h = 0.45 + coll * 0.30 + f * 0.10;
+      } else if (r < 0.345) {
+        // The limbal ring.
+        const t = (r - 0.315) / 0.030;
+        const dark = Math.sin(t * Math.PI);
+        const base = 0.30 - dark * 0.22;
+        c.r = base * 0.95; c.g = base * 0.97; c.b = base * 1.05;
+        c.rough = 0.14; c.ao = 1 - dark * 0.20; c.h = 0.5; c.metal = 0;
+      } else {
+        /* Sclera. Warm, not white, and it darkens into the corners
+           where the lids shade it -- which is the other half of why a
+           flat white eyeball looks wrong. */
+        const t = Math.min(1, (r - 0.345) / 0.155);
+        /* Vessels thicken toward the corners, where they actually
+           are, and there are none at all against the limbus. */
+        const ves = vessel * smoothstep(0.02, 0.40, t);
+        const base = 0.86 - t * 0.16;
+        c.r = base * 1.00 + ves * 0.06;
+        c.g = base * 0.96 - ves * 0.14;
+        c.b = base * 0.93 - ves * 0.13;
+        c.rough = 0.12; c.ao = 1 - t * 0.18; c.h = 0.5; c.metal = 0;
+      }
+    },
+
+    /* TOOTH ENAMEL. Almost white and never white: enamel is
+       translucent over dentine, so it goes warm and slightly
+       transparent at the biting edge and cooler at the gum. The bands
+       running up each tooth are the perikymata -- the growth lines --
+       and they are faint, but they are the reason a rendered tooth
+       without them looks like a tic tac. */
+    enamel(u, v, n, c) {
+      const band = n.fbm(u * 4, v * 30, 21.7, 2) * 0.5 + 0.5;
+      const stain = n.fbm(u * 8, v * 8, 62.3, 3) * 0.5 + 0.5;
+      // v runs gum to edge; the edge is where the translucency shows.
+      const edge = smoothstep(0.55, 1.0, v);
+      const base = 0.90 + band * 0.04 - stain * 0.06 - edge * 0.10;
+      c.r = base * 1.00; c.g = base * 0.99 - edge * 0.01; c.b = base * 0.94 + edge * 0.03;
+      c.metal = 0;
+      c.rough = clamp(0.14 + stain * 0.10, 0.08, 0.40);
+      c.ao = 1 - stain * 0.06;
+      c.h = 0.5 + (band - 0.5) * 0.10;
+    },
+
+    /* FINGERNAIL. Keratin plate: glossy, faintly striped along its
+       length, pinker over the nail bed and paler at the free edge and
+       in the lunula. Small, and it is the difference between a hand
+       and a mitten at the range a viewmodel is seen from. */
+    nail(u, v, n, c) {
+      const ridge = n.fbm(u * 3, v * 40, 8.1, 2) * 0.5 + 0.5;
+      const lun = Math.exp(-Math.pow((v - 0.12) * 5.5, 2));
+      const free = smoothstep(0.86, 1.0, v);
+      const base = 0.80 + ridge * 0.05 + lun * 0.08 + free * 0.10;
+      c.r = base * 1.00; c.g = base * 0.90 - lun * 0.02; c.b = base * 0.87;
+      c.metal = 0;
+      c.rough = clamp(0.17 + (1 - ridge) * 0.06, 0.10, 0.45);
+      c.ao = 1;
+      c.h = 0.5 + (ridge - 0.5) * 0.18;
     },
 
     plastic(u, v, n, c) {
@@ -2469,6 +2701,135 @@ const TextureLib = {
         c.ao = 1 - smoothstep(0.4, 0.12, gap) * 0.3;
         c.h = 0.8;
       }
+    },
+
+    /* ==================================================================
+       CLOTH
+       ==================================================================
+       The bank had one cloth recipe, `fabric`, and it is a fine even
+       weave -- a shirt. Everything anyone in this game wears was that
+       shirt: the greatcoats, the denim, the tarpaulins, the field
+       caps. Cloth is where a weave IS the material, and four weaves
+       that are actually different do more for a crowd of soldiers than
+       any amount of work on their faces.
+
+       All four are near-neutral for the usual reason: the colour is
+       the material's, so one wool recipe dresses both armies.
+       ================================================================== */
+
+    /* WOOL SERGE -- a battledress blouse, a greatcoat, a service cap.
+       Two things make it wool and not cotton. It is a TWILL, so the
+       weave runs on a diagonal rather than a grid, and that diagonal
+       is visible at conversation distance. And it has a HALO: wool
+       fibres stand off the surface, so the cloth has no sharp edge to
+       its shading and never takes a specular highlight anywhere. */
+    wool(u, v, n, c) {
+      /* The twill line. Sampling a diagonal coordinate is what makes
+         it a twill rather than a grid -- 2/2 serge advances one end
+         per pick, so the line runs at about 45 degrees. */
+      const d = (u + v) * 52;
+      const twill = Math.abs(((d % 1) - 0.5) * 2);
+      const rib = 1 - Math.pow(twill, 1.6);
+      const halo = n.fbm(u * 130, v * 130, 3.8, 2) * 0.5 + 0.5;
+      const slub = n.fbm(u * 11, v * 9, 47.6, 3) * 0.5 + 0.5;
+      const base = 0.60 + rib * 0.14 + (halo - 0.5) * 0.10 + (slub - 0.5) * 0.09;
+      c.r = base * 1.00; c.g = base * 0.99; c.b = base * 0.96;
+      c.metal = 0;
+      /* Almost nothing on earth is rougher than raw wool. The narrow
+         band is deliberate: a highlight anywhere on this and it stops
+         being wool and starts being gabardine. */
+      c.rough = clamp(0.94 - rib * 0.03 + (halo - 0.5) * 0.04, 0.80, 1);
+      c.ao = 0.80 + rib * 0.20;
+      c.h = rib * 0.45 + (halo - 0.5) * 0.18;
+    },
+
+    /* DENIM. A 3/1 twill in which the warp is dyed indigo and the weft
+       is left white, which is why denim is blue on the face, pale on
+       the back, and goes WHITE where it wears -- the dye only ever sat
+       on the outside of the warp yarn. So the two thread directions
+       are written separately here rather than as one colour with
+       noise on it, and the wear lightens the warp toward the weft
+       instead of toward grey. */
+    denim(u, v, n, c) {
+      const NW = 46;
+      const gu = u * NW, gv = v * NW;
+      const iu = Math.floor(gu), iv = Math.floor(gv);
+      const fu = gu - iu, fv = gv - iv;
+      // 3/1: the warp floats over three picks out of four.
+      const warpUp = (((iu - iv) % 4) + 4) % 4 !== 0;
+      const round = Math.sin((warpUp ? fu : fv) * Math.PI);
+      const slub = n.fbm(u * 9, v * 40, 18.2, 3) * 0.5 + 0.5;
+      const wearF = n.fbm(u * 4, v * 5, 58.9, 3) * 0.5 + 0.5;
+      const wear = Math.max(0, wearF - 0.58) / 0.42;
+      const lit = 0.55 + round * 0.30 + (slub - 0.5) * 0.10;
+      if (warpUp) {
+        // Indigo, fading to the undyed core as it wears.
+        const t = wear * 0.8;
+        c.r = lit * (0.42 + t * 0.52);
+        c.g = lit * (0.50 + t * 0.44);
+        c.b = lit * (0.68 + t * 0.26);
+      } else {
+        // Weft: always the pale undyed cotton.
+        c.r = lit * 0.92; c.g = lit * 0.90; c.b = lit * 0.84;
+      }
+      c.metal = 0;
+      c.rough = clamp(0.90 - round * 0.06 - wear * 0.04, 0.68, 1);
+      c.ao = 0.74 + round * 0.26;
+      c.h = round * 0.6 + (slub - 0.5) * 0.10;
+    },
+
+    /* RIPSTOP. A plain weave with a heavier thread every few
+       millimetres in both directions, so a tear runs to the next
+       reinforcement and stops. That grid is the entire look of the
+       material and it is a hard geometric pattern -- which is why no
+       amount of noise on `fabric` was ever going to produce it. Modern
+       kit, a windproof smock, a parachute panel. */
+    ripstop(u, v, n, c) {
+      const GRID = 17;
+      const gu = (u * GRID) % 1, gv = (v * GRID) % 1;
+      const bar = Math.max(1 - Math.min(gu, 1 - gu) * GRID * 0.7,
+        1 - Math.min(gv, 1 - gv) * GRID * 0.7);
+      const rein = smoothstep(0.55, 0.95, bar);
+      // The ground weave, much finer, plain over-under.
+      const WV = 150;
+      const wu = Math.sin(u * WV * Math.PI), wv2 = Math.sin(v * WV * Math.PI);
+      const weave = (wu * wv2) * 0.5 + 0.5;
+      const sheen = n.fbm(u * 6, v * 6, 37.1, 2) * 0.5 + 0.5;
+      const base = 0.62 + weave * 0.10 + rein * 0.09 + (sheen - 0.5) * 0.07;
+      c.r = base * 1.00; c.g = base * 1.00; c.b = base * 0.98;
+      c.metal = 0;
+      /* Synthetic, so unlike wool it DOES take a sheen -- a low, broad
+         one, strongest along the reinforcing bars where the thread is
+         thickest. */
+      c.rough = clamp(0.74 - rein * 0.10 - sheen * 0.08, 0.42, 0.95);
+      c.ao = 0.86 + rein * 0.14;
+      c.h = rein * 0.55 + weave * 0.18;
+    },
+
+    /* RIB KNIT -- a watch cap, a jumper, the cuff of a jacket. Knit is
+       not woven: it is a fabric of interlocking LOOPS, so it has
+       vertical columns (wales) of little V shapes rather than a grid,
+       and it is thick and soft enough that the relief is real rather
+       than optical. The V is what says knit; without it any amount of
+       fuzz just says towel. */
+    knit(u, v, n, c) {
+      const WALE = 22, COURSE = 26;
+      const gu = u * WALE, gv = v * COURSE;
+      const iu = Math.floor(gu), iv = Math.floor(gv);
+      const fu = gu - iu, fv = gv - iv;
+      // Each cell is a V: two legs meeting at the bottom middle.
+      const leg = Math.abs(fu - 0.5) * 2;
+      const vshape = Math.sin(Math.max(0, 1 - Math.abs(fv - leg * 0.75)) * Math.PI * 0.5);
+      // Ribbing: every other wale sits proud.
+      const ribOut = (iu & 1) === 0 ? 1 : 0.55;
+      const fuzz = n.fbm(u * 120, v * 120, 12.3, 2) * 0.5 + 0.5;
+      const round = vshape * ribOut;
+      const base = 0.52 + round * 0.28 + (fuzz - 0.5) * 0.10;
+      c.r = base * 1.00; c.g = base * 0.99; c.b = base * 0.97;
+      c.metal = 0;
+      c.rough = clamp(0.93 - round * 0.04 + (fuzz - 0.5) * 0.05, 0.78, 1);
+      c.ao = 0.62 + round * 0.38;
+      c.h = round * 0.9 + (fuzz - 0.5) * 0.12;
     },
 
     /* ==================================================================
