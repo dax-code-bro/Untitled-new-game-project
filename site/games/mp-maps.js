@@ -81,10 +81,16 @@
      needs -- the `wide` set below -- rather than sharing one with a
      two-metre crate. */
   var MAT = {
-    asphalt: { color: 0x7a7772, texture: 'concrete', roughness: 0.96, metalness: 0, uvScale: 8 },
-    concrete: { color: 0xbdb9b0, texture: 'concrete', roughness: 0.93, metalness: 0, uvScale: 5, normalStrength: 0.4 },
-    concretePale: { color: 0xd2cec4, texture: 'concrete', roughness: 0.90, metalness: 0, uvScale: 6 },
-    kerb: { color: 0xcfcbc2, texture: 'concrete', roughness: 0.88, metalness: 0, uvScale: 4 },
+    /* Asphalt is the one surface that IS meant to be dark, so it keeps
+       a tint below the others -- but 0x7a7772 on a recipe that bakes
+       to #bebbb3 is a road that disappears the moment it is not in
+       direct sun, and a road you cannot see is a lane you cannot
+       read. 0xa8a5a0 is still plainly darker than the pavement beside
+       it and still there in shadow. */
+    asphalt: { color: 0xa8a5a0, texture: 'concrete', roughness: 0.96, metalness: 0, uvScale: 8 },
+    concrete: { color: 0xe6e2da, texture: 'concrete', roughness: 0.93, metalness: 0, uvScale: 5, normalStrength: 0.4 },
+    concretePale: { color: 0xf4f0e8, texture: 'concrete', roughness: 0.90, metalness: 0, uvScale: 6 },
+    kerb: { color: 0xeeeae2, texture: 'concrete', roughness: 0.88, metalness: 0, uvScale: 4 },
     /* Red brick, and the recipe is already red: the tint runs near
        white so the wall is not pulled darker still. */
     brick: { color: 0xf2ece4, texture: 'brick', roughness: 0.95, metalness: 0, uvScale: 9 },
@@ -111,13 +117,43 @@
     canvas: { color: 0xe4e0d4, texture: 'fabric', roughness: 0.97, metalness: 0, uvScale: 3 },
     rock: { color: 0xe8e4dc, texture: 'rock', roughness: 0.96, metalness: 0, uvScale: 7 },
 
-    /* ---- the wide set: surfaces that cover the whole map ---- */
-    wideAsphalt: { color: 0x7a7772, texture: 'concrete', roughness: 0.96, metalness: 0, uvScale: 34 },
-    wideConcrete: { color: 0xa6a29a, texture: 'concrete', roughness: 0.93, metalness: 0, uvScale: 40 },
-    wideDirt: { color: 0x9c9486, texture: 'dirt', roughness: 0.98, metalness: 0, uvScale: 48 },
-    wideTile: { color: 0xb6bcc2, texture: 'tile', roughness: 0.42, metalness: 0, uvScale: 44 },
-    wideGrass: { color: 0xb0c09c, texture: 'grass', roughness: 0.97, metalness: 0, uvScale: 40, subsurface: 0.3 },
-    wideRock: { color: 0xc8c4bc, texture: 'rock', roughness: 0.96, metalness: 0, uvScale: 30 },
+    /* ---- the wide set: surfaces that cover the whole map ----
+     *
+       THESE WERE MULTIPLYING THE MAP DOWN TWICE AND FLOORING IT AT
+       BLACK, and it took five probes to see because every one of my
+       first theories was wrong. Not the shadow cascade -- the shader
+       treats outside-the-cascade as lit. Not the tint pipeline -- an
+       isolated test renders red #3f3522 against blue #18181e. Not the
+       tiling -- uvScale from 1 to 40 changes the pixel by nothing at
+       all. Not the sun -- the same points read #000000 at 9.5, 12 and
+       15 hours and under a swapped sky.
+
+       What it is, measured on one pavement slab that a raycast
+       confirms is a single object under one light:
+
+         pure white, no texture    #434a52
+         white + concrete          #1e2427
+         0xa6a29a, no texture      #031317
+         0xa6a29a + concrete       #000000
+
+       The light landing there is a quarter of white to begin with --
+       blue-cast, so it is sky ambient with no sun in it. Then the grey
+       tint takes two thirds of what is left and the texture recipe
+       takes most of the rest. Three multiplications below one, and the
+       floor is zero.
+
+       This file's own rule, written at the top of it, is that a tint
+       only ever multiplies DOWN and anything meant to read pale is
+       built near white. The wide set broke that rule: a mid-grey tint
+       on an already-mid recipe. The recipes carry the colour -- so the
+       tints run near white now and the ground is allowed to be as
+       bright as the light on it. */
+    wideAsphalt: { color: 0xc8c6c2, texture: 'concrete', roughness: 0.96, metalness: 0, uvScale: 34 },
+    wideConcrete: { color: 0xf0ede8, texture: 'concrete', roughness: 0.93, metalness: 0, uvScale: 40 },
+    wideDirt: { color: 0xe8e2d6, texture: 'dirt', roughness: 0.98, metalness: 0, uvScale: 48 },
+    wideTile: { color: 0xeef2f6, texture: 'tile', roughness: 0.42, metalness: 0, uvScale: 44 },
+    wideGrass: { color: 0xdcecc8, texture: 'grass', roughness: 0.97, metalness: 0, uvScale: 40, subsurface: 0.3 },
+    wideRock: { color: 0xf0ece4, texture: 'rock', roughness: 0.96, metalness: 0, uvScale: 30 },
   };
 
   /* WHY THE DECORATIVE GROUND SITS AT -0.08 AND NOT AT 0.
