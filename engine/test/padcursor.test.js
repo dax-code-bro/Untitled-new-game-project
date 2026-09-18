@@ -128,9 +128,26 @@ window.__stick = function (a, b) { window.__pad.axes[0] = a; window.__pad.axes[1
     const auto = window.MP.pointer.on;
     const btn = document.querySelector('#mpui .over .again');
     if (!btn) return { err: 'no Play Again button on the end screen' };
-    const r = btn.getBoundingClientRect();
+    /* A BUTTON THAT DOES NOT RELOAD THE PAGE.
+       Play Again is wired to W.location.reload(), which is right --
+       rebuilding the world is a much better way to get a second match
+       than unpicking the first one's corpses and bullet holes. It is
+       also fatal to a test standing inside the page: the moment the
+       convergence fix above started actually reaching the button, the
+       press landed, the page navigated, and the run died with
+       "Execution context was destroyed" instead of reporting a pass.
+
+       cloneNode copies the element and none of its listeners, so this
+       is the same button in the same place with the game's handler
+       left behind. What is under test is whether the pad's pointer can
+       be driven onto it and press it, and that is exactly what
+       survives. */
+    const live = document.querySelector('#mpui .over .again');
+    const btn2 = live.cloneNode(true);
+    live.parentNode.replaceChild(btn2, live);
+    const r = btn2.getBoundingClientRect();
     let clicked = false;
-    btn.addEventListener('click', () => { clicked = true; }, { once: true });
+    btn2.addEventListener('click', () => { clicked = true; }, { once: true });
     /* Walk the pointer onto the button, then press A. */
     window.MP.pointer.set(true);
     const target = { x: r.left + r.width / 2, y: r.top + r.height / 2 };

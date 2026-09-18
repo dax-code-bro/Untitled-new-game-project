@@ -122,25 +122,43 @@ try {
     ev('keyup', 'KeyN', 'n');
 
     /* Up again: `p.prone && cmd.jump` is the game's own way out of a
-       drop, and it is read with `once`, so it needs a fresh press. */
+       drop, and it is read with `once`, so it needs a fresh press.
+
+       AND IT LANDS IN A CROUCH, not on his feet -- that same line sets
+       crouching true. So `low()` stays true after the jump and asking
+       it whether he got up says no forever. Prone is the signal from
+       here on. Getting fully upright needs a TAP, which this harness
+       cannot make. */
+    const prone = () => !!window.MP.match.you.prone;
     ev('keydown', 'Space', ' ');
     await new Promise((r) => requestAnimationFrame(r));
     ev('keyup', 'Space', ' ');
-    const upAgain = await until(false, 20);
+    let upAgain = -1;
+    for (let i = 0; i < 20; i++) {
+      if (!prone()) { upAgain = i; break; }
+      await new Promise((r) => requestAnimationFrame(r));
+    }
 
+    /* The old key gets the whole budget and has to spend all of it NOT
+       dropping him. If C were still bound, a hold this long is a dive
+       and prone would come back. */
     ev('keydown', 'KeyC', 'c');
-    const onC = await until(true, 16);
+    let onC = -1;
+    for (let i = 0; i < 16; i++) {
+      if (prone()) { onC = i; break; }
+      await new Promise((r) => requestAnimationFrame(r));
+    }
     ev('keyup', 'KeyC', 'c');
-    return { was, onN, upAgain, onC, stillLow: low() };
+    return { was, onN, upAgain, onC };
   });
-  note(`low stance: start ${crouch.was}, down ${crouch.onN} frames after N, `
-    + `up ${crouch.upAgain} frames after a jump, old key C ${crouch.onC}`);
+  note(`stance: start low ${crouch.was}, down ${crouch.onN} frames after N, `
+    + `off his face ${crouch.upAgain} frames after a jump, old key C ${crouch.onC}`);
   check('crouch answers to the key it was bound to',
     crouch.was === false && crouch.onN >= 0, `${crouch.onN} frames`);
-  check('and the drop is one a jump gets him out of',
-    crouch.upAgain >= 0, `still low after 20 frames`);
-  check('and the old crouch key is no longer a crouch key', crouch.onC === -1,
-    crouch.onC === -1 ? '' : `went low ${crouch.onC} frames after C`);
+  check('and a jump gets him off his face again',
+    crouch.upAgain >= 0, 'still prone after 20 frames');
+  check('and the old crouch key no longer drops him', crouch.onC === -1,
+    crouch.onC === -1 ? '' : `went prone ${crouch.onC} frames after C`);
 
   check('no page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
   console.log(`\n  ${passed} passed, ${failed} failed`);
