@@ -139,9 +139,11 @@ function check(name, cond, detail = '') {
         check(`${tag}: and ends on the score limit or the clock`,
           r.score.a >= 75 || r.score.b >= 75 || r.time >= 600,
           `${r.score.a}-${r.score.b} at ${r.time}s`);
-        check(`${tag}: it is not a walkover`,
-          Math.min(r.score.a, r.score.b) >= 20,
-          `${r.score.a}-${r.score.b}`);
+        /* The walkover check is done once, over several seeds, after
+           this loop -- see below. One match is one sample of a
+           stochastic quantity and this threshold is inside its spread,
+           so checking it here was a coin flip that happened to be
+           landing heads. */
       } else {
         check(`${tag}: somebody reaches six rounds`,
           r.score.a >= 6 || r.score.b >= 6, `${r.score.a}-${r.score.b}`);
@@ -151,6 +153,47 @@ function check(name, cond, detail = '') {
         `${r.simMs} ms`);
     }
   }
+
+/* ====================================================================
+   IS EITHER SIDE ACTUALLY PLAYING?
+   ====================================================================
+   The losing score in a deathmatch is a random variable. Measured over
+   six seeds on Town it came out 21, 23, 25, 29, 36, 38 -- a mean near
+   twenty-nine and a spread of seventeen. Checking one sample of that
+   against a threshold of twenty is not a check; it is a coin flip with
+   a bias, and it had been landing heads.
+
+   So: three seeds a map, and the MEAN has to clear the bar. That is
+   the thing the check was always trying to say -- that neither side
+   gets wiped every time -- and it says it with enough samples to mean
+   it. The worst single match is reported too, because a mean of
+   twenty-nine hiding a nine would be worth knowing about.
+   ==================================================================== */
+{
+  const spread = await page.evaluate(async (maps) => {
+    const out = {};
+    for (const m of maps) {
+      out[m] = [];
+      for (const seed of [7, 17, 27]) {
+        if (window.G) { try { window.G.dispose(); } catch (e) { /* nothing to lose */ } }
+        const G = window.G = LE.create({ canvas: '#game', quality: 'low', gravity: -19.6 });
+        const M = MP_MATCH.start({ game: G, mapId: m, mode: 'tdm',
+          headless: true, youBot: true, seed });
+        let t = 0;
+        while (!M.over && t < 720) { M.update(1 / 30); t += 1 / 30; }
+        out[m].push(Math.min(M.score.a, M.score.b));
+      }
+    }
+    return out;
+  }, maps);
+  for (const m of maps) {
+    const v = spread[m];
+    const mean = v.reduce((a, b) => a + b, 0) / v.length;
+    check(`${m}/tdm: it is not a walkover`, mean >= 20,
+      `losers ${v.join(', ')} — mean ${mean.toFixed(1)}`);
+    console.log(`..   ${m}: losing scores ${v.join(', ')}, mean ${mean.toFixed(1)}`);
+  }
+}
 
   /* The same seed must produce the same match, or none of the above
      means anything on the second run. */

@@ -436,7 +436,33 @@ function svcDetails(g, K) {
      round boss -- and the boss matters, because a lever growing
      straight out of a flat wall is a sticker. */
   const sel = K.selector || { x: R.rear + 0.052, y: -R.down * 0.10 };
-  band(g, -W - 0.0075, -W + 0.0010, 0.0, 0.0078, 14, sel.y, 0);
+  /* The boss the lever turns on. It has to be a raised round plate: a
+     lever growing straight out of a flat wall is a sticker. */
+  strut(g, [sel.x, sel.y, -W - 0.0065], [sel.x, sel.y, -W + 0.0005],
+    ringOutline(0.0078, 14));
+  /* THE POSITIONS. A selector is not a lever, it is a lever AND the
+     stops it clicks into, and those stops are what tell you at a
+     glance whether the gun in your hands is a two-position rifle or a
+     three-position one. Semi-only guns get SAFE and FIRE; anything
+     that will run away gets SAFE, SEMI and AUTO, in that order down
+     the plate the way nearly every service rifle of the century laid
+     them out.
+
+     They are small raised detents round the boss rather than lettering
+     -- at the distance a viewmodel is held, the shape of the stops
+     reads and engraving does not. */
+  {
+    const auto = K.auto !== false;
+    const stops = auto ? [0.95, 0.30, -0.42] : [0.95, -0.15];
+    for (const a of stops) {
+      const dx = sel.x + Math.cos(a) * 0.0108;
+      const dy = sel.y + Math.sin(a) * 0.0108;
+      strut(g, [dx, dy, -W - 0.0072], [dx, dy, -W - 0.0018], ringOutline(0.0013, 8));
+    }
+  }
+  /* And the lever itself, sitting on whichever stop the gun is set to
+     -- the top one, SAFE, is wrong for a weapon somebody is carrying
+     into a fight, so it rests on the one below it. */
   strut(g, [sel.x, sel.y, -W - 0.0050], [sel.x - 0.020, sel.y - 0.011, -W - 0.0062],
     roundRect(0.0038, 0.0038, 0.0024, 4, 10));
 
@@ -448,12 +474,31 @@ function svcDetails(g, K) {
   }
 
   /* Two takedown pins through the receiver, which is how every one of
-     these comes apart. */
+     these comes apart.
+
+     THESE WERE BOTH IN THE WRONG PLACE, AND IN THE SAME WRONG PLACE.
+     `band` sweeps along the BORE axis -- its first two arguments are x
+     -- so `band(-W, +W, ...)` drew a stub a centimetre long lying down
+     the barrel line at the origin, twice, and the loop variable `px`
+     that says where each pin goes was never read. Thirty-three
+     weapons, two pins each, none of them where a pin is.
+
+     A pin goes ACROSS the receiver, which is a run from one wall to
+     the other: that is `strut`, not `band`. The head stands a
+     millimetre and a half proud on the left, the way a real one
+     does. */
   for (const px of [R.rear + 0.030, R.front - 0.026]) {
-    band(g, -W - 0.0018, W + 0.0018, 0.0, 0.0044, 12, -R.down * 0.35, 0);
+    const py = -R.down * 0.35;
+    strut(g, [px, py, -W - 0.0015], [px, py, W + 0.0015], ringOutline(0.0044, 12));
+    // The head, on the left, where your thumb pushes it.
+    strut(g, [px, py, -W - 0.0032], [px, py, -W - 0.0012], ringOutline(0.0062, 12));
   }
   /* And the pin the trigger hangs on. */
-  band(g, -W - 0.0015, W + 0.0015, 0.0, 0.0032, 10, -R.down - 0.0015, 0);
+  {
+    const ty = -R.down - 0.0015;
+    strut(g, [R.rear + 0.058, ty, -W - 0.0012], [R.rear + 0.058, ty, W + 0.0012],
+      ringOutline(0.0032, 10));
+  }
 
   /* Sling swivels: one forward, one on the butt. A gun with nowhere to
      put a sling is a prop. */
@@ -483,13 +528,24 @@ function svcDetails(g, K) {
      milled from a billet. Six a side, which is what a stamped receiver
      looks like and what makes it read as stamped. */
   if (R.e >= 4.4) {
+    /* THE SAME MISTAKE AS THE PINS, AND THIS ONE WAS SIGNED. `rx` --
+       where along the receiver each rivet goes -- was computed, never
+       used, and then explicitly discarded with `void rx;` to stop a
+       linter complaining about it. Twelve rivets, all twelve at the
+       origin, on top of one another, on every stamped gun in the game.
+
+       A rivet is a dome standing proud of the wall, which is a short
+       run across the plate with a rounded head: one strut per side, at
+       the x the loop worked out. */
     for (let i = 0; i < 6; i++) {
       const rx = R.rear + 0.024 + i * (R.front - R.rear - 0.050) / 5;
+      const ry = -R.down * 0.42;
       for (const sz of [-1, 1]) {
-        band(g, 0.0, 0.0022, 0.0, 0.0030, 8, 0, 0);
-        spin(g, [[sz * (W + 0.0005), 0.0030], [sz * (W + 0.0022), 0.0026],
-          [sz * (W + 0.0022), 0.0]], 10, 30, -R.down * 0.42, 0);
-        void rx;
+        strut(g, [rx, ry, sz * (W + 0.0002)], [rx, ry, sz * (W + 0.0019)],
+          ringOutline(0.0031, 10));
+        // and the dome on the end of it
+        spin(g, [[rx - 0.0022, 0.0], [rx - 0.0015, 0.0026], [rx + 0.0015, 0.0026],
+          [rx + 0.0022, 0.0]], 10, 30, ry, sz * (W + 0.0019));
       }
     }
   }
@@ -1156,6 +1212,41 @@ Object.assign(SERVICE_KINDS, {
     sight: { y: 0.0405, frontX: 0.430, rearX: 0.000, front: 'ears', rear: 'aperture' },
     charge: { x: 0.040, y: 0.0170, z: 0.0250 },
     mass: 12.1, bound: 0.70,
+  }),
+  /* THE MG 42, WHICH HAD BEEN BORROWING THE MG 34's MODEL.
+   *
+     They are not the same gun and they do not look remotely alike. The
+     34 is a milled, round-receivered thing with a fluted barrel jacket
+     and a horseshoe butt. The 42 is the first mass-produced STAMPED
+     machine gun: a slab-sided pressed receiver with a square section,
+     a jacket with one enormous rectangular cut-out down the right side
+     for the quick-change barrel, a booster cone on the muzzle, a
+     pistol grip rather than a spade, and a much deeper bipod. It also
+     fires at twice the rate, which is why anyone knows the difference.
+
+     Everything below is that: e = 5.2 makes the receiver read as
+     pressed rather than turned, and the rivets that go with a pressed
+     receiver come free from the shared detail pass. */
+  mg42: svcSpec({
+    ammoKind: 'full',
+    muzzle: 0.625, barrel: { rear: 0.055, r0: 0.0140, r1: 0.0108, bore: 0.0040,
+      step: 0.190, gas: false, shroud: true, shroudX0: 0.070, shroudX1: 0.415,
+      shroudR: 0.0252, brake: 'cone' },
+    /* Stamped: square in section, flat-sided, and wider than the 34's
+       turned tube. */
+    rec: { rear: -0.165, front: 0.095, up: 0.0290, down: 0.0250, w: 0.0225, e: 5.2 },
+    port: { x0: -0.014, x1: 0.030, up: 0.0170, down: 0.0045 },
+    hg: { kind: 'none' },
+    /* A pistol grip, where the 34 has a spade. */
+    grip: { x: -0.092, y: -0.0215, len: 0.114, rake: 0.40 },
+    trigger: { x: -0.064 },
+    mag: { kind: 'belt', x: -0.024, y: -0.0250 },
+    /* The bakelite butt, straighter and blockier than the 34's. */
+    stock: { kind: 'poly', butt: -0.385, comb: 0.0270, drop: 0.0290, w: 0.0210 },
+    bipod: { x: 0.355, len: 0.178, rake: 0.034, spread: 0.088 },
+    sight: { y: 0.0430, frontX: 0.440, rearX: -0.005, front: 'ears', rear: 'aperture' },
+    charge: { x: 0.045, y: 0.0185, z: 0.0265 },
+    mass: 11.6, bound: 0.70,
   }),
   m60: svcSpec({
     ammoKind: 'full',

@@ -1101,18 +1101,41 @@
      18 and the interesting light is at the ends of it. These are all
      chosen for an elevation between about 0.25 and 1.0 -- low enough
      for long shadows at each end of the day, high enough to fight in. */
+  /* AND THE FOG IS NOT A MOOD EITHER.
+   *
+     The dawn preset carries a warm beige haze at a density of 0.008,
+     which over a 150-metre map means everything past about thirty
+     metres is the same colour as everything else past about thirty
+     metres. Photographed, Helipad was a flat tan field with slightly
+     darker tan boxes on it, and no amount of building detail was ever
+     going to show through that -- the detail was there and the fog was
+     eating it.
+
+     Each map gets its own density and tint now, chosen against a
+     photograph rather than against the preset's idea of the hour:
+     enough haze to give the distance depth, not so much that the far
+     lane is a wash. Town keeps most of its overcast, because a grey
+     day genuinely is hazy and that map reads well; Helipad loses two
+     thirds of its. */
   var SKY = {
-    helipad: { sky: 'dawn', hours: 7.0, exposure: 1.10 },        // elev 0.26
-    resort: { sky: 'day', hours: 15.0, exposure: 1.0 },          // elev 0.71
-    town: { sky: 'overcast', hours: 9.5, exposure: 0.98 },       // elev 0.79
-    demolition: { sky: 'sunset', hours: 17.4, exposure: 1.18 },  // elev 0.26
+    helipad: { sky: 'dawn', hours: 7.4, exposure: 1.06,
+      fog: 0xb9bcc4, fogDensity: 0.0026 },                       // elev 0.36
+    resort: { sky: 'day', hours: 15.0, exposure: 1.0,
+      fog: 0xa8c0dc, fogDensity: 0.0032 },                       // elev 0.71
+    town: { sky: 'overcast', hours: 9.5, exposure: 1.02,
+      fog: 0x9aa4b0, fogDensity: 0.0070 },                       // elev 0.79
+    demolition: { sky: 'sunset', hours: 17.2, exposure: 1.14,
+      fog: 0xc98a58, fogDensity: 0.0038 },                       // elev 0.30
   };
 
   function applySky(game, id) {
     var s = SKY[id] || SKY.town;
     /* The exposure is applied after the preset, because setSky writes
-       the preset's own and would put it back. */
-    try { game.setSky(s.sky); } catch (e) { /* a sky name the build does not have */ }
+       the preset's own and would put it back. The fog goes in as an
+       override so setSky cannot put that back either. */
+    try {
+      game.setSky(s.sky, { fog: s.fog, fogDensity: s.fogDensity });
+    } catch (e) { /* a sky name the build does not have */ }
     try { game.setTimeOfDay(s.hours); } catch (e) { /* older engine */ }
     try { if (s.exposure != null) game.renderer.post.exposure = s.exposure; } catch (e) { /* no post stage */ }
     return s;

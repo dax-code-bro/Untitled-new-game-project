@@ -919,6 +919,9 @@ body.b9staged #b9hud { display:none !important; }
 #b9shell .sgn .p { font-style:normal; font-size:11px; color:#8a8272;
   font-variant-numeric:tabular-nums; }
 #b9shell .pcnone { flex:1; font-size:12px; color:#8a8272; }
+#b9shell .pcsub { font-size:11px; color:#8a8272; margin:0 0 7px 33px;
+  line-height:1.5; }
+#b9shell .opt.sub .n { padding-left:16px; color:#bdb5a1; }
 #b9shell .pcx { flex:0 0 100%; margin-top:8px; padding-top:8px;
   border-top:1px solid #2c2820; font-size:11px; letter-spacing:.10em;
   color:#e2705f; }
@@ -1959,10 +1962,10 @@ function mpLoad() {
   if (Array.isArray(saved.streaks)) {
     var ks = [], sseen = {};
     saved.streaks.forEach(function (id) {
-      if (!MP.KILLSTREAKS.some(function (k2) { return k2.id === id; }) || sseen[id] || ks.length >= 5) return;
+      if (!MP.KILLSTREAKS.some(function (k2) { return k2.id === id; }) || sseen[id] || ks.length >= 3) return;
       sseen[id] = 1; ks.push(id);
     });
-    while (ks.length < 5) {
+    while (ks.length < 3) {
       var fill = MP.KILLSTREAKS.filter(function (k2) { return !sseen[k2.id]; })[0];
       if (!fill) break;
       sseen[fill.id] = 1; ks.push(fill.id);
@@ -2453,7 +2456,6 @@ var SLOT_ROWS = [
   { id: 'ability', k: 'Ability' },
   { head: 'Killstreaks' },
   { id: 'streak0', k: 'One' }, { id: 'streak1', k: 'Two' }, { id: 'streak2', k: 'Three' },
-  { id: 'streak3', k: 'Four' }, { id: 'streak4', k: 'Five' },
   { head: 'Finish' },
   { id: 'camo', k: 'Camo' },
   { id: 'keychain', k: 'Keychain' },
@@ -2762,6 +2764,47 @@ function signRow(e) {
   return d;
 }
 
+/* How many times a streak has been called in, over a career. The rail
+   in the match writes this; the loadout screen reads it. */
+function streakUses(id) {
+  try {
+    var o = JSON.parse(localStorage.getItem('b9.mp.streakUses.v1') || '{}');
+    return o[id] || 0;
+  } catch (e) { return 0; }
+}
+
+/* The three levels of one streak, as a block: what each is, whether it
+   is reached, and whether it is switched on. */
+function levelStack(into, k, uses, lv, L) {
+  var wrap = document.createElement('div');
+  wrap.className = 'procon';
+  var c = document.createElement('div');
+  c.className = 'pc';
+  var h = document.createElement('div');
+  h.className = 'pch';
+  h.textContent = 'Level ' + lv + ' — ' + uses + ' called in';
+  c.appendChild(h);
+  MP.streakLevels(k.id).forEach(function (S, i) {
+    if (!S) return;
+    var got = uses >= S.unlock;
+    var off = !!(L.streakOff && L.streakOff[S.id]);
+    var row = document.createElement('div');
+    row.className = 'sgn ' + (got && !off ? 'good' : 'bad');
+    row.innerHTML = '<b class="m"></b><span class="t"></span><i class="p"></i>';
+    row.querySelector('.m').textContent = got ? (off ? '\u00b7' : '\u2713') : '\u00b7';
+    row.querySelector('.t').textContent = 'L' + (i + 1) + ' ' + S.name;
+    row.querySelector('.p').textContent = got ? (off ? 'off' : 'on')
+      : (S.unlock + ' uses');
+    c.appendChild(row);
+    var d = document.createElement('div');
+    d.className = 'pcsub';
+    d.textContent = S.desc;
+    c.appendChild(d);
+  });
+  wrap.appendChild(c);
+  into.appendChild(wrap);
+}
+
 function prosAndCons(into, attId, gunId, fitted) {
   var fx = MP.effectsOf(attId, gunId, fitted);
   if (!fx.fits) return;
@@ -2963,19 +3006,58 @@ function paintDetail() {
     return;
   }
 
-  /* ---- one of the five killstreak slots ---- */
+  /* ---- one of the three killstreak slots ----
+     The list, and under each one the levels it has reached and what
+     they give you. A level past the first is an ABILITY YOU SWITCH ON
+     OR OFF rather than a number going up, and the switch is here
+     because that is where the decision belongs: you pick your three
+     and how each of them behaves before the match, not during it. */
   if (slot.indexOf('streak') === 0) {
     var n = +slot.slice(6);
     el.dname.textContent = 'Killstreak ' + (n + 1);
-    el.tagline.textContent = 'five of them, and the kills do not carry over a death';
+    el.tagline.textContent = 'three of them, and the kills do not carry over a death';
+    L.streakOff = L.streakOff || {};
     MP.KILLSTREAKS.forEach(function (k) {
       var here = L.streaks[n] === k.id;
       var elsewhere = !here && L.streaks.indexOf(k.id) >= 0;
-      var d = detailRow(k.name, k.blurb, k.cost + ' kills', { fitted: here, locked: elsewhere });
-      pushRow(d, null, function () {
+      var uses = streakUses(k.id);
+      var lv = MP.streakLevelOf(k.id, uses);
+      var d = detailRow(k.name, k.blurb,
+        k.cost + ' kills &nbsp;&middot;&nbsp; <b style="color:#ffd27a">L' + lv + '</b>',
+        { fitted: here, locked: elsewhere });
+      pushRow(d, function () {
+        el.confirm.innerHTML = '';
+        levelStack(el.confirm, k, uses, lv, L);
+        var act = document.createElement('div');
+        act.className = 'item';
+        act.innerHTML = '<span class="t"></span><span class="hint"></span>';
+        act.querySelector('.t').textContent = elsewhere ? 'Already in another slot'
+          : (here ? 'In this slot' : 'Take it');
+        act.querySelector('.hint').textContent = elsewhere ? '' : 'Enter / A';
+        el.confirm.appendChild(act);
+      }, function () {
         if (elsewhere) { beep('back'); return; }
         L.streaks[n] = k.id; mpSave(); paintSlots(); paintDetail(); ldNav(true);
       }, elsewhere);
+      /* And, for the one in this slot, a row per unlocked level so the
+         ability can be switched off without leaving the screen. */
+      if (here) {
+        MP.streakLevels(k.id).forEach(function (S, i) {
+          if (!S) return;
+          var got = uses >= S.unlock;
+          var off = !!L.streakOff[S.id];
+          var r = detailRow('   L' + (i + 1) + ' — ' + S.name, S.desc,
+            got ? (off ? 'off' : 'on') : (S.unlock + ' uses'),
+            { fitted: got && !off, locked: !got });
+          r.classList.add('sub');
+          pushRow(r, null, function () {
+            if (!got) { beep('back'); return; }
+            if (L.streakOff[S.id]) delete L.streakOff[S.id];
+            else L.streakOff[S.id] = 1;
+            mpSave(); paintDetail(); ldNav(true);
+          }, !got);
+        });
+      }
     });
     return;
   }

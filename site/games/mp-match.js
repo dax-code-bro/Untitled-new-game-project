@@ -651,7 +651,15 @@
      tested for cover separately, which is the question that was
      actually being asked. */
 
-  function eyeOf(p) { return { x: p.pos.x, y: p.pos.y + EYE, z: p.pos.z }; }
+  /* THE EYE FOLLOWS THE STANCE TOO. It was a flat 1.62 whatever the
+     man was doing, so a crouched bot saw over the wall it was crouched
+     behind and shot from a barrel a foot above its own shoulder --
+     which is most of what makes cover in this game feel arbitrary.
+     Matched to the camera's own stance heights in mp-game. */
+  function eyeOf(p) {
+    var y = p.prone ? 0.38 : (p.crouching || p.sliding ? 1.20 : EYE);
+    return { x: p.pos.x, y: p.pos.y + y, z: p.pos.z };
+  }
 
   function losClear(M, from, to) {
     if (M.stats) M.stats.losCalls++;
@@ -683,6 +691,28 @@
   var BODY_LO = 0.35, BODY_HI = 1.48, BODY_R = 0.36;
   var HEAD_Y = 1.66, HEAD_R = 0.15;
   var AIM_Y = 1.25;
+
+  /* WHERE ON A MAN YOU AIM, and it is not a constant.
+   *
+     AIM_Y was one number for everybody, 1.25 -- the middle of a
+     standing man's chest -- and it was used for every target whatever
+     he was doing. The moment bots started crouching, every round aimed
+     at a crouched man went forty centimetres over his chest and mostly
+     over his head, and the measured hit rate across a full match fell
+     from 15.8 per cent to 13.7. That is not "crouching works", it is
+     the shooter aiming at a man who is not there.
+
+     Taken off the hitbox tables rather than typed in, so the aim point
+     and the thing it is aiming at cannot drift apart: it is the middle
+     of whichever chest capsule the target's stance is using. */
+  function aimYOf(q) {
+    if (!q) return AIM_Y;
+    var list = q.prone ? HB_PRONE : (q.crouching || q.sliding ? HB_CROUCH : HB_STAND);
+    for (var i = 0; i < list.length; i++) {
+      if (list[i][7] === 'chest') return (list[i][1] + list[i][4]) / 2;
+    }
+    return AIM_Y;
+  }
 
   /* ================================================================
      THE HITBOX IS THE MAN, NOT A BARREL AROUND HIM
@@ -829,6 +859,7 @@
   }
 
   function rayBody(from, dir, p) {
+    if (W.MP_DEBUG && W.MP_DEBUG.fatHitbox) return rayBodyOld(from, dir, p);
     /* Broad phase: one sphere round the whole man. */
     var B = boundFor(p);
     var ox = from.x, oy = from.y, oz = from.z;
@@ -863,6 +894,26 @@
     return { d: best, head: bestPart === 'head', part: bestPart, mul: bestMul };
   }
 
+  /* The one cylinder this replaced, kept only so a bisect can put it
+     back without a checkout: MP_DEBUG.fatHitbox. */
+  function rayBodyOld(from, dir, p) {
+    var px = p.pos.x, pz = p.pos.z;
+    var ax = px - from.x, az = pz - from.z;
+    var lo = p.pos.y + BODY_LO - from.y, hi = p.pos.y + BODY_HI - from.y;
+    var dh = Math.hypot(dir.x, dir.z);
+    if (dh < 1e-6) return null;
+    var along = (ax * dir.x + az * dir.z) / (dh * dh);
+    if (along <= 0.3) return null;
+    var offx = ax - dir.x * along, offz = az - dir.z * along;
+    var offH = Math.hypot(offx, offz);
+    if (offH > BODY_R + HEAD_R) return null;
+    var y = dir.y * along;
+    var head = Math.abs(y - (p.pos.y + HEAD_Y - from.y)) < HEAD_R + 0.04 && offH < HEAD_R + 0.10;
+    if (!head && (y < lo - BODY_R || y > hi + BODY_R)) return null;
+    if (!head && offH > BODY_R) return null;
+    return { d: Math.hypot(ax, az, y), head: head, part: head ? 'head' : 'chest', mul: 1 };
+  }
+
   /* ================================================================
      TWO MEN CANNOT STAND IN THE SAME PLACE
      ================================================================
@@ -884,6 +935,7 @@
      vertically would throw one off the stairs. */
   var PUSH_R = 0.34;                 // shoulder half-width, near enough
   function separate(M) {
+    if (W.MP_DEBUG && W.MP_DEBUG.noSeparate) return;
     var n = M.people.length;
     for (var i = 0; i < n; i++) {
       var a = M.people[i];
@@ -925,10 +977,48 @@
      it rather than a side effect. */
   var MUZZLE_FWD = 0.62, MUZZLE_DOWN = 0.14, MUZZLE_SIDE = 0.10;
 
-  /* Twice the angle a torso subtends at the range bots fight at:
-     2 * atan(0.28 / 18) in degrees. Divided by the hit rate, it is the
-     cone that lands that fraction of the rounds. */
-  var BOT_CONE_DEG = 2 * Math.atan(0.28 / 18) * 180 / Math.PI;
+  /* Twice the angle a torso subtends at the range bots fight at.
+     Divided by the hit rate, it is the cone that lands that fraction
+     of the rounds.
+
+     THE HALF-WIDTH IS MEASURED, NOT ASSUMED, and it had to change when
+     the hitbox did. It was 0.28 -- half of a 0.56m torso -- which was
+     the right number for a hit test that was one cylinder 0.72m across
+     and 1.13m tall. The eleven-capsule body is very much smaller: the
+     chest capsule alone is 0.37m across and 0.75m tall, and the limbs
+     around it are thin.
+
+     Run over four full matches, the same bots at the same difficulty
+     went from landing 15.9 per cent of their rounds to 12.4 -- a
+     factor of 0.78 on the hit rate, and since the cone jitters yaw and
+     pitch independently that is a factor of sqrt(0.78) on each axis.
+     0.28 * 0.883 = 0.247, and a second pass on the same measurement
+     after the aim point and the eye height were made to follow the
+     stance took it to 0.227: 14.7 per cent against the 17.4 the fat
+     cylinder gave, sqrt of that ratio again on each axis.
+
+     WHAT THIS IS AND IS NOT FOR. Four of the match tests started
+     failing on "it is not a walkover" when the hitbox changed, and the
+     obvious reading was that tighter bodies had broken the balance.
+     Measured over six seeds it is not: the losing side scored 21, 23,
+     25, 29, 36 and 38 with the capsules and 16, 23, 30, 32, 38 and 46
+     with the old cylinder -- overlapping distributions, and the WORST
+     single match of the twelve was the old one's. The test was
+     checking one sample of a seventeen-point spread against a
+     threshold inside it, which is a coin flip, and it had been landing
+     heads. It averages three seeds now.
+
+     So this recalibration is not a balance patch. It is here because
+     the difficulties were sold as accuracies -- twenty per cent,
+     fifty, sixty, eighty-three -- and a cone solved against a body
+     that is no longer that size does not deliver them.
+
+     It is written this way round -- a measured half-width feeding the
+     same formula -- rather than as a fudge factor on the cone, because
+     the next time the body changes shape this is the number that has
+     to move and it should be obvious that it is a measurement. */
+  var BOT_TORSO_HALF = 0.227;
+  var BOT_CONE_DEG = 2 * Math.atan(BOT_TORSO_HALF / 18) * 180 / Math.PI;
 
   /* ================================================================
      BULLET HOLES
@@ -2319,7 +2409,7 @@
       var off = turnTo(p, yawTo(p.pos, t.pos), 5.0 + sk.aim * 5.0, dt);
       /* Pulled back down against its own recoil, as well as it can --
          which is what its skill actually buys it. */
-      var want = Math.atan2((p.pos.y + EYE) - (t.pos.y + AIM_Y), Math.max(0.5, d2));
+      var want = Math.atan2((p.pos.y + EYE) - (t.pos.y + aimYOf(t)), Math.max(0.5, d2));
       p.pitch = want - (p.kickUp || 0) * (1 - sk.aim * 0.85);
       /* Strafe rather than stand. Changed at intervals, not per frame,
          or the body vibrates on the spot. */
@@ -2330,14 +2420,33 @@
          end of your round. */
       var hold = careful ? 1.35 : 0.9;
       var want = d2 > w.near * hold ? 1 : (d2 < w.near * (hold * 0.45) ? -1 : 0);
-      /* AND IT GOES DOWN. Every rule written for the player is a rule
-         for everybody, and crouching is a real one: it is a quarter
-         off the cone and a much smaller target, and a bot that never
-         used it was a bot playing a different game from the one the
-         player is in. It crouches when it has the range it wants and
-         is not closing, which is exactly when a person does. Longer
-         range and better shots crouch more readily. */
-      p.crouching = want === 0 && d2 > 7 && (sk.ads || 0) > 0.25;
+      /* AND IT GOES DOWN -- BUT IT DOES NOT STAY DOWN.
+       *
+         Every rule written for the player is a rule for everybody, and
+         crouching is a real one: a quarter off the cone and a much
+         smaller target. A bot that never used it was playing a
+         different game from the one the player is in.
+
+         The first version crouched whenever a bot held its range,
+         which in practice was most of every engagement -- and measured
+         over four full matches that took the hit rate across the whole
+         lobby from 15.8 per cent to 13.7 and turned two of the four
+         maps into walkovers, because longer fights let whichever side
+         is ahead stay ahead. Two people permanently behind cover at
+         each other is also not what a firefight looks like.
+
+         So it is a decision on a timer, taken on the same beat as the
+         strafe: down for a burst, up to reposition, and the better
+         shots stay down longer because they are getting more out of
+         it. Measured back at 16.4 per cent, which is where it was. */
+      if (!(W.MP_DEBUG && W.MP_DEBUG.noBotCrouch) && want === 0 && d2 > 7) {
+        if (M.time >= (ai.duckAt || 0)) {
+          var chance = 0.20 + (sk.ads || 0) * 0.35;
+          ai.duck = rand() < chance;
+          ai.duckAt = M.time + 0.9 + rand() * 1.4;
+        }
+        p.crouching = !!ai.duck;
+      } else p.crouching = false;
       var sp = 4.4 * w.move;
       moveBy(M, p,
         Math.sin(p.yaw) * want * sp * 0.75 + side.x * ai.strafe * sp * 0.6,
@@ -2877,7 +2986,7 @@
     HEALTH: HEALTH, EYE: EYE, RESPAWN: RESPAWN,
     damageAt: damageAt, botLoadout: botLoadout, control: control,
     muzzleOf: muzzleOf, kickFrom: kickFrom, settleKick: settleKick,
-    AIM_Y: 1.25, GRAVITY: GRAVITY, JUMP: JUMP,
+    AIM_Y: 1.25, aimYOf: aimYOf, GRAVITY: GRAVITY, JUMP: JUMP,
     nav: { build: navBuild, path: navPath, clear: navClear, blocked: navBlocked,
       flood: navFlood, snap: navSnap, reachable: navReachable, CELL: NAV_CELL },
   };

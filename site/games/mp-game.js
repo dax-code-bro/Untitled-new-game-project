@@ -622,7 +622,10 @@
   var VM_BESPOKE = { mp5: 'mp5', m1911: 'pistol1911', model5: 'model5',
     mauser: 'mauserC96', breakwater: 'breakwater', scatter: 'scattergun',
     sawnoff: 'sawnOff' };
-  var VM_FALLBACK = { mg42: 'mg34', riotshield: 'ump' };
+  /* The MG 42 has its own model now (see SERVICE_KINDS), so the only
+     thing still borrowing one is the riot shield, which is a sheet of
+     polycarbonate and a handle and genuinely has no weapon under it. */
+  var VM_FALLBACK = { riotshield: 'ump' };
 
   /* WHERE THE HANDS GO ON A WEAPON THAT HAS NEVER BEEN POSED.
    *
@@ -1739,6 +1742,8 @@
     };
 
     var stanceY = W.MP_MATCH.EYE;
+    /* How hard the last shot shoved, 0 to about 1.6, decaying fast. */
+    var punch = 0;
     var kick = 0, bob = 0, bobT = 0, lastHp = M.you.hp, wasAlive = true;
     var adsT = 0;
     var over = false;
@@ -1966,7 +1971,32 @@
          coming back down under its own weight and must NOT drag the
          view with it, or every burst ends where it started and recoil
          costs nothing. */
-      if (dUp > 0) { pitch -= dUp; yaw -= dSide; pad.rumble(0.22, 0.05); }
+      if (dUp > 0) {
+        pitch -= dUp; yaw -= dSide;
+        /* THE SHOVE, which is separate from the climb.
+         *
+           A big round does two things to a shooter and the game only
+           did one of them. The CLIMB is the muzzle rising, and that is
+           `pitch -= dUp` above: it is permanent until you pull it back
+           down, and it is what recoil control is. The SHOVE is the gun
+           coming back into your shoulder and your whole body giving a
+           little -- it is over in a tenth of a second and it takes
+           nothing away from your aim, and it is the entire reason a
+           fifty calibre feels like a fifty calibre and a nine
+           millimetre does not.
+
+           Scaled off the weapon's own vertical recoil, so it needs no
+           second table and no gun can have one without the other. An
+           STG at 0.52 degrees gets almost nothing; the anti-materiel
+           rifle at 6.2 throws the camera back a good way and widens
+           the field of view as it does, the way a punch does. */
+        var w2 = p.guns[p.held];
+        var heavy = Math.min(1, ((w2 && w2.rec ? w2.rec[0] : 0.6) - 0.4) / 5.0);
+        if (heavy > 0) {
+          punch = Math.min(1.6, punch + heavy * 1.25);
+          pad.rumble(0.35 + heavy * 0.6, 0.06 + heavy * 0.10);
+        } else pad.rumble(0.22, 0.05);
+      }
       if (p.kills > kills0) { hud.hitMark(true); pad.rumble(0.8, 0.22); }
       pitch = Math.max(-1.45, Math.min(1.45, pitch));
       watchDamage();
@@ -2017,7 +2047,18 @@
         var wantEye = p.prone ? 0.38 : (p.crouching ? 1.20 : W.MP_MATCH.EYE);
         var eRate = p.prone ? 12 : 9;
         stanceY += (wantEye - stanceY) * Math.min(1, dt * eRate);
-        eye = { x: p.pos.x, y: p.pos.y + stanceY + bob, z: p.pos.z };
+        /* The shove decays in about a sixth of a second. */
+        punch *= Math.pow(0.0004, dt);
+        if (punch < 0.001) punch = 0;
+        var fwdP = Math.cos(pitch);
+        eye = {
+          x: p.pos.x - Math.sin(yaw) * fwdP * punch * 0.055,
+          y: p.pos.y + stanceY + bob + punch * 0.012,
+          z: p.pos.z - Math.cos(yaw) * fwdP * punch * 0.055,
+        };
+        /* And the field of view opens a little with it, which is what
+           makes a heavy shot read as force rather than as a wobble. */
+        if (game.fieldOfView) game.fieldOfView(55 + punch * 2.6);
         var cp = Math.cos(pitch);
         game.lookAt([eye.x, eye.y, eye.z],
           [eye.x + Math.sin(yaw) * cp, eye.y - Math.sin(pitch), eye.z + Math.cos(yaw) * cp]);
