@@ -80,20 +80,23 @@ function check(name, cond, detail = '') {
     out.holeOpen = !hit || hit.point.y < C.C.pier.deckY - 0.3;
     out.holeHit = hit ? { y: +hit.point.y.toFixed(2), name: hit.actor && hit.actor.name } : null;
 
-    /* --- refused from the surface ---------------------------------------
-       Not from the deck: three and a half metres up through the boards is
-       out of reach and SHOULD give no prompt at all. The refusal that
-       matters is the one you get floating on the water directly over it,
-       where the machine is close enough to touch and you are still
-       breathing. */
-    T.teleport(S.pap.at[0], C.C.water.y, S.pap.at[2] + 0.6);
-    for (let i = 0; i < 24; i++) G.step(1 / 60);
-    out.floatEyeY = +(P.actor.position.y + 0.745).toFixed(2);
-    out.floatUnder = !!P.underwater;
-    const afloat = window.__T_SYS.nearestInteract(S, P);
-    out.fromSurface = afloat && { kind: afloat.kind, label: afloat.label };
-    // And from up on the pier there should be nothing to answer at all.
+    /* --- not reachable from the surface ---------------------------------
+     *
+       This used to float the player DIRECTLY OVER the machine and check
+       for the "it is under the water" refusal. There is no directly over
+       it any more: the machine is inside a rock, and the point on the
+       surface above it is solid stone. So the question changes with the
+       map -- it is no longer "does it refuse you while you are
+       breathing", it is "is the only way to it through the cave".
+
+       Three places that are not the cave, and none of them may answer:
+       the water outside the mouth, the water above the outcrop, and the
+       pier itself. */
+    const K = C.CAVE;
+    out.fromOutside = T.interactAt((K.tunnel.x0 + K.tunnel.x1) / 2, C.C.water.y - 0.3, K.z0 - 3.0);
+    out.fromAboveRock = T.interactAt(S.pap.at[0], K.topY + 1.2, S.pap.at[2]);
     out.fromDeck = T.interactAt(C.C.pier.x, C.C.pier.deckY + 0.9, mid);
+    out.caveAt = [K.room.x0, K.room.x1, K.room.z0, K.room.z1];
 
     // --- offered from under the water ------------------------------------
     // Drop in beside the machine and let the water code decide what we are.
@@ -181,21 +184,24 @@ function check(name, cond, detail = '') {
   console.log(JSON.stringify(r, null, 1).slice(0, 2600));
   console.log('');
 
-  check('the machine is on the lake bed where the map put it',
+  check('the machine is where the map put it',
     r.papAt && Math.abs(r.papAt[1] - r.declared[1]) < 0.001, JSON.stringify(r.papAt));
+  check('and that is inside the cave chamber',
+    r.papAt && r.papAt[0] > r.caveAt[0] && r.papAt[0] < r.caveAt[1]
+      && r.papAt[2] > r.caveAt[2] && r.papAt[2] < r.caveAt[3],
+    `${JSON.stringify(r.papAt)} vs room ${JSON.stringify(r.caveAt)}`);
   check('it is under the water, not floating on it',
     r.papAt[1] < r.waterY - 1.0, `y=${r.papAt[1]} water=${r.waterY}`);
-  check('it is standing on the bed, not inside it',
+  check('it is standing on the floor of the chamber, not inside it',
     r.bed && r.papAt[1] > r.bed.bed - 0.2 && r.papAt[1] < r.bed.surface,
     JSON.stringify(r.bed));
   check('the deck directly above it is actually gone', r.holeOpen, JSON.stringify(r.holeHit));
   check('the model exists with a beak and a head', r.hasModel);
-  check('floating on top of it, it will not deal',
-    r.fromSurface && r.fromSurface.kind === 'papCold', JSON.stringify(r.fromSurface));
-  check('and it says why', r.fromSurface && /under the water/i.test(r.fromSurface.label || ''),
-    r.fromSurface && r.fromSurface.label);
-  check('from up on the pier there is nothing to answer', r.fromDeck === null,
-    JSON.stringify(r.fromDeck));
+  check('from the water outside the mouth there is nothing to answer',
+    r.fromOutside === null, JSON.stringify(r.fromOutside));
+  check('nor from the surface above the rock it is buried in',
+    r.fromAboveRock === null, JSON.stringify(r.fromAboveRock));
+  check('nor from up on the pier', r.fromDeck === null, JSON.stringify(r.fromDeck));
   check('swimming down puts the eyes under the surface', r.underwater,
     `eye=${r.eyeY} water=${r.waterY}`);
   check('underwater it offers the trade', r.fromWater && r.fromWater.kind === 'pap',

@@ -285,6 +285,13 @@ const MAT = {
   papEye: { color: 0xfff4d8, texture: 'smooth', roughness: 0.2, metalness: 0,
     emissive: 0xffd070, emissiveStrength: 1.6 },
   shore: { color: 0x8e9086, texture: 'concrete', roughness: 0.98, metalness: 0, uvScale: 20, castShadow: false },
+  /* The crack in the roof of an air pocket. A light in a sealed dome is
+     a light from nowhere; a slit of bright sky in the rock above it is
+     where the light is from, and it is the thing that tells you from
+     under the water that there is air up there. */
+  crack: { color: 0xdfe8ee, texture: 'smooth', roughness: 0.9, metalness: 0,
+    emissive: 0xcfe2ee, emissiveStrength: 1.9, castShadow: false },
+  caveRock: { color: 0x6c6a63, texture: 'rock', roughness: 0.97, metalness: 0, uvScale: 5 },
 };
 
 /* Rooms, for whatever wants to ask which part of the map something is
@@ -450,7 +457,11 @@ const PAP = {
      the hole in the pier showed you empty water and the machine was
      something you found by swimming around looking -- the break is
      supposed to BE the signpost. */
-  at: [C.pier.x + 0.55, C.water.y - 1.62, 26.1],
+  /* INSIDE THE CAVE, on the floor of the chamber. It was directly under
+     the gap in the pier; the gap is still where you go in, but what is
+     under it now is the swim out to the rock rather than the machine
+     itself. See CAVE below. */
+  at: [6.2, -2.55, 47.8],
   /* The span of decking that went in with it: a three-and-a-half metre
      hole in the run SHORT of the boathouse, so you walk out, the boards
      stop, and the boathouse is still ahead of you on the other side.
@@ -462,6 +473,81 @@ const PAP = {
      does not complain, it just does not exist, and the render looked
      plausible enough that it took reading the numbers to notice. */
   breaks: { x0: C.pier.x - 1.35, x1: C.pier.x + 1.35, z0: 24.4, z1: 27.9 },
+};
+
+/* THE CAVE THE MACHINE IS IN.
+   ============================================================
+   The flamingo sat on the open bed in two metres of water, which is a
+   dive and not a journey: you went over the side, you were on top of it
+   in four seconds, and the only thing between you and an upgrade was
+   remembering where it was. Nothing about it needed the air in your
+   lungs.
+
+   So it is inside a rock now, and getting to it is the cost:
+
+     THE MOUTH    a scoured slot in the bed, past the end of the pier,
+                  its top a metre below the surface -- you cannot see
+                  into it from above and you cannot swim into it without
+                  going down.
+
+     THE TUNNEL   nine metres, roofed a metre and a half UNDER the
+                  waterline the whole way, so there is nowhere to put
+                  your head up.
+
+     THE CHIMNEY  halfway along, a shaft rising through the rock with
+                  half a metre of air at the top of it and a crack of
+                  daylight coming in. The first air pocket, and the
+                  reason thirty seconds is enough for somebody who knows
+                  where it is.
+
+     THE CHAMBER  flooded, three and a half metres deep, the flamingo on
+                  the floor of it.
+
+     THE DOME     the back of the chamber, where the roof lifts clear of
+                  the water. The second pocket, and the big one -- you
+                  surface, you get your breath back, you go down and
+                  feed it a gun, and then you have the whole swim out
+                  again.
+
+   WEST OF THE PIER'S LINE, deliberately. The escape boat runs straight
+   up +Z from x 17.85 for a hundred and fifty metres, and an outcrop in
+   line with the pier would have it drive through solid rock in the one
+   shot nobody can skip. Five metres of clearance.
+
+   The hole in the pier is still the signpost -- you drop through it and
+   the rock is ahead of you and off to the left -- and the planks that
+   went in with the decking have drifted that way. */
+const CAVE = {
+  x0: -2.5, x1: 12.5, z0: 36.0, z1: 54.0,
+  /* A REEF, NOT AN ISLAND, and the ceiling is not a taste decision.
+     The escape camera flies off the boat's quarter and its path crosses
+     this footprint at x 10.3 to 11.4, z 37 to 54, at a height of three
+     metres and a bit -- worked out from the numbers rather than noticed
+     in a screenshot. At the first cut the rock stood 2.95 and the crags
+     on it reached 4.4, so the last shot of the game would have flown
+     through solid stone. Everything here now stops below 1.95, which
+     leaves the camera a clear metre. */
+  baseY: -4.8, topY: C.water.y + 1.60,
+  /* The approach. The bed is scoured out in front of the mouth, because
+     otherwise the swim code -- which holds you at bed + 0.55 -- will not
+     let you get low enough to swim in, and the cave has a door you can
+     see and cannot use. */
+  apron: { x0: 6.35, x1: 9.65, z0: 33.0 },
+  /* NEARLY THREE METRES OF WATER IN IT, and that is not generosity.
+     The first cut gave the tunnel 1.95 m for a body that is 1.75 m tall,
+     which sounds like clearance and is not: the swim code holds you
+     twenty centimetres off the floor, the mouth's sill is the same rock
+     that makes the floor, and a player driving forward parks against
+     that lip and stays there. The test drove at it for nine seconds of
+     game time and never got in -- a door you can see and cannot use,
+     which is the exact failure the cave was most likely to have.
+
+     The roof still sits nearly a metre under the waterline, so it is as
+     flooded as it ever was; there is just room to swim now. */
+  tunnel: { x0: 6.85, x1: 9.15, z0: 36.0, z1: 45.0, floorY: -3.4, roofY: -0.55 },
+  chimney: { x0: 6.85, x1: 9.15, z0: 40.0, z1: 42.0, roofY: C.water.y + 0.85 },
+  room: { x0: 1.0, x1: 11.5, z0: 45.0, z1: 52.5, floorY: -3.6, roofY: -0.15 },
+  pocket: { x0: 4.0, x1: 9.5, z0: 48.8, z1: 51.8, roofY: C.water.y + 0.90 },
 };
 
 /* The flamingo. Pink, bloated, and wrong in the specific way a pool toy
@@ -1886,18 +1972,116 @@ function build(game, S) {
      the machine is found: you walk out along the pier, the boards stop,
      and there is something pink moving about two metres under you. */
   {
+    /* ---- the rock, and the way through it ---------------------------
+     *
+       Built as the COMPLEMENT of the void rather than as a shell with
+       holes cut in it: the tunnel, the chimney, the chamber and the dome
+       are four boxes of empty space, and everything in the outcrop that
+       is not one of them is rock. Written that way because a shell with
+       holes is where a cave leaks -- one slab an inch short and the
+       player swims out through the wall into the lake, which is a bug
+       you find by falling through it rather than by reading it. A
+       complement cannot leak; the bands below tile the whole block. */
+    const K = CAVE, TU = K.tunnel, CH = K.chimney, RM = K.room, PK = K.pocket;
+    const rock = (x0, x1, y0, y1, z0, z1, nm) =>
+      slab(x0, x1, y0, y1, z0, z1, mats.caveRock, nm || 'cave-rock');
+
+    /* z 36 .. 40 and z 42 .. 45: the tunnel, with rock either side of it
+       and rock above and below. */
+    for (const [za, zb] of [[K.z0, CH.z0], [CH.z1, TU.z1]]) {
+      rock(K.x0, TU.x0, K.baseY, K.topY, za, zb);
+      rock(TU.x1, K.x1, K.baseY, K.topY, za, zb);
+      rock(TU.x0, TU.x1, K.baseY, TU.floorY, za, zb);
+      rock(TU.x0, TU.x1, TU.roofY, K.topY, za, zb);
+    }
+    /* z 40 .. 42: the same, except the rock above the tunnel is gone as
+       far as the chimney's roof -- which is the chimney. */
+    rock(K.x0, TU.x0, K.baseY, K.topY, CH.z0, CH.z1);
+    rock(TU.x1, K.x1, K.baseY, K.topY, CH.z0, CH.z1);
+    rock(TU.x0, TU.x1, K.baseY, TU.floorY, CH.z0, CH.z1);
+    rock(TU.x0, TU.x1, CH.roofY, K.topY, CH.z0, CH.z1);
+
+    /* z 45 .. 52.5: the chamber. Rock either side, under the floor, and
+       over the roof -- except where the dome lifts it clear of the
+       water. */
+    for (const [za, zb, domed] of [[RM.z0, PK.z0, false], [PK.z0, PK.z1, true], [PK.z1, RM.z1, false]]) {
+      rock(K.x0, RM.x0, K.baseY, K.topY, za, zb);
+      rock(RM.x1, K.x1, K.baseY, K.topY, za, zb);
+      rock(RM.x0, RM.x1, K.baseY, RM.floorY, za, zb);
+      if (!domed) { rock(RM.x0, RM.x1, RM.roofY, K.topY, za, zb); continue; }
+      rock(RM.x0, PK.x0, RM.roofY, K.topY, za, zb);
+      rock(PK.x1, RM.x1, RM.roofY, K.topY, za, zb);
+      rock(PK.x0, PK.x1, PK.roofY, K.topY, za, zb);
+    }
+    // And the back of the outcrop, which is solid all the way through.
+    rock(K.x0, K.x1, K.baseY, K.topY, RM.z1, K.z1);
+
+    /* Rough it up, so it reads as rock and not as a crate. Spheres on
+       the outside only -- nothing here is solid, because the block
+       underneath already is and a second collider on the same face is
+       two surfaces fighting over one plane. */
+    for (let i = 0; i < 22; i++) {
+      const a = (i * 2.399) % (Math.PI * 2);
+      const cx = (K.x0 + K.x1) / 2 + Math.cos(a) * (7.0 + (i % 3) * 0.8);
+      const cz = (K.z0 + K.z1) / 2 + Math.sin(a) * (8.4 + (i % 4) * 0.7);
+      /* Kept under the roof line. A crag is decoration and decoration
+         is exactly the sort of thing that grows through a cutscene
+         camera without anybody noticing until the ending plays. */
+      const cy = K.baseY + 1.0 + ((i * 7) % 6) * 0.75;
+      const rad = 1.3 + ((i * 11) % 5) * 0.32;
+      const b = game.sphere({ at: [cx, cy, cz], radius: rad,
+        material: mats.caveRock, physics: false });
+      b.name = 'cave-crag'; b.scale.y *= 0.72;
+      /* How far up this one actually reaches, recorded rather than
+         guessed at from the actor. A sphere's radius lives in its
+         geometry, not in its scale -- reading scale gives 1 and a test
+         that believes it is measuring nothing. */
+      b.__topY = cy + rad * 0.72;
+      decos.push(b);
+    }
+
+    /* The cracks the light comes in by, and the light itself. Both
+       pockets get one; the tunnel gets a dim one so the mouth is a dark
+       opening rather than a black hole with nothing in it. */
+    deco(PK.x0 + 1.6, PK.x1 - 1.6, PK.roofY - 0.06, PK.roofY + 0.02,
+      (PK.z0 + PK.z1) / 2 - 0.34, (PK.z0 + PK.z1) / 2 + 0.34, mats.crack, 'cave-crack');
+    deco(CH.x0 + 0.42, CH.x1 - 0.42, CH.roofY - 0.05, CH.roofY + 0.02,
+      (CH.z0 + CH.z1) / 2 - 0.22, (CH.z0 + CH.z1) / 2 + 0.22, mats.crack, 'cave-crack');
+    game.light({ at: [(PK.x0 + PK.x1) / 2, PK.roofY - 0.7, (PK.z0 + PK.z1) / 2],
+      color: 0xc6dcea, intensity: 58, radius: 10 });
+    game.light({ at: [(CH.x0 + CH.x1) / 2, CH.roofY - 0.5, (CH.z0 + CH.z1) / 2],
+      color: 0xc6dcea, intensity: 34, radius: 7 });
+    game.light({ at: [(TU.x0 + TU.x1) / 2, TU.roofY - 0.8, TU.z0 + 2.2],
+      color: 0x9fb6b0, intensity: 16, radius: 6 });
+
     const fl = buildFlamingo(game, mats, decos, PAP.at);
     if (S) S.papFlamingo = fl;
+    // Its own glow, so you can see it from the far end of the chamber.
+    game.light({ at: [PAP.at[0], PAP.at[1] + 0.8, PAP.at[2]],
+      color: 0xff7ab0, intensity: 44, radius: 8 });
     // The wreckage: the torn ends of the run that fell in.
     for (const side of [-1, 1]) {
       const z = side < 0 ? PAP.breaks.z0 : PAP.breaks.z1;
       deco(PAP.breaks.x0 - 0.1, PAP.breaks.x1 + 0.1, C.pier.deckY - 0.16, C.pier.deckY - 0.02,
         z - 0.12, z + 0.12, mats.deckLong, 'pier-broken-end');
     }
-    // And boards in the water under it, at the angles boards end up at.
-    for (let i = 0; i < 5; i++) {
+    /* And boards in the water under it, at the angles boards end up at.
+     *
+       Off the BREAK, not off the machine. They were placed relative to
+       PAP.at, which was directly under the hole and now is not -- left
+       alone they would have been sealed inside the cave, forty metres
+       from the pier they fell off, which is the sort of thing that only
+       looks deliberate.
+
+       The last two have drifted out toward the mouth, because the drift
+       is the hint: the boards went that way, so go that way. */
+    const bkx = (PAP.breaks.x0 + PAP.breaks.x1) / 2;
+    const bkz = (PAP.breaks.z0 + PAP.breaks.z1) / 2;
+    for (let i = 0; i < 7; i++) {
       const a = (i * 37) % 60 - 30;
-      const bx = PAP.at[0] - 1.6 + (i % 3) * 1.3, bz = PAP.at[2] - 1.2 + ((i * 5) % 4) * 1.1;
+      const out = i >= 5 ? (i - 4) : 0;        // the two that got away
+      const bx = bkx - 1.6 + (i % 3) * 1.3 - out * 2.6;
+      const bz = bkz - 1.2 + ((i * 5) % 4) * 1.1 + out * 3.4;
       const pl = game.box({ at: [bx, C.water.y - 1.42 - (i % 2) * 0.1, bz],
         size: [0.22, 0.06, 2.1 + (i % 2) * 0.7], material: mats.deckLong, physics: false });
       pl.name = 'sunk-plank';
@@ -1986,6 +2170,28 @@ function waterAt(x, z) {
      you before you reach the edge of either. */
   if (z < 0.2 || z > 137) return null;
   if (Math.abs(x) > 83) return null;
+
+  /* THE CAVE HAS ITS OWN FLOOR, and it has to be reported here or the
+     cave cannot be entered at all.
+
+     The swim code holds the body at bed + 0.55, and out here the bed is
+     about two metres down -- so a player in front of the mouth is held
+     with the top of his capsule half a metre ABOVE the mouth's roof, and
+     the only thing he can do is bump along the outside of the rock. He
+     can see the opening and he cannot get into it.
+
+     So the bed drops away in the scoured apron in front of the mouth,
+     down the tunnel and across the chamber. The rock itself is what
+     actually carries him once he is inside -- these numbers only have to
+     stop the swim code lifting him into the ceiling. */
+  const K = CAVE, TU = K.tunnel, RM = K.room, AP = K.apron;
+  if (x > AP.x0 && x < AP.x1 && z > AP.z0 && z < TU.z1) {
+    return { surface: C.water.y, bed: TU.floorY };
+  }
+  if (x > RM.x0 - 0.4 && x < RM.x1 + 0.4 && z >= TU.z1 && z < RM.z1 + 0.4) {
+    return { surface: C.water.y, bed: RM.floorY };
+  }
+
   const bedTop = C.water.y - 0.55;
   // Which shelf step this is on; step 0 runs from the wall out to z = 1.
   const i = z <= 1.0 ? 0 : Math.min(8, Math.floor((z - 1.0) / 5.0) + 1);
@@ -2028,7 +2234,7 @@ const CAMO = {
 
 window.COASTLINE = {
   id: 'coastline', name: 'Coastline',
-  C, MAP, WINDOWS, DOORS, MAT, SKY, PLAY, LINES, PAP, CAMO, ESCAPE, build, applySky, waterAt,
+  C, MAP, WINDOWS, DOORS, MAT, SKY, PLAY, LINES, PAP, CAVE, CAMO, ESCAPE, build, applySky, waterAt,
   /* Where you start: on the walk, a little up the lawn from the water,
      looking down it -- the view the fourth photograph is taken from. */
   spawn: { at: [0, 1.2, -16.0], yaw: 0 },
