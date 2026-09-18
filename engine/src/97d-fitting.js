@@ -175,4 +175,25 @@ Engine.prototype.showAttachments = function (root, list) {
   for (const id of Object.keys(made)) {
     for (const a of made[id]) a.visible = !!on[id];
   }
+
+  /* AND THE MAGAZINE IT CAME WITH COMES OFF.
+   *
+     Every mag-slot part -- the drum, the extended box, the taped
+     pair, and the five ammunition types, which are the same box with
+     a different follower colour -- is a WHOLE MAGAZINE, mounted in
+     the same well the weapon's own one sits in. Showing it without
+     hiding the original leaves two magazines in one well, which the
+     photograph of a drum-fed StG44 shows plainly: the drum hanging
+     under the receiver and the original box still poking out past
+     the back of it.
+
+     Nothing else in a loadout replaces a part of the gun, so there is
+     no general mechanism here; there is one slot that does, and this
+     is it. */
+  const ownMag = root.mag;
+  if (ownMag) {
+    if (root.__magWasOn == null) root.__magWasOn = ownMag.visible !== false;
+    const swapped = want.some((p) => p.slot === 'mag' && made[p.id] && made[p.id].length);
+    ownMag.visible = root.__magWasOn && !swapped;
+  }
 };
