@@ -175,7 +175,16 @@ window.__stick = function (a, b) { window.__pad.axes[0] = a; window.__pad.axes[1
       const q = window.MP.pointer.at;
       if (Math.hypot(q.x - target.x, q.y - target.y) < 14) break;
     }
+    /* LET IT SETTLE BEFORE MEASURING IT. The loop breaks on a reading
+       taken inside the frame, but the stick it set is still live for
+       the poll that follows, so the pointer travels one more step
+       after the break -- which is how a 14px window reported 22.8px
+       away. Zero the stick, give it two frames to stop, then look. The
+       press landed at 22.8 so the bar could simply have been moved to
+       fit the number; measuring it once it has stopped is the thing
+       that is actually true. */
     window.__stick(0, 0);
+    for (let f = 0; f < 2; f++) await new Promise((rf) => requestAnimationFrame(rf));
     const at = window.MP.pointer.at;
     const near = Math.hypot(at.x - target.x, at.y - target.y);
     window.__press(0, true);
