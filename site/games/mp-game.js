@@ -924,9 +924,13 @@
         shown = false;
         if (flash) flash.visible = false;
       },
-      place: function (eye, yaw, pitch, aim, sprint, kick, bob, id, reload, dt) {
+      place: function (eye, yaw, pitch, aim, sprint, kick, bob, id, reload, dt, ammoFrac) {
         var g = select(id || curId || 'm4');
         state.placed++;
+        /* The column of rounds inside the magazine. Defaults to full
+           when a caller does not say, so nothing that has not been
+           taught about ammunition suddenly renders an empty gun. */
+        if (g && g.setRounds) g.setRounds(ammoFrac == null ? 1 : ammoFrac);
         state.aim = aim;
         var low = sprint ? 1 : 0;
         state.sprint = low;
@@ -2194,7 +2198,12 @@
           rl = Math.sin(Math.min(1, t) * Math.PI);
         }
         vm.place(eye, yaw, pitch, adsT, p.sprinting, kick, bob,
-          w.id || w.base || 'm4', rl, dt);
+          w.id || w.base || 'm4', rl, dt,
+          /* What is left in the magazine, as a fraction, so the column
+             of rounds inside it goes down as you shoot. The gun owns
+             the rule -- see setRounds on the service arm -- and all
+             this has to do is say how full it is. */
+          w.mag ? Math.max(0, Math.min(1, p.ammo[p.held] / w.mag)) : 1);
         /* THE CROSSHAIR GOES AWAY AT THE SIGHTS. Leaving it up while
            you are looking through the irons puts two aiming marks on
            the screen that do not agree, and the one that is right is

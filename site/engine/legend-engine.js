@@ -26252,6 +26252,34 @@ function serviceArm(E, kind, opts) {
     const a = body['shell' + i], t = body['tip' + i];
     if (a || t) body.roundBands.push([a, t].filter(Boolean));
   }
+  /* THE RULE LIVES ON THE WEAPON, not in each game's viewmodel code.
+   *
+     The first cut of this put the band arithmetic in the zombies
+     viewmodel update -- and service arms are what MULTIPLAYER builds,
+     so it was written against a gun that does not have them and never
+     ran. Two games, two viewmodel paths, one fact about how a magazine
+     empties; if the rule is copied into both then it is two rules, and
+     the one nobody is looking at is the one that rots.
+
+     `frac` is rounds remaining over capacity. Bands go from the feed
+     lips down, so hiding from the top of the index is hiding from the
+     bottom of the column, which is the end the follower is pushing
+     from. */
+  body.setRounds = function (frac) {
+    const bands = body.roundBands;
+    if (!bands || !bands.length) return 0;
+    const f = frac == null ? 1 : Math.max(0, Math.min(1, frac));
+    let shown = 0;
+    for (let i = 0; i < bands.length; i++) {
+      /* A band is shown when the column still reaches it. Strictly
+         less than, so an empty magazine shows nothing at all rather
+         than keeping its bottom band on a rounding error. */
+      const on = (i / bands.length) < f;
+      if (on) shown++;
+      for (const a of bands[i]) a.visible = on;
+    }
+    return shown;
+  };
   body.kind = kind;
   return body;
 }

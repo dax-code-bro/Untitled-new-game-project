@@ -7581,17 +7581,10 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
        magazine you can see going down. */
     const gunRoot = v.kind === 'single' ? v.actor : v.root;
     const bands = gunRoot && gunRoot.roundBands;
-    if (bands && bands.length) {
+    if (bands && bands.length && gunRoot.setRounds) {
       const held = (P.ammo[P.equipped()] || {}).mag;
       const cap = spec.mag || 1;
-      /* During the swap the magazine itself is gone, so the rounds go
-         with it -- and the fresh one comes back full, which is what
-         the counter says by then anyway. */
-      const frac = out ? 0 : Math.max(0, Math.min(1, (held == null ? cap : held) / cap));
-      for (let bi = 0; bi < bands.length; bi++) {
-        const show = !out && (bi / bands.length) < frac;
-        for (const a of bands[bi]) a.visible = show;
-      }
+      gunRoot.setRounds((held == null ? cap : held) / cap);
     }
 
     /* AND THE EMPTY ONE FALLS OUT, instead of ceasing to exist.
@@ -7634,15 +7627,9 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
        long as the magazine is. */
     const gone = drop >= 0.97;
     for (const m of magParts) m.visible = !gone;
-    if (bands && out) {
-      const held0 = (P.ammo[P.equipped()] || {}).mag;
-      const cap0 = spec.mag || 1;
-      const f0 = Math.max(0, Math.min(1, (held0 == null ? 0 : held0) / cap0));
-      for (let bi = 0; bi < bands.length; bi++) {
-        const show = !gone && (bi / bands.length) < f0;
-        for (const a of bands[bi]) a.visible = show;
-      }
-    }
+    /* Once the magazine is out of frame the rounds go with it, whatever
+       the count says -- they are inside the thing that just left. */
+    if (gone && bands) for (const b of bands) for (const a of b) a.visible = false;
     if (v.bolt && v.boltThrow) {
       // Cocking handle: thrown back and released on the last beat. The
       // throw is the model's own, along the axis its tube actually runs.

@@ -127,28 +127,42 @@ const note = (s) => console.log(`  ..   ${s}`);
       out.guns.push({ id, expect, atShot, afterCycle,
         moved: +moved.toFixed(4), hasBolt: !!(v && v.bolt), hasSlide: !!(gun && gun.slide) });
     }
-    /* And the magazine column, on a weapon that has one. Driven
-       through the real ammo count and the real viewmodel update, so
-       this measures what a player sees rather than the branch that
-       decides it. */
-    T.give('mp5');
-    for (let i = 0; i < 30; i++) G.step(1 / 60);
-    const mv = P.view[P.equipped()];
-    const mroot = mv && (mv.kind === 'single' ? mv.actor : mv.root);
-    const bands = mroot && mroot.roundBands;
-    if (bands && bands.length) {
-      const cap = window.__T_WEAPONS.mp5.mag;
-      const shown = () => bands.filter((b) => b.some((a) => a.visible)).length;
-      const setAmmo = (k) => {
-        P.ammo[P.equipped()].mag = k;
-        for (let i = 0; i < 3; i++) G.step(1 / 60);
-      };
-      setAmmo(cap); const full = shown();
-      setAmmo(Math.floor(cap / 2)); const half = shown();
-      setAmmo(0); const empty = shown();
-      setAmmo(cap);
-      out.rounds = { bands: bands.length, full, half, empty };
-    }
+    /* AND THE MAGAZINE COLUMN, ON A GUN THAT HAS ONE.
+     *
+       The first cut of this asked the MP5 for its bands and got
+       nothing, then failed with no message at all, because the branch
+       was `else failed++`. Two faults in one line: it tested the wrong
+       gun, and when it went wrong it would not say so.
+
+       Rounds inside a magazine are built by the SERVICE ARM builder,
+       which is what multiplayer's sixty weapons are made from -- the
+       zombies rack has its own hand-built models. So the thing to ask
+       is a service arm, and it is asked directly rather than through a
+       viewmodel, because the rule now lives on the weapon (setRounds)
+       and that is the unit worth testing. */
+    out.rounds = { err: null };
+    try {
+      const arm = G.serviceArm('m4', { at: [0, -90, 0], physics: false });
+      const bands = arm && arm.roundBands;
+      if (!bands || !bands.length) {
+        out.rounds.err = 'a service arm has no round bands at all';
+      } else if (!arm.setRounds) {
+        out.rounds.err = 'the arm has bands but no setRounds';
+      } else {
+        out.rounds.bands = bands.length;
+        const shown = () => bands.filter((b) => b.some((a) => a.visible)).length;
+        arm.setRounds(1); out.rounds.full = shown();
+        arm.setRounds(0.5); out.rounds.half = shown();
+        arm.setRounds(0); out.rounds.empty = shown();
+        /* And that the bands are in lips-first order, which is the
+           whole correctness question: at a quarter full it must be
+           band 0 that is showing and not band 3. */
+        arm.setRounds(0.26);
+        out.rounds.lowestOn = bands.findIndex((b) => b.some((a) => a.visible));
+        out.rounds.highestOn = bands.reduce(
+          (acc, b, i) => (b.some((a) => a.visible) ? i : acc), -1);
+      }
+    } catch (e) { out.rounds.err = e.message; }
     return out;
   });
 
@@ -208,8 +222,13 @@ const note = (s) => console.log(`  ..   ${s}`);
      at both ends: full when full, none when empty, and fewer in
      between. A check that only looked at "empty" would pass on a
      magazine whose rounds were never drawn at all. */
-  if (r.rounds) {
-    note('rounds ' + JSON.stringify(r.rounds));
+  note('rounds ' + JSON.stringify(r.rounds));
+  /* Never a bare `failed++`. A test that fails without saying why sends
+     the next person looking in the wrong place, and this one already
+     did exactly that once. */
+  check('the magazine column could be measured at all',
+    !!r.rounds && !r.rounds.err, r.rounds ? r.rounds.err : 'no result came back');
+  if (r.rounds && !r.rounds.err) {
     check('a full magazine shows its whole column',
       r.rounds.full > 0 && r.rounds.full === r.rounds.bands,
       `${r.rounds.full} of ${r.rounds.bands} bands visible`);
@@ -218,7 +237,13 @@ const note = (s) => console.log(`  ..   ${s}`);
     check('and a half-full one shows some of it',
       r.rounds.half > 0 && r.rounds.half < r.rounds.bands,
       `${r.rounds.half} of ${r.rounds.bands}`);
-  } else failed++;
+    /* The column empties from the BOTTOM, because the follower pushes
+       the stack up behind the rounds leaving the top. So a nearly
+       empty magazine keeps the band at the feed lips. */
+    check('and it empties from the bottom, not the top',
+      r.rounds.lowestOn === 0 && r.rounds.highestOn < r.rounds.bands - 1,
+      `bands ${r.rounds.lowestOn}..${r.rounds.highestOn} on at a quarter full`);
+  }
 
   check('no page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
   console.log(`\n  ${passed} passed, ${failed} failed`);
