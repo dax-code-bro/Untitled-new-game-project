@@ -2501,6 +2501,11 @@ const TextureLib = {
 
 /* ---------------- Material ---------------- */
 
+/* Set by the renderer from the quality tier before any material is
+   built. A module-level default rather than an argument threaded
+   through forty call sites: every builder in the game makes materials
+   and not one of them should have to know about texture budgets. */
+
 let _materialId = 0;
 
 class Material {
@@ -2524,36 +2529,79 @@ class Material {
     this.subsurface = opts.subsurface != null ? opts.subsurface : 0;
 
     this.maps = null;
-    if (this.texture) this._buildMaps(opts.textureSize || 256, opts.textureSeed || 1);
+    /* THE SIZE COMES FROM THE QUALITY TIER, not from a constant.
+     *
+       256 was not a considered number, it was what the per-material
+       duplication above could afford. With the textures shared, 512
+       costs half of what 256 used to and 1024 costs twice -- so the
+       tier decides, the way it decides shadow resolution and sample
+       counts, and a phone and a desktop stop rendering the same
+       thumbnail. A caller can still pin a size for a preview. */
+    if (this.texture) {
+      this._buildMaps(opts.textureSize || Material.textureSize || 256,
+        opts.textureSeed || 1);
+    }
   }
 
+  /* ONE SET OF TEXTURES PER RECIPE, NOT PER MATERIAL.
+   *
+     This built three GPU textures for every Material that asked for a
+     texture, and Coastline makes a hundred and thirty-six materials out
+     of seventeen recipes. Every brick material in the map uploaded its
+     own identical copy of the same brick: 136 x 3 x 256 x 256 x 4, which
+     is 102 MB of video memory holding about thirteen megabytes of
+     distinct data.
+
+     The CPU side was already shared -- TextureLib.generate caches on
+     kind:size:seed and has done all along -- so this was 89 MB of pure
+     duplication on the GPU, and it is the reason the textures had to
+     stay at 256 in the first place.
+
+     Shared, the same seventeen recipes cost 13 MB at 256 and 51 MB at
+     512. So HALF the memory buys FOUR TIMES the texel density, which is
+     the single largest thing standing between these surfaces and
+     looking sharp. The cache hangs off the GL context, because that is
+     what owns the textures and what they die with.
+
+     Nothing here disposes them. A material does not own a texture it
+     shares with a hundred others, and calling dispose on one would pull
+     the brick out from under every wall in the level. */
   _buildMaps(size, seed) {
     const gl = this.gl;
-    const data = TextureLib.generate(this.texture, size, seed);
-    const mk = (bytes, srgb) => new Texture(gl, {
-      internalFormat: srgb ? gl.SRGB8_ALPHA8 : gl.RGBA8,
-      format: gl.RGBA,
-      type: gl.UNSIGNED_BYTE,
-      wrap: gl.REPEAT,
-      aniso: 8,
-    }).upload(bytes, size, size);
-    this.maps = {
-      // Albedo is authored in sRGB; the GPU converts on sample. ORM and
-      // normal are data, not colour, and must stay linear.
-      albedo: mk(data.albedo, true),
-      normal: mk(data.normal, false),
-      orm: mk(data.orm, false),
-    };
+    const store = gl.__legendTexCache || (gl.__legendTexCache = new Map());
+    const key = this.texture + ':' + size + ':' + seed;
+    let shared = store.get(key);
+    if (!shared) {
+      const data = TextureLib.generate(this.texture, size, seed);
+      const mk = (bytes, srgb) => new Texture(gl, {
+        internalFormat: srgb ? gl.SRGB8_ALPHA8 : gl.RGBA8,
+        format: gl.RGBA,
+        type: gl.UNSIGNED_BYTE,
+        wrap: gl.REPEAT,
+        aniso: 8,
+      }).upload(bytes, size, size);
+      shared = {
+        // Albedo is authored in sRGB; the GPU converts on sample. ORM and
+        // normal are data, not colour, and must stay linear.
+        albedo: mk(data.albedo, true),
+        normal: mk(data.normal, false),
+        orm: mk(data.orm, false),
+      };
+      store.set(key, shared);
+    }
+    this.maps = shared;
   }
 
   dispose() {
-    if (this.maps) {
-      this.maps.albedo.dispose();
-      this.maps.normal.dispose();
-      this.maps.orm.dispose();
-    }
+    /* The maps are shared and outlive any one material -- see
+       _buildMaps. Disposing them here would take the texture away from
+       every other material built from the same recipe, which on
+       Coastline is up to seven hundred actors. */
+    this.maps = null;
   }
 }
+
+Material.textureSize = 256;
 
 /* Sensible presets so a game can say `material: 'gold'` and get something
    that reads correctly under the engine's lighting. */
@@ -3924,7 +3972,7 @@ class Camera {
    top two tiers. */
 const QUALITY = {
   retro: { shadowRes: 512, cascades: 1, bloom: false, bloomIters: 0, fluidScale: 0.35,
-    fxaa: false, msaa: 0, maxGrass: 500, renderScale: 0.26,
+    fxaa: false, msaa: 0, maxGrass: 500, renderScale: 0.26, texRes: 128,
     ssao: 0, ssaoSamples: 0, sharpen: 0, posterize: 9, pixelated: true, fpsCap: 24 },
   /* CONTACT SHADOWS ON THE TIERS PEOPLE ACTUALLY RUN.
    *
@@ -3947,16 +3995,16 @@ const QUALITY = {
      blur then smears. */
   low: { shadowRes: 768, cascades: 1, bloom: false, bloomIters: 0, fluidScale: 0.5,
     fxaa: false, msaa: 0, maxGrass: 2500, renderScale: 0.66,
-    ssao: 0.50, ssaoSamples: 6, ssaoRadius: 0.42, sharpen: 0, posterize: 0 },
+    ssao: 0.50, ssaoSamples: 6, ssaoRadius: 0.42, sharpen: 0.10, posterize: 0, texRes: 512 },
   normal: { shadowRes: 1536, cascades: 2, bloom: true, bloomIters: 3, fluidScale: 0.75,
     fxaa: true, msaa: 0, maxGrass: 20000, renderScale: 1,
-    ssao: 0.62, ssaoSamples: 10, ssaoRadius: 0.50, sharpen: 0.12, posterize: 0 },
+    ssao: 0.62, ssaoSamples: 10, ssaoRadius: 0.50, sharpen: 0.16, posterize: 0, texRes: 768 },
   high: { shadowRes: 2560, cascades: 2, bloom: true, bloomIters: 4, fluidScale: 1,
     fxaa: true, msaa: 0, maxGrass: 60000, renderScale: 1.25,
-    ssao: 0.70, ssaoSamples: 12, ssaoRadius: 0.55, sharpen: 0.34, posterize: 0 },
+    ssao: 0.70, ssaoSamples: 12, ssaoRadius: 0.55, sharpen: 0.34, posterize: 0, texRes: 1024 },
   ultra: { shadowRes: 4096, cascades: 2, bloom: true, bloomIters: 5, fluidScale: 1,
     fxaa: true, msaa: 0, maxGrass: 160000, renderScale: 1.85,
-    ssao: 0.95, ssaoSamples: 26, ssaoRadius: 0.70, sharpen: 0.52, posterize: 0 },
+    ssao: 0.95, ssaoSamples: 26, ssaoRadius: 0.70, sharpen: 0.52, posterize: 0, texRes: 1024 },
 };
 // `medium` is what the old auto-detect asked for and what several callers
 // still pass; it is this tier's previous name.
@@ -4150,6 +4198,24 @@ class Renderer {
     if (!QUALITY[name]) return this.qualityName;
     this.qualityName = name;
     this.quality = Object.assign({}, QUALITY[name], overrides || {});
+    /* THE TEXTURE BUDGET, SET BEFORE ANYTHING IS BUILT.
+     *
+       Textures are shared per recipe now (see Material._buildMaps), so
+       seventeen recipes at 512 cost 51 MB where the old per-material
+       duplication cost 102 MB at 256. That is half the memory for four
+       times the texel density, which is why this can be a tier setting
+       at all rather than a constant nobody could afford to raise.
+
+       BUT THE FIRST BUILD STAYS SMALL. Generating these is per-texel
+       JavaScript: 0.57 s for the whole set at 256 and 6.2 s at 1024, on
+       a desktop. Baking the tier's full size up front would put half a
+       minute of loading in front of a phone, so the tier's number is
+       the TARGET and the game reaches it with upgradeTextures() once
+       the map is running -- see 98c-texres.js. Retro is the exception
+       and takes its size immediately, because 128 is faster than the
+       default and the whole point of that tier is to look coarse. */
+    this.texTarget = this.quality.texRes || 256;
+    Material.textureSize = Math.min(256, this.texTarget);
     for (const m of this.shadowMaps || []) if (m.dispose) m.dispose();
     this._initShadowMaps();
     this.width = -1; this.height = -1;
@@ -28836,6 +28902,99 @@ Engine.prototype.fieldOfView = function (deg) {
   if (deg == null) return this.camera.fov * 180 / Math.PI;
   this.camera.fov = deg * Math.PI / 180;
   return deg;
+};
+
+
+/* ─────────── 98c-texres.js ─────────── */
+/* ============================================================
+   TEXTURE RESOLUTION — load fast, sharpen a moment later.
+   ============================================================
+   The surfaces in this game are generated per texel in JavaScript, and
+   that is the whole reason they were stuck at 256 pixels:
+
+       256px   all seventeen recipes    0.57 s
+       512px                            1.74 s
+       768px                            3.72 s
+      1024px                            6.23 s
+
+   -- on a desktop. Multiply by three or four for a phone and a
+   1024-pixel world is half a minute of staring at a loading bar, which
+   is a worse game than a slightly soft one.
+
+   But nothing says the size has to be decided once. The maps are SHARED
+   now, one set per recipe rather than one per material (see
+   Material._buildMaps), and that changes what is possible here: there
+   are seventeen textures in the whole game, every wall in the level
+   points at the same brick, and re-uploading that one texture at four
+   times the size sharpens every wall at once. No materials to find, no
+   actors to touch, no rebinding -- the GL texture object is the same
+   object, it simply has more pixels in it than it did a second ago.
+
+   So: build at 256, which is fast and is what you see while the map
+   settles, then walk the recipes ONE PER CALL and upgrade them. One
+   recipe is 100-370 ms depending on the target, which is a hitch if you
+   do seventeen of them in a frame and nothing at all if you do one
+   every half second while the player is reading the round counter.
+
+   It is deliberately not clever about which recipes matter most. The
+   obvious refinement -- do the ones covering the most screen first --
+   needs a screen to look at, and by the time you have one the whole set
+   is done anyway.
+   ============================================================ */
+
+Engine.prototype.upgradeTextures = function (size, opts = {}) {
+  const gl = this.renderer && this.renderer.gl;
+  const store = gl && gl.__legendTexCache;
+  if (!store || !size) return null;
+
+  /* Every recipe that is actually in use, at a size below the target.
+     A map that never asks for marble never pays for marble. */
+  const jobs = [];
+  for (const [key, maps] of store) {
+    const bits = key.split(':');
+    const kind = bits[0], was = +bits[1], seed = +bits[2];
+    if (!(was < size)) continue;
+    jobs.push({ key, kind, was, seed, maps });
+  }
+  if (!jobs.length) return null;
+
+  let i = 0;
+  const state = { total: jobs.length, done: 0, size, running: true };
+  const step = () => {
+    if (!state.running || i >= jobs.length) {
+      state.running = false;
+      if (opts.onDone) opts.onDone(state);
+      return;
+    }
+    const j = jobs[i++];
+    try {
+      const data = TextureLib.generate(j.kind, size, j.seed);
+      /* Straight back into the SAME texture objects. texImage2D
+         reallocates, so the bigger data simply replaces the smaller and
+         every material already pointing at this texture is sharper on
+         the next frame it draws. */
+      j.maps.albedo.upload(data.albedo, size, size);
+      j.maps.normal.upload(data.normal, size, size);
+      j.maps.orm.upload(data.orm, size, size);
+      /* Re-key it so a second pass does not redo work already done. */
+      store.delete(j.key);
+      store.set(j.kind + ':' + size + ':' + j.seed, j.maps);
+    } catch (e) {
+      /* One recipe failing is one soft surface, not a dead game. */
+      void e;
+    }
+    state.done++;
+    if (opts.onStep) opts.onStep(state);
+    schedule();
+  };
+  const schedule = () => {
+    if (!state.running) return;
+    const gap = opts.gapMs != null ? opts.gapMs : 400;
+    setTimeout(step, gap);
+  };
+  schedule();
+  state.stop = () => { state.running = false; };
+  return state;
 };
 
 

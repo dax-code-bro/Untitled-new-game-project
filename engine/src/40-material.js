@@ -597,6 +597,11 @@ const TextureLib = {
 
 /* ---------------- Material ---------------- */
 
+/* Set by the renderer from the quality tier before any material is
+   built. A module-level default rather than an argument threaded
+   through forty call sites: every builder in the game makes materials
+   and not one of them should have to know about texture budgets. */
+
 let _materialId = 0;
 
 class Material {
@@ -620,36 +625,79 @@ class Material {
     this.subsurface = opts.subsurface != null ? opts.subsurface : 0;
 
     this.maps = null;
-    if (this.texture) this._buildMaps(opts.textureSize || 256, opts.textureSeed || 1);
+    /* THE SIZE COMES FROM THE QUALITY TIER, not from a constant.
+     *
+       256 was not a considered number, it was what the per-material
+       duplication above could afford. With the textures shared, 512
+       costs half of what 256 used to and 1024 costs twice -- so the
+       tier decides, the way it decides shadow resolution and sample
+       counts, and a phone and a desktop stop rendering the same
+       thumbnail. A caller can still pin a size for a preview. */
+    if (this.texture) {
+      this._buildMaps(opts.textureSize || Material.textureSize || 256,
+        opts.textureSeed || 1);
+    }
   }
 
+  /* ONE SET OF TEXTURES PER RECIPE, NOT PER MATERIAL.
+   *
+     This built three GPU textures for every Material that asked for a
+     texture, and Coastline makes a hundred and thirty-six materials out
+     of seventeen recipes. Every brick material in the map uploaded its
+     own identical copy of the same brick: 136 x 3 x 256 x 256 x 4, which
+     is 102 MB of video memory holding about thirteen megabytes of
+     distinct data.
+
+     The CPU side was already shared -- TextureLib.generate caches on
+     kind:size:seed and has done all along -- so this was 89 MB of pure
+     duplication on the GPU, and it is the reason the textures had to
+     stay at 256 in the first place.
+
+     Shared, the same seventeen recipes cost 13 MB at 256 and 51 MB at
+     512. So HALF the memory buys FOUR TIMES the texel density, which is
+     the single largest thing standing between these surfaces and
+     looking sharp. The cache hangs off the GL context, because that is
+     what owns the textures and what they die with.
+
+     Nothing here disposes them. A material does not own a texture it
+     shares with a hundred others, and calling dispose on one would pull
+     the brick out from under every wall in the level. */
   _buildMaps(size, seed) {
     const gl = this.gl;
-    const data = TextureLib.generate(this.texture, size, seed);
-    const mk = (bytes, srgb) => new Texture(gl, {
-      internalFormat: srgb ? gl.SRGB8_ALPHA8 : gl.RGBA8,
-      format: gl.RGBA,
-      type: gl.UNSIGNED_BYTE,
-      wrap: gl.REPEAT,
-      aniso: 8,
-    }).upload(bytes, size, size);
-    this.maps = {
-      // Albedo is authored in sRGB; the GPU converts on sample. ORM and
-      // normal are data, not colour, and must stay linear.
-      albedo: mk(data.albedo, true),
-      normal: mk(data.normal, false),
-      orm: mk(data.orm, false),
-    };
+    const store = gl.__legendTexCache || (gl.__legendTexCache = new Map());
+    const key = this.texture + ':' + size + ':' + seed;
+    let shared = store.get(key);
+    if (!shared) {
+      const data = TextureLib.generate(this.texture, size, seed);
+      const mk = (bytes, srgb) => new Texture(gl, {
+        internalFormat: srgb ? gl.SRGB8_ALPHA8 : gl.RGBA8,
+        format: gl.RGBA,
+        type: gl.UNSIGNED_BYTE,
+        wrap: gl.REPEAT,
+        aniso: 8,
+      }).upload(bytes, size, size);
+      shared = {
+        // Albedo is authored in sRGB; the GPU converts on sample. ORM and
+        // normal are data, not colour, and must stay linear.
+        albedo: mk(data.albedo, true),
+        normal: mk(data.normal, false),
+        orm: mk(data.orm, false),
+      };
+      store.set(key, shared);
+    }
+    this.maps = shared;
   }
 
   dispose() {
-    if (this.maps) {
-      this.maps.albedo.dispose();
-      this.maps.normal.dispose();
-      this.maps.orm.dispose();
-    }
+    /* The maps are shared and outlive any one material -- see
+       _buildMaps. Disposing them here would take the texture away from
+       every other material built from the same recipe, which on
+       Coastline is up to seven hundred actors. */
+    this.maps = null;
   }
 }
+
+Material.textureSize = 256;
 
 /* Sensible presets so a game can say `material: 'gold'` and get something
    that reads correctly under the engine's lighting. */

@@ -15575,7 +15575,24 @@ function start(opts = {}) {
   };
 
   rollShop(S);
-  if (!opts.test) game.start();
+  /* AND THEN THE TEXTURES GET SHARPER.
+   *
+     The map builds with 256-pixel surfaces because that is what loads
+     in half a second. The quality tier's real target is up to four
+     times that, and upgradeTextures walks the recipes one at a time,
+     four hundred milliseconds apart, re-uploading each into the texture
+     every material already shares. By the time the first horde arrives
+     the world is at full resolution and nothing ever hitched.
+
+     Not in tests: a test wants a deterministic frame, not a world that
+     quietly sharpens underneath it three seconds in. */
+  if (!opts.test) {
+    game.start();
+    const target = game.renderer && game.renderer.texTarget;
+    if (target > 256 && game.upgradeTextures) {
+      S.texUpgrade = game.upgradeTextures(target, { gapMs: 420 });
+    }
+  }
   /* `hud` goes out with the rest so a test can drive the pieces of the
      front end that only ever appear in response to something external --
      the update notice, which otherwise needs a real new build published

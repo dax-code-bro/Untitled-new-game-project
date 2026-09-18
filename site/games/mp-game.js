@@ -2292,6 +2292,13 @@
       W.requestAnimationFrame(function () { pointerLoop(now); });
     })(0);
     game.start();
+    /* Same as zombies: load at 256, reach the tier's target in the
+       background while the pregame lobby counts down. See
+       98c-texres.js and Material._buildMaps. */
+    {
+      var _tt = game.renderer && game.renderer.texTarget;
+      if (_tt > 256 && game.upgradeTextures) game.upgradeTextures(_tt, { gapMs: 420 });
+    }
 
     var api = {
       game: game, match: M, hud: hud, input: input, pad: pad, viewmodel: vm,

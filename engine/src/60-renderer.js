@@ -81,7 +81,7 @@ class Camera {
    top two tiers. */
 const QUALITY = {
   retro: { shadowRes: 512, cascades: 1, bloom: false, bloomIters: 0, fluidScale: 0.35,
-    fxaa: false, msaa: 0, maxGrass: 500, renderScale: 0.26,
+    fxaa: false, msaa: 0, maxGrass: 500, renderScale: 0.26, texRes: 128,
     ssao: 0, ssaoSamples: 0, sharpen: 0, posterize: 9, pixelated: true, fpsCap: 24 },
   /* CONTACT SHADOWS ON THE TIERS PEOPLE ACTUALLY RUN.
    *
@@ -104,16 +104,16 @@ const QUALITY = {
      blur then smears. */
   low: { shadowRes: 768, cascades: 1, bloom: false, bloomIters: 0, fluidScale: 0.5,
     fxaa: false, msaa: 0, maxGrass: 2500, renderScale: 0.66,
-    ssao: 0.50, ssaoSamples: 6, ssaoRadius: 0.42, sharpen: 0, posterize: 0 },
+    ssao: 0.50, ssaoSamples: 6, ssaoRadius: 0.42, sharpen: 0.10, posterize: 0, texRes: 512 },
   normal: { shadowRes: 1536, cascades: 2, bloom: true, bloomIters: 3, fluidScale: 0.75,
     fxaa: true, msaa: 0, maxGrass: 20000, renderScale: 1,
-    ssao: 0.62, ssaoSamples: 10, ssaoRadius: 0.50, sharpen: 0.12, posterize: 0 },
+    ssao: 0.62, ssaoSamples: 10, ssaoRadius: 0.50, sharpen: 0.16, posterize: 0, texRes: 768 },
   high: { shadowRes: 2560, cascades: 2, bloom: true, bloomIters: 4, fluidScale: 1,
     fxaa: true, msaa: 0, maxGrass: 60000, renderScale: 1.25,
-    ssao: 0.70, ssaoSamples: 12, ssaoRadius: 0.55, sharpen: 0.34, posterize: 0 },
+    ssao: 0.70, ssaoSamples: 12, ssaoRadius: 0.55, sharpen: 0.34, posterize: 0, texRes: 1024 },
   ultra: { shadowRes: 4096, cascades: 2, bloom: true, bloomIters: 5, fluidScale: 1,
     fxaa: true, msaa: 0, maxGrass: 160000, renderScale: 1.85,
-    ssao: 0.95, ssaoSamples: 26, ssaoRadius: 0.70, sharpen: 0.52, posterize: 0 },
+    ssao: 0.95, ssaoSamples: 26, ssaoRadius: 0.70, sharpen: 0.52, posterize: 0, texRes: 1024 },
 };
 // `medium` is what the old auto-detect asked for and what several callers
 // still pass; it is this tier's previous name.
@@ -307,6 +307,24 @@ class Renderer {
     if (!QUALITY[name]) return this.qualityName;
     this.qualityName = name;
     this.quality = Object.assign({}, QUALITY[name], overrides || {});
+    /* THE TEXTURE BUDGET, SET BEFORE ANYTHING IS BUILT.
+     *
+       Textures are shared per recipe now (see Material._buildMaps), so
+       seventeen recipes at 512 cost 51 MB where the old per-material
+       duplication cost 102 MB at 256. That is half the memory for four
+       times the texel density, which is why this can be a tier setting
+       at all rather than a constant nobody could afford to raise.
+
+       BUT THE FIRST BUILD STAYS SMALL. Generating these is per-texel
+       JavaScript: 0.57 s for the whole set at 256 and 6.2 s at 1024, on
+       a desktop. Baking the tier's full size up front would put half a
+       minute of loading in front of a phone, so the tier's number is
+       the TARGET and the game reaches it with upgradeTextures() once
+       the map is running -- see 98c-texres.js. Retro is the exception
+       and takes its size immediately, because 128 is faster than the
+       default and the whole point of that tier is to look coarse. */
+    this.texTarget = this.quality.texRes || 256;
+    Material.textureSize = Math.min(256, this.texTarget);
     for (const m of this.shadowMaps || []) if (m.dispose) m.dispose();
     this._initShadowMaps();
     this.width = -1; this.height = -1;
