@@ -532,7 +532,10 @@ const CAVE = {
      otherwise the swim code -- which holds you at bed + 0.55 -- will not
      let you get low enough to swim in, and the cave has a door you can
      see and cannot use. */
-  apron: { x0: 6.35, x1: 9.65, z0: 33.0 },
+  /* Starts at 31, where bed step 7 does, so the hole cut in the slab
+     and the depth waterAt reports begin at the same z. Picking a
+     different number for each is how they drift apart again. */
+  apron: { x0: 6.35, x1: 9.65, z0: 31.0 },
   /* NEARLY THREE METRES OF WATER IN IT, and that is not generosity.
      The first cut gave the tunnel 1.95 m for a body that is 1.75 m tall,
      which sounds like clearance and is not: the swim code holds you
@@ -1875,12 +1878,61 @@ function build(game, S) {
        and well past anywhere a player can reach, and the same drop lands.
        A collision box the size of a small town is not a collision box. */
     const BW = 90;
+
+    /* AND THE BED GETS OUT OF THE CAVE'S WAY.
+     *
+       The lake bed is not a number, it is nine stepped slabs a hundred
+       and eighty metres wide and 1.2 m thick. waterAt is the other
+       account of the same surface, and moving one without the other is
+       two sources of truth for one fact -- the exact mistake this file
+       warns about twice already.
+
+       Which is what happened: the cave's floor was written into waterAt
+       and the slabs were left where they were. Step 7 tops out at -1.74
+       and the tunnel's roof is at -0.55, so a swimmer heading for the
+       mouth was STANDING on the lake bed a metre and a half above the
+       door -- the controller's ground ray found the slab, called him
+       grounded, and zeroed his downward velocity every frame. The probe
+       read vy exactly 0 for forty consecutive frames with grounded true
+       and the bed at -3.4, which is not a body failing to swim, it is a
+       body standing on something.
+
+       And the same slabs ran straight THROUGH the cave: step 8 fills
+       z 36 to 41 and the bank fills 40 to 42.5, both of them across the
+       middle of the tunnel.
+
+       So any bed strip that crosses the outcrop leaves a hole the width
+       of it, and any strip that crosses the scoured approach leaves a
+       slot the width of that. Only where it would actually foul the
+       cave -- a strip that passes under the whole thing, like the deep
+       floor six metres down, is left alone. */
+    const KV = CAVE;
+    const cut = (z0, z1, y0, y1) => {
+      if (y1 < KV.baseY || y0 > KV.topY) return null;          // passes under it
+      if (z1 > KV.z0 && z0 < KV.z1) return [KV.x0 - 0.2, KV.x1 + 0.2];
+      if (z1 > KV.apron.z0 && z0 < KV.z0) return [KV.apron.x0 - 0.2, KV.apron.x1 + 0.2];
+      return null;
+    };
+    const bedSlab = (x0, x1, y0, y1, z0, z1, mat, name) => {
+      const h = cut(z0, z1, y0, y1);
+      if (!h) return slab(x0, x1, y0, y1, z0, z1, mat, name);
+      slab(x0, Math.min(x1, h[0]), y0, y1, z0, z1, mat, name + '-w');
+      slab(Math.max(x0, h[1]), x1, y0, y1, z0, z1, mat, name + '-e');
+      return null;
+    };
+
     for (let i = 0; i < 9; i++) {
       const z0 = i === 0 ? -1.0 : 1.0 + (i - 1) * 5.0;
       const z1 = 1.0 + i * 5.0;
       const y = bedTop - i * 0.22;
-      slab(-BW, BW, y - 1.2, y, z0, z1, mats.bed, 'lake-bed-' + i);
+      bedSlab(-BW, BW, y - 1.2, y, z0, z1, mats.bed, 'lake-bed-' + i);
     }
+    /* A basin under the slot, so the scour has a bottom. Nothing else
+       out here does: the deep floor does not start until z 42.5, and a
+       hole in the bed with no floor under it is how this map earned
+       "your character falls through the water into an endless void". */
+    slab(KV.apron.x0 - 0.2, KV.apron.x1 + 0.2, KV.tunnel.floorY - 1.2, KV.tunnel.floorY,
+      KV.apron.z0, KV.z0, mats.bed, 'cave-approach-floor');
     /* AND A FLOOR UNDER THE REST OF IT.
     
        Past the bank the lake had no bottom at all -- a downward raycast
@@ -1944,7 +1996,7 @@ function build(game, S) {
        there is a metre and a half down: a wall whose top is just under
        the surface is already two metres of rise. You cannot wade past it
        and you cannot see it. */
-    slab(-BW, BW, C.water.y - 3.0, C.water.y - 0.05, 40.0, 42.5, mats.bed, 'lake-bank');
+    bedSlab(-BW, BW, C.water.y - 3.0, C.water.y - 0.05, 40.0, 42.5, mats.bed, 'lake-bank');
   }
 
   /* The lamps along the seawall. Warm, low and few -- at dusk they are
