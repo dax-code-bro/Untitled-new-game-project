@@ -8327,6 +8327,26 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
       b = Math.sin(Math.min(1, Math.max(0, hu)) * Math.PI);
     }
     v.bolt.setPosition([R[0] + T[0] * b, R[1] + T[1] * b, R[2] + T[2] * b]);
+    /* AND THE ROUND THE BOLT IS CARRYING.
+     *
+       `b` is how far BACK the breech is, so the forward stroke is the
+       falling half of it -- and the round is only on the bolt face
+       during that half. On the way back the feed is empty: the bolt
+       has not reached the magazine yet. Feeding it on the way back as
+       well would show a cartridge flying out of the chamber towards
+       the magazine, which is a gun running in reverse.
+
+       The peak is found by remembering the largest b of this stroke.
+       Reading the timer instead would need every action's stroke shape
+       written down twice, and they differ -- a hand-worked bolt is not
+       a half-sine of the same length as a gas gun's. */
+    if (gunActor.setFeed) {
+      if (b > (v.__boltPeak || 0)) v.__boltPeak = b;
+      const peak = v.__boltPeak || 0;
+      const returning = peak > 0.05 && b < peak - 0.001;
+      gunActor.setFeed(returning ? 1 - (b / peak) : null);
+      if (b <= 0.001) v.__boltPeak = 0;
+    }
   }
 
   /* The manual cycle's own clock, and the case that comes out on it.

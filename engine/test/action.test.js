@@ -163,6 +163,31 @@ const note = (s) => console.log(`  ..   ${s}`);
           (acc, b, i) => (b.some((a) => a.visible) ? i : acc), -1);
       }
     } catch (e) { out.rounds.err = e.message; }
+
+    /* THE ROUND THE BOLT CARRIES. Asserted as a journey rather than as
+       a flag: hidden at both ends, visible in the middle, and further
+       forward at three quarters than at one quarter. A check that only
+       asked "is it visible" would pass on a cartridge stuck to the
+       feed lips. */
+    out.feed = { err: null };
+    try {
+      const arm = G.serviceArm('m4', { at: [0, -90, 0], physics: false });
+      if (!arm || !arm.setFeed) out.feed.err = 'a service arm has no setFeed';
+      else if (!arm.feed) out.feed.err = 'setFeed exists but there is no round to fly';
+      else {
+        const at = (t) => {
+          arm.setFeed(t);
+          const q = arm.feed.position || arm.feed._position;
+          return { on: !!arm.feed.visible, x: q ? +q.x.toFixed(4) : null };
+        };
+        out.feed.start = at(0);
+        out.feed.early = at(0.25);
+        out.feed.late = at(0.75);
+        out.feed.end = at(1);
+        out.feed.from = arm.feedFrom ? +arm.feedFrom[0].toFixed(4) : null;
+        out.feed.to = +arm.feedTo[0].toFixed(4);
+      }
+    } catch (e) { out.feed.err = e.message; }
     return out;
   });
 
@@ -243,6 +268,26 @@ const note = (s) => console.log(`  ..   ${s}`);
     check('and it empties from the bottom, not the top',
       r.rounds.lowestOn === 0 && r.rounds.highestOn < r.rounds.bands - 1,
       `bands ${r.rounds.lowestOn}..${r.rounds.highestOn} on at a quarter full`);
+  }
+
+  note('feed ' + JSON.stringify(r.feed));
+  check('the fed round could be measured at all',
+    !!r.feed && !r.feed.err, r.feed ? r.feed.err : 'no result came back');
+  if (r.feed && !r.feed.err) {
+    check('no round is on the bolt face between cycles',
+      !r.feed.start.on && !r.feed.end.on,
+      `start ${r.feed.start.on}, end ${r.feed.end.on}`);
+    check('and one is, during the forward stroke',
+      r.feed.early.on && r.feed.late.on, 'nothing visible mid-stroke');
+    /* The chamber is forward of the magazine, so the round travels in
+       +x. Comparing the two samples rather than to a fixed number
+       keeps this true for a pistol and for a rifle. */
+    check('and it travels from the magazine towards the chamber',
+      r.feed.late.x > r.feed.early.x,
+      `${r.feed.early.x} then ${r.feed.late.x}`);
+    check('starting at the feed lips and ending at the breech',
+      r.feed.from != null && r.feed.to > r.feed.from,
+      `lips ${r.feed.from}, chamber ${r.feed.to}`);
   }
 
   check('no page errors', errors.length === 0, errors.slice(0, 3).join(' | '));

@@ -25788,6 +25788,12 @@ function svcCartridge(shell, tip, A, o, u, v) {
    the top would have a floating stack with a gap above it. */
 const ROUND_BANDS = 4;
 
+/* How far above the magazine's stated y the feed lips sit. The mag's
+   own y is where its body starts; the round on top of the follower
+   rides a few millimetres proud of that, which is the height the bolt
+   face actually meets it at. */
+const A_FEED_LIFT = 0.006;
+
 function svcRounds(shell, tip, K) {
   const M = K.mag, A = K.ammo;
   if (!M || M.kind === 'none' || !A) return;
@@ -25858,6 +25864,32 @@ function svcRounds(shell, tip, K) {
     svcCartridge(shellB, tipB, A,
       new Vec3(x - u.x * half, y - u.y * half, z), u, across);
   }
+}
+
+/* THE ROUND THE BOLT IS CARRYING.
+ *
+   The last part of a cycle that this gun did not have. The bolt moves,
+   the column in the magazine goes down, and the brass comes out of the
+   port -- but the thing joining those three, the round being stripped
+   off the top of the magazine and pushed into the chamber, was simply
+   missing. Watch a rifle closely and that is the motion you see: the
+   bolt goes back over an empty feed, then comes forward and takes the
+   top round with it.
+
+   One cartridge, built at the ORIGIN and lying along the bore, so it
+   can be flown from the feed lips to the chamber by moving its actor
+   rather than by rebuilding anything. The arm carries the two ends of
+   that journey and the game asks for a position along it.
+
+   Nothing to do with the rounds in the magazine: those are four static
+   bands that switch off in order. This is one moving object, and it is
+   only ever visible during the few hundredths of a second the bolt is
+   running forward. */
+function svcFeedRound(shell, tip, K) {
+  const A = K.ammo, M = K.mag;
+  if (!A || !M || M.kind === 'none' || M.kind === 'belt') return;
+  svcCartridge(shell, tip, A, new Vec3(0, 0, 0),
+    new Vec3(1, 0, 0), new Vec3(0, 0, 1));
 }
 
 /* A bipod, folded down. Two legs off a yoke under the barrel, which is
@@ -25966,6 +25998,8 @@ function svcMats(K) {
     out['shell' + i] = ARM_MAT.brass;
     out['tip' + i] = ARM_MAT.copper;
   }
+  out.feed = ARM_MAT.brass;
+  out.feedTip = ARM_MAT.copper;
   return out;
 }
 
@@ -26215,6 +26249,9 @@ function makeServiceArm(kind) {
     shellB.push(geos['shell' + i]); tipB.push(geos['tip' + i]);
   }
   svcRounds(shellB, tipB, K);
+  geos.feed = new Geometry(); geos.feedTip = new Geometry();
+  svcFeedRound(geos.feed, geos.feedTip, K);
+  if (!geos.feed.positions.length) { delete geos.feed; delete geos.feedTip; }
   /* A gun with no magazine has no rounds to show, and an empty
      geometry through mountArm is an actor with nothing in it. Each
      band is dropped on its own: a five-round magazine does not fill
@@ -26265,6 +26302,50 @@ function serviceArm(E, kind, opts) {
      lips down, so hiding from the top of the index is hiding from the
      bottom of the column, which is the end the follower is pushing
      from. */
+  /* WHERE THE ROUND STARTS AND WHERE IT ENDS, in the arm's own space.
+   *
+     It starts at the FEED LIPS -- the top of the magazine, which is
+     where the magazine's own curve begins -- and it ends in the
+     CHAMBER, which is the back of the barrel on the bore line. Both
+     come out of the same numbers the rest of the gun is built from, so
+     a short pistol and a long rifle each get their own without a table
+     of offsets: this is the same discipline the reload path already
+     follows. */
+  body.feedFrom = K.mag && K.mag.kind !== 'none'
+    ? [K.mag.x - o.x, K.mag.y - o.y + A_FEED_LIFT, 0] : null;
+  body.feedTo = [K.rec.front - 0.030 - o.x, -o.y, 0];
+  /* Fly the round from the lips to the chamber. `t` runs 0 to 1 over
+     the bolt's FORWARD stroke; anything outside that hides it, because
+     a round sitting in mid-air between cycles is worse than no round
+     at all.
+
+     It lifts as it goes. A round does not slide in a straight line
+     from the magazine to the chamber -- the bolt face pushes the base
+     while the nose rides up the feed ramp, so the path is a shallow
+     arc and the cartridge tips nose-up on the way. Straight-line
+     interpolation reads as a cartridge being teleported along a rail,
+     which is worse than not showing it. */
+  body.setFeed = function (t) {
+    const a = body.feed, b = body.feedTip;
+    if (!a && !b) return false;
+    const on = t != null && t > 0.001 && t < 0.999 && body.feedFrom;
+    if (a) a.visible = !!on;
+    if (b) b.visible = !!on;
+    if (!on) return false;
+    const F = body.feedFrom, T = body.feedTo;
+    const x = F[0] + (T[0] - F[0]) * t;
+    // The ramp: a half-sine bulge above the straight line.
+    const lift = Math.sin(t * Math.PI) * 0.004;
+    const y = F[1] + (T[1] - F[1]) * t + lift;
+    const tilt = (1 - t) * -9;
+    for (const q of [a, b]) {
+      if (!q) continue;
+      q.setPosition([x, y, 0]);
+      q.setRotation([0, 0, tilt]);
+    }
+    return true;
+  };
+
   body.setRounds = function (frac) {
     const bands = body.roundBands;
     if (!bands || !bands.length) return 0;
