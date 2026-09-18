@@ -15040,15 +15040,36 @@ class Engine {
     this.particles.explosion(center, { scale: opts.scale || radius / 5 });
     this.audio.impact(1);
 
-    // Break anything destructible inside the blast, strongest first so the
-    // chunk budget goes to the most visible pieces.
+    /* Break anything destructible inside the blast, strongest first so
+       the chunk budget goes to the most visible pieces.
+
+       OVER THE ACTORS, NOT OVER WHAT THE PHYSICS SWEEP RETURNED.
+       physics.explode hands back the bodies it pushed, and it does not
+       push STATIC bodies -- there is nothing to push. So every static
+       destructible was invisible to this loop, which is every wall of
+       every building in the game: a map with twenty-nine breakable
+       pieces in it took a nine-metre blast at full strength and broke
+       none of them, and the call reported success. A wall being
+       immovable is exactly why it is worth blowing up. */
     const breakables = [];
+    const seen = new Set();
     for (const b of affected) {
       const a = b.actor;
-      if (a && a.destructible && !a.destructible.broken) {
-        const dist = a.position.distanceTo(center);
-        breakables.push({ actor: a, dist });
+      if (a && a.destructible && !a.destructible.broken && !seen.has(a)) {
+        seen.add(a);
+        breakables.push({ actor: a, dist: a.position.distanceTo(center) });
       }
+    }
+    for (const a of this.actors) {
+      if (!a.destructible || a.destructible.broken || seen.has(a)) continue;
+      /* Against the actor's EXTENT, not its centre: a twelve-metre wall
+         whose middle is outside the radius still has an end inside it,
+         and a blast at that end should take it down. */
+      const dist = a.position.distanceTo(center);
+      const reach = a.boundRadius || 0;
+      if (dist - reach > radius) continue;
+      seen.add(a);
+      breakables.push({ actor: a, dist: Math.max(0, dist - reach) });
     }
     breakables.sort((x, y) => x.dist - y.dist);
     for (const { actor, dist } of breakables) {

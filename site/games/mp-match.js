@@ -684,26 +684,233 @@
   var HEAD_Y = 1.66, HEAD_R = 0.15;
   var AIM_Y = 1.25;
 
+  /* ================================================================
+     THE HITBOX IS THE MAN, NOT A BARREL AROUND HIM
+     ================================================================
+     It was one vertical cylinder 0.72m across from the knees to the
+     collar, plus a ball for the head. Which means a round that passed
+     thirty centimetres to the side of somebody's ribs -- through the
+     air next to his arm -- hit him, and a round through the gap
+     between his legs hit him, and a round that clipped his boot
+     missed. "Skin tight, not even a bit off" is exactly the right
+     complaint.
+
+     ELEVEN CAPSULES, laid out on the same skeleton the model is built
+     on. A capsule is the right primitive for a limb and the ray test
+     against one is a segment-to-segment distance, which is thirty
+     lines and no allocation. A sphere is a capsule of zero length, so
+     the head is one too and there is one test rather than two shapes.
+
+     The layout is in the body's OWN space -- x to his right, y up from
+     his feet, z the way he is facing -- and it is turned by his yaw
+     before the test. That matters: a man side-on is narrower than a
+     man facing you, and with a cylinder he never was.
+
+     THREE STANCES. Standing, crouched and flat each have their own
+     set, because a crouched man is not a standing man scaled and a
+     prone man is not either -- he is a metre and a half of body lying
+     along the ground in the direction he is facing, which is a
+     completely different silhouette from the front and from the side.
+
+     WHAT IT IS WORTH. Each part carries its own multiplier, so a limb
+     hit is worth less than a chest hit and a head is worth whatever
+     the weapon says. There was no such thing as a limb hit before. */
+
+  /* [ax, ay, az, bx, by, bz, radius, part, multiplier] */
+  var HB_STAND = [
+    [0, 1.60, 0.01, 0, 1.72, 0.01, 0.105, 'head', null],   // null = the weapon's hs
+    [0, 1.44, 0, 0, 1.56, 0, 0.075, 'neck', 1.35],
+    [0, 1.06, 0, 0, 1.44, 0, 0.185, 'chest', 1.00],
+    [0, 0.90, 0, 0, 1.08, 0, 0.165, 'gut', 1.00],
+    [-0.20, 1.40, 0, -0.24, 1.12, 0.02, 0.068, 'armL', 0.72],
+    [0.20, 1.40, 0, 0.24, 1.12, 0.02, 0.068, 'armR', 0.72],
+    [-0.24, 1.12, 0.02, -0.22, 0.90, 0.10, 0.056, 'foreL', 0.72],
+    [0.24, 1.12, 0.02, 0.22, 0.90, 0.10, 0.056, 'foreR', 0.72],
+    [-0.10, 0.88, 0, -0.11, 0.48, 0, 0.098, 'thighL', 0.80],
+    [0.10, 0.88, 0, 0.11, 0.48, 0, 0.098, 'thighR', 0.80],
+    [-0.11, 0.48, 0, -0.11, 0.08, 0.02, 0.072, 'shinL', 0.70],
+    [0.11, 0.48, 0, 0.11, 0.08, 0.02, 0.072, 'shinR', 0.70],
+  ];
+  /* Crouched: the hips drop 0.42 and the thighs fold forward, so the
+     knees are in front of the body rather than under it. */
+  var HB_CROUCH = [
+    [0, 1.18, 0.03, 0, 1.30, 0.03, 0.105, 'head', null],
+    [0, 1.02, 0.02, 0, 1.14, 0.02, 0.075, 'neck', 1.35],
+    [0, 0.66, 0.01, 0, 1.02, 0.02, 0.185, 'chest', 1.00],
+    [0, 0.52, 0, 0, 0.68, 0.01, 0.165, 'gut', 1.00],
+    [-0.20, 0.98, 0.02, -0.24, 0.72, 0.06, 0.068, 'armL', 0.72],
+    [0.20, 0.98, 0.02, 0.24, 0.72, 0.06, 0.068, 'armR', 0.72],
+    [-0.24, 0.72, 0.06, -0.22, 0.54, 0.14, 0.056, 'foreL', 0.72],
+    [0.24, 0.72, 0.06, 0.22, 0.54, 0.14, 0.056, 'foreR', 0.72],
+    [-0.11, 0.50, 0, -0.13, 0.40, 0.34, 0.098, 'thighL', 0.80],
+    [0.11, 0.50, 0, 0.13, 0.40, 0.34, 0.098, 'thighR', 0.80],
+    [-0.13, 0.40, 0.34, -0.12, 0.07, 0.24, 0.072, 'shinL', 0.70],
+    [0.13, 0.40, 0.34, 0.12, 0.07, 0.24, 0.072, 'shinR', 0.70],
+  ];
+  /* Flat: everything is between 0.10 and 0.36 off the ground and runs
+     backwards along -Z from the head, which is at the front. */
+  var HB_PRONE = [
+    [0, 0.30, 0.62, 0, 0.30, 0.74, 0.105, 'head', null],
+    [0, 0.28, 0.50, 0, 0.29, 0.62, 0.075, 'neck', 1.35],
+    [0, 0.26, 0.14, 0, 0.28, 0.50, 0.175, 'chest', 1.00],
+    [0, 0.24, -0.06, 0, 0.26, 0.16, 0.155, 'gut', 1.00],
+    [-0.22, 0.20, 0.34, -0.26, 0.20, 0.54, 0.068, 'armL', 0.72],
+    [0.22, 0.20, 0.34, 0.26, 0.20, 0.54, 0.068, 'armR', 0.72],
+    [-0.26, 0.18, 0.54, -0.20, 0.18, 0.68, 0.056, 'foreL', 0.72],
+    [0.26, 0.18, 0.54, 0.20, 0.18, 0.68, 0.056, 'foreR', 0.72],
+    [-0.11, 0.18, -0.06, -0.13, 0.16, -0.50, 0.092, 'thighL', 0.80],
+    [0.11, 0.18, -0.06, 0.13, 0.16, -0.50, 0.092, 'thighR', 0.80],
+    [-0.13, 0.14, -0.50, -0.13, 0.12, -0.90, 0.070, 'shinL', 0.70],
+    [0.13, 0.14, -0.50, 0.13, 0.12, -0.90, 0.070, 'shinR', 0.70],
+  ];
+
+  function hbOf(p) {
+    return p.prone ? HB_PRONE : (p.crouching || p.sliding ? HB_CROUCH : HB_STAND);
+  }
+  /* The tightest sphere round the whole set, per stance, so one cheap
+     test throws out the ninety-odd per cent of rounds that were never
+     going anywhere near anybody. Measured off the tables rather than
+     typed in, because a broad-phase radius that is too small silently
+     eats real hits. */
+  function boundOf(list) {
+    var cy = 0, r = 0, i;
+    var lo = 1e9, hi = -1e9;
+    for (i = 0; i < list.length; i++) {
+      lo = Math.min(lo, list[i][1] - list[i][6], list[i][4] - list[i][6]);
+      hi = Math.max(hi, list[i][1] + list[i][6], list[i][4] + list[i][6]);
+    }
+    cy = (lo + hi) / 2;
+    for (i = 0; i < list.length; i++) {
+      var q = list[i];
+      r = Math.max(r,
+        Math.hypot(q[0], q[1] - cy, q[2]) + q[6],
+        Math.hypot(q[3], q[4] - cy, q[5]) + q[6]);
+    }
+    return { y: cy, r: r };
+  }
+  var HB_BOUND = { stand: boundOf(HB_STAND), crouch: boundOf(HB_CROUCH),
+    prone: boundOf(HB_PRONE) };
+  function boundFor(p) {
+    return p.prone ? HB_BOUND.prone
+      : (p.crouching || p.sliding ? HB_BOUND.crouch : HB_BOUND.stand);
+  }
+
+  /* Ray from `o` along unit `d` against the segment a..b of radius r.
+     Returns the distance along the ray, or -1. Standard segment-to-ray
+     closest approach with both parameters clamped, which is exact for
+     the cylinder body of the capsule and a close enough approximation
+     at the rounded ends that no player will ever measure it. */
+  function rayCapsule(ox, oy, oz, dx, dy, dz, ax, ay, az, bx, by, bz, r) {
+    var ux = bx - ax, uy = by - ay, uz = bz - az;
+    var wx = ox - ax, wy = oy - ay, wz = oz - az;
+    var uu = ux * ux + uy * uy + uz * uz;
+    var ud = ux * dx + uy * dy + uz * dz;
+    var uw = ux * wx + uy * wy + uz * wz;
+    var dw = dx * wx + dy * wy + dz * wz;
+    var den = uu - ud * ud;                 // d is unit, so dd = 1
+    var t, sSeg;
+    if (den < 1e-9) {
+      /* Parallel: any point will do; take the near end. */
+      t = -dw; sSeg = 0;
+    } else {
+      t = (ud * uw - dw * uu) / den;
+      sSeg = (uu * 0 + ud * t + uw) / (uu || 1);
+    }
+    if (t < 0) t = 0;
+    sSeg = Math.max(0, Math.min(1, sSeg));
+    /* One refinement with the segment parameter pinned, which is what
+       makes the clamped case right rather than nearly right. */
+    var cx = ax + ux * sSeg, cy = ay + uy * sSeg, cz = az + uz * sSeg;
+    t = (cx - ox) * dx + (cy - oy) * dy + (cz - oz) * dz;
+    if (t < 0) return -1;
+    var px = ox + dx * t - cx, py = oy + dy * t - cy, pz = oz + dz * t - cz;
+    if (px * px + py * py + pz * pz > r * r) return -1;
+    return t;
+  }
+
   function rayBody(from, dir, p) {
-    /* Closest approach between the shot and the body's own axis. */
-    var px = p.pos.x, pz = p.pos.z;
-    var ax = px - from.x, az = pz - from.z;
-    var lo = p.pos.y + BODY_LO - from.y, hi = p.pos.y + BODY_HI - from.y;
-    /* The axis is vertical, so the geometry collapses: the horizontal
-       part is a ray-versus-line problem and the vertical part is just
-       an interval to be inside. */
-    var dh = Math.hypot(dir.x, dir.z);
-    if (dh < 1e-6) return null;
-    var along = (ax * dir.x + az * dir.z) / (dh * dh);
-    if (along <= 0.3) return null;
-    var offx = ax - dir.x * along, offz = az - dir.z * along;
-    var offH = Math.hypot(offx, offz);
-    if (offH > BODY_R + HEAD_R) return null;
-    var y = dir.y * along;
-    var head = Math.abs(y - (p.pos.y + HEAD_Y - from.y)) < HEAD_R + 0.04 && offH < HEAD_R + 0.10;
-    if (!head && (y < lo - BODY_R || y > hi + BODY_R)) return null;
-    if (!head && offH > BODY_R) return null;
-    return { d: Math.hypot(ax, az, y) , head: head };
+    /* Broad phase: one sphere round the whole man. */
+    var B = boundFor(p);
+    var ox = from.x, oy = from.y, oz = from.z;
+    var cx = p.pos.x, cy = p.pos.y + B.y, cz = p.pos.z;
+    var vx = cx - ox, vy = cy - oy, vz = cz - oz;
+    var along = vx * dir.x + vy * dir.y + vz * dir.z;
+    if (along <= 0.25) return null;
+    var offx = vx - dir.x * along, offy = vy - dir.y * along, offz = vz - dir.z * along;
+    if (offx * offx + offy * offy + offz * offz > B.r * B.r) return null;
+
+    /* Narrow phase, in his own space. */
+    var list = hbOf(p);
+    var c = Math.cos(p.yaw), sn = Math.sin(p.yaw);
+    var best = -1, bestPart = null, bestMul = 1;
+    for (var i = 0; i < list.length; i++) {
+      var q = list[i];
+      /* Local (x, z) to world: forward is (sin yaw, cos yaw) and right
+         is (-cos yaw, sin yaw) -- see RIGHT() -- so a local +x (his
+         right) goes to (-cos, +sin) and a local +z (forward) goes to
+         (+sin, +cos). */
+      var ax = p.pos.x - q[0] * c + q[2] * sn;
+      var az = p.pos.z + q[0] * sn + q[2] * c;
+      var bx = p.pos.x - q[3] * c + q[5] * sn;
+      var bz = p.pos.z + q[3] * sn + q[5] * c;
+      var t = rayCapsule(ox, oy, oz, dir.x, dir.y, dir.z,
+        ax, p.pos.y + q[1], az, bx, p.pos.y + q[4], bz, q[6]);
+      if (t < 0) continue;
+      if (best >= 0 && t >= best) continue;
+      best = t; bestPart = q[7]; bestMul = q[8];
+    }
+    if (best < 0) return null;
+    return { d: best, head: bestPart === 'head', part: bestPart, mul: bestMul };
+  }
+
+  /* ================================================================
+     TWO MEN CANNOT STAND IN THE SAME PLACE
+     ================================================================
+     They could, and at every spawn they did -- a photograph of the
+     start of a match is five bodies inside one another with five heads
+     sticking out of the top. Nothing in the match ever asked whether
+     anybody else was already where a body was going: the movement
+     collides with the map and with nothing alive.
+
+     One pass at the end of the tick, each overlapping pair pushed
+     apart by half the overlap each. Halves rather than moving one out
+     of the other, because moving one is a rule about who was there
+     first and there is no such thing -- and because two people each
+     pushed half as far do not oscillate the way one pushed the whole
+     way does.
+
+     Only the living, and only in the horizontal: two men in a stairwell
+     one above the other are not overlapping, and pushing them apart
+     vertically would throw one off the stairs. */
+  var PUSH_R = 0.34;                 // shoulder half-width, near enough
+  function separate(M) {
+    var n = M.people.length;
+    for (var i = 0; i < n; i++) {
+      var a = M.people[i];
+      if (!a.alive) continue;
+      for (var j = i + 1; j < n; j++) {
+        var b = M.people[j];
+        if (!b.alive) continue;
+        /* Different floors are not a collision. */
+        if (Math.abs(a.pos.y - b.pos.y) > 1.4) continue;
+        var dx = b.pos.x - a.pos.x, dz = b.pos.z - a.pos.z;
+        var d2 = dx * dx + dz * dz;
+        var want = PUSH_R * 2;
+        if (d2 >= want * want) continue;
+        var d = Math.sqrt(d2);
+        if (d < 1e-4) {
+          /* Exactly on top of one another, which happens at a spawn:
+             pick a direction from their ids so it is the same every
+             frame and they do not jitter. */
+          var ang = (i * 2.39996 + j * 0.7);
+          dx = Math.cos(ang); dz = Math.sin(ang); d = 1;
+        }
+        var push = (want - d) * 0.5;
+        var ux = dx / d, uz = dz / d;
+        a.pos.x -= ux * push; a.pos.z -= uz * push;
+        b.pos.x += ux * push; b.pos.z += uz * push;
+      }
+    }
   }
 
   /* WHERE THE ROUND ACTUALLY LEAVES FROM.
@@ -918,14 +1125,22 @@
           var wh = M.game.raycast([from.x, from.y, from.z], [dir.x, dir.y, dir.z],
             w.far * 2.2, notActor);
           if (wh && wh.point) {
-            if (M.decals) M.decals.bullet(wh.point, wh.normal, w);
+            if (w.splash > 0) blast(M, wh.point, p, w, emit);
+            else if (M.decals) M.decals.bullet(wh.point, wh.normal, w);
             else markAt(M, wh.point, wh.normal);
           }
         } catch (e) { /* no physics on this map */ }
       }
+      /* A rocket that hits a man goes off on him, not through him. */
+      if (best && w.splash > 0) {
+        blast(M, { x: best.q.pos.x, y: best.q.pos.y + 1.0, z: best.q.pos.z }, p, w, emit);
+      }
       if (best) {
         if (M.stats) M.stats.hits++;
-        var amount = damageAt(w, best.r.d) * (best.r.head ? w.hs : 1);
+        /* A head is worth what the weapon says; everything else is
+           worth what the part says. A hand is not a chest. */
+        var amount = damageAt(w, best.r.d)
+          * (best.r.head ? w.hs : (best.r.mul != null ? best.r.mul : 1));
         /* BLOOD. Off the man, and onto whatever is behind him if
            anything is within a couple of metres -- which on these maps
            usually is. A head shot throws more of it. */
@@ -940,6 +1155,49 @@
     }
     if (p.ammo[p.held] <= 0) beginReload(M, p);
     return out;
+  }
+
+  /* ================================================================
+     THE BLAST, AND WHAT IT TAKES DOWN WITH IT
+     ================================================================
+     Six launchers in the weapon table carry a splash radius and not
+     one of them had ever produced one: a rocket did point damage to
+     whatever the ray touched and marked the wall with a bullet hole.
+     You could empty a launcher into a building and the building did
+     not notice.
+
+     `game.explode` is the engine's own call and it does three things
+     in one -- impulses on every rigid body in range, breakage on
+     anything destructible, and the light and the smoke. The map now
+     has destructible pieces in it (see frail() in mp-maps), so this is
+     the thing that opens a building up.
+
+     THE DAMAGE TO PEOPLE IS OURS, not the physics'. Combatants are
+     teleported capsules with no rigid body to push, and a blast that
+     only moved crates would be a rocket that hurts scenery. Falloff is
+     linear from the centre and a wall in the way stops it, so blowing
+     a hole in the wall somebody is behind is a thing you do BEFORE you
+     kill them rather than instead of. */
+  function blast(M, at, from, w, emit) {
+    var r = w.splash || 4.0;
+    try {
+      if (M.game && M.game.explode) {
+        M.game.explode([at.x, at.y, at.z],
+          { radius: r * 1.6, strength: 16 + r * 3.2, scale: r / 3.2, upBias: 0.35 });
+      }
+    } catch (e) { /* no physics on this map */ }
+    if (M.decals) M.decals.scorch(at, { x: 0, y: 1, z: 0 }, r * 0.9);
+    for (var i = 0; i < M.people.length; i++) {
+      var q = M.people[i];
+      if (!q.alive) continue;
+      var mid = { x: q.pos.x, y: q.pos.y + 1.0, z: q.pos.z };
+      var d = Math.hypot(mid.x - at.x, mid.y - at.y, mid.z - at.z);
+      if (d > r) continue;
+      if (!losClear(M, at, mid)) continue;
+      /* Own team included: a rocket does not check a uniform. */
+      var amount = w.dmg * (1 - (d / r) * 0.72);
+      hurt(M, from, q, amount, false, emit);
+    }
   }
 
   /* RECOIL THAT MOVES THE MAN, NOT THE GUN.
@@ -1776,11 +2034,21 @@
      first frame, whatever direction he was running or shooting in --
      twelve people strafing sideways and firing over their shoulders,
      for the whole of every match. */
+  var _upAxis = null;
   function face(actor, yaw) {
     if (!actor) return;
     if (actor.controller) actor.controller.facing = yaw;
-    else if (actor.rotation && actor.rotation.setFromAxisAngle) {
-      actor.rotation.setFromAxisAngle([0, 1, 0], yaw);
+    else if (actor.rotation && actor.rotation.setAxisAngle) {
+      /* setAxisAngle, not setFromAxisAngle -- there is no such method
+         on this Quat, so this branch has been throwing nothing and
+         doing nothing since it was written. And the axis is read as
+         .x/.y/.z, so an array arrives as three undefineds and yields a
+         quaternion of NaNs: a body that reports a perfectly correct
+         world position while the GPU throws away every one of its
+         triangles. That exact pair of mistakes cost most of a day on
+         the multiplayer viewmodel. */
+      if (!_upAxis) _upAxis = new W.LE.Vec3(0, 1, 0);
+      actor.rotation.setAxisAngle(_upAxis, yaw);
     }
   }
 
@@ -2062,6 +2330,14 @@
          end of your round. */
       var hold = careful ? 1.35 : 0.9;
       var want = d2 > w.near * hold ? 1 : (d2 < w.near * (hold * 0.45) ? -1 : 0);
+      /* AND IT GOES DOWN. Every rule written for the player is a rule
+         for everybody, and crouching is a real one: it is a quarter
+         off the cone and a much smaller target, and a bot that never
+         used it was a bot playing a different game from the one the
+         player is in. It crouches when it has the range it wants and
+         is not closing, which is exactly when a person does. Longer
+         range and better shots crouch more readily. */
+      p.crouching = want === 0 && d2 > 7 && (sk.ads || 0) > 0.25;
       var sp = 4.4 * w.move;
       moveBy(M, p,
         Math.sin(p.yaw) * want * sp * 0.75 + side.x * ai.strafe * sp * 0.6,
@@ -2071,6 +2347,7 @@
     }
 
     p.aiming = false;
+    p.crouching = false;
 
     if (ai.state === 'break') {
       /* Hurt: back off the way you came and let it regenerate. Bots
@@ -2428,6 +2705,8 @@
       if (p.pos.y < -25) { p.alive = false; p.deaths++; p.respawnAt = M.time + 2; }
     }
 
+    /* Nobody stands inside anybody, and then everybody is placed. */
+    separate(M);
     /* PLACEMENT IS A SECOND PASS, after everybody has moved, so a body
        is drawn where it is now rather than where it was last frame. */
     for (var j = 0; j < M.people.length; j++) place(M, M.people[j]);

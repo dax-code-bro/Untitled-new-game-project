@@ -73,30 +73,46 @@
   font-size:19px; letter-spacing:.20em; margin-bottom:6px; }
 `;
 
-  /* ---- the suit, in metres ---- */
+  /* ---- the suit, in metres ----
+     Twelve feet is 3.66, and the whole layout is measured off it
+     rather than guessed, because a mech whose legs are a third of its
+     height reads as a man in a big coat and one whose legs are two
+     thirds reads as a chicken. This is roughly a walking excavator:
+     legs to 1.72, a deep hull from there to 3.16, and the sensor head
+     sunk into the shoulders rather than perched on them. */
   var SUIT = {
-    h: 3.66,                 // twelve feet, floor to the top of the shoulders
-    hipY: 1.62,              // where the legs meet the body
-    torso: { w: 1.34, h: 1.26, d: 0.92 },
-    canopy: { w: 0.74, h: 0.52, d: 0.10 },
-    shoulder: { r: 0.40 },
-    upperLeg: { w: 0.38, h: 0.74, d: 0.42 },
-    lowerLeg: { w: 0.32, h: 0.70, d: 0.36 },
-    foot: { w: 0.52, h: 0.22, d: 0.86 },
-    minigun: { barrels: 6, len: 1.26, r: 0.052, ring: 0.26 },
-    flame: { len: 0.96, r: 0.14 },
-    /* The eye the player looks from in third person: over the left
-       shoulder, because the minigun is on the right and a camera
-       behind a spinning six-barrel is a camera behind a wall. */
-    camBack: 5.4, camUp: 3.3, camSide: 1.15,
+    h: 3.66,
+    foot: { w: 0.56, h: 0.26, d: 1.02 },
+    shin: { w: 0.40, h: 0.84, d: 0.46 },
+    knee: 1.10,
+    thigh: { w: 0.46, h: 0.62, d: 0.54 },
+    hipY: 1.72,
+    pelvis: { w: 1.02, h: 0.36, d: 0.80 },
+    torso: { w: 1.40, h: 1.14, d: 0.94, y: 2.60 },   // y is its CENTRE
+    canopy: { w: 0.72, h: 0.50 },
+    shoulderY: 2.96,
+    minigun: { barrels: 6, len: 1.38, r: 0.058, ring: 0.215, housing: 0.78 },
+    flame: { len: 1.04, r: 0.115 },
+    /* Third person, over the left shoulder -- the minigun is on the
+       right and a camera behind a spinning six-barrel is a camera
+       behind a wall. Far enough back that the whole twelve feet is in
+       frame with room to see past it. */
+    camBack: 8.2, camUp: 4.4, camSide: 1.5,
   };
 
+  /* LIGHTER THAN THEY LOOK RIGHT ON PAPER. Every map in this game is
+     lit warm and fogged, and a #4a4e52 plate -- which is a perfectly
+     reasonable gunmetal in a swatch -- comes out of that as dark
+     brown. The first mech was a brown blob for exactly that reason.
+     These are two stops up from where they "should" be so that what
+     arrives on the screen is steel. */
   var MAT = {
-    plate: { color: 0x4a4e52, roughness: 0.62, metalness: 0.55, texture: 'metal' },
-    dark: { color: 0x23262a, roughness: 0.55, metalness: 0.70, texture: 'metal' },
-    hot: { color: 0x8a3a22, roughness: 0.70, metalness: 0.40, texture: 'rust' },
-    glass: { color: 0x2b3a44, roughness: 0.14, metalness: 0.20, opacity: 0.55 },
-    trim: { color: 0xc8a24e, roughness: 0.42, metalness: 0.80, texture: 'metal' },
+    plate: { color: 0x9aa0a6, roughness: 0.58, metalness: 0.62, texture: 'metal' },
+    dark: { color: 0x54585e, roughness: 0.52, metalness: 0.72, texture: 'metal' },
+    hot: { color: 0xb85744, roughness: 0.66, metalness: 0.42, texture: 'rust' },
+    glass: { color: 0x6f8894, roughness: 0.12, metalness: 0.25, opacity: 0.55 },
+    trim: { color: 0xe0b45c, roughness: 0.38, metalness: 0.82, texture: 'metal' },
+    warn: { color: 0xd8642e, roughness: 0.70, metalness: 0.20, texture: 'metal' },
   };
 
   /* ------------------------------------------------------------------
@@ -107,6 +123,9 @@
      every frame from one position and one yaw, because forty boxes at
      sixty hertz is nothing and a parent chain is another thing that can
      be wrong.
+
+     LOCAL SPACE is the match's: +x is the suit's RIGHT, +y up, +z the
+     way it is facing.
      ------------------------------------------------------------------ */
   function build(game) {
     var P = [];
@@ -116,6 +135,7 @@
       P.push({ a: a, n: name, o: [x, y, z] });
       return a;
     }
+    /* axis: 'y' stands it up, 'z' lays it along the facing, 'x' across. */
     function cyl(name, x, y, z, r, h, mat, axis) {
       var a = game.cylinder({ radius: r, height: h, at: [0, -500, 0], physics: false,
         material: mat || MAT.plate, name: 'bers-' + name });
@@ -125,104 +145,164 @@
 
     var T = SUIT.torso, hip = SUIT.hipY;
 
-    /* ---- body ---- */
-    box('pelvis', 0, hip - 0.16, 0, T.w * 0.72, 0.42, T.d * 0.80, MAT.dark);
-    box('torso', 0, hip + T.h * 0.52, 0, T.w, T.h, T.d);
-    box('chestPlate', 0, hip + T.h * 0.66, T.d * 0.50 + 0.03, T.w * 0.86, T.h * 0.46, 0.07, MAT.trim);
-    box('canopy', 0, hip + T.h * 0.74, T.d * 0.50 + 0.07,
-      SUIT.canopy.w, SUIT.canopy.h, SUIT.canopy.d, MAT.glass);
-    box('canopyBar', 0, hip + T.h * 0.74, T.d * 0.50 + 0.12, 0.05, SUIT.canopy.h, 0.05, MAT.dark);
-    /* The exhaust stacks, because something has to be burning to move
-       four tonnes of plate at walking pace. */
-    cyl('stackL', -0.36, hip + T.h + 0.30, -T.d * 0.40, 0.09, 0.58, MAT.hot);
-    cyl('stackR', 0.36, hip + T.h + 0.30, -T.d * 0.40, 0.09, 0.58, MAT.hot);
-    box('collar', 0, hip + T.h + 0.10, 0, T.w * 0.80, 0.18, T.d * 0.74, MAT.dark);
-    /* A sensor head, small and set low, so the silhouette reads as a
-       machine with a man in it rather than a robot. */
-    box('head', 0, hip + T.h + 0.30, 0.12, 0.42, 0.26, 0.34, MAT.dark);
-    box('visor', 0, hip + T.h + 0.30, 0.30, 0.34, 0.11, 0.04, MAT.trim);
+    /* ---- legs: feet, shins, knees, thighs ---- */
+    var FT = SUIT.foot, SH = SUIT.shin, TH = SUIT.thigh;
+    [-1, 1].forEach(function (sgn) {
+      var t = sgn < 0 ? 'L' : 'R', lx = sgn * 0.42;
+      box('foot' + t, lx, FT.h * 0.5, 0.06, FT.w, FT.h, FT.d, MAT.dark);
+      box('toe' + t, lx, FT.h * 0.42, 0.06 + FT.d * 0.5 + 0.11, FT.w * 0.82,
+        FT.h * 0.66, 0.22, MAT.trim);
+      box('heel' + t, lx, FT.h * 0.55, 0.06 - FT.d * 0.5 - 0.07, FT.w * 0.70,
+        FT.h * 0.80, 0.16, MAT.dark);
+      box('ankle' + t, lx, FT.h + 0.10, 0.02, 0.26, 0.22, 0.28, MAT.dark);
+      box('shin' + t, lx, FT.h + 0.10 + SH.h * 0.5, 0, SH.w, SH.h, SH.d);
+      /* A hydraulic ram down the front of each shin, which is most of
+         what makes a leg read as machinery rather than as a pillar. */
+      cyl('ram' + t, lx, FT.h + 0.14 + SH.h * 0.5, SH.d * 0.5 + 0.05, 0.062,
+        SH.h * 0.86, MAT.trim);
+      box('knee' + t, lx, SUIT.knee, 0.02, SH.w * 0.94, 0.26, SH.d * 0.98, MAT.dark);
+      box('thigh' + t, lx, SUIT.knee + 0.13 + TH.h * 0.5, -0.02, TH.w, TH.h, TH.d);
+      cyl('piston' + t, lx + sgn * 0.26, SUIT.knee + 0.13 + TH.h * 0.5, -0.10,
+        0.055, TH.h * 0.9, MAT.trim);
+    });
+
+    /* ---- hull ---- */
+    var PV = SUIT.pelvis;
+    box('pelvis', 0, hip + PV.h * 0.5 - 0.10, 0, PV.w, PV.h, PV.d, MAT.dark);
+    box('waist', 0, hip + PV.h + 0.06, 0, PV.w * 0.72, 0.22, PV.d * 0.76, MAT.trim);
+    box('torso', 0, T.y, 0, T.w, T.h, T.d);
+    /* A sloped glacis on the front, so the hull is not a fridge. */
+    box('glacis', 0, T.y - T.h * 0.30, T.d * 0.5 + 0.06, T.w * 0.92, T.h * 0.40,
+      0.14, MAT.dark);
+    box('canopy', 0, T.y + T.h * 0.22, T.d * 0.5 + 0.05,
+      SUIT.canopy.w, SUIT.canopy.h, 0.10, MAT.glass);
+    box('canopyFrame', 0, T.y + T.h * 0.22, T.d * 0.5 + 0.03,
+      SUIT.canopy.w + 0.10, SUIT.canopy.h + 0.10, 0.06, MAT.dark);
+    box('canopyBar', 0, T.y + T.h * 0.22, T.d * 0.5 + 0.11, 0.05,
+      SUIT.canopy.h, 0.04, MAT.dark);
+    /* Warning stripes across the chest, the way real plant is marked. */
+    box('stripe', 0, T.y - T.h * 0.46, T.d * 0.5 + 0.04, T.w * 0.80, 0.11, 0.05,
+      MAT.warn);
+    /* Exhaust stacks out of the back deck. */
+    cyl('stackL', -0.40, T.y + T.h * 0.5 + 0.34, -T.d * 0.34, 0.095, 0.68, MAT.hot);
+    cyl('stackR', 0.40, T.y + T.h * 0.5 + 0.34, -T.d * 0.34, 0.095, 0.68, MAT.hot);
+    cyl('capL', -0.40, T.y + T.h * 0.5 + 0.70, -T.d * 0.34, 0.125, 0.09, MAT.dark);
+    cyl('capR', 0.40, T.y + T.h * 0.5 + 0.70, -T.d * 0.34, 0.125, 0.09, MAT.dark);
+    /* Collar and a sensor head sunk between the shoulders. */
+    box('collar', 0, T.y + T.h * 0.5 + 0.11, 0, T.w * 0.78, 0.22, T.d * 0.72, MAT.dark);
+    box('head', 0, T.y + T.h * 0.5 + 0.34, 0.14, 0.48, 0.28, 0.38, MAT.dark);
+    box('visor', 0, T.y + T.h * 0.5 + 0.34, 0.34, 0.40, 0.12, 0.05, MAT.trim);
 
     /* ---- shoulders ---- */
-    var shY = hip + T.h * 0.78;
-    var shX = T.w * 0.5 + 0.16;
-    box('shoulderL', -shX, shY, 0, 0.44, 0.52, 0.62);
-    box('shoulderR', shX, shY, 0, 0.44, 0.52, 0.62);
-    box('pauldronL', -shX - 0.06, shY + 0.26, 0, 0.50, 0.16, 0.70, MAT.trim);
-    box('pauldronR', shX + 0.06, shY + 0.26, 0, 0.50, 0.16, 0.70, MAT.trim);
+    var shY = SUIT.shoulderY;
+    var shX = T.w * 0.5 + 0.22;
+    box('shoulderL', -shX, shY, 0, 0.50, 0.58, 0.68);
+    box('shoulderR', shX, shY, 0, 0.50, 0.58, 0.68);
+    box('pauldronL', -shX - 0.07, shY + 0.31, 0, 0.58, 0.16, 0.80, MAT.trim);
+    box('pauldronR', shX + 0.07, shY + 0.31, 0, 0.58, 0.16, 0.80, MAT.trim);
 
-    /* ---- right arm: the minigun ---- */
+    /* ---- right arm: the minigun ----
+       A housing hanging under the shoulder, a hub on the front of it,
+       six barrels out of the hub, and a ring holding their muzzles.
+       Everything from the hub forward points along +z, which is what
+       axis 'z' means. */
     var G = SUIT.minigun;
-    box('gunBody', shX, shY - 0.18, 0.34, 0.40, 0.42, 0.72, MAT.dark);
-    cyl('gunHub', shX, shY - 0.18, 0.34 + 0.40, G.ring, 0.26, MAT.dark, 'z');
+    var armY = shY - 0.30;
+    var gunZ = 0.30;                                   // front of the housing
+    box('gunBody', shX, armY, gunZ - G.housing * 0.5 + 0.10, 0.50, 0.50,
+      G.housing, MAT.dark);
+    cyl('gunHub', shX, armY, gunZ + 0.16, G.ring + 0.055, 0.30, MAT.dark, 'z');
     for (var i = 0; i < G.barrels; i++) {
-      var a = (i / G.barrels) * Math.PI * 2;
-      cyl('barrel' + i, shX + Math.cos(a) * G.ring * 0.62,
-        shY - 0.18 + Math.sin(a) * G.ring * 0.62, 0.34 + 0.40 + G.len * 0.5,
-        G.r, G.len, MAT.dark, 'z');
+      var ang = (i / G.barrels) * Math.PI * 2;
+      cyl('barrel' + i,
+        shX + Math.cos(ang) * G.ring, armY + Math.sin(ang) * G.ring,
+        gunZ + 0.30 + G.len * 0.5, G.r, G.len, MAT.dark, 'z');
     }
-    cyl('gunRing', shX, shY - 0.18, 0.34 + 0.40 + G.len, G.ring * 0.94, 0.09, MAT.trim, 'z');
-    box('ammoBox', shX + 0.30, shY - 0.34, -0.22, 0.34, 0.50, 0.54, MAT.dark);
+    cyl('gunRing', shX, armY, gunZ + 0.30 + G.len - 0.05, G.ring + 0.075, 0.10,
+      MAT.trim, 'z');
+    /* The belt box, on the outboard side where it does not foul the
+       hull. */
+    box('ammoBox', shX + 0.36, armY - 0.18, -0.28, 0.32, 0.58, 0.62, MAT.dark);
+    /* The belt itself, from the box into the side of the housing. Short
+       and tucked in: the first version was a half-metre rod sticking
+       out sideways past the gun, which from the side read as a blue
+       pole through the mech. */
+    box('feed', shX + 0.30, armY - 0.02, -0.14, 0.14, 0.13, 0.30, MAT.warn);
 
-    /* ---- left arm: the flame nozzle (or the health cannon) ---- */
+    /* ---- left arm: the flame nozzle, or the health cannon ---- */
     var F = SUIT.flame;
-    box('armL', -shX, shY - 0.18, 0.22, 0.38, 0.40, 0.56);
-    cyl('nozzle', -shX, shY - 0.18, 0.22 + 0.28 + F.len * 0.5, F.r, F.len, MAT.hot, 'z');
-    cyl('nozzleTip', -shX, shY - 0.18, 0.22 + 0.28 + F.len + 0.04, F.r * 1.35, 0.10, MAT.trim, 'z');
-    cyl('fuelA', -shX - 0.26, shY - 0.30, -0.30, 0.15, 0.68, MAT.hot);
-    cyl('fuelB', -shX + 0.02, shY - 0.30, -0.36, 0.15, 0.68, MAT.hot);
-
-    /* ---- legs: two pistons each, digitigrade, feet flat ---- */
-    var UL = SUIT.upperLeg, LL = SUIT.lowerLeg, FT = SUIT.foot;
-    [-1, 1].forEach(function (s) {
-      var t = s < 0 ? 'L' : 'R', lx = s * 0.40;
-      box('hip' + t, lx, hip - 0.24, 0, 0.42, 0.34, 0.46, MAT.dark);
-      box('upper' + t, lx, hip - 0.28 - UL.h * 0.5, -0.04, UL.w, UL.h, UL.d);
-      cyl('piston' + t, lx + s * 0.22, hip - 0.28 - UL.h * 0.5, 0.16, 0.06, UL.h * 0.9, MAT.trim);
-      box('knee' + t, lx, hip - 0.30 - UL.h, 0, 0.34, 0.26, 0.38, MAT.dark);
-      box('lower' + t, lx, hip - 0.36 - UL.h - LL.h * 0.5, 0.06, LL.w, LL.h, LL.d);
-      box('foot' + t, lx, FT.h * 0.5, 0.10, FT.w, FT.h, FT.d, MAT.dark);
-      box('toe' + t, lx, FT.h * 0.4, 0.10 + FT.d * 0.5 + 0.10, FT.w * 0.86, FT.h * 0.7, 0.22, MAT.trim);
-    });
+    box('armL', -shX, armY, 0.14, 0.46, 0.46, 0.66);
+    cyl('nozzle', -shX, armY, 0.14 + 0.33 + F.len * 0.5, F.r, F.len, MAT.dark, 'z');
+    cyl('nozzleTip', -shX, armY, 0.14 + 0.33 + F.len + 0.06, F.r * 1.5, 0.13,
+      MAT.hot, 'z');
+    cyl('pilot', -shX + 0.16, armY + 0.10, 0.14 + 0.33 + F.len * 0.75, 0.032,
+      F.len * 0.5, MAT.trim, 'z');
+    /* The fuel, on the BACK of the hull rather than hung off the side.
+       Slung outboard they were two rust-coloured slabs the size of the
+       shoulders, and from every angle they read as battle damage
+       rather than as tanks. Behind the deck they are a silhouette. */
+    cyl('fuelA', -0.30, T.y - 0.10, -T.d * 0.5 - 0.20, 0.145, 0.82, MAT.hot);
+    cyl('fuelB', 0.02, T.y - 0.10, -T.d * 0.5 - 0.26, 0.145, 0.82, MAT.hot);
+    box('fuelStrap', -0.14, T.y - 0.10, -T.d * 0.5 - 0.23, 0.68, 0.10, 0.22, MAT.dark);
+    /* And the line from the tanks to the nozzle arm. */
+    box('fuelLine', -shX * 0.55, T.y - 0.34, -T.d * 0.5 - 0.10, shX * 0.9, 0.08, 0.10,
+      MAT.dark);
 
     P.forEach(function (q) { q.a.visible = false; });
     return P;
   }
 
-  /* Place the whole suit from one position and one yaw. */
+  /* Place the whole suit from one position and one yaw.
+
+     THE ROTATION CALL IS setAxisAngle, and the first version of this
+     called setFromAxisAngle, which does not exist on this Quat. It was
+     guarded by `if (a.rotation.setFromAxisAngle)`, so it did not even
+     throw: nothing was ever rotated. The photograph showed six minigun
+     barrels standing vertically in a row beside the mech like a picket
+     fence, and everything else square to the world however the suit
+     was facing. Guarding a call against its own name being wrong is
+     how a whole limb goes missing in silence. */
   function put(P, x, y, z, yaw, spin) {
+    axes();
     var c = Math.cos(yaw), s = Math.sin(yaw);
+    var shX = SUIT.torso.w * 0.5 + 0.22;
+    var armY = SUIT.shoulderY - 0.30;
     for (var i = 0; i < P.length; i++) {
       var q = P[i], o = q.o;
-      /* Forward is +Z at yaw 0, so a yaw rotation about Y takes
-         (ox, oz) to (ox*cos + oz*sin, -ox*sin + oz*cos) in this
-         handedness -- the same one RIGHT() uses in the match. */
-      var wx = o[0] * c + o[2] * s;
-      var wz = -o[0] * s + o[2] * c;
-      var wy = o[1];
+      var ox = o[0], oy = o[1], oz = o[2];
       if (spin && q.n.indexOf('barrel') === 0) {
-        /* The six barrels turn about the gun's own axis. */
-        var shX = SUIT.torso.w * 0.5 + 0.16;
-        var bx = o[0] - shX, by = o[1] - (SUIT.hipY + SUIT.torso.h * 0.78 - 0.18);
+        /* The six turn about the gun's own axis, which runs along z
+           through (shX, armY). */
+        var bx = ox - shX, by = oy - armY;
         var bc = Math.cos(spin), bs = Math.sin(spin);
-        var rx = bx * bc - by * bs, ry = bx * bs + by * bc;
-        var lx = rx + shX, ly = ry + (SUIT.hipY + SUIT.torso.h * 0.78 - 0.18);
-        wx = lx * c + o[2] * s;
-        wz = -lx * s + o[2] * c;
-        wy = ly;
+        ox = bx * bc - by * bs + shX;
+        oy = bx * bs + by * bc + armY;
       }
-      q.a.position.set(x + wx, y + wy, z + wz);
-      if (q.a.rotation && q.a.rotation.setFromAxisAngle) {
-        var ax = q.axis === 'z' ? AXZ : AXY;
-        if (q.axis === 'z') {
-          /* A cylinder is built up the Y axis; a barrel points along Z,
-             so it is tipped a right angle and then yawed with the rest. */
-          Q1.setFromAxisAngle(AXX, Math.PI / 2);
-          Q2.setFromAxisAngle(AXY, yaw);
-          q.a.rotation.mulQuats(Q2, Q1);
-        } else {
-          q.a.rotation.setFromAxisAngle(ax, yaw);
-        }
+      /* Local to world. Forward is (sin yaw, cos yaw); the suit's own
+         right is (-cos yaw, sin yaw), the same RIGHT() the match uses.
+         So local +x goes to (-cos, +sin) and local +z to (+sin, +cos). */
+      q.a.position.set(
+        x - ox * c + oz * s,
+        y + oy,
+        z + ox * s + oz * c
+      );
+      var r = q.a.rotation;
+      if (!r || !r.setAxisAngle) { q.a._still = false; continue; }
+      if (q.axis === 'z') {
+        /* A cylinder is built up its own +Y. Tipping it a right angle
+           about +X takes +Y onto +Z; then the suit's yaw turns it with
+           everything else. */
+        Q1.setAxisAngle(AXX, Math.PI / 2);
+        Q2.setAxisAngle(AXY, yaw);
+        r.mulQuats(Q2, Q1);
+      } else if (q.axis === 'x') {
+        Q1.setAxisAngle(AXZ, Math.PI / 2);
+        Q2.setAxisAngle(AXY, yaw);
+        r.mulQuats(Q2, Q1);
+      } else {
+        r.setAxisAngle(AXY, yaw);
       }
+      q.a._still = false;
     }
   }
   var AXX, AXY, AXZ, Q1, Q2;
@@ -552,13 +632,22 @@
       line.classList.add('hide');
 
       if (S.state === 'smoke') {
-        /* The smoke climbs, widening, for the length of the fuse. */
+        /* THE COLUMN FILLS FROM THE GROUND UP.
+           The first go at this gave every puff the same rise with a
+           small lag, so the whole column left the ground together and
+           the photograph came back with a flare on the floor and
+           nothing above it -- eight spheres between five and nine
+           metres up, out of frame. A smoke column is a stack: puff i
+           sits at its own fraction of the height and the whole stack
+           grows into place. */
         var f = Math.min(1, S.t / B.flare.smoke);
-        for (var i = 0; i < S.smoke.length; i++) {
-          var lag = i / S.smoke.length;
-          var rise = Math.max(0, f - lag * 0.5) * 9;
-          S.smoke[i].position.set(S.at.x + Math.sin(S.t * 1.4 + i) * rise * 0.10,
-            S.at.y + rise, S.at.z + Math.cos(S.t * 1.1 + i) * rise * 0.10);
+        var n = S.smoke.length;
+        for (var i = 0; i < n; i++) {
+          var frac = (i + 0.5) / n;                 // 0 at the flare, 1 at the top
+          var rise = frac * f * 7.5;
+          var drift = rise * 0.13;
+          S.smoke[i].position.set(S.at.x + Math.sin(S.t * 1.1 + i * 1.7) * drift,
+            S.at.y + 0.25 + rise, S.at.z + Math.cos(S.t * 0.9 + i * 2.1) * drift);
         }
         if (S.t >= B.flare.smoke) spawnJet(S.at);
         return null;
@@ -697,6 +786,23 @@
       get hp() { return S.hp; },
       get level() { return S.level; },
       _S: S,
+      /* THE SEQUENCE IS TWENTY SECONDS LONG and this renderer manages
+         two frames a second, so photographing the mech takes three
+         minutes of waiting for a thing that has nothing to do with the
+         mech. This jumps straight to a state, and only a test ever
+         calls it. */
+      _skipTo: function (state, where) {
+        if (S.state === 'off') callIn(3);
+        var at = where || { x: M.you.pos.x + Math.sin(M.you.yaw) * 7,
+          y: M.you.pos.y, z: M.you.pos.z + Math.cos(M.you.yaw) * 7 };
+        var gr = M.groundAt ? M.groundAt(at.x, at.z, at.y + 2) : at.y;
+        at.y = gr == null ? at.y : gr;
+        if (state === 'smoke') { spawnFlare(at); return; }
+        if (state === 'jet') { spawnFlare(at); spawnJet(at); return; }
+        if (state === 'open') { spawnFlare(at); spawnJet(at); spawnCapsule(at);
+          S.capY = at.y + 2.2; openUp(); return; }
+        if (state === 'ride') { S.at = at; mount(); }
+      },
       dispose: function () {
         clean();
         if (parts) show(parts, false);

@@ -223,7 +223,7 @@ check('a level 1 gun can reach several slots',
 const L = MP.defaultLoadout();
 check('the default loadout passes its own check', MP.checkLoadout(L).length === 0,
   MP.checkLoadout(L).join('; '));
-check('the default loadout has five killstreaks', L.streaks.length === 5);
+check('the default loadout has three killstreaks', L.streaks.length === 3);
 check('the default names a tactical, a lethal and an ability',
   !!MP.TACTICALS.find((t) => t.id === L.tactical)
   && !!MP.LETHALS.find((t) => t.id === L.lethal)
@@ -261,6 +261,107 @@ check('the maps are the four that were asked for',
   MP.MAPS.map((m) => m.id).join(',') === 'helipad,resort,town,demolition');
 check('the modes are team deathmatch and search and destroy',
   MP.MODES.map((m) => m.id).join(',') === 'tdm,snd');
+
+/* ================================================================
+   KILLSTREAKS, LEVELS AND THE BERSERKER
+   ================================================================ */
+check('three killstreak slots, not five',
+  MP.STREAK_SLOTS === 3
+  && MP.checkLoadout(Object.assign(MP.defaultLoadout(), {
+    streaks: ['k-recon', 'k-crate', 'k-mortar', 'k-airstrike'],
+  })).length > 0);
+check('the Berserker Suit is in the table and costs eighteen',
+  !!MP.streak('k-berserker') && MP.streak('k-berserker').cost === 18);
+check('every killstreak has three levels',
+  MP.KILLSTREAKS.every((k) => {
+    const L = MP.streakLevels(k.id);
+    return L.length === 3 && L[0] === null && L[1] && L[2];
+  }), MP.KILLSTREAKS.filter((k) => MP.streakLevels(k.id).length !== 3).map((k) => k.id).join(','));
+check('every level past the first is a named ability with a description',
+  MP.KILLSTREAKS.every((k) => MP.streakLevels(k.id).slice(1).every(
+    (L) => L && L.name && L.desc && L.unlock > 0)));
+check('a streak levels by being used, and starts at one',
+  MP.streakLevelOf('k-berserker', 0) === 1
+  && MP.streakLevelOf('k-berserker', 5) === 2
+  && MP.streakLevelOf('k-berserker', 14) === 3);
+check('level two of the Berserker is the Health Cannon',
+  /health cannon/i.test(MP.streakLevels('k-berserker')[1].name));
+check('the suit has ten thousand armour and is twelve feet',
+  MP.BERSERKER.hp === 10000 && Math.abs(MP.BERSERKER.height - 3.66) < 0.01);
+check('the minigun is three thousand a minute at ten a round, five hundred then cool',
+  MP.BERSERKER.minigun.rpm === 3000 && MP.BERSERKER.minigun.damage === 10
+  && MP.BERSERKER.minigun.rounds === 500 && MP.BERSERKER.minigun.cool === 5);
+check('the health cannon is fifty-four a minute, ten damage, twenty to recharge',
+  MP.BERSERKER.health.rpm === 54 && MP.BERSERKER.health.damage === 10
+  && MP.BERSERKER.health.cool === 20);
+check('aiming in the suit only narrows the field of view',
+  MP.BERSERKER.fov.ads < MP.BERSERKER.fov.hip);
+
+/* ================================================================
+   THE PROS AND THE CONS
+   ================================================================
+   Measured off the folds, so what is checked is that the measurement
+   is honest rather than that any one number is a particular value. */
+const RIFLE = MP.GUNS.find((g) => g.cls === 'assault').id;
+check('a part that fits a gun reports effects on it',
+  MP.effectsOf('m-suppressor', RIFLE).fits === true);
+check('a part that does not fit reports nothing rather than lying',
+  MP.effectsOf('o-7x', RIFLE).fits === false
+  && MP.effectsOf('o-7x', RIFLE).pros.length === 0);
+{
+  const e = MP.effectsOf('m-annihilator', RIFLE);
+  const up = e.all.find((x) => x.stat === 'recUp');
+  const ads = e.all.find((x) => x.stat === 'ads');
+  check('a recoil-killing muzzle is a green minus on vertical recoil',
+    !!up && up.good === true && up.sign === '\u2212' && up.signs === 3,
+    up ? `${up.sign}${up.signs} ${(up.pct * 100).toFixed(0)}%` : 'no entry');
+  check('and a red plus on the time to bring it up',
+    !!ads && ads.good === false && ads.sign === '+',
+    ads ? `${ads.sign}${ads.signs}` : 'no entry');
+  check('and it marks you on their minimap, as a con',
+    e.cons.some((c) => c.flag === 'loud'));
+}
+{
+  const bolt = MP.GUNS.find((g) => g.fam === 'bolt').id;
+  const e = MP.effectsOf('o-7x', bolt);
+  const mag = e.all.find((x) => x.stat === 'sightFov');
+  check('a scope reports magnification, not a field of view going down',
+    !!mag && mag.name === 'Magnification' && mag.pct > 0 && mag.good === true,
+    mag ? `${mag.name} ${(mag.pct * 100).toFixed(0)}%` : 'no entry');
+}
+check('the sign bands are the ones asked for',
+  MP.signsFor(0.01) === 0 && MP.signsFor(0.18) === 1
+  && MP.signsFor(0.45) === 2 && MP.signsFor(0.70) === 3
+  && MP.signsFor(-0.70) === 3);
+check('every attachment measures cleanly on every gun it fits',
+  MP.ATTACHMENTS.every((a) => MP.GUNS.every((g) => {
+    if (!MP.fits(a, g)) return true;
+    const e = MP.effectsOf(a.id, g.id);
+    return e.all.every((x) => Number.isFinite(x.pct) && x.signs >= 1 && x.signs <= 3);
+  })));
+check('at least four parts in five say something about themselves',
+  (() => {
+    let some = 0, all = 0;
+    MP.ATTACHMENTS.forEach((a) => {
+      const g = MP.GUNS.find((x) => MP.fits(a, x));
+      if (!g) return;
+      all++;
+      const e = MP.effectsOf(a.id, g.id);
+      if (e.pros.length + e.cons.length > 0) some++;
+    });
+    return all > 0 && some / all >= 0.8;
+  })());
+
+/* ---- what cannot be fitted with what ---- */
+check('a bipod and a grip are refused together',
+  MP.conflicts('u-bipod', ['u-grip']).length === 1);
+check('and the loadout check says so',
+  MP.checkLoadout(Object.assign(MP.defaultLoadout(), {
+    primary: RIFLE, primaryAtt: ['u-bipod', 'u-grip'],
+  })).some((b) => /cannot be fitted/.test(b)));
+check('exclusions read the same from both directions',
+  Object.keys(MP.EXCLUDES).every((a) => MP.EXCLUDES[a].every(
+    (b) => MP.conflicts(a, [b]).length === 1 && MP.conflicts(b, [a]).length === 1)));
 
 console.log(`\n  ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

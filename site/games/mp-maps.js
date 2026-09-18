@@ -146,6 +146,57 @@
       if (a) { a.name = name || 'mp'; solids.push(a); }
       return a;
     }
+
+    /* ================================================================
+       SOMETHING YOU CAN TAKE DOWN
+       ================================================================
+       The engine has had Voronoi fracture, stress accumulation and a
+       chunk pool since before any of these maps were built, and not
+       one piece of any of them used it. Every wall on every map was
+       as solid as the cliff behind it.
+
+       WHAT IS AND IS NOT FRAGILE, and the rule matters more than the
+       list. Anything you STAND on or that holds the map's shape is
+       permanent: floors, roofs, stairs, the edge. Anything that is
+       only in the way is fragile: interior partitions, sheds, crates,
+       pallets, the sandbags. So a rocket into a building opens it up
+       and leaves cover where the wall was, and nobody ever drops
+       through a floor that has been shot away or ends up standing
+       outside the map.
+
+       `health` is in solid hits and `threshold` is the impulse below
+       which nothing registers at all -- which is what stops a wall
+       crumbling because somebody walked into it. Rifle rounds carry
+       nowhere near it; a rocket carries several times it.
+
+       The chunks live for twenty seconds and then go, because the
+       rubble IS the cover for the fight that is happening now and a
+       map carpeted with every wall anybody has ever broken is a map
+       that runs at nine frames a second by the third round. */
+    function frail(x0, x1, y0, y1, z0, z1, material, name, spec) {
+      if (x1 - x0 < 0.001 || y1 - y0 < 0.001 || z1 - z0 < 0.001) return null;
+      var w = x1 - x0, h = y1 - y0, d = z1 - z0;
+      var vol = w * h * d;
+      var S = spec || {};
+      var a = game.box({
+        at: [(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2],
+        size: [w, h, d], material: material, static: true,
+        breakable: {
+          /* Bigger pieces take more to bring down, and get more chunks
+             when they do -- but both are capped, because a twelve-metre
+             wall shattered into ninety pieces is ninety rigid bodies
+             in one frame. */
+          health: S.health != null ? S.health : Math.max(1, Math.min(4, vol / 3.0)),
+          threshold: S.threshold != null ? S.threshold : 2600,
+          pieces: S.pieces != null ? S.pieces : Math.max(5, Math.min(14, Math.round(vol * 1.6))),
+          pattern: S.pattern || 'uniform',
+          chunkLifetime: S.chunkLifetime != null ? S.chunkLifetime : 20,
+          maxGeneration: 0,
+        },
+      });
+      if (a) { a.name = name || 'mp-frail'; a.__frail = true; solids.push(a); }
+      return a;
+    }
     function deco(x0, x1, y0, y1, z0, z1, material, name) {
       if (x1 - x0 < 0.001 || y1 - y0 < 0.001 || z1 - z0 < 0.001) return null;
       var a = game.box({
@@ -167,7 +218,11 @@
        cube. Always one of the three cover heights. */
     function crate(x, z, w, d, h, material, name) {
       var m = material || mats.wood;
-      slab(x - w / 2, x + w / 2, 0, h, z - d / 2, z + d / 2, m, name || 'crate');
+      /* A wooden crate is the most obviously breakable thing on any of
+         these maps and it was the most solid. Low threshold: a grenade
+         beside it should do it, not only a rocket. */
+      frail(x - w / 2, x + w / 2, 0, h, z - d / 2, z + d / 2, m, name || 'crate',
+        { health: 1, threshold: 1100, pieces: 9, chunkLifetime: 14 });
       deco(x - w / 2 - 0.03, x + w / 2 + 0.03, h - 0.06, h, z - d / 2 - 0.03, z + d / 2 + 0.03, mats.woodDark, 'crate-lid');
       deco(x - w / 2 - 0.03, x + w / 2 + 0.03, h * 0.42, h * 0.52, z - d / 2 - 0.03, z + d / 2 + 0.03, mats.woodDark, 'crate-batten');
     }
@@ -194,8 +249,9 @@
       for (var i = 0; i < courses; i++) {
         var t = i / courses, y0 = t * top, y1 = (i + 1) / courses * top;
         var inset = i * 0.10, jog = (i % 2) * 0.09;
-        if (alongZ) slab(x0 - 0.32 + inset, x0 + 0.32 - inset, y0, y1, z - (x1 - x0) / 2 + jog, z + (x1 - x0) / 2 + jog, mats.sand, 'sandbag');
-        else slab(x0 + inset + jog, x1 - inset + jog, y0, y1, z - 0.32 + inset, z + 0.32 - inset, mats.sand, 'sandbag');
+        var SB = { health: 1, threshold: 1600, pieces: 6, chunkLifetime: 12 };
+        if (alongZ) frail(x0 - 0.32 + inset, x0 + 0.32 - inset, y0, y1, z - (x1 - x0) / 2 + jog, z + (x1 - x0) / 2 + jog, mats.sand, 'sandbag', SB);
+        else frail(x0 + inset + jog, x1 - inset + jog, y0, y1, z - 0.32 + inset, z + 0.32 - inset, mats.sand, 'sandbag', SB);
       }
     }
 
@@ -241,15 +297,27 @@
        This is the single most used thing in the kit, because a building
        you can only look at is scenery and a building you can fight
        through is a map. */
-    function wall(x0, x1, z0, z1, h, material, gaps, name) {
+    /* `opts.frail` makes every piece of the wall breakable. It is a
+       wall-level flag rather than a separate function because a wall
+       is already cut into pieces round its doors and windows, and the
+       pieces are what break. */
+    function wall(x0, x1, z0, z1, h, material, gaps, name, opts) {
       var alongX = (x1 - x0) > (z1 - z0);
       var a0 = alongX ? x0 : z0, a1 = alongX ? x1 : z1;
       var cuts = (gaps || []).slice().sort(function (p, q) { return p[0] - q[0]; });
       var at = a0;
+      var mk = (opts && opts.frail) ? frail : slab;
+      var sp = opts && opts.frail && typeof opts.frail === 'object' ? opts.frail : null;
       function piece(p0, p1, y0, y1) {
         if (p1 - p0 < 0.01 || y1 - y0 < 0.01) return;
-        if (alongX) slab(p0, p1, y0, y1, z0, z1, material, name || 'wall');
-        else slab(x0, x1, y0, y1, p0, p1, material, name || 'wall');
+        /* A LINTEL IS NOT A PARTITION. The strip over a doorway is
+           holding the wall above it up, and dropping it on its own
+           leaves a hole with a floating wall over it. Lintels stay
+           solid even in a fragile wall. */
+        var lintel = y0 > 1.6;
+        var f = (mk === frail && !lintel) ? frail : slab;
+        if (alongX) f(p0, p1, y0, y1, z0, z1, material, name || 'wall', sp);
+        else f(x0, x1, y0, y1, p0, p1, material, name || 'wall', sp);
       }
       cuts.forEach(function (g) {
         var from = Math.max(a0, g[0]), to = Math.min(a1, g[1]);
@@ -376,7 +444,7 @@
 
     return {
       game: game, mats: mats, solids: solids, decos: decos, COVER: COVER, screenPair: screenPair,
-      slab: slab, deco: deco, post: post, crate: crate, jersey: jersey,
+      slab: slab, frail: frail, deco: deco, post: post, crate: crate, jersey: jersey,
       sandbags: sandbags, barrel: barrel, container: container, wall: wall,
       stair: stair, fence: fence, car: car, deck: deck,
     };
@@ -466,10 +534,10 @@
     K.sandbags(-37.5, -31.5, -2.0, false);
     K.sandbags(-37.5, -31.5, 12.0, false);
     /* Pump house, at the far end of the lane. */
-    K.wall(-50, -42, 22, 22.4, C.storey, m.brick, [[-47.5, -44.5]], 'pump-wall');
-    K.wall(-50, -42, 29.6, 30, C.storey, m.brick, [[-48, -45]], 'pump-wall');
+    K.wall(-50, -42, 22, 22.4, C.storey, m.brick, [[-47.5, -44.5]], 'pump-wall', { frail: true });
+    K.wall(-50, -42, 29.6, 30, C.storey, m.brick, [[-48, -45]], 'pump-wall', { frail: true });
     K.wall(-50.4, -50, 22, 30, C.storey, m.brick, [], 'pump-wall');
-    K.wall(-42, -41.6, 22, 30, C.storey, m.brick, [[24.5, 27.5]], 'pump-wall');
+    K.wall(-42, -41.6, 22, 30, C.storey, m.brick, [[24.5, 27.5]], 'pump-wall', { frail: true });
     K.slab(-50.6, -41.4, C.storey, C.storey + 0.25, 21.8, 30.2, m.concrete, 'pump-roof');
 
     /* ---- the cliff, and the walk along the top of it ---- */
@@ -599,7 +667,7 @@
     K.slab(LX0 - 0.6, LX1 + 0.6, LH, LH + 0.4, LZ0 - 0.6, LZ1 + 0.6, m.concrete, 'lobby-roof');
     /* The corridor: a spine down the back of the lobby with two ways
        into the room, so the building is not one box. */
-    K.wall(LX0 + 7, LX0 + 7.4, LZ0 + 1, LZ1 - 1, LH, m.plaster, [[-14, -8], [5, 11]], 'corridor-wall');
+    K.wall(LX0 + 7, LX0 + 7.4, LZ0 + 1, LZ1 - 1, LH, m.plaster, [[-14, -8], [5, 11]], 'corridor-wall', { frail: true });
     /* Reception -- a bomb site with a desk in front of it and a way in
        from two sides. */
     K.slab(-44, -34, 0, 1.15, -8, -6, m.woodDark, 'reception-desk');
@@ -629,10 +697,10 @@
 
     /* ---- right lane: the cabanas and the lake path ---- */
     for (var cz = -26; cz <= 26; cz += 17) {
-      K.wall(26, 38, cz - 5, cz - 4.6, 3.0, m.plaster, [[30, 34]], 'cabana');
-      K.wall(26, 38, cz + 4.6, cz + 5, 3.0, m.plaster, [[30, 34]], 'cabana');
-      K.wall(25.6, 26, cz - 5, cz + 5, 3.0, m.plaster, [], 'cabana');
-      K.wall(38, 38.4, cz - 5, cz + 5, 3.0, m.plaster, [[cz - 2, cz + 2]], 'cabana');
+      K.wall(26, 38, cz - 5, cz - 4.6, 3.0, m.plaster, [[30, 34]], 'cabana', { frail: true });
+      K.wall(26, 38, cz + 4.6, cz + 5, 3.0, m.plaster, [[30, 34]], 'cabana', { frail: true });
+      K.wall(25.6, 26, cz - 5, cz + 5, 3.0, m.plaster, [], 'cabana', { frail: true });
+      K.wall(38, 38.4, cz - 5, cz + 5, 3.0, m.plaster, [[cz - 2, cz + 2]], 'cabana', { frail: true });
       K.slab(25.2, 38.8, 3.0, 3.25, cz - 5.4, cz + 5.4, m.roof, 'cabana-roof');
       K.deco(31, 33, 0, 0.9, cz - 1, cz + 1, m.canvas, 'lounger');
     }
@@ -642,10 +710,10 @@
     K.car(42, 30, true, m.paintBlue);
     /* The plant room -- the second site, indoors, small, and with one
        door and one window, so holding it is a real decision. */
-    K.wall(15, 25, 22, 22.4, 3.2, m.brickPale, [[18, 21]], 'plant');
-    K.wall(15, 25, 29.6, 30, 3.2, m.brickPale, [[19, 22, 1.1, 2.4]], 'plant');
-    K.wall(14.6, 15, 22, 30, 3.2, m.brickPale, [], 'plant');
-    K.wall(25, 25.4, 22, 30, 3.2, m.brickPale, [[24, 27]], 'plant');
+    K.wall(15, 25, 22, 22.4, 3.2, m.brickPale, [[18, 21]], 'plant', { frail: true });
+    K.wall(15, 25, 29.6, 30, 3.2, m.brickPale, [[19, 22, 1.1, 2.4]], 'plant', { frail: true });
+    K.wall(14.6, 15, 22, 30, 3.2, m.brickPale, [], 'plant', { frail: true });
+    K.wall(25, 25.4, 22, 30, 3.2, m.brickPale, [[24, 27]], 'plant', { frail: true });
     K.slab(14.4, 25.6, 3.2, 3.45, 21.8, 30.2, m.concrete, 'plant-roof');
     K.slab(17, 20, 0, 1.4, 27, 29, m.steelDark, 'pump');
     K.barrel(22.5, 24.0); K.barrel(23.4, 25.0);
@@ -734,7 +802,7 @@
     K.wall(BX0, BX1, BZ1 - 0.4, BZ1, BH, m.brick, [[-27, -23, 1.0, 2.6]], 'bakery-wall');
     K.wall(BX1 - 0.4, BX1, BZ0, BZ1, BH, m.brick, [[-2, 3], [6, 11, 1.0, 2.6]], 'bakery-wall');
     K.wall(BX0 - 0.4, BX0, BZ0, BZ1, BH, m.brick, [[2, 6]], 'bakery-wall');
-    K.wall(BX0, BX1, 4, 4.4, BH, m.plaster, [[-27, -23]], 'bakery-divide');
+    K.wall(BX0, BX1, 4, 4.4, BH, m.plaster, [[-27, -23]], 'bakery-divide', { frail: true });
     K.slab(BX0 - 0.6, BX1 + 0.6, BH, BH + 0.35, BZ0 - 0.6, BZ1 + 0.6, m.roof, 'bakery-roof');
     K.slab(BX1 - 6, BX1 - 1, 0, 1.10, -4, -3, m.woodDark, 'counter');
     /* The ovens. */
@@ -746,7 +814,7 @@
     /* The alley, and the garden walls that make it. */
     K.slab(-40, -33, -0.58, 0.06, -EDGE + 6, EDGE - 6, m.wideConcrete, 'alley');
     for (var gz = -46; gz <= 46; gz += 15) {
-      K.wall(-56, -40.4, gz - 0.25, gz + 0.25, C.wall, m.brick, [[-50, -47]], 'garden-wall');
+      K.wall(-56, -40.4, gz - 0.25, gz + 0.25, C.wall, m.brick, [[-50, -47]], 'garden-wall', { frail: true });
       K.slab(-56, -40.4, C.wall, C.wall + 0.12, gz - 0.32, gz + 0.32, m.kerb, 'wall-cap');
     }
     K.wall(-33.2, -32.8, -EDGE + 6, EDGE - 6, C.wall, m.brick,
@@ -757,10 +825,10 @@
     K.crate(-36.5, 20, 1.4, 1.4, C.low, m.wood);
     K.barrel(-38.5, 8); K.barrel(-37.6, 9.0);
     /* A shed you can shoot from, at the top of the alley. */
-    K.wall(-50, -43, 34, 34.3, 2.6, m.woodDark, [[-48, -45]], 'shed');
-    K.wall(-50, -43, 40.7, 41, 2.6, m.woodDark, [[-49, -46, 1.0, 2.0]], 'shed');
-    K.wall(-50.3, -50, 34, 41, 2.6, m.woodDark, [], 'shed');
-    K.wall(-43, -42.7, 34, 41, 2.6, m.woodDark, [[36, 39]], 'shed');
+    K.wall(-50, -43, 34, 34.3, 2.6, m.woodDark, [[-48, -45]], 'shed', { frail: true });
+    K.wall(-50, -43, 40.7, 41, 2.6, m.woodDark, [[-49, -46, 1.0, 2.0]], 'shed', { frail: true });
+    K.wall(-50.3, -50, 34, 41, 2.6, m.woodDark, [], 'shed', { frail: true });
+    K.wall(-43, -42.7, 34, 41, 2.6, m.woodDark, [[36, 39]], 'shed', { frail: true });
     K.slab(-50.6, -42.4, 2.6, 2.8, 33.8, 41.2, m.roof, 'shed-roof');
 
     /* ---- right lane: the garage, the yard and the church ---- */
