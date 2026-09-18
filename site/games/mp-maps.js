@@ -112,8 +112,20 @@
     sand: { color: 0xd8cfbc, texture: 'sand', roughness: 0.98, metalness: 0, uvScale: 3 },
     tile: { color: 0xc4cad0, texture: 'tile', roughness: 0.42, metalness: 0, uvScale: 6 },
     tilePool: { color: 0xbcd8e2, texture: 'tile', roughness: 0.38, metalness: 0, uvScale: 8 },
-    /* Roof tile is the brick recipe too, so the same rule applies. */
-    roof: { color: 0xd8cfc8, texture: 'brick', roughness: 0.94, metalness: 0, uvScale: 12 },
+    /* ROOF TILE WAS BUILT ON THE ONE RECIPE THIS FILE SAYS NOT TO USE
+       FOR IT. The note fifty lines above is explicit: the brick recipe
+       bakes to #80493b, a tint only ever multiplies DOWN, and anything
+       meant to read pale is built on smooth or concrete instead. The
+       old line even acknowledged it -- "the same rule applies" -- and
+       then broke it anyway with a 0xd8cfc8 tint on brick, which is how
+       every roof on Resort came out near black from above.
+
+       Terracotta on the concrete recipe instead: concrete bakes to
+       #bebbb3, so 0xc86a44 lands around #955241, which is a clay
+       pantile. The slate is for the flat roofs that are not tiled at
+       all. */
+    roof: { color: 0xc86a44, texture: 'concrete', roughness: 0.94, metalness: 0, uvScale: 12 },
+    roofSlate: { color: 0x8e949c, texture: 'concrete', roughness: 0.88, metalness: 0, uvScale: 10 },
     canvas: { color: 0xe4e0d4, texture: 'fabric', roughness: 0.97, metalness: 0, uvScale: 3 },
     rock: { color: 0xe8e4dc, texture: 'rock', roughness: 0.96, metalness: 0, uvScale: 7 },
 
