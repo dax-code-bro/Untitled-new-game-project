@@ -123,6 +123,54 @@ const pct = (a, b) => +(((b - a) / (a || 1)) * 100).toFixed(1);
     for (let i = 0; i < 8; i++) G.step(1 / 60);
     R.fog.skyBlend = 0; G.step(1 / 60); out.nearOff = whole();
     R.fog.skyBlend = kb; G.step(1 / 60); out.nearOn = whole();
+
+    /* ---- PBR: does the normal map reach the shading? ----------------- */
+    /* MEASURED WITHOUT THE LIGHTING, on purpose.
+     *
+       The complaint that started this was "the brick looks flat", and
+       four attempts to measure it through the lit image all came back
+       near zero -- which reads like a broken pipeline and is not one.
+       Under Coastline's authored weather (dusk, overcast) skyIrradiance
+       varies slowly with the normal, so tilting the normal changes the
+       PICTURE very little no matter how good the map is. That is a
+       lighting property, not a pipeline fault, and a test that went
+       through the lighting would be testing the weather.
+
+       Debug mode 2 writes the world normal straight out as colour: no
+       sun, no shadow, no tonemap. What it answers is the only question
+       this file can usefully lock down -- that the map is generated,
+       the tangent frame survives to the fragment, and uNormalStrength
+       moves N. If tangents are ever dropped from a mesh, or the TBN
+       goes degenerate, or the generator's height field goes flat, this
+       is what notices. */
+    const allMats = [];
+    for (const a of G.actors) if (a && a.material && !allMats.includes(a.material)) allMats.push(a.material);
+    const authored = allMats.map((m) => m.normalStrength);
+    const hfOf = () => {
+      const x0 = Math.floor(W * 0.3), x1 = Math.floor(W * 0.7);
+      const y0 = Math.floor(H * 0.3), y1 = Math.floor(H * 0.7);
+      const w = x1 - x0, h = y1 - y0;
+      const px = new Uint8Array(w * h * 4);
+      gl.readPixels(x0, y0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      let hf = 0, c = 0;
+      for (let y = 0; y < h; y++) for (let x = 0; x < w - 1; x++) {
+        const i = (y * w + x) * 4; hf += Math.abs(px[i + 4] - px[i]); c++;
+      }
+      return +(hf / c).toFixed(3);
+    };
+    R.debugMode = 2;
+    // Looking down at the ground, which is the surface with the most
+    // relief in it and the one a player spends the most time near.
+    T.teleport(-10, 1.5, -10);
+    T.look(0, 0.85);
+    for (let i = 0; i < 6; i++) G.step(1 / 60);
+    allMats.forEach((m) => { m.normalStrength = 0; });
+    G.step(1 / 60); out.nmOff = hfOf();
+    allMats.forEach((m, i) => { m.normalStrength = authored[i]; });
+    G.step(1 / 60); out.nmOn = hfOf();
+    R.debugMode = 0;
+    out.materials = allMats.length;
+    out.withMaps = allMats.filter((m) => m.maps).length;
     return out;
   });
 
@@ -164,6 +212,14 @@ const pct = (a, b) => +(((b - a) / (a || 1)) * 100).toFixed(1);
   const dn = Math.abs(pct(r.nearOff.mean, r.nearOn.mean));
   check('a near surface does not move', dn < 5,
     `near mean moved ${dn}% (${r.nearOff.mean} to ${r.nearOn.mean})`);
+
+  /* THE NORMAL MAP REACHES THE SHADING. Measured off the raw normal
+     buffer, so this says nothing about how the weather shows it. */
+  check('every material carries its maps', r.withMaps === r.materials,
+    `${r.withMaps} of ${r.materials} have albedo/normal/ORM`);
+  check('and the normal map actually moves the surface normal',
+    pct(r.nmOff, r.nmOn) > 50,
+    `normal-buffer detail ${pct(r.nmOff, r.nmOn)}% (${r.nmOff} to ${r.nmOn})`);
 
   check('no page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
   console.log(`\n  ${passed} passed, ${failed} failed`);
