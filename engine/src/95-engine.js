@@ -376,6 +376,9 @@ class Engine {
     // The reflection environment for anything under a roof. Left alone by
     // the presets, since only a game with interiors knows it needs one.
     if (cfg.room != null) parseColor(cfg.room, r.sky.room);
+    /* How much sky a shadowed point loses. A map that is almost all
+       interior wants more of this than one played in a field. */
+    if (cfg.skyOcclusion != null) r.sky.occlusion = cfg.skyOcclusion;
     this.skyName = typeof name === 'string' ? name : 'custom';
     return this;
   }

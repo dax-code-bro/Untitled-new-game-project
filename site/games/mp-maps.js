@@ -74,12 +74,30 @@
        rust     #a99388   rock  #7d7a73   grass #265718  dirt #d0cbc3
        sand     #bab3a6   fabric #e0e2e7  smooth #ffffff tile #a8acaf
 
-     And uvScale is tiles across a FACE, not tiles per metre. At 5, a
-     116-metre terrace slab is tiled in twenty-three metre squares,
-     which is what made Resort's floor a white waffle. Every surface
-     that covers the whole map gets its own material with the uvScale it
-     needs -- the `wide` set below -- rather than sharing one with a
-     two-metre crate. */
+     AND uvScale USED TO BE TILES ACROSS A FACE, not tiles per metre,
+     because a box mesh is a unit cube whose UVs run 0..1 however big
+     the thing is scaled to be. At 5, a 116-metre terrace slab was
+     tiled in twenty-three metre squares -- Resort's floor as a white
+     waffle -- while a two-metre crate on the same material got half-
+     metre squares. The workaround was the `wide` set: a second copy of
+     each material carrying a uvScale in the thirties.
+
+     It was a workaround and it only ever covered the surfaces somebody
+     remembered to move onto it. Anything in between -- a twelve-metre
+     hotel wall, a nine-metre hangar door, a four-metre roof -- kept
+     the small-object number and came out smeared, which is exactly the
+     report that a wall beside a detailed one looks "like maths".
+
+     So every material here now sets `worldUv` and uvScale is TILES PER
+     METRE. The texture is projected from world space down the
+     surface's dominant axis, so a crate, a wall and a runway carry the
+     same grain, a slab that is twelve metres one way and three the
+     other is no longer stretched four to one, and there is no size a
+     surface can be that gets it wrong. The numbers below are the
+     physical size of one repeat of each recipe: brick at 1.11 is a
+     0.9-metre tile, which is four bricks across by twelve courses
+     down -- a 225 x 75 millimetre brick, the real one; wood at 0.9 is
+     six boards in 1.1 metres, so a 185-millimetre board. */
   var MAT = {
     /* Asphalt is the one surface that IS meant to be dark, so it keeps
        a tint below the others -- but 0x7a7772 on a recipe that bakes
@@ -87,31 +105,43 @@
        direct sun, and a road you cannot see is a lane you cannot
        read. 0xa8a5a0 is still plainly darker than the pavement beside
        it and still there in shadow. */
-    asphalt: { color: 0xa8a5a0, texture: 'concrete', roughness: 0.96, metalness: 0, uvScale: 8 },
-    concrete: { color: 0xe6e2da, texture: 'concrete', roughness: 0.93, metalness: 0, uvScale: 5, normalStrength: 0.4 },
-    concretePale: { color: 0xf4f0e8, texture: 'concrete', roughness: 0.90, metalness: 0, uvScale: 6 },
-    kerb: { color: 0xeeeae2, texture: 'concrete', roughness: 0.88, metalness: 0, uvScale: 4 },
+    asphalt: { color: 0xa8a5a0, texture: 'concrete', roughness: 0.96, metalness: 0, uvScale: 0.4, worldUv: true },
+    concrete: { color: 0xe6e2da, texture: 'concrete', roughness: 0.93, metalness: 0, uvScale: 0.5, normalStrength: 0.4, worldUv: true },
+    concretePale: { color: 0xf4f0e8, texture: 'concrete', roughness: 0.90, metalness: 0, uvScale: 0.5, worldUv: true },
+    kerb: { color: 0xeeeae2, texture: 'concrete', roughness: 0.88, metalness: 0, uvScale: 1, worldUv: true },
     /* Red brick, and the recipe is already red: the tint runs near
        white so the wall is not pulled darker still. */
-    brick: { color: 0xf2ece4, texture: 'brick', roughness: 0.95, metalness: 0, uvScale: 9 },
-    /* Cream render over brick. Built on smooth, because the brick
-       recipe cannot be made pale by any tint that exists. */
-    brickPale: { color: 0xd6ccba, texture: 'smooth', roughness: 0.93, metalness: 0, uvScale: 5 },
-    plaster: { color: 0xe4ddcc, texture: 'smooth', roughness: 0.94, metalness: 0, uvScale: 4 },
-    wood: { color: 0xb49a7c, texture: 'wood', roughness: 0.94, metalness: 0, uvScale: 4 },
-    woodDark: { color: 0x7a6650, texture: 'wood', roughness: 0.95, metalness: 0, uvScale: 6 },
-    steel: { color: 0xd0d6da, texture: 'metal', roughness: 0.54, metalness: 1, uvScale: 6 },
-    steelDark: { color: 0x9aa2a8, texture: 'metal', roughness: 0.62, metalness: 1, uvScale: 4 },
-    paintGreen: { color: 0x59654f, texture: 'metal', roughness: 0.74, metalness: 0, uvScale: 4 },
-    paintRed: { color: 0xa8493c, texture: 'metal', roughness: 0.76, metalness: 0, uvScale: 4 },
-    paintBlue: { color: 0x45596b, texture: 'metal', roughness: 0.76, metalness: 0, uvScale: 4 },
-    rust: { color: 0xe4c8a8, texture: 'rust', roughness: 0.88, metalness: 0.28, uvScale: 5 },
-    glass: { color: 0xa8c4cc, texture: 'smooth', roughness: 0.12, metalness: 0.1, opacity: 0.32 },
-    grass: { color: 0xc4d4b0, texture: 'grass', roughness: 0.97, metalness: 0, uvScale: 6, subsurface: 0.3 },
-    dirt: { color: 0xa89f92, texture: 'dirt', roughness: 0.98, metalness: 0, uvScale: 6 },
-    sand: { color: 0xd8cfbc, texture: 'sand', roughness: 0.98, metalness: 0, uvScale: 3 },
-    tile: { color: 0xc4cad0, texture: 'tile', roughness: 0.42, metalness: 0, uvScale: 6 },
-    tilePool: { color: 0xbcd8e2, texture: 'tile', roughness: 0.38, metalness: 0, uvScale: 8 },
+    brick: { color: 0xf2ece4, texture: 'brick', roughness: 0.95, metalness: 0, uvScale: 1.11, worldUv: true },
+    /* Cream render over brick, and plain render. BOTH USED TO BE BUILT
+       ON `smooth`, which is a recipe that writes one constant: no
+       albedo variation, no relief, no roughness break. The reasoning
+       was sound as far as it went -- the brick recipe is too dark to be
+       tinted pale -- but the conclusion was a thirty-metre hotel wall
+       rendered as a single flat fill, which is the surface the report
+       about walls that look "just like maths" was actually standing in
+       front of. It was never the tiling on that wall. There was
+       nothing on it to tile.
+
+       There is a real plaster recipe now: float sweep, suction mottle,
+       grit and blowholes, baking near 0.90 white so a pale tint still
+       lands pale. The hexes are lifted a touch to pay for the 10 per
+       cent the recipe costs against a flat 1.0. */
+    brickPale: { color: 0xe2d8c4, texture: 'plaster', roughness: 0.93, metalness: 0, uvScale: 0.5, worldUv: true },
+    plaster: { color: 0xf0e9d8, texture: 'plaster', roughness: 0.94, metalness: 0, uvScale: 0.5, worldUv: true },
+    wood: { color: 0xb49a7c, texture: 'wood', roughness: 0.94, metalness: 0, uvScale: 0.9, worldUv: true },
+    woodDark: { color: 0x7a6650, texture: 'wood', roughness: 0.95, metalness: 0, uvScale: 0.9, worldUv: true },
+    steel: { color: 0xd0d6da, texture: 'metal', roughness: 0.54, metalness: 1, uvScale: 0.67, worldUv: true },
+    steelDark: { color: 0x9aa2a8, texture: 'metal', roughness: 0.62, metalness: 1, uvScale: 0.67, worldUv: true },
+    paintGreen: { color: 0x59654f, texture: 'metal', roughness: 0.74, metalness: 0, uvScale: 0.55, worldUv: true },
+    paintRed: { color: 0xa8493c, texture: 'metal', roughness: 0.76, metalness: 0, uvScale: 0.55, worldUv: true },
+    paintBlue: { color: 0x45596b, texture: 'metal', roughness: 0.76, metalness: 0, uvScale: 0.55, worldUv: true },
+    rust: { color: 0xe4c8a8, texture: 'rust', roughness: 0.88, metalness: 0.28, uvScale: 0.85, worldUv: true },
+    glass: { color: 0xa8c4cc, texture: 'smooth', roughness: 0.12, metalness: 0.1, opacity: 0.32, uvScale: 0.5, worldUv: true },
+    grass: { color: 0xc4d4b0, texture: 'grass', roughness: 0.97, metalness: 0, uvScale: 0.67, subsurface: 0.3, worldUv: true },
+    dirt: { color: 0xa89f92, texture: 'dirt', roughness: 0.98, metalness: 0, uvScale: 0.5, worldUv: true },
+    sand: { color: 0xd8cfbc, texture: 'sand', roughness: 0.98, metalness: 0, uvScale: 0.67, worldUv: true },
+    tile: { color: 0xc4cad0, texture: 'tile', roughness: 0.42, metalness: 0, uvScale: 0.42, worldUv: true },
+    tilePool: { color: 0xbcd8e2, texture: 'tile', roughness: 0.38, metalness: 0, uvScale: 0.83, worldUv: true },
     /* ROOF TILE WAS BUILT ON THE ONE RECIPE THIS FILE SAYS NOT TO USE
        FOR IT. The note fifty lines above is explicit: the brick recipe
        bakes to #80493b, a tint only ever multiplies DOWN, and anything
@@ -124,10 +154,10 @@
        #bebbb3, so 0xc86a44 lands around #955241, which is a clay
        pantile. The slate is for the flat roofs that are not tiled at
        all. */
-    roof: { color: 0xc86a44, texture: 'concrete', roughness: 0.94, metalness: 0, uvScale: 12 },
-    roofSlate: { color: 0x8e949c, texture: 'concrete', roughness: 0.88, metalness: 0, uvScale: 10 },
-    canvas: { color: 0xe4e0d4, texture: 'fabric', roughness: 0.97, metalness: 0, uvScale: 3 },
-    rock: { color: 0xe8e4dc, texture: 'rock', roughness: 0.96, metalness: 0, uvScale: 7 },
+    roof: { color: 0xc86a44, texture: 'concrete', roughness: 0.94, metalness: 0, uvScale: 1, worldUv: true },
+    roofSlate: { color: 0x8e949c, texture: 'concrete', roughness: 0.88, metalness: 0, uvScale: 0.6, worldUv: true },
+    canvas: { color: 0xe4e0d4, texture: 'fabric', roughness: 0.97, metalness: 0, uvScale: 2, worldUv: true },
+    rock: { color: 0xe8e4dc, texture: 'rock', roughness: 0.96, metalness: 0, uvScale: 0.33, worldUv: true },
 
     /* ---- the wide set: surfaces that cover the whole map ----
      *
@@ -160,12 +190,12 @@
        on an already-mid recipe. The recipes carry the colour -- so the
        tints run near white now and the ground is allowed to be as
        bright as the light on it. */
-    wideAsphalt: { color: 0xc8c6c2, texture: 'concrete', roughness: 0.96, metalness: 0, uvScale: 34 },
-    wideConcrete: { color: 0xf0ede8, texture: 'concrete', roughness: 0.93, metalness: 0, uvScale: 40 },
-    wideDirt: { color: 0xe8e2d6, texture: 'dirt', roughness: 0.98, metalness: 0, uvScale: 48 },
-    wideTile: { color: 0xeef2f6, texture: 'tile', roughness: 0.42, metalness: 0, uvScale: 44 },
-    wideGrass: { color: 0xdcecc8, texture: 'grass', roughness: 0.97, metalness: 0, uvScale: 40, subsurface: 0.3 },
-    wideRock: { color: 0xf0ece4, texture: 'rock', roughness: 0.96, metalness: 0, uvScale: 30 },
+    wideAsphalt: { color: 0xc8c6c2, texture: 'concrete', roughness: 0.96, metalness: 0, uvScale: 0.4, worldUv: true },
+    wideConcrete: { color: 0xf0ede8, texture: 'concrete', roughness: 0.93, metalness: 0, uvScale: 0.5, worldUv: true },
+    wideDirt: { color: 0xe8e2d6, texture: 'dirt', roughness: 0.98, metalness: 0, uvScale: 0.5, worldUv: true },
+    wideTile: { color: 0xeef2f6, texture: 'tile', roughness: 0.42, metalness: 0, uvScale: 0.42, worldUv: true },
+    wideGrass: { color: 0xdcecc8, texture: 'grass', roughness: 0.97, metalness: 0, uvScale: 0.67, subsurface: 0.3, worldUv: true },
+    wideRock: { color: 0xf0ece4, texture: 'rock', roughness: 0.96, metalness: 0, uvScale: 0.33, worldUv: true },
   };
 
   /* WHY THE DECORATIVE GROUND SITS AT -0.08 AND NOT AT 0.

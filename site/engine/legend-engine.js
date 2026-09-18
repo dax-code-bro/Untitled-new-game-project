@@ -2033,6 +2033,10 @@ const TextureLib = {
        surface as large as the battlefield the ground fizzed. Same
        reasoning as the note on metal above. */
     dirt: 1.4, sand: 1.2, grass: 1.2,
+    /* Nearly flat. The relief that matters on render is the blowholes,
+       and they are deep in a height field that is otherwise almost
+       level -- push this up and the trowel sweep becomes corrugation. */
+    plaster: 0.9,
     /* Enough relief to give each toy an edge and not so much that the
        ripple under them turns into facets. */
     floaties: 1.0,
@@ -2083,8 +2087,22 @@ const TextureLib = {
     },
 
     brick(u, v, n, c) {
-      // Running bond: every other course shifts by half a brick.
-      const rows = 8, cols = 4;
+      /* Running bond: every other course shifts by half a brick.
+       *
+         TWELVE COURSES, NOT EIGHT, and the reason is the aspect ratio
+         rather than the count. A tile of 8 rows by 4 columns makes a
+         brick twice as wide as it is tall. A real brick, with its bed
+         joint, is 225 by 75 millimetres -- three to one. At 8 rows
+         there is no tile size at all that gives both the right brick
+         width and the right course height: pick the width and the
+         courses come out half as deep again as a real one, which is
+         what makes a rendered wall read as a games-console wall.
+
+         At 12 by 4 the tile is exactly three bricks tall for every one
+         it is wide, so a 0.9-metre tile is a 225 x 75 brick to the
+         millimetre. Which is why brick is set to 1.11 tiles per metre
+         wherever it is used. */
+      const rows = 12, cols = 4;
       const ry = v * rows;
       const row = Math.floor(ry);
       const offset = (row % 2) * 0.5;
@@ -2451,6 +2469,69 @@ const TextureLib = {
       c.rough = 0.8; c.ao = 1; c.h = 0.5;
     },
 
+    /* PLASTER, and why a pale wall could not be made out of any recipe
+       that already existed.
+     *
+       The rule this bank runs on is that a tint only ever multiplies
+       DOWN, so anything that has to read pale has to be built on a
+       recipe that is already pale. Until now the only pale recipe was
+       `smooth`, which is a constant: no albedo variation, no relief, no
+       roughness break. So every rendered wall, every hotel corridor and
+       every cabana in the game was a flat fill -- which is the whole of
+       the report that a wall beside a detailed one looks "just like
+       maths". It was not the tiling on those walls. There was nothing
+       on them to tile.
+
+       This is render, not paint: a thin cement skim, floated on with a
+       trowel and left. Four things make it read as that and not as a
+       grey rectangle, and all four are small on purpose, because
+       plaster IS subtle and the failure mode of a subtle material is
+       inventing texture it does not have.
+
+         THE FLOAT SWEEP, long and directional -- the arcs a trowel
+         leaves. Stretched 4:1 so it has a direction; a wall skimmed
+         with no direction at all looks poured.
+
+         SUCTION MOTTLE, the slow blotching where the backing pulled
+         water out of the mix at different rates. This is the one that
+         does most of the work at across-the-room distance, and it is
+         almost entirely a ROUGHNESS effect: the patches are the same
+         colour and a different sheen, which is exactly what you see on
+         a real wall and what a colour-only mottle never looks like.
+
+         GRIT, fine and dense, so there is something under a torch.
+
+         BLOWHOLES, rare, small and deep -- the air that did not get
+         out. One in a few hundred texels, and they are what tells you
+         the surface is a paste that set rather than a sheet.
+
+       Bakes near 0.90 white, so a tint puts it anywhere from that down
+       to a mid grey and the old pale hexes carry across unchanged. */
+    plaster(u, v, n, c) {
+      const sweep = n.fbm(u * 3.2, v * 12.8, 5.1, 3) * 0.5 + 0.5;
+      const mottle = n.fbm(u * 5.5, v * 5.5, 18.7, 4) * 0.5 + 0.5;
+      const grit = n.fbm(u * 120, v * 120, 41.3, 2) * 0.5 + 0.5;
+      /* Blowholes: the top of a sparse high-frequency field, so they
+         are isolated rather than a second noise laid over everything. */
+      const holeF = n.fbm(u * 64, v * 64, 77.9, 2) * 0.5 + 0.5;
+      const hole = Math.max(0, holeF - 0.82) / 0.18;
+
+      const base = 0.895 + (sweep - 0.5) * 0.045 + (grit - 0.5) * 0.022
+        - hole * 0.30;
+      /* Cement skim is faintly cool and faintly green; lime render is
+         warmer. Split the difference and let the material's tint say
+         which one this wall is. */
+      c.r = base * 0.995; c.g = base; c.b = base * 0.985;
+      /* The mottle lives here, not in the colour: suction patches are a
+         sheen difference of maybe 0.2 and a colour difference of almost
+         nothing. The sweep adds a little on top because a trowelled
+         pass burnishes what it touches. */
+      c.rough = clamp(0.78 + (mottle - 0.5) * 0.30 - (sweep - 0.5) * 0.10
+        + hole * 0.18, 0.42, 1);
+      c.ao = 1 - hole * 0.55 - (1 - mottle) * 0.04;
+      c.h = 0.55 + (sweep - 0.5) * 0.30 + (grit - 0.5) * 0.10 - hole * 0.9;
+    },
+
     /* FLOATIES. Coastline's upgrade finish: pool toys drifting across a
        baby-blue field.
        
@@ -2579,6 +2660,21 @@ class Material {
     this.transparent = this.opacity < 1 || !!opts.transparent;
     this.doubleSided = !!opts.doubleSided;
     this.uvScale = opts.uvScale != null ? opts.uvScale : 1;
+    /* WORLD-PROJECTED TILING, and what uvScale then means.
+     *
+       Off (the default): uvScale is tiles across a FACE, because a box
+       mesh is a unit cube whose UVs run 0..1 whatever it is scaled to.
+       That is right for a gun part and wrong for a building -- two
+       walls of the same material and different sizes get different
+       grain, and the big one reads as flat.
+
+       On: the texture is projected from world space down the surface's
+       dominant axis, and uvScale is TILES PER METRE. Every surface in
+       the world then carries the same grain at the same distance, and
+       a slab stretched twelve by three stops being stretched at all.
+       Meant for architecture and ground; not for anything that moves,
+       because a world projection slides across a body that walks. */
+    this.worldUv = !!opts.worldUv;
     this.normalStrength = opts.normalStrength != null ? opts.normalStrength : 1;
     /* How much fine grain this surface shows close up. 1 for anything
        with a real texture to it; 0 for the ones whose whole point is
@@ -2796,6 +2892,10 @@ uniform float uSkyIntensity;
    doing. This is the room itself: the lit walls a lamp is bouncing off are,
    to a mirror, the environment. */
 uniform vec3 uRoomAmbient;
+/* ---- sky occlusion from the sun shadow ----
+   How much of the sky a shadowed point is allowed to keep. See the
+   block where it is used, in the ambient term. */
+uniform float uSkyOcclusion;
 
 vec3 skyRadiance(vec3 dir){
   float up = dir.y;
@@ -3154,6 +3254,23 @@ uniform vec3 uEmissive;
 uniform float uOpacity;
 uniform float uUvScale;
 uniform float uNormalStrength;
+/* ---- world-projected UVs ----
+   A box mesh is a UNIT cube scaled by the actor, and its UVs run 0..1
+   across every face. So one uvScale means one tile across a face,
+   whatever size that face is: a two-metre crate and a hundred-and-
+   seventy-metre ground slab sharing a material get texel densities a
+   hundred times apart, and the big one reads as flat shading with a
+   smear on it. That is the whole of the "one wall is detailed and the
+   next is just maths" fault -- it was never the recipe.
+
+   With uWorldUv the texture is projected from world space down the
+   surface's dominant axis instead, and uvScale becomes TILES PER
+   METRE. A crate and a runway then carry the same grain, and a slab
+   that is twelve metres one way and three the other stops being
+   stretched three-to-one. The frame for the normal map has to come
+   from the same projection, not from the mesh tangents, or the relief
+   lights from the wrong direction on four faces out of six. */
+uniform int uWorldUv;
 /* ---- the detail layer ----
    Texel density, not more texture. See the block in main(). */
 uniform float uDetailScale;
@@ -3177,6 +3294,16 @@ layout(location=0) out vec4 outColor;
 
 void main(){
   vec2 uv = vUv * uUvScale;
+  /* The projection axis, kept because the tangent frame below needs
+     the same one. 0 = mesh UVs, 1 = +-X, 2 = +-Y, 3 = +-Z. */
+  int uvAxis = 0;
+  if (uWorldUv == 1) {
+    vec3 an = abs(normalize(vNormal));
+    vec3 wp = vWorldPos;
+    if (an.y >= an.x && an.y >= an.z) { uvAxis = 2; uv = wp.xz * uUvScale; }
+    else if (an.x >= an.z)            { uvAxis = 1; uv = wp.zy * uUvScale; }
+    else                              { uvAxis = 3; uv = wp.xy * uUvScale; }
+  }
 
   /* THE DETAIL LAYER.
    *
@@ -3244,8 +3371,31 @@ void main(){
 
   vec3 N = normalize(vNormal);
   if (uHasMaps == 1 && uNormalStrength > 0.001) {
-    vec3 T = normalize(vTangent.xyz - N * dot(N, vTangent.xyz));
-    vec3 B = cross(N, T) * vTangent.w;
+    vec3 T, B;
+    if (uvAxis != 0) {
+      /* Match the projection exactly: u along the first axis of the
+         pair the UV was built from, v along the second. Taking a cross
+         product instead gets it right on two of the three axes and
+         inside out on the third, because the three pairs are not all
+         right-handed -- xz, zy and xy. So both are named.
+
+         The sign flip is the back faces. Projecting world position
+         mirrors the texture on the -X, -Y and -Z sides, and a mirrored
+         normal map turns every bump into a dent. Flipping u with the
+         facing puts the relief back the right way up. */
+      float sgn = uvAxis == 2 ? (vNormal.y < 0.0 ? -1.0 : 1.0)
+                : uvAxis == 1 ? (vNormal.x < 0.0 ? -1.0 : 1.0)
+                              : (vNormal.z < 0.0 ? -1.0 : 1.0);
+      vec3 tw = uvAxis == 1 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+      vec3 bw = uvAxis == 2 ? vec3(0.0, 0.0, 1.0) : vec3(0.0, 1.0, 0.0);
+      vec3 t0 = tw * sgn - N * dot(N, tw * sgn);
+      T = dot(t0, t0) > 1e-8 ? normalize(t0) : normalize(cross(N, bw));
+      vec3 b0 = bw - N * dot(N, bw) - T * dot(T, bw);
+      B = dot(b0, b0) > 1e-8 ? normalize(b0) : cross(N, T);
+    } else {
+      T = normalize(vTangent.xyz - N * dot(N, vTangent.xyz));
+      B = cross(N, T) * vTangent.w;
+    }
     vec3 tn = texture(uNormalMap, uv).xyz * 2.0 - 1.0;
     tn.xy *= uNormalStrength;
     /* And the fine grain's own slope, added to the macro slope. Summing
@@ -3305,13 +3455,46 @@ void main(){
     color += diffuseColor * uSunColor * uSunIntensity * wrap * 0.55 * mix(0.35, 1.0, shadow);
   }
 
-  /* --- ambient from the sky --- */
-  vec3 irradiance = skyIrradiance(N);
+  /* --- ambient from the sky ---
+   *
+     SHADOWED POINTS SEE LESS SKY, and until this line they saw all of
+     it. The sky irradiance here is a hemisphere lookup on the normal
+     with nothing between it and the surface: a wall inside a room with
+     a roof on it got exactly the same ambient as the same wall out in
+     the open. Which is why every interior in the game -- the hotel
+     lobby, the bunker, the cottage -- rendered as flat grey fill. It
+     was not the textures on those walls and it was not the tiling. A
+     surface lit by a uniform hemisphere and nothing else has no shape,
+     whatever is painted on it.
+
+     Proper sky visibility means tracing the hemisphere, which this
+     engine is not going to do at sixty frames on a phone. But there is
+     already a buffer that knows what is above a point: the SUN SHADOW
+     MAP. Physically it answers a different question -- is the sun
+     blocked, not is the sky blocked -- and for the occluders that
+     actually matter here they are the same object. A roof blocks both.
+     A crate blocks both, from most of the sky it covers.
+
+     So a shadowed point keeps (1 - uSkyOcclusion) of its sky. Indoors
+     that is the roof putting the room in half light, which is what
+     makes lamps, muzzle flash and the light out of a doorway read as
+     light instead of as colour. Outdoors it is the reason a shadow on
+     a sunlit map looks like a shadow rather than a grey patch.
+
+     Two things are deliberately left out of it. The punctual lights,
+     because a torch in a dark room must not be dimmed by the roof that
+     makes the room dark. And uRoomAmbient, which is the floor under
+     the whole thing -- the term that stops an unlit interior going to
+     black. Specular gets three quarters of the attenuation rather than
+     all of it: a polished floor indoors still catches the doorway. */
+  float skyVis = mix(1.0 - uSkyOcclusion, 1.0, shadow);
+  vec3 irradiance = skyIrradiance(N) * skyVis;
   vec3 kS = fresnelSchlickRough(NoV, F0, rough);
   vec3 kD = (vec3(1.0) - kS) * (1.0 - metal);
   vec3 R = reflect(-V, N);
   // Rough surfaces reflect an increasingly averaged sky.
-  vec3 envSpec = mix(skyRadiance(R), skyIrradiance(N), rough * rough) + uRoomAmbient;
+  vec3 envSpec = mix(skyRadiance(R), skyIrradiance(N), rough * rough)
+    * mix(skyVis, 1.0, 0.25) + uRoomAmbient;
   color += (kD * diffuseColor * irradiance + envSpec * envBRDFApprox(F0, rough, NoV)) * ao;
 
   /* --- punctual lights --- */
@@ -4189,6 +4372,15 @@ class Renderer {
          Zero outdoors; a game with interiors sets it to roughly the colour
          and brightness of its lit walls. */
       room: new Vec3(0, 0, 0),
+      /* HOW MUCH SKY A SHADOWED POINT LOSES. The sun shadow map stands
+         in for sky visibility -- see the long note in the ambient term
+         of the surface shader. 0 is the old behaviour, where a room
+         with a roof on it was lit exactly like the yard outside; 1
+         would put anything the sun cannot reach on room ambient alone.
+         0.45 is enough that interiors read as interiors and a shadow
+         on a bright map reads as a shadow, and short of the point
+         where a shaded doorway becomes a hole. */
+      occlusion: 0.45,
     };
     this.fog = {
       color: new Vec3(0.62, 0.72, 0.85),
@@ -4396,6 +4588,7 @@ class Renderer {
     sh.f('uSunIntensity', this.sun.intensity);
     sh.f('uSkyIntensity', this.sky.intensity);
     sh.v3('uRoomAmbient', this.sky.room);
+    sh.f('uSkyOcclusion', this.sky.occlusion);
     sh.v3('uFogColor', this.fog.color);
     sh.f('uFogDensity', this.fog.density);
     sh.f('uFogHeight', this.fog.height);
@@ -4466,6 +4659,7 @@ class Renderer {
       mat.emissive.z * mat.emissiveStrength);
     sh.f('uOpacity', mat.opacity);
     sh.f('uUvScale', mat.uvScale);
+    sh.i('uWorldUv', mat.worldUv ? 1 : 0);
     sh.f('uNormalStrength', mat.normalStrength);
     sh.f('uDetail', mat.detail != null ? mat.detail : 1);
     sh.f('uDetailScale', this.detailScale);
@@ -14766,6 +14960,9 @@ class Engine {
     // The reflection environment for anything under a roof. Left alone by
     // the presets, since only a game with interiors knows it needs one.
     if (cfg.room != null) parseColor(cfg.room, r.sky.room);
+    /* How much sky a shadowed point loses. A map that is almost all
+       interior wants more of this than one played in a field. */
+    if (cfg.skyOcclusion != null) r.sky.occlusion = cfg.skyOcclusion;
     this.skyName = typeof name === 'string' ? name : 'custom';
     return this;
   }

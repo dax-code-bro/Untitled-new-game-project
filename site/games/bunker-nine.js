@@ -3923,15 +3923,15 @@ function placeOnBeach(game, S, P) {
   const E = S.escape;
   const B = E.beachAt;
   const M = (spec) => game.material(spec);
-  const sand = M({ color: 0xe8dcbe, texture: 'sand', roughness: 0.98, metalness: 0, uvScale: 24 });
+  const sand = M({ color: 0xe8dcbe, texture: 'sand', roughness: 0.98, metalness: 0, uvScale: 0.67, worldUv: true });
   /* Turquoise, and properly saturated -- the first one was so pale that
      against washed-out sand it read as more sand. */
   const sea = M({ color: 0x2f9ec8, texture: 'smooth', roughness: 0.12, metalness: 0, castShadow: false });
   const surf = M({ color: 0xe8f6f8, texture: 'smooth', roughness: 0.5, metalness: 0, castShadow: false });
-  const bark = M({ color: 0x9c8570, texture: 'wood', roughness: 0.95, metalness: 0, uvScale: 4 });
+  const bark = M({ color: 0x9c8570, texture: 'wood', roughness: 0.95, metalness: 0, uvScale: 0.9, worldUv: true });
   const frond = M({ color: 0xbfe08a, texture: 'grass', roughness: 0.9, metalness: 0, uvScale: 2, subsurface: 0.4 });
-  const canvasM = M({ color: 0xe4e0d2, texture: 'fabric', roughness: 0.96, metalness: 0, uvScale: 3 });
-  const timber = M({ color: 0xd0b48c, texture: 'wood', roughness: 0.85, metalness: 0, uvScale: 3 });
+  const canvasM = M({ color: 0xe4e0d2, texture: 'fabric', roughness: 0.96, metalness: 0, uvScale: 2, worldUv: true });
+  const timber = M({ color: 0xd0b48c, texture: 'wood', roughness: 0.85, metalness: 0, uvScale: 0.9, worldUv: true });
   const glassM = M({ color: 0xd8f0f4, texture: 'smooth', roughness: 0.1, metalness: 0, opacity: 0.6 });
   const drink = M({ color: 0xf0a24c, texture: 'smooth', roughness: 0.3, metalness: 0 });
   const box = (x0, x1, y0, y1, z0, z1, m) => game.box({
@@ -4328,13 +4328,16 @@ function finishGenericMap(game, S, def) {
 
 function buildBunker9(game, S) {
   const MAT = {
-    /* uvScale is tiles-per-face, not tiles-per-metre, and every wall and
-       floor in here is a single slab twelve to fifteen metres long. At 1.3
-       the 256-pixel concrete stretched across the whole of it, so each
-       surface showed one magnified blotch of the texture — which is why the
-       roof deck came out as a dark red-brown stain in full daylight while a
-       test box beside it was properly sunlit. These tile at roughly a metre
-       and a half now. */
+    /* uvScale IS tiles per metre here now, and it used to be tiles per
+       face -- which is the whole reason the note that used to be at
+       this line existed. Every wall and floor in this room is a single
+       slab twelve to fifteen metres long, so one tile across a face
+       was one magnified blotch of concrete, and the roof deck read as
+       a red-brown stain in daylight while a test box beside it was
+       properly sunlit. The fix then was to raise the number until this
+       particular room looked right. The fix now is that the number
+       means a physical size: 0.5 is a two-metre tile on a slab of any
+       length, and nobody has to pick one again. */
     /* These read about three times darker than their hex suggests. The
        concrete texture multiplies albedo by its own mid-grey and then knocks
        ambient down again through the AO channel, so a nominal 0x76736c
@@ -4344,11 +4347,11 @@ function buildBunker9(game, S) {
     /* Corrected once, not twice. These were pushed up to compensate for the
        concrete texture eating three quarters of the albedo; the texture
        itself is fixed now, so the same lift again just bleaches the room. */
-    wall: { color: 0xa6a29a, texture: 'concrete', roughness: 0.94, metalness: 0, uvScale: 5, normalStrength: 0.45 },
-    wallDark: { color: 0x827e77, texture: 'concrete', roughness: 0.95, metalness: 0, uvScale: 5 },
-    floor: { color: 0x8d8981, texture: 'concrete', roughness: 0.9, metalness: 0, uvScale: 7, normalStrength: 0.45 },
-    wood: { color: 0x584023, texture: 'wood', roughness: 0.8, metalness: 0, uvScale: 2 },
-    board: { color: 0x7d5c36, texture: 'wood', roughness: 0.85, metalness: 0, uvScale: 3 },
+    wall: { color: 0xa6a29a, texture: 'concrete', roughness: 0.94, metalness: 0, uvScale: 0.5, normalStrength: 0.45, worldUv: true },
+    wallDark: { color: 0x827e77, texture: 'concrete', roughness: 0.95, metalness: 0, uvScale: 0.5, worldUv: true },
+    floor: { color: 0x8d8981, texture: 'concrete', roughness: 0.9, metalness: 0, uvScale: 0.5, normalStrength: 0.45, worldUv: true },
+    wood: { color: 0x584023, texture: 'wood', roughness: 0.8, metalness: 0, uvScale: 0.9, worldUv: true },
+    board: { color: 0x7d5c36, texture: 'wood', roughness: 0.85, metalness: 0, uvScale: 0.9, worldUv: true },
     /* THE BLACK MASS UNDER THE STAIRCASE.
      *
      * This was 0x4a4e54, and that is not a colour on a conductor -- it is
@@ -4373,35 +4376,39 @@ function buildBunker9(game, S) {
      * actor.material at runtime does NOT work as a probe: the renderer
      * buckets actors into instanced batches by material and a late
      * reassignment never re-buckets. `visible` is tested every frame. */
-    steel: { color: 0xa8b0ba, texture: 'metal', roughness: 0.5, metalness: 1 },
-    sand: { color: 0x8a7f5e, texture: 'fabric', roughness: 0.98, metalness: 0, uvScale: 2 },
+    steel: { color: 0xa8b0ba, texture: 'metal', roughness: 0.5, metalness: 1, uvScale: 0.67, worldUv: true },
+    sand: { color: 0x8a7f5e, texture: 'fabric', roughness: 0.98, metalness: 0, uvScale: 2, worldUv: true },
     chalk: { color: 0xf5f2e6, texture: 'smooth', roughness: 0.9, metalness: 0, emissive: 0xcfe8ff, emissiveStrength: 0.35 },
     // Outside. Churned mud, scorched steel, and wire.
-    /* uvScale is tiles-per-FACE, and this face is the whole battlefield --
-       a hundred and sixty metres of it. At 3 that is one 256-pixel tile
-       stretched over fifty-three metres, so at the player's feet a single
-       texel covers a fifth of a metre and the strength-3 normal map built
-       from it turns into a field of steep facets, every one of them
-       catching a specular highlight. That is the dithered crimson mess in
-       front of the camera: the dirt recipe's red channel is its strongest,
-       so a blown-out one goes red.
+    /* THIS IS THE FAULT THAT NAMED THE CLASS, and it is worth keeping
+       the account even though the cause is gone. uvScale was tiles per
+       FACE, and this face is the whole battlefield -- a hundred and
+       sixty metres of it. At 3 that is one 256-pixel tile stretched
+       over fifty-three metres, so a single texel covered a fifth of a
+       metre at the player's feet and the strength-3 normal map built
+       from it became a field of steep facets, every one catching a
+       specular highlight. The dithered crimson slick in front of the
+       camera was that: the average of a texture lands on its dominant
+       channel and dirt's is red. It was never the colour.
 
-       Exactly the mistake the walls had ("At 1.3 the 256-pixel concrete
-       stretched across the whole of it"), fixed there and never checked
-       here. These tile at about two metres now. */
+       It was the same mistake the walls above had, fixed there and not
+       checked here, and then the same mistake again on Resort a map
+       later. Three times is a rule, not an accident: a number that has
+       to be re-derived for every surface WILL be wrong on the surface
+       nobody re-derived it for. Per metre it cannot be. */
     /* And desaturated. 0x453c2e reads as a reasonable brown as a swatch
        and is 1 : 0.76 : 0.46 once it is linear, which under a warm sun is
        terracotta. Churned wet earth is a grey-brown; it is only orange in
        a paint catalogue. */
     // For the small props -- crater spoil, mounds -- which are a metre or
     // two across. The ground plane passes its own, see buildMap.
-    mud: { color: 0x4a443b, texture: 'dirt', roughness: 1.0, metalness: 0, uvScale: 2 },
-    mudDark: { color: 0x2f2b25, texture: 'dirt', roughness: 1.0, metalness: 0, uvScale: 12 },
-    burnt: { color: 0x2b2a28, texture: 'metal', roughness: 0.82, metalness: 1 },
-    hull: { color: 0x4a4c3e, texture: 'metal', roughness: 0.72, metalness: 1, uvScale: 2 },
-    wire: { color: 0x53504a, texture: 'metal', roughness: 0.6, metalness: 1 },
-    cloth: { color: 0x4b4a3c, texture: 'fabric', roughness: 0.96, metalness: 0, uvScale: 3 },
-    bark: { color: 0x261f1a, texture: 'wood', roughness: 0.96, metalness: 0, uvScale: 4 },
+    mud: { color: 0x4a443b, texture: 'dirt', roughness: 1.0, metalness: 0, uvScale: 0.5, worldUv: true },
+    mudDark: { color: 0x2f2b25, texture: 'dirt', roughness: 1.0, metalness: 0, uvScale: 0.5, worldUv: true },
+    burnt: { color: 0x2b2a28, texture: 'metal', roughness: 0.82, metalness: 1, uvScale: 0.67, worldUv: true },
+    hull: { color: 0x4a4c3e, texture: 'metal', roughness: 0.72, metalness: 1, uvScale: 0.67, worldUv: true },
+    wire: { color: 0x53504a, texture: 'metal', roughness: 0.6, metalness: 1, uvScale: 0.67, worldUv: true },
+    cloth: { color: 0x4b4a3c, texture: 'fabric', roughness: 0.96, metalness: 0, uvScale: 2, worldUv: true },
+    bark: { color: 0x261f1a, texture: 'wood', roughness: 0.96, metalness: 0, uvScale: 0.9, worldUv: true },
   };
 
   // A static slab from bounds, the whole bunker is made of these.
@@ -4499,7 +4506,14 @@ function buildBunker9(game, S) {
 
      0.57 x 160 = 91 tiles across the field, about one every metre and
      three quarters, with the material at 1 so it does not multiply. */
-  game.ground({ material: { ...MAT.mud, uvScale: 1 }, size: 160, uvScale: 0.57, segments: 48 });
+  /* AND NONE OF THAT COMPOUNDING HAPPENS ANY MORE, which is worth
+     saying because the note above is a long account of a fault that
+     cannot recur. MAT.mud projects from world space now, so the
+     terrain mesh's own UVs are never sampled and the material's
+     tiles-per-metre is the only number in play: two-metre tiles,
+     everywhere, at any map size. ground()'s 0.57 is left alone because
+     it is part of the mesh cache key, not because it does anything. */
+  game.ground({ material: MAT.mud, size: 160, uvScale: 0.57, segments: 48 });
 
   /* AND A HORIZON BEHIND IT, because the field ends at 80 metres and
      you can see where.
@@ -4524,7 +4538,9 @@ function buildBunker9(game, S) {
   game.ground({ at: [0, -0.06, 0], size: 900, uvScale: 0.05, segments: 1,
     physics: false,
     material: { color: 0x6a6052, texture: 'dirt', roughness: 0.99, metalness: 0,
-      uvScale: 1 } });
+      /* Coarser than the real field on purpose: nothing gets within
+         eighty metres of it and a fine tile at that range is aliasing. */
+      uvScale: 0.12, worldUv: true } });
 
   /* Everything the battlefield builds gets registered as it is made, so the
      graphics setting can take the whole of it away in one go rather than

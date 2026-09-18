@@ -166,26 +166,26 @@ const MAT = {
   /* Dialled back from 0xe9efcc, which over-corrected: the lawn came out
      a lit golf course under a sunset sky, brighter than the concrete it
      runs up to and brighter than anything in the photographs. */
-  grass: { color: 0xc4d4b0, texture: 'grass', roughness: 0.97, metalness: 0, uvScale: 1, subsurface: 0.3 },
-  grassWorn: { color: 0xd8d2b0, texture: 'grass', roughness: 0.98, metalness: 0, uvScale: 3 },
+  grass: { color: 0xc4d4b0, texture: 'grass', roughness: 0.97, metalness: 0, uvScale: 0.67, subsurface: 0.3, worldUv: true },
+  grassWorn: { color: 0xd8d2b0, texture: 'grass', roughness: 0.98, metalness: 0, uvScale: 0.67, worldUv: true },
   /* Poured concrete, weathered. The walk, the ramp and the seawall cap
      are all the same pour and read as one thing in the photographs. */
-  concrete: { color: 0xbdb9b0, texture: 'concrete', roughness: 0.93, metalness: 0, uvScale: 4, normalStrength: 0.4 },
-  concreteWet: { color: 0x8e8c86, texture: 'concrete', roughness: 0.72, metalness: 0, uvScale: 4 },
+  concrete: { color: 0xbdb9b0, texture: 'concrete', roughness: 0.93, metalness: 0, uvScale: 0.5, normalStrength: 0.4, worldUv: true },
+  concreteWet: { color: 0x8e8c86, texture: 'concrete', roughness: 0.72, metalness: 0, uvScale: 0.5, worldUv: true },
   /* The seawall's face is weathered timber behind the concrete cap, and
      it is the one place on the map with real rust on it. */
-  wallTimber: { color: 0xa78c6c, texture: 'wood', roughness: 0.94, metalness: 0, uvScale: 5 },
-  rust: { color: 0xd8a878, texture: 'rust', roughness: 0.86, metalness: 0.3 },
+  wallTimber: { color: 0xa78c6c, texture: 'wood', roughness: 0.94, metalness: 0, uvScale: 0.9, worldUv: true },
+  rust: { color: 0xd8a878, texture: 'rust', roughness: 0.86, metalness: 0.3, uvScale: 0.85, worldUv: true },
   /* Thin galvanised pilings and handrail. Pale, rough, and a real
      reflectance -- these are conductors and a dark hex would put them in
      the same hole the gun metals were in. */
-  galv: { color: 0xd4dade, texture: 'metal', roughness: 0.52, metalness: 1 },
-  steelDark: { color: 0xa8b0b6, texture: 'metal', roughness: 0.58, metalness: 1 },
+  galv: { color: 0xd4dade, texture: 'metal', roughness: 0.52, metalness: 1, uvScale: 0.67, worldUv: true },
+  steelDark: { color: 0xa8b0b6, texture: 'metal', roughness: 0.58, metalness: 1, uvScale: 0.67, worldUv: true },
   /* PAINTED iron -- the benches, the outboard, the trailer. metalness 0,
      because paint is a dielectric: at 1 these have no diffuse at all and
      read as dark grey-blue cut-outs lit by nothing but the reflection
      probe, which is what made a park bench look like a hole. */
-  ironPaint: { color: 0x5f6a63, texture: 'metal', roughness: 0.72, metalness: 0 },
+  ironPaint: { color: 0x5f6a63, texture: 'metal', roughness: 0.72, metalness: 0, uvScale: 0.67, worldUv: true },
   /* A PALE CYAN, to make a red wall. This looks like a mistake and is
      not, and it is worth the arithmetic because guessing at it produced a
      fire engine twice.
@@ -199,32 +199,44 @@ const MAT = {
      the wall at (0.117, 0.059, 0.045): a brick red with brick's own
      ratios rather than a traffic light.
 
-     uvScale 22, not 2.6. It is tiles per FACE, the recipe lays 8 courses
-     to a tile, and the ranch's front is nineteen metres: at 2.6 that is a
-     course nearly a metre tall, which is what made the walls read as
-     painted blocks. At 22 a course is about eleven centimetres. */
-  brick: { color: 0xc2f5ff, texture: 'brick', roughness: 0.93, metalness: 0, uvScale: 22 },
-  brickPale: { color: 0xa6f9ff, texture: 'brick', roughness: 0.93, metalness: 0, uvScale: 22 },
-  shingle: { color: 0x6f6158, texture: 'concrete', roughness: 0.95, metalness: 0, uvScale: 6 },
+     uvScale 1.11, AND IT USED TO BE 22, which is the same number said
+     in a different unit and it is worth writing down why it changed.
+
+     It was tiles per FACE. A box mesh is a unit cube with 0..1 UVs, so
+     22 was "twenty-two courses of brick across whatever this wall
+     happens to be" -- right for the ranch front at nineteen metres and
+     wrong for every other wall on the map, each by the ratio of its
+     own size to nineteen. That is the fault a player reported on
+     Resort: one wall detailed, the next one flat, with nothing to tell
+     them apart in the source.
+
+     Now the texture is projected from world space and uvScale is tiles
+     per METRE. At 1.11 a tile is 0.9 m, the recipe lays four bricks
+     across it and twelve courses down it, and a brick is 225 x 75
+     millimetres -- the real thing -- on a garden wall and on the side
+     of a house alike. */
+  brick: { color: 0xc2f5ff, texture: 'brick', roughness: 0.93, metalness: 0, uvScale: 1.11, worldUv: true },
+  brickPale: { color: 0xa6f9ff, texture: 'brick', roughness: 0.93, metalness: 0, uvScale: 1.11, worldUv: true },
+  shingle: { color: 0x6f6158, texture: 'concrete', roughness: 0.95, metalness: 0, uvScale: 1, worldUv: true },
   /* The pavilion roof is the one strong colour on the whole map. */
-  roofOrange: { color: 0xd07a42, texture: 'concrete', roughness: 0.9, metalness: 0, uvScale: 5 },
-  roofBrown: { color: 0x8a6b4e, texture: 'wood', roughness: 0.9, metalness: 0, uvScale: 4 },
+  roofOrange: { color: 0xd07a42, texture: 'concrete', roughness: 0.9, metalness: 0, uvScale: 1, worldUv: true },
+  roofBrown: { color: 0x8a6b4e, texture: 'wood', roughness: 0.9, metalness: 0, uvScale: 0.9, worldUv: true },
   /* Deck boards.
   
-     uvScale is tiles per FACE, so it has to be chosen against the SIZE of
-     the thing wearing it, and one number cannot serve a two-metre plank
-     and a sixty-eight-metre pier. It was set to 5, then lowered to 1.3 on
-     a bad reading of the pier -- exactly the mistake the brick made, in
-     the same direction: what looked like crowded grain was one tile
-     stretched the length of the walkway.
-  
-     8 suits the short runs: walkways, floors, stairs, the balcony. The
-     pier has its own below, because it is an order of magnitude longer
-     than any of them. */
-  deck: { color: 0xa08464, texture: 'wood', roughness: 0.9, metalness: 0, uvScale: 8 },
-  /* The pier itself: sixty-eight metres of it in one slab, so it needs a
-     tile count to match or the boards are a metre wide. */
-  deckLong: { color: 0xa08464, texture: 'wood', roughness: 0.9, metalness: 0, uvScale: 46 },
+     THERE USED TO BE TWO OF THESE and now there is one twice, because
+     the reason for the second is gone. Under tiles-per-face a number
+     had to be chosen against the size of the thing wearing it, and no
+     one number could serve a two-metre plank and a sixty-eight-metre
+     pier: deck was 8 for the short runs and deckLong was 46 for the
+     walkway. Per metre, 0.9 is 0.9 everywhere -- six boards to 1.1
+     metres, a 185 mm board, on a stair tread and on the pier.
+
+     deckLong is kept as a name so the builders below do not all have
+     to change, and it is now the same material. */
+  deck: { color: 0xa08464, texture: 'wood', roughness: 0.9, metalness: 0, uvScale: 0.9, worldUv: true },
+  /* The pier: sixty-eight metres in one slab, and it no longer needs a
+     number of its own to stop the boards being a metre wide. */
+  deckLong: { color: 0xa08464, texture: 'wood', roughness: 0.9, metalness: 0, uvScale: 0.9, worldUv: true },
   /* Weathered white paint, not fresh white. On the smooth recipe, which
      is neutral, 0xdcd8cc is 72 per cent reflectance -- brighter than
      anything outdoors at dusk -- and it is on every post, rail, door and
@@ -233,8 +245,8 @@ const MAT = {
   white: { color: 0xb4b0a4, texture: 'smooth', roughness: 0.8, metalness: 0 },
   /* Painted metal roofing: pale, but a coat of paint rather than a
      mirror, so it takes a colour instead of the sky. */
-  roofMetal: { color: 0x9fa39c, texture: 'metal', roughness: 0.62, metalness: 0 },
-  canvas: { color: 0xbcb49e, texture: 'fabric', roughness: 0.96, metalness: 0, uvScale: 3 },
+  roofMetal: { color: 0x9fa39c, texture: 'metal', roughness: 0.62, metalness: 0, uvScale: 0.67, worldUv: true },
+  canvas: { color: 0xbcb49e, texture: 'fabric', roughness: 0.96, metalness: 0, uvScale: 2, worldUv: true },
   glass: { color: 0x2e3a42, texture: 'smooth', roughness: 0.18, metalness: 0 },
   /* ---- the street, the cars and what is inside the houses ----
 
@@ -243,9 +255,9 @@ const MAT = {
      has, only darker and with no float marks in it. Tinted to about a
      third, since the recipe already averages #bebbb3 and asphalt is not
      a light grey surface. */
-  asphalt: { color: 0x4a4b4d, texture: 'concrete', roughness: 0.96, metalness: 0, uvScale: 14 },
+  asphalt: { color: 0x4a4b4d, texture: 'concrete', roughness: 0.96, metalness: 0, uvScale: 0.4, worldUv: true },
   roadLine: { color: 0xd8cda0, texture: 'smooth', roughness: 0.92, metalness: 0 },
-  kerb: { color: 0xcac6bd, texture: 'concrete', roughness: 0.9, metalness: 0, uvScale: 8 },
+  kerb: { color: 0xcac6bd, texture: 'concrete', roughness: 0.9, metalness: 0, uvScale: 1, worldUv: true },
   /* Car paint. Clear-coat over colour: high metalness reads as a mirror
      and reflects the room floor, which under an overcast sky is exactly
      what a car roof does. Each body colour is its own material so the
@@ -254,29 +266,46 @@ const MAT = {
   carBlue: { color: 0x263c56, texture: 'smooth', roughness: 0.30, metalness: 0.55 },
   carCream: { color: 0xb5ac96, texture: 'smooth', roughness: 0.36, metalness: 0.45 },
   carGreen: { color: 0x35452f, texture: 'smooth', roughness: 0.33, metalness: 0.5 },
-  carRust: { color: 0xb89272, texture: 'rust', roughness: 0.92, metalness: 0.3, uvScale: 3 },
+  carRust: { color: 0xb89272, texture: 'rust', roughness: 0.92, metalness: 0.3, uvScale: 0.85, worldUv: true },
   tyre: { color: 0x1d1f22, texture: 'smooth', roughness: 0.95, metalness: 0 },
   chrome: { color: 0xd8dee4, texture: 'metal', roughness: 0.22, metalness: 1 },
   carGlass: { color: 0x39454c, texture: 'smooth', roughness: 0.14, metalness: 0, opacity: 0.55 },
   /* Inside. Plaster is near-white on `concrete` at a fine scale, because
      an interior wall is the one surface in this map with no colour of
      its own and everything else in the room is read against it. */
-  plaster: { color: 0xe2ddd2, texture: 'concrete', roughness: 0.95, metalness: 0, uvScale: 6, normalStrength: 0.3 },
-  floorBoard: { color: 0xb59672, texture: 'wood', roughness: 0.82, metalness: 0, uvScale: 14 },
-  carpet: { color: 0x8e8272, texture: 'fabric', roughness: 0.99, metalness: 0, uvScale: 10 },
-  sofa: { color: 0x6f7a6a, texture: 'fabric', roughness: 0.97, metalness: 0, uvScale: 4 },
+  plaster: { color: 0xf0ebe0, texture: 'plaster', roughness: 0.95, metalness: 0, uvScale: 0.5, normalStrength: 0.3, worldUv: true },
+  floorBoard: { color: 0xb59672, texture: 'wood', roughness: 0.82, metalness: 0, uvScale: 0.9, worldUv: true },
+  carpet: { color: 0x8e8272, texture: 'fabric', roughness: 0.99, metalness: 0, uvScale: 2, worldUv: true },
+  sofa: { color: 0x6f7a6a, texture: 'fabric', roughness: 0.97, metalness: 0, uvScale: 2, worldUv: true },
   counter: { color: 0x8d8a82, texture: 'smooth', roughness: 0.45, metalness: 0.1 },
-  cabinet: { color: 0xa8825c, texture: 'wood', roughness: 0.78, metalness: 0, uvScale: 4 },
-  mattress: { color: 0xd6d2c6, texture: 'fabric', roughness: 0.98, metalness: 0, uvScale: 5 },
-  appliance: { color: 0xc8ccce, texture: 'metal', roughness: 0.42, metalness: 0.9 },
-  doorWood: { color: 0x9a7346, texture: 'wood', roughness: 0.86, metalness: 0, uvScale: 3 },
+  cabinet: { color: 0xa8825c, texture: 'wood', roughness: 0.78, metalness: 0, uvScale: 0.9, worldUv: true },
+  mattress: { color: 0xd6d2c6, texture: 'fabric', roughness: 0.98, metalness: 0, uvScale: 2, worldUv: true },
+  appliance: { color: 0xc8ccce, texture: 'metal', roughness: 0.42, metalness: 0.9, uvScale: 0.67, worldUv: true },
+  doorWood: { color: 0x9a7346, texture: 'wood', roughness: 0.86, metalness: 0, uvScale: 0.9, worldUv: true },
+  /* ---- AND THESE ONES DELIBERATELY DO NOT SET worldUv ----
+   *
+     Everything above projects its texture from world space, so its
+     uvScale is tiles per metre. The ones from here down are cylinders
+     and spheres -- trunks, pilings, canopies, a barrel -- and a planar
+     world projection on a round thing smears along the two faces
+     turned away from the projection plane. On a flat wall that never
+     happens, which is why the flat things all use it and the round
+     things all do not.
+
+     Their uvScale is still tiles across a face. That is fine here and
+     only here: a trunk is a trunk-sized object, the whole point of the
+     per-metre rule is that a material gets used at sizes nobody
+     anticipated, and a tree does not have a twenty-metre variant.
+
+     If one of these ever gets a worldUv added to "finish the job",
+     look at the far side of it first. */
   trunk: { color: 0x9c8570, texture: 'wood', roughness: 0.96, metalness: 0, uvScale: 3 },
   /* Foliage, on the grass recipe, so the same white-tint rule applies.
      Kept a step under the lawn rather than a quarter of it: a canopy in
      shadow is darker than a mown green, it is not a hole in the sky. */
   leaf: { color: 0xc6d8a4, texture: 'grass', roughness: 0.95, metalness: 0, uvScale: 2, subsurface: 0.35 },
   leafPine: { color: 0xb8cfa8, texture: 'grass', roughness: 0.95, metalness: 0, uvScale: 2, subsurface: 0.3 },
-  mulch: { color: 0x8a6b4c, texture: 'dirt', roughness: 0.97, metalness: 0, uvScale: 2 },
+  mulch: { color: 0x8a6b4c, texture: 'dirt', roughness: 0.97, metalness: 0, uvScale: 0.5, worldUv: true },
   barrel: { color: 0x9a6f44, texture: 'wood', roughness: 0.88, metalness: 0, uvScale: 3 },
   /* The water. It is not blue and it is not transparent: in every one of
      the photographs it is a flat green-grey that takes the sky's orange
@@ -310,7 +339,7 @@ const MAT = {
      walked through all of it. */
   fenceMesh: { color: 0x6f7377, texture: 'metal', roughness: 0.8, metalness: 0, opacity: 0.55 },
   // The lake bed: silt and weed, seen through water and never close up.
-  bed: { color: 0x53563f, texture: 'dirt', roughness: 0.99, metalness: 0, uvScale: 8, castShadow: false },
+  bed: { color: 0x53563f, texture: 'dirt', roughness: 0.99, metalness: 0, uvScale: 0.5, castShadow: false, worldUv: true },
   // The wood behind the boundary fence: darker than the lawn trees.
   leafWood: { color: 0x93ab7c, texture: 'grass', roughness: 0.97, metalness: 0, uvScale: 3 },
   /* The flamingo. A pool toy that has been in the water too long: the
@@ -320,14 +349,14 @@ const MAT = {
   papBeak: { color: 0x2a2226, texture: 'smooth', roughness: 0.35, metalness: 0 },
   papEye: { color: 0xfff4d8, texture: 'smooth', roughness: 0.2, metalness: 0,
     emissive: 0xffd070, emissiveStrength: 1.6 },
-  shore: { color: 0x8e9086, texture: 'concrete', roughness: 0.98, metalness: 0, uvScale: 20, castShadow: false },
+  shore: { color: 0x8e9086, texture: 'concrete', roughness: 0.98, metalness: 0, uvScale: 0.5, castShadow: false, worldUv: true },
   /* The crack in the roof of an air pocket. A light in a sealed dome is
      a light from nowhere; a slit of bright sky in the rock above it is
      where the light is from, and it is the thing that tells you from
      under the water that there is air up there. */
   crack: { color: 0xdfe8ee, texture: 'smooth', roughness: 0.9, metalness: 0,
     emissive: 0xcfe2ee, emissiveStrength: 1.9, castShadow: false },
-  caveRock: { color: 0x6c6a63, texture: 'rock', roughness: 0.97, metalness: 0, uvScale: 5 },
+  caveRock: { color: 0x6c6a63, texture: 'rock', roughness: 0.97, metalness: 0, uvScale: 0.33, worldUv: true },
 };
 
 /* Rooms, for whatever wants to ask which part of the map something is
@@ -994,7 +1023,12 @@ function build(game, S) {
    * So the mesh draws and does not collide, and a slab the size of the
    * lawn -- invisible, because the grass is already drawn over it --
    * carries the player. */
-  game.ground({ at: [0, 0, -128], material: { ...MAT.grass, uvScale: 1 },
+  /* The mesh's own uvScale is now dead weight on this one: MAT.grass
+     projects from world space, so the material's tiles-per-metre is
+     what the lawn tiles at and the terrain's UVs are never read. Left
+     in place because ground() bakes it into the mesh cache key and
+     changing it would only rebuild the mesh. */
+  game.ground({ at: [0, 0, -128], material: MAT.grass,
     size: 260, uvScale: 0.62, segments: 40, physics: false });
   {
     /* Stops at the outer face of the seawall. Run on to z = 2 it was the

@@ -175,6 +175,15 @@ class Renderer {
          Zero outdoors; a game with interiors sets it to roughly the colour
          and brightness of its lit walls. */
       room: new Vec3(0, 0, 0),
+      /* HOW MUCH SKY A SHADOWED POINT LOSES. The sun shadow map stands
+         in for sky visibility -- see the long note in the ambient term
+         of the surface shader. 0 is the old behaviour, where a room
+         with a roof on it was lit exactly like the yard outside; 1
+         would put anything the sun cannot reach on room ambient alone.
+         0.45 is enough that interiors read as interiors and a shadow
+         on a bright map reads as a shadow, and short of the point
+         where a shaded doorway becomes a hole. */
+      occlusion: 0.45,
     };
     this.fog = {
       color: new Vec3(0.62, 0.72, 0.85),
@@ -382,6 +391,7 @@ class Renderer {
     sh.f('uSunIntensity', this.sun.intensity);
     sh.f('uSkyIntensity', this.sky.intensity);
     sh.v3('uRoomAmbient', this.sky.room);
+    sh.f('uSkyOcclusion', this.sky.occlusion);
     sh.v3('uFogColor', this.fog.color);
     sh.f('uFogDensity', this.fog.density);
     sh.f('uFogHeight', this.fog.height);
@@ -452,6 +462,7 @@ class Renderer {
       mat.emissive.z * mat.emissiveStrength);
     sh.f('uOpacity', mat.opacity);
     sh.f('uUvScale', mat.uvScale);
+    sh.i('uWorldUv', mat.worldUv ? 1 : 0);
     sh.f('uNormalStrength', mat.normalStrength);
     sh.f('uDetail', mat.detail != null ? mat.detail : 1);
     sh.f('uDetailScale', this.detailScale);

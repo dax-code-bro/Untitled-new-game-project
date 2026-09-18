@@ -129,6 +129,10 @@ const TextureLib = {
        surface as large as the battlefield the ground fizzed. Same
        reasoning as the note on metal above. */
     dirt: 1.4, sand: 1.2, grass: 1.2,
+    /* Nearly flat. The relief that matters on render is the blowholes,
+       and they are deep in a height field that is otherwise almost
+       level -- push this up and the trowel sweep becomes corrugation. */
+    plaster: 0.9,
     /* Enough relief to give each toy an edge and not so much that the
        ripple under them turns into facets. */
     floaties: 1.0,
@@ -179,8 +183,22 @@ const TextureLib = {
     },
 
     brick(u, v, n, c) {
-      // Running bond: every other course shifts by half a brick.
-      const rows = 8, cols = 4;
+      /* Running bond: every other course shifts by half a brick.
+       *
+         TWELVE COURSES, NOT EIGHT, and the reason is the aspect ratio
+         rather than the count. A tile of 8 rows by 4 columns makes a
+         brick twice as wide as it is tall. A real brick, with its bed
+         joint, is 225 by 75 millimetres -- three to one. At 8 rows
+         there is no tile size at all that gives both the right brick
+         width and the right course height: pick the width and the
+         courses come out half as deep again as a real one, which is
+         what makes a rendered wall read as a games-console wall.
+
+         At 12 by 4 the tile is exactly three bricks tall for every one
+         it is wide, so a 0.9-metre tile is a 225 x 75 brick to the
+         millimetre. Which is why brick is set to 1.11 tiles per metre
+         wherever it is used. */
+      const rows = 12, cols = 4;
       const ry = v * rows;
       const row = Math.floor(ry);
       const offset = (row % 2) * 0.5;
@@ -547,6 +565,69 @@ const TextureLib = {
       c.rough = 0.8; c.ao = 1; c.h = 0.5;
     },
 
+    /* PLASTER, and why a pale wall could not be made out of any recipe
+       that already existed.
+     *
+       The rule this bank runs on is that a tint only ever multiplies
+       DOWN, so anything that has to read pale has to be built on a
+       recipe that is already pale. Until now the only pale recipe was
+       `smooth`, which is a constant: no albedo variation, no relief, no
+       roughness break. So every rendered wall, every hotel corridor and
+       every cabana in the game was a flat fill -- which is the whole of
+       the report that a wall beside a detailed one looks "just like
+       maths". It was not the tiling on those walls. There was nothing
+       on them to tile.
+
+       This is render, not paint: a thin cement skim, floated on with a
+       trowel and left. Four things make it read as that and not as a
+       grey rectangle, and all four are small on purpose, because
+       plaster IS subtle and the failure mode of a subtle material is
+       inventing texture it does not have.
+
+         THE FLOAT SWEEP, long and directional -- the arcs a trowel
+         leaves. Stretched 4:1 so it has a direction; a wall skimmed
+         with no direction at all looks poured.
+
+         SUCTION MOTTLE, the slow blotching where the backing pulled
+         water out of the mix at different rates. This is the one that
+         does most of the work at across-the-room distance, and it is
+         almost entirely a ROUGHNESS effect: the patches are the same
+         colour and a different sheen, which is exactly what you see on
+         a real wall and what a colour-only mottle never looks like.
+
+         GRIT, fine and dense, so there is something under a torch.
+
+         BLOWHOLES, rare, small and deep -- the air that did not get
+         out. One in a few hundred texels, and they are what tells you
+         the surface is a paste that set rather than a sheet.
+
+       Bakes near 0.90 white, so a tint puts it anywhere from that down
+       to a mid grey and the old pale hexes carry across unchanged. */
+    plaster(u, v, n, c) {
+      const sweep = n.fbm(u * 3.2, v * 12.8, 5.1, 3) * 0.5 + 0.5;
+      const mottle = n.fbm(u * 5.5, v * 5.5, 18.7, 4) * 0.5 + 0.5;
+      const grit = n.fbm(u * 120, v * 120, 41.3, 2) * 0.5 + 0.5;
+      /* Blowholes: the top of a sparse high-frequency field, so they
+         are isolated rather than a second noise laid over everything. */
+      const holeF = n.fbm(u * 64, v * 64, 77.9, 2) * 0.5 + 0.5;
+      const hole = Math.max(0, holeF - 0.82) / 0.18;
+
+      const base = 0.895 + (sweep - 0.5) * 0.045 + (grit - 0.5) * 0.022
+        - hole * 0.30;
+      /* Cement skim is faintly cool and faintly green; lime render is
+         warmer. Split the difference and let the material's tint say
+         which one this wall is. */
+      c.r = base * 0.995; c.g = base; c.b = base * 0.985;
+      /* The mottle lives here, not in the colour: suction patches are a
+         sheen difference of maybe 0.2 and a colour difference of almost
+         nothing. The sweep adds a little on top because a trowelled
+         pass burnishes what it touches. */
+      c.rough = clamp(0.78 + (mottle - 0.5) * 0.30 - (sweep - 0.5) * 0.10
+        + hole * 0.18, 0.42, 1);
+      c.ao = 1 - hole * 0.55 - (1 - mottle) * 0.04;
+      c.h = 0.55 + (sweep - 0.5) * 0.30 + (grit - 0.5) * 0.10 - hole * 0.9;
+    },
+
     /* FLOATIES. Coastline's upgrade finish: pool toys drifting across a
        baby-blue field.
        
@@ -675,6 +756,21 @@ class Material {
     this.transparent = this.opacity < 1 || !!opts.transparent;
     this.doubleSided = !!opts.doubleSided;
     this.uvScale = opts.uvScale != null ? opts.uvScale : 1;
+    /* WORLD-PROJECTED TILING, and what uvScale then means.
+     *
+       Off (the default): uvScale is tiles across a FACE, because a box
+       mesh is a unit cube whose UVs run 0..1 whatever it is scaled to.
+       That is right for a gun part and wrong for a building -- two
+       walls of the same material and different sizes get different
+       grain, and the big one reads as flat.
+
+       On: the texture is projected from world space down the surface's
+       dominant axis, and uvScale is TILES PER METRE. Every surface in
+       the world then carries the same grain at the same distance, and
+       a slab stretched twelve by three stops being stretched at all.
+       Meant for architecture and ground; not for anything that moves,
+       because a world projection slides across a body that walks. */
+    this.worldUv = !!opts.worldUv;
     this.normalStrength = opts.normalStrength != null ? opts.normalStrength : 1;
     /* How much fine grain this surface shows close up. 1 for anything
        with a real texture to it; 0 for the ones whose whole point is
