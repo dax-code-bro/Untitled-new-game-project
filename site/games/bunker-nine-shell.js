@@ -3501,6 +3501,12 @@ var ACTIONS = [
   /* T, and L1. The row said E and L2 and the game read neither -- the
      menu was describing controls nothing implemented. */
   { id: 'nade',   name: 'Grenade',      key: 'KeyT',        pad: 4 },
+  /* TWO THAT WERE NEVER ON THE LIST. Multiplayer reads a crouch and a
+     scoreboard every frame and the screen that claims to rebind every
+     key did not mention either, so they were the two controls in the
+     game that could not be moved. */
+  { id: 'crouch', name: 'Crouch',       key: 'KeyC',        pad: 11 },
+  { id: 'scores', name: 'Scoreboard',   key: 'Tab',         pad: 8 },
   { id: 'pause',  name: 'Pause',        key: 'Escape',      pad: 9 },
 ];
 

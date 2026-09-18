@@ -24,8 +24,15 @@
   var W = window;
 
   /* ---- keys ----
-     Defaults. Everything here is a name so the rebinding work can point
-     at it later without unpicking the reader. */
+     Defaults, and for a long time the ONLY thing multiplayer read. The
+     comment here used to say "so the rebinding work can point at it
+     later", and later never came: the settings screen let you rebind
+     every one of these, saved it, published it, and a match ignored
+     the lot. Rebinding worked in zombies and nowhere else, which is
+     worse than not offering it.
+
+     `bindsFor` below folds whatever the player has saved over the top
+     of this table. */
   var KEYS = {
     forward: ['w', 'arrowup'], back: ['s', 'arrowdown'],
     left: ['a', 'arrowleft'], right: ['d', 'arrowright'],
@@ -33,6 +40,41 @@
     slide: ['z'], reload: ['r'], swap: ['q', '1', '2'], scores: ['tab'],
     quit: ['escape'],
   };
+
+  /* WHICH ROW OF THE SETTINGS SCREEN DRIVES WHICH READER.
+     The shell names its actions for the player; this file names them
+     for the code, and nothing connected the two. */
+  var BIND_TO_KEY = {
+    fwd: 'forward', back: 'back', left: 'left', right: 'right',
+    jump: 'jump', sprint: 'sprint', slide: 'slide', crouch: 'crouch',
+    reload: 'reload', swap: 'swap', scores: 'scores', pause: 'quit',
+  };
+
+  /* A BINDING IS A PHYSICAL KEY, NOT A LETTER.
+     The shell captures event.code, because that is the key somebody
+     actually pressed; this file's reader has always matched on
+     event.key, which is the letter that key produces. On a US layout
+     they agree and everywhere else they do not, so translating one to
+     the other would rebind the wrong key for anybody on AZERTY. The
+     reader records BOTH instead, and a saved binding matches the
+     code. */
+  function bindsFor() {
+    var out = {}, k;
+    for (k in KEYS) if (Object.prototype.hasOwnProperty.call(KEYS, k)) out[k] = KEYS[k];
+    var saved = null;
+    try {
+      saved = JSON.parse(W.localStorage.getItem('b9.settings.v1') || 'null');
+    } catch (e) { saved = null; }
+    var m = saved && saved.keyBinds;
+    if (!m) return out;
+    for (var id in m) {
+      if (!Object.prototype.hasOwnProperty.call(m, id)) continue;
+      var name = BIND_TO_KEY[id];
+      if (!name || !m[id]) continue;
+      out[name] = ['code:' + m[id]];
+    }
+    return out;
+  }
 
   var CSS = `
 #mpui { position:fixed; inset:0; z-index:40; pointer-events:none;
@@ -369,13 +411,20 @@
       if (k === 'control' || k === 'ctrl') return 'control';
       return k;
     }
+    /* Both the letter and the physical key, under two names in the same
+       map, so a default written as 'w' and a binding saved as
+       'code:KeyW' are read by exactly the same `any`. */
     function keyDown(e) {
-      var k = name(e);
+      var k = name(e), c = e.code ? 'code:' + e.code : null;
       if (!down[k]) pressed[k] = true;
       down[k] = true;
+      if (c) { if (!down[c]) pressed[c] = true; down[c] = true; }
       if (k === 'tab' || k === ' ' || k.indexOf('arrow') === 0) e.preventDefault();
     }
-    function keyUp(e) { down[name(e)] = false; }
+    function keyUp(e) {
+      down[name(e)] = false;
+      if (e.code) down['code:' + e.code] = false;
+    }
     function move(e) {
       if (!locked) return;
       mdx += e.movementX || 0;
@@ -1851,14 +1900,23 @@
       return d.join(' &nbsp;&middot;&nbsp; ');
     }
 
+    /* The bindings, re-read twice a second, the same way the pad
+       re-reads its config: a rebind made in the pause screen applies
+       on the next frame and nothing has to be restarted, which is the
+       half of "the rebinding has to actually apply" that is easy to
+       get wrong by caching it once at startup. */
+    var K = bindsFor(), bindAge = 0;
+
     function frame(dt) {
       if (over) return;
       var p = M.you;
+      bindAge += dt;
+      if (bindAge > 0.5) { bindAge = 0; K = bindsFor(); }
 
       /* Settings open: the world keeps turning but you do not steer it.
          Reading the stick while a menu is up is how a player comes back
          to find they have walked into a wall for thirty seconds. */
-      if (input.once(KEYS.quit)) settings.toggle();
+      if (input.once(K.quit)) settings.toggle();
       if (settings.open) {
         M.update(dt);
         input.endFrame();
@@ -1880,7 +1938,7 @@
         var rdt = Math.min(dt, 0.05);
         var sk = { forward: 0, right: 0, lookX: 0, lookY: 0, fire: false, jump: false };
         pad.poll(rdt, sk);
-        var skip = input.once(KEYS.jump) || input.once(KEYS.quit)
+        var skip = input.once(K.jump) || input.once(K.quit)
           || input.buttons.fire || sk.fire || sk.jump;
         var running = replay.update(rdt);
         /* A respawn ends it whatever the clip says -- being alive and
@@ -1971,12 +2029,12 @@
 
       var cmd = {
         yaw: yaw, pitch: pitch,
-        forward: (input.any(KEYS.forward) ? 1 : 0) - (input.any(KEYS.back) ? 1 : 0),
-        right: (input.any(KEYS.right) ? 1 : 0) - (input.any(KEYS.left) ? 1 : 0),
-        run: input.any(KEYS.sprint), jump: input.once(KEYS.jump),
-        crouch: input.any(KEYS.crouch),
-        reload: input.once(KEYS.reload), swap: input.once(KEYS.swap),
-        slide: input.once(KEYS.slide), scores: input.any(KEYS.scores),
+        forward: (input.any(K.forward) ? 1 : 0) - (input.any(K.back) ? 1 : 0),
+        right: (input.any(K.right) ? 1 : 0) - (input.any(K.left) ? 1 : 0),
+        run: input.any(K.sprint), jump: input.once(K.jump),
+        crouch: input.any(K.crouch),
+        reload: input.once(K.reload), swap: input.once(K.swap),
+        slide: input.once(K.slide), scores: input.any(K.scores),
         fire: input.buttons.fire, aim: input.buttons.aim,
         lookX: 0, lookY: 0,
       };
