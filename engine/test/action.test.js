@@ -127,6 +127,28 @@ const note = (s) => console.log(`  ..   ${s}`);
       out.guns.push({ id, expect, atShot, afterCycle,
         moved: +moved.toFixed(4), hasBolt: !!(v && v.bolt), hasSlide: !!(gun && gun.slide) });
     }
+    /* And the magazine column, on a weapon that has one. Driven
+       through the real ammo count and the real viewmodel update, so
+       this measures what a player sees rather than the branch that
+       decides it. */
+    T.give('mp5');
+    for (let i = 0; i < 30; i++) G.step(1 / 60);
+    const mv = P.view[P.equipped()];
+    const mroot = mv && (mv.kind === 'single' ? mv.actor : mv.root);
+    const bands = mroot && mroot.roundBands;
+    if (bands && bands.length) {
+      const cap = window.__T_WEAPONS.mp5.mag;
+      const shown = () => bands.filter((b) => b.some((a) => a.visible)).length;
+      const setAmmo = (k) => {
+        P.ammo[P.equipped()].mag = k;
+        for (let i = 0; i < 3; i++) G.step(1 / 60);
+      };
+      setAmmo(cap); const full = shown();
+      setAmmo(Math.floor(cap / 2)); const half = shown();
+      setAmmo(0); const empty = shown();
+      setAmmo(cap);
+      out.rounds = { bands: bands.length, full, half, empty };
+    }
     return out;
   });
 
@@ -180,6 +202,22 @@ const note = (s) => console.log(`  ..   ${s}`);
   if (by.m1911) {
     check('and a pistol\'s slide still does', by.m1911.moved > 0.004,
       `moved ${by.m1911.moved} m`);
+  } else failed++;
+
+  /* THE COLUMN OF ROUNDS GOES DOWN. Asserted in both directions and
+     at both ends: full when full, none when empty, and fewer in
+     between. A check that only looked at "empty" would pass on a
+     magazine whose rounds were never drawn at all. */
+  if (r.rounds) {
+    note('rounds ' + JSON.stringify(r.rounds));
+    check('a full magazine shows its whole column',
+      r.rounds.full > 0 && r.rounds.full === r.rounds.bands,
+      `${r.rounds.full} of ${r.rounds.bands} bands visible`);
+    check('and an empty one shows none of it',
+      r.rounds.empty === 0, `${r.rounds.empty} bands still visible at zero`);
+    check('and a half-full one shows some of it',
+      r.rounds.half > 0 && r.rounds.half < r.rounds.bands,
+      `${r.rounds.half} of ${r.rounds.bands}`);
   } else failed++;
 
   check('no page errors', errors.length === 0, errors.slice(0, 3).join(' | '));

@@ -624,6 +624,29 @@ function svcCartridge(shell, tip, A, o, u, v) {
    why a thirty-round box is two rounds wide and not thirty tall -- and
    staggering them is what makes the stack read as separate rounds
    rather than as a striped block. */
+/* HOW MANY BANDS THE COLUMN OF ROUNDS IS CUT INTO.
+ *
+   The rounds inside a magazine were one geometry, so they were one
+   actor, so a magazine showed a full column of brass whether it held
+   thirty rounds or none. You watch a translucent magazine precisely so
+   you can see what is left in it -- that is why real ones are made
+   translucent, and the comment on the `smoke` material says so -- and
+   this one always said "full".
+
+   One actor per round would be honest and costs thirty actors per gun
+   on a rifle, times every gun on the map. Four bands is the compromise
+   that buys the thing that matters: a magazine that is visibly going
+   down. Quarter resolution on the count, four actors instead of
+   thirty.
+
+   Band 0 is at the FEED LIPS and the last to go. That is the right way
+   round and it is worth saying why, because the intuition runs the
+   other way: rounds leave from the top, but the follower pushes the
+   stack up behind them, so the column always starts at the lips and it
+   is the BOTTOM of it that disappears. A magazine that emptied from
+   the top would have a floating stack with a gap above it. */
+const ROUND_BANDS = 4;
+
 function svcRounds(shell, tip, K) {
   const M = K.mag, A = K.ammo;
   if (!M || M.kind === 'none' || !A) return;
@@ -646,11 +669,15 @@ function svcRounds(shell, tip, K) {
     for (let i = 0; i < n; i++) {
       const th = (i / n) * TAU;
       const c = Math.cos(th), si = Math.sin(th);
+      /* A drum and a pan go into band 0 whole. You cannot see into
+         either of them well enough for a count to mean anything, and
+         a drum that emptied in quarters would be a quarter of a ring
+         of brass hanging in mid air. */
       if (M.kind === 'pan') {
-        svcCartridge(shell, tip, A, new Vec3(M.x + c * rr, cy + 0.002, si * rr),
+        svcCartridge(shell[0], tip[0], A, new Vec3(M.x + c * rr, cy + 0.002, si * rr),
           new Vec3(-c, 0, -si), new Vec3(0, 1, 0));
       } else {
-        svcCartridge(shell, tip, A, new Vec3(M.x + c * rr, cy + si * rr, 0),
+        svcCartridge(shell[0], tip[0], A, new Vec3(M.x + c * rr, cy + si * rr, 0),
           new Vec3(-c, -si, 0), across);
       }
     }
@@ -664,6 +691,16 @@ function svcRounds(shell, tip, K) {
   const n = Math.min(A.rounds, Math.floor(M.len / A.pitch) * 2);
   const half = A.len * 0.50;
   for (let i = 0; i < n; i++) {
+    /* Which band this round belongs to. Rounds are laid two per pitch,
+       alternating left and right of centre, so the band has to come
+       from the POSITION down the magazine (i >> 1) and not from i --
+       otherwise a band is half of one course and half of the next, and
+       hiding it takes out a zigzag rather than the bottom of the
+       stack. */
+    const band = Math.min(ROUND_BANDS - 1,
+      Math.floor(((i >> 1) / Math.max(1, (n >> 1))) * ROUND_BANDS));
+    const shellB = shell[band] || shell[0];
+    const tipB = tip[band] || tip[0];
     const t = (i >> 1) * A.pitch / M.len;
     if (t > 0.98) break;
     const a = M.curve * t;
@@ -677,7 +714,7 @@ function svcRounds(shell, tip, K) {
        centred in the magazine instead of hanging out of the front of
        it. `half` is the magazine's own depth, which is now derived from
        this same length. */
-    svcCartridge(shell, tip, A,
+    svcCartridge(shellB, tipB, A,
       new Vec3(x - u.x * half, y - u.y * half, z), u, across);
   }
 }
@@ -776,7 +813,7 @@ const AMMO_KINDS = {
    made of, so a row cannot say 'wood' and then render in plastic. */
 function svcMats(K) {
   const wooden = (K.hg && K.hg.kind === 'wood') || (K.stock && K.stock.kind === 'wood');
-  return {
+  const out = {
     steel: ARM_MAT.blued,
     wood: wooden ? ARM_MAT.walnut : ARM_MAT.poly,
     mag: K.mag && K.mag.clear ? ARM_MAT.smoke : ARM_MAT.blued,
@@ -784,6 +821,11 @@ function svcMats(K) {
     shell: ARM_MAT.brass,
     tip: ARM_MAT.copper,
   };
+  for (let i = 0; i < ROUND_BANDS; i++) {
+    out['shell' + i] = ARM_MAT.brass;
+    out['tip' + i] = ARM_MAT.copper;
+  }
+  return out;
 }
 
 /* A shallow merge, one level into the sub-objects, which is as deep as
@@ -1023,11 +1065,24 @@ function makeServiceArm(kind) {
   svcGrip(geos.wood, K);
   geos.mag = new Geometry(); svcMag(geos.mag, K);
   geos.bolt = new Geometry(); svcBolt(geos.bolt, K);
-  geos.shell = new Geometry(); geos.tip = new Geometry();
-  svcRounds(geos.shell, geos.tip, K);
+  /* One pair of channels per band, so the column can be taken down a
+     quarter at a time. mountArm is generic over whatever keys are in
+     here, so this costs nothing but the names. */
+  const shellB = [], tipB = [];
+  for (let i = 0; i < ROUND_BANDS; i++) {
+    geos['shell' + i] = new Geometry(); geos['tip' + i] = new Geometry();
+    shellB.push(geos['shell' + i]); tipB.push(geos['tip' + i]);
+  }
+  svcRounds(shellB, tipB, K);
   /* A gun with no magazine has no rounds to show, and an empty
-     geometry through mountArm is an actor with nothing in it. */
-  if (!geos.shell.positions.length) { delete geos.shell; delete geos.tip; }
+     geometry through mountArm is an actor with nothing in it. Each
+     band is dropped on its own: a five-round magazine does not fill
+     four bands, and the empty ones must not become empty actors. */
+  for (let i = 0; i < ROUND_BANDS; i++) {
+    if (!geos['shell' + i].positions.length) {
+      delete geos['shell' + i]; delete geos['tip' + i];
+    }
+  }
   return fin(geos, K.origin);
 }
 
@@ -1047,6 +1102,15 @@ function serviceArm(E, kind, opts) {
     K.mag ? K.mag.y - o.y : 0, 0];
   body.boltRest = [0, 0, 0];
   body.boltThrow = [-0.032, 0, 0];
+  /* The column, in order from the feed lips down, so the game can hide
+     it from the bottom as the magazine empties. Absent bands are left
+     out rather than held as nulls -- a five-round magazine genuinely
+     has fewer than four. */
+  body.roundBands = [];
+  for (let i = 0; i < ROUND_BANDS; i++) {
+    const a = body['shell' + i], t = body['tip' + i];
+    if (a || t) body.roundBands.push([a, t].filter(Boolean));
+  }
   body.kind = kind;
   return body;
 }

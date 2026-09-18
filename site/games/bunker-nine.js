@@ -7559,7 +7559,90 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
   const magParts = spec.reloadKind === 'mag' ? activeMag(v) : null;
   if (magParts && magParts.length) {
     const out = P.reloading > 0 && P.reloadStage >= 1 && P.reloadStage < 2;
-    for (const m of magParts) m.visible = !out;
+    /* THE COLUMN GOES DOWN AS YOU FIRE.
+     *
+       The rounds inside a magazine were one geometry and therefore one
+       actor, so a translucent magazine showed a full column of brass
+       whether it held thirty rounds or none. That is the one thing a
+       translucent magazine exists to tell you -- the note on the
+       `smoke` material says real ones are made that way so the man
+       holding it can count what is left -- and it always said "full".
+
+       The column is cut into four bands now, band 0 at the feed lips.
+       Rounds leave from the top but the follower pushes the stack up
+       behind them, so what disappears is the BOTTOM: band 3 goes
+       first, band 0 last. A magazine emptying from the top would leave
+       a stack floating with a gap above it.
+
+       Quarter resolution, deliberately. One actor per round would be
+       exact and would cost thirty actors a gun on a rifle, times every
+       gun on the map, to tell you something you are reading off the
+       ammo counter anyway. Four bands buys the thing that matters: a
+       magazine you can see going down. */
+    const gunRoot = v.kind === 'single' ? v.actor : v.root;
+    const bands = gunRoot && gunRoot.roundBands;
+    if (bands && bands.length) {
+      const held = (P.ammo[P.equipped()] || {}).mag;
+      const cap = spec.mag || 1;
+      /* During the swap the magazine itself is gone, so the rounds go
+         with it -- and the fresh one comes back full, which is what
+         the counter says by then anyway. */
+      const frac = out ? 0 : Math.max(0, Math.min(1, (held == null ? cap : held) / cap));
+      for (let bi = 0; bi < bands.length; bi++) {
+        const show = !out && (bi / bands.length) < frac;
+        for (const a of bands[bi]) a.visible = show;
+      }
+    }
+
+    /* AND THE EMPTY ONE FALLS OUT, instead of ceasing to exist.
+     *
+       The fresh magazine has been a real object the support hand
+       carries for a while now. The old one was still just switched
+       off: at the moment the hand left the forend, thirty rounds of
+       steel and brass stopped being anywhere. It is the half of a
+       reload you actually watch, because it happens right under the
+       gun and it is the only part with gravity in it.
+
+       Down the well and tipping as it goes -- a magazine released
+       under its own weight pivots about the front lip of the well on
+       its way out, which is why it does not simply translate. Hidden
+       only once it is clear of the frame, so nothing pops.
+
+       The rounds still in it go with it. They are separate actors, so
+       without this the brass would hang in the air where the magazine
+       used to be. */
+    const dropList = magParts.slice();
+    if (bands) for (const b of bands) for (const a of b) dropList.push(a);
+    const ru = P.reloading > 0 ? 1 - P.reloading / (P.reloadMax || spec.reload) : -1;
+    const drop = out ? Math.max(0, Math.min(1, (ru - 0.06) / 0.26)) : 0;
+    for (const m of dropList) {
+      if (!m.__magRest) {
+        const q = m.position || m._position;
+        m.__magRest = q ? [q.x, q.y, q.z] : [0, 0, 0];
+      }
+      const R = m.__magRest;
+      if (drop > 0) {
+        m.setPosition([R[0] + drop * 0.020, R[1] - drop * 0.30, R[2]]);
+        m.setRotation([0, 0, -26 * drop]);
+      } else if (m.__magMoved) {
+        m.setPosition(R); m.setRotation([0, 0, 0]);
+      }
+      m.__magMoved = drop > 0;
+    }
+    /* Visibility last, and it has to survive the band pass above: a
+       round inside a magazine that is falling away is visible for as
+       long as the magazine is. */
+    const gone = drop >= 0.97;
+    for (const m of magParts) m.visible = !gone;
+    if (bands && out) {
+      const held0 = (P.ammo[P.equipped()] || {}).mag;
+      const cap0 = spec.mag || 1;
+      const f0 = Math.max(0, Math.min(1, (held0 == null ? 0 : held0) / cap0));
+      for (let bi = 0; bi < bands.length; bi++) {
+        const show = !gone && (bi / bands.length) < f0;
+        for (const a of bands[bi]) a.visible = show;
+      }
+    }
     if (v.bolt && v.boltThrow) {
       // Cocking handle: thrown back and released on the last beat. The
       // throw is the model's own, along the axis its tube actually runs.
