@@ -64,6 +64,9 @@
         canvas: '#game', mapId: want.map, mode: want.mode,
         loadout: want.loadout, name: want.name, operator: want.operator,
         onQuit: function () { location.href = 'bunker-nine.html'; },
+        /* Same mode, same map, a clean match. Reloading is deliberate:
+           see the note on the end screen in mp-game. */
+        onAgain: function () { location.reload(); },
       });
       boot.classList.add('gone');
     } catch (err) {

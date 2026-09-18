@@ -156,6 +156,10 @@
   border:1px solid #4a4234; padding:12px 30px; font-size:15px; letter-spacing:.26em;
   text-transform:uppercase; background:rgba(232,221,200,.04); }
 #mpui .over .go:hover { border-color:#ffd27a; color:#ffd27a; }
+#mpui .over .ends { display:flex; gap:14px; }
+#mpui .over .ends .go { margin-top:28px; }
+#mpui .over .ends .again { border-color:#6b7f5a; color:#cfe6bd; }
+#mpui .over .ends .again:hover { border-color:#8ce8a0; color:#8ce8a0; }
 
 /* ---- the replay: kill cam and best play ----
    Everything else on the HUD goes away while one of these runs. A kill
@@ -1130,7 +1134,9 @@
             + (M.winner == null ? 'Drawn' : (won ? 'Your side won' : 'You lost')) + '</div>'
             + '<div class="sub">' + esc(M.mode.name) + ' &middot; ' + M.score[p.team]
             + ' to ' + M.score[p.team === 'a' ? 'b' : 'a'] + '</div>'
-            + boardHtml(M) + '<div class="go">Back to the lobby</div>';
+            + boardHtml(M)
+            + '<div class="ends"><div class="go again">Play again</div>'
+            + '<div class="go lobby">Return to lobby</div></div>';
         }
       },
     };
@@ -1544,6 +1550,8 @@
        the frame of the kill is a still photograph. So the death is
        noted, and the clip is cut a beat later. */
     var camPend = null, aliveWas = true, bestTried = false;
+    /* How far through the end-of-match slow motion we are, 0 to 1. */
+    var endT = 0, endWall = 0;
 
     /* Being shot has to point at whoever did it, and the match reports
        a kill but not a graze. The player's own health falling is the
@@ -1648,11 +1656,49 @@
         }
       }
 
+      /* ---- the last second of a match ----
+         It should not simply stop. The game drops into slow motion as
+         the final kill lands, the world slides to a halt, and only
+         then does the screen tell you whether you won. A match that
+         cuts straight from a firefight to a scoreboard throws away the
+         one moment everybody remembers.
+
+         Driven on the engine's own timeScale, so everything slows
+         together -- bodies, bullets, the viewmodel, the bob -- rather
+         than a few things being lerped while the rest runs on. */
+      if (M.over && endT < 1) {
+        /* ON WALL TIME, NOT GAME TIME. timeScale scales the dt handed
+           to every update hook including this one, so driving the ramp
+           from `dt` means the ramp slows down as it slows the game
+           down -- and at timeScale 0 it receives dt 0, stops
+           advancing, and the result screen never arrives at all. The
+           match would simply stop, frozen, forever. */
+        var wnow = (W.performance ? W.performance.now() : Date.now()) / 1000;
+        var wdt = endWall ? Math.min(0.25, wnow - endWall) : 1 / 60;
+        endWall = wnow;
+        endT = Math.min(1, endT + wdt / 1.6);
+        /* Down to a tenth and then to a stop, on a curve that is
+           slowest at the end so the freeze arrives rather than hits. */
+        var sl = 1 - endT;
+        game.timeScale = Math.max(0, sl * sl * 0.9 + 0.02);
+        if (endT >= 1) game.timeScale = 0;
+      }
+      if (M.over && endT < 0.999) {
+        /* Still slowing: the world runs, nothing else happens yet. */
+        M.update(dt);
+        hud.paint(0.02, false, adsT);
+        input.endFrame();
+        return;
+      }
+
       /* ---- best play, before the scoreboard ---- */
       if (M.over && !bestTried) {
         bestTried = true;
         var b = M.bestPlay();
         if (b && b.clip) {
+          /* Back to real time for the replay -- a highlight played at
+             a fiftieth of speed is not a highlight. */
+          game.timeScale = 1;
           replay.begin({
             kind: 'Best play', name: b.name, detail: bestPlayDetail(b),
             clip: b.clip, from: b.from, to: b.to,
@@ -1784,10 +1830,33 @@
 
       if (M.over && !over && !replay.active) {
         over = true;
+        game.timeScale = 1;
         if (document.exitPointerLock) document.exitPointerLock();
-        var go = root.querySelector('.over .go');
-        if (go) {
-          go.addEventListener('click', function () {
+        /* TWO WAYS OUT, and there was one.
+         *
+           A finished match offered "Back to the lobby" and nothing
+           else, so the only way to play a second one was to restart
+           the whole game. That is not a missing feature, it is a match
+           you cannot leave.
+
+           Play again RELOADS rather than tearing the match down in
+           place. A match owns actors, corpses, bullet holes, a
+           recorder tape, highlight clips and a weapon per combatant,
+           and unpicking all of that correctly is a much better way to
+           produce a second match with the first one's ghosts in it.
+           The world rebuild costs a few seconds and is certainly
+           right; that is the correct trade for the thing that has
+           been stopping play entirely. */
+        var again = root.querySelector('.over .again');
+        var lobby = root.querySelector('.over .lobby');
+        if (again) {
+          again.addEventListener('click', function () {
+            if (opts.onAgain) opts.onAgain(M);
+            else W.location.reload();
+          });
+        }
+        if (lobby) {
+          lobby.addEventListener('click', function () {
             if (opts.onQuit) opts.onQuit(M);
             else W.location.href = 'bunker-nine.html';
           });
