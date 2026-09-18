@@ -136,6 +136,24 @@ const TextureLib = {
     /* Enough relief to give each toy an edge and not so much that the
        ripple under them turns into facets. */
     floaties: 1.0,
+    /* ---- the gun set ----
+       These are looked at from thirty centimetres rather than three
+       metres, so the relief has to survive being magnified rather than
+       survive being tiled. The rule is the same one metal follows: a
+       strength that puts more than about a quarter-texel of slope on a
+       feature turns the feature into a facet, and a faceted cartridge
+       case reads as a low-poly cylinder no matter how good the albedo
+       on it is. */
+    /* LOWER THAN THE ARCHITECTURE, AND THE FIRST SET OF THESE WAS NOT.
+       A number here multiplies the slope taken from the height field,
+       so it compounds with whatever amplitude the recipe wrote. The
+       first cut had both high: 1.7 on leather over a height field
+       swinging half its range, at nine centimetres across. The render
+       was tooled leather, not worn leather. The heights came down in
+       the recipes and these came down with them. */
+    brass: 0.30, copper: 0.28, lead: 0.55, primer: 0.25,
+    bluing: 0.18, parkerize: 0.85, walnut: 0.35, bakelite: 0.30,
+    polymer: 0.80, leather: 0.60, webbing: 1.10,
   },
 
   /* Surface recipes. Each writes into `c` for one texel.
@@ -547,6 +565,355 @@ const TextureLib = {
         c.ao = 1 - smoothstep(0.4, 0.12, gap) * 0.3;
         c.h = 0.8;
       }
+    },
+
+    /* ==================================================================
+       THE GUN AND AMMUNITION SET
+       ==================================================================
+       Everything above this line is architecture: surfaces a metre or
+       more across, authored to read from across a room. A cartridge
+       case is twelve millimetres wide and you look at it from thirty
+       centimetres, so nothing above is any use for one -- `metal` is a
+       brushed panel, and a brushed panel on a bullet is a bullet made
+       of a filing cabinet.
+
+       These are authored at the scale they are seen. Every one carries
+       its own colour, as the whole bank does, because a tint can only
+       multiply down: brass has to BE brass here or no material can ask
+       for it.
+
+       THE COLOURS ARE THE REAL ALLOYS, not a guess at what looks
+       gold-ish. For a metal, albedo is F0 -- the reflectance -- so
+       getting it wrong is not a tint being off, it is the wrong metal.
+         cartridge brass, 70 Cu / 30 Zn   0.93 : 0.76 : 0.40
+         gilding metal,   95 Cu /  5 Zn   0.95 : 0.64 : 0.47
+         lead, oxidised                   0.54 : 0.54 : 0.56
+         blued steel (magnetite over it)  near black, with a blue cast
+       ================================================================== */
+
+    /* CARTRIDGE BRASS. A case is DRAWN -- punched from a cup and pulled
+       through progressively smaller dies -- so its marks run along the
+       axis, not around it. That is the one detail that separates a case
+       from a gold-painted cylinder, and it is why the frequency below
+       is high in u and low in v: u wraps the cylinder, so 150 cycles in
+       u is fine lengthwise striation.
+
+       Fired cases tarnish in blotches rather than evenly, because the
+       chamber touches them unevenly and the hand touches them after.
+       The tarnish lives mostly in the roughness: brass goes DULL before
+       it goes brown. */
+    brass(u, v, n, c) {
+      /* THREE CORRECTIONS, ALL FROM LOOKING AT THE FIRST RENDER.
+       *
+         IT WAS GOLD. 0.93 : 0.76 : 0.40 is a jeweller's yellow. Brass
+         is a copper-zinc alloy and the zinc pulls it toward white --
+         cartridge brass reflects about 0.53 in blue where gold
+         reflects half that. The blue channel IS the difference between
+         brass and gold and it was the channel that was wrong.
+
+         IT WAS HAMMERED. The dings were cubed and multiplied by 1.4,
+         so a third of the surface was a dimple. A fired case has a few
+         marks on it, not a peened finish. A fifth of the amplitude,
+         and a higher threshold so they are isolated.
+
+         IT WAS BUMPY. The height ran +-0.3 on the draw lines and -0.45
+         in the dings, which at twelve millimetres across is a relief
+         carving. Drawn brass is SMOOTH -- the striations are an optical
+         effect in the roughness far more than a physical one. Most of
+         the signal moved out of the height field and into the sheen. */
+      const draw = n.fbm(u * 150, v * 4, 3.1, 2) * 0.5 + 0.5;
+      const tarnish = n.fbm(u * 7, v * 5, 22.5, 4) * 0.5 + 0.5;
+      const dings = Math.pow(Math.max(0, n.fbm(u * 44, v * 44, 8.8, 2) - 0.25), 3) * 2.2;
+      const base = 0.93 - tarnish * 0.09 + (draw - 0.5) * 0.035;
+      c.r = base * 0.91; c.g = base * 0.79; c.b = base * 0.53;
+      c.metal = 1;
+      c.rough = clamp(0.17 + tarnish * 0.15 + (draw - 0.5) * 0.10 + dings * 0.18, 0.11, 0.62);
+      c.ao = 1 - dings * 0.10;
+      c.h = (draw - 0.5) * 0.06 - dings * 0.12;
+    },
+
+    /* GILDING METAL -- the copper jacket of a bullet, and a different
+       alloy from the case even though both are copper-bearing. Redder,
+       softer, and drawn harder, so the striation is finer and deeper.
+       A jacket is also handled less than a case, so it keeps its shine
+       and tarnishes as a smooth film rather than in blotches. */
+    copper(u, v, n, c) {
+      const draw = n.fbm(u * 220, v * 5, 5.7, 2) * 0.5 + 0.5;
+      const film = n.fbm(u * 4, v * 3, 31.2, 3) * 0.5 + 0.5;
+      const base = 0.95 - film * 0.07 + (draw - 0.5) * 0.045;
+      c.r = base * 0.95; c.g = base * 0.64; c.b = base * 0.47;
+      c.metal = 1;
+      c.rough = clamp(0.16 + film * 0.11 + (draw - 0.5) * 0.09, 0.10, 0.50);
+      c.ao = 1;
+      /* Same correction as the case: a drawn jacket is smooth, and the
+         striations belong in the sheen rather than in the surface. */
+      c.h = (draw - 0.5) * 0.07;
+    },
+
+    /* LEAD. Exposed at the base of a jacketed bullet and over the whole
+       of a cast one. It is the one metal here that does not shine: a
+       lead surface oxidises in minutes to a grey film, and what you see
+       is the film. Nearly neutral, faintly blue, and dull enough that
+       the highlight is a broad sheen rather than a point. Swage marks
+       -- the flats the forming die leaves -- are the only structure. */
+    lead(u, v, n, c) {
+      const swage = n.fbm(u * 16, v * 10, 9.4, 2) * 0.5 + 0.5;
+      const oxide = n.fbm(u * 30, v * 30, 44.1, 3) * 0.5 + 0.5;
+      const base = 0.56 + swage * 0.07 - oxide * 0.06;
+      c.r = base * 0.98; c.g = base * 0.99; c.b = base * 1.03;
+      c.metal = 1;
+      /* High for a metal on purpose. Below about 0.5 this reads as
+         pewter or as dirty chrome; lead is closer to unglazed clay that
+         happens to be a conductor. */
+      c.rough = clamp(0.58 + oxide * 0.22 + (swage - 0.5) * 0.10, 0.40, 0.92);
+      c.ao = 1 - oxide * 0.10;
+      /* Swaging leaves the softest marks of anything here: lead flows
+         into the die rather than being cut by it. */
+      c.h = (swage - 0.5) * 0.16 + (oxide - 0.5) * 0.05;
+    },
+
+    /* PRIMER CUP. Brass or nickel, struck flat, and the one part of a
+       round that is polished rather than drawn -- it is a stamping. Kept
+       separate from `brass` because the cup is visibly brighter and
+       smoother than the case around it, and on a round seen end-on that
+       contrast IS the primer. */
+    primer(u, v, n, c) {
+      const mill = n.fbm(u * 60, v * 60, 12.8, 2) * 0.5 + 0.5;
+      const base = 0.96 - mill * 0.05;
+      c.r = base * 0.90; c.g = base * 0.83; c.b = base * 0.62;
+      c.metal = 1;
+      c.rough = clamp(0.13 + mill * 0.10, 0.08, 0.40);
+      c.ao = 1;
+      c.h = (mill - 0.5) * 0.12;
+    },
+
+    /* BLUED STEEL. Not paint and not a dark metal: it is magnetite
+       grown on the steel, a few ten-thousandths thick, and the steel
+       under it is still a mirror. So this is a very LOW roughness with
+       a very LOW albedo, which is an unusual pair and exactly why blued
+       guns look the way they do -- a black that throws a hard white
+       highlight.
+
+       Two things stop it being a black mirror. The polishing swirl left
+       by the wheel, which is broad and directional. And WEAR: the oxide
+       is thin, so every edge and every bearing surface comes back to
+       bright steel. The worn patches here are sparse, bright and rough
+       -- the peaks of a high-frequency field -- because that is what
+       holster wear looks like from thirty centimetres. */
+    bluing(u, v, n, c) {
+      /* THE WEAR WAS SALT AND PEPPER. At 18 cycles across the tile and
+         three octaves, the top octave lands about one texel a cycle, so
+         thresholding it picked out INDIVIDUAL TEXELS -- and a threshold
+         on white noise is white noise. The first render was a black
+         ball with a snowstorm on it.
+
+         Wear is not a noise, it is a place: the high edges and the
+         parts a holster rubs. Four cycles and two octaves makes broad
+         patches, and the threshold then selects a few of them rather
+         than a scatter of pixels. Brighter, too -- worn bluing goes to
+         bright steel, not to grey.
+
+         The base is also lifted. 0.115 is darker than magnetite really
+         is; the reason a blued gun looks black is the low ROUGHNESS
+         throwing all its light into one highlight, not the albedo. */
+      const swirl = n.fbm(u * 26, v * 9, 6.3, 3) * 0.5 + 0.5;
+      const cloud = n.fbm(u * 3.5, v * 3.5, 17.7, 3) * 0.5 + 0.5;
+      const wearF = n.fbm(u * 4, v * 4, 55.3, 2) * 0.5 + 0.5;
+      const wear = Math.max(0, wearF - 0.72) / 0.28;
+      const base = 0.155 + cloud * 0.045 + (swirl - 0.5) * 0.020;
+      /* The blue is in the RATIO, not in a tint on top: magnetite runs
+         a few per cent cooler in red than in blue, and at this
+         brightness a few per cent is the whole of the colour. */
+      c.r = base * 0.88 + wear * 0.34;
+      c.g = base * 0.94 + wear * 0.35;
+      c.b = base * 1.12 + wear * 0.36;
+      c.metal = 1;
+      c.rough = clamp(0.115 + (swirl - 0.5) * 0.05 + cloud * 0.05 + wear * 0.26, 0.07, 0.62);
+      c.ao = 1;
+      // Polished steel has no relief at all. This is barely a ripple.
+      c.h = (swirl - 0.5) * 0.03 - wear * 0.04;
+    },
+
+    /* PARKERIZING -- manganese phosphate, the finish on almost every
+       service weapon made after about 1935, and nothing in this bank
+       could do it. It is a CONVERSION COATING: the steel is eaten into
+       and regrown as a crystalline crust, so the surface is a mat of
+       interlocking grains, dead matte, dark grey with a green-brown
+       cast, and it holds oil, which is why it looks faintly wet.
+
+       The crystal mat is what has to be right, and it is not fbm --
+       fbm gives clouds and this is CELLS. Two high-frequency fields
+       multiplied and sharpened make grain boundaries: where either is
+       near its own mid-value there is a crack between crystals.
+
+       Metalness 0.5. A phosphate layer is a ceramic on top of a metal,
+       and it reads as neither on its own -- at 1 it goes to a dark
+       mirror and at 0 it goes to grey plastic. */
+    parkerize(u, v, n, c) {
+      /* Finer than the first cut. At 85 cycles the crystals came out
+         about two millimetres across on a receiver, which is pumice;
+         real phosphate crystals are a tenth of that and read as a
+         texture rather than as holes. 150 is as fine as the bake will
+         carry -- past that the grain boundaries fall inside one texel
+         and it goes back to being noise. */
+      const a = n.fbm(u * 150, v * 150, 4.2, 2);
+      const b = n.fbm(u * 150, v * 150, 61.9, 2);
+      /* Distance from either field's zero crossing: small near a
+         boundary, large in the middle of a crystal. */
+      const cell = Math.min(Math.abs(a), Math.abs(b));
+      const grain = smoothstep(0.0, 0.16, cell);
+      const oil = n.fbm(u * 6, v * 6, 28.4, 3) * 0.5 + 0.5;
+      const base = 0.200 + grain * 0.060 - (1 - grain) * 0.040 + oil * 0.018;
+      c.r = base * 1.00; c.g = base * 1.01; c.b = base * 0.93;
+      c.metal = 0.5;
+      /* Matte, and only the oil in the crystal pits breaks it. */
+      c.rough = clamp(0.88 - grain * 0.10 - oil * 0.12, 0.45, 1);
+      c.ao = 0.84 + grain * 0.16;
+      c.h = grain * 0.30;
+    },
+
+    /* WALNUT, and not the `wood` recipe. That one is construction
+       timber: six sawn boards to a tile with seams and knots between
+       them, which is right for a crate and absurd for a rifle stock --
+       a stock is ONE piece of one tree, chosen for its figure, sanded
+       to nothing and oil-finished.
+
+       So: no boards, no seams. Close parallel grain with the growth
+       rings crowding and opening as the surface cuts across them, the
+       pore flecks that make walnut read as walnut rather than as brown
+       plastic, and a finish that is smooth over the wood and very
+       slightly less smooth in the open pores -- which is the whole
+       visual signature of an oiled stock as against a lacquered one. */
+    walnut(u, v, n, c) {
+      /* Rings: a smooth field, then folded. The fold is what makes them
+         crowd together where the cut is near-tangential. */
+      /* IT CAME OUT AS AN ORDNANCE SURVEY MAP. `flow * 5.5` displaced
+         the ring field by five and a half whole rings, so the rings
+         wrapped back over themselves into closed contours and burls.
+         A stock is cut from a straight billet: the grain runs broadly
+         ALONG it and only bends. 0.7 of a ring is a bend.
+
+         The rings are also tighter, because 22 across a 220-millimetre
+         stock is a growth ring every centimetre, and walnut grown for
+         gunstocks is far closer than that. */
+      const flow = n.fbm(u * 2.2, v * 1.1, 13.7, 3);
+      const rings = Math.abs(Math.sin((v * 34.0 + flow * 0.7) * Math.PI));
+      const ringD = Math.pow(1 - rings, 2.2);
+      const fig = n.fbm(u * 3, v * 7, 41.5, 4) * 0.5 + 0.5;
+      // Pores: short dashes lying along the grain, not round dots.
+      const poreF = n.fbm(u * 26, v * 190, 70.1, 2) * 0.5 + 0.5;
+      const pore = Math.max(0, poreF - 0.70) / 0.30;
+      const base = 0.34 + fig * 0.17 - ringD * 0.15 - pore * 0.09;
+      /* Walnut under oil is a cool red-brown that goes almost purple in
+         the dark rings. The first cut ran 1.00 : 0.64 : 0.40, which is
+         terracotta -- it is the same mistake the battlefield mud made,
+         and the correction is the same: take red down relative to the
+         other two until it stops being orange. */
+      c.r = base * 1.00; c.g = base * 0.70; c.b = base * 0.52;
+      c.metal = 0;
+      c.rough = clamp(0.36 + ringD * 0.08 + pore * 0.26 - fig * 0.05, 0.22, 0.85);
+      c.ao = 1 - pore * 0.22 - ringD * 0.08;
+      /* A stock is SANDED. The only thing below the surface is the open
+         pores; the grain itself is an optical pattern in a flat plane,
+         and running it at +-0.35 was carving the figure into the wood. */
+      c.h = 0.6 - ringD * 0.05 - pore * 0.22;
+    },
+
+    /* BAKELITE. Phenolic resin with a filler, moulded, and the reason
+       it never looks like plastic is that the filler MARBLES -- the
+       flow front drags streaks of lighter and darker resin through it,
+       so the pattern follows the shape of the part. Warm oxblood, near
+       the AK furniture colour, and glossy because a mould is polished
+       and the resin takes its finish exactly. */
+    bakelite(u, v, n, c) {
+      const warp = n.fbm(u * 2.5, v * 2.5, 3.9, 3);
+      const swirl = n.fbm(u * 5 + warp * 2.4, v * 3 + warp * 1.6, 27.2, 4) * 0.5 + 0.5;
+      const fleck = n.fbm(u * 70, v * 70, 66.6, 2) * 0.5 + 0.5;
+      const base = 0.36 + swirl * 0.26 + (fleck - 0.5) * 0.04;
+      c.r = base * 1.00; c.g = base * 0.47; c.b = base * 0.30;
+      c.metal = 0;
+      c.rough = clamp(0.26 + (1 - swirl) * 0.08 + (fleck - 0.5) * 0.05, 0.16, 0.6);
+      c.ao = 1;
+      c.h = 0.5 + (swirl - 0.5) * 0.18;
+    },
+
+    /* MOULDED POLYMER -- a modern frame, a magazine body, a handguard.
+       The surface a mould leaves is not smooth: it is textured on
+       purpose, a fine pebble grain, both so it can be gripped and so it
+       does not show every scuff. That grain is the whole material, and
+       it is DENSE -- about a tenth of a millimetre a cell -- so this is
+       the one recipe here that wants to be near the bake's own limit. */
+    polymer(u, v, n, c) {
+      const a = n.fbm(u * 150, v * 150, 7.7, 2);
+      const b = n.fbm(u * 150, v * 150, 83.1, 2);
+      const cell = Math.min(Math.abs(a), Math.abs(b));
+      const pebble = smoothstep(0.0, 0.13, cell);
+      const mould = n.fbm(u * 4, v * 4, 19.3, 3) * 0.5 + 0.5;
+      const base = 0.19 + pebble * 0.05 + mould * 0.02;
+      // Very slightly warm-neutral: a true grey polymer reads as dead.
+      c.r = base * 1.01; c.g = base * 1.00; c.b = base * 0.97;
+      c.metal = 0;
+      c.rough = clamp(0.72 - pebble * 0.14 + (mould - 0.5) * 0.06, 0.40, 0.95);
+      c.ao = 0.86 + pebble * 0.14;
+      c.h = pebble * 0.45;
+    },
+
+    /* GRAIN LEATHER -- a sling, a holster, a rifle's cheekpiece. Three
+       things, in order of how much they matter: the PORES, which are
+       the follicles and are what makes leather leather; the CREASE
+       network, broad and soft, where it has folded; and a wax finish
+       that is glossy on the high ground and dead in the creases,
+       because that is where the polish never reaches. */
+    leather(u, v, n, c) {
+      const poreF = n.fbm(u * 110, v * 110, 2.4, 2) * 0.5 + 0.5;
+      const pore = Math.max(0, poreF - 0.60) / 0.40;
+      const warp = n.fbm(u * 3, v * 3, 51.8, 2);
+      /* IT WAS A MAZE. `Math.abs(field) * 5.5` makes a ridge wherever
+         the field crosses zero, and a three-octave field crosses zero
+         everywhere -- so the whole surface was creases, meeting each
+         other, at full depth. Real leather has a few soft folds across
+         it and is otherwise flat grain.
+
+         Two octaves so the crossings are sparse, x 9 so the ridges are
+         narrow rather than broad bands, and squared harder so only the
+         very centre of a crossing counts as a crease at all. */
+      const creaseF = n.fbm(u * 6 + warp * 1.2, v * 6 - warp * 1.2, 33.6, 2);
+      const crease = Math.pow(1 - Math.min(1, Math.abs(creaseF) * 9.0), 3.0);
+      const wax = n.fbm(u * 5, v * 5, 71.4, 3) * 0.5 + 0.5;
+      const base = 0.40 + wax * 0.10 - crease * 0.14 - pore * 0.09;
+      c.r = base * 1.00; c.g = base * 0.68; c.b = base * 0.48;
+      c.metal = 0;
+      c.rough = clamp(0.44 + crease * 0.26 + pore * 0.20 - wax * 0.10, 0.25, 0.95);
+      c.ao = 1 - crease * 0.28 - pore * 0.18;
+      /* A fold in leather is a tenth of a millimetre deep and a pore is
+         less. Both were running at half the height range. */
+      c.h = 0.6 - crease * 0.16 - pore * 0.10;
+    },
+
+    /* WEBBING -- a sling, a strap, a magazine pouch. Not the `fabric`
+       recipe, which is a fine weave for clothing. This is a two-over-
+       two herringbone in a heavy cotton or nylon tape, the individual
+       tows are visible at arm's length, and the edges of the tape are
+       selvedge rather than cut. Coarse, matte, and with enough relief
+       in the height field that the weave catches a rim light. */
+    webbing(u, v, n, c) {
+      const NW = 26;
+      const gu = u * NW, gv = v * NW;
+      const iu = Math.floor(gu), iv = Math.floor(gv);
+      const fu = gu - iu, fv = gv - iv;
+      // Two-over-two: which tow is on top alternates in pairs.
+      const over = (((iu >> 1) + (iv >> 1)) & 1) === 0;
+      // Along the tow it is round, so the shade is a cosine across it.
+      const across = over ? fv : fu;
+      const round = Math.sin(across * Math.PI);
+      const fuzz = n.fbm(u * 200, v * 200, 14.9, 2) * 0.5 + 0.5;
+      const dirt = n.fbm(u * 6, v * 6, 47.2, 3) * 0.5 + 0.5;
+      const base = 0.44 + round * 0.22 - (1 - dirt) * 0.10 + (fuzz - 0.5) * 0.06;
+      c.r = base * 1.00; c.g = base * 0.96; c.b = base * 0.82;
+      c.metal = 0;
+      c.rough = clamp(0.93 - round * 0.06 + (fuzz - 0.5) * 0.06, 0.55, 1);
+      c.ao = 0.68 + round * 0.32;
+      c.h = round * 0.8 + (fuzz - 0.5) * 0.08;
     },
 
     /* A flat surface — for when a material wants pure colour and the

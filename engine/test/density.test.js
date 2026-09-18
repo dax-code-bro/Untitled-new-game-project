@@ -62,24 +62,65 @@ const note = (s) => console.log(`  ..   ${s}`);
     /* Two walls of one material, three metres and twenty-four, far
        enough apart that neither is ever in frame with the other. */
     G.box({ at: [0, 1.5, 0], size: [3, 3, 0.4], material: mat, physics: false });
-    G.box({ at: [200, 12, 0], size: [24, 24, 0.4], material: mat, physics: false });
+    G.box({ at: [60, 12, 0], size: [24, 24, 0.4], material: mat, physics: false });
 
     /* Both photographed from 2.6 m, so the two frames cover the same
        physical patch of wall and the comparison is about the surface
        rather than about the distance to it. */
     const gl = G.gl, W = gl.drawingBufferWidth, H = gl.drawingBufferHeight;
     const buf = new Uint8Array(W * H * 4);
+    /* THE BOUNDS ARE COMPUTED ONCE AND NAMED, because of a bug that was
+       in here: `(W * 0.7) | 0 - 1` does not mean what it reads as. `|`
+       binds LOOSER than `-`, so that parses as `(W * 0.7) | (0 - 1)`,
+       which is `x | -1`, which is -1. The inner loop never ran, every
+       grain came back 0, and the first assertion would have been
+       deciding 0 > 1.5 rather than measuring anything. */
+    const x0 = Math.floor(W * 0.3), x1 = Math.floor(W * 0.7) - 1;
+    const y0 = Math.floor(H * 0.3), y1 = Math.floor(H * 0.7);
+    /* MEASURED AT THE SCALE OF THE PATTERN, NOT AT THE SCALE OF A
+       PIXEL, and the first version of this got it wrong in a way worth
+       recording because it is the same mistake three probes in this
+       project have made: it measured something next to the question.
+
+       Neighbour-pixel difference sounds like "how much is going on
+       here". It is not. The shader's detail layer tiles the same
+       texture a second time at nine times the rate whenever the camera
+       is inside eleven metres, so at this range BOTH walls carry dense
+       fine grain and the two came back 1.02x apart -- under the old
+       regime, where the bricks were visibly eight centimetres on one
+       wall and sixty-seven on the other. The metric could not see
+       brick size at all. It was measuring the detail layer.
+
+       So the frame is block-averaged 4x4 first. That is a low-pass
+       filter: it throws away the fine layer and leaves the macro
+       pattern, which is the thing whose scale is in question. A mortar
+       line every 2.4 blocks and a mortar line every 7 blocks are
+       plainly different numbers; a millimetre of grain in both is not.
+
+       Nothing about the render changes -- the detail layer is still on,
+       exactly as a player sees it. Only what is read off the frame. */
+    const BK = 4;
+    const bw = Math.floor((x1 - x0) / BK), bh = Math.floor((y1 - y0) / BK);
+    const blocks = new Float32Array(bw * bh);
     const grainAt = (x) => {
       G.renderFrom([x, 1.5, 2.6], [x, 1.5, 0], { fov: 62 });
       gl.readPixels(0, 0, W, H, gl.RGBA, gl.UNSIGNED_BYTE, buf);
-      /* The middle of the frame only: at this range the wall fills it,
-         and the margins are where the sky and the ground come in. */
+      for (let by = 0; by < bh; by++) {
+        for (let bx = 0; bx < bw; bx++) {
+          let acc = 0;
+          for (let dy = 0; dy < BK; dy++) {
+            for (let dx = 0; dx < BK; dx++) {
+              const a = ((y0 + by * BK + dy) * W + (x0 + bx * BK + dx)) * 4;
+              acc += 0.2126 * buf[a] + 0.7152 * buf[a + 1] + 0.0722 * buf[a + 2];
+            }
+          }
+          blocks[by * bw + bx] = acc / (BK * BK);
+        }
+      }
       let sum = 0, n = 0;
-      for (let y = (H * 0.3) | 0; y < (H * 0.7) | 0; y++) {
-        for (let x2 = (W * 0.3) | 0; x2 < (W * 0.7) | 0 - 1; x2++) {
-          const a = (y * W + x2) * 4, b = a + 4;
-          sum += Math.abs(buf[a] - buf[b]) + Math.abs(buf[a + 1] - buf[b + 1])
-            + Math.abs(buf[a + 2] - buf[b + 2]);
+      for (let by = 0; by < bh; by++) {
+        for (let bx = 0; bx < bw - 1; bx++) {
+          sum += Math.abs(blocks[by * bw + bx] - blocks[by * bw + bx + 1]);
           n++;
         }
       }
@@ -87,12 +128,12 @@ const note = (s) => console.log(`  ..   ${s}`);
     };
     const out = { on: {}, off: {} };
     mat.worldUv = true; mat.uvScale = 1.11;
-    out.on.small = grainAt(0); out.on.large = grainAt(200);
+    out.on.small = grainAt(0); out.on.large = grainAt(60);
     /* And the same pair under the rule this replaced, so the test can
        say the old one was broken rather than only that the new one is
        self-consistent. 9 is what Resort's brick actually carried. */
     mat.worldUv = false; mat.uvScale = 9;
-    out.off.small = grainAt(0); out.off.large = grainAt(200);
+    out.off.small = grainAt(0); out.off.large = grainAt(60);
     return out;
   });
 
@@ -106,11 +147,21 @@ const note = (s) => console.log(`  ..   ${s}`);
      pinning today's brick recipe -- but the ratio between a small
      surface and a large one, which is the thing that has to be 1. */
   check('a 24 m wall carries the same grain as a 3 m one',
-    on < 1.6, `${on.toFixed(2)}x apart`);
+    on < 1.15, `${on.toFixed(2)}x apart`);
   /* And the regime it replaced, so a future change that quietly drops
-     worldUv fails here rather than in somebody's screenshot. */
+     worldUv fails here rather than in somebody's screenshot.
+
+     THE THRESHOLD IS 1.35 AND IT WAS 2.2, which was a number I made up
+     before the metric existed -- taken from the eight-to-one ratio of
+     BRICK SIZES in the two screenshots, which is not what this reads.
+     Measured, the block-averaged structure comes out 1.00 with world
+     UVs and 1.67 without. Half the gap, as every other threshold in
+     this suite is set, puts it at 1.35. Moving a threshold to make a
+     test pass is cheating; setting one from a measurement instead of
+     from a guess is the opposite, and the guess is written down above
+     so the difference is checkable. */
   check('and under face UVs they were not remotely the same',
-    off > 2.2, `only ${off.toFixed(2)}x apart, so this no longer proves anything`);
+    off > 1.35, `only ${off.toFixed(2)}x apart, so this no longer proves anything`);
   check('world UVs are the closer of the two', on < off,
     `${on.toFixed(2)} vs ${off.toFixed(2)}`);
 
