@@ -712,6 +712,13 @@
      id added to MP_DATA before its model exists should still put
      something in the player's hands. */
   var VM_FALLBACK = {};
+  /* PUBLISHED, because mp-match builds the SAME weapon for the man
+     across the street and was reaching straight for serviceArm -- so
+     the hand-built models were in your hands and not in his. One map,
+     one place, exported rather than copied: a duplicate would agree
+     with itself while the two representations diverged, which is how
+     this diverged in the first place. */
+  W.MP_VM_BESPOKE = VM_BESPOKE;
 
   /* WHERE THE HANDS GO ON A WEAPON THAT HAS NEVER BEEN POSED.
    *

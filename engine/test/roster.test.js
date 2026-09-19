@@ -202,6 +202,21 @@ function readFallback() {
     .map((x) => x.via.slice(8)));
   note('bespoke builders in use: ' + [...usedFns].sort().join(', '));
 
+  /* AND THE OTHER REPRESENTATION. mp-match builds the weapon you see
+     in somebody else's hands, and it was reaching straight for
+     serviceArm -- so every hand-built model was in your hands and not
+     in his. Two files, two builders, one weapon: the map has to be
+     shared, and this asserts that it is rather than that a copy of it
+     happens to match today. */
+  const matchSrc = fs.readFileSync(path.join(ROOT, 'site/games/mp-match.js'), 'utf8');
+  check('the third-person weapon uses the same bespoke map as the viewmodel',
+    /MP_VM_BESPOKE/.test(matchSrc),
+    'mp-match.js builds its own model without consulting VM_BESPOKE');
+  check('and that map is published rather than copied',
+    /W\.MP_VM_BESPOKE = VM_BESPOKE/.test(
+      fs.readFileSync(path.join(ROOT, 'site/games/mp-game.js'), 'utf8')),
+    'mp-game.js does not export VM_BESPOKE');
+
   if (r.strays && r.strays.length) {
     note('magazine outside its grip: ' + r.strays.map((x) => x.kind
       + ' mag [' + x.mag + '] grip [' + x.grip + ']').join(', '));

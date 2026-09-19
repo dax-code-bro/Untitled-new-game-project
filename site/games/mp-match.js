@@ -2054,10 +2054,30 @@
     if (!id) return null;
     p._arms = p._arms || {};
     if (p._arms[id] !== undefined) return p._arms[id];
+    /* THE SAME MODEL THE VIEWMODEL USES.
+     *
+       This built the third-person weapon with serviceArm(id) directly,
+       so every hand-built gun in the engine was missing from the man
+       across the street even after mp-game's VM_BESPOKE was fixed to
+       use them in your own hands. The Thompson you carry and the
+       Thompson he carries were two different weapons, and the one he
+       had was the generic table arm -- the exact fault, in the exact
+       shape, that "the Thompson is completely wrong" turned out to be,
+       surviving in the other representation because the two build
+       their models in different files.
+
+       The map is read out of mp-game.js rather than duplicated, for
+       the reason roster.test.js gives: a second copy agrees with
+       itself and not with the game. */
     var made = null;
-    try {
-      made = M.game.serviceArm(id, { at: [0, -90, 0], physics: false });
-    } catch (e) { made = null; }
+    var fn = W.MP_VM_BESPOKE && W.MP_VM_BESPOKE[id];
+    if (fn && typeof M.game[fn] === 'function') {
+      try { made = M.game[fn]({ at: [0, -90, 0], physics: false }); } catch (e) { made = null; }
+    }
+    if (!made) {
+      try { made = M.game.serviceArm(id, { at: [0, -90, 0], physics: false }); }
+      catch (e) { made = null; }
+    }
     if (!made) {
       /* A gun with no model is the wrong gun, never an empty hand. */
       try { made = M.game.serviceArm('m4', { at: [0, -90, 0], physics: false }); }
