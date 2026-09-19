@@ -1,8 +1,8 @@
 {
-  "version": "0.8.0",
-  "name": "the dead arrive",
-  "date": "2026-09-14",
-  "mode": "zombies",
-  "did": "Coastline is playable again. You no longer fall through the water into an endless void -- the lake bed was a 520-metre-wide box that did not collide, and past it there was no bed at all. The dead now actually reach you from every way in: they were walking straight at you with no pathfinding, and then jamming on the lake bed one centimetre at a time. Falling off a height or out of the world kills you. Dropped guns rest on the floor instead of falling through it, and clear after ten minutes.",
-  "onAccept": "Your round is saved and the map is rebuilt. You keep your points, your guns and your perks, and the dead hold off for three minutes while you get set."
+  "version": "0.9.0",
+  "name": "the armoury",
+  "date": "2026-09-19",
+  "mode": "multiplayer",
+  "did": "Seventy-five guns, up from sixty, and two new sections to hold them. Shotguns are a class of their own now with thirteen in it -- a trench gun with a bayonet on it, a coach gun, an over-and-under, a drum-fed auto, a lever gun, a twin-tube bullpup, a long-recoil humpback, a riot pump with breaching teeth, a twelve-round revolver and an eight-bore that moves you as much as it moves him. Snipers are a class of their own too, ten of them, with a Dragunov, a Lee-Enfield, an Arctic AW, a Springfield A4 and a bullpup .338 joining the five that were filed under Special. And every gun in the game was compared against every other one: the nine pistols were near enough the same pistol with the numbers moved about, and so were nine other pairs. They all have their own parts now -- serrations, hammers, beavertails, ported barrels, cocking tubes, ammunition tins, bayonets, skeleton stocks -- instead of their own dimensions.",
+  "onAccept": "The armoury reloads. Your loadouts are kept; anything you had equipped that moved class is still where you left it."
 }

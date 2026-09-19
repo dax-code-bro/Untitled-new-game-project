@@ -136,12 +136,14 @@ function check(name, cond, detail = '') {
     && !lo.keys.includes('Four') && !lo.keys.includes('Five'),
     lo.keys.join(','));
   check('nothing in the loadout is empty', lo.vals.every((v) => v && v !== '—'), lo.vals.join(' | '));
-  check('the primary list opens on the gun list', lo.opts >= 40 && lo.heads >= 5,
+  check('the primary list opens on the gun list', lo.opts >= 40 && lo.heads >= 6,
     `${lo.opts} guns in ${lo.heads} classes`);
   await page.screenshot({ path: path.join(OUT, 'mp-loadout.jpg'), type: 'jpeg', quality: 82 });
 
-  /* Every one of the sixty is reachable from this screen, across the
-     primary and the secondary between them. */
+  /* Every one of them is reachable from this screen, across the
+     primary and the secondary between them. Counted against
+     MP_DATA.GUNS rather than against a number written here, which is
+     why this went on being true when sixty became seventy-five. */
   const reach = await page.evaluate(() => {
     const names = new Set();
     const pick = (label) => {
@@ -154,7 +156,7 @@ function check(name, cond, detail = '') {
     pick('Primary'); pick('Secondary');
     return { n: names.size, total: window.MP_DATA.GUNS.length };
   });
-  check('all sixty guns are reachable in the menu', reach.n === reach.total,
+  check('every gun in the table is reachable in the menu', reach.n === reach.total,
     `${reach.n} of ${reach.total}`);
 
   /* ---- attachments: the preview, then the confirm ---- */

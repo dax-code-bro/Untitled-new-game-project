@@ -25861,7 +25861,7 @@ function svcReceiver(g, K) {
       roundRect(0.0026, 0.0026, 0.0026, 3, 8));
   }
   /* And a flat-top rail on the ones that do not. */
-  if (K.rail) {
+  if (K.rail && !K.rail.under) {
     svcSlab(g, [[K.rail.x0, R.up + 0.008, -R.up + 0.001, 0.0095, 6],
       [K.rail.x1, R.up + 0.008, -R.up + 0.001, 0.0095, 6]]);
     const n = Math.round((K.rail.x1 - K.rail.x0) / 0.010);
@@ -25869,6 +25869,32 @@ function svcReceiver(g, K) {
       const x = K.rail.x0 + (i + 0.5) * (K.rail.x1 - K.rail.x0) / n;
       svcSlab(g, [[x - 0.0022, R.up + 0.0105, -R.up - 0.001, 0.0098, 6],
         [x + 0.0022, R.up + 0.0105, -R.up - 0.001, 0.0098, 6]]);
+    }
+  }
+  /* OR AN ACCESSORY RAIL UNDERNEATH, which is a different part in a
+     different place and was being drawn as this one. A pistol's rail
+     is moulded into the dust cover BELOW the barrel -- it is what a
+     light clips onto -- and the P226 and the G18 were both wearing a
+     Picatinny standing up out of the top of the slide, right through
+     where the sights look. Nobody caught it because a rail on top is
+     correct for the four rifles that also use this field, and the two
+     pistols had only ever been looked at in a 90-pixel thumbnail.
+   *
+     ITS OWN BRANCH, not the same one with the signs flipped. The first
+     go did flip the signs, and roundRect's back depth folds a negative
+     over to positive y -- the same trap written up on the hooded front
+     sight -- so the "under" rail straddled the bore and stuck up
+     through the slide anyway. Built about its own centre with
+     svcSlab's y instead, where there is no sign to get wrong. */
+  if (K.rail && K.rail.under) {
+    const h = 0.0042, cy = -R.down - h;
+    svcSlab(g, [[K.rail.x0, h, h, 0.0095, 6],
+      [K.rail.x1, h, h, 0.0095, 6]], 0, true, true, cy);
+    const n = Math.max(2, Math.round((K.rail.x1 - K.rail.x0) / 0.010));
+    for (let i = 0; i < n; i++) {
+      const x = K.rail.x0 + (i + 0.5) * (K.rail.x1 - K.rail.x0) / n;
+      svcSlab(g, [[x - 0.0022, h * 0.6, h + 0.0016, 0.0098, 6],
+        [x + 0.0022, h * 0.6, h + 0.0016, 0.0098, 6]], 0, true, true, cy);
     }
   }
 }
@@ -28580,7 +28606,22 @@ function sideSpec(over) {
     /* The slide. Short, square in section, and it runs most of the
        length of the gun -- which is why a pistol reads as one solid
        block with a handle on it rather than as a tube on a frame. */
-    rec: { rear: -0.052, front: 0.098, up: 0.0140, down: 0.0120, w: 0.0115, e: 4.2 },
+    /* THE SLIDE RUNS TO THE MUZZLE, and on every self-loader in this
+       table it stopped ten centimetres short of one.
+     *
+       `front: 0.098` against a muzzle at 0.216 left 118 mm of bare
+       barrel poking out of the front of a 216 mm pistol. That is not a
+       service pistol, it is a long-slide target gun -- and since every
+       entry inherited it, ALL of them were long-slide target guns with
+       the same thin rod out front. It is most of why the pistols
+       photographed as one object: the single biggest thing in their
+       shared outline was a mistake they all shared.
+
+       A slide covers its barrel to within a few millimetres of the
+       crown. The revolver, the broomhandle and the Luger genuinely do
+       show barrel ahead of the frame and say so in their own
+       entries. */
+    rec: { rear: -0.052, front: 0.210, up: 0.0140, down: 0.0120, w: 0.0115, e: 4.2 },
     port: { x0: 0.030, x1: 0.062, up: 0.0095, down: 0.0015 },
     trigger: { x: -0.014 },
     charge: null,
@@ -28614,10 +28655,10 @@ Object.assign(SERVICE_KINDS, {
   /* The 1911 with the edges taken off and one more in the magazine.
      Longer slide, a beavertail, and a rounded-off frame. */
   blaze: sideSpec({
-    muzzle: 0.222, rec: { front: 0.104, up: 0.0146, e: 3.6 },
+    muzzle: 0.222, rec: { front: 0.216, up: 0.0146, e: 3.6 },
     grip: { len: 0.096, deep: 1.06, wide: 0.90, e: 0.92, checkN: [6, 9] },
     mag: { len: 0.088, r: 0.032 },
-    sight: { frontX: 0.098, rear: 'notch' },
+    sight: { frontX: 0.204, rear: 'notch' },
     /* The three things that say 1911 across a room, and none of them
        is a dimension: the spur standing over the web of your hand, the
        beavertail it stands on, and a single block of straight-cut
@@ -28635,17 +28676,21 @@ Object.assign(SERVICE_KINDS, {
     ammoKind: 'full',
     muzzle: 0.242,
     barrel: { rear: 0.026, r0: 0.0112, r1: 0.0098, bore: 0.0064, step: 0.090 },
-    rec: { rear: -0.060, front: 0.132, up: 0.0186, down: 0.0150, w: 0.0150, e: 4.4 },
+    /* e below 4.4, because at or above it svcDetails stamps six
+       rivets a side into the wall -- right for a receiver pressed out
+       of sheet, absurd on a milled slide, and it was on this, the
+       P226 and the G18. */
+    rec: { rear: -0.060, front: 0.196, up: 0.0186, down: 0.0150, w: 0.0150, e: 4.2 },
     port: { x0: 0.040, x1: 0.084, up: 0.0130, down: 0.0020 },
     grip: { x: -0.044, y: -0.0190, len: 0.108, rake: 0.26 },
     mag: { x: -0.044, y: -0.0210, len: 0.100, w: 0.0110, d: 0.0130, r: 0.028 },
-    sight: { y: 0.0230, frontX: 0.112, rearX: -0.046 },
+    sight: { y: 0.0230, frontX: 0.188, rearX: -0.046 },
     /* A slab-sided triangle with a rib down the whole top of it and
        four ports cut through the barrel to hold the muzzle down. The
        serrations go OVER the top as well as down the flanks, because
        the slide is wide enough that a thumb lands on top of it. */
-    rib: { x0: -0.030, x1: 0.118, hw: 0.0078, vent: true },
-    comp: { x0: 0.148, x1: 0.214, n: 4, w: 0.0036, hw: 0.0026 },
+    rib: { x0: -0.030, x1: 0.190, hw: 0.0078, vent: true },
+    comp: { x0: 0.204, x1: 0.234, n: 3, w: 0.0036, hw: 0.0026 },
     serr: { kind: 'slant', rear: [-0.052, -0.012], pitch: 0.0070,
       out: 0.0018, top: true, hw: 0.0020 },
     hammer: { kind: 'spur', x: -0.056, y: 0.0130 },
@@ -28763,22 +28808,23 @@ Object.assign(SERVICE_KINDS, {
   p226: sideSpec({
     muzzle: 0.196,
     barrel: { rear: 0.018, r0: 0.0082, r1: 0.0070, bore: 0.0046, step: 0.060 },
-    rec: { rear: -0.050, front: 0.092, up: 0.0146, down: 0.0124, w: 0.0126, e: 4.6 },
+    rec: { rear: -0.050, front: 0.190, up: 0.0146, down: 0.0124, w: 0.0126, e: 4.2 },
     port: { x0: 0.026, x1: 0.058, up: 0.0098, down: 0.0015 },
     grip: { x: -0.034, y: -0.0165, len: 0.098, rake: 0.24 },
     // Double stack: wider and deeper than a single-column magazine.
     mag: { x: -0.034, y: -0.0185, len: 0.094, w: 0.0116, d: 0.0112, r: 0.030 },
-    rail: { x0: 0.030, x1: 0.070 },
-    sight: { y: 0.0180, frontX: 0.086, rearX: -0.038 },
+    // UNDER the dust cover, which is where a pistol's rail is.
+    rail: { x0: 0.070, x1: 0.140, under: true },
+    sight: { y: 0.0180, frontX: 0.178, rearX: -0.038 },
     /* Serrated at BOTH ends -- front cocking grooves as well as rear,
        which is the modern-duty-pistol tell and which none of the
        war-era guns in this table have -- a hammer bobbed down flush so
        it cannot snag coming out of a holster, and a light hanging off
        the rail, since the rail existed and nothing was ever on it. */
-    serr: { kind: 'slant', rear: [-0.042, -0.008], front: [0.062, 0.084],
+    serr: { kind: 'slant', rear: [-0.042, -0.008], front: [0.148, 0.176],
       pitch: 0.0055, out: 0.0015 },
     hammer: { kind: 'bob', x: -0.044, y: 0.0098 },
-    underslung: { x0: 0.030, x1: 0.084, drop: 0.0088 },
+    underslung: { x0: 0.072, x1: 0.136, drop: 0.0110 },
     grip: { deep: 0.92, wide: 1.16, e: 1.35, checkH: 0.0007 },
     mass: 0.96, bound: 0.16,
   }),
@@ -28790,13 +28836,13 @@ Object.assign(SERVICE_KINDS, {
     ammoKind: 'pistolBottle',
     muzzle: 0.194,
     barrel: { rear: 0.018, r0: 0.0076, r1: 0.0062, bore: 0.0039, step: 0.062 },
-    rec: { rear: -0.048, front: 0.090, up: 0.0136, down: 0.0116, w: 0.0110, e: 4.0 },
+    rec: { rear: -0.048, front: 0.188, up: 0.0136, down: 0.0116, w: 0.0110, e: 4.0 },
     port: { x0: 0.024, x1: 0.054, up: 0.0092, down: 0.0015 },
     grip: { x: -0.034, y: -0.0160, len: 0.092, rake: 0.20,
       // Slim and almost parallel-sided, with the coarse ribbed panels.
       deep: 0.88, wide: 0.86, e: 1.10, checkN: [4, 8], checkH: 0.0014 },
     mag: { x: -0.034, y: -0.0180, len: 0.086, w: 0.0088, d: 0.0104, r: 0.028 },
-    sight: { y: 0.0170, frontX: 0.084, rearX: -0.036 },
+    sight: { y: 0.0170, frontX: 0.176, rearX: -0.036 },
     /* Six grooves, wide and far apart, cut deep into the whole height
        of the slide -- the TT's are unmistakable next to the fine close
        ones on a modern gun, and they run right up over the top. The
@@ -28813,20 +28859,20 @@ Object.assign(SERVICE_KINDS, {
   g18: sideSpec({
     muzzle: 0.188,
     barrel: { rear: 0.016, r0: 0.0080, r1: 0.0068, bore: 0.0046, step: 0.056 },
-    rec: { rear: -0.048, front: 0.088, up: 0.0144, down: 0.0122, w: 0.0128, e: 4.8 },
+    rec: { rear: -0.048, front: 0.180, up: 0.0144, down: 0.0122, w: 0.0128, e: 4.2 },
     port: { x0: 0.024, x1: 0.056, up: 0.0096, down: 0.0015 },
     grip: { x: -0.032, y: -0.0165, len: 0.096, rake: 0.22 },
     // Long stick, and it is the silhouette: it reaches past the hand.
     mag: { x: -0.032, y: -0.0185, len: 0.148, w: 0.0116, d: 0.0112, r: 0.034 },
-    rail: { x0: 0.028, x1: 0.066 },
-    sight: { y: 0.0178, frontX: 0.080, rearX: -0.036 },
+    rail: { x0: 0.062, x1: 0.124, under: true },
+    sight: { y: 0.0178, frontX: 0.168, rearX: -0.036 },
     /* NO HAMMER -- it is striker-fired, and the empty space behind the
        slide where every other pistol here has a spur or a ring is as
        much of a tell as a part would be. What it does have is a pair
        of slots cut through the top of the barrel and the slide over
        them, which is the only thing keeping seventeen rounds a second
        anywhere near where you pointed it. */
-    comp: { x0: 0.118, x1: 0.152, n: 2, w: 0.0042, hw: 0.0030, shroud: true },
+    comp: { x0: 0.146, x1: 0.172, n: 2, w: 0.0042, hw: 0.0030 },
     serr: { kind: 'vert', rear: [-0.040, -0.010], pitch: 0.0048,
       out: 0.0012, hw: 0.0014 },
     // Squared-off polymer: wide, shallow, hard-cornered, stippled fine.
@@ -29439,9 +29485,17 @@ Object.assign(SERVICE_KINDS, {
      can see whether it is going to go off. */
   coach: gaugeSpec({
     muzzle: 0.690,
-    barrel: { rear: 0.020, r0: 0.0186, r1: 0.0180, bore: 0.0092, step: 0.320 },
+    /* `rear` AT THE BREECH FACE, not 20 mm in front of it. svcRotary
+       starts its tubes at barrel.rear + 0.030 and its breech disc at
+       + 0.020, so a rear of 0.020 on a receiver ending at 0.026 left
+       the whole barrel assembly -- both tubes, the forend and the rib,
+       650 mm and 130 pieces of it -- hanging fourteen millimetres
+       clear of the gun. attached.test.js named it as one cluster,
+       which is exactly what a detached barrel looks like from
+       outside. */
+    barrel: { rear: 0.002, r0: 0.0186, r1: 0.0180, bore: 0.0092, step: 0.320 },
     rotary: 2, rotaryR: 0.0124, rotaryBr: 0.0122,
-    rec: { rear: -0.115, front: 0.026, up: 0.0200, down: 0.0190, w: 0.0198, e: 3.0 },
+    rec: { rear: -0.115, front: 0.036, up: 0.0200, down: 0.0190, w: 0.0198, e: 3.0 },
     port: null, charge: null,
     hg: { kind: 'wood', x0: 0.055, x1: 0.185, drop: 0.0235, w: 0.0240, upper: null },
     grip: { x: -0.080, y: -0.0180, len: 0.104, rake: 0.56, deep: 1.08, e: 0.86 },

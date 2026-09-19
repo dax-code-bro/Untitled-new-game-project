@@ -323,7 +323,7 @@ function svcReceiver(g, K) {
       roundRect(0.0026, 0.0026, 0.0026, 3, 8));
   }
   /* And a flat-top rail on the ones that do not. */
-  if (K.rail) {
+  if (K.rail && !K.rail.under) {
     svcSlab(g, [[K.rail.x0, R.up + 0.008, -R.up + 0.001, 0.0095, 6],
       [K.rail.x1, R.up + 0.008, -R.up + 0.001, 0.0095, 6]]);
     const n = Math.round((K.rail.x1 - K.rail.x0) / 0.010);
@@ -331,6 +331,32 @@ function svcReceiver(g, K) {
       const x = K.rail.x0 + (i + 0.5) * (K.rail.x1 - K.rail.x0) / n;
       svcSlab(g, [[x - 0.0022, R.up + 0.0105, -R.up - 0.001, 0.0098, 6],
         [x + 0.0022, R.up + 0.0105, -R.up - 0.001, 0.0098, 6]]);
+    }
+  }
+  /* OR AN ACCESSORY RAIL UNDERNEATH, which is a different part in a
+     different place and was being drawn as this one. A pistol's rail
+     is moulded into the dust cover BELOW the barrel -- it is what a
+     light clips onto -- and the P226 and the G18 were both wearing a
+     Picatinny standing up out of the top of the slide, right through
+     where the sights look. Nobody caught it because a rail on top is
+     correct for the four rifles that also use this field, and the two
+     pistols had only ever been looked at in a 90-pixel thumbnail.
+   *
+     ITS OWN BRANCH, not the same one with the signs flipped. The first
+     go did flip the signs, and roundRect's back depth folds a negative
+     over to positive y -- the same trap written up on the hooded front
+     sight -- so the "under" rail straddled the bore and stuck up
+     through the slide anyway. Built about its own centre with
+     svcSlab's y instead, where there is no sign to get wrong. */
+  if (K.rail && K.rail.under) {
+    const h = 0.0042, cy = -R.down - h;
+    svcSlab(g, [[K.rail.x0, h, h, 0.0095, 6],
+      [K.rail.x1, h, h, 0.0095, 6]], 0, true, true, cy);
+    const n = Math.max(2, Math.round((K.rail.x1 - K.rail.x0) / 0.010));
+    for (let i = 0; i < n; i++) {
+      const x = K.rail.x0 + (i + 0.5) * (K.rail.x1 - K.rail.x0) / n;
+      svcSlab(g, [[x - 0.0022, h * 0.6, h + 0.0016, 0.0098, 6],
+        [x + 0.0022, h * 0.6, h + 0.0016, 0.0098, 6]], 0, true, true, cy);
     }
   }
 }
