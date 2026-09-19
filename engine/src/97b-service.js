@@ -1287,7 +1287,21 @@ function svcLimbs(g, K) {
 function svcBolt(g, K) {
   const R = K.rec, C = K.charge;
   const x = C ? C.x : R.front - 0.060;
-  tubeRun(g, [[x - 0.050, R.up * 0.52], [x + 0.020, R.up * 0.52]], 16, true, true, 0, 0);
+  /* A BOLT CANNOT BE WIDER THAN THE RECEIVER IT RIDES IN.
+   *
+     Its radius was R.up * 0.52 -- the receiver's outside height -- which
+     is right for everything with a receiver and absurd for the one
+     entry whose `rec` is not one. The riot shield's rec IS the shield
+     face, 520 mm tall, so it was issued a bolt 270 mm across: measured
+     at z -0.135 to +0.135 on a slab 27 mm thick, from the same 130
+     vertices that give the MG 42 a sensible 30 mm one.
+     
+     Capping by the receiver's half-width says the same thing the part
+     says -- a bolt is inside the gun -- and it is provably free for
+     every real weapon, because on all of them R.up * 0.52 is already
+     the smaller of the two. Only the slab changes. */
+  const r = Math.min(R.up * 0.52, R.w);
+  tubeRun(g, [[x - 0.050, r], [x + 0.020, r]], 16, true, true, 0, 0);
 }
 
 /* ==================================================================
