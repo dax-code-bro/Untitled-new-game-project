@@ -547,6 +547,27 @@ Object.assign(SERVICE_KINDS, {
     hg: { x0: 0.080, x1: 0.480, r: 0.0220 },
     stock: { butt: -0.370, comb: 0.0230, drop: 0.0310 },
     charge: { x: -0.012, y: 0.0020, z: 0.0300 },
+    // A straight wrist, not a pistol grip. See the Springfield's.
+    grip: { rake: 0.68, deep: 0.96, e: 0.82 },
+    /* THE ZF41, AND IT IS MOUNTED FORWARD OF THE ACTION.
+     *
+       This and the Springfield are both full-stocked wooden bolt
+       rifles of the same war and measured 0.256 apart -- under the
+       line -- which is a fair thing for a shape comparison to say,
+       because as shapes they very nearly are the same rifle. Raising
+       the Springfield's scope onto tall rings moved it sixteen
+       thousandths and no further: whatever else you hang over a
+       receiver, the mass that makes these two alike is a metre of
+       walnut and a barrel, and both have both.
+
+       So the difference has to be somewhere the other one has nothing
+       at all. The Kar98k's own sniper fitting was the ZF41 -- a 1.5x
+       tube the length of a finger, clamped to the REAR SIGHT BASE a
+       hand's width down the barrel, with the shooter's eye a foot
+       behind it. It sits where a Springfield's forend is, not where
+       its scope is. Correct, and it is the only optic in the rack
+       mounted forward of the breech. */
+    optic: { x0: 0.130, x1: 0.240, r: 0.0098, bell: 0.0110, y: 0.0430 },
     sight: { frontX: 0.590, rearX: 0.090, front: 'ears', rear: 'notch' },
     mass: 3.9, bound: 0.66,
   }),
@@ -561,8 +582,16 @@ Object.assign(SERVICE_KINDS, {
     // Straight out, not turned down: the Mosin's handle is a stick.
     charge: { x: -0.006, y: 0.0180, z: 0.0300 },
     grip: { rake: 0.62 },
+    /* The cleaning rod under the barrel and the cruciform spike on the
+       end of it. A Mosin was ISSUED with the bayonet fixed and zeroed
+       with it on, and without it this and the Kar98k measured 0.277
+       apart -- two lengths of walnut with a bolt sticking out of the
+       side, which is a fair description of both and a useful one of
+       neither. */
+    tube: { x0: 0.130, x1: 0.660, r: 0.0034, y: -0.0170 },
+    bayonet: { kind: 'spike', x0: 0.690, x1: 0.960, y: -0.0130 },
     sight: { frontX: 0.650, rearX: 0.110 },
-    mass: 4.1, bound: 0.70,
+    mass: 4.1, bound: 0.88,
   }),
 
   /* Fifty calibre. Goes through the man, the wall, and whatever was
@@ -583,8 +612,17 @@ Object.assign(SERVICE_KINDS, {
        a NaN vertex still counts as a vertex. */
     bipod: { x: 0.300, rake: 0.030, len: 0.140, spread: 0.110 },
     rail: { x0: -0.090, x1: 0.070 },
-    sight: { y: 0.0520, frontX: 0.140, rearX: -0.060, front: 'none', rear: 'scope' },
-    mass: 12.4, bound: 0.84,
+    /* The other half of that pair, and the answer is to make it the
+       opposite kind of fifty: a bolt gun, everything solid, with a can
+       on the front instead of a brake and a low scope tucked down onto
+       the rail rather than a tower over it. Where the Barrett is a
+       skeleton you can see through, this is a slab. */
+    tube: { x0: 0.640, x1: 0.840, r: 0.0270, open: true },
+    barrel: { r0: 0.0165, r1: 0.0148, bore: 0.0064, step: 0.360, brake: null },
+    optic: { x0: -0.110, x1: 0.100, r: 0.0195, bell: 0.0270, y: 0.0560 },
+    muzzle: 0.680,
+    sight: { y: 0.0520, frontX: 0.140, rearX: -0.060, front: 'none', rear: 'none' },
+    mass: 12.4, bound: 0.90,
   }),
 
   /* Semi-automatic, which means you get to be wrong twice. The big one:
@@ -603,8 +641,179 @@ Object.assign(SERVICE_KINDS, {
       w: 0.0150, d: 0.0190, r: 0.050, clear: true },
     bipod: { x: 0.340, rake: 0.034, len: 0.150, spread: 0.120 },
     rail: { x0: -0.110, x1: 0.090 },
-    sight: { y: 0.0560, frontX: 0.150, rearX: -0.080, front: 'none', rear: 'scope' },
+    /* A GLASS THE SIZE OF A THERMOS, the cut-outs down the forend, and
+       the arrowhead brake. Against the Kill Streak this measured 0.204
+       -- two scoped, bipodded, muzzle-braked fifties, which is exactly
+       what they both are, so what has to differ is everything ELSE.
+       This one is the semi-automatic: a recoiling barrel assembly in a
+       skeletonised chassis you can see straight through, with the
+       optic mounted so high it clears the whole receiver. */
+    optic: { x0: -0.130, x1: 0.130, r: 0.0260, bell: 0.0340, y: 0.0900 },
+    /* ON THE FOREND, which hangs BELOW the bore. Written without a
+       yOff these five pairs of ribs went on the bore line, where this
+       rifle has nothing but air between the barrel above and the
+       handguard under it -- nine floating clusters, caught by
+       attached.test.js the first time it ran after. A vent is a hole
+       in a surface, so it has to be told which surface; the default of
+       zero is right for a tube handguard wrapped round the barrel and
+       wrong for every forend that sits under one. */
+    vents: { kind: 'slot', x0: 0.180, x1: 0.360, n: 5, r: 0.0300, w: 0.0160,
+      yOff: -0.0205 },
+    barrel: { r0: 0.0170, r1: 0.0152, bore: 0.0064, step: 0.420, brake: 'slots' },
     mass: 13.5, bound: 0.96,
+  }),
+
+
+  /* ---------------- FIVE MORE THAT FIRE ONCE ----------------
+
+     A sniper section, for the same reason as the shotgun one: five
+     long rifles filed under Special alongside a shield and a crossbow
+     is a list, not a class. These five are picked so that no two of
+     the ten share an action AND a stock: two bolt guns with wooden
+     furniture already exist, so the new bolt gun gets a chassis, and
+     the new self-loaders are as far apart as a Dragunov and a bullpup.
+  */
+
+  /* Semi-automatic, and built to be carried a long way: a skeletonised
+     butt with a hole through it, a very thin barrel, and the short
+     slotted forend that leaves most of the barrel bare. */
+  svd: boltSpec({
+    ammoKind: 'full',
+    muzzle: 0.760,
+    barrel: { rear: 0.055, r0: 0.0112, r1: 0.0088, bore: 0.0039, step: 0.320,
+      gas: true, gasAt: 0.300, gasR: 0.0072, gasY: 0.0180, brake: 'slots' },
+    rec: { rear: -0.155, front: 0.100, up: 0.0230, down: 0.0205, w: 0.0165, e: 4 },
+    port: { x0: 0.010, x1: 0.056, up: 0.0150, down: 0.0025 },
+    charge: { x: 0.062, y: 0.0150, z: 0.0215 },
+    hg: { kind: 'wood', x0: 0.108, x1: 0.255, drop: 0.0250, w: 0.0215, upper: 0.0260 },
+    vents: { kind: 'slot', x0: 0.125, x1: 0.240, n: 4, r: 0.0215, w: 0.0120 },
+    mag: { kind: 'box', x: -0.030, y: -0.0215, len: 0.110, curve: 0.20,
+      w: 0.0130, d: 0.0150, r: 0.010, clear: false },
+    grip: { x: -0.082, y: -0.0185, len: 0.104, rake: 0.36 },
+    /* The skeleton butt, as on the PKM -- the same country, the same
+       decade and very nearly the same part. It is also the fastest way
+       to tell this from every other long rifle in the rack, all of
+       which have something solid back there. */
+    stock: { kind: 'skeleton', butt: -0.395, comb: 0.0250, drop: 0.0290,
+      w: 0.0180, hole: 0.048 },
+    optic: { x0: -0.140, x1: 0.030, r: 0.0180, bell: 0.0210, y: 0.0560 },
+    sight: { y: 0.0360, frontX: 0.620, rearX: 0.120, front: 'ears', rear: 'notch' },
+    mass: 4.6, bound: 0.80,
+  }),
+
+  /* Ten rounds, a bolt you work without taking your eye off it, and
+     wood all the way to the muzzle. The scope sits off to the LEFT,
+     because the charger bridge is where it would otherwise go. */
+  lee: boltSpec({
+    muzzle: 0.620,
+    barrel: { rear: 0.050, r0: 0.0122, r1: 0.0098, step: 0.260, gas: false },
+    rec: { rear: -0.145, front: 0.092, up: 0.0235, down: 0.0210, w: 0.0172, e: 3.2 },
+    /* A bolt handle that turns down INTO a recess at the back of the
+       receiver, close to the hand -- which is why this one is quicker
+       than the Mauser pattern and why the handle is further back than
+       any other bolt gun's here. */
+    charge: { x: -0.060, y: -0.0020, z: 0.0290 },
+    hg: { kind: 'wood', x0: 0.075, x1: 0.480, r: 0.0225, w: 0.0225, drop: 0.0265,
+      upper: 0.0230 },
+    // Ten, in two rows, in a box that stands well below the stock.
+    mag: { kind: 'box', x: -0.024, y: -0.0210, len: 0.082, curve: 0.06,
+      w: 0.0150, d: 0.0165, r: 0.030, clear: false },
+    grip: { x: -0.092, y: -0.0175, len: 0.104, rake: 0.58, deep: 1.06, e: 0.86 },
+    stock: { kind: 'wood', butt: -0.370, comb: 0.0240, drop: 0.0320, w: 0.0220 },
+    optic: { x0: -0.096, x1: 0.040, r: 0.0140, bell: 0.0160, y: 0.0480 },
+    sight: { y: 0.0340, frontX: 0.570, rearX: 0.060, front: 'ears', rear: 'aperture' },
+    mass: 4.2, bound: 0.68,
+  }),
+
+  /* An aluminium chassis with the barrel floating free inside it, a
+     thumbhole through the butt, a folding bipod and a glass the size
+     of a rolling pin. Nothing wooden anywhere on it. */
+  arctic: boltSpec({
+    muzzle: 0.740,
+    barrel: { rear: 0.045, r0: 0.0145, r1: 0.0132, bore: 0.0046, step: 0.330,
+      gas: false, brake: 'cage' },
+    rec: { rear: -0.160, front: 0.105, up: 0.0245, down: 0.0220, w: 0.0195, e: 6 },
+    charge: { x: -0.030, y: 0.0080, z: 0.0300 },
+    /* The chassis: a squared aluminium forend with lightening cuts all
+       down it, standing clear of a barrel that touches nothing. */
+    hg: { kind: 'poly', x0: 0.095, x1: 0.420, r: 0.0250, w: 0.0250, drop: 0.0250 },
+    vents: { kind: 'slot', x0: 0.120, x1: 0.400, n: 7, r: 0.0270, w: 0.0130,
+      yOff: -0.0190 },
+    mag: { kind: 'box', x: -0.034, y: -0.0225, len: 0.092, curve: 0,
+      w: 0.0140, d: 0.0170, r: 0.010, clear: false },
+    grip: { x: -0.100, y: -0.0195, len: 0.110, rake: 0.22, wide: 1.10, e: 1.25 },
+    // The thumbhole butt: the same hole the PKM has, in a rifle stock.
+    stock: { kind: 'skeleton', butt: -0.400, comb: 0.0285, drop: 0.0250,
+      w: 0.0210, hole: 0.040 },
+    bipod: { x: 0.380, rake: 0.030, len: 0.150, spread: 0.110 },
+    optic: { x0: -0.120, x1: 0.105, r: 0.0235, bell: 0.0310, y: 0.0700 },
+    rail: { x0: -0.100, x1: 0.080 },
+    sight: { y: 0.0520, frontX: 0.140, rearX: -0.060, front: 'none', rear: 'none' },
+    mass: 6.8, bound: 0.84,
+  }),
+
+  /* The Great War rifle with a telescope screwed to the side of it and
+     the bolt handle bent down out of the way of the eyepiece. Five
+     rounds, no aperture, and a cleaning rod under the barrel. */
+  springfield: boltSpec({
+    muzzle: 0.700,
+    barrel: { rear: 0.052, r0: 0.0118, r1: 0.0086, step: 0.300, gas: false },
+    rec: { rear: -0.140, front: 0.095, up: 0.0230, down: 0.0200, w: 0.0168, e: 3.0 },
+    charge: { x: -0.026, y: -0.0060, z: 0.0310 },
+    hg: { kind: 'wood', x0: 0.080, x1: 0.510, r: 0.0220, w: 0.0220, drop: 0.0260,
+      upper: 0.0225 },
+    tube: { x0: 0.140, x1: 0.600, r: 0.0032, y: -0.0165 },
+    mag: { kind: 'box', x: -0.028, y: -0.0195, len: 0.042, curve: 0,
+      w: 0.0135, d: 0.0155, r: 0.020, clear: false },
+    /* The C-stock's PISTOL GRIP -- a real one, dropping away under the
+       hand, where a Kar98k has a straight wrist you wrap round. It is
+       the last thing separating two rifles that a shape comparison
+       kept calling one rifle, and it is a genuine difference: the two
+       were built thirty years and one design philosophy apart. */
+    grip: { x: -0.096, y: -0.0180, len: 0.114, rake: 0.30, deep: 1.14, e: 1.0 },
+    stock: { kind: 'wood', butt: -0.375, comb: 0.0230, drop: 0.0330, w: 0.0215 },
+    /* UP ON TALL RINGS, and that is the whole difference between this
+       and a Kar98k: two full-stocked wooden bolt rifles of the same
+       war measured 0.240 apart -- under the line -- with the scope
+       drawn low and tucked down onto a receiver that was already solid
+       there. Mass added inside a shape that is already occupied does
+       not change the shape. Lifted clear, into the empty air above the
+       bore where a sniper's glass actually sits, it does.
+
+       It is also more honest: the bolt on an A4 is bent down BECAUSE
+       the scope is in the way, and the model has the bent bolt
+       already. */
+    optic: { x0: -0.056, x1: 0.136, r: 0.0150, bell: 0.0180, y: 0.0640 },
+    sight: { y: 0.0330, frontX: 0.610, rearX: 0.090, front: 'none', rear: 'none' },
+    mass: 4.3, bound: 0.72,
+  }),
+
+  /* Ours. A self-loading .338 with the whole action behind the
+     trigger, so it carries a thirty-inch barrel in the length of a
+     carbine -- and with no butt at all, because the receiver goes all
+     the way back to the shoulder. */
+  longwake: boltSpec({
+    ammoKind: 'full',
+    muzzle: 0.560,
+    barrel: { rear: 0.050, r0: 0.0150, r1: 0.0130, bore: 0.0050, step: 0.240,
+      gas: true, gasAt: 0.330, gasR: 0.0080, gasY: -0.0230, brake: 'slots' },
+    rec: { rear: -0.280, front: 0.075, up: 0.0280, down: 0.0250, w: 0.0200, e: 6 },
+    port: { x0: -0.185, x1: -0.130, up: 0.0170, down: 0.0030 },
+    charge: { x: 0.020, y: 0.0200, z: 0.0240 },
+    hg: { kind: 'poly', x0: 0.090, x1: 0.300, r: 0.0240, w: 0.0240, drop: 0.0240 },
+    vents: { x0: 0.110, x1: 0.290, n: 6, r: 0.0240, r0: 0.0050 },
+    mag: { kind: 'box', x: -0.175, y: -0.0250, len: 0.105, curve: 0.08,
+      w: 0.0145, d: 0.0175, r: 0.010, clear: false },
+    grip: { x: -0.048, y: -0.0210, len: 0.108, rake: 0.24, wide: 1.12, e: 1.3 },
+    trigger: { x: -0.014 },
+    // Nothing behind the shoulder: the receiver IS the butt.
+    stock: { kind: 'none' },
+    foregrip: { x: 0.175, len: 0.092, rake: 0.06, under: 0.0240 },
+    bipod: { x: 0.290, rake: 0.028, len: 0.140, spread: 0.100 },
+    optic: { x0: -0.230, x1: 0.010, r: 0.0230, bell: 0.0300, y: 0.0640 },
+    rail: { x0: -0.250, x1: 0.040 },
+    sight: { y: 0.0500, frontX: 0.120, rearX: -0.200, front: 'none', rear: 'none' },
+    mass: 6.4, bound: 0.66,
   }),
 
   /* Eight pellets, one pump. The pump itself is the handguard, ribbed,
@@ -649,6 +858,219 @@ Object.assign(SERVICE_KINDS, {
       w: 0.0160, d: 0.0200, r: 0.044, clear: true },
     rail: { x0: -0.060, x1: 0.060 },
     mass: 3.8, bound: 0.58,
+  }),
+
+
+  /* ---------------- THE OTHER TEN GAUGES ----------------
+
+     A shotgun section, rather than three shotguns filed under Special
+     with a crossbow and a riot shield. Ten more, and the rule they are
+     built to is the one the rack as a whole is now measured by: two
+     weapons may share a class and a calibre, but not a silhouette. So
+     these are ten different ACTIONS -- pump, break, lever, revolver,
+     long-recoil, gas, bullpup -- rather than ten barrel lengths, and
+     each one owns a part nothing else in the game has. */
+
+  /* Nineteen-seventeen, and the reason the other side complained. A
+     pump with a ventilated heat shield over the barrel, a lug on the
+     end of it, and a bayonet on the lug. */
+  trench: gaugeSpec({
+    muzzle: 0.520,
+    barrel: { rear: 0.040, r0: 0.0142, r1: 0.0132, step: 0.190,
+      shroud: true, shroudX0: 0.150, shroudX1: 0.455, shroudR: 0.0230 },
+    hg: { kind: 'tube', x0: 0.105, x1: 0.330, r: 0.0180, drop: 0.0230 },
+    bayonet: { kind: 'knife', x0: 0.470, x1: 0.700, y: -0.0190 },
+    stock: { kind: 'wood', butt: -0.345, comb: 0.0250, drop: 0.0305, w: 0.0220 },
+    sight: { y: 0.0270, frontX: 0.470, rearX: 0.030, front: 'blade', rear: 'none' },
+    grip: { x: -0.086, y: -0.0180, len: 0.102, rake: 0.50, deep: 1.04, checkN: [5, 9] },
+    mass: 3.9, bound: 0.70,
+  }),
+
+  /* Two barrels, side by side, and nothing else. Full length, a single
+     wooden splinter forend, and the hammers out in the open where you
+     can see whether it is going to go off. */
+  coach: gaugeSpec({
+    muzzle: 0.690,
+    barrel: { rear: 0.020, r0: 0.0186, r1: 0.0180, bore: 0.0092, step: 0.320 },
+    rotary: 2, rotaryR: 0.0124, rotaryBr: 0.0122,
+    rec: { rear: -0.115, front: 0.026, up: 0.0200, down: 0.0190, w: 0.0198, e: 3.0 },
+    port: null, charge: null,
+    hg: { kind: 'wood', x0: 0.055, x1: 0.185, drop: 0.0235, w: 0.0240, upper: null },
+    grip: { x: -0.080, y: -0.0180, len: 0.104, rake: 0.56, deep: 1.08, e: 0.86 },
+    trigger: { x: -0.050 },
+    // Two of them, standing up behind the breech where a coach gun's are.
+    hammer: { kind: 'spur', x: -0.078, y: 0.0136 },
+    rib: { x0: 0.040, x1: 0.660, hw: 0.0092, onBarrel: true },
+    stock: { kind: 'wood', butt: -0.365, comb: 0.0255, drop: 0.0340, w: 0.0235 },
+    sight: { y: 0.0300, frontX: 0.660, rearX: 0.020, front: 'blade', rear: 'none' },
+    mass: 3.1, bound: 0.66,
+  }),
+
+  /* The same two barrels stacked instead of paired, which is a
+     completely different gun to look down: one narrow rib with a
+     vented top and a receiver deep enough to hide the lower breech. */
+  longshore: gaugeSpec({
+    muzzle: 0.720,
+    barrel: { rear: 0.024, r0: 0.0152, r1: 0.0146, bore: 0.0092, step: 0.340 },
+    rec: { rear: -0.120, front: 0.030, up: 0.0290, down: 0.0230, w: 0.0165, e: 3.4 },
+    port: null, charge: null,
+    /* The second barrel, ABOVE the first. `rotary: 2` puts them side by
+       side, which is the coach gun and is the wrong answer here -- a
+       tube alongside says over-and-under and says it in one field. */
+    tube: { x0: 0.024, x1: 0.720, r: 0.0146, y: 0.0300 },
+    hg: { kind: 'wood', x0: 0.060, x1: 0.210, drop: 0.0230, w: 0.0210, upper: null },
+    grip: { x: -0.082, y: -0.0180, len: 0.106, rake: 0.52, deep: 1.02, checkN: [6, 9] },
+    trigger: { x: -0.052 },
+    rib: { x0: 0.050, x1: 0.700, hw: 0.0070, vent: true, onBarrel: true },
+    stock: { kind: 'wood', butt: -0.370, comb: 0.0260, drop: 0.0320, w: 0.0225 },
+    sight: { y: 0.0480, frontX: 0.700, rearX: 0.030, front: 'blade', rear: 'none' },
+    mass: 3.5, bound: 0.70,
+  }),
+
+  /* Thirty-two shells on a drum and a trigger that does not care how
+     many of them are left. Everything about it is polymer, everything
+     is square, and the drum is bigger than the receiver. */
+  grinder: gaugeSpec({
+    muzzle: 0.480,
+    barrel: { rear: 0.035, r0: 0.0148, r1: 0.0138, step: 0.180, gas: true,
+      gasAt: 0.230, gasR: 0.0092, gasY: -0.0235, brake: 'slots' },
+    rec: { rear: -0.150, front: 0.095, up: 0.0245, down: 0.0230, w: 0.0195, e: 6 },
+    hg: { kind: 'poly', x0: 0.110, x1: 0.270, r: 0.0240, w: 0.0240, drop: 0.0240 },
+    mag: null,
+    ammoBox: { kind: 'drum', x: -0.020, r: 0.0720, w: 0.0340, drop: 0.002 },
+    grip: { x: -0.092, y: -0.0190, len: 0.108, rake: 0.28, wide: 1.18, e: 1.4 },
+    trigger: { x: -0.060 },
+    foregrip: { x: 0.180, len: 0.096, rake: 0.08, under: 0.0240 },
+    stock: { kind: 'poly', butt: -0.330, comb: 0.0250, drop: 0.0230, w: 0.0215 },
+    rail: { x0: -0.110, x1: 0.060 },
+    sight: { y: 0.0430, frontX: 0.250, rearX: -0.090, front: 'ears', rear: 'aperture' },
+    mass: 5.4, bound: 0.62,
+  }),
+
+  /* Worked by throwing a hoop forward and catching it. Nothing else in
+     the game is, and the hoop is the whole outline. */
+  ranger: gaugeSpec({
+    muzzle: 0.540,
+    barrel: { rear: 0.045, r0: 0.0150, r1: 0.0142, step: 0.210 },
+    rec: { rear: -0.128, front: 0.070, up: 0.0260, down: 0.0250, w: 0.0180, e: 3.2 },
+    port: { x0: 0.006, x1: 0.046, up: 0.0150, down: 0.0030 },
+    charge: null,
+    lever: { x0: -0.110, x1: 0.030, drop: 0.082 },
+    hammer: { kind: 'spur', x: -0.118, y: 0.0170 },
+    // A tube magazine under the barrel, and no pump riding on it.
+    tube: { x0: 0.090, x1: 0.480, r: 0.0130, y: -0.0250 },
+    hg: { kind: 'wood', x0: 0.080, x1: 0.180, drop: 0.0225, w: 0.0195, upper: null },
+    grip: { x: -0.110, y: -0.0190, len: 0.108, rake: 0.62, deep: 1.10, e: 0.84 },
+    trigger: { x: -0.062 },
+    stock: { kind: 'wood', butt: -0.360, comb: 0.0255, drop: 0.0350, w: 0.0225 },
+    sight: { y: 0.0310, frontX: 0.510, rearX: 0.050, front: 'blade', rear: 'notch' },
+    mass: 3.6, bound: 0.66,
+  }),
+
+  /* Two magazine tubes, a switch between them, and the whole action
+     behind the trigger so the thing is fourteen inches shorter than it
+     has any right to be. */
+  kestrel12: gaugeSpec({
+    muzzle: 0.330,
+    barrel: { rear: 0.030, r0: 0.0140, r1: 0.0132, step: 0.140 },
+    rec: { rear: -0.230, front: 0.050, up: 0.0270, down: 0.0250, w: 0.0210, e: 6 },
+    port: { x0: -0.150, x1: -0.105, up: 0.0160, down: 0.0030 },
+    charge: { x: 0.010, y: 0.0190, z: 0.0240 },
+    /* BOTH of them, and the pair is the gun. Side by side under the
+       barrel, each as long as the receiver, which is why the weapon is
+       as wide as it is short. */
+    tube: [{ x0: -0.170, x1: 0.290, r: 0.0128, y: -0.0250, z: -0.0140 },
+      { x0: -0.170, x1: 0.290, r: 0.0128, y: -0.0250, z: 0.0140 }],
+    hg: { kind: 'none' },
+    foregrip: { x: 0.140, len: 0.090, rake: 0.06, under: 0.0330 },
+    grip: { x: -0.036, y: -0.0200, len: 0.108, rake: 0.26, wide: 1.14, e: 1.35 },
+    trigger: { x: -0.006 },
+    mag: null,
+    stock: { kind: 'none' },
+    rail: { x0: -0.190, x1: 0.020 },
+    sight: { y: 0.0480, frontX: 0.040, rearX: -0.160, front: 'ears', rear: 'aperture' },
+    mass: 3.2, bound: 0.44,
+  }),
+
+  /* The whole barrel comes back with the bolt when it fires, which is
+     why the back of the receiver is squared off into a hump. Once seen,
+     never mistaken for anything else. */
+  marshback: gaugeSpec({
+    muzzle: 0.620,
+    barrel: { rear: 0.045, r0: 0.0146, r1: 0.0138, step: 0.240 },
+    /* THE HUMP. The receiver does not taper into the wrist of the
+       stock, it stops dead in a square shoulder -- and that step is
+       the one thing everybody can name about this action. */
+    rec: { rear: -0.150, front: 0.088, up: 0.0330, down: 0.0215, w: 0.0180, e: 7 },
+    port: { x0: 0.006, x1: 0.052, up: 0.0180, down: 0.0030 },
+    charge: { x: 0.030, y: 0.0110, z: 0.0200 },
+    tube: { x0: 0.100, x1: 0.500, r: 0.0130, y: -0.0250 },
+    hg: { kind: 'wood', x0: 0.095, x1: 0.215, drop: 0.0230, w: 0.0200, upper: null },
+    grip: { x: -0.100, y: -0.0185, len: 0.106, rake: 0.58, deep: 1.06, e: 0.88 },
+    trigger: { x: -0.056 },
+    stock: { kind: 'wood', butt: -0.360, comb: 0.0250, drop: 0.0330, w: 0.0225 },
+    rib: { x0: -0.140, x1: 0.086, hw: 0.0066 },
+    sight: { y: 0.0300, frontX: 0.600, rearX: 0.040, front: 'blade', rear: 'none' },
+    mass: 4.1, bound: 0.70,
+  }),
+
+  /* Fourteen inches, no stock, and a ring of steel teeth on the muzzle
+     for standing the barrel off a hinge before you fire through it. */
+  doorbreaker: gaugeSpec({
+    muzzle: 0.300,
+    barrel: { rear: 0.030, r0: 0.0146, r1: 0.0138, step: 0.120 },
+    rec: { rear: -0.115, front: 0.072, up: 0.0215, down: 0.0205, w: 0.0180, e: 5 },
+    breacher: { r: 0.0270, n: 3, len: 0.036 },
+    tube: { x0: 0.085, x1: 0.265, r: 0.0128, y: -0.0250 },
+    hg: { kind: 'poly', x0: 0.090, x1: 0.200, r: 0.0210, w: 0.0210, drop: 0.0230 },
+    grip: { x: -0.070, y: -0.0180, len: 0.106, rake: 0.30, wide: 1.12, e: 1.3 },
+    trigger: { x: -0.040 },
+    // No stock at all, and a hook off the back of the grip instead.
+    stock: { kind: 'none' },
+    rail: { x0: -0.095, x1: 0.030 },
+    sight: { y: 0.0330, frontX: 0.055, rearX: -0.080, front: 'ears', rear: 'aperture' },
+    mass: 2.6, bound: 0.36,
+  }),
+
+  /* Twelve rounds on a spring-wound cylinder as wide as your hand, and
+     a folding wire stock over the top of it. */
+  carousel: gaugeSpec({
+    muzzle: 0.420,
+    barrel: { rear: 0.120, r0: 0.0148, r1: 0.0138, step: 0.160 },
+    rec: { rear: -0.130, front: 0.020, up: 0.0230, down: 0.0215, w: 0.0175, e: 4 },
+    port: null,
+    /* Not `rotary`. See the Webley: `cylinder` is the part with
+       chambers in it and `rotary` is a cluster of barrels, and sharing
+       the field between them cost that revolver its barrel. */
+    cylinder: { x0: -0.012, x1: 0.104, r: 0.0480, n: 12, bore: 0.0092 },
+    charge: { x: -0.060, y: 0.0140, z: 0.0230 },
+    hg: { kind: 'none' },
+    foregrip: { x: 0.185, len: 0.088, rake: 0.08, under: 0.0140 },
+    grip: { x: -0.084, y: -0.0190, len: 0.106, rake: 0.34, wide: 1.06, e: 1.2 },
+    trigger: { x: -0.050 },
+    mag: null,
+    stock: { kind: 'wire', butt: -0.280, comb: 0.0200, drop: 0.0240, w: 0.0180 },
+    sight: { y: 0.0300, frontX: 0.400, rearX: -0.100, front: 'blade', rear: 'notch' },
+    mass: 4.4, bound: 0.52,
+  }),
+
+  /* One barrel, one shell, and a bore you could post a letter down.
+     Breaks at the hinge, has an outside hammer you thumb back by hand,
+     and weighs as much as a machine gun. */
+  anvil: gaugeSpec({
+    ammoKind: 'full',
+    muzzle: 0.800,
+    barrel: { rear: 0.020, r0: 0.0250, r1: 0.0235, bore: 0.0170, step: 0.380 },
+    rec: { rear: -0.135, front: 0.024, up: 0.0245, down: 0.0235, w: 0.0230, e: 3.0 },
+    port: null, charge: null, mag: null,
+    hg: { kind: 'wood', x0: 0.055, x1: 0.195, drop: 0.0265, w: 0.0270, upper: null },
+    hammer: { kind: 'spur', x: -0.096, y: 0.0180 },
+    grip: { x: -0.092, y: -0.0190, len: 0.110, rake: 0.60, deep: 1.16, wide: 1.08,
+      e: 0.82, checkN: [5, 10], checkH: 0.0014 },
+    trigger: { x: -0.058 },
+    stock: { kind: 'wood', butt: -0.380, comb: 0.0270, drop: 0.0360, w: 0.0250 },
+    sight: { y: 0.0380, frontX: 0.770, rearX: 0.010, front: 'ears', rear: 'notch' },
+    mass: 6.2, bound: 0.78,
   }),
 
   /* Silent, arcs like a thrown rock. A rail with a stock on it, a

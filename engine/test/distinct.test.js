@@ -117,7 +117,26 @@ check('the rack as a whole is varied -- the median pair shares little',
  * one already here without this saying so by name. */
 const DUPLICATE = 0.30;
 const ALIKE = 0.40;
-const BASELINE_ALIKE = 6;
+/* Sixteen, and every one of them is a pair that SHOULD be related.
+   Machine guns with machine guns (M60/PKM, MG34/PKM, Bren/DP-28); the
+   AK-47 with the STG 44 it is descended from, and with the AK-74 that
+   is descended from it; the two roller-locked 7.62s, and the G3 with
+   the AK because both are stamped boxes with a pistol grip; the AK-74
+   with the M16, which is the Cold War in one pair; the two HK
+   submachine guns; the three break-action shotguns (Coach/Longshore,
+   Coach/Anvil) and the two tube-magazine pumps (Scatter/Ranger); and
+   the four wooden bolt rifles of the same war -- Lee, Springfield and
+   Kar98k in every combination, plus the Lee against the Marshback,
+   which is a wooden-stocked tube-fed long arm and so, honestly, is it.
+
+   Making any of those unrelated would be a worse model, not a better
+   one. What the number is for is that it cannot GROW: a seventy-fourth
+   weapon cannot be added as a recolour of one already here without
+   this failing and naming both. Every one of the fifteen added in the
+   same change as this line -- ten shotguns and five sniper rifles --
+   had to earn its place past it, and two did not on the first try.
+*/
+const BASELINE_ALIKE = 16;
 
 const dupes = pairs.filter((p) => p[0] < DUPLICATE);
 check(`no two weapons are the same shape (under ${DUPLICATE})`,
