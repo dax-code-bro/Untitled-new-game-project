@@ -1301,6 +1301,32 @@ function buildViewHand(g, rawAt, side, opts = {}) {
      * trigger guard it follows the guard. No shape has to be anticipated,
      * and there is nothing left to tune per weapon. */
     const surfM = marchOn || null;
+    /* HOW TIGHTLY A FINGER CAN CURL AT ALL, measured, because it bounds
+     * everything below and two attempts were made at relaxing it before
+     * anyone worked out that it cannot be relaxed from here.
+     *
+     * Over 822 half-bones across the rack, 548 of them -- two thirds --
+     * finish AT the cap the line below sets. The middle joint asks for
+     * 1.50 radians a half-bone and is allowed 0.70. A whole finger
+     * achieves 3.17 radians, 182 degrees, against the 330 its own
+     * anatomy asks for and the 239 the cap would permit.
+     *
+     * SUBDIVIDING DOES NOT HELP, and it looks as though it should. The
+     * cap is step / (r0 * 1.85) and each bone is walked in two steps, so
+     * four steps ought to buy twice the curl at the same tightest bend.
+     * It buys none: step is lens/SUB, so the cap per step falls in
+     * exactly the same proportion and the total over a bone is
+     * lens / (r0 * 1.85) whatever SUB is. It is a CURVATURE limit -- a
+     * tube of radius r cannot follow a centreline radius under about
+     * 1.85r however finely you chop it -- not a per-step budget. Built
+     * and measured at SUB = 4: byte-identical geometry on all fifteen
+     * weapons, at twice the rings per finger. Reverted.
+     *
+     * What that leaves is 57 degrees a finger of slack between what the
+     * search takes and what the cap allows, and a fixed 91 degrees that
+     * only a thinner finger would recover. The fingers are 21.2 mm
+     * across, widened when the hands were scaled up to match the arms;
+     * a real one is 18 to 20 at the base and 15 at the tip. */
     // What a knuckle, a middle joint and a fingertip can each manage,
     // halved because every bone is walked in two steps.
     const JOINT = [0.86, 1.02, 0.74];
