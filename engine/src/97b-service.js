@@ -511,18 +511,20 @@ function svcMag(g, K) {
     return;
   }
   if (M.kind === 'belt') {
-    /* A short tab of belt out of the feed tray, curving away and down;
-       the rest of it is in a box, and the box is a separate prop.
-       Each link is a plate and a round, and the plate needs TWO
-       stations -- swept from one it is nothing at all. */
-    for (let i = 0; i < 7; i++) {
-      const t = i / 6;
-      const x = M.x - t * 0.034;
-      const y = M.y - t * t * 0.060;
-      svcSlab(g, [[x - 0.0042, y + 0.0060, -y + 0.0000, 0.0230, 3],
-        [x + 0.0042, y + 0.0060, -y + 0.0000, 0.0230, 3]], 0, true, true);
-      tubeRun(g, [[x - 0.0038, 0.0038], [x + 0.0038, 0.0038]], 10, true, true,
-        y + 0.0010, 0.0150);
+    /* THE LINKS ONLY. The rounds in them are brass and these are
+       steel, and they are different geometry channels -- drawing the
+       cartridges here put them in the magazine's blued material, so
+       the MG 34's belt was a short black strip under the receiver that
+       read as nothing at all. svcRounds draws them now, off the same
+       link positions.
+
+       Longer, too, and swung out to the left as it falls: a belt is
+       the one part of a machine gun you see from across the map, and
+       seven links over 34 mm is a tab, not a belt. */
+    for (const L of svcBeltLinks(M)) {
+      svcSlab(g, [[L.x - 0.0046, 0.0032, 0.0032, 0.0235, 3],
+        [L.x + 0.0046, 0.0032, 0.0032, 0.0235, 3]],
+      L.z, true, true, L.y + 0.0032);
     }
     return;
   }
@@ -846,6 +848,23 @@ const ROUND_BANDS = 4;
    face actually meets it at. */
 const A_FEED_LIFT = 0.006;
 
+/* Where each link of the exposed belt sits: back from the feed tray,
+   falling faster as it goes, and drifting out to the left -- which is
+   the side a Maxim-pattern gun's belt hangs on, and the side the model
+   ejects away from. Shared between the links and the rounds in them
+   so the two cannot drift apart. */
+function svcBeltLinks(M) {
+  const out = [], n = 11;
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1);
+    out.push({ t,
+      x: M.x - t * 0.050,
+      y: M.y - t * t * 0.100,
+      z: -t * t * 0.024 });
+  }
+  return out;
+}
+
 function svcRounds(shell, tip, K) {
   const M = K.mag, A = K.ammo;
   if (!M || M.kind === 'none' || !A) return;
@@ -882,7 +901,18 @@ function svcRounds(shell, tip, K) {
     }
     return;
   }
-  if (M.kind === 'belt') return;      // the belt builds its own rounds
+  if (M.kind === 'belt') {
+    /* A belted round lies ACROSS the gun, nose pointing at the feed
+       tray, not fore-and-aft like one in a box. The old code swept a
+       7.6 mm tube along X for each link -- a stub, in the wrong
+       material, pointing the wrong way. */
+    for (const L of svcBeltLinks(M)) {
+      svcCartridge(shell[0], tip[0], A,
+        new Vec3(L.x, L.y + 0.0014, L.z - A.len * 0.5),
+        new Vec3(0, 0, 1), new Vec3(1, 0, 0));
+    }
+    return;
+  }
 
   /* A box: walk down the magazine's own curve, one round every pitch,
      alternating left and right of centre. Only as far as the magazine
