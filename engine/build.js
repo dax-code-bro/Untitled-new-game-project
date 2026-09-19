@@ -64,6 +64,18 @@ const LegendEngine = {
      from outside the bundle, because the bank was a module-level const
      nobody could reach. engine/test/texture.test.js reaches it now. */
   Textures: TextureLib,
+  /* The weapon tables and their builders, exported for the same reason
+     the texture bank is: so they can be MEASURED without a browser.
+
+     Sixty guns were compared side by side by rendering all sixty and
+     diffing the pictures, which needs a GPU, takes minutes, and can
+     only answer questions about what a camera happens to see. These
+     builders are pure geometry -- no GL, no canvas -- so a Node test
+     can ask how many vertices a part has, where its bounding box is,
+     and whether two weapons differ by anything at all. The pistol
+     cluster that started this was found with a renderer and confirmed
+     in forty milliseconds with arithmetic. */
+  SERVICE_KINDS, makeServiceArm,
   bakeCavityAO,
   clamp, lerp, smoothstep,
 };

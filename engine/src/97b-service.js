@@ -526,6 +526,190 @@ function svcToggle(g, K) {
   }
 }
 
+/* ==================================================================
+   THE WORK ON A SLIDE
+   ==================================================================
+   Nine pistols came out of the table as nine copies of one object.
+   Measured pairwise against every other gun in the game, six of them
+   sat inside a hundredth of each other -- the G18 and the P226 at
+   0.0035 against a median difference of 0.0468, which is to say they
+   were thirteen times more alike than two guns picked at random. That
+   is not a tuning problem. Millimetres on a slide's length do not
+   photograph; the difference between a Luger and a Glock is not two
+   millimetres of anything, it is that one has a toggle and knurled
+   discs and the other has a squared-off polymer block with grooves cut
+   in the back of it.
+
+   So the fix is not to move the numbers apart, it is to give the table
+   the vocabulary those guns are actually distinguished by. Everything
+   below is optional and off unless a spec asks for it, so no existing
+   weapon changes by a vertex until its own entry opts in.
+   ================================================================== */
+
+/* Cocking serrations. The single most recognisable thing about the
+   back half of any self-loading pistol, and the table had no way to
+   say it -- so every slide in the game was a smooth block.
+
+   They stand PROUD, not cut in. A groove in a flat wall needs the wall
+   to have thickness the renderer knows about; a rib does not, and at
+   the distance a sidearm is held a rib and a groove read the same. The
+   same reasoning is already written down on the ejection port lip. */
+function svcSerrate(g, K) {
+  const S = K.serr;
+  if (!S) return;
+  const R = K.rec, W = R.w;
+  const kind = S.kind || 'vert';
+  for (const span of [S.rear, S.front]) {
+    if (!span) continue;
+    const n = Math.max(2, Math.round((span[1] - span[0]) / (S.pitch || 0.0062)));
+    for (let i = 0; i < n; i++) {
+      const x = span[0] + (i + 0.5) * (span[1] - span[0]) / n;
+      /* How far the rib leans. A 1911's are straight up; a modern
+         slide's rake back; the Tokarev's are wide and shallow. */
+      const lean = kind === 'slant' ? 0.0075 : 0;
+      const top = R.up - (S.inset || 0.0010);
+      const bot = -R.down + (S.inset || 0.0010) + (S.depth || 0);
+      if (kind === 'scallop') {
+        /* Not ribs at all: a column of round dimples, which is what a
+           few of these wear instead. */
+        for (const sz of [-1, 1]) {
+          const my = (top + bot) * 0.5;
+          strut(g, [x, my, sz * (W - 0.0002)], [x, my, sz * (W + 0.0016)],
+            ringOutline(S.r || 0.0026, 10));
+        }
+        continue;
+      }
+      /* Wave: the rib's height rises and falls along the run, which is
+         how a wavy-cut slide reads at a glance. */
+      const h = kind === 'wave'
+        ? 0.55 + 0.45 * Math.cos((i / Math.max(1, n - 1)) * TAU)
+        : 1;
+      for (const sz of [-1, 1]) {
+        strut(g, [x, bot + (top - bot) * (0.5 - 0.5 * h), sz * (W + 0.0002)],
+          [x + lean, bot + (top - bot) * (0.5 + 0.5 * h), sz * (W + (S.out || 0.0013))],
+          roundRect(S.hw || 0.0017, S.hw || 0.0017, 0.0009, 3.0, 8));
+      }
+      /* And across the top on the ones that are cut over the whole
+         slide rather than only down the flanks. */
+      if (S.top) {
+        strut(g, [x, R.up - 0.0004, -W * 0.82], [x + lean, R.up + 0.0011, W * 0.82],
+          roundRect(S.hw || 0.0017, S.hw || 0.0017, 0.0009, 3.0, 8));
+      }
+    }
+  }
+}
+
+/* The hammer, the tang under it, and the muzzle work on the front.
+   Three separate small parts, but they share a spec section because
+   they are the three things at the two ENDS of a pistol -- and the
+   ends are what you see of one in a silhouette. */
+function svcSlideWork(g, K) {
+  const R = K.rec, W = R.w;
+
+  /* The beavertail. A shelf standing back off the top rear of the
+     frame, over the web of the hand -- the reason a 1911 pattern
+     reads as a 1911 pattern and a Tokarev does not. */
+  const T = K.tang;
+  if (T) {
+    const bx = T.x != null ? T.x : R.rear;
+    svcSlab(g, [
+      [bx, 0.0060, 0.0060, W * 0.76, 3.4],
+      [bx - (T.len || 0.024) * 0.55, 0.0052, 0.0072, W * 0.70, 3.4],
+      [bx - (T.len || 0.024), 0.0026, 0.0060, W * 0.52, 3.0],
+    ], 0, true, true, (T.y != null ? T.y : R.up - 0.0060));
+  }
+
+  /* The hammer. Three shapes, and which one a pistol wears says more
+     about it than its length does: a spur you can thumb back, a ring
+     that is lighter and does not snag, or nothing at all because the
+     gun is striker-fired and there is no hammer to see. */
+  const H = K.hammer;
+  if (H && H.kind && H.kind !== 'none') {
+    const hx = H.x != null ? H.x : R.rear + 0.004;
+    const hy = H.y != null ? H.y : R.up - 0.0020;
+    // The pin it swings on, through both walls.
+    strut(g, [hx, hy - 0.0090, -W - 0.0014], [hx, hy - 0.0090, W + 0.0014],
+      ringOutline(0.0024, 10));
+    if (H.kind === 'bob') {
+      // Rounded off flush with the tang: a stub and nothing more.
+      strut(g, [hx, hy - 0.0090, 0], [hx - 0.0060, hy + 0.0036, 0],
+        roundRect(0.0038, 0.0038, 0.0030, 3.0, 12));
+    } else {
+      // The spine, leaning back over the tang the way a cocked one does.
+      strut(g, [hx, hy - 0.0090, 0], [hx - 0.0086, hy + 0.0092, 0],
+        roundRect(0.0032, 0.0032, 0.0026, 3.4, 12));
+      if (H.kind === 'ring') {
+        strut(g, [hx - 0.0100, hy + 0.0120, -0.0026], [hx - 0.0100, hy + 0.0120, 0.0026],
+          ringOutline(0.0052, 14));
+      } else {
+        // A spur: a flat thumbpiece, wider than the spine it sits on.
+        svcSlab(g, [[hx - 0.0150, 0.0026, 0.0026, 0.0050, 3.0],
+          [hx - 0.0062, 0.0030, 0.0030, 0.0054, 3.0]], 0, true, true, hy + 0.0122);
+      }
+    }
+  }
+
+  /* Compensator ports. Holes in the top of the barrel that let the gas
+     out upwards so the muzzle does not climb -- and on a pistol they
+     are cut where the barrel stands clear of the slide, which is the
+     one bit of a handgun that is not a rectangle. */
+  const C = K.comp;
+  if (C) {
+    const n = C.n || 3;
+    for (let i = 0; i < n; i++) {
+      const x = C.x0 + (n === 1 ? 0 : i * (C.x1 - C.x0) / (n - 1));
+      const r = K.barrel.r1;
+      /* A raised collar round each port. A hole with no rim is a dark
+         dot, and a dark dot on a barrel is a texture, not a part. */
+      strut(g, [x, r - 0.0020, 0], [x, r + 0.0022, 0],
+        roundRect(C.w || 0.0030, C.w || 0.0030, C.hw || 0.0022, 3.0, 10));
+    }
+    if (C.shroud) {
+      /* And on the ones where the whole muzzle end is a squared-off
+         block rather than a round barrel. */
+      const br = K.barrel.r1;
+      svcSlab(g, [[C.x0 - 0.008, br + 0.0040, br + 0.0030, 0.0088, 4],
+        [C.x1 + 0.008, br + 0.0040, br + 0.0030, 0.0088, 4]]);
+    }
+  }
+
+  /* A sighting rib down the top of the slide -- a raised flat strip
+     between the sights, which a target pistol and a service revolver
+     both wear and a plain service auto does not. */
+  const B = K.rib;
+  if (B) {
+    const top = B.onBarrel ? K.barrel.r1 : R.up;
+    svcSlab(g, [
+      [B.x0, 0.0026, 0.0026, B.hw || 0.0060, 5],
+      [B.x1, 0.0026, 0.0026, B.hw || 0.0060, 5],
+    ], 0, true, true, top + 0.0014);
+    if (B.vent) {
+      // Cut through in a line, the way a ventilated rib is.
+      const n = Math.max(2, Math.round((B.x1 - B.x0) / 0.014));
+      for (let i = 0; i < n; i++) {
+        const x = B.x0 + (i + 0.5) * (B.x1 - B.x0) / n;
+        strut(g, [x, top + 0.0010, -(B.hw || 0.0060) * 0.5],
+          [x, top + 0.0010, (B.hw || 0.0060) * 0.5],
+          roundRect(0.0024, 0.0024, 0.0018, 3.0, 8));
+      }
+    }
+  }
+
+  /* An accessory light or laser under the dust cover -- the thing
+     hanging off the rail rather than the rail itself. */
+  const L = K.underslung;
+  if (L) {
+    const ly = -R.down - (L.drop || 0.0090);
+    svcSlab(g, [
+      [L.x0, 0.0072, 0.0072, 0.0098, 4],
+      [L.x1 - 0.008, 0.0078, 0.0078, 0.0104, 4],
+      [L.x1, 0.0060, 0.0060, 0.0086, 4],
+    ], 0, true, true, ly);
+    // The lens on the front of it.
+    strut(g, [L.x1 - 0.0016, ly, 0], [L.x1 + 0.0020, ly, 0], ringOutline(0.0062, 14));
+  }
+}
+
 function svcGrip(g, K) {
   const G = K.grip;
   /* A FRONT GRIP, on the two weapons that have one. The M60's is under
@@ -543,19 +727,36 @@ function svcGrip(g, K) {
         [1.00, 0.0148, 0.0148, 0.0142, 3.2],
       ]);
   }
+  /* THE SECTION, and it is not the same on two of these.
+   *
+     One profile for every grip in the game made a Mauser broomhandle
+     -- round, and the reason the gun is called that -- come out as the
+     same flat-sided slab as a Glock's. The three knobs below are what
+     a grip's cross-section actually varies in: how deep front to back,
+     how wide across, and how square the corners are. Default to the
+     numbers that were hard-coded, so a spec that says nothing is
+     unchanged. */
+  const gd = G.deep != null ? G.deep : 1;
+  const gw = G.wide != null ? G.wide : 1;
+  const ge = G.e != null ? G.e : 1;
   gripStack(g, G.x, G.y, G.len, G.rake, [
-    [0.00, 0.0175, 0.0165, 0.0165, 3.0],
-    [0.22, 0.0168, 0.0158, 0.0162, 3.0],
-    [0.55, 0.0155, 0.0150, 0.0158, 2.8],
-    [0.85, 0.0160, 0.0158, 0.0162, 2.8],
-    [1.00, 0.0168, 0.0168, 0.0166, 3.2],
+    [0.00, 0.0175 * gd, 0.0165 * gd, 0.0165 * gw, 3.0 * ge],
+    [0.22, 0.0168 * gd, 0.0158 * gd, 0.0162 * gw, 3.0 * ge],
+    [0.55, 0.0155 * gd, 0.0150 * gd, 0.0158 * gw, 2.8 * ge],
+    [0.85, 0.0160 * gd, 0.0158 * gd, 0.0162 * gw, 2.8 * ge],
+    [1.00, 0.0168 * gd, 0.0168 * gd, 0.0166 * gw, 3.2 * ge],
   ]);
   /* Checkering on the sides, which is the difference between a grip
-     you can feel and a painted slab. */
-  const ux = -G.rake / Math.hypot(G.rake, 1), uy = -1 / Math.hypot(G.rake, 1);
-  for (const sz of [-1, 1]) {
-    checker(g, G.x + ux * G.len * 0.52, G.y + uy * G.len * 0.52, sz * 0.0161,
-      ux, uy, sz, 5, 7, 0.0072, 0.0009);
+     you can feel and a painted slab -- but a smooth walnut target
+     panel and a stippled polymer one are not the same surface, so a
+     spec can ask for coarser, finer, or none. */
+  if (G.check !== false) {
+    const ux = -G.rake / Math.hypot(G.rake, 1), uy = -1 / Math.hypot(G.rake, 1);
+    const cols = G.checkN ? G.checkN[0] : 5, rows = G.checkN ? G.checkN[1] : 7;
+    for (const sz of [-1, 1]) {
+      checker(g, G.x + ux * G.len * 0.52, G.y + uy * G.len * 0.52, sz * 0.0161 * gw,
+        ux, uy, sz, cols, rows, 0.0072, G.checkH || 0.0009);
+    }
   }
 }
 
@@ -1666,6 +1867,8 @@ function makeServiceArm(kind) {
   svcRotary(geos.steel, K);
   svcCylinder(geos.steel, K);
   svcToggle(geos.steel, K);
+  svcSerrate(geos.steel, K);
+  svcSlideWork(geos.steel, K);
   svcWarhead(geos.steel, K);
   svcLimbs(geos.steel, K);
   geos.wood = new Geometry(); svcFurniture(geos.wood, K);

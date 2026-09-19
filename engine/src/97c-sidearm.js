@@ -67,8 +67,16 @@ Object.assign(SERVICE_KINDS, {
      Longer slide, a beavertail, and a rounded-off frame. */
   blaze: sideSpec({
     muzzle: 0.222, rec: { front: 0.104, up: 0.0146, e: 3.6 },
-    grip: { len: 0.096 }, mag: { len: 0.088, r: 0.032 },
+    grip: { len: 0.096, deep: 1.06, wide: 0.90, e: 0.92, checkN: [6, 9] },
+    mag: { len: 0.088, r: 0.032 },
     sight: { frontX: 0.098, rear: 'notch' },
+    /* The three things that say 1911 across a room, and none of them
+       is a dimension: the spur standing over the web of your hand, the
+       beavertail it stands on, and a single block of straight-cut
+       serrations at the back of a slide that is otherwise smooth. */
+    hammer: { kind: 'spur', x: -0.046, y: 0.0092 },
+    tang: { x: -0.048, len: 0.026, y: 0.0086 },
+    serr: { kind: 'vert', rear: [-0.044, -0.014], pitch: 0.0052, out: 0.0016 },
     mass: 1.15,
   }),
 
@@ -84,6 +92,16 @@ Object.assign(SERVICE_KINDS, {
     grip: { x: -0.044, y: -0.0190, len: 0.108, rake: 0.26 },
     mag: { x: -0.044, y: -0.0210, len: 0.100, w: 0.0110, d: 0.0130, r: 0.028 },
     sight: { y: 0.0230, frontX: 0.112, rearX: -0.046 },
+    /* A slab-sided triangle with a rib down the whole top of it and
+       four ports cut through the barrel to hold the muzzle down. The
+       serrations go OVER the top as well as down the flanks, because
+       the slide is wide enough that a thumb lands on top of it. */
+    rib: { x0: -0.030, x1: 0.118, hw: 0.0078, vent: true },
+    comp: { x0: 0.148, x1: 0.214, n: 4, w: 0.0036, hw: 0.0026 },
+    serr: { kind: 'slant', rear: [-0.052, -0.012], pitch: 0.0070,
+      out: 0.0018, top: true, hw: 0.0020 },
+    hammer: { kind: 'spur', x: -0.056, y: 0.0130 },
+    grip: { deep: 1.14, wide: 1.10, e: 1.20, checkN: [6, 8], checkH: 0.0012 },
     mass: 1.9, bound: 0.20,
   }),
 
@@ -107,6 +125,15 @@ Object.assign(SERVICE_KINDS, {
     grip: { x: -0.040, y: -0.0170, len: 0.098, rake: 0.46 },
     mag: null,
     sight: { y: 0.0215, frontX: 0.206, rearX: -0.030, front: 'blade', rear: 'notch' },
+    /* The top strap, which on a Webley runs unbroken from the standing
+       breech over the cylinder and all the way to the foresight -- it
+       is the line that makes a break-open revolver look like one. And
+       the big flat hammer spur you cock with a thumb. */
+    rib: { x0: 0.050, x1: 0.204, hw: 0.0068, onBarrel: true },
+    hammer: { kind: 'spur', x: -0.040, y: 0.0116 },
+    /* Bird's head butt: deep front to back, narrow across, and the
+       vulcanite panels are coarse-chequered rather than fine. */
+    grip: { deep: 1.10, wide: 0.86, e: 0.80, checkN: [5, 9], checkH: 0.0013 },
     mass: 1.1, bound: 0.18,
   }),
 
@@ -128,6 +155,16 @@ Object.assign(SERVICE_KINDS, {
     // Forward of the trigger, which is the whole silhouette of this gun.
     mag: { x: 0.016, y: -0.0190, len: 0.074, w: 0.0098, d: 0.0120, r: 0.020, curve: 0 },
     sight: { y: 0.0210, frontX: 0.226, rearX: 0.030, rear: 'notch' },
+    /* A round bolt with two knurled ears, a ring hammer behind it, and
+       a grip that is genuinely circular in section -- which is the
+       whole reason anybody ever called it a broomhandle, and which one
+       shared grip profile had flattened into the same slab as every
+       other pistol in the rack. */
+    serr: { kind: 'scallop', rear: [-0.058, -0.030], pitch: 0.0140, r: 0.0042 },
+    hammer: { kind: 'ring', x: -0.062, y: 0.0112 },
+    grip: { deep: 0.94, wide: 1.06, e: 0.62, check: false },
+    // The long sighting rib along the top of the barrel extension.
+    rib: { x0: -0.058, x1: 0.062, hw: 0.0052 },
     mass: 1.25, bound: 0.20,
   }),
 
@@ -153,9 +190,22 @@ Object.assign(SERVICE_KINDS, {
     charge: null,
     toggle: { x0: -0.052, x1: 0.030, knuckle: -0.026, rise: 0.0026,
       out: 0.0052, r: 0.0088 },
-    grip: { x: -0.046, y: -0.0170, len: 0.094, rake: 0.58 },
+    /* Sharply raked, and chequered walnut all the way round rather
+       than two panels let into a frame. Narrow across -- a P08 grip is
+       a thin one, which is half of why the gun points the way it
+       does. */
+    grip: { x: -0.046, y: -0.0170, len: 0.094, rake: 0.58,
+      deep: 1.02, wide: 0.82, e: 0.74, checkN: [6, 10] },
     mag: { x: -0.046, y: -0.0190, len: 0.086, r: 0.030 },
     sight: { y: 0.0200, frontX: 0.142, rearX: -0.044 },
+    /* NO SERRATIONS AND NO HAMMER, and both absences are deliberate.
+       You cock a Luger by the toggle knuckle, so there is nothing cut
+       into the sides to grip, and the striker is inside the breech
+       block where you cannot see it. Every other self-loader in this
+       table now wears both; leaving this one bare is what makes the
+       toggle read as the mechanism rather than as an ornament. The
+       frame tail behind the breech is the one thing it does get. */
+    tang: { x: -0.054, len: 0.020, y: 0.0092 },
     mass: 0.95, bound: 0.17,
   }),
 
@@ -172,6 +222,16 @@ Object.assign(SERVICE_KINDS, {
     mag: { x: -0.034, y: -0.0185, len: 0.094, w: 0.0116, d: 0.0112, r: 0.030 },
     rail: { x0: 0.030, x1: 0.070 },
     sight: { y: 0.0180, frontX: 0.086, rearX: -0.038 },
+    /* Serrated at BOTH ends -- front cocking grooves as well as rear,
+       which is the modern-duty-pistol tell and which none of the
+       war-era guns in this table have -- a hammer bobbed down flush so
+       it cannot snag coming out of a holster, and a light hanging off
+       the rail, since the rail existed and nothing was ever on it. */
+    serr: { kind: 'slant', rear: [-0.042, -0.008], front: [0.062, 0.084],
+      pitch: 0.0055, out: 0.0015 },
+    hammer: { kind: 'bob', x: -0.044, y: 0.0098 },
+    underslung: { x0: 0.030, x1: 0.084, drop: 0.0088 },
+    grip: { deep: 0.92, wide: 1.16, e: 1.35, checkH: 0.0007 },
     mass: 0.96, bound: 0.16,
   }),
 
@@ -184,9 +244,18 @@ Object.assign(SERVICE_KINDS, {
     barrel: { rear: 0.018, r0: 0.0076, r1: 0.0062, bore: 0.0039, step: 0.062 },
     rec: { rear: -0.048, front: 0.090, up: 0.0136, down: 0.0116, w: 0.0110, e: 4.0 },
     port: { x0: 0.024, x1: 0.054, up: 0.0092, down: 0.0015 },
-    grip: { x: -0.034, y: -0.0160, len: 0.092, rake: 0.20 },
+    grip: { x: -0.034, y: -0.0160, len: 0.092, rake: 0.20,
+      // Slim and almost parallel-sided, with the coarse ribbed panels.
+      deep: 0.88, wide: 0.86, e: 1.10, checkN: [4, 8], checkH: 0.0014 },
     mag: { x: -0.034, y: -0.0180, len: 0.086, w: 0.0088, d: 0.0104, r: 0.028 },
     sight: { y: 0.0170, frontX: 0.084, rearX: -0.036 },
+    /* Six grooves, wide and far apart, cut deep into the whole height
+       of the slide -- the TT's are unmistakable next to the fine close
+       ones on a modern gun, and they run right up over the top. The
+       hammer is a big exposed spur with a hole through it. */
+    serr: { kind: 'vert', rear: [-0.040, -0.006], pitch: 0.0090,
+      out: 0.0022, hw: 0.0024, top: true },
+    hammer: { kind: 'ring', x: -0.042, y: 0.0086 },
     mass: 0.85, bound: 0.15,
   }),
 
@@ -203,6 +272,17 @@ Object.assign(SERVICE_KINDS, {
     mag: { x: -0.032, y: -0.0185, len: 0.148, w: 0.0116, d: 0.0112, r: 0.034 },
     rail: { x0: 0.028, x1: 0.066 },
     sight: { y: 0.0178, frontX: 0.080, rearX: -0.036 },
+    /* NO HAMMER -- it is striker-fired, and the empty space behind the
+       slide where every other pistol here has a spur or a ring is as
+       much of a tell as a part would be. What it does have is a pair
+       of slots cut through the top of the barrel and the slide over
+       them, which is the only thing keeping seventeen rounds a second
+       anywhere near where you pointed it. */
+    comp: { x0: 0.118, x1: 0.152, n: 2, w: 0.0042, hw: 0.0030, shroud: true },
+    serr: { kind: 'vert', rear: [-0.040, -0.010], pitch: 0.0048,
+      out: 0.0012, hw: 0.0014 },
+    // Squared-off polymer: wide, shallow, hard-cornered, stippled fine.
+    grip: { deep: 0.90, wide: 1.20, e: 1.45, checkN: [7, 10], checkH: 0.0006 },
     mass: 0.92, bound: 0.20,
   }),
 });
