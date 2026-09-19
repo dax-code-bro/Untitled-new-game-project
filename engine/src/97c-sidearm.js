@@ -116,7 +116,12 @@ Object.assign(SERVICE_KINDS, {
   mauser: sideSpec({
     ammoKind: 'inter',
     muzzle: 0.254,
-    barrel: { rear: 0.074, r0: 0.0082, r1: 0.0068, bore: 0.0039, step: 0.110 },
+    /* `rear` at 0.074 with the receiver ending at 0.070 left four
+       millimetres between the barrel and the gun, so the whole barrel
+       -- fifty-seven pieces of it -- was a separate object. The same
+       shape of fault as the Webley's, and like the Webley's it
+       photographed as one gun because the two overlap in silhouette. */
+    barrel: { rear: 0.066, r0: 0.0082, r1: 0.0068, bore: 0.0039, step: 0.110 },
     rec: { rear: -0.066, front: 0.070, up: 0.0158, down: 0.0134, w: 0.0122, e: 3.4 },
     port: { x0: 0.006, x1: 0.040, up: 0.0110, down: 0.0015 },
     grip: { x: -0.048, y: -0.0170, len: 0.086, rake: 0.16 },

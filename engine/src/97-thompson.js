@@ -174,7 +174,11 @@ function buildTommySteel(g) {
      it cleared the old wood by 0.8 mm and the new, deeper block not at
      all: a sling swivel entirely inside the forend, which is the same
      bug as a sight with no hole in it — correct part, invisible. */
-  loop(0.343, -0.0378);
+  /* And then I overshot by the same margin the other way: -0.0378
+     left 1.5 mm of air between the loop and the wood. attached.test.js
+     caught that; my eye did not, either time. -0.0350 has it biting
+     into the forend, which is where a swivel screw goes. */
+  loop(0.343, -0.0350);
 }
 
 /* The charging handle, on its own so it can ride back with each shot. */

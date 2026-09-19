@@ -246,13 +246,14 @@ const note = (s) => console.log(`  ..   ${s}`);
      after the service belt, 46 after the magazine catch, 45 after the
      Webley's top strap, 26 after the rear aperture base / the forward
      sling swivel / the AK's selector marks, 13 after the hand-built
-     MG 42's belt links. Lower it in the same commit as every fix.
+     MG 42's belt links, 11 after the Mauser's barrel and the
+     Thompson's sling swivel. Lower it in the same commit as every fix.
 
      What is left is one-offs on individual weapons rather than shared
      builders: the Mauser's barrel, the riot shield's panel, three on
      the Breakwater, and single small parts on the Hydra, the Thompson
      and the MP5. */
-  const BASELINE = 13;
+  const BASELINE = 11;
   check('no NEW part of any weapon is floating clear of the rest',
     r.adrift.length <= BASELINE,
     `${r.adrift.length} adrift clusters, baseline ${BASELINE}`);
