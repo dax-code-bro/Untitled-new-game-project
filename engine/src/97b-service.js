@@ -581,7 +581,7 @@ function svcMag(g, K) {
        Longer, too, and swung out to the left as it falls: a belt is
        the one part of a machine gun you see from across the map, and
        seven links over 34 mm is a tab, not a belt. */
-    for (const L of svcBeltLinks(M)) {
+    for (const L of svcBeltLinks(M, K)) {
       svcSlab(g, [[L.x - 0.0046, 0.0032, 0.0032, 0.0235, 3],
         [L.x + 0.0046, 0.0032, 0.0032, 0.0235, 3]],
       L.z, true, true, L.y + 0.0032);
@@ -757,7 +757,14 @@ function svcDetails(g, K) {
     for (const a of stops) {
       const dx = sel.x + Math.cos(a) * 0.0108;
       const dy = sel.y + Math.sin(a) * 0.0108;
-      strut(g, [dx, dy, -W - 0.0072], [dx, dy, -W - 0.0018], ringOutline(0.0013, 8));
+      /* THROUGH THE WALL, not hovering outside it. These ran from
+         -W-0.0072 to -W-0.0018 -- entirely clear of the receiver at
+         -W, with a 1.8 mm gap -- and they sit 10.8 mm out from a boss
+         whose plate is only 7.8 mm, so they touched the boss either.
+         Three little pips floating beside the selector on forty-five
+         weapons. A detent is a stop pressed into the wall; it starts
+         in the wall. Found by attached.test.js. */
+      strut(g, [dx, dy, -W - 0.0072], [dx, dy, -W + 0.0004], ringOutline(0.0013, 8));
     }
   }
   /* And the lever itself, sitting on whichever stop the gun is set to
@@ -944,14 +951,49 @@ const A_FEED_LIFT = 0.006;
    the side a Maxim-pattern gun's belt hangs on, and the side the model
    ejects away from. Shared between the links and the rounds in them
    so the two cannot drift apart. */
-function svcBeltLinks(M) {
-  const out = [], n = 11;
-  for (let i = 0; i < n; i++) {
-    const t = i / (n - 1);
-    out.push({ t,
-      x: M.x - t * 0.050,
-      y: M.y - t * t * 0.100,
-      z: -t * t * 0.024 });
+function svcBeltLinks(M, K) {
+  /* THE FIRST LINK HAS TO BE IN THE GUN. The belt starts at the
+     magazine's own y, which on these four sits 4 mm below the
+     receiver's underside -- so the whole belt, links and brass
+     together, hung clear of the weapon touching nothing. My own,
+     from the commit that gave these guns a belt at all, and found by
+     attached.test.js rather than by looking: it is a big obvious part
+     and it still read as fine in every photograph, because a belt
+     hanging just under a receiver looks like a belt hanging just
+     under a receiver. */
+  const y0 = K && K.rec ? Math.max(M.y, -K.rec.down + 0.002) : M.y;
+  /* EQUAL STEPS ALONG THE PATH, not equal steps in t.
+   *
+     The fall is quadratic, so eleven links at equal t put the first
+     two a millimetre apart and the last two NINETEEN -- and a link is
+     6.4 mm tall. The bottom half of the belt came apart into separate
+     plates hanging in a line with air between them. From the side it
+     looked like a belt; it was a dotted line, and no photograph of it
+     said otherwise. attached.test.js did, by flagging the lower links
+     as a cluster that reaches nothing.
+
+     So: measure the path, then lay links along it at a fixed pitch a
+     little shorter than a link is long, so consecutive plates always
+     overlap however steeply the curve is falling. */
+  const at = (t) => [M.x - t * 0.050, y0 - t * t * 0.100, -t * t * 0.024];
+  const S = 64, cum = [0];
+  let prev = at(0);
+  for (let i = 1; i <= S; i++) {
+    const q = at(i / S);
+    cum.push(cum[i - 1] + Math.hypot(q[0] - prev[0], q[1] - prev[1], q[2] - prev[2]));
+    prev = q;
+  }
+  const len = cum[S];
+  const n = Math.max(8, Math.round(len / 0.0082) + 1);
+  const out = [];
+  let seg = 0;
+  for (let k = 0; k < n; k++) {
+    const want = (k / (n - 1)) * len;
+    while (seg < S - 1 && cum[seg + 1] < want) seg++;
+    const span = cum[seg + 1] - cum[seg] || 1;
+    const t = (seg + (want - cum[seg]) / span) / S;
+    const q = at(Math.min(1, t));
+    out.push({ t: Math.min(1, t), x: q[0], y: q[1], z: q[2] });
   }
   return out;
 }
@@ -997,7 +1039,7 @@ function svcRounds(shell, tip, K) {
        tray, not fore-and-aft like one in a box. The old code swept a
        7.6 mm tube along X for each link -- a stub, in the wrong
        material, pointing the wrong way. */
-    for (const L of svcBeltLinks(M)) {
+    for (const L of svcBeltLinks(M, K)) {
       svcCartridge(shell[0], tip[0], A,
         new Vec3(L.x, L.y + 0.0014, L.z - A.len * 0.5),
         new Vec3(0, 0, 1), new Vec3(1, 0, 0));

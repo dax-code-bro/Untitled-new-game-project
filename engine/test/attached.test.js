@@ -155,7 +155,11 @@ const note = (s) => console.log(`  ..   ${s}`);
       for (const [r, c] of size) {
         if (r === main) continue;
         const s = span.get(r);
-        out.adrift.push({ weapon: label, pieces: c,
+        const chans = [];
+        for (let i = 0; i < n; i++) {
+          if (find(i) === r && chans.indexOf(boxes[i].k) < 0) chans.push(boxes[i].k);
+        }
+        out.adrift.push({ weapon: label, pieces: c, chan: chans.sort().join('+'),
           at: [+((s[0] + s[3]) / 2).toFixed(4), +((s[1] + s[4]) / 2).toFixed(4),
             +((s[2] + s[5]) / 2).toFixed(4)],
           size: +Math.max(s[3] - s[0], s[4] - s[1], s[5] - s[2]).toFixed(4) });
@@ -191,9 +195,10 @@ const note = (s) => console.log(`  ..   ${s}`);
        look at. */
     const bucket = new Map();
     for (const a of r.adrift) {
-      const key = a.pieces + 'p/' + (a.size * 1000).toFixed(0) + 'mm/y'
-        + (Math.round(a.at[1] * 200) / 200).toFixed(3)
-        + '/z' + (Math.round(a.at[2] * 200) / 200).toFixed(3);
+      const key = a.chan + ' ' + a.pieces + 'p/' + (a.size * 1000).toFixed(0) + 'mm @x'
+        + (Math.round(a.at[0] * 100) / 100).toFixed(2)
+        + ' y' + (Math.round(a.at[1] * 200) / 200).toFixed(3)
+        + ' z' + (Math.round(a.at[2] * 200) / 200).toFixed(3);
       const g = bucket.get(key) || { n: 0, who: [] };
       g.n++; if (g.who.length < 4) g.who.push(a.weapon);
       bucket.set(key, g);
@@ -237,7 +242,10 @@ const note = (s) => console.log(`  ..   ${s}`);
 
      What this must NOT become is a number somebody raises to make the
      build green. Raising it is the failure. */
-  const BASELINE = 130;
+  /* 130 when the test went in; 72 after the selector detents, the
+     belt and the FG 42's magazine. Lower it in the same commit as
+     every fix. */
+  const BASELINE = 72;
   check('no NEW part of any weapon is floating clear of the rest',
     r.adrift.length <= BASELINE,
     `${r.adrift.length} adrift clusters, baseline ${BASELINE}`);
