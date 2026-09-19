@@ -1154,6 +1154,16 @@ Engine.prototype.pistol1911 = function (opts = {}) {
   body.ejectPort = [0.0900, 0.0400, 0.0110];
   body.magWell = [-0.0120, -0.0850, 0];
   body.slideTravel = 0.026;
+  /* THE PART LIST, which mountArm sets for every table-built gun and
+     which the two hand-built ones never did. It is not documentation:
+     `visible` is per actor and is NOT inherited down the parent chain,
+     so hiding the weapon hides the frame and leaves the slide, the
+     grips and the magazine hanging in the air. Everything that hides,
+     shows, tints or measures a gun walks partNames -- mp-game's show(),
+     mp-match's, bunker-nine's camo and the attachment fitter -- and on
+     a gun without one they all walked an empty list and silently did
+     nothing to four fifths of the model. */
+  body.partNames = ['steel', 'grips', 'mark', 'slide', 'mag'];
   // Where the bore sits above the grip, so anything bolted to the muzzle
   // lands on the barrel's own line rather than on a guess at it.
   body.boreAt = -PISTOL_ORIGIN.y;

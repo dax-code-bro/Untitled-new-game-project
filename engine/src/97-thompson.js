@@ -170,7 +170,11 @@ function buildTommySteel(g) {
     ], true, true);
   };
   loop(-0.205, -0.0895);   // resting against the stock's belly
-  loop(0.360, -0.0395);    // under the foregrip, touching it
+  /* Under the foregrip and BELOW it. At −0.0395 with a 2.8 mm section
+     it cleared the old wood by 0.8 mm and the new, deeper block not at
+     all: a sling swivel entirely inside the forend, which is the same
+     bug as a sight with no hole in it — correct part, invisible. */
+  loop(0.343, -0.0378);
 }
 
 /* The charging handle, on its own so it can ride back with each shot. */
@@ -193,8 +197,15 @@ function buildTommyMag(g) {
     pts: roundRect(0.0148 * grow, 0.0148 * grow, 0.0102 * grow, 2.7, 18),
   });
   sweepPath(g, [magAt(0, 1.06), magAt(0.012, 1.06), magAt(0.014, 1.0), magAt(0.165, 1.0), magAt(0.172, 1.02)], true, true);
-  hardBox(g, 0.148 + magAxis.x * 0.09, -0.040 - 0.09, 0.0104, 0.0022, 0.055, 0.0007);
-  hardBox(g, 0.148 + magAxis.x * 0.09, -0.040 - 0.09, -0.0104, 0.0022, 0.055, 0.0007);
+  /* Ribs proud of the flats, not flush with them. At 0.7 mm they were
+     inside the 2.7-exponent superellipse for most of their length and
+     the magazine photographed as a plain black plank. */
+  for (const d of [0.052, 0.090, 0.128]) {
+    for (const sz of [-1, 1]) {
+      hardBox(g, 0.148 + magAxis.x * d, -0.040 + magAxis.y * d, sz * 0.0106,
+        0.0026, 0.0130, 0.0016);
+    }
+  }
 }
 
 function buildTommyWood(g) {
@@ -232,18 +243,40 @@ function buildTommyWood(g) {
   ], true, true);
 
   /* Horizontal foregrip under the barrel — the M1A1's, not the 1928
-     vertical broomhandle. Grooved: three finger scallops read as one. */
-  const fore = (x, r) => ({
-    o: new Vec3(x, -0.0195, 0), u: U, v: V, pts: roundRect(r * 0.72, r, 0.0146, 2.3, 18),
+     vertical broomhandle.
+
+     WIDER THAN TALL, AND ACTUALLY GROOVED. The first pass was a 29 mm
+     by 33 mm lozenge carrying the comment "grooved: three finger
+     scallops read as one" — and not one scallop in the geometry. A
+     smooth capsule taller than it is wide is what a forend looks like
+     before anybody has made it a forend, and it is most of why this
+     gun read as a toy next to the MP5.
+
+     The real block is about 39 mm across and 30 mm deep with three
+     finger grooves cut into it. The grooves are made by pulling the
+     section in at each groove centre and letting the sweep interpolate
+     back out either side: a finger groove is a waist, not a
+     subtraction, and a waist is one station.
+
+     The top stays at −5.0 mm, which is 6 mm ABOVE the barrel's
+     underside at this station — the wood has to bite into the steel or
+     the two read as a plank floating under a pipe. */
+  const fore = (x, w, dn, up) => ({
+    o: new Vec3(x, -0.0175, 0), u: U, v: V, pts: roundRect(up, dn, w, 2.6, 20),
   });
-  sweepPath(g, [
-    fore(0.262, 0.0165),
-    fore(0.285, 0.0185),
-    fore(0.320, 0.0192),
-    fore(0.355, 0.0192),
-    fore(0.395, 0.0180),
-    fore(0.422, 0.0150),
-  ], true, true);
+  const FW = 0.0195, FD = 0.0160, FU = 0.0125;
+  const forePath = [
+    fore(0.262, FW * 0.80, FD * 0.78, FU),
+    fore(0.272, FW, FD, FU),
+  ];
+  for (const c of [0.300, 0.335, 0.370]) {
+    forePath.push(fore(c - 0.012, FW, FD, FU));
+    forePath.push(fore(c, FW * 0.90, FD * 0.85, FU));
+    forePath.push(fore(c + 0.012, FW, FD, FU));
+  }
+  forePath.push(fore(0.412, FW, FD, FU));
+  forePath.push(fore(0.424, FW * 0.78, FD * 0.78, FU));
+  sweepPath(g, forePath, true, true);
 }
 
 /* ---------------- engine hook ---------------- */
@@ -272,7 +305,17 @@ const TOMMY_MATERIALS = {
  * moved up to where steel actually sits. The others in this game already
  * run 0x848c95 to 0xc2c8ce and are left alone.
  */
-  steel: { color: 0x6b7078, texture: 'metal', roughness: 0.44, metalness: 1 },
+  /* ON THE `bluing` RECIPE, like every other gun in the game.
+   *
+   * `metal` is a machining/noise field meant for bright steel, and on a
+   * swept tube at the default uvScale it sprays the barrel with white
+   * speckle and one hard specular streak — a plastic pipe, not a blued
+   * barrel. `bluing` is the recipe that was written for exactly this
+   * finish (the reflectance, the polishing swirl, the wear back to
+   * bright on the edges) and the MP5 — the one the user said looked
+   * good — is wearing it. Same tint rule as ARM_MAT.blued: the recipe
+   * carries the colour, so the tint is white. */
+  steel: { color: 0xffffff, texture: 'bluing', roughness: 1, metalness: 1, uvScale: 2.6 },
   /* uvScale 5, not 18.
    *
    * On a swept section U runs AROUND the cross-section and V along the
@@ -280,7 +323,13 @@ const TOMMY_MATERIALS = {
    * out banded diagonally in cream and tan -- a barber's pole, not wood.
    * It is on every wooden part in the game. Five repeats over a forearm
    * puts the figure along the piece, which is the way a stock is cut. */
-  wood: { color: 0x5c4028, texture: 'wood', roughness: 0.66, metalness: 0, uvScale: 5 },
+  /* And `walnut`, not `wood`. `wood` is six sawn boards to a tile with
+     seams — a floor, which is what it was authored for. `walnut` is one
+     piece of figured stock with an oil finish. The tint is near-neutral
+     because the recipe already bakes the brown in; 0x5c4028 on top of
+     it is warm twice over, which is the mistake that made every service
+     rifle in this game terracotta. */
+  wood: { color: 0xc2c2c0, texture: 'walnut', roughness: 1, metalness: 0, uvScale: 2.2 },
 };
 
 function makeThompson() {
@@ -344,6 +393,10 @@ Engine.prototype.thompson = function (opts = {}) {
   body.ejectPort = [0.0700, 0.0930, 0.0210];
   body.magWell = [0.1180, -0.0300, 0];
   body.slideTravel = 0.030;
+  /* See the note on the 1911's: `visible` does not inherit, so without
+     this list hiding the Thompson left its stock, its bolt handle and
+     its magazine floating where the gun used to be. */
+  body.partNames = ['steel', 'wood', 'slide', 'mag'];
   body.boreAt = 0.070;                 // the origin sits 70 mm under the bore
   body.muzzleAt = TOMMY.muzzle + 0.030;
   body.sightAt = TOMMY.recUp + 0.0040 + 0.070;

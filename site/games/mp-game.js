@@ -685,17 +685,33 @@
      is a measured number and getting it wrong is what "he holds his gun
      way too high" was. */
 
-  /* Three guns have hand-built models instead of table entries, so the
+  /* A dozen guns have hand-built models instead of table entries, so the
      table cannot be the only place this looks. Anything with no model
      at all falls back to the nearest thing that does, because a missing
-     gun should be the wrong gun and not an empty hand. */
+     gun should be the wrong gun and not an empty hand.
+
+     THIS MAP IS THE WHOLE BUG. A hand-built model that is not listed
+     here is not "unused" in a harmless way -- the lookup silently falls
+     through to serviceArm, and the player gets a generic arm wearing the
+     right name. "The Thompson is completely wrong" was exactly that: a
+     351-line Thompson sat in 97-thompson.js while the game drew a
+     table-built stand-in. Worse, `remington`, `killstreak` and
+     `riotshield` have no service kind either, so they fell all the way
+     through to the m4 -- a bolt-action sniper rifle and an anti-materiel
+     rifle were both being drawn as a carbine.
+
+     So: every Engine.prototype gun builder belongs in here, keyed by the
+     MP_DATA weapon id (which is not always the builder's name --
+     `remington` the weapon, `remington700` the builder). */
   var VM_BESPOKE = { mp5: 'mp5', m1911: 'pistol1911', model5: 'model5',
     mauser: 'mauserC96', breakwater: 'breakwater', scatter: 'scattergun',
-    sawnoff: 'sawnOff' };
-  /* The MG 42 has its own model now (see SERVICE_KINDS), so the only
-     thing still borrowing one is the riot shield, which is a sheet of
-     polycarbonate and a handle and genuinely has no weapon under it. */
-  var VM_FALLBACK = { riotshield: 'ump' };
+    sawnoff: 'sawnOff', thompson: 'thompson', mg42: 'mg42',
+    remington: 'remington700', killstreak: 'killStreak',
+    riotshield: 'riotShield' };
+  /* Nothing borrows a model any more. The fallback stays because a new
+     id added to MP_DATA before its model exists should still put
+     something in the player's hands. */
+  var VM_FALLBACK = {};
 
   /* WHERE THE HANDS GO ON A WEAPON THAT HAS NEVER BEEN POSED.
    *

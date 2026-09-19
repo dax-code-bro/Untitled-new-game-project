@@ -2541,7 +2541,13 @@ const RIFLE_KINDS = {
     scope: { x0: -0.0700, x1: 0.1600, r: 0.0175, bell: 0.0245, y: 0.0500 },
     bipod: false,
     origin: new Vec3(-0.0640, -0.0480, 0), mass: 3.9, bound: 0.62,
-    mats: { steel: ARM_MAT.blued, wood: ARM_MAT.poly, bolt: ARM_MAT.bright, scope: ARM_MAT.blued, glass: ARM_MAT.glass, reticle: ARM_MAT.reticle },
+    /* WALNUT, not polymer. A 700 in grey synthetic is a real rifle, but
+       0xc8ccd2 polymer sits at almost exactly the value a blued barrel
+       returns under a key light, so the whole gun photographed as one
+       continuous grey shape with a scope on it -- no read of where the
+       steel ends and the stock begins. The BDL's walnut is the classic
+       anyway, and the contrast is what makes a bolt gun legible. */
+    mats: { steel: ARM_MAT.blued, wood: ARM_MAT.walnut, bolt: ARM_MAT.bright, scope: ARM_MAT.blued, glass: ARM_MAT.glass, reticle: ARM_MAT.reticle },
   },
   killstreak: {
     /* Two millimetres of bore inside forty of steel. Everything about
