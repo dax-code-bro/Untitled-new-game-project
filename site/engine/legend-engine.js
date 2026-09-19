@@ -25613,12 +25613,27 @@ function svcFurniture(g, K) {
          up the far end, back along the top. */
       spin(g, [[H.x0, K.barrel.r1 + 0.002], [H.x1, K.barrel.r1 + 0.002],
         [H.x1 - 0.008, H.r], [H.x0 + 0.006, H.r]], 22, 30);
-      /* Cooling slots, cut as shallow bands rather than real holes. */
-      for (let i = 0; i < 4; i++) {
-        const x = H.x0 + 0.018 + i * (H.x1 - H.x0 - 0.036) / 3;
-        for (const th of [0.9, 2.24, TAU - 0.9, TAU - 2.24]) {
-          band(g, x - 0.010, x + 0.010, H.r - 0.0015, H.r + 0.0005, 8,
-            Math.cos(th) * H.r * 0.72, Math.sin(th) * H.r * 0.72);
+      if (H.ribs) {
+        /* LENGTHWISE, for a handguard that is fluted rather than
+           slotted. The FG42's wooden sleeve has grooves running front
+           to back; dressed in the ring slots below it came out
+           corrugated across its width, like a length of flexible
+           conduit, which is the single thing that made that rifle look
+           wrong from above. A rib is one thin rod laid along the tube
+           at the sleeve's own radius. */
+        for (let i = 0; i < H.ribs; i++) {
+          const th = TAU * i / H.ribs + TAU / (H.ribs * 2);
+          band(g, H.x0 + 0.010, H.x1 - 0.008, 0, 0.0022, 8,
+            Math.cos(th) * H.r, Math.sin(th) * H.r);
+        }
+      } else {
+        /* Cooling slots, cut as shallow bands rather than real holes. */
+        for (let i = 0; i < 4; i++) {
+          const x = H.x0 + 0.018 + i * (H.x1 - H.x0 - 0.036) / 3;
+          for (const th of [0.9, 2.24, TAU - 0.9, TAU - 2.24]) {
+            band(g, x - 0.010, x + 0.010, H.r - 0.0015, H.r + 0.0005, 8,
+              Math.cos(th) * H.r * 0.72, Math.sin(th) * H.r * 0.72);
+          }
         }
       }
     } else {
@@ -26363,7 +26378,13 @@ const SERVICE_KINDS = {
     ammoKind: 'full',
     muzzle: 0.470, barrel: { brake: 'cone', gasAt: 0.330 },
     rec: { rear: -0.140, front: 0.100, up: 0.0215, w: 0.0155 },
-    hg: { kind: 'tube', x0: 0.110, x1: 0.215, r: 0.0180 },
+    hg: { kind: 'tube', x0: 0.110, x1: 0.215, r: 0.0180, ribs: 8 },
+    /* THE BIPOD. The FG42 is a paratrooper's light machine rifle and
+       the folding bipod is half of what it is for -- it was simply
+       absent, because the table only ever gave one to the LMG rows.
+       Type II pattern: hung off the gas block rather than the muzzle,
+       which is the change that stopped it whipping the barrel. */
+    bipod: { x: 0.300, len: 0.146, rake: 0.026, spread: 0.066 },
     /* 7.92x57, not the Kurz: the FG42 is a full-power rifle, which is
        most of why it needed the raked grip and the muzzle cone it has
        -- and it feeds from the left. */
