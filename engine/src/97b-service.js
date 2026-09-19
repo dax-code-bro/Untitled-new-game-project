@@ -607,11 +607,29 @@ function svcMag(g, K) {
      is one sign, and the rounds inside use the same formula, so they
      follow it. */
   const sg = M.up ? -1 : 1;
+  /* A MAGAZINE INSIDE A GRIP LEANS WITH THE GRIP.
+   *
+     On a rifle the magazine hangs below the receiver in open air and
+     `curve` is the whole story. On a PISTOL the magazine is inside the
+     grip, and the grip leans -- gripStack takes a `rake` and walks its
+     sections down an axis of (-rake, -1). The magazine walked straight
+     down regardless, so on the Luger, whose grip rakes at 0.58 over
+     94 mm, the magazine and the column of brass in it came out through
+     the FRONT of the grip about fifty millimetres clear of it: a stack
+     of cartridges hanging in mid air in front of the trigger guard.
+     Every pistol in the game had some of this; the Luger and the
+     broomhandle had all of it.
+
+     So: if the magazine sits over the grip, it takes the grip's rake.
+     `mag.rake` overrides, and a rifle has neither and is untouched. */
+  const inGrip = K.grip && Math.abs(M.x - K.grip.x) < 0.020;
+  const rake = M.rake != null ? M.rake : (inGrip ? (K.grip.rake || 0) : 0);
+  const lean = Math.atan(rake);
   const n = 8, sts = [];
   for (let i = 0; i <= n; i++) {
     const t = i / n;
-    const a = M.curve * t;
-    const x = M.x + Math.sin(a) * M.len * t * 0.62;
+    const a = lean + M.curve * t;
+    const x = M.x - Math.sin(a) * M.len * t + Math.sin(M.curve * t) * M.len * t * 0.62;
     const y = M.y - sg * Math.cos(a) * M.len * t;
     /* Down the magazine is (sin a, -cos a); square to it, in the same
        plane, is (cos a, sin a) -- which at the top is straight forward,
@@ -628,7 +646,7 @@ function svcMag(g, K) {
   /* A floor plate: one more station, wider and shallower, so the base
      has a lip instead of being a cut-off tube. */
   const last = sts[n];
-  const aL = M.curve;
+  const aL = lean + M.curve;
   sts.push({
     o: new Vec3(last.o.x + Math.sin(aL) * 0.008,
       last.o.y - sg * Math.cos(aL) * 0.008, 0),
@@ -980,6 +998,9 @@ function svcRounds(shell, tip, K) {
   const n = Math.min(A.rounds, Math.floor(M.len / A.pitch) * 2);
   const half = A.len * 0.50;
   const sg = M.up ? -1 : 1;              // see the note on M.up in svcMag
+  const inGrip = K.grip && Math.abs(M.x - K.grip.x) < 0.020;
+  const rake = M.rake != null ? M.rake : (inGrip ? (K.grip.rake || 0) : 0);
+  const lean = Math.atan(rake);          // and on the grip's rake
   for (let i = 0; i < n; i++) {
     /* Which band this round belongs to. Rounds are laid two per pitch,
        alternating left and right of centre, so the band has to come
@@ -993,8 +1014,8 @@ function svcRounds(shell, tip, K) {
     const tipB = tip[band] || tip[0];
     const t = (i >> 1) * A.pitch / M.len;
     if (t > 0.98) break;
-    const a = M.curve * t;
-    const x = M.x + Math.sin(a) * M.len * t * 0.62;
+    const a = lean + M.curve * t;
+    const x = M.x - Math.sin(a) * M.len * t + Math.sin(M.curve * t) * M.len * t * 0.62;
     const y = M.y - sg * Math.cos(a) * M.len * t;
     const z = ((i & 1) ? 1 : -1) * A.stagger;
     /* Nose forward, along the magazine's own local 'up' -- which is
@@ -1198,6 +1219,13 @@ const AMMO_KINDS = {
   full: { caseR: 0.0060, len: 0.071, pitch: 0.0128, stagger: 0.0052, rounds: 20 },
   /* Pistol calibre, for everything in the SMG list. */
   pistol: { caseR: 0.0050, len: 0.030, pitch: 0.0106, stagger: 0.0042, rounds: 32 },
+  /* 7.62x25 and 7.63x25: a bottlenecked PISTOL round, 35 mm over all.
+     The Tokarev was marked `inter`, which in this table means 7.62x39
+     at 56 mm -- and because the magazine's depth is derived from the
+     cartridge (`mag.d = ammo.len * 0.52`) that gave a service pistol a
+     58 mm deep magazine inside a 30 mm grip. Being a bottleneck round
+     is not the same as being an intermediate one. */
+  pistolBottle: { caseR: 0.0043, len: 0.035, pitch: 0.0100, stagger: 0.0036, rounds: 8 },
 };
 
 /* Walnut where there is wood on the gun, polymer where there is not.

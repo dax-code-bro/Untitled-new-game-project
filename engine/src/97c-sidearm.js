@@ -156,7 +156,8 @@ Object.assign(SERVICE_KINDS, {
   /* The same fast bullet as the broomhandle in something you can carry.
      Slim, straight-gripped, and machined flat all over. */
   tokarev: sideSpec({
-    ammoKind: 'inter',
+    // 7.62x25, which is a bottlenecked PISTOL round and not 7.62x39.
+    ammoKind: 'pistolBottle',
     muzzle: 0.194,
     barrel: { rear: 0.018, r0: 0.0076, r1: 0.0062, bore: 0.0039, step: 0.062 },
     rec: { rear: -0.048, front: 0.090, up: 0.0136, down: 0.0116, w: 0.0110, e: 4.0 },

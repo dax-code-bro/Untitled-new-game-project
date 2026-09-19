@@ -111,7 +111,65 @@ function readFallback() {
       } catch (e) { err = String(e.message || e).split('\n')[0]; }
       rows.push({ id, cls: g.cls, via, built, parts, err });
     }
-    return { rows, kinds: kinds.size, guns: guns.length };
+    /* AND: IS THE MAGAZINE INSIDE THE GRIP?
+     *
+       On a pistol the magazine lives in the grip. The Luger's came out
+       through the FRONT of its grip with a column of brass hanging in
+       mid air in front of the trigger guard, because gripStack walks
+       its sections down an axis of (-rake, -1) and svcMag walked
+       straight down regardless -- and the Luger's grip rakes at 0.58
+       over 94 mm, so the two diverged by about fifty millimetres.
+
+       MY FIRST VERSION OF THIS CHECK WAS WORTHLESS and it is worth
+       saying why. It compared the magazine's depth to the cartridge's
+       length -- and svcSpec sets `mag.d = ammo.len * 0.52`, so the
+       comparison was `len * 1.04 >= len`, an identity. It passed on 36
+       weapons while every pistol in the game was visibly wrong. A test
+       that cannot fail is worse than no test, because it reports the
+       thing it was meant to guard as safe.
+
+       So measure the geometry instead. A pistol has no stock and no
+       handguard, which means its `wood` channel IS its grip, and the
+       magazine has its own channel. Compare their x-ranges. Nothing
+       here is derived from anything else here. */
+    const strays = [];
+    let measured = 0;
+    for (const kind of kinds) {
+      const K = G.serviceArmSpec(kind);
+      if (!K || !K.mag || K.mag.kind !== 'box') continue;
+      if (K.stock || K.hg) continue;                 // not a pistol
+      const P = G._armParts && G._armParts['svc:' + kind];
+      if (!P || !P.mag || !P.wood) continue;
+      /* ONLY WHERE THE GRIP IS. An extended magazine -- the G18's --
+         legitimately hangs BELOW the grip, and once it leans back with
+         the grip's rake its floorplate ends up further back than the
+         grip's heel. That is what an extended magazine does and it is
+         not the fault this is looking for. So the x-span is taken over
+         the part of the magazine that is level with the grip; below
+         the grip's bottom the magazine is in open air and free. */
+      const spanX = (geo, yMin) => {
+        const q = geo.positions; let lo = 1e9, hi = -1e9;
+        for (let i = 0; i < q.length; i += 3) {
+          if (yMin != null && q[i + 1] < yMin) continue;
+          if (q[i] < lo) lo = q[i]; if (q[i] > hi) hi = q[i];
+        }
+        return [lo, hi];
+      };
+      const gy = (() => {
+        const q = P.wood.positions; let lo = 1e9;
+        for (let i = 1; i < q.length; i += 3) if (q[i] < lo) lo = q[i];
+        return lo;
+      })();
+      const m = spanX(P.mag, gy), w = spanX(P.wood, null);
+      if (!(m[0] < m[1])) continue;                  // nothing level with it
+      measured++;
+      const slack = 0.006;                           // the magazine catch
+      if (m[0] < w[0] - slack || m[1] > w[1] + slack) {
+        strays.push({ kind, mag: [+m[0].toFixed(4), +m[1].toFixed(4)],
+          grip: [+w[0].toFixed(4), +w[1].toFixed(4)] });
+      }
+    }
+    return { rows, kinds: kinds.size, guns: guns.length, strays, measured };
   }, { bespoke, fallback });
 
   note(`${r.guns} weapons in MP_DATA, ${r.kinds} service kinds`);
@@ -143,6 +201,19 @@ function readFallback() {
   const usedFns = new Set(r.rows.filter((x) => x.via.startsWith('bespoke:'))
     .map((x) => x.via.slice(8)));
   note('bespoke builders in use: ' + [...usedFns].sort().join(', '));
+
+  if (r.strays && r.strays.length) {
+    note('magazine outside its grip: ' + r.strays.map((x) => x.kind
+      + ' mag [' + x.mag + '] grip [' + x.grip + ']').join(', '));
+  }
+  note(`magazine containment measured on ${r.measured} pistols`);
+  /* Asserted separately: a check that skipped every weapon would
+     otherwise report success and mean nothing. That has happened
+     twice in this repository already. */
+  check('the containment check actually measured something',
+    r.measured >= 5, `${r.measured} pistols`);
+  check('no pistol carries its magazine outside its grip',
+    !r.strays || r.strays.length === 0, `${r.strays ? r.strays.length : '?'} pistols`);
 
   check('no page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
   console.log(`\n  ${passed} passed, ${failed} failed`);
