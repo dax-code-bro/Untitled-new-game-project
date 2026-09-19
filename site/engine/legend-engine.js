@@ -25392,10 +25392,27 @@ Engine.prototype.gunPartKinds = function () { return Object.keys(ATT_BUILD); };
    The exponent `e` is how square the corners are -- 2 is an ellipse, 8
    is very nearly a rectangle. Receivers are about 3.2; a pressed steel
    one is nearer 5. */
-function svcSlab(g, pts, z = 0, capA = true, capB = true) {
+function svcSlab(g, pts, z = 0, capA = true, capB = true, y = 0) {
   sweepPath(g, pts.map(function (p) {
-    return ax(p[0], roundRect(p[1], p[2], p[3], p[4] || 3.2, 22), 0, z);
+    return ax(p[0], roundRect(p[1], p[2], p[3], p[4] || 3.2, 22), y, z);
   }), capA, capB);
+}
+
+/* How high the gun's top surface is at a given x: the receiver where
+   there is one, the jacket where there is one, and otherwise the
+   barrel's own tapering radius. Anything bolted on top needs this --
+   a bracket drawn to a fixed height is a bracket drawn to thin air on
+   every weapon whose proportions differ from the one it was tuned on. */
+function svcTopAt(K, x) {
+  const R = K.rec, B = K.barrel;
+  if (x <= R.front) return R.up;
+  if (B.shroud && x >= B.shroudX0 && x <= B.shroudX1) return B.shroudR;
+  /* Matching svcBarrel exactly: r0 out to the step, then r1. */
+  if (B.step != null && x <= B.step) return B.r0;
+  if (B.step != null) return B.r1;
+  const span = Math.max(0.001, K.muzzle - R.front);
+  const t = Math.max(0, Math.min(1, (x - R.front) / span));
+  return B.r0 + (B.r1 - B.r0) * t;
 }
 
 function svcBarrel(g, K) {
@@ -25418,15 +25435,37 @@ function svcBarrel(g, K) {
   /* A jacket with holes in it: the Thompson, the Sten, the MG 42 and
      anything else that had to be held while it was hot. */
   if (B.shroud) {
-    band(g, B.shroudX0, B.shroudX1, B.r1 + 0.004, B.shroudR, 20);
-    const n = Math.max(3, Math.round((B.shroudX1 - B.shroudX0) / 0.026));
-    for (let i = 0; i < n; i++) {
-      const x = B.shroudX0 + (i + 0.5) * (B.shroudX1 - B.shroudX0) / n;
-      for (let k = 0; k < 6; k++) {
-        const th = (k / 6) * TAU + (i % 2) * 0.5;
-        band(g, x - 0.005, x + 0.005, B.shroudR - 0.001, B.shroudR + 0.0015, 8,
-          Math.cos(th) * B.shroudR * 0.82, Math.sin(th) * B.shroudR * 0.82);
-      }
+    /* WITH HOLES IN IT, and not with lumps on it.
+     *
+     * This was a solid tube dressed with what the author meant to be
+     * holes: `band(x-5mm, x+5mm, R-1mm, R+1.5mm, 8, cy, cz)` -- an
+     * annulus whose OWN radius is the shroud's, offset sideways by
+     * 0.82R. Six of those per row, overlapping into a collar. The
+     * PPSh-41 came out as a stack of doughnuts, which is the single
+     * worst-looking thing on any gun in this game.
+     *
+     * The mistake is not fixable by shrinking the ring, because `band`
+     * extrudes along X and a hole in the side of a tube has a RADIAL
+     * axis. There is no boolean subtraction here and there does not
+     * need to be: what a perforated jacket looks like is the metal
+     * BETWEEN the holes. So build that -- rings around, ribs along,
+     * and the gaps are real holes you see the barrel through.
+     *
+     * The Sten, the PPSh, the MG 34 and the service MG 42 all share
+     * it, and all four have a genuinely perforated jacket. */
+    const SX0 = B.shroudX0, SX1 = B.shroudX1, SR = B.shroudR;
+    const wall = 0.0024;
+    const rows = Math.max(2, Math.round((SX1 - SX0) / 0.030));
+    for (let i = 0; i <= rows; i++) {
+      const x = SX0 + i * (SX1 - SX0) / rows;
+      const t = (i === 0 || i === rows) ? 0.0090 : 0.0048;
+      band(g, x - t * 0.5, x + t * 0.5, SR - wall, SR, 20);
+    }
+    const ribs = 8;
+    for (let k = 0; k < ribs; k++) {
+      const th = (k / ribs) * TAU + TAU / (ribs * 2);
+      band(g, SX0, SX1, 0, wall * 1.2, 7,
+        Math.cos(th) * (SR - wall * 0.5), Math.sin(th) * (SR - wall * 0.5));
     }
   }
   /* The muzzle device, if it has one. A brake is slots; a flash hider
@@ -25498,15 +25537,50 @@ function svcReceiver(g, K) {
       roundRect(0.0045, 0.0045, 0.0045, 3, 12));
     band(g, C.x - 0.008, C.x + 0.008, 0.0, 0.0075, 12, C.y, C.z);
   }
-  /* A carrying handle over the top, on the ones that have one. */
+  /* A carrying handle over the top, on the ones that have one.
+   *
+   * ITS LEGS LAND ON WHATEVER IS ACTUALLY THERE. They were hard-wired
+   * to R.up -- the receiver's top -- which is right for the M16 and
+   * the AUG, whose handles sit over the receiver, and wrong for the
+   * Bren and the MG 34, whose handles are over the BARREL, well
+   * forward of it. Both of those photographed as a steel box hovering
+   * three centimetres above the gun with two stubs poking down at
+   * nothing. A leg that lands on the barrel also gets the collar that
+   * clamps it there, because a handle bolted to a smooth pipe is the
+   * same lie one step smaller. */
   if (K.handle) {
     const H = K.handle;
-    svcSlab(g, [[H.x0, H.y + 0.012, -H.y + 0.004, 0.011, 4],
-      [H.x1, H.y + 0.012, -H.y + 0.004, 0.011, 4]]);
-    strut(g, [H.x0 + 0.004, R.up, 0], [H.x0 + 0.016, H.y, 0],
-      roundRect(0.005, 0.005, 0.009, 3, 10));
-    strut(g, [H.x1 - 0.004, R.up, 0], [H.x1 - 0.016, H.y, 0],
-      roundRect(0.005, 0.005, 0.009, 3, 10));
+    if (H.x0 > R.front) {
+      /* OVER THE BARREL is a different part from over the receiver.
+       *
+       * The Bren's and the MG 34's handles are not bars on two legs;
+       * they are a grip on ONE rotating collar clamped round the
+       * barrel, which is how you lift a barrel you have just fired two
+       * hundred rounds through. Drawn with the receiver pattern they
+       * came out as a sheet-metal trough straddling the barrel -- and
+       * the trough is its own bug: the receiver bar is written with a
+       * NEGATIVE `hb` to push the section up off the axis, which is a
+       * degenerate outline that sweeps into an open shell rather than
+       * a bar. So this one is built about its own centre instead, with
+       * svcSlab's new `y`. */
+      const mid = (H.x0 + H.x1) * 0.5, top = svcTopAt(K, mid);
+      band(g, mid - 0.015, mid + 0.015, top - 0.001, top + 0.0065, 18);
+      strut(g, [mid, top + 0.003, 0], [mid, H.y - 0.006, 0],
+        roundRect(0.0065, 0.0065, 0.0105, 4, 12));
+      svcSlab(g, [
+        [H.x0, 0.0070, 0.0070, 0.0090, 4],
+        [H.x0 + 0.012, 0.0085, 0.0085, 0.0110, 4],
+        [H.x1 - 0.012, 0.0085, 0.0085, 0.0110, 4],
+        [H.x1, 0.0070, 0.0070, 0.0090, 4],
+      ], 0, true, true, H.y);
+    } else {
+      svcSlab(g, [[H.x0, H.y + 0.012, -H.y + 0.004, 0.011, 4],
+        [H.x1, H.y + 0.012, -H.y + 0.004, 0.011, 4]]);
+      strut(g, [H.x0 + 0.004, R.up, 0], [H.x0 + 0.016, H.y, 0],
+        roundRect(0.005, 0.005, 0.009, 3, 10));
+      strut(g, [H.x1 - 0.004, R.up, 0], [H.x1 - 0.016, H.y, 0],
+        roundRect(0.005, 0.005, 0.009, 3, 10));
+    }
   }
   /* And a flat-top rail on the ones that do not. */
   if (K.rail) {
@@ -25814,12 +25888,21 @@ function svcMag(g, K) {
      station, so a u pointing down the sweep gives every section zero
      depth and the magazine came out as a sliver of nothing. Every AK
      in the table was standing there without one. */
+  /* `up` for a gun that feeds from ABOVE. The Bren is the one in this
+     table: its curved thirty-round box stands up out of the receiver,
+     which is why its sights are offset to the left, and it was being
+     swept downward like everybody else's -- a top-fed light machine
+     gun with its magazine hanging out of the bottom, and only the feed
+     lips showing where the magazine is supposed to be. The direction
+     is one sign, and the rounds inside use the same formula, so they
+     follow it. */
+  const sg = M.up ? -1 : 1;
   const n = 8, sts = [];
   for (let i = 0; i <= n; i++) {
     const t = i / n;
     const a = M.curve * t;
     const x = M.x + Math.sin(a) * M.len * t * 0.62;
-    const y = M.y - Math.cos(a) * M.len * t;
+    const y = M.y - sg * Math.cos(a) * M.len * t;
     /* Down the magazine is (sin a, -cos a); square to it, in the same
        plane, is (cos a, sin a) -- which at the top is straight forward,
        exactly where a magazine's thickness lies. */
@@ -25837,7 +25920,8 @@ function svcMag(g, K) {
   const last = sts[n];
   const aL = M.curve;
   sts.push({
-    o: new Vec3(last.o.x + Math.sin(aL) * 0.008, last.o.y - Math.cos(aL) * 0.008, 0),
+    o: new Vec3(last.o.x + Math.sin(aL) * 0.008,
+      last.o.y - sg * Math.cos(aL) * 0.008, 0),
     u: new Vec3(Math.cos(aL), Math.sin(aL), 0), v: AV,
     pts: roundRect(M.d + 0.0022, M.d + 0.0022, M.w + 0.0022, 4, 18),
   });
@@ -26157,6 +26241,7 @@ function svcRounds(shell, tip, K) {
      actually goes. */
   const n = Math.min(A.rounds, Math.floor(M.len / A.pitch) * 2);
   const half = A.len * 0.50;
+  const sg = M.up ? -1 : 1;              // see the note on M.up in svcMag
   for (let i = 0; i < n; i++) {
     /* Which band this round belongs to. Rounds are laid two per pitch,
        alternating left and right of centre, so the band has to come
@@ -26172,7 +26257,7 @@ function svcRounds(shell, tip, K) {
     if (t > 0.98) break;
     const a = M.curve * t;
     const x = M.x + Math.sin(a) * M.len * t * 0.62;
-    const y = M.y - Math.cos(a) * M.len * t;
+    const y = M.y - sg * Math.cos(a) * M.len * t;
     const z = ((i & 1) ? 1 : -1) * A.stagger;
     /* Nose forward, along the magazine's own local 'up' -- which is
        the direction the feed lips point. */
@@ -26791,8 +26876,14 @@ Object.assign(SERVICE_KINDS, {
     hg: { kind: 'none' },
     grip: { x: -0.074, y: -0.0170, len: 0.092, rake: 0.10 },
     trigger: { x: -0.046 },
-    /* Side-fed, so from the front this one is a pipe and nothing else. */
-    mag: { kind: 'none' },
+    /* Side-fed -- and it was carried as `kind: none`, so the Sten had
+       no magazine at all. That is the same omission the FG 42 had, on
+       the gun where it costs even more: a stamped tube with a
+       thirty-two round box lying flat out of the left side IS the Sten,
+       and without it the model is a pipe with a grip. `kind: side`
+       already exists for exactly this. */
+    mag: { kind: 'side', x: 0.028, y: 0.0010, out: 0.168, z0: 0.017,
+      d: 0.0215, w: 0.0108, clear: false },
     stock: { kind: 'wire', butt: -0.290, comb: 0.0120, drop: 0.0150, w: 0.0140 },
     sight: { y: 0.0295, frontX: 0.265, rearX: 0.020, front: 'ears', rear: 'aperture' },
     charge: { x: 0.026, y: 0.0110, z: 0.0225 },
@@ -27013,8 +27104,8 @@ Object.assign(SERVICE_KINDS, {
     trigger: { x: -0.066 },
     /* Top-fed: the magazine stands up out of the receiver, which is why
        the sights are offset to the left on the real thing. */
-    mag: { kind: 'stick', x: -0.010, y: 0.0450, len: 0.155, curve: 0.22,
-      w: 0.0130, d: 0.0135 },
+    mag: { kind: 'stick', x: -0.010, y: 0.0235, len: 0.150, curve: 0.20,
+      w: 0.0130, d: 0.0135, up: true },
     stock: { kind: 'wood', butt: -0.375, comb: 0.0240, drop: 0.0300, w: 0.0190 },
     bipod: { x: 0.450, len: 0.158, rake: 0.030, spread: 0.076 },
     handle: { x0: 0.120, x1: 0.215, y: 0.0420 },
