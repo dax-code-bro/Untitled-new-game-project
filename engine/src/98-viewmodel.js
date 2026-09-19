@@ -647,6 +647,23 @@ function buildViewHand(g, rawAt, side, opts = {}) {
         const d = surf(bx, by, bz);
         e += Math.abs(d - want) + (solidAt && solidAt(bx, by, bz) ? 0.060 : 0);
       }
+      /* NOT A SIGHT CEILING HERE. Tried, and taken out again: charging
+         this row for standing above the weapon's sight line, on the
+         reasoning that a hand's top finishes a near-invariant 80 to 92 mm
+         above its own knuckles, so the row has a height it has to be
+         below. The arithmetic is right and the premise is wrong, and one
+         more measurement is what showed it: at the station where the
+         support hand sits, the top of the WEAPON is already 5 to 32 mm
+         BELOW its own sight line on eleven of fifteen. The gun leaves
+         room. The hand is not on the gun -- on the MP5 it finishes 38 mm
+         above the thing it is holding.
+
+         So the row is not what is too high, and a term here only trades
+         millimetres: measured, it moved seven weapons by -3 to +2 mm, net
+         about nothing, and made the Thompson and the Breakwater slightly
+         worse. What overshoots is the FINGERS, past the top of the
+         forend, where there is no longer anything to curl around -- see
+         the march. */
       /* And a spring back to where the weapon says the hand goes. The
          search is free in three axes over 180 mm, which is enough rope to
          find some other part of the gun that a knuckle row fits nicely --
@@ -665,27 +682,44 @@ function buildViewHand(g, rawAt, side, opts = {}) {
     /* Along three axes, not one. Sliding only toward the weapon fixes a
        hand held too far out; it does nothing for one sitting 60 mm up the
        barrel from the forend, which is what several of these were. */
-    let bx = 0, by = 0, bz = 0, bestErr = rowErr(0, 0, 0);
-    let stepList = [0.006, 0.002, 0.0007];
-    for (const step of stepList) {
-      let improved = true, guard = 0;
-      while (improved && guard++ < 40) {
-        improved = false;
-        for (const ax of [grasp, lane, point]) {
-          for (const sgn of [1, -1]) {
-            const nx = bx + ax.x * step * sgn, ny = by + ax.y * step * sgn, nz = bz + ax.z * step * sgn;
-            /* Bounded, but generously. A hand 15 cm from the battering ram
-               -- which is where the support hand on it started -- is beyond
-               any correction a tight bound would allow, and refusing to fix
-               it leaves an arm stretching off to a hand holding nothing,
-               which is what "my arms got cut off" looks like. */
-            if (Math.hypot(nx, ny, nz) > 0.18) continue;
-            const e = rowErr(nx, ny, nz);
-            if (e < bestErr - 1e-7) { bestErr = e; bx = nx; by = ny; bz = nz; improved = true; }
+    const descend = (sx, sy, sz) => {
+      let bx = sx, by = sy, bz = sz, bestErr = rowErr(sx, sy, sz);
+      const stepList = [0.006, 0.002, 0.0007];
+      for (const step of stepList) {
+        let improved = true, guard = 0;
+        while (improved && guard++ < 40) {
+          improved = false;
+          for (const ax of [grasp, lane, point]) {
+            for (const sgn of [1, -1]) {
+              const nx = bx + ax.x * step * sgn, ny = by + ax.y * step * sgn,
+                nz = bz + ax.z * step * sgn;
+              /* Bounded, but generously. A hand 15 cm from the battering ram
+                 -- which is where the support hand on it started -- is beyond
+                 any correction a tight bound would allow, and refusing to fix
+                 it leaves an arm stretching off to a hand holding nothing,
+                 which is what "my arms got cut off" looks like. */
+              if (Math.hypot(nx, ny, nz) > 0.18) continue;
+              const e = rowErr(nx, ny, nz);
+              if (e < bestErr - 1e-7) { bestErr = e; bx = nx; by = ny; bz = nz; improved = true; }
+            }
           }
         }
       }
-    }
+      return { bx, by, bz, err: bestErr };
+    };
+    /* ONE START, NOT TWO. Tried: a second descent from below the weapon,
+       to get round the fact that coordinate descent cannot tunnel out of
+       a hand sitting on top of a round forend -- every downward step is
+       inside the metal, at 60 mm of error a knuckle, and the sight
+       ceiling is worth a fifth of that. It is a fair diagnosis and it did
+       not pay: five weapons improved by 3 to 6 mm, none was fixed, and
+       the Mauser went 13 mm WORSE because the alternative won on surface
+       fit while both candidates were saturated against the ceiling's cap,
+       so the ceiling could not break the tie it was there to break.
+       Reverted rather than shipped for a net loss. */
+    const sol0 = descend(0, 0, 0);
+    let bx = sol0.bx, by = sol0.by, bz = sol0.bz;
+    const bestErr = sol0.err;
     // Accept anything that got the row within a couple of centimetres; a
     // hand that could not be seated at all keeps its authored position.
     if (bestErr < 0.05) {
@@ -1235,6 +1269,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
      one that is placed rather than closed -- the trigger finger, which
      lies on a blade and must not wrap round the front of the guard. */
   let marchOn = null;
+
   const digit = (root, dir0, bends, lens, r0, pt = point, cl = curl) => {
     const rs = [];
     // Where the two knuckles past the first one land, so the measurement
@@ -1376,6 +1411,60 @@ function buildViewHand(g, rawAt, side, opts = {}) {
               if (g0 > cross) cross = g0;
               if (solidM && solidM(sx, sy, sz)) cross += 0.020;
             }
+            /* NO SIGHT-LINE TERM HERE, AND THE REASON IS WORTH THE SPACE,
+             * because this is the eighth attempt at the same fault and the
+             * first one that knows why the other seven failed.
+             *
+             * THE FAULT. Seven of the fifteen two-handed weapons have their
+             * support hand standing in their own sight picture -- Scattergun
+             * 49 mm above the line, Mauser 46, sawn-off 44, Breakwater 31,
+             * Thompson 30, Paralyzer 29, MP5 23.
+             *
+             * WHY EVERY PREVIOUS ATTEMPT WAS INERT. All seven put their
+             * constraint in solveCurl, and when `marchOn` is set this march
+             * picks each joint's angle itself -- `bends` is only where it
+             * starts from. The curl solve's answer is discarded. Proved
+             * rather than argued: multiplying solveCurl's ceiling weight by
+             * a hundred produced BYTE-IDENTICAL geometry on all fifteen
+             * weapons. A constraint on an answer nobody uses cannot bind at
+             * any weight, which is exactly the shape of result those seven
+             * passes kept getting.
+             *
+             * SO IT WAS TRIED HERE, where the shape is actually decided.
+             * It binds immediately -- six weapons moved, the Breakwater by
+             * 12.5 mm -- and it is still not a fix, for a reason that only
+             * showed up when the grip test ran: the Breakwater's support
+             * fingers went from 8, 0 and 0 per cent buried in the weapon to
+             * 50, 33 and 33. Forty millimetres over the ceiling is 0.48 of
+             * error and being inside the metal is 0.08, so the cheapest
+             * route under the sight line is straight through the handguard.
+             * Gated so it could no longer outbid burial, the term gave back
+             * every millimetre it had won: scatter returned to 48.6, its
+             * exact starting value. All six improvements had been bought by
+             * pushing a finger into the gun.
+             *
+             * WHAT IS ACTUALLY WRONG, measured: the hands are not on the
+             * guns. At the station where the support hand sits, the top of
+             * the WEAPON is 5 to 32 mm BELOW its own sight line on eleven of
+             * fifteen -- the gun leaves room -- and the hand finishes 18 to
+             * 61 mm above the top of the thing it is holding. The Thompson's
+             * is 61 mm clear of its own handguard.
+             *
+             * The cause is one line of this march's own rule. A finger
+             * closes while it stays in contact, and past the top of a forend
+             * there is nothing left to be in contact with, so "close as far
+             * as contact allows" runs the fingers on into fresh air instead
+             * of bringing them over and down the near side. Curling further
+             * there means briefly losing contact, which this search has no
+             * way to pay for.
+             *
+             * That is the fix, and it is a change to the rule that shapes
+             * every finger on every weapon rather than a term added beside
+             * it: past the crest of what it is holding, a finger should keep
+             * closing at its own natural rate rather than tracking a surface
+             * that has run out. engine/test/sightblock.test.js holds the
+             * number at 7 weapons and 48.6 mm so it cannot grow back while
+             * that waits. */
             const e = Math.abs(dd - wantM) + (solidM && solidM(nx, ny, nz) ? 0.08 : 0);
             cands.push([cand, e + cross * 2.5, cross > 0]);
           }
