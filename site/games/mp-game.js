@@ -525,6 +525,13 @@
     scores: 8, quit: 9,
     lb: 4, rb: 5,
   };
+  /* Published so a test can press the buttons this table names rather
+     than a copy of it. engine/test/mppad.test.js gives the reason at
+     length: multiplayer has its own input layer, separate from the
+     zombies one, and a second copy of these numbers would agree with
+     itself while the game moved on -- which is exactly how the Thompson
+     ended up as two different weapons. */
+  W.MP_PAD = PAD;
 
   function stick(x, y, dz) {
     var m = Math.hypot(x, y);
@@ -2293,6 +2300,15 @@
          which matters more than it sounds, because a player with a pad
          in their hands still hits Escape with the other one. */
       var padOn = pad.poll(dt, cmd);
+      /* The command the pad just filled in, published for a test to
+         read. This is the pad layer's whole contract -- a button's job
+         is to reach the field it is bound to -- and asserting it here
+         is far better than guessing at downstream effects: half of
+         these have no lasting state at all (`scores` is handed
+         straight to hud.paint and forgotten), so a test looking for
+         one on the player finds nothing and reports a fault that is
+         its own. See engine/test/mppad.test.js. */
+      W.MP_LASTCMD = cmd;
       if (padOn) { yaw += cmd.lookX; pitch += cmd.lookY; }
       pitch = Math.max(-1.45, Math.min(1.45, pitch));
       cmd.yaw = yaw; cmd.pitch = pitch;
