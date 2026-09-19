@@ -20844,11 +20844,17 @@ function buildMP5Steel(g) {
   sweepPath(g, [
     ax(K.recFront - 0.006, ringOutline(0.0128, 20), K.ribY),
     ax(K.recFront + 0.004, ringOutline(K.cockR, 20), K.ribY),
-    ax(0.3020, ringOutline(K.cockR, 20), K.ribY),
-    ax(0.3140, ringOutline(0.0104, 20), K.ribY),
+    ax(0.3280, ringOutline(K.cockR, 20), K.ribY),
+    ax(0.3420, ringOutline(0.0104, 20), K.ribY),
   ], true, true);
   // Slot, as a recessed channel rather than a painted line.
-  hardBox(g, 0.230, K.ribY + 0.0020, -K.cockR + 0.0016, 0.062, 0.0030, 0.0020);
+  hardBox(g, 0.240, K.ribY + 0.0020, -K.cockR + 0.0016, 0.070, 0.0030, 0.0020);
+  /* THE HK SLAP NOTCH: the squared step at the front of the cocking
+     tube that the handle locks back into, and that you knock it out of
+     with the heel of your hand. It is the single most recognisable
+     thing anybody does with this gun and there was nothing there. */
+  band(g, 0.2980, 0.3140, K.cockR - 0.0010, K.cockR + 0.0032, 20, K.ribY, 0);
+  hardBox(g, 0.3050, K.ribY + 0.0012, -K.cockR - 0.0026, 0.0062, 0.0074, 0.0030);
 
   /* Barrel: stepped at the chamber, tapering to a threaded muzzle, crowned. */
   tubeRun(g, [
@@ -20862,14 +20868,21 @@ function buildMP5Steel(g) {
      millimetre off it. Two sights that are each individually beautiful and
      do not share a line cannot be aimed with, and the player finds that out
      the first time they miss something at ten metres. */
-  band(g, 0.3160, 0.3400, 0.0120, 0.0152, 22, K.sightY);
+  /* AT THE MUZZLE, which is where an MP5's is. It sat at 316-340 with
+     the muzzle at 360, so twenty millimetres of bare barrel stuck out
+     in front of the front sight and the gun read as having two
+     barrels, one of them stubby. On the real weapon the sight ring and
+     the muzzle finish together. Shorter, too: 24 mm of ring is a can,
+     and the "weird circle round the barrel" complaint on the AK was
+     exactly this shape. */
+  band(g, 0.3380, 0.3560, 0.0120, 0.0152, 22, K.sightY);
   // The hood's base, bridging it down to the cocking tube well under the
   // sight line — anything that crosses that line is a wall across the aim.
-  hardBox(g, 0.3280, 0.0270, 0, 0.0080, 0.0075, 0.0060);
-  hardBox(g, 0.3280, K.sightY - 0.0099, 0, 0.0022, 0.0060, 0.0020);        // post
+  hardBox(g, 0.3470, 0.0270, 0, 0.0080, 0.0075, 0.0060);
+  hardBox(g, 0.3470, K.sightY - 0.0099, 0, 0.0022, 0.0060, 0.0020);        // post
   // The tip finishes ON the line, not 1.4 mm over it. A post whose tip is
   // proud of the line is a gun that shoots low by however proud it is.
-  hardBox(g, 0.3280, K.sightY - 0.0028, 0, 0.0015, 0.0028, 0.0012);        // blade tip
+  hardBox(g, 0.3470, K.sightY - 0.0028, 0, 0.0015, 0.0028, 0.0012);        // blade tip
 
   /* Rear sight: an aperture you look through, on the same line. The MP5's
      is a rotary drum, so the ring is drum-sized and carries the four click
@@ -21013,10 +21026,23 @@ function buildMP5Mag(g) {
 }
 
 /* Charging handle: the tube's own knob, thrown forward and slapped down. */
+/* The cocking handle, which is the most-used control on this gun and
+   was a 6 mm peg with a 9 mm box on the end of it -- at arm's length, a
+   smudge. The real one is a fore-and-aft knurled cylinder about 40 mm
+   long on a short stalk out of the tube's left flank, and it is what
+   your hand goes to every single time. On its own geometry because it
+   reciprocates. */
 function buildMP5Bolt(g) {
   const K = MP5;
-  strut(g, [0.2760, K.ribY, -K.cockR + 0.002], [0.2760, K.ribY, -K.cockR - 0.0150], ringOutline(0.0058, 14));
-  hardBox(g, 0.2760, K.ribY, -K.cockR - 0.0165, 0.0090, 0.0060, 0.0030);
+  const z = -K.cockR - 0.0125;
+  strut(g, [0.2740, K.ribY, -K.cockR + 0.002], [0.2790, K.ribY + 0.0010, z],
+    roundRect(0.0064, 0.0064, 0.0052, 3, 12));
+  tubeRun(g, [[0.2570, 0.0058], [0.2610, 0.0074], [0.2900, 0.0074], [0.2945, 0.0056]],
+    14, true, true, K.ribY + 0.0010, z);
+  // Knurling: shallow rings, which is what a thumb feels for.
+  for (const kx of [0.2650, 0.2730, 0.2810]) {
+    band(g, kx - 0.0013, kx + 0.0013, 0.0072, 0.0082, 12, K.ribY + 0.0010, z);
+  }
 }
 
 /* ============================================================
