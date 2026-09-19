@@ -55,6 +55,10 @@ function svcTopAt(K, x) {
   const R = K.rec, B = K.barrel;
   if (x <= R.front) return R.up;
   if (B.shroud && x >= B.shroudX0 && x <= B.shroudX1) return B.shroudR;
+  /* And a tube handguard, which is the M60's case: its carry handle
+     spans 0.150 to 0.250 and its handguard 0.110 to 0.240, so a
+     bracket drawn to the bare barrel starts INSIDE the handguard. */
+  if (K.hg && K.hg.kind === 'tube' && x >= K.hg.x0 && x <= K.hg.x1) return K.hg.r;
   /* Matching svcBarrel exactly: r0 out to the step, then r1. */
   if (B.step != null && x <= B.step) return B.r0;
   if (B.step != null) return B.r1;
@@ -136,6 +140,23 @@ function svcBarrel(g, K) {
   } else if (B.brake === 'cone') {
     spin(g, [[K.muzzle - 0.004, B.bore + 0.002], [K.muzzle + 0.030, B.r1 * 1.9],
       [K.muzzle + 0.030, B.r1 * 2.3], [K.muzzle - 0.004, B.r1 + 0.004]], 20, 34);
+  } else if (B.brake === 'ppsh') {
+    /* Not a flash hider. The PPSh-41's muzzle device is the barrel
+       JACKET carried on past the muzzle and cut away on top: gas goes
+       up through the port and the muzzle comes down, which is the
+       whole reason a gun firing at nine hundred rounds a minute is
+       controllable. It had a cone on it, which is the FG 42's part on
+       the wrong rifle. */
+    const jr = B.shroudR || (B.r1 + 0.008);
+    band(g, K.muzzle - 0.026, K.muzzle + 0.022, jr - 0.0024, jr, 20);
+    // The front face, an annulus round the bore.
+    band(g, K.muzzle + 0.019, K.muzzle + 0.022, B.bore + 0.0022, jr - 0.0022, 20);
+    /* The deflector: the plate standing above the port, leaning back.
+       It is the bit you actually see from the side. */
+    svcSlab(g, [
+      [K.muzzle - 0.020, 0.0026, 0.0026, jr * 0.74, 5],
+      [K.muzzle + 0.020, 0.0026, 0.0026, jr * 0.74, 5],
+    ], 0, true, true, jr + 0.0024);
   }
 }
 
@@ -229,6 +250,32 @@ function svcReceiver(g, K) {
       strut(g, [H.x1 - 0.004, R.up, 0], [H.x1 - 0.016, H.y, 0],
         roundRect(0.005, 0.005, 0.009, 3, 10));
     }
+  }
+  /* THE FEED COVER, on anything belt-fed.
+   *
+     A belt-fed gun has a hinged lid over the feed tray -- the biggest
+     single thing on the top of its receiver, and the part you throw
+     open to load it. There was none, so on all five of these the belt
+     appeared to run into a flat steel box. Hinged at the front and
+     latched at the rear, which is the way round every one of them
+     opens. */
+  if (K.mag && K.mag.kind === 'belt') {
+    const F = K.feed || {};
+    const fx0 = F.x0 != null ? F.x0 : R.rear + 0.058;
+    const fx1 = F.x1 != null ? F.x1 : R.front - 0.006;
+    const up = F.up != null ? F.up : 0.0250;
+    const h = up * 0.5, fy = R.up + h - 0.0015, W = R.w;
+    svcSlab(g, [
+      [fx0, h * 0.58, h * 1.10, W * 0.78, 4],
+      [fx0 + 0.020, h, h * 1.10, W * 0.94, 4],
+      [fx1 - 0.018, h, h * 1.10, W * 0.94, 4],
+      [fx1, h * 0.52, h * 1.10, W * 0.76, 4],
+    ], 0, true, true, fy);
+    // The latch at the back, and the hinge pin across the front.
+    svcSlab(g, [[fx0 - 0.011, 0.0055, 0.0055, W * 0.42, 4],
+      [fx0 - 0.001, 0.0055, 0.0055, W * 0.42, 4]], 0, true, true, R.up + 0.0075);
+    strut(g, [fx1 - 0.004, R.up + 0.004, -W * 0.90], [fx1 - 0.004, R.up + 0.004, W * 0.90],
+      roundRect(0.0026, 0.0026, 0.0026, 3, 8));
   }
   /* And a flat-top rail on the ones that do not. */
   if (K.rail) {
@@ -1585,7 +1632,7 @@ Object.assign(SERVICE_KINDS, {
     ammoKind: 'pistol',
     muzzle: 0.320, barrel: { rear: 0.040, r0: 0.0100, r1: 0.0085, bore: 0.0038,
       gas: false, shroud: true, shroudX0: 0.075, shroudX1: 0.230, shroudR: 0.0180,
-      brake: 'cone' },
+      brake: 'ppsh' },
     rec: { rear: -0.140, front: 0.072, up: 0.0205, down: 0.0195, w: 0.0175, e: 3 },
     hg: { kind: 'wood', x0: 0.020, x1: 0.070, drop: 0.0230, w: 0.0185, upper: null },
     grip: { x: -0.068, y: -0.0190, len: 0.090, rake: 0.08 },
