@@ -859,6 +859,118 @@
     } catch (e) { /* audio is never worth dropping a frame for */ }
   }
 
+  /* THE REST OF THE FIGHT.
+   *
+     Giving the player's own weapon a voice left multiplayer stranger
+     than it was silent: you could hear yourself and nothing else. Five
+     other people shooting at you across a map made no sound at all, so
+     there was no way to tell where fire was coming from, or that it
+     was coming at all until your health moved.
+
+     THE ENGINE'S AUDIO IS 2D. There is no panner in it, so this cannot
+     do direction -- what it can do is distance, and distance is most
+     of what matters for gunfire: whether that was close. Two things
+     fall off with range and they fall off differently.
+
+       LOUDNESS goes as inverse square, softened here to 1/(1+(d/8)^2)
+       because a strict inverse square makes everything past twenty
+       metres inaudible and a game is not an anechoic chamber.
+
+       BRIGHTNESS goes faster. Air absorbs high frequencies far more
+       than low ones, which is why a rifle at ten metres cracks and the
+       same rifle across a valley thumps. So the crack -- the
+       supersonic snap, which is a local phenomenon anyway, heard only
+       near the bullet's path -- is cut hard with range, the body is
+       dragged downward, and the room tail is lengthened.
+
+     Without the second part every distant shot sounds like a close one
+     played quietly, which reads as a bug rather than as distance. */
+  var HEAR = 8.0;                       // metres to half loudness
+  function distant(spec, d) {
+    var v = voiceFor(spec);
+    if (!v) return null;
+    var att = 1 / (1 + (d / HEAR) * (d / HEAR));
+    if (att < 0.012) return null;       // below this nobody hears it
+    /* Brightness falls off faster than loudness. */
+    var bright = 1 / (1 + (d / (HEAR * 0.55)) * (d / (HEAR * 0.55)));
+    var o = v[1], far = {};
+    for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) far[k] = o[k];
+    far.volume = att;
+    far.crack = o.crack * bright * bright;
+    far.crackHz = Math.max(900, o.crackHz * (0.45 + bright * 0.55));
+    far.bodyHz0 = Math.max(260, o.bodyHz0 * (0.35 + bright * 0.65));
+    far.bodyHz1 = Math.max(90, o.bodyHz1 * (0.5 + bright * 0.5));
+    far.thump = o.thump * (0.7 + (1 - bright) * 0.5);
+    far.tail = o.tail * (1 + (1 - bright) * 1.6);
+    far.tailLen = o.tailLen * (1 + (1 - bright) * 1.2);
+    /* A distant gun must never be rate-limited out by a near one: the
+       guard is per-report and the far ones are the quiet ones. */
+    far.minGap = 0.010;
+    /* The two falloffs, returned alongside so the claim about them is
+       testable directly. `report` never sees this element.
+
+       It matters because the obvious test -- "does the crack fall
+       faster than the volume?" -- is satisfied by the SQUARING of
+       `bright` alone, so it passes even when `bright` is set equal to
+       `att` and the model has stopped distinguishing distance from
+       volume at all. I know because I tried exactly that regression
+       and the test stayed green. The claim worth asserting is the
+       physical one: high frequencies are absorbed by air faster than
+       amplitude is, so bright < att at every distance. */
+    return [v[0], far, { att: att, bright: bright }];
+  }
+
+  function makeWorldAudio(game) {
+    var last = [];                      // per-combatant: ammo, stepped-from
+    var lastDamage = 0, lastKills = 0;
+    return function tick(M) {
+      if (!game.audio || !M || !M.people) return;
+      var me = M.you, A = game.audio;
+      var ex = me ? me.pos.x : 0, ey = me ? me.pos.y : 0, ez = me ? me.pos.z : 0;
+      for (var i = 0; i < M.people.length; i++) {
+        var p = M.people[i];
+        var st = last[i] || (last[i] = { ammo: -1, sx: p.pos.x, sz: p.pos.z, walk: 0 });
+        var held = p.ammo ? p.ammo[p.held] : -1;
+        var dx = p.pos.x - ex, dy = p.pos.y - ey, dz = p.pos.z - ez;
+        var d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        /* SOMEBODY ELSE FIRED. The local player's own shot is played by
+           fireSound with the full close voice, so it is skipped here or
+           every shot you take is two shots. */
+        if (st.ammo >= 0 && held >= 0 && held < st.ammo && (!me || p.id !== me.id)) {
+          var v = distant(p.guns ? p.guns[p.held] : null, d);
+          if (v) { try { A.report(v[0], v[1]); } catch (e) { /* never drop a frame for audio */ } }
+        }
+        st.ammo = held;
+        /* FOOTSTEPS, by distance travelled rather than by a timer, so
+           they keep pace with however fast the man is actually moving
+           and stop dead when he does. */
+        if (p.alive) {
+          var mx = p.pos.x - st.sx, mz = p.pos.z - st.sz;
+          st.walk += Math.sqrt(mx * mx + mz * mz);
+          st.sx = p.pos.x; st.sz = p.pos.z;
+          if (st.walk > 0.95) {
+            st.walk = 0;
+            var fa = 1 / (1 + (d / 5.0) * (d / 5.0));
+            if (fa > 0.05) {
+              try { A.impact(0.10, { volume: fa * 0.5 }); } catch (e) { /* ditto */ }
+            }
+          }
+        } else { st.walk = 0; st.sx = p.pos.x; st.sz = p.pos.z; }
+      }
+      /* THE HIT MARKER, which is information and not decoration: it is
+         the only way to know a shot connected on a man you cannot see
+         go down. A short bright tick, close and dry. */
+      if (me) {
+        if (me.damage > lastDamage + 0.5) {
+          var head = me.kills > lastKills;
+          try { A.tone(head ? 1650 : 1180, 0.045, 'square', 0.055); } catch (e) { void e; }
+        }
+        lastDamage = me.damage || 0;
+        lastKills = me.kills || 0;
+      }
+    };
+  }
+
   function buildGun(game, id) {
     var made = null;
     var fn = VM_BESPOKE[id];
@@ -1849,6 +1961,9 @@
     var TIER = { retro: 'retro', low: 'low', normal: 'normal', high: 'high', ultra: 'ultra' };
     var game = W.LE.create({ canvas: canvas, gravity: -19.6,
       quality: opts.quality || TIER[saved] || undefined });
+    /* The rest of the fight: other people's weapons, their feet, and
+       the tick that says a shot of yours connected. See makeWorldAudio. */
+    var worldAudio = makeWorldAudio(game);
 
     /* AND A WATCHDOG, because a guess about the hardware that is never
        checked against the result is how a machine ends up rendering
@@ -2208,6 +2323,11 @@
         fireSound(game, p.guns[p.held], p.ammo[p.held] === 0);
       }
       M.update(dt);
+      /* EVERYBODY ELSE'S GUNS, FEET AND HITS. After update, so it reads
+         the state the match has just settled on; the local player's own
+         shot is played above and skipped there by id, or every shot you
+         take would be two shots. */
+      if (worldAudio) { try { worldAudio(M); } catch (e) { void e; } }
       var dUp = (p.kickUp || 0) - kUp0, dSide = (p.kickSide || 0) - kSide0;
       /* Only the climb is handed to the player. The settle is the gun
          coming back down under its own weight and must NOT drag the

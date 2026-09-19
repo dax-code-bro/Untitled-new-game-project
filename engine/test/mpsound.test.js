@@ -44,7 +44,13 @@ function liftVoiceFor() {
   if (i < 0) return null;
   const j = src.indexOf('\n  }\n', src.indexOf('function voiceFor(spec) {', i));
   if (j < 0) return null;
-  return src.slice(i, j + 4);
+  /* And `distant`, which turns a voice into the same voice heard from
+     across the map. Lifted the same way and for the same reason: a
+     copy of the falloff in the test would agree with itself. */
+  const a = src.indexOf('  var HEAR =');
+  const b = src.indexOf('\n  }\n', src.indexOf('function distant(spec, d) {', a));
+  if (a < 0 || b < 0) return null;
+  return src.slice(i, j + 4) + '\n' + src.slice(a, b + 4);
 }
 
 (async () => {
@@ -67,7 +73,8 @@ function liftVoiceFor() {
   const r = await page.evaluate((src) => {
     const W = window;
     // eslint-disable-next-line no-new-func
-    const voiceFor = new Function('W', src + '; return voiceFor;')(W);
+    const lifted = new Function('W', src + '; return { voiceFor, distant };')(W);
+    const voiceFor = lifted.voiceFor, distant = lifted.distant;
     const guns = W.MP_DATA.GUNS;
     const out = { rows: [], bad: [] };
     for (const g of guns) {
@@ -86,6 +93,27 @@ function liftVoiceFor() {
       }
       out.rows.push({ id: g.id, cls: g.cls, mv: w.mv, bore: +bore.toFixed(3),
         crack: +o.crack.toFixed(3), mech: o.mech });
+    }
+    /* THE DISTANCE MODEL. Loudness and brightness have to fall off at
+       DIFFERENT rates, or a distant shot is a close shot played quietly
+       -- which reads as a bug rather than as distance, because air
+       absorbs treble far faster than it absorbs volume. */
+    {
+      const w = W.MP_DATA.build('stg44', []);
+      const near = distant(w, 2), mid = distant(w, 20), far = distant(w, 60);
+      out.falloff = {
+        near: near && { v: +near[1].volume.toFixed(4), crack: +near[1].crack.toFixed(3),
+          body: near[1].bodyHz0, tail: +near[1].tailLen.toFixed(3) },
+        mid: mid && { v: +mid[1].volume.toFixed(4), crack: +mid[1].crack.toFixed(3),
+          body: mid[1].bodyHz0, tail: +mid[1].tailLen.toFixed(3) },
+        far: far && { v: +far[1].volume.toFixed(4), crack: +far[1].crack.toFixed(3),
+          body: far[1].bodyHz0, tail: +far[1].tailLen.toFixed(3) },
+      };
+      out.silentAt = distant(w, 400) === null;
+      out.brightness = [2, 8, 20, 45].map((d) => {
+        const q = distant(w, d);
+        return q && q[2] ? { d, att: +q[2].att.toFixed(4), bright: +q[2].bright.toFixed(4) } : null;
+      }).filter(Boolean);
     }
     // Does the audio engine actually have the two entry points?
     const G = LE.create({ canvas: '#game', quality: 'low', gravity: 0 });
@@ -125,6 +153,31 @@ function liftVoiceFor() {
   /* And they are not all the same sound wearing sixty names. */
   const distinct = new Set(r.rows.map((x) => x.bore.toFixed(2) + '/' + x.crack.toFixed(2)));
   check('the sixty voices are actually distinct', distinct.size > 30, `${distinct.size} distinct`);
+
+  const F = r.falloff || {};
+  if (F.near) note(`at 2 m ${JSON.stringify(F.near)}`);
+  if (F.mid) note(`at 20 m ${JSON.stringify(F.mid)}`);
+  if (F.far) note(`at 60 m ${JSON.stringify(F.far)}`);
+
+  check('a shot gets quieter with distance',
+    F.near && F.mid && F.far && F.near.v > F.mid.v && F.mid.v > F.far.v,
+    JSON.stringify([F.near && F.near.v, F.mid && F.mid.v, F.far && F.far.v]));
+  /* THE CLAIM THAT MATTERS, asserted on the falloffs themselves.
+   *
+     My first version of this compared the CRACK's falloff to the
+     volume's, which sounds like the same thing and is not: the crack
+     is `bright` SQUARED, so it falls faster than the volume whatever
+     `bright` is. I proved that the wrong way round -- set `bright =
+     att`, which collapses the whole model into a volume slider, and
+     the check stayed green. So it asks the physical question now.
+     High frequencies are absorbed by air faster than amplitude is. */
+  check('and duller faster than it gets quieter',
+    r.brightness && r.brightness.every((b) => b.bright < b.att * 0.9),
+    JSON.stringify(r.brightness));
+  check('and the room rings longer the further off it is',
+    F.near && F.far && F.far.tail > F.near.tail * 1.5,
+    F.near && F.far ? `${F.near.tail} -> ${F.far.tail}` : 'missing');
+  check('a shot far enough away is not played at all', r.silentAt === true);
 
   check('no page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
   console.log(`\n  ${passed} passed, ${failed} failed`);
