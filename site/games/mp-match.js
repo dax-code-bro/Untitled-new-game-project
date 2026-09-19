@@ -2135,7 +2135,8 @@
     if (!a) return;
     if (p._armShown && p._armShown !== a) showArm(p._armShown, false);
     p._armShown = a;
-    if (!aliveNow) { showArm(a, false); return; }
+    /* A man with no weapon on screen must not be reaching for one. */
+    if (!aliveNow) { showArm(a, false); p._reachGun = null; return; }
     showArm(a, true);
 
     var cy = Math.cos(yaw), sy = Math.sin(yaw);
@@ -2167,9 +2168,19 @@
       /* Up to the eye: the carry sits 0.30 below it, so that is what
          has to come back. */
       + aim * 0.26;
-    /* In to the centre line, and a touch further forward, because the
-       support hand comes back under the handguard. */
-    var side = 0.11 * (1 - aim * 0.86), ahead = 0.17 + aim * 0.055;
+    /* In towards the centre line, and a touch further forward, because
+       the support hand comes back under the handguard.
+
+       NOT ALL THE WAY IN. This used to take the weapon to 1.5 cm off
+       the centre line on the sights, which put the stock on his
+       sternum and -- once the arms actually followed the weapon --
+       both hands and both forearms across his own face. A rifle is
+       shouldered in the pocket, six or seven centimetres to the firing
+       side, and the head comes across to it; the weapon does not come
+       to the nose. Nobody could see that while the gun was held by
+       nobody, which is why it survived three rounds of tuning the
+       height. */
+    var side = 0.11 * (1 - aim * 0.455), ahead = 0.17 + aim * 0.055;
     a.position.set(
       p.pos.x + rx * side + fx * ahead,
       h + fy * ahead,
@@ -2191,6 +2202,206 @@
     if (low) { _q2.setEuler(0.40, 0, 0); _q1.mulQuats(_q1, _q2); }
     a.rotation.copy(_q1);
     a._still = false;
+    /* The reach cannot happen here. The engine updates every actor's
+       animator after the match has finished its tick, so a pose solved
+       now is overwritten before it is ever drawn -- which it was, every
+       frame, until I stopped assuming and looked at who else was
+       touching the skeleton. It runs from the animator's own onPosed
+       instead; all this does is leave it the numbers. */
+    p._reachGun = a;
+    p._reachAim = aim;
+    if (p.actor.animator && !p.actor.animator.onPosed) {
+      p.actor.animator.onPosed = function () {
+        if (p._reachGun) reachForWeapon(p, p._reachGun, p._reachAim || 0);
+      };
+    }
+  }
+
+  /* HANDS ONTO THE WEAPON.
+   *
+     The stock humanoid clip set has nineteen clips in it and not one
+     of them holds a gun -- they are all locomotion, and every one
+     swings both arms like a man jogging empty-handed. Measured on a
+     bot with `aiming` true: hands at y 0.12 and 0.21 against a head at
+     0.568, and the clip playing was `run`. So the rifle sat at his
+     shoulder held by nobody, a foot and a half above and in front of
+     where his hands were.
+
+     THE POSE AND THE WEAPON WERE TWO SEPARATE SOLVES. The gun's place
+     is worked out from the pelvis and the facing; the hands come from
+     the skeleton; and nothing ever reconciled them. Authoring an arm
+     pose to match would reconcile them for one weapon at one distance
+     and drift the moment either number moved -- and both move, because
+     the carry drops at a sprint and rises 26 cm to the eye on ADS.
+
+     So: solve the arms to where the weapon actually IS. The gun is the
+     authority, because its height is a tuned number that took three
+     goes to get right ("the gun is STILL carried too high"), and the
+     arms follow it. Two-bone IK, which the skeleton already has for
+     planting feet.
+
+     THE SPACES ARE THE WHOLE TRICK. A bone's worldMatrix here is built
+     from the bone hierarchy alone, so it is ACTOR-LOCAL -- the hips sit
+     at the origin. The gun is placed in world space. Feeding one into
+     the other puts the target forty metres away across the map, which
+     is what `applyQuatInv` against the actor's rotation is for.
+
+     The firing hand goes to the gun's own origin, because svcSpec sets
+     every weapon's origin to its grip -- the same convention the
+     viewmodel's hand solve relies on, so the two representations agree
+     by construction rather than by two sets of numbers. */
+  var _ikA = null, _ikB = null, _ikP = null, _ikInv = null, _ikS = null, _ikU = null;
+  var _ikQ = null, _ikY = null;
+  function reachForWeapon(p, gunA, aim) {
+    var actor = p.actor, sk = actor && actor.skeleton;
+    if (!sk || !sk.solveIK || !sk.index) return;
+    var iUR = sk.index('upperArmR'), iLR = sk.index('lowerArmR'), iHR = sk.index('handR');
+    var iUL = sk.index('upperArmL'), iLL = sk.index('lowerArmL'), iHL = sk.index('handL');
+    if (iUR < 0 || iLR < 0 || iHR < 0 || iUL < 0 || iLL < 0 || iHL < 0) return;
+    if (!_ikA) {
+      _ikA = new W.LE.Vec3(); _ikB = new W.LE.Vec3(); _ikP = new W.LE.Vec3();
+      _ikS = new W.LE.Vec3(); _ikU = new W.LE.Vec3();
+      _ikInv = new W.LE.Mat4();
+    }
+
+    /* BLADE THE STANCE BEFORE SOLVING ANYTHING.
+     *
+       With the torso square to the front the support hand cannot reach
+       a shouldered weapon, and that is not a limitation of the solver,
+       it is arithmetic. The left shoulder sits 17 cm to his left and
+       3 cm ahead of the hips; a rifle at the eye puts its forend grip
+       43 cm ahead of the head and 6 cm to the right; the straight-line
+       distance between those is 58 cm and the arm is 50. It was eight
+       centimetres short, every time, on every rifle -- which is why
+       choking the hand back to the reachable point left it almost
+       touching the firing hand on an MP5 and looked like a man
+       clasping something rather than holding it.
+
+       A person closes that eight centimetres by turning: the support
+       shoulder comes forward and across, which is the bladed stance
+       everybody who has ever shouldered a rifle stands in, and which
+       exists for exactly this reason rather than for style. Thirty-five
+       degrees of chest rotation moves the left shoulder 3 cm right and
+       10 cm forward and brings the same reach to 49.6 cm -- inside the
+       arm, with a centimetre to spare. The number is not a taste; it
+       is the angle at which the hand can get there.
+
+       The head does NOT go with it. A shooter's torso blades and his
+       head stays square, looking down the sights, so the neck takes the
+       same rotation back. Without that he aims thirty-five degrees off
+       the thing he is shooting at, which the kill cam would show. */
+    var iChest = sk.index('chest'), iNeck = sk.index('neck');
+    if (iChest >= 0) {
+      if (!_ikQ) _ikQ = new W.LE.Quat();
+      if (!_ikY) _ikY = new W.LE.Vec3(0, 1, 0);
+      var blade = -(0.20 + aim * 0.41);
+      _ikQ.setAxisAngle(_ikY, blade);
+      sk.bones[iChest].localRotation.premul(_ikQ).normalize();
+      if (iNeck >= 0) {
+        _ikQ.setAxisAngle(_ikY, -blade);
+        sk.bones[iNeck].localRotation.premul(_ikQ).normalize();
+      }
+      sk.update();
+    }
+
+    /* World -> the actor's own frame, which is the frame the bones are
+       in.
+
+       THE FIRST VERSION OF THIS SUBTRACTED actor.position AND UNDID
+       actor.rotation, AND BOTH HALVES WERE WRONG. A character here is
+       driven by a kinematic controller, and Actor.updateMatrix composes
+       such an actor from `controller.body.position + visualOffset` and
+       `setEuler(0, controller.facing, 0)` -- it never looks at
+       actor.rotation at all, because the rigid body's rotation is locked
+       so it cannot topple and is therefore always identity. Undoing an
+       identity quaternion undoes nothing, so every target was left in
+       world orientation while the bones were in the body's, and a man
+       facing south reached for a rifle that, as far as his shoulders
+       were concerned, was behind him. The face() function twenty lines
+       down documents this exact trap; I walked into it anyway by
+       reading the getter's name instead of the composer.
+
+       So take the frame from the composer. Recompose the matrix (it is
+       otherwise a frame stale, because the engine rebuilds transforms
+       after it runs the animators) and invert it: that is correct
+       whatever updateMatrix does next, including the per-operator scale,
+       which subtract-and-unrotate also silently ignored. */
+    actor.updateMatrix();
+    _ikInv.copy(actor.matrix).invert();
+    var toLocal = function (out, wx, wy, wz) {
+      out.set(wx, wy, wz).applyMat4(_ikInv);
+      return out;
+    };
+
+    // The firing hand: the weapon's origin is its grip.
+    toLocal(_ikA, gunA.position.x, gunA.position.y, gunA.position.z);
+    /* The support hand: out along the forend, at about half bore
+       height, which is where handsFor puts the viewmodel's -- the same
+       rule, so the man across the street holds it where you do. */
+    var reach = (gunA.muzzleAt != null ? gunA.muzzleAt : 0.42) * 0.62;
+    var bore = (gunA.boreAt != null ? gunA.boreAt : 0.05) * 0.42;
+    _ikB.set(reach, bore, 0).applyQuat(gunA.rotation);
+    toLocal(_ikP, gunA.position.x + _ikB.x, gunA.position.y + _ikB.y,
+      gunA.position.z + _ikB.z);
+    _ikB.copy(_ikP);
+
+    /* CHOKE UP WHEN THE ARM WILL NOT GO THAT FAR.
+     *
+       Sixty-two per cent of the way to the muzzle is where a support
+       hand belongs on a carbine and nowhere near where it can go on a
+       machine gun. Measured: the MG42's forend point is 52 cm ahead of
+       its grip, the arm is 50 cm long, and it hangs off a shoulder 20
+       more centimetres away again -- so the target was a third of a
+       metre outside the reachable annulus. solveIK clamps rather than
+       fails, which means it quietly locked the arm straight and left
+       the hand in mid-air, and the same thing was happening by 7 cm on
+       an MP5 the moment the weapon came up to the eye. Four weapons
+       were holding nothing with their support hand and the only reason
+       it was not obvious is that a straight arm looks deliberate.
+
+       A person solves this by choking up: the hand goes as far down the
+       handguard as the arm reaches and no further. So do that, and
+       exactly -- walk the target back along the weapon's own axis to
+       the last point inside the arm's reach, which is a quadratic in
+       one unknown rather than a fudge factor. The hand stays ON the
+       weapon, which is the whole promise, and long guns get held nearer
+       the receiver, which is how long guns are held. */
+    var shd = sk.worldPosition(iUL, _ikS);
+    var armReach = 0.98 * (
+      sk.worldPosition(iUL, _ikU).distanceTo(sk.worldPosition(iLL, _ikP))
+      + sk.worldPosition(iLL, _ikU).distanceTo(sk.worldPosition(iHL, _ikP)));
+    if (_ikB.distanceTo(shd) > armReach) {
+      /* The weapon's axis in the actor's frame, taken as the direction
+         from grip to the wanted hand rather than re-deriving it, so a
+         weapon whose forend point is at zero cannot produce a NaN. */
+      _ikU.copy(_ikB).sub(_ikA);
+      var span = _ikU.length();
+      if (span > 1e-5) {
+        _ikU.scale(1 / span);
+        // |(grip - shoulder) + t * axis| = armReach, largest root.
+        _ikP.copy(_ikA).sub(shd);
+        var b = _ikP.dot(_ikU), c = _ikP.lengthSq() - armReach * armReach;
+        var disc = b * b - c;
+        var t = disc > 0 ? -b + Math.sqrt(disc) : -b;
+        t = Math.max(0.06, Math.min(span, t));
+        _ikB.copy(_ikA).addScaled(_ikU, t);
+      }
+    }
+
+    /* Elbows. Without a pole the solver keeps whatever bend the clip
+       left, which on a run cycle is behind him -- so both elbows wind
+       up pointing backwards and the arms read as broken. The firing
+       elbow rides OUT and up as the weapon comes to the shoulder,
+       which is the single detail that says "aiming" at a distance; the
+       support elbow tucks in and under, because that is what carries
+       the weight. */
+    sk.worldPosition(iChest >= 0 ? iChest : sk.index('spine'), _ikP);
+    var chestY = _ikP.y;
+    var poleR = { x: -0.34 - aim * 0.16, y: chestY - 0.10 + aim * 0.20, z: -0.06 };
+    var poleL = { x: 0.16, y: chestY - 0.30, z: 0.10 };
+
+    sk.solveIK(iUR, iLR, iHR, _ikA, poleR);
+    sk.solveIK(iUL, iLL, iHL, _ikB, poleL);
   }
 
   /* WHICH WAY A BODY IS POINTING.

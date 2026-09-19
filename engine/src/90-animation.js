@@ -140,24 +140,59 @@ class Skeleton {
     const upperDir = _ik[7].copy(toTarget).applyQuat(_ikQ.setAxisAngle(axis, angleA));
     const newMid = _ik[8].copy(rootPos).addScaled(upperDir, lenUpper);
 
-    // Convert the two world-space aims back into local rotations.
-    aimBoneAt(this, upperIdx, newMid);
+    // Convert the two world-space aims back into local rotations. The
+    // child index goes with each one -- see aimBoneAt for why assuming
+    // an axis instead cost this solver its entire working life.
+    aimBoneAt(this, upperIdx, lowerIdx, newMid);
     this.update();
-    aimBoneAt(this, lowerIdx, target);
+    aimBoneAt(this, lowerIdx, endIdx, target);
     this.update();
   }
 }
 
-/* Rotate a bone so its local +Y axis points at a world target. */
-function aimBoneAt(skeleton, boneIdx, worldTarget) {
+/* Rotate a bone so that the limb it carries points at a world target.
+ *
+ * "THE LIMB IT CARRIES", NOT "ITS +Y AXIS", AND THAT WAS THE WHOLE BUG.
+ * This used to take the bone's +Y as the direction being aimed, on the
+ * usual convention that a bone points along +Y towards its child. The
+ * procedural humanoid below does the opposite: upperArm sits at
+ * [0.103, -0.052, 0.002] under the shoulder and lowerArm at
+ * [0.016, -0.262, 0.004] under that, so every arm and every leg runs
+ * DOWN its parent's -Y, and the rest rotations are identity. Aiming +Y
+ * at a target therefore pointed the actual limb 180 degrees away from
+ * it.
+ *
+ * Measured, on a man asked to bring a rifle to his shoulder: target
+ * 0.398 m up and forward of the joint, hand solved to 0.502 m straight
+ * DOWN from it -- a fully extended arm, hanging, with the elbow exactly
+ * half way. Not a near miss; the precise opposite, at full stretch,
+ * which is what a sign error looks like when the solver is otherwise
+ * correct. The clamp to the reachable annulus even hid it: with the
+ * target unreachable in that direction the arm just locked straight,
+ * and a straight arm hanging at the side is indistinguishable from an
+ * idle pose. It read as "the IK never ran".
+ *
+ * It had never run. solveIK is documented here as the workhorse for
+ * planting feet on uneven ground, and had no caller anywhere in the
+ * project -- sixty weapons, four maps, a whole multiplayer mode, and
+ * this was the first thing to ask it for anything.
+ *
+ * So stop assuming an axis. The direction the limb actually points is
+ * the direction from this bone to the one it drives, which the caller
+ * knows and the hierarchy can be asked for. That is correct for a +Y
+ * rig too, so nothing has to agree with a convention. */
+function aimBoneAt(skeleton, boneIdx, childIdx, worldTarget) {
   const bone = skeleton.bones[boneIdx];
   const world = bone.worldMatrix.getTranslation(_ik[9]);
   const desired = _ik[10].subVectors(worldTarget, world);
   if (desired.lengthSq() < 1e-10) return;
   desired.normalize();
 
-  // Current world-space direction of the bone's +Y.
-  const current = _ik[11].set(0, 1, 0).applyMat4Dir(bone.worldMatrix).normalize();
+  // Where the limb points now: this joint towards the next one.
+  const child = skeleton.bones[childIdx].worldMatrix.getTranslation(_ik[13]);
+  const current = _ik[11].subVectors(child, world);
+  if (current.lengthSq() < 1e-10) return;
+  current.normalize();
   const delta = _ikQ.setFromUnitVectors(current, desired);
 
   // Move the correction into the parent's frame before applying it locally.
@@ -312,6 +347,20 @@ class Animator {
       }
     }
     this.skeleton.update();
+    /* THE LAST WORD ON THE POSE.
+     *
+       Anything that corrects a clip -- a hand reaching for a weapon, a
+       foot planted on a slope -- has to run AFTER the sample or the
+       next update wipes it, and the engine updates every actor's
+       animator itself (95-engine.js), well after the game has had its
+       turn. I solved a pair of arms onto a rifle in the match's update
+       and watched them snap back to the clip every single frame
+       before working out why.
+
+       So the correction belongs here, at the end of the pipeline,
+       where it cannot be overwritten by the thing that produced the
+       pose it is correcting. */
+    if (this.onPosed) this.onPosed(this);
   }
 }
 
