@@ -99,6 +99,24 @@ function band(g, x0, x1, rIn, rOut, seg = 22, cy = 0, cz = 0) {
    the rest of the model has already decided on. */
 function strut(g, a, b, pts, capA = true, capB = true) {
   const dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2];
+  /* `|| 1` DOES NOT CATCH NaN, and writing that out is the point.
+     NaN is falsy, so `NaN || 1` is 1: the guard fires, looks like it
+     handled something, and leaves dx/dy/dz still NaN. Every vertex of
+     the run then comes out non-finite, and geometry with a NaN
+     coordinate in it is discarded by the GPU without a word -- so the
+     part is not wrong, it is ABSENT. Six rifles lost their selector
+     that way and it read as a modelling omission.
+
+     Refuse instead, and say so once. A strut asked for with a nonsense
+     endpoint should draw nothing loudly, not draw an invisible
+     nothing quietly. */
+  if (!Number.isFinite(dx) || !Number.isFinite(dy) || !Number.isFinite(dz)) {
+    if (!strut.__warned) {
+      strut.__warned = 1;
+      if (typeof console !== 'undefined') console.warn('strut: non-finite endpoint', a, b);
+    }
+    return;
+  }
   const L = Math.hypot(dx, dy, dz) || 1;
   const dir = new Vec3(dx / L, dy / L, dz / L);
   // Any two vectors square to the run will do; pick the one that keeps

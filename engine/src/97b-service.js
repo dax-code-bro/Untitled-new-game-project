@@ -241,9 +241,26 @@ function svcFurniture(g, K) {
   if (H && H.kind !== 'none') {
     if (H.kind === 'tube') {
       /* A round polymer or alloy handguard, which is what everything
-         since about 1960 has. */
-      spin(g, [[H.x0, K.barrel.r1 + 0.002], [H.x0 + 0.006, H.r],
-        [H.x1 - 0.008, H.r], [H.x1, K.barrel.r1 + 0.002]], 22, 30);
+         since about 1960 has.
+
+         THIS OUTLINE WAS WOUND BACKWARDS AND THE HANDGUARD WAS INSIDE
+         OUT. `spin` says so at its own definition -- the outline is
+         (x, radius) and "must run counter-clockwise in that plane ...
+         which is what puts the normals outward" -- and this one ran
+         bottom-left, top-left, top-right, bottom-right, which is
+         clockwise. Every tube handguard in the game: the M4, the M16,
+         the AUG, the Groza, the FG42 and all four launchers.
+
+         It hid because the volume test measures a whole material
+         channel at a time, and on a rifle the stock's wood swamps the
+         handguard's. The two weapons it showed up on were the
+         Panzerschreck and the RPG-7 -- the only ones with a tube
+         handguard and NO stock, so nothing was left to mask it.
+
+         Reversed, so it runs anticlockwise: along the bottom first,
+         up the far end, back along the top. */
+      spin(g, [[H.x0, K.barrel.r1 + 0.002], [H.x1, K.barrel.r1 + 0.002],
+        [H.x1 - 0.008, H.r], [H.x0 + 0.006, H.r]], 22, 30);
       /* Cooling slots, cut as shallow bands rather than real holes. */
       for (let i = 0; i < 4; i++) {
         const x = H.x0 + 0.018 + i * (H.x1 - H.x0 - 0.036) / 3;
@@ -500,7 +517,46 @@ function svcDetails(g, K) {
   /* The selector, on the left, where a thumb reaches it. A paddle on a
      round boss -- and the boss matters, because a lever growing
      straight out of a flat wall is a sticker. */
-  const sel = K.selector || { x: R.rear + 0.052, y: -R.down * 0.10 };
+  /* EVERY FIELD DEFAULTED SEPARATELY, not the whole object at once.
+   *
+     This was `K.selector || { x, y }` -- a fallback for the whole
+     thing. I then added a `selector` to the base spec carrying a kind
+     and a side and NO x or y, which satisfied the `||` and left
+     sel.x undefined. Undefined reaches strut, Math.hypot returns NaN,
+     and `NaN || 1` is 1 -- so the length guard does not catch it and
+     the direction comes out NaN. 394 vertices of NaN on six rifles,
+     which the GPU discards silently: parts that are simply not there.
+
+     That is the "or missing" in the report, and I caused it an hour
+     before finding it. An object-level `||` is a trap whenever the
+     object can be partially specified; each field defaults on its
+     own now. */
+  const SEL = K.selector || {};
+  const sel = {
+    kind: SEL.kind || 'lever',
+    side: SEL.side != null ? SEL.side : -1,
+    x: SEL.x != null ? SEL.x : R.rear + 0.052,
+    y: SEL.y != null ? SEL.y : -R.down * 0.10,
+  };
+  const sz = sel.side;
+  if (sel.kind === 'plate') {
+    /* THE AK'S, AND IT IS A DIFFERENT OBJECT. Not a thumb lever: a
+       stamped bar as long as the ejection port, on the RIGHT side,
+       with a bent tab at the top. It is one of the most recognisable
+       things about the rifle, and a generic paddle in its place is
+       most of why an AK reads as a generic carbine. */
+    const off = W + 0.0012;
+    strut(g, [sel.x - 0.004, sel.y, sz * off], [sel.x + 0.062, sel.y + 0.012, sz * off],
+      roundRect(0.0062, 0.0062, 0.0016, 3.0, 12));
+    strut(g, [sel.x + 0.058, sel.y + 0.012, sz * off],
+      [sel.x + 0.070, sel.y + 0.020, sz * (off + 0.0060)],
+      roundRect(0.0055, 0.0055, 0.0018, 3.0, 12));
+    for (const dy of [0.0, 0.024]) {
+      strut(g, [sel.x + 0.056, sel.y + 0.030 + dy, sz * (W + 0.0002)],
+        [sel.x + 0.056, sel.y + 0.030 + dy, sz * (W + 0.0014)],
+        ringOutline(0.0022, 8));
+    }
+  } else {
   /* The boss the lever turns on. It has to be a raised round plate: a
      lever growing straight out of a flat wall is a sticker. */
   strut(g, [sel.x, sel.y, -W - 0.0065], [sel.x, sel.y, -W + 0.0005],
@@ -530,6 +586,7 @@ function svcDetails(g, K) {
      into a fight, so it rests on the one below it. */
   strut(g, [sel.x, sel.y, -W - 0.0050], [sel.x - 0.020, sel.y - 0.011, -W - 0.0062],
     roundRect(0.0038, 0.0038, 0.0024, 4, 10));
+  }
 
   /* The magazine catch, at the back of the well. */
   if (K.mag && K.mag.kind !== 'none' && K.mag.kind !== 'pan') {
@@ -615,67 +672,6 @@ function svcDetails(g, K) {
     }
   }
 
-  /* THE SELECTOR, which is the part a player asked for by name --
-     "the semi auto and full auto trigger thing that you flip up on
-     some guns". Every weapon in this table had a trigger and no way
-     to choose what it did, and it is one of the few controls on a
-     rifle big enough to read at arm's length.
-
-     Two shapes, because there are two families and they do not look
-     remotely alike.
-
-       A LEVER: a short paddle on the left of the receiver, just above
-       the pistol grip, where a thumb sits. The Western pattern -- M16,
-       MP5, StG, G3, and almost everything after them.
-
-       A PLATE: the AK's, and it is enormous. A stamped bar the length
-       of the ejection port, on the RIGHT side, with a bent tab at the
-       top for the thumb. It is one of the most recognisable things
-       about the rifle and its absence is part of why an AK without one
-       reads as a generic carbine.
-
-     `side` is -1 or +1 in Z. The shapes are drawn at the receiver wall
-     plus a hair, so they stand proud rather than z-fighting it. */
-  const SEL = K.selector;
-  if (SEL && SEL.kind !== 'none') {
-    const sz = SEL.side != null ? SEL.side : -1;
-    const sx = SEL.x != null ? SEL.x : R.rear + 0.052;
-    const sy = SEL.y != null ? SEL.y : -R.down * 0.10;
-    const off = W + 0.0012;
-    if (SEL.kind === 'plate') {
-      /* The bar: long, thin, and standing off the wall. Swept along X
-         so it lies flat against the receiver. */
-      strut(g, [sx - 0.004, sy, sz * off], [sx + 0.062, sy + 0.012, sz * off],
-        roundRect(0.0062, 0.0062, 0.0016, 3.0, 12));
-      // The thumb tab, bent outboard at the top of the travel.
-      strut(g, [sx + 0.058, sy + 0.012, sz * off],
-        [sx + 0.070, sy + 0.020, sz * (off + 0.0060)],
-        roundRect(0.0055, 0.0055, 0.0018, 3.0, 12));
-      /* The detent stops -- the two notches the lever parks in. On a
-         real one these are cut into the receiver, and they are the
-         only reason the lever's position reads as a SETTING rather
-         than as a part that happens to be at an angle. */
-      for (const dy of [0.0, 0.024]) {
-        strut(g, [sx + 0.056, sy + 0.030 + dy, sz * (W + 0.0002)],
-          [sx + 0.056, sy + 0.030 + dy, sz * (W + 0.0014)],
-          ringOutline(0.0022, 8));
-      }
-    } else {
-      // A thumb paddle on a short shaft through the receiver wall.
-      strut(g, [sx, sy, sz * (W - 0.0010)], [sx, sy, sz * (off + 0.0028)],
-        ringOutline(0.0034, 12));
-      strut(g, [sx, sy, sz * (off + 0.0026)],
-        [sx - 0.017, sy - 0.009, sz * (off + 0.0030)],
-        roundRect(0.0044, 0.0044, 0.0017, 3.0, 12));
-      /* SAFE and FIRE, as two marks on the wall. Tiny, and the reason
-         to have them is that a control with no markings beside it
-         reads as a lump rather than as a switch. */
-      for (const [mx, my] of [[-0.013, 0.011], [0.011, 0.011]]) {
-        strut(g, [sx + mx, sy + my, sz * (W + 0.0002)],
-          [sx + mx, sy + my, sz * (W + 0.0009)], ringOutline(0.0013, 6));
-      }
-    }
-  }
 }
 
 /* ==================================================================
@@ -882,10 +878,6 @@ function svcBolt(g, K) {
    ================================================================== */
 
 const SVC_BASE = {
-  /* Every gun gets a selector unless it says otherwise. A bolt rifle
-     and a break gun have none -- there is nothing to select -- and
-     those rows set `selector: null`. */
-  selector: { kind: 'lever', side: -1 },
   muzzle: 0.430,
   barrel: { rear: 0.055, r0: 0.0115, r1: 0.0086, bore: 0.0039, step: 0.130,
     gas: true, gasAt: 0.300, gasR: 0.0062, gasY: 0.0180 },

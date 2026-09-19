@@ -137,6 +137,43 @@ function sweepPath(g, stations, capStart = true, capEnd = true) {
     vRun[i] = vRun[i - 1] + d / n;
   }
 
+  /* WHICH WAY ROUND THE SWEEP RUNS, AND WHY IT MATTERS.
+   *
+     Reported from the photographs: "the stock and some parts are like
+     see-through or you can see the inside". They were.
+
+     The surface normal here is cross(tangent, travel), where travel is
+     the direction the path advances. For a sweep that runs forwards
+     that cross product points OUT of the solid. For one that runs
+     BACKWARDS it points in, and the triangle winding -- which follows
+     the station index, not the geometry -- reverses with it. Back-face
+     culling then throws away the side facing you and draws the inside
+     of the far wall instead, which is exactly what "you can see the
+     inside" looks like.
+
+     A buttstock is built from the receiver rearwards: its first
+     station is at R.rear and its last at S.butt, which is a quarter of
+     a metre further back. Every stock in the game runs backwards. So
+     does anything else authored muzzle-to-breech, which is why the
+     report said "and some parts" rather than naming one.
+
+     `flip` is decided once for the whole sweep by comparing the
+     direction of travel against the profile's own outward normal,
+     which the outline already carries -- so this needs no assumption
+     about which axis a part is built along, and it stays correct for a
+     sweep that curves. */
+  let flip = false;
+  {
+    const a0 = world[0], a1 = world[ns - 1];
+    const tv = new Vec3(0, 0, 0);
+    for (let k = 0; k < n; k++) {
+      tv.x += a1[k].x - a0[k].x; tv.y += a1[k].y - a0[k].y; tv.z += a1[k].z - a0[k].z;
+    }
+    const st0 = stations[0];
+    const face = new Vec3().crossVectors(st0.u, st0.v);
+    flip = (tv.x * face.x + tv.y * face.y + tv.z * face.z) < 0;
+  }
+
   const t = new Vec3(), ax = new Vec3(), nrm = new Vec3(), fallback = new Vec3();
   for (let i = 0; i < ns; i++) {
     const st = stations[i];
@@ -152,6 +189,7 @@ function sweepPath(g, stations, capStart = true, capEnd = true) {
       nrm.crossVectors(t, ax);
       if (nrm.lengthSq() < 1e-14) nrm.set(st.u.x * na + st.v.x * nb, st.u.y * na + st.v.y * nb, st.u.z * na + st.v.z * nb);
       nrm.normalize();
+      if (flip) { nrm.x = -nrm.x; nrm.y = -nrm.y; nrm.z = -nrm.z; }
       const w = world[i][k];
       // Length along U, girth along V: the wood texture lays its grain
       // along V, and a stock's grain runs down its length, not across it.
@@ -186,10 +224,15 @@ function sweepPath(g, stations, capStart = true, capEnd = true) {
       const k2 = (k + 1) % n;
       const a = base + i * n + k, b = base + i * n + k2;
       const c = base + (i + 1) * n + k2, d = base + (i + 1) * n + k;
-      g.quad(a, b, c, d);
+      // Same flip, on the winding: a normal pointing out of a triangle
+      // wound the wrong way is still a triangle that gets culled.
+      if (flip) g.quad(d, c, b, a); else g.quad(a, b, c, d);
     }
   }
 
+  /* And the caps turn over with it, or a corrected tube comes back
+     with two lids facing into itself. */
+  const capDir = flip ? -1 : 1;
   const cap = (idx, dir) => {
     const st = stations[idx];
     const nx = new Vec3().crossVectors(st.u, st.v).normalize().scale(dir);
@@ -232,8 +275,8 @@ function sweepPath(g, stations, capStart = true, capEnd = true) {
       else g.tri(centre, rim[k2], rim[k]);
     }
   };
-  if (capStart) cap(0, -1);
-  if (capEnd) cap(ns - 1, 1);
+  if (capStart) cap(0, -capDir);
+  if (capEnd) cap(ns - 1, capDir);
 }
 
 /* A box with hard edges everywhere, given a centre and half-extents. */
