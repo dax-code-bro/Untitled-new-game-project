@@ -751,6 +751,114 @@
       left: [fore, bore * 0.42, 0], leftGrip: 'fore' };
   }
 
+  /* WHAT SIXTY GUNS SOUND LIKE.
+   *
+     Multiplayer was SILENT. Not thin, not sharing sounds -- there was
+     not one call into the audio engine anywhere in mp-game.js or
+     mp-match.js. Zombies has a hand-authored voice per weapon and
+     eighteen weapons to author; this side has sixty, and waiting for
+     sixty authored voices is waiting forever, so these are DERIVED
+     from what MP_DATA already knows about each gun -- the same bargain
+     handsFor makes for grips.
+
+     MUZZLE VELOCITY IS THE ONE THAT MATTERS. A supersonic bullet drags
+     a shock cone behind it and that crack is most of what you hear
+     downrange; a subsonic one has none at all, which is why a .45 out
+     of a 1911 (253 m/s) is a flat thump and a 7.92 out of an FG 42
+     (740 m/s) is a whip. Sound in air is about 343 m/s and the table
+     has `mv` on every row, so the crack simply switches itself on at
+     the right place instead of being a per-gun opinion.
+
+     Bore -- how big the report is -- comes off the charge rather than
+     the calibre: damage times velocity is close enough to muzzle
+     energy for this, and it puts a Kar98k above an MP5 and a Barrett
+     above both, which is the order your ear expects.
+
+     Everything else falls out: a big charge means a lower, longer
+     body and a longer room tail; an open-bolt subgun means a loud
+     mechanical clatter (the Thompson's bolt is half of what you hear);
+     and minGap comes off the rate of fire so a gun at 1150 rpm is not
+     rate-limited into a stutter by a guard written for a rifle. */
+  var VOICES = {};
+  function voiceFor(spec) {
+    if (!spec) return null;
+    if (VOICES[spec.id]) return VOICES[spec.id];
+    var mv = spec.mv || 400, cls = spec.cls || 'assault';
+    var shotgun = (W.MP_DATA && W.MP_DATA.SHOTGUNS || []).indexOf(spec.id) >= 0;
+    var launcher = cls === 'launcher';
+    /* Energy in arbitrary units, normalised so a 9 mm subgun lands
+       near 0.2 and a .50 BMG near 1. */
+    var energy = ((spec.dmg || 25) * mv) / 42000;
+    var bore = Math.max(0.12, Math.min(1, energy));
+    if (shotgun) bore = 0.92;
+    if (launcher) bore = 1.0;
+    /* The supersonic crack, off before 340 m/s and saturating well
+       above it. Nothing subsonic gets one. */
+    var sup = Math.max(0, Math.min(1, (mv - 340) / 430));
+    var crack = shotgun ? 0.45 : (0.28 + sup * 0.95);
+    var crackHz = Math.max(1200, Math.min(3800, 1400 + (mv - 250) * 2.9));
+    /* Open-bolt blowback subguns clatter; a closed-bolt one does not.
+       This was derived from muzzle velocity -- `cls === 'smg' && mv <
+       420` -- which is not a fact about the action at all: the MP5
+       fires the same 9 mm at the same 400 m/s as an MP 40, and came
+       out with the MP 40's clatter. Whether the bolt is closed when
+       the trigger breaks is a DESIGN decision, not something the
+       ballistics can be asked about, and the MP5's is the whole reason
+       it is the accurate one.
+
+       The table already groups it: `fam: 'trench'` is exactly the
+       open-bolt wartime generation -- Thompson, Grease Gun, Sten, MP
+       40, PPSh -- while 'hk', 'modern' and 'machpistol' are all
+       closed-bolt. So ask the family. Caught by mpsound.test.js, which
+       exists because a derivation that quietly gives two guns the same
+       voice looks exactly like one that works. */
+    var openBolt = spec.fam === 'trench' || spec.fam === 'belt' || spec.fam === 'bipod';
+    var mech = launcher ? 0 : (openBolt ? 0.52 : (cls === 'pistol' ? 0.30 : 0.22));
+    var dur = 0.09 + bore * 0.30;
+    VOICES[spec.id] = [bore, {
+      crack: crack,
+      crackHz: crackHz,
+      crackLen: 0.024 + bore * 0.045,
+      bodyHz0: Math.round(2000 - bore * 900),
+      bodyHz1: Math.round(420 - bore * 320),
+      thump: 0.40 + bore * 0.80,
+      thumpHz: Math.round(180 - bore * 110),
+      dur: dur,
+      mech: mech,
+      mechHz: openBolt ? 1500 : 2800,
+      mechLen: openBolt ? 0.060 : 0.035,
+      tail: 0.12 + bore * 0.40,
+      tailHz: Math.round(1900 - bore * 1100),
+      tailLen: 0.20 + bore * 1.4,
+      /* A shot every 60/rpm seconds; the guard has to sit under that
+         or the fastest guns lose every other report. */
+      minGap: Math.max(0.012, Math.min(0.05, (60 / (spec.rpm || 600)) * 0.55)),
+    }];
+    return VOICES[spec.id];
+  }
+
+  /* THE GARAND'S PING.
+   *
+     The M1 is loaded with an eight-round en-bloc clip, and when the
+     last round goes the clip itself is thrown out of the top of the
+     receiver by its own spring -- the one mechanical noise in small
+     arms that everybody can identify. It is the last item on the
+     moving-parts list and it belongs to exactly one weapon: the SVT-40
+     and the Brecher 59 are in the same family in the table but both
+     feed from detachable boxes, so neither has anything to eject. */
+  function fireSound(game, spec, emptied) {
+    if (!game || !game.audio || !spec) return;
+    var v = voiceFor(spec);
+    try {
+      if (v) game.audio.report(v[0], v[1]);
+      /* After the shot, not with it -- the clip does not leave until
+         the bolt has run back. */
+      if (emptied && spec.id === 'garand') {
+        game.audio.ping({ delay: 0.085, frequency: 2180, volume: 0.30 });
+      }
+    } catch (e) { /* audio is never worth dropping a frame for */ }
+  }
+
   function buildGun(game, id) {
     var made = null;
     var fn = VM_BESPOKE[id];
@@ -2092,7 +2200,13 @@
          pace, firing your own weapon, from inside a mech. */
       var suited = !!(berserk && berserk.riding);
       if (!suited) M.control(cmd, dt);
-      if (!suited && p.ammo[p.held] < before) { kick = Math.min(1.4, kick + 0.55); vm.fired(); }
+      if (!suited && p.ammo[p.held] < before) {
+        kick = Math.min(1.4, kick + 0.55); vm.fired();
+        /* The HELD weapon, not the table row: MP_DATA.build has
+           already folded the attachments into it, so a longer barrel
+           or a different muzzle is heard as well as felt. */
+        fireSound(game, p.guns[p.held], p.ammo[p.held] === 0);
+      }
       M.update(dt);
       var dUp = (p.kickUp || 0) - kUp0, dSide = (p.kickSide || 0) - kSide0;
       /* Only the climb is handed to the player. The settle is the gun

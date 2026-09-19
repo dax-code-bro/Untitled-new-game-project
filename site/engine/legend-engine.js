@@ -12702,6 +12702,64 @@ class Audio {
     osc.start(now); osc.stop(now + duration);
   }
 
+  /* THE GARAND'S CLIP PING: a struck steel plate, not a beep.
+   *
+   * `tone` is one oscillator, and one oscillator at 2 kHz is a
+   * smoke alarm. What makes thin sheet steel ring is that its modes
+   * are INHARMONIC -- they are not 1, 2, 3 times a fundamental, so
+   * the ear cannot resolve a pitch and hears metal instead. These
+   * ratios are for a rectangular plate; the exact numbers matter less
+   * than that none of them is a small whole number.
+   *
+   * Each partial decays at its own rate, the high ones fastest, which
+   * is the other half of it: a metal ring starts bright and gets
+   * darker as it fades, and a chord of partials all decaying together
+   * sounds like an organ.
+   *
+   * There is also a tick of noise at the front, because the clip does
+   * not simply start ringing -- it is thrown out of the receiver by a
+   * spring and hits the ground, and the attack is a clatter. */
+  ping(opts = {}) {
+    if (!this.enabled) return;
+    const ctx = this.ensure();
+    if (!ctx) return;
+    const now = ctx.currentTime + (opts.delay || 0);
+    const f0 = opts.frequency || 2180;
+    const vol = opts.volume != null ? opts.volume : 0.30;
+    const PARTIALS = [
+      [1.00, 1.00, 0.72],
+      [1.57, 0.62, 0.46],
+      [2.31, 0.38, 0.30],
+      [3.14, 0.24, 0.19],
+      [4.07, 0.13, 0.12],
+    ];
+    for (const [ratio, amp, decay] of PARTIALS) {
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      /* A struck plate's pitch sags very slightly as the strike
+         energy leaves it. Without this the ring is dead still, which
+         is the other thing that says synthesiser. */
+      osc.frequency.setValueAtTime(f0 * ratio * 1.012, now);
+      osc.frequency.exponentialRampToValueAtTime(f0 * ratio, now + 0.05);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.exponentialRampToValueAtTime(vol * amp, now + 0.004);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + decay);
+      osc.connect(g).connect(this.bus);
+      osc.start(now); osc.stop(now + decay + 0.02);
+    }
+    // The clatter of it leaving, under the ring.
+    const src = ctx.createBufferSource();
+    src.buffer = this._noiseBuffer(0.06);
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass'; bp.frequency.value = f0 * 1.4; bp.Q.value = 1.2;
+    const ng = ctx.createGain();
+    ng.gain.setValueAtTime(vol * 0.55, now);
+    ng.gain.exponentialRampToValueAtTime(0.0001, now + 0.055);
+    src.connect(bp).connect(ng).connect(this.bus);
+    src.start(now); src.stop(now + 0.06);
+  }
+
   setVolume(v) {
     this.volume = clamp(v, 0, 1);
     if (this.master) this.master.gain.value = this.volume;
@@ -25421,13 +25479,22 @@ function svcTopAt(K, x) {
 
 function svcBarrel(g, K) {
   const B = K.barrel;
-  const pts = [[B.rear, B.r0]];
-  if (B.step) pts.push([B.step, B.r0], [B.step + 0.004, B.r1]);
-  pts.push([K.muzzle - 0.012, B.r1]);
-  tubeRun(g, pts, 18, true, false);
-  /* A crowned muzzle, because what sells the end of a barrel is the
-     shadow inside it. */
-  crown(g, K.muzzle, B.r1, B.bore, 0.030);
+  /* A MINIGUN HAS SIX BARRELS AND NOT A SEVENTH AROUND THEM.
+   *
+     svcRotary builds the cluster -- six tubes on a circle of radius
+     0.62 * r0 -- and this drew a solid tube of radius r0 straight over
+     the top of it, so the Hydra photographed as a smooth pipe with its
+     own barrels sealed inside. The one weapon in the table whose
+     defining feature is that you can see six muzzles. */
+  if (!K.rotary) {
+    const pts = [[B.rear, B.r0]];
+    if (B.step) pts.push([B.step, B.r0], [B.step + 0.004, B.r1]);
+    pts.push([K.muzzle - 0.012, B.r1]);
+    tubeRun(g, pts, 18, true, false);
+    /* A crowned muzzle, because what sells the end of a barrel is the
+       shadow inside it. */
+    crown(g, K.muzzle, B.r1, B.bore, 0.030);
+  }
 
   /* Gas system: the tube over the barrel that everything but a
      blowback has, and the block it comes off. */
@@ -27244,7 +27311,10 @@ Object.assign(SERVICE_KINDS, {
 function svcRotary(g, K) {
   const n = K.rotary;
   if (!n) return;
-  const R = K.barrel.r0 * 0.62, br = 0.0062;
+  /* Out to where the solid barrel used to be, now that it is gone:
+     the cluster IS the gun's muzzle end, so it has to fill the same
+     silhouette rather than rattle around inside it. */
+  const R = K.barrel.r0 * 0.74, br = 0.0072;
   for (let i = 0; i < n; i++) {
     const th = (i / n) * TAU;
     const cy = Math.cos(th) * R, cz = Math.sin(th) * R;

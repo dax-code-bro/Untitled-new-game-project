@@ -69,13 +69,22 @@ function svcTopAt(K, x) {
 
 function svcBarrel(g, K) {
   const B = K.barrel;
-  const pts = [[B.rear, B.r0]];
-  if (B.step) pts.push([B.step, B.r0], [B.step + 0.004, B.r1]);
-  pts.push([K.muzzle - 0.012, B.r1]);
-  tubeRun(g, pts, 18, true, false);
-  /* A crowned muzzle, because what sells the end of a barrel is the
-     shadow inside it. */
-  crown(g, K.muzzle, B.r1, B.bore, 0.030);
+  /* A MINIGUN HAS SIX BARRELS AND NOT A SEVENTH AROUND THEM.
+   *
+     svcRotary builds the cluster -- six tubes on a circle of radius
+     0.62 * r0 -- and this drew a solid tube of radius r0 straight over
+     the top of it, so the Hydra photographed as a smooth pipe with its
+     own barrels sealed inside. The one weapon in the table whose
+     defining feature is that you can see six muzzles. */
+  if (!K.rotary) {
+    const pts = [[B.rear, B.r0]];
+    if (B.step) pts.push([B.step, B.r0], [B.step + 0.004, B.r1]);
+    pts.push([K.muzzle - 0.012, B.r1]);
+    tubeRun(g, pts, 18, true, false);
+    /* A crowned muzzle, because what sells the end of a barrel is the
+       shadow inside it. */
+    crown(g, K.muzzle, B.r1, B.bore, 0.030);
+  }
 
   /* Gas system: the tube over the barrel that everything but a
      blowback has, and the block it comes off. */
@@ -1892,7 +1901,10 @@ Object.assign(SERVICE_KINDS, {
 function svcRotary(g, K) {
   const n = K.rotary;
   if (!n) return;
-  const R = K.barrel.r0 * 0.62, br = 0.0062;
+  /* Out to where the solid barrel used to be, now that it is gone:
+     the cluster IS the gun's muzzle end, so it has to fill the same
+     silhouette rather than rattle around inside it. */
+  const R = K.barrel.r0 * 0.74, br = 0.0072;
   for (let i = 0; i < n; i++) {
     const th = (i / n) * TAU;
     const cy = Math.cos(th) * R, cz = Math.sin(th) * R;

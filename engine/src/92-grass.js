@@ -935,6 +935,64 @@ class Audio {
     osc.start(now); osc.stop(now + duration);
   }
 
+  /* THE GARAND'S CLIP PING: a struck steel plate, not a beep.
+   *
+   * `tone` is one oscillator, and one oscillator at 2 kHz is a
+   * smoke alarm. What makes thin sheet steel ring is that its modes
+   * are INHARMONIC -- they are not 1, 2, 3 times a fundamental, so
+   * the ear cannot resolve a pitch and hears metal instead. These
+   * ratios are for a rectangular plate; the exact numbers matter less
+   * than that none of them is a small whole number.
+   *
+   * Each partial decays at its own rate, the high ones fastest, which
+   * is the other half of it: a metal ring starts bright and gets
+   * darker as it fades, and a chord of partials all decaying together
+   * sounds like an organ.
+   *
+   * There is also a tick of noise at the front, because the clip does
+   * not simply start ringing -- it is thrown out of the receiver by a
+   * spring and hits the ground, and the attack is a clatter. */
+  ping(opts = {}) {
+    if (!this.enabled) return;
+    const ctx = this.ensure();
+    if (!ctx) return;
+    const now = ctx.currentTime + (opts.delay || 0);
+    const f0 = opts.frequency || 2180;
+    const vol = opts.volume != null ? opts.volume : 0.30;
+    const PARTIALS = [
+      [1.00, 1.00, 0.72],
+      [1.57, 0.62, 0.46],
+      [2.31, 0.38, 0.30],
+      [3.14, 0.24, 0.19],
+      [4.07, 0.13, 0.12],
+    ];
+    for (const [ratio, amp, decay] of PARTIALS) {
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      /* A struck plate's pitch sags very slightly as the strike
+         energy leaves it. Without this the ring is dead still, which
+         is the other thing that says synthesiser. */
+      osc.frequency.setValueAtTime(f0 * ratio * 1.012, now);
+      osc.frequency.exponentialRampToValueAtTime(f0 * ratio, now + 0.05);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.exponentialRampToValueAtTime(vol * amp, now + 0.004);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + decay);
+      osc.connect(g).connect(this.bus);
+      osc.start(now); osc.stop(now + decay + 0.02);
+    }
+    // The clatter of it leaving, under the ring.
+    const src = ctx.createBufferSource();
+    src.buffer = this._noiseBuffer(0.06);
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass'; bp.frequency.value = f0 * 1.4; bp.Q.value = 1.2;
+    const ng = ctx.createGain();
+    ng.gain.setValueAtTime(vol * 0.55, now);
+    ng.gain.exponentialRampToValueAtTime(0.0001, now + 0.055);
+    src.connect(bp).connect(ng).connect(this.bus);
+    src.start(now); src.stop(now + 0.06);
+  }
+
   setVolume(v) {
     this.volume = clamp(v, 0, 1);
     if (this.master) this.master.gain.value = this.volume;
