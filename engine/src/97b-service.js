@@ -352,8 +352,13 @@ function svcSights(g, K) {
   }
   /* Rear: a notch on a ramp, an aperture on a drum, or a folding
      ladder. All three are the same two boxes with a different hole. */
-  svcSlab(g, [[S.rearX - 0.010, S.y - 0.008, 0.002, 0.0090, 4],
-    [S.rearX + 0.008, S.y - 0.008, 0.002, 0.0090, 4]]);
+  /* The base's top was S.y - 0.008 and the aperture ring's underside
+     is S.y - 0.0065, so on every rifle with a peep the RING FLOATED
+     1.5 mm above its own base -- eight weapons, and a millimetre and a
+     half is invisible in a photograph and obvious to a contact test.
+     The base reaches the ring now. */
+  svcSlab(g, [[S.rearX - 0.010, S.y - 0.004, 0.002, 0.0090, 4],
+    [S.rearX + 0.008, S.y - 0.004, 0.002, 0.0090, 4]]);
   if (S.rear === 'aperture') {
     band(g, S.rearX - 0.004, S.rearX + 0.002, 0.0028, 0.0075, 16, S.y + 0.001, 0);
   } else {
@@ -730,9 +735,15 @@ function svcDetails(g, K) {
     strut(g, [sel.x + 0.058, sel.y + 0.012, sz * off],
       [sel.x + 0.070, sel.y + 0.020, sz * (off + 0.0060)],
       roundRect(0.0055, 0.0055, 0.0018, 3.0, 12));
-    for (const dy of [0.0, 0.024]) {
-      strut(g, [sel.x + 0.056, sel.y + 0.030 + dy, sz * (W + 0.0002)],
-        [sel.x + 0.056, sel.y + 0.030 + dy, sz * (W + 0.0014)],
+    /* The AB / OD marks above the lever's travel. At sel.y + 0.030 and
+       + 0.054 the upper one stood THIRTY-FOUR MILLIMETRES above a
+       receiver only twenty-four tall -- two little studs hanging in
+       the air over the rifle. They belong on the wall, inside the
+       receiver's own height, which is where they are stamped. */
+    for (const dy of [0.0, 0.0125]) {
+      const my = Math.min(sel.y + 0.010 + dy, R.up - 0.004);
+      strut(g, [sel.x + 0.056, my, sz * (W + 0.0002)],
+        [sel.x + 0.056, my, sz * (W + 0.0014)],
         ringOutline(0.0022, 8));
     }
   } else {
@@ -835,7 +846,15 @@ function svcDetails(g, K) {
   const slung = (K.hg && K.hg.kind !== 'none') || (K.stock && K.stock.kind !== 'none');
   if (slung) {
     const fx = K.hg && K.hg.kind !== 'none' ? K.hg.x1 - 0.014 : K.barrel.rear + 0.060;
-    const fy = -(K.hg && K.hg.kind === 'wood' ? K.hg.drop : K.barrel.r1 + 0.010);
+    /* HUNG OFF WHATEVER IS ACTUALLY ABOVE IT. `-(barrel.r1 + 0.010)`
+       put the loop's top six millimetres BELOW the barrel on every gun
+       with no wooden forend -- the Grease Gun, the MP 40, the Micro
+       Uzi, the Skorpion, the Stinger -- so the swivel was bolted to
+       air there too, in the same way it was on the pistols and for the
+       same reason: a height guessed from the barrel rather than taken
+       from the part it hangs on. */
+    const fy = K.hg && K.hg.kind === 'wood' ? -K.hg.drop
+      : (K.hg && K.hg.kind === 'tube' ? -K.hg.r : -K.barrel.r1);
     band(g, fx - 0.0022, fx + 0.0022, 0.0060, 0.0100, 14, fy - 0.006, 0);
   }
   if (K.stock && K.stock.kind !== 'none') {

@@ -2317,8 +2317,17 @@ function buildMgBelt(g) {
   // nose-inboard, so every round points at the chamber.
   const link = (at, run, nose) => {
     const q = ringOutline(0.0072, 8);
-    strut(g, [at[0] - run[0] * 0.0058, at[1] - run[1] * 0.0058, at[2] - run[2] * 0.0058],
-             [at[0] + run[0] * 0.0058, at[1] + run[1] * 0.0058, at[2] + run[2] * 0.0058], q);
+    /* LONGER THAN THE PITCH, so consecutive links overlap. At 0.0058
+       each link was 11.6 mm along a run stepping 15.8 mm, leaving four
+       millimetres of air between every pair -- so the hanging tail was
+       fifteen separate objects in a row rather than a belt. Real links
+       interlock; these have to at least touch. Same fault, and the
+       same cause, as the service-arm belt: a pitch chosen for how the
+       rounds should be spaced and a link sized without reference to
+       it. */
+    const half = PITCH * 0.56;
+    strut(g, [at[0] - run[0] * half, at[1] - run[1] * half, at[2] - run[2] * half],
+             [at[0] + run[0] * half, at[1] + run[1] * half, at[2] + run[2] * half], q);
     // Case, shoulder and bullet, as three short runs along the nose axis.
     const P = (t) => [at[0] + nose[0] * t, at[1] + nose[1] * t, at[2] + nose[2] * t];
     strut(g, P(-CASE * 0.45), P(CASE * 0.28), ringOutline(R, 10));
