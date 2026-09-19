@@ -26489,6 +26489,71 @@ function svcBipod(g, K) {
   }
 }
 
+/* A CROSSBOW IS NOT A RIFLE WITH A BIPOD ON IT.
+ *
+ * The limbs were drawn by svcBipod, on the reasoning -- written down
+ * in the table -- that "two arms swept out and forward from a point
+ * under the barrel is exactly what a bipod is and exactly what a
+ * crossbow's limbs are". They are not. A bipod has two STRAIGHT legs
+ * with feet on them, and the crossbow came out as a rifle with an X
+ * across the front: no curve, no taper, little rubber feet on the
+ * ends, and above all NO STRING. A bow without a string is a stick.
+ *
+ * What is actually there: a riser across the front of the rail, two
+ * limbs that taper and curve back as they go out, a string from tip to
+ * tip drawn back to the latch, and a bolt lying in the groove with its
+ * nock against the string. The string is the part that makes the
+ * silhouette read, because it is the only straight line on the weapon
+ * that goes anywhere diagonally.
+ */
+function svcLimbs(g, K) {
+  const L = K.limbs;
+  if (!L) return;
+  const x = L.x, y = L.y || 0, sp = L.spread, back = L.sweep || 0.030;
+  // The riser: the block the limbs bolt into, across the rail.
+  svcSlab(g, [[x - 0.016, 0.0090, 0.0090, 0.0170, 3.4],
+    [x + 0.014, 0.0075, 0.0075, 0.0150, 3.4]], 0, true, true, y);
+  for (const sz of [-1, 1]) {
+    /* Two segments so the limb bends rather than pointing. A limb is
+       a leaf spring: thick at the riser, thin at the tip. */
+    const mid = [x - back * 0.34, y + 0.0050, sz * sp * 0.55];
+    const tip = [x - back, y + 0.0130, sz * sp];
+    strut(g, [x, y, sz * 0.0130], mid, roundRect(0.0038, 0.0038, 0.0090, 3, 10));
+    strut(g, mid, tip, roundRect(0.0026, 0.0026, 0.0062, 3, 10));
+    // The tip nock, which is what the loop of the string sits in.
+    strut(g, tip, [x - back - 0.006, y + 0.0150, sz * (sp + 0.004)],
+      roundRect(0.0024, 0.0024, 0.0034, 3, 8));
+    /* And the string, tip to latch. 1.6 mm of cord, and the whole
+       reason anybody can tell what this weapon is. */
+    /* 2.4 mm. It photographed as a DASHED line at 640 px and I
+       thickened it on the assumption that was the cause; it still
+       dashed, so I rendered the same model at 1280 and it came out
+       solid. The dashing is rasterisation of a sub-two-pixel feature
+       and nothing is wrong with the geometry -- which is worth the
+       note, because a broken-looking string is exactly the kind of
+       thing that gets "fixed" three times by guessing. 2.4 mm is
+       roughly a served bowstring anyway, so it stays. */
+    strut(g, tip, [L.latch, y + 0.0110, 0], roundRect(0.0012, 0.0012, 0.0012, 2, 8));
+  }
+  if (L.bolt !== false) {
+    /* The bolt in the groove, nock against the string. A crossbow
+       carried with nothing on the rail is a crossbow nobody has
+       loaded. */
+    const bx0 = L.latch + 0.004, bx1 = x + 0.150;
+    tubeRun(g, [[bx0, 0.0038], [bx1 - 0.030, 0.0038]], 8, true, false, y + 0.0110, 0);
+    // Head: a short four-sided broadhead taper.
+    spin(g, [[bx1 - 0.030, 0.0000], [bx1, 0.0000], [bx1, 0.0010],
+      [bx1 - 0.026, 0.0072], [bx1 - 0.030, 0.0040]], 4, 0, y + 0.0110, 0);
+    // Fletching, three vanes at the nock end.
+    for (let i = 0; i < 3; i++) {
+      const th = (i / 3) * TAU;
+      strut(g, [bx0 + 0.006, y + 0.0110 + Math.cos(th) * 0.0040, Math.sin(th) * 0.0040],
+        [bx0 + 0.006, y + 0.0110 + Math.cos(th) * 0.0105, Math.sin(th) * 0.0105],
+        roundRect(0.0140, 0.0140, 0.0004, 6, 6));
+    }
+  }
+}
+
 function svcBolt(g, K) {
   const R = K.rec, C = K.charge;
   const x = C ? C.x : R.front - 0.060;
@@ -26842,6 +26907,7 @@ function makeServiceArm(kind) {
   svcBipod(geos.steel, K);
   svcRotary(geos.steel, K);
   svcWarhead(geos.steel, K);
+  svcLimbs(geos.steel, K);
   geos.wood = new Geometry(); svcFurniture(geos.wood, K);
   /* A grip is furniture on a wooden gun and part of the frame on a
      polymer one, but it is always its own material -- it is the only
@@ -27970,11 +28036,15 @@ Object.assign(SERVICE_KINDS, {
   }),
 
   /* Silent, arcs like a thrown rock. A rail with a stock on it, a
-     prod across the front, and a bolt lying in the groove -- the limbs
-     are the only thing here shaped like nothing else in the game, and
-     `bipod` draws them: two arms swept out and forward from a point
-     under the barrel is exactly what a bipod is and exactly what a
-     crossbow's limbs are. */
+     prod across the front, a string, and a bolt lying in the groove.
+   *
+     The limbs used to be drawn by `bipod`, on the reasoning -- which
+     was written down right here -- that "two arms swept out and
+     forward from a point under the barrel is exactly what a bipod is
+     and exactly what a crossbow's limbs are". They are not. A bipod is
+     two straight legs with rubber feet, and this came out as a rifle
+     with an X across the front and, fatally, no string on it. A bow
+     without a string is a stick. `limbs` builds the real thing. */
   crossbow: boltSpec({
     ammoKind: 'full',
     muzzle: 0.560,
@@ -27985,9 +28055,8 @@ Object.assign(SERVICE_KINDS, {
     stock: { kind: 'poly', butt: -0.330, comb: 0.0180, drop: 0.0240, w: 0.0160 },
     grip: { x: -0.084, y: -0.0170, len: 0.102, rake: 0.32 },
     mag: null,
-    // The limbs, swept hard forward and out from the front of the rail.
-    // The crossbow's limbs: swept hard out and barely down at all.
-    bipod: { x: 0.380, rake: -0.040, len: 0.026, spread: 0.300 },
+    bipod: null,
+    limbs: { x: 0.390, y: 0.0060, spread: 0.290, sweep: 0.048, latch: 0.116 },
     rail: { x0: -0.080, x1: 0.060 },
     sight: { y: 0.0380, frontX: 0.150, rearX: -0.060, front: 'none', rear: 'scope' },
     mass: 3.1, bound: 0.60,

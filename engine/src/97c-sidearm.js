@@ -545,11 +545,15 @@ Object.assign(SERVICE_KINDS, {
   }),
 
   /* Silent, arcs like a thrown rock. A rail with a stock on it, a
-     prod across the front, and a bolt lying in the groove -- the limbs
-     are the only thing here shaped like nothing else in the game, and
-     `bipod` draws them: two arms swept out and forward from a point
-     under the barrel is exactly what a bipod is and exactly what a
-     crossbow's limbs are. */
+     prod across the front, a string, and a bolt lying in the groove.
+   *
+     The limbs used to be drawn by `bipod`, on the reasoning -- which
+     was written down right here -- that "two arms swept out and
+     forward from a point under the barrel is exactly what a bipod is
+     and exactly what a crossbow's limbs are". They are not. A bipod is
+     two straight legs with rubber feet, and this came out as a rifle
+     with an X across the front and, fatally, no string on it. A bow
+     without a string is a stick. `limbs` builds the real thing. */
   crossbow: boltSpec({
     ammoKind: 'full',
     muzzle: 0.560,
@@ -560,9 +564,8 @@ Object.assign(SERVICE_KINDS, {
     stock: { kind: 'poly', butt: -0.330, comb: 0.0180, drop: 0.0240, w: 0.0160 },
     grip: { x: -0.084, y: -0.0170, len: 0.102, rake: 0.32 },
     mag: null,
-    // The limbs, swept hard forward and out from the front of the rail.
-    // The crossbow's limbs: swept hard out and barely down at all.
-    bipod: { x: 0.380, rake: -0.040, len: 0.026, spread: 0.300 },
+    bipod: null,
+    limbs: { x: 0.390, y: 0.0060, spread: 0.290, sweep: 0.048, latch: 0.116 },
     rail: { x0: -0.080, x1: 0.060 },
     sight: { y: 0.0380, frontX: 0.150, rearX: -0.060, front: 'none', rear: 'scope' },
     mass: 3.1, bound: 0.60,
