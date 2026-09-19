@@ -8004,6 +8004,12 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
           }
         }
         void muzzle;
+        /* Last: make sure the fetch point is on screen. Every branch
+           above has had its say about WHERE the load comes from; this
+           only swings that reach up if it would start below the frame,
+           and leaves it alone otherwise. It runs after them all so a
+           per-kind path cannot reintroduce the fault. */
+        from = ONSCREEN(game, (v.kind === 'single' ? v.actor : v.root), to, from);
         // Recompute, since a per-round path above resets how far along it is.
         u2 = Math.min(1, Math.max(0, propT));
         e = u2 * u2 * (3 - 2 * u2);
@@ -8992,6 +8998,76 @@ function FETCH(to, dy, dz) {
   const y = dy == null ? -0.052 : dy;
   const z = dz == null ? -0.140 : dz;
   return [to[0] - 0.028, to[1] + y, to[2] + z];
+}
+
+/* AND THE SAME TRADE AGAIN, ONCE THE CAMERA CAN BE ASKED.
+ *
+ * The rule above is right and the numbers in it are not enough on their
+ * own. Measured across the rack, five weapons still fetch from below the
+ * frame -- the Thompson's magazine reaches NDC -1.22, the MP5's -1.17,
+ * the 1911's -1.16, the Arc's -1.09 -- and the player watches a hand dip
+ * off the bottom of the screen and come back with a magazine in it.
+ *
+ * WHY A CONSTANT CANNOT FIX IT. The obvious repair is a floor on the
+ * fetch height, and the measurement says no: the Thompson's magazine
+ * well sits at local y -0.030 and the 1911's at -0.085, and it is the
+ * THOMPSON that goes further off screen. Each viewmodel sits at its own
+ * depth and its own offset, so the same local y lands somewhere
+ * different on the glass for every weapon. A number chosen in the
+ * weapon's space cannot know that, which is why the hand-picked pairs
+ * above are right for some guns and not others.
+ *
+ * So ask the camera, which knows. Swing the fetch offset up in the y-z
+ * plane, keeping its LENGTH -- the same reach, the same distance
+ * travelled, exactly the trade the rule above describes -- until the
+ * point projects above the bottom edge. Nothing moves on a weapon that
+ * was already fine, because the loop exits on the first test. */
+function ONSCREEN(game, root, to, from) {
+  const cam = game && game.camera;
+  if (!cam || !cam.viewProj || !root || !root.matrix) return from;
+  const m = cam.viewProj.e, rm = root.matrix.e;
+  /* Weapon space -> world -> clip. The prop is parented to the weapon,
+     so the weapon's own matrix is the whole of the first step. */
+  const ndcY = (q) => {
+    const x = rm[0] * q[0] + rm[4] * q[1] + rm[8] * q[2] + rm[12];
+    const y = rm[1] * q[0] + rm[5] * q[1] + rm[9] * q[2] + rm[13];
+    const z = rm[2] * q[0] + rm[6] * q[1] + rm[10] * q[2] + rm[14];
+    const w = m[3] * x + m[7] * y + m[11] * z + m[15];
+    if (w <= 1e-5) return null;
+    return (m[1] * x + m[5] * y + m[9] * z + m[13]) / w;
+  };
+  /* A margin inside the edge, because the magazine has a length and it
+     is the BOTTOM of it that leaves the screen first. */
+  const FLOOR = -0.88;
+  const dy = from[1] - to[1], dz = from[2] - to[2];
+  const len = Math.hypot(dy, dz);
+  if (len < 1e-6) return from;
+  const q0 = ndcY(from);
+  if (q0 == null || q0 >= FLOOR) return from;
+  /* Swing the reach up, keeping its length. The angle to swing TOWARDS
+     is the one with no drop at all and the same outboard direction --
+     straight back for a fetch that comes from behind, straight forward
+     for one that does not. Rotating toward zero instead sends a fetch
+     that should come from the pouch out over the muzzle, which is the
+     first thing this got wrong. */
+  const a0 = Math.atan2(dy, dz);
+  const tgt = dz < 0 ? (a0 < 0 ? -Math.PI : Math.PI) : 0;
+  for (let i = 1; i <= 8; i++) {
+    const na = a0 + (tgt - a0) * (i / 8);
+    const cand = [from[0], to[1] + Math.sin(na) * len, to[2] + Math.cos(na) * len];
+    const q = ndcY(cand);
+    if (q != null && q >= FLOOR) return cand;
+  }
+  /* A FLAT REACH IS STILL NOT ENOUGH ON EVERY WEAPON, and the next stage
+     -- giving up length as well as drop -- is written and measuring. The
+     Thompson is the one it is for: flattening keeps the fetch 140 mm
+     BEHIND the gun, and on a viewmodel carried below the eye, further
+     back is also further down the glass, so no angle that preserves the
+     length can clear it. Until that is measured, a weapon that cannot be
+     helped keeps its authored point rather than a worse one. */
+  /* Nothing on this weapon clears: leave the authored point rather than
+     return a worse one. */
+  return from;
 }
 
 /* When the carried load is visible, per reload kind.
