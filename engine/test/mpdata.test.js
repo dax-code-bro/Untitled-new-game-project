@@ -36,8 +36,19 @@ const MP = sandbox.window.MP_DATA;
 check('the module loads', !!MP);
 
 /* ---- the counts the game was asked for ---- */
-check('sixty guns', MP.GUNS.length === 60, `got ${MP.GUNS.length}`);
-check('six classes', MP.CLASSES.length === 6, `got ${MP.CLASSES.length}`);
+/* Seventy-five. Sixty until the shotgun and sniper sections landed:
+   ten more gauges and five more rifles, and the eight that were filed
+   under Special moved into the two new classes rather than being
+   counted twice. */
+check('seventy-five guns', MP.GUNS.length === 75, `got ${MP.GUNS.length}`);
+/* Eight. Six until the snipers and the shotguns came out of Special --
+   ten one-shot rifles and thirteen gauges is two classes, not a note in
+   a bin that also holds a crossbow and a riot shield. Special is those
+   two now, and the count is asserted rather than inferred because
+   every class-keyed table in the project has to be visited when it
+   changes; ADS_CONE was not, and every optic in the game folded a NaN
+   onto every sniper rifle until this file said so. */
+check('eight classes', MP.CLASSES.length === 8, `got ${MP.CLASSES.length}`);
 
 const byCls = {};
 MP.GUNS.forEach((g) => { byCls[g.cls] = (byCls[g.cls] || 0) + 1; });

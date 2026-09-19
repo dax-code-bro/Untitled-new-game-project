@@ -563,11 +563,21 @@
 
   /* A bot's class. Weighted rather than uniform, because players are:
      most of a lobby is carrying a rifle or an SMG, one person has a
-     sniper, and somebody always has the shotgun. */
+     sniper, and somebody always has the shotgun.
+   *
+     THE SNIPER AND THE SHOTGUN ARE THEIR OWN CLASSES NOW, so the one
+     eleven-per-cent slice that used to be 'special' is two slices --
+     and what was in that slice was five rifles, three gauges, a
+     crossbow and a shield, drawn uniformly. A bot was therefore twice
+     as likely to spawn with the riot shield as with any particular
+     sniper rifle. Split out, the weights say what the comment always
+     claimed they did: one person has a sniper, somebody has a shotgun,
+     and the crossbow and the shield are the rarity they should be. */
   function botLoadout(rand) {
     var r = rand();
-    var cls = r < 0.42 ? 'assault' : r < 0.72 ? 'smg' : r < 0.84 ? 'lmg'
-      : r < 0.95 ? 'special' : 'pistol';
+    var cls = r < 0.40 ? 'assault' : r < 0.68 ? 'smg' : r < 0.79 ? 'lmg'
+      : r < 0.88 ? 'sniper' : r < 0.95 ? 'shotgun'
+      : r < 0.97 ? 'special' : 'pistol';
     var list = MP_DATA.gunsOf(cls).filter(function (g) { return !g.shield; });
     var g = list[Math.floor(rand() * list.length) % list.length];
     var pistols = MP_DATA.gunsOf('pistol');

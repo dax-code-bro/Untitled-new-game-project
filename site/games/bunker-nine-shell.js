@@ -2809,6 +2809,8 @@ var ART = {
   assault: { butt: -40, rec: 44, hand: 34, barrel: 34, mag: 26, drop: 20, w: 13 },
   smg:     { butt: -30, rec: 36, hand: 22, barrel: 20, mag: 30, drop: 18, w: 12 },
   lmg:     { butt: -44, rec: 52, hand: 30, barrel: 40, mag: 22, drop: 24, w: 16 },
+  sniper:  { butt: -48, rec: 46, hand: 42, barrel: 54, mag: 12, drop: 12, w: 12 },
+  shotgun: { butt: -42, rec: 44, hand: 34, barrel: 42, mag: 8,  drop: 14, w: 15 },
   special: { butt: -46, rec: 48, hand: 40, barrel: 46, mag: 14, drop: 12, w: 12 },
   pistol:  { butt: 0,   rec: 30, hand: 0,  barrel: 14, mag: 0,  drop: 26, w: 11 },
   launcher:{ butt: -50, rec: 70, hand: 24, barrel: 30, mag: 0,  drop: 14, w: 20 },

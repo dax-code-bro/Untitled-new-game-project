@@ -59,8 +59,12 @@
       blurb: 'Wins the room, loses the street.' },
     { id: 'lmg', name: 'Light Machine Gun', short: 'LMG',
       blurb: 'A belt, a bipod, and nowhere to be in a hurry.' },
+    { id: 'sniper', name: 'Sniper Rifle', short: 'SNP',
+      blurb: 'One round, one answer, and a second and a half to think about it.' },
+    { id: 'shotgun', name: 'Shotgun', short: 'SHG',
+      blurb: 'Everything inside eight metres, nothing outside twelve.' },
     { id: 'special', name: 'Special', short: 'SPC',
-      blurb: 'Rifles that fire once, shotguns that fire eight, and a shield.' },
+      blurb: 'The two that are not guns at all.' },
     { id: 'pistol', name: 'Pistol', short: 'PST',
       blurb: 'What you have left.' },
     { id: 'launcher', name: 'Launcher', short: 'LNC',
@@ -80,13 +84,20 @@
     machpistol: 'Machine pistols', belt: 'Belt-fed', bipod: 'Magazine-fed LMGs',
     rotary: 'Rotary', bolt: 'Bolt-action', amr: 'Anti-materiel',
     pump: 'Pump and break', auto12: 'Self-loading shotguns', exotic: 'Exotic',
+    breakopen: 'Break-action', lever: 'Lever and revolver', marksman: 'Marksman rifles',
     acp: '.45 automatics', broom: 'Broomhandles', service: 'Service pistols',
     handcannon: 'Hand cannons', tube: 'Shoulder tubes', guided: 'Guided',
     grenade: 'Grenade launchers',
   };
 
   /* ================================================================
-     THE SIXTY
+     THE SEVENTY-FIVE
+     ================================================================
+     Sixty until the shotgun and sniper sections landed. The three
+     gauges and five long rifles that were filed under Special are
+     classes of their own now, with ten more gauges and five more
+     rifles beside them, and Special is what is actually left: a
+     crossbow and a shield.
      ================================================================ */
   var GUNS = [
 
@@ -237,44 +248,119 @@
       spinUp: 0.9,
       blurb: 'A second of spin-up, then the wall in front of you stops being a wall.' },
 
-    /* ---------------- SPECIAL (10) ---------------- */
-    { id: 'remington', name: 'Remington 700', cls: 'special', fam: 'bolt',
+    /* ---------------- SNIPER RIFLES (10) ---------------- */
+    { id: 'remington', name: 'Remington 700', cls: 'sniper', fam: 'bolt',
       mag: 5, rpm: 48, bolt: 1.25, dmg: 100, dmgFar: 95, near: 60, far: 120, hs: 3.0, auto: false,
       ads: 0.42, move: 0.88, reload: 3.2, rec: [3.4, 0.8], spread: 6.0, mv: 820,
       oneShot: 'chest',
       blurb: 'Chest and up, once, anywhere on any map.' },
-    { id: 'kar98', name: 'Kar98k', cls: 'special', fam: 'bolt',
+    { id: 'kar98', name: 'Kar98k', cls: 'sniper', fam: 'bolt',
       mag: 5, rpm: 42, bolt: 1.40, dmg: 100, dmgFar: 95, near: 70, far: 140, hs: 3.0, auto: false,
       ads: 0.45, move: 0.89, reload: 3.6, rec: [3.7, 0.8], spread: 6.4, mv: 760,
       oneShot: 'chest',
       blurb: 'Slower to cycle than anything else here, and it does not need a second try.' },
-    { id: 'mosin', name: 'Mosin-Nagant', cls: 'special', fam: 'bolt',
+    { id: 'mosin', name: 'Mosin-Nagant', cls: 'sniper', fam: 'bolt',
       mag: 5, rpm: 40, bolt: 1.45, dmg: 100, dmgFar: 95, near: 70, far: 140, hs: 3.0, auto: false,
       ads: 0.47, move: 0.88, reload: 3.8, rec: [3.9, 0.9], spread: 6.6, mv: 800,
       oneShot: 'chest',
       blurb: 'The bolt is stiff and the stock is a plank. It shoots like a laser.' },
-    { id: 'killstreak', name: 'The Kill Streak', cls: 'special', fam: 'amr',
+    { id: 'killstreak', name: 'The Kill Streak', cls: 'sniper', fam: 'amr',
       mag: 5, rpm: 36, bolt: 1.6, dmg: 130, dmgFar: 125, near: 90, far: 180, hs: 3.0, auto: false,
       ads: 0.58, move: 0.76, reload: 4.4, rec: [6.6, 1.5], spread: 8.0, mv: 880,
       oneShot: 'any', pierce: 2,
       blurb: 'Fifty calibre. Goes through the man, the wall, and the man behind the wall.' },
-    { id: 'barrett', name: 'Barrett M82', cls: 'special', fam: 'amr',
+    { id: 'barrett', name: 'Barrett M82', cls: 'sniper', fam: 'amr',
       mag: 10, rpm: 90, dmg: 118, dmgFar: 110, near: 80, far: 170, hs: 3.0, auto: false,
       ads: 0.62, move: 0.74, reload: 4.8, rec: [6.2, 1.4], spread: 8.4, mv: 853,
       oneShot: 'any', pierce: 1,
       blurb: 'Semi-automatic, which means you get to be wrong twice quickly.' },
-    { id: 'scatter', name: 'Scattergun', cls: 'special', fam: 'pump',
+    { id: 'svd', name: 'SVD Dragunov', cls: 'sniper', fam: 'marksman',
+      mag: 10, rpm: 110, dmg: 88, dmgFar: 78, near: 55, far: 120, hs: 2.4, auto: false,
+      ads: 0.40, move: 0.86, reload: 3.0, rec: [2.6, 0.7], spread: 4.6, mv: 830,
+      blurb: 'Semi-automatic and not quite a one-shot, which is the trade it was built to make.' },
+    { id: 'lee', name: 'Lee-Enfield No.4', cls: 'sniper', fam: 'bolt',
+      mag: 10, rpm: 58, bolt: 1.05, dmg: 96, dmgFar: 90, near: 62, far: 130, hs: 3.0, auto: false,
+      ads: 0.43, move: 0.89, reload: 4.2, rec: [3.2, 0.8], spread: 5.8, mv: 744,
+      /* NO oneShot, and 96 rather than 100, which is the trade this
+         rifle is for: twice the magazine and half again the bolt speed
+         of anything else in the class, in exchange for needing the
+         second round on a body shot. mpdata.test.js caught the first
+         draft, where it was flagged oneShot and did 96 -- a rifle
+         that promised a kill it could not deliver. */
+      blurb: 'Ten rounds and the fastest bolt anybody ever fitted to a rifle. It still needs two on a sprinter.' },
+    { id: 'arctic', name: 'Arctic AW', cls: 'sniper', fam: 'bolt',
+      mag: 5, rpm: 46, bolt: 1.30, dmg: 108, dmgFar: 100, near: 80, far: 160, hs: 3.0, auto: false,
+      ads: 0.50, move: 0.82, reload: 3.4, rec: [4.2, 1.0], spread: 6.2, mv: 936,
+      oneShot: 'chest',
+      blurb: 'An aluminium chassis with a rifle floating inside it. Nothing it touches can move.' },
+    { id: 'springfield', name: 'Springfield A4', cls: 'sniper', fam: 'bolt',
+      mag: 5, rpm: 44, bolt: 1.35, dmg: 100, dmgFar: 95, near: 68, far: 138, hs: 3.0, auto: false,
+      ads: 0.46, move: 0.88, reload: 3.7, rec: [3.6, 0.8], spread: 6.2, mv: 823,
+      oneShot: 'chest',
+      blurb: 'The Great War rifle with a telescope screwed to it, and the bolt bent down to clear it.' },
+    { id: 'longwake', name: 'Longwake .338', cls: 'sniper', fam: 'marksman',
+      mag: 8, rpm: 96, dmg: 112, dmgFar: 104, near: 85, far: 175, hs: 2.8, auto: false,
+      ads: 0.54, move: 0.80, reload: 3.6, rec: [5.0, 1.2], spread: 6.8, mv: 915,
+      oneShot: 'chest', pierce: 1,
+      blurb: 'The whole action sits behind the trigger, so it carries a thirty-inch barrel like a carbine.' },
+
+    /* ---------------- SHOTGUNS (13) ---------------- */
+    { id: 'scatter', name: 'Scattergun', cls: 'shotgun', fam: 'pump',
       mag: 6, rpm: 70, dmg: 22, dmgFar: 6, near: 9, far: 19, hs: 1.3, auto: false, pellets: 8,
       ads: 0.30, move: 0.96, reload: 0.55, reloadKind: 'shell', rec: [2.3, 0.7], spread: 6.5, mv: 380,
       blurb: 'Eight pellets, one pump, and a reload you can stop halfway through.' },
-    { id: 'sawnoff', name: 'Sawn-Off', cls: 'special', fam: 'pump',
+    { id: 'sawnoff', name: 'Sawn-Off', cls: 'shotgun', fam: 'pump',
       mag: 2, rpm: 200, dmg: 26, dmgFar: 4, near: 7, far: 14, hs: 1.3, auto: false, pellets: 10,
       ads: 0.22, move: 1.05, reload: 2.1, rec: [3.8, 1.7], spread: 10.0, mv: 350,
       blurb: 'Two barrels, no stock, and the range of an angry handshake.' },
-    { id: 'breakwater', name: 'Breakwater', cls: 'special', fam: 'auto12',
+    { id: 'breakwater', name: 'Breakwater', cls: 'shotgun', fam: 'auto12',
       mag: 8, rpm: 180, dmg: 18, dmgFar: 5, near: 10, far: 20, hs: 1.3, pellets: 8,
       ads: 0.32, move: 0.94, reload: 0.5, reloadKind: 'shell', rec: [1.1, 0.4], spread: 6.0, mv: 380,
       blurb: 'Self-loading twelve gauge. You can hold the trigger down. People do.' },
+    { id: 'trench', name: 'Trench Gun', cls: 'shotgun', fam: 'pump',
+      mag: 6, rpm: 78, dmg: 23, dmgFar: 7, near: 10, far: 20, hs: 1.3, auto: false, pellets: 9,
+      ads: 0.29, move: 0.95, reload: 0.52, reloadKind: 'shell', rec: [2.4, 0.8], spread: 6.2, mv: 390,
+      melee: 1.6,
+      blurb: 'Nineteen-seventeen, and the reason the other side complained to the Hague about it.' },
+    { id: 'coach', name: 'Coach Gun', cls: 'shotgun', fam: 'breakopen',
+      mag: 2, rpm: 210, dmg: 25, dmgFar: 6, near: 11, far: 22, hs: 1.3, auto: false, pellets: 9,
+      ads: 0.26, move: 0.99, reload: 2.2, rec: [3.4, 1.4], spread: 7.2, mv: 400,
+      blurb: 'Two barrels side by side and the hammers out where you can see them. Then two and a half seconds.' },
+    { id: 'longshore', name: 'Longshore O/U', cls: 'shotgun', fam: 'breakopen',
+      mag: 2, rpm: 260, dmg: 27, dmgFar: 7, near: 12, far: 24, hs: 1.4, auto: false, pellets: 8,
+      ads: 0.28, move: 0.97, reload: 2.3, rec: [3.2, 1.2], spread: 5.4, mv: 410,
+      blurb: 'Stacked instead of paired, so there is one rib to look down and it shoots where you look.' },
+    { id: 'grinder', name: 'Grinder 12', cls: 'shotgun', fam: 'auto12',
+      mag: 20, rpm: 300, dmg: 15, dmgFar: 4, near: 8, far: 17, hs: 1.2, pellets: 8,
+      ads: 0.38, move: 0.86, reload: 4.6, rec: [1.0, 0.5], spread: 7.0, mv: 370,
+      blurb: 'Twenty shells on a drum and a trigger that does not care how many are left.' },
+    { id: 'ranger', name: 'Ranger Lever', cls: 'shotgun', fam: 'lever',
+      mag: 5, rpm: 88, dmg: 24, dmgFar: 6, near: 10, far: 21, hs: 1.3, auto: false, pellets: 8,
+      ads: 0.27, move: 0.97, reload: 0.58, reloadKind: 'shell', rec: [2.6, 0.9], spread: 6.6, mv: 385,
+      blurb: 'Worked by throwing a hoop forward and catching it. Faster than a pump if your hand knows how.' },
+    { id: 'kestrel12', name: 'Kestrel 12', cls: 'shotgun', fam: 'pump',
+      mag: 14, rpm: 74, dmg: 22, dmgFar: 6, near: 9, far: 19, hs: 1.3, auto: false, pellets: 9,
+      ads: 0.31, move: 0.94, reload: 0.50, reloadKind: 'shell', rec: [2.2, 0.7], spread: 6.4, mv: 380,
+      blurb: 'Two magazine tubes, a switch between them, and the whole action behind the trigger.' },
+    { id: 'marshback', name: 'Marshback Auto', cls: 'shotgun', fam: 'auto12',
+      mag: 5, rpm: 200, dmg: 20, dmgFar: 5, near: 10, far: 21, hs: 1.3, pellets: 8,
+      ads: 0.30, move: 0.93, reload: 0.54, reloadKind: 'shell', rec: [1.6, 0.6], spread: 6.0, mv: 390,
+      blurb: 'The barrel comes back with the bolt, which is why the receiver has a hump on it.' },
+    { id: 'doorbreaker', name: 'Doorbreaker', cls: 'shotgun', fam: 'pump',
+      mag: 4, rpm: 82, dmg: 26, dmgFar: 4, near: 7, far: 15, hs: 1.3, auto: false, pellets: 10,
+      ads: 0.20, move: 1.06, reload: 0.48, reloadKind: 'shell', rec: [3.6, 1.5], spread: 9.5, mv: 350,
+      blurb: 'Fourteen inches, no stock, and a ring of teeth on the muzzle for standing it off a hinge.' },
+    { id: 'carousel', name: 'Carousel 12', cls: 'shotgun', fam: 'lever',
+      mag: 12, rpm: 150, dmg: 19, dmgFar: 5, near: 9, far: 18, hs: 1.2, auto: false, pellets: 8,
+      ads: 0.34, move: 0.90, reload: 5.0, rec: [2.0, 0.8], spread: 7.4, mv: 375,
+      blurb: 'Twelve rounds on a spring-wound cylinder as wide as your hand. Winding it back up takes a while.' },
+    { id: 'anvil', name: 'Anvil 8-Bore', cls: 'shotgun', fam: 'breakopen',
+      mag: 1, rpm: 60, dmg: 96, dmgFar: 34, near: 14, far: 26, hs: 1.5, auto: false, pellets: 1,
+      ads: 0.44, move: 0.80, reload: 1.9, rec: [8.0, 2.6], spread: 3.0, mv: 440,
+      slug: true,
+      blurb: 'One barrel, one shell, and a bore you could post a letter down. It moves you as much as him.' },
+
+    /* ---------------- SPECIAL (2) ---------------- */
     { id: 'crossbow', name: 'Crossbow', cls: 'special', fam: 'exotic',
       mag: 1, rpm: 30, dmg: 120, dmgFar: 120, near: 200, far: 200, hs: 2.0, auto: false,
       ads: 0.40, move: 0.95, reload: 1.9, rec: [0.4, 0.1], spread: 2.0, mv: 105,
@@ -410,9 +496,17 @@
   ];
   var MAX_FITTED = 5;
 
-  var GUNCLS = ['assault', 'smg', 'lmg', 'special', 'pistol', 'launcher'];
-  var LONGARM = ['assault', 'smg', 'lmg', 'special'];
-  var SHOTGUNS = ['scatter', 'sawnoff', 'breakwater'];
+  var GUNCLS = ['assault', 'smg', 'lmg', 'sniper', 'shotgun', 'special',
+    'pistol', 'launcher'];
+  var LONGARM = ['assault', 'smg', 'lmg', 'sniper', 'shotgun'];
+  /* Thirteen of them now, and they are a CLASS rather than a note in
+     the Special bin. Kept as an explicit list all the same, because
+     what this is used for is "does a choke thread onto this" -- a
+     question about the muzzle, not about the tab it is filed under,
+     and the Anvil is an eight-bore that will not take one. */
+  var SHOTGUNS = ['scatter', 'sawnoff', 'breakwater', 'trench', 'coach',
+    'longshore', 'grinder', 'ranger', 'kestrel12', 'marshback',
+    'doorbreaker', 'carousel', 'anvil'];
 
   var ATTACHMENTS = [
 
@@ -432,16 +526,22 @@
     { id: 'o-2x', slot: 'optic', name: 'Marksman 2x', lvl: 11, classes: LONGARM.concat(['pistol']),
       blurb: 'Twice, which is exactly enough to read a face across a street.',
       fold: function (w) { return { sightH: w.sightH + 0.015, sightFov: 0.62, ads: w.ads * 1.08, adsSpread: w.adsSpread * 0.70 }; } },
-    { id: 'o-34x', slot: 'optic', name: 'Recon 3.4x', lvl: 14, classes: ['assault', 'lmg', 'special'],
+    { id: 'o-34x', slot: 'optic', name: 'Recon 3.4x', lvl: 14, classes: ['assault', 'lmg', 'sniper'],
       blurb: 'Reads a name plate at sixty metres and nothing at six.',
       fold: function (w) { return { sightH: w.sightH + 0.016, sightFov: 0.40, ads: w.ads * 1.16, adsSpread: w.adsSpread * 0.56 }; } },
-    { id: 'o-4x', slot: 'optic', name: 'Patrol 4x', lvl: 17, classes: ['assault', 'lmg', 'special'],
+    { id: 'o-4x', slot: 'optic', name: 'Patrol 4x', lvl: 17, classes: ['assault', 'lmg', 'sniper'],
       blurb: 'Chevron reticle with a drop ladder under it.',
       fold: function (w) { return { sightH: w.sightH + 0.017, sightFov: 0.34, ads: w.ads * 1.22, adsSpread: w.adsSpread * 0.48 }; } },
-    { id: 'o-7x', slot: 'optic', name: 'Sniper 7x', lvl: 12, classes: ['special'], fams: ['bolt', 'amr'],
+    /* fams, and it EXCLUDES something: the two self-loading marksman
+       rifles take glass but not this much of it. Without the family
+       line both of these fitted all ten snipers and the check that
+       some attachments are family-only went from four to two. */
+    { id: 'o-7x', slot: 'optic', name: 'Sniper 7x', lvl: 12, classes: ['sniper'],
+      fams: ['bolt', 'amr'],
       blurb: 'Seven times and no use at all inside a room.',
       fold: function (w) { return { sightH: w.sightH + 0.020, sightFov: 0.22, ads: w.ads * 1.34, adsSpread: w.adsSpread * 0.26, scoped: true }; } },
-    { id: 'o-12x', slot: 'optic', name: 'Long Range 12x', lvl: 21, classes: ['special'], fams: ['bolt', 'amr'],
+    { id: 'o-12x', slot: 'optic', name: 'Long Range 12x', lvl: 21, classes: ['sniper'],
+      fams: ['bolt', 'amr'],
       blurb: 'You can hold your breath on it. You will need to.',
       fold: function (w) { return { sightH: w.sightH + 0.022, sightFov: 0.14, ads: w.ads * 1.52, adsSpread: w.adsSpread * 0.14, scoped: true, holdBreath: true }; } },
     { id: 'o-thermal', slot: 'optic', name: 'Thermal Optic', lvl: 24, classes: LONGARM,
@@ -479,10 +579,14 @@
     { id: 'm-annihilator', slot: 'muzzle', name: 'Mark One Annihilator', lvl: 25, classes: LONGARM,
       blurb: 'Recoil, very nearly gone. Weighs as much as the barrel.',
       fold: function (w) { return { rec: [w.rec[0] * 0.30, w.rec[1] * 0.34], ads: w.ads * 1.18, move: w.move * 0.95, loud: true }; } },
-    { id: 'm-chokefull', slot: 'muzzle', name: 'Full Choke', lvl: 4, classes: ['special'], fams: ['pump', 'auto12'],
+    /* A choke threads into a barrel that is bored for one. The lever
+       gun and the revolver are not, and neither is an eight-bore. */
+    { id: 'm-chokefull', slot: 'muzzle', name: 'Full Choke', lvl: 4, classes: ['shotgun'],
+      fams: ['pump', 'auto12', 'breakopen'],
       blurb: 'Squeezes the pattern. Reaches further and forgives less.',
       fold: function (w) { return { spread: w.spread * 0.58, near: w.near * 1.45, far: w.far * 1.35 }; } },
-    { id: 'm-duckbill', slot: 'muzzle', name: 'Duckbill', lvl: 12, classes: ['special'], fams: ['pump', 'auto12'],
+    { id: 'm-duckbill', slot: 'muzzle', name: 'Duckbill', lvl: 12, classes: ['shotgun'],
+      fams: ['pump', 'auto12', 'breakopen'],
       blurb: 'Spreads the pattern sideways, into a doorway-shaped slot.',
       fold: function (w) { return { spreadX: 2.4, spreadY: 0.5, near: w.near * 0.9 }; } },
 
@@ -510,13 +614,13 @@
     { id: 'b-match', slot: 'barrel', name: 'Match Grade Barrel', lvl: 16, classes: LONGARM.concat(['pistol']),
       blurb: 'Cut on a good day by somebody who cared. Tightest sights in the game.',
       fold: function (w) { return { adsSpread: w.adsSpread * 0.62, spread: w.spread * 0.94, ads: w.ads * 1.08 }; } },
-    { id: 'b-recon', slot: 'barrel', name: 'Recon Barrel', lvl: 18, classes: ['assault', 'smg', 'special'],
+    { id: 'b-recon', slot: 'barrel', name: 'Recon Barrel', lvl: 18, classes: ['assault', 'smg', 'sniper', 'shotgun'],
       blurb: 'Anybody you hit and do not kill is outlined for three seconds.',
       fold: function (w) { return { mark: 3.0, dmg: w.dmg * 0.95 }; } },
-    { id: 'b-cqb', slot: 'barrel', name: 'CQB Barrel', lvl: 7, classes: ['smg', 'special', 'assault'],
+    { id: 'b-cqb', slot: 'barrel', name: 'CQB Barrel', lvl: 7, classes: ['smg', 'shotgun', 'assault'],
       blurb: 'Sawn back to the gas block. Hipfire tightens, everything else suffers.',
       fold: function (w) { return { spread: w.spread * 0.66, ads: w.ads * 0.88, far: w.far * 0.74, dmgFar: w.dmgFar * 0.88, move: w.move * 1.05 }; } },
-    { id: 'b-marksman', slot: 'barrel', name: 'Marksman Barrel', lvl: 20, classes: ['assault', 'special', 'lmg'],
+    { id: 'b-marksman', slot: 'barrel', name: 'Marksman Barrel', lvl: 20, classes: ['assault', 'sniper', 'lmg'],
       blurb: 'Long, heavy, and it does not want to be moved once it is pointed.',
       fold: function (w) { return { near: w.near * 1.35, far: w.far * 1.30, dmgFar: w.dmgFar * 1.12, ads: w.ads * 1.20, move: w.move * 0.92 }; } },
     { id: 'b-shrouded', slot: 'barrel', name: 'Shrouded Barrel', lvl: 15, classes: LONGARM,
@@ -536,7 +640,7 @@
     { id: 'u-angle', slot: 'under', name: 'Angled Grip', lvl: 5, classes: LONGARM,
       blurb: 'Rolls the gun into the shoulder. Quicker up, worse held.',
       fold: function (w) { return { ads: w.ads * 0.87, rec: [w.rec[0] * 1.06, w.rec[1] * 0.86] }; } },
-    { id: 'u-bipod', slot: 'under', name: 'Bipod', lvl: 10, classes: ['lmg', 'assault', 'special'],
+    { id: 'u-bipod', slot: 'under', name: 'Bipod', lvl: 10, classes: ['lmg', 'assault', 'sniper'],
       blurb: 'Put it on something and the recoil stops being a problem you have.',
       fold: function (w) { return { bipod: true, move: w.move * 0.96 }; } },
     { id: 'u-ranger', slot: 'under', name: 'Ranger Foregrip', lvl: 12, classes: LONGARM,
@@ -567,7 +671,7 @@
       not: ['mp40', 'sten'],
       blurb: 'Enormous. The gun stops being something you carry and starts being something you hold.',
       fold: function (w) { return { mag: Math.round(w.mag * 2.4), reload: w.reload * 1.55, move: w.move * 0.94, ads: w.ads * 1.10 }; } },
-    { id: 'g-speed', slot: 'mag', name: 'Speed Loader', lvl: 6, classes: ['special', 'pistol'],
+    { id: 'g-speed', slot: 'mag', name: 'Speed Loader', lvl: 6, classes: ['shotgun', 'sniper', 'pistol'],
       fams: ['pump', 'auto12', 'handcannon', 'bolt'],
       blurb: 'All of them at once instead of one at a time.',
       fold: function (w) { return { reload: w.reload * 0.55, reloadKind: 'mag' }; } },
@@ -594,7 +698,7 @@
     { id: 's-heavy', slot: 'stock', name: 'Heavy Stock', lvl: 7, classes: LONGARM,
       blurb: 'Weight in the butt. The sight picture stops drifting.',
       fold: function (w) { return { sway: 0.45, rec: [w.rec[0] * 0.84, w.rec[1] * 0.78], move: w.move * 0.94 }; } },
-    { id: 's-none', slot: 'stock', name: 'No Stock', lvl: 11, classes: ['smg', 'special'],
+    { id: 's-none', slot: 'stock', name: 'No Stock', lvl: 11, classes: ['smg', 'shotgun'],
       blurb: 'Taken off entirely. You are quick, and you cannot hold it.',
       fold: function (w) { return { move: w.move * 1.12, ads: w.ads * 0.82, spread: w.spread * 1.20, rec: [w.rec[0] * 1.35, w.rec[1] * 1.40] }; } },
     { id: 's-padded', slot: 'stock', name: 'Padded Stock', lvl: 9, classes: LONGARM,
@@ -606,7 +710,7 @@
     { id: 's-wire', slot: 'stock', name: 'Wire Stock', lvl: 5, classes: ['smg', 'lmg'],
       blurb: 'A folded rod. Light, cheap and it rattles.',
       fold: function (w) { return { move: w.move * 1.08, ads: w.ads * 0.92, rec: [w.rec[0] * 1.22, w.rec[1] * 1.18] }; } },
-    { id: 's-marksman', slot: 'stock', name: 'Marksman Stock', lvl: 17, classes: ['special', 'assault', 'lmg'],
+    { id: 's-marksman', slot: 'stock', name: 'Marksman Stock', lvl: 17, classes: ['sniper', 'assault', 'lmg'],
       blurb: 'Cheek riser and an adjustable comb. Built to be still.',
       fold: function (w) { return { sway: 0.30, holdBreath: true, adsSpread: w.adsSpread * 0.80, move: w.move * 0.90 }; } },
 
@@ -1031,7 +1135,21 @@
      multiplies it produces NaN, and a NaN in a stat bar is a stat bar
      that silently stops existing -- so the defaults live here, once,
      rather than as a guard in sixty-nine places. */
-  var ADS_CONE = { special: 0.06, assault: 0.16, pistol: 0.22, smg: 0.28, lmg: 0.30, launcher: 0.40 };
+/* A TABLE KEYED BY CLASS, AND THERE ARE TWO MORE CLASSES NOW.
+ *
+   Splitting the snipers and the shotguns out of Special left this
+   reading `ADS_CONE['sniper']`, which is undefined, which multiplies to
+   NaN, which every optic in the game then folded into its own answer.
+   mpdata.test.js named it on the first run: "no attachment produces a
+   NaN on any gun it fits -- remington+o-reflex.adsSpread". Any lookup
+   by class is a list of the classes, and adding one means visiting
+   every list. The ART table in the shell is the other one, and it has
+   a fallback so it only went quiet rather than wrong -- which is worse,
+   not better. */
+  var ADS_CONE = {
+    sniper: 0.05, special: 0.06, assault: 0.16, pistol: 0.22,
+    shotgun: 0.24, smg: 0.28, lmg: 0.30, launcher: 0.40,
+  };
 
   function baseStats(g) {
     return {
