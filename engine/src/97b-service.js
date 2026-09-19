@@ -404,8 +404,12 @@ function svcFurniture(g, K) {
           band(g, H.x0 + 0.010, H.x1 - 0.008, 0, 0.0022, 8,
             Math.cos(th) * H.r, Math.sin(th) * H.r);
         }
-      } else {
-        /* Cooling slots, cut as shallow bands rather than real holes. */
+      } else if (H.slots !== false) {
+        /* Cooling slots, cut as shallow bands rather than real holes.
+           `slots: false` for a sleeve that has none -- a launcher's
+           tube is smooth, and dressing one in M4 cooling slots is why
+           every launcher in the game photographed as a pipe with four
+           octagonal discs threaded onto it. */
         for (let i = 0; i < 4; i++) {
           const x = H.x0 + 0.018 + i * (H.x1 - H.x0 - 0.036) / 3;
           for (const th of [0.9, 2.24, TAU - 0.9, TAU - 2.24]) {
@@ -1135,7 +1139,12 @@ const AMMO_KINDS = {
    One rule, applied from what the handguard and the stock say they are
    made of, so a row cannot say 'wood' and then render in plastic. */
 function svcMats(K) {
-  const wooden = (K.hg && K.hg.kind === 'wood') || (K.stock && K.stock.kind === 'wood');
+  /* `furniture: 'wood'` for a weapon whose woodwork is not a stock or
+     a slab forend -- the RPG-7's heat shield is a wooden sleeve round
+     the tube, built as a `tube` handguard, and without this it came
+     out in grey polymer on a weapon that has never had any. */
+  const wooden = (K.hg && K.hg.kind === 'wood') || (K.stock && K.stock.kind === 'wood')
+    || K.furniture === 'wood';
   const out = {
     steel: ARM_MAT.blued,
     wood: wooden ? ARM_MAT.walnut : ARM_MAT.poly,
@@ -1396,6 +1405,7 @@ function makeServiceArm(kind) {
   svcDetails(geos.steel, K);
   svcBipod(geos.steel, K);
   svcRotary(geos.steel, K);
+  svcWarhead(geos.steel, K);
   geos.wood = new Geometry(); svcFurniture(geos.wood, K);
   /* A grip is furniture on a wooden gun and part of the frame on a
      polymer one, but it is always its own material -- it is the only
@@ -1435,6 +1445,14 @@ function serviceArm(E, kind, opts) {
   const o = K.origin;
   body.boreAt = -o.y;
   body.muzzleAt = K.muzzle - o.x;
+  /* HOW LONG THE WEAPON ACTUALLY IS, which is not where the round
+     leaves it. A Panzerfaust's warhead stands 200 mm out in front of
+     the muzzle and an RPG's grenade 310 mm, so anything that frames,
+     bounds or reaches for the far end of the model has to ask this and
+     not muzzleAt -- the studio rig framed on muzzleAt and cropped the
+     RPG's grenade off the side of the picture. The muzzle flash still
+     belongs at muzzleAt, because that is where the gas is. */
+  body.tipAt = K.warhead ? K.warhead.x1 - o.x : body.muzzleAt;
   body.sightAt = K.sight.y - o.y;
   body.ejectPort = K.port
     ? [K.port.x0 + 0.020 - o.x, K.port.up * 0.5 - o.y, K.rec.w + 0.004]
@@ -1894,6 +1912,58 @@ Object.assign(SERVICE_KINDS, {
     rotary: 6,
   }),
 });
+
+/* THE THING THE LAUNCHER LAUNCHES.
+ *
+ * A Panzerfaust and an RPG-7 are unrecognisable without the grenade on
+ * the front and unmistakable with it -- it is the entire silhouette,
+ * more than the tube is. Both were carried in the table as a `hg`
+ * TUBE HANDGUARD with a big radius, which is a reasonable-sounding
+ * hack until you remember that a tube handguard gets dressed in four
+ * rings of cooling slots: the Panzerfaust's warhead rendered as a cage
+ * of octagonal plates threaded on a pipe.
+ *
+ * Both profiles are solids of revolution, so the outline runs forward
+ * along the axis and back along the surface -- counter-clockwise in
+ * (x, radius), which is what puts the normals outward. `spin` says so
+ * at its own definition and the tube handguard was wound the wrong way
+ * for months.
+ */
+function svcWarhead(g, K) {
+  const H = K.warhead;
+  if (!H) return;
+  const R = H.r, x0 = H.x0, x1 = H.x1, L = x1 - x0;
+  if (H.kind === 'faust') {
+    /* Panzerfaust 60: a 149 mm bulb on a 44 mm tube, which is the only
+       launcher silhouette anybody can name from across a street.
+       Blunt ogive, widest about a third back, then a long cone down
+       onto the tube. */
+    spin(g, [
+      [x0, 0.0000], [x1, 0.0000],
+      [x1, 0.0060],
+      [x1 - L * 0.10, R * 0.46],
+      [x1 - L * 0.22, R * 0.82],
+      [x1 - L * 0.36, R],
+      [x0 + L * 0.34, R * 0.96],
+      [x0 + L * 0.06, R * 0.50],
+      [x0, R * 0.34],
+    ], 26, 34);
+  } else if (H.kind === 'pg7') {
+    /* PG-7V: a tail boom out of the muzzle, a boat tail up to the
+       85 mm body, a long ogive and the fuze probe on the nose. The
+       probe is 35 mm of nothing and it is the detail that says RPG. */
+    spin(g, [
+      [x0, 0.0000], [x1, 0.0000],
+      [x1, 0.0045],
+      [x1 - L * 0.12, 0.0062],
+      [x1 - L * 0.14, 0.0150],
+      [x1 - L * 0.36, R],
+      [x0 + L * 0.34, R],
+      [x0 + L * 0.22, R * 0.36],
+      [x0, R * 0.30],
+    ], 26, 34);
+  }
+}
 
 /* The rotary barrels, which only the minigun has. Six tubes on a circle
    about the bore, a muzzle plate holding their fronts together, and a

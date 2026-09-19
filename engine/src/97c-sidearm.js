@@ -234,8 +234,16 @@ Object.assign(SERVICE_KINDS, {
        muzzle positions now, chosen so the total is right. */
     muzzle: 0.560,
     barrel: { rear: -0.240, r0: 0.0225, r1: 0.0225, bore: 0.0200, step: 0.300 },
-    // The warhead, out front and much fatter than the tube.
-    hg: { kind: 'tube', x0: 0.430, x1: 0.560, r: 0.0720 },
+    /* THE WARHEAD, which is a warhead now and not a handguard.
+       Carrying it as `hg: { kind: 'tube', r: 0.072 }` was a reasonable
+       hack until you remember that a tube handguard gets four rings of
+       cooling slots: it rendered as a cage of octagonal plates on a
+       pipe. It also sat BEHIND the muzzle, inside the tube's own
+       length, when the whole point of a Panzerfaust is that the bulb
+       stands out in front on a stick. 0.555 to 0.755 puts the overall
+       length at 1.00 m, which is a Panzerfaust 60 exactly. */
+    hg: null,
+    warhead: { kind: 'faust', x0: 0.555, x1: 0.755, r: 0.0720 },
     rec: { rear: -0.100, front: 0.020, up: 0.0130, down: 0.0230, w: 0.0120 },
     grip: { x: -0.056, y: -0.0250, len: 0.100, rake: 0.30 },
     sight: { y: 0.0420, frontX: 0.230, rearX: 0.040 },
@@ -247,7 +255,9 @@ Object.assign(SERVICE_KINDS, {
   bazooka: tubeSpec({
     muzzle: 1.190,
     barrel: { rear: -0.180, r0: 0.0320, r1: 0.0320, bore: 0.0300, step: 0.600 },
-    hg: { kind: 'tube', x0: 0.300, x1: 0.460, r: 0.0370 },
+    // A smooth collar round the grip section: an M1's tube has no
+    // cooling slots in it and never did.
+    hg: { kind: 'tube', x0: 0.300, x1: 0.460, r: 0.0370, slots: false },
     rec: { rear: -0.060, front: 0.060, up: 0.0160, down: 0.0300, w: 0.0150 },
     grip: { x: -0.020, y: -0.0320, len: 0.112, rake: 0.32 },
     trigger: { x: 0.006 },
@@ -261,8 +271,16 @@ Object.assign(SERVICE_KINDS, {
   rpg7: tubeSpec({
     muzzle: 0.650,
     barrel: { rear: -0.300, r0: 0.0210, r1: 0.0210, bore: 0.0200, step: 0.450 },
-    // The mid-body flare where the tube widens round the chamber.
-    hg: { kind: 'tube', x0: 0.180, x1: 0.360, r: 0.0420 },
+    // The mid-body flare where the tube widens round the chamber --
+    // smooth, like the rest of an RPG's tube.
+    hg: { kind: 'tube', x0: 0.180, x1: 0.360, r: 0.0420, slots: false },
+    // The heat shield is wood on a real one, not grey polymer.
+    furniture: 'wood',
+    /* And the grenade, which was simply absent: an RPG-7 without the
+       PG-7 standing off the muzzle is a length of pipe. Tail boom out
+       of the tube, boat tail up to the 85 mm body, long ogive, fuze
+       probe on the nose. */
+    warhead: { kind: 'pg7', x0: 0.640, x1: 0.960, r: 0.0425 },
     rec: { rear: -0.140, front: 0.030, up: 0.0150, down: 0.0280, w: 0.0140 },
     grip: { x: -0.090, y: -0.0290, len: 0.108, rake: 0.36 },
     trigger: { x: -0.062 },
@@ -276,7 +294,8 @@ Object.assign(SERVICE_KINDS, {
   stinger: tubeSpec({
     muzzle: 0.680,
     barrel: { rear: -0.300, r0: 0.0350, r1: 0.0350, bore: 0.0320, step: 0.380 },
-    hg: { kind: 'tube', x0: 0.200, x1: 0.420, r: 0.0395 },
+    // A sealed glass-fibre launch tube. No slots in it either.
+    hg: { kind: 'tube', x0: 0.200, x1: 0.420, r: 0.0395, slots: false },
     rec: { rear: -0.170, front: 0.010, up: 0.0130, down: 0.0420, w: 0.0230, e: 4.0 },
     grip: { x: -0.110, y: -0.0420, len: 0.116, rake: 0.30 },
     trigger: { x: -0.082 },
