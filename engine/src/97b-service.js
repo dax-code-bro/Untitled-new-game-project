@@ -175,9 +175,45 @@ function svcSights(g, K) {
   svcSlab(g, [[S.frontX - 0.0022, S.y + 0.002, -0.004, 0.0020, 4],
     [S.frontX + 0.0022, S.y + 0.002, -0.004, 0.0020, 4]]);
   if (S.front === 'hood') {
-    spin(g, [[S.frontX - 0.016, K.barrel.r1 + 0.004], [S.frontX + 0.016, K.barrel.r1 + 0.004],
-      [S.frontX + 0.016, S.y - 0.001], [S.frontX + 0.010, S.y + 0.004],
-      [S.frontX - 0.010, S.y + 0.004], [S.frontX - 0.016, S.y - 0.001]], 18, 30);
+    /* A HOOD IS A RING ON A POST, NOT A WHEEL ON THE BARREL.
+     *
+       This was one `spin` -- a surface of revolution whose profile ran
+       from the barrel's own radius all the way out to the top of the
+       sight -- so it swept a SOLID DISC forty millimetres across,
+       centred on the bore, sitting in front of the handguard. Reported
+       from the photographs as "this weird circle around its barrel",
+       which is exactly what it was, and it is on every hooded rifle in
+       the table: the AK, the AK-74, the Garand, the SVT, the MG 34 and
+       the MG 42 all carry it.
+
+       The real thing is two separate objects. A BASE, a small block
+       clamped to the barrel, and a HOOD, a thin ring about eighteen
+       millimetres across standing on top of it with the post inside.
+       You see through the ring. The old geometry could not be seen
+       through at all -- it was filled in from the barrel outwards,
+       which is why it read as a wheel rather than as a sight.
+
+       The ring is centred so its TOP lands on the sight line, because
+       that is what the hood is for: the post's tip and the top of the
+       hood are at the same height, and a shooter lines up on the post
+       with the ring around it. */
+    const hr = 0.0090;                 // the ring's outer radius
+    const hy = S.y - hr + 0.0016;      // so the top of it sits on the sight line
+    band(g, S.frontX - 0.011, S.frontX + 0.011, hr - 0.0016, hr, 20, hy, 0);
+    /* The base: barrel to ring, wide enough to read as a clamp rather
+       than as a wire.
+
+       A NEGATIVE `hb` IS NOT A DOWNWARD EXTENT. roundRect takes
+       (front depth, back depth, half width), and for the back half it
+       multiplies by sign(cos) -- so a negative back depth folds that
+       side over to POSITIVE y. It is how the sight post above this
+       line stands on top of the barrel instead of straddling the bore,
+       and my first go at this base used it as though it meant "six
+       millimetres below centre", which put the clamp around the bore
+       and left the ring floating above it. */
+    const hbot = hy - hr;              // the underside of the ring
+    svcSlab(g, [[S.frontX - 0.010, hbot + 0.0012, -(K.barrel.r1 - 0.0030), 0.0062, 4],
+      [S.frontX + 0.010, hbot + 0.0012, -(K.barrel.r1 - 0.0030), 0.0062, 4]]);
   } else if (S.front === 'ears') {
     for (const sz of [-1, 1]) {
       strut(g, [S.frontX, K.barrel.r1, sz * 0.0085], [S.frontX, S.y + 0.004, sz * 0.0070],
@@ -578,6 +614,68 @@ function svcDetails(g, K) {
       }
     }
   }
+
+  /* THE SELECTOR, which is the part a player asked for by name --
+     "the semi auto and full auto trigger thing that you flip up on
+     some guns". Every weapon in this table had a trigger and no way
+     to choose what it did, and it is one of the few controls on a
+     rifle big enough to read at arm's length.
+
+     Two shapes, because there are two families and they do not look
+     remotely alike.
+
+       A LEVER: a short paddle on the left of the receiver, just above
+       the pistol grip, where a thumb sits. The Western pattern -- M16,
+       MP5, StG, G3, and almost everything after them.
+
+       A PLATE: the AK's, and it is enormous. A stamped bar the length
+       of the ejection port, on the RIGHT side, with a bent tab at the
+       top for the thumb. It is one of the most recognisable things
+       about the rifle and its absence is part of why an AK without one
+       reads as a generic carbine.
+
+     `side` is -1 or +1 in Z. The shapes are drawn at the receiver wall
+     plus a hair, so they stand proud rather than z-fighting it. */
+  const SEL = K.selector;
+  if (SEL && SEL.kind !== 'none') {
+    const sz = SEL.side != null ? SEL.side : -1;
+    const sx = SEL.x != null ? SEL.x : R.rear + 0.052;
+    const sy = SEL.y != null ? SEL.y : -R.down * 0.10;
+    const off = W + 0.0012;
+    if (SEL.kind === 'plate') {
+      /* The bar: long, thin, and standing off the wall. Swept along X
+         so it lies flat against the receiver. */
+      strut(g, [sx - 0.004, sy, sz * off], [sx + 0.062, sy + 0.012, sz * off],
+        roundRect(0.0062, 0.0062, 0.0016, 3.0, 12));
+      // The thumb tab, bent outboard at the top of the travel.
+      strut(g, [sx + 0.058, sy + 0.012, sz * off],
+        [sx + 0.070, sy + 0.020, sz * (off + 0.0060)],
+        roundRect(0.0055, 0.0055, 0.0018, 3.0, 12));
+      /* The detent stops -- the two notches the lever parks in. On a
+         real one these are cut into the receiver, and they are the
+         only reason the lever's position reads as a SETTING rather
+         than as a part that happens to be at an angle. */
+      for (const dy of [0.0, 0.024]) {
+        strut(g, [sx + 0.056, sy + 0.030 + dy, sz * (W + 0.0002)],
+          [sx + 0.056, sy + 0.030 + dy, sz * (W + 0.0014)],
+          ringOutline(0.0022, 8));
+      }
+    } else {
+      // A thumb paddle on a short shaft through the receiver wall.
+      strut(g, [sx, sy, sz * (W - 0.0010)], [sx, sy, sz * (off + 0.0028)],
+        ringOutline(0.0034, 12));
+      strut(g, [sx, sy, sz * (off + 0.0026)],
+        [sx - 0.017, sy - 0.009, sz * (off + 0.0030)],
+        roundRect(0.0044, 0.0044, 0.0017, 3.0, 12));
+      /* SAFE and FIRE, as two marks on the wall. Tiny, and the reason
+         to have them is that a control with no markings beside it
+         reads as a lump rather than as a switch. */
+      for (const [mx, my] of [[-0.013, 0.011], [0.011, 0.011]]) {
+        strut(g, [sx + mx, sy + my, sz * (W + 0.0002)],
+          [sx + mx, sy + my, sz * (W + 0.0009)], ringOutline(0.0013, 6));
+      }
+    }
+  }
 }
 
 /* ==================================================================
@@ -784,6 +882,10 @@ function svcBolt(g, K) {
    ================================================================== */
 
 const SVC_BASE = {
+  /* Every gun gets a selector unless it says otherwise. A bolt rifle
+     and a break gun have none -- there is nothing to select -- and
+     those rows set `selector: null`. */
+  selector: { kind: 'lever', side: -1 },
   muzzle: 0.430,
   barrel: { rear: 0.055, r0: 0.0115, r1: 0.0086, bore: 0.0039, step: 0.130,
     gas: true, gasAt: 0.300, gasR: 0.0062, gasY: 0.0180 },
@@ -793,13 +895,24 @@ const SVC_BASE = {
   charge: { x: 0.030, y: 0.0130, z: 0.0225 },
   hg: { kind: 'wood', x0: 0.120, x1: 0.250, r: 0.0200, w: 0.0195, drop: 0.0250, upper: 0.0230 },
   grip: { x: -0.082, y: -0.0180, len: 0.108, rake: 0.40 },
-  /* `clear` makes the magazine body smoked polymer so the column of
-     rounds inside it reads. Every magazine in the game is built this
-     way: real modern magazines are translucent for exactly this reason
-     -- so the man holding it can count what is left -- and it is worth
-     more than the strict period accuracy of an opaque steel box. */
+  /* `clear` MAKES A MAGAZINE TRANSLUCENT, AND IT IS NOW OFF BY
+     DEFAULT. It used to be on for everything, with a note arguing
+     that seeing the column of rounds is worth more than period
+     accuracy. The note was defending a real thing -- the rounds are
+     modelled and they are nice -- but the consequence was that every
+     WWII rifle in the rack hung a smoked-plastic box off a wooden
+     stock. A StG 44 and a Kar 98 with translucent magazines do not
+     read as slightly inaccurate; they read as toys, and the report
+     that came back was about exactly that.
+
+     Two rows turn it back on, and only two, because only two of these
+     weapons genuinely have a see-through magazine: the AUG and the
+     P90. Everything else is stamped steel, aluminium or opaque
+     polymer, and the rounds inside it are simply not visible -- which
+     is also why the column now empties from the bottom rather than
+     being the main event. */
   mag: { kind: 'box', x: -0.012, y: -0.0215, len: 0.150, curve: 0.30,
-    w: 0.0125, d: 0.0135, r: 0.055, clear: true },
+    w: 0.0125, d: 0.0135, r: 0.055, clear: false },
   stock: { kind: 'wood', butt: -0.330, comb: 0.0245, drop: 0.0300, w: 0.0195 },
   sight: { y: 0.0335, frontX: 0.355, rearX: 0.020, front: 'ears', rear: 'notch' },
   handle: null, rail: null, bipod: null, rotary: 0,
@@ -1003,6 +1116,8 @@ const SERVICE_KINDS = {
     stock: { kind: 'wood', butt: -0.330, comb: 0.0225, drop: 0.0300 },
     sight: { y: 0.0370, frontX: 0.375, front: 'hood' },
     charge: { x: 0.048, y: 0.0175, z: 0.0215 },
+    // The big stamped bar down the right side. See svcDetails.
+    selector: { kind: 'plate', side: 1, x: 0.020, y: 0.004 },
     mass: 4.8,
   }),
   ak74: svcSpec({
@@ -1014,6 +1129,7 @@ const SERVICE_KINDS = {
     mag: { curve: 0.40, len: 0.165, w: 0.0126, d: 0.0138 },
     grip: { rake: 0.36, len: 0.104 },
     stock: { kind: 'poly', butt: -0.330, comb: 0.0225, drop: 0.0300 },
+    selector: { kind: 'plate', side: 1, x: 0.020, y: 0.004 },
     sight: { y: 0.0370, frontX: 0.378, front: 'hood' },
     charge: { x: 0.048, y: 0.0175, z: 0.0215 },
     mass: 4.4,
@@ -1069,7 +1185,11 @@ const SERVICE_KINDS = {
     port: { x0: -0.140, x1: -0.100, up: 0.0140, down: 0.0020 },
     hg: { kind: 'tube', x0: 0.060, x1: 0.150, r: 0.0230 },
     grip: { x: -0.026, y: -0.0195, len: 0.104, rake: 0.26 },
-    mag: { curve: 0.24, len: 0.155, x: -0.140, y: -0.0230 },
+    /* One of the two magazines in this rack that really is
+       translucent: the AUG's is a smoked polymer box and you can count
+       the rounds in it through the side. See the note on the base
+       row. */
+    mag: { curve: 0.24, len: 0.155, x: -0.140, y: -0.0230, clear: true },
     stock: { kind: 'none' },
     handle: { x0: -0.090, x1: 0.030, y: 0.0420 },
     sight: { y: 0.0500, frontX: 0.035, rearX: -0.060, front: 'ears', rear: 'aperture' },
@@ -1367,8 +1487,11 @@ Object.assign(SERVICE_KINDS, {
     hg: { kind: 'none' },
     grip: { x: 0.012, y: -0.0250, len: 0.100, rake: 0.16 },
     trigger: { x: 0.040 },
+    /* And the other one. The P90's magazine lies along the top of the
+       gun in clear polymer, with the rounds turned sideways inside it
+       -- it is the most visible magazine of any weapon here. */
     mag: { kind: 'stick', x: -0.020, y: 0.0300, len: 0.170, curve: 0.0,
-      w: 0.0170, d: 0.0090 },
+      w: 0.0170, d: 0.0090, clear: true },
     stock: { kind: 'none' },
     handle: { x0: -0.080, x1: 0.010, y: 0.0430 },
     sight: { y: 0.0480, frontX: 0.030, rearX: -0.060, front: 'ears', rear: 'aperture' },
