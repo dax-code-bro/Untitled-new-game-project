@@ -9058,13 +9058,27 @@ function ONSCREEN(game, root, to, from) {
     const q = ndcY(cand);
     if (q != null && q >= FLOOR) return cand;
   }
-  /* A FLAT REACH IS STILL NOT ENOUGH ON EVERY WEAPON, and the next stage
-     -- giving up length as well as drop -- is written and measuring. The
-     Thompson is the one it is for: flattening keeps the fetch 140 mm
-     BEHIND the gun, and on a viewmodel carried below the eye, further
-     back is also further down the glass, so no angle that preserves the
-     length can clear it. Until that is measured, a weapon that cannot be
-     helped keeps its authored point rather than a worse one. */
+  /* AND THE ONE WEAPON THIS DOES NOT FIX IS NOT THIS FUNCTION'S FAULT.
+   *
+     The Thompson still shows its load off screen for 18 per cent of its
+     reload, and the next thing to try looked obvious: give up LENGTH as
+     well as drop, shrinking the reach toward the magazine well, which
+     must converge because at zero length the fetch point IS the well.
+     Built and measured: byte-identical, and the Thompson's lowest point
+     stayed at exactly -1.22 for a third run running.
+
+     That number is the answer. Between the first two runs its on-screen
+     share moved from 78 to 82 per cent while the lowest point did not
+     change by a thousandth -- and no correction to the fetch point can
+     do that, because the fetch point is where the path STARTS and the
+     path only rises from there. So whatever reaches -1.22 on the
+     Thompson is not the thing this function moves: another visible part,
+     at another moment of the reload. Finding which is a measurement
+     nobody has taken yet, and guessing at it from here would be the
+     fourth repair aimed at the wrong object today.
+
+     So a weapon this cannot help keeps its authored point rather than a
+     worse one. */
   /* Nothing on this weapon clears: leave the authored point rather than
      return a worse one. */
   return from;
