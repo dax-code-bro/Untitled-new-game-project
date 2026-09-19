@@ -802,10 +802,23 @@ function svcDetails(g, K) {
   }
 
   /* Sling swivels: one forward, one on the butt. A gun with nowhere to
-     put a sling is a prop. */
-  const fx = K.hg && K.hg.kind !== 'none' ? K.hg.x1 - 0.014 : K.barrel.rear + 0.060;
-  const fy = -(K.hg && K.hg.kind === 'wood' ? K.hg.drop : K.barrel.r1 + 0.010);
-  band(g, fx - 0.0022, fx + 0.0022, 0.0060, 0.0100, 14, fy - 0.006, 0);
+     put a sling is a prop.
+   *
+     AND ONLY WHERE THERE IS SOMETHING TO BOLT ONE TO. The forward
+     swivel was drawn unconditionally, so every pistol in the table --
+     which has neither a handguard nor a stock -- carried a 20 mm steel
+     ring hanging in mid air two centimetres under its barrel, fixed to
+     nothing. It is the small floating O under the Luger, the Webley
+     and the Tokarev in every photograph of them, and it was there
+     because the `hg` branch has an `else` that assumes a barrel to
+     hang it from rather than asking whether the weapon takes a sling
+     at all. A pistol does not. Neither does a sawn-off. */
+  const slung = (K.hg && K.hg.kind !== 'none') || (K.stock && K.stock.kind !== 'none');
+  if (slung) {
+    const fx = K.hg && K.hg.kind !== 'none' ? K.hg.x1 - 0.014 : K.barrel.rear + 0.060;
+    const fy = -(K.hg && K.hg.kind === 'wood' ? K.hg.drop : K.barrel.r1 + 0.010);
+    band(g, fx - 0.0022, fx + 0.0022, 0.0060, 0.0100, 14, fy - 0.006, 0);
+  }
   if (K.stock && K.stock.kind !== 'none') {
     const bx = K.stock.butt + 0.055;
     band(g, bx - 0.0022, bx + 0.0022, 0.0060, 0.0100, 14, -K.stock.drop * 0.92, 0);
@@ -1315,7 +1328,14 @@ const SERVICE_KINDS = {
        inheriting that turned this one into a translucent white slab
        hanging off the side of a steel rifle. The FG42's is an opaque
        box and there are no rounds drawn behind it. */
-    mag: { kind: 'side', x: 0.006, y: 0.002, out: 0.135, z0: 0.019,
+    /* `z0` is where the magazine STARTS, measured out from the centre
+       line, and at 0.019 it began 3.5 mm clear of a receiver whose
+       wall is at 0.0155 -- a twenty-round box hanging in the air
+       alongside the rifle, touching nothing. Found by
+       attached.test.js, which is exactly the fault it was written
+       for: invisible from the hero angle because the magazine points
+       at the camera, and obvious in a plan view nobody takes. */
+    mag: { kind: 'side', x: 0.006, y: 0.002, out: 0.135, z0: 0.0142,
       d: 0.0255, w: 0.0130, clear: false },
     grip: { rake: 0.58, len: 0.112 },
     stock: { kind: 'wood', butt: -0.320, comb: 0.0180, drop: 0.0260, w: 0.0165 },
