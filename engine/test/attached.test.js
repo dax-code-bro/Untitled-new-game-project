@@ -242,10 +242,10 @@ const note = (s) => console.log(`  ..   ${s}`);
 
      What this must NOT become is a number somebody raises to make the
      build green. Raising it is the failure. */
-  /* 130 when the test went in; 72 after the selector detents, the
-     belt and the FG 42's magazine. Lower it in the same commit as
-     every fix. */
-  const BASELINE = 72;
+  /* 130 when the test went in. 77 after the selector detents, 72
+     after the belt, 46 after the magazine catch, 45 after the
+     Webley's top strap. Lower it in the same commit as every fix. */
+  const BASELINE = 45;
   check('no NEW part of any weapon is floating clear of the rest',
     r.adrift.length <= BASELINE,
     `${r.adrift.length} adrift clusters, baseline ${BASELINE}`);

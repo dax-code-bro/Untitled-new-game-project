@@ -774,11 +774,23 @@ function svcDetails(g, K) {
     roundRect(0.0038, 0.0038, 0.0024, 4, 10));
   }
 
-  /* The magazine catch, at the back of the well. */
+  /* The magazine catch, at the back of the well.
+   *
+     BELOW THE RECEIVER, where a catch is and where a thumb can reach
+     it. It was placed off `K.mag.y + 0.006` -- the magazine's own top,
+     which is inside the receiver on every weapon here -- and written
+     with a negative `hf`, so it came out as a 12 mm block buried in
+     the middle of the receiver. Twenty-three weapons had a magazine
+     release you could not see and could not have pressed. Flagged by
+     attached.test.js as a cluster touching nothing, which is exactly
+     what a part sealed inside a solid looks like from outside: the
+     test cannot tell "floating in air" from "buried in steel", and
+     both are wrong. */
   if (K.mag && K.mag.kind !== 'none' && K.mag.kind !== 'pan') {
-    const mx = K.mag.x - K.mag.d - 0.006, my = K.mag.y + 0.006;
-    svcSlab(g, [[mx - 0.008, my + 0.004, 0.009, 0.0060, 4],
-      [mx + 0.004, my + 0.004, 0.009, 0.0060, 4]]);
+    const mx = K.mag.x - K.mag.d - 0.006;
+    const my = -R.down - 0.004;
+    svcSlab(g, [[mx - 0.008, 0.0055, 0.0055, 0.0060, 4],
+      [mx + 0.004, 0.0055, 0.0055, 0.0060, 4]], 0, true, true, my);
   }
 
   /* Two takedown pins through the receiver, which is how every one of
@@ -2112,6 +2124,19 @@ function svcCylinder(g, K) {
   if (C.strap !== false) {
     svcSlab(g, [[x0 - 0.008, 0.0030, 0.0030, 0.0072, 3.4],
       [x1 + 0.014, 0.0030, 0.0030, 0.0068, 3.4]], 0, true, true, r + 0.0034);
+    /* AND THE BLOCK WHERE THE STRAP MEETS THE BARREL'S REAR. The strap
+       sits 7.8 mm above the barrel and ended in the air over it, so
+       after the cylinder went in the Webley's entire barrel was still
+       a separate object -- fifty-seven pieces of it. It LOOKED joined
+       in the photograph because the strap crosses the barrel in
+       silhouette, which is the whole reason attached.test.js exists.
+       On the real weapon this is where the top strap latches down
+       onto the barrel's rib. */
+    const bt = (K.barrel && K.barrel.r0) || r * 0.6;
+    const half = (r + 0.0034 - bt) * 0.5 + 0.0012;
+    const mid = (r + 0.0034 + bt) * 0.5;
+    svcSlab(g, [[x1 - 0.002, half, half, 0.0072, 3.4],
+      [x1 + 0.020, half, half, 0.0066, 3.4]], 0, true, true, mid);
   }
 }
 
