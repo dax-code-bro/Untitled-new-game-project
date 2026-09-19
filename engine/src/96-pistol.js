@@ -1014,7 +1014,22 @@ const PISTOL_MATERIALS = {
      bright pistol on purpose, so the reflectance only comes down a little;
      what changes is the roughness, so the highlight spreads across the
      form instead of taking the whole side of it at once. */
-  steel: { color: 0xc2c8ce, texture: 'metal', roughness: 0.34, metalness: 1 },
+  /* 0.46, AND THAT IS THE THIRD CORRECTION IN THE SAME DIRECTION.
+     The note above records the first two: 0xdadee2 at 0.24 was "a
+     mirror the colour of a mirror", so the reflectance came down a
+     little and the roughness went up to 0.34. Photographed in a
+     neutral studio it is still a mirror -- a black slide with one hard
+     white streak down it, which is what a near-mirror does when the
+     only thing in its environment is a sky gradient and three lights.
+
+     The same arithmetic that settled blued steel applies here and it
+     is worth stating once for both: a polished metal shows you its
+     surroundings, this engine's surroundings are almost featureless,
+     so polish buys a highlight and nothing else. Roughness is what
+     spreads that highlight into a form you can read. A Government
+     Model is a bright pistol and stays one; it is just not a mirror
+     any more. */
+  steel: { color: 0xc2c8ce, texture: 'metal', roughness: 0.46, metalness: 1 },
   /* THE GRIP PANELS WERE ROYAL BLUE. 0x1d3f87 is a saturated navy, on
      the `smooth` recipe, which writes a flat fill -- so the one part
      of this pistol you are always looking at, the part your hand is

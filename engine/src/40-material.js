@@ -1636,7 +1636,28 @@ const TextureLib = {
 
          Three lifts by guesswork to arrive at a number that was in the
          file the whole time. */
-      const base = 0.46 + cloud * 0.07 + (swirl - 0.5) * 0.04;
+      /* 0.30, AND THE SWING FROM 0.115 TO 0.46 AND BACK IS THE POINT.
+       *
+         Under a blue sky 0.46 read as a blue-grey gun, which is what
+         convinced me it was right. Under a neutral overcast studio --
+         which is the honest light to judge a material in -- the same
+         number came back as bright chrome, because a satin metal shows
+         you whatever is around it and a grey dome is bright.
+
+         Both readings are physically correct and neither is a blued
+         rifle. What makes real blued steel look dark is not its
+         reflectance, it is that a real room is full of dark things: a
+         photographer surrounds the gun with black flags precisely
+         because the steel would otherwise mirror the walls.
+
+         This engine's environment is a sky gradient and a room term,
+         and there is no black in it. So the albedo has to carry some
+         of the job the environment does not: 0.30 is under the
+         physical value and over the point where a metal has nothing to
+         be dark with. It is the number that looks like blued steel in
+         the lighting this game actually has, which is the only test
+         that matters. */
+      const base = 0.30 + cloud * 0.06 + (swirl - 0.5) * 0.035;
       /* The blue is in the RATIO, not in a tint on top: magnetite runs
          a few per cent cooler in red than in blue, and at this
          brightness a few per cent is the whole of the colour. */
@@ -1647,7 +1668,8 @@ const TextureLib = {
          that: it can only ever overshoot, and past the top of the
          range it clips to white. */
       // Bare steel is brighter than the oxide over it, but not by much.
-      const bare = 0.66;
+      // Bare steel stays brighter than the oxide, by about a third.
+      const bare = 0.44;
       /* THE BLUE IS A NAME, NOT A HUE, and this is the fifth pass on
          this material. 0.88 : 0.94 : 1.12 is a strong cast, and at the
          near-black albedo the recipe started with it was invisible --
