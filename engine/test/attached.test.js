@@ -253,7 +253,7 @@ const note = (s) => console.log(`  ..   ${s}`);
      builders: the Mauser's barrel, the riot shield's panel, three on
      the Breakwater, and single small parts on the Hydra, the Thompson
      and the MP5. */
-  const BASELINE = 11;
+  const BASELINE = 5;
   check('no NEW part of any weapon is floating clear of the rest',
     r.adrift.length <= BASELINE,
     `${r.adrift.length} adrift clusters, baseline ${BASELINE}`);

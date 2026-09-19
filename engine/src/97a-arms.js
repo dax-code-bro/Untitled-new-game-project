@@ -1913,7 +1913,13 @@ function buildRifleSteel(g, K) {
     [-0.0180, -K.recR - 0.025], [-0.0105, -K.recR - 0.017], [-0.0085, -K.recR - 0.006],
   ], 0.0028, 0.0028, 0.0058);
   triggerBlade(g, -0.0300, -K.recR - 0.006, 0, 0.022, 0.0040);
-  hardBox(g, K.recRear + 0.008, K.recR + 0.004, 0.0060, 0.0080, 0.0026, 0.0040);
+  /* The safety, on the tang behind the bolt -- and it has to be ON it.
+     Centred at recR + 4 with a half-height of 2.6, its underside sat at
+     recR + 1.4: a millimetre and a half of air under a catch your thumb
+     is supposed to push. Both bolt rifles had it, being the same
+     builder, and both showed it as a 16 mm steel cluster adrift.
+     Spanning from just inside the receiver instead, top unchanged. */
+  hardBox(g, K.recRear + 0.008, K.recR + 0.0028, 0.0060, 0.0080, 0.0038, 0.0040);
 
   /* Magazine box, a hinged floorplate under it, and the release. */
   sweepPath(g, [
@@ -1972,7 +1978,20 @@ function buildRifleStock(g, K) {
   // Butt pad.
   hardBox(g, K.stockButt - 0.0030, -0.0420, 0, 0.0035, 0.0480, 0.0175);
   if (K.cheek) {
-    hardBox(g, K.stockButt + 0.120, K.comb + 0.0090, 0, 0.0520, 0.0110, 0.0165);
+    /* The riser has to sit ON the comb.
+     
+       It was a box 11 mm tall centred at comb + 9, so its underside sat
+       at comb - 2 -- and the stock's own top at that station is
+       cy + up = -0.030 + (comb + 0.018), which is comb - 12. Ten
+       millimetres of daylight under a cheek piece, on the rifle you put
+       your face against. It came out of attached.test.js as a floating
+       104 mm cluster of wood, which is this box and nothing else.
+       
+       Sized to span instead: down to comb - 18, which is six clear
+       millimetres into the comb at the station under its middle, and up
+       to comb + 20 where it already was. A riser is bolted to a stock
+       and reads better slightly let in than hovering. */
+    hardBox(g, K.stockButt + 0.120, K.comb + 0.0010, 0, 0.0520, 0.0190, 0.0165);
     // Two lightening cuts through the wrist, so it reads as a chassis.
     for (const sx of [K.stockButt + 0.075, K.stockButt + 0.145]) {
       strut(g, [sx, -0.0300, -0.0180], [sx, -0.0300, 0.0180], ringOutline(0.0135, 14));
@@ -2027,11 +2046,25 @@ function buildRifleScope(g, K) {
   hardBox(g, tx, S2.y, S2.r + 0.0130, 0.0125, 0.0125, 0.0130);
   // Magnification ring, knurled, behind the turrets.
   band(g, S2.x1 - 0.100, S2.x1 - 0.082, S2.r, S2.r + 0.0035, 22, S2.y);
-  // Rings and the rail they clamp to.
+  /* Rings and the rail they clamp to -- and the ring POSTS have to
+     reach the ring.
+     
+     They did not. The post's height was half the gap between the tube
+     and the receiver, centred half a receiver-radius up, which is two
+     different halvings of the same distance and lands the post short of
+     both ends. Measured on the Kill Streak: the post ran from y 7.25 mm
+     to 33.75 and the ring's underside is at 35.5 -- a gap of 1.75 mm,
+     and the whole optic hung there unsupported. engine/test/attached.js
+     found it as a floating cluster of 95 pieces, 291 mm long, which is a
+     telescopic sight with nothing holding it on.
+     
+     A post spans what it actually has to span: the top of the receiver
+     to the bottom of the tube, which puts it through the ring band
+     rather than under it. */
   for (const rx of [S2.x0 + 0.070, S2.x1 - 0.115]) {
     band(g, rx - 0.008, rx + 0.008, S2.r, S2.r + 0.0055, 22, S2.y);
-    hardBox(g, rx, (S2.y - S2.r - K.recR) / 2 + K.recR / 2 + S2.r * 0, 0,
-      0.0080, (S2.y - S2.r - K.recR) / 2 + 0.004, 0.0090);
+    const foot = K.recR, head = S2.y - S2.r;
+    hardBox(g, rx, (foot + head) / 2, 0, 0.0080, (head - foot) / 2, 0.0090);
   }
   hardBox(g, (S2.x0 + S2.x1) / 2, K.recR + 0.0035, 0, (S2.x1 - S2.x0) / 2 * 0.7, 0.0035, 0.0105);
 }
@@ -2791,7 +2824,14 @@ function buildBWSteel(g) {
      rather than a blade you look OVER keeps the middle of the picture
      empty. */
   const dx = K.recRear + 0.0340;
-  hardBox(g, dx, K.sightY - 0.0190, 0, 0.0130, 0.0090, 0.0090);                  // tower
+  /* The tower carries the ears, so it is as wide as they are.
+     It was 18 mm across with the ears standing 31.6 mm apart, their
+     inner faces at z 13.6 against a ring 11.8 in radius and a base
+     9 -- so each ear was 1.8 mm clear of everything and both came out
+     of attached.test.js as floating 21 mm clusters. A sight base
+     narrower than the guards bolted to it is the sort of thing that is
+     invisible head-on and obvious from three-quarters. */
+  hardBox(g, dx, K.sightY - 0.0190, 0, 0.0130, 0.0090, 0.0180);                  // tower
   band(g, dx - 0.0060, dx + 0.0060, 0.0082, 0.0118, 22, K.sightY);
   // Protective ears either side of the ring, short of the sight line.
   for (const s of [-1, 1]) {
