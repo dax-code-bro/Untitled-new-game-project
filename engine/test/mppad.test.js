@@ -37,6 +37,14 @@
  *   every one of them everything but fire. Sixteen buttons and four
  *   axes IS the standard layout whatever it calls itself.
  *
+ * VALIDATED BY PUTTING THE BUG BACK, because a test that passes first
+ * time against existing code has proved nothing yet -- two tests written
+ * earlier this week went green on faults that were still there. Dropping
+ * the edge() wrapper off swap, so the button sets its field every frame
+ * it is held, takes the one-shot count from 1 of 20 to 20 of 20 and
+ * fails the check by name. Restored immediately; it is not a real fault,
+ * it was a question.
+ *
  * Usage: node engine/test/mppad.test.js
  */
 const path = require('path');
