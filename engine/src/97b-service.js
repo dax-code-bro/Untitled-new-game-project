@@ -482,8 +482,67 @@ function svcFurniture(g, K) {
   }
 }
 
+/* THE TOGGLE, which only the Luger has and which IS the Luger.
+ *
+ * A P08's breech is not a slide. It is two links pinned together that
+ * jack up in the middle like a knee when the gun fires, and the two
+ * knurled discs you pull on are on the knuckle. Nothing about that
+ * shape is shared with any other pistol, and the table carried it as
+ * `charge` -- one knob on the right flank, which is a charging handle
+ * and is what every other self-loader here has. So the most
+ * recognisable pistol of the century was being drawn as a generic
+ * blocky automatic with a bump on it.
+ *
+ * Closed, which is how it sits in the hand: the links lie flat along
+ * the top of the receiver, the knuckle a little proud, the discs out
+ * either side on their pin.
+ */
+function svcToggle(g, K) {
+  const T = K.toggle;
+  if (!T) return;
+  const R = K.rec, y = R.up + T.rise;
+  // The two links, flat along the top, with a step where they meet.
+  svcSlab(g, [
+    [T.x0, 0.0042, 0.0042, R.w * 0.72, 3.4],
+    [T.knuckle - 0.004, 0.0052, 0.0052, R.w * 0.80, 3.4],
+    [T.knuckle + 0.004, 0.0052, 0.0052, R.w * 0.80, 3.4],
+    [T.x1, 0.0038, 0.0038, R.w * 0.66, 3.4],
+  ], 0, true, true, y);
+  /* The pin through the knuckle, which is what carries the discs --
+     and without it they are two coins floating either side of the
+     gun, which is the class of fault attached.test.js exists for. */
+  const zr = R.w + T.out;
+  strut(g, [T.knuckle, y, -zr - 0.0022], [T.knuckle, y, zr + 0.0022],
+    ringOutline(0.0026, 10));
+  for (const sz of [-1, 1]) {
+    // The disc: a knurled wheel you get a thumb and finger onto.
+    band(g, T.knuckle - 0.0088, T.knuckle + 0.0088, 0, T.r, 18, y, sz * zr);
+    for (let i = 0; i < 10; i++) {
+      const th = (i / 10) * TAU;
+      strut(g, [T.knuckle + Math.cos(th) * T.r, y + Math.sin(th) * T.r, sz * (zr - 0.0086)],
+        [T.knuckle + Math.cos(th) * T.r, y + Math.sin(th) * T.r, sz * (zr + 0.0086)],
+        ringOutline(0.0011, 6));
+    }
+  }
+}
+
 function svcGrip(g, K) {
   const G = K.grip;
+  /* A FRONT GRIP, on the two weapons that have one. The M60's is under
+     the gas tube and is half of how anybody holds ten kilos of machine
+     gun; it was simply absent. It hangs off whatever is above it so it
+     cannot float. */
+  const F = K.foregrip;
+  if (F) {
+    const top = svcTopAt(K, F.x);
+    gripStack(g, F.x, -(F.under != null ? F.under : top) + 0.002,
+      F.len || 0.100, F.rake || 0.10, [
+        [0.00, 0.0150, 0.0140, 0.0140, 3.0],
+        [0.30, 0.0138, 0.0130, 0.0132, 2.8],
+        [0.70, 0.0132, 0.0128, 0.0130, 2.8],
+        [1.00, 0.0148, 0.0148, 0.0142, 3.2],
+      ]);
+  }
   gripStack(g, G.x, G.y, G.len, G.rake, [
     [0.00, 0.0175, 0.0165, 0.0165, 3.0],
     [0.22, 0.0168, 0.0158, 0.0162, 3.0],
@@ -1592,6 +1651,7 @@ function makeServiceArm(kind) {
   svcBipod(geos.steel, K);
   svcRotary(geos.steel, K);
   svcCylinder(geos.steel, K);
+  svcToggle(geos.steel, K);
   svcWarhead(geos.steel, K);
   svcLimbs(geos.steel, K);
   geos.wood = new Geometry(); svcFurniture(geos.wood, K);
@@ -2001,6 +2061,9 @@ Object.assign(SERVICE_KINDS, {
     stock: { kind: 'poly', butt: -0.395, comb: 0.0255, drop: 0.0310, w: 0.0200 },
     bipod: { x: 0.470, len: 0.170, rake: 0.035, spread: 0.082 },
     handle: { x0: 0.150, x1: 0.250, y: 0.0430 },
+    /* The front pistol grip under the gas tube. It is half of how
+       anybody holds ten kilos of machine gun and it was not there. */
+    foregrip: { x: 0.195, len: 0.104, rake: 0.14 },
     sight: { y: 0.0440, frontX: 0.500, rearX: 0.010, front: 'ears', rear: 'aperture' },
     mass: 10.5, bound: 0.72,
   }),

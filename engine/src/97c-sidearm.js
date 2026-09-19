@@ -135,14 +135,27 @@ Object.assign(SERVICE_KINDS, {
      steps down hard, and the toggle knuckle standing proud of the
      breech -- which is what `charge` draws here. */
   luger: sideSpec({
-    muzzle: 0.222,
+    /* 222 mm OVER ALL, which is a P08. It was 278 -- a quarter too
+       long, and all of it in the barrel: 188 mm of it against the real
+       gun's hundred. That is an artillery Luger, a different weapon
+       with a different job, and it is why this one photographed as a
+       long thin thing rather than as the stubby toggle-topped pistol
+       everybody recognises. */
+    muzzle: 0.166,
     barrel: { rear: 0.034, r0: 0.0086, r1: 0.0064, bore: 0.0045, step: 0.052 },
     rec: { rear: -0.056, front: 0.034, up: 0.0148, down: 0.0126, w: 0.0116, e: 3.2 },
     port: { x0: 0.000, x1: 0.026, up: 0.0100, down: 0.0015 },
-    charge: { x: -0.030, y: 0.0165, z: 0.0130 },
+    /* NOT a charging handle. See svcToggle: a P08's breech is two
+       links that jack up in the middle, and the knurled discs are on
+       the knuckle. `charge` drew one knob on the right flank -- which
+       is what every other self-loader in this table has and is the one
+       thing a Luger does not. */
+    charge: null,
+    toggle: { x0: -0.052, x1: 0.030, knuckle: -0.026, rise: 0.0026,
+      out: 0.0052, r: 0.0088 },
     grip: { x: -0.046, y: -0.0170, len: 0.094, rake: 0.58 },
     mag: { x: -0.046, y: -0.0190, len: 0.086, r: 0.030 },
-    sight: { y: 0.0200, frontX: 0.198, rearX: -0.044 },
+    sight: { y: 0.0200, frontX: 0.142, rearX: -0.044 },
     mass: 0.95, bound: 0.17,
   }),
 
