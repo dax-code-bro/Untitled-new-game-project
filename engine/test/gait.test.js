@@ -338,41 +338,106 @@ function check(name, cond, detail = '') {
     if (!geo) return { err: 'the body geometry is not registered' };
     const P = geo.positions, I = geo.indices, J = geo.joints, W = geo.weights;
     if (!J || !W) return { err: 'no skin weights' };
-    const out = { worst: 0, bad: 0, note: '' };
+    const out = { worst: 0, bad: 0, note: '', holdWorst: 0, holdNote: '', holdPoses: 0 };
     const parts = geo.parts || [];
     out.tagged = parts.length ? new Set(parts).size : 0;
+    const A = c.animator, S = c.skeleton;
+
+    /* Skin the mesh at whatever pose the skeleton is in now, and record
+       the worst edge. Split out of the clip loop because the clips are
+       no longer the only poses this body is ever put into. */
+    const sk = new Float64Array(P.length);
+    const measure = (label, into) => {
+      const M = S.matrices;
+      for (let i = 0; i < P.length / 3; i++) {
+        let x = 0, y = 0, z = 0;
+        for (let k = 0; k < 4; k++) {
+          const w = W[i * 4 + k]; if (w < 1e-6) continue;
+          const o = J[i * 4 + k] * 16;
+          const px = P[i * 3], py = P[i * 3 + 1], pz = P[i * 3 + 2];
+          x += w * (M[o] * px + M[o + 4] * py + M[o + 8] * pz + M[o + 12]);
+          y += w * (M[o + 1] * px + M[o + 5] * py + M[o + 9] * pz + M[o + 13]);
+          z += w * (M[o + 2] * px + M[o + 6] * py + M[o + 10] * pz + M[o + 14]);
+        }
+        sk[i * 3] = x; sk[i * 3 + 1] = y; sk[i * 3 + 2] = z;
+      }
+      for (let t = 0; t < I.length; t += 3) {
+        for (let e = 0; e < 3; e++) {
+          const a = I[t + e], b2 = I[t + (e + 1) % 3];
+          const d0 = Math.hypot(P[a * 3] - P[b2 * 3], P[a * 3 + 1] - P[b2 * 3 + 1],
+            P[a * 3 + 2] - P[b2 * 3 + 2]);
+          if (d0 < 1e-6) continue;
+          const d1 = Math.hypot(sk[a * 3] - sk[b2 * 3], sk[a * 3 + 1] - sk[b2 * 3 + 1],
+            sk[a * 3 + 2] - sk[b2 * 3 + 2]);
+          const rr = d1 / d0;
+          if (rr > into.worst) { into.worst = rr; into.note = label; }
+          if (rr > 3) out.bad++;
+        }
+      }
+    };
+
     for (const clip of ['walk', 'run', 'sprint', 'slide', 'jump']) {
-      const A = c.animator, S = c.skeleton;
       const dur = A.clips.get(clip).duration;
       for (let ph = 0; ph < 6; ph++) {
         A.play(clip, 0); A.speed = 0; A.time = (ph / 6) * dur; A.update(0); S.update();
-        const M = S.matrices;
-        const sk = new Float64Array(P.length);
-        for (let i = 0; i < P.length / 3; i++) {
-          let x = 0, y = 0, z = 0;
-          for (let k = 0; k < 4; k++) {
-            const w = W[i * 4 + k]; if (w < 1e-6) continue;
-            const o = J[i * 4 + k] * 16;
-            const px = P[i * 3], py = P[i * 3 + 1], pz = P[i * 3 + 2];
-            x += w * (M[o] * px + M[o + 4] * py + M[o + 8] * pz + M[o + 12]);
-            y += w * (M[o + 1] * px + M[o + 5] * py + M[o + 9] * pz + M[o + 13]);
-            z += w * (M[o + 2] * px + M[o + 6] * py + M[o + 10] * pz + M[o + 14]);
-          }
-          sk[i * 3] = x; sk[i * 3 + 1] = y; sk[i * 3 + 2] = z;
-        }
-        for (let t = 0; t < I.length; t += 3) {
-          for (let e = 0; e < 3; e++) {
-            const a = I[t + e], b2 = I[t + (e + 1) % 3];
-            const d0 = Math.hypot(P[a * 3] - P[b2 * 3], P[a * 3 + 1] - P[b2 * 3 + 1], P[a * 3 + 2] - P[b2 * 3 + 2]);
-            if (d0 < 1e-6) continue;
-            const d1 = Math.hypot(sk[a * 3] - sk[b2 * 3], sk[a * 3 + 1] - sk[b2 * 3 + 1], sk[a * 3 + 2] - sk[b2 * 3 + 2]);
-            const rr = d1 / d0;
-            if (rr > out.worst) { out.worst = rr; out.note = clip + '@' + (ph / 6).toFixed(2); }
-            if (rr > 3) out.bad++;
-          }
-        }
+        measure(clip + '@' + (ph / 6).toFixed(2), out);
       }
     }
+
+    /* ---------------- AND THE POSES NO CLIP EVER PRODUCES.
+     *
+       Everything above samples the authored clips, and until recently
+       that was every pose this body was put into. It is not any more:
+       the arms are now solved onto the weapon with IK from the
+       animator's onPosed hook, and the torso blades up to 35 degrees to
+       let the support hand reach. Those are shoulder and chest
+       deformations nothing in the clip set asks for, so measuring the
+       clips alone stopped being a measurement of the skin.
+
+       It matters here specifically. The ribbon failure was a BIND
+       problem -- thigh vertices claimed by the hand -- and a bind is
+       only ever exposed by a pose that separates the two bones it
+       confused. The reach separates them further than any clip does. */
+    const holder = { worst: 0, note: '' };
+    const iUR = S.index('upperArmR'), iLR = S.index('lowerArmR'), iHR = S.index('handR');
+    const iUL = S.index('upperArmL'), iLL = S.index('lowerArmL'), iHL = S.index('handL');
+    const iChest = S.index('chest'), iNeck = S.index('neck');
+    const V = LE.Vec3, Q = LE.Quat;
+    const upY = new V(0, 1, 0), q = new Q();
+    const at = (i) => { const o = new V(); S.worldPosition(i, o); return o; };
+    if (iUR >= 0 && iUL >= 0 && iChest >= 0) {
+      /* The hold envelope, taken from the game's own numbers: the grip
+         runs from the hip carry to the eye, the blade from 11 to 35
+         degrees with it, and the support hand goes 12 to 24 cm down the
+         weapon. Sampled at the corners and the middle. */
+      const HOLDS = [
+        { label: 'hip', gy: 0.45, gz: 0.30, blade: 0.20, along: 0.24 },
+        { label: 'ads', gy: 0.73, gz: 0.22, blade: 0.61, along: 0.22 },
+        { label: 'ads-long', gy: 0.73, gz: 0.22, blade: 0.61, along: 0.12 },
+        { label: 'sprint-low', gy: 0.30, gz: 0.26, blade: 0.20, along: 0.20 },
+        { label: 'high-port', gy: 0.86, gz: 0.14, blade: 0.61, along: 0.18 },
+      ];
+      for (const h of HOLDS) {
+        A.play('idle', 0); A.speed = 0; A.time = 0; A.update(0); S.update();
+        q.setAxisAngle(upY, -h.blade);
+        S.bones[iChest].localRotation.premul(q).normalize();
+        if (iNeck >= 0) {
+          q.setAxisAngle(upY, h.blade);
+          S.bones[iNeck].localRotation.premul(q).normalize();
+        }
+        S.update();
+        const grip = new V(-0.06, h.gy, h.gz);
+        const fore = new V(-0.06, h.gy, h.gz + h.along);
+        const chestY = at(iChest).y;
+        S.solveIK(iUR, iLR, iHR, grip,
+          { x: -0.50, y: chestY + 0.10, z: -0.06 });
+        S.solveIK(iUL, iLL, iHL, fore, { x: 0.16, y: chestY - 0.30, z: 0.10 });
+        measure('hold/' + h.label, holder);
+        out.holdPoses++;
+      }
+    }
+    out.holdWorst = holder.worst;
+    out.holdNote = holder.note;
     return out;
   });
   /* THE BODY IS STILL A BODY.
@@ -409,6 +474,18 @@ function check(name, cond, detail = '') {
        failure was eleven times, on edges nowhere near a joint. */
     check('and nothing is stretched much outside a hard joint fold',
       skin.worst < 2.8, `${skin.worst.toFixed(1)}x at ${skin.note}`);
+
+    console.log(`  .. hold: ${skin.holdPoses} IK poses, worst edge stretch `
+      + `${skin.holdWorst.toFixed(1)}x (${skin.holdNote})`);
+    check('the reach poses were actually solved', skin.holdPoses >= 5,
+      `${skin.holdPoses} poses`);
+    /* The same 2.8x the clips get. A shoulder brought up and across to
+       a rifle is a gentler fold than the sprint's knee, so if this ever
+       goes higher than a running stride it is the bind, not the
+       technique. */
+    check('and the skin survives being posed onto a weapon',
+      skin.holdWorst < 2.8 && skin.holdWorst > 1.0,
+      `${skin.holdWorst.toFixed(2)}x at ${skin.holdNote}`);
   }
 
   /* ---------------- the pictures ---------------- */
