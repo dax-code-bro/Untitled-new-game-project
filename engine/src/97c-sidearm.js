@@ -99,7 +99,11 @@ Object.assign(SERVICE_KINDS, {
        behind the cylinder instead of running the length of the gun. */
     rec: { rear: -0.048, front: 0.014, up: 0.0150, down: 0.0130, w: 0.0128, e: 3.0 },
     port: null,
-    rotary: 6,
+    /* `cylinder`, not `rotary`. See svcCylinder: they are different
+       parts and sharing the field cost this revolver its barrel. Mk VI
+       dimensions -- a 40 mm cylinder, 38 mm across, six chambers -- and
+       the top strap that ties the breech to the barrel. */
+    cylinder: { x0: 0.006, x1: 0.046, r: 0.0190, n: 6, bore: 0.0058 },
     grip: { x: -0.040, y: -0.0170, len: 0.098, rake: 0.46 },
     mag: null,
     sight: { y: 0.0215, frontX: 0.206, rearX: -0.030, front: 'blade', rear: 'notch' },
@@ -519,6 +523,10 @@ Object.assign(SERVICE_KINDS, {
     muzzle: 0.300,
     barrel: { rear: 0.030, r0: 0.0190, r1: 0.0185, bore: 0.0092, step: 0.120 },
     rotary: 2,
+    /* Its own cluster geometry. The shared default is tuned for the
+       Hydra's six barrels on a spindle; two 12-bores lie side by side
+       and touching, on 24 mm centres. */
+    rotaryR: 0.0122, rotaryBr: 0.0120,
     rec: { rear: -0.100, front: 0.050, up: 0.0205, down: 0.0195, w: 0.0195 },
     hg: null,
     // Cut off behind the grip: there is no stock, which is the point.

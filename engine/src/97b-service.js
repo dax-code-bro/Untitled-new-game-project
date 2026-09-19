@@ -1498,6 +1498,7 @@ function makeServiceArm(kind) {
   svcDetails(geos.steel, K);
   svcBipod(geos.steel, K);
   svcRotary(geos.steel, K);
+  svcCylinder(geos.steel, K);
   svcWarhead(geos.steel, K);
   svcLimbs(geos.steel, K);
   geos.wood = new Geometry(); svcFurniture(geos.wood, K);
@@ -2007,6 +2008,51 @@ Object.assign(SERVICE_KINDS, {
   }),
 });
 
+/* A REVOLVER'S CYLINDER IS NOT A MINIGUN'S BARREL CLUSTER.
+ *
+ * The Webley was built with `rotary: 6` on the reasoning that six bores
+ * on a circle is six bores on a circle. It is not: a minigun's six
+ * barrels REPLACE the single barrel and run its whole length, while a
+ * revolver's six chambers are forty millimetres long, sit BETWEEN the
+ * standing breech and the barrel, and the barrel is still there.
+ *
+ * Sharing the field meant the Webley got six full-length tubes from the
+ * breech to the muzzle -- and when I widened the cluster to uncover the
+ * Hydra's barrels and suppressed the solid barrel underneath them, the
+ * Webley lost its barrel too and came apart into a floating Gatling
+ * cluster and a floating grip. One field meaning two things, and the
+ * damage showing up on the weapon I was not looking at.
+ */
+function svcCylinder(g, K) {
+  const C = K.cylinder;
+  if (!C) return;
+  const n = C.n || 6, r = C.r, x0 = C.x0, x1 = C.x1;
+  // The drum, capped at both ends.
+  spin(g, [[x0, 0.0000], [x1, 0.0000], [x1, r], [x0, r]], 26, 32);
+  /* The chambers, as bored holes rather than as painted circles: a
+     ring of wall with a hole down the middle, so the front face has
+     six shadows in it and not six discs. */
+  const cr = C.bore || 0.0060, br = cr + 0.0018, pitch = r * 0.60;
+  for (let i = 0; i < n; i++) {
+    const th = (i / n) * TAU + TAU / (n * 2);
+    band(g, x0 + 0.002, x1 - 0.002, cr, br, 12,
+      Math.cos(th) * pitch, Math.sin(th) * pitch);
+  }
+  // Flutes between them, which is what stops a cylinder reading as a tin.
+  for (let i = 0; i < n; i++) {
+    const th = (i / n) * TAU;
+    band(g, x0 + 0.006, x1 - 0.006, 0, 0.0034, 8,
+      Math.cos(th) * (r + 0.0008), Math.sin(th) * (r + 0.0008));
+  }
+  /* The top strap over it, tying the standing breech to the barrel --
+     without it a top-break revolver is a frame and a floating barrel,
+     which is exactly how this one photographed. */
+  if (C.strap !== false) {
+    svcSlab(g, [[x0 - 0.008, 0.0030, 0.0030, 0.0072, 3.4],
+      [x1 + 0.014, 0.0030, 0.0030, 0.0068, 3.4]], 0, true, true, r + 0.0034);
+  }
+}
+
 /* THE THING THE LAUNCHER LAUNCHES.
  *
  * A Panzerfaust and an RPG-7 are unrecognisable without the grenade on
@@ -2067,8 +2113,16 @@ function svcRotary(g, K) {
   if (!n) return;
   /* Out to where the solid barrel used to be, now that it is gone:
      the cluster IS the gun's muzzle end, so it has to fill the same
-     silhouette rather than rattle around inside it. */
-  const R = K.barrel.r0 * 0.74, br = 0.0072;
+     silhouette rather than rattle around inside it.
+   *
+     Overridable, because `rotary` serves two weapons that are nothing
+     alike -- the minigun's six barrels on a spindle and the sawn-off's
+     two 12-bore tubes side by side -- and a radius tuned on one is
+     wrong on the other. Tuning the Hydra without these moved the
+     sawn-off's bores, which is the cost of one field meaning two
+     things. */
+  const R = K.rotaryR != null ? K.rotaryR : K.barrel.r0 * 0.74;
+  const br = K.rotaryBr != null ? K.rotaryBr : 0.0072;
   for (let i = 0; i < n; i++) {
     const th = (i / n) * TAU;
     const cy = Math.cos(th) * R, cz = Math.sin(th) * R;
