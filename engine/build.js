@@ -88,6 +88,7 @@ const LegendEngine = {
   /* And the twelve that are hand-dimensioned rather than table-built,
      for the same reason. See BESPOKE_ARMS in 97a-arms.js. */
   BESPOKE_ARMS, makeBespokeArm,
+  WEAPON_ACTIONS, weaponAction, poseAction,
   bakeCavityAO,
   clamp, lerp, smoothstep,
 };

@@ -77,6 +77,13 @@
      the Kurz rifles share a barrel set with each other and with nothing
      else, and a drum magazine that fits a Thompson also fits a PPSh
      because both of those really did take one. */
+  /* WHAT THE ACTION IS, where the family cannot say. A family is a
+     shelf in a menu, not a mechanism: "Pump and break" holds four pumps
+     and a double, and "Lever and revolver" holds one of each. The nine
+     guns that are the odd one out in their own family carry `act`
+     themselves, and engine/src/97e-action.js reads it before it falls
+     back to the family. Without this a sawn-off racked a forend it does
+     not have and a carousel worked a bolt for a cylinder. */
   var FAMILIES = {
     kurz: 'Kurz rifles', garand: 'Self-loading rifles', battle: 'Battle rifles',
     kalash: 'Kalashnikov pattern', stoner: 'Stoner pattern', bullpup: 'Bullpups',
@@ -264,7 +271,7 @@
       ads: 0.47, move: 0.88, reload: 3.8, rec: [3.9, 0.9], spread: 6.6, mv: 800,
       oneShot: 'chest',
       blurb: 'The bolt is stiff and the stock is a plank. It shoots like a laser.' },
-    { id: 'killstreak', name: 'The Kill Streak', cls: 'sniper', fam: 'amr',
+    { id: 'killstreak', act: 'manual', name: 'The Kill Streak', cls: 'sniper', fam: 'amr',
       mag: 5, rpm: 36, bolt: 1.6, dmg: 130, dmgFar: 125, near: 90, far: 180, hs: 3.0, auto: false,
       ads: 0.58, move: 0.76, reload: 4.4, rec: [6.6, 1.5], spread: 8.0, mv: 880,
       oneShot: 'any', pierce: 2,
@@ -309,7 +316,7 @@
       mag: 6, rpm: 70, dmg: 22, dmgFar: 6, near: 9, far: 19, hs: 1.3, auto: false, pellets: 8,
       ads: 0.30, move: 0.96, reload: 0.55, reloadKind: 'shell', rec: [2.3, 0.7], spread: 6.5, mv: 380,
       blurb: 'Eight pellets, one pump, and a reload you can stop halfway through.' },
-    { id: 'sawnoff', name: 'Sawn-Off', cls: 'shotgun', fam: 'pump',
+    { id: 'sawnoff', act: 'break', name: 'Sawn-Off', cls: 'shotgun', fam: 'pump',
       mag: 2, rpm: 200, dmg: 26, dmgFar: 4, near: 7, far: 14, hs: 1.3, auto: false, pellets: 10,
       ads: 0.22, move: 1.05, reload: 2.1, rec: [3.8, 1.7], spread: 10.0, mv: 350,
       blurb: 'Two barrels, no stock, and the range of an angry handshake.' },
@@ -350,7 +357,7 @@
       mag: 4, rpm: 82, dmg: 26, dmgFar: 4, near: 7, far: 15, hs: 1.3, auto: false, pellets: 10,
       ads: 0.20, move: 1.06, reload: 0.48, reloadKind: 'shell', rec: [3.6, 1.5], spread: 9.5, mv: 350,
       blurb: 'Fourteen inches, no stock, and a ring of teeth on the muzzle for standing it off a hinge.' },
-    { id: 'carousel', name: 'Carousel 12', cls: 'shotgun', fam: 'lever',
+    { id: 'carousel', act: 'revolver', name: 'Carousel 12', cls: 'shotgun', fam: 'lever',
       mag: 12, rpm: 150, dmg: 19, dmgFar: 5, near: 9, far: 18, hs: 1.2, auto: false, pellets: 8,
       ads: 0.34, move: 0.90, reload: 5.0, rec: [2.0, 0.8], spread: 7.4, mv: 375,
       blurb: 'Twelve rounds on a spring-wound cylinder as wide as your hand. Winding it back up takes a while.' },
@@ -361,7 +368,7 @@
       blurb: 'One barrel, one shell, and a bore you could post a letter down. It moves you as much as him.' },
 
     /* ---------------- SPECIAL (2) ---------------- */
-    { id: 'crossbow', name: 'Crossbow', cls: 'special', fam: 'exotic',
+    { id: 'crossbow', act: 'manual', name: 'Crossbow', cls: 'special', fam: 'exotic',
       mag: 1, rpm: 30, dmg: 120, dmgFar: 120, near: 200, far: 200, hs: 2.0, auto: false,
       ads: 0.40, move: 0.95, reload: 1.9, rec: [0.4, 0.1], spread: 2.0, mv: 105,
       silent: true, explosiveBolt: true,
@@ -381,11 +388,19 @@
       mag: 8, rpm: 400, dmg: 34, dmgFar: 20, near: 17, far: 32, hs: 1.6, auto: false,
       ads: 0.15, move: 1.07, reload: 1.4, rec: [0.85, 0.3], spread: 2.9, mv: 253,
       blurb: 'The 1911 with the sharp edges taken off and one more in the magazine.' },
-    { id: 'model5', name: 'Model 5', cls: 'pistol', fam: 'handcannon',
+    /* `selfLoading`, and it should be `revolver`. The Model 5 IS a
+       revolver -- bunker-nine builds it with a cylinder and a hammer and
+       animates both -- but the SERVICE model multiplayer draws has a
+       slide, an ejection port and cocking serrations on it: the two
+       games model the same pistol as two different guns. Animating it
+       as a revolver here would turn a cylinder it does not have and
+       leave the slide it does have dead. The action follows the model
+       until the model is rebuilt. */
+    { id: 'model5', act: 'selfLoading', name: 'Model 5', cls: 'pistol', fam: 'handcannon',
       mag: 4, rpm: 230, dmg: 55, dmgFar: 38, near: 24, far: 44, hs: 1.9, auto: false,
       ads: 0.22, move: 1.00, reload: 2.0, rec: [3.4, 1.1], spread: 4.0, mv: 450,
       blurb: 'Fifty calibre out of a pistol. Two shots and your wrist has an opinion.' },
-    { id: 'webley', name: 'Webley Mk VI', cls: 'pistol', fam: 'handcannon',
+    { id: 'webley', act: 'revolver', name: 'Webley Mk VI', cls: 'pistol', fam: 'handcannon',
       mag: 6, rpm: 210, dmg: 52, dmgFar: 36, near: 22, far: 40, hs: 1.8, auto: false,
       ads: 0.20, move: 1.02, reload: 2.6, reloadKind: 'moon', rec: [2.7, 0.9], spread: 3.8, mv: 200,
       blurb: 'Breaks open at the top and throws all six on the floor at once.' },
@@ -413,17 +428,17 @@
       blurb: 'Seventeen rounds in under a second. Aim is a formality.' },
 
     /* ---------------- LAUNCHERS (6) ---------------- */
-    { id: 'panzer', name: 'Panzerfaust', cls: 'launcher', fam: 'tube',
+    { id: 'panzer', act: 'manual', name: 'Panzerfaust', cls: 'launcher', fam: 'tube',
       mag: 1, rpm: 30, dmg: 180, dmgFar: 60, near: 4.5, far: 8, hs: 1.0, auto: false,
       ads: 0.50, move: 0.88, reload: 3.6, rec: [5.0, 1.0], spread: 1.0, mv: 60,
       splash: 4.5, dropsFast: true,
       blurb: 'Point it, fire it, throw the tube away. Drops like a brick past thirty metres.' },
-    { id: 'bazooka', name: 'M1 Bazooka', cls: 'launcher', fam: 'tube',
+    { id: 'bazooka', act: 'manual', name: 'M1 Bazooka', cls: 'launcher', fam: 'tube',
       mag: 1, rpm: 30, dmg: 170, dmgFar: 55, near: 4.0, far: 7.5, hs: 1.0, auto: false,
       ads: 0.52, move: 0.86, reload: 4.0, rec: [4.4, 0.9], spread: 1.2, mv: 82,
       splash: 4.2,
       blurb: 'Flatter than the Panzerfaust and takes four seconds to reload.' },
-    { id: 'rpg7', name: 'RPG-7', cls: 'launcher', fam: 'tube',
+    { id: 'rpg7', act: 'manual', name: 'RPG-7', cls: 'launcher', fam: 'tube',
       mag: 1, rpm: 34, dmg: 190, dmgFar: 65, near: 5.0, far: 9, hs: 1.0, auto: false,
       ads: 0.50, move: 0.87, reload: 3.8, rec: [5.2, 1.1], spread: 1.0, mv: 115,
       splash: 5.0,
@@ -433,12 +448,12 @@
       ads: 0.60, move: 0.86, reload: 4.2, rec: [2.6, 0.6], spread: 0, mv: 200,
       lockOn: 'air', vsAir: 900, splash: 3.0,
       blurb: 'Useless against a man and the last word against a helicopter.' },
-    { id: 'm79', name: 'M79 Thumper', cls: 'launcher', fam: 'grenade',
+    { id: 'm79', act: 'break', name: 'M79 Thumper', cls: 'launcher', fam: 'grenade',
       mag: 1, rpm: 50, dmg: 120, dmgFar: 45, near: 3.5, far: 6.5, hs: 1.0, auto: false,
       ads: 0.34, move: 0.95, reload: 2.6, rec: [3.2, 0.8], spread: 1.4, mv: 76,
       splash: 3.5, arcs: true,
       blurb: 'Break-action, lobs in an arc, and lands somewhere you can aim for.' },
-    { id: 'gl6', name: 'Six-Shot GL', cls: 'launcher', fam: 'grenade',
+    { id: 'gl6', act: 'revolver', name: 'Six-Shot GL', cls: 'launcher', fam: 'grenade',
       mag: 6, rpm: 120, dmg: 95, dmgFar: 35, near: 3.0, far: 5.5, hs: 1.0, auto: false,
       ads: 0.44, move: 0.88, reload: 6.5, rec: [2.4, 0.9], spread: 2.0, mv: 76,
       splash: 3.0, arcs: true,

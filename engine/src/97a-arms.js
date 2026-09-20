@@ -2569,12 +2569,26 @@ function mountArm(E, key, parts, mats, opts, boundR, mass, main) {
    * had to be found by measuring every part and matching numbers to the
    * source by hand. The mesh key already says exactly what it is; it
    * costs one assignment to put it on the actor. */
+  const pivots = parts.__pivots || null;
   for (const name of Object.keys(parts)) {
-    if (name === main) continue;
+    if (name === main || name.charAt(0) === '_') continue;
     const a = E._spawn({ material: matFor(name), physics: false },
       E._mesh(key + ':' + name, () => parts[name]), null, boundR);
     a.parent = body;
     a.name = key + ':' + name;
+    /* WHERE IT TURNS, if it turns. Not where it SITS: every part is
+       built in the gun's own frame and stays there, because that frame
+       is what every measurement in the test suite reads -- guns.test.js
+       unions the parts' bounds to find where the weapon ends, and
+       adrift.test.js asks whether any of them has floated away from the
+       others. Offsetting a group to its own pivot was the first attempt
+       and it broke both: the hinged shotguns reported their muzzles as
+       being past their own models and their barrels as adrift.
+
+       A child actor has no pivot of its own, so the turn is composed in
+       poseAction instead -- rotate by R and move by (P - R.P), which is
+       a rotation about P and leaves the rest pose untouched. */
+    if (pivots && pivots[name]) body[name + 'Pivot'] = pivots[name];
     body[name] = a;
     body.partNames.push(name);
   }
@@ -2589,9 +2603,35 @@ function armCache(E, key, build) {
   return c[key];
 }
 
-function fin(geos, origin) {
+/* A PART THAT HAS TO TURN NEEDS ITS OWN ORIGIN.
+ *
+   A child actor composes position, rotation and scale about its own
+   origin and the engine gives it no separate pivot, so a group offset to
+   the gun's origin like everything else can only spin about the gun's
+   origin. A break gun's barrels have to hinge about the pin at the
+   breech and a revolver's cylinder about its own axis; offset either to
+   the gun's origin and it swings through the stock.
+
+   So those parts are offset to THEIR pivot instead, and `__pivots` says
+   where to put each one back. mountArm reads it and seats the child
+   there, which makes the child's origin the pivot and the rotation
+   correct by construction. */
+function fin(geos, origin, pivots) {
   const out = {};
-  for (const k of Object.keys(geos)) out[k] = offsetGeometry(geos[k], origin).finalize();
+  const pv = {};
+  for (const k of Object.keys(geos)) {
+    out[k] = offsetGeometry(geos[k], origin).finalize();
+    if (pivots && pivots[k]) {
+      const o = pivots[k];
+      pv[k] = [o.x - origin.x, o.y - origin.y, o.z - origin.z];
+    }
+  }
+  /* NON-ENUMERABLE. Every test and tool in this repo walks a built
+     weapon with Object.keys and treats each value as a Geometry --
+     distinct.test.js reads p.positions, guns.test.js reads p.bounds --
+     so a plain property here is an immediate crash in three places for
+     the sake of a side channel mountArm reads by name. */
+  if (Object.keys(pv).length) Object.defineProperty(out, '__pivots', { value: pv });
   return out;
 }
 

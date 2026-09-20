@@ -712,7 +712,49 @@ function svcToggle(g, K) {
    and all of it is the first thing you see.
    ================================================================== */
 
-function svcAux(g, K) {
+/* `lvG` is where the LEVER goes. One weapon in the rack is worked by
+   throwing it, so on that one it has to be its own actor. */
+/* THE SLIDING FOREND OF A PUMP GUN.
+ *
+   Four shotguns in this rack are pump guns and not one of them had a
+   forend that could move: their handguard is part of the furniture,
+   welded to the barrel shroud, so racking them moved nothing. That is
+   the single loudest thing a pump gun does.
+
+   It is a new part rather than a slice of the old one, because a pump
+   gun genuinely has both: a fixed shroud or rib over the barrel, and a
+   ribbed wooden sleeve riding the magazine tube UNDER it. So the shroud
+   stays where it was and this rides below it, on the tube, with the
+   longitudinal grooves that tell you which way it goes. */
+function svcPump(g, K) {
+  const P = K.pump;
+  if (!P) return;
+  const y = P.y != null ? P.y : -(K.barrel.r1 + 0.0170);
+  const r = P.r || 0.0175, x0 = P.x0, x1 = P.x1;
+  // The sleeve, closed at both ends.
+  spin(g, [[x0, 0], [x0 + 0.004, r * 0.86], [x0 + 0.012, r],
+    [x1 - 0.012, r], [x1 - 0.004, r * 0.86], [x1, 0]], 22, 26, y);
+  /* The grooves. Eight of them down the length, cut in rather than
+     stuck on -- a pump's forend is ribbed so a wet hand can work it. */
+  const n = P.grooves || 8;
+  for (let i = 0; i < n; i++) {
+    const th = (i / n) * TAU;
+    const cy = y + Math.sin(th) * (r - 0.0012), cz = Math.cos(th) * (r - 0.0012);
+    strut(g, [x0 + 0.016, cy, cz], [x1 - 0.016, cy, cz],
+      roundRect(0.0016, 0.0016, 0.0026, 2.4, 6));
+  }
+  /* The action bar: the flat that reaches back from the forend into the
+     receiver and is the reason the bolt goes with it. */
+  const bz = P.barZ != null ? P.barZ : r * 0.62;
+  for (const sgn of [-1, 1]) {
+    strut(g, [x1 - 0.010, y + r * 0.35, sgn * bz], [x1 + (P.bar || 0.085), y + r * 0.55, sgn * bz],
+      roundRect(0.0030, 0.0030, 0.0018, 2.0, 6));
+  }
+}
+
+/* `lvG` is where the LEVER goes. One weapon in the rack is worked by
+   throwing it, so on that one it has to be its own actor. */
+function svcAux(g, K, lvG) {
   const R = K.rec, W = R.w;
 
   /* AN AUXILIARY TUBE alongside the bore. One field, and it covers
@@ -766,14 +808,16 @@ function svcAux(g, K) {
      which is a shape nothing else here produces. */
   const LV = K.lever;
   if (LV) {
+    const lg = lvG || g;
     const y0 = -R.down - 0.002, drop = LV.drop || 0.070;
-    guardBow(g, [
+    guardBow(lg, [
       [LV.x1, y0], [LV.x1 + 0.010, y0 - drop * 0.34],
       [LV.x1 - 0.010, y0 - drop * 0.86], [LV.x0 + 0.040, y0 - drop],
       [LV.x0, y0 - drop * 0.72], [LV.x0 - 0.004, y0 - drop * 0.22],
       [LV.x0 + 0.010, y0],
     ], 0.0042, 0.0042, 0.0072);
-    // The pin it pivots on, through the receiver walls.
+    // The pin it pivots on, through the receiver walls. This stays with
+    // the frame -- a pin that swings with the lever is not a pin.
     strut(g, [LV.x1, y0 + 0.004, -W - 0.0016], [LV.x1, y0 + 0.004, W + 0.0016],
       ringOutline(0.0040, 10));
   }
@@ -2039,6 +2083,16 @@ function svcMats(K) {
   }
   out.feed = ARM_MAT.brass;
   out.feedTip = ARM_MAT.copper;
+  /* THE PARTS THAT MOVE STILL NEED TO LOOK LIKE THE GUN. A group with no
+     entry here falls through mountArm's matFor to undefined and renders
+     in the default white -- which is what the first pump gun did: a pale
+     slab sliding under the barrel where a walnut forend should be. A
+     forend is furniture, a hinged barrel group is steel, and a cylinder
+     and a lever are steel. */
+  out.forend = out.wood;
+  out.swing = out.steel;
+  out.cylinder = out.steel;
+  out.lever = out.steel;
   return out;
 }
 
@@ -2362,17 +2416,49 @@ const SERVICE_KINDS = {
 function makeServiceArm(kind) {
   const K = SERVICE_KINDS[kind];
   const geos = {};
+  const pivots = {};
   geos.steel = new Geometry();
-  svcBarrel(geos.steel, K);
+  /* THE PARTS THAT TURN COME OUT AS THEIR OWN GROUPS.
+   *
+     Every one of these used to go into `steel` with the frame, which
+     means a break gun's barrels and a revolver's cylinder were welded to
+     the receiver and could not move. Measured across the multiplayer
+     roster: ten weapons -- every break gun, every revolver and the
+     rotary -- had an action the game knew about and no geometry it could
+     drive. They are separate actors now, each offset to its own pivot so
+     it turns about the thing it actually turns about (see fin()).
+
+     `swing` is the barrel assembly of a hinged gun, pinned at the
+     breech. `cylinder` is a revolver's cylinder or a rotary's barrel
+     cluster, on the bore axis. */
+  const hinged = !!K.swing;
+  const barrelG = hinged ? (geos.swing = new Geometry()) : geos.steel;
+  if (hinged) pivots.swing = new Vec3(K.barrel ? K.barrel.rear : 0, -0.006, 0);
+  /* A pump gun's forend is its own actor: it is the part the shooter
+     works and the only part of a pump gun that moves. */
+  if (K.pump) { geos.forend = new Geometry(); svcPump(geos.forend, K); }
+  /* And a lever gun's lever. Pinned at the front of its own loop. */
+  if (K.lever) {
+    geos.lever = new Geometry();
+    pivots.lever = new Vec3(K.lever.x1, -(K.rec.down + 0.002), 0);
+  }
+  const turns = !!(K.cylinder || (K.rotary && K.spin));
+  const cylG = turns ? (geos.cylinder = new Geometry()) : geos.steel;
+  if (turns) {
+    pivots.cylinder = K.cylinder
+      ? new Vec3((K.cylinder.x0 + K.cylinder.x1) / 2, 0, 0)
+      : new Vec3((K.barrel.rear + K.muzzle) / 2, 0, 0);
+  }
+  svcBarrel(barrelG, K);
   svcReceiver(geos.steel, K);
   svcSights(geos.steel, K);
   svcDetails(geos.steel, K);
   svcBipod(geos.steel, K);
-  svcRotary(geos.steel, K);
-  svcCylinder(geos.steel, K);
+  svcRotary(hinged || (K.rotary && K.spin) ? (hinged ? barrelG : cylG) : geos.steel, K);
+  svcCylinder(cylG, K);
   svcToggle(geos.steel, K);
   svcSerrate(geos.steel, K);
-  svcAux(geos.steel, K);
+  svcAux(geos.steel, K, geos.lever);
   svcSlideWork(geos.steel, K);
   svcWarhead(geos.steel, K);
   svcLimbs(geos.steel, K);
@@ -2382,6 +2468,9 @@ function makeServiceArm(kind) {
      thing on the gun you are actually touching. */
   svcGrip(geos.wood, K);
   geos.mag = new Geometry(); svcMag(geos.mag, K);
+  /* On a revolver whose cylinder IS its magazine -- the six-shot
+     grenade launcher -- that group turns, so it needs its own axis. */
+  if (K.revolve && K.mag) pivots.mag = new Vec3(K.mag.x, K.mag.y, 0);
   geos.bolt = new Geometry(); svcBolt(geos.bolt, K);
   /* One pair of channels per band, so the column can be taken down a
      quarter at a time. mountArm is generic over whatever keys are in
@@ -2404,7 +2493,7 @@ function makeServiceArm(kind) {
       delete geos['shell' + i]; delete geos['tip' + i];
     }
   }
-  return fin(geos, K.origin);
+  return fin(geos, K.origin, pivots);
 }
 
 function serviceArm(E, kind, opts) {
@@ -2464,6 +2553,13 @@ function serviceArm(E, kind, opts) {
     K.mag ? K.mag.y - o.y : 0, 0];
   body.boltRest = [0, 0, 0];
   body.boltThrow = [-0.032, 0, 0];
+  /* What the turning parts need to know about themselves. A cylinder
+     indexes by one chamber a shot, so it has to say how many it has; a
+     hinged gun has to say how far it opens. */
+  body.chambers = (K.cylinder && K.cylinder.n) || (K.rotary || 6);
+  body.hingeArc = K.hingeArc || 26;
+  body.rackTravel = K.rackTravel || 0.072;
+  body.leverSwing = (K.lever && K.lever.swing) || 58;
   /* The column, in order from the feed lips down, so the game can hide
      it from the bottom as the magazine empties. Absent bands are left
      out rather than held as nulls -- a five-round magazine genuinely
@@ -2976,6 +3072,9 @@ Object.assign(SERVICE_KINDS, {
      nine standard objects, and it is here anyway because seven of the
      nine are still the same -- only the barrel and the feed differ. */
   hydra: svcSpec({
+    /* The barrel cluster turns. Externally driven, so it spins while the
+       gun is spun up and not only while a round is leaving it. */
+    spin: true,
     muzzle: 0.560, barrel: { rear: 0.060, r0: 0.0320, r1: 0.0300, bore: 0.0250,
       step: 0.180, gas: false },
     rec: { rear: -0.150, front: 0.105, up: 0.0330, down: 0.0300, w: 0.0270, e: 3 },

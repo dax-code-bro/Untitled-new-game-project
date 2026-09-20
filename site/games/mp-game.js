@@ -1079,7 +1079,18 @@
     } catch (e) { flash = null; }
 
     var state = { aim: 0, sprint: 0, ox: 0, oy: 0, oz: 0, placed: 0, hidden: 0,
-      gun: null, reload: 0 };
+      gun: null, reload: 0,
+      /* THE MECHANISM. Everything below this line was missing: this
+         viewmodel builds a real serviceArm -- the same one bunker-nine
+         builds, with the same bolt, cylinder, hammer, cover and belt
+         hanging off it -- and drove none of it. Seventy-five guns fired
+         with a dead receiver: a flash at the muzzle and nothing moving
+         behind it. Counted before it was fixed: `bolt`, `cylinder`,
+         `hammer`, `cover`, `belt`, `forend` and `swing` each appeared
+         ZERO times in this file. */
+      cyc: 0, cycMax: 0.085,   // the automatic stroke, per shot
+      hand: 0, handMax: 0.9,   // a hand-worked stroke, between shots
+      trig: 0, rounds: 0, spin: 0, act: null, actId: null };
 
     function show(g, on) {
       if (!g) return;
@@ -1167,7 +1178,21 @@
       },
       /* One shot: the flash comes on for forty milliseconds, which is
          about two frames and is all a real one lasts. */
-      fired: function () { flashT = 0.04; },
+      fired: function (refire) {
+        flashT = 0.04;
+        state.rounds++;
+        /* The breech runs in about a tenth of a second whatever the
+           rate of fire, but it cannot take longer than the gap between
+           shots or a fast gun would be caught mid-stroke every time. */
+        state.cycMax = Math.max(0.045, Math.min(0.095, (refire || 0.1) * 0.62));
+        state.cyc = state.cycMax;
+        /* And a hand-worked gun starts its stroke AFTER the shot, not
+           during it -- that pause is the whole feel of a bolt gun. */
+        if (state.act && state.act.cycle === 'hand') {
+          state.handMax = Math.max(0.35, (refire || 1.0) * 0.78);
+          state.hand = state.handMax;
+        }
+      },
       hide: function () {
         state.hidden++;
         if (cur) show(cur, false);
@@ -1185,6 +1210,36 @@
         var low = sprint ? 1 : 0;
         state.sprint = low;
         state.reload = reload || 0;
+
+        /* Run the mechanism. The action comes from the weapon's own
+           declaration where it has one and from its family otherwise;
+           poseAction skips any part the model does not carry, so this
+           is safe on all eighty-one of them. */
+        var W = window.LE;
+        if (W && W.weaponAction && g) {
+          if (state.actId !== id) {
+            state.actId = id;
+            var sp = (W.MP_DATA && W.MP_DATA.gun) ? W.MP_DATA.gun(id) : null;
+            state.act = W.weaponAction(sp);
+          }
+          var d = dt || 0;
+          state.cyc = Math.max(0, state.cyc - d);
+          state.hand = Math.max(0, state.hand - d);
+          /* Trigger: in fast, out slower, off the same clock as the
+             shot -- and a revolver's cylinder indexes on it, so it has
+             to be a real curve and not a flag. */
+          var tw = state.cyc > 0 ? 1 : 0;
+          state.trig += (tw - state.trig) * Math.min(1, d * (tw ? 34 : 12));
+          state.spin += d * (state.cyc > 0 ? 6 : 0);
+          W.poseAction(g, state.act, {
+            /* Back hard and forward on the return: a half sine, which
+               is the shape the real thing traces. */
+            fire: state.cyc > 0 ? Math.sin((1 - state.cyc / state.cycMax) * Math.PI) : 0,
+            hand: state.hand > 0 ? Math.sin((1 - state.hand / state.handMax) * Math.PI) : 0,
+            reload: state.reload, trigger: state.trig,
+            rounds: state.rounds, spin: state.spin,
+          });
+        }
 
         /* The camera frame. f forward, r right, u up -- the same basis
            the match uses for everything else, so the gun and the shot
@@ -2339,7 +2394,7 @@
       var suited = !!(berserk && berserk.riding);
       if (!suited) M.control(cmd, dt);
       if (!suited && p.ammo[p.held] < before) {
-        kick = Math.min(1.4, kick + 0.55); vm.fired();
+        kick = Math.min(1.4, kick + 0.55); vm.fired(60 / Math.max(1, w.rpm || 600));
         /* The HELD weapon, not the table row: MP_DATA.build has
            already folded the attachments into it, so a longer barrel
            or a different muzzle is heard as well as felt. */

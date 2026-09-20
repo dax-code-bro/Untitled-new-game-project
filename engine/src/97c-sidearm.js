@@ -445,6 +445,9 @@ Object.assign(SERVICE_KINDS, {
      stock -- the only launcher here that looks like a shotgun, and the
      only one with furniture. */
   m79: tubeSpec({
+    /* HINGED. The barrel assembly comes out as its own group, pinned at
+       the breech, so it can actually break open -- see makeServiceArm. */
+    swing: true,
     muzzle: 0.420,
     barrel: { rear: 0.010, r0: 0.0250, r1: 0.0245, bore: 0.0200, step: 0.180 },
     rec: { rear: -0.120, front: 0.060, up: 0.0230, down: 0.0230, w: 0.0210, e: 3.0 },
@@ -467,7 +470,11 @@ Object.assign(SERVICE_KINDS, {
     stock: { kind: 'tube', butt: -0.300, comb: 0.0230, drop: 0.0250, w: 0.0180 },
     grip: { x: -0.074, y: -0.0210, len: 0.104, rake: 0.36 },
     trigger: { x: -0.046 },
-    // The cylinder: faces left and right, centred just ahead of the grip.
+    /* The cylinder: faces left and right, centred just ahead of the
+       grip -- and it is modelled as the magazine, because on this gun
+       the magazine IS the cylinder. `revolve` pivots that group on its
+       own axis so it can index a chamber a shot like any other. */
+    revolve: true,
     mag: { kind: 'drum', x: 0.052, y: 0.0060, r: 0.0720, w: 0.0420, clear: false },
     sight: { y: 0.0480, frontX: 0.420, rearX: -0.020, rear: 'aperture' },
     rail: { x0: -0.030, x1: 0.020 },
@@ -876,6 +883,11 @@ Object.assign(SERVICE_KINDS, {
   /* Eight pellets, one pump. The pump itself is the handguard, ribbed,
      sitting on the magazine tube. */
   scatter: gaugeSpec({
+    /* PUMP. A ribbed sleeve riding the magazine tube under the barrel,
+       with the action bars that carry the bolt back with it. It is a
+       separate actor, so it can actually be racked -- see svcPump. */
+    pump: { x0: 0.150, x1: 0.330, y: -0.0255, r: 0.0180, bar: 0.090 },
+    rackTravel: 0.086,
     muzzle: 0.560,
     mass: 3.4,
   }),
@@ -884,6 +896,9 @@ Object.assign(SERVICE_KINDS, {
      side, cut down to nothing, with a pistol grip where the stock was
      -- so `rotary: 2` puts two bores where one would go. */
   sawnoff: gaugeSpec({
+    /* HINGED. The barrel assembly comes out as its own group, pinned at
+       the breech, so it can actually break open -- see makeServiceArm. */
+    swing: true,
     muzzle: 0.300,
     barrel: { rear: 0.030, r0: 0.0190, r1: 0.0185, bore: 0.0092, step: 0.120 },
     rotary: 2,
@@ -932,6 +947,11 @@ Object.assign(SERVICE_KINDS, {
      pump with a ventilated heat shield over the barrel, a lug on the
      end of it, and a bayonet on the lug. */
   trench: gaugeSpec({
+    /* PUMP. A ribbed sleeve riding the magazine tube under the barrel,
+       with the action bars that carry the bolt back with it. It is a
+       separate actor, so it can actually be racked -- see svcPump. */
+    pump: { x0: 0.140, x1: 0.300, y: -0.0255, r: 0.0180, bar: 0.085 },
+    rackTravel: 0.080,
     muzzle: 0.520,
     barrel: { rear: 0.040, r0: 0.0142, r1: 0.0132, step: 0.190,
       shroud: true, shroudX0: 0.150, shroudX1: 0.455, shroudR: 0.0230 },
@@ -947,6 +967,9 @@ Object.assign(SERVICE_KINDS, {
      wooden splinter forend, and the hammers out in the open where you
      can see whether it is going to go off. */
   coach: gaugeSpec({
+    /* HINGED. The barrel assembly comes out as its own group, pinned at
+       the breech, so it can actually break open -- see makeServiceArm. */
+    swing: true,
     muzzle: 0.690,
     /* `rear` AT THE BREECH FACE, not 20 mm in front of it. svcRotary
        starts its tubes at barrel.rear + 0.030 and its breech disc at
@@ -975,6 +998,9 @@ Object.assign(SERVICE_KINDS, {
      completely different gun to look down: one narrow rib with a
      vented top and a receiver deep enough to hide the lower breech. */
   longshore: gaugeSpec({
+    /* HINGED. The barrel assembly comes out as its own group, pinned at
+       the breech, so it can actually break open -- see makeServiceArm. */
+    swing: true,
     muzzle: 0.720,
     barrel: { rear: 0.024, r0: 0.0152, r1: 0.0146, bore: 0.0092, step: 0.340 },
     rec: { rear: -0.120, front: 0.030, up: 0.0290, down: 0.0230, w: 0.0165, e: 3.4 },
@@ -1036,6 +1062,11 @@ Object.assign(SERVICE_KINDS, {
      behind the trigger so the thing is fourteen inches shorter than it
      has any right to be. */
   kestrel12: gaugeSpec({
+    /* PUMP. A ribbed sleeve riding the magazine tube under the barrel,
+       with the action bars that carry the bolt back with it. It is a
+       separate actor, so it can actually be racked -- see svcPump. */
+    pump: { x0: 0.085, x1: 0.245, y: -0.0250, r: 0.0170, barZ: 0.0145, bar: 0.070 },
+    rackTravel: 0.074,
     muzzle: 0.330,
     barrel: { rear: 0.030, r0: 0.0140, r1: 0.0132, step: 0.140 },
     rec: { rear: -0.230, front: 0.050, up: 0.0270, down: 0.0250, w: 0.0210, e: 6 },
@@ -1082,6 +1113,11 @@ Object.assign(SERVICE_KINDS, {
   /* Fourteen inches, no stock, and a ring of steel teeth on the muzzle
      for standing the barrel off a hinge before you fire through it. */
   doorbreaker: gaugeSpec({
+    /* PUMP. A ribbed sleeve riding the magazine tube under the barrel,
+       with the action bars that carry the bolt back with it. It is a
+       separate actor, so it can actually be racked -- see svcPump. */
+    pump: { x0: 0.105, x1: 0.235, y: -0.0250, r: 0.0180, bar: 0.070 },
+    rackTravel: 0.068,
     muzzle: 0.300,
     barrel: { rear: 0.030, r0: 0.0146, r1: 0.0138, step: 0.120 },
     rec: { rear: -0.115, front: 0.072, up: 0.0215, down: 0.0205, w: 0.0180, e: 5 },
@@ -1123,6 +1159,9 @@ Object.assign(SERVICE_KINDS, {
      Breaks at the hinge, has an outside hammer you thumb back by hand,
      and weighs as much as a machine gun. */
   anvil: gaugeSpec({
+    /* HINGED. The barrel assembly comes out as its own group, pinned at
+       the breech, so it can actually break open -- see makeServiceArm. */
+    swing: true,
     ammoKind: 'full',
     muzzle: 0.800,
     barrel: { rear: 0.020, r0: 0.0250, r1: 0.0235, bore: 0.0170, step: 0.380 },
