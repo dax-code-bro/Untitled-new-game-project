@@ -28055,7 +28055,17 @@ function serviceArm(E, kind, opts) {
   const body = mountArm(E, 'svc:' + kind, parts, K.mats, opts, K.bound, K.mass, 'steel');
   const o = K.origin;
   body.boreAt = -o.y;
-  body.muzzleAt = K.muzzle - o.x;
+  /* THE MUZZLE IS THE END OF THE CAN, if there is a can.
+   *
+     A suppressor is where the bullet actually leaves and where the
+     flash belongs, and the Kill Streak's runs 160 mm past the end of
+     its barrel. Left at K.muzzle, its rounds would have been spawning
+     inside their own suppressor and the flash with them. `can` says
+     the coaxial tube is one; the two launchers' warheads and the two
+     bayonets are handled by tipAt below, because those are things in
+     FRONT of the muzzle rather than a new one. */
+  const can = K.tube && !Array.isArray(K.tube) && K.tube.can ? K.tube.x1 : null;
+  body.muzzleAt = (can != null ? Math.max(can, K.muzzle) : K.muzzle) - o.x;
   /* HOW LONG THE WEAPON ACTUALLY IS, which is not where the round
      leaves it. A Panzerfaust's warhead stands 200 mm out in front of
      the muzzle and an RPG's grenade 310 mm, so anything that frames,
@@ -28063,7 +28073,15 @@ function serviceArm(E, kind, opts) {
      not muzzleAt -- the studio rig framed on muzzleAt and cropped the
      RPG's grenade off the side of the picture. The muzzle flash still
      belongs at muzzleAt, because that is where the gas is. */
-  body.tipAt = K.warhead ? K.warhead.x1 - o.x : body.muzzleAt;
+  /* AND A BAYONET IS A FAR END TOO. This knew about warheads, because
+     a Panzerfaust's stands 200 mm out in front; it did not know about
+     the spike on a Mosin (260 mm) or the knife on a trench gun (180),
+     both of which are deliberately past the muzzle and both of which
+     read to anything measuring muzzleAt as a part that had escaped. */
+  body.tipAt = Math.max(
+    K.warhead ? K.warhead.x1 - o.x : -1e9,
+    K.bayonet ? K.bayonet.x1 - o.x : -1e9,
+    body.muzzleAt);
   /* THROUGH THE GLASS, IF THERE IS GLASS.
    *
      sightAt is the height the game puts the camera at when the player
@@ -28884,7 +28902,13 @@ Object.assign(SERVICE_KINDS, {
     comp: { x0: 0.204, x1: 0.234, n: 3, w: 0.0036, hw: 0.0026 },
     serr: { kind: 'slant', rear: [-0.052, -0.012], pitch: 0.0070,
       out: 0.0018, top: true, hw: 0.0020 },
-    hammer: { kind: 'spur', x: -0.056, y: 0.0130 },
+/* IN, NOT OUT. The spur is drawn 15 mm behind its own pin, so at
+       x -0.056 it reached -0.071 -- eleven millimetres behind a frame
+       that ends at -0.060, and it took the whole pistol from 340 mm
+       overall to 351 against a class ceiling of 340. A Desert Eagle's
+       hammer sits inside the backstrap's profile; this one now does
+       too. */
+    hammer: { kind: 'spur', x: -0.046, y: 0.0130 },
     grip: { deep: 1.14, wide: 1.10, e: 1.20, checkN: [6, 8], checkH: 0.0012 },
     mass: 1.9, bound: 0.20,
   }),
@@ -29321,6 +29345,14 @@ Object.assign(SERVICE_KINDS, {
     stock: { kind: 'poly', butt: -0.370, comb: 0.0270, drop: 0.0250, w: 0.0215 },
     grip: { x: -0.092, y: -0.0180, len: 0.108, rake: 0.30 },
     rail: { x0: -0.070, x1: 0.050 },
+    /* AND THE SCOPE IT SAYS IT HAS. `rear: 'scope'` told svcSights not
+       to build irons and told nobody to build glass, so the table
+       version of this rifle aimed at a sight line 12 mm above the
+       tallest thing on it -- a scoped rifle with no scope. (The
+       hand-built remington700 the game actually issues has always had
+       one; this is the table stand-in, which the contact sheet and
+       every measurement pass use.) */
+    optic: { x0: -0.075, x1: 0.075, r: 0.0165, bell: 0.0200, y: 0.0520 },
     sight: { y: 0.0430, frontX: 0.120, rearX: -0.050, front: 'none', rear: 'scope' },
     mass: 4.3, bound: 0.68,
   }),
@@ -29402,7 +29434,7 @@ Object.assign(SERVICE_KINDS, {
        on the front instead of a brake and a low scope tucked down onto
        the rail rather than a tower over it. Where the Barrett is a
        skeleton you can see through, this is a slab. */
-    tube: { x0: 0.640, x1: 0.840, r: 0.0270, open: true },
+    tube: { x0: 0.640, x1: 0.840, r: 0.0270, open: true, can: true },
     barrel: { r0: 0.0165, r1: 0.0148, bore: 0.0064, step: 0.360, brake: null },
     optic: { x0: -0.110, x1: 0.100, r: 0.0195, bell: 0.0270, y: 0.0560 },
     muzzle: 0.680,
@@ -29902,6 +29934,8 @@ Object.assign(SERVICE_KINDS, {
     bipod: null,
     limbs: { x: 0.390, y: 0.0060, spread: 0.290, sweep: 0.048, latch: 0.116 },
     rail: { x0: -0.080, x1: 0.060 },
+    // Same as the Remington: it claimed glass and had none.
+    optic: { x0: -0.080, x1: 0.055, r: 0.0140, bell: 0.0165, y: 0.0450 },
     sight: { y: 0.0380, frontX: 0.150, rearX: -0.060, front: 'none', rear: 'scope' },
     mass: 3.1, bound: 0.60,
   }),
@@ -31651,7 +31685,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
              * number at 7 weapons and 48.6 mm so it cannot grow back while
              * that waits. */
             const e = Math.abs(dd - wantM) + (solidM && solidM(nx, ny, nz) ? 0.08 : 0);
-            cands.push([cand, e + cross * 2.5, cross > 0, dd]);
+            cands.push([cand, e + cross * 2.5, cross > 0]);
           }
           /* A hand grips by CLOSING, and contact must not hold a joint
              straighter than that.
@@ -31670,51 +31704,45 @@ function buildViewHand(g, rawAt, side, opts = {}) {
            * the weapon does the flatter half of the range get a look. The
            * knuckle is nearly free -- a proximal phalanx does lie flat
            * along a forend -- and the two joints past it are not. */
-          /* PAST THE CREST, CLOSE AT THE NATURAL RATE.
+          /* THE NINTH ATTEMPT AT THE SIGHT PICTURE WENT HERE AND IS
+           * NOT HERE ANY MORE, AND THE MEASUREMENT IT TOOK IS WHY.
            *
-           * This is the fix the block above spent eight attempts
-           * arriving at and then wrote down instead of making, and the
-           * note is worth reading first: seven of the fifteen
-           * two-handed weapons had the support hand standing in the
-           * sight picture, the Scattergun 49 mm above the line, and
-           * every previous attempt either did nothing at all or bought
-           * its millimetres by pushing fingers through the handguard.
+           * The note above ends by naming the fix it did not make: past
+           * the crest of what it is holding, a finger should keep
+           * closing at its own natural rate rather than tracking a
+           * surface that has run out. That was built. The test for
+           * "the surface has run out" is free in the row this loop
+           * already computes -- if closing all the way takes the joint
+           * FURTHER from the surface than not closing at all, the
+           * surface is receding behind the finger -- and past the crest
+           * every candidate is clean, so forcing the anatomical bend
+           * there is cheap and safe.
            *
-           * WHAT IS ACTUALLY WRONG. "Close as far as contact allows"
-           * is a rule about tracking a surface, and it assumes there
-           * is one. Past the top of a forend there is not. The nearest
-           * surface is then the crest BEHIND the finger, so curling
-           * further moves AWAY from it, the straight candidate scores
-           * best, and the rule marches the finger on into clear air
-           * over the top of the gun -- 18 to 61 mm above the thing it
-           * is supposed to be holding.
+           * Measured on all fifteen: scatter +49, mauser +46, sawnoff
+           * +44, breakwater +31, thompson +30, paralyzer +29, mp5 +23.
+           * Identical to the seven it started with, to the millimetre,
+           * worst still 48.6. The only thing that moved anywhere was
+           * the Kill Streak's left index, from 33 per cent buried in
+           * its forend to 50, which grip.test.js charged for. Inert on
+           * the target and harmful off it, so it is gone.
            *
-           * THE TEST FOR IT is right there in the row that was already
-           * being computed and thrown away: if closing all the way
-           * takes the joint FURTHER from the surface than not closing
-           * at all, the surface is receding, and this joint is past
-           * the crest of it. Going down the far side gives the
-           * opposite sign, so the two cases do not get confused; a
-           * tall flat face gives the same sign as a crest, which is
-           * correct too -- that is the Kill Streak's forend, where
-           * every curl loses contact and the old rule produced four
-           * straight posts standing beside the gun.
+           * AND THE REASON IT COULD NEVER HAVE WORKED is in the same
+           * report, one line down: "hands finishing clear of the top of
+           * the weapon they hold: thompson +61 mauser +52 scatter +42
+           * mp5 +39 sawnoff +37 breakwater +36 paralyzer +29". Put the
+           * Thompson's figure beside its +30 over the sight line. The
+           * hand is 61 mm above the handguard and 30 mm above the sight
+           * line, so a hand simply RESTING on that weapon would have
+           * its fingers 31 mm BELOW the line. Every one of the seven is
+           * like that.
            *
-           * WHAT TO DO ABOUT IT is not to add a sight-line term -- the
-           * previous attempt did, and the cheapest route under the
-           * line turned out to be straight through the handguard, at
-           * 50 per cent burial on the Breakwater's fingers. It is to
-           * stop tracking: search only angles at or above the finger's
-           * own anatomical bend, and if none of those is clean, take
-           * the shallowest crossing AMONG THOSE rather than falling
-           * back to the whole range. The finger keeps closing at the
-           * rate a finger closes at, which is what it does in the air,
-           * and the burial charge still decides between the angles
-           * that remain. */
-          const crested = cands.length > 1
-            && cands[cands.length - 1][3] > cands[0][3] + r0 * 0.35;
-          const floorA = crested ? Math.min(lim, bends[k] * 0.5)
-            : lim * (k === 0 ? 0.15 : 0.45);
+           * No rule about how a finger curls can fix that, because the
+           * finger is not near the gun to begin with -- it is curling in
+           * open air 40 to 60 mm above the thing it is supposed to be
+           * wrapped round. The fault is in where the HAND is put, which
+           * is the seating search in buildViewHand, not in this march.
+           * Eight attempts aimed at solveCurl, the ninth aimed here, and
+           * all nine were aimed at the wrong subsystem. */
           const pick = (minA) => {
             let bE = 1e9, bA = null;
             for (const [cand, e, xd] of cands) if (!xd && cand >= minA && e < bE) bE = e;
@@ -31723,9 +31751,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
             return [bA, bE];
           };
           const selF = pick(floorA);
-          /* No dropping back to the straight half of the range when the
-             surface has run out -- that is the whole point. */
-          const sel = selF || (crested ? null : pick(0));
+          const sel = selF || pick(0);
           /* Held straighter than a curl by contact, as against nothing
              reachable at all -- two different faults with opposite
              repairs, and `walled` only counts the second. */
@@ -31752,10 +31778,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
              * longer ties, so take the shallowest crossing there is: the
              * finger presses into what it holds rather than through it. */
             let bA = null, bE = 1e9;
-            for (const [cand, e] of cands) {
-              if (crested && cand < floorA) continue;
-              if (e < bE) { bE = e; bA = cand; }
-            }
+            for (const [cand, e] of cands) if (e < bE) { bE = e; bA = cand; }
             if (bA != null) a = bA;
             if (opts.out) opts.out.walled = (opts.out.walled || 0) + 1;
           }

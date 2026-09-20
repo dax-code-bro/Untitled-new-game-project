@@ -1492,7 +1492,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
              * number at 7 weapons and 48.6 mm so it cannot grow back while
              * that waits. */
             const e = Math.abs(dd - wantM) + (solidM && solidM(nx, ny, nz) ? 0.08 : 0);
-            cands.push([cand, e + cross * 2.5, cross > 0, dd]);
+            cands.push([cand, e + cross * 2.5, cross > 0]);
           }
           /* A hand grips by CLOSING, and contact must not hold a joint
              straighter than that.
@@ -1511,51 +1511,45 @@ function buildViewHand(g, rawAt, side, opts = {}) {
            * the weapon does the flatter half of the range get a look. The
            * knuckle is nearly free -- a proximal phalanx does lie flat
            * along a forend -- and the two joints past it are not. */
-          /* PAST THE CREST, CLOSE AT THE NATURAL RATE.
+          /* THE NINTH ATTEMPT AT THE SIGHT PICTURE WENT HERE AND IS
+           * NOT HERE ANY MORE, AND THE MEASUREMENT IT TOOK IS WHY.
            *
-           * This is the fix the block above spent eight attempts
-           * arriving at and then wrote down instead of making, and the
-           * note is worth reading first: seven of the fifteen
-           * two-handed weapons had the support hand standing in the
-           * sight picture, the Scattergun 49 mm above the line, and
-           * every previous attempt either did nothing at all or bought
-           * its millimetres by pushing fingers through the handguard.
+           * The note above ends by naming the fix it did not make: past
+           * the crest of what it is holding, a finger should keep
+           * closing at its own natural rate rather than tracking a
+           * surface that has run out. That was built. The test for
+           * "the surface has run out" is free in the row this loop
+           * already computes -- if closing all the way takes the joint
+           * FURTHER from the surface than not closing at all, the
+           * surface is receding behind the finger -- and past the crest
+           * every candidate is clean, so forcing the anatomical bend
+           * there is cheap and safe.
            *
-           * WHAT IS ACTUALLY WRONG. "Close as far as contact allows"
-           * is a rule about tracking a surface, and it assumes there
-           * is one. Past the top of a forend there is not. The nearest
-           * surface is then the crest BEHIND the finger, so curling
-           * further moves AWAY from it, the straight candidate scores
-           * best, and the rule marches the finger on into clear air
-           * over the top of the gun -- 18 to 61 mm above the thing it
-           * is supposed to be holding.
+           * Measured on all fifteen: scatter +49, mauser +46, sawnoff
+           * +44, breakwater +31, thompson +30, paralyzer +29, mp5 +23.
+           * Identical to the seven it started with, to the millimetre,
+           * worst still 48.6. The only thing that moved anywhere was
+           * the Kill Streak's left index, from 33 per cent buried in
+           * its forend to 50, which grip.test.js charged for. Inert on
+           * the target and harmful off it, so it is gone.
            *
-           * THE TEST FOR IT is right there in the row that was already
-           * being computed and thrown away: if closing all the way
-           * takes the joint FURTHER from the surface than not closing
-           * at all, the surface is receding, and this joint is past
-           * the crest of it. Going down the far side gives the
-           * opposite sign, so the two cases do not get confused; a
-           * tall flat face gives the same sign as a crest, which is
-           * correct too -- that is the Kill Streak's forend, where
-           * every curl loses contact and the old rule produced four
-           * straight posts standing beside the gun.
+           * AND THE REASON IT COULD NEVER HAVE WORKED is in the same
+           * report, one line down: "hands finishing clear of the top of
+           * the weapon they hold: thompson +61 mauser +52 scatter +42
+           * mp5 +39 sawnoff +37 breakwater +36 paralyzer +29". Put the
+           * Thompson's figure beside its +30 over the sight line. The
+           * hand is 61 mm above the handguard and 30 mm above the sight
+           * line, so a hand simply RESTING on that weapon would have
+           * its fingers 31 mm BELOW the line. Every one of the seven is
+           * like that.
            *
-           * WHAT TO DO ABOUT IT is not to add a sight-line term -- the
-           * previous attempt did, and the cheapest route under the
-           * line turned out to be straight through the handguard, at
-           * 50 per cent burial on the Breakwater's fingers. It is to
-           * stop tracking: search only angles at or above the finger's
-           * own anatomical bend, and if none of those is clean, take
-           * the shallowest crossing AMONG THOSE rather than falling
-           * back to the whole range. The finger keeps closing at the
-           * rate a finger closes at, which is what it does in the air,
-           * and the burial charge still decides between the angles
-           * that remain. */
-          const crested = cands.length > 1
-            && cands[cands.length - 1][3] > cands[0][3] + r0 * 0.35;
-          const floorA = crested ? Math.min(lim, bends[k] * 0.5)
-            : lim * (k === 0 ? 0.15 : 0.45);
+           * No rule about how a finger curls can fix that, because the
+           * finger is not near the gun to begin with -- it is curling in
+           * open air 40 to 60 mm above the thing it is supposed to be
+           * wrapped round. The fault is in where the HAND is put, which
+           * is the seating search in buildViewHand, not in this march.
+           * Eight attempts aimed at solveCurl, the ninth aimed here, and
+           * all nine were aimed at the wrong subsystem. */
           const pick = (minA) => {
             let bE = 1e9, bA = null;
             for (const [cand, e, xd] of cands) if (!xd && cand >= minA && e < bE) bE = e;
@@ -1564,9 +1558,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
             return [bA, bE];
           };
           const selF = pick(floorA);
-          /* No dropping back to the straight half of the range when the
-             surface has run out -- that is the whole point. */
-          const sel = selF || (crested ? null : pick(0));
+          const sel = selF || pick(0);
           /* Held straighter than a curl by contact, as against nothing
              reachable at all -- two different faults with opposite
              repairs, and `walled` only counts the second. */
@@ -1592,21 +1584,6 @@ function buildViewHand(g, rawAt, side, opts = {}) {
              * tip on the far side. With depth in the score the row no
              * longer ties, so take the shallowest crossing there is: the
              * finger presses into what it holds rather than through it. */
-            /* AND THE CREST RULE DOES NOT REACH IN HERE.
-             *
-               It did on the first attempt, and grip.test.js charged for
-               it: the Kill Streak's left index went from 33 per cent
-               buried in the forend to 50. This branch is the case where
-               EVERY angle goes through something, and restricting it to
-               angles at or above the anatomical bend means the shallowest
-               crossing available is no longer the shallowest crossing
-               there is -- so the finger is pushed further into the wood
-               to satisfy a rule about air.
-
-               The crest rule says where to look for a CLEAN angle. It
-               does not get to authorise burial; that is the mistake the
-               eighth attempt made with a sight-line term and the one
-               this was written to avoid. Full range here. */
             let bA = null, bE = 1e9;
             for (const [cand, e] of cands) if (e < bE) { bE = e; bA = cand; }
             if (bA != null) a = bA;
