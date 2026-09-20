@@ -3325,6 +3325,20 @@
         && M.time > (p.slideEnd == null ? -99 : p.slideEnd) + 0.45) {
       p._wantSlide = false;
       p.sliding = true;
+      /* THE PRESS IS SPENT. Circle is the crouch button, and the crouch
+         key is three actions decided by how long you hold it: tap to
+         crouch, hold while sprinting to slide, hold otherwise to DROP
+         flat. Entering a slide from the press -- which is what a pad
+         does now -- leaves the button still down, and 220 ms later the
+         same unbroken press reaches the hold path. By then the slide
+         has set p.sprinting false, so it takes the `else` branch and
+         throws you on your face in the middle of your own slide, and
+         you stay prone, and prone cancels sprint, so nothing sprints
+         again for the rest of the life.
+
+         Marking the press used is what already stops a tap and a hold
+         both firing; it stops a slide and a drop both firing too. */
+      p._crouchUsed = true;
       p.slideEnd = M.time + 0.72;
       p.slideDir = { x: Math.sin(p.yaw), z: Math.cos(p.yaw) };
       p.slideSpeed = 5.2 * w.move * 1.62;

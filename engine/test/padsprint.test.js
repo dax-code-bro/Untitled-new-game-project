@@ -66,11 +66,11 @@ function check(name, cond, detail = '') {
       you.sliding = false; you.slideEnd = -99;
       await settle(14);
     };
-    const click = async (i) => {
+    const click = async (i, n) => {
       pad.buttons[i].pressed = true; pad.buttons[i].value = 1;
-      await settle(2);
+      await settle(n || 2);
       pad.buttons[i].pressed = false; pad.buttons[i].value = 0;
-      await settle(2);
+      await settle(n || 2);
     };
     const out = { padMap: !!PAD, inspectBtn: PAD && PAD.inspect };
 
@@ -89,43 +89,62 @@ function check(name, cond, detail = '') {
     pad.buttons[PAD.crouch].pressed = false; pad.buttons[PAD.crouch].value = 0;
     for (let i = 0; i < 20; i++) { await frame(); if (you.sliding) slid = true; }
     out.slideOnCirclePress = slid;
+    /* AND IT DOES NOT PUT YOU ON YOUR FACE. Circle is the crouch
+       button; holding it while NOT sprinting is the drop. Sliding from
+       the press leaves the button down, and 220 ms later the same
+       unbroken press reaches the hold path with sprinting already
+       false -- so the slide ended prone, and prone cancels sprint, and
+       nothing sprinted again for the rest of the life. Found because
+       the three "does the toggle stop" checks all reported a sprint
+       that never started. */
+    out.proneAfterSlide = !!you.prone;
 
-    /* ---- the toggle turns itself off when you stop, and when you aim ---- */
-    await clear();
-    pad.axes = [0, -1, 0, 0]; await settle(6);
-    await click(PAD.sprint); await settle(8);
-    const onAgain = !!you.sprinting;
+    /* ---- the toggle turns itself off three ways ----
+       EACH HALF REPORTED SEPARATELY. The first version of this ANDed
+       "it started" with "it stopped" into one boolean, so a run where
+       the sprint never started at all was indistinguishable from one
+       where it started and would not stop -- and those want opposite
+       fixes. A test that cannot name its own offender is a test you
+       have to debug before you can use it. */
+    const startSprint = async () => {
+      await clear();
+      pad.axes = [0, -1, 0, 0]; await settle(8);
+      await click(PAD.sprint); await settle(8);
+      return !!you.sprinting;
+    };
+
+    out.startedA = await startSprint();
     pad.axes = [0, 0, 0, 0];                // stick released
-    await settle(10);
-    out.sprintEndsWhenStickReleased = onAgain && !you.sprinting;
+    await settle(12);
+    out.stoppedOnStickRelease = !you.sprinting;
 
-    await clear();
-    pad.axes = [0, -1, 0, 0]; await settle(6);
-    await click(PAD.sprint); await settle(8);
-    const on2 = !!you.sprinting;
+    out.startedB = await startSprint();
     pad.buttons[PAD.aim].pressed = true; pad.buttons[PAD.aim].value = 1;
-    await settle(10);
-    out.sprintEndsWhenAiming = on2 && !you.sprinting;
+    await settle(12);
+    out.stoppedOnAim = !you.sprinting;
     pad.buttons[PAD.aim].pressed = false; pad.buttons[PAD.aim].value = 0;
 
-    /* ---- and clicking again turns it off ---- */
-    await clear();
-    pad.axes = [0, -1, 0, 0]; await settle(6);
-    await click(PAD.sprint); await settle(8);
-    const on3 = !!you.sprinting;
-    await click(PAD.sprint); await settle(8);
-    out.sprintTogglesOff = on3 && !you.sprinting;
+    out.startedC = await startSprint();
+    await click(PAD.sprint); await settle(10);
+    out.stoppedOnSecondClick = !you.sprinting;
 
     /* ---- INSPECT: two presses of D-pad right, not one ---- */
     await clear();
     await click(PAD.inspect);
     await settle(14);
     out.oneTapDoesNothing = !(vm.state.ins > 0);
-    await click(PAD.inspect);
-    await settle(2);
-    await click(PAD.inspect);
+    /* AS FAST AS THIS PAGE CAN. It renders in software GL at about nine
+       frames a second, so a frame is 110 ms and the tightest double
+       press the test can physically make is three or four frames --
+       around 0.4 s. That is a real constraint on the window, not an
+       artefact: a window a player cannot hit on a slow machine is a
+       window that does not work. */
+    const t0 = performance.now();
+    await click(PAD.inspect, 1);
+    await click(PAD.inspect, 1);
+    out.doubleTookMs = Math.round(performance.now() - t0);
     let ins = false;
-    for (let i = 0; i < 12; i++) { await frame(); if (vm.state.ins > 0) ins = true; }
+    for (let i = 0; i < 14; i++) { await frame(); if (vm.state.ins > 0) ins = true; }
     out.doubleTapInspects = ins;
     return out;
   });
@@ -135,11 +154,16 @@ function check(name, cond, detail = '') {
   check('the pad map is read from the game', r.padMap === true);
   check('a CLICK of L3 starts you sprinting', r.sprintAfterClick === true);
   check('sprint and one press of circle is a slide', r.slideOnCirclePress === true);
-  check('letting go of the stick ends the sprint', r.sprintEndsWhenStickReleased === true);
-  check('bringing the sights up ends the sprint', r.sprintEndsWhenAiming === true);
-  check('clicking L3 again ends the sprint', r.sprintTogglesOff === true);
+  check('and the slide does not also drop you prone', r.proneAfterSlide === false);
+  check('the toggle restarts a sprint every time',
+    r.startedA && r.startedB && r.startedC,
+    [r.startedA, r.startedB, r.startedC].join(','));
+  check('letting go of the stick ends the sprint', r.stoppedOnStickRelease === true);
+  check('bringing the sights up ends the sprint', r.stoppedOnAim === true);
+  check('clicking L3 again ends the sprint', r.stoppedOnSecondClick === true);
   check('one press of D-pad right does not inspect', r.oneTapDoesNothing === true);
-  check('two presses of D-pad right does', r.doubleTapInspects === true);
+  check('two presses of D-pad right does', r.doubleTapInspects === true,
+    'the two presses took ' + r.doubleTookMs + ' ms');
   const real = errors.filter((e) => !/SwiftShader|Fallback|favicon/i.test(e));
   check('no page error', real.length === 0, real.slice(0, 3).join(' | '));
 

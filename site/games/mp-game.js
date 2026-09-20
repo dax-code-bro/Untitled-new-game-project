@@ -535,8 +535,17 @@
        up, down, left, right in the standard mapping. */
     inspect: 15,
   };
-  /* How close two presses have to be to count as a double. */
-  var DOUBLE = 0.34;
+  /* How close two presses have to be to count as a double.
+   *
+     Half a second, not the third of one I first wrote. A double press
+     is bounded at the bottom by the frame rate -- on a machine drawing
+     thirty frames a second two presses cannot be closer than about
+     70 ms, and on one drawing nine they cannot be closer than 400 --
+     and at the top by how long a player is willing to hold the idea of
+     "one gesture" in their head, which is comfortably half a second.
+     A window that a slow machine cannot hit is a window that does not
+     work, and the test rendering in software GL found exactly that. */
+  var DOUBLE = 0.50;
   /* Published so a test can press the buttons this table names rather
      than a copy of it. engine/test/mppad.test.js gives the reason at
      length: multiplayer has its own input layer, separate from the
@@ -2506,14 +2515,30 @@
     var pointer = makePointer(root, canvas);
     /* Every gun this player can end the match holding, built now. */
     vm.warm((M.you.guns || []).map(function (w) { return w.id || w.base; }));
-    /* And what is bolted to them. */
-    (function () {
+    /* AND WHAT IS BOLTED TO THEM -- EVERY TIME THE WEAPON CHANGES, not
+       once at start-up.
+     *
+       This ran exactly once, in an immediately-invoked function, for
+       whichever gun happened to be in hand when the match opened. Swap
+       to your secondary and the viewmodel kept showing the PRIMARY's
+       attachments, on the pistol; swap back and it still showed them,
+       because nothing ever called fit() again. Half of "it doesn't
+       look like the attachments even applied" is that: they applied,
+       to the wrong gun, once.
+
+       The stat side was never broken -- MP_DATA.build folds the fitted
+       list into each weapon when the loadout is made, and both guns get
+       their own -- which is why this could go unnoticed: the gun shot
+       like it had a suppressor and did not look like it. */
+    var fitFor = function () {
       var lo = M.you.loadout || {};
       var held = M.you.guns[M.you.held];
-      var which = (held && (held.id || held.base)) === lo.secondary
-        ? lo.secondaryAtt : lo.primaryAtt;
-      vm.fit(which || []);
-    })();
+      var id = held && (held.id || held.base);
+      vm.fit((id === lo.secondary ? lo.secondaryAtt : lo.primaryAtt) || []);
+      lastFitHeld = M.you.held;
+    };
+    var lastFitHeld = -1;
+    fitFor();
 
     var yaw = M.you.yaw, pitch = 0;
     var sens = (opts.sensitivity || 1) * 0.0022;
@@ -2810,6 +2835,10 @@
          spawn yaw on the combatant and this file owns the view. */
       if (!wasAlive && p.alive) { yaw = p.yaw; pitch = 0; }
       wasAlive = p.alive;
+
+      /* The slot changes at the midpoint of a swap, so this is where a
+         weapon change is noticed rather than at the key press. */
+      if (p.held !== lastFitHeld) fitFor();
 
       var before = p.ammo[p.held];
       /* The view recoil the match just applied has to come back into

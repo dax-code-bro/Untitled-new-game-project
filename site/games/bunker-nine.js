@@ -15089,7 +15089,7 @@ function start(opts = {}) {
          thumb that is also working the killstreak rail. */
       let askInspect = CTL.keyHit('inspect');
       if (CTL.padHit('inspect')) {
-        if (S.time - (S.lastInspectTap || -99) < 0.34) { askInspect = true; S.lastInspectTap = -99; }
+        if (S.time - (S.lastInspectTap || -99) < 0.50) { askInspect = true; S.lastInspectTap = -99; }
         else S.lastInspectTap = S.time;
       }
       if (askInspect && P.inspectT <= 0 && P.reloading <= 0

@@ -109,7 +109,49 @@ function buildViewArm(g, sk, shoulder, hand, side, wrist) {
     [0.755, 0.0416, 0.0398],  // the cuff, standing proud of the arm
     [0.782, 0.0358, 0.0342],  // and rolled back under itself
   ];
+  /* AND IT CARRIES ON PAST THE MOUTH, off the bottom of the frame.
+   *
+     The sleeve above runs from t=0 to t=0.78 and is CAPPED at both
+     ends, and t=0 is described as "at the frame edge" -- which it is,
+     while the weapon is where the weapon usually is. But the arms are
+     parented to the WEAPON, and the weapon moves: a battering ram
+     thrust drives the root 620 mm straight down the look vector
+     (MELEE_SWING.ram.reach), and the capped disc at the sleeve mouth
+     goes with it. Half a metre in front of where it belongs, it is no
+     longer off the frame edge -- it is in the middle of the picture,
+     and what you see is an arm that simply stops in mid-air with a
+     flat lid on it. Reported exactly that way: "beyond a short point,
+     your arm is just invisible and not there".
+
+     The mouth cannot be pinned to the body, because the geometry is
+     baked in the weapon's space and the shoulder is not a joint. So
+     the arm is given another 720 mm of length instead, running
+     straight on in the direction it was already going -- back and
+     mostly DOWN, since the anchor sits 335 mm below the weapon and
+     only 70 behind it. That is longer than the furthest the weapon
+     ever travels, so the end of it stays out of frame through a ram
+     thrust, a swap, a reload and a slide alike.
+
+     Widening as it goes, because that is the direction of the elbow:
+     a forearm is 104 mm across at the sleeve mouth and an upper arm is
+     about 150. Four rings, 56 vertices an arm. */
+  const a0 = P(0), a1 = P(0.10);
+  let bx = a0.x - a1.x, by = a0.y - a1.y, bz = a0.z - a1.z;
+  const bl = Math.hypot(bx, by, bz) || 1;
+  bx /= bl; by /= bl; bz /= bl;
+  const EXT = [
+    [0.720, 0.0762, 0.0730],
+    [0.440, 0.0700, 0.0672],
+    [0.220, 0.0616, 0.0592],
+    [0.080, 0.0556, 0.0534],
+  ];
   const arm = [];
+  for (const [d0, w, d] of EXT) {
+    arm.push({
+      p: new Vec3(a0.x + bx * d0, a0.y + by * d0, a0.z + bz * d0),
+      w, d, e: 2.1, uv: -d0,
+    });
+  }
   for (const [t, w, d] of SLEEVE) arm.push({ p: P(t), w, d, e: 2.1, uv: t });
   loftRings(g, arm, 14, true, true);
 

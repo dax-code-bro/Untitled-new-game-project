@@ -34,6 +34,36 @@ const ATT_MAT = {
   glassG: { color: 0x08180e, texture: 'smooth', roughness: 0.10, metalness: 0,
     emissive: 0x4affa0, emissiveStrength: 1.2 },
   lens: { color: 0x0d1a22, texture: 'smooth', roughness: 0.08, metalness: 0 },
+  /* A REFLEX WINDOW IS GLASS, NOT A LAMP.
+   *
+     The red dot, the reflex and the holographic sight all put their
+     WINDOW and their DOT into the same geometry, and that geometry was
+     given `glassR` -- which is emissive at strength 1.4. So the whole
+     27 mm window glowed: "the reflex site is just a big obstructing red
+     blob", and it is, because the lens is the thing lit rather than the
+     reticle on it.
+
+     A reflex lens is a dichroic mirror. It looks like dark glass with a
+     ruby-gold sheen in reflection and it emits nothing whatsoever; the
+     only light in the sight is the dot. So the window gets this and the
+     dot goes to the `reticle` channel, which has been sitting there
+     emissive and unused by these three all along. */
+  lensRuby: { color: 0x1a1512, texture: 'smooth', roughness: 0.06, metalness: 0.35 },
+  /* A LASER BEAM IS LIGHT, and this is the whole of why "lasers aren't
+     showing up". The beam was always built -- a long thin rod off the
+     front of the housing -- but it was emitted into the BODY geometry,
+     which is `black`, `steel` or `poly`. So every laser in the game
+     has been drawing a gunmetal rod: present, solid, correctly placed,
+     and invisible against anything darker than concrete.
+
+     It gets its own geometry and its own material now, the way a
+     scope's glass does. Emissive and near-white at the core, because a
+     beam seen end-on is the dot and a beam seen across is the line,
+     and both are brighter than their colour. */
+  beamR: { color: 0xff5348, texture: 'smooth', roughness: 1, metalness: 0,
+    emissive: 0xff1a0e, emissiveStrength: 4.2 },
+  beamG: { color: 0x6bff9a, texture: 'smooth', roughness: 1, metalness: 0,
+    emissive: 0x18ff6a, emissiveStrength: 3.8 },
   /* ---- ammunition ----
      Brass for the case, and a tip colour per type, because that is how
      ammunition is actually marked: you can tell armour-piercing from
@@ -331,10 +361,18 @@ function buildRedDot(g) {
 function buildRedDotGlass(g) {
   const L = 0.0620, R = 0.0155, drop = 0.0180;
   // One canted window, which is what a tube dot has and what makes it
-  // glint differently to the steel around it.
+  // glint differently to the steel around it. Dark glass -- the dot is
+  // built separately, into the lit channel, because a window that glows
+  // is a red blob over the target rather than a sight.
   spin(g, [[L - 0.0140, 0], [L - 0.0140, R * 0.86], [L - 0.0125, R * 0.86], [L - 0.0125, 0]],
     20, 40, drop);
-  // The dot itself.
+}
+
+/* The dot. A millimetre of it, and that is the entire point: a 2 MOA
+   dot subtends about half a millimetre at the glass, and anything
+   bigger covers the thing you are shooting at. */
+function buildRedDotReticle(g) {
+  const L = 0.0620, drop = 0.0180;
   hardBox(g, L - 0.0132, drop, 0, 0.0006, 0.0009, 0.0009);
 }
 
@@ -799,7 +837,8 @@ const ATT_BUILD = {
   longbarrel: { perHost: true, body: (g, o) => buildLongBarrel(g, o.bore, o.host), mat: 'steel', bound: 0.32 },
   shortbarrel: { perHost: true, body: (g, o) => buildShortBarrel(g, o.bore, o.host), mat: 'steel', bound: 0.09 },
   bayonet: { body: buildBayonet, mat: 'bright', bound: 0.20 },
-  reddot: { body: buildRedDot, glass: buildRedDotGlass, glassMat: 'glassR', mat: 'black', bound: 0.09 },
+  reddot: { body: buildRedDot, glass: buildRedDotGlass, reticle: buildRedDotReticle,
+    glassMat: 'lensRuby', mat: 'black', bound: 0.09 },
   thermal: { body: buildThermal, glass: buildThermalGlass, glassMat: 'glassG', mat: 'poly', bound: 0.14 },
   nightvision: { body: buildNightVision, glass: buildNightVisionGlass, glassMat: 'glassG', mat: 'black', bound: 0.15 },
   rangefinder: { body: buildRangefinder, glass: buildRangefinderGlass, glassMat: 'glassR', mat: 'poly', bound: 0.13 },
@@ -965,7 +1004,12 @@ function buildHolo(g) {
 function buildHoloGlass(g) {
   const L = 0.0960, W = 0.0175, H = 0.0180, drop = 0.0205;
   hardBox(g, L * 0.60, drop + 0.0010, 0, 0.0008, H * 0.82, W * 0.80);
-  hardBox(g, L * 0.60, drop + 0.0010, 0, 0.0016, 0.0011, 0.0011);   // the ring
+}
+
+/* The ring-and-dot a holographic sight projects, and only that. */
+function buildHoloReticle(g) {
+  const L = 0.0960, drop = 0.0205;
+  hardBox(g, L * 0.60, drop + 0.0010, 0, 0.0016, 0.0011, 0.0011);
 }
 
 /* A canted iron, off at forty-five degrees on its own mount -- the only
@@ -1180,8 +1224,16 @@ function buildLaser(g, len, r) {
   spin(g, [[0, 0.0075], [L, 0.0075], [L, 0.0030], [0, 0.0030]], 14, 16, -0.0060);
   hardBox(g, 0.0080, -0.0060, 0.0090, 0.0060, 0.0035, 0.0028);      // the switch
   railClamp(g, 0.0180, 0.0020, 0.014);
-  // The beam, as a long thin rod -- short on a 1mW, long on a 5mW.
-  if (len > 0) spin(g, [[L, r], [L + len, r * 0.6]], 8, 10, -0.0060);
+}
+
+/* The beam itself, into its OWN geometry so it can be lit. Short on a
+   1 mW, long on a 5 mW, and the infrared one has none at all -- which
+   is the point of an infrared laser and is why `len` of zero emits
+   nothing rather than emitting a zero-length rod. */
+function buildLaserBeam(g, len, r) {
+  if (!(len > 0)) return;
+  const L = 0.0460;
+  spin(g, [[L, r], [L + len, r * 0.6]], 8, 10, -0.0060);
 }
 
 /* THE MULTIPLAYER IDS, all sixty-nine of them.
@@ -1193,9 +1245,12 @@ function buildLaser(g, len, r) {
    by calling the same builder with a different number. */
 Object.assign(ATT_BUILD, {
   /* ---- optics ---- */
-  'o-reflex': { body: buildRedDot, glass: buildRedDotGlass, glassMat: 'glassR', mat: 'black', bound: 0.09 },
-  'o-reddot': { body: buildRedDot, glass: buildRedDotGlass, glassMat: 'glassR', mat: 'black', bound: 0.09 },
-  'o-holo': { body: buildHolo, glass: buildHoloGlass, glassMat: 'glassR', mat: 'poly', bound: 0.11 },
+  'o-reflex': { body: buildRedDot, glass: buildRedDotGlass, reticle: buildRedDotReticle,
+    glassMat: 'lensRuby', mat: 'black', bound: 0.09 },
+  'o-reddot': { body: buildRedDot, glass: buildRedDotGlass, reticle: buildRedDotReticle,
+    glassMat: 'lensRuby', mat: 'black', bound: 0.09 },
+  'o-holo': { body: buildHolo, glass: buildHoloGlass, reticle: buildHoloReticle,
+    glassMat: 'lensRuby', mat: 'poly', bound: 0.11 },
   'o-combat': { body: (g) => scopeTube(g, 1.5), glass: (g) => scopeGlass(g, 1.5),
     reticle: (g) => scopeReticle(g, 1.5), glassMat: 'lens', mat: 'black', bound: 0.14 },
   'o-2x': { body: (g) => scopeTube(g, 2), glass: (g) => scopeGlass(g, 2),
@@ -1284,11 +1339,16 @@ Object.assign(ATT_BUILD, {
 
   /* ---- lasers. The beam length is the only difference anybody sees,
      and on the infrared one there is deliberately no beam at all. ---- */
-  'l-1mw': { body: (g) => buildLaser(g, 0.60, 0.0013), mat: 'black', bound: 0.10 },
-  'l-5mw': { body: (g) => buildLaser(g, 1.40, 0.0018), mat: 'black', bound: 0.10 },
-  'l-tac': { body: (g) => buildLaser(g, 0.90, 0.0016), mat: 'steel', bound: 0.10 },
+  'l-1mw': { body: (g) => buildLaser(g, 0.60, 0.0013),
+    glass: (g) => buildLaserBeam(g, 0.60, 0.0013), glassMat: 'beamR', mat: 'black', bound: 0.66 },
+  'l-5mw': { body: (g) => buildLaser(g, 1.40, 0.0018),
+    glass: (g) => buildLaserBeam(g, 1.40, 0.0018), glassMat: 'beamR', mat: 'black', bound: 1.46 },
+  'l-tac': { body: (g) => buildLaser(g, 0.90, 0.0016),
+    glass: (g) => buildLaserBeam(g, 0.90, 0.0016), glassMat: 'beamG', mat: 'steel', bound: 0.96 },
+  /* No beam, on purpose: that is what an infrared laser is. */
   'l-ir': { body: (g) => buildLaser(g, 0, 0), mat: 'poly', bound: 0.06 },
-  'l-steady': { body: (g) => buildLaser(g, 0.40, 0.0012), mat: 'poly', bound: 0.10 },
+  'l-steady': { body: (g) => buildLaser(g, 0.40, 0.0012),
+    glass: (g) => buildLaserBeam(g, 0.40, 0.0012), glassMat: 'beamR', mat: 'poly', bound: 0.46 },
 });
 
 Engine.prototype.gunPartKinds = function () { return Object.keys(ATT_BUILD); };
