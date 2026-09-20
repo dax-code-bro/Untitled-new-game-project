@@ -35141,20 +35141,23 @@ function handGive(o = {}) {
   const bx = Math.sin(t * 1.5) * br, by = Math.cos(t * 1.1) * br;
   /* THE BREATH DOES NOT RUN ALONG THE BORE.
    *
-     It did, on both hands, and that is a hand sliding up and down the
-     grip it is holding -- which is not what breathing looks like and
-     costs real reach. Measured across the change: hold.test.js asks
-     whether the support hand is far enough forward to read as a second
-     grip, and the along-bore term took 2 mm off all four weapons it
-     reports (mp5 20.7 -> 20.5, mg42 20.9 -> 20.7, remington 20.8 ->
-     20.7, thompson 20.1 -> 19.9), consistently and in the wrong
-     direction. The check was already 3 mm short, so this did not break
-     it -- but a term that only ever costs something is a term that
-     should not be there.
+     It did, on both hands, and a breath along X is a hand sliding up
+     and down the grip it is holding. It moves across the grip instead:
+     up and down with the chest, and a little in and out laterally.
+     Both are movement you can see and neither lets go of the weapon.
 
-     A hand on a grip breathes ACROSS the grip: up and down with the
-     chest, and a little in and out laterally. Both of those are
-     movement you can see and neither of them lets go. */
+     ON PRINCIPLE, NOT ON A MEASUREMENT, and the distinction is the
+     point. An earlier version of this comment quoted hold.test.js --
+     mp5 20.7 -> 20.5, thompson 20.1 -> 19.9 and so on -- as evidence
+     that the along-bore term cost 2 mm of support reach. Those numbers
+     were real and they were worthless: three runs of one UNCHANGED
+     build then returned 20.7 / 20.4 / 20.5 on the mp5 and 20.1 / 19.8 /
+     19.9 on the thompson. Three millimetres of scatter, which is more
+     than the difference being attributed to the change.
+
+     So the reason to move the term is that a hand does not breathe
+     along the axis it is gripping. That was true before the
+     measurement and is still true after it. */
   return {
     r: [slide, heel + by, bx],
     l: [slide * 0.55 * (0.4 + 0.6 * lag),

@@ -120,6 +120,28 @@ const note = (s) => console.log(`  ..   ${s}`);
            "improvements" to the reach were measured against it and both
            readings were noise. A man aiming a rifle is standing still;
            hold it there. */
+        /* WHERE THE REMAINING SCATTER COMES FROM, and why it is not
+           fixed here.
+         *
+           Pinning the animator holds the body still, and samples taken
+           back to back inside ONE run now agree to 0.3 mm. Separate
+           runs of the same build still disagree by 3 mm, so the
+           variance is not frame to frame -- it is per page load. The
+           subject is a live bot: he spawns somewhere different, picks a
+           different enemy and aims somewhere different every match, and
+           the support reach solves to wherever he is pointing.
+
+           Taking him out of botThink was tried and is worse than the
+           problem. `bot = false` makes the match treat him as a human
+           player, and it hides the local player's own third-person
+           body -- all sixteen holds came back "no weapon drawn". The
+           subject has to stay a bot to have arms at all.
+
+           SO THE LIMIT IS STATED RATHER THAN HIDDEN: within a run this
+           reading is good to a third of a millimetre, and ACROSS runs
+           it is good to about three. A difference under five
+           millimetres between two builds means nothing, and two rounds
+           were already spent chasing two. */
         foe.actor.animator.play('idle', 0);
         foe.actor.animator.speed = 0;
         foe.actor.animator.time = 0;
@@ -159,12 +181,47 @@ const note = (s) => console.log(`  ..   ${s}`);
         const offAxis = Math.hypot(rel.x - axis.x * along, rel.y - axis.y * along,
           rel.z - axis.z * along);
 
+        /* SAMPLED THREE TIMES, AND THE SPREAD REPORTED.
+         *
+           Pinning the animator was not enough. The subject is a bot in
+           a LIVE match: botThink runs every frame, so its aim solves to
+           a slightly different point each time and the arm goes with
+           it. Measured directly -- three runs of one unchanged build --
+           the support hand's reach came back 20.7, 20.4 and 20.5 cm on
+           the MP5 and 20.1, 19.8, 19.9 on the Thompson. Three
+           millimetres of scatter on code that did not change.
+
+           That matters because the bar this check measures against is
+           four millimetres away. A test whose noise is most of its
+           margin cannot adjudicate anything, and it has now cost two
+           rounds of chasing: a 2 mm "regression" was diagnosed,
+           committed against, and turned out to be inside this spread.
+
+           So each subject is sampled three times with frames between,
+           the MEDIAN is what the check uses, and the spread is printed
+           beside it. A reading that cannot be trusted should say so on
+           its own line rather than wait to be caught. */
+        const samples = [];
+        for (let k = 0; k < 3; k++) {
+          const hLk = pos(sk, 'handL');
+          const relk = new LEx.Vec3(hLk.x - gripL.x, hLk.y - gripL.y, hLk.z - gripL.z);
+          samples.push(relk.x * axis.x + relk.y * axis.y + relk.z * axis.z);
+          foe.actor.animator.time = 0;
+          await frame();
+          a.updateMatrix();
+        }
+        samples.sort((x, y) => x - y);
+        const alongMed = samples[1];
+        const alongSpread = samples[2] - samples[0];
+
         const rec = {
           id, aiming,
+          alongSpread: +alongSpread.toFixed(4),
           gripMiss: +hR.distanceTo(gripL).toFixed(4),
           foreMiss: +hL.distanceTo(foreL).toFixed(4),
           offAxis: +offAxis.toFixed(4),
-          along: +along.toFixed(4),
+          along: +alongMed.toFixed(4),
+          alongOnce: +along.toFixed(4),
           wanted: +span.toFixed(4),
           /* How far apart the hands ended up, against how far apart
              their two targets are. */
@@ -227,6 +284,24 @@ const note = (s) => console.log(`  ..   ${s}`);
      it stops mattering. */
   const SECOND_GRIP = 0.22;
   const wantAlong = (m) => Math.min(m.wanted, SECOND_GRIP) - 0.01;
+  /* HOW MUCH OF THE MARGIN IS NOISE. Printed unconditionally, because
+     the number below is only worth reading if this one is small. */
+  const spread = real.reduce((a, m) => Math.max(a, m.alongSpread || 0), 0);
+  const shortfall = real.reduce((a, m) => Math.max(a, wantAlong(m) - m.along), 0);
+  note(`support reach: worst spread over three samples ${(spread * 1000).toFixed(1)} mm, `
+    + `worst shortfall ${(shortfall * 1000).toFixed(1)} mm`);
+  note('   ACROSS separate runs this reading moves by about 3 mm -- the subject is a '
+    + 'live bot who aims somewhere new each match. Treat anything under 5 mm as noise.');
+  /* WITHIN one run. The run-to-run figure is the one that matters and
+     no single run can see it, so this says which it is rather than
+     implying the reading is trustworthy across builds. Pinning the
+     subject above is what makes the two agree; if they ever diverge
+     again, this line is the first place it shows. */
+  check('the reach reading is steady within a run',
+    spread < Math.max(0.004, shortfall * 0.5),
+    `${(spread * 1000).toFixed(1)} mm of scatter against a ${(shortfall * 1000).toFixed(1)} mm `
+    + 'shortfall -- this check cannot decide anything at that ratio');
+
   check('the support hand is far enough forward to be a second grip',
     real.every((m) => m.along >= wantAlong(m)),
     real.filter((m) => m.along < wantAlong(m)).slice(0, 5)
