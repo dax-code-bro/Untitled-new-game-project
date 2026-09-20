@@ -2501,6 +2501,15 @@
        when the stance changed (proneAt), so the clip runs for its own
        length from that moment and nothing has to remember to clear
        a flag. */
+    /* WHICH CYCLE IS CHOSEN BY THE CYCLES, not by thresholds written
+       against this game's movement speeds. Those speeds are not human
+       ones -- 4.6 m/s is a sprint, not a walk -- so a threshold list
+       tuned to them put a man crossing a room into the WALK clip at
+       barely two metres a second of leg speed against 4.6 of floor, and
+       his feet skated the difference. Every locomotion clip now states
+       how far one cycle carries the body, so the right clip is simply
+       the one whose own travelling speed is nearest and the right rate
+       is the ratio. See gaitRate and AnimationClip.stride. */
     var want;
     var sinceProne = M_TIME - (p.proneAt || -99);
     if (!p.alive && p.corpse) want = p.corpse.face ? 'deathFace' : 'deathBack';
@@ -2512,10 +2521,8 @@
       else want = v > 0.18 ? 'crawl' : 'proneIdle';
     } else if (sinceProne < 0.80 && p._wasProne) want = 'standUp';
     else if (p.crouching) {
-      want = v > 2.4 ? 'crouchRun' : (v > 0.30 ? 'crouchWalk' : 'crouchIdle');
-    } else if (p.sprinting && v > 4.6) want = 'sprint';
-    else if (v > 4.3) want = 'run';
-    else if (v > 0.35) want = 'walk';
+      want = v > 0.30 ? gaitPick(a, ['crouchWalk', 'crouchRun'], v) : 'crouchIdle';
+    } else if (v > 0.35) want = gaitPick(a, ['walk', 'run', 'sprint'], v);
     else want = 'idle';
     p._wasProne = !!p.prone || want === 'standUp';
 
@@ -2525,13 +2532,24 @@
       var quick = want === 'jump' || want === 'slide' || want === 'drop';
       a.play(want, quick ? 0.06 : (want === 'standUp' ? 0.10 : 0.16));
     }
-    if (want === 'walk') a.speed = Math.max(0.5, Math.min(1.7, v / 4.6));
-    else if (want === 'run') a.speed = Math.max(0.7, Math.min(1.4, v / 6.0));
-    else if (want === 'sprint') a.speed = Math.max(0.85, Math.min(1.2, v / 7.0));
-    else if (want === 'crouchWalk') a.speed = Math.max(0.5, Math.min(1.6, v / 2.2));
-    else if (want === 'crouchRun') a.speed = Math.max(0.7, Math.min(1.5, v / 3.4));
+    var cyc = a.clips.get(want);
+    if (cyc && cyc.stride) a.speed = W.LE.gaitRate(cyc, v);
     else if (want === 'crawl') a.speed = Math.max(0.5, Math.min(1.8, v / 1.1));
     else a.speed = 1;
+  }
+
+  /* The cycle whose own travelling speed is closest, compared in log
+     terms: a clip asked for half speed and one asked for double are
+     equally wrong, and a linear comparison says otherwise. */
+  function gaitPick(a, names, v) {
+    var best = names[0], bestErr = Infinity;
+    for (var i = 0; i < names.length; i++) {
+      var c = a.clips.get(names[i]);
+      if (!c || !c.stride) continue;
+      var err = Math.abs(Math.log(Math.max(v, 0.2) / (c.stride / c.duration)));
+      if (err < bestErr) { bestErr = err; best = names[i]; }
+    }
+    return best;
   }
 
   /* Pose every body from a tape frame instead of from the simulation.

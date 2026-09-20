@@ -471,19 +471,26 @@ class CharacterController {
       this.facing += diff * Math.min(1, this.turnSpeed * dt);
     }
 
-    /* Animation state. */
+    /* Animation state.
+
+       WHICH CLIP, AND HOW FAST, BOTH COME FROM THE CLIPS THEMSELVES.
+       They used to come from the controller's own moveSpeed and
+       runSpeed, and those are game numbers, not gait numbers: this
+       game's characters move at 4.6 m/s, which is not a walk, it is a
+       sprint. So a man crossing a room at 4.6 played the WALK clip,
+       stretched to its 1.9x ceiling, and his feet covered 1.9 metres a
+       second while the floor went past at 4.6. That is the skate.
+
+       Every locomotion clip now states how far one cycle carries the
+       body (AnimationClip.stride), because the generator that built it
+       knows -- the planted foot is planted, and stride over duration is
+       the speed at which that is true. Pick the clip whose natural speed
+       is nearest what the body is doing, then scale to close the gap. */
     const planar = Math.sqrt(body.velocity.x ** 2 + body.velocity.z ** 2);
     let state;
     if (this.sliding) state = 'slide';
     else if (!this.grounded) state = 'jump';
-    /* Sprint is its own clip, not the run played faster. The threshold
-       sits just under runSpeed because a controller rarely reaches its
-       own stated top speed exactly -- drag, a slope, a wall graze -- and
-       a sprint that only triggers at the theoretical maximum is a sprint
-       that almost never triggers. */
-    else if (planar > this.runSpeed * 0.90) state = 'sprint';
-    else if (planar > this.moveSpeed * 1.12) state = 'run';
-    else if (planar > 0.35) state = 'walk';
+    else if (planar > 0.35) state = this._gaitFor(planar);
     else state = 'idle';
     if (state !== this.state) {
       this.state = state;
@@ -495,22 +502,31 @@ class CharacterController {
         this.animator.play(state, state === 'jump' ? 0.08 : 0.2);
       }
     }
-    // Match stride to actual speed so the feet do not skate.
     if (this.animator && this.autoAnimate === false) { /* owner drives speed */ }
     else if (this.animator && (state === 'walk' || state === 'run' || state === 'sprint')) {
-      const ref = state === 'walk' ? this.moveSpeed : this.runSpeed;
-      /* The sprint clip is authored AT runSpeed, so its own tempo is
-         already right and the scale only trims the last few per cent.
-         Letting it stretch to 1.9 like the walk does is what turns a
-         sprint back into the cartoon it was built to replace. */
-      const lo = state === 'sprint' ? 0.85 : 0.45;
-      const hi = state === 'sprint' ? 1.20 : 1.9;
-      this.animator.speed = clamp(planar / ref, lo, hi);
+      this.animator.speed = gaitRate(this.animator.clips.get(state), planar);
     } else if (this.animator) {
       this.animator.speed = 1;
     }
 
     if (!wasGrounded && this.grounded && this.onLand) this.onLand(Math.abs(body.velocity.y));
+  }
+
+  /* The cycle whose own travelling speed is closest to this one, in log
+     terms -- a clip asked to run at half speed and one asked to run at
+     double are equally wrong, and a linear comparison says otherwise. */
+  _gaitFor(planar) {
+    const A = this.animator;
+    if (!A) return 'walk';
+    let best = 'walk', bestErr = Infinity;
+    for (const name of ['walk', 'run', 'sprint']) {
+      const clip = A.clips.get(name);
+      if (!clip || !clip.stride) continue;
+      const natural = clip.stride / clip.duration;
+      const err = Math.abs(Math.log(Math.max(planar, 0.2) / natural));
+      if (err < bestErr) { bestErr = err; best = name; }
+    }
+    return best;
   }
 
   get position() { return this.body.position; }

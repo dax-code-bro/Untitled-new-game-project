@@ -229,28 +229,75 @@ class AnimationClip {
     this.duration = duration;
     this.tracks = tracks;   // boneName -> { times:[], rotations:[Quat], positions:[Vec3] }
     this.loop = opts.loop !== false;
+    /* How far over the ground one cycle of this clip carries the body,
+       in metres, for the cycles where that means anything. It is not a
+       decoration: the planted foot in these clips is planted, so the
+       only playback rate at which the feet do not skate is the one where
+       stride/duration matches how fast the body is actually moving. The
+       controller reads it. */
+    this.stride = opts.stride || 0;
   }
 
-  /* Sample into a target pose object: { boneName: {rotation, position} }. */
+  /* Sample into a target pose object: { boneName: {rotation, position} }.
+
+     SMOOTH, not linear. This used to slerp straight from one key to the
+     next, which means the speed of every joint was CONSTANT across each
+     segment and changed instantaneously at every key. Measured across the
+     fifty clips in this engine, the worst of those steps was the sprint's
+     left knee: 1737 degrees per second of angular velocity appearing in
+     a single frame. That is what "the animation looks cartoonish" is --
+     not the poses, which were fine, but a body whose every joint jerks to
+     a new speed eight times a second.
+
+     So each segment is a cubic Hermite through the two keys it spans,
+     with tangents taken from the neighbouring keys. The curve still
+     passes exactly through every authored pose -- nothing is softened
+     away -- but velocity is now continuous across the whole clip, and
+     the ease in and out of each extreme comes for free.
+
+     Tangents are the weighted three-point form rather than the plain
+     centred difference. Key spacing here is wildly uneven (a sprint has
+     keys at 0, 0.08, 0.22, 0.36 ... in the same track), and the centred
+     difference overshoots badly when a short segment sits next to a long
+     one -- a knee authored to 140 degrees swinging out past 160. The
+     weighted form biases the tangent toward the shorter neighbour and
+     keeps the overshoot to a degree or two, which is follow-through
+     rather than a glitch. */
   sample(time, out) {
-    const t = this.loop ? ((time % this.duration) + this.duration) % this.duration : clamp(time, 0, this.duration);
+    const dur = this.duration;
+    const t = this.loop ? ((time % dur) + dur) % dur : clamp(time, 0, dur);
     for (const name in this.tracks) {
       const track = this.tracks[name];
       const times = track.times;
+      const n = times.length;
       let i = 0;
-      while (i < times.length - 1 && times[i + 1] < t) i++;
-      const t0 = times[i], t1 = times[Math.min(i + 1, times.length - 1)];
-      const span = t1 - t0;
-      const f = span > 1e-6 ? (t - t0) / span : 0;
-      const j = Math.min(i + 1, times.length - 1);
+      while (i < n - 1 && times[i + 1] < t) i++;
+      const j = Math.min(i + 1, n - 1);
+      const t1 = times[i], t2 = times[j];
+      const span = t2 - t1;
+      const f = span > 1e-6 ? (t - t1) / span : 0;
+
+      /* The keys either side, for the tangents. A looping clip wraps --
+         and its first and last key hold the SAME pose, so the wrap has to
+         step over one of them or the tangent at the seam is computed
+         across a zero-length segment and the loop point pops. */
+      let h = i - 1, k = j + 1, tPrev, tNext;
+      if (h < 0) {
+        if (this.loop && n > 2) { h = n - 2; tPrev = times[n - 2] - dur; }
+        else { h = i; tPrev = t1 - (span > 1e-6 ? span : 1); }
+      } else tPrev = times[h];
+      if (k > n - 1) {
+        if (this.loop && n > 2) { k = 1; tNext = times[1] + dur; }
+        else { k = j; tNext = t2 + (span > 1e-6 ? span : 1); }
+      } else tNext = times[k];
 
       let slot = out[name];
       if (!slot) { slot = out[name] = { rotation: new Quat(), position: new Vec3(), hasPosition: false }; }
       if (track.rotations) {
-        slot.rotation.copy(track.rotations[i]).slerp(track.rotations[j], f);
+        hermiteQuat(slot.rotation, track.rotations, h, i, j, k, tPrev, t1, t2, tNext, f);
       }
       if (track.positions) {
-        slot.position.copy(track.positions[i]).lerp(track.positions[j], f);
+        hermiteVec3(slot.position, track.positions, h, i, j, k, tPrev, t1, t2, tNext, f);
         slot.hasPosition = true;
       } else {
         slot.hasPosition = false;
@@ -258,6 +305,83 @@ class AnimationClip {
     }
     return out;
   }
+}
+
+/* The Hermite basis, and the weighted three-point tangent that feeds it.
+   `a` is the value at t1 with the key before it at t0; `b` the value at
+   t2 with the key after it at t3. Shared by both channels so the rotation
+   and the position of one bone cannot drift out of step. */
+function hermiteWeights(t0, t1, t2, t3, f) {
+  const s2 = f * f, s3 = s2 * f;
+  const span = t2 - t1;
+  return {
+    h00: 2 * s3 - 3 * s2 + 1,
+    h10: (s3 - 2 * s2 + f) * span,
+    h01: -2 * s3 + 3 * s2,
+    h11: (s3 - s2) * span,
+    dA: t1 - t0, dB: span, dC: t3 - t2,
+  };
+}
+/* One scalar channel: value, and the two tangents around it.
+
+   SHAPE-PRESERVING. The plain weighted tangent still overshoots, and on
+   these clips it overshot a lot -- the wave's right upper arm sailed
+   37.5 degrees past the pose it was aimed at, which is precisely the
+   "over-exaggerated" this whole pass is about. So the tangents are
+   limited the Fritsch-Carlson way: zero at a local extreme, and
+   otherwise no steeper than three times the shallower neighbouring
+   secant. That makes the cubic monotone on every segment, so it CANNOT
+   leave the box its two keys define. What survives is the easing --
+   speed coming off at each extreme and building through the middle,
+   which is what a limb does and a straight line never did. */
+function hermiteScalar(w, p0, p1, p2, p3) {
+  const dA = w.dA > 1e-9 ? w.dA : w.dB, dC = w.dC > 1e-9 ? w.dC : w.dB;
+  const dB = w.dB > 1e-9 ? w.dB : 1;
+  const s0 = (p1 - p0) / dA, s1 = (p2 - p1) / dB, s2 = (p3 - p2) / dC;
+  let m1, m2;
+  if (s0 * s1 <= 0) m1 = 0;
+  else {
+    m1 = (s0 * dB + s1 * dA) / (dA + dB);
+    const lim = 3 * Math.min(Math.abs(s0), Math.abs(s1));
+    if (m1 > lim) m1 = lim; else if (m1 < -lim) m1 = -lim;
+  }
+  if (s1 * s2 <= 0) m2 = 0;
+  else {
+    m2 = (s1 * dC + s2 * dB) / (dB + dC);
+    const lim = 3 * Math.min(Math.abs(s1), Math.abs(s2));
+    if (m2 > lim) m2 = lim; else if (m2 < -lim) m2 = -lim;
+  }
+  return w.h00 * p1 + w.h10 * m1 + w.h01 * p2 + w.h11 * m2;
+}
+
+const _hq = [0, 0, 0, 0];
+function hermiteQuat(outQ, arr, h, i, j, k, t0, t1, t2, t3, f) {
+  const q1 = arr[i];
+  if (t2 - t1 <= 1e-9) { outQ.copy(q1).normalize(); return; }
+  /* Align the four onto one hemisphere, as a CHAIN. Aligning each one to
+     q1 independently is wrong once a clip turns far enough for q2 to
+     flip: q3 then has to follow q2, not q1. */
+  const sgn = (a, b) => (a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w < 0 ? -1 : 1);
+  const s0 = sgn(q1, arr[h]);
+  const q2 = arr[j], s2 = sgn(q1, q2);
+  const s3 = s2 * (q2.x * arr[k].x + q2.y * arr[k].y + q2.z * arr[k].z + q2.w * arr[k].w < 0 ? -1 : 1);
+  const w = hermiteWeights(t0, t1, t2, t3, f);
+  const A = arr[h], B = q1, C = q2, D = arr[k];
+  _hq[0] = hermiteScalar(w, s0 * A.x, B.x, s2 * C.x, s3 * D.x);
+  _hq[1] = hermiteScalar(w, s0 * A.y, B.y, s2 * C.y, s3 * D.y);
+  _hq[2] = hermiteScalar(w, s0 * A.z, B.z, s2 * C.z, s3 * D.z);
+  _hq[3] = hermiteScalar(w, s0 * A.w, B.w, s2 * C.w, s3 * D.w);
+  outQ.set(_hq[0], _hq[1], _hq[2], _hq[3]).normalize();
+}
+function hermiteVec3(outV, arr, h, i, j, k, t0, t1, t2, t3, f) {
+  if (t2 - t1 <= 1e-9) { outV.copy(arr[i]); return; }
+  const w = hermiteWeights(t0, t1, t2, t3, f);
+  const A = arr[h], B = arr[i], C = arr[j], D = arr[k];
+  outV.set(
+    hermiteScalar(w, A.x, B.x, C.x, D.x),
+    hermiteScalar(w, A.y, B.y, C.y, D.y),
+    hermiteScalar(w, A.z, B.z, C.z, D.z),
+  );
 }
 
 /* Plays and cross-fades clips onto a skeleton. */
@@ -461,6 +585,21 @@ function buildClip(name, duration, spec, opts = {}) {
   return new AnimationClip(name, duration, tracks, opts);
 }
 
+/* How fast to play a locomotion clip so its planted foot stays planted.
+
+   The clip states how far one cycle carries the body; divide by the
+   duration and that is the speed at which the animation is TRUE. Any
+   other rate is a foot sliding on the floor, and the further from it the
+   worse. The clamp is there because the alternative to a little sliding
+   at the edges is a man moving his legs at a speed no man moves them --
+   a clip stretched past about 1.8 stops reading as running and starts
+   reading as a cartoon, which is the whole complaint this pass answers. */
+function gaitRate(clip, speed, lo = 0.55, hi = 1.80) {
+  if (!clip || !clip.stride || clip.duration <= 0) return 1;
+  const natural = clip.stride / clip.duration;
+  return clamp(speed / natural, lo, hi);
+}
+
 /* The stock locomotion set. Enough for a character to read as alive without
    any authored animation data. */
 function makeHumanoidClips() {
@@ -508,140 +647,168 @@ function makeHumanoidClips() {
      stance 62 per cent of the cycle. Phase convention is the sprint's:
      t=0 is left foot strike. */
 
-  clips.push(buildClip('walk', 1.06, {
+  /* ------------------------------------------------------------------
+     LOCOMOTION. Every cycle below -- walk, run, sprint and the two
+     crouches -- is GENERATED from where the foot goes, not written as a
+     table of hip and knee degrees. Two things forced that.
+
+     The first is that the hand-written ones were mirrored. Two comments
+     in this file asserted that a positive upper leg is forward. It is
+     not: upperLegL.x = +20 puts that foot at z -0.280, which is BEHIND.
+     Measured across the finished clips, neither foot in the walk ever
+     reached in front of the pelvis (z -0.59..-0.02) and neither did in
+     the run (-0.77..-0.12). Both men were being dragged along by the
+     shoulders. The arms were mirrored by the same wrong belief, which is
+     why the contralateral check in gait.test.js still passed: two
+     errors, one on each limb, cancelling in the correlation.
+
+     The second is that angles cannot express the thing that matters. A
+     planted foot must not move, must not sink through the floor, and
+     must be somewhere the leg can actually reach. Those are properties
+     of the foot's PATH; write angles and you are guessing at all three
+     at once. So the path is the input -- planted and carried backwards
+     through stance, arcing clear through swing, its height solved from
+     its own pitch so whichever end of the sole is lower rests exactly on
+     the floor -- and the hip and knee are solved to put the ankle on it.
+
+     The pelvis height is solved too, from the stance knee: given where
+     the planted ankle is and how far the knee over it is bent, the hip
+     can only be in one place. Author the shock absorber (19 degrees of
+     knee in a walk, 43 in a run) and the bob falls out of it -- 57 mm
+     for the walk, 88 for the run, which is what a person does. In the
+     air, where no leg constrains anything, the gap is bridged with the
+     parabola gravity draws.
+
+     Measured on the result: no foot anywhere in the five clips goes
+     below the floor, and no leg is asked for more than 99.7% of its own
+     length. See engine/test/motion.test.js, which holds all of it.
+     ------------------------------------------------------------------ */
+  clips.push(buildClip('walk', 0.9, {
     hips: {
-      /* Rotation keys sit at the position keys' times, because the
-         builder resamples position ONTO the rotation times and a bob
-         sampled at the quarters comes out as a third of itself. */
-      keys: [
-        [0.00, 4, -4.0, 0.0], [0.10, 4, -3.2, 3.0], [0.25, 4, 0.0, 4.0],
-        [0.38, 4, 2.6, 2.6], [0.50, 4, 4.0, 0.0], [0.60, 4, 3.2, -3.0],
-        [0.72, 4, 0.0, -4.0], [0.86, 4, -2.6, -2.6], [1.00, 4, -4.0, 0.0],
-      ],
-      /* Up at each mid-stance over a straight supporting leg, down at
-         each double support. Twice a cycle, 46mm, and about 19mm of
-         sway toward whichever foot is carrying the weight -- +X is the
-         left side of this skeleton (upperLegL sits at x +0.09). */
-      pos: [
-        [0.00, 0.000, -0.031, 0], [0.10, 0.012, -0.016, 0], [0.25, 0.019, 0.015, 0],
-        [0.38, 0.012, 0.002, 0], [0.50, 0.000, -0.031, 0], [0.60, -0.012, -0.016, 0],
-        [0.72, -0.019, 0.015, 0], [0.86, -0.012, 0.002, 0], [1.00, 0.000, -0.031, 0],
-      ],
+      keys: [[0.00, 4, -4, 0], [0.06, 4, -3, 0.8], [0.13, 4, -2, 1.5], [0.19, 4, -1, 2.3], [0.25, 4, 0, 3],
+                 [0.31, 4, 1, 2.3], [0.38, 4, 2, 1.5], [0.44, 4, 3, 0.8], [0.50, 4, 4, 0],
+                 [0.56, 4, 3, -0.8], [0.63, 4, 2, -1.5], [0.69, 4, 1, -2.3], [0.75, 4, 0, -3],
+                 [0.81, 4, -1, -2.3], [0.88, 4, -2, -1.5], [0.94, 4, -3, -0.8], [1.00, 4, -4, 0]],
+      pos: [[0.00, 0, -0.049, 0], [0.06, 0.004, -0.043, 0], [0.13, 0.009, -0.042, 0],
+                 [0.19, 0.013, -0.016, 0], [0.25, 0.018, -0.006, 0], [0.31, 0.013, -0.003, 0],
+                 [0.38, 0.009, -0.005, 0], [0.44, 0.005, -0.005, 0], [0.50, 0, -0.049, 0],
+                 [0.56, -0.004, -0.043, 0], [0.63, -0.009, -0.042, 0], [0.69, -0.013, -0.016, 0],
+                 [0.75, -0.018, -0.006, 0], [0.81, -0.013, -0.003, 0], [0.88, -0.009, -0.005, 0],
+                 [0.94, -0.005, -0.005, 0], [1.00, 0, -0.049, 0]],
     },
-    spine: { keys: [[0, 3, 2.5, 0], [0.25, 3, 0, 0], [0.5, 3, -2.5, 0], [0.75, 3, 0, 0], [1, 3, 2.5, 0]] },
-    chest: { keys: [[0, 2, 5, -1], [0.25, 2, 0, 0], [0.5, 2, -5, 1], [0.75, 2, 0, 0], [1, 2, 5, -1]] },
-    /* The head does not rotate with the shoulders. It stays pointed
-       where the man is going, which is what the neck is for. */
-    neck: { keys: [[0, -2, -3, 0], [0.5, -2, 3, 0], [1, -2, -3, 0]] },
-    head: { keys: [[0, -1, -2, 0], [0.5, -1, 2, 0], [1, -1, -2, 0]] },
+    spine: { keys: [[0.00, 0.9, 1.8, 0], [0.13, 0.9, 0.9, -0.4], [0.25, 0.9, 0, -0.9], [0.38, 0.9, -0.9, -0.4], [0.50, 0.9, -1.8, 0], [0.63, 0.9, -0.9, 0.4], [0.75, 0.9, 0, 0.9], [0.88, 0.9, 0.9, 0.4], [1.00, 0.9, 1.8, 0]] },
+    chest: { keys: [[0.00, 0.6, 3.3, 0], [0.13, 0.6, 1.6, -0.7], [0.25, 0.6, 0, -1.4], [0.38, 0.6, -1.6, -0.7], [0.50, 0.6, -3.3, 0], [0.63, 0.6, -1.6, 0.7], [0.75, 0.6, 0, 1.4], [0.88, 0.6, 1.6, 0.7], [1.00, 0.6, 3.3, 0]] },
+    neck: { keys: [[0.00, -2.5, -1.5, 0], [0.13, -2.5, -0.8, 0.6], [0.25, -2.5, 0, 1.2], [0.38, -2.5, 0.8, 0.6], [0.50, -2.5, 1.5, 0], [0.63, -2.5, 0.8, -0.6], [0.75, -2.5, 0, -1.2], [0.88, -2.5, -0.8, -0.6], [1.00, -2.5, -1.5, 0]] },
+    head: { keys: [[0.00, -1.2, -1.1, 0], [0.13, -1.2, -0.6, 0.4], [0.25, -1.2, 0, 0.7], [0.38, -1.2, 0.6, 0.4], [0.50, -1.2, 1.1, 0], [0.63, -1.2, 0.6, -0.4], [0.75, -1.2, 0, -0.7], [0.88, -1.2, -0.6, -0.4], [1.00, -1.2, -1.1, 0]] },
+    upperLegL: { keys: [[0.00, -32.7, 0, 0], [0.05, -30.9, 0, 0], [0.10, -32.5, 0, 0], [0.12, -32.4, 0, 0],
+             [0.15, -25.2, 0, 0], [0.20, -20.3, 0, 0], [0.25, -15.6, 0, 0], [0.30, -11.6, 0, 0],
+             [0.35, -7.8, 0, 0], [0.40, -4, 0, 0], [0.45, -1.6, 0, 0], [0.50, -7.9, 0, 0],
+             [0.55, -3.7, 0, 0], [0.60, -1, 0, 0], [0.62, 0.5, 0, 0], [0.65, -3.7, 0, 0],
+             [0.70, -16.6, 0, 0], [0.75, -29.6, 0, 0], [0.80, -38.4, 0, 0], [0.85, -38, 0, 0],
+             [0.90, -37.9, 0, 0], [0.95, -28.9, 0, 0], [1.00, -32.7, 0, 0]] },
+    lowerLegL: { keys: [[0.00, 17.3, 0, 0], [0.05, 21, 0, 0], [0.10, 31.2, 0, 0], [0.12, 33.8, 0, 0],
+             [0.15, 23.8, 0, 0], [0.20, 21.1, 0, 0], [0.25, 18.7, 0, 0], [0.30, 17.6, 0, 0],
+             [0.35, 16.8, 0, 0], [0.40, 16.3, 0, 0], [0.45, 18.4, 0, 0], [0.50, 40.1, 0, 0],
+             [0.55, 38.3, 0, 0], [0.60, 39.6, 0, 0], [0.62, 39.3, 0, 0], [0.65, 46.6, 0, 0],
+             [0.70, 62.7, 0, 0], [0.75, 68.6, 0, 0], [0.80, 62.3, 0, 0], [0.85, 41.4, 0, 0],
+             [0.90, 27.3, 0, 0], [0.95, 5.1, 0, 0], [1.00, 17.3, 0, 0]] },
+    footL: { keys: [[0.00, 3.3, 0, 0], [0.05, 4.4, 0, 0], [0.10, -2.3, 0, 0], [0.12, -4.8, 0, 0],
+             [0.15, -1.9, 0, 0], [0.20, -3.6, 0, 0], [0.25, -5.4, 0, 0], [0.30, -7.8, 0, 0],
+             [0.35, -10.4, 0, 0], [0.40, -11.9, 0, 0], [0.45, -12, 0, 0], [0.50, -22.9, 0, 0],
+             [0.55, -17.8, 0, 0], [0.60, -13.9, 0, 0], [0.62, -11.9, 0, 0], [0.65, -6.6, 0, 0],
+             [0.70, -2.8, 0, 0], [0.75, -5.6, 0, 0], [0.80, -7.8, 0, 0], [0.85, -10, 0, 0],
+             [0.90, -10.7, 0, 0], [0.95, -8.7, 0, 0], [1.00, 3.3, 0, 0]] },
+    upperLegR: { keys: [[0.00, -7.9, 0, 0], [0.05, -3.7, 0, 0], [0.10, -1, 0, 0], [0.12, 0.5, 0, 0],
+             [0.15, -3.7, 0, 0], [0.20, -16.6, 0, 0], [0.25, -29.6, 0, 0], [0.30, -38.4, 0, 0],
+             [0.35, -38, 0, 0], [0.40, -37.9, 0, 0], [0.45, -28.9, 0, 0], [0.50, -32.7, 0, 0],
+             [0.55, -30.9, 0, 0], [0.60, -32.5, 0, 0], [0.62, -32.4, 0, 0], [0.65, -25.2, 0, 0],
+             [0.70, -20.3, 0, 0], [0.75, -15.6, 0, 0], [0.80, -11.6, 0, 0], [0.85, -7.8, 0, 0],
+             [0.90, -4, 0, 0], [0.95, -1.6, 0, 0], [1.00, -7.9, 0, 0]] },
+    lowerLegR: { keys: [[0.00, 40.1, 0, 0], [0.05, 38.3, 0, 0], [0.10, 39.6, 0, 0], [0.12, 39.3, 0, 0],
+             [0.15, 46.6, 0, 0], [0.20, 62.7, 0, 0], [0.25, 68.6, 0, 0], [0.30, 62.3, 0, 0],
+             [0.35, 41.4, 0, 0], [0.40, 27.3, 0, 0], [0.45, 5.1, 0, 0], [0.50, 17.3, 0, 0],
+             [0.55, 21, 0, 0], [0.60, 31.2, 0, 0], [0.62, 33.8, 0, 0], [0.65, 23.8, 0, 0],
+             [0.70, 21.1, 0, 0], [0.75, 18.7, 0, 0], [0.80, 17.6, 0, 0], [0.85, 16.8, 0, 0],
+             [0.90, 16.3, 0, 0], [0.95, 18.4, 0, 0], [1.00, 40.1, 0, 0]] },
+    footR: { keys: [[0.00, -22.9, 0, 0], [0.05, -17.8, 0, 0], [0.10, -13.9, 0, 0], [0.12, -11.9, 0, 0],
+             [0.15, -6.6, 0, 0], [0.20, -2.8, 0, 0], [0.25, -5.6, 0, 0], [0.30, -7.8, 0, 0],
+             [0.35, -10, 0, 0], [0.40, -10.7, 0, 0], [0.45, -8.7, 0, 0], [0.50, 3.3, 0, 0],
+             [0.55, 4.4, 0, 0], [0.60, -2.3, 0, 0], [0.62, -4.8, 0, 0], [0.65, -1.9, 0, 0],
+             [0.70, -3.6, 0, 0], [0.75, -5.4, 0, 0], [0.80, -7.8, 0, 0], [0.85, -10.4, 0, 0],
+             [0.90, -11.9, 0, 0], [0.95, -12, 0, 0], [1.00, -22.9, 0, 0]] },
+    shoulderL: { keys: [[0.00, 0, 2.5, 1.5], [0.13, 0, 1.3, 1.5], [0.25, 0, 0, 1.5], [0.38, 0, -1.3, 1.5], [0.50, 0, -2.5, 1.5], [0.63, 0, -1.3, 1.5], [0.75, 0, 0, 1.5], [0.88, 0, 1.3, 1.5], [1.00, 0, 2.5, 1.5]] },
+    shoulderR: { keys: [[0.00, 0, 2.5, -1.5], [0.13, 0, 1.3, -1.5], [0.25, 0, 0, -1.5], [0.38, 0, -1.3, -1.5], [0.50, 0, -2.5, -1.5], [0.63, 0, -1.3, -1.5], [0.75, 0, 0, -1.5], [0.88, 0, 1.3, -1.5], [1.00, 0, 2.5, -1.5]] },
+    upperArmL: { keys: [[0.00, 14, 0, 7], [0.13, 7, 0, 7], [0.25, 0, 0, 7], [0.38, -10, 0, 7], [0.50, -20, 0, 7], [0.63, -10, 0, 7], [0.75, 0, 0, 7], [0.88, 7, 0, 7], [1.00, 14, 0, 7]] },
+    lowerArmL: { keys: [[0.00, -20, 0, 0], [0.13, -23.5, 0, 0], [0.25, -27, 0, 0], [0.38, -30.5, 0, 0], [0.50, -34, 0, 0], [0.63, -30.5, 0, 0], [0.75, -27, 0, 0], [0.88, -23.5, 0, 0], [1.00, -20, 0, 0]] },
+    handL: { keys: [[0.00, -6, 0, 4], [0.13, -3, 0, 4], [0.25, 0, 0, 4], [0.38, 3, 0, 4], [0.50, 6, 0, 4], [0.63, 3, 0, 4], [0.75, 0, 0, 4], [0.88, -3, 0, 4], [1.00, -6, 0, 4]] },
+    upperArmR: { keys: [[0.00, -20, 0, -7], [0.13, -10, 0, -7], [0.25, 0, 0, -7], [0.38, 7, 0, -7], [0.50, 14, 0, -7], [0.63, 7, 0, -7], [0.75, 0, 0, -7], [0.88, -10, 0, -7], [1.00, -20, 0, -7]] },
+    lowerArmR: { keys: [[0.00, -34, 0, 0], [0.13, -30.5, 0, 0], [0.25, -27, 0, 0], [0.38, -23.5, 0, 0], [0.50, -20, 0, 0], [0.63, -23.5, 0, 0], [0.75, -27, 0, 0], [0.88, -30.5, 0, 0], [1.00, -34, 0, 0]] },
+    handR: { keys: [[0.00, 6, 0, -4], [0.13, 3, 0, -4], [0.25, 0, 0, -4], [0.38, -3, 0, -4], [0.50, -6, 0, -4], [0.63, -3, 0, -4], [0.75, 0, 0, -4], [0.88, 3, 0, -4], [1.00, 6, 0, -4]] },
+  }, { stride: 0.98 }));
 
-    // Left: strike at 0, toe-off at 0.62, swing through to strike again.
-    upperLegL: {
-      keys: [[0.00, 28, 0, 0], [0.10, 22, 0, 0], [0.25, 12, 0, 0], [0.38, 0, 0, 0],
-        [0.50, -10, 0, 0], [0.60, -12, 0, 0], [0.72, 8, 0, 0], [0.86, 30, 0, 0],
-        [1.00, 28, 0, 0]],
-    },
-    /* Two flexion waves, not one. The small one early in stance is the
-       knee taking the landing, and leaving it out is most of what makes
-       a walk look like a pair of scissors. */
-    lowerLegL: {
-      keys: [[0.00, 5, 0, 0], [0.10, 17, 0, 0], [0.25, 8, 0, 0], [0.38, 5, 0, 0],
-        [0.50, 14, 0, 0], [0.60, 40, 0, 0], [0.72, 62, 0, 0], [0.86, 28, 0, 0],
-        [1.00, 5, 0, 0]],
-    },
-    footL: {
-      keys: [[0.00, -4, 0, 0], [0.10, 4, 0, 0], [0.25, -2, 0, 0], [0.38, -9, 0, 0],
-        [0.50, -6, 0, 0], [0.60, 14, 0, 0], [0.72, -6, 0, 0], [0.86, -8, 0, 0],
-        [1.00, -4, 0, 0]],
-    },
-    // Right: the same curve, half a cycle along.
-    upperLegR: {
-      keys: [[0.00, -10, 0, 0], [0.10, -12, 0, 0], [0.22, 8, 0, 0], [0.36, 30, 0, 0],
-        [0.50, 28, 0, 0], [0.60, 22, 0, 0], [0.75, 12, 0, 0], [0.88, 0, 0, 0],
-        [1.00, -10, 0, 0]],
-    },
-    lowerLegR: {
-      keys: [[0.00, 14, 0, 0], [0.10, 40, 0, 0], [0.22, 62, 0, 0], [0.36, 28, 0, 0],
-        [0.50, 5, 0, 0], [0.60, 17, 0, 0], [0.75, 8, 0, 0], [0.88, 5, 0, 0],
-        [1.00, 14, 0, 0]],
-    },
-    footR: {
-      keys: [[0.00, -6, 0, 0], [0.10, 14, 0, 0], [0.22, -6, 0, 0], [0.36, -8, 0, 0],
-        [0.50, -4, 0, 0], [0.60, 4, 0, 0], [0.75, -2, 0, 0], [0.88, -9, 0, 0],
-        [1.00, -6, 0, 0]],
-    },
-
-    /* CONTRALATERAL, and the sign was settled by measuring rather than
-       by reading the numbers -- twice. A positive upper arm is FORWARD
-       on this rig, so the left arm is at -16 (back) while the left leg
-       is at +28 (forward). The check in gait.test.js correlates how far
-       ahead the left FOOT is against how far ahead the left HAND is,
-       over the whole cycle, and contralateral is a negative
-       correlation. Reading it off the keys got it backwards; the
-       correlation does not care what I think the sign means. */
-    upperArmL: { keys: [[0, -16, 0, -7], [0.25, -4, 0, -7], [0.5, 11, 0, -7], [0.75, -4, 0, -7], [1, -16, 0, -7]] },
-    upperArmR: { keys: [[0, 11, 0, 7], [0.25, -4, 0, 7], [0.5, -16, 0, 7], [0.75, -4, 0, 7], [1, 11, 0, 7]] },
-    lowerArmL: { keys: [[0, 14, 0, 0], [0.5, 26, 0, 0], [1, 14, 0, 0]] },
-    lowerArmR: { keys: [[0, 26, 0, 0], [0.5, 14, 0, 0], [1, 26, 0, 0]] },
-  }));
-
-  clips.push(buildClip('run', 0.70, {
+  clips.push(buildClip('run', 0.7, {
     hips: {
-      keys: [
-        [0.00, 9, -6, 2], [0.12, 9, -5, 3], [0.22, 9, -3, 2], [0.35, 9, 1, 0],
-        [0.50, 9, 6, -2], [0.62, 9, 5, -3], [0.72, 9, 3, -2], [0.85, 9, -1, 0],
-        [1.00, 9, -6, 2],
-      ],
-      // Lowest over the loaded knee at mid-stance, highest in flight.
-      pos: [
-        [0.00, 0, -0.010, 0], [0.12, 0, -0.042, 0], [0.22, 0, -0.014, 0],
-        [0.35, 0, 0.026, 0], [0.50, 0, -0.010, 0], [0.62, 0, -0.042, 0],
-        [0.72, 0, -0.014, 0], [0.85, 0, 0.026, 0], [1.00, 0, -0.010, 0],
-      ],
+      keys: [[0.00, 9, -6.5, 0], [0.06, 9, -4.9, 1], [0.13, 9, -3.3, 2], [0.19, 9, -1.6, 3],
+                 [0.25, 9, 0, 4], [0.31, 9, 1.6, 3], [0.38, 9, 3.3, 2], [0.44, 9, 4.9, 1],
+                 [0.50, 9, 6.5, 0], [0.56, 9, 4.9, -1], [0.63, 9, 3.3, -2], [0.69, 9, 1.6, -3],
+                 [0.75, 9, 0, -4], [0.81, 9, -1.6, -3], [0.88, 9, -3.3, -2], [0.94, 9, -4.9, -1],
+                 [1.00, 9, -6.5, 0]],
+      pos: [[0.00, 0, -0.026, 0], [0.06, 0.003, -0.038, 0], [0.13, 0.006, -0.045, 0],
+                 [0.19, 0.01, -0.029, 0], [0.25, 0.013, -0.027, 0], [0.31, 0.01, -0.043, 0],
+                 [0.38, 0.006, -0.102, 0], [0.44, 0.003, -0.056, 0], [0.50, 0, -0.026, 0],
+                 [0.56, -0.003, -0.038, 0], [0.63, -0.006, -0.045, 0], [0.69, -0.01, -0.029, 0],
+                 [0.75, -0.013, -0.027, 0], [0.81, -0.01, -0.043, 0], [0.88, -0.006, -0.102, 0],
+                 [0.94, -0.003, -0.056, 0], [1.00, 0, -0.026, 0]],
     },
-    spine: { keys: [[0, 10, 4, 0], [0.5, 10, -4, 0], [1, 10, 4, 0]] },
-    chest: { keys: [[0, 5, 7, -1], [0.5, 5, -7, 1], [1, 5, 7, -1]] },
-    neck: { keys: [[0, -8, -6, 0], [0.5, -8, 6, 0], [1, -8, -6, 0]] },
-    head: { keys: [[0, -4, -5, 0], [0.5, -4, 5, 0], [1, -4, -5, 0]] },
-
-    upperLegL: {
-      keys: [[0.00, 55, 0, 0], [0.12, 38, 0, 0], [0.22, 18, 0, 0], [0.35, -12, 0, 0],
-        [0.50, -20, 0, 0], [0.62, -6, 0, 0], [0.72, 20, 0, 0], [0.85, 46, 0, 0],
-        [1.00, 55, 0, 0]],
-    },
-    lowerLegL: {
-      keys: [[0.00, 22, 0, 0], [0.12, 40, 0, 0], [0.22, 26, 0, 0], [0.35, 22, 0, 0],
-        [0.50, 78, 0, 0], [0.62, 112, 0, 0], [0.72, 96, 0, 0], [0.85, 48, 0, 0],
-        [1.00, 22, 0, 0]],
-    },
-    footL: {
-      keys: [[0.00, -14, 0, 0], [0.12, 6, 0, 0], [0.22, 12, 0, 0], [0.35, 26, 0, 0],
-        [0.50, 4, 0, 0], [0.62, -14, 0, 0], [0.72, -18, 0, 0], [0.85, -16, 0, 0],
-        [1.00, -14, 0, 0]],
-    },
-    upperLegR: {
-      keys: [[0.00, -20, 0, 0], [0.12, -6, 0, 0], [0.22, 20, 0, 0], [0.35, 46, 0, 0],
-        [0.50, 55, 0, 0], [0.62, 38, 0, 0], [0.72, 18, 0, 0], [0.85, -12, 0, 0],
-        [1.00, -20, 0, 0]],
-    },
-    lowerLegR: {
-      keys: [[0.00, 78, 0, 0], [0.12, 112, 0, 0], [0.22, 96, 0, 0], [0.35, 48, 0, 0],
-        [0.50, 22, 0, 0], [0.62, 40, 0, 0], [0.72, 26, 0, 0], [0.85, 22, 0, 0],
-        [1.00, 78, 0, 0]],
-    },
-    footR: {
-      keys: [[0.00, 4, 0, 0], [0.12, -14, 0, 0], [0.22, -18, 0, 0], [0.35, -16, 0, 0],
-        [0.50, -14, 0, 0], [0.62, 6, 0, 0], [0.72, 12, 0, 0], [0.85, 26, 0, 0],
-        [1.00, 4, 0, 0]],
-    },
-
-    upperArmL: { keys: [[0, -44, 0, -10], [0.25, -5, 0, -12], [0.5, 42, 0, -12], [0.75, -5, 0, -12], [1, -44, 0, -10]] },
-    upperArmR: { keys: [[0, 42, 0, 12], [0.25, -5, 0, 12], [0.5, -44, 0, 10], [0.75, -5, 0, 12], [1, 42, 0, 12]] },
-    lowerArmL: { keys: [[0, 68, 0, 0], [0.5, 92, 0, 0], [1, 68, 0, 0]] },
-    lowerArmR: { keys: [[0, 92, 0, 0], [0.5, 68, 0, 0], [1, 92, 0, 0]] },
-    shoulderL: { keys: [[0, 0, 0, -3], [0.5, 0, 0, 4], [1, 0, 0, -3]] },
-    shoulderR: { keys: [[0, 0, 0, -4], [0.5, 0, 0, 3], [1, 0, 0, -4]] },
-  }));
+    spine: { keys: [[0.00, 2, 3.1, 0], [0.13, 2, 1.6, -0.6], [0.25, 2, 0, -1.2], [0.38, 2, -1.6, -0.6], [0.50, 2, -3.1, 0], [0.63, 2, -1.6, 0.6], [0.75, 2, 0, 1.2], [0.88, 2, 1.6, 0.6], [1.00, 2, 3.1, 0]] },
+    chest: { keys: [[0.00, 1.4, 5.9, 0], [0.13, 1.4, 2.9, -0.9], [0.25, 1.4, 0, -1.8], [0.38, 1.4, -2.9, -0.9], [0.50, 1.4, -5.9, 0], [0.63, 1.4, -2.9, 0.9], [0.75, 1.4, 0, 1.8], [0.88, 1.4, 2.9, 0.9], [1.00, 1.4, 5.9, 0]] },
+    neck: { keys: [[0.00, -5.6, -2.7, 0], [0.13, -5.6, -1.3, 0.9], [0.25, -5.6, 0, 1.8], [0.38, -5.6, 1.3, 0.9], [0.50, -5.6, 2.7, 0], [0.63, -5.6, 1.3, -0.9], [0.75, -5.6, 0, -1.8], [0.88, -5.6, -1.3, -0.9], [1.00, -5.6, -2.7, 0]] },
+    head: { keys: [[0.00, -3.8, -2, 0], [0.13, -3.8, -1, 0.5], [0.25, -3.8, 0, 1.1], [0.38, -3.8, 1, 0.5], [0.50, -3.8, 2, 0], [0.63, -3.8, 1, -0.5], [0.75, -3.8, 0, -1.1], [0.88, -3.8, -1, -0.5], [1.00, -3.8, -2, 0]] },
+    upperLegL: { keys: [[0.00, -33, 0, 0], [0.05, -32, 0, 0], [0.10, -31.1, 0, 0], [0.15, -21.9, 0, 0],
+             [0.20, -12.5, 0, 0], [0.25, -2.9, 0, 0], [0.30, 4.5, 0, 0], [0.35, 7.3, 0, 0],
+             [0.38, 10.4, 0, 0], [0.40, 6.3, 0, 0], [0.45, -1.5, 0, 0], [0.50, -10.9, 0, 0],
+             [0.55, -22.8, 0, 0], [0.60, -36.3, 0, 0], [0.65, -48.4, 0, 0], [0.70, -57.7, 0, 0],
+             [0.75, -62.5, 0, 0], [0.80, -63.3, 0, 0], [0.85, -65.2, 0, 0], [0.88, -65.3, 0, 0],
+             [0.90, -61, 0, 0], [0.95, -48.3, 0, 0], [1.00, -33, 0, 0]] },
+    lowerLegL: { keys: [[0.00, 21.2, 0, 0], [0.05, 32.1, 0, 0], [0.10, 43.5, 0, 0], [0.15, 38.2, 0, 0],
+             [0.20, 31.9, 0, 0], [0.25, 25, 0, 0], [0.30, 22.3, 0, 0], [0.35, 30.7, 0, 0],
+             [0.38, 32.6, 0, 0], [0.40, 43, 0, 0], [0.45, 58.8, 0, 0], [0.50, 73, 0, 0],
+             [0.55, 89, 0, 0], [0.60, 103.5, 0, 0], [0.65, 105, 0, 0], [0.70, 100.9, 0, 0],
+             [0.75, 91.9, 0, 0], [0.80, 80.7, 0, 0], [0.85, 75.3, 0, 0], [0.88, 72.5, 0, 0],
+             [0.90, 64.5, 0, 0], [0.95, 45.6, 0, 0], [1.00, 21.2, 0, 0]] },
+    footL: { keys: [[0.00, 6.8, 0, 0], [0.05, -7.3, 0, 0], [0.10, -20.7, 0, 0], [0.15, -20.4, 0, 0],
+             [0.20, -19.3, 0, 0], [0.25, -16.1, 0, 0], [0.30, -10.5, 0, 0], [0.35, -11.2, 0, 0],
+             [0.38, -10, 0, 0], [0.40, -7.1, 0, 0], [0.45, -2.4, 0, 0], [0.50, -1.5, 0, 0],
+             [0.55, -4, 0, 0], [0.60, -6.9, 0, 0], [0.65, -9.8, 0, 0], [0.70, -12.8, 0, 0],
+             [0.75, -14.2, 0, 0], [0.80, -14.6, 0, 0], [0.85, -14.9, 0, 0], [0.88, -15.1, 0, 0],
+             [0.90, -15.3, 0, 0], [0.95, -4.5, 0, 0], [1.00, 6.8, 0, 0]] },
+    upperLegR: { keys: [[0.00, -10.9, 0, 0], [0.05, -22.8, 0, 0], [0.10, -36.3, 0, 0], [0.15, -48.4, 0, 0],
+             [0.20, -57.7, 0, 0], [0.25, -62.5, 0, 0], [0.30, -63.3, 0, 0], [0.35, -65.2, 0, 0],
+             [0.38, -65.3, 0, 0], [0.40, -61, 0, 0], [0.45, -48.3, 0, 0], [0.50, -33, 0, 0],
+             [0.55, -32, 0, 0], [0.60, -31.1, 0, 0], [0.65, -21.9, 0, 0], [0.70, -12.5, 0, 0],
+             [0.75, -2.9, 0, 0], [0.80, 4.5, 0, 0], [0.85, 7.3, 0, 0], [0.88, 10.4, 0, 0],
+             [0.90, 6.3, 0, 0], [0.95, -1.5, 0, 0], [1.00, -10.9, 0, 0]] },
+    lowerLegR: { keys: [[0.00, 73, 0, 0], [0.05, 89, 0, 0], [0.10, 103.5, 0, 0], [0.15, 105, 0, 0],
+             [0.20, 100.9, 0, 0], [0.25, 91.9, 0, 0], [0.30, 80.7, 0, 0], [0.35, 75.3, 0, 0],
+             [0.38, 72.5, 0, 0], [0.40, 64.5, 0, 0], [0.45, 45.6, 0, 0], [0.50, 21.2, 0, 0],
+             [0.55, 32.1, 0, 0], [0.60, 43.5, 0, 0], [0.65, 38.2, 0, 0], [0.70, 31.9, 0, 0],
+             [0.75, 25, 0, 0], [0.80, 22.3, 0, 0], [0.85, 30.7, 0, 0], [0.88, 32.6, 0, 0],
+             [0.90, 43, 0, 0], [0.95, 58.8, 0, 0], [1.00, 73, 0, 0]] },
+    footR: { keys: [[0.00, -1.5, 0, 0], [0.05, -4, 0, 0], [0.10, -6.9, 0, 0], [0.15, -9.8, 0, 0],
+             [0.20, -12.8, 0, 0], [0.25, -14.2, 0, 0], [0.30, -14.6, 0, 0], [0.35, -14.9, 0, 0],
+             [0.38, -15.1, 0, 0], [0.40, -15.3, 0, 0], [0.45, -4.5, 0, 0], [0.50, 6.8, 0, 0],
+             [0.55, -7.3, 0, 0], [0.60, -20.7, 0, 0], [0.65, -20.4, 0, 0], [0.70, -19.3, 0, 0],
+             [0.75, -16.1, 0, 0], [0.80, -10.5, 0, 0], [0.85, -11.2, 0, 0], [0.88, -10, 0, 0],
+             [0.90, -7.1, 0, 0], [0.95, -2.4, 0, 0], [1.00, -1.5, 0, 0]] },
+    shoulderL: { keys: [[0.00, 0, 4, 1.5], [0.13, 0, 2, 1.5], [0.25, 0, 0, 1.5], [0.38, 0, -2, 1.5], [0.50, 0, -4, 1.5], [0.63, 0, -2, 1.5], [0.75, 0, 0, 1.5], [0.88, 0, 2, 1.5], [1.00, 0, 4, 1.5]] },
+    shoulderR: { keys: [[0.00, 0, 4, -1.5], [0.13, 0, 2, -1.5], [0.25, 0, 0, -1.5], [0.38, 0, -2, -1.5], [0.50, 0, -4, -1.5], [0.63, 0, -2, -1.5], [0.75, 0, 0, -1.5], [0.88, 0, 2, -1.5], [1.00, 0, 4, -1.5]] },
+    upperArmL: { keys: [[0.00, 34, 0, 9], [0.13, 17, 0, 9], [0.25, 0, 0, 9], [0.38, -22, 0, 9], [0.50, -44, 0, 9], [0.63, -22, 0, 9], [0.75, 0, 0, 9], [0.88, 17, 0, 9], [1.00, 34, 0, 9]] },
+    lowerArmL: { keys: [[0.00, -64, 0, 0], [0.13, -70, 0, 0], [0.25, -76, 0, 0], [0.38, -82, 0, 0], [0.50, -88, 0, 0], [0.63, -82, 0, 0], [0.75, -76, 0, 0], [0.88, -70, 0, 0], [1.00, -64, 0, 0]] },
+    handL: { keys: [[0.00, -6, 0, 4], [0.13, -3, 0, 4], [0.25, 0, 0, 4], [0.38, 3, 0, 4], [0.50, 6, 0, 4], [0.63, 3, 0, 4], [0.75, 0, 0, 4], [0.88, -3, 0, 4], [1.00, -6, 0, 4]] },
+    upperArmR: { keys: [[0.00, -44, 0, -9], [0.13, -22, 0, -9], [0.25, 0, 0, -9], [0.38, 17, 0, -9], [0.50, 34, 0, -9], [0.63, 17, 0, -9], [0.75, 0, 0, -9], [0.88, -22, 0, -9], [1.00, -44, 0, -9]] },
+    lowerArmR: { keys: [[0.00, -88, 0, 0], [0.13, -82, 0, 0], [0.25, -76, 0, 0], [0.38, -70, 0, 0], [0.50, -64, 0, 0], [0.63, -70, 0, 0], [0.75, -76, 0, 0], [0.88, -82, 0, 0], [1.00, -88, 0, 0]] },
+    handR: { keys: [[0.00, 6, 0, -4], [0.13, 3, 0, -4], [0.25, 0, 0, -4], [0.38, -3, 0, -4], [0.50, -6, 0, -4], [0.63, -3, 0, -4], [0.75, 0, 0, -4], [0.88, 3, 0, -4], [1.00, 6, 0, -4]] },
+  }, { stride: 1.78 }));
 
   /* A sprint is not a fast run, and speeding the run clip up does not
      make one. Three things separate them and all three are geometry,
@@ -667,89 +834,69 @@ function makeHumanoidClips() {
      is what stops the torso reading as a plank bolted to the legs.
 
      Phase convention matches walk and run: t=0 is left leg forward. */
-  clips.push(buildClip('sprint', 0.46, {
+  clips.push(buildClip('sprint', 0.52, {
     hips: {
-      /* The rotation keys are at the POSITION keys' times, not at the
-         quarters they would otherwise sit at. A track carries ONE time
-         array for both channels and the builder resamples position onto
-         the rotation times -- so a seven-centimetre rise sampled at
-         0, 1/4, 1/2, 3/4 came out as fifteen millimetres of nothing,
-         because both extremes fall between those samples. Measured, or
-         it would have shipped looking like a glide. */
-      keys: [
-        [0.00, 10, 8, 4], [0.12, 10, 6, 3], [0.30, 10, 3, 1],
-        [0.50, 10, -8, -4], [0.62, 10, -6, -3], [0.80, 10, -3, -1],
-        [1.00, 10, 8, 4],
-      ],
-      // Two rises per cycle -- one per step. Lowest at mid-stance when
-      // the supporting knee is loaded, highest in the flight phase.
-      pos: [
-        [0.00, 0, -0.010, 0], [0.12, 0, -0.050, 0], [0.30, 0, 0.032, 0],
-        [0.50, 0, -0.010, 0], [0.62, 0, -0.050, 0], [0.80, 0, 0.032, 0],
-        [1.00, 0, -0.010, 0],
-      ],
+      keys: [[0.00, 15, -8.5, 0], [0.06, 15, -6.4, 1.3], [0.13, 15, -4.3, 2.5], [0.19, 15, -2.1, 3.8],
+                 [0.25, 15, 0, 5], [0.31, 15, 2.1, 3.8], [0.38, 15, 4.3, 2.5], [0.44, 15, 6.4, 1.3],
+                 [0.50, 15, 8.5, 0], [0.56, 15, 6.4, -1.3], [0.63, 15, 4.3, -2.5],
+                 [0.69, 15, 2.1, -3.8], [0.75, 15, 0, -5], [0.81, 15, -2.1, -3.8],
+                 [0.88, 15, -4.3, -2.5], [0.94, 15, -6.4, -1.3], [1.00, 15, -8.5, 0]],
+      pos: [[0.00, 0, -0.007, 0], [0.06, 0.002, -0.044, 0], [0.13, 0.004, -0.037, 0],
+                 [0.19, 0.007, -0.037, 0], [0.25, 0.009, -0.085, 0], [0.31, 0.007, -0.069, 0],
+                 [0.38, 0.004, -0.039, 0], [0.44, 0.002, -0.018, 0], [0.50, 0, -0.007, 0],
+                 [0.56, -0.002, -0.044, 0], [0.63, -0.004, -0.037, 0], [0.69, -0.007, -0.037, 0],
+                 [0.75, -0.009, -0.085, 0], [0.81, -0.007, -0.069, 0], [0.88, -0.004, -0.039, 0],
+                 [0.94, -0.002, -0.018, 0], [1.00, 0, -0.007, 0]],
     },
-    /* Twenty-eight degrees of lean by the chest and thirty-five by the
-       neck, against the run's eighteen. The first pass used twenty and
-       measured within a millimetre of the run at the chest, which is
-       the whole difference being invisible. */
-    spine: { keys: [[0.00, 18, -6, 0], [0.50, 18, 6, 0], [1.00, 18, -6, 0]] },
-    chest: { keys: [[0.00, 7, -10, 0], [0.50, 7, 10, 0], [1.00, 7, -10, 0]] },
-    /* And the neck and the head between them give nearly all of it
-       back, so the eyes stay on the horizon. It has to be split across
-       BOTH: the head bone's own rotation turns the face but does not
-       move the head, so putting all of it on the head left the skull
-       sitting thirty-five degrees out over the chest with the face
-       pointing back at the sky. The neck is what stands the head up. */
-    neck: { keys: [[0.00, -18, 2, 0], [0.50, -18, -2, 0], [1.00, -18, 2, 0]] },
-    head: { keys: [[0.00, -10, 4, 0], [0.50, -10, -4, 0], [1.00, -10, 4, 0]] },
-
-    upperLegL: {
-      keys: [[0.00, 80, 0, 0], [0.12, 62, 0, 0], [0.22, 40, 0, 0],
-        [0.35, 0, 0, 0], [0.48, -42, 0, 0], [0.58, -30, 0, 0],
-        [0.72, 10, 0, 0], [0.86, 55, 0, 0], [1.00, 80, 0, 0]],
-    },
-    lowerLegL: {
-      keys: [[0.00, 85, 0, 0], [0.12, 35, 0, 0], [0.22, 5, 0, 0],
-        [0.35, 8, 0, 0], [0.48, 12, 0, 0], [0.58, 95, 0, 0],
-        [0.72, 140, 0, 0], [0.86, 118, 0, 0], [1.00, 85, 0, 0]],
-    },
-    footL: {
-      keys: [[0.00, -20, 0, 0], [0.22, 2, 0, 0], [0.48, 30, 0, 0],
-        [0.62, 12, 0, 0], [1.00, -20, 0, 0]],
-    },
-
-    upperLegR: {
-      keys: [[0.00, -42, 0, 0], [0.08, -30, 0, 0], [0.22, 10, 0, 0],
-        [0.36, 55, 0, 0], [0.50, 80, 0, 0], [0.62, 62, 0, 0],
-        [0.72, 40, 0, 0], [0.85, 0, 0, 0], [1.00, -42, 0, 0]],
-    },
-    lowerLegR: {
-      keys: [[0.00, 12, 0, 0], [0.08, 95, 0, 0], [0.22, 140, 0, 0],
-        [0.36, 118, 0, 0], [0.50, 85, 0, 0], [0.62, 35, 0, 0],
-        [0.72, 5, 0, 0], [0.85, 8, 0, 0], [1.00, 12, 0, 0]],
-    },
-    footR: {
-      keys: [[0.00, 30, 0, 0], [0.12, 12, 0, 0], [0.50, -20, 0, 0],
-        [0.72, 2, 0, 0], [1.00, 30, 0, 0]],
-    },
-
-    /* Elbows locked near a right angle and tightening as the hand comes
-       forward. The arm that swings back belongs to the leg that is
-       forward -- and this clip had them the wrong way round, with a
-       comment underneath explaining why it was right. A positive upper
-       arm is FORWARD, so the left arm is at -72 (hand back by the hip)
-       while upperLegL is at +80 (leg forward). Measured, this time:
-       gait.test.js correlates foot lead against hand lead and wants a
-       negative number. */
-    upperArmL: { keys: [[0.00, -72, 0, -14], [0.50, 52, 0, -9], [1.00, -72, 0, -14]] },
-    upperArmR: { keys: [[0.00, 52, 0, 9], [0.50, -72, 0, 14], [1.00, 52, 0, 9]] },
-    // Tighter when the hand is up at the cheek, which for L is at 0.5.
-    lowerArmL: { keys: [[0.00, 92, 0, 0], [0.50, 112, 0, 0], [1.00, 92, 0, 0]] },
-    lowerArmR: { keys: [[0.00, 112, 0, 0], [0.50, 92, 0, 0], [1.00, 112, 0, 0]] },
-    shoulderL: { keys: [[0.00, 0, 0, -4], [0.50, 0, 0, 6], [1.00, 0, 0, -4]] },
-    shoulderR: { keys: [[0.00, 0, 0, -6], [0.50, 0, 0, 4], [1.00, 0, 0, -6]] },
-  }));
+    spine: { keys: [[0.00, 3.3, 4.2, 0], [0.13, 3.3, 2.1, -0.8], [0.25, 3.3, 0, -1.5], [0.38, 3.3, -2.1, -0.8], [0.50, 3.3, -4.2, 0], [0.63, 3.3, -2.1, 0.8], [0.75, 3.3, 0, 1.5], [0.88, 3.3, 2.1, 0.8], [1.00, 3.3, 4.2, 0]] },
+    chest: { keys: [[0.00, 2.4, 7.8, 0], [0.13, 2.4, 3.9, -1.1], [0.25, 2.4, 0, -2.3], [0.38, 2.4, -3.9, -1.1], [0.50, 2.4, -7.8, 0], [0.63, 2.4, -3.9, 1.1], [0.75, 2.4, 0, 2.3], [0.88, 2.4, 3.9, 1.1], [1.00, 2.4, 7.8, 0]] },
+    neck: { keys: [[0.00, -9.3, -3.6, 0], [0.13, -9.3, -1.8, 1.1], [0.25, -9.3, 0, 2.2], [0.38, -9.3, 1.8, 1.1], [0.50, -9.3, 3.6, 0], [0.63, -9.3, 1.8, -1.1], [0.75, -9.3, 0, -2.2], [0.88, -9.3, -1.8, -1.1], [1.00, -9.3, -3.6, 0]] },
+    head: { keys: [[0.00, -7.8, -2.6, 0], [0.13, -7.8, -1.3, 0.7], [0.25, -7.8, 0, 1.3], [0.38, -7.8, 1.3, 0.7], [0.50, -7.8, 2.6, 0], [0.63, -7.8, 1.3, -0.7], [0.75, -7.8, 0, -1.3], [0.88, -7.8, -1.3, -0.7], [1.00, -7.8, -2.6, 0]] },
+    upperLegL: { keys: [[0.00, -39.5, 0, 0], [0.05, -36.8, 0, 0], [0.10, -28.4, 0, 0], [0.15, -14.2, 0, 0],
+             [0.20, -0.3, 0, 0], [0.25, 7.2, 0, 0], [0.27, 13.7, 0, 0], [0.30, 4.1, 0, 0],
+             [0.35, -3.7, 0, 0], [0.40, -11.9, 0, 0], [0.45, -21.2, 0, 0], [0.50, -32, 0, 0],
+             [0.55, -44.5, 0, 0], [0.60, -58.4, 0, 0], [0.65, -69.9, 0, 0], [0.70, -77.7, 0, 0],
+             [0.75, -85, 0, 0], [0.77, -85.8, 0, 0], [0.80, -81.6, 0, 0], [0.85, -71.9, 0, 0],
+             [0.90, -62.3, 0, 0], [0.95, -51.5, 0, 0], [1.00, -39.5, 0, 0]] },
+    lowerLegL: { keys: [[0.00, 26, 0, 0], [0.05, 40.1, 0, 0], [0.10, 42.7, 0, 0], [0.15, 32.6, 0, 0],
+             [0.20, 22.3, 0, 0], [0.25, 26.1, 0, 0], [0.27, 19.1, 0, 0], [0.30, 43.7, 0, 0],
+             [0.35, 62.3, 0, 0], [0.40, 77.4, 0, 0], [0.45, 91, 0, 0], [0.50, 103, 0, 0],
+             [0.55, 116.4, 0, 0], [0.60, 123.9, 0, 0], [0.65, 120.7, 0, 0], [0.70, 114.5, 0, 0],
+             [0.75, 111.8, 0, 0], [0.77, 108.5, 0, 0], [0.80, 97.1, 0, 0], [0.85, 76.5, 0, 0],
+             [0.90, 58.8, 0, 0], [0.95, 44.5, 0, 0], [1.00, 26, 0, 0]] },
+    footL: { keys: [[0.00, 12.5, 0, 0], [0.05, -10.4, 0, 0], [0.10, -22.5, 0, 0], [0.15, -18.9, 0, 0],
+             [0.20, -10, 0, 0], [0.25, -4.9, 0, 0], [0.27, 2, 0, 0], [0.30, 4, 0, 0],
+             [0.35, 4.6, 0, 0], [0.40, 1.8, 0, 0], [0.45, -2.3, 0, 0], [0.50, -5.8, 0, 0],
+             [0.55, -9.2, 0, 0], [0.60, -12.6, 0, 0], [0.65, -16, 0, 0], [0.70, -16.6, 0, 0],
+             [0.75, -17.1, 0, 0], [0.77, -17.4, 0, 0], [0.80, -17.7, 0, 0], [0.85, -18.3, 0, 0],
+             [0.90, -14.3, 0, 0], [0.95, -1.2, 0, 0], [1.00, 12.5, 0, 0]] },
+    upperLegR: { keys: [[0.00, -32, 0, 0], [0.05, -44.5, 0, 0], [0.10, -58.4, 0, 0], [0.15, -69.9, 0, 0],
+             [0.20, -77.7, 0, 0], [0.25, -85, 0, 0], [0.27, -85.8, 0, 0], [0.30, -81.6, 0, 0],
+             [0.35, -71.9, 0, 0], [0.40, -62.3, 0, 0], [0.45, -51.5, 0, 0], [0.50, -39.5, 0, 0],
+             [0.55, -36.8, 0, 0], [0.60, -28.4, 0, 0], [0.65, -14.2, 0, 0], [0.70, -0.3, 0, 0],
+             [0.75, 7.2, 0, 0], [0.77, 13.7, 0, 0], [0.80, 4.1, 0, 0], [0.85, -3.7, 0, 0],
+             [0.90, -11.9, 0, 0], [0.95, -21.2, 0, 0], [1.00, -32, 0, 0]] },
+    lowerLegR: { keys: [[0.00, 103, 0, 0], [0.05, 116.4, 0, 0], [0.10, 123.9, 0, 0], [0.15, 120.7, 0, 0],
+             [0.20, 114.5, 0, 0], [0.25, 111.8, 0, 0], [0.27, 108.5, 0, 0], [0.30, 97.1, 0, 0],
+             [0.35, 76.5, 0, 0], [0.40, 58.8, 0, 0], [0.45, 44.5, 0, 0], [0.50, 26, 0, 0],
+             [0.55, 40.1, 0, 0], [0.60, 42.7, 0, 0], [0.65, 32.6, 0, 0], [0.70, 22.3, 0, 0],
+             [0.75, 26.1, 0, 0], [0.77, 19.1, 0, 0], [0.80, 43.7, 0, 0], [0.85, 62.3, 0, 0],
+             [0.90, 77.4, 0, 0], [0.95, 91, 0, 0], [1.00, 103, 0, 0]] },
+    footR: { keys: [[0.00, -5.8, 0, 0], [0.05, -9.2, 0, 0], [0.10, -12.6, 0, 0], [0.15, -16, 0, 0],
+             [0.20, -16.6, 0, 0], [0.25, -17.1, 0, 0], [0.27, -17.4, 0, 0], [0.30, -17.7, 0, 0],
+             [0.35, -18.3, 0, 0], [0.40, -14.3, 0, 0], [0.45, -1.2, 0, 0], [0.50, 12.5, 0, 0],
+             [0.55, -10.4, 0, 0], [0.60, -22.5, 0, 0], [0.65, -18.9, 0, 0], [0.70, -10, 0, 0],
+             [0.75, -4.9, 0, 0], [0.77, 2, 0, 0], [0.80, 4, 0, 0], [0.85, 4.6, 0, 0],
+             [0.90, 1.8, 0, 0], [0.95, -2.3, 0, 0], [1.00, -5.8, 0, 0]] },
+    shoulderL: { keys: [[0.00, 0, 6, 1.5], [0.13, 0, 3, 1.5], [0.25, 0, 0, 1.5], [0.38, 0, -3, 1.5], [0.50, 0, -6, 1.5], [0.63, 0, -3, 1.5], [0.75, 0, 0, 1.5], [0.88, 0, 3, 1.5], [1.00, 0, 6, 1.5]] },
+    shoulderR: { keys: [[0.00, 0, 6, -1.5], [0.13, 0, 3, -1.5], [0.25, 0, 0, -1.5], [0.38, 0, -3, -1.5], [0.50, 0, -6, -1.5], [0.63, 0, -3, -1.5], [0.75, 0, 0, -1.5], [0.88, 0, 3, -1.5], [1.00, 0, 6, -1.5]] },
+    upperArmL: { keys: [[0.00, 52, 0, 11], [0.13, 26, 0, 11], [0.25, 0, 0, 11], [0.38, -37, 0, 11], [0.50, -74, 0, 11], [0.63, -37, 0, 11], [0.75, 0, 0, 11], [0.88, 26, 0, 11], [1.00, 52, 0, 11]] },
+    lowerArmL: { keys: [[0.00, -86, 0, 0], [0.13, -91, 0, 0], [0.25, -96, 0, 0], [0.38, -101, 0, 0], [0.50, -106, 0, 0], [0.63, -101, 0, 0], [0.75, -96, 0, 0], [0.88, -91, 0, 0], [1.00, -86, 0, 0]] },
+    handL: { keys: [[0.00, -6, 0, 4], [0.13, -3, 0, 4], [0.25, 0, 0, 4], [0.38, 3, 0, 4], [0.50, 6, 0, 4], [0.63, 3, 0, 4], [0.75, 0, 0, 4], [0.88, -3, 0, 4], [1.00, -6, 0, 4]] },
+    upperArmR: { keys: [[0.00, -74, 0, -11], [0.13, -37, 0, -11], [0.25, 0, 0, -11], [0.38, 26, 0, -11], [0.50, 52, 0, -11], [0.63, 26, 0, -11], [0.75, 0, 0, -11], [0.88, -37, 0, -11], [1.00, -74, 0, -11]] },
+    lowerArmR: { keys: [[0.00, -106, 0, 0], [0.13, -101, 0, 0], [0.25, -96, 0, 0], [0.38, -91, 0, 0], [0.50, -86, 0, 0], [0.63, -91, 0, 0], [0.75, -96, 0, 0], [0.88, -101, 0, 0], [1.00, -106, 0, 0]] },
+    handR: { keys: [[0.00, 6, 0, -4], [0.13, 3, 0, -4], [0.25, 0, 0, -4], [0.38, -3, 0, -4], [0.50, -6, 0, -4], [0.63, -3, 0, -4], [0.75, 0, 0, -4], [0.88, 3, 0, -4], [1.00, 6, 0, -4]] },
+  }, { stride: 2.6 }));
 
   /* The slide. A slide is a controlled fall onto the outside of the
      trailing thigh, and the thing that makes a bad one look bad is
@@ -862,79 +1009,136 @@ function makeHumanoidClips() {
   /* A duck walk: short steps, the hips barely rise, and the trunk
      stays where it is so the sights do not wander. 1.20s because the
      stride is short and the cadence is slow. */
-  clips.push(buildClip('crouchWalk', 1.20, {
+  clips.push(buildClip('crouchWalk', 1.1, {
     hips: {
-      keys: [[0.00, 14, -3, 0], [0.25, 14, 0, 3], [0.50, 14, 3, 0],
-        [0.75, 14, 0, -3], [1.00, 14, -3, 0]],
-      pos: [[0.00, 0, CR_HIP, 0.008], [0.25, 0.012, CR_HIP + 0.018, 0],
-        [0.50, 0, CR_HIP, -0.008], [0.75, -0.012, CR_HIP + 0.018, 0],
-        [1.00, 0, CR_HIP, 0.008]],
+      keys: [[0.00, 22, -3, 0], [0.06, 22, -2.3, 0.5], [0.13, 22, -1.5, 1], [0.19, 22, -0.8, 1.5],
+                 [0.25, 22, 0, 2], [0.31, 22, 0.8, 1.5], [0.38, 22, 1.5, 1], [0.44, 22, 2.3, 0.5],
+                 [0.50, 22, 3, 0], [0.56, 22, 2.3, -0.5], [0.63, 22, 1.5, -1], [0.69, 22, 0.8, -1.5],
+                 [0.75, 22, 0, -2], [0.81, 22, -0.8, -1.5], [0.88, 22, -1.5, -1],
+                 [0.94, 22, -2.3, -0.5], [1.00, 22, -3, 0]],
+      pos: [[0.00, 0, -0.433, 0], [0.06, 0.005, -0.399, 0], [0.13, 0.01, -0.379, 0],
+                 [0.19, 0.015, -0.35, 0], [0.25, 0.02, -0.329, 0], [0.31, 0.015, -0.316, 0],
+                 [0.38, 0.01, -0.308, 0], [0.44, 0.005, -0.306, 0], [0.50, 0, -0.433, 0],
+                 [0.56, -0.005, -0.399, 0], [0.63, -0.01, -0.379, 0], [0.69, -0.015, -0.35, 0],
+                 [0.75, -0.02, -0.329, 0], [0.81, -0.015, -0.316, 0], [0.88, -0.01, -0.308, 0],
+                 [0.94, -0.005, -0.306, 0], [1.00, 0, -0.433, 0]],
     },
-    spine: { keys: [[0.00, -6, 2, 0], [0.50, -6, -2, 0], [1.00, -6, 2, 0]] },
-    chest: { keys: [[0.00, -4, -2, 0], [0.50, -4, 2, 0], [1.00, -4, -2, 0]] },
-    head:  { keys: [[0.00, -2, 0, 0], [0.50, -2, 0, 0], [1.00, -2, 0, 0]] },
-    /* Same correction as the crouch stance, and the same method: the
-       thigh swings 72 forward at the front of the step to 44 at
-       toe-off, and at every key the shank is SOLVED so the planted
-       ankle lands on -0.860 rather than picked to look right. The
-       swing key at 0.75 is the only one allowed off the floor, and by
-       0.10m, which is as high as a man steps when he is trying not to
-       be seen. */
-    upperLegL: { keys: [[0.00, -86, 0, 5], [0.25, -72, 0, 5], [0.50, -58, 0, 5],
-      [0.75, -80, 0, 5], [1.00, -86, 0, 5]] },
-    upperLegR: { keys: [[0.00, -58, 0, -5], [0.25, -80, 0, -5], [0.50, -86, 0, -5],
-      [0.75, -72, 0, -5], [1.00, -58, 0, -5]] },
-    lowerLegL: { keys: [[0.00, 120, 0, 0], [0.25, 119, 0, 0], [0.50, 120, 0, 0],
-      [0.75, 134, 0, 0], [1.00, 120, 0, 0]] },
-    lowerLegR: { keys: [[0.00, 120, 0, 0], [0.25, 134, 0, 0], [0.50, 120, 0, 0],
-      [0.75, 119, 0, 0], [1.00, 120, 0, 0]] },
-    footL: { keys: [[0.00, -56, 0, 0], [0.25, -61, 0, 0], [0.50, -54, 0, 0],
-      [0.75, -58, 0, 0], [1.00, -56, 0, 0]] },
-    footR: { keys: [[0.00, -54, 0, 0], [0.25, -58, 0, 0], [0.50, -56, 0, 0],
-      [0.75, -61, 0, 0], [1.00, -54, 0, 0]] },
-    /* Contralateral, and small -- a crouched man's arms hardly move,
-       because both hands are on the weapon. */
-    upperArmL: { keys: [[0.00, -7, 0, -10], [0.50, 7, 0, -10], [1.00, -7, 0, -10]] },
-    upperArmR: { keys: [[0.00, 7, 0, 10], [0.50, -7, 0, 10], [1.00, 7, 0, 10]] },
-    lowerArmL: { keys: [[0.00, 16, 0, 0], [0.50, 12, 0, 0], [1.00, 16, 0, 0]] },
-    lowerArmR: { keys: [[0.00, 12, 0, 0], [0.50, 16, 0, 0], [1.00, 12, 0, 0]] },
-  }));
+    spine: { keys: [[0.00, 4.8, 1.2, 0], [0.13, 4.8, 0.6, -0.3], [0.25, 4.8, 0, -0.6], [0.38, 4.8, -0.6, -0.3], [0.50, 4.8, -1.2, 0], [0.63, 4.8, -0.6, 0.3], [0.75, 4.8, 0, 0.6], [0.88, 4.8, 0.6, 0.3], [1.00, 4.8, 1.2, 0]] },
+    chest: { keys: [[0.00, 3.5, 2.3, 0], [0.13, 3.5, 1.1, -0.5], [0.25, 3.5, 0, -0.9], [0.38, 3.5, -1.1, -0.5], [0.50, 3.5, -2.3, 0], [0.63, 3.5, -1.1, 0.5], [0.75, 3.5, 0, 0.9], [0.88, 3.5, 1.1, 0.5], [1.00, 3.5, 2.3, 0]] },
+    neck: { keys: [[0.00, -13.6, -1.1, 0], [0.13, -13.6, -0.5, 0.5], [0.25, -13.6, 0, 1], [0.38, -13.6, 0.5, 0.5], [0.50, -13.6, 1.1, 0], [0.63, -13.6, 0.5, -0.5], [0.75, -13.6, 0, -1], [0.88, -13.6, -0.5, -0.5], [1.00, -13.6, -1.1, 0]] },
+    head: { keys: [[0.00, -15.4, -0.8, 0], [0.13, -15.4, -0.4, 0.3], [0.25, -15.4, 0, 0.6], [0.38, -15.4, 0.4, 0.3], [0.50, -15.4, 0.8, 0], [0.63, -15.4, 0.4, -0.3], [0.75, -15.4, 0, -0.6], [0.88, -15.4, -0.4, -0.3], [1.00, -15.4, -0.8, 0]] },
+    upperLegL: { keys: [[0.00, -124.2, 0, 0], [0.05, -118.1, 0, 0], [0.10, -112.2, 0, 0], [0.15, -109.1, 0, 0],
+             [0.20, -99.1, 0, 0], [0.25, -92.2, 0, 0], [0.30, -85.6, 0, 0], [0.35, -79.1, 0, 0],
+             [0.40, -72.7, 0, 0], [0.45, -66.4, 0, 0], [0.50, -63.2, 0, 0], [0.55, -55.7, 0, 0],
+             [0.60, -48.7, 0, 0], [0.65, -42.5, 0, 0], [0.70, -46, 0, 0], [0.75, -61.2, 0, 0],
+             [0.80, -83.1, 0, 0], [0.85, -98.8, 0, 0], [0.90, -102.5, 0, 0], [0.95, -101.4, 0, 0],
+             [1.00, -124.2, 0, 0]] },
+    lowerLegL: { keys: [[0.00, 118.3, 0, 0], [0.05, 119.7, 0, 0], [0.10, 121.1, 0, 0], [0.15, 125.3, 0, 0],
+             [0.20, 121.8, 0, 0], [0.25, 121.2, 0, 0], [0.30, 120.7, 0, 0], [0.35, 119.9, 0, 0],
+             [0.40, 118.9, 0, 0], [0.45, 117.8, 0, 0], [0.50, 135.8, 0, 0], [0.55, 129.1, 0, 0],
+             [0.60, 122.9, 0, 0], [0.65, 120.1, 0, 0], [0.70, 119.9, 0, 0], [0.75, 127.2, 0, 0],
+             [0.80, 130.4, 0, 0], [0.85, 121.9, 0, 0], [0.90, 107.9, 0, 0], [0.95, 99.6, 0, 0],
+             [1.00, 118.3, 0, 0]] },
+    footL: { keys: [[0.00, 37.9, 0, 0], [0.05, 31.8, 0, 0], [0.10, 26.1, 0, 0], [0.15, 20, 0, 0],
+             [0.20, 14.3, 0, 0], [0.25, 8.7, 0, 0], [0.30, 3.4, 0, 0], [0.35, -1.6, 0, 0],
+             [0.40, -6.3, 0, 0], [0.45, -10.3, 0, 0], [0.50, -25, 0, 0], [0.55, -25, 0, 0],
+             [0.60, -25, 0, 0], [0.65, -25, 0, 0], [0.70, -8.7, 0, 0], [0.75, 1.2, 0, 0],
+             [0.80, -1, 0, 0], [0.85, -2.2, 0, 0], [0.90, -3.5, 0, 0], [0.95, -1.3, 0, 0],
+             [1.00, 37.9, 0, 0]] },
+    upperLegR: { keys: [[0.00, -63.2, 0, 0], [0.05, -55.7, 0, 0], [0.10, -48.7, 0, 0], [0.15, -42.5, 0, 0],
+             [0.20, -46, 0, 0], [0.25, -61.2, 0, 0], [0.30, -83.1, 0, 0], [0.35, -98.8, 0, 0],
+             [0.40, -102.5, 0, 0], [0.45, -101.4, 0, 0], [0.50, -124.2, 0, 0], [0.55, -118.1, 0, 0],
+             [0.60, -112.2, 0, 0], [0.65, -109.1, 0, 0], [0.70, -99.1, 0, 0], [0.75, -92.2, 0, 0],
+             [0.80, -85.6, 0, 0], [0.85, -79.1, 0, 0], [0.90, -72.7, 0, 0], [0.95, -66.4, 0, 0],
+             [1.00, -63.2, 0, 0]] },
+    lowerLegR: { keys: [[0.00, 135.8, 0, 0], [0.05, 129.1, 0, 0], [0.10, 122.9, 0, 0], [0.15, 120.1, 0, 0],
+             [0.20, 119.9, 0, 0], [0.25, 127.2, 0, 0], [0.30, 130.4, 0, 0], [0.35, 121.9, 0, 0],
+             [0.40, 107.9, 0, 0], [0.45, 99.6, 0, 0], [0.50, 118.3, 0, 0], [0.55, 119.7, 0, 0],
+             [0.60, 121.1, 0, 0], [0.65, 125.3, 0, 0], [0.70, 121.8, 0, 0], [0.75, 121.2, 0, 0],
+             [0.80, 120.7, 0, 0], [0.85, 119.9, 0, 0], [0.90, 118.9, 0, 0], [0.95, 117.8, 0, 0],
+             [1.00, 135.8, 0, 0]] },
+    footR: { keys: [[0.00, -25, 0, 0], [0.05, -25, 0, 0], [0.10, -25, 0, 0], [0.15, -25, 0, 0],
+             [0.20, -8.7, 0, 0], [0.25, 1.2, 0, 0], [0.30, -1, 0, 0], [0.35, -2.2, 0, 0],
+             [0.40, -3.5, 0, 0], [0.45, -1.3, 0, 0], [0.50, 37.9, 0, 0], [0.55, 31.8, 0, 0],
+             [0.60, 26.1, 0, 0], [0.65, 20, 0, 0], [0.70, 14.3, 0, 0], [0.75, 8.7, 0, 0],
+             [0.80, 3.4, 0, 0], [0.85, -1.6, 0, 0], [0.90, -6.3, 0, 0], [0.95, -10.3, 0, 0],
+             [1.00, -25, 0, 0]] },
+    shoulderL: { keys: [[0.00, 0, 1.5, 1.5], [0.13, 0, 0.8, 1.5], [0.25, 0, 0, 1.5], [0.38, 0, -0.8, 1.5], [0.50, 0, -1.5, 1.5], [0.63, 0, -0.8, 1.5], [0.75, 0, 0, 1.5], [0.88, 0, 0.8, 1.5], [1.00, 0, 1.5, 1.5]] },
+    shoulderR: { keys: [[0.00, 0, 1.5, -1.5], [0.13, 0, 0.8, -1.5], [0.25, 0, 0, -1.5], [0.38, 0, -0.8, -1.5], [0.50, 0, -1.5, -1.5], [0.63, 0, -0.8, -1.5], [0.75, 0, 0, -1.5], [0.88, 0, 0.8, -1.5], [1.00, 0, 1.5, -1.5]] },
+    upperArmL: { keys: [[0.00, 8, 0, 6], [0.13, 4, 0, 6], [0.25, 0, 0, 6], [0.38, -6, 0, 6], [0.50, -12, 0, 6], [0.63, -6, 0, 6], [0.75, 0, 0, 6], [0.88, 4, 0, 6], [1.00, 8, 0, 6]] },
+    lowerArmL: { keys: [[0.00, -30, 0, 0], [0.13, -32.5, 0, 0], [0.25, -35, 0, 0], [0.38, -37.5, 0, 0], [0.50, -40, 0, 0], [0.63, -37.5, 0, 0], [0.75, -35, 0, 0], [0.88, -32.5, 0, 0], [1.00, -30, 0, 0]] },
+    handL: { keys: [[0.00, -6, 0, 4], [0.13, -3, 0, 4], [0.25, 0, 0, 4], [0.38, 3, 0, 4], [0.50, 6, 0, 4], [0.63, 3, 0, 4], [0.75, 0, 0, 4], [0.88, -3, 0, 4], [1.00, -6, 0, 4]] },
+    upperArmR: { keys: [[0.00, -12, 0, -6], [0.13, -6, 0, -6], [0.25, 0, 0, -6], [0.38, 4, 0, -6], [0.50, 8, 0, -6], [0.63, 4, 0, -6], [0.75, 0, 0, -6], [0.88, -6, 0, -6], [1.00, -12, 0, -6]] },
+    lowerArmR: { keys: [[0.00, -40, 0, 0], [0.13, -37.5, 0, 0], [0.25, -35, 0, 0], [0.38, -32.5, 0, 0], [0.50, -30, 0, 0], [0.63, -32.5, 0, 0], [0.75, -35, 0, 0], [0.88, -37.5, 0, 0], [1.00, -40, 0, 0]] },
+    handR: { keys: [[0.00, 6, 0, -4], [0.13, 3, 0, -4], [0.25, 0, 0, -4], [0.38, -3, 0, -4], [0.50, -6, 0, -4], [0.63, -3, 0, -4], [0.75, 0, 0, -4], [0.88, 3, 0, -4], [1.00, 6, 0, -4]] },
+  }, { stride: 0.9 }));
 
   /* Crouch-running: longer steps, the trunk pitched further forward,
      and the hips come up a little because you cannot run as low as you
      can walk. */
-  clips.push(buildClip('crouchRun', 0.86, {
+  clips.push(buildClip('crouchRun', 0.84, {
     hips: {
-      keys: [[0.00, 20, -5, 0], [0.25, 20, 0, 5], [0.50, 20, 5, 0],
-        [0.75, 20, 0, -5], [1.00, 20, -5, 0]],
-      pos: [[0.00, 0, CR_HIP + 0.07, 0.018], [0.25, 0.020, CR_HIP + 0.10, 0],
-        [0.50, 0, CR_HIP + 0.07, -0.018], [0.75, -0.020, CR_HIP + 0.10, 0],
-        [1.00, 0, CR_HIP + 0.07, 0.018]],
+      keys: [[0.00, 26, -5, 0], [0.06, 26, -3.8, 0.8], [0.13, 26, -2.5, 1.5], [0.19, 26, -1.3, 2.3],
+                 [0.25, 26, 0, 3], [0.31, 26, 1.3, 2.3], [0.38, 26, 2.5, 1.5], [0.44, 26, 3.8, 0.8],
+                 [0.50, 26, 5, 0], [0.56, 26, 3.8, -0.8], [0.63, 26, 2.5, -1.5], [0.69, 26, 1.3, -2.3],
+                 [0.75, 26, 0, -3], [0.81, 26, -1.3, -2.3], [0.88, 26, -2.5, -1.5],
+                 [0.94, 26, -3.8, -0.8], [1.00, 26, -5, 0]],
+      pos: [[0.00, 0, -0.406, 0], [0.06, 0.004, -0.365, 0], [0.13, 0.007, -0.34, 0],
+                 [0.19, 0.011, -0.309, 0], [0.25, 0.015, -0.295, 0], [0.31, 0.011, -0.292, 0],
+                 [0.38, 0.007, -0.306, 0], [0.44, 0.004, -0.354, 0], [0.50, 0, -0.406, 0],
+                 [0.56, -0.004, -0.365, 0], [0.63, -0.007, -0.34, 0], [0.69, -0.011, -0.309, 0],
+                 [0.75, -0.015, -0.295, 0], [0.81, -0.011, -0.292, 0], [0.88, -0.007, -0.306, 0],
+                 [0.94, -0.004, -0.354, 0], [1.00, 0, -0.406, 0]],
     },
-    spine: { keys: [[0.00, -10, 4, 0], [0.50, -10, -4, 0], [1.00, -10, 4, 0]] },
-    chest: { keys: [[0.00, -6, -4, 0], [0.50, -6, 4, 0], [1.00, -6, -4, 0]] },
-    head:  { keys: [[0.00, 4, 0, 0], [0.50, 4, 0, 0], [1.00, 4, 0, 0]] },
-    /* The hips are 70mm higher than the crouch walk's, which is why
-       the thigh can reach 78 degrees forward and the stride can be
-       0.53m end to end instead of 0.20m. Solved against a -0.860
-       ankle at every stance key, the same as the other two. */
-    upperLegL: { keys: [[0.00, -98, 0, 4], [0.25, -70, 0, 4], [0.50, -42, 0, 4],
-      [0.75, -90, 0, 4], [1.00, -98, 0, 4]] },
-    upperLegR: { keys: [[0.00, -42, 0, -4], [0.25, -90, 0, -4], [0.50, -98, 0, -4],
-      [0.75, -70, 0, -4], [1.00, -42, 0, -4]] },
-    lowerLegL: { keys: [[0.00, 95, 0, 0], [0.25, 105, 0, 0], [0.50, 100, 0, 0],
-      [0.75, 134, 0, 0], [1.00, 95, 0, 0]] },
-    lowerLegR: { keys: [[0.00, 100, 0, 0], [0.25, 134, 0, 0], [0.50, 95, 0, 0],
-      [0.75, 105, 0, 0], [1.00, 100, 0, 0]] },
-    footL: { keys: [[0.00, -27, 0, 0], [0.25, -55, 0, 0], [0.50, -52, 0, 0],
-      [0.75, -52, 0, 0], [1.00, -27, 0, 0]] },
-    footR: { keys: [[0.00, -52, 0, 0], [0.25, -52, 0, 0], [0.50, -27, 0, 0],
-      [0.75, -55, 0, 0], [1.00, -52, 0, 0]] },
-    upperArmL: { keys: [[0.00, -16, 0, -12], [0.50, 16, 0, -12], [1.00, -16, 0, -12]] },
-    upperArmR: { keys: [[0.00, 16, 0, 12], [0.50, -16, 0, 12], [1.00, 16, 0, 12]] },
-    lowerArmL: { keys: [[0.00, 24, 0, 0], [0.50, 16, 0, 0], [1.00, 24, 0, 0]] },
-    lowerArmR: { keys: [[0.00, 16, 0, 0], [0.50, 24, 0, 0], [1.00, 16, 0, 0]] },
-  }));
+    spine: { keys: [[0.00, 5.7, 2.1, 0], [0.13, 5.7, 1, -0.4], [0.25, 5.7, 0, -0.9], [0.38, 5.7, -1, -0.4], [0.50, 5.7, -2.1, 0], [0.63, 5.7, -1, 0.4], [0.75, 5.7, 0, 0.9], [0.88, 5.7, 1, 0.4], [1.00, 5.7, 2.1, 0]] },
+    chest: { keys: [[0.00, 4.2, 3.9, 0], [0.13, 4.2, 2, -0.7], [0.25, 4.2, 0, -1.4], [0.38, 4.2, -2, -0.7], [0.50, 4.2, -3.9, 0], [0.63, 4.2, -2, 0.7], [0.75, 4.2, 0, 1.4], [0.88, 4.2, 2, 0.7], [1.00, 4.2, 3.9, 0]] },
+    neck: { keys: [[0.00, -16.1, -1.8, 0], [0.13, -16.1, -0.9, 0.7], [0.25, -16.1, 0, 1.4], [0.38, -16.1, 0.9, 0.7], [0.50, -16.1, 1.8, 0], [0.63, -16.1, 0.9, -0.7], [0.75, -16.1, 0, -1.4], [0.88, -16.1, -0.9, -0.7], [1.00, -16.1, -1.8, 0]] },
+    head: { keys: [[0.00, -18.7, -1.3, 0], [0.13, -18.7, -0.7, 0.4], [0.25, -18.7, 0, 0.8], [0.38, -18.7, 0.7, 0.4], [0.50, -18.7, 1.3, 0], [0.63, -18.7, 0.7, -0.4], [0.75, -18.7, 0, -0.8], [0.88, -18.7, -0.7, -0.4], [1.00, -18.7, -1.3, 0]] },
+    upperLegL: { keys: [[0.00, -122.9, 0, 0], [0.05, -115, 0, 0], [0.10, -107.2, 0, 0], [0.15, -97.5, 0, 0],
+             [0.20, -87.6, 0, 0], [0.25, -78, 0, 0], [0.30, -68.5, 0, 0], [0.35, -59.4, 0, 0],
+             [0.40, -50.6, 0, 0], [0.45, -42.6, 0, 0], [0.48, -37.3, 0, 0], [0.50, -36.6, 0, 0],
+             [0.55, -42.2, 0, 0], [0.60, -53.4, 0, 0], [0.65, -70.3, 0, 0], [0.70, -89.9, 0, 0],
+             [0.75, -104.2, 0, 0], [0.80, -109.7, 0, 0], [0.85, -110.2, 0, 0], [0.90, -110.7, 0, 0],
+             [0.95, -116.5, 0, 0], [0.98, -121.4, 0, 0], [1.00, -122.9, 0, 0]] },
+    lowerLegL: { keys: [[0.00, 113.4, 0, 0], [0.05, 116, 0, 0], [0.10, 118.6, 0, 0], [0.15, 118.6, 0, 0],
+             [0.20, 117.5, 0, 0], [0.25, 116.3, 0, 0], [0.30, 114.4, 0, 0], [0.35, 112.4, 0, 0],
+             [0.40, 112.4, 0, 0], [0.45, 114.3, 0, 0], [0.48, 115.3, 0, 0], [0.50, 119.1, 0, 0],
+             [0.55, 123.1, 0, 0], [0.60, 130.2, 0, 0], [0.65, 136.3, 0, 0], [0.70, 136.8, 0, 0],
+             [0.75, 130, 0, 0], [0.80, 118.6, 0, 0], [0.85, 107.3, 0, 0], [0.90, 101.4, 0, 0],
+             [0.95, 108.4, 0, 0], [0.98, 115.4, 0, 0], [1.00, 113.4, 0, 0]] },
+    footL: { keys: [[0.00, 27.6, 0, 0], [0.05, 19.8, 0, 0], [0.10, 12.3, 0, 0], [0.15, 4.3, 0, 0],
+             [0.20, -2.8, 0, 0], [0.25, -9.5, 0, 0], [0.30, -15.3, 0, 0], [0.35, -20.1, 0, 0],
+             [0.40, -25, 0, 0], [0.45, -25, 0, 0], [0.48, -25, 0, 0], [0.50, -24.7, 0, 0],
+             [0.55, -9.2, 0, 0], [0.60, 0.5, 0, 0], [0.65, -2.5, 0, 0], [0.70, -3.6, 0, 0],
+             [0.75, -4.7, 0, 0], [0.80, -5.7, 0, 0], [0.85, -6.8, 0, 0], [0.90, -7.9, 0, 0],
+             [0.95, 5.6, 0, 0], [0.98, 18.6, 0, 0], [1.00, 27.6, 0, 0]] },
+    upperLegR: { keys: [[0.00, -36.6, 0, 0], [0.05, -42.2, 0, 0], [0.10, -53.4, 0, 0], [0.15, -70.3, 0, 0],
+             [0.20, -89.9, 0, 0], [0.25, -104.2, 0, 0], [0.30, -109.7, 0, 0], [0.35, -110.2, 0, 0],
+             [0.40, -110.7, 0, 0], [0.45, -116.5, 0, 0], [0.48, -121.4, 0, 0], [0.50, -122.9, 0, 0],
+             [0.55, -115, 0, 0], [0.60, -107.2, 0, 0], [0.65, -97.5, 0, 0], [0.70, -87.6, 0, 0],
+             [0.75, -78, 0, 0], [0.80, -68.5, 0, 0], [0.85, -59.4, 0, 0], [0.90, -50.6, 0, 0],
+             [0.95, -42.6, 0, 0], [0.98, -37.3, 0, 0], [1.00, -36.6, 0, 0]] },
+    lowerLegR: { keys: [[0.00, 119.1, 0, 0], [0.05, 123.1, 0, 0], [0.10, 130.2, 0, 0], [0.15, 136.3, 0, 0],
+             [0.20, 136.8, 0, 0], [0.25, 130, 0, 0], [0.30, 118.6, 0, 0], [0.35, 107.3, 0, 0],
+             [0.40, 101.4, 0, 0], [0.45, 108.4, 0, 0], [0.48, 115.4, 0, 0], [0.50, 113.4, 0, 0],
+             [0.55, 116, 0, 0], [0.60, 118.6, 0, 0], [0.65, 118.6, 0, 0], [0.70, 117.5, 0, 0],
+             [0.75, 116.3, 0, 0], [0.80, 114.4, 0, 0], [0.85, 112.4, 0, 0], [0.90, 112.4, 0, 0],
+             [0.95, 114.3, 0, 0], [0.98, 115.3, 0, 0], [1.00, 119.1, 0, 0]] },
+    footR: { keys: [[0.00, -24.7, 0, 0], [0.05, -9.2, 0, 0], [0.10, 0.5, 0, 0], [0.15, -2.5, 0, 0],
+             [0.20, -3.6, 0, 0], [0.25, -4.7, 0, 0], [0.30, -5.7, 0, 0], [0.35, -6.8, 0, 0],
+             [0.40, -7.9, 0, 0], [0.45, 5.6, 0, 0], [0.48, 18.6, 0, 0], [0.50, 27.6, 0, 0],
+             [0.55, 19.8, 0, 0], [0.60, 12.3, 0, 0], [0.65, 4.3, 0, 0], [0.70, -2.8, 0, 0],
+             [0.75, -9.5, 0, 0], [0.80, -15.3, 0, 0], [0.85, -20.1, 0, 0], [0.90, -25, 0, 0],
+             [0.95, -25, 0, 0], [0.98, -25, 0, 0], [1.00, -24.7, 0, 0]] },
+    shoulderL: { keys: [[0.00, 0, 3, 1.5], [0.13, 0, 1.5, 1.5], [0.25, 0, 0, 1.5], [0.38, 0, -1.5, 1.5], [0.50, 0, -3, 1.5], [0.63, 0, -1.5, 1.5], [0.75, 0, 0, 1.5], [0.88, 0, 1.5, 1.5], [1.00, 0, 3, 1.5]] },
+    shoulderR: { keys: [[0.00, 0, 3, -1.5], [0.13, 0, 1.5, -1.5], [0.25, 0, 0, -1.5], [0.38, 0, -1.5, -1.5], [0.50, 0, -3, -1.5], [0.63, 0, -1.5, -1.5], [0.75, 0, 0, -1.5], [0.88, 0, 1.5, -1.5], [1.00, 0, 3, -1.5]] },
+    upperArmL: { keys: [[0.00, 20, 0, 8], [0.13, 10, 0, 8], [0.25, 0, 0, 8], [0.38, -14, 0, 8], [0.50, -28, 0, 8], [0.63, -14, 0, 8], [0.75, 0, 0, 8], [0.88, 10, 0, 8], [1.00, 20, 0, 8]] },
+    lowerArmL: { keys: [[0.00, -52, 0, 0], [0.13, -56.5, 0, 0], [0.25, -61, 0, 0], [0.38, -65.5, 0, 0], [0.50, -70, 0, 0], [0.63, -65.5, 0, 0], [0.75, -61, 0, 0], [0.88, -56.5, 0, 0], [1.00, -52, 0, 0]] },
+    handL: { keys: [[0.00, -6, 0, 4], [0.13, -3, 0, 4], [0.25, 0, 0, 4], [0.38, 3, 0, 4], [0.50, 6, 0, 4], [0.63, 3, 0, 4], [0.75, 0, 0, 4], [0.88, -3, 0, 4], [1.00, -6, 0, 4]] },
+    upperArmR: { keys: [[0.00, -28, 0, -8], [0.13, -14, 0, -8], [0.25, 0, 0, -8], [0.38, 10, 0, -8], [0.50, 20, 0, -8], [0.63, 10, 0, -8], [0.75, 0, 0, -8], [0.88, -14, 0, -8], [1.00, -28, 0, -8]] },
+    lowerArmR: { keys: [[0.00, -70, 0, 0], [0.13, -65.5, 0, 0], [0.25, -61, 0, 0], [0.38, -56.5, 0, 0], [0.50, -52, 0, 0], [0.63, -56.5, 0, 0], [0.75, -61, 0, 0], [0.88, -65.5, 0, 0], [1.00, -70, 0, 0]] },
+    handR: { keys: [[0.00, 6, 0, -4], [0.13, 3, 0, -4], [0.25, 0, 0, -4], [0.38, -3, 0, -4], [0.50, -6, 0, -4], [0.63, -3, 0, -4], [0.75, 0, 0, -4], [0.88, 3, 0, -4], [1.00, 6, 0, -4]] },
+  }, { stride: 1.4 }));
 
   /* THE DROP. Non-looping and short: 0.42s from upright to flat, which
      is the same third-of-a-second the match refuses to let you fire
