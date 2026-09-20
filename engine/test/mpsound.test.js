@@ -76,7 +76,7 @@ function liftVoiceFor() {
     const lifted = new Function('W', src + '; return { voiceFor, distant };')(W);
     const voiceFor = lifted.voiceFor, distant = lifted.distant;
     const guns = W.MP_DATA.GUNS;
-    const out = { rows: [], bad: [] };
+    const out = { rows: [], bad: [], total: guns.length };
     for (const g of guns) {
       const w = W.MP_DATA.build(g.id, []);
       const v = voiceFor(w);
@@ -134,7 +134,14 @@ function liftVoiceFor() {
 
   check('the audio engine has report()', r.hasReport);
   check('the audio engine has ping() for the Garand clip', r.hasPing);
-  check('every weapon in the table gets a voice', r.rows.length === 60, `${r.rows.length}`);
+  /* Against the table's own length, not against 60. The number was
+     written down here when there were sixty guns, and the day the
+     shotgun and sniper sections landed it became an assertion that
+     fifteen weapons do not exist -- which is the opposite of what the
+     line is for. Third copy of the same mistake found in this sweep;
+     the other two were in mpdata.test.js and mpshell.test.js. */
+  check('every weapon in the table gets a voice', r.rows.length === r.total,
+    `${r.rows.length} of ${r.total}`);
   check('and every number in it is finite and in range',
     r.bad.length === 0, r.bad.slice(0, 3).map((b) => b.id + ':' + b.why).join(', '));
 
