@@ -26486,11 +26486,20 @@ function svcAux(g, K) {
     for (let i = 0; i < n; i++) {
       const x = V.x0 + (i + 0.5) * (V.x1 - V.x0) / n;
       if (V.kind === 'slot') {
-        // A long cut across: one rib each side of it.
+        /* A long cut across: one rib each side of it.
+         *
+           EIGHT POINTS ROUND A THREE-MILLIMETRE BAR, not twenty-two.
+           svcSlab's profile is fixed at 22 and that is right for a
+           receiver; on a rib 2.6 mm thick it is 88 vertices to draw a
+           matchstick, and there are up to seven of them a side on
+           eight weapons. Measured across the rack, vents were 20,508
+           vertices -- the most expensive single thing added this
+           session and twice the next. A strut with an 8-point section
+           is the same matchstick. */
         for (const sz of [-1, 1]) {
-          svcSlab(g, [[x - (V.w || 0.0055), 0.0022, 0.0022, 0.0026, 4],
-            [x + (V.w || 0.0055), 0.0022, 0.0022, 0.0026, 4]],
-            sz * top * 0.86, true, true, V.yOff || 0);
+          strut(g, [x - (V.w || 0.0055), V.yOff || 0, sz * top * 0.86],
+            [x + (V.w || 0.0055), V.yOff || 0, sz * top * 0.86],
+            roundRect(0.0026, 0.0026, 0.0022, 3.0, 8));
         }
       } else {
         // A round hole: a raised eyelet round it, each side.
