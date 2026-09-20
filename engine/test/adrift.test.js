@@ -152,5 +152,35 @@ console.log(`  ..   ${table.length + hand.length} weapons, ${pieces} pieces`);
 check('no part of any weapon is floating clear of the rest',
   adrift.length === 0, adrift.join('; '));
 
+/* AND THE SIGHT LINE POINTS THROUGH WHATEVER THE WEAPON AIMS WITH.
+ *
+ * A second question, in the same file because it has the same shape:
+ * two numbers that describe one thing and are written down twice.
+ * `sight.y` is where the iron line is and `optic.y` is where the scope
+ * tube's axis is, and on all nine weapons with an integral optic they
+ * disagreed -- the Barrett by 34 mm, the Springfield by 31. The game
+ * puts the camera on the sight line when you aim, so on those nine you
+ * aimed at the underside of your own scope.
+ *
+ * serviceArm reads the optic's axis when there is one now, so this
+ * cannot come back through that path. What this catches is the other
+ * direction: an optic added to a spec whose height nobody thought
+ * about, which is exactly how all nine arrived. A scope that is not
+ * roughly over the bore, or is buried in the receiver, is wrong
+ * whatever reads it.
+ */
+const badOptic = [];
+for (const id of table) {
+  const K = LE.SERVICE_KINDS[id];
+  if (!K.optic) continue;
+  const clear = K.optic.y - K.rec.up;
+  if (clear < 0.002 || clear > 0.060) {
+    badOptic.push(`${id} optic ${K.optic.y.toFixed(3)} vs receiver top `
+      + `${K.rec.up.toFixed(3)} (${(clear * 1000).toFixed(0)}mm clear)`);
+  }
+}
+check('every integral optic sits above its receiver and not in orbit',
+  badOptic.length === 0, badOptic.join('; '));
+
 console.log(`\n  ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

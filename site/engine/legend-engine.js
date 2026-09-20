@@ -28064,7 +28064,22 @@ function serviceArm(E, kind, opts) {
      RPG's grenade off the side of the picture. The muzzle flash still
      belongs at muzzleAt, because that is where the gas is. */
   body.tipAt = K.warhead ? K.warhead.x1 - o.x : body.muzzleAt;
-  body.sightAt = K.sight.y - o.y;
+  /* THROUGH THE GLASS, IF THERE IS GLASS.
+   *
+     sightAt is the height the game puts the camera at when the player
+     aims, and it was taking `sight.y` -- the IRON sight line -- on the
+     nine weapons that have an integral optic. The Barrett's tube sits
+     34 mm above its iron line, the Springfield's 31, the SVD's 20: aim
+     any of them and you are looking at the underside of the scope body
+     instead of down it.
+
+     I introduced every one of those this session, by adding `optic` to
+     a spec and leaving `sight.y` where it was. Reading the optic's own
+     axis when there is one means the two cannot drift apart again, and
+     it leaves the iron geometry -- the ears and posts that svcSights
+     draws off `sight.y`, which three of these rifles genuinely keep --
+     exactly where it was. */
+  body.sightAt = (K.optic ? K.optic.y : K.sight.y) - o.y;
   body.ejectPort = K.port
     ? [K.port.x0 + 0.020 - o.x, K.port.up * 0.5 - o.y, K.rec.w + 0.004]
     : null;
@@ -29418,7 +29433,12 @@ Object.assign(SERVICE_KINDS, {
        This one is the semi-automatic: a recoiling barrel assembly in a
        skeletonised chassis you can see straight through, with the
        optic mounted so high it clears the whole receiver. */
-    optic: { x0: -0.130, x1: 0.130, r: 0.0260, bell: 0.0340, y: 0.0900 },
+    /* 0.090 put the tube 64 mm clear of a receiver 26 mm tall -- a
+       scope on a tower, with nothing but its own casting holding it
+       up. Rings over a flat-top rail stand a big fifty's glass about
+       32 mm above the receiver, which is 0.060 here and is also where
+       this rifle's sight line already was. */
+    optic: { x0: -0.130, x1: 0.130, r: 0.0260, bell: 0.0340, y: 0.0600 },
     /* ON THE FOREND, which hangs BELOW the bore. Written without a
        yOff these five pairs of ribs went on the bore line, where this
        rifle has nothing but air between the barrel above and the

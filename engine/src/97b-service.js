@@ -2414,7 +2414,22 @@ function serviceArm(E, kind, opts) {
      RPG's grenade off the side of the picture. The muzzle flash still
      belongs at muzzleAt, because that is where the gas is. */
   body.tipAt = K.warhead ? K.warhead.x1 - o.x : body.muzzleAt;
-  body.sightAt = K.sight.y - o.y;
+  /* THROUGH THE GLASS, IF THERE IS GLASS.
+   *
+     sightAt is the height the game puts the camera at when the player
+     aims, and it was taking `sight.y` -- the IRON sight line -- on the
+     nine weapons that have an integral optic. The Barrett's tube sits
+     34 mm above its iron line, the Springfield's 31, the SVD's 20: aim
+     any of them and you are looking at the underside of the scope body
+     instead of down it.
+
+     I introduced every one of those this session, by adding `optic` to
+     a spec and leaving `sight.y` where it was. Reading the optic's own
+     axis when there is one means the two cannot drift apart again, and
+     it leaves the iron geometry -- the ears and posts that svcSights
+     draws off `sight.y`, which three of these rifles genuinely keep --
+     exactly where it was. */
+  body.sightAt = (K.optic ? K.optic.y : K.sight.y) - o.y;
   body.ejectPort = K.port
     ? [K.port.x0 + 0.020 - o.x, K.port.up * 0.5 - o.y, K.rec.w + 0.004]
     : null;

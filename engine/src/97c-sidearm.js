@@ -668,7 +668,12 @@ Object.assign(SERVICE_KINDS, {
        This one is the semi-automatic: a recoiling barrel assembly in a
        skeletonised chassis you can see straight through, with the
        optic mounted so high it clears the whole receiver. */
-    optic: { x0: -0.130, x1: 0.130, r: 0.0260, bell: 0.0340, y: 0.0900 },
+    /* 0.090 put the tube 64 mm clear of a receiver 26 mm tall -- a
+       scope on a tower, with nothing but its own casting holding it
+       up. Rings over a flat-top rail stand a big fifty's glass about
+       32 mm above the receiver, which is 0.060 here and is also where
+       this rifle's sight line already was. */
+    optic: { x0: -0.130, x1: 0.130, r: 0.0260, bell: 0.0340, y: 0.0600 },
     /* ON THE FOREND, which hangs BELOW the bore. Written without a
        yOff these five pairs of ribs went on the bore line, where this
        rifle has nothing but air between the barrel above and the
