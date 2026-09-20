@@ -10048,8 +10048,13 @@ function makeHumanoidClips() {
     head: { keys: [[0, 0, 0, 0], [0.35, 1, 4, 0], [0.7, 0, -3, 0], [1, 0, 0, 0]] },
     upperArmL: { keys: [[0, 0, 0, -6], [0.5, 0, 0, -9], [1, 0, 0, -6]] },
     upperArmR: { keys: [[0, 0, 0, 6], [0.5, 0, 0, 9], [1, 0, 0, 6]] },
-    lowerArmL: { keys: [[0, 8, 0, 0], [0.5, 12, 0, 0], [1, 8, 0, 0]] },
-    lowerArmR: { keys: [[0, 8, 0, 0], [0.5, 12, 0, 0], [1, 8, 0, 0]] },
+    /* NEGATIVE. On this rig a positive lower arm is HYPEREXTENSION --
+       the forearm swinging backwards past straight -- and every clip in
+       this file had it positive, 59 keys of it, up to +86 in the crawl.
+       An arm at rest hangs with the elbow a little flexed, which is a
+       small NEGATIVE number. */
+    lowerArmL: { keys: [[0, -13, 0, 0], [0.5, -17, 0, 0], [1, -13, 0, 0]] },
+    lowerArmR: { keys: [[0, -13, 0, 0], [0.5, -17, 0, 0], [1, -13, 0, 0]] },
   }));
 
   /* WALK AND RUN.
@@ -10367,25 +10372,30 @@ function makeHumanoidClips() {
     chest: { keys: [[0.00, 0, -2, 0], [0.25, 8, -8, -3], [1.00, 4, -6, -2]] },
     head:  { keys: [[0.00, 0, 0, 0], [0.25, 12, -6, 0], [1.00, 6, -4, 0]] },
 
-    // Lead leg out front, knee just off straight.
-    upperLegL: { keys: [[0.00, 24, 0, 0], [0.20, 82, 0, 8], [0.80, 78, 0, 8], [1.00, 44, 0, 3]] },
-    lowerLegL: { keys: [[0.00, 20, 0, 0], [0.20, 14, 0, 0], [1.00, 26, 0, 0]] },
-    footL:     { keys: [[0.00, 0, 0, 0], [0.20, -14, 0, 0], [1.00, -4, 0, 0]] },
+    /* Lead leg out front, knee just off straight -- and it was not.
+       The comment said "out front" above upperLegL = +82, and on this
+       rig a POSITIVE upper leg swings the thigh BACK, so the lead leg
+       was raked eighty-two degrees behind him. Solved now, by
+       engine/tools/pose-solve.js, for a heel skidding on the floor
+       0.60 m in front of the pelvis. */
+    upperLegL: { keys: [[0.00, -52.0, 0, 0], [0.20, -62.7, 0, 8], [0.80, -59.0, 0, 8], [1.00, -38.0, 0, 3]] },
+    lowerLegL: { keys: [[0.00, 40.1, 0, 0], [0.20, 37.6, 0, 0], [0.80, 28.8, 0, 0], [1.00, 44.0, 0, 0]] },
+    footL:     { keys: [[0.00, 16.0, 0, 0], [0.20, 33.1, 0, 0], [0.80, 38.3, 0, 0], [1.00, 10.0, 0, 0]] },
 
     // Trail leg folded under the body, toe pointed so it drags.
-    upperLegR: { keys: [[0.00, -10, 0, 0], [0.20, 30, 0, -14], [0.80, 28, 0, -14], [1.00, 6, 0, -5]] },
+    upperLegR: { keys: [[0.00, 5.0, 0, 0], [0.20, 26.4, 0, -14], [0.80, 26.0, 0, -14], [1.00, 10.0, 0, -5]] },
     /* The recovery key had the trailing knee STRAIGHTENING, which
        drives the shin down: 20 degrees of knee put the foot 170mm
        under, worse than the 50 it replaced. It wants more bend, not
        less -- the leg is coming up under him. */
-    lowerLegR: { keys: [[0.00, 24, 0, 0], [0.20, 115, 0, 0], [0.80, 112, 0, 0], [1.00, 70, 0, 0]] },
-    footR:     { keys: [[0.00, 0, 0, 0], [0.20, 35, 0, 0], [1.00, 26, 0, 0]] },
+    lowerLegR: { keys: [[0.00, 85, 0, 0], [0.20, 111.6, 0, 0], [0.80, 110, 0, 0], [1.00, 78, 0, 0]] },
+    footR:     { keys: [[0.00, -20, 0, 0], [0.20, -25, 0, 0], [0.80, -24, 0, 0], [1.00, -18, 0, 0]] },
 
     // Off arm back and out; gun arm holds its carry.
     upperArmL: { keys: [[0.00, 0, 0, -8], [0.22, 38, 0, -26], [1.00, 14, 0, -14]] },
-    lowerArmL: { keys: [[0.00, 14, 0, 0], [0.22, 34, 0, 0], [1.00, 22, 0, 0]] },
+    lowerArmL: { keys: [[0.00, -18, 0, 0], [0.22, -44, 0, 0], [1.00, -30, 0, 0]] },
     upperArmR: { keys: [[0.00, -30, 0, 10], [0.22, -46, 0, 16], [1.00, -36, 0, 12]] },
-    lowerArmR: { keys: [[0.00, 60, 0, 0], [0.22, 74, 0, 0], [1.00, 66, 0, 0]] },
+    lowerArmR: { keys: [[0.00, -72, 0, 0], [0.22, -86, 0, 0], [1.00, -78, 0, 0]] },
   }, { loop: false }));
 
   /* ================================================================
@@ -10407,7 +10417,11 @@ function makeHumanoidClips() {
      out of a crouched idle does not pop the legs: only the cycle is
      added on top. */
 
-  const CR_HIP = -0.42;              // how far the hips drop, in metres
+  /* How far the hips drop, in metres. -0.42 with a flat sole needed 64
+     degrees of ankle dorsiflexion; an ankle has 25. This is the depth
+     the crouch CYCLES solve to, and the sole comes off the floor at the
+     heel, which is what a person in a crouch this deep is standing on. */
+  const CR_HIP = -0.346;
   clips.push(buildClip('crouchIdle', 3.4, {
     hips: {
       keys: [[0.00, 14, 0, 0], [0.50, 15, 1, 0], [1.00, 14, 0, 0]],
@@ -10431,16 +10445,22 @@ function makeHumanoidClips() {
        it rests standing. Thigh 58 degrees forward and shank 64 back
        puts it at -0.858, four millimetres behind the hips. The foot
        key then cancels the shank so the sole is flat. */
-    upperLegL: { keys: [[0.00, -72, 0, 5], [0.50, -73, 0, 5], [1.00, -72, 0, 5]] },
-    upperLegR: { keys: [[0.00, -72, 0, -5], [0.50, -73, 0, -5], [1.00, -72, 0, -5]] },
-    lowerLegL: { keys: [[0.00, 122, 0, 0], [0.50, 120, 0, 0], [1.00, 122, 0, 0]] },
-    lowerLegR: { keys: [[0.00, 122, 0, 0], [0.50, 120, 0, 0], [1.00, 122, 0, 0]] },
-    footL: { keys: [[0.00, -64, 0, 0], [0.50, -62, 0, 0], [1.00, -64, 0, 0]] },
-    footR: { keys: [[0.00, -64, 0, 0], [0.50, -62, 0, 0], [1.00, -64, 0, 0]] },
+    /* Solved, by engine/tools/pose-solve.js, from where the pelvis is
+       and where the foot has to be -- the same arithmetic the crouch
+       cycles use, so walking out of this idle does not pop the legs.
+       The heel is up: at a 122 degree knee the shin rakes 60 degrees
+       back, and holding the sole flat from there wanted 64 degrees of
+       dorsiflexion against an ankle's 25. */
+    upperLegL: { keys: [[0.00, -83.2, 0, 5], [0.50, -82.3, 0, 5], [1.00, -83.2, 0, 5]] },
+    upperLegR: { keys: [[0.00, -83.2, 0, -5], [0.50, -82.3, 0, -5], [1.00, -83.2, 0, -5]] },
+    lowerLegL: { keys: [[0.00, 121.8, 0, 0], [0.50, 119.8, 0, 0], [1.00, 121.8, 0, 0]] },
+    lowerLegR: { keys: [[0.00, 121.8, 0, 0], [0.50, 119.8, 0, 0], [1.00, 121.8, 0, 0]] },
+    footL: { keys: [[0.00, -20.5, 0, 0], [0.50, -19.5, 0, 0], [1.00, -20.5, 0, 0]] },
+    footR: { keys: [[0.00, -20.5, 0, 0], [0.50, -19.5, 0, 0], [1.00, -20.5, 0, 0]] },
     upperArmL: { keys: [[0.00, 0, 0, -10], [0.50, 0, 0, -12], [1.00, 0, 0, -10]] },
     upperArmR: { keys: [[0.00, 0, 0, 10], [0.50, 0, 0, 12], [1.00, 0, 0, 10]] },
-    lowerArmL: { keys: [[0.00, 14, 0, 0], [0.50, 17, 0, 0], [1.00, 14, 0, 0]] },
-    lowerArmR: { keys: [[0.00, 14, 0, 0], [0.50, 17, 0, 0], [1.00, 14, 0, 0]] },
+    lowerArmL: { keys: [[0.00, -19, 0, 0], [0.50, -23, 0, 0], [1.00, -19, 0, 0]] },
+    lowerArmR: { keys: [[0.00, -19, 0, 0], [0.50, -23, 0, 0], [1.00, -19, 0, 0]] },
   }));
 
   /* A duck walk: short steps, the hips barely rise, and the trunk
@@ -10612,7 +10632,11 @@ function makeHumanoidClips() {
     },
     spine: { keys: [[0.00, 0, 0, 0], [0.40, -8, 0, -2], [1.00, -9, 0, -4]] },
     chest: { keys: [[0.00, 0, 0, 0], [0.40, 2, 0, -1], [1.00, 5, 0, -2]] },
-    head:  { keys: [[0.00, 0, 0, 0], [0.40, -32, 0, 0], [1.00, -58, 0, 0]] },
+    /* A head craned 58 degrees back is past where a neck goes. A prone
+       man gets there the way a prone man does -- half from the neck,
+       half from the skull on top of it. */
+    neck:  { keys: [[0.00, 0, 0, 0], [0.40, -14, 0, 0], [1.00, -26, 0, 0]] },
+    head:  { keys: [[0.00, 0, 0, 0], [0.40, -18, 0, 0], [1.00, -32, 0, 0]] },
     /* Trailing further behind him at every step down, and flat out by
        the end: world -40 at the halfway point and -86 on the deck. */
     upperLegL: { keys: [[0.00, 0, 0, 5], [0.40, -18, 0, 10], [1.00, 4, 0, 12]] },
@@ -10625,8 +10649,8 @@ function makeHumanoidClips() {
        and lets go of his rifle has not dropped, he has fallen. */
     upperArmL: { keys: [[0.00, 0, 0, -10], [0.40, -12, 0, 4], [1.00, -20, 0, 14]] },
     upperArmR: { keys: [[0.00, 0, 0, 10], [0.40, -10, 0, -2], [1.00, -18, 0, -12]] },
-    lowerArmL: { keys: [[0.00, 14, 0, 0], [1.00, 62, 0, 0]] },
-    lowerArmR: { keys: [[0.00, 14, 0, 0], [1.00, 66, 0, 0]] },
+    lowerArmL: { keys: [[0.00, -18, 0, 0], [1.00, -78, 0, 0]] },
+    lowerArmR: { keys: [[0.00, -18, 0, 0], [1.00, -82, 0, 0]] },
   }, { loop: false }));
 
   /* Flat and still, breathing. The whole body is 6 degrees onto the
@@ -10639,7 +10663,8 @@ function makeHumanoidClips() {
     },
     spine: { keys: [[0.00, -9, 0, -4], [0.50, -8, 0, -4], [1.00, -9, 0, -4]] },
     chest: { keys: [[0.00, 5, 0, -2], [0.50, 7, 0, -2], [1.00, 5, 0, -2]] },
-    head:  { keys: [[0.00, -58, 0, 0], [0.50, -57, 2, 0], [1.00, -58, 0, 0]] },
+    neck:  { keys: [[0.00, -26, 0, 0], [0.50, -26, 1, 0], [1.00, -26, 0, 0]] },
+    head:  { keys: [[0.00, -32, 0, 0], [0.50, -31, 1, 0], [1.00, -32, 0, 0]] },
     /* Out behind him and flat: world -86 and -88, which is the leg
        lying along the ground rather than hanging off the pelvis. The
        feet are turned out a little, toes to the side, which is what
@@ -10653,8 +10678,8 @@ function makeHumanoidClips() {
     /* Down onto the elbows and forward onto the weapon. */
     upperArmL: { keys: [[0.00, -20, 0, 14], [1.00, -20, 0, 14]] },
     upperArmR: { keys: [[0.00, -18, 0, -12], [1.00, -18, 0, -12]] },
-    lowerArmL: { keys: [[0.00, 62, 0, 0], [1.00, 62, 0, 0]] },
-    lowerArmR: { keys: [[0.00, 66, 0, 0], [1.00, 66, 0, 0]] },
+    lowerArmL: { keys: [[0.00, -78, 0, 0], [1.00, -78, 0, 0]] },
+    lowerArmR: { keys: [[0.00, -82, 0, 0], [1.00, -82, 0, 0]] },
   }));
 
   /* The combat crawl: elbow and opposite knee, then the other pair.
@@ -10670,7 +10695,8 @@ function makeHumanoidClips() {
     },
     spine: { keys: [[0.00, -9, 5, -4], [0.50, -9, -5, -4], [1.00, -9, 5, -4]] },
     chest: { keys: [[0.00, 5, -6, -2], [0.50, 5, 6, -2], [1.00, 5, -6, -2]] },
-    head:  { keys: [[0.00, -56, -3, 0], [0.50, -56, 3, 0], [1.00, -56, -3, 0]] },
+    neck:  { keys: [[0.00, -25, -2, 0], [0.50, -25, 2, 0], [1.00, -25, -2, 0]] },
+    head:  { keys: [[0.00, -31, -1, 0], [0.50, -31, 1, 0], [1.00, -31, -1, 0]] },
     /* Lead knee comes up, pushes, straightens; then the other. */
     /* Rebased onto the flat leg. The knee that is working comes up to
        world -55 with 65 degrees in it and the foot flattens; the other
@@ -10689,10 +10715,10 @@ function makeHumanoidClips() {
        hand reaches and pulls. */
     upperArmL: { keys: [[0.00, -20, 0, 14], [0.25, -34, 0, 22], [0.50, -12, 0, 10],
       [1.00, -20, 0, 14]] },
-    lowerArmL: { keys: [[0.00, 62, 0, 0], [0.25, 86, 0, 0], [0.50, 48, 0, 0],
-      [1.00, 62, 0, 0]] },
+    lowerArmL: { keys: [[0.00, -78, 0, 0], [0.25, -98, 0, 0], [0.50, -64, 0, 0],
+      [1.00, -78, 0, 0]] },
     upperArmR: { keys: [[0.00, -18, 0, -12], [0.50, -24, 0, -16], [1.00, -18, 0, -12]] },
-    lowerArmR: { keys: [[0.00, 66, 0, 0], [0.50, 74, 0, 0], [1.00, 66, 0, 0]] },
+    lowerArmR: { keys: [[0.00, -82, 0, 0], [0.50, -90, 0, 0], [1.00, -82, 0, 0]] },
   }));
 
   /* Getting up. The reverse of the drop, and slower, because standing
@@ -10709,7 +10735,8 @@ function makeHumanoidClips() {
     },
     spine: { keys: [[0.00, -9, 0, -4], [1.00, -6, 0, 0]] },
     chest: { keys: [[0.00, 5, 0, -2], [1.00, -4, 0, 1]] },
-    head:  { keys: [[0.00, -58, 0, 0], [1.00, -2, 0, 0]] },
+    neck:  { keys: [[0.00, -26, 0, 0], [0.45, -10, 0, 0], [1.00, 0, 0, 0]] },
+    head:  { keys: [[0.00, -32, 0, 0], [0.45, -12, 0, 0], [1.00, -2, 0, 0]] },
     /* Flat at the start, the new crouch at the end, and a kneel in
        between -- the thigh comes forward through +25 with 120 degrees
        in the knee, which is a man getting a foot under himself. */
@@ -10721,12 +10748,16 @@ function makeHumanoidClips() {
       [1.00, 122, 0, 0]] },
     lowerLegR: { keys: [[0.00, 6, 0, 0], [0.25, 55, 0, 0], [0.50, 118, 0, 0],
       [1.00, 122, 0, 0]] },
-    footL: { keys: [[0.00, 8, 0, 0], [0.25, 5, 0, 0], [0.50, 5, 0, 0], [1.00, -64, 0, 0]] },
-    footR: { keys: [[0.00, 8, 0, 0], [0.25, 5, 0, 0], [0.50, 5, 0, 0], [1.00, -64, 0, 0]] },
+    /* -64 was an ankle dorsiflexed two and a half times as far as an
+       ankle goes, and it was there to hold a sole flat under a crouch
+       too deep for a flat sole. It ends in the crouch idle's pose now,
+       which is solved. */
+    footL: { keys: [[0.00, 8, 0, 0], [0.25, 5, 0, 0], [0.50, -21.2, 0, 0], [1.00, -20.5, 0, 0]] },
+    footR: { keys: [[0.00, 8, 0, 0], [0.25, 5, 0, 0], [0.50, -21.2, 0, 0], [1.00, -20.5, 0, 0]] },
     upperArmL: { keys: [[0.00, -20, 0, 14], [1.00, 0, 0, -10]] },
     upperArmR: { keys: [[0.00, -18, 0, -12], [1.00, 0, 0, 10]] },
-    lowerArmL: { keys: [[0.00, 62, 0, 0], [1.00, 14, 0, 0]] },
-    lowerArmR: { keys: [[0.00, 66, 0, 0], [1.00, 14, 0, 0]] },
+    lowerArmL: { keys: [[0.00, -78, 0, 0], [1.00, -19, 0, 0]] },
+    lowerArmR: { keys: [[0.00, -82, 0, 0], [1.00, -19, 0, 0]] },
   }, { loop: false }));
 
   clips.push(buildClip('jump', 0.9, {
@@ -10745,7 +10776,7 @@ function makeHumanoidClips() {
 
   clips.push(buildClip('wave', 1.6, {
     upperArmR: { keys: [[0, 0, 0, 10], [0.2, -140, 0, 40], [1, -140, 0, 40]] },
-    lowerArmR: { keys: [[0, 10, 0, 0], [0.35, 20, 0, -28], [0.55, 20, 0, 22], [0.75, 20, 0, -28], [1, 10, 0, 0]] },
+    lowerArmR: { keys: [[0, -14, 0, 0], [0.35, -34, 0, -20], [0.55, -34, 0, 18], [0.75, -34, 0, -20], [1, -14, 0, 0]] },
     head: { keys: [[0, 0, 0, 0], [0.5, 0, -12, 0], [1, 0, 0, 0]] },
   }, { loop: false }));
 
@@ -10814,8 +10845,8 @@ function makeHumanoidClips() {
        his back lands with his arms out. */
     upperArmL: { keys: [[0, -8, 0, 7], [0.28, -54, 0, 26], [0.7, -22, 0, 52], [1, -18, 0, 50]] },
     upperArmR: { keys: [[0, -8, 0, -7], [0.32, -48, 0, -24], [0.74, -16, 0, -54], [1, -12, 0, -52]] },
-    lowerArmL: { keys: [[0, 14, 0, 0], [0.4, 46, 0, 0], [1, 28, 0, 0]] },
-    lowerArmR: { keys: [[0, 14, 0, 0], [0.44, 40, 0, 0], [1, 24, 0, 0]] },
+    lowerArmL: { keys: [[0, -18, 0, 0], [0.4, -58, 0, 0], [1, -36, 0, 0]] },
+    lowerArmR: { keys: [[0, -18, 0, 0], [0.44, -52, 0, 0], [1, -32, 0, 0]] },
   }, { loop: false }));
 
   /* Shot from behind: he goes down onto his face, and the arms do not
@@ -10843,8 +10874,8 @@ function makeHumanoidClips() {
     lowerLegR: { keys: [[0, 5, 0, 0], [0.36, 24, 0, 0], [0.76, 0, 0, 0], [1, -6, 0, 0]] },
     upperArmL: { keys: [[0, -8, 0, -7], [0.3, 26, 0, -18], [0.72, 54, 0, -14], [1, 50, 0, -13]] },
     upperArmR: { keys: [[0, -8, 0, 7], [0.34, 22, 0, 16], [0.76, 50, 0, 13], [1, 46, 0, 12]] },
-    lowerArmL: { keys: [[0, 14, 0, 0], [0.42, 62, 0, 0], [1, 40, 0, 0]] },
-    lowerArmR: { keys: [[0, 14, 0, 0], [0.46, 56, 0, 0], [1, 36, 0, 0]] },
+    lowerArmL: { keys: [[0, -18, 0, 0], [0.42, -74, 0, 0], [1, -50, 0, 0]] },
+    lowerArmR: { keys: [[0, -18, 0, 0], [0.46, -68, 0, 0], [1, -46, 0, 0]] },
   }, { loop: false }));
 
   /* STANDING STILL IS NOT STANDING STILL.
@@ -10892,7 +10923,7 @@ function makeHumanoidClips() {
      a salute. */
   clips.push(buildClip('idleCheck', 2.8, {
     upperArmR: { keys: [[0, 0, 0, 6], [0.24, -18, 0, 16], [0.55, -22, 0, 19], [0.82, -8, 0, 10], [1, 0, 0, 6]] },
-    lowerArmR: { keys: [[0, 8, 0, 0], [0.24, 58, 0, 0], [0.58, 66, 0, 0], [0.85, 26, 0, 0], [1, 8, 0, 0]] },
+    lowerArmR: { keys: [[0, -13, 0, 0], [0.24, -70, 0, 0], [0.58, -80, 0, 0], [0.85, -34, 0, 0], [1, -13, 0, 0]] },
     handR: { keys: [[0, 0, 0, 0], [0.4, 0, 0, -14], [0.6, 0, 0, -10], [1, 0, 0, 0]] },
     neck: { keys: [[0, 0, 0, 0], [0.45, 5, 0, 0], [0.7, 4, 0, 0], [1, 0, 0, 0]] },
     head: { keys: [[0, 0, 0, 0], [0.45, 7, 0, 0], [0.7, 5, 0, 0], [1, 0, 0, 0]] },
