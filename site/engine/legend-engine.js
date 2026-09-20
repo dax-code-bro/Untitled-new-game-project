@@ -31743,6 +31743,12 @@ function buildViewHand(g, rawAt, side, opts = {}) {
            * is the seating search in buildViewHand, not in this march.
            * Eight attempts aimed at solveCurl, the ninth aimed here, and
            * all nine were aimed at the wrong subsystem. */
+          /* Search the angles at or above a real curl first; only if
+             none of those can be reached without going through the
+             weapon does the flatter half of the range get a look. The
+             knuckle is nearly free -- a proximal phalanx does lie flat
+             along a forend -- and the two joints past it are not. */
+          const floorA = lim * (k === 0 ? 0.15 : 0.45);
           const pick = (minA) => {
             let bE = 1e9, bA = null;
             for (const [cand, e, xd] of cands) if (!xd && cand >= minA && e < bE) bE = e;

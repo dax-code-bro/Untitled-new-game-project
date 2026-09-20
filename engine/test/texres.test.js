@@ -91,6 +91,19 @@ const note = (s) => console.log(`  ..   ${s}`);
     out.keysBefore = before.slice(0, 3);
     out.keysAfter = after.slice(0, 3);
     out.allAt512 = after.every((k) => k.split(':')[1] === '512');
+    /* NAME THE ONES THAT DID NOT COME WITH, and the ones that appeared.
+     *
+       This reported `keysAfter.slice(0, 3)` on failure -- the first
+       three keys alphabetically, which on a passing set and a failing
+       one are the same three, all at 512. So the message read "and
+       every recipe ends up at the new size [bluing:512, brass:512,
+       brick:512]", which is the evidence FOR the thing it is
+       complaining about. The store has eighteen entries; the two that
+       matter were never printed. */
+    out.stragglers = after.filter((k) => k.split(':')[1] !== '512');
+    out.appeared = after.filter((k) => before.indexOf(k) < 0
+      && before.indexOf(k.replace(/:\d+:/, ':256:')) < 0);
+    out.vanished = before.filter((k) => after.indexOf(k) < 0);
     /* THE SAME OBJECT, bigger. A new texture here would mean every
        material is still holding the old small one. */
     out.sameObject = store.get(after[0]).albedo === beforeTex;
@@ -111,9 +124,10 @@ const note = (s) => console.log(`  ..   ${s}`);
   check('upgrading re-uploads into the texture the materials already hold',
     r.sameObject, 'it made a new texture, so nothing would have sharpened');
   check('and every recipe ends up at the new size', r.allAt512,
-    JSON.stringify(r.keysAfter));
+    'still at the old size: ' + JSON.stringify(r.stragglers));
   check('without leaking a second set', r.setsAfter === r.sets,
-    `${r.sets} before, ${r.setsAfter} after`);
+    `${r.sets} before, ${r.setsAfter} after; new keys `
+    + JSON.stringify(r.appeared) + ', gone ' + JSON.stringify(r.vanished));
 
   check('no page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
   console.log(`\n  ${passed} passed, ${failed} failed`);
