@@ -1798,11 +1798,30 @@
           } else if (state.rlProp) {
             LE.stowReloadProp(state.rlProp);
           }
-          if (!handSet) {
-            for (var s3 = 0; s3 < arms.support.length; s3++) {
-              arms.support[s3].setPosition([ox2, oy2, oz2]);
-            }
-          }
+          /* AND THE HANDS THEMSELVES MOVE.
+           *
+             The hand geometry is lofted in the weapon's space and the
+             palm actor sat at the origin with no transform, so relative
+             to the gun the hand never moved at all -- only the fingers
+             turned, each rigidly about its own knuckle, which is why
+             the motion read as wobble rather than as grip. giveHands
+             slides both hands forward in the weapon's frame as the gun
+             is driven back into them, lets the heel give downward, and
+             breathes when nothing else is happening.
+
+             The support hand's reload offset is handed in as `extra`
+             rather than being overwritten: a reload carries that hand
+             right off the weapon and the give has to ride on top of it,
+             not fight it for the same three numbers. */
+          game.giveHands(arms, {
+            kick: (kick || 0) * 0.02,
+            fire: state.cyc > 0 ? 1 - state.cyc / Math.max(1e-4, state.cycMax) : 0,
+            t: state.swayT, aim: aim,
+          /* A reload owns the support hand outright -- it is placed on
+             the magazine it is carrying, from an absolute point -- so
+             the give is applied to the firing hand only for those
+             frames. Everywhere else it rides on the reach. */
+          }, handSet ? false : [ox2, oy2, oz2]);
         }
       },
     };

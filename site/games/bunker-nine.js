@@ -7897,7 +7897,22 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
     } else if (v.prop) {
       game.stowReloadProp(v.prop);
     }
-    if (!handSet) for (const q of v.arms.support) q.setPosition([ox, oy, oz]);
+    /* AND THE HANDS THEMSELVES MOVE. The hand geometry is lofted in the
+       weapon's space and the palm actor sat at the origin with no
+       transform, so relative to the gun the hand never moved at all --
+       only the fingers turned, rigidly, about their own knuckles, which
+       is why the motion read as wobble rather than as grip. giveHands
+       slides both hands forward in the weapon's frame as the gun is
+       driven back into them and breathes when nothing else is going on.
+
+       A reload owns the support hand outright while it is carrying
+       something, so `false` says leave that one alone; the firing hand
+       gets its give either way. */
+    game.giveHands(v.arms, {
+      kick: P.kickBack || 0,
+      fire: Math.max(0, Math.min(1, (P.slideCycle || 0) / (P.slideCycleMax || 0.085))),
+      t: P.swayT || 0, aim: P.ads || 0,
+    }, handSet ? false : [ox, oy, oz]);
   }
 
   /* Revolver reload: the cylinder swings out on its crane, hangs there

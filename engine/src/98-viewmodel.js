@@ -3040,3 +3040,97 @@ Engine.prototype.viewmodelArms = function (weapon, hands, opts = {}) {
     digits: parts.digits,
     support: lSleeve ? [lSleeve, lSkin] : [], parts: all };
 };
+
+/* ==================================================================
+   THE HAND IS NOT A CASTING
+   ==================================================================
+
+   Reported, and correct: "it looks like the hand is just a stationary
+   object and finger placement is the only thing that moves".
+
+   That is exactly what it was. The hand geometry is lofted in the
+   WEAPON's space and the palm actor sits at the origin with no
+   transform, so relative to the gun the hand never moved at all --
+   not while walking, not while aiming, not while firing. The only
+   thing with a runtime transform was the fingers, each swinging
+   rigidly about its own base knuckle, which is why the motion reads as
+   wobble rather than as grip: four rigid hooks pivoting on a hand that
+   is welded in place.
+
+   A hand holding a gun that is being fired does move, and the movement
+   is the whole read of weight. The gun is driven BACK into the palm, so
+   in the weapon's own frame the hand travels FORWARD along the bore and
+   then settles; the support hand takes less of it and later, because it
+   is further from the recoil and holding a longer lever. And a hand
+   that is doing nothing at all is still not still -- it breathes.
+
+   Small numbers on purpose. The hand is 200 mm from the eye: 12 mm of
+   travel there is a centimetre and a half on the glass, which is
+   plainly visible, and anything more slides the fingers off the grip
+   they were solved onto.
+
+     o.kick   how far the weapon went back, metres (its own recoil)
+     o.fire   0..1 through the current shot's cycle
+     o.t      a clock, for the breath
+     o.aim    0..1 down the sights, which steadies everything
+
+   Returns two offsets in the weapon's own space: +X toward the muzzle,
+   +Y up, +Z the weapon's right. The caller adds them to whatever else
+   it is doing to that hand -- a reload moves the support hand a long
+   way and this has to ride on top of it rather than fight it. */
+function handGive(o = {}) {
+  const kick = Math.max(0, Math.min(0.06, o.kick || 0));
+  const fire = Math.max(0, Math.min(1, o.fire || 0));
+  const aim = Math.max(0, Math.min(1, o.aim || 0));
+  const t = o.t || 0;
+  /* The gun slides back through the grip, so the hand goes forward in
+     the gun's frame. Capped, because past about 12 mm the fingers leave
+     the surface they were solved onto. */
+  const slide = Math.min(0.012, kick * 0.42);
+  /* And the heel of the hand gives downward as the weapon climbs. */
+  const heel = -slide * 0.55;
+  /* The support hand takes less and takes it late: it is further down
+     the weapon and it is resisting rather than absorbing. */
+  const lag = fire * fire;
+  /* Breathing. A quarter of a hertz on one hand and a third on the
+     other, so the two never come back into phase and the pair never
+     reads as one object; steadied to almost nothing on the sights,
+     because that is what holding your breath is. */
+  const br = (1 - aim * 0.85) * 0.0011;
+  const bx = Math.sin(t * 1.5) * br, by = Math.cos(t * 1.1) * br;
+  return {
+    r: [slide + bx, heel + by, 0],
+    l: [slide * 0.55 * (0.4 + 0.6 * lag) + by,
+      heel * 0.70 * (0.4 + 0.6 * lag) + bx,
+      -slide * 0.22],
+  };
+}
+
+/* Apply it. `arms` is what viewmodelArms returned; `extra` is anything
+   the caller is already doing to the support hand (a reload carries it
+   right off the weapon), and the give is added to that rather than
+   replacing it.
+
+   Both the sleeve and the palm move, because they are two actors and a
+   palm that travels without its sleeve is a hand coming off a wrist.
+   The fingers and thumb are parented to the palm, so they come along. */
+Engine.prototype.giveHands = function (arms, o = {}, extra) {
+  if (!arms) return null;
+  const g = handGive(o);
+  const set = (a, v) => { if (a) a.setPosition(v); };
+  set(arms.sleeve, g.r);
+  set(arms.skin, g.r);
+  /* `extra === false` means SOMEBODY ELSE OWNS THE SUPPORT HAND -- a
+     reload places it on the magazine it is carrying, from an absolute
+     point, and writing the give over the top would snap it back to the
+     forend. The firing hand still gets its give either way. Any other
+     value is an offset the give is added to. */
+  if (extra === false) return g;
+  const e = extra || null;
+  const lx = g.l[0] + (e ? e[0] : 0);
+  const ly = g.l[1] + (e ? e[1] : 0);
+  const lz = g.l[2] + (e ? e[2] : 0);
+  set(arms.lSleeve, [lx, ly, lz]);
+  set(arms.lSkin, [lx, ly, lz]);
+  return g;
+};
