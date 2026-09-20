@@ -1592,11 +1592,23 @@ function buildViewHand(g, rawAt, side, opts = {}) {
              * tip on the far side. With depth in the score the row no
              * longer ties, so take the shallowest crossing there is: the
              * finger presses into what it holds rather than through it. */
+            /* AND THE CREST RULE DOES NOT REACH IN HERE.
+             *
+               It did on the first attempt, and grip.test.js charged for
+               it: the Kill Streak's left index went from 33 per cent
+               buried in the forend to 50. This branch is the case where
+               EVERY angle goes through something, and restricting it to
+               angles at or above the anatomical bend means the shallowest
+               crossing available is no longer the shallowest crossing
+               there is -- so the finger is pushed further into the wood
+               to satisfy a rule about air.
+
+               The crest rule says where to look for a CLEAN angle. It
+               does not get to authorise burial; that is the mistake the
+               eighth attempt made with a sight-line term and the one
+               this was written to avoid. Full range here. */
             let bA = null, bE = 1e9;
-            for (const [cand, e] of cands) {
-              if (crested && cand < floorA) continue;
-              if (e < bE) { bE = e; bA = cand; }
-            }
+            for (const [cand, e] of cands) if (e < bE) { bE = e; bA = cand; }
             if (bA != null) a = bA;
             if (opts.out) opts.out.walled = (opts.out.walled || 0) + 1;
           }

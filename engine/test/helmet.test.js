@@ -93,6 +93,18 @@ const note = (s) => console.log(`  ..   ${s}`);
       const hb = bounds(hg.positions, hg.stride || 3);
       const head = {
         bottom: boneY + (hoff ? hoff.y : 0) + hb.y0 * hs,
+        /* THE CHIN, not the lowest vertex anywhere on the sculpt.
+         *
+           91-face.js records both and says why: "the jaw sweeps back
+           under the ear and the nape hollow can dip lower than the chin
+           does". The head is PLACED by chinY -- 95-engine.js puts the
+           chin on the bone and then drops it 11 mm so the jaw overlaps
+           the neck instead of balancing on it -- so measuring the mesh
+           minimum measures the nape, which hangs 9 to 13 mm lower
+           again. That is 20 to 24 mm against a 20 mm bar, and six
+           operators failed a check about the chin on account of the
+           back of their necks. */
+        chin: boneY + (hoff ? hoff.y : 0) + (hg.headBounds ? hg.headBounds.chinY : hb.y0) * hs,
         top: boneY + (hoff ? hoff.y : 0) + hb.y1 * hs,
         halfW: Math.max(-hb.x0, hb.x1) * hs,
         front: hb.z1 * hs,
@@ -123,9 +135,15 @@ const note = (s) => console.log(`  ..   ${s}`);
   }
 
   check('somebody is wearing something on their head', fits.length >= 3, String(fits.length));
+  /* And the bar is TIGHTER for asking the right question: the placement
+     is deliberate and exact -- chin on the bone, then 11 mm down for the
+     overlap -- so anything past 15 mm is a head that has come off its
+     rig, which is what this was written to catch. Measured against the
+     nape it could not have been set below 25 mm without failing on
+     correct geometry. */
   check('the chin is on the head bone, not the middle of the face',
-    fits.every((f) => Math.abs(f.head.bottom - f.boneY) < 0.02),
-    fits.map((f) => (f.head.bottom - f.boneY).toFixed(3)).join(' '));
+    fits.every((f) => Math.abs(f.head.chin - f.boneY) < 0.015),
+    fits.map((f) => (f.head.chin - f.boneY).toFixed(3)).join(' '));
 
   const lids = fits.filter((f) => f.wears.indexOf('helmet') >= 0);
   note(`${lids.length} of them in a helmet: ${lids.map((f) => f.id).join(', ')}`);

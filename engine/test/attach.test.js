@@ -29,25 +29,43 @@ const R = path.join(__dirname, '..', '..') + '/';
   await p.setContent('<body><canvas id="game" style="position:fixed;inset:0;width:100%;height:100%"></canvas></body>');
   await p.addScriptTag({ content: fs.readFileSync(R + 'site/engine/legend-engine.js', 'utf8') });
   await p.addScriptTag({ content: fs.readFileSync(R + 'site/games/bunker-nine.js', 'utf8') });
-  const r = await p.evaluate(() => {
+  /* ONE EVALUATE PER GUN, NOT ONE FOR THE WHOLE RACK.
+   *
+   * This was a single synchronous page.evaluate over every weapon and
+   * every magazine that fits it, and the expensive half is the second
+   * loop: each combination is fired three times, emptied, and then run
+   * for a whole reload -- about 250 steps of the real game loop, times
+   * twenty-odd guns times the magazines each will take. Under
+   * SwiftShader that is a quarter of an hour, and because it was one
+   * call it produced NO OUTPUT AT ALL until it either finished or was
+   * killed. Run with a ten-minute cap it reported "Target page has been
+   * closed" and nothing else; run with fifteen, the same. A test that
+   * can only time out or pass is not telling you anything in between,
+   * and this one had stopped telling anyone anything.
+   *
+   * Split per gun it prints a line as each finishes, with its own
+   * elapsed time, so a slow weapon is visible as a slow weapon rather
+   * than as a dead browser -- and no single call can swallow the whole
+   * budget. The claims below are unchanged; only who calls them. */
+  const setup = await p.evaluate(() => {
     window.B = BUNKER.start({ canvas: '#game', test: true, quality: 'low' });
-    const run = (n) => { for (let i = 0; i < n; i++) { B.S.toSpawn = 0; B.S.spawnT = 1e9; B.game.step(1/60); } };
-    __T.buildPool(4); __T.god(true); __T.killAll(); run(20);
-    const A = __T_SYS.ATTACH, P = B.S.player;
+    window.__run = (n) => { for (let i = 0; i < n; i++) { B.S.toSpawn = 0; B.S.spawnT = 1e9; B.game.step(1/60); } };
+    __T.buildPool(4); __T.god(true); __T.killAll(); window.__run(20);
+    const A = __T_SYS.ATTACH;
     const GUNS = Object.keys(__T_WEAPONS).filter((k) => !__T_WEAPONS[k].melee);
     // Which parts each gun will actually accept.
-    const allowed = {};
+    window.__allowed = {};
     for (const g of GUNS) {
-      allowed[g] = Object.keys(A.parts).filter((k) => !(A.parts[k].bans || []).includes(g));
+      window.__allowed[g] = Object.keys(A.parts).filter((k) => !(A.parts[k].bans || []).includes(g));
     }
-    const out = { doubles: [], errs: [], combos: 0, guns: GUNS.length };
-    const visibleParts = (v) => {
-      const root = v.kind === 'single' ? v.actor : v.root;
-      const seen = [];
-      const walk = (a) => { if (a.mesh && a.visible !== false) seen.push(a); for (const c of (a.children || [])) walk(c); };
-      walk(root);
-      return seen;
-    };
+    return { guns: GUNS };
+  });
+  const GUNLIST = setup.guns;
+  const r = { doubles: [], errs: [], combos: 0, guns: GUNLIST.length, floating: [] };
+  /* The cheap half first, in one pass: nothing may hang in the air. */
+  r.floating = (await p.evaluate((GUNS) => {
+    const A = __T_SYS.ATTACH, P = B.S.player;
+    const out = { floating: [] };
     /* Nothing may hang in the air.
      *
      * "Make sure the animations are good and nothing's hovering in the
@@ -89,7 +107,6 @@ const R = path.join(__dirname, '..', '..') + '/';
       walk(root, null, pts, false);
       return { pts, walk };
     };
-    out.floating = [];
     for (const g of GUNS) {
       const v = P.view[g];
       if (!v || !v.att) continue;
@@ -124,7 +141,17 @@ const R = path.join(__dirname, '..', '..') + '/';
       }
     }
 
-    for (const g of GUNS) {
+    return out;
+  }, GUNLIST)).floating;
+
+  /* And then the expensive half, one weapon at a time. */
+  for (const g of GUNLIST) {
+    const t0 = Date.now();
+    const o = await p.evaluate((g) => {
+      const run = window.__run;
+      const A = __T_SYS.ATTACH, P = B.S.player;
+      const out = { doubles: [], errs: [], combos: 0 };
+      const allowed = window.__allowed;
       const parts = allowed[g];
       const mags = parts.filter((k) => A.parts[k].slot === 'mag');
       for (const m of mags) {
@@ -167,9 +194,15 @@ const R = path.join(__dirname, '..', '..') + '/';
       }
       P.fitted[g] = {};
       __T_SYS.applyAttachmentLooks(B.game, P, g);
-    }
-    return out;
-  });
+      return out;
+    }, g);
+    r.doubles.push(...o.doubles);
+    r.errs.push(...o.errs);
+    r.combos += o.combos;
+    console.log(`  ..   ${g}  ${o.combos} magazine${o.combos === 1 ? '' : 's'}`
+      + `  ${((Date.now() - t0) / 1000).toFixed(1)}s`
+      + (o.errs.length ? '  ' + o.errs.length + ' threw' : ''));
+  }
   await b.close();
 
   let passed = 0, failed = 0;
