@@ -17,6 +17,7 @@ weapon actor and a fraction, and they hand back where things go.
 | `97f-reload.js` | the load in the support hand — magazine, clip, cell, belt, pair of shells, loose rounds, tube shells |
 | `97g-inspect.js` | the inspect, as a curve |
 | `97h-spent.js` | what the gun throws away — brass out of the port, the magazine out of the well |
+| `97i-handling.js` | the noises a weapon makes when nobody is shooting it |
 
 ## 97f-reload.js — the reload
 
@@ -31,10 +32,14 @@ Seven kinds, and the kind decides the whole path:
 | `break` | two shells together | into the chamber mouths, and they **stay** |
 | `revolver` | loose rounds, one at a time | round the cylinder face, and they **stay** |
 | `tube` | shells, one at a time | up the loading gate, and they **vanish into the tube** |
+| `rocket` | a warhead on a motor tube | up from below and in FRONT, back into the muzzle |
 
-`tube` is the one that is new. Thirteen pump and lever shotguns in
+`tube` and `rocket` are new. Thirteen pump and lever shotguns in
 multiplayer were going to reload like a broken double — a gun hinging
-open that does not hinge.
+open that does not hinge — and four launchers were posting a pistol
+magazine into a tube that has no magazine well, because with no path of
+their own they fell through to `mag` and `magWell` came back as the
+weapon's own origin.
 
 ```js
 const reach = LE.reloadReach(u, kind);         // where the empty hand goes
@@ -95,3 +100,40 @@ like self-loaders.
 
 The litter list belongs to the caller. A game with a corpse budget and a
 game with a round timer want different caps.
+
+## 97i-handling.js — the sound
+
+A gunshot is a report. Everything else a weapon does is a small
+mechanical noise, and multiplayer had none of them: seventy-five weapons
+reloading, swapping and being inspected in silence, while zombies next
+door had a tuned set nothing else could reach.
+
+```js
+game.handling('magIn');                       // one noise
+game.cueSounds(LE.RELOAD_SOUNDS[kind], was, now);   // a whole reload
+game.cueSounds(LE.INSPECT_SOUNDS, was, now);
+```
+
+`cueSounds` takes the two fractions the frame spans and plays every mark
+that falls between them — exactly once, whatever the frame rate. A
+per-stage flag cannot do that: it needs one flag per sound and it fires
+twice if the clock ever runs backwards.
+
+Fourteen of the twenty-five were zombies'; the numbers went across
+unchanged and its `makeSfx` delegates to them rather than keeping a
+second copy. Eleven are new, and they are the mechanisms that were being
+animated in silence in **both** games: the hinge on a break gun, the
+gate on a tube gun, the crane and ejector rod on a revolver, the forend
+on a pump, a rocket going down a tube, and the two quiet ones an inspect
+makes.
+
+## The clock
+
+Anything a match owns — a reload, a swap — runs on **match time**
+(`M.time`), which clamps its tick at 0.05 s so one long frame cannot
+teleport anybody. Anything the view owns runs on the frame's dt, clamped
+the same way. Mixing them is a real bug and was one: the inspect counted
+raw dt, so on a machine rendering at nine frames a second a 2.05 s
+inspect finished in 1.0 s of match time while the swap beside it still
+took its measured half second — two animations on the same weapon at
+different speeds.

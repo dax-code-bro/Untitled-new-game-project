@@ -1151,6 +1151,12 @@
          inside bunker-nine.js where nothing here could reach it. It is
          engine/src/97f-reload.js now and both games drive it. */
       rlKind: null, rlId: null, rlProp: null, rlStage: 0,
+      /* Last frame's reload and inspect fractions, so a cue can be
+         played exactly once whatever the frame rate: a mark that falls
+         between `was` and `now` fires, and nothing else does. A
+         per-stage flag cannot do this -- it needs one flag per sound
+         and it fires twice if the clock ever goes backwards. */
+      rlWas: 0, insWas: 0,
       // The idle drift's own clock -- see place().
       swayT: 0 };
     /* One prop per weapon, built the first time it is needed and kept.
@@ -1327,11 +1333,21 @@
         state.sprint = low;
         var rlU = Math.max(0, Math.min(1, reload || 0));
         state.reload = rlU > 0 ? Math.sin(rlU * Math.PI) : 0;
+        /* Both cue clocks reset the moment a reload ends, HERE rather
+           than inside the arms block further down: a weapon with no
+           hands built would leave `rlWas` at wherever the last one
+           finished, and the next reload would then play no cue at all
+           until it had passed that mark. */
+        if (rlU <= 0) { state.rlWas = 0; state.rlStage = 0; }
         /* THE INSPECT. A curve rather than a clip -- a viewmodel is one
            actor held at an offset from the eye, so the thing that moves
            is the offset. The shape is engine/src/97g-inspect.js and
            zombies runs the same one. */
         var insU2 = Math.max(0, Math.min(1, insU || 0));
+        if (window.LE.INSPECT_SOUNDS) {
+          game.cueSounds(window.LE.INSPECT_SOUNDS, state.insWas, insU2);
+        }
+        state.insWas = insU2;
         var INS = (insU2 > 0 && window.LE.inspectPose)
           ? window.LE.inspectPose(insU2, insW == null ? 1 : insW)
           : { in: 0, up: 0, side: 0, yaw: 0, pitch: 0, roll: 0, bolt: 0, tap: 0 };
@@ -1536,7 +1552,10 @@
            half at most. Killed by aiming, because a sight picture that
            wanders is a sight picture you cannot use, and killed by
            moving, because the bob is already doing this job. */
-        state.swayT += (dt || 0) * 1.6;
+        /* The sway is on the view's clock rather than the match's --
+           place() is not given match time -- but it is clamped the same
+           way, so a long frame is a long frame and not a lurch. */
+        state.swayT += Math.min(dt || 0, 0.05) * 1.6;
         var still = Math.max(0, 1 - Math.abs(bob) * 90);
         var swayK = (1 - aim * 0.88) * still;
         var swayY = Math.sin(state.swayT * 2) * 0.0016 * swayK;
@@ -1628,11 +1647,22 @@
             state.rlMag = (rsp && rsp.mag) || 8;
           }
           var kind = state.rlKind;
+          /* AND WHAT IT SOUNDS LIKE. Multiplayer reloaded seventy-five
+             weapons in silence: the magazine catch, the magazine
+             leaving, the fresh one going in and the slide running
+             forward all happened without a noise between them. The
+             cue list is per kind and lives in the engine beside the
+             movement it belongs to, so a break gun hears its hinge and
+             a tube gun hears five shells go up the gate. */
+          if (LE.RELOAD_SOUNDS) {
+            game.cueSounds(LE.RELOAD_SOUNDS[kind], state.rlWas, rlU);
+          }
+          state.rlWas = rlU;
+
           /* WHAT THE RELOAD THROWS AWAY, once per reload rather than
              once per frame. `rlStage` counts the beats that have gone
              by; it is reset the moment a reload ends. */
-          if (rlU <= 0) state.rlStage = 0;
-          else {
+          if (rlU > 0) {
             var ej = state.act && state.act.eject;
             /* The old magazine, out of the well and onto the floor.
                Multiplayer reloaded seventy-five weapons and not one of
@@ -2519,7 +2549,7 @@
        teleports the weapon back to the carry between two frames; this
        fades the pose out over INSPECT_CANCEL instead, from wherever it
        had got to, while the clock keeps running underneath. */
-    var insT = 0, insW = 1, rlHeld = 0;
+    var insT = 0, insW = 1, rlHeld = 0, swapRang = false;
     var over = false;
     /* The kill cam cannot start the instant you die: the second after
        the shot has not been recorded yet, and a kill cam that stops on
@@ -2758,7 +2788,23 @@
       var suited = !!(berserk && berserk.riding);
       if (!suited) M.control(cmd, dt);
       if (!suited && p.ammo[p.held] < before) {
-        kick = Math.min(1.4, kick + 0.55); vm.fired(60 / Math.max(1, w.rpm || 600));
+        /* THE WEAPON IN HAND NOW, not the one `w` happens to hold.
+         *
+           This read `w`, which is declared four hundred lines further
+           down inside `if (p.alive)` -- so on any frame it was the
+           PREVIOUS frame's weapon, and on the first shot of a session
+           it was undefined and this line threw. A throw here kills the
+           rest of the frame: the match still updates, so you keep
+           playing, but everything after it in this function -- the
+           viewmodel, the HUD, the camera -- stops for that tick. Fire
+           on your first frame and the screen hitches.
+
+           Found by the new mpswap.test.js, which watches for page
+           errors while it presses the trigger; it is not a new fault,
+           it is one nothing had been looking for. */
+        var wNow = p.guns[p.held];
+        kick = Math.min(1.4, kick + 0.55);
+        vm.fired(60 / Math.max(1, (wNow && wNow.rpm) || 600));
         /* The HELD weapon, not the table row: MP_DATA.build has
            already folded the attachments into it, so a longer barrel
            or a different muzzle is heard as well as felt. */
@@ -2879,6 +2925,23 @@
         var wantAim = (input.buttons.aim || p.aiming) ? 1 : 0;
         var rate = wantAim ? 13 : 9;
         adsT += (wantAim - adsT) * Math.min(1, dt * rate);
+        /* MATCH TIME, NOT WALL TIME.
+         *
+           The match clamps its tick at 0.05 s so one long frame cannot
+           teleport anybody, and M.time advances by the clamped figure --
+           so on a slow machine match time runs slower than wall time.
+           The reload and the swap are both on M.time because they are
+           match state. The inspect and the sway were counting raw dt,
+           so on a machine rendering at nine frames a second the inspect
+           finished in one second of match time while the gun swap
+           beside it still took its half second: two animations on the
+           same weapon running at different speeds.
+
+           Measured -- mpswap.test.js watched a 2.05 s inspect finish in
+           1.0 s of match time -- and the replay code twenty lines up
+           already had a comment about this exact clamp. */
+        var vdt = Math.min(dt, 0.05);
+
         /* THE INSPECT, as a clock. Purely a thing you look at -- it
            changes nothing the match knows about -- so it lives here
            rather than in the rules, and anything that matters
@@ -2892,15 +2955,15 @@
         /* Held reload is the same request, for a pad with no button to
            spare. Timed here because the pad layer does not know how
            long a frame was. */
-        if (cmd.reloadHeld && !p.reloadUntil) rlHeld += dt; else rlHeld = 0;
+        if (cmd.reloadHeld && !p.reloadUntil) rlHeld += vdt; else rlHeld = 0;
         if (rlHeld > 0.42 && !insT && !p.swapUntil && !input.buttons.fire) {
           insT = W.LE.INSPECT_TIME; insW = 1; rlHeld = -9;
         }
         if (insT > 0) {
-          insT = Math.max(0, insT - dt);
+          insT = Math.max(0, insT - vdt);
           var cancel = input.buttons.fire || input.buttons.aim || p.sprinting
             || p.reloadUntil > M.time || p.swapUntil > M.time || !p.alive;
-          if (cancel) insW = Math.max(0, insW - dt / W.LE.INSPECT_CANCEL);
+          if (cancel) insW = Math.max(0, insW - vdt / W.LE.INSPECT_CANCEL);
           if (insW <= 0) insT = 0;
         }
 
@@ -2915,6 +2978,16 @@
            fraction now and derives its own bump; the magazine, the
            clip, the cell, the belt, the shells and the loose rounds
            all hang off this one number. */
+        /* THE SWAP'S OWN NOISE: cloth, then the weight of the next
+           weapon arriving. The match owns the clock, so this watches
+           for a swap appearing rather than being told about one --
+           beginSwap is called from three places and none of them can
+           reach the audio. */
+        if (p.swapUntil > M.time && !swapRang) {
+          swapRang = true;
+          game.handling('swap');
+        } else if (p.swapUntil <= M.time) swapRang = false;
+
         var rl = 0;
         if (p.reloadUntil > M.time) {
           var total = Math.max(0.2, w.reload || 2.0);

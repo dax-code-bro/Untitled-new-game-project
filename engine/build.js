@@ -97,6 +97,8 @@ const LegendEngine = {
   INSPECT_TIME, INSPECT_CANCEL, inspectPose,
   /* Brass and spent magazines -- see 97h-spent.js. */
   keepSpent,
+  /* The noises a weapon makes when nobody is shooting it. */
+  HANDLING, RELOAD_SOUNDS, INSPECT_SOUNDS,
   bakeCavityAO,
   clamp, lerp, smoothstep,
 };

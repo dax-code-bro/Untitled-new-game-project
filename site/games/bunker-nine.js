@@ -1492,7 +1492,7 @@ const ROUNDS = {
 
    Keep this in step with version.json -- site/games/bump-version.js does
    both at once, and there is a test that fails if they drift. */
-const B9_BUILD = { version: '0.10.0', name: 'every last animation' };
+const B9_BUILD = { version: '0.11.0', name: 'the reload, the swap, the inspect' };
 
 /* ---------------- live updates ----------------
 
@@ -2701,11 +2701,20 @@ function makeSfx(game) {
     shotPistol() { A.report(0.30); t(1750, 0.022, 'square', 0.045); },
     shotSmg() { A.report(0.22, { volume: 0.9 }); t(1450, 0.018, 'square', 0.04); },
     shotMagnum() { A.report(0.72); t(2300, 0.02, 'square', 0.04); },
-    dryFire() { t(1300, 0.02, 'square', 0.06); },
-    magRelease() { t(1500, 0.022, 'square', 0.07); },
-    magOut() { t(420, 0.05, 'square', 0.07); A.impact(0.2); },
-    magIn() { t(300, 0.06, 'square', 0.09); A.impact(0.35); t(900, 0.03, 'square', 0.05); },
-    slideRelease() { A.impact(0.55); t(1250, 0.035, 'square', 0.09); t(600, 0.05, 'sawtooth', 0.07); },
+    dryFire() { game.handling('dryFire'); },
+    /* THE HANDLING NOISES MOVED TO THE ENGINE.
+     *
+       These fourteen -- a magazine catch, a magazine leaving, a bolt
+       running home, a cover, a belt, a cell, a swap -- were tuned here
+       and reachable from nowhere else, so multiplayer reloaded,
+       swapped and was inspected in total silence on seventy-five
+       weapons. They are engine/src/97i-handling.js now and both games
+       call them. Every number went across unchanged; these are
+       delegations, not rewrites. */
+    magRelease() { game.handling('magRelease'); },
+    magOut() { game.handling('magOut'); },
+    magIn() { game.handling('magIn'); },
+    slideRelease() { game.handling('slideRelease'); },
     hitmark() { t(2300, 0.02, 'square', 0.05); },
     headmark() { t(2800, 0.025, 'square', 0.06); t(3400, 0.02, 'square', 0.04); },
     groan(pitch) { t(58 + pitch * 30, 0.5, 'sawtooth', 0.05); t(74 + pitch * 26, 0.42, 'triangle', 0.06); },
@@ -2814,24 +2823,18 @@ function makeSfx(game) {
     breakShut() { A.impact(0.55); t(820, 0.035, 'square', 0.10); t(1400, 0.02, 'square', 0.05); },
     /* A bolt is a long steel noise in two parts: the handle turning up and
        the body running back, then the same in reverse with a round under it. */
-    boltBack() { t(240, 0.05, 'square', 0.06); setTimeout(() => t(180, 0.11, 'sawtooth', 0.07), 60); },
-    boltHome() { t(200, 0.09, 'sawtooth', 0.07); setTimeout(() => { A.impact(0.42); t(760, 0.03, 'square', 0.08); }, 90); },
-    clipIn() { t(1900, 0.02, 'square', 0.05);
-      for (let i = 0; i < 3; i++) setTimeout(() => t(520 - i * 40, 0.03, 'triangle', 0.05), 70 + i * 55); },
+    boltBack() { game.handling('boltBack'); },
+    boltHome() { game.handling('boltHome'); },
+    clipIn() { game.handling('clipIn'); },
     /* The MG 42's own noises. A stamped top cover is a big thin sheet: it
        comes up with a ringing creak and goes down like a car bonnet, and
        the belt going into the tray is fifty brass links landing on steel,
        not one click. */
-    coverUp() { t(420, 0.05, 'sawtooth', 0.06);
-      setTimeout(() => { t(1150, 0.09, 'triangle', 0.05); A.impact(0.22); }, 70); },
-    coverDown() { A.impact(0.72); t(240, 0.07, 'square', 0.11);
-      setTimeout(() => { t(1600, 0.03, 'square', 0.07); t(900, 0.05, 'triangle', 0.05); }, 55); },
-    beltIn() { for (let i = 0; i < 6; i++) {
-      setTimeout(() => t(1500 + Math.random() * 900, 0.018, 'square', 0.045), i * 34);
-    } setTimeout(() => A.impact(0.30), 170); },
-    cellOut() { t(880, 0.05, 'triangle', 0.06); t(160, 0.10, 'sawtooth', 0.05); },
-    cellIn() { A.impact(0.35); t(300, 0.06, 'square', 0.07);
-      setTimeout(() => t(1240, 0.09, 'sine', 0.06), 80); },
+    coverUp() { game.handling('coverUp'); },
+    coverDown() { game.handling('coverDown'); },
+    beltIn() { game.handling('beltIn'); },
+    cellOut() { game.handling('cellOut'); },
+    cellIn() { game.handling('cellIn'); },
     /* The bench grace: a rising two-note all-clear, and a falling one when
        it runs out and they can reach you again. */
     graceStart() { [660, 990].forEach((f, i) => setTimeout(() => t(f, 0.14, 'triangle', 0.09), i * 90)); },
@@ -2868,7 +2871,7 @@ function makeSfx(game) {
     land(force) { A.impact(Math.min(0.5, 0.22 + force * 0.3), { volume: 0.5 }); },
     jump() { t(220, 0.05, 'sine', 0.035); },
     /* Swapping weapons: cloth, then the weight of the next one arriving. */
-    swap() { t(700, 0.04, 'triangle', 0.045); setTimeout(() => A.impact(0.22, { volume: 0.4 }), 90); },
+    swap() { game.handling('swap'); },
     /* The window boards going on and the horde working at them from outside
        already have sounds. This is the one for a board coming off in your
        face, which had none. */
@@ -15044,7 +15047,13 @@ function start(opts = {}) {
         P.inspectT = window.LE.INSPECT_TIME; P.inspectW = 1;
       }
       if (P.inspectT > 0) {
+        const insWas = 1 - P.inspectT / window.LE.INSPECT_TIME;
         P.inspectT = Math.max(0, P.inspectT - dt);
+        /* And the noises it makes. A weapon turned over in the hands is
+           not silent, and an inspect with no sound reads as the picture
+           drifting rather than as a thing being handled. */
+        game.cueSounds(window.LE.INSPECT_SOUNDS, insWas,
+          1 - P.inspectT / window.LE.INSPECT_TIME);
         /* Never in the way: anything you would rather be doing ends it
            on the frame you ask for it -- but it FADES out rather than
            cutting. Setting the clock to zero teleports the weapon back

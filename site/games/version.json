@@ -1,8 +1,8 @@
 {
-  "version": "0.10.0",
-  "name": "every last animation",
+  "version": "0.11.0",
+  "name": "the reload, the swap, the inspect",
   "date": "2026-09-20",
   "mode": "multiplayer",
-  "did": "Every one of the fifty skeletal clips rebuilt. The walk and the run had both feet permanently behind the pelvis; the locomotion cycles are generated from the foot's path now, so a planted foot is planted and nothing goes through the floor. Fifty-nine keyframes bent an elbow backwards. The sampler no longer interpolates in straight lines, so no joint snaps to a new speed at every key.",
+  "did": "Multiplayer's reload is real on all seventy-five weapons: a magazine, stripper clip, cell, belt, pair of shells, loose rounds, tube shells or a rocket, carried by a hand that goes and fetches it.",
   "onAccept": "The armoury reloads. Your loadouts are kept; anything you had equipped that moved class is still where you left it."
 }

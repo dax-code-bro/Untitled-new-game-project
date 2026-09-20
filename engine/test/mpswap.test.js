@@ -48,7 +48,8 @@ function check(name, cond, detail = '') {
   });
   const page = await browser.newPage({ viewport: { width: 420, height: 264 } });
   const errors = [];
-  page.on('pageerror', (e) => errors.push(e.message.split('\n')[0]));
+  page.on('pageerror', (e) => errors.push((e.message.split('\n')[0]) + ' @ '
+    + String(e.stack || '').split('\n').slice(1, 3).join(' <- ').trim()));
   await page.goto('file://' + path.join(ROOT, 'site/games/multiplayer.html') + '?map=town&mode=tdm');
   await page.waitForFunction(() => window.MP && window.MP.match, null, { timeout: 180000 });
   await page.evaluate(() => window.MP.input._lock(true));
@@ -94,46 +95,77 @@ function check(name, cond, detail = '') {
     out.restOy = +rest.toFixed(4);
     out.dropped = +(rest - lowest).toFixed(4);
 
-    /* ---- 4. A BOT WHOSE PRIMARY IS EMPTY ---- */
+    /* ---- 4. A BOT'S SWAP IS ADVANCED BY SOMEBODY ---- */
+    /* The defect this is for: runSwap ran inside the human command path
+       only. beginReload calls beginSwap when you are out of reserve, so
+       a bot that emptied its primary would set a swap that nothing ever
+       advanced and stand there holding an empty gun for the rest of the
+       match -- twelve of them, every match.
+
+       Set the state beginSwap sets, rather than waiting for a bot to
+       see an enemy and pull the trigger on an empty gun: whether a bot
+       ASKS for a swap is its brain's business and it is not what broke.
+       Whether anything RUNS one for it is. */
     const bot = M.people.find((p) => p.bot && p.alive);
     if (bot) {
       bot.held = 0;
-      bot.ammo[0] = 0; bot.reserve[0] = 0;
-      bot.ammo[1] = bot.guns[1].mag; bot.reserve[1] = 60;
-      bot.swapUntil = 0; bot.swapFor = 0; bot.swapTo = -1;
+      bot.swapFor = 0.5;
+      bot.swapUntil = M.time + 0.5;
+      bot.swapTo = 1;
       const t0 = M.time;
-      bot.nextShot = 0;
-      // beginReload is what notices; the bot asks for one when it is dry.
-      /* Nothing outside the match can call beginReload, so the bot is
-         put in the state that makes it ask for one: empty in the hand
-         and empty in the pouch. Its own brain does the rest, which is
-         the point -- this is asking whether the BOT's path runs a swap,
-         not whether a function exists. */
-      let swapped = false;
-      for (let i = 0; i < 160; i++) {
+      let swapped = false, cleared = false;
+      for (let i = 0; i < 120; i++) {
         await frame();
-        if (bot.held === 1) { swapped = true; break; }
-        if (!bot.alive) break;
+        if (bot.held === 1) swapped = true;
+        if (swapped && !bot.swapUntil) { cleared = true; break; }
       }
       out.botSwapped = swapped;
+      out.botCleared = cleared;
       out.botTook = +(M.time - t0).toFixed(2);
-      out.botAlive = bot.alive;
     } else out.botSwapped = 'no bot';
 
     /* ---- 5-6. THE INSPECT ---- */
     await settle(20);
     const before = { oy: vm.state.oy, oz: vm.state.oz, ins: vm.state.ins || 0 };
     input._press('i');
-    let moved = 0, ran = 0, maxIns = 0;
+    /* Wait for the press to be SEEN. The input layer clears its
+       one-shot table at the end of every frame, so a press made between
+       the game's read and its endFrame is gone -- and counting frames
+       from the press rather than from the start measures the alignment
+       of two requestAnimationFrame loops, not the animation. */
+    for (let i = 0; i < 20 && !(vm.state.ins > 0); i++) {
+      await frame();
+      if (!(vm.state.ins > 0)) input._press('i');
+    }
+    out.inspectStarted = vm.state.ins > 0;
+    /* IN SECONDS, NOT FRAMES. The first version of this counted frames
+       with `ins > 0` and wanted most of forty of them; it got nineteen
+       and I nearly went looking for a cancel. The page renders in
+       software GL at about nine frames a second, so nineteen frames IS
+       the whole two-second animation. A frame count measures the
+       machine the test is running on. */
+    const t0i = M.time;
+    let moved = 0, ran = 0, maxIns = 0, ended = -1;
     for (let i = 0; i < 40; i++) {
       await frame();
       const s = vm.state;
-      if ((s.ins || 0) > 0) ran++;
-      if ((s.ins || 0) > maxIns) maxIns = s.ins;
+      if ((s.ins || 0) > 0) { ran++; if ((s.ins || 0) > maxIns) maxIns = s.ins; }
+      else if (ran > 0 && ended < 0) ended = M.time - t0i;
       moved = Math.max(moved, Math.abs(s.oz - before.oz) + Math.abs(s.oy - before.oy));
+      if (ended >= 0) break;
     }
     out.inspectRan = ran;
+    out.inspectSecs = +(ended >= 0 ? ended : M.time - t0i).toFixed(2);
+    out.inspectReached = +maxIns.toFixed(3);
+    out.inspectWhole = ended >= 0;
     out.inspectMoved = +moved.toFixed(4);
+    /* And put it back for the cancel test below, since the loop above
+       may have run it to the end. */
+    if (!(vm.state.ins > 0)) {
+      for (let i = 0; i < 12 && !(vm.state.ins > 0); i++) {
+        input._press('i'); await frame();
+      }
+    }
     /* Cancel it by firing, and watch how far the weapon jumps in one
        frame. A cut teleports; a fade does not. */
     let jump = 0, prev = { y: vm.state.oy, z: vm.state.oz };
@@ -163,9 +195,14 @@ function check(name, cond, detail = '') {
     r.held0 + ' -> ' + r.heldEnd);
   check('the weapon clears the frame while the exchange happens',
     r.dropped > 0.12, 'dropped ' + r.dropped + ' m');
-  check('a bot that runs its primary dry gets its swap run too',
-    r.botSwapped === true, String(r.botSwapped) + ' after ' + r.botTook + 's');
-  check('the inspect runs', r.inspectRan > 20, r.inspectRan + ' frames');
+  check("a bot's swap is advanced and finished by somebody",
+    r.botSwapped === true && r.botCleared === true,
+    'swapped ' + r.botSwapped + ', cleared ' + r.botCleared + ', ' + r.botTook + 's');
+  check('the inspect runs for its whole length',
+    r.inspectStarted && r.inspectWhole
+      && r.inspectSecs > 1.6 && r.inspectSecs < 2.9 && r.inspectReached > 0.9,
+    r.inspectSecs + 's over ' + r.inspectRan + ' frames, reached '
+      + r.inspectReached);
   check('and it moves the weapon', r.inspectMoved > 0.02, String(r.inspectMoved));
   check('firing cancels it', r.insAfterCancel === 0, String(r.insAfterCancel));
   check('and the cancel does not snap the weapon', r.cancelJump < 0.02,
