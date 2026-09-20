@@ -182,5 +182,48 @@ for (const id of table) {
 check('every integral optic sits above its receiver and not in orbit',
   badOptic.length === 0, badOptic.join('; '));
 
+/* NO WEAPON MAY DECLARE THE SAME THING TWICE.
+ *
+ * A JavaScript object literal with two `grip:` keys is legal, silent,
+ * and keeps the LAST one. Adding grip-section modifiers to five
+ * sidearms as a new line rather than as fields on the line already
+ * there therefore deleted the Model 5's, the Webley's, the Mauser's,
+ * the P226's and the G18's authored grips outright -- position, length
+ * and rake all reverted to the generic pistol base, and nothing said a
+ * word. The Model 5 then failed guns.test.js on overall length, and my
+ * first repair for THAT was aimed at its hammer, because the grip
+ * regression was invisible and the length was not.
+ *
+ * The Kill Streak had two `muzzle` and two `barrel`, and the Barrett
+ * two `barrel`. Those happened to resolve to what I intended, which is
+ * worse: dead lines that read as authoritative.
+ *
+ * Source text, not the built table, because by the time it is an
+ * object the evidence is gone -- that is the whole problem.
+ */
+{
+  const fs = require('fs');
+  const path = require('path');
+  const dupes = [];
+  for (const f of ['97b-service.js', '97c-sidearm.js']) {
+    const lines = fs.readFileSync(
+      path.join(__dirname, '..', 'src', f), 'utf8').split('\n');
+    let cur = null, keys = null, at = 0;
+    lines.forEach((line, i) => {
+      const open = /^  ([A-Za-z0-9_]+): (svcSpec|sideSpec|gaugeSpec|boltSpec|tubeSpec)\(\{/.exec(line);
+      if (open) { cur = open[1]; keys = new Map(); at = i + 1; return; }
+      if (cur == null) return;
+      if (/^  \}\),/.test(line)) {
+        for (const [k, n] of keys) if (n > 1) dupes.push(`${f}:${at} ${cur} has ${n} \`${k}\``);
+        cur = null; return;
+      }
+      const k = /^    ([A-Za-z0-9_]+): /.exec(line);
+      if (k) keys.set(k[1], (keys.get(k[1]) || 0) + 1);
+    });
+  }
+  check('no weapon spec declares the same key twice',
+    dupes.length === 0, dupes.join('; '));
+}
+
 console.log(`\n  ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
