@@ -1,8 +1,8 @@
 {
-  "version": "0.9.0",
-  "name": "the armoury",
-  "date": "2026-09-19",
+  "version": "0.10.0",
+  "name": "every last animation",
+  "date": "2026-09-20",
   "mode": "multiplayer",
-  "did": "Seventy-five guns, up from sixty, and two new sections to hold them. Shotguns are a class of their own now with thirteen in it -- a trench gun with a bayonet on it, a coach gun, an over-and-under, a drum-fed auto, a lever gun, a twin-tube bullpup, a long-recoil humpback, a riot pump with breaching teeth, a twelve-round revolver and an eight-bore that moves you as much as it moves him. Snipers are a class of their own too, ten of them, with a Dragunov, a Lee-Enfield, an Arctic AW, a Springfield A4 and a bullpup .338 joining the five that were filed under Special. And every gun in the game was compared against every other one: the nine pistols were near enough the same pistol with the numbers moved about, and so were nine other pairs. They all have their own parts now -- serrations, hammers, beavertails, ported barrels, cocking tubes, ammunition tins, bayonets, skeleton stocks -- instead of their own dimensions.",
+  "did": "Every one of the fifty skeletal clips rebuilt. The walk and the run had both feet permanently behind the pelvis; the locomotion cycles are generated from the foot's path now, so a planted foot is planted and nothing goes through the floor. Fifty-nine keyframes bent an elbow backwards. The sampler no longer interpolates in straight lines, so no joint snaps to a new speed at every key.",
   "onAccept": "The armoury reloads. Your loadouts are kept; anything you had equipped that moved class is still where you left it."
 }
