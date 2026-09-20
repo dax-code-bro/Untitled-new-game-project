@@ -89,6 +89,14 @@ const LegendEngine = {
      for the same reason. See BESPOKE_ARMS in 97a-arms.js. */
   BESPOKE_ARMS, makeBespokeArm,
   WEAPON_ACTIONS, weaponAction, poseAction,
+  /* The reload, as a thing you can watch. Both games drive the same
+     six load paths from here -- see 97f-reload.js. */
+  RELOAD_WINDOW, RELOAD_CARRIES, RELOAD_HOLD, RELOAD_AMMO,
+  reloadFetch, reloadOnscreen, reloadReach, stowReloadProp,
+  /* The inspect, shared for the same reason -- see 97g-inspect.js. */
+  INSPECT_TIME, INSPECT_CANCEL, inspectPose,
+  /* Brass and spent magazines -- see 97h-spent.js. */
+  keepSpent,
   bakeCavityAO,
   clamp, lerp, smoothstep,
 };

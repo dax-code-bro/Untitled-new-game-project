@@ -1350,6 +1350,10 @@ const CONTROLS = {
   pause:  { key: 'escape',  alt: 'o',   pad: 9 },   // Start / Options
   sprint: { key: 'shift',   pad: 10 },  // left stick click
   knife:  { key: 'v',       pad: 11 },  // right stick click
+  /* LOOK AT THE THING YOU ARE HOLDING. There was no way to, in either
+     game: you could fire a weapon, reload it, sprint with it and swap
+     off it, and never once see it. D-pad up, which nothing else uses. */
+  inspect: { key: 'i',      pad: 12 },  // D-pad up
   /* Aim is LT and fire is RT, read as analogue axes rather than as
      buttons -- see the note on arming the trigger where the input is
      composed. They are not in this table and cannot collide with it. */
@@ -6262,6 +6266,10 @@ function makePlayer(game, S, hud, sfx, voice) {
        happens at the midpoint, when the old gun is off the bottom of
        the screen and the new one has not come up yet. */
     swapT: 0, swapFor: 0, swapTo: -1,
+    /* THE INSPECT: how long is left of it, and how far the action is
+       opened for the chamber check. Purely a thing you look at, so it
+       holds no rules -- anything that matters cancels it. */
+    inspectT: 0, inspectW: 1, inspectBolt: 0,
     trigT: 0, trigHold: 0,
     clipStage: 0, cellStage: 0, swayT: 0,
     // Three springs: muzzle rise, drive back along the bore, and twist.
@@ -7056,7 +7064,7 @@ function setViewVisible(v, on) {
   if (v.att) for (const arr of Object.values(v.att)) for (const a of arr) a.visible = on && !!a.__attOn;
   // The magazine in the support hand only exists during a reload, and never
   // for a weapon that has been put away.
-  if (v.prop) for (const a of v.prop.parts) a.visible = false;
+  if (v.prop) window.LE.stowReloadProp(v.prop);
 }
 
 /* Position the equipped weapon against the camera every frame — bob,
@@ -7316,9 +7324,18 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
    * on the camera axis, and it is -sightH at any distance. Scaling it
    * would take every measured sight line in this file off axis at once. */
   const OUT = 1.30;
-  const offR = hipX * OUT * (1 - a) + adsX * a;
-  const offU = hipY * OUT * (1 - a) + adsY * a;
-  const dist = (hipD * (1 - a) + adsD * a) * OUT;
+  /* THE INSPECT, which is a curve rather than a clip: a viewmodel is one
+     actor held at an offset from the eye, so the thing that has to move
+     is the offset. engine/src/97g-inspect.js owns the shape and
+     multiplayer runs the same one, so the movement is identical in both
+     games rather than being written twice and drifting. */
+  const INS = (P.inspectT > 0 && window.LE.inspectPose)
+    ? window.LE.inspectPose(1 - P.inspectT / window.LE.INSPECT_TIME, P.inspectW)
+    : null;
+  P.inspectBolt = INS ? INS.bolt : 0;
+  const offR = hipX * OUT * (1 - a) + adsX * a + (INS ? INS.side : 0);
+  const offU = hipY * OUT * (1 - a) + adsY * a + (INS ? INS.up : 0);
+  const dist = (hipD * (1 - a) + adsD * a) * OUT - (INS ? INS.in : 0);
 
   /* Sprinting: gun canted down and inboard, out of the sight line.
      Driven by lowReady rather than by raw sprint, so that asking to
@@ -7396,7 +7413,7 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
   root.setPosition([px - f.x * kb, py - f.y * kb, pz - f.z * kb]);
 
   const fh = Math.hypot(f.x, f.z) || 1e-6;
-  const yaw = Math.atan2(-f.z / fh, f.x / fh);
+  const yaw = Math.atan2(-f.z / fh, f.x / fh) + (INS ? INS.yaw : 0);
   /* Muzzle down at the hip, level at the sights.
 
      Seven degrees, blended out entirely with the aim so the sight picture
@@ -7430,12 +7447,21 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
    * every measured sightH still lands on the camera axis; and the reload
    * term levels it again so the breech, the well and the port face the
    * camera while the hands work. */
-  const hipTip = bench ? 0 : (1 - a) * (tipWant + sp * 0.10) * (1 - rl * 0.85);
-  const pitch = Math.asin(Math.max(-1, Math.min(1, f.y))) + P.kickPitch * 0.06 - hipTip;
+  /* AND THE SWAP'S OWN TIP, which was computed forty lines above and
+     then dropped on the floor: `swapTip` and `swapRoll` were assigned
+     and never read, so a zombies swap was a gun sliding straight down a
+     rail rather than pivoting out of the shoulder. Multiplayer's port
+     of this is where it showed -- writing the same three terms there
+     and finding only one of them had ever been used here. */
+  const hipTip = bench ? 0
+    : (1 - a) * (tipWant + sp * 0.10) * (1 - rl * 0.85) + swapTip;
+  const pitch = Math.asin(Math.max(-1, Math.min(1, f.y))) + P.kickPitch * 0.06 - hipTip
+    + (INS ? INS.pitch : 0);
   /* Roll the weapon inboard while sprinting, and again while reloading so
      the breech, the magazine well or the open cylinder turns to face the
      camera. A gun reloaded side-on hides the one thing worth watching. */
-  const roll = sp * 0.42 + (1 - a) * 0.03 + rollIn * 0.0175 + (P.kickRoll || 0);
+  const roll = sp * 0.42 + (1 - a) * 0.03 + rollIn * 0.0175 + (P.kickRoll || 0)
+    + swapRoll + (INS ? INS.roll : 0);
   /* Composed from explicit axis-angles rather than Euler triples. setEuler
      takes (pitch, yaw, roll) in YXZ, which is easy to feed in the wrong
      order and gives a weapon that rolls when it should pitch — and the
@@ -7780,279 +7806,68 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
 
   /* The support hand doing the loading.
 
-     Everything below this point used to happen by itself: the magazine
-     vanished, a magazine appeared, and the arms sat on the gun throughout.
-     Now the support arm leaves the forend, drops out of frame, comes back
-     up with something in it, and puts it in — and the something is a real
-     actor you can watch travel.
+     Everything below used to happen by itself: the magazine vanished, a
+     magazine appeared, and the arms sat on the gun throughout. Now the
+     support arm leaves the forend, drops out of frame, comes back up with
+     something in it, and puts it in -- and the something is a real actor
+     you can watch travel.
 
-     The path is described in the weapon's own space, so it works on a
-     pistol and on a belt-fed machine gun without a table of offsets: down
-     and outboard to fetch, then up to the magazine well, then away. */
+     THE PATHS THEMSELVES LIVE IN THE ENGINE now, in 97f-reload.js, and
+     multiplayer drives the same ones. They were three hundred lines here,
+     which is why multiplayer never had them: seventy-five weapons whose
+     reload was a positional dip and an ammunition counter. Nothing was
+     re-derived in the move -- the numbers below the fold are the numbers
+     that were measured here, and reload.test.js is the check on that. */
   if (v.arms && v.arms.support && v.arms.support.length) {
     const kind = spec.reloadKind;
-    /* The revolver joins the list. Its cylinder swung out and four
-       rounds appeared in it by themselves -- the one reload in the game
-       still being done by an invisible hand. */
-    const carries = kind === 'mag' || kind === 'clip' || kind === 'cell'
-      || kind === 'break' || kind === 'revolver' || kind === 'belt';
+    /* The revolver joins the list. Its cylinder swung out and four rounds
+       appeared in it by themselves -- the one reload in the game still
+       being done by an invisible hand. */
+    const carries = !!window.LE.RELOAD_CARRIES[kind];
     let ox = 0, oy = 0, oz = 0, propT = -1;
     if (P.reloading > 0 && carries) {
       const u = 1 - P.reloading / (P.reloadMax || spec.reload);
-      /* Four beats: away from the gun, out of shot, back with the load,
-         and home. Smoothed, because a hand that moves linearly between
-         poses reads as a lift rather than as an arm. */
-      const ease = (t) => t * t * (3 - 2 * t);
-      const seg = (a, b) => Math.max(0, Math.min(1, (u - a) / (b - a)));
-      const away = ease(seg(0.05, 0.30));
-      const back = ease(seg(0.42, 0.74));
-      const settle = ease(seg(0.74, 0.94));
-      /* Reach: down and to the SUPPORT SIDE, not down and out of the
-         picture.
-
-         It used to drop 150 mm. The weapon is carried 186 mm below the
-         camera axis and lifted 98 during a reload, and half the frame at
-         the weapon's distance is 185 mm -- so a hand 150 mm below the gun
-         was 88 mm below the bottom edge of the screen, and everything it
-         was carrying went with it. The player watched an empty room and
-         a gun that reloaded itself, which is exactly what he reported.
-
-         The room is sideways. There is 13 cm of frame to the right of the
-         gun and 45 to the left, so the fetch goes to the support side --
-         camera-left, the weapon's -Z -- and only dips far enough to read
-         as reaching. Every millimetre of that is on screen. */
-      const reach = away * (1 - back);
-      ox = -0.030 * reach;
-      oy = -0.052 * reach - 0.026 * back * (1 - settle);
-      oz = -0.135 * reach;
-      // The load is in the hand between fetching it and seating it. The
-      // window is set per kind below, against the beat the gun's own part
-      // changes on -- see RELOAD_WINDOW.
-      const win = RELOAD_WINDOW[kind] || RELOAD_WINDOW.mag;
-      if (u > win[0] && u < win[1]) propT = (u - win[0]) / (win[1] - win[0]);
+      const R = window.LE.reloadReach(u, kind);
+      ox = R.x; oy = R.y; oz = R.z; propT = R.t;
     }
     /* Where the support hand goes. If it is carrying something, it is put
-       where that thing is a few lines below instead -- the hand and the
-       load have to be one movement, and running them on two paths that
-       merely pass near each other is why the magazine looked like it was
-       flying alongside the hand rather than being held by it. */
+       where that thing is instead -- the hand and the load have to be one
+       movement, and running them on two paths that merely pass near each
+       other is why the magazine looked like it was flying alongside the
+       hand rather than being held by it. */
     let handSet = false;
-
-    /* The thing being carried. One prop per weapon, built the first time it
-       is needed and then hidden — a magazine for a box gun, a stripper clip
-       for the bolt guns, a cell for the Arc, a pair of shells for a break
-       gun. It rides the same path as the hand, a few centimetres in front
-       of where the fingers close. */
     if (propT >= 0) {
       const prop = reloadProp(game, P, v, spec, kind);
       if (prop) {
-        /* Where the load is going, and how it gets there.
-
-           Everything used to travel the same path to the same place: up
-           from below-outboard to the magazine well, whatever it was. A
-           stripper clip does not go into a magazine well, it goes into the
-           guide on TOP of the receiver and the rounds are pressed down out
-           of it. Shotgun shells go into the chamber mouths, nose first,
-           and stay there. A speedloader goes onto the face of an open
-           cylinder and is twisted off. Sending all of them to the same
-           point is the invisible reload with a prop attached to it. */
-        let u2 = Math.min(1, Math.max(0, propT));
-        let e = u2 * u2 * (3 - 2 * u2);
-        // Which actor actually travels. For most weapons it is the whole
-        // prop; the revolver moves one cartridge at a time out of four.
-        let propRoot = prop.root;
-        const bore = (v.root && v.root.boreAt) || 0.06;
-        const muzzle = (v.root && v.root.muzzleAt) || 0.3;
-        let to = v.magWell || (v.root && v.root.magWell) || [M_WELL_X(v), -0.055, 0];
-        let from = FETCH(to);
-        let rot = [0, 0, 0], rot0 = [0, 0, 0];
-        let show = true;
-
-        if (kind === 'break') {
-          /* Into the chamber mouths of the broken-open barrels: the pair
-             comes up from below the breech, noses forward, and slides in.
-             Once they are home the shells stay -- the gun's own barrels
-             carry them from there. */
-          const bx = (v.root && v.root.breechAt) || 0.030;
-          to = [bx + 0.004, bore - 0.0002, -0.0122];
-          from = FETCH(to, -0.055);
-          rot = [0, 0, 0]; rot0 = [0, -34, -22];
-          show = u2 < 0.995;
-        } else if (kind === 'revolver') {
-          /* Four rounds, one chamber at a time.
-           *
-           * The hand makes the same short trip four times over the length
-           * of the reload: down to the pocket, up to the cylinder face,
-           * press, back down. Each round stops in the chamber it was put in
-           * and stays there -- they are the gun's rounds now -- so by the
-           * end of the reload there are four cartridges sitting in the
-           * cylinder rather than a speedloader that has vanished.
-           *
-           * The prop path below carries the one currently in the fingers;
-           * the ones already seated are placed and left alone. */
-          const cr = v.crane || [0.09, bore, -0.015];
-          const N = Math.max(1, spec.mag || 4);
-          const seat = (i) => {
-            // Round the cylinder face, in the order a thumb would use them.
-            const th = (i / N) * Math.PI * 2 + 0.4;
-            const pcd = 0.0148;
-            return [cr[0] - 0.030, bore + Math.sin(th) * pcd, cr[2] - 0.045 + Math.cos(th) * pcd];
-          };
-          const each = 1 / N;
-          const which = Math.min(N - 1, Math.floor(u2 / each));
-          const sub = (u2 - which * each) / each;      // 0..1 within this one
-          if (prop.rounds) {
-            for (let i = 0; i < N; i++) {
-              const grp = prop.rounds.filter((q, k) => Math.floor(k / (prop.rounds.length / N)) === i);
-              const done2 = i < which;
-              const now2 = i === which;
-              for (const q of grp) {
-                q.visible = done2 || (now2 && sub > 0.12);
-                /* Nose forward, down the chamber.
-                 *
-                 * These were turned ninety degrees about Z, which takes a
-                 * cartridge from pointing at the muzzle to standing
-                 * vertically -- so every round already loaded was stood on
-                 * end in the cylinder like a row of little chimneys. A
-                 * cartridge model runs along +X by construction, and +X is
-                 * where the barrel is, so the seated rotation is zero. */
-                if (done2) { q.setPosition(seat(i)); q.setRotation([0, 0, 0]); }
-              }
-            }
+        const root = v.kind === 'single' ? v.actor : v.root;
+        const at = game.poseReload({
+          prop, kind, t: propT, root, camera: game.camera,
+          bore: (v.root && v.root.boreAt) || 0.06,
+          magWell: v.magWell || (v.root && v.root.magWell) || [M_WELL_X(v), -0.055, 0],
+          breechAt: v.root && v.root.breechAt,
+          crane: v.crane, cellRest: v.cellRest, clipRest: v.clipRest,
+          sightAt: v.root && v.root.sightAt,
+          mag: spec.mag,
+          fitted: (P.fitted[P.equipped()] || {}).mag,
+        });
+        if (at) {
+          /* Where the support hand sits when it is on the weapon. Taken
+             from the built hand rather than from the weapon table, because
+             the builder drops it for a forend and then seats it against
+             the surface -- so the authored number is not where the hand
+             is. */
+          const dl = v.arms.digits && v.arms.digits.left;
+          const home = (dl && dl.at) || (WEAPONS[P.equipped()].hands.left) || [0, 0, 0];
+          for (const q of v.arms.support) {
+            q.setPosition([at.x + at.hold[0] - home[0],
+              at.y + at.hold[1] - home[1],
+              at.z + at.hold[2] - home[2]]);
           }
-          const sTo = seat(which);
-          to = sTo;
-          from = FETCH(sTo);
-          // Home is nose-down-the-chamber; it arrives tipped and straightens.
-          rot = [0, 0, 0]; rot0 = [0, -28, 34];
-          // Only the one being loaded rides the path.
-          propRoot = prop.rounds ? prop.rounds[Math.floor(which * (prop.rounds.length / N))] : prop.root;
-          propT = sub;
-          show = true;
-        } else if (kind === 'clip') {
-          /* The whole of it on one path: up out of the pouch, into the
-             stripper guide on top of the open action, PRESSED DOWN so the
-             rounds strip off it into the magazine, then flicked clear.
-             Three legs rather than one, because a clip that arrives and
-             stops is a clip nobody loaded. The hand is placed from
-             wherever this ends up, so it is on the clip for all three --
-             the press included, which is the leg that used to happen by
-             itself. */
-          const seat = v.clipRest || [0.012, bore + 0.030, 0];
-          const fetch = FETCH(seat, -0.075, -0.150);
-          const leg = (a2, b2) => Math.max(0, Math.min(1, (u2 - a2) / (b2 - a2)));
-          const eIn = leg(0, 0.42), ePress = leg(0.42, 0.76), eOut = leg(0.80, 1);
-          const sIn = eIn * eIn * (3 - 2 * eIn);
-          const sPr = ePress * ePress * (3 - 2 * ePress);
-          const cx = fetch[0] + (seat[0] - fetch[0]) * sIn;
-          const cy2 = fetch[1] + (seat[1] - fetch[1]) * sIn - 0.042 * sPr;
-          const cz = fetch[2] + (seat[2] - fetch[2]) * sIn;
-          // Thrown off to the support side as it leaves.
-          to = [cx - 0.010 * eOut, cy2 + 0.055 * eOut, cz - 0.090 * eOut];
-          from = to;
-          const tilt = 1 - sIn;
-          rot = [22 * tilt, -30 * tilt, 16 * tilt + 40 * eOut];
-          rot0 = rot;
-          show = eOut < 0.92;
-        } else if (kind === 'belt') {
-          /* Into the feed tray, from the left, laid flat.
-
-             The belt is carried by its leading link and goes in across the
-             gun -- so it arrives level with the tray and slightly outboard
-             of it, and the last of the travel is sideways rather than up.
-             That is the difference between laying a belt in and posting a
-             magazine. */
-          const trayY = ((v.root && v.root.sightAt) || 0.09) - 0.030;
-          to = [0.096, trayY, -0.020];
-          from = [to[0] - 0.020, to[1] - 0.070, to[2] - 0.165];
-          rot = [0, 0, 0]; rot0 = [0, -34, -30];
-          show = u2 < 0.96;
-        } else if (kind === 'cell') {
-          /* Into the housing the cell actually lives in. This went to the
-             magazine well -- which the Arc Breaker does not have, so it
-             fell through to a guess and the cell was posted into the air
-             below the accelerator tube. The weapon reports where its cell
-             rests; use that. */
-          const cr = v.cellRest || [to[0], to[1] + 0.004, to[2]];
-          to = [cr[0], cr[1], cr[2]];
-          from = FETCH(to, -0.058);
-          rot = [0, 0, 0]; rot0 = [0, -24, -18];
-        } else {
-          /* A magazine goes up the well nose-first, tipped a little as
-             the hand brings it round, straightening as it seats.
-             
-             And what is fitted changes how it is done, because the object
-             in the hand is a different weight and shape. A drum is heavy
-             and wide: it comes in from further out, low, and is rocked in
-             back-first the way a drum has to be. An extended magazine is
-             long enough that it has to be brought up steeper or its nose
-             catches the well. A fast magazine has a loop on it and is
-             snapped in from a shorter reach, which is what it is for. */
-          const fitted = (P.fitted[P.equipped()] || {}).mag;
-          if (fitted === 'drummag') {
-            from = FETCH(to, -0.062, -0.185);
-            rot0 = [0, -34, -40];
-            rot = [0, 0, -6];
-          } else if (fitted === 'extmag') {
-            from = FETCH(to, -0.078, -0.120);
-            rot0 = [0, -8, -26];
-          } else if (fitted === 'fastmag') {
-            from = FETCH(to, -0.040, -0.105);
-            rot0 = [0, -14, -12];
-          } else {
-            rot0 = [0, -12, -16];
-          }
+          handSet = true;
         }
-        void muzzle;
-        /* Last: make sure the fetch point is on screen. Every branch
-           above has had its say about WHERE the load comes from; this
-           only swings that reach up if it would start below the frame,
-           and leaves it alone otherwise. It runs after them all so a
-           per-kind path cannot reintroduce the fault. */
-        from = ONSCREEN(game, (v.kind === 'single' ? v.actor : v.root), to, from);
-        // Recompute, since a per-round path above resets how far along it is.
-        u2 = Math.min(1, Math.max(0, propT));
-        e = u2 * u2 * (3 - 2 * u2);
-        if (kind !== 'revolver') for (const q of prop.parts) q.visible = show;
-        const px = to[0] + (from[0] - to[0]) * (1 - e);
-        const py = to[1] + (from[1] - to[1]) * (1 - e);
-        const pz = to[2] + (from[2] - to[2]) * (1 - e);
-        propRoot.setPosition([px, py, pz]);
-        propRoot.setRotation([
-          rot[0] + (rot0[0] - rot[0]) * (1 - e),
-          rot[1] + (rot0[1] - rot[1]) * (1 - e),
-          rot[2] + (rot0[2] - rot[2]) * (1 - e),
-        ]);
-        /* And the hand goes to it.
-         *
-         * The hand and the load were on two separate paths that happened to
-         * run near each other, so the magazine travelled beside the hand
-         * rather than in it -- which is what "he doesn't even hold a
-         * magazine" looks like. The hand is placed FROM the load's position
-         * now, offset by where the fingers close on it, so the two cannot
-         * drift apart however either path is changed.
-         *
-         * The offset is where a hand grips each kind: a magazine is held
-         * near its base, a clip by its spine, a pair of shells at their
-         * heads, a cell by its body. */
-        const hold = kind === 'break' ? [-0.030, -0.008, -0.010]
-          : kind === 'clip' ? [-0.004, 0.050, -0.008]
-            : kind === 'revolver' ? [-0.010, -0.030, -0.012]
-              : kind === 'belt' ? [-0.010, -0.014, -0.030]
-                : [0.000, -0.052, -0.006];
-        /* Where the support hand sits when it is on the weapon. Taken from
-           the built hand rather than from the weapon table, because the
-           builder drops it for a forend and then seats it against the
-           surface -- so the authored number is not where the hand is. */
-        const dl = v.arms.digits && v.arms.digits.left;
-        const home = (dl && dl.at) || (WEAPONS[P.equipped()].hands.left) || [0, 0, 0];
-        for (const q of v.arms.support) {
-          q.setPosition([px + hold[0] - home[0], py + hold[1] - home[1], pz + hold[2] - home[2]]);
-        }
-        handSet = true;
       }
     } else if (v.prop) {
-      for (const q of v.prop.parts) q.visible = false;
+      game.stowReloadProp(v.prop);
     }
     if (!handSet) for (const q of v.arms.support) q.setPosition([ox, oy, oz]);
   }
@@ -8332,6 +8147,12 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
       const hu = 1 - P.handCycle / (P.handCycleMax || 1);
       b = Math.sin(Math.min(1, Math.max(0, hu)) * Math.PI);
     }
+    /* And the inspect opens it too. Looking at the side of a receiver
+       is a chamber check: the whole reason anybody does it is to see
+       whether there is brass in there. Taken as a maximum so it cannot
+       fight the firing stroke -- the inspect is cancelled by firing, so
+       the two never overlap for more than a frame. */
+    b = Math.max(b, P.inspectBolt || 0);
     v.bolt.setPosition([R[0] + T[0] * b, R[1] + T[1] * b, R[2] + T[2] * b]);
     /* AND THE ROUND THE BOLT IS CARRYING.
      *
@@ -8994,126 +8815,20 @@ function arcBolt(game, a, b) {
 
    dy and dz are the drop and the outboard reach; the defaults are the
    ones almost everything uses. */
-function FETCH(to, dy, dz) {
-  const y = dy == null ? -0.052 : dy;
-  const z = dz == null ? -0.140 : dz;
-  return [to[0] - 0.028, to[1] + y, to[2] + z];
-}
-
-/* AND THE SAME TRADE AGAIN, ONCE THE CAMERA CAN BE ASKED.
+/* THE RELOAD PATHS MOVED TO THE ENGINE.
  *
- * The rule above is right and the numbers in it are not enough on their
- * own. Measured across the rack, five weapons still fetch from below the
- * frame -- the Thompson's magazine reaches NDC -1.22, the MP5's -1.17,
- * the 1911's -1.16, the Arc's -1.09 -- and the player watches a hand dip
- * off the bottom of the screen and come back with a magazine in it.
+ * FETCH, ONSCREEN, RELOAD_WINDOW and the six per-kind load paths were
+ * three hundred lines here, and that is exactly why multiplayer never
+ * had a reload animation: nothing in that file could reach them. They
+ * are engine/src/97f-reload.js now -- window.LE.reloadFetch,
+ * reloadOnscreen, reloadReach, RELOAD_WINDOW, game.reloadProp and
+ * game.poseReload -- and both games drive the same ones.
  *
- * WHY A CONSTANT CANNOT FIX IT. The obvious repair is a floor on the
- * fetch height, and the measurement says no: the Thompson's magazine
- * well sits at local y -0.030 and the 1911's at -0.085, and it is the
- * THOMPSON that goes further off screen. Each viewmodel sits at its own
- * depth and its own offset, so the same local y lands somewhere
- * different on the glass for every weapon. A number chosen in the
- * weapon's space cannot know that, which is why the hand-picked pairs
- * above are right for some guns and not others.
- *
- * So ask the camera, which knows. Swing the fetch offset up in the y-z
- * plane, keeping its LENGTH -- the same reach, the same distance
- * travelled, exactly the trade the rule above describes -- until the
- * point projects above the bottom edge. Nothing moves on a weapon that
- * was already fine, because the loop exits on the first test. */
-function ONSCREEN(game, root, to, from) {
-  const cam = game && game.camera;
-  if (!cam || !cam.viewProj || !root || !root.matrix) return from;
-  const m = cam.viewProj.e, rm = root.matrix.e;
-  /* Weapon space -> world -> clip. The prop is parented to the weapon,
-     so the weapon's own matrix is the whole of the first step. */
-  const ndcY = (q) => {
-    const x = rm[0] * q[0] + rm[4] * q[1] + rm[8] * q[2] + rm[12];
-    const y = rm[1] * q[0] + rm[5] * q[1] + rm[9] * q[2] + rm[13];
-    const z = rm[2] * q[0] + rm[6] * q[1] + rm[10] * q[2] + rm[14];
-    const w = m[3] * x + m[7] * y + m[11] * z + m[15];
-    if (w <= 1e-5) return null;
-    return (m[1] * x + m[5] * y + m[9] * z + m[13]) / w;
-  };
-  /* A margin inside the edge, because the magazine has a length and it
-     is the BOTTOM of it that leaves the screen first. */
-  const FLOOR = -0.88;
-  const dy = from[1] - to[1], dz = from[2] - to[2];
-  const len = Math.hypot(dy, dz);
-  if (len < 1e-6) return from;
-  const q0 = ndcY(from);
-  if (q0 == null || q0 >= FLOOR) return from;
-  /* Swing the reach up, keeping its length. The angle to swing TOWARDS
-     is the one with no drop at all and the same outboard direction --
-     straight back for a fetch that comes from behind, straight forward
-     for one that does not. Rotating toward zero instead sends a fetch
-     that should come from the pouch out over the muzzle, which is the
-     first thing this got wrong. */
-  const a0 = Math.atan2(dy, dz);
-  /* PAST LEVEL, AND UP.
-   *
-     The swing used to stop at 0 or +-PI, and the sine of both of those
-     is ZERO -- so every candidate it could reach was at exactly the
-     magazine well's own height. It could lift a fetch up TO the well
-     and never ABOVE it, and on the one weapon where that matters it
-     is the only thing that would have helped.
-
-     Measured on the Thompson. Its eight swing candidates come out
-     -1.212 through -1.040 against a floor of -0.88: monotonic, doing
-     what they are told, and short. Then the shrink toward `to` that
-     the old note here reasoned about was built and measured too, and
-     it goes the WRONG WAY -- -1.049, -1.058, on down to -1.128 -- for
-     a reason that is the whole answer: -1.128 is `to`. The magazine
-     WELL is off the bottom of the frame. Nothing about where the load
-     comes FROM can save a journey whose destination is off screen, and
-     that is why three separate corrections here came back
-     byte-identical. They were all reaching for a point at or below a
-     point that was already too low.
-
-     So the swing carries on a quarter turn past level, which puts the
-     fetch directly above the well rather than behind it, and lifts it
-     by the reach's own length. Still no LENGTH given up: a hand comes
-     to the gun from somewhere, and shortening the journey to nothing
-     would be a magazine appearing in the well. */
-  const tgt = dz < 0 ? (a0 < 0 ? -Math.PI : Math.PI) : 0;
-  const tgtUp = tgt + (a0 < 0 ? -Math.PI / 2 : Math.PI / 2);
-  for (let i = 1; i <= 16; i++) {
-    const na = a0 + (tgtUp - a0) * (i / 16);
-    const cand = [from[0], to[1] + Math.sin(na) * len, to[2] + Math.cos(na) * len];
-    const q = ndcY(cand);
-    if (q != null && q >= FLOOR) return cand;
-  }
-  /* And if even straight up over the well does not clear, the gun
-     itself is off screen and the load is the least of the problem. */
-  return from;
-}
-
-/* When the carried load is visible, per reload kind.
-
-   These are not free numbers. Each one is pinned to the beat the WEAPON's
-   own part changes on, because for half a second there were two
-   magazines: the carried one was still flying at prog 0.62, which is
-   exactly when the gun's own magazine came back. And before prog 0.34
-   there was no magazine at all, in the hand or in the gun -- a fifth of a
-   second of a man reloading with an empty fist.
-
-     mag      gun's magazine hidden 0.16 -> 0.62   (reloadStage 1 -> 2)
-     clip     gun's own clip seats   0.28 -> 0.74
-     cell     cell is clear of the housing 0.26 -> 0.62
-     break    nothing gun-side; the shells stay in the chambers
-     revolver cylinder is out 0.20 -> 0.78
-
-   The carried thing therefore arrives exactly as the gun-side part takes
-   over, and leaves nothing empty behind it. */
-const RELOAD_WINDOW = {
-  mag: [0.14, 0.63],
-  clip: [0.10, 0.86],
-  cell: [0.16, 0.63],
-  belt: [0.34, 0.66],
-  break: [0.20, 0.68],
-  revolver: [0.22, 0.78],
-};
+ * Nothing was re-derived in the move. Every number, every comment and
+ * every measurement that produced them went across unchanged, and
+ * engine/test/reload.test.js is the check: five passes before, five
+ * after, on the same sixteen weapons. */
+const RELOAD_WINDOW = window.LE.RELOAD_WINDOW;
 
 /* Where the magazine goes in, when the model has not said. */
 function M_WELL_X(v) {
@@ -9123,116 +8838,30 @@ function M_WELL_X(v) {
 
 /* The thing the support hand is carrying.
 
-   Built once per weapon and kept, because a reload happens every few
-   seconds and spawning a magazine each time is a mesh upload each time.
-   Parented to the weapon, so it inherits every bit of sway and recoil the
-   gun has and does not swim about relative to the hand holding it. */
+   The BUILDING of it is game.reloadProp now (engine/src/97f-reload.js),
+   which both games call. This is the thin part that stays here: the
+   cache lives on the player, the id is the equipped weapon, and `v.prop`
+   is what the rest of this file looks at.
 
+   The id is a parameter so these can be built at start-up instead of the
+   first time each weapon is reloaded. A magazine is a few hundred
+   triangles and a mesh upload, and doing it on the frame a man with an
+   empty gun reaches for one is a hitch at the worst possible moment. */
 function reloadProp(game, P, v, spec, kind, forId) {
   P.props = P.props || {};
-  /* The id is a parameter now, so these can be built at start-up instead
-     of the first time each weapon is reloaded. A magazine is a few hundred
-     triangles and a mesh upload, and doing it on the frame a man with an
-     empty gun reaches for one is a hitch at the worst possible moment --
-     the same class of fault as the stutter this pass is chasing, just
-     spread over fourteen weapons instead of one. */
   const id = forId || P.equipped();
-  const cached = P.props[id];
-  /* Kept between reloads, but only while it is still the right object.
-     The clip guns hand back the WEAPON's own clip actor, and a weapon
-     given again is a new viewmodel with a new clip -- a cache that
-     returned the old one would drive an actor no longer in the scene, and
-     the reload would go invisible in exactly the way this whole pass is
-     about. */
-  if (cached && (kind !== 'clip' || cached.root === v.clip)) {
-    v.prop = cached;
-    return cached;
-  }
   const root = v.kind === 'single' ? v.actor : v.root;
   if (!root) return null;
-
-  const A = spec.ammo || {};
-  let made = null;
-  if (kind === 'mag') {
-    made = game.boxMagazine({ physics: false, mag: Object.assign({
-      w: 0.026, d: 0.021, len: 0.105, curve: 0, witness: 0, round: AMMO.para9,
-    }, A.mag || {}), bodyMaterial: A.magMaterial });
-  } else if (kind === 'clip') {
-    /* The weapon already has one. Building a second meant two clips on
-       screen a fifth of a second apart, and neither of them held for the
-       part of the reload that matters. */
-    if (v.clip) {
-      P.props[id] = { root: v.clip, parts: [v.clip] };
-      v.prop = P.props[id];
-      return P.props[id];
-    }
-    made = game.stripperClip({ physics: false, clip: Object.assign({
-      count: 10, pitch: 0.0098, round: AMMO.mau763,
-    }, A.clip || {}) });
-  } else if (kind === 'cell') {
-    made = game.powerCell({ physics: false, cell: Object.assign({
-      w: 0.052, h: 0.070, d: 0.038,
-    }, A.cell || {}) });
-  } else if (kind === 'belt') {
-    made = game.mgBelt({ physics: false, belt: { links: 12 } });
-  } else if (kind === 'break') {
-    /* Two shells held between the fingers, which is how you load a
-       double: the pair goes in together. They are their own actors so
-       they can be left in the chambers rather than vanishing. */
-    const shells = [];
-    for (let i = 0; i < 2; i++) {
-      const sh = game.shotShell({ physics: false,
-        shell: Object.assign({ r: 0.00925, len: 0.0700, head: 0.0220 }, A.shell || {}),
-        hullMaterial: A.hullMaterial });
-      sh.setRotation([0, 0, 0]);
-      shells.push(sh);
-    }
-    // The first is the holder; the second rides beside it.
-    shells[0].parent = root;
-    shells[1].parent = shells[0];
-    shells[1].setPosition([0, 0, 0.0212]);
-    const parts0 = [];
-    for (const sh of shells) {
-      parts0.push(sh);
-      for (const n of sh.partNames || []) if (sh[n]) parts0.push(sh[n]);
-    }
-    for (const q of parts0) q.visible = false;
-    P.props[id] = { root: shells[0], parts: parts0, shells };
-    v.prop = P.props[id];
-    return P.props[id];
-  } else if (kind === 'revolver') {
-    /* Loose rounds, thumbed in one at a time.
-     *
-     * It was a speedloader -- a moon clip with four rounds in it, pressed
-     * on and twisted off, which takes about a second. That is a competition
-     * shooter's tool and this is a man in a bunker with a handful of .50
-     * out of his coat pocket. Four separate cartridges now, each going into
-     * its own chamber in turn, which is what the reload time was already
-     * paying for and what "I want him to load the round" describes.
-     *
-     * They are their own actors so they can be left IN the chambers rather
-     * than vanishing at the end -- the cylinder carries them from there. */
-    const rounds = [];
-    for (let i = 0; i < (spec.mag || 4); i++) {
-      const r = game.cartridge({ physics: false,
-        round: Object.assign({}, AMMO.mag500, A.round || {}) });
-      r.parent = root;
-      rounds.push(r);
-      for (const n of r.partNames || []) if (r[n]) rounds.push(r[n]);
-    }
-    for (const q of rounds) q.visible = false;
-    P.props[id] = { root: rounds[0], parts: rounds, rounds };
-    v.prop = P.props[id];
-    return P.props[id];
-  } else return null;
-
-  made.parent = root;
-  const parts = [made];
-  for (const n of made.partNames || []) if (made[n]) parts.push(made[n]);
-  for (const q of parts) q.visible = false;
-  P.props[id] = { root: made, parts };
-  v.prop = P.props[id];
-  return P.props[id];
+  const prop = game.reloadProp(P.props, id, root, kind, {
+    ammo: spec.ammo || {},
+    /* The clip guns hand back the WEAPON's own clip actor. Building a
+       second meant two clips on screen a fifth of a second apart, and
+       neither of them held for the part of the reload that matters. */
+    clip: v.clip,
+    mag: spec.mag,
+  });
+  if (prop) v.prop = prop;
+  return prop;
 }
 
 /* ==================================================================
@@ -9302,102 +8931,36 @@ function actionOf(spec) {
   return ACTIONS.selfLoading;
 }
 
-/* Eject a case. A real little brass cylinder with velocity and spin,
-   thrown up and to the right out of the port, that lands and stays for a
-   moment. Nothing sells a gun firing like brass leaving it. */
 function ejectShell(game, S, P, v, opts) {
   if (S.toggles && !S.toggles.shellCasings) return;
   const gun = v.kind === 'single' ? v.actor : v.root;
-  /* A REVOLVER HAS NO PORT, which is the point of it, so the old
-     early-return here meant the Model 5 could never show its brass at
-     all -- and the unconditional call from the firing path meant the
+  /* A REVOLVER HAS NO PORT, which is the point of it, so an early return
+     on a missing port meant the Model 5 could never show its brass at
+     all -- and an unconditional call from the firing path meant the
      other fourteen showed theirs at the wrong moment. Both halves of
-     the same missing question.
+     the same missing question. `drop` is the ejector rod.
 
-     `drop` is the ejector rod: six cases pushed out of the back of the
-     cylinder by hand and falling more or less straight down at your
-     feet. They come from the magazine well, which on a revolver is
-     where the cylinder is, and they leave with almost no speed --
-     brass off a rod drops, it does not fly. */
-  const drop = !!(opts && opts.drop);
-  const lp = drop ? (gun.magWell || [0, 0, 0]) : gun.ejectPort;
-  if (!lp) return;
-  const m = gun.matrix.e;
-  // Transform the port and the ejection direction by the gun's own matrix,
-  // so brass leaves the port in the direction the gun is actually pointing.
-  const wx = m[0] * lp[0] + m[4] * lp[1] + m[8] * lp[2] + m[12];
-  const wy = m[1] * lp[0] + m[5] * lp[1] + m[9] * lp[2] + m[13];
-  const wz = m[2] * lp[0] + m[6] * lp[1] + m[10] * lp[2] + m[14];
-  // Out of a port: up, right and back. Off a rod: down and barely at all.
-  const dir = drop ? [-0.25, -0.9, 0.15] : [0.35, 0.75, 1.0];
-  const ex = m[0] * dir[0] + m[4] * dir[1] + m[8] * dir[2];
-  const ey = m[1] * dir[0] + m[5] * dir[1] + m[9] * dir[2];
-  const ez = m[2] * dir[0] + m[6] * dir[1] + m[10] * dir[2];
-  const sp = drop ? 0.5 + Math.random() * 0.4 : 2.4 + Math.random() * 1.2;
-  const shell = game.cylinder({
-    at: [wx, wy, wz], radius: 0.0058, height: 0.023, lifetime: 3.4,
-    material: P.goldAmmo
-      ? { color: 0xf5c93f, texture: 'metal', roughness: 0.10, metalness: 1, emissive: 0x5a3f06, emissiveStrength: 0.55 }
-      : { color: 0xc79a43, texture: 'metal', roughness: 0.3, metalness: 1 },
-    velocity: drop
-      ? [ex * sp + (Math.random() - 0.5) * 0.35, ey * sp - 0.2,
-        ez * sp + (Math.random() - 0.5) * 0.35]
-      : [ex * sp + (Math.random() - 0.5), ey * sp + 1.2, ez * sp + (Math.random() - 0.5)],
-    bounce: 0.35, friction: 0.6, mass: 0.012,
+     The arithmetic is game.ejectCase now (engine/src/97h-spent.js), so
+     multiplayer -- which fired seventy-five weapons without a single
+     case in the air -- runs the same one. */
+  game.ejectCase(gun, {
+    drop: !!(opts && opts.drop),
+    gold: !!P.goldAmmo,
+    keep: S.brass, cap: 24,
   });
-  if (shell.body) {
-    shell.body.angularVelocity.set(
-      (Math.random() - 0.5) * 26, (Math.random() - 0.5) * 26, (Math.random() - 0.5) * 26);
-  }
-  S.brass.push(shell);
-  if (S.brass.length > 24) { const old = S.brass.shift(); if (old && !old.dead) old.destroy(); }
 }
 
-/* Drop the spent magazine. It falls, bounces once and lies there. */
-/* The magazine that just hit the floor.
- *
- * This dropped one grey 26 x 100 x 21 box for every weapon in the game --
- * the same brick out of a 1911, an MP5 and a drum-fed Thompson -- and only
- * on the two guns that happen to call their magazine `mag`, so the Mauser
- * and the MG 42 dropped nothing at all. It is the real magazine now: the
- * weapon's own ammunition description gives its width, depth, length and
- * curve, and a fitted drum drops a drum. */
+/* Drop the spent magazine. It falls, bounces once and lies there.
+   game.dropMagazine does the work; this says whose ammunition it is and
+   what is fitted. */
 function dropMagazine(game, S, P, v) {
   const gun = v.kind === 'single' ? v.actor : v.root;
-  if (!gun || !gun.magWell) return;
-  const m = gun.matrix.e;
-  const lp = gun.magWell;
-  const wx = m[0] * lp[0] + m[4] * lp[1] + m[8] * lp[2] + m[12];
-  const wy = m[1] * lp[0] + m[5] * lp[1] + m[9] * lp[2] + m[13];
-  const wz = m[2] * lp[0] + m[6] * lp[1] + m[10] * lp[2] + m[14];
   const spec = P.spec();
-  const A = (spec && spec.ammo) || {};
-  const fit = (P.fitted[P.equipped()] || {}).mag;
-  const vel = [(Math.random() - 0.5) * 0.6, -0.8, (Math.random() - 0.5) * 0.6];
-  let drop = null;
-  try {
-    if (fit === 'drummag') {
-      /* A drum is not a stick with more rounds in it, so what hits the
-         floor is the drum's own model -- the same one that was on the gun a
-         moment ago. */
-      drop = game.gunPart('drummag', { at: [wx, wy, wz], lifetime: 6, mass: 0.55,
-        physics: true, velocity: vel, bounce: 0.15, friction: 0.9 });
-    } else {
-      // Longer for an extended magazine, stubbier for a fast one.
-      const shape = fit === 'extmag' ? { len: 0.150 } : fit === 'fastmag' ? { len: 0.078 } : {};
-      drop = game.boxMagazine({
-        at: [wx, wy, wz], lifetime: 6, mass: 0.13,
-        mag: Object.assign({ w: 0.026, d: 0.021, len: 0.105, curve: 0, witness: 0,
-          round: AMMO.para9 }, A.mag || {}, shape),
-        bodyMaterial: A.magMaterial,
-        velocity: vel, bounce: 0.2, friction: 0.8,
-      });
-    }
-  } catch (e) { void e; }
-  if (!drop) return;
-  const body = drop.root || drop;
-  if (body.body) body.body.angularVelocity.set((Math.random() - 0.5) * 5, 0, (Math.random() - 0.5) * 5);
-  S.brass.push(body);
+  game.dropMagazine(gun, {
+    ammo: (spec && spec.ammo) || {},
+    fitted: (P.fitted[P.equipped()] || {}).mag,
+    keep: S.brass, cap: 24,
+  });
 }
 
 function tryReload(P, sfx, S) {
@@ -15469,6 +15032,30 @@ function start(opts = {}) {
         const cur = P.knifeOut ? (P.prevSlot || 0) : P.slot;
         beginSwap(cur === 0 ? 1 : 0);
       }
+      /* LOOK AT THE THING YOU ARE HOLDING.
+       *
+         There was no way to. You could fire a weapon, reload it, sprint
+         with it and swap off it, and never once see it -- on a game
+         whose whole argument is that the guns are modelled properly.
+         The curve is engine/src/97g-inspect.js and multiplayer runs the
+         same one, so the movement is identical in both. */
+      if (CTL.hit('inspect') && P.inspectT <= 0 && P.reloading <= 0
+          && P.swapT <= 0 && !P.knifeOut && P.ads < 0.05 && (P.lowReady || 0) < 0.05) {
+        P.inspectT = window.LE.INSPECT_TIME; P.inspectW = 1;
+      }
+      if (P.inspectT > 0) {
+        P.inspectT = Math.max(0, P.inspectT - dt);
+        /* Never in the way: anything you would rather be doing ends it
+           on the frame you ask for it -- but it FADES out rather than
+           cutting. Setting the clock to zero teleports the weapon back
+           to the carry between two frames, which on the roll channel is
+           1.18 radians in a sixtieth of a second. */
+        const cancel = P.reloading > 0 || P.swapT > 0 || P.knifeOut
+          || P.ads > 0.05 || (P.lowReady || 0) > 0.05 || S.gameOver;
+        if (cancel) P.inspectW = Math.max(0, P.inspectW - dt / window.LE.INSPECT_CANCEL);
+        if (P.inspectW <= 0) P.inspectT = 0;
+      }
+      if (P.inspectT <= 0) P.inspectBolt = 0;
       if (i.justPressed('1')) beginSwap(0);
       if (i.justPressed('2')) beginSwap(1);
 

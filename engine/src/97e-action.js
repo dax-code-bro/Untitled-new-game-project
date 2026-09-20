@@ -23,28 +23,37 @@
  * Everything here skips a part it cannot find, so adding one to a model
  * is all it takes to make it move.
  */
+/* EVERY ONE CARRIES ITS OWN NAME.
+ *
+   They did not, and the caller had no way to ask what it had been
+   handed: multiplayer's reload wanted to know whether a weapon hinges
+   open or has a lifter -- which is exactly the question an action
+   answers -- read `act.kind`, got undefined on all nine, and put every
+   shotgun and every revolver in the game down as a box magazine. A
+   table whose rows cannot say what they are is a table you can only
+   use by remembering which one you looked up. */
 const WEAPON_ACTIONS = {
   /* Gas or recoil works the breech: a case a shot, and the bolt runs. */
-  selfLoading: { eject: 'shot', cycle: 'shot', all: false },
+  selfLoading: { kind: 'selfLoading', eject: 'shot', cycle: 'shot', all: false },
   /* Your hand works it, between shots -- a turnbolt. It lifts, draws,
      returns and turns down, and it takes most of a second. */
-  manual: { eject: 'cycle', cycle: 'hand', all: false, turn: true },
+  manual: { kind: 'manual', eject: 'cycle', cycle: 'hand', all: false, turn: true },
   /* A pump gun. The FOREND travels, not the bolt, and the shooter's
      support hand goes with it -- which is the whole read. */
-  pump: { eject: 'cycle', cycle: 'hand', all: false, rack: true },
+  pump: { kind: 'pump', eject: 'cycle', cycle: 'hand', all: false, rack: true },
   /* A lever drops away from the grip and comes back. */
-  lever: { eject: 'cycle', cycle: 'hand', all: false, lever: true },
+  lever: { kind: 'lever', eject: 'cycle', cycle: 'hand', all: false, lever: true },
   /* The cylinder turns and the hammer falls. Nothing leaves until the
      ejector rod is pushed, which is what the reload is for. */
-  revolver: { eject: 'reload', cycle: 'none', all: true, index: true },
+  revolver: { kind: 'revolver', eject: 'reload', cycle: 'none', all: true, index: true },
   /* Hinged: both barrels empty together when it breaks open. */
-  break: { eject: 'open', cycle: 'none', all: true, hinge: true },
+  break: { kind: 'break', eject: 'open', cycle: 'none', all: true, hinge: true },
   /* A link and a case per shot, and the bolt runs the whole time. */
-  belt: { eject: 'shot', cycle: 'shot', all: false, feed: true },
+  belt: { kind: 'belt', eject: 'shot', cycle: 'shot', all: false, feed: true },
   /* Externally driven: the barrels spin whether or not it is firing. */
-  rotary: { eject: 'shot', cycle: 'spin', all: false },
+  rotary: { kind: 'rotary', eject: 'shot', cycle: 'spin', all: false },
   /* Nothing in it is a cartridge. */
-  energy: { eject: 'never', cycle: 'none', all: false },
+  energy: { kind: 'energy', eject: 'never', cycle: 'none', all: false },
 };
 
 /* Which action a weapon has, from its own declaration first and its

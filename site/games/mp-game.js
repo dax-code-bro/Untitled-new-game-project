@@ -38,6 +38,12 @@
     left: ['a', 'arrowleft'], right: ['d', 'arrowright'],
     jump: [' '], crouch: ['control', 'c'], sprint: ['shift'],
     slide: ['z'], reload: ['r'], swap: ['q', '1', '2'], scores: ['tab'],
+    /* LOOK AT THE THING YOU ARE HOLDING. There was no way to: you could
+       fire a weapon, reload it, sprint with it and swap off it, and
+       never once see it. On a game whose argument is that the guns are
+       modelled properly, that is the animation whose absence costs the
+       most. */
+    inspect: ['i'],
     quit: ['escape'],
   };
 
@@ -48,6 +54,7 @@
     fwd: 'forward', back: 'back', left: 'left', right: 'right',
     jump: 'jump', sprint: 'sprint', slide: 'slide', crouch: 'crouch',
     reload: 'reload', swap: 'swap', scores: 'scores', pause: 'quit',
+    inspect: 'inspect',
   };
 
   /* A BINDING IS A PHYSICAL KEY, NOT A LETTER.
@@ -650,6 +657,12 @@
           cmd.jump = cmd.jump || edge('jump', down(p, PAD.jump));
           cmd.crouch = cmd.crouch || down(p, PAD.crouch);
           cmd.reload = cmd.reload || edge('reload', down(p, PAD.reload));
+          /* HELD, NOT TAPPED, is the inspect -- the convention every
+             pad shooter uses, and it costs no button on a layout that
+             has none spare. The held state goes out raw and the frame
+             loop times it, because the pad layer does not know how long
+             a frame was. */
+          cmd.reloadHeld = cmd.reloadHeld || down(p, PAD.reload);
           cmd.swap = cmd.swap || edge('swap', down(p, PAD.swap));
           cmd.run = cmd.run || down(p, PAD.sprint);
           cmd.slide = cmd.slide || edge('slide', down(p, PAD.slide));
@@ -1039,6 +1052,43 @@
     return made;
   }
 
+  /* WHICH OF THE SIX (now seven) A WEAPON RELOADS WITH.
+   *
+     mp-data says 'mag', 'shell', 'moon' or 'clip', which is a stat-sheet
+     vocabulary rather than an animation one -- 'shell' covers both a
+     break gun that takes two at once and a pump gun that takes five one
+     at a time, and those are not the same movement at all. The ACTION
+     already knows the difference, because it is the thing that decides
+     whether the gun hinges open or has a lifter, so ask it first and
+     fall back to the stat sheet.
+
+     'tube' is new. Thirteen pump and lever shotguns were going to reload
+     like a broken double, which is a gun hinging open that does not
+     hinge. */
+  function reloadKindFor(spec, act) {
+    var a = act && act.kind;
+    if (a === 'break') return 'break';
+    if (a === 'revolver' || a === 'rotary') return 'revolver';
+    if (a === 'belt') return 'belt';
+    if (a === 'energy') return 'cell';
+    /* A LAUNCHER DOES NOT TAKE A MAGAZINE. With no path of its own the
+       Panzerfaust, the Bazooka, the RPG and the Stinger all fell through
+       to `mag` -- and a tube has no magazine well, so magWell came back
+       as the weapon's own origin and a pistol magazine was posted into
+       the middle of the barrel. A rocket instead: a warhead on a motor
+       tube, brought up from below and in front and pushed home. The two
+       that are NOT this -- the M79 hinges and the six-shot revolves --
+       are caught above, by their own declared action. */
+    if (spec && spec.cls === 'launcher') return 'rocket';
+    var k = spec && spec.reloadKind;
+    if (k === 'clip') return 'clip';
+    if (k === 'moon') return 'revolver';
+    /* A shell-fed gun that does not hinge is loaded a round at a time
+       through the gate -- pump, lever and the two semi-auto shotguns. */
+    if (k === 'shell') return 'tube';
+    return 'mag';
+  }
+
   function makeViewmodel(game) {
     var cache = {};
     var cur = null, curId = null;
@@ -1090,11 +1140,33 @@
          ZERO times in this file. */
       cyc: 0, cycMax: 0.085,   // the automatic stroke, per shot
       hand: 0, handMax: 0.9,   // a hand-worked stroke, between shots
-      trig: 0, rounds: 0, spin: 0, act: null, actId: null };
+      trig: 0, rounds: 0, spin: 0, act: null, actId: null,
+      /* THE LOAD IN THE SUPPORT HAND. Multiplayer's reload was a
+         positional dip and an ammunition counter: the gun tipped, the
+         number went back up, and no magazine ever left a pouch or
+         entered a well on any of seventy-five weapons. Zombies has had
+         the whole thing for months -- a real magazine, clip, cell,
+         belt, pair of shells or handful of loose rounds, carried by a
+         hand that goes and fetches it -- and it was three hundred lines
+         inside bunker-nine.js where nothing here could reach it. It is
+         engine/src/97f-reload.js now and both games drive it. */
+      rlKind: null, rlId: null, rlProp: null, rlStage: 0,
+      // The idle drift's own clock -- see place().
+      swayT: 0 };
+    /* One prop per weapon, built the first time it is needed and kept.
+       A magazine is a few hundred triangles and a mesh upload, and
+       doing that on the frame a man with an empty gun reaches for one
+       is a hitch at the worst possible moment. */
+    var props = {};
+    /* The litter. Capped at twenty, because a match is long and an LMG
+       fires five hundred rounds -- the cap is the caller's, which is
+       why the engine takes the list rather than owning one. */
+    var brass = [];
 
     function show(g, on) {
       if (!g) return;
       g.visible = on;
+      if (!on && window.LE.stowReloadProp) window.LE.stowReloadProp(state.rlProp);
       // The hands go with it, or a pair of them floats where the last
       // weapon was.
       if (g.__arms && g.__arms.parts) {
@@ -1122,6 +1194,22 @@
        invisible" is this early return. */
     var shown = false;
     var fitted = [];
+
+    /* WHICH MAGAZINE IS ON THE GUN, in the vocabulary the reload path
+       speaks. A drum is heavy and wide and is rocked in back-first; an
+       extended magazine is long enough that it has to come up steeper
+       or its nose catches the well; a fast magazine has a loop on it
+       and is snapped in from a shorter reach. Three different objects
+       in the hand, three different movements, and the same three names
+       zombies uses so one table serves both games. */
+    function fittedMag() {
+      for (var i = 0; i < fitted.length; i++) {
+        if (fitted[i] === 'g-drum') return 'drummag';
+        if (fitted[i] === 'g-ext') return 'extmag';
+        if (fitted[i] === 'g-fast') return 'fastmag';
+      }
+      return null;
+    }
 
     /* Every part is built and hidden; this is what decides which of
        them you can see. One per slot, because two optics on one rail
@@ -1192,14 +1280,42 @@
           state.handMax = Math.max(0.35, (refire || 1.0) * 0.78);
           state.hand = state.handMax;
         }
+        /* AND THE BRASS. Seventy-five weapons fired without a single
+           case in the air: zombies has thrown one out of the port on
+           every shot for months and nothing in this file had ever
+           asked for one. game.ejectCase is the same arithmetic both
+           games now run -- the port and the direction through the
+           weapon's own matrix, so the case leaves the way the gun is
+           actually pointing.
+
+           A HAND-WORKED GUN DOES NOT SPIT ON THE SHOT. A bolt rifle
+           holds its case in the chamber until the bolt is lifted and
+           drawn, so its brass comes out on the stroke -- see below --
+           and a revolver does not eject at all until the rod is
+           pushed. Asking here for all three would put brass in the air
+           at the wrong moment on nineteen weapons. */
+        var ac = state.act;
+        if (cur && (!ac || ac.eject === 'shot' || ac.eject == null)) {
+          try { game.ejectCase(cur, { keep: brass, cap: 20 }); } catch (e) { void e; }
+        }
       },
       hide: function () {
         state.hidden++;
         if (cur) show(cur, false);
         shown = false;
         if (flash) flash.visible = false;
+        /* And whatever the hand was carrying. A magazine left visible
+           when the weapon goes away hangs in the air where the gun
+           used to be -- the same fault zombies had and fixed. */
+        if (window.LE.stowReloadProp) window.LE.stowReloadProp(state.rlProp);
       },
-      place: function (eye, yaw, pitch, aim, sprint, kick, bob, id, reload, dt, ammoFrac) {
+      /* `reload` is how far through the reload we are, 0..1 and LINEAR,
+         with 0 meaning not reloading. It used to be the sine bump that
+         drops the gun, which is a shape and not a clock -- it comes
+         back to zero at the end and passes through every value twice,
+         so nothing downstream could tell the fetch from the seat. The
+         bump is derived from it here instead. */
+      place: function (eye, yaw, pitch, aim, sprint, kick, bob, id, reload, dt, ammoFrac, swapU, insU, insW) {
         var g = select(id || curId || 'm4');
         state.placed++;
         /* The column of rounds inside the magazine. Defaults to full
@@ -1209,33 +1325,81 @@
         state.aim = aim;
         var low = sprint ? 1 : 0;
         state.sprint = low;
-        state.reload = reload || 0;
+        var rlU = Math.max(0, Math.min(1, reload || 0));
+        state.reload = rlU > 0 ? Math.sin(rlU * Math.PI) : 0;
+        /* THE INSPECT. A curve rather than a clip -- a viewmodel is one
+           actor held at an offset from the eye, so the thing that moves
+           is the offset. The shape is engine/src/97g-inspect.js and
+           zombies runs the same one. */
+        var insU2 = Math.max(0, Math.min(1, insU || 0));
+        var INS = (insU2 > 0 && window.LE.inspectPose)
+          ? window.LE.inspectPose(insU2, insW == null ? 1 : insW)
+          : { in: 0, up: 0, side: 0, yaw: 0, pitch: 0, roll: 0, bolt: 0, tap: 0 };
+        state.ins = insU2;
 
         /* Run the mechanism. The action comes from the weapon's own
            declaration where it has one and from its family otherwise;
            poseAction skips any part the model does not carry, so this
-           is safe on all eighty-one of them. */
-        var W = window.LE;
-        if (W && W.weaponAction && g) {
+           is safe on all eighty-one of them.
+         *
+           `LE` AND NOT `W`, AND THAT IS THE WHOLE OF A BUG.
+         *
+           This said `var W = window.LE` and then asked `W.MP_DATA` for
+           the weapon's spec. MP_DATA is on `window`, not on the engine,
+           so the lookup was undefined every time -- on every weapon,
+           every frame, since the mechanism was written. weaponAction was
+           handed nothing and returned its default, which is
+           selfLoading, so the whole rack ran a self-loader's action: the
+           sawn-off's barrels never hinged, the Webley's cylinder never
+           swung, the pump guns' forends never racked, and eleven weapons
+           that declare their own action had it read off a null.
+
+           The file has a module-level `var W = window` thirteen hundred
+           lines up and this shadowed it inside one function, so both
+           lines look correct on their own. Caught by the new
+           mpreload.test.js, which printed `{"mag": 75}` for a rack with
+           thirteen shotguns and three revolvers in it. */
+        var LE = window.LE;
+        if (LE && LE.weaponAction && g) {
           if (state.actId !== id) {
             state.actId = id;
-            var sp = (W.MP_DATA && W.MP_DATA.gun) ? W.MP_DATA.gun(id) : null;
-            state.act = W.weaponAction(sp);
+            var sp = (window.MP_DATA && window.MP_DATA.gun) ? window.MP_DATA.gun(id) : null;
+            state.act = LE.weaponAction(sp);
           }
           var d = dt || 0;
           state.cyc = Math.max(0, state.cyc - d);
+          var handWas = state.hand;
           state.hand = Math.max(0, state.hand - d);
+          /* A HAND-WORKED ACTION EJECTS ON THE STROKE, not on the shot.
+             A bolt rifle holds its case in the chamber until the bolt is
+             lifted and drawn, so the brass leaves near the top of the
+             stroke -- and that pause between the bang and the tinkle is
+             most of what a bolt gun feels like. The same is true of a
+             pump and a lever. */
+          if (state.act && state.act.eject === 'cycle' && handWas > 0 && state.handMax > 0) {
+            var hu0 = 1 - handWas / state.handMax, hu1 = 1 - state.hand / state.handMax;
+            if (hu0 < 0.45 && hu1 >= 0.45) {
+              try { game.ejectCase(g, { keep: brass, cap: 20 }); } catch (e) { void e; }
+            }
+          }
           /* Trigger: in fast, out slower, off the same clock as the
              shot -- and a revolver's cylinder indexes on it, so it has
              to be a real curve and not a flag. */
           var tw = state.cyc > 0 ? 1 : 0;
           state.trig += (tw - state.trig) * Math.min(1, d * (tw ? 34 : 12));
           state.spin += d * (state.cyc > 0 ? 6 : 0);
-          W.poseAction(g, state.act, {
+          LE.poseAction(g, state.act, {
             /* Back hard and forward on the return: a half sine, which
                is the shape the real thing traces. */
             fire: state.cyc > 0 ? Math.sin((1 - state.cyc / state.cycMax) * Math.PI) : 0,
-            hand: state.hand > 0 ? Math.sin((1 - state.hand / state.handMax) * Math.PI) : 0,
+            /* The hand-worked stroke, and the inspect uses the same
+               channel: opening the action to look at the chamber is
+               the same movement as working it, so a bolt gun's bolt,
+               a pump's forend, a revolver's cylinder and a break
+               gun's barrels all do the right thing for free. */
+            hand: Math.max(
+              state.hand > 0 ? Math.sin((1 - state.hand / state.handMax) * Math.PI) : 0,
+              INS.bolt),
             reload: state.reload, trigger: state.trig,
             rounds: state.rounds, spin: state.spin,
           });
@@ -1258,7 +1422,26 @@
            swinging onto the centre line and up to the sight as you aim.
            The reload drops it further and the sprint drops it further
            still. */
-        var rl = reload || 0;
+        /* A RELOAD BRINGS THE WEAPON UP, NOT DOWN.
+         *
+           This dropped it 75 mm, on top of a hip carry that already sits
+           128 mm below the eye -- so the gun was loaded somewhere around
+           the knees and the player watched an empty room. It is the
+           exact fault zombies found and fixed before multiplayer had a
+           reload animation at all, and writing one here reintroduced it
+           from scratch: the note next door says "you cannot see the
+           shells go in if you cannot see the gun".
+
+           Measured rather than argued about. mpreload.test.js projects
+           the load through the live camera on all seventy-five weapons
+           and counts the frames it spends below the bottom edge: with
+           the dip, six of them -- the two bullpups, the MP5, the micro
+           Uzi, the Remington and the Kill Streak, every one of them a
+           weapon whose magazine well sits low and far back -- lost
+           between a third and a half of the carry off frame. The lift
+           is zombies' measured 98 mm, with its 52 mm draw-in, and the
+           roll and the levelling that were already here. */
+        var rl = state.reload;
 
         /* WHERE THE WEAPON IS HELD, and this was invented here instead
            of taken from the game next door that already had it right.
@@ -1293,6 +1476,35 @@
            looking at the gun rather than through it. */
         var sightH = (g && g.sightAt != null) ? g.sightAt
           : ((g && g.sightH != null) ? g.sightH : 0.0455);
+        /* THE SWAP, ON SCREEN.
+         *
+           The gun travels one and three quarter times the low-ready
+           drop, which is far enough to clear the bottom of the frame on
+           everything from a 1911 to an MG42 -- and clearing the frame is
+           the entire requirement, because the slot changes while it is
+           down there and the exchange must not be visible.
+
+           Down is fast and up is slower, which is how it works with a
+           real weapon and is also what makes the two halves read as two
+           motions rather than as one thing bouncing. The muzzle dips as
+           it goes and comes back level on the way up, so it pivots out
+           of the shoulder rather than sliding down a rail.
+
+           The drop is proportional to length for the reason the sprint
+           carry is: a 1911 sits 84 per cent of the way down the frame
+           and an MG42's receiver at 68, so the same number of
+           centimetres takes one off the bottom edge and leaves the
+           other in plain sight. */
+        var swapU2 = Math.max(0, Math.min(1, swapU || 0));
+        var swapDrop = 0, swapTip = 0, swapRoll = 0;
+        if (swapU2 > 0 && swapU2 < 1) {
+          var su = swapU2 < 0.5
+            ? Math.pow(swapU2 / 0.5, 0.72)              // 0 -> 1, fast
+            : Math.pow(1 - (swapU2 - 0.5) / 0.5, 1.45); // 1 -> 0, slower
+          swapDrop = su * (0.085 + bulk * 0.062) * 1.75;
+          swapTip = su * 0.52;
+          swapRoll = su * 0.30;
+        }
         var OUT = 1.30;
         /* No invented drop term here. Zombies subtracts a `tipDrop`
            that belongs to ITS rotation scheme, and adding my own guess
@@ -1311,10 +1523,33 @@
            exactly, because that is what puts the front blade and the
            rear notch on the camera axis, and it is -sightH at any
            distance. */
-        var offR = hipX * OUT * (1 - aim);
+        /* IDLE SWAY. A held weapon is never perfectly still, and
+           multiplayer's was: the walk bob decays to exactly zero the
+           moment you stop, and from then on the gun is welded to the
+           screen. That is the single clearest tell that a viewmodel is
+           a picture rather than an object, and zombies has had the
+           drift since it had a viewmodel.
+
+           Slow -- about a quarter of a hertz on the vertical and half
+           that on the lateral, so the two never come back into phase
+           and it does not read as a loop -- and a millimetre and a
+           half at most. Killed by aiming, because a sight picture that
+           wanders is a sight picture you cannot use, and killed by
+           moving, because the bob is already doing this job. */
+        state.swayT += (dt || 0) * 1.6;
+        var still = Math.max(0, 1 - Math.abs(bob) * 90);
+        var swayK = (1 - aim * 0.88) * still;
+        var swayY = Math.sin(state.swayT * 2) * 0.0016 * swayK;
+        var swayX = Math.cos(state.swayT) * 0.0010 * swayK;
+
+        var offR = hipX * OUT * (1 - aim) + INS.side + swayX;
         var offU = hipY * OUT * (1 - aim) + (-sightH) * aim
-          - low * 0.085 - rl * 0.075 + bob * 0.6;
-        var dist = (hipD * (1 - aim) + 0.30 * aim) * OUT - kick * 0.03 - low * 0.03;
+          - low * 0.085 + rl * 0.098 + bob * 0.6 - swapDrop + INS.up + swayY;
+        var dist = (hipD * (1 - aim) + 0.30 * aim) * OUT - kick * 0.03 - low * 0.03
+          - INS.in
+          /* And drawn in toward the face while the hands work, which is
+             the other half of "you can see what is being done to it". */
+          - rl * 0.052;
 
         if (flash) {
           flashT = Math.max(0, flashT - (dt || 0.016));
@@ -1342,14 +1577,17 @@
            at full ADS the bore must be exactly on the camera axis or the
            sights do not line up with the crosshair. */
         var fh = Math.hypot(fx, fz) || 1e-6;
-        var gy = Math.atan2(-fz / fh, fx / fh);
+        var gy = Math.atan2(-fz / fh, fx / fh) + INS.yaw;
         /* The hip cant, and it was 0.50 -- twenty-nine degrees of muzzle
            down, which points the whole barrel out of the bottom of the
            picture on a long weapon. Enough to read as a hip carry, not
            enough to throw the gun off screen. */
-        var tip = (1 - aim) * (0.30 + low * 0.14) * (1 - rl * 0.85);
+        /* The swap's tip is not blended out with the aim the way the hip
+           cant is: you cannot be looking through the sights of a weapon
+           that is on its way out of your hands. */
+        var tip = (1 - aim) * (0.30 + low * 0.14) * (1 - rl * 0.85) + swapTip - INS.pitch;
         var gp = Math.asin(Math.max(-1, Math.min(1, fy))) - tip;
-        var roll = low * 0.42 + (1 - aim) * 0.03 + rl * 0.30;
+        var roll = low * 0.42 + (1 - aim) * 0.03 + rl * 0.30 + swapRoll + INS.roll;
         Q.setAxisAngle(AY, gy);
         Q2.setAxisAngle(AZ, gp);
         Q.mulQuats(Q, Q2);
@@ -1368,6 +1606,122 @@
           );
           flash.rotation.copy(Q);
           flash._still = false;
+        }
+
+        /* ============ THE LOAD, AND THE HAND THAT CARRIES IT ============
+         *
+           Everything above this line is the gun. This is the other half
+           of a reload: the support hand leaves the forend, drops to the
+           pouch, and comes back with a real object that goes into a real
+           opening. It is the same code zombies runs -- reloadReach for
+           the hand, poseReload for the load -- because it is in the
+           engine now rather than in one game's file.
+
+           Last in place(), so the on-screen check reads the weapon's
+           matrix for this frame's hold rather than the previous one's. */
+        var arms = g.__arms;
+        if (LE && LE.reloadReach && arms && arms.support && arms.support.length) {
+          if (state.rlId !== id) {
+            state.rlId = id;
+            var rsp = (window.MP_DATA && window.MP_DATA.gun) ? window.MP_DATA.gun(id) : null;
+            state.rlKind = reloadKindFor(rsp, state.act);
+            state.rlMag = (rsp && rsp.mag) || 8;
+          }
+          var kind = state.rlKind;
+          /* WHAT THE RELOAD THROWS AWAY, once per reload rather than
+             once per frame. `rlStage` counts the beats that have gone
+             by; it is reset the moment a reload ends. */
+          if (rlU <= 0) state.rlStage = 0;
+          else {
+            var ej = state.act && state.act.eject;
+            /* The old magazine, out of the well and onto the floor.
+               Multiplayer reloaded seventy-five weapons and not one of
+               them ever dropped anything. */
+            if (state.rlStage < 1 && rlU > 0.16 && kind === 'mag') {
+              state.rlStage = 1;
+              try {
+                game.dropMagazine(g, { fitted: fittedMag(), keep: brass, cap: 20 });
+              } catch (e) { void e; }
+            }
+            /* A REVOLVER'S SIX COME OUT TOGETHER, on the ejector rod,
+               when the cylinder is out -- it does not eject while
+               firing, which is the whole point of the design. A break
+               gun's pair are thrown clear as it opens. */
+            if (state.rlStage < 2 && rlU > 0.20 && (ej === 'reload' || ej === 'open')) {
+              state.rlStage = 2;
+              var n = ej === 'open' ? 2 : Math.min(6, state.rlMag || 6);
+              for (var e2 = 0; e2 < n; e2++) {
+                try {
+                  game.ejectCase(g, { drop: ej === 'reload', keep: brass, cap: 20 });
+                } catch (e) { void e; }
+              }
+            }
+          }
+          var ox2 = 0, oy2 = 0, oz2 = 0, carry = -1;
+          if (rlU > 0 && LE.RELOAD_CARRIES[kind]) {
+            var RE = LE.reloadReach(rlU, kind);
+            ox2 = RE.x; oy2 = RE.y; oz2 = RE.z; carry = RE.t;
+          }
+          /* The tap on the base of the magazine, which is the fourth
+             beat of the inspect. A short push, not a hold. Added AFTER
+             the reach, not before: a reload assigns these three rather
+             than adding to them, and the two can never overlap by more
+             than a frame anyway -- a reload cancels an inspect -- but a
+             term that is silently thrown away is how the swap's tip came
+             to be dead for months. */
+          if (INS.tap > 0) { oy2 += INS.tap * 0.018; ox2 -= INS.tap * 0.010; }
+          var handSet = false;
+          if (carry >= 0) {
+            var prop = game.reloadProp(props, id, g, kind, {
+              /* No ammunition table in multiplayer, so the engine's own
+                 defaults do the work. The magazine builder takes its
+                 dimensions from the gun it is parented to in every case
+                 that matters, and a 9 mm case in a rifle magazine is
+                 not a thing anybody has ever been able to see at
+                 viewmodel distance. */
+              ammo: {},
+              mag: state.rlMag,
+            });
+            state.rlProp = prop;
+            if (prop) {
+              var at = game.poseReload({
+                prop: prop, kind: kind, t: carry, root: g, camera: game.camera,
+                bore: g.boreAt != null ? g.boreAt : 0.06,
+                magWell: g.magWell || [0.02, -0.055, 0],
+                breechAt: g.breechAt,
+                sightAt: g.sightAt,
+                muzzleAt: g.muzzleAt,
+                mag: state.rlMag,
+                /* The fitted magazine changes how it is brought in -- a
+                   drum is rocked in back-first, an extended one comes up
+                   steeper. Read off what is actually on the gun. */
+                fitted: fittedMag(),
+              });
+              if (at) {
+                /* The hand is placed FROM the load, offset by where the
+                   fingers close on it, so the two cannot drift apart.
+                   Two separate paths that merely run near each other is
+                   what makes a magazine travel BESIDE a hand rather
+                   than in it. */
+                var dl = arms.digits && arms.digits.left;
+                var home = (dl && dl.at) || [0, 0, 0];
+                for (var s2 = 0; s2 < arms.support.length; s2++) {
+                  arms.support[s2].setPosition([
+                    at.x + at.hold[0] - home[0],
+                    at.y + at.hold[1] - home[1],
+                    at.z + at.hold[2] - home[2]]);
+                }
+                handSet = true;
+              }
+            }
+          } else if (state.rlProp) {
+            LE.stowReloadProp(state.rlProp);
+          }
+          if (!handSet) {
+            for (var s3 = 0; s3 < arms.support.length; s3++) {
+              arms.support[s3].setPosition([ox2, oy2, oz2]);
+            }
+          }
         }
       },
     };
@@ -2157,6 +2511,15 @@
     var punch = 0;
     var kick = 0, bob = 0, bobT = 0, lastHp = M.you.hp, wasAlive = true;
     var adsT = 0;
+    /* How much of the inspect is left to run, how strongly it is
+       applied, and how long the reload button has been held down --
+       the pad's way of asking for one.
+
+       `insW` is the whole of the cancel. Setting the clock to zero
+       teleports the weapon back to the carry between two frames; this
+       fades the pose out over INSPECT_CANCEL instead, from wherever it
+       had got to, while the clock keeps running underneath. */
+    var insT = 0, insW = 1, rlHeld = 0;
     var over = false;
     /* The kill cam cannot start the instant you die: the second after
        the shot has not been recorded yet, and a kill cam that stops on
@@ -2346,6 +2709,7 @@
         run: input.any(K.sprint), jump: input.once(K.jump),
         crouch: input.any(K.crouch),
         reload: input.once(K.reload), swap: input.once(K.swap),
+        inspect: input.once(K.inspect), reloadHeld: input.any(K.reload),
         slide: input.once(K.slide), scores: input.any(K.scores),
         fire: input.buttons.fire, aim: input.buttons.aim,
         lookX: 0, lookY: 0,
@@ -2515,15 +2879,49 @@
         var wantAim = (input.buttons.aim || p.aiming) ? 1 : 0;
         var rate = wantAim ? 13 : 9;
         adsT += (wantAim - adsT) * Math.min(1, dt * rate);
-        /* The reload, as a visible thing: the gun drops and rolls while
-           the hands work, and comes back up. There was no reload
-           animation at all. */
+        /* THE INSPECT, as a clock. Purely a thing you look at -- it
+           changes nothing the match knows about -- so it lives here
+           rather than in the rules, and anything that matters
+           interrupts it: firing, aiming, sprinting, reloading,
+           swapping, or dying. That is the whole contract of an
+           inspect: it is never in the way. */
+        if (cmd.inspect && !insT && !p.reloadUntil && !p.swapUntil
+            && !input.buttons.fire && !input.buttons.aim && !p.sprinting) {
+          insT = W.LE.INSPECT_TIME; insW = 1;
+        }
+        /* Held reload is the same request, for a pad with no button to
+           spare. Timed here because the pad layer does not know how
+           long a frame was. */
+        if (cmd.reloadHeld && !p.reloadUntil) rlHeld += dt; else rlHeld = 0;
+        if (rlHeld > 0.42 && !insT && !p.swapUntil && !input.buttons.fire) {
+          insT = W.LE.INSPECT_TIME; insW = 1; rlHeld = -9;
+        }
+        if (insT > 0) {
+          insT = Math.max(0, insT - dt);
+          var cancel = input.buttons.fire || input.buttons.aim || p.sprinting
+            || p.reloadUntil > M.time || p.swapUntil > M.time || !p.alive;
+          if (cancel) insW = Math.max(0, insW - dt / W.LE.INSPECT_CANCEL);
+          if (insW <= 0) insT = 0;
+        }
+
+        /* The reload, as a clock rather than as a shape.
+         *
+           This used to hand the viewmodel `sin(t*PI)` -- the bump that
+           drops the gun -- and that is all the viewmodel ever knew
+           about a reload. A bump comes back to zero at the end and
+           passes through every value twice on the way, so nothing
+           downstream could tell fetching a magazine from seating one,
+           and the hand had no clock to work to. It gets the linear
+           fraction now and derives its own bump; the magazine, the
+           clip, the cell, the belt, the shells and the loose rounds
+           all hang off this one number. */
         var rl = 0;
         if (p.reloadUntil > M.time) {
           var total = Math.max(0.2, w.reload || 2.0);
           var left = p.reloadUntil - M.time;
-          var t = Math.max(0, Math.min(1, 1 - left / total));
-          rl = Math.sin(Math.min(1, t) * Math.PI);
+          // Never exactly zero while a reload is running: zero means
+          // "not reloading", and the first frame of one is not that.
+          rl = Math.max(1e-3, Math.min(1, 1 - left / total));
         }
         vm.place(eye, yaw, pitch, adsT, p.sprinting, kick, bob,
           w.id || w.base || 'm4', rl, dt,
@@ -2531,7 +2929,15 @@
              of rounds inside it goes down as you shoot. The gun owns
              the rule -- see setRounds on the service arm -- and all
              this has to do is say how full it is. */
-          w.mag ? Math.max(0, Math.min(1, p.ammo[p.held] / w.mag)) : 1);
+          w.mag ? Math.max(0, Math.min(1, p.ammo[p.held] / w.mag)) : 1,
+          /* How far through a weapon swap, 0..1. The match owns the
+             clock -- the slot changes at its midpoint -- and all this
+             does is drop the gun out of the frame around that moment so
+             the exchange is never seen. */
+          p.swapUntil > M.time && p.swapFor > 0
+            ? Math.max(0, Math.min(1, 1 - (p.swapUntil - M.time) / p.swapFor)) : 0,
+          // And how far through the inspect.
+          insT > 0 ? 1 - insT / W.LE.INSPECT_TIME : 0, insW);
         /* THE CROSSHAIR GOES AWAY AT THE SIGHTS. Leaving it up while
            you are looking through the irons puts two aiming marks on
            the screen that do not agree, and the one that is right is

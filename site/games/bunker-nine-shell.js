@@ -3773,6 +3773,9 @@ var ACTIONS = [
      game that could not be moved. */
   { id: 'crouch', name: 'Crouch',       key: 'KeyC',        pad: 11 },
   { id: 'scores', name: 'Scoreboard',   key: 'Tab',         pad: 8 },
+  /* AND A THIRD. Looking at the weapon you are holding is a control
+     both games now have and neither screen listed. */
+  { id: 'inspect', name: 'Inspect weapon', key: 'KeyI',     pad: 12 },
   { id: 'pause',  name: 'Pause',        key: 'Escape',      pad: 9 },
 ];
 

@@ -2553,6 +2553,19 @@ function serviceArm(E, kind, opts) {
     K.mag ? K.mag.y - o.y : 0, 0];
   body.boltRest = [0, 0, 0];
   body.boltThrow = [-0.032, 0, 0];
+  /* WHERE THE CHAMBER IS, which is where a loose round goes in.
+   *
+     A tube-fed shotgun is loaded through a gate on the underside of the
+     receiver, just behind the lifter, and the reload had no way to ask
+     where that is -- so every pump and lever gun fell back to a constant
+     30 mm from the origin, which on a long receiver is halfway down the
+     magazine tube and on a short one is out in front of the gun. Two
+     fifths back from the front of the receiver is the lifter on every
+     one of them, because that is where the bolt face sits when the
+     action is closed. */
+  body.breechAt = K.rec
+    ? K.rec.front - (K.rec.front - K.rec.rear) * 0.42 - o.x
+    : 0.030;
   /* What the turning parts need to know about themselves. A cylinder
      indexes by one chamber a shot, so it has to say how many it has; a
      hinged gun has to say how far it opens. */

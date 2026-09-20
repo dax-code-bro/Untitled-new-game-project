@@ -626,6 +626,11 @@
     /* Far enough in the past that neither cooldown is running. */
     p.proneAt = -99; p.slideEnd = -99;
     p.held = 0;
+    /* The swap, as two halves: the old gun goes down out of the frame,
+       the slot changes where nothing can see it change, and the new one
+       comes up. `swapUntil` is when the whole of it ends, `swapFor` how
+       long it is, `swapTo` the slot it lands on. */
+    p.swapUntil = 0; p.swapFor = 0; p.swapTo = -1;
     p.ammo = [p.guns[0].mag, p.guns[1].mag];
     p.reserve = [p.guns[0].mag * 10, p.guns[1].mag * 10];
     p.reloadUntil = 0; p.nextShot = 0;
@@ -1370,13 +1375,55 @@
     if (Math.abs(p.kickSide) < 1e-5) p.kickSide = 0;
   }
 
+  /* HOW LONG A WEAPON TAKES TO GET OUT OF THE SHOULDER.
+   *
+     The one thing a weapon swap is, is a pair of animations -- the old
+     gun goes down out of the frame and the new one comes up into it.
+     Neither of them exists if the exchange happens in the same tick,
+     and multiplayer's did: `p.held = 1 - p.held`, and the gun in your
+     hands became a different gun between one frame and the next.
+
+     By class, because that is what multiplayer knows about a weapon's
+     bulk, and divided by the gun's own `swap` stat -- which has been on
+     every row of the table since the table was written and which
+     nothing has ever read. Attachments move it, so a quick-draw grip
+     now does something. */
+  var SWAP_TIME = { pistol: 0.34, smg: 0.44, shotgun: 0.52, ar: 0.52,
+    lmg: 0.66, sniper: 0.62, launcher: 0.60, special: 0.46 };
+
+  function beginSwap(M, p, n) {
+    if (n < 0 || n > 1 || n === p.held) return;
+    if (p.swapUntil > M.time) return;               // already mid-swap
+    var w = p.guns[p.held];
+    var dur = (SWAP_TIME[w && w.cls] || 0.48) / Math.max(0.4, (w && w.swap) || 1);
+    p.swapFor = dur;
+    p.swapUntil = M.time + dur;
+    p.swapTo = n;
+    /* A reload does not survive a swap. It did: the counter kept
+       running on a weapon that was no longer in your hands and filled
+       the magazine of the one you had put away. */
+    p.reloadUntil = 0;
+    // Nothing fires until the new gun is up.
+    p.nextShot = Math.max(p.nextShot, p.swapUntil);
+  }
+
+  /* Run it. The exchange lands at the halfway mark, which is where the
+     gun is furthest down and the change cannot be seen. */
+  function runSwap(M, p) {
+    if (!p.swapUntil) return;
+    if (p.swapTo >= 0 && M.time >= p.swapUntil - p.swapFor * 0.5) {
+      p.held = p.swapTo; p.swapTo = -1;
+    }
+    if (M.time >= p.swapUntil) { p.swapUntil = 0; p.swapFor = 0; }
+  }
+
   function beginReload(M, p) {
     var w = gun(p);
     if (p.reserve[p.held] <= 0) {
       /* Out. Swap to the other gun rather than standing there, which is
          what a player does and what makes a secondary worth having. */
       var other = 1 - p.held;
-      if (p.ammo[other] > 0 || p.reserve[other] > 0) { p.held = other; p.nextShot = M.time + 0.45; }
+      if (p.ammo[other] > 0 || p.reserve[other] > 0) beginSwap(M, p, other);
       return;
     }
     p.reloadUntil = M.time + w.reload;
@@ -3146,6 +3193,16 @@
         continue;
       }
       settleKick(M, p, dt);
+      /* EVERYBODY'S SWAP, not just the one being steered by a keyboard.
+       *
+         The first version of this ran runSwap inside the human command
+         path only, and beginReload calls beginSwap when you are out of
+         reserve -- so a bot that emptied its primary would set a swap
+         that nothing ever advanced and stand there for the rest of the
+         match holding an empty gun. Twelve of them, every match.
+         Lifting it here means one call covers bots and the player, and
+         a swap cannot be half-run by whoever happens to own the tick. */
+      runSwap(M, p);
       if (M.time >= p.reloadUntil && p.reloadUntil > 0) { finishReload(M, p); p.reloadUntil = 0; }
       /* Health comes back after five seconds untouched. Without it every
          fight after the first is decided by the one before it. */
@@ -3304,11 +3361,12 @@
     moveBy(M, p, (sy * fwd + rt.x * str) * speed, (cy * fwd + rt.z * str) * speed, dt,
       !!cmd.jump && p.grounded);
 
-    if (cmd.swap && M.time > (p._swapAt || 0)) {
-      p.held = 1 - p.held; p._swapAt = M.time + 0.6; p.nextShot = M.time + 0.5;
-      p.reloadUntil = 0;
-    }
-    if (cmd.reload && !p.reloadUntil && p.ammo[p.held] < w.mag) beginReload(M, p);
+    if (cmd.swap) beginSwap(M, p, 1 - p.held);
+    /* No reload while the gun is on its way down or up. You cannot
+       change a magazine in a weapon you are in the middle of putting
+       away, and letting it start here is how a reload came to finish
+       into the other gun. */
+    if (cmd.reload && !p.reloadUntil && !p.swapUntil && p.ammo[p.held] < w.mag) beginReload(M, p);
     /* Not while you are getting up out of a slide. */
     if (cmd.fire && M.time >= (p.slideRecover || 0) && !settling
         && (w.auto || !p._heldTrigger)) {
