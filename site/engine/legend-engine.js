@@ -10783,18 +10783,66 @@ function makeHumanoidClips() {
     lowerArmR: { keys: [[0.00, -115, 0, 0], [0.35, -62, 0, 0], [1.00, -19, 0, 0]] },
   }, { loop: false }));
 
+  /* THE JUMP, which had four bones in it and no pelvis, no feet, no
+     elbows and no trunk. A man going up came out of a standing pose with
+     his knees bending underneath him and everything else nailed still --
+     no crouch, because the hips had no position track and could not go
+     down; no push, because the ankles had no track and could not
+     plantarflex; no wind-up, because the arms went straight up from rest
+     with nothing behind them.
+
+     A jump is five beats and the first one is the one that sells it.
+     LOAD: the pelvis drops 105 mm, the knees fold to 60, the arms swing
+     BACK. DRIVE: the legs extend and the ankles come up onto the toes
+     44 degrees, which is the whole of the push. TUCK: knees up under
+     him in the air. REACH: the legs go down for the floor, toes first.
+     ABSORB: the pelvis takes 150 mm out of the landing and gives it
+     back. The contact poses are solved by engine/tools/pose-solve.js so
+     the foot is on the floor at load, at drive and at landing, and not
+     wherever the interpolation happened to leave it. */
   clips.push(buildClip('jump', 0.9, {
-    hips: { keys: [[0, 0, 0, 0], [0.2, -14, 0, 0], [0.5, 6, 0, 0], [1, 0, 0, 0]] },
-    /* The crouch before the leap had the knee going BACK and the shin
-       forward, the same inversion the crouch stance had. Thigh 35
-       forward with 85 in the knee is a man loading a jump; 20 and 50
-       in the air is the tuck. */
-    upperLegL: { keys: [[0, 0, 0, 0], [0.2, -21, 0, 0], [0.5, -26, 0, 0], [1, 0, 0, 0]] },
-    upperLegR: { keys: [[0, 0, 0, 0], [0.2, -21, 0, 0], [0.5, -26, 0, 0], [1, 0, 0, 0]] },
-    lowerLegL: { keys: [[0, 0, 0, 0], [0.2, 85, 0, 0], [0.5, 50, 0, 0], [1, 0, 0, 0]] },
-    lowerLegR: { keys: [[0, 0, 0, 0], [0.2, 85, 0, 0], [0.5, 50, 0, 0], [1, 0, 0, 0]] },
-    upperArmL: { keys: [[0, 0, 0, -8], [0.25, -110, 0, -22], [0.6, -70, 0, -18], [1, 0, 0, -8]] },
-    upperArmR: { keys: [[0, 0, 0, 8], [0.25, -110, 0, 22], [0.6, -70, 0, 18], [1, 0, 0, 8]] },
+    hips: {
+      keys: [[0.00, 2, 0, 0], [0.16, 18, 0, 0], [0.28, -2, 0, 0], [0.46, 8, 0, 0],
+        [0.64, 6, 0, 0], [0.80, 8, 0, 0], [0.88, 16, 0, 0], [1.00, 6, 0, 0]],
+      pos: [[0.00, 0, -0.005, 0], [0.16, 0, -0.105, 0], [0.28, 0, 0.030, 0],
+        [0.46, 0, 0.015, 0], [0.64, 0, 0.005, 0], [0.80, 0, -0.020, 0],
+        [0.88, 0, -0.128, 0], [1.00, 0, -0.040, 0]],
+    },
+    spine: { keys: [[0.00, 0, 0, 0], [0.16, -5, 0, 0], [0.28, 2, 0, 0], [0.46, 4, 0, 0],
+      [0.80, 0, 0, 0], [0.88, -5, 0, 0], [1.00, -2, 0, 0]] },
+    chest: { keys: [[0.00, 0, 0, 0], [0.16, -4, 0, 0], [0.28, 3, 0, 0], [0.46, 3, 0, 0],
+      [0.80, 0, 0, 0], [0.88, -4, 0, 0], [1.00, -1, 0, 0]] },
+    /* And the head stays level through all of it, which is what makes a
+       jump read as a body moving rather than a camera being thrown. */
+    neck: { keys: [[0.00, -1, 0, 0], [0.16, -7, 0, 0], [0.28, 1, 0, 0], [0.46, -4, 0, 0],
+      [0.88, -6, 0, 0], [1.00, -3, 0, 0]] },
+    head: { keys: [[0.00, 0, 0, 0], [0.16, -4, 0, 0], [0.28, 0, 0, 0], [0.46, -2, 0, 0],
+      [0.88, -3, 0, 0], [1.00, -1, 0, 0]] },
+
+    upperLegL: { keys: [[0.00, -9.3, 0, 1], [0.16, -49.7, 0, 3], [0.28, -8, 0, 1],
+      [0.46, -52, 0, 4], [0.64, -40, 0, 3], [0.80, -30, 0, 2], [0.88, -58.7, 0, 3], [1.00, -25.4, 0, 1]] },
+    upperLegR: { keys: [[0.00, -9.3, 0, -1], [0.16, -48.0, 0, -3], [0.28, -8, 0, -1],
+      [0.46, -49, 0, -4], [0.64, -38, 0, -3], [0.80, -29, 0, -2], [0.88, -57.0, 0, -3], [1.00, -24.0, 0, -1]] },
+    lowerLegL: { keys: [[0.00, 15, 0, 0], [0.16, 60.2, 0, 0], [0.28, 10, 0, 0],
+      [0.46, 66, 0, 0], [0.64, 40, 0, 0], [0.80, 22, 0, 0], [0.88, 70.1, 0, 0], [1.00, 36.7, 0, 0]] },
+    lowerLegR: { keys: [[0.00, 15, 0, 0], [0.16, 58.4, 0, 0], [0.28, 10, 0, 0],
+      [0.46, 63, 0, 0], [0.64, 38, 0, 0], [0.80, 21, 0, 0], [0.88, 68.0, 0, 0], [1.00, 35.4, 0, 0]] },
+    footL: { keys: [[0.00, -7.7, 0, 0], [0.16, -25, 0, 0], [0.28, 44, 0, 0],
+      [0.46, -16, 0, 0], [0.64, -10, 0, 0], [0.80, -6, 0, 0], [0.88, -25, 0, 0], [1.00, -17.4, 0, 0]] },
+    footR: { keys: [[0.00, -7.7, 0, 0], [0.16, -24, 0, 0], [0.28, 42, 0, 0],
+      [0.46, -15, 0, 0], [0.64, -10, 0, 0], [0.80, -6, 0, 0], [0.88, -24, 0, 0], [1.00, -17.0, 0, 0]] },
+
+    /* The arms go BACK before they go up. Anticipation is the whole of
+       why a jump reads as effort; without it the arms rise out of a
+       standing pose and the man looks lifted rather than launched. */
+    upperArmL: { keys: [[0.00, 0, 0, 8], [0.16, 42, 0, 14], [0.30, -108, 0, 22],
+      [0.60, -68, 0, 18], [0.88, 18, 0, 12], [1.00, 0, 0, 8]] },
+    upperArmR: { keys: [[0.00, 0, 0, -8], [0.16, 40, 0, -14], [0.30, -110, 0, -22],
+      [0.60, -66, 0, -18], [0.88, 16, 0, -12], [1.00, 0, 0, -8]] },
+    lowerArmL: { keys: [[0.00, -13, 0, 0], [0.16, -32, 0, 0], [0.30, -22, 0, 0],
+      [0.60, -40, 0, 0], [0.88, -46, 0, 0], [1.00, -13, 0, 0]] },
+    lowerArmR: { keys: [[0.00, -13, 0, 0], [0.16, -30, 0, 0], [0.30, -24, 0, 0],
+      [0.60, -38, 0, 0], [0.88, -44, 0, 0], [1.00, -13, 0, 0]] },
   }, { loop: false }));
 
   clips.push(buildClip('wave', 1.6, {
