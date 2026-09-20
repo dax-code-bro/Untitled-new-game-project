@@ -405,14 +405,25 @@ Engine.prototype.poseReload = function (o) {
     rot0 = [0, -34, -22];
     show = u2 < 0.995;
   } else if (kind === 'rocket') {
-    /* Nose first, back into the muzzle. It comes from below and in
-       FRONT of the weapon rather than from the pouch under the
-       receiver, because that is where a second rocket is carried and
-       because a warhead arriving from behind would have to pass
-       through the tube to get where it is going. */
+    /* Nose first, into the muzzle. It comes from below and in FRONT of
+       the weapon rather than from the pouch under the receiver, because
+       that is where a second rocket is carried and because a warhead
+       arriving from behind would have to pass through the tube to get
+       where it is going.
+
+       AND IT ENDS IN FRONT OF THE MUZZLE, NOT BEHIND IT. This seated
+       the warhead 30 mm back from muzzleAt -- inside the tube, where
+       the one thing worth watching is invisible. A rocket-propelled
+       grenade is loaded from the front and STAYS proud of the tube;
+       the weapon says exactly how far, because tipAt is the far end of
+       the model and exists for this reason: "a Panzerfaust's warhead
+       stands 200 mm out in front of the muzzle and an RPG's grenade
+       310". Seat it there and it is the same object in the same place
+       the loaded weapon draws it. */
     const mz = o.muzzleAt == null ? 0.42 : o.muzzleAt;
-    to = [mz - 0.030, bore, 0];
-    from = [mz + 0.150, bore - 0.175, -0.120];
+    const tip = o.tipAt != null && o.tipAt > mz ? o.tipAt : mz + 0.120;
+    to = [tip - 0.060, bore, 0];
+    from = [tip + 0.190, bore - 0.185, -0.130];
     rot0 = [0, -26, -30];
     // It stays in the tube once it is home, so nothing to hide.
     show = u2 < 0.99;

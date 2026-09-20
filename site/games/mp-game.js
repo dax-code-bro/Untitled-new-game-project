@@ -1720,7 +1720,7 @@
                 magWell: g.magWell || [0.02, -0.055, 0],
                 breechAt: g.breechAt,
                 sightAt: g.sightAt,
-                muzzleAt: g.muzzleAt,
+                muzzleAt: g.muzzleAt, tipAt: g.tipAt,
                 mag: state.rlMag,
                 /* The fitted magazine changes how it is brought in -- a
                    drum is rocked in back-first, an extended one comes up
