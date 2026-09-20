@@ -1,35 +1,31 @@
-const { leg, curve, settleAnkle, solvePelvis, GROUND, FLOOR, LEG, anklePath } = require('./gait-solve.js');
-const GD = require('./gait-defs.js');
-
-/* zf   ankle z at contact           zb   ankle z when the heel comes off
-   rollBack how far the ankle comes back FORWARD as it pivots over the toe
-   toeOff  how high the ankle rises on the toe   clear  swing arc height
-   retract how far past the contact point the swing reaches before settling */
-const GAITS = GD.GAITS;
-const KEYS = GD.KEYS;
-const want = process.argv[2];
-for (const name in GAITS) {
-  if (want && name !== want) continue;
-  const g = GAITS[name], keys = KEYS[name];
-  g.hipsPitch = GD.TRUNK[name].pitch;
-  settleAnkle(g);
-  const L = leg(g, 0, keys), R = leg(g, 0.5, keys);
-  const stride = g.stride;
-  console.log(`--- ${name}  T=${g.T}s  stance=${g.stance}  stride=${stride.toFixed(2)}m/cycle  natural=${(stride / g.T).toFixed(2)} m/s`);
-  console.log(`    reach L ${(L.reach * 100).toFixed(1)}%  R ${(R.reach * 100).toFixed(1)}%   lowest toe ${L.lowToe.toFixed(3)}  heel ${L.lowHeel.toFixed(3)}  (floor ${FLOOR})  ankle clamped by ${Math.max(L.clamped, R.clamped).toFixed(1)} deg`);
-  let zmin = 1e9, zmax = -1e9, ymin = 1e9;
-  for (let i = 0; i < 200; i++) { const [y, z] = anklePath(g, i / 200); zmin = Math.min(zmin, z); zmax = Math.max(zmax, z); ymin = Math.min(ymin, y); }
-  console.log(`    ankle path z ${zmin.toFixed(3)}..${zmax.toFixed(3)}   y min ${ymin.toFixed(3)}`);
+/* Measure every gait without emitting it: how much of its own leg each
+   one asks for, whether any part of a sole goes through the floor, how
+   far the pelvis rides, and how fast the cycle travels over the ground.
+   `node engine/tools/gait-report.js [name ...]` */
+const S = require('./gait-solve.js');
+const G = require('./gait-defs.js');
+const want = process.argv.slice(2);
+let bad = 0;
+for (const name in G.GAITS) {
+  if (want.length && !want.includes(name)) continue;
+  const g = G.GAITS[name], keys = G.KEYS[name], tr = G.TRUNK[name];
+  g.hipsPitch = tr.pitch;
+  S.prepare(g);
+  const L = S.legTracks(g, 'L', keys), R = S.legTracks(g, 'R', keys);
   let pmin = 1e9, pmax = -1e9;
   for (const [, v] of g.hipsY) { pmin = Math.min(pmin, v); pmax = Math.max(pmax, v); }
-  console.log(`    pelvis ${pmin.toFixed(3)}..${pmax.toFixed(3)}  (bob ${((pmax - pmin) * 1000).toFixed(0)} mm)`);
-  if (process.env.SRC) {
-    const q = (t) => '[' + t.map(([p, v]) => `[${p.toFixed(2)}, ${v}, 0, 0]`).join(', ') + ']';
-    console.log('    upperLegL:', q(L.hip));
-    console.log('    lowerLegL:', q(L.knee));
-    console.log('    footL:    ', q(L.foot));
-    console.log('    upperLegR:', q(R.hip));
-    console.log('    lowerLegR:', q(R.knee));
-    console.log('    footR:    ', q(R.foot));
-  }
+  let zl = 1e9, zh = -1e9;
+  for (const side of ['L', 'R'])
+    for (let i = 0; i < 200; i++) {
+      const z = S.anklePath(g, g[side], i / 200)[1];
+      zl = Math.min(zl, z); zh = Math.max(zh, z);
+    }
+  const lowest = Math.min(L.lowToe, L.lowHeel, R.lowToe, R.lowHeel);
+  const reach = Math.max(L.reach, R.reach), clamp = Math.max(L.clamped, R.clamped);
+  if (reach > 1.005 || lowest < S.FLOOR - 0.002) bad++;
+  console.log(`${name.padEnd(13)} ${g.T}s  stride ${g.stride.toFixed(2)}m = ${(g.stride / g.T).toFixed(2)} m/s`);
+  console.log(`  reach ${(reach * 100).toFixed(1)}%   sole low ${lowest.toFixed(3)} (floor ${S.FLOOR})`
+    + `   ankle clamp ${clamp.toFixed(1)} deg   pelvis ${pmin.toFixed(3)}..${pmax.toFixed(3)} (${((pmax - pmin) * 1000).toFixed(0)} mm)`
+    + `   ankle z ${zl.toFixed(2)}..${zh.toFixed(2)}`);
 }
+if (bad) { console.log(`\n${bad} gait(s) over-reach or penetrate`); process.exit(1); }
