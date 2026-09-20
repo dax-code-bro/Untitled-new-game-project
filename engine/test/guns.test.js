@@ -97,7 +97,7 @@ function check(name, cond, detail = '') {
       return {
         lo, hi, verts, nan, per,
         names: g.partNames.slice(),
-        muzzleAt: g.muzzleAt, sightAt: g.sightAt, boreAt: g.boreAt,
+        muzzleAt: g.muzzleAt, tipAt: g.tipAt, sightAt: g.sightAt, boreAt: g.boreAt,
         magWell: g.magWell,
         spec: { muzzle: spec.muzzle, hgX1: spec.hg ? spec.hg.x1 : null,
           sightY: spec.sight.y, recUp: spec.rec.up,
@@ -136,10 +136,23 @@ function check(name, cond, detail = '') {
     if (len < band[0] || len > band[1]) {
       problems.push(`${len.toFixed(2)} m long (${r.cls || 'service'} wants ${band[0]}-${band[1]})`);
     }
-    /* The muzzle must be the front of the gun. Anything in front of it
-       is a part that has escaped. */
-    if (r.hi[0] > r.muzzleAt + 0.060) {
-      problems.push(`something reaches ${(r.hi[0] - r.muzzleAt).toFixed(3)} past the muzzle`);
+    /* The DECLARED far end must be the front of the gun. Anything in
+       front of it is a part that has escaped.
+     *
+       Measured against muzzleAt this flagged four weapons that are
+       correct: a Panzerfaust's warhead stands 195 mm out in front of
+       the tube and an RPG's grenade 310, a Mosin was issued with its
+       spike fixed and it reaches 260 past the crown, and a trench gun's
+       knife 180. The engine already records where a model really ends
+       -- `tipAt` exists precisely because the studio rig framed on
+       muzzleAt and cropped the RPG's grenade off the side of the
+       picture -- so ask that. It is not a looser question: anything
+       past the end the weapon DECLARES is still a part that has got
+       out, and a weapon that declares nothing still gets measured
+       against its muzzle. */
+    const far = r.tipAt != null ? Math.max(r.tipAt, r.muzzleAt) : r.muzzleAt;
+    if (r.hi[0] > far + 0.060) {
+      problems.push(`something reaches ${(r.hi[0] - far).toFixed(3)} past the front of it`);
     }
     if (r.muzzleAt > r.hi[0] + 0.005) {
       problems.push(`the muzzle is ${(r.muzzleAt - r.hi[0]).toFixed(3)} beyond the model`);

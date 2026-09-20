@@ -119,7 +119,13 @@ Object.assign(SERVICE_KINDS, {
     comp: { x0: 0.204, x1: 0.234, n: 3, w: 0.0036, hw: 0.0026 },
     serr: { kind: 'slant', rear: [-0.052, -0.012], pitch: 0.0070,
       out: 0.0018, top: true, hw: 0.0020 },
-    hammer: { kind: 'spur', x: -0.056, y: 0.0130 },
+/* IN, NOT OUT. The spur is drawn 15 mm behind its own pin, so at
+       x -0.056 it reached -0.071 -- eleven millimetres behind a frame
+       that ends at -0.060, and it took the whole pistol from 340 mm
+       overall to 351 against a class ceiling of 340. A Desert Eagle's
+       hammer sits inside the backstrap's profile; this one now does
+       too. */
+    hammer: { kind: 'spur', x: -0.046, y: 0.0130 },
     grip: { deep: 1.14, wide: 1.10, e: 1.20, checkN: [6, 8], checkH: 0.0012 },
     mass: 1.9, bound: 0.20,
   }),
@@ -556,6 +562,14 @@ Object.assign(SERVICE_KINDS, {
     stock: { kind: 'poly', butt: -0.370, comb: 0.0270, drop: 0.0250, w: 0.0215 },
     grip: { x: -0.092, y: -0.0180, len: 0.108, rake: 0.30 },
     rail: { x0: -0.070, x1: 0.050 },
+    /* AND THE SCOPE IT SAYS IT HAS. `rear: 'scope'` told svcSights not
+       to build irons and told nobody to build glass, so the table
+       version of this rifle aimed at a sight line 12 mm above the
+       tallest thing on it -- a scoped rifle with no scope. (The
+       hand-built remington700 the game actually issues has always had
+       one; this is the table stand-in, which the contact sheet and
+       every measurement pass use.) */
+    optic: { x0: -0.075, x1: 0.075, r: 0.0165, bell: 0.0200, y: 0.0520 },
     sight: { y: 0.0430, frontX: 0.120, rearX: -0.050, front: 'none', rear: 'scope' },
     mass: 4.3, bound: 0.68,
   }),
@@ -637,7 +651,7 @@ Object.assign(SERVICE_KINDS, {
        on the front instead of a brake and a low scope tucked down onto
        the rail rather than a tower over it. Where the Barrett is a
        skeleton you can see through, this is a slab. */
-    tube: { x0: 0.640, x1: 0.840, r: 0.0270, open: true },
+    tube: { x0: 0.640, x1: 0.840, r: 0.0270, open: true, can: true },
     barrel: { r0: 0.0165, r1: 0.0148, bore: 0.0064, step: 0.360, brake: null },
     optic: { x0: -0.110, x1: 0.100, r: 0.0195, bell: 0.0270, y: 0.0560 },
     muzzle: 0.680,
@@ -1137,6 +1151,8 @@ Object.assign(SERVICE_KINDS, {
     bipod: null,
     limbs: { x: 0.390, y: 0.0060, spread: 0.290, sweep: 0.048, latch: 0.116 },
     rail: { x0: -0.080, x1: 0.060 },
+    // Same as the Remington: it claimed glass and had none.
+    optic: { x0: -0.080, x1: 0.055, r: 0.0140, bell: 0.0165, y: 0.0450 },
     sight: { y: 0.0380, frontX: 0.150, rearX: -0.060, front: 'none', rear: 'scope' },
     mass: 3.1, bound: 0.60,
   }),

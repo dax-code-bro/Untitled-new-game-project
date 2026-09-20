@@ -2405,7 +2405,17 @@ function serviceArm(E, kind, opts) {
   const body = mountArm(E, 'svc:' + kind, parts, K.mats, opts, K.bound, K.mass, 'steel');
   const o = K.origin;
   body.boreAt = -o.y;
-  body.muzzleAt = K.muzzle - o.x;
+  /* THE MUZZLE IS THE END OF THE CAN, if there is a can.
+   *
+     A suppressor is where the bullet actually leaves and where the
+     flash belongs, and the Kill Streak's runs 160 mm past the end of
+     its barrel. Left at K.muzzle, its rounds would have been spawning
+     inside their own suppressor and the flash with them. `can` says
+     the coaxial tube is one; the two launchers' warheads and the two
+     bayonets are handled by tipAt below, because those are things in
+     FRONT of the muzzle rather than a new one. */
+  const can = K.tube && !Array.isArray(K.tube) && K.tube.can ? K.tube.x1 : null;
+  body.muzzleAt = (can != null ? Math.max(can, K.muzzle) : K.muzzle) - o.x;
   /* HOW LONG THE WEAPON ACTUALLY IS, which is not where the round
      leaves it. A Panzerfaust's warhead stands 200 mm out in front of
      the muzzle and an RPG's grenade 310 mm, so anything that frames,
@@ -2413,7 +2423,15 @@ function serviceArm(E, kind, opts) {
      not muzzleAt -- the studio rig framed on muzzleAt and cropped the
      RPG's grenade off the side of the picture. The muzzle flash still
      belongs at muzzleAt, because that is where the gas is. */
-  body.tipAt = K.warhead ? K.warhead.x1 - o.x : body.muzzleAt;
+  /* AND A BAYONET IS A FAR END TOO. This knew about warheads, because
+     a Panzerfaust's stands 200 mm out in front; it did not know about
+     the spike on a Mosin (260 mm) or the knife on a trench gun (180),
+     both of which are deliberately past the muzzle and both of which
+     read to anything measuring muzzleAt as a part that had escaped. */
+  body.tipAt = Math.max(
+    K.warhead ? K.warhead.x1 - o.x : -1e9,
+    K.bayonet ? K.bayonet.x1 - o.x : -1e9,
+    body.muzzleAt);
   /* THROUGH THE GLASS, IF THERE IS GLASS.
    *
      sightAt is the height the game puts the camera at when the player
