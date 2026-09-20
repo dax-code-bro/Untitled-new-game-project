@@ -7,14 +7,23 @@
  * story — which is the whole point, since every Legend game is one
  * self-contained HTML file.
  *
- * Usage:  node engine/build.js [--watch]
+ * Usage:  node engine/build.js [--watch] [--out <path>]
+ *
+ * --out writes somewhere other than site/engine/legend-engine.js. That
+ * exists so a bundle can be built and measured WHILE the test suite is
+ * running against the real one -- the suite reads the file at run time,
+ * so rebuilding underneath it silently changes what half the run was
+ * testing.
  */
 const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
 const SRC = path.join(__dirname, 'src');
-const OUT = path.join(ROOT, 'site', 'engine', 'legend-engine.js');
+const outAt = process.argv.indexOf('--out');
+const OUT = outAt >= 0 && process.argv[outAt + 1]
+  ? path.resolve(process.argv[outAt + 1])
+  : path.join(ROOT, 'site', 'engine', 'legend-engine.js');
 const VERSION = require('./version.json').version;
 
 function build() {
@@ -76,6 +85,9 @@ const LegendEngine = {
      cluster that started this was found with a renderer and confirmed
      in forty milliseconds with arithmetic. */
   SERVICE_KINDS, makeServiceArm,
+  /* And the twelve that are hand-dimensioned rather than table-built,
+     for the same reason. See BESPOKE_ARMS in 97a-arms.js. */
+  BESPOKE_ARMS, makeBespokeArm,
   bakeCavityAO,
   clamp, lerp, smoothstep,
 };

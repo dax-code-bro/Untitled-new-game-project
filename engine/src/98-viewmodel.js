@@ -1492,7 +1492,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
              * number at 7 weapons and 48.6 mm so it cannot grow back while
              * that waits. */
             const e = Math.abs(dd - wantM) + (solidM && solidM(nx, ny, nz) ? 0.08 : 0);
-            cands.push([cand, e + cross * 2.5, cross > 0]);
+            cands.push([cand, e + cross * 2.5, cross > 0, dd]);
           }
           /* A hand grips by CLOSING, and contact must not hold a joint
              straighter than that.
@@ -1511,7 +1511,51 @@ function buildViewHand(g, rawAt, side, opts = {}) {
            * the weapon does the flatter half of the range get a look. The
            * knuckle is nearly free -- a proximal phalanx does lie flat
            * along a forend -- and the two joints past it are not. */
-          const floorA = lim * (k === 0 ? 0.15 : 0.45);
+          /* PAST THE CREST, CLOSE AT THE NATURAL RATE.
+           *
+           * This is the fix the block above spent eight attempts
+           * arriving at and then wrote down instead of making, and the
+           * note is worth reading first: seven of the fifteen
+           * two-handed weapons had the support hand standing in the
+           * sight picture, the Scattergun 49 mm above the line, and
+           * every previous attempt either did nothing at all or bought
+           * its millimetres by pushing fingers through the handguard.
+           *
+           * WHAT IS ACTUALLY WRONG. "Close as far as contact allows"
+           * is a rule about tracking a surface, and it assumes there
+           * is one. Past the top of a forend there is not. The nearest
+           * surface is then the crest BEHIND the finger, so curling
+           * further moves AWAY from it, the straight candidate scores
+           * best, and the rule marches the finger on into clear air
+           * over the top of the gun -- 18 to 61 mm above the thing it
+           * is supposed to be holding.
+           *
+           * THE TEST FOR IT is right there in the row that was already
+           * being computed and thrown away: if closing all the way
+           * takes the joint FURTHER from the surface than not closing
+           * at all, the surface is receding, and this joint is past
+           * the crest of it. Going down the far side gives the
+           * opposite sign, so the two cases do not get confused; a
+           * tall flat face gives the same sign as a crest, which is
+           * correct too -- that is the Kill Streak's forend, where
+           * every curl loses contact and the old rule produced four
+           * straight posts standing beside the gun.
+           *
+           * WHAT TO DO ABOUT IT is not to add a sight-line term -- the
+           * previous attempt did, and the cheapest route under the
+           * line turned out to be straight through the handguard, at
+           * 50 per cent burial on the Breakwater's fingers. It is to
+           * stop tracking: search only angles at or above the finger's
+           * own anatomical bend, and if none of those is clean, take
+           * the shallowest crossing AMONG THOSE rather than falling
+           * back to the whole range. The finger keeps closing at the
+           * rate a finger closes at, which is what it does in the air,
+           * and the burial charge still decides between the angles
+           * that remain. */
+          const crested = cands.length > 1
+            && cands[cands.length - 1][3] > cands[0][3] + r0 * 0.35;
+          const floorA = crested ? Math.min(lim, bends[k] * 0.5)
+            : lim * (k === 0 ? 0.15 : 0.45);
           const pick = (minA) => {
             let bE = 1e9, bA = null;
             for (const [cand, e, xd] of cands) if (!xd && cand >= minA && e < bE) bE = e;
@@ -1520,7 +1564,9 @@ function buildViewHand(g, rawAt, side, opts = {}) {
             return [bA, bE];
           };
           const selF = pick(floorA);
-          const sel = selF || pick(0);
+          /* No dropping back to the straight half of the range when the
+             surface has run out -- that is the whole point. */
+          const sel = selF || (crested ? null : pick(0));
           /* Held straighter than a curl by contact, as against nothing
              reachable at all -- two different faults with opposite
              repairs, and `walled` only counts the second. */
@@ -1547,7 +1593,10 @@ function buildViewHand(g, rawAt, side, opts = {}) {
              * longer ties, so take the shallowest crossing there is: the
              * finger presses into what it holds rather than through it. */
             let bA = null, bE = 1e9;
-            for (const [cand, e] of cands) if (e < bE) { bE = e; bA = cand; }
+            for (const [cand, e] of cands) {
+              if (crested && cand < floorA) continue;
+              if (e < bE) { bE = e; bA = cand; }
+            }
             if (bA != null) a = bA;
             if (opts.out) opts.out.walled = (opts.out.walled || 0) + 1;
           }

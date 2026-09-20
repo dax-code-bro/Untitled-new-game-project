@@ -20652,7 +20652,10 @@ function spin(g, raw, seg = 24, smooth = 32, cy = 0, cz = 0) {
 
 /* A crowned muzzle: the bore actually goes in. Depth is generous because
    what sells it is the shadow, and a 2 mm dimple has none. */
-function crown(g, x, outR, boreR, depth = 0.035, taper = 0) {
+function crown(g, x, outR, boreR, depth = 0.035, taper = 0, cy = 0, cz = 0) {
+  /* cy/cz, because a rotary gun has six muzzles and none of them is on
+     the axis. Without them every crown a minigun drew landed in the
+     hole in the middle of its barrel cluster. */
   spin(g, [
     [x - depth, boreR],
     [x - 0.0015, boreR],
@@ -20660,7 +20663,7 @@ function crown(g, x, outR, boreR, depth = 0.035, taper = 0) {
     [x, outR],                       // muzzle face
     [x - 0.006, outR + taper],
     [x - depth, outR + taper],
-  ], 22, 34);
+  ], 22, 34, cy, cz);
 }
 
 /* A hoop standing around the bore — barrel band, sight hood, muzzle nut. */
@@ -20987,8 +20990,23 @@ function buildMP5Steel(g) {
     strut(g, [K.recRear + 0.004, -0.0060, s * 0.0116], [K.recRear - 0.010, -0.0060, s * 0.0116],
       ringOutline(0.0062, 12));
   }
-  // Sling loop under the wrist, and the receiver's rear end cap.
-  strut(g, [K.recRear + 0.010, -0.0230, -0.0040], [K.recRear + 0.010, -0.0230, 0.0040], ringOutline(0.0034, 10));
+  /* Sling loop under the wrist -- AND THE STALK THAT HOLDS IT ON.
+   *
+     The loop alone sat at y -0.0230 with a 3.4 mm section, so its top
+     was at -0.0196 and the receiver's underside at that x is -0.0168:
+     a 2.8 mm gap, and the loop was a steel ring hanging in the air
+     behind the pistol grip. It is the 8 mm floating cluster
+     attached.test.js has reported on this weapon since it was written,
+     and it is the same fault as the sling swivels that used to hang
+     under every pistol in the service table -- a fitting drawn at a
+     height that was guessed instead of taken from the thing it bolts
+     to. The measurement is in the code now so it cannot drift. */
+  {
+    const lx = K.recRear + 0.010, ly = -0.0230, under = -0.0168;
+    strut(g, [lx, ly, -0.0040], [lx, ly, 0.0040], ringOutline(0.0034, 10));
+    strut(g, [lx, under + 0.0010, 0], [lx, ly + 0.0020, 0],
+      roundRect(0.0030, 0.0030, 0.0032, 3.0, 10));
+  }
 }
 
 /* The retractable stock: two rails and a stamped butt. Its own part so the
@@ -22771,7 +22789,14 @@ function buildMgSteel(g) {
 
   /* Sights: a folding leaf at the back on a tall base, a hooded post at
      the front of the shroud. Both stand well clear of the cover. */
-  hardBox(g, -0.0620, K.feedY + 0.0180, 0, 0.0110, 0.0130, 0.0090);
+  /* THE BASE REACHES THE RECEIVER. Centred on feedY + 0.0180 with a
+     13 mm half-height, its underside sat at 0.0395 and the receiver's
+     top at that station is 0.0330 -- so the leaf sight and the tall
+     base under it were a 39 mm assembly hanging six millimetres above
+     the gun. That is the MG 42's entry in the attachment sweep, and it
+     has been there since the model was built. The top of the base has
+     not moved; only the bottom, down onto the thing it is bolted to. */
+  hardBox(g, -0.0620, K.feedY + 0.0145, 0, 0.0110, 0.0165, 0.0090);
   band(g, -0.0680, -0.0560, 0.0042, 0.0105, 20, K.feedY + 0.0330);
   band(g, K.shroudFront - 0.030, K.shroudFront - 0.010, 0.0090, 0.0120, 20, K.feedY + 0.0330);
   hardBox(g, K.shroudFront - 0.020, K.feedY + 0.0270, 0, 0.0018, 0.0055, 0.0016);
@@ -23496,9 +23521,18 @@ function buildBWPoly(g) {
     ax(K.recRear - 0.025, roundRect(0.0060, 0.0120, 0.0150, 3.0, 18), K.combY),
     ax(K.stockButt + 0.075, roundRect(0.0060, 0.0130, 0.0158, 3.0, 18), K.combY - 0.0030),
   ], true, true);
-  // Recoil pad, canted, with the ribs a pad has.
+  /* Recoil pad, canted, with the ribs a pad has.
+   *
+     ITS FRONT FACE OVERLAPS THE STOCK. The stock's last station is at
+     stockButt + 0.018 and the pad's first was at + 0.016 -- two
+     millimetres BEHIND it, so the pad, its three ribs and all 42
+     pieces of it were a slab of rubber floating just off the end of
+     the gun. Two millimetres is invisible in any photograph and is
+     exactly what the attachment sweep is for; this is the Breakwater's
+     entry in it. Starting at + 0.022 buries the pad's front four
+     millimetres into the stock, which is what a recoil pad does. */
   sweepPath(g, [
-    ax(K.stockButt + 0.016, roundRect(0.0300, 0.0330, 0.0206, 3.0, 22), -0.0112),
+    ax(K.stockButt + 0.022, roundRect(0.0300, 0.0330, 0.0206, 3.0, 22), -0.0112),
     ax(K.stockButt + 0.002, roundRect(0.0310, 0.0345, 0.0212, 3.0, 22), -0.0125),
   ], true, true);
   for (let i = 0; i < 3; i++) {
@@ -23911,6 +23945,84 @@ Engine.prototype.mg42 = function (opts = {}) {
 };
 
 /* A loose length of belt, for the hand that is loading one. */
+/* ==================================================================
+   THE HAND-BUILT WEAPONS, AS PURE GEOMETRY
+   ==================================================================
+   Twelve of the models in this game are not built from the service
+   table -- they are hand-dimensioned, one function per part, and the
+   only way in was through Engine.prototype, which needs a GL context,
+   which needs a browser.
+
+   That mattered the day attached.test.js started reporting floating
+   parts on three of them. The numbers it prints are a signature -- how
+   many pieces, how big, roughly where -- and chasing a signature to a
+   part means building the model and walking its components, which
+   meant a Chromium and a two-minute round trip per guess.
+
+   Same reasoning as exporting SERVICE_KINDS and the texture bank: the
+   builders are arithmetic, so let arithmetic reach them. Each entry
+   returns exactly what the Engine.prototype method caches, with the
+   origin already subtracted, so a component walked here is at the same
+   coordinates the sweep reports.
+   ================================================================== */
+const BESPOKE_ARMS = {
+  mp5: () => {
+    const steel = new Geometry(); buildMP5Steel(steel);
+    const poly = new Geometry(); buildMP5Poly(poly);
+    const mag = new Geometry(); buildMP5Mag(mag);
+    const bolt = new Geometry(); buildMP5Bolt(bolt);
+    const stock = new Geometry(); buildMP5Stock(stock);
+    return fin({ steel, poly, mag, bolt, stock }, MP5_ORIGIN);
+  },
+  breakwater: () => {
+    const steel = new Geometry(); buildBWSteel(steel);
+    const poly = new Geometry(); buildBWPoly(poly);
+    const mag = new Geometry(); buildBWMag(mag);
+    const bolt = new Geometry(); buildBWBolt(bolt);
+    return fin({ steel, poly, mag, bolt }, BW_ORIGIN);
+  },
+  mauserC96: () => {
+    const steel = new Geometry(); buildMauserSteel(steel);
+    const wood = new Geometry(); buildMauserGrip(wood);
+    const bolt = new Geometry(); buildMauserBolt(bolt);
+    const clip = new Geometry(); buildStripperClip(clip, 10, 0.00385, 0.0086);
+    return fin({ steel, wood, bolt, clip }, C96_ORIGIN);
+  },
+  model5: () => {
+    const steel = new Geometry(); buildModel5Steel(steel);
+    const grip = new Geometry(); buildModel5Grip(grip);
+    const cylinder = new Geometry(); buildModel5Cylinder(cylinder);
+    const hammer = new Geometry(); buildModel5Hammer(hammer);
+    return fin({ steel, grip, cylinder, hammer }, MOD5_ORIGIN);
+  },
+  riotShield: () => {
+    const panel = new Geometry(); buildShieldPanel(panel);
+    const frame = new Geometry(); buildShieldFrame(frame);
+    return fin({ frame, panel }, SHIELD_ORIGIN);
+  },
+  scattergun: () => makeDoubleGun('scatter'),
+  sawnOff: () => makeDoubleGun('sawnoff'),
+  paralyzer: () => makeDoubleGun('paralyzer'),
+  remington700: () => makeRifle('remington'),
+  killStreak: () => makeRifle('killstreak'),
+  mg42: () => {
+    const steel = new Geometry(); buildMgSteel(steel);
+    const wood = new Geometry(); buildMgStock(wood);
+    const belt = new Geometry(); buildMgBelt(belt);
+    const bolt = new Geometry(); buildMgBolt(bolt);
+    const out = fin({ steel, wood, belt, bolt }, MG42_ORIGIN);
+    /* The cover is built about its own hinge pin and placed there, so
+       it is finalised on its own -- see the note in the method. */
+    const cover = new Geometry(); buildMgCover(cover);
+    out.cover = cover.finalize();
+    return out;
+  },
+};
+function makeBespokeArm(name) {
+  const f = BESPOKE_ARMS[name];
+  return f ? f() : null;
+}
+
 Engine.prototype.mgBelt = function (opts = {}) {
   const n = (opts.belt && opts.belt.links) || 12;
   const key = 'mgbelt:' + n;
@@ -25901,9 +26013,21 @@ function svcReceiver(g, K) {
 
 function svcSights(g, K) {
   const S = K.sight;
-  /* Front: a post, and a hood or two ears round it on most. */
-  svcSlab(g, [[S.frontX - 0.0022, S.y + 0.002, -0.004, 0.0020, 4],
-    [S.frontX + 0.0022, S.y + 0.002, -0.004, 0.0020, 4]]);
+  /* 'none' MEANS NONE, and it did not.
+   *
+     The post and the rear base were drawn unconditionally and only the
+     hood, the ears and the aperture were switched on `S.front` /
+     `S.rear`. So every weapon that says `front: 'none', rear: 'none'`
+     -- which is what a rifle with a scope and no irons says, and there
+     are now eight of them -- got a post and a notch anyway, sitting
+     under the glass where a shooter would be looking straight at them.
+     I wrote six of those specs this session assuming the field did
+     what it says. */
+  if (S.front !== 'none') {
+    /* Front: a post, and a hood or two ears round it on most. */
+    svcSlab(g, [[S.frontX - 0.0022, S.y + 0.002, -0.004, 0.0020, 4],
+      [S.frontX + 0.0022, S.y + 0.002, -0.004, 0.0020, 4]]);
+  }
   if (S.front === 'hood') {
     /* A HOOD IS A RING ON A POST, NOT A WHEEL ON THE BARREL.
      *
@@ -25950,6 +26074,12 @@ function svcSights(g, K) {
         roundRect(0.0075, 0.0075, 0.0016, 3, 10));
     }
   }
+  /* 'scope' TOO. A weapon that aims through glass has no iron notch,
+     and the switch only knew 'aperture' and everything-else -- so the
+     Remington and the crossbow, both of which say `rear: 'scope'`,
+     were getting a leaf sight built under their optics. Same fault as
+     'none' and found in the same sweep. */
+  if (S.rear === 'none' || S.rear === 'scope') return;
   /* Rear: a notch on a ramp, an aperture on a drum, or a folding
      ladder. All three are the same two boxes with a different hole. */
   /* The base's top was S.y - 0.008 and the aperture ring's underside
@@ -25957,8 +26087,30 @@ function svcSights(g, K) {
      1.5 mm above its own base -- eight weapons, and a millimetre and a
      half is invisible in a photograph and obvious to a contact test.
      The base reaches the ring now. */
-  svcSlab(g, [[S.rearX - 0.010, S.y - 0.004, 0.002, 0.0090, 4],
-    [S.rearX + 0.008, S.y - 0.004, 0.002, 0.0090, 4]]);
+  /* THE BASE STANDS ON WHATEVER IS UNDER IT, not on the bore.
+   *
+     This was `up: S.y - 0.004, down: 0.002` -- a block reaching from
+     two millimetres below the BORE LINE all the way up to the sight.
+     On a rifle whose rear sight is 35 mm up that is a 37 mm plank with
+     33 mm of it buried inside the receiver: invisible, wasteful, and
+     wrong in a way nothing could see.
+
+     On the riot shield, whose notional bore runs through the middle of
+     a slab and whose sight is at 215 mm, it was a 213 MILLIMETRE PLANK
+     standing in the hollow between the two skins, touching nothing.
+     That is the 221 mm floating cluster attached.test.js has been
+     reporting since the day it was written.
+
+     Same fix as the carry-handle legs: ask svcTopAt what is actually
+     there and land on it. Every normal rifle keeps the block it always
+     had from the outside; only the buried part goes. */
+  {
+    const top = S.y - 0.004;
+    const bot = Math.min(svcTopAt(K, S.rearX) - 0.0015, top - 0.0035);
+    const hh = (top - bot) / 2;
+    svcSlab(g, [[S.rearX - 0.010, hh, hh, 0.0090, 4],
+      [S.rearX + 0.008, hh, hh, 0.0090, 4]], 0, true, true, (top + bot) / 2);
+  }
   if (S.rear === 'aperture') {
     band(g, S.rearX - 0.004, S.rearX + 0.002, 0.0028, 0.0075, 16, S.y + 0.001, 0);
   } else {
@@ -27298,7 +27450,23 @@ function svcRounds(shell, tip, K) {
 function svcFeedRound(shell, tip, K) {
   const A = K.ammo, M = K.mag;
   if (!A || !M || M.kind === 'none' || M.kind === 'belt') return;
-  svcCartridge(shell, tip, A, new Vec3(0, 0, 0),
+  /* IN THE CHAMBER, WHICH IS INSIDE THE BARREL.
+   *
+     This was drawn at the model origin -- the grip, near enough -- so
+     on every weapon here the chambered round sat in the feed way
+     BEHIND the barrel's breech face, floating in the hollow between
+     the bolt tube and the receiver walls. It read as attached only by
+     accident: the old rear-sight base was a plank running from the
+     bore line up to the sight, and on four of these guns that plank
+     happened to pass through the same air. Fixing the plank left four
+     cartridges hanging in space, which is what they always were.
+
+     A chambered round's nose is in the chamber and its base is against
+     the breech, so put it there: the barrel's rear face is a capped
+     disc and the round now goes through it. Correct, and it is what
+     makes it touch. */
+  const x = K.barrel.rear + 0.006 - A.len;
+  svcCartridge(shell, tip, A, new Vec3(x, 0, 0),
     new Vec3(1, 0, 0), new Vec3(0, 0, 1));
 }
 
@@ -28564,7 +28732,15 @@ function svcRotary(g, K) {
     const th = (i / n) * TAU;
     const cy = Math.cos(th) * R, cz = Math.sin(th) * R;
     tubeRun(g, [[K.barrel.rear + 0.030, br], [K.muzzle - 0.004, br]], 12, true, false, cy, cz);
-    crown(g, K.muzzle, br, br * 0.55, 0.014);
+    /* ON ITS OWN BARREL. `crown(g, K.muzzle, br, ...)` takes no centre
+       and defaults to the axis, so all six crowns were drawn on top of
+       one another in the middle of the cluster, where the Hydra has no
+       barrel at all -- thirty-six pieces in a 14 mm box, hanging in
+       the hole between the six muzzles. The loop worked out cy and cz
+       and then only gave them to the tube. Same shape of mistake as
+       the takedown pins and the rivets, and the third time it has been
+       this exact one: a position computed and not passed. */
+    crown(g, K.muzzle, br, br * 0.55, 0.014, cy, cz);
   }
   band(g, K.muzzle - 0.030, K.muzzle - 0.018, R - br - 0.002, R + br + 0.002, 22);
   band(g, K.barrel.rear + 0.020, K.barrel.rear + 0.050, 0.004, R + br + 0.004, 22);
@@ -29254,6 +29430,14 @@ Object.assign(SERVICE_KINDS, {
     vents: { kind: 'slot', x0: 0.180, x1: 0.360, n: 5, r: 0.0300, w: 0.0160,
       yOff: -0.0205 },
     barrel: { r0: 0.0170, r1: 0.0152, bore: 0.0064, step: 0.420, brake: 'slots' },
+    /* AND THE SIGHT LINE, which the optic edit above dropped on the
+       floor. Replacing the block that ended with `sight:` took the
+       whole line with it, so this rifle fell back to boltSpec's base
+       row -- hooded ears at 560 mm and a notch, on a weapon with a
+       26 mm scope tube over it, and `y` back to 0.033 when the glass
+       is at 0.090. `y` is the height the game aims through, so that
+       was not two spare parts, it was the wrong sight line. */
+    sight: { y: 0.0560, frontX: 0.150, rearX: -0.080, front: 'none', rear: 'none' },
     mass: 13.5, bound: 0.96,
   }),
 
@@ -29717,11 +29901,16 @@ Object.assign(SERVICE_KINDS, {
     grip: { x: -0.150, y: -0.0200, len: 0.108, rake: 0.10 },
     trigger: null,
     mag: null,
-    /* A shield HAS a sight, and it is the only reason the viewport is
-       there: the rim of the vision slit is what you line up over. It
-       sits at the top of the slit, which is above the bore -- the bore
-       here being the notional line through the middle of the slab. */
-    sight: { y: 0.2150, frontX: -0.010, rearX: -0.250, front: 'blade', rear: 'notch' },
+    /* A shield HAS a sight LINE, and it is the only reason the viewport
+       is there: the rim of the vision slit is what you line up over,
+       and `y` is that height so the game aims through it. But it has
+       no sight PARTS -- there is no post and no notch on a slab of
+       laminate, and asking for them built a 213 mm plank standing in
+       the hollow between the two skins, touching nothing. That is the
+       221 mm floating cluster the attachment sweep has reported since
+       the day it was written. The slit's own lips, which svcDetails
+       already draws on the skin, are the sight. */
+    sight: { y: 0.2150, frontX: -0.010, rearX: -0.250, front: 'none', rear: 'none' },
     handle: { x0: -0.230, x1: -0.090, y: 0.0000, r: 0.0130 },
     rail: null, bipod: null, rotary: 0,
     mass: 7.5, bound: 0.44,
@@ -31442,7 +31631,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
              * number at 7 weapons and 48.6 mm so it cannot grow back while
              * that waits. */
             const e = Math.abs(dd - wantM) + (solidM && solidM(nx, ny, nz) ? 0.08 : 0);
-            cands.push([cand, e + cross * 2.5, cross > 0]);
+            cands.push([cand, e + cross * 2.5, cross > 0, dd]);
           }
           /* A hand grips by CLOSING, and contact must not hold a joint
              straighter than that.
@@ -31461,7 +31650,51 @@ function buildViewHand(g, rawAt, side, opts = {}) {
            * the weapon does the flatter half of the range get a look. The
            * knuckle is nearly free -- a proximal phalanx does lie flat
            * along a forend -- and the two joints past it are not. */
-          const floorA = lim * (k === 0 ? 0.15 : 0.45);
+          /* PAST THE CREST, CLOSE AT THE NATURAL RATE.
+           *
+           * This is the fix the block above spent eight attempts
+           * arriving at and then wrote down instead of making, and the
+           * note is worth reading first: seven of the fifteen
+           * two-handed weapons had the support hand standing in the
+           * sight picture, the Scattergun 49 mm above the line, and
+           * every previous attempt either did nothing at all or bought
+           * its millimetres by pushing fingers through the handguard.
+           *
+           * WHAT IS ACTUALLY WRONG. "Close as far as contact allows"
+           * is a rule about tracking a surface, and it assumes there
+           * is one. Past the top of a forend there is not. The nearest
+           * surface is then the crest BEHIND the finger, so curling
+           * further moves AWAY from it, the straight candidate scores
+           * best, and the rule marches the finger on into clear air
+           * over the top of the gun -- 18 to 61 mm above the thing it
+           * is supposed to be holding.
+           *
+           * THE TEST FOR IT is right there in the row that was already
+           * being computed and thrown away: if closing all the way
+           * takes the joint FURTHER from the surface than not closing
+           * at all, the surface is receding, and this joint is past
+           * the crest of it. Going down the far side gives the
+           * opposite sign, so the two cases do not get confused; a
+           * tall flat face gives the same sign as a crest, which is
+           * correct too -- that is the Kill Streak's forend, where
+           * every curl loses contact and the old rule produced four
+           * straight posts standing beside the gun.
+           *
+           * WHAT TO DO ABOUT IT is not to add a sight-line term -- the
+           * previous attempt did, and the cheapest route under the
+           * line turned out to be straight through the handguard, at
+           * 50 per cent burial on the Breakwater's fingers. It is to
+           * stop tracking: search only angles at or above the finger's
+           * own anatomical bend, and if none of those is clean, take
+           * the shallowest crossing AMONG THOSE rather than falling
+           * back to the whole range. The finger keeps closing at the
+           * rate a finger closes at, which is what it does in the air,
+           * and the burial charge still decides between the angles
+           * that remain. */
+          const crested = cands.length > 1
+            && cands[cands.length - 1][3] > cands[0][3] + r0 * 0.35;
+          const floorA = crested ? Math.min(lim, bends[k] * 0.5)
+            : lim * (k === 0 ? 0.15 : 0.45);
           const pick = (minA) => {
             let bE = 1e9, bA = null;
             for (const [cand, e, xd] of cands) if (!xd && cand >= minA && e < bE) bE = e;
@@ -31470,7 +31703,9 @@ function buildViewHand(g, rawAt, side, opts = {}) {
             return [bA, bE];
           };
           const selF = pick(floorA);
-          const sel = selF || pick(0);
+          /* No dropping back to the straight half of the range when the
+             surface has run out -- that is the whole point. */
+          const sel = selF || (crested ? null : pick(0));
           /* Held straighter than a curl by contact, as against nothing
              reachable at all -- two different faults with opposite
              repairs, and `walled` only counts the second. */
@@ -31497,7 +31732,10 @@ function buildViewHand(g, rawAt, side, opts = {}) {
              * longer ties, so take the shallowest crossing there is: the
              * finger presses into what it holds rather than through it. */
             let bA = null, bE = 1e9;
-            for (const [cand, e] of cands) if (e < bE) { bE = e; bA = cand; }
+            for (const [cand, e] of cands) {
+              if (crested && cand < floorA) continue;
+              if (e < bE) { bE = e; bA = cand; }
+            }
             if (bA != null) a = bA;
             if (opts.out) opts.out.walled = (opts.out.walled || 0) + 1;
           }
@@ -34659,6 +34897,9 @@ const LegendEngine = {
      cluster that started this was found with a renderer and confirmed
      in forty milliseconds with arithmetic. */
   SERVICE_KINDS, makeServiceArm,
+  /* And the twelve that are hand-dimensioned rather than table-built,
+     for the same reason. See BESPOKE_ARMS in 97a-arms.js. */
+  BESPOKE_ARMS, makeBespokeArm,
   bakeCavityAO,
   clamp, lerp, smoothstep,
 };

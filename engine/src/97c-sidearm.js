@@ -680,6 +680,14 @@ Object.assign(SERVICE_KINDS, {
     vents: { kind: 'slot', x0: 0.180, x1: 0.360, n: 5, r: 0.0300, w: 0.0160,
       yOff: -0.0205 },
     barrel: { r0: 0.0170, r1: 0.0152, bore: 0.0064, step: 0.420, brake: 'slots' },
+    /* AND THE SIGHT LINE, which the optic edit above dropped on the
+       floor. Replacing the block that ended with `sight:` took the
+       whole line with it, so this rifle fell back to boltSpec's base
+       row -- hooded ears at 560 mm and a notch, on a weapon with a
+       26 mm scope tube over it, and `y` back to 0.033 when the glass
+       is at 0.090. `y` is the height the game aims through, so that
+       was not two spare parts, it was the wrong sight line. */
+    sight: { y: 0.0560, frontX: 0.150, rearX: -0.080, front: 'none', rear: 'none' },
     mass: 13.5, bound: 0.96,
   }),
 
@@ -1143,11 +1151,16 @@ Object.assign(SERVICE_KINDS, {
     grip: { x: -0.150, y: -0.0200, len: 0.108, rake: 0.10 },
     trigger: null,
     mag: null,
-    /* A shield HAS a sight, and it is the only reason the viewport is
-       there: the rim of the vision slit is what you line up over. It
-       sits at the top of the slit, which is above the bore -- the bore
-       here being the notional line through the middle of the slab. */
-    sight: { y: 0.2150, frontX: -0.010, rearX: -0.250, front: 'blade', rear: 'notch' },
+    /* A shield HAS a sight LINE, and it is the only reason the viewport
+       is there: the rim of the vision slit is what you line up over,
+       and `y` is that height so the game aims through it. But it has
+       no sight PARTS -- there is no post and no notch on a slab of
+       laminate, and asking for them built a 213 mm plank standing in
+       the hollow between the two skins, touching nothing. That is the
+       221 mm floating cluster the attachment sweep has reported since
+       the day it was written. The slit's own lips, which svcDetails
+       already draws on the skin, are the sight. */
+    sight: { y: 0.2150, frontX: -0.010, rearX: -0.250, front: 'none', rear: 'none' },
     handle: { x0: -0.230, x1: -0.090, y: 0.0000, r: 0.0130 },
     rail: null, bipod: null, rotary: 0,
     mass: 7.5, bound: 0.44,

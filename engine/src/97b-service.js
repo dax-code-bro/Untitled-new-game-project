@@ -363,9 +363,21 @@ function svcReceiver(g, K) {
 
 function svcSights(g, K) {
   const S = K.sight;
-  /* Front: a post, and a hood or two ears round it on most. */
-  svcSlab(g, [[S.frontX - 0.0022, S.y + 0.002, -0.004, 0.0020, 4],
-    [S.frontX + 0.0022, S.y + 0.002, -0.004, 0.0020, 4]]);
+  /* 'none' MEANS NONE, and it did not.
+   *
+     The post and the rear base were drawn unconditionally and only the
+     hood, the ears and the aperture were switched on `S.front` /
+     `S.rear`. So every weapon that says `front: 'none', rear: 'none'`
+     -- which is what a rifle with a scope and no irons says, and there
+     are now eight of them -- got a post and a notch anyway, sitting
+     under the glass where a shooter would be looking straight at them.
+     I wrote six of those specs this session assuming the field did
+     what it says. */
+  if (S.front !== 'none') {
+    /* Front: a post, and a hood or two ears round it on most. */
+    svcSlab(g, [[S.frontX - 0.0022, S.y + 0.002, -0.004, 0.0020, 4],
+      [S.frontX + 0.0022, S.y + 0.002, -0.004, 0.0020, 4]]);
+  }
   if (S.front === 'hood') {
     /* A HOOD IS A RING ON A POST, NOT A WHEEL ON THE BARREL.
      *
@@ -412,6 +424,12 @@ function svcSights(g, K) {
         roundRect(0.0075, 0.0075, 0.0016, 3, 10));
     }
   }
+  /* 'scope' TOO. A weapon that aims through glass has no iron notch,
+     and the switch only knew 'aperture' and everything-else -- so the
+     Remington and the crossbow, both of which say `rear: 'scope'`,
+     were getting a leaf sight built under their optics. Same fault as
+     'none' and found in the same sweep. */
+  if (S.rear === 'none' || S.rear === 'scope') return;
   /* Rear: a notch on a ramp, an aperture on a drum, or a folding
      ladder. All three are the same two boxes with a different hole. */
   /* The base's top was S.y - 0.008 and the aperture ring's underside
@@ -419,8 +437,30 @@ function svcSights(g, K) {
      1.5 mm above its own base -- eight weapons, and a millimetre and a
      half is invisible in a photograph and obvious to a contact test.
      The base reaches the ring now. */
-  svcSlab(g, [[S.rearX - 0.010, S.y - 0.004, 0.002, 0.0090, 4],
-    [S.rearX + 0.008, S.y - 0.004, 0.002, 0.0090, 4]]);
+  /* THE BASE STANDS ON WHATEVER IS UNDER IT, not on the bore.
+   *
+     This was `up: S.y - 0.004, down: 0.002` -- a block reaching from
+     two millimetres below the BORE LINE all the way up to the sight.
+     On a rifle whose rear sight is 35 mm up that is a 37 mm plank with
+     33 mm of it buried inside the receiver: invisible, wasteful, and
+     wrong in a way nothing could see.
+
+     On the riot shield, whose notional bore runs through the middle of
+     a slab and whose sight is at 215 mm, it was a 213 MILLIMETRE PLANK
+     standing in the hollow between the two skins, touching nothing.
+     That is the 221 mm floating cluster attached.test.js has been
+     reporting since the day it was written.
+
+     Same fix as the carry-handle legs: ask svcTopAt what is actually
+     there and land on it. Every normal rifle keeps the block it always
+     had from the outside; only the buried part goes. */
+  {
+    const top = S.y - 0.004;
+    const bot = Math.min(svcTopAt(K, S.rearX) - 0.0015, top - 0.0035);
+    const hh = (top - bot) / 2;
+    svcSlab(g, [[S.rearX - 0.010, hh, hh, 0.0090, 4],
+      [S.rearX + 0.008, hh, hh, 0.0090, 4]], 0, true, true, (top + bot) / 2);
+  }
   if (S.rear === 'aperture') {
     band(g, S.rearX - 0.004, S.rearX + 0.002, 0.0028, 0.0075, 16, S.y + 0.001, 0);
   } else {
@@ -1760,7 +1800,23 @@ function svcRounds(shell, tip, K) {
 function svcFeedRound(shell, tip, K) {
   const A = K.ammo, M = K.mag;
   if (!A || !M || M.kind === 'none' || M.kind === 'belt') return;
-  svcCartridge(shell, tip, A, new Vec3(0, 0, 0),
+  /* IN THE CHAMBER, WHICH IS INSIDE THE BARREL.
+   *
+     This was drawn at the model origin -- the grip, near enough -- so
+     on every weapon here the chambered round sat in the feed way
+     BEHIND the barrel's breech face, floating in the hollow between
+     the bolt tube and the receiver walls. It read as attached only by
+     accident: the old rear-sight base was a plank running from the
+     bore line up to the sight, and on four of these guns that plank
+     happened to pass through the same air. Fixing the plank left four
+     cartridges hanging in space, which is what they always were.
+
+     A chambered round's nose is in the chamber and its base is against
+     the breech, so put it there: the barrel's rear face is a capped
+     disc and the round now goes through it. Correct, and it is what
+     makes it touch. */
+  const x = K.barrel.rear + 0.006 - A.len;
+  svcCartridge(shell, tip, A, new Vec3(x, 0, 0),
     new Vec3(1, 0, 0), new Vec3(0, 0, 1));
 }
 
@@ -3026,7 +3082,15 @@ function svcRotary(g, K) {
     const th = (i / n) * TAU;
     const cy = Math.cos(th) * R, cz = Math.sin(th) * R;
     tubeRun(g, [[K.barrel.rear + 0.030, br], [K.muzzle - 0.004, br]], 12, true, false, cy, cz);
-    crown(g, K.muzzle, br, br * 0.55, 0.014);
+    /* ON ITS OWN BARREL. `crown(g, K.muzzle, br, ...)` takes no centre
+       and defaults to the axis, so all six crowns were drawn on top of
+       one another in the middle of the cluster, where the Hydra has no
+       barrel at all -- thirty-six pieces in a 14 mm box, hanging in
+       the hole between the six muzzles. The loop worked out cy and cz
+       and then only gave them to the tube. Same shape of mistake as
+       the takedown pins and the rivets, and the third time it has been
+       this exact one: a position computed and not passed. */
+    crown(g, K.muzzle, br, br * 0.55, 0.014, cy, cz);
   }
   band(g, K.muzzle - 0.030, K.muzzle - 0.018, R - br - 0.002, R + br + 0.002, 22);
   band(g, K.barrel.rear + 0.020, K.barrel.rear + 0.050, 0.004, R + br + 0.004, 22);

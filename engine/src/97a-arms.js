@@ -76,7 +76,10 @@ function spin(g, raw, seg = 24, smooth = 32, cy = 0, cz = 0) {
 
 /* A crowned muzzle: the bore actually goes in. Depth is generous because
    what sells it is the shadow, and a 2 mm dimple has none. */
-function crown(g, x, outR, boreR, depth = 0.035, taper = 0) {
+function crown(g, x, outR, boreR, depth = 0.035, taper = 0, cy = 0, cz = 0) {
+  /* cy/cz, because a rotary gun has six muzzles and none of them is on
+     the axis. Without them every crown a minigun drew landed in the
+     hole in the middle of its barrel cluster. */
   spin(g, [
     [x - depth, boreR],
     [x - 0.0015, boreR],
@@ -84,7 +87,7 @@ function crown(g, x, outR, boreR, depth = 0.035, taper = 0) {
     [x, outR],                       // muzzle face
     [x - 0.006, outR + taper],
     [x - depth, outR + taper],
-  ], 22, 34);
+  ], 22, 34, cy, cz);
 }
 
 /* A hoop standing around the bore — barrel band, sight hood, muzzle nut. */
@@ -411,8 +414,23 @@ function buildMP5Steel(g) {
     strut(g, [K.recRear + 0.004, -0.0060, s * 0.0116], [K.recRear - 0.010, -0.0060, s * 0.0116],
       ringOutline(0.0062, 12));
   }
-  // Sling loop under the wrist, and the receiver's rear end cap.
-  strut(g, [K.recRear + 0.010, -0.0230, -0.0040], [K.recRear + 0.010, -0.0230, 0.0040], ringOutline(0.0034, 10));
+  /* Sling loop under the wrist -- AND THE STALK THAT HOLDS IT ON.
+   *
+     The loop alone sat at y -0.0230 with a 3.4 mm section, so its top
+     was at -0.0196 and the receiver's underside at that x is -0.0168:
+     a 2.8 mm gap, and the loop was a steel ring hanging in the air
+     behind the pistol grip. It is the 8 mm floating cluster
+     attached.test.js has reported on this weapon since it was written,
+     and it is the same fault as the sling swivels that used to hang
+     under every pistol in the service table -- a fitting drawn at a
+     height that was guessed instead of taken from the thing it bolts
+     to. The measurement is in the code now so it cannot drift. */
+  {
+    const lx = K.recRear + 0.010, ly = -0.0230, under = -0.0168;
+    strut(g, [lx, ly, -0.0040], [lx, ly, 0.0040], ringOutline(0.0034, 10));
+    strut(g, [lx, under + 0.0010, 0], [lx, ly + 0.0020, 0],
+      roundRect(0.0030, 0.0030, 0.0032, 3.0, 10));
+  }
 }
 
 /* The retractable stock: two rails and a stamped butt. Its own part so the
@@ -2195,7 +2213,14 @@ function buildMgSteel(g) {
 
   /* Sights: a folding leaf at the back on a tall base, a hooded post at
      the front of the shroud. Both stand well clear of the cover. */
-  hardBox(g, -0.0620, K.feedY + 0.0180, 0, 0.0110, 0.0130, 0.0090);
+  /* THE BASE REACHES THE RECEIVER. Centred on feedY + 0.0180 with a
+     13 mm half-height, its underside sat at 0.0395 and the receiver's
+     top at that station is 0.0330 -- so the leaf sight and the tall
+     base under it were a 39 mm assembly hanging six millimetres above
+     the gun. That is the MG 42's entry in the attachment sweep, and it
+     has been there since the model was built. The top of the base has
+     not moved; only the bottom, down onto the thing it is bolted to. */
+  hardBox(g, -0.0620, K.feedY + 0.0145, 0, 0.0110, 0.0165, 0.0090);
   band(g, -0.0680, -0.0560, 0.0042, 0.0105, 20, K.feedY + 0.0330);
   band(g, K.shroudFront - 0.030, K.shroudFront - 0.010, 0.0090, 0.0120, 20, K.feedY + 0.0330);
   hardBox(g, K.shroudFront - 0.020, K.feedY + 0.0270, 0, 0.0018, 0.0055, 0.0016);
@@ -2920,9 +2945,18 @@ function buildBWPoly(g) {
     ax(K.recRear - 0.025, roundRect(0.0060, 0.0120, 0.0150, 3.0, 18), K.combY),
     ax(K.stockButt + 0.075, roundRect(0.0060, 0.0130, 0.0158, 3.0, 18), K.combY - 0.0030),
   ], true, true);
-  // Recoil pad, canted, with the ribs a pad has.
+  /* Recoil pad, canted, with the ribs a pad has.
+   *
+     ITS FRONT FACE OVERLAPS THE STOCK. The stock's last station is at
+     stockButt + 0.018 and the pad's first was at + 0.016 -- two
+     millimetres BEHIND it, so the pad, its three ribs and all 42
+     pieces of it were a slab of rubber floating just off the end of
+     the gun. Two millimetres is invisible in any photograph and is
+     exactly what the attachment sweep is for; this is the Breakwater's
+     entry in it. Starting at + 0.022 buries the pad's front four
+     millimetres into the stock, which is what a recoil pad does. */
   sweepPath(g, [
-    ax(K.stockButt + 0.016, roundRect(0.0300, 0.0330, 0.0206, 3.0, 22), -0.0112),
+    ax(K.stockButt + 0.022, roundRect(0.0300, 0.0330, 0.0206, 3.0, 22), -0.0112),
     ax(K.stockButt + 0.002, roundRect(0.0310, 0.0345, 0.0212, 3.0, 22), -0.0125),
   ], true, true);
   for (let i = 0; i < 3; i++) {
@@ -3335,6 +3369,84 @@ Engine.prototype.mg42 = function (opts = {}) {
 };
 
 /* A loose length of belt, for the hand that is loading one. */
+/* ==================================================================
+   THE HAND-BUILT WEAPONS, AS PURE GEOMETRY
+   ==================================================================
+   Twelve of the models in this game are not built from the service
+   table -- they are hand-dimensioned, one function per part, and the
+   only way in was through Engine.prototype, which needs a GL context,
+   which needs a browser.
+
+   That mattered the day attached.test.js started reporting floating
+   parts on three of them. The numbers it prints are a signature -- how
+   many pieces, how big, roughly where -- and chasing a signature to a
+   part means building the model and walking its components, which
+   meant a Chromium and a two-minute round trip per guess.
+
+   Same reasoning as exporting SERVICE_KINDS and the texture bank: the
+   builders are arithmetic, so let arithmetic reach them. Each entry
+   returns exactly what the Engine.prototype method caches, with the
+   origin already subtracted, so a component walked here is at the same
+   coordinates the sweep reports.
+   ================================================================== */
+const BESPOKE_ARMS = {
+  mp5: () => {
+    const steel = new Geometry(); buildMP5Steel(steel);
+    const poly = new Geometry(); buildMP5Poly(poly);
+    const mag = new Geometry(); buildMP5Mag(mag);
+    const bolt = new Geometry(); buildMP5Bolt(bolt);
+    const stock = new Geometry(); buildMP5Stock(stock);
+    return fin({ steel, poly, mag, bolt, stock }, MP5_ORIGIN);
+  },
+  breakwater: () => {
+    const steel = new Geometry(); buildBWSteel(steel);
+    const poly = new Geometry(); buildBWPoly(poly);
+    const mag = new Geometry(); buildBWMag(mag);
+    const bolt = new Geometry(); buildBWBolt(bolt);
+    return fin({ steel, poly, mag, bolt }, BW_ORIGIN);
+  },
+  mauserC96: () => {
+    const steel = new Geometry(); buildMauserSteel(steel);
+    const wood = new Geometry(); buildMauserGrip(wood);
+    const bolt = new Geometry(); buildMauserBolt(bolt);
+    const clip = new Geometry(); buildStripperClip(clip, 10, 0.00385, 0.0086);
+    return fin({ steel, wood, bolt, clip }, C96_ORIGIN);
+  },
+  model5: () => {
+    const steel = new Geometry(); buildModel5Steel(steel);
+    const grip = new Geometry(); buildModel5Grip(grip);
+    const cylinder = new Geometry(); buildModel5Cylinder(cylinder);
+    const hammer = new Geometry(); buildModel5Hammer(hammer);
+    return fin({ steel, grip, cylinder, hammer }, MOD5_ORIGIN);
+  },
+  riotShield: () => {
+    const panel = new Geometry(); buildShieldPanel(panel);
+    const frame = new Geometry(); buildShieldFrame(frame);
+    return fin({ frame, panel }, SHIELD_ORIGIN);
+  },
+  scattergun: () => makeDoubleGun('scatter'),
+  sawnOff: () => makeDoubleGun('sawnoff'),
+  paralyzer: () => makeDoubleGun('paralyzer'),
+  remington700: () => makeRifle('remington'),
+  killStreak: () => makeRifle('killstreak'),
+  mg42: () => {
+    const steel = new Geometry(); buildMgSteel(steel);
+    const wood = new Geometry(); buildMgStock(wood);
+    const belt = new Geometry(); buildMgBelt(belt);
+    const bolt = new Geometry(); buildMgBolt(bolt);
+    const out = fin({ steel, wood, belt, bolt }, MG42_ORIGIN);
+    /* The cover is built about its own hinge pin and placed there, so
+       it is finalised on its own -- see the note in the method. */
+    const cover = new Geometry(); buildMgCover(cover);
+    out.cover = cover.finalize();
+    return out;
+  },
+};
+function makeBespokeArm(name) {
+  const f = BESPOKE_ARMS[name];
+  return f ? f() : null;
+}
+
 Engine.prototype.mgBelt = function (opts = {}) {
   const n = (opts.belt && opts.belt.links) || 12;
   const key = 'mgbelt:' + n;
