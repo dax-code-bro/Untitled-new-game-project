@@ -31736,23 +31736,50 @@ function buildViewHand(g, rawAt, side, opts = {}) {
            * its forend to 50, which grip.test.js charged for. Inert on
            * the target and harmful off it, so it is gone.
            *
-           * AND THE REASON IT COULD NEVER HAVE WORKED is in the same
-           * report, one line down: "hands finishing clear of the top of
-           * the weapon they hold: thompson +61 mauser +52 scatter +42
-           * mp5 +39 sawnoff +37 breakwater +36 paralyzer +29". Put the
-           * Thompson's figure beside its +30 over the sight line. The
-           * hand is 61 mm above the handguard and 30 mm above the sight
-           * line, so a hand simply RESTING on that weapon would have
-           * its fingers 31 mm BELOW the line. Every one of the seven is
-           * like that.
+           * WHERE IT IS, measured part by part rather than as one
+           * number. sightblock reports "the hand", meaning every actor
+           * on the rig; broken down on the Scattergun it is:
            *
-           * No rule about how a finger curls can fix that, because the
-           * finger is not near the gun to begin with -- it is curling in
-           * open air 40 to 60 mm above the thing it is supposed to be
-           * wrapped round. The fault is in where the HAND is put, which
-           * is the seating search in buildViewHand, not in this march.
-           * Eight attempts aimed at solveCurl, the ninth aimed here, and
-           * all nine were aimed at the wrong subsystem. */
+           *     parts.12   +48.6 mm over the sight line
+           *     parts.13   +47.9
+           *     parts.10   +47.3
+           *     parts.8    +47.0
+           *     lThumb      -1.2
+           *     lSkin      -1.2 ... and on the other six, -17 to -33
+           *
+           * The PALM is below the line on all seven. What is over it is
+           * four fingers, spaced 24 mm apart along the barrel, each
+           * about 40 mm above the top of the forend -- and the palm's
+           * own top is at or under that forend. So the hand is where it
+           * should be and the fingers are not on it: they run up past
+           * the side of the forend and stop, instead of coming over the
+           * top and down. Four posts, which is the phrase three
+           * paragraphs up.
+           *
+           * (An earlier reading of this had it the other way round --
+           * that the hand was not on the gun at all -- from taking
+           * sightblock's "hand" to mean the palm. It does not; it means
+           * the whole rig, fingers included. The palm is fine.)
+           *
+           * WHY THE CREST TEST DID NOT FIRE ON THEM, which is the
+           * useful part. A finger standing beside a forend that needs
+           * to come over the top gets CLOSER to the surface as it
+           * closes, not further -- the opposite sign from the crest
+           * case -- so `crested` is false and the rule never applies.
+           * The march would already prefer closing there, and does not,
+           * because the arc over the top clips the forend and `cross`
+           * charges for it. That is the same wall the eighth attempt
+           * hit from the other side: over the top costs burial, beside
+           * it costs the sight picture, and the scoring picks beside.
+           *
+           * So the tenth attempt is not another term in this row. It is
+           * either a finger that can reach round a 25 mm forend -- the
+           * curl budget is 182 degrees of an anatomical 330, and the
+           * note above shows the cap is a curvature limit that
+           * subdivision cannot relax, so it would have to be a thinner
+           * finger -- or a palm seated close enough that the wrap is
+           * geometrically possible. Both are measurable before they are
+           * built, and neither is a change to this scoring row. */
           /* Search the angles at or above a real curl first; only if
              none of those can be reached without going through the
              weapon does the flatter half of the range get a look. The
@@ -33663,6 +33690,23 @@ Engine.prototype.upgradeTextures = function (size, opts = {}) {
   }
   if (!jobs.length) return null;
 
+  /* AND EVERYTHING BUILT FROM NOW ON ASKS FOR THE NEW SIZE.
+   *
+     This did not touch Material.textureSize, so every actor created
+     after the upgrade still requested 256 -- and since the cache is
+     keyed `kind:size:seed`, a request at the old size does not find the
+     upgraded entry, it MAKES A SECOND ONE. texres.test.js caught it as
+     a leak of exactly two sets, `skin` and `fabric`: the two recipes
+     the player's own body and clothing use, which are the only ones
+     rebuilt while the ramp is still running. Every one of those actors
+     was also drawing at the resolution the upgrade was there to leave
+     behind.
+
+     Raised here rather than in onDone so the window is closed for the
+     whole ramp and not just after it. */
+  const Mat = (typeof Material !== 'undefined') ? Material : null;
+  if (Mat && (Mat.textureSize || 0) < size) Mat.textureSize = size;
+
   let i = 0;
   const state = { total: jobs.length, done: 0, size, running: true };
   const step = () => {
@@ -33681,9 +33725,17 @@ Engine.prototype.upgradeTextures = function (size, opts = {}) {
       j.maps.albedo.upload(data.albedo, size, size);
       j.maps.normal.upload(data.normal, size, size);
       j.maps.orm.upload(data.orm, size, size);
-      /* Re-key it so a second pass does not redo work already done. */
+      /* Re-key it so a second pass does not redo work already done.
+       *
+         AND IF SOMETHING ALREADY MADE THE TARGET KEY while this ramp
+         was running -- which is now possible, because the line above
+         lets new actors ask for the full size straight away -- then
+         that entry is the live one and this is the orphan. Dropping the
+         old key without overwriting the new one is the difference
+         between a cache and a leak. */
+      const dest = j.kind + ':' + size + ':' + j.seed;
       store.delete(j.key);
-      store.set(j.kind + ':' + size + ':' + j.seed, j.maps);
+      if (!store.has(dest)) store.set(dest, j.maps);
     } catch (e) {
       /* One recipe failing is one soft surface, not a dead game. */
       void e;

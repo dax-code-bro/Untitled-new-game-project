@@ -50,6 +50,23 @@ Engine.prototype.upgradeTextures = function (size, opts = {}) {
   }
   if (!jobs.length) return null;
 
+  /* AND EVERYTHING BUILT FROM NOW ON ASKS FOR THE NEW SIZE.
+   *
+     This did not touch Material.textureSize, so every actor created
+     after the upgrade still requested 256 -- and since the cache is
+     keyed `kind:size:seed`, a request at the old size does not find the
+     upgraded entry, it MAKES A SECOND ONE. texres.test.js caught it as
+     a leak of exactly two sets, `skin` and `fabric`: the two recipes
+     the player's own body and clothing use, which are the only ones
+     rebuilt while the ramp is still running. Every one of those actors
+     was also drawing at the resolution the upgrade was there to leave
+     behind.
+
+     Raised here rather than in onDone so the window is closed for the
+     whole ramp and not just after it. */
+  const Mat = (typeof Material !== 'undefined') ? Material : null;
+  if (Mat && (Mat.textureSize || 0) < size) Mat.textureSize = size;
+
   let i = 0;
   const state = { total: jobs.length, done: 0, size, running: true };
   const step = () => {
@@ -68,9 +85,17 @@ Engine.prototype.upgradeTextures = function (size, opts = {}) {
       j.maps.albedo.upload(data.albedo, size, size);
       j.maps.normal.upload(data.normal, size, size);
       j.maps.orm.upload(data.orm, size, size);
-      /* Re-key it so a second pass does not redo work already done. */
+      /* Re-key it so a second pass does not redo work already done.
+       *
+         AND IF SOMETHING ALREADY MADE THE TARGET KEY while this ramp
+         was running -- which is now possible, because the line above
+         lets new actors ask for the full size straight away -- then
+         that entry is the live one and this is the orphan. Dropping the
+         old key without overwriting the new one is the difference
+         between a cache and a leak. */
+      const dest = j.kind + ':' + size + ':' + j.seed;
       store.delete(j.key);
-      store.set(j.kind + ':' + size + ':' + j.seed, j.maps);
+      if (!store.has(dest)) store.set(dest, j.maps);
     } catch (e) {
       /* One recipe failing is one soft surface, not a dead game. */
       void e;
