@@ -531,7 +531,12 @@
     sprint: 10, slide: 11,      // stick clicks
     scores: 8, quit: 9,
     lb: 4, rb: 5,
+    /* D-pad right, pressed twice, is the weapon inspect. 12..15 are
+       up, down, left, right in the standard mapping. */
+    inspect: 15,
   };
+  /* How close two presses have to be to count as a double. */
+  var DOUBLE = 0.34;
   /* Published so a test can press the buttons this table names rather
      than a copy of it. engine/test/mppad.test.js gives the reason at
      length: multiplayer has its own input layer, separate from the
@@ -556,6 +561,10 @@
 
   function makePad(opts) {
     var prev = {}, live = null;
+    /* Sprint is a TOGGLE on a pad -- see the note where L3 is read --
+       so it needs somewhere to live between frames, and so does the
+       clock for the double press that opens the inspect. */
+    var padSprint = false, lastDR = -99;
     var dzL = opts.deadzoneLeft != null ? opts.deadzoneLeft : 0.18;
     var dzR = opts.deadzoneRight != null ? opts.deadzoneRight : 0.16;
     /* Read live rather than captured, so changing any of these applies
@@ -655,16 +664,49 @@
           cmd.fire = cmd.fire || trig(PAD.fire) > 0.35;
           cmd.aim = cmd.aim || trig(PAD.aim) > 0.35;
           cmd.jump = cmd.jump || edge('jump', down(p, PAD.jump));
+          /* SPRINT IS A CLICK, NOT A HOLD, and this was the single
+             biggest thing wrong with the controller.
+           *
+             L3 is a momentary stick click. Nobody holds a stick click
+             down while running -- your thumb is on the stick, steering.
+             Bound as a hold, `cmd.run` was false on a pad essentially
+             always: no sprint, no low-ready, no sprint animation, and
+             no SLIDE, because a slide is entered from a sprint and from
+             nothing else. "Sliding does not work" is this.
+
+             Measured before it was changed. Driving the real pad
+             layer: L3 held down gave sprinting true and sliding true;
+             L3 clicked and released -- which is what a stick click IS
+             -- gave both false.
+
+             So it toggles, the way every console shooter does it, and
+             it ends by itself the moment sprinting stops making sense:
+             you let go of the stick, you bring the sights up, or you
+             click again. */
+          if (edge('sprint', down(p, PAD.sprint))) padSprint = !padSprint;
+          if (-L[1] < 0.5 || cmd.aim) padSprint = false;
+          cmd.run = cmd.run || padSprint;
           cmd.crouch = cmd.crouch || down(p, PAD.crouch);
+          /* SPRINT AND PRESS CIRCLE IS A SLIDE, on the press. Circle is
+             the crouch button and crouch-while-sprinting already means
+             slide -- but only after a 220 ms hold, which is the fence
+             between a deliberate crouch and a dive. While you are
+             SPRINTING there is no such ambiguity: you cannot crouch
+             mid-sprint anyway, so the press is the whole intention and
+             waiting a fifth of a second for it just feels broken. */
+          if (padSprint && edge('slidePress', down(p, PAD.crouch))) cmd.slide = true;
           cmd.reload = cmd.reload || edge('reload', down(p, PAD.reload));
-          /* HELD, NOT TAPPED, is the inspect -- the convention every
-             pad shooter uses, and it costs no button on a layout that
-             has none spare. The held state goes out raw and the frame
-             loop times it, because the pad layer does not know how long
-             a frame was. */
-          cmd.reloadHeld = cmd.reloadHeld || down(p, PAD.reload);
+          /* INSPECT: RIGHT ON THE D-PAD, TWICE. Asked for by name, and
+             better than the held reload it replaces -- holding reload
+             is also how you would hold reload. Two presses inside
+             `DOUBLE` seconds; a single press does nothing, so the
+             D-pad stays free for anything that wants one tap. */
+          if (edge('dright', down(p, PAD.inspect))) {
+            var nowT = (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
+            if (nowT - lastDR < DOUBLE) { cmd.inspect = true; lastDR = -99; }
+            else lastDR = nowT;
+          }
           cmd.swap = cmd.swap || edge('swap', down(p, PAD.swap));
-          cmd.run = cmd.run || down(p, PAD.sprint);
           cmd.slide = cmd.slide || edge('slide', down(p, PAD.slide));
           cmd.scores = cmd.scores || down(p, PAD.scores);
         } else {
@@ -2549,7 +2591,7 @@
        teleports the weapon back to the carry between two frames; this
        fades the pose out over INSPECT_CANCEL instead, from wherever it
        had got to, while the clock keeps running underneath. */
-    var insT = 0, insW = 1, rlHeld = 0, swapRang = false;
+    var insT = 0, insW = 1, swapRang = false;
     var over = false;
     /* The kill cam cannot start the instant you die: the second after
        the shot has not been recorded yet, and a kill cam that stops on
@@ -2739,7 +2781,7 @@
         run: input.any(K.sprint), jump: input.once(K.jump),
         crouch: input.any(K.crouch),
         reload: input.once(K.reload), swap: input.once(K.swap),
-        inspect: input.once(K.inspect), reloadHeld: input.any(K.reload),
+        inspect: input.once(K.inspect),
         slide: input.once(K.slide), scores: input.any(K.scores),
         fire: input.buttons.fire, aim: input.buttons.aim,
         lookX: 0, lookY: 0,
@@ -2952,13 +2994,10 @@
             && !input.buttons.fire && !input.buttons.aim && !p.sprinting) {
           insT = W.LE.INSPECT_TIME; insW = 1;
         }
-        /* Held reload is the same request, for a pad with no button to
-           spare. Timed here because the pad layer does not know how
-           long a frame was. */
-        if (cmd.reloadHeld && !p.reloadUntil) rlHeld += vdt; else rlHeld = 0;
-        if (rlHeld > 0.42 && !insT && !p.swapUntil && !input.buttons.fire) {
-          insT = W.LE.INSPECT_TIME; insW = 1; rlHeld = -9;
-        }
+        /* The pad asks for an inspect with two presses of D-pad right,
+           which the pad layer turns into the same `cmd.inspect` the I
+           key sets -- so there is one path here and not two. It used to
+           be a held reload; that is also how you would hold reload. */
         if (insT > 0) {
           insT = Math.max(0, insT - vdt);
           var cancel = input.buttons.fire || input.buttons.aim || p.sprinting

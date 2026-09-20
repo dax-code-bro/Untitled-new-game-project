@@ -1353,7 +1353,9 @@ const CONTROLS = {
   /* LOOK AT THE THING YOU ARE HOLDING. There was no way to, in either
      game: you could fire a weapon, reload it, sprint with it and swap
      off it, and never once see it. D-pad up, which nothing else uses. */
-  inspect: { key: 'i',      pad: 12 },  // D-pad up
+  /* D-pad RIGHT, pressed twice. A single press is left free; the
+     double is what opens the inspect. */
+  inspect: { key: 'i',      pad: 15 },  // D-pad right
   /* Aim is LT and fire is RT, read as analogue axes rather than as
      buttons -- see the note on arming the trigger where the input is
      composed. They are not in this table and cannot collide with it. */
@@ -1443,9 +1445,32 @@ function makeControls(S, game) {
     if (!pn) return false;
     return how === 'down' ? !!pad.buttons[pn] : !!pad.pressed[pn];
   };
+  /* THE KEY AND THE BUTTON, SEPARATELY.
+   *
+     `held` and `hit` merge the two devices, which is right for almost
+     everything and wrong for sprint: a key is a hold and a stick click
+     is a click, and asking both the same question is why sprint never
+     engaged on a controller. These two let one action read the keyboard
+     as a level and the pad as an edge. */
+  const keyOnly = (id, how) => {
+    const i = game.input;
+    const { k, custom } = keyOf(id);
+    if (k && i[how](k)) return true;
+    const alt = !custom && CONTROLS[id] && CONTROLS[id].alt;
+    return !!(alt && i[how](alt));
+  };
+  const padOnly = (id, how) => {
+    const pad = game.input.pad;
+    const pn = padOf(id);
+    if (!pn) return false;
+    return how === 'down' ? !!pad.buttons[pn] : !!pad.pressed[pn];
+  };
   return {
     held: (id) => probe(id, 'down'),
     hit: (id) => probe(id, 'justPressed'),
+    keyHeld: (id) => keyOnly(id, 'down'),
+    keyHit: (id) => keyOnly(id, 'justPressed'),
+    padHit: (id) => padOnly(id, 'justPressed'),
     /* Movement, rebindable, and folded with the stick exactly the way the
        engine's own beginFrame() folds WASD -- so with everything on its
        default this is the number `input.axes` would have given. */
@@ -14313,7 +14338,24 @@ function start(opts = {}) {
     S.input.jumpPressed = CTL.hit('jump');
     S.input.aimHeld = i.down('control') || i.pointer.rightDown
       || pad.lt > (S.trigThreshold == null ? 0.40 : S.trigThreshold * 0.9) || !!th.aim;
-    S.input.sprintHeld = CTL.held('sprint') || !!th.sprint;
+    /* SPRINT IS A CLICK ON A PAD, NOT A HOLD.
+     *
+       L3 is a momentary stick click and the keyboard's Shift is a hold,
+       and this asked both the same question. Nobody holds a stick click
+       down while running -- the thumb is on the stick, steering -- so on
+       a controller sprint simply never engaged: no sprint, no low-ready
+       carry, and no slide, because a slide is entered from a sprint and
+       from nothing else. Measured in multiplayer, whose pad layer had
+       the identical fault: L3 held gave sprinting true, L3 clicked and
+       released gave false.
+
+       So the KEY stays a hold and the BUTTON toggles, and the toggle
+       ends by itself when sprinting stops making sense -- you stop
+       moving forward, you bring the sights up, or you click again. */
+    if (CTL.padHit('sprint')) S.padSprint = !S.padSprint;
+    const mv = CTL.axes();
+    if (mv.y > -0.5 || S.input.aimHeld) S.padSprint = false;
+    S.input.sprintHeld = CTL.keyHeld('sprint') || S.padSprint || !!th.sprint;
     // Held rather than pressed: the easter egg wants to know you are
     // standing at the generator with your hand on it, not that you tapped it.
     S.input.useDown = CTL.held('use');
@@ -15042,7 +15084,15 @@ function start(opts = {}) {
          whose whole argument is that the guns are modelled properly.
          The curve is engine/src/97g-inspect.js and multiplayer runs the
          same one, so the movement is identical in both. */
-      if (CTL.hit('inspect') && P.inspectT <= 0 && P.reloading <= 0
+      /* ON A PAD IT IS TWO PRESSES, on a key it is one. A single press
+         of a D-pad direction is too easy to hit by accident with a
+         thumb that is also working the killstreak rail. */
+      let askInspect = CTL.keyHit('inspect');
+      if (CTL.padHit('inspect')) {
+        if (S.time - (S.lastInspectTap || -99) < 0.34) { askInspect = true; S.lastInspectTap = -99; }
+        else S.lastInspectTap = S.time;
+      }
+      if (askInspect && P.inspectT <= 0 && P.reloading <= 0
           && P.swapT <= 0 && !P.knifeOut && P.ads < 0.05 && (P.lowReady || 0) < 0.05) {
         P.inspectT = window.LE.INSPECT_TIME; P.inspectW = 1;
       }
