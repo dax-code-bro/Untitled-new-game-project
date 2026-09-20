@@ -2311,6 +2311,13 @@
         _ikQ.setAxisAngle(_ikY, -blade);
         sk.bones[iNeck].localRotation.premul(_ikQ).normalize();
       }
+      /* A support shoulder protracted in its own socket was tried here,
+         both ways round, and the readings said it cost two to three
+         centimetres of reach either way -- which was nonsense, and
+         turned out to be nonsense: hold.test.js measures a bot in a
+         LIVE MATCH, and three runs of one unchanged build returned 20,
+         20 and 14 cm. The test pins the subject's pose now. Nothing was
+         learnt about the shoulder; it is simply not in. */
       sk.update();
     }
 
@@ -2522,7 +2529,17 @@
     } else if (sinceProne < 0.80 && p._wasProne) want = 'standUp';
     else if (p.crouching) {
       want = v > 0.30 ? gaitPick(a, ['crouchWalk', 'crouchRun'], v) : 'crouchIdle';
-    } else if (v > 0.35) want = gaitPick(a, ['walk', 'run', 'sprint'], v);
+    /* A man who is AIMING is not sprinting, whatever his speed says.
+       Rewriting this to pick by stride dropped the `p.sprinting` gate the
+       old thresholds carried, so a bot crossing a room with his rifle
+       shouldered played the sprint cycle -- fifteen degrees of trunk
+       lean and twelve of chest twist -- and his support hand lost three
+       centimetres of reach down the handguard. hold.test.js measured it:
+       17.1 cm to 14.1. */
+    } else if (v > 0.35) {
+      want = gaitPick(a, (p.sprinting && !p.aiming) ? ['walk', 'run', 'sprint']
+        : ['walk', 'run'], v);
+    }
     else want = 'idle';
     p._wasProne = !!p.prone || want === 'standUp';
 

@@ -10398,10 +10398,14 @@ function makeHumanoidClips() {
     lowerLegR: { keys: [[0.00, 85, 0, 0], [0.20, 111.6, 0, 0], [0.80, 110, 0, 0], [1.00, 78, 0, 0]] },
     footR:     { keys: [[0.00, -20, 0, 0], [0.20, -25, 0, 0], [0.80, -24, 0, 0], [1.00, -18, 0, 0]] },
 
-    // Off arm back and out; gun arm holds its carry.
-    upperArmL: { keys: [[0.00, 0, 0, -8], [0.22, 38, 0, -26], [1.00, 14, 0, -14]] },
+    /* Off arm back and OUT -- and it was going in. A rotation about Z
+       sends the left arm's hand to +X, which is away from the body, so
+       "out" on the left is POSITIVE and on the right NEGATIVE. Both were
+       the other way, and with the elbows now flexing forwards instead of
+       backwards the left forearm tracked straight through the ribs. */
+    upperArmL: { keys: [[0.00, 0, 0, 10], [0.22, 38, 0, 30], [1.00, 14, 0, 18]] },
     lowerArmL: { keys: [[0.00, -18, 0, 0], [0.22, -44, 0, 0], [1.00, -30, 0, 0]] },
-    upperArmR: { keys: [[0.00, -30, 0, 10], [0.22, -46, 0, 16], [1.00, -36, 0, 12]] },
+    upperArmR: { keys: [[0.00, -30, 0, -12], [0.22, -46, 0, -20], [1.00, -36, 0, -15]] },
     lowerArmR: { keys: [[0.00, -72, 0, 0], [0.22, -86, 0, 0], [1.00, -78, 0, 0]] },
   }, { loop: false }));
 
@@ -10659,10 +10663,10 @@ function makeHumanoidClips() {
     footR: { keys: [[0.00, 0, 0, 0], [1.00, 8, 0, 0]] },
     /* Hands stay on the weapon the whole way down -- a man who drops
        and lets go of his rifle has not dropped, he has fallen. */
-    upperArmL: { keys: [[0.00, 0, 0, -10], [0.40, -12, 0, 4], [1.00, -20, 0, 14]] },
-    upperArmR: { keys: [[0.00, 0, 0, 10], [0.40, -10, 0, -2], [1.00, -18, 0, -12]] },
-    lowerArmL: { keys: [[0.00, -18, 0, 0], [1.00, -78, 0, 0]] },
-    lowerArmR: { keys: [[0.00, -18, 0, 0], [1.00, -82, 0, 0]] },
+    upperArmL: { keys: [[0.00, 0, 0, -10], [0.40, -34, 0, 24], [1.00, -60, 0, 60]] },
+    upperArmR: { keys: [[0.00, 0, 0, 10], [0.40, -32, 0, -22], [1.00, -60, 0, -60]] },
+    lowerArmL: { keys: [[0.00, -18, 0, 0], [0.40, -62, 0, 0], [1.00, -115, 0, 0]] },
+    lowerArmR: { keys: [[0.00, -18, 0, 0], [0.40, -62, 0, 0], [1.00, -115, 0, 0]] },
   }, { loop: false }));
 
   /* Flat and still, breathing. The whole body is 6 degrees onto the
@@ -10688,10 +10692,17 @@ function makeHumanoidClips() {
     footL: { keys: [[0.00, 8, 0, 0], [1.00, 8, 0, 0]] },
     footR: { keys: [[0.00, 8, 0, 0], [1.00, 8, 0, 0]] },
     /* Down onto the elbows and forward onto the weapon. */
-    upperArmL: { keys: [[0.00, -20, 0, 14], [1.00, -20, 0, 14]] },
-    upperArmR: { keys: [[0.00, -18, 0, -12], [1.00, -18, 0, -12]] },
-    lowerArmL: { keys: [[0.00, -78, 0, 0], [1.00, -78, 0, 0]] },
-    lowerArmR: { keys: [[0.00, -82, 0, 0], [1.00, -82, 0, 0]] },
+    /* PROPPED, not hanging. The shoulder in this pose is 150 mm above
+       the floor and the upper arm is 260 long, so any arm pointing
+       downward puts the elbow through the concrete -- which is what
+       flexing these elbows the right way first produced, hands 130 mm
+       under. A prone man's arms lie along the ground: both segments near
+       horizontal, elbows out wide, forearms forward. Searched for, not
+       guessed: elbow 35 mm clear of the floor, hand 27 mm. */
+    upperArmL: { keys: [[0.00, -60, 0, 60], [0.50, -58, 0, 61], [1.00, -60, 0, 60]] },
+    upperArmR: { keys: [[0.00, -60, 0, -60], [0.50, -62, 0, -59], [1.00, -60, 0, -60]] },
+    lowerArmL: { keys: [[0.00, -115, 0, 0], [0.50, -113, 0, 0], [1.00, -115, 0, 0]] },
+    lowerArmR: { keys: [[0.00, -115, 0, 0], [0.50, -117, 0, 0], [1.00, -115, 0, 0]] },
   }));
 
   /* The combat crawl: elbow and opposite knee, then the other pair.
@@ -10725,12 +10736,12 @@ function makeHumanoidClips() {
     footR: { keys: [[0.00, 8, 0, 0], [0.75, -18, 0, 0], [1.00, 8, 0, 0]] },
     /* The elbows do the work. The gun hand keeps its grip; the support
        hand reaches and pulls. */
-    upperArmL: { keys: [[0.00, -20, 0, 14], [0.25, -34, 0, 22], [0.50, -12, 0, 10],
-      [1.00, -20, 0, 14]] },
-    lowerArmL: { keys: [[0.00, -78, 0, 0], [0.25, -98, 0, 0], [0.50, -64, 0, 0],
-      [1.00, -78, 0, 0]] },
-    upperArmR: { keys: [[0.00, -18, 0, -12], [0.50, -24, 0, -16], [1.00, -18, 0, -12]] },
-    lowerArmR: { keys: [[0.00, -82, 0, 0], [0.50, -90, 0, 0], [1.00, -82, 0, 0]] },
+    upperArmL: { keys: [[0.00, -60, 0, 60], [0.25, -70, 0, 64], [0.50, -52, 0, 55],
+      [1.00, -60, 0, 60]] },
+    lowerArmL: { keys: [[0.00, -115, 0, 0], [0.25, -124, 0, 0], [0.50, -106, 0, 0],
+      [1.00, -115, 0, 0]] },
+    upperArmR: { keys: [[0.00, -60, 0, -60], [0.50, -68, 0, -63], [1.00, -60, 0, -60]] },
+    lowerArmR: { keys: [[0.00, -115, 0, 0], [0.50, -121, 0, 0], [1.00, -115, 0, 0]] },
   }));
 
   /* Getting up. The reverse of the drop, and slower, because standing
@@ -10766,10 +10777,10 @@ function makeHumanoidClips() {
        which is solved. */
     footL: { keys: [[0.00, 8, 0, 0], [0.25, 5, 0, 0], [0.50, -21.2, 0, 0], [1.00, -20.5, 0, 0]] },
     footR: { keys: [[0.00, 8, 0, 0], [0.25, 5, 0, 0], [0.50, -21.2, 0, 0], [1.00, -20.5, 0, 0]] },
-    upperArmL: { keys: [[0.00, -20, 0, 14], [1.00, 0, 0, -10]] },
-    upperArmR: { keys: [[0.00, -18, 0, -12], [1.00, 0, 0, 10]] },
-    lowerArmL: { keys: [[0.00, -78, 0, 0], [1.00, -19, 0, 0]] },
-    lowerArmR: { keys: [[0.00, -82, 0, 0], [1.00, -19, 0, 0]] },
+    upperArmL: { keys: [[0.00, -60, 0, 60], [0.35, -34, 0, 24], [1.00, 0, 0, -10]] },
+    upperArmR: { keys: [[0.00, -60, 0, -60], [0.35, -32, 0, -22], [1.00, 0, 0, 10]] },
+    lowerArmL: { keys: [[0.00, -115, 0, 0], [0.35, -62, 0, 0], [1.00, -19, 0, 0]] },
+    lowerArmR: { keys: [[0.00, -115, 0, 0], [0.35, -62, 0, 0], [1.00, -19, 0, 0]] },
   }, { loop: false }));
 
   clips.push(buildClip('jump', 0.9, {

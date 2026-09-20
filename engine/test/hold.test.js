@@ -111,7 +111,22 @@ const note = (s) => console.log(`  ..   ${s}`);
         /* Let the ADS ease settle rather than assuming it snaps: the
            carry eases to the shoulder the same way the viewmodel does. */
         foe._adsT = aiming ? 1 : 0;
-        for (let i = 0; i < 6; i++) await frame();
+        /* AND PIN THE POSE. This subject is a bot in a live match, so
+           without this it is measured in whatever cycle it happens to be
+           running and at whatever phase -- and three runs of one
+           unchanged build returned 20 cm, 20 cm and 14 cm for the same
+           weapon. Six centimetres of scatter cannot decide anything, and
+           it decided several things before anyone checked: two separate
+           "improvements" to the reach were measured against it and both
+           readings were noise. A man aiming a rifle is standing still;
+           hold it there. */
+        foe.actor.animator.play('idle', 0);
+        foe.actor.animator.speed = 0;
+        foe.actor.animator.time = 0;
+        for (let i = 0; i < 6; i++) {
+          foe.actor.animator.time = 0;
+          await frame();
+        }
         const a = foe.actor, sk = a.skeleton, g = foe._reachGun;
         if (!g) { out.measured.push({ id, aiming, noWeapon: true }); continue; }
         a.updateMatrix();
