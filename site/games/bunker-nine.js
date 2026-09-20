@@ -9051,36 +9051,41 @@ function ONSCREEN(game, root, to, from) {
      that should come from the pouch out over the muzzle, which is the
      first thing this got wrong. */
   const a0 = Math.atan2(dy, dz);
+  /* PAST LEVEL, AND UP.
+   *
+     The swing used to stop at 0 or +-PI, and the sine of both of those
+     is ZERO -- so every candidate it could reach was at exactly the
+     magazine well's own height. It could lift a fetch up TO the well
+     and never ABOVE it, and on the one weapon where that matters it
+     is the only thing that would have helped.
+
+     Measured on the Thompson. Its eight swing candidates come out
+     -1.212 through -1.040 against a floor of -0.88: monotonic, doing
+     what they are told, and short. Then the shrink toward `to` that
+     the old note here reasoned about was built and measured too, and
+     it goes the WRONG WAY -- -1.049, -1.058, on down to -1.128 -- for
+     a reason that is the whole answer: -1.128 is `to`. The magazine
+     WELL is off the bottom of the frame. Nothing about where the load
+     comes FROM can save a journey whose destination is off screen, and
+     that is why three separate corrections here came back
+     byte-identical. They were all reaching for a point at or below a
+     point that was already too low.
+
+     So the swing carries on a quarter turn past level, which puts the
+     fetch directly above the well rather than behind it, and lifts it
+     by the reach's own length. Still no LENGTH given up: a hand comes
+     to the gun from somewhere, and shortening the journey to nothing
+     would be a magazine appearing in the well. */
   const tgt = dz < 0 ? (a0 < 0 ? -Math.PI : Math.PI) : 0;
-  for (let i = 1; i <= 8; i++) {
-    const na = a0 + (tgt - a0) * (i / 8);
+  const tgtUp = tgt + (a0 < 0 ? -Math.PI / 2 : Math.PI / 2);
+  for (let i = 1; i <= 16; i++) {
+    const na = a0 + (tgtUp - a0) * (i / 16);
     const cand = [from[0], to[1] + Math.sin(na) * len, to[2] + Math.cos(na) * len];
     const q = ndcY(cand);
     if (q != null && q >= FLOOR) return cand;
   }
-  /* AND THE ONE WEAPON THIS DOES NOT FIX IS NOT THIS FUNCTION'S FAULT.
-   *
-     The Thompson still shows its load off screen for 18 per cent of its
-     reload, and the next thing to try looked obvious: give up LENGTH as
-     well as drop, shrinking the reach toward the magazine well, which
-     must converge because at zero length the fetch point IS the well.
-     Built and measured: byte-identical, and the Thompson's lowest point
-     stayed at exactly -1.22 for a third run running.
-
-     That number is the answer. Between the first two runs its on-screen
-     share moved from 78 to 82 per cent while the lowest point did not
-     change by a thousandth -- and no correction to the fetch point can
-     do that, because the fetch point is where the path STARTS and the
-     path only rises from there. So whatever reaches -1.22 on the
-     Thompson is not the thing this function moves: another visible part,
-     at another moment of the reload. Finding which is a measurement
-     nobody has taken yet, and guessing at it from here would be the
-     fourth repair aimed at the wrong object today.
-
-     So a weapon this cannot help keeps its authored point rather than a
-     worse one. */
-  /* Nothing on this weapon clears: leave the authored point rather than
-     return a worse one. */
+  /* And if even straight up over the well does not clear, the gun
+     itself is off screen and the load is the least of the problem. */
   return from;
 }
 
