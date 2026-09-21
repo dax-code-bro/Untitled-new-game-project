@@ -913,7 +913,7 @@ const PERKS = {
   },
   adrenaline: {
     name: 'ADRENALINE', cost: 2000, color: 0xffd23a, icon: 'adrenaline',
-    blurb: 'Faster on your feet, three minutes of sprint, slide and slide-cancel, and you reload at double speed.',
+    blurb: 'Faster on your feet, three minutes of sprint, a longer slide you can cancel out of, and you reload at double speed.',
   },
 };
 
@@ -1290,6 +1290,21 @@ function buildPerkBottle(game, def, at, scale = 1) {
 
 const SHIELD = { duration: 5.0, cooldown: 22 };
 const SLIDE = { speed: 11.5, duration: 0.62, cooldown: 1.1, height: 0.9 };
+
+/* HOW FAR UP THE PATHFINDER LOOKS. See buildNavLevel for why there is
+   more than one of these at all.
+
+   NOT AT THE SHIN. The first set started at 0.30 m and it cost routes:
+   four of the bunker's five spawn windows could still reach the player
+   and one could not, and on Coastline a window's own inside point
+   landed in a solid cell -- because a kerb, a sill lip and a doorstep
+   are all solid at ankle height and a thing that walks steps over them.
+   Marking them impassable does not stop anybody phasing through a
+   bench; it walls the bench's owner into his own doorway.
+
+   Knee, waist and chest. Everything a body has to go round, nothing it
+   can step over. */
+const NAV_HEIGHTS = [0.55, 1.00, 1.45];
 
 /* ---------------- what a control is bound to ----------------
 
@@ -6320,7 +6335,7 @@ function makePlayer(game, S, hud, sfx, voice) {
     recoil: { pitch: 0, yaw: 0 }, recoilApplied: { pitch: 0, yaw: 0 },
     arms: {},
     perks: {}, maxHp: PLAYER.hp,
-    stamina: 1, sliding: 0, slideCd: 0, slideDir: null,
+    stamina: 1, sliding: 0, slideMax: 0, slideCd: 0, slideDir: null,
     shieldT: 0, shieldCd: 0,
     prevSlot: 0, knifeOut: false,
     building: false, buildingWas: false, buildT: 0, lastBeat: -1, prevSlotBuild: 0,
@@ -9395,7 +9410,10 @@ function roomOf(p) {
    between them and the room graph already owns that. */
 const NAV = { cell: 0.5 };
 
-function buildNavLevel(game, box, y) {
+/* `heights` is how far above the floor to sweep, and it is an argument
+   so a test can build the OLD one-slice grid beside the new one and
+   report what changed. Defaults to the real set. */
+function buildNavLevel(game, box, y, heights) {
   const c = NAV.cell;
   const w = Math.ceil((box.x1 - box.x0) / c);
   const h = Math.ceil((box.z1 - box.z0) / c);
@@ -9409,7 +9427,8 @@ function buildNavLevel(game, box, y) {
   /* March, do not single-cast. One ray down a row reports only the first
      thing it meets; restarting a little past each hit walks the whole row
      and finds the far side of the bench as well as the near side. */
-  const sweep = (along) => {
+  const sweep = (along, atY) => {
+    const yy = atY == null ? y : atY;
     const n = along === 'x' ? h : w;
     for (let k = 0; k < n; k++) {
       const fixed = (along === 'x' ? box.z0 : box.x0) + (k + 0.5) * c;
@@ -9419,7 +9438,7 @@ function buildNavLevel(game, box, y) {
         const ox = along === 'x' ? box.x0 + t : fixed;
         const oz = along === 'x' ? fixed : box.z0 + t;
         const dir = along === 'x' ? [1, 0, 0] : [0, 0, 1];
-        const hit = game.raycast([ox, y, oz], dir, span - t, solid);
+        const hit = game.raycast([ox, yy, oz], dir, span - t, solid);
         if (!hit) break;
         const d = Math.hypot(hit.point.x - ox, hit.point.z - oz);
         mark(hit.point.x, hit.point.z);
@@ -9427,8 +9446,33 @@ function buildNavLevel(game, box, y) {
       }
     }
   };
-  sweep('x');
-  sweep('z');
+  /* FOUR HEIGHTS, NOT ONE, and this is most of "the AI are phasing
+     through stuff".
+   *
+   * The sweep above fires its rays at a single `y` -- the walker's chest
+   * -- so the map the pathfinder reasons over is one horizontal slice of
+   * the world. Anything that does not happen to intersect that slice is
+   * not in it: a bench, a crate, a low wall, a car bonnet, a counter, a
+   * railing, the underside of a stair. The A* then plans a route straight
+   * over the top of the obstacle, because as far as the grid is concerned
+   * there is nothing there, and what the player sees is a zombie walking
+   * through a workbench.
+   *
+   * It is not a pathfinding fault -- the A*, the cache, the search budget
+   * and the reachability flood were all already here and all work -- it
+   * is that they were being handed a map with the furniture missing.
+   *
+   * Shin, knee, waist and chest. Four sweeps in each axis instead of one,
+   * eight rays' worth of build cost on a grid that is built once when the
+   * map loads. Anything solid at ANY of those heights is solid, which is
+   * the right rule for a thing that walks: you do not path through a
+   * bench because your head clears it.
+   *
+   * The same fault, and the same fix, is in mp-match.js -- the two games
+   * have separate nav builders and had the identical single-slice bug. */
+  const HEIGHTS = heights || NAV_HEIGHTS;
+  const floor = y - 1.05;
+  for (const hh of HEIGHTS) { sweep('x', floor + hh); sweep('z', floor + hh); }
   return { box, w, h, c, g };
 }
 
@@ -14450,15 +14494,38 @@ function start(opts = {}) {
       P.lowReady = (P.lowReady || 0)
         + (wantLow - (P.lowReady || 0)) * Math.min(1, dt * (wantLow ? 7 : 16));
 
-      /* Slide, for Athlete. A sprint committed to a direction: you keep the
-         speed you had, you cannot steer much, and you come out of it low. */
+      /* SLIDE. A sprint committed to a direction: you keep the speed you
+         had, you cannot steer much, and you come out of it low.
+
+         REPORTED AS "SLIDING DOES NOT WORK", AND IT DID NOT, FOR MOST OF
+         A MATCH. It was gated on `P.perks.adrenaline` -- the Athlete
+         perk -- so before you had bought it, sprinting and pressing
+         circle did nothing at all and said nothing about why. Multiplayer
+         never gated it, so the same two inputs behaved differently in the
+         two games with no way to tell which rule you were under. A
+         movement control that is silent when it refuses is
+         indistinguishable from one that is broken, and the player is
+         right either way.
+
+         So everyone slides, and Athlete makes it a BETTER slide rather
+         than the only slide: half again the distance and a third off the
+         cooldown, which is what a perk about moving should do. */
       P.slideCd = Math.max(0, P.slideCd - dt);
-      if (P.perks.adrenaline && P.sliding <= 0 && P.slideCd <= 0 && P.sprinting
-          && CTL.hit('slide')) {
-        P.sliding = SLIDE.duration;
-        P.slideCd = SLIDE.cooldown;
+      const ath = !!P.perks.adrenaline;
+      if (P.sliding <= 0 && P.slideCd <= 0 && P.sprinting && CTL.hit('slide')) {
+        P.sliding = SLIDE.duration * (ath ? 1.5 : 1);
+        P.slideMax = P.sliding;
+        P.slideCd = SLIDE.cooldown * (ath ? 0.66 : 1);
         P.slideDir = { x: wx, z: wz };
         sfx.slide();
+      }
+      /* SLIDE-CANCEL, which is the half of it Athlete actually owns. Jump
+         out of a slide and you keep the speed instead of riding it out --
+         the reason to sprint-slide-cancel rather than just sprint. Without
+         the perk the jump is simply refused during a slide, as it was. */
+      if (P.sliding > 0 && ath && S.input.jumpPressed) {
+        P.sliding = 0;
+        P.slideCd = Math.min(P.slideCd, SLIDE.cooldown * 0.45);
       }
 
       const perkSpeed = (P.perks.adrenaline ? 1.42 : 1) * (P.perks.supersoldier ? 1.12 : 1)
@@ -14473,7 +14540,7 @@ function start(opts = {}) {
       if (P.sliding > 0) {
         P.sliding -= dt;
         const d = P.slideDir;
-        const k = Math.max(0.25, P.sliding / SLIDE.duration);
+        const k = Math.max(0.25, P.sliding / (P.slideMax || SLIDE.duration));
         P.actor.controller.moveSpeed = SLIDE.speed * k * perkSpeed;
         P.actor.controller.move(d.x, d.z, false);
       } else {
@@ -15673,7 +15740,12 @@ function start(opts = {}) {
        frame, which makes setting camera.fov directly useless. */
     PLAYER, TOGGLES, TOGGLE_ORDER, HEROES, HERO_ORDER, EXIT42, updateExit42, exitStep,
     CAST, sayLine, setSpokenWords, applyHeroLook, assignVoices, systemVoiceFor, voicePool,
-    lineId, loadVoicePack, weaponSurface };
+    lineId, loadVoicePack, weaponSurface,
+    /* The pathfinder and the grid it reads, so a test can ask what the
+       AI can actually see instead of inferring it from where a zombie
+       ends up. The single-height sweep that let them walk through
+       furniture was invisible for exactly as long as this was. */
+    navPath, buildNavLevel, navBlocked };
   window.__T_MAKE = { makeParalyzer, makeMP5, makeSawedOff, makeScattergun, makeObliterator,
     makeBreakwater,
     makeMauser, makeArcProjector, makeKnife, makeHammer, makeRiotShield, makeBatteringRam };

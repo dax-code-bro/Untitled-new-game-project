@@ -892,7 +892,24 @@ function buildViewHand(g, rawAt, side, opts = {}) {
       e: 2.6, uv: t,
     });
   }
-  loftRings(g, rings, 16, true, true);
+  /* THE PALM IS ITS OWN MESH, and that is the whole of "the hand is just
+     a stationary object".
+
+     It was lofted into `g` -- the same geometry as the forearm and the
+     wrist. One mesh is one actor and one actor has one transform, so
+     there was no way to turn the hand without turning the arm it is on.
+     The palm could be TRANSLATED with the forearm, which is what
+     handGive does, and that is the only thing it has ever done: the
+     player was looking at a forearm-and-palm casting sliding 12 mm back
+     and forth with five fingers pivoting on it.
+
+     Lofted into `opts.palmGeo` when one is offered, it becomes an actor
+     of its own hung under the forearm, and the wrist is the joint
+     between them. Nothing about the geometry changes -- the rings are
+     the same rings in the same weapon-space positions, so every contact
+     and sight measurement reads identically at rest -- it is only which
+     buffer they land in. */
+  loftRings(opts.palmGeo || g, rings, 16, true, true);
 
   /* Where the palm actually opens, with the frame the loft gave it.
    *
@@ -2896,14 +2913,20 @@ function makeViewmodelArms(hands, opts = {}) {
   const rDigits = [new Geometry(), new Geometry(), new Geometry(), new Geometry()];
   const lDigits = [new Geometry(), new Geometry(), new Geometry(), new Geometry()];
   const lThumb = new Geometry();
+  /* AND THE PALMS. See the note at the loft in buildViewHand: the palm
+     shared a mesh with the forearm, so the hand could only ever be
+     translated with the arm and never turned on the wrist. Two more
+     meshes buys the joint. */
+  const palm = new Geometry();
+  const lPalm = new Geometry();
   const out = {};
   const pairs = [
     { hand: hands.right, side: 1, grip: hands.rightGrip || 'pistol', sl: sleeve, sk: skin,
-      tg: thumb, dg: rDigits },
+      tg: thumb, dg: rDigits, pg: palm },
     { hand: hands.left, side: -1, grip: hands.leftGrip || 'fore', sl: lSleeve, sk: lSkin,
-      tg: lThumb, dg: lDigits },
+      tg: lThumb, dg: lDigits, pg: lPalm },
   ];
-  for (const { hand, side, grip, sl, sk, tg, dg } of pairs) {
+  for (const { hand, side, grip, sl, sk, tg, dg, pg } of pairs) {
     if (!hand) continue;
     const h = new Vec3(hand[0], hand[1], hand[2]);
     /* MEASURED, and not acted on. Every FIRING hand's anchor sits 2 to
@@ -2951,7 +2974,8 @@ function makeViewmodelArms(hands, opts = {}) {
       sightY: opts.sightY,
       // The firing hand's index keeps its own named mesh, because the game
       // drives it off the trigger; the rest come back through digitGeos.
-      indexGeo: side > 0 ? index : null, digitGeos: dg, surface: opts.surface });
+      indexGeo: side > 0 ? index : null, digitGeos: dg, palmGeo: pg,
+      surface: opts.surface });
     buildViewArm(sl, sk, shoulder, h, side, rec.wrist);
     if (tg && rec.thumbPivot) {
       out[side > 0 ? 'thumbPivot' : 'lThumbPivot'] = rec.thumbPivot;
@@ -2965,7 +2989,7 @@ function makeViewmodelArms(hands, opts = {}) {
     out[side > 0 ? 'right' : 'left'] = rec;
     out[side > 0 ? 'rPivots' : 'lPivots'] = rec.pivots || [];
   }
-  for (const g of [sleeve, skin, lSleeve, lSkin, thumb, index, lThumb,
+  for (const g of [sleeve, skin, lSleeve, lSkin, palm, lPalm, thumb, index, lThumb,
     ...rDigits, ...lDigits]) {
     if (!g) continue;
     g.finalize();
@@ -2973,7 +2997,7 @@ function makeViewmodelArms(hands, opts = {}) {
     smoothNormals(g);
     weldNormals(g.normals, g.weldGroups);
   }
-  return { sleeve, skin, lSleeve, lSkin, thumb, index, lThumb,
+  return { sleeve, skin, lSleeve, lSkin, palm, lPalm, thumb, index, lThumb,
     thumbPivot: out.thumbPivot, indexPivot: out.indexPivot,
     lThumbPivot: out.lThumbPivot,
     thumbAxis: out.thumbAxis, lThumbAxis: out.lThumbAxis,
@@ -3034,6 +3058,7 @@ Engine.prototype.viewmodelArms = function (weapon, hands, opts = {}) {
     a.parent = under || weapon;
     return a;
   };
+  const solidGeo = (geo) => !!(geo && geo.indices && geo.indices.length > 0);
   const sleeveMat = opts.sleeveMaterial || VIEW_ARM_MATERIALS.sleeve;
   const skinMat = opts.skinMaterial || VIEW_ARM_MATERIALS.skin;
   const sleeve = mk(parts.sleeve, sleeveMat, 'r');
@@ -3045,6 +3070,28 @@ Engine.prototype.viewmodelArms = function (weapon, hands, opts = {}) {
     lSkin = mk(parts.lSkin, skinMat, 'l');
     all.push(lSleeve, lSkin);
   }
+  /* THE PALM, hung under the forearm, with the wrist as the joint.
+   *
+   * Reported: "it looks like the hand is just a stationary object and
+   * finger placement is the only thing that moves". It was, and this is
+   * the structural half of why -- the palm was welded into the forearm
+   * mesh, so no amount of animation code could have turned one without
+   * the other. The palm lofts at the weapon's origin exactly as before,
+   * so at zero rotation this is the same hand to the micron; the
+   * difference is that there is now something to rotate.
+   *
+   * Everything that hangs off a hand hangs off the PALM from here --
+   * thumb, index and all four fingers -- so a wrist turn carries them
+   * and their own bends compose on top of it. Left on the forearm they
+   * would have stayed put while the palm turned out from under them,
+   * which is the hand-pulled-apart fault the digit-parenting note above
+   * already describes once. */
+  let palm = skin;
+  if (solidGeo(parts.palm)) { palm = mk(parts.palm, skinMat, 'p', skin); all.push(palm); }
+  let lPalm = null;
+  if (parts.hasLeft && solidGeo(parts.lPalm)) {
+    lPalm = mk(parts.lPalm, skinMat, 'lp', lSkin); all.push(lPalm);
+  } else lPalm = lSkin;
   /* A Geometry object is always returned for these; whether anything was
      ever emitted into it is a different question. The index finger is
      built by the trigger solve, and a knife, a hammer, a battering ram
@@ -3055,11 +3102,11 @@ Engine.prototype.viewmodelArms = function (weapon, hands, opts = {}) {
      candidate for a thing that cannot be seen. */
   const solid = (geo) => geo && geo.indices && geo.indices.length > 0;
   let thumb = null;
-  if (solid(parts.thumb)) { thumb = mk(parts.thumb, skinMat, 't', skin); all.push(thumb); }
+  if (solid(parts.thumb)) { thumb = mk(parts.thumb, skinMat, 't', palm); all.push(thumb); }
   let index = null;
-  if (solid(parts.index)) { index = mk(parts.index, skinMat, 'i', skin); all.push(index); }
+  if (solid(parts.index)) { index = mk(parts.index, skinMat, 'i', palm); all.push(index); }
   let lThumb = null;
-  if (solid(parts.lThumb)) { lThumb = mk(parts.lThumb, skinMat, 'lt', lSkin); all.push(lThumb); }
+  if (solid(parts.lThumb)) { lThumb = mk(parts.lThumb, skinMat, 'lt', lPalm); all.push(lThumb); }
   /* An actor per finger, both hands. They are parented to the weapon like
      every other piece of arm, so at zero rotation the hand is exactly the
      one the grip and contact tests measure -- and now it can also open,
@@ -3067,11 +3114,11 @@ Engine.prototype.viewmodelArms = function (weapon, hands, opts = {}) {
   const rFingers = [], lFingers = [];
   for (let f = 0; f < 4; f++) {
     if (solid(parts.rDigits && parts.rDigits[f])) {
-      const a = mk(parts.rDigits[f], skinMat, 'rf' + f, skin);
+      const a = mk(parts.rDigits[f], skinMat, 'rf' + f, palm);
       rFingers[f] = a; all.push(a);
     } else rFingers[f] = null;
     if (solid(parts.lDigits && parts.lDigits[f])) {
-      const a = mk(parts.lDigits[f], skinMat, 'lf' + f, lSkin);
+      const a = mk(parts.lDigits[f], skinMat, 'lf' + f, lPalm);
       lFingers[f] = a; all.push(a);
     } else lFingers[f] = null;
   }
@@ -3089,7 +3136,16 @@ Engine.prototype.viewmodelArms = function (weapon, hands, opts = {}) {
   /* The support hand's fingers hang off its palm now, so moving the palm
      moves them. Listing them here as well would set their positions a
      second time from the outside, which is the bug this parenting fixes. */
-  return { sleeve, skin, lSleeve, lSkin, thumb, thumbPivot: parts.thumbPivot,
+  return { sleeve, skin, lSleeve, lSkin, palm, lPalm,
+    /* Where each hand joins its arm, in the weapon's own space. The
+       wrist is the point a hand turns about, so the give wants it by
+       name rather than digging it out of the digit record every
+       frame. */
+    rWrist: parts.digits && parts.digits.right && parts.digits.right.wrist
+      ? parts.digits.right.wrist.p : null,
+    lWrist: parts.digits && parts.digits.left && parts.digits.left.wrist
+      ? parts.digits.left.wrist.p : null,
+    thumb, thumbPivot: parts.thumbPivot,
     index, indexPivot: parts.indexPivot,
     lThumb, lThumbPivot: parts.lThumbPivot,
     thumbAxis: parts.thumbAxis, lThumbAxis: parts.lThumbAxis,
@@ -3174,11 +3230,58 @@ function handGive(o = {}) {
      So the reason to move the term is that a hand does not breathe
      along the axis it is gripping. That was true before the
      measurement and is still true after it. */
+  /* AND THE WRIST TURNS, which is the half of this that was missing and
+     is most of what the report was about.
+   *
+   * Everything above is translation: the whole hand-and-forearm casting
+   * sliding 12 mm along the bore. A hand that only slides is a prop
+   * being pushed about, and it is what "the hand is just a stationary
+   * object" describes -- it has no joint of its own, so nothing about
+   * it can look like effort. A wrist is the joint that shows the load.
+   *
+   * WHICH WAY. In the WEAPON's frame the gun is still and the man
+   * moves, so the signs are the opposite of the ones you would write
+   * for a recoiling gun. The muzzle climbs, so relative to the gun the
+   * hand's knuckles go DOWN: a negative turn about +Z, which is the
+   * weapon's right. About +Z a positive angle takes +X (the muzzle
+   * direction) toward +Y (up), so negative drops the knuckles and
+   * lifts the heel of the hand -- the wrist extending as the gun is
+   * driven into the web of the thumb. That is the motion, and it is
+   * the one a camera 200 mm away can actually read.
+   *
+   * HOW FAR, and it is deliberately small. The fingertips are about
+   * 90 mm from the wrist, so 0.085 rad swings them 7.6 mm -- the same
+   * order as the 12 mm of slide, which is the amount already measured
+   * as visible without sliding the fingers off the surface they were
+   * solved onto. It also bounds the seam: the palm turns on the wrist
+   * and the forearm does not, so the two rings open by the angle times
+   * the wrist's half-depth, 0.085 * 15 mm = 1.3 mm, and the forearm's
+   * last ring is lofted 45 per cent deeper than the palm's first one
+   * precisely so there is skin to hide that in.
+   *
+   * THE SUPPORT WRIST does less and does it later -- same reasoning as
+   * its translation, further from the recoil and on a longer lever --
+   * and it goes the other way, because the two hands are the two ends
+   * of the couple that holds the muzzle down.
+   *
+   * AND A HAND AT REST IS NOT STILL. The breath already moves both
+   * hands across the grip; it turns them too, a fifth of a degree of
+   * pronation on a period that does not match the translation's, so
+   * the pair never reads as one rigid object. Steadied by aim, like
+   * everything else here, because that is what holding your breath
+   * is. */
+  const bp = (1 - aim * 0.85) * 0.0042;
+  const rz = -0.085 * (kick / 0.06) - Math.sin(t * 1.3) * bp * 0.6;
+  const lz = 0.052 * (kick / 0.06) * (0.4 + 0.6 * lag) + Math.cos(t * 0.9) * bp * 0.6;
   return {
     r: [slide, heel + by, bx],
     l: [slide * 0.55 * (0.4 + 0.6 * lag),
       heel * 0.70 * (0.4 + 0.6 * lag) + bx,
       -slide * 0.22 + by],
+    /* [about X, about Y, about Z] in the weapon's own frame: pronation,
+       deviation, extension. */
+    rq: [Math.sin(t * 1.7) * bp, -0.018 * (kick / 0.06), rz],
+    lq: [Math.cos(t * 1.15) * bp, 0.026 * (kick / 0.06) * (0.4 + 0.6 * lag), lz],
   };
 }
 
@@ -3194,19 +3297,37 @@ Engine.prototype.giveHands = function (arms, o = {}, extra) {
   if (!arms) return null;
   const g = handGive(o);
   const set = (a, v) => { if (a) a.setPosition(v); };
+  /* Turn a palm on its wrist. An actor's transform is translate-then-
+     rotate about its own origin, and the palm's origin is the weapon's,
+     so holding the wrist point still costs the same p - R*p the fingers
+     already use on their knuckles.
+
+     Skipped when the palm actor IS the forearm actor, which is what the
+     empty-mesh guard falls back to: rotating there would swing the whole
+     arm from the wrist and put the elbow through the camera. */
+  const _wq = new Quat(), _wv = new Vec3();
+  const turnPalm = (act, host, piv, e) => {
+    if (!act || act === host || !piv) return;
+    _wq.setEuler(e[0], e[1], e[2]);
+    _wv.set(piv[0], piv[1], piv[2]).applyQuat(_wq);
+    act.setRotation(_wq);
+    act.setPosition([piv[0] - _wv.x, piv[1] - _wv.y, piv[2] - _wv.z]);
+  };
   set(arms.sleeve, g.r);
   set(arms.skin, g.r);
+  turnPalm(arms.palm, arms.skin, arms.rWrist, g.rq);
   /* `extra === false` means SOMEBODY ELSE OWNS THE SUPPORT HAND -- a
      reload places it on the magazine it is carrying, from an absolute
      point, and writing the give over the top would snap it back to the
      forend. The firing hand still gets its give either way. Any other
      value is an offset the give is added to. */
-  if (extra === false) return g;
+  if (extra === false) { turnPalm(arms.lPalm, arms.lSkin, arms.lWrist, g.lq); return g; }
   const e = extra || null;
   const lx = g.l[0] + (e ? e[0] : 0);
   const ly = g.l[1] + (e ? e[1] : 0);
   const lz = g.l[2] + (e ? e[2] : 0);
   set(arms.lSleeve, [lx, ly, lz]);
   set(arms.lSkin, [lx, ly, lz]);
+  turnPalm(arms.lPalm, arms.lSkin, arms.lWrist, g.lq);
   return g;
 };
