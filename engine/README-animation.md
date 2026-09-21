@@ -137,3 +137,66 @@ raw dt, so on a machine rendering at nine frames a second a 2.05 s
 inspect finished in 1.0 s of match time while the swap beside it still
 took its measured half second — two animations on the same weapon at
 different speeds.
+
+## The hand
+
+Four things about a hand now live in the engine, so the two games cannot
+tell them differently.
+
+**`game.giveHands(arms, o, extra)`** — where a hand sits. It translates
+both hands in the weapon's own frame as the gun is driven back into
+them, turns each palm on its wrist, and breathes. `o.kick`, `o.fire`,
+`o.aim`, `o.t`, and `o.reach`.
+
+`o.reach` is the one worth explaining. Every arm actor is parented to
+the weapon, so when the ram's thrust moves the weapon root 0.62 m the
+arm goes with it — shoulder end included — and finishes in mid-air two
+feet in front of the player. A thrust is the one motion where an arm has
+to change length, so the sleeve and the forearm stretch along the
+weapon's axis, anchored at the wrist, by exactly the distance travelled.
+Pass the projection of the thrust onto the weapon's own +X, not the raw
+distance: an arm can only absorb the part of the motion that runs down
+it, and on a pistol at the hip that is a small fraction of a forward
+lunge.
+
+**`game.openHand(arms, which, amount)`** — a hand letting go. 0 is the
+grip the hand was built in, which every contact and sight measurement is
+taken at, so it must cost nothing; 1 is a hand open enough to receive a
+magazine. Half the turn at the knuckle, a third at the middle joint, a
+fifth at the tip.
+
+**A finger is three actors.** `arms.rBones[f]` is the chain and
+`arms.rFingers[f]` is still the proximal bone, so anything that turned a
+finger about its knuckle keeps working and brings the other two with it.
+The bend must be spread across the three: the tube ends are bare at the
+joints, and 0.6 rad at one knuckle shows 1.9 mm of daylight where 0.2
+rad at each of three shows 0.2 mm.
+
+**The palm is its own mesh**, hung under the forearm with the wrist as
+the joint, and everything that hangs off a hand hangs off the palm. This
+is what makes the first two possible: while the palm shared a buffer
+with the forearm there was no way to turn one without turning the other,
+and the hand could only ever be slid about as a casting.
+
+### What a test of a hand has to do
+
+Four instruments went wrong here before they went right, and all four
+failures have the same shape — measuring in a frame where something else
+was moving, or with a denominator that had changed.
+
+* **Measure in the right frame.** A finger bend is 2 mm; the arm
+  carrying it to a magazine well travels 320 mm, and the gun's own bob
+  moves everything again. Stop the matrix chain at the palm for a
+  finger, at the weapon for a hand.
+* **Watch out for a moving denominator.** grip.test.js samples vertices.
+  Cutting a finger into three buffers re-phases the ring samples and
+  adds interior cap centres, so every percentage in its table moves on
+  geometry whose bounding box is identical to the micron. Re-derive the
+  baselines and say so; do not carry them over.
+* **Pick an invariant the fault cannot satisfy.** "The tip travels
+  further than the middle joint" is not it — that ratio is fixed by the
+  radii and can go either way. The angle between one bone and the next
+  is: a hook swings, and its own shape is constant.
+* **Two poses, not one.** Every hand check in the project measured the
+  built pose, and the built pose was always correct. "The hand never
+  moves" was outside all of them.
