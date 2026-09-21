@@ -2997,7 +2997,8 @@ function makeViewmodelArms(hands, opts = {}) {
     smoothNormals(g);
     weldNormals(g.normals, g.weldGroups);
   }
-  return { sleeve, skin, lSleeve, lSkin, palm, lPalm, thumb, index, lThumb,
+  return { sleeve, skin, lSleeve, lSkin, palm, lPalm, shoulderX: back,
+    thumb, index, lThumb,
     thumbPivot: out.thumbPivot, indexPivot: out.indexPivot,
     lThumbPivot: out.lThumbPivot,
     thumbAxis: out.thumbAxis, lThumbAxis: out.lThumbAxis,
@@ -3137,6 +3138,10 @@ Engine.prototype.viewmodelArms = function (weapon, hands, opts = {}) {
      moves them. Listing them here as well would set their positions a
      second time from the outside, which is the bug this parenting fixes. */
   return { sleeve, skin, lSleeve, lSkin, palm, lPalm,
+    /* Where the arm STARTS, along the weapon's own long axis. The stretch
+       in giveHands measures from here, so it is the builder's number
+       rather than a constant copied into a second file. */
+    shoulderX: parts.shoulderX != null ? parts.shoulderX : -0.07,
     /* Where each hand joins its arm, in the weapon's own space. The
        wrist is the point a hand turns about, so the give wants it by
        name rather than digging it out of the digit record every
@@ -3293,9 +3298,51 @@ function handGive(o = {}) {
    Both the sleeve and the palm move, because they are two actors and a
    palm that travels without its sleeve is a hand coming off a wrist.
    The fingers and thumb are parented to the palm, so they come along. */
+/* HOW FAR THE WEAPON HAS BEEN PUSHED AWAY FROM THE BODY, and what an arm
+ * is supposed to do about it.
+ *
+ * Reported: "if you're using a battering ram and you push the batter ram
+ * in front of you, your arms are there but beyond a short point your arm
+ * is just invisible and not there."
+ *
+ * Exactly so, and it is not a length limit and not a clip plane. Every
+ * arm actor is parented to the WEAPON. The ram's thrust moves the weapon
+ * root 0.62 m along the look vector, so the arm goes with it -- all of
+ * it, the shoulder end included. The arm never gets shorter; it is
+ * carried bodily out in front of the player and finishes in mid-air two
+ * feet from anything, which from behind the eye reads as an arm that
+ * stops partway.
+ *
+ * A thrust is the one motion where an arm HAS to change length, because
+ * the shoulder stays and the hand goes. So the sleeve and the forearm
+ * stretch along the weapon's axis, anchored at the wrist, by exactly the
+ * distance the weapon travelled -- which puts the shoulder end back where
+ * it was before the thrust.
+ *
+ * o.reach is that distance in metres. Zero -- every weapon that does not
+ * thrust -- leaves the scale at 1 and costs nothing. */
 Engine.prototype.giveHands = function (arms, o = {}, extra) {
   if (!arms) return null;
   const g = handGive(o);
+  const reach = Math.max(0, Math.min(1.2, o.reach || 0));
+  const sx = arms.shoulderX != null ? arms.shoulderX : -0.07;
+  const stretchOf = (wrist) => {
+    if (!wrist || reach < 1e-4) return null;
+    const L = wrist[0] - sx;
+    if (!(L > 0.02)) return null;
+    return { k: (L + reach) / L, at: wrist[0] };
+  };
+  const rS = stretchOf(arms.rWrist), lS = stretchOf(arms.lWrist);
+  /* An actor composes translate, rotate, then scale about its own origin,
+     so holding the wrist still under a scale is the same correction the
+     fingers already use for a rotation: the parent maps x to k*x + at*(1-k),
+     which is the identity at x = at. */
+  const grow = (act, st, v) => {
+    if (!act) return;
+    if (!st) { if (act.scale.x !== 1) act.scale.set(1, 1, 1); act.setPosition(v); return; }
+    act.scale.set(st.k, 1, 1);
+    act.setPosition([v[0] + st.at * (1 - st.k), v[1], v[2]]);
+  };
   const set = (a, v) => { if (a) a.setPosition(v); };
   /* Turn a palm on its wrist. An actor's transform is translate-then-
      rotate about its own origin, and the palm's origin is the weapon's,
@@ -3306,28 +3353,37 @@ Engine.prototype.giveHands = function (arms, o = {}, extra) {
      empty-mesh guard falls back to: rotating there would swing the whole
      arm from the wrist and put the elbow through the camera. */
   const _wq = new Quat(), _wv = new Vec3();
-  const turnPalm = (act, host, piv, e) => {
+  /* AND IT UNDOES THE FOREARM'S STRETCH. The palm hangs under the
+     forearm, so a forearm scaled by k would carry the hand with it -- a
+     hand half a metre long, with the fingers pulled off the grip. The
+     parent maps x to k*x + at*(1-k); a child with scale 1/k and its x
+     offset by -at*(1-k)/k composes with that to the identity, so the
+     hand comes out exactly as built however far the arm reaches. */
+  const turnPalm = (act, host, piv, e, st) => {
     if (!act || act === host || !piv) return;
     _wq.setEuler(e[0], e[1], e[2]);
     _wv.set(piv[0], piv[1], piv[2]).applyQuat(_wq);
     act.setRotation(_wq);
-    act.setPosition([piv[0] - _wv.x, piv[1] - _wv.y, piv[2] - _wv.z]);
+    const k = st ? st.k : 1;
+    const back = st ? -st.at * (1 - k) / k : 0;
+    if (act.scale.x !== 1 / k) act.scale.set(1 / k, 1, 1);
+    act.setPosition([piv[0] - _wv.x + back, piv[1] - _wv.y, piv[2] - _wv.z]);
   };
-  set(arms.sleeve, g.r);
-  set(arms.skin, g.r);
-  turnPalm(arms.palm, arms.skin, arms.rWrist, g.rq);
+  grow(arms.sleeve, rS, g.r);
+  grow(arms.skin, rS, g.r);
+  turnPalm(arms.palm, arms.skin, arms.rWrist, g.rq, rS);
   /* `extra === false` means SOMEBODY ELSE OWNS THE SUPPORT HAND -- a
      reload places it on the magazine it is carrying, from an absolute
      point, and writing the give over the top would snap it back to the
      forend. The firing hand still gets its give either way. Any other
      value is an offset the give is added to. */
-  if (extra === false) { turnPalm(arms.lPalm, arms.lSkin, arms.lWrist, g.lq); return g; }
+  if (extra === false) { turnPalm(arms.lPalm, arms.lSkin, arms.lWrist, g.lq, lS); return g; }
   const e = extra || null;
   const lx = g.l[0] + (e ? e[0] : 0);
   const ly = g.l[1] + (e ? e[1] : 0);
   const lz = g.l[2] + (e ? e[2] : 0);
-  set(arms.lSleeve, [lx, ly, lz]);
-  set(arms.lSkin, [lx, ly, lz]);
-  turnPalm(arms.lPalm, arms.lSkin, arms.lWrist, g.lq);
+  grow(arms.lSleeve, lS, [lx, ly, lz]);
+  grow(arms.lSkin, lS, [lx, ly, lz]);
+  turnPalm(arms.lPalm, arms.lSkin, arms.lWrist, g.lq, lS);
   return g;
 };

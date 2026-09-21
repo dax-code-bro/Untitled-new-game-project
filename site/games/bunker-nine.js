@@ -6335,7 +6335,7 @@ function makePlayer(game, S, hud, sfx, voice) {
     recoil: { pitch: 0, yaw: 0 }, recoilApplied: { pitch: 0, yaw: 0 },
     arms: {},
     perks: {}, maxHp: PLAYER.hp,
-    stamina: 1, sliding: 0, slideMax: 0, slideCd: 0, slideDir: null,
+    stamina: 1, sliding: 0, slideMax: 0, slideCd: 0, slideDir: null, reachOut: 0,
     shieldT: 0, shieldCd: 0,
     prevSlot: 0, knifeOut: false,
     building: false, buildingWas: false, buildT: 0, lastBeat: -1, prevSlotBuild: 0,
@@ -7552,6 +7552,30 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
                along the look vector — it is a thrust, not a swing
        shield  turned edge-on and shoved, a short flat push
        knife   a diagonal slash across the body */
+  /* HOW FAR THE WEAPON HAS GONE FROM THE BODY THIS FRAME, which the arms
+     need and had no way to know. Zeroed here and written by the thrust
+     and the lunge below, so a swing that ends leaves it at nothing
+     without anybody having to remember to clear it. */
+  P.reachOut = 0;
+  /* ALONG THE ARM, NOT ALONG THE LOOK VECTOR, and the difference is not
+     small. The thrust and the lunge move the weapon along the way the
+     camera is facing; the arm runs along the WEAPON's long axis, which
+     on a pistol at the hip is tipped a long way off that. Stretching an
+     arm can only absorb the part of the motion that runs down the arm,
+     so that is the part it is told about -- the projection onto the
+     weapon's own +X in world. The rest legitimately swings the arm, the
+     way a real one swings when you punch across yourself.
+
+     Measured on the 1911, which is what found this: its local +X points
+     roughly (0, -0.70, -0.72) in world at the hip carry, so a forward
+     thrust is almost entirely across its arm rather than along it. Told
+     the raw 0.62 the shoulder came out 877 mm from where it started --
+     further wrong than doing nothing at all. */
+  const armAxis = (root2, wx, wy, wz) => {
+    if (!root2 || !root2.rotation) return 0;
+    _vAxisTmp.set(1, 0, 0).applyQuat(root2.rotation);
+    return wx * _vAxisTmp.x + wy * _vAxisTmp.y + wz * _vAxisTmp.z;
+  };
   const swingSpec = MELEE_SWING[P.equipped()];
   if (swingSpec && P.swingT > 0) {
     const u = 1 - P.swingT / swingSpec.time;          // 0 at the strike, 1 done
@@ -7561,6 +7585,7 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
       : 1 - (u - swingSpec.out) / (1 - swingSpec.out);
     if (swingSpec.thrust) {
       const reach = drive * swingSpec.reach;
+      P.reachOut = Math.max(0, armAxis(root, f.x * reach, f.y * reach, f.z * reach));
       root.setPosition([px + f.x * reach, py + f.y * reach - 0.02 * (1 - drive), pz + f.z * reach]);
       _vQuat2.setAxisAngle(_vAxisZ, -0.30 * (1 - drive));
       _vQuat1.mulQuats(_vQuat1, _vQuat2);
@@ -7574,6 +7599,7 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
       }
       root.setRotation(_vQuat1);
       const lunge = drive * swingSpec.reach;
+      P.reachOut = Math.max(0, armAxis(root, f.x * lunge, f.y * lunge, f.z * lunge));
       root.setPosition([px + f.x * lunge, py + f.y * lunge, pz + f.z * lunge]);
     }
   } else if (spec.blocks && P.blocking) {
@@ -7924,6 +7950,11 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
        something, so `false` says leave that one alone; the firing hand
        gets its give either way. */
     game.giveHands(v.arms, {
+      /* The thrust and the lunge carry the weapon away from the body, and
+         the arms are parented to the weapon -- so without this the whole
+         arm travels with it and ends in mid-air. See the note on reach in
+         98-viewmodel.js; this is the battering ram fault. */
+      reach: P.reachOut || 0,
       kick: P.kickBack || 0,
       fire: Math.max(0, Math.min(1, (P.slideCycle || 0) / (P.slideCycleMax || 0.085))),
       t: P.swayT || 0, aim: P.ads || 0,
@@ -8304,6 +8335,7 @@ const _clone = () => Object.assign(Object.create(Object.getPrototypeOf(_vTmp1)),
 const _vTmp2 = _clone();
 const _vTmp3 = _clone();
 const _vTmp4 = _clone();
+let _vAxisTmp = null;
 let _vQuat1 = null, _vQuat2 = null;   // need LE at boot; assigned in start()
 let _vAxisX = null, _vAxisY = null, _vAxisZ = null;
 
@@ -13927,6 +13959,7 @@ function start(opts = {}) {
   _vAxisX = new LE.Vec3(1, 0, 0);
   _vAxisY = new LE.Vec3(0, 1, 0);
   _vAxisZ = new LE.Vec3(0, 0, 1);
+  _vAxisTmp = new LE.Vec3(1, 0, 0);
 
   const game = LE.create({
     canvas: opts.canvas || '#game',
