@@ -8082,85 +8082,18 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
      casting; the support hand could be slid to the magazine well but not
      opened, so it arrived as a closed fist and the magazine appeared
      inside it. */
-  const turnDigit = (act, piv, axis, ang) => {
-    if (!act || !piv) return;
-    const q = new LegendEngine.Quat().setAxisAngle(
-      new LegendEngine.Vec3(axis ? axis[0] : 0, axis ? axis[1] : 0, axis ? axis[2] : 1), ang);
-    act.setRotation(q);
-    /* Hold the knuckle still. An actor's transform is translate-then-
-       rotate, so to fix a point p it has to sit at p - R*p. */
-    const r = new LegendEngine.Vec3(piv[0], piv[1], piv[2]).applyQuat(q);
-    act.setPosition([piv[0] - r.x, piv[1] - r.y, piv[2] - r.z]);
-  };
-  const poseHand = (arms, which, amount) => {
-    if (!arms) return;
-    const fingers = which === 'left' ? arms.lFingers : arms.rFingers;
-    const pivots = which === 'left' ? arms.lPivots : arms.rPivots;
-    const rec = arms.digits && arms.digits[which];
-    if (!fingers || !pivots || !rec || !rec.digits) return;
-    for (let f = 0; f < 4; f++) {
-      const d = rec.digits[f];
-      if (!fingers[f] || !pivots[f] || !d) continue;
-      /* The little finger opens furthest and the index least, which is
-         what a hand actually does when it lets go of something. */
-      /* Nearly together. At 1.15 down to 0.78 the four fingers opened by
-         visibly different amounts, and since a rigid turn about the
-         knuckle cannot uncurl them, what came out was four posts of four
-         different heights standing off the handguard -- a staircase, not
-         a hand. A hand relaxing opens its fingers by almost the same
-         amount; the little finger leads by a hair and that is all. */
-      const lean = [1.06, 1.0, 0.96, 0.90][f];
-      /* A rigid turn about the base knuckle cannot UNCURL a finger -- it
-         swings the whole hook open, which is what letting go looks like
-         from outside and is as far as one joint can take it. 1.25 rad at
-         the knuckle carries the fingertip far enough to read as an open
-         hand; less and it looks like the hand twitched. Opening turns
-         away from the closing direction, so it can never drive a finger
-         into the weapon however far it goes. */
-      /* And not so far. One joint swinging 72 degrees is a claw opening;
-         a hand letting go of something rotates its knuckles about half
-         that and does the rest by straightening, which one rigid turn
-         cannot do. Asking for the part it CAN do reads as a hand; asking
-         for the whole of it reads as a mistake. */
-      // `open` is the sign that takes this finger AWAY from the weapon,
-      // measured when it was built rather than assumed to be negative.
-      const want = (d.open || -1) * amount * 0.62 * lean;
-      /* ACROSS THREE JOINTS, because a finger has three.
-       *
-       * It used to be one turn at the base knuckle, and the paragraph
-       * above admits what that costs: "a rigid turn about the base
-       * knuckle cannot UNCURL a finger -- it swings the whole hook
-       * open". That is the hook the player was looking at, and why the
-       * motion read as a wobble rather than as a hand.
-       *
-       * Half at the knuckle, a third at the middle joint, a fifth at
-       * the tip -- which is roughly how a hand opens, the big joint
-       * leading -- and the three compose because each bone is parented
-       * to the one before it. It also keeps the gap at each joint
-       * small: bare tube ends rotating about a shared centre open
-       * r*(1-cos t), and spreading 0.6 rad over three joints puts that
-       * at 0.2 mm instead of the 1.9 mm one hinge would have shown.
-       *
-       * The old single-actor finger still works: bones[1] and bones[2]
-       * are null there and the whole angle lands on the knuckle, which
-       * is exactly what it did before. */
-      const bones = (which === 'left' ? arms.lBones : arms.rBones) || [];
-      const bs = bones[f];
-      const piv3 = d.pivots3 || null;
-      if (bs && bs[1] && bs[2] && piv3) {
-        const SHARE = [0.50, 0.30, 0.20];
-        for (let b = 0; b < 3; b++) turnDigit(bs[b], piv3[b], d.axis, want * SHARE[b]);
-      } else {
-        turnDigit(fingers[f], pivots[f], d.axis, want);
-      }
-    }
-    const th = which === 'left' ? arms.lThumb : arms.thumb;
-    const tp = which === 'left' ? arms.lThumbPivot : arms.thumbPivot;
-    // About the thumb's own opening axis. World Z swung it up and down
-    // the frame instead of off the fingers.
-    const ta = which === 'left' ? arms.lThumbAxis : arms.thumbAxis;
-    if (th && tp) turnDigit(th, tp, ta || [0, 0, 1], -amount * 0.42);
-  };
+  /* OPENING THE HAND LIVES IN THE ENGINE NOW, and the four paragraphs
+     of reasoning that used to be here went with it -- see openHand in
+     98-viewmodel.js. The motion is the same in both games, because a
+     hand lets go of a weapon the same way whoever is holding it, and
+     two copies of it is two places for the little finger to start
+     leading by a different amount.
+
+     What was here also predated the finger being three bones: it turned
+     one rigid actor about one knuckle, which is the hook the report was
+     about. The engine version spreads the turn across the three joints
+     each finger now has. */
+  const poseHand = (arms, which, amount) => { game.openHand(arms, which, amount); };
   /* The support hand through a reload: it lets go, travels open, closes on
      what it is fetching, and opens again to release. RELOAD_WINDOW already
      says when each weapon's load is in that hand -- the same numbers the
