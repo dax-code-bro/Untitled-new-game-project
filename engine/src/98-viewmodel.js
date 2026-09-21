@@ -3407,6 +3407,65 @@ function handGive(o = {}) {
   };
 }
 
+/* OPEN A HAND, across the three bones each finger now has.
+ *
+ * Zombies grew its own version of this before the finger was split, and
+ * it is the same motion in both games -- a hand lets go of a weapon to
+ * fetch a magazine exactly the same way whoever is holding it. Put here
+ * so multiplayer, which had no finger animation at all, gets one from
+ * the same code rather than a second copy that drifts.
+ *
+ *   amount  0 is the grip the hand was built in -- every contact and
+ *           sight measurement is taken there, so it must cost nothing --
+ *           and 1 is a hand open enough to receive something.
+ *
+ * Half the opening at the knuckle, a third at the middle joint, a fifth
+ * at the tip: roughly how a hand opens, the big joint leading, and it
+ * keeps each joint's turn small enough that the bare tube ends do not
+ * show daylight between them.
+ *
+ * The direction comes from the digit record, measured when the finger
+ * was built. Assuming it is negative works on a pistol grip and is
+ * wrong on a forend, which is the sort of thing that makes a support
+ * hand close INTO a handguard when it is asked to let go. */
+const OPEN_SHARE = [0.50, 0.30, 0.20];
+const _ohQ = new Quat(), _ohV = new Vec3();
+Engine.prototype.openHand = function (arms, which, amount) {
+  if (!arms) return;
+  const bones = which === 'left' ? arms.lBones : arms.rBones;
+  const fingers = which === 'left' ? arms.lFingers : arms.rFingers;
+  const pivots = which === 'left' ? arms.lPivots : arms.rPivots;
+  const rec = arms.digits && arms.digits[which];
+  const ds = rec && rec.digits;
+  if (!ds) return;
+  const turn = (act, piv, axis, ang) => {
+    if (!act || !piv) return;
+    _ohQ.setAxisAngle(_ohV.set(axis ? axis[0] : 0, axis ? axis[1] : 0,
+      axis ? axis[2] : 1), ang);
+    act.setRotation(_ohQ);
+    const r = _ohV.set(piv[0], piv[1], piv[2]).applyQuat(_ohQ);
+    act.setPosition([piv[0] - r.x, piv[1] - r.y, piv[2] - r.z]);
+  };
+  for (let f = 0; f < 4; f++) {
+    const d = ds[f];
+    if (!d) continue;
+    /* The little finger leads by a hair and that is all. Four fingers
+       opening by visibly different amounts comes out as a staircase. */
+    const lean = [1.06, 1.0, 0.96, 0.90][f];
+    const want = (d.open || -1) * amount * 0.62 * lean;
+    const bs = bones && bones[f];
+    if (bs && bs[1] && bs[2] && d.pivots3) {
+      for (let b = 0; b < 3; b++) turn(bs[b], d.pivots3[b], d.axis, want * OPEN_SHARE[b]);
+    } else if (fingers && fingers[f] && pivots && pivots[f]) {
+      turn(fingers[f], pivots[f], d.axis, want);
+    }
+  }
+  const th = which === 'left' ? arms.lThumb : arms.thumb;
+  const tp = which === 'left' ? arms.lThumbPivot : arms.thumbPivot;
+  const ta = which === 'left' ? arms.lThumbAxis : arms.thumbAxis;
+  if (th && tp) turn(th, tp, ta || [0, 0, 1], -amount * 0.42);
+};
+
 /* Apply it. `arms` is what viewmodelArms returned; `extra` is anything
    the caller is already doing to the support hand (a reload carries it
    right off the weapon), and the give is added to that rather than

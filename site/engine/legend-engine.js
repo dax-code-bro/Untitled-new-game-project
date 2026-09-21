@@ -31081,13 +31081,25 @@ const RELOAD_WINDOW = {
   /* A rocket is one object and it takes the whole reload to fetch,
      line up and push home. */
   rocket: [0.14, 0.88],
+  /* A BAZOOKA LOADS FROM THE BACK, so the rocket is in the hand for the
+     first two thirds and then disappears INTO the tube rather than
+     staying proud of the muzzle. All four launchers shared the muzzle
+     path, which put an M1's rocket out in front of a weapon that is
+     loaded over the loader's shoulder. */
+  breech: [0.12, 0.70],
+  /* A STINGER IS A SEALED TUBE. There is no missile to load: the round
+     comes packed in its launch tube and what changes hands is the tube
+     itself, clipped onto the gripstock. So the carried object is the
+     whole tube, it arrives late, and it never leaves the hand -- it
+     BECOMES the weapon. */
+  sealed: [0.30, 0.86],
 };
 
 /* Every kind that puts something in the hand. A weapon whose reloadKind
    is none of these reloads gun-side only, and the support hand stays
    where it is. */
 const RELOAD_CARRIES = { mag: 1, clip: 1, cell: 1, belt: 1, break: 1,
-  revolver: 1, tube: 1, rocket: 1 };
+  revolver: 1, tube: 1, rocket: 1, breech: 1, sealed: 1 };
 
 /* Where the fingers close on each kind of load: a magazine near its
    base, a clip by its spine, a pair of shells at their heads, a cell by
@@ -31103,6 +31115,12 @@ const RELOAD_HOLD = {
   /* A rocket is carried by its motor tube, well behind the warhead --
      nobody picks one up by the fuse. */
   rocket: [-0.120, -0.012, 0.000],
+  /* Going in backwards, so the hand is on the fin end: the warhead is
+     the part being pushed away from you. */
+  breech: [0.105, -0.010, 0.000],
+  /* A launch tube is carried under the middle, two hands' worth of
+     weight on one until it is clipped on. */
+  sealed: [0.000, -0.062, 0.000],
   mag: [0.000, -0.052, -0.006],
 };
 
@@ -31249,7 +31267,33 @@ Engine.prototype.reloadProp = function (cache, id, root, kind, o = {}) {
     for (const q of parts0) q.visible = false;
     cache[id] = { root: shells[0], parts: parts0, shells };
     return cache[id];
-  } else if (kind === 'rocket') {
+  } else if (kind === 'sealed') {
+    /* A STINGER HAS NO MISSILE TO LOAD.
+     *
+     * The round comes from the factory sealed in its launch tube; what
+     * a crew changes is the TUBE, clipped onto a gripstock that is the
+     * only part they keep. So the carried object is not a rocket, it is
+     * a metre of fibreglass pipe with the weapon's own diameter, and it
+     * does not disappear into anything -- it becomes the weapon.
+     *
+     * All four launchers shared the muzzle-loaded rocket path, which
+     * had a Stinger crew posting a bare missile into the front of a
+     * sealed tube. */
+    const T = (A.sealed || {});
+    const body = this.cylinder({ physics: false,
+      radius: T.r == null ? 0.041 : T.r,
+      height: T.len == null ? 0.62 : T.len,
+      material: A.sealedMaterial || { color: 0x5d6152, texture: 'metal',
+        roughness: 0.78, metalness: 0.25 } });
+    body.parent = root;
+    // Built standing on +Y; the bore runs +X.
+    body.setRotation([0, 0, -90]);
+    const partsT = [body];
+    for (const q of body.partNames || []) if (body[q]) partsT.push(body[q]);
+    for (const q of partsT) q.visible = false;
+    cache[id] = { root: body, parts: partsT };
+    return cache[id];
+  } else if (kind === 'rocket' || kind === 'breech') {
     /* A LAUNCHER DOES NOT TAKE A MAGAZINE, and four of them were going
        to: with no path of their own they fell through to `mag`, which
        posts a box into a magazine well -- and a tube has none, so
@@ -31436,6 +31480,36 @@ Engine.prototype.poseReload = function (o) {
     rot0 = [0, -26, -30];
     // It stays in the tube once it is home, so nothing to hide.
     show = u2 < 0.99;
+  } else if (kind === 'breech') {
+    /* AND A BAZOOKA LOADS FROM THE OTHER END.
+     *
+     * An M1 is loaded over the firer's shoulder: the rocket goes into
+     * the BACK of the tube, fins first is wrong -- warhead first, from
+     * behind -- and once it is home it is inside the tube and out of
+     * sight. Sharing the muzzle path put an M1's rocket standing proud
+     * of the front of a weapon nobody can reach the front of while it
+     * is on their shoulder.
+     *
+     * The breech end is behind the weapon's origin, which is roughly
+     * under the firer's hand; the rocket comes up and in from the
+     * support side and goes forward down the bore. It vanishes at the
+     * end of the window rather than staying, because by then it is
+     * inside the tube. */
+    const back = o.breechAt == null ? -0.150 : Math.min(-0.060, o.breechAt - 0.20);
+    to = [back + 0.030, bore, 0];
+    from = [back - 0.230, bore - 0.150, -0.150];
+    rot0 = [0, 18, -24];
+    show = u2 < 0.92;
+  } else if (kind === 'sealed') {
+    /* THE WHOLE TUBE, clipped on. It comes up from underneath and to
+       the support side, levels, and seats along the bore -- and it does
+       NOT disappear, because from that moment it is the weapon. The
+       seat is the weapon's own axis, so the tube finishes concentric
+       with the launcher rather than beside it. */
+    to = [0.030, bore, 0];
+    from = [-0.120, bore - 0.230, -0.175];
+    rot0 = [0, 10, -30];
+    show = true;
   } else if (kind === 'tube') {
     /* One shell at a time, up into the gate. The hand makes the same
        short trip as many times as there are shells: down to the belt,
@@ -35468,6 +35542,65 @@ function handGive(o = {}) {
     lq: [Math.cos(t * 1.15) * bp, 0.026 * (kick / 0.06) * (0.4 + 0.6 * lag), lz],
   };
 }
+
+/* OPEN A HAND, across the three bones each finger now has.
+ *
+ * Zombies grew its own version of this before the finger was split, and
+ * it is the same motion in both games -- a hand lets go of a weapon to
+ * fetch a magazine exactly the same way whoever is holding it. Put here
+ * so multiplayer, which had no finger animation at all, gets one from
+ * the same code rather than a second copy that drifts.
+ *
+ *   amount  0 is the grip the hand was built in -- every contact and
+ *           sight measurement is taken there, so it must cost nothing --
+ *           and 1 is a hand open enough to receive something.
+ *
+ * Half the opening at the knuckle, a third at the middle joint, a fifth
+ * at the tip: roughly how a hand opens, the big joint leading, and it
+ * keeps each joint's turn small enough that the bare tube ends do not
+ * show daylight between them.
+ *
+ * The direction comes from the digit record, measured when the finger
+ * was built. Assuming it is negative works on a pistol grip and is
+ * wrong on a forend, which is the sort of thing that makes a support
+ * hand close INTO a handguard when it is asked to let go. */
+const OPEN_SHARE = [0.50, 0.30, 0.20];
+const _ohQ = new Quat(), _ohV = new Vec3();
+Engine.prototype.openHand = function (arms, which, amount) {
+  if (!arms) return;
+  const bones = which === 'left' ? arms.lBones : arms.rBones;
+  const fingers = which === 'left' ? arms.lFingers : arms.rFingers;
+  const pivots = which === 'left' ? arms.lPivots : arms.rPivots;
+  const rec = arms.digits && arms.digits[which];
+  const ds = rec && rec.digits;
+  if (!ds) return;
+  const turn = (act, piv, axis, ang) => {
+    if (!act || !piv) return;
+    _ohQ.setAxisAngle(_ohV.set(axis ? axis[0] : 0, axis ? axis[1] : 0,
+      axis ? axis[2] : 1), ang);
+    act.setRotation(_ohQ);
+    const r = _ohV.set(piv[0], piv[1], piv[2]).applyQuat(_ohQ);
+    act.setPosition([piv[0] - r.x, piv[1] - r.y, piv[2] - r.z]);
+  };
+  for (let f = 0; f < 4; f++) {
+    const d = ds[f];
+    if (!d) continue;
+    /* The little finger leads by a hair and that is all. Four fingers
+       opening by visibly different amounts comes out as a staircase. */
+    const lean = [1.06, 1.0, 0.96, 0.90][f];
+    const want = (d.open || -1) * amount * 0.62 * lean;
+    const bs = bones && bones[f];
+    if (bs && bs[1] && bs[2] && d.pivots3) {
+      for (let b = 0; b < 3; b++) turn(bs[b], d.pivots3[b], d.axis, want * OPEN_SHARE[b]);
+    } else if (fingers && fingers[f] && pivots && pivots[f]) {
+      turn(fingers[f], pivots[f], d.axis, want);
+    }
+  }
+  const th = which === 'left' ? arms.lThumb : arms.thumb;
+  const tp = which === 'left' ? arms.lThumbPivot : arms.thumbPivot;
+  const ta = which === 'left' ? arms.lThumbAxis : arms.thumbAxis;
+  if (th && tp) turn(th, tp, ta || [0, 0, 1], -amount * 0.42);
+};
 
 /* Apply it. `arms` is what viewmodelArms returned; `extra` is anything
    the caller is already doing to the support hand (a reload carries it

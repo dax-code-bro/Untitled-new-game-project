@@ -72,13 +72,25 @@ const RELOAD_WINDOW = {
   /* A rocket is one object and it takes the whole reload to fetch,
      line up and push home. */
   rocket: [0.14, 0.88],
+  /* A BAZOOKA LOADS FROM THE BACK, so the rocket is in the hand for the
+     first two thirds and then disappears INTO the tube rather than
+     staying proud of the muzzle. All four launchers shared the muzzle
+     path, which put an M1's rocket out in front of a weapon that is
+     loaded over the loader's shoulder. */
+  breech: [0.12, 0.70],
+  /* A STINGER IS A SEALED TUBE. There is no missile to load: the round
+     comes packed in its launch tube and what changes hands is the tube
+     itself, clipped onto the gripstock. So the carried object is the
+     whole tube, it arrives late, and it never leaves the hand -- it
+     BECOMES the weapon. */
+  sealed: [0.30, 0.86],
 };
 
 /* Every kind that puts something in the hand. A weapon whose reloadKind
    is none of these reloads gun-side only, and the support hand stays
    where it is. */
 const RELOAD_CARRIES = { mag: 1, clip: 1, cell: 1, belt: 1, break: 1,
-  revolver: 1, tube: 1, rocket: 1 };
+  revolver: 1, tube: 1, rocket: 1, breech: 1, sealed: 1 };
 
 /* Where the fingers close on each kind of load: a magazine near its
    base, a clip by its spine, a pair of shells at their heads, a cell by
@@ -94,6 +106,12 @@ const RELOAD_HOLD = {
   /* A rocket is carried by its motor tube, well behind the warhead --
      nobody picks one up by the fuse. */
   rocket: [-0.120, -0.012, 0.000],
+  /* Going in backwards, so the hand is on the fin end: the warhead is
+     the part being pushed away from you. */
+  breech: [0.105, -0.010, 0.000],
+  /* A launch tube is carried under the middle, two hands' worth of
+     weight on one until it is clipped on. */
+  sealed: [0.000, -0.062, 0.000],
   mag: [0.000, -0.052, -0.006],
 };
 
@@ -240,7 +258,33 @@ Engine.prototype.reloadProp = function (cache, id, root, kind, o = {}) {
     for (const q of parts0) q.visible = false;
     cache[id] = { root: shells[0], parts: parts0, shells };
     return cache[id];
-  } else if (kind === 'rocket') {
+  } else if (kind === 'sealed') {
+    /* A STINGER HAS NO MISSILE TO LOAD.
+     *
+     * The round comes from the factory sealed in its launch tube; what
+     * a crew changes is the TUBE, clipped onto a gripstock that is the
+     * only part they keep. So the carried object is not a rocket, it is
+     * a metre of fibreglass pipe with the weapon's own diameter, and it
+     * does not disappear into anything -- it becomes the weapon.
+     *
+     * All four launchers shared the muzzle-loaded rocket path, which
+     * had a Stinger crew posting a bare missile into the front of a
+     * sealed tube. */
+    const T = (A.sealed || {});
+    const body = this.cylinder({ physics: false,
+      radius: T.r == null ? 0.041 : T.r,
+      height: T.len == null ? 0.62 : T.len,
+      material: A.sealedMaterial || { color: 0x5d6152, texture: 'metal',
+        roughness: 0.78, metalness: 0.25 } });
+    body.parent = root;
+    // Built standing on +Y; the bore runs +X.
+    body.setRotation([0, 0, -90]);
+    const partsT = [body];
+    for (const q of body.partNames || []) if (body[q]) partsT.push(body[q]);
+    for (const q of partsT) q.visible = false;
+    cache[id] = { root: body, parts: partsT };
+    return cache[id];
+  } else if (kind === 'rocket' || kind === 'breech') {
     /* A LAUNCHER DOES NOT TAKE A MAGAZINE, and four of them were going
        to: with no path of their own they fell through to `mag`, which
        posts a box into a magazine well -- and a tube has none, so
@@ -427,6 +471,36 @@ Engine.prototype.poseReload = function (o) {
     rot0 = [0, -26, -30];
     // It stays in the tube once it is home, so nothing to hide.
     show = u2 < 0.99;
+  } else if (kind === 'breech') {
+    /* AND A BAZOOKA LOADS FROM THE OTHER END.
+     *
+     * An M1 is loaded over the firer's shoulder: the rocket goes into
+     * the BACK of the tube, fins first is wrong -- warhead first, from
+     * behind -- and once it is home it is inside the tube and out of
+     * sight. Sharing the muzzle path put an M1's rocket standing proud
+     * of the front of a weapon nobody can reach the front of while it
+     * is on their shoulder.
+     *
+     * The breech end is behind the weapon's origin, which is roughly
+     * under the firer's hand; the rocket comes up and in from the
+     * support side and goes forward down the bore. It vanishes at the
+     * end of the window rather than staying, because by then it is
+     * inside the tube. */
+    const back = o.breechAt == null ? -0.150 : Math.min(-0.060, o.breechAt - 0.20);
+    to = [back + 0.030, bore, 0];
+    from = [back - 0.230, bore - 0.150, -0.150];
+    rot0 = [0, 18, -24];
+    show = u2 < 0.92;
+  } else if (kind === 'sealed') {
+    /* THE WHOLE TUBE, clipped on. It comes up from underneath and to
+       the support side, levels, and seats along the bore -- and it does
+       NOT disappear, because from that moment it is the weapon. The
+       seat is the weapon's own axis, so the tube finishes concentric
+       with the launcher rather than beside it. */
+    to = [0.030, bore, 0];
+    from = [-0.120, bore - 0.230, -0.175];
+    rot0 = [0, 10, -30];
+    show = true;
   } else if (kind === 'tube') {
     /* One shell at a time, up into the gate. The hand makes the same
        short trip as many times as there are shells: down to the belt,

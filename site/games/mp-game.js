@@ -1130,7 +1130,21 @@
        tube, brought up from below and in front and pushed home. The two
        that are NOT this -- the M79 hinges and the six-shot revolves --
        are caught above, by their own declared action. */
-    if (spec && spec.cls === 'launcher') return 'rocket';
+    /* AND THE FOUR LAUNCHERS ARE NOT ALL THE SAME LAUNCHER. They all
+       returned 'rocket' -- one warhead pushed into the muzzle and left
+       standing proud of it -- which is the Panzerfaust and the RPG and
+       is neither of the other two.
+
+       An M1 Bazooka is loaded over the firer's shoulder, into the BACK
+       of the tube, and the rocket is inside once it is home. A Stinger
+       has no missile to load at all: the round is sealed in its launch
+       tube at the factory and what changes hands is the tube, clipped
+       onto the gripstock. Same class, three different jobs. */
+    if (spec && spec.cls === 'launcher') {
+      if (spec.id === 'bazooka') return 'breech';
+      if (spec.fam === 'guided') return 'sealed';
+      return 'rocket';
+    }
     var k = spec && spec.reloadKind;
     if (k === 'clip') return 'clip';
     if (k === 'moon') return 'revolver';
@@ -1813,6 +1827,33 @@
              rather than being overwritten: a reload carries that hand
              right off the weapon and the give has to ride on top of it,
              not fight it for the same three numbers. */
+          /* AND THE SUPPORT HAND OPENS TO TAKE THE MAGAZINE. Multiplayer
+             had no finger animation at all: the hand arrived at the
+             magazine well as a closed fist and the magazine appeared
+             inside it. Same motion as zombies, from the same engine
+             function, so the two cannot drift apart. Open early, hold
+             open until the load is in the hand, then close on it. */
+          if (game.openHand) {
+            let want = 0;
+            if (rl > 0) {
+              /* `rl` is already how far through the reload is, 0 to 1 --
+                 the caller divides the time out. Zombies keeps the time
+                 remaining instead and has to invert it, which is the
+                 sort of difference that puts a hand on the wrong beat
+                 in one game and not the other. */
+              const done = rl;
+              const win = (LE.RELOAD_WINDOW && LE.RELOAD_WINDOW[state.rlKind])
+                || [0.15, 0.65];
+              const o0 = Math.max(0.05, win[0] * 0.75);
+              if (done < o0) want = Math.min(1, done / o0);
+              else if (done < win[0]) want = 1;
+              else if (done < win[1]) want = 0.15;
+              else want = Math.max(0, 1 - (done - win[1]) / Math.max(0.08, 1 - win[1]));
+            }
+            state.handOpen = (state.handOpen || 0)
+              + (want - (state.handOpen || 0)) * Math.min(1, (dt || 0.016) * 14);
+            game.openHand(arms, 'left', state.handOpen);
+          }
           game.giveHands(arms, {
             kick: (kick || 0) * 0.02,
             fire: state.cyc > 0 ? 1 - state.cyc / Math.max(1e-4, state.cycMax) : 0,
