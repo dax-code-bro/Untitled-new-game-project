@@ -72,7 +72,7 @@
        first thing it meets; restarting a little past each hit walks the
        whole row and finds the far side of the crate as well as the
        near side. */
-    function sweep(along) {
+    function sweep(along, atY) {
       var n = along === 'x' ? h : w;
       for (var k = 0; k < n; k++) {
         var fixed = (along === 'x' ? box.z0 : box.x0) + (k + 0.5) * c;
@@ -82,7 +82,7 @@
           var ox = along === 'x' ? box.x0 + t : fixed;
           var oz = along === 'x' ? fixed : box.z0 + t;
           var dir = along === 'x' ? [1, 0, 0] : [0, 0, 1];
-          var hit = game.raycast([ox, y, oz], dir, span - t, solid);
+          var hit = game.raycast([ox, atY, oz], dir, span - t, solid);
           if (!hit) break;
           var d = Math.hypot(hit.point.x - ox, hit.point.z - oz);
           mark(hit.point.x, hit.point.z);
@@ -90,7 +90,32 @@
         }
       }
     }
-    sweep('x'); sweep('z');
+    /* AT MORE THAN ONE HEIGHT, and this is the whole of "the AI phase
+       through stuff".
+     *
+       The sweep ran at a single y -- 1.05 m, chest height -- and marked
+       a cell only where a ray at that exact height hit something. So
+       the grid contained precisely the obstacles that intersect one
+       horizontal plane a metre off the floor, and NOTHING else. A
+       waist-high crate, a car bonnet, a low wall, a counter, a railing,
+       a stack of sandbags: all of them invisible to the pathfinder,
+       all of them walked straight through. The bots were not failing to
+       path -- they have A*, a path cache and a search budget, and all
+       of it works. They were pathing perfectly around a map that was
+       missing most of its furniture.
+
+       A man is 1.75 m tall and he is stopped by anything between his
+       ankles and his eyes. Four heights, unioned: 0.30 catches kerbs
+       and crates, 0.75 catches counters and bonnets, 1.20 is the old
+       chest line, 1.60 catches the rails and beams that a body would
+       walk into face first. Four times the rays, cast once at match
+       start and never again. */
+    var HEIGHTS = [0.30, 0.75, 1.20, 1.60];
+    var base = y - 1.05;                 // keep the caller's floor offset
+    for (var hi = 0; hi < HEIGHTS.length; hi++) {
+      sweep('x', base + HEIGHTS[hi]);
+      sweep('z', base + HEIGHTS[hi]);
+    }
     return { box: box, w: w, h: h, c: c, g: g };
   }
 
