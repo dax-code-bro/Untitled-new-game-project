@@ -123,7 +123,49 @@ const note = (s) => console.log(`  ..   ${s}`);
           if (Pz[i + 1] > gunTop) gunTop = Pz[i + 1];
         }
       }
+      /* CAN THE FINGER REACH OVER AT ALL? The nine attempts recorded in
+         98-viewmodel.js end by naming three levers: a thinner finger, a
+         looser curl cap, and a palm seated close enough that the wrap is
+         geometrically possible. The first two are tried and reverted.
+         This is the third, and it is arithmetic rather than a build.
+
+         A finger lying over a forend has to leave the knuckle, cross to
+         the near face, climb it, and come over the crown. That path is
+         measurable from the weapon's own cross-section at the hand's
+         station, and so is the finger. */
+      let secTop = -9, secNear = 9, secFar = -9, sn = 0;
+      for (const act of acts) {
+        const geo2 = G.geometryOf ? G.geometryOf(act.mesh) : null;
+        if (!geo2 || !geo2.positions) continue;
+        const Q = geo2.positions;
+        for (let i = 0; i < Q.length; i += 3) {
+          if (Math.abs(Q[i] - handX) > 0.030) continue;
+          sn++;
+          if (Q[i + 1] > secTop) secTop = Q[i + 1];
+          if (Q[i + 2] < secNear) secNear = Q[i + 2];
+          if (Q[i + 2] > secFar) secFar = Q[i + 2];
+        }
+      }
+      const dd = (u, w2) => Math.hypot(u[0] - w2[0], u[1] - w2[1], u[2] - w2[2]);
+      let have = 0, hn = 0;
+      for (const d of (L.digits || [])) {
+        if (!d || !d.tip) continue;
+        const j0 = (d.joints && d.joints[0]) || d.tip;
+        const j1 = (d.joints && d.joints[1]) || j0;
+        have += dd(d.knuckle, j0) + dd(j0, j1) + dd(j1, d.tip);
+        hn++;
+      }
+      have = hn ? have / hn : 0;
+      const mid = (L.digits && L.digits[1]) || (L.digits && L.digits[0]);
+      const kn = mid ? mid.knuckle : null;
+      const need = (sn && kn)
+        ? Math.max(0, secNear - kn[2]) + Math.max(0, secTop - kn[1])
+          + (secFar - secNear) * 0.5
+        : null;
+
       out.push({ id,
+        wrapHave: +have.toFixed(4),
+        wrapNeed: need == null ? null : +need.toFixed(4),
         handOverSight: +(meshTop - sight).toFixed(4),
         jointOverSight: +(jointTop - sight).toFixed(4),
         gunOverSight: n ? +(gunTop - sight).toFixed(4) : null,
@@ -171,6 +213,58 @@ const note = (s) => console.log(`  ..   ${s}`);
   note('hands finishing clear of the top of the weapon they hold: '
     + (floating.length ? floating.sort((a, b) => b.handOverGun - a.handOverGun)
       .map((r) => `${r.id} +${(r.handOverGun * 1000).toFixed(0)}`).join(' ') + ' mm' : 'none'));
+  /* THE THIRD LEVER, AND IT IS NOT THE ANSWER FOR SIX OF THE SEVEN.
+   *
+   * The nine attempts recorded in 98-viewmodel.js end by naming three
+   * escapes: a thinner finger, a looser curl cap, and a palm seated
+   * close enough that the wrap is geometrically possible. The first two
+   * are built, measured and reverted. This is the third, and it is
+   * arithmetic rather than a build -- which is what that note asked
+   * for: "both are measurable before they are built".
+   *
+   * MEASURED, on the weapons that actually block. The average finger is
+   * 87 mm and the path over the forend is:
+   *
+   *     thompson 47   mp5 51   mauser 60   sawnoff 79
+   *     breakwater 86   scatter 73          paralyzer 96
+   *
+   * So six of the seven have between 1 and 40 mm of slack. Their palms
+   * are not too far away and their fingers are not too short: they CAN
+   * come over the top and they do not. The Paralyzer is the one honest
+   * exception, 9 mm short, and it is the only one of the seven for
+   * which "seat the palm closer" is a real answer.
+   *
+   * Which puts the cause back where the eighth attempt left it: over
+   * the top costs burial, beside it costs the sight picture, and the
+   * scoring picks beside. All three escapes are now closed, so an
+   * eleventh attempt has to be in the scoring row itself -- and the
+   * eighth already showed that a COST term there gives every millimetre
+   * back the moment it is gated so it cannot outbid burial. What has
+   * NOT been tried is a restriction rather than a cost: past the crown
+   * of what it is holding, simply do not offer the search the
+   * candidates that stay above the sight line. A restriction cannot be
+   * outbid, and the `walled` fallback already exists for the joints
+   * where nothing qualifies. */
+  const wrap = two.filter((r) => r.wrapNeed != null && r.handOverSight > 0);
+  if (wrap.length) {
+    note('can the finger even reach over? ' + wrap
+      .map((r) => `${r.id} has ${(r.wrapHave * 1000).toFixed(0)} needs `
+        + `${(r.wrapNeed * 1000).toFixed(0)}`).join(', ') + ' mm');
+    const tooShort = wrap.filter((r) => r.wrapHave < r.wrapNeed);
+    note('too short to wrap at all: ' + (tooShort.length
+      ? tooShort.map((r) => `${r.id} by `
+        + `${((r.wrapNeed - r.wrapHave) * 1000).toFixed(0)} mm`).join(', ')
+      : 'none'));
+    /* Held at one, the Paralyzer, for the same reason the count above is
+       held at seven: so a change that puts another hand out of reach of
+       its own weapon shows up as a failure rather than as a hand that
+       quietly stopped trying. */
+    check('no more blocking hand is physically unable to wrap its weapon',
+      tooShort.length <= 1,
+      tooShort.map((r) => `${r.id} short by `
+        + `${((r.wrapNeed - r.wrapHave) * 1000).toFixed(0)}mm`).join(', '));
+  }
+
   check('the weapons that block their own sights do so by less than a scope',
     gunAbove.every((r) => r.gunOverSight < 0.040),
     gunAbove.filter((r) => r.gunOverSight >= 0.040)

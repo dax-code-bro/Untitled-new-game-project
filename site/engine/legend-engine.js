@@ -33840,7 +33840,42 @@ function buildViewHand(g, rawAt, side, opts = {}) {
            * subdivision cannot relax, so it would have to be a thinner
            * finger -- or a palm seated close enough that the wrap is
            * geometrically possible. Both are measurable before they are
-           * built, and neither is a change to this scoring row. */
+           * built, and neither is a change to this scoring row.
+           *
+           * BOTH WERE THEN MEASURED, AND BOTH ARE CLOSED.
+           *
+           * The thinner finger and the looser cap were built: the first
+           * buried thirteen digits, the second bought 3.7 mm of sight
+           * picture for sixteen more buried fingers. Both reverted, both
+           * written up above.
+           *
+           * The closer palm did not need building. sightblock.test.js
+           * now measures, on every run, the path a finger has to travel
+           * to lie over the forend -- out to the near face, up it, over
+           * the crown -- against the finger it has. The average finger
+           * is 87 mm and the path is 47 on the Thompson, 51 on the MP5,
+           * 60 on the Mauser, 73 on the Scattergun, 79 on the Sawn-off,
+           * 86 on the Breakwater. Six of the seven weapons that block
+           * their own sights have between 1 and 40 mm of SLACK. Their
+           * palms are not too far away and their fingers are not too
+           * short. They can come over the top and they do not. (The
+           * Paralyzer is the one real exception, 9 mm short, and is the
+           * only one of the seven a closer palm would fix.)
+           *
+           * So all three escapes this note offered are gone, and the
+           * cause is back in this scoring row, where the eighth attempt
+           * left it: over the top costs burial, beside it costs the
+           * sight picture, and the row picks beside. The eighth added a
+           * COST and found it gives every millimetre back the moment it
+           * is gated so it cannot outbid burial.
+           *
+           * WHAT IS LEFT UNTRIED is a RESTRICTION rather than a cost:
+           * past the crown of what it is holding, do not offer the
+           * search the candidates that stay above the sight line at all.
+           * A cost can be outbid; a restriction cannot, and `walled`
+           * already exists for the joints where nothing qualifies. That
+           * is the eleventh attempt, and it is the first one with no
+           * cheaper thing left to rule out first. */
           /* Search the angles at or above a real curl first; only if
              none of those can be reached without going through the
              weapon does the flatter half of the range get a look. The
