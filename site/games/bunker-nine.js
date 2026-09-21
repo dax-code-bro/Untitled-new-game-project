@@ -9021,6 +9021,107 @@ function dropMagazine(game, S, P, v) {
   });
 }
 
+/* WHAT LOOKING THROUGH EACH ONE IS LIKE.
+ *
+ * All three ride the post-processing grade, which now carries a
+ * luminance tint (see engine/src/50-shaders.js). The rest is exposure,
+ * saturation, contrast and grain -- the four knobs that separate "a dark
+ * room" from "a dark room seen through a tube".
+ *
+ * The numbers are a state, not a delta: every frame writes the whole set
+ * from the base values, so letting go of the trigger or swapping the
+ * weapon restores the picture with no bookkeeping and nothing can drift.
+ * An earlier shape of this added and subtracted, and one missed frame on
+ * a weapon swap left the world green until you died. */
+const OPTIC_BASE = { exposure: 1.0, saturation: 1.08, contrast: 1.04, grain: 0.012,
+  vignette: 0.28, tintMix: 0 };
+function applyOptic(game, S, P, spec, hud) {
+  const post = game.renderer && game.renderer.post;
+  if (!post) return;
+  const u = spec ? Math.max(0, Math.min(1, P.ads || 0)) : 0;
+  const night = spec && spec.nightvision ? u : 0;
+  const therm = spec && spec.thermal ? u : 0;
+  const lerp = (a, b, k) => a + (b - a) * k;
+
+  let exposure = OPTIC_BASE.exposure, sat = OPTIC_BASE.saturation;
+  let contrast = OPTIC_BASE.contrast, grain = OPTIC_BASE.grain;
+  let vig = OPTIC_BASE.vignette, mix = 0;
+  let tr = 0.35, tg = 1.0, tb = 0.45;
+
+  if (night > 0) {
+    /* GREEN, GRAINY, AND YOU CAN SEE THE CORNERS -- which is the blurb,
+       so it is what it has to do. The gain is the point: two and a half
+       stops, so the unlit end of the bunker stops being a black wall.
+       The grain is what you pay for the gain, and a heavy vignette is
+       the tube's own edge. */
+    exposure = lerp(exposure, 2.6, night);
+    sat = lerp(sat, 0.0, night);
+    contrast = lerp(contrast, 0.88, night);
+    grain = lerp(grain, 0.085, night);
+    vig = lerp(vig, 0.62, night);
+    mix = Math.max(mix, night * 0.92);
+    tr = 0.30; tg = 1.0; tb = 0.38;
+  }
+  if (therm > 0) {
+    /* THEY GLOW, NOTHING ELSE DOES. The world goes cold and flat and
+       the bodies are tinted hot below, which is the half a colour grade
+       cannot do: warm blood is not brighter than a lit wall, so no
+       function of luminance can find it. The game knows which actors
+       are dead men walking, so it says so. */
+    exposure = lerp(exposure, 1.15, therm);
+    sat = lerp(sat, 0.0, therm);
+    contrast = lerp(contrast, 1.5, therm);
+    grain = lerp(grain, 0.02, therm);
+    vig = lerp(vig, 0.55, therm);
+    mix = Math.max(mix, therm * 0.95);
+    tr = lerp(tr, 0.16, therm); tg = lerp(tg, 0.26, therm); tb = lerp(tb, 0.62, therm);
+  }
+  post.exposure = exposure; post.saturation = sat; post.contrast = contrast;
+  post.grain = grain; post.tintMix = mix;
+  post.tint = [tr, tg, tb];
+  /* The wound vignette is a standing state the damage code owns, so this
+     only ever raises it and never writes it down past what that set. */
+  if (vig > post.vignette || P._opticVig) { post.vignette = vig; }
+  P._opticVig = mix > 0.001;
+
+  /* THE BODIES, for thermal. Actor tints are a multiply on the material,
+     so 1,1,1 is "as built" and restoring is exact. Tracked on the zombie
+     rather than on a list, because a zombie can die and be removed
+     between the frame that tinted it and the frame that would clear
+     it. */
+  const want = therm > 0.35;
+  if (want !== !!S._thermalOn) {
+    S._thermalOn = want;
+    for (const z of (S.zombies || [])) {
+      if (!z.actor || !z.actor.tint) continue;
+      if (want) z.actor.tint.set(3.4, 1.15, 0.35); else z.actor.tint.set(1, 1, 1);
+      z._thermaled = want;
+    }
+  } else if (want) {
+    /* Anything that spawned since the switch flipped. */
+    for (const z of (S.zombies || [])) {
+      if (z._thermaled || !z.actor || !z.actor.tint) continue;
+      z._thermaled = true;
+      z.actor.tint.set(3.4, 1.15, 0.35);
+    }
+  }
+  if (!want) for (const z of (S.zombies || [])) z._thermaled = false;
+
+  /* THE RANGEFINDER READS THE DISTANCE, which is the whole of its name.
+     One ray down the sight line at the thing the shot would hit. */
+  if (spec && spec.rangefinder && u > 0.55) {
+    const cam = game.camera;
+    const dir = cam.forward ? cam.forward : null;
+    let m = null;
+    if (dir) {
+      m = game.raycast([cam.position.x, cam.position.y, cam.position.z],
+        [dir.x, dir.y, dir.z], 220,
+        (b) => b && !b.isTrigger && !(b.userData && b.userData.player));
+    }
+    if (hud.range) hud.range(m ? m.distance : null);
+  } else if (hud.range) hud.range(null);
+}
+
 function tryReload(P, sfx, S) {
   const spec = P.spec();
   const am = P.ammoFor(P.equipped());
@@ -13072,6 +13173,12 @@ function makeHud() {
     border:1px solid #6a5a34; padding:7px 16px; display:none; text-align:center; }
   #b9hud .banner { position:absolute; left:50%; top:20%; transform:translateX(-50%); font-size:34px;
     letter-spacing:.28em; opacity:0; text-shadow:0 0 22px currentColor; transition:opacity .3s; }
+  /* Under the middle of the screen, in the optic's own amber, monospaced
+     so the digits do not dance as the number changes. */
+  #b9hud .rangeread { position:absolute; left:50%; top:calc(50% + 34px);
+    transform:translateX(-50%); opacity:0; transition:opacity .12s;
+    font:600 15px/1 ui-monospace,Menlo,Consolas,monospace; letter-spacing:.14em;
+    color:#ffc85e; text-shadow:0 0 6px rgba(255,150,40,.55); pointer-events:none; }
   #b9hud .advig { position:absolute; inset:0; opacity:0; transition:opacity .05s;
     background:radial-gradient(ellipse at center, transparent 34%, rgba(0,0,0,.82) 92%); }
   #b9hud .cross { transition:opacity .08s; }
@@ -13179,7 +13286,7 @@ function makeHud() {
   const root = document.createElement('div');
   root.id = 'b9hud';
   root.innerHTML = `
-    <div class="dmg"></div><div class="hitflash"></div><div class="fadeout"></div><div class="advig"></div><div class="scope">
+    <div class="dmg"></div><div class="hitflash"></div><div class="fadeout"></div><div class="advig"></div><div class="rangeread"></div><div class="scope">
       <div class="glass"></div>
       <div class="ret">
         <i class="vh" style="top:0;height:34%"></i><i class="vh" style="top:66%;height:34%"></i>
@@ -13242,7 +13349,7 @@ function makeHud() {
   const $ = (c) => root.querySelector(c);
   const els = {
     round: $('.round'), points: $('.points'), ammo: $('.ammo .nums'), wname: $('.ammo .wname'),
-    prompt: $('.prompt'), cursorwarn: $('.cursorwarn'), subs: $('.subs'), subWho: $('.subs .who'), subText: $('.subs .text'), vig: $('.advig'), scope: $('.scope'), glass: $('.scope .glass'),
+    range: $('.rangeread'), prompt: $('.prompt'), cursorwarn: $('.cursorwarn'), subs: $('.subs'), subWho: $('.subs .who'), subText: $('.subs .text'), vig: $('.advig'), scope: $('.scope'), glass: $('.scope .glass'),
     grace: $('.grace'), graceFill: $('.grace .fill'), graceNum: $('.grace .num'),
     build: $('.build'),
     upd: $('.upd'), updName: $('.upd .un'), updVer: $('.upd .uv'), updDid: $('.upd .ud'),
@@ -13611,6 +13718,16 @@ function makeHud() {
        it would be a lie about the point of aim. What can move honestly is
        the eye behind the glass, so the bell wanders a few pixels with the
        shooter's breathing and the crosshair stays put. */
+    /* THE RANGEFINDER'S NUMBER. Under the crosshair, where a rangefinder
+       puts it, and only while the optic is being looked through. Null
+       clears it, which is what a weapon swap and lowering the gun both
+       come through as. */
+    range(m) {
+      if (!els.range) return;
+      if (m == null) { els.range.style.opacity = '0'; return; }
+      els.range.style.opacity = '1';
+      els.range.textContent = m.toFixed(m < 10 ? 1 : 0) + ' M';
+    },
     scopeOffset(x, y) {
       els.glass.style.transform = `translate(${x.toFixed(2)}px, ${y.toFixed(2)}px)`;
     },
@@ -14760,6 +14877,27 @@ function start(opts = {}) {
           Math.sin(t * 0.61) * 2.8 + Math.cos(t * 1.70) * 1.0);
       }
 
+      /* ============ THE THREE OPTICS THAT DID NOTHING ============
+       *
+       * Reported as "the attachment, what it does doesn't apply", and
+       * measured rather than guessed: the Thermal Optic, Night Vision
+       * and the Rangefinder each fold a flag onto the weapon's spec --
+       * `thermal`, `nightvision`, `rangefinder` -- and a search of this
+       * file for each of those three names returns exactly one hit
+       * apiece, the line in ATTACH that sets it. Nothing read them.
+       * Three thousand, two thousand two hundred and fifty and two
+       * thousand points for a boolean.
+       *
+       * (Not all of it was dead: the Rangefinder's adsSpread and every
+       * optic's sightH were always applied. It is the part named in the
+       * blurb that was missing, which is the worst half to lose.)
+       *
+       * THROUGH THE SIGHT, NOT ALL THE TIME. An image tube is behind
+       * the ocular. Faded on P.ads so raising the weapon brings it in
+       * and lowering it takes it away, rather than the world changing
+       * colour because of something in your kit. */
+      applyOptic(game, S, P, spec0, hud);
+
       if (CTL.hit('reload')) tryReload(P, sfx, S);
       P.swingT = Math.max(0, P.swingT - dt);
       /* Aim, on a shield, means put it between you and them. */
@@ -15740,7 +15878,7 @@ function start(opts = {}) {
        frame, which makes setting camera.fov directly useless. */
     PLAYER, TOGGLES, TOGGLE_ORDER, HEROES, HERO_ORDER, EXIT42, updateExit42, exitStep,
     CAST, sayLine, setSpokenWords, applyHeroLook, assignVoices, systemVoiceFor, voicePool,
-    lineId, loadVoicePack, weaponSurface,
+    lineId, loadVoicePack, weaponSurface, applyOptic,
     /* The pathfinder and the grid it reads, so a test can ask what the
        AI can actually see instead of inferring it from where a zombie
        ends up. The single-height sweep that let them walk through

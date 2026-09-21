@@ -1095,6 +1095,13 @@ uniform float uChromatic;
 uniform float uSaturation;
 uniform float uContrast;
 uniform float uGrain;
+/* A COLOUR CAST OVER THE WHOLE FRAME, which the grade could not do.
+   exposure, saturation and contrast can wash a picture out or crush it,
+   and none of them can make it GREEN -- so night vision and a thermal
+   optic had no way to look like anything, which is part of why they were
+   booleans nobody read. uTintMix of 0 is the old behaviour exactly. */
+uniform vec3 uTint;
+uniform float uTintMix;
 uniform float uTime;
 uniform float uSharpen;
 uniform float uPosterize;
@@ -1170,6 +1177,13 @@ void main(){
   color = saturate3((color - 0.5) * uContrast + 0.5);
   float lum = dot(color, vec3(0.2126, 0.7152, 0.0722));
   color = mix(vec3(lum), color, uSaturation);
+
+  /* Tint on the LUMINANCE, not on the colour. Multiplying the picture by
+     green leaves a red wall black, because a red wall has no green in it
+     to keep -- an image tube does not work that way round. What comes out
+     of one is brightness written in one colour, so that is what this
+     does, and the mix fades between the graded picture and it. */
+  if (uTintMix > 0.0) color = mix(color, uTint * (lum + 0.06), saturate1(uTintMix));
 
   color *= 1.0 - saturate1(r2 * uVignette);
 

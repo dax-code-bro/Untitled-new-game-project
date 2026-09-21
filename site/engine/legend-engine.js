@@ -5257,6 +5257,13 @@ uniform float uChromatic;
 uniform float uSaturation;
 uniform float uContrast;
 uniform float uGrain;
+/* A COLOUR CAST OVER THE WHOLE FRAME, which the grade could not do.
+   exposure, saturation and contrast can wash a picture out or crush it,
+   and none of them can make it GREEN -- so night vision and a thermal
+   optic had no way to look like anything, which is part of why they were
+   booleans nobody read. uTintMix of 0 is the old behaviour exactly. */
+uniform vec3 uTint;
+uniform float uTintMix;
 uniform float uTime;
 uniform float uSharpen;
 uniform float uPosterize;
@@ -5332,6 +5339,13 @@ void main(){
   color = saturate3((color - 0.5) * uContrast + 0.5);
   float lum = dot(color, vec3(0.2126, 0.7152, 0.0722));
   color = mix(vec3(lum), color, uSaturation);
+
+  /* Tint on the LUMINANCE, not on the colour. Multiplying the picture by
+     green leaves a red wall black, because a red wall has no green in it
+     to keep -- an image tube does not work that way round. What comes out
+     of one is brightness written in one colour, so that is what this
+     does, and the mix fades between the graded picture and it. */
+  if (uTintMix > 0.0) color = mix(color, uTint * (lum + 0.06), saturate1(uTintMix));
 
   color *= 1.0 - saturate1(r2 * uVignette);
 
@@ -5757,6 +5771,10 @@ class Renderer {
       saturation: 1.08,
       contrast: 1.04,
       grain: 0.012,
+      /* See the shader. tintMix 0 is "no cast", which is every frame the
+         game has ever drawn until an optic asks otherwise. */
+      tint: [0.35, 1.0, 0.45],
+      tintMix: 0,
     };
     this.water = {
       color: new Vec3(0.16, 0.55, 0.68),
@@ -6440,6 +6458,9 @@ class Renderer {
     comp.f('uSaturation', this.post.saturation);
     comp.f('uContrast', this.post.contrast);
     comp.f('uGrain', this.post.grain);
+    const tn = this.post.tint || [1, 1, 1];
+    comp.v3f('uTint', tn[0], tn[1], tn[2]);
+    comp.f('uTintMix', this.post.tintMix || 0);
     comp.f('uTime', this.time);
     comp.f('uSharpen', this.quality.sharpen || 0);
     comp.f('uPosterize', this.quality.posterize || 0);

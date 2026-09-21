@@ -217,6 +217,10 @@ class Renderer {
       saturation: 1.08,
       contrast: 1.04,
       grain: 0.012,
+      /* See the shader. tintMix 0 is "no cast", which is every frame the
+         game has ever drawn until an optic asks otherwise. */
+      tint: [0.35, 1.0, 0.45],
+      tintMix: 0,
     };
     this.water = {
       color: new Vec3(0.16, 0.55, 0.68),
@@ -900,6 +904,9 @@ class Renderer {
     comp.f('uSaturation', this.post.saturation);
     comp.f('uContrast', this.post.contrast);
     comp.f('uGrain', this.post.grain);
+    const tn = this.post.tint || [1, 1, 1];
+    comp.v3f('uTint', tn[0], tn[1], tn[2]);
+    comp.f('uTintMix', this.post.tintMix || 0);
     comp.f('uTime', this.time);
     comp.f('uSharpen', this.quality.sharpen || 0);
     comp.f('uPosterize', this.quality.posterize || 0);
