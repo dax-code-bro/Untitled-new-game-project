@@ -21,13 +21,23 @@
  * opens or which direction anything faces, and a rigid hook cannot fake
  * it at any magnitude.
  *
- * AND THE SKIN MUST NOT MOVE AT REST. Cutting the finger into three
- * meshes is only safe if the surface is unchanged where every other
- * check measures it. Verified separately by dumping every finger vertex
- * before and after: the bounding box is identical to the micron, 16
- * interior cap-centre points are added, and the ring samples are
- * re-phased by up to half a segment -- which is why grip.test.js's
- * baselines were re-derived rather than carried over.
+ * AND IT MUST STILL LOOK LIKE ONE FINGER. This is the check that caught
+ * the split out, and it was added after a screenshot showed what no
+ * measurement had: the fingers had become a string of sausages.
+ *
+ * The verification that cleared the split compared vertex POSITIONS
+ * before and after and found the bounding box identical to the micron.
+ * That was measuring the right thing about the wrong property. Normals
+ * are smoothed and welded per geometry, so cutting a finger at its
+ * joints left the shared ring with one set of normals in the bone behind
+ * it and a different set in the bone in front: the surface continuous,
+ * the shading broken. A SEAM VERTEX is one that shares a position with
+ * another and disagrees about which way the surface faces, and there
+ * were 0 of them on a finger built as one loft and 104 on the same
+ * finger built as three.
+ *
+ * So the count is checked here, every run. A surface is positions AND
+ * normals and only one of them had been looked at.
  *
  * Usage: node engine/test/phalanx.test.js
  */
@@ -145,6 +155,31 @@ const note = (s) => console.log(`  ..   ${s}`);
         midMoved: +dist(shut.mid, open.mid).toFixed(5),
         tipMoved: +dist(shut.tip, open.tip).toFixed(5),
         knuckMoved: +dist(shut.knuck, open.knuck).toFixed(5),
+        seams: (() => {
+          /* Counted on the finger this row is about, in the pose it was
+             built in -- normals do not move with a bend. */
+          const byPos = new Map();
+          let n = 0;
+          for (const act of bs) {
+            if (!act) continue;
+            const g4 = B.game.geometryOf(act.mesh);
+            if (!g4 || !g4.positions || !g4.normals) continue;
+            const Pp = g4.positions, Nn = g4.normals;
+            for (let i = 0; i < Pp.length; i += 3) {
+              const k = Pp[i].toFixed(5) + ',' + Pp[i + 1].toFixed(5) + ','
+                + Pp[i + 2].toFixed(5);
+              const had = byPos.get(k);
+              const nv = [Nn[i], Nn[i + 1], Nn[i + 2]];
+              if (!had) { byPos.set(k, [nv]); continue; }
+              let fresh = true;
+              for (const m of had) {
+                if (m[0] * nv[0] + m[1] * nv[1] + m[2] * nv[2] > 0.985) { fresh = false; break; }
+              }
+              if (fresh) { had.push(nv); n++; }
+            }
+          }
+          return n;
+        })(),
         bendShut: +ang(shut).toFixed(2),
         bendOpen: +ang(open).toFixed(2),
         returned: +dist(shut.tip, back.tip).toFixed(6),
@@ -178,6 +213,14 @@ const note = (s) => console.log(`  ..   ${s}`);
   check('the finger changes its own shape, which one hinge cannot',
     rigid.length === 0,
     rigid.map((r) => `${r.id} ${r.bendShut.toFixed(1)} -> ${r.bendOpen.toFixed(1)} deg`).join(', '));
+
+  /* THE SHADING, which is what a bead is made of. */
+  const beaded = rows.filter((r) => r.seams > 0);
+  note(`seam vertices across a whole finger: `
+    + rows.map((r) => `${r.id} ${r.seams}`).join(', '));
+  check('the three bones shade as one finger, with no seam at a joint',
+    beaded.length === 0,
+    beaded.map((r) => `${r.id} ${r.seams}`).join(', '));
 
   const stuck = rows.filter((r) => r.returned > 1e-4);
   check('and the hand closes again exactly', stuck.length === 0,

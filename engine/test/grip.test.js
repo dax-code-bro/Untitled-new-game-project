@@ -352,41 +352,50 @@ const R = path.join(__dirname, '..', '..') + '/';
      The ratchet is only worth having if it moves when the fleet genuinely
      improves and records what it cost -- and if it moves when the
      instrument is corrected and says so. */
-  /* RE-DERIVED WHEN THE FINGER BECAME THREE BONES, and the reason is
-     the whole point of this note: NOT ONE VERTEX OF SKIN MOVED.
+  /* RE-DERIVED ON THE OUTER SURFACE ONLY, twice, and the second time
+     is the reading to keep.
 
-     Cutting a finger into three meshes at its joints leaves the same
-     ring circles in the same places. Checked rather than argued, by
-     dumping every finger vertex on three weapons before and after:
-     the bounding box came out IDENTICAL to the micron. What does
-     change is that the rings are re-phased by up to half a segment,
-     and sixteen interior cap-centre points appear where the bones are
-     cut. This table samples vertices, so its samples moved although
-     the surface did not, and carrying the old numbers over would have
-     made a ratchet out of an artefact.
+     THE FIRST TIME was when the finger became three bones. Cutting a
+     finger at its joints leaves the same ring circles in the same
+     places -- checked rather than argued, by dumping every finger
+     vertex on three weapons before and after, where the bounding box
+     came out IDENTICAL to the micron -- but each bone was capped at
+     both ends, so sixteen interior cap-centre points appeared where
+     the cuts were. This table samples vertices. Interior points are
+     not skin, and a percentage whose denominator grew by points that
+     are inside the finger is not a comparison.
 
-     Fleet average 11.2 per cent buried on the old sampling, 8.9 on
-     this one. The two are not comparable and no conclusion is drawn
-     from the difference; what is comparable is everything measured
-     from here on. The worst offenders are the same ones they have
-     always been -- the Kill Streak's support hand, the Mauser's, the
-     MP5's. */
+     THE SECOND TIME was when those caps came off again, for a reason
+     that had nothing to do with this file: two flat discs back to
+     back at a joint z-fight at rest and separate into two visible
+     discs the moment it turns. Taking them off left 528 vertices of
+     pure outer surface where the single-mesh finger had 424 and the
+     capped split had 544.
+
+     So this baseline is measured on a finger with no interior
+     geometry in it at all, which is the first time that has been
+     true. Fleet average: 11.2 per cent buried on the pre-split
+     sampling, 8.9 with the caps in, 9.2 without. None of the three
+     is comparable to the others and no conclusion is drawn from the
+     differences; what is comparable is everything measured from here
+     on. The worst offenders are the same ones they have always been
+     -- the Kill Streak's support hand, the Mauser's, the MP5's. */
   const BASE = {
-    m1911: { r0: 0, l0: 0, r1: 6, l1: 6, r2: 6, l2: 6, index: 6, l3: 6 },
-    blaze: { r0: 0, l0: 0, r1: 6, l1: 6, r2: 6, l2: 6, index: 6, l3: 6 },
-    thompson: { r0: 0, l0: 6, r1: 0, l1: 0, r2: 6, l2: 0, index: 6, l3: 6 },
-    scatter: { r0: 0, l0: 0, r1: 0, l1: 6, r2: 6, l2: 0, index: 6, l3: 0 },
-    arc: { r0: 0, l0: 0, r1: 0, l1: 0, r2: 0, l2: 0, index: 25, l3: 6 },
-    arc2: { r0: 0, l0: 0, r1: 0, l1: 0, r2: 0, l2: 0, index: 25, l3: 6 },
-    obliterator: { r0: 6, l0: 0, r1: 6, l1: 0, r2: 6, l2: 0, index: 13, l3: 0 },
-    mauser: { r0: 13, l0: 31, r1: 19, l1: 19, r2: 0, l2: 6, index: 19, l3: 6 },
-    paralyzer: { r0: 0, l0: 38, r1: 0, l1: 6, r2: 6, l2: 13, index: 6, l3: 13 },
-    mp5: { r0: 0, l0: 13, r1: 0, l1: 19, r2: 13, l2: 25, index: 13, l3: 13 },
-    breakwater: { r0: 0, l0: 13, r1: 0, l1: 13, r2: 13, l2: 6, index: 19, l3: 6 },
-    sawnoff: { r0: 0, l0: 13, r1: 0, l1: 19, r2: 6, l2: 25, index: 25, l3: 13 },
-    remington: { r0: 0, l0: 19, r1: 0, l1: 6, r2: 0, l2: 6, index: 6, l3: 6 },
-    killstreak: { r0: 0, l0: 44, r1: 0, l1: 44, r2: 6, l2: 56, index: 19, l3: 75 },
-    mg42: { r0: 0, l0: 19, r1: 6, l1: 19, r2: 6, l2: 19, index: 25, l3: 13 },
+    m1911: { r0: 0, l0: 0, r1: 13, l1: 0, r2: 13, l2: 7, index: 7, l3: 7 },
+    blaze: { r0: 0, l0: 0, r1: 13, l1: 0, r2: 13, l2: 7, index: 7, l3: 7 },
+    thompson: { r0: 0, l0: 0, r1: 0, l1: 0, r2: 7, l2: 0, index: 13, l3: 0 },
+    scatter: { r0: 0, l0: 0, r1: 0, l1: 0, r2: 7, l2: 0, index: 0, l3: 0 },
+    arc: { r0: 0, l0: 0, r1: 0, l1: 0, r2: 0, l2: 0, index: 20, l3: 7 },
+    arc2: { r0: 0, l0: 0, r1: 0, l1: 0, r2: 0, l2: 0, index: 20, l3: 7 },
+    obliterator: { r0: 13, l0: 0, r1: 7, l1: 0, r2: 7, l2: 0, index: 20, l3: 0 },
+    mauser: { r0: 0, l0: 33, r1: 13, l1: 13, r2: 0, l2: 7, index: 20, l3: 7 },
+    paralyzer: { r0: 0, l0: 40, r1: 0, l1: 13, r2: 7, l2: 13, index: 7, l3: 13 },
+    mp5: { r0: 0, l0: 27, r1: 0, l1: 27, r2: 0, l2: 33, index: 7, l3: 20 },
+    breakwater: { r0: 0, l0: 13, r1: 7, l1: 13, r2: 20, l2: 0, index: 13, l3: 0 },
+    sawnoff: { r0: 0, l0: 27, r1: 0, l1: 20, r2: 7, l2: 27, index: 27, l3: 13 },
+    remington: { r0: 0, l0: 20, r1: 0, l1: 7, r2: 7, l2: 7, index: 13, l3: 7 },
+    killstreak: { r0: 0, l0: 47, r1: 0, l1: 27, r2: 7, l2: 53, index: 27, l3: 67 },
+    mg42: { r0: 0, l0: 7, r1: 7, l1: 13, r2: 7, l2: 20, index: 27, l3: 20 },
   };
   // Eight points is about one sample in twelve: past the noise of which
   // vertices happen to land inside, and well under the 19 that aiming

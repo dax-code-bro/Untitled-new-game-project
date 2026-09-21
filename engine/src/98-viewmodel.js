@@ -1809,9 +1809,14 @@ function buildViewHand(g, rawAt, side, opts = {}) {
      * else, so the three lofts are the one loft ring for ring. */
     const pg = phalanxG;
     if (pg && pg.length === 3 && boneEnd[0] > 0 && boneEnd[1] > boneEnd[0]) {
-      loftRings(pg[0], rs.slice(0, boneEnd[0] + 1), 12, true, true);
-      loftRings(pg[1], rs.slice(boneEnd[0], boneEnd[1] + 1), 12, true, true);
-      loftRings(pg[2], rs.slice(boneEnd[1]), 12, true, true);
+      /* CAPPED AT THE OUTER ENDS ONLY. A cap is a flat disc across the
+         tube, and at an internal joint there would be two of them, back
+         to back, in exactly the same place -- z-fighting at rest and
+         two visible discs the moment the joint turns. The joint rings
+         coincide, so there is nothing to close off. */
+      loftRings(pg[0], rs.slice(0, boneEnd[0] + 1), 12, true, false);
+      loftRings(pg[1], rs.slice(boneEnd[0], boneEnd[1] + 1), 12, false, false);
+      loftRings(pg[2], rs.slice(boneEnd[1]), 12, false, true);
     } else {
       loftRings(digitG || g, rs, 12, true, true);
     }
@@ -2901,6 +2906,51 @@ function buildViewHand(g, rawAt, side, opts = {}) {
 
 }
 
+/* MAKE THREE BUFFERS SHADE AS ONE SURFACE.
+ *
+ * Normals are smoothed and welded per geometry, so cutting a finger at
+ * its joints leaves the shared ring with one set of normals in the bone
+ * behind it and a different set in the bone in front. The positions are
+ * identical -- the surface is continuous -- and the SHADING breaks,
+ * which is what a bead is. Measured: 0 seam vertices on a finger built
+ * as one loft, 104 on the same finger built as three.
+ *
+ * That number is the whole reason this function exists, and the reason
+ * it was missed first time round is worth writing down: the check that
+ * cleared the split compared vertex POSITIONS before and after and
+ * found the bounding box identical to the micron. It was measuring the
+ * right thing about the wrong property. A surface is positions AND
+ * normals, and only one of them was looked at.
+ *
+ * Averaged only where two DIFFERENT buffers meet. Within one buffer a
+ * coincident pair is usually a cap rim against a tube rim, and those are
+ * meant to disagree -- rounding them off would soften every fingertip. */
+function weldAcross(geos) {
+  const map = new Map();
+  for (let gi = 0; gi < geos.length; gi++) {
+    const g = geos[gi];
+    if (!g || !g.positions || !g.normals) continue;
+    const P = g.positions, N = g.normals;
+    for (let i = 0; i < P.length; i += 3) {
+      const k = P[i].toFixed(5) + ',' + P[i + 1].toFixed(5) + ',' + P[i + 2].toFixed(5);
+      let e = map.get(k);
+      if (!e) { e = { x: 0, y: 0, z: 0, at: [], from: new Set() }; map.set(k, e); }
+      e.x += N[i]; e.y += N[i + 1]; e.z += N[i + 2];
+      e.at.push(N); e.at.push(i); e.from.add(gi);
+    }
+  }
+  for (const e of map.values()) {
+    if (e.from.size < 2) continue;
+    const L = Math.hypot(e.x, e.y, e.z);
+    if (L < 1e-9) continue;
+    const x = e.x / L, y = e.y / L, z = e.z / L;
+    for (let j = 0; j < e.at.length; j += 2) {
+      const N = e.at[j], i = e.at[j + 1];
+      N[i] = x; N[i + 1] = y; N[i + 2] = z;
+    }
+  }
+}
+
 /* Build both arms for one weapon.
    `hands` gives the two grip points in weapon-local space; `shoulders`
    defaults to a pair of anchors down and back from the camera. */
@@ -3080,6 +3130,9 @@ function makeViewmodelArms(hands, opts = {}) {
     smoothNormals(g);
     weldNormals(g.normals, g.weldGroups);
   }
+  /* AFTER the per-geometry smoothing, or it would be undone by it. */
+  for (const set of rPh) weldAcross(set);
+  for (const set of lPh) weldAcross(set);
   return { sleeve, skin, lSleeve, lSkin, palm, lPalm, shoulderX: back,
     rPh, lPh,
     thumb, index, lThumb,
