@@ -33384,8 +33384,18 @@ function buildViewHand(g, rawAt, side, opts = {}) {
     digitG = gg;
     digit(root, dir0, bends, lens, r0, pt, cl);
     digitG = save;
+    /* One finger's worth, consumed. A caller that does not set it gets
+       the single-mesh finger, which is what the trigger-solve's own
+       probe passes want -- those run the build to see where a tip lands
+       and throw the geometry away. */
+    phalanxG = null;
   };
   let digitG = null;
+  /* The three buffers this finger's bones go into, or null for one mesh.
+     Set by the caller immediately before digitTo, because the three
+     places that build a finger each pick their geometry differently and
+     threading it through four signatures would be worse. */
+  let phalanxG = null;
   /* The surface a digit closes onto while it is being built, or null for
      one that is placed rather than closed -- the trigger finger, which
      lies on a blade and must not wrap round the front of the guard. */
@@ -33393,6 +33403,8 @@ function buildViewHand(g, rawAt, side, opts = {}) {
 
   const digit = (root, dir0, bends, lens, r0, pt = point, cl = curl) => {
     const rs = [];
+    // The last ring of each bone, so the finger can be cut at its joints.
+    const boneEnd = [0, 0, 0];
     // Where the two knuckles past the first one land, so the measurement
     // can ask the same question the solve now answers: is the finger lying
     // ALONG the thing it holds, or poking it with one fingertip.
@@ -33807,12 +33819,64 @@ function buildViewHand(g, rawAt, side, opts = {}) {
         // Swollen at the joint, tapering toward the tip.
         push(r0 * (j === 2 ? 1.10 : 1.0) * (1 - (travelled / total) * 0.28));
       }
+      boneEnd[k] = rs.length - 1;
       if (k < 2) joints.push([p.x, p.y, p.z]);
     }
     p = new Vec3(p.x + d.x * 0.0045, p.y + d.y * 0.0045, p.z + d.z * 0.0045);
     travelled += 0.0045;
     push(r0 * 0.44);
-    loftRings(digitG || g, rs, 12, true, true);
+    /* ONE FINGER, THREE BONES, THREE MESHES.
+     *
+     * Reported: the fingers are "wiggly and wobbly, and it doesn't feel
+     * like the hand is actually doing anything". A finger was one mesh
+     * swinging rigidly about its base knuckle -- a hook on a hinge. A
+     * hook can be waved; it cannot open, and it cannot close round
+     * anything, so every hand motion in the game read as a wobble.
+     *
+     * The march above already walks the finger bone by bone and knows
+     * exactly which rings belong to which bone, so the split costs
+     * nothing but the bookkeeping: the same rings, in three buffers
+     * instead of one, cut at the joints. At zero bend the three lofts
+     * are the one loft, ring for ring, so grip and sightblock read
+     * identically -- checked, not assumed.
+     *
+     * NOTHING IS ADDED AT THE JOINTS, and a dome that was there is gone
+     * again, because of what it did to the only instrument that can
+     * judge this.
+     *
+     * Two tubes sharing an end ring and rotating about its centre open a
+     * lens-shaped gap on the outside of the bend, about r*(1-cos t). The
+     * obvious cure is a surface centred ON the pivot -- it does not move
+     * when the joint turns, so it fills the gap at any angle -- and it
+     * was built, as two rings of a sphere prepended to each distal bone.
+     *
+     * IT MADE THE MEASUREMENT UNREADABLE. Gap-filling geometry is by
+     * definition redundant at rest: at zero bend the dome sits entirely
+     * inside the bone next to it. grip.test.js counts how much of a
+     * finger's skin is inside the weapon by sampling its vertices, and
+     * those vertices are not skin -- they are interior. Every figure in
+     * its table moved on geometry where nothing visible had changed,
+     * and a ratchet that cannot tell a real regression from a
+     * tessellation change is not a ratchet. The same is true of the
+     * dome attached the other way round, to the proximal bone: it is
+     * then buried in the distal one instead.
+     *
+     * So the joints are left bare and the gap is kept below the point
+     * where it can be seen, from the other end: the runtime bend is
+     * SPREAD over the three joints instead of being spent at one. At
+     * 0.2 rad a joint the gap is 10.6 * (1-cos 0.2) = 0.2 mm, which on a
+     * hand 200 mm from the eye is nothing; the single rigid hinge this
+     * replaces had to swing the whole 0.6 rad at one knuckle and would
+     * have opened 1.9 mm there. Bones cut at the joint ring and nowhere
+     * else, so the three lofts are the one loft ring for ring. */
+    const pg = phalanxG;
+    if (pg && pg.length === 3 && boneEnd[0] > 0 && boneEnd[1] > boneEnd[0]) {
+      loftRings(pg[0], rs.slice(0, boneEnd[0] + 1), 12, true, true);
+      loftRings(pg[1], rs.slice(boneEnd[0], boneEnd[1] + 1), 12, true, true);
+      loftRings(pg[2], rs.slice(boneEnd[1]), 12, true, true);
+    } else {
+      loftRings(digitG || g, rs, 12, true, true);
+    }
     /* Where this digit starts, ends, and how thick it is.
      *
      * Reported rather than inferred, because "is the finger touching the
@@ -33824,6 +33888,13 @@ function buildViewHand(g, rawAt, side, opts = {}) {
       (opts.out.digits || (opts.out.digits = [])).push({
         knuckle: [root.x, root.y, root.z],
         joints,
+        /* THE THREE POINTS A FINGER TURNS ABOUT, in order, so whatever
+           drives it does not have to re-derive them from `joints` and
+           get the order wrong. The first is the knuckle the whole finger
+           swings on, which is the only one anything used to have. */
+        pivots3: [[root.x, root.y, root.z],
+          joints[0] ? joints[0].slice() : [root.x, root.y, root.z],
+          joints[1] ? joints[1].slice() : [root.x, root.y, root.z]],
         tip: [p.x, p.y, p.z],
         r: r0,
         /* The axis this digit actually bends about, so whatever drives it
@@ -34720,6 +34791,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
         }
         if (bt && bt.e < 0.030 && bt.fwd >= 0.015) {
           const ig2 = opts.indexGeo || (opts.digitGeos && opts.digitGeos[f]) || g;
+          phalanxG = (opts.phalanxGeos && opts.phalanxGeos[f]) || null;
           digitTo(ig2, root, bt.d0, [bt.b[0] * bt.k, bt.b[1] * bt.k, bt.b[2] * bt.k],
             lens, FR, bt.pt, bt.cl);
           if (opts.out) {
@@ -34753,6 +34825,7 @@ function buildViewHand(g, rawAt, side, opts = {}) {
         opts.out.indexPlane = a.err <= b2.err ? 'wrap' : 'fwd';
         opts.out.indexErr = [+a.err.toFixed(4), +b2.err.toFixed(4)];
       }
+      phalanxG = (opts.phalanxGeos && opts.phalanxGeos[f]) || null;
       if (a.err <= b2.err) {
         digitTo(ig, root, d0, [bends[0] * a.k, bends[1] * a.k, bends[2] * a.k], lens, FR);
       } else {
@@ -34790,8 +34863,9 @@ function buildViewHand(g, rawAt, side, opts = {}) {
        * turn away from it about the knuckle. */
       const fg = (opts.digitGeos && opts.digitGeos[f]) || null;
       marchOn = opts.surface || null;
+      if (fg) phalanxG = (opts.phalanxGeos && opts.phalanxGeos[f]) || null;
       if (fg) digitTo(fg, root, d0, [sb[0] * sol.k, sb[1] * sol.k, sb[2] * sol.k], lens, FR);
-      else digit(root, d0, [sb[0] * sol.k, sb[1] * sol.k, sb[2] * sol.k], lens, FR);
+      else { phalanxG = null; digit(root, d0, [sb[0] * sol.k, sb[1] * sol.k, sb[2] * sol.k], lens, FR); }
       marchOn = null;
       lastReach = null;
     }
@@ -34981,14 +35055,22 @@ function makeViewmodelArms(hands, opts = {}) {
      meshes buys the joint. */
   const palm = new Geometry();
   const lPalm = new Geometry();
+  /* AND A BUFFER PER BONE. Four fingers, three bones each, per hand --
+     see the note at the split in buildViewHand for why one mesh a finger
+     could never be a finger. They are 12-segment lofts of three or four
+     rings, so the extra draws are small and the alternative is a hand
+     made of hooks. */
+  const mkPh = () => [new Geometry(), new Geometry(), new Geometry()];
+  const rPh = [mkPh(), mkPh(), mkPh(), mkPh()];
+  const lPh = [mkPh(), mkPh(), mkPh(), mkPh()];
   const out = {};
   const pairs = [
     { hand: hands.right, side: 1, grip: hands.rightGrip || 'pistol', sl: sleeve, sk: skin,
-      tg: thumb, dg: rDigits, pg: palm },
+      tg: thumb, dg: rDigits, pg: palm, ph: rPh },
     { hand: hands.left, side: -1, grip: hands.leftGrip || 'fore', sl: lSleeve, sk: lSkin,
-      tg: lThumb, dg: lDigits, pg: lPalm },
+      tg: lThumb, dg: lDigits, pg: lPalm, ph: lPh },
   ];
-  for (const { hand, side, grip, sl, sk, tg, dg, pg } of pairs) {
+  for (const { hand, side, grip, sl, sk, tg, dg, pg, ph } of pairs) {
     if (!hand) continue;
     const h = new Vec3(hand[0], hand[1], hand[2]);
     /* MEASURED, and not acted on. Every FIRING hand's anchor sits 2 to
@@ -35037,6 +35119,7 @@ function makeViewmodelArms(hands, opts = {}) {
       // The firing hand's index keeps its own named mesh, because the game
       // drives it off the trigger; the rest come back through digitGeos.
       indexGeo: side > 0 ? index : null, digitGeos: dg, palmGeo: pg,
+      phalanxGeos: ph,
       surface: opts.surface });
     buildViewArm(sl, sk, shoulder, h, side, rec.wrist);
     if (tg && rec.thumbPivot) {
@@ -35052,7 +35135,7 @@ function makeViewmodelArms(hands, opts = {}) {
     out[side > 0 ? 'rPivots' : 'lPivots'] = rec.pivots || [];
   }
   for (const g of [sleeve, skin, lSleeve, lSkin, palm, lPalm, thumb, index, lThumb,
-    ...rDigits, ...lDigits]) {
+    ...rDigits, ...lDigits, ...rPh.flat(), ...lPh.flat()]) {
     if (!g) continue;
     g.finalize();
     g.computeWeldGroups();
@@ -35060,6 +35143,7 @@ function makeViewmodelArms(hands, opts = {}) {
     weldNormals(g.normals, g.weldGroups);
   }
   return { sleeve, skin, lSleeve, lSkin, palm, lPalm, shoulderX: back,
+    rPh, lPh,
     thumb, index, lThumb,
     thumbPivot: out.thumbPivot, indexPivot: out.indexPivot,
     lThumbPivot: out.lThumbPivot,
@@ -35175,15 +35259,41 @@ Engine.prototype.viewmodelArms = function (weapon, hands, opts = {}) {
      one the grip and contact tests measure -- and now it can also open,
      close, and take hold of something. */
   const rFingers = [], lFingers = [];
+  /* A CHAIN PER FINGER: proximal under the palm, middle under proximal,
+     distal under middle. Each one's transform is then only its own bend,
+     and the three compose the way a finger does -- which is the whole
+     point, because one actor can only ever swing the lot rigidly about
+     the base knuckle.
+   *
+   * `rFingers[f]` stays the PROXIMAL actor, so every caller that turns a
+   * finger about its knuckle keeps working unchanged and simply brings
+   * the other two bones with it. `rBones[f]` is the chain, for callers
+   * that want the other two joints. */
+  const rBones = [], lBones = [];
+  const chain = (set, host, tag) => {
+    if (!set) return null;
+    const outc = [];
+    let host2 = host;
+    for (let b = 0; b < 3; b++) {
+      if (!solid(set[b])) { outc[b] = null; continue; }
+      const a = mk(set[b], skinMat, tag + b, host2);
+      outc[b] = a; all.push(a); host2 = a;
+    }
+    return outc[0] ? outc : null;
+  };
   for (let f = 0; f < 4; f++) {
-    if (solid(parts.rDigits && parts.rDigits[f])) {
+    const rc = chain(parts.rPh && parts.rPh[f], palm, 'rf' + f + '_');
+    if (rc) { rBones[f] = rc; rFingers[f] = rc[0]; }
+    else if (solid(parts.rDigits && parts.rDigits[f])) {
       const a = mk(parts.rDigits[f], skinMat, 'rf' + f, palm);
-      rFingers[f] = a; all.push(a);
-    } else rFingers[f] = null;
-    if (solid(parts.lDigits && parts.lDigits[f])) {
+      rFingers[f] = a; all.push(a); rBones[f] = [a, null, null];
+    } else { rFingers[f] = null; rBones[f] = null; }
+    const lc = chain(parts.lPh && parts.lPh[f], lPalm, 'lf' + f + '_');
+    if (lc) { lBones[f] = lc; lFingers[f] = lc[0]; }
+    else if (solid(parts.lDigits && parts.lDigits[f])) {
       const a = mk(parts.lDigits[f], skinMat, 'lf' + f, lPalm);
-      lFingers[f] = a; all.push(a);
-    } else lFingers[f] = null;
+      lFingers[f] = a; all.push(a); lBones[f] = [a, null, null];
+    } else { lFingers[f] = null; lBones[f] = null; }
   }
   /* `support` is the pair that may be moved away from the weapon during a
      reload. Everything else about them is identical to the firing arm. */
@@ -35195,7 +35305,13 @@ Engine.prototype.viewmodelArms = function (weapon, hands, opts = {}) {
      drives it by name, but it is also finger 3 -- so it appears in both
      places rather than leaving a hole in the array everything else
      iterates. */
-  if (index && !rFingers[3]) rFingers[3] = index;
+  /* THE TRIGGER FINGER IS FINGER 3, and it is now a chain like the rest.
+     The game drives `index` by name off the trigger, so that name has to
+     point at the bone the trigger actually turns -- the proximal one.
+     Left as the old single mesh only on a weapon that never got a chain
+     built, which is the same fallback as everything above. */
+  if (rFingers[3]) index = rFingers[3];
+  else if (index) rFingers[3] = index;
   /* The support hand's fingers hang off its palm now, so moving the palm
      moves them. Listing them here as well would set their positions a
      second time from the outside, which is the bug this parenting fixes. */
@@ -35216,7 +35332,8 @@ Engine.prototype.viewmodelArms = function (weapon, hands, opts = {}) {
     index, indexPivot: parts.indexPivot,
     lThumb, lThumbPivot: parts.lThumbPivot,
     thumbAxis: parts.thumbAxis, lThumbAxis: parts.lThumbAxis,
-    rFingers, lFingers, rPivots: parts.rPivots || [], lPivots: parts.lPivots || [],
+    rFingers, lFingers, rBones, lBones,
+    rPivots: parts.rPivots || [], lPivots: parts.lPivots || [],
     digits: parts.digits,
     support: lSleeve ? [lSleeve, lSkin] : [], parts: all };
 };

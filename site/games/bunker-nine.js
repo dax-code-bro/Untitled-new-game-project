@@ -8124,7 +8124,35 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
          for the whole of it reads as a mistake. */
       // `open` is the sign that takes this finger AWAY from the weapon,
       // measured when it was built rather than assumed to be negative.
-      turnDigit(fingers[f], pivots[f], d.axis, (d.open || -1) * amount * 0.62 * lean);
+      const want = (d.open || -1) * amount * 0.62 * lean;
+      /* ACROSS THREE JOINTS, because a finger has three.
+       *
+       * It used to be one turn at the base knuckle, and the paragraph
+       * above admits what that costs: "a rigid turn about the base
+       * knuckle cannot UNCURL a finger -- it swings the whole hook
+       * open". That is the hook the player was looking at, and why the
+       * motion read as a wobble rather than as a hand.
+       *
+       * Half at the knuckle, a third at the middle joint, a fifth at
+       * the tip -- which is roughly how a hand opens, the big joint
+       * leading -- and the three compose because each bone is parented
+       * to the one before it. It also keeps the gap at each joint
+       * small: bare tube ends rotating about a shared centre open
+       * r*(1-cos t), and spreading 0.6 rad over three joints puts that
+       * at 0.2 mm instead of the 1.9 mm one hinge would have shown.
+       *
+       * The old single-actor finger still works: bones[1] and bones[2]
+       * are null there and the whole angle lands on the knuckle, which
+       * is exactly what it did before. */
+      const bones = (which === 'left' ? arms.lBones : arms.rBones) || [];
+      const bs = bones[f];
+      const piv3 = d.pivots3 || null;
+      if (bs && bs[1] && bs[2] && piv3) {
+        const SHARE = [0.50, 0.30, 0.20];
+        for (let b = 0; b < 3; b++) turnDigit(bs[b], piv3[b], d.axis, want * SHARE[b]);
+      } else {
+        turnDigit(fingers[f], pivots[f], d.axis, want);
+      }
     }
     const th = which === 'left' ? arms.lThumb : arms.thumb;
     const tp = which === 'left' ? arms.lThumbPivot : arms.thumbPivot;

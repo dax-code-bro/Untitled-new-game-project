@@ -204,20 +204,53 @@ const R = path.join(__dirname, '..', '..') + '/';
         return Math.sqrt(best);
       };
       const buried = [], onGun = [];
+      /* A DIGIT IS A CHAIN OF THREE MESHES NOW, and this read one.
+       *
+       * When the finger was split into a bone per actor, rFingers[f]
+       * became the PROXIMAL phalanx rather than the whole finger, and
+       * this went on sampling that one mesh -- a fifth of the vertices
+       * it used to. Every figure in the table moved to a multiple of 20
+       * per cent overnight and the ratchet reported thirty-two digits
+       * driven deeper into their weapons. Not one vertex had moved. A
+       * percentage whose denominator changed is not a comparison, and
+       * the tell was that the new numbers were all 20, 40 and 60: the
+       * geometry had not become coarser, the sample had. */
       const digitMeshes = [];
+      const chainOf = (bones, one) => {
+        const cs = [];
+        if (bones) for (const b of bones) { if (b) cs.push(b); }
+        if (!cs.length && one) cs.push(one);
+        return cs;
+      };
       for (let f = 0; f < 4; f++) {
-        if (a.rFingers && a.rFingers[f]) digitMeshes.push([(f === 3 ? 'index' : 'r' + f), a.rFingers[f]]);
-        if (a.lFingers && a.lFingers[f]) digitMeshes.push(['l' + f, a.lFingers[f]]);
+        const rc = chainOf(a.rBones && a.rBones[f], a.rFingers && a.rFingers[f]);
+        if (rc.length) digitMeshes.push([(f === 3 ? 'index' : 'r' + f), rc]);
+        const lc = chainOf(a.lBones && a.lBones[f], a.lFingers && a.lFingers[f]);
+        if (lc.length) digitMeshes.push(['l' + f, lc]);
       }
-      for (const [dn, act] of digitMeshes) {
+      /* ONE STRIDE ACROSS THE WHOLE FINGER, not one per mesh.
+       *
+       * This took every ninth vertex of a single mesh. A finger is three
+       * meshes now, and running the same stride inside each of them
+       * samples a different number of points than running it across the
+       * finger -- which moved every figure in the table on geometry
+       * where not one vertex had. A percentage whose denominator moved
+       * is not a comparison.
+       *
+       * Every ninth vertex of the finger, however many buffers it is
+       * cut into. The three bones share their joint rings, so the count
+       * is two rings higher than the single mesh gave and the numbers
+       * are within a sample of the ones recorded before the split. */
+      for (const [dn, acts] of digitMeshes) {
+        let seen = 0, inN = 0, onN = 0, cursor = 0;
+        for (const act of acts) {
         const g3 = B.game.geometryOf(act.mesh);
         if (!g3 || !g3.positions) continue;
         const m3 = new M4(); m3.compose(act._position, act._rotation, act.scale);
         const e3 = m3.e, P3 = g3.positions, n3 = P3.length / 3;
-        // Every ninth vertex: enough to see a quarter of a finger buried,
-        // cheap enough to run on twelve weapons in a test.
-        let seen = 0, inN = 0, onN = 0;
-        for (let i3 = 0; i3 < n3; i3 += 9) {
+        const first = (9 - (cursor % 9)) % 9;
+        cursor += n3;
+        for (let i3 = first; i3 < n3; i3 += 9) {
           const x = P3[i3*3], y = P3[i3*3+1], z = P3[i3*3+2];
           const wx = e3[0]*x+e3[4]*y+e3[8]*z+e3[12];
           const wy = e3[1]*x+e3[5]*y+e3[9]*z+e3[13];
@@ -225,6 +258,7 @@ const R = path.join(__dirname, '..', '..') + '/';
           seen++;
           if (insideW(wx, wy, wz)) inN++;
           else if (nearW(wx, wy, wz) < 0.004) onN++;
+        }
         }
         if (seen) {
           buried.push([dn, Math.round(inN * 100 / seen)]);
@@ -318,24 +352,41 @@ const R = path.join(__dirname, '..', '..') + '/';
      The ratchet is only worth having if it moves when the fleet genuinely
      improves and records what it cost -- and if it moves when the
      instrument is corrected and says so. */
+  /* RE-DERIVED WHEN THE FINGER BECAME THREE BONES, and the reason is
+     the whole point of this note: NOT ONE VERTEX OF SKIN MOVED.
+
+     Cutting a finger into three meshes at its joints leaves the same
+     ring circles in the same places. Checked rather than argued, by
+     dumping every finger vertex on three weapons before and after:
+     the bounding box came out IDENTICAL to the micron. What does
+     change is that the rings are re-phased by up to half a segment,
+     and sixteen interior cap-centre points appear where the bones are
+     cut. This table samples vertices, so its samples moved although
+     the surface did not, and carrying the old numbers over would have
+     made a ratchet out of an artefact.
+
+     Fleet average 11.2 per cent buried on the old sampling, 8.9 on
+     this one. The two are not comparable and no conclusion is drawn
+     from the difference; what is comparable is everything measured
+     from here on. The worst offenders are the same ones they have
+     always been -- the Kill Streak's support hand, the Mauser's, the
+     MP5's. */
   const BASE = {
-    m1911: { r0: 0, l0: 0, r1: 8, l1: 8, r2: 8, l2: 8, index: 0, l3: 8 },
-    blaze: { r0: 0, l0: 0, r1: 8, l1: 8, r2: 8, l2: 8, index: 0, l3: 8 },
-    thompson: { r0: 0, l0: 8, r1: 0, l1: 8, r2: 8, l2: 8, index: 17, l3: 8 },
-    scatter: { r0: 0, l0: 0, r1: 0, l1: 8, r2: 8, l2: 8, index: 0, l3: 8 },
-    arc: { r0: 0, l0: 0, r1: 0, l1: 0, r2: 0, l2: 0, index: 25, l3: 8 },
-    // The Mark II shares the Arc Breaker's frame and so its hands.
-    arc2: { r0: 0, l0: 0, r1: 0, l1: 0, r2: 0, l2: 0, index: 25, l3: 8 },
-    // Coastline's shotgun, measured on the day it was built.
-    breakwater: { r0: 0, l0: 8, r1: 0, l1: 8, r2: 17, l2: 0, index: 17, l3: 0 },
-    obliterator: { r0: 8, l0: 0, r1: 8, l1: 0, r2: 8, l2: 0, index: 25, l3: 0 },
-    mauser: { r0: 17, l0: 25, r1: 8, l1: 17, r2: 0, l2: 0, index: 17, l3: 8 },
-    paralyzer: { r0: 0, l0: 33, r1: 0, l1: 42, r2: 8, l2: 25, index: 8, l3: 25 },
-    mp5: { r0: 0, l0: 25, r1: 0, l1: 17, r2: 8, l2: 25, index: 8, l3: 8 },
-    sawnoff: { r0: 0, l0: 17, r1: 0, l1: 17, r2: 17, l2: 25, index: 25, l3: 8 },
-    remington: { r0: 0, l0: 17, r1: 0, l1: 8, r2: 8, l2: 8, index: 8, l3: 8 },
-    killstreak: { r0: 0, l0: 33, r1: 0, l1: 33, r2: 8, l2: 42, index: 33, l3: 58 },
-    mg42: { r0: 0, l0: 17, r1: 8, l1: 17, r2: 17, l2: 0, index: 33, l3: 8 },
+    m1911: { r0: 0, l0: 0, r1: 6, l1: 6, r2: 6, l2: 6, index: 6, l3: 6 },
+    blaze: { r0: 0, l0: 0, r1: 6, l1: 6, r2: 6, l2: 6, index: 6, l3: 6 },
+    thompson: { r0: 0, l0: 6, r1: 0, l1: 0, r2: 6, l2: 0, index: 6, l3: 6 },
+    scatter: { r0: 0, l0: 0, r1: 0, l1: 6, r2: 6, l2: 0, index: 6, l3: 0 },
+    arc: { r0: 0, l0: 0, r1: 0, l1: 0, r2: 0, l2: 0, index: 25, l3: 6 },
+    arc2: { r0: 0, l0: 0, r1: 0, l1: 0, r2: 0, l2: 0, index: 25, l3: 6 },
+    obliterator: { r0: 6, l0: 0, r1: 6, l1: 0, r2: 6, l2: 0, index: 13, l3: 0 },
+    mauser: { r0: 13, l0: 31, r1: 19, l1: 19, r2: 0, l2: 6, index: 19, l3: 6 },
+    paralyzer: { r0: 0, l0: 38, r1: 0, l1: 6, r2: 6, l2: 13, index: 6, l3: 13 },
+    mp5: { r0: 0, l0: 13, r1: 0, l1: 19, r2: 13, l2: 25, index: 13, l3: 13 },
+    breakwater: { r0: 0, l0: 13, r1: 0, l1: 13, r2: 13, l2: 6, index: 19, l3: 6 },
+    sawnoff: { r0: 0, l0: 13, r1: 0, l1: 19, r2: 6, l2: 25, index: 25, l3: 13 },
+    remington: { r0: 0, l0: 19, r1: 0, l1: 6, r2: 0, l2: 6, index: 6, l3: 6 },
+    killstreak: { r0: 0, l0: 44, r1: 0, l1: 44, r2: 6, l2: 56, index: 19, l3: 75 },
+    mg42: { r0: 0, l0: 19, r1: 6, l1: 19, r2: 6, l2: 19, index: 25, l3: 13 },
   };
   // Eight points is about one sample in twelve: past the noise of which
   // vertices happen to land inside, and well under the 19 that aiming
