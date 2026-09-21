@@ -1,8 +1,8 @@
 {
-  "version": "0.12.0",
-  "name": "a hand that works",
+  "version": "0.13.0",
+  "name": "a finger with three bones",
   "date": "2026-09-21",
   "mode": "multiplayer",
-  "did": "The palm is its own mesh on its own wrist, so the hand turns under recoil instead of sliding as one casting with the forearm",
+  "did": "A finger is three actors chained, not one rigid hook on a hinge, and the bend is spread across the joints the way a hand opens",
   "onAccept": "The armoury reloads. Your loadouts are kept; anything you had equipped that moved class is still where you left it."
 }
