@@ -1,8 +1,8 @@
 {
-  "version": "0.11.0",
-  "name": "the reload, the swap, the inspect",
-  "date": "2026-09-20",
+  "version": "0.12.0",
+  "name": "a hand that works",
+  "date": "2026-09-21",
   "mode": "multiplayer",
-  "did": "Multiplayer's reload is real on all seventy-five weapons: a magazine, stripper clip, cell, belt, pair of shells, loose rounds, tube shells or a rocket, carried by a hand that goes and fetches it.",
+  "did": "The palm is its own mesh on its own wrist, so the hand turns under recoil instead of sliding as one casting with the forearm",
   "onAccept": "The armoury reloads. Your loadouts are kept; anything you had equipped that moved class is still where you left it."
 }
