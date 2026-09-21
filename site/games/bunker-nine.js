@@ -9026,8 +9026,28 @@ function dropMagazine(game, S, P, v) {
  * weapon restores the picture with no bookkeeping and nothing can drift.
  * An earlier shape of this added and subtracted, and one missed frame on
  * a weapon swap left the world green until you died. */
-const OPTIC_BASE = { exposure: 1.0, saturation: 1.08, contrast: 1.04, grain: 0.012,
-  vignette: 0.28, tintMix: 0 };
+/* THE BASE IS WHATEVER THE GAME HAD, NOT A CONSTANT, and the first
+ * version of this got that wrong in a way worth writing down.
+ *
+ * It wrote the whole grade from a hardcoded set every frame, on the
+ * reasoning that a state written whole cannot drift. True, and it also
+ * cannot leave anything alone: the map sets vignette 0.16 and grain
+ * 0.01 on the way in, the bunker sets 0.28 and 0.022, the graphics
+ * tiers set their own, and the death sequence drops exposure to 0.92.
+ * Every one of those was being overwritten sixty times a second by a
+ * function about optics.
+ *
+ * So the base is SNAPSHOT when an optic comes up and restored exactly
+ * when it goes down, and nothing is written at all in between times --
+ * which is every frame of the game that is not looking through one of
+ * three attachments.
+ *
+ * AND THE VIGNETTE IS LEFT ALONE ENTIRELY. It is the one channel
+ * somebody else owns as a standing state: the wound vignette. A snapshot
+ * taken before a wound and restored after it would wipe the wound, and
+ * "raise but never lower" cannot tell a wound from a scope. The tube
+ * edge is worth having and not worth clobbering a damage cue for, and
+ * the ADS overlay already darkens the corners. */
 function applyOptic(game, S, P, spec, hud) {
   const post = game.renderer && game.renderer.post;
   if (!post) return;
@@ -9036,9 +9056,31 @@ function applyOptic(game, S, P, spec, hud) {
   const therm = spec && spec.thermal ? u : 0;
   const lerp = (a, b, k) => a + (b - a) * k;
 
-  let exposure = OPTIC_BASE.exposure, sat = OPTIC_BASE.saturation;
-  let contrast = OPTIC_BASE.contrast, grain = OPTIC_BASE.grain;
-  let vig = OPTIC_BASE.vignette, mix = 0;
+  if (night <= 0 && therm <= 0) {
+    if (P._opticBase) {
+      const b = P._opticBase;
+      post.exposure = b.exposure; post.saturation = b.sat;
+      post.contrast = b.contrast; post.grain = b.grain; post.tintMix = 0;
+      P._opticBase = null;
+    }
+    if (hud && hud.range) hud.range(null);
+    if (S._thermalOn) {
+      S._thermalOn = false;
+      for (const z of (S.zombies || [])) {
+        if (z.actor && z.actor.tint) z.actor.tint.set(1, 1, 1);
+        z._thermaled = false;
+      }
+    }
+    return;
+  }
+  if (!P._opticBase) {
+    P._opticBase = { exposure: post.exposure, sat: post.saturation,
+      contrast: post.contrast, grain: post.grain };
+  }
+  const BASE = P._opticBase;
+  let exposure = BASE.exposure, sat = BASE.sat;
+  let contrast = BASE.contrast, grain = BASE.grain;
+  let mix = 0;
   let tr = 0.35, tg = 1.0, tb = 0.45;
 
   if (night > 0) {
@@ -9051,7 +9093,6 @@ function applyOptic(game, S, P, spec, hud) {
     sat = lerp(sat, 0.0, night);
     contrast = lerp(contrast, 0.88, night);
     grain = lerp(grain, 0.085, night);
-    vig = lerp(vig, 0.62, night);
     mix = Math.max(mix, night * 0.92);
     tr = 0.30; tg = 1.0; tb = 0.38;
   }
@@ -9065,17 +9106,12 @@ function applyOptic(game, S, P, spec, hud) {
     sat = lerp(sat, 0.0, therm);
     contrast = lerp(contrast, 1.5, therm);
     grain = lerp(grain, 0.02, therm);
-    vig = lerp(vig, 0.55, therm);
     mix = Math.max(mix, therm * 0.95);
     tr = lerp(tr, 0.16, therm); tg = lerp(tg, 0.26, therm); tb = lerp(tb, 0.62, therm);
   }
   post.exposure = exposure; post.saturation = sat; post.contrast = contrast;
   post.grain = grain; post.tintMix = mix;
   post.tint = [tr, tg, tb];
-  /* The wound vignette is a standing state the damage code owns, so this
-     only ever raises it and never writes it down past what that set. */
-  if (vig > post.vignette || P._opticVig) { post.vignette = vig; }
-  P._opticVig = mix > 0.001;
 
   /* THE BODIES, for thermal. Actor tints are a multiply on the material,
      so 1,1,1 is "as built" and restoring is exact. Tracked on the zombie

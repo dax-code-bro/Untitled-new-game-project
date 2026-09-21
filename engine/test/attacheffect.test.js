@@ -138,17 +138,37 @@ const note = (s) => console.log(`  ..   ${s}`);
       __T_SYS.applyOptic(game, S, P, P.spec(), { range() {} });
       return snap();
     };
+    /* THE GRADE THE GAME SET, before anything about optics touches it.
+       An earlier applyOptic wrote the whole grade from a hardcoded set
+       every frame, which meant it silently overwrote the map's own
+       vignette and grain, the graphics tier's, and the death sequence's
+       exposure. So this marks the picture first and checks at the end
+       that lowering the optic gives it back unchanged -- and it marks
+       it with values nothing in the game would coincidentally choose. */
+    post.exposure = 0.77; post.saturation = 1.31;
+    post.contrast = 1.19; post.grain = 0.041; post.vignette = 0.53;
+    const marked = snap();
+    const markedVig = post.vignette;
     const hip = (() => { const r = runOptic(null); return r; })();
     const night = runOptic('nightvision');
     const therm = runOptic('thermal');
-    /* And the bodies, which is the half a colour grade cannot do. */
-    const z = (S.zombies || [])[0] || null;
-    const zTint = z && z.actor && z.actor.tint
-      ? [z.actor.tint.x, z.actor.tint.y, z.actor.tint.z] : null;
+    /* WHILE IT IS STILL UP. Adding the restore pass below moved this
+       read after the tints had been taken off again, and the check for
+       "the bodies are the only warm thing in it" duly read 1,1,1 and
+       failed against code that was working. */
+    const zNow = (S.zombies || [])[0] || null;
+    const zTintHot = zNow && zNow.actor && zNow.actor.tint
+      ? [zNow.actor.tint.x, zNow.actor.tint.y, zNow.actor.tint.z] : null;
     runOptic(null);
+    const restored = snap();
+    const restoredVig = post.vignette;
+    /* And the bodies, which is the half a colour grade cannot do. */
+    const z = zNow;
+    const zTint = zTintHot;
     const zAfter = z && z.actor && z.actor.tint
       ? [z.actor.tint.x, z.actor.tint.y, z.actor.tint.z] : null;
-    return { hip, night, therm, zTint, zAfter, hadZombie: !!z };
+    return { hip, night, therm, zTint, zAfter, hadZombie: !!z,
+      marked, restored, markedVig, restoredVig };
   });
 
   note(`no optic: exposure ${seen.hip.exposure.toFixed(2)}, tint mix `
@@ -165,8 +185,15 @@ const note = (s) => console.log(`  ..   ${s}`);
     seen.night.exposure > seen.hip.exposure * 1.5 && seen.night.mix > 0.5
       && seen.night.tint[1] > seen.night.tint[0] * 2,
     JSON.stringify(seen.night));
+  /* AGAINST THE PICTURE THE GAME SET, not against a constant. This
+     asked for three times the hip grain when the hip grain was a
+     hardcoded 0.012; now that the optic snapshots whatever the game
+     had, the reference is whatever this file marked it with. Half again
+     is the honest claim: gain costs grain, and how much grain there was
+     to start with is the map's business. */
   check('and it is grainy, which is what the gain costs',
-    seen.night.grain > seen.hip.grain * 3, `${seen.night.grain}`);
+    seen.night.grain > seen.marked.grain * 1.6,
+    `${seen.night.grain} against a base of ${seen.marked.grain}`);
   check('thermal drains the colour and goes cold',
     seen.therm.sat < 0.05 && seen.therm.mix > 0.5
       && seen.therm.tint[2] > seen.therm.tint[0] * 2,
@@ -181,6 +208,18 @@ const note = (s) => console.log(`  ..   ${s}`);
   } else {
     note('no zombie was alive to tint, so the body half went unmeasured');
   }
+
+  /* THE CHANNELS AN OPTIC DOES NOT OWN. */
+  const same = (a, b) => Math.abs(a - b) < 1e-6;
+  check('lowering the optic gives the picture back exactly as it was',
+    same(seen.marked.exposure, seen.restored.exposure)
+      && same(seen.marked.sat, seen.restored.sat)
+      && same(seen.marked.grain, seen.restored.grain)
+      && seen.restored.mix < 1e-6,
+    JSON.stringify({ was: seen.marked, now: seen.restored }));
+  check('and the vignette, which the wound cue owns, is never touched',
+    same(seen.markedVig, seen.restoredVig),
+    `${seen.markedVig} -> ${seen.restoredVig}`);
 
   check('no page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
   console.log(`\n  ${passed} passed, ${failed} failed`);
