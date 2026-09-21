@@ -33428,6 +33428,63 @@ function buildViewHand(g, rawAt, side, opts = {}) {
            * off the side of the finger. That is the spike on the end of
            * every fingertip. The radius here is step/angle, so the angle
            * has a ceiling the geometry sets. */
+          /* THE TENTH ATTEMPT, AND IT WENT BACK. It changed one number
+           * none of the other nine touched, and the result is written
+           * down here so an eleventh does not spend the day on it.
+           *
+           * Everything above is about WHERE to aim the finger. This is
+           * about whether it can physically get there. The cap is a
+           * curvature limit -- a tube of radius r cannot follow a
+           * centreline radius much under 1.85r without the inside of the
+           * bend passing through itself -- and two thirds of the 822
+           * half-bones on the rack finish AT it. The middle joint asks
+           * for 1.50 radians and is allowed 0.70. A whole finger manages
+           * 182 degrees against the 330 its anatomy wants. So the
+           * fingers are not choosing to stand up beside the forend; they
+           * run out of curl before they reach the top of it, which is
+           * why every attempt to aim them better has been inert. You
+           * cannot aim past a wall.
+           *
+           * The argument for loosening it was that 1.85 is conservative
+           * for what is actually drawn: these are lofted rings, not a
+           * swept solid, so the inside of a tight bend overlaps INSIDE
+           * the finger where nothing can see it, and a real finger
+           * creases there rather than staying round. 1.45 buys 28 per
+           * cent more curl per joint at the same thickness and the same
+           * seat, so the finger reaches over the crest without being
+           * moved any closer to the metal.
+           *
+           * MEASURED, both tests, same tree, one number apart:
+           *   sightblock  worst 48.6 -> 44.9 mm, and still seven
+           *               weapons over the line. A gain, not the fix.
+           *   grip        fingers driven deeper into the weapon than
+           *               their own baseline: 1 -> 17. arc l3 8 -> 33
+           *               per cent, mg42 l2 0 -> 25, killstreak
+           *               l3 58 -> 67.
+           *
+           * So the overlap does NOT stay invisible inside the finger.
+           * Past the crest there is nothing left to be in contact with,
+           * the march keeps closing, and the extra curl it was handed
+           * goes through the forend instead of over it. 3.7 mm off one
+           * sight picture does not buy sixteen more buried fingers.
+           * Reverted. The cap stays at 1.85.
+           *
+           * WHAT IT RULES OUT, which is the part worth keeping: the cap
+           * is NOT the binding constraint on sight blocking. The fingers
+           * can reach further, and reaching further does not help,
+           * because what they are reaching for is wrong the moment
+           * contact is lost. The remaining cause is the one the
+           * sightblock header already names -- the march has no surface
+           * to follow past the top of a forend -- and the fix belongs
+           * there, in what a finger aims at with nothing under it,
+           * rather than in how tightly it is allowed to curl.
+           *
+           * (Thinner fingers are the other obvious lever and are also
+           * tried and reverted, forty lines up. FR does two jobs: the
+           * flesh thickness AND the standoff the seat is measured in, so
+           * thinning it seats every finger closer to the metal and
+           * thirteen ended up more buried. One number doing two jobs is
+           * the recurring shape of fault in this file.) */
           const lim = Math.min(Math.max(a, JOINT[k]), step / (r0 * 1.85));
           /* CLOSE as far as contact allows, rather than as little.
            *
