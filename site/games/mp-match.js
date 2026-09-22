@@ -1298,7 +1298,7 @@
             w.far * 2.2, notActor);
           if (wh && wh.point) {
             if (w.splash > 0) blast(M, wh.point, p, w, emit);
-            else if (M.decals) M.decals.bullet(wh.point, wh.normal, w);
+            else if (M.decals) M.decals.bullet(wh.point, wh.normal, w, wh.actor);
             else markAt(M, wh.point, wh.normal);
           }
         } catch (e) { /* no physics on this map */ }

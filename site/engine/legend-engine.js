@@ -8732,8 +8732,17 @@ class ParticleSystem {
         color,
         colorEnd: parseColor(opts.colorEnd != null ? opts.colorEnd : 0x6b6459),
         alpha: opts.alpha != null ? opts.alpha : 0.5,
-        drag: 1.9,
-        gravity: -0.7,
+        drag: opts.drag != null ? opts.drag : 1.9,
+        /* HOW FAST IT COMES BACK DOWN, which decides whether this reads
+           as dust or as sprinkles.
+         *
+           It was fixed at -0.7 -- a light haze that hangs -- and every
+           caller got that whatever it asked for, so wet mud off a
+           flowerbed drifted around like concrete powder. The difference
+           between the two is almost entirely this number: dust hangs,
+           mud drops. Passed as a positive weight because a caller
+           thinking about a material thinks "heavy", not "negative Y". */
+        gravity: opts.gravity != null ? -Math.abs(opts.gravity) : -0.7,
         spin: this.rng.range(-1.2, 1.2),
         type: PARTICLE.SMOKE,
       });

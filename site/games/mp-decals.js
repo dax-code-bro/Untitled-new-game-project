@@ -76,6 +76,114 @@
     return { hole: 0.058, spall: 0.15, dust: 12, spark: 5, deep: 1 };
   }
 
+  /* ================= WHAT THE WALL IS MADE OF =================
+   *
+   * Reported: "whenever you shoot at mud there should be like wet
+   * sprinkles of mud drifting out and dust should come off if you shoot
+   * concrete -- very realistic is what I'm meaning here for bullet
+   * impacts".
+   *
+   * Every impact in the game was the same grey puff. impactOf reads the
+   * WEAPON -- a fifty calibre throws more of it than a pistol, which is
+   * right -- and nothing anywhere read the surface, so a round into a
+   * flowerbed and a round into a concrete pillar were the same event
+   * drawn at different sizes.
+   *
+   * A surface decides four things a weapon cannot: the COLOUR of what
+   * comes off, how FAST it leaves, whether it hangs in the air or falls
+   * straight back down, and whether the round strikes a spark. Wet mud
+   * is the clearest case in both directions -- it throws heavy dark
+   * specks that drop immediately and it cannot spark at all -- and dry
+   * concrete is its opposite: a pale cloud that hangs, and grit.
+   *
+   * Matched on the actor's own name, because that is the one thing
+   * every builder already sets and it costs nothing to read. Unknown
+   * surfaces fall through to the old grey, which is what everything was
+   * before this.
+   */
+  var SURFACE = {
+    /* Dust, and a lot of it. The pale cloud is most of what you see. */
+    concrete: { tint: 0x9d9a92, dust: 1.5, drift: 1.0, fall: 0.35, spark: 0.7,
+      size: 1.25, wet: 0 },
+    brick: { tint: 0x8c4b38, dust: 1.35, drift: 0.9, fall: 0.45, spark: 0.5,
+      size: 1.15, wet: 0 },
+    stone: { tint: 0x8e8b84, dust: 1.4, drift: 0.95, fall: 0.4, spark: 0.9,
+      size: 1.2, wet: 0 },
+    tile: { tint: 0xbdb6a8, dust: 1.1, drift: 0.8, fall: 0.5, spark: 1.1,
+      size: 1.0, wet: 0 },
+    /* WET MUD. Heavy, dark, and it does not hang about -- sprinkles
+       that leave fast and drop, which is the whole difference between
+       mud and dust. No spark: there is nothing in a puddle to strike. */
+    mud: { tint: 0x4a3524, dust: 1.2, drift: 0.25, fall: 2.4, spark: 0,
+      size: 0.85, wet: 1 },
+    dirt: { tint: 0x6b5235, dust: 1.3, drift: 0.5, fall: 1.3, spark: 0,
+      size: 0.95, wet: 0.35 },
+    sand: { tint: 0xc9b183, dust: 1.25, drift: 0.45, fall: 1.6, spark: 0,
+      size: 0.9, wet: 0.15 },
+    grass: { tint: 0x4e6b34, dust: 0.8, drift: 0.4, fall: 1.5, spark: 0,
+      size: 0.8, wet: 0.2 },
+    /* Splinters, not dust: few, fast, and they fall. */
+    wood: { tint: 0x8a6438, dust: 0.7, drift: 0.35, fall: 1.7, spark: 0,
+      size: 0.9, wet: 0 },
+    /* Almost nothing comes off metal and almost all of it is spark. */
+    metal: { tint: 0xb8bcc2, dust: 0.35, drift: 0.7, fall: 0.9, spark: 2.4,
+      size: 0.6, wet: 0 },
+    glass: { tint: 0xcfe2ea, dust: 0.9, drift: 0.5, fall: 1.9, spark: 0.2,
+      size: 0.7, wet: 0 },
+    water: { tint: 0x6f95a8, dust: 1.1, drift: 0.2, fall: 2.6, spark: 0,
+      size: 1.0, wet: 1 },
+  };
+  var PLAIN = { tint: 0x9a968c, dust: 1, drift: 0.8, fall: 0.7, spark: 1,
+    size: 1, wet: 0 };
+  /* Each surface fades toward a darker shade of its own colour rather
+     than toward the shared default grey. Computed once here so the
+     table above stays a table of facts about materials. */
+  (function () {
+    var all = [PLAIN];
+    for (var k in SURFACE) if (Object.prototype.hasOwnProperty.call(SURFACE, k)) all.push(SURFACE[k]);
+    for (var i = 0; i < all.length; i++) {
+      var c = all[i].tint;
+      all[i].tintEnd = (Math.round(((c >> 16) & 255) * 0.55) << 16)
+        | (Math.round(((c >> 8) & 255) * 0.55) << 8)
+        | Math.round((c & 255) * 0.55);
+    }
+  }());
+
+  /* An actor's name says what it is, and the names are already
+     descriptive because they were written for debugging. Longest match
+     first, so 'brickPale' does not answer to 'pale'. */
+  var SURF_WORDS = [
+    ['concrete', 'concrete'], ['kerb', 'concrete'], ['slab', 'concrete'],
+    ['brick', 'brick'], ['chimney', 'brick'], ['hoarding', 'wood'],
+    ['rock', 'stone'], ['cliff', 'stone'], ['stone', 'stone'],
+    ['tile', 'tile'], ['terrace', 'tile'], ['marble', 'tile'],
+    ['mud', 'mud'], ['puddle', 'mud'], ['bog', 'mud'],
+    ['dirt', 'dirt'], ['earth', 'dirt'], ['ground', 'dirt'],
+    ['sand', 'sand'], ['beach', 'sand'],
+    ['grass', 'grass'], ['lawn', 'grass'], ['hedge', 'grass'],
+    ['plank', 'wood'], ['board', 'wood'], ['crate', 'wood'],
+    ['fence', 'wood'], ['wood', 'wood'], ['door', 'wood'],
+    ['steel', 'metal'], ['metal', 'metal'], ['pipe', 'metal'],
+    ['rail', 'metal'], ['container', 'metal'], ['car', 'metal'],
+    ['heli', 'metal'], ['crane', 'metal'], ['tank', 'metal'],
+    ['glass', 'glass'], ['window', 'glass'], ['pane', 'glass'],
+    ['water', 'water'], ['pool', 'water'],
+    ['asphalt', 'concrete'], ['road', 'concrete'], ['edge', 'stone'],
+  ];
+  function surfaceOf(actor) {
+    if (!actor) return PLAIN;
+    if (actor.__surf) return actor.__surf;
+    var nm = String(actor.name || '').toLowerCase();
+    var got = PLAIN;
+    for (var i = 0; i < SURF_WORDS.length; i++) {
+      if (nm.indexOf(SURF_WORDS[i][0]) >= 0) { got = SURFACE[SURF_WORDS[i][1]] || PLAIN; break; }
+    }
+    /* Cached on the actor: a wall is not going to change what it is
+       made of, and this runs on every round that lands. */
+    try { actor.__surf = got; } catch (e) { /* frozen actor */ }
+    return got;
+  }
+
   function make(game) {
     if (!game || !game.box) return null;
     var mats = {};
@@ -162,8 +270,9 @@
 
     return {
       /* ---- a round into the scenery ---- */
-      bullet: function (point, normal, weapon) {
+      bullet: function (point, normal, weapon, actor) {
         var I = impactOf(weapon);
+        var S = surfaceOf(actor);
         if (I.scorch) { this.scorch(point, normal, I.scorch); }
         else {
           /* The spall goes down first so the hole sits on top of it. */
@@ -173,13 +282,33 @@
             Math.random() * 6.28);
         }
         /* And the thing you actually notice: the puff off the wall. */
+        /* WHAT COMES OFF IT. The weapon says how much and the surface
+           says what: colour, how fast it leaves, and whether it hangs or
+           drops. A wet surface throws fewer, heavier, darker specks that
+           fall immediately -- sprinkles rather than a cloud -- which is
+           the difference between mud and concrete stated as numbers. */
         try {
           if (game.particles) {
-            game.particles.dust([point.x, point.y, point.z],
-              { count: I.dust, size: 0.06 + I.hole });
-            if (I.spark) {
+            var n = Math.max(1, Math.round(I.dust * S.dust));
+            game.particles.dust([point.x, point.y, point.z], {
+              count: n,
+              size: (0.06 + I.hole) * S.size,
+              color: S.tint,
+              /* And it fades toward a darker version of ITSELF. Without
+                 this every surface ends up the same grey, which is most
+                 of why they all looked alike however the start colour
+                 was set. */
+              colorEnd: S.tintEnd,
+              speed: (1.0 + I.deep * 0.5) * (0.4 + S.drift),
+              gravity: S.fall,
+              life: S.wet ? 0.45 : 1.1 + S.drift * 0.6,
+            });
+            /* Nothing in a puddle to strike, and a great deal in a
+               steel container. */
+            var sp = Math.round(I.spark * S.spark);
+            if (sp > 0) {
               game.particles.sparks([point.x, point.y, point.z],
-                { count: I.spark, speed: 3.4 + I.deep });
+                { count: sp, speed: 3.4 + I.deep });
             }
           }
         } catch (e) { /* no particle system on this build */ }
@@ -285,5 +414,6 @@
     };
   }
 
-  W.MP_DECALS = { make: make, LIFE: LIFE, impactOf: impactOf, POOL: POOL, STEPS: STEPS };
+  W.MP_DECALS = {
+    SURFACE: SURFACE, surfaceOf: surfaceOf, make: make, LIFE: LIFE, impactOf: impactOf, POOL: POOL, STEPS: STEPS };
 }());
