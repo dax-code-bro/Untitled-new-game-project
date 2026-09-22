@@ -1004,6 +1004,88 @@
   var MAX_LEVEL = 30;
   var XP_KILL = 60, XP_HEADSHOT = 100, XP_ASSIST = 25, XP_PER_10M = 12;
 
+  /* ================= THREE THINGS LEVEL, NOT ONE =================
+   *
+   * Reported: "for every single gun there's no level system and for your
+   * character themselves they cannot level up either, your guns don't
+   * level up".
+   *
+   * Half right, and the half that was wrong is the more interesting one.
+   * A gun's level track has been here all along -- levelOf, levelFrac,
+   * prestigeOf, the bar under every gun in the loadout, gold, platinum
+   * and diamond -- and addKills and addMetres are exported to feed it.
+   * NOTHING IN A MATCH HAS EVER CALLED THEM. The bar reads a number that
+   * cannot change, so every gun sits at level 1 for ever and the whole
+   * unlock tree behind it is unreachable. A feature with no writer is
+   * indistinguishable from a feature that does not exist, and the player
+   * is right to call it the second thing.
+   *
+   * The player and the killstreaks had nothing at all.
+   *
+   * THE RATES, as asked for:
+   *
+   *     a kill              100 player XP, 50 gun XP
+   *     a kill with a       5 killstreak XP -- they have far fewer
+   *      killstreak up       levels, so they are earned far slower
+   *     ten minutes with    100 gun XP, and NO player XP: time carried
+   *      a gun out           is a fact about the gun, not about you
+   *     winning             doubles all three
+   */
+  var XP_PLAYER_KILL = 100;
+  var XP_GUN_KILL = 50;
+  /* Per second, so ten minutes of carry comes to a hundred. Paid out as
+     it accrues rather than in one lump at the ten minute mark, or a
+     match that ends at nine minutes pays nothing for nine minutes of
+     carrying the thing. */
+  var XP_GUN_PER_SEC = 100 / 600;
+  var XP_STREAK_KILL = 5;
+  var XP_WIN_MULT = 2;
+
+  /* A KILLSTREAK'S TRACK IS SHORT ON PURPOSE. Ten levels at five XP a
+     kill is two hundred kills with the streak up to max one, against a
+     gun's thirty levels at fifty a kill. That ratio is the point of the
+     rate the player asked for, so the curve is written to preserve it
+     rather than reusing the gun's and quietly making it unreachable. */
+  var MAX_STREAK_LEVEL = 10;
+  function xpForStreakLevel(n) {
+    if (n <= 1) return 0;
+    var k = n - 1;
+    return Math.round(18 * k + 4 * k * k);
+  }
+  function streakLevelForXp(xp) {
+    var n = 1;
+    while (n < MAX_STREAK_LEVEL && xp >= xpForStreakLevel(n + 1)) n++;
+    return n;
+  }
+
+  /* THE PLAYER'S RANK runs further than a gun's and never prestiges into
+     a finish -- it is the one number that is about you rather than about
+     a piece of kit. Fifty five ranks, on a curve that starts quick and
+     stretches. */
+  var MAX_RANK = 55;
+  function xpForRank(n) {
+    if (n <= 1) return 0;
+    var k = n - 1;
+    return Math.round(900 * k + 130 * k * k);
+  }
+  function rankForXp(xp) {
+    var n = 1;
+    while (n < MAX_RANK && xp >= xpForRank(n + 1)) n++;
+    return n;
+  }
+  function rankFrac(xp) {
+    var n = rankForXp(xp);
+    if (n >= MAX_RANK) return 1;
+    var a = xpForRank(n), b = xpForRank(n + 1);
+    return Math.max(0, Math.min(1, ((xp || 0) - a) / (b - a)));
+  }
+  function streakFrac(xp) {
+    var n = streakLevelForXp(xp);
+    if (n >= MAX_STREAK_LEVEL) return 1;
+    var a = xpForStreakLevel(n), b = xpForStreakLevel(n + 1);
+    return Math.max(0, Math.min(1, ((xp || 0) - a) / (b - a)));
+  }
+
   /* Total experience needed to HAVE reached level n. */
   function xpForLevel(n) {
     if (n <= 1) return 0;
@@ -1461,7 +1543,31 @@
 
   /* ---- progress ---- */
 
-  function newProgress() { return { xp: 0, kills: 0, heads: 0, metres: 0 }; }
+  function newProgress() { return { xp: 0, kills: 0, heads: 0, metres: 0, secs: 0 }; }
+
+  /* WHAT ONE EVENT IS WORTH, in one place, so the scoreboard, the popup
+     beside the hitmarker and the end-of-match tally cannot disagree
+     about it. `win` doubles everything, which is what a Victory Royale
+     does to all three tracks. */
+  function xpFor(evt, win) {
+    var m = win ? XP_WIN_MULT : 1;
+    if (evt === 'kill') {
+      return { player: XP_PLAYER_KILL * m, gun: XP_GUN_KILL * m, streak: 0 };
+    }
+    if (evt === 'streakKill') {
+      return { player: XP_PLAYER_KILL * m, gun: XP_GUN_KILL * m,
+        streak: XP_STREAK_KILL * m };
+    }
+    return { player: 0, gun: 0, streak: 0 };
+  }
+
+  /* Time carried, in seconds, paid to the GUN only. */
+  function addCarry(pr, secs, win) {
+    if (!pr || !(secs > 0)) return pr;
+    pr.secs = (pr.secs || 0) + secs;
+    pr.xp += secs * XP_GUN_PER_SEC * (win ? XP_WIN_MULT : 1);
+    return pr;
+  }
 
   function addKills(pr, n, heads) {
     pr.kills += n;
@@ -1586,6 +1692,14 @@
     checkLoadout: checkLoadout,
     xpForLevel: xpForLevel, levelForXp: levelForXp,
     newProgress: newProgress, addKills: addKills, addMetres: addMetres,
+    addCarry: addCarry, xpFor: xpFor,
+    XP_PLAYER_KILL: XP_PLAYER_KILL, XP_GUN_KILL: XP_GUN_KILL,
+    XP_GUN_PER_SEC: XP_GUN_PER_SEC, XP_STREAK_KILL: XP_STREAK_KILL,
+    XP_WIN_MULT: XP_WIN_MULT,
+    MAX_RANK: MAX_RANK, xpForRank: xpForRank, rankForXp: rankForXp,
+    rankFrac: rankFrac,
+    MAX_STREAK_LEVEL: MAX_STREAK_LEVEL, xpForStreakLevel: xpForStreakLevel,
+    streakLevelForXp: streakLevelForXp, streakFrac: streakFrac,
     levelOf: levelOf, levelFrac: levelFrac, prestigeOf: prestigeOf,
     unlockedParts: unlockedParts, isUnlocked: isUnlocked,
     defaultLoadout: defaultLoadout,

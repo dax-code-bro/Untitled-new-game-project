@@ -2225,8 +2225,27 @@ function mpLoad() {
     var p = pg[g.id];
     mp.progress[g.id] = (p && typeof p.xp === 'number' && isFinite(p.xp))
       ? { xp: Math.max(0, p.xp), kills: Math.max(0, p.kills | 0), heads: Math.max(0, p.heads | 0),
-        metres: Math.max(0, p.metres | 0) }
+        metres: Math.max(0, p.metres | 0), secs: Math.max(0, p.secs || 0) }
       : MP.newProgress();
+  });
+  /* THE PLAYER'S OWN RANK, and the killstreaks'. Guns have had a level
+     track all along; these two had nothing, so "your character cannot
+     level up either" was literally true. Kept beside the guns' progress
+     and saved with it, because they are earned in the same match from
+     the same events. */
+  if (!mp.you || typeof mp.you.xp !== 'number' || !isFinite(mp.you.xp)) {
+    mp.you = { xp: 0, kills: 0, wins: 0 };
+  } else {
+    mp.you = { xp: Math.max(0, mp.you.xp), kills: Math.max(0, mp.you.kills | 0),
+      wins: Math.max(0, mp.you.wins | 0) };
+  }
+  var sp = mp.streakProgress && typeof mp.streakProgress === 'object' ? mp.streakProgress : {};
+  mp.streakProgress = {};
+  (MP.KILLSTREAKS || []).forEach(function (k) {
+    var q = sp[k.id];
+    mp.streakProgress[k.id] = (q && typeof q.xp === 'number' && isFinite(q.xp))
+      ? { xp: Math.max(0, q.xp), kills: Math.max(0, q.kills | 0) }
+      : { xp: 0, kills: 0 };
   });
   if (!MP.MODES.some(function (m) { return m.id === mp.mode; })) mp.mode = MP.MODES[0].id;
   if (!MP.MAPS.some(function (m) { return m.id === mp.map; })) mp.map = MP.MAPS[0].id;
@@ -2238,6 +2257,45 @@ function mpSave() {
 }
 
 function prog(gunId) { return (mp && mp.progress && mp.progress[gunId]) || MP.newProgress(); }
+function streakProg(id) {
+  return (mp && mp.streakProgress && mp.streakProgress[id]) || { xp: 0, kills: 0 };
+}
+
+/* WHAT A MATCH EARNED, banked in one place.
+ *
+ * The match hands back a tally rather than writing to storage itself:
+ * it does not know about localStorage and should not, and a tally that
+ * arrives as one object can be checked, doubled for a win, and saved
+ * once instead of sixty times a second. */
+function mpBank(tally) {
+  if (!tally || !mp) return;
+  var mult = tally.win ? (MP.XP_WIN_MULT || 2) : 1;
+  if (tally.player > 0) {
+    mp.you.xp += tally.player * mult;
+    mp.you.kills += (tally.kills | 0);
+    if (tally.win) mp.you.wins += 1;
+  }
+  var g = tally.gun || {};
+  for (var id in g) {
+    if (!Object.prototype.hasOwnProperty.call(g, id)) continue;
+    var pr = mp.progress[id];
+    if (!pr) continue;
+    pr.xp += g[id].xp * mult;
+    pr.kills += (g[id].kills | 0);
+    pr.heads += (g[id].heads | 0);
+    pr.secs = (pr.secs || 0) + (g[id].secs || 0);
+  }
+  var k = tally.streak || {};
+  for (var sid in k) {
+    if (!Object.prototype.hasOwnProperty.call(k, sid)) continue;
+    var sq = mp.streakProgress[sid];
+    if (!sq) continue;
+    sq.xp += k[sid].xp * mult;
+    sq.kills += (k[sid].kills | 0);
+  }
+  mpSave();
+}
+W.MP_BANK = mpBank;
 
 /* ---------------- the operator, on a range ----------------
    Bones, the same as the loading zombie: every limb is a stroke drawn

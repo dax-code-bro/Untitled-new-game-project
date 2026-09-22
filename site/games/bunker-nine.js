@@ -6336,6 +6336,10 @@ function makePlayer(game, S, hud, sfx, voice) {
     arms: {},
     perks: {}, maxHp: PLAYER.hp,
     stamina: 1, sliding: 0, slideMax: 0, slideCd: 0, slideDir: null, reachOut: 0,
+    /* The interaction you are locked into, or null. See the note where
+       it is ticked: this is what stops a timed animation being a label
+       on a man who has walked off. */
+    lock: null,
     shieldT: 0, shieldCd: 0,
     prevSlot: 0, knifeOut: false,
     building: false, buildingWas: false, buildT: 0, lastBeat: -1, prevSlotBuild: 0,
@@ -14684,7 +14688,67 @@ function start(opts = {}) {
       P.actor.controller.runSpeed = PLAYER.sprintSpeed * perkSpeed * knifeSpeed * canSlow;
       P.actor.controller.moveSpeed = base * perkSpeed * knifeSpeed * canSlow * (P.spec().moveMul || 1);
 
-      if (P.sliding > 0) {
+      /* ============ LOCKED INTO AN INTERACTION ============
+       *
+       * Reported, and it is the single clearest description of the fault
+       * in the whole list: "you were allowed to move around the lever
+       * while the animation was broken, still saying you were cranking
+       * it, but when your character actually put his hand around the
+       * cranking lever like a full in depth thing".
+       *
+       * Exactly so. Every timed interaction in this game -- the
+       * generator crank, boarding a window, the bench -- was a TIMER
+       * WITH A LABEL. It set a flag, counted down, and did nothing at
+       * all about the body: you could walk away mid-crank and the crank
+       * went on cranking, because nothing connected the animation to the
+       * man supposedly performing it.
+       *
+       * A lock is the missing half. While one is held:
+       *   - the feet are ignored, so you are where the job is
+       *   - the body turns to FACE the thing, once, and stays there
+       *   - the gun goes away and the tool comes out
+       *   - letting go of the key cancels it, unless the job is
+       *     committed (a defusal is not something you half-do)
+       *
+       * P.lock is the whole of it, so anything that wants an in-depth
+       * animation asks for one rather than inventing its own timer and
+       * forgetting the same half again. */
+      if (P.lock) {
+        P.lock.t -= dt;
+        /* Face the work. Turned rather than snapped, because a body that
+           spins to a new heading in one frame reads as a teleport. */
+        if (P.lock.at) {
+          const fx = P.lock.at[0] - P.actor.position.x;
+          const fz = P.lock.at[2] - P.actor.position.z;
+          if (fx * fx + fz * fz > 1e-6) {
+            const want = Math.atan2(fx, fz);
+            let d2 = want - P.yaw;
+            while (d2 > Math.PI) d2 -= Math.PI * 2;
+            while (d2 < -Math.PI) d2 += Math.PI * 2;
+            P.yaw += d2 * Math.min(1, dt * 9);
+          }
+        }
+        /* Walking away cancels an uncommitted job, which is what letting
+           go of a crank means. A committed one -- see P.lock.commit --
+           ignores it: you are inside the storage tank with the wires. */
+        const bailed = !P.lock.commit
+          && (Math.abs(mx) + Math.abs(mz) > 0.25 || S.input.jumpPressed);
+        if (bailed || P.lock.t <= 0) {
+          const fin = P.lock;
+          P.lock = null;
+          P.sprinting = false;
+          if (!bailed && fin.done) { try { fin.done(); } catch (e) { void e; } }
+          else if (bailed && fin.cancel) { try { fin.cancel(); } catch (e) { void e; } }
+        }
+      }
+      /* THE FEET ARE NOT YOURS WHILE THE LOCK IS ON. This is the line the
+         report was about: without it every one of these animations is a
+         label on a man who is somewhere else. */
+      if (P.lock) {
+        P.sprinting = false;
+        P.actor.controller.moveSpeed = 0;
+        P.actor.controller.move(0, 0, false);
+      } else if (P.sliding > 0) {
         P.sliding -= dt;
         const d = P.slideDir;
         const k = Math.max(0.25, P.sliding / (P.slideMax || SLIDE.duration));

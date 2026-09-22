@@ -51,6 +51,30 @@
      this file is parsed before the engine has necessarily run. */
   var _q1 = null, _q2 = null;
   var RESPAWN = 5.0;            // seconds, team deathmatch
+
+  /* ============ THE COMBAT ZONE ============
+   *
+   * Reported: "every single map just has this weird little barrier thing
+   * and these weird randomly placed objects", and the fix was named in
+   * the same breath -- outside the boundary, a blinking red skull and a
+   * countdown from ten saying return to the combat zone, and you die if
+   * you do not.
+   *
+   * So the walls are gone. Every map built three or four nine-metre rock
+   * or brick slabs round its edge and they were solid: the awkward
+   * pillars. They are scenery now (K.deco, see mp-maps.js) so the
+   * horizon still reads as enclosed, and nothing stops you walking out
+   * except the clock.
+   *
+   * Applied to BOTS TOO, for the same reason every other rule is: a
+   * boundary only the player obeys is a boundary that makes the bots
+   * look like they are cheating. A bot outside its zone walks back in,
+   * and dies on the same ten seconds if it cannot. */
+  var ZONE_GRACE = 10.0;
+  /* And four seconds before you can respawn, asked for by name. It is a
+     floor under RESPAWN rather than a replacement, so a mode with a
+     longer respawn keeps it. */
+  var RESPAWN_FLOOR = 4.0;
   var NAV_CELL = 0.55;
   var NAV_Y = 1.05;
 
@@ -471,6 +495,10 @@
     var M = {
       stats: stats,
       game: game, map: map, mapId: mapId, mode: mode, nav: nav,
+      /* The HUD draws the skull and the countdown off these rather than
+         computing the zone a second time and disagreeing about it. */
+      outsideBy: function (pos) { return outsideBy(M, pos); },
+      ZONE_GRACE: ZONE_GRACE,
       people: people, time: 0, over: false, winner: null,
       score: { a: 0, b: 0 }, round: 1, roundTime: 0,
       bomb: null, events: [],
@@ -1486,7 +1514,8 @@
     to.alive = false;
     to.deaths++;
     to.streak = 0;
-    to.respawnAt = M.time + RESPAWN;
+    to.respawnAt = M.time + Math.max(RESPAWN_FLOOR, RESPAWN);
+    to.zoneLeft = 0;
     if (from) {
       from.kills++;
       from.streak++;
@@ -3183,6 +3212,34 @@
      THE TICK
      ================================================================ */
 
+  /* How far outside the zone a body is, in metres, or 0 for inside.
+     The largest overshoot on either axis, so a corner is as far out as
+     it looks rather than the sum of two smaller numbers. */
+  function outsideBy(M, pos) {
+    var z = M.map && M.map.zone;
+    if (!z) return 0;
+    var dx = Math.max(z.x0 - pos.x, pos.x - z.x1, 0);
+    var dz = Math.max(z.z0 - pos.z, pos.z - z.z1, 0);
+    return Math.max(dx, dz);
+  }
+
+  function zoneTick(M, p, dt) {
+    var out = outsideBy(M, p.pos);
+    if (out <= 0) { p.zoneLeft = 0; return; }
+    /* Counts from ten the first time it is noticed rather than from
+       whatever is left of a previous excursion. */
+    if (!(p.zoneLeft > 0)) p.zoneLeft = ZONE_GRACE;
+    p.zoneLeft -= dt;
+    if (p.zoneLeft > 0) return;
+    p.zoneLeft = 0;
+    /* Dying out here is a death like any other -- it counts against
+       you, it clears your streak, and nobody is credited with it. */
+    p.alive = false;
+    p.deaths++;
+    p.streak = 0;
+    p.respawnAt = M.time + Math.max(RESPAWN_FLOOR, RESPAWN);
+  }
+
   function update(M, dt, rand, emit) {
     if (M.over) return;
     dt = Math.min(dt, 0.05);           // one long frame must not teleport anybody
@@ -3233,6 +3290,12 @@
          fight after the first is decided by the one before it. */
       if (p.hp < HEALTH && M.time - (p.hurtAt || 0) > 5) p.hp = Math.min(HEALTH, p.hp + 18 * dt);
       if (p.bot) botThink(M, p, dt, rand, emit);
+      /* OUTSIDE THE COMBAT ZONE. Ten seconds, then you are dead, and
+         the same ten seconds for a bot as for the player. Cleared the
+         moment you are back inside, so stepping out and back in costs
+         nothing -- the timer is a leash, not a punishment for touching
+         the edge. */
+      zoneTick(M, p, dt);
       /* Out of the world. It should not be possible and it is checked
          for anyway, because the one time it happens it is a player
          falling for the rest of the match. */

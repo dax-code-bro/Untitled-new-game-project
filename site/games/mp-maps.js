@@ -669,10 +669,14 @@
     /* ---- the boundary ---- */
     [[-EDGE - 2, EDGE + 2, -EDGE - 2, -EDGE], [-EDGE - 2, EDGE + 2, EDGE, EDGE + 2],
       [EDGE, EDGE + 2, -EDGE, EDGE]].forEach(function (b) {
-      K.slab(b[0], b[1], 0, 9.0, b[2], b[3], m.wideRock, 'edge');
+      K.deco(b[0], b[1], 0, 9.0, b[2], b[3], m.wideRock, 'edge');
     });
 
     return {
+      /* THE COMBAT ZONE. the rock walls are scenery now, so the zone is what stops you: step past it and a red skull
+         and ten seconds appear, and at zero you die. See the note on
+         zoneOf in mp-match.js for why the walls went. */
+      zone: { x0: -EDGE, x1: EDGE, z0: -EDGE, z1: EDGE },
       spawns: {
         a: [[-26, -48], [-14, -50], [-3, -51], [8, -50], [20, -48], [32, -47]],
         b: [[-26, 48], [-14, 50], [-3, 51], [8, 50], [20, 48], [32, 47]],
@@ -814,10 +818,14 @@
     /* ---- the boundary ---- */
     [[-EDGE - 2, EDGE + 2, -EDGE - 2, -EDGE], [-EDGE - 2, EDGE + 2, EDGE, EDGE + 2],
       [-EDGE - 2, -EDGE, -EDGE, EDGE], [EDGE, EDGE + 2, -EDGE, EDGE]].forEach(function (b) {
-      K.slab(b[0], b[1], 0, 6.0, b[2], b[3], m.brickPale, 'edge');
+      K.deco(b[0], b[1], 0, 6.0, b[2], b[3], m.brickPale, 'edge');
     });
 
     return {
+      /* THE COMBAT ZONE. the garden walls are scenery now, so the zone is what stops you: step past it and a red skull
+         and ten seconds appear, and at zero you die. See the note on
+         zoneOf in mp-match.js for why the walls went. */
+      zone: { x0: -EDGE, x1: EDGE, z0: -EDGE, z1: EDGE },
       spawns: {
         a: [[-34, -46], [-20, -48], [-6, -49], [8, -48], [22, -46], [36, -44]],
         b: [[-34, 46], [-20, 48], [-6, 49], [8, 48], [22, 46], [36, 44]],
@@ -983,7 +991,7 @@
     /* ---- the boundary: the rest of the town, in silhouette ---- */
     [[-EDGE - 2, EDGE + 2, -EDGE - 2, -EDGE], [-EDGE - 2, EDGE + 2, EDGE, EDGE + 2],
       [-EDGE - 2, -EDGE, -EDGE, EDGE], [EDGE, EDGE + 2, -EDGE, EDGE]].forEach(function (b) {
-      K.slab(b[0], b[1], 0, 7.0, b[2], b[3], m.brick, 'edge');
+      K.deco(b[0], b[1], 0, 7.0, b[2], b[3], m.brick, 'edge');
     });
     for (var ez = -54; ez <= 54; ez += 18) {
       K.deco(-EDGE - 8, -EDGE - 2, 0, 11 + (ez % 7), ez - 6, ez + 6, m.brick, 'skyline');
@@ -991,6 +999,10 @@
     }
 
     return {
+      /* THE COMBAT ZONE. the brick backs are scenery now, so the zone is what stops you: step past it and a red skull
+         and ten seconds appear, and at zero you die. See the note on
+         zoneOf in mp-match.js for why the walls went. */
+      zone: { x0: -EDGE, x1: EDGE, z0: -EDGE, z1: EDGE },
       /* Both spawn lines sit past the last building. The right-hand
          one was at z = 50, which is inside the church -- the test found
          a man standing on the gallery four metres up, behind the enemy
@@ -1025,7 +1037,12 @@
     var F1 = 3.70, F2 = 7.40;
     var BX0 = -42, BX1 = 42, BZ0 = -22, BZ1 = 22;
 
-    K.game.ground({ at: [0, -0.08, 0], material: MAT.wideDirt, size: 140, uvScale: 0.6,
+    /* WIDE ENOUGH TO STAND ON FOR TEN SECONDS. The zone runs to +-56
+       and this was 140 across -- +-70 -- so a body twelve metres outside
+       the line was already off the edge of the world and fell before the
+       countdown could finish. There is no point giving somebody ten
+       seconds to walk back if the ground runs out at six. */
+    K.game.ground({ at: [0, -0.08, 0], material: MAT.wideDirt, size: 190, uvScale: 0.6,
       segments: 1, physics: false });
     K.slab(-EDGE - 2, EDGE + 2, -0.6, 0, -EDGE - 2, EDGE + 2, m.wideDirt, 'ground');
 
@@ -1140,7 +1157,7 @@
     /* ---- the boundary: hoarding, and the rest of the block ---- */
     [[-EDGE - 2, EDGE + 2, -EDGE - 2, -EDGE], [-EDGE - 2, EDGE + 2, EDGE, EDGE + 2],
       [-EDGE - 2, -EDGE, -EDGE, EDGE], [EDGE, EDGE + 2, -EDGE, EDGE]].forEach(function (b) {
-      K.slab(b[0], b[1], 0, 4.0, b[2], b[3], m.woodDark, 'hoarding');
+      K.deco(b[0], b[1], 0, 4.0, b[2], b[3], m.woodDark, 'hoarding');
     });
     for (var sz2 = -44; sz2 <= 44; sz2 += 16) {
       K.deco(-EDGE - 9, -EDGE - 2, 0, 14 + (sz2 % 5), sz2 - 6, sz2 + 6, m.brick, 'skyline');
@@ -1148,6 +1165,10 @@
     }
 
     return {
+      /* THE COMBAT ZONE. the hoarding is scenery now, so the zone is what stops you: step past it and a red skull
+         and ten seconds appear, and at zero you die. See the note on
+         zoneOf in mp-match.js for why the walls went. */
+      zone: { x0: -EDGE, x1: EDGE, z0: -EDGE, z1: EDGE },
       spawns: {
         a: [[-34, -40], [-20, -42], [-7, -43], [7, -42], [21, -40], [34, -38]],
         b: [[-34, 40], [-20, 42], [-7, 43], [7, 42], [21, 40], [34, 38]],
@@ -1303,6 +1324,13 @@
       solids: K.solids, decos: K.decos,
       spawns: { a: place(out.spawns.a, 0), b: place(out.spawns.b, Math.PI) },
       sites: out.sites, lanes: out.lanes,
+      /* THE COMBAT ZONE, carried out of the builder. The builders have
+         declared one each since the boundary walls became scenery, and
+         this dropped it on the floor -- so every map reported no zone at
+         all and the countdown could never start on any of them. A value
+         a builder returns and the assembler does not copy is a value
+         nobody has. */
+      zone: out.zone || null,
       sky: SKY[id],
     };
   }

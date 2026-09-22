@@ -108,6 +108,40 @@
 #mpui .hit.fade { opacity:0; transition:opacity .28s linear; }
 #mpui .hit.kill b { background:#ff6a5a; }
 
+/* ---- what the kill was worth, beside the hitmarker ----
+
+   Small, just off the marker's shoulder, so it is read out of the corner
+   of the eye without ever covering the thing being shot at. Two flavours:
+   a kill is plain, anything else is gold. */
+#mpui .xpop { position:absolute; left:50%; top:50%; width:0; height:0;
+  pointer-events:none; }
+#mpui .xpop i { position:absolute; left:16px; top:-9px; white-space:nowrap;
+  font:600 13px/1 ui-monospace,Menlo,Consolas,monospace; letter-spacing:.06em;
+  color:#e8ddc8; text-shadow:0 1px 3px rgba(0,0,0,.95); font-style:normal;
+  opacity:0; transform:translateY(2px); }
+#mpui .xpop i.show { opacity:1; transform:translateY(0);
+  transition:opacity .10s linear, transform .16s cubic-bezier(.2,.9,.3,1); }
+#mpui .xpop i.go { opacity:0; transition:opacity .9s linear; }
+/* ---- out of bounds: a skull, a clock, and ten seconds ----
+
+   Top of the screen, where a warning goes, and blinking because a
+   static red thing at the top of a shooter is furniture. The skull is
+   drawn rather than set in a font: a glyph would depend on what the
+   machine happens to have installed, and this one has to be read in
+   half a second. */
+#mpui .zone { position:absolute; left:50%; top:8%; transform:translateX(-50%);
+  text-align:center; opacity:0; transition:opacity .18s linear; pointer-events:none; }
+#mpui .zone.on { opacity:1; }
+#mpui .zone svg { display:block; margin:0 auto 6px; width:46px; height:46px;
+  filter:drop-shadow(0 0 10px rgba(200,40,30,.65)); }
+#mpui .zone.blink svg { opacity:.25; }
+#mpui .zone .cd { font:700 40px/1 'Oswald',ui-sans-serif,sans-serif; color:#e8483a;
+  letter-spacing:.04em; text-shadow:0 2px 8px rgba(0,0,0,.9); }
+#mpui .zone .lab { margin-top:4px; font:600 12px/1 ui-sans-serif,sans-serif;
+  letter-spacing:.30em; color:#e8ddc8; text-shadow:0 1px 4px rgba(0,0,0,.95); }
+
+#mpui .xpop i.gold { color:#ffc85e; text-shadow:0 0 7px rgba(255,160,40,.5),0 1px 3px rgba(0,0,0,.95); }
+
 /* ---- health, bottom left ---- */
 #mpui .hp { position:absolute; left:34px; bottom:34px; width:210px; }
 #mpui .hp .bar { position:relative; height:5px; background:rgba(0,0,0,.55);
@@ -322,6 +356,10 @@
   <div class="cross"><i class="dot"></i><i class="up"></i><i class="dn"></i>
     <i class="lf"></i><i class="rt"></i></div>
   <div class="hit"><b></b><b></b><b></b><b></b></div>
+  <div class="xpop"><i></i><i></i></div>
+  <div class="zone"><svg viewBox="0 0 24 24" fill="#e8483a" aria-hidden="true">
+    <path d="M12 2C7.6 2 4 5.4 4 9.6c0 2.4 1.2 4.1 2.6 5.2V17c0 .6.4 1 1 1h1.2v1.6c0 .5.4.9.9.9h4.6c.5 0 .9-.4.9-.9V18H17c.6 0 1-.4 1-1v-2.2c1.4-1.1 2.6-2.8 2.6-5.2C20.6 5.4 16.4 2 12 2zm-3.3 9.6a1.9 1.9 0 110-3.8 1.9 1.9 0 010 3.8zm6.6 0a1.9 1.9 0 110-3.8 1.9 1.9 0 010 3.8zM12 16.4l-1.1-2.2h2.2L12 16.4z"/>
+  </svg><div class="cd">10</div><div class="lab">RETURN TO THE COMBAT ZONE</div></div>
   <div class="dmg"></div>
   <div class="top">
     <div class="sc"><span class="us">0</span><span class="sp">&ndash;</span><span class="them">0</span></div>
@@ -1884,7 +1922,8 @@
   function makeHud(root, M) {
     var q = function (sel) { return root.querySelector(sel); };
     var el = {
-      cross: q('.cross'), hit: q('.hit'), dmg: q('.dmg'),
+      cross: q('.cross'), hit: q('.hit'), xpop: q('.xpop'), dmg: q('.dmg'),
+      zone: q('.zone'), zoneCd: q('.zone .cd'),
       sc: q('.top .sc'), us: q('.top .us'), them: q('.top .them'),
       clock: q('.clock'), mode: q('.mode'), bomb: q('.bomb'),
       feed: q('.feed'), hp: q('.hp'), hpn: q('.hp .n'), hpbar: q('.hp .bar i'),
@@ -1928,6 +1967,33 @@
 
     var feed = [];
     var hitAt = -9, hitKill = false;
+
+    /* ================= THE TALLY BESIDE THE HITMARKER =================
+     *
+     * Asked for exactly: a kill puts "+100" in small letters beside the
+     * marker and it fades after twenty seconds; another kill before it
+     * fades STACKS onto the same number rather than starting a second
+     * one; any other kind of points does the same in gold and lasts
+     * thirty.
+     *
+     * Two runs, not one, because the two clocks are different lengths
+     * and a gold score arriving mid-kill-tally must not reset it or be
+     * swallowed by it. Each keeps its own total and its own deadline,
+     * and a fresh score extends the deadline from NOW -- which is what
+     * "stacks up" means: the number grows and the clock restarts, so a
+     * streak of kills reads as one running total instead of a stutter of
+     * separate numbers. */
+    var POP_LIFE = { kill: 20, gold: 30 };
+    var pops = { kill: { n: 0, until: -9, shown: -9 }, gold: { n: 0, until: -9, shown: -9 } };
+    function popScore(kind, amount) {
+      if (!(amount > 0)) return;
+      var q = pops[kind];
+      /* Expired runs start again from zero rather than resuming a total
+         the player has already watched disappear. */
+      if (M.time >= q.until) q.n = 0;
+      q.n += amount;
+      q.until = M.time + POP_LIFE[kind];
+    }
     var marks = [];
 
     function you() { return M.you; }
@@ -1973,6 +2039,9 @@
         el.feed.innerHTML = feed.join('');
       },
       hitMark: function (kill) { hitAt = M.time; hitKill = !!kill; },
+      /* Called by whatever awarded the points, so the popup and the
+         progress that is actually banked come from one number. */
+      score: function (kind, amount) { popScore(kind, amount); },
       tookFrom: function (from) { marks.push({ t: M.time, from: from }); },
 
       paint: function (spread, showBoard, aim) {
@@ -1995,6 +2064,46 @@
         put(el.xDn, 'top', gap + 'px');
         put(el.xLf, 'left', (-gap - 9) + 'px');
         put(el.xRt, 'left', gap + 'px');
+
+        /* The two tallies. Written only when the number or the state
+           changes, because this runs every frame and a DOM write that
+           says the same thing as last frame is a layout for nothing. */
+        for (var pi = 0; pi < 2; pi++) {
+          var kind = pi ? 'gold' : 'kill';
+          var q = pops[kind], node = el.xpop.children[pi];
+          if (!node) continue;
+          var live = q.n > 0 && M.time < q.until;
+          /* The last second of the life is the fade, so the number does
+             not simply vanish while the eye is still on it. */
+          var going = live && (q.until - M.time) < 0.9;
+          if (live && q.shown !== q.n) {
+            node.textContent = '+' + Math.round(q.n);
+            q.shown = q.n;
+          }
+          if (!live && q.shown !== -9) q.shown = -9;
+          node.classList.toggle('gold', !!pi);
+          node.classList.toggle('show', live && !going);
+          node.classList.toggle('go', live && going);
+          if (!live) { node.classList.remove('show'); node.classList.remove('go'); }
+        }
+
+        /* OUT OF BOUNDS. The number is the match's own countdown, not a
+           second clock kept here -- the thing that kills you and the
+           thing that warns you have to be the same number or the warning
+           is a lie. */
+        var zLeft = p.alive ? (p.zoneLeft || 0) : 0;
+        var zOn = zLeft > 0;
+        el.zone.classList.toggle('on', zOn);
+        if (zOn) {
+          var secs = Math.max(0, Math.ceil(zLeft));
+          if (el.zone.dataset.n !== String(secs)) {
+            el.zone.dataset.n = String(secs);
+            el.zoneCd.textContent = secs;
+          }
+          /* Twice a second, and faster as it runs out. */
+          var rate = zLeft < 4 ? 6 : 3;
+          el.zone.classList.toggle('blink', (Math.floor(M.time * rate) % 2) === 1);
+        } else if (el.zone.dataset.n) { el.zone.dataset.n = ''; }
 
         var since = M.time - hitAt;
         el.hit.classList.toggle('kill', hitKill);
@@ -2070,6 +2179,21 @@
         if (M.over && !el.over.dataset.done) {
           el.over.dataset.done = '1';
           var won = M.winner === p.team;
+          /* BANK IT, ONCE. A win doubles the player's XP, the gun's and
+             the killstreak's -- all three, which is what a Victory
+             Royale is worth. Done here rather than in the match because
+             the match does not know who "you" are for the purpose of
+             saving, and dataset.done makes sure a second frame of the
+             end screen does not pay you twice. */
+          if (W.MP_BANK) {
+            tally.win = !!won;
+            for (var gk in tally.gun) {
+              if (!Object.prototype.hasOwnProperty.call(tally.gun, gk)) continue;
+              var gq = tally.gun[gk];
+              gq.xp += (gq.secs || 0) * (D.XP_GUN_PER_SEC || 0);
+            }
+            try { W.MP_BANK(tally); } catch (e) { void e; }
+          }
           el.over.innerHTML = '<div class="won ' + (won ? 'us' : 'them') + '">'
             + (M.winner == null ? 'Drawn' : (won ? 'Your side won' : 'You lost')) + '</div>'
             + '<div class="sub">' + esc(M.mode.name) + ' &middot; ' + M.score[p.team]
@@ -2502,6 +2626,8 @@
 
   function start(opts) {
     opts = opts || {};
+    /* The data module, for the XP rates and the killstreak table. */
+    var D = W.MP_DATA;
     var canvas = typeof opts.canvas === 'string'
       ? document.querySelector(opts.canvas) : (opts.canvas || document.querySelector('#game'));
 
@@ -2632,6 +2758,39 @@
       } catch (e) { /* storage off: it simply never levels */ }
     }
     var berserk = null;
+
+    /* ============== WHAT THIS MATCH HAS EARNED ==============
+     *
+     * One tally, handed to the shell when the match ends rather than
+     * written to storage as it goes. The shell owns saving and knows
+     * about the win multiplier; the match owns counting and does not
+     * need to know either. Sixty writes a second to localStorage would
+     * also be sixty writes a second to localStorage.
+     *
+     * Guns are keyed by the weapon's own id, so a match spent swapping
+     * between two of them pays each one for what it actually did. */
+    var tally = { player: 0, kills: 0, gun: {}, streak: {}, win: false };
+    function tallyGun(id) {
+      if (!id) id = 'unknown';
+      return tally.gun[id] || (tally.gun[id] = { xp: 0, kills: 0, heads: 0, secs: 0 });
+    }
+    /* IS A KILLSTREAK UP RIGHT NOW? The Berserker says so itself; the
+       rest are on M._streaks with the time they were called, and a
+       streak's own level table says how long it lasts. Returns the id,
+       so the five XP goes to the streak that was actually running. */
+    function streakUp() {
+      if (berserk && berserk.riding) return 'k-berserker';
+      var list = M._streaks || [];
+      for (var i = list.length - 1; i >= 0; i--) {
+        var q = list[i];
+        if (q.by !== M.you.id) continue;
+        var def = D.streak ? D.streak(q.id) : null;
+        var life = (def && def.duration) || 20;
+        if (M.time - q.at <= life) return q.id;
+      }
+      return null;
+    }
+
     var rail = W.MP_STREAKS ? W.MP_STREAKS.make(root, M, {
       pad: pad, input: input, uses: usesOf,
       callIn: function (def, level) {
@@ -2910,6 +3069,15 @@
          controlling recoil is. */
       var kUp0 = p.kickUp || 0, kSide0 = p.kickSide || 0;
       var kills0 = p.kills;
+      /* WHAT THE GUN IN YOUR HANDS EARNS BY BEING IN THEM. Ten minutes
+         of carry is a hundred gun XP and no player XP -- time carried is
+         a fact about the weapon, not about you. Paid per second as it
+         accrues, or a match that ends at nine minutes pays nothing for
+         nine minutes of carrying the thing. Alive only: a corpse is not
+         carrying anything. */
+      if (p.alive && !M.over && p.guns && p.guns[p.held]) {
+        tallyGun(p.guns[p.held]).secs += dt;
+      }
       /* IN THE SUIT YOU ARE NOT A MAN WITH A RIFLE. The match's own
          control -- walking, sprinting, firing, reloading, sliding --
          is skipped entirely, because the suit moves you itself and
@@ -2942,6 +3110,25 @@
         fireSound(game, p.guns[p.held], p.ammo[p.held] === 0);
       }
       M.update(dt);
+      /* THE KILL, AND WHAT IT IS WORTH. Counted off p.kills rather than
+         the event stream, because that is the number the scoreboard
+         already trusts and the two must not disagree. */
+      if (p.kills > kills0) {
+        var got = p.kills - kills0;
+        var upNow = streakUp();
+        var rate = D.xpFor(upNow ? 'streakKill' : 'kill', false);
+        tally.player += rate.player * got;
+        tally.kills += got;
+        var tg = tallyGun(p.guns[p.held]);
+        tg.xp += rate.gun * got; tg.kills += got;
+        if (upNow && rate.streak > 0) {
+          var ts = tally.streak[upNow] || (tally.streak[upNow] = { xp: 0, kills: 0 });
+          ts.xp += rate.streak * got; ts.kills += got;
+        }
+        /* The number beside the marker is the PLAYER's XP, which is what
+           "+100" means to somebody reading it mid-fight. */
+        hud.score('kill', rate.player * got);
+      }
       /* EVERYBODY ELSE'S GUNS, FEET AND HITS. After update, so it reads
          the state the match has just settled on; the local player's own
          shot is played above and skipped there by id, or every shot you
