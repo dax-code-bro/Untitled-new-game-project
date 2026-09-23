@@ -33,6 +33,24 @@ const R = path.join(__dirname, '..', '..') + '/';
       return [(m[0]*x + m[4]*y + m[8]*z + m[12]) / w, (m[1]*x + m[5]*y + m[9]*z + m[13]) / w];
     };
     const wp = (a) => { const e = a.matrix.e; return [e[12], e[13], e[14]]; };
+    /* Each load piece's authored box, taken once. */
+    const _bx = {};
+    const boxOf = (a) => {
+      const k = (a.mesh && a.mesh.id != null) ? a.mesh.id : a.name;
+      if (k in _bx) return _bx[k];
+      const g = B.game.geometryOf ? B.game.geometryOf(a.mesh) : null;
+      const Q = g && g.positions;
+      if (!Q || !Q.length) { _bx[k] = null; return null; }
+      const lo = [9, 9, 9], hi = [-9, -9, -9];
+      for (let i = 0; i < Q.length; i += 3)
+        for (let c = 0; c < 3; c++) {
+          const val = Q[i + c];
+          if (val < lo[c]) lo[c] = val;
+          if (val > hi[c]) hi[c] = val;
+        }
+      _bx[k] = [lo, hi];
+      return _bx[k];
+    };
     const GUNS = Object.keys(__T_WEAPONS).filter((k) => {
       const w = __T_WEAPONS[k];
       return !w.melee && w.reload && w.reloadKind && P.view[k];
@@ -63,7 +81,24 @@ const R = path.join(__dirname, '..', '..') + '/';
            position field is only the OFFSET the reload has applied. The
            hand is at (authored hand point + that offset). Measuring the
            actor origin instead reports the distance from the gun's web to
-           the magazine, which is a real number about nothing. */
+           the magazine, which is a real number about nothing.
+           
+           AND THE LOAD IS THE SAME KIND OF THING, which this got right
+           for the hand and wrong for the load for months. A prop mesh is
+           authored where the magazine belongs ON the gun, so its actor
+           position is also only the offset -- and comparing a hand at
+           (authored + offset) against a load at (offset) is comparing two
+           different frames. It read 52 mm on every magazine in the game
+           and the hand was on all of them; it read 51 on the stripper
+           clips, where the hand was 51 mm away for other reasons, and the
+           two numbers being similar is a coincidence.
+           
+           So: distance from the hand to the load's own BOX, vertices plus
+           offset. Zero when the hand is on it or in it, and the real gap
+           when it is not. Point-to-box rather than point-to-nearest-
+           vertex, because a hand gripping a battery cell through the
+           middle is 26 mm from the cell's nearest CORNER and on the
+           cell. */
         const ls = v.arms && v.arms.lSkin;
         const dl = v.arms && v.arms.digits && v.arms.digits.left;
         if (ls && dl && dl.at) {
@@ -77,11 +112,28 @@ const R = path.join(__dirname, '..', '..') + '/';
              whether the hand is on the round it is carrying. */
           let d = 1e9;
           for (const q2 of vis) {
-            const b2 = q2.position;
-            const dd = Math.hypot(hx - b2.x, hy - b2.y, hz - b2.z);
+            const bx = boxOf(q2);
+            const o = q2.position;
+            let dd;
+            if (!bx) dd = Math.hypot(hx - o.x, hy - o.y, hz - o.z);
+            else {
+              const h3 = [hx - o.x, hy - o.y, hz - o.z];
+              let s2 = 0;
+              for (let c = 0; c < 3; c++) {
+                const g3 = h3[c] < bx[0][c] ? bx[0][c] - h3[c]
+                  : (h3[c] > bx[1][c] ? h3[c] - bx[1][c] : 0);
+                s2 += g3 * g3;
+              }
+              dd = Math.sqrt(s2);
+            }
             if (dd < d) d = dd;
           }
-          if (d < 0.13) inHand++;
+          /* TWENTY MILLIMETRES, not a hundred and thirty. The old
+             threshold was wider than a hand, so "the support hand is on
+             the load" could not fail and never had: the shells and the
+             clips were 46 to 57 mm out for the whole of every reload and
+             it reported 100 per cent. */
+          if (d < 0.020) inHand++;
           if (d > worstHand) worstHand = d;
         }
       }

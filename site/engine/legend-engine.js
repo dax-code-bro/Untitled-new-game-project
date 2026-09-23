@@ -31199,9 +31199,91 @@ const RELOAD_WINDOW = {
 const RELOAD_CARRIES = { mag: 1, clip: 1, cell: 1, belt: 1, break: 1,
   revolver: 1, tube: 1, rocket: 1, breech: 1, sealed: 1 };
 
-/* Where the fingers close on each kind of load: a magazine near its
-   base, a clip by its spine, a pair of shells at their heads, a cell by
-   its body, a belt by its leading link. */
+/* WHERE THE FINGERS CLOSE, AS A FRACTION OF THE LOAD ITSELF.
+ *
+ * Reported: "the hand positions on bullets and magazines are wrong."
+ * Measured, as the distance from the palm to the nearest point on the
+ * surface of the thing it is carrying, over every frame of every
+ * reload on the rack:
+ *
+ *     magazines    7 to 14 mm      a hand on a magazine
+ *     belt         19 mm           near enough
+ *     cells        21 mm
+ *     shells       46 to 50 mm     for the WHOLE reload
+ *     clips        51 to 58 mm     for the whole reload
+ *     revolver     27 median, 185 worst
+ *
+ * So it is the bullets, not the magazines, and it is a constant offset
+ * rather than a moment: the hand and the load are simply in different
+ * places for the entire animation.
+ *
+ * THE CLIPS GIVE THE CAUSE AWAY. Their holder's own authored centre is
+ * 59, 61 and 67 mm forward in x on the three clip weapons, and the
+ * typed hold says -4. The magazine's number happened to be right
+ * because a magwell is where a magazine is; nothing else was ever
+ * measured against its load.
+ *
+ * WHY THE OLD TEST DID NOT CATCH IT, which is the part worth keeping.
+ * reload.test.js adds the authored hand point to the hand's offset --
+ * correctly, and it says so in a comment -- and then compares that
+ * against the load's actor ORIGIN, which for these props is only the
+ * offset the reload has applied. Two different frames. It also passed
+ * anything inside 130 mm, which is wider than a hand. Both are fixed.
+ *
+ * SO IT IS MEASURED NOW, off the load and not typed. The holder's own
+ * authored box, cached on the prop, and a per-kind fraction of its
+ * half-extent saying WHICH END the fingers close on -- so a fat
+ * shotgun shell and a pistol round are gripped in the same place
+ * rather than at the same number of millimetres, and a Breakwater
+ * magazine is gripped like a 1911's rather than 40 mm above its own
+ * base. */
+const RELOAD_GRIP = {
+  mag: [0.00, -0.15, 0.00],        // near the base
+  clip: [0.00, -0.25, 0.00],       // by the spine
+  break: [-0.60, 0.00, 0.00],      // a pair of shells, at their heads
+  revolver: [-0.40, 0.00, 0.00],   // a cartridge between finger and thumb
+  belt: [0.75, 0.00, 0.00],        // the leading link, the end going in
+  cell: [0.00, 0.00, 0.00],        // by the body
+  tube: [-0.55, 0.00, 0.00],
+  rocket: [-0.65, 0.00, 0.00],
+  breech: [0.65, 0.00, 0.00],
+  sealed: [0.00, -0.30, 0.00],
+};
+
+/* The holder's authored box, taken once and kept on the prop. Its
+   geometry does not change while the weapon is out, and walking a few
+   thousand vertices every frame of every reload would not be free. */
+function reloadHold(game, prop, kind) {
+  const frac = RELOAD_GRIP[kind] || RELOAD_GRIP.mag;
+  if (!prop.__grip) {
+    const q = prop.parts && prop.parts[0];
+    const g = (q && game && game.geometryOf) ? game.geometryOf(q.mesh) : null;
+    const Q = g && g.positions;
+    if (!Q || !Q.length) {
+      /* No geometry to measure -- a GPU-side mesh, or a prop built
+         before this ran. Fall back to the typed table rather than to
+         the origin, which would put the hand at the muzzle. */
+      prop.__grip = RELOAD_HOLD[kind] || RELOAD_HOLD.mag;
+    } else {
+      const lo = [9, 9, 9], hi = [-9, -9, -9];
+      for (let i = 0; i < Q.length; i += 3) {
+        for (let k = 0; k < 3; k++) {
+          const v = Q[i + k];
+          if (v < lo[k]) lo[k] = v;
+          if (v > hi[k]) hi[k] = v;
+        }
+      }
+      prop.__grip = [0, 1, 2].map(function (k) {
+        return (lo[k] + hi[k]) / 2 + frac[k] * (hi[k] - lo[k]) / 2;
+      });
+    }
+  }
+  return prop.__grip;
+}
+
+/* The numbers this replaces. Kept because they are the fallback when a
+   prop has no readable geometry, and because the measurement above is
+   only legible next to them. */
 const RELOAD_HOLD = {
   break: [-0.030, -0.008, -0.010],
   clip: [-0.004, 0.050, -0.008],
@@ -31766,7 +31848,7 @@ Engine.prototype.poseReload = function (o) {
      travelled BESIDE the hand rather than in it. The hand is placed FROM
      the load's position now, offset by where the fingers close, so the
      two cannot drift apart however either path is changed. */
-  return { x: px, y: py, z: pz, hold: RELOAD_HOLD[kind] || RELOAD_HOLD.mag };
+  return { x: px, y: py, z: pz, hold: reloadHold(this, prop, kind) };
 };
 
 /* Hide whatever a weapon was carrying. Called when a reload ends, or

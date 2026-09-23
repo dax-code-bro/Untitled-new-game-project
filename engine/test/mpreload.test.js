@@ -93,6 +93,24 @@ function check(name, cond, detail = '') {
         (m[1] * x + m[5] * y + m[9] * z + m[13]) / w];
     };
     const wp = (a) => { const e = a.matrix.e; return [e[12], e[13], e[14]]; };
+    /* Each load piece's authored box, taken once and kept. */
+    const _bx = {};
+    const boxOf = (a) => {
+      const k = (a.mesh && a.mesh.id != null) ? a.mesh.id : a.name;
+      if (k in _bx) return _bx[k];
+      const g = G.game.geometryOf ? G.game.geometryOf(a.mesh) : null;
+      const Q = g && g.positions;
+      if (!Q || !Q.length) { _bx[k] = null; return null; }
+      const lo = [9, 9, 9], hi = [-9, -9, -9];
+      for (let i = 0; i < Q.length; i += 3)
+        for (let c = 0; c < 3; c++) {
+          const val = Q[i + c];
+          if (val < lo[c]) lo[c] = val;
+          if (val > hi[c]) hi[c] = val;
+        }
+      _bx[k] = [lo, hi];
+      return _bx[k];
+    };
     /* COMPOSE THE MATRICES WITHOUT RUNNING THE GAME.
      *
        This called game.step(0) to get the transforms up to date, and
@@ -171,7 +189,24 @@ function check(name, cond, detail = '') {
              And the NEAREST visible piece of the load, not the first:
              a revolver leaves each round in the chamber it was thumbed
              into, so the first visible part is one already in the gun
-             and the hand is correctly nowhere near it. */
+             and the hand is correctly nowhere near it.
+
+             AND THE LOAD IS MEASURED THE SAME WAY, which is the half of
+             that paragraph both tests got wrong. A prop mesh is authored
+             where the load belongs on the gun, so its actor position is
+             ALSO only an offset -- comparing a hand at (authored +
+             offset) against a load at (offset) is comparing two frames.
+             It read 52 mm on every magazine, where the hand was on the
+             magazine, and 51 on the stripper clips, where the hand was
+             51 mm from the clip: the two being similar was a
+             coincidence, and under it the shells and the clips were out
+             by 46 to 57 mm for the whole of every reload.
+
+             Point to the load's own BOX -- zero on it or in it, the real
+             gap off it -- because a hand gripping a battery cell through
+             the middle is 26 mm from its nearest corner and is holding
+             it. And 20 mm, not 160: the old bound was wider than a hand,
+             so this check could not fail. */
           const ls = armsNow && armsNow.lSkin;
           const dl = armsNow && armsNow.digits && armsNow.digits.left;
           if (ls && dl && dl.at) {
@@ -179,12 +214,23 @@ function check(name, cond, detail = '') {
             const hx = dl.at[0] + lp.x, hy = dl.at[1] + lp.y, hz = dl.at[2] + lp.z;
             let d = 1e9;
             for (const q2 of vis) {
-              const b2 = q2.position;
-              const dd = Math.hypot(hx - b2.x, hy - b2.y, hz - b2.z);
+              const bx = boxOf(q2), o = q2.position;
+              let dd;
+              if (!bx) dd = Math.hypot(hx - o.x, hy - o.y, hz - o.z);
+              else {
+                const h3 = [hx - o.x, hy - o.y, hz - o.z];
+                let s2 = 0;
+                for (let c = 0; c < 3; c++) {
+                  const g3 = h3[c] < bx[0][c] ? bx[0][c] - h3[c]
+                    : (h3[c] > bx[1][c] ? h3[c] - bx[1][c] : 0);
+                  s2 += g3 * g3;
+                }
+                dd = Math.sqrt(s2);
+              }
               if (dd < d) d = dd;
             }
             if (d > worst) worst = d;
-            if (d < 0.16) inHand++;
+            if (d < 0.020) inHand++;
           }
         }
         // And the frame after it ends.

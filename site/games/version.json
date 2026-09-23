@@ -1,8 +1,8 @@
 {
-  "version": "0.18.0",
-  "name": "the crane, and the site coming down",
+  "version": "0.18.1",
+  "name": "a hand actually on the bullets",
   "date": "2026-09-23",
   "mode": "multiplayer",
-  "did": "Demolition rebuilt. A crane you can climb: ten flights of steel stairs switchbacking up the inside of the tower to a machinery deck at 23 m, an operator's cab, and a jib catwalk you can walk the length of, out over the middle of the map. Six parts of the site now collapse -- each groans and sheds dust for a couple of seconds, drops, kills whoever stayed under it and leaves a heap of rubble. The standing wing is three floors of rooms off a corridor with a door on every one of them, and there is a two-storey site office in the yard.",
+  "did": "Reload grips fixed. The support hand was 46 to 58 mm away from the shells, stripper clips and revolver rounds it was supposed to be carrying, for the whole of every reload -- only the magazines were right. Where the fingers close is measured off the load's own geometry now instead of being a typed number, so every one of them is held.",
   "onAccept": "The armoury reloads. Your loadouts are kept; anything you had equipped that moved class is still where you left it."
 }
