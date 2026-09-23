@@ -1733,13 +1733,67 @@ function buildViewHand(g, rawAt, side, opts = {}) {
            * COST and found it gives every millimetre back the moment it
            * is gated so it cannot outbid burial.
            *
-           * WHAT IS LEFT UNTRIED is a RESTRICTION rather than a cost:
-           * past the crown of what it is holding, do not offer the
-           * search the candidates that stay above the sight line at all.
-           * A cost can be outbid; a restriction cannot, and `walled`
-           * already exists for the joints where nothing qualifies. That
-           * is the eleventh attempt, and it is the first one with no
-           * cheaper thing left to rule out first. */
+           * THE ELEVENTH ATTEMPT WAS A RESTRICTION RATHER THAN A COST,
+           * AND IT RULES OUT THE WHOLE FAMILY. This is the useful one,
+           * so it gets the space.
+           *
+           * The idea was the one the paragraph above used to end on: a
+           * cost can be outbid, so do not offer the search the losing
+           * candidates at all. Among the angles this joint can reach
+           * without going through the weapon, prefer the ones that keep
+           * the OUTSIDE of the finger below the gun's own sight line,
+           * and only look at the rest if there are none. Burial cannot
+           * buy anything, because `!xd` is still required inside the
+           * restricted set.
+           *
+           * Built, and inert: 7 weapons, worst 48.6 mm, identical to
+           * the millimetre. So the ceiling was swept from 12.6 mm below
+           * the sight line -- where the curl solve's is -- to 12 mm
+           * ABOVE it, five heights:
+           *
+           *     drop  +12.6  +6.0   0.0   -6.0  -12.0 mm
+           *     worst  48.6  48.6  48.6  48.6  48.6
+           *
+           * Not one millimetre, anywhere, including at a ceiling the
+           * finished fingers are nowhere near. A constraint that does
+           * nothing when you move it past the thing it is constraining
+           * is not a weak constraint; it is not running.
+           *
+           * SO IT WAS COUNTED, per joint-row, over all fifteen weapons.
+           * Every row falls into one of two buckets and never a third:
+           * either NO clean candidate is under the line, or ALL of them
+           * are. On the Scattergun, at the loosest ceiling: 20 rows with
+           * none, 4 rows with all, 0 rows mixed. Same shape on every
+           * weapon -- `bound` equals `all` on all fifteen.
+           *
+           * THAT IS THE RESULT, and it is not about the sight line. One
+           * step of this march is a fraction of a bone, and the curl cap
+           * limits a step to step/(r0*1.85) of turn, so the twenty-five
+           * candidates at a single joint fan out over a millimetre or
+           * two of height. The sight line is never BETWEEN them. The
+           * finger does not decide to stand up in the sight picture at
+           * any one step; it does it over forty steps, each of which is
+           * locally indistinguishable from the alternative.
+           *
+           * No per-step rule about the sight line can bind, at any
+           * height, as a cost or as a restriction. That closes attempts
+           * eight through eleven as a family, not one at a time.
+           *
+           * WHERE A TWELFTH WOULD HAVE TO GO. The decision is made at
+           * the scale of the whole finger, so the rule has to be too --
+           * which is solveCurl, whose answer this march currently
+           * discards whenever `marchOn` is set (proved in the note
+           * above: multiplying its ceiling weight by a hundred produced
+           * byte-identical geometry). Either the support hand stops
+           * being marched and goes back to the solve, which has a
+           * ceiling that works on the whole finger at once, or the march
+           * keeps the shape and the solve gets a veto over it. Both are
+           * a change to which machine shapes a support hand, not a term
+           * in this row, and both want grip.test.js watched the whole
+           * way.
+           *
+           * engine/test/sightblock.test.js holds the number at 7 weapons
+           * and 48.6 mm so it cannot grow back while that waits. */
           /* Search the angles at or above a real curl first; only if
              none of those can be reached without going through the
              weapon does the flatter half of the range get a look. The

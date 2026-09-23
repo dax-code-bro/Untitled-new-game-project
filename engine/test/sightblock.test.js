@@ -18,14 +18,25 @@
  * it is a hand-solver fault. Measured: the gun is below its own sight
  * line at the hand's station on eleven of fifteen, so this is the hand.
  *
- * A RATCHET, NOT A PASS. Seven weapons are still over the line and the
- * remaining cause is understood and specific -- the march that shapes
- * each finger keeps closing only while it stays in contact, and past the
- * top of a forend there is nothing left to be in contact with, so the
- * fingers run on into fresh air. Fixing that is a change to the function
- * that shapes every finger on every weapon and wants the grip test's
- * burial numbers watched the whole way. Until then the number is held
- * where it is, so it cannot quietly grow back.
+ * A RATCHET, NOT A PASS. Seven weapons are still over the line, and
+ * eleven attempts at it are written up in 98-viewmodel.js. The
+ * eleventh is the one that says something general, so it is repeated
+ * here: the per-step march that shapes each finger CANNOT be told
+ * about the sight line at all. Counted per joint over all fifteen
+ * weapons, every row has either no candidate under the line or all of
+ * them under it, never a mix -- one step is a fraction of a bone and
+ * the twenty-five angles at a joint fan out over a millimetre or two,
+ * so the line is never between them. Sweeping the ceiling from 12.6 mm
+ * below the sight line to 12 mm above it moved the worst weapon by
+ * nothing at any height. That closes attempts eight to eleven as a
+ * family -- cost or restriction, it makes no difference.
+ *
+ * The finger decides to stand up over forty steps, none of which is
+ * locally wrong, so the rule has to be at the scale of the whole
+ * finger: solveCurl, whose answer the march currently discards. That
+ * is a change to WHICH machine shapes a support hand and wants the
+ * grip test's burial numbers watched the whole way. Until then the
+ * number is held where it is, so it cannot quietly grow back.
  *
  * Usage: node engine/test/sightblock.test.js
  */
