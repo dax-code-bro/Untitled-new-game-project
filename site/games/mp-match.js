@@ -501,6 +501,10 @@
          computing the zone a second time and disagreeing about it. */
       outsideBy: function (pos) { return outsideBy(M, pos); },
       ZONE_GRACE: ZONE_GRACE,
+      /* Put everything that has fallen back where it was. armRound
+         calls it between rounds; a test calls it to check that it
+         does what it says. */
+      resetCollapses: function () { resetCollapses(M); },
       people: people, time: 0, over: false, winner: null,
       score: { a: 0, b: 0 }, round: 1, roundTime: 0,
       bomb: null, events: [],
@@ -3111,6 +3115,10 @@
        the previous one is a round somebody can finish in six seconds. */
     for (var si = 0; si < nSites; si++) showTank(M.map.sites[si], false);
     releaseAll(M);
+    /* And everything that fell last round goes back up. Round two on
+       a site that has already collapsed is a different map from round
+       one, and neither side chose it. */
+    resetCollapses(M);
     /* The bomb goes to whoever spawned nearest the site they are going
        to, not to whoever happens to be first in the list. On Town --
        the biggest of the four -- the first attacker was routinely the
@@ -3232,7 +3240,15 @@
       for (var j = 0; j < M.people.length; j++) {
         var p = M.people[j];
         if (!p.alive) continue;
+        /* AND ON THE SAME FLOOR AS IT. Doors know what storey they
+           are on now (door() takes a base, for the three floors of
+           rooms in Demolition's standing wing), so a plan-view test
+           alone has a man on the ground opening every door in the
+           building above his head. Two and a half metres of slack,
+           which covers a man on a stair halfway through a doorway and
+           excludes the floor above. */
         var dx = p.pos.x - d.at[0], dz = p.pos.z - d.at[2];
+        if (Math.abs(p.pos.y - d.at[1]) > 2.5) continue;
         if (dx * dx + dz * dz < r2) { near = true; break; }
       }
       var want = near ? 1 : 0;
@@ -3241,6 +3257,188 @@
       var step = dt * DOOR_RATE;
       d.setOpen(want > cur ? Math.min(want, cur + step) : Math.max(want, cur - step));
     }
+  }
+
+  /* ================================================================
+     PARTS OF THE SITE COME DOWN
+     ================================================================
+     "you can actually go on top of the giant crane although you'll
+     have to be very careful as every once in a while, parts of the
+     construction area will collapse."
+
+     Demolition declares six pieces that can fall -- see `collapses`
+     at the bottom of buildDemolition. The map only says WHAT there is
+     to drop; this is the machine that decides when, gives you notice,
+     drops it and kills whoever stayed.
+
+     One piece at a time, in four states:
+
+       wait     nothing, for somewhere between one and two GAPs
+       warn     it shakes, groans and sheds dust for its own `warn`,
+                which is between one and three seconds
+       fall     it drops its full distance in FALL, accelerating the
+                way a falling thing does
+       down     it stays where it landed until the round resets
+
+     THE WARNING IS THE WHOLE MECHANIC. A slab that arrives with no
+     notice is a random death and the map becomes a coin toss you
+     cannot play around. One that groans over your head for two and a
+     half seconds first is a place you CHOSE to still be standing in,
+     which is the only version of this worth having in a game where
+     rounds are won and lost on one life.
+
+     AND IT KILLS ON LANDING, NOT DURING. Testing the footprint every
+     frame of the fall kills a man standing under a slab that is still
+     six metres above him -- which makes the warning worthless, since
+     running out during the fall would not save him. Testing it only
+     on the frame it lands means the two and a half seconds are real.
+
+     EVERY ROUND PUTS IT BACK. armRound calls resetCollapses, so the
+     second round is not fought over a site that has already fallen
+     down and the third is not fought on bare ground. */
+  var COLLAPSE_GAP = 26;        // seconds of quiet between one and the next
+  var COLLAPSE_FALL = 1.15;     // and how long the drop itself takes
+
+  /* WHERE EACH PIECE STARTED, taken the first time it is asked for
+     and not at build time. An actor composes its matrix from its body
+     when it has one, and reading positions off a map the instant it
+     is built reads them before anything has settled. */
+  function collapseHome(c) {
+    if (!c.home) {
+      c.home = c.parts.map(function (a) {
+        return (a && a.position) ? [a.position.x, a.position.y, a.position.z] : null;
+      });
+    }
+    return c.home;
+  }
+
+  /* setPosition, never position.set. An actor with no body composes
+     its matrix once and returns the cache for ever after; an actor
+     with one needs the body moved or the collision stays where the
+     geometry used to be. Both are the setter's job. */
+  function collapseMove(c, dy) {
+    var h = collapseHome(c);
+    for (var i = 0; i < c.parts.length; i++) {
+      var a = c.parts[i], p = h[i];
+      if (!a || !p || !a.setPosition) continue;
+      a.setPosition([p[0], p[1] + dy, p[2]]);
+    }
+  }
+
+  /* THE HEAP IT LEAVES BEHIND. The map builds it at its resting place
+     but eight metres under the world; this lifts it into position on
+     the frame the piece lands and buries it again when the round
+     resets. A collapse with no rubble is a thing that VANISHES, which
+     reads as a bug and not as a building coming down -- and the heap
+     is the cover the rest of the round gets fought from. */
+  var DEBRIS_LIFT = 8;
+
+  function collapseShow(c, up) {
+    if (!c.debris || !c.debris.length) return;
+    if (!c.rubbleHome) {
+      c.rubbleHome = c.debris.map(function (a) {
+        return (a && a.position) ? [a.position.x, a.position.y, a.position.z] : null;
+      });
+    }
+    for (var i = 0; i < c.debris.length; i++) {
+      var a = c.debris[i], p = c.rubbleHome[i];
+      if (!a || !p || !a.setPosition) continue;
+      a.setPosition([p[0], p[1] + (up ? DEBRIS_LIFT : 0), p[2]]);
+    }
+  }
+
+  function collapseDust(M, c, n) {
+    if (!M.game || !M.game.particles || !M.game.particles.dust) return;
+    try {
+      M.game.particles.dust([c.at[0], c.at[1] + 0.6, c.at[2]],
+        { count: n, size: 1.6, spread: c.r, gravity: 0.4 });
+    } catch (e) { /* an effect is never worth a frame */ }
+  }
+
+  function resetCollapses(M) {
+    var list = (M.map && M.map.collapses) || [];
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].rubbleHome) collapseShow(list[i], false);
+      if (!list[i].home) continue;          // never moved, nothing to put back
+      collapseMove(list[i], 0);
+      list[i].fallen = false;
+    }
+    if (M._collapse) { M._collapse.phase = 'wait'; M._collapse.cur = -1; M._collapse.t = 0; }
+  }
+
+  function updateCollapse(M, dt, emit, rand) {
+    var list = (M.map && M.map.collapses) || [];
+    if (!list.length) return;
+    if (!M._collapse) {
+      /* Not straight away. The first thirty seconds of a round are
+         the walk out of spawn and nobody is under anything yet. */
+      M._collapse = { phase: 'wait', left: 18 + rand() * COLLAPSE_GAP, cur: -1, t: 0, count: 0 };
+    }
+    var S = M._collapse;
+    S.t += dt;
+
+    if (S.phase === 'wait') {
+      S.left -= dt;
+      if (S.left > 0) return;
+      var up = [];
+      for (var i = 0; i < list.length; i++) if (!list[i].fallen) up.push(i);
+      /* Everything is already down. Wait for the round rather than
+         dropping the same slab twice. */
+      if (!up.length) { S.left = 10; return; }
+      S.cur = up[Math.min(up.length - 1, Math.floor(rand() * up.length))];
+      S.phase = 'warn'; S.t = 0;
+      var c0 = list[S.cur];
+      var evK = { t: M.time, kind: 'creak', at: c0.at.slice(), r: c0.r,
+        warn: c0.warn, what: c0.name };
+      M.events.push(evK); emit(evK);
+      return;
+    }
+
+    var c = list[S.cur];
+    if (!c) { S.phase = 'wait'; S.left = COLLAPSE_GAP; return; }
+
+    if (S.phase === 'warn') {
+      /* Three centimetres, fast. Enough to read from underneath as
+         something about to let go, and small enough that a man
+         standing on top of it is not shaken off it. */
+      collapseMove(c, 0.03 * Math.sin(M.time * 34));
+      if (rand() < dt * 9) collapseDust(M, c, 4);
+      if (S.t < c.warn) return;
+      S.phase = 'fall'; S.t = 0;
+      return;
+    }
+
+    if (S.phase !== 'fall') return;
+    var u = S.t / COLLAPSE_FALL;
+    if (u > 1) u = 1;
+    collapseMove(c, -c.drop * u * u);
+    if (u < 1) return;
+
+    /* It has landed. */
+    c.fallen = true;
+    collapseShow(c, true);
+    S.count++;
+    S.phase = 'wait';
+    S.left = COLLAPSE_GAP + rand() * COLLAPSE_GAP;
+    collapseDust(M, c, 34);
+    var killed = [];
+    for (var j = 0; j < M.people.length; j++) {
+      var q = M.people[j];
+      if (!q.alive) continue;
+      var dx = q.pos.x - c.at[0], dz = q.pos.z - c.at[2];
+      if (dx * dx + dz * dz > c.r * c.r) continue;
+      /* AND UNDER IT, not merely near it. The footprint is a circle on
+         the ground but the thing falling started at c.at[1] and came
+         down by c.drop, so the band it swept is what it can hit.
+         Without this the men on the crane deck died to the scaffold
+         twenty metres below them. */
+      if (q.pos.y > c.at[1] + 1.2 || q.pos.y < c.at[1] - c.drop - 2.0) continue;
+      killed.push(q.id);
+      hurt(M, null, q, 10000, false, emit);
+    }
+    var evC = { t: M.time, kind: 'collapse', at: c.at.slice(), r: c.r,
+      what: c.name, killed: killed };
+    M.events.push(evC); emit(evC);
   }
 
   function updateBomb(M, dt, emit, rand) {
@@ -3623,6 +3821,7 @@
     for (var j = 0; j < M.people.length; j++) place(M, M.people[j]);
 
     updateDoors(M, dt);
+    updateCollapse(M, dt, emit, rand);
     if (M.mode.bomb) updateBomb(M, dt, emit, rand);
     else {
       if (M.score.a >= M.mode.score) return finish(M, 'a', emit);
@@ -3821,6 +4020,11 @@
        the ONE way a wire gets cut, by a bot or by the player. */
     SND: SND, cutWire: cutWire, atSite: atSite,
     DOOR_RATE: DOOR_RATE,
+    /* The collapses, for the HUD and for the test that has to be able
+       to bring one down on demand rather than waiting half a minute
+       for the timer to come round. */
+    COLLAPSE_GAP: COLLAPSE_GAP, COLLAPSE_FALL: COLLAPSE_FALL,
+    resetCollapses: resetCollapses,
     muzzleOf: muzzleOf, kickFrom: kickFrom, settleKick: settleKick,
     AIM_Y: 1.25, aimYOf: aimYOf, GRAVITY: GRAVITY, JUMP: JUMP,
     nav: { build: navBuild, path: navPath, clear: navClear, blocked: navBlocked,

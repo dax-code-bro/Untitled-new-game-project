@@ -147,6 +147,27 @@
 #mpui .zone .lab { margin-top:4px; font:600 12px/1 ui-sans-serif,sans-serif;
   letter-spacing:.30em; color:#e8ddc8; text-shadow:0 1px 4px rgba(0,0,0,.95); }
 
+/* ---- something over your head is going ----
+   Amber, under the out-of-bounds skull, and shown ONLY while you are
+   personally standing in the footprint of a piece that is coming
+   down. A warning everybody on the map can see is a warning nobody
+   reads; this one is about you and the two seconds you have left.
+   The bar empties rather than fills, because it is time you are
+   losing and not progress you are making. */
+#mpui .fall { position:absolute; left:50%; top:21%; transform:translateX(-50%);
+  width:330px; text-align:center; opacity:0; transition:opacity .12s linear;
+  pointer-events:none; }
+#mpui .fall.on { opacity:1; }
+#mpui .fall .lab { font:700 13px/1 'Oswald',ui-sans-serif,sans-serif; letter-spacing:.22em;
+  color:#ffb347; text-shadow:0 2px 8px rgba(0,0,0,.95); }
+#mpui .fall .what { margin-top:4px; font:600 11px/1 ui-sans-serif,sans-serif;
+  letter-spacing:.14em; color:#e8ddc8; text-shadow:0 1px 4px rgba(0,0,0,.95); }
+#mpui .fall .bar { margin:7px auto 0; width:220px; height:4px; border-radius:3px;
+  background:rgba(0,0,0,.55); box-shadow:inset 0 0 0 1px rgba(255,179,71,.30); }
+#mpui .fall .bar i { display:block; height:100%; width:100%; border-radius:3px;
+  background:linear-gradient(90deg,#ffb347,#e8483a); }
+#mpui .fall.near .lab { color:#e8483a; }
+
 /* ---- the tank: a job bar, and then four wires ----
    Bottom middle, above the gun panel, because it is the thing you are
    doing and not a warning about somewhere you are. The wires are real
@@ -399,6 +420,9 @@
   <div class="zone"><svg viewBox="0 0 24 24" fill="#e8483a" aria-hidden="true">
     <path d="M12 2C7.6 2 4 5.4 4 9.6c0 2.4 1.2 4.1 2.6 5.2V17c0 .6.4 1 1 1h1.2v1.6c0 .5.4.9.9.9h4.6c.5 0 .9-.4.9-.9V18H17c.6 0 1-.4 1-1v-2.2c1.4-1.1 2.6-2.8 2.6-5.2C20.6 5.4 16.4 2 12 2zm-3.3 9.6a1.9 1.9 0 110-3.8 1.9 1.9 0 010 3.8zm6.6 0a1.9 1.9 0 110-3.8 1.9 1.9 0 010 3.8zM12 16.4l-1.1-2.2h2.2L12 16.4z"/>
   </svg><div class="cd">10</div><div class="lab">RETURN TO THE COMBAT ZONE</div></div>
+  <div class="fall"><div class="lab">GET CLEAR</div>
+    <div class="what"></div>
+    <div class="bar"><i></i></div></div>
   <div class="tank"><div class="job">CUTTING THE LOCK</div>
     <div class="bar"><i></i></div>
     <div class="fuse">10</div>
@@ -2012,6 +2036,7 @@
     var el = {
       cross: q('.cross'), hit: q('.hit'), xpop: q('.xpop'), dmg: q('.dmg'),
       zone: q('.zone'), zoneCd: q('.zone .cd'),
+      fall: q('.fall'), fallWhat: q('.fall .what'), fallBar: q('.fall .bar i'),
       tank: q('.tank'), tankJob: q('.tank .job'), tankBar: q('.tank .bar i'),
       tankFuse: q('.tank .fuse'), tankWires: q('.tank .wires'),
       sc: q('.top .sc'), us: q('.top .us'), them: q('.top .them'),
@@ -2059,6 +2084,12 @@
     var hitAt = -9, hitKill = false;
     /* Held while a win cutscene is running -- see hud.hold below. */
     var holdResult = false;
+    /* The piece that is currently coming down, set by the creak event
+       and cleared when it lands, and how hard the camera was shoved
+       when it did. Both live here rather than in the match because
+       neither of them is a fact about the match: one man's screen
+       shaking is not part of the score. */
+    var warn = null, shake = 0;
 
     /* ================= THE TALLY BESIDE THE HITMARKER =================
      *
@@ -2114,6 +2145,26 @@
           feed.unshift('<div><b class="' + sideOf(ev.who) + '">' + esc(nameOf(ev.who))
             + '</b> <span class="wp">defused it</span></div>');
           el.feed.innerHTML = feed.slice(0, 5).join('');
+        } else if (ev.kind === 'creak') {
+          /* THE WARNING IS PER PLAYER, not per map. Everybody gets the
+             line in the feed, because a thing the size of a scaffold
+             going over is news; only the man standing under it gets
+             the banner and the clock. */
+          feed.unshift('<div><span class="wp">' + esc(ev.what) + ' is going</span></div>');
+          el.feed.innerHTML = feed.slice(0, 5).join('');
+          warn = { at: ev.at, r: ev.r, what: ev.what, until: M.time + ev.warn, len: ev.warn };
+        } else if (ev.kind === 'collapse') {
+          warn = null;
+          feed.unshift('<div><span class="wp">' + esc(ev.what) + ' came down'
+            + (ev.killed && ev.killed.length
+              ? ' on ' + ev.killed.map(function (id) { return esc(nameOf(id)); }).join(', ')
+              : '') + '</span></div>');
+          el.feed.innerHTML = feed.slice(0, 5).join('');
+          /* Felt, not only seen. Everything inside forty metres gets a
+             shove, worst at the foot of it. */
+          var dxq = you().pos.x - ev.at[0], dzq = you().pos.z - ev.at[2];
+          var far = Math.hypot(dxq, dzq);
+          if (far < 40) shake = Math.max(shake, 0.9 * (1 - far / 40));
         } else if (ev.kind === 'roundEnd') {
           feed.unshift('<div><span class="wp">round to </span><b class="'
             + (ev.winner === you().team ? 'us' : 'them') + '">'
@@ -2131,6 +2182,16 @@
         el.feed.innerHTML = feed.join('');
       },
       hitMark: function (kill) { hitAt = M.time; hitKill = !!kill; },
+      /* HOW HARD THE GROUND JUST MOVED, read once by the frame as it
+         places the camera and decayed in the same call. Returning it
+         and decaying it in two places is how you get a shake that
+         never stops or one that never starts. */
+      shakeTake: function (dt) {
+        var v = shake;
+        shake *= Math.pow(0.02, dt);
+        if (shake < 0.002) shake = 0;
+        return v;
+      },
       /* Called by whatever awarded the points, so the popup and the
          progress that is actually banked come from one number. */
       score: function (kind, amount) { popScore(kind, amount); },
@@ -2199,6 +2260,32 @@
           var rate = zLeft < 4 ? 6 : 3;
           el.zone.classList.toggle('blink', (Math.floor(M.time * rate) % 2) === 1);
         } else if (el.zone.dataset.n) { el.zone.dataset.n = ''; }
+
+        /* SOMETHING OVER YOUR HEAD. Only while you are inside its
+           footprint and alive: a banner for a slab forty metres away
+           is the reason nobody reads banners. */
+        var fOn = false;
+        if (warn) {
+          if (M.time > warn.until + 0.4) warn = null;
+          else if (p.alive) {
+            var fdx = p.pos.x - warn.at[0], fdz = p.pos.z - warn.at[2];
+            fOn = (fdx * fdx + fdz * fdz) < warn.r * warn.r;
+          }
+        }
+        el.fall.classList.toggle('on', fOn);
+        if (fOn) {
+          var leftF = Math.max(0, warn.until - M.time);
+          el.fall.classList.toggle('near', leftF < 1.0);
+          if (el.fall.dataset.w !== warn.what) {
+            el.fall.dataset.w = warn.what;
+            el.fallWhat.textContent = warn.what.toUpperCase();
+          }
+          var pct = Math.round((leftF / Math.max(0.01, warn.len)) * 100);
+          if (el.fall.dataset.p !== String(pct)) {
+            el.fall.dataset.p = String(pct);
+            el.fallBar.style.width = pct + '%';
+          }
+        } else if (el.fall.dataset.w) { el.fall.dataset.w = ''; }
 
         /* ---- THE TANK ----
            Shown only while you are the one doing something to it, so it
@@ -3466,10 +3553,19 @@
         punch *= Math.pow(0.0004, dt);
         if (punch < 0.001) punch = 0;
         var fwdP = Math.cos(pitch);
+        /* AND WHATEVER JUST LANDED. Three different frequencies so it
+           reads as ground rather than as a sine wave, and it moves the
+           EYE and not the aim -- a collapse that threw your crosshair
+           off the man you were shooting would be the map taking a
+           gunfight off you. */
+        var shk = hud.shakeTake(dt);
         eye = {
-          x: p.pos.x - Math.sin(yaw) * fwdP * punch * 0.055,
-          y: p.pos.y + stanceY + bob + punch * 0.012,
-          z: p.pos.z - Math.cos(yaw) * fwdP * punch * 0.055,
+          x: p.pos.x - Math.sin(yaw) * fwdP * punch * 0.055
+            + (shk ? Math.sin(M.time * 41.0) * shk * 0.10 : 0),
+          y: p.pos.y + stanceY + bob + punch * 0.012
+            + (shk ? Math.sin(M.time * 53.0) * shk * 0.085 : 0),
+          z: p.pos.z - Math.cos(yaw) * fwdP * punch * 0.055
+            + (shk ? Math.cos(M.time * 47.0) * shk * 0.10 : 0),
         };
         /* And the field of view opens a little with it, which is what
            makes a heavy shot read as force rather than as a wobble. */

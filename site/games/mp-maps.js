@@ -135,6 +135,10 @@
     paintGreen: { color: 0x59654f, texture: 'metal', roughness: 0.74, metalness: 0, uvScale: 0.55, worldUv: true },
     paintRed: { color: 0xa8493c, texture: 'metal', roughness: 0.76, metalness: 0, uvScale: 0.55, worldUv: true },
     paintBlue: { color: 0x45596b, texture: 'metal', roughness: 0.76, metalness: 0, uvScale: 0.55, worldUv: true },
+    /* Site-cabin cream: the off-white every portacabin on every site
+       is painted, which is a warm grey by the time it has had a
+       winter on it -- not white, or it reads as plaster. */
+    paintCream: { color: 0xc9c3b4, texture: 'metal', roughness: 0.80, metalness: 0, uvScale: 0.55, worldUv: true },
     rust: { color: 0xe4c8a8, texture: 'rust', roughness: 0.88, metalness: 0.28, uvScale: 0.85, worldUv: true },
     glass: { color: 0xa8c4cc, texture: 'smooth', roughness: 0.12, metalness: 0.1, opacity: 0.32, uvScale: 0.5, worldUv: true },
     grass: { color: 0xc4d4b0, texture: 'grass', roughness: 0.97, metalness: 0, uvScale: 0.67, subsurface: 0.3, worldUv: true },
@@ -886,19 +890,23 @@
       var into = O.into === -1 ? -1 : 1;
       var m = O.material || mats.woodDark;
       var leafW = W - 0.06;
+      /* THE FLOOR THIS DOOR IS STANDING ON. Same reason wall() has one:
+         a building with three storeys of rooms wants three storeys of
+         doors, and without this they all hang in the ground floor. */
+      var B = O.base || 0;
 
       /* The frame: two jambs and a head, all deco. They are inside the
          hole the wall left, so they take nothing away from the width a
          man can walk through. */
       var j = 0.055;
       if (alongX) {
-        deco(x - W / 2 - j, x - W / 2, 0, H + j, z - 0.09, z + 0.09, mats.woodDark, 'door-jamb');
-        deco(x + W / 2, x + W / 2 + j, 0, H + j, z - 0.09, z + 0.09, mats.woodDark, 'door-jamb');
-        deco(x - W / 2 - j, x + W / 2 + j, H, H + j, z - 0.09, z + 0.09, mats.woodDark, 'door-head');
+        deco(x - W / 2 - j, x - W / 2, B, B + H + j, z - 0.09, z + 0.09, mats.woodDark, 'door-jamb');
+        deco(x + W / 2, x + W / 2 + j, B, B + H + j, z - 0.09, z + 0.09, mats.woodDark, 'door-jamb');
+        deco(x - W / 2 - j, x + W / 2 + j, B + H, B + H + j, z - 0.09, z + 0.09, mats.woodDark, 'door-head');
       } else {
-        deco(x - 0.09, x + 0.09, 0, H + j, z - W / 2 - j, z - W / 2, mats.woodDark, 'door-jamb');
-        deco(x - 0.09, x + 0.09, 0, H + j, z + W / 2, z + W / 2 + j, mats.woodDark, 'door-jamb');
-        deco(x - 0.09, x + 0.09, H, H + j, z - W / 2 - j, z + W / 2 + j, mats.woodDark, 'door-head');
+        deco(x - 0.09, x + 0.09, B, B + H + j, z - W / 2 - j, z - W / 2, mats.woodDark, 'door-jamb');
+        deco(x - 0.09, x + 0.09, B, B + H + j, z + W / 2, z + W / 2 + j, mats.woodDark, 'door-jamb');
+        deco(x - 0.09, x + 0.09, B + H, B + H + j, z - W / 2 - j, z + W / 2 + j, mats.woodDark, 'door-head');
       }
 
       /* The hinge is at one end of the opening; the leaf is built shut,
@@ -906,8 +914,8 @@
       var hx = alongX ? x + hand * (W / 2 - 0.03) : x;
       var hz = alongX ? z : z + hand * (W / 2 - 0.03);
       var leaf = alongX
-        ? slab(x - leafW / 2, x + leafW / 2, 0.015, H - 0.02, z - T, z + T, m, 'door-leaf')
-        : slab(x - T, x + T, 0.015, H - 0.02, z - leafW / 2, z + leafW / 2, m, 'door-leaf');
+        ? slab(x - leafW / 2, x + leafW / 2, B + 0.015, B + H - 0.02, z - T, z + T, m, 'door-leaf')
+        : slab(x - T, x + T, B + 0.015, B + H - 0.02, z - leafW / 2, z + leafW / 2, m, 'door-leaf');
       if (!leaf) return null;
       var shut = { x: leaf.position.x, y: leaf.position.y, z: leaf.position.z };
 
@@ -916,7 +924,7 @@
       var kx = alongX ? x - hand * (leafW / 2 - 0.10) : x;
       var kz = alongX ? z : z - hand * (leafW / 2 - 0.10);
       var knob = deco(kx - (alongX ? 0.035 : 0.10), kx + (alongX ? 0.035 : 0.10),
-        1.00, 1.08, kz - (alongX ? 0.10 : 0.035), kz + (alongX ? 0.10 : 0.035),
+        B + 1.00, B + 1.08, kz - (alongX ? 0.10 : 0.035), kz + (alongX ? 0.10 : 0.035),
         mats.steelDark, 'door-handle');
 
       var open = 0;
@@ -939,12 +947,12 @@
         }
         if (knob) {
           var kdx = kx - hx, kdz = kz - hz;
-          knob.setPosition([hx + kdx * c - kdz * sn, 1.04, hz + kdx * sn + kdz * c]);
+          knob.setPosition([hx + kdx * c - kdz * sn, B + 1.04, hz + kdx * sn + kdz * c]);
         }
       }
 
       var d = {
-        name: O.name || 'door', at: [x, 0, z], alongX: !!alongX, width: W,
+        name: O.name || 'door', at: [x, B, z], alongX: !!alongX, width: W,
         leaf: leaf, setOpen: setOpen, get open() { return open; },
         /* Where somebody has to be standing for it to open. Both sides:
            a door only one side of which works is a trap. */
@@ -1940,24 +1948,62 @@
   }
 
   /* ================================================================
-     DEMOLITION
+     DEMOLITION -- a construction site that is still coming down
      ================================================================
-     A block half knocked down and left. The smallest of the four and
-     the nastiest.
+     "demolition is a construction site and you can actually go on top
+     of the giant crane although you'll have to be very careful as
+     every once in a while, parts of the construction area will
+     collapse."
 
-     Three floors with most of the walls gone, so sightlines cut
-     diagonally up and down through holes in the slabs. There is no safe
-     lane. There is barely a lane -- the three exist, but the middle one
-     is a heap rather than a route, and the holes mean the floor above
-     you is not somewhere else, it is part of the room you are in.
-     ================================================================ */
+     Three things this map has to do that the other three do not.
+
+     THE CRANE IS SOMEWHERE YOU GO. It was a red outline with four
+     legs and a jib made of decoration -- scenery you could shelter
+     under and nothing else. It is a building now: a tower you climb
+     by ten flights of steel stairs switchbacking up the inside of it,
+     a machinery deck at twenty-three metres, an operator's cab, and a
+     jib catwalk you can walk the whole length of. It is the best view
+     on the map and the worst place to be caught on it, which is the
+     trade the map is built around, and it is why the jib reaches back
+     over the middle rather than out over nothing.
+
+     PARTS OF IT COME DOWN. Six pieces are wired to collapse -- the
+     declaration is `collapses` at the bottom and the machine that
+     runs it is updateCollapse in mp-match.js. Each one names the
+     actors that fall, how far they fall, and the footprint that is
+     lethal when they land.
+
+     AND IT HAS INSIDES. The standing wing was a wall with holes in
+     it. It is three floors of rooms off a corridor now, with a door
+     on every one of them.
+  */
   function buildDemolition(K) {
     var m = K.mats, C = K.COVER;
     var EDGE = 50;
     var F1 = 3.70, F2 = 7.40;
     var BX0 = -42, BX1 = 42, BZ0 = -22, BZ1 = 22;
+    /* Everything the collapse machine is allowed to drop, gathered as
+       the map is built and handed over at the bottom. */
+    var FALLS = [];
+    function fall(name, at, r, drop, warn) {
+      var c = { name: name, at: at, r: r, drop: drop, warn: warn || 2.4, parts: [] };
+      FALLS.push(c);
+      return c;
+    }
+    function into(c, a) { if (a && c) c.parts.push(a); return a; }
+    /* THE HEAP IT LEAVES. Built at its resting place but eight metres
+       under the map, and lifted into position on the frame the piece
+       lands -- see collapseShow in mp-match. Without it a collapse is
+       a thing that disappears, which reads as a bug rather than as a
+       building coming down, and the rubble is the cover the rest of
+       the round is fought from. */
+    function heap(c, x0, x1, z0, z1, h, material) {
+      var a = K.slab(x0, x1, -8, -8 + h, z0, z1, material || m.rock, 'rubble-fallen');
+      if (a) { c.debris = c.debris || []; c.debris.push(a); }
+      return a;
+    }
 
-    /* WIDE ENOUGH TO STAND ON FOR TEN SECONDS. The zone runs to +-56
+    /* WIDE ENOUGH TO STAND ON FOR TEN SECONDS. The zone runs to +-50
        and this was 140 across -- +-70 -- so a body twelve metres outside
        the line was already off the edge of the world and fell before the
        countdown could finish. There is no point giving somebody ten
@@ -1974,27 +2020,88 @@
       }
     }
 
-    /* ---- the standing wing, on the left. Walls, floors, a stairwell.
-       It is the only part of the map where you can be in a room. ---- */
+    /* ================================================================
+       THE STANDING WING -- three floors of rooms
+       ================================================================
+       A corridor the full depth of the building with four rooms off
+       its west side and three off its east, on all three floors, and
+       a door hung in every opening. The plan is the same on each
+       floor on purpose: this is one building that was being fitted
+       out when the wreckers arrived, not three different ones, and a
+       fight that runs up a stairwell is easier to follow when you
+       already know the floor you are arriving on.
+
+       WHAT IS FRAGILE AND WHAT IS NOT, the rule the whole game uses:
+       the slabs, the columns and the stairs are permanent because you
+       stand on them; the partitions are fragile because they are only
+       in the way. A rocket through the corridor opens three rooms and
+       leaves you standing on the same floor. */
+    var CW0 = -30.0, CW1 = -27.0;            // the corridor walls
+    var WEST = [-16.5, -5.5, 5.5, 16.5];     // doorways off the west side
+    var EAST = [-14.0, 1.0, 15.0];           // and off the east
     function wingFloor(y) {
       K.slab(BX0, -14, y - 0.22, y, BZ0, BZ1, m.concrete, 'slab');
       /* Two holes punched through it, which is what makes the wing
          part of the same fight as the middle rather than a fort. */
       K.deco(-24, -19, y - 0.24, y - 0.20, -6, -1, m.rust, 'rebar');
     }
+    function gapsAt(list) {
+      return list.map(function (z) { return [z - 0.62, z + 0.62]; });
+    }
+    function wingRooms(y, floor) {
+      var P = { frail: true, base: y };
+      K.wall(CW0 - 0.18, CW0, BZ0 + 0.5, BZ1 - 0.5, 3.1, m.plaster, gapsAt(WEST), 'corridor-wall', P);
+      K.wall(CW1, CW1 + 0.18, BZ0 + 0.5, BZ1 - 0.5, 3.1, m.plaster, gapsAt(EAST), 'corridor-wall', P);
+      WEST.forEach(function (z, i) {
+        K.door(CW0 - 0.09, z, false, { base: y, hand: i % 2 ? -1 : 1, into: -1,
+          material: m.woodDark, name: 'wing-door' });
+      });
+      EAST.forEach(function (z, i) {
+        K.door(CW1 + 0.09, z, false, { base: y, hand: i % 2 ? 1 : -1, into: 1,
+          material: m.woodDark, name: 'wing-door' });
+      });
+      // The walls between the rooms. West side four rooms, east side three.
+      [-11, 0, 11].forEach(function (z) {
+        K.wall(BX0 + 0.5, CW0, z - 0.09, z + 0.09, 3.1, m.plaster, [], 'room-wall', P);
+      });
+      [-6, 8].forEach(function (z) {
+        K.wall(CW1 + 0.18, -14.4, z - 0.09, z + 0.09, 3.1, m.plaster, [], 'room-wall', P);
+      });
+      /* Something in each room, so a doorway is not a view of an empty
+         box: a trestle in some, a stack of board in others, and the
+         top floor is bare because it was never got to. */
+      if (floor < 2) {
+        [[-36, -16.5], [-36, 5.5], [-21, -14], [-21, 15]].forEach(function (t, i) {
+          if (i % 2 === floor % 2) {
+            K.deco(t[0] - 1.1, t[0] + 1.1, y + 0.72, y + 0.80, t[1] - 0.45, t[1] + 0.45,
+              m.wood, 'trestle');
+            K.deco(t[0] - 1.0, t[0] - 0.9, y, y + 0.72, t[1] - 0.4, t[1] + 0.4, m.wood, 'trestle-leg');
+            K.deco(t[0] + 0.9, t[0] + 1.0, y, y + 0.72, t[1] - 0.4, t[1] + 0.4, m.wood, 'trestle-leg');
+          } else {
+            K.deco(t[0] - 0.8, t[0] + 0.8, y, y + 0.55, t[1] - 0.6, t[1] + 0.6, m.plaster, 'board-stack');
+          }
+        });
+      }
+    }
     K.slab(BX0, -14, -0.02, 0.12, BZ0, BZ1, m.wideConcrete, 'wing-ground');
     wingFloor(F1); wingFloor(F2);
     [0, F1, F2].forEach(function (y, i) {
-      K.wall(BX0, BX0 + 0.4, BZ0, BZ1, 3.4, m.brick, [[-14, -9, 1.0, 2.4], [6, 11, 1.0, 2.4]], 'wing-wall');
-      K.wall(BX0, -14, BZ0, BZ0 + 0.4, 3.4, m.brick, [[-34, -29], [-24, -19, 1.0, 2.4]], 'wing-wall');
-      K.wall(BX0, -14, BZ1 - 0.4, BZ1, 3.4, m.brick, [[-32, -27, 1.0, 2.4], [-22, -17]], 'wing-wall');
+      K.wall(BX0, BX0 + 0.4, BZ0, BZ1, 3.4, m.brick, [[-14, -9, 1.0, 2.4], [6, 11, 1.0, 2.4]],
+        'wing-wall', { base: y });
+      K.wall(BX0, -14, BZ0, BZ0 + 0.4, 3.4, m.brick, [[-34, -29], [-24, -19, 1.0, 2.4]],
+        'wing-wall', { base: y });
+      K.wall(BX0, -14, BZ1 - 0.4, BZ1, 3.4, m.brick, [[-32, -27, 1.0, 2.4], [-22, -17]],
+        'wing-wall', { base: y });
       /* The wall between the wing and the middle is the one that is
          coming down: less of it on every floor. */
       K.wall(-14.4, -14, BZ0, BZ1, 3.4, m.brick,
-        i === 0 ? [[-12, -6], [4, 10]] : (i === 1 ? [[-16, -4], [2, 14]] : [[-20, 16]]), 'wing-wall');
+        i === 0 ? [[-12, -6], [4, 10]] : (i === 1 ? [[-16, -4], [2, 14]] : [[-20, 16]]),
+        'wing-wall', { base: y });
+      wingRooms(y, i);
     });
     /* The stairwell -- the second bomb site, and the only way up the
-       wing that is not a climb. */
+       wing that is not a climb. It lands in the corridor on each
+       floor, which is why the corridor is where it is. */
     var SX = -36, SZ = 6;
     K.stair(SX, SZ - 6, 2.4, 0.26, 0.31, 14, 'z+', m.concrete);
     K.slab(SX - 1.4, SX + 1.4, F1 - 0.2, F1, SZ - 2.4, SZ + 1.2, m.concrete, 'landing');
@@ -2004,8 +2111,18 @@
     K.crate(-20, 16, 1.6, 1.6, C.low, m.wood);
     K.barrel(-30, -14); K.barrel(-29, -15);
 
-    /* ---- the collapsed middle: rubble you can climb, and two slabs
-       that came down at an angle and are now ramps ---- */
+    /* THE FIRST THING THAT FALLS: the top floor over the north end of
+       the wing, four bays of it, straight down onto the floor below.
+       It is the one collapse that happens indoors. */
+    var cWing = fall('the top floor of the wing', [-34, F2, -15], 7.0, 3.5, 2.6);
+    into(cWing, K.slab(-41, -27, F2 + 3.2, F2 + 3.5, -21, -9, m.concrete, 'wing-ceiling'));
+    into(cWing, K.deco(-40, -28, F2 + 2.9, F2 + 3.2, -20, -10, m.rust, 'ceiling-rebar'));
+    heap(cWing, -40, -28, -20, -11, 1.05, m.rock);
+    heap(cWing, -37, -31, -18, -13, 1.65, m.concretePale);
+
+    /* ================================================================
+       THE COLLAPSED MIDDLE
+       ================================================================ */
     for (var r = 0; r < 9; r++) {
       var rt = r / 9;
       K.slab(-13 + r * 1.5, -13 + (r + 1) * 1.5 + 0.4, 0, 0.35 + rt * 3.3, -8 + r * 0.5, 4 - r * 0.4, m.rock, 'rubble-ramp');
@@ -2019,15 +2136,35 @@
     K.slab(-13, -1, F1 - 0.22, F1, BZ0, -4, m.concrete, 'slab-island');
     K.slab(3, 14, F1 - 0.22, F1, 2, BZ1, m.concrete, 'slab-island');
     K.deco(-1, 3, F1 - 0.24, F1 - 0.18, -4, 2, m.rust, 'rebar');
-    /* And the second floor, less of it again. */
-    K.slab(-10, 2, F2 - 0.22, F2, -14, -2, m.concrete, 'slab-island');
+    /* And the second floor, less of it again. The west half of it is
+       the second thing that falls. */
+    var cIsland = fall('the second floor island', [-4, F2, -8], 7.5, F2 - 0.6, 2.2);
+    into(cIsland, K.slab(-10, 2, F2 - 0.22, F2, -14, -2, m.concrete, 'slab-island'));
+    heap(cIsland, -9, 1, -13, -3, 1.20, m.rock);
+    heap(cIsland, -7, -1, -11, -6, 1.85, m.concretePale);
     K.slab(6, 14, F2 - 0.22, F2, 8, BZ1, m.concrete, 'slab-island');
     K.slab(-9, 6, 0, C.low, -19, -16, m.rock, 'rubble');
     K.slab(-4, 10, 0, C.vault, 16, 19, m.rock, 'rubble');
     K.crate(-6, 8, 1.7, 1.7, C.vault, m.wood);
     K.crate(6, -8, 1.7, 1.7, C.low, m.wood);
 
-    /* ---- the right: the crane and the skips ---- */
+    /* The mixer -- the third bomb site. A drum on a frame with a
+       hopper, and the pile of aggregate it was being fed from. */
+    var MXX = 0, MXZ = -9;
+    K.slab(MXX - 1.6, MXX + 1.6, 0, 0.35, MXZ - 1.4, MXZ + 1.4, m.concrete, 'mixer-pad');
+    K.post(MXX - 1.2, MXZ - 1.0, 0.35, 2.4, 0.09, m.steelDark, 'mixer-leg');
+    K.post(MXX + 1.2, MXZ - 1.0, 0.35, 2.4, 0.09, m.steelDark, 'mixer-leg');
+    K.post(MXX - 1.2, MXZ + 1.0, 0.35, 2.4, 0.09, m.steelDark, 'mixer-leg');
+    K.post(MXX + 1.2, MXZ + 1.0, 0.35, 2.4, 0.09, m.steelDark, 'mixer-leg');
+    K.slab(MXX - 1.3, MXX + 1.3, 1.5, 2.9, MXZ - 1.1, MXZ + 1.1, m.paintBlue, 'mixer-drum');
+    K.deco(MXX - 1.45, MXX + 1.45, 1.9, 2.1, MXZ - 1.25, MXZ + 1.25, m.rust, 'mixer-band');
+    K.deco(MXX - 0.7, MXX + 0.7, 2.9, 3.5, MXZ + 0.4, MXZ + 1.5, m.rust, 'mixer-hopper');
+    K.slab(MXX - 4.2, MXX - 1.8, 0, 1.3, MXZ - 2.2, MXZ + 2.2, m.rock, 'aggregate');
+    K.barrel(MXX + 2.6, MXZ - 1.8); K.barrel(MXX + 3.3, MXZ - 1.2);
+
+    /* ================================================================
+       THE YARD, THE OFFICE AND THE CRANE
+       ================================================================ */
     K.slab(14, BX1, -0.02, 0.12, BZ0, BZ1, m.wideConcrete, 'yard-slab');
     K.slab(20, 30, F1 - 0.22, F1, -18, -6, m.concrete, 'slab-island');
     K.stair(25, -6, 2.4, 0.26, 0.31, 14, 'z+', m.steelDark);
@@ -2042,26 +2179,188 @@
       K.slab(s[0] - 2.4, s[0] + 2.4, 0, 1.45, s[1] - 1.6, s[1] - 1.4, m.rust, 'skip-end');
       K.slab(s[0] - 2.4, s[0] + 2.4, 0, 1.45, s[1] + 1.4, s[1] + 1.6, m.rust, 'skip-end');
     });
-    /* The crane. Its base is the first bomb site: out in the open, with
-       four legs to hide behind and three floors looking down on it. */
-    var KX = 34, KZ = 2;
-    K.slab(KX - 3.4, KX + 3.4, 0, 0.55, KZ - 3.4, KZ + 3.4, m.concrete, 'crane-base');
+
+    /* THE SITE OFFICE. Two cabins stacked, which is how they arrive on
+       a lorry and how they are always left, with an outside stair to
+       the top one and a walkway between them. Inside: a desk, a plan
+       table, a locker, and a window each end you can shoot along the
+       yard from. The only enclosed room on this side of the map. */
+    var OX0 = 16.5, OX1 = 27.5, OZ0 = 4.0, OZ1 = 10.0, OH = 2.55;
+    [0, OH + 0.25].forEach(function (base, lvl) {
+      var P = { base: base };
+      K.slab(OX0, OX1, base - 0.14, base + 0.02, OZ0, OZ1, m.steelDark, 'cabin-floor');
+      K.wall(OX0, OX1, OZ0, OZ0 + 0.14, OH, m.paintCream,
+        [[OX0 + 2.0, OX0 + 3.6, 0.95, 1.95], [OX1 - 3.4, OX1 - 1.8, 0.95, 1.95]], 'cabin-wall', P);
+      K.wall(OX0, OX1, OZ1 - 0.14, OZ1, OH, m.paintCream,
+        lvl === 0 ? [[OX0 + 4.3, OX0 + 5.5]] : [[OX0 + 4.3, OX0 + 5.5], [OX1 - 2.6, OX1 - 1.2, 0.95, 1.95]],
+        'cabin-wall', P);
+      K.wall(OX0, OX0 + 0.14, OZ0, OZ1, OH, m.paintCream, [[OZ0 + 1.9, OZ0 + 3.4, 0.95, 1.95]], 'cabin-wall', P);
+      K.wall(OX1 - 0.14, OX1, OZ0, OZ1, OH, m.paintCream, [[OZ0 + 1.9, OZ0 + 3.4, 0.95, 1.95]], 'cabin-wall', P);
+      K.slab(OX0 - 0.1, OX1 + 0.1, base + OH, base + OH + 0.18, OZ0 - 0.1, OZ1 + 0.1, m.steelDark, 'cabin-roof');
+      K.door(OX0 + 4.9, OZ1 - 0.07, true, { base: base, hand: 1, into: -1,
+        material: m.steelDark, name: 'cabin-door' });
+      // A partition and the furniture, so it reads as an office from the door.
+      K.wall(OX0 + 6.6, OX0 + 6.78, OZ0 + 0.14, OZ1 - 1.6, OH, m.plaster, [], 'cabin-part',
+        { frail: true, base: base });
+      K.deco(OX0 + 0.5, OX0 + 2.6, base + 0.68, base + 0.78, OZ0 + 0.6, OZ0 + 1.8, m.wood, 'desk');
+      K.deco(OX0 + 7.2, OX1 - 0.4, base + 0.80, base + 0.88, OZ0 + 1.0, OZ1 - 1.0, m.wood, 'plan-table');
+      K.deco(OX1 - 1.1, OX1 - 0.3, base + 0.02, base + 1.85, OZ1 - 1.5, OZ1 - 0.6, m.paintBlue, 'locker');
+    });
+    K.stair(OX1 + 1.4, OZ0 + 0.4, 1.1, 0.26, 0.31, 11, 'z+', m.steelDark);
+    K.deco(OX1 + 0.9, OX1 + 1.95, OH + 0.25, OH + 1.30, OZ0 + 0.4, OZ0 + 0.5, m.steelDark, 'office-rail');
+    K.slab(OX1, OX1 + 2.0, OH + 0.11, OH + 0.25, OZ0 + 2.8, OZ0 + 4.6, m.steelDark, 'office-landing');
+
+    /* ================================================================
+       THE CRANE
+       ================================================================
+       "you can actually go on top of the giant crane."
+
+       So it is built to be climbed, not to be looked at. The tower is
+       six and a half metres across between the legs, which is a metre
+       and a half more than it was, and that metre and a half is what
+       lets a 2.2 m flight switchback inside it: ten flights, nine
+       treads each, alternating north and south, with a landing at the
+       head of every one. Twenty-three and a half metres to the
+       machinery deck.
+
+       WHY THE STAIRS ARE TREADS AND NOT BLOCKS. Every flight on every
+       other map is a solid block from the ground up to each step,
+       which is right for concrete poured against dirt. Built that way
+       here the second flight would have been a wall from the ground
+       to the sky. stair() takes a base now and lays each step as one
+       rise sitting on the last -- a bolted steel flight, which is
+       what this is.
+
+       THE JIB REACHES BACK OVER THE MAP, not out over the boundary.
+       A catwalk that only ever looks at the skyline is a climb for
+       nothing; this one puts you over the middle lane at twenty-four
+       metres with a handrail and no cover, which is a real choice and
+       not a free perch. */
+    var KX = 34, KZ = 2, LEG = 3.25, DECK = 23.40, JIBY = 24.10;
+    K.slab(KX - 4.0, KX + 4.0, 0, 0.55, KZ - 4.0, KZ + 4.0, m.concrete, 'crane-base');
     for (var lx2 = -1; lx2 <= 1; lx2 += 2) {
       for (var lz2 = -1; lz2 <= 1; lz2 += 2) {
-        K.slab(KX + lx2 * 2.4 - 0.22, KX + lx2 * 2.4 + 0.22, 0.55, 22, KZ + lz2 * 2.4 - 0.22, KZ + lz2 * 2.4 + 0.22, m.paintRed, 'crane-leg');
+        K.slab(KX + lx2 * LEG - 0.22, KX + lx2 * LEG + 0.22, 0.55, DECK + 1.2,
+          KZ + lz2 * LEG - 0.22, KZ + lz2 * LEG + 0.22, m.paintRed, 'crane-leg');
       }
     }
-    for (var by = 2.2; by < 22; by += 2.6) {
-      K.deco(KX - 2.6, KX + 2.6, by, by + 0.16, KZ - 2.6, KZ - 2.3, m.paintRed, 'crane-brace');
-      K.deco(KX - 2.6, KX + 2.6, by, by + 0.16, KZ + 2.3, KZ + 2.6, m.paintRed, 'crane-brace');
-      K.deco(KX - 2.6, KX - 2.3, by, by + 0.16, KZ - 2.6, KZ + 2.6, m.paintRed, 'crane-brace');
-      K.deco(KX + 2.3, KX + 2.6, by, by + 0.16, KZ - 2.6, KZ + 2.6, m.paintRed, 'crane-brace');
+    /* Bracing on three sides only. The fourth is where you get in. */
+    for (var by = 2.2; by < DECK; by += 2.6) {
+      K.deco(KX - LEG - 0.1, KX + LEG + 0.1, by, by + 0.16, KZ + LEG - 0.3, KZ + LEG + 0.1, m.paintRed, 'crane-brace');
+      K.deco(KX - LEG - 0.1, KX - LEG + 0.3, by, by + 0.16, KZ - LEG - 0.1, KZ + LEG + 0.1, m.paintRed, 'crane-brace');
+      K.deco(KX + LEG - 0.3, KX + LEG + 0.1, by, by + 0.16, KZ - LEG - 0.1, KZ + LEG + 0.1, m.paintRed, 'crane-brace');
+      if (by > 3.0) {
+        K.deco(KX - LEG - 0.1, KX + LEG + 0.1, by, by + 0.16, KZ - LEG - 0.1, KZ - LEG + 0.3, m.paintRed, 'crane-brace');
+      }
     }
-    K.deco(KX - 26, KX + 8, 22, 22.9, KZ - 0.7, KZ + 0.7, m.paintRed, 'crane-jib');
-    K.deco(-4.4, -3.6, 8.5, 22, KZ - 0.2, KZ + 0.2, m.steelDark, 'crane-cable');
+    var FLIGHTS = 10, TREADS = 9, RISE = 0.26, RUN = 0.315;
+    var LIFT = TREADS * RISE;                       // 2.34 m a flight
+    for (var fi = 0; fi < FLIGHTS; fi++) {
+      var y0 = 0.55 + fi * LIFT;
+      var north = (fi % 2) === 0;
+      var sx = KX + (north ? -1.35 : 1.35);
+      var sz = north ? KZ - 2.55 : KZ + 2.55;
+      K.stair(sx, sz, 2.3, RISE, RUN, TREADS, north ? 'z+' : 'z-', m.steelDark, y0);
+      var ly = y0 + LIFT;
+      // The landing at the head of it, which is also the foot of the next.
+      K.slab(KX - 2.9, KX + 2.9, ly - 0.14, ly,
+        north ? KZ + 0.30 : KZ - 1.60, north ? KZ + 1.60 : KZ - 0.30, m.steelDark, 'crane-landing');
+    }
+    /* The machinery deck: the floor at the top of the stairs, and the
+       only flat place up here that is not the jib. */
+    K.slab(KX - 3.6, KX + 3.6, DECK - 0.16, DECK, KZ - 3.6, KZ + 3.6, m.steelDark, 'crane-deck');
+    [[KX - 3.7, KX + 3.7, KZ - 3.7, KZ - 3.6], [KX - 3.7, KX + 3.7, KZ + 3.6, KZ + 3.7],
+      [KX - 3.7, KX - 3.6, KZ - 3.7, KZ + 3.7], [KX + 3.6, KX + 3.7, KZ - 3.7, KZ + 3.7]]
+      .forEach(function (rr) {
+        K.deco(rr[0], rr[1], DECK, DECK + 1.05, rr[2], rr[3], m.steelDark, 'deck-rail');
+      });
+    // The winch house and the cab hung off the front of it.
+    K.slab(KX + 1.0, KX + 3.4, DECK, DECK + 1.9, KZ - 2.2, KZ + 2.2, m.paintRed, 'winch-house');
+    K.slab(KX - 3.4, KX - 1.4, DECK, DECK + 2.1, KZ - 1.3, KZ + 1.3, m.steelDark, 'crane-cab');
+    K.deco(KX - 3.45, KX - 1.35, DECK + 0.75, DECK + 1.75, KZ - 1.35, KZ - 1.25, m.glass, 'cab-glass');
+    K.deco(KX - 3.45, KX - 3.35, DECK + 0.75, DECK + 1.75, KZ - 1.35, KZ + 1.35, m.glass, 'cab-glass');
+
+    /* The jib: a catwalk you walk on, a top boom over it, and the
+       lattice between the two. It runs back over the middle of the
+       map and a short counter-jib the other way with the ballast on
+       the end of it. */
+    var JX0 = KX - 30, JX1 = KX + 9;
+    K.slab(JX0, JX1, JIBY - 0.14, JIBY, KZ - 0.75, KZ + 0.75, m.steelDark, 'jib-walk');
+    K.deco(JX0, JX1, JIBY + 0.95, JIBY + 1.05, KZ - 0.80, KZ - 0.70, m.paintRed, 'jib-rail');
+    K.deco(JX0, JX1, JIBY + 0.95, JIBY + 1.05, KZ + 0.70, KZ + 0.80, m.paintRed, 'jib-rail');
+    K.deco(JX0, JX1, JIBY + 2.5, JIBY + 2.9, KZ - 0.55, KZ + 0.55, m.paintRed, 'jib-boom');
+    for (var jx = JX0; jx < JX1; jx += 2.6) {
+      K.deco(jx, jx + 0.12, JIBY + 1.0, JIBY + 2.5, KZ - 0.80, KZ - 0.70, m.paintRed, 'jib-lattice');
+      K.deco(jx, jx + 0.12, JIBY + 1.0, JIBY + 2.5, KZ + 0.70, KZ + 0.80, m.paintRed, 'jib-lattice');
+    }
+    K.deco(JX1 - 2.6, JX1, JIBY - 1.5, JIBY - 0.2, KZ - 1.2, KZ + 1.2, m.concrete, 'counter-ballast');
+    // The cable and the ball, hanging where the wall used to be.
+    K.deco(-4.4, -3.6, 8.5, JIBY - 0.1, KZ - 0.2, KZ + 0.2, m.steelDark, 'crane-cable');
     K.deco(-6, -2, 7.2, 8.5, KZ - 1.8, KZ + 1.8, m.steelDark, 'wrecking-ball');
     K.crate(18, -18, 1.7, 1.7, C.vault, m.wood);
     K.barrel(28, 18); K.barrel(29, 19);
+
+    /* ================================================================
+       SCAFFOLD, AND THE REST OF WHAT COMES DOWN
+       ================================================================
+       Two towers of scaffold against the middle, both of them wired.
+       They are cover and a climb while they are standing and a
+       killing floor for two seconds when they are not. */
+    function scaffold(x, z, lifts, c) {
+      for (var li = 0; li < lifts; li++) {
+        var y = 1.95 * (li + 1);
+        into(c, K.slab(x - 1.6, x + 1.6, y - 0.10, y, z - 1.2, z + 1.2, m.wood, 'scaffold-deck'));
+        into(c, K.deco(x - 1.7, x + 1.7, y, y + 1.0, z - 1.25, z - 1.15, m.steelDark, 'scaffold-rail'));
+        into(c, K.deco(x - 1.7, x + 1.7, y, y + 1.0, z + 1.15, z + 1.25, m.steelDark, 'scaffold-rail'));
+      }
+      [[-1.6, -1.2], [1.6, -1.2], [-1.6, 1.2], [1.6, 1.2]].forEach(function (p) {
+        into(c, K.slab(x + p[0] - 0.07, x + p[0] + 0.07, 0, 1.95 * lifts + 1.0,
+          z + p[1] - 0.07, z + p[1] + 0.07, m.steelDark, 'scaffold-standard'));
+      });
+      /* THE LADDER UP IT, and it has to be clear of the decks.
+       *
+         The game has no ladder mechanic, so this is a stair pretending
+         to be one: rungs 0.36 apart, under the controller's 0.42 m
+         step, and deep enough for the step-up probe to find ground on.
+         Two things were wrong with the first one. At 0.42 the rise was
+         exactly on the controller's limit and half the rungs refused
+         it. And it ran up the +Z face INSIDE the decks' own footprint,
+         so from above every rung near a deck was in the deck's shadow
+         and the climb dead-ended at a metre and a half: you could get
+         four rungs up a six-metre tower and no further.
+
+         It runs up the +X face now, starting two centimetres outside
+         the deck edge, so every rung is reachable from below and the
+         deck is a step ACROSS from the rung beside it rather than a
+         step up through it. */
+      for (var ri = 1; ri * 0.36 < 1.95 * lifts + 0.4; ri++) {
+        into(c, K.slab(x + 1.62, x + 2.24, ri * 0.36 - 0.07, ri * 0.36,
+          z - 0.40, z + 0.40, m.steelDark, 'scaffold-rung'));
+      }
+    }
+    var cN = fall('the scaffold on the north face', [-8, 0, 14], 4.2, 6.2, 2.4);
+    scaffold(-8, 14, 3, cN);
+    heap(cN, -10.4, -5.6, 12.4, 15.6, 0.95, m.wood);
+    heap(cN, -9.2, -6.8, 13.2, 14.8, 1.55, m.rust);
+    var cS = fall('the scaffold on the south face', [9, 0, -15], 4.2, 8.1, 2.4);
+    scaffold(9, -15, 4, cS);
+    heap(cS, 6.6, 11.4, -16.6, -13.4, 1.05, m.wood);
+    heap(cS, 7.8, 10.2, -15.8, -14.2, 1.70, m.rust);
+
+    /* The last two: a slab of the wing's front wall that is only
+       hanging on, and the stack of precast panels leaning on the
+       columns in the middle of the yard. */
+    var cFace = fall('the front of the wing', [-14, F1, 8], 5.0, F1 + 2.0, 2.0);
+    into(cFace, K.slab(-14.4, -13.9, F2, F2 + 3.2, 2, 14, m.brick, 'hanging-face'));
+    heap(cFace, -15.6, -12.4, 2.4, 13.6, 0.90, m.brick);
+    heap(cFace, -15.0, -13.0, 5.0, 11.0, 1.45, m.rock);
+    var cStack = fall('the stack of precast panels', [22, 0, -2], 4.6, 3.0, 1.8);
+    for (var pi = 0; pi < 4; pi++) {
+      into(cStack, K.slab(20 + pi * 0.55, 20.42 + pi * 0.55, 0, 3.0 + pi * 0.1, -4.2, 0.2,
+        m.concretePale, 'precast-panel'));
+    }
+    heap(cStack, 19.4, 23.4, -4.6, 0.6, 0.85, m.concretePale);
+    heap(cStack, 20.4, 22.4, -3.4, -0.4, 1.35, m.rock);
 
     /* ---- the approach from each spawn ----
        Site hoarding, in two staggered runs, with gates between. */
@@ -2098,6 +2397,12 @@
         { id: 'stairwell', name: 'the standing stairwell', at: [-34, 0, 4], r: 4.0, face: 0 },
         { id: 'mixer', name: 'the concrete mixer', at: [0, 0, -9], r: 4.5, face: 0 },
       ],
+      /* WHAT COMES DOWN, AND WHEN IT IS SAFE TO BE UNDER IT. Each of
+         these carries the actors that fall, the distance, and the
+         footprint that is lethal on the frame they land. The timing,
+         the warning and the dust are updateCollapse's in mp-match.js
+         -- the map only says what there is to drop. */
+      collapses: FALLS,
       lanes: [{ x: -30, name: 'the standing wing' }, { x: 0, name: 'the collapsed middle' },
         { x: 30, name: 'the crane' }],
     };
@@ -2262,6 +2567,10 @@
       /* Carried out, like the zone was not. A door the assembler drops
          is a door nothing can ever open. */
       doors: K.doors,
+      /* AND THE SAME FOR THE COLLAPSES. Demolition is the only map
+         with any; the others carry an empty list rather than nothing,
+         so updateCollapse has one shape to read on every map. */
+      collapses: out.collapses || [],
       spawns: { a: place(out.spawns.a, 0), b: place(out.spawns.b, Math.PI) },
       sites: out.sites, lanes: out.lanes,
       /* THE COMBAT ZONE, carried out of the builder. The builders have
