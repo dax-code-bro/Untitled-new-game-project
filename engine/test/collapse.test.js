@@ -234,7 +234,8 @@ const note = (s) => console.log(`  ..   ${s}`);
       return a ? +a.position.y.toFixed(2) : null;
     });
     out.reset = { before, after, home: list.map((c) => (c.home
-      ? +c.home.find((h) => h)[1].toFixed(2) : null)) };
+      ? +c.home.find((h) => h)[1].toFixed(2) : null)),
+    left: +M._collapse.left.toFixed(1), phase: M._collapse.phase };
     out.stillDown = list.filter((c) => c.fallen).length;
     /* And the rubble goes back under with it. */
     out.rubbleAfter = list.map((c) => {
@@ -274,6 +275,15 @@ const note = (s) => console.log(`  ..   ${s}`);
     drop.each.map((e) => `${e.name} ${e.heapWas}->${e.heapNow}`).join(' | '));
 
   note(`after the reset: ${drop.reset.after.join(', ')} (home ${drop.reset.home.join(', ')})`);
+  /* AND THE CLOCK GOES BACK WITH THE GEOMETRY. It did not: the reset
+     put every piece back and left the countdown at whatever it had
+     reached, which on a round that ended seconds before one was due is
+     zero -- so round two opened with a slab coming down on its first
+     tick, while both sides were still in spawn. */
+  note(`the clock after a reset reads ${drop.reset.left} s`);
+  check('and the round starts quiet, not mid-collapse',
+    drop.reset.left >= 15 && drop.reset.phase === 'wait',
+    `${drop.reset.left} s, phase ${drop.reset.phase}`);
   check('the round puts every one of them back',
     drop.reset.after.every((v, i) => v != null
       && Math.abs(v - drop.reset.home[i]) < 0.02),

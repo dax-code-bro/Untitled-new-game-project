@@ -154,7 +154,11 @@
    reads; this one is about you and the two seconds you have left.
    The bar empties rather than fills, because it is time you are
    losing and not progress you are making. */
-#mpui .fall { position:absolute; left:50%; top:21%; transform:translateX(-50%);
+/* Below the out-of-bounds skull, not across it. The skull block is
+   about 110 px tall from 8%, which on a 700 px screen finishes around
+   24%, and a man can be outside the line AND under a slab at the same
+   time -- it is exactly the sort of moment when he is. */
+#mpui .fall { position:absolute; left:50%; top:27%; transform:translateX(-50%);
   width:330px; text-align:center; opacity:0; transition:opacity .12s linear;
   pointer-events:none; }
 #mpui .fall.on { opacity:1; }

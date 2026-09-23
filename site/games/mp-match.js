@@ -3298,6 +3298,10 @@
      down and the third is not fought on bare ground. */
   var COLLAPSE_GAP = 26;        // seconds of quiet between one and the next
   var COLLAPSE_FALL = 1.15;     // and how long the drop itself takes
+  /* And the quiet at the start of a round. The first thirty seconds are
+     the walk out of spawn; nobody is under anything yet and a collapse
+     then is a death nobody could have played around. */
+  var COLLAPSE_OPEN = 18;
 
   /* WHERE EACH PIECE STARTED, taken the first time it is asked for
      and not at build time. An actor composes its matrix from its body
@@ -3363,16 +3367,24 @@
       collapseMove(list[i], 0);
       list[i].fallen = false;
     }
-    if (M._collapse) { M._collapse.phase = 'wait'; M._collapse.cur = -1; M._collapse.t = 0; }
+    /* AND THE CLOCK GOES BACK TOO, not just the phase. It was left at
+       whatever it had counted down to, which on a round that ended
+       moments before one was due is zero -- so round two opened with a
+       slab coming down on the first tick, while both sides were still
+       in spawn. Every round gets the same quiet opening the first one
+       had. */
+    if (M._collapse) {
+      M._collapse.phase = 'wait'; M._collapse.cur = -1; M._collapse.t = 0;
+      M._collapse.left = COLLAPSE_OPEN;
+    }
   }
 
   function updateCollapse(M, dt, emit, rand) {
     var list = (M.map && M.map.collapses) || [];
     if (!list.length) return;
     if (!M._collapse) {
-      /* Not straight away. The first thirty seconds of a round are
-         the walk out of spawn and nobody is under anything yet. */
-      M._collapse = { phase: 'wait', left: 18 + rand() * COLLAPSE_GAP, cur: -1, t: 0, count: 0 };
+        M._collapse = { phase: 'wait', left: COLLAPSE_OPEN + rand() * COLLAPSE_GAP,
+        cur: -1, t: 0, count: 0 };
     }
     var S = M._collapse;
     S.t += dt;
