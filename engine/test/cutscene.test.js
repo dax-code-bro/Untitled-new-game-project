@@ -98,7 +98,19 @@ const note = (s) => console.log(`  ..   ${s}`);
           panelUp: !panel.classList.contains('hide'),
           active: !!(window.MP_CUT && window.MP_CUT.active),
         });
-        if (Date.now() - t0 > (secs + 8) * 1000
+        /* WAIT FOR THE SCENE, NOT FOR THE CLOCK ON THE WALL.
+           The scene runs on a wall clock with its step clamped at 0.20 s,
+           which is right for a game -- a stall must not teleport the
+           helicopter -- but this renderer is software GL and the rebuilt
+           Helipad draws at about two and a half frames a second, so the
+           scene advances at roughly half real time. A budget of the
+           scene's own length plus eight seconds cut it off in the middle
+           of the lift beat, and the failure that produced ("the
+           helicopter only climbed to 9 m") was a measurement of the
+           frame rate, not of the shot. The budget is now four times the
+           scene, which is slack enough for a renderer this slow and
+           still finite if the scene genuinely hangs. */
+        if (Date.now() - t0 > (secs * 4 + 10) * 1000
           || (out.length > 6 && !out[out.length - 1].active && out.some((r) => r.active))) {
           return done(out);
         }

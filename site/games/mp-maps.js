@@ -141,6 +141,10 @@
     dirt: { color: 0xa89f92, texture: 'dirt', roughness: 0.98, metalness: 0, uvScale: 0.5, worldUv: true },
     sand: { color: 0xd8cfbc, texture: 'sand', roughness: 0.98, metalness: 0, uvScale: 0.67, worldUv: true },
     tile: { color: 0xc4cad0, texture: 'tile', roughness: 0.42, metalness: 0, uvScale: 0.42, worldUv: true },
+    /* Jungle canopy. `grass` rather than a green paint: a painted metal
+       cylinder overhead reads as a parasol, and the whole point of the
+       clearing is that it is surrounded by something growing. */
+    foliage: { color: 0x5d7a46, texture: 'grass', roughness: 0.96, metalness: 0, uvScale: 1.4, worldUv: true },
     tilePool: { color: 0xbcd8e2, texture: 'tile', roughness: 0.38, metalness: 0, uvScale: 0.83, worldUv: true },
     /* ROOF TILE WAS BUILT ON THE ONE RECIPE THIS FILE SAYS NOT TO USE
        FOR IT. The note fifty lines above is explicit: the brick recipe
@@ -761,6 +765,99 @@
     }
 
     /* ================================================================
+       A HOTEL BLOCK
+       ================================================================
+       "a few luxury hotels with swimming pools[,] balconies and all
+       that."
+
+       A wing of rooms: N storeys, a corridor down the back, rooms off
+       it with a door each, a balcony running the length of the front,
+       and a stair at one end that reaches every floor. Built along X
+       with the front facing -Z or +Z.
+
+       THE BALCONY IS THE POINT. A hotel in a shooter is a firing step
+       with beds behind it -- the rooms matter because they are how you
+       get onto the balcony without being seen crossing it, and the
+       corridor matters because it is how you leave when somebody comes
+       up the stair. Every floor has both. */
+    function hotelBlock(x0, x1, z0, z1, opts) {
+      var O = opts || {};
+      var floors = O.floors || 2;
+      var FH = O.floorHeight || 3.3;
+      var T = 0.32;
+      var faceZ = O.front === 'z+' ? 1 : -1;          // which way the rooms look
+      var wallMat = O.wall || mats.brickPale;
+      var out = { at: [(x0 + x1) / 2, 0, (z0 + z1) / 2], floors: floors, height: floors * FH };
+
+      // The front is the -Z or +Z wall; the corridor runs along the other.
+      var fz = faceZ < 0 ? z0 : z1;                    // front face
+      var bz = faceZ < 0 ? z1 : z0;                    // back face
+      var corr = bz - faceZ * 2.3;                     // the corridor's inner wall
+      var rooms = Math.max(2, Math.floor((x1 - x0) / 5.2));
+      var rw = (x1 - x0) / rooms;
+
+      slab(x0 - 0.4, x1 + 0.4, 0, 0.14, z0 - 0.4, z1 + 0.4, mats.kerb, 'hotel-floor');
+
+      for (var f = 0; f < floors; f++) {
+        var base = f * FH;
+        // Front wall: a window and a balcony door per room.
+        var gaps = [];
+        for (var r = 0; r < rooms; r++) {
+          var rx = x0 + (r + 0.5) * rw;
+          gaps.push([rx - 1.0, rx + 0.2]);                       // the balcony door
+          gaps.push([rx + 0.7, rx + 1.8, 1.0, 2.4]);             // and a window
+        }
+        wall(x0, x1, faceZ < 0 ? z0 : z1 - T, faceZ < 0 ? z0 + T : z1,
+          FH, wallMat, gaps, 'hotel-wall', { base: base });
+        // Back wall, solid but for a stairwell window.
+        wall(x0, x1, faceZ < 0 ? z1 - T : z0, faceZ < 0 ? z1 : z0 + T,
+          FH, wallMat, [[x1 - 3.2, x1 - 1.4, 1.1, 2.3]], 'hotel-wall', { base: base });
+        // Ends.
+        wall(x0, x0 + T, z0, z1, FH, wallMat, [], 'hotel-wall', { base: base });
+        wall(x1 - T, x1, z0, z1, FH, wallMat, [], 'hotel-wall', { base: base });
+        // The corridor wall, with a door into each room.
+        var cgaps = [];
+        for (var r2 = 0; r2 < rooms; r2++) {
+          var rx2 = x0 + (r2 + 0.5) * rw;
+          cgaps.push([rx2 - 0.6, rx2 + 0.6]);
+        }
+        wall(x0 + T, x1 - T, Math.min(corr, corr + faceZ * 0.16), Math.max(corr, corr + faceZ * 0.16),
+          FH, mats.plaster, cgaps, 'hotel-part', { frail: true, base: base });
+        // And the partitions between rooms.
+        for (var r3 = 1; r3 < rooms; r3++) {
+          var px = x0 + r3 * rw;
+          wall(px - 0.08, px + 0.08, Math.min(fz, corr) + 0.1, Math.max(fz, corr) - 0.1,
+            FH, mats.plaster, [], 'hotel-part', { frail: true, base: base });
+        }
+        // A bed in each room.
+        for (var r4 = 0; r4 < rooms; r4++) {
+          var rx4 = x0 + (r4 + 0.5) * rw;
+          var bzc = fz + faceZ * 1.5;
+          slab(rx4 - 1.05, rx4 + 1.05, base + 0.16, base + 0.62,
+            bzc - 0.95, bzc + 0.95, mats.canvas, 'hotel-bed');
+        }
+        // The floor above, or the roof.
+        var top = base + FH;
+        slab(x0 - 0.5, x1 + 0.5, top, top + (f === floors - 1 ? 0.32 : 0.18),
+          z0 - 0.5, z1 + 0.5, f === floors - 1 ? mats.concrete : mats.concrete, 'hotel-slab');
+        // The stairwell hole, at the far end, and the flight up to it.
+        slab(x1 - 3.4, x1 - 0.4, top, top + 0.19, bz - faceZ * 0.4, corr, mats.plaster, 'stair-void');
+        if (f < floors - 1) {
+          stair(x1 - 1.9, faceZ < 0 ? corr + 0.2 : corr - 0.2, 2.4, FH / 13, 0.30, 13,
+            faceZ < 0 ? 'z+' : 'z-', mats.concrete);
+        }
+        /* THE BALCONY, the length of the front, on every floor
+           including the ground one -- where it is a veranda. */
+        deck(x0, x1, base + 0.16, faceZ < 0 ? z0 - 2.2 : z1,
+          faceZ < 0 ? z0 : z1 + 2.2, mats.tile, faceZ < 0 ? [0, 1, 2] : [0, 1, 3]);
+      }
+      // One way up from outside, so the block is not sealed at ground level.
+      stair(x0 + 1.8, faceZ < 0 ? z0 - 2.4 : z1 + 2.4, 2.2, FH / 13, 0.30, 13,
+        faceZ < 0 ? 'z-' : 'z+', mats.concrete);
+      return out;
+    }
+
+    /* ================================================================
        A DOOR THAT IS A DOOR
        ================================================================
        `wall` has always been able to cut a doorway -- a hole with a
@@ -860,14 +957,29 @@
     /* A flight of stairs, and the only thing worth saying about it is
        that the steps are solid boxes rather than a ramp: a ramp lets a
        body slide back down and reads wrong under a footstep. */
-    function stair(x, z, w, rise, run, steps, dir, material) {
+    /* A FLIGHT THAT DOES NOT HAVE TO START ON THE GROUND.
+     *
+       Every step used to be a solid block from y = 0 up to its own
+       tread, which is exactly right for a concrete flight cast against
+       the dirt and exactly wrong anywhere else: the crane tower wanted
+       ten flights switchbacking up to twenty-three metres, and built
+       this way the second one would have been a wall from the ground
+       to the sky with the map behind it.
+
+       With a `base` each step is a tread one rise deep sitting on the
+       last, which is what a bolted steel flight actually looks like,
+       and the run is contiguous so there is still a continuous surface
+       to walk on. Without one nothing changes. */
+    function stair(x, z, w, rise, run, steps, dir, material, base) {
       var m = material || mats.concrete;
+      var b = base || 0;
       for (var i = 0; i < steps; i++) {
-        var y = (i + 1) * rise;
-        if (dir === 'z+') slab(x - w / 2, x + w / 2, 0, y, z + i * run, z + (i + 1) * run, m, 'step');
-        else if (dir === 'z-') slab(x - w / 2, x + w / 2, 0, y, z - (i + 1) * run, z - i * run, m, 'step');
-        else if (dir === 'x+') slab(x + i * run, x + (i + 1) * run, 0, y, z - w / 2, z + w / 2, m, 'step');
-        else slab(x - (i + 1) * run, x - i * run, 0, y, z - w / 2, z + w / 2, m, 'step');
+        var y1 = b + (i + 1) * rise;
+        var y0 = b ? b + i * rise : 0;
+        if (dir === 'z+') slab(x - w / 2, x + w / 2, y0, y1, z + i * run, z + (i + 1) * run, m, 'step');
+        else if (dir === 'z-') slab(x - w / 2, x + w / 2, y0, y1, z - (i + 1) * run, z - i * run, m, 'step');
+        else if (dir === 'x+') slab(x + i * run, x + (i + 1) * run, y0, y1, z - w / 2, z + w / 2, m, 'step');
+        else slab(x - (i + 1) * run, x - i * run, y0, y1, z - w / 2, z + w / 2, m, 'step');
       }
     }
 
@@ -969,7 +1081,7 @@
       game: game, mats: mats, solids: solids, decos: decos, doors: doors,
       COVER: COVER, screenPair: screenPair,
       slab: slab, frail: frail, deco: deco, post: post, crate: crate, jersey: jersey,
-      tank: tank, door: door, house: house,
+      tank: tank, door: door, house: house, hotelBlock: hotelBlock,
       sandbags: sandbags, barrel: barrel, container: container, wall: wall,
       stair: stair, fence: fence, car: car, deck: deck,
     };
@@ -1037,7 +1149,8 @@
     K.crate(4.0, -14.0, 1.8, 1.8, C.vault, m.wood);
 
     /* ---- left lane: the fuel farm ---- */
-    K.slab(-52, -26, 0, 0.10, -30, 30, m.wideConcrete, 'farm-pad');
+    /* The farm stops at 24 now: the mountain begins at 26. */
+    K.slab(-52, -26, 0, 0.10, -30, 24, m.wideConcrete, 'farm-pad');
     [-14, 0, 14].forEach(function (tz, i) {
       var a = K.game.cylinder({ at: [-40, 3.6, tz], radius: 4.2, height: 7.2,
         material: m.steel, static: true });
@@ -1048,8 +1161,8 @@
     });
     /* The pipe run: vaultable the whole way, which is the lane's one
        fast route and the reason it is not simply a safe corridor. */
-    K.slab(-33.6, -32.4, 0.9, C.vault, -28, 28, m.rust, 'pipe-run');
-    for (var pz = -26; pz <= 26; pz += 6.5) K.post(-33, pz, 0, 0.9, 0.14, m.steelDark, 'pipe-stand');
+    K.slab(-33.6, -32.4, 0.9, C.vault, -28, 22, m.rust, 'pipe-run');
+    for (var pz = -26; pz <= 20; pz += 6.5) K.post(-33, pz, 0, 0.9, 0.14, m.steelDark, 'pipe-stand');
     /* The manifold -- the second bomb site. A cluster you can stand in
        and be covered from two sides and open from the third. */
     K.slab(-40.4, -35.6, 0, 1.05, 4.0, 8.0, m.rust, 'manifold');
@@ -1059,17 +1172,17 @@
     K.sandbags(-37.5, -31.5, -2.0, false);
     K.sandbags(-37.5, -31.5, 12.0, false);
     /* Pump house, at the far end of the lane. */
-    K.wall(-50, -42, 22, 22.4, C.storey, m.brick, [[-47.5, -44.5]], 'pump-wall', { frail: true });
-    K.wall(-50, -42, 29.6, 30, C.storey, m.brick, [[-48, -45]], 'pump-wall', { frail: true });
-    K.wall(-50.4, -50, 22, 30, C.storey, m.brick, [], 'pump-wall');
-    K.wall(-42, -41.6, 22, 30, C.storey, m.brick, [[24.5, 27.5]], 'pump-wall', { frail: true });
-    K.slab(-50.6, -41.4, C.storey, C.storey + 0.25, 21.8, 30.2, m.concrete, 'pump-roof');
+    K.wall(-50, -42, 14, 14.4, C.storey, m.brick, [[-47.5, -44.5]], 'pump-wall', { frail: true });
+    K.wall(-50, -42, 21.6, 22, C.storey, m.brick, [[-48, -45]], 'pump-wall', { frail: true });
+    K.wall(-50.4, -50, 14, 22, C.storey, m.brick, [], 'pump-wall');
+    K.wall(-42, -41.6, 14, 22, C.storey, m.brick, [[16.5, 19.5]], 'pump-wall', { frail: true });
+    K.slab(-50.6, -41.4, C.storey, C.storey + 0.25, 13.8, 22.2, m.concrete, 'pump-roof');
 
     /* ---- the cliff, and the walk along the top of it ---- */
     K.slab(-EDGE - 6, -52, 0, 9.0, -EDGE, EDGE, m.wideRock, 'cliff');
-    K.deck(-52, -47.5, 4.30, -28, 28, m.concrete, [1]);
+    K.deck(-52, -47.5, 4.30, -28, 24, m.concrete, [1]);
     K.stair(-49.8, -28, 4.2, 0.24, 0.30, 18, 'z-', m.concrete);
-    K.stair(-49.8, 28, 4.2, 0.24, 0.30, 18, 'z+', m.concrete);
+    K.stair(-49.8, 24, 4.2, 0.24, 0.30, 18, 'z+', m.concrete);
 
     /* ---- right lane: the hangar ---- */
     var HX0 = 20, HX1 = 50, HZ0 = -17, HZ1 = 17, HH = 8.4;
@@ -1102,16 +1215,223 @@
     K.slab(38.6, 48.4, HH + 6.4, HH + 6.8, 4.6, 14.4, m.steelDark, 'tower-roof');
     K.stair(43.5, HZ1 + 0.4, 2.2, 0.26, 0.32, 33, 'z+', m.steelDark);
 
+    /* ================================================================
+       THE MOUNTAIN, THE TUNNEL, THE HOTEL AND THE JUNGLE
+       ================================================================
+       "It's like a small hotel driven into the side of the mountain[.]
+       the enemy team spawns on the east side of the mountain, which is
+       a small clearing in the jungle where they have to make their way
+       all the way up to the helipad ... there is a small tunnel in the
+       middle of the mountain, and you have to go through that and it
+       will exit on the other side of the mountain right out to the
+       helipad. Now there's also like swimming pools."
+
+       EAST IS THE FAR END. The two spawns face each other down Z and
+       moving one of them to +X would leave the sides interleaved, which
+       is the one thing a symmetric map may not do. So the jungle end is
+       the +Z end: the shape of the thing -- clearing, climb, tunnel,
+       pad -- is what was described, and which compass point it sits on
+       is not.
+
+       AND THE TUNNEL IS NOT THE ONLY WAY THROUGH. The mountain runs
+       from x = -18 to the east edge, so the fuel farm side stays open
+       and there are two routes north. One choke point for twelve people
+       is not a map, it is a queue. */
+    var MZ0 = 26, MZ1 = 42, MTOP = 15.0;           // the mountain
+    var TW = 3.6;                                   // half the tunnel width
+    var TY = 3.0;                                   // the tunnel FLOOR, above the pad
+    var THH = TY + 3.2;                             // and its ceiling
+
+    /* THE TUNNEL IS UP THE HILL, and that is the whole point of it.
+     *
+       The first cut had the tunnel at ground level with three terraces
+       in front of it, and because the spawns are always placed at y =
+       0.1 the clearing had to stay at zero -- so the terraces went UP
+       1.4 m and then dropped back down into the tunnel mouth. A hump.
+       Walking out of the clearing you climbed a ledge and fell off it,
+       and coming back you could not climb it at all.
+
+       So the tunnel floor is three metres up, the terraces climb to it,
+       and a ramp brings you back down to the pad on the far side. "They
+       have to make their way all the way up to the helipad" is a
+       gradient, and a gradient has to go one way. */
+    K.slab(-18, -TW, 0, MTOP, MZ0, MZ1, m.wideRock, 'mountain');
+    K.slab(TW, EDGE + 2, 0, MTOP, MZ0, MZ1, m.wideRock, 'mountain');
+    // Under the tunnel floor, and the lid over it.
+    K.slab(-TW, TW, 0, TY, MZ0, MZ1, m.wideRock, 'mountain');
+    K.slab(-TW, TW, THH, MTOP, MZ0, MZ1, m.wideRock, 'mountain');
+    K.slab(-TW, TW, TY, TY + 0.12, MZ0, MZ1, m.concrete, 'tunnel-floor');
+    /* Lit, because a black hole in a rock face is a hole nobody walks
+       into. Two strips down the length of it. */
+    for (var tl = MZ0 + 2; tl < MZ1; tl += 4) {
+      K.deco(-TW + 0.2, TW - 0.2, THH - 0.18, THH - 0.10, tl - 0.25, tl + 0.25,
+        m.concretePale, 'tunnel-light');
+    }
+    /* THE WAY DOWN TO THE PAD. Out of the south mouth at three metres
+       and down to the terrace on a flight wide enough for two. */
+    K.slab(-TW, TW, 0, TY, MZ0 - 6, MZ0, m.wideRock, 'tunnel-apron');
+    K.stair(0, MZ0 - 6, 6.0, TY / 10, 0.42, 10, 'z-', m.concrete);
+    K.slab(-TW, TW, TY, TY + 0.12, MZ0 - 6, MZ0, m.concrete, 'tunnel-floor');
+    // Rock shoulders, so the mountain is not a cuboid seen end on.
+    K.deco(-20, -16, 0, MTOP - 2.0, MZ0 - 2.4, MZ0, m.wideRock, 'mountain-toe');
+    K.deco(-20, -16, 0, MTOP - 2.0, MZ1, MZ1 + 2.4, m.wideRock, 'mountain-toe');
+    K.deco(-EDGE, -18, MTOP - 3.0, MTOP, MZ0 - 1, MZ1 + 1, m.wideRock, 'mountain-ridge');
+
+    /* ---- the hotel, driven into the south face ----
+       Two floors, cut back into the rock so the mountain is behind it
+       and the pad is in front. Rooms upstairs off a corridor, a lobby
+       and a bar below, balconies the length of the front, and the way
+       up is inside. */
+    var OX0 = 8, OX1 = 32, OZ0 = MZ0 - 10, OZ1 = MZ0 + 2, OH = 3.4;
+    K.slab(OX0 - 0.4, OX1 + 0.4, 0, 0.14, OZ0 - 0.4, OZ1 + 0.4, m.kerb, 'hotel-floor');
+    // Ground floor: glass front onto the terrace, solid back into the rock.
+    K.wall(OX0, OX1, OZ0, OZ0 + 0.35, OH, m.brickPale,
+      [[12, 15], [18, 28, 0.9, 2.9]], 'hotel-wall');
+    K.wall(OX0, OX1, OZ1 - 0.35, OZ1, OH, m.rock, [], 'hotel-wall');
+    K.wall(OX0 - 0.35, OX0, OZ0, OZ1, OH, m.brickPale, [[OZ0 + 4, OZ0 + 7]], 'hotel-wall');
+    K.wall(OX1, OX1 + 0.35, OZ0, OZ1, OH, m.brickPale, [[OZ0 + 3, OZ0 + 6, 1.0, 2.6]], 'hotel-wall');
+    K.door(13.5, OZ0 + 0.175, true, { hand: 1, into: -1, name: 'hotel-door' });
+    K.deco(18, 28, 0.9, 2.9, OZ0 + 0.13, OZ0 + 0.19, m.glass, 'hotel-glass');
+    // The lobby: a desk, seating, and a stair up at the back.
+    K.slab(OX0 + 2, OX0 + 7, 0.14, 1.08, OZ0 + 2.2, OZ0 + 3.0, m.woodDark, 'reception-desk');
+    K.slab(OX1 - 8, OX1 - 2, 0.14, 0.62, OZ0 + 1.6, OZ0 + 3.4, m.canvas, 'lobby-seat');
+    K.stair(OX0 + 4.5, OZ1 - 5.5, 2.4, 0.28, 0.30, 12, 'z-', m.concrete);
+    // A bar along the back wall, under the rock.
+    K.slab(OX1 - 10, OX1 - 1, 0.14, 1.12, OZ1 - 2.2, OZ1 - 1.4, m.woodDark, 'hotel-bar');
+    // The first floor and its corridor of rooms.
+    var OH2 = OH + 3.2;
+    K.slab(OX0, OX1, OH, OH + 0.18, OZ0, OZ1, m.concrete, 'hotel-slab');
+    K.slab(OX0 + 3.2, OX0 + 7.2, OH, OH + 0.18, OZ1 - 6.4, OZ1 - 2.6, m.concrete, 'stairwell-void');
+    K.wall(OX0, OX1, OZ0, OZ0 + 0.3, OH2 - OH, m.brickPale,
+      [[11, 13, 1.0, 2.4], [16, 18, 1.0, 2.4], [21, 23, 1.0, 2.4], [26, 28, 1.0, 2.4]],
+      'hotel-wall', { base: OH });
+    K.wall(OX0, OX1, OZ1 - 0.3, OZ1, OH2 - OH, m.rock, [], 'hotel-wall', { base: OH });
+    K.wall(OX0 - 0.3, OX0, OZ0, OZ1, OH2 - OH, m.brickPale, [], 'hotel-wall', { base: OH });
+    K.wall(OX1, OX1 + 0.3, OZ0, OZ1, OH2 - OH, m.brickPale, [], 'hotel-wall', { base: OH });
+    // The corridor wall, with a door to each of four rooms.
+    K.wall(OX0, OX1, OZ0 + 4.6, OZ0 + 4.8, OH2 - OH, m.plaster,
+      [[11.4, 12.6], [16.4, 17.6], [21.4, 22.6], [26.4, 27.6]],
+      'hotel-part', { frail: true, base: OH });
+    [12, 17, 22, 27].forEach(function (rx, ri) {
+      K.slab(rx - 1.1, rx + 1.1, OH + 0.18, OH + 0.62, OZ0 + 1.0, OZ0 + 3.0, m.canvas, 'hotel-bed');
+      if (ri % 2 === 0) {
+        K.slab(rx - 1.3, rx - 0.5, OH + 0.18, OH + 0.90, OZ0 + 3.4, OZ0 + 4.0, m.woodDark, 'hotel-desk');
+      }
+      // Partitions between the rooms.
+      if (ri) {
+        K.wall(rx - 2.6, rx - 2.4, OZ0 + 0.3, OZ0 + 4.6, OH2 - OH, m.plaster, [],
+          'hotel-part', { frail: true, base: OH });
+      }
+    });
+    K.slab(OX0 - 0.6, OX1 + 0.6, OH2, OH2 + 0.3, OZ0 - 0.6, OZ1 + 0.6, m.concrete, 'hotel-roof');
+    // The balcony, the length of the front, and how you get onto it.
+    K.deck(OX0, OX1, OH + 0.18, OZ0 - 2.4, OZ0, m.concrete, [0, 1, 2, 3]);
+    K.stair(OX1 - 1.6, OZ0 - 2.6, 2.0, 0.28, 0.30, 12, 'z-', m.concrete);
+
+    /* ---- the pools ----
+       Two of them on the terrace between the hotel and the pad, one
+       long and one square, both sunk so they are cover rather than
+       decoration: you drop into one and you are out of the sightline
+       down the pad. */
+    function pool(px0, px1, pz0, pz1) {
+      var D = 1.5;
+      /* A SURROUND, NOT A LID. The first cut laid one slab over the whole
+         footprint, which is a pool with a floor across the top of it --
+         and every check passed, because a capped hole still has a floor
+         to stand on and no hole in it. Four strips round the edge. */
+      K.slab(px0 - 0.5, px1 + 0.5, 0, 0.14, pz0 - 0.5, pz0, m.tile, 'pool-deck');
+      K.slab(px0 - 0.5, px1 + 0.5, 0, 0.14, pz1, pz1 + 0.5, m.tile, 'pool-deck');
+      K.slab(px0 - 0.5, px0, 0, 0.14, pz0, pz1, m.tile, 'pool-deck');
+      K.slab(px1, px1 + 0.5, 0, 0.14, pz0, pz1, m.tile, 'pool-deck');
+      K.slab(px0, px1, -D - 0.2, -D, pz0, pz1, m.tile, 'pool-floor');
+      // The four walls of the hole, inside the line of the deck.
+      K.slab(px0 - 0.4, px0, -D, 0.12, pz0 - 0.4, pz1 + 0.4, m.tile, 'pool-side');
+      K.slab(px1, px1 + 0.4, -D, 0.12, pz0 - 0.4, pz1 + 0.4, m.tile, 'pool-side');
+      K.slab(px0, px1, -D, 0.12, pz0 - 0.4, pz0, m.tile, 'pool-end');
+      K.slab(px0, px1, -D, 0.12, pz1, pz1 + 0.4, m.tile, 'pool-end');
+      // The water, which you can see and stand in.
+      K.deco(px0, px1, -0.30, -0.26, pz0, pz1, m.glass, 'pool-water');
+      K.stair(px0 + 1.2, pz0 + 0.2, 1.4, 0.30, 0.34, 5, 'z+', m.concretePale);
+    }
+    pool(10, 24, OZ0 - 9.5, OZ0 - 4.5);
+    pool(27, 33, OZ0 - 8.5, OZ0 - 4.5);
+    for (var lg = 11; lg < 24; lg += 3.2) {
+      K.slab(lg, lg + 1.8, 0.14, 0.50, OZ0 - 11.6, OZ0 - 10.4, m.canvas, 'sun-lounger');
+    }
+    K.deco(6.6, 7.0, 0, 3.4, OZ0 - 12, OZ0 - 2, m.steelDark, 'terrace-rail');
+
+    /* ---- the climb, and the jungle clearing at the top of it ----
+       Out of the clearing the ground steps up to the tunnel mouth in
+       three terraces, so the enemy end is BELOW the mountain and has to
+       come up to it -- which is the whole of "they have to make their
+       way all the way up to the helipad". */
+    var JZ0 = MZ1;
+    /* Three shelves, each a metre up, rising toward the tunnel mouth.
+       The one against the mountain is level with the tunnel floor. */
+    for (var ti = 0; ti < 3; ti++) {
+      var ty = TY - ti * 1.0, tz0 = JZ0 + ti * 3.4;
+      K.slab(-EDGE, EDGE, 0, ty, tz0, tz0 + 3.4, m.wideRock, 'terrace');
+    }
+    /* And a flight up each shelf, in three places across the width, so
+       the climb is not one queue. */
+    for (var ti2 = 0; ti2 < 3; ti2++) {
+      var sy = TY - ti2 * 1.0, sz = JZ0 + (ti2 + 1) * 3.4;
+      /* EVERY STEP THE SAME HEIGHT. `stair` builds its treads up from
+         the ground, so a flight onto a shelf three metres up has most
+         of itself buried in the shelf below -- which is fine, and only
+         if the step height is right. Dividing the shelf's height by
+         four gave 0.75 m treads on the first flight: a staircase you
+         cannot walk up. A quarter of a metre, and as many as it takes. */
+      [-30, 0, 30].forEach(function (sx) {
+        K.stair(sx, sz, 4.4, 0.25, 0.34, Math.round(sy / 0.25), 'z-', m.rock);
+      });
+    }
+
+    /* THE JUNGLE. Trunks are solid and thin -- cover for one man, seen
+       through at an angle -- and the canopy is deco overhead so the
+       clearing reads as a clearing and not as a field. */
+    K.slab(-EDGE, EDGE, -0.2, 0.06, JZ0 + 10.2, EDGE + 2, m.wideDirt, 'clearing');
+    void MTOP;
+    var TREES = [
+      [-46, 54], [-38, 57], [-31, 53], [-21, 56], [-12, 53], [-4, 58],
+      [6, 54], [15, 57], [24, 53], [33, 56], [41, 54], [48, 57],
+      [-42, 52], [-16, 52], [10, 52], [37, 52],
+    ];
+    TREES.forEach(function (t, i) {
+      var th = 7.5 + (i % 4) * 1.6, r = 0.34 + (i % 3) * 0.07;
+      K.post(t[0], t[1], 0, th, r, m.woodDark, 'trunk');
+      var a = K.game.cylinder({ at: [t[0], th + 1.2, t[1]], radius: 3.2 + (i % 3) * 0.6,
+        height: 2.4, material: m.foliage, physics: false });
+      if (a) { a.name = 'canopy'; K.decos.push(a); }
+    });
+    // Undergrowth: low, breakable, and something to be prone behind.
+    for (var ug = 0; ug < 10; ug++) {
+      var uxp = -44 + ug * 9.6, uzp = 53 + (ug % 3) * 2.2;
+      K.crate(uxp, uzp, 2.0, 1.4, C.low, m.paintGreen);
+    }
+    /* Two huts in the clearing, which is where the enemy end gets its
+       cover and its only interiors. */
+    /* OUT OF THE SPAWN LINE. The first placing put one of them straight
+       on top of spawn b0, and the check that caught it did so by finding
+       a floor at 3.10 m where it wanted 0.1 -- a man spawning on a
+       hut roof. The six b spawns sit between x = -26 and 32, so the
+       huts go outside that. */
+    K.house(-50, -42, 52, 58, { variant: 5, front: 'z-', height: 2.8,
+      wall: m.woodDark, floor: m.wood });
+    K.house(40, 48, 52, 58, { variant: 0, front: 'z-', height: 2.8,
+      wall: m.woodDark, floor: m.wood });
+
     /* ---- the approach from each spawn ----
        Revetments: the short concrete walls a coastal battery keeps its
        vehicles behind, in two staggered rows. Not a line across the
        map -- the pad stays open, which is the map. */
     K.screenPair(-32, -52, 52, m.concretePale, -1);
-    K.screenPair(32, -52, 52, m.concretePale, 1);
-    K.container(-30, 28, false, m.paintGreen);
+    /* The +Z rows are gone: the mountain is doing that job now, and a
+       revetment inside a mountain is a wall nobody will ever see. */
+    K.container(-30, 22, false, m.paintGreen);
     K.container(30, -28, false, m.paintGreen);
     K.crate(-18, -30, 1.8, 1.8, C.vault, m.wood);
-    K.crate(18, 30, 1.8, 1.8, C.vault, m.wood);
+    K.crate(-22, 20, 1.8, 1.8, C.vault, m.wood);
 
     /* ---- the boundary ---- */
     [[-EDGE - 2, EDGE + 2, -EDGE - 2, -EDGE], [-EDGE - 2, EDGE + 2, EDGE, EDGE + 2],
@@ -1126,7 +1446,8 @@
       zone: { x0: -EDGE, x1: EDGE, z0: -EDGE, z1: EDGE },
       spawns: {
         a: [[-26, -48], [-14, -50], [-3, -51], [8, -50], [20, -48], [32, -47]],
-        b: [[-26, 48], [-14, 50], [-3, 51], [8, 50], [20, 48], [32, 47]],
+        /* In the clearing, past the last terrace, which starts at 54.2. */
+        b: [[-26, 55], [-14, 56], [-3, 56], [8, 56], [20, 55], [32, 55]],
       },
       sites: [
         { id: 'heli', name: 'the helicopter', at: [0, 0, -1], r: 4.5, face: 0 },
@@ -1224,6 +1545,47 @@
     K.crate(PX1 + 11, PZ1 + 2.2, 1.5, 1.5, 2.55, m.wood);
     K.slab(PX1 + 8.5, PX1 + 12.5, 4.24, 4.42, PZ1 + 1, PZ1 + 3, m.tile, 'balcony-step');
     K.stair(PX1 + 5, PZ0 - 9, 2.2, 0.26, 0.32, 17, 'z-', m.tile);
+
+    /* ================================================================
+       THE OTHER TWO HOTELS
+       ================================================================
+       "a few luxury hotels with swimming pools[,] balconies and all
+       that." One wing was one hotel. These are the other two: a
+       three-storey block up the -Z end and a two-storey wing up the +Z
+       end, both of them rooms off a corridor with a balcony running the
+       length of the front, and both looking onto their own pool.
+
+       They face INWARD, onto the terrace, so every balcony is a firing
+       step over the ground everybody has to cross -- which is what a
+       resort is, from the point of view of somebody being shot at in
+       one. */
+    K.hotelBlock(-30, 4, -46, -34, { floors: 3, front: 'z+', wall: m.brickPale });
+    /* Pulled back off the +Z spawn line: at z = 46 the roof of this one
+       was over spawn b4, and the check caught it as a man standing on a
+       floor 6.92 m up. */
+    K.hotelBlock(-4, 26, 32, 43, { floors: 2, front: 'z-', wall: m.plaster });
+
+    /* A pool for each of them, full this time -- the drained one in the
+       middle is the map's own idea and it should stay the odd one. */
+    function fullPool(px0, px1, pz0, pz1) {
+      var D = 1.6;
+      K.slab(px0 - 0.6, px1 + 0.6, 0, 0.14, pz0 - 0.6, pz0, m.tilePool, 'pool-deck');
+      K.slab(px0 - 0.6, px1 + 0.6, 0, 0.14, pz1, pz1 + 0.6, m.tilePool, 'pool-deck');
+      K.slab(px0 - 0.6, px0, 0, 0.14, pz0, pz1, m.tilePool, 'pool-deck');
+      K.slab(px1, px1 + 0.6, 0, 0.14, pz0, pz1, m.tilePool, 'pool-deck');
+      K.slab(px0, px1, -D - 0.2, -D, pz0, pz1, m.tilePool, 'pool-floor');
+      K.slab(px0 - 0.4, px0, -D, 0.12, pz0 - 0.4, pz1 + 0.4, m.tilePool, 'pool-side');
+      K.slab(px1, px1 + 0.4, -D, 0.12, pz0 - 0.4, pz1 + 0.4, m.tilePool, 'pool-side');
+      K.slab(px0, px1, -D, 0.12, pz0 - 0.4, pz0, m.tilePool, 'pool-end');
+      K.slab(px0, px1, -D, 0.12, pz1, pz1 + 0.4, m.tilePool, 'pool-end');
+      K.deco(px0, px1, -0.32, -0.28, pz0, pz1, m.glass, 'pool-water');
+      K.stair(px0 + 1.4, pz0 + 0.2, 1.6, 0.32, 0.34, 5, 'z+', m.tilePool);
+      for (var lp = px0 + 1; lp < px1 - 1.6; lp += 2.8) {
+        K.slab(lp, lp + 1.7, 0.14, 0.50, pz1 + 1.0, pz1 + 1.8, m.canvas, 'lounger');
+      }
+    }
+    fullPool(-22, -6, -31, -24);
+    fullPool(6, 22, 24, 31);
 
     /* ---- right lane: the cabanas and the lake path ---- */
     for (var cz = -26; cz <= 26; cz += 17) {
