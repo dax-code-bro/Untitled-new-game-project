@@ -1,8 +1,8 @@
 {
-  "version": "0.15.0",
-  "name": "four wires and a blowtorch",
+  "version": "0.16.0",
+  "name": "the helicopter leaves",
   "date": "2026-09-23",
   "mode": "multiplayer",
-  "did": "Search and Destroy rebuilt: three storage tanks per map, a twenty-second defuse that holds you still, wire cutters on the padlock, four randomised wires with a ten-second failsafe, and a blowtorch that welds the tank shut again.",
+  "did": "A win cutscene for each map, and the result message waits until it is over: the helicopter leaves Helipad, a scientist presses the button under Town, Resort goes into lockdown, and a worker brings Demolition down.",
   "onAccept": "The armoury reloads. Your loadouts are kept; anything you had equipped that moved class is still where you left it."
 }

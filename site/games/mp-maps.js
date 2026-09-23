@@ -325,13 +325,16 @@
        The doors always face out along that axis, which is the side an
        attacker has to be standing on. */
     function tank(x, z, facing, name) {
-      var W = 2.30, D = 1.80, H = 2.15;         // outside
+      /* TW, not W. The file's `W` is `window`, and a local called W
+         shadows it for the whole function -- which is how the door
+         swing below came to call `2.30.LE.Vec3` and throw. */
+      var TW = 2.30, D = 1.80, H = 2.15;         // outside
       var T = 0.10;                              // plate thickness
       var f = (facing | 0) & 3;
       var alongX = (f === 1 || f === 3);
       // Half-extents in world, after the quarter turn.
-      var hw = alongX ? D / 2 : W / 2;
-      var hd = alongX ? W / 2 : D / 2;
+      var hw = alongX ? D / 2 : TW / 2;
+      var hd = alongX ? TW / 2 : D / 2;
       var m = mats.steelDark, mp = mats.paintRed;
 
       // Floor, roof and the three closed sides. The open side is the
@@ -426,6 +429,16 @@
          with the first hint of movement, because a padlock still
          hanging on a door that is standing open is the sort of detail
          that makes everything near it look wrong. */
+      /* setPosition AND setRotation, NOT position.set.
+       *
+         An actor with no rigid body composes its matrix once and then
+         raises `_still`; after that the matrix is returned from cache and
+         nothing recomposes it until a SETTER clears the flag. Writing
+         through `a.position.set(...)` moves the vector and leaves the flag
+         up, so the number is right, every read of it agrees, and the
+         door does not move a millimetre on the screen. The doors are
+         deco -- see the note above about not sealing anybody in -- so
+         they are exactly the case this bites. */
       function setOpen(t) {
         var k = Math.max(0, Math.min(1, t));
         var ang = k * 1.745;                              // 100 degrees
@@ -436,8 +449,11 @@
           var th = ang * dir;
           var dx = sh.pos.x - hx, dz = sh.pos.z - hz;
           var c = Math.cos(th), sn = Math.sin(th);
-          a.position.set(hx + dx * c - dz * sn, sh.pos.y, hz + dx * sn + dz * c);
-          if (a.rotation && a.rotation.setAxisAngle) a.rotation.setAxisAngle([0, 1, 0], th);
+          a.setPosition([hx + dx * c - dz * sn, sh.pos.y, hz + dx * sn + dz * c]);
+          if (a.setRotation) {
+            var q = a.rotation.clone ? a.rotation.clone() : null;
+            if (q && q.setAxisAngle) { q.setAxisAngle(new W.LE.Vec3(0, 1, 0), th); a.setRotation(q); }
+          }
         }
         if (lk) lk.visible = k < 0.02;
       }

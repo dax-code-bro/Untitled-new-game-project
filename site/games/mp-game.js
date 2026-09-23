@@ -2057,6 +2057,8 @@
 
     var feed = [];
     var hitAt = -9, hitKill = false;
+    /* Held while a win cutscene is running -- see hud.hold below. */
+    var holdResult = false;
 
     /* ================= THE TALLY BESIDE THE HITMARKER =================
      *
@@ -2132,6 +2134,9 @@
       /* Called by whatever awarded the points, so the popup and the
          progress that is actually banked come from one number. */
       score: function (kind, amount) { popScore(kind, amount); },
+      /* Held while a win cutscene is running. Set by the frame. */
+      hold: function (v) { holdResult = !!v; },
+      get held() { return holdResult; },
       tookFrom: function (from) { marks.push({ t: M.time, from: from }); },
 
       paint: function (spread, showBoard, aim) {
@@ -2317,8 +2322,13 @@
         if (showBoard && !M.over) put(el.board, 'html', boardHtml(M));
 
         /* the end */
-        el.over.classList.toggle('hide', !M.over);
-        if (M.over && !el.over.dataset.done) {
+        /* THE MESSAGE COMES AFTER THE SCENE. "I want the your side won
+           message to appear after the cutscene ends" -- so the panel is
+           gated on the scene being finished, not on the match being
+           over. A result screen sitting over a cutscene is a cutscene
+           nobody watches. */
+        el.over.classList.toggle('hide', !M.over || holdResult);
+        if (M.over && !holdResult && !el.over.dataset.done) {
           el.over.dataset.done = '1';
           var won = M.winner === p.team;
           /* BANK IT, ONCE. A win doubles the player's XP, the gun's and
@@ -2867,6 +2877,20 @@
     };
     var lastFitHeld = -1;
     fitFor();
+    /* The win cutscene, and its own wall clock. See the block in the
+       frame; `cutDone` latches so a skipped scene cannot restart.
+
+       NOT NAMED `cut`, and that cost an hour. frame() already declares
+       `var cut` for the kill cam's clip three hundred lines below where
+       this is read, and var is hoisted to the top of its function -- so
+       an outer `cut` is shadowed for the whole of frame(), and writing
+       to it writes to a local that is undefined again on the next call.
+       The scene was REBUILT FROM SCRATCH every frame: thirty-one of them
+       in five seconds, each advanced by one sixtieth of a second and
+       then thrown away. On the screen that is a cutscene frozen on its
+       first frame for ever, which is exactly what it looked like, and
+       every number I could read said the scene was running. */
+    var winCut = null, cutDone = false, cutWall = 0;
 
     var yaw = M.you.yaw, pitch = 0;
     /* For the tool animation, up here because the frame below uses them
@@ -3134,10 +3158,64 @@
       }
       if (M.over && endT < 0.999) {
         /* Still slowing: the world runs, nothing else happens yet. */
+        hud.hold(true);
         M.update(dt);
         hud.paint(0.02, false, adsT);
         input.endFrame();
         return;
+      }
+
+      /* ---- THE WIN CUTSCENE ----
+       *
+         Frozen world, moving camera, on the WALL clock -- the same trap
+         the ramp above documents: timeScale is 0 by now, so anything
+         driven off dt does not advance and the scene would never end.
+
+         It runs before Best Play and before the scoreboard, and the
+         result panel is held shut for the whole of it, which is the
+         thing that was actually asked for. Skippable, because a scene
+         you cannot skip is a scene you resent by the third time. */
+      if (M.over && !cutDone) {
+        if (!winCut && W.MP_CUTSCENE) {
+          winCut = W.MP_CUTSCENE.make(game, M, M.mapId, {});
+          /* TIME RUNS AGAIN FOR THE SCENE, and the match does not.
+           *
+             The freeze above is timeScale 0, and at 0 the engine hands
+             dt 0 to the particle system and the physics step as well as
+             to everything else -- so the first cut of these scenes had
+             no dust, no smoke, no explosions and nothing that fell.
+             Every effect was spawned and then held at the instant it
+             was born.
+
+             What has to stop is the MATCH, not the world: nobody may
+             take another step or fire another round. So the clock goes
+             back to normal and M.update is simply not called while the
+             scene runs -- the block below returns before it. */
+          game.timeScale = 1;
+          winCut.begin(M.winner);
+          /* Published for a test: which beat, and how far in. */
+          W.MP_CUT = winCut;
+          vm.hide();
+          el0Hide(true);
+          cutWall = 0;
+        }
+        if (winCut && winCut.active) {
+          var cnow = (W.performance ? W.performance.now() : Date.now()) / 1000;
+          var cdt = cutWall ? Math.min(0.20, cnow - cutWall) : 1 / 60;
+          cutWall = cnow;
+          var skipCut = input.once(K.jump) || input.once(K.quit) || input.buttons.fire;
+          if (skipCut || winCut.update(cdt)) { winCut.stop(); cutDone = true; }
+          if (!cutDone) {
+            hud.hold(true);
+            hud.paint(0.02, false, 0);
+            input.endFrame();
+            return;
+          }
+        } else cutDone = true;
+        /* The scene is over: give the screen back and let the rest of
+           the end sequence run on the frame after this one. */
+        el0Hide(false);
+        hud.hold(false);
       }
 
       /* ---- best play, before the scoreboard ---- */
@@ -3649,6 +3727,11 @@
     var api = {
       game: game, match: M, hud: hud, input: input, pad: pad, viewmodel: vm,
       replay: replay, pointer: pointer,
+      /* The end-sequence state, for a test. `ended` is this file's own
+         latch -- the moment the result screen takes the machine over --
+         and it is NOT M.over, which is the match saying it is finished
+         several seconds earlier. */
+      get ended() { return over; }, get menu() { return settings.open; },
       get yaw() { return yaw; }, get pitch() { return pitch; },
       /* The rail and whatever it has called in, for a test and for the
          pause menu later. */
