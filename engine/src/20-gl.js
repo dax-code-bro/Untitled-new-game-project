@@ -193,6 +193,44 @@ class Texture {
     return this;
   }
 
+  /* ---- ALLOCATE A WHOLE MIP CHAIN, UNFILLED ----
+   *
+   * alloc() allocates level 0. That is all a render target needs, and it
+   * is not enough for a cube whose mips are going to be RENDERED rather
+   * than generated: a prefiltered environment map writes roughness 0.2
+   * into mip 1, 0.4 into mip 2 and so on, and every level it is going to
+   * draw into has to exist first.
+   *
+   * It is also the difference between a working cube and a black one. A
+   * texture created with mips on gets LINEAR_MIPMAP_LINEAR (see
+   * _configure), and a cube with only level 0 allocated is MIP
+   * INCOMPLETE -- WebGL does not warn, it just samples black, on every
+   * face, for ever.
+   *
+   * Returns the number of levels allocated, so the caller can loop to
+   * exactly that many rather than recomputing log2 and disagreeing. */
+  allocMips(size, levels) {
+    const gl = this.gl;
+    const n = levels || (Math.floor(Math.log2(Math.max(1, size))) + 1);
+    this.width = size; this.height = size;
+    gl.bindTexture(this.target, this.handle);
+    gl.texParameteri(this.target, gl.TEXTURE_BASE_LEVEL, 0);
+    gl.texParameteri(this.target, gl.TEXTURE_MAX_LEVEL, n - 1);
+    for (let l = 0; l < n; l++) {
+      const s2 = Math.max(1, size >> l);
+      if (this.target === gl.TEXTURE_CUBE_MAP) {
+        for (let f = 0; f < 6; f++) {
+          gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + f, l, this.internalFormat,
+            s2, s2, 0, this.format, this.type, null);
+        }
+      } else {
+        gl.texImage2D(gl.TEXTURE_2D, l, this.internalFormat, s2, s2, 0, this.format, this.type, null);
+      }
+    }
+    this.levels = n;
+    return n;
+  }
+
   generateMips() {
     const gl = this.gl;
     gl.bindTexture(this.target, this.handle);
@@ -296,6 +334,83 @@ class Framebuffer {
   }
 
   get color() { return this.colors[0]; }
+
+  /* ---- POINT THIS TARGET SOMEWHERE ELSE ----
+   *
+   * A Framebuffer owns the textures it renders into, allocated at its own
+   * size, always TEXTURE_2D, always mip 0. That is right for the twelve
+   * full-screen targets the pipeline is made of and wrong for exactly one
+   * job: prefiltering an environment cubemap, which has to render six
+   * faces at each of several mip levels into a texture somebody else
+   * owns.
+   *
+   * `attach` retargets colour attachment 0 at an arbitrary texture, face
+   * and level, and sets the viewport size to match that level -- so the
+   * caller can walk 6 faces x 6 mips through one framebuffer object
+   * instead of building thirty-six of them.
+   *
+   * The framebuffer's own colour[0] is left allocated and unreferenced
+   * while it is retargeted; `detach()` puts it back. A framebuffer used
+   * for this should be created with { width: 1, height: 1, depth: false }
+   * so the texture it is not using costs four bytes.
+   */
+  attach(tex, opts = {}) {
+    const gl = this.gl;
+    const level = opts.level || 0;
+    const face = opts.face == null ? -1 : opts.face;
+    const target = face >= 0 ? gl.TEXTURE_CUBE_MAP_POSITIVE_X + face : gl.TEXTURE_2D;
+    /* The size of THIS MIP, not of the texture. Getting this wrong
+       renders a full-size image into a quarter-size level and the
+       prefiltered roughness mips come out as a crop of the sharp one. */
+    this.width = Math.max(1, opts.width || (tex.width >> level));
+    this.height = Math.max(1, opts.height || (tex.height >> level));
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.handle);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, target, tex.handle, level);
+    /* A retargeted framebuffer has no depth of the right size and does
+       not need one -- every pass that uses this is a fullscreen triangle.
+       Detaching depth also stops it failing completeness when the mip is
+       smaller than the renderbuffer. */
+    if (this.depthBuffer) gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, null);
+    if (this.depthTexture) gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, null, 0);
+    gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
+    gl.viewport(0, 0, this.width, this.height);
+    this._borrowed = true;
+    return this;
+  }
+
+  /* Put the framebuffer's own texture back under it. */
+  detach() {
+    if (!this._borrowed) return this;
+    const gl = this.gl;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.handle);
+    if (this.colors[0]) {
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.colors[0].handle, 0);
+      this.width = this.colors[0].width;
+      this.height = this.colors[0].height;
+    }
+    if (this.depthBuffer) gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, this.depthBuffer);
+    else if (this.depthTexture) gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, this.depthTexture.handle, 0);
+    this._borrowed = false;
+    return this;
+  }
+
+  /* ---- CLEAR THE COLOUR AND KEEP THE DEPTH ----
+   *
+   * bind(true) clears COLOR and DEPTH together, which is what almost
+   * every pass wants and is exactly wrong for a pass that draws into a
+   * target whose depth was filled by an earlier pass -- a forward pass
+   * after a depth prepass, or a transparent pass after an opaque one.
+   * There was no way to express that, so this is it. */
+  bindKeepDepth(clear = true, r = 0, g = 0, b = 0, a = 1) {
+    const gl = this.gl;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.handle);
+    gl.viewport(0, 0, this.width, this.height);
+    if (clear) {
+      gl.clearColor(r, g, b, a);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+    }
+    return this;
+  }
 
   dispose() {
     const gl = this.gl;

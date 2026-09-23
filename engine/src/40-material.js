@@ -50,8 +50,60 @@ const COLOR_NAMES = {
    (r = ambient occlusion, g = roughness, b = metalness) plus a height
    field that becomes a normal map. Working in height-then-derive keeps
    the normals consistent with the visible detail. */
+/* ================================================================
+   THE HEIGHT FIELD, AND WHERE IT GOES
+   ================================================================
+   Every recipe already fills `c.h` for every texel -- it has to, because
+   that is what heightToNormal differentiates to make the normal map --
+   and then the number was thrown away. Nothing downstream could ask how
+   DEEP a mortar course is, only which way it faced, so parallax occlusion
+   mapping had nothing to occlude with and every brick wall was a picture
+   of a brick wall.
+
+   It is packed into the alpha channel of the ORM map, which is allocated,
+   uploaded, mipmapped and bound already and which the shader reads as
+   .rgb -- so this costs one byte of writing per texel in a loop that was
+   running anyway, no new texture, no new texture unit, no new upload
+   path, and not one byte of extra memory.
+
+   WHY A FIXED WINDOW AND NOT PER-RECIPE NORMALISATION, which is the
+   decision that matters. Measured over all 46 recipes at 96x96, the
+   height ranges are:
+
+       pantile 1.357   brick 0.818   concrete 0.537   walnut 0.195
+       hair    1.074   ice   0.800   metal    0.504   bluing 0.035
+       plaster 0.925   tile  0.750   marble   0.400   smooth 0.000
+
+   That ordering is PHYSICALLY RIGHT and it was right by accident: a roof
+   of pantiles really does have centimetres of relief, a brick wall has
+   its mortar courses, a blued receiver has microns and a polished
+   surface has none. Normalising each recipe to its own min and max would
+   throw exactly that away -- it would stretch bluing's 0.035 to the same
+   full-scale depth as pantile's 1.357 and put visible corrugations on a
+   gun.
+
+   So one window for all of them, wide enough for the widest: the global
+   range measured across every recipe is -0.447 to 1.214, and the window
+   is -0.45 to 1.25. Pantile then uses 80 per cent of the 8 bits, brick
+   48, concrete 32, and bluing 2 -- which is the point. Quantisation
+   error is 1.7/255 = 0.0067 of a height unit, under one per cent of
+   brick's range.
+
+   THESE TWO NUMBERS ARE DUPLICATED IN GLSL, in the parallax block of
+   50-shaders.js, because a uniform that is never bound is silently zero
+   and a silently zero height scale is a feature that does nothing with
+   no error to find. A literal cannot be silently zero. engine/test/
+   height.test.js reads both files and fails if they drift apart. */
+const HEIGHT_BIAS = -0.45;   // height at alpha 0
+const HEIGHT_SPAN = 1.70;    // height at alpha 1 is HEIGHT_BIAS + HEIGHT_SPAN
+
 const TextureLib = {
   _cache: new Map(),
+
+  /* Published so the renderer and the tests read the same two numbers
+     the packer used, rather than a second copy of them. */
+  heightBias: HEIGHT_BIAS,
+  heightSpan: HEIGHT_SPAN,
 
   /* Height → tangent-space normal map, via central differences. */
   heightToNormal(height, size, strength = 2) {
@@ -106,7 +158,10 @@ const TextureLib = {
         orm[i] = clamp(c.ao, 0, 1) * 255;
         orm[i + 1] = clamp(c.rough, 0.03, 1) * 255;
         orm[i + 2] = clamp(c.metal, 0, 1) * 255;
-        orm[i + 3] = 255;
+        /* The height field, quantised into the one channel nobody was
+           using. See the note on HEIGHT_BIAS above for why the window is
+           fixed rather than per recipe. */
+        orm[i + 3] = clamp((c.h - HEIGHT_BIAS) / HEIGHT_SPAN, 0, 1) * 255;
         height[y * size + x] = c.h;
       }
     }
@@ -119,8 +174,16 @@ const TextureLib = {
        under a bright sky every one of them catches a specular highlight —
        a blued receiver comes out looking like it has been sprinkled with
        salt. That is the speckle, and it was never in the albedo. */
+    /* heightToNormal keeps the RAW float field, not the quantised byte.
+       Differentiating an 8-bit height would coarsen every normal map in
+       the game, and worst exactly where it shows: the low-relief metal
+       finishes whose normalStrength is already down at 0.18 would step
+       between two adjacent codes and read as facets. */
     const normal = this.heightToNormal(height, size, this.normalStrength[kind] || 3);
-    const maps = { albedo, orm, normal, size };
+    const maps = { albedo, orm, normal, size,
+      /* What alpha 0 and alpha 1 mean, carried with the maps so a
+         consumer never has to assume. */
+      heightBias: HEIGHT_BIAS, heightSpan: HEIGHT_SPAN };
     this._cache.set(key, maps);
     return maps;
   },

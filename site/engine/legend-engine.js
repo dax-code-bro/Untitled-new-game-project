@@ -818,6 +818,44 @@ class Texture {
     return this;
   }
 
+  /* ---- ALLOCATE A WHOLE MIP CHAIN, UNFILLED ----
+   *
+   * alloc() allocates level 0. That is all a render target needs, and it
+   * is not enough for a cube whose mips are going to be RENDERED rather
+   * than generated: a prefiltered environment map writes roughness 0.2
+   * into mip 1, 0.4 into mip 2 and so on, and every level it is going to
+   * draw into has to exist first.
+   *
+   * It is also the difference between a working cube and a black one. A
+   * texture created with mips on gets LINEAR_MIPMAP_LINEAR (see
+   * _configure), and a cube with only level 0 allocated is MIP
+   * INCOMPLETE -- WebGL does not warn, it just samples black, on every
+   * face, for ever.
+   *
+   * Returns the number of levels allocated, so the caller can loop to
+   * exactly that many rather than recomputing log2 and disagreeing. */
+  allocMips(size, levels) {
+    const gl = this.gl;
+    const n = levels || (Math.floor(Math.log2(Math.max(1, size))) + 1);
+    this.width = size; this.height = size;
+    gl.bindTexture(this.target, this.handle);
+    gl.texParameteri(this.target, gl.TEXTURE_BASE_LEVEL, 0);
+    gl.texParameteri(this.target, gl.TEXTURE_MAX_LEVEL, n - 1);
+    for (let l = 0; l < n; l++) {
+      const s2 = Math.max(1, size >> l);
+      if (this.target === gl.TEXTURE_CUBE_MAP) {
+        for (let f = 0; f < 6; f++) {
+          gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + f, l, this.internalFormat,
+            s2, s2, 0, this.format, this.type, null);
+        }
+      } else {
+        gl.texImage2D(gl.TEXTURE_2D, l, this.internalFormat, s2, s2, 0, this.format, this.type, null);
+      }
+    }
+    this.levels = n;
+    return n;
+  }
+
   generateMips() {
     const gl = this.gl;
     gl.bindTexture(this.target, this.handle);
@@ -921,6 +959,83 @@ class Framebuffer {
   }
 
   get color() { return this.colors[0]; }
+
+  /* ---- POINT THIS TARGET SOMEWHERE ELSE ----
+   *
+   * A Framebuffer owns the textures it renders into, allocated at its own
+   * size, always TEXTURE_2D, always mip 0. That is right for the twelve
+   * full-screen targets the pipeline is made of and wrong for exactly one
+   * job: prefiltering an environment cubemap, which has to render six
+   * faces at each of several mip levels into a texture somebody else
+   * owns.
+   *
+   * `attach` retargets colour attachment 0 at an arbitrary texture, face
+   * and level, and sets the viewport size to match that level -- so the
+   * caller can walk 6 faces x 6 mips through one framebuffer object
+   * instead of building thirty-six of them.
+   *
+   * The framebuffer's own colour[0] is left allocated and unreferenced
+   * while it is retargeted; `detach()` puts it back. A framebuffer used
+   * for this should be created with { width: 1, height: 1, depth: false }
+   * so the texture it is not using costs four bytes.
+   */
+  attach(tex, opts = {}) {
+    const gl = this.gl;
+    const level = opts.level || 0;
+    const face = opts.face == null ? -1 : opts.face;
+    const target = face >= 0 ? gl.TEXTURE_CUBE_MAP_POSITIVE_X + face : gl.TEXTURE_2D;
+    /* The size of THIS MIP, not of the texture. Getting this wrong
+       renders a full-size image into a quarter-size level and the
+       prefiltered roughness mips come out as a crop of the sharp one. */
+    this.width = Math.max(1, opts.width || (tex.width >> level));
+    this.height = Math.max(1, opts.height || (tex.height >> level));
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.handle);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, target, tex.handle, level);
+    /* A retargeted framebuffer has no depth of the right size and does
+       not need one -- every pass that uses this is a fullscreen triangle.
+       Detaching depth also stops it failing completeness when the mip is
+       smaller than the renderbuffer. */
+    if (this.depthBuffer) gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, null);
+    if (this.depthTexture) gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, null, 0);
+    gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
+    gl.viewport(0, 0, this.width, this.height);
+    this._borrowed = true;
+    return this;
+  }
+
+  /* Put the framebuffer's own texture back under it. */
+  detach() {
+    if (!this._borrowed) return this;
+    const gl = this.gl;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.handle);
+    if (this.colors[0]) {
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.colors[0].handle, 0);
+      this.width = this.colors[0].width;
+      this.height = this.colors[0].height;
+    }
+    if (this.depthBuffer) gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, this.depthBuffer);
+    else if (this.depthTexture) gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, this.depthTexture.handle, 0);
+    this._borrowed = false;
+    return this;
+  }
+
+  /* ---- CLEAR THE COLOUR AND KEEP THE DEPTH ----
+   *
+   * bind(true) clears COLOR and DEPTH together, which is what almost
+   * every pass wants and is exactly wrong for a pass that draws into a
+   * target whose depth was filled by an earlier pass -- a forward pass
+   * after a depth prepass, or a transparent pass after an opaque one.
+   * There was no way to express that, so this is it. */
+  bindKeepDepth(clear = true, r = 0, g = 0, b = 0, a = 1) {
+    const gl = this.gl;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.handle);
+    gl.viewport(0, 0, this.width, this.height);
+    if (clear) {
+      gl.clearColor(r, g, b, a);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+    }
+    return this;
+  }
 
   dispose() {
     const gl = this.gl;
@@ -1954,8 +2069,60 @@ const COLOR_NAMES = {
    (r = ambient occlusion, g = roughness, b = metalness) plus a height
    field that becomes a normal map. Working in height-then-derive keeps
    the normals consistent with the visible detail. */
+/* ================================================================
+   THE HEIGHT FIELD, AND WHERE IT GOES
+   ================================================================
+   Every recipe already fills `c.h` for every texel -- it has to, because
+   that is what heightToNormal differentiates to make the normal map --
+   and then the number was thrown away. Nothing downstream could ask how
+   DEEP a mortar course is, only which way it faced, so parallax occlusion
+   mapping had nothing to occlude with and every brick wall was a picture
+   of a brick wall.
+
+   It is packed into the alpha channel of the ORM map, which is allocated,
+   uploaded, mipmapped and bound already and which the shader reads as
+   .rgb -- so this costs one byte of writing per texel in a loop that was
+   running anyway, no new texture, no new texture unit, no new upload
+   path, and not one byte of extra memory.
+
+   WHY A FIXED WINDOW AND NOT PER-RECIPE NORMALISATION, which is the
+   decision that matters. Measured over all 46 recipes at 96x96, the
+   height ranges are:
+
+       pantile 1.357   brick 0.818   concrete 0.537   walnut 0.195
+       hair    1.074   ice   0.800   metal    0.504   bluing 0.035
+       plaster 0.925   tile  0.750   marble   0.400   smooth 0.000
+
+   That ordering is PHYSICALLY RIGHT and it was right by accident: a roof
+   of pantiles really does have centimetres of relief, a brick wall has
+   its mortar courses, a blued receiver has microns and a polished
+   surface has none. Normalising each recipe to its own min and max would
+   throw exactly that away -- it would stretch bluing's 0.035 to the same
+   full-scale depth as pantile's 1.357 and put visible corrugations on a
+   gun.
+
+   So one window for all of them, wide enough for the widest: the global
+   range measured across every recipe is -0.447 to 1.214, and the window
+   is -0.45 to 1.25. Pantile then uses 80 per cent of the 8 bits, brick
+   48, concrete 32, and bluing 2 -- which is the point. Quantisation
+   error is 1.7/255 = 0.0067 of a height unit, under one per cent of
+   brick's range.
+
+   THESE TWO NUMBERS ARE DUPLICATED IN GLSL, in the parallax block of
+   50-shaders.js, because a uniform that is never bound is silently zero
+   and a silently zero height scale is a feature that does nothing with
+   no error to find. A literal cannot be silently zero. engine/test/
+   height.test.js reads both files and fails if they drift apart. */
+const HEIGHT_BIAS = -0.45;   // height at alpha 0
+const HEIGHT_SPAN = 1.70;    // height at alpha 1 is HEIGHT_BIAS + HEIGHT_SPAN
+
 const TextureLib = {
   _cache: new Map(),
+
+  /* Published so the renderer and the tests read the same two numbers
+     the packer used, rather than a second copy of them. */
+  heightBias: HEIGHT_BIAS,
+  heightSpan: HEIGHT_SPAN,
 
   /* Height → tangent-space normal map, via central differences. */
   heightToNormal(height, size, strength = 2) {
@@ -2010,7 +2177,10 @@ const TextureLib = {
         orm[i] = clamp(c.ao, 0, 1) * 255;
         orm[i + 1] = clamp(c.rough, 0.03, 1) * 255;
         orm[i + 2] = clamp(c.metal, 0, 1) * 255;
-        orm[i + 3] = 255;
+        /* The height field, quantised into the one channel nobody was
+           using. See the note on HEIGHT_BIAS above for why the window is
+           fixed rather than per recipe. */
+        orm[i + 3] = clamp((c.h - HEIGHT_BIAS) / HEIGHT_SPAN, 0, 1) * 255;
         height[y * size + x] = c.h;
       }
     }
@@ -2023,8 +2193,16 @@ const TextureLib = {
        under a bright sky every one of them catches a specular highlight —
        a blued receiver comes out looking like it has been sprinkled with
        salt. That is the speckle, and it was never in the albedo. */
+    /* heightToNormal keeps the RAW float field, not the quantised byte.
+       Differentiating an 8-bit height would coarsen every normal map in
+       the game, and worst exactly where it shows: the low-relief metal
+       finishes whose normalStrength is already down at 0.18 would step
+       between two adjacent codes and read as facets. */
     const normal = this.heightToNormal(height, size, this.normalStrength[kind] || 3);
-    const maps = { albedo, orm, normal, size };
+    const maps = { albedo, orm, normal, size,
+      /* What alpha 0 and alpha 1 mean, carried with the maps so a
+         consumer never has to assume. */
+      heightBias: HEIGHT_BIAS, heightSpan: HEIGHT_SPAN };
     this._cache.set(key, maps);
     return maps;
   },
