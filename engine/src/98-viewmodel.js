@@ -292,6 +292,35 @@ const GRIP_KINDS = {
      box, which cannot tell those apart -- and looks at `drop` and the
      per-weapon `hands.left` anchor rather than at the wrap. Do not spend
      another pass on `close`. */
+  /* AND `drop` HAS NOW BEEN SWEPT, which was the other half of that
+     sentence. It moves the whole support hand along the grasp axis, and
+     for these three grips the grasp axis points up at the forend, so it
+     is the one number that decides how far under the thing the hand
+     sits. The measured gap -- knuckles 18 to 29 mm below the crown --
+     is the same magnitude as the drops themselves (19, 23, 28 mm),
+     which made it look like the cause.
+
+     Scaled 1.0 / 0.5 / 0.0 / -1.0 / -2.0, worst weapon in millimetres:
+
+         1.0   7 blocking, worst 48.6   (as shipped)
+         0.5   7 blocking, worst 67.7   sawn-off 43.7 -> 67.7
+         0.0   6 blocking, worst 55.3   breakwater 31 -> 19, sawnoff -> 55
+        -1.0   8 blocking, worst 58.0
+        -2.0   8 blocking, worst 50.8
+
+     It trades weapons and never fixes one: at zero drop the Breakwater
+     gains twelve millimetres and the sawn-off loses twenty-four. The
+     Mauser reads 46.4 at every value, because its support hand is not
+     on a forend at all. The typed drops are the best of the five.
+
+     Which closes the third axis. The shape cannot do it (attempts 8-12,
+     both scales, written up in the march's scoring row), and neither
+     can sliding the hand along the line it grasps on. What is left is
+     the DIRECTION the fingers leave the knuckles -- `round` points the
+     grasp straight up, so the fingers set off up the near face of the
+     forend and a finger climbing a near face is a finger in the notch
+     whatever it does afterwards. That is a change to how these weapons
+     are held, not to how far the hand is from them. */
   fore: { axis: [1, 0, 0], round: [0, 1, 0], girth: 0.078,
     spread: 0.0202, close: 0.96, index: 'wrap', thumb: 'along', drop: 0.019 },
   /* A vertical foregrip, gripped like a pistol grip but with nothing to
