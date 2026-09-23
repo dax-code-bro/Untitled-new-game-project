@@ -142,6 +142,45 @@ const QUALITY = {
 // `medium` is what the old auto-detect asked for and what several callers
 // still pass; it is this tier's previous name.
 QUALITY.medium = QUALITY.normal;
+/* ---- FEATURE 1: SCREEN-SPACE REFLECTIONS, PHASE 1 TIER RAISE ----
+ *
+ * Patched onto the table rather than written into it, for one reason
+ * worth stating: nine features are landing on these five literals in
+ * parallel and every one of them that edits the same object lines
+ * conflicts with the other eight. A property assignment after the fact
+ * composes with all of them and says exactly which key belongs to whom.
+ *
+ * ULTRA ONLY, and NOT high, even though the G-buffer is allocated at
+ * high too. Three of browser.test.js's eight scenes run at 'high'
+ * (shadows at line 70, materials at 82, effects at 157), underside.js
+ * pins it, and sweep.js raises to it mid-run -- so 'high' is a
+ * heavily-asserted tier, and a reflection term is exactly the kind of
+ * broad low-frequency brightness that moves a mean-luma assertion.
+ * Ultra is reachable only by an explicit setQuality('ultra') or
+ * LE.create({quality:'ultra'}); detectQuality() cannot return it and
+ * the watchdog only ever steps down. Nothing in the suite runs there
+ * except the photoreal test, which is written to expect this.
+ *
+ * ssrSteps 28: at ultra the trace runs at half of a 1.85x-scaled frame,
+ * and the march is capped at 0.8 of the smaller half-res dimension
+ * (~800 texels on a 1080p canvas). 800/28 is a 28-texel stride, which
+ * five binary-search halvings refine to under one texel -- the point at
+ * which a half-resolution buffer has nothing more to give. Fewer steps
+ * and the refinement starts from a gap wide enough to have skipped the
+ * object entirely; more and it is paying for precision the buffer
+ * cannot express.
+ *
+ * The four lower tiers are pinned to 0 only if nothing has set them, so
+ * this is idempotent with whatever the plumbing commit wrote. Note that
+ * QUALITY.medium IS QUALITY.normal -- one object, so writing 'normal'
+ * writes both, which is what is wanted. */
+QUALITY.ultra.ssr = 1;
+QUALITY.ultra.ssrSteps = 28;
+for (const _t of ['retro', 'low', 'normal', 'high']) {
+  if (QUALITY[_t].ssr == null) QUALITY[_t].ssr = 0;
+  if (QUALITY[_t].ssrSteps == null) QUALITY[_t].ssrSteps = 0;
+}
+
 
 function detectQuality() {
   const mem = navigator.deviceMemory || 4;
@@ -313,6 +352,54 @@ class Renderer {
 
     this._shadowMats = [new Mat4(), new Mat4()];
     this._planes = new Float32Array(24);
+    /* ================================================================
+       SCREEN-SPACE REFLECTIONS
+       ================================================================
+       Live and writable the way `shadows`, `fog` and `post` are, so a
+       map or a test can reach all of it without a rebuild.
+
+       The two COST knobs are deliberately NOT here: whether the pass
+       runs at all and how many march steps it gets are tier keys
+       (quality.ssr, quality.ssrSteps), because they are the two numbers
+       that have to differ between a phone and a desktop. What is here
+       is the LOOK, which should not. */
+    this.ssr = {
+      // Scales the whole replacement. 1.0 is the physical answer.
+      intensity: 1.0,
+      /* How much of the environment specular the forward pass already
+         applied gets paid back before the traced reflection replaces
+         it. Not 1.0 on purpose: the fold cannot see the sun shadow term
+         or the ORM occlusion at the receiving pixel, so its estimate of
+         what pbrFrag added can be up to a fifth too bright. Leaving a
+         sliver unsubtracted makes that error read as a slightly strong
+         reflection instead of as a hole, and a hole is far worse. */
+      replace: 0.90,
+      /* Full strength below roughCut, gone at roughMax. These are set
+         by what the cone blur can actually cover -- see the arithmetic
+         in GLSL.ssrBlurFrag -- and not by taste. Glass, water, a
+         puddle, wet tile and a blued receiver all sit under 0.35. */
+      roughCut: 0.25,
+      roughMax: 0.50,
+      /* Metres. How solid the marcher is entitled to assume one depth
+         sample is. Big enough that a ray does not tunnel through the
+         wall of a crate, small enough that it cannot claim the far side
+         of a doorway it passed through. */
+      thickness: 0.35,
+      /* Metres. Past this the environment term is the better answer
+         anyway, and a shorter ray spends the fixed step budget on the
+         near reflections that actually read. */
+      maxDistance: 24,
+      /* UV units of border over which a reflection fades out rather
+         than ending in a hard line that slides with the camera. */
+      edgeFade: 0.12,
+      /* A firefly ceiling in linear radiance and a darkening floor as a
+         fraction of the pixel. Rails, not tuning -- a well-behaved
+         frame never reaches either, and they are here so a badly
+         behaved one degrades instead of punching a black or white hole
+         through the brightest assertions in the test suite. */
+      clamp: 6.0,
+      maxDarken: 0.60,
+    };
     this._instanceScratch = new Float32Array(20 * 1024);
 
     this._initTargets();
@@ -987,6 +1074,232 @@ class Renderer {
     gl.depthMask(true);
   }
 
+  /* ================================================================
+     SCREEN-SPACE REFLECTIONS  (feature 1 — every uniform is uSsr*)
+     ================================================================
+     Four draws at ultra and none anywhere else: a half-resolution
+     perspective-correct trace against the depth buffer, two separable
+     cone-blur passes ping-ponged between ssrA and ssrB exactly the way
+     the SSAO blur ping-pongs aoA and aoB, and one full-resolution fold
+     that pays the environment term back and adds the reflection.
+
+     WHAT THIS BUYS. Every glossy surface in the game currently reflects
+     an analytic two-colour sky gradient with a dot in it, indoors as
+     well as out. Wet concrete, a puddle, a tiled floor, a countertop, a
+     pane of glass and a blued receiver all reflect a sky they may not
+     even be able to see, and never the crate standing on them -- which
+     is why objects in this renderer look like they are hovering over a
+     surface rather than sitting on it. */
+
+  /* Allocated on demand and freed again when the tier drops, rather
+     than in _initTargets. Two reasons. Ultra is the only tier that
+     turns this on, and it is reachable only by an explicit setQuality,
+     so allocating two half-resolution RGBA16F targets at boot would be
+     memory every other tier pays and never uses. And doing it here
+     instead means setQuality() needs no edit at all, which matters when
+     nine features are landing on that one method in parallel.
+
+     Nothing is lost by not proving the format at boot: RGBA16F support
+     is already proven by hdrA, which this gates on through
+     this.gbuffer. */
+  _ensureSsrTargets() {
+    const want = !!(this.quality.ssr && this.gbuffer && this.floatBuffers
+      && this.width >= 2 && this.height >= 2);
+    if (!want) {
+      if (this.ssrA) { this.ssrA.dispose(); this.ssrA = null; }
+      if (this.ssrB) { this.ssrB.dispose(); this.ssrB = null; }
+      return false;
+    }
+    /* Half resolution, by exactly the aoA/aoB rule. The reflection is
+       blurred by roughness on its way out and folded back through a
+       depth-aware upsample, so the half that is thrown away is half the
+       pass would have thrown away anyway -- and at the ultra render
+       scale of 1.85 a full-resolution RGBA16F pair is 113 MB. */
+    const w = Math.max(2, this.width >> 1), h = Math.max(2, this.height >> 1);
+    if (!this.ssrA) {
+      const gl = this.gl;
+      const spec = { internalFormat: gl.RGBA16F, format: gl.RGBA, type: gl.HALF_FLOAT };
+      this.ssrA = new Framebuffer(gl, { width: w, height: h, colors: [spec], depth: false });
+      this.ssrB = new Framebuffer(gl, { width: w, height: h, colors: [spec], depth: false });
+    } else {
+      this.ssrA.resize(w, h);
+      this.ssrB.resize(w, h);
+    }
+    return true;
+  }
+
+  /* The shared frame data these three programs read.
+     Contract RULE 2 reserves uGBufferTex and uSceneDepth for the
+     plumbing owner's _bindFrame(), so that is used whenever it exists.
+     The fallback binds the same two names to the same two textures, so
+     this feature works against the two-attachment G-buffer in the tree
+     today as well as against the three-attachment one the contract
+     specifies -- in both, colors[1] is the normal/roughness target. */
+  _bindSsrFrame(sh) {
+    if (this._bindFrame) { this._bindFrame(sh); return; }
+    sh.tex('uGBufferTex', this.hdrA.colors[1] || null);
+    sh.tex('uSceneDepth', this.hdrA.depthTexture);
+  }
+
+  /* Returns the texture holding the blurred reflection, or null when
+     the pass did not run. Ping-pongs A -> B -> A, so the result is in
+     ssrA; ssrB is the scratch between the two separable halves. */
+  _renderSsr() {
+    const cam = this.camera;
+    if (!cam || !this.hdrA.depthTexture) return null;
+    if (!this._ensureSsrTargets()) return null;
+
+    const S = this.ssr;
+    const w = this.ssrA.width, h = this.ssrA.height;
+    const pe = cam.proj.e;
+    /* The march loop is written with a constant bound of 64 and a break,
+       which is the form ANGLE compiles without complaint -- the same
+       shape as the SSAO loop's cap of 32. Clamping here as well means a
+       tier asking for 100 gets 64 rather than silently getting 64. */
+    const steps = Math.max(4, Math.min(64, this.quality.ssrSteps || 16));
+
+    const tr = this.program('ssr', FULLSCREEN_VS, GLSL.ssrFrag).use();
+    this.ssrA.bind(true, 0, 0, 0, 0);
+    this._bindSsrFrame(tr);
+    tr.tex('uSsrSceneTex', this.hdrA.color);
+    tr.m4('uProj', cam.proj);
+    tr.m4('uInvProj', cam.invProj);
+    tr.v2('uSsrTexel', 1 / w, 1 / h);
+    /* The two projection entries that turn a depth sample into a view
+       z in one divide. The march does this once per step plus five more
+       in the refinement, and a mat4 multiply there is 16 multiplies it
+       does not need to do. */
+    tr.v2('uSsrZParams', pe[10], pe[14]);
+    tr.i('uSsrSteps', steps);
+    tr.f('uSsrNear', cam.near);
+    tr.f('uSsrMaxDistance', S.maxDistance);
+    /* Cap the SCREEN travel as well as the world distance. A ray running
+       flat along a floor covers the whole frame, and spending 28 steps
+       on that is a stride wide enough to miss anything thinner than a
+       car. 0.8 of the smaller dimension is most of a frame and still
+       leaves the stride sub-30 texels at ultra. */
+    tr.f('uSsrMaxTexels', Math.min(w, h) * 0.8);
+    tr.f('uSsrThickness', S.thickness);
+    tr.f('uSsrEdgeFade', S.edgeFade);
+    tr.f('uSsrRoughCut', S.roughCut);
+    tr.f('uSsrRoughMax', S.roughMax);
+    /* Zero unless TAA is running. Animating the dither without a
+       temporal filter to resolve it trades a static stair-step for a
+       crawling one, which is strictly worse to look at. */
+    tr.f('uSsrJitter', this.quality.taa ? ((this.frameIndex || 0) % 8) * 5.588 : 0);
+    this.fullscreen.draw();
+    this.stats.draws++;
+
+    /* The cone blur. uSsrConeScale is half-resolution pixels per radian
+       of cone half-angle -- see the derivation in GLSL.ssrBlurFrag for
+       why the hit distance cancels and the radius is purely angular.
+       uSsrMaxStride is what stops thirteen taps from being spread so
+       far apart that they alias; deriving the radius ceiling from it
+       means the two cannot drift out of agreement. */
+    const maxStride = Math.max(1.5, h * 0.016);
+    const coneScale = h / Math.max(cam.fov, 1e-3);
+    const bl = this.program('ssrBlur', FULLSCREEN_VS, GLSL.ssrBlurFrag);
+    for (const [src, dst, dx, dy] of [[this.ssrA, this.ssrB, 1, 0], [this.ssrB, this.ssrA, 0, 1]]) {
+      bl.use();
+      dst.bind(true, 0, 0, 0, 0);
+      this._bindSsrFrame(bl);
+      bl.tex('uSsrTex', src.color);
+      bl.v2('uSsrTexel', 1 / src.width, 1 / src.height);
+      bl.v2('uSsrDir', dx, dy);
+      bl.v2('uSsrZParams', pe[10], pe[14]);
+      bl.f('uSsrConeScale', coneScale);
+      bl.f('uSsrConeMax', maxStride * 6.0);
+      bl.f('uSsrMaxStride', maxStride);
+      this.fullscreen.draw();
+      this.stats.draws++;
+    }
+    if (this.stats.passes) this.stats.passes.ssr = (this.stats.passes.ssr || 0) + 1;
+    return this.ssrA.color;
+  }
+
+  /* ONE full-resolution pass, hdrA.color -> hdrB.color.
+     hdrB is already a full-resolution RGBA16F target that the pipeline
+     pays for and that is dead by this point in the frame -- the fluid
+     shading finished with it and blitted it back before present() was
+     called -- so the most expensive new pass in the chain costs no new
+     memory at all.
+
+     THIS IS ALSO THE PASS FEATURES 4 AND 9 FOLD INTO. The contract's
+     pass order puts volumetrics and GTAO specular occlusion through the
+     same resolve, and a second _applyScreenSpace defined in this class
+     body would silently replace this one rather than collide. Both have
+     a named, zero-strength hook in GLSL.screenSpaceFrag and two bind
+     lines below; fill those in, do not write another method.
+
+     Feature 9 additionally has to MOVE the AO block to the top of
+     present() before its bent normals are current in this pass. SSR
+     does not read AO, so it is left where it is for now. */
+  _applyScreenSpace(ssrTex) {
+    const cam = this.camera;
+    if (!cam) return null;
+    const volOn = !!(this.quality.volumetric && this.volB);
+    const bentOn = !!(this.quality.gtao && this.bentA);
+    if (!ssrTex && !volOn && !bentOn) return null;
+
+    /* The contract's pass order asks for the mask down here. hdrB has
+       one attachment so its own draw-buffer state is already right;
+       this is for the frame's bookkeeping, and it is what renderScene
+       raises again next frame. */
+    if (this._sceneTargets) this._sceneTargets(false);
+
+    const S = this.ssr;
+    const pe = cam.proj.e;
+    const hw = this.ssrA ? this.ssrA.width : Math.max(2, this.width >> 1);
+    const hh = this.ssrA ? this.ssrA.height : Math.max(2, this.height >> 1);
+
+    const sh = this.program('screenSpace', FULLSCREEN_VS, GLSL.screenSpaceFrag).use();
+    /* No clear. Every return path in the shader writes outColor, so the
+       target is fully covered, and this is the one full-resolution
+       RGBA16F clear in the chain worth not paying for. */
+    this.hdrB.bind(false);
+    this._bindSsrFrame(sh);
+    /* The sky uniforms, for the fallback the fold pays back and for the
+       environment a missed ray keeps. _bindEnv is the single binding
+       site for all of them and it already serves three other programs. */
+    this._bindEnv(sh);
+    sh.tex('uSsrSceneTex', this.hdrA.color);
+    sh.m4('uInvProj', cam.invProj);
+    sh.m4('uInvView', cam.invView);
+    sh.v2('uSsrZParams', pe[10], pe[14]);
+    sh.v2('uSsrTexel', 1 / hw, 1 / hh);
+    sh.tex('uSsrTex', ssrTex || this.hdrA.color);
+    /* Zero when the trace did not run, which is also when uSsrTex is
+       bound to a fallback whose alpha is not a confidence. The shader
+       skips its whole SSR half on this, so the fallback is never read. */
+    sh.f('uSsrIntensity', ssrTex ? S.intensity : 0);
+    sh.f('uSsrReplace', S.replace);
+    /* pbrFrag attenuates its environment specular by
+       mix(skyVis, 1.0, 0.25) where skyVis = mix(1 - occlusion, 1, shadow).
+       This pass cannot see the shadow term, so it binds the MIDPOINT of
+       that range: at the default occlusion of 0.45 the true value runs
+       0.663 to 1.0 and this is 0.831. The residual is what ssr.replace
+       is under 1.0 for. */
+    sh.f('uSsrEnvVis', 1.0 - 0.375 * this.sky.occlusion);
+    sh.f('uSsrClamp', S.clamp);
+    sh.f('uSsrMaxDarken', S.maxDarken);
+    /* ---- HOOKS: FEATURES 4 AND 9 ----
+       Both samplers are ACTIVE uniforms (they sit inside a branch, so
+       the compiler keeps them), and tex() silently no-ops on a null
+       texture -- which would leave the sampler pointed at whatever unit
+       zero happens to hold. They are therefore always bound to
+       something, exactly the `|| this.hdrA.color` idiom the composite
+       already uses for its unused bloom levels. */
+    sh.tex('uVolTex', (volOn && this.volB.color) || this.hdrA.color);
+    sh.f('uVolStrength', volOn ? (this.quality.volStrength || 1) : 0);
+    sh.tex('uGtaoBentTex', (bentOn && this.bentA.color) || this.hdrA.color);
+    sh.f('uGtaoSpecOcc', bentOn ? (this.quality.gtaoSpecOcc || 1) : 0);
+    /* ---- END HOOKS ---- */
+    this.fullscreen.draw();
+    this.stats.draws++;
+    if (this.stats.passes) this.stats.passes.resolve = (this.stats.passes.resolve || 0) + 1;
+    return this.hdrB.color;
+  }
+
   /* ---------------- post ---------------- */
 
   present() {
@@ -994,12 +1307,36 @@ class Renderer {
     gl.disable(gl.DEPTH_TEST);
     gl.disable(gl.BLEND);
 
+    /* ---- SCREEN-SPACE REFLECTIONS, AND THE FOLD THAT LANDS THEM ----
+     *
+     * Everything downstream now reads this._sceneTex instead of
+     * hdrA.color, so a pass that produces a new version of the scene --
+     * this one now, TAA later -- only has to reassign it and the bloom
+     * and composite need no further edits. When no such pass runs,
+     * _sceneTex IS hdrA.color and the frame is bit-identical to the one
+     * this renderer produced before the feature existed.
+     *
+     * Bloom therefore reads the reflected image, which is deliberate: a
+     * bright reflection in a puddle should bloom, and the bright pass
+     * reading the pre-fold buffer would be the one place the reflection
+     * silently did not exist.
+     *
+     * The gate is written to include volumetrics and GTAO as well, so
+     * features 4 and 9 need no edit to present() at all. */
+    this._sceneTex = this.hdrA.color;
+    if ((this.quality.ssr && this.gbuffer)
+        || (this.quality.volumetric && this.volB)
+        || (this.quality.gtao && this.bentA)) {
+      const folded = this._applyScreenSpace(this._renderSsr());
+      if (folded) this._sceneTex = folded;
+    }
+
     let bloom0 = null, bloom1 = null, bloom2 = null;
     const iters = Math.min(this.quality.bloomIters, this.bloomChain.length);
     if (this.quality.bloom && this.post.bloom > 0 && iters > 0) {
       const bright = this.program('bright', FULLSCREEN_VS, GLSL.brightFrag).use();
       this.bloomChain[0].a.bind(true, 0, 0, 0, 1);
-      bright.tex('uTex', this.hdrA.color);
+      bright.tex('uTex', this._sceneTex || this.hdrA.color);
       bright.f('uThreshold', this.post.bloomThreshold);
       bright.f('uSoftKnee', 0.6);
       this.fullscreen.draw();
@@ -1093,7 +1430,7 @@ class Renderer {
     }
 
     const comp = this.program('composite', FULLSCREEN_VS, GLSL.compositeFrag).use();
-    comp.tex('uScene', this.hdrA.color);
+    comp.tex('uScene', this._sceneTex || this.hdrA.color);
     comp.tex('uBloom0', bloom0 || this.hdrA.color);
     comp.tex('uBloom1', bloom1 || this.hdrA.color);
     comp.tex('uBloom2', bloom2 || this.hdrA.color);

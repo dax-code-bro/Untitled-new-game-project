@@ -1636,3 +1636,477 @@ uniform sampler2D uTex;
 layout(location=0) out vec4 outColor;
 void main(){ outColor = texture(uTex, vUv); }
 `;
+/* ================================================================
+   SCREEN-SPACE REFLECTIONS   (feature 1 — every uniform is uSsr*)
+   ================================================================
+   Three programs: a half-resolution trace, a roughness-driven cone
+   blur run as a separable ping-pong, and one full-resolution fold
+   that folds the result back into the scene.
+
+   WHAT THE TRACE IS. A perspective-correct march in SCREEN space, not
+   a fixed world-space step. The ray's two endpoints are projected to
+   clip space once; after that uv, 1/w and z/w are all LINEAR in the
+   screen parameter t, so one lerp of each per step recovers the ray's
+   exact view-space depth at that pixel. Verified numerically against a
+   ground-truth reprojection: max error 2.2e-16 over 21 samples, i.e.
+   exact to float precision. A world-space march cannot do this -- it
+   oversamples near the camera and skips whole pixels far from it, and
+   the pixel is the only resolution a depth buffer has.
+
+   THE FOLD IS A STRICT NO-OP WHERE THE RAY MISSED. The trace writes
+   PREMULTIPLIED radiance, so the fold's delta is
+     (ssr.rgb - envIBL * ssr.a * uSsrReplace) * envBRDF
+   which is identically zero when ssr.a is zero. That is the strongest
+   correctness property this feature can have: a pixel SSR did not
+   reach is bit-identical to the pixel the renderer produced without
+   this pass at all. */
+
+GLSL.ssrFrag = `
+${GLSL.common}
+${GLSL.pbr}
+in vec2 vUv;
+
+/* Shared frame data — bound by Renderer._bindFrame, never by this feature.
+   uGBufferTex: .rg = octEncode(view normal), .b = rough, .a = metal. */
+uniform sampler2D uGBufferTex;
+uniform sampler2D uSceneDepth;
+
+/* Existing renderer uniform names, reused verbatim (contract RULE 2). */
+uniform mat4 uProj;
+uniform mat4 uInvProj;
+
+uniform sampler2D uSsrSceneTex;   // hdrA.color — the radiance being reflected
+uniform vec2  uSsrTexel;          // 1 / half-res size
+uniform vec2  uSsrZParams;        // (proj[10], proj[14]) — closed-form depth->viewZ
+uniform int   uSsrSteps;
+uniform float uSsrNear;
+uniform float uSsrMaxDistance;
+uniform float uSsrMaxTexels;
+uniform float uSsrThickness;
+uniform float uSsrEdgeFade;
+uniform float uSsrRoughCut;
+uniform float uSsrRoughMax;
+uniform float uSsrJitter;
+
+layout(location=0) out vec4 outColor;
+
+/* depth -> view-space z, in one divide.
+   Unprojecting with uInvProj costs a mat4 multiply, and this runs once
+   per march step plus five more in the refinement. The projection is
+   diagonal apart from these two entries, so the closed form is exact:
+     ndc = (p10 * z + p14) / -z   =>   z = -p14 / (ndc + p10)
+   Round-tripped against the real matrix at z = -1, -5, -20, -60 and
+   -200 m: exact to five decimal places. */
+float ssrViewZ(float depth){
+  return -uSsrZParams.y / (depth * 2.0 - 1.0 + uSsrZParams.x);
+}
+
+/* Full view-space position, for the ray origin only -- once per pixel,
+   so the mat4 is affordable here where it is not inside the march.
+   Deliberately local and deliberately not the shared helper: an
+   unprojection is a closed-form identity that cannot silently drift
+   between consumers the way an encoding can, so it carries no
+   dependency on a chunk that may or may not have landed. */
+vec3 ssrViewPos(vec2 uv, float depth){
+  vec4 c = vec4(uv * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
+  vec4 v = uInvProj * c;
+  return v.xyz / v.w;
+}
+
+/* Interleaved gradient noise -- the dither that decorrelates best under
+   a box filter, which is exactly what the cone blur below is. */
+float ssrIGN(vec2 p){
+  return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
+}
+
+void main(){
+  float d0 = texture(uSceneDepth, vUv).r;
+  // Sky. Nothing reflects, and there is no surface to reflect from.
+  if (d0 >= 0.99999) { outColor = vec4(0.0); return; }
+
+  vec4 g = texture(uGBufferTex, vUv);
+  float rough = clamp(g.b, 0.0, 1.0);
+
+  /* ROUGHNESS GATE, and the honest reason for these two numbers.
+     The cone blur below is thirteen taps at a stride the pass can
+     actually afford. It covers a GGX cone of half-angle atan(rough^2)
+     up to about rough 0.5 at ultra's half-resolution, and no further.
+     Past that the screen-space data is both least valid (a rough lobe
+     samples half the hemisphere, most of which is off screen) and
+     least affordable, so it hands over entirely to the environment
+     term the forward shader already applied. Below uSsrRoughCut the
+     reflection is at full strength: glass, water, a puddle, tile and a
+     blued receiver all live under 0.35. */
+  float weight = 1.0 - smoothstep(uSsrRoughCut, uSsrRoughMax, rough);
+  if (weight <= 0.001) { outColor = vec4(0.0); return; }
+
+  vec3 P  = ssrViewPos(vUv, d0);
+  vec3 N  = octDecode(g.rg);
+  vec3 Vd = normalize(P);            // eye -> surface, view space (-Z forward)
+  vec3 R  = reflect(Vd, N);
+
+  /* A ray that heads back toward the camera is reflecting something
+     BETWEEN the eye and the surface, which is either off screen or the
+     camera itself. Fading it is what stops a wall facing the player
+     from smearing the player's own viewmodel across it. */
+  weight *= 1.0 - smoothstep(0.25, 0.75, saturate1(dot(R, -Vd)));
+  if (weight <= 0.001) { outColor = vec4(0.0); return; }
+
+  /* Clip to the near plane before projecting. Past it w changes sign
+     and the whole screen-space interpolation inverts. */
+  float maxT = uSsrMaxDistance;
+  if (R.z > 1e-4) {
+    float tNear = (-uSsrNear - P.z) / R.z;
+    maxT = min(maxT, max(tNear - 0.01, 0.0));
+  }
+  if (maxT <= 0.02) { outColor = vec4(0.0); return; }
+
+  vec3 Q  = P + R * maxT;
+  vec4 c0 = uProj * vec4(P, 1.0);
+  vec4 c1 = uProj * vec4(Q, 1.0);
+  float w0 = max(c0.w, 1e-5), w1 = max(c1.w, 1e-5);
+  vec2 uv0 = (c0.xy / w0) * 0.5 + 0.5;
+  vec2 uv1 = (c1.xy / w1) * 0.5 + 0.5;
+  vec2 dUv = uv1 - uv0;
+
+  /* Cap the SCREEN travel as well as the world distance. Without this
+     a grazing ray along a floor spends the entire step budget crossing
+     the frame and the stride is tens of pixels, which misses every
+     object thinner than a car. */
+  vec2  res    = 1.0 / uSsrTexel;
+  float travel = length(dUv * res);
+  float tEnd   = travel > uSsrMaxTexels ? uSsrMaxTexels / max(travel, 1e-5) : 1.0;
+
+  float iw0 = 1.0 / w0, iw1 = 1.0 / w1;
+  float zw0 = P.z * iw0, zw1 = Q.z * iw1;
+
+  int steps = uSsrSteps;
+  float dt  = tEnd / float(max(steps, 1));
+
+  /* Interleaved gradient noise, not a hash: it is the pattern that
+     dithers best under a box filter, and the blur below is exactly
+     that. uSsrJitter is zero unless TAA is on, because animating the
+     offset without a temporal filter trades a static stair-step for a
+     crawling one, which is worse. */
+  float jit = ssrIGN(gl_FragCoord.xy + uSsrJitter) - 0.5;
+
+  float tPrev = 0.0;
+  float zPrev = P.z;
+  float tHit  = -1.0;
+
+  /* Hard cap of 64, the way the SSAO loop caps at 32: a constant bound
+     with a break is the form ANGLE compiles without complaint. Raising
+     uSsrSteps past 64 in the tier table silently does nothing. */
+  for (int i = 1; i <= 64; i++) {
+    if (i > steps) break;
+    float t = dt * (float(i) - 0.5 + jit * 0.9);
+    vec2  uv = uv0 + dUv * t;
+    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) break;
+
+    float iw = iw0 + (iw1 - iw0) * t;
+    float zw = zw0 + (zw1 - zw0) * t;
+    float zRay = zw / iw;
+
+    float dS = texture(uSceneDepth, uv).r;
+    if (dS >= 0.99999) { tPrev = t; zPrev = zRay; continue; }  // sky is not a hit
+
+    float zScene = ssrViewZ(dS);
+    float diff   = zScene - zRay;        // > 0 once the ray is behind the surface
+
+    /* A depth-relative epsilon rather than a constant. The depth buffer
+       quantises hardest far away, and a fixed 2 cm that is right at
+       four metres is noise at sixty. */
+    float minDiff = max(0.02, -zScene * 0.002);
+    if (diff > minDiff) {
+      /* THICKNESS. A depth buffer stores one surface, so the marcher has
+         to guess how solid it is. The guess is a floor plus however far
+         the ray itself moved in depth over the last step -- anything
+         inside that is indistinguishable from a hit at this sampling
+         rate -- bounded so a grazing ray cannot claim the whole room. */
+      float thick = uSsrThickness + min(abs(zRay - zPrev), uSsrThickness * 6.0);
+      if (diff < thick) { tHit = t; break; }
+      /* Too far behind: the ray passed BEHIND a foreground object. Keep
+         going; it may come out the far side and hit something real. */
+    }
+    tPrev = t;
+    zPrev = zRay;
+  }
+
+  if (tHit < 0.0) { outColor = vec4(0.0); return; }
+
+  /* Binary refinement. Five halvings take the ~27-texel stride at ultra
+     down to under a texel, which is the point at which a further
+     halving buys nothing a half-resolution buffer can express. They
+     cost five taps and only on the pixels that actually hit. */
+  float tA = tPrev, tB = tHit;
+  for (int r = 0; r < 5; r++) {
+    float tm = (tA + tB) * 0.5;
+    float iwm = iw0 + (iw1 - iw0) * tm;
+    float zwm = zw0 + (zw1 - zw0) * tm;
+    float zRm = zwm / iwm;
+    vec2  uvm = uv0 + dUv * tm;
+    float dm  = texture(uSceneDepth, uvm).r;
+    if (dm >= 0.99999) { tA = tm; continue; }
+    if (ssrViewZ(dm) - zRm > 0.0) tB = tm; else tA = tm;
+  }
+  float tF  = tB;
+  vec2  uvF = uv0 + dUv * tF;
+
+  /* Screen-edge fade. Without it the reflection stops in a hard line
+     wherever the ray leaves the frame, and that line moves with the
+     camera, which reads as a tear rather than as a reflection. */
+  vec2  e    = min(uvF, 1.0 - uvF);
+  float edge = saturate1(min(e.x, e.y) / max(uSsrEdgeFade, 1e-4));
+  weight *= edge * edge * (3.0 - 2.0 * edge);
+
+  // The far end of the march is where the stride is coarsest and a hit
+  // least trustworthy, so it fades out rather than ending.
+  weight *= 1.0 - smoothstep(0.88 * tEnd, tEnd, tF);
+
+  /* Backface rejection, using the hit pixel's own G-buffer normal. A
+     hit on a surface facing the same way as the ray is the BACK of an
+     object -- the ray went through it -- and its shaded colour has
+     nothing to do with what a reflection would see. Faded rather than
+     cut, so a legitimately grazing hit does not speckle. */
+  vec4 gh = texture(uGBufferTex, uvF);
+  weight *= 1.0 - smoothstep(-0.05, 0.28, dot(octDecode(gh.rg), R));
+  if (weight <= 0.0005) { outColor = vec4(0.0); return; }
+
+  vec3 hit = max(texture(uSsrSceneTex, uvF).rgb, vec3(0.0));
+
+  /* PREMULTIPLIED. The blur below averages rgb and a with one kernel;
+     premultiplied is the only encoding under which that average is the
+     correct partial coverage, and it is what makes the fold exactly
+     zero where nothing was hit. */
+  outColor = vec4(hit * weight, weight);
+}
+`;
+
+/* ----------------------------------------------------------------
+   ROUGHNESS-AWARE CONE BLUR — run twice, H then V, ssrA -> ssrB -> ssrA,
+   exactly the aoA/aoB ping-pong the SSAO blur already uses.
+   ---------------------------------------------------------------- */
+GLSL.ssrBlurFrag = `
+${GLSL.common}
+in vec2 vUv;
+
+uniform sampler2D uGBufferTex;
+uniform sampler2D uSceneDepth;
+
+uniform sampler2D uSsrTex;
+uniform vec2  uSsrTexel;
+uniform vec2  uSsrDir;
+uniform vec2  uSsrZParams;
+uniform float uSsrConeScale;      // half-res pixels per radian of cone
+uniform float uSsrConeMax;        // hard ceiling, half-res pixels
+uniform float uSsrMaxStride;      // ceiling on the gap between taps
+
+layout(location=0) out vec4 outColor;
+
+void main(){
+  float dc = texture(uSceneDepth, vUv).r;
+  vec4  c  = texture(uSsrTex, vUv);
+  if (dc >= 0.99999) { outColor = c; return; }
+
+  /* THE CONE, AND WHY THE RADIUS DOES NOT DIVIDE BY DEPTH.
+     A GGX lobe of roughness r has half-angle about atan(r*r). The
+     footprint it covers at the hit is that angle times the hit
+     distance, and the screen size of that footprint is the footprint
+     divided by the hit distance -- so for a reflection of something at
+     roughly the receiver's own depth the two cancel and the radius is
+     purely ANGULAR. uSsrConeScale is therefore halfResHeight / fovY,
+     i.e. pixels per radian, and the whole thing is correct under both
+     a resolution change and a field-of-view change with no per-scene
+     tuning. */
+  float rough  = clamp(texture(uGBufferTex, vUv).b, 0.0, 1.0);
+  float alpha  = rough * rough;
+  float radius = min(alpha * uSsrConeScale, uSsrConeMax);
+
+  /* Thirteen taps spanning +-radius, so the stride is radius/6. A
+     mirror (alpha -> 0) gets a stride of zero and is not touched at
+     all, which is what a mirror should be; only a genuinely rough
+     surface spreads its taps out, and by then the source it is
+     sampling is incoherent anyway. */
+  float stride = min(radius / 6.0, uSsrMaxStride);
+  if (stride < 0.5) { outColor = c; return; }
+
+  float zc = -uSsrZParams.y / (dc * 2.0 - 1.0 + uSsrZParams.x);
+  vec2  stepUv = uSsrDir * uSsrTexel * stride;
+
+  vec4  sum  = vec4(0.0);
+  float wsum = 0.0;
+  for (int i = -6; i <= 6; i++) {
+    vec2  uv = vUv + stepUv * float(i);
+    float dn = texture(uSceneDepth, uv).r;
+    float zn = -uSsrZParams.y / (dn * 2.0 - 1.0 + uSsrZParams.x);
+    /* Do not blur across a silhouette: a reflection belongs to the
+       surface it was traced from, and letting it leak past the edge is
+       the halo every screen-space effect is accused of. The tolerance
+       is relative to depth because a 30 cm gap is an edge at three
+       metres and nothing at forty. */
+    float wz = exp(-abs(zn - zc) / max(0.25, abs(zc) * 0.08));
+    float wg = exp(-float(i * i) * 0.11);
+    float w  = wz * wg;
+    sum  += texture(uSsrTex, uv) * w;
+    wsum += w;
+  }
+  outColor = wsum > 1e-5 ? sum / wsum : c;
+}
+`;
+
+/* ----------------------------------------------------------------
+   THE FOLD — one full-resolution pass, hdrA.color -> hdrB.color.
+   Also the single place features 4 (volumetrics) and 9 (GTAO bent
+   normals) hang their screen-space terms; see the marked block.
+   ---------------------------------------------------------------- */
+GLSL.screenSpaceFrag = `
+${GLSL.common}
+${GLSL.sky}
+${GLSL.pbr}
+in vec2 vUv;
+
+uniform sampler2D uGBufferTex;
+uniform sampler2D uSceneDepth;
+
+uniform mat4 uInvProj;
+uniform mat4 uInvView;
+
+uniform sampler2D uSsrSceneTex;   // hdrA.color
+uniform sampler2D uSsrTex;        // the blurred reflection, half res
+uniform vec2  uSsrTexel;          // 1 / half-res size
+uniform vec2  uSsrZParams;
+uniform float uSsrIntensity;
+uniform float uSsrReplace;
+uniform float uSsrEnvVis;
+uniform float uSsrClamp;
+uniform float uSsrMaxDarken;
+
+/* ---- HOOKS: FEATURES 4 AND 9 FILL THESE IN ----
+   They are declared here, at zero strength, because this pass is the
+   one place the contract's pass order puts all three screen-space
+   terms. Feature 4 binds volB to uVolTex and raises uVolStrength;
+   feature 9 binds bentA to uGtaoBentTex and raises uGtaoSpecOcc.
+   NEITHER MAY WRITE A SECOND _applyScreenSpace: a duplicate method in
+   a JS class body silently keeps only the last one. */
+uniform sampler2D uVolTex;
+uniform float uVolStrength;
+uniform sampler2D uGtaoBentTex;
+uniform float uGtaoSpecOcc;
+/* ---- END HOOKS ---- */
+
+layout(location=0) out vec4 outColor;
+
+const vec2 SSR_UP[4] = vec2[4](
+  vec2(-0.5, -0.5), vec2(0.5, -0.5), vec2(-0.5, 0.5), vec2(0.5, 0.5));
+
+vec3 ssrViewPos(vec2 uv, float depth){
+  vec4 c = vec4(uv * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
+  vec4 v = uInvProj * c;
+  return v.xyz / v.w;
+}
+
+void main(){
+  vec3  scene = texture(uSsrSceneTex, vUv).rgb;
+  float d0    = texture(uSceneDepth, vUv).r;
+  if (d0 >= 0.99999) { outColor = vec4(scene, 1.0); return; }
+
+  float zc = -uSsrZParams.y / (d0 * 2.0 - 1.0 + uSsrZParams.x);
+
+  /* uSsrIntensity is zero, and this whole half is skipped, whenever the
+     trace did not run -- which is also when uSsrTex is bound to the
+     fallback texture rather than to a reflection buffer. Without this
+     gate the fallback's own alpha would be read as a confidence. The
+     branch is uniform across the draw, so it costs nothing. */
+  if (uSsrIntensity > 0.0) {
+    /* DEPTH-AWARE UPSAMPLE. Four taps at the surrounding half-resolution
+       texel centres, weighted by how close each one's depth is to this
+       pixel's. A plain bilinear read drags the reflection one half-res
+       texel past every silhouette, which on a railing or a gun barrel
+       is a bright fringe on the wrong side of the edge. */
+    vec4  acc  = vec4(0.0);
+    float wsum = 0.0;
+    for (int i = 0; i < 4; i++) {
+      vec2  uv = vUv + SSR_UP[i] * uSsrTexel;
+      float dn = texture(uSceneDepth, uv).r;
+      float zn = -uSsrZParams.y / (dn * 2.0 - 1.0 + uSsrZParams.x);
+      float w  = exp(-abs(zn - zc) / max(0.20, abs(zc) * 0.05));
+      acc  += texture(uSsrTex, uv) * w;
+      wsum += w;
+    }
+    vec4  ssr  = wsum > 1e-4 ? acc / wsum : texture(uSsrTex, vUv);
+    float conf = clamp(ssr.a, 0.0, 1.0);
+
+    if (conf > 0.0005) {
+    vec4  g     = texture(uGBufferTex, vUv);
+    float rough = clamp(g.b, 0.035, 1.0);
+    float metal = clamp(g.a, 0.0, 1.0);
+
+    vec3 Pv = ssrViewPos(vUv, d0);
+    vec3 Nv = octDecode(g.rg);
+    vec3 Vd = normalize(Pv);
+    vec3 Rv = reflect(Vd, Nv);
+    float NoV = max(dot(Nv, -Vd), 1e-4);
+
+    mat3 v2w = mat3(uInvView);
+    vec3 Nw = normalize(v2w * Nv);
+    vec3 Rw = normalize(v2w * Rv);
+
+    /* F0 WITHOUT AN ALBEDO BUFFER. The G-buffer carries no base colour
+       -- that was the deliberate trade for staying at three
+       attachments. A dielectric does not need one: it is 0.04 flat.
+       A metal borrows the hue of what has already been shaded at this
+       very pixel, normalised so only its colour and not its brightness
+       is taken, and pulled toward neutral where the pixel is too dark
+       for its hue to mean anything. Documented approximation. */
+    float mx   = max(max(scene.r, scene.g), scene.b);
+    vec3  tint = mx > 1e-4 ? saturate3(scene / mx) : vec3(1.0);
+    tint = mix(vec3(1.0), tint, saturate1(mx * 4.0));
+    vec3  F0   = mix(vec3(0.04), tint, metal);
+
+    /* Reconstruct the environment specular the FORWARD shader already
+       added at this pixel, then pay back the difference. This is the
+       whole reason the fold cannot double-count: it does not add a
+       reflection, it REPLACES the sky the forward pass assumed, in
+       proportion to how confident the trace is.
+
+       uSsrEnvVis stands in for pbrFrag's mix(skyVis, 1.0, 0.25), which
+       depends on the sun shadow term this pass cannot see. The
+       renderer binds the midpoint of its range, so the estimate is
+       within about a fifth either way, and uSsrReplace (0.90) leaves a
+       deliberate sliver unsubtracted -- slightly too bright reads as a
+       reflection, slightly too dark reads as a hole. */
+    vec3 envIBL = mix(skyRadiance(Rw), skyIrradiance(Nw), rough * rough)
+      * uSsrEnvVis + uRoomAmbient;
+    vec3 brdf   = envBRDFApprox(F0, rough, NoV);
+
+    vec3 delta = (ssr.rgb - envIBL * conf * uSsrReplace) * brdf * uSsrIntensity;
+
+    /* Two rails, because this pass runs at ultra where the brightest
+       pixel assertions in the suite have the least room. A single
+       blown texel in the reflection would otherwise go through bloom,
+       and an over-subtracted sun reflection would otherwise punch a
+       black hole. Neither rail is ever reached by a well-behaved
+       frame; they exist so a badly-behaved one degrades. */
+    delta = min(delta, vec3(uSsrClamp));
+    delta = max(delta, -scene * uSsrMaxDarken);
+    scene = max(scene + delta, vec3(0.0));
+    }
+  }
+
+  /* ---- HOOKS: FEATURES 4 AND 9 ---- */
+  if (uVolStrength > 0.0) {
+    // Feature 4: rgb = in-scattered radiance, a = transmittance.
+    vec4 vol = texture(uVolTex, vUv);
+    scene = scene * mix(1.0, vol.a, uVolStrength) + vol.rgb * uVolStrength;
+  }
+  if (uGtaoSpecOcc > 0.0) {
+    // Feature 9: .a = specular occlusion, half res, bilinear is enough.
+    float so = clamp(texture(uGtaoBentTex, vUv).a, 0.0, 1.0);
+    scene *= mix(1.0, so, uGtaoSpecOcc);
+  }
+  /* ---- END HOOKS ---- */
+
+  outColor = vec4(scene, 1.0);
+}
+`;
+

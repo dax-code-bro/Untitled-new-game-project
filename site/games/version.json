@@ -1,8 +1,8 @@
 {
-  "version": "0.18.1",
-  "name": "a hand actually on the bullets",
+  "version": "0.19.0",
+  "name": "the floor knows what is standing on it",
   "date": "2026-09-23",
   "mode": "multiplayer",
-  "did": "Reload grips fixed. The support hand was 46 to 58 mm away from the shells, stripper clips and revolver rounds it was supposed to be carrying, for the whole of every reload -- only the magazines were right. Where the fingers close is measured off the load's own geometry now instead of being a typed number, so every one of them is held.",
+  "did": "Screen-space reflections at ULTRA: polished floors, wet ground and glass now reflect the room around them instead of a painted sky. Select ULTRA in Settings to see it.",
   "onAccept": "The armoury reloads. Your loadouts are kept; anything you had equipped that moved class is still where you left it."
 }
