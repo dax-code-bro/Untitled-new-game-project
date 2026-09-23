@@ -139,7 +139,39 @@ game.renderer.post.bloom = 0.8;
 game.renderer.post.exposure = 1.2;
 game.renderer.fog.density = 0.02;
 game.renderer.shadows.distance = 80;
+game.renderer.sky.bounce = 0.7;      // how much sun the ground throws back up
+game.renderer.sky.occlusion = 0.45;  // how much sky a shadowed point loses
 ```
+
+### Why anything has a lit underside
+
+`sky.ground` is the ground's **albedo**, not its radiance. What a surface
+facing downwards receives is that albedo times whatever is lighting the
+ground, and outdoors that is mostly the sun — several times the whole sky.
+`sky.bounce` is the fraction of it that comes back up.
+
+Leave it at zero and the ground half of the ambient hemisphere is a flat
+dark constant, so every downward-facing surface goes black however bright
+the day is: stair undersides, eaves, handguards, and worst of all rubble,
+which is nothing but facets pointing every way. On the shipped maps that
+was thirteen to sixteen per cent of the frame at absolute black.
+
+Two other things hold the shadows up, and both are easy to undo by
+accident:
+
+* `skyIrradiance` never gives a downward normal a sky share of exactly
+  zero. Zero is only true of something lying flat on the ground; anything
+  held above it sees sky past its own horizon, and that floor is what
+  keeps the blue and green of a dark material off the bottom rail.
+* The screen-space AO has a floor (`quality.ssaoFloor`, default 0.30).
+  It multiplies the whole of the light rather than the ambient part of
+  it, so without a floor a dense pile of geometry deletes its own
+  sunlight.
+
+And the grade runs **after** the sRGB encode, not before it. Contrast
+pivots around 0.5, which is mid-grey only in display space; applied to
+linear light the same line subtracts a flat constant and clips the
+bottom fifteen per cent of the picture to solid black.
 
 ## Destruction
 

@@ -184,6 +184,14 @@ class Renderer {
          on a bright map reads as a shadow, and short of the point
          where a shaded doorway becomes a hole. */
       occlusion: 0.45,
+      /* HOW MUCH OF THE SUN THE GROUND BOUNCES BACK UP. Multiplies the
+         ground half of the ambient hemisphere -- see groundIrradiance in
+         the surface shader. 0 is the old behaviour, where the underside
+         of every object on a bright map went to black; 1 is roughly what
+         a perfectly diffuse ground would really send back. 0.70 lifts an
+         underside off the floor while keeping it plainly darker than the
+         lit top, which is what an underside looks like. */
+      bounce: 0.70,
     };
     this.fog = {
       color: new Vec3(0.62, 0.72, 0.85),
@@ -396,6 +404,7 @@ class Renderer {
     sh.f('uSkyIntensity', this.sky.intensity);
     sh.v3('uRoomAmbient', this.sky.room);
     sh.f('uSkyOcclusion', this.sky.occlusion);
+    sh.f('uGroundBounce', this.sky.bounce);
     sh.v3('uFogColor', this.fog.color);
     sh.f('uFogDensity', this.fog.density);
     sh.f('uFogHeight', this.fog.height);
@@ -865,6 +874,14 @@ class Renderer {
       ssao.v2('uTexel', 1 / this.aoA.width, 1 / this.aoA.height);
       ssao.f('uRadius', this.quality.ssaoRadius || 0.6);
       ssao.f('uBias', 0.10);
+      /* A FLOOR, because this AO multiplies the whole of the light and
+         not just the ambient part of it. At intensity 2.9 the term
+         saturates to zero wherever geometry is dense -- and a pile of
+         rubble is the densest geometry the game ever makes, so the pile
+         came out black even in full sun. Screen-space occlusion has no
+         business removing direct sunlight; the floor caps how much of
+         the picture it is allowed to take. */
+      ssao.f('uAoFloor', this.quality.ssaoFloor != null ? this.quality.ssaoFloor : 0.30);
       ssao.f('uIntensity', 2.9);
       ssao.i('uSamples', this.quality.ssaoSamples | 0);
       ssao.f('uTime', this.time);

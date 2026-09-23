@@ -379,6 +379,7 @@ class Engine {
     /* How much sky a shadowed point loses. A map that is almost all
        interior wants more of this than one played in a field. */
     if (cfg.skyOcclusion != null) r.sky.occlusion = cfg.skyOcclusion;
+    if (cfg.groundBounce != null) r.sky.bounce = cfg.groundBounce;
     this.skyName = typeof name === 'string' ? name : 'custom';
     return this;
   }

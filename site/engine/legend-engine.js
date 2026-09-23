@@ -4235,18 +4235,51 @@ uniform float uSkyIntensity;
    doing. This is the room itself: the lit walls a lamp is bouncing off are,
    to a mirror, the environment. */
 uniform vec3 uRoomAmbient;
+/* ---- how much of the sun the ground bounces back up ----
+   See groundIrradiance below. */
+uniform float uGroundBounce;
 /* ---- sky occlusion from the sun shadow ----
    How much of the sky a shadowed point is allowed to keep. See the
    block where it is used, in the ambient term. */
 uniform float uSkyOcclusion;
+
+/* WHAT THE GROUND SENDS BACK UP.
+ *
+   uGroundColor is the ground's ALBEDO, not its radiance, and until this
+   function existed it was used as though it were radiance: a surface
+   facing straight down received a flat dark constant no matter how
+   bright the day was. What a downward-facing surface actually receives
+   is that albedo times whatever the ground itself is lit by, and on a
+   sunny map the ground is lit by a sun several times the strength of
+   the whole sky.
+
+   Leaving the sun out of it is why the UNDERSIDE OF EVERYTHING went
+   black on a bright map. A measured example, on a concrete sphere under
+   the default sun: the top of it came out at 170 and the bottom at 10,
+   a ratio of sixteen to one, when a stone ball on a sunlit road is
+   nearer four. Small objects are the worst case because most of their
+   surface faces somewhere other than up -- which is why it showed up
+   first, and loudest, in rubble. A shattered wall is nothing BUT
+   facets pointing every way, so half of every chunk went to black and
+   the pile read as one black blob rather than as broken masonry.
+
+   The bounce is attenuated by the same skyVis as the rest of the
+   ambient, so a roof still darkens the room under it: the caller
+   multiplies the whole of skyIrradiance by it. */
+vec3 groundIrradiance(){
+  // How square-on the sun hits flat ground. Nothing to bounce at night.
+  float lit = max(uSunDir.y, 0.0);
+  return uGroundColor * (uSkyIntensity + uSunColor * uSunIntensity * lit * uGroundBounce);
+}
 
 vec3 skyRadiance(vec3 dir){
   float up = dir.y;
   // Horizon band is tight near y=0 and eases into the zenith colour.
   float t = pow(saturate1(up * 0.5 + 0.5), 0.55);
   vec3 sky = mix(uSkyHorizon, uSkyZenith, saturate1(up * 1.6));
-  // Below the horizon, fade into the ground bounce colour.
-  sky = mix(uGroundColor, sky, smoothstep(-0.28, 0.06, up));
+  // Below the horizon, fade into the ground bounce -- the lit ground, so
+  // that a chrome surface looking down reflects a road and not a hole.
+  sky = mix(groundIrradiance() / max(uSkyIntensity, 1e-4), sky, smoothstep(-0.28, 0.06, up));
 
   float sunDot = saturate1(dot(dir, uSunDir));
   // Mie-like forward scattering halo around the sun.
@@ -4260,9 +4293,21 @@ vec3 skyRadiance(vec3 dir){
 
 /* Cheap hemisphere irradiance: what a diffuse surface receives from the sky. */
 vec3 skyIrradiance(vec3 n){
-  float up = n.y * 0.5 + 0.5;
-  vec3 sky = mix(uSkyHorizon, uSkyZenith, 0.65);
-  return mix(uGroundColor, sky, up) * uSkyIntensity;
+  /* A SURFACE FACING STRAIGHT DOWN STILL SEES SKY.
+   *
+     The plain hemisphere lerp gives n.y = -1 a sky share of exactly
+     zero, which is only true of a surface lying flat on the ground.
+     Everything else -- the underside of a chunk of rubble, a stair
+     tread, a handguard, an eave -- is held some distance above it and
+     sees sky in every direction past its own horizon. Zero is what kept
+     the blue and green of a dark material pinned at black no matter how
+     much warm bounce came up off the ground, because the bounce is the
+     colour of dirt and a dark red brick has almost no green in it to
+     return. The floor is what makes a shaded brick read as shaded brick
+     rather than as a hole cut in the picture. */
+  float up = mix(0.18, 1.0, n.y * 0.5 + 0.5);
+  vec3 sky = mix(uSkyHorizon, uSkyZenith, 0.65) * uSkyIntensity;
+  return mix(groundIrradiance(), sky, up);
 }
 `;
 
@@ -5335,6 +5380,32 @@ void main(){
   color *= uExposure;
   color = acesFilm(color);
 
+  /* TO DISPLAY SPACE FIRST, AND THEN GRADE.
+   *
+     The grade below pivots contrast around 0.5, which is mid-grey ONLY
+     once the picture has been encoded. ACES hands back a linear value,
+     where mid-grey is 0.18, and for a long time the encode was the last
+     thing in the shader -- so a pivot meant for display space was being
+     applied to linear light.
+
+     That is not a subtle mis-shaping. Expand the line at the contrast
+     the game actually ships: (x - 0.5) * 1.04 + 0.5 is 1.04x - 0.02, so
+     it SUBTRACTS A FLAT TWO HUNDREDTHS from linear light, and anything
+     dimmer than 0.0192 clamps to absolute zero. Linear 0.0192 encodes
+     to sRGB 0.18, so that threw away every shadow below 45 out of 255 --
+     the darkest fifth of the picture, gone, as one solid black with no
+     detail anywhere in it.
+
+     It is why the underside of dark materials stayed black however much
+     bounce light was put into them: the light was arriving and the
+     grade was subtracting it again. A brick sphere's underside measured
+     6.7 out of 255 and did not move -- 6.7, then 6.8 -- as the ground
+     bounce was swept from nothing to the whole of what a diffuse ground
+     really sends back.
+
+     So: encode, then grade, which is what the comment always said. */
+  color = pow(saturate3(color), vec3(1.0 / 2.2));
+
   // Grade in display space: contrast around mid-grey, then saturation.
   color = saturate3((color - 0.5) * uContrast + 0.5);
   float lum = dot(color, vec3(0.2126, 0.7152, 0.0722));
@@ -5353,10 +5424,7 @@ void main(){
     float n = hash12(gl_FragCoord.xy + fract(uTime) * 173.0) - 0.5;
     color += n * uGrain;
   }
-
-  // Linear to sRGB. The default framebuffer is not sRGB-encoded, so this
-  // conversion has to be explicit or everything reads too dark.
-  color = pow(saturate3(color), vec3(1.0 / 2.2));
+  color = saturate3(color);
 
   /* Retro: quantise to a small palette AFTER the grade, the way a machine
      with an eight-bit framebuffer would. Doing it in linear space instead
@@ -5395,6 +5463,7 @@ uniform vec2 uTexel;
 uniform float uRadius;
 uniform float uBias;
 uniform float uIntensity;
+uniform float uAoFloor;
 uniform int uSamples;
 uniform float uTime;
 layout(location=0) out vec4 outColor;
@@ -5470,7 +5539,9 @@ void main(){
     occ += above * range;
   }
   float ao = 1.0 - (occ / float(n)) * uIntensity;
-  outColor = vec4(saturate1(ao), 0.0, 0.0, 1.0);
+  // Floored: see the note where uAoFloor is set. This term multiplies the
+  // direct sun as well as the ambient, so it must not reach zero.
+  outColor = vec4(clamp(ao, uAoFloor, 1.0), 0.0, 0.0, 1.0);
 }
 `;
 
@@ -5738,6 +5809,14 @@ class Renderer {
          on a bright map reads as a shadow, and short of the point
          where a shaded doorway becomes a hole. */
       occlusion: 0.45,
+      /* HOW MUCH OF THE SUN THE GROUND BOUNCES BACK UP. Multiplies the
+         ground half of the ambient hemisphere -- see groundIrradiance in
+         the surface shader. 0 is the old behaviour, where the underside
+         of every object on a bright map went to black; 1 is roughly what
+         a perfectly diffuse ground would really send back. 0.70 lifts an
+         underside off the floor while keeping it plainly darker than the
+         lit top, which is what an underside looks like. */
+      bounce: 0.70,
     };
     this.fog = {
       color: new Vec3(0.62, 0.72, 0.85),
@@ -5950,6 +6029,7 @@ class Renderer {
     sh.f('uSkyIntensity', this.sky.intensity);
     sh.v3('uRoomAmbient', this.sky.room);
     sh.f('uSkyOcclusion', this.sky.occlusion);
+    sh.f('uGroundBounce', this.sky.bounce);
     sh.v3('uFogColor', this.fog.color);
     sh.f('uFogDensity', this.fog.density);
     sh.f('uFogHeight', this.fog.height);
@@ -6419,6 +6499,14 @@ class Renderer {
       ssao.v2('uTexel', 1 / this.aoA.width, 1 / this.aoA.height);
       ssao.f('uRadius', this.quality.ssaoRadius || 0.6);
       ssao.f('uBias', 0.10);
+      /* A FLOOR, because this AO multiplies the whole of the light and
+         not just the ambient part of it. At intensity 2.9 the term
+         saturates to zero wherever geometry is dense -- and a pile of
+         rubble is the densest geometry the game ever makes, so the pile
+         came out black even in full sun. Screen-space occlusion has no
+         business removing direct sunlight; the floor caps how much of
+         the picture it is allowed to take. */
+      ssao.f('uAoFloor', this.quality.ssaoFloor != null ? this.quality.ssaoFloor : 0.30);
       ssao.f('uIntensity', 2.9);
       ssao.i('uSamples', this.quality.ssaoSamples | 0);
       ssao.f('uTime', this.time);
@@ -16765,6 +16853,7 @@ class Engine {
     /* How much sky a shadowed point loses. A map that is almost all
        interior wants more of this than one played in a field. */
     if (cfg.skyOcclusion != null) r.sky.occlusion = cfg.skyOcclusion;
+    if (cfg.groundBounce != null) r.sky.bounce = cfg.groundBounce;
     this.skyName = typeof name === 'string' ? name : 'custom';
     return this;
   }

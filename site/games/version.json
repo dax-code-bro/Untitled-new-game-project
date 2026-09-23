@@ -1,8 +1,8 @@
 {
-  "version": "0.13.0",
-  "name": "a finger with three bones",
-  "date": "2026-09-21",
+  "version": "0.14.0",
+  "name": "the light under things",
+  "date": "2026-09-23",
   "mode": "multiplayer",
-  "did": "A finger is three actors chained, not one rigid hook on a hinge, and the bend is spread across the joints the way a hand opens",
+  "did": "Rubble stopped being a black blob: the ground half of the ambient now carries the sun's bounce, a downward normal keeps a share of the sky, the screen-space AO has a floor, and the grade runs after the sRGB encode instead of before it. Interaction animations lock you in place.",
   "onAccept": "The armoury reloads. Your loadouts are kept; anything you had equipped that moved class is still where you left it."
 }

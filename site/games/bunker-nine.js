@@ -1532,7 +1532,7 @@ const ROUNDS = {
 
    Keep this in step with version.json -- site/games/bump-version.js does
    both at once, and there is a test that fails if they drift. */
-const B9_BUILD = { version: '0.13.0', name: 'a finger with three bones' };
+const B9_BUILD = { version: '0.14.0', name: 'the light under things' };
 
 /* ---------------- live updates ----------------
 
@@ -12836,6 +12836,18 @@ function doInteract(game, S, P, hud, sfx, it, dt) {
     S.escape.fuelling = S.escape.def.pour;
     sfx.doorOpen();
   } else if (it.kind === 'crankBoat') {
+    /* THE ONE THE REPORT NAMED. "You were allowed to move around the
+       lever while the animation was broken, still saying you were
+       cranking it." Locked now: the feet are ignored, the body turns to
+       face the crank, the tool comes out, and walking off cancels it
+       instead of leaving a phantom cranking away by itself. */
+    const at = (S.escape.def && S.escape.def.crankAt) || (it.at || null);
+    P.lock = {
+      t: S.escape.def.crank, kind: 'crank', at: at, tool: 'crank',
+      commit: false,
+      done: function () { S.escape.cranking = 0.001; },
+      cancel: function () { S.escape.cranking = 0; },
+    };
     S.escape.cranking = S.escape.def.crank;
     sfx.doorOpen();
   } else if (it.kind === 'castOff') {
@@ -12907,7 +12919,18 @@ function doInteract(game, S, P, hud, sfx, it, dt) {
        is done with a hammer rather than by standing near the wall: the
        tool comes out, the arm swings, the nail goes in. Being unable to
        shoot while you do it is the whole cost of repairing. */
-    if (S.repairFrame !== S.frame - 1) { S.repairT = PLAYER.plankTime; P.buildT = 0; }
+    /* AND BOARDING UP, for the same reason. The hammer already came
+       out; the man holding it could still walk away while the nails
+       went in. One plank at a time, so letting go between planks is
+       allowed -- that is the design -- but you cannot stroll off
+       halfway through driving one. */
+    if (S.repairFrame !== S.frame - 1) {
+      S.repairT = PLAYER.plankTime; P.buildT = 0;
+      if (!P.lock && it.win && it.win.def) {
+        P.lock = { t: PLAYER.plankTime, kind: 'board', at: it.win.def.sillAt,
+          tool: 'hammer', commit: false };
+      }
+    }
     S.repairFrame = S.frame;
     P.building = true;
     S.repairT -= dt;

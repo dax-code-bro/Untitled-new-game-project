@@ -489,6 +489,9 @@ const ESCAPE = {
   beach: { at: [420, 0, 0] },
   // How long each stage takes, in seconds.
   pour: 4.0, crank: 3.0, run: 9.0, fade: 1.6, sit: 9.0,
+  /* Where the crank handle is, so the man locked into turning it faces
+     the handle rather than whatever he happened to be looking at. */
+  crankAt: [C.pier.x + 3.35, C.water.y + 0.55, C.boathouse.z + 0.4],
 };
 
 /* ---------------- the doors ----------------
