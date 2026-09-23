@@ -395,6 +395,8 @@
       id: i, name: def.name, team: team, bot: !!def.bot, skill: def.skill || null,
       operator: def.operator || null,
       hp: HEALTH, alive: false, respawnAt: 0,
+      /* Set only by the Search and Destroy tank -- see busyHold. */
+      busy: null,
       pos: { x: 0, y: 0, z: 0 }, yaw: 0, pitch: 0,
       sliding: false, slideEnd: 0, slideRecover: 0,
       vel: { x: 0, z: 0 },
@@ -1251,6 +1253,11 @@
   }
 
   function fire(M, p, rand, emit) {
+    /* Both hands are on a pair of wire cutters. Guarded here and not at
+       the callers because M.fire and fireHuman are public entry points
+       that do not pass through either of them, and a hold with a way
+       round it is the fault this was written to fix. */
+    if (p.busy) return false;
     var w = gun(p);
     if (!p.alive || M.time < p.nextShot || M.time < p.reloadUntil) return null;
     if (p.ammo[p.held] <= 0) { beginReload(M, p); return null; }
@@ -1516,6 +1523,7 @@
     to.streak = 0;
     to.respawnAt = M.time + Math.max(RESPAWN_FLOOR, RESPAWN);
     to.zoneLeft = 0;
+    to.busy = null;
     if (from) {
       from.kills++;
       from.streak++;
@@ -2754,7 +2762,45 @@
      Four states. A bot with fourteen states does something
      inexplicable once a match and ruins it. */
 
+  /* ================================================================
+     WHAT BEING HELD MEANS
+     ================================================================
+     "You were allowed to move around the lever while the animation was
+     broken, still saying you were cranking it."
+
+     So a lock is not a flag that a bit of UI reads. It is this, and it
+     is applied in the one place both a bot and the player go through:
+
+       the feet stop        no walk, no sprint, no slide, no jump
+       the hands are busy   no firing, no reload, no grenade
+       the body turns       to the thing being worked on, which is how
+                            the man ends up looking at the tank instead
+                            of at wherever he happened to be aiming
+
+     Returns true when the man is held, so the callers can stop early
+     rather than carefully zeroing eleven fields each. */
+  function busyHold(M, p, dt) {
+    if (!p.busy) return false;
+    p.vel.x = 0; p.vel.z = 0;
+    p.sprinting = false; p.aiming = false;
+    p._wantSlide = false; p.sliding = false;
+    p._heldTrigger = false;
+    var f = p.busy.faceAt;
+    if (f) {
+      var want = Math.atan2(f[0] - p.pos.x, f[2] - p.pos.z);
+      var d = want - p.yaw;
+      while (d > Math.PI) d -= Math.PI * 2;
+      while (d < -Math.PI) d += Math.PI * 2;
+      p.yaw += d * Math.min(1, dt * 7);
+      p.pitch += (0.12 - p.pitch) * Math.min(1, dt * 5);
+    }
+    return true;
+  }
+
   function botThink(M, p, dt, rand, emit) {
+    /* A held bot is held. Without this the one cutting the lock walks
+       off to shoot at somebody while the progress bar fills. */
+    if (busyHold(M, p, dt)) return;
     var ai = p.ai, sk = p.skill || MP_DATA.BOT_SKILL[1];
     var w = gun(p);
 
@@ -2989,7 +3035,8 @@
         var sd = M.map.sites[M.bomb.want];
         return { x: sd.at[0] + (rand() - 0.5) * 13, z: sd.at[2] + (rand() - 0.5) * 13 };
       }
-      var s2 = M.map.sites[att ? M.bomb.want : (rand() < 0.5 ? 0 : 1)];
+      var s2 = M.map.sites[att ? M.bomb.want
+        : Math.min(M.map.sites.length - 1, Math.floor(rand() * M.map.sites.length))];
       return { x: s2.at[0] + (rand() - 0.5) * 10, z: s2.at[2] + (rand() - 0.5) * 10 };
     }
     var lane = M.map.lanes[Math.floor(rand() * M.map.lanes.length) % M.map.lanes.length];
@@ -3053,8 +3100,17 @@
     var half = Math.ceil(M.mode.score / 2);
     var swapped = (M.score.a + M.score.b) >= half;
     var attackers = swapped ? 'b' : 'a';
-    var want = (M.round % 2) ? 0 : 1;
+    /* THREE SITES NOW, so the round number cannot just alternate. Walk
+       them in order: with three sites and six rounds a side, each one
+       comes up twice. */
+    var nSites = (M.map.sites && M.map.sites.length) || 1;
+    var want = M.round % nSites;
     var site = M.map.sites[want];
+    /* Every tank shut, every lock back on, nobody still held by last
+       round's job. A round that starts with a door standing open from
+       the previous one is a round somebody can finish in six seconds. */
+    for (var si = 0; si < nSites; si++) showTank(M.map.sites[si], false);
+    releaseAll(M);
     /* The bomb goes to whoever spawned nearest the site they are going
        to, not to whoever happens to be first in the list. On Town --
        the biggest of the four -- the first attacker was routinely the
@@ -3075,7 +3131,81 @@
     M.roundTime = 0;
   }
 
-  function updateBomb(M, dt, emit) {
+  /* ================================================================
+     THE TANK, THE LOCK AND FOUR WIRES
+     ================================================================
+     A defuse used to be six seconds of standing on a coordinate. This
+     is what was asked for instead, and the shape of it is the point:
+     it takes twenty seconds, you cannot move for any of them, and at
+     the end of it you have to be right about something.
+
+       0.0 - 7.0    WIRE CUTTERS on the padlock. The lock goes, the
+                    doors swing.
+       7.0 - 20.0   INSIDE, working on the bomb.
+       20.0         FOUR WIRES. One of them is the one.
+       wrong        the failsafe arms and you have TEN SECONDS to pick
+                    again from what is left.
+
+     And the other side can undo it. A tank that has been cut open, with
+     nobody in it, can be BLOWTORCHED shut again: doors back together,
+     lock fused, and the twenty seconds start from nothing.
+
+     Both jobs hold the man doing them still -- see busyTick. That was
+     the whole complaint about the power lever in the other game: an
+     animation you could walk away from while it carried on saying you
+     were doing it. */
+  var SND = {
+    lock: 7.0,          // wire cutters on the padlock
+    inside: 13.0,       // and then in the tank, on the bomb
+    failsafe: 10.0,     // after a wrong wire
+    weld: 8.0,          // the blowtorch, to put it back
+    hold: 4.0,          // how long progress survives its man being killed
+    wires: ['red', 'blue', 'green', 'yellow'],
+  };
+
+  /* Everybody of one side who is standing at the site, nearest first. */
+  function atSite(M, team, site) {
+    return M.people.filter(function (q) {
+      return q.team === team && q.alive
+        && Math.hypot(q.pos.x - site.at[0], q.pos.z - site.at[2]) < site.r;
+    }).sort(function (x, y) {
+      return Math.hypot(x.pos.x - site.at[0], x.pos.z - site.at[2])
+        - Math.hypot(y.pos.x - site.at[0], y.pos.z - site.at[2]);
+    });
+  }
+
+  /* THE LOCK ITSELF. One man at a time is the worker, he cannot move,
+     and he is let go the moment the job stops being his -- finished,
+     killed, welded shut under him, or the round over. Nothing else in
+     the match is allowed to set p.busy, so there is exactly one place
+     that can leave somebody stuck. */
+  function setBusy(M, p, kind, site) {
+    if (!p) return;
+    p.busy = { kind: kind, site: site.id, at: M.time,
+      faceAt: (site.tank && site.tank.at) || site.at };
+  }
+  function clearBusy(p) { if (p) p.busy = null; }
+  function releaseAll(M) {
+    for (var i = 0; i < M.people.length; i++) clearBusy(M.people[i]);
+  }
+
+  function shuffledWires(rand) {
+    var w = SND.wires.slice();
+    for (var i = w.length - 1; i > 0; i--) {
+      var j = Math.floor(rand() * (i + 1));
+      var t = w[i]; w[i] = w[j]; w[j] = t;
+    }
+    return w;
+  }
+
+  /* Open the doors and take the padlock off, or put both back. Guarded,
+     because a map built before the tanks existed has sites with no tank
+     on them and the mode still has to run. */
+  function showTank(site, open) {
+    if (site && site.tank && site.tank.setOpen) site.tank.setOpen(open ? 1 : 0);
+  }
+
+  function updateBomb(M, dt, emit, rand) {
     var B = M.bomb;
     if (!B) return;
     /* THE OPENING FREEZE.
@@ -3119,12 +3249,21 @@
          walk to in a straight line for six rounds running. Once per
          round, so it is a decision and not a dither. */
       if (c2 && c2.alive && !B.switched && M.roundTime > 20) {
-        var other = 1 - B.want;
-        var so = M.map.sites[other], sn = M.map.sites[B.want];
-        var dOther = Math.hypot(c2.pos.x - so.at[0], c2.pos.z - so.at[2]);
+        /* THE NEAREST OF THE OTHERS, not "the other one". With two
+           sites that was the same sentence; with three it is not, and
+           1 - want on a three-site map sends a carrier standing at
+           site 2 off to site -1, which is nowhere. */
+        var sn = M.map.sites[B.want];
         var dNow = Math.hypot(c2.pos.x - sn.at[0], c2.pos.z - sn.at[2]);
-        if (dOther < dNow * 1.25) {
-          B.want = other; B.switched = true; B.progress = 0;
+        var best = -1, bestD = Infinity;
+        for (var oi = 0; oi < M.map.sites.length; oi++) {
+          if (oi === B.want) continue;
+          var so = M.map.sites[oi];
+          var d = Math.hypot(c2.pos.x - so.at[0], c2.pos.z - so.at[2]);
+          if (d < bestD) { bestD = d; best = oi; }
+        }
+        if (best >= 0 && bestD < dNow * 1.25) {
+          B.want = best; B.switched = true; B.progress = 0;
           M.people.forEach(function (q) { if (q.team === B.attackers) { q.ai.goal = null; q.ai.goalAt = -99; } });
         }
       }
@@ -3151,6 +3290,16 @@
         B.progress += dt * (1 + (onSite.length - 1) * 0.40);
         if (B.progress >= 2.8) {
           B.planted = true; B.plantAt = M.time; B.site = site; B.progress = 0;
+          /* The bomb goes INTO the tank and the tank is locked. Which
+             wire is the one is decided now, out of the match's own
+             seeded random, so a replay of a match cuts the same wire. */
+          var order = shuffledWires(rand);
+          B.tank = {
+            cut: 0, open: false, inside: 0, ready: false, weld: 0,
+            wires: order, correct: order[0], tried: [],
+            failsafe: 0, worker: null, welder: null, lastWork: M.time,
+          };
+          showTank(site, false);
           var ev = { t: M.time, kind: 'plant', who: onSite[0].id, site: site.id };
           M.events.push(ev); emit(ev);
         }
@@ -3168,26 +3317,152 @@
 
     /* Planted. The clock is the only thing that matters now -- killing
        the last defender does not win it, and that is the mode. */
-    var defusing = M.people.filter(function (p) {
-      return p.team === B.defenders && p.alive
-        && Math.hypot(p.pos.x - B.site.at[0], p.pos.z - B.site.at[2]) < B.site.r;
-    });
-    if (defusing.length) {
-      B.defuse += dt * (1 + (defusing.length - 1) * 0.35);
-      if (B.defuse >= 6.0) {
-        var ev2 = { t: M.time, kind: 'defuse', who: defusing[0].id };
-        M.events.push(ev2); emit(ev2);
-        return endRound(M, B.defenders, 'defused', emit);
+    var T = B.tank;
+    if (!T) {
+      /* A round that was already in progress when this code arrived, or
+         a map with no tanks. Arm one rather than run without it: a
+         missing tank must not become a defuse that can never happen. */
+      var ord = shuffledWires(rand || Math.random);
+      T = B.tank = { cut: 0, open: false, inside: 0, ready: false, weld: 0,
+        wires: ord, correct: ord[0], tried: [], failsafe: 0,
+        worker: null, welder: null, lastWork: M.time };
+    }
+    var defusing = atSite(M, B.defenders, B.site);
+    var guarding = atSite(M, B.attackers, B.site);
+
+    /* THE FAILSAFE RUNS WHATEVER ELSE IS HAPPENING. Once a wrong wire
+       has been cut the ten seconds are the ten seconds -- being killed
+       off the tank does not stop the countdown, and that is the whole
+       weight of getting it wrong. */
+    if (T.failsafe > 0) {
+      T.failsafe -= dt;
+      if (T.failsafe <= 0) {
+        T.failsafe = 0;
+        var evF = { t: M.time, kind: 'failsafe', site: B.site.id };
+        M.events.push(evF); emit(evF);
+        releaseAll(M);
+        return endRound(M, B.attackers, 'detonated', emit);
       }
-    } else B.defuse = Math.max(0, B.defuse - dt * 0.5);
-    if (M.time - B.plantAt > 45) return endRound(M, B.attackers, 'detonated', emit);
-    if (alive[B.defenders] === 0 && !defusing.length) {
+    }
+
+    /* ---- the man doing the work ---- */
+    var worker = T.worker != null ? M.people[T.worker] : null;
+    if (worker && (!worker.alive || worker.team !== B.defenders)) { clearBusy(worker); worker = null; T.worker = null; }
+    if (!worker && defusing.length && !T.ready) {
+      worker = defusing[0]; T.worker = worker.id;
+    }
+    /* A worker who is somehow no longer at the tank -- knocked back by a
+       blast, most likely -- gives the job up rather than working on it
+       from wherever he landed. */
+    if (worker && defusing.indexOf(worker) < 0) { clearBusy(worker); worker = null; T.worker = null; }
+
+    if (worker) {
+      T.lastWork = M.time;
+      if (!T.open) {
+        setBusy(M, worker, 'cut', B.site);
+        T.cut += dt * (1 + (defusing.length - 1) * 0.30);
+        if (T.cut >= SND.lock) {
+          T.cut = SND.lock; T.open = true;
+          showTank(B.site, true);
+          var evC = { t: M.time, kind: 'cut', who: worker.id, site: B.site.id };
+          M.events.push(evC); emit(evC);
+        }
+      } else if (!T.ready) {
+        setBusy(M, worker, 'inside', B.site);
+        T.inside += dt * (1 + (defusing.length - 1) * 0.30);
+        if (T.inside >= SND.inside) {
+          T.inside = SND.inside; T.ready = true;
+          setBusy(M, worker, 'wires', B.site);
+          var evW = { t: M.time, kind: 'wires', who: worker.id, site: B.site.id };
+          M.events.push(evW); emit(evW);
+        }
+      }
+    } else if (M.time - T.lastWork > SND.hold) {
+      /* Only once the tank has properly been given up. Work that
+         unwinds the instant its man is shot is work that only ever
+         gets finished uncontested. */
+      if (!T.open) T.cut = Math.max(0, T.cut - dt * 0.5);
+      else T.inside = Math.max(0, T.inside - dt * 0.4);
+    }
+
+    /* ---- and the blowtorch ---- */
+    var welder = T.welder != null ? M.people[T.welder] : null;
+    if (welder && (!welder.alive || guarding.indexOf(welder) < 0)) { clearBusy(welder); welder = null; T.welder = null; }
+    /* Only worth doing on a tank that is open, and only with nobody in
+       it -- welding a man into a steel box is not a thing this mode is
+       going to do to anybody. */
+    if (T.open && !T.ready && !worker && guarding.length) {
+      if (!welder) { welder = guarding[0]; T.welder = welder.id; }
+      setBusy(M, welder, 'weld', B.site);
+      T.weld += dt * (1 + (guarding.length - 1) * 0.30);
+      if (T.weld >= SND.weld) {
+        clearBusy(welder);
+        T.weld = 0; T.open = false; T.cut = 0; T.inside = 0; T.welder = null;
+        showTank(B.site, false);
+        var evB = { t: M.time, kind: 'weld', who: welder.id, site: B.site.id };
+        M.events.push(evB); emit(evB);
+      }
+    } else {
+      if (welder) { clearBusy(welder); T.welder = null; }
+      T.weld = Math.max(0, T.weld - dt * 0.6);
+    }
+
+    /* ---- a bot at the wires picks one ---- */
+    if (T.ready && worker && worker.bot) {
+      if (T.botAt == null) T.botAt = M.time + 1.2 + rnd(rand) * 1.6;
+      if (M.time >= T.botAt) {
+        T.botAt = null;
+        var left = T.wires.filter(function (w) { return T.tried.indexOf(w) < 0; });
+        /* A better bot guesses better. Not certainty even at the top --
+           a mode where the best bots always cut the right wire first is
+           a mode with no failsafe in it. */
+        var sure = worker.skill && worker.skill.aim != null ? 0.30 + worker.skill.aim * 0.45 : 0.45;
+        var pick = (rnd(rand) < sure || left.length === 1)
+          ? T.correct : left[Math.floor(rnd(rand) * left.length) % left.length];
+        if (left.indexOf(pick) < 0) pick = left[0];
+        var r = cutWire(M, worker, pick, emit);
+        if (r === 'defused') return endRound(M, B.defenders, 'defused', emit);
+      }
+    }
+
+    /* Detonation, and the one thing that is not decided by it. */
+    if (M.time - B.plantAt > 45) { releaseAll(M); return endRound(M, B.attackers, 'detonated', emit); }
+    if (alive[B.defenders] === 0 && !defusing.length && T.failsafe <= 0) {
+      releaseAll(M);
       return endRound(M, B.attackers, 'defenders eliminated', emit);
     }
     return undefined;
   }
 
+  function rnd(rand) { return typeof rand === 'function' ? rand() : Math.random(); }
+
+  /* CUT ONE. The same call for a bot and for the player, because the
+     rule about what a wrong wire costs must not depend on who cut it.
+     Returns 'defused', 'wrong', or 'no' when there was nothing to cut. */
+  function cutWire(M, p, colour, emit) {
+    var B = M.bomb, T = B && B.tank;
+    if (!T || !T.ready || !p || !p.alive) return 'no';
+    if (T.worker !== p.id) return 'no';
+    if (T.tried.indexOf(colour) >= 0 || T.wires.indexOf(colour) < 0) return 'no';
+    var ev;
+    if (colour === T.correct) {
+      clearBusy(p);
+      releaseAll(M);
+      ev = { t: M.time, kind: 'defuse', who: p.id, wire: colour };
+      M.events.push(ev); if (emit) emit(ev);
+      return 'defused';
+    }
+    T.tried.push(colour);
+    /* The failsafe arms ONCE. Cutting a second wrong wire inside the
+       ten seconds does not buy another ten. */
+    if (T.failsafe <= 0) T.failsafe = SND.failsafe;
+    ev = { t: M.time, kind: 'wrongWire', who: p.id, wire: colour };
+    M.events.push(ev); if (emit) emit(ev);
+    return 'wrong';
+  }
+
   function endRound(M, winner, why, emit) {
+    releaseAll(M);
     M.score[winner]++;
     var ev = { t: M.time, kind: 'roundEnd', winner: winner, why: why,
       score: { a: M.score.a, b: M.score.b } };
@@ -3237,6 +3512,7 @@
     p.alive = false;
     p.deaths++;
     p.streak = 0;
+    p.busy = null;
     p.respawnAt = M.time + Math.max(RESPAWN_FLOOR, RESPAWN);
   }
 
@@ -3299,7 +3575,7 @@
       /* Out of the world. It should not be possible and it is checked
          for anyway, because the one time it happens it is a player
          falling for the rest of the match. */
-      if (p.pos.y < -25) { p.alive = false; p.deaths++; p.respawnAt = M.time + 2; }
+      if (p.pos.y < -25) { p.alive = false; p.busy = null; p.deaths++; p.respawnAt = M.time + 2; }
     }
 
     /* Nobody stands inside anybody, and then everybody is placed. */
@@ -3308,7 +3584,7 @@
        is drawn where it is now rather than where it was last frame. */
     for (var j = 0; j < M.people.length; j++) place(M, M.people[j]);
 
-    if (M.mode.bomb) updateBomb(M, dt, emit);
+    if (M.mode.bomb) updateBomb(M, dt, emit, rand);
     else {
       if (M.score.a >= M.mode.score) return finish(M, 'a', emit);
       if (M.score.b >= M.mode.score) return finish(M, 'b', emit);
@@ -3330,6 +3606,12 @@
   function control(M, cmd, dt) {
     var p = M.you;
     if (!p || !p.alive || M.over) return;
+    /* THE PLAYER IS HELD THE SAME WAY A BOT IS, and by the same
+       function. Two separate implementations of "you cannot move" is
+       two chances for one of them to be the broken one. Note this is
+       before the yaw is taken from the command: while you are cutting
+       a lock the mouse does not turn you, the job does. */
+    if (busyHold(M, p, dt)) return;
     var w = gun(p);
     p.yaw = cmd.yaw; p.pitch = cmd.pitch;
     p.aiming = !!cmd.aim;
@@ -3496,6 +3778,9 @@
     start: start,
     HEALTH: HEALTH, EYE: EYE, RESPAWN: RESPAWN,
     damageAt: damageAt, botLoadout: botLoadout, control: control,
+    /* Search and Destroy, for the HUD and for the tests. cutWire is
+       the ONE way a wire gets cut, by a bot or by the player. */
+    SND: SND, cutWire: cutWire, atSite: atSite,
     muzzleOf: muzzleOf, kickFrom: kickFrom, settleKick: settleKick,
     AIM_Y: 1.25, aimYOf: aimYOf, GRAVITY: GRAVITY, JUMP: JUMP,
     nav: { build: navBuild, path: navPath, clear: navClear, blocked: navBlocked,

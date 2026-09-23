@@ -37,7 +37,14 @@
     forward: ['w', 'arrowup'], back: ['s', 'arrowdown'],
     left: ['a', 'arrowleft'], right: ['d', 'arrowright'],
     jump: [' '], crouch: ['control', 'c'], sprint: ['shift'],
-    slide: ['z'], reload: ['r'], swap: ['q', '1', '2'], scores: ['tab'],
+    slide: ['z'], reload: ['r'], swap: ['q'], scores: ['tab'],
+    /* THE FOUR WIRES. 1 to 4, and the D-pad, which is why swap lost its
+       1 and 2: a key cannot both change your gun and cut a wire, and
+       there is no moment in a round where you want the gun one more
+       than you want the wire -- while the panel is up you cannot shoot
+       anyway. Q still swaps. */
+    wire1: ['1', 'code:Digit1'], wire2: ['2', 'code:Digit2'],
+    wire3: ['3', 'code:Digit3'], wire4: ['4', 'code:Digit4'],
     /* LOOK AT THE THING YOU ARE HOLDING. There was no way to: you could
        fire a weapon, reload it, sprint with it and swap off it, and
        never once see it. On a game whose argument is that the guns are
@@ -139,6 +146,38 @@
   letter-spacing:.04em; text-shadow:0 2px 8px rgba(0,0,0,.9); }
 #mpui .zone .lab { margin-top:4px; font:600 12px/1 ui-sans-serif,sans-serif;
   letter-spacing:.30em; color:#e8ddc8; text-shadow:0 1px 4px rgba(0,0,0,.95); }
+
+/* ---- the tank: a job bar, and then four wires ----
+   Bottom middle, above the gun panel, because it is the thing you are
+   doing and not a warning about somewhere you are. The wires are real
+   buttons with real numbers on them: a colour alone is not something a
+   colourblind player can be asked to pick under a ten second clock. */
+#mpui .tank { position:absolute; left:50%; bottom:24%; transform:translateX(-50%);
+  width:400px; text-align:center; opacity:0; transition:opacity .16s linear;
+  pointer-events:none; }
+#mpui .tank.on { opacity:1; }
+#mpui .tank .job { font:600 13px/1 ui-sans-serif,sans-serif; letter-spacing:.26em;
+  color:#e8ddc8; text-shadow:0 1px 4px rgba(0,0,0,.95); }
+#mpui .tank .bar { margin:7px auto 0; width:300px; height:5px; border-radius:3px;
+  background:rgba(0,0,0,.55); box-shadow:inset 0 0 0 1px rgba(232,221,200,.22); }
+#mpui .tank .bar i { display:block; height:100%; width:0%; border-radius:3px;
+  background:linear-gradient(90deg,#8fd06a,#d8e86a); }
+#mpui .tank.weld .bar i { background:linear-gradient(90deg,#ffb347,#ff7a3d); }
+#mpui .tank .fuse { margin-top:8px; font:700 34px/1 'Oswald',ui-sans-serif,sans-serif;
+  color:#e8483a; letter-spacing:.04em; text-shadow:0 2px 8px rgba(0,0,0,.9);
+  display:none; }
+#mpui .tank.fail .fuse { display:block; }
+#mpui .tank .wires { display:none; justify-content:center; gap:12px; margin-top:10px; }
+#mpui .tank.pick .wires { display:flex; }
+#mpui .tank .wires b { display:block; width:62px; padding:7px 0 6px; border-radius:5px;
+  font:700 12px/1 ui-sans-serif,sans-serif; letter-spacing:.14em; color:#0d0f12;
+  box-shadow:0 2px 10px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,255,255,.28); }
+#mpui .tank .wires b.gone { opacity:.22; }
+#mpui .tank .wires b .k { display:block; margin-top:3px; font-size:10px; opacity:.75; }
+#mpui .tank .wires b.red { background:#d5382c; color:#fff; }
+#mpui .tank .wires b.blue { background:#2f6fd0; color:#fff; }
+#mpui .tank .wires b.green { background:#3f9b48; color:#fff; }
+#mpui .tank .wires b.yellow { background:#e0c23a; }
 
 #mpui .xpop i.gold { color:#ffc85e; text-shadow:0 0 7px rgba(255,160,40,.5),0 1px 3px rgba(0,0,0,.95); }
 
@@ -360,6 +399,10 @@
   <div class="zone"><svg viewBox="0 0 24 24" fill="#e8483a" aria-hidden="true">
     <path d="M12 2C7.6 2 4 5.4 4 9.6c0 2.4 1.2 4.1 2.6 5.2V17c0 .6.4 1 1 1h1.2v1.6c0 .5.4.9.9.9h4.6c.5 0 .9-.4.9-.9V18H17c.6 0 1-.4 1-1v-2.2c1.4-1.1 2.6-2.8 2.6-5.2C20.6 5.4 16.4 2 12 2zm-3.3 9.6a1.9 1.9 0 110-3.8 1.9 1.9 0 010 3.8zm6.6 0a1.9 1.9 0 110-3.8 1.9 1.9 0 010 3.8zM12 16.4l-1.1-2.2h2.2L12 16.4z"/>
   </svg><div class="cd">10</div><div class="lab">RETURN TO THE COMBAT ZONE</div></div>
+  <div class="tank"><div class="job">CUTTING THE LOCK</div>
+    <div class="bar"><i></i></div>
+    <div class="fuse">10</div>
+    <div class="wires"></div></div>
   <div class="dmg"></div>
   <div class="top">
     <div class="sc"><span class="us">0</span><span class="sp">&ndash;</span><span class="them">0</span></div>
@@ -756,6 +799,17 @@
           cmd.swap = cmd.swap || edge('swap', down(p, PAD.swap));
           cmd.slide = cmd.slide || edge('slide', down(p, PAD.slide));
           cmd.scores = cmd.scores || down(p, PAD.scores);
+          /* THE FOUR FACE BUTTONS, AS FOUR BUTTONS. Published as their
+             own field rather than folded into jump and reload, because
+             the only thing that reads it is the wire panel and the
+             panel is only up while you are held -- at which point jump,
+             crouch, reload and swap all do nothing anyway. The D-pad
+             cannot have them: that is the killstreak rail, which is its
+             own module reading its own buttons. */
+          cmd.padFace = edge('w1', down(p, PAD.jump)) ? 1
+            : edge('w2', down(p, PAD.crouch)) ? 2
+              : edge('w3', down(p, PAD.reload)) ? 3
+                : edge('w4', down(p, PAD.swap)) ? 4 : 0;
         } else {
           /* Genuinely strange hardware: fewer than fifteen buttons, so
              the standard indices cannot be assumed. Bind what is nearly
@@ -816,7 +870,14 @@
     mauser: 'mauserC96', breakwater: 'breakwater', scatter: 'scattergun',
     sawnoff: 'sawnOff', thompson: 'thompson', mg42: 'mg42',
     remington: 'remington700', killstreak: 'killStreak',
-    riotshield: 'riotShield' };
+    riotshield: 'riotShield',
+    /* THE TWO TOOLS. Not weapons -- they have no id in MP_DATA, no
+       stats and no attachments -- but they go through the same
+       viewmodel because they are held in the same hands, and building
+       a second path for them is how the two would drift apart. The
+       fallback chain below ends at an M4, so a tool id that reached it
+       would put a rifle in your hands to cut a padlock with. */
+    'tool-cutters': 'wireCutters', 'tool-torch': 'blowtorch' };
   /* Nothing borrows a model any more. The fallback stays because a new
      id added to MP_DATA before its model exists should still put
      something in the player's hands. */
@@ -1139,6 +1200,17 @@
       } catch (e) { made.__arms = null; }
     }
     return made;
+  }
+
+  /* What is in your hands for a given job. Null means the gun. */
+  function toolFor(busy) {
+    if (!busy) return null;
+    if (busy.kind === 'cut') return 'tool-cutters';
+    if (busy.kind === 'weld') return 'tool-torch';
+    /* Inside the tank and at the wires, the cutters are still what you
+       are holding -- the wire is cut with the same pair that took the
+       padlock off. */
+    return 'tool-cutters';
   }
 
   /* WHICH OF THE SIX (now seven) A WEAPON RELOADS WITH.
@@ -1638,6 +1710,18 @@
         var hipX = 0.092 + bulk * 0.020;
         var hipY = -0.128 - bulk * 0.026;
         var hipD = 0.355 + bulk * 0.055;
+        /* A TOOL IS NOT CARRIED, IT IS USED. The hip numbers above are
+           where a rifle rides when you are walking about with it, and a
+           two-hundred-millimetre pair of pliers held there is a speck in
+           the bottom corner -- which is what the first build of this
+           looked like. A tool comes UP and IN, because you hold a tool
+           against the thing you are working on. The model says where,
+           since the model is the only thing that knows how long it is. */
+        var holdTip = 1;
+        if (g && g.holdAt) {
+          hipX = g.holdAt[0]; hipY = g.holdAt[1]; hipD = g.holdAt[2];
+          holdTip = g.holdTip != null ? g.holdTip : 1;
+        }
         /* The aimed vertical is NOT scaled by OUT. It is -sightH
            exactly, because that is what puts the front blade and the
            rear notch on the camera axis, and it is -sightH at any
@@ -1707,7 +1791,11 @@
         /* The swap's tip is not blended out with the aim the way the hip
            cant is: you cannot be looking through the sights of a weapon
            that is on its way out of your hands. */
-        var tip = (1 - aim) * (0.30 + low * 0.14) * (1 - rl * 0.85) + swapTip - INS.pitch;
+        /* The hip cant is a rifle's answer to perspective lifting a long
+           barrel. A tool has almost no barrel to lift, so most of the
+           cant just points it at the floor. */
+        var tip = (1 - aim) * (0.30 + low * 0.14) * holdTip * (1 - rl * 0.85)
+          + swapTip - INS.pitch;
         var gp = Math.asin(Math.max(-1, Math.min(1, fy))) - tip;
         var roll = low * 0.42 + (1 - aim) * 0.03 + rl * 0.30 + swapRoll + INS.roll;
         Q.setAxisAngle(AY, gy);
@@ -1924,6 +2012,8 @@
     var el = {
       cross: q('.cross'), hit: q('.hit'), xpop: q('.xpop'), dmg: q('.dmg'),
       zone: q('.zone'), zoneCd: q('.zone .cd'),
+      tank: q('.tank'), tankJob: q('.tank .job'), tankBar: q('.tank .bar i'),
+      tankFuse: q('.tank .fuse'), tankWires: q('.tank .wires'),
       sc: q('.top .sc'), us: q('.top .us'), them: q('.top .them'),
       clock: q('.clock'), mode: q('.mode'), bomb: q('.bomb'),
       feed: q('.feed'), hp: q('.hp'), hpn: q('.hp .n'), hpbar: q('.hp .bar i'),
@@ -2104,6 +2194,58 @@
           var rate = zLeft < 4 ? 6 : 3;
           el.zone.classList.toggle('blink', (Math.floor(M.time * rate) % 2) === 1);
         } else if (el.zone.dataset.n) { el.zone.dataset.n = ''; }
+
+        /* ---- THE TANK ----
+           Shown only while you are the one doing something to it, so it
+           is never furniture. Everything on it is read from the match:
+           the bar is the match's own progress, the fuse is the match's
+           own failsafe, and the wires still on the panel are the wires
+           the match has not been told about. Nothing here keeps its own
+           copy of any of it. */
+        var TB = M.bomb && M.bomb.tank, busy = p.alive ? p.busy : null;
+        var tOn = !!(busy && TB);
+        el.tank.classList.toggle('on', tOn);
+        if (tOn) {
+          var SNDc = W.MP_MATCH.SND;
+          var job = busy.kind, frac = 0, label = '';
+          if (job === 'cut') { frac = TB.cut / SNDc.lock; label = 'CUTTING THE LOCK'; }
+          else if (job === 'inside') { frac = TB.inside / SNDc.inside; label = 'DISARMING THE BOMB'; }
+          else if (job === 'weld') { frac = TB.weld / SNDc.weld; label = 'WELDING IT SHUT'; }
+          else { frac = 1; label = 'CUT THE RIGHT WIRE'; }
+          if (el.tank.dataset.job !== label) { el.tank.dataset.job = label; el.tankJob.textContent = label; }
+          var pct = Math.round(Math.max(0, Math.min(1, frac)) * 100);
+          if (el.tank.dataset.pct !== String(pct)) {
+            el.tank.dataset.pct = String(pct);
+            el.tankBar.style.width = pct + '%';
+          }
+          el.tank.classList.toggle('weld', job === 'weld');
+          var picking = job === 'wires';
+          el.tank.classList.toggle('pick', picking);
+          var fs2 = TB.failsafe > 0 ? Math.max(0, Math.ceil(TB.failsafe)) : 0;
+          el.tank.classList.toggle('fail', fs2 > 0);
+          if (el.tank.dataset.fs !== String(fs2)) {
+            el.tank.dataset.fs = String(fs2);
+            el.tankFuse.textContent = fs2;
+          }
+          /* The buttons are rebuilt only when the set of wires left
+             changes, which is at most three times in a round. */
+          if (picking) {
+            var key = TB.wires.join(',') + '|' + TB.tried.join(',');
+            if (el.tank.dataset.wires !== key) {
+              el.tank.dataset.wires = key;
+              var html = '';
+              for (var wi = 0; wi < TB.wires.length; wi++) {
+                var col = TB.wires[wi], gone = TB.tried.indexOf(col) >= 0;
+                html += '<b class="' + col + (gone ? ' gone' : '') + '">'
+                  + col.toUpperCase() + '<span class="k">' + (wi + 1)
+                  + ' / ' + 'ABXY'.charAt(wi) + '</span></b>';
+              }
+              el.tankWires.innerHTML = html;
+            }
+          }
+        } else if (el.tank.dataset.job) {
+          el.tank.dataset.job = ''; el.tank.dataset.wires = ''; el.tank.dataset.fs = '';
+        }
 
         var since = M.time - hitAt;
         el.hit.classList.toggle('kill', hitKill);
@@ -2727,6 +2869,12 @@
     fitFor();
 
     var yaw = M.you.yaw, pitch = 0;
+    /* For the tool animation, up here because the frame below uses them
+       every tick. A Vec3, not an array: setAxisAngle reads axis.x, and
+       [0,0,1].x is undefined, which makes the whole quaternion NaN and
+       the part vanish without a word -- see the note in makeViewmodel. */
+    var AXZ = new W.LE.Vec3(0, 0, 1);
+    var lastBite = -1;
     var sens = (opts.sensitivity || 1) * 0.0022;
     /* Escape opens the settings, which is also where the pointer lock
        goes when the browser takes it away -- it does that on Escape
@@ -3028,6 +3176,8 @@
         inspect: input.once(K.inspect),
         slide: input.once(K.slide), scores: input.any(K.scores),
         fire: input.buttons.fire, aim: input.buttons.aim,
+        wire: input.once(K.wire1) ? 1 : input.once(K.wire2) ? 2
+          : input.once(K.wire3) ? 3 : input.once(K.wire4) ? 4 : 0,
         lookX: 0, lookY: 0,
       };
       /* The pad adds to what the keyboard said rather than replacing
@@ -3054,6 +3204,25 @@
          spawn yaw on the combatant and this file owns the view. */
       if (!wasAlive && p.alive) { yaw = p.yaw; pitch = 0; }
       wasAlive = p.alive;
+
+      /* ---- CUT ONE ----
+         The number keys only mean anything while the panel is up, and
+         the panel is only up while the match says this man is at the
+         wires. Handed straight to the match, which owns every rule
+         about what a wrong one costs -- there is no second copy of that
+         here that could disagree with the one the bots obey. */
+      if (!cmd.wire && cmd.padFace) cmd.wire = cmd.padFace;
+      if (cmd.wire && p.alive && p.busy && p.busy.kind === 'wires') {
+        var TBx = M.bomb && M.bomb.tank;
+        var colour = TBx && TBx.wires[cmd.wire - 1];
+        if (colour) {
+          var res = W.MP_MATCH.cutWire(M, p, colour, M._emit || function () {});
+          try {
+            if (res === 'defused') game.audio.ping({ frequency: 1180, volume: 0.35 });
+            else if (res === 'wrong') game.audio.ping({ frequency: 190, volume: 0.45 });
+          } catch (e) { /* audio is never worth dropping a frame for */ }
+        }
+      }
 
       /* The slot changes at the midpoint of a swap, so this is where a
          weapon change is noticed rather than at the key press. */
@@ -3311,8 +3480,17 @@
           // "not reloading", and the first frame of one is not that.
           rl = Math.max(1e-3, Math.min(1, 1 - left / total));
         }
+        /* THE TOOL, IF THERE IS ONE. Passed as the weapon id because
+           that is the argument place() selects on -- so the swap is the
+           same swap, through the same code, and the hands are solved
+           onto the pliers the way they are solved onto a rifle.
+           Everything that is about a gun is zeroed with it: you are not
+           aiming a pair of wire cutters, reloading them, or inspecting
+           them while the clock runs. */
+        var toolId = p.alive ? toolFor(p.busy) : null;
+        if (toolId) { adsT = 0; rl = 0; insT = 0; }
         vm.place(eye, yaw, pitch, adsT, p.sprinting, kick, bob,
-          w.id || w.base || 'm4', rl, dt,
+          toolId || w.id || w.base || 'm4', rl, dt,
           /* What is left in the magazine, as a fraction, so the column
              of rounds inside it goes down as you shoot. The gun owns
              the rule -- see setRounds on the service arm -- and all
@@ -3326,6 +3504,43 @@
             ? Math.max(0, Math.min(1, 1 - (p.swapUntil - M.time) / p.swapFor)) : 0,
           // And how far through the inspect.
           insT > 0 ? 1 - insT / W.LE.INSPECT_TIME : 0, insW);
+        /* ---- AND THE TOOL WORKS ----
+           A pair of pliers that does not bite and a torch that is not
+           alight are two props being carried, which is the same nothing
+           as holding a rifle. Both are driven off the match's own
+           progress rather than off a clock kept here, so a job that is
+           paused because its man was shot has a tool that stops too. */
+        if (toolId) {
+          var tg = vm.gun;
+          var TBz = M.bomb && M.bomb.tank;
+          if (tg && toolId === 'tool-cutters') {
+            /* One bite a second while the lock is being cut, and held
+               shut on the wire itself. The two halves turn opposite
+               ways about the pin, which is where their pivots are. */
+            var bite = p.busy.kind === 'cut'
+              ? Math.max(0, Math.sin(M.time * 6.2)) : (p.busy.kind === 'wires' ? 0.35 : 0.12);
+            var ang = (tg.biteOpen != null ? tg.biteOpen : 0.30) * (1 - bite);
+            if (tg.upper && tg.upper.rotation) tg.upper.rotation.setAxisAngle(AXZ, ang);
+            if (tg.lower && tg.lower.rotation) tg.lower.rotation.setAxisAngle(AXZ, -ang);
+          } else if (tg && toolId === 'tool-torch') {
+            /* Lit only while the weld is actually advancing, and the
+               flame flickers because a steady cone is a cone. */
+            if (tg.flame) {
+              tg.flame.visible = p.busy.kind === 'weld';
+              var fl = 0.85 + Math.sin(M.time * 31.0) * 0.10 + Math.sin(M.time * 17.3) * 0.06;
+              tg.flame.scale.set(1, fl, fl);
+            }
+          }
+          if (TBz && game.audio) {
+            try {
+              if (p.busy.kind === 'cut' && Math.floor(M.time * 1.6) !== lastBite) {
+                lastBite = Math.floor(M.time * 1.6);
+                game.audio.ping({ frequency: 2600, volume: 0.13 });
+              }
+            } catch (e) { /* audio is never worth dropping a frame for */ }
+          }
+        }
+
         /* THE CROSSHAIR GOES AWAY AT THE SIGHTS. Leaving it up while
            you are looking through the irons puts two aiming marks on
            the screen that do not agree, and the one that is right is

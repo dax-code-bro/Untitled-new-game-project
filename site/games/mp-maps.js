@@ -305,6 +305,153 @@
       deco(x - w / 2 - 0.03, x + w / 2 + 0.03, h * 0.42, h * 0.52, z - d / 2 - 0.03, z + d / 2 + 0.03, mats.woodDark, 'crate-batten');
     }
 
+    /* ================================================================
+       THE STORAGE TANK — what a bomb site actually is
+       ================================================================
+       A site used to be a coordinate with a radius drawn round it, and
+       nothing at all standing there. You planted by walking to a patch
+       of ground.
+
+       It is a small steel storage tank now, because the whole of the
+       mode's second half happens ON it: a lock to cut, two doors to
+       swing open, and room to step inside and reach the bomb. The
+       parts are named and handed back rather than just drawn, because
+       the match has to open the doors, take the lock off and put it
+       back on again when a defender welds it shut.
+
+       Built around the origin of its own footprint and then offset, so
+       the only thing a caller has to know is where it stands and which
+       way it faces: 0 faces -Z, 1 faces +X, 2 faces +Z, 3 faces -X.
+       The doors always face out along that axis, which is the side an
+       attacker has to be standing on. */
+    function tank(x, z, facing, name) {
+      var W = 2.30, D = 1.80, H = 2.15;         // outside
+      var T = 0.10;                              // plate thickness
+      var f = (facing | 0) & 3;
+      var alongX = (f === 1 || f === 3);
+      // Half-extents in world, after the quarter turn.
+      var hw = alongX ? D / 2 : W / 2;
+      var hd = alongX ? W / 2 : D / 2;
+      var m = mats.steelDark, mp = mats.paintRed;
+
+      // Floor, roof and the three closed sides. The open side is the
+      // one the doors are on, and it is left as a hole so a man can
+      // actually get in.
+      slab(x - hw, x + hw, 0, T, z - hd, z + hd, m, 'tank-floor');
+      slab(x - hw, x + hw, H - T, H, z - hd, z + hd, m, 'tank-roof');
+      /* doorSign is the side the DOORS are on, so the back wall is the
+         other one. Getting these two the same way round built a tank
+         whose doors and back panel were the same panel.
+
+         EVERY SPAN IS ORDERED. slab and deco both return null when a
+         dimension comes out negative, and half of these spans are built
+         by stepping in the -doorSign direction -- so on the two facings
+         where doorSign is -1 the back wall, both doors and the padlock
+         were all silently not built. A tank with no doors and no lock
+         is a tank the mode has nothing to cut. */
+      var doorSign = (f === 0 || f === 3) ? -1 : 1;
+      var faceHalf = alongX ? hw : hd;                  // half-extent along the facing axis
+      var lo = Math.min, hi = Math.max;
+      if (alongX) {
+        slab(x - hw, x + hw, 0, H, z - hd, z - hd + T, m, 'tank-side');
+        slab(x - hw, x + hw, 0, H, z + hd - T, z + hd, m, 'tank-side');
+        var bx = x - doorSign * hw;
+        slab(lo(bx, bx + doorSign * T), hi(bx, bx + doorSign * T), 0, H, z - hd, z + hd, m, 'tank-back');
+      } else {
+        slab(x - hw, x - hw + T, 0, H, z - hd, z + hd, m, 'tank-side');
+        slab(x + hw - T, x + hw, 0, H, z - hd, z + hd, m, 'tank-side');
+        var bz = z - doorSign * hd;
+        slab(x - hw, x + hw, 0, H, lo(bz, bz + doorSign * T), hi(bz, bz + doorSign * T), m, 'tank-back');
+      }
+
+      /* THE DOORS ARE DECO, NOT SOLID, and deliberately. A pair of
+         swinging leaves that collide would trap whoever is inside the
+         moment a defender welds them shut, and being sealed in a box
+         is not a thing the mode should ever do to anybody. What keeps
+         you out of a locked tank is the mode refusing to let you
+         start, not a slab in the doorway. */
+      var doors = [];
+      var hingeGap = 0.02;
+      for (var i = 0; i < 2; i++) {
+        var sgn = i ? 1 : -1;                   // left leaf, right leaf
+        var a;
+        if (alongX) {
+          var fx = x + doorSign * hw, gx = fx + doorSign * 0.06;
+          a = deco(lo(fx, gx), hi(fx, gx),
+            0.02, H - 0.04, z + (sgn < 0 ? -hd : hingeGap), z + (sgn < 0 ? -hingeGap : hd), mp, 'tank-door');
+        } else {
+          var fz = z + doorSign * hd, gz = fz + doorSign * 0.06;
+          a = deco(x + (sgn < 0 ? -hw : hingeGap), x + (sgn < 0 ? -hingeGap : hw),
+            0.02, H - 0.04, lo(fz, gz), hi(fz, gz), mp, 'tank-door');
+        }
+        if (a) {
+          /* THE HINGE, worked out here and not by the caller. A leaf
+             swings about its OUTER edge -- the one away from the seam
+             -- and which edge that is depends on the facing and on
+             which of the two leaves this is. The match only ever says
+             how far open the tank should be; everything about where
+             the metal actually goes stays in the file that built it. */
+          a.__hinge = alongX ? [x + doorSign * hw, z + sgn * hd]
+            : [x + sgn * hw, z + doorSign * hd];
+          a.__shut = { pos: a.position.clone(), side: sgn, sign: doorSign, alongX: alongX };
+          doors.push(a);
+        }
+      }
+
+      /* The hasp and the padlock on it, at chest height in the middle
+         of the seam. This is the thing the wire cutters go on, and it
+         is the thing that has to visibly disappear when it is cut. */
+      var lockY = 1.12, lk;
+      if (alongX) {
+        var lx0 = x + doorSign * (hw - 0.09), lx1 = x + doorSign * (hw + 0.05);
+        lk = deco(lo(lx0, lx1), hi(lx0, lx1), lockY - 0.13, lockY + 0.13, z - 0.11, z + 0.11,
+          mats.steel, 'tank-lock');
+      } else {
+        var lz0 = z + doorSign * (hd - 0.09), lz1 = z + doorSign * (hd + 0.05);
+        lk = deco(x - 0.11, x + 0.11, lockY - 0.13, lockY + 0.13, lo(lz0, lz1), hi(lz0, lz1),
+          mats.steel, 'tank-lock');
+      }
+
+      // A rib round the middle and a hazard band, so it reads as a tank
+      // and not as a red box, at the distance people shoot from.
+      deco(x - hw - 0.03, x + hw + 0.03, H * 0.52, H * 0.60, z - hd - 0.03, z + hd + 0.03, mats.steelDark, 'tank-rib');
+
+      /* WHERE YOU HAVE TO STAND. One and a half metres out from the
+         doors: far enough to swing them, close enough that it is
+         plainly this tank and not the next thing along. */
+      var ox = alongX ? doorSign * (faceHalf + 1.5) : 0;
+      var oz = alongX ? 0 : doorSign * (faceHalf + 1.5);
+      /* HOW FAR OPEN IT IS, 0 to 1. Both leaves swing out through a
+         hundred degrees about their own hinge, and the padlock goes
+         with the first hint of movement, because a padlock still
+         hanging on a door that is standing open is the sort of detail
+         that makes everything near it look wrong. */
+      function setOpen(t) {
+        var k = Math.max(0, Math.min(1, t));
+        var ang = k * 1.745;                              // 100 degrees
+        for (var i = 0; i < doors.length; i++) {
+          var a = doors[i], sh = a.__shut, hx = a.__hinge[0], hz = a.__hinge[1];
+          // Swing out of the doorway: the far leaf turns the other way.
+          var dir = -sh.side * sh.sign * (sh.alongX ? -1 : 1);
+          var th = ang * dir;
+          var dx = sh.pos.x - hx, dz = sh.pos.z - hz;
+          var c = Math.cos(th), sn = Math.sin(th);
+          a.position.set(hx + dx * c - dz * sn, sh.pos.y, hz + dx * sn + dz * c);
+          if (a.rotation && a.rotation.setAxisAngle) a.rotation.setAxisAngle([0, 1, 0], th);
+        }
+        if (lk) lk.visible = k < 0.02;
+      }
+      setOpen(0);
+
+      return {
+        name: name || 'tank', at: [x, 0, z], facing: f,
+        doors: doors, lock: lk, setOpen: setOpen,
+        standAt: [x + ox, 0, z + oz],
+        insideAt: [x, 0, z],
+        faceDir: alongX ? [-doorSign, 0, 0] : [0, 0, -doorSign],
+      };
+    }
+
     /* A road barrier: the concrete kind with the sloped foot. Two
        slabs, because the slope is the only thing that distinguishes it
        from a wall and it is what stops a grenade rolling under. */
@@ -522,7 +669,7 @@
 
     return {
       game: game, mats: mats, solids: solids, decos: decos, COVER: COVER, screenPair: screenPair,
-      slab: slab, frail: frail, deco: deco, post: post, crate: crate, jersey: jersey,
+      slab: slab, frail: frail, deco: deco, post: post, crate: crate, jersey: jersey, tank: tank,
       sandbags: sandbags, barrel: barrel, container: container, wall: wall,
       stair: stair, fence: fence, car: car, deck: deck,
     };
@@ -682,8 +829,9 @@
         b: [[-26, 48], [-14, 50], [-3, 51], [8, 50], [20, 48], [32, 47]],
       },
       sites: [
-        { id: 'heli', name: 'the helicopter', at: [0, 0, -1], r: 4.5 },
-        { id: 'manifold', name: 'the fuel manifold', at: [-38, 0, 6], r: 4.5 },
+        { id: 'heli', name: 'the helicopter', at: [0, 0, -1], r: 4.5, face: 0 },
+        { id: 'manifold', name: 'the fuel manifold', at: [-38, 0, 6], r: 4.5, face: 2 },
+        { id: 'hangar', name: 'the hangar floor', at: [35, 0, 6], r: 4.5, face: 2 },
       ],
       lanes: [{ x: -38, name: 'fuel farm' }, { x: 0, name: 'the pad' }, { x: 35, name: 'hangar' }],
     };
@@ -831,8 +979,9 @@
         b: [[-34, 46], [-20, 48], [-6, 49], [8, 48], [22, 46], [36, 44]],
       },
       sites: [
-        { id: 'reception', name: 'the reception desk', at: [-39, 0, -4], r: 4.5 },
-        { id: 'plant', name: 'the pool plant room', at: [20, 0, 26], r: 4.0 },
+        { id: 'reception', name: 'the reception desk', at: [-39, 0, -4], r: 4.5, face: 2 },
+        { id: 'plant', name: 'the pool plant room', at: [20, 0, 26], r: 4.0, face: 0 },
+        { id: 'terrace', name: 'the terrace bar', at: [33, 0, -8], r: 4.5, face: 0 },
       ],
       lanes: [{ x: -39, name: 'lobby' }, { x: 1, name: 'the pool' }, { x: 33, name: 'terrace' }],
     };
@@ -1012,8 +1161,9 @@
         b: [[-40, 56], [-26, 57], [-12, 57], [2, 57], [16, 56], [27, 57]],
       },
       sites: [
-        { id: 'ovens', name: 'the bakery ovens', at: [-24, 0, 9], r: 4.5 },
-        { id: 'pit', name: 'the garage pit', at: [32, 0, -1], r: 4.5 },
+        { id: 'ovens', name: 'the bakery ovens', at: [-24, 0, 9], r: 4.5, face: 0 },
+        { id: 'pit', name: 'the garage pit', at: [32, 0, -1], r: 4.5, face: 2 },
+        { id: 'square', name: 'the market square', at: [1, 0, 4], r: 4.5, face: 0 },
       ],
       lanes: [{ x: -36, name: 'the alley' }, { x: 0, name: 'the high street' }, { x: 34, name: 'the garage' }],
     };
@@ -1174,8 +1324,9 @@
         b: [[-34, 40], [-20, 42], [-7, 43], [7, 42], [21, 40], [34, 38]],
       },
       sites: [
-        { id: 'crane', name: 'the crane base', at: [34, 0, 2], r: 4.5 },
-        { id: 'stairwell', name: 'the standing stairwell', at: [-34, 0, 4], r: 4.0 },
+        { id: 'crane', name: 'the crane base', at: [34, 0, 2], r: 4.5, face: 2 },
+        { id: 'stairwell', name: 'the standing stairwell', at: [-34, 0, 4], r: 4.0, face: 0 },
+        { id: 'mixer', name: 'the concrete mixer', at: [0, 0, -9], r: 4.5, face: 0 },
       ],
       lanes: [{ x: -30, name: 'the standing wing' }, { x: 0, name: 'the collapsed middle' },
         { x: 30, name: 'the crane' }],
@@ -1312,6 +1463,22 @@
     if (!fn) return null;
     var K = kit(game);
     var out = fn(K);
+
+    /* A TANK AT EVERY SITE, built here rather than in each of the four
+       builders, because a site without one is a site the mode cannot be
+       played on and that is not a thing to leave to four separate
+       hands. The site coordinate stays where it was -- it is the patch
+       of ground you stand on -- and the tank goes 2.4 m behind it,
+       facing back at you. */
+    (out.sites || []).forEach(function (st) {
+      var f = st.face || 0;
+      var sign = (f === 0 || f === 3) ? -1 : 1;
+      var ax = (f === 1 || f === 3) ? 0 : 2;          // which axis the doors face along
+      var tx = st.at[0] - (ax === 0 ? sign * 2.4 : 0);
+      var tz = st.at[2] - (ax === 2 ? sign * 2.4 : 0);
+      st.tank = K.tank(tx, tz, f, 'tank-' + st.id);
+    });
+
     applySky(game, id);
 
     function place(list, facing) {
