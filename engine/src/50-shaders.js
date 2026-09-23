@@ -171,6 +171,33 @@ vec3 fresnelSchlickRough(float cosT, vec3 F0, float rough){
   vec3 Fr = max(vec3(1.0 - rough), F0);
   return F0 + (Fr - F0) * pow(saturate1(1.0 - cosT), 5.0);
 }
+/* ---- OCTAHEDRAL NORMAL ENCODING ----
+ *
+ * Two channels instead of three for a unit vector, which is what lets
+ * the G-buffer carry a normal, a roughness AND a metalness in one
+ * RGBA16F texel.
+ *
+ * Fold the sphere onto an octahedron and unwrap it into a square. The
+ * worst-case angular error at 16 bits a channel is far below anything a
+ * reflection or an occlusion term can see, and unlike storing xy and
+ * rebuilding z it survives normals facing away from the camera -- which
+ * matter, because the shading normal is not the geometric one and a
+ * strong bump can tilt it past the silhouette. */
+vec2 octEncode(vec3 n){
+  n /= (abs(n.x) + abs(n.y) + abs(n.z));
+  vec2 e = n.xy;
+  if (n.z < 0.0) {
+    e = (1.0 - abs(n.yx)) * vec2(n.x >= 0.0 ? 1.0 : -1.0, n.y >= 0.0 ? 1.0 : -1.0);
+  }
+  return e;
+}
+vec3 octDecode(vec2 e){
+  vec3 n = vec3(e.xy, 1.0 - abs(e.x) - abs(e.y));
+  float t = max(-n.z, 0.0);
+  n.xy += vec2(n.x >= 0.0 ? -t : t, n.y >= 0.0 ? -t : t);
+  return normalize(n);
+}
+
 /* Karis' analytic split-sum approximation — gives believable ambient
    specular without shipping a precomputed BRDF LUT. */
 vec3 envBRDFApprox(vec3 F0, float rough, float NoV){
@@ -516,7 +543,33 @@ uniform int uLightCount;
 uniform vec4 uLightPos[8];    // xyz = position, w = radius
 uniform vec4 uLightColor[8];  // rgb = colour, a = intensity
 
+/* The view matrix, for the G-buffer normal only. Everything else in
+   this shader works in world space; screen-space effects downstream do
+   not, and converting once here is cheaper and more accurate than
+   having each of them rebuild a view normal from world. */
+uniform mat4 uView;
+
 layout(location=0) out vec4 outColor;
+/* ---- THE G-BUFFER ----
+ *
+ * Written by the opaque pass and discarded by the driver on every other
+ * pass, because the renderer lowers the draw-buffer mask for them (see
+ * _sceneTargets). Declaring it when there is no second attachment is
+ * legal and the write goes nowhere, so this needs no #define and does
+ * not double the shader permutation count.
+ *
+ *   .rg  view-space SHADING normal, octahedral, signed
+ *   .b   perceptual roughness
+ *   .a   metalness
+ *
+ * The shading normal, emphatically, and not the geometric one. A normal
+ * reconstructed from the depth buffer -- which is what this renderer's
+ * ambient occlusion does today -- is the normal of the depth surface,
+ * so every bump the normal map puts on a brick wall is invisible to it.
+ * That is the difference between a reflection that ripples across
+ * mortar courses and one that slides over them as if the wall were
+ * glass. */
+layout(location=1) out vec4 outGBuffer;
 
 void main(){
   vec2 uv = vUv * uUvScale;
@@ -760,6 +813,15 @@ void main(){
   alpha = 1.0;
 #endif
   outColor = vec4(color, alpha);
+
+  /* The G-buffer. The renderer masks attachment 1 off for every pass but
+     the opaque one, so on those passes this write is discarded by the
+     driver and on a tier with no G-buffer at all it goes nowhere.
+     mat3(uView) is the rotation of the view matrix -- the translation is
+     irrelevant to a direction -- and the result is renormalised because
+     the view matrix is not guaranteed orthonormal once a non-uniform
+     scale is in the stack. */
+  outGBuffer = vec4(octEncode(normalize(mat3(uView) * N)), rough, metal);
 }
 `;
 

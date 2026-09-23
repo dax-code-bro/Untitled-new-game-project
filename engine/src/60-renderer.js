@@ -79,10 +79,30 @@ class Camera {
    stair-stepping that no amount of FXAA can. It is also the single most
    expensive number here, which is why it is the one that separates the
    top two tiers. */
+/* ---- A KEY IN ONE TIER IS A KEY IN ALL FIVE ----
+ *
+ * QUALITY.medium is a REFERENCE alias of QUALITY.normal just below the
+ * table -- the same object, not a copy -- so adding a key to one adds
+ * it to both and mutating either mutates both. Every new setting is
+ * written out explicitly in all five tiers rather than left to default,
+ * and every read site uses the `|| default` idiom, so a tier table
+ * somebody edits by hand cannot silently switch a pass on.
+ *
+ * gbuffer: a second colour attachment on the scene target carrying the
+ * shading normal and roughness. Screen-space reflections and
+ * ground-truth ambient occlusion both need it and neither can get it
+ * from depth -- a depth-derived normal is the GEOMETRIC normal of the
+ * depth surface, blind to every bump the normal map adds, and roughness
+ * is not in there at all. Full-resolution RGBA16F is 8 bytes a pixel,
+ * so tiers that cannot spend it do not allocate it. It is on at high
+ * and ultra; three of browser.test.js's scenes run at high, which is
+ * deliberate -- the path wants exercising, and a G-buffer nothing reads
+ * yet costs one extra attachment write and no passes. */
 const QUALITY = {
   retro: { shadowRes: 512, cascades: 1, bloom: false, bloomIters: 0, fluidScale: 0.35,
     fxaa: false, msaa: 0, maxGrass: 500, renderScale: 0.26, texRes: 128,
-    ssao: 0, ssaoSamples: 0, sharpen: 0, posterize: 9, pixelated: true, fpsCap: 24 },
+    ssao: 0, ssaoSamples: 0, sharpen: 0, posterize: 9, pixelated: true, fpsCap: 24,
+    gbuffer: false },
   /* CONTACT SHADOWS ON THE TIERS PEOPLE ACTUALLY RUN.
    *
      These two said `ssao: 0`, and so the pass below them -- a real
@@ -104,16 +124,20 @@ const QUALITY = {
      blur then smears. */
   low: { shadowRes: 768, cascades: 1, bloom: false, bloomIters: 0, fluidScale: 0.5,
     fxaa: false, msaa: 0, maxGrass: 2500, renderScale: 0.66,
-    ssao: 0.50, ssaoSamples: 6, ssaoRadius: 0.42, sharpen: 0.10, posterize: 0, texRes: 512 },
+    ssao: 0.50, ssaoSamples: 6, ssaoRadius: 0.42, sharpen: 0.10, posterize: 0, texRes: 512,
+    gbuffer: false },
   normal: { shadowRes: 1536, cascades: 2, bloom: true, bloomIters: 3, fluidScale: 0.75,
     fxaa: true, msaa: 0, maxGrass: 20000, renderScale: 1,
-    ssao: 0.62, ssaoSamples: 10, ssaoRadius: 0.50, sharpen: 0.16, posterize: 0, texRes: 768 },
+    ssao: 0.62, ssaoSamples: 10, ssaoRadius: 0.50, sharpen: 0.16, posterize: 0, texRes: 768,
+    gbuffer: false },
   high: { shadowRes: 2560, cascades: 2, bloom: true, bloomIters: 4, fluidScale: 1,
     fxaa: true, msaa: 0, maxGrass: 60000, renderScale: 1.25,
-    ssao: 0.70, ssaoSamples: 12, ssaoRadius: 0.55, sharpen: 0.34, posterize: 0, texRes: 1024 },
+    ssao: 0.70, ssaoSamples: 12, ssaoRadius: 0.55, sharpen: 0.34, posterize: 0, texRes: 1024,
+    gbuffer: true },
   ultra: { shadowRes: 4096, cascades: 2, bloom: true, bloomIters: 5, fluidScale: 1,
     fxaa: true, msaa: 0, maxGrass: 160000, renderScale: 1.85,
-    ssao: 0.95, ssaoSamples: 26, ssaoRadius: 0.70, sharpen: 0.52, posterize: 0, texRes: 1024 },
+    ssao: 0.95, ssaoSamples: 26, ssaoRadius: 0.70, sharpen: 0.52, posterize: 0, texRes: 1024,
+    gbuffer: true },
 };
 // `medium` is what the old auto-detect asked for and what several callers
 // still pass; it is this tier's previous name.
@@ -315,17 +339,85 @@ class Renderer {
     return sh;
   }
 
+  /* ---- WHICH ATTACHMENTS THIS DRAW IS ALLOWED TO TOUCH ----
+   *
+   * With a G-buffer hung off the scene target, "draw into hdrA" stops
+   * being one thing. The opaque pass fills colour AND normals; every
+   * other pass that writes to hdrA -- the sky, the transparent queue,
+   * the blit that brings the fluid shading back, the particles -- has
+   * only a colour to contribute and no normal worth having.
+   *
+   * Left unmasked they write one anyway. A fragment shader that
+   * declares one output leaves the other attachment undefined, and a
+   * BLIT does not go through a shader at all: it copies attachment for
+   * attachment, so the fluid blit would paste the water's colour
+   * straight into the normal buffer. Blending is worse -- it applies to
+   * every enabled draw buffer, so a puff of smoke would alpha-blend its
+   * colour over the normals underneath it and every screen-space effect
+   * downstream would reflect off fog.
+   *
+   * So the mask goes up for the one pass that has a normal to write and
+   * down for everything else. A no-op when there is no G-buffer. */
+  _sceneTargets(full) {
+    if (!this.gbuffer) return;
+    const gl = this.gl;
+    gl.drawBuffers(full
+      ? [gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]
+      : [gl.COLOR_ATTACHMENT0, gl.NONE]);
+  }
+
   _initTargets() {
     const gl = this.gl;
     const hdr = this.floatBuffers
       ? { internalFormat: gl.RGBA16F, format: gl.RGBA, type: gl.HALF_FLOAT }
       : { internalFormat: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE };
     this._hdrSpec = hdr;
+
+    /* ================================================================
+       THE G-BUFFER
+       ================================================================
+       A second colour attachment on the scene target, written by the
+       opaque pass only, carrying what a forward renderer throws away
+       and every screen-space effect needs back: the shading normal and
+       the roughness.
+
+       Reconstructing a normal from the depth buffer -- which is what
+       the existing SSAO does at 50-shaders.js -- gives the GEOMETRIC
+       normal of the depth surface, not the SHADING normal. Every bump
+       the normal map adds is invisible to it, so a screen-space
+       reflection off a brick wall would reflect as if the wall were
+       glass-flat, and ambient occlusion cannot tell a groove from a
+       painted line. Roughness cannot be reconstructed from depth at
+       all, and without it a reflection is either a mirror everywhere or
+       a blur everywhere.
+
+       RGBA16F, packed:
+         .rg  view-space shading normal, octahedral, signed [-1,1]
+         .b   perceptual roughness [0,1]
+         .a   metalness [0,1]
+
+       Octahedral rather than storing xyz: two channels instead of
+       three, exact enough that the error is under a tenth of a degree
+       at 16-bit, and it leaves .a free for metalness in one 8-byte
+       texel. Signed with no bias because a half float round-trips
+       [-1,1] exactly and a bias would waste a bit.
+
+       ALLOCATED ONLY WHEN ASKED. A full-resolution RGBA16F is 8 bytes a
+       pixel, which at the ultra render scale of 1.85 is 3.4x the CSS
+       pixel count -- so the tiers that cannot use it do not pay for it.
+       Framebuffer.color returns colors[0], so every existing
+       hdrA.color consumer is untouched by the extra attachment. */
+    this._gbufSpec = this.floatBuffers
+      ? { internalFormat: gl.RGBA16F, format: gl.RGBA, type: gl.HALF_FLOAT }
+      : { internalFormat: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE };
+    this.gbuffer = !!this.quality.gbuffer;
+    const sceneColors = this.gbuffer ? [hdr, this._gbufSpec] : [hdr];
+
     /* The main target's depth is a texture rather than a renderbuffer, so
        ambient occlusion can read the scene's depth without a second
        geometry pass. It is still blitted into the fluid target the same
        way. */
-    this.hdrA = new Framebuffer(gl, { width: 4, height: 4, colors: [hdr], depth: true, depthTexture: true });
+    this.hdrA = new Framebuffer(gl, { width: 4, height: 4, colors: sceneColors, depth: true, depthTexture: true });
     this.hdrB = new Framebuffer(gl, { width: 4, height: 4, colors: [hdr], depth: false });
     this.bloomChain = [];
     for (let i = 0; i < 4; i++) {
@@ -385,6 +477,27 @@ class Renderer {
     if (!QUALITY[name]) return this.qualityName;
     this.qualityName = name;
     this.quality = Object.assign({}, QUALITY[name], overrides || {});
+    /* THE SCENE TARGET IS REBUILT IF THE G-BUFFER COMES OR GOES.
+     *
+       A Framebuffer's attachment list is fixed at construction, so a
+       tier change that turns the G-buffer on cannot just set a flag --
+       the attachment has to exist. In practice this almost never fires:
+       the watchdog only ever steps DOWN and detectQuality tops out at
+       'high', so the only way to gain one is an explicit
+       setQuality('ultra') from below. It fires correctly when it does,
+       and the resize() that every caller already performs afterwards
+       (setQuality deliberately sets width to -1 to defeat the
+       early-return) puts it back at the right size. */
+    const wantGbuf = !!this.quality.gbuffer;
+    if (wantGbuf !== this.gbuffer) {
+      const gl = this.gl;
+      this.gbuffer = wantGbuf;
+      const colors = wantGbuf ? [this._hdrSpec, this._gbufSpec] : [this._hdrSpec];
+      this.hdrA.dispose();
+      this.hdrA = new Framebuffer(gl, {
+        width: 4, height: 4, colors: colors, depth: true, depthTexture: true,
+      });
+    }
     /* THE TEXTURE BUDGET, SET BEFORE ANYTHING IS BUILT.
      *
        Textures are shared per recipe now (see Material._buildMaps), so
@@ -671,6 +784,11 @@ class Renderer {
        player stood — was never uploaded at all. */
     this.camera = camera;
     const gl = this.gl;
+    /* Mask UP before the clear, not after: one clear has to fill the
+       normal buffer as well as the colour, or last frame's normals
+       survive wherever nothing is drawn this frame and the sky
+       reflects whatever used to be in front of it. */
+    this._sceneTargets(true);
     this.hdrA.bind(true, 0, 0, 0, 1);
     gl.enable(gl.DEPTH_TEST);
     gl.depthMask(true);
@@ -685,6 +803,8 @@ class Renderer {
 
     for (const batch of opaque) this._drawPbr(batch, camera);
 
+    /* Everything past here has a colour and no normal. */
+    this._sceneTargets(false);
     this._drawSky(camera);
 
     // Transparent last, sorted back to front, with depth writes off so
@@ -698,6 +818,10 @@ class Renderer {
       gl.depthMask(true);
       gl.disable(gl.BLEND);
     }
+    /* Leave the mask down. Every later pass that touches hdrA -- the
+       fluid blit, the particles -- wants colour only, and a pass that
+       needs the G-buffer raises it for itself. */
+    this._sceneTargets(false);
   }
 
   _drawPbr(batch, camera) {
@@ -710,6 +834,8 @@ class Renderer {
     const sh = this.program('pbr', GLSL.pbrVert, GLSL.pbrFrag, defines).use();
 
     sh.m4('uViewProj', camera.viewProj);
+    // For the G-buffer normal only; see the uView comment in pbrFrag.
+    sh.m4('uView', camera.view);
     sh.v3('uCameraPos', camera.position);
     this._bindEnv(sh);
     this._bindShadows(sh);
@@ -820,8 +946,13 @@ class Renderer {
     this.fullscreen.draw();
     this.stats.draws++;
 
+    /* A BLIT DOES NOT GO THROUGH A SHADER. It copies attachment for
+       attachment, so without the mask down this pastes the water's
+       shaded colour straight into the normal buffer and every
+       screen-space effect downstream reflects off the sea. */
     gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.hdrB.handle);
     gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, this.hdrA.handle);
+    this._sceneTargets(false);
     gl.blitFramebuffer(0, 0, this.width, this.height, 0, 0, this.width, this.height, gl.COLOR_BUFFER_BIT, gl.NEAREST);
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.hdrA.handle);
     gl.viewport(0, 0, this.width, this.height);
@@ -834,6 +965,10 @@ class Renderer {
     if (!system || !system.count) return;
     const gl = this.gl;
     this.hdrA.bind(false);
+    /* Blending applies to EVERY enabled draw buffer, so an unmasked
+       puff of smoke would alpha-blend its colour over the normals
+       underneath it. */
+    this._sceneTargets(false);
     gl.viewport(0, 0, this.width, this.height);
     gl.enable(gl.DEPTH_TEST);
     gl.depthMask(false);
