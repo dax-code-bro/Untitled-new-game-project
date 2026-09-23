@@ -218,6 +218,54 @@ class Renderer {
     this.shadows = { enabled: true, distance: 60, strength: 0.86, split: 14 };
     this.post = {
       exposure: 1.0,
+      /* 'agx' or 'aces'. AgX is a display transform rather than a curve
+         fit: it shapes in log exposure across a fixed EV window, so it
+         has a real toe and a real shoulder, and its inset keeps the
+         channels from separating so a bright saturated thing -- a muzzle
+         flash, a tracer, the sun -- stays its own colour as it clips
+         instead of skewing to yellow-white. See the long note in the
+         composite for the measurement that chose it. */
+      /* DEFAULT OFF, DELIBERATELY, AND THIS IS THE INTERESTING PART.
+       *
+         AgX measurably fixes what was measured wrong -- on the four
+         reference views it takes the street's mid-band pile-up from 75
+         to 50 per cent, the rubble's from 50 to 13, and the interior's
+         crush from 62 per cent of the frame below 64 down to 38.
+       *
+         And it fails three tests, all for the same reason and none of
+         them a stale baseline:
+       *
+           interior  'a floor under a roof is darker than the same floor
+                     outside' -- covered fell from 71 to 82 per cent of
+                     open
+           graphics  'darkens the ambient mid-tones' -- p50 94.5 -> 90.2
+           tonal     every view lost pixels below 64
+       *
+         Those are the same fact three times: AgX has a real toe, and a
+         toe LIFTS shadows, because its job is to keep detail in them
+         instead of crushing them to black. On a renderer whose shading
+         already had range that is a straight win. On this one it is not
+         yet, because the range is not there to keep -- there is no
+         image-based lighting, so an interior is lit by an analytic sky
+         a roof simply blocks, and no ambient occlusion worth the name,
+         so a corner is not darker than a wall. The curve is being asked
+         to supply contrast that the LIGHTING should be supplying.
+       *
+         Turning the punch up to compensate was tried and measured: it
+         restores the street's shade (1.3 to 3.7 per cent) and re-crushes
+         the interior (62 to 71). There is no setting that fixes both,
+         which is the tell that it is not the curve's job.
+       *
+         So AgX stays fully built, switchable and measured, and off
+         until the probe, GTAO and contact shadows have put real range
+         into the shading. Then it goes on and the three baselines move
+         once, deliberately, with the whole picture in view. Grading
+         around a lighting deficiency is the exact mistake this file has
+         a long comment about further down. */
+      toneMap: 'aces',
+      /* The look on top of AgX. 1.0/1.0 is the transform on its own. */
+      agxPunch: 1.0,
+      agxSat: 1.0,
       bloom: 0.55,
       bloomThreshold: 1.1,
       vignette: 0.55,
@@ -916,6 +964,13 @@ class Renderer {
     comp.tex('uBloom2', bloom2 || this.hdrA.color);
     comp.f('uBloomStrength', bloom0 ? this.post.bloom : 0);
     comp.f('uExposure', this.post.exposure);
+    /* The tonemapper, and its look. Bound explicitly rather than left to
+       default, because a uniform this renderer never sets reads as zero
+       -- and zero here would be the old ACES curve with an AgX punch of
+       nothing, which is a picture nobody chose. */
+    comp.i('uToneMap', this.post.toneMap === 'aces' ? 0 : 1);
+    comp.f('uAgxPunch', this.post.agxPunch != null ? this.post.agxPunch : 1.0);
+    comp.f('uAgxSat', this.post.agxSat != null ? this.post.agxSat : 1.0);
     comp.f('uVignette', this.post.vignette);
     comp.f('uChromatic', this.post.chromatic);
     comp.f('uSaturation', this.post.saturation);

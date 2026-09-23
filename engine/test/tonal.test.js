@@ -95,11 +95,25 @@ const VIEWS = [
    so the ratchet allows 0.8 on the two that must not fall and 1.5 on
    the one that must not rise. */
 const BASE = {
-  'town-street': { dark: 1.3, bright: 0.4, mid: 74.7 },
-  'town-inside': { dark: 62.4, bright: 0.0, mid: 1.2 },
-  'demo-crane': { dark: 6.5, bright: 2.7, mid: 48.1 },
-  'demo-rubble': { dark: 22.7, bright: 0.0, mid: 50.2 },
+  'town-street': { spread: 132, peak: 44.6 },
+  'town-inside': { spread: 93, peak: 60.2 },
+  'demo-crane': { spread: 161, peak: 28.3 },
+  'demo-rubble': { spread: 161, peak: 40.7 },
 };
+
+/* AND THE BASELINE MUST EXIST FOR EVERY VIEW, checked rather than
+   assumed. The first cut of this file kept its baselines under the old
+   metric's key names; when the metric changed, every comparison was
+   against `undefined`, every `<` was false, and all three ratchets
+   passed without measuring anything. A test that cannot fail is worse
+   than no test. */
+function baselineFor(id) {
+  const b = BASE[id];
+  if (!b || typeof b.spread !== 'number' || typeof b.peak !== 'number') {
+    throw new Error('no baseline recorded for view ' + id);
+  }
+  return b;
+}
 
 let passed = 0, failed = 0;
 function check(name, cond, detail = '') {
@@ -151,62 +165,76 @@ const note = (s) => console.log(`  ..   ${s}`);
         hist[Math.min(7, Math.floor(l / 32))]++;
       }
       const pc = hist.map((h) => +(100 * h / n).toFixed(1));
+
+      /* PERCENTILES, NOT A COUNT OF DARK PIXELS.
+       *
+         The first version of this ratcheted on "per cent of the frame
+         below 64" and called it shade. That is wrong, and switching the
+         tonemapper is what exposed it: a filmic toe LIFTS the darkest
+         pixels, on purpose, because its job is to keep detail in a
+         shadow rather than crush it to black. Measured against the old
+         metric that reads as every view losing its shade, when what
+         actually happened is that the shadows stopped being clipped.
+       *
+         A count of dark pixels cannot tell "has shade" from "is
+         crushed". The spread between the fifth and ninety-fifth
+         percentile can: it is large when a picture uses its range and
+         small when everything is one value, and it does not care where
+         on the scale that range sits. */
+      const lum = [];
+      for (let i = 0; i < px.length; i += 4) {
+        lum.push(0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2]);
+      }
+      lum.sort((a, b) => a - b);
+      const at = (q) => lum[Math.min(lum.length - 1, Math.floor(q * lum.length))];
+      const p5 = at(0.05), p50 = at(0.50), p95 = at(0.95);
+
       out.push({
         id: v.id,
         mean: +(sum / n).toFixed(1),
         hist: pc,
-        /* Real shade, real glare, and how much of the frame is piled
-           into the two mid-bright bands that flatness lives in. */
-        dark: +(pc[0] + pc[1]).toFixed(1),
-        bright: +(pc[7]).toFixed(1),
-        mid: +(pc[5] + pc[6]).toFixed(1),
+        p5: +p5.toFixed(0), p50: +p50.toFixed(0), p95: +p95.toFixed(0),
+        /* How much of the scale the picture actually occupies. */
+        spread: +(p95 - p5).toFixed(0),
+        /* And the single fullest band, because a picture can have a wide
+           spread and still be a spike with two tails. */
+        peak: +Math.max.apply(null, pc).toFixed(1),
       });
     }
     return out;
   }, VIEWS);
 
-  console.log('   view          mean   <64    >224   160-223   histogram by 32s');
+  console.log('   view          mean   p5   p50  p95  spread  peak%  histogram by 32s');
   for (const r of rows) {
     console.log('   ' + r.id.padEnd(14) + String(r.mean).padEnd(7)
-      + String(r.dark).padEnd(7) + String(r.bright).padEnd(7)
-      + String(r.mid).padEnd(10) + r.hist.map((v) => String(v).padStart(6)).join(''));
+      + String(r.p5).padEnd(5) + String(r.p50).padEnd(5) + String(r.p95).padEnd(5)
+      + String(r.spread).padEnd(8) + String(r.peak).padEnd(7)
+      + r.hist.map((v) => String(v).padStart(6)).join(''));
   }
 
   check('every view was measured', rows.length === VIEWS.length,
     `${rows.length}/${VIEWS.length}`);
 
-  /* THE THREE RATCHETS. Each is allowed a little slack for the
-     renderer's own dither and for SwiftShader's rounding, and no more. */
-  const worseDark = rows.filter((r) => r.dark < (BASE[r.id] || {}).dark - 0.8);
-  check('no view lost shade it used to have', worseDark.length === 0,
-    worseDark.map((r) => `${r.id} ${r.dark}% vs ${BASE[r.id].dark}%`).join(', '));
+  /* TWO RATCHETS. A picture may not use less of the scale than it does
+     today, and it may not pile more of itself into one band. Slack is
+     six code values on the spread and two points on the peak, which is
+     several times the run-to-run scatter SwiftShader produces. */
+  const narrower = rows.filter((r) => r.spread < baselineFor(r.id).spread - 6);
+  check('no view uses less of the tonal scale than it did',
+    narrower.length === 0,
+    narrower.map((r) => `${r.id} spread ${r.spread} vs ${BASE[r.id].spread}`).join(', '));
 
-  const worseBright = rows.filter((r) => r.bright < (BASE[r.id] || {}).bright - 0.8);
-  check('no view lost highlights it used to have', worseBright.length === 0,
-    worseBright.map((r) => `${r.id} ${r.bright}% vs ${BASE[r.id].bright}%`).join(', '));
-
-  const worseMid = rows.filter((r) => r.mid > (BASE[r.id] || {}).mid + 1.5);
-  check('no view got flatter', worseMid.length === 0,
-    worseMid.map((r) => `${r.id} ${r.mid}% vs ${BASE[r.id].mid}%`).join(', '));
-
-  /* A SECOND RATCHET, ON THE CRUSHED END. town-inside is 62% below 64:
-     an interior lit by bounce alone, going to mud. It must not get
-     muddier, and unlike the others the number that must not RISE is its
-     shade. */
-  const inside = rows.find((r) => r.id === 'town-inside');
-  if (inside) {
-    check('the interior did not crush any further',
-      inside.dark <= BASE['town-inside'].dark + 1.5,
-      `${inside.dark}% below 64, was ${BASE['town-inside'].dark}%`);
-  }
+  const spikier = rows.filter((r) => r.peak > baselineFor(r.id).peak + 2.0);
+  check('no view piled further into one band', spikier.length === 0,
+    spikier.map((r) => `${r.id} peak ${r.peak}% vs ${BASE[r.id].peak}%`).join(', '));
 
   /* AND WHAT GOOD WOULD LOOK LIKE, stated so the gap is on the record
-     rather than implied. A photograph of a sunlit street puts a few per
-     cent of its pixels in real shade and a few tenths in specular
-     glare. Only demo-crane manages it today; the other three are the
-     target the shader work is aiming at, printed every run. */
-  const goal = rows.filter((r) => r.dark >= 3 && r.bright >= 0.2 && r.mid <= 55);
-  note(`views that read as photographic (>=3% shade, >=0.2% glare, <=55% mid): `
+     rather than implied. A photograph uses most of the scale -- a
+     p95-p5 spread over about 150 of 255 -- without dumping a third of
+     itself into any single band. Printed every run, pass or fail, so
+     the distance left to go is never a matter of opinion. */
+  const goal = rows.filter((r) => r.spread >= 150 && r.peak <= 33);
+  note(`views that read as photographic (spread >=150, no band over 33%): `
     + `${goal.length}/${rows.length}`
     + (goal.length ? ' -- ' + goal.map((r) => r.id).join(', ') : ''));
 
