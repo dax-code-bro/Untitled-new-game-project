@@ -100,7 +100,7 @@ class Camera {
  * yet costs one extra attachment write and no passes. */
 const QUALITY = {
   retro: { shadowRes: 512, cascades: 1, bloom: false, bloomIters: 0, fluidScale: 0.35,
-    fxaa: false, msaa: 0, maxGrass: 500, renderScale: 0.26, texRes: 128,
+    fxaa: false, msaa: 0, maxGrass: 500, renderScale: 0.26, texRes: 128,    env: 0, envRes: 0, envSamples: 0, envDiffuse: 0,
     ssao: 0, ssaoSamples: 0, sharpen: 0, posterize: 9, pixelated: true, fpsCap: 24,
     gbuffer: false },
   /* CONTACT SHADOWS ON THE TIERS PEOPLE ACTUALLY RUN.
@@ -123,19 +123,19 @@ const QUALITY = {
      wide radius with six taps is not soft occlusion, it is noise the
      blur then smears. */
   low: { shadowRes: 768, cascades: 1, bloom: false, bloomIters: 0, fluidScale: 0.5,
-    fxaa: false, msaa: 0, maxGrass: 2500, renderScale: 0.66,
+    fxaa: false, msaa: 0, maxGrass: 2500, renderScale: 0.66,    env: 0, envRes: 0, envSamples: 0, envDiffuse: 0,
     ssao: 0.50, ssaoSamples: 6, ssaoRadius: 0.42, sharpen: 0.10, posterize: 0, texRes: 512,
     gbuffer: false },
   normal: { shadowRes: 1536, cascades: 2, bloom: true, bloomIters: 3, fluidScale: 0.75,
-    fxaa: true, msaa: 0, maxGrass: 20000, renderScale: 1,
+    fxaa: true, msaa: 0, maxGrass: 20000, renderScale: 1,    env: 0, envRes: 64, envSamples: 24, envDiffuse: 0,
     ssao: 0.62, ssaoSamples: 10, ssaoRadius: 0.50, sharpen: 0.16, posterize: 0, texRes: 768,
     gbuffer: false },
   high: { shadowRes: 2560, cascades: 2, bloom: true, bloomIters: 4, fluidScale: 1,
-    fxaa: true, msaa: 0, maxGrass: 60000, renderScale: 1.25,
+    fxaa: true, msaa: 0, maxGrass: 60000, renderScale: 1.25,    env: 1, envRes: 128, envSamples: 32, envDiffuse: 0,
     ssao: 0.70, ssaoSamples: 12, ssaoRadius: 0.55, sharpen: 0.34, posterize: 0, texRes: 1024,
     gbuffer: true },
   ultra: { shadowRes: 4096, cascades: 2, bloom: true, bloomIters: 5, fluidScale: 1,
-    fxaa: true, msaa: 0, maxGrass: 160000, renderScale: 1.85,
+    fxaa: true, msaa: 0, maxGrass: 160000, renderScale: 1.85,    env: 1, envRes: 256, envSamples: 64, envDiffuse: 1,
     ssao: 0.95, ssaoSamples: 26, ssaoRadius: 0.70, sharpen: 0.52, posterize: 0, texRes: 1024,
     gbuffer: true },
 };
@@ -350,7 +350,29 @@ class Renderer {
     this._lightPos = new Float32Array(32);
     this._lightColor = new Float32Array(32);
 
-    this._shadowMats = [new Mat4(), new Mat4()];
+    this._shadowMats = [new Mat4(), new Mat4()];    /* ---- the environment probe ----
+       Allocated lazily by renderEnv(), the first frame a tier with
+       quality.env on actually renders. Nothing here is built in the
+       constructor on purpose: a phone must not pay for a cubemap it
+       will never sample, and none of the three probe programs may be
+       compiled inside a game's boot window (killcam, mpplay and mpshell
+       give that window 120 s under SwiftShader). */
+    this.envCube = null;      // prefiltered, mip L = roughness L/(levels-1)
+    this.envSource = null;    // the unfiltered sky, the prefilter's input
+    this.envFbo = null;       // 1x1, borrowed onto a face/level at a time
+    this.brdfLut = null;      // 128x128 split-sum table
+    this.envLevels = 0;
+    this.envRes = 0;
+    /* Probe strength. 1.0 is physical. A game can dial it without
+       switching the probe off; 0 switches it off. */
+    this.envIntensity = 1.0;
+    this._envSh = new Float32Array(27);
+    this._envHash = null;
+    this._envJob = 0;
+    this._envJobs = 0;
+    this._envReady = false;
+    this._brdfLutBaked = false;
+    this._envNull = null;    // 1x1 stand-ins, see _envFallback
     this._planes = new Float32Array(24);
     /* ================================================================
        SCREEN-SPACE REFLECTIONS
@@ -603,7 +625,11 @@ class Renderer {
        default and the whole point of that tier is to look coarse. */
     this.texTarget = this.quality.texRes || 256;
     Material.textureSize = Math.min(256, this.texTarget);
-    for (const m of this.shadowMaps || []) if (m.dispose) m.dispose();
+    for (const m of this.shadowMaps || []) if (m.dispose) m.dispose();    /* The probe is sized by the tier (envRes) and not by renderScale,
+       so it is not part of resize(). Drop it here and let renderEnv
+       rebuild it lazily at the new size on the next frame -- which is
+       also why a tier with env off allocates nothing at all. */
+    this._disposeEnv();
     this._initShadowMaps();
     this.width = -1; this.height = -1;
     return this.qualityName;
@@ -657,7 +683,45 @@ class Renderer {
     sh.f('uFogDensity', this.fog.density);
     sh.f('uFogHeight', this.fog.height);
     sh.f('uFogHeightFalloff', this.fog.falloff);
-    sh.f('uFogSkyBlend', this.fog.skyBlend);
+    sh.f('uFogSkyBlend', this.fog.skyBlend);    /* ---- the environment probe ----
+       One bind site for all three programs that include GLSL.sky (pbr,
+       sky, fluidShade). uEnvIntensity is the gate as well as the
+       strength: at zero every envXxx() in the shader evaluates the
+       analytic expression it replaced, which is what makes a tier with
+       quality.env off render the frame it rendered before.
+
+       _envReady is false until the first full bake has finished, which
+       is what stops anything sampling the mip levels allocMips left
+       uninitialised.
+
+       BOTH SAMPLERS ARE BOUND UNCONDITIONALLY, AND THAT IS NOT TIDINESS.
+       envBRDF and envRadiance branch on a uniform, so the compiler
+       cannot prove uEnvCube and uBrdfLut are unused and does not strip
+       them: they stay ACTIVE, and an active sampler that nobody points
+       anywhere reads texture unit 0 -- where _bindShadows has just put
+       uShadowMap0, a sampler2DShadow. Two sampler types on one unit is
+       GL_INVALID_OPERATION at draw time and THE DRAW IS DROPPED, which
+       is measurable: interior.test.js went from 88.9/119.2 covered/open
+       to a flat 188.7 for both, because the floor was never rasterised
+       and the band was reading sky.
+
+       The stand-ins are 1x1 textures of our own and NOT, say, hdrA.color
+       -- hdrA is the framebuffer being drawn into, and binding an
+       attachment of the current framebuffer as a texture is the same
+       GL_INVALID_OPERATION by a different route, whether or not the
+       shader ever samples it. Twenty-eight bytes and two bindTexture
+       calls per batch, the same cost as the shadow maps beside them. */
+    const envOn = !!(this.quality.env && this.envCube && this._envReady);
+    sh.f('uEnvIntensity', envOn ? (this.envIntensity != null ? this.envIntensity : 1) : 0);
+    sh.f('uEnvDiffuse', envOn ? (this.quality.envDiffuse || 0) : 0);
+    /* Always zero here. The only draw that sets it to 1 is the cube bake
+       itself, in _bakeEnvSource, immediately after this call. */
+    sh.f('uEnvNoSunDisc', 0);
+    sh.v2('uEnvLod', envOn ? this.envLevels - 1 : 0, envOn ? Math.max(0, this.envLevels - 3) : 0);
+    sh.v3v('uEnvSh', this._envSh);
+    const nul = this._envFallback();
+    sh.tex('uEnvCube', envOn ? this.envCube : nul.cube);
+    sh.tex('uBrdfLut', envOn ? this.brdfLut : nul.lut);
     sh.f('uTime', this.time);
   }
 
@@ -869,7 +933,13 @@ class Renderer {
        the camera to do it. Without this it silently fell back to creation
        order, so the ninth light ever created — whatever it was, wherever the
        player stood — was never uploaded at all. */
-    this.camera = camera;
+    this.camera = camera;    /* Pass 1: the amortised environment bake, before anything binds
+       hdrA. It borrows envFbo and leaves the viewport at a mip size,
+       which the hdrA bind below puts back, and it restores depthMask
+       so that bind's depth clear is not masked out. Here rather than
+       in Engine.step so renderFrom() -- killcams, cutscenes,
+       interior.test.js and density.test.js -- gets a probe too. */
+    this.renderEnv();
     const gl = this.gl;
     /* Mask UP before the clear, not after: one clear has to fill the
        normal buffer as well as the colour, or last frame's normals
@@ -1471,6 +1541,366 @@ class Renderer {
     }
   }
 
+  /* ---------------- environment probe ---------------- */
+
+  /* WHAT THIS PASS IS FOR.
+   *
+     Ambient specular was one call to skyRadiance() along the reflection
+     vector, lerped toward a flat hemisphere constant by rough*rough.
+     Nothing in the world appeared in any reflection, roughness did not
+     blur anything, and indoors a metal reflected a sky it could not
+     see. This bakes skyRadiance() into a small cubemap, runs a GGX
+     roughness prefilter down its mip chain, integrates the split-sum
+     BRDF into a table once, and projects the same sky onto nine
+     spherical harmonics for the diffuse half.
+
+     COST CONTROL IS THE WHOLE DESIGN. The bake is amortised at ONE MIP
+     LEVEL PER FRAME (six faces), so a rebake is envLevels+1 frames --
+     7 at envRes 32, 9 at 128, 10 at 256, i.e. about a sixth of a second
+     at 60 fps and always inside the 20 frames photoreal.test.js runs.
+     It only happens when the sky actually changed: the state is hashed
+     rather than flagged, because setSky and setTimeOfDay both mutate
+     the renderer's Vec3s in place with no event, and bunker-nine writes
+     renderer.sky.intensity directly, which no flag in setSky would ever
+     catch. The hash is only re-read when the previous bake has
+     finished, so a day/night cycle that moves the sun every frame
+     rebakes the whole chain every envLevels+1 frames instead of
+     restarting mip 0 for ever.
+
+     Called from the top of renderScene so both Engine.step and
+     Engine.renderFrom reach it -- interior.test.js and density.test.js
+     render exclusively through renderFrom and would otherwise never
+     have a probe at all. */
+  renderEnv() {
+    const gl = this.gl;
+    const want = this.quality.env ? Math.max(8, this.quality.envRes || 64) : 0;
+    if (!want) {
+      if (this.envCube) this._disposeEnv();
+      return;
+    }
+    if (!this.envCube || this.envRes !== want) {
+      this._disposeEnv();
+      this._initEnv(want);
+    }
+
+    /* The probe passes are fullscreen triangles into a target with no
+       depth attachment. DEPTH_TEST is harmless there but depthMask is
+       not: renderScene's hdrA.bind(true, ...) clears DEPTH immediately
+       after this returns, and a depth clear is masked by depthMask. So
+       both are restored on every path out of here. */
+    gl.disable(gl.DEPTH_TEST);
+    gl.disable(gl.BLEND);
+    gl.depthMask(false);
+
+    if (!this._brdfLutBaked) {
+      this.program('envBrdf', FULLSCREEN_VS, GLSL.envBrdfFrag).use();
+      this.envFbo.attach(this.brdfLut, { level: 0, width: 128, height: 128 });
+      this.fullscreen.draw();
+      this.envFbo.detach();
+      this._brdfLutBaked = true;
+      this.stats.draws++;
+      if (this.stats.passes) this.stats.passes.env++;
+    }
+
+    if (this._envJob >= this._envJobs) {
+      const h = this._envHashState();
+      if (h === this._envHash) {
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthMask(true);
+        return;
+      }
+      this._envHash = h;
+      this._envJob = 0;
+      // The diffuse half is CPU-side and costs nothing, so it is ready
+      // on the frame the sky changed rather than levels frames later.
+      this._bakeEnvSh();
+    }
+
+    const job = this._envJob++;
+    if (job === 0) this._bakeEnvSource();
+    else this._prefilterEnvLevel(job - 1);
+    /* Once true it stays true. A later rebake overwrites the cube in
+       place, which reads as a reflection settling over a few frames --
+       far better than popping back to the analytic sky and in again. */
+    if (this._envJob >= this._envJobs) this._envReady = true;
+
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthMask(true);
+  }
+
+  /* Everything the bake depends on, quantised to a thousandth so float
+     noise cannot retrigger it. sky.clouds is deliberately absent --
+     clouds live in skyFrag, not in skyRadiance, so they are not baked
+     (see the note on renderEnv's scope). sky.room and sky.occlusion are
+     absent because they are applied at shading time, not in the cube. */
+  _envHashState() {
+    const s = this.sky;
+    const u = this.sun;
+    let h = 2166136261;
+    const push = (v) => {
+      h = Math.imul(h ^ (Math.round(v * 1000) | 0), 16777619);
+    };
+    push(u.direction.x); push(u.direction.y); push(u.direction.z);
+    push(u.color.x); push(u.color.y); push(u.color.z);
+    push(u.intensity);
+    push(s.zenith.x); push(s.zenith.y); push(s.zenith.z);
+    push(s.horizon.x); push(s.horizon.y); push(s.horizon.z);
+    push(s.ground.x); push(s.ground.y); push(s.ground.z);
+    push(s.intensity); push(s.bounce);
+    return h | 0;
+  }
+
+  _initEnv(res) {
+    const gl = this.gl;
+    /* Half-float when the context has EXT_color_buffer_float, RGBA8
+       otherwise -- the same rule _hdrSpec follows. On the 8-bit path the
+       sky clips at 1.0, which costs the Mie halo its punch in
+       reflections and costs nothing else, because the one genuinely
+       HDR thing in this sky (the sun disc, ~74 linear at the noon
+       preset) is not baked in the first place. */
+    const fmt = this.floatBuffers ? gl.RGBA16F : gl.RGBA8;
+    const type = this.floatBuffers ? gl.HALF_FLOAT : gl.UNSIGNED_BYTE;
+    this.envSource = new Texture(gl, {
+      cube: true, internalFormat: fmt, format: gl.RGBA, type: type,
+      wrap: gl.CLAMP_TO_EDGE, mips: false, minFilter: gl.LINEAR, magFilter: gl.LINEAR,
+    });
+    this.envSource.alloc(res, res);
+    this.envCube = new Texture(gl, {
+      cube: true, internalFormat: fmt, format: gl.RGBA, type: type,
+      wrap: gl.CLAMP_TO_EDGE, mips: true,
+    });
+    /* allocMips, not alloc. A cube with only level 0 and the
+       LINEAR_MIPMAP_LINEAR filter that mips:true selects is MIP
+       INCOMPLETE, and WebGL does not warn -- it samples black, on every
+       face, for ever. */
+    this.envLevels = this.envCube.allocMips(res);
+    this.envFbo = new Framebuffer(gl, {
+      width: 1, height: 1,
+      colors: [{ internalFormat: fmt, format: gl.RGBA, type: type }],
+      depth: false,
+    });
+    const lutFmt = this.floatBuffers ? gl.RG16F : gl.RG8;
+    const lutType = this.floatBuffers ? gl.HALF_FLOAT : gl.UNSIGNED_BYTE;
+    this.brdfLut = new Texture(gl, {
+      internalFormat: lutFmt, format: gl.RG, type: lutType,
+      /* CLAMP_TO_EDGE is not optional. REPEAT wraps grazing NoV round to
+         zero and puts a bright rim on every silhouette in the game. */
+      wrap: gl.CLAMP_TO_EDGE, mips: false, minFilter: gl.LINEAR, magFilter: gl.LINEAR,
+    });
+    this.brdfLut.alloc(128, 128);
+    this.envRes = res;
+    this._envJob = 0;
+    // One frame for the source, then one per mip level.
+    this._envJobs = 1 + this.envLevels;
+    this._envHash = null;
+    this._envReady = false;
+    this._brdfLutBaked = false;
+  }
+
+  _disposeEnv() {
+    if (this.envCube) this.envCube.dispose();
+    if (this.envSource) this.envSource.dispose();
+    if (this.brdfLut) this.brdfLut.dispose();
+    if (this.envFbo) this.envFbo.dispose();
+    this.envCube = null;
+    this.envSource = null;
+    this.brdfLut = null;
+    this.envFbo = null;
+    this.envLevels = 0;
+    this.envRes = 0;
+    this._envJob = 0;
+    this._envJobs = 0;
+    this._envHash = null;
+    this._envReady = false;
+    this._brdfLutBaked = false;
+  }
+
+  /* Six faces of raw sky into envSource. One draw each, no sampling
+     loop -- this is the cheap half of the bake. */
+  _bakeEnvSource() {
+    const sh = this.program('envBake', FULLSCREEN_VS, GLSL.envBakeFrag).use();
+    this._bindEnv(sh);
+    // The one draw in the engine that suppresses the sun disc.
+    sh.f('uEnvNoSunDisc', 1);
+    for (let f = 0; f < 6; f++) {
+      const b = _envFaces[f];
+      sh.v3f('uEnvFaceX', b.x[0], b.x[1], b.x[2]);
+      sh.v3f('uEnvFaceY', b.y[0], b.y[1], b.y[2]);
+      sh.v3f('uEnvFaceZ', b.z[0], b.z[1], b.z[2]);
+      this.envFbo.attach(this.envSource, { face: f, level: 0, width: this.envRes, height: this.envRes });
+      this.fullscreen.draw();
+      this.stats.draws++;
+    }
+    this.envFbo.detach();
+    if (this.stats.passes) this.stats.passes.env++;
+  }
+
+  /* One roughness level of the prefiltered cube, six faces. Level L is
+     baked at roughness L/(levels-1), which is the mapping envRadiance
+     inverts when it picks a LOD. */
+  _prefilterEnvLevel(level) {
+    const sh = this.program('envPrefilter', FULLSCREEN_VS, GLSL.envPrefilterFrag).use();
+    sh.f('uEnvRough', level / Math.max(1, this.envLevels - 1));
+    sh.i('uEnvSamples', Math.max(8, Math.min(64, this.quality.envSamples || 32)));
+    sh.tex('uEnvSource', this.envSource);
+    const size = Math.max(1, this.envRes >> level);
+    for (let f = 0; f < 6; f++) {
+      const b = _envFaces[f];
+      sh.v3f('uEnvFaceX', b.x[0], b.x[1], b.x[2]);
+      sh.v3f('uEnvFaceY', b.y[0], b.y[1], b.y[2]);
+      sh.v3f('uEnvFaceZ', b.z[0], b.z[1], b.z[2]);
+      /* attach() sets the viewport to THIS MIP's size. Getting that
+         wrong renders a full-size image into a quarter-size level and
+         every prefiltered roughness mip comes out as a crop of the
+         sharp one. */
+      this.envFbo.attach(this.envCube, { face: f, level: level, width: size, height: size });
+      this.fullscreen.draw();
+      this.stats.draws++;
+    }
+    this.envFbo.detach();
+    if (this.stats.passes) this.stats.passes.env++;
+  }
+
+  /* THE DIFFUSE HALF, ON THE CPU.
+   *
+     Projecting the sky onto nine spherical harmonics is 1536 evaluations
+     of a thirty-flop function -- well under a millisecond, once per sky
+     change. Doing it on the GPU would mean a convolution pass and then a
+     readback, and a readback is a pipeline stall. This is strictly
+     cheaper and it is exact, because skyRadiance() is analytic and can
+     simply be evaluated in JavaScript.
+
+     The sample set is the six cube faces at 16x16 with the proper cube
+     texel solid angle 4 / (N^2 * (1+s^2+t^2)^1.5), which sums to 4*PI
+     over the six faces. The l-band cosine convolution weights (1, 2/3,
+     1/4) and the 1/PI that turns irradiance into the average incident
+     radiance skyIrradiance() returns are folded into the uploaded
+     coefficients, so the shader is nine multiply-adds.
+
+     The sun disc is left out here for the same reason it is left out of
+     the cube: pbrFrag adds the sun analytically, with a shadow term. */
+  _bakeEnvSh() {
+    const N = 16;
+    const L = new Float64Array(27);
+    const c = _envRgb;
+    for (let f = 0; f < 6; f++) {
+      const b = _envFaces[f];
+      for (let yi = 0; yi < N; yi++) {
+        const t = ((yi + 0.5) / N) * 2 - 1;
+        for (let xi = 0; xi < N; xi++) {
+          const s = ((xi + 0.5) / N) * 2 - 1;
+          let dx = b.z[0] + s * b.x[0] + t * b.y[0];
+          let dy = b.z[1] + s * b.x[1] + t * b.y[1];
+          let dz = b.z[2] + s * b.x[2] + t * b.y[2];
+          const inv = 1 / Math.sqrt(dx * dx + dy * dy + dz * dz);
+          dx *= inv; dy *= inv; dz *= inv;
+          const d2 = 1 + s * s + t * t;
+          const dw = (4 / (N * N)) / (d2 * Math.sqrt(d2));
+          this._skyRadianceJs(dx, dy, dz, c);
+          const r = c[0] * dw, g = c[1] * dw, bl = c[2] * dw;
+          let w = 0.282095;
+          L[0] += r * w; L[1] += g * w; L[2] += bl * w;
+          w = 0.488603 * dy;
+          L[3] += r * w; L[4] += g * w; L[5] += bl * w;
+          w = 0.488603 * dz;
+          L[6] += r * w; L[7] += g * w; L[8] += bl * w;
+          w = 0.488603 * dx;
+          L[9] += r * w; L[10] += g * w; L[11] += bl * w;
+          w = 1.092548 * dx * dy;
+          L[12] += r * w; L[13] += g * w; L[14] += bl * w;
+          w = 1.092548 * dy * dz;
+          L[15] += r * w; L[16] += g * w; L[17] += bl * w;
+          w = 0.315392 * (3 * dz * dz - 1);
+          L[18] += r * w; L[19] += g * w; L[20] += bl * w;
+          w = 1.092548 * dx * dz;
+          L[21] += r * w; L[22] += g * w; L[23] += bl * w;
+          w = 0.546274 * (dx * dx - dy * dy);
+          L[24] += r * w; L[25] += g * w; L[26] += bl * w;
+        }
+      }
+    }
+    // A_l / PI, times the basis constant, folded per band.
+    const K = [
+      1.0 * 0.282095,
+      0.6666667 * 0.488603, 0.6666667 * 0.488603, 0.6666667 * 0.488603,
+      0.25 * 1.092548, 0.25 * 1.092548, 0.25 * 0.315392, 0.25 * 1.092548, 0.25 * 0.546274,
+    ];
+    for (let i = 0; i < 9; i++) {
+      const k = K[i];
+      this._envSh[i * 3] = L[i * 3] * k;
+      this._envSh[i * 3 + 1] = L[i * 3 + 1] * k;
+      this._envSh[i * 3 + 2] = L[i * 3 + 2] * k;
+    }
+  }
+
+  /* skyRadiance() from GLSL.sky, line for line, minus the sun disc.
+     THESE TWO MUST NOT DRIFT. If skyRadiance changes and this does not,
+     the specular probe (baked on the GPU) and the diffuse probe
+     (projected here) stop describing the same sky, and the symptom is a
+     metal and the matte surface beside it disagreeing about what colour
+     the day is. */
+  _skyRadianceJs(dx, dy, dz, out) {
+    const s = this.sky;
+    const u = this.sun;
+    const si = s.intensity;
+    const k = Math.min(1, Math.max(0, dy * 1.6));
+    let r = s.horizon.x + (s.zenith.x - s.horizon.x) * k;
+    let g = s.horizon.y + (s.zenith.y - s.horizon.y) * k;
+    let b = s.horizon.z + (s.zenith.z - s.horizon.z) * k;
+    const lit = Math.max(u.direction.y, 0);
+    const inv = 1 / Math.max(si, 1e-4);
+    const gr = s.ground.x * (si + u.color.x * u.intensity * lit * s.bounce) * inv;
+    const gg = s.ground.y * (si + u.color.y * u.intensity * lit * s.bounce) * inv;
+    const gb = s.ground.z * (si + u.color.z * u.intensity * lit * s.bounce) * inv;
+    let e = Math.min(1, Math.max(0, (dy + 0.28) / 0.34));
+    e = e * e * (3 - 2 * e);
+    r = gr + (r - gr) * e;
+    g = gg + (g - gg) * e;
+    b = gb + (b - gb) * e;
+    const sd = Math.min(1, Math.max(0, dx * u.direction.x + dy * u.direction.y + dz * u.direction.z));
+    const halo = Math.pow(sd, 12) * 0.35 + Math.pow(sd, 3) * 0.08;
+    const hs = halo * u.intensity * 0.35;
+    r += u.color.x * hs;
+    g += u.color.y * hs;
+    b += u.color.z * hs;
+    // The disc (uSunColor * disc * uSunIntensity * 12.0) is omitted here,
+    // exactly as uEnvNoSunDisc omits it on the GPU bake.
+    out[0] = r * si;
+    out[1] = g * si;
+    out[2] = b * si;
+    return out;
+  }
+
+  /* THE STAND-INS FOR "NO PROBE".
+   *
+     envBRDF and envRadiance branch on a uniform, so uEnvCube and
+     uBrdfLut stay active in the linked program even on a tier that will
+     never sample them -- and an active sampler nobody points anywhere
+     reads texture unit 0, where uShadowMap0 already is. Two sampler
+     types on one unit is GL_INVALID_OPERATION and the draw is dropped.
+     Twenty-eight bytes of black texture is the entire fix, and they are
+     deliberately textures of our own rather than any existing target,
+     because a target that is also an attachment of the framebuffer
+     being drawn into is the same error again. Built once, never
+     disposed with the probe -- they are wanted exactly when it is not. */
+  _envFallback() {
+    if (this._envNull) return this._envNull;
+    const gl = this.gl;
+    const black = new Uint8Array([0, 0, 0, 255]);
+    const cube = new Texture(gl, {
+      cube: true, internalFormat: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE,
+      wrap: gl.CLAMP_TO_EDGE, mips: false, minFilter: gl.LINEAR, magFilter: gl.LINEAR,
+    });
+    for (let f = 0; f < 6; f++) cube.uploadCubeFace(f, black, 1);
+    cube.width = 1; cube.height = 1;
+    const lut = new Texture(gl, {
+      internalFormat: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE,
+      wrap: gl.CLAMP_TO_EDGE, mips: false, minFilter: gl.LINEAR, magFilter: gl.LINEAR,
+    });
+    lut.upload(black, 1, 1);
+    this._envNull = { cube: cube, lut: lut };
+    return this._envNull;
+  }
   beginFrame(dt) {
     this.time += dt;
     this.stats.draws = 0;
@@ -1486,3 +1916,25 @@ const _shadowViewInv = new Mat4();
 const _shadowProj = new Mat4();
 const _axisZ = new Vec3(0, 0, 1);
 const _defaultWind = new Vec3(1, 0, 0.3).normalize();
+/* THE OPENGL CUBE-FACE BASIS, AS A TABLE.
+ *
+   For each face: given the face's texture coordinates (s, t) in [0,1],
+   the direction is z + (2s-1)*x + (2t-1)*y. These are the inverses of
+   the major-axis rules in the GL spec's cube-map table -- which is why
+   four of the six have y = (0,-1,0) and +Y's is (0,0,1). Getting one
+   row wrong does not fail, it mirrors or rotates one face of every
+   reflection in the game, so this is written out once and shared by the
+   bake, the prefilter and the CPU-side spherical-harmonic projection.
+
+   The fullscreen triangle's vUv (aPos*0.5+0.5) is exactly that (s, t):
+   vUv.y = 0 is framebuffer row 0, which is cube face texel row 0, which
+   is the spec's t = 0. */
+const _envFaces = [
+  { x: [0, 0, -1], y: [0, -1, 0], z: [1, 0, 0] },   // +X
+  { x: [0, 0, 1], y: [0, -1, 0], z: [-1, 0, 0] },   // -X
+  { x: [1, 0, 0], y: [0, 0, 1], z: [0, 1, 0] },     // +Y
+  { x: [1, 0, 0], y: [0, 0, -1], z: [0, -1, 0] },   // -Y
+  { x: [1, 0, 0], y: [0, -1, 0], z: [0, 0, 1] },    // +Z
+  { x: [-1, 0, 0], y: [0, -1, 0], z: [0, 0, -1] },  // -Z
+];
+const _envRgb = [0, 0, 0];

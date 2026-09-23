@@ -55,31 +55,56 @@ const CHROME = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
    mirror anywhere in the real game. The satin row is the one that
    matters for the streets. */
 const SUBJECTS = [
-  { id: 'chrome', rough: 0.04, metal: 1.0 },
-  { id: 'satin', rough: 0.30, metal: 1.0 },
+  { id: 'ball-chrome', rig: 'ball', tier: 'high', rough: 0.04, metal: 1.0 },
+  { id: 'ball-satin', rig: 'ball', tier: 'high', rough: 0.30, metal: 1.0 },
+  /* THE SAME ROOM WITH THE MIRROR ON THE FLOOR INSTEAD OF THE BALL, at
+     high and at ultra, because screen-space reflection only exists at
+     ultra and a ratchet that runs at high alone cannot see it.
+
+     The pairing is the measurement: the two rows differ in the tier and
+     in nothing else, so whatever separates them is the feature. And the
+     floor is the shape SSR is FOR. A convex mirror ball is close to its
+     worst case -- almost every ray it reflects leaves the screen within
+     a few texels, and SSR can only return what is still on screen --
+     which is why the ball rows move by 0.13 per cent at ultra while the
+     floor rows move by five. That is not a defect in the trace; it is
+     the reason an environment probe is still needed alongside it. */
+  { id: 'floor-high', rig: 'floor', tier: 'high', rough: 0.04, metal: 1.0 },
+  { id: 'floor-ultra', rig: 'floor', tier: 'ultra', rough: 0.04, metal: 1.0 },
 ];
 
 /* Measured on the build this test was written against, at quality high,
    with the analytic sky as the only environment term.
 
-     chrome (rough 0.04)   chroma 0.469   spread 1.467   walls 0/4
-     satin  (rough 0.30)   chroma 0.446   spread 1.708   walls 0/4
+     ball-chrome  (rough 0.04, high)   chroma 0.469  sharp 0.0815  0/4
+     ball-satin   (rough 0.30, high)   chroma 0.437  sharp 0.2702  0/4
+     floor-high   (mirror floor)       chroma 0.541  sharp 0.0285  0/4
+     floor-ultra  (mirror floor)       chroma 0.544  sharp 0.0271  3/4
 
-   Zero of four, on both, with every one of the four counts reading
-   0.00 per cent. A mirrored ball at the centre of a room whose walls
-   are pure red, green, magenta and yellow shows not one pixel of any of
-   them, while the control confirms the other three walls are in plain
-   sight in the same frame at 21.5, 16.1 and 16.1 per cent. The chroma that is there is the sky's own
-   blue, and a bright-quartile only 1.4x the dark quartile is the
-   signature of a gradient rather than a room.
+   THE THREE ZEROES ARE THE POINT, and so is the three. A mirrored ball
+   at the centre of a room whose walls are pure red, green, magenta and
+   yellow shows not one pixel of any of them, at either tier, while the
+   control confirms the other three walls are in plain sight in the same
+   frame. Lay the same mirror flat on the FLOOR and at ultra three of
+   the four appear -- 12.7, 4.8 and 3.6 per cent -- because the
+   screen-space trace can return what is on screen.
+
+   GREEN STAYS AT ZERO IN EVERY ROW, by construction: the green wall is
+   behind the camera. Nothing this engine currently does can reflect it.
+   A screen-space trace cannot, and the environment probe bakes the
+   analytic SKY rather than the scene, so it cannot either. The day a
+   row here reads 4 of 4 is the day something genuinely samples the
+   whole room.
 
    SLACK: two consecutive runs agreed to three decimal places, so this
    rig is as deterministic as SwiftShader gets. The tolerances below are
    for a different machine, not for run-to-run noise. `hues` is an
    integer count of walls and may not fall at all. */
 const BASE = {
-  chrome: { chroma: 0.469, sd: 1.467, hues: 0 },
-  satin: { chroma: 0.446, sd: 1.708, hues: 0 },
+  'ball-chrome': { chroma: 0.469, sd: 0.0815, hues: 0 },
+  'ball-satin': { chroma: 0.437, sd: 0.2702, hues: 0 },
+  'floor-high': { chroma: 0.541, sd: 0.0285, hues: 0 },
+  'floor-ultra': { chroma: 0.544, sd: 0.0271, hues: 3 },
 };
 
 /* The baseline must exist for every subject, checked rather than
@@ -118,7 +143,7 @@ const note = (s) => console.log(`  ..   ${s}`);
   const rows = await page.evaluate((subjects) => {
     const out = [];
     for (const s of subjects) {
-      const g = LegendEngine.create({ canvas: '#game', quality: 'high', preserveDrawingBuffer: true });
+      const g = LegendEngine.create({ canvas: '#game', quality: s.tier, preserveDrawingBuffer: true });
       /* The room. Walls at +-4 m, tall enough to fill the sphere's
          hemisphere, and matte so they contribute colour rather than
          bouncing the sky back. physics:false because nothing here
@@ -139,24 +164,32 @@ const note = (s) => console.log(`  ..   ${s}`);
       wall(0, -4, 8, 0.2, 0x00ff00);   // green   behind the camera
       wall(4, 0, 0.2, 8, 0xff00ff);    // magenta right
       wall(-4, 0, 0.2, 8, 0xffff00);   // yellow  left
-      g.box({
-        size: [8, 0.2, 8], position: [0, -0.1, 0], physics: false,
-        material: { color: 0xffffff, texture: 'smooth', roughness: 0.9, metalness: 0 },
-      });
-      /* NO TEXTURE ON THE BALL, deliberately. The shader resolves
+      /* NO TEXTURE ON THE MIRROR, deliberately. The shader resolves
          metalness as `uMetalness * mix(1.0, orm.b, 0.85)`, and the
          `smooth` recipe never sets metal, so its ORM blue is 0 --
          a material asking for metalness 1 with that texture on it
          renders at 0.15. With no maps at all uHasMaps is 0 and the
          uniforms pass through untouched, which is what a controlled
-         rig needs. */
-      const ball = g.sphere({
-        radius: 1.1, position: [0, 1.4, 0], physics: false,
-        material: { color: 0xffffff, texture: null, roughness: s.rough, metalness: s.metal },
-      });
+         rig needs. It also makes the mirror the only metal in the
+         room, which is how the mask below finds it. */
+      const mirror = { color: 0xffffff, texture: null, roughness: s.rough, metalness: s.metal };
+      const matte = { color: 0xffffff, texture: 'smooth', roughness: 0.9, metalness: 0 };
+      if (s.rig === 'floor') {
+        g.box({ size: [8, 0.2, 8], position: [0, -0.1, 0], physics: false, material: mirror });
+        g.sphere({ radius: 0.7, position: [0, 0.75, 1.2], physics: false, material: matte });
+      } else {
+        g.box({ size: [8, 0.2, 8], position: [0, -0.1, 0], physics: false, material: matte });
+        g.sphere({ radius: 1.1, position: [0, 1.4, 0], physics: false, material: mirror });
+      }
 
-      g.camera.position.set(0, 1.6, -3.0);
-      g.camera.target.set(0, 1.4, 0);
+      if (s.rig === 'floor') {
+        // Looking down the floor, so the reflected rays stay in frame.
+        g.camera.position.set(0, 2.2, -3.0);
+        g.camera.target.set(0, 0.0, 0.6);
+      } else {
+        g.camera.position.set(0, 1.6, -3.0);
+        g.camera.target.set(0, 1.4, 0);
+      }
       /* Wide enough that the side walls are in shot. At 62 degrees they
          fell outside the frame, so the control could only ever
          demonstrate the red class and said nothing about whether the
@@ -182,8 +215,8 @@ const note = (s) => console.log(`  ..   ${s}`);
         if (e === 31) return m ? NaN : sg * Infinity;
         return sg * Math.pow(2, e - 15) * (1 + m / 1024);
       };
-      const read = (att) => {
-        gl.bindFramebuffer(gl.FRAMEBUFFER, r.hdrA.handle);
+      const read = (att, fb) => {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fb.handle);
         gl.readBuffer(gl.COLOR_ATTACHMENT0 + att);
         while (gl.getError()) {}
         const fmt = gl.getParameter(gl.IMPLEMENTATION_COLOR_READ_FORMAT);
@@ -216,8 +249,17 @@ const note = (s) => console.log(`  ..   ${s}`);
          The ball is the only metal in the rig, so attachment 1's
          metalness channel names it exactly, with no shadow in it and no
          silhouette blend. */
-      const gbuf = read(1);
-      const px = read(0);
+      /* THE POST-FOLD SCENE, not hdrA. Screen-space reflection is folded
+         in during present(), into hdrB, and the renderer then points
+         _sceneTex at whichever of the two the rest of the frame should
+         read. Reading hdrA would measure the picture as it was BEFORE
+         the reflection was added, which is how the first run of this
+         reported ultra and high as identical to three decimals. Both
+         targets are scene-sized, so the G-buffer mask lines up with
+         either one exactly. */
+      const folded = r._sceneTex && r.hdrB && r._sceneTex === r.hdrB.color;
+      const gbuf = read(1, r.hdrA);
+      const px = read(0, folded ? r.hdrB : r.hdrA);
       if (!gbuf || !px) { out.push({ id: s.id, err: 'could not read the scene target' }); continue; }
       const raw = new Uint8Array(W * H);
       for (let p = 0; p < W * H; p++) raw[p] = gbuf[p * 4 + 3] > 0.5 ? 1 : 0;
@@ -272,6 +314,7 @@ const note = (s) => console.log(`  ..   ${s}`);
 
       let n = 0, sumChroma = 0, sumL = 0;
       const lums = [];
+      const lumImg = new Float32Array(W * H);
       const hue = { r: 0, g: 0, m: 0, y: 0 };
       for (let p = 0; p < mask.length; p++) {
         if (!mask[p]) continue;
@@ -280,7 +323,7 @@ const note = (s) => console.log(`  ..   ${s}`);
         const chroma = mx ? (mx - mn) / mx : 0;
         sumChroma += chroma;
         const L = 0.2126 * R + 0.7152 * G + 0.0722 * B;
-        sumL += L; lums.push(L); n++;
+        sumL += L; lums.push(L); lumImg[p] = L; n++;
         /* A wall colour counts only when it is unmistakably that wall:
            a clear dominant channel, not a tint. The sky's own blue is
            pale and wide, so a 25% margin keeps it out of hue.b. */
@@ -299,19 +342,40 @@ const note = (s) => console.log(`  ..   ${s}`);
       }
       if (!n) { out.push({ id: s.id, err: 'no ball pixels found' }); continue; }
       const mean = sumL / n;
-      /* SPREAD AS A QUARTILE RATIO, not a standard deviation.
-         The first cut used sd/mean and read 4.86 on a mirror -- not
+
+      /* SHARPNESS AS LOCAL GRADIENT ENERGY, and it took two wrong
+         metrics to get here.
+       *
+         The first was sd/mean, which read 4.86 on a mirror -- not
          because the reflection was rich but because the sun's specular
-         highlight on a mirror is a handful of pixels in the hundreds of
-         nits against a sky in the fractions, and one blazing spot
-         dominates any second moment. p75/p25 ignores it: it asks how
-         far apart the bulk of the reflection is, which is what "there
-         is more than one thing in this mirror" actually means. Scale
-         free, so a brighter sun does not move it. */
-      lums.sort((a, b) => a - b);
-      const q = (f) => lums[Math.min(lums.length - 1, Math.floor(f * lums.length))];
-      const p25 = q(0.25), p75 = q(0.75);
-      const sd = p25 > 1e-6 ? p75 / p25 : 0;
+         highlight is a handful of pixels in the hundreds of nits
+         against a sky in the fractions, and one blazing spot dominates
+         any second moment.
+
+         The second was the quartile ratio p75/p25, which survives that
+         spot but fails the opposite way: a ROUGH surface spreads the
+         sun into a broad bright lobe that lifts p75 across a quarter of
+         the ball, so the satin sphere measured a WIDER range than the
+         mirror (1.566 against 1.445) while being visibly blurrier. A
+         wider range is not more detail.
+
+         What "sharp" actually means is high spatial frequency, so
+         measure that: the mean absolute local gradient, divided by the
+         mean level so it is scale free. A broad smooth lobe, however
+         bright, has almost no gradient in it; an edge has nothing but.
+         Only pixels whose four neighbours are also on the subject
+         count, so the silhouette contributes no gradient of its own. */
+      let gsum = 0, gn = 0;
+      for (let y = 1; y < H - 1; y++) {
+        for (let x = 1; x < W - 1; x++) {
+          const i = y * W + x;
+          if (!mask[i] || !mask[i - 1] || !mask[i + 1] || !mask[i - W] || !mask[i + W]) continue;
+          gsum += Math.abs(lumImg[i + 1] - lumImg[i - 1])
+                + Math.abs(lumImg[i + W] - lumImg[i - W]);
+          gn++;
+        }
+      }
+      const sd = (gn && mean > 1e-6) ? (gsum / gn) / mean : 0;
       /* A wall "appears" when it covers at least half a per cent of the
          ball. One stray pixel is noise, not a reflection. */
       const min = n * 0.005;
@@ -319,7 +383,7 @@ const note = (s) => console.log(`  ..   ${s}`);
       out.push({
         id: s.id, px: n,
         chroma: +(sumChroma / n).toFixed(3),
-        mean: +mean.toFixed(3), sd: +sd.toFixed(3),
+        mean: +mean.toFixed(3), sd: +sd.toFixed(4),
         hues: seen.length, seen: seen.join('') || '-',
         counts: ['r', 'g', 'm', 'y'].map((k) => +(100 * hue[k] / n).toFixed(2)),
         ctl: ['r', 'g', 'm', 'y'].map((k) => +(100 * ctl[k] / Math.max(1, ctl.n)).toFixed(2)),
@@ -329,12 +393,12 @@ const note = (s) => console.log(`  ..   ${s}`);
   }, SUBJECTS);
 
   const pad = (s, w) => String(s).padEnd(w);
-  console.log('\n  ' + pad('subject', 9) + pad('px', 7) + pad('chroma', 8) + pad('mean', 7)
-    + pad('sd', 7) + pad('hues', 6) + pad('seen', 6) + '  r%    g%    m%    y%');
+  console.log('\n  ' + pad('subject', 13) + pad('px', 8) + pad('chroma', 8) + pad('mean', 8)
+    + pad('sharp', 9) + pad('hues', 6) + pad('seen', 6) + '  r%    g%    m%    y%');
   for (const r of rows) {
-    if (r.err) { console.log('  ' + pad(r.id, 9) + r.err); continue; }
-    console.log('  ' + pad(r.id, 9) + pad(r.px, 7) + pad(r.chroma.toFixed(3), 8)
-      + pad(r.mean.toFixed(3), 7) + pad(r.sd.toFixed(3), 7) + pad(r.hues + '/4', 6)
+    if (r.err) { console.log('  ' + pad(r.id, 13) + r.err); continue; }
+    console.log('  ' + pad(r.id, 13) + pad(r.px, 8) + pad(r.chroma.toFixed(3), 8)
+      + pad(r.mean.toFixed(3), 8) + pad(r.sd.toFixed(4), 9) + pad(r.hues + '/4', 6)
       + pad(r.seen, 6) + r.counts.map((v) => pad(v.toFixed(2), 6)).join(''));
   }
   console.log('');
@@ -360,12 +424,41 @@ const note = (s) => console.log(`  ..   ${s}`);
     const b = baselineFor(r.id);
     check(`${r.id}: the reflection is no less colourful than it was`,
       r.chroma >= b.chroma - 0.02, `chroma ${r.chroma} vs ${b.chroma}`);
-    check(`${r.id}: the reflection has no less detail in it than it did`,
-      r.sd >= b.sd - 0.06, `spread ${r.sd} vs ${b.sd}`);
+    check(`${r.id}: the reflection is no blurrier than it was`,
+      r.sd >= b.sd * 0.90, `sharpness ${r.sd} vs ${b.sd}`);
     check(`${r.id}: no wall that used to show up has stopped showing up`,
       r.hues >= b.hues, `hues ${r.hues}/4 vs ${b.hues}/4`);
   }
 
+  /* WHY THERE IS NO "ROUGHNESS MUST BLUR" CHECK HERE, having tried
+     twice to write one.
+   *
+     It is the obvious invariant to want: two balls in the same room
+     differing only in roughness, and the rough one must show the less
+     detailed reflection. It cannot be measured in THIS rig, and the
+     reason is worth writing down rather than discovering a third time.
+
+     Attempt one compared the quartile ratio p75/p25. The satin ball
+     measured WIDER than the mirror, 1.566 against 1.445. Attempt two
+     compared local gradient energy, which is what sharpness actually
+     means. The satin ball measured three times SHARPER, 0.270 against
+     0.082. Both numbers are right, and both are about the sun rather
+     than the room: on a mirror the sun is a handful of blazing texels,
+     and on a satin sphere it is a broad lobe whose steep rim carries
+     more edge than the whole rest of the reflection put together.
+
+     Underneath that is the thing that actually blocks the measurement:
+     THE ENVIRONMENT IN THIS ROOM HAS NO DETAIL TO BLUR. The probe bakes
+     the analytic sky, and the analytic sky is a smooth gradient, so a
+     perfectly sharp mirror of it is already a smooth image. There is no
+     high frequency for roughness to take away. The invariant becomes
+     measurable the day something with edges in it reaches the
+     reflection -- which is what a scene-rendering probe would put
+     there, and what the screen-space trace already puts into
+     floor-ultra.
+
+     So sharpness below is recorded and ratcheted as a tripwire against
+     a reflection collapsing, and is NOT read as a quality score. */
   const best = Math.max(...rows.filter((r) => !r.err).map((r) => r.hues));
   note(`walls visible in the best reflection: ${best}/4`
     + (best === 0 ? ' -- the scene does not appear in any mirror in this engine' : ''));

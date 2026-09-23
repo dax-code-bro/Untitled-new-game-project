@@ -104,6 +104,42 @@ uniform float uSkyOcclusion;
    The bounce is attenuated by the same skyVis as the rest of the
    ambient, so a roof still darkens the room under it: the caller
    multiplies the whole of skyIrradiance by it. */
+/* ================================================================
+   THE BAKED ENVIRONMENT PROBE
+   ================================================================
+   Everything above this point is a FIT, not an environment. A metal
+   reflects a two-colour vertical gradient with a dot in it, and
+   roughness does not blur that gradient -- it lerps it toward a flat
+   constant -- see the mix(skyRadiance(R), skyIrradiance(N), rough*rough)
+   in the ambient term. That is the whole reason mid-rough metal -- worn
+   gun steel, wet concrete, a car panel -- reads as either chrome or
+   matte paint with nothing in between, and it is why a gun indoors
+   reflects an outdoor sky it cannot see.
+
+   These uniforms are the real thing: a small cubemap of skyRadiance()
+   with a GGX roughness prefilter down its mip chain, the split-sum BRDF
+   as a lookup table, and a nine-coefficient spherical-harmonic
+   projection of the same sky for the diffuse half. The renderer bakes
+   all three (Renderer.renderEnv) and binds them in _bindEnv.
+
+   uEnvIntensity IS THE GATE. Zero means "no probe", and every envXxx()
+   function below then evaluates the exact expression this shader used
+   before the probe existed -- same constants, same order of operations
+   -- so a tier with quality.env off renders the frame it rendered
+   yesterday, bit for bit. It doubles as the strength, so a game can
+   dial a probe down without switching it off. */
+uniform samplerCube uEnvCube;   // mip L was baked at roughness L/(levels-1)
+uniform sampler2D uBrdfLut;     // split-sum: .r scales F0, .g is the bias
+uniform float uEnvIntensity;    // 0 = no probe, and the pre-probe code path
+uniform vec2 uEnvLod;           // x = levels-1, y = coarsest mip we may sample
+uniform float uEnvDiffuse;      // 0..1: analytic hemisphere -> SH9 irradiance
+uniform vec3 uEnvSh[9];         // cosine-convolved and already divided by PI
+/* 1 only while skyRadiance() is being baked into the cube, 0 every other
+   time. The polarity is deliberate. A uniform this renderer never binds
+   reads as zero (20-gl.js), and zero here means "draw the sun disc",
+   which is exactly what this shader did before. The other way round, one
+   missed bind in _bindEnv would silently delete the sun from the sky. */
+uniform float uEnvNoSunDisc;
 vec3 groundIrradiance(){
   // How square-on the sun hits flat ground. Nothing to bounce at night.
   float lit = max(uSunDir.y, 0.0);
@@ -125,7 +161,14 @@ vec3 skyRadiance(vec3 dir){
   // The disc itself: sharp, bright, and clipped so bloom does the glow.
   float disc = smoothstep(0.9986, 0.9995, sunDot);
   sky += uSunColor * (halo * uSunIntensity * 0.35);
-  sky += uSunColor * disc * uSunIntensity * 12.0;
+  /* The disc is multiplied out while this sky is being baked into the
+     environment cube. pbrFrag adds the analytic sun itself with a
+     shadow term, and prefiltering a ~74-linear spike (noon preset)
+     across a GGX lobe puts a second, blurry, unshadowed sun on every
+     rough metal in the game. uEnvNoSunDisc is 0 everywhere else, and
+     multiplying by exactly 1.0 is exact in IEEE float, so this line
+     produces the same bits it did before for every ordinary draw. */
+  sky += uSunColor * disc * uSunIntensity * 12.0 * (1.0 - uEnvNoSunDisc);
   return sky * uSkyIntensity;
 }
 
@@ -146,6 +189,83 @@ vec3 skyIrradiance(vec3 n){
   float up = mix(0.18, 1.0, n.y * 0.5 + 0.5);
   vec3 sky = mix(uSkyHorizon, uSkyZenith, 0.65) * uSkyIntensity;
   return mix(groundIrradiance(), sky, up);
+}
+/* ---- the split-sum BRDF, twice ----
+   envBRDFFit is a verbatim copy of envBRDFApprox (Karis' analytic fit,
+   in GLSL.pbr). It is duplicated rather than called for one hard
+   reason: GLSL.sky is compiled into skyFrag, which does NOT include
+   GLSL.pbr, so a call here would need a forward declaration whose
+   definition is missing in that program -- a link error on any driver
+   that does not dead-strip before it checks. Eight lines of arithmetic
+   is the cheap side of that trade, and it is the same trade the shadow
+   chunk already makes with pcfCascade0/pcfCascade1. */
+vec3 envBRDFFit(vec3 F0, float rough, float NoV){
+  const vec4 c0 = vec4(-1.0, -0.0275, -0.572, 0.022);
+  const vec4 c1 = vec4(1.0, 0.0425, 1.04, -0.04);
+  vec4 r = rough * c0 + c1;
+  float a004 = min(r.x * r.x, exp2(-9.28 * NoV)) * r.x + r.y;
+  vec2 AB = vec2(-1.04, 1.04) * a004 + r.zw;
+  return F0 * AB.x + AB.y;
+}
+
+/* The integrated table when there is a probe, the fit when there is
+   not. The table is the same quantity the fit approximates -- the
+   scale and bias halves of Karis' split sum -- integrated with 128
+   GGX samples instead of curve-fitted, which is worth having exactly
+   where the fit is worst: high roughness at grazing angles, i.e. the
+   rim of every rough metal silhouette. */
+vec3 envBRDF(vec3 F0, float rough, float NoV){
+  if (uEnvIntensity <= 0.0) return envBRDFFit(F0, rough, NoV);
+  vec2 ab = texture(uBrdfLut, vec2(NoV, rough)).rg;
+  return F0 * ab.x + vec3(ab.y);
+}
+
+/* Nine coefficients, evaluated in the same world-space basis the
+   renderer projected them in. The constants (sqrt terms, the l-band
+   convolution weights and the 1/PI) are all folded into the uploaded
+   coefficients, so this is nine multiply-adds and nothing else. */
+vec3 shIrradiance(vec3 n){
+  return uEnvSh[0]
+    + uEnvSh[1] * n.y + uEnvSh[2] * n.z + uEnvSh[3] * n.x
+    + uEnvSh[4] * (n.x * n.y) + uEnvSh[5] * (n.y * n.z)
+    + uEnvSh[6] * (3.0 * n.z * n.z - 1.0)
+    + uEnvSh[7] * (n.x * n.z) + uEnvSh[8] * (n.x * n.x - n.y * n.y);
+}
+
+/* DIFFUSE AMBIENT. skyIrradiance() is a two-lobe lerp on n.y: it has
+   almost no directional structure, which is why a normal map is
+   invisible in shade and why turning an object under a blue sky over
+   warm ground barely changes its colour. SH9 of the actual sky has
+   that structure. It is blended rather than swapped because the lerp
+   was hand-tuned to hold undersides off black (see the long note in
+   skyIrradiance) and a band-limited projection of a hard horizon step
+   rings slightly below it; max() against zero clamps the ringing, and
+   uEnvDiffuse decides how much of the real thing to take. */
+vec3 envIrradiance(vec3 n){
+  vec3 analytic = skyIrradiance(n);
+  if (uEnvIntensity <= 0.0 || uEnvDiffuse <= 0.0) return analytic;
+  return mix(analytic, max(shIrradiance(n), vec3(0.0)), uEnvDiffuse);
+}
+
+/* SPECULAR AMBIENT -- the line this whole feature exists for.
+   Without a probe: the old lerp, unchanged.
+   With one: mip L of the cube was baked by importance-sampling GGX at
+   roughness L/(levels-1), so the mapping back is linear in roughness.
+
+   Two clamps, both about cube seams. WebGL2 has no
+   TEXTURE_CUBE_MAP_SEAMLESS, so bilinear across a face edge clamps
+   inside the face and the join shows. uEnvLod.y stops the sampler two
+   levels short of 1x1 -- the coarsest face we ever read is 4x4 -- and
+   above roughness 0.75 the probe cross-fades into the irradiance,
+   where a GGX lobe that already covers most of the hemisphere and a
+   cosine lobe differ by very little. The fade also lands the rough end
+   on exactly the value the old code produced there, so the transition
+   from no-probe to probe is continuous in roughness. */
+vec3 envRadiance(vec3 R, vec3 N, float rough){
+  if (uEnvIntensity <= 0.0) return mix(skyRadiance(R), skyIrradiance(N), rough * rough);
+  float lod = min(rough * uEnvLod.x, uEnvLod.y);
+  vec3 probe = textureLod(uEnvCube, R, lod).rgb * uEnvIntensity;
+  return mix(probe, envIrradiance(N), smoothstep(0.75, 1.0, rough));
 }
 `;
 
@@ -767,14 +887,17 @@ void main(){
      black. Specular gets three quarters of the attenuation rather than
      all of it: a polished floor indoors still catches the doorway. */
   float skyVis = mix(1.0 - uSkyOcclusion, 1.0, shadow);
-  vec3 irradiance = skyIrradiance(N) * skyVis;
+  vec3 irradiance = envIrradiance(N) * skyVis;
   vec3 kS = fresnelSchlickRough(NoV, F0, rough);
   vec3 kD = (vec3(1.0) - kS) * (1.0 - metal);
   vec3 R = reflect(-V, N);
   // Rough surfaces reflect an increasingly averaged sky.
-  vec3 envSpec = mix(skyRadiance(R), skyIrradiance(N), rough * rough)
+  /* The baked probe when there is one, and the analytic lerp this
+     line used to be when there is not -- envRadiance holds both, so
+     the shape of the ambient term here is unchanged. */
+  vec3 envSpec = envRadiance(R, N, rough)
     * mix(skyVis, 1.0, 0.25) + uRoomAmbient;
-  color += (kD * diffuseColor * irradiance + envSpec * envBRDFApprox(F0, rough, NoV)) * ao;
+  color += (kD * diffuseColor * irradiance + envSpec * envBRDF(F0, rough, NoV)) * ao;
 
   /* --- punctual lights --- */
   for (int i = 0; i < 8; i++) {
@@ -1636,6 +1759,179 @@ uniform sampler2D uTex;
 layout(location=0) out vec4 outColor;
 void main(){ outColor = texture(uTex, vUv); }
 `;
+/* ---------------- environment probe bake ---------------- */
+
+/* Shared by the prefilter and the BRDF table. Kept out of GLSL.common
+   on purpose: common is interpolated into thirteen programs including
+   three vertex shaders, and neither of these is wanted there. */
+GLSL.envSample = `
+/* Van der Corput radical inverse, bit-reversal form. A Hammersley set
+   is the right sequence here because the number of samples is known up
+   front and fixed -- it is stratified by construction, so 32 of these
+   beat 32 hash samples by a wide margin and cost two dozen integer ops. */
+float radicalInverseVdC(uint bits){
+  bits = (bits << 16u) | (bits >> 16u);
+  bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+  bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+  bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+  bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+  return float(bits) * 2.3283064365386963e-10;
+}
+vec2 hammersley(int i, int n){
+  return vec2(float(i) / float(n), radicalInverseVdC(uint(i)));
+}
+/* Draw a half-vector from the GGX distribution of visible normals'
+   simpler cousin -- the plain NDF importance sample. alpha = rough^2,
+   matching distributionGGX in GLSL.pbr so the prefilter and the direct
+   specular lobe are the same distribution. */
+vec3 importanceGGX(vec2 Xi, float rough, vec3 N){
+  float a = rough * rough;
+  float phi = 2.0 * PI * Xi.x;
+  float cosT = sqrt((1.0 - Xi.y) / (1.0 + (a * a - 1.0) * Xi.y));
+  float sinT = sqrt(max(0.0, 1.0 - cosT * cosT));
+  vec3 H = vec3(sinT * cos(phi), sinT * sin(phi), cosT);
+  vec3 up = abs(N.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+  vec3 tx = normalize(cross(up, N));
+  vec3 ty = cross(N, tx);
+  return normalize(tx * H.x + ty * H.y + N * H.z);
+}
+/* The face basis comes in as three vectors from the CPU rather than as
+   a face index and a switch, because the OpenGL cube-face convention
+   (the one where +Y's second axis is +Z and everything else's is -Y) is
+   a table, and a table belongs in a table. */
+vec3 envFaceDir(vec2 uv, vec3 fx, vec3 fy, vec3 fz){
+  return normalize(fz + (uv.x * 2.0 - 1.0) * fx + (uv.y * 2.0 - 1.0) * fy);
+}
+`;
+
+/* Mip 0 of the source cube: the sky itself, six faces, no prefilter.
+   It writes into a SEPARATE texture from the prefiltered cube. That is
+   not tidiness -- prefiltering reads mip 0 while writing mip L of the
+   same texture, and a sampler bound to a complete mip chain that also
+   contains the draw target is undefined feedback under the WebGL2 spec
+   whatever LOD the shader asks for. Two textures, no feedback, and the
+   source gets to be a plain LINEAR non-mipped cube. */
+GLSL.envBakeFrag = `
+${GLSL.common}
+${GLSL.sky}
+${GLSL.envSample}
+in vec2 vUv;
+uniform vec3 uEnvFaceX;
+uniform vec3 uEnvFaceY;
+uniform vec3 uEnvFaceZ;
+layout(location=0) out vec4 outColor;
+void main(){
+  vec3 dir = envFaceDir(vUv, uEnvFaceX, uEnvFaceY, uEnvFaceZ);
+  /* uEnvNoSunDisc is set to 1 for this draw, so what lands in the cube
+     is the gradient, the horizon fade, the ground bounce and the Mie
+     halo -- everything except the disc. pbrFrag adds the analytic sun
+     itself, with a shadow term the cube cannot have, and a ~74-linear
+     spike smeared across a GGX lobe puts a second, blurry, unshadowed
+     sun on every rough metal in the game. */
+  outColor = vec4(skyRadiance(dir), 1.0);
+}
+`;
+
+/* One roughness level, one face. Called levels times per rebake, six
+   draws each, one level per frame. */
+GLSL.envPrefilterFrag = `
+${GLSL.common}
+${GLSL.envSample}
+in vec2 vUv;
+uniform samplerCube uEnvSource;
+uniform vec3 uEnvFaceX;
+uniform vec3 uEnvFaceY;
+uniform vec3 uEnvFaceZ;
+uniform float uEnvRough;
+uniform int uEnvSamples;
+layout(location=0) out vec4 outColor;
+void main(){
+  vec3 N = envFaceDir(vUv, uEnvFaceX, uEnvFaceY, uEnvFaceZ);
+  // Mip 0 is roughness 0: a mirror is the source, exactly.
+  if (uEnvRough < 0.01) { outColor = vec4(textureLod(uEnvSource, N, 0.0).rgb, 1.0); return; }
+  /* The usual split-sum simplification: the prefilter cannot know the
+     view direction, so it assumes N = V = R. It over-blurs at grazing
+     angles and every engine that ships a cube probe accepts it. */
+  vec3 V = N;
+  vec3 sum = vec3(0.0);
+  float wsum = 0.0;
+  int n = uEnvSamples;
+  /* Constant loop bound with an early break -- the idiom the SSAO pass
+     already uses -- so ANGLE never has to unroll a dynamic count. 64 is
+     the ceiling the tier table is allowed to ask for.
+
+     A LOW SAMPLE COUNT IS DEFENSIBLE HERE AND WOULD NOT BE FOR A SCENE
+     PROBE. The source is skyRadiance(): a two-colour vertical lerp, a
+     smoothstep across the horizon and two pow() lobes, with the one
+     genuine spike -- the sun disc -- deliberately not baked. It is
+     band-limited by construction, so importance-sampling variance is
+     tiny and there are no fireflies to average out. 32 samples leave a
+     residual below the half-float quantisation of the target; the same
+     32 against a real scene bake would be visibly noisy. */
+  for (int i = 0; i < 64; i++) {
+    if (i >= n) break;
+    vec2 Xi = hammersley(i, n);
+    vec3 H = importanceGGX(Xi, uEnvRough, N);
+    vec3 L = normalize(2.0 * dot(V, H) * H - V);
+    float NoL = dot(N, L);
+    if (NoL <= 0.0) continue;
+    sum += textureLod(uEnvSource, L, 0.0).rgb * NoL;
+    wsum += NoL;
+  }
+  outColor = vec4(sum / max(wsum, 1e-4), 1.0);
+}
+`;
+
+/* The split-sum BRDF table. x = NoV, y = roughness, .r = the scale on
+   F0, .g = the bias. Baked once, 128x128, then never touched again --
+   it depends on nothing but the BRDF, so it survives every sky change,
+   every tier change and every resize. */
+GLSL.envBrdfFrag = `
+${GLSL.common}
+${GLSL.envSample}
+in vec2 vUv;
+layout(location=0) out vec4 outColor;
+/* Smith with the IBL k remap, k = alpha/2. NOT the (rough+1)^2/8 remap
+   geometrySmith uses: that one is Disney's fudge for ANALYTIC lights
+   and using it here would bake a brighter table than the split sum it
+   is meant to be half of. */
+float gSmithIbl(float NoV, float NoL, float rough){
+  float k = (rough * rough) * 0.5;
+  float gv = NoV / (NoV * (1.0 - k) + k);
+  float gl = NoL / (NoL * (1.0 - k) + k);
+  return gv * gl;
+}
+void main(){
+  float NoV = max(vUv.x, 1e-3);
+  float rough = max(vUv.y, 1e-3);
+  vec3 V = vec3(sqrt(max(0.0, 1.0 - NoV * NoV)), 0.0, NoV);
+  vec3 N = vec3(0.0, 0.0, 1.0);
+  float A = 0.0;
+  float B = 0.0;
+  /* 128 samples, not Karis' 1024. This integrand has no environment
+     lookup in it -- it is analytic BRDF over the GGX distribution, and
+     it is smooth. At 128 the residual is under half a per cent on the
+     scale term and about one per cent on the bias at the grazing edge,
+     which is comfortably inside the RG16F it is written to and an order
+     better than the analytic fit it replaces. It also has to finish in
+     one frame on SwiftShader: 16384 pixels x 1024 would be seconds. */
+  for (int i = 0; i < 128; i++) {
+    vec2 Xi = hammersley(i, 128);
+    vec3 H = importanceGGX(Xi, rough, N);
+    vec3 L = normalize(2.0 * dot(V, H) * H - V);
+    float NoL = max(L.z, 0.0);
+    if (NoL <= 0.0) continue;
+    float NoH = max(H.z, 0.0);
+    float VoH = max(dot(V, H), 0.0);
+    float G = gSmithIbl(NoV, NoL, rough);
+    float Gvis = (G * VoH) / max(NoH * NoV, 1e-4);
+    float Fc = pow(1.0 - VoH, 5.0);
+    A += (1.0 - Fc) * Gvis;
+    B += Fc * Gvis;
+  }
+  outColor = vec4(A / 128.0, B / 128.0, 0.0, 1.0);
+}
+`;
 /* ================================================================
    SCREEN-SPACE REFLECTIONS   (feature 1 — every uniform is uSsr*)
    ================================================================
@@ -2075,9 +2371,24 @@ void main(){
        within about a fifth either way, and uSsrReplace (0.90) leaves a
        deliberate sliver unsubtracted -- slightly too bright reads as a
        reflection, slightly too dark reads as a hole. */
-    vec3 envIBL = mix(skyRadiance(Rw), skyIrradiance(Nw), rough * rough)
-      * uSsrEnvVis + uRoomAmbient;
-    vec3 brdf   = envBRDFApprox(F0, rough, NoV);
+    /* KEPT IN STEP WITH pbrFrag BY HAND, and it has to be. This pass
+       does not add a reflection, it pays back the environment specular
+       the forward shader already applied -- so the expression here must
+       be the same one pbrFrag used, term for term. When the probe
+       landed and pbrFrag moved from the analytic lerp of skyRadiance
+       and skyIrradiance to envRadiance, this line had to move with it
+       in the same commit; had it not, the fold would have subtracted a
+       sky the forward pass no longer applies and every reflective
+       surface in the game would have gone dark by the difference.
+
+       envRadiance and envBRDF both live in GLSL.sky, which this shader
+       already includes, and _bindEnv -- which _applyScreenSpace already
+       calls -- binds the cube and its gate. So this is a substitution
+       and nothing else. On a tier with no probe uEnvIntensity is 0 and
+       envRadiance returns exactly the analytic lerp this line used to
+       read, so the fold is unchanged there to the bit. */
+    vec3 envIBL = envRadiance(Rw, Nw, rough) * uSsrEnvVis + uRoomAmbient;
+    vec3 brdf   = envBRDF(F0, rough, NoV);
 
     vec3 delta = (ssr.rgb - envIBL * conf * uSsrReplace) * brdf * uSsrIntensity;
 
