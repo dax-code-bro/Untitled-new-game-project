@@ -212,7 +212,7 @@
      fourteen centimetres of separation, which holds at any range this
      map is ever seen from. */
   function kit(game) {
-    var solids = [], decos = [], mats = {};
+    var solids = [], decos = [], mats = {}, doors = [];
     for (var k in MAT) if (Object.prototype.hasOwnProperty.call(MAT, k)) mats[k] = game.material(MAT[k]);
 
     function slab(x0, x1, y0, y1, z0, z1, material, name) {
@@ -549,13 +549,22 @@
       var at = a0;
       var mk = (opts && opts.frail) ? frail : slab;
       var sp = opts && opts.frail && typeof opts.frail === 'object' ? opts.frail : null;
+      /* WHERE THE BOTTOM OF THE WALL IS. Everything here counted from
+         the ground, which is fine for a shed and useless for the first
+         floor of a house -- an upper storey built with this put its
+         walls through the room below. `base` lifts the whole run, and
+         every height in `gaps` is still measured from the FLOOR of that
+         storey, because a window is 1 m up the wall it is in and not 4 m
+         up the building. */
+      var base = (opts && opts.base) || 0;
       function piece(p0, p1, y0, y1) {
         if (p1 - p0 < 0.01 || y1 - y0 < 0.01) return;
+        y0 += base; y1 += base;
         /* A LINTEL IS NOT A PARTITION. The strip over a doorway is
            holding the wall above it up, and dropping it on its own
            leaves a hole with a floating wall over it. Lintels stay
            solid even in a fragile wall. */
-        var lintel = y0 > 1.6;
+        var lintel = y0 - base > 1.6;
         var f = (mk === frail && !lintel) ? frail : slab;
         if (alongX) f(p0, p1, y0, y1, z0, z1, material, name || 'wall', sp);
         else f(x0, x1, y0, y1, p0, p1, material, name || 'wall', sp);
@@ -573,6 +582,279 @@
         at = to;
       });
       piece(at, a1, 0, h);
+    }
+
+    /* ================================================================
+       A HOUSE WITH ROOMS IN IT
+       ================================================================
+       "most of the houses are just small one story houses, but every
+       house['s] layout is different. Some have a backyard."
+
+       So a house is not a box with a hole in it. This builds a shell, a
+       roof, an INTERNAL LAYOUT chosen by variant, a front door and a
+       back door where the layout has one, and enough furniture that a
+       room reads as a room from the doorway.
+
+       EVERY VARIANT IS WALKABLE END TO END. A layout that seals a room
+       off is a room nobody will ever be shot in, and worse, it is a
+       place the pathfinder sends bots to stand against a wall. Each one
+       below is drawn so that every room touches the hall or another
+       room through a doorway.
+
+         0  one partition, two rooms, back door
+         1  a hall down the middle with a room either side
+         2  three rooms in a row, doors offset so the run is a zigzag
+         3  a big front room and a back kitchen, door to the yard
+         4  four rooms round a central hall -- the biggest plan
+         5  open plan with a stub wall, which is cover and not a room
+
+       Doorways are cut by `wall`; a leaf is hung in each by `door`. */
+    function house(x0, x1, z0, z1, opts) {
+      var O = opts || {};
+      var H = O.height || 3.0;
+      var wallMat = O.wall || m.brick;
+      var inMat = O.inner || mats.plaster;
+      var floorMat = O.floor || mats.wood;
+      var variant = (O.variant || 0) % 6;
+      var T = 0.30;                                     // wall thickness
+      var cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+      var mid = { x: cx, z: cz };
+
+      // Floor, and a roof with a small overhang -- but only if the roof
+      // is the top of the building. On a two-storey house the same slab
+      // is a ledge through the middle of it, and one you can stand on.
+      slab(x0 - 0.3, x1 + 0.3, 0, 0.12, z0 - 0.3, z1 + 0.3, floorMat, 'house-floor');
+      if (O.storeys !== 2) {
+        slab(x0 - 0.5, x1 + 0.5, H, H + 0.3, z0 - 0.5, z1 + 0.5, mats.roof, 'house-roof');
+      }
+
+      /* THE FRONT, and which wall it is on decides everything else.
+         Held as a pair of numbers so the layouts below do not each have
+         to know about four cases. */
+      var front = O.front || 'z-';
+      var frontOnZ = front === 'z-' || front === 'z+';
+      var fpos = front === 'z-' ? z0 : front === 'z+' ? z1 : front === 'x-' ? x0 : x1;
+      var doorAt = frontOnZ ? cx + (O.doorOff || 0) : cz + (O.doorOff || 0);
+      var gapF = [doorAt - 0.6, doorAt + 0.6];
+      // Windows: two per long wall, at sill height.
+      var w1 = frontOnZ ? x0 + (x1 - x0) * 0.22 : z0 + (z1 - z0) * 0.22;
+      var w2 = frontOnZ ? x0 + (x1 - x0) * 0.78 : z0 + (z1 - z0) * 0.78;
+
+      function side(which, gaps) {
+        if (which === 'z-') wall(x0, x1, z0, z0 + T, H, wallMat, gaps, 'house-wall');
+        else if (which === 'z+') wall(x0, x1, z1 - T, z1, H, wallMat, gaps, 'house-wall');
+        else if (which === 'x-') wall(x0, x0 + T, z0, z1, H, wallMat, gaps, 'house-wall');
+        else wall(x1 - T, x1, z0, z1, H, wallMat, gaps, 'house-wall');
+      }
+
+      var back = front === 'z-' ? 'z+' : front === 'z+' ? 'z-' : front === 'x-' ? 'x+' : 'x-';
+      var bpos = front === 'z-' ? z1 : front === 'z+' ? z0 : front === 'x-' ? x1 : x0;
+      var hasBack = variant === 0 || variant === 3 || !!O.yard;
+      var backAt = frontOnZ ? cx - (O.doorOff || 0) : cz - (O.doorOff || 0);
+
+      side(front, [gapF, [w1 - 0.7, w1 + 0.7, 1.0, 2.2], [w2 - 0.7, w2 + 0.7, 1.0, 2.2]]);
+      side(back, hasBack ? [[backAt - 0.6, backAt + 0.6], [w1 - 0.7, w1 + 0.7, 1.0, 2.2]]
+        : [[w1 - 0.8, w1 + 0.8, 1.0, 2.2], [w2 - 0.8, w2 + 0.8, 1.0, 2.2]]);
+      // The two ends: a window each, no way through.
+      var e1 = frontOnZ ? cz : cx;
+      side(frontOnZ ? 'x-' : 'z-', [[e1 - 0.9, e1 + 0.9, 1.0, 2.2]]);
+      side(frontOnZ ? 'x+' : 'z+', [[e1 - 0.9, e1 + 0.9, 1.0, 2.2]]);
+
+      // The doors themselves.
+      if (frontOnZ) {
+        door(doorAt, fpos + (front === 'z-' ? T / 2 : -T / 2), true,
+          { hand: 1, into: front === 'z-' ? 1 : -1, name: 'front-door' });
+        if (hasBack) {
+          door(backAt, bpos + (back === 'z-' ? T / 2 : -T / 2), true,
+            { hand: -1, into: back === 'z-' ? 1 : -1, name: 'back-door' });
+        }
+      } else {
+        door(fpos + (front === 'x-' ? T / 2 : -T / 2), doorAt, false,
+          { hand: 1, into: front === 'x-' ? 1 : -1, name: 'front-door' });
+        if (hasBack) {
+          door(bpos + (back === 'x-' ? T / 2 : -T / 2), backAt, false,
+            { hand: -1, into: back === 'x-' ? 1 : -1, name: 'back-door' });
+        }
+      }
+
+      /* ---- the inside ----
+         Partitions are `plaster` and FRAIL: an interior wall is the
+         thing a grenade should take out, and it is what turns a house
+         into two rooms rather than into a bunker. */
+      var P = { frail: true };
+      var ix0 = x0 + T, ix1 = x1 - T, iz0 = z0 + T, iz1 = z1 - T;
+      function partX(px, gaps) { wall(px - 0.08, px + 0.08, iz0, iz1, H, inMat, gaps, 'partition', P); }
+      function partZ(pz, gaps) { wall(ix0, ix1, pz - 0.08, pz + 0.08, H, inMat, gaps, 'partition', P); }
+
+      if (variant === 0) {
+        partZ(cz, [[cx - 1.4, cx - 0.3]]);
+      } else if (variant === 1) {
+        var hw = 1.5;                                    // the hall
+        partX(cx - hw, [[iz0 + 1.2, iz0 + 2.3], [iz1 - 2.3, iz1 - 1.2]]);
+        partX(cx + hw, [[iz0 + 1.6, iz0 + 2.7]]);
+      } else if (variant === 2) {
+        partZ(iz0 + (iz1 - iz0) * 0.34, [[ix0 + 0.4, ix0 + 1.5]]);
+        partZ(iz0 + (iz1 - iz0) * 0.68, [[ix1 - 1.5, ix1 - 0.4]]);
+      } else if (variant === 3) {
+        partZ(iz0 + (iz1 - iz0) * 0.62, [[cx - 0.55, cx + 0.55]]);
+        partX(cx + 1.8, [[iz1 - 2.2, iz1 - 1.1]]);
+      } else if (variant === 4) {
+        partX(cx, [[cz - 0.55, cz + 0.55]]);
+        partZ(cz, [[ix0 + 0.8, ix0 + 1.9], [ix1 - 1.9, ix1 - 0.8]]);
+      } else {
+        // A stub, which is cover rather than a room.
+        wall(cx - 0.08, cx + 0.08, iz0, iz0 + (iz1 - iz0) * 0.45, H, inMat, [], 'partition', P);
+      }
+
+      /* ---- what is in the rooms ----
+         Four things, placed relative to the shell so every variant gets
+         furnished without a table per layout. Low enough to vault or
+         crouch behind: furniture that is cover is furniture that gets
+         used. */
+      var q = function (ax, az) { return [ix0 + (ix1 - ix0) * ax, iz0 + (iz1 - iz0) * az]; };
+      var t1 = q(0.24, 0.22);
+      slab(t1[0] - 0.7, t1[0] + 0.7, 0.12, 0.78, t1[1] - 0.45, t1[1] + 0.45, mats.woodDark, 'table');
+      var b1 = q(0.76, 0.24);
+      slab(b1[0] - 0.55, b1[0] + 0.55, 0.12, 0.58, b1[1] - 0.95, b1[1] + 0.95, mats.canvas, 'bed');
+      var c1 = q(0.22, 0.78);
+      slab(c1[0] - 0.85, c1[0] + 0.85, 0.12, 0.92, c1[1] - 0.32, c1[1] + 0.32, mats.woodDark, 'counter');
+      var s1 = q(0.74, 0.76);
+      slab(s1[0] - 0.75, s1[0] + 0.75, 0.12, 0.70, s1[1] - 0.38, s1[1] + 0.38, mats.canvas, 'sofa');
+
+      /* ---- the yard ---- */
+      if (O.yard) {
+        var yd = O.yard;
+        var yx0 = frontOnZ ? x0 : (back === 'x+' ? x1 : x0 - yd);
+        var yx1 = frontOnZ ? x1 : (back === 'x+' ? x1 + yd : x0);
+        var yz0 = frontOnZ ? (back === 'z+' ? z1 : z0 - yd) : z0;
+        var yz1 = frontOnZ ? (back === 'z+' ? z1 + yd : z0) : z1;
+        // A low garden wall, which is cover and a boundary at once.
+        wall(yx0, yx1, yz0, yz0 + 0.24, COVER.low, mats.brickPale, [], 'garden-wall');
+        wall(yx0, yx1, yz1 - 0.24, yz1, COVER.low, mats.brickPale,
+          [[(yx0 + yx1) / 2 - 0.7, (yx0 + yx1) / 2 + 0.7]], 'garden-wall');
+        wall(yx0, yx0 + 0.24, yz0, yz1, COVER.low, mats.brickPale, [], 'garden-wall');
+        wall(yx1 - 0.24, yx1, yz0, yz1, COVER.low, mats.brickPale, [], 'garden-wall');
+        crate(yx0 + 1.4, (yz0 + yz1) / 2, 1.1, 1.1, COVER.low, mats.wood);
+      }
+
+      /* ---- and a second storey, if it has one ---- */
+      if (O.storeys === 2) {
+        var H2 = H + 3.0;
+        slab(x0 - 0.5, x1 + 0.5, H2, H2 + 0.3, z0 - 0.5, z1 + 0.5, mats.roof, 'house-roof');
+        // The upper floor, with a stairwell hole in one corner.
+        var sx = ix1 - 2.6, sz = iz0 + 0.3;
+        slab(x0, sx, H, H + 0.16, z0, z1, mats.woodDark, 'upper-floor');
+        slab(sx, x1, H, H + 0.16, sz + 3.6, z1, mats.woodDark, 'upper-floor');
+        stair(sx + 1.3, sz, 2.2, H / 12, 0.30, 12, 'z+', mats.woodDark);
+        // Upstairs walls, with the same window line as below.
+        wall(x0, x1, z0, z0 + T, H2 - H, wallMat, [[w1 - 0.7, w1 + 0.7, 1.0, 2.2],
+          [w2 - 0.7, w2 + 0.7, 1.0, 2.2]], 'house-wall', { base: H });
+        wall(x0, x1, z1 - T, z1, H2 - H, wallMat, [[w1 - 0.7, w1 + 0.7, 1.0, 2.2]], 'house-wall', { base: H });
+        wall(x0, x0 + T, z0, z1, H2 - H, wallMat, [[e1 - 0.9, e1 + 0.9, 1.0, 2.2]], 'house-wall', { base: H });
+        wall(x1 - T, x1, z0, z1, H2 - H, wallMat, [[e1 - 0.9, e1 + 0.9, 1.0, 2.2]], 'house-wall', { base: H });
+        // One partition up there too, so the top floor is two rooms.
+        wall(cx - 0.08, cx + 0.08, iz0, iz1, H2 - H, inMat,
+          [[iz0 + 1.0, iz0 + 2.1]], 'partition', { frail: true, base: H });
+      }
+      void mid;
+      return { at: [cx, 0, cz], x0: x0, x1: x1, z0: z0, z1: z1, height: H };
+    }
+
+    /* ================================================================
+       A DOOR THAT IS A DOOR
+       ================================================================
+       `wall` has always been able to cut a doorway -- a hole with a
+       lintel over it -- and that is all any of these maps had. A hole
+       is not a door. What was asked for is "real doors" and "an
+       animation for opening and closing the door", so this is a leaf on
+       a hinge with a frame round it and a handle on it, and something
+       has to swing it: see updateDoors in mp-match, which opens the
+       ones people are standing at and closes the rest.
+
+       THE LEAF IS SOLID THE WHOLE TIME and it swings AWAY from the side
+       you approach from, lying back along the inside wall at a hundred
+       degrees. Making it non-solid while open would be easier and it is
+       the wrong trade: a door you can shoot through while it stands
+       open is a door that lies about itself, and the arc is clear of
+       anybody standing in the opening.
+
+       (x, z) is the CENTRE of the opening. `alongX` says the wall runs
+       in X, so the leaf swings about a hinge at one end of the opening
+       and turns toward +Z or -Z. `hand` is -1 or +1: which end the
+       hinge is at. `into` is -1 or +1: which way it opens. */
+    function door(x, z, alongX, opts) {
+      var O = opts || {};
+      var W = O.width || 1.15, H = O.height || 2.10, T = 0.055;
+      var hand = O.hand === -1 ? -1 : 1;
+      var into = O.into === -1 ? -1 : 1;
+      var m = O.material || mats.woodDark;
+      var leafW = W - 0.06;
+
+      /* The frame: two jambs and a head, all deco. They are inside the
+         hole the wall left, so they take nothing away from the width a
+         man can walk through. */
+      var j = 0.055;
+      if (alongX) {
+        deco(x - W / 2 - j, x - W / 2, 0, H + j, z - 0.09, z + 0.09, mats.woodDark, 'door-jamb');
+        deco(x + W / 2, x + W / 2 + j, 0, H + j, z - 0.09, z + 0.09, mats.woodDark, 'door-jamb');
+        deco(x - W / 2 - j, x + W / 2 + j, H, H + j, z - 0.09, z + 0.09, mats.woodDark, 'door-head');
+      } else {
+        deco(x - 0.09, x + 0.09, 0, H + j, z - W / 2 - j, z - W / 2, mats.woodDark, 'door-jamb');
+        deco(x - 0.09, x + 0.09, 0, H + j, z + W / 2, z + W / 2 + j, mats.woodDark, 'door-jamb');
+        deco(x - 0.09, x + 0.09, H, H + j, z - W / 2 - j, z + W / 2 + j, mats.woodDark, 'door-head');
+      }
+
+      /* The hinge is at one end of the opening; the leaf is built shut,
+         filling it, and its own centre is half a leaf from the hinge. */
+      var hx = alongX ? x + hand * (W / 2 - 0.03) : x;
+      var hz = alongX ? z : z + hand * (W / 2 - 0.03);
+      var leaf = alongX
+        ? slab(x - leafW / 2, x + leafW / 2, 0.015, H - 0.02, z - T, z + T, m, 'door-leaf')
+        : slab(x - T, x + T, 0.015, H - 0.02, z - leafW / 2, z + leafW / 2, m, 'door-leaf');
+      if (!leaf) return null;
+      var shut = { x: leaf.position.x, y: leaf.position.y, z: leaf.position.z };
+
+      /* A handle, on the swinging edge and on both faces. Small, and it
+         is the only thing that says which end opens. */
+      var kx = alongX ? x - hand * (leafW / 2 - 0.10) : x;
+      var kz = alongX ? z : z - hand * (leafW / 2 - 0.10);
+      var knob = deco(kx - (alongX ? 0.035 : 0.10), kx + (alongX ? 0.035 : 0.10),
+        1.00, 1.08, kz - (alongX ? 0.10 : 0.035), kz + (alongX ? 0.10 : 0.035),
+        mats.steelDark, 'door-handle');
+
+      var open = 0;
+      /* 0 shut, 1 wide. A hundred degrees, because ninety leaves the
+         leaf square across the opening's edge and it reads as stuck. */
+      function setOpen(t) {
+        var k = t < 0 ? 0 : t > 1 ? 1 : t;
+        if (Math.abs(k - open) < 0.002) return;
+        open = k;
+        var th = k * 1.745 * into * -hand * (alongX ? 1 : -1);
+        var dx = shut.x - hx, dz = shut.z - hz;
+        var c = Math.cos(th), sn = Math.sin(th);
+        /* setPosition and setRotation, not position.set: an actor with
+           a body still needs the setter, and one without it composes
+           its matrix once and never again. */
+        leaf.setPosition([hx + dx * c - dz * sn, shut.y, hz + dx * sn + dz * c]);
+        if (leaf.setRotation && leaf.rotation && leaf.rotation.clone) {
+          var q = leaf.rotation.clone();
+          if (q.setAxisAngle) { q.setAxisAngle(new window.LE.Vec3(0, 1, 0), th); leaf.setRotation(q); }
+        }
+        if (knob) {
+          var kdx = kx - hx, kdz = kz - hz;
+          knob.setPosition([hx + kdx * c - kdz * sn, 1.04, hz + kdx * sn + kdz * c]);
+        }
+      }
+
+      var d = {
+        name: O.name || 'door', at: [x, 0, z], alongX: !!alongX, width: W,
+        leaf: leaf, setOpen: setOpen, get open() { return open; },
+        /* Where somebody has to be standing for it to open. Both sides:
+           a door only one side of which works is a trap. */
+        reach: O.reach || 2.1,
+      };
+      doors.push(d);
+      return d;
     }
 
     /* A flight of stairs, and the only thing worth saying about it is
@@ -684,8 +966,10 @@
     }
 
     return {
-      game: game, mats: mats, solids: solids, decos: decos, COVER: COVER, screenPair: screenPair,
-      slab: slab, frail: frail, deco: deco, post: post, crate: crate, jersey: jersey, tank: tank,
+      game: game, mats: mats, solids: solids, decos: decos, doors: doors,
+      COVER: COVER, screenPair: screenPair,
+      slab: slab, frail: frail, deco: deco, post: post, crate: crate, jersey: jersey,
+      tank: tank, door: door, house: house,
       sandbags: sandbags, barrel: barrel, container: container, wall: wall,
       stair: stair, fence: fence, car: car, deck: deck,
     };
@@ -1141,6 +1425,114 @@
     }
     K.deco(TX - 3.8, TX + 3.8, 15.0, 15.4, TZ - 3.8, TZ + 3.8, m.roof, 'tower-cap');
 
+    /* ================================================================
+       THE NEIGHBOURHOOD
+       ================================================================
+       "town is just a small simple neighborhood with two two-story
+       buildings and there's a unique design for bikers[,] giant
+       businesses[,] and most of the houses are just small one story
+       houses, but every house['s] layout is different. Some have a
+       backyard."
+
+       Eight houses, no two with the same plan, on the two strips
+       between the high street and the lanes -- which were the emptiest
+       ground on the map and the reason the middle read as a road with
+       nothing either side of it. Each one is a shell with rooms, a
+       front door and furniture; four have yards behind them.
+
+       They are placed in TWO ROWS FACING THE STREET, because that is
+       what a street of houses is, and because a house you can enter
+       from the pavement and leave into a back garden is a route rather
+       than a hiding place. */
+    /* FRONTS ON THE STREET. The first cut had them facing up the map,
+       which put every front door and every window looking at the back
+       of the next house five metres away -- two rows of houses that
+       were not on a street at all. The left row fronts +X, the right
+       row fronts -X, and the yards go out the back onto the lanes. */
+    var HOMES = [
+      // x0,  x1,   z0,   z1,  variant, front, yard, wall
+      [-28, -18, -48, -39, 0, 'x+', 5, m.brick],
+      [-28, -18, -34, -26, 2, 'x+', 0, m.brickPale],
+      [-28, -18, 21, 30, 4, 'x+', 5, m.brick],
+      [-28, -18, 35, 44, 1, 'x+', 0, m.brickPale],
+      [17, 27, -46, -37, 3, 'x-', 5, m.brickPale],
+      [17, 27, -31, -23, 5, 'x-', 0, m.brick],
+      [17, 27, 23, 32, 2, 'x-', 0, m.brick],
+      [17, 27, 37, 46, 0, 'x-', 5, m.brickPale],
+    ];
+    HOMES.forEach(function (h, i) {
+      K.house(h[0], h[1], h[2], h[3], {
+        variant: h[4], front: h[5], yard: h[6] || 0, wall: h[7],
+        height: 3.0 + (i % 3) * 0.2,
+        doorOff: ((i % 3) - 1) * 1.1,
+      });
+    });
+
+    /* ---- the two-storey pair ----
+       One each side, at the ends of the rows, so the street has a
+       height at both ends of it and neither side owns the high ground.
+       Both are houses with a first floor and a stair, built by the same
+       thing as the rest -- a two-storey building that is a different
+       KIND of object from a one-storey one is two things to maintain. */
+    K.house(-30, -18, -18, -8, { variant: 1, front: 'x+', storeys: 2,
+      wall: m.brick, height: 3.1 });
+    K.house(17, 29, 4, 14, { variant: 4, front: 'x-', storeys: 2,
+      wall: m.brickPale, height: 3.1 });
+
+    /* ---- the bikers ----
+       A clubhouse, and it has to look like one from across the street
+       rather than be a house with a sign on it: a long low steel shed
+       with a roller door, a row of bikes outside under a lean-to, and a
+       bar down one wall inside. Black and oxblood, no windows on the
+       street -- the whole point of the place is that you cannot see in.  */
+    var KX0 = -46, KX1 = -30, KZ0 = -26, KZ1 = -12, KH = 4.0;
+    K.slab(KX0 - 0.4, KX1 + 0.4, 0, 0.12, KZ0 - 0.4, KZ1 + 0.4, m.concrete, 'club-floor');
+    K.wall(KX0, KX1, KZ1 - 0.35, KZ1, KH, m.steelDark, [[-40, -37]], 'club-wall');
+    K.wall(KX0, KX1, KZ0, KZ0 + 0.35, KH, m.steelDark, [[-44, -40, 0, 3.2]], 'club-wall');
+    K.wall(KX0 - 0.35, KX0, KZ0, KZ1, KH, m.steelDark, [], 'club-wall');
+    K.wall(KX1, KX1 + 0.35, KZ0, KZ1, KH, m.steelDark, [[-22, -19, 1.1, 2.6]], 'club-wall');
+    K.slab(KX0 - 0.7, KX1 + 0.7, KH, KH + 0.3, KZ0 - 0.7, KZ1 + 0.7, m.paintRed, 'club-roof');
+    K.door(-38.5, KZ1 - 0.175, true, { hand: 1, into: -1, name: 'club-door' });
+    // The bar, and the stools, down the long wall.
+    K.slab(KX0 + 0.8, KX0 + 2.4, 0.12, 1.08, KZ0 + 2, KZ1 - 2, m.woodDark, 'bar');
+    for (var bs = KZ0 + 3; bs < KZ1 - 2; bs += 1.6) K.post(KX0 + 3.2, bs, 0.12, 0.76, 0.17, m.steelDark, 'stool');
+    // A pool table, which is the cover in the middle of the room.
+    K.slab(-38.5, -35.5, 0.12, 0.84, -21, -17, m.paintGreen, 'pool-table');
+    // The lean-to outside, and the bikes under it.
+    K.deco(KX1 + 0.4, KX1 + 4.2, 2.7, 2.9, KZ0 + 1, KZ1 - 1, m.roof, 'lean-to');
+    for (var bk = 0; bk < 4; bk++) {
+      var bz2 = KZ0 + 2.4 + bk * 2.8;
+      K.slab(KX1 + 1.2, KX1 + 3.2, 0.12, 0.62, bz2 - 0.22, bz2 + 0.22, m.steelDark, 'bike');
+      K.post(KX1 + 1.5, bz2, 0.62, 1.05, 0.05, m.steelDark, 'bike-bars');
+    }
+    K.post(KX1 + 0.6, KZ0 + 1, 0, 2.9, 0.09, m.steelDark, 'lean-post');
+    K.post(KX1 + 0.6, KZ1 - 1, 0, 2.9, 0.09, m.steelDark, 'lean-post');
+
+    /* ---- the business ----
+       Pale block, a glass front onto the street, an open floor with
+       partitions on it and a loading bay at the back. It is the widest
+       building on the map and the only one with a second way in at
+       first-floor height, which is what makes it worth crossing for. */
+    var NX0 = 30, NX1 = 50, NZ0 = -44, NZ1 = -26, NH = 4.6;
+    K.slab(NX0 - 0.4, NX1 + 0.4, 0, 0.14, NZ0 - 0.4, NZ1 + 0.4, m.kerb, 'biz-floor');
+    K.wall(NX0, NX1, NZ1 - 0.4, NZ1, NH, m.brickPale,
+      [[33, 37], [39, 47, 1.0, 3.2]], 'biz-wall');
+    K.wall(NX0, NX1, NZ0, NZ0 + 0.4, NH, m.brickPale, [[36, 42, 0, 3.6]], 'biz-wall');
+    K.wall(NX0 - 0.4, NX0, NZ0, NZ1, NH, m.brickPale, [[-38, -34, 1.0, 3.2]], 'biz-wall');
+    K.wall(NX1, NX1 + 0.4, NZ0, NZ1, NH, m.brickPale, [[-36, -32]], 'biz-wall');
+    K.slab(NX0 - 0.7, NX1 + 0.7, NH, NH + 0.35, NZ0 - 0.7, NZ1 + 0.7, m.roof, 'biz-roof');
+    K.door(35, NZ1 - 0.2, true, { hand: -1, into: -1, name: 'biz-door' });
+    // The glass front, over the street side.
+    K.deco(39, 47, 1.0, 3.2, NZ1 - 0.22, NZ1 - 0.16, m.glass, 'shopfront');
+    // Partitions on the open floor, and the counter.
+    K.wall(NX0 + 4, NX0 + 4.16, NZ0 + 3, NZ1 - 5, 2.4, m.plaster, [[-36, -35]], 'biz-part', { frail: true });
+    K.wall(NX0 + 4, NX1 - 4, NZ0 + 7, NZ0 + 7.16, 2.4, m.plaster, [[44, 45.2]], 'biz-part', { frail: true });
+    K.slab(41, 47, 0.14, 1.08, NZ1 - 3.4, NZ1 - 2.6, m.woodDark, 'biz-counter');
+    // The mezzanine at the back, reached by a stair, with a roof hatch.
+    K.deck(NX0 + 0.4, NX0 + 7, 2.60, NZ0 + 0.4, NZ0 + 8, m.steelDark, [1, 2]);
+    K.stair(NX0 + 9, NZ0 + 2, 2.0, 0.26, 0.32, 10, 'x-', m.steelDark);
+    K.crate(NX1 - 3, NZ0 + 3, 1.8, 1.8, C.vault, m.wood);
+
     /* ---- the approach from each spawn ----
        Garden walls and outbuildings, seen end on. The +Z rows stop
        short of the church, which is doing that job itself, and pick up
@@ -1505,6 +1897,9 @@
     return {
       id: id,
       solids: K.solids, decos: K.decos,
+      /* Carried out, like the zone was not. A door the assembler drops
+         is a door nothing can ever open. */
+      doors: K.doors,
       spawns: { a: place(out.spawns.a, 0), b: place(out.spawns.b, Math.PI) },
       sites: out.sites, lanes: out.lanes,
       /* THE COMBAT ZONE, carried out of the builder. The builders have

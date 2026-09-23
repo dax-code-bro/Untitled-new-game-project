@@ -3205,6 +3205,44 @@
     if (site && site.tank && site.tank.setOpen) site.tank.setOpen(open ? 1 : 0);
   }
 
+  /* ================================================================
+     DOORS THAT OPEN BECAUSE SOMEBODY IS THERE
+     ================================================================
+     "make an animation for opening and closing the door."
+
+     No key and no prompt: a door in a shooter that has to be USED is a
+     door that gets you killed standing at it. Anybody alive within
+     reach swings it, and it falls shut behind them.
+
+     Rate, not teleport. Three quarters of a second to swing, which is
+     fast enough not to be an obstacle and slow enough to be seen, and
+     the same rate shut so the two read as one mechanism.
+
+     DISTANCE SQUARED, and only against the people who could plausibly
+     be near it. Twelve people against a few dozen doors every tick is
+     nothing, but it is nothing that happens sixty times a second, so
+     the cheap test comes first. */
+  var DOOR_RATE = 1 / 0.75;
+
+  function updateDoors(M, dt) {
+    var doors = M.map && M.map.doors;
+    if (!doors || !doors.length) return;
+    for (var i = 0; i < doors.length; i++) {
+      var d = doors[i], near = false, r2 = d.reach * d.reach;
+      for (var j = 0; j < M.people.length; j++) {
+        var p = M.people[j];
+        if (!p.alive) continue;
+        var dx = p.pos.x - d.at[0], dz = p.pos.z - d.at[2];
+        if (dx * dx + dz * dz < r2) { near = true; break; }
+      }
+      var want = near ? 1 : 0;
+      var cur = d.open;
+      if (cur === want) continue;
+      var step = dt * DOOR_RATE;
+      d.setOpen(want > cur ? Math.min(want, cur + step) : Math.max(want, cur - step));
+    }
+  }
+
   function updateBomb(M, dt, emit, rand) {
     var B = M.bomb;
     if (!B) return;
@@ -3584,6 +3622,7 @@
        is drawn where it is now rather than where it was last frame. */
     for (var j = 0; j < M.people.length; j++) place(M, M.people[j]);
 
+    updateDoors(M, dt);
     if (M.mode.bomb) updateBomb(M, dt, emit, rand);
     else {
       if (M.score.a >= M.mode.score) return finish(M, 'a', emit);
@@ -3781,6 +3820,7 @@
     /* Search and Destroy, for the HUD and for the tests. cutWire is
        the ONE way a wire gets cut, by a bot or by the player. */
     SND: SND, cutWire: cutWire, atSite: atSite,
+    DOOR_RATE: DOOR_RATE,
     muzzleOf: muzzleOf, kickFrom: kickFrom, settleKick: settleKick,
     AIM_Y: 1.25, aimYOf: aimYOf, GRAVITY: GRAVITY, JUMP: JUMP,
     nav: { build: navBuild, path: navPath, clear: navClear, blocked: navBlocked,
