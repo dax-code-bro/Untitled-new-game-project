@@ -31,12 +31,24 @@
  * nothing at any height. That closes attempts eight to eleven as a
  * family -- cost or restriction, it makes no difference.
  *
- * The finger decides to stand up over forty steps, none of which is
- * locally wrong, so the rule has to be at the scale of the whole
- * finger: solveCurl, whose answer the march currently discards. That
- * is a change to WHICH machine shapes a support hand and wants the
- * grip test's burial numbers watched the whole way. Until then the
- * number is held where it is, so it cannot quietly grow back.
+ * The twelfth went to the other scale -- solveCurl, whose answer the
+ * march discards -- and the discarded answer is 44 to 59 mm lower on
+ * every one of the seven, already under the line. A per-finger veto
+ * on it takes seven blocking weapons to four. It also drives nine
+ * digits deeper into their guns, and gated so it cannot do that, it
+ * fires on 3 fingers out of 60 and moves no number at all.
+ *
+ * So both scales are closed, which is the thing worth knowing: there
+ * are only two machines that shape a support finger, and both of the
+ * answers that clear the sight line put flesh in the metal. The hand
+ * cannot be got out of the sight picture by choosing a finger SHAPE.
+ *
+ * What is left is where the hand SITS, which neither machine touches.
+ * The support knuckles are 18 to 29 mm below the top of the forend
+ * they hold, so every finger has to climb the near face to reach
+ * anything -- and a finger climbing a near face is a finger in the
+ * notch. Until the seat is fixed the number is held where it is, so
+ * it cannot quietly grow back.
  *
  * Usage: node engine/test/sightblock.test.js
  */

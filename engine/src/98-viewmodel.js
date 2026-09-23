@@ -1792,6 +1792,74 @@ function buildViewHand(g, rawAt, side, opts = {}) {
            * in this row, and both want grip.test.js watched the whole
            * way.
            *
+           * THE TWELFTH WENT THERE, AND IT CLOSES THE OTHER SCALE.
+           *
+           * solveCurl fits three bends to the whole finger against a
+           * ceiling; the march then re-picks every joint itself and
+           * `bends` is only where it starts from. So the discarded
+           * answer was measured -- tipOf walks the same three bones with
+           * no geometry -- and it is dramatically lower. The highest
+           * joint of the support hand against the sight line, march
+           * versus solve, in millimetres:
+           *
+           *     scatter  +46.2 ->  -1.7     mauser   +44.1 -> -15.0
+           *     sawnoff  +41.3 -> -12.6     breakw   +28.9 -> -17.4
+           *     thompson +28.0 -> -15.7     paralyzer+26.3 -> -19.2
+           *     mp5      +20.8 -> -32.1
+           *
+           * Every one of the seven has a solved finger already UNDER the
+           * line, and it is lower on all fifteen. So a veto was built:
+           * both shapes run DRY -- a digit build that lofts nothing --
+           * and the march keeps the finger unless it is putting it in
+           * the sight picture and the solve is not. Per finger, so a
+           * hand can march the ones that work and solve the ones that
+           * stand up.
+           *
+           * Ungated it works: seven blocking weapons to FOUR, Thompson
+           * 30.4 -> 19.2, Mauser 46.4 -> 21.2, MP5 and Breakwater clear.
+           *
+           * And grip.test.js charged nine digits driven deeper into
+           * their weapons -- the Scattergun's little finger from nothing
+           * to a third of it inside the receiver, the MP5's from a fifth
+           * to a half. So the gate was added: the solve must be at least
+           * as clean as the march, measured with grip's own ruler (a
+           * ring whose centre is within its own radius of the skin has
+           * flesh in the metal; counting only centres INSIDE the weapon
+           * passed three fingers grip then failed -- two rulers again).
+           *
+           * Swept, and the curve is sharp rather than gradual:
+           *
+           *     gate            blocking   cost
+           *     same ruler, 0       7      none -- nothing moves at all
+           *     centreline .025     7      3 digits deeper
+           *     centreline .200     6      more
+           *     none                4      9 digits deeper
+           *
+           * Honestly gated, the veto fires on 3 fingers out of 60, none
+           * of them its weapon's worst, and not one reported number
+           * moves. EVERY millimetre of sight picture the solve offers is
+           * paid for in burial. Reverted.
+           *
+           * WHICH IS THE RESULT, and it is bigger than either attempt.
+           * The eleventh closed the per-step scale; the twelfth closes
+           * the whole-finger scale. There is no third shape: these are
+           * the only two machines that shape a support finger, and both
+           * of the answers that clear the sight line put flesh in the
+           * gun. The support hand cannot be got out of the sight picture
+           * by choosing a finger SHAPE at all.
+           *
+           * WHAT IS LEFT IS THE HAND'S PLACE, which is upstream of both
+           * and has never been touched. Measured: the support knuckles
+           * sit 18 to 29 mm BELOW the top of the forend they are holding
+           * (Thompson -18.5, Scattergun -29.2, MP5 -46.1), so every
+           * finger has to climb past the crown to reach anything, and a
+           * finger climbing a near face is a finger in the sights. Seat
+           * the palm so the knuckles are at or above the crown and the
+           * fingers come DOWN over it, which is both how a hand holds a
+           * forend and the only arrangement in which the shape machines
+           * have a clean answer available. That is the thirteenth, and
+           * it is a change to where the hand goes, not to how it bends.
+           *
            * engine/test/sightblock.test.js holds the number at 7 weapons
            * and 48.6 mm so it cannot grow back while that waits. */
           /* Search the angles at or above a real curl first; only if
