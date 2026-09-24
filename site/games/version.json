@@ -1,8 +1,8 @@
 {
-  "version": "0.22.0",
-  "name": "a shadow with a soft edge",
+  "version": "0.23.0",
+  "name": "brick you can feel",
   "date": "2026-09-24",
   "mode": "multiplayer",
-  "did": "At ULTRA, shadow edges are softened by a blocker search rather than a fixed blur, and screen-space contact shadows darken the places where two surfaces meet.",
+  "did": "At ULTRA, surfaces with relief are displaced as you look across them: brick courses, cobbles and pantiles now occlude each other at a glancing angle instead of being a flat picture of depth.",
   "onAccept": "The armoury reloads. Your loadouts are kept; anything you had equipped that moved class is still where you left it."
 }

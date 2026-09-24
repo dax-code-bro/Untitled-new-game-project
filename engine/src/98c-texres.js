@@ -85,6 +85,14 @@ Engine.prototype.upgradeTextures = function (size, opts = {}) {
       j.maps.albedo.upload(data.albedo, size, size);
       j.maps.normal.upload(data.normal, size, size);
       j.maps.orm.upload(data.orm, size, size);
+      /* The measured relief comes with the new bake. A 1024 pass
+         resolves pits that a 256 pass averaged flat, so the range
+         genuinely moves, and _bindMaterial reads these off the shared
+         maps object on every draw -- leaving the 256 figures in place
+         would drive the parallax depth from a texture that no longer
+         exists. */
+      j.maps.heightTop = data.heightTop;
+      j.maps.heightRange = data.heightRange;
       /* Re-key it so a second pass does not redo work already done.
        *
          AND IF SOMETHING ALREADY MADE THE TARGET KEY while this ramp

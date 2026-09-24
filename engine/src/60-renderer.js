@@ -257,6 +257,57 @@ for (const _t of ['retro', 'low', 'normal', 'high']) {
 }
 
 
+/* ---- PARALLAX OCCLUSION MAPPING + DETAIL NORMALS ----
+ *
+ * Patched onto the table for the same reason the SSR keys above are:
+ * several features are landing on these five object literals in
+ * parallel, and a property assignment after the fact composes with all
+ * of them instead of conflicting with all of them. QUALITY.medium IS
+ * QUALITY.normal -- one object -- so writing 'normal' writes both,
+ * which is what is wanted.
+ *
+ * ULTRA ONLY, AND NOT HIGH, THOUGH HIGH COULD AFFORD IT. The march is
+ * twelve to twenty-four textureGrad fetches on every textured fragment
+ * plus five refinement taps, and it moves the point every other fetch
+ * reads -- so it changes the albedo, the roughness, the AO and the
+ * shading normal of every surface in the frame, which is exactly the
+ * shape of change that moves a mean-luma assertion. 'high' is the most
+ * heavily asserted tier in the suite: browser.test.js runs shadows,
+ * materials and effects there, underside.test.js pins it (and its
+ * underside floor of 24 sRGB has six units of margin on brick),
+ * sweep.test.js raises to it mid-run for the skin-tone channel ratios.
+ * Raising high is a one-line change and is the right next step, but it
+ * belongs in a commit that re-measures those assertions, not in this
+ * one. Ultra is reachable only by an explicit setQuality('ultra') or
+ * LE.create({quality:'ultra'}); detectQuality() cannot return it and
+ * the watchdog only steps down.
+ *
+ * parallaxSteps 24 at ultra. The linear search leaves one stride of
+ * residual, which five binary halvings divide by 32; at 24 steps that
+ * is (1/24)/32 = 0.0013 of the depth range, and the height channel is
+ * eight bits, so 1/255 = 0.0039 is the floor of what the texture can
+ * express. Twelve steps already reaches 0.0026 and is the number 'high'
+ * should take when it takes it -- ultra pays for 24 because it renders
+ * at 1.85x, where a stride invisible at 1.25x starts to read as a
+ * stair-step along a long grazing wall.
+ *
+ * detailNormal is a separate key from parallax on purpose. The detail
+ * package -- reoriented blending, the decorrelating rotation, the
+ * detail roughness term, Toksvig -- costs one extra texture fetch and
+ * about a dozen ALU, with no loop and no dependent fetch, so it is
+ * affordable a long way down the table. It is 0 everywhere here only
+ * because raising it moves pixels and this commit re-baselines nothing.
+ * It is the first key to raise. */
+QUALITY.ultra.parallax = 1;
+QUALITY.ultra.parallaxSteps = 24;
+QUALITY.ultra.detailNormal = 1;
+for (const _t of ['retro', 'low', 'normal', 'high']) {
+  if (QUALITY[_t].parallax == null) QUALITY[_t].parallax = 0;
+  if (QUALITY[_t].parallaxSteps == null) QUALITY[_t].parallaxSteps = 0;
+  if (QUALITY[_t].detailNormal == null) QUALITY[_t].detailNormal = 0;
+}
+
+
 function detectQuality() {
   const mem = navigator.deviceMemory || 4;
   const cores = navigator.hardwareConcurrency || 4;
@@ -353,6 +404,26 @@ class Renderer {
        of how far away the eye is, which no material knows. */
     this.detailScale = 9.0;
     this.detailFade = 11.0;
+    /* ---- PARALLAX, THE TWO NUMBERS A MAP CAN REACH ----
+       parallaxDepth is the apparent depth, in UV units, of the deepest
+       point of a REFERENCE surface -- brick, whose measured relief is
+       0.82 height units. Every other recipe is scaled off its own
+       measured range against that, so this one number moves all 46
+       together and keeps their physical ordering.
+       0.022 UV: on a wall tiled at one tile per metre that is 2.2 cm of
+       apparent mortar depth against a real 5-10 mm. Parallax is
+       habitually driven two to three times physical, because the eye
+       reads the MOTION of the offset rather than its absolute size, and
+       an honest 6 mm is indistinguishable from none at all.
+       parallaxFade is where it is gone. Wider than the detail layer's
+       11 m because macro relief -- mortar courses, sett crowns, pantile
+       rolls -- is about nine times coarser than the 9x-tiled grain and
+       survives roughly three times further before its own stride
+       shimmers. Renderer-level, like detailScale and detailFade, and
+       for the same reason: it is a property of how far away the eye is,
+       which no material knows. */
+    this.parallaxDepth = 0.022;
+    this.parallaxFade = 18.0;
     /* softness is the SUN'S ANGULAR RADIUS, as a tangent. The real sun
        subtends about half a degree, so its radius is 0.265 deg and
        tan(0.265 deg) = 0.00463: an occluder one metre above a surface
@@ -1001,6 +1072,29 @@ class Renderer {
     sh.f('uDetail', mat.detail != null ? mat.detail : 1);
     sh.f('uDetailScale', this.detailScale);
     sh.f('uDetailFade', this.detailFade);
+    /* ---- PARALLAX + DETAIL NORMALS: six uniforms, no new sampler ----
+       The height is uOrmMap.a, which nothing sampled before, so this
+       adds no texture unit to a pass that already binds five.
+       uParallaxDepth carries the whole gate: tier x material x the
+       renderer's global depth. When it is zero the shader never reaches
+       the march, so a tier with parallax off pays one scalar compare
+       per fragment and nothing else. uParallaxTop and uParallaxRange
+       are this recipe's MEASURED relief, taken at bake time in the loop
+       that already walked every texel and carried on the shared maps
+       object; a material with no maps binds range 0, which reads as
+       "no relief" and switches the whole thing off by itself. */
+    const pTier = this.quality.parallax || 0;
+    const pMat = mat.parallax != null ? mat.parallax : 0;
+    const pRange = (mat.maps && mat.maps.heightRange != null) ? mat.maps.heightRange : 0;
+    sh.f('uParallaxDepth',
+      (pTier > 0 && pMat > 0 && pRange > 1e-4)
+        ? (this.parallaxDepth != null ? this.parallaxDepth : 0.022) * pMat * pTier
+        : 0);
+    sh.f('uParallaxSteps', this.quality.parallaxSteps || 12);
+    sh.f('uParallaxFade', this.parallaxFade != null ? this.parallaxFade : 18.0);
+    sh.f('uParallaxRange', pRange);
+    sh.f('uParallaxTop', (mat.maps && mat.maps.heightTop != null) ? mat.maps.heightTop : 1);
+    sh.f('uDetailNormal', this.quality.detailNormal ? 1 : 0);
     sh.f('uSubsurface', mat.subsurface);
     sh.i('uReceiveShadow', mat.receiveShadow ? 1 : 0);
     sh.i('uHasMaps', mat.maps ? 1 : 0);

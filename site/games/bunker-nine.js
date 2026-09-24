@@ -1532,7 +1532,7 @@ const ROUNDS = {
 
    Keep this in step with version.json -- site/games/bump-version.js does
    both at once, and there is a test that fails if they drift. */
-const B9_BUILD = { version: '0.22.0', name: 'a shadow with a soft edge' };
+const B9_BUILD = { version: '0.23.0', name: 'brick you can feel' };
 
 /* ---------------- live updates ----------------
 

@@ -839,6 +839,182 @@ uniform sampler2D uAlbedoMap;
 uniform sampler2D uNormalMap;
 uniform sampler2D uOrmMap;
 
+/* ================= PARALLAX OCCLUSION + DETAIL NORMALS =================
+ *
+ * WHERE THE HEIGHT COMES FROM. 40-material.js builds a full-resolution
+ * height field for all 46 recipes -- it has to, because that is what
+ * heightToNormal differentiates -- and packs it into uOrmMap.a, the one
+ * channel of the three bound maps that nothing sampled. So this costs no
+ * new texture, no new texture unit, no new upload path and not one byte
+ * of memory. The pack is a FIXED affine window shared by every recipe:
+ *
+ *     height = alpha * HEIGHT_SPAN + HEIGHT_BIAS
+ *
+ * fixed, and not per-recipe normalised, because the relative depths are
+ * physically right by construction: pantile really does have centimetres
+ * of relief and a blued receiver has microns, and normalising each recipe
+ * to its own extremes would put the same corrugations on both.
+ *
+ * THESE TWO NUMBERS ARE LITERALS, NOT UNIFORMS, AND THAT IS DELIBERATE.
+ * An unbound uniform reads zero with no error (20-gl.js:98 no-ops an
+ * unknown name), and a silently zero height span is a feature that does
+ * nothing and leaves nothing to find. A literal cannot be silently zero.
+ * engine/test/height.test.js reads both files and fails if they drift. */
+const float PARALLAX_HEIGHT_BIAS = -0.45;
+const float PARALLAX_HEIGHT_SPAN = 1.70;
+
+/* Depth in UV units for a surface whose relief matches the reference
+   recipe, already multiplied by the material's own parallax scale, by
+   the tier, and by the distance fade. 0 means the whole march is
+   skipped -- which is every tier but ultra, and every material that
+   asked to stay flat. */
+uniform float uParallaxDepth;
+uniform float uParallaxSteps;
+uniform float uParallaxFade;
+/* This recipe's measured relief, in the same height units the recipes
+   wrote: uParallaxTop is its highest point, uParallaxRange its peak to
+   trough. Measured at bake time in the loop that was already walking
+   every texel, carried on the shared maps object, bound per material.
+   Nothing here guesses. */
+uniform float uParallaxTop;
+uniform float uParallaxRange;
+/* 0/1. Gates the reoriented detail-normal blend, the decorrelating
+   rotation, the detail roughness term and the Toksvig lift together, so
+   one tier key turns the whole close-range package on and off and no
+   tier can end up with half of it. */
+uniform float uDetailNormal;
+
+/* ---- one height tap ----
+   textureGrad and not texture: the march below runs with a data-
+   dependent trip count, where the implicit derivative chain is
+   undefined, and an explicit-LOD fetch would throw away the anisotropic
+   filtering that a grazing-angle effect needs more than any other pass
+   in this renderer. The gradients are taken once, outside, from the
+   unoffset UV.
+   Returned as a 0..1 DEPTH -- 0 at this recipe's highest point, 1 at its
+   lowest -- so the ray marches in the same space whatever the recipe. */
+float pomDepth(vec2 uvp, vec2 ddx, vec2 ddy){
+  float h = textureGrad(uOrmMap, uvp, ddx, ddy).a * PARALLAX_HEIGHT_SPAN + PARALLAX_HEIGHT_BIAS;
+  return saturate1((uParallaxTop - h) / max(uParallaxRange, 1e-4));
+}
+
+/* ---- steep parallax occlusion mapping, with a binary refinement ----
+ *
+ * Vt is the view direction in tangent space, pointing away from the
+ * surface; Vt.z is the cosine of the view angle. The returned value is
+ * the UV offset to add before every other fetch.
+ *
+ * WHY Vt.z IS CLAMPED AT 0.30. The UV travelled per unit of depth is
+ * Vt.xy / Vt.z, which runs away to infinity as the view goes edge on.
+ * Unclamped, a wall at eighty-five degrees marches a fifth of a tile per
+ * step and the mortar visibly swims as the head moves. 0.30 is
+ * cos(72.5 deg); past that a texel is under a pixel wide along u for any
+ * tiling this engine ships, so the fetch is mip blur and the extra reach
+ * resolves nothing. The clamp also bounds the total excursion at
+ * 3.33 * depthScale, which is what keeps the offset inside the
+ * anisotropic footprint the driver is filtering over.
+ *
+ * WHY THE STEP COUNT MOVES WITH THE ANGLE. Head on, the ray is nearly a
+ * point and one step would do; edge on it is the full 3.33 * depthScale
+ * and needs every step there is. So the budget is spent where the ray is
+ * long. The floor of a third keeps the near-normal case from striding so
+ * coarsely that a deep pit is jumped clean over.
+ *
+ * WHY FIVE BINARY HALVINGS AND NOT SIX. The linear search leaves a
+ * residual of one stride, 1/12 = 0.083 of the depth range at the high
+ * step count. Five halvings cut that to 0.083/32 = 0.0026, and the
+ * height channel is eight bits: 1/255 = 0.0039. A sixth halving refines
+ * quantisation noise. That is also why twelve linear steps is the right
+ * floor -- it is the coarsest stride five halvings can still resolve to
+ * below what the texture can express. */
+vec2 parallaxOffset(vec2 uvIn, vec3 Vt, float depthScale, float maxSteps){
+  vec2 ray = (Vt.xy / max(Vt.z, 0.30)) * depthScale;
+  vec2 ddx = dFdx(uvIn);
+  vec2 ddy = dFdy(uvIn);
+
+  float nf = mix(maxSteps, max(maxSteps * 0.34, 4.0), saturate1(Vt.z));
+  int   n  = int(nf);
+  float dz = 1.0 / nf;
+  vec2  duv = ray * dz;
+
+  float t = 0.0;                 // ray depth: 0 at the top, 1 at the floor
+  vec2  p = uvIn;
+  float d = pomDepth(p, ddx, ddy);
+  float tPrev = 0.0;
+
+  /* The hard 32 is the same guard the SSAO loop uses: a constant bound
+     the compiler can unroll against, with the real count as an early
+     break, so no tier can ever ask for an unbounded loop. */
+  for (int i = 0; i < 32; i++) {
+    if (i >= n || d <= t) break;
+    tPrev = t;
+    t += dz;
+    p -= duv;
+    d = pomDepth(p, ddx, ddy);
+  }
+
+  /* pLo is the last sample still above the height field, pHi the first
+     one under it. UV is affine in t, so bisecting the pair bisects the
+     depth interval with it. */
+  float lo = tPrev, hi = t;
+  vec2  pLo = p + duv, pHi = p;
+  for (int i = 0; i < 5; i++) {
+    float mid = (lo + hi) * 0.5;
+    vec2  pm  = (pLo + pHi) * 0.5;
+    float dm  = pomDepth(pm, ddx, ddy);
+    if (dm > mid) { hi = mid; pHi = pm; }
+    else          { lo = mid; pLo = pm; }
+  }
+  return pHi - uvIn;
+}
+
+/* ---- reoriented normal mapping (Barre-Brisebois & Hill, 2012) ----
+   Summing the XY of two tangent-space normals, which is what the detail
+   layer did, is only correct where the macro normal is flat. Where it is
+   not, the fine slopes are being measured against the wrong plane, so
+   grain on a steeply normal-mapped surface tilts the wrong way and
+   partly cancels the relief it is supposed to sit on. RNM rotates the
+   detail normal into the macro normal's frame first. That is the whole
+   difference between grain that lies ON the brick and grain that argues
+   with it.
+   Written without the divide by t.z: t.z = n1.z + 1 is strictly
+   positive, so dropping it only scales the result and the normalize
+   takes the scale straight back out. */
+vec3 rnmBlend(vec3 n1, vec3 n2){
+  vec3 t = n1 + vec3(0.0, 0.0, 1.0);
+  vec3 u = n2 * vec3(-1.0, -1.0, 1.0);
+  return normalize(t * dot(t, u) - u * t.z);
+}
+
+/* ---- the detail layer is the same texture, and that is the problem ----
+   Sampling the macro map nine times tighter puts a scale model of the
+   pattern inside itself: tiny bricks inside each brick, tiny setts
+   inside each sett. Once seen it cannot be unseen, and it is not a
+   resolution fault, it is a LATTICE fault. Two copies of one pattern at
+   a whole-number scale ratio share a lattice, so they line up, and the
+   eye is extremely good at finding that.
+   Rotating the fine copy breaks the shared lattice. tan(theta) = 1/phi
+   = 0.6180 is chosen deliberately: the golden ratio is the worst-
+   approximable irrational, so this is the rotation furthest from
+   relining the two lattices up at any small period. The offset moves the
+   fine copy's origin off the macro one so they do not agree at the tile
+   corner either. Four multiplies and two adds.
+   DR_C/DR_S are cos/sin of 31.717 degrees. */
+const float DR_C = 0.85065081;
+const float DR_S = 0.52573111;
+const vec2  DR_O = vec2(0.37, 0.61);
+vec2 detailRotate(vec2 p){
+  return vec2(p.x * DR_C - p.y * DR_S, p.x * DR_S + p.y * DR_C) + DR_O;
+}
+/* And the detail normal's own XY has to come back out through the
+   inverse rotation, or every fine slope in the game points 31.7 degrees
+   away from the one it was baked at and the grain reads as lit from a
+   direction the light is not in. */
+vec2 detailUnrotate(vec2 p){
+  return vec2(p.x * DR_C + p.y * DR_S, -p.x * DR_S + p.y * DR_C);
+}
+
+
 /* Extra point lights — small fixed budget, plenty for torches, muzzle
    flashes and glowing debris. */
 uniform int uLightCount;
@@ -906,12 +1082,98 @@ void main(){
      The albedo is mixed around 1.0 rather than replaced -- this is a
      contrast modulation on the macro colour, not a second colour. Blend
      it in flat and every surface goes to the average of itself. */
+  /* ---- PARALLAX OCCLUSION MAPPING ----
+   *
+   * This has to happen HERE, before the first fetch, because it moves
+   * the UV that every fetch below uses -- albedo, ORM, the normal map
+   * and the detail layer all have to read the point the eye actually
+   * sees rather than the point the polygon is at. Which in turn means
+   * the tangent frame has to exist up here, above the sampling block
+   * that used to build it.
+   *
+   * The frame is rebuilt rather than shared with the normal-mapping
+   * block below, and the duplication is on purpose: gating it on
+   * uParallaxDepth > 0.0 costs one scalar compare on every tier that
+   * has parallax off, which is every tier the test suite runs, against
+   * a restructure of thirty lines of load-bearing tangent-frame code
+   * that four other features are editing around. Twenty ALU ops at
+   * ultra is the cheaper side of that trade by a wide margin.
+   *
+   * pomNormalLen is declared out here because the Toksvig term below
+   * needs the macro normal's pre-normalisation length, which is
+   * measured inside the normal-mapping block. 1.0 means "no variance",
+   * which is what an untextured surface should read as. */
+  vec3 Ng = normalize(vNormal);
+  float pomNormalLen = 1.0;
+  float pomDepthScale = 0.0;
+  if (uHasMaps == 1 && uParallaxDepth > 0.0 && uParallaxRange > 1e-4) {
+    /* Faded out with distance for the same reason the detail layer is:
+       a stride that is invisible up close is aliasing at range, and
+       aliasing is worse than soft. The window is wider than the detail
+       layer's eleven metres because the relief is at the MACRO tile
+       scale -- mortar courses, sett crowns, pantile rolls -- which is
+       about nine times coarser than the 9x-tiled grain and so survives
+       roughly three times further before its own steps start to
+       shimmer. Renderer-level, so a map with unusually large or small
+       architecture can move it. */
+    float pDist = length(vWorldPos - uCameraPos);
+    float pFade = 1.0 - smoothstep(uParallaxFade * 0.45, uParallaxFade, pDist);
+    /* PER-RECIPE DEPTH, FROM THE MEASURED FIELD AND NOT FROM A GUESS.
+       uParallaxRange is this recipe's real peak-to-trough in height
+       units, measured at bake time. Dividing by brick's 0.82 makes
+       brick the unit: pantile (1.357) comes out 1.66x deeper, concrete
+       (0.537) 0.66x, marble (0.400) 0.49x, a blued receiver (0.035)
+       0.04x -- which is the whole point, because a gun must not grow
+       corrugations. The clamp at 2.2 stops a recipe nobody measured
+       from opening a hole in a wall. */
+    pomDepthScale = uParallaxDepth * clamp(uParallaxRange / 0.82, 0.0, 2.2) * pFade;
+  }
+  if (pomDepthScale > 0.0) {
+    /* The same frame the normal-mapping block builds, for the same
+       reason: with a world projection the relief has to be lit and
+       marched down the projection's own axes, not the mesh tangents,
+       or it comes out inside-out on four faces of six. */
+    vec3 pT, pB;
+    if (uvAxis != 0) {
+      float sgn = uvAxis == 2 ? (vNormal.y < 0.0 ? -1.0 : 1.0)
+                : uvAxis == 1 ? (vNormal.x < 0.0 ? -1.0 : 1.0)
+                              : (vNormal.z < 0.0 ? -1.0 : 1.0);
+      vec3 tw = uvAxis == 1 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+      vec3 bw = uvAxis == 2 ? vec3(0.0, 0.0, 1.0) : vec3(0.0, 1.0, 0.0);
+      vec3 t0 = tw * sgn - Ng * dot(Ng, tw * sgn);
+      pT = dot(t0, t0) > 1e-8 ? normalize(t0) : normalize(cross(Ng, bw));
+      vec3 b0 = bw - Ng * dot(Ng, bw) - pT * dot(pT, bw);
+      pB = dot(b0, b0) > 1e-8 ? normalize(b0) : cross(Ng, pT);
+    } else {
+      pT = normalize(vTangent.xyz - Ng * dot(Ng, vTangent.xyz));
+      pB = cross(Ng, pT) * vTangent.w;
+    }
+    vec3 Vw = normalize(uCameraPos - vWorldPos);
+    vec3 Vt = vec3(dot(Vw, pT), dot(Vw, pB), dot(Vw, Ng));
+    /* SILHOUETTE SAFETY. Below cos 0.08 -- 85.4 degrees -- the surface
+       is either turned away from the eye (a back face on a double-sided
+       material, where marching would walk the relief the wrong way and
+       turn every bump into a dent) or so close to edge on that the
+       clamped ray is at full stretch and the whole tile is under a
+       pixel. Both cases get the flat surface, which is what the eye
+       sees there anyway. This is a HARD cut rather than a fade because
+       the region it cuts is a few pixels wide on a silhouette and a
+       fade across it costs a branch to hide nothing. */
+    if (Vt.z > 0.08) {
+      uv += parallaxOffset(uv, Vt, pomDepthScale, max(uParallaxSteps, 4.0));
+    }
+  }
+
   float detW = 0.0;
   vec2 dUv = uv;
   if (uHasMaps == 1 && uDetail > 0.001) {
     float dDist = length(vWorldPos - uCameraPos);
     detW = uDetail * (1.0 - smoothstep(uDetailFade * 0.30, uDetailFade, dDist));
     dUv = uv * uDetailScale;
+    /* Decorrelated, so the fine copy stops being a scale model of the
+       macro one. Gated with the rest of the close-range package so a
+       tier that has it off samples exactly the UV it sampled before. */
+    if (uDetailNormal > 0.5) dUv = detailRotate(dUv);
   }
 
   vec3 albedo = uBaseColor * vParams.rgb * vTint;
@@ -947,6 +1209,31 @@ void main(){
     // stays dielectric no matter what the ORM texture says, while a metal
     // picks up the map's variation (rust patches, worn edges).
     metal = uMetalness * mix(1.0, orm.b, 0.85);
+
+    /* ---- THE DETAIL LAYER REACHES ROUGHNESS, AT LAST ----
+       It modulated albedo and it modulated the normal and it stopped
+       there. 40-material.js's own note above the concrete recipe makes
+       the argument against that better than this comment can: under an
+       overcast sky a tilted normal returns very nearly the same shade,
+       and the only channel that reads as relief is varied SHEEN. So at
+       exactly the range where detail matters most -- face against the
+       wall, no sun -- the one channel that would have sold it was
+       frozen at the macro value.
+       One more fetch of a texture that is already bound, already
+       mipped and already being sampled twice fixes it, and the same
+       fetch carries a micro-occlusion term for the ambient.
+       Modulated around the detail tile's own mean, exactly the way the
+       albedo is, so this is CONTRAST and not gain: a surface's average
+       roughness does not move, which matters because every material in
+       the game was authored against that average. The clamps are
+       generous but finite -- a recipe with a near-black roughness texel
+       must not turn a concrete wall into a mirror. */
+    if (detW > 0.001 && uDetailNormal > 0.5) {
+      vec4 dOrm = texture(uOrmMap, dUv);
+      float dAvgR = max(textureLod(uOrmMap, dUv, 20.0).g, 0.02);
+      rough *= mix(1.0, clamp(dOrm.g / dAvgR, 0.55, 1.80), detW * 0.45);
+      ao    *= mix(1.0, clamp(dOrm.r, 0.35, 1.0), detW * 0.55);
+    }
   }
   rough = clamp(rough, 0.035, 1.0);
 
@@ -977,20 +1264,69 @@ void main(){
       T = normalize(vTangent.xyz - N * dot(N, vTangent.xyz));
       B = cross(N, T) * vTangent.w;
     }
-    vec3 tn = texture(uNormalMap, uv).xyz * 2.0 - 1.0;
+    vec3 tnRaw = texture(uNormalMap, uv).xyz * 2.0 - 1.0;
+    /* The length of the sampled vector BEFORE it is renormalised is a
+       free variance measurement. The mip filter averages the stored
+       vectors, so a texel whose neighbours disagreed comes back SHORT,
+       and how short says how much slope this pixel has averaged away.
+       Captured here and spent on roughness after the frame is built --
+       see the Toksvig block below. */
+    pomNormalLen = clamp(length(tnRaw), 0.25, 1.0);
+    vec3 tn = tnRaw;
     tn.xy *= uNormalStrength;
-    /* And the fine grain's own slope, added to the macro slope. Summing
-       the XY of two tangent-space normals is the cheap standard blend
-       and it is the right one here: the detail is a perturbation of the
-       big shape, not a replacement for it. */
     if (detW > 0.001) {
       vec3 dn = texture(uNormalMap, dUv).xyz * 2.0 - 1.0;
-      tn.xy += dn.xy * uNormalStrength * detW * 0.8;
+      if (uDetailNormal > 0.5) {
+        /* Out of the decorrelating rotation first, then faded by
+           distance and by the material's own normal strength, then
+           composited with RNM instead of summed. dn.z is floored
+           because a normal map texel that quantised to z <= 0 would
+           make the blend flip the detail inside out. */
+        dn.xy = detailUnrotate(dn.xy) * uNormalStrength * detW * 0.8;
+        dn.z  = max(dn.z, 0.05);
+        tn = rnmBlend(normalize(tn), normalize(dn));
+      } else {
+        /* The original additive blend, kept verbatim, so a tier with
+           detail normals off renders the identical picture it did. */
+        tn.xy += dn.xy * uNormalStrength * detW * 0.8;
+      }
     }
     N = normalize(mat3(T, B, N) * normalize(tn));
   }
   // Back-facing geometry (double-sided leaves, glass) must not light black.
   if (!gl_FrontFacing) N = -N;
+
+  /* ---- TOKSVIG: DISTANT BUMPY SURFACES GET ROUGHER, NOT SPARKLIER ----
+   *
+   * A tiled roof, chain-link, tread plate, a gravel path. At range the
+   * normal map's mip chain averages the bumps away and the surface
+   * flattens into a small mirror that catches the sun on one frame and
+   * misses it on the next. That is the crawl, and nothing downstream
+   * removes it, because the signal genuinely aliased in the shading --
+   * FXAA and TAA can only average a sparkle that has already happened.
+   *
+   * The fix is Toksvig's and the measurement was free: |n| = 1 means one
+   * slope under this pixel, |n| = 0.8 means a spread of them, and a
+   * spread of slopes IS a wider specular lobe, which is what roughness
+   * is. Converted through the Blinn power the two models share:
+   *     s  = 2/alpha^2 - 2,  ft = |n| / (|n| + s(1 - |n|)),  s' = ft*s
+   * and back. s' <= s always, so this can only ever roughen.
+   *
+   * THE 0.985 FLOOR IS NOT ARBITRARY. An eight-bit normal map quantises
+   * each component to 2/255 = 0.0078, so a unit vector comes back with
+   * |n| as low as 0.993 at mip 0 with no averaging at all. Engaging
+   * below 0.985 keeps quantisation noise out of it entirely: a flat
+   * surface close up is untouched, bit for bit. 0.86 is where the
+   * averaged spread is wide enough that Toksvig's approximation is the
+   * dominant term rather than a correction to it. */
+  float tVar = 1.0 - smoothstep(0.86, 0.985, pomNormalLen);
+  if (uDetailNormal > 0.5 && tVar > 0.001) {
+    float al  = max(rough * rough, 1e-3);
+    float s   = 2.0 / (al * al) - 2.0;
+    float ft  = pomNormalLen / max(pomNormalLen + s * (1.0 - pomNormalLen), 1e-4);
+    float alT = sqrt(2.0 / max(ft * s + 2.0, 2.0));
+    rough = clamp(mix(rough, sqrt(alT), tVar), rough, 1.0);
+  }
 
   vec3 V = normalize(uCameraPos - vWorldPos);
   float NoV = max(dot(N, V), 1e-4);

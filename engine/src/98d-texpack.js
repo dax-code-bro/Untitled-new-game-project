@@ -94,15 +94,58 @@ Engine.prototype.useTexturePack = async function (kind, pack) {
   if (!entry) return false;
 
   try {
-    const [alb, nrm, orm] = await Promise.all([
+    /* `height` is the fourth image every CC0 library ships beside the
+       ORM set -- ambientCG and Poly Haven both call it Displacement --
+       and until now it had nowhere to go, so a photographed brick came
+       in FLATTER than the procedural brick it replaced. It goes where
+       the procedural height goes: the alpha of the ORM texture. */
+    const [alb, nrm, orm, hgt] = await Promise.all([
       pack.albedo ? loadImagePixels(pack.albedo) : null,
       pack.normal ? loadImagePixels(pack.normal) : null,
       pack.orm ? loadImagePixels(pack.orm)
         : ormFromChannels(pack.ao, pack.roughness, pack.metalness),
+      pack.height ? loadImagePixels(pack.height) : null,
     ]);
     if (alb) entry.albedo.upload(alb.data, alb.w, alb.h);
     if (nrm) entry.normal.upload(nrm.data, nrm.w, nrm.h);
-    if (orm) entry.orm.upload(orm.data, orm.w, orm.h);
+    if (orm) {
+      /* Merge the displacement into the ORM alpha BEFORE the upload,
+         and record the relief the same way the procedural bake does so
+         the shader's depth scale means the same thing for a photograph
+         as it does for a recipe. A displacement map is authored full
+         range 0..255, so it is mapped onto the same fixed window the
+         recipes use rather than onto its own extremes -- otherwise a
+         photographed sheet of paper would get a brick's mortar depth.
+         Sizes are required to match; a mismatched pair is ignored
+         rather than resampled, because a pack that ships a 2K albedo
+         with a 1K height is a pack with a mistake in it and a silently
+         stretched height reads as a smear nobody can source. */
+      let hTop = 1, hRange = 0;
+      if (hgt && hgt.w === orm.w && hgt.h === orm.h) {
+        let lo = 255, hi = 0;
+        for (let i = 0; i < orm.w * orm.h; i++) {
+          const v = hgt.data[i * 4];
+          orm.data[i * 4 + 3] = v;
+          if (v < lo) lo = v;
+          if (v > hi) hi = v;
+        }
+        const span = (typeof TextureLib !== 'undefined' && TextureLib.heightSpan != null)
+          ? TextureLib.heightSpan : 1.70;
+        const bias = (typeof TextureLib !== 'undefined' && TextureLib.heightBias != null)
+          ? TextureLib.heightBias : -0.45;
+        hTop = (hi / 255) * span + bias;
+        hRange = ((hi - lo) / 255) * span;
+      } else {
+        /* No height in the pack: ormFromChannels writes 255 into every
+           alpha, so there is no relief to march and saying so switches
+           parallax off for this recipe rather than leaving it driving
+           from the procedural range of a texture that is gone. */
+        for (let i = 0; i < orm.w * orm.h; i++) orm.data[i * 4 + 3] = 255;
+      }
+      entry.orm.upload(orm.data, orm.w, orm.h);
+      entry.heightTop = hTop;
+      entry.heightRange = hRange;
+    }
     if (!alb && !nrm && !orm) return false;
     /* Re-key so a later resolution upgrade does not regenerate the
        procedural version straight back over the top of the photograph,

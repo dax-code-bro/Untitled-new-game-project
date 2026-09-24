@@ -142,6 +142,13 @@ const TextureLib = {
     const albedo = new Uint8Array(size * size * 4);
     const orm = new Uint8Array(size * size * 4);
     const height = new Float32Array(size * size);
+    /* The relief this recipe actually has, measured in the loop that is
+       already walking every texel -- two compares, no second pass. The
+       shader needs it because the packed window is FIXED and global: a
+       blued receiver occupies 2% of the byte range and pantile 80%, and
+       a parallax scale that did not know which it was looking at would
+       either flatten the roof or corrugate the gun. */
+    let hMin = Infinity, hMax = -Infinity;
     const fn = this.kinds[kind] || this.kinds.concrete;
 
     const c = { r: 1, g: 1, b: 1, ao: 1, rough: 0.8, metal: 0, h: 0.5 };
@@ -163,6 +170,8 @@ const TextureLib = {
            fixed rather than per recipe. */
         orm[i + 3] = clamp((c.h - HEIGHT_BIAS) / HEIGHT_SPAN, 0, 1) * 255;
         height[y * size + x] = c.h;
+        if (c.h < hMin) hMin = c.h;
+        if (c.h > hMax) hMax = c.h;
       }
     }
 
@@ -183,7 +192,17 @@ const TextureLib = {
     const maps = { albedo, orm, normal, size,
       /* What alpha 0 and alpha 1 mean, carried with the maps so a
          consumer never has to assume. */
-      heightBias: HEIGHT_BIAS, heightSpan: HEIGHT_SPAN };
+      heightBias: HEIGHT_BIAS, heightSpan: HEIGHT_SPAN,
+      /* And what this recipe's relief actually is, in the same height
+         units the recipe wrote: the top of it and the peak-to-trough.
+         Clamped into the packed window because that is all the texture
+         can carry -- a recipe whose height escaped the window has been
+         flattened at the byte and the shader must be told the flattened
+         figure, not the authored one, or its depth scale is driven from
+         relief that is no longer in the map. */
+      heightTop: Math.min(hMax, HEIGHT_BIAS + HEIGHT_SPAN),
+      heightRange: Math.max(0,
+        Math.min(hMax, HEIGHT_BIAS + HEIGHT_SPAN) - Math.max(hMin, HEIGHT_BIAS)) };
     this._cache.set(key, maps);
     return maps;
   },
@@ -2149,6 +2168,26 @@ const TextureLib = {
 
 let _materialId = 0;
 
+/* ---- RECIPES THAT MUST NOT BE PARALLAXED ----
+ *
+ * Not "look worse with it" -- wrong with it.
+ *   eye      radial UVs, not a tiling relief field: the offset would
+ *            drag the iris across the pupil.
+ *   hair     its height is strands plus a stray term that goes past
+ *            3.0, so the march would punch holes through a card that is
+ *            two triangles thick anyway.
+ *   skin     the relief is pores and it is subsurface; a face at thirty
+ *            centimetres would have a nose that swam as the head turned.
+ *   grass    ALPHA_CLIP. The clip fetch reads the same uv, so offsetting
+ *            it eats the blade silhouette from the edge inward.
+ *   glass ice smooth floaties
+ *            the whole point of them is being featureless, which is the
+ *            same argument the `detail` flag makes two lines below.
+ * Everything else is in, scaled by its own measured relief, so a recipe
+ * with no depth contributes none without needing to be listed. */
+const NO_PARALLAX = new Set(['eye', 'hair', 'skin', 'grass',
+  'glass', 'ice', 'smooth', 'floaties']);
+
 class Material {
   constructor(gl, opts = {}) {
     this.gl = gl;
@@ -2185,6 +2224,21 @@ class Material {
     this.detail = opts.detail != null ? opts.detail
       : (this.texture === 'smooth' || this.texture === 'ice' ? 0 : 1);
     this.texture = opts.texture || null;   // name of a TextureLib kind
+    /* HOW DEEP THE RELIEF READS, per material. 1 means "whatever this
+       recipe measured", which is what almost everything wants -- the
+       renderer's parallaxDepth sets the reference and the recipe's own
+       height range does the rest, so brick, pantile and a blued
+       receiver all come out at their real relative depths from one
+       number. 0 is flat.
+       READ AFTER this.texture IS ASSIGNED, DELIBERATELY. The `detail`
+       line three above reads this.texture BEFORE it is set, so its
+       smooth/ice special case has never once fired -- a live bug, and
+       it is left alone here on purpose: fixing it changes the shading
+       of every glass, ice and painted panel in the game on every tier,
+       which is a re-baseline this change has no business making. Do not
+       "tidy" the ordering by moving this line up with it. */
+    this.parallax = opts.parallax != null ? opts.parallax
+      : (NO_PARALLAX.has(this.texture) ? 0 : 1);
     this.castShadow = opts.castShadow !== false;
     this.receiveShadow = opts.receiveShadow !== false;
     // Subsurface approximation — foliage and skin look dead without it.
@@ -2248,6 +2302,12 @@ class Material {
         albedo: mk(data.albedo, true),
         normal: mk(data.normal, false),
         orm: mk(data.orm, false),
+        /* Carried onto the SHARED object, next to the textures, because
+           that is the thing _bindMaterial has in its hand at draw time
+           and because the measurement belongs to the recipe rather than
+           to any one material made from it. */
+        heightTop: data.heightTop,
+        heightRange: data.heightRange,
       };
       store.set(key, shared);
     }
