@@ -71,6 +71,13 @@ const SUBJECTS = [
      the reason an environment probe is still needed alongside it. */
   { id: 'floor-high', rig: 'floor', tier: 'high', rough: 0.04, metal: 1.0 },
   { id: 'floor-ultra', rig: 'floor', tier: 'ultra', rough: 0.04, metal: 1.0 },
+  /* THE ROW THE WHOLE FILE WAS BUILT FOR. A mirrored ball is the worst
+     case for a screen-space trace and the best case for a probe: it
+     reflects the entire hemisphere, most of which is off screen. If this
+     row ever reads 4 of 4 -- green included -- then something in this
+     engine has sampled the wall BEHIND THE CAMERA, which no screen-space
+     trick and no analytic sky can do. */
+  { id: 'ball-ultra', rig: 'ball', tier: 'ultra', rough: 0.04, metal: 1.0 },
 ];
 
 /* Measured on the build this test was written against, at quality high,
@@ -78,8 +85,9 @@ const SUBJECTS = [
 
      ball-chrome  (rough 0.04, high)   chroma 0.469  sharp 0.0815  0/4
      ball-satin   (rough 0.30, high)   chroma 0.437  sharp 0.2702  0/4
-     floor-high   (mirror floor)       chroma 0.541  sharp 0.0285  0/4
-     floor-ultra  (mirror floor)       chroma 0.544  sharp 0.0271  3/4
+     floor-high   (mirror floor, high) chroma 0.541  sharp 0.0285  0/4
+     floor-ultra  (mirror floor,ultra) chroma 0.584  sharp 0.0271  3/4
+     ball-ultra   (rough 0.04, ultra)  chroma 0.618  sharp 0.0805  3/4
 
    THE THREE ZEROES ARE THE POINT, and so is the three. A mirrored ball
    at the centre of a room whose walls are pure red, green, magenta and
@@ -89,12 +97,20 @@ const SUBJECTS = [
    the four appear -- 12.7, 4.8 and 3.6 per cent -- because the
    screen-space trace can return what is on screen.
 
-   GREEN STAYS AT ZERO IN EVERY ROW, by construction: the green wall is
-   behind the camera. Nothing this engine currently does can reflect it.
-   A screen-space trace cannot, and the environment probe bakes the
-   analytic SKY rather than the scene, so it cannot either. The day a
-   row here reads 4 of 4 is the day something genuinely samples the
-   whole room.
+   GREEN IS THE ONE THAT MATTERS, and it is the last row that has it.
+   The green wall stands BEHIND THE CAMERA. It is not on screen, so a
+   screen-space trace can never return it, and it is not in the sky, so
+   an analytic environment can never return it either -- which is why
+   every row above reads 0.00 for green while the control confirms the
+   other three walls are in plain sight. ball-ultra reads 26.55 per
+   cent green, because at ultra the probe bakes six faces of the actual
+   scene and a mirrored ball reflects the hemisphere behind the viewer.
+
+   Red is only 0.34 per cent in that row, below the half-per-cent floor,
+   and that is geometry rather than a fault: the red wall stands behind
+   the BALL, so it reflects off the far side of the sphere, which the
+   camera cannot see. Three of four is what a mirrored ball in this room
+   should show.
 
    SLACK: two consecutive runs agreed to three decimal places, so this
    rig is as deterministic as SwiftShader gets. The tolerances below are
@@ -104,7 +120,8 @@ const BASE = {
   'ball-chrome': { chroma: 0.469, sd: 0.0815, hues: 0 },
   'ball-satin': { chroma: 0.437, sd: 0.2702, hues: 0 },
   'floor-high': { chroma: 0.541, sd: 0.0285, hues: 0 },
-  'floor-ultra': { chroma: 0.544, sd: 0.0271, hues: 3 },
+  'floor-ultra': { chroma: 0.584, sd: 0.0271, hues: 3 },
+  'ball-ultra': { chroma: 0.618, sd: 0.0805, hues: 3 },
 };
 
 /* The baseline must exist for every subject, checked rather than

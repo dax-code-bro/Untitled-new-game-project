@@ -285,6 +285,17 @@ class Engine {
   constructor(opts = {}) {
     this.canvas = resolveCanvas(opts.canvas);
     this.renderer = new Renderer(this.canvas, opts);
+    /* HOW THE RENDERER ASKS FOR THE WORLD BEHIND THE CAMERA.
+     *
+       The environment probe bakes six faces of the actual scene, and it
+       runs inside renderScene -- by which point the batch list it was
+       handed has already been frustum-culled against the player's view.
+       The renderer has no way to reach the actor list itself and should
+       not grow one, so the Engine hands it a closure instead. Null for
+       any renderer used without an Engine, which renderEnv tests before
+       it tries a scene bake and falls back to the sky. */
+    this.renderer.probeBatches = (x, y, z, radius) =>
+      this._buildBatches({ x: x, y: y, z: z, radius: radius });
     this.gl = this.renderer.gl;
     this.physics = new PhysicsWorld({
       gravity: opts.gravity != null
@@ -310,6 +321,16 @@ class Engine {
     this._fractureCache = new Map();
     this._batchList = [];
     this._individual = [];
+    /* A SECOND SET, for the environment probe, and it has to be second
+       rather than shared. _buildBatches reuses one group map, one
+       individual list and one output array across frames -- it resets
+       their counts and refills them. The probe builds its own batches
+       from inside renderScene, which has ALREADY been handed the main
+       list; sharing the state would empty the very array being drawn
+       and the frame would come out blank. */
+    this._probeGroups = new Map();
+    this._probeList = [];
+    this._probeIndividual = [];
     this._frameNo = 0;
     this._planes = new Float32Array(24);
 
@@ -1479,14 +1500,23 @@ class Engine {
 
   /* ---------------- batching ---------------- */
 
-  _buildBatches() {
-    const groups = this._batchGroups;
+  /* probe, when given, is {x, y, z, radius}: collect what is near that
+     point instead of what is inside the camera's frustum. The
+     environment probe needs it because the whole value of a cubemap is
+     the half of the world that is BEHIND the viewer, and the main
+     frustum has already thrown that away by the time renderScene is
+     called. */
+  _buildBatches(probe) {
+    const groups = probe ? this._probeGroups : this._batchGroups;
+    const individual = probe ? this._probeIndividual : this._individual;
     for (const g of groups.values()) g.count = 0;
-    this._individual.length = 0;
+    individual.length = 0;
     /* Ticked once per batch build. Skeletons use it to upload their
        bone palette at most once a frame however many actors share
-       them -- see Skeleton.uploadTexture. */
-    this._frameNo = (this._frameNo || 0) + 1;
+       them -- see Skeleton.uploadTexture. The probe pass does NOT tick
+       it: it runs in the same frame as the main build and wants the
+       palette that build already uploaded, not a second copy of it. */
+    if (!probe) this._frameNo = (this._frameNo || 0) + 1;
 
     if (this.frustumCulling) this.camera.extractPlanes(this._planes);
     const planes = this._planes;
@@ -1504,7 +1534,17 @@ class Engine {
     for (const actor of this.actors) {
       if (!actor.visible || !actor.mesh || actor.dead) continue;
 
-      if (this.frustumCulling && !actor.noCull) {
+      if (probe) {
+        /* A sphere around the probe, not a frustum: the cube faces cover
+           every direction, so the only question is range. Same matrix
+           translation and same inflated radius as the frustum path
+           below -- a parented actor has no position of its own. */
+        const m = actor.matrix.e;
+        const dx = m[12] - probe.x, dy = m[13] - probe.y, dz = m[14] - probe.z;
+        const sc = Math.max(actor.scale.x, actor.scale.y, actor.scale.z);
+        const reach = probe.radius + actor.boundRadius * Math.max(1, sc);
+        if (dx * dx + dy * dy + dz * dz > reach * reach) continue;
+      } else if (this.frustumCulling && !actor.noCull) {
         // Cull against the matrix translation, not actor.position. A
         // parented actor (a head on a neck bone, a held item) has no
         // position of its own — its world location only exists once the
@@ -1527,7 +1567,7 @@ class Engine {
       // Skinned and morphed meshes cannot be instanced: each needs its own
       // bone texture or its own vertex buffer.
       if (actor.skeleton || actor.face) {
-        this._individual.push(actor);
+        individual.push(actor);
         continue;
       }
 
@@ -1562,7 +1602,7 @@ class Engine {
       g.count++;
     }
 
-    const list = this._batchList;
+    const list = probe ? this._probeList : this._batchList;
     list.length = 0;
     for (const g of groups.values()) {
       if (!g.count) continue;
@@ -1580,7 +1620,7 @@ class Engine {
       list.push(g);
     }
 
-    for (const actor of this._individual) {
+    for (const actor of individual) {
       const batch = {
         mesh: actor.mesh,
         material: actor.material,

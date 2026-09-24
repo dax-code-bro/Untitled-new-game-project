@@ -991,15 +991,27 @@ class Framebuffer {
     this.height = Math.max(1, opts.height || (tex.height >> level));
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.handle);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, target, tex.handle, level);
-    /* A retargeted framebuffer has no depth of the right size and does
-       not need one -- every pass that uses this is a fullscreen triangle.
-       Detaching depth also stops it failing completeness when the mip is
-       smaller than the renderbuffer. */
-    if (this.depthBuffer) gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, null);
-    if (this.depthTexture) gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, null, 0);
+    /* A retargeted framebuffer has no depth of the right size and
+       usually does not need one -- almost every pass that uses this is a
+       fullscreen triangle. Detaching depth also stops it failing
+       completeness when the mip is smaller than the renderbuffer.
+
+       opts.depth is the exception: the environment probe rasterises real
+       geometry into a cube face and cannot sort it without a depth
+       buffer. The caller owns that renderbuffer and is responsible for
+       it being exactly this mip's size -- an attachment of a different
+       size is FRAMEBUFFER_INCOMPLETE_DIMENSIONS and the whole bake
+       silently draws nothing. */
+    if (opts.depth) {
+      gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, opts.depth);
+    } else {
+      if (this.depthBuffer) gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, null);
+      if (this.depthTexture) gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, null, 0);
+    }
     gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
     gl.viewport(0, 0, this.width, this.height);
     this._borrowed = true;
+    this._borrowedDepth = !!opts.depth;
     return this;
   }
 
@@ -1015,6 +1027,16 @@ class Framebuffer {
     }
     if (this.depthBuffer) gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, this.depthBuffer);
     else if (this.depthTexture) gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, this.depthTexture.handle, 0);
+    else if (this._borrowedDepth) {
+      /* A BORROWED DEPTH HAS TO BE GIVEN BACK EXPLICITLY. The two
+         branches above restore whatever this framebuffer OWNS, and a
+         target built with depth:false owns nothing -- so without this
+         line a depth buffer lent to it by attach() stays bound for
+         every later pass. The probe lends a cube-face-sized one and the
+         passes that follow render into mips a fraction of that size. */
+      gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, null);
+    }
+    this._borrowedDepth = false;
     this._borrowed = false;
     return this;
   }
@@ -6942,9 +6964,26 @@ QUALITY.medium = QUALITY.normal;
  * writes both, which is what is wanted. */
 QUALITY.ultra.ssr = 1;
 QUALITY.ultra.ssrSteps = 28;
+/* THE PROBE BAKES THE SCENE, NOT JUST THE SKY, and only at ultra.
+ *
+   The sky probe fixed how roughness READS -- a real GGX prefilter
+   instead of a fade to a constant -- but a cube full of sky still has
+   no building in it, so a mirror still showed no building. This makes
+   the six faces real renders of the world around the probe.
+
+   Ultra alone because it is six extra scene passes. They are amortised
+   one face per frame and the faces are small, but they are draw calls
+   and a phone should not find them. */
+QUALITY.ultra.envScene = 1;
+/* How far from the probe an actor still counts. Beyond this it is not
+   drawn into the cube at all -- at 128 to 256 pixels across a face,
+   something sixty metres away is a texel. */
+QUALITY.ultra.envSceneRange = 60;
 for (const _t of ['retro', 'low', 'normal', 'high']) {
   if (QUALITY[_t].ssr == null) QUALITY[_t].ssr = 0;
   if (QUALITY[_t].ssrSteps == null) QUALITY[_t].ssrSteps = 0;
+  if (QUALITY[_t].envScene == null) QUALITY[_t].envScene = 0;
+  if (QUALITY[_t].envSceneRange == null) QUALITY[_t].envSceneRange = 0;
 }
 
 
@@ -7132,6 +7171,14 @@ class Renderer {
     /* Probe strength. 1.0 is physical. A game can dial it without
        switching the probe off; 0 switches it off. */
     this.envIntensity = 1.0;
+    /* Set only while the six scene faces are being drawn. _bindEnv reads
+       it and binds uEnvIntensity 0, so the world baked into the cube is
+       lit WITHOUT the cube -- otherwise each rebake reflects the last
+       one and the reflections compound frame over frame. */
+    this._envBaking = false;
+    this._envDepth = null;   // depth renderbuffer, cube-face sized
+    this._envCam = null;     // the 90-degree camera the faces are drawn from
+    this._envAt = null;      // where the cube in hand was baked from
     this._envSh = new Float32Array(27);
     this._envHash = null;
     this._envJob = 0;
@@ -7477,7 +7524,14 @@ class Renderer {
        GL_INVALID_OPERATION by a different route, whether or not the
        shader ever samples it. Twenty-eight bytes and two bindTexture
        calls per batch, the same cost as the shadow maps beside them. */
-    const envOn = !!(this.quality.env && this.envCube && this._envReady);
+    /* _envBaking is the recursion brake. The six scene faces are drawn
+       by this same PBR path, so without it each face would be shaded
+       using the cube it is being baked into: a rebake would reflect the
+       previous bake, and a bright reflective scene would ratchet itself
+       brighter every cycle. Baked faces are lit by sun, lights and the
+       analytic sky only. */
+    const envOn = !!(this.quality.env && this.envCube && this._envReady
+      && !this._envBaking);
     sh.f('uEnvIntensity', envOn ? (this.envIntensity != null ? this.envIntensity : 1) : 0);
     sh.f('uEnvDiffuse', envOn ? (this.quality.envDiffuse || 0) : 0);
     /* Always zero here. The only draw that sets it to 1 is the cube bake
@@ -7705,7 +7759,7 @@ class Renderer {
        so that bind's depth clear is not masked out. Here rather than
        in Engine.step so renderFrom() -- killcams, cutscenes,
        interior.test.js and density.test.js -- gets a probe too. */
-    this.renderEnv();
+    this.renderEnv(batches, camera);
     const gl = this.gl;
     /* Mask UP before the clear, not after: one clear has to fill the
        normal buffer as well as the colour, or last frame's normals
@@ -8337,7 +8391,11 @@ class Renderer {
      Engine.renderFrom reach it -- interior.test.js and density.test.js
      render exclusively through renderFrom and would otherwise never
      have a probe at all. */
-  renderEnv() {
+  /* batches and camera are the main frame's, and are used only to decide
+     WHERE the probe sits and to reach the Engine's actor list through
+     probeBatches. A renderer driven without an Engine passes neither and
+     gets the sky-only bake, which is what it had before. */
+  renderEnv(batches, camera) {
     const gl = this.gl;
     const want = this.quality.env ? Math.max(8, this.quality.envRes || 64) : 0;
     if (!want) {
@@ -8347,6 +8405,26 @@ class Renderer {
     if (!this.envCube || this.envRes !== want) {
       this._disposeEnv();
       this._initEnv(want);
+    }
+
+    /* WHERE THE PROBE WANTS TO BE: on the camera, snapped to a grid.
+       Snapping is the whole rebake policy. Un-snapped, the hash would
+       change every frame the player moved a millimetre and the cube
+       would never finish a cycle; at this step it rebakes after a few
+       paces and holds still otherwise. Three metres is about a room, and
+       the error it leaves is a reflection that is slightly stale in
+       parallax -- which, blurred by roughness across a 128-pixel face,
+       is not a thing anyone can see. */
+    if (this._envSceneFaces() > 1 && camera) {
+      const q = 3;
+      const cp = camera.position;
+      this._envWantAt = [
+        Math.round(cp.x / q) * q,
+        Math.round(cp.y / q) * q,
+        Math.round(cp.z / q) * q,
+      ];
+    } else {
+      this._envWantAt = null;
     }
 
     /* The probe passes are fullscreen triangles into a target with no
@@ -8377,14 +8455,28 @@ class Renderer {
       }
       this._envHash = h;
       this._envJob = 0;
+      /* Recomputed per cycle, not once in _initEnv: the tier can change
+         under setQuality and a scene bake is six jobs where a sky bake
+         is one. Getting this stale runs the prefilter over a half-baked
+         source, or skips mips entirely. */
+      this._envJobs = this._envSceneFaces() + this.envLevels;
+      // Where this cube is being baked from, fixed for the whole cycle.
+      if (this._envSceneFaces() > 1 && this._envWantAt) {
+        this._envAt = this._envWantAt.slice();
+      }
       // The diffuse half is CPU-side and costs nothing, so it is ready
       // on the frame the sky changed rather than levels frames later.
       this._bakeEnvSh();
     }
 
+    const faces = this._envSceneFaces();
     const job = this._envJob++;
-    if (job === 0) this._bakeEnvSource();
-    else this._prefilterEnvLevel(job - 1);
+    if (job < faces) {
+      if (faces === 1) this._bakeEnvSource();
+      else this._bakeEnvSceneFace(job, batches, camera);
+    } else {
+      this._prefilterEnvLevel(job - faces);
+    }
     /* Once true it stays true. A later rebake overwrites the cube in
        place, which reads as a reflection settling over a few frames --
        far better than popping back to the analytic sky and in again. */
@@ -8413,6 +8505,18 @@ class Renderer {
     push(s.horizon.x); push(s.horizon.y); push(s.horizon.z);
     push(s.ground.x); push(s.ground.y); push(s.ground.z);
     push(s.intensity); push(s.bounce);
+    /* AND WHERE THE PROBE STANDS, when it is baking the scene. A sky
+       cube is the same from everywhere, so the sky-only bake depends on
+       nothing but the sky and runs once. A cube of the WORLD is only
+       right near the point it was baked from, so walking away from it
+       has to retrigger it -- and the quantised position going into the
+       hash is what does that, with no separate timer or dirty flag.
+
+       Quantised to the step in _envWantAt, so standing still cannot
+       rebake and walking a few metres must. */
+    if (this._envWantAt) {
+      push(this._envWantAt[0]); push(this._envWantAt[1]); push(this._envWantAt[2]);
+    }
     return h | 0;
   }
 
@@ -8454,10 +8558,25 @@ class Renderer {
       wrap: gl.CLAMP_TO_EDGE, mips: false, minFilter: gl.LINEAR, magFilter: gl.LINEAR,
     });
     this.brdfLut.alloc(128, 128);
+    /* Depth, only when the faces will hold real geometry. A cube of sky
+       is six fullscreen triangles and needs none. */
+    if (this.quality.envScene) {
+      this._envDepth = gl.createRenderbuffer();
+      gl.bindRenderbuffer(gl.RENDERBUFFER, this._envDepth);
+      gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, res, res);
+      gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+    }
     this.envRes = res;
-    this._envJob = 0;
-    // One frame for the source, then one per mip level.
+    // One frame for the source, then one per mip level -- or six for the
+    // source when the faces hold real geometry, which renderEnv
+    // recomputes at the start of every cycle.
     this._envJobs = 1 + this.envLevels;
+    /* STARTED AT THE END, so the very first renderEnv falls into the
+       cycle-start branch instead of past it. That branch is what stamps
+       the hash, recomputes the job count for the tier, and fixes the
+       point the scene faces are baked from -- skip it once and the first
+       six jobs run with no probe position and quietly draw nothing. */
+    this._envJob = this._envJobs;
     this._envHash = null;
     this._envReady = false;
     this._brdfLutBaked = false;
@@ -8468,6 +8587,9 @@ class Renderer {
     if (this.envSource) this.envSource.dispose();
     if (this.brdfLut) this.brdfLut.dispose();
     if (this.envFbo) this.envFbo.dispose();
+    if (this._envDepth) this.gl.deleteRenderbuffer(this._envDepth);
+    this._envDepth = null;
+    this._envAt = null;
     this.envCube = null;
     this.envSource = null;
     this.brdfLut = null;
@@ -8483,6 +8605,109 @@ class Renderer {
 
   /* Six faces of raw sky into envSource. One draw each, no sampling
      loop -- this is the cheap half of the bake. */
+  /* Six when the tier bakes the scene and the Engine gave us a way to
+     reach it, one when it is sky only. Everything else keys off this, so
+     there is exactly one place that decides. */
+  _envSceneFaces() {
+    return (this.quality.envScene
+      && typeof this.probeBatches === 'function' && this._envDepth) ? 6 : 1;
+  }
+
+  /* The camera for one cube face: ninety degrees, square, looking down
+     the face's own axis.
+
+     UP IS THE FACE'S +y BASIS, NOT WORLD UP, and it is not a free
+     choice. _envFaces gives, for each face, the direction in which the
+     texture coordinate t increases. A perspective render puts the
+     camera's up vector at the TOP of the image, which is the highest
+     gl_FragCoord.y, which for a render-to-texture is the last row, which
+     is t = 1. So up must be exactly the basis the sampler will read
+     along. Four of the six are (0,-1,0), which looks wrong and is the
+     cube-map convention: get one row of that table wrong and a single
+     face of every reflection in the game comes out mirrored. */
+  _faceCamera(f) {
+    if (!this._envCam) this._envCam = new Camera();
+    const c = this._envCam, b = _envFaces[f], p = this._envAt;
+    c.position.set(p[0], p[1], p[2]);
+    c.target.set(p[0] + b.z[0], p[1] + b.z[1], p[2] + b.z[2]);
+    c.up.set(b.y[0], b.y[1], b.y[2]);
+    c.fov = Math.PI / 2;
+    c.near = 0.05;
+    c.far = Math.max(80, (this.quality.envSceneRange || 60) * 3);
+    c.update(1);
+    return c;
+  }
+
+  /* ONE FACE OF THE WORLD. Sky first as the background, then the opaque
+     geometry over it with depth on.
+
+     Transparent geometry is left out on purpose. It would need sorting
+     against a camera it was not sorted for, it writes no depth, and a
+     window in a reflection at 128 pixels across is worth less than the
+     bug it would cost. */
+  _bakeEnvSceneFace(f, batches, camera) {
+    const gl = this.gl;
+    const res = this.envRes;
+    const b = _envFaces[f];
+    if (!this._envAt) return;
+
+    this.envFbo.attach(this.envSource, {
+      face: f, level: 0, width: res, height: res, depth: this._envDepth,
+    });
+
+    /* Clear depth with the mask OPEN. glClear is masked by depthMask,
+       so clearing after the sky pass has closed it silently does
+       nothing and the face keeps the previous face's depth. */
+    gl.depthMask(true);
+    gl.clear(gl.DEPTH_BUFFER_BIT);
+
+    const sky = this.program('envBake', FULLSCREEN_VS, GLSL.envBakeFrag).use();
+    this._bindEnv(sky);
+    sky.f('uEnvNoSunDisc', 1);
+    sky.v3f('uEnvFaceX', b.x[0], b.x[1], b.x[2]);
+    sky.v3f('uEnvFaceY', b.y[0], b.y[1], b.y[2]);
+    sky.v3f('uEnvFaceZ', b.z[0], b.z[1], b.z[2]);
+    gl.disable(gl.DEPTH_TEST);
+    gl.depthMask(false);
+    this.fullscreen.draw();
+    this.stats.draws++;
+
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthMask(true);
+    gl.disable(gl.BLEND);
+    gl.viewport(0, 0, res, res);
+
+    const cam = this._faceCamera(f);
+    /* COLLECTED ONCE PER CYCLE, ON THE FIRST FACE, and reused for the
+       other five. Two reasons, and the second is the important one.
+       It is six times less work -- every collect walks the whole actor
+       list. And the six faces then share ONE INSTANT: rebuilt per face
+       they would be six frames apart, so anything moving would step
+       between one face and the next and show a seam down the cube edge
+       where the two meet. */
+    if (f === 0 || !this._probeSnapshot) {
+      const range = this.quality.envSceneRange || 60;
+      try {
+        this._probeSnapshot = this.probeBatches(
+          this._envAt[0], this._envAt[1], this._envAt[2], range);
+      } catch (e) {
+        this._probeSnapshot = null;
+      }
+    }
+    const list = this._probeSnapshot;
+    if (list) {
+      this._envBaking = true;
+      for (const batch of list) {
+        if (!batch.count || batch.material.transparent) continue;
+        this._drawPbr(batch, cam);
+      }
+      this._envBaking = false;
+    }
+
+    this.envFbo.detach();
+    if (this.stats.passes) this.stats.passes.env++;
+  }
+
   _bakeEnvSource() {
     const sh = this.program('envBake', FULLSCREEN_VS, GLSL.envBakeFrag).use();
     this._bindEnv(sh);
@@ -18879,6 +19104,17 @@ class Engine {
   constructor(opts = {}) {
     this.canvas = resolveCanvas(opts.canvas);
     this.renderer = new Renderer(this.canvas, opts);
+    /* HOW THE RENDERER ASKS FOR THE WORLD BEHIND THE CAMERA.
+     *
+       The environment probe bakes six faces of the actual scene, and it
+       runs inside renderScene -- by which point the batch list it was
+       handed has already been frustum-culled against the player's view.
+       The renderer has no way to reach the actor list itself and should
+       not grow one, so the Engine hands it a closure instead. Null for
+       any renderer used without an Engine, which renderEnv tests before
+       it tries a scene bake and falls back to the sky. */
+    this.renderer.probeBatches = (x, y, z, radius) =>
+      this._buildBatches({ x: x, y: y, z: z, radius: radius });
     this.gl = this.renderer.gl;
     this.physics = new PhysicsWorld({
       gravity: opts.gravity != null
@@ -18904,6 +19140,16 @@ class Engine {
     this._fractureCache = new Map();
     this._batchList = [];
     this._individual = [];
+    /* A SECOND SET, for the environment probe, and it has to be second
+       rather than shared. _buildBatches reuses one group map, one
+       individual list and one output array across frames -- it resets
+       their counts and refills them. The probe builds its own batches
+       from inside renderScene, which has ALREADY been handed the main
+       list; sharing the state would empty the very array being drawn
+       and the frame would come out blank. */
+    this._probeGroups = new Map();
+    this._probeList = [];
+    this._probeIndividual = [];
     this._frameNo = 0;
     this._planes = new Float32Array(24);
 
@@ -20073,14 +20319,23 @@ class Engine {
 
   /* ---------------- batching ---------------- */
 
-  _buildBatches() {
-    const groups = this._batchGroups;
+  /* probe, when given, is {x, y, z, radius}: collect what is near that
+     point instead of what is inside the camera's frustum. The
+     environment probe needs it because the whole value of a cubemap is
+     the half of the world that is BEHIND the viewer, and the main
+     frustum has already thrown that away by the time renderScene is
+     called. */
+  _buildBatches(probe) {
+    const groups = probe ? this._probeGroups : this._batchGroups;
+    const individual = probe ? this._probeIndividual : this._individual;
     for (const g of groups.values()) g.count = 0;
-    this._individual.length = 0;
+    individual.length = 0;
     /* Ticked once per batch build. Skeletons use it to upload their
        bone palette at most once a frame however many actors share
-       them -- see Skeleton.uploadTexture. */
-    this._frameNo = (this._frameNo || 0) + 1;
+       them -- see Skeleton.uploadTexture. The probe pass does NOT tick
+       it: it runs in the same frame as the main build and wants the
+       palette that build already uploaded, not a second copy of it. */
+    if (!probe) this._frameNo = (this._frameNo || 0) + 1;
 
     if (this.frustumCulling) this.camera.extractPlanes(this._planes);
     const planes = this._planes;
@@ -20098,7 +20353,17 @@ class Engine {
     for (const actor of this.actors) {
       if (!actor.visible || !actor.mesh || actor.dead) continue;
 
-      if (this.frustumCulling && !actor.noCull) {
+      if (probe) {
+        /* A sphere around the probe, not a frustum: the cube faces cover
+           every direction, so the only question is range. Same matrix
+           translation and same inflated radius as the frustum path
+           below -- a parented actor has no position of its own. */
+        const m = actor.matrix.e;
+        const dx = m[12] - probe.x, dy = m[13] - probe.y, dz = m[14] - probe.z;
+        const sc = Math.max(actor.scale.x, actor.scale.y, actor.scale.z);
+        const reach = probe.radius + actor.boundRadius * Math.max(1, sc);
+        if (dx * dx + dy * dy + dz * dz > reach * reach) continue;
+      } else if (this.frustumCulling && !actor.noCull) {
         // Cull against the matrix translation, not actor.position. A
         // parented actor (a head on a neck bone, a held item) has no
         // position of its own — its world location only exists once the
@@ -20121,7 +20386,7 @@ class Engine {
       // Skinned and morphed meshes cannot be instanced: each needs its own
       // bone texture or its own vertex buffer.
       if (actor.skeleton || actor.face) {
-        this._individual.push(actor);
+        individual.push(actor);
         continue;
       }
 
@@ -20156,7 +20421,7 @@ class Engine {
       g.count++;
     }
 
-    const list = this._batchList;
+    const list = probe ? this._probeList : this._batchList;
     list.length = 0;
     for (const g of groups.values()) {
       if (!g.count) continue;
@@ -20174,7 +20439,7 @@ class Engine {
       list.push(g);
     }
 
-    for (const actor of this._individual) {
+    for (const actor of individual) {
       const batch = {
         mesh: actor.mesh,
         material: actor.material,

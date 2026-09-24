@@ -366,15 +366,27 @@ class Framebuffer {
     this.height = Math.max(1, opts.height || (tex.height >> level));
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.handle);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, target, tex.handle, level);
-    /* A retargeted framebuffer has no depth of the right size and does
-       not need one -- every pass that uses this is a fullscreen triangle.
-       Detaching depth also stops it failing completeness when the mip is
-       smaller than the renderbuffer. */
-    if (this.depthBuffer) gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, null);
-    if (this.depthTexture) gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, null, 0);
+    /* A retargeted framebuffer has no depth of the right size and
+       usually does not need one -- almost every pass that uses this is a
+       fullscreen triangle. Detaching depth also stops it failing
+       completeness when the mip is smaller than the renderbuffer.
+
+       opts.depth is the exception: the environment probe rasterises real
+       geometry into a cube face and cannot sort it without a depth
+       buffer. The caller owns that renderbuffer and is responsible for
+       it being exactly this mip's size -- an attachment of a different
+       size is FRAMEBUFFER_INCOMPLETE_DIMENSIONS and the whole bake
+       silently draws nothing. */
+    if (opts.depth) {
+      gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, opts.depth);
+    } else {
+      if (this.depthBuffer) gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, null);
+      if (this.depthTexture) gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, null, 0);
+    }
     gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
     gl.viewport(0, 0, this.width, this.height);
     this._borrowed = true;
+    this._borrowedDepth = !!opts.depth;
     return this;
   }
 
@@ -390,6 +402,16 @@ class Framebuffer {
     }
     if (this.depthBuffer) gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, this.depthBuffer);
     else if (this.depthTexture) gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, this.depthTexture.handle, 0);
+    else if (this._borrowedDepth) {
+      /* A BORROWED DEPTH HAS TO BE GIVEN BACK EXPLICITLY. The two
+         branches above restore whatever this framebuffer OWNS, and a
+         target built with depth:false owns nothing -- so without this
+         line a depth buffer lent to it by attach() stays bound for
+         every later pass. The probe lends a cube-face-sized one and the
+         passes that follow render into mips a fraction of that size. */
+      gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, null);
+    }
+    this._borrowedDepth = false;
     this._borrowed = false;
     return this;
   }

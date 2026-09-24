@@ -1,8 +1,8 @@
 {
-  "version": "0.20.0",
-  "name": "a sky with a shape to it",
-  "date": "2026-09-23",
+  "version": "0.21.0",
+  "name": "the world in the mirror",
+  "date": "2026-09-24",
   "mode": "multiplayer",
-  "did": "An environment probe at HIGH and ULTRA: the sky is baked into a cubemap and prefiltered by roughness, so a mid-rough metal now blurs its reflection properly instead of fading to a flat grey. Diffuse ambient comes from a nine-term spherical-harmonic fit of the same sky.",
+  "did": "At ULTRA the environment probe now bakes six faces of the actual scene instead of just the sky, so polished surfaces reflect the room around them -- including what is behind you, which no screen-space reflection can ever show.",
   "onAccept": "The armoury reloads. Your loadouts are kept; anything you had equipped that moved class is still where you left it."
 }
