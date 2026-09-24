@@ -1,8 +1,8 @@
 {
-  "version": "0.21.0",
-  "name": "the world in the mirror",
+  "version": "0.22.0",
+  "name": "a shadow with a soft edge",
   "date": "2026-09-24",
   "mode": "multiplayer",
-  "did": "At ULTRA the environment probe now bakes six faces of the actual scene instead of just the sky, so polished surfaces reflect the room around them -- including what is behind you, which no screen-space reflection can ever show.",
+  "did": "At ULTRA, shadow edges are softened by a blocker search rather than a fixed blur, and screen-space contact shadows darken the places where two surfaces meet.",
   "onAccept": "The armoury reloads. Your loadouts are kept; anything you had equipped that moved class is still where you left it."
 }

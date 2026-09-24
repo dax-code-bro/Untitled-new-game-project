@@ -198,6 +198,64 @@ for (const _t of ['retro', 'low', 'normal', 'high']) {
   if (QUALITY[_t].envSceneRange == null) QUALITY[_t].envSceneRange = 0;
 }
 
+/* ---- PCSS AND CONTACT SHADOWS: ULTRA ONLY, FOR NOW ----
+ *
+ * pcss 1 / pcssBlockers 12 / pcssTaps 16 / contactShadow 1 /
+ * contactSteps 10, and zero on the other four tiers -- the same landing
+ * shape the reflections above use, and for the same reason. Nothing in
+ * the test suite runs at ultra: detectQuality() tops out at 'high', the
+ * quality watchdog only ever steps DOWN, and ultra is reachable only
+ * through an explicit setQuality('ultra') or LE.create({ quality:
+ * 'ultra' }). So this lands without moving a single pixel assertion, and
+ * a regression found later has exactly one suspect.
+ *
+ * TO PUT PCSS ON 'high', WHICH IS WHERE IT BELONGS, add:
+ *     QUALITY.high.pcss = 1; QUALITY.high.pcssBlockers = 8;
+ *     QUALITY.high.pcssTaps = 12;
+ * and re-baseline, in the same commit, every number that moves:
+ * browser.test.js's shadows / materials / effects scenes (all three run
+ * at 'high'), its debugMode=1 shadowed-pixel percentage at line 336
+ * (13.0% today against a 1.5..60 band -- a wider penumbra moves it UP,
+ * because a soft edge puts more pixels under the red<200 threshold than
+ * a hard one does), underside.test.js in full, and sweep.test.js's
+ * skin-tone block, which raises the tier to 'high' at line 1001.
+ * CONTACT SHADOWS SHOULD NOT FOLLOW IT TO 'high' until somebody has
+ * measured underside.test.js:196 afterwards: brick's underside sits six
+ * sRGB units over a floor of 24, and a term that multiplies the AO
+ * buffer is a term that can spend those six.
+ *
+ * pcssBlockers 12: the search is a uniform-density disc over
+ * penumbraMax (18) texels, so 12 taps put one sample per ~85 texels of
+ * area -- a 1 m occluder at cascade 0's 7.8 mm texel spans 128 texels
+ * and cannot fall between them. 8 is the same disc at two thirds of the
+ * density and is the right 'high' number; below about 6 the estimated
+ * gap starts changing between neighbouring receivers and the penumbra
+ * width boils instead of holding still.
+ *
+ * pcssTaps 16: the widest penumbra is 18 texels across, about 1000
+ * texels of area. 16 stratified taps is one per 64 texels, and the
+ * per-pixel rotation turns what is left into noise the eye reads as film
+ * grain rather than as banding. 8 taps -- what the fixed-spread path has
+ * always used -- holds up to about 10 texels of spread and is visibly
+ * stepped past it.
+ *
+ * contactSteps 10 against a 26-pixel cap is a 2.6-pixel stride at half
+ * resolution: close enough that a magazine's edge cannot be stepped
+ * over, long enough that ten steps still reach 30 cm of world ray at
+ * arm's length. */
+QUALITY.ultra.pcss = 1;
+QUALITY.ultra.pcssBlockers = 12;
+QUALITY.ultra.pcssTaps = 16;
+QUALITY.ultra.contactShadow = 1;
+QUALITY.ultra.contactSteps = 10;
+for (const _t of ['retro', 'low', 'normal', 'high']) {
+  if (QUALITY[_t].pcss == null) QUALITY[_t].pcss = 0;
+  if (QUALITY[_t].pcssBlockers == null) QUALITY[_t].pcssBlockers = 0;
+  if (QUALITY[_t].pcssTaps == null) QUALITY[_t].pcssTaps = 0;
+  if (QUALITY[_t].contactShadow == null) QUALITY[_t].contactShadow = 0;
+  if (QUALITY[_t].contactSteps == null) QUALITY[_t].contactSteps = 0;
+}
+
 
 function detectQuality() {
   const mem = navigator.deviceMemory || 4;
@@ -295,7 +353,40 @@ class Renderer {
        of how far away the eye is, which no material knows. */
     this.detailScale = 9.0;
     this.detailFade = 11.0;
-    this.shadows = { enabled: true, distance: 60, strength: 0.86, split: 14 };
+    /* softness is the SUN'S ANGULAR RADIUS, as a tangent. The real sun
+       subtends about half a degree, so its radius is 0.265 deg and
+       tan(0.265 deg) = 0.00463: an occluder one metre above a surface
+       throws a penumbra 4.6 mm wide. That number is what makes PCSS read
+       as sunlight rather than as a blur slider, and it is deliberately
+       the physical one rather than a flattering one. Raise it for haze
+       or overcast (0.02 is a soft, sourceless day); take it toward zero
+       for the hard-edged look the fixed-spread path has always had. It
+       does nothing at all unless quality.pcss is on.
+       penumbraMax caps the penumbra in SHADOW TEXELS, which is what
+       bounds both the blocker-search radius and the final PCF disc -- so
+       it is the one knob that trades softness against tap density, and
+       raising it without raising pcssTaps buys noise.
+       The contact* group is the screen-space march; every one of them is
+       explained where it is used, in GLSL.contactFrag. They are fields
+       on the renderer rather than constants in the shader because the
+       survey is right that uBias 0.10, uIntensity 2.9 and uSoftKnee 0.6
+       are exactly the knobs no tier and no game can reach today. */
+    this.shadows = {
+      enabled: true, distance: 60, strength: 0.86, split: 14,
+      softness: 0.00463, penumbraMax: 18.0,
+      contactLength: 0.30, contactMaxPixels: 26.0, contactThickness: 0.45,
+      contactBias: 0.004, contactStrength: 0.85, contactFade: 14.0,
+    };
+    /* One entry per cascade: the gap, in proj.z units, that gives a
+       penumbra exactly one shadow texel wide, and one texel of lateral
+       movement in the same units. Both are written by _fitCascade, the
+       only place that knows a cascade's radius. Defaulted so that a
+       frame rendered before any cascade has been fitted -- shadows
+       disabled, or the first renderFrom() -- asks for the MINIMUM spread
+       rather than the maximum. */
+    this._cascadeGap = new Float32Array([1, 1]);
+    this._cascadeTexelZ = new Float32Array([0, 0]);
+    this._contactSunView = new Vec3();
     this.post = {
       exposure: 1.0,
       /* 'agx' or 'aces'. AgX is a display transform rather than a curve
@@ -592,10 +683,49 @@ class Renderer {
        trusted to the table, because the table is the easy place to change
        a number without knowing what else depends on it. */
     const n = Math.min(this.quality.cascades, this._shadowMats.length);
+    /* THE BLOCKER ATTACHMENT, and why it has to exist at all.
+     *
+       PCSS has to AVERAGE the depth of the occluders above a receiver,
+       and uShadowMap0/1 cannot give it one. They are created with
+       compare: true, i.e. TEXTURE_COMPARE_MODE = COMPARE_REF_TO_TEXTURE,
+       so every fetch is a comparison against a reference and returns a
+       lit fraction. That is exactly right for the PCF and useless for a
+       search. Reading the same texture through a plain sampler2D is not
+       a way out either: in GLSL ES 3.00 a depth texture with compare
+       mode set is INCOMPLETE to a non-shadow sampler and returns zero,
+       silently and with no error to find.
+
+       So the shadow pass writes gl_FragCoord.z a second time, into an R8
+       colour attachment, and the search reads that. One byte a texel:
+       13.1 MB for two 2560 cascades, 33.6 MB for two 4096 ones, and
+       nothing at all on the tiers that never ask. The precision argument
+       is in the comment above pcssBlocker0 in 50-shaders.js; the short
+       version is that an orthographic proj.z is linear, so R8's
+       quantisation lands at about a seventh of a shadow texel of
+       penumbra, which nothing can see. */
+    const wantBlocker = !!this.quality.pcss;
+    const blockerSpec = {
+      internalFormat: gl.R8, format: gl.RED, type: gl.UNSIGNED_BYTE,
+      minFilter: gl.NEAREST, magFilter: gl.NEAREST,
+    };
     for (let i = 0; i < n; i++) {
-      this.shadowMaps.push(new Framebuffer(gl, {
+      this.shadowMaps.push(new Framebuffer(gl, Object.assign({
         width: res, height: res, depthOnly: true, depthTexture: true, compare: true, depth: true,
-      }));
+      }, wantBlocker ? { colors: [blockerSpec] } : null)));
+    }
+    /* Both blocker samplers are bound on every PBR draw whether PCSS is
+       on or not, so they need something valid to point at when it is
+       off. They cannot be left unbound: an unset sampler2D reads unit 0,
+       where uShadowMap0 -- a sampler2DShadow -- already is, and two
+       sampler types on one unit is an INVALID_OPERATION on every draw.
+       1.0 is the far plane, so the search finds no blocker and the crisp
+       path runs. One texel, one byte, allocated once for the process. */
+    if (!this._noBlockerTex) {
+      this._noBlockerTex = new Texture(gl, {
+        internalFormat: gl.R8, format: gl.RED, type: gl.UNSIGNED_BYTE,
+        wrap: gl.CLAMP_TO_EDGE, minFilter: gl.NEAREST, magFilter: gl.NEAREST, mips: false,
+      });
+      this._noBlockerTex.upload(new Uint8Array([255]), 1, 1);
     }
   }
 
@@ -765,6 +895,53 @@ class Renderer {
     sh.f('uShadowStrength', this.shadows.enabled ? this.shadows.strength : 0);
     sh.tex('uShadowMap0', this.shadowMaps[0].depthTexture);
     sh.tex('uShadowMap1', this.shadowMaps[this.shadowMaps.length > 1 ? 1 : 0].depthTexture);
+
+    /* ---- PCSS ----
+       The gate is the ATTACHMENT, not the tier key. quality.pcss is read
+       by _initShadowMaps, which runs from the constructor and from
+       setQuality() and nowhere else, so a game that writes
+       renderer.quality.pcss = 1 at runtime has the flag without the
+       buffer. Testing for the buffer here means that degrades to the
+       crisp path -- the picture this renderer has always produced --
+       instead of searching a one-texel dummy and drawing a shadow with
+       no penumbra and no explanation. */
+    const far = this.shadowMaps[this.shadowMaps.length > 1 ? 1 : 0];
+    const hasBlocker = !!(this.shadowMaps[0].colors.length && far.colors.length);
+    const blockers = (this.quality.pcss && hasBlocker)
+      ? Math.max(4, Math.min(16, this.quality.pcssBlockers | 0)) : 0;
+    sh.i('uShadowBlockers', blockers);
+    sh.i('uShadowTaps', Math.max(4, Math.min(24, this.quality.pcssTaps || 8)));
+    sh.f('uShadowPenumbraMax', Math.max(1, this.shadows.penumbraMax || 18));
+    sh.v2('uShadowGapUnit', this._cascadeGap[0],
+      this._cascadeGap[this.shadowMaps.length > 1 ? 1 : 0]);
+    sh.v2('uShadowTexelZ', this._cascadeTexelZ[0],
+      this._cascadeTexelZ[this.shadowMaps.length > 1 ? 1 : 0]);
+    if (blockers > 0) {
+      sh.tex('uShadowBlocker0', this.shadowMaps[0].colors[0]);
+      sh.tex('uShadowBlocker1', far.colors[0]);
+    } else {
+      this._bindNoBlocker(sh);
+    }
+  }
+
+  /* Park both blocker samplers on ONE texture unit holding the 1x1 white
+     dummy. Going through sh.tex() twice would burn two units and two
+     bindTexture calls on every PBR draw of every tier -- around 520 GL
+     calls a frame in the real multiplayer map -- to say the same thing
+     twice. This says it once. Reaching into the shader's uniform map is
+     deliberate: pointing two samplers at one unit is not something
+     tex() can express, and the alternative is paying for it forever on
+     the tiers that never use PCSS at all. */
+  _bindNoBlocker(sh) {
+    const u0 = sh.uniforms.get('uShadowBlocker0');
+    const u1 = sh.uniforms.get('uShadowBlocker1');
+    if (!u0 && !u1) return;
+    const gl = this.gl;
+    const unit = sh._texUnit++;
+    gl.activeTexture(gl.TEXTURE0 + unit);
+    gl.bindTexture(gl.TEXTURE_2D, this._noBlockerTex.handle);
+    if (u0) gl.uniform1i(u0.loc, unit);
+    if (u1) gl.uniform1i(u1.loc, unit);
   }
 
   _bindLights(sh) {
@@ -875,6 +1052,26 @@ class Renderer {
     lightView.lookAt(eye2, snapped, Math.abs(this.sun.direction.y) > 0.99 ? _axisZ : Vec3.UP);
 
     _shadowProj.ortho(-radius, radius, -radius, radius, 0.5, radius * 4.4 + 20);
+
+    /* THE TWO NUMBERS PCSS NEEDS, and this is the only function that
+       knows them. The projection is orthographic, so proj.z is LINEAR in
+       metres along the light over exactly this range -- which is why a
+       gap in proj.z becomes a penumbra in texels with a single divide in
+       the shader, and why one byte of stored blocker depth is enough.
+         gap    = texelWorld / (sunTan * depthRange)
+                  -- the gap that gives a one-texel penumbra
+         texelZ = texelWorld / depthRange
+                  -- one texel of lateral movement, in proj.z
+       `out` is always this._shadowMats[i], and there are exactly two of
+       them (the array is fixed at length 2 and _initShadowMaps clamps the
+       cascade count to it), so testing identity against slot 1 recovers
+       the cascade index without changing this function's signature. */
+    const depthRange = (radius * 4.4 + 20) - 0.5;
+    const texelWorld = (radius * 2) / res;
+    const sunTan = Math.max(1e-5, this.shadows.softness || 0.00463);
+    const cIdx = (out === this._shadowMats[1]) ? 1 : 0;
+    this._cascadeGap[cIdx] = texelWorld / (sunTan * depthRange);
+    this._cascadeTexelZ[cIdx] = texelWorld / depthRange;
     out.mulMatrices(_shadowProj, lightView);
     return out;
   }
@@ -913,7 +1110,16 @@ class Renderer {
       const fb = this.shadowMaps[i];
       gl.bindFramebuffer(gl.FRAMEBUFFER, fb.handle);
       gl.viewport(0, 0, fb.width, fb.height);
-      gl.clear(gl.DEPTH_BUFFER_BIT);
+      /* With a blocker attachment the colour has to be cleared too, and
+         to WHITE: 1.0 is the far plane, so a texel nothing was drawn into
+         reports "no occluder" instead of reporting whatever the previous
+         frame left there. */
+      if (fb.colors.length) {
+        gl.clearColor(1, 1, 1, 1);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      } else {
+        gl.clear(gl.DEPTH_BUFFER_BIT);
+      }
 
       for (const batch of batches) {
         if (!batch.count || !batch.material.castShadow) continue;
@@ -1521,6 +1727,51 @@ class Renderer {
       }
       aoTex = this.aoA.color;
       this.stats.draws += 3;
+    }
+
+    /* ---- SCREEN-SPACE CONTACT SHADOWS ----
+     *
+     * One half-resolution draw: read the blurred occlusion out of aoA,
+     * multiply a short sun-direction ray march into it, leave the result
+     * in aoB. aoTex then points at aoB and the composite is untouched --
+     * uAo and uAoStrength keep meaning exactly what they meant before,
+     * which is what graphics.test.js, interior.test.js and
+     * underside.test.js all read the frame through.
+     *
+     * IT RIDES ON THE AO PASS ON PURPOSE. Gating on aoTex rather than
+     * standing alone means it is off wherever AO is off -- including
+     * underside.test.js:106, which zeroes quality.ssao specifically to
+     * isolate the ambient term, and graphics.test.js:104, which zeroes it
+     * to measure AO's own contribution. A contact term still running in
+     * those two would be measured as ambient and reported as a
+     * regression in something nobody had touched. */
+    if (this.quality.contactShadow && aoTex && this.camera && this.hdrA.depthTexture) {
+      const S = this.shadows;
+      const cs = this.program('contact', FULLSCREEN_VS, GLSL.contactFrag).use();
+      this.aoB.bind(true, 1, 1, 1, 1);
+      /* sun.direction points AT the sun and is a direction, so only the
+         view matrix's rotation applies -- applyMat4Dir drops the
+         translation. Renormalised because a view matrix built by lookAt
+         is orthonormal in theory and drifts in practice. */
+      const Lv = this._contactSunView.copy(this.sun.direction)
+        .applyMat4Dir(this.camera.view).normalize();
+      cs.tex('uContactDepth', this.hdrA.depthTexture);
+      cs.tex('uContactAo', aoTex);
+      cs.m4('uContactInvProj', this.camera.invProj);
+      cs.m4('uContactProj', this.camera.proj);
+      cs.v3('uContactLightView', Lv);
+      cs.v2('uContactTexel', 1 / this.aoB.width, 1 / this.aoB.height);
+      cs.f('uContactLength', S.contactLength);
+      cs.f('uContactMaxPixels', S.contactMaxPixels);
+      cs.f('uContactThickness', S.contactThickness);
+      cs.f('uContactBias', S.contactBias);
+      cs.f('uContactStrength', S.enabled ? S.contactStrength : 0);
+      cs.f('uContactFade', S.contactFade);
+      cs.i('uContactSteps', Math.max(1, Math.min(32, this.quality.contactSteps || 8)));
+      this.fullscreen.draw();
+      aoTex = this.aoB.color;
+      this.stats.draws++;
+      if (this.stats.passes) this.stats.passes.contact = (this.stats.passes.contact || 0) + 1;
     }
 
     const useFxaa = this.quality.fxaa;
