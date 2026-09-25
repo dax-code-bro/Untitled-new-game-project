@@ -228,6 +228,62 @@ int main() {
         CHECK(s3.animalsInCare() == s.animalsInCare());
     }
 
+    // ---- Daily care, clinic check-ups and the hands-on surgical field ----
+    {
+        Sim s;
+        s.newGame();
+        s.econ.cash = 1e6;
+        int frank = -1;
+        for (auto& a : s.animalList) if (speciesCatalog()[size_t(a.species)].name == "Dachshund") frank = a.id;
+        CHECK(frank >= 0);
+        Animal* f = s.findAnimal(frank);
+        CHECK(f && f->housing >= 0);                                  // lives in a container shelter
+        CHECK(s.uncheckedToday() == 3);
+        s.checkAnimal(frank);
+        CHECK(s.uncheckedToday() == 2);
+        f->hunger = 0.9f;
+        CHECK(s.handFeed(frank) && f->hunger < 0.1f);               // dog food from the starter stock
+        // Ultrasound finds a swallowed object; reading it right books surgery
+        f->hidden = Hidden::ForeignBody;
+        std::string why;
+        CHECK(s.startExam(frank, &why));
+        CHECK(s.exam.kind == ExamKind::Ultrasound && !s.examReady());
+        s.advance(25.0);
+        CHECK(s.examReady());
+        CHECK(s.answerExam(Hidden::ForeignBody));
+        CHECK(f->needsSurgery && f->diagnosed);
+        // Surgery: a clean midline incision is safe; straying across an artery is not
+        CHECK(s.beginSurgery(frank, &why));
+        s.surgeryAnesthetize(s.surgery.idealMgPerKg);
+        Surgery& S = s.surgery;
+        vec2 prev = S.guideA;
+        for (int i = 1; i <= 10; ++i) { vec2 p = S.guideA + (S.guideB - S.guideA) * (float(i) / 10.0f); s.surgeryCutTo(prev, p); prev = p; }
+        CHECK(S.bloodLoss < 0.01f && S.organDamage < 0.01f);
+        s.surgeryCutTo(prev, prev + vec2(-0.2f, 0.0f));               // slips sideways across the epigastric artery and aorta
+        CHECK(S.bloodLoss > 0.25f && !S.bleeders.empty());
+        while (!S.bleeders.empty()) s.surgeryClampAt(S.bleeders.front());
+        CHECK(S.bleedersClamped);
+        // Reach the target through the incision (extend toward it first)
+        s.surgeryCutTo(prev, S.target);
+        CHECK(s.surgeryTreatTargetAt(S.target));
+        std::vector<vec2> cutCopy = S.cut;
+        for (size_t i = 0; i + 1 < cutCopy.size() && S.active; ++i)
+            for (float t = 0.0f; t < 1.0f && S.active; t += 0.1f) s.surgeryStitchAt(cutCopy[i] + (cutCopy[i + 1] - cutCopy[i]) * t);
+        CHECK(!S.active && f->status != AnimalStatus::Dead);
+        // Supplies arrive the next morning
+        float before = s.food[size_t(FoodKind::Hay)];
+        CHECK(s.orderFood(FoodKind::Hay, 25.0f));
+        s.advance(1440.0);
+        CHECK(s.food[size_t(FoodKind::Hay)] > before);
+        // Land: only the home parcel is buyable at first, then its neighbors; the fence follows
+        CHECK(!s.land.homeOwned() && s.land.fence().size() == 4);
+        CHECK(!s.buyLand(Land::kHomeCol + 1, 0, &why));
+        CHECK(s.buyLand(Land::kHomeCol, 0, &why));
+        CHECK(s.land.canBuy(Land::kHomeCol + 1, 0) && !s.land.canBuy(Land::kHomeCol + 2, 0));
+        CHECK(s.buyLand(Land::kHomeCol + 1, 0, &why));
+        CHECK(s.land.fence().size() == 6 && s.land.ownedSqMi() > 1.9f);
+    }
+
     std::printf("\n%d passed, %d failed\n", g_pass, g_fail);
     return g_fail == 0 ? 0 : 1;
 }

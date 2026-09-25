@@ -1,4 +1,5 @@
 #include "game/Game.h"
+#include "game/ClinicViews.h"
 #include "core/GL.h"
 #include "core/Image.h"
 #include "core/SaveFile.h"
@@ -417,8 +418,20 @@ void Game::update(float dt) {
             float blocked = world_.collision.raycast(eye, fwd, hover_.distance);
             if (hover_.type != Interaction::None && blocked >= 0.0f && blocked < hover_.distance - 0.15f && hover_.type != Interaction::Door)
                 hover_ = Interaction();
+            // Animals you can walk up to and check on
+            float ad = 0.0f;
+            hoverAnimal_ = animals_.pick(eye, fwd, 3.2f, &ad);
+            if (hoverAnimal_ >= 0 && (hover_.type == Interaction::None || ad < hover_.distance)) {
+                hover_ = Interaction();
+                const Animal* ha = sim_.findAnimal(hoverAnimal_);
+                hover_.prompt = ha ? ("Check on " + ha->name + (ha->checkedDay == sim_.clock.day() ? "  (checked today)" : "")) : "";
+            } else hoverAnimal_ = -1;
             if (input_.pressed(GLFW_KEY_E) || input_.mousePressed(GLFW_MOUSE_BUTTON_LEFT)) {
-                if (hover_.type == Interaction::Computer) { state_ = State::Computer; computer_.open = true; }
+                if (hoverAnimal_ >= 0) {
+                    checkAnimal_ = hoverAnimal_;
+                    checkNotes_ = sim_.checkAnimal(checkAnimal_);
+                    state_ = State::AnimalCheck;
+                } else if (hover_.type == Interaction::Computer) { state_ = State::Computer; computer_.open = true; }
                 else if (hover_.type == Interaction::OperatingTable) { state_ = State::Surgery; surgeryPickAnimal_ = -1; }
                 else if (hover_.type != Interaction::None) world_.facility.interact(hover_, sim_.security);
             }
@@ -450,8 +463,13 @@ void Game::update(float dt) {
         renderer_.setTimeOfDay(sim_.clock.hour());
         break;
     }
+    case State::AnimalCheck:
+        sim_.advance(double(dt) * double(timeScale_) * 0.2);
+        if (input_.pressed(GLFW_KEY_ESCAPE) || input_.pressed(GLFW_KEY_E)) state_ = State::Playing;
+        renderer_.setTimeOfDay(sim_.clock.hour());
+        break;
     case State::Surgery:
-        sim_.advance(double(dt) * double(timeScale_) * 0.05);
+        sim_.advance(double(dt) * double(timeScale_) * (sim_.surgery.active ? 0.05 : 1.0));
         sim_.surgeryTick(dt);
         if (input_.pressed(GLFW_KEY_ESCAPE) && !sim_.surgery.active) state_ = State::Playing;
         renderer_.setTimeOfDay(sim_.clock.hour());
@@ -474,7 +492,7 @@ void Game::update(float dt) {
 // ---------------------------------------------------------------- render
 bool Game::inGame() const {
     return state_ == State::Playing || state_ == State::Computer || state_ == State::Paused || state_ == State::Dialog ||
-           state_ == State::Surgery || state_ == State::MainMenu;
+           state_ == State::Surgery || state_ == State::MainMenu || state_ == State::AnimalCheck;
 }
 
 void Game::scene(Renderer& r, Pass pass) {
@@ -581,6 +599,10 @@ void Game::drawUI() {
     case State::Surgery:
         drawSurgery();
         break;
+    case State::AnimalCheck:
+        drawHUD();
+        drawAnimalCheck();
+        break;
     }
     if (showSettings_) drawSettings();
     if (messageTimer_ > 0.0f) {
@@ -590,7 +612,7 @@ void Game::drawUI() {
         ImGui::TextUnformatted(message_.c_str());
         ImGui::End();
     }
-    if (state_ == State::Playing || state_ == State::Computer || state_ == State::Surgery) drawToasts(ImGui::GetIO().DeltaTime);
+    if (state_ == State::Playing || state_ == State::Computer) drawToasts(ImGui::GetIO().DeltaTime);
 }
 
 void Game::drawMainMenu() {
@@ -634,6 +656,18 @@ void Game::drawHUD() {
     ImGui::End();
 
     drawIncidentBanner();
+    // Daily rounds reminder
+    if (state_ == State::Playing) {
+        int unchecked = sim_.uncheckedToday();
+        if (unchecked > 0) {
+            ImGui::SetNextWindowPos(ImVec2(12, 130), ImGuiCond_Always);
+            ImGui::SetNextWindowBgAlpha(0.5f);
+            ImGui::Begin("##rounds", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs);
+            ImGui::TextColored(ImVec4(1, 0.85f, 0.4f, 1), "Daily rounds: %d animal%s still to check today", unchecked, unchecked == 1 ? "" : "s");
+            if (sim_.examReady()) ImGui::TextColored(ImVec4(0.5f, 0.9f, 1, 1), "Scan results are ready at the clinic (operating table).");
+            ImGui::End();
+        }
+    }
     // Inbox: decisions waiting for you
     if (!sim_.decisions.empty() && state_ == State::Playing) {
         ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y - 14), ImGuiCond_Always, ImVec2(0.5f, 1));
@@ -654,7 +688,7 @@ void Game::drawHUD() {
         ImDrawList* dl = ImGui::GetForegroundDrawList();
         ImVec2 c(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f);
         dl->AddCircleFilled(c, hover_.type != Interaction::None ? 4.0f : 2.5f, IM_COL32(255, 255, 255, 200));
-        if (hover_.type != Interaction::None) {
+        if (hover_.type != Interaction::None || hoverAnimal_ >= 0) {
             std::string txt = "[E]  " + hover_.prompt;
             ImVec2 sz = ImGui::CalcTextSize(txt.c_str());
             ImVec2 p(c.x - sz.x * 0.5f, c.y + 40);
@@ -763,14 +797,24 @@ void Game::drawDecision() {
 void Game::drawSurgery() {
     ImGuiIO& io = ImGui::GetIO();
     Surgery& S = sim_.surgery;
-    float w = std::min(io.DisplaySize.x * 0.42f, 520.0f);
-    if (touch_ || io.DisplaySize.x < 900) w = io.DisplaySize.x * 0.5f;
+    float w = std::min(io.DisplaySize.x * 0.5f, 640.0f);
+    if (touch_ || io.DisplaySize.x < 900) w = io.DisplaySize.x * 0.58f;
     ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x - 10, 10), ImGuiCond_Always, ImVec2(1, 0));
     ImGui::SetNextWindowSize(ImVec2(w, io.DisplaySize.y - 20));
     ImGui::SetNextWindowBgAlpha(0.88f);
     ImGui::Begin("Operating table", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
     auto close = [&]() { if (!S.active) state_ = State::Playing; };
     if (!S.active) {
+        if (ImGui::RadioButton("Check-ups & scans", clinicTab_ == 0)) clinicTab_ = 0;
+        ImGui::SameLine();
+        if (ImGui::RadioButton("Surgery", clinicTab_ == 1)) clinicTab_ = 1;
+        ImGui::Separator();
+        if (clinicTab_ == 0) {
+            drawCheckups();
+            if (ImGui::Button("Leave the clinic  [Esc]", ImVec2(-1, 34))) close();
+            ImGui::End();
+            return;
+        }
         ImGui::TextWrapped("Choose a patient. Animals that need surgery are listed first. Large, feral and restricted animals "
                            "need the Surgery Wing.");
         ImGui::Separator();
@@ -855,24 +899,130 @@ void Game::drawSurgery() {
         if (ImGui::Button("Inject anesthetic", bs)) sim_.surgeryAnesthetize(surgeryDose_);
         break;
     }
-    case 2:
-        ImGui::TextWrapped("The patient is under. Scrub in and open it up.");
-        if (ImGui::Button("Make the incision", bs)) sim_.surgeryIncise();
+    case 2: case 3: case 4: {
+        const char* hint = S.step == 2 ? "Drag the scalpel along the blue line to open it up. Watch for arteries (red), veins (blue), organs and bone."
+                         : S.step == 3 ? (S.bleeders.empty() ? "Find the target inside your incision and click it."
+                                                             : "BLEEDING: click each pooling bleeder (yellow ring) to clamp it.")
+                                       : "Click along the incision to place stitches and close it.";
+        ImGui::TextWrapped("%s", hint);
+        if (S.step == 3) ImGui::TextColored(ImVec4(0.6f, 1, 0.6f, 1), "Target: %s", S.targetName.c_str());
+        if (!S.lastEvent.empty()) ImGui::TextColored(ImVec4(1, 0.5f, 0.4f, 1), "%s", S.lastEvent.c_str());
+        float fw = ImGui::GetContentRegionAvail().x;
+        float fh = std::min(fw * 1.1f, ImGui::GetContentRegionAvail().y - 60.0f);
+        clinic::drawSurgeryField(sim_, fw, std::max(fh, 200.0f), time_);
+        if (sim_.staff.count(Role::Veterinarian) > 0 && ImGui::Button("Let your vet take over", ImVec2(-1, 28))) {
+            sim_.surgeryClamp();
+            while (sim_.surgery.active && sim_.surgery.step < 5) {
+                int st = sim_.surgery.step;
+                if (st == 2) sim_.surgeryIncise();
+                else if (st == 3) sim_.surgeryRepair();
+                else if (st == 4) sim_.surgerySuture();
+                if (sim_.surgery.step == st && st != 3) break;
+            }
+        }
         break;
-    case 3:
-        ImGui::TextWrapped(S.bleedersClamped ? "Bleeding is controlled. Do the repair." : "Blood is welling up in the wound - clamp the bleeders.");
-        if (!S.bleedersClamped && ImGui::Button("Clamp the bleeders", bs)) sim_.surgeryClamp();
-        if (ImGui::Button("Repair", bs)) sim_.surgeryRepair();
-        break;
-    case 4:
-        if (ImGui::Button("Suture and close", bs)) sim_.surgerySuture();
-        break;
+    }
     default: break;
     }
     if (S.woke) ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "The animal is too light - it's moving and crying out!");
     ImGui::Spacing();
     if (S.step < 5 && ImGui::Button("Abort surgery", ImVec2(-1, 30))) sim_.surgeryAbort();
     ImGui::End();
+}
+
+void Game::drawAnimalCheck() {
+    Animal* a = sim_.findAnimal(checkAnimal_);
+    if (!a || !a->inCare()) { state_ = State::Playing; return; }
+    const Species& sp = speciesCatalog()[size_t(a->species)];
+    ImGuiIO& io = ImGui::GetIO();
+    float w = std::min(io.DisplaySize.x - 24.0f, 460.0f);
+    ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x - 12, io.DisplaySize.y * 0.5f), ImGuiCond_Always, ImVec2(1, 0.5f));
+    ImGui::SetNextWindowSize(ImVec2(w, 0));
+    ImGui::SetNextWindowBgAlpha(0.92f);
+    ImGui::Begin("##check", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize);
+    ImGui::TextColored(ImVec4(0.6f, 0.85f, 1, 1), "%s", a->name.c_str());
+    ImGui::SameLine();
+    ImGui::TextDisabled("%s %s, %s", a->male ? "male" : "female", sp.name.c_str(), a->isBaby(sp) ? "baby" : "adult");
+    ImGui::Separator();
+    for (const auto& n : checkNotes_) ImGui::BulletText("%s", n.c_str());
+    ImGui::Separator();
+    ImGui::Text("Food: %s   Water: %.0f%%", a->hunger > 0.6f ? "hungry" : "fed", double(a->water * 100.0f));
+    auto foods = foodsFor(sp, a->isBaby(sp));
+    std::string likes;
+    for (size_t i = 0; i < foods.size(); ++i) {
+        char b[64];
+        std::snprintf(b, sizeof b, "%s%s (%.1f kg)", i ? ", " : "", foodName(foods[i]), double(sim_.food[size_t(foods[i])]));
+        likes += b;
+    }
+    ImGui::TextWrapped("Eats: %s", likes.c_str());
+    ImVec2 bs(-1, touch_ ? 42.0f : 30.0f);
+    if (ImGui::Button("Fill its water", bs)) { sim_.giveWater(a->id); checkNotes_ = sim_.checkAnimal(a->id); }
+    if (ImGui::Button("Feed it (from your supplies)", bs)) {
+        if (!sim_.handFeed(a->id)) { message_ = "You're out of the food it eats. Order some from the computer's Store."; messageTimer_ = 4.0f; }
+        checkNotes_ = sim_.checkAnimal(a->id);
+    }
+    if (ImGui::Button("Pet it", bs)) { a->happiness = std::min(1.0f, a->happiness + 0.1f); a->stress = std::max(0.0f, a->stress - 0.1f); }
+    char lbl[96];
+    std::snprintf(lbl, sizeof lbl, "Bring it to the clinic for a check-up ($%.0f)", sim_.examCost(*a));
+    if (ImGui::Button(lbl, bs)) {
+        std::string why;
+        if (sim_.startExam(a->id, &why)) { message_ = "The staff took " + a->name + " for the " + examName(sim_.exam.kind) + ". Results at the clinic soon."; messageTimer_ = 5.0f; }
+        else { message_ = why; messageTimer_ = 4.0f; }
+    }
+    if (ImGui::Button(touch_ ? "Done" : "Done  [E]", bs)) state_ = State::Playing;
+    ImGui::End();
+}
+
+void Game::drawCheckups() {
+    Exam& E = sim_.exam;
+    if (E.active) {
+        const Animal* a = sim_.findAnimal(E.animal);
+        if (!a) { E.active = false; return; }
+        const Species& sp = speciesCatalog()[size_t(a->species)];
+        ImGui::Text("%s: %s the %s", examName(E.kind), a->name.c_str(), sp.name.c_str());
+        if (!sim_.examReady()) {
+            int mins = std::max(1, int(E.readyAt - sim_.clock.minutes));
+            ImGui::TextWrapped("The staff took %s back for the %s. Results in about %d minutes.", a->name.c_str(), examName(E.kind), mins);
+            if (ImGui::Button("Wait for the results")) sim_.advance(E.readyAt - sim_.clock.minutes + 0.1);
+            return;
+        }
+        ImGui::TextWrapped("Results are in. Read them and decide what's wrong:");
+        clinic::drawExamResult(E, sp, ImGui::GetContentRegionAvail().x);
+        auto opts = examOptions(E.kind);
+        for (size_t i = 0; i < opts.size(); ++i) {
+            if (i % 2) ImGui::SameLine();
+            if (ImGui::Button(hiddenName(opts[i]), ImVec2(ImGui::GetContentRegionAvail().x * (i % 2 ? 1.0f : 0.49f), 34))) {
+                bool right = sim_.answerExam(opts[i]);
+                message_ = right ? "Correct read." : "That wasn't it - the problem is still there.";
+                messageTimer_ = 4.0f;
+                return;
+            }
+        }
+        return;
+    }
+    ImGui::TextWrapped("Pick an animal for a check-up. Each kind of animal gets its own procedure: dogs get an abdominal "
+                       "ultrasound, cats a blood panel, rabbits and rodents a dental exam, birds, reptiles and others an X-ray.");
+    ImGui::BeginChild("examlist", ImVec2(0, ImGui::GetContentRegionAvail().y - 90), ImGuiChildFlags_Borders);
+    for (const Animal& a : sim_.animalList) {
+        if (!a.inCare()) continue;
+        const Species& sp = speciesCatalog()[size_t(a.species)];
+        ImGui::PushID(a.id);
+        char lbl[160];
+        std::snprintf(lbl, sizeof lbl, "%s - %s  |  %s  |  last check-up: %s", a.name.c_str(), sp.name.c_str(), examName(examFor(sp)),
+                      a.lastExamDay < -90 ? "never" : (std::to_string(sim_.clock.day() - a.lastExamDay) + "d ago").c_str());
+        if (ImGui::Selectable(lbl, examPick_ == a.id)) examPick_ = a.id;
+        ImGui::PopID();
+    }
+    ImGui::EndChild();
+    const Animal* pick = sim_.findAnimal(examPick_);
+    if (pick) {
+        char lbl[96];
+        std::snprintf(lbl, sizeof lbl, "Start the check-up ($%.0f)", sim_.examCost(*pick));
+        if (ImGui::Button(lbl, ImVec2(-1, 36))) {
+            std::string why;
+            if (!sim_.startExam(pick->id, &why)) { message_ = why; messageTimer_ = 4.0f; }
+        }
+    }
 }
 
 void Game::drawPauseMenu() {
@@ -1091,12 +1241,51 @@ int Game::runScreenshotSuite(const std::string& dir) {
     if (Animal* lab = sim_.findAnimal(labId)) { lab->needsSurgery = true; lab->condition = "Swallowed a toy (intestinal blockage)"; }
     sim_.beginSurgery(labId, &why);
     sim_.surgeryAnesthetize(sim_.surgery.idealMgPerKg);
-    sim_.surgeryIncise();
-    sim_.surgery.bloodLoss = 0.35f;
+    {
+        // Drag the scalpel down the midline, then slip sideways across an artery
+        Surgery& S = sim_.surgery;
+        vec2 prev = S.guideA;
+        for (int i = 1; i <= 12; ++i) { vec2 p = S.guideA + (S.guideB - S.guideA) * (float(i) / 12.0f); sim_.surgeryCutTo(prev, p); prev = p; }
+        sim_.surgeryCutTo(prev, prev + vec2(-0.14f, 0.02f));
+    }
     state_ = State::Surgery;
     for (int i = 0; i < 4; ++i) animals_.update(sim_, 0.5f, camera_.pos);
-    shoot("28_surgery_table", 4);
+    shoot("28_surgery_field", 4);
     sim_.surgeryClamp(); sim_.surgeryRepair(); sim_.surgeryRepair(); sim_.surgerySuture();
+    // Daily check on an animal, and each kind of clinic check-up
+    auto idOf = [&](const char* sp) { for (auto& a : sim_.animalList) if (a.inCare() && speciesCatalog()[size_t(a.species)].name == sp) return a.id; return -1; };
+    state_ = State::AnimalCheck;
+    checkAnimal_ = idOf("Beagle");
+    if (Animal* b = sim_.findAnimal(checkAnimal_)) { b->water = 0.1f; b->hidden = Hidden::ForeignBody; b->hiddenDays = 3; }
+    checkNotes_ = sim_.checkAnimal(checkAnimal_);
+    pov("31_animal_check", {40.0f, 0.0f, -8.5f}, 180.0f, -10.0f, 10.5f);
+    state_ = State::AnimalCheck;
+    shoot("31_animal_check", 3);
+    auto scan = [&](const char* sp, Hidden h, const char* name) {
+        int id = idOf(sp);
+        Animal* a = sim_.findAnimal(id);
+        if (!a) return;
+        a->hidden = h; a->male = h == Hidden::EggBinding ? false : a->male;
+        sim_.exam.active = false;
+        sim_.startExam(id, &why);
+        sim_.advance(30.0);
+        state_ = State::Surgery;
+        clinicTab_ = 0;
+        shoot(name, 3);
+        sim_.exam.active = false;
+    };
+    scan("Beagle", Hidden::ForeignBody, "32_exam_ultrasound");
+    scan("Budgerigar", Hidden::EggBinding, "33_exam_xray");
+    scan("Siamese", Hidden::KidneyDisease, "34_exam_blood_panel");
+    scan("Holland Lop", Hidden::DentalOvergrowth, "35_exam_dental");
+    state_ = State::Computer;
+    computer_.open = true;
+    computer_.tab = ComputerUI::TabStore;
+    computer_.setStoreTab(2);
+    shoot("36_store_supplies");
+    computer_.setStoreTab(0);
+    shoot("37_store_land");
+    computer_.open = false;
     // A tiger in the parking lot
     state_ = State::Playing;
     sim_.startIncident(findSpecies("Bengal Tiger"));

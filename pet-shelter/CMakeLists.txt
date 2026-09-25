@@ -29,6 +29,7 @@ add_library(ps_sim STATIC
   src/game/Land.cpp
   src/game/SimAnimals.cpp
   src/game/SimPeople.cpp
+  src/game/SimClinic.cpp
   src/game/Species.cpp
 )
 target_include_directories(ps_sim PUBLIC src)
@@ -87,6 +88,7 @@ if(PS_BUILD_GAME)
     src/game/AnimalModel.cpp
     src/game/AnimalAnimator.cpp
     src/game/AnimalActors.cpp
+    src/game/ClinicViews.cpp
     src/world/World.cpp
     src/world/Facility.cpp
     src/world/Scenery.cpp

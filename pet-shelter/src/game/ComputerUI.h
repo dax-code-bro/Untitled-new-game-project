@@ -27,6 +27,7 @@ public:
     // Returns false when the user closes the computer.
     bool draw(Sim& sim, const Facility& facility);
     void selectAnimal(int id) { selectedAnimal_ = id; }
+    void setStoreTab(int t) { storeTab_ = t; }
 
 private:
     void drawAnimals(Sim& sim);

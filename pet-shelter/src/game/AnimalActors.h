@@ -34,6 +34,7 @@ public:
     void update(const Sim& sim, float dt, vec3 camPos);
     void draw(Renderer& r, Pass p, vec3 camPos) const;
     const AnimalActor* find(int animalId) const;
+    int pick(vec3 ro, vec3 rd, float maxDist, float* dist = nullptr) const;   // animal under the crosshair
     int count() const { return int(actors_.size()); }
     static vec3 operatingTableTop() { return {9.4f, 0.30f + 0.9f, -2.5f}; }
 

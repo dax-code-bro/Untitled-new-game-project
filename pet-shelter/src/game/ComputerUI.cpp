@@ -231,8 +231,8 @@ void ComputerUI::drawAnimals(Sim& sim) {
     ImGui::Separator();
     // Housing & unlocks
     if (ImGui::CollapsingHeader("Housing & equipment", ImGuiTreeNodeFlags_DefaultOpen)) {
-        const BuildKind kinds[] = {BuildKind::KennelBlock, BuildKind::CatHouse, BuildKind::SmallAnimalHouse, BuildKind::Barn,
-                                   BuildKind::FeralEnclosure, BuildKind::SecureEnclosure};
+        const BuildKind kinds[] = {BuildKind::ContainerShelter, BuildKind::KennelBlock, BuildKind::CatHouse, BuildKind::SmallAnimalHouse,
+                                   BuildKind::Barn, BuildKind::FeralEnclosure, BuildKind::SecureEnclosure};
         if (ImGui::BeginTable("housing", compact ? 2 : 3, ImGuiTableFlags_SizingStretchSame)) {
             for (BuildKind k : kinds) {
                 ImGui::TableNextColumn();
@@ -340,6 +340,11 @@ void ComputerUI::drawAnimals(Sim& sim) {
     bar("happy", a->happiness, goodBad(a->happiness)); ImGui::SameLine();
     bar("clean", a->cleanliness, goodBad(a->cleanliness));
     if (a->bleeding > 0.02f) ImGui::TextColored(ImVec4(1, 0.25f, 0.2f, 1), "BLEEDING (%.0f%%)", double(a->bleeding * 100.0f));
+    bar("water", a->water, goodBad(a->water)); ImGui::SameLine();
+    ImGui::TextColored(a->checkedDay == sim.clock.day() ? ImVec4(0.5f, 0.9f, 0.5f, 1) : ImVec4(1, 0.6f, 0.3f, 1), "%s",
+                       a->checkedDay == sim.clock.day() ? "You checked on it today" : "Not checked today - go see it in person");
+    if (a->diagnosed && a->hidden != Hidden::None) ImGui::TextColored(ImVec4(1, 0.7f, 0.3f, 1), "Diagnosed: %s", hiddenName(a->hidden));
+    ImGui::TextDisabled("Eats: %s (favorite)", foodName(foodsFor(sp, a->isBaby(sp))[0]));
     ImGui::Text("%s  %s  %s", a->vaccinated ? "[vaccinated]" : "[not vaccinated]", a->fixed ? "[spayed/neutered]" : "[intact]",
                 a->microchipped ? "[chipped]" : "");
     ImGui::Separator();
@@ -370,12 +375,50 @@ void ComputerUI::drawAnimals(Sim& sim) {
 void ComputerUI::drawStore(Sim& sim) {
     ImGui::Text("STORE");
     ImGui::Separator();
-    const char* sub[] = {"Land", "Equipment"};
-    for (int i = 0; i < 2; ++i) {
+    const char* sub[] = {"Land", "Equipment", "Food & supplies"};
+    for (int i = 0; i < 3; ++i) {
         if (i) ImGui::SameLine();
         if (ImGui::RadioButton(sub[i], storeTab_ == i)) storeTab_ = i;
     }
     ImGui::Separator();
+    if (storeTab_ == 2) {
+        ImGui::TextWrapped("Orders arrive tomorrow at 8 AM. Every species eats what it really eats - check an animal to see what it likes. "
+                           "Or drive to the pet store for same-day supplies.");
+        // What your animals need per day
+        float need[size_t(FoodKind::Count)] = {};
+        for (const Animal& a : sim.animalList) {
+            if (!a.inCare()) continue;
+            const Species& sp = speciesCatalog()[size_t(a.species)];
+            need[size_t(foodsFor(sp, a.isBaby(sp))[0])] += dailyFoodKg(a, sp);
+        }
+        if (ImGui::BeginTable("food", 5, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders)) {
+            for (const char* h : {"Food", "On hand", "Your animals use/day", "Price", "Order"}) ImGui::TableSetupColumn(h);
+            ImGui::TableHeadersRow();
+            for (int i = 0; i < int(FoodKind::Count); ++i) {
+                FoodKind f = FoodKind(i);
+                ImGui::PushID(i);
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn(); ImGui::TextUnformatted(foodName(f));
+                ImGui::TableNextColumn();
+                bool low = need[i] > 0.0f && sim.food[i] < need[i] * 2.0f;
+                ImGui::TextColored(low ? ImVec4(1, 0.5f, 0.3f, 1) : ImVec4(0.85f, 0.9f, 0.85f, 1), "%.1f kg%s", double(sim.food[i]),
+                                   sim.foodOrdered[i] > 0.0f ? " (+ordered)" : "");
+                ImGui::TableNextColumn(); ImGui::Text("%.2f kg", double(need[i]));
+                ImGui::TableNextColumn(); ImGui::Text("$%.2f/kg", double(foodPricePerKg(f)));
+                ImGui::TableNextColumn();
+                for (float kg : {5.0f, 25.0f, 100.0f}) {
+                    char b[32];
+                    std::snprintf(b, sizeof b, "%.0f kg", double(kg));
+                    if (ImGui::SmallButton(b)) sim.orderFood(f, kg);
+                    ImGui::SameLine();
+                }
+                ImGui::NewLine();
+                ImGui::PopID();
+            }
+            ImGui::EndTable();
+        }
+        return;
+    }
     if (storeTab_ == 1) {
         ImGui::TextWrapped("Protective gear: bite sleeves, catch poles, face shields and Kevlar gloves for every employee. "
                            "Needed to handle feral animals without people getting hurt.");

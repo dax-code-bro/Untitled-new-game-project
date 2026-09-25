@@ -56,6 +56,9 @@ public:
     bool protectiveGear = false;   // unlock: staff can handle feral/restricted animals safely
     Incident incident;             // dangerous animal loose
     Surgery surgery;               // operating table
+    Exam exam;                     // clinic check-up / scan
+    float food[size_t(FoodKind::Count)] = {};   // supplies on hand (kg)
+    float foodOrdered[size_t(FoodKind::Count)] = {};   // arrives next morning
     std::vector<int> deathDays;    // animal deaths in the last 30 days
     int adoptionsTotal = 0, deathsTotal = 0, intakeTotal = 0;
 
@@ -106,6 +109,23 @@ public:
     bool adopt(int animalId);                             // adopt out now (fee)
     bool treat(int animalId);                             // routine treatment by staff vet (not surgery)
 
+    // Daily care
+    std::vector<std::string> checkAnimal(int animalId);   // you check on it in person; returns what you notice
+    bool handFeed(int animalId);                          // from supplies, favorite food first
+    void giveWater(int animalId);
+    int uncheckedToday() const;
+    bool orderFood(FoodKind f, float kg);                 // Store: delivered tomorrow at 8 AM
+    // Clinic check-ups
+    bool startExam(int animalId, std::string* why);
+    bool examReady() const { return exam.active && clock.minutes >= exam.readyAt; }
+    bool answerExam(Hidden guess);                        // true = you read it right
+    double examCost(const Animal& a) const;
+    // Hands-on surgery
+    void surgeryCutTo(vec2 from, vec2 to);                // drag the scalpel
+    bool surgeryClampAt(vec2 p);
+    bool surgeryTreatTargetAt(vec2 p);
+    bool surgeryStitchAt(vec2 p);
+
     // Surgery (operating table in the medical room / surgery wing)
     bool beginSurgery(int animalId, std::string* why);
     float idealDose(const Animal& a) const;               // mg/kg for this species
@@ -150,6 +170,9 @@ private:
     void quarterly();
     RatingInputs ratingInputs() const;
     void animalsHourly(int hour);
+    void careHourly(int hour);
+    void careDaily();
+    void buildSurgeryField(const Animal& a);
     void animalsDaily();
     void peopleHourly(int hour);
     void peopleDaily();

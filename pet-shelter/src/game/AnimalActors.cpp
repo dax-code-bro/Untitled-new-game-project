@@ -27,6 +27,22 @@ vec3 randomIn(const AABB& a, Rng& r) {
 }
 }  // namespace
 
+int AnimalActors::pick(vec3 ro, vec3 rd, float maxDist, float* dist) const {
+    int best = -1;
+    float bestT = maxDist;
+    for (const auto& [id, a] : actors_) {
+        if (a->onTable) continue;
+        const AABB& b = a->build.bounds;
+        float r = std::max({b.max.x - b.min.x, b.max.z - b.min.z}) * 0.5f;
+        vec3 c = a->pos + vec3(0, (b.max.y) * 0.5f, 0);
+        AABB wb(c - vec3(r, b.max.y * 0.5f, r), c + vec3(r, b.max.y * 0.5f, r));
+        float t = rayAABB(ro, rd, wb);
+        if (t >= 0.0f && t < bestT) { bestT = t; best = id; }
+    }
+    if (dist) *dist = bestT;
+    return best;
+}
+
 const AnimalActor* AnimalActors::find(int id) const {
     auto it = actors_.find(id);
     return it == actors_.end() ? nullptr : it->second.get();

@@ -9,6 +9,22 @@
 
 namespace ps {
 
+// ---- Food, water, hidden conditions, clinic exams ----
+enum class FoodKind : uint8_t { DogFood, CatFood, Hay, Pellets, Seeds, Insects, FrozenRodents, Meat, Fish, FruitVeg, Grain, Formula, Count };
+const char* foodName(FoodKind f);
+float foodPricePerKg(FoodKind f);
+
+enum class Hidden : uint8_t {
+    None, ForeignBody, BladderStones, Tumor, Pregnancy, InternalBleeding, Parasites, DentalOvergrowth, EggBinding,
+    Fracture, KidneyDisease, Diabetes, Count
+};
+const char* hiddenName(Hidden h);
+const char* hiddenSymptom(Hidden h);          // what you'd notice on a daily check
+bool hiddenNeedsSurgery(Hidden h);
+
+enum class ExamKind : uint8_t { Ultrasound, BloodPanel, Dental, XRay };
+const char* examName(ExamKind k);
+
 enum class AnimalStatus : uint8_t { Healthy, Sick, Injured, Critical, Recovering, Dead, Adopted, Released, Transferred };
 const char* statusName(AnimalStatus s);
 
@@ -28,6 +44,13 @@ struct Animal {
     float bleeding = 0.0f;          // 0..1 (drives the wound shader)
     bool needsSurgery = false;
     bool vaccinated = false, fixed = false, microchipped = false;
+    float water = 1.0f;             // water bowl (0 empty .. 1 full)
+    int checkedDay = -1;            // last day YOU checked on it in person
+    Hidden hidden = Hidden::None;   // something wrong only a clinic check-up can find
+    int hiddenDays = 0;             // how long it has been going on
+    bool diagnosed = false;         // you found it
+    int lastExamDay = -99;
+    int fedWrongDays = 0;           // got food it doesn't like
     int housing = -1;               // placed building id (-1 = medical room)
     int arrivedDay = 0;
     std::string origin;             // "Stray", "Owner surrender", "Animal control"...
@@ -48,6 +71,24 @@ struct Animal {
 
 // Where each species lives
 BuildKind housingFor(const Species& sp);
+std::vector<FoodKind> foodsFor(const Species& sp, bool baby);   // favorite first
+float dailyFoodKg(const Animal& a, const Species& sp);
+ExamKind examFor(const Species& sp);
+std::vector<Hidden> examOptions(ExamKind k);                    // what this exam can show (None = normal)
+
+// A clinic check-up in progress: the staff take the animal for the scan, results come back.
+struct Exam {
+    bool active = false;
+    int animal = -1;
+    ExamKind kind = ExamKind::Ultrasound;
+    double readyAt = 0.0;           // game minutes
+    Hidden truth = Hidden::None;
+    uint32_t seed = 1;
+};
+
+// Surgical field (normalized 0..1 coordinates: x across the body, y head -> tail)
+struct FieldLine { std::vector<vec2> pts; int kind = 0; std::string name; bool hit = false; };   // 0 artery, 1 vein, 2 bone
+struct FieldOrgan { vec2 c, r; std::string name; vec3 color; bool hit = false; };
 std::string randomAnimalName(Rng& rng, bool male);
 
 // ---------------------------------------------------------------------------
@@ -115,6 +156,18 @@ struct Surgery {
     int step = 0;                   // 0 consent, 1 anesthesia, 2 incision, 3 repair, 4 suture, 5 done
     bool bleedersClamped = false;
     bool woke = false, died = false;
+    // Hands-on field
+    std::vector<FieldLine> vessels;
+    std::vector<FieldOrgan> organs;
+    vec2 guideA{0.5f, 0.3f}, guideB{0.5f, 0.7f};   // suggested incision
+    std::vector<vec2> cut;          // the incision you actually made
+    vec2 target{0.5f, 0.5f};        // what needs fixing / removing
+    std::string targetName;
+    bool targetDone = false;
+    std::vector<vec2> bleeders;     // open bleeding points (click to clamp)
+    std::vector<vec2> stitches;     // sutures placed
+    float organDamage = 0.0f;
+    std::string lastEvent;
 };
 
 }  // namespace ps

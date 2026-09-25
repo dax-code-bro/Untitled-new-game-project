@@ -187,7 +187,7 @@ void Sim::animalsHourly(int h) {
         const Species& sp = speciesCatalog()[size_t(a.species)];
         a.hunger = clampf(a.hunger + 0.012f, 0.0f, 1.0f);
         a.cleanliness = clampf(a.cleanliness - 0.008f, 0.0f, 1.0f);
-        if (feeding && rng.uniform() < coverage) { a.hunger = 0.05f; a.cleanliness = 1.0f; }
+        if (feeding && rng.uniform() < coverage) a.cleanliness = 1.0f;   // feeding itself is in careHourly (uses your supplies)
         // Health
         if (a.hunger > 0.85f) a.health -= 0.012f;
         if (a.bleeding > 0.0f) a.health -= a.bleeding * 0.03f;
@@ -431,6 +431,7 @@ bool Sim::beginSurgery(int id, std::string* why) {
     surgery.procedure = a->needsSurgery ? (a->condition.empty() ? "Exploratory surgery" : a->condition) : "Spay / neuter";
     surgery.idealMgPerKg = idealDose(*a);
     surgery.step = a->owned && !a->ownerConsented ? 0 : 1;
+    buildSurgeryField(*a);
     if ((sp.cls == AnimalClass::Feral || sp.cls == AnimalClass::Restricted) && !protectiveGear && rng.uniform() < 0.4f)
         log("Getting the " + sp.name + " onto the table without protective gear, it slashed a tech's arm open. Blood everywhere.");
     return true;
@@ -517,8 +518,17 @@ void Sim::surgeryFinish() {
         a->status = AnimalStatus::Recovering;
         a->health = std::max(a->health, 0.45f);
         a->condition.clear();
-        log("Surgery on " + a->name + " the " + sp.name + " went well. Recovering in the ward.");
-        ratings.shock(0.6f, 0.4f);
+        if (a->hidden != Hidden::None && hiddenNeedsSurgery(a->hidden)) { a->hidden = Hidden::None; a->diagnosed = false; }
+        if (surgery.organDamage > 0.3f) {
+            a->health = 0.3f;
+            a->status = AnimalStatus::Sick;
+            a->condition = "Post-op complications (damaged organ)";
+            log("Surgery on " + a->name + " is done, but the organ damage is serious. It's in critical watch.");
+            ratings.shock(-0.5f, 0.0f);
+        } else {
+            log("Surgery on " + a->name + " the " + sp.name + " went well. Recovering in the ward.");
+            ratings.shock(0.6f, 0.4f);
+        }
     }
     if (noConsent && rng.uniform() < 0.75f) {
         scandal(9.0f, "Surgery without the owner's consent");

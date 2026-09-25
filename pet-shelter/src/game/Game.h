@@ -41,7 +41,7 @@ public:
     void setPlayerName(const std::string& n) { appearance_.name = n.substr(0, 40); }
 
 private:
-    enum class State { MainMenu, Creator, Cutscene, Playing, Computer, Paused, Dialog, Surgery };
+    enum class State { MainMenu, Creator, Cutscene, Playing, Computer, Paused, Dialog, Surgery, AnimalCheck };
     enum class Mode { POV, Creative };
 
     void frame(float dt);
@@ -56,6 +56,8 @@ private:
     void drawToasts(float dt);
     void drawDecision();
     void drawSurgery();
+    void drawAnimalCheck();
+    void drawCheckups();
     void drawIncidentBanner();
     bool inGame() const;
 
@@ -88,6 +90,11 @@ private:
     int dialogDecision_ = -1;
     float surgeryDose_ = 0.0f;
     int surgeryPickAnimal_ = -1;
+    int hoverAnimal_ = -1;
+    int checkAnimal_ = -1;
+    std::vector<std::string> checkNotes_;
+    int clinicTab_ = 0;
+    int examPick_ = -1;
     Camera camera_;
 
     State state_ = State::MainMenu;

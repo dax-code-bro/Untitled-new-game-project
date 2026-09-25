@@ -65,6 +65,12 @@ void Sim::newGame() {
     }
     animals = animalsInCare();
     for (auto& e : staff.employees) randomPersonalLife(e, rng);
+    // A starter stock of food
+    food[size_t(FoodKind::DogFood)] = 25.0f;
+    food[size_t(FoodKind::CatFood)] = 10.0f;
+    food[size_t(FoodKind::Hay)] = 20.0f;
+    food[size_t(FoodKind::Pellets)] = 10.0f;
+    food[size_t(FoodKind::FruitVeg)] = 8.0f;
     econ.cashHistory.push_back(float(econ.cash));
     log("Welcome to your new shelter! The highway gate is closed, so no visitors can get in yet. "
         "Open it at the gate keypad, or set it to automatic from the office computer.");
@@ -108,6 +114,7 @@ void Sim::advance(double gameMinutes) {
 
 void Sim::onHour(int h) {
     animalsHourly(h);
+    careHourly(h);
     peopleHourly(h);
     // Visitors arrive during opening hours if the gate lets them in.
     if (!security.isOpenHours(float(h))) return;
@@ -203,6 +210,7 @@ void Sim::onEndOfDay() {
     }
 
     animalsDaily();
+    careDaily();
     peopleDaily();
     // Staff morale drifts toward what their situation deserves.
     float bonusPer = staff.employees.empty() ? 0.0f
@@ -416,9 +424,12 @@ void Sim::save(KeyValues& kv) const {
         kv.seti(p + "status", int(a.status)); kv.set(p + "cond", a.condition); kv.setf(p + "bleed", a.bleeding);
         kv.seti(p + "surg", a.needsSurgery); kv.seti(p + "vax", a.vaccinated); kv.seti(p + "fixed", a.fixed);
         kv.seti(p + "house", a.housing); kv.seti(p + "day", a.arrivedDay); kv.set(p + "origin", a.origin);
+        kv.setf(p + "water", a.water); kv.seti(p + "checked", a.checkedDay); kv.seti(p + "hidden", int(a.hidden));
+        kv.seti(p + "hdays", a.hiddenDays); kv.seti(p + "diag", a.diagnosed);
         kv.seti(p + "owned", a.owned); kv.set(p + "ownerName", a.ownerName); kv.seti(p + "consent", a.ownerConsented);
     }
     kv.seti("animal.count", n);
+    for (int i = 0; i < int(FoodKind::Count); ++i) kv.setf("food." + std::to_string(i), food[i]);
 }
 
 void Sim::load(const KeyValues& kv) {
@@ -506,9 +517,12 @@ void Sim::load(const KeyValues& kv) {
         a.fixed = kv.geti(p + "fixed") != 0; a.housing = int(kv.geti(p + "house", -1)); a.arrivedDay = int(kv.geti(p + "day"));
         a.origin = kv.get(p + "origin"); a.owned = kv.geti(p + "owned") != 0; a.ownerName = kv.get(p + "ownerName");
         a.ownerConsented = kv.geti(p + "consent") != 0;
+        a.water = float(kv.getf(p + "water", 1)); a.checkedDay = int(kv.geti(p + "checked", -1));
+        a.hidden = Hidden(kv.geti(p + "hidden", 0)); a.hiddenDays = int(kv.geti(p + "hdays", 0)); a.diagnosed = kv.geti(p + "diag") != 0;
         if (a.species >= 0 && a.species < int(speciesCatalog().size())) animalList.push_back(a);
     }
     animals = animalsInCare();
+    for (int i = 0; i < int(FoodKind::Count); ++i) food[i] = float(kv.getf("food." + std::to_string(i), food[i]));
     staff.refreshApplicants(rng, ratings.privateRating / 100.0f);
     log("Game loaded.");
 }
