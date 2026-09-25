@@ -32,7 +32,7 @@ public:
 
     struct Stats { size_t meshes = 0, materials = 0, draws = 0, instances = 0, vertices = 0,
                    triangles = 0, rewound = 0, lights = 0, skinned = 0,
-                   retessellated = 0; };
+                   retessellated = 0, foliage = 0; };
     [[nodiscard]] const Stats& stats() const { return m_stats; }
 
 private:

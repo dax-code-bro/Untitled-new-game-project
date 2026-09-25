@@ -1,4 +1,5 @@
 #include "scene/SceneFile.hpp"
+#include "scene/Foliage.hpp"
 
 #include <nlohmann/json.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -106,6 +107,13 @@ bool hasToken(const std::vector<std::string>& t, std::initializer_list<const cha
             if (x == w) return true;
     return false;
 }
+// Tree canopies: the maps build them from spheres named for what they are.
+bool isFoliageName(const std::string& n) {
+    const auto t = nameTokens(n);
+    return hasToken(t, {"crown", "canopy", "foliage", "bush", "hedge", "leaves", "shrub"}) ||
+           (hasToken(t, {"tree"}) && !hasToken(t, {"trunk", "limb", "stump", "guard", "pit"}));
+}
+
 bool isWaterName(const std::string& n) {
     const auto t = nameTokens(n);
     return hasToken(t, {"lake", "water", "sea", "pond", "pool", "river", "ocean", "harbour", "harbor"}) &&
@@ -139,11 +147,14 @@ SceneFile::SceneFile(const std::filesystem::path& path, rendering::MaterialLibra
     // ---- meshes ----
     std::vector<const rendering::Mesh*> meshes;
     std::vector<bool> isBox;          // unit cubes: these get the edge bevel
+    std::vector<bool> isSphere;       // unit spheres: canopies are swapped for leaves
+    std::vector<const rendering::Mesh*> foliage;   // a few leaf-cluster variants, built on demand
     static const bool webTessellation = std::getenv("GAME_WEB_TESSELLATION") != nullptr;
     for (const auto& jm : doc.at("meshes")) {
         geometry::MeshData d;
         const auto key = jm.find("key");
         isBox.push_back(key != jm.end() && key->is_string() && key->get<std::string>() == "box");
+        isSphere.push_back(key != jm.end() && key->is_string() && key->get<std::string>() == "sphere");
         if (!webTessellation && key != jm.end() && key->is_string() && rebuildPrimitive(key->get<std::string>(), d)) {
             ++m_stats.retessellated;
             m_stats.vertices += d.positions.size();
@@ -224,6 +235,22 @@ SceneFile::SceneFile(const std::filesystem::path& path, rendering::MaterialLibra
         const std::string name = get(jd, "name", std::string());
         it.water = isWaterName(name);
         if (it.water) it.bevel = 0.0f;
+        /* A canopy sphere becomes a crown of leaves. Four variants, chosen
+           per draw, so neighbouring trees do not share one silhouette. */
+        if (isSphere.at(jd.at("mesh").get<size_t>()) && isFoliageName(name)) {
+            if (foliage.empty()) {
+                for (uint32_t v = 0; v < 4; ++v) {
+                    m_meshes.push_back(std::make_unique<rendering::Mesh>(foliageCluster(101u + v * 7919u)));
+                    foliage.push_back(m_meshes.back().get());
+                }
+                // The distant variant: scenery a hundred metres off.
+                m_meshes.push_back(std::make_unique<rendering::Mesh>(foliageCluster(977u, 380, 1.7f)));
+                foliage.push_back(m_meshes.back().get());
+            }
+            const bool far = hasToken(nameTokens(name), {"far"});
+            it.mesh = far ? foliage[4] : foliage[m_items.size() % 4];
+            ++m_stats.foliage;
+        }
         it.material = mats.at(jd.at("material").get<size_t>());
         it.grass = get(jd, "grass", false);
         if (jd.contains("bones")) {
