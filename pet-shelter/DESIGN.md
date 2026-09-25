@@ -371,6 +371,11 @@ What's built:
   screen, and then you just make changes to that specific version so I don't have to download a new link every time."
   So: one permanent link, saved to the home screen, and every update goes to that same link. The play link
   https://claude.ai/artifact/LMioUChoeVEsUUuLZD2R1h already works this way (each release replaces it in place).
+- **Owner's pick for hosting: githack** ("Why not just use Githack"). The home-screen link is
+  https://raw.githack.com/dax-code-bro/Untitled-new-game-project/claude/pet-shelter-base-ygolsg/pet-shelter/app/index.html
+  It serves `pet-shelter/app/` straight from this public repo, so every push updates the same link. (The claude.ai
+  link couldn't be saved as an app, pet-shelter.vercel.app belongs to someone else, and the Vercel connection isn't
+  allowed to create projects.) Because githack doesn't open bare folder addresses, the app starts at index.html.
 - Hosting: a PWA needs its own HTTPS web address. The claude.ai play link can't be installed as an app (it runs
   inside claude.ai), so the installable version needs a host such as GitHub Pages or Vercel.
 

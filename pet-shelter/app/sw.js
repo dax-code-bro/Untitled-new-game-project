@@ -1,11 +1,11 @@
 // Service worker for the installable (PWA) build: the game works offline after the first visit.
-// 10-pwa is filled in from PS_BUILD in index.html when the app is assembled, so each release
+// 11-githack is filled in from PS_BUILD in index.html when the app is assembled, so each release
 // gets its own cache and old ones are removed.
-const VERSION = '10-pwa';
+const VERSION = '11-githack';
 const CACHE = 'pet-shelter-' + VERSION;
 const FONTS = 'pet-shelter-fonts';
 const SHELL = [
-  './', 'index.html', 'manifest.webmanifest',
+  'index.html', 'manifest.webmanifest',   // (no './': static hosts like githack don't serve folder indexes)
   'PetShelter.js?v=' + VERSION, 'PetShelter.wasm?v=' + VERSION,
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png', 'icons/favicon-32.png',
 ];
@@ -28,7 +28,7 @@ async function page(req) {
     if (res.ok) cache.put('index.html', res.clone());
     return res;
   } catch (err) {
-    return (await cache.match('index.html')) || (await cache.match('./')) || Response.error();
+    return (await cache.match('index.html')) || Response.error();
   }
 }
 

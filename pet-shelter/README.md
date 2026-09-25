@@ -36,6 +36,9 @@ cmake --build build-web      # -> build-web/PetShelter.js + PetShelter.wasm (sha
 Serve those two files next to `web/index.html` (the page body; it adds the phone touch controls and the loading screen).
 On phones and tablets the page starts the game with `--touch`, which turns on touch controls, bigger UI and lighter graphics.
 
+**Play / install on your phone:** https://raw.githack.com/dax-code-bro/Untitled-new-game-project/claude/pet-shelter-base-ygolsg/pet-shelter/app/index.html
+(open it, then Share → Add to Home Screen on iPhone, or ⋮ → Add to Home screen / Install app on Android).
+
 **Installable app (PWA).** The same build also writes `build-web/pwa/`: a complete site (page, `manifest.webmanifest`,
 icons, `sw.js`, game files). Put that folder on any HTTPS host and players can install the game to their home
 screen or desktop. It opens full screen, works offline after the first visit, and keeps saves in the browser's

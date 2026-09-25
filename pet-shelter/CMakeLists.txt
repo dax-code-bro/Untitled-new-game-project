@@ -129,6 +129,8 @@ if(PS_BUILD_GAME)
     add_custom_target(pwa ALL
       COMMAND ${CMAKE_COMMAND} -DSRC=${CMAKE_CURRENT_SOURCE_DIR}/web -DBIN=$<TARGET_FILE_DIR:PetShelter>
               -DOUT=${CMAKE_BINARY_DIR}/pwa -P ${CMAKE_CURRENT_SOURCE_DIR}/web/pwa/assemble.cmake
+      # app/ is the committed copy the home-screen link serves (raw.githack.com from GitHub)
+      COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/pwa ${CMAKE_CURRENT_SOURCE_DIR}/app
       DEPENDS PetShelter VERBATIM)
   endif()
   # Copy shaders next to the executable so a packaged build runs anywhere.
