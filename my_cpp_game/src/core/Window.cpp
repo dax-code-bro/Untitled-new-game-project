@@ -3,6 +3,7 @@
 #include <glad/gl.h>       // must precede GLFW: it defines the GL symbols
 #include <GLFW/glfw3.h>
 
+#include <cstdio>
 #include <stdexcept>
 #include <string>
 
@@ -29,24 +30,33 @@ struct GlfwRuntime {
 void ensureGlfw() { static GlfwRuntime runtime; }
 } // namespace
 
-Window::Window(int width, int height, const std::string& title)
+Window::Window(int width, int height, const std::string& title, bool visible)
     : m_width(width), m_height(height) {
     ensureGlfw();
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+    /* 4.6 first, then 4.5. The engine uses nothing 4.6 added (SPIR-V
+       shaders are its one real feature), and 4.5 is what Mesa's software
+       rasteriser provides -- which is what every screenshot of this engine
+       is verified on, since the build machine has no GPU. A real card gets
+       4.6; nothing behaves differently either way. */
+    for (const int minor : {6, 5}) {
+        glfwDefaultWindowHints();
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, minor);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+        glfwWindowHint(GLFW_VISIBLE, visible ? GLFW_TRUE : GLFW_FALSE);
 #ifndef NDEBUG
-    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
+        glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
 #endif
-    glfwWindowHint(GLFW_SAMPLES, 0);   // MSAA is the renderer's business
-
-    m_window.reset(glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr));
+        glfwWindowHint(GLFW_SAMPLES, 0);   // MSAA is the renderer's business
+        m_window.reset(glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr));
+        if (m_window) { m_major = 4; m_minor = minor; break; }
+    }
     if (!m_window)
         throw std::runtime_error(
-            "glfwCreateWindow failed: no GL 4.6 core context. On a headless "
-            "machine or a driver below 4.6 this is where it stops.");
+            "glfwCreateWindow failed: no GL 4.5+ core context. The driver is "
+            "older than 4.5, or there is no display to attach to.");
 
     glfwMakeContextCurrent(m_window.get());
 

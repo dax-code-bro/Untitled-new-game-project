@@ -16,7 +16,7 @@ namespace game::core {
  * that ordering is not a thing a caller can get wrong. */
 class Window {
 public:
-    Window(int width, int height, const std::string& title);
+    Window(int width, int height, const std::string& title, bool visible = true);
     ~Window();
 
     Window(const Window&)            = delete;
@@ -31,12 +31,16 @@ public:
     [[nodiscard]] int  width()  const { return m_width; }
     [[nodiscard]] int  height() const { return m_height; }
     [[nodiscard]] GLFWwindow* handle() const { return m_window.get(); }
+    [[nodiscard]] int  glMajor() const { return m_major; }
+    [[nodiscard]] int  glMinor() const { return m_minor; }
 
 private:
     struct Deleter { void operator()(GLFWwindow*) const noexcept; };
 
     int m_width  = 0;
     int m_height = 0;
+    int m_major  = 0;
+    int m_minor  = 0;
     std::unique_ptr<GLFWwindow, Deleter> m_window;
 };
 

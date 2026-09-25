@@ -60,14 +60,47 @@ FetchContent_MakeAvailable(stb)
 add_library(stb_image INTERFACE)
 target_include_directories(stb_image INTERFACE ${stb_SOURCE_DIR})
 
-set(GAME_SOURCES
-  src/main.cpp
-  src/core/Window.cpp
-)
+# ---------------------------------------------------------------------------
+#  ONE LIBRARY PER DIRECTORY, SOURCES GLOBBED, so a module can be written in
+#  parallel with the rest without anyone editing this file. Each library
+#  owns exactly one directory; nothing reaches across except through its
+#  headers. CONFIGURE_DEPENDS re-runs the glob when a file is added.
+# ---------------------------------------------------------------------------
+function(game_module name dir)
+  file(GLOB_RECURSE _src CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${dir}/*.cpp)
+  add_library(${name} STATIC ${_src})
+  target_include_directories(${name} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+  target_compile_features(${name} PUBLIC cxx_std_20)
+endfunction()
 
-add_executable(my_cpp_game ${GAME_SOURCES})
-target_include_directories(my_cpp_game PRIVATE src)
-target_link_libraries(my_cpp_game PRIVATE glfw glad_gl_core_46 glm::glm stb_image)
+# Pure CPU: no GL, no window. Testable headless, buildable anywhere.
+game_module(game_assets   src/assets)      # procedural material baker
+game_module(game_geometry src/geometry)    # primitives, tangents
+target_link_libraries(game_assets   PUBLIC glm::glm)
+target_link_libraries(game_geometry PUBLIC glm::glm)
+find_package(Threads REQUIRED)
+target_link_libraries(game_assets PUBLIC Threads::Threads)
+
+# GL: needs a context.
+game_module(game_render src/rendering)
+target_link_libraries(game_render PUBLIC glad_gl_core_46 glfw glm::glm stb_image game_assets game_geometry)
+
+game_module(game_core src/core)
+target_link_libraries(game_core PUBLIC glfw glad_gl_core_46 glm::glm stb_image)
+# Shaders are loaded from the SOURCE tree, not the copy next to the binary:
+# that is what makes editing a .glsl file hot-reload the running game.
+target_compile_definitions(game_core PUBLIC GAME_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+
+add_executable(my_cpp_game src/main.cpp)
+target_link_libraries(my_cpp_game PRIVATE game_core game_render)
+
+# Every tests/*.cpp becomes its own executable, linked against everything.
+file(GLOB _tests CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp)
+foreach(_t ${_tests})
+  get_filename_component(_n ${_t} NAME_WE)
+  add_executable(${_n} ${_t})
+  target_link_libraries(${_n} PRIVATE game_core game_render game_assets game_geometry)
+endforeach()
 
 if(GAME_WITH_ASSIMP)
   set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "" FORCE)

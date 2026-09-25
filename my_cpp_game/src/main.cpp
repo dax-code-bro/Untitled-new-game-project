@@ -1,9 +1,20 @@
-/* my_cpp_game — engine initialisation and the master loop.
+/* my_cpp_game -- engine initialisation and the master loop.
  *
- * This is the bootstrap only: a GL 4.6 core context, a loaded driver, a
- * fixed-step loop and a clear. The renderer, ECS and Lua layers attach
- * to the marked points below as they are ported. */
+ *   my_cpp_game                                   windowed, interactive
+ *   my_cpp_game --width 3840 --height 2160 --screenshot out.png
+ *                                                 offscreen 4K, save, exit
+ *
+ * Every frame renders into an offscreen HDR target at the requested size,
+ * never straight into the window. That is what lets a capture be any
+ * resolution -- 4K or 8K -- regardless of the monitor, and it is the same
+ * path either way, so a screenshot is a picture of exactly what the game
+ * draws rather than of a special capture mode. */
+#include "core/Args.hpp"
+#include "core/Capture.hpp"
 #include "core/Window.hpp"
+#include "rendering/ShaderLibrary.hpp"
+#include "rendering/gl/Framebuffer.hpp"
+#include "rendering/gl/VertexArray.hpp"
 
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
@@ -13,12 +24,11 @@
 #include <chrono>
 #include <cstdio>
 #include <exception>
+#include <filesystem>
 #include <memory>
 
 namespace {
 
-constexpr int    kWidth     = 1280;
-constexpr int    kHeight    = 720;
 constexpr double kFixedStep = 1.0 / 60.0;   // the sim step the JS engine uses
 
 void APIENTRY debugCallback(GLenum, GLenum type, GLuint, GLenum severity,
@@ -27,13 +37,35 @@ void APIENTRY debugCallback(GLenum, GLenum type, GLuint, GLenum severity,
     std::fprintf(stderr, "[gl] type=0x%x severity=0x%x: %s\n", type, severity, message);
 }
 
+std::filesystem::path shaderRoot() {
+    namespace fs = std::filesystem;
+    for (const fs::path& p : {fs::path(GAME_SOURCE_DIR) / "shaders", fs::path("shaders")})
+        if (fs::is_directory(p)) return p;
+    throw std::runtime_error("no shaders directory found");
+}
+
+// The web engine's default daylight, so both builds start from one sky.
+void bindSky(const game::gl::Program& p) {
+    p.set("uSkyZenith",    glm::vec3(0.16f, 0.33f, 0.66f));
+    p.set("uSkyHorizon",   glm::vec3(0.62f, 0.74f, 0.88f));
+    p.set("uGroundColor",  glm::vec3(0.26f, 0.24f, 0.22f));
+    p.set("uSunDir",       glm::normalize(glm::vec3(0.45f, 0.72f, 0.53f)));
+    p.set("uSunColor",     glm::vec3(1.0f, 0.94f, 0.84f));
+    p.set("uSunIntensity", 3.4f);
+    p.set("uSkyIntensity", 1.0f);
+    p.set("uGroundBounce", 0.35f);
+}
+
 } // namespace
 
-int main() try {
-    auto window = std::make_unique<game::core::Window>(kWidth, kHeight, "my_cpp_game");
+int main(int argc, char** argv) try {
+    const game::core::Args args = game::core::parseArgs(argc, argv);
 
-    std::printf("GL_VERSION  %s\n", glGetString(GL_VERSION));
-    std::printf("GL_RENDERER %s\n", glGetString(GL_RENDERER));
+    auto window = std::make_unique<game::core::Window>(
+        args.hidden ? 64 : args.width, args.hidden ? 64 : args.height, "my_cpp_game", !args.hidden);
+
+    std::printf("GL %d.%d core | %s | %s\n", window->glMajor(), window->glMinor(),
+                glGetString(GL_RENDERER), glGetString(GL_VERSION));
 
     int flags = 0;
     glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
@@ -43,39 +75,69 @@ int main() try {
         glDebugMessageCallback(debugCallback, nullptr);
     }
 
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_CULL_FACE);
+    game::rendering::ShaderLibrary shaders(shaderRoot());
+    auto sky     = shaders.get("fullscreen.vert", "sky.frag");
+    auto tonemap = shaders.get("fullscreen.vert", "tonemap.frag");
 
-    // TODO(port): auto renderer = std::make_unique<game::rendering::Renderer>(*window);
-    // TODO(port): auto script   = std::make_unique<game::scripting::LuaHost>("scripts/");
+    game::gl::VertexArray emptyVao;   // fullscreen passes draw from gl_VertexID
+    game::gl::Framebuffer hdr(args.width, args.height, {GL_RGBA16F});
+    game::gl::Framebuffer ldr(args.width, args.height, {GL_RGBA8});
+
+    glm::vec3 eye(0.0f, 1.7f, 0.0f);
+    glm::vec3 target(0.0f, 2.6f, 10.0f);
 
     using clock = std::chrono::steady_clock;
-    auto  previous    = clock::now();
+    auto   previous    = clock::now();
     double accumulator = 0.0;
+    int    frame       = 0;
 
-    /* Fixed-step simulation, variable-step present. The JS engine steps at
-       1/60 and clamps dt; this keeps that contract so ported gameplay code
-       behaves identically rather than becoming frame-rate dependent. */
     while (!window->shouldClose()) {
         const auto now = clock::now();
-        double frame = std::chrono::duration<double>(now - previous).count();
+        double dt = std::chrono::duration<double>(now - previous).count();
         previous = now;
-        if (frame > 0.20) frame = 0.20;      // same clamp as the JS loop
-        accumulator += frame;
-
+        if (dt > 0.20) dt = 0.20;      // same clamp as the JS loop
+        accumulator += dt;
         window->pollEvents();
+        if (shaders.reloadChanged()) std::printf("shaders reloaded\n");
 
-        while (accumulator >= kFixedStep) {
-            // TODO(port): script->tick(kFixedStep);
-            // TODO(port): world.step(kFixedStep);
-            accumulator -= kFixedStep;
+        while (accumulator >= kFixedStep) accumulator -= kFixedStep;   // sim attaches here
+
+        const float aspect = static_cast<float>(args.width) / static_cast<float>(args.height);
+        const glm::mat4 view = glm::lookAt(eye, target, glm::vec3(0, 1, 0));
+        const glm::mat4 proj = glm::perspective(glm::radians(62.0f), aspect, 0.05f, 400.0f);
+
+        glBindVertexArray(emptyVao.id());
+        glDisable(GL_DEPTH_TEST);
+
+        hdr.bind();
+        sky->use();
+        bindSky(*sky);
+        sky->set("uInvViewProj", glm::inverse(proj * view));
+        sky->set("uCameraPos", eye);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+
+        ldr.bind();
+        tonemap->use();
+        tonemap->texture("uHdr", hdr.color(0), 0);
+        tonemap->set("uExposure", 1.0f);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+
+        if (!args.hidden) {
+            glBlitNamedFramebuffer(ldr.id(), 0, 0, 0, ldr.width(), ldr.height(),
+                                   0, 0, window->width(), window->height(),
+                                   GL_COLOR_BUFFER_BIT, GL_LINEAR);
+            window->swapBuffers();
         }
 
-        glClearColor(0.16f, 0.33f, 0.66f, 1.0f);   // the engine's sky zenith
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        // TODO(port): renderer->renderScene(world, camera);
-
-        window->swapBuffers();
+        if (args.frames > 0 && ++frame >= args.frames) {
+            if (!args.screenshot.empty()) {
+                glFinish();
+                auto px = game::core::readRGBA8(ldr.id(), ldr.width(), ldr.height());
+                game::core::savePNG(args.screenshot, ldr.width(), ldr.height(), px);
+                std::printf("wrote %s (%dx%d)\n", args.screenshot.c_str(), ldr.width(), ldr.height());
+            }
+            break;
+        }
     }
     return 0;
 } catch (const std::exception& e) {
