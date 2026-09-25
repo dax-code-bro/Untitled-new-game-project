@@ -196,6 +196,7 @@ bool Game::init(int argc, char** argv) {
         if (std::fabs(x) < layout::kGateHalfWidth && z > layout::kSouthEdge - 4.0f && z < layout::kSouthEdge + 4.0f) return true;
         return layout::publicArea(x, z);
     };
+    initDriving();
     std::fprintf(stderr, "[startup] 6/8 world built\n");
     computer_.init(renderer_);
     sim_.newGame();
@@ -243,18 +244,21 @@ void Game::tick() {
 #endif
 }
 
-bool Game::wantsPointerLock() const { return !touch_ && state_ == State::Playing && mode_ == Mode::POV; }
+bool Game::wantsPointerLock() const {
+    return !touch_ && ((state_ == State::Playing && mode_ == Mode::POV) || state_ == State::Driving);
+}
 
 int Game::touchState() const {
     switch (state_) {
     case State::Cutscene: return 1;
     case State::Playing: return mode_ == Mode::POV ? 2 : 3;
+    case State::Driving: return 4;   // joystick = pedals and wheel, driving buttons
     default: return 0;   // menus, creator, computer, pause: plain taps
     }
 }
 
 void Game::touchPause() {
-    if (state_ == State::Playing) state_ = State::Paused;
+    if (state_ == State::Playing || state_ == State::Driving) state_ = State::Paused;
 }
 
 bool Game::takeNameEditRequest() {
@@ -316,6 +320,7 @@ void Game::startCutscene() {
 
 void Game::startPlaying() {
     state_ = State::Playing;
+    resetTruck();
     player_.eyeHeight = character_.eyeHeight();
     player_.place(playerSpawnFrontDoor(), kPi, radians(-3.0f));
     world_.facility.doors[0].swing.target = 1.0f;   // the front door is open, come on in
@@ -342,6 +347,8 @@ bool Game::saveGame() {
     kv.setv("player.feet", player_.feet);
     kv.setf("player.yaw", player_.yaw);
     kv.seti("player.mode", int(mode_));
+    kv.setv("truck.pos", truck_.pos);
+    kv.setf("truck.yaw", truck_.yaw);
     bool ok = kv.write(savePath_);
     message_ = ok ? "Game saved" : "Save failed";
     messageTimer_ = 2.5f;
@@ -360,6 +367,10 @@ bool Game::loadGame() {
     player_.eyeHeight = character_.eyeHeight();
     player_.place(kv.getv("player.feet", playerSpawnFrontDoor()), float(kv.getf("player.yaw", kPi)));
     setMode(Mode(kv.geti("player.mode", 0)));
+    resetTruck();
+    truck_.pos = kv.getv("truck.pos", Facility::parkedCarPos());
+    truck_.yaw = float(kv.getf("truck.yaw", kPi));
+    world_.facility.setCarCollider(world_.collision, truck_.pos, truck_.yaw);
     message_ = "Game loaded";
     messageTimer_ = 2.5f;
     return true;
@@ -378,7 +389,8 @@ void Game::update(float dt) {
     }
     if (characterDirty_) { character_.build(appearance_); characterDirty_ = false; }
 
-    bool wantLock = !touch_ && state_ == State::Playing && mode_ == Mode::POV;
+    if (inTruck_ && state_ == State::Playing) state_ = State::Driving;   // back from a menu or a decision while driving
+    bool wantLock = wantsPointerLock();
     input_.setCursorLocked(wantLock);
 
     switch (state_) {
@@ -426,12 +438,16 @@ void Game::update(float dt) {
                 const Animal* ha = sim_.findAnimal(hoverAnimal_);
                 hover_.prompt = ha ? ("Check on " + ha->name + (ha->checkedDay == sim_.clock.day() ? "  (checked today)" : "")) : "";
             } else hoverAnimal_ = -1;
+            // Your truck and the pet store door
+            if (hover_.type == Interaction::None && hoverAnimal_ < 0) pickTruck(eye, fwd);
+            else truckHover_ = 0;
             if (input_.pressed(GLFW_KEY_E) || input_.mousePressed(GLFW_MOUSE_BUTTON_LEFT)) {
                 if (hoverAnimal_ >= 0) {
                     checkAnimal_ = hoverAnimal_;
                     checkNotes_ = sim_.checkAnimal(checkAnimal_);
                     state_ = State::AnimalCheck;
-                } else if (hover_.type == Interaction::Computer) { state_ = State::Computer; computer_.open = true; }
+                } else if (truckHover_ > 0) useTruckHover();
+                else if (hover_.type == Interaction::Computer) { state_ = State::Computer; computer_.open = true; }
                 else if (hover_.type == Interaction::OperatingTable) { state_ = State::Surgery; surgeryPickAnimal_ = -1; }
                 else if (hover_.type != Interaction::None) world_.facility.interact(hover_, sim_.security);
             }
@@ -443,6 +459,15 @@ void Game::update(float dt) {
         renderer_.setTimeOfDay(sim_.clock.hour());
         break;
     }
+    case State::Driving:
+        updateDriving(dt);
+        renderer_.setTimeOfDay(sim_.clock.hour());
+        break;
+    case State::PetStore:
+        sim_.advance(double(dt) * double(timeScale_) * 0.2);
+        if (input_.pressed(GLFW_KEY_ESCAPE)) state_ = State::Playing;
+        renderer_.setTimeOfDay(sim_.clock.hour());
+        break;
     case State::Computer:
         sim_.advance(double(dt) * double(timeScale_));
         if (input_.pressed(GLFW_KEY_ESCAPE)) { state_ = State::Playing; computer_.open = false; }
@@ -479,6 +504,16 @@ void Game::update(float dt) {
         animals_.update(sim_, state_ == State::Paused ? 0.0f : dt, camera_.pos);
         while (!sim_.greetings.empty()) { toasts_.push_back({sim_.greetings.front(), 8.0f}); sim_.greetings.pop_front(); }
     }
+    // The road: traffic runs whenever the world is on screen; the rules apply while you drive
+    if (inGame() || state_ == State::Cutscene) {
+        float rdt = state_ == State::Paused ? 0.0f : dt;
+        roads_.update(rdt, sim_, truck_, state_ == State::Driving);
+        world_.setTraffic(roads_.trafficInstances());
+        if (state_ != State::Driving) {   // the door still swings while you're on foot
+            truck_.door += ((truck_.doorOpen ? 1.0f : 0.0f) - truck_.door) * std::min(1.0f, rdt * 5.0f);
+            if (!inTruck_) world_.facility.gateRemote = false;
+        }
+    }
     world_.ghostVisible = world_.ghostVisible && state_ == State::Playing && mode_ == Mode::Creative;
     world_.update(dt, camera_.pos, time_, sim_);
 
@@ -492,12 +527,15 @@ void Game::update(float dt) {
 // ---------------------------------------------------------------- render
 bool Game::inGame() const {
     return state_ == State::Playing || state_ == State::Computer || state_ == State::Paused || state_ == State::Dialog ||
-           state_ == State::Surgery || state_ == State::MainMenu || state_ == State::AnimalCheck;
+           state_ == State::Surgery || state_ == State::MainMenu || state_ == State::AnimalCheck || state_ == State::Driving ||
+           state_ == State::PetStore;
 }
 
 void Game::scene(Renderer& r, Pass pass) {
     world_.draw(r, pass, r.nightAmount(), time_);
+    drawTruck(r, pass);
     if (pass == Pass::Transparent) return;
+    roads_.draw(r, pass, camera_.pos);
     if (inGame()) animals_.draw(r, pass, camera_.pos);
     bool drawChar = false;
     mat4 root;
@@ -507,10 +545,10 @@ void Game::scene(Renderer& r, Pass pass) {
     } else if (state_ == State::Cutscene && cutscene_.showCharacter()) {
         drawChar = true;
         root = cutscene_.characterTransform();
-    } else if ((state_ == State::Playing || state_ == State::Paused) && mode_ == Mode::Creative) {
+    } else if ((state_ == State::Playing || state_ == State::Paused) && mode_ == Mode::Creative && !inTruck_) {
         drawChar = true;
         root = mat4::translate(player_.feet) * mat4::rotateY(player_.yaw);
-    } else if (state_ == State::Playing && mode_ == Mode::POV && pass == Pass::Shadow) {
+    } else if ((state_ == State::Playing || state_ == State::PetStore) && mode_ == Mode::POV && pass == Pass::Shadow) {
         drawChar = true;   // your own shadow in first person
         root = mat4::translate(player_.feet) * mat4::rotateY(player_.yaw);
     }
@@ -554,7 +592,8 @@ void Game::render(float dt) {
         break;
     }
     default:
-        if (mode_ == Mode::POV) player_.applyCamera(camera_);
+        if (inTruck_) driveCamera();
+        else if (mode_ == Mode::POV) player_.applyCamera(camera_);
         else creative_.applyCamera(camera_);
         break;
     }
@@ -586,6 +625,11 @@ void Game::drawUI() {
         drawHUD();
         if (mode_ == Mode::Creative) creative_.drawUI(sim_, timeScale_);
         break;
+    case State::Driving: drawDriving(); break;
+    case State::PetStore:
+        drawHUD();
+        drawPetStore();
+        break;
     case State::Computer:
         if (!computer_.draw(sim_, world_.facility)) { state_ = State::Playing; computer_.open = false; }
         break;
@@ -613,7 +657,11 @@ void Game::drawUI() {
         ImGui::TextUnformatted(message_.c_str());
         ImGui::End();
     }
-    if (state_ == State::Playing || state_ == State::Computer) drawToasts(ImGui::GetIO().DeltaTime);
+    if (state_ == State::Playing || state_ == State::Computer || state_ == State::Driving) drawToasts(ImGui::GetIO().DeltaTime);
+    // Words on the road signs you can see
+    if ((state_ == State::Playing && mode_ == Mode::POV) || state_ == State::Driving || state_ == State::PetStore ||
+        (state_ == State::Paused && inTruck_))
+        roads_.drawSignText(camera_, int(ImGui::GetIO().DisplaySize.x), int(ImGui::GetIO().DisplaySize.y));
 }
 
 void Game::drawMainMenu() {
@@ -648,9 +696,12 @@ void Game::drawHUD() {
     ImGui::Text("Cash: $%s", std::to_string((long long)sim_.econ.cash).c_str());
     ImGui::Text("Public %.0f   Private %.0f   Finance %s", sim_.ratings.publicRating, sim_.ratings.privateRating,
                 Economy::grade(sim_.financialScore()));
-    ImGui::TextColored(mode_ == Mode::POV ? ImVec4(0.6f, 0.85f, 1.0f, 1) : ImVec4(0.6f, 0.95f, 0.6f, 1), "%s",
-                       mode_ == Mode::POV ? "POV MODE  (Tab: Build)" : "BUILD MODE  (Tab: POV)");
-    if (mode_ == Mode::POV) {
+    if (inTruck_)
+        ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.45f, 1), "DRIVING  (%s)", touch_ ? "Get out: stop first" : "F: get out");
+    else
+        ImGui::TextColored(mode_ == Mode::POV ? ImVec4(0.6f, 0.85f, 1.0f, 1) : ImVec4(0.6f, 0.95f, 0.6f, 1), "%s",
+                           mode_ == Mode::POV ? "POV MODE  (Tab: Build)" : "BUILD MODE  (Tab: POV)");
+    if (mode_ == Mode::POV && !inTruck_) {
         const RoomSpec* room = roomAt(player_.feet.x, player_.feet.z);
         ImGui::TextDisabled("%s", room && player_.feet.y > 0.2f ? room->name.c_str() : "Outside");
     }
@@ -689,7 +740,7 @@ void Game::drawHUD() {
         ImDrawList* dl = ImGui::GetForegroundDrawList();
         ImVec2 c(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f);
         dl->AddCircleFilled(c, hover_.type != Interaction::None ? 4.0f : 2.5f, IM_COL32(255, 255, 255, 200));
-        if (hover_.type != Interaction::None || hoverAnimal_ >= 0) {
+        if (hover_.type != Interaction::None || hoverAnimal_ >= 0 || truckHover_ > 0) {
             std::string txt = "[E]  " + hover_.prompt;
             ImVec2 sz = ImGui::CalcTextSize(txt.c_str());
             ImVec2 p(c.x - sz.x * 0.5f, c.y + 40);
@@ -1293,6 +1344,44 @@ int Game::runScreenshotSuite(const std::string& dir) {
     computer_.setStoreTab(0);
     shoot("37_store_land");
     computer_.open = false;
+    // Your truck: walk up and open the door, then drive to the pet store
+    resetTruck();
+    truck_.doorOpen = true;
+    truck_.door = 1.0f;
+    pov("40_truck_door", truck_.transform().transformPoint({3.0f, 0.0f, 0.2f}), degrees(truck_.yaw - kPi * 0.5f), -12.0f, 10.5f);
+    auto drive = [&](const std::string& name, vec3 pos, float yawDeg, float speed, int cam, float hour, float lightClock, int frames) {
+        state_ = State::Playing;
+        timeScale_ = 0.0f;
+        sim_.clock.minutes = double(hour) * 60.0;
+        truck_.pos = pos;
+        truck_.yaw = radians(yawDeg);
+        enterTruck();
+        truck_.speed = speed;
+        truck_.headlights = hour > 19.0f;
+        driveCam_ = cam;
+        chaseYaw_ = truck_.yaw;
+        roads_.setClock(lightClock);
+        shoot(name, frames);
+    };
+    drive("41_driving_cockpit", {kCrossX - 420.0f, 0.0f, kHighwayZ + 1.9f}, 90.0f, 24.0f, 0, 16.5f, 5.0f, 8);
+    truck_.signal = 1;
+    drive("42_red_light", {kCrossX - 32.0f, 0.0f, kHighwayZ + 1.9f}, 90.0f, 0.0f, 0, 12.0f, 40.0f, 6);
+    drive("43_driving_chase_night", {-60.0f, 0.0f, kHighwayZ + 5.6f}, 90.0f, 20.0f, 1, 20.6f, 0.0f, 8);
+    // Hold the gas from inside the yard: the gate remote opens the gate and the truck rolls out onto the highway
+    truck_.speed = 0.0f;
+    drive("46_through_the_gate", {0.0f, 0.0f, kSouthEdge - 130.0f}, 0.0f, 0.0f, 1, 9.0f, 0.0f, 1);
+    input_.onKey(GLFW_KEY_W, GLFW_PRESS);
+    shoot("46_through_the_gate", 290);
+    input_.onKey(GLFW_KEY_W, GLFW_RELEASE);
+    std::fprintf(stderr, "[drive-test] after 290 frames of gas: z=%.1f speed=%.1f mph (gate at z=%.0f)\n", double(truck_.pos.z),
+                 double(truck_.mph()), double(kSouthEdge));
+    truck_.speed = 0.0f;
+    exitTruck();
+    sim_.buyFromPetStore(0);
+    pov("44_pet_store", {kPetStoreX + 6.0f, 0.0f, kPetStoreZ - 22.0f}, -10.0f, 2.0f, 11.0f);
+    state_ = State::PetStore;
+    shoot("45_pet_store_counter", 4);
+    resetTruck();
     // A tiger in the parking lot
     state_ = State::Playing;
     sim_.startIncident(findSpecies("Bengal Tiger"));

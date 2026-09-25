@@ -68,6 +68,7 @@ void Sim::newGame() {
         Animal& r2 = admit(findSpecies("Holland Lop"), "Found in a box at the gate", 0.2f); r2.name = "Pip";
     }
     animals = animalsInCare();
+    restockPetStore();
     for (auto& e : staff.employees) randomPersonalLife(e, rng);
     // A starter stock of food
     food[size_t(FoodKind::DogFood)] = 25.0f;
@@ -215,6 +216,7 @@ void Sim::onEndOfDay() {
 
     animalsDaily();
     careDaily();
+    restockPetStore();
     peopleDaily();
     // Staff morale drifts toward what their situation deserves.
     float bonusPer = staff.employees.empty() ? 0.0f

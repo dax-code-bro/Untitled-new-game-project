@@ -282,6 +282,23 @@ int main() {
         CHECK(s.land.canBuy(Land::kHomeCol + 1, 0) && !s.land.canBuy(Land::kHomeCol + 2, 0));
         CHECK(s.buyLand(Land::kHomeCol + 1, 0, &why));
         CHECK(s.land.fence().size() == 6 && s.land.ownedSqMi() > 1.9f);
+        // Pet store: snakes, birds, cats and dogs; what you buy rides home in the truck, then joins the shelter
+        CHECK(s.petStore.size() == 9);
+        bool dog = false, cat = false, bird = false, snake = false;
+        for (const StoreAnimal& a : s.petStore) {
+            const Species& sp = speciesCatalog()[size_t(a.species)];
+            dog |= sp.category == "Dog"; cat |= sp.category == "Cat"; bird |= sp.category == "Bird"; snake |= sp.shape.plan == BodyPlan::Snake;
+        }
+        CHECK(dog && cat && bird && snake);
+        size_t inCare = s.animalsInCare();
+        double cash = s.econ.cash;
+        CHECK(s.buyFromPetStore(0, &why) && s.truckCargo.size() == 1 && s.petStore.size() == 8 && s.econ.cash < cash);
+        CHECK(s.animalsInCare() == inCare);
+        CHECK(s.deliverCargo() == 1 && s.truckCargo.empty() && s.animalsInCare() == inCare + 1);
+        // Traffic tickets cost money and count up
+        cash = s.econ.cash;
+        s.ticket("speeding (70 in a 55 zone)", 300.0);
+        CHECK(s.ticketsTotal == 1 && std::fabs(s.econ.cash - (cash - 300.0)) < 0.01);
     }
 
     std::printf("\n%d passed, %d failed\n", g_pass, g_fail);

@@ -28,6 +28,16 @@ struct GameClock {
 
 struct GameEvent { int day; std::string text; };
 
+// Pet store (2 miles east on the highway): today's animals for sale
+struct StoreAnimal {
+    int species = 0;
+    bool male = true;
+    float ageFrac = 0.3f;
+    int coat = 0;
+    float price = 100.0f;
+    std::string name;
+};
+
 class Sim {
 public:
     GameClock clock;
@@ -74,6 +84,17 @@ public:
     std::deque<std::string> greetings;      // staff greeting the owner (shown as toasts)
     std::string ownerName = "Boss";         // the player's name (staff use it when they like you)
     float timeSinceHourMin = 0.0f;
+
+    // ---- Driving & the pet store ----
+    std::vector<StoreAnimal> petStore;     // restocked every morning
+    std::vector<StoreAnimal> truckCargo;   // animals riding home in your truck
+    int ticketsTotal = 0;
+    double finesTotal = 0.0;
+    void restockPetStore();
+    bool buyFromPetStore(size_t index, std::string* why = nullptr);
+    bool buyStoreFood(FoodKind f, float kg);          // carried home right away (store prices)
+    int deliverCargo();                               // unload the truck at the shelter
+    void ticket(const std::string& reason, double fine);
 
     void newGame();
     // Advance the simulation by `gameMinutes`.

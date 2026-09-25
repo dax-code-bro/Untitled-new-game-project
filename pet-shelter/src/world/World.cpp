@@ -78,19 +78,6 @@ void World::build(float detail) {
         buildables_[i].upload(b);
     }
 
-    // Traffic: 4 lanes, eastbound on the south side
-    Rng rng(4242);
-    for (int i = 0; i < 28; ++i) {
-        Car c;
-        c.lane = i % 4;
-        c.x0 = rng.range(-4000.0f, 4000.0f);
-        c.speed = rng.range(24.0f, 33.0f);
-        static const vec3 paints[] = {{0.8f, 0.8f, 0.82f}, {0.1f, 0.1f, 0.12f}, {0.6f, 0.08f, 0.06f}, {0.12f, 0.2f, 0.45f},
-                                      {0.5f, 0.5f, 0.52f}, {0.9f, 0.9f, 0.88f}, {0.15f, 0.3f, 0.2f}, {0.7f, 0.55f, 0.2f}};
-        c.tint = vec4(paints[rng.irange(0, 7)] * 1.1f, 1.0f);
-        cars_.push_back(c);
-    }
-
     facility.build(collision);
     auto t1 = std::chrono::steady_clock::now();
     std::fprintf(stderr, "[world] built %zu terrain tiles in %.2fs\n", terrain_.size(),
@@ -257,21 +244,6 @@ void World::update(float dt, vec3 camPos, float time, Sim& sim) {
     facility.update(dt, sim.security, sim.clock.hour(), collision);
     syncPlaced(sim);
 
-    // Highway traffic (wraps in an 8 km window around the camera)
-    float center = std::round(camPos.x / 8000.0f) * 8000.0f;
-    static const float laneZ[4] = {kHighwayZ + 1.9f, kHighwayZ + 5.6f, kHighwayZ - 1.9f, kHighwayZ - 5.6f};
-    std::vector<InstanceData> inst;
-    inst.reserve(cars_.size());
-    for (const Car& c : cars_) {
-        bool east = c.lane < 2;
-        float x = c.x0 + (east ? 1.0f : -1.0f) * c.speed * time;
-        x = center - 4000.0f + std::fmod(std::fmod(x - (center - 4000.0f), 8000.0f) + 8000.0f, 8000.0f);
-        InstanceData d;
-        d.model = mat4::translate({x, 0.03f, laneZ[c.lane]}) * mat4::rotateY(radians(east ? 90.0f : -90.0f));
-        d.tint = c.tint;
-        inst.push_back(d);
-    }
-    traffic_.setInstances(inst);
 }
 
 mat4 World::placedTransform(const Placed& p) const {

@@ -315,6 +315,43 @@ Recorded as said, with my interpretation where it was ambiguous (marked *interpr
 - **Signs** point to where things are and show where you are. (You said I can choose where to put things.)
 - You drive to a **pet store** that sells **snakes, birds, cats and dogs**.
 
+## 8.8 Driving and the pet store: what's built (update 3)
+Where I put things (you said I could choose):
+- **HWY 89** runs east-west past your gate. Traffic drives on the right: eastbound in the two lanes on the far
+  (south) side, westbound on your side. Limit **55 mph**.
+- The **pet store, "Paws & Claws Pet Supply"**, is **2 miles east** on **Crossroads Rd**, a side road going south at
+  the only **traffic light**. It's open 7 AM to 9 PM, and restocks every morning with 3 dogs, 2 cats, 2 birds and
+  2 snakes (real species, each with a name, sex, coat and price). It also sells food at retail prices.
+- **Cedar Flats** (the town) is 12 miles west. It's signposted but not built yet.
+- **Signs:** speed limits every mile each way; green **mile markers** ("HWY 89 MILE 12" is your gate); guide signs
+  "ANIMAL SHELTER NEXT LEFT/RIGHT" and "PET STORE, CROSSROADS RD, NEXT RIGHT/LEFT"; a direction sign at your gate
+  ("<- EAST Pet Store 2 mi / WEST -> Cedar Flats 12 mi"); a blue "YOUR SHELTER" sign; 25 mph signs on your drive
+  and the side road; the store's pylon sign. The words on each sign are readable as you drive up.
+- The GPS map in the corner shows where you are, your fence, the highway, the shelter and the store, with miles to each.
+
+How it plays:
+- Walk up to the red truck (the same one from the cutscene) and look at the handle: **E opens the door**. Look into
+  the cab and press **E to get in** (the door pulls shut behind you). You can also close the door from outside.
+- **Controls:** W gas, S brake (hold to reverse), A/D steer, Space handbrake, **Q/E left/right turn signal** (it
+  cancels itself when you straighten out after a turn, like a real truck), L headlights, V driver's seat or
+  behind-the-truck camera, mouse to look around the cab, C to look ahead again, **F to get out** (stop first).
+  On phones: the joystick is the pedals and the wheel, with buttons for signals, brake, lights, view and get out.
+- The truck has a working steering wheel view, see-through windows, an opening door, steering and rolling
+  wheels, brake/tail lights, blinking signals, headlights and reverse lights.
+- The **gate remote** on the visor opens your gate as you drive up to it.
+- **Traffic:** 40 cars follow the car ahead, keep their distance, stop for red and yellow lights, and slow down
+  behind you.
+- **Rules of the road** (the police pull you over and fine you; your public rating drops a little):
+  - Speeding more than 5 mph over the limit for 3 seconds: $150 + $10 per mph over. You get a warning first.
+    Your own land has a posted 15 mph limit, but police don't patrol your private drive (warning only).
+  - Running a red light at any of the 3 stop lines: $300.
+  - Changing lanes without signaling: $120.
+  - Turning onto or off the highway without signaling the matching direction: $120.
+  - Driving on the wrong side of the highway: $400 (after a "WRONG WAY" warning).
+  - Hitting another car: $800 reckless driving + $1,200 body work.
+- **Buying animals:** at the store counter you pay and the animal rides home in a carrier in the truck bed. Drive
+  home and get out on your land: they're unloaded and join the shelter (housed like any new arrival).
+
 ## 9. Next up
 - More model passes until nothing looks off (small terriers, fur close-ups, coiled snakes).
 - Staff and protesters as visible people in the world; clients in the waiting room.
@@ -328,7 +365,7 @@ Recorded as said, with my interpretation where it was ambiguous (marked *interpr
 - Game title.
 - Is walking beyond the property gate onto the highway ever allowed, or only for vehicles?
 - Do staff need to be visible NPCs walking around in POV mode? (Planned; data model exists.)
-- Can the character leave POV mode in a vehicle (drive the car)?
+- (Answered in update 3: yes, you drive the red truck.)
 - Should the shelter be a for-profit business or a nonprofit (no income tax, but different rules)?
 - Did "GSSL locking" mean GLSL *lighting*/shaders (what's built), or something else?
 

@@ -26,6 +26,8 @@ public:
 
     // First hit along a ray against enabled boxes (for interaction/placement).
     float raycast(vec3 ro, vec3 rd, float maxDist, int* hitId = nullptr) const;
+    // Does a vertical cylinder at (x,z) overlap any solid box between y0 and y1? (vehicles)
+    bool overlaps(float x, float z, float radius, float y0, float y1, int ignoreId = -1) const;
 
     size_t count() const { return boxes_.size(); }
     // Where a character may stand (your land, the gate, public roads). Unset = anywhere in the region.

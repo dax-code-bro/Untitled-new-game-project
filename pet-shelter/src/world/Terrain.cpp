@@ -20,7 +20,11 @@ float naturalness(float x, float z) {
     // Highway corridor (runs east-west through the whole background)
     float dHwy = std::fabs(z - kHighwayZ) - 30.0f;
     float wHwy = smoothstepf(0.0f, 450.0f, dHwy);
-    return std::min(wFac, wHwy);
+    // Pet store at the crossroads 2 miles east, and its side road south
+    float sx = std::max(std::max(kCrossX - 30.0f - x, x - (kPetStoreX + 60.0f)), 0.0f);
+    float sz = std::max(std::max(kHighwayZ - z, z - (kHighwayZ + 190.0f)), 0.0f);
+    float wStore = smoothstepf(0.0f, 300.0f, std::sqrt(sx * sx + sz * sz));
+    return std::min(std::min(wFac, wHwy), wStore);
 }
 
 // Distance outside the property (0 inside)

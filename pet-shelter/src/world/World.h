@@ -16,6 +16,8 @@ class World {
 public:
     void build(float detail = 1.0f);   // detail 2 = half the terrain resolution (phones)
     void update(float dt, vec3 camPos, float time, Sim& sim);
+    // Highway cars (moved by the game's Driving system)
+    void setTraffic(const std::vector<InstanceData>& cars) { traffic_.setInstances(cars); }
     void draw(Renderer& r, Pass pass, float night, float time) const;
     void appendLights(std::vector<PointLight>& out, float night) const;
     // Rebuilds colliders and cached transforms for creative-mode objects.
@@ -59,8 +61,6 @@ private:
     std::unordered_map<long long, std::vector<TreeInst>> treeCells_;
     vec3 treeCenter_{1e9f, 0, 1e9f};
 
-    struct Car { int lane; float x0, speed; vec4 tint; };
-    std::vector<Car> cars_;
 
     struct PlacedDraw { int id; BuildKind kind; mat4 model; AABB bounds; };
     std::vector<PlacedDraw> placedDraw_;

@@ -103,6 +103,12 @@
   <button id="bRotate" class="btn" data-mode="build">Rotate</button>
   <button id="bDemolish" class="btn" data-mode="build">Remove</button>
   <button id="bCancel" class="btn" data-mode="build">Cancel</button>
+  <button id="bSigL" class="btn" data-mode="drive">&#9664; Sig</button>
+  <button id="bSigR" class="btn" data-mode="drive">Sig &#9654;</button>
+  <button id="bLights" class="btn" data-mode="drive">Lights</button>
+  <button id="bCam" class="btn" data-mode="drive">View</button>
+  <button id="bExit" class="btn" data-mode="drive">Get out</button>
+  <button id="bBrake" class="btn big" data-mode="drive">Brake</button>
 </div>
 <div id="topBar" class="ctl" hidden>
   <button id="bMode" class="chip">Build mode</button>
@@ -316,7 +322,7 @@
     e.preventDefault();
     showProblem('The graphics stopped, usually because the device ran low on memory. Close other tabs or apps and reload the page.');
   });
-  const PS_BUILD = '8-animals';   // bump with each release so browsers fetch the new game files
+  const PS_BUILD = '9-drive';   // bump with each release so browsers fetch the new game files
   window.Module = {
     locateFile: (f) => f + '?v=' + PS_BUILD,
     canvas,
@@ -357,8 +363,8 @@
   // =====================================================================
   // Touch controls
   // =====================================================================
-  const KEY = { E: 69, TAB: 258, ESC: 256, R: 82, X: 88, SPACE: 32, SHIFT: 340 };
-  const STATE = { UI: 0, CUTSCENE: 1, POV: 2, BUILD: 3 };
+  const KEY = { E: 69, TAB: 258, ESC: 256, R: 82, X: 88, SPACE: 32, SHIFT: 340, Q: 81, L: 76, V: 86, F: 70 };
+  const STATE = { UI: 0, CUTSCENE: 1, POV: 2, BUILD: 3, DRIVE: 4 };   // DRIVE: joystick = gas/brake + steering
 
   function mouse(type, x, y) {
     canvas.dispatchEvent(new MouseEvent(type, { clientX: x, clientY: y, button: 0, buttons: type === 'mouseup' ? 0 : 1,
@@ -391,6 +397,12 @@
     hold('bMode', () => tapKey(KEY.TAB));
     hold('bMenu', () => Module._ps_pause());
     hold('skip', () => tapKey(KEY.SPACE));
+    hold('bSigL', () => tapKey(KEY.Q));
+    hold('bSigR', () => tapKey(KEY.E));
+    hold('bLights', () => tapKey(KEY.L));
+    hold('bCam', () => tapKey(KEY.V));
+    hold('bExit', () => tapKey(KEY.F));
+    hold('bBrake', () => key(KEY.SPACE, true), () => key(KEY.SPACE, false));
 
     // Joystick
     let stickId = null;
@@ -470,7 +482,7 @@
           const tx = t.clientX - p.sx, ty = t.clientY - p.sy;
           if (Math.hypot(tx, ty) < 10) continue;
           decided = true;
-          if (st === STATE.POV) gesture = 'look';
+          if (st === STATE.POV || st === STATE.DRIVE) gesture = 'look';
           else if (st === STATE.BUILD) gesture = Module._ps_ui_wants_pointer() ? 'ui-scroll' : 'pan';
           else if (st === STATE.UI) {
             // Sideways drags move sliders; up/down drags scroll. Nothing is pressed until we know which.
@@ -537,12 +549,14 @@
       const st = state();
       if (st !== lastState) {
         lastState = st;
-        stick.hidden = !(st === STATE.POV || st === STATE.BUILD);
+        stick.hidden = !(st === STATE.POV || st === STATE.BUILD || st === STATE.DRIVE);
         $('rightPad').hidden = stick.hidden;
         $('topBar').hidden = stick.hidden;
+        $('bMode').hidden = st === STATE.DRIVE;
+        const padMode = st === STATE.POV ? 'pov' : st === STATE.DRIVE ? 'drive' : 'build';
         $('skip').hidden = st !== STATE.CUTSCENE;
         for (const b of document.querySelectorAll('#rightPad [data-mode]'))
-          b.hidden = (b.dataset.mode === 'pov') !== (st === STATE.POV);
+          b.hidden = b.dataset.mode !== padMode;
         $('bMode').textContent = st === STATE.POV ? 'Build mode' : 'Walk mode';
         if (!stick.hidden) { knob.style.transform = ''; Module._ps_touch_move(0, 0); }
         lastTap = null;

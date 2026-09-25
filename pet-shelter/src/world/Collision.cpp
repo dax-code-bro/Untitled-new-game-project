@@ -135,6 +135,19 @@ vec3 CollisionWorld::moveCharacter(vec3 feet, vec3 delta, float radius, float he
     return p;
 }
 
+bool CollisionWorld::overlaps(float x, float z, float radius, float y0, float y1, int ignoreId) const {
+    bool hit = false;
+    query(x - radius, z - radius, x + radius, z + radius, [&](int id, const Entry& e) {
+        if (hit || id == ignoreId) return;
+        const AABB& b = e.box;
+        if (b.max.y <= y0 || b.min.y >= y1) return;
+        float cx = clampf(x, b.min.x, b.max.x), cz = clampf(z, b.min.z, b.max.z);
+        float dx = x - cx, dz = z - cz;
+        if (dx * dx + dz * dz < radius * radius) hit = true;
+    });
+    return hit;
+}
+
 float CollisionWorld::raycast(vec3 ro, vec3 rd, float maxDist, int* hitId) const {
     vec3 end = ro + rd * maxDist;
     float best = -1.0f;

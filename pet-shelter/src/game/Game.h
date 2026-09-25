@@ -8,8 +8,10 @@
 #include "game/ComputerUI.h"
 #include "game/CreativeMode.h"
 #include "game/Cutscene.h"
+#include "game/Driving.h"
 #include "game/PlayerController.h"
 #include "game/Sim.h"
+#include "game/Vehicle.h"
 #include "render/Renderer.h"
 #include "world/World.h"
 #include <chrono>
@@ -41,7 +43,7 @@ public:
     void setPlayerName(const std::string& n) { appearance_.name = n.substr(0, 40); }
 
 private:
-    enum class State { MainMenu, Creator, Cutscene, Playing, Computer, Paused, Dialog, Surgery, AnimalCheck };
+    enum class State { MainMenu, Creator, Cutscene, Playing, Computer, Paused, Dialog, Surgery, AnimalCheck, Driving, PetStore };
     enum class Mode { POV, Creative };
 
     void frame(float dt);
@@ -72,6 +74,18 @@ private:
     int runScreenshotSuite(const std::string& dir);
     int runAnimalStudio(const std::string& dir, const std::string& filter);   // AnimalStudio.cpp
     void scene(Renderer& r, Pass pass);
+    // Your truck, the road and the pet store (GameDriving.cpp)
+    void initDriving();
+    void resetTruck();
+    void pickTruck(vec3 eye, vec3 fwd);        // POV: truck door / pet store door under the crosshair
+    void useTruckHover();
+    void enterTruck();
+    bool exitTruck();
+    void updateDriving(float dt);
+    void driveCamera();
+    void drawDriving();
+    void drawPetStore();
+    void drawTruck(Renderer& r, Pass pass);
 
     GLFWwindow* window_ = nullptr;
     int width_ = 1600, height_ = 900;
@@ -96,6 +110,16 @@ private:
     int clinicTab_ = 0;
     int examPick_ = -1;
     Camera camera_;
+    Truck truck_;
+    TruckModel truckModel_;
+    Driving roads_;
+    bool inTruck_ = false;
+    int driveCam_ = 0;                 // 0 driver's seat, 1 behind the truck
+    float driveLookYaw_ = 0.0f, driveLookPitch_ = 0.0f, chaseYaw_ = 0.0f;
+    bool signalArmed_ = false;         // the signal cancels itself once the turn is done
+    int truckHover_ = 0;               // 1 open door, 2 get in, 3 close door, 4 pet store
+    int storeTab_ = 0;
+    std::string storeMsg_;
 
     State state_ = State::MainMenu;
     Mode mode_ = Mode::POV;

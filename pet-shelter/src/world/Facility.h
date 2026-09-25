@@ -41,7 +41,11 @@ public:
 
     std::vector<Door> doors;
     Tween gate;                  // 0 closed .. 1 open
-    mat4 playerCar;              // parked car transform (the cutscene drives it)
+    mat4 playerCar;              // truck transform (cutscene / parked / driving)
+    bool gateRemote = false;     // your truck is at the gate: its remote opens it
+    bool drawCar = true;         // the game draws the drivable truck itself
+    int carCollider = -1;
+    void setCarCollider(CollisionWorld& cw, vec3 pos, float yaw);
     const Mesh& carMesh() const { return car_; }
     static void buildCar(MeshBuilder& b, vec3 paint);
     static vec3 parkedCarPos() { return {-8.0f, 0.0f, 22.0f}; }

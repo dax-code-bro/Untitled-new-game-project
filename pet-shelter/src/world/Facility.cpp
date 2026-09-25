@@ -150,7 +150,16 @@ void Facility::build(CollisionWorld& cw) {
     car_.upload(car);
     vec3 cp = parkedCarPos();
     playerCar = mat4::translate(cp) * mat4::rotateY(radians(180.0f));
-    cw.addBox(AABB(cp - vec3(1.0f, 0.0f, 2.6f), cp + vec3(1.0f, 1.9f, 2.6f)));
+    carCollider = cw.addBox(AABB(cp - vec3(1.0f, 0.0f, 2.6f), cp + vec3(1.0f, 1.9f, 2.6f)));
+}
+
+void Facility::setCarCollider(CollisionWorld& cw, vec3 pos, float yaw) {
+    // Axis-aligned box around the (possibly turned) truck body
+    float c = std::fabs(std::cos(yaw)), s = std::fabs(std::sin(yaw));
+    float hx = 1.0f * c + 2.6f * s, hz = 1.0f * s + 2.6f * c;
+    AABB b(pos - vec3(hx, 0.0f, hz), pos + vec3(hx, 1.9f, hz));
+    if (carCollider < 0) carCollider = cw.addBox(b);
+    else cw.setBox(carCollider, b);
 }
 
 void Facility::buildShell(MeshBuilder& b, MeshBuilder& glass, CollisionWorld& cw) {
@@ -713,7 +722,7 @@ void Facility::update(float dt, SecuritySystem& sec, float hour, CollisionWorld&
             cw.setEnabled(d.collider, true);
         }
     }
-    gate.target = sec.gateShouldBeOpen(hour) ? 1.0f : 0.0f;
+    gate.target = sec.gateShouldBeOpen(hour) || gateRemote ? 1.0f : 0.0f;
     gate.update(dt);
     float open = gate.eased() * (kGateHalfWidth * 2.0f);
     cw.setBox(gateCollider_, AABB({-kGateHalfWidth + open, 0.0f, kSouthEdge - 0.3f}, {kGateHalfWidth + open, 2.2f, kSouthEdge + 0.3f}));
@@ -733,7 +742,7 @@ void Facility::draw(Renderer& r, Pass pass, float night, float time) const {
     r.setDoubleSided(true);
     r.draw(gatePanel_, mat4::translate({-kGateHalfWidth - 0.1f + open, 0.0f, kSouthEdge - 0.25f}), vec4(vec3(blink), 1.0f));
     r.setDoubleSided(false);
-    r.draw(car_, playerCar);
+    if (drawCar) r.draw(car_, playerCar);
 }
 
 void Facility::appendLights(std::vector<PointLight>& out, float night) const {
