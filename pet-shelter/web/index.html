@@ -188,6 +188,11 @@
 
   if (isTouch) { $('helpDesktop').hidden = true; $('helpTouch').hidden = false; }
 
+  // iPhones and iPads have no mouse capture (Pointer Lock). The windowing layer calls these
+  // functions every frame, so give them harmless stand-ins where the browser lacks them.
+  if (typeof document.exitPointerLock !== 'function') document.exitPointerLock = function () {};
+  if (typeof Element.prototype.requestPointerLock !== 'function') Element.prototype.requestPointerLock = function () {};
+
   // ---- Start the game ----
   const probe = document.createElement('canvas').getContext('webgl2');
   if (!probe) {

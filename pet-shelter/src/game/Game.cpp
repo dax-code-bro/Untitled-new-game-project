@@ -148,6 +148,7 @@ bool Game::init(int argc, char** argv) {
         st.GrabMinSize = 22.0f;
         ImGui::GetIO().FontGlobalScale = 1.1f;
         ImGui::GetIO().ConfigInputTrickleEventQueue = true;
+        ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;   // no mouse cursor on phones
         creative_.touchUI = true;
         creatorUI_.touchUI = true;
         computer_.compact = true;
