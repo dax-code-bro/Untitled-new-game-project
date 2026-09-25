@@ -611,4 +611,359 @@ inline void buildGlow(gfx::Mesh& out){
   b.finish(out);
 }
 
+
+// ============================================================================
+//  QUADRUPED — our own rig, built from scratch.
+//  One 20-joint skeleton drives every land animal; each species is a different
+//  set of proportions and a different mesh skinned to the same bones.
+// ============================================================================
+enum QJoint : int {
+  Q_ROOT = 0,        // hips
+  Q_CHEST, Q_NECK, Q_HEAD, Q_EAR_L, Q_EAR_R,
+  Q_TAIL1, Q_TAIL2,
+  Q_FL_HIP, Q_FL_KNEE, Q_FL_FOOT,
+  Q_FR_HIP, Q_FR_KNEE, Q_FR_FOOT,
+  Q_BL_HIP, Q_BL_KNEE, Q_BL_FOOT,
+  Q_BR_HIP, Q_BR_KNEE, Q_BR_FOOT,
+  QJOINT_COUNT
+};
+
+// Canonical animal: roughly deer-sized, body running along +Z (forward).
+// Species scale this whole rig; the mesh is built to match.
+inline const JointDef* quadJointDefs(){
+  static const JointDef d[QJOINT_COUNT] = {
+    /* ROOT    */ { -1,        { 0.00f, 0.72f, -0.26f } },
+    /* CHEST   */ { Q_ROOT,    { 0.00f, 0.02f,  0.52f } },
+    /* NECK    */ { Q_CHEST,   { 0.00f, 0.15f,  0.24f } },
+    /* HEAD    */ { Q_NECK,    { 0.00f, 0.12f,  0.20f } },
+    /* EAR_L   */ { Q_HEAD,    { 0.07f, 0.09f,  0.01f } },
+    /* EAR_R   */ { Q_HEAD,    {-0.07f, 0.09f,  0.01f } },
+    /* TAIL1   */ { Q_ROOT,    { 0.00f, 0.09f, -0.21f } },
+    /* TAIL2   */ { Q_TAIL1,   { 0.00f,-0.03f, -0.17f } },
+    /* FL_HIP  */ { Q_CHEST,   { 0.13f,-0.09f,  0.09f } },
+    /* FL_KNEE */ { Q_FL_HIP,  { 0.00f,-0.27f,  0.00f } },
+    /* FL_FOOT */ { Q_FL_KNEE, { 0.00f,-0.25f,  0.00f } },
+    /* FR_HIP  */ { Q_CHEST,   {-0.13f,-0.09f,  0.09f } },
+    /* FR_KNEE */ { Q_FR_HIP,  { 0.00f,-0.27f,  0.00f } },
+    /* FR_FOOT */ { Q_FR_KNEE, { 0.00f,-0.25f,  0.00f } },
+    /* BL_HIP  */ { Q_ROOT,    { 0.14f,-0.05f, -0.03f } },
+    /* BL_KNEE */ { Q_BL_HIP,  { 0.00f,-0.29f,  0.00f } },
+    /* BL_FOOT */ { Q_BL_KNEE, { 0.00f,-0.27f,  0.00f } },
+    /* BR_HIP  */ { Q_ROOT,    {-0.14f,-0.05f, -0.03f } },
+    /* BR_KNEE */ { Q_BR_HIP,  { 0.00f,-0.29f,  0.00f } },
+    /* BR_FOOT */ { Q_BR_KNEE, { 0.00f,-0.27f,  0.00f } }
+  };
+  return d;
+}
+inline v3 quadRestWorld(int j){
+  const JointDef* d = quadJointDefs();
+  v3 p{0,0,0};
+  while(j >= 0){ p += d[j].offset; j = d[j].parent; }
+  return p;
+}
+
+enum HeadGear : int { HG_NONE = 0, HG_ANTLERS, HG_HORNS, HG_TUSKS };
+enum TailKind : int { TK_STUB = 0, TK_BUSHY, TK_LONG, TK_FLAG };
+
+struct QuadSpec {
+  const char* name;
+  float scale;             // overall size multiplier
+  float bodyLen, bodyR;    // torso length / radius
+  float chestR, rumpR;     // girth at shoulder / hip
+  float neckR, headLen, headR, snoutLen;
+  float legThick;
+  float earLen, earWide;
+  int   headGear, tail;
+  v3    coat, belly, face, horn;
+  float rough;
+};
+
+// Torso + neck + head + four legs, each part tagged with its joint.
+inline void buildQuadruped(gfx::Mesh& out, const QuadSpec& S){
+  Builder b;
+  b.mat(S.rough, 0.0f);
+  auto at = [&](int j){ return quadRestWorld(j); };
+
+  // ---- torso: a barrel from rump to chest, plus a belly slab
+  {
+    b.joint = Q_ROOT;
+    v3 rump = at(Q_ROOT);
+    b.sphere(rump + v3{0, 0.01f, 0.04f}, S.rumpR, 6, 9, S.coat,
+             {1.0f, 0.92f, 1.22f});
+    b.joint = Q_CHEST;
+    v3 ch = at(Q_CHEST);
+    b.sphere(ch + v3{0, 0.0f, -0.06f}, S.chestR, 6, 9, S.coat,
+             {1.0f, 0.96f, 1.30f});
+    // the span between them, so the animal reads as one body not two balls
+    b.joint = Q_ROOT;
+    v3 mid = (rump + ch) * 0.5f;
+    b.sphere(mid, (S.rumpR + S.chestR) * 0.48f, 5, 9, S.coat,
+             {1.02f, 0.94f, S.bodyLen * 1.5f});
+    b.sphere(mid + v3{0, -S.bodyR * 0.42f, 0}, S.bodyR * 0.72f, 4, 8, S.belly,
+             {0.92f, 0.62f, S.bodyLen * 1.45f});
+  }
+
+  // ---- neck and head
+  {
+    b.joint = Q_NECK;
+    v3 nk = at(Q_NECK);
+    b.sphere(nk + v3{0, 0.02f, 0.02f}, S.neckR, 5, 8, S.coat, {0.95f, 1.35f, 0.95f});
+    b.joint = Q_HEAD;
+    v3 hd = at(Q_HEAD);
+    b.sphere(hd, S.headR, 6, 9, S.coat, {0.92f, 0.96f, S.headLen / S.headR});
+    // snout
+    b.sphere(hd + v3{0, -S.headR * 0.22f, S.headLen * 0.82f}, S.headR * 0.58f, 5, 8,
+             S.face, {0.80f, 0.74f, S.snoutLen / (S.headR * 0.58f)});
+    // nose
+    b.mat(0.30f, 0.0f);
+    b.sphere(hd + v3{0, -S.headR * 0.24f, S.headLen * 0.82f + S.snoutLen * 0.52f},
+             S.headR * 0.20f, 4, 6, {0.10f, 0.09f, 0.09f});
+    // eyes
+    b.sphere(hd + v3{ S.headR * 0.62f, S.headR * 0.20f, S.headLen * 0.34f}, S.headR * 0.17f, 4, 6, {0.05f,0.04f,0.04f});
+    b.sphere(hd + v3{-S.headR * 0.62f, S.headR * 0.20f, S.headLen * 0.34f}, S.headR * 0.17f, 4, 6, {0.05f,0.04f,0.04f});
+    b.mat(S.rough, 0.0f);
+    // ears
+    b.joint = Q_EAR_L;
+    b.sphere(at(Q_EAR_L) + v3{0, S.earLen * 0.40f, 0}, S.earLen * 0.5f, 4, 6, S.coat,
+             {S.earWide, 1.0f, 0.42f});
+    b.joint = Q_EAR_R;
+    b.sphere(at(Q_EAR_R) + v3{0, S.earLen * 0.40f, 0}, S.earLen * 0.5f, 4, 6, S.coat,
+             {S.earWide, 1.0f, 0.42f});
+  }
+
+  // ---- head gear
+  if(S.headGear != HG_NONE){
+    b.joint = Q_HEAD;
+    v3 hd = at(Q_HEAD);
+    b.mat(0.62f, 0.0f);
+    if(S.headGear == HG_ANTLERS){
+      for(int side = -1; side <= 1; side += 2){
+        v3 base = hd + v3{ side * S.headR * 0.44f, S.headR * 0.80f, -S.headR * 0.10f };
+        // main beam, swept up and back
+        for(int k = 0; k < 4; k++){
+          float t = k / 4.0f;
+          v3 pnt = base + v3{ side * (0.05f + t * 0.20f), 0.10f + t * 0.34f, -t * 0.16f };
+          b.sphere(pnt, 0.035f - t * 0.012f, 3, 5, S.horn, {1.0f, 1.9f, 1.0f});
+        }
+        // two tines
+        for(int tine = 0; tine < 2; tine++){
+          v3 root = base + v3{ side * (0.08f + tine * 0.10f), 0.18f + tine * 0.16f, -0.06f - tine * 0.05f };
+          for(int k = 0; k < 3; k++){
+            float t = k / 3.0f;
+            b.sphere(root + v3{ side * t * 0.05f, t * 0.17f, t * 0.05f },
+                     0.026f - t * 0.008f, 3, 5, S.horn, {1.0f, 1.7f, 1.0f});
+          }
+        }
+      }
+    } else if(S.headGear == HG_HORNS){
+      for(int side = -1; side <= 1; side += 2){
+        v3 base = hd + v3{ side * S.headR * 0.50f, S.headR * 0.62f, 0.0f };
+        for(int k = 0; k < 5; k++){
+          float t = k / 5.0f;
+          float a = t * 2.4f;
+          b.sphere(base + v3{ side * (0.05f + std::sin(a) * 0.13f),
+                              0.07f + t * 0.16f,
+                             -0.02f - (1.0f - std::cos(a)) * 0.13f },
+                   0.046f - t * 0.020f, 4, 6, S.horn);
+        }
+      }
+    } else if(S.headGear == HG_TUSKS){
+      for(int side = -1; side <= 1; side += 2){
+        v3 base = hd + v3{ side * S.headR * 0.42f, -S.headR * 0.28f, S.headLen * 0.80f };
+        for(int k = 0; k < 3; k++){
+          float t = k / 3.0f;
+          b.sphere(base + v3{ side * t * 0.02f, t * 0.09f, t * 0.04f },
+                   0.024f - t * 0.007f, 3, 5, S.horn);
+        }
+      }
+    }
+    b.mat(S.rough, 0.0f);
+  }
+
+  // ---- tail
+  {
+    b.joint = Q_TAIL1;
+    v3 t1 = at(Q_TAIL1);
+    float tr = S.tail == TK_BUSHY ? S.bodyR * 0.40f : S.bodyR * 0.16f;
+    b.sphere(t1 + v3{0, -0.02f, -0.06f}, tr, 4, 7, S.coat, {1.0f, 1.0f, 1.7f});
+    b.joint = Q_TAIL2;
+    v3 t2 = at(Q_TAIL2);
+    if(S.tail == TK_STUB){
+      b.sphere(t2 + v3{0, 0.02f, -0.02f}, S.bodyR * 0.22f, 4, 6, S.belly);
+    } else if(S.tail == TK_BUSHY){
+      b.sphere(t2 + v3{0, -0.02f, -0.10f}, S.bodyR * 0.46f, 5, 8, S.coat, {1.0f, 1.0f, 1.9f});
+    } else if(S.tail == TK_FLAG){
+      b.sphere(t2 + v3{0, 0.0f, -0.07f}, S.bodyR * 0.30f, 4, 7, S.belly, {1.0f, 1.5f, 1.5f});
+    } else {
+      for(int k = 0; k < 3; k++)
+        b.sphere(t2 + v3{0, -0.01f * k, -0.07f * k}, S.bodyR * (0.15f - k * 0.03f), 3, 6, S.coat);
+    }
+  }
+
+  // ---- four legs
+  {
+    struct LegIds { int hip, knee, foot; };
+    const LegIds legs[4] = {
+      { Q_FL_HIP, Q_FL_KNEE, Q_FL_FOOT }, { Q_FR_HIP, Q_FR_KNEE, Q_FR_FOOT },
+      { Q_BL_HIP, Q_BL_KNEE, Q_BL_FOOT }, { Q_BR_HIP, Q_BR_KNEE, Q_BR_FOOT }
+    };
+    const JointDef* jd = quadJointDefs();
+    for(int i = 0; i < 4; i++){
+      const LegIds& L = legs[i];
+      bool front = i < 2;
+      // segment lengths come straight from the rig, so the mesh can never
+      // drift apart from the bones it is skinned to
+      float upper = -jd[L.knee].offset.y;
+      float lower = -jd[L.foot].offset.y;
+
+      b.joint = L.hip;
+      // haunch: a fuller mass around the hip, blending into the torso
+      b.sphere(at(L.hip) + v3{0, -upper * 0.16f, 0},
+               S.legThick * (front ? 1.9f : 2.5f), 4, 7, S.coat,
+               {0.90f, 1.15f, 1.00f});
+      // upper segment spans hip -> knee, with a little overlap at each end
+      {
+        float r = S.legThick * 1.10f;
+        b.sphere(at(L.hip) + v3{0, -upper * 0.50f, 0}, r, 4, 7, S.coat,
+                 {1.0f, (upper * 0.60f) / r, 1.0f});
+      }
+      // lower segment spans knee -> foot
+      b.joint = L.knee;
+      {
+        float r = S.legThick * 0.82f;
+        b.sphere(at(L.knee) + v3{0, -lower * 0.50f, 0}, r, 4, 7, S.coat,
+                 {1.0f, (lower * 0.58f) / r, 1.0f});
+      }
+      b.joint = L.foot;
+      b.mat(0.35f, 0.0f);
+      b.sphere(at(L.foot) + v3{0, -0.012f, 0.012f}, S.legThick * 1.00f, 4, 6,
+               {0.13f, 0.11f, 0.10f}, {1.0f, 0.70f, 1.30f});
+      b.mat(S.rough, 0.0f);
+    }
+  }
+
+  // bake the species scale into the mesh so the instance matrix stays clean
+  if(S.scale != 1.0f) for(auto& v : b.verts) v.pos = v.pos * S.scale;
+  b.finish(out);
+}
+
+// ---------------------------------------------------------------- our roster
+enum Species : int {
+  SP_DEER = 0, SP_ELK, SP_WOLF, SP_BEAR, SP_BOAR, SP_FOX,
+  SP_RABBIT, SP_BIGHORN, SP_COUNT
+};
+
+inline const QuadSpec* speciesTable(){
+  static const QuadSpec T[SP_COUNT] = {
+    // name        scale bodyLen bodyR chestR rumpR neckR headLen headR snout legT  earL earW  gear        tail      coat                      belly                     face                      horn                      rough
+    { "Deer",      1.00f, 1.00f, 0.20f, 0.21f, 0.22f, 0.11f, 0.17f, 0.11f, 0.11f, 0.040f, 0.10f, 0.55f, HG_ANTLERS, TK_FLAG, {0.55f,0.38f,0.22f}, {0.82f,0.75f,0.64f}, {0.44f,0.31f,0.19f}, {0.72f,0.66f,0.52f}, 0.78f },
+    { "Elk",       1.32f, 1.06f, 0.24f, 0.26f, 0.25f, 0.14f, 0.20f, 0.13f, 0.13f, 0.050f, 0.11f, 0.55f, HG_ANTLERS, TK_STUB, {0.40f,0.29f,0.18f}, {0.66f,0.58f,0.44f}, {0.26f,0.19f,0.13f}, {0.70f,0.63f,0.48f}, 0.80f },
+    { "Wolf",      0.86f, 1.02f, 0.18f, 0.19f, 0.18f, 0.12f, 0.19f, 0.10f, 0.13f, 0.038f, 0.08f, 0.70f, HG_NONE,    TK_BUSHY,{0.44f,0.42f,0.40f}, {0.72f,0.70f,0.66f}, {0.34f,0.32f,0.30f}, {0.60f,0.60f,0.60f}, 0.84f },
+    { "Bear",      1.28f, 0.94f, 0.30f, 0.31f, 0.30f, 0.18f, 0.18f, 0.15f, 0.11f, 0.062f, 0.07f, 0.95f, HG_NONE,    TK_STUB, {0.20f,0.15f,0.12f}, {0.26f,0.20f,0.16f}, {0.30f,0.24f,0.18f}, {0.60f,0.60f,0.60f}, 0.88f },
+    { "Boar",      0.80f, 0.92f, 0.23f, 0.25f, 0.21f, 0.14f, 0.20f, 0.10f, 0.15f, 0.036f, 0.06f, 0.80f, HG_TUSKS,   TK_STUB, {0.28f,0.23f,0.20f}, {0.38f,0.33f,0.29f}, {0.22f,0.18f,0.16f}, {0.84f,0.82f,0.74f}, 0.86f },
+    { "Fox",       0.58f, 1.00f, 0.15f, 0.15f, 0.15f, 0.10f, 0.17f, 0.09f, 0.12f, 0.028f, 0.10f, 0.62f, HG_NONE,    TK_BUSHY,{0.74f,0.36f,0.14f}, {0.92f,0.88f,0.84f}, {0.66f,0.30f,0.12f}, {0.60f,0.60f,0.60f}, 0.80f },
+    { "Rabbit",    0.34f, 0.86f, 0.16f, 0.15f, 0.18f, 0.09f, 0.13f, 0.09f, 0.07f, 0.026f, 0.22f, 0.42f, HG_NONE,    TK_STUB, {0.58f,0.52f,0.46f}, {0.90f,0.88f,0.84f}, {0.50f,0.44f,0.40f}, {0.60f,0.60f,0.60f}, 0.82f },
+    { "Bighorn",   0.94f, 0.96f, 0.22f, 0.23f, 0.22f, 0.13f, 0.17f, 0.11f, 0.10f, 0.044f, 0.07f, 0.60f, HG_HORNS,   TK_STUB, {0.60f,0.52f,0.42f}, {0.86f,0.82f,0.74f}, {0.52f,0.45f,0.36f}, {0.52f,0.46f,0.36f}, 0.84f }
+  };
+  return T;
+}
+
+// ============================================================================
+//  BIRD — small separate build, wings animated by two joints
+// ============================================================================
+enum BJoint : int { B_BODY = 0, B_WING_L, B_WING_R, B_TAIL, BJOINT_COUNT };
+
+inline const JointDef* birdJointDefs(){
+  static const JointDef d[BJOINT_COUNT] = {
+    /* BODY   */ { -1,       { 0.00f, 0.00f,  0.00f } },
+    /* WING_L */ { B_BODY,   { 0.05f, 0.02f,  0.00f } },
+    /* WING_R */ { B_BODY,   {-0.05f, 0.02f,  0.00f } },
+    /* TAIL   */ { B_BODY,   { 0.00f, 0.00f, -0.10f } }
+  };
+  return d;
+}
+
+inline void buildBird(gfx::Mesh& out, const v3& body, const v3& wing){
+  Builder b;
+  b.mat(0.72f, 0.0f);
+  b.joint = B_BODY;
+  b.sphere({0, 0, 0}, 0.085f, 5, 8, body, {0.85f, 0.85f, 1.65f});
+  b.sphere({0, 0.045f, 0.10f}, 0.050f, 4, 6, body);                 // head
+  b.mat(0.35f, 0.0f);
+  b.sphere({0, 0.030f, 0.152f}, 0.020f, 3, 5, {0.85f, 0.62f, 0.15f}, {0.7f,0.7f,1.9f});
+  b.mat(0.72f, 0.0f);
+  b.joint = B_WING_L;
+  b.sphere({0.105f, 0.0f, -0.01f}, 0.070f, 4, 7, wing, {2.15f, 0.22f, 1.20f});
+  b.joint = B_WING_R;
+  b.sphere({-0.105f, 0.0f, -0.01f}, 0.070f, 4, 7, wing, {2.15f, 0.22f, 1.20f});
+  b.joint = B_TAIL;
+  b.sphere({0, 0.005f, -0.075f}, 0.050f, 4, 6, wing, {0.95f, 0.22f, 1.55f});
+  b.finish(out);
+}
+
+// ============================================================================
+//  STREET FURNITURE — more of our own props for the city
+// ============================================================================
+inline void buildBench(gfx::Mesh& out){
+  Builder b;
+  b.mat(0.74f, 0.0f);
+  const v3 wood{0.42f, 0.29f, 0.17f};
+  for(int i = 0; i < 3; i++) b.box({0, 0.45f, -0.18f + i * 0.17f}, {0.85f, 0.028f, 0.070f}, wood);
+  for(int i = 0; i < 3; i++)
+    b.box({0, 0.62f + i * 0.15f, -0.26f}, {0.85f, 0.060f, 0.026f}, wood,
+          quat::axisAngle({1,0,0}, -0.22f));
+  b.mat(0.42f, 0.55f);
+  const v3 iron{0.16f, 0.17f, 0.18f};
+  for(int side = -1; side <= 1; side += 2){
+    b.box({side * 0.74f, 0.22f, 0.0f},  {0.030f, 0.22f, 0.030f}, iron);
+    b.box({side * 0.74f, 0.22f, -0.20f},{0.030f, 0.22f, 0.030f}, iron);
+    b.box({side * 0.74f, 0.44f, -0.09f},{0.034f, 0.026f, 0.24f}, iron);
+    b.box({side * 0.74f, 0.74f, -0.28f},{0.030f, 0.30f, 0.030f}, iron);
+  }
+  b.finish(out);
+}
+
+inline void buildHydrant(gfx::Mesh& out){
+  Builder b;
+  b.mat(0.48f, 0.15f);
+  const v3 red{0.66f, 0.10f, 0.08f};
+  b.cylinder({0, 0.045f, 0}, 0.155f, 0.045f, 10, {0.22f, 0.22f, 0.24f});
+  b.cylinder({0, 0.30f, 0}, 0.105f, 0.26f, 10, red, quat(), 0.098f);
+  b.sphere({0, 0.58f, 0}, 0.105f, 4, 8, red, {1.0f, 0.68f, 1.0f});
+  b.cylinder({0, 0.665f, 0}, 0.030f, 0.030f, 6, red);
+  for(int side = -1; side <= 1; side += 2)
+    b.cylinder({side * 0.115f, 0.36f, 0}, 0.046f, 0.045f, 8, red,
+               quat::axisAngle({0,0,1}, m::PI * 0.5f));
+  b.cylinder({0, 0.36f, 0.115f}, 0.046f, 0.045f, 8, red, quat::axisAngle({1,0,0}, m::PI * 0.5f));
+  b.finish(out);
+}
+
+inline void buildBin(gfx::Mesh& out){
+  Builder b;
+  b.mat(0.66f, 0.25f);
+  b.cylinder({0, 0.40f, 0}, 0.24f, 0.40f, 12, {0.20f, 0.26f, 0.22f}, quat(), 0.27f);
+  b.mat(0.44f, 0.5f);
+  b.cylinder({0, 0.83f, 0}, 0.285f, 0.035f, 12, {0.14f, 0.16f, 0.15f});
+  b.cylinder({0, 0.88f, 0}, 0.20f, 0.030f, 10, {0.10f, 0.11f, 0.11f});
+  b.finish(out);
+}
+
+inline void buildBusStop(gfx::Mesh& out){
+  Builder b;
+  b.mat(0.40f, 0.6f);
+  const v3 frame{0.22f, 0.24f, 0.27f};
+  for(int side = -1; side <= 1; side += 2){
+    b.box({side * 1.30f, 1.20f, -0.55f}, {0.045f, 1.20f, 0.045f}, frame);
+    b.box({side * 1.30f, 1.20f,  0.55f}, {0.045f, 1.20f, 0.045f}, frame);
+  }
+  b.box({0, 2.44f, 0}, {1.40f, 0.045f, 0.68f}, frame);
+  b.mat(0.08f, 0.30f);
+  b.box({0, 1.30f, -0.58f}, {1.26f, 0.95f, 0.012f}, {0.20f, 0.30f, 0.36f});
+  b.mat(0.60f, 0.0f);
+  b.box({0, 0.52f, -0.34f}, {1.10f, 0.035f, 0.18f}, {0.34f, 0.30f, 0.26f});
+  b.mat(0.30f, 0.1f);
+  b.box({1.30f, 1.85f, 0.58f}, {0.42f, 0.55f, 0.020f}, {1.6f, 1.4f, 0.7f});
+  b.finish(out);
+}
+
 } // namespace models

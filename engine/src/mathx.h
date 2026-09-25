@@ -266,6 +266,12 @@ struct Rng {
   int   irange(int a, int b)   { return a + (int)(next() % (uint32_t)(b - a + 1)); }
 };
 
+// quick global jitter helper for gameplay code
+inline float rr_(float a, float b){
+  static Rng g(1234567u);
+  return a + g.f() * (b - a);
+}
+
 inline float hash2(int x, int y){
   uint32_t h = (uint32_t)(x * 374761393) + (uint32_t)(y * 668265263);
   h = (h ^ (h >> 13)) * 1274126177u;

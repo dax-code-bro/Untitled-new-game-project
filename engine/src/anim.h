@@ -17,6 +17,9 @@ using m::quat;
 using m::m4;
 using models::JOINT_COUNT;
 
+// The largest rig the engine supports. Must match uJoints[] in the shaders.
+constexpr int MAX_JOINTS = 24;
+
 // ---------------------------------------------------------------- clips
 struct Key { float t; quat rot; };
 
@@ -40,7 +43,7 @@ struct Track {
 };
 
 struct Clip {
-  Track  tracks[JOINT_COUNT];
+  Track  tracks[MAX_JOINTS];
   float  duration = 1.0f;
   bool   loop = true;
   // root motion overlay
@@ -284,7 +287,7 @@ inline Library& library(){
 
 // ---------------------------------------------------------------- pose / skeleton
 struct Pose {
-  quat local[JOINT_COUNT];
+  quat local[MAX_JOINTS];
   v3   rootOffset{0,0,0};
   quat rootRot;
 };
@@ -292,43 +295,57 @@ struct Pose {
 // Precomputed inverse-bind matrices (rest pose has no rotations, so the bind
 // matrix is a pure translation and its inverse is just the negated offset).
 struct Skeleton {
-  m4 invBind[JOINT_COUNT];
+  const models::JointDef* defs = nullptr;
+  int  count = 0;
+  m4   invBind[MAX_JOINTS];
   bool ready = false;
 
-  void init(){
+  // The rest pose has no rotations, so each bind matrix is a pure translation
+  // and its inverse is just the negated world-space rest position.
+  void init(const models::JointDef* d, int n){
     if(ready) return;
     ready = true;
-    for(int j = 0; j < JOINT_COUNT; j++){
-      invBind[j] = m4::translate(-models::jointRestWorld(j));
+    defs = d; count = n < MAX_JOINTS ? n : MAX_JOINTS;
+    for(int j = 0; j < count; j++){
+      v3 p{0,0,0};
+      int k = j;
+      while(k >= 0){ p += defs[k].offset; k = defs[k].parent; }
+      invBind[j] = m4::translate(-p);
     }
   }
 
   // Walk the hierarchy and produce the matrices the vertex shader consumes.
   void skin(const Pose& p, m4* out) const {
-    const models::JointDef* jd = models::jointDefs();
-    m4 world[JOINT_COUNT];
-    for(int j = 0; j < JOINT_COUNT; j++){
-      m4 localM = m4::trs(jd[j].offset, p.local[j], v3(1,1,1));
-      int par = jd[j].parent;
+    m4 world[MAX_JOINTS];
+    for(int j = 0; j < count; j++){
+      m4 localM = m4::trs(defs[j].offset, p.local[j], v3(1,1,1));
+      int par = defs[j].parent;
       world[j] = (par < 0) ? localM : world[par] * localM;
     }
     // root overlay (bob / lean / sway) applied above everything
     m4 rootM = m4::trs(p.rootOffset, p.rootRot, v3(1,1,1));
-    for(int j = 0; j < JOINT_COUNT; j++){
+    for(int j = 0; j < count; j++){
       out[j] = rootM * world[j] * invBind[j];
     }
+    for(int j = count; j < MAX_JOINTS; j++) out[j] = m4::identity();
   }
 };
 
 inline Skeleton& skeleton(){
   static Skeleton S;
-  S.init();
+  S.init(models::jointDefs(), models::JOINT_COUNT);
+  return S;
+}
+inline Skeleton& quadSkeleton(){
+  static Skeleton S;
+  S.init(models::quadJointDefs(), models::QJOINT_COUNT);
   return S;
 }
 
 // ---------------------------------------------------------------- animator
 // Plays one clip while fading out the previous one — no popping between states.
 struct Animator {
+  const Clip* bank = nullptr;      // null -> humanoid library
   int   cur = CLIP_IDLE, prev = CLIP_IDLE;
   float curTime = 0.0f, prevTime = 0.0f;
   float blend = 1.0f, blendRate = 6.0f;
@@ -342,20 +359,22 @@ struct Animator {
     blendRate = fade > 1e-3f ? 1.0f / fade : 1000.0f;
   }
 
+  const Clip* clips() const { return bank ? bank : library().clips; }
+
   void update(float dt){
-    const Library& L = library();
+    const Clip* C = clips();
     curTime  += dt * speedScale;
     prevTime += dt * speedScale;
-    float dc = L.clips[cur].duration;
-    if(dc > 1e-4f && L.clips[cur].loop) curTime = std::fmod(curTime, dc);
-    float dp = L.clips[prev].duration;
-    if(dp > 1e-4f && L.clips[prev].loop) prevTime = std::fmod(prevTime, dp);
+    float dc = C[cur].duration;
+    if(dc > 1e-4f && C[cur].loop) curTime = std::fmod(curTime, dc);
+    float dp = C[prev].duration;
+    if(dp > 1e-4f && C[prev].loop) prevTime = std::fmod(prevTime, dp);
     if(blend < 1.0f) blend = m::clampf(blend + dt * blendRate, 0.0f, 1.0f);
   }
 
   static void samplePose(const Clip& c, float time, Pose& out){
     float ph = c.duration > 1e-4f ? m::clampf(time / c.duration, 0.0f, 1.0f) : 0.0f;
-    for(int j = 0; j < JOINT_COUNT; j++) out.local[j] = c.tracks[j].sample(ph);
+    for(int j = 0; j < MAX_JOINTS; j++) out.local[j] = c.tracks[j].sample(ph);
     float bob = std::sin(ph * m::TAU * c.bobFreq) * c.bobAmp;
     out.rootOffset = { 0.0f, -std::fabs(bob), 0.0f };
     float sway = std::sin(ph * m::TAU) * c.swayZ;
@@ -363,13 +382,13 @@ struct Animator {
   }
 
   void evaluate(Pose& out) const {
-    const Library& L = library();
+    const Clip* C = clips();
     Pose a, b;
-    samplePose(L.clips[cur], curTime, a);
+    samplePose(C[cur], curTime, a);
     if(blend >= 0.999f){ out = a; return; }
-    samplePose(L.clips[prev], prevTime, b);
+    samplePose(C[prev], prevTime, b);
     float t = m::smoothstepf(blend);
-    for(int j = 0; j < JOINT_COUNT; j++) out.local[j] = m::slerp(b.local[j], a.local[j], t);
+    for(int j = 0; j < MAX_JOINTS; j++) out.local[j] = m::slerp(b.local[j], a.local[j], t);
     out.rootOffset = m::lerp(b.rootOffset, a.rootOffset, t);
     out.rootRot    = m::slerp(b.rootRot, a.rootRot, t);
   }
@@ -390,5 +409,227 @@ struct Animator {
     }
   }
 };
+
+
+// ---------------------------------------------------------------- quadruped
+// Gaits authored as a 4-sample cycle per limb, then phase-shifted per leg so
+// the footfall sequence is correct for each gait.
+enum QClipId { QCLIP_IDLE = 0, QCLIP_WALK, QCLIP_TROT, QCLIP_GALLOP,
+               QCLIP_ALERT, QCLIP_GRAZE, QCLIP_COUNT };
+
+inline float sampleCycle(const float* vals, int n, float ph){
+  ph = ph - std::floor(ph);
+  float f = ph * n;
+  int i0 = ((int)f) % n;
+  int i1 = (i0 + 1) % n;
+  float t = f - std::floor(f);
+  return m::lerpf(vals[i0], vals[i1], t);
+}
+inline void addCycle(Track& tr, const float* vals, int n, float phase){
+  for(int k = 0; k <= 4; k++){
+    float t = k / 4.0f;
+    tr.add(t, pitch(sampleCycle(vals, n, t + phase)));
+  }
+}
+
+struct QuadLibrary {
+  Clip clips[QCLIP_COUNT];
+  bool built = false;
+
+  // hip/knee curves are shared; only amplitude, timing and phase change
+  void gait(Clip& c, float dur, const float* hip, const float* knee,
+            const float* phases, float bob, float pitchAmp){
+    c.duration = dur; c.loop = true;
+    c.bobAmp = bob; c.bobFreq = 2.0f;
+
+    const int HIP[4]  = { models::Q_FL_HIP,  models::Q_FR_HIP,
+                          models::Q_BL_HIP,  models::Q_BR_HIP };
+    const int KNEE[4] = { models::Q_FL_KNEE, models::Q_FR_KNEE,
+                          models::Q_BL_KNEE, models::Q_BR_KNEE };
+    const int FOOT[4] = { models::Q_FL_FOOT, models::Q_FR_FOOT,
+                          models::Q_BL_FOOT, models::Q_BR_FOOT };
+    static const float FOOTC[4] = { -6.0f, 10.0f, 16.0f, -2.0f };
+
+    for(int i = 0; i < 4; i++){
+      addCycle(c.tracks[HIP[i]],  hip,   4, phases[i]);
+      addCycle(c.tracks[KNEE[i]], knee,  4, phases[i]);
+      addCycle(c.tracks[FOOT[i]], FOOTC, 4, phases[i]);
+    }
+    // spine flexes twice per stride, out of phase with the bob
+    c.tracks[models::Q_CHEST].add(0.00f, pitch(-pitchAmp));
+    c.tracks[models::Q_CHEST].add(0.25f, pitch( pitchAmp));
+    c.tracks[models::Q_CHEST].add(0.50f, pitch(-pitchAmp));
+    c.tracks[models::Q_CHEST].add(0.75f, pitch( pitchAmp));
+    c.tracks[models::Q_CHEST].add(1.00f, pitch(-pitchAmp));
+    // head counter-nods so it stays roughly level
+    c.tracks[models::Q_NECK].add(0.00f, pitch(pitchAmp * 0.8f));
+    c.tracks[models::Q_NECK].add(0.50f, pitch(-pitchAmp * 0.8f));
+    c.tracks[models::Q_NECK].add(1.00f, pitch(pitchAmp * 0.8f));
+    // tail swings with the stride
+    c.tracks[models::Q_TAIL1].add(0.00f, roll(-5.0f));
+    c.tracks[models::Q_TAIL1].add(0.50f, roll( 5.0f));
+    c.tracks[models::Q_TAIL1].add(1.00f, roll(-5.0f));
+  }
+
+  void build(){
+    if(built) return;
+    built = true;
+
+    // ---------------- IDLE: breathing, ear flick, slow tail
+    {
+      Clip& c = clips[QCLIP_IDLE];
+      c.duration = 4.2f; c.loop = true;
+      c.bobAmp = 0.006f; c.bobFreq = 1.0f;
+      c.tracks[models::Q_CHEST].add(0.0f, pitch(-0.8f));
+      c.tracks[models::Q_CHEST].add(0.5f, pitch( 0.8f));
+      c.tracks[models::Q_CHEST].add(1.0f, pitch(-0.8f));
+      c.tracks[models::Q_NECK].add(0.0f, pitch(2.0f));
+      c.tracks[models::Q_NECK].add(0.5f, pitch(-1.0f));
+      c.tracks[models::Q_NECK].add(1.0f, pitch(2.0f));
+      c.tracks[models::Q_HEAD].add(0.00f, yaw(-5.0f));
+      c.tracks[models::Q_HEAD].add(0.35f, yaw( 6.0f));
+      c.tracks[models::Q_HEAD].add(0.70f, yaw(-2.0f));
+      c.tracks[models::Q_HEAD].add(1.00f, yaw(-5.0f));
+      c.tracks[models::Q_EAR_L].add(0.00f, pitch(0.0f));
+      c.tracks[models::Q_EAR_L].add(0.18f, pitch(-26.0f));
+      c.tracks[models::Q_EAR_L].add(0.32f, pitch(0.0f));
+      c.tracks[models::Q_EAR_L].add(1.00f, pitch(0.0f));
+      c.tracks[models::Q_EAR_R].add(0.00f, pitch(0.0f));
+      c.tracks[models::Q_EAR_R].add(0.55f, pitch(0.0f));
+      c.tracks[models::Q_EAR_R].add(0.68f, pitch(-22.0f));
+      c.tracks[models::Q_EAR_R].add(0.82f, pitch(0.0f));
+      c.tracks[models::Q_EAR_R].add(1.00f, pitch(0.0f));
+      c.tracks[models::Q_TAIL1].add(0.00f, roll(-7.0f));
+      c.tracks[models::Q_TAIL1].add(0.50f, roll( 7.0f));
+      c.tracks[models::Q_TAIL1].add(1.00f, roll(-7.0f));
+      c.tracks[models::Q_TAIL2].add(0.00f, roll( 5.0f));
+      c.tracks[models::Q_TAIL2].add(0.50f, roll(-5.0f));
+      c.tracks[models::Q_TAIL2].add(1.00f, roll( 5.0f));
+    }
+
+    // ---------------- WALK: 4-beat lateral sequence  FL, BR, FR, BL
+    {
+      static const float hip[4]  = {  26.0f,   4.0f, -20.0f,  -3.0f };
+      static const float knee[4] = {  -9.0f, -32.0f, -13.0f, -42.0f };
+      static const float ph[4]   = { 0.00f, 0.50f, 0.75f, 0.25f };   // FL FR BL BR
+      gait(clips[QCLIP_WALK], 1.15f, hip, knee, ph, 0.016f, 1.6f);
+    }
+
+    // ---------------- TROT: diagonal pairs  FL+BR, FR+BL
+    {
+      static const float hip[4]  = {  33.0f,   3.0f, -27.0f,  -2.0f };
+      static const float knee[4] = { -11.0f, -42.0f, -15.0f, -52.0f };
+      static const float ph[4]   = { 0.00f, 0.50f, 0.50f, 0.00f };
+      gait(clips[QCLIP_TROT], 0.70f, hip, knee, ph, 0.040f, 2.6f);
+    }
+
+    // ---------------- GALLOP: rotary, both hind legs lead
+    {
+      static const float hip[4]  = {  46.0f, -12.0f, -33.0f,  16.0f };
+      static const float knee[4] = { -18.0f, -66.0f, -22.0f, -74.0f };
+      static const float ph[4]   = { 0.50f, 0.62f, 0.00f, 0.12f };
+      gait(clips[QCLIP_GALLOP], 0.50f, hip, knee, ph, 0.085f, 6.5f);
+    }
+
+    // ---------------- ALERT: frozen, head up, ears forward
+    {
+      Clip& c = clips[QCLIP_ALERT];
+      c.duration = 2.4f; c.loop = true;
+      c.bobAmp = 0.003f; c.bobFreq = 1.0f;
+      c.tracks[models::Q_NECK].add(0.0f, pitch(-30.0f));
+      c.tracks[models::Q_HEAD].add(0.00f, pitch(24.0f) * yaw(-7.0f));
+      c.tracks[models::Q_HEAD].add(0.50f, pitch(24.0f) * yaw( 7.0f));
+      c.tracks[models::Q_HEAD].add(1.00f, pitch(24.0f) * yaw(-7.0f));
+      c.tracks[models::Q_EAR_L].add(0.0f, pitch(20.0f));
+      c.tracks[models::Q_EAR_R].add(0.0f, pitch(20.0f));
+      c.tracks[models::Q_TAIL1].add(0.0f, pitch(-22.0f));
+    }
+
+    // ---------------- GRAZE: head down to the grass
+    {
+      Clip& c = clips[QCLIP_GRAZE];
+      c.duration = 3.6f; c.loop = true;
+      c.bobAmp = 0.004f; c.bobFreq = 1.0f;
+      c.tracks[models::Q_NECK].add(0.0f, pitch(52.0f));
+      c.tracks[models::Q_HEAD].add(0.00f, pitch(30.0f));
+      c.tracks[models::Q_HEAD].add(0.22f, pitch(36.0f));
+      c.tracks[models::Q_HEAD].add(0.44f, pitch(29.0f));
+      c.tracks[models::Q_HEAD].add(1.00f, pitch(30.0f));
+      c.tracks[models::Q_TAIL1].add(0.00f, roll(-9.0f));
+      c.tracks[models::Q_TAIL1].add(0.50f, roll( 9.0f));
+      c.tracks[models::Q_TAIL1].add(1.00f, roll(-9.0f));
+    }
+  }
+};
+
+inline QuadLibrary& quadLibrary(){
+  static QuadLibrary L;
+  L.build();
+  return L;
+}
+
+// Pick and time a gait from ground speed, in body-lengths per second.
+inline void driveQuad(Animator& a, float speed, bool spooked, bool grazing){
+  a.bank = quadLibrary().clips;
+  if(speed < 0.25f){
+    if(spooked)      { a.play(QCLIP_ALERT, 0.18f); a.speedScale = 1.0f; }
+    else if(grazing) { a.play(QCLIP_GRAZE, 0.35f); a.speedScale = 1.0f; }
+    else             { a.play(QCLIP_IDLE,  0.30f); a.speedScale = 1.0f; }
+    return;
+  }
+  if(speed < 1.9f){
+    a.play(QCLIP_WALK, 0.20f);
+    a.speedScale = m::clampf(speed / 1.1f, 0.5f, 1.8f);
+  } else if(speed < 5.0f){
+    a.play(QCLIP_TROT, 0.18f);
+    a.speedScale = m::clampf(speed / 3.2f, 0.7f, 1.7f);
+  } else {
+    a.play(QCLIP_GALLOP, 0.16f);
+    a.speedScale = m::clampf(speed / 8.0f, 0.75f, 1.8f);
+  }
+}
+
+// ---------------------------------------------------------------- bird
+enum BClipId { BCLIP_FLAP = 0, BCLIP_GLIDE, BCLIP_COUNT };
+
+struct BirdLibrary {
+  Clip clips[BCLIP_COUNT];
+  bool built = false;
+  void build(){
+    if(built) return;
+    built = true;
+    {
+      Clip& c = clips[BCLIP_FLAP];
+      c.duration = 0.36f; c.loop = true;
+      c.bobAmp = 0.030f; c.bobFreq = 1.0f;
+      c.tracks[models::B_WING_L].add(0.00f, roll( 42.0f));
+      c.tracks[models::B_WING_L].add(0.50f, roll(-34.0f));
+      c.tracks[models::B_WING_L].add(1.00f, roll( 42.0f));
+      c.tracks[models::B_WING_R].add(0.00f, roll(-42.0f));
+      c.tracks[models::B_WING_R].add(0.50f, roll( 34.0f));
+      c.tracks[models::B_WING_R].add(1.00f, roll(-42.0f));
+      c.tracks[models::B_TAIL].add(0.00f, pitch( 6.0f));
+      c.tracks[models::B_TAIL].add(0.50f, pitch(-6.0f));
+      c.tracks[models::B_TAIL].add(1.00f, pitch( 6.0f));
+    }
+    {
+      Clip& c = clips[BCLIP_GLIDE];
+      c.duration = 2.4f; c.loop = true;
+      c.tracks[models::B_WING_L].add(0.00f, roll( 8.0f));
+      c.tracks[models::B_WING_L].add(0.50f, roll( 2.0f));
+      c.tracks[models::B_WING_L].add(1.00f, roll( 8.0f));
+      c.tracks[models::B_WING_R].add(0.00f, roll(-8.0f));
+      c.tracks[models::B_WING_R].add(0.50f, roll(-2.0f));
+      c.tracks[models::B_WING_R].add(1.00f, roll(-8.0f));
+    }
+  }
+};
+inline BirdLibrary& birdLibrary(){ static BirdLibrary L; L.build(); return L; }
+
+inline Skeleton& birdSkeleton(){
+  static Skeleton S;
+  S.init(models::birdJointDefs(), models::BJOINT_COUNT);
+  return S;
+}
 
 } // namespace anim

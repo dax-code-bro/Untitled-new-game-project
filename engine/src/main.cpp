@@ -56,6 +56,8 @@ static Mesh meshChar;
 static Mesh meshCarBody[7], meshCarPolice, meshWheel;
 static Mesh meshTower[2], meshHouse[2], meshShop, meshApt[2];
 static Mesh meshTree[3], meshRock[3], meshLamp, meshTLight;
+static Mesh meshAnimal[models::SP_COUNT], meshBird;
+static Mesh meshBench, meshHydrant, meshBin, meshBusStop;
 static Mesh meshRoads, meshWater;
 static Mesh meshFarTerrain;      // coarse full-map ground, fills every gap
 static Mesh meshUnit;                       // 1x1x1 box, generic filler
@@ -74,6 +76,7 @@ static int  gDbgTint = 0;   // 1 = colour-code ground sources
 static int  gDbgMode = 0;   // shader debug visualisation
 static bool gShowShadowMap = false;
 static int  gDbgShadowIdx = 0;
+static bool gFreezeAnimals = false;
 
 // ============================================================================
 //  Time / sun
@@ -172,8 +175,28 @@ struct Ped {
   float yellT = 0.0f;
 };
 
+// Wild animals. One shared rig, eight species, real gaits.
+struct Animal {
+  v3    pos{0,0,0};
+  float heading = 0.0f;
+  float speed = 0.0f;
+  float wanderT = 0.0f, fleeT = 0.0f, graze = 0.0f;
+  int   species = 0;
+  bool  grazing = false, spooked = false;
+  anim::Animator animator;
+};
+struct Bird {
+  v3    pos{0,0,0};
+  float heading = 0.0f, radius = 40.0f, angle = 0.0f, height = 0.0f, flap = 1.0f;
+  anim::Animator animator;
+};
+struct Furn { float x, z, y, rot; int kind; };
+
 static std::vector<Vehicle> gCars;
 static std::vector<Ped>     gPeds;
+static std::vector<Animal>  gAnimals;
+static std::vector<Bird>    gBirds;
+static std::vector<Furn>    gFurn;
 
 struct Player {
   v3    pos{0, 0, 0};
@@ -522,6 +545,22 @@ static void buildAllMeshes(){
   models::buildLamppost(meshLamp);   makeUnitInstanced(meshLamp, 600);
   models::buildTrafficLight(meshTLight); makeUnitInstanced(meshTLight, 300);
 
+  // our own animals: one mesh per species, all on the same 20-joint rig
+  {
+    const models::QuadSpec* T = models::speciesTable();
+    for(int i = 0; i < models::SP_COUNT; i++){
+      models::buildQuadruped(meshAnimal[i], T[i]);
+      makeUnitInstanced(meshAnimal[i], 1);
+    }
+  }
+  models::buildBird(meshBird, {0.22f, 0.20f, 0.19f}, {0.30f, 0.28f, 0.26f});
+  makeUnitInstanced(meshBird, 1);
+
+  models::buildBench(meshBench);     makeUnitInstanced(meshBench, 400);
+  models::buildHydrant(meshHydrant); makeUnitInstanced(meshHydrant, 400);
+  models::buildBin(meshBin);         makeUnitInstanced(meshBin, 400);
+  models::buildBusStop(meshBusStop); makeUnitInstanced(meshBusStop, 200);
+
   { models::Builder b; b.mat(0.6f, 0.0f); b.box({0,0.5f,0}, {0.5f,0.5f,0.5f}, {1,1,1}); b.finish(meshUnit); }
   makeUnitInstanced(meshUnit, 64);
 
@@ -650,6 +689,29 @@ static void gatherScene(const SunState& sun){
     for(int i = 0; i < 3; i++) pushDraw(&meshRock[i], std::move(rock[i]), false, true);
   }
 
+  // ---------------- street furniture
+  {
+    std::vector<Mesh::Instance> bench, hyd, bin, stop;
+    for(const auto& f : gFurn){
+      float dx = f.x - focus.x, dz = f.z - focus.z;
+      if(dx*dx + dz*dz > 420.0f * 420.0f) continue;
+      if(!cam.frustum.sphereVisible(v3{f.x, f.y + 1.0f, f.z}, 3.4f)) continue;
+      Mesh::Instance in;
+      in.xform = m4::trs({f.x, f.y, f.z}, quat::axisAngle({0,1,0}, f.rot), v3(1.0f));
+      in.tint  = v3{1, 1, 1};
+      switch(f.kind){
+        case 0: bench.push_back(in); break;
+        case 1: hyd.push_back(in);   break;
+        case 2: bin.push_back(in);   break;
+        default: stop.push_back(in); break;
+      }
+    }
+    pushDraw(&meshBench,   std::move(bench), false, true);
+    pushDraw(&meshHydrant, std::move(hyd),   false, true);
+    pushDraw(&meshBin,     std::move(bin),   false, true);
+    pushDraw(&meshBusStop, std::move(stop),  false, true);
+  }
+
   // ---------------- street lights + traffic lights
   {
     std::vector<Mesh::Instance> lamps, tls;
@@ -732,7 +794,7 @@ static void gatherScene(const SunState& sun){
 }
 
 // Characters are drawn one at a time: each needs its own uJoints[] upload.
-struct SkinnedDraw { m4 xform; v3 tint; m4 joints[models::JOINT_COUNT]; };
+struct SkinnedDraw { Mesh* mesh; m4 xform; v3 tint; m4 joints[anim::MAX_JOINTS]; };
 static std::vector<SkinnedDraw> gSkinned;
 
 static void gatherSkinned(){
@@ -743,6 +805,7 @@ static void gatherSkinned(){
   // the player, unless they're inside a car
   if(!P.inCar){
     SkinnedDraw d;
+    d.mesh  = &meshChar;
     d.xform = m4::trs(P.pos, quat::axisAngle({0,1,0}, P.heading), v3(1.0f));
     d.tint  = v3{1, 1, 1};
     anim::Pose pose;
@@ -757,11 +820,45 @@ static void gatherSkinned(){
     if(!cam.frustum.sphereVisible(p.pos + v3{0, 1.0f, 0}, 1.6f)) continue;
     if(gSkinned.size() >= 48) break;
     SkinnedDraw d;
+    d.mesh  = &meshChar;
     d.xform = m4::trs(p.pos, quat::axisAngle({0,1,0}, p.heading), v3(1.0f));
     d.tint  = v3{1, 1, 1};
     anim::Pose pose;
     p.animator.evaluate(pose);
     sk.skin(pose, d.joints);
+    gSkinned.push_back(d);
+  }
+
+  // ---- animals
+  anim::Skeleton& qs = anim::quadSkeleton();
+  for(const auto& a : gAnimals){
+    float dx = a.pos.x - focus.x, dz = a.pos.z - focus.z;
+    if(dx*dx + dz*dz > 380.0f * 380.0f) continue;
+    if(!cam.frustum.sphereVisible(a.pos + v3{0, 0.9f, 0}, 2.6f)) continue;
+    if(gSkinned.size() >= 72) break;
+    SkinnedDraw d;
+    d.mesh  = &meshAnimal[a.species % models::SP_COUNT];
+    d.xform = m4::trs(a.pos, quat::axisAngle({0,1,0}, a.heading), v3(1.0f));
+    d.tint  = v3{1, 1, 1};
+    anim::Pose pose;
+    a.animator.evaluate(pose);
+    qs.skin(pose, d.joints);
+    gSkinned.push_back(d);
+  }
+
+  // ---- birds
+  anim::Skeleton& bs = anim::birdSkeleton();
+  for(const auto& b : gBirds){
+    float dx = b.pos.x - focus.x, dz = b.pos.z - focus.z;
+    if(dx*dx + dz*dz > 320.0f * 320.0f) continue;
+    if(gSkinned.size() >= 84) break;
+    SkinnedDraw d;
+    d.mesh  = &meshBird;
+    d.xform = m4::trs(b.pos, quat::axisAngle({0,1,0}, b.heading), v3(1.0f));
+    d.tint  = v3{1, 1, 1};
+    anim::Pose pose;
+    b.animator.evaluate(pose);
+    bs.skin(pose, d.joints);
     gSkinned.push_back(d);
   }
 }
@@ -878,13 +975,13 @@ static void drawSceneGeometry(const gfx::Program& pr, bool shadowPass){
   pr.set("uSway", 0);
   pr.set("uSkinned", 1);
   for(const auto& s : gSkinned){
-    glUniformMatrix4fv(pr.loc("uJoints"), models::JOINT_COUNT, GL_FALSE, s.joints[0].e);
+    glUniformMatrix4fv(pr.loc("uJoints"), anim::MAX_JOINTS, GL_FALSE, s.joints[0].e);
     std::vector<Mesh::Instance> one(1);
     one[0].xform = s.xform;
     one[0].tint  = s.tint;
     one[0].extra = 0.0f;
-    meshChar.updateInstances(one);
-    meshChar.drawInstanced();
+    s.mesh->updateInstances(one);
+    s.mesh->drawInstanced();
   }
   pr.set("uSkinned", 0);
 }
@@ -1128,6 +1225,159 @@ static void updatePed(Ped& p, float dt){
   p.animator.update(dt);
 }
 
+// Which species belong in which biome, so a bear never spawns on a beach.
+static int pickSpecies(world::Biome b, m::Rng& rng){
+  int pool[8]; int n = 0;
+  switch(b){
+    case world::B_FOREST:
+      pool[n++]=models::SP_DEER;  pool[n++]=models::SP_DEER;
+      pool[n++]=models::SP_WOLF;  pool[n++]=models::SP_BEAR;
+      pool[n++]=models::SP_BOAR;  pool[n++]=models::SP_FOX;
+      pool[n++]=models::SP_ELK;   break;
+    case world::B_MOUNTAIN:
+      pool[n++]=models::SP_BIGHORN; pool[n++]=models::SP_BIGHORN;
+      pool[n++]=models::SP_ELK;     pool[n++]=models::SP_WOLF;
+      pool[n++]=models::SP_BEAR;    break;
+    case world::B_SAND:
+      pool[n++]=models::SP_FOX; pool[n++]=models::SP_RABBIT; break;
+    default:
+      pool[n++]=models::SP_DEER;   pool[n++]=models::SP_RABBIT;
+      pool[n++]=models::SP_RABBIT; pool[n++]=models::SP_FOX;
+      pool[n++]=models::SP_BOAR;   pool[n++]=models::SP_ELK;  break;
+  }
+  return pool[rng.next() % (uint32_t)n];
+}
+
+// Only grazers put their heads down. Predators prowl instead.
+static bool isGrazer(int sp){
+  return sp == models::SP_DEER || sp == models::SP_ELK
+      || sp == models::SP_RABBIT || sp == models::SP_BIGHORN
+      || sp == models::SP_BOAR;
+}
+
+static void streamWildlife(float dt){
+  (void)dt;
+  if(gFreezeAnimals) return;        // hold the roster still for inspection
+  v3 focus = P.inCar && P.carIndex >= 0 ? gCars[P.carIndex].pos : P.pos;
+  static m::Rng rng(90210u);
+
+  const int TARGET = (gQuality >= 2) ? 16 : 9;
+  for(int i = (int)gAnimals.size() - 1; i >= 0; i--){
+    float dx = gAnimals[i].pos.x - focus.x, dz = gAnimals[i].pos.z - focus.z;
+    if(dx*dx + dz*dz > 520.0f * 520.0f) gAnimals.erase(gAnimals.begin() + i);
+  }
+  int guard = 0;
+  while((int)gAnimals.size() < TARGET && guard++ < 50){
+    float ang = rng.f() * m::TAU, d = rng.range(120.0f, 420.0f);
+    float x = focus.x + std::cos(ang) * d, z = focus.z + std::sin(ang) * d;
+    if(x < 60 || z < 60 || x > world::SIZE - 60 || z > world::SIZE - 60) continue;
+    world::Biome b = W.terr.sampleBiome(x, z);
+    if(b == world::B_WATER || world::World::isUrbanB((uint8_t)b)) continue;
+    Animal a;
+    a.pos = v3{ x, terrainH(x, z), z };
+    a.heading = rng.f() * m::TAU;
+    a.species = pickSpecies(b, rng);
+    a.wanderT = rng.range(1.5f, 5.0f);
+    a.graze   = rng.range(2.0f, 9.0f);
+    a.grazing = isGrazer(a.species) && rng.f() < 0.55f;
+    anim::driveQuad(a.animator, 0.0f, false, a.grazing);
+    gAnimals.push_back(a);
+  }
+
+  // birds circle overhead, more of them out in the wild
+  const int BIRDS = (gQuality >= 2) ? 7 : 3;
+  for(int i = (int)gBirds.size() - 1; i >= 0; i--){
+    float dx = gBirds[i].pos.x - focus.x, dz = gBirds[i].pos.z - focus.z;
+    if(dx*dx + dz*dz > 460.0f * 460.0f) gBirds.erase(gBirds.begin() + i);
+  }
+  guard = 0;
+  while((int)gBirds.size() < BIRDS && guard++ < 30){
+    float ang = rng.f() * m::TAU, d = rng.range(60.0f, 260.0f);
+    float x = focus.x + std::cos(ang) * d, z = focus.z + std::sin(ang) * d;
+    if(x < 60 || z < 60 || x > world::SIZE - 60 || z > world::SIZE - 60) continue;
+    Bird bd;
+    bd.radius = rng.range(22.0f, 70.0f);
+    bd.angle  = rng.f() * m::TAU;
+    bd.height = rng.range(16.0f, 52.0f);
+    bd.pos = v3{ x, terrainH(x, z) + bd.height, z };
+    bd.animator.bank = anim::birdLibrary().clips;
+    bd.animator.play(anim::BCLIP_FLAP, 0.01f);
+    gBirds.push_back(bd);
+  }
+}
+
+static void updateAnimal(Animal& a, float dt){
+  v3 focus = P.inCar && P.carIndex >= 0 ? gCars[P.carIndex].pos : P.pos;
+  float dx = a.pos.x - focus.x, dz = a.pos.z - focus.z;
+  float distToPlayer = std::sqrt(dx*dx + dz*dz);
+
+  // animals flee further from a moving car than from someone on foot
+  float spookRange = P.inCar ? 46.0f : 26.0f;
+  if(distToPlayer < spookRange){
+    a.fleeT = 3.4f;
+    a.heading = m::angLerp(a.heading, std::atan2(dx, dz), 1.0f - std::pow(0.004f, dt));
+  }
+  if(a.fleeT > 0.0f) a.fleeT -= dt;
+
+  const models::QuadSpec& S = models::speciesTable()[a.species % models::SP_COUNT];
+  float topSpeed = 9.5f * m::clampf(S.scale, 0.45f, 1.4f);
+
+  if(a.fleeT > 0.0f){
+    a.grazing = false;
+    a.spooked = true;
+    a.speed = m::lerpf(a.speed, topSpeed, dt * 2.6f);
+  } else {
+    a.spooked = distToPlayer < spookRange * 2.0f;
+    a.graze -= dt;
+    if(a.graze <= 0.0f){
+      a.grazing = isGrazer(a.species) ? !a.grazing : false;
+      a.graze = a.grazing ? m::rr_(3.0f, 10.0f) : m::rr_(2.0f, 7.0f);
+    }
+    float roam = isGrazer(a.species) ? 1.05f : 1.45f;
+    float want = a.grazing ? 0.0f : roam * m::clampf(S.scale, 0.5f, 1.3f);
+    a.speed = m::lerpf(a.speed, want, dt * 1.8f);
+    a.wanderT -= dt;
+    if(a.wanderT <= 0.0f){
+      a.wanderT = m::rr_(1.6f, 5.5f);
+      a.heading += m::rr_(-1.0f, 1.0f);
+    }
+  }
+
+  float nx = a.pos.x + std::sin(a.heading) * a.speed * dt;
+  float nz = a.pos.z + std::cos(a.heading) * a.speed * dt;
+  world::Biome nb = W.terr.sampleBiome(nx, nz);
+  if(nb == world::B_WATER || world::World::isUrbanB((uint8_t)nb)
+     || nx < 40 || nz < 40 || nx > world::SIZE - 40 || nz > world::SIZE - 40){
+    a.heading += 2.3f;                       // turn away from water and town
+  } else {
+    a.pos.x = nx; a.pos.z = nz;
+  }
+  a.pos.y = m::lerpf(a.pos.y, terrainH(a.pos.x, a.pos.z), 1.0f - std::pow(0.0005f, dt));
+
+  anim::driveQuad(a.animator, a.speed, a.spooked, a.grazing);
+  a.animator.update(dt);
+}
+
+static void updateBird(Bird& b, float dt){
+  b.angle += dt * (1.15f / std::max(b.radius, 6.0f)) * 9.0f;
+  float cx = b.pos.x - std::sin(b.heading) * 0.0f;
+  (void)cx;
+  // orbit a drifting centre
+  b.pos.x += std::cos(b.angle) * b.radius * dt * 0.10f;
+  b.pos.z -= std::sin(b.angle) * b.radius * dt * 0.10f;
+  b.heading = std::atan2(std::cos(b.angle), -std::sin(b.angle));
+  float ground = terrainH(b.pos.x, b.pos.z);
+  b.pos.y = m::lerpf(b.pos.y, ground + b.height, dt * 0.8f);
+  // flap in bursts, glide between them
+  b.flap -= dt;
+  if(b.flap <= 0.0f){
+    bool flapping = b.animator.cur == anim::BCLIP_FLAP;
+    b.animator.play(flapping ? anim::BCLIP_GLIDE : anim::BCLIP_FLAP, 0.20f);
+    b.flap = flapping ? m::rr_(1.2f, 2.8f) : m::rr_(0.8f, 1.8f);
+  }
+  b.animator.update(dt);
+}
+
 static void updatePlayer(float dt){
   // ---- camera orbit
   float lookSpeed = 2.6f;
@@ -1345,11 +1595,11 @@ static void renderFrame(){
     if(i == 0){
       progShadow.set("uSkinned", 1);
       for(const auto& s : gSkinned){
-        glUniformMatrix4fv(progShadow.loc("uJoints"), models::JOINT_COUNT, GL_FALSE, s.joints[0].e);
+        glUniformMatrix4fv(progShadow.loc("uJoints"), anim::MAX_JOINTS, GL_FALSE, s.joints[0].e);
         std::vector<Mesh::Instance> one(1);
         one[0].xform = s.xform;
-        meshChar.updateInstances(one);
-        meshChar.drawInstanced();
+        s.mesh->updateInstances(one);
+        s.mesh->drawInstanced();
       }
       progShadow.set("uSkinned", 0);
     }
@@ -1483,6 +1733,10 @@ static void mainLoop(){
       updateVehicle(gCars[i], dt);
     }
     for(auto& p : gPeds) updatePed(p, dt);
+    streamWildlife(dt);
+    if(!gFreezeAnimals) for(auto& a : gAnimals) updateAnimal(a, dt);
+    else                for(auto& a : gAnimals) a.animator.update(dt);
+    for(auto& b : gBirds)   updateBird(b, dt);
     updatePlayer(dt);
   } else {
     // slow orbit over the city while the player is on the title screen
@@ -1631,6 +1885,47 @@ extern "C" {
   EMSCRIPTEN_KEEPALIVE float dbgVel(){ return m::len(v3{P.vel.x, 0, P.vel.z}); }
   EMSCRIPTEN_KEEPALIVE float dbgLastDt(){ return gLastDt; }
   EMSCRIPTEN_KEEPALIVE int   dbgInCar(){ return P.inCar ? 1 : 0; }
+  EMSCRIPTEN_KEEPALIVE int   dbgAnimals(){ return (int)gAnimals.size(); }
+  EMSCRIPTEN_KEEPALIVE int   dbgBirds(){ return (int)gBirds.size(); }
+  EMSCRIPTEN_KEEPALIVE int   dbgFurn(){ return (int)gFurn.size(); }
+  EMSCRIPTEN_KEEPALIVE int   dbgAnimalSpecies(int i){
+    return (i >= 0 && i < (int)gAnimals.size()) ? gAnimals[i].species : -1;
+  }
+  EMSCRIPTEN_KEEPALIVE int   dbgAnimalClip(int i){
+    return (i >= 0 && i < (int)gAnimals.size()) ? gAnimals[i].animator.cur : -1;
+  }
+  EMSCRIPTEN_KEEPALIVE float dbgAnimalSpeed(int i){
+    return (i >= 0 && i < (int)gAnimals.size()) ? gAnimals[i].speed : -1.0f;
+  }
+  EMSCRIPTEN_KEEPALIVE void  dbgLookAtAnimal(int i, float dist, float up){
+    if(i < 0 || i >= (int)gAnimals.size()) return;
+    const Animal& a = gAnimals[i];
+    v3 eye = a.pos + v3{ dist * 0.70f, up, dist * 0.70f };
+    float yaw = std::atan2(a.pos.x - eye.x, a.pos.z - eye.z);
+    float flat = std::sqrt((a.pos.x - eye.x) * (a.pos.x - eye.x)
+                         + (a.pos.z - eye.z) * (a.pos.z - eye.z));
+    float pitch = std::atan2((a.pos.y + 0.6f) - eye.y, flat);
+    gFreeCam = true; gFreeCamPos = eye; gFreeYaw = yaw; gFreePitch = pitch;
+  }
+  EMSCRIPTEN_KEEPALIVE void  dbgFreezeAnimals(int on){ gFreezeAnimals = on != 0; }
+  EMSCRIPTEN_KEEPALIVE void  dbgWarpToAnimal(){
+    if(gAnimals.empty()) return;
+    P.pos = gAnimals[0].pos + v3{14.0f, 0.0f, 14.0f};
+    P.pos.y = W.terr.sample(P.pos.x, P.pos.z);
+    P.inCar = false; P.carIndex = -1;
+  }
+  EMSCRIPTEN_KEEPALIVE void  dbgWarpWild(){
+    for(int z = 40; z < world::HM - 40; z += 3){
+      for(int x = 40; x < world::HM - 40; x += 3){
+        if(W.terr.biome[z * world::HM + x] == world::B_FOREST){
+          P.pos = v3{ x * world::HSTEP, 0.0f, z * world::HSTEP };
+          P.pos.y = W.terr.sample(P.pos.x, P.pos.z);
+          P.inCar = false; P.carIndex = -1;
+          return;
+        }
+      }
+    }
+  }
   EMSCRIPTEN_KEEPALIVE int   dbgWarpToCar(){
     int best = -1; float bd = 1e18f;
     for(size_t i = 0; i < gCars.size(); i++){
@@ -1719,6 +2014,35 @@ int main(){
   t0 = emscripten_get_now();
   buildAllMeshes();
   printf("[meshes] %.0f ms\n", emscripten_get_now() - t0);
+
+  // ---- scatter our street furniture along the urban kerbs
+  {
+    m::Rng fr(5150u);
+    for(const auto& e : W.edges){
+      if(e.zone > 2 || e.bridge) continue;
+      float ax = e.x2 - e.x1, az = e.z2 - e.z1;
+      float L = e.len; if(L < 40.0f) continue;
+      float px = -az / L, pz = ax / L;
+      int n = std::max(1, (int)(L / 55.0f));
+      for(int k = 0; k < n; k++){
+        if(fr.f() > 0.55f) continue;
+        float t = (k + 0.5f) / n + fr.range(-0.06f, 0.06f);
+        float side = fr.f() < 0.5f ? 1.0f : -1.0f;
+        float off = e.width * 0.5f + fr.range(1.6f, 3.0f);
+        Furn f;
+        f.x = e.x1 + ax * t + px * off * side;
+        f.z = e.z1 + az * t + pz * off * side;
+        if(W.terr.isWater(f.x, f.z)) continue;
+        f.y = W.terr.sample(f.x, f.z);
+        f.rot = std::atan2(-px * side, -pz * side);
+        float r = fr.f();
+        f.kind = r < 0.34f ? 0 : r < 0.62f ? 1 : r < 0.90f ? 2 : 3;
+        if(f.kind == 3 && e.zone > 1) f.kind = 2;     // bus stops only downtown
+        gFurn.push_back(f);
+      }
+    }
+    printf("[furniture] %d pieces\n", (int)gFurn.size());
+  }
 
   // ---- spawn the player on a downtown street
   {
