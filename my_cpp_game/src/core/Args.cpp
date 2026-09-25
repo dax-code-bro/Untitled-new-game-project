@@ -34,6 +34,7 @@ Args parseArgs(int argc, char** argv) {
         else if (!std::strcmp(k, "--look"))        a.look       = need(i);
         else if (!std::strcmp(k, "--eye"))         a.eye        = need(i);
         else if (!std::strcmp(k, "--target"))      a.target     = need(i);
+        else if (!std::strcmp(k, "--orbit"))       a.orbit      = static_cast<float>(std::atof(need(i)));
         else if (!std::strcmp(k, "--fov"))         a.fov        = static_cast<float>(std::atof(need(i)));
         else if (!std::strcmp(k, "--hidden"))      a.hidden     = true;
         else if (!std::strcmp(k, "--gl-debug"))    a.glDebug    = true;

@@ -212,6 +212,14 @@ int main(int argc, char** argv) try {
 
         while (accumulator >= kFixedStep) accumulator -= kFixedStep;   // sim attaches here
 
+        if (args.orbit != 0.0f) {
+            // Swing the eye round the target about the vertical axis.
+            const float a = glm::radians(args.orbit);
+            const glm::vec3 o = camera.position - camera.target;
+            camera.position = camera.target + glm::vec3(o.x * std::cos(a) - o.z * std::sin(a), o.y,
+                                                        o.x * std::sin(a) + o.z * std::cos(a));
+        }
+
         const auto g0 = clock::now();
         renderer.render(items, camera, static_cast<float>(dt));
         const auto& out = renderer.output();

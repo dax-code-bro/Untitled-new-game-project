@@ -25,6 +25,7 @@ struct Args {
     std::string look;                    // --look file.ini (default scripts/look.ini, watched)
     std::string eye, target;             // --eye x,y,z --target x,y,z: camera override
     float       fov        = 0.0f;       // --fov degrees (0 = the shot's own)
+    float       orbit      = 0.0f;       // --orbit deg/frame: turn the camera round its target (TAA motion test)
     bool        hidden     = false;      // no visible window (headless capture)
     bool        glDebug    = false;      // KHR_debug output, errors counted and printed
     bool        fullscreen = false;      // primary monitor at its native resolution

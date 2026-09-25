@@ -1,9 +1,12 @@
+## my_cpp_game — native C++ port (renderer, baker, maps; no gameplay)
 
-## my_cpp_game — native C++ port (bootstrap only)
-
-`my_cpp_game/` holds a CMake + GLFW + Glad + GLM bootstrap for a proposed
-native port. It compiles and links; it has no renderer and nothing is
-ported. `my_cpp_game/README.md` has the dependency table, the RAII rules
-(no raw new/delete), the port order, and an honest accounting of what the
-port costs — chiefly that this game is delivered as a link to a static
-page, and a native binary cannot be.
+`my_cpp_game/` is the native C++/OpenGL 4.5+ build: the renderer, the
+procedural material baker and the geometry library are ported and verified
+(parity tests, `test_render_stages`), and the six game maps are exported
+from the running web game with `tools/export_scene.js` and rendered on it.
+Gameplay is NOT ported; the web build remains the playable game.
+`my_cpp_game/README.md` is the index: build, verification, layout, the
+web winding bug the port found, and the Windows release
+(`tools/package_windows.sh` -> `release/legend-native-windows.zip`).
+Native departures from the web renderer are marked `NATIVE` in the source.
+Verify natively under `Xvfb :99` (Mesa llvmpipe, GL 4.5) with `--gl-debug`.
