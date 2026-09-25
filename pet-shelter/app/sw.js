@@ -1,0 +1,62 @@
+// Service worker for the installable (PWA) build: the game works offline after the first visit.
+// 10-pwa is filled in from PS_BUILD in index.html when the app is assembled, so each release
+// gets its own cache and old ones are removed.
+const VERSION = '10-pwa';
+const CACHE = 'pet-shelter-' + VERSION;
+const FONTS = 'pet-shelter-fonts';
+const SHELL = [
+  './', 'index.html', 'manifest.webmanifest',
+  'PetShelter.js?v=' + VERSION, 'PetShelter.wasm?v=' + VERSION,
+  'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png', 'icons/favicon-32.png',
+];
+
+self.addEventListener('install', (e) => {
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL.map((u) => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
+});
+
+self.addEventListener('activate', (e) => {
+  e.waitUntil(caches.keys()
+    .then((keys) => Promise.all(keys.filter((k) => k.startsWith('pet-shelter-') && k !== CACHE && k !== FONTS).map((k) => caches.delete(k))))
+    .then(() => self.clients.claim()));
+});
+
+// The page: try the network first (so you get updates), fall back to the saved copy when offline.
+async function page(req) {
+  const cache = await caches.open(CACHE);
+  try {
+    const res = await Promise.race([fetch(req), new Promise((_, no) => setTimeout(() => no(new Error('slow')), 4000))]);
+    if (res.ok) cache.put('index.html', res.clone());
+    return res;
+  } catch (err) {
+    return (await cache.match('index.html')) || (await cache.match('./')) || Response.error();
+  }
+}
+
+// Game files, icons: the saved copy first (each release has its own ?v= name), else download and keep it.
+async function asset(req) {
+  const cache = await caches.open(CACHE);
+  const hit = await cache.match(req);
+  if (hit) return hit;
+  const res = await fetch(req);
+  if (res.ok) cache.put(req, res.clone());
+  return res;
+}
+
+// Fonts: use the saved copy right away and refresh it in the background.
+async function font(req) {
+  const cache = await caches.open(FONTS);
+  const hit = await cache.match(req);
+  const fresh = fetch(req).then((res) => { if (res.ok || res.type === 'opaque') cache.put(req, res.clone()); return res; }).catch(() => hit);
+  return hit || fresh;
+}
+
+self.addEventListener('fetch', (e) => {
+  const req = e.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  if (url.origin === self.location.origin) {
+    e.respondWith(req.mode === 'navigate' ? page(req) : asset(req));
+  } else if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
+    e.respondWith(font(req));
+  }
+});
