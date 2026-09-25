@@ -9,6 +9,7 @@
 #include "core/Math.h"
 #include "render/Mesh.h"
 #include "render/Shader.h"
+#include "render/SkinnedMesh.h"
 #include <functional>
 #include <vector>
 
@@ -73,6 +74,10 @@ public:
     vec3 viewPos() const { return viewPos_; }
     void draw(const Mesh& m, const mat4& model = mat4(), vec4 tint = {1, 1, 1, 1});
     void drawInstanced(const Mesh& m);
+    // Animals: skinned mesh + bone matrices + coat; `shells` extra fur layers (0 = none).
+    void drawSkinned(const SkinnedMesh& m, const mat4* bones, int boneCount, const mat4& model,
+                     const CoatUniforms& coat, int shells = 0, float furScale = 1.0f);
+    int furShells = 6;           // fur shell layers for close animals (0 on phones)
     void setDoubleSided(bool on);
 
     // Settings (the pause menu edits these)
@@ -99,7 +104,7 @@ private:
     Shader* program(bool instanced);
 
     int w_ = 1280, h_ = 720;
-    Shader lit_, litInst_, shadow_, shadowInst_, sky_, bloomDown_, bloomUp_, lum_, adapt_, tonemap_, fxaa_, cctv_;
+    Shader lit_, litInst_, litSkin_, shadow_, shadowInst_, shadowSkin_, sky_, bloomDown_, bloomUp_, lum_, adapt_, tonemap_, fxaa_, cctv_;
     GLuint emptyVao_ = 0;
 
     GLuint hdrFbo_ = 0, hdrTex_ = 0, depthTex_ = 0;

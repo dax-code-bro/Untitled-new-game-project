@@ -1,6 +1,7 @@
 // Physically based (GGX) shading with HDR output. Sun + sky ambient +
 // indoor point lights + emissive, cascaded shadows, procedural materials.
 #include "common.glsl"
+#include "coat.glsl"
 
 in vec3 vWorldPos;
 in vec3 vNormal;
@@ -198,8 +199,9 @@ float sampleShadow(sampler2DShadow sm, mat4 m, vec3 wp, float bias) {
 float shadowFactor(vec3 wp, vec3 n) {
     if (uShadowOn < 0.5) return 1.0;
     float ndl = max(dot(n, uSunDir), 0.0);
-    vec3 off = wp + n * 0.04;
-    float s = sampleShadow(uShadow0, uShadowMat0, off, 0.0008 + 0.0015 * (1.0 - ndl));
+    vec3 off = wp + n * 0.02;
+    // near cascade spans 500 m of depth: 0.00006 ~ 3 cm of bias
+    float s = sampleShadow(uShadow0, uShadowMat0, off, 0.00006 + 0.00016 * (1.0 - ndl));
     if (s >= 0.0) return s;
     s = sampleShadow(uShadow1, uShadowMat1, wp + n * 0.3, 0.0006 + 0.0012 * (1.0 - ndl));
     return s >= 0.0 ? s : 1.0;
@@ -216,6 +218,37 @@ void main() {
     int pat = int(vMat.w + 0.5);
     s.emissive = s.albedo * vMat.z;
     applyPattern(pat, s, vWorldPos, vUV);
+    float furAmount = 0.0;
+    if (pat == 22) {   // animal coat
+        int region = int(vUV.x + 0.5);
+        float furMask;
+        s.albedo = coatAlbedo(vBindPos, region, vUV.y, vColor.a, furMask);
+        s.emissive = vec3(0.0);
+        furAmount = furMask * step(0.001, vMat.z);
+        // Fine hair strands: tiny brightness variation that follows the body
+        float strand = vnoise3(vBindPos * vec3(900.0, 300.0, 900.0));
+        s.albedo *= mix(1.0, 0.86 + 0.28 * strand, furAmount);
+        // Fur shells: each shell keeps only the hairs tall enough to reach it
+        if (uShell > 0.0) {
+            vec3 hc = vBindPos * 520.0;
+            float hair = hash13(floor(hc));
+            // strands taper toward their tips
+            float r = length(fract(hc) - 0.5);
+            if (hair < uShell * 0.9 || furAmount < 0.5 || r > 0.62 - 0.3 * uShell) discard;
+            s.albedo *= mix(0.84, 1.03, uShell);
+            if (uCoatPattern == 19 || uCoatPattern == 20) s.albedo = mix(s.albedo, uCoatPattern == 19 ? uCoatB : uCoatC, uShell * 0.45);   // ticked / roan hair tips
+        } else {
+            s.albedo *= mix(1.0, 0.78, furAmount);    // skin layer: darker roots under the fur
+        }
+        // Wound: wet blood, glossy
+        if (uWound.w > 0.0) {
+            float d = length(vBindPos - uWound.xyz) / uWound.w;
+            float wound = smoothstep(1.0, 0.6, d + (vnoise3(vBindPos * 60.0) - 0.5) * 0.4);
+            s.albedo = mix(s.albedo, mix(vec3(0.30, 0.02, 0.02), vec3(0.12, 0.0, 0.0), smoothstep(0.5, 0.0, d)), wound * (0.5 + 0.5 * uWet));
+            s.rough = mix(s.rough, 0.12, wound * uWet);
+            if (uShell > 0.0 && wound > 0.3) discard;   // fur shaved/matted at the wound
+        }
+    }
 
     vec3 N = s.n;
     vec3 V = normalize(uCamPos - vWorldPos);
@@ -255,6 +288,10 @@ void main() {
         color += uPointColor[i].rgb * att * s.albedo * 0.06;
     }
     color += s.emissive;
+    if (furAmount > 0.0) {   // fur sheen: soft light scattering at grazing angles
+        float rim = pow(1.0 - max(dot(N, V), 0.0), 3.0);
+        color += (uSunColor * max(dot(N, uSunDir) * 0.5 + 0.5, 0.0) * 0.06 + ambient * 0.25) * s.albedo * rim * furAmount;
+    }
 
     if (pat == 13) {   // glass: reflective, mostly transparent
         vec3 refl = skyRadiance(R) * skyVis;

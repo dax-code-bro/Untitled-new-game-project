@@ -12,6 +12,13 @@ layout(location = 7) in vec4 iM2;
 layout(location = 8) in vec4 iM3;
 layout(location = 9) in vec4 iTint;
 #endif
+#ifdef SKINNED
+// Animals: each vertex follows up to 4 skeleton bones (GPU skinning).
+layout(location = 10) in vec4 aBones;
+layout(location = 11) in vec4 aWeights;
+uniform mat4 uBones[40];
+uniform float uShellOffset;   // fur shells: push the surface out along the normal (meters)
+#endif
 
 uniform mat4 uViewProj;
 uniform mat4 uModel;
@@ -25,6 +32,7 @@ out vec2 vUV;
 out vec4 vColor;
 out vec4 vMat;
 out float vW;
+out vec3 vBindPos;   // position before animation (keeps coat patterns glued to the body)
 
 void main() {
 #ifdef INSTANCED
@@ -34,14 +42,28 @@ void main() {
     mat4 model = uModel;
     vec4 tint = uTint;
 #endif
+#ifdef SKINNED
+    mat4 skin = uBones[int(aBones.x)] * aWeights.x + uBones[int(aBones.y)] * aWeights.y +
+                uBones[int(aBones.z)] * aWeights.z + uBones[int(aBones.w)] * aWeights.w;
+    vec3 skinnedN = normalize(mat3(skin) * aNormal);
+    vec4 localPos = skin * vec4(aPos, 1.0);
+    // Fur shells grow along the normal; longer fur droops a little with gravity.
+    float furLen = aMat.z * uShellOffset;
+    localPos.xyz += skinnedN * furLen - vec3(0.0, furLen * furLen * 1.5, 0.0);
+    vec4 wp = model * localPos;
+    vec3 nrm = skinnedN;
+#else
     vec4 wp = model * vec4(aPos, 1.0);
+    vec3 nrm = aNormal;
+#endif
+    vBindPos = aPos;
     // Foliage sways in the wind (vertex animation, in-shader)
     if (int(aMat.w + 0.5) == 17) {
         float sway = sin(uTime * 1.7 + wp.x * 0.13 + wp.z * 0.11) * 0.06 * max(aPos.y - 1.5, 0.0) * uWind;
         wp.xz += vec2(sway, sway * 0.6);
     }
     vWorldPos = wp.xyz;
-    vNormal = mat3(model) * aNormal;
+    vNormal = mat3(model) * nrm;
     vUV = aUV;
     vColor = vec4(aColor.rgb * tint.rgb, aColor.a * tint.a);
     vMat = aMat;

@@ -87,6 +87,8 @@ bool Game::init(int argc, char** argv) {
     for (int i = 1; i < argc; ++i) {
         std::string a = argv[i];
         if (a == "--screenshots" && i + 1 < argc) screenshotSuiteDir_ = argv[++i];
+        else if (a == "--animals" && i + 1 < argc) animalStudioDir_ = argv[++i];
+        else if (a == "--only" && i + 1 < argc) animalStudioFilter_ = argv[++i];
         else if (a == "--touch") touch_ = true;
         else if (a == "--low") low_ = true;
         else if (a == "--size" && i + 2 < argc) { width_ = std::atoi(argv[++i]); height_ = std::atoi(argv[++i]); }
@@ -253,6 +255,7 @@ bool Game::takeNameEditRequest() {
 
 int Game::run() {
     if (!screenshotSuiteDir_.empty()) return runScreenshotSuite(screenshotSuiteDir_);
+    if (!animalStudioDir_.empty()) return runAnimalStudio(animalStudioDir_, animalStudioFilter_);
     lastTick_ = std::chrono::steady_clock::now();
 #ifdef __EMSCRIPTEN__
     emscripten_set_main_loop_arg([](void* g) { static_cast<Game*>(g)->tick(); }, this, 0, true);

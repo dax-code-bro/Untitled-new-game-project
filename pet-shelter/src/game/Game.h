@@ -63,6 +63,7 @@ private:
     bool saveExists() const;
     void takeScreenshot(const std::string& path);
     int runScreenshotSuite(const std::string& dir);
+    int runAnimalStudio(const std::string& dir, const std::string& filter);   // AnimalStudio.cpp
     void scene(Renderer& r, Pass pass);
 
     GLFWwindow* window_ = nullptr;
@@ -97,6 +98,7 @@ private:
     struct Toast { std::string text; float t; };
     std::deque<Toast> toasts_;
     std::string screenshotSuiteDir_;
+    std::string animalStudioDir_, animalStudioFilter_;
     std::chrono::steady_clock::time_point lastTick_;
     bool browserLocked_ = false;
     bool touch_ = false;          // phone / tablet mode (--touch)

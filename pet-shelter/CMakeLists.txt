@@ -26,6 +26,7 @@ add_library(ps_sim STATIC
   src/game/Character.cpp
   src/game/Buildables.cpp
   src/game/Sim.cpp
+  src/game/Species.cpp
 )
 target_include_directories(ps_sim PUBLIC src)
 
@@ -79,6 +80,8 @@ if(PS_BUILD_GAME)
     src/render/Mesh.cpp
     src/render/Renderer.cpp
     src/render/Animation.cpp
+    src/render/SkinnedMesh.cpp
+    src/game/AnimalModel.cpp
     src/world/World.cpp
     src/world/Facility.cpp
     src/world/Scenery.cpp
@@ -89,6 +92,7 @@ if(PS_BUILD_GAME)
     src/game/ComputerUI.cpp
     src/game/CharacterCreatorUI.cpp
     src/game/Game.cpp
+    src/game/AnimalStudio.cpp
   )
   target_link_libraries(PetShelter PRIVATE ps_sim imgui glfw)
   target_compile_definitions(PetShelter PRIVATE GLFW_INCLUDE_NONE PS_SHADER_DIR="${CMAKE_CURRENT_SOURCE_DIR}/shaders")

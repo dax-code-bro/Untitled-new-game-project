@@ -8,6 +8,11 @@ layout(location = 6) in vec4 iM1;
 layout(location = 7) in vec4 iM2;
 layout(location = 8) in vec4 iM3;
 #endif
+#ifdef SKINNED
+layout(location = 10) in vec4 aBones;
+layout(location = 11) in vec4 aWeights;
+uniform mat4 uBones[40];
+#endif
 uniform mat4 uLightVP;
 uniform mat4 uModel;
 out vec2 vUV;
@@ -20,5 +25,11 @@ void main() {
 #endif
     vUV = aUV;
     vPat = int(aMat.w + 0.5);
+#ifdef SKINNED
+    mat4 skin = uBones[int(aBones.x)] * aWeights.x + uBones[int(aBones.y)] * aWeights.y +
+                uBones[int(aBones.z)] * aWeights.z + uBones[int(aBones.w)] * aWeights.w;
+    gl_Position = uLightVP * model * skin * vec4(aPos, 1.0);
+#else
     gl_Position = uLightVP * model * vec4(aPos, 1.0);
+#endif
 }

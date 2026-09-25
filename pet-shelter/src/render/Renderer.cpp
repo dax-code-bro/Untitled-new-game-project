@@ -67,6 +67,8 @@ void Renderer::reloadShaders() {
     litInst_.begin("lit.vert", "lit.frag", "#define INSTANCED 1");
     shadow_.begin("shadow.vert", "shadow.frag");
     shadowInst_.begin("shadow.vert", "shadow.frag", "#define INSTANCED 1");
+    litSkin_.begin("lit.vert", "lit.frag", "#define SKINNED 1");
+    shadowSkin_.begin("shadow.vert", "shadow.frag", "#define SKINNED 1");
     sky_.begin("fullscreen.vert", "sky.frag");
     bloomDown_.begin("fullscreen.vert", "bloom_down.frag");
     bloomUp_.begin("fullscreen.vert", "bloom_up.frag");
@@ -76,7 +78,7 @@ void Renderer::reloadShaders() {
     fxaa_.begin("fullscreen.vert", "fxaa.frag");
     cctv_.begin("fullscreen.vert", "cctv.frag");
     bool ok = true;
-    for (Shader* s : {&lit_, &litInst_, &shadow_, &shadowInst_, &sky_, &bloomDown_, &bloomUp_, &lum_, &adapt_, &tonemap_, &fxaa_, &cctv_})
+    for (Shader* s : {&lit_, &litInst_, &litSkin_, &shadow_, &shadowInst_, &shadowSkin_, &sky_, &bloomDown_, &bloomUp_, &lum_, &adapt_, &tonemap_, &fxaa_, &cctv_})
         ok &= s->finish();
     std::fprintf(stderr, "[renderer] shaders %s\n", ok ? "loaded" : "error: shaders failed to compile (see above)");
 }
@@ -270,6 +272,39 @@ void Renderer::draw(const Mesh& m, const mat4& model, vec4 tint) {
     m.draw();
 }
 
+void Renderer::drawSkinned(const SkinnedMesh& m, const mat4* bones, int boneCount, const mat4& model,
+                           const CoatUniforms& coat, int shells, float furScale) {
+    Shader* s = pass_ == Pass::Shadow ? &shadowSkin_ : &litSkin_;
+    if (pass_ == Pass::Transparent) return;
+    if (s != bound_) { s->use(); bound_ = s; }
+    s->set("uModel", model);
+    glUniformMatrix4fv(s->loc("uBones[0]"), std::min(boneCount, kMaxBones), GL_FALSE, bones[0].data());
+    if (pass_ == Pass::Shadow) { m.draw(); return; }
+    s->set("uCoatA", coat.a);
+    s->set("uCoatB", coat.b);
+    s->set("uCoatC", coat.c);
+    s->set("uCoatPattern", coat.pattern);
+    s->set("uCoatParams", vec4(coat.scale, coat.amount, coat.seed, coat.contrast));
+    s->set("uCoatMarks", coat.marks);
+    s->set("uWound", coat.wound);
+    s->set("uWet", coat.wet);
+    s->set("uTint", vec4(1, 1, 1, 1));
+    s->set("uShell", 0.0f);
+    s->set("uShellOffset", 0.0f);
+    m.draw();
+    // Fur shells: the same surface pushed outward in layers; the shader keeps only hair strands.
+    if (shells > 0) {
+        for (int i = 1; i <= shells; ++i) {
+            float h = float(i) / float(shells);
+            s->set("uShell", h);
+            s->set("uShellOffset", h * furScale);
+            m.draw();
+        }
+        s->set("uShell", 0.0f);
+        s->set("uShellOffset", 0.0f);
+    }
+}
+
 void Renderer::drawInstanced(const Mesh& m) {
     Shader* s = program(true);
     if (s != bound_) { s->use(); bound_ = s; }
@@ -308,7 +343,8 @@ void Renderer::renderShadows(const Camera& cam, const SceneFn& scene) {
         lc.x = std::floor(lc.x / texel) * texel;
         lc.y = std::floor(lc.y / texel) * texel;
         float d = -lc.z;
-        mat4 proj = mat4::ortho(lc.x - r, lc.x + r, lc.y - r, lc.y + r, d - 1500.0f, d + 1500.0f);
+        const float depthRange = c == 0 ? 250.0f : 1500.0f;   // tight near range keeps small shadows (animals, legs)
+        mat4 proj = mat4::ortho(lc.x - r, lc.x + r, lc.y - r, lc.y + r, d - depthRange, d + depthRange);
         curLightVP_ = proj * lv;
         shadowMat_[c] = curLightVP_;
         frustum_.fromMatrix(curLightVP_);
@@ -317,6 +353,7 @@ void Renderer::renderShadows(const Camera& cam, const SceneFn& scene) {
         glClear(GL_DEPTH_BUFFER_BIT);
         shadow_.use(); shadow_.set("uLightVP", curLightVP_);
         shadowInst_.use(); shadowInst_.set("uLightVP", curLightVP_);
+        shadowSkin_.use(); shadowSkin_.set("uLightVP", curLightVP_);
         bound_ = &shadowInst_;
         scene(*this, Pass::Shadow);
     }
@@ -358,6 +395,7 @@ void Renderer::renderScene(const Camera& cam, const SceneFn& scene, GLuint fbo, 
     glBindTexture(GL_TEXTURE_2D, shadowTex_[1]);
     glActiveTexture(GL_TEXTURE0);
     setupLitUniforms(litInst_, cam, shadowsOn, time, false);
+    setupLitUniforms(litSkin_, cam, shadowsOn, time, false);
     setupLitUniforms(lit_, cam, shadowsOn, time, false);
     bound_ = &lit_;
     pass_ = Pass::Opaque;
@@ -370,6 +408,7 @@ void Renderer::renderScene(const Camera& cam, const SceneFn& scene, GLuint fbo, 
     glDepthMask(0);
     glDisable(GL_CULL_FACE);
     setupLitUniforms(litInst_, cam, shadowsOn, time, true);
+    setupLitUniforms(litSkin_, cam, shadowsOn, time, true);
     setupLitUniforms(lit_, cam, shadowsOn, time, true);
     bound_ = &lit_;
     pass_ = Pass::Transparent;
