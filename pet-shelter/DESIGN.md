@@ -352,6 +352,24 @@ How it plays:
 - **Buying animals:** at the store counter you pay and the animal rides home in a carrier in the truck bed. Drive
   home and get out on your land: they're unloaded and join the shelter (housed like any new arrival).
 
+## 8.9 Update 4: owner's direction — make it a PWA
+"Let's turn this into a PWA." The browser version becomes an installable app: add it to your home screen / dock,
+it opens full screen like a normal app, works offline after the first load, and your saves are kept on the device.
+
+What's built:
+- `build-web/pwa/` is assembled by the web build (`web/pwa/assemble.cmake`): the game page with app meta tags, a
+  web app manifest (name "Untitled Pet Shelter", short name "Pet Shelter", full screen, landscape, dark green theme),
+  paw-print icons (normal, maskable for Android, Apple touch icon, favicon) and a service worker.
+- Service worker: saves the game files on the first visit so it runs offline. The page itself is fetched fresh when
+  online (so updates arrive), game files are served from the saved copy for that release, fonts are refreshed in
+  the background. Each release (`PS_BUILD`) gets its own cache and old ones are deleted.
+- Saves now survive closing the browser or app (IndexedDB). Autosave every 5 minutes of play and whenever the app
+  goes to the background.
+- Checked in Chromium: the manifest has no errors, it's installable, the service worker controls the page, the game
+  starts with the network switched off, and a saved game is still there after a reload.
+- Hosting: a PWA needs its own HTTPS web address. The claude.ai play link can't be installed as an app (it runs
+  inside claude.ai), so the installable version needs a host such as GitHub Pages or Vercel.
+
 ## 9. Next up
 - More model passes until nothing looks off (small terriers, fur close-ups, coiled snakes).
 - Staff and protesters as visible people in the world; clients in the waiting room.

@@ -119,11 +119,17 @@ if(PS_BUILD_GAME)
     target_link_options(PetShelter PRIVATE
       -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -sGL_ENABLE_GET_PROC_ADDRESS=1
       -sALLOW_MEMORY_GROWTH=1 -sINITIAL_MEMORY=134217728 -sSTACK_SIZE=4194304
-      -sENVIRONMENT=web -sEXPORTED_RUNTIME_METHODS=ccall,UTF8ToString
+      -sENVIRONMENT=web -sEXPORTED_RUNTIME_METHODS=ccall,UTF8ToString -lidbfs.js
       "--embed-file=${CMAKE_CURRENT_SOURCE_DIR}/shaders@/shaders")
     # Relink when any shader changes (they're baked into the .wasm)
     file(GLOB PS_SHADER_FILES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/shaders/*)
     set_property(TARGET PetShelter APPEND PROPERTY LINK_DEPENDS ${PS_SHADER_FILES})
+    # Installable app (PWA): build-web/pwa/ holds everything to put on a web server
+    # (a custom target so it also re-runs when only the page, icons or service worker change)
+    add_custom_target(pwa ALL
+      COMMAND ${CMAKE_COMMAND} -DSRC=${CMAKE_CURRENT_SOURCE_DIR}/web -DBIN=$<TARGET_FILE_DIR:PetShelter>
+              -DOUT=${CMAKE_BINARY_DIR}/pwa -P ${CMAKE_CURRENT_SOURCE_DIR}/web/pwa/assemble.cmake
+      DEPENDS PetShelter VERBATIM)
   endif()
   # Copy shaders next to the executable so a packaged build runs anywhere.
   add_custom_command(TARGET PetShelter POST_BUILD

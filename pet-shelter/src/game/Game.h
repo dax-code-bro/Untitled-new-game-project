@@ -41,6 +41,7 @@ public:
     bool takeNameEditRequest();
     const std::string& playerName() const { return appearance_.name; }
     void setPlayerName(const std::string& n) { appearance_.name = n.substr(0, 40); }
+    void autosave();   // saves if a game is in progress
 
 private:
     enum class State { MainMenu, Creator, Cutscene, Playing, Computer, Paused, Dialog, Surgery, AnimalCheck, Driving, PetStore };
@@ -146,6 +147,7 @@ private:
     int framesDrawn_ = 0;
     int ticksStarted_ = 0;
     bool low_ = false;            // low graphics mode (--low)
+    float autosaveTimer_ = 0.0f;  // seconds of play since the last save
 };
 
 }  // namespace ps

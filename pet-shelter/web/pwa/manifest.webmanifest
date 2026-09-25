@@ -1,0 +1,19 @@
+{
+  "name": "Untitled Pet Shelter",
+  "short_name": "Pet Shelter",
+  "description": "Run an animal shelter: care for 139 real species, run the clinic, hire staff, buy land and drive the red truck.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "landscape",
+  "background_color": "#0d1411",
+  "theme_color": "#0d1411",
+  "categories": ["games", "simulation"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

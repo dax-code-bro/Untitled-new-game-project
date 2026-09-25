@@ -55,6 +55,8 @@ extern "C" EMSCRIPTEN_KEEPALIVE int ps_ui_wants_pointer() { return ImGui::GetCur
 extern "C" EMSCRIPTEN_KEEPALIVE int ps_name_edit_requested() { return g_game && g_game->takeNameEditRequest() ? 1 : 0; }
 extern "C" EMSCRIPTEN_KEEPALIVE const char* ps_get_name() { return g_game ? g_game->playerName().c_str() : ""; }
 extern "C" EMSCRIPTEN_KEEPALIVE void ps_set_name(const char* n) { if (g_game && n) g_game->setPlayerName(n); }
+// The page calls this when the app goes to the background (phone home button, closing the tab)
+extern "C" EMSCRIPTEN_KEEPALIVE void ps_autosave() { if (g_game) g_game->autosave(); }
 #endif
 static void keyCb(GLFWwindow*, int key, int, int action, int) { if (g_game) g_game->input().onKey(key, action); }
 static void buttonCb(GLFWwindow*, int b, int action, int) { if (g_game) g_game->input().onButton(b, action); }
@@ -110,6 +112,16 @@ bool Game::init(int argc, char** argv) {
 #endif
     }
     Shader::setDirectory(shaderDir);
+#ifdef __EMSCRIPTEN__
+    // Saves live in the browser's IndexedDB so they survive closing the page or the installed app
+    EM_ASM({
+        try { FS.mkdir('/saves'); } catch (e) {}
+        try {
+            FS.mount(IDBFS, {}, '/saves');
+            FS.syncfs(true, function (err) { if (err) console.warn('[saves] could not load: ' + err); });
+        } catch (e) { console.warn('[saves] storage unavailable: ' + e); }
+    });
+#endif
 
     if (width_ <= 0 || height_ <= 0) { width_ = 1280; height_ = 720; }
     std::fprintf(stderr, "[startup] 1/8 opening window\n");
@@ -336,6 +348,13 @@ void Game::setMode(Mode m) {
     }
 }
 
+void Game::autosave() {
+    bool playing = state_ == State::Playing || state_ == State::Computer || state_ == State::Paused || state_ == State::Dialog ||
+                   state_ == State::Surgery || state_ == State::AnimalCheck || state_ == State::Driving || state_ == State::PetStore;
+    if (playing && screenshotSuiteDir_.empty() && saveGame()) message_ = "Autosaved";
+    autosaveTimer_ = 0.0f;
+}
+
 bool Game::saveExists() const { return std::filesystem::exists(savePath_); }
 
 bool Game::saveGame() {
@@ -350,6 +369,9 @@ bool Game::saveGame() {
     kv.setv("truck.pos", truck_.pos);
     kv.setf("truck.yaw", truck_.yaw);
     bool ok = kv.write(savePath_);
+#ifdef __EMSCRIPTEN__
+    if (ok) EM_ASM({ try { FS.syncfs(false, function (err) { if (err) console.warn('[saves] could not store: ' + err); }); } catch (e) {} });
+#endif
     message_ = ok ? "Game saved" : "Save failed";
     messageTimer_ = 2.5f;
     return ok;
@@ -388,6 +410,11 @@ void Game::update(float dt) {
         takeScreenshot(screenshotDir_ + name);
     }
     if (characterDirty_) { character_.build(appearance_); characterDirty_ = false; }
+    // Quiet autosave every 5 minutes of play (phones and the installed app can be closed at any moment)
+    if (state_ == State::Playing || state_ == State::Driving) {
+        autosaveTimer_ += dt;
+        if (autosaveTimer_ > 300.0f) autosave();
+    }
 
     if (inTruck_ && state_ == State::Playing) state_ = State::Driving;   // back from a menu or a decision while driving
     bool wantLock = wantsPointerLock();

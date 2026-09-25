@@ -322,7 +322,7 @@
     e.preventDefault();
     showProblem('The graphics stopped, usually because the device ran low on memory. Close other tabs or apps and reload the page.');
   });
-  const PS_BUILD = '9-drive';   // bump with each release so browsers fetch the new game files
+  const PS_BUILD = '10-pwa';   // bump with each release so browsers fetch the new game files
   window.Module = {
     locateFile: (f) => f + '?v=' + PS_BUILD,
     canvas,
@@ -347,6 +347,16 @@
   s.src = 'PetShelter.js?v=' + PS_BUILD;
   s.onerror = () => fail("The game files didn't load. Reload the page to try again.");
   document.body.appendChild(s);
+
+  // ---- Keep your progress: save when the app goes to the background or closes ----
+  const autosave = () => { try { if (ready && window.Module && Module._ps_autosave) Module._ps_autosave(); } catch (err) { /* optional */ } };
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') autosave(); });
+  window.addEventListener('pagehide', autosave);
+
+  // ---- Installable app (PWA): only in the build that ships a manifest and service worker ----
+  if ('serviceWorker' in navigator && window.isSecureContext && document.querySelector('link[rel="manifest"]')) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  }
 
   // ---- Computers: mouse capture comes from a click ----
   canvas.addEventListener('mousedown', (e) => {
