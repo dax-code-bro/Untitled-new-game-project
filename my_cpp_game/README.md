@@ -4,7 +4,7 @@ The Legend Engine's renderer, material baker and geometry, ported to native
 C++, rendering the game's real maps at any resolution — 4K, 8K — with
 procedural textures baked at 4096².
 
-**Download (Windows, ready to run):** `dist/legend-native-windows.zip` —
+**Download (Windows, ready to run):** `release/legend-native-windows.zip` —
 unzip, double-click an `Explore - …` launcher. See `tools/windows/README.txt`
 for controls and requirements.
 

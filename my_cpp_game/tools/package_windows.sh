@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build the Windows release: cross-compiled .exe + shaders + scripts + the
-# exported maps + launchers, zipped into my_cpp_game/dist/.
+# exported maps + launchers, zipped into my_cpp_game/release/.
 #
 #   my_cpp_game/tools/package_windows.sh [scenes-dir]
 #
@@ -10,7 +10,7 @@ set -euo pipefail
 HERE="$(cd "$(dirname "$0")/.." && pwd)"          # my_cpp_game
 ROOT="$(cd "$HERE/.." && pwd)"
 SCENES="${1:-}"
-OUT="$HERE/dist"
+OUT="$HERE/release"   # not dist/: the repo ignores every dist/ folder
 STAGE="$(mktemp -d)"
 PKG="$STAGE/legend-native-windows"
 
