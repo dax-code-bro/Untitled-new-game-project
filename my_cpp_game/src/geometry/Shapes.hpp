@@ -31,6 +31,14 @@ struct MeshData {
     std::vector<glm::vec2> uvs;
     std::vector<glm::vec4> tangents; // xyz unit tangent, w = +-1 bitangent handedness
     std::vector<uint32_t> indices;   // triangle list
+    /* Optional per-vertex tint (the web Geometry.colors). Not sRGB-decoded:
+       the shader multiplies it in as-is, exactly like the JS. Empty = the
+       renderer's generic white. None of the primitives here emit one; the
+       scene importer fills it for exported web meshes that carry one. */
+    std::vector<glm::vec3> colors;
+    /* Optional skinning: four bone indices (as floats, like the JS) and
+       four weights per vertex. Filled only by the scene importer. */
+    std::vector<glm::vec4> joints, weights;
     glm::vec3 boundsMin{0.0f}, boundsMax{0.0f};
 
     std::size_t vertexCount() const { return positions.size(); }

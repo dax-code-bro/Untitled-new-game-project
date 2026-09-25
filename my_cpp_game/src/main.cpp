@@ -22,6 +22,7 @@
 #include "rendering/Renderer.hpp"
 #include "rendering/ShaderLibrary.hpp"
 #include "rendering/Tunables.hpp"
+#include "scene/SceneFile.hpp"
 #include "scene/Showcase.hpp"
 
 #include <glad/gl.h>
@@ -102,8 +103,23 @@ int main(int argc, char** argv) try {
 
     game::rendering::MaterialLibrary materials(args.textureRes);
     const auto t0 = std::chrono::steady_clock::now();
-    if (args.scene != "showcase") throw std::invalid_argument("unknown scene '" + args.scene + "'");
-    game::scene::Showcase scene(materials, renderer, args.grass);
+    /* Two kinds of scene: the built-in showcase, or a map exported from the
+       web game (tools/export_scene.js writes a .lescene). */
+    std::unique_ptr<game::scene::Showcase> showcase;
+    std::unique_ptr<game::scene::SceneFile> sceneFile;
+    if (args.scene == "showcase") {
+        showcase = std::make_unique<game::scene::Showcase>(materials, renderer, args.grass);
+    } else {
+        sceneFile = std::make_unique<game::scene::SceneFile>(args.scene, materials, renderer);
+        const auto& st = sceneFile->stats();
+        std::printf("imported %s: %zu meshes (%zu verts, %zu tris, %zu triangles rewound), %zu materials, "
+                    "%zu draws (%zu skinned), %zu instances, %zu lights\n", args.scene.c_str(), st.meshes, st.vertices,
+                    st.triangles, st.rewound, st.materials, st.draws, st.skinned, st.instances, st.lights);
+    }
+    const std::vector<game::rendering::DrawItem>& items = showcase ? showcase->items() : sceneFile->items();
+    auto shotCamera = [&](const std::string& name) {
+        return showcase ? showcase->shot(name) : sceneFile->camera();
+    };
     applyDisables(renderer, args.disable);
     /* The look file is applied over the scene's own settings and then
        watched; --set wins over both. */
@@ -121,10 +137,19 @@ int main(int argc, char** argv) try {
     applySets();
     std::printf("scene built in %.2f s: %zu draws, %zu recipes at %d px (bake %.2f s), internal %dx%d\n",
                 std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count(),
-                scene.items().size(), materials.recipeCount(), materials.textureSize(),
+                items.size(), materials.recipeCount(), materials.textureSize(),
                 materials.bakeSeconds(), renderer.internalWidth(), renderer.internalHeight());
 
-    game::rendering::Camera camera = scene.shot(args.shot);
+    game::rendering::Camera camera = shotCamera(args.shot);
+    auto parse3 = [](const std::string& v) {
+        glm::vec3 r(0.0f);
+        if (std::sscanf(v.c_str(), "%f,%f,%f", &r.x, &r.y, &r.z) != 3)
+            throw std::invalid_argument("expected x,y,z, got '" + v + "'");
+        return r;
+    };
+    if (!args.eye.empty()) camera.position = parse3(args.eye);
+    if (!args.target.empty()) camera.target = parse3(args.target);
+    if (args.fov > 0.0f) camera.fov = glm::radians(args.fov);
     FlyCamera fly;
     fly.lookFrom(camera);
 
@@ -160,7 +185,7 @@ int main(int argc, char** argv) try {
             if (glfwGetKey(w, GLFW_KEY_Q)) fly.pos.y -= speed;
             const auto names = game::scene::Showcase::shotNames();
             for (int k = 0; k < static_cast<int>(names.size()) && k < 9; ++k)
-                if (glfwGetKey(w, GLFW_KEY_1 + k)) fly.lookFrom(scene.shot(names[static_cast<size_t>(k)]));
+                if (glfwGetKey(w, GLFW_KEY_1 + k)) fly.lookFrom(shotCamera(names[static_cast<size_t>(k)]));
             double mx = 0, my = 0;
             glfwGetCursorPos(w, &mx, &my);
             if (glfwGetMouseButton(w, GLFW_MOUSE_BUTTON_RIGHT)) {
@@ -180,7 +205,7 @@ int main(int argc, char** argv) try {
         while (accumulator >= kFixedStep) accumulator -= kFixedStep;   // sim attaches here
 
         const auto g0 = clock::now();
-        renderer.render(scene.items(), camera, static_cast<float>(dt));
+        renderer.render(items, camera, static_cast<float>(dt));
         const auto& out = renderer.output();
         if (!args.hidden) {
             glBlitNamedFramebuffer(out.id(), 0, 0, 0, out.width(), out.height(),

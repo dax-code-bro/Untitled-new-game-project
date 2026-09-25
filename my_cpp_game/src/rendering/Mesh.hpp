@@ -19,7 +19,9 @@ struct Instance {
  * VAO that already knows the layout GLSL.transform expects:
  *
  *     0 aPosition vec3   1 aNormal vec3   2 aUv vec2   3 aTangent vec4
- *     4 aColor    (left disabled -- the generic value, white, applies)
+ *     4 aColor    per-vertex tint if the mesh has one, else disabled and
+ *                 the generic value (pinned to white by the Renderer) applies
+ *     5 aJoints, 6 aWeights  (skinned meshes only)
  *     8..11 aModel, 12 aParams  (per instance, only when instanced)
  *
  * The instance buffer grows on demand and is never shrunk. */
@@ -31,11 +33,13 @@ public:
     void drawInstanced(const std::vector<Instance>& instances) const;
 
     [[nodiscard]] GLsizei   indexCount() const { return m_indexCount; }
+    [[nodiscard]] bool      skinned()    const { return m_skinned; }
     [[nodiscard]] glm::vec3 boundsMin()  const { return m_min; }
     [[nodiscard]] glm::vec3 boundsMax()  const { return m_max; }
 
 private:
-    gl::Buffer      m_vbo, m_ebo;
+    gl::Buffer      m_vbo, m_ebo, m_colors, m_joints, m_weights;
+    bool            m_skinned = false;
     mutable gl::VertexArray m_vao;
     mutable gl::Buffer m_instances;
     mutable size_t     m_instanceCapacity = 0;

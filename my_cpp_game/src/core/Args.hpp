@@ -23,6 +23,8 @@ struct Args {
     std::vector<std::string> disable;    // passes to switch off: shadows,env,ssao,...
     std::vector<std::string> sets;       // --set key=value look overrides (see Tunables)
     std::string look;                    // --look file.ini (default scripts/look.ini, watched)
+    std::string eye, target;             // --eye x,y,z --target x,y,z: camera override
+    float       fov        = 0.0f;       // --fov degrees (0 = the shot's own)
     bool        hidden     = false;      // no visible window (headless capture)
     bool        glDebug    = false;      // KHR_debug output, errors counted and printed
 };

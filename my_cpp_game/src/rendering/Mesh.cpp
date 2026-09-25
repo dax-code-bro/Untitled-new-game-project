@@ -13,6 +13,9 @@ struct Vertex {
 static_assert(sizeof(Vertex) == 48, "interleaved vertex must be tightly packed");
 constexpr GLuint kVertexBinding   = 0;
 constexpr GLuint kInstanceBinding = 1;
+constexpr GLuint kColorBinding    = 2;
+constexpr GLuint kJointBinding    = 3;
+constexpr GLuint kWeightBinding   = 4;
 } // namespace
 
 Mesh::Mesh(const geometry::MeshData& d)
@@ -33,6 +36,20 @@ Mesh::Mesh(const geometry::MeshData& d)
     m_vao.attribute(2, kVertexBinding, 2, GL_FLOAT, offsetof(Vertex, uv));
     m_vao.attribute(3, kVertexBinding, 4, GL_FLOAT, offsetof(Vertex, tangent));
     m_vao.elementBuffer(m_ebo);
+    if (!d.colors.empty() && d.colors.size() == d.positions.size()) {
+        m_colors = gl::Buffer::from(d.colors, 0);
+        m_vao.vertexBuffer(kColorBinding, m_colors, 0, sizeof(glm::vec3));
+        m_vao.attribute(4, kColorBinding, 3, GL_FLOAT, 0);
+    }
+    if (d.joints.size() == d.positions.size() && d.weights.size() == d.positions.size()) {
+        m_joints = gl::Buffer::from(d.joints, 0);
+        m_weights = gl::Buffer::from(d.weights, 0);
+        m_vao.vertexBuffer(kJointBinding, m_joints, 0, sizeof(glm::vec4));
+        m_vao.vertexBuffer(kWeightBinding, m_weights, 0, sizeof(glm::vec4));
+        m_vao.attribute(5, kJointBinding, 4, GL_FLOAT, 0);
+        m_vao.attribute(6, kWeightBinding, 4, GL_FLOAT, 0);
+        m_skinned = true;
+    }
 }
 
 void Mesh::draw() const {

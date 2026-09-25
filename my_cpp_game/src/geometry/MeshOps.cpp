@@ -1,6 +1,7 @@
 // dropDegenerateTriangles / computeTangents / computeBounds, ported from the
 // Geometry class in engine/src/30-geometry.js.
 #include "geometry/Shapes.hpp"
+#include <stdexcept>
 
 #include <algorithm>
 #include <cmath>
@@ -8,10 +9,23 @@
 
 namespace game::geometry {
 
+namespace {
+// The ops are public, so an external caller can hand them inconsistent
+// arrays; the JS would compute NaN there, the port must not read past an end.
+void requireConsistent(const MeshData& m, bool needAttributes) {
+    const std::size_t nv = m.positions.size();
+    for (uint32_t i : m.indices)
+        if (i >= nv) throw std::out_of_range("MeshData: index past the end of positions");
+    if (needAttributes && (m.normals.size() != nv || m.uvs.size() != nv))
+        throw std::invalid_argument("MeshData: normals/uvs must have one entry per position");
+}
+} // namespace
+
 void dropDegenerateTriangles(MeshData& m) {
     const auto& P = m.positions;
     const auto& I = m.indices;
     if (I.empty() || P.empty()) return;
+    requireConsistent(m, false);
     std::vector<uint32_t> keep;
     keep.reserve(I.size());
     for (std::size_t i = 0; i + 2 < I.size(); i += 3) {
@@ -29,6 +43,7 @@ void dropDegenerateTriangles(MeshData& m) {
 }
 
 void computeTangents(MeshData& m) {
+    requireConsistent(m, true);
     const std::size_t nv = m.positions.size();
     const auto& P = m.positions;
     const auto& U = m.uvs;

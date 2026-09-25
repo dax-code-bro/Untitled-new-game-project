@@ -107,7 +107,7 @@ void heightToNormalInto(const float* hgt, int size, double strength, unsigned nT
         const double ny = (d - up) * strength;
         const double nz = 1;
         double len = std::sqrt(nx * nx + ny * ny + nz * nz);
-        if (!(len != 0)) len = 1;   // `|| 1`: 0 and NaN both fall back
+        if (!(len > 0)) len = 1;    // `|| 1`: 0 and NaN both fall back (NaN > 0 is false)
         const size_t i = (rowC + x) * 4;
         out[i] = toUint8(((nx / len) * 0.5 + 0.5) * 255);
         out[i + 1] = toUint8(((ny / len) * 0.5 + 0.5) * 255);

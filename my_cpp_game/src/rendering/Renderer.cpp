@@ -311,6 +311,10 @@ void Renderer::bindMaterial(const gl::Program& p, const Material& m) const {
 }
 
 void Renderer::drawItem(const gl::Program& p, const DrawItem& it) {
+    if (it.boneTexture && it.mesh->skinned()) {
+        p.texture("uBoneTex", *it.boneTexture);
+        p.set("uBoneCount", static_cast<float>(it.boneCount));
+    }
     if (it.instances && !it.instances->empty()) {
         it.mesh->drawInstanced(*it.instances);
         m_stats.instances += static_cast<int>(it.instances->size());
@@ -328,6 +332,7 @@ void Renderer::drawItem(const gl::Program& p, const DrawItem& it) {
 static std::vector<std::string> meshDefines(const DrawItem& it, bool alphaClip) {
     std::vector<std::string> d;
     if (it.instances && !it.instances->empty()) d.emplace_back("INSTANCED");
+    else if (it.boneTexture && it.mesh->skinned()) d.emplace_back("SKINNED");
     if (it.grass) d.emplace_back("GRASS");
     if (alphaClip && it.material->alphaClip) d.emplace_back("ALPHA_CLIP");
     return d;

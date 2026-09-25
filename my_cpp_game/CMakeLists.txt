@@ -57,6 +57,13 @@ FetchContent_Declare(stb
   GIT_TAG        master
   GIT_SHALLOW    TRUE)
 FetchContent_MakeAvailable(stb)
+
+# JSON, for the scene files exported from the web game (tools/export_scene.js).
+FetchContent_Declare(json
+  URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
+  URL_HASH SHA256=d6c65aca6b1ed68e7a182f4757257b107ae403032760ed6ef121c9d55e81757d
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+FetchContent_MakeAvailable(json)
 add_library(stb_image INTERFACE)
 target_include_directories(stb_image INTERFACE ${stb_SOURCE_DIR})
 
@@ -93,7 +100,7 @@ target_compile_definitions(game_core PUBLIC GAME_SOURCE_DIR="${CMAKE_CURRENT_SOU
 
 # Scenes: what gets drawn. Depends on everything below it.
 game_module(game_scene src/scene)
-target_link_libraries(game_scene PUBLIC game_render game_core)
+target_link_libraries(game_scene PUBLIC game_render game_core nlohmann_json::nlohmann_json)
 
 add_executable(my_cpp_game src/main.cpp)
 target_link_libraries(my_cpp_game PRIVATE game_scene game_core game_render)

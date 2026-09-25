@@ -22,6 +22,10 @@ struct DrawItem {
     glm::vec4       params{1.0f, 1.0f, 1.0f, 0.0f};   // tint rgb, custom
     const std::vector<Instance>* instances = nullptr;
     bool            grass = false;
+    /* Skinned: the bone palette, one mat4 per bone as an RGBA32F texture
+       (width = 4 x bones, height 1) -- GLSL.transform's layout. */
+    const gl::Texture* boneTexture = nullptr;
+    int             boneCount = 0;
 };
 
 struct PointLight {
