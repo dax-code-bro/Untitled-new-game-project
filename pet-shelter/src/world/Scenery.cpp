@@ -273,6 +273,79 @@ void buildBuildable(MeshBuilder& b, BuildKind kind) {
         }
         break;
     }
+    case BuildKind::SmallAnimalHouse:
+        building({0.70f, 0.82f, 0.66f}, 2.8f);
+        b.addBox(AABB({-hw + 0.8f, 0.9f, hd - 0.11f}, {-1.0f, 2.2f, hd - 0.04f}), dark);
+        b.addBox(AABB({1.0f, 0.9f, hd - 0.11f}, {hw - 0.8f, 2.2f, hd - 0.04f}), dark);
+        break;
+    case BuildKind::Barn: {
+        // Red barn on the back half, fenced paddock in front
+        float bz = -hd * 0.25f;
+        Material red = Material::make({0.45f, 0.08f, 0.06f}, 0.7f, 0.0f, PAT_SIDING);
+        Material white = Material::make({0.85f, 0.84f, 0.8f}, 0.6f);
+        b.addBox(AABB({-hw, -3.0f, -hd}, {hw, 0.2f, bz}), concrete, true);
+        b.addBox(AABB({-hw + 0.1f, 0.2f, -hd + 0.1f}, {hw - 0.1f, 4.0f, bz - 0.1f}), red);
+        float cz = (-hd + bz) * 0.5f, rh = 2.2f;
+        b.addQuad({-hw - 0.4f, 4.0f, bz + 0.3f}, {hw + 0.4f, 4.0f, bz + 0.3f}, {hw + 0.4f, 4.0f + rh, cz}, {-hw - 0.4f, 4.0f + rh, cz}, roof);
+        b.addQuad({hw + 0.4f, 4.0f, -hd - 0.3f}, {-hw - 0.4f, 4.0f, -hd - 0.3f}, {-hw - 0.4f, 4.0f + rh, cz}, {hw + 0.4f, 4.0f + rh, cz}, roof);
+        b.addQuad({-hw, 4.0f, -hd}, {-hw, 4.0f, bz}, {-hw, 4.0f + rh, cz}, {-hw, 4.0f + rh, cz}, red);
+        b.addQuad({hw, 4.0f, bz}, {hw, 4.0f, -hd}, {hw, 4.0f + rh, cz}, {hw, 4.0f + rh, cz}, red);
+        b.addBox(AABB({-1.6f, 0.2f, bz - 0.12f}, {1.6f, 3.2f, bz - 0.04f}), Material::make({0.5f, 0.1f, 0.07f}, 0.6f, 0.0f, PAT_WOOD));
+        b.addBox(AABB({-1.6f, 1.6f, bz - 0.04f}, {1.6f, 1.75f, bz}), white);
+        b.addBox(AABB({-hw, 0.0f, bz}, {hw, 0.06f, hd}), Material::make({0.22f, 0.33f, 0.1f}, 0.95f, 0.0f, PAT_GRASS));
+        Material rail = Material::make({0.8f, 0.78f, 0.72f}, 0.6f, 0.0f, PAT_WOOD);
+        auto rails = [&](vec3 p0, vec3 p1) {
+            for (float y : {0.55f, 1.05f, 1.45f}) {
+                vec3 d = p1 - p0;
+                vec3 c = (p0 + p1) * 0.5f + vec3(0, y, 0);
+                vec3 half{std::fabs(d.x) * 0.5f + 0.05f, 0.06f, std::fabs(d.z) * 0.5f + 0.05f};
+                b.addBox(AABB(c - half, c + half), rail);
+            }
+            float len = length(p1 - p0);
+            for (float t = 0; t <= len; t += 2.5f) b.addBox(p0 + (p1 - p0) * (t / len) + vec3(0, 0.8f, 0), {0.08f, 0.8f, 0.08f}, rail);
+        };
+        rails({-hw, 0, bz}, {-hw, 0, hd});
+        rails({hw, 0, bz}, {hw, 0, hd});
+        rails({-hw, 0, hd}, {-2.0f, 0, hd});
+        rails({2.0f, 0, hd}, {hw, 0, hd});
+        b.addBox(AABB({hw - 3.0f, 0.06f, hd - 1.2f}, {hw - 1.0f, 0.7f, hd - 0.6f}), steel);   // water trough
+        break;
+    }
+    case BuildKind::FeralEnclosure: {
+        b.addBox(AABB({-hw, -0.2f, -hd}, {hw, 0.05f, hd}), concrete);
+        Material chain = Material::make({0.5f, 0.52f, 0.54f}, 0.5f, 0.7f, PAT_FENCE);
+        auto wall = [&](vec3 p0, vec3 p1) { b.addQuad(p0, p1, p1 + vec3(0, 3.0f, 0), p0 + vec3(0, 3.0f, 0), chain); };
+        wall({-hw, 0, -hd}, {hw, 0, -hd}); wall({hw, 0, -hd}, {hw, 0, hd}); wall({hw, 0, hd}, {-hw, 0, hd}); wall({-hw, 0, hd}, {-hw, 0, -hd});
+        wall({0, 0, -hd}, {0, 0, hd}); wall({-hw, 0, 0}, {hw, 0, 0});    // four pens
+        for (float x : {-hw, 0.0f, hw}) for (float z : {-hd, 0.0f, hd}) b.addCylinder({x, 0, z}, 0.07f, 3.1f, 6, steel);
+        for (float x : {-hw * 0.5f, hw * 0.5f}) for (float z : {-hd * 0.5f, hd * 0.5f})
+            b.addBox(AABB({x - 1.0f, 0.05f, z - 0.8f}, {x + 1.0f, 1.2f, z + 0.8f}), Material::make({0.4f, 0.3f, 0.2f}, 0.8f, 0.0f, PAT_WOOD));
+        b.addQuad({-hw, 3.0f, -hd}, {-hw, 3.0f, hd}, {hw, 3.0f, hd}, {hw, 3.0f, -hd}, chain);    // mesh roof
+        break;
+    }
+    case BuildKind::SecureEnclosure: {
+        b.addBox(AABB({-hw, -0.3f, -hd}, {hw, 0.3f, hd}), concrete);
+        Material bars = Material::make({0.2f, 0.21f, 0.22f}, 0.35f, 0.9f);
+        for (float x = -hw; x <= hw + 0.01f; x += 0.25f) {
+            b.addCylinder({x, 0.3f, -hd}, 0.035f, 3.6f, 6, bars);
+            b.addCylinder({x, 0.3f, hd}, 0.035f, 3.6f, 6, bars);
+        }
+        for (float z = -hd; z <= hd + 0.01f; z += 0.25f) {
+            b.addCylinder({-hw, 0.3f, z}, 0.035f, 3.6f, 6, bars);
+            b.addCylinder({hw, 0.3f, z}, 0.035f, 3.6f, 6, bars);
+        }
+        b.addBox(AABB({-hw, 3.9f, -hd}, {hw, 4.1f, hd}), bars);
+        b.addBox(AABB({-hw * 0.6f, 0.3f, -hd + 0.2f}, {hw * 0.6f, 2.0f, -hd + 2.2f}), concrete);   // den
+        b.addBox(AABB({hw - 0.6f, 2.6f, hd + 0.02f}, {hw - 0.1f, 3.0f, hd + 0.06f}), Material::make({0.9f, 0.7f, 0.05f}, 0.4f));   // warning sign
+        break;
+    }
+    case BuildKind::SurgeryWing:
+        building({0.9f, 0.92f, 0.93f}, 3.4f);
+        for (float x : {-4.5f, 4.5f}) b.addBox(AABB({x - 1.2f, 1.0f, hd - 0.11f}, {x + 1.2f, 2.5f, hd - 0.04f}), dark);
+        // red cross
+        b.addBox(AABB({-0.15f, 2.6f, hd - 0.03f}, {0.15f, 3.3f, hd + 0.01f}), Material::make({0.8f, 0.05f, 0.05f}, 0.4f, 0.0f, PAT_PLAIN, 1.5f));
+        b.addBox(AABB({-0.5f, 2.8f, hd - 0.03f}, {0.5f, 3.1f, hd + 0.01f}), Material::make({0.8f, 0.05f, 0.05f}, 0.4f, 0.0f, PAT_PLAIN, 1.5f));
+        break;
     default:
         b.addBox(AABB({-hw, 0.0f, -hd}, {hw, bi.height, hd}), siding);
         break;

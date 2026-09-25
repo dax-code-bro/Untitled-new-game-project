@@ -135,7 +135,7 @@ Interact with the computer in your office (E). It opens full screen. Tabs:
 - **Base foundation built.** Engine, HDR pipeline, world, starting facility, character creator, opening
   cutscene, POV and Creative modes, office computer (Animals/Security/Finances/Ratings), economy and
   taxes, staff/payroll, private and public ratings, security cameras, gate and locks, save/load.
-- Verified with 34 headless sim tests and a 24-shot screenshot suite (`--screenshots`). Samples are in `docs/screenshots/`.
+- Verified with 59 headless sim tests (now incl. species counts, surgery, incidents, staff, interviews) and a 24-shot screenshot suite (`--screenshots`). Samples are in `docs/screenshots/`.
 - The character, furniture and buildings are **procedural placeholder geometry** (built in code from
   boxes, cylinders and ellipsoids). They already use the final shader and lighting pipeline, so real modeled
   and rigged assets can replace them later without renderer changes.
@@ -196,12 +196,81 @@ The full species list lives in `src/game/Species.cpp`.
 - **Protesters** can show up. Declining their interview, or failing the online interview, significantly
   lowers the public rating.
 
+## 8.6 Animals: what's built (update 2 status)
+- **Species:** 139 real species exactly as asked: 20 small, 40 medium, 20 large, 40 feral, 19 restricted
+  (`src/game/Species.cpp`). Each has its scientific name, a real fact, diet, lifespan, temperament, fee, care cost,
+  measured proportions and its real coat colors. Domestic breeds carry breed-standard colors (the dachshund alone
+  has 15; cats up to 23; horses up to 17), and every individual also varies by sex, age, size, weight, random
+  white markings and color jitter. Babies are generated with big heads, short snouts and floppy ears; fawns get spots.
+- **Models:** each animal is one continuous skinned mesh generated from its measurements, with the following:
+  - Anatomy: a torso with chest, loin and haunches; legs with paws, hooves and claws; skull and muzzle.
+  - Head details: a jaw, tongue, eyes on the skull with round, slit or goat pupils, and 11 ear types.
+  - Extras: 8 horn and antler types, manes, tusks, beards, combs, wattles and snoods.
+  - Special body plans: birds with folded wings, lizards and crocodiles, turtles and tortoises with domed scute
+    shells, snakes, a knuckle-walking chimp with a bare face, and rabbits in the sitting "loaf" posture.
+  - Coat shader: 23 real patterns plus fur shells and blood wounds.
+- **Animation:** 47 behaviors blended over walk/trot/gallop/hop/waddle/slither/knuckle gaits
+  (`src/game/AnimalAnimator.cpp`). Each species only uses the behaviors it really does: rabbits thump and binky,
+  cats knead and pounce, horses rear and kick, cobras hood up, turtles hide in the shell, chimps chest-beat.
+  Sedated (on the operating table) and dead poses are included.
+- **Play-testing:** `PetShelter --animals DIR [--only "Name,Name"|Class] [--poses]` photographs every species
+  (male, female and baby from the side and the front) and, with `--poses`, every behavior. All 139 were reviewed
+  and the obvious problems fixed: bodies were tubes, cats looked like weasels, rabbits looked like hairballs, horse
+  necks were planks, eyes were buried, there was a "grin" seam and birds had shield wings.
+  **Still honestly rough:** the models are procedural and stylized, not hand-sculpted. Small terriers still read
+  a bit horse-like, fur shells can look fuzzy up close, and snakes lie straight unless coiled. More passes are needed
+  to reach "nothing even slightly looks wrong".
+- **Housing (Creative mode):**
+  - Existing: Kennel Block (dogs) and Cat House.
+  - New: Small Animal House (rabbits, rodents, ferrets, birds, reptiles), Barn & Paddock (horses, donkeys, cattle,
+    camelids, pigs, goats, sheep, poultry), Feral Holding and Secure Enclosure (dangerous animals until transfer).
+  - New: the **Surgery Wing**, which is the bigger medical room, required for feral and large animals.
+  - The starting medical room holds 4 crates.
+- **Protective gear** is a $4,500 unlock. Without it, staff get bitten handling feral animals (life event plus ER bill).
+- **Animals in the world:** every animal is an actor in its housing (kennel runs, paddock, pens, medical room),
+  choosing behaviors from health, mood, stress and time of day (sleeping at night, eating at 8 AM and 5 PM,
+  limping when injured).
+- **Sim:** intake (strays, surrenders, litters with babies), feeding and cleaning by caretakers, illness,
+  injuries, bleeding, fights in shared housing (babies can be torn open and killed), adoptions, deaths, owned client
+  pets, feral intake from animal control, release to the wild, and sanctuary transfers.
+- **Surgery:** the operating table in the medical room runs these steps in order:
+  1. Owner consent.
+  2. Anesthesia dose in mg/kg. Too light and the animal wakes screaming; too much and it stops breathing.
+  3. Incision.
+  4. Clamp the bleeders.
+  5. Repair.
+  6. Suture.
+
+  Live heart rate, SpO2, depth and blood loss are shown, with blood on the animal. Operating on an owned pet without
+  consent is found out 75% of the time and becomes a scandal.
+- **Restricted animals:** a tiger, bear or other restricted animal can turn up loose by the parking lot. The right
+  move is to stay calm, get everyone inside and call 911 (the [P] key or the button). Police dart it; it goes to your
+  Secure Enclosure or is taken away. Panic or trying to catch it gets people mauled or killed, with huge rating hits
+  and protests.
+- **Staff wellbeing:** fatigue, stress, trust, days off per week, vacations, one-on-ones, gifts and paying medical
+  bills.
+  - Life events: family death, house fire, injury, illness, burnout, new baby and wedding, each with supportive
+    down to cold choices.
+  - High private rating: staff greet you by name in the morning and share their family and hobbies.
+  - Low private rating: rumors, quitting and sabotage (antifreeze in a water bowl; cameras can catch who did it).
+- **Public events:**
+  - Client visits: warm, silent, curt or refuse.
+  - Consent.
+  - Deaths.
+  - Smoking, drinking and drugs on the property: ask, kick out, call police or ignore.
+  - Protests that grow, calm down, or turn deadly.
+  - Online interview: 3 questions. Declining or failing it is a big public hit.
+- Decisions pop up as cards ([Q] in POV; urgent ones stop time) and are also in the computer's **Inbox** tab. The
+  **Animals** tab has a live rotating 3D record with every behavior; the **Staff** tab covers wellbeing.
+
 ## 9. Next up
-- Build out the animal systems above in stages (species data, then models and animation, then sim and events).
+- More model passes until nothing looks off (small terriers, fur close-ups, coiled snakes).
+- Staff and protesters as visible people in the world; clients in the waiting room.
+- Animals walking on leashes with the player, hands-on feeding and cleaning in POV.
 
 ## 9b. Open questions for the owner (animals)
 - Are adoptions the main income from animals, or will you also sell animals (the owner mentioned "buy animals")?
-- Do feral animals get released back to the wild after treatment?
+- Do feral animals get released back to the wild after treatment? (Built as: yes, it's offered once they recover.)
 
 ## 9c. Open questions for the owner (general)
 - Game title.

@@ -599,7 +599,7 @@ void smallAnimals(Cat& c) {
     }
     {
         AnimalShape a = dog(0.33f, 0.33f, 7);
-        a.headLen = 0.6f; a.headWidth = 0.5f; a.snoutLen = 0.5f; a.snoutWidth = 0.7f; a.stop = 0.3f; a.ear = Ear::Folded; a.earSize = 0.3f;
+        a.headLen = 0.47f; a.headWidth = 0.55f; a.snoutLen = 0.48f; a.snoutWidth = 0.7f; a.stop = 0.35f; a.neckLen = 0.28f; a.ear = Ear::Folded; a.earSize = 0.3f;
         a.tail = Tail::Stub; a.tailLen = 0.18f; a.tailCarry = 70; a.fur = 0.02f; a.extras |= X_BEARD; a.legRatio = 0.52f;
         auto& s = c.add("Miniature Schnauzer", DOG, AC::Small, "Dog", a, 14, "Dog food", 0.35f, 400, 2,
                         "Named for its bearded muzzle - 'Schnauze' is German for snout.");
@@ -607,7 +607,7 @@ void smallAnimals(Cat& c) {
     }
     {
         AnimalShape a = dog(0.3f, 0.32f, 6.5f);
-        a.headLen = 0.55f; a.headWidth = 0.55f; a.snoutLen = 0.45f; a.stop = 0.45f; a.ear = Ear::Folded; a.earSize = 0.3f;
+        a.headLen = 0.46f; a.headWidth = 0.6f; a.snoutLen = 0.42f; a.stop = 0.5f; a.neckLen = 0.28f; a.ear = Ear::Folded; a.earSize = 0.3f;
         a.tail = Tail::Stub; a.tailLen = 0.3f; a.tailCarry = 75; a.fur = 0.008f; a.legRatio = 0.52f; a.gaitSpeed = 1.3f;
         auto& s = c.add("Jack Russell Terrier", DOG, AC::Small, "Dog", a, 15, "Dog food", 0.5f, 300, 2,
                         "Bred for fox hunting in the 1800s; can jump five times its own height.");

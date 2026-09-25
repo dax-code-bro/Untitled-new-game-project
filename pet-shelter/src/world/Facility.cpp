@@ -766,6 +766,16 @@ Interaction Facility::pick(vec3 ro, vec3 rd, float maxDist, const SecuritySystem
         best.distance = t;
         best.prompt = "Use computer";
     }
+    {
+        AABB table({8.45f, kFloorY, -2.9f}, {10.35f, kFloorY + 1.0f, -2.1f});
+        float tt = rayAABB(ro, rd, table);
+        if (tt >= 0.0f && tt < best.distance) {
+            best.type = Interaction::OperatingTable;
+            best.index = 0;
+            best.distance = tt;
+            best.prompt = "Operating table";
+        }
+    }
     t = rayAABB(ro, rd, gateKeypad_);
     AABB gateBox({-kGateHalfWidth, 0.0f, kSouthEdge - 0.6f}, {kGateHalfWidth, 2.2f, kSouthEdge + 0.6f});
     float t2 = rayAABB(ro, rd, gateBox);

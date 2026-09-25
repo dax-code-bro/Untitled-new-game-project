@@ -1,6 +1,7 @@
 #include "game/ComputerUI.h"
 #include "world/Layout.h"
 #include <imgui.h>
+#include <algorithm>
 #include <cfloat>
 #include <cmath>
 #include <cstdio>
@@ -57,6 +58,60 @@ void factorTable(const char* id, const std::vector<RatingFactor>& f) {
 
 void ComputerUI::init(Renderer& r) {
     feed_ = r.createTarget(640, 360);
+    previewTarget_ = r.createTarget(480, 360);
+    MeshBuilder gb;
+    gb.addCylinder({0, -0.05f, 0}, 3.0f, 0.05f, 48, Material::make({0.34f, 0.36f, 0.34f}, 0.85f));
+    previewGround_.upload(gb);
+}
+
+void ComputerUI::renderPreview(Renderer& r, const Sim& sim, float dt, float time) {
+    previewReady_ = false;
+    if (!open || tab != TabAnimals) return;
+    const Animal* a = sim.findAnimal(selectedAnimal_);
+    if (!a) return;
+    const Species& sp = speciesCatalog()[size_t(a->species)];
+    if (!preview_ || preview_->animalId != a->id) {
+        preview_ = std::make_unique<Preview>();
+        preview_->animalId = a->id;
+        AnimalIndividual ind;
+        ind.species = a->species; ind.male = a->male; ind.age = a->ageFraction(sp); ind.coat = a->coat;
+        ind.seed = a->seed; ind.weightFactor = a->weightFactor;
+        preview_->build = buildAnimal(sp, ind);
+        preview_->mesh.upload(preview_->build.mesh);
+        preview_->anim.init(preview_->build.rig, sp, a->seed);
+        previewAction_ = 0;
+    }
+    Preview& P = *preview_;
+    auto acts = availableActions(sp);
+    AnimAction want = acts.empty() ? AnimAction::Idle : acts[size_t(std::clamp(previewAction_, 0, int(acts.size()) - 1))];
+    if (P.anim.action() != want) P.anim.play(want, 0.3f);
+    else if (P.anim.finished()) { P.anim.play(AnimAction::Idle, 0.05f); P.anim.play(want, 0.3f); }
+    P.anim.update(dt);
+    P.yaw += dt * 0.35f;
+    // A little stage far above the property so nothing else is in the shot
+    const vec3 stage{0.0f, 900.0f, 0.0f};
+    const AABB& b = P.build.bounds;
+    float size = std::max({b.max.x - b.min.x, b.max.y - b.min.y, b.max.z - b.min.z});
+    CoatUniforms coat = P.build.coat;
+    if (a->bleeding > 0.02f)
+        coat.wound = vec4(P.build.bounds.max.x * 0.92f, P.build.rig.shoulderH * 0.72f, P.build.rig.bodyLen * 0.25f, P.build.rig.bodyLen * (0.08f + 0.15f * a->bleeding)),
+        coat.wet = a->bleeding;
+    auto scene = [&](Renderer& rr, Pass p) {
+        if (p == Pass::Transparent) return;
+        rr.draw(previewGround_, mat4::translate(stage) * mat4::scale(vec3(std::max(size, 0.3f) * 0.6f, 1.0f, std::max(size, 0.3f) * 0.6f)));
+        const auto& sk = P.anim.skin();
+        rr.drawSkinned(P.mesh, sk.data(), int(sk.size()), mat4::translate(stage) * mat4::rotateY(P.yaw), coat, p == Pass::Opaque ? rr.furShells : 0, 1.0f);
+    };
+    Camera cam;
+    cam.fovY = radians(32.0f);
+    cam.aspect = 480.0f / 360.0f;
+    cam.zNear = 0.02f;
+    cam.zFar = 400.0f;
+    vec3 c = stage + vec3(0, (b.max.y) * 0.45f, 0);
+    float dist = size * 0.5f / std::tan(cam.fovY * 0.5f) * 1.25f + 0.1f;
+    cam.lookAt(c + normalize(vec3(0.9f, 0.35f, 0.8f)) * dist, c);
+    r.renderToTarget(cam, scene, previewTarget_, time, false);
+    previewReady_ = true;
 }
 
 void ComputerUI::renderFeed(Renderer& r, const Renderer::SceneFn& scene, const Sim& sim, float time) {
@@ -100,8 +155,10 @@ bool ComputerUI::draw(Sim& sim, const Facility& facility) {
 
     // Sidebar tabs
     ImGui::BeginChild("tabs", ImVec2(compact ? 150.0f : 240.0f, 0), ImGuiChildFlags_Borders);
-    const char* names[] = {"Animals", "Security", "Finances", "Ratings"};
-    const char* hints[] = {"Every animal in your care", "Cameras, gate & locks", "Taxes, income, payroll", "Private & public opinion"};
+    std::string inboxName = "Inbox (" + std::to_string(sim.decisions.size()) + ")";
+    const char* names[] = {inboxName.c_str(), "Animals", "Staff", "Security", "Finances", "Ratings"};
+    const char* hints[] = {"Decisions waiting for you", "Every animal in your care", "Wellbeing, schedules, one-on-ones",
+                           "Cameras, gate & locks", "Taxes, income, payroll", "Private & public opinion"};
     for (int i = 0; i < TabCount; ++i) {
         if (ImGui::Selectable(names[i], tab == i, 0, ImVec2(0, 34))) tab = i;
         if (!compact) { ImGui::TextDisabled("  %s", hints[i]); ImGui::Spacing(); }
@@ -115,7 +172,9 @@ bool ComputerUI::draw(Sim& sim, const Facility& facility) {
     ImGui::SameLine();
     ImGui::BeginChild("content", ImVec2(0, 0), ImGuiChildFlags_Borders);
     switch (tab) {
+    case TabInbox: drawInbox(sim); break;
     case TabAnimals: drawAnimals(sim); break;
+    case TabStaff: drawStaff(sim); break;
     case TabSecurity: drawSecurity(sim, facility); break;
     case TabFinances: drawFinances(sim); break;
     case TabRatings: drawRatings(sim); break;
@@ -126,24 +185,264 @@ bool ComputerUI::draw(Sim& sim, const Facility& facility) {
     return keepOpen;
 }
 
+void ComputerUI::drawInbox(Sim& sim) {
+    ImGui::Text("INBOX");
+    ImGui::Separator();
+    if (sim.decisions.empty()) ImGui::TextDisabled("Nothing needs your decision right now.");
+    int resolveId = -1, resolveChoice = -1;
+    for (const Decision& d : sim.decisions) {
+        ImGui::PushID(d.id);
+        ImGui::TextColored(d.urgent ? ImVec4(1, 0.45f, 0.35f, 1) : ImVec4(1, 0.85f, 0.4f, 1), "%s", d.title.c_str());
+        ImGui::TextWrapped("%s", d.text.c_str());
+        if (d.expires > 0.0) {
+            int mins = std::max(0, int(d.expires - sim.clock.minutes));
+            ImGui::TextDisabled("Answer within %dh %02dm", mins / 60, mins % 60);
+        }
+        for (size_t k = 0; k < d.choices.size(); ++k) {
+            ImGui::PushID(int(k));
+            if (ImGui::Button(d.choices[k].c_str())) { resolveId = d.id; resolveChoice = int(k); }
+            ImGui::PopID();
+        }
+        ImGui::Separator();
+        ImGui::PopID();
+    }
+    if (resolveId >= 0) sim.resolve(resolveId, resolveChoice);
+    ImGui::SeparatorText("Recent events");
+    int n = 0;
+    for (auto it = sim.events.rbegin(); it != sim.events.rend() && n < 40; ++it, ++n)
+        ImGui::TextWrapped("Day %d: %s", it->day + 1, it->text.c_str());
+}
+
+namespace {
+void bar(const char* label, float v, ImVec4 col, float w = 120.0f) {
+    ImGui::PushStyleColor(ImGuiCol_PlotHistogram, col);
+    ImGui::ProgressBar(clampf(v, 0.0f, 1.0f), ImVec2(w, 0), label);
+    ImGui::PopStyleColor();
+}
+ImVec4 goodBad(float v) { return v > 0.66f ? ImVec4(0.3f, 0.75f, 0.35f, 1) : (v > 0.33f ? ImVec4(0.85f, 0.7f, 0.2f, 1) : ImVec4(0.85f, 0.25f, 0.2f, 1)); }
+}  // namespace
+
 void ComputerUI::drawAnimals(Sim& sim) {
     ImGui::Text("ANIMALS");
+    ImGui::SameLine();
+    ImGui::TextDisabled("  %d in care  |  %d adopted  |  %d died  |  %d taken in", sim.animalsInCare(), sim.adoptionsTotal,
+                        sim.deathsTotal, sim.intakeTotal);
     ImGui::Separator();
-    int kennels = sim.placedCount(BuildKind::KennelBlock), cats = sim.placedCount(BuildKind::CatHouse);
-    int capacity = kennels * buildInfo(BuildKind::KennelBlock).animalCapacity + cats * buildInfo(BuildKind::CatHouse).animalCapacity;
-    ImGui::Text("Animals in care: %d", sim.animals);
-    ImGui::Text("Housing capacity: %d  (kennel blocks: %d, cat houses: %d)", capacity, kennels, cats);
-    ImGui::Spacing();
-    if (ImGui::BeginTable("animals", 6, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders)) {
-        for (const char* h : {"Name", "Species", "Breed", "Age", "Health", "Status"}) ImGui::TableSetupColumn(h);
+    // Housing & unlocks
+    if (ImGui::CollapsingHeader("Housing & equipment", ImGuiTreeNodeFlags_DefaultOpen)) {
+        const BuildKind kinds[] = {BuildKind::KennelBlock, BuildKind::CatHouse, BuildKind::SmallAnimalHouse, BuildKind::Barn,
+                                   BuildKind::FeralEnclosure, BuildKind::SecureEnclosure};
+        if (ImGui::BeginTable("housing", compact ? 2 : 3, ImGuiTableFlags_SizingStretchSame)) {
+            for (BuildKind k : kinds) {
+                ImGui::TableNextColumn();
+                int used = sim.housingUsed(k), cap = sim.housingCapacity(k);
+                ImVec4 col = cap == 0 ? ImVec4(0.55f, 0.55f, 0.55f, 1) : (used >= cap ? ImVec4(1, 0.5f, 0.3f, 1) : ImVec4(0.8f, 0.9f, 0.8f, 1));
+                ImGui::TextColored(col, "%s: %d / %d", buildInfo(k).name, used, cap);
+            }
+            ImGui::EndTable();
+        }
+        int crates = 0;
+        for (auto& a : sim.animalList) crates += (a.inCare() && a.housing < 0) ? 1 : 0;
+        ImGui::Text("Medical room crates: %d / 4", crates);
+        ImGui::SameLine();
+        ImGui::Text("   Surgery Wing: %s", sim.hasSurgeryWing() ? "built" : "not built (needed for feral & large animals)");
+        if (sim.protectiveGear) ImGui::TextColored(ImVec4(0.4f, 0.9f, 0.5f, 1), "Protective gear: issued to all staff");
+        else {
+            ImGui::TextColored(ImVec4(1, 0.6f, 0.3f, 1), "Protective gear: none - staff get hurt handling feral animals.");
+            ImGui::SameLine();
+            if (ImGui::Button("Buy protective gear ($4,500)")) sim.buyProtectiveGear();
+        }
+    }
+    const char* filters[] = {"All", "Needs care", "Up for adoption", "Wild & dangerous", "Client patients"};
+    for (int i = 0; i < 5; ++i) {
+        if (i) ImGui::SameLine();
+        if (ImGui::RadioButton(filters[i], animalFilter_ == i)) animalFilter_ = i;
+    }
+    const auto& cat = speciesCatalog();
+    float listW = compact ? ImGui::GetContentRegionAvail().x * 0.45f : ImGui::GetContentRegionAvail().x * 0.5f;
+    ImGui::BeginChild("alist", ImVec2(listW, 0), ImGuiChildFlags_Borders);
+    if (ImGui::BeginTable("animals", compact ? 3 : 5, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY)) {
+        ImGui::TableSetupColumn("Name");
+        ImGui::TableSetupColumn("Species");
+        if (!compact) { ImGui::TableSetupColumn("Class"); ImGui::TableSetupColumn("Age"); }
+        ImGui::TableSetupColumn("Status");
         ImGui::TableHeadersRow();
+        for (const Animal& a : sim.animalList) {
+            if (!a.inCare()) continue;
+            const Species& sp = cat[size_t(a.species)];
+            bool wild = sp.cls == AnimalClass::Feral || sp.cls == AnimalClass::Restricted;
+            if (animalFilter_ == 1 && a.status == AnimalStatus::Healthy && a.hunger < 0.7f) continue;
+            if (animalFilter_ == 2 && (wild || a.owned || a.status != AnimalStatus::Healthy)) continue;
+            if (animalFilter_ == 3 && !wild) continue;
+            if (animalFilter_ == 4 && !a.owned) continue;
+            ImGui::PushID(a.id);
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            if (ImGui::Selectable(a.name.c_str(), selectedAnimal_ == a.id, ImGuiSelectableFlags_SpanAllColumns)) selectedAnimal_ = a.id;
+            ImGui::TableNextColumn(); ImGui::TextUnformatted(sp.name.c_str());
+            if (!compact) {
+                ImGui::TableNextColumn(); ImGui::TextUnformatted(className(sp.cls));
+                ImGui::TableNextColumn();
+                if (a.isBaby(sp)) ImGui::TextColored(ImVec4(1, 0.8f, 0.5f, 1), "baby");
+                else ImGui::Text("%.1f y", double(a.ageYears));
+            }
+            ImGui::TableNextColumn();
+            ImVec4 sc = a.status == AnimalStatus::Healthy ? ImVec4(0.5f, 0.9f, 0.5f, 1)
+                      : (a.status == AnimalStatus::Critical ? ImVec4(1, 0.3f, 0.25f, 1) : ImVec4(1, 0.75f, 0.3f, 1));
+            ImGui::TextColored(sc, "%s%s", statusName(a.status), a.needsSurgery ? " +surgery" : "");
+            ImGui::PopID();
+        }
         ImGui::EndTable();
     }
+    ImGui::EndChild();
+    ImGui::SameLine();
+    ImGui::BeginChild("adetail", ImVec2(0, 0), ImGuiChildFlags_Borders);
+    Animal* a = sim.findAnimal(selectedAnimal_);
+    if (!a || !a->inCare()) {
+        ImGui::TextWrapped("Select an animal to see its record, a live 3D view and every behavior it can do.");
+        ImGui::EndChild();
+        return;
+    }
+    const Species& sp = cat[size_t(a->species)];
+    float w = ImGui::GetContentRegionAvail().x;
+    if (previewReady_) ImGui::Image((ImTextureID)(intptr_t)previewTarget_.ldrTex, ImVec2(w, w * 0.75f), ImVec2(0, 1), ImVec2(1, 0));
+    else ImGui::Dummy(ImVec2(w, w * 0.75f));
+    auto acts = availableActions(sp);
+    if (!acts.empty()) {
+        previewAction_ = std::clamp(previewAction_, 0, int(acts.size()) - 1);
+        ImGui::SetNextItemWidth(w * 0.6f);
+        if (ImGui::BeginCombo("Behavior", actionName(acts[size_t(previewAction_)]))) {
+            for (size_t i = 0; i < acts.size(); ++i)
+                if (ImGui::Selectable(actionName(acts[i]), int(i) == previewAction_)) previewAction_ = int(i);
+            ImGui::EndCombo();
+        }
+        ImGui::SameLine();
+        ImGui::TextDisabled("%d behaviors", int(acts.size()));
+    }
+    ImGui::TextColored(ImVec4(0.6f, 0.85f, 1, 1), "%s", a->name.c_str());
+    ImGui::SameLine();
+    ImGui::Text("- %s %s, %s", a->male ? "male" : "female", sp.name.c_str(), a->isBaby(sp) ? "baby" : "adult");
+    ImGui::TextDisabled("%s  |  %s  |  %s", sp.scientific.c_str(), className(sp.cls), sp.category.c_str());
+    const std::string coatName = sp.coats.empty() ? "" : sp.coats[size_t(a->coat) % sp.coats.size()].name;
+    ImGui::Text("Coat: %s   Age: %.1f y   Weight: %.1f kg", coatName.c_str(), double(a->ageYears), double(a->weightKg(sp)));
+    ImGui::Text("From: %s (day %d)", a->origin.c_str(), a->arrivedDay + 1);
+    if (a->owned) ImGui::Text("Owner: %s  |  consent: %s", a->ownerName.c_str(), a->ownerConsented ? "yes" : "NO");
+    ImGui::TextWrapped("Rule: %s", classRule(sp.cls));
+    ImGui::TextWrapped("Did you know? %s", sp.fact.c_str());
+    ImGui::TextDisabled("Diet: %s  |  Lifespan ~%d y  |  Temperament %s", sp.diet.c_str(), sp.lifespanYears,
+                        sp.temperament > 0.7f ? "dangerous" : (sp.temperament > 0.4f ? "wary" : "gentle"));
+    ImGui::Separator();
+    ImGui::Text("Status: %s%s", statusName(a->status), a->condition.empty() ? "" : (" - " + a->condition).c_str());
+    bar("health", a->health, goodBad(a->health)); ImGui::SameLine();
+    bar("fed", 1.0f - a->hunger, goodBad(1.0f - a->hunger)); ImGui::SameLine();
+    bar("calm", 1.0f - a->stress, goodBad(1.0f - a->stress));
+    bar("happy", a->happiness, goodBad(a->happiness)); ImGui::SameLine();
+    bar("clean", a->cleanliness, goodBad(a->cleanliness));
+    if (a->bleeding > 0.02f) ImGui::TextColored(ImVec4(1, 0.25f, 0.2f, 1), "BLEEDING (%.0f%%)", double(a->bleeding * 100.0f));
+    ImGui::Text("%s  %s  %s", a->vaccinated ? "[vaccinated]" : "[not vaccinated]", a->fixed ? "[spayed/neutered]" : "[intact]",
+                a->microchipped ? "[chipped]" : "");
+    ImGui::Separator();
+    bool wild = sp.cls == AnimalClass::Feral || sp.cls == AnimalClass::Restricted;
+    if (ImGui::Button("Treat / vaccinate")) sim.treat(a->id);
+    if (a->needsSurgery) {
+        ImGui::SameLine();
+        ImGui::TextColored(ImVec4(1, 0.7f, 0.3f, 1), "Needs surgery - go to the operating table in the medical room.");
+    }
+    if (a->owned && !a->ownerConsented) {
+        if (ImGui::Button("Call the owner (explain & ask consent)")) { a->ownerConsented = true; sim.ratings.shock(0.3f, 0.0f); }
+    }
+    if (!wild && !a->owned && a->status == AnimalStatus::Healthy) {
+        char lbl[64];
+        std::snprintf(lbl, sizeof lbl, "Adopt out to a waiting family ($%.0f fee)", double(sp.adoptionFee));
+        if (ImGui::Button(lbl)) { sim.adopt(a->id); selectedAnimal_ = -1; }
+    }
+    if (sp.cls == AnimalClass::Feral && a->status == AnimalStatus::Healthy && !a->isBaby(sp)) {
+        if (ImGui::Button("Release back into the wild")) {
+            a->status = AnimalStatus::Released;
+            sim.ratings.shock(1.2f, 0.6f);
+            sim.log(a->name + " the " + sp.name + " was released back into the wild.");
+        }
+    }
+    ImGui::EndChild();
+}
+
+void ComputerUI::drawStaff(Sim& sim) {
+    ImGui::Text("STAFF WELLBEING");
+    ImGui::SameLine();
+    ImGui::TextDisabled("  Private rating %.0f - staff talk. Rest, fair pay and being there for them keeps it up.", double(sim.ratings.privateRating));
+    ImGui::Separator();
+    StaffRoster& st = sim.staff;
+    const int day = sim.clock.day();
+    if (ImGui::BeginTable("wb", compact ? 5 : 9, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders)) {
+        ImGui::TableSetupColumn("Name");
+        if (!compact) ImGui::TableSetupColumn("Role");
+        ImGui::TableSetupColumn("Rested");
+        ImGui::TableSetupColumn("Calm");
+        if (!compact) { ImGui::TableSetupColumn("Morale"); ImGui::TableSetupColumn("Trust"); }
+        ImGui::TableSetupColumn("Days off/wk");
+        if (!compact) ImGui::TableSetupColumn("1-on-1");
+        ImGui::TableSetupColumn("Now");
+        ImGui::TableHeadersRow();
+        for (auto& e : st.employees) {
+            ImGui::PushID(e.id);
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            if (ImGui::Selectable(e.name.c_str(), selectedStaff_ == e.id, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap))
+                selectedStaff_ = e.id;
+            if (!compact) { ImGui::TableNextColumn(); ImGui::TextUnformatted(roleInfo(e.role).name); }
+            ImGui::TableNextColumn(); bar("", 1.0f - e.fatigue, goodBad(1.0f - e.fatigue), 70);
+            ImGui::TableNextColumn(); bar("", 1.0f - e.stress, goodBad(1.0f - e.stress), 70);
+            if (!compact) {
+                ImGui::TableNextColumn(); bar("", e.morale, goodBad(e.morale), 70);
+                ImGui::TableNextColumn(); bar("", e.relationship, goodBad(e.relationship), 70);
+            }
+            ImGui::TableNextColumn();
+            ImGui::SetNextItemWidth(80);
+            int dof = e.daysOffPerWeek;
+            if (ImGui::SliderInt("##dof", &dof, 0, 4)) sim.staffSetDaysOff(e.id, dof);
+            if (!compact) {
+                ImGui::TableNextColumn();
+                int ago = day - e.lastInterviewDay;
+                if (e.lastInterviewDay < -900) ImGui::TextColored(ImVec4(1, 0.6f, 0.3f, 1), "never");
+                else ImGui::TextColored(ago > 30 ? ImVec4(1, 0.6f, 0.3f, 1) : ImVec4(0.7f, 0.9f, 0.7f, 1), "%dd ago", ago);
+            }
+            ImGui::TableNextColumn();
+            if (e.onVacation(day)) ImGui::TextColored(ImVec4(0.5f, 0.8f, 1, 1), "off until day %d", e.vacationUntil + 1);
+            else if (e.lifeEvent != LE_None) ImGui::TextColored(ImVec4(1, 0.6f, 0.4f, 1), "%s", lifeEventName(e.lifeEvent));
+            else if (e.overworked()) ImGui::TextColored(ImVec4(1, 0.5f, 0.3f, 1), "overworked");
+            else ImGui::TextDisabled("working");
+            ImGui::PopID();
+        }
+        ImGui::EndTable();
+    }
+    Employee* e = st.find(selectedStaff_);
     ImGui::Spacing();
-    ImGui::TextWrapped("No animals yet. Intake, kennel assignment, medical records, appointments and adoptions "
-                       "will appear here once animals arrive in the next update.");
-    ImGui::Spacing();
-    ImGui::TextDisabled("Tip: build Kennel Blocks and Cat Houses in Creative mode (Tab) to get housing ready.");
+    if (!e) { ImGui::TextDisabled("Select someone to check in, give time off, or help them out."); return; }
+    ImGui::SeparatorText(e->name.c_str());
+    ImGui::Text("%s  |  $%.2f/hr (market $%.2f)  |  %.0f h/week  |  %d days with you", roleInfo(e->role).name, double(e->hourlyWage),
+                double(roleInfo(e->role).marketWage), double(e->hoursPerWeek), e->daysEmployed);
+    if (e->relationship > 0.6f) ImGui::TextWrapped("You know them well: %s, and %s.", e->family.c_str(), e->hobby.c_str());
+    else ImGui::TextDisabled("You don't know them well yet. One-on-ones build trust.");
+    if (e->lifeEvent != LE_None)
+        ImGui::TextColored(ImVec4(1, 0.6f, 0.4f, 1), "Going through: %s%s", lifeEventName(e->lifeEvent), e->lifeEventSupported ? " (you helped)" : "");
+    if (ImGui::Button("One-on-one check-in")) { sim.staffInterview(e->id); tab = TabInbox; }
+    ImGui::SameLine();
+    if (ImGui::Button("Give them tomorrow off")) sim.staffGiveDayOff(e->id);
+    ImGui::SameLine();
+    if (ImGui::Button("Paid vacation, on you ($1,500)")) sim.staffSendOnVacation(e->id, 7, true);
+    if (ImGui::Button("Unpaid week off")) sim.staffSendOnVacation(e->id, 7, false);
+    ImGui::SameLine();
+    if (ImGui::Button("Gift $100")) sim.staffGift(e->id, 100, "Thank-you gift");
+    ImGui::SameLine();
+    if (ImGui::Button("Gift $500")) sim.staffGift(e->id, 500, "Bonus");
+    ImGui::SameLine();
+    if (ImGui::Button("Gift $1,000")) sim.staffGift(e->id, 1000, "Bonus");
+    if (e->lifeEvent == LE_Injury || e->lifeEvent == LE_Illness) {
+        if (ImGui::Button("Pay their medical bill ($1,900)")) {
+            if (sim.staffGift(e->id, 1900, "Medical bill")) { e->lifeEventSupported = true; e->stress = std::max(0.0f, e->stress - 0.2f); }
+        }
+    }
+    ImGui::TextDisabled("Tip: nobody should go without days off. Wages and hours are in Finances > Payroll.");
 }
 
 void ComputerUI::drawSecurity(Sim& sim, const Facility& facility) {

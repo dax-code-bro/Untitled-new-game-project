@@ -26,6 +26,8 @@ add_library(ps_sim STATIC
   src/game/Character.cpp
   src/game/Buildables.cpp
   src/game/Sim.cpp
+  src/game/SimAnimals.cpp
+  src/game/SimPeople.cpp
   src/game/Species.cpp
 )
 target_include_directories(ps_sim PUBLIC src)
@@ -82,6 +84,8 @@ if(PS_BUILD_GAME)
     src/render/Animation.cpp
     src/render/SkinnedMesh.cpp
     src/game/AnimalModel.cpp
+    src/game/AnimalAnimator.cpp
+    src/game/AnimalActors.cpp
     src/world/World.cpp
     src/world/Facility.cpp
     src/world/Scenery.cpp

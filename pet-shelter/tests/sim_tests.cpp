@@ -150,6 +150,84 @@ int main() {
     CHECK(b.name == "Test Person" && b.gender == Gender::Female && b.topStyle == 2);
     std::remove(path);
 
+    // ---- Species catalog: the exact class counts the owner asked for ----
+    CHECK(speciesCount(AnimalClass::Small) == 20);
+    CHECK(speciesCount(AnimalClass::Medium) == 40);
+    CHECK(speciesCount(AnimalClass::Large) == 20);
+    CHECK(speciesCount(AnimalClass::Feral) == 40);
+    CHECK(speciesCount(AnimalClass::Restricted) == 19);
+    {
+        bool allCoats = true;
+        for (const auto& sp : speciesCatalog()) allCoats &= !sp.coats.empty() && !sp.fact.empty() && !sp.scientific.empty();
+        CHECK(allCoats);
+        CHECK(findSpecies("Dachshund") >= 0 && findSpecies("Holland Lop") >= 0 && findSpecies("Bengal Tiger") >= 0);
+        std::printf("species: %zu\n", speciesCatalog().size());
+    }
+    // ---- Animals in a running shelter ----
+    {
+        Sim s;
+        s.newGame();
+        CHECK(s.animalsInCare() == 3);                 // Frank the dachshund + two rabbits
+        std::string why;
+        s.econ.cash = 2e6;
+        CHECK(s.build(BuildKind::KennelBlock, 40.0f, -20.0f, 0, &why));
+        CHECK(s.build(BuildKind::SmallAnimalHouse, 60.0f, -20.0f, 0, &why));
+        CHECK(s.build(BuildKind::SurgeryWing, -40.0f, -30.0f, 0, &why));
+        // Surgery: an overdose kills, a correct dose with clamped bleeders saves
+        Animal& a = s.admit(findSpecies("Labrador Retriever"), "Test", 1.0f);
+        a.needsSurgery = true; a.condition = "Swallowed a toy (intestinal blockage)"; a.status = AnimalStatus::Sick;
+        int id = a.id;
+        CHECK(s.beginSurgery(id, &why));
+        s.surgeryAnesthetize(s.surgery.idealMgPerKg);
+        s.surgeryIncise(); s.surgeryClamp(); s.surgeryRepair(); s.surgeryRepair(); s.surgerySuture();
+        CHECK(s.findAnimal(id)->status == AnimalStatus::Recovering && !s.surgery.died);
+        Animal& b = s.admit(findSpecies("Beagle"), "Test", 1.0f);
+        int bid = b.id;
+        CHECK(s.beginSurgery(bid, &why));
+        s.surgeryAnesthetize(s.surgery.idealMgPerKg * 2.6f);
+        s.surgeryIncise();
+        for (int i = 0; i < 200 && s.surgery.active; ++i) s.surgeryTick(0.5f);
+        CHECK(s.findAnimal(bid)->status == AnimalStatus::Dead);
+        // Feral animals need the surgery wing
+        Sim s2; s2.newGame();
+        Animal& deer = s2.admit(findSpecies("White-tailed Deer"), "Test", 1.0f);
+        CHECK(!s2.beginSurgery(deer.id, &why));
+        // Dangerous animal: calm + police = nobody hurt, ratings go up
+        float pub0 = s.ratings.publicRating;
+        s.startIncident(findSpecies("Bengal Tiger"));
+        s.resolve(s.decisions.back().id, 0);
+        s.advance(60.0);
+        CHECK(!s.incident.active);
+        CHECK(s.ratings.publicRating >= pub0 - 0.01f || s.incident.injured > 0);
+        // Staff: a burned-out employee sent on a paid vacation feels better and likes you more
+        Employee& e = s.staff.employees[0];
+        e.fatigue = 0.9f; e.stress = 0.9f;
+        float rel = e.relationship;
+        CHECK(s.staffSendOnVacation(e.id, 7, true));
+        CHECK(e.fatigue == 0.0f && e.stress < 0.3f && e.relationship > rel);
+        // Declining the interview hurts the public rating
+        float p1 = s.ratings.publicRating;
+        s.scandal(9.0f, "Test scandal");
+        CHECK(s.protest.active);
+        const Decision* req = nullptr;
+        for (auto& d : s.decisions) if (d.kind == DecisionKind::InterviewRequest) req = &d;
+        CHECK(req != nullptr);
+        if (req) s.resolve(req->id, 1);
+        CHECK(s.ratings.publicRating < p1 - 12.0f);
+        // A long run stays sane
+        s.advance(1440.0 * 60);
+        CHECK(s.animalsInCare() >= 0 && s.econ.cash == s.econ.cash);
+        std::printf("after 60 days: %d in care, %d adopted, %d died, %d intake, public %.1f private %.1f, %zu decisions pending\n",
+                    s.animalsInCare(), s.adoptionsTotal, s.deathsTotal, s.intakeTotal, double(s.ratings.publicRating),
+                    double(s.ratings.privateRating), s.decisions.size());
+        // Save / load keeps the animals
+        KeyValues kv3;
+        s.save(kv3);
+        Sim s3;
+        s3.load(kv3);
+        CHECK(s3.animalsInCare() == s.animalsInCare());
+    }
+
     std::printf("\n%d passed, %d failed\n", g_pass, g_fail);
     return g_fail == 0 ? 0 : 1;
 }

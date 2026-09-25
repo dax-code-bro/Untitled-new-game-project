@@ -26,6 +26,12 @@ void Ratings::dailyUpdate(const RatingInputs& in) {
         pub("Visitors turned away (full)", -std::min(10.0f, 0.15f * float(in.visitorsTurnedAway)));
     if (in.incidentsRecent > 0) pub("Security incidents", -3.0f * float(in.incidentsRecent));
     pub("Security presence", 4.0f * diminishing(in.securityMonthly, 800.0f));
+    if (in.animalDeathsRecent > 0) pub("Animals that died in your care", -std::min(25.0f, 3.0f * float(in.animalDeathsRecent)));
+    if (in.scandalsRecent > 0) pub("Scandals (consent, neglect, cover-ups)", -5.0f * float(in.scandalsRecent));
+    if (in.clientsMistreated > 0) pub("Rude / uncaring to clients", -std::min(15.0f, 2.5f * float(in.clientsMistreated)));
+    if (in.clientsHelped > 0) pub("Clients you treated well", std::min(8.0f, 0.8f * float(in.clientsHelped)));
+    if (in.violatorsTolerated > 0) pub("Smoking/drinking/drugs tolerated", -1.5f * float(in.violatorsTolerated));
+    if (in.protestActive) pub("Protest at the gate", -6.0f);
 
     float pt = 0;
     for (auto& f : publicFactors) pt += f.value;
@@ -41,6 +47,13 @@ void Ratings::dailyUpdate(const RatingInputs& in) {
         prv("Bonuses", 8.0f * diminishing(in.bonusBudgetPerStaff, 150.0f));
     } else {
         prv("Running it alone", -4.0f);
+    }
+    if (in.staffCount > 0) {
+        prv("Rest & days off", -22.0f * std::max(0.0f, in.staffFatigue - 0.3f));
+        prv("Stress level", -16.0f * std::max(0.0f, in.staffStress - 0.3f));
+        if (in.overworkedStaff > 0) prv("Overworked staff", -3.0f * float(in.overworkedStaff));
+        if (in.interviewsOverdue > 0) prv("No one-on-ones in a month", -1.5f * float(in.interviewsOverdue));
+        prv("Protective gear for dangerous animals", in.protectiveGear ? 2.0f : 0.0f);
     }
     if (in.missedPayrollsRecent > 0) prv("Missed paychecks", -14.0f * float(in.missedPayrollsRecent));
     if (in.taxesOverdue) prv("Behind on taxes", -10.0f);

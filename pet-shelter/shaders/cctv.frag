@@ -5,7 +5,14 @@ uniform sampler2D uHDR;
 uniform float uExposure;
 uniform float uTime;
 uniform float uNightVision;
+uniform float uPlain;   // 1 = clean studio render (animal records), no camera effects
+vec3 aces(vec3 x) { return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0); }
 void main() {
+    if (uPlain > 0.5) {
+        vec3 hc = aces(texture(uHDR, vUV).rgb * uExposure);
+        fragColor = vec4(pow(hc, vec3(1.0 / 2.2)), 1.0);
+        return;
+    }
     vec2 uv = vUV;
     // Slight barrel distortion (wide angle lens)
     vec2 d = uv - 0.5;

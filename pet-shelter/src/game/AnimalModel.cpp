@@ -723,7 +723,7 @@ void buildQuadruped(const Species& sp, const AnimalIndividual& ind, AnimalBuild&
         // long necks (horses, deer, camelids) are deep and narrow
         float deepN = 1.0f + std::max(0.0f, S.neckLen - 0.35f) * 1.6f;
         neck.push_back({NB + dn * (NL * 0.35f), rN * (deepN > 1.0f ? 0.85f : 1.0f), rN * 1.15f * deepN, 3.0f, 0.5f, bodyFur * (ruff ? 1.8f : 1.0f), REG_BODY});
-        neck.push_back({NE, rN * 0.8f, rN * (1.0f + (deepN - 1.0f) * 0.5f), 4.0f, 0.5f, bodyFur, REG_BODY});
+        neck.push_back({NE, rN * 0.75f, rN * (deepN > 1.0f ? 0.85f : 1.0f), 4.0f, 0.5f, bodyFur, REG_BODY});
         neck.push_back({HB + dh * (SL * 0.25f), rN * 0.8f, rN * 0.85f, 5.0f, 0.5f, bodyFur, REG_BODY});
         LoftOpts o;
         o.segs = 20;
@@ -789,8 +789,9 @@ void buildQuadruped(const Species& sp, const AnimalIndividual& ind, AnimalBuild&
         oj.segs = 16;
         oj.ringsPerKey = 3;
         oj.modify = [](SkinVertex& v, float, float a) {
-            if (std::sin(a) > 0.35f) { v.uv.x = float(REG_FIXED); v.mat.w = float(PAT_PLAIN); v.mat.z = 0; v.color = vec4(kMouth, 0.5f); }
+            if (std::sin(a) > 0.8f) { v.uv.x = float(REG_FIXED); v.mat.w = float(PAT_PLAIN); v.mat.z = 0; v.color = vec4(kMouth, 0.5f); }
         };
+        for (auto& k : jaw) { k.rx *= 0.9f; k.c -= upH * (hw * 0.04f); }   // tucks inside the upper lip when closed
         loft(b, jaw, {rig.jaw}, oj);
         // Tongue
         vec3 tp = HB + dh * (SL + ML * 0.35f) - upH * (jy + hw * 0.1f);
@@ -887,7 +888,7 @@ void buildQuadruped(const Species& sp, const AnimalIndividual& ind, AnimalBuild&
         }
         if (S.extras & X_BEARD) {
             vec3 cb = HB + dh * (SL + ML * 0.6f) - upH * (hw * 0.75f);
-            tube(b, {cb, cb - upH * HL * 0.3f + dh * HL * 0.02f}, hw * 0.18f, hw * 0.03f, rig.jaw, vec3(1), 0.9f, 8, true, REG_MANE, fur * 2.0f);
+            tube(b, {cb + dh * HL * 0.05f, cb - upH * HL * 0.14f + dh * HL * 0.04f}, hw * 0.3f, hw * 0.12f, rig.jaw, vec3(1), 0.9f, 10, true, REG_MANE, fur * 2.0f);
         }
     }
 

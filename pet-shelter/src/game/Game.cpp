@@ -89,6 +89,7 @@ bool Game::init(int argc, char** argv) {
         if (a == "--screenshots" && i + 1 < argc) screenshotSuiteDir_ = argv[++i];
         else if (a == "--animals" && i + 1 < argc) animalStudioDir_ = argv[++i];
         else if (a == "--only" && i + 1 < argc) animalStudioFilter_ = argv[++i];
+        else if (a == "--poses") animalStudioPoses_ = true;
         else if (a == "--touch") touch_ = true;
         else if (a == "--low") low_ = true;
         else if (a == "--size" && i + 2 < argc) { width_ = std::atoi(argv[++i]); height_ = std::atoi(argv[++i]); }
@@ -395,6 +396,12 @@ void Game::update(float dt) {
         if (input_.pressed(GLFW_KEY_F9)) loadGame();
         if (input_.pressed(GLFW_KEY_F1)) showHelp_ = !showHelp_;
         sim_.advance(double(dt) * double(timeScale_));
+        sim_.ownerName = appearance_.name.empty() ? "Boss" : appearance_.name.substr(0, appearance_.name.find(' '));
+        // Urgent decisions (a tiger in the parking lot, a live interview) interrupt you
+        for (const auto& d : sim_.decisions) if (d.urgent) { dialogDecision_ = d.id; state_ = State::Dialog; break; }
+        if (state_ == State::Dialog) break;
+        if (input_.pressed(GLFW_KEY_Q) && !sim_.decisions.empty()) { dialogDecision_ = sim_.decisions.front().id; state_ = State::Dialog; break; }
+        if (input_.pressed(GLFW_KEY_P) && sim_.incident.active) sim_.incidentCallPolice();
         if (mode_ == Mode::POV) {
             player_.update(dt, input_, world_.collision, true);
             vec3 eye = player_.eye(), fwd = player_.forward();
@@ -404,6 +411,7 @@ void Game::update(float dt) {
                 hover_ = Interaction();
             if (input_.pressed(GLFW_KEY_E) || input_.mousePressed(GLFW_MOUSE_BUTTON_LEFT)) {
                 if (hover_.type == Interaction::Computer) { state_ = State::Computer; computer_.open = true; }
+                else if (hover_.type == Interaction::OperatingTable) { state_ = State::Surgery; surgeryPickAnimal_ = -1; }
                 else if (hover_.type != Interaction::None) world_.facility.interact(hover_, sim_.security);
             }
             character_.animate(time_, player_.walkPhase, player_.walkAmount);
@@ -422,6 +430,28 @@ void Game::update(float dt) {
     case State::Paused:
         if (input_.pressed(GLFW_KEY_ESCAPE)) { state_ = State::Playing; showSettings_ = false; }
         break;
+    case State::Dialog: {
+        const Decision* d = sim_.findDecision(dialogDecision_);
+        if (!d && !sim_.decisions.empty()) { dialogDecision_ = sim_.decisions.front().id; d = &sim_.decisions.front(); }
+        bool urgent = d && d->urgent;
+        sim_.advance(double(dt) * double(timeScale_) * (urgent ? 0.0 : 0.2));
+        if (!d) { state_ = State::Playing; break; }
+        for (int k = 0; k < int(d->choices.size()) && k < 4; ++k)
+            if (input_.pressed(GLFW_KEY_1 + k)) { sim_.resolve(d->id, k); dialogDecision_ = -1; state_ = State::Playing; break; }
+        if (state_ == State::Dialog && !urgent && input_.pressed(GLFW_KEY_ESCAPE)) state_ = State::Playing;
+        renderer_.setTimeOfDay(sim_.clock.hour());
+        break;
+    }
+    case State::Surgery:
+        sim_.advance(double(dt) * double(timeScale_) * 0.05);
+        sim_.surgeryTick(dt);
+        if (input_.pressed(GLFW_KEY_ESCAPE) && !sim_.surgery.active) state_ = State::Playing;
+        renderer_.setTimeOfDay(sim_.clock.hour());
+        break;
+    }
+    if (inGame()) {
+        animals_.update(sim_, state_ == State::Paused ? 0.0f : dt, camera_.pos);
+        while (!sim_.greetings.empty()) { toasts_.push_back({sim_.greetings.front(), 8.0f}); sim_.greetings.pop_front(); }
     }
     world_.ghostVisible = world_.ghostVisible && state_ == State::Playing && mode_ == Mode::Creative;
     world_.update(dt, camera_.pos, time_, sim_);
@@ -434,9 +464,15 @@ void Game::update(float dt) {
 }
 
 // ---------------------------------------------------------------- render
+bool Game::inGame() const {
+    return state_ == State::Playing || state_ == State::Computer || state_ == State::Paused || state_ == State::Dialog ||
+           state_ == State::Surgery || state_ == State::MainMenu;
+}
+
 void Game::scene(Renderer& r, Pass pass) {
     world_.draw(r, pass, r.nightAmount(), time_);
     if (pass == Pass::Transparent) return;
+    if (inGame()) animals_.draw(r, pass, camera_.pos);
     bool drawChar = false;
     mat4 root;
     if (state_ == State::Creator) {
@@ -484,6 +520,13 @@ void Game::render(float dt) {
         camera_.fovY = radians(55.0f);
         cutscene_.applyCamera(camera_);
         break;
+    case State::Surgery: {
+        // Standing at the operating table under the surgical lamp
+        vec3 t = AnimalActors::operatingTableTop();
+        camera_.fovY = radians(50.0f);
+        camera_.lookAt(t + vec3(0.1f, 0.95f, 1.2f), t + vec3(0.55f, 0.05f, 0.0f));
+        break;
+    }
     default:
         if (mode_ == Mode::POV) player_.applyCamera(camera_);
         else creative_.applyCamera(camera_);
@@ -495,6 +538,7 @@ void Game::render(float dt) {
     renderer_.letterbox = state_ == State::Cutscene ? 1.0f : 0.0f;
     auto sceneFn = [this](Renderer& r, Pass p) { scene(r, p); };
     computer_.renderFeed(renderer_, sceneFn, sim_, time_);
+    computer_.renderPreview(renderer_, sim_, dt, time_);
     renderer_.renderFrame(camera_, sceneFn, dt, time_);
 }
 
@@ -522,6 +566,13 @@ void Game::drawUI() {
         drawHUD();
         drawPauseMenu();
         break;
+    case State::Dialog:
+        drawHUD();
+        drawDecision();
+        break;
+    case State::Surgery:
+        drawSurgery();
+        break;
     }
     if (showSettings_) drawSettings();
     if (messageTimer_ > 0.0f) {
@@ -531,7 +582,7 @@ void Game::drawUI() {
         ImGui::TextUnformatted(message_.c_str());
         ImGui::End();
     }
-    if (state_ == State::Playing || state_ == State::Computer) drawToasts(ImGui::GetIO().DeltaTime);
+    if (state_ == State::Playing || state_ == State::Computer || state_ == State::Surgery) drawToasts(ImGui::GetIO().DeltaTime);
 }
 
 void Game::drawMainMenu() {
@@ -574,6 +625,23 @@ void Game::drawHUD() {
     }
     ImGui::End();
 
+    drawIncidentBanner();
+    // Inbox: decisions waiting for you
+    if (!sim_.decisions.empty() && state_ == State::Playing) {
+        ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y - 14), ImGuiCond_Always, ImVec2(0.5f, 1));
+        ImGui::SetNextWindowBgAlpha(0.72f);
+        ImGui::Begin("##inbox", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize);
+        ImGui::TextColored(ImVec4(1.0f, 0.85f, 0.35f, 1), "%d decision%s waiting", int(sim_.decisions.size()), sim_.decisions.size() == 1 ? "" : "s");
+        ImGui::SameLine();
+        ImGui::TextUnformatted(("- " + sim_.decisions.front().title).c_str());
+        ImGui::SameLine();
+        if (touch_ || mode_ == Mode::Creative) {
+            if (ImGui::Button("Open")) { dialogDecision_ = sim_.decisions.front().id; state_ = State::Dialog; }
+        } else {
+            ImGui::TextDisabled("[Q] open");
+        }
+        ImGui::End();
+    }
     if (mode_ == Mode::POV && state_ == State::Playing) {
         ImDrawList* dl = ImGui::GetForegroundDrawList();
         ImVec2 c(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f);
@@ -589,7 +657,7 @@ void Game::drawHUD() {
             ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x - 12, io.DisplaySize.y - 12), ImGuiCond_Always, ImVec2(1, 1));
             ImGui::SetNextWindowBgAlpha(0.45f);
             ImGui::Begin("##help", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoInputs);
-            ImGui::TextDisabled("WASD move | Shift sprint | E interact | Tab creative mode");
+            ImGui::TextDisabled("WASD move | Shift sprint | E interact | Q decisions | Tab creative mode");
             ImGui::TextDisabled("Esc pause | F5 save | F9 load | F12 screenshot | F1 hide help");
             ImGui::End();
         }
@@ -613,6 +681,190 @@ void Game::drawToasts(float dt) {
         ImGui::End();
     }
     while (!toasts_.empty() && toasts_.front().t <= 0.0f) toasts_.pop_front();
+}
+
+void Game::drawIncidentBanner() {
+    if (!sim_.incident.active) return;
+    ImGuiIO& io = ImGui::GetIO();
+    const Species& sp = speciesCatalog()[size_t(sim_.incident.species)];
+    ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, 12), ImGuiCond_Always, ImVec2(0.5f, 0));
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.45f, 0.02f, 0.02f, 0.88f));
+    ImGui::Begin("##incident", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize);
+    ImGui::Text("DANGER: %s loose near the parking lot. Stay calm.", sp.name.c_str());
+    if (sim_.incident.policeCalled) {
+        int mins = std::max(0, int(sim_.incident.policeArrive - sim_.clock.minutes));
+        ImGui::Text("Police & animal control arriving in ~%d min. Keep everyone inside.", mins);
+    } else if (touch_ || state_ != State::Playing || mode_ == Mode::Creative) {
+        if (ImGui::Button("CALL 911", ImVec2(220, 40))) sim_.incidentCallPolice();
+    } else {
+        ImGui::TextColored(ImVec4(1, 1, 0.5f, 1), "Press [P] to call 911");
+    }
+    if (sim_.incident.injured + sim_.incident.killed > 0)
+        ImGui::Text("Injured: %d   Killed: %d", sim_.incident.injured, sim_.incident.killed);
+    ImGui::End();
+    ImGui::PopStyleColor();
+}
+
+void Game::drawDecision() {
+    const Decision* d = sim_.findDecision(dialogDecision_);
+    if (!d) return;
+    ImGuiIO& io = ImGui::GetIO();
+    float w = std::min(io.DisplaySize.x - 24.0f, 640.0f);
+    ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowSize(ImVec2(w, 0));
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, d->urgent ? ImVec4(0.22f, 0.04f, 0.04f, 0.96f) : ImVec4(0.08f, 0.1f, 0.13f, 0.96f));
+    ImGui::Begin("##decision", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize);
+    ImGui::SetWindowFontScale(1.15f);
+    ImGui::TextColored(d->urgent ? ImVec4(1, 0.5f, 0.4f, 1) : ImVec4(1, 0.85f, 0.4f, 1), "%s", d->title.c_str());
+    ImGui::SetWindowFontScale(1.0f);
+    ImGui::Separator();
+    ImGui::PushTextWrapPos(w - 20);
+    ImGui::TextUnformatted(d->text.c_str());
+    ImGui::PopTextWrapPos();
+    if (d->expires > 0.0) {
+        int mins = std::max(0, int(d->expires - sim_.clock.minutes));
+        ImGui::TextDisabled(mins >= 120 ? "Answer within %d hours" : "Answer within %d minutes", mins >= 120 ? mins / 60 : mins);
+    }
+    ImGui::Spacing();
+    int picked = -1;
+    for (size_t k = 0; k < d->choices.size(); ++k) {
+        std::string label = std::to_string(k + 1) + ".  " + d->choices[k];
+        if (ImGui::Button(label.c_str(), ImVec2(w - 20, touch_ ? 44.0f : 32.0f))) picked = int(k);
+    }
+    ImGui::Spacing();
+    if (!d->urgent) {
+        if (ImGui::Button(touch_ ? "Later" : "Later  [Esc]")) state_ = State::Playing;
+        if (sim_.decisions.size() > 1) {
+            ImGui::SameLine();
+            ImGui::TextDisabled("%d more waiting", int(sim_.decisions.size()) - 1);
+        }
+    } else {
+        ImGui::TextDisabled("Time is stopped until you decide.");
+    }
+    ImGui::End();
+    ImGui::PopStyleColor();
+    if (picked >= 0) {
+        sim_.resolve(d->id, picked);
+        dialogDecision_ = -1;
+        state_ = sim_.decisions.empty() ? State::Playing : State::Dialog;
+        if (state_ == State::Dialog) dialogDecision_ = sim_.decisions.front().id;
+        if (state_ == State::Dialog && !sim_.decisions.front().urgent) state_ = State::Playing;
+    }
+}
+
+void Game::drawSurgery() {
+    ImGuiIO& io = ImGui::GetIO();
+    Surgery& S = sim_.surgery;
+    float w = std::min(io.DisplaySize.x * 0.42f, 520.0f);
+    if (touch_ || io.DisplaySize.x < 900) w = io.DisplaySize.x * 0.5f;
+    ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x - 10, 10), ImGuiCond_Always, ImVec2(1, 0));
+    ImGui::SetNextWindowSize(ImVec2(w, io.DisplaySize.y - 20));
+    ImGui::SetNextWindowBgAlpha(0.88f);
+    ImGui::Begin("Operating table", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
+    auto close = [&]() { if (!S.active) state_ = State::Playing; };
+    if (!S.active) {
+        ImGui::TextWrapped("Choose a patient. Animals that need surgery are listed first. Large, feral and restricted animals "
+                           "need the Surgery Wing.");
+        ImGui::Separator();
+        bool any = false;
+        for (int pass = 0; pass < 2; ++pass)
+            for (const Animal& a : sim_.animalList) {
+                if (!a.inCare()) continue;
+                bool urgent = a.needsSurgery;
+                bool elective = !a.fixed && !a.owned && a.status == AnimalStatus::Healthy;
+                if ((pass == 0 && !urgent) || (pass == 1 && (urgent || !elective))) continue;
+                any = true;
+                const Species& sp = speciesCatalog()[size_t(a.species)];
+                ImGui::PushID(a.id);
+                std::string label = a.name + " - " + sp.name + (urgent ? "  |  " + a.condition : "  |  Spay / neuter");
+                if (a.owned) label += a.ownerConsented ? "  (owner consented)" : "  (OWNED - no consent yet)";
+                if (ImGui::Selectable(label.c_str(), surgeryPickAnimal_ == a.id)) surgeryPickAnimal_ = a.id;
+                ImGui::PopID();
+            }
+        if (!any) ImGui::TextDisabled("No patients need the table right now.");
+        ImGui::Spacing();
+        const Animal* pick = sim_.findAnimal(surgeryPickAnimal_);
+        if (pick && pick->owned && !pick->ownerConsented) {
+            ImGui::TextColored(ImVec4(1, 0.6f, 0.3f, 1), "This is %s's pet. Operating without telling them can wreck your reputation.",
+                               pick->ownerName.c_str());
+            if (ImGui::Button("Call the owner and ask for consent")) {
+                Animal* m = sim_.findAnimal(pick->id);
+                if (m) { m->ownerConsented = true; sim_.ratings.shock(0.3f, 0.0f); sim_.log(m->ownerName + " gave consent for surgery on " + m->name + "."); }
+            }
+        }
+        if (pick && ImGui::Button("Bring the patient to the table", ImVec2(-1, 40))) {
+            std::string why;
+            if (!sim_.beginSurgery(pick->id, &why)) { message_ = why; messageTimer_ = 4.0f; }
+            else surgeryDose_ = S.idealMgPerKg;
+        }
+        if (ImGui::Button("Leave the table  [Esc]", ImVec2(-1, 34))) close();
+        ImGui::End();
+        return;
+    }
+    const Animal* a = sim_.findAnimal(S.animal);
+    if (!a) { ImGui::End(); return; }
+    const Species& sp = speciesCatalog()[size_t(a->species)];
+    float kg = a->weightKg(sp);
+    ImGui::Text("%s the %s  (%.1f kg)", a->name.c_str(), sp.name.c_str(), double(kg));
+    ImGui::TextDisabled("Procedure: %s", S.procedure.c_str());
+    ImGui::Separator();
+    // Vitals monitor
+    ImVec4 hrCol = (S.heartRate > 150 || S.heartRate < 45) ? ImVec4(1, 0.35f, 0.3f, 1) : ImVec4(0.4f, 1, 0.5f, 1);
+    ImGui::TextColored(hrCol, "HR %3.0f bpm", double(S.heartRate));
+    ImGui::SameLine();
+    ImGui::TextColored(S.oxygen < 0.9f ? ImVec4(1, 0.35f, 0.3f, 1) : ImVec4(0.4f, 0.8f, 1, 1), "   SpO2 %2.0f%%", double(S.oxygen * 100.0f));
+    ImGui::SameLine();
+    ImGui::Text("   Anesthesia depth");
+    ImGui::SameLine();
+    ImGui::ProgressBar(clampf(S.depth / 1.6f, 0.0f, 1.0f), ImVec2(-1, 0), S.step < 2 ? "awake" : (S.depth < 0.6f ? "TOO LIGHT" : (S.depth > 1.25f ? "TOO DEEP" : "surgical plane")));
+    ImGui::Text("Blood loss");
+    ImGui::SameLine();
+    ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.7f, 0.05f, 0.05f, 1));
+    ImGui::ProgressBar(clampf(S.bloodLoss, 0.0f, 1.0f), ImVec2(-1, 0));
+    ImGui::PopStyleColor();
+    ImGui::Text("Progress");
+    ImGui::SameLine();
+    ImGui::ProgressBar(S.progress, ImVec2(-1, 0));
+    ImGui::Separator();
+    ImVec2 bs(-1, touch_ ? 46.0f : 36.0f);
+    switch (S.step) {
+    case 0:
+        ImGui::TextColored(ImVec4(1, 0.6f, 0.3f, 1), "%s hasn't consented to surgery on %s.", a->ownerName.c_str(), a->name.c_str());
+        if (ImGui::Button("Call the owner first", bs)) {
+            Animal* m = sim_.findAnimal(a->id);
+            if (m) { m->ownerConsented = true; sim_.ratings.shock(0.3f, 0.0f); }
+            S.step = 1;
+        }
+        if (ImGui::Button("Operate without telling them", bs)) S.step = 1;
+        break;
+    case 1: {
+        ImGui::TextWrapped("Anesthesia: induction dose for a %s is about %.1f mg/kg (%.0f mg total). Too little and it wakes "
+                           "up in pain on the table; too much and it stops breathing.",
+                           sp.name.c_str(), double(S.idealMgPerKg), double(S.idealMgPerKg * kg));
+        ImGui::SetNextItemWidth(-1);
+        ImGui::SliderFloat("##dose", &surgeryDose_, 0.0f, S.idealMgPerKg * 3.0f, "%.2f mg/kg");
+        ImGui::Text("Total: %.0f mg", double(surgeryDose_ * kg));
+        if (ImGui::Button("Inject anesthetic", bs)) sim_.surgeryAnesthetize(surgeryDose_);
+        break;
+    }
+    case 2:
+        ImGui::TextWrapped("The patient is under. Scrub in and open it up.");
+        if (ImGui::Button("Make the incision", bs)) sim_.surgeryIncise();
+        break;
+    case 3:
+        ImGui::TextWrapped(S.bleedersClamped ? "Bleeding is controlled. Do the repair." : "Blood is welling up in the wound - clamp the bleeders.");
+        if (!S.bleedersClamped && ImGui::Button("Clamp the bleeders", bs)) sim_.surgeryClamp();
+        if (ImGui::Button("Repair", bs)) sim_.surgeryRepair();
+        break;
+    case 4:
+        if (ImGui::Button("Suture and close", bs)) sim_.surgerySuture();
+        break;
+    default: break;
+    }
+    if (S.woke) ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "The animal is too light - it's moving and crying out!");
+    ImGui::Spacing();
+    if (S.step < 5 && ImGui::Button("Abort surgery", ImVec2(-1, 30))) sim_.surgeryAbort();
+    ImGui::End();
 }
 
 void Game::drawPauseMenu() {
@@ -792,6 +1044,62 @@ int Game::runScreenshotSuite(const std::string& dir) {
     shoot("19_computer_ratings");
     computer_.tab = ComputerUI::TabAnimals;
     shoot("20_computer_animals");
+
+    // ---- Animals ----
+    computer_.open = false;
+    sim_.econ.cash = 5e6;
+    sim_.build(BuildKind::SmallAnimalHouse, 62.0f, -20.0f, 0, &why);
+    sim_.build(BuildKind::Barn, -75.0f, -30.0f, 0, &why);
+    sim_.build(BuildKind::FeralEnclosure, 85.0f, -48.0f, 0, &why);
+    sim_.build(BuildKind::SurgeryWing, -40.0f, -60.0f, 0, &why);
+    if (!why.empty()) std::fprintf(stderr, "[shots] build: %s\n", why.c_str());
+    for (const char* n : {"Labrador Retriever", "Golden Retriever", "Beagle", "Pug", "German Shepherd", "Dalmatian", "Holland Lop",
+                          "Guinea Pig", "Budgerigar", "American Quarter Horse", "Donkey", "Highland Cow", "Pygmy Goat",
+                          "Rhode Island Red", "Siamese", "Maine Coon", "White-tailed Deer", "Raccoon"}) {
+        int sid = findSpecies(n);
+        if (sid >= 0) sim_.admit(sid, "Screenshot", 1.0f);
+    }
+    int labId = -1;
+    for (auto& a : sim_.animalList) if (speciesCatalog()[size_t(a.species)].name == "Labrador Retriever") labId = a.id;
+    for (int i = 0; i < 30; ++i) animals_.update(sim_, 0.05f, camera_.pos);
+    for (int i = 0; i < 60; ++i) animals_.update(sim_, 0.1f, camera_.pos);
+    pov("21_animals_kennel_runs", {40.0f, 0.0f, -8.5f}, 180.0f, -10.0f, 10.5f);
+    pov("22_animals_barn_paddock", {-75.0f, 0.0f, -10.0f}, 180.0f, -8.0f, 10.5f);
+    pov("23_animals_medical_crates", {8.0f, kFloorY, -0.4f}, 180.0f, -32.0f, 10.5f);
+    pov("24_animals_feral_pens", {85.0f, 0.0f, -32.0f}, 180.0f, -18.0f, 10.5f);
+    state_ = State::Computer;
+    computer_.open = true;
+    computer_.tab = ComputerUI::TabAnimals;
+    computer_.selectAnimal(labId);
+    shoot("25_computer_animal_record", 4);
+    computer_.tab = ComputerUI::TabStaff;
+    shoot("26_computer_staff");
+    sim_.staffInterview(sim_.staff.employees[0].id);
+    computer_.tab = ComputerUI::TabInbox;
+    shoot("27_computer_inbox");
+    computer_.open = false;
+    // Surgery on the Labrador
+    state_ = State::Playing;
+    if (Animal* lab = sim_.findAnimal(labId)) { lab->needsSurgery = true; lab->condition = "Swallowed a toy (intestinal blockage)"; }
+    sim_.beginSurgery(labId, &why);
+    sim_.surgeryAnesthetize(sim_.surgery.idealMgPerKg);
+    sim_.surgeryIncise();
+    sim_.surgery.bloodLoss = 0.35f;
+    state_ = State::Surgery;
+    for (int i = 0; i < 4; ++i) animals_.update(sim_, 0.5f, camera_.pos);
+    shoot("28_surgery_table", 4);
+    sim_.surgeryClamp(); sim_.surgeryRepair(); sim_.surgeryRepair(); sim_.surgerySuture();
+    // A tiger in the parking lot
+    state_ = State::Playing;
+    sim_.startIncident(findSpecies("Bengal Tiger"));
+    shoot("29_incident_decision", 3);
+    if (!sim_.decisions.empty()) sim_.resolve(sim_.decisions.back().id, 0);
+    state_ = State::Playing;
+    for (int i = 0; i < 20; ++i) animals_.update(sim_, 0.1f, camera_.pos);
+    {
+        vec3 tp = sim_.incident.pos;
+        pov("30_incident_tiger", {tp.x - 1.0f, 0.0f, tp.z + 11.0f}, 175.0f, -6.0f, 10.5f);
+    }
     return 0;
 }
 

@@ -53,6 +53,24 @@ std::string randomPersonName(Rng& rng) {
            last[rng.next() % (sizeof(last) / sizeof(*last))];
 }
 
+void randomPersonalLife(Employee& e, Rng& rng) {
+    static const char* fam[] = {"married, two kids (Lily and Mateo)", "single, lives with a rescue greyhound named Comet",
+                                "married, a baby on the way", "raising a teenage son alone", "cares for an elderly mother",
+                                "engaged - wedding next spring", "divorced, three cats", "lives with a partner and a parrot",
+                                "has twin daughters in middle school", "just moved here from out of state"};
+    static const char* hob[] = {"coaches Little League", "restores old pickup trucks", "plays bass in a garage band",
+                                "is training for a marathon", "bakes sourdough every weekend", "volunteers at the food bank",
+                                "is studying to become a vet tech", "fishes the reservoir every Sunday", "paints wildlife",
+                                "rides rodeo on weekends", "is learning Spanish", "builds furniture"};
+    e.family = fam[rng.next() % (sizeof(fam) / sizeof(*fam))];
+    e.hobby = hob[rng.next() % (sizeof(hob) / sizeof(*hob))];
+}
+
+const char* lifeEventName(int e) {
+    static const char* n[] = {"", "Death in the family", "House fire", "Injured", "Sick", "Burned out", "New baby", "Getting married"};
+    return (e >= 0 && e < LE_Count) ? n[e] : "";
+}
+
 void StaffRoster::refreshApplicants(Rng& rng, float privateRating01, int n) {
     applicants.clear();
     for (int i = 0; i < n; ++i) {
@@ -66,6 +84,7 @@ void StaffRoster::refreshApplicants(Rng& rng, float privateRating01, int n) {
         a.hourlyWage = std::round(ri.marketWage * (0.85f + a.skill * 0.35f) * 4.0f) / 4.0f;
         a.hoursPerWeek = ri.hoursPerWeek;
         a.morale = 0.65f + privateRating01 * 0.25f;
+        randomPersonalLife(a, rng);
         applicants.push_back(a);
     }
 }

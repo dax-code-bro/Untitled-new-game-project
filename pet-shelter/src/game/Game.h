@@ -2,6 +2,7 @@
 // opening cutscene -> POV/Creative gameplay), HUD, pause menu, save/load.
 #pragma once
 #include "core/Input.h"
+#include "game/AnimalActors.h"
 #include "game/CharacterCreatorUI.h"
 #include "game/CharacterModel.h"
 #include "game/ComputerUI.h"
@@ -40,7 +41,7 @@ public:
     void setPlayerName(const std::string& n) { appearance_.name = n.substr(0, 40); }
 
 private:
-    enum class State { MainMenu, Creator, Cutscene, Playing, Computer, Paused };
+    enum class State { MainMenu, Creator, Cutscene, Playing, Computer, Paused, Dialog, Surgery };
     enum class Mode { POV, Creative };
 
     void frame(float dt);
@@ -53,6 +54,10 @@ private:
     void drawSettings();
     void drawCutsceneOverlay();
     void drawToasts(float dt);
+    void drawDecision();
+    void drawSurgery();
+    void drawIncidentBanner();
+    bool inGame() const;
 
     void beginNewGame();
     void startCutscene();
@@ -79,6 +84,10 @@ private:
     Cutscene cutscene_;
     ComputerUI computer_;
     CharacterCreatorUI creatorUI_;
+    AnimalActors animals_;
+    int dialogDecision_ = -1;
+    float surgeryDose_ = 0.0f;
+    int surgeryPickAnimal_ = -1;
     Camera camera_;
 
     State state_ = State::MainMenu;
@@ -99,6 +108,7 @@ private:
     std::deque<Toast> toasts_;
     std::string screenshotSuiteDir_;
     std::string animalStudioDir_, animalStudioFilter_;
+    bool animalStudioPoses_ = false;
     std::chrono::steady_clock::time_point lastTick_;
     bool browserLocked_ = false;
     bool touch_ = false;          // phone / tablet mode (--touch)

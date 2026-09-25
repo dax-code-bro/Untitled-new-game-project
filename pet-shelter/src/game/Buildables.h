@@ -7,7 +7,8 @@
 namespace ps {
 
 enum class BuildKind {
-    KennelBlock, DogRun, CatHouse, Path, Tree, Bench, LampPost, SecurityCamera, StaffBuilding, ParkingLot, Count
+    KennelBlock, DogRun, CatHouse, Path, Tree, Bench, LampPost, SecurityCamera, StaffBuilding, ParkingLot,
+    SmallAnimalHouse, Barn, FeralEnclosure, SecureEnclosure, SurgeryWing, Count
 };
 
 struct BuildInfo {

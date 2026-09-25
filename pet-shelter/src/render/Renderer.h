@@ -64,7 +64,7 @@ public:
 
     void renderFrame(const Camera& cam, const SceneFn& scene, float dt, float time);
     Target createTarget(int w, int h);
-    void renderToTarget(const Camera& cam, const SceneFn& scene, Target& t, float time);
+    void renderToTarget(const Camera& cam, const SceneFn& scene, Target& t, float time, bool cctv = true);
     std::vector<uint8_t> readPixels() const;
     void resetAdaptation() { firstAdapt_ = true; }
 

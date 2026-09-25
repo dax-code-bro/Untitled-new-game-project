@@ -23,6 +23,17 @@ const BuildInfo& buildInfo(BuildKind k) {
          "Break room, lockers, laundry. Improves staff morale."},
         {"Parking Lot", "Visitor amenities", 14000, 20, 16, 0.05f, 1.0f, 40, 0, 10, false,
          "Twenty more parking spaces: more visitors per day."},
+        {"Small Animal House", "Animal housing", 24000, 10, 7, 3.0f, 5, 0, 30, 50, true,
+         "Hutches, cages, tanks and an aviary room for rabbits, rodents, ferrets, birds and reptiles."},
+        {"Barn & Paddock", "Animal housing", 58000, 18, 14, 5.0f, 6, 0, 10, 70, true,
+         "Stalls and a fenced paddock for horses, donkeys, cattle, camelids, pigs, goats, sheep and poultry."},
+        {"Feral Holding", "Animal housing", 36000, 12, 10, 3.2f, 1, 0, 8, 60, true,
+         "Reinforced wildlife enclosures with squeeze cages. Needs protective gear for staff."},
+        {"Secure Enclosure", "Animal housing", 90000, 10, 10, 4.0f, 0, 0, 2, 120, true,
+         "Steel-and-concrete holding for dangerous animals until the authorities or a sanctuary take them."},
+        {"Surgery Wing", "Facilities", 120000, 14, 10, 3.6f, 4, 5, 0, 110, true,
+         "The upgraded, much bigger medical room: two operating tables, anesthesia machines, recovery ward. "
+         "Required for feral and large animals."},
     };
     return info[int(k)];
 }

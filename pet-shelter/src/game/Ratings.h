@@ -36,6 +36,13 @@ struct RatingInputs {
     int visitorsServed = 0;            // yesterday
     bool gateBlockingVisitors = false; // gate shut during opening hours
     int incidentsRecent = 0;           // break-ins / vandalism in last 30 days
+    // staff wellbeing (private)
+    float staffFatigue = 0.2f, staffStress = 0.2f;
+    int overworkedStaff = 0, interviewsOverdue = 0;
+    bool protectiveGear = false;
+    // how the public sees you
+    int animalDeathsRecent = 0, scandalsRecent = 0, clientsMistreated = 0, clientsHelped = 0, violatorsTolerated = 0;
+    bool protestActive = false;
 };
 
 class Ratings {

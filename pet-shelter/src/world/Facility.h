@@ -13,7 +13,7 @@
 namespace ps {
 
 struct Interaction {
-    enum Type { None, Door, Gate, Computer } type = None;
+    enum Type { None, Door, Gate, Computer, OperatingTable } type = None;
     int index = -1;
     std::string prompt;
     float distance = 0.0f;

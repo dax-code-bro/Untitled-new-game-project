@@ -2,10 +2,12 @@
 // from the side and from the front three-quarter so each model can be
 // play-tested by eye.  Run: PetShelter --animals DIR [--only NAME|CLASS]
 #include "core/Image.h"
+#include "game/AnimalAnimator.h"
 #include "game/AnimalModel.h"
 #include "game/Game.h"
 #include <GLFW/glfw3.h>
 #include <cstdio>
+#include <cstdlib>
 #include <filesystem>
 
 namespace ps {
@@ -25,6 +27,7 @@ std::string fileSafe(const std::string& s) {
 }  // namespace
 
 int Game::runAnimalStudio(const std::string& dir, const std::string& filter) {
+    const bool poses = animalStudioPoses_;
     std::error_code ec;
     std::filesystem::create_directories(dir, ec);
     renderer_.setTimeOfDay(10.5f);
@@ -69,6 +72,11 @@ int Game::runAnimalStudio(const std::string& dir, const std::string& filter) {
             ind.seed = uint32_t(11 + k * 7);
             row[k].build = buildAnimal(sp, ind);
             row[k].mesh.upload(row[k].build.mesh);
+            if (std::getenv("PS_WOUND_TEST") && k == 0) {
+                const AnimalRig& rg = row[k].build.rig;
+                row[k].build.coat.wound = vec4(row[k].build.bounds.max.x * 0.92f, rg.shoulderH * 0.72f, rg.bodyLen * 0.22f, rg.bodyLen * 0.2f);
+                row[k].build.coat.wet = 1.0f;
+            }
             const AABB& b = row[k].build.bounds;
             float len = b.max.z - b.min.z;
             maxH = std::max(maxH, b.max.y);
@@ -120,6 +128,31 @@ int Game::runAnimalStudio(const std::string& dir, const std::string& filter) {
         vec3 dir3 = normalize(vec3(0.75f, 0.35f, 0.65f));
         cam.lookAt(mc + dir3 * d2, mc);
         shoot(cam, std::string(nm) + fileSafe(sp.name) + "_front");
+        if (poses) {
+            // One frame per behavior, on the adult male, from the front three-quarter
+            AnimalAnimator anim;
+            anim.init(row[0].build.rig, sp, 11);
+            for (AnimAction act : availableActions(sp)) {
+                anim.play(act, 0.01f);
+                float tt = actionLoops(act) ? 2.0f : actionDuration(act) * 0.45f;
+                for (float t = 0; t < tt; t += 1.0f / 30.0f) anim.update(1.0f / 30.0f);
+                std::vector<mat4> sk = anim.skin();
+                auto poseScene = [&](Renderer& r, Pass p) {
+                    if (p == Pass::Transparent) return;
+                    r.draw(ground, mat4::translate({total * 0.5f, 0, 0}));
+                    r.drawSkinned(row[0].mesh, sk.data(), int(sk.size()), row[0].model, row[0].build.coat, p == Pass::Opaque ? 6 : 0, 1.0f);
+                };
+                renderer_.resetAdaptation();
+                for (int f = 0; f < 3; ++f) {
+                    glfwPollEvents();
+                    renderer_.renderFrame(cam, poseScene, 1.0f / 30.0f, 1.0f);
+                    if (f == 2) writePNG(dir + "/" + std::string(nm) + fileSafe(sp.name) + "_pose_" + fileSafe(actionName(act)) + ".png",
+                                         width_, height_, renderer_.readPixels());
+                    glfwSwapBuffers(window_);
+                }
+                ++shots;
+            }
+        }
         std::fprintf(stderr, "[studio] %s  verts %zu  bones %zu  %.2fm tall\n", sp.name.c_str(), row[0].build.mesh.verts.size(),
                      row[0].build.rig.bones.size(), double(maxH));
     }

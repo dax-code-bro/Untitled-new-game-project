@@ -244,7 +244,7 @@ void main() {
         if (uWound.w > 0.0) {
             float d = length(vBindPos - uWound.xyz) / uWound.w;
             float wound = smoothstep(1.0, 0.6, d + (vnoise3(vBindPos * 60.0) - 0.5) * 0.4);
-            s.albedo = mix(s.albedo, mix(vec3(0.30, 0.02, 0.02), vec3(0.12, 0.0, 0.0), smoothstep(0.5, 0.0, d)), wound * (0.5 + 0.5 * uWet));
+            s.albedo = mix(s.albedo, mix(vec3(0.30, 0.02, 0.02), vec3(0.12, 0.0, 0.0), smoothstep(0.5, 0.0, d)), wound * (0.75 + 0.25 * uWet));
             s.rough = mix(s.rough, 0.12, wound * uWet);
             if (uShell > 0.0 && wound > 0.3) discard;   // fur shaved/matted at the wound
         }

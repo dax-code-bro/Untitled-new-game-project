@@ -47,6 +47,15 @@ void Sim::newGame() {
     security.addCamera("Parking Lot", {-21.5f, 4.6f, 39.5f}, radians(130.0f), -0.32f);
     security.doorLocked.assign(layout::doors().size(), false);
     econ.cashHistory.push_back(float(econ.cash));
+    // Your first residents wait in the medical room crates: a dachshund and a pair of rabbits.
+    if (findSpecies("Dachshund") >= 0) { Animal& a = admit(findSpecies("Dachshund"), "Owner surrender", 1.0f); a.name = "Frank"; a.male = true; a.coat = 0; }
+    if (findSpecies("Holland Lop") >= 0) {
+        Animal& r1 = admit(findSpecies("Holland Lop"), "Found in a box at the gate", 1.0f); r1.name = "Clover"; r1.male = false;
+        Animal& r2 = admit(findSpecies("Holland Lop"), "Found in a box at the gate", 0.2f); r2.name = "Pip";
+    }
+    animals = animalsInCare();
+    for (auto& e : staff.employees) randomPersonalLife(e, rng);
+    econ.cashHistory.push_back(float(econ.cash));
     log("Welcome to your new shelter! The highway gate is closed, so no visitors can get in yet. "
         "Open it at the gate keypad, or set it to automatic from the office computer.");
 }
@@ -80,10 +89,16 @@ void Sim::advance(double gameMinutes) {
         int hourIndex = int(std::llround(nextHour / 60.0)) % 24;
         if (hourIndex == 0) onEndOfDay();
         onHour(hourIndex);
+        expireDecisions();
+        incidentUpdate();
     }
+    expireDecisions();
+    incidentUpdate();
 }
 
 void Sim::onHour(int h) {
+    animalsHourly(h);
+    peopleHourly(h);
     // Visitors arrive during opening hours if the gate lets them in.
     if (!security.isOpenHours(float(h))) return;
     if (!security.visitorsCanEnter(float(h))) return;
@@ -113,7 +128,26 @@ RatingInputs Sim::ratingInputs() const {
     in.securityMonthly = econ.monthlyBudget[size_t(BudgetCat::Security)];
     in.animalCareMonthly = econ.monthlyBudget[size_t(BudgetCat::AnimalCare)];
     in.medicalMonthly = econ.monthlyBudget[size_t(BudgetCat::Medical)];
-    in.animals = animals;
+    in.animals = animalsInCare();
+    float fat = 0, str = 0;
+    int over = 0, overdue = 0;
+    for (auto& e : staff.employees) {
+        fat += e.fatigue; str += e.stress;
+        over += e.overworked() ? 1 : 0;
+        overdue += clock.day() - e.lastInterviewDay > 30 ? 1 : 0;
+    }
+    if (!staff.employees.empty()) { fat /= float(staff.employees.size()); str /= float(staff.employees.size()); }
+    in.staffFatigue = fat;
+    in.staffStress = str;
+    in.overworkedStaff = over;
+    in.interviewsOverdue = overdue;
+    in.animalDeathsRecent = int(deathDays.size());
+    in.scandalsRecent = int(scandalDays.size());
+    in.clientsMistreated = clientsMistreatedRecent;
+    in.clientsHelped = clientsHelpedRecent;
+    in.protestActive = protest.active;
+    in.violatorsTolerated = violatorsTolerated;
+    in.protectiveGear = protectiveGear;
     in.receptionists = staff.count(Role::Receptionist);
     in.janitors = staff.count(Role::Janitor);
     in.caretakers = staff.count(Role::Caretaker);
@@ -158,6 +192,8 @@ void Sim::onEndOfDay() {
         log("Back taxes paid off.");
     }
 
+    animalsDaily();
+    peopleDaily();
     // Staff morale drifts toward what their situation deserves.
     float bonusPer = staff.employees.empty() ? 0.0f
                      : econ.monthlyBudget[size_t(BudgetCat::StaffBonuses)] / float(staff.employees.size());
@@ -169,10 +205,13 @@ void Sim::onEndOfDay() {
         float fair = e.hourlyWage / roleInfo(e.role).marketWage;
         float target = 0.55f + clampf((fair - 1.0f) * 1.2f, -0.35f, 0.25f) + std::min(0.15f, bonusPer / 1000.0f) +
                        (hasStaffBuilding ? 0.08f : 0.0f) + (hasManager ? 0.05f : 0.0f) +
-                       (ratings.privateRating - 50.0f) / 250.0f - 0.2f * float(e.missedPaychecks);
+                       (ratings.privateRating - 50.0f) / 250.0f - 0.2f * float(e.missedPaychecks) -
+                       std::max(0.0f, e.fatigue - 0.3f) * 0.45f - e.stress * 0.3f + (e.relationship - 0.35f) * 0.25f -
+                       (clock.day() - e.lastInterviewDay > 30 ? 0.04f : 0.0f);
         e.morale = clampf(e.morale + (clampf(target, 0.0f, 1.0f) - e.morale) * 0.08f, 0.0f, 1.0f);
         if (e.morale < 0.25f && rng.uniform() < 0.12f) {
-            log(e.name + " (" + roleInfo(e.role).name + ") quit. Morale was too low.");
+            log(e.name + " (" + roleInfo(e.role).name + ") quit. " +
+                (e.fatigue > 0.7f ? "\"I'm exhausted and nobody cares.\"" : (e.stress > 0.7f ? "\"I can't take the stress anymore.\"" : "Morale was too low.")));
             ratings.shock(-0.5f, -2.0f);
             staff.employees.erase(staff.employees.begin() + long(i));
             continue;
@@ -333,6 +372,29 @@ void Sim::save(KeyValues& kv) const {
     for (bool b : security.doorLocked) locks += b ? '1' : '0';
     kv.set("sec.doors", locks);
     kv.seti("visitors.total", visitorsTotal);
+    kv.seti("gear", protectiveGear);
+    kv.set("owner", ownerName);
+    for (size_t i = 0; i < staff.employees.size(); ++i) {
+        const Employee& e = staff.employees[i];
+        std::string p = "staff." + std::to_string(i) + ".";
+        kv.setf(p + "fatigue", e.fatigue); kv.setf(p + "stress", e.stress); kv.setf(p + "rel", e.relationship);
+        kv.seti(p + "daysoff", e.daysOffPerWeek); kv.seti(p + "vac", e.vacationUntil); kv.seti(p + "interview", e.lastInterviewDay);
+        kv.set(p + "family", e.family); kv.set(p + "hobby", e.hobby);
+    }
+    kv.seti("animal.nextId", nextAnimalId);
+    int n = 0;
+    for (const Animal& a : animalList) {
+        if (!a.inCare()) continue;
+        std::string p = "animal." + std::to_string(n++) + ".";
+        kv.seti(p + "id", a.id); kv.seti(p + "sp", a.species); kv.set(p + "name", a.name); kv.seti(p + "male", a.male);
+        kv.setf(p + "age", a.ageYears); kv.seti(p + "coat", a.coat); kv.seti(p + "seed", long(a.seed)); kv.setf(p + "wf", a.weightFactor);
+        kv.setf(p + "health", a.health); kv.setf(p + "hunger", a.hunger); kv.setf(p + "stress", a.stress);
+        kv.seti(p + "status", int(a.status)); kv.set(p + "cond", a.condition); kv.setf(p + "bleed", a.bleeding);
+        kv.seti(p + "surg", a.needsSurgery); kv.seti(p + "vax", a.vaccinated); kv.seti(p + "fixed", a.fixed);
+        kv.seti(p + "house", a.housing); kv.seti(p + "day", a.arrivedDay); kv.set(p + "origin", a.origin);
+        kv.seti(p + "owned", a.owned); kv.set(p + "ownerName", a.ownerName); kv.seti(p + "consent", a.ownerConsented);
+    }
+    kv.seti("animal.count", n);
 }
 
 void Sim::load(const KeyValues& kv) {
@@ -393,6 +455,35 @@ void Sim::load(const KeyValues& kv) {
     std::string locks = kv.get("sec.doors");
     for (size_t i = 0; i < security.doorLocked.size() && i < locks.size(); ++i) security.doorLocked[i] = locks[i] == '1';
     visitorsTotal = kv.geti("visitors.total", 0);
+    protectiveGear = kv.geti("gear", 0) != 0;
+    ownerName = kv.get("owner", ownerName);
+    for (int i = 0; i < int(staff.employees.size()); ++i) {
+        Employee& e = staff.employees[size_t(i)];
+        std::string p = "staff." + std::to_string(i) + ".";
+        e.fatigue = float(kv.getf(p + "fatigue", 0.15)); e.stress = float(kv.getf(p + "stress", 0.2)); e.relationship = float(kv.getf(p + "rel", 0.35));
+        e.daysOffPerWeek = int(kv.geti(p + "daysoff", 2)); e.vacationUntil = int(kv.geti(p + "vac", -1));
+        e.lastInterviewDay = int(kv.geti(p + "interview", -999)); e.family = kv.get(p + "family"); e.hobby = kv.get(p + "hobby");
+        e.gearIssued = protectiveGear;
+        if (e.family.empty()) randomPersonalLife(e, rng);
+    }
+    animalList.clear();
+    decisions.clear();
+    nextAnimalId = int(kv.geti("animal.nextId", 1));
+    int an = int(kv.geti("animal.count", 0));
+    for (int i = 0; i < an; ++i) {
+        std::string p = "animal." + std::to_string(i) + ".";
+        Animal a;
+        a.id = int(kv.geti(p + "id")); a.species = int(kv.geti(p + "sp")); a.name = kv.get(p + "name"); a.male = kv.geti(p + "male") != 0;
+        a.ageYears = float(kv.getf(p + "age", 2)); a.coat = int(kv.geti(p + "coat")); a.seed = uint32_t(kv.geti(p + "seed", 1));
+        a.weightFactor = float(kv.getf(p + "wf", 1)); a.health = float(kv.getf(p + "health", 1)); a.hunger = float(kv.getf(p + "hunger"));
+        a.stress = float(kv.getf(p + "stress", 0.3)); a.status = AnimalStatus(kv.geti(p + "status")); a.condition = kv.get(p + "cond");
+        a.bleeding = float(kv.getf(p + "bleed")); a.needsSurgery = kv.geti(p + "surg") != 0; a.vaccinated = kv.geti(p + "vax") != 0;
+        a.fixed = kv.geti(p + "fixed") != 0; a.housing = int(kv.geti(p + "house", -1)); a.arrivedDay = int(kv.geti(p + "day"));
+        a.origin = kv.get(p + "origin"); a.owned = kv.geti(p + "owned") != 0; a.ownerName = kv.get(p + "ownerName");
+        a.ownerConsented = kv.geti(p + "consent") != 0;
+        if (a.species >= 0 && a.species < int(speciesCatalog().size())) animalList.push_back(a);
+    }
+    animals = animalsInCare();
     staff.refreshApplicants(rng, ratings.privateRating / 100.0f);
     log("Game loaded.");
 }

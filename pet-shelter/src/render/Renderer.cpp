@@ -545,7 +545,7 @@ Renderer::Target Renderer::createTarget(int w, int h) {
     return t;
 }
 
-void Renderer::renderToTarget(const Camera& cam, const SceneFn& scene, Target& t, float time) {
+void Renderer::renderToTarget(const Camera& cam, const SceneFn& scene, Target& t, float time, bool cctv) {
     renderScene(cam, scene, t.hdrFbo, t.w, t.h, time, false);
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
@@ -557,6 +557,8 @@ void Renderer::renderToTarget(const Camera& cam, const SceneFn& scene, Target& t
     cctv_.set("uExposure", lerpf(0.35f, 14.0f, night_));
     cctv_.set("uNightVision", night_ > 0.6f ? 1.0f : 0.0f);
     cctv_.set("uTime", time);
+    cctv_.set("uPlain", cctv ? 0.0f : 1.0f);
+    if (!cctv) cctv_.set("uExposure", 0.55f * std::exp2(exposureBias));
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, t.hdrTex);
     fullscreen();
