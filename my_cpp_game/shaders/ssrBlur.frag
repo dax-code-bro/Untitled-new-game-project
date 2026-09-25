@@ -34,20 +34,26 @@ void main(){
   float alpha  = rough * rough;
   float radius = min(alpha * uSsrConeScale, uSsrConeMax);
 
-  /* Thirteen taps spanning +-radius, so the stride is radius/6. A
-     mirror (alpha -> 0) gets a stride of zero and is not touched at
-     all, which is what a mirror should be; only a genuinely rough
-     surface spreads its taps out, and by then the source it is
-     sampling is incoherent anyway. */
-  float stride = min(radius / 6.0, uSsrMaxStride);
-  if (stride < 0.5) { outColor = c; return; }
+  /* NATIVE: AS MANY TAPS AS THE RADIUS NEEDS, NEVER A GAP.
+     The web build spent a fixed thirteen taps across +-radius, so the
+     stride grew with the cone -- to 17 half-res texels at 4K -- and a
+     small bright source (a lamp reflected in rough copper) came out as
+     a 13x13 grid of copies, because the two separable halves each copy
+     it thirteen times. Here the stride is capped at uSsrMaxStride
+     (1.5 texels; bilinear taps that close overlap) and the tap count
+     grows instead, up to 64 each side. The kernel keeps the web
+     Gaussian's shape exactly: exp(-3.96 t^2) over t in [-1, 1]. A
+     mirror still has radius ~0 and is not touched at all. */
+  if (radius < 0.75) { outColor = c; return; }
+  int   n      = int(clamp(ceil(radius / uSsrMaxStride), 6.0, 64.0));
+  float stride = radius / float(n);
 
   float zc = -uSsrZParams.y / (dc * 2.0 - 1.0 + uSsrZParams.x);
   vec2  stepUv = uSsrDir * uSsrTexel * stride;
 
   vec4  sum  = vec4(0.0);
   float wsum = 0.0;
-  for (int i = -6; i <= 6; i++) {
+  for (int i = -n; i <= n; i++) {
     vec2  uv = vUv + stepUv * float(i);
     float dn = texture(uSceneDepth, uv).r;
     float zn = -uSsrZParams.y / (dn * 2.0 - 1.0 + uSsrZParams.x);
@@ -57,7 +63,8 @@ void main(){
        is relative to depth because a 30 cm gap is an edge at three
        metres and nothing at forty. */
     float wz = exp(-abs(zn - zc) / max(0.25, abs(zc) * 0.08));
-    float wg = exp(-float(i * i) * 0.11);
+    float t  = float(i) / float(n);
+    float wg = exp(-t * t * 3.96);
     float w  = wz * wg;
     sum  += texture(uSsrTex, uv) * w;
     wsum += w;

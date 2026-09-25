@@ -766,7 +766,11 @@ GLuint Renderer::renderSsr(const Camera& cam) {
     t->set("uSsrJitter", 0.0f);
     fullscreen();
 
-    const float maxStride = std::max(1.5f, h * 0.016f);
+    /* NATIVE: the blur's tap count grows with the cone instead of its
+       stride (see ssrBlur.frag), so this is a gap ceiling in texels, and
+       the cone ceiling keeps the web's value of 6x the web stride cap. */
+    const float maxStride = 1.5f;
+    const float coneMax = std::max(1.5f, h * 0.016f) * 6.0f;
     const float coneScale = h / std::max(cam.fov, 1e-3f);
     const gl::Framebuffer* passes[2][2] = {{m_ssrA.get(), m_ssrB.get()}, {m_ssrB.get(), m_ssrA.get()}};
     for (int i = 0; i < 2; ++i) {
@@ -780,7 +784,7 @@ GLuint Renderer::renderSsr(const Camera& cam) {
         b->set("uSsrDir", i == 0 ? glm::vec2(1, 0) : glm::vec2(0, 1));
         b->set("uSsrZParams", zParams);
         b->set("uSsrConeScale", coneScale);
-        b->set("uSsrConeMax", maxStride * 6.0f);
+        b->set("uSsrConeMax", coneMax);
         b->set("uSsrMaxStride", maxStride);
         fullscreen();
     }
