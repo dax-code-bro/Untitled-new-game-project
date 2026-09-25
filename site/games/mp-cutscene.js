@@ -302,6 +302,19 @@
 
      The camera does not follow it. That is the whole shot: it is fixed
      on the pad, and the thing you were fighting over gets smaller. */
+  /* WHERE THE CAMERA STANDS FOR THE WHOLE HELIPAD SCENE.
+
+     It stood at (11.5, 9.5), east of the pad, and the crew walk out from
+     the WEST -- so the helicopter's own fuselage stood between the lens
+     and the only people in the shot, and the walk-out played entirely
+     behind a seven-metre green box. (A ray from the old eye to the crew
+     hits heli-tail; to the pad centre, heli-body.) The camera now stands
+     on their side, off the south-west corner of the apron, with the
+     aircraft filling the right of the frame and the crew crossing in
+     front of it. It still does not move: the aim swings to follow the
+     aircraft up, which is the shot as it was asked for. */
+  function HELI_EYE_AT(y) { return [-12.5, y, 12.0]; }
+
   var HELIPAD = {
     name: 'the helicopter leaves',
     setup: function (c) {
@@ -322,7 +335,7 @@
       /* 1. The pad, from the side. They start walking. */
       { id: 'walk', t: 3.4, at: function (c, u) {
         var e = c.ease(u);
-        c.look([11.5, 3.4 - e * 0.6, 9.5], [0.5, 1.6, 0.5]);
+        c.look(HELI_EYE_AT(3.4 - e * 0.6), [-1.6, 1.3, 2.4]);
         c.fov(58);
         c.rotorAng += 0.06 + e * 0.5;
         c.rotor.spin(0, -1, c.rotorAng, 0, 0, 0);
@@ -334,7 +347,7 @@
       } },
       /* 2. They are aboard and the rotor comes up to speed. */
       { id: 'board', t: 2.0, at: function (c, u) {
-        c.look([11.5, 2.8, 9.5], [0.5, 1.8, 0.5]);
+        c.look(HELI_EYE_AT(2.8), [-1.2, 1.6, 1.4]);
         c.rotorAng += 0.55 + u * 0.5;
         c.rotor.spin(0, -1, c.rotorAng, 0, 0, 0);
         for (var i = 0; i < c.crew.length; i++) {
@@ -347,7 +360,7 @@
       /* 3. Lift, nose over, and away. The camera does not move. */
       { id: 'lift', t: 6.2, at: function (c, u) {
         var e = c.ease(u);
-        c.look([11.5, 2.8, 9.5], [0.5, 1.8 + e * 26, 0.5 - e * 30]);
+        c.look(HELI_EYE_AT(2.8), [-1.2, 1.6 + e * 26, 1.4 - e * 30]);
         c.rotorAng += 1.05;
         var up = e * e * 62, out = e * e * 110, nose = e * 0.28;
         c.heli.spin(0, -1, nose * 0.25, 0, up, -out);
@@ -356,7 +369,7 @@
       } },
       /* 4. Gone. A beat of empty sky before the message. */
       { id: 'gone', t: 1.8, at: function (c, u) {
-        c.look([11.5, 2.8, 9.5], [0.5, 26 + u * 4, -30]);
+        c.look(HELI_EYE_AT(2.8), [-1.2, 26 + u * 4, -30]);
         c.fov(c.lerp(58, 46, c.ease(u)));
       } },
     ],

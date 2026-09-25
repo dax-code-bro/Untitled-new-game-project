@@ -11263,6 +11263,20 @@ function updateZombie(game, S, P, z, dt, sfx) {
            back out of a slow slam is a thing a player can do. */
         z.atkLock -= dt;
         a.controller.move(0, 0);
+        /* KEEP ARM'S LENGTH. The lunge carries the head forty centimetres
+           forward of the feet, and a body that walked right up against
+           you swung it through the camera -- the old code never showed
+           an attack for more than a frame, so nobody saw that. While it
+           is committed to a swing it is eased back out to a stand-off
+           just inside reach, so the blow lands at arm's length. It is
+           moved rather than walked, because walking would turn it round
+           to face the way it was going. */
+        const STAND = 1.1;
+        if (d < STAND && d > 1e-3) {
+          const bp = a.controller.body.position, k = (STAND - d) * Math.min(1, dt * 9);
+          bp.x -= (target.x - pos.x) / d * k;
+          bp.z -= (target.z - pos.z) / d * k;
+        }
         if (a.controller.facing != null) {
           const want = Math.atan2(target.x - pos.x, target.z - pos.z);
           let dYaw = want - a.controller.facing;
