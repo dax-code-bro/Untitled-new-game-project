@@ -81,8 +81,8 @@ vec3 coatAlbedo(vec3 bp, int region, float sub, float under, out float furMask) 
         col = mix(A, B, spot);
     } else if (P == 5) {     // merle / dapple patches
         float n = fbm3(q * 4.0 + 3.0);
-        float patch = smoothstep(0.58, 0.62, n);
-        col = mix(A, B, patch);
+        float patchV = smoothstep(0.58, 0.62, n);
+        col = mix(A, B, patchV);
         col = mix(col, B, smoothstep(0.64, 0.7, fbm3(q * 9.0)) * 0.6);
     } else if (P == 6 || P == 22) {  // piebald / tuxedo (6), holstein (22: big patches)
         float bias = under * 0.55 + (region == 2 ? 0.45 * (1.0 - sub) : 0.0) + (region == 3 ? 0.25 * sub : 0.0);

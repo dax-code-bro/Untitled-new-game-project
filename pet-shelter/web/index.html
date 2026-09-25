@@ -316,7 +316,9 @@
     e.preventDefault();
     showProblem('The graphics stopped, usually because the device ran low on memory. Close other tabs or apps and reload the page.');
   });
+  const PS_BUILD = '8-animals';   // bump with each release so browsers fetch the new game files
   window.Module = {
+    locateFile: (f) => f + '?v=' + PS_BUILD,
     canvas,
     arguments: (isTouch ? ['--touch'] : []).concat(lowMode ? ['--low'] : []),
     setStatus,
@@ -336,7 +338,7 @@
     onAbort: (what) => showProblem('The game stopped because of an error (' + what + '). Reload the page to try again.'),
   };
   const s = document.createElement('script');
-  s.src = 'PetShelter.js';
+  s.src = 'PetShelter.js?v=' + PS_BUILD;
   s.onerror = () => fail("The game files didn't load. Reload the page to try again.");
   document.body.appendChild(s);
 

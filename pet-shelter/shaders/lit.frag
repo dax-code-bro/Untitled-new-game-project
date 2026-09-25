@@ -1,7 +1,9 @@
 // Physically based (GGX) shading with HDR output. Sun + sky ambient +
 // indoor point lights + emissive, cascaded shadows, procedural materials.
 #include "common.glsl"
+#ifdef SKINNED
 #include "coat.glsl"
+#endif
 
 in vec3 vWorldPos;
 in vec3 vNormal;
@@ -219,6 +221,7 @@ void main() {
     s.emissive = s.albedo * vMat.z;
     applyPattern(pat, s, vWorldPos, vUV);
     float furAmount = 0.0;
+#ifdef SKINNED
     if (pat == 22) {   // animal coat
         int region = int(vUV.x + 0.5);
         float furMask;
@@ -249,6 +252,7 @@ void main() {
             if (uShell > 0.0 && wound > 0.3) discard;   // fur shaved/matted at the wound
         }
     }
+#endif
 
     vec3 N = s.n;
     vec3 V = normalize(uCamPos - vWorldPos);

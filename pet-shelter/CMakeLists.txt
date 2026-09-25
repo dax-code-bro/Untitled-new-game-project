@@ -113,6 +113,9 @@ if(PS_BUILD_GAME)
       -sALLOW_MEMORY_GROWTH=1 -sINITIAL_MEMORY=134217728 -sSTACK_SIZE=4194304
       -sENVIRONMENT=web -sEXPORTED_RUNTIME_METHODS=ccall,UTF8ToString
       "--embed-file=${CMAKE_CURRENT_SOURCE_DIR}/shaders@/shaders")
+    # Relink when any shader changes (they're baked into the .wasm)
+    file(GLOB PS_SHADER_FILES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/shaders/*)
+    set_property(TARGET PetShelter APPEND PROPERTY LINK_DEPENDS ${PS_SHADER_FILES})
   endif()
   # Copy shaders next to the executable so a packaged build runs anywhere.
   add_custom_command(TARGET PetShelter POST_BUILD
