@@ -2266,7 +2266,16 @@
     var cp = Math.cos(pitch), sp = Math.sin(pitch);
     var fx = sy * cp, fy = -sp, fz = cy * cp;
     var rx = -cy, rz = sy;                       // see face()/RIGHT: right is -X
-    var low = sprinting ? 1 : 0;
+    /* The sprint carry EASES down and back up, like the aim does. It was
+       a switch: the frame a bot broke into a sprint his rifle jumped ten
+       centimetres and twenty-three degrees, and jumped back the frame he
+       stopped. Down in about a quarter second, up a little quicker (a
+       man coming out of a run brings the gun up with purpose), and the
+       smoothstep takes the corners off both ends. */
+    var wantLow = sprinting ? 1 : 0;
+    p._lowT = p._lowT == null ? wantLow
+      : p._lowT + Math.max(-DT_LAST * 5.5, Math.min(DT_LAST * 4.0, wantLow - p._lowT));
+    var low = p._lowT * p._lowT * (3 - 2 * p._lowT);
     /* AIMED, FROM THE OUTSIDE.
      *
        Bots aim -- coneOf has narrowed their cone for aiming since the
@@ -2322,7 +2331,7 @@
     _q1.setEuler(0, gy, 0);
     _q2.setEuler(0, 0, gp);
     _q1.mulQuats(_q1, _q2);
-    if (low) { _q2.setEuler(0.40, 0, 0); _q1.mulQuats(_q1, _q2); }
+    if (low > 1e-3) { _q2.setEuler(0.40 * low, 0, 0); _q1.mulQuats(_q1, _q2); }
     a.rotation.copy(_q1);
     a._still = false;
     /* The reach cannot happen here. The engine updates every actor's
@@ -2695,10 +2704,36 @@
       var p = M.people[i], e = list[i];
       if (!p.actor || !p.actor.controller) continue;
       if (!e.alive) {
-        p.actor.controller.teleport([e.x, -60, e.z]);
+        /* THE VICTIM FALLS IN HIS OWN KILL CAM.
+
+           A dead entry used to be sent sixty metres under the map, so at
+           the moment of the kill -- the moment the kill cam exists to
+           show -- the man who was shot simply ceased to be there. A body
+           seen alive on this tape and dead on the next frame is posed
+           where it stood, playing the same fall the live game plays
+           (face down if the round came from behind); only a man who was
+           already dead before the tape starts is kept out of sight. */
+        if (p._rpAlive && p._rpLast && p.actor.animator) {
+          p._rpDead = p._rpLast;
+          var fc = p.corpse ? !!p.corpse.face : false;
+          p.actor.controller.autoAnimate = false;
+          p.actor.animator.play(fc ? 'deathFace' : 'deathBack', 0.08);
+          p.actor.animator.speed = 1;
+          p._rpState = 'dead';
+        }
+        p._rpAlive = false;
         if (p._armShown) showArm(p._armShown, false);
+        if (p._rpDead) {
+          p.actor.controller.teleport([p._rpDead.x, p._rpDead.y + lift(p), p._rpDead.z]);
+          face(p.actor, p._rpDead.yaw);
+        } else {
+          p.actor.controller.teleport([e.x, -60, e.z]);
+        }
         continue;
       }
+      if (p._rpState === 'dead') p._rpState = null;
+      p._rpAlive = true; p._rpDead = null;
+      p._rpLast = { x: e.x, y: e.y, z: e.z, yaw: e.yaw };
       p.actor.controller.teleport([e.x, e.y + lift(p), e.z]);
       face(p.actor, e.yaw);
       /* The replay's weapons come off the tape too, or a kill cam shows
@@ -2721,11 +2756,20 @@
       p._rpPos = { x: e.x, z: e.z };
       p._rpSpeed = p._rpSpeed == null ? sp : p._rpSpeed + (sp - p._rpSpeed) * Math.min(1, dt * 12);
       var v = p._rpSpeed;
-      var want = e.sprinting && v > 4.6 ? 'sprint' : v > 4.3 ? 'run' : v > 0.35 ? 'walk' : 'idle';
+      /* The same choice the live game makes, from the same clips: a
+         replay used to pick by fixed speed thresholds and knew nothing of
+         crouch or prone, so a man who crawled up to the shot stood up and
+         walked in his own kill cam, feet skating at the old speeds. */
+      var want;
+      if (e.prone) want = v > 0.18 ? 'crawl' : 'proneIdle';
+      else if (e.crouching) want = v > 0.30 ? gaitPick(a, ['crouchWalk', 'crouchRun'], v) : 'crouchIdle';
+      else if (v > 0.35) want = gaitPick(a, (e.sprinting && !e.aiming) ? ['walk', 'run', 'sprint'] : ['walk', 'run'], v);
+      else want = 'idle';
+      if (!a.clips.get(want)) want = v > 0.35 ? 'walk' : 'idle';
       if (want !== p._rpState) { p._rpState = want; a.play(want, 0.16); }
-      if (want === 'walk') a.speed = Math.max(0.5, Math.min(1.7, v / 4.6));
-      else if (want === 'run') a.speed = Math.max(0.7, Math.min(1.4, v / 6.0));
-      else if (want === 'sprint') a.speed = Math.max(0.85, Math.min(1.2, v / 7.0));
+      var rc = a.clips.get(want);
+      if (rc && rc.stride) a.speed = W.LE.gaitRate(rc, v);
+      else if (want === 'crawl') a.speed = Math.max(0.5, Math.min(1.8, v / 1.1));
       else a.speed = 1;
     }
   }
@@ -2738,6 +2782,7 @@
     for (var i = 0; i < M.people.length; i++) {
       var p = M.people[i];
       p._rpPos = null; p._rpSpeed = null; p._rpState = null;
+      p._rpAlive = false; p._rpDead = null; p._rpLast = null;
       p._animState = null; p._animPos = null; p._animSpeed = null;
     }
   }

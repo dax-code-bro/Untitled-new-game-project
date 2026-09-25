@@ -433,6 +433,11 @@ function makeZombieClips() {
     upperArmR: { keys: [[0, -22, 0, 18], [0.35, -100, 0, 16], [0.7, -54, 0, 24], [1, -22, 0, 18]] },
     lowerArmL: { keys: [[0, -8, 0, 0], [0.35, -46, 0, 0], [1, -8, 0, 0]] },
     lowerArmR: { keys: [[0, -46, 0, 0], [0.35, -8, 0, 0], [1, -46, 0, 0]] },
+  }, {
+    /* Two hauls a cycle, a long lunge each: the rate follows the body's
+       speed like the shambles do, so the planted hand stays planted
+       instead of skating at whatever speed the crawler rolled. */
+    stride: 2.2,
   }));
 
   /* ---------------------------------------------------------
@@ -1306,6 +1311,10 @@ function makeZombieClips() {
     lowerLegL: { keys: [[0, 18, 0, 0], [0.5, 34, 0, 0], [1, 18, 0, 0]] },
     upperLegR: { keys: [[0, -12, 0, -3], [0.5, 10, 0, -3], [1, -12, 0, -3]] },
     lowerLegR: { keys: [[0, 34, 0, 0], [0.5, 18, 0, 0], [1, 34, 0, 0]] },
+  }, {
+    /* A stroke carries the body about this far, so faster swimmers
+       stroke faster rather than gliding through the same slow crawl. */
+    stride: 2.6,
   }));
 
   /* ---------------------------------------------------------

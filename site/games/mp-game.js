@@ -1532,10 +1532,23 @@
            taught about ammunition suddenly renders an empty gun. */
         if (g && g.setRounds) g.setRounds(ammoFrac == null ? 1 : ammoFrac);
         state.aim = aim;
-        var low = sprint ? 1 : 0;
+        /* EASED into and out of the low ready, down at 7 a second and up
+           at 12 -- it was `sprint ? 1 : 0`, a gun that teleported between
+           the carry and the sprint and back. */
+        var lowWant = sprint ? 1 : 0;
+        state.lowS = (state.lowS || 0) + (lowWant - (state.lowS || 0)) *
+          (1 - Math.exp(-Math.min(dt || 0, 0.05) * (lowWant ? 7 : 12)));
+        var low = window.LE.Motion.Ease.smooth(state.lowS);
         state.sprint = low;
         var rlU = Math.max(0, Math.min(1, reload || 0));
-        state.reload = rlU > 0 ? Math.sin(rlU * Math.PI) : 0;
+        /* Two different things, which were one: the LIFT the weapon makes
+           (a shaped curve, 0 at both ends) and the PROGRESS the action
+           reads. breakOpen() wants progress -- fed the half-sine it saw
+           the reload peak at 1 half-way through, which it reads as "the
+           end", and a break gun's barrels shut in the middle of every
+           reload and opened again. */
+        state.reload = rlU > 0 ? window.LE.Motion.lift(rlU) : 0;
+        state.reloadU = rlU;
         /* Both cue clocks reset the moment a reload ends, HERE rather
            than inside the arms block further down: a weapon with no
            hands built would leave `rlWas` at wherever the last one
@@ -1606,20 +1619,27 @@
              to be a real curve and not a flag. */
           var tw = state.cyc > 0 ? 1 : 0;
           state.trig += (tw - state.trig) * Math.min(1, d * (tw ? 34 : 12));
-          state.spin += d * (state.cyc > 0 ? 6 : 0);
+          /* A rotary spins UP and runs DOWN: a quarter-second to speed
+             and over a second to coast to a stop, instead of switching
+             between six revolutions a second and none. */
+          var spinWant = state.cyc > 0 ? 6 : 0;
+          state.spinRate = (state.spinRate || 0) + (spinWant - (state.spinRate || 0)) *
+            (1 - Math.exp(-d * (spinWant > (state.spinRate || 0) ? 7 : 1.8)));
+          state.spin += d * state.spinRate;
           LE.poseAction(g, state.act, {
-            /* Back hard and forward on the return: a half sine, which
-               is the shape the real thing traces. */
-            fire: state.cyc > 0 ? Math.sin((1 - state.cyc / state.cycMax) * Math.PI) : 0,
+            /* Back hard, a dwell, forward on the spring and a bounce
+               off the stop (LE.Motion.stroke) -- not the half sine,
+               which was as slow going back as coming home. */
+            fire: state.cyc > 0 ? LE.Motion.stroke(1 - state.cyc / state.cycMax) : 0,
             /* The hand-worked stroke, and the inspect uses the same
                channel: opening the action to look at the chamber is
                the same movement as working it, so a bolt gun's bolt,
                a pump's forend, a revolver's cylinder and a break
                gun's barrels all do the right thing for free. */
             hand: Math.max(
-              state.hand > 0 ? Math.sin((1 - state.hand / state.handMax) * Math.PI) : 0,
+              state.hand > 0 ? LE.Motion.stroke(1 - state.hand / state.handMax, 0.40, 0.14, 0.03) : 0,
               INS.bolt),
-            reload: state.reload, trigger: state.trig,
+            reload: state.reloadU || 0, trigger: state.trig,
             rounds: state.rounds, spin: state.spin,
           });
         }
@@ -1717,9 +1737,12 @@
         var swapU2 = Math.max(0, Math.min(1, swapU || 0));
         var swapDrop = 0, swapTip = 0, swapRoll = 0;
         if (swapU2 > 0 && swapU2 < 1) {
+          /* A lift before the holster, and a draw that comes up past the
+             carry and settles into it -- the same curves as zombies. */
+          var EZ = window.LE.Motion.Ease;
           var su = swapU2 < 0.5
-            ? Math.pow(swapU2 / 0.5, 0.72)              // 0 -> 1, fast
-            : Math.pow(1 - (swapU2 - 0.5) / 0.5, 1.45); // 1 -> 0, slower
+            ? EZ.inBack(swapU2 / 0.5, 0.7)
+            : 1 - EZ.outBack((swapU2 - 0.5) / 0.5, 1.5);
           swapDrop = su * (0.085 + bulk * 0.062) * 1.75;
           swapTip = su * 0.52;
           swapRoll = su * 0.30;
@@ -1770,11 +1793,28 @@
         /* The sway is on the view's clock rather than the match's --
            place() is not given match time -- but it is clamped the same
            way, so a long frame is a long frame and not a lurch. */
-        state.swayT += Math.min(dt || 0, 0.05) * 1.6;
+        var dtc = Math.min(dt || 0, 0.05);
+        state.swayT += dtc * 1.6;
+        state.idleT = (state.idleT || 0) + dtc;
+        var MO = window.LE.Motion;
         var still = Math.max(0, 1 - Math.abs(bob) * 90);
         var swayK = (1 - aim * 0.88) * still;
-        var swayY = Math.sin(state.swayT * 2) * 0.0016 * swayK;
-        var swayX = Math.cos(state.swayT) * 0.0010 * swayK;
+        /* Breathing plus a wander on smooth noise, which never repeats. */
+        var swayY = (Math.sin(state.idleT * 1.35) * 0.0011 + MO.noise1(state.idleT * 0.35, 3) * 0.0009) * swayK;
+        var swayX = MO.noise1(state.idleT * 0.27, 7) * 0.0011 * swayK;
+        /* THE LOOK LAG. The gun trails a turn on a spring and rolls into
+           it, so a flick of the view shows the weight in your hands. */
+        if (!state.ls) state.ls = { x: new MO.Spring(4.2, 0.5), y: new MO.Spring(4.2, 0.5), r: new MO.Spring(3.2, 0.45), yaw: yaw, pitch: pitch };
+        var dyaw = yaw - state.ls.yaw;
+        while (dyaw > Math.PI) dyaw -= 2 * Math.PI;
+        while (dyaw < -Math.PI) dyaw += 2 * Math.PI;
+        var dpit = pitch - state.ls.pitch;
+        state.ls.yaw = yaw; state.ls.pitch = pitch;
+        var yawRate = dtc > 0 ? dyaw / dtc : 0, pitRate = dtc > 0 ? dpit / dtc : 0;
+        var lagK = 1 - aim * 0.8;
+        swayX += state.ls.x.update(Math.max(-0.022, Math.min(0.022, yawRate * 0.0065)) * lagK, dtc);
+        swayY += state.ls.y.update(Math.max(-0.016, Math.min(0.016, pitRate * 0.0050)) * lagK, dtc);
+        var swayRoll = state.ls.r.update(Math.max(-0.10, Math.min(0.10, yawRate * 0.030)) * lagK, dtc);
 
         var offR = hipX * OUT * (1 - aim) + INS.side + swayX;
         var offU = hipY * OUT * (1 - aim) + (-sightH) * aim
@@ -1825,11 +1865,11 @@
         var tip = (1 - aim) * (0.30 + low * 0.14) * holdTip * (1 - rl * 0.85)
           + swapTip - INS.pitch;
         var gp = Math.asin(Math.max(-1, Math.min(1, fy))) - tip;
-        var roll = low * 0.42 + (1 - aim) * 0.03 + rl * 0.30 + swapRoll + INS.roll;
+        var roll = low * 0.42 + (1 - aim) * 0.03 + rl * 0.30 + swapRoll + INS.roll + swayRoll;
         Q.setAxisAngle(AY, gy);
         Q2.setAxisAngle(AZ, gp);
         Q.mulQuats(Q, Q2);
-        if (roll > 1e-4) { Q2.setAxisAngle(AX, roll); Q.mulQuats(Q, Q2); }
+        if (Math.abs(roll) > 1e-4) { Q2.setAxisAngle(AX, roll); Q.mulQuats(Q, Q2); }
         g.rotation.copy(Q);
         g._still = false;
 
@@ -3089,6 +3129,7 @@
     /* How hard the last shot shoved, 0 to about 1.6, decaying fast. */
     var punch = 0;
     var kick = 0, bob = 0, bobT = 0, lastHp = M.you.hp, wasAlive = true;
+    var kickS = null, moveAmt = 0, adsRaw = 0;
     var adsT = 0;
     /* How much of the inspect is left to run, how strongly it is
        applied, and how long the reload button has been held down --
@@ -3440,7 +3481,13 @@
            errors while it presses the trigger; it is not a new fault,
            it is one nothing had been looking for. */
         var wNow = p.guns[p.held];
-        kick = Math.min(1.4, kick + 0.55);
+        /* An impulse into a spring, not a bump on a fade: the kick punches
+           back fast and the shooter's return carries it a little past
+           rest before it settles, which is the overshoot that reads as
+           mass. */
+        if (!kickS) kickS = new window.LE.Motion.Spring(3.6, 0.42);
+        kickS.velocity += 16;
+        if (kickS.value > 1.3) kickS.value = 1.3;
         vm.fired(60 / Math.max(1, (wNow && wNow.rpm) || 600));
         /* The HELD weapon, not the table row: MP_DATA.build has
            already folded the attachments into it, so a longer barrel
@@ -3507,10 +3554,17 @@
       pitch = Math.max(-1.45, Math.min(1.45, pitch));
       watchDamage();
 
-      kick *= Math.pow(0.02, dt);
+      if (!kickS) kickS = new window.LE.Motion.Spring(3.6, 0.42);
+      kick = Math.max(-0.35, Math.min(1.4, kickS.update(0, dt)));
       var moving = Math.abs(cmd.forward) + Math.abs(cmd.right) > 0.1 && p.grounded;
-      bobT += dt * (p.sprinting ? 12 : 7.5) * (moving ? 1 : 0);
-      bob = moving ? Math.sin(bobT) * (p.sprinting ? 0.016 : 0.009) : bob * 0.9;
+      /* How much you are moving EASES, and the bob follows it on the
+         clock: `bob * 0.9` a frame died twice as fast at 120 fps as at 60,
+         and the clock froze the instant you stopped. The vertical carries
+         a footfall -- sharp at each plant, round over the top. */
+      moveAmt += ((moving ? 1 : 0) - moveAmt) * (1 - Math.exp(-dt * 6));
+      bobT += dt * (p.sprinting ? 12 : 7.5) * (0.25 + 0.75 * moveAmt);
+      var bobAmp = (p.sprinting ? 0.016 : 0.009) * moveAmt;
+      bob = (Math.pow(Math.abs(Math.sin(bobT)), 0.55) - 0.62) * 1.6 * bobAmp;
 
       /* ---- the killstreak rail, and whatever it called in ----
          Polled before the camera, because the Berserker Suit takes the
@@ -3588,8 +3642,11 @@
            there's no animation" is. It eases now, and faster to the
            sight than back off it, the way a real one does. */
         var wantAim = (input.buttons.aim || p.aiming) ? 1 : 0;
-        var rate = wantAim ? 13 : 9;
-        adsT += (wantAim - adsT) * Math.min(1, dt * rate);
+        /* A linear ramp, eased on the way out: starts, travels, seats on
+           the eye -- 0.2 s up, 0.26 s down -- where the exponential lunged
+           and then crept. */
+        adsRaw = wantAim ? Math.min(1, adsRaw + dt / 0.20) : Math.max(0, adsRaw - dt / 0.26);
+        adsT = window.LE.Motion.Ease.inOutCubic(adsRaw);
         /* MATCH TIME, NOT WALL TIME.
          *
            The match clamps its tick at 0.05 s so one long frame cannot

@@ -417,6 +417,22 @@ class Animator {
       this.previous = null;
       this.fade = 1;
     }
+    /* PHASE-MATCHED between cycles. Walk, run and sprint are all solved
+       from the same foot paths with the same foot planted at t = 0, so a
+       change of gait should carry on from the SAME point in the stride
+       -- the left foot still halfway through its swing -- rather than
+       restart the new cycle at its beginning. Restarting was a pop at
+       every walk/run/sprint change: for the length of the fade, one clip
+       had the left foot down and the other the right. Only between two
+       looping cycles that both carry a stride; anything else (a jump, a
+       death, an idle) still starts at the top. */
+    const from = this.current;
+    if (from && from.loop && clip.loop && from.stride > 0 && clip.stride > 0 && from.duration > 0) {
+      const phase = ((this.time / from.duration) % 1 + 1) % 1;
+      this.current = clip;
+      this.time = phase * clip.duration;
+      return this;
+    }
     this.current = clip;
     this.time = 0;
     return this;
@@ -441,26 +457,31 @@ class Animator {
     const a = this.current.sample(this.time, this._poseA);
     if (this.previous && this.fade < 1) {
       const b = this.previous.sample(this.prevTime, this._poseB);
+      /* The blend weight EASED, not linear: a linear crossfade leaves and
+         arrives at full speed, so every transition has a visible corner
+         at each end. Smoothstep takes the corners off without moving the
+         start or the finish. */
+      const w = this.fade * this.fade * (3 - 2 * this.fade);
       for (const name in b) {
         const idx = this.skeleton.index(name);
         if (idx < 0) continue;
         const target = a[name];
         const bone = bones[idx];
         if (target) {
-          bone.localRotation.copy(b[name].rotation).slerp(target.rotation, this.fade);
+          bone.localRotation.copy(b[name].rotation).slerp(target.rotation, w);
           if (target.hasPosition && b[name].hasPosition) {
-            bone.localPosition.copy(b[name].position).lerp(target.position, this.fade);
+            bone.localPosition.copy(b[name].position).lerp(target.position, w);
           }
         } else {
-          bone.localRotation.copy(this.restRotations[idx]).slerp(b[name].rotation, 1 - this.fade);
+          bone.localRotation.copy(this.restRotations[idx]).slerp(b[name].rotation, 1 - w);
         }
       }
       for (const name in a) {
         if (b[name]) continue;
         const idx = this.skeleton.index(name);
         if (idx < 0) continue;
-        bones[idx].localRotation.copy(this.restRotations[idx]).slerp(a[name].rotation, this.fade);
-        if (a[name].hasPosition) bones[idx].localPosition.lerp(a[name].position, this.fade);
+        bones[idx].localRotation.copy(this.restRotations[idx]).slerp(a[name].rotation, w);
+        if (a[name].hasPosition) bones[idx].localPosition.lerp(a[name].position, w);
       }
     } else {
       for (const name in a) {

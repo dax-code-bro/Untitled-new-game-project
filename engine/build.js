@@ -89,6 +89,10 @@ const LegendEngine = {
      for the same reason. See BESPOKE_ARMS in 97a-arms.js. */
   BESPOKE_ARMS, makeBespokeArm,
   WEAPON_ACTIONS, weaponAction, poseAction,
+  /* The shared motion vocabulary -- easing with anticipation and
+     overshoot, analytic settle/kick curves, mechanism strokes, arcs,
+     exact springs, smooth noise. See 90a-motion.js. */
+  Motion, Ease, Spring,
   /* The reload, as a thing you can watch. Both games drive the same
      six load paths from here -- see 97f-reload.js. */
   RELOAD_WINDOW, RELOAD_CARRIES, RELOAD_HOLD, RELOAD_AMMO,

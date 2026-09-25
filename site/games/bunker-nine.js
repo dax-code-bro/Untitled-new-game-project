@@ -7139,10 +7139,60 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
   // offset, which sends a gun meant to sit low in frame up into the sky.
   const up = _vTmp4.copy(right).cross(f).normalize();
 
-  P.swayT += dt * (moving ? 7.2 : 1.6);
+  /* THE CARRY IN MOTION, redone (LE.Motion).
+
+     The bob used to switch its clock between 7.2 and 1.6 the instant you
+     stopped, so the gun jumped phase; the walk was a smooth Lissajous
+     with no footfall in it; the idle was a sine that repeated every two
+     seconds; and the gun sat welded to the look, so turning never
+     dragged it. Now:
+
+       - how much you are walking EASES in and out, and the clock and the
+         amplitude follow it;
+       - the vertical has a footfall: it dips sharply as each foot plants
+         and rounds over the top of the stride;
+       - standing, the hands breathe and wander on smooth noise, which
+         never repeats;
+       - the gun LAGS the look on a spring and rolls into the turn, so a
+         flick of the view shows the weight of what you are holding;
+       - a landing drops it on a damped kick scaled by how hard you hit,
+         and it floats a little while you are in the air. */
+  const MO = window.LE.Motion;
+  P.moveAmt = (P.moveAmt || 0) + ((moving ? 1 : 0) - (P.moveAmt || 0)) * (1 - Math.exp(-dt * 5));
+  const mv = P.moveAmt;
+  P.swayT += dt * (1.6 + 5.6 * mv);
+  P.idleT = (P.idleT || 0) + dt;
   const sway = 1 - P.ads * 0.88;                 // aiming kills the bob
-  const bobY = Math.sin(P.swayT * 2) * (moving ? 0.006 : 0.0016) * sway;
-  const bobX = Math.cos(P.swayT) * (moving ? 0.004 : 0.001) * sway;
+  const stepPhase = Math.abs(Math.sin(P.swayT));   // 0 at each footfall
+  const walkY = (Math.pow(stepPhase, 0.55) - 0.62) * 0.0085;
+  const walkX = Math.cos(P.swayT) * 0.0045;
+  const breathY = Math.sin(P.idleT * 1.35) * 0.0011 + MO.noise1(P.idleT * 0.35, 3) * 0.0009;
+  const idleX = MO.noise1(P.idleT * 0.27, 7) * 0.0011;
+  // The look lag: how fast the view moved across and up, this frame.
+  if (!P.lookSway) P.lookSway = { x: new MO.Spring(4.2, 0.5), y: new MO.Spring(4.2, 0.5), r: new MO.Spring(3.2, 0.45), fx: f.x, fy: f.y, fz: f.z };
+  const LS = P.lookSway;
+  const dfx = f.x - LS.fx, dfy = f.y - LS.fy, dfz = f.z - LS.fz;
+  LS.fx = f.x; LS.fy = f.y; LS.fz = f.z;
+  const lookR = dt > 0 ? (dfx * right.x + dfy * right.y + dfz * right.z) / dt : 0;
+  const lookU = dt > 0 ? (dfx * up.x + dfy * up.y + dfz * up.z) / dt : 0;
+  const lagK = 1 - P.ads * 0.8;
+  const swayXv = LS.x.update(Math.max(-0.022, Math.min(0.022, -lookR * 0.0065)) * lagK, dt);
+  const swayYv = LS.y.update(Math.max(-0.016, Math.min(0.016, -lookU * 0.0050)) * lagK, dt);
+  const swayRv = LS.r.update(Math.max(-0.10, Math.min(0.10, -lookR * 0.030)) * lagK, dt);
+  // Landing, and the float in the air.
+  const ctl = P.actor && P.actor.controller;
+  const grounded = !ctl || ctl.grounded !== false;
+  if (grounded && P.__wasGrounded === false) {
+    P.landT = 0;
+    P.landAmp = Math.max(0.35, Math.min(1.2, (P.__fallV || 0) / 7));
+  }
+  if (!grounded && ctl && ctl.body) P.__fallV = Math.max(0, -ctl.body.velocity.y);
+  P.__wasGrounded = grounded;
+  P.landT = (P.landT == null ? 9 : P.landT + dt);
+  P.airAmt = (P.airAmt || 0) + ((grounded ? 0 : 1) - (P.airAmt || 0)) * (1 - Math.exp(-dt * 6));
+  const landDip = MO.kick(P.landT, 2.4, 0.45) * 0.024 * (P.landAmp || 0) * (1 - P.ads * 0.6);
+  const bobY = (walkY * mv + breathY * (1 - mv * 0.6)) * sway + swayYv - landDip + P.airAmt * 0.006;
+  const bobX = (walkX * mv + idleX * (1 - mv * 0.6)) * sway + swayXv;
   /* Recoil on the weapon itself, as a spring rather than a fade.
    *
    * kickPitch used to bleed off linearly at a fixed rate and that was the
@@ -7188,7 +7238,10 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
      watched an empty room. You cannot see the shells go in if you cannot
      see the gun. It lifts to where the hands are working and rolls
      inboard so the breech faces the camera, then settles back. */
-  const rl = P.reloading > 0 ? Math.sin(Math.min(1, 1 - P.reloading / (P.reloadMax || spec.reload)) * Math.PI) : 0;
+  /* Up briskly to where the hands work, a working drift, down and a
+     settle at the carry (LE.Motion.lift) -- not a half-sine, which rose
+     as slowly as it fell and stopped dead. */
+  const rl = P.reloading > 0 ? window.LE.Motion.lift(Math.min(1, 1 - P.reloading / (P.reloadMax || spec.reload))) : 0;
   const dip = -rl * 0.098;
   const drawIn = rl * 0.052;
   const rollIn = rl * 18;
@@ -7438,10 +7491,15 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
   if (P.swapT > 0 && P.swapFor > 0) {
     const t = 1 - P.swapT / P.swapFor;              // 0 at the start, 1 at the end
     const down = t < 0.5;
-    // Eased: fast out of the shoulder, slow back into it.
+    /* Holster: a small lift first -- the hand takes the weight before it
+       drops the gun -- then down and away. Draw: up out of the bottom of
+       the frame and a touch PAST the carry, then settled back into it
+       (LE.Motion.Ease inBack / outBack). The pow() curves stopped dead at
+       the shoulder, which is the one place a gun never does. */
+    const E = window.LE.Motion.Ease;
     const u = down
-      ? Math.pow(t / 0.5, 0.72)                     // 0 -> 1 in the first half
-      : Math.pow(1 - (t - 0.5) / 0.5, 1.45);        // 1 -> 0 in the second
+      ? E.inBack(t / 0.5, 0.7)                      // 0 -> 1, dipping below 0 first
+      : 1 - E.outBack((t - 0.5) / 0.5, 1.5);        // 1 -> 0, overshooting past it
     swapDrop = u * lowDrop * 1.75;
     swapTip = u * 0.52;
     swapRoll = u * 0.30;
@@ -7508,7 +7566,7 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
      the breech, the magazine well or the open cylinder turns to face the
      camera. A gun reloaded side-on hides the one thing worth watching. */
   const roll = sp * 0.42 + (1 - a) * 0.03 + rollIn * 0.0175 + (P.kickRoll || 0)
-    + swapRoll + (INS ? INS.roll : 0);
+    + swapRoll + (INS ? INS.roll : 0) + swayRv;
   /* Composed from explicit axis-angles rather than Euler triples. setEuler
      takes (pitch, yaw, roll) in YXZ, which is easy to feed in the wrong
      order and gives a weapon that rolls when it should pitch — and the
@@ -7516,7 +7574,9 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
   _vQuat1.setAxisAngle(_vAxisY, yaw);
   _vQuat2.setAxisAngle(_vAxisZ, pitch);
   _vQuat1.mulQuats(_vQuat1, _vQuat2);
-  if (roll > 1e-4) {
+  // Either way: the look sway rolls both ways, and `roll > 1e-4` threw
+  // every leftward roll away.
+  if (Math.abs(roll) > 1e-4) {
     _vQuat2.setAxisAngle(_vAxisX, roll);
     _vQuat1.mulQuats(_vQuat1, _vQuat2);
   }
@@ -7583,10 +7643,22 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
   const swingSpec = MELEE_SWING[P.equipped()];
   if (swingSpec && P.swingT > 0) {
     const u = 1 - P.swingT / swingSpec.time;          // 0 at the strike, 1 done
-    // Hard out, slow back.
-    const drive = u < swingSpec.out
-      ? Math.pow(u / swingSpec.out, 0.6)
-      : 1 - (u - swingSpec.out) / (1 - swingSpec.out);
+    /* A SWING HAS FOUR PARTS, and this had two (out on a power curve,
+       back on a straight line):
+         wind-up  -- the arm draws back first, a fifth of the drive the
+                     other way, because nothing is struck from a standstill;
+         strike   -- accelerating all the way into the contact;
+         hit-stop -- held at full extension for a few frames with a small
+                     tremor, which is what makes a blow land rather than
+                     pass through;
+         recovery -- eased back to the carry, decelerating into it. */
+    const E = window.LE.Motion.Ease, o = swingSpec.out;
+    const wind = o * 0.30, stopEnd = Math.min(0.92, o + 0.10);
+    let drive;
+    if (u < wind) drive = -0.20 * E.outQuad(u / wind);
+    else if (u < o) drive = -0.20 + 1.20 * E.inQuad((u - wind) / (o - wind));
+    else if (u < stopEnd) drive = 1 - 0.025 * Math.sin((u - o) / (stopEnd - o) * Math.PI * 3);
+    else drive = 1 - E.inOutCubic((u - stopEnd) / (1 - stopEnd));
     if (swingSpec.thrust) {
       const reach = drive * swingSpec.reach;
       P.reachOut = Math.max(0, armAxis(root, f.x * reach, f.y * reach, f.z * reach));
@@ -7625,7 +7697,16 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
     let open = 0;
     if (P.reloading > 0) {
       const u = 1 - P.reloading / (P.reloadMax || spec.reload);
-      open = u < 0.17 ? u / 0.17 : (u < 0.70 ? 1 : Math.max(0, 1 - (u - 0.70) / 0.20));
+      /* Dropped on the hinge -- fast into the stop and a small rebound off
+         it -- held open while it is fed, and swung shut, slow off the
+         rest and fast into the lock. It was three straight lines. */
+      {
+        const E = window.LE.Motion.Ease;
+        if (u < 0.13) open = E.outCubic(u / 0.13);
+        else if (u < 0.25) { const b = (u - 0.13) / 0.12; open = 1 - 0.07 * Math.sin(Math.PI * b) * (1 - b); }
+        else if (u < 0.70) open = 1;
+        else open = Math.max(0, 1 - E.inCubic((u - 0.70) / 0.20));
+      }
       /* A stage counter that only ever goes up.
 
          This used to be a boolean: set at u > 0.06, cleared again at
@@ -8161,7 +8242,12 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
   if (P.slideCycle > 0) P.slideCycle = Math.max(0, P.slideCycle - dt);
   const cycU = P.slideCycle > 0
     ? 1 - P.slideCycle / (P.slideCycleMax || 0.085) : -1;
-  const cycBack = cycU >= 0 ? Math.sin(Math.min(1, Math.max(0, cycU)) * Math.PI) : 0;
+  /* NOT A HALF-SINE ANY MORE. A slide is driven back by the shot in a
+     fraction of the cycle and returned by its spring more slowly, and it
+     bounces off the stop: fast back, dwell, slower forward, rebound --
+     LE.Motion.stroke. The half-sine went back exactly as fast as it came
+     forward, which is the one thing a slide never does. */
+  const cycBack = cycU >= 0 ? window.LE.Motion.stroke(Math.min(1, Math.max(0, cycU))) : 0;
 
   if (gunActor.slide) {
     gunActor.slide.setPosition([-(gunActor.slideTravel || 0.02) * cycBack, 0, 0]);
@@ -8199,7 +8285,10 @@ function updateViewmodel(game, P, dt, moving, S, sfx) {
          in eighty milliseconds -- which is the whole reason to carry a
          bolt rifle and the whole reason the game should show it. */
       const hu = 1 - P.handCycle / (P.handCycleMax || 1);
-      b = Math.sin(Math.min(1, Math.max(0, hu)) * Math.PI);
+      /* Drawn back briskly, a beat at the rear, pushed home and seated:
+         a hand stroke, so a longer draw and a softer stop than a gas
+         gun's. */
+      b = window.LE.Motion.stroke(Math.min(1, Math.max(0, hu)), 0.40, 0.14, 0.03);
     }
     /* And the inspect opens it too. Looking at the side of a receiver
        is a chamber check: the whole reason anybody does it is to see
@@ -8274,9 +8363,15 @@ function updateRecoil(game, P, dt, S) {
     // rather than as a wobble.
     const k = S.shake.life > 0 ? S.shake.t / S.shake.life : 0;
     const amp = S.shake.mag * k * k;
-    const tt = (S.frame || 0) * 0.9;
-    R.pitch += Math.sin(tt * 3.1) * amp * 0.6 + (Math.random() - 0.5) * amp * 0.5;
-    R.yaw += Math.cos(tt * 2.3) * amp * 0.5 + (Math.random() - 0.5) * amp * 0.4;
+    /* On the clock and on smooth noise, not on the frame counter and
+       Math.random(): the old one rattled twice as fast at 120 fps and was
+       white noise at any rate, which reads as a glitch rather than as the
+       room moving. Scaled by dt so the added energy does not depend on
+       the frame rate either. */
+    S.shakeClock = (S.shakeClock || 0) + dt;
+    const MO2 = window.LE.Motion, fr = dt * 60;
+    R.pitch += (MO2.noise1(S.shakeClock * 21, 1) * 0.7 + Math.sin(S.shakeClock * 17) * 0.3) * amp * 0.8 * fr;
+    R.yaw += (MO2.noise1(S.shakeClock * 19, 2) * 0.7 + Math.cos(S.shakeClock * 13) * 0.3) * amp * 0.65 * fr;
     if (S.shake.t <= 0) { S.shake.mag = 0; S.shake.max = 0; }
   }
 
@@ -10223,6 +10318,59 @@ function spawnZombie(game, S, win, forceVariant) {
    armoured runner and the reason the melee weapons and the gold rounds
    exist. Everything else — a ram, a shield edge, an eighteen carat round —
    goes straight through it. */
+/* THE HIT REACTION.
+
+   A zombie took a magazine and did not so much as twitch: nothing in the
+   game answered a hit with the body, only with blood. Every hit now
+   drives an impulse through the torso -- the chest is shoved the way the
+   round was going, the spine follows a little behind, a headshot snaps
+   the head back -- as an ADDITIVE layer on whatever clip is playing, so a
+   runner shot mid-stride keeps running and simply jolts. The impulse is
+   Motion.kick, an analytic damped response, so it rises in a frame,
+   swings a touch past rest and is gone in about half a second whatever
+   the frame rate. A second hit before the first has died restarts it at
+   the larger of the two, so sustained fire keeps the body rocking rather
+   than stacking into a pose. */
+let _flQ = null;
+function flinchZombie(z, dmg, dir, headshot, source) {
+  if (source === 'fire' || !z.actor.animator || !z.actor.skeleton) return;
+  const bite = Math.max(0.2, Math.min(1, dmg / Math.max(30, z.maxHp * 0.3)));
+  const f = z.actor.controller.facing || 0;
+  const fx = Math.sin(f), fz = Math.cos(f);
+  const dx = dir ? dir[0] : -fx, dz = dir ? dir[2] : -fz;
+  const live = z.flT != null && z.flT < 0.45 ? z.flAmp * (1 - z.flT / 0.45) : 0;
+  z.flAmp = Math.max(live, (source === 'melee' ? 0.8 : 0.45) + 0.55 * bite);
+  z.flT = 0;
+  z.flFwd = dx * fx + dz * fz;           // + : shoved forward, - : knocked back
+  z.flSide = dx * fz - dz * fx;          // across the body
+  z.flHead = headshot ? 1 : 0;
+  if (!z.actor.animator.__flinch) {
+    z.actor.animator.__flinch = true;
+    const prev = z.actor.animator.onPosed;
+    z.actor.animator.onPosed = function (an) {
+      if (prev) prev(an);
+      if (z.flT == null || z.flT > 0.7 || z.dead) return;
+      const k = window.LE.Motion.kick(z.flT, 2.4, 0.42) * z.flAmp;
+      if (Math.abs(k) < 1e-3) return;
+      if (!_flQ) _flQ = new window.LE.Quat();
+      const sk = z.actor.skeleton;
+      const push = (name, pitch, yaw, roll) => {
+        const b = sk.bone(name);
+        if (!b) return;
+        _flQ.setEuler(pitch * k, yaw * k, roll * k);
+        b.localRotation.mul(_flQ);
+      };
+      const back = z.flFwd, side = z.flSide;
+      push('spine', 0.20 * back, 0.16 * side, -0.10 * side);
+      push('chest', 0.26 * back, 0.22 * side, -0.14 * side);
+      push('head', (0.20 + 0.55 * z.flHead) * back - 0.35 * z.flHead, 0.10 * side, -0.12 * side);
+      push('upperArmL', -0.30 * Math.abs(back), 0, 0.18);
+      push('upperArmR', -0.30 * Math.abs(back), 0, -0.18);
+      sk.update();
+    };
+  }
+}
+
 function hurtZombie(game, S, z, dmg, at, headshot, source, opts) {
   if (z.dead) return;
   /* The boss's shield is a health pool of its own, not an immunity. Hit it
@@ -10304,6 +10452,7 @@ function hurtZombie(game, S, z, dmg, at, headshot, source, opts) {
     }
   }
   void zp0;
+  flinchZombie(z, dmg, dir, headshot, source);
   if (source === 'fire') {
     /* Incendiary. The hit itself is light; what the round is for is what
        it leaves behind, and it stacks its clock rather than its damage —
@@ -10749,6 +10898,7 @@ function applyPowerup(game, S, P, hud, sfx) {
 
 /* Per-frame zombie brain. */
 function updateZombie(game, S, P, z, dt, sfx) {
+  if (z.flT != null) z.flT += dt;
   if (z.dead || z.parked) return;
   const a = z.actor;
   const pos = a.position;
@@ -11096,20 +11246,58 @@ function updateZombie(game, S, P, z, dt, sfx) {
       /* Runs because it is a runner, not because its speed happens to be
          over a number. The threshold was 2.4, which slowing the runners
          down would have quietly dropped half of them back to a walk. */
-      move(tx, tz, (V.run || V.boss) ? 2 : 1);
-      playZombieAnim(z, z.moveClip);
       z.attackT -= dt;
-      if (!S.shieldActive && d < PLAYER.attackRange && z.attackT <= 0 && Math.abs(pos.y - P.actor.position.y) < 1.6) {
-        z.attackT = PLAYER.attackCooldown;
-        /* Each kind strikes its own way — the walkers grab, the runners
-           bite, the crawler rakes at your ankles, and the heavy ones bring
-           both arms over. A variant with more than one takes turns, so a
-           crowd of walkers is not one animation played twelve times. */
-        const set = (z.V && z.V.attack) || ['zattack'];
-        z.atkIdx = ((z.atkIdx || 0) + 1) % set.length;
-        playZombieAnim(z, set[z.atkIdx], 0.05);
-        z.anim = '';
-        hurtPlayer(game, S, P, z.dmg, sfx, 'melee', pos);
+      if (z.atkLock > 0) {
+        /* COMMITTED TO THE SWING.
+
+           The attack used to be played and then overwritten on the very
+           next frame -- `z.anim = ''` made the move clip win the following
+           update, so the strike was replaced after one frame and faded out
+           over the next 0.18 s: attacks never played through at all. And
+           the damage landed on the frame the swing STARTED, while the
+           zombie carried on walking into you.
+
+           Now the body roots for the length of the clip, turns to keep you
+           in front of it, and the blow lands on the strike frame -- 45 per
+           cent through -- and only if you are still in reach, so stepping
+           back out of a slow slam is a thing a player can do. */
+        z.atkLock -= dt;
+        a.controller.move(0, 0);
+        if (a.controller.facing != null) {
+          const want = Math.atan2(target.x - pos.x, target.z - pos.z);
+          let dYaw = want - a.controller.facing;
+          while (dYaw > Math.PI) dYaw -= 2 * Math.PI;
+          while (dYaw < -Math.PI) dYaw += 2 * Math.PI;
+          a.controller.facing += dYaw * Math.min(1, dt * 6);
+        }
+        if (z.atkHitT > 0) {
+          z.atkHitT -= dt;
+          if (z.atkHitT <= 0 && !S.shieldActive && d < PLAYER.attackRange * 1.25
+              && Math.abs(pos.y - P.actor.position.y) < 1.6) {
+            hurtPlayer(game, S, P, z.dmg, sfx, 'melee', pos);
+          }
+        }
+        if (z.atkLock <= 0) z.anim = '';            // hand back to the move clip
+      } else {
+        move(tx, tz, (V.run || V.boss) ? 2 : 1);
+        playZombieAnim(z, z.moveClip);
+        if (!S.shieldActive && d < PLAYER.attackRange && z.attackT <= 0 && Math.abs(pos.y - P.actor.position.y) < 1.6) {
+          z.attackT = PLAYER.attackCooldown;
+          /* Each kind strikes its own way — the walkers grab, the runners
+             bite, the crawler rakes at your ankles, and the heavy ones bring
+             both arms over. A variant with more than one takes turns, so a
+             crowd of walkers is not one animation played twelve times. */
+          const set = (z.V && z.V.attack) || ['zattack'];
+          z.atkIdx = ((z.atkIdx || 0) + 1) % set.length;
+          const clipName = set[z.atkIdx];
+          playZombieAnim(z, clipName, 0.08);
+          const clip = a.animator && a.animator.clips.get(clipName);
+          // The attack plays at the variant's lean alone (it has no stride to
+          // match), which is what the speed line below settles on next frame.
+          const dur = clip ? clip.duration / Math.max(0.2, V.clipSpeed * (z.lucid ? 1.05 : 1)) : 0.7;
+          z.atkLock = Math.min(1.1, dur * 0.92);
+          z.atkHitT = dur * 0.45;
+        }
       }
     } else {
       /* Walk the route in order and remember where you are on it.
@@ -11512,8 +11700,25 @@ function updateDeath(game, S, P, hud, dt) {
      that has stopped holding itself up actually falls. */
   const e = 1 - Math.pow(1 - u, 2.4);
 
+  /* THE FALL LANDS. The drop was the same ease-out as the turn, so the
+     camera decelerated all the way to the floor and arrived on it like
+     a lift stopping. A body does the opposite: the legs go, it falls
+     FASTER as it goes, and it hits -- the eye bottoms out, bounces a
+     few centimetres, and the whole view jolts. So the drop accelerates
+     to an impact at `hitU` of the way through, and an analytic impulse
+     (Motion.kick, time-based, so the same at any frame rate) supplies
+     the bounce and the jolt. The turn keeps its ease-out; it is the
+     head going, not the body. */
+  const M = window.LE.Motion;
+  const hitU = 0.36;
+  const tAfter = Math.max(0, (u - hitU) * D.def.dur);
+  const landed = u >= hitU && D.def.fall > 0.25 && !D.def.sink;
+  const fallE = !landed && D.def.fall > 0.25 && !D.def.sink
+    ? M.Ease.inQuad(u / hitU) * 0.92 + 0.08 * M.Ease.outCubic(u / hitU)
+    : landed ? 1 - 0.08 * M.kick(tAfter, 3.4, 0.42) : e;
+  const jolt = landed ? M.kick(tAfter, 5.0, 0.38) : 0;
   const eye = D.eye, fwd = D.fwd;
-  const drop = D.def.fall * e + (D.def.sink ? D.def.sink * u : 0);
+  const drop = D.def.fall * fallE + (D.def.sink ? D.def.sink * u : 0);
   const px = eye[0], py = eye[1] - drop, pz = eye[2];
 
   /* Where it is looking. Straight up for a fall, at the killer for a
@@ -11530,10 +11735,11 @@ function updateDeath(game, S, P, hud, dt) {
   } else {
     tx = px + fwd[0]; ty = py + fwd[1] - 0.9 * e; tz = pz + fwd[2];
   }
+  ty -= 0.22 * jolt;             // the nose knocked down by the impact
 
   /* The roll, about the look axis. Rodrigues on the world up, which is
      the same trick the flinch uses. */
-  const ang = D.def.roll * D.spin * e;
+  const ang = D.def.roll * D.spin * e + 0.07 * jolt * (D.spin < 0 ? -1 : 1);
   const ca = Math.cos(ang), sa = Math.sin(ang);
   const dx = tx - px, dy = ty - py, dz = tz - pz;
   const dl = Math.hypot(dx, dy, dz) || 1;
@@ -14973,8 +15179,17 @@ function start(opts = {}) {
       /* Aim down sights. */
       // A gun in each hand has nothing to look down.
       P.adsWant = S.input.aimHeld && !P.sprinting && P.reloading <= 0 && !P.spec().noAds;
+      /* An EASED ramp, not an exponential chase. The chase lunged at the
+         sight and crept the last few per cent forever, the same both
+         ways. Now the raw progress runs linearly over 2.4 time constants
+         (where the old curve was ~91 per cent there) and what the pose,
+         the FOV and the cutoffs see is that progress eased in and out:
+         a gun that starts to come up, travels, and seats on the eye. */
       const at = P.spec().adsTime || 0.2;
-      P.ads += ((P.adsWant ? 1 : 0) - P.ads) * Math.min(1, dt / at);
+      P.adsRaw = (P.adsRaw == null ? P.ads : P.adsRaw);
+      const step = dt / (at * 2.4);
+      P.adsRaw = P.adsWant ? Math.min(1, P.adsRaw + step) : Math.max(0, P.adsRaw - step * 1.15);
+      P.ads = window.LE.Motion.Ease.inOutCubic(P.adsRaw);
       if (P.ads < 0.002) P.ads = 0;
       if (P.ads > 0.998) P.ads = 1;
       // Field of view follows the aim: narrowing is most of what sells it.

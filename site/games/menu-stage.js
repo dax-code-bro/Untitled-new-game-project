@@ -169,7 +169,20 @@
       /* ---- walking on ---- */
       if (entry) {
         var e = sub.__entry;
-        sub.__z += dt * 1.45 * e.speed;
+        /* The feet and the floor agree. He covered 1.45 x speed metres a
+           second while the walk played at `speed` times its own pace --
+           its natural speed is nearer 1.1 m/s, so every operator skated
+           in. The clip's rate now comes from how fast he is actually
+           going, and he slows over the last stride and a half into his
+           mark instead of arriving at full pace and stopping dead. */
+        var base = 1.45 * e.speed;
+        var v = base * Math.max(0.3, Math.min(1, -sub.__z / 0.65));
+        sub.__z += dt * v;
+        if (sub.animator) {
+          var wc = sub.animator.clips.get('walk');
+          sub.animator.speed = wc && wc.stride && window.LE && window.LE.gaitRate
+            ? window.LE.gaitRate(wc, v) : e.speed;
+        }
         if (sub.__z >= -0.02) {
           sub.__z = 0;
           entry = 0;

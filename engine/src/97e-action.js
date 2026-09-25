@@ -123,15 +123,21 @@ function poseAction(gun, act, s) {
      actually runs. */
   if (gun.bolt && gun.boltThrow) {
     const R = gun.boltRest || [0, 0, 0], T = gun.boltThrow;
-    gun.bolt.setPosition([R[0] + T[0] * back, R[1] + T[1] * back, R[2] + T[2] * back]);
     /* A turnbolt does not just slide. It lifts through 90 degrees before
        it will come back and turns down again before it will fire, and
        the lift happens at the very start and end of the stroke -- which
-       is what makes a bolt gun read as a bolt gun and not an SMG. */
+       is what makes a bolt gun read as a bolt gun and not an SMG.
+       So the two are SEQUENCED, not simultaneous: the handle comes up
+       over the first quarter of the channel with the bolt still locked,
+       and only then does it travel -- and in reverse on the way home,
+       where it runs forward first and turns down last. */
+    let travel = back;
     if (act.turn) {
-      const lift = Math.min(1, back / 0.22);
+      const lift = Ease.outCubic(mWin(back, 0, 0.24));
+      travel = Ease.inOutQuad(mWin(back, 0.18, 1));
       gun.bolt.setRotation([90 * lift, 0, 0]);
     }
+    gun.bolt.setPosition([R[0] + T[0] * travel, R[1] + T[1] * travel, R[2] + T[2] * travel]);
   }
   /* A pistol's slide, which is the same motion under another name. */
   if (gun.slide) gun.slide.setPosition([-(gun.slideTravel || 0.02) * back, 0, 0]);
@@ -144,7 +150,7 @@ function poseAction(gun, act, s) {
   /* A lever swings down and forward about its pin at the back of the
      trigger guard. */
   if (act.lever && gun.lever) {
-    turnAbout(gun.lever, gun.leverPivot, 'z', -(gun.leverSwing || 58) * hand);
+    turnAbout(gun.lever, gun.leverPivot, 'z', -(gun.leverSwing || 58) * Ease.inOutQuad(hand));
   }
   /* A revolver indexes: one chamber per shot, and it turns while the
      hammer is coming back rather than after it falls. */
@@ -165,7 +171,9 @@ function poseAction(gun, act, s) {
     const t = s.trigger || 0;
     /* Rises with the first 80 per cent of the pull and drops through
        the last twenty, which is where a trigger actually breaks. */
-    const rise = t < 0.8 ? t / 0.8 : 1 - (t - 0.8) / 0.2;
+    /* Eased back against its spring, and it FALLS -- accelerating under
+       the mainspring rather than retreating at the speed it came. */
+    const rise = t < 0.8 ? Ease.inOutQuad(t / 0.8) : 1 - Ease.inQuad((t - 0.8) / 0.2);
     gun.hammer.setRotation([0, 0, (gun.hammerArc || 34) * rise]);
   }
   /* A belt gun's top cover lifts on the reload, and the belt itself
@@ -193,8 +201,12 @@ function poseAction(gun, act, s) {
    says it is finished. */
 function breakOpen(r) {
   if (r <= 0) return 0;
-  if (r < 0.18) return r / 0.18;
+  /* Barrels drop under their own weight -- fast, easing into the hinge
+     stop -- and rebound a few per cent off it before they settle. */
+  if (r < 0.14) return Ease.outCubic(r / 0.14);
+  if (r < 0.26) { const b = (r - 0.14) / 0.12; return 1 - 0.07 * Math.sin(Math.PI * b) * (1 - b); }
   if (r < 0.74) return 1;
-  return Math.max(0, 1 - (r - 0.74) / 0.20);
+  /* And they are SWUNG shut: slow off the rest, fast into the lock. */
+  return Math.max(0, 1 - Ease.inCubic((r - 0.74) / 0.20));
 }
 function beltCover(r) { return breakOpen(r); }

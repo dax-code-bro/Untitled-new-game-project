@@ -194,6 +194,43 @@
         catch (e) { /* never worth a frame */ }
       },
       lerp: lerp, lerp3: lerp3, ease: ease, clamp01: clamp01,
+      dt: 0,
+      /* MOVE A FIGURE AND LET ITS FEET AGREE.
+
+         The crew used to be slid across the pad by setPosition while the
+         controller -- which only ever saw a kinematic body with no
+         velocity -- played them the idle clip, and a |sin| hop on top was
+         all the walking there was: three men standing to attention and
+         gliding. This measures how fast the script actually moved the
+         figure, turns it to face the way it is going, and plays the gait
+         whose own speed is nearest at the rate that keeps its planted
+         foot planted, exactly as the combatants do. */
+      stride: function (a, pos) {
+        if (!a) return;
+        var last = a.__cutPos, dt = ctx.dt;
+        a.setPosition(pos);
+        a.__cutPos = [pos[0], pos[1], pos[2]];
+        var an = a.animator, ctl = a.controller;
+        if (!an || !ctl) return;
+        ctl.autoAnimate = false;
+        var sp = 0;
+        if (last && dt > 1e-4) {
+          var dx = pos[0] - last[0], dz = pos[2] - last[2];
+          sp = Math.hypot(dx, dz) / dt;
+          if (sp > 0.05) {
+            var want = Math.atan2(dx, dz), d = want - ctl.facing;
+            while (d > Math.PI) d -= 2 * Math.PI;
+            while (d < -Math.PI) d += 2 * Math.PI;
+            ctl.facing += d * Math.min(1, dt * 10);
+          }
+        }
+        a.__cutSp = a.__cutSp == null ? sp : a.__cutSp + (sp - a.__cutSp) * Math.min(1, dt * 10);
+        var v = a.__cutSp;
+        var clip = v < 0.3 ? 'idle' : (v > 2.8 && an.clips.get('run')) ? 'run' : 'walk';
+        if (a.__cutClip !== clip) { a.__cutClip = clip; an.play(clip, 0.2); }
+        var c = an.clips.get(clip);
+        an.speed = c && c.stride && v >= 0.3 ? W.LE.gaitRate(c, v) : 1;
+      },
       get winner() { return winner; },
     };
 
@@ -210,6 +247,7 @@
     function update(wdt) {
       if (!running || !beats) return true;
       t += Math.min(0.1, wdt || 0);
+      ctx.dt = Math.min(0.1, wdt || 0);
       var acc = 0;
       for (var i = 0; i < beats.length; i++) {
         var b = beats[i];
@@ -291,8 +329,7 @@
         for (var i = 0; i < c.crew.length; i++) {
           var m = c.crew[i], k = c.clamp01((e - m.lag) / (1 - m.lag));
           var x = c.lerp(m.x0, -1.4 + i * 0.5, k), z = c.lerp(m.z0, 1.4, k);
-          var bob = Math.abs(Math.sin((u * 9 + i) * Math.PI)) * 0.045 * (1 - k);
-          if (m.body) m.body.setPosition([x, 0.05 + bob, z]);
+          c.stride(m.body, [x, 0.05, z]);
         }
       } },
       /* 2. They are aboard and the rotor comes up to speed. */
@@ -303,7 +340,7 @@
         for (var i = 0; i < c.crew.length; i++) {
           var m = c.crew[i], k = c.ease(c.clamp01(u * 1.4 - i * 0.16));
           // Into the cabin: they step up and in, and the doorway hides them.
-          if (m.body) m.body.setPosition([-1.4 + i * 0.5, 0.05 + k * 0.55, c.lerp(1.4, -0.9, k)]);
+          c.stride(m.body, [-1.4 + i * 0.5, 0.05 + k * 0.55, c.lerp(1.4, -0.9, k)]);
         }
         if (u > 0.9) c.thud(0.30);
       } },

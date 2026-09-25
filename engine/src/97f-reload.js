@@ -465,11 +465,14 @@ Engine.prototype.reloadProp = function (cache, id, root, kind, o = {}) {
    frame to the right of the gun and 45 to the left -- so the fetch goes
    to the support side and only dips far enough to read as reaching. */
 function reloadReach(u, kind) {
-  const ease = (t) => t * t * (3 - 2 * t);
   const seg = (a, b) => Math.max(0, Math.min(1, (u - a) / (b - a)));
-  const away = ease(seg(0.05, 0.30));
-  const back = ease(seg(0.42, 0.74));
-  const settle = ease(seg(0.74, 0.94));
+  /* Off the gun FAST -- a hand going for a pouch does not ease away --
+     back with the load at a steady, careful pace, and home onto the grip
+     decelerating (LE.Motion). The smoothstep on all three made the grab
+     as lazy as the return. */
+  const away = Ease.outCubic(seg(0.05, 0.26));
+  const back = Ease.inOutCubic(seg(0.42, 0.74));
+  const settle = Ease.outCubic(seg(0.74, 0.94));
   const reach = away * (1 - back);
   const win = RELOAD_WINDOW[kind] || RELOAD_WINDOW.mag;
   return {
@@ -725,16 +728,44 @@ Engine.prototype.poseReload = function (o) {
      reintroduce the fault. */
   from = reloadOnscreen(o.camera, o.root, to, from);
   u2 = Math.min(1, Math.max(0, carry));
-  const e = u2 * u2 * (3 - 2 * u2);
   if (kind !== 'revolver' && kind !== 'tube') for (const q of prop.parts) q.visible = show;
-  const px = to[0] + (from[0] - to[0]) * (1 - e);
-  const py = to[1] + (from[1] - to[1]) * (1 - e);
-  const pz = to[2] + (from[2] - to[2]) * (1 - e);
+  /* HOW A LOAD ACTUALLY GOES IN, in three parts, where it used to be one
+     straight line on a smoothstep:
+
+       the swing  -- an ARC, not a ruler: the load comes round from below
+                     and outboard, the way a forearm carries it, bulging
+                     away from the gun and down (LE.Motion.arc);
+       the line-up -- it slows and straightens a centimetre short of home,
+                     nose on the opening, because that is where a hand
+                     takes care;
+       the seat   -- the last push, a touch past home and back: the bump
+                     of a magazine catch or a shell clicking into the
+                     chamber.
+
+     The rotation finishes before the insertion does, so the load is
+     square to the opening when it enters. Endpoints are unchanged -- it
+     still starts at `from` and ends exactly at `to` -- so everything that
+     measures a reload's start and finish reads the same. */
+  const dx = from[0] - to[0], dy = from[1] - to[1], dz = from[2] - to[2];
+  const dist = Math.hypot(dx, dy, dz) || 1;
+  const lineUp = Math.min(0.012, dist * 0.2);
+  const pre = [to[0] + dx / dist * lineUp, to[1] + dy / dist * lineUp, to[2] + dz / dist * lineUp];
+  const lift = [0, -0.22 * dist, (dz >= 0 ? 1 : -1) * 0.10 * dist];
+  let P3;
+  if (u2 < 0.86) {
+    P3 = mArc([0, 0, 0], from, pre, lift, Ease.inOutCubic(u2 / 0.86));
+  } else {
+    const k = (u2 - 0.86) / 0.14;
+    const push = Ease.outBack(k, 2.4);          // a few per cent past home, then back
+    P3 = [pre[0] + (to[0] - pre[0]) * push, pre[1] + (to[1] - pre[1]) * push, pre[2] + (to[2] - pre[2]) * push];
+  }
+  const px = P3[0], py = P3[1], pz = P3[2];
+  const er = Ease.inOutCubic(Math.min(1, u2 / 0.8));
   propRoot.setPosition([px, py, pz]);
   propRoot.setRotation([
-    rot[0] + (rot0[0] - rot[0]) * (1 - e),
-    rot[1] + (rot0[1] - rot[1]) * (1 - e),
-    rot[2] + (rot0[2] - rot[2]) * (1 - e),
+    rot[0] + (rot0[0] - rot[0]) * (1 - er),
+    rot[1] + (rot0[1] - rot[1]) * (1 - er),
+    rot[2] + (rot0[2] - rot[2]) * (1 - er),
   ]);
   /* And the hand goes to it. The hand and the load were on two separate
      paths that happened to run near each other, so the magazine
