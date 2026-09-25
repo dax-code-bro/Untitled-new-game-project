@@ -444,8 +444,13 @@ void Renderer::renderShadows(const std::vector<DrawItem>& items, const Camera& c
         for (const auto& it : items) {
             if (!it.mesh || !it.material || !it.material->castShadow) continue;
             if (it.material->transparent && it.material->opacity < 0.6f) continue;
-            auto p = prog("shadow.vert", "shadow.frag", meshDefines(it, false));
+            const bool clip = it.material->alphaClip && it.material->maps;
+            auto p = prog("shadow.vert", "shadow.frag", meshDefines(it, clip));
             p->set("uViewProj", m_shadowMats[static_cast<size_t>(i)]);
+            if (clip) {
+                p->texture("uAlbedoMap", it.material->maps->albedo);
+                p->set("uUvScale", it.material->uvScale);
+            }
             p->set("uTime", m_time);
             p->set("uCameraPos", cam.position);
             if (it.grass) {

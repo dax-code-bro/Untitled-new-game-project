@@ -17,6 +17,16 @@ in vec2 vUv;
  * is ORTHOGRAPHIC, so this is already linear in metres along the light,
  * which is the whole reason one byte of it is enough. */
 layout(location=0) out float outBlocker;
+#ifdef ALPHA_CLIP
+/* NATIVE: cut-out shadows. Leaf cards (Foliage.cpp) are quads carrying a
+   spray of leaves in their alpha; without the same clip the lit pass does,
+   every card would cast a solid square. */
+uniform sampler2D uAlbedoMap;
+uniform float uUvScale;
+#endif
 void main(){
+#ifdef ALPHA_CLIP
+  if (texture(uAlbedoMap, vUv * uUvScale).a < 0.35) discard;
+#endif
   outBlocker = gl_FragCoord.z;
 }

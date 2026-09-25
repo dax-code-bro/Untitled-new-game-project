@@ -50,7 +50,7 @@ struct KitResult {
     };
     std::vector<MeshPart> meshes;
     std::vector<BoxPart> boxes;
-    size_t roofs = 0, flatRoofs = 0, windows = 0, trim = 0;
+    size_t roofs = 0, flatRoofs = 0, windows = 0, trim = 0, fittings = 0;
 };
 
 KitResult buildKit(const std::vector<KitBox>& boxes, rendering::MaterialLibrary& lib);

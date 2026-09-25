@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <vector>
 #include <string>
 #include <tuple>
 
@@ -66,6 +67,11 @@ public:
     explicit MaterialLibrary(int textureSize = 2048, float anisotropy = 16.0f, float lodBias = 0.0f);
 
     std::shared_ptr<const GpuMaps> maps(const std::string& kind, uint32_t seed = 1);
+    /* NATIVE: maps generated elsewhere (RGBA8, size x size each) -- leaf
+       sprays and bark (Foliage.cpp) -- uploaded with the same mips, filter
+       and bias as the baked recipes, and cached under `key`. */
+    std::shared_ptr<const GpuMaps> custom(const std::string& key, int size, const std::vector<uint8_t>& albedo,
+                                          const std::vector<uint8_t>& normal, const std::vector<uint8_t>& orm);
 
     /* A MaterialPresets entry ('brick', 'gold', 'carpaint', ...). Throws
        std::invalid_argument on an unknown name. */

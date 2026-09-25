@@ -168,6 +168,14 @@ SceneFile::SceneFile(const std::filesystem::path& path, rendering::MaterialLibra
     std::vector<const rendering::Mesh*> meshes;
     std::vector<bool> isBox;          // unit cubes: these get the edge bevel
     std::vector<bool> isSphere;       // unit spheres: canopies are swapped for leaves
+    std::vector<bool> isCylinder;     // unit cylinders: trunks and limbs are swapped for bark
+    std::vector<bool> isCone;         // unit cones: conifer tiers are swapped for needles
+    std::vector<const rendering::Mesh*> conifers;
+    std::map<const rendering::Material*, const rendering::Material*> needleMats;
+    std::vector<const rendering::Mesh*> cardCrowns, trunks, limbs;
+    std::map<const rendering::Material*, const rendering::Material*> leafMats;
+    const rendering::Material* barkMat = nullptr;
+    static const bool geometryLeaves = std::getenv("GAME_GEOMETRY_LEAVES") != nullptr;
     std::vector<const rendering::Mesh*> foliage;   // a few leaf-cluster variants, built on demand
     std::vector<std::pair<glm::vec3, glm::vec3>> meshBounds;   // local AABB, for the scatter
     auto bound = [&](const geometry::MeshData& d) {
@@ -182,6 +190,8 @@ SceneFile::SceneFile(const std::filesystem::path& path, rendering::MaterialLibra
         const auto key = jm.find("key");
         isBox.push_back(key != jm.end() && key->is_string() && key->get<std::string>() == "box");
         isSphere.push_back(key != jm.end() && key->is_string() && key->get<std::string>() == "sphere");
+        isCylinder.push_back(key != jm.end() && key->is_string() && key->get<std::string>() == "cylinder");
+        isCone.push_back(key != jm.end() && key->is_string() && key->get<std::string>() == "cone");
         if (!webTessellation && key != jm.end() && key->is_string() && rebuildPrimitive(key->get<std::string>(), d)) {
             ++m_stats.retessellated;
             bound(d);
@@ -324,6 +334,112 @@ SceneFile::SceneFile(const std::filesystem::path& path, rendering::MaterialLibra
         }
         const size_t matIdx = jd.at("material").get<size_t>();
         it.material = mats.at(matIdx);
+        /* Near crowns: leaf cards carrying small painted leaves (Foliage.hpp);
+           the far bank keeps the geometry leaves, which read right at 100 m. */
+        const bool nearCrown = isSphere.at(jd.at("mesh").get<size_t>()) && isFoliageName(name) &&
+                               !hasToken(nameTokens(name), {"far"}) && !geometryLeaves;
+        if (nearCrown) {
+            if (cardCrowns.empty()) {
+                for (uint32_t v = 0; v < 4; ++v) {
+                    m_meshes.push_back(std::make_unique<rendering::Mesh>(foliageCards(211u + v * 104729u)));
+                    cardCrowns.push_back(m_meshes.back().get());
+                }
+            }
+            it.mesh = cardCrowns[m_items.size() % 4];
+            auto& lm = leafMats[it.material];
+            if (!lm) {
+                const PaintedMaps pm = leafSprayMaps(512, 7u);
+                rendering::Material m = *it.material;
+                m.maps = lib.custom("leaf-spray", pm.size, pm.albedo, pm.normal, pm.orm);
+                const float l = std::max(luminance(m.color), 1e-3f);
+                m.color = glm::mix(glm::vec3(1.0f), m.color / l * 0.9f, 0.3f);
+                m.alphaClip = true;
+                m.doubleSided = false;
+                m.worldUv = false;
+                m.uvScale = 1.0f;
+                m.roughness = 0.6f;
+                m.subsurface = std::max(m.subsurface, 0.4f);
+                m.parallax = 0.0f;
+                m.normalStrength = 1.0f;
+                m_materials.push_back(m);
+                lm = &m_materials.back();
+            }
+            it.material = lm;
+        }
+        const auto nt0 = nameTokens(name);
+        /* Conifer tiers: needle sprays hanging off the cone. */
+        if (isCone.at(jd.at("mesh").get<size_t>()) && !geometryLeaves &&
+            hasToken(nameTokens(name), {"pine", "fir", "spruce", "conifer", "cedar"})) {
+            if (conifers.empty())
+                for (uint32_t v = 0; v < 3; ++v) {
+                    m_meshes.push_back(std::make_unique<rendering::Mesh>(coniferCards(401u + v * 7907u)));
+                    conifers.push_back(m_meshes.back().get());
+                }
+            it.mesh = conifers[m_items.size() % 3];
+            auto& nm = needleMats[mats.at(matIdx)];
+            if (!nm) {
+                const PaintedMaps pm = needleSprayMaps(512, 5u);
+                rendering::Material m = *mats.at(matIdx);
+                m.maps = lib.custom("needle-spray", pm.size, pm.albedo, pm.normal, pm.orm);
+                m.color = glm::vec3(1.0f);
+                m.alphaClip = true;
+                m.doubleSided = false;
+                m.worldUv = false;
+                m.uvScale = 1.0f;
+                m.roughness = 0.65f;
+                m.subsurface = std::max(m.subsurface, 0.25f);
+                m.parallax = 0.0f;
+                m_materials.push_back(m);
+                nm = &m_materials.back();
+            }
+            it.material = nm;
+            it.bevel = 0.0f;
+        }
+        /* Mulch round a sapling: a low dark mound of bark chips, not a disc. */
+        if (isCylinder.at(jd.at("mesh").get<size_t>()) && hasToken(nt0, {"mulch"})) {
+            if (m_mulchMesh.empty()) {
+                m_meshes.push_back(std::make_unique<rendering::Mesh>(geometry::sphere(0.5, 16, 32)));
+                m_mulchMesh.push_back(m_meshes.back().get());
+                rendering::Material m = *mats.at(matIdx);
+                m.color = glm::vec3(0.075f, 0.05f, 0.035f);
+                m.roughness = 0.95f;
+                m.uvScale = 2.5f;
+                m_materials.push_back(m);
+                m_mulchMat = &m_materials.back();
+            }
+            it.mesh = m_mulchMesh.front();
+            it.material = m_mulchMat;
+            it.bevel = 0.0f;
+        }
+        /* Trunks and limbs: tapered, bent, flared, in bark. */
+        const auto nt = nameTokens(name);
+        if (isCylinder.at(jd.at("mesh").get<size_t>()) && hasToken(nt, {"trunk", "limb", "branch", "bough"})) {
+            if (trunks.empty()) {
+                for (uint32_t v = 0; v < 4; ++v) {
+                    m_meshes.push_back(std::make_unique<rendering::Mesh>(treeTrunk(31u + v * 7u, true)));
+                    trunks.push_back(m_meshes.back().get());
+                }
+                for (uint32_t v = 0; v < 2; ++v) {
+                    m_meshes.push_back(std::make_unique<rendering::Mesh>(treeTrunk(97u + v * 13u, false)));
+                    limbs.push_back(m_meshes.back().get());
+                }
+                const PaintedMaps pm = barkMaps(512, 3u);
+                rendering::Material m;
+                m.color = glm::vec3(1.0f);
+                m.roughness = 0.92f;
+                m.maps = lib.custom("bark", pm.size, pm.albedo, pm.normal, pm.orm);
+                m.worldUv = false;
+                m.uvScale = 1.0f;
+                m.normalStrength = 1.4f;
+                m.parallax = 0.0f;
+                m_materials.push_back(m);
+                barkMat = &m_materials.back();
+            }
+            const bool limb = hasToken(nt, {"limb", "branch", "bough"});
+            it.mesh = limb ? limbs[m_items.size() % 2] : trunks[m_items.size() % 4];
+            it.material = barkMat;
+            ++m_stats.trunks;
+        }
         it.grass = get(jd, "grass", false);
         const auto tokens = nameTokens(name);
         const bool foliageDraw = isSphere.at(jd.at("mesh").get<size_t>()) && isFoliageName(name);
@@ -458,6 +574,7 @@ SceneFile::SceneFile(const std::filesystem::path& path, rendering::MaterialLibra
         m_stats.flatRoofs = kit.flatRoofs;
         m_stats.windows = kit.windows;
         m_stats.trim = kit.trim;
+        m_stats.fittings = kit.fittings;
     }
 
     /* ---- NATIVE: the ground scatter (Scatter.hpp) ----

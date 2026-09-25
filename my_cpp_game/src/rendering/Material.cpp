@@ -114,6 +114,39 @@ std::shared_ptr<const GpuMaps> MaterialLibrary::maps(const std::string& kind, ui
     return m;
 }
 
+std::shared_ptr<const GpuMaps> MaterialLibrary::custom(const std::string& key, int size,
+                                                       const std::vector<uint8_t>& albedo,
+                                                       const std::vector<uint8_t>& normal,
+                                                       const std::vector<uint8_t>& orm) {
+    const auto ck = std::make_pair("custom:" + key, 0u);
+    if (auto it = m_cache.find(ck); it != m_cache.end()) return it->second;
+    auto mk = [&](GLenum fmt, const std::vector<uint8_t>& bytes) {
+        gl::TextureDesc d;
+        d.width = d.height = size;
+        d.levels = 0;
+        d.internalFormat = fmt;
+        d.minFilter = GL_LINEAR_MIPMAP_LINEAR;
+        d.magFilter = GL_LINEAR;
+        d.wrap = GL_REPEAT;
+        d.anisotropy = m_aniso;
+        gl::Texture t(d);
+        t.upload(0, size, size, GL_RGBA, GL_UNSIGNED_BYTE, bytes.data());
+        t.generateMips();
+        if (m_lodBias != 0.0f) glTextureParameterf(t.id(), GL_TEXTURE_LOD_BIAS, m_lodBias);
+        return t;
+    };
+    auto m = std::make_shared<GpuMaps>();
+    m->kind = key;
+    m->size = size;
+    m->albedo = mk(GL_SRGB8_ALPHA8, albedo);
+    m->normal = mk(GL_RGBA8, normal);
+    m->orm = mk(GL_RGBA8, orm);
+    m->heightTop = 1.0f;
+    m->heightRange = 0.0f;
+    m_cache.emplace(ck, m);
+    return m;
+}
+
 Material MaterialLibrary::textured(const std::string& kind, glm::vec3 color, float roughness,
                                    float metalness, uint32_t seed) {
     Material m;

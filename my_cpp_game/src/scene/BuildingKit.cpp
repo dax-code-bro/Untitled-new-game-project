@@ -388,6 +388,7 @@ KitResult buildKit(const std::vector<KitBox>& boxes, rendering::MaterialLibrary&
     sill.uvScale = 0.5f;
     try { sill.maps = lib.maps("concrete", 4u); } catch (const std::exception&) {}
     std::vector<rendering::Instance> frames, panes, sills, plinths, cornices;
+    std::vector<rendering::Instance> fittingsPaint, fittingsMetal, fittingsGlass;
 
     // Everything a window could collide with, as world AABBs.
     std::vector<size_t> obstacles;
@@ -490,12 +491,135 @@ KitResult buildKit(const std::vector<KitBox>& boxes, rendering::MaterialLibrary&
                                  centre.x, centre.y, centre.z, n.x, n.z, boxes[i].name.c_str());
             }
         }
+        /* Wall fittings: what a lived-in wall collects. A meter box and its
+           conduit, a vent grille, a lamp, an air-conditioner on a bracket --
+           each only where the wall is long enough and nothing (door, window,
+           neighbour) is in the way, and each by a hash of the wall, so no two
+           walls carry the same set. */
+        if (L > 2.4f) {
+            auto clearAt = [&](const glm::vec3& c, float ha, float hu, float depth) {
+                const glm::vec3 ext = glm::abs(a) * (ha + 0.08f) + up * (hu + 0.08f);
+                const glm::vec3 lo = glm::min(c + n * 0.02f, c + n * depth) - ext, hi = glm::max(c + n * 0.02f, c + n * depth) + ext;
+                for (size_t o : obstacles)
+                    if (o != i && overlaps(lo, hi, fr[o].lo, fr[o].hi)) return false;
+                // ...and none of this wall's own new windows.
+                for (const auto& pw : panes) {
+                    const glm::vec3 pc(pw.model[3]);
+                    if (std::abs(glm::dot(pc - c, a)) < ha + 0.75f && std::abs(pc.y - c.y) < hu + 0.85f &&
+                        std::abs(glm::dot(pc - c, n)) < 0.5f) return false;
+                }
+                return true;
+            };
+            const float h1 = hash(f.t.x * 0.7f, f.t.z * 1.3f), h2 = hash(f.t.z * 0.9f + 3.0f, f.t.x),
+                        h3 = hash(f.t.x + f.t.z, 7.7f), h4 = hash(f.t.z - f.t.x, 2.1f);
+            auto at = [&](float s, float y) { return face + a * s + up * (y - f.t.y); };
+            if (h1 < 0.45f) {
+                const glm::vec3 c = at(0.5f * L - 0.55f, yb + 1.35f);
+                if (clearAt(c, 0.23f, 0.3f, 0.25f)) {
+                    fittingsPaint.push_back(inst(boxModel(c + n * 0.09f, basis, {0.45f, 0.6f, 0.18f})));
+                    fittingsMetal.push_back(inst(boxModel(at(0.5f * L - 0.55f, yb + 0.55f) + n * 0.04f, basis, {0.05f, 1.0f, 0.05f})));
+                    ++out.fittings;
+                }
+            }
+            if (h2 < 0.5f && yt - yb > 2.6f) {
+                const glm::vec3 c = at(-(0.5f * L - 0.6f), yt - 0.7f);
+                if (clearAt(c, 0.17f, 0.12f, 0.1f)) { fittingsMetal.push_back(inst(boxModel(c + n * 0.025f, basis, {0.32f, 0.22f, 0.05f}))); ++out.fittings; }
+            }
+            if (h3 < 0.4f && yt - yb > 2.8f) {
+                const float sl = cols >= 2 ? -0.5f * usable + usable / cols : 0.5f * L - 1.25f;
+                const glm::vec3 c = at(sl, yb + 2.35f);
+                if (clearAt(c, 0.1f, 0.15f, 0.2f)) {
+                    fittingsMetal.push_back(inst(boxModel(c + n * 0.08f, basis, {0.16f, 0.26f, 0.15f})));
+                    fittingsGlass.push_back(inst(boxModel(c + n * 0.08f - up * 0.02f, basis, {0.12f, 0.16f, 0.16f})));
+                    ++out.fittings;
+                }
+            }
+            if (h4 < 0.3f && L > 3.2f && yt - yb > 3.0f) {
+                const glm::vec3 c = at(-(0.5f * L - 1.3f), yb + 2.25f);
+                if (clearAt(c, 0.45f, 0.32f, 0.45f)) {
+                    fittingsPaint.push_back(inst(boxModel(c + n * 0.2f, basis, {0.85f, 0.6f, 0.32f})));
+                    fittingsMetal.push_back(inst(boxModel(c + n * 0.2f - up * 0.33f, basis, {0.9f, 0.05f, 0.4f})));
+                    fittingsMetal.push_back(inst(boxModel(c + n * 0.37f, basis, {0.6f, 0.4f, 0.02f})));   // grille face
+                    ++out.fittings;
+                }
+            }
+        }
+    }
+
+    /* ---- freestanding walls: copings and piers ----
+       A garden or yard wall with no roof over it: a stone coping along the
+       top, and brick piers every three metres with their own caps. */
+    std::map<const rendering::Material*, std::vector<rendering::Instance>> piers;
+    std::vector<rendering::Instance> copings, stonePosts;
+    for (size_t i = 0; i < boxes.size(); ++i) {
+        const auto t = tokens(boxes[i].name);
+        const std::string& tex = boxes[i].texture;
+        // 'screen' is the multiplayer maps' cover wall: a freestanding brick
+        // wall in all but name.
+        if (!has(t, {"wall", "screen"}) || has(t, {"sea", "seawall", "harbour", "retaining", "tank", "pit", "cabin", "room",
+                                          "corridor", "wing", "hotel", "hangar", "pump", "lobby", "house", "club", "biz",
+                                          "church", "bakery", "garage", "skyline", "edge", "container", "cap"}))
+            continue;
+        if (!(tex == "brick" || tex == "concrete" || tex == "plaster" || tex == "rock" || tex == "setts")) continue;
+        const Frame& f = fr[i];
+        if (!f.upright || f.s.y < 0.5f || f.s.y > 3.0f) continue;
+        const bool longX = f.s.x >= f.s.z;
+        const float L = longX ? f.s.x : f.s.z, th = longX ? f.s.z : f.s.x;
+        const bool cover = has(t, {"screen"});
+        if (th > (cover ? 3.5f : 1.3f) || L < 1.5f) continue;
+        bool roofed = false, capped = false;
+        for (size_t r : roofs) {
+            const Frame& R = fr[r];
+            if (f.t.x > R.lo.x && f.t.x < R.hi.x && f.t.z > R.lo.z && f.t.z < R.hi.z && R.lo.y > f.hi.y - 0.5f &&
+                R.lo.y < f.hi.y + 3.0f) { roofed = true; break; }
+        }
+        if (roofed) continue;
+        for (size_t o : obstacles) {
+            if (o == i || !has(tokens(boxes[o].name), {"cap", "coping"})) continue;
+            if (overlaps(f.lo + glm::vec3(0, f.s.y - 0.05f, 0), f.hi + glm::vec3(0, 0.2f, 0), fr[o].lo, fr[o].hi)) { capped = true; break; }
+        }
+        glm::vec3 a = longX ? f.r[0] : f.r[2];
+        glm::vec3 n = longX ? f.r[2] : f.r[0];
+        if (glm::dot(glm::cross(a, up), n) < 0.0f) a = -a;
+        const glm::mat3 basis(a, up, n);
+        const float top = f.hi.y;
+        if (std::getenv("GAME_KIT_VERBOSE"))
+            std::fprintf(stderr, "[kit] freestanding '%s' at (%.1f %.1f %.1f) L %.2f th %.2f capped %d\n", boxes[i].name.c_str(),
+                         f.t.x, f.t.y, f.t.z, L, th, capped ? 1 : 0);
+        if (!capped) copings.push_back(inst(boxModel(glm::vec3(f.t.x, top + 0.035f, f.t.z), basis, {L + 0.08f, 0.07f, th + 0.1f})));
+        if (L >= 3.5f) {
+            const int np = static_cast<int>(L / 3.0f);
+            for (int k = 0; k <= np; ++k) {
+                const float sp = -0.5f * L + 0.225f + (L - 0.45f) * static_cast<float>(k) / np;
+                const glm::vec3 base = f.t + a * sp;
+                // Stone posts, standing proud of whatever cap the map put on
+                // the wall, so the run reads as panels between posts.
+                const float ph = f.s.y + (capped ? 0.3f : 0.12f);
+                stonePosts.push_back(inst(boxModel(glm::vec3(base.x, f.lo.y + 0.5f * ph, base.z), basis, {0.5f, ph, th + 0.16f})));
+                copings.push_back(inst(boxModel(glm::vec3(base.x, f.lo.y + ph + 0.045f, base.z), basis, {0.62f, 0.09f, th + 0.28f})));
+            }
+        }
+        ++out.trim;
     }
     rendering::Material plinthMat = sill;
     plinthMat.color = glm::vec3(0.24f, 0.23f, 0.22f);
     rendering::Material corniceMat = sill;
     corniceMat.color = glm::vec3(0.46f, 0.44f, 0.40f);
     if (!plinths.empty()) out.boxes.push_back({std::move(plinths), plinthMat});
+    if (!copings.empty()) out.boxes.push_back({std::move(copings), corniceMat});
+    for (auto& [src, v] : piers) out.boxes.push_back({std::move(v), *src});
+    rendering::Material postMat = sill;
+    postMat.color = glm::vec3(0.38f, 0.36f, 0.33f);
+    if (!stonePosts.empty()) out.boxes.push_back({std::move(stonePosts), postMat});
+    if (!fittingsPaint.empty()) out.boxes.push_back({std::move(fittingsPaint), plant});
+    if (!fittingsMetal.empty()) out.boxes.push_back({std::move(fittingsMetal), gutter});
+    rendering::Material lampGlass;
+    lampGlass.color = glm::vec3(0.8f, 0.75f, 0.6f);
+    lampGlass.roughness = 0.2f;
+    lampGlass.emissive = glm::vec3(1.0f, 0.78f, 0.5f);
+    lampGlass.emissiveStrength = 0.6f;
+    lampGlass.maps = frameMat.maps;   // not "glassy": no room traced behind a lamp
+    if (!fittingsGlass.empty()) out.boxes.push_back({std::move(fittingsGlass), lampGlass});
     if (!cornices.empty()) out.boxes.push_back({std::move(cornices), corniceMat});
     if (!panes.empty()) {
         out.boxes.push_back({std::move(panes), glass, 0.9f});

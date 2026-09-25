@@ -121,8 +121,9 @@ int main(int argc, char** argv) try {
                     "%zu draws (%zu skinned), %zu instances, %zu lights\n", args.scene.c_str(), st.meshes, st.vertices,
                     st.triangles, st.rewound, st.retessellated, st.materials, st.draws, st.skinned, st.instances, st.lights);
         std::printf("look-dev: %zu leaf crowns, %zu albedos capped, %zu draws weathered, %zu scattered, "
-                    "%zu roofs pitched, %zu flat roofs dressed, %zu windows, %zu trimmed, %zu lawn tufts\n", st.foliage,
-                    st.albedoCapped, st.weathered, st.scattered, st.roofs, st.flatRoofs, st.windows, st.trim, st.lawnTufts);
+                    "%zu roofs pitched, %zu flat roofs dressed, %zu windows, %zu trimmed, %zu wall fittings, %zu lawn tufts, "
+                    "%zu trunks\n", st.foliage, st.albedoCapped, st.weathered, st.scattered, st.roofs, st.flatRoofs,
+                    st.windows, st.trim, st.fittings, st.lawnTufts, st.trunks);
     }
     const std::vector<game::rendering::DrawItem>& items = showcase ? showcase->items() : sceneFile->items();
     auto shotCamera = [&](const std::string& name) {
