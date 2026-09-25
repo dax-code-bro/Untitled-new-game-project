@@ -151,6 +151,9 @@ void Renderer::resize(int outW, int outH) {
     m_ssrB = makeTarget(hw, hh, {GL_RGBA16F});
     m_volA = makeTarget(hw, hh, {GL_RGBA16F});
     m_volB = makeTarget(hw, hh, {GL_RGBA16F});
+    m_taa[0] = makeTarget(m_w, m_h, {GL_RGBA16F});
+    m_taa[1] = makeTarget(m_w, m_h, {GL_RGBA16F});
+    m_taaFrames = 0;
 }
 
 const gl::Framebuffer* Renderer::target(const std::string& n) const {
@@ -801,7 +804,7 @@ GLuint Renderer::renderVolumetrics(const Camera& cam) {
     p->set("uVolCurve", std::max(1.5f, volumetric.curve));
     p->set("uVolNear", std::max(0.02f, cam.nearZ));
     p->set("uVolRange", glm::vec2(far * volumetric.fadeStart, far));
-    p->set("uVolJitter", 0.0f);
+    p->set("uVolJitter", taaOn() ? std::fmod(static_cast<float>(m_frame) * 0.6180339887f, 1.0f) : 0.0f);
     fullscreen();
 
     auto b = prog("fullscreen.vert", "volBlur.frag");
@@ -833,7 +836,8 @@ GLuint Renderer::renderSsr(const Camera& cam) {
     t->set("uSsrEdgeFade", ssr.edgeFade);
     t->set("uSsrRoughCut", ssr.roughCut);
     t->set("uSsrRoughMax", ssr.roughMax);
-    t->set("uSsrJitter", 0.0f);
+    // Animated only under TAA, which resolves it; static otherwise (web rule).
+    t->set("uSsrJitter", taaOn() ? static_cast<float>(m_frame % 8u) * 5.588f : 0.0f);
     fullscreen();
 
     /* NATIVE: the blur's tap count grows with the cone instead of its
@@ -890,6 +894,28 @@ GLuint Renderer::applyScreenSpace(const Camera& cam, GLuint ssrTex, GLuint volTe
 /*  Post                                                                */
 /* ------------------------------------------------------------------ */
 
+GLuint Renderer::resolveTaa(const Camera& cam, GLuint sceneTex) {
+    const int cur = m_taaIndex, prev = 1 - m_taaIndex;
+    auto p = prog("fullscreen.vert", "taa.frag");
+    m_taa[static_cast<size_t>(cur)]->bind();
+    p->texture("uCurrent", sceneTex);
+    p->texture("uHistory", m_taa[static_cast<size_t>(prev)]->color(0));
+    p->texture("uDepth", *m_hdrA->depth());
+    p->set("uInvViewProj", cam.invViewProj);
+    p->set("uPrevViewProj", m_prevViewProj);
+    p->set("uTexel", glm::vec2(1.0f / m_w, 1.0f / m_h));
+    p->set("uJitterUv", m_jitterUv);
+    /* 1/(n+1) while the history fills -- so frame n is an exact running
+       average and a still screenshot converges to a true supersample --
+       then a floor of 0.08 so a moving view keeps responding. */
+    p->set("uBlend", std::max(0.08f, 1.0f / static_cast<float>(m_taaFrames + 1)));
+    p->set("uHistoryValid", m_taaFrames > 0 ? 1.0f : 0.0f);
+    fullscreen();
+    ++m_taaFrames;
+    m_taaIndex = prev;
+    return m_taa[static_cast<size_t>(cur)]->color(0).id();
+}
+
 void Renderer::present(const Camera& cam) {
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_BLEND);
@@ -899,6 +925,7 @@ void Renderer::present(const Camera& cam) {
     GLuint sceneTex = m_hdrA->color(0).id();
     const GLuint ssrTex = renderSsr(cam);
     if (ssrTex || volTex) sceneTex = applyScreenSpace(cam, ssrTex, volTex);
+    if (taaOn()) sceneTex = resolveTaa(cam, sceneTex);
 
     GLuint bloom[3] = {0, 0, 0};
     const int iters = std::min(m_q.bloomIters, static_cast<int>(m_bloom.size()));
@@ -988,7 +1015,8 @@ void Renderer::present(const Camera& cam) {
     }
 
     const gl::Framebuffer& finalTarget = m_final ? *m_final : *m_output;
-    const bool fxaa = m_q.fxaa && stages.fxaa;
+    // FXAA after TAA would anti-alias twice and soften for nothing.
+    const bool fxaa = m_q.fxaa && stages.fxaa && !taaOn();
     const gl::Framebuffer& compTarget = fxaa ? *m_ldr : finalTarget;
     compTarget.bind();
     {
@@ -1043,9 +1071,38 @@ void Renderer::render(const std::vector<DrawItem>& items, const Camera& camIn, f
     Camera cam = camIn;
     cam.update(static_cast<float>(m_w) / static_cast<float>(m_h));
     updateAtmosphere();
+    const glm::mat4 unjitteredViewProj = cam.viewProj;
+    if (taaOn()) {
+        /* Halton(2,3) sub-pixel jitter on the projection: sixteen positions
+           that fill the pixel evenly for every prefix length. */
+        auto halton = [](uint32_t i, uint32_t b) {
+            float f = 1.0f, r = 0.0f;
+            for (; i > 0; i /= b) { f /= static_cast<float>(b); r += f * static_cast<float>(i % b); }
+            return r;
+        };
+        const uint32_t k = (m_frame % 16u) + 1u;
+        const float jx = halton(k, 2) - 0.5f, jy = halton(k, 3) - 0.5f;   // pixels
+        /* proj[2][x] multiplies the view-space z, which is NEGATIVE for
+           everything in front of a GL camera (clip w = -z). Subtracting is
+           therefore what moves the image by +jitter -- the direction the
+           TAA shader assumes when it adds uJitterUv back. Adding here was a
+           measured bug: every frame read the history up to a pixel away and
+           the repeated bilinear resample blurred the whole image. */
+        cam.proj[2][0] -= 2.0f * jx / static_cast<float>(m_w);
+        cam.proj[2][1] -= 2.0f * jy / static_cast<float>(m_h);
+        cam.viewProj = cam.proj * cam.view;
+        cam.invViewProj = glm::inverse(cam.viewProj);
+        cam.invProj = glm::inverse(cam.proj);
+        m_jitterUv = glm::vec2(jx / static_cast<float>(m_w), jy / static_cast<float>(m_h));
+    } else {
+        m_jitterUv = glm::vec2(0.0f);
+        m_taaFrames = 0;
+    }
     renderShadows(items, cam);
     renderScene(items, cam);
     present(cam);
+    m_prevViewProj = unjitteredViewProj;
+    ++m_frame;
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 

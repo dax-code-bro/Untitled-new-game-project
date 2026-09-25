@@ -44,7 +44,7 @@ bat "Explore - Resort"               "--fullscreen --scene scenes\\resort.lescen
 bat "Explore - Town"                 "--fullscreen --scene scenes\\town.lescene --texture-res 4096"
 bat "Explore - Demolition"           "--fullscreen --scene scenes\\demolition.lescene --texture-res 4096"
 bat "Windowed"                    "--width 1600 --height 900"
-printf '@echo off\r\ncd /d "%%~dp0"\r\necho Rendering 7680x4320 -- this takes a few seconds on a real GPU.\r\nmy_cpp_game.exe --width 7680 --height 4320 --quality cinematic --texture-res 4096 --screenshot showcase-8k.png\r\npause\r\n' \
+printf '@echo off\r\ncd /d "%%~dp0"\r\necho Rendering 7680x4320 -- this takes a few seconds on a real GPU.\r\nmy_cpp_game.exe --width 7680 --height 4320 --quality cinematic --texture-res 4096 --frames 16 --screenshot showcase-8k.png\r\npause\r\n' \
   > "$PKG/Screenshot - 8K Showcase.bat"
 
 mkdir -p "$OUT"

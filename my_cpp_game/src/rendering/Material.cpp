@@ -64,8 +64,8 @@ glm::vec3 srgb(uint32_t hex) {
             srgbToLinear(static_cast<float>(hex & 255u) / 255.0f)};
 }
 
-MaterialLibrary::MaterialLibrary(int textureSize, float anisotropy)
-    : m_size(textureSize), m_aniso(anisotropy) {}
+MaterialLibrary::MaterialLibrary(int textureSize, float anisotropy, float lodBias)
+    : m_size(textureSize), m_aniso(anisotropy), m_lodBias(lodBias) {}
 
 std::shared_ptr<const GpuMaps> MaterialLibrary::maps(const std::string& kind, uint32_t seed) {
     const auto key = std::make_pair(kind, seed);
@@ -88,6 +88,7 @@ std::shared_ptr<const GpuMaps> MaterialLibrary::maps(const std::string& kind, ui
         gl::Texture t(d);
         t.upload(0, baked.size, baked.size, GL_RGBA, GL_UNSIGNED_BYTE, bytes.data());
         t.generateMips();
+        if (m_lodBias != 0.0f) glTextureParameterf(t.id(), GL_TEXTURE_LOD_BIAS, m_lodBias);
         return t;
     };
     auto m = std::make_shared<GpuMaps>();

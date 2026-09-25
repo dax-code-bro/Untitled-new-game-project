@@ -74,6 +74,9 @@ struct Quality {
     /* Internal resolution / output resolution. >1 is supersampling,
        resolved with a box-filtered downsample. */
     float renderScale = 1.0f;
+    /* NATIVE: temporal anti-aliasing (shaders/taa.frag). Also animates the
+       SSR and volumetric dither, which only pays with a temporal filter. */
+    bool  taa = true;
 
     static Quality ultra();
     static Quality cinematic();
@@ -184,7 +187,7 @@ public:
     /* Stage switches for the step-by-step screenshots. All on = the frame. */
     struct Stages {
         bool shadows = true, env = true, ssao = true, contact = true, ssr = true;
-        bool volumetric = true, bloom = true, fxaa = true, textures = true;
+        bool volumetric = true, bloom = true, fxaa = true, textures = true, taa = true;
     } stages;
 
 private:
@@ -206,8 +209,10 @@ private:
     GLuint renderVolumetrics(const Camera& cam);
     GLuint renderSsr(const Camera& cam);
     GLuint applyScreenSpace(const Camera& cam, GLuint ssrTex, GLuint volTex);
+    GLuint resolveTaa(const Camera& cam, GLuint sceneTex);
 
     void updateAtmosphere();
+    [[nodiscard]] bool taaOn() const { return m_q.taa && stages.taa; }
     void initEnv();
     void bakeEnvSh();
     glm::vec3 skyRadianceCpu(const glm::vec3& d) const;
@@ -226,6 +231,13 @@ private:
     std::vector<std::pair<std::unique_ptr<gl::Framebuffer>, std::unique_ptr<gl::Framebuffer>>> m_bloom;
     std::array<std::unique_ptr<gl::Framebuffer>, 2> m_shadowMaps;
     std::array<glm::mat4, 2> m_shadowMats{glm::mat4(1.0f), glm::mat4(1.0f)};
+    // TAA.
+    std::array<std::unique_ptr<gl::Framebuffer>, 2> m_taa;
+    int       m_taaIndex = 0;
+    int       m_taaFrames = 0;           // frames accumulated since the history was valid
+    uint32_t  m_frame = 0;
+    glm::vec2 m_jitterUv{0.0f};
+    glm::mat4 m_prevViewProj{1.0f};      // last frame, unjittered
     std::array<float, 2> m_cascadeGap{1.0f, 1.0f}, m_cascadeTexelZ{0.0f, 0.0f};
     gl::VertexArrayHandle m_emptyVao;
 

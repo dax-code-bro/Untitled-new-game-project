@@ -55,7 +55,8 @@ void applyDisables(game::rendering::Renderer& r, const std::vector<std::string>&
         else if (n == "bloom")      s.bloom = false;
         else if (n == "fxaa")       s.fxaa = false;
         else if (n == "textures")   s.textures = false;
-        else if (n == "post")       { s.ssao = s.contact = s.ssr = s.volumetric = s.bloom = s.fxaa = false; }
+        else if (n == "taa")        s.taa = false;
+        else if (n == "post")       { s.ssao = s.contact = s.ssr = s.volumetric = s.bloom = s.fxaa = s.taa = false; }
         else if (n == "grade")      { r.post.vignette = 0; r.post.chromatic = 0; r.post.grain = 0;
                                       r.post.saturation = 1; r.post.contrast = 1; }
         else throw std::invalid_argument("--disable: unknown pass '" + n + "'");
@@ -102,7 +103,10 @@ int main(int argc, char** argv) try {
     else renderer.resize(window->width(), window->height());
     renderer.debugMode = args.debugMode;
 
-    game::rendering::MaterialLibrary materials(args.textureRes);
+    const bool taaActive = quality.taa &&
+        std::find(args.disable.begin(), args.disable.end(), "taa") == args.disable.end() &&
+        std::find(args.disable.begin(), args.disable.end(), "post") == args.disable.end();
+    game::rendering::MaterialLibrary materials(args.textureRes, 16.0f, taaActive ? -1.0f : 0.0f);
     const auto t0 = std::chrono::steady_clock::now();
     /* Two kinds of scene: the built-in showcase, or a map exported from the
        web game (tools/export_scene.js writes a .lescene). */

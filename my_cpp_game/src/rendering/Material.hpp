@@ -59,7 +59,10 @@ glm::vec3 srgb(uint32_t hex);
  * shared set. Also builds the web engine's named presets. */
 class MaterialLibrary {
 public:
-    explicit MaterialLibrary(int textureSize = 2048, float anisotropy = 16.0f);
+    /* lodBias < 0 sharpens texture sampling; a temporal filter wants about
+       -1 (it averages sub-pixel jittered samples, so the mip one level
+       finer resolves without shimmering), a single-frame image wants 0. */
+    explicit MaterialLibrary(int textureSize = 2048, float anisotropy = 16.0f, float lodBias = 0.0f);
 
     std::shared_ptr<const GpuMaps> maps(const std::string& kind, uint32_t seed = 1);
 
@@ -78,6 +81,7 @@ public:
 private:
     int    m_size;
     float  m_aniso;
+    float  m_lodBias;
     double m_bakeSeconds = 0.0;
     std::map<std::pair<std::string, uint32_t>, std::shared_ptr<const GpuMaps>> m_cache;
 };
