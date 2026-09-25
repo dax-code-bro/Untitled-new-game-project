@@ -1,4 +1,5 @@
 #include "game/Staff.h"
+#include "game/People.h"
 #include "core/Math.h"
 #include <algorithm>
 #include <cmath>
@@ -71,41 +72,65 @@ const char* lifeEventName(int e) {
     return (e >= 0 && e < LE_Count) ? n[e] : "";
 }
 
-void StaffRoster::refreshApplicants(Rng& rng, float privateRating01, int n) {
+Employee StaffRoster::fromPerson(int personId, float privateRating01) {
+    const Person* p = findPerson(personId);
+    Employee a;
+    if (!p) return a;
+    a.personId = p->id;
+    a.id = 100000 + p->id;   // applicant id (a real id is assigned on hire)
+    a.name = p->name;
+    a.role = p->role;
+    const RoleInfo& ri = roleInfo(a.role);
+    a.skill = p->skill;
+    a.hourlyWage = std::round(ri.marketWage * p->wageAsk * 4.0f) / 4.0f;
+    a.hoursPerWeek = ri.hoursPerWeek;
+    a.morale = 0.65f + privateRating01 * 0.25f;
+    Rng r(uint64_t(p->id) * 131u + 7u);
+    randomPersonalLife(a, r);
+    return a;
+}
+
+void StaffRoster::refreshApplicants(Rng& rng, float privateRating01, int day) {
+    (void)rng;
     applicants.clear();
-    for (int i = 0; i < n; ++i) {
-        Employee a;
-        a.id = nextId++;
-        a.name = randomPersonName(rng);
-        a.role = Role(rng.irange(0, int(Role::Count) - 1));
-        const RoleInfo& ri = roleInfo(a.role);
-        // A better private reputation attracts better people.
-        a.skill = clampf(rng.range(0.2f, 0.75f) + privateRating01 * 0.3f, 0.05f, 1.0f);
-        a.hourlyWage = std::round(ri.marketWage * (0.85f + a.skill * 0.35f) * 4.0f) / 4.0f;
-        a.hoursPerWeek = ri.hoursPerWeek;
-        a.morale = 0.65f + privateRating01 * 0.25f;
-        randomPersonalLife(a, rng);
-        applicants.push_back(a);
+    for (const Person& p : peopleRoster()) {
+        bool employed = false;
+        for (const Employee& e : employees) employed |= e.personId == p.id;
+        if (employed || deceased[size_t(p.id)] || awayUntil[size_t(p.id)] > day) continue;
+        applicants.push_back(fromPerson(p.id, privateRating01));
     }
 }
 
 bool StaffRoster::hire(int applicantId) {
     for (size_t i = 0; i < applicants.size(); ++i)
         if (applicants[i].id == applicantId) {
-            employees.push_back(applicants[i]);
+            Employee e = applicants[i];
+            e.id = nextId++;
+            employees.push_back(e);
             applicants.erase(applicants.begin() + long(i));
             return true;
         }
     return false;
 }
 
-bool StaffRoster::fire(int employeeId) {
+bool StaffRoster::fire(int employeeId, int day) {
     for (size_t i = 0; i < employees.size(); ++i)
         if (employees[i].id == employeeId) {
+            if (employees[i].personId > 0) awayUntil[size_t(employees[i].personId)] = day + 45;
             employees.erase(employees.begin() + long(i));
             return true;
         }
     return false;
+}
+
+void StaffRoster::leave(int employeeId, int day, bool died) {
+    for (size_t i = 0; i < employees.size(); ++i)
+        if (employees[i].id == employeeId) {
+            int pid = employees[i].personId;
+            if (pid > 0) { if (died) deceased[size_t(pid)] = true; else awayUntil[size_t(pid)] = day + 45; }
+            employees.erase(employees.begin() + long(i));
+            return;
+        }
 }
 
 Employee* StaffRoster::find(int id) {

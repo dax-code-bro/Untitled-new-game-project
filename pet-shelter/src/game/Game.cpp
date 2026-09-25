@@ -565,6 +565,7 @@ void Game::render(float dt) {
     auto sceneFn = [this](Renderer& r, Pass p) { scene(r, p); };
     computer_.renderFeed(renderer_, sceneFn, sim_, time_);
     computer_.renderPreview(renderer_, sim_, dt, time_);
+    computer_.renderPortraits(renderer_, time_);
     renderer_.renderFrame(camera_, sceneFn, dt, time_);
 }
 
@@ -1231,7 +1232,13 @@ int Game::runScreenshotSuite(const std::string& dir) {
     computer_.selectAnimal(labId);
     shoot("25_computer_animal_record", 4);
     computer_.tab = ComputerUI::TabStaff;
-    shoot("26_computer_staff");
+    shoot("26_computer_staff", 6);
+    computer_.tab = ComputerUI::TabRecruit;
+    computer_.selectRecruit(15);
+    shoot("38_computer_recruit", 26);
+    computer_.tab = ComputerUI::TabStaff;
+    computer_.selectStaff(sim_.staff.employees.empty() ? -1 : sim_.staff.employees[0].id);
+    shoot("39_computer_staff_card", 4);
     sim_.staffInterview(sim_.staff.employees[0].id);
     computer_.tab = ComputerUI::TabInbox;
     shoot("27_computer_inbox");

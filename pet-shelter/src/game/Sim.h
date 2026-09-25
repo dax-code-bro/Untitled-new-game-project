@@ -92,6 +92,8 @@ public:
 
     void log(const std::string& text);
     bool buyLand(int col, int row, std::string* why = nullptr);
+    int officeCapacity() const;   // every worker needs their own office
+    bool hire(int applicantId, std::string* why = nullptr);
 
     // Animals
     Animal* findAnimal(int id);

@@ -19,6 +19,7 @@ const RoleInfo& roleInfo(Role r);
 
 struct Employee {
     int id = 0;
+    int personId = 0;       // which of the 40 recruitable people this is
     std::string name;
     Role role = Role::Caretaker;
     float hourlyWage = 15.0f;
@@ -56,9 +57,14 @@ struct StaffRoster {
     double weeklyGross() const;
     float averageMorale() const;
     float wageFairness() const;        // avg(wage/market), 1 = market rate
-    void refreshApplicants(Rng& rng, float privateRating01, int n = 6);
+    // The recruit pool: every one of the 40 people who isn't on your team, away, or dead.
+    void refreshApplicants(Rng& rng, float privateRating01, int day = 0);
     bool hire(int applicantId);
-    bool fire(int employeeId);
+    bool fire(int employeeId, int day = 0);          // they come back to the pool after 45 days
+    void leave(int employeeId, int day, bool died);   // quit / died
+    std::vector<int> awayUntil = std::vector<int>(64, -1);   // by person id
+    std::vector<bool> deceased = std::vector<bool>(64, false);
+    static Employee fromPerson(int personId, float privateRating01);
     Employee* find(int id);
 };
 

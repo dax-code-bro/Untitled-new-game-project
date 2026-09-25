@@ -1,4 +1,6 @@
 #include "game/Sim.h"
+#include "game/People.h"
+#include <cstdlib>
 #include "core/SaveFile.h"
 #include "world/Layout.h"
 #include "world/Terrain.h"
@@ -33,14 +35,16 @@ void Sim::newGame() {
     *this = Sim();
     econ.post(0, Ledger::Grants, 25000.0, "Small business startup grant");
     // Two people start with you: someone at the front desk and one caretaker.
-    Employee rec;
-    rec.id = staff.nextId++; rec.name = randomPersonName(rng); rec.role = Role::Receptionist;
-    rec.hourlyWage = roleInfo(rec.role).marketWage; rec.hoursPerWeek = roleInfo(rec.role).hoursPerWeek; rec.skill = 0.55f;
-    Employee care;
-    care.id = staff.nextId++; care.name = randomPersonName(rng); care.role = Role::Caretaker;
-    care.hourlyWage = roleInfo(care.role).marketWage; care.hoursPerWeek = roleInfo(care.role).hoursPerWeek; care.skill = 0.5f;
-    staff.employees = {rec, care};
-    staff.refreshApplicants(rng, ratings.privateRating / 100.0f);
+    // June at the front desk and Tyler, a young caretaker, from the recruit pool
+    for (const char* who : {"June Nguyen", "Tyler Brooks"})
+        for (const Person& p : peopleRoster())
+            if (p.name == who) {
+                Employee e = StaffRoster::fromPerson(p.id, ratings.privateRating / 100.0f);
+                e.id = staff.nextId++;
+                e.hourlyWage = roleInfo(e.role).marketWage;
+                staff.employees.push_back(e);
+            }
+    staff.refreshApplicants(rng, ratings.privateRating / 100.0f, clock.day());
     // Built-in cameras: highway gate and waiting room.
     security.addCamera("Highway Gate", {8.0f, 4.2f, layout::kSouthEdge - 8.0f}, radians(-38.0f), -0.22f);
     security.addCamera("Waiting Room", {3.6f, layout::kCeilingY - 0.3f, 5.7f}, radians(-150.0f), -0.42f);
@@ -231,7 +235,7 @@ void Sim::onEndOfDay() {
             log(e.name + " (" + roleInfo(e.role).name + ") quit. " +
                 (e.fatigue > 0.7f ? "\"I'm exhausted and nobody cares.\"" : (e.stress > 0.7f ? "\"I can't take the stress anymore.\"" : "Morale was too low.")));
             ratings.shock(-0.5f, -2.0f);
-            staff.employees.erase(staff.employees.begin() + long(i));
+            staff.leave(e.id, clock.day(), false);
             continue;
         }
         ++i;
@@ -253,7 +257,7 @@ void Sim::onEndOfDay() {
 
     int newDay = clock.day();
     if (newDay % 7 == 5) payWeeklyPayroll();   // after Friday closes (day index 4 -> 5)
-    if (newDay % 7 == 0) staff.refreshApplicants(rng, ratings.privateRating / 100.0f);
+    staff.refreshApplicants(rng, ratings.privateRating / 100.0f, newDay);
     if (newDay % 30 == 0) monthly();
     if (newDay % 90 == 0) quarterly();
     econ.cashHistory.push_back(float(econ.cash));
@@ -345,6 +349,22 @@ bool Sim::demolish(int id) {
     return false;
 }
 
+int Sim::officeCapacity() const {
+    // Main building: office, front desk and clinic workstations; then staff buildings and office blocks
+    return 3 + 2 * placedCount(BuildKind::StaffBuilding) + 4 * placedCount(BuildKind::StaffOffices);
+}
+
+bool Sim::hire(int applicantId, std::string* why) {
+    if (int(staff.employees.size()) >= officeCapacity()) {
+        if (why) *why = "No free office. Build Staff Offices (Build mode > Operations) - every worker needs their own office.";
+        return false;
+    }
+    if (!staff.hire(applicantId)) return false;
+    const Employee& e = staff.employees.back();
+    log("New hire: " + e.name + " (" + roleInfo(e.role).name + ").");
+    return true;
+}
+
 bool Sim::buyLand(int c, int r, std::string* why) {
     if (!land.canBuy(c, r)) { if (why) *why = land.homeOwned() ? "You can only buy land next to land you own" : "Buy the square mile around your shelter first"; return false; }
     double cost = land.price(c, r);
@@ -404,6 +424,12 @@ void Sim::save(KeyValues& kv) const {
     kv.set("sec.doors", locks);
     kv.seti("visitors.total", visitorsTotal);
     kv.seti("gear", protectiveGear);
+    {
+        std::string away, dead;
+        for (size_t i = 0; i < staff.awayUntil.size(); ++i) { away += std::to_string(staff.awayUntil[i]) + ","; dead += staff.deceased[i] ? '1' : '0'; }
+        kv.set("staff.away", away);
+        kv.set("staff.dead", dead);
+    }
     land.save(kv);
     kv.set("owner", ownerName);
     for (size_t i = 0; i < staff.employees.size(); ++i) {
@@ -411,7 +437,7 @@ void Sim::save(KeyValues& kv) const {
         std::string p = "staff." + std::to_string(i) + ".";
         kv.setf(p + "fatigue", e.fatigue); kv.setf(p + "stress", e.stress); kv.setf(p + "rel", e.relationship);
         kv.seti(p + "daysoff", e.daysOffPerWeek); kv.seti(p + "vac", e.vacationUntil); kv.seti(p + "interview", e.lastInterviewDay);
-        kv.set(p + "family", e.family); kv.set(p + "hobby", e.hobby);
+        kv.set(p + "family", e.family); kv.set(p + "hobby", e.hobby); kv.seti(p + "person", e.personId);
     }
     kv.seti("animal.nextId", nextAnimalId);
     int n = 0;
@@ -491,6 +517,17 @@ void Sim::load(const KeyValues& kv) {
     for (size_t i = 0; i < security.doorLocked.size() && i < locks.size(); ++i) security.doorLocked[i] = locks[i] == '1';
     visitorsTotal = kv.geti("visitors.total", 0);
     protectiveGear = kv.geti("gear", 0) != 0;
+    {
+        std::string away = kv.get("staff.away"), dead = kv.get("staff.dead");
+        size_t i = 0, st = 0;
+        while (i < staff.awayUntil.size() && st < away.size()) {
+            size_t e = away.find(',', st);
+            staff.awayUntil[i++] = std::atoi(away.substr(st, e - st).c_str());
+            if (e == std::string::npos) break;
+            st = e + 1;
+        }
+        for (size_t k = 0; k < staff.deceased.size() && k < dead.size(); ++k) staff.deceased[k] = dead[k] == '1';
+    }
     land.load(kv);
     ownerName = kv.get("owner", ownerName);
     for (int i = 0; i < int(staff.employees.size()); ++i) {
@@ -499,6 +536,7 @@ void Sim::load(const KeyValues& kv) {
         e.fatigue = float(kv.getf(p + "fatigue", 0.15)); e.stress = float(kv.getf(p + "stress", 0.2)); e.relationship = float(kv.getf(p + "rel", 0.35));
         e.daysOffPerWeek = int(kv.geti(p + "daysoff", 2)); e.vacationUntil = int(kv.geti(p + "vac", -1));
         e.lastInterviewDay = int(kv.geti(p + "interview", -999)); e.family = kv.get(p + "family"); e.hobby = kv.get(p + "hobby");
+        e.personId = int(kv.geti(p + "person", 0));
         e.gearIssued = protectiveGear;
         if (e.family.empty()) randomPersonalLife(e, rng);
     }
@@ -523,7 +561,7 @@ void Sim::load(const KeyValues& kv) {
     }
     animals = animalsInCare();
     for (int i = 0; i < int(FoodKind::Count); ++i) food[i] = float(kv.getf("food." + std::to_string(i), food[i]));
-    staff.refreshApplicants(rng, ratings.privateRating / 100.0f);
+    staff.refreshApplicants(rng, ratings.privateRating / 100.0f, clock.day());
     log("Game loaded.");
 }
 

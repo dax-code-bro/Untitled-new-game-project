@@ -6,6 +6,7 @@
 #include "game/Sim.h"
 #include "render/Renderer.h"
 #include "world/Facility.h"
+#include <map>
 #include <memory>
 #include <vector>
 
@@ -13,7 +14,7 @@ namespace ps {
 
 class ComputerUI {
 public:
-    enum Tab { TabInbox, TabAnimals, TabStaff, TabStore, TabSecurity, TabFinances, TabRatings, TabCount };
+    enum Tab { TabInbox, TabAnimals, TabStaff, TabRecruit, TabStore, TabSecurity, TabFinances, TabRatings, TabCount };
     int tab = TabFinances;
     int selectedCamera = 0;
     bool open = false;
@@ -24,16 +25,23 @@ public:
     void renderFeed(Renderer& r, const Renderer::SceneFn& scene, const Sim& sim, float time);
     // Renders the selected animal's rotating 3D preview (call before ImGui).
     void renderPreview(Renderer& r, const Sim& sim, float dt, float time);
+    // Renders face portraits for the staff / recruit cards (a few per frame, cached).
+    void renderPortraits(Renderer& r, float time);
     // Returns false when the user closes the computer.
     bool draw(Sim& sim, const Facility& facility);
     void selectAnimal(int id) { selectedAnimal_ = id; }
     void setStoreTab(int t) { storeTab_ = t; }
+    void selectRecruit(int personId) { selectedRecruit_ = personId; }
+    void selectStaff(int id) { selectedStaff_ = id; }
 
 private:
     void drawAnimals(Sim& sim);
     void drawStaff(Sim& sim);
     void drawInbox(Sim& sim);
     void drawStore(Sim& sim);
+    void drawRecruit(Sim& sim);
+    bool faceCard(int personId, const std::string& name, const std::string& sub, bool selected, bool dim);
+    void personDetails(int personId);
     void drawSecurity(Sim& sim, const Facility& facility);
     void drawFinances(Sim& sim);
     void drawRatings(Sim& sim);
@@ -56,6 +64,9 @@ private:
     int animalFilter_ = 0;
     int previewAction_ = 0;
     int selectedStaff_ = -1;
+    int selectedRecruit_ = -1;
+    std::map<int, Renderer::Target> portraits_;
+    std::vector<int> wantPortraits_;
     int storeTab_ = 0;
     int landPick_ = -1;
 };

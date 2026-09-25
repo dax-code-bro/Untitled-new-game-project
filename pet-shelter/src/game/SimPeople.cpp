@@ -556,8 +556,9 @@ void Sim::peopleDaily() {
                 log("SABOTAGE: " + a->name + " the " + sp.name + " is convulsing - someone put antifreeze in its water.");
                 if (security.cameras.size() >= 4 && rng.uniform() < 0.5f) {
                     log("Camera footage shows " + e.name + " doing it. They've been fired and the police were called.");
-                    int id = e.id;
-                    staff.fire(id);
+                    int id = e.id, pid = e.personId;   // copy before the record is erased
+                    staff.fire(id, clock.day());
+                    staff.awayUntil[size_t(std::max(0, pid))] = 1 << 28;   // never coming back
                 } else {
                     scandal(3.0f, "Animals poisoned at the shelter");
                 }

@@ -558,7 +558,7 @@ void Renderer::renderToTarget(const Camera& cam, const SceneFn& scene, Target& t
     cctv_.set("uNightVision", night_ > 0.6f ? 1.0f : 0.0f);
     cctv_.set("uTime", time);
     cctv_.set("uPlain", cctv ? 0.0f : 1.0f);
-    if (!cctv) cctv_.set("uExposure", 0.55f * std::exp2(exposureBias));
+    if (!cctv) cctv_.set("uExposure", 0.24f * std::exp2(exposureBias));
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, t.hdrTex);
     fullscreen();

@@ -22,6 +22,7 @@ add_library(ps_sim STATIC
   src/game/Economy.cpp
   src/game/Ratings.cpp
   src/game/Staff.cpp
+  src/game/People.cpp
   src/game/Security.cpp
   src/game/Character.cpp
   src/game/Buildables.cpp

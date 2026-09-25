@@ -1,4 +1,6 @@
 #include "game/ComputerUI.h"
+#include "game/CharacterModel.h"
+#include "game/People.h"
 #include "world/Layout.h"
 #include <imgui.h>
 #include <algorithm>
@@ -156,9 +158,10 @@ bool ComputerUI::draw(Sim& sim, const Facility& facility) {
     // Sidebar tabs
     ImGui::BeginChild("tabs", ImVec2(compact ? 150.0f : 240.0f, 0), ImGuiChildFlags_Borders);
     std::string inboxName = "Inbox (" + std::to_string(sim.decisions.size()) + ")";
-    const char* names[] = {inboxName.c_str(), "Animals", "Staff", "Store", "Security", "Finances", "Ratings"};
-    const char* hints[] = {"Decisions waiting for you", "Every animal in your care", "Wellbeing, schedules, one-on-ones",
-                           "Buy land, supplies & equipment", "Cameras, gate & locks", "Taxes, income, payroll", "Private & public opinion"};
+    const char* names[] = {inboxName.c_str(), "Animals", "Staff", "Recruit", "Store", "Security", "Finances", "Ratings"};
+    const char* hints[] = {"Decisions waiting for you", "Every animal in your care", "Your team, wellbeing, one-on-ones",
+                           "40 people looking for work", "Buy land, supplies & equipment", "Cameras, gate & locks", "Taxes, income, payroll",
+                           "Private & public opinion"};
     for (int i = 0; i < TabCount; ++i) {
         if (ImGui::Selectable(names[i], tab == i, 0, ImVec2(0, 34))) tab = i;
         if (!compact) { ImGui::TextDisabled("  %s", hints[i]); ImGui::Spacing(); }
@@ -175,6 +178,7 @@ bool ComputerUI::draw(Sim& sim, const Facility& facility) {
     case TabInbox: drawInbox(sim); break;
     case TabAnimals: drawAnimals(sim); break;
     case TabStaff: drawStaff(sim); break;
+    case TabRecruit: drawRecruit(sim); break;
     case TabStore: drawStore(sim); break;
     case TabSecurity: drawSecurity(sim, facility); break;
     case TabFinances: drawFinances(sim); break;
@@ -372,6 +376,106 @@ void ComputerUI::drawAnimals(Sim& sim) {
     ImGui::EndChild();
 }
 
+void ComputerUI::renderPortraits(Renderer& r, float time) {
+    int budget = 2;   // build a couple of faces per frame
+    for (int pid : wantPortraits_) {
+        if (portraits_.count(pid) || budget <= 0) continue;
+        const Person* p = findPerson(pid);
+        if (!p) continue;
+        --budget;
+        CharacterModel cm;
+        cm.build(p->looks);
+        cm.animate(1.0f, 0.0f, 0.0f);
+        const vec3 stage{40.0f, 1200.0f, 0.0f};
+        auto scene = [&](Renderer& rr, Pass pass) {
+            if (pass == Pass::Transparent) return;
+            cm.draw(rr, mat4::translate(stage));
+        };
+        Camera cam;
+        cam.fovY = radians(24.0f);
+        cam.aspect = 1.0f;
+        cam.zNear = 0.05f;
+        cam.zFar = 50.0f;
+        float eye = cm.eyeHeight();
+        vec3 head = stage + vec3(0, eye - 0.02f, 0);
+        cam.lookAt(head + vec3(0.25f, 0.05f, 1.05f), head);
+        Renderer::Target t = r.createTarget(160, 160);
+        r.renderToTarget(cam, scene, t, time, false);
+        portraits_[pid] = t;
+    }
+    wantPortraits_.clear();
+}
+
+bool ComputerUI::faceCard(int personId, const std::string& name, const std::string& sub, bool selected, bool dim) {
+    const float S = compact ? 96.0f : 120.0f;
+    ImGui::PushID(personId);
+    ImVec2 p0 = ImGui::GetCursorScreenPos();
+    bool clicked = ImGui::InvisibleButton("card", ImVec2(S, S + 34));
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    // A transparent square with the face
+    dl->AddRectFilled(p0, ImVec2(p0.x + S, p0.y + S + 34), selected ? IM_COL32(90, 150, 220, 90) : IM_COL32(255, 255, 255, ImGui::IsItemHovered() ? 40 : 22), 8.0f);
+    dl->AddRect(p0, ImVec2(p0.x + S, p0.y + S + 34), selected ? IM_COL32(120, 190, 255, 220) : IM_COL32(255, 255, 255, 60), 8.0f, 0, selected ? 2.0f : 1.0f);
+    auto it = portraits_.find(personId);
+    if (it != portraits_.end())
+        dl->AddImageRounded((ImTextureID)(intptr_t)it->second.ldrTex, ImVec2(p0.x + 6, p0.y + 6), ImVec2(p0.x + S - 6, p0.y + S - 6), ImVec2(0, 1), ImVec2(1, 0),
+                            dim ? IM_COL32(255, 255, 255, 110) : IM_COL32(255, 255, 255, 235), 6.0f);
+    else wantPortraits_.push_back(personId);
+    dl->AddText(ImVec2(p0.x + 6, p0.y + S - 2), IM_COL32(235, 240, 245, 255), name.c_str());
+    dl->AddText(ImVec2(p0.x + 6, p0.y + S + 14), IM_COL32(160, 175, 190, 255), sub.c_str());
+    ImGui::PopID();
+    return clicked;
+}
+
+void ComputerUI::personDetails(int personId) {
+    const Person* p = findPerson(personId);
+    if (!p) return;
+    ImGui::TextColored(ImVec4(0.6f, 0.85f, 1, 1), "%s", p->name.c_str());
+    ImGui::SameLine();
+    ImGui::TextDisabled("%s, %d  |  %s", p->gender == Gender::Female ? "woman" : "man", p->age, roleInfo(p->role).name);
+    ImGui::TextWrapped("%s", p->bio.c_str());
+    ImGui::TextDisabled("Experience:");
+    ImGui::SameLine();
+    ImGui::TextWrapped("%s", p->experience.c_str());
+    if (p->badHistory.empty()) ImGui::TextColored(ImVec4(0.5f, 0.85f, 0.5f, 1), "Background check: clean.");
+    else ImGui::TextColored(ImVec4(1, 0.55f, 0.35f, 1), "Background check: %s", p->badHistory.c_str());
+    bar("skill", p->skill, goodBad(p->skill), 160);
+}
+
+void ComputerUI::drawRecruit(Sim& sim) {
+    StaffRoster& st = sim.staff;
+    int cap = sim.officeCapacity();
+    ImGui::Text("RECRUIT");
+    ImGui::SameLine();
+    ImGui::TextDisabled("  Team %d / %d offices. Everyone needs their own office - build Staff Offices to grow.", int(st.employees.size()), cap);
+    ImGui::Separator();
+    if (st.applicants.empty()) ImGui::TextDisabled("Nobody is looking for work right now.");
+    float listH = ImGui::GetContentRegionAvail().y * 0.6f;
+    ImGui::BeginChild("pool", ImVec2(0, listH), ImGuiChildFlags_Borders);
+    float x = 0.0f, avail = ImGui::GetContentRegionAvail().x;
+    const float S = (compact ? 96.0f : 120.0f) + 8.0f;
+    for (const Employee& a : st.applicants) {
+        if (x > 0.0f && x + S <= avail) ImGui::SameLine();
+        else x = 0.0f;
+        if (faceCard(a.personId, a.name, roleInfo(a.role).name, selectedRecruit_ == a.personId, false)) selectedRecruit_ = a.personId;
+        x += S;
+    }
+    ImGui::EndChild();
+    const Employee* pick = nullptr;
+    for (const Employee& a : st.applicants) if (a.personId == selectedRecruit_) pick = &a;
+    if (!pick) { ImGui::TextDisabled("Click a face to see their bio, work history and background check."); return; }
+    personDetails(pick->personId);
+    ImGui::Text("Asking $%.2f/hr (market $%.2f)", double(pick->hourlyWage), double(roleInfo(pick->role).marketWage));
+    bool full = int(st.employees.size()) >= cap;
+    if (full) ImGui::TextColored(ImVec4(1, 0.6f, 0.3f, 1), "No free office - build Staff Offices first.");
+    if (full) ImGui::BeginDisabled();
+    if (ImGui::Button("Hire", ImVec2(160, 34))) {
+        std::string why;
+        if (!sim.hire(pick->id, &why)) sim.log(why);
+        selectedRecruit_ = -1;
+    }
+    if (full) ImGui::EndDisabled();
+}
+
 void ComputerUI::drawStore(Sim& sim) {
     ImGui::Text("STORE");
     ImGui::Separator();
@@ -485,6 +589,19 @@ void ComputerUI::drawStaff(Sim& sim) {
     ImGui::Separator();
     StaffRoster& st = sim.staff;
     const int day = sim.clock.day();
+    ImGui::Text("Your team: %d / %d offices", int(st.employees.size()), sim.officeCapacity());
+    {
+        float x = 0.0f, avail = ImGui::GetContentRegionAvail().x;
+        const float S = (compact ? 96.0f : 120.0f) + 8.0f;
+        for (const Employee& emp : st.employees) {
+            if (x > 0.0f && x + S <= avail) ImGui::SameLine();
+            else x = 0.0f;
+            std::string sub = roleInfo(emp.role).name;
+            if (emp.onVacation(day)) sub = "on leave";
+            if (faceCard(emp.personId, emp.name, sub, selectedStaff_ == emp.id, emp.onVacation(day))) selectedStaff_ = emp.id;
+            x += S;
+        }
+    }
     if (ImGui::BeginTable("wb", compact ? 5 : 9, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders)) {
         ImGui::TableSetupColumn("Name");
         if (!compact) ImGui::TableSetupColumn("Role");
@@ -529,8 +646,28 @@ void ComputerUI::drawStaff(Sim& sim) {
     }
     Employee* e = st.find(selectedStaff_);
     ImGui::Spacing();
-    if (!e) { ImGui::TextDisabled("Select someone to check in, give time off, or help them out."); return; }
+    if (!e) { ImGui::TextDisabled("Click someone's face (or name) to see their record, check in, give time off, or let them go."); return; }
     ImGui::SeparatorText(e->name.c_str());
+    if (e->personId > 0) personDetails(e->personId);
+    ImGui::SameLine(0, 30);
+    if (ImGui::Button("Fire")) ImGui::OpenPopup("fire?");
+    if (ImGui::BeginPopupModal("fire?", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("Let %s go?", e->name.c_str());
+        ImGui::TextDisabled("Others will notice. They won't reapply for about 45 days.");
+        if (ImGui::Button("Fire them")) {
+            sim.log("You let " + e->name + " go.");
+            st.fire(e->id, day);
+            sim.ratings.shock(0.0f, -1.5f);
+            for (auto& o : st.employees) o.morale = std::max(0.0f, o.morale - 0.03f);
+            selectedStaff_ = -1;
+            ImGui::CloseCurrentPopup();
+            ImGui::EndPopup();
+            return;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel")) ImGui::CloseCurrentPopup();
+        ImGui::EndPopup();
+    }
     ImGui::Text("%s  |  $%.2f/hr (market $%.2f)  |  %.0f h/week  |  %d days with you", roleInfo(e->role).name, double(e->hourlyWage),
                 double(roleInfo(e->role).marketWage), double(e->hoursPerWeek), e->daysEmployed);
     if (e->relationship > 0.6f) ImGui::TextWrapped("You know them well: %s, and %s.", e->family.c_str(), e->hobby.c_str());
@@ -731,7 +868,7 @@ void ComputerUI::drawFinances(Sim& sim) {
             ImGui::EndTable();
         }
         if (fireId >= 0) {
-            st.fire(fireId);
+            st.fire(fireId, sim.clock.day());
             sim.ratings.shock(0.0f, -1.5f);
             sim.log("You let an employee go.");
         }
@@ -754,7 +891,7 @@ void ComputerUI::drawFinances(Sim& sim) {
             }
             ImGui::EndTable();
         }
-        if (hireId >= 0 && st.hire(hireId)) sim.log("New hire: " + st.employees.back().name + " (" + roleInfo(st.employees.back().role).name + ").");
+        if (hireId >= 0) { std::string why; if (!sim.hire(hireId, &why)) sim.log(why); }
     } else if (financeTab_ == 3) {
         const TaxRates& t = e.tax;
         if (ImGui::BeginTable("tax", 3, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders)) {

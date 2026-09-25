@@ -589,7 +589,16 @@ void Sim::incidentUpdate() {
         if (rng.uniform() < risk) {
             if (rng.uniform() < 0.25f && !incident.areaCleared) {
                 incident.killed++;
-                log("The " + sp.name + " dragged down a visitor in the parking lot. By the time anyone reached them they had bled to death.");
+                if (!staff.employees.empty() && rng.uniform() < 0.3f) {
+                    Employee& victim = staff.employees[size_t(rng.next() % staff.employees.size())];
+                    std::string who = victim.name;
+                    log("The " + sp.name + " caught " + who + " between the kennels. They bled to death before help arrived.");
+                    for (auto& o : staff.employees) if (o.id != victim.id) { o.stress = std::min(1.0f, o.stress + 0.4f); o.morale = std::max(0.0f, o.morale - 0.2f); }
+                    staff.leave(victim.id, clock.day(), true);
+                    ratings.shock(-4.0f, -10.0f);
+                } else {
+                    log("The " + sp.name + " dragged down a visitor in the parking lot. By the time anyone reached them they had bled to death.");
+                }
             } else {
                 incident.injured++;
                 log("The " + sp.name + " mauled a visitor who got too close - deep bites to the leg, they're being rushed to the hospital.");
