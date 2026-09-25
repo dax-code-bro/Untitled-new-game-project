@@ -1,4 +1,5 @@
 #pragma once
+#include "rendering/Atmosphere.hpp"
 #include "rendering/Camera.hpp"
 #include "rendering/Material.hpp"
 #include "rendering/Mesh.hpp"
@@ -96,6 +97,14 @@ struct Sky {
     glm::vec3 room{0.0f};
     float     occlusion = 0.45f;
     float     bounce = 0.70f;
+    /* NATIVE: 0 = the web engine's authored gradient; 1 = the physical
+       atmosphere (rendering/Atmosphere), where zenith/horizon are derived
+       from the scattering and turbidity thickens the haze. physicalGain
+       calibrates the table's per-unit-illuminance radiance to this
+       renderer's sun intensities. */
+    int       model = 0;
+    float     turbidity = 1.0f;
+    float     physicalGain = 4.0f;       // chosen from a 3/4/6 sweep at noon and golden hour
 };
 struct Fog {
     glm::vec3 color{0.62f, 0.72f, 0.85f};
@@ -198,6 +207,7 @@ private:
     GLuint renderSsr(const Camera& cam);
     GLuint applyScreenSpace(const Camera& cam, GLuint ssrTex, GLuint volTex);
 
+    void updateAtmosphere();
     void initEnv();
     void bakeEnvSh();
     glm::vec3 skyRadianceCpu(const glm::vec3& d) const;
@@ -229,6 +239,13 @@ private:
     bool m_envHashValid = false;
     glm::vec3 m_envAt{0.0f}, m_envWantAt{0.0f};
     std::array<glm::vec3, 9> m_envSh{};
+
+    // Physical sky.
+    Atmosphere  m_atmo;
+    gl::Texture m_skyLut;
+    uint32_t    m_atmoHash = 0;
+    bool        m_atmoValid = false;
+    glm::vec3   m_atmoZenith{0.0f}, m_atmoHorizon{0.0f};
 };
 
 } // namespace game::rendering

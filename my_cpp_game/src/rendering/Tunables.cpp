@@ -24,6 +24,7 @@ const std::map<std::string, Slot>& registry() {
         V("sky.zenith", r.sky.zenith), V("sky.horizon", r.sky.horizon), V("sky.ground", r.sky.ground),
         F("sky.intensity", r.sky.intensity), F("sky.clouds", r.sky.clouds), V("sky.room", r.sky.room),
         F("sky.occlusion", r.sky.occlusion), F("sky.bounce", r.sky.bounce),
+        I("sky.model", r.sky.model), F("sky.turbidity", r.sky.turbidity), F("sky.physicalGain", r.sky.physicalGain),
         V("fog.color", r.fog.color), F("fog.density", r.fog.density), F("fog.height", r.fog.height),
         F("fog.falloff", r.fog.falloff), F("fog.skyBlend", r.fog.skyBlend),
         F("shadows.distance", r.shadows.distance), F("shadows.strength", r.shadows.strength),

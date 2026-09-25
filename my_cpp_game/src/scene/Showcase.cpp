@@ -87,6 +87,10 @@ Showcase::Showcase(rendering::MaterialLibrary& lib, rendering::Renderer& r, int 
     r.sky.ground = glm::vec3(0.24f, 0.21f, 0.18f);
     r.sky.intensity = 0.8f;
     r.sky.clouds = 0.28f;
+    /* The physical atmosphere: the zenith/horizon above stay as the
+       fallback, but the sky drawn, reflected and used for ambient is the
+       scattered one, so moving the sun moves the whole day with it. */
+    r.sky.model = 1;
     r.fog.color = glm::vec3(0.92f, 0.66f, 0.46f);
     r.fog.density = 0.0016f;
     r.volumetric.densityScale = 6.0f;

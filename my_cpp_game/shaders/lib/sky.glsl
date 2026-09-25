@@ -84,6 +84,25 @@ uniform vec3 uEnvSh[9];         // cosine-convolved and already divided by PI
    which is exactly what this shader did before. The other way round, one
    missed bind in _bindEnv would silently delete the sun from the sky. */
 uniform float uEnvNoSunDisc;
+/* ---- NATIVE: THE PHYSICAL SKY ----
+   uSkyModel 0 is the web engine's gradient, untouched. At 1 the sky is a
+   single-scattering Earth atmosphere (Rayleigh + Mie + ozone) ray marched
+   on the CPU into a latitude/longitude table (rendering/Atmosphere.cpp):
+   a deep zenith, a bright hazy horizon, a real Mie halo round the sun and
+   an orange sunset, all from the sun direction alone. The table holds
+   radiance per unit of sun illuminance; uSkyLutScale is the sun's colour
+   x intensity x a calibration gain. The v mapping spends most rows near
+   the horizon -- the CPU mirror, Atmosphere::dirToUv, must match it. */
+uniform float uSkyModel;
+uniform sampler2D uSkyLut;
+uniform vec3 uSkyLutScale;
+vec3 skyPhysical(vec3 dir){
+  float az = atan(dir.z, dir.x);
+  float el = asin(clamp(dir.y, -1.0, 1.0));
+  float v = 0.5 + 0.5 * sign(el) * sqrt(abs(el) / (0.5 * PI));
+  return textureLod(uSkyLut, vec2(az / (2.0 * PI) + 0.5, v), 0.0).rgb * uSkyLutScale;
+}
+
 vec3 groundIrradiance(){
   // How square-on the sun hits flat ground. Nothing to bounce at night.
   float lit = max(uSunDir.y, 0.0);
@@ -92,6 +111,16 @@ vec3 groundIrradiance(){
 
 vec3 skyRadiance(vec3 dir){
   float up = dir.y;
+  if (uSkyModel > 0.5) {
+    // Same ground blend and sun disc as the gradient path; the halo is
+    // in the table, scattered physically, so it is not added again.
+    vec3 psky = skyPhysical(dir) / max(uSkyIntensity, 1e-4);
+    psky = mix(groundIrradiance() / max(uSkyIntensity, 1e-4), psky, smoothstep(-0.28, 0.06, up));
+    float pDot = saturate1(dot(dir, uSunDir));
+    float pDisc = smoothstep(0.9986, 0.9995, pDot);
+    psky += uSunColor * pDisc * uSunIntensity * 12.0 * (1.0 - uEnvNoSunDisc);
+    return psky * uSkyIntensity;
+  }
   // Horizon band is tight near y=0 and eases into the zenith colour.
   float t = pow(saturate1(up * 0.5 + 0.5), 0.55);
   vec3 sky = mix(uSkyHorizon, uSkyZenith, saturate1(up * 1.6));

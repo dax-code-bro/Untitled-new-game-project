@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <stdexcept>
 
 /* A pass-for-pass port of Renderer in engine/src/60-renderer.js. The long
@@ -193,8 +194,15 @@ void Renderer::fullscreen() {
 /* ------------------------------------------------------------------ */
 
 void Renderer::bindEnv(const gl::Program& p) const {
-    p.set("uSkyZenith", sky.zenith);
-    p.set("uSkyHorizon", sky.horizon);
+    const bool physical = sky.model == 1 && m_atmoValid;
+    /* With the physical sky the two gradient colours are not authored but
+       measured off the table, so every fallback that still reads them --
+       the analytic hemisphere, the probe-less path -- agrees with it. */
+    p.set("uSkyZenith", physical ? m_atmoZenith : sky.zenith);
+    p.set("uSkyHorizon", physical ? m_atmoHorizon : sky.horizon);
+    p.set("uSkyModel", physical ? 1.0f : 0.0f);
+    p.set("uSkyLutScale", sun.color * (sun.intensity * sky.physicalGain));
+    p.texture("uSkyLut", physical ? m_skyLut : m_envNull2D);
     p.set("uGroundColor", sky.ground);
     p.set("uSunDir", sun.direction);
     p.set("uSunColor", sun.color);
@@ -436,6 +444,49 @@ void Renderer::renderShadows(const std::vector<DrawItem>& items, const Camera& c
 /*  Environment probe                                                   */
 /* ------------------------------------------------------------------ */
 
+void Renderer::updateAtmosphere() {
+    if (sky.model != 1) return;
+    uint32_t h = 2166136261u;
+    auto push = [&](float v) {
+        h = (h ^ static_cast<uint32_t>(static_cast<int32_t>(std::lround(v * 10000.0f)))) * 16777619u;
+    };
+    for (int i = 0; i < 3; ++i) push(sun.direction[i]);
+    push(sky.turbidity);
+    if (m_atmoValid && h == m_atmoHash) return;
+    m_atmoHash = h;
+
+    AtmosphereParams ap;
+    ap.turbidity = std::max(0.0f, sky.turbidity);
+    m_atmo.compute(ap, sun.direction);
+    if (!m_skyLut) {
+        gl::TextureDesc d;
+        d.width = Atmosphere::kWidth;
+        d.height = Atmosphere::kHeight;
+        d.internalFormat = GL_RGBA16F;
+        d.wrap = GL_REPEAT;               // azimuth wraps...
+        m_skyLut = gl::Texture(d);
+        glTextureParameteri(m_skyLut.id(), GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);   // ...elevation does not
+    }
+    m_skyLut.upload(0, Atmosphere::kWidth, Atmosphere::kHeight, GL_RGBA, GL_FLOAT, m_atmo.texels().data());
+
+    // Zenith and horizon as the gradient path would see them, azimuth-averaged.
+    const glm::vec3 scale = sun.color * (sun.intensity * sky.physicalGain) / std::max(sky.intensity, 1e-4f);
+    glm::vec3 zen(0.0f), hor(0.0f);
+    constexpr int kAz = 32;
+    for (int i = 0; i < kAz; ++i) {
+        const float a = (i + 0.5f) / kAz * 6.2831853f;
+        zen += m_atmo.sample(glm::normalize(glm::vec3(std::cos(a) * 0.26f, 0.966f, std::sin(a) * 0.26f)));
+        hor += m_atmo.sample(glm::normalize(glm::vec3(std::cos(a), 0.05f, std::sin(a))));
+    }
+    m_atmoZenith = zen / static_cast<float>(kAz) * scale;
+    m_atmoHorizon = hor / static_cast<float>(kAz) * scale;
+    m_atmoValid = true;
+    if (std::getenv("GAME_SKY_DEBUG"))
+        std::fprintf(stderr, "[sky] sun.y %.2f zenith %.3f %.3f %.3f horizon %.3f %.3f %.3f (x sky.intensity %.2f)\n",
+                     sun.direction.y, m_atmoZenith.r, m_atmoZenith.g, m_atmoZenith.b, m_atmoHorizon.r,
+                     m_atmoHorizon.g, m_atmoHorizon.b, sky.intensity);
+}
+
 void Renderer::initEnv() {
     const int res = std::max(8, m_q.envRes);
     gl::TextureDesc d;
@@ -493,6 +544,9 @@ uint32_t Renderer::envHash() const {
     for (int i = 0; i < 3; ++i) push(sky.ground[i]);
     push(sky.intensity);
     push(sky.bounce);
+    push(static_cast<float>(sky.model));
+    push(sky.turbidity);
+    push(sky.physicalGain);
     if (m_q.envScene) for (int i = 0; i < 3; ++i) push(m_envWantAt[i]);
     return h;
 }
@@ -501,6 +555,17 @@ uint32_t Renderer::envHash() const {
 // not drift from shaders/lib/sky.glsl.
 glm::vec3 Renderer::skyRadianceCpu(const glm::vec3& d) const {
     const float si = sky.intensity;
+    if (sky.model == 1 && m_atmoValid) {
+        // Mirrors the uSkyModel branch of skyRadiance(), minus the disc.
+        const glm::vec3 scale = sun.color * (sun.intensity * sky.physicalGain);
+        glm::vec3 c = m_atmo.sample(d) * scale / std::max(si, 1e-4f);
+        const float lit = std::max(sun.direction.y, 0.0f);
+        const glm::vec3 g = sky.ground * (glm::vec3(si) + sun.color * (sun.intensity * lit * sky.bounce)) /
+                            std::max(si, 1e-4f);
+        float e = clampv((d.y + 0.28f) / 0.34f, 0.0f, 1.0f);
+        e = e * e * (3.0f - 2.0f * e);
+        return (g + (c - g) * e) * si;
+    }
     const float k = clampv(d.y * 1.6f, 0.0f, 1.0f);
     glm::vec3 c = sky.horizon + (sky.zenith - sky.horizon) * k;
     const float lit = std::max(sun.direction.y, 0.0f);
@@ -977,6 +1042,7 @@ void Renderer::render(const std::vector<DrawItem>& items, const Camera& camIn, f
     m_stats = {};
     Camera cam = camIn;
     cam.update(static_cast<float>(m_w) / static_cast<float>(m_h));
+    updateAtmosphere();
     renderShadows(items, cam);
     renderScene(items, cam);
     present(cam);
