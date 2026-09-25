@@ -31,3 +31,6 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+
+# emscripten SDK (installed outside the repo)
+emsdk/

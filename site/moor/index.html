@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+<title>MOOR — 100 sq mi</title>
+<meta name="theme-color" content="#05080c" />
+<meta name="description" content="MOOR — a 100 square mile open world. C++ compiled to WebAssembly, rendered with WebGL2 and physically based shading." />
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden;background:#05080c;color:#e8eef5}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;touch-action:none;user-select:none;-webkit-user-select:none}
+  #canvas{display:block;position:fixed;inset:0;width:100%;height:100%;outline:none}
+
+  /* ---------- loading ---------- */
+  #boot{position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;
+        background:radial-gradient(circle at 50% 42%,#101826 0%,#05080c 72%);transition:opacity .8s ease}
+  #boot.gone{opacity:0;pointer-events:none}
+  #boot h1{font:700 clamp(38px,11vw,78px)/1 Georgia,serif;letter-spacing:.14em;color:#e8c37a;text-shadow:0 8px 60px rgba(232,195,122,.28)}
+  #boot .sub{margin-top:10px;font-size:11px;letter-spacing:.42em;color:#5d7align;color:#5d708a}
+  #bar{margin-top:26px;width:min(300px,68vw);height:3px;background:#16202e;border-radius:2px;overflow:hidden}
+  #bar i{display:block;height:100%;width:8%;background:linear-gradient(90deg,#8a6c2e,#e8c37a);transition:width .35s ease}
+  #boot .note{margin-top:14px;font-size:11px;color:#41546b;letter-spacing:.06em}
+
+  /* ---------- title ---------- */
+  #title{position:fixed;inset:0;z-index:30;display:none;flex-direction:column;align-items:center;justify-content:center;
+         background:linear-gradient(180deg,rgba(5,8,12,.30) 0%,rgba(5,8,12,.72) 100%)}
+  #title.show{display:flex}
+  #title h1{font:700 clamp(44px,13vw,104px)/1 Georgia,serif;letter-spacing:.10em;color:#e8c37a;text-shadow:0 10px 70px rgba(0,0,0,.8)}
+  #title .stats{margin-top:14px;font-size:13px;color:#a9bcd2;letter-spacing:.04em;text-align:center;line-height:1.7}
+  #title .go{margin-top:30px;font-size:15px;font-weight:700;color:#fff;animation:pulse 2s infinite}
+  #title .tech{position:absolute;bottom:22px;left:0;right:0;text-align:center;font-size:10.5px;color:#41546b;letter-spacing:.05em;line-height:1.8;padding:0 18px}
+  @keyframes pulse{0%,100%{opacity:.45}50%{opacity:1}}
+
+  /* ---------- hud ---------- */
+  #hud{position:fixed;inset:0;z-index:20;pointer-events:none;display:none}
+  #hud.show{display:block}
+  .card{position:absolute;background:rgba(8,12,18,.62);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.08);
+        border-radius:10px;padding:9px 13px;font-variant-numeric:tabular-nums}
+  #tl{top:calc(12px + env(safe-area-inset-top,0px));left:12px}
+  #tl .place{font-size:13px;font-weight:700;color:#e8c37a;letter-spacing:.10em}
+  #tl .row{margin-top:3px;font-size:11px;color:#8fa3b8}
+  #tr{top:calc(12px + env(safe-area-inset-top,0px));right:12px;text-align:right}
+  #tr .clock{font-size:17px;font-weight:700;color:#e8eef5}
+  #tr .fps{margin-top:2px;font-size:10.5px;color:#6d8298}
+  #br{bottom:calc(14px + env(safe-area-inset-bottom,0px));right:12px;text-align:right}
+  #br .speed{font-size:15px;font-weight:700;color:#7dd8a0}
+  #keys{position:absolute;bottom:calc(14px + env(safe-area-inset-bottom,0px));left:12px;font-size:10.5px;color:#5d708a;line-height:1.75}
+  #keys b{color:#8fa3b8;font-weight:700}
+
+  /* ---------- touch controls ---------- */
+  #touch{position:fixed;inset:0;z-index:25;display:none;pointer-events:none}
+  #touch.show{display:block}
+  #stick{position:absolute;left:calc(18px + env(safe-area-inset-left,0px));bottom:calc(20px + env(safe-area-inset-bottom,0px));
+         width:132px;height:132px;border-radius:50%;background:rgba(10,16,24,.42);border:1px solid rgba(255,255,255,.12);pointer-events:auto}
+  #knob{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;
+        background:rgba(232,195,122,.55);border:1px solid rgba(255,255,255,.28)}
+  .tbtn{position:absolute;right:calc(20px + env(safe-area-inset-right,0px));width:66px;height:66px;border-radius:50%;
+        background:rgba(10,16,24,.52);border:1px solid rgba(255,255,255,.14);color:#e8c37a;font:700 13px/66px -apple-system,sans-serif;
+        text-align:center;pointer-events:auto}
+  #bA{bottom:calc(100px + env(safe-area-inset-bottom,0px))}
+  #bB{bottom:calc(24px + env(safe-area-inset-bottom,0px));right:calc(96px + env(safe-area-inset-right,0px))}
+
+  /* ---------- settings ---------- */
+  #gear{position:fixed;z-index:26;top:calc(12px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);
+        background:rgba(8,12,18,.62);border:1px solid rgba(255,255,255,.10);border-radius:10px;
+        color:#8fa3b8;font-size:11px;padding:8px 12px;display:none;gap:10px;align-items:center}
+  #gear.show{display:flex}
+  #gear button{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#cfe0f0;
+               border-radius:7px;padding:5px 9px;font:600 11px -apple-system,sans-serif;cursor:pointer}
+  #gear button.on{background:rgba(232,195,122,.20);border-color:#e8c37a;color:#e8c37a}
+</style>
+</head>
+<body>
+<canvas id="canvas" tabindex="0"></canvas>
+
+<div id="boot">
+  <h1>MOOR</h1>
+  <div class="sub">100 SQUARE MILES</div>
+  <div id="bar"><i id="barfill"></i></div>
+  <div class="note" id="bootnote">compiling WebAssembly…</div>
+</div>
+
+<div id="title">
+  <h1>MOOR</h1>
+  <div class="stats" id="tstats"></div>
+  <div class="go">click or tap to begin</div>
+  <div class="tech">
+    C++ → WebAssembly · WebGL2 · physically based shading · cascaded shadow maps<br>
+    atmospheric scattering · HDR bloom · ACES tonemapping · FXAA · skeletal animation
+  </div>
+</div>
+
+<div id="hud">
+  <div class="card" id="tl">
+    <div class="place" id="h_place">MOOR CITY</div>
+    <div class="row"><span id="h_speed">on foot</span></div>
+  </div>
+  <div class="card" id="tr">
+    <div class="clock" id="h_clock">09:30</div>
+    <div class="fps" id="h_fps">— fps</div>
+  </div>
+  <div id="keys">
+    <b>WASD</b> move · <b>Shift</b> sprint · <b>mouse</b> look · <b>F</b> enter/exit car<br>
+    <b>Space</b> brake · <b>O</b> time +3h · <b>R</b> 4K toggle · <b>T</b> FXAA
+  </div>
+</div>
+
+<div id="touch">
+  <div id="stick"><div id="knob"></div></div>
+  <div class="tbtn" id="bA">CAR</div>
+  <div class="tbtn" id="bB">RUN</div>
+</div>
+
+<div id="gear">
+  <span>quality</span>
+  <button data-q="1">low</button>
+  <button data-q="2" class="on">high</button>
+  <button data-q="3">4K</button>
+</div>
+
+<script>
+  // ---------- boot progress ----------
+  var fill = document.getElementById('barfill');
+  var note = document.getElementById('bootnote');
+  var pct = 8;
+  var tick = setInterval(function(){
+    pct = Math.min(88, pct + Math.random() * 7);
+    fill.style.width = pct + '%';
+  }, 220);
+
+  // ---------- emscripten module hooks ----------
+  var Module = {
+    canvas: (function(){ return document.getElementById('canvas'); })(),
+    print: function(t){ console.log(t); if(/world|meshes|GL |shaders/.test(t)) note.textContent = t; },
+    printErr: function(t){ console.warn(t); },
+    setStatus: function(t){ if(t) note.textContent = t; }
+  };
+
+  // Called from C++ once the world is generated and meshes are uploaded.
+  window.moorReady = function(){
+    clearInterval(tick);
+    fill.style.width = '100%';
+    try {
+      var b = Module._getBuildings(), p = Module._getProps();
+      var w = Module._getPctWater(), u = Module._getPctUrban(), wd = Module._getPctWild();
+      document.getElementById('tstats').innerHTML =
+        w.toFixed(1) + '% water · ' + u.toFixed(1) + '% built · ' + wd.toFixed(1) + '% wild<br>' +
+        b.toLocaleString() + ' buildings · ' + p.toLocaleString() + ' trees &amp; rocks';
+    } catch(e){}
+    setTimeout(function(){
+      document.getElementById('boot').classList.add('gone');
+      document.getElementById('title').classList.add('show');
+      document.getElementById('canvas').focus();
+    }, 320);
+  };
+
+  // ---------- start ----------
+  var started = false;
+  function begin(){
+    if(started) return;
+    started = true;
+    document.getElementById('title').classList.remove('show');
+    document.getElementById('hud').classList.add('show');
+    document.getElementById('gear').classList.add('show');
+    if(isTouch) document.getElementById('touch').classList.add('show');
+    // the overlay swallows the click, so tell the engine directly
+    try { Module._startGame(); } catch(e){}
+    document.getElementById('canvas').focus();
+  }
+  var isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+  window.addEventListener('pointerdown', begin);
+  window.addEventListener('keydown', function(e){
+    begin();
+    if([32,37,38,39,40,9].indexOf(e.keyCode) !== -1) e.preventDefault();
+  }, {passive:false});
+
+  // ---------- quality buttons ----------
+  Array.prototype.forEach.call(document.querySelectorAll('#gear button'), function(btn){
+    btn.addEventListener('click', function(ev){
+      ev.stopPropagation();
+      Array.prototype.forEach.call(document.querySelectorAll('#gear button'), function(b){ b.classList.remove('on'); });
+      btn.classList.add('on');
+      try { Module._setQuality(parseInt(btn.dataset.q, 10)); } catch(e){}
+    });
+  });
+
+  // ---------- touch: virtual stick -> key events into C++ ----------
+  (function(){
+    var stick = document.getElementById('stick');
+    var knob  = document.getElementById('knob');
+    var active = false, cx = 0, cy = 0;
+    var held = { 87:false, 83:false, 65:false, 68:false };
+    function press(code, down){
+      if(held[code] === down) return;
+      held[code] = down;
+      try { Module._setKey(code, down ? 1 : 0); } catch(e){}
+    }
+    function apply(dx, dy){
+      var R = 46;
+      var len = Math.hypot(dx, dy);
+      if(len > R){ dx = dx / len * R; dy = dy / len * R; }
+      knob.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+      var dead = 12;
+      press(87, dy < -dead);
+      press(83, dy >  dead);
+      press(65, dx < -dead);
+      press(68, dx >  dead);
+    }
+    function release(){
+      active = false;
+      knob.style.transform = '';
+      press(87,false); press(83,false); press(65,false); press(68,false);
+    }
+    stick.addEventListener('touchstart', function(e){
+      e.preventDefault(); begin();
+      var r = stick.getBoundingClientRect();
+      cx = r.left + r.width/2; cy = r.top + r.height/2;
+      active = true;
+      var t = e.touches[0];
+      apply(t.clientX - cx, t.clientY - cy);
+    }, {passive:false});
+    stick.addEventListener('touchmove', function(e){
+      e.preventDefault();
+      if(!active) return;
+      var t = e.touches[0];
+      apply(t.clientX - cx, t.clientY - cy);
+    }, {passive:false});
+    stick.addEventListener('touchend', function(e){ e.preventDefault(); release(); }, {passive:false});
+    stick.addEventListener('touchcancel', function(e){ e.preventDefault(); release(); }, {passive:false});
+
+    document.getElementById('bA').addEventListener('touchstart', function(e){
+      e.preventDefault(); e.stopPropagation(); begin();
+      try { Module._actionEnterCar(); } catch(err){}
+    }, {passive:false});
+    var bB = document.getElementById('bB');
+    bB.addEventListener('touchstart', function(e){
+      e.preventDefault(); e.stopPropagation(); begin();
+      try { Module._setKey(16, 1); } catch(err){}
+    }, {passive:false});
+    bB.addEventListener('touchend', function(e){
+      e.preventDefault(); e.stopPropagation();
+      try { Module._setKey(16, 0); } catch(err){}
+    }, {passive:false});
+  })();
+</script>
+<script async src="moor.js"></script>
+</body>
+</html>
