@@ -42,6 +42,19 @@ constexpr float kGateHalfWidth = 4.5f;
 constexpr float kParkMinX = -22.0f, kParkMaxX = 22.0f, kParkMinZ = 12.0f, kParkMaxZ = 40.0f;
 constexpr float kFlatRadius = 900.0f;      // terrain is flattened around the facility
 
+// ---- Off-property places you can drive to ----------------------------------
+// Pet store: 2 miles east on the highway, south side, at a crossroads with a traffic light.
+constexpr float kCrossX = 3150.0f;                     // crossroads (traffic light) on the highway
+constexpr float kPetStoreX = 3230.0f, kPetStoreZ = kHighwayZ + 48.0f;   // store building center
+constexpr float kPetLotMinX = 3165.0f, kPetLotMaxX = 3300.0f, kPetLotMinZ = kHighwayZ + 12.0f, kPetLotMaxZ = kHighwayZ + 36.0f;
+constexpr float kHighwaySpeedMph = 55.0f, kLocalSpeedMph = 25.0f;
+// Where people may be off your land: the highway corridor and the pet store's lot.
+inline bool publicArea(float x, float z) {
+    if (z > kSouthEdge + 0.6f && z < kHighwayZ + kHighwayHalfWidth + 12.0f) return true;
+    if (x > kCrossX - 9.0f && x < kCrossX + 9.0f && z > kHighwayZ && z < kHighwayZ + 140.0f) return true;   // side road
+    return x > kPetLotMinX - 2.0f && x < kPetStoreX + 22.0f && z > kHighwayZ && z < kPetStoreZ + 12.0f;
+}
+
 // ---- Building ---------------------------------------------------------------
 constexpr float kFloorY = 0.30f;           // top of the foundation slab
 constexpr float kWallHeight = 3.0f;

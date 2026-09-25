@@ -13,7 +13,7 @@ namespace ps {
 
 class ComputerUI {
 public:
-    enum Tab { TabInbox, TabAnimals, TabStaff, TabSecurity, TabFinances, TabRatings, TabCount };
+    enum Tab { TabInbox, TabAnimals, TabStaff, TabStore, TabSecurity, TabFinances, TabRatings, TabCount };
     int tab = TabFinances;
     int selectedCamera = 0;
     bool open = false;
@@ -32,6 +32,7 @@ private:
     void drawAnimals(Sim& sim);
     void drawStaff(Sim& sim);
     void drawInbox(Sim& sim);
+    void drawStore(Sim& sim);
     void drawSecurity(Sim& sim, const Facility& facility);
     void drawFinances(Sim& sim);
     void drawRatings(Sim& sim);
@@ -54,6 +55,8 @@ private:
     int animalFilter_ = 0;
     int previewAction_ = 0;
     int selectedStaff_ = -1;
+    int storeTab_ = 0;
+    int landPick_ = -1;
 };
 
 }  // namespace ps

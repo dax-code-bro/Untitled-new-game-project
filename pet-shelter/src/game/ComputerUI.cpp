@@ -156,9 +156,9 @@ bool ComputerUI::draw(Sim& sim, const Facility& facility) {
     // Sidebar tabs
     ImGui::BeginChild("tabs", ImVec2(compact ? 150.0f : 240.0f, 0), ImGuiChildFlags_Borders);
     std::string inboxName = "Inbox (" + std::to_string(sim.decisions.size()) + ")";
-    const char* names[] = {inboxName.c_str(), "Animals", "Staff", "Security", "Finances", "Ratings"};
+    const char* names[] = {inboxName.c_str(), "Animals", "Staff", "Store", "Security", "Finances", "Ratings"};
     const char* hints[] = {"Decisions waiting for you", "Every animal in your care", "Wellbeing, schedules, one-on-ones",
-                           "Cameras, gate & locks", "Taxes, income, payroll", "Private & public opinion"};
+                           "Buy land, supplies & equipment", "Cameras, gate & locks", "Taxes, income, payroll", "Private & public opinion"};
     for (int i = 0; i < TabCount; ++i) {
         if (ImGui::Selectable(names[i], tab == i, 0, ImVec2(0, 34))) tab = i;
         if (!compact) { ImGui::TextDisabled("  %s", hints[i]); ImGui::Spacing(); }
@@ -175,6 +175,7 @@ bool ComputerUI::draw(Sim& sim, const Facility& facility) {
     case TabInbox: drawInbox(sim); break;
     case TabAnimals: drawAnimals(sim); break;
     case TabStaff: drawStaff(sim); break;
+    case TabStore: drawStore(sim); break;
     case TabSecurity: drawSecurity(sim, facility); break;
     case TabFinances: drawFinances(sim); break;
     case TabRatings: drawRatings(sim); break;
@@ -364,6 +365,74 @@ void ComputerUI::drawAnimals(Sim& sim) {
         }
     }
     ImGui::EndChild();
+}
+
+void ComputerUI::drawStore(Sim& sim) {
+    ImGui::Text("STORE");
+    ImGui::Separator();
+    const char* sub[] = {"Land", "Equipment"};
+    for (int i = 0; i < 2; ++i) {
+        if (i) ImGui::SameLine();
+        if (ImGui::RadioButton(sub[i], storeTab_ == i)) storeTab_ = i;
+    }
+    ImGui::Separator();
+    if (storeTab_ == 1) {
+        ImGui::TextWrapped("Protective gear: bite sleeves, catch poles, face shields and Kevlar gloves for every employee. "
+                           "Needed to handle feral animals without people getting hurt.");
+        if (sim.protectiveGear) ImGui::TextColored(ImVec4(0.4f, 0.9f, 0.5f, 1), "Owned.");
+        else if (ImGui::Button("Buy protective gear ($4,500)")) sim.buyProtectiveGear();
+        return;
+    }
+    Land& L = sim.land;
+    ImGui::Text("You own %.2f sq mi of 500.  Parcels: %d.", double(L.ownedSqMi()), L.parcelsOwned());
+    ImGui::TextWrapped(L.homeOwned() ? "Buy any square mile next to land you own. The fence moves out around your new land automatically."
+                                     : "You're on a small fenced workspace. Buy the square mile around your shelter to start expanding.");
+    // Map: north is up. Row 0 is the south edge (the highway side).
+    float avail = std::min(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y - 60.0f);
+    float cell = std::floor(std::max(10.0f, avail / float(Land::kCols)));
+    ImVec2 o = ImGui::GetCursorScreenPos();
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    ImGuiIO& io = ImGui::GetIO();
+    int hover = -1;
+    for (int r = 0; r < Land::kRows; ++r)
+        for (int c = 0; c < Land::kCols; ++c) {
+            float a = L.cellSqMi(c, r);
+            if (a <= 0.001f) continue;
+            ImVec2 p0(o.x + float(c) * cell, o.y + float(Land::kRows - 1 - r) * cell);
+            ImVec2 p1(p0.x + cell * std::min(1.0f, a / std::max(0.01f, a)) - 1.0f, p0.y + cell - 1.0f);
+            ImU32 col = L.owned(c, r) ? IM_COL32(60, 150, 70, 255) : (L.canBuy(c, r) ? IM_COL32(150, 130, 50, 255) : IM_COL32(45, 55, 50, 255));
+            dl->AddRectFilled(p0, p1, col);
+            if (io.MousePos.x >= p0.x && io.MousePos.x < p1.x && io.MousePos.y >= p0.y && io.MousePos.y < p1.y) hover = r * Land::kCols + c;
+            if (landPick_ == r * Land::kCols + c) dl->AddRect(p0, p1, IM_COL32(255, 255, 255, 255), 0, 0, 2.0f);
+        }
+    // Shelter marker and the highway along the south
+    ImVec2 home(o.x + (float(Land::kHomeCol) + 0.5f) * cell, o.y + (float(Land::kRows) - 0.25f) * cell);
+    dl->AddCircleFilled(home, std::max(3.0f, cell * 0.18f), IM_COL32(230, 60, 50, 255));
+    dl->AddLine(ImVec2(o.x, o.y + float(Land::kRows) * cell + 3), ImVec2(o.x + float(Land::kCols) * cell, o.y + float(Land::kRows) * cell + 3),
+                IM_COL32(200, 200, 200, 200), 3.0f);
+    ImGui::InvisibleButton("landmap", ImVec2(float(Land::kCols) * cell, float(Land::kRows) * cell + 8));
+    if (ImGui::IsItemClicked() && hover >= 0) landPick_ = hover;
+    if (hover >= 0) {
+        int c = hover % Land::kCols, r = hover / Land::kCols;
+        ImGui::SetTooltip("Parcel %c%d  |  %.2f sq mi  |  %s", 'A' + c, r + 1, double(L.cellSqMi(c, r)),
+                          L.owned(c, r) ? "yours" : (L.canBuy(c, r) ? ("$" + std::to_string(long(L.price(c, r)))).c_str() : "not adjacent yet"));
+    }
+    ImGui::TextDisabled("Red dot = your shelter. The line at the bottom is the highway.");
+    if (landPick_ >= 0) {
+        int c = landPick_ % Land::kCols, r = landPick_ / Land::kCols;
+        if (L.canBuy(c, r)) {
+            char lbl[96];
+            std::snprintf(lbl, sizeof lbl, "Buy parcel %c%d (%.2f sq mi) for $%s", 'A' + c, r + 1, double(L.cellSqMi(c, r)),
+                          std::to_string(long(L.price(c, r))).c_str());
+            if (ImGui::Button(lbl)) {
+                std::string why;
+                if (!sim.buyLand(c, r, &why)) sim.log(why);
+                landPick_ = -1;
+            }
+        } else {
+            ImGui::TextDisabled(L.owned(c, r) ? "You already own this parcel." : "Buy land next to it first.");
+        }
+    }
 }
 
 void ComputerUI::drawStaff(Sim& sim) {

@@ -2,6 +2,7 @@
 // highway, trees, utility poles and creative-mode building models.
 #pragma once
 #include "game/Buildables.h"
+#include "game/Land.h"
 #include "render/Mesh.h"
 #include <vector>
 
@@ -17,11 +18,14 @@ struct TerrainTile {
 // Builds one LOD ring as tiles (optionally with a hole where a finer level is).
 std::vector<TerrainTile> buildTerrainLevel(Rect area, float spacing, int tilesPerSide, const Rect* hole);
 
-void buildPerimeterFence(MeshBuilder& b);
+void buildFence(MeshBuilder& b, const std::vector<FenceSeg>& segs);   // around owned land, gap at the gate
 void buildHighway(MeshBuilder& b);
 void buildPineTree(MeshBuilder& b);
 void buildOakTree(MeshBuilder& b);
 void buildUtilityPole(MeshBuilder& b);
+void buildBush(MeshBuilder& b);
+void buildRock(MeshBuilder& b);
+void buildGrassClump(MeshBuilder& b, bool flowers);
 void buildBuildable(MeshBuilder& b, BuildKind kind);
 
 }  // namespace ps::scenery

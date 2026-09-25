@@ -116,10 +116,21 @@ void CreativeMode::drawTouchUI(float& timeScale) {
     ImGui::SetNextWindowSize(ImVec2(w, 0.0f));
     ImGui::SetNextWindowBgAlpha(0.85f);
     ImGui::Begin("BuildTouch", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove);
+    ImGui::BeginChild("cats", ImVec2(0, 40), ImGuiChildFlags_None, ImGuiWindowFlags_HorizontalScrollbar);
+    for (int c = 0; c < int(BuildCat::Count); ++c) {
+        if (c) ImGui::SameLine();
+        bool on = category == c;
+        if (on) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.45f, 0.65f, 1));
+        if (ImGui::Button(buildCatName(BuildCat(c)), ImVec2(0, 32))) category = c;
+        if (on) ImGui::PopStyleColor();
+    }
+    ImGui::EndChild();
     ImGui::BeginChild("strip", ImVec2(0, 62), ImGuiChildFlags_None, ImGuiWindowFlags_HorizontalScrollbar);
+    int shownT = 0;
     for (int i = 0; i < int(BuildKind::Count); ++i) {
+        if (int(buildCategory(BuildKind(i))) != category) continue;
         const BuildInfo& bi = buildInfo(BuildKind(i));
-        if (i) ImGui::SameLine();
+        if (shownT++) ImGui::SameLine();
         bool sel = tool == i;
         if (sel) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.55f, 0.3f, 1));
         char label[96];
@@ -127,6 +138,7 @@ void CreativeMode::drawTouchUI(float& timeScale) {
         if (ImGui::Button(label, ImVec2(112, 46))) tool = sel ? -1 : i;
         if (sel) ImGui::PopStyleColor();
     }
+    if (shownT == 0) ImGui::TextDisabled("%s", buildCatPlan(BuildCat(category)));
     ImGui::EndChild();
     const float speeds[] = {0.0f, 1.0f, 5.0f, 20.0f};
     const char* names[] = {"||", "1x", "5x", "20x"};
@@ -151,29 +163,34 @@ void CreativeMode::drawUI(Sim& sim, float& timeScale) {
     ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y - 10.0f), ImGuiCond_Always, ImVec2(0.5f, 1.0f));
     ImGui::SetNextWindowBgAlpha(0.85f);
     ImGui::Begin("Build", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove);
-    ImGui::TextColored(ImVec4(0.6f, 0.9f, 0.6f, 1), "CREATIVE MODE");
+    ImGui::TextColored(ImVec4(0.6f, 0.9f, 0.6f, 1), "BUILD MODE");
     ImGui::SameLine();
     ImGui::TextDisabled("  WASD pan | RMB rotate | wheel zoom | R rotate | X demolish | Tab: POV mode");
-    const char* lastCat = "";
+    // Category tabs
+    for (int c = 0; c < int(BuildCat::Count); ++c) {
+        if (c) ImGui::SameLine();
+        bool on = category == c;
+        if (on) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.45f, 0.65f, 1));
+        if (ImGui::Button(buildCatName(BuildCat(c)))) category = c;
+        if (on) ImGui::PopStyleColor();
+    }
+    ImGui::TextDisabled("%s", buildCatPlan(BuildCat(category)));
+    int shown = 0;
     for (int i = 0; i < int(BuildKind::Count); ++i) {
+        if (int(buildCategory(BuildKind(i))) != category) continue;
         const BuildInfo& bi = buildInfo(BuildKind(i));
-        if (std::string(bi.category) != lastCat) {
-            if (i) ImGui::SameLine();
-            ImGui::BeginGroup();
-            ImGui::TextDisabled("%s", bi.category);
-            lastCat = bi.category;
-        }
+        if (shown++ % 7) ImGui::SameLine();
         bool sel = tool == i;
         if (sel) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.55f, 0.3f, 1));
         char label[96];
         std::snprintf(label, sizeof label, "%s\n$%s", bi.name, std::to_string(int(bi.cost)).c_str());
-        if (ImGui::Button(label, ImVec2(118, 40))) tool = sel ? -1 : i;
+        if (ImGui::Button(label, ImVec2(128, 40))) tool = sel ? -1 : i;
         if (sel) ImGui::PopStyleColor();
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s\nAppeal +%.1f  Visitors +%d/day  Upkeep $%.0f/day", bi.description, bi.appeal,
-                                                      bi.visitorCapacity, bi.upkeepPerDay);
-        bool nextNewCat = i + 1 >= int(BuildKind::Count) || std::string(buildInfo(BuildKind(i + 1)).category) != lastCat;
-        if (nextNewCat) ImGui::EndGroup();
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("%s\nAppeal +%.1f  Visitors +%d/day  Animals %d  Upkeep $%.0f/day", bi.description, bi.appeal,
+                              bi.visitorCapacity, bi.animalCapacity, bi.upkeepPerDay);
     }
+    if (shown == 0) ImGui::TextColored(ImVec4(1, 0.85f, 0.4f, 1), "Coming soon.");
     ImGui::Separator();
     if (ImGui::Button(tool == -2 ? "Demolish: ON" : "Demolish")) tool = tool == -2 ? -1 : -2;
     ImGui::SameLine();
@@ -192,8 +209,7 @@ void CreativeMode::drawUI(Sim& sim, float& timeScale) {
         if (on) ImGui::PopStyleColor();
     }
     if (statusTimer > 0.0f && !status.empty()) ImGui::TextColored(ImVec4(1, 0.85f, 0.4f, 1), "%s", status.c_str());
-    else ImGui::TextDisabled("You own %.0f sq mi. Everything must be built inside the barrier fence.", layout::kAreaSqMiles);
-    (void)sim;
+    else ImGui::TextDisabled("You own %.2f of 500 sq mi. Build inside your fence; buy more land in the computer's Store.", double(sim.land.ownedSqMi()));
     ImGui::End();
 }
 

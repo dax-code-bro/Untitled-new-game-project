@@ -35,15 +35,26 @@ public:
     bool ghostValid = true;
     int highlightPlaced = -1;
     float treeRadius = 2600.0f;   // trees drawn within this distance (smaller on phones)
+    float coverRadius = 220.0f;   // bushes, rocks and grass drawn within this distance
 
 private:
     struct Chunk { Mesh mesh; AABB bounds; int level; };
     struct TreeInst { vec3 pos; float scale, yaw; vec4 tint; bool pine; };
     void refreshTrees(vec3 camPos);
+    void refreshCover(vec3 camPos);
+    vec3 coverCenter_{1e9f, 0, 1e9f};
     const std::vector<TreeInst>& treeCell(int cx, int cz);
 
     std::vector<Chunk> terrain_;
     Mesh fence_, highway_, pine_, oak_, pineShadow_, oakShadow_, poles_, traffic_;
+    Mesh bush_, rock_, grass_, flowers_;
+    struct CoverInst { vec3 pos; float scale, yaw; int kind; vec4 tint; };
+    std::unordered_map<long long, std::vector<CoverInst>> coverCells_;
+    const std::vector<CoverInst>& coverCell(int cx, int cz);
+    bool clearGround(float x, float z, float pad) const;
+    std::vector<AABB> keepClear_;          // buildings you placed (no trees inside)
+    std::vector<FenceSeg> fenceSegs_;
+    int natureVersion_ = 0;
     Mesh buildables_[size_t(BuildKind::Count)];
     std::unordered_map<long long, std::vector<TreeInst>> treeCells_;
     vec3 treeCenter_{1e9f, 0, 1e9f};
@@ -55,6 +66,7 @@ private:
     std::vector<PlacedDraw> placedDraw_;
     std::vector<int> placedColliders_;
     size_t placedVersion_ = size_t(-1);
+    int fenceVersion_ = -1;
 };
 
 }  // namespace ps

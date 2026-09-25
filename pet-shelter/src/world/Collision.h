@@ -2,6 +2,7 @@
 // walkable surfaces (floors, terrain) and the property barrier.
 #pragma once
 #include "core/Math.h"
+#include <functional>
 #include <unordered_map>
 #include <vector>
 
@@ -27,6 +28,8 @@ public:
     float raycast(vec3 ro, vec3 rd, float maxDist, int* hitId = nullptr) const;
 
     size_t count() const { return boxes_.size(); }
+    // Where a character may stand (your land, the gate, public roads). Unset = anywhere in the region.
+    std::function<bool(float x, float z, float radius)> allowed;
 
 private:
     struct Entry { AABB box; bool enabled = true; bool walkable = false; bool alive = true; };

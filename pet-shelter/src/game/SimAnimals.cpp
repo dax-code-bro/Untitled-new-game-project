@@ -119,6 +119,9 @@ Animal& Sim::admit(int species, const std::string& origin, float ageFrac, bool o
     a.stress = sp.cls == AnimalClass::Feral || sp.cls == AnimalClass::Restricted ? 0.8f : rng.range(0.3f, 0.6f);
     a.hunger = rng.range(0.1f, 0.6f);
     a.housing = housingBuildingFor(housingFor(sp));
+    // Small and medium animals can use the container shelters behind the building
+    if (a.housing < 0 && (sp.cls == AnimalClass::Small || sp.cls == AnimalClass::Medium) && !owned)
+        a.housing = housingBuildingFor(BuildKind::ContainerShelter);
     intakeTotal += owned ? 0 : 1;
     animalList.push_back(a);
     return animalList.back();
@@ -254,7 +257,8 @@ void Sim::animalsDaily() {
         BuildKind hk = housingFor(sp);
         int crateUsed = 0;
         for (auto& a : animalList) crateUsed += (a.inCare() && a.housing < 0) ? 1 : 0;
-        bool room = housingBuildingFor(hk) >= 0 || (sp.cls != AnimalClass::Large && crateUsed < kMedicalCrates);
+        bool room = housingBuildingFor(hk) >= 0 || (sp.cls != AnimalClass::Large && crateUsed < kMedicalCrates) ||
+                    (sp.cls != AnimalClass::Large && housingBuildingFor(BuildKind::ContainerShelter) >= 0);
         if (!room) {
             if (rng.uniform() < 0.5f) log("A " + sp.name + " needed a home but you had no room for it (build " + buildInfo(hk).name + ").");
             continue;

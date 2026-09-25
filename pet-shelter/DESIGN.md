@@ -263,6 +263,58 @@ The full species list lives in `src/game/Species.cpp`.
 - Decisions pop up as cards ([Q] in POV; urgent ones stop time) and are also in the computer's **Inbox** tab. The
   **Animals** tab has a live rotating 3D record with every behavior; the **Staff** tab covers wellbeing.
 
+## 8.7 Update 3: owner's direction (land, build mode, care, clinic, recruiting, driving)
+Recorded as said, with my interpretation where it was ambiguous (marked *interpretation*):
+
+**Nature everywhere.** Trees and natural things all around, including outside the border.
+
+**Land and the fence.**
+- You start with a fenced *workspace* (keeps animals in and wild animals out), with the gate where cars come in.
+- The way you reach the full 500 sq mi: from the office computer's **Store** you buy land **one square mile at
+  a time**, and the fence **moves dynamically** around everything you own.
+- Buying land also lets you **push back the road**, until you eventually own all 500 sq mi.
+- *Interpretation (built):* land is a 1-mile grid. Your first purchase is the square mile around the shelter, then
+  any square next to land you already own. The public highway stays where it is. The road and the fence move out
+  with your land; the gate stays where the access road meets the highway. **Question for you:** should the highway
+  itself move back as you buy land to the south?
+
+**Behind the shelter.** Five small storage/cargo-container animal shelters, each with its own small fenced yard.
+
+**Build mode categories.** (You said you'll explain each one later; they exist now as categories.)
+- Pathways; Research; Roofs, walls and windows; Trees (plant them); Fences and gates.
+- Client: little buildings for your clients.
+- Operations: expand the main building and decorate it (plants and so on), upgrade the clinic room, add things for
+  the animals and the container shelters.
+
+**Daily animal care.**
+- A **manual check-up on every animal every day**: you walk up and check on it yourself.
+- Make sure each animal has **food and water of its choice** and has shelter.
+
+**Clinic check-ups.**
+- You can bring an animal to the clinic for a check-up, and each animal type has its **own procedure**.
+- Dogs are taken away for a **scan**, and the results come back as a **sonogram (ultrasound)**. You must identify
+  what's wrong, e.g. the dog ate something it wasn't supposed to.
+
+**Operations.**
+- Realistic blood and gore.
+- You have to worry about **hitting organs, arteries, veins and bones**.
+
+**Recruit (office computer).**
+- The bigger your facility, the more workers you can have, but **each one needs their own office**, and all of them
+  need to feel good.
+- **40 different people** to hire, with different genders, bios, names and looks.
+- Someone already on your team (same name, same model) is **not available** to recruit.
+- *Interpretation:* once you lose them (they quit or are fired) they come back to the recruit pool after a while;
+  if they died they never come back.
+- **Staff screen:** transparent squares showing each person's face. Click one to **fire** them, and to see their
+  **bio**, their **experience at past workplaces** and any **bad history**.
+
+**Driving.**
+- You spawn with the **red truck** from the cutscene. You open its door, get in, and drive onto the highway.
+- You must obey the **speed limit**, **traffic lights** and **turn signals**: every little thing.
+- **Signs** point to where things are and show where you are. (You said I can choose where to put things.)
+- You drive to a **pet store** that sells **snakes, birds, cats and dogs**.
+
 ## 9. Next up
 - More model passes until nothing looks off (small terriers, fur close-ups, coiled snakes).
 - Staff and protesters as visible people in the world; clients in the waiting room.

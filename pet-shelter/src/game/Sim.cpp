@@ -47,7 +47,17 @@ void Sim::newGame() {
     security.addCamera("Parking Lot", {-21.5f, 4.6f, 39.5f}, radians(130.0f), -0.32f);
     security.doorLocked.assign(layout::doors().size(), false);
     econ.cashHistory.push_back(float(econ.cash));
-    // Your first residents wait in the medical room crates: a dachshund and a pair of rabbits.
+    // Five converted cargo containers behind the shelter, each with its own small fenced yard
+    for (int i = 0; i < 5; ++i) {
+        Placed p;
+        p.id = nextPlacedId++;
+        p.kind = BuildKind::ContainerShelter;
+        p.x = -28.0f + 14.0f * float(i);
+        p.z = -38.0f;
+        p.rot = 0;
+        placed.push_back(p);
+    }
+    // Your first residents: a dachshund and a pair of rabbits, in the container shelters.
     if (findSpecies("Dachshund") >= 0) { Animal& a = admit(findSpecies("Dachshund"), "Owner surrender", 1.0f); a.name = "Frank"; a.male = true; a.coat = 0; }
     if (findSpecies("Holland Lop") >= 0) {
         Animal& r1 = admit(findSpecies("Holland Lop"), "Found in a box at the gate", 1.0f); r1.name = "Clover"; r1.male = false;
@@ -298,7 +308,7 @@ void Sim::quarterly() {
 
 bool Sim::build(BuildKind k, float x, float z, int rot, std::string* why, int* outId) {
     const BuildInfo& bi = buildInfo(k);
-    if (!validPlacement(k, x, z, rot, placed, why)) return false;
+    if (!validPlacement(k, x, z, rot, placed, why, &land)) return false;
     if (econ.cash < bi.cost) { if (why) *why = "Not enough cash"; return false; }
     econ.post(clock.day(), Ledger::Construction, -bi.cost, bi.name);
     econ.propertyValue += bi.cost * 0.8;
@@ -325,6 +335,19 @@ bool Sim::demolish(int id) {
             return true;
         }
     return false;
+}
+
+bool Sim::buyLand(int c, int r, std::string* why) {
+    if (!land.canBuy(c, r)) { if (why) *why = land.homeOwned() ? "You can only buy land next to land you own" : "Buy the square mile around your shelter first"; return false; }
+    double cost = land.price(c, r);
+    if (!econ.tryPay(clock.day(), Ledger::Construction, cost, "Land purchase (1 sq mi)")) { if (why) *why = "Not enough cash"; return false; }
+    land.buy(c, r);
+    econ.propertyValue += cost;
+    char buf[160];
+    std::snprintf(buf, sizeof buf, "You bought another square mile of land. You now own %.1f sq mi - the fence has been moved out.", double(land.ownedSqMi()));
+    log(buf);
+    ratings.shock(0.3f, 0.3f);
+    return true;
 }
 
 const Placed* Sim::findPlaced(int id) const {
@@ -373,6 +396,7 @@ void Sim::save(KeyValues& kv) const {
     kv.set("sec.doors", locks);
     kv.seti("visitors.total", visitorsTotal);
     kv.seti("gear", protectiveGear);
+    land.save(kv);
     kv.set("owner", ownerName);
     for (size_t i = 0; i < staff.employees.size(); ++i) {
         const Employee& e = staff.employees[i];
@@ -456,6 +480,7 @@ void Sim::load(const KeyValues& kv) {
     for (size_t i = 0; i < security.doorLocked.size() && i < locks.size(); ++i) security.doorLocked[i] = locks[i] == '1';
     visitorsTotal = kv.geti("visitors.total", 0);
     protectiveGear = kv.geti("gear", 0) != 0;
+    land.load(kv);
     ownerName = kv.get("owner", ownerName);
     for (int i = 0; i < int(staff.employees.size()); ++i) {
         Employee& e = staff.employees[size_t(i)];

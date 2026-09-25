@@ -18,6 +18,7 @@ AABB localArea(BuildKind k) {
     case BuildKind::FeralEnclosure: return AABB({-hw + 0.8f, 0.05f, -hd + 0.8f}, {hw - 0.8f, 0.05f, hd - 0.8f});
     case BuildKind::SecureEnclosure: return AABB({-hw + 1.0f, 0.3f, -hd + 2.6f}, {hw - 1.0f, 0.3f, hd - 1.0f});
     case BuildKind::DogRun: return AABB({-hw + 1.0f, 0.06f, -hd + 1.0f}, {hw - 1.0f, 0.06f, hd - 1.0f});
+    case BuildKind::ContainerShelter: return AABB({-hw + 0.9f, 0.0f, -hd + 3.0f}, {hw - 0.9f, 0.0f, hd - 0.7f});
     default: return AABB({-1, 0, -1}, {1, 0, 1});
     }
 }

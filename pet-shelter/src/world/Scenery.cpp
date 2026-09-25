@@ -82,51 +82,54 @@ std::vector<TerrainTile> buildTerrainLevel(Rect area, float spacing, int tilesPe
     return tiles;
 }
 
-void buildPerimeterFence(MeshBuilder& b) {
+void buildFence(MeshBuilder& b, const std::vector<FenceSeg>& segs) {
     Material m = Material::make({0.62f, 0.64f, 0.66f}, 0.45f, 1.0f, PAT_FENCE);
-    const float seg = 12.0f, h = 2.2f;
-    auto run = [&](vec3 from, vec3 to, bool skipGate) {
-        vec3 d = to - from;
-        float len = length(vec3(d.x, 0, d.z));
-        int n = int(std::ceil(len / seg));
-        for (int i = 0; i < n; ++i) {
-            float t0 = float(i) / float(n), t1 = float(i + 1) / float(n);
-            vec3 a = from + d * t0, c = from + d * t1;
-            if (skipGate) {
-                float mn = std::min(a.x, c.x), mx = std::max(a.x, c.x);
-                if (mx > -kGateHalfWidth - 0.35f && mn < kGateHalfWidth + 0.35f) {
-                    // split around the gate opening
-                    if (mn < -kGateHalfWidth - 0.35f) c.x = -kGateHalfWidth - 0.35f;
-                    else if (mx > kGateHalfWidth + 0.35f) a.x = kGateHalfWidth + 0.35f;
-                    else continue;
+    Material post = Material::make({0.5f, 0.52f, 0.55f}, 0.4f, 1.0f, PAT_METAL);
+    const float seg = 12.0f, h = 2.2f, gate = kGateHalfWidth + 0.35f;
+    for (const FenceSeg& fs : segs) {
+        // Split the south line around the gate opening
+        std::vector<std::pair<vec3, vec3>> pieces{{fs.a, fs.b}};
+        bool south = std::fabs(fs.a.z - kSouthEdge) < 0.5f && std::fabs(fs.b.z - kSouthEdge) < 0.5f;
+        if (south) {
+            float x0 = std::min(fs.a.x, fs.b.x), x1 = std::max(fs.a.x, fs.b.x);
+            pieces.clear();
+            if (x1 <= -gate || x0 >= gate) pieces.push_back({{x0, 0, kSouthEdge}, {x1, 0, kSouthEdge}});
+            else {
+                if (x0 < -gate) pieces.push_back({{x0, 0, kSouthEdge}, {-gate, 0, kSouthEdge}});
+                if (x1 > gate) pieces.push_back({{gate, 0, kSouthEdge}, {x1, 0, kSouthEdge}});
+            }
+        }
+        for (auto [from, to] : pieces) {
+            vec3 d = to - from;
+            float len = length(vec3(d.x, 0, d.z));
+            if (len < 0.01f) continue;
+            int n = int(std::ceil(len / seg));
+            for (int i = 0; i < n; ++i) {
+                float t0 = float(i) / float(n), t1 = float(i + 1) / float(n);
+                vec3 a = from + d * t0, c = from + d * t1;
+                a.y = terrain::height(a.x, a.z);
+                c.y = terrain::height(c.x, c.z);
+                float u0 = t0 * len, u1 = t1 * len;
+                vec3 nrm = normalize(cross(vec3(0, 1, 0), c - a));
+                uint32_t v0 = b.addVertex(a, nrm, {u0, 0.0f}, m), v1 = b.addVertex(c, nrm, {u1, 0.0f}, m);
+                uint32_t v2 = b.addVertex(c + vec3(0, h, 0), nrm, {u1, h}, m), v3 = b.addVertex(a + vec3(0, h, 0), nrm, {u0, h}, m);
+                b.addTri(v0, v1, v2);
+                b.addTri(v0, v2, v3);
+                // Real posts and a top rail near the shelter (far fence is texture only)
+                vec3 mid = (a + c) * 0.5f;
+                if (mid.x * mid.x + mid.z * mid.z < 900.0f * 900.0f) {
+                    for (float t = 0.0f; t < 1.0f; t += 0.25f) {
+                        vec3 p = a + (c - a) * t;
+                        b.addCylinder({p.x, terrain::height(p.x, p.z), p.z}, 0.035f, h + 0.05f, 6, post);
+                    }
+                    vec3 dir = normalize(vec3(c.x - a.x, 0, c.z - a.z));
+                    vec3 side{-dir.z, 0, dir.x};
+                    vec3 q0 = a + vec3(0, h - 0.03f, 0), q1 = c + vec3(0, h - 0.03f, 0);
+                    b.addQuad(q0 - side * 0.03f, q1 - side * 0.03f, q1 + side * 0.03f + vec3(0, 0.05f, 0) * 0.0f, q0 + side * 0.03f, post);
                 }
             }
-            a.y = terrain::height(a.x, a.z);
-            c.y = terrain::height(c.x, c.z);
-            float u0 = t0 * len, u1 = t1 * len;
-            vec3 n = normalize(cross(vec3(0, 1, 0), c - a));
-            uint32_t v0 = b.addVertex(a, n, {u0, 0.0f}, m), v1 = b.addVertex(c, n, {u1, 0.0f}, m);
-            uint32_t v2 = b.addVertex(c + vec3(0, h, 0), n, {u1, h}, m), v3 = b.addVertex(a + vec3(0, h, 0), n, {u0, h}, m);
-            b.addTri(v0, v1, v2);
-            b.addTri(v0, v2, v3);
         }
-    };
-    vec3 sw{kRegionMinX, 0, kRegionMaxZ}, se{kRegionMaxX, 0, kRegionMaxZ};
-    vec3 nw{kRegionMinX, 0, kRegionMinZ}, ne{kRegionMaxX, 0, kRegionMinZ};
-    run(sw, se, true);
-    run(se, ne, false);
-    run(ne, nw, false);
-    run(nw, sw, false);
-    // Real 3D posts near the facility
-    Material post = Material::make({0.5f, 0.52f, 0.55f}, 0.4f, 1.0f, PAT_METAL);
-    for (float x = -300.0f; x <= 300.0f; x += 3.0f) {
-        if (std::fabs(x) < kGateHalfWidth + 0.5f) continue;
-        float y = terrain::height(x, kRegionMaxZ);
-        b.addCylinder({x, y, kRegionMaxZ}, 0.035f, h + 0.05f, 6, post);
     }
-    // Top rail near the facility
-    b.addBox(AABB({-300.0f, h - 0.03f, kRegionMaxZ - 0.025f}, {-kGateHalfWidth - 0.35f, h + 0.02f, kRegionMaxZ + 0.025f}), post);
-    b.addBox(AABB({kGateHalfWidth + 0.35f, h - 0.03f, kRegionMaxZ - 0.025f}, {300.0f, h + 0.02f, kRegionMaxZ + 0.025f}), post);
 }
 
 void buildHighway(MeshBuilder& b) {
@@ -164,6 +167,46 @@ void buildOakTree(MeshBuilder& b) {
     b.addEllipsoid({0, 5.2f, 0}, {2.9f, 2.3f, 2.9f}, 10, 7, leaves);
     b.addEllipsoid({1.3f, 4.6f, 0.8f}, {1.9f, 1.6f, 1.9f}, 9, 6, leaves);
     b.addEllipsoid({-1.2f, 4.8f, -0.9f}, {1.8f, 1.6f, 1.8f}, 9, 6, leaves);
+}
+
+void buildBush(MeshBuilder& b) {
+    Material leaves = Material::make({0.14f, 0.28f, 0.09f}, 0.85f, 0.0f, PAT_FOLIAGE);
+    Material dark = Material::make({0.1f, 0.2f, 0.07f}, 0.85f, 0.0f, PAT_FOLIAGE);
+    b.addEllipsoid({0, 0.45f, 0}, {0.8f, 0.55f, 0.8f}, 9, 6, leaves);
+    b.addEllipsoid({0.45f, 0.35f, 0.2f}, {0.55f, 0.42f, 0.55f}, 8, 5, dark);
+    b.addEllipsoid({-0.4f, 0.32f, -0.25f}, {0.5f, 0.38f, 0.5f}, 8, 5, leaves);
+}
+
+void buildRock(MeshBuilder& b) {
+    Material stone = Material::make({0.42f, 0.4f, 0.37f}, 0.9f, 0.0f, PAT_CONCRETE);
+    size_t v0 = b.verts.size();
+    b.addEllipsoid({0, 0.15f, 0}, {0.7f, 0.45f, 0.55f}, 9, 6, stone);
+    // Lumpy: push vertices around deterministically
+    for (size_t i = v0; i < b.verts.size(); ++i) {
+        vec3& p = b.verts[i].pos;
+        float k = 0.8f + 0.35f * std::sin(p.x * 7.1f + p.z * 3.3f) * std::cos(p.y * 5.7f + p.x * 2.1f);
+        p = vec3(p.x * k, std::max(p.y * k, -0.1f), p.z * k);
+    }
+    b.addEllipsoid({0.6f, 0.05f, 0.3f}, {0.3f, 0.2f, 0.25f}, 7, 4, stone);
+}
+
+void buildGrassClump(MeshBuilder& b, bool flowers) {
+    Material blade = Material::make({0.2f, 0.36f, 0.1f}, 0.9f, 0.0f, PAT_FOLIAGE);
+    Material dry = Material::make({0.42f, 0.4f, 0.18f}, 0.9f, 0.0f, PAT_FOLIAGE);
+    for (int i = 0; i < 9; ++i) {
+        float a = float(i) * 2.39996f, r = 0.08f + 0.05f * float(i % 3);
+        vec3 base{std::cos(a) * r, 0.0f, std::sin(a) * r};
+        b.addCone(base, 0.035f, 0.35f + 0.15f * float(i % 4), 4, i % 4 == 0 ? dry : blade);
+    }
+    if (flowers) {
+        const vec3 cols[] = {{0.9f, 0.8f, 0.15f}, {0.85f, 0.85f, 0.9f}, {0.6f, 0.25f, 0.7f}, {0.85f, 0.3f, 0.2f}};
+        for (int i = 0; i < 4; ++i) {
+            float a = float(i) * 1.7f;
+            vec3 p{std::cos(a) * 0.15f, 0.45f + 0.05f * float(i), std::sin(a) * 0.15f};
+            b.addCylinder({p.x, 0.0f, p.z}, 0.008f, p.y, 3, blade, false);
+            b.addEllipsoid(p, {0.04f, 0.025f, 0.04f}, 5, 3, Material::make(cols[i], 0.7f));
+        }
+    }
 }
 
 void buildUtilityPole(MeshBuilder& b) {
@@ -234,6 +277,12 @@ void buildBuildable(MeshBuilder& b, BuildKind kind) {
         break;
     case BuildKind::Path:
         b.addBox(AABB({-hw, -0.2f, -hd}, {hw, 0.05f, hd}), concrete);
+        break;
+    case BuildKind::PineTree:
+        buildPineTree(b);
+        break;
+    case BuildKind::Shrub:
+        buildBush(b);
         break;
     case BuildKind::Tree:
         buildOakTree(b);
@@ -345,6 +394,32 @@ void buildBuildable(MeshBuilder& b, BuildKind kind) {
         // red cross
         b.addBox(AABB({-0.15f, 2.6f, hd - 0.03f}, {0.15f, 3.3f, hd + 0.01f}), Material::make({0.8f, 0.05f, 0.05f}, 0.4f, 0.0f, PAT_PLAIN, 1.5f));
         b.addBox(AABB({-0.5f, 2.8f, hd - 0.03f}, {0.5f, 3.1f, hd + 0.01f}), Material::make({0.8f, 0.05f, 0.05f}, 0.4f, 0.0f, PAT_PLAIN, 1.5f));
+        break;
+    case BuildKind::ContainerShelter: {
+        // Shipping container (back) with a side door and a vent, fenced yard in front
+        Material box = Material::make({0.16f, 0.32f, 0.36f}, 0.55f, 0.4f, PAT_SIDING);
+        Material rib = Material::make({0.13f, 0.27f, 0.3f}, 0.5f, 0.5f);
+        float cz0 = -hd, cz1 = -hd + 2.44f;
+        b.addBox(AABB({-hw + 0.3f, 0.0f, cz0 - 0.05f}, {hw - 0.3f, 0.15f, cz1 + 0.05f}), concrete);   // pad
+        b.addBox(AABB({-3.05f, 0.15f, cz0}, {3.05f, 2.74f, cz1}), box);
+        for (float x = -2.9f; x <= 2.95f; x += 0.35f) b.addBox(AABB({x - 0.04f, 0.2f, cz1}, {x + 0.04f, 2.7f, cz1 + 0.04f}), rib);
+        b.addBox(AABB({-0.5f, 0.15f, cz1}, {0.5f, 1.25f, cz1 + 0.06f}), dark);                       // animal door
+        b.addBox(AABB({1.6f, 1.9f, cz1}, {2.5f, 2.3f, cz1 + 0.06f}), steel);                           // vent
+        b.addBox(AABB({-3.1f, 2.74f, cz0 - 0.05f}, {3.1f, 2.84f, cz1 + 0.05f}), rib);                  // roof edge
+        auto side = [&](vec3 p0, vec3 p1) { b.addQuad(p0, p1, p1 + vec3(0, 1.4f, 0), p0 + vec3(0, 1.4f, 0), fence); };
+        float yz0 = cz1, yz1 = hd;
+        side({-hw + 0.3f, 0, yz0}, {-hw + 0.3f, 0, yz1});
+        side({hw - 0.3f, 0, yz1}, {hw - 0.3f, 0, yz0});
+        side({-hw + 0.3f, 0, yz1}, {-0.6f, 0, yz1});
+        side({0.6f, 0, yz1}, {hw - 0.3f, 0, yz1});
+        for (float x : {-hw + 0.3f, hw - 0.3f}) b.addCylinder({x, 0, yz1}, 0.04f, 1.45f, 6, steel);
+        b.addBox(AABB({-0.6f, 0.0f, yz1 - 0.03f}, {0.6f, 1.3f, yz1 + 0.03f}), fence);                  // yard gate
+        b.addCylinder({hw - 1.0f, 0.0f, yz0 + 0.8f}, 0.2f, 0.1f, 10, steel);                             // water bowl
+        break;
+    }
+    case BuildKind::StaffOffices:
+        building({0.82f, 0.8f, 0.74f}, 3.1f);
+        for (float x : {-4.5f, -1.5f, 1.5f, 4.5f}) b.addBox(AABB({x - 0.8f, 1.1f, hd - 0.11f}, {x + 0.8f, 2.3f, hd - 0.04f}), dark);
         break;
     default:
         b.addBox(AABB({-hw, 0.0f, -hd}, {hw, bi.height, hd}), siding);

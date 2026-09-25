@@ -156,6 +156,7 @@ bool Game::init(int argc, char** argv) {
         creatorUI_.touchUI = true;
         computer_.compact = true;
         world_.treeRadius = 1400.0f;
+        world_.coverRadius = 110.0f;
         renderer_.setShadowSize(1024);
         renderer_.bloomStrength = 0.035f;
     }
@@ -184,9 +185,16 @@ bool Game::init(int argc, char** argv) {
         renderer_.shadows = false;
         renderer_.bloomStrength = 0.0f;
         world_.treeRadius = 700.0f;
+        world_.coverRadius = 80.0f;
     }
     std::fprintf(stderr, "[startup] 5/8 building the world\n");
     world_.build(touch_ || low_ ? 2.0f : 1.0f);
+    // You can walk on your own land, through the gate, and along the public road to town
+    world_.collision.allowed = [this](float x, float z, float r) {
+        if (sim_.land.contains(x, z, r)) return true;
+        if (std::fabs(x) < layout::kGateHalfWidth && z > layout::kSouthEdge - 4.0f && z < layout::kSouthEdge + 4.0f) return true;
+        return layout::publicArea(x, z);
+    };
     std::fprintf(stderr, "[startup] 6/8 world built\n");
     computer_.init(renderer_);
     sim_.newGame();
@@ -618,7 +626,7 @@ void Game::drawHUD() {
     ImGui::Text("Public %.0f   Private %.0f   Finance %s", sim_.ratings.publicRating, sim_.ratings.privateRating,
                 Economy::grade(sim_.financialScore()));
     ImGui::TextColored(mode_ == Mode::POV ? ImVec4(0.6f, 0.85f, 1.0f, 1) : ImVec4(0.6f, 0.95f, 0.6f, 1), "%s",
-                       mode_ == Mode::POV ? "POV MODE  (Tab: Creative)" : "CREATIVE MODE  (Tab: POV)");
+                       mode_ == Mode::POV ? "POV MODE  (Tab: Build)" : "BUILD MODE  (Tab: POV)");
     if (mode_ == Mode::POV) {
         const RoomSpec* room = roomAt(player_.feet.x, player_.feet.z);
         ImGui::TextDisabled("%s", room && player_.feet.y > 0.2f ? room->name.c_str() : "Outside");

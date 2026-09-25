@@ -91,6 +91,7 @@ vec3 CollisionWorld::moveCharacter(vec3 feet, vec3 delta, float radius, float he
     vec3 step = vec3(delta.x, 0, delta.z) / float(steps);
     vec3 p = feet;
     for (int s = 0; s < steps; ++s) {
+        vec3 prevP = p;
         p += step;
         // Resolve penetration against solid boxes (circle vs rect in XZ).
         for (int iter = 0; iter < 3; ++iter) {
@@ -121,6 +122,13 @@ vec3 CollisionWorld::moveCharacter(vec3 feet, vec3 delta, float radius, float he
             if (!any) break;
         }
         p = layout::clampToRegion(p, layout::kBarrierInset + radius);
+        if (allowed && !allowed(p.x, p.z, radius)) {
+            // Slide along the fence: keep whichever axis is still allowed
+            vec3 prev = prevP;
+            if (allowed(p.x, prev.z, radius)) p.z = prev.z;
+            else if (allowed(prev.x, p.z, radius)) p.x = prev.x;
+            else { p.x = prev.x; p.z = prev.z; }
+        }
         p.y = groundHeight(p.x, p.z, p.y);
     }
     if (steps == 0) p.y = groundHeight(p.x, p.z, p.y);

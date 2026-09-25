@@ -6,9 +6,11 @@
 
 namespace ps {
 
+class Land;
+
 enum class BuildKind {
     KennelBlock, DogRun, CatHouse, Path, Tree, Bench, LampPost, SecurityCamera, StaffBuilding, ParkingLot,
-    SmallAnimalHouse, Barn, FeralEnclosure, SecureEnclosure, SurgeryWing, Count
+    SmallAnimalHouse, Barn, FeralEnclosure, SecureEnclosure, SurgeryWing, ContainerShelter, StaffOffices, PineTree, Shrub, Count
 };
 
 struct BuildInfo {
@@ -25,6 +27,12 @@ struct BuildInfo {
 };
 const BuildInfo& buildInfo(BuildKind k);
 
+// Build-mode categories (the owner will spec each one in detail later)
+enum class BuildCat { Pathways, Research, Structures, Trees, FencesGates, Client, Operations, Count };
+const char* buildCatName(BuildCat c);
+const char* buildCatPlan(BuildCat c);   // what's coming in that category
+BuildCat buildCategory(BuildKind k);
+
 struct Placed {
     int id = 0;
     BuildKind kind = BuildKind::Tree;
@@ -36,6 +44,6 @@ struct Placed {
 // Areas you can't build on: the starting building, road, parking lot.
 std::vector<AABB> reservedAreas();
 bool validPlacement(BuildKind kind, float x, float z, int rot, const std::vector<Placed>& existing,
-                    std::string* whyNot);
+                    std::string* whyNot, const Land* land = nullptr);
 
 }  // namespace ps

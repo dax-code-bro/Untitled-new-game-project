@@ -26,6 +26,7 @@ add_library(ps_sim STATIC
   src/game/Character.cpp
   src/game/Buildables.cpp
   src/game/Sim.cpp
+  src/game/Land.cpp
   src/game/SimAnimals.cpp
   src/game/SimPeople.cpp
   src/game/Species.cpp

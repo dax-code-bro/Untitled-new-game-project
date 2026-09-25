@@ -5,6 +5,7 @@
 #include "game/Animals.h"
 #include "game/Buildables.h"
 #include "game/Economy.h"
+#include "game/Land.h"
 #include "game/Ratings.h"
 #include "game/Security.h"
 #include "game/Staff.h"
@@ -34,6 +35,7 @@ public:
     StaffRoster staff;
     Ratings ratings;
     SecuritySystem security;
+    Land land;
     std::vector<Placed> placed;
     int nextPlacedId = 1;
     int animals = 0;               // animals arrive in the next update
@@ -86,6 +88,7 @@ public:
     const Placed* findPlaced(int id) const;
 
     void log(const std::string& text);
+    bool buyLand(int col, int row, std::string* why = nullptr);
 
     // Animals
     Animal* findAnimal(int id);

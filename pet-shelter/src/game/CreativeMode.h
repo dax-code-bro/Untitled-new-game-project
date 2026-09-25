@@ -18,6 +18,7 @@ public:
 
     int tool = -1;          // -1 = none, -2 = demolish, else BuildKind
     int rotation = 0;
+    int category = int(BuildCat::Operations);
     bool snap = true;
     bool touchUI = false;      // phone layout: one scrolling strip, room for on-screen controls
     std::string status;
