@@ -38,7 +38,7 @@ int main() {
     for (const char* f : {"fluidBlur", "fluidShade", "bright", "blur", "composite", "ssao",
                           "ssaoBlur", "fxaa", "volumetric", "volBlur", "copy", "contact",
                           "envBake", "envPrefilter", "envBrdf", "ssr", "ssrBlur",
-                          "screenSpace", "tonemap", "taa"})
+                          "screenSpace", "tonemap", "taa", "exposure"})
         cases.push_back({"fullscreen.vert", std::string(f) + ".frag", {}});
 
     int failed = 0;

@@ -18,6 +18,22 @@ for controls and requirements.
 | Renderer | the whole frame of `60-renderer.js`: cascaded shadows + PCSS, scene-baked environment probe (GGX prefilter + SH), PBR with multi-scatter BRDF, clearcoat, sheen, parallax, detail normals, sky, volumetric scattering, SSR, SSAO, contact shadows, bloom, ACES/AgX composite, FXAA, supersampling | `test_render_stages`: zero GL errors (KHR_debug), every active uniform of every program set, and each pass checked for output |
 | Maps | Bunker Nine, Coastline, Helipad, Resort, Town, Demolition | exported from the running web game (`tools/export_scene.js`) and rendered side by side with the web frame |
 
+### Look-dev on the maps (native only)
+
+The exported maps are built from boxes, spheres and flat colours. On load,
+from nothing but the map's own geometry and the names its builders gave
+each part, the native build adds (every step marked `NATIVE`, each with an
+environment switch to turn it off for comparison):
+
+| | | off switch |
+|---|---|---|
+| A. Edges | every box gets a rounded, worn edge in the shader (`uBevel`) | `bevelScale = 0` |
+| B. Water | lakes, pools and sea get waves, Fresnel, sun glint, shore foam | — |
+| C. Trees | canopy spheres become crowns of ~1100 leaves in clumps (`Foliage.cpp`) | — |
+| D. Ground | albedos brought into a measured physical range; macro colour variation, grime at wall feet, rain streaks; damp patches, puddles and cracks on outdoor paving; grass, weeds and stones scattered on the ground nothing stands on (`Scatter.cpp`) | `GAME_NO_SCATTER=1`, `weatheringScale`, `wetScale` |
+| E. Buildings | roof slabs become hipped tile roofs (stepped stacks become the roof they drew), a hangar a barrel vault, flat roofs get parapets, gravel and plant; blank exterior walls get framed, sill-hung windows (`BuildingKit.cpp`) | `GAME_NO_KIT=1` |
+| F. Light | auto exposure (`exposure.frag`), physical sky on daytime maps, noon suns lowered to 40° on their own bearing, thinner haze | `GAME_WEB_LIGHT=1` |
+
 ### What is not ported
 
 Gameplay. There are no zombies, no weapons firing, no physics, no AI, no
@@ -71,7 +87,7 @@ hot-reloads the same way.
 src/assets/     procedural material baker        (game_assets, no GL)
 src/geometry/   primitives, tangents              (game_geometry, no GL)
 src/rendering/  gl/ RAII wrappers, ShaderLibrary, Renderer, Material, Mesh, Tunables
-src/scene/      Showcase, SceneFile (exported maps)
+src/scene/      Showcase, SceneFile (exported maps), Foliage, Scatter, BuildingKit
 src/core/       Window, Args, Capture, Paths, GlDebug
 shaders/        GLSL 4.50, #include-able lib/
 scripts/        look.ini (live look overrides)

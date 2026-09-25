@@ -99,6 +99,15 @@ std::shared_ptr<const GpuMaps> MaterialLibrary::maps(const std::string& kind, ui
     m->orm    = mk(GL_RGBA8, baked.orm);
     m->heightTop   = static_cast<float>(baked.heightTop);
     m->heightRange = static_cast<float>(baked.heightRange);
+    {   // Linear mean of the albedo (sRGB decoded per texel, every 7th sampled).
+        double acc[3] = {0, 0, 0};
+        size_t n = 0;
+        auto lin = [](uint8_t v) { const double c = v / 255.0;
+                                   return c <= 0.04045 ? c / 12.92 : std::pow((c + 0.055) / 1.055, 2.4); };
+        for (size_t i = 0; i + 3 < baked.albedo.size(); i += 4 * 7, ++n)
+            for (int k = 0; k < 3; ++k) acc[k] += lin(baked.albedo[i + k]);
+        if (n) m->albedoMean = glm::vec3(acc[0] / n, acc[1] / n, acc[2] / n);
+    }
     std::fprintf(stderr, "[materials] baked %-10s %dx%d in %.2f s\n", kind.c_str(), baked.size,
                  baked.size, secs);
     m_cache.emplace(key, m);

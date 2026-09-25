@@ -21,6 +21,7 @@ struct GpuMaps {
     gl::Texture orm;      // RGBA8: AO, roughness, metalness, packed height
     float heightTop   = 1.0f;
     float heightRange = 0.0f;
+    glm::vec3 albedoMean{0.5f};   // linear average of the albedo map
 };
 
 /* Material, field for field the web engine's (40-material.js), defaults

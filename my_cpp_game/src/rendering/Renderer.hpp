@@ -33,6 +33,12 @@ struct DrawItem {
     /* NATIVE: a lake/pool/sea surface -- the shader replaces the normal
        with animated waves and drops the roughness (see pbr.frag). */
     bool            water = false;
+    /* NATIVE: outdoor wear, 0..1 -- macro colour variation, grime at the
+       foot of walls, rain streaks under their tops (see pbr.frag). */
+    float           weathering = 0.0f;
+    /* NATIVE: 0..1 -- this is outdoor ground: damp patches, puddles and
+       cracks in the paving. */
+    float           wetGround = 0.0f;
 };
 
 struct PointLight {
@@ -135,6 +141,9 @@ struct Post {
     float saturation = 1.08f, contrast = 1.04f, grain = 0.012f;
     glm::vec3 tint{0.35f, 1.0f, 0.45f};
     float tintMix = 0.0f;
+    /* NATIVE: auto exposure. key 0 = off (the web engine's fixed exposure).
+       min/max bound the correction; speed is the adaptation rate, 1/s. */
+    float autoKey = 0.0f, autoMin = 0.35f, autoMax = 2.5f, autoSpeed = 1.5f;
 };
 struct Ssr {
     float intensity = 1.0f, replace = 0.90f, roughCut = 0.25f, roughMax = 0.50f;
@@ -147,6 +156,7 @@ struct Volumetric {
 
 /* Which passes ran and the last frame's counters. */
 struct RenderStats {
+    float autoLum = 0.0f;   // the meter's reading (read back only with GAME_EXPOSURE_VERBOSE)
     int draws = 0;
     long long tris = 0;
     int instances = 0;
@@ -190,6 +200,8 @@ public:
     float      parallaxDepth = 0.022f, parallaxFade = 18.0f;
     float      envIntensity = 1.0f;
     float      bevelScale = 1.0f;       // multiplies every DrawItem::bevel
+    float      weatheringScale = 1.0f;  // multiplies every DrawItem::weathering
+    float      wetScale = 1.0f;         // multiplies every DrawItem::wetGround
     int        debugMode = 0;
     /* Stage switches for the step-by-step screenshots. All on = the frame. */
     struct Stages {
@@ -234,6 +246,10 @@ private:
     std::map<std::string, std::shared_ptr<gl::Program>> m_used;
 
     std::unique_ptr<gl::Framebuffer> m_hdrA, m_hdrB, m_ldr, m_final, m_output;
+    std::unique_ptr<gl::Framebuffer> m_exp[2];   // NATIVE: adapted log-luminance, ping-pong 1x1
+    int m_expCur = 0;
+    bool m_expValid = false;
+    float m_lastDt = 0.016f;
     std::unique_ptr<gl::Framebuffer> m_aoA, m_aoB, m_ssrA, m_ssrB, m_volA, m_volB;
     std::vector<std::pair<std::unique_ptr<gl::Framebuffer>, std::unique_ptr<gl::Framebuffer>>> m_bloom;
     std::array<std::unique_ptr<gl::Framebuffer>, 2> m_shadowMaps;

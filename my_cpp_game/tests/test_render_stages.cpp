@@ -94,6 +94,7 @@ int main(int argc, char** argv) {
     rendering::MaterialLibrary materials(256);
     scene::Showcase scene(materials, renderer, 3000);
     const auto cam = scene.shot(argc > 2 ? argv[2] : "hero");
+    renderer.post.autoKey = 0.2f;   // exercise the NATIVE auto-exposure meter too
     renderer.render(scene.items(), cam, 1.0f / 60.0f);
     glFinish();
 

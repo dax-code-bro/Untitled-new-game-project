@@ -7,6 +7,14 @@ uniform sampler2D uBloom1;
 uniform sampler2D uBloom2;
 uniform float uBloomStrength;
 uniform float uExposure;
+/* NATIVE: auto exposure (exposure.frag). uAutoKey is the luminance the
+   meter centres the frame on; 0 turns it off and uExposure alone applies,
+   as in the web engine. The correction is clamped, so a night map stays
+   night and a white-out stays bright. */
+uniform sampler2D uAutoExp;
+uniform float uAutoKey;
+uniform float uAutoMin;
+uniform float uAutoMax;
 uniform float uVignette;
 uniform float uChromatic;
 uniform float uSaturation;
@@ -203,7 +211,10 @@ void main(){
              + texture(uBloom2, uv).rgb * 0.18;
   color += bloom * uBloomStrength;
 
-  color *= uExposure;
+  float autoGain = 1.0;
+  if (uAutoKey > 0.0)
+    autoGain = clamp(uAutoKey / exp(texelFetch(uAutoExp, ivec2(0), 0).r), uAutoMin, uAutoMax);
+  color *= uExposure * autoGain;
   color = uToneMap == 1 ? agx(color, uAgxPunch, uAgxSat) : acesFilm(color);
 
   /* TO DISPLAY SPACE FIRST, AND THEN GRADE.

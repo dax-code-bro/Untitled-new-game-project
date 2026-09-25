@@ -44,6 +44,18 @@ uniform float uBevel;
    instead of a smear. The high frequencies fade with distance, and the
    roughness rises to stand in for the waves that went sub-pixel. */
 uniform float uWater;
+/* NATIVE: WEATHERING. The maps are built from flat-coloured boxes, and a
+   flat colour over twenty metres of wall or road is the single strongest
+   tell that a scene is made of primitives. Three cheap, world-space terms
+   the importer switches on per draw (DrawItem::weathering / wetGround):
+     - macro variation, 6 m and 25 m octaves of brightness and warmth, so
+       no two stretches of the same material are the same shade;
+     - on box sides, grime splashed up the foot of the wall and rain
+       streaks run down from under its top;
+     - on outdoor ground, damp patches, standing puddles (a flat mirror:
+       the SSR and probe do the rest) and cracks along noise contours. */
+uniform float uWeathering;
+uniform float uWetGround;
 vec3 waterNormal(vec2 p, float t, float dist){
   vec2 g = vec2(0.0);
   // direction.xy, wavelength (m), amplitude (m)
@@ -636,6 +648,57 @@ void main(){
     albedo = mix(albedo, vec3(0.78, 0.80, 0.78), foam);
     rough = mix(rough, 0.7, foam);
     N = normalize(mix(N, vec3(0.0, 1.0, 0.0), foam * 0.7));
+  }
+  if (uWeathering > 0.0 && uWater == 0.0) {
+    vec3 gN = normalize(vNormal);
+    vec3 wp = vWorldPos;
+    float m1 = valueNoise(wp * 0.16 + 3.1), m2 = valueNoise(wp * 0.04 - 7.7);
+    float macro = (m1 - 0.5) * 0.6 + (m2 - 0.5) * 0.9;
+    albedo *= 1.0 + macro * 0.24 * uWeathering;
+    albedo = mix(albedo, albedo * vec3(1.06, 1.0, 0.88), saturate1(m2 - 0.45) * 0.8 * uWeathering);
+    rough = clamp(rough * (1.0 + macro * 0.12 * uWeathering), 0.035, 1.0);
+    /* Open ground seen from height is where a flat tone shows most: 40 m
+       and 90 m patches of darker, warmer earth or older paving, and paler
+       worn ground between them. */
+    if (uWetGround > 0.0 && gN.y > 0.7) {
+      float g1 = valueNoise(vec3(wp.xz * 0.025, 11.3)), g2 = valueNoise(vec3(wp.xz * 0.011, 5.9));
+      float patchy = smoothstep(0.25, 0.8, g1 * 0.6 + g2 * 0.4);
+      albedo *= mix(1.12, 0.66, patchy);
+      albedo = mix(albedo, albedo * vec3(1.10, 0.97, 0.80), patchy * 0.6);
+    }
+    if (abs(gN.y) < 0.5 && uBevel > 0.0) {
+      float hb = vObjPos.y + 0.5 * vObjScale.y;     // metres above the box's foot
+      float ht = 0.5 * vObjScale.y - vObjPos.y;     // metres below its top
+      vec3 side = normalize(cross(gN, vec3(0.0, 1.0, 0.0)));
+      float u = dot(wp, side);
+      float splash = 0.35 + 0.45 * valueNoise(vec3(u * 1.3, 0.0, 5.3));
+      float foot = (1.0 - smoothstep(0.0, splash, hb)) * step(0.8, vObjScale.y);
+      float sn = valueNoise(vec3(u * 3.5, wp.y * 0.3, 1.7)) * valueNoise(vec3(u * 9.0, wp.y * 0.05, 9.1));
+      float streak = smoothstep(0.16, 0.48, sn) * exp(-ht * 0.5) * step(1.4, vObjScale.y);
+      float grime = saturate1(foot * 0.6 + streak * 0.4) * uWeathering;
+      albedo *= 1.0 - grime * 0.5;
+      albedo = mix(albedo, albedo * vec3(1.05, 0.97, 0.86), grime);
+      rough = min(1.0, mix(rough, rough * 1.15, grime));
+      ao *= 1.0 - foot * 0.3 * uWeathering;
+    }
+  }
+  if (uWetGround > 0.0 && uWater == 0.0 && normalize(vNormal).y > 0.7) {
+    vec2 g = vWorldPos.xz;
+    float w = fbm3(vec3(g * 0.085, 2.7));
+    float damp = smoothstep(0.50, 0.60, w) * uWetGround;
+    float pud = smoothstep(0.60, 0.635, w) * uWetGround;
+    float cn = valueNoise(vec3(g * 0.9, 4.2));
+    float crack = (1.0 - smoothstep(0.0, 0.03, abs(cn - 0.5)))
+                * smoothstep(0.55, 0.75, valueNoise(vec3(g * 0.13, 8.8))) * uWetGround;
+    albedo *= 1.0 - crack * 0.55 * (1.0 - pud);
+    // Water fills the pores: darker and far smoother. Standing water is a
+    // flat mirror over whatever was there.
+    albedo *= mix(1.0, 0.6, damp);
+    rough = mix(rough, rough * 0.4, damp);
+    albedo *= mix(1.0, 0.8, pud);
+    rough = mix(rough, 0.03, pud);
+    metal *= 1.0 - pud;
+    N = normalize(mix(N, normalize(vNormal), pud));
   }
   // Back-facing geometry (double-sided leaves, glass) must not light black.
   if (!gl_FrontFacing) N = -N;

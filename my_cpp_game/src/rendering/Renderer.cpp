@@ -151,6 +151,9 @@ void Renderer::resize(int outW, int outH) {
     m_ssrB = makeTarget(hw, hh, {GL_RGBA16F});
     m_volA = makeTarget(hw, hh, {GL_RGBA16F});
     m_volB = makeTarget(hw, hh, {GL_RGBA16F});
+    m_exp[0] = makeTarget(2, 2, {GL_R32F}, 0, GL_NEAREST);
+    m_exp[1] = makeTarget(2, 2, {GL_R32F}, 0, GL_NEAREST);
+    m_expValid = false;
     m_taa[0] = makeTarget(m_w, m_h, {GL_RGBA16F});
     m_taa[1] = makeTarget(m_w, m_h, {GL_RGBA16F});
     m_taaFrames = 0;
@@ -361,6 +364,8 @@ void Renderer::drawPbr(const DrawItem& it, const Camera& cam) {
     p->set("uDebugMode", debugMode);
     p->set("uBevel", it.bevel * bevelScale);
     p->set("uWater", it.water ? 1.0f : 0.0f);
+    p->set("uWeathering", it.weathering * weatheringScale);
+    p->set("uWetGround", it.wetGround * wetScale);
     if (it.grass) {
         p->set("uWindDir", windDir);
         p->set("uWindStrength", windStrength);
@@ -934,6 +939,27 @@ void Renderer::present(const Camera& cam) {
     if (ssrTex || volTex) sceneTex = applyScreenSpace(cam, ssrTex, volTex);
     if (taaOn()) sceneTex = resolveTaa(cam, sceneTex);
 
+    // NATIVE: meter the frame (exposure.frag) before the bloom and grade.
+    if (post.autoKey > 0.0f) {
+        const int nxt = 1 - m_expCur;
+        auto e = prog("fullscreen.vert", "exposure.frag");
+        m_exp[nxt]->bind();
+        e->texture("uScene", sceneTex);
+        e->texture("uPrev", m_exp[m_expCur]->color(0));
+        e->set("uAdapt", m_expValid ? 1.0f - std::exp(-post.autoSpeed * std::max(m_lastDt, 0.0f)) : 1.0f);
+        fullscreen();
+        m_expCur = nxt;
+        m_expValid = true;
+        static const bool verbose = std::getenv("GAME_EXPOSURE_VERBOSE") != nullptr;
+        if (verbose) {
+            float v[4] = {};
+            glGetTextureImage(m_exp[m_expCur]->color(0).id(), 0, GL_RED, GL_FLOAT, sizeof(v), v);
+            m_stats.autoLum = std::exp(v[0]);
+            std::fprintf(stderr, "[exposure] meter %.4f -> gain %.3f\n", m_stats.autoLum,
+                         clampv(post.autoKey / m_stats.autoLum, post.autoMin, post.autoMax));
+        }
+    }
+
     GLuint bloom[3] = {0, 0, 0};
     const int iters = std::min(m_q.bloomIters, static_cast<int>(m_bloom.size()));
     if (m_q.bloom && stages.bloom && post.bloom > 0.0f && iters > 0) {
@@ -1035,6 +1061,10 @@ void Renderer::present(const Camera& cam) {
         c->texture("uBloom2", bloom[2] ? bloom[2] : fallback);
         c->set("uBloomStrength", bloom[0] ? post.bloom : 0.0f);
         c->set("uExposure", post.exposure);
+        c->texture("uAutoExp", m_exp[m_expCur]->color(0));
+        c->set("uAutoKey", m_expValid ? post.autoKey : 0.0f);
+        c->set("uAutoMin", post.autoMin);
+        c->set("uAutoMax", post.autoMax);
         c->set("uToneMap", post.toneMap);
         c->set("uAgxPunch", post.agxPunch);
         c->set("uAgxSat", post.agxSat);
@@ -1074,6 +1104,7 @@ void Renderer::present(const Camera& cam) {
 void Renderer::render(const std::vector<DrawItem>& items, const Camera& camIn, float dt) {
     if (!m_hdrA) throw std::logic_error("Renderer::render before resize");
     m_time += dt;
+    m_lastDt = dt;
     m_stats = {};
     Camera cam = camIn;
     cam.update(static_cast<float>(m_w) / static_cast<float>(m_h));
