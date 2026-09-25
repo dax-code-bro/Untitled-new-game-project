@@ -30,6 +30,13 @@ static Game* g_game = nullptr;
 extern "C" EMSCRIPTEN_KEEPALIVE int ps_wants_pointer_lock() { return g_game && g_game->wantsPointerLock() ? 1 : 0; }
 
 // ---- Touch controls (phones). The web page turns finger gestures into these calls. ----
+// Backup for browsers that pause requestAnimationFrame in embedded pages: drive frames from a timer.
+extern "C" EMSCRIPTEN_KEEPALIVE void ps_use_timer_loop() {
+    emscripten_set_main_loop_timing(EM_TIMING_SETTIMEOUT, 16);
+    // The pending frame request may never fire: restart the loop so it schedules on the timer now.
+    emscripten_pause_main_loop();
+    emscripten_resume_main_loop();
+}
 extern "C" EMSCRIPTEN_KEEPALIVE int ps_touch_state() { return g_game ? g_game->touchState() : 0; }
 extern "C" EMSCRIPTEN_KEEPALIVE void ps_touch_move(float x, float y) { if (g_game) g_game->input().touchMove = {x, y}; }
 extern "C" EMSCRIPTEN_KEEPALIVE void ps_touch_look(float dx, float dy) { if (g_game) g_game->input().addTouchLook(dx, dy); }
@@ -96,6 +103,7 @@ bool Game::init(int argc, char** argv) {
     Shader::setDirectory(shaderDir);
 
     if (width_ <= 0 || height_ <= 0) { width_ = 1280; height_ = 720; }
+    std::fprintf(stderr, "[startup] 1/8 opening window\n");
     if (!glfwInit()) { std::fprintf(stderr, "glfwInit failed\n"); return false; }
 #ifndef __EMSCRIPTEN__
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -109,6 +117,7 @@ bool Game::init(int argc, char** argv) {
     if (!window_) { std::fprintf(stderr, "error: could not create the graphics context (WebGL 2 / OpenGL 3.3)\n"); return false; }
     glfwMakeContextCurrent(window_);
     glfwSwapInterval(vsync_ ? 1 : 0);
+    std::fprintf(stderr, "[startup] 2/8 graphics context ready\n");
     if (!loadGL([](const char* n) { return reinterpret_cast<void*>(glfwGetProcAddress(n)); })) return false;
     std::fprintf(stderr, "[gl] %s | %s\n", (const char*)glGetString(GL_RENDERER), (const char*)glGetString(GL_VERSION));
 
@@ -120,6 +129,7 @@ bool Game::init(int argc, char** argv) {
     glfwSetCursorPosCallback(window_, cursorCb);
     glfwSetFramebufferSizeCallback(window_, sizeCb);
 
+    std::fprintf(stderr, "[startup] 3/8 setting up the interface\n");
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGui::GetIO().IniFilename = nullptr;
@@ -153,6 +163,7 @@ bool Game::init(int argc, char** argv) {
     int fbw, fbh;
     glfwGetFramebufferSize(window_, &fbw, &fbh);
     width_ = fbw; height_ = fbh;
+    std::fprintf(stderr, "[startup] 4/8 compiling shaders (%dx%d)\n", width_, height_);
     renderer_.init(width_, height_);
     renderer_.indoorBox = buildingBounds();
     renderer_.indoorBox.max.y = kCeilingY + 0.2f;
@@ -161,12 +172,15 @@ bool Game::init(int argc, char** argv) {
         renderer_.bloomStrength = 0.0f;
         world_.treeRadius = 700.0f;
     }
+    std::fprintf(stderr, "[startup] 5/8 building the world\n");
     world_.build(touch_ || low_ ? 2.0f : 1.0f);
+    std::fprintf(stderr, "[startup] 6/8 world built\n");
     computer_.init(renderer_);
     sim_.newGame();
     appearance_.applyPreset(0);
     character_.build(appearance_);
     characterDirty_ = false;
+    std::fprintf(stderr, "[startup] 7/8 drawing the first frame\n");
     return true;
 }
 
@@ -193,7 +207,12 @@ void Game::tick() {
     frame(dt);
     glfwSwapBuffers(window_);
 #ifdef __EMSCRIPTEN__
-    if (++framesDrawn_ == 3) EM_ASM({ if (window.psGameReady) window.psGameReady(); });
+    ++framesDrawn_;
+    if (framesDrawn_ <= 3) {
+        double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - now).count();
+        std::fprintf(stderr, "[startup] 8/8 frame %d drawn in %.0f ms\n", framesDrawn_, ms);
+    }
+    if (framesDrawn_ == 3) EM_ASM({ if (window.psGameReady) window.psGameReady(); });
     // Browsers release the mouse when you press Esc; treat that as "pause".
     bool locked = EM_ASM_INT({ return document.pointerLockElement ? 1 : 0; }) != 0;
     if (browserLocked_ && !locked && state_ == State::Playing && mode_ == Mode::POV) state_ = State::Paused;

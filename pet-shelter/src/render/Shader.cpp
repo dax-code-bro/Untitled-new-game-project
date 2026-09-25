@@ -68,6 +68,9 @@ bool Shader::load(const std::string& vsFile, const std::string& fsFile, const st
 
 bool Shader::reload() {
 #ifdef __EMSCRIPTEN__
+    std::fprintf(stderr, "[startup] 4/8 compiling %s + %s\n", vs_.c_str(), fs_.c_str());
+#endif
+#ifdef __EMSCRIPTEN__
     std::string header = "#version 300 es\nprecision highp float;\nprecision highp int;\nprecision highp sampler2DShadow;\n" + defines_ + "\n";
 #else
     std::string header = "#version 330 core\n" + defines_ + "\n";

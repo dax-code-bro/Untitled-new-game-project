@@ -41,6 +41,7 @@
   .bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
   .bar i { display: block; height: 100%; width: 8%; background: var(--sage); transition: width .3s ease; }
   #status { font: 500 13px/1.4 var(--mono); color: var(--text); }
+  #diag { font: 500 11px/1.5 var(--mono); color: var(--muted); white-space: pre-wrap; word-break: break-word; }
   dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; font-size: 14px; }
   dt { font: 500 12px/1.6 var(--mono); color: var(--hay); white-space: nowrap; }
   dd { margin: 0; color: var(--text); }
@@ -142,6 +143,10 @@
     <p>Start a small animal shelter on 500 square miles of fenced land. Build it up in Creative mode, or walk your facility in first person.</p>
     <div class="bar" aria-hidden="true"><i id="progress"></i></div>
     <div id="status" role="status">Loading the game…</div>
+    <div id="diag" aria-live="off"></div>
+    <div class="row" id="startRow" hidden>
+      <button type="button" id="startBtn" class="action primary">Tap to start</button>
+    </div>
     <div class="row" id="lowRow" hidden>
       <button type="button" id="lowBtn" class="action primary">Try low graphics mode</button>
     </div>
@@ -197,15 +202,62 @@
   let lowMode = false;
   try { lowMode = localStorage.getItem('psLowGraphics') === '1'; } catch (e) { /* storage unavailable */ }
   document.getElementById('lowBtn').addEventListener('click', () => {
-    try { localStorage.setItem('psLowGraphics', '1'); } catch (e) { /* ignore */ }
+    try { localStorage.setItem('psLowGraphics', lowMode ? '0' : '1'); } catch (e) { /* ignore */ }
     location.reload();
   });
   const problems = [];   // error lines printed by the game, shown if it can't start
+  // Live startup readout: if the game gets stuck, a screenshot of this tells us where.
+  let lastStep = 'waiting for the game files';
+  let rafTicks = 0;
+  const t0 = performance.now();
+  let gpu = 'unknown GPU';
+  try {
+    const dbg = probe && probe.getExtension('WEBGL_debug_renderer_info');
+    gpu = dbg ? probe.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : probe.getParameter(probe.RENDERER);
+  } catch (e) { /* not available */ }
+  (function countFrames() { rafTicks++; requestAnimationFrame(countFrames); })();
+  function updateDiag() {
+    if (ready) return;
+    const secs = ((performance.now() - t0) / 1000).toFixed(0);
+    document.getElementById('diag').textContent =
+      'Step: ' + lastStep + '\n' + secs + ' s · screen refreshes: ' + rafTicks + ' · ' + gpu +
+      (isTouch ? ' · touch' : '') + (lowMode ? ' · low graphics' : '') + (timerLoop ? ' · timer frames' : '');
+  }
+  setInterval(updateDiag, 500);
+  // Watchdog: once the game has finished loading, frames must start. Some phones pause the
+  // display refresh signal inside embedded pages; if frames don't arrive, switch to a timer.
+  let loaded = false, timerLoop = false;
+  function kickFrames() {
+    if (ready || timerLoop || !Module._ps_use_timer_loop) return;
+    timerLoop = true;
+    try { Module._ps_use_timer_loop(); } catch (e) { console.log('timer loop failed', e); }
+    updateDiag();
+  }
+  document.getElementById('startBtn').addEventListener('click', kickFrames);
+  function startWatchdog() {
+    let checks = 0;
+    const id = setInterval(() => {
+      if (ready) { clearInterval(id); return; }
+      checks++;
+      if (checks === 3) kickFrames();                                    // 1.5 s without frames
+      if (checks === 4) document.getElementById('startRow').hidden = false;
+      if (checks === 30) offerLowMode();                                 // 15 s: still nothing
+    }, 500);
+  }
   function note(t) {
     console.log(t);
+    const m = /^\[startup\] (.*)/.exec(t);
+    if (m) {
+      lastStep = m[1];
+      if (!loaded && m[1].startsWith('7/8')) { loaded = true; setTimeout(startWatchdog, 0); }
+      updateDiag();
+    }
     if (/error|failed|incomplete|missing|unsupported/i.test(t)) problems.push(t);
   }
-  function offerLowMode() { if (!lowMode) document.getElementById('lowRow').hidden = false; }
+  function offerLowMode() {
+    document.getElementById('lowBtn').textContent = lowMode ? 'Switch back to normal graphics' : 'Try low graphics mode';
+    document.getElementById('lowRow').hidden = false;
+  }
   function showProblem(headline) {
     overlay.classList.remove('done');
     offerLowMode();
@@ -459,9 +511,8 @@
         input.focus();
       }
       rotate.hidden = window.innerWidth >= window.innerHeight;
-      requestAnimationFrame(frame);
     }
-    requestAnimationFrame(frame);
+    setInterval(frame, 100);   // a timer, not requestAnimationFrame: some phones pause that in embedded pages
   }
 })();
 </script>

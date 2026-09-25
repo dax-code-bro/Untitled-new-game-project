@@ -97,9 +97,9 @@ private:
     std::string screenshotSuiteDir_;
     std::chrono::steady_clock::time_point lastTick_;
     bool browserLocked_ = false;
-    bool touch_ = false;
+    bool touch_ = false;          // phone / tablet mode (--touch)
     int framesDrawn_ = 0;
-    bool low_ = false;            // low graphics mode (--low)          // phone / tablet mode (--touch)
+    bool low_ = false;            // low graphics mode (--low)
 };
 
 }  // namespace ps
