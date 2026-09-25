@@ -67,6 +67,7 @@ void Showcase::add(const rendering::Mesh* me, const Material* mat, const glm::ma
     it.material = mat;
     it.model = model;
     it.params = params;
+    if (me == m_boxMesh) it.bevel = 0.02f;
     m_items.push_back(it);
 }
 
@@ -103,6 +104,7 @@ Showcase::Showcase(rendering::MaterialLibrary& lib, rendering::Renderer& r, int 
 
     // ---- shared meshes -------------------------------------------------
     const auto* box    = mesh(G::box(1, 1, 1));
+    m_boxMesh = box;
     const auto* sphere = mesh(G::sphere(0.5, 96, 144));
     const auto* column = mesh(G::cylinder(0.5, 1, 64, true));
     const auto* torus  = mesh(G::torus(0.6, 0.22, 96, 144));

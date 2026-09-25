@@ -108,10 +108,12 @@ SceneFile::SceneFile(const std::filesystem::path& path, rendering::MaterialLibra
 
     // ---- meshes ----
     std::vector<const rendering::Mesh*> meshes;
+    std::vector<bool> isBox;          // unit cubes: these get the edge bevel
     static const bool webTessellation = std::getenv("GAME_WEB_TESSELLATION") != nullptr;
     for (const auto& jm : doc.at("meshes")) {
         geometry::MeshData d;
         const auto key = jm.find("key");
+        isBox.push_back(key != jm.end() && key->is_string() && key->get<std::string>() == "box");
         if (!webTessellation && key != jm.end() && key->is_string() && rebuildPrimitive(key->get<std::string>(), d)) {
             ++m_stats.retessellated;
             m_stats.vertices += d.positions.size();
@@ -188,6 +190,7 @@ SceneFile::SceneFile(const std::filesystem::path& path, rendering::MaterialLibra
     for (const auto& jd : doc.at("draws")) {
         rendering::DrawItem it;
         it.mesh = meshes.at(jd.at("mesh").get<size_t>());
+        if (isBox.at(jd.at("mesh").get<size_t>())) it.bevel = 0.03f;
         it.material = mats.at(jd.at("material").get<size_t>());
         it.grass = get(jd, "grass", false);
         if (jd.contains("bones")) {

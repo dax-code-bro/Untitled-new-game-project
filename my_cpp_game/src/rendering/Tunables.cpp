@@ -42,7 +42,7 @@ const std::map<std::string, Slot>& registry() {
         F("volumetric.intensity", r.volumetric.intensity), F("volumetric.densityScale", r.volumetric.densityScale),
         F("volumetric.anisotropy", r.volumetric.anisotropy), F("volumetric.tint", r.volumetric.tint),
         F("volumetric.maxDistance", r.volumetric.maxDistance), F("volumetric.fadeStart", r.volumetric.fadeStart),
-        F("envIntensity", r.envIntensity), F("detailScale", r.detailScale), F("detailFade", r.detailFade),
+        F("envIntensity", r.envIntensity), F("bevelScale", r.bevelScale), F("detailScale", r.detailScale), F("detailFade", r.detailFade),
         F("parallaxDepth", r.parallaxDepth), F("parallaxFade", r.parallaxFade),
         F("windStrength", r.windStrength), V("windDir", r.windDir),
     };

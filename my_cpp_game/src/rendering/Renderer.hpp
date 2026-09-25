@@ -27,6 +27,9 @@ struct DrawItem {
        (width = 4 x bones, height 1) -- GLSL.transform's layout. */
     const gl::Texture* boneTexture = nullptr;
     int             boneCount = 0;
+    /* NATIVE: edge bevel radius in metres, for meshes that are unit boxes
+       (the shader derives a rounded-box normal from it). 0 = off. */
+    float           bevel = 0.0f;
 };
 
 struct PointLight {
@@ -183,6 +186,7 @@ public:
     float      detailScale = 9.0f, detailFade = 11.0f;
     float      parallaxDepth = 0.022f, parallaxFade = 18.0f;
     float      envIntensity = 1.0f;
+    float      bevelScale = 1.0f;       // multiplies every DrawItem::bevel
     int        debugMode = 0;
     /* Stage switches for the step-by-step screenshots. All on = the frame. */
     struct Stages {

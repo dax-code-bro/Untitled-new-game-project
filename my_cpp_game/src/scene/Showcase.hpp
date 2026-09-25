@@ -40,6 +40,7 @@ private:
     std::deque<rendering::Material>              m_materials;
     std::deque<std::vector<rendering::Instance>> m_instances;
     std::vector<rendering::DrawItem>             m_items;
+    const rendering::Mesh*                       m_boxMesh = nullptr;
 };
 
 } // namespace game::scene

@@ -48,6 +48,10 @@ struct Surface {
   vec4 tangent;
   vec2 uv;
   vec4 params;
+  // NATIVE: object space, in metres, for the edge bevel (pbr.frag).
+  vec3 objPos;     // local position times the model scale
+  vec3 objScale;   // the model's per-axis scale
+  mat3 objRot;     // the model's rotation, scale removed
 };
 
 Surface computeSurface(){
@@ -107,6 +111,10 @@ Surface computeSurface(){
   vec3 c0 = model[0].xyz, c1 = model[1].xyz, c2 = model[2].xyz;
   vec3 invSq = 1.0 / max(vec3(dot(c0, c0), dot(c1, c1), dot(c2, c2)), vec3(1e-8));
   mat3 nm = mat3(c0 * invSq.x, c1 * invSq.y, c2 * invSq.z);
+
+  s.objScale = sqrt(max(vec3(dot(c0, c0), dot(c1, c1), dot(c2, c2)), vec3(1e-12)));
+  s.objPos = localPos * s.objScale;
+  s.objRot = mat3(c0 / s.objScale.x, c1 / s.objScale.y, c2 / s.objScale.z);
 
   s.normal = normalize(nm * localNrm);
   s.tangent = vec4(normalize(nm * localTan), aTangent.w);

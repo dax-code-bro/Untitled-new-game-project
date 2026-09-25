@@ -12,6 +12,35 @@ in vec2 vUv;
 in vec3 vTint;
 in vec4 vParams;
 in float vViewDepth;
+in vec3 vObjPos;
+in vec3 vObjScale;
+in mat3 vObjRot;
+
+/* ---- NATIVE: THE EDGE BEVEL ----
+   Nothing built is razor-sharp: a wall, a kerb, a table top all end in a
+   rounded edge a centimetre or three across, and that edge is what catches
+   the light and tells the eye where one plane turns into the next. Every
+   box in the maps is a unit cube scaled by its actor, so its size and the
+   fragment's place on it are known here exactly, and the normal a ROUNDED
+   box of radius uBevel would have at this point is closed-form:
+       q = |p| - (halfExtent - r);  n = sign(p) * max(q, 0)
+   which is the face normal across the face and swings through 45 degrees
+   at the edge. uBevel is 0 for every mesh that is not a box, and the
+   radius is capped at 0.45 of the smallest half-extent so a thin slab
+   rounds its edge rather than turning into a cylinder. */
+uniform float uBevel;
+vec3 bevelNormal(out float edge){
+  vec3 h = 0.5 * vObjScale;
+  float r = min(uBevel, 0.45 * min(h.x, min(h.y, h.z)));
+  vec3 q = abs(vObjPos) - (h - r);
+  vec3 nl = sign(vObjPos) * max(q, vec3(0.0));
+  float len = length(nl);
+  if (len < 1e-6) { edge = 0.0; return normalize(vNormal); }
+  nl /= len;
+  float m = max(abs(nl.x), max(abs(nl.y), abs(nl.z)));
+  edge = smoothstep(0.0, 0.25, 1.0 - m);      // 0 across a face, 1 on the arc
+  return normalize(vObjRot * nl);
+}
 
 uniform vec3 uCameraPos;
 uniform float uTime;
@@ -527,6 +556,14 @@ void main(){
       }
     }
     N = normalize(mat3(T, B, N) * normalize(tn));
+  }
+  if (uBevel > 0.0) {
+    float edge;
+    vec3 nb = bevelNormal(edge);
+    // Bend the (normal-mapped) shading normal by the bevel's turn, and wear
+    // the edge slightly: arrises are where paint chips and dirt rubs off.
+    N = normalize(N + nb - normalize(vNormal));
+    albedo = mix(albedo, albedo * 1.22 + 0.015, edge * 0.45);
   }
   // Back-facing geometry (double-sided leaves, glass) must not light black.
   if (!gl_FrontFacing) N = -N;

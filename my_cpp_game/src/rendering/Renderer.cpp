@@ -359,6 +359,7 @@ void Renderer::drawPbr(const DrawItem& it, const Camera& cam) {
     bindLights(*p, cam.position);
     bindMaterial(*p, *it.material);
     p->set("uDebugMode", debugMode);
+    p->set("uBevel", it.bevel * bevelScale);
     if (it.grass) {
         p->set("uWindDir", windDir);
         p->set("uWindStrength", windStrength);
