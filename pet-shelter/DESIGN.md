@@ -144,11 +144,66 @@ Interact with the computer in your office (E). It opens full screen. Tabs:
   phones/tablets held sideways. Phone mode has touch controls, larger UI, a name box that uses the phone keyboard,
   and lighter graphics (1024 shadow maps, shorter tree distance).
 
-## 8. Next up (from the owner)
-- **Animals**: "I'll get into animals next." They hook into the Animals tab, the medical room,
-  the appointment room, adoptions (income plus public rating) and creative mode enclosures.
+## 8. Animals (owner's direction, update 2)
 
-## 9. Open questions for the owner
+### 8.1 Classes and counts
+Every animal is a **real-life species**. There are five classes:
+
+| Class | Species | What it means |
+|---|---|---|
+| **Small** | 20 | Small pets (dachshund, rabbits, hamsters, small cats and birds...) |
+| **Medium** | 40 | Most dogs and cats, goats, pigs, parrots, reptiles... |
+| **Large** | 20 | Giant dogs, horses, donkeys, cattle, llamas... |
+| **Feral** | 40 | Wild or feral animals brought in for checkups (deer, wild pig, raccoon...). **Requires an upgraded (much bigger) medical room** and the **staff protective gear** unlock. |
+| **Restricted** | 19 | Dangerous animals (panther, tiger, grizzly bear...). The player must **calmly control the situation and call the police**. |
+
+The full species list lives in `src/game/Species.cpp`.
+
+### 8.2 Models and animation
+- Full 3-D models for every species, "hyper developed". The owner wants every model play-tested so that
+  **nothing looks even slightly wrong**.
+- **Dozens of colors and variations** per species (named coat colors and patterns, white markings,
+  eye colors, size and weight variation), plus **male and female** (e.g. antlers, manes and tusks only on males,
+  size differences) and **babies**.
+- **"Every animal has a different animation for every little thing."** Walk, trot, run, hop, sit, lie,
+  sleep, eat, drink, sniff, groom, scratch, shake, yawn, stretch, play, vocalize, growl, attack/fight,
+  flinch, limp, cower, anesthetized, recovering, plus species signatures (rabbit binky, cat knead,
+  bird preen/peck/fly, snake coil/strike/tongue-flick, turtle withdraw, bear stand-up, horse rear...).
+
+### 8.3 Mature content (owner-approved direction)
+- **Blood and gore** during operations (watching or doing one yourself).
+- **Animal fights**. Baby animals can get hurt.
+- **Anesthesia** for operations.
+- **Protests can turn deadly fast.**
+- **Tobacco, alcohol and drug references.** Visitors smoking, drinking or using drugs on the property must be
+  kicked out by you or security guards.
+
+### 8.4 Private rating: new rules
+- **Staff need rest.** Not letting staff rest lowers the private rating. **Underpaying and overworking** workers is
+  a ticket to a significant drop.
+- **Interview staff every once in a while** and ask how they're doing. Schedule days off and vacations.
+- **Staff life events**: a family member dies, their house burns down, heavy stress, injury... The player should
+  rest them or give them time off. A quick way to raise the private rating: **give them money when they're
+  going through a tough time**, **pay for a vacation**, or **pay a medical bill** if they get hurt.
+- **Low private rating**: employees start **quitting**, **sabotaging** (they may **poison animals**) and
+  **spreading rumors** (hurts the public rating).
+- **Decent or high**: staff work normally. **Super high**: staff **greet you by name** and talk to you about their
+  personal lives.
+
+### 8.5 Public rating: new rules
+- It drops if you're **mean, disrespectful or uncaring toward clients**, if you **put animals through surgery or
+  procedures without telling the owner**, or if **an animal dies**.
+- **Protesters** can show up. Declining their interview, or failing the online interview, significantly
+  lowers the public rating.
+
+## 9. Next up
+- Build out the animal systems above in stages (species data, then models and animation, then sim and events).
+
+## 9b. Open questions for the owner (animals)
+- Are adoptions the main income from animals, or will you also sell animals (the owner mentioned "buy animals")?
+- Do feral animals get released back to the wild after treatment?
+
+## 9c. Open questions for the owner (general)
 - Game title.
 - Is walking beyond the property gate onto the highway ever allowed, or only for vehicles?
 - Do staff need to be visible NPCs walking around in POV mode? (Planned; data model exists.)
