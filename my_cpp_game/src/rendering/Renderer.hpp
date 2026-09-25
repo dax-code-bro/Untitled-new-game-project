@@ -1,0 +1,230 @@
+#pragma once
+#include "rendering/Camera.hpp"
+#include "rendering/Material.hpp"
+#include "rendering/Mesh.hpp"
+#include "rendering/ShaderLibrary.hpp"
+#include "rendering/gl/Framebuffer.hpp"
+
+#include <array>
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
+
+namespace game::rendering {
+
+/* One thing to draw. `instances` non-null and non-empty = one instanced
+ * draw of every entry (model/params come from the instances then). */
+struct DrawItem {
+    const Mesh*     mesh     = nullptr;
+    const Material* material = nullptr;
+    glm::mat4       model{1.0f};
+    glm::vec4       params{1.0f, 1.0f, 1.0f, 0.0f};   // tint rgb, custom
+    const std::vector<Instance>* instances = nullptr;
+    bool            grass = false;
+};
+
+struct PointLight {
+    glm::vec3 position{0.0f};
+    float     radius = 10.0f;
+    glm::vec3 color{1.0f};
+    float     intensity = 1.0f;
+};
+
+/* The quality table. The web engine had five tiers bounded by a phone and a
+ * test suite; this build runs on a desktop GPU, so it has two: `ultra` is
+ * the web engine's ultra tier exactly, and `cinematic` is what that tier's
+ * own comments say each number would be with the budget to spend. */
+struct Quality {
+    std::string name = "ultra";
+    int   shadowRes = 4096;
+    int   bloomIters = 4;
+    bool  bloom = true;
+    bool  fxaa = true;
+    float ssao = 0.95f;
+    int   ssaoSamples = 26;
+    float ssaoRadius = 0.70f;
+    float ssaoFloor = 0.30f;
+    float sharpen = 0.52f;
+    bool  env = true;
+    int   envRes = 256;
+    int   envSamples = 64;
+    float envDiffuse = 1.0f;
+    bool  envScene = true;
+    float envSceneRange = 60.0f;
+    float multiscatter = 1.0f;
+    float specOcclusion = 1.0f;
+    bool  ssr = true;
+    int   ssrSteps = 28;
+    bool  volumetric = true;
+    int   volSteps = 24;
+    bool  pcss = true;
+    int   pcssBlockers = 12;
+    int   pcssTaps = 16;
+    bool  contactShadow = true;
+    int   contactSteps = 10;
+    float parallax = 1.0f;
+    int   parallaxSteps = 24;
+    bool  detailNormal = true;
+    /* Internal resolution / output resolution. >1 is supersampling,
+       resolved with a box-filtered downsample. */
+    float renderScale = 1.0f;
+
+    static Quality ultra();
+    static Quality cinematic();
+    static Quality byName(const std::string& n);
+};
+
+/* The look knobs -- the web renderer's sun/sky/fog/shadows/post/ssr/
+ * volumetric objects, with the web defaults. Live: change them between
+ * frames. */
+struct Sun {
+    glm::vec3 direction = glm::normalize(glm::vec3(0.45f, 0.72f, 0.53f));   // toward the sun
+    glm::vec3 color{1.0f, 0.94f, 0.84f};
+    float     intensity = 3.4f;
+};
+struct Sky {
+    glm::vec3 zenith{0.16f, 0.33f, 0.66f};
+    glm::vec3 horizon{0.62f, 0.74f, 0.88f};
+    glm::vec3 ground{0.26f, 0.24f, 0.22f};
+    float     intensity = 1.0f;
+    float     clouds = 0.4f;
+    glm::vec3 room{0.0f};
+    float     occlusion = 0.45f;
+    float     bounce = 0.70f;
+};
+struct Fog {
+    glm::vec3 color{0.62f, 0.72f, 0.85f};
+    float density = 0.008f, height = 0.0f, falloff = 0.08f, skyBlend = 0.85f;
+};
+struct Shadows {
+    bool  enabled = true;
+    float distance = 60.0f, strength = 0.86f, split = 14.0f;
+    float softness = 0.00463f, penumbraMax = 18.0f;
+    float contactLength = 0.30f, contactMaxPixels = 26.0f, contactThickness = 0.45f;
+    float contactBias = 0.004f, contactStrength = 0.85f, contactFade = 14.0f;
+};
+struct Post {
+    float exposure = 1.0f;
+    int   toneMap = 0;              // 0 ACES, 1 AgX
+    float agxPunch = 1.0f, agxSat = 1.0f;
+    float bloom = 0.55f, bloomThreshold = 1.1f;
+    float vignette = 0.55f, chromatic = 0.0018f;
+    float saturation = 1.08f, contrast = 1.04f, grain = 0.012f;
+    glm::vec3 tint{0.35f, 1.0f, 0.45f};
+    float tintMix = 0.0f;
+};
+struct Ssr {
+    float intensity = 1.0f, replace = 0.90f, roughCut = 0.25f, roughMax = 0.50f;
+    float thickness = 0.35f, maxDistance = 24.0f, edgeFade = 0.12f, clamp = 6.0f, maxDarken = 0.60f;
+};
+struct Volumetric {
+    float intensity = 1.0f, densityScale = 8.0f, anisotropy = 0.45f, tint = 0.60f;
+    float maxDistance = 60.0f, fadeStart = 0.62f, bias = 0.0001f, clamp = 4.0f, curve = 24.0f;
+};
+
+/* Which passes ran and the last frame's counters. */
+struct RenderStats {
+    int draws = 0;
+    long long tris = 0;
+    int instances = 0;
+};
+
+/* HDR forward PBR with cascaded shadows (PCSS), a scene-baked environment
+ * probe, SSR, volumetric scattering, SSAO + contact shadows, bloom, and a
+ * filmic composite -- the web engine's frame, pass for pass, on the same
+ * shaders. Output is an RGBA8 target at the output resolution. */
+class Renderer {
+public:
+    Renderer(ShaderLibrary& shaders, Quality quality);
+    ~Renderer();
+
+    void resize(int outputWidth, int outputHeight);
+    void render(const std::vector<DrawItem>& items, const Camera& camera, float dt);
+
+    [[nodiscard]] const gl::Framebuffer& output() const { return *m_output; }
+    [[nodiscard]] const Quality& quality() const { return m_q; }
+    [[nodiscard]] const RenderStats& stats() const { return m_stats; }
+    [[nodiscard]] int internalWidth()  const { return m_w; }
+    [[nodiscard]] int internalHeight() const { return m_h; }
+
+    /* Debug: capture intermediate targets. "hdr", "gbuffer", "ao",
+       "ssr", "vol", "shadow0", "bloom" -- read back by the stage tests. */
+    [[nodiscard]] const gl::Framebuffer* target(const std::string& name) const;
+    /* Every program the renderer has used, for the never-set audit. */
+    [[nodiscard]] std::vector<std::shared_ptr<gl::Program>> programs() const;
+
+    Sun        sun;
+    Sky        sky;
+    Fog        fog;
+    Shadows    shadows;
+    Post       post;
+    Ssr        ssr;
+    Volumetric volumetric;
+    std::vector<PointLight> lights;
+    glm::vec3  windDir = glm::normalize(glm::vec3(1.0f, 0.0f, 0.3f));
+    float      windStrength = 0.25f;
+    float      detailScale = 9.0f, detailFade = 11.0f;
+    float      parallaxDepth = 0.022f, parallaxFade = 18.0f;
+    float      envIntensity = 1.0f;
+    int        debugMode = 0;
+    /* Stage switches for the step-by-step screenshots. All on = the frame. */
+    struct Stages {
+        bool shadows = true, env = true, ssao = true, contact = true, ssr = true;
+        bool volumetric = true, bloom = true, fxaa = true, textures = true;
+    } stages;
+
+private:
+    std::shared_ptr<gl::Program> prog(const std::string& vert, const std::string& frag,
+                                      const std::vector<std::string>& defines = {});
+    void bindEnv(const gl::Program& p) const;
+    void bindShadows(const gl::Program& p) const;
+    void bindLights(const gl::Program& p, const glm::vec3& cameraPos) const;
+    void bindMaterial(const gl::Program& p, const Material& m) const;
+    void drawItem(const gl::Program& p, const DrawItem& it);
+    void drawPbr(const DrawItem& it, const Camera& cam);
+    void fullscreen();
+
+    void fitCascade(const Camera& cam, float nearD, float farD, int idx);
+    void renderShadows(const std::vector<DrawItem>& items, const Camera& cam);
+    void renderEnv(const std::vector<DrawItem>& items, const Camera& cam);
+    void renderScene(const std::vector<DrawItem>& items, const Camera& cam);
+    void present(const Camera& cam);
+    GLuint renderVolumetrics(const Camera& cam);
+    GLuint renderSsr(const Camera& cam);
+    GLuint applyScreenSpace(const Camera& cam, GLuint ssrTex, GLuint volTex);
+
+    void initEnv();
+    void bakeEnvSh();
+    glm::vec3 skyRadianceCpu(const glm::vec3& d) const;
+    uint32_t envHash() const;
+    void attachEnvFace(const gl::Texture& cube, int face, int level, int size, bool withDepth);
+
+    ShaderLibrary& m_lib;
+    Quality        m_q;
+    int  m_outW = 0, m_outH = 0, m_w = 0, m_h = 0;
+    float m_time = 0.0f;
+    RenderStats m_stats;
+    std::map<std::string, std::shared_ptr<gl::Program>> m_used;
+
+    std::unique_ptr<gl::Framebuffer> m_hdrA, m_hdrB, m_ldr, m_final, m_output;
+    std::unique_ptr<gl::Framebuffer> m_aoA, m_aoB, m_ssrA, m_ssrB, m_volA, m_volB;
+    std::vector<std::pair<std::unique_ptr<gl::Framebuffer>, std::unique_ptr<gl::Framebuffer>>> m_bloom;
+    std::array<std::unique_ptr<gl::Framebuffer>, 2> m_shadowMaps;
+    std::array<glm::mat4, 2> m_shadowMats{glm::mat4(1.0f), glm::mat4(1.0f)};
+    std::array<float, 2> m_cascadeGap{1.0f, 1.0f}, m_cascadeTexelZ{0.0f, 0.0f};
+    gl::VertexArrayHandle m_emptyVao;
+
+    // Environment probe.
+    gl::Texture m_envSource, m_envCube, m_brdfLut, m_envNullCube, m_envNull2D, m_noBlocker;
+    gl::FramebufferHandle m_envFbo;
+    gl::RenderbufferHandle m_envDepth;
+    int  m_envLevels = 0, m_envJob = 0, m_envJobs = 0;
+    bool m_envReady = false, m_brdfBaked = false, m_envBaking = false;
+    uint32_t m_envHash = 0;
+    bool m_envHashValid = false;
+    glm::vec3 m_envAt{0.0f}, m_envWantAt{0.0f};
+    std::array<glm::vec3, 9> m_envSh{};
+};
+
+} // namespace game::rendering

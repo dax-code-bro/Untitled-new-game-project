@@ -36,7 +36,7 @@ void computeTangents(MeshData& m) {
     const auto& I = m.indices;
 
     // The JS accumulates into Float32Arrays: every += is a double add rounded
-    // to float. `float += double` does exactly that.
+    // to float, which acc() below reproduces.
     std::vector<float> tan(nv * 3, 0.0f), bit(nv * 3, 0.0f);
 
     for (std::size_t i = 0; i + 2 < I.size(); i += 3) {
@@ -53,9 +53,10 @@ void computeTangents(MeshData& m) {
         const double r = 1 / det;
         const double tx = (e1x * dv2 - e2x * dv1) * r, ty = (e1y * dv2 - e2y * dv1) * r, tz = (e1z * dv2 - e2z * dv1) * r;
         const double bx = (e2x * du1 - e1x * du2) * r, by = (e2y * du1 - e1y * du2) * r, bz = (e2z * du1 - e1z * du2) * r;
+        const auto acc = [](float& f, double d) { f = static_cast<float>(static_cast<double>(f) + d); };
         for (const uint32_t idx : {i0, i1, i2}) {
-            tan[idx * 3] += tx; tan[idx * 3 + 1] += ty; tan[idx * 3 + 2] += tz;
-            bit[idx * 3] += bx; bit[idx * 3 + 1] += by; bit[idx * 3 + 2] += bz;
+            acc(tan[idx * 3], tx); acc(tan[idx * 3 + 1], ty); acc(tan[idx * 3 + 2], tz);
+            acc(bit[idx * 3], bx); acc(bit[idx * 3 + 1], by); acc(bit[idx * 3 + 2], bz);
         }
     }
 

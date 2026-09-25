@@ -11,8 +11,12 @@
 // exactly as JS does it, and rounded to float only at the end, which is where
 // the JS rounds too (new Float32Array). Indices are plain uint32 triangles.
 //
-// Winding: counter-clockwise when seen from the side the normal points to,
-// matching the JS (verified by the parity test's winding check).
+// Winding: every triangle is counter-clockwise seen from the side its normals
+// point to (OpenGL default front face). This is the one place the port departs
+// from the JS on purpose: the JS cylinder, cone, torus and the +Y/-Y faces of
+// box are wound clockwise, so its back-face-culled renderer drew them
+// inside-out. Those triangles are the JS triangles with their last two indices
+// swapped; every other index is identical to the JS.
 #include <cstddef>
 #include <cstdint>
 #include <functional>

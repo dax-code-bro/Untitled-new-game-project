@@ -36,7 +36,8 @@ Texture::Texture(const TextureDesc& d) : m_desc(d) {
     glTextureParameteri(id, GL_TEXTURE_WRAP_T, static_cast<GLint>(d.wrap));
     if (d.target == GL_TEXTURE_CUBE_MAP) {
         glTextureParameteri(id, GL_TEXTURE_WRAP_R, static_cast<GLint>(d.wrap));
-        glTextureParameteri(id, GL_TEXTURE_CUBE_MAP_SEAMLESS, GL_TRUE);
+        // Seamless filtering is global state in core GL (the per-texture
+        // parameter is an extension): the Renderer enables it once.
     }
     glTextureParameteri(id, GL_TEXTURE_BASE_LEVEL, 0);
     glTextureParameteri(id, GL_TEXTURE_MAX_LEVEL, m_desc.levels - 1);

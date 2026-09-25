@@ -1,27 +1,36 @@
 /* my_cpp_game -- engine initialisation and the master loop.
  *
  *   my_cpp_game                                   windowed, interactive
- *   my_cpp_game --width 3840 --height 2160 --screenshot out.png
+ *   my_cpp_game --width 3840 --height 2160 --texture-res 4096 --screenshot out.png
  *                                                 offscreen 4K, save, exit
+ *   my_cpp_game --width 7680 --height 4320 --quality cinematic --screenshot 8k.png
  *
- * Every frame renders into an offscreen HDR target at the requested size,
- * never straight into the window. That is what lets a capture be any
- * resolution -- 4K or 8K -- regardless of the monitor, and it is the same
- * path either way, so a screenshot is a picture of exactly what the game
- * draws rather than of a special capture mode. */
+ * Every frame renders into offscreen targets at the requested size, never
+ * straight into the window. That is what lets a capture be any resolution
+ * -- 4K or 8K -- regardless of the monitor, and it is the same path either
+ * way, so a screenshot is a picture of exactly what the game draws rather
+ * than of a special capture mode.
+ *
+ * Controls (windowed): WASD / QE move, hold right mouse to look, Shift is
+ * fast, 1-6 jump to the named shots, F5 hot-reloads shaders (also automatic
+ * on save), F12 saves a screenshot at the window's resolution. */
 #include "core/Args.hpp"
 #include "core/Capture.hpp"
+#include "core/GlDebug.hpp"
 #include "core/Window.hpp"
+#include "rendering/Material.hpp"
+#include "rendering/Renderer.hpp"
 #include "rendering/ShaderLibrary.hpp"
-#include "rendering/gl/Framebuffer.hpp"
-#include "rendering/gl/VertexArray.hpp"
+#include "rendering/Tunables.hpp"
+#include "scene/Showcase.hpp"
 
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
 
+#include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <cstdio>
 #include <exception>
 #include <filesystem>
@@ -31,12 +40,6 @@ namespace {
 
 constexpr double kFixedStep = 1.0 / 60.0;   // the sim step the JS engine uses
 
-void APIENTRY debugCallback(GLenum, GLenum type, GLuint, GLenum severity,
-                            GLsizei, const GLchar* message, const void*) {
-    if (severity == GL_DEBUG_SEVERITY_NOTIFICATION) return;
-    std::fprintf(stderr, "[gl] type=0x%x severity=0x%x: %s\n", type, severity, message);
-}
-
 std::filesystem::path shaderRoot() {
     namespace fs = std::filesystem;
     for (const fs::path& p : {fs::path(GAME_SOURCE_DIR) / "shaders", fs::path("shaders")})
@@ -44,17 +47,40 @@ std::filesystem::path shaderRoot() {
     throw std::runtime_error("no shaders directory found");
 }
 
-// The web engine's default daylight, so both builds start from one sky.
-void bindSky(const game::gl::Program& p) {
-    p.set("uSkyZenith",    glm::vec3(0.16f, 0.33f, 0.66f));
-    p.set("uSkyHorizon",   glm::vec3(0.62f, 0.74f, 0.88f));
-    p.set("uGroundColor",  glm::vec3(0.26f, 0.24f, 0.22f));
-    p.set("uSunDir",       glm::normalize(glm::vec3(0.45f, 0.72f, 0.53f)));
-    p.set("uSunColor",     glm::vec3(1.0f, 0.94f, 0.84f));
-    p.set("uSunIntensity", 3.4f);
-    p.set("uSkyIntensity", 1.0f);
-    p.set("uGroundBounce", 0.35f);
+void applyDisables(game::rendering::Renderer& r, const std::vector<std::string>& off) {
+    auto& s = r.stages;
+    for (const auto& n : off) {
+        if      (n == "shadows")    s.shadows = false;
+        else if (n == "env")        s.env = false;
+        else if (n == "ssao")       s.ssao = false;
+        else if (n == "contact")    s.contact = false;
+        else if (n == "ssr")        s.ssr = false;
+        else if (n == "volumetric") s.volumetric = false;
+        else if (n == "bloom")      s.bloom = false;
+        else if (n == "fxaa")       s.fxaa = false;
+        else if (n == "textures")   s.textures = false;
+        else if (n == "post")       { s.ssao = s.contact = s.ssr = s.volumetric = s.bloom = s.fxaa = false; }
+        else if (n == "grade")      { r.post.vignette = 0; r.post.chromatic = 0; r.post.grain = 0;
+                                      r.post.saturation = 1; r.post.contrast = 1; }
+        else throw std::invalid_argument("--disable: unknown pass '" + n + "'");
+    }
 }
+
+/* A free-fly camera over the scene's named shot. */
+struct FlyCamera {
+    glm::vec3 pos{0.0f};
+    float yaw = 0.0f, pitch = 0.0f;
+
+    void lookFrom(const game::rendering::Camera& c) {
+        pos = c.position;
+        const glm::vec3 d = glm::normalize(c.target - c.position);
+        yaw = std::atan2(d.x, -d.z);
+        pitch = std::asin(std::clamp(d.y, -1.0f, 1.0f));
+    }
+    glm::vec3 forward() const {
+        return {std::sin(yaw) * std::cos(pitch), std::sin(pitch), -std::cos(yaw) * std::cos(pitch)};
+    }
+};
 
 } // namespace
 
@@ -63,83 +89,129 @@ int main(int argc, char** argv) try {
 
     auto window = std::make_unique<game::core::Window>(
         args.hidden ? 64 : args.width, args.hidden ? 64 : args.height, "my_cpp_game", !args.hidden);
-
     std::printf("GL %d.%d core | %s | %s\n", window->glMajor(), window->glMinor(),
                 glGetString(GL_RENDERER), glGetString(GL_VERSION));
-
-    int flags = 0;
-    glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
-    if (flags & GL_CONTEXT_FLAG_DEBUG_BIT) {
-        glEnable(GL_DEBUG_OUTPUT);
-        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-        glDebugMessageCallback(debugCallback, nullptr);
-    }
+    if (args.glDebug) game::core::installGlDebug();
 
     game::rendering::ShaderLibrary shaders(shaderRoot());
-    auto sky     = shaders.get("fullscreen.vert", "sky.frag");
-    auto tonemap = shaders.get("fullscreen.vert", "tonemap.frag");
+    game::rendering::Quality quality = game::rendering::Quality::byName(args.quality);
+    quality.renderScale = args.scale;
+    game::rendering::Renderer renderer(shaders, quality);
+    renderer.resize(args.width, args.height);
+    renderer.debugMode = args.debugMode;
 
-    game::gl::VertexArray emptyVao;   // fullscreen passes draw from gl_VertexID
-    game::gl::Framebuffer hdr(args.width, args.height, {GL_RGBA16F});
-    game::gl::Framebuffer ldr(args.width, args.height, {GL_RGBA8});
+    game::rendering::MaterialLibrary materials(args.textureRes);
+    const auto t0 = std::chrono::steady_clock::now();
+    if (args.scene != "showcase") throw std::invalid_argument("unknown scene '" + args.scene + "'");
+    game::scene::Showcase scene(materials, renderer, args.grass);
+    applyDisables(renderer, args.disable);
+    /* The look file is applied over the scene's own settings and then
+       watched; --set wins over both. */
+    game::rendering::TunableFile look(args.look.empty()
+        ? std::filesystem::path(GAME_SOURCE_DIR) / "scripts" / "look.ini" : std::filesystem::path(args.look));
+    look.reloadIfChanged(renderer);
+    auto applySets = [&] {
+        for (const auto& kv : args.sets) {
+            const auto eq = kv.find('=');
+            std::string err;
+            if (eq == std::string::npos || !game::rendering::setTunable(renderer, kv.substr(0, eq), kv.substr(eq + 1), &err))
+                throw std::invalid_argument("--set " + kv + ": " + (err.empty() ? "expected key=value" : err));
+        }
+    };
+    applySets();
+    std::printf("scene built in %.2f s: %zu draws, %zu recipes at %d px (bake %.2f s), internal %dx%d\n",
+                std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count(),
+                scene.items().size(), materials.recipeCount(), materials.textureSize(),
+                materials.bakeSeconds(), renderer.internalWidth(), renderer.internalHeight());
 
-    glm::vec3 eye(0.0f, 1.7f, 0.0f);
-    glm::vec3 target(0.0f, 2.6f, 10.0f);
+    game::rendering::Camera camera = scene.shot(args.shot);
+    FlyCamera fly;
+    fly.lookFrom(camera);
 
     using clock = std::chrono::steady_clock;
     auto   previous    = clock::now();
     double accumulator = 0.0;
     int    frame       = 0;
+    double gpuMsSum    = 0.0;
+    double lastX = 0.0, lastY = 0.0;
+    bool   looking = false;
 
     while (!window->shouldClose()) {
         const auto now = clock::now();
         double dt = std::chrono::duration<double>(now - previous).count();
         previous = now;
         if (dt > 0.20) dt = 0.20;      // same clamp as the JS loop
+        if (args.frames > 0) dt = kFixedStep;   // captures are deterministic
         accumulator += dt;
         window->pollEvents();
         if (shaders.reloadChanged()) std::printf("shaders reloaded\n");
+        if (frame > 0 && look.reloadIfChanged(renderer)) { applySets(); std::printf("look reloaded\n"); }
+
+        if (!args.hidden) {
+            GLFWwindow* w = window->handle();
+            const float speed = static_cast<float>(dt) * (glfwGetKey(w, GLFW_KEY_LEFT_SHIFT) ? 12.0f : 3.5f);
+            const glm::vec3 f = fly.forward();
+            const glm::vec3 r = glm::normalize(glm::cross(f, glm::vec3(0, 1, 0)));
+            if (glfwGetKey(w, GLFW_KEY_W)) fly.pos += f * speed;
+            if (glfwGetKey(w, GLFW_KEY_S)) fly.pos -= f * speed;
+            if (glfwGetKey(w, GLFW_KEY_D)) fly.pos += r * speed;
+            if (glfwGetKey(w, GLFW_KEY_A)) fly.pos -= r * speed;
+            if (glfwGetKey(w, GLFW_KEY_E)) fly.pos.y += speed;
+            if (glfwGetKey(w, GLFW_KEY_Q)) fly.pos.y -= speed;
+            const auto names = game::scene::Showcase::shotNames();
+            for (int k = 0; k < static_cast<int>(names.size()) && k < 9; ++k)
+                if (glfwGetKey(w, GLFW_KEY_1 + k)) fly.lookFrom(scene.shot(names[static_cast<size_t>(k)]));
+            double mx = 0, my = 0;
+            glfwGetCursorPos(w, &mx, &my);
+            if (glfwGetMouseButton(w, GLFW_MOUSE_BUTTON_RIGHT)) {
+                if (looking) {
+                    fly.yaw += static_cast<float>(mx - lastX) * 0.0025f;
+                    fly.pitch = std::clamp(fly.pitch - static_cast<float>(my - lastY) * 0.0025f, -1.5f, 1.5f);
+                }
+                looking = true;
+            } else {
+                looking = false;
+            }
+            lastX = mx; lastY = my;
+            camera.position = fly.pos;
+            camera.target = fly.pos + fly.forward();
+        }
 
         while (accumulator >= kFixedStep) accumulator -= kFixedStep;   // sim attaches here
 
-        const float aspect = static_cast<float>(args.width) / static_cast<float>(args.height);
-        const glm::mat4 view = glm::lookAt(eye, target, glm::vec3(0, 1, 0));
-        const glm::mat4 proj = glm::perspective(glm::radians(62.0f), aspect, 0.05f, 400.0f);
-
-        glBindVertexArray(emptyVao.id());
-        glDisable(GL_DEPTH_TEST);
-
-        hdr.bind();
-        sky->use();
-        bindSky(*sky);
-        sky->set("uInvViewProj", glm::inverse(proj * view));
-        sky->set("uCameraPos", eye);
-        glDrawArrays(GL_TRIANGLES, 0, 3);
-
-        ldr.bind();
-        tonemap->use();
-        tonemap->texture("uHdr", hdr.color(0), 0);
-        tonemap->set("uExposure", 1.0f);
-        glDrawArrays(GL_TRIANGLES, 0, 3);
-
+        const auto g0 = clock::now();
+        renderer.render(scene.items(), camera, static_cast<float>(dt));
+        const auto& out = renderer.output();
         if (!args.hidden) {
-            glBlitNamedFramebuffer(ldr.id(), 0, 0, 0, ldr.width(), ldr.height(),
+            glBlitNamedFramebuffer(out.id(), 0, 0, 0, out.width(), out.height(),
                                    0, 0, window->width(), window->height(),
                                    GL_COLOR_BUFFER_BIT, GL_LINEAR);
             window->swapBuffers();
+            if (glfwGetKey(window->handle(), GLFW_KEY_F12)) {
+                auto px = game::core::readRGBA8(out.id(), out.width(), out.height());
+                game::core::savePNG("screenshot.png", out.width(), out.height(), px);
+                std::printf("wrote screenshot.png\n");
+            }
+        } else {
+            glFinish();
         }
+        gpuMsSum += std::chrono::duration<double, std::milli>(clock::now() - g0).count();
+        ++frame;
 
-        if (args.frames > 0 && ++frame >= args.frames) {
+        if (args.frames > 0 && frame >= args.frames) {
+            const auto& st = renderer.stats();
+            std::printf("%d frames, %.1f ms/frame avg, last frame %d draws, %lld tris, %d instances\n",
+                        frame, gpuMsSum / frame, st.draws, st.tris, st.instances);
+            if (args.glDebug) std::printf("GL errors: %d\n", game::core::glDebugErrorCount());
             if (!args.screenshot.empty()) {
-                glFinish();
-                auto px = game::core::readRGBA8(ldr.id(), ldr.width(), ldr.height());
-                game::core::savePNG(args.screenshot, ldr.width(), ldr.height(), px);
-                std::printf("wrote %s (%dx%d)\n", args.screenshot.c_str(), ldr.width(), ldr.height());
+                auto px = game::core::readRGBA8(out.id(), out.width(), out.height());
+                game::core::savePNG(args.screenshot, out.width(), out.height(), px);
+                std::printf("wrote %s (%dx%d)\n", args.screenshot.c_str(), out.width(), out.height());
             }
             break;
         }
     }
-    return 0;
+    return (args.glDebug && game::core::glDebugErrorCount() > 0) ? 2 : 0;
 } catch (const std::exception& e) {
     std::fprintf(stderr, "fatal: %s\n", e.what());
     return 1;

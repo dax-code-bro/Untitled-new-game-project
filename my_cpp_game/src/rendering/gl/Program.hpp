@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace game::gl {
 
@@ -41,7 +42,29 @@ public:
     void set(const std::string& n, const glm::vec4& v) const { glProgramUniform4fv(m_h.get(), location(n), 1, &v[0]); }
     void set(const std::string& n, const glm::mat3& m) const { glProgramUniformMatrix3fv(m_h.get(), location(n), 1, GL_FALSE, &m[0][0]); }
     void set(const std::string& n, const glm::mat4& m) const { glProgramUniformMatrix4fv(m_h.get(), location(n), 1, GL_FALSE, &m[0][0]); }
+    void set(const std::string& n, const glm::ivec2& v) const { glProgramUniform2iv(m_h.get(), location(n), 1, &v[0]); }
+    void setArray(const std::string& n, const glm::vec3* v, int count) const { glProgramUniform3fv(m_h.get(), location(n), count, &v[0][0]); }
+    void setArray(const std::string& n, const glm::vec4* v, int count) const { glProgramUniform4fv(m_h.get(), location(n), count, &v[0][0]); }
     void texture(const std::string& n, const Texture& t, GLuint unit) const { t.bind(unit); set(n, static_cast<int>(unit)); }
+
+    /* EVERY ACTIVE SAMPLER OWNS ONE TEXTURE UNIT, assigned at link time.
+     *
+     * The WebGL engine allocated units per draw, and twice lost whole
+     * draws to the rule that two samplers of different types may not
+     * share a unit: an active sampler nobody bound reads unit 0, where a
+     * sampler2DShadow already was, and the draw was dropped with
+     * GL_INVALID_OPERATION and no other symptom. Here a sampler's unit is
+     * fixed and unique within its program, so an unbound sampler reads
+     * an incomplete texture (black) instead of taking the draw down. */
+    void texture(const std::string& n, const Texture& t) const;
+    void texture(const std::string& n, GLuint textureId) const;
+    [[nodiscard]] bool hasSampler(const std::string& n) const { return m_samplerUnits.count(n) != 0; }
+
+    /* Every active uniform the renderer never once touched. The mirror of
+       missing(): a uniform the shader reads and nobody sets reads ZERO,
+       silently, which is the other half of the web engine's worst class
+       of bug. The renderer test asserts this is empty for every pass. */
+    [[nodiscard]] std::vector<std::string> neverSet() const;
 
     [[nodiscard]] GLuint id() const { return m_h.get(); }
     [[nodiscard]] const std::string& name() const { return m_name; }
@@ -53,6 +76,9 @@ private:
     std::string   m_name;
     mutable std::unordered_map<std::string, GLint> m_cache;
     mutable std::set<std::string>                  m_missing;
+    std::unordered_map<std::string, GLuint>        m_samplerUnits;
+    std::vector<std::string>                       m_active;
+    mutable std::set<std::string>                  m_samplerTouched;
 };
 
 } // namespace game::gl

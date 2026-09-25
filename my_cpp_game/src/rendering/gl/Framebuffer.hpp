@@ -10,8 +10,11 @@ namespace game::gl {
 class Framebuffer {
 public:
     Framebuffer() = default;
+    /* depthCompare: the depth texture is a shadow map (sampler2DShadow,
+       LEQUAL compare, LINEAR filter = hardware 2x2 PCF). Otherwise depth
+       is sampled raw with NEAREST. */
     Framebuffer(int w, int h, std::vector<GLenum> colorFormats, GLenum depthFormat = 0,
-                GLenum filter = GL_LINEAR);
+                GLenum filter = GL_LINEAR, bool depthCompare = false);
 
     void bind() const;                                 // binds + sets the viewport
     void clearColor(int attachment, float r, float g, float b, float a) const;

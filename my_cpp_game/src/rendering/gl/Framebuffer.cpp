@@ -4,7 +4,8 @@
 
 namespace game::gl {
 
-Framebuffer::Framebuffer(int w, int h, std::vector<GLenum> colorFormats, GLenum depthFormat, GLenum filter)
+Framebuffer::Framebuffer(int w, int h, std::vector<GLenum> colorFormats, GLenum depthFormat, GLenum filter,
+                         bool depthCompare)
     : m_w(w), m_h2(h) {
     GLuint id = 0;
     glCreateFramebuffers(1, &id);
@@ -22,7 +23,9 @@ Framebuffer::Framebuffer(int w, int h, std::vector<GLenum> colorFormats, GLenum 
     if (depthFormat) {
         TextureDesc d;
         d.width = w; d.height = h; d.internalFormat = depthFormat;
-        d.minFilter = GL_NEAREST; d.magFilter = GL_NEAREST;
+        d.minFilter = depthCompare ? GL_LINEAR : GL_NEAREST;
+        d.magFilter = d.minFilter;
+        d.depthCompare = depthCompare;
         m_depth = std::make_unique<Texture>(d);
         glNamedFramebufferTexture(id, GL_DEPTH_ATTACHMENT, m_depth->id(), 0);
     }
