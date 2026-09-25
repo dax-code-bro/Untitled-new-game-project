@@ -30,6 +30,8 @@ public:
     Input& input() { return input_; }
     void onResize(int w, int h);
     bool wantsPointerLock() const;
+    int framesDrawn() const { return framesDrawn_; }
+    int ticksStarted() const { return ticksStarted_; }
     // Touch (phone) support used by the web page
     int touchState() const;
     void touchPause();
@@ -99,6 +101,7 @@ private:
     bool browserLocked_ = false;
     bool touch_ = false;          // phone / tablet mode (--touch)
     int framesDrawn_ = 0;
+    int ticksStarted_ = 0;
     bool low_ = false;            // low graphics mode (--low)
 };
 

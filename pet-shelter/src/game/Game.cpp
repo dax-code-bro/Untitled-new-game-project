@@ -38,6 +38,10 @@ extern "C" EMSCRIPTEN_KEEPALIVE void ps_use_timer_loop() {
     emscripten_pause_main_loop();
     emscripten_resume_main_loop();
 }
+// Last resort used by the page's "Tap to start": run one frame right now, from the tap itself.
+extern "C" EMSCRIPTEN_KEEPALIVE void ps_tick_now() { if (g_game) g_game->tick(); }
+extern "C" EMSCRIPTEN_KEEPALIVE int ps_ticks_started() { return g_game ? g_game->ticksStarted() : 0; }
+extern "C" EMSCRIPTEN_KEEPALIVE int ps_frames_drawn() { return g_game ? g_game->framesDrawn() : 0; }
 extern "C" EMSCRIPTEN_KEEPALIVE int ps_touch_state() { return g_game ? g_game->touchState() : 0; }
 extern "C" EMSCRIPTEN_KEEPALIVE void ps_touch_move(float x, float y) { if (g_game) g_game->input().touchMove = {x, y}; }
 extern "C" EMSCRIPTEN_KEEPALIVE void ps_touch_look(float dx, float dy) { if (g_game) g_game->input().addTouchLook(dx, dy); }
@@ -196,6 +200,7 @@ void Game::onResize(int w, int h) {
 }
 
 void Game::tick() {
+    ++ticksStarted_;
 #ifdef __EMSCRIPTEN__
     // Follow the browser window size
     int bw = EM_ASM_INT({ return window.innerWidth; }), bh = EM_ASM_INT({ return window.innerHeight; });

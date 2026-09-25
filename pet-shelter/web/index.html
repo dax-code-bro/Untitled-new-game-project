@@ -227,7 +227,9 @@
     const secs = ((performance.now() - t0) / 1000).toFixed(0);
     document.getElementById('diag').textContent =
       'Step: ' + lastStep + '\n' + timings() + '\n' + secs + ' s · screen refreshes: ' + rafTicks + ' · ' + gpu +
-      (isTouch ? ' · touch' : '') + (lowMode ? ' · low graphics' : '') + (timerLoop ? ' · timer frames' : '');
+      (isTouch ? ' · touch' : '') + (lowMode ? ' · low graphics' : '') + (timerLoop ? ' · timer frames' : '') +
+      (manualDriver ? ' · tap-driven' : '') + '\nGame frames started/finished: ' + gameCounter('_ps_ticks_started') + '/' + gameCounter('_ps_frames_drawn') +
+      (lastTapResult ? '\nLast tap: ' + lastTapResult : '') + (problems.length ? '\nProblem: ' + problems[problems.length - 1] : '');
   }
   setInterval(updateDiag, 500);
   // Watchdog: once the game has finished loading, frames must start. Some phones pause the
@@ -239,7 +241,31 @@
     try { Module._ps_use_timer_loop(); } catch (e) { console.log('timer loop failed', e); }
     updateDiag();
   }
-  document.getElementById('startBtn').addEventListener('click', kickFrames);
+  // "Tap to start": run a frame straight from the tap (browsers never hold back work started by a tap),
+  // then keep the game going with our own timer instead of Emscripten's frame scheduler.
+  let manualDriver = false, lastTapResult = '';
+  function gameCounter(name) { try { return Module[name] ? Module[name]() : '–'; } catch (e) { return '–'; } }
+  function driveOnce() {
+    const t = performance.now();
+    try { Module._ps_tick_now(); return (performance.now() - t).toFixed(0) + ' ms'; }
+    catch (e) { problems.push('frame error: ' + (e && e.message ? e.message : e)); return 'error: ' + (e && e.message ? e.message : e); }
+  }
+  document.getElementById('startBtn').addEventListener('click', () => {
+    if (!Module._ps_tick_now) return;
+    const btn = document.getElementById('startBtn');
+    btn.textContent = 'Starting…';
+    if (!manualDriver) {
+      manualDriver = true;
+      try { if (Module.pauseMainLoop) Module.pauseMainLoop(); } catch (e) { /* keep going */ }
+      const loop = () => { driveOnce(); if (!ready || manualDriver) setTimeout(loop, 16); };
+      setTimeout(loop, 16);
+    }
+    lastTapResult = 'frame took ' + driveOnce();
+    updateDiag();
+    btn.textContent = 'Tap again';
+  });
+  window.addEventListener('error', (e) => { problems.push('script error: ' + (e.message || e.type)); updateDiag(); });
+  window.addEventListener('unhandledrejection', (e) => { problems.push('async error: ' + (e.reason && e.reason.message ? e.reason.message : e.reason)); updateDiag(); });
   function startWatchdog() {
     let checks = 0;
     const id = setInterval(() => {
