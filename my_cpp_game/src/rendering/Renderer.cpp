@@ -208,7 +208,7 @@ void Renderer::bindEnv(const gl::Program& p) const {
     p.texture("uSkyLut", physical ? m_skyLut : m_envNull2D);
     p.set("uGroundColor", sky.ground);
     p.set("uSunDir", sun.direction);
-    p.set("uSunColor", sun.color);
+    p.set("uSunColor", litSunColor());
     p.set("uSunIntensity", sun.intensity);
     p.set("uSkyIntensity", sky.intensity);
     p.set("uRoomAmbient", sky.room);
@@ -360,6 +360,7 @@ void Renderer::drawPbr(const DrawItem& it, const Camera& cam) {
     bindMaterial(*p, *it.material);
     p->set("uDebugMode", debugMode);
     p->set("uBevel", it.bevel * bevelScale);
+    p->set("uWater", it.water ? 1.0f : 0.0f);
     if (it.grass) {
         p->set("uWindDir", windDir);
         p->set("uWindStrength", windStrength);
@@ -462,6 +463,11 @@ void Renderer::updateAtmosphere() {
     AtmosphereParams ap;
     ap.turbidity = std::max(0.0f, sky.turbidity);
     m_atmo.compute(ap, sun.direction);
+    {
+        const glm::vec3 t = Atmosphere::sunTransmittance(ap, sun.direction);
+        const glm::vec3 t0 = Atmosphere::sunTransmittance(ap, glm::vec3(0.0f, 1.0f, 0.0f));
+        m_sunTint = t / glm::max(t0, glm::vec3(1e-4f));
+    }
     if (!m_skyLut) {
         gl::TextureDesc d;
         d.width = Atmosphere::kWidth;
@@ -564,7 +570,7 @@ glm::vec3 Renderer::skyRadianceCpu(const glm::vec3& d) const {
         const glm::vec3 scale = sun.color * (sun.intensity * sky.physicalGain);
         glm::vec3 c = m_atmo.sample(d) * scale / std::max(si, 1e-4f);
         const float lit = std::max(sun.direction.y, 0.0f);
-        const glm::vec3 g = sky.ground * (glm::vec3(si) + sun.color * (sun.intensity * lit * sky.bounce)) /
+        const glm::vec3 g = sky.ground * (glm::vec3(si) + litSunColor() * (sun.intensity * lit * sky.bounce)) /
                             std::max(si, 1e-4f);
         float e = clampv((d.y + 0.28f) / 0.34f, 0.0f, 1.0f);
         e = e * e * (3.0f - 2.0f * e);

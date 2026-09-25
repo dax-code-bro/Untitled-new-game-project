@@ -30,6 +30,9 @@ struct DrawItem {
     /* NATIVE: edge bevel radius in metres, for meshes that are unit boxes
        (the shader derives a rounded-box normal from it). 0 = off. */
     float           bevel = 0.0f;
+    /* NATIVE: a lake/pool/sea surface -- the shader replaces the normal
+       with animated waves and drops the roughness (see pbr.frag). */
+    bool            water = false;
 };
 
 struct PointLight {
@@ -262,6 +265,13 @@ private:
     uint32_t    m_atmoHash = 0;
     bool        m_atmoValid = false;
     glm::vec3   m_atmoZenith{0.0f}, m_atmoHorizon{0.0f};
+    /* The sun as it arrives through the air, relative to overhead: white at
+       noon, orange and dimmer at a low sun. Multiplies the sun's colour in
+       every lighting use while the physical sky is on. */
+    glm::vec3   m_sunTint{1.0f};
+    [[nodiscard]] glm::vec3 litSunColor() const {
+        return (sky.model == 1 && m_atmoValid) ? sun.color * m_sunTint : sun.color;
+    }
 };
 
 } // namespace game::rendering

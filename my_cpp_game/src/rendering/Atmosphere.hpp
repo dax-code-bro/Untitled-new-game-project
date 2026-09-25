@@ -37,6 +37,10 @@ public:
     /* Rebuilds the table for a sun direction (toward the sun). */
     void compute(const AtmosphereParams& p, const glm::vec3& sunDir);
 
+    /* How much of the sun's light survives the air between it and the eye,
+       per channel -- 1 overhead is ~0.9, at the horizon it is red and dim. */
+    static glm::vec3 sunTransmittance(const AtmosphereParams& p, const glm::vec3& sunDir);
+
     /* Bilinear lookup, the same mapping the shader uses. */
     [[nodiscard]] glm::vec3 sample(const glm::vec3& dir) const;
     [[nodiscard]] const std::vector<glm::vec4>& texels() const { return m_texels; }   // RGBA, row 0 = v 0

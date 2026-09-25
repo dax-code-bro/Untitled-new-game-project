@@ -53,6 +53,15 @@ glm::vec3 transmittanceToSun(const AtmosphereParams& p, const glm::vec3& pos, co
 }
 } // namespace
 
+glm::vec3 Atmosphere::sunTransmittance(const AtmosphereParams& p, const glm::vec3& sunDir) {
+    const glm::vec3 origin(0.0f, p.planetRadius + p.cameraAltitude, 0.0f);
+    glm::vec3 d = glm::normalize(sunDir);
+    // Below the horizon the planet blocks it; hold a sliver above so a sun
+    // exactly on the horizon still reads as a deep red one.
+    if (d.y < 0.01f) d = glm::normalize(glm::vec3(d.x, 0.01f, d.z));
+    return transmittanceToSun(p, origin, d);
+}
+
 glm::vec2 Atmosphere::dirToUv(const glm::vec3& d) {
     const float az = std::atan2(d.z, d.x);
     const float el = std::asin(std::clamp(d.y, -1.0f, 1.0f));

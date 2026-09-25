@@ -29,6 +29,58 @@ in mat3 vObjRot;
    radius is capped at 0.45 of the smallest half-extent so a thin slab
    rounds its edge rather than turning into a cylinder. */
 uniform float uBevel;
+
+/* ---- NATIVE: WATER ----
+   The maps build their lakes and pools as flat boxes, and a flat dark box
+   is what they looked like: a grey sheet with a blurred blob of sun on it.
+   uWater marks those draws (the importer tags them by name). The normal
+   becomes a sum of directional waves -- a long swell, a cross-swell, wind
+   chop -- plus two scrolling octaves of fine noise, evaluated analytically
+   in world space, and the roughness drops to nearly a mirror. Everything
+   else follows from the PBR and screen-space passes already running: the
+   Fresnel term makes it dark looking down and a sky mirror at grazing
+   angles, SSR reflects the pier and the trees in the ripples (the rippled
+   normal goes into the G-buffer), and the sun turns into a glitter path
+   instead of a smear. The high frequencies fade with distance, and the
+   roughness rises to stand in for the waves that went sub-pixel. */
+uniform float uWater;
+vec3 waterNormal(vec2 p, float t, float dist){
+  vec2 g = vec2(0.0);
+  // direction.xy, wavelength (m), amplitude (m)
+  /* Wavelengths in no simple ratio and directions spread round a prevailing
+     wind, so no two crests line up into the corduroy a regular set makes. */
+  const vec4 W[10] = vec4[10](
+    vec4( 0.82,  0.57, 11.3, 0.045),
+    vec4( 0.36,  0.93,  7.1, 0.030),
+    vec4( 0.97,  0.24,  4.7, 0.021),
+    vec4(-0.21,  0.98,  3.3, 0.014),
+    vec4( 0.70, -0.71,  2.3, 0.010),
+    vec4( 0.55,  0.83,  1.61, 0.0068),
+    vec4(-0.64,  0.77,  1.13, 0.0047),
+    vec4( 0.99, -0.12,  0.79, 0.0032),
+    vec4( 0.13,  0.99,  0.53, 0.0021),
+    vec4(-0.86,  0.51,  0.37, 0.0014));
+  for (int i = 0; i < 10; i++) {
+    vec2 d = normalize(W[i].xy);
+    float k = 6.2831853 / W[i].z;
+    float w = sqrt(9.81 * k);
+    float fade = 1.0 - smoothstep(W[i].z * 25.0, W[i].z * 90.0, dist);
+    g += W[i].w * k * d * cos(k * dot(d, p) - w * t) * fade;
+  }
+  // Fine chop: finite-difference gradient of two scrolling noise octaves.
+  float near = 1.0 - smoothstep(8.0, 45.0, dist);
+  if (near > 0.0) {
+    vec2 q1 = p * 1.7 + vec2(t * 0.31, t * 0.17);
+    vec2 q2 = p * 4.1 - vec2(t * 0.23, -t * 0.41);
+    float e = 0.05;
+    float n0 = valueNoise(vec3(q1, 0.0)) + 0.5 * valueNoise(vec3(q2, 3.0));
+    float nx = valueNoise(vec3(q1 + vec2(e, 0.0), 0.0)) + 0.5 * valueNoise(vec3(q2 + vec2(e, 0.0), 3.0));
+    float nz = valueNoise(vec3(q1 + vec2(0.0, e), 0.0)) + 0.5 * valueNoise(vec3(q2 + vec2(0.0, e), 3.0));
+    g += vec2(nx - n0, nz - n0) / e * 0.018 * near;
+  }
+  return normalize(vec3(-g.x, 1.0, -g.y));
+}
+
 vec3 bevelNormal(out float edge){
   vec3 h = 0.5 * vObjScale;
   float r = min(uBevel, 0.45 * min(h.x, min(h.y, h.z)));
@@ -564,6 +616,26 @@ void main(){
     // the edge slightly: arrises are where paint chips and dirt rubs off.
     N = normalize(N + nb - normalize(vNormal));
     albedo = mix(albedo, albedo * 1.22 + 0.015, edge * 0.45);
+  }
+  if (uWater > 0.0 && normalize(vNormal).y > 0.5) {
+    float wd = length(vWorldPos - uCameraPos);
+    N = waterNormal(vWorldPos.xz, uTime, wd);
+    albedo = uBaseColor * vParams.rgb;
+    rough = mix(0.035, 0.16, smoothstep(25.0, 220.0, wd));
+    metal = 0.0;
+    ao = 1.0;
+    /* Shore foam. A water box's sides are where it meets the seawall and
+       the banks, so the distance to them, in metres, is the distance to
+       the shore: a broken band of foam that breathes with the swell. */
+    vec2 hxz = 0.5 * vObjScale.xz;
+    float shore = min(hxz.x - abs(vObjPos.x), hxz.y - abs(vObjPos.z));
+    float churn = valueNoise(vec3(vWorldPos.xz * 1.3 + vec2(uTime * 0.2, 0.0), uTime * 0.15))
+                * valueNoise(vec3(vWorldPos.xz * 3.7, uTime * 0.3));
+    float band = 1.0 - smoothstep(0.0, 1.8 + 0.8 * sin(uTime * 0.7 + vWorldPos.x * 0.2), shore);
+    float foam = saturate1(band * (0.35 + churn * 1.6)) * (1.0 - smoothstep(30.0, 120.0, wd));
+    albedo = mix(albedo, vec3(0.78, 0.80, 0.78), foam);
+    rough = mix(rough, 0.7, foam);
+    N = normalize(mix(N, vec3(0.0, 1.0, 0.0), foam * 0.7));
   }
   // Back-facing geometry (double-sided leaves, glass) must not light black.
   if (!gl_FrontFacing) N = -N;

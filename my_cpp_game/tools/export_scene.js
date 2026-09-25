@@ -175,11 +175,38 @@ async function main() {
     // array uploadTexture sends to the GPU).
     const skelByTex = new Map();
     for (const a of G.actors) if (a.skeleton && a.skeleton.texture) skelByTex.set(a.skeleton.texture, a.skeleton);
+    /* STATIC ACTORS ARE WALKED DIRECTLY, not taken from the batches, so
+       each draw can carry the NAME its builder gave the actor -- 'lake',
+       'oak-crown', 'house-roof', 'house-window'. The batches group by mesh
+       and material only, and that is exactly the information the native
+       look-dev passes need to know what a box IS. Grouped by mesh +
+       material + name; engine default names ('actor123') count as none.
+       Same visibility rule as _buildBatches; the matrices were updated by
+       the _buildBatches call above. Skinned and morph-target actors, and
+       the grass, still come from the batches. */
+    const groups = new Map();
+    for (const a of G.actors) {
+      if (!a.visible || !a.mesh || a.dead || a.skeleton || a.face) continue;
+      const mi = meshId(a.mesh);
+      if (mi < 0) { noGeometry++; continue; }
+      const name = /^actor\d+$/.test(a.name || '') ? '' : (a.name || '');
+      const mat = matId(a.material);
+      const key = mi + '|' + mat + '|' + name;
+      let g = groups.get(key);
+      if (!g) { g = { mesh: mi, material: mat, name, data: [] }; groups.set(key, g); }
+      const e = a.matrix.e;
+      for (let i = 0; i < 16; i++) g.data.push(e[i]);
+      g.data.push(a.tint.x, a.tint.y, a.tint.z, a.custom || 0);
+    }
+    for (const g of groups.values())
+      draws.push({ mesh: g.mesh, material: g.material, name: g.name, grass: false, alphaClip: false,
+                   instances: f32(new Float32Array(g.data)) });
     for (const b of batches) {
-      if (!b.count) continue;
+      if (!b.count || (b.instanced && !b.grass)) continue;   // statics done above
       const mi = meshId(b.mesh);
       if (mi < 0) { noGeometry++; continue; }
-      const d = { mesh: mi, material: matId(b.material), grass: !!b.grass, alphaClip: !!b.alphaClip };
+      const d = { mesh: mi, material: matId(b.material), name: b.grass ? 'grass' : '', grass: !!b.grass,
+                  alphaClip: !!b.alphaClip };
       if (b.skinned) {
         const sk = skelByTex.get(b.boneTexture);
         const g = b.mesh.__geometry;

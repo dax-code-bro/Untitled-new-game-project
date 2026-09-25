@@ -83,6 +83,36 @@ bool rebuildPrimitive(const std::string& key, geometry::MeshData& out) {
     return false;
 }
 
+// Names the web map builders give their water surfaces -- 'lake',
+// 'lake-far', 'pool-water' -- matched as whole words, so 'bench-seat' and
+// 'seawall' are not the sea, and the lake's own bank and bed are ground.
+std::vector<std::string> nameTokens(const std::string& n) {
+    std::vector<std::string> out;
+    std::string cur;
+    for (char c : n) {
+        if (c == '-' || c == ':' || c == '_' || c == ' ' || (c >= '0' && c <= '9')) {
+            if (!cur.empty()) out.push_back(cur);
+            cur.clear();
+        } else {
+            cur += c;
+        }
+    }
+    if (!cur.empty()) out.push_back(cur);
+    return out;
+}
+bool hasToken(const std::vector<std::string>& t, std::initializer_list<const char*> any) {
+    for (const auto& x : t)
+        for (const char* w : any)
+            if (x == w) return true;
+    return false;
+}
+bool isWaterName(const std::string& n) {
+    const auto t = nameTokens(n);
+    return hasToken(t, {"lake", "water", "sea", "pond", "pool", "river", "ocean", "harbour", "harbor"}) &&
+           !hasToken(t, {"bank", "bed", "deep", "post", "rail", "ladder", "edge", "wall", "tank", "can",
+                         "pipe", "gun", "piling", "rim", "side", "floor"});
+}
+
 template <class T>
 T get(const json& j, const char* k, T fallback) {
     const auto it = j.find(k);
@@ -191,6 +221,9 @@ SceneFile::SceneFile(const std::filesystem::path& path, rendering::MaterialLibra
         rendering::DrawItem it;
         it.mesh = meshes.at(jd.at("mesh").get<size_t>());
         if (isBox.at(jd.at("mesh").get<size_t>())) it.bevel = 0.03f;
+        const std::string name = get(jd, "name", std::string());
+        it.water = isWaterName(name);
+        if (it.water) it.bevel = 0.0f;
         it.material = mats.at(jd.at("material").get<size_t>());
         it.grass = get(jd, "grass", false);
         if (jd.contains("bones")) {

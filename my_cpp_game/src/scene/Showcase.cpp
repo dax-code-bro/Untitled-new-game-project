@@ -204,6 +204,8 @@ Showcase::Showcase(rendering::MaterialLibrary& lib, rendering::Renderer& r, int 
     // ---- the reflecting pool: water a hand below a low stone kerb -----
     const glm::vec3 poolC(1.5f, 0.0f, 3.4f);
     add(box, mPool, trs(poolC + glm::vec3(0, 0.07f, 0), {7.0f, 0.02f, 3.4f}));
+    m_items.back().water = true;       // still water: waves, glints, reflections
+    m_items.back().bevel = 0.0f;
     add(box, mRim, trs(poolC + glm::vec3(0, 0.06f, 1.9f), {7.8f, 0.12f, 0.4f}));
     add(box, mRim, trs(poolC + glm::vec3(0, 0.06f, -1.9f), {7.8f, 0.12f, 0.4f}));
     add(box, mRim, trs(poolC + glm::vec3(3.7f, 0.06f, 0), {0.4f, 0.12f, 3.4f}));
