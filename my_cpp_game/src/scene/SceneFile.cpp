@@ -61,8 +61,8 @@ size_t repairWinding(geometry::MeshData& m) {
  * 20x28, a cylinder 20 sides, a capsule 8x16 -- a silhouette you can count
  * the facets on at 4K. They arrive tagged with the engine's cache key, so
  * the ones whose parameters the key carries are rebuilt here with the
- * native Shapes port (the same builders, bit-identical UV layout) at five
- * to eight times the segment count. Boxes are exact already; rocks keep
+ * native Shapes port (the same builders, bit-identical UV layout) at about
+ * three to four times the segment count per axis. Boxes are exact already; rocks keep
  * their deliberate facets; everything bespoke uses its exported mesh. */
 bool rebuildPrimitive(const std::string& key, geometry::MeshData& out) {
     namespace G = geometry;
@@ -71,11 +71,15 @@ bool rebuildPrimitive(const std::string& key, geometry::MeshData& out) {
         for (int k = 0; k < i; ++k) a = key.find(':', a) + 1;
         return std::stod(key.substr(a, key.find(':', a) - a));
     };
-    if (key == "sphere")   { out = G::sphere(0.5, 112, 160); return true; }
-    if (key == "cylinder") { out = G::cylinder(0.5, 1, 128, true); return true; }
-    if (key == "cone")     { out = G::cone(0.5, 1, 128); return true; }
-    if (key.rfind("torus:", 0) == 0)   { out = G::torus(1, field(3), 96, 192); return true; }
-    if (key.rfind("capsule:", 0) == 0) { out = G::capsule(field(1), field(2), 48, 96); return true; }
+    /* Measured, not guessed: at 112x160 spheres Coastline's instanced tree
+       canopies alone put 64.7 M triangles into one 8K frame (shadows and
+       probe included) -- a stills budget, not a play budget. 64x96 is 11x
+       the web count, still round at 4K, and a third of the triangles. */
+    if (key == "sphere")   { out = G::sphere(0.5, 64, 96); return true; }
+    if (key == "cylinder") { out = G::cylinder(0.5, 1, 72, true); return true; }
+    if (key == "cone")     { out = G::cone(0.5, 1, 72); return true; }
+    if (key.rfind("torus:", 0) == 0)   { out = G::torus(1, field(3), 64, 128); return true; }
+    if (key.rfind("capsule:", 0) == 0) { out = G::capsule(field(1), field(2), 24, 64); return true; }
     return false;
 }
 
