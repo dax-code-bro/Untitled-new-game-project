@@ -14,7 +14,7 @@ namespace ps {
 
 class World {
 public:
-    void build();
+    void build(float detail = 1.0f);   // detail 2 = half the terrain resolution (phones)
     void update(float dt, vec3 camPos, float time, Sim& sim);
     void draw(Renderer& r, Pass pass, float night, float time) const;
     void appendLights(std::vector<PointLight>& out, float night) const;

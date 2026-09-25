@@ -15,21 +15,22 @@ static constexpr float kTreeShadowRadius = 280.0f;
 static float snapDown(float v, float s) { return std::floor(v / s) * s; }
 static float snapUp(float v, float s) { return std::ceil(v / s) * s; }
 
-void World::build() {
+void World::build(float detail) {
+    const float d = detail >= 1.5f ? 2.0f : 1.0f;
     auto t0 = std::chrono::steady_clock::now();
     // ---- Terrain: three nested LOD rings, generated in parallel ----
     scenery::Rect l0{-1536.0f, -1248.0f, 1536.0f, 1824.0f};
     scenery::Rect l1{-8000.0f, -7680.0f, 8000.0f, 8320.0f};
-    scenery::Rect l2{snapDown(kRegionMinX - kBackgroundExtent, 160.0f), snapDown(kRegionMinZ - kBackgroundExtent, 160.0f),
-                     snapUp(kRegionMaxX + kBackgroundExtent, 160.0f), snapUp(kRegionMaxZ + kBackgroundExtent, 160.0f)};
+    scenery::Rect l2{snapDown(kRegionMinX - kBackgroundExtent, 160.0f * d), snapDown(kRegionMinZ - kBackgroundExtent, 160.0f * d),
+                     snapUp(kRegionMaxX + kBackgroundExtent, 160.0f * d), snapUp(kRegionMaxZ + kBackgroundExtent, 160.0f * d)};
 #ifdef __EMSCRIPTEN__
     const auto policy = std::launch::deferred;   // no threads in the browser build
 #else
     const auto policy = std::launch::async;
 #endif
-    auto f0 = std::async(policy, [=] { return scenery::buildTerrainLevel(l0, 6.0f, 8, nullptr); });
-    auto f1 = std::async(policy, [=] { return scenery::buildTerrainLevel(l1, 32.0f, 8, &l0); });
-    auto f2 = std::async(policy, [=] { return scenery::buildTerrainLevel(l2, 160.0f, 8, &l1); });
+    auto f0 = std::async(policy, [=] { return scenery::buildTerrainLevel(l0, 6.0f * d, 8, nullptr); });
+    auto f1 = std::async(policy, [=] { return scenery::buildTerrainLevel(l1, 32.0f * d, 8, &l0); });
+    auto f2 = std::async(policy, [=] { return scenery::buildTerrainLevel(l2, 160.0f * d, 8, &l1); });
     int level = 0;
     for (auto* f : {&f0, &f1, &f2}) {
         auto tiles = f->get();

@@ -142,6 +142,9 @@
     <p>Start a small animal shelter on 500 square miles of fenced land. Build it up in Creative mode, or walk your facility in first person.</p>
     <div class="bar" aria-hidden="true"><i id="progress"></i></div>
     <div id="status" role="status">Loading the game…</div>
+    <div class="row" id="lowRow" hidden>
+      <button type="button" id="lowBtn" class="action primary">Try low graphics mode</button>
+    </div>
     <dl id="helpDesktop">
       <dt>WASD + mouse</dt><dd>Walk and look (click the game to capture the mouse)</dd>
       <dt>E / click</dt><dd>Open doors, the gate keypad, the office computer</dd>
@@ -191,22 +194,54 @@
     return;
   }
   let ready = false;
+  let lowMode = false;
+  try { lowMode = localStorage.getItem('psLowGraphics') === '1'; } catch (e) { /* storage unavailable */ }
+  document.getElementById('lowBtn').addEventListener('click', () => {
+    try { localStorage.setItem('psLowGraphics', '1'); } catch (e) { /* ignore */ }
+    location.reload();
+  });
+  const problems = [];   // error lines printed by the game, shown if it can't start
+  function note(t) {
+    console.log(t);
+    if (/error|failed|incomplete|missing|unsupported/i.test(t)) problems.push(t);
+  }
+  function offerLowMode() { if (!lowMode) document.getElementById('lowRow').hidden = false; }
+  function showProblem(headline) {
+    overlay.classList.remove('done');
+    offerLowMode();
+    const detail = problems.length ? ' Details: ' + problems.slice(-3).join(' | ') : '';
+    fail(headline + detail);
+  }
+  window.psGameReady = () => {
+    if (ready) return;
+    ready = true;
+    progressEl.style.width = '100%';
+    overlay.classList.add('done');
+    if (isTouch) startTouch(); else canvas.focus();
+  };
+  window.psGameFailed = () => showProblem("The game couldn't start its graphics on this device.");
+  canvas.addEventListener('webglcontextlost', (e) => {
+    e.preventDefault();
+    showProblem('The graphics stopped, usually because the device ran low on memory. Close other tabs or apps and reload the page.');
+  });
   window.Module = {
     canvas,
-    arguments: isTouch ? ['--touch'] : [],
+    arguments: (isTouch ? ['--touch'] : []).concat(lowMode ? ['--low'] : []),
     setStatus,
-    print: (t) => console.log(t),
-    printErr: (t) => console.log(t),
+    print: note,
+    printErr: note,
     onRuntimeInitialized() {
-      progressEl.style.width = '100%';
-      statusEl.textContent = 'Building the world…';
+      progressEl.style.width = '95%';
+      statusEl.textContent = 'Building the world… (this can take a little while on a phone)';
+      // The loading card stays up until the game has drawn its first frames (window.psGameReady).
       setTimeout(() => {
-        overlay.classList.add('done');
-        ready = true;
-        if (isTouch) startTouch(); else canvas.focus();
-      }, 600);
+        if (!ready) statusEl.textContent = problems.length
+          ? 'Still starting… ' + problems.slice(-2).join(' | ')
+          : 'Still building the world… Older phones can take up to a minute. If it never finishes, try low graphics mode.';
+        if (!ready) offerLowMode();
+      }, 20000);
     },
-    onAbort: () => fail('The game stopped because of an error. Reload the page to try again.'),
+    onAbort: (what) => showProblem('The game stopped because of an error (' + what + '). Reload the page to try again.'),
   };
   const s = document.createElement('script');
   s.src = 'PetShelter.js';

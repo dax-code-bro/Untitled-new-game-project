@@ -75,7 +75,7 @@ void Renderer::reloadShaders() {
     ok &= tonemap_.load("fullscreen.vert", "tonemap.frag");
     ok &= fxaa_.load("fullscreen.vert", "fxaa.frag");
     ok &= cctv_.load("fullscreen.vert", "cctv.frag");
-    std::fprintf(stderr, "[renderer] shaders %s\n", ok ? "loaded" : "had errors (see above)");
+    std::fprintf(stderr, "[renderer] shaders %s\n", ok ? "loaded" : "error: shaders failed to compile (see above)");
 }
 
 Renderer::Fb Renderer::makeColorFb(int w, int h, GLenum ifmt, GLenum fmt, GLenum type, bool mip) {
@@ -92,8 +92,18 @@ Renderer::Fb Renderer::makeColorFb(int w, int h, GLenum ifmt, GLenum fmt, GLenum
     glGenFramebuffers(1, &f.fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, f.fbo);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, f.tex, 0);
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-        std::fprintf(stderr, "[renderer] framebuffer %dx%d incomplete\n", w, h);
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        if (ifmt != GL_RGBA8) {
+            // This GPU can't render to this float format: fall back to 8-bit so the game still draws.
+            std::fprintf(stderr, "[renderer] %dx%d float target unsupported, using 8-bit fallback\n", w, h);
+            glDeleteFramebuffers(1, &f.fbo);
+            glDeleteTextures(1, &f.tex);
+            lowPrecision_ = true;
+            autoExposure = false;
+            return makeColorFb(w, h, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE, mip);
+        }
+        std::fprintf(stderr, "[renderer] error: framebuffer %dx%d incomplete\n", w, h);
+    }
     return f;
 }
 
@@ -115,8 +125,17 @@ void Renderer::createTargets() {
     glBindFramebuffer(GL_FRAMEBUFFER, hdrFbo_);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, hdrTex_, 0);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTex_, 0);
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-        std::fprintf(stderr, "[renderer] HDR framebuffer incomplete\n");
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        std::fprintf(stderr, "[renderer] HDR float target unsupported, using 8-bit fallback\n");
+        lowPrecision_ = true;
+        autoExposure = false;
+        glBindTexture(GL_TEXTURE_2D, hdrTex_);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w_, h_, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+        glBindFramebuffer(GL_FRAMEBUFFER, hdrFbo_);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, hdrTex_, 0);
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+            std::fprintf(stderr, "[renderer] error: scene framebuffer incomplete\n");
+    }
 
     // Bloom mip chain (half res and down)
     int bw = w_ / 2, bh = h_ / 2;
@@ -394,33 +413,35 @@ void Renderer::renderFrame(const Camera& cam, const SceneFn& scene, float dt, fl
     firstAdapt_ = false;
 
     // --- Bloom ---
-    bloomDown_.use();
-    bloomDown_.set("uSrc", 0);
-    bloomDown_.set("uThreshold", 60.0f);
-    GLuint src = hdrTex_;
-    int sw = w_, sh = h_;
-    for (size_t i = 0; i < bloom_.size(); ++i) {
-        glBindFramebuffer(GL_FRAMEBUFFER, bloom_[i].fbo);
-        glViewport(0, 0, bloom_[i].w, bloom_[i].h);
-        bloomDown_.set("uTexel", vec2(1.0f / float(sw), 1.0f / float(sh)));
-        bloomDown_.set("uFirst", i == 0 ? 1.0f : 0.0f);
-        glBindTexture(GL_TEXTURE_2D, src);
-        fullscreen();
-        src = bloom_[i].tex; sw = bloom_[i].w; sh = bloom_[i].h;
+    if (bloomStrength > 0.0f) {
+        bloomDown_.use();
+        bloomDown_.set("uSrc", 0);
+        bloomDown_.set("uThreshold", 60.0f);
+        GLuint src = hdrTex_;
+        int sw = w_, sh = h_;
+        for (size_t i = 0; i < bloom_.size(); ++i) {
+            glBindFramebuffer(GL_FRAMEBUFFER, bloom_[i].fbo);
+            glViewport(0, 0, bloom_[i].w, bloom_[i].h);
+            bloomDown_.set("uTexel", vec2(1.0f / float(sw), 1.0f / float(sh)));
+            bloomDown_.set("uFirst", i == 0 ? 1.0f : 0.0f);
+            glBindTexture(GL_TEXTURE_2D, src);
+            fullscreen();
+            src = bloom_[i].tex; sw = bloom_[i].w; sh = bloom_[i].h;
+        }
+        bloomUp_.use();
+        bloomUp_.set("uSrc", 0);
+        bloomUp_.set("uRadius", 1.0f);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_ONE, GL_ONE);
+        for (size_t i = bloom_.size() - 1; i > 0; --i) {
+            glBindFramebuffer(GL_FRAMEBUFFER, bloom_[i - 1].fbo);
+            glViewport(0, 0, bloom_[i - 1].w, bloom_[i - 1].h);
+            bloomUp_.set("uTexel", vec2(1.0f / float(bloom_[i].w), 1.0f / float(bloom_[i].h)));
+            glBindTexture(GL_TEXTURE_2D, bloom_[i].tex);
+            fullscreen();
+        }
+        glDisable(GL_BLEND);
     }
-    bloomUp_.use();
-    bloomUp_.set("uSrc", 0);
-    bloomUp_.set("uRadius", 1.0f);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_ONE, GL_ONE);
-    for (size_t i = bloom_.size() - 1; i > 0; --i) {
-        glBindFramebuffer(GL_FRAMEBUFFER, bloom_[i - 1].fbo);
-        glViewport(0, 0, bloom_[i - 1].w, bloom_[i - 1].h);
-        bloomUp_.set("uTexel", vec2(1.0f / float(bloom_[i].w), 1.0f / float(bloom_[i].h)));
-        glBindTexture(GL_TEXTURE_2D, bloom_[i].tex);
-        fullscreen();
-    }
-    glDisable(GL_BLEND);
 
     // --- Tonemap to LDR ---
     glBindFramebuffer(GL_FRAMEBUFFER, ldrFb_.fbo);
@@ -432,7 +453,7 @@ void Renderer::renderFrame(const Camera& cam, const SceneFn& scene, float dt, fl
     tonemap_.set("uBloomStrength", bloomStrength);
     tonemap_.set("uExposureBias", exposureBias);
     tonemap_.set("uAutoExposure", autoExposure ? 1.0f : 0.0f);
-    tonemap_.set("uManualExposure", 0.12f);
+    tonemap_.set("uManualExposure", lowPrecision_ ? 1.0f : 0.12f);
     tonemap_.set("uFade", fade);
     tonemap_.set("uLetterbox", letterbox);
     tonemap_.set("uTime", time);

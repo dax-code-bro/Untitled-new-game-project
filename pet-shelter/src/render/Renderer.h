@@ -109,7 +109,8 @@ private:
     bool firstAdapt_ = true;
     int lumLevels_ = 1;
 
-    int kShadowSize = 2048;   // lowered on phones (set before init)
+    int kShadowSize = 2048;
+    bool lowPrecision_ = false;   // lowered on phones (set before init)
     GLuint shadowFbo_[2] = {0, 0}, shadowTex_[2] = {0, 0};
     mat4 shadowMat_[2];
 

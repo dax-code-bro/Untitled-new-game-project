@@ -76,6 +76,7 @@ bool Game::init(int argc, char** argv) {
         std::string a = argv[i];
         if (a == "--screenshots" && i + 1 < argc) screenshotSuiteDir_ = argv[++i];
         else if (a == "--touch") touch_ = true;
+        else if (a == "--low") low_ = true;
         else if (a == "--size" && i + 2 < argc) { width_ = std::atoi(argv[++i]); height_ = std::atoi(argv[++i]); }
     }
     // Shader directory: next to the executable, else the source tree
@@ -94,6 +95,7 @@ bool Game::init(int argc, char** argv) {
     }
     Shader::setDirectory(shaderDir);
 
+    if (width_ <= 0 || height_ <= 0) { width_ = 1280; height_ = 720; }
     if (!glfwInit()) { std::fprintf(stderr, "glfwInit failed\n"); return false; }
 #ifndef __EMSCRIPTEN__
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -104,7 +106,7 @@ bool Game::init(int argc, char** argv) {
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
 #endif
     window_ = glfwCreateWindow(width_, height_, "Untitled Pet Shelter Game", nullptr, nullptr);
-    if (!window_) { std::fprintf(stderr, "Could not create an OpenGL 3.3 window\n"); return false; }
+    if (!window_) { std::fprintf(stderr, "error: could not create the graphics context (WebGL 2 / OpenGL 3.3)\n"); return false; }
     glfwMakeContextCurrent(window_);
     glfwSwapInterval(vsync_ ? 1 : 0);
     if (!loadGL([](const char* n) { return reinterpret_cast<void*>(glfwGetProcAddress(n)); })) return false;
@@ -154,7 +156,12 @@ bool Game::init(int argc, char** argv) {
     renderer_.init(width_, height_);
     renderer_.indoorBox = buildingBounds();
     renderer_.indoorBox.max.y = kCeilingY + 0.2f;
-    world_.build();
+    if (low_) {   // low graphics: no shadows or bloom, coarser terrain, fewer trees
+        renderer_.shadows = false;
+        renderer_.bloomStrength = 0.0f;
+        world_.treeRadius = 700.0f;
+    }
+    world_.build(touch_ || low_ ? 2.0f : 1.0f);
     computer_.init(renderer_);
     sim_.newGame();
     appearance_.applyPreset(0);
@@ -186,6 +193,7 @@ void Game::tick() {
     frame(dt);
     glfwSwapBuffers(window_);
 #ifdef __EMSCRIPTEN__
+    if (++framesDrawn_ == 3) EM_ASM({ if (window.psGameReady) window.psGameReady(); });
     // Browsers release the mouse when you press Esc; treat that as "pause".
     bool locked = EM_ASM_INT({ return document.pointerLockElement ? 1 : 0; }) != 0;
     if (browserLocked_ && !locked && state_ == State::Playing && mode_ == Mode::POV) state_ = State::Paused;
